@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.6.2.1 2008/08/30 16:15:42 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.7 2008/09/02 01:30:29 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
@@ -62,6 +62,7 @@
  */
 int _interactiveHack;
 int FixItMode = 0;
+int NCpus;
 
 static void	create_termcap(void);
 static void	fixit_common(void);
@@ -315,8 +316,8 @@ installFixitHoloShell(dialogMenuItem *self)
 {
     FixItMode = 1;
     systemCreateHoloshell();
-    return DITEM_SUCCESS;
     FixItMode = 0;
+    return DITEM_SUCCESS;
 }
 
 int
@@ -772,6 +773,8 @@ installCommit(dialogMenuItem *self)
 	/* select reasonable defaults if necessary */
 	if (!Dists)
 	    Dists = _DIST_USER;
+        if (!KernelDists)
+            KernelDists = selectKernel();
     }
 
     if (!mediaVerify())
@@ -876,6 +879,32 @@ installFixupBase(dialogMenuItem *self)
 #endif
 
 	/* Do all the last ugly work-arounds here */
+    }
+    return DITEM_SUCCESS | DITEM_RESTORE;
+}
+
+int
+installFixupKernel(dialogMenuItem *self, int dists)
+{
+
+    /* All of this is done only as init, just to be safe */
+    if (RunningAsInit) {
+       /*
+        * Install something as /boot/kernel.  Prefer SMP
+        * over generic--this should handle the case where
+        * both SMP and GENERIC are installed (otherwise we
+        * select the one kernel that was installed).
+        *
+        * NB: we assume any existing kernel has been saved
+        *     already and the /boot/kernel we remove is empty.
+        */
+       vsystem("rm -rf /boot/kernel");
+#if WITH_SMP
+       if (dists & DIST_KERNEL_SMP)
+               vsystem("mv /boot/SMP /boot/kernel");
+       else
+#endif
+               vsystem("mv /boot/GENERIC /boot/kernel");
     }
     return DITEM_SUCCESS | DITEM_RESTORE;
 }
@@ -990,8 +1019,7 @@ installFilesystems(dialogMenuItem *self)
 	}
 	else {
 	    if (!upgrade) {
-		msgConfirm("Warning:  Using existing root partition.  It will be assumed\n"
-			   "that you have the appropriate device entries already in /dev.");
+		msgConfirm("Warning:  Using existing root partition.");
 	    }
 	    dialog_clear_norefresh();
 	    msgNotify("Checking integrity of existing %s filesystem.", dname);
@@ -1124,28 +1152,16 @@ installFilesystems(dialogMenuItem *self)
     return DITEM_SUCCESS | DITEM_RESTORE;
 }
 
-static char *
-getRelname(void)
-{
-    static char buf[64];
-    size_t sz = (sizeof buf) - 1;
-
-    if (sysctlbyname("kern.osrelease", buf, &sz, NULL, 0) != -1) {
-	buf[sz] = '\0';
-	return buf;
-    }
-    else
-	return "<unknown>";
-}
-
 /* Initialize various user-settable values to their defaults */
 int
 installVarDefaults(dialogMenuItem *self)
 {
-    char *cp;
+    char *cp, ncpus[10];
 
     /* Set default startup options */
-    variable_set2(VAR_RELNAME,			getRelname(), 0);
+    cp = getsysctlbyname("kern.osrelease");
+    variable_set2(VAR_RELNAME,			cp, 0);
+    free(cp);
     variable_set2(VAR_CPIO_VERBOSITY,		"high", 0);
     variable_set2(VAR_TAPE_BLOCKSIZE,		DEFAULT_TAPE_BLOCKSIZE, 0);
     variable_set2(VAR_INSTALL_ROOT,		"/", 0);
@@ -1174,6 +1190,15 @@ installVarDefaults(dialogMenuItem *self)
 	variable_set2(SYSTEM_STATE,		"init", 0);
     variable_set2(VAR_NEWFS_ARGS,		"-b 16384 -f 2048", 0);
     variable_set2(VAR_CONSTERM,                 "NO", 0);
+#if defined(__i386__) || defined(__amd64__)
+    NCpus = acpi_detect();
+    if (NCpus == -1)
+       NCpus = biosmptable_detect();
+#endif
+    if (NCpus <= 0)
+       NCpus = 1;
+    snprintf(ncpus, sizeof(ncpus), "%u", NCpus);
+    variable_set2(VAR_NCPUS,			ncpus, 0);
     return DITEM_SUCCESS;
 }
 

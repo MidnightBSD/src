@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.3 2008/01/21 16:06:30 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.4 2008/05/02 07:18:57 laffer1 Exp $ */
 /* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/usr.sbin/sysinstall/dist.h,v 1.67.2.4.2.1 2008/01/14 19:28:43 kensmith Exp $  */
 
 #ifndef _DIST_H_INCLUDE
@@ -20,6 +20,7 @@
 #ifdef __amd64__
 #define DIST_LIB32		0x01000
 #endif
+#define	DIST_KERNEL		0x02000
 #define DIST_ALL		0xFFFFF
 
 /* Subtypes for SRC distribution */
@@ -43,12 +44,22 @@
 #define DIST_SRC_SSECURE	0x20000
 #define DIST_SRC_SKERBEROS5	0x40000
 #define DIST_SRC_RESCUE		0x80000
-#define DIST_SRC_ALL		0x3FFFF
+#define DIST_SRC_CDDL		0x100000
+#define DIST_SRC_COMPAT		0x200000
+#define DIST_SRC_ALL		0x3FFFFF
+
+/* Subtypes for X.Org packages */
 #define DIST_XORG_ALL		0xFFFFF
+
+/* Subtypes for KERNEL distribution */
+#define DIST_KERNEL_GENERIC	0x00001
+#define DIST_KERNEL_SMP		0x00002
+#define DIST_KERNEL_ALL		0xFFFFF
+
 /* Canned distribution sets */
 
 #define _DIST_USER \
-	( DIST_BASE | DIST_DOC | DIST_MANPAGES | DIST_DICT )
+	( DIST_BASE | DIST_KERNEL | DIST_DOC | DIST_MANPAGES | DIST_DICT )
 
 #define _DIST_DEVELOPER \
 	( _DIST_USER | DIST_PROFLIBS | DIST_INFO | DIST_SRC )

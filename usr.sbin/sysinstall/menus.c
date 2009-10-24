@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.15 2009/05/20 23:33:31 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.16 2009/05/21 00:08:40 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -54,6 +54,22 @@ clearSrc(dialogMenuItem *self)
 {
     Dists &= ~DIST_SRC;
     SrcDists = 0;
+    return DITEM_SUCCESS | DITEM_REDRAW;
+}
+
+static int
+setKernel(dialogMenuItem *self)
+{
+    Dists |= DIST_KERNEL;
+    KernelDists = DIST_KERNEL_ALL;
+    return DITEM_SUCCESS | DITEM_REDRAW;
+}
+
+static int
+clearKernel(dialogMenuItem *self)
+{
+    Dists &= ~DIST_KERNEL;
+    KernelDists = 0;
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
 
@@ -104,7 +120,7 @@ checkDistXUser(dialogMenuItem *self)
 static int
 checkDistMinimum(dialogMenuItem *self)
 {
-    return Dists == (DIST_BASE);
+    return Dists == (DIST_BASE | DIST_KERNEL);
 }
 
 static int
@@ -112,13 +128,31 @@ checkDistEverything(dialogMenuItem *self)
 {
     return Dists == DIST_ALL &&
 	_IS_SET(SrcDists, DIST_SRC_ALL) &&
-	_IS_SET(XOrgDists, DIST_XORG_ALL);
+	_IS_SET(XOrgDists, DIST_XORG_ALL) &&
+	_IS_SET(KernelDists, DIST_KERNEL_ALL);
 }
 
 static int
 srcFlagCheck(dialogMenuItem *item)
 {
     return SrcDists;
+}
+
+static int
+x11FlagCheck(dialogMenuItem *item)
+{
+    if (XOrgDists != 0)
+	Dists |= DIST_XORG;
+    else
+	Dists &= ~DIST_XORG;
+
+    return Dists & DIST_XORG;
+}
+
+static int
+kernelFlagCheck(dialogMenuItem *item)
+{
+    return KernelDists;
 }
 
 static int
@@ -553,6 +587,8 @@ DMenu MenuSubDistributions = {
 	NULL, distReset, NULL, NULL, ' ', ' ', ' ' },
       { " base",	"Binary base distribution (required)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_BASE },
+      { " kernels",	"Binary kernel distributions (required)",
+	kernelFlagCheck,distSetKernel },
       { " dict",	"Spelling checker dictionary files",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DICT },
       { " doc",		"Miscellaneous MidnightBSD online docs",
@@ -582,6 +618,27 @@ DMenu MenuSubDistributions = {
       { NULL } },
 };
 
+DMenu MenuKernelDistributions = {
+    DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
+    "Select the operating system kernels you wish to install.",
+    "Please check off those kernels you wish to install.\n",
+    NULL,
+    NULL,
+    { { "X Exit", "Exit this menu (returning to previous)",
+	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
+      { "All",		"Select all of the below",
+	NULL,		setKernel, NULL, NULL, ' ', ' ', ' ' },
+      { "Reset",	"Reset all of the below",
+	NULL,		clearKernel, NULL, NULL, ' ', ' ', ' ' },
+      { " GENERIC",	"GENERIC kernel configuration",
+	dmenuFlagCheck,	dmenuSetFlag, NULL, &KernelDists, '[', 'X', ']', DIST_KERNEL_GENERIC },
+#ifdef WITH_SMP
+      { " SMP",		"GENERIC symmetric multiprocessor kernel configuration",
+	dmenuFlagCheck,	dmenuSetFlag,	NULL, &KernelDists, '[', 'X', ']', DIST_KERNEL_SMP },
+#endif
+      { NULL } },
+};
+
 DMenu MenuSrcDistributions = {
     DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
     "Select the sub-components of src you wish to install.",
@@ -597,6 +654,10 @@ DMenu MenuSrcDistributions = {
 	NULL,		clearSrc, NULL, NULL, ' ', ' ', ' ' },
       { " base",	"top-level files in /usr/src",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_BASE },
+      { " cddl",	"/usr/src/cddl (software from Sun)",
+	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_CDDL },
+      { " compat",	"/usr/src/compat (compatibility software)",
+	dmenuFlagCheck,	dmenuSetFlag,	NULL, &SrcDists, '[', 'X', ']', DIST_SRC_COMPAT },
       { " contrib",	"/usr/src/contrib (contributed software)",
 	dmenuFlagCheck,	dmenuSetFlag,	NULL, &SrcDists, '[', 'X', ']', DIST_SRC_CONTRIB },
       { " crypto",	"/usr/src/crypto (contrib encryption sources)",

@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/keymap.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $ 
+ * $MidnightBSD: src/usr.sbin/sysinstall/keymap.c,v 1.3 2009/05/20 23:33:31 laffer1 Exp $ 
  * $FreeBSD: src/usr.sbin/sysinstall/keymap.c,v 1.6 2000/10/08 21:33:51 phk Exp $
  *
  */
@@ -51,7 +51,7 @@ struct keymapInfo {
  * the language name only.
  */
 
-
+#ifdef WITH_SYSCONS
 static int
 keymapSetDefault(const char *prefix)
 {
@@ -92,7 +92,7 @@ keymapMenuSelect(dialogMenuItem *self)
 
     if ((country = variable_get(VAR_COUNTRY)) != NULL)
     {
-	lang = NULL;
+	lang = country;
 	for (i = 0; map[i].country; ++i)
 	    if (!strcmp(country, map[i].country))
 	    {
@@ -100,23 +100,25 @@ keymapMenuSelect(dialogMenuItem *self)
 		break;
 	    }
 
-	if (!lang)
-	    lang = country;
-
 	snprintf(prefix, sizeof(prefix), "keymap=%s.iso", lang);
 	if ((choice = keymapSetDefault(prefix)) == -1)
 	{
 	    snprintf(prefix, sizeof(prefix), "keymap=%s", lang);
-	    if ((choice = keymapSetDefault(prefix)) == -1)
-		choice = 0;
+	    if ((choice = keymapSetDefault(prefix)) == -1) {
+		    snprintf(prefix, sizeof(prefix), "keymap=us.iso");
+		    if ((choice = keymapSetDefault(prefix)) == -1)
+			    choice = 0;
+	    }
 	}
 
 	dmenuSetDefaultIndex(&MenuSysconsKeymap, &choice, &scroll, &curr, &max);
 	return dmenuOpen(&MenuSysconsKeymap, &choice, &scroll, &curr, &max, FALSE);
     }
     else
-	return dmenuOpenSimple(&MenuSysconsKeymap, FALSE);
+	return dmenuOpenSimple(&MenuSysconsKeymap, FALSE) ? DITEM_SUCCESS :
+	    DITEM_FAILURE;
 }
+#endif
 
 /*
  * Return values:

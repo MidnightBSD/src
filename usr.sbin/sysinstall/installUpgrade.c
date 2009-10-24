@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.6 2007/07/17 13:08:07 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.7 2007/07/29 15:03:12 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.84.12.1 2005/12/03 14:36:26 philip Exp $
  *
  * Copyright (c) 1995
@@ -125,14 +125,15 @@ static HitList etc_files [] = {
    { JUST_COPY,		"skeykeys",		TRUE, NULL },
    { JUST_COPY,		"snmpd.config",		TRUE, NULL },
    { JUST_COPY,		"spwd.db",		TRUE, NULL },
+   { JUST_COPY,		"src.conf",		TRUE, NULL },
    { JUST_COPY,		"ssh",			TRUE, NULL },
    { JUST_COPY,		"sysctl.conf",		TRUE, NULL },
    { JUST_COPY,		"syslog.conf",		TRUE, NULL },
    { JUST_COPY,		"ttys",			TRUE, NULL },
-   { 0 },
+   { 0,			NULL,			FALSE, NULL },
 };
 
-void
+static void
 traverseHitlist(HitList *h)
 {
     system("rm -rf /etc/upgrade");
@@ -260,7 +261,7 @@ installUpgrade(dialogMenuItem *self)
 
     saved_etc[0] = '\0';
 
-    /* Don't allow sources to be upgraded unless if we have src already */
+    /* Don't allow sources to be upgraded if we have src already */
     if (directory_exists("/usr/src/") && (Dists & DIST_SRC)) {
 	Dists &= ~DIST_SRC;
 	SrcDists = 0;
@@ -288,18 +289,27 @@ installUpgrade(dialogMenuItem *self)
 
 	if (saved_etc[0]) {
 	    msgNotify("Preserving /etc directory..");
-	    if (vsystem("tar -cpf - -C /etc . | tar -xpf - -C %s", saved_etc))
+	    if (vsystem("tar -cBpf - -C /etc . | tar --unlink -xBpf - -C %s", saved_etc))
 		if (msgYesNo("Unable to backup your /etc into %s.\n"
 			     "Do you want to continue anyway?", saved_etc) != 0)
 		    return DITEM_FAILURE;
 	    msgNotify("Preserving /root directory..");
-	    vsystem("tar -cpf - -C / root | tar -xpf - -C %s", saved_etc);
+	    vsystem("tar -cBpf - -C / root | tar --unlink -xBpf - -C %s", saved_etc);
 	}
 
 	msgNotify("chflags'ing old binaries - please wait.");
-	(void)vsystem("chflags -R noschg /bin /sbin /usr/sbin /usr/bin /usr/lib /usr/libexec /var/empty /boot/kernel*");
+	(void)vsystem("chflags -R noschg /bin /sbin /lib /libexec /usr/bin /usr/sbin /usr/lib /usr/libexec /var/empty /boot/kernel*");
 
 	if (directory_exists("/boot/kernel")) {
+	    if (directory_exists("/boot/kernel.prev")) {
+		msgNotify("Removing /boot/kernel.prev");
+		if (system("rm -fr /boot/kernel.prev")) {
+		    msgConfirm("NOTICE: I'm trying to back up /boot/kernel to\n"
+			       "/boot/kernel.prev, but /boot/kernel.prev exists and I\n"
+			       "can't remove it.  This means that the backup will, in\n"
+			       "all probability, fail.");
+		}
+	    }
 	    msgNotify("Moving old kernel to /boot/kernel.prev");
 	    if (system("mv /boot/kernel /boot/kernel.prev")) {
 		if (!msgYesNo("Hmmm!  I couldn't move the old kernel over!  Do you want to\n"
@@ -309,8 +319,9 @@ installUpgrade(dialogMenuItem *self)
 		    systemShutdown(1);
 	    }
 	    else 
-		msgConfirm("NOTICE: Your old kernel is in /boot/kernel.prev should this upgrade\n"
-			   "fail for any reason and you need to boot your old kernel");
+		msgConfirm("NOTICE: Your old kernel is in /boot/kernel.prev should this\n"
+			   "upgrade fail for any reason and you need to boot your old\n"
+			   "kernel.");
 	}
     }
 
@@ -329,7 +340,7 @@ media:
 	    return DITEM_FAILURE | DITEM_REDRAW | DITEM_RESTORE;
     }
     
-    msgNotify("Beginning extraction of distributions..");
+    msgNotify("Beginning extraction of distributions.");
     if (DITEM_STATUS(distExtractAll(self)) == DITEM_FAILURE) {
 	msgConfirm("Hmmmm.  We couldn't even extract the base distribution.  This upgrade\n"
 		   "should be considered a failure and started from the beginning, sorry!\n"
@@ -407,7 +418,7 @@ installUpgradeNonInteractive(dialogMenuItem *self)
 	    return DITEM_FAILURE;
 	}
 	else {
-	    /* Enable all the drives befor we start */
+	    /* Enable all the drives before we start */
 	    for (i = 0; i < cnt; i++)
 		devs[i]->enabled = TRUE;
 	}
@@ -466,15 +477,25 @@ installUpgradeNonInteractive(dialogMenuItem *self)
 	return DITEM_FAILURE;
     }
 
-    if (file_readable("/kernel")) {
-	msgNotify("Moving old kernel to /kernel.prev");
-	if (!system("chflags noschg /kernel && mv /kernel /kernel.prev")) {
-	    /* Give us a working kernel in case we crash and reboot */
-	    system("cp /kernel.prev /kernel");
+    /*
+     * Back up the old kernel, leaving it in place in case we
+     *  crash and reboot.
+     */
+    if (directory_exists("/boot/kernel")) {
+	if (directory_exists("/boot/kernel.prev")) {
+	    msgNotify("Removing /boot/kernel.prev");
+	    if (system("rm -fr /boot/kernel.prev")) {
+		msgConfirm("NOTICE: I'm trying to back up /boot/kernel to\n"
+		    "/boot/kernel.prev, but /boot/kernel.prev exists and I\n"
+		    "can't remove it.  This means that the backup will, in\n"
+		    "all probability, fail.");
+	    }
 	}
-    }
+	msgNotify("Copying old kernel to /boot/kernel.prev");
+	vsystem("cp -Rp /boot/kernel /boot/kernel.prev");
+    }   
 
-    msgNotify("Beginning extraction of distributions..");
+    msgNotify("Beginning extraction of distributions.");
     if (DITEM_STATUS(distExtractAll(self)) == DITEM_FAILURE) {
 	msgConfirm("Hmmmm.  We couldn't even extract the base distribution.  This upgrade\n"
 		   "should be considered a failure and started from the beginning, sorry!\n"
@@ -498,7 +519,7 @@ installUpgradeNonInteractive(dialogMenuItem *self)
     }
 
     msgNotify("First stage of upgrade completed successfully.");
-    if (vsystem("tar -cpf - -C %s . | tar -xpf - -C /etc", saved_etc)) {
+    if (vsystem("tar -cpBf - -C %s . | tar --unlink -xpBf - -C /etc", saved_etc)) {
 	msgNotify("Unable to resurrect your old /etc!");
 	return DITEM_FAILURE;
     }

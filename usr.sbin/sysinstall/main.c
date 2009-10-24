@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.6 2009/05/20 22:26:53 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.7 2009/05/20 23:33:31 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/main.c,v 1.71 2003/08/20 06:27:21 imp Exp $
  *
  * Copyright (c) 1995
@@ -169,6 +169,10 @@ main(int argc, char **argv)
 	systemShutdown(status);
     }
 
+    /* Get user's country and keymap */
+    if (RunningAsInit)
+       configCountry(NULL);
+
     /* Add MidnightBSD version to menu */
     arch = getsysctlbyname("hw.machine_arch");
     osrel = getsysctlbyname("kern.osrelease");
@@ -179,9 +183,6 @@ main(int argc, char **argv)
     free(osrel);
     free(ostype);
     MenuInitial.title = titlestr;
-
-    /* Get user's country and keymap */
-    configCountry(NULL);
 
     /* Begin user dialog at outer menu */
     dialog_clear();
