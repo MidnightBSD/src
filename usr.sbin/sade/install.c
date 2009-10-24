@@ -65,9 +65,6 @@ checkLabels(Boolean whinge)
     status = TRUE;
     HomeChunk = RootChunk = SwapChunk = NULL;
     TmpChunk = UsrChunk = VarChunk = NULL;
-#ifdef __ia64__
-    EfiChunk = NULL;
-#endif
 
     /* We don't need to worry about root/usr/swap if we're already multiuser */
     return status;
@@ -192,18 +189,6 @@ installFilesystems(dialogMenuItem *self)
 		sprintf(name, "/%s", ((PartInfo *)c1->private_data)->mountpoint);
 		Mkdir(name);
 	    }
-#if defined(__ia64__)
-	    else if (c1->type == efi && c1->private_data) {
-		PartInfo *pi = (PartInfo *)c1->private_data;
-
-		sprintf(dname, "/dev/%s", c1->name);
-
-		if (pi->do_newfs && (!upgrade ||
-		    !msgNoYes("You are upgrading - are you SURE you want to "
-		    "newfs /dev/%s?", c1->name)))
-			performNewfs(pi, dname, QUEUE_YES);
-	    }
-#endif
 	}
     }
 

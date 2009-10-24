@@ -282,9 +282,6 @@ extern Chunk *SwapChunk;
 extern Chunk *TmpChunk;
 extern Chunk *UsrChunk;
 extern Chunk *VarChunk;
-#ifdef __ia64__
-extern Chunk *EfiChunk;
-#endif
 
 /* Stuff from libdialog which isn't properly declared outside */
 extern void display_helpfile(void);

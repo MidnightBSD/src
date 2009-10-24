@@ -53,9 +53,6 @@ Chunk		*SwapChunk;
 Chunk		*TmpChunk;
 Chunk		*UsrChunk;
 Chunk		*VarChunk;
-#ifdef __ia64__
-Chunk		*EfiChunk;
-#endif
 
 /*
  * Yes, I know some of these are already automatically initialized as
@@ -78,7 +75,4 @@ globalsInit(void)
     TmpChunk = NULL;
     UsrChunk = NULL;
     VarChunk = NULL;
-#ifdef __ia64__
-    EfiChunk = NULL;
-#endif
 }
