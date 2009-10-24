@@ -147,17 +147,8 @@ installFilesystems(dialogMenuItem *self)
 	    return DITEM_FAILURE | DITEM_RESTORE;
 	}
 	for (c1 = disk->chunks->part; c1; c1 = c1->next) {
-#ifdef __ia64__
-	if (c1->type == part) {
-		c2 = c1;
-		{
-#elif defined(__powerpc__)
-	    if (c1->type == apple) {
-		for (c2 = c1->part; c2; c2 = c2->next) {
-#else
 	    if (c1->type == freebsd) {
 		for (c2 = c1->part; c2; c2 = c2->next) {
-#endif
 		    if (c2->type == part && c2->subtype != FS_SWAP && c2->private_data) {
 			PartInfo *tmp = (PartInfo *)c2->private_data;
 
