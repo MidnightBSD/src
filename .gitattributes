@@ -35582,8 +35582,6 @@ tools/regression/geom_uzip/runtests.sh -text
 tools/regression/geom_uzip/test-1.img.gz.uue -text
 tools/regression/geom_uzip/test-1.sh -text
 tools/regression/geom_uzip/test-2.sh -text
-tools/regression/ia64/unaligned/test.c -text
-tools/regression/ia64/unaligned/unaligned.t -text
 tools/regression/include/tgmath/Makefile -text
 tools/regression/include/tgmath/tgmath.c -text
 tools/regression/include/tgmath/tgmath.t -text
