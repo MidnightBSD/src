@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/variable.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/variable.c,v 1.37 2004/03/11 11:58:16 bde Exp $
  *
  * Copyright (c) 1995
@@ -302,6 +302,7 @@ free_variables(void)
 void
 pvariable_set(char *var)
 {
+    char *p;
     char tmp[1024];
 
     if (!var)
@@ -313,7 +314,9 @@ pvariable_set(char *var)
     if (index(var, '=') == NULL)
 	msgFatal("Invalid variable format: %s", var);
     strlcat(tmp, var, 1024); 
-    putenv(tmp);
+    p = strchr(tmp, '=');
+    *p = '\0';
+    setenv(tmp, p + 1, 1);
 }
 
 char *
