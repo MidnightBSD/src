@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.4 2008/05/02 06:41:00 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.5 2008/05/29 20:50:14 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/disks.c,v 1.154.2.1 2006/01/31 22:07:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -173,7 +173,7 @@ print_chunks(Disk *d, int u)
 }
 
 static void
-print_command_summary()
+print_command_summary(void)
 {
     mvprintw(14, 0, "The following commands are supported (in upper or lower case):");
     mvprintw(16, 0, "A = Use Entire Disk   G = set Drive Geometry   C = Create Slice   F = `DD' mode");
@@ -751,7 +751,13 @@ diskPartitionWrite(dialogMenuItem *self)
 
 	msgNotify("Writing partition information to drive %s", d->name);
 	if (!Fake && Write_Disk(d)) {
-	    msgConfirm("ERROR: Unable to write data to disk %s!", d->name);
+	    if (RunningAsInit) {
+		msgConfirm("ERROR: Unable to write data to disk %s!", d->name);
+	    } else {
+		msgConfirm("ERROR: Unable to write data to disk %s!\n\n"
+		    "To edit the labels on a running system set\n"
+		    "sysctl kern.geom.debugflags=16 and try again.", d->name);
+	    }
 	    return DITEM_FAILURE;
 	}
     }
