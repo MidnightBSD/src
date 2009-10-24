@@ -26146,6 +26146,8 @@ release/scripts/games-make.sh -text
 release/scripts/info-install.sh -text
 release/scripts/info-make.sh -text
 release/scripts/info.sh -text
+release/scripts/kernels-install.sh -text
+release/scripts/lib32-install.sh -text
 release/scripts/lib32-make.sh -text
 release/scripts/manpages-install.sh -text
 release/scripts/manpages-make.sh -text

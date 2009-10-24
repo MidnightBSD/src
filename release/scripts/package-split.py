@@ -7,12 +7,11 @@
 #
 # Usage: package-split.py <INDEX> <master INDEX>
 #
-# $MidnightBSD: src/release/scripts/package-split.py,v 1.7.4.2 2008/08/29 15:46:56 laffer1 Exp $
+# $MidnightBSD: src/release/scripts/package-split.py,v 1.8 2008/09/02 01:45:29 laffer1 Exp $
 # $FreeBSD: src/release/scripts/package-split.py,v 1.6.2.4 2005/12/07 22:27:49 obrien Exp $
 
 import os
 import sys
-#import file
 
 try:
     arch = os.environ["PKG_ARCH"]
@@ -20,10 +19,10 @@ except:
     arch = os.uname()[4]
 print "Using arch %s" % (arch)
 
-#if os.environ["PKG_VERBOSE"] == 1:
-verbose = 1
-#else:
-#    verbose = 0
+if 'PKG_VERBOSE' in os.environ:
+    verbose = 1
+else:
+    verbose = 0
 
 # List of packages for disc1.  This just includes packages sysinstall can
 # install as a distribution
