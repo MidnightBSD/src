@@ -39113,7 +39113,10 @@ usr.sbin/spray/Makefile -text
 usr.sbin/spray/spray.8 -text
 usr.sbin/spray/spray.c -text
 usr.sbin/sysinstall/Makefile -text
+usr.sbin/sysinstall/acpi.c -text
+usr.sbin/sysinstall/acpidump.h -text
 usr.sbin/sysinstall/anonFTP.c -text
+usr.sbin/sysinstall/biosmptable.c -text
 usr.sbin/sysinstall/cdrom.c -text
 usr.sbin/sysinstall/command.c -text
 usr.sbin/sysinstall/config.c -text

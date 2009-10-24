@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.6 2008/09/02 01:30:29 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.7 2009/05/20 21:41:40 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.35.2.1 2006/01/20 13:00:32 ceri Exp $
  *
  * Copyright (c) 1995
@@ -116,7 +116,7 @@ static Layout layout[] = {
     { 19, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
-    { 0 },
+    LAYOUT_END,
 };
 
 static int
@@ -169,8 +169,7 @@ createFtpUser(void)
 	return DITEM_SUCCESS; 	/* succeeds if already exists */
     }
     
-    sprintf(pwline, "%s:*:%s:%d::0:0:%s:%s:/nonexistent\n", 
-        FTP_NAME, tconf.uid, gid, tconf.comment, tconf.homedir);
+    sprintf(pwline, "%s:*:%s:%d::0:0:%s:%s:/nonexistent\n", FTP_NAME, tconf.uid, gid, tconf.comment, tconf.homedir);
     
     fptr = fopen(_PATH_MASTERPASSWD,"a");
     if (! fptr) {

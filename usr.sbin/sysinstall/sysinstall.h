@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.7 2009/05/20 23:33:31 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.8 2009/05/20 23:48:28 laffer1 Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -108,6 +108,7 @@
 #define VAR_DIST_MAIN			"distMain"
 #define VAR_DIST_SRC			"distSRC"
 #define VAR_DIST_X11			"distX11"
+#define VAR_DIST_KERNEL			"distKernel"
 #define VAR_DEDICATE_DISK		"dedicateDisk"
 #define VAR_DOMAINNAME			"domainname"
 #define VAR_EDITOR			"editor"
@@ -148,6 +149,7 @@
 #define VAR_MOUSED_PORT			"moused_port"
 #define VAR_MOUSED_TYPE			"moused_type"
 #define VAR_NAMESERVER			"nameserver"
+#define	VAR_NCPUS			"ncpus"
 #define VAR_NETINTERACTIVE		"netInteractive"
 #define VAR_NETMASK			"netmask"
 #define VAR_NETWORK_DEVICE		"netDev"
@@ -269,6 +271,9 @@ typedef struct _layout {
     void        *obj;           /* The obj pointer returned by libdialog */
 } Layout;
 
+/* Layout array terminator. */
+#define	LAYOUT_END		{ 0, 0, 0, 0, NULL, NULL, NULL, 0, NULL }
+
 typedef enum {
     DEVICE_TYPE_NONE,
     DEVICE_TYPE_DISK,
@@ -356,7 +361,7 @@ typedef struct _opt {
     enum { OPT_IS_STRING, OPT_IS_INT, OPT_IS_FUNC, OPT_IS_VAR } type;
     void *data;
     void *aux;
-    char *(*check)();
+    char *(*check)(struct _opt *);
 } Option;
 
 /* Weird index nodey things we use for keeping track of package information */
@@ -419,6 +424,7 @@ extern Device		*mediaDevice;		/* Where we're getting our distribution from	*/
 extern unsigned int	Dists;			/* Which distributions we want			*/
 extern unsigned int	SrcDists;		/* Which src distributions we want		*/
 extern unsigned int	XOrgDists;		/* Which X.Org dists we want			*/
+extern unsigned int	KernelDists;		/* Which kernel dists we want			*/
 extern int		BootMgr;		/* Which boot manager to use 			*/
 extern int		StatusLine;		/* Where to print our status messages		*/
 extern DMenu		MenuCountry;		/* Country menu				*/
@@ -468,11 +474,13 @@ extern DMenu		MenuDistributions;	/* Distribution menu				*/
 extern DMenu		MenuDiskDevices;	/* Disk type devices				*/
 extern DMenu		MenuSubDistributions;	/* Custom distribution menu			*/
 extern DMenu		MenuSrcDistributions;	/* Source distribution menu			*/
+extern DMenu		MenuKernelDistributions;/* Kernel distribution menu			*/
 extern DMenu		MenuHTMLDoc;		/* HTML Documentation menu			*/
 extern DMenu		MenuUsermgmt;		/* User management menu				*/
 extern DMenu		MenuFixit;		/* Fixit floppy/CDROM/shell menu		*/
-extern int              FixItMode;              /* FixItMode starts shell onc urrent device (ie Serial port) */
+extern int              FixItMode;              /* FixItMode starts shell on current device (ie Serial port) */
 extern const char *	StartName;		/* Which name we were started as */
+extern int		NCpus;			/* # cpus on machine */
 
 /* Important chunks. */
 extern Chunk *HomeChunk;
@@ -490,6 +498,9 @@ extern void display_helpfile(void);
 extern void display_helpline(WINDOW *w, int y, int width);
 
 /*** Prototypes ***/
+
+/* acpi.c */
+extern int	acpi_detect(void);
 
 /* anonFTP.c */
 extern int	configAnonFTP(dialogMenuItem *self);
@@ -591,7 +602,9 @@ extern int	distSetXUser(dialogMenuItem *self);
 extern int	distSetMinimum(dialogMenuItem *self);
 extern int	distSetEverything(dialogMenuItem *self);
 extern int	distSetSrc(dialogMenuItem *self);
+extern int	distSetKernel(dialogMenuItem *self);
 extern int	distExtractAll(dialogMenuItem *self);
+extern int	selectKernel(void);
 
 /* dmenu.c */
 extern int	dmenuDisplayFile(dialogMenuItem *tmp);
@@ -668,6 +681,7 @@ extern int	installFixitHoloShell(dialogMenuItem *self);
 extern int	installFixitCDROM(dialogMenuItem *self);
 extern int	installFixitFloppy(dialogMenuItem *self);
 extern int	installFixupBase(dialogMenuItem *self);
+extern int	installFixupKernel(dialogMenuItem *self, int dists);
 extern int	installUpgrade(dialogMenuItem *self);
 extern int	installFilesystems(dialogMenuItem *self);
 extern int	installVarDefaults(dialogMenuItem *self);
@@ -772,6 +786,9 @@ extern int	mousedTest(dialogMenuItem *self);
 extern int	mousedDisable(dialogMenuItem *self);
 extern int      setMouseFlags(dialogMenuItem *self);
 
+/* mptable.c */
+extern int	biosmptable_detect(void);
+
 /* msg.c */
 extern Boolean	isDebug(void);
 extern void	msgInfo(char *fmt, ...) __printf0like(1, 2);
@@ -844,9 +861,6 @@ extern void     configTtys(void);
 extern void	mediaShutdownUFS(Device *dev);
 extern Boolean	mediaInitUFS(Device *dev);
 extern FILE	*mediaGetUFS(Device *dev, char *file, Boolean probe);
-
-/* usb.c */
-extern void	usbInitialize(void);
 
 /* user.c */
 extern int	userAddGroup(dialogMenuItem *self);

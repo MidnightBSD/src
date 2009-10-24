@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.13 2009/02/09 16:51:55 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.14 2009/05/20 23:33:31 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -274,7 +274,7 @@ configFstab(dialogMenuItem *self)
  * returns number of lines read.  line contents
  * are malloc'd and must be freed by the caller.
  */
-int
+static int
 readConfig(char *config, char **lines, int max)
 {
     FILE *fp;
@@ -602,17 +602,6 @@ configSecurelevelNetworkSecure(dialogMenuItem *self)
 }
 
 int
-configSecurity(dialogMenuItem *self)
-{
-    WINDOW *w = savescr();
-
-    dialog_clear_norefresh();
-    dmenuOpenSimple(&MenuSecurity, FALSE);
-    restorescr(w);
-    return DITEM_SUCCESS;
-}
-
-int
 configResolv(dialogMenuItem *ditem)
 {
     FILE *fp;
@@ -878,13 +867,18 @@ configNFSServer(dialogMenuItem *self)
 int
 configRpcBind(dialogMenuItem *self)
 {
+    char *tmp, *tmp2;
     int retval = 0;
     int doupdate = 1;
 
     if (self != NULL) {
-    	retval = dmenuToggleVariable(self);
-	if (strcmp(variable_get(self->data), "YES") != 0)
-	    doupdate = 0;
+        retval = dmenuToggleVariable(self);
+        tmp = strdup(self->data);
+        if ((tmp2 = index(tmp, '=')) != NULL)
+            *tmp2 = '\0';
+        if (strcmp(variable_get(tmp), "YES") != 0)
+             doupdate = 0;
+        free(tmp);
     }
 
     if (doupdate && strcmp(variable_get(VAR_RPCBIND_ENABLE), "YES") != 0) {
