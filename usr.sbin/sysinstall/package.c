@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/package.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/package.c,v 1.103 2004/01/02 09:52:14 obrien Exp $
  */
 
@@ -116,8 +116,9 @@ package_extract(Device *dev, char *name, Boolean depended)
 {
     char path[MAXPATHLEN];
     const char *PkgExts[] = { "", ".tbz", ".tbz2", ".tgz" };
-    int ext, last_msg, pathend, ret;
+    int last_msg, pathend, ret;
     FILE *fp;
+    size_t ext;
 
     last_msg = 0;
 
