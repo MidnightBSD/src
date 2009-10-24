@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile.inc.docports,v 1.4 2007/02/07 15:50:03 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile.inc.docports,v 1.5 2007/07/26 13:40:42 laffer1 Exp $
 # $FreeBSD: src/release/Makefile.inc.docports,v 1.26 2004/09/01 14:36:48 ru Exp $
 #
 # List of (dependent) ports that are minimally required to be
@@ -29,7 +29,7 @@ MINIMALDOCPORTS+= \
 	mports/converters/libiconv \
 	mports/devel/gettext \
 	mports/devel/gmake \
-	mports/devel/libtool15 \
+	mports/devel/libtool22 \
 	mports/devel/pkg-config \
 	mports/graphics/gd \
 	mports/graphics/jbigkit \
@@ -66,6 +66,3 @@ MINIMALDOCPORTS+=	mports/textproc/openjade \
 .else
 MINIMALDOCPORTS+=	mports/textproc/jade
 .endif
-
-MINIMALDOCPORTS+= \
-	mports/lang/perl5.8

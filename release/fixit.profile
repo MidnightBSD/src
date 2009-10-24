@@ -1,14 +1,16 @@
 :
-# $MidnightBSD$
+# $MidnightBSD: src/release/fixit.profile,v 1.3 2006/10/01 21:50:12 laffer1 Exp $
 # $FreeBSD: src/release/fixit.profile,v 1.10 2004/09/02 13:40:34 keramida Exp $
 
 export BLOCKSIZE=K
 export PS1="Fixit# "
-export EDITOR="/mnt2/stand/vi"
-export PAGER="/mnt2/stand/more"
+export EDITOR="/mnt2/rescue/vi"
+export PAGER="/mnt2/usr/bin/more"
 export SCSI_MODES="/mnt2/usr/share/misc/scsi_modes"
 # the root MFS doesn't have /dev/nrsa0, pick a better default for mt(1)
 export TAPE=/mnt2/dev/nrsa0
+# make geom(8) utilities find their modules
+export GEOM_LIBRARY_PATH="/mnt2/lib/geom"
 
 alias ls="ls -F"
 alias ll="ls -l"

@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.21 2009/05/01 17:36:02 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.22 2009/05/20 21:30:19 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -161,8 +161,8 @@ RELEASEDISTFILES?=	${.CURDIR}/../../mports/Distfiles
 AUTO_KEYBOARD_DETECT?= 0
 
 .if !defined(NODOC)
-DIST_DOCS_ARCH_INDEP=	readme errata
-DIST_DOCS_ARCH_DEP=	installation relnotes hardware
+DIST_DOCS_ARCH_INDEP=	hardware readme relnotes errata
+DIST_DOCS_ARCH_DEP=
 .endif
 
 # Things which without too much trouble can be considered variables
@@ -175,6 +175,16 @@ ARCH_DISTS?=	lib32
 .endif
 DISTRIBUTIONS?=	${BASE_DISTS} ${OTHER_DISTS}
 
+#
+# Build and package both GENERIC and SMP kernels if the target
+# has both configuration files.  Otherwise only GENERIC is done.
+#
+.if exists(${.CURDIR}/../sys/${TARGET}/conf/SMP)
+KERNELS_BASE?= GENERIC SMP
+.else
+KERNELS_BASE?= GENERIC
+.endif
+
 # mountpoint for filesystems.
 MNT=			/mnt
 
@@ -184,6 +194,7 @@ MNT=			/mnt
 .undef MAKE_FLOPPIES
 .if ${TARGET_ARCH} == "i386"
 MAKE_FLOPPIES=		true
+SEPARATE_LIVEFS=
 SPLIT_MFSROOT=
 FLOPPYSIZE=		1440
 FLOPPYSPLITSIZE=	1392
@@ -200,15 +211,16 @@ MFSINODE=		8192
 MFSLABEL=		auto
 MINIROOT=
 .elif ${TARGET_ARCH} == "amd64"
-MAKE_FLOPPIES=          true
-FLOPPYSIZE=             1440
-FLOPPYSPLITSIZE=        1392
-FLOPPYINODE=            40000
-FLOPPYLABEL=            fd1440
-BOOTINODE=              80000
+MAKE_FLOPPIES=		true
+FLOPPYSIZE=		1440
+FLOPPYSPLITSIZE=	1392
+FLOPPYINODE=		40000
+FLOPPYLABEL=		fd1440
+BOOTINODE=		80000
 MFSSIZE=		4096
 MFSINODE=		8192
 MFSLABEL=		auto
+SEPARATE_LIVEFS=
 SPLIT_MFSROOT=
 .endif
 .if defined(NO_FLOPPIES)
@@ -234,6 +246,9 @@ CD_BOOT=		${CD}/bootonly
 CD_DISC1=		${CD}/disc1
 CD_DISC2=		${CD}/disc2
 CD_DISC3=		${CD}/disc3
+.if !defined(NODOC)
+CD_DOCS=		${CD}/docs
+.endif
 .if defined(SEPARATE_LIVEFS)
 CD_LIVEFS=		${CD}/livefs
 .else
@@ -332,9 +347,8 @@ release rerelease:
 .endif
 	mkdir -p ${CHROOTDIR}
 	@echo ">>> make release for ${TARGET} started on `LC_ALL=C TZ=GMT date`"
-	cd ${WORLDDIR} && ${NATIVEMAKE} -DNO_GAMES -DNO_HTML -DNO_INFO \
-	    -DNO_LIB32 -DNO_MAN -DNO_NLS -DNO_PROFILE installworld \
-	    DESTDIR=${CHROOTDIR}
+	cd ${WORLDDIR} && ${NATIVEMAKE} -DWITHOUT_GAMES -DWITHOUT_HTML -DWITHOUT_LIB32 \
+	    -DWITHOUT_MAN -DWITHOUT_NLS -DWITHOUT_PROFILE installworld DESTDIR=${CHROOTDIR}
 	cd ${WORLDDIR} && ${NATIVEMAKE} distribution DESTDIR=${CHROOTDIR}
 	if [ -f /etc/resolv.conf ]; then \
 		cp -p /etc/resolv.conf ${CHROOTDIR}/etc; \
@@ -364,7 +378,7 @@ release rerelease:
 	rm -rf ${CHROOTDIR}/usr/mports
 .if !defined(NOPORTSATALL)
 .if defined(EXTPORTSDIR)
-	cd ${CHROOTDIR}/usr && cp -H ${EXTPORTSDIR} mports
+	cd ${CHROOTDIR}/usr && cp -R -H ${EXTPORTSDIR} mports
 	# If there are distfiles downloaded removing them
 	rm -rf mports/Distfiles/*
 .else
@@ -375,7 +389,7 @@ release rerelease:
 .if !defined(NODOC)
 	rm -rf ${CHROOTDIR}/usr/doc
 .if defined(EXTDOCDIR)
-	cd ${CHROOTDIR}/usr && cp -H ${EXTDOCDIR} doc
+	cd ${CHROOTDIR}/usr && cp -R -H ${EXTDOCDIR} doc
 .else
 	cd ${CHROOTDIR}/usr && ${CVSPREFIX} cvs ${CVSARGS} -d ${CVSROOT} \
 	    co ${CVSCMDARGS} ${CVS_DOCARGS} ${RELEASEDOCMODULE}
@@ -441,6 +455,7 @@ release rerelease:
 	FTP_PROXY \
 	HTTP_PROXY \
 	KERNELS \
+	KERNELS_BASE \
 	KERNEL_FLAGS \
 	MAKE_FLOPPIES \
 	MAKE_ISOS \
@@ -452,7 +467,6 @@ release rerelease:
 	NO_CPU_CFLAGS \
 	NO_CPU_COPTFLAGS \
 	NO_FLOPPIES \
-	NO_SENDMAIL \
 	RELEASETAG \
 	RELNOTES_LANG \
 	SEPARATE_LIVEFS \
@@ -470,6 +484,10 @@ release rerelease:
 	# NB: these may fail if the host is running w/o devfs
 	echo "umount /dev >/dev/null 2>&1 || true" >> ${_MK}
 	echo "mount -t devfs devfs /dev >/dev/null 2>&1 || true"	>> ${_MK}
+	echo "if [ ! -c /dev/null ]; then" >> ${_MK}
+	echo "  echo /dev/null is not a device!" >> ${_MK}
+	echo "  exit 1" >> ${_MK}
+	echo "fi" >> ${_MK}
 	echo "if [ -x /etc/rc.d/ldconfig ]; then" >> ${_MK}
 	echo "	/etc/rc.d/ldconfig start"	>> ${_MK}
 	echo "else"				>> ${_MK}
@@ -535,7 +553,6 @@ release.1:
 	mkdir ${RD}/floppies
 .endif
 	mkdir ${RD}/trees
-	mkdir ${RD}/kernels
 	for i in ${DISTRIBUTIONS}; do \
 		mkdir ${RD}/trees/$$i && \
 		mtree -deU -f ${MTREEFILES}/BSD.root.dist \
@@ -547,32 +564,27 @@ release.1:
 		mtree -deU -f ${MTREEFILES}/BSD.var.dist \
 		    -p ${RD}/trees/$$i/var > /dev/null ; \
 	done
+	mkdir ${RD}/kernels
+	for i in ${KERNELS_BASE} ${KERNELS}; do \
+		mkdir -p ${RD}/kernels/$${i}; \
+	done
 	touch ${.TARGET}
 
 # Install the system into the various distributions.
 release.2:
-	cd ${.CURDIR}/../etc && make distrib-dirs DESTDIR=${RD}/trees/base
+	cd ${.CURDIR}/.. && ${CROSSMAKE} distrib-dirs DESTDIR=${RD}/trees/base
 	cd ${.CURDIR}/.. && ${CROSSMAKE} ${WORLD_FLAGS} distributeworld \
 	    DISTDIR=${RD}/trees
 	touch ${.TARGET}
 
 # Make and install the generic kernel(s).
 release.3:
-.for kernel in ${KERNELS}
-	cd ${.CURDIR}/..; \
-	${CROSSMAKE} ${KERNEL_FLAGS} -DNO_MODULES \
-	    KERNCONF=${kernel} INSTKERNNAME=${kernel} kernel \
-	    DESTDIR=${RD}/trees/base
-.endfor
-	# Install a standard boot kernel+modules.
+.for kernel in ${KERNELS_BASE} ${KERNELS}
 	cd ${.CURDIR}/..; \
 	${CROSSMAKE} ${KERNEL_FLAGS} \
-	    kernel \
-	    DESTDIR=${RD}/trees/base; \
-	cd ${.CURDIR}/..; \
-	${CROSSMAKE} ${KERNEL_FLAGS} -DNO_MODULES \
-	    reinstallkernel -DINSTALL_DEBUG \
-	    DESTDIR=${RD}/trees/base
+	KERNCONF=${kernel} kernel \
+	DESTDIR=${RD}/kernels KODIR=/${kernel}
+.endfor
 	touch ${.TARGET}
 
 # Make and install the three crunched binaries which live on the floppies.
@@ -584,7 +596,8 @@ release.4:
 .if exists(${.CURDIR}/${TARGET}/${j}_crunch.conf)
 	rm -rf ${j}_crunch
 	mkdir ${j}_crunch
-	cd ${j}_crunch; ${WMAKEENV} crunchgen -o \
+	cd ${j}_crunch; ${WMAKEENV} MAKEFLAGS="-m ${.CURDIR}/../share/mk" \
+	    crunchgen -o \
 	    ${.CURDIR}/${TARGET}/${j}_crunch.conf
 	cd ${j}_crunch; ${WMAKE} -f ${j}_crunch.mk subclean
 	cd ${.CURDIR}/..; ${BINMAKE} -f Makefile.inc1 _build-tools
@@ -627,6 +640,15 @@ release.6:
 			cd ${.CURDIR} && $(MAKE) doTARBALL \
 				SD=${RD}/trees/$${i} \
 				TN=$$i TD=$$i ARG="." && \
+			echo "$${i} distribution is finished."; \
+		fi ; \
+	done
+	@for i in ${KERNELS_BASE} ${KERNELS} ; \
+	do \
+		if [ -d ${RD}/kernels/$${i} ] ; then \
+			cd ${.CURDIR} && $(MAKE) doTARBALL \
+				SD=${RD}/kernels \
+				TN=$$i TD=kernels ARG="$$i" && \
 			echo "$${i} distribution is finished."; \
 		fi ; \
 	done
@@ -699,7 +721,6 @@ release.8:
 		ln -sf /stand $$dir; \
 	  done )
 	cp ${RD}/trees/base/sbin/dhclient-script ${RD}/mfsfd/stand
-#	cp ${RD}/trees/base/usr/bin/tar ${RD}/mfsfd/stand
 	cp ${.CURDIR}/../etc/master.passwd ${RD}/mfsfd/etc/master.passwd
 	cp ${RD}/trees/base/etc/*pwd.db ${RD}/mfsfd/etc/
 	( for F in defaults/rc.conf netconfig protocols ; do \
@@ -725,8 +746,6 @@ release.8:
 	  cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.txt \
 	      ${RD}/mfsfd/stand/help/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
 	done
-	@mv ${RD}/mfsfd/stand/help/INSTALLATION.TXT \
-	    ${RD}/mfsfd/stand/help/INSTALL.TXT
 .endif
 	-test -f ${.CURDIR}/install.cfg \
 	    && cp ${.CURDIR}/install.cfg ${RD}/mfsfd
@@ -756,7 +775,7 @@ SMALLMFSROOTFLOPPYSET=	${RD}/floppyset/mfsroot-small/mfsroot.gz
 
 # Build boot and install floppies.
 floppies.1:
-	@gzip -9nc ${RD}/trees/base/boot/kernel/kernel > ${RD}/kernels/kernel.gz
+	@gzip -9nc ${RD}/kernels/GENERIC/kernel > ${RD}/kernels/kernel.gz
 	@echo "Making the kernel boot floppies..."
 	@cd ${.CURDIR} && ${MAKE} makeFloppySet FLOPPYBASE=kern \
 	    FLOPPYDESC="Kernel" SPLITFILE=${RD}/kernels/kernel.gz
@@ -832,15 +851,8 @@ floppies.2:
 
 # Do our last minute floppies directory setup
 floppies.3:
-.if !defined(NODOC)
-	@cp ${RND}/${RELNOTES_LANG}/installation/${TARGET}/article.txt \
-	    ${RD}/floppies/README.TXT
-	@(cd ${RD}/floppies; md5 README.TXT *.flp > CHECKSUM.MD5)
-	@(cd ${RD}/floppies; sha256 README.TXT *.flp > CHECKSUM.SHA256)
-.else
 	@(cd ${RD}/floppies; md5 *.flp > CHECKSUM.MD5)
 	@(cd ${RD}/floppies; sha256 *.flp > CHECKSUM.SHA256)
-.endif
 	touch ${.TARGET}
 
 #
@@ -868,8 +880,6 @@ ftp.1:
 		    ${FD}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
 	done
 	@cp ${RND}/${RELNOTES_LANG}/readme/docbook.css ${FD}
-	@mv ${FD}/INSTALLATION.TXT ${FD}/INSTALL.TXT
-	@mv ${FD}/INSTALLATION.HTM ${FD}/INSTALL.HTM
 .endif
 	@echo "CD_VERSION = ${BUILDNAME}" > ${FD}/cdrom.inf
 	touch ${.TARGET}
@@ -883,9 +893,12 @@ cdrom.1:
 		if [ -d ${RD}/trees/$${i} ] ; then \
 			chflags -R noschg ${RD}/trees/$${i} || true ; \
 			( cd ${RD}/trees/$${i} && \
-			     pax -rw -k -p e -t -u . ${CD_LIVEFS} ) ; \
+			    pax -rw -k -p e -t -u . ${CD_LIVEFS} ) ; \
 		fi \
 	done
+	@echo "Copy GENERIC kernel to boot area"
+	@cp -Rp ${RD}/kernels/GENERIC/ ${CD_LIVEFS}/boot/kernel
+	@rm -f ${CD_LIVEFS}/boot/kernel/*.symbols
 	@rm -f ${CD_LIVEFS}/.profile
 	@cp ${.CURDIR}/fixit.profile ${CD_LIVEFS}/.profile
 	@ln -sf /rescue ${CD_LIVEFS}/stand
@@ -925,8 +938,6 @@ cdrom.2:
 	      ${CD_DISC1}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
 	done
 	@cp ${RND}/${RELNOTES_LANG}/readme/docbook.css ${CD_DISC1}
-	@mv ${CD_DISC1}/INSTALLATION.TXT ${CD_DISC1}/INSTALL.TXT
-	@mv ${CD_DISC1}/INSTALLATION.HTM ${CD_DISC1}/INSTALL.HTM
 .endif
 .if defined(SEPARATE_LIVEFS)
 	@cp -Rp ${CD_LIVEFS}/boot ${CD_DISC1}
@@ -942,12 +953,15 @@ cdrom.2:
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DISC3}/cdrom.inf
 	@echo "CD_VOLUME = 3" >> ${CD_DISC3}/cdrom.inf
 .if !defined(NODOC)
-	@mkdir -p ${CD_DISC2}/usr/share/doc
+	echo "Building CDROM docs filesystem image"
+	@mkdir -p ${CD_DOCS}
+	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DOCS}/cdrom.inf
+	@mkdir -p ${CD_DOCS}/usr/share/doc
 	@for i in `ls ${CD_LIVEFS}/usr/share/doc`; do \
 		if [ -L ${CD_LIVEFS}/usr/share/doc/$$i -o \
 		    -d /usr/doc/$$i ]; then \
 			mv ${CD_LIVEFS}/usr/share/doc/$$i \
-			    ${CD_DISC2}/usr/share/doc; \
+			    ${CD_DOCS}/usr/share/doc; \
 		fi \
 	done
 .endif
@@ -1006,6 +1020,11 @@ iso.1:
 	    MidnightBSD_Packages_2 \
 	    ${CD}/${BUILDNAME}-${TARGET}-disc3.iso ${CD_DISC3} \
 	    ${CD_DISC3_PKGS}
+.if !defined(NODOC)
+	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh \
+	    MidnightBSD_Documentation \
+	    ${CD}/${BUILDNAME}-${TARGET}-docs.iso ${CD_DOCS}
+.endif
 .if defined(SEPARATE_LIVEFS)
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh ${BOOTABLE} \
 	    MidnightBSD_LiveFS \
@@ -1180,7 +1199,7 @@ makeFloppySet:
 IMAGEDIR=	${RD}/image.${FSIMAGE}
 BOOTDIR=	${RD}/trees/base/boot
 HINTSFILE=	${BOOTDIR}/device.hints
-ACPI_KO=	${BOOTDIR}/kernel/acpi.ko
+ACPI_KO=	${RD}/kernels/GENERIC/acpi.ko
 IMAGEFILE=	${RD}/floppies/${FSIMAGE}.flp
 .if defined(FDSIZE) && ${FDSIZE} == "SMALL"
 FLPSIZE=	${SMALLFLOPPYSIZE}
