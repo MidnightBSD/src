@@ -75,12 +75,6 @@ set_termcap(void)
 	    }
 	}
 
-#ifdef PC98
-	if (!term) {
-	    if (setenv("TERM", "cons25w", 1) < 0)
-		return -1;
-	}
-#else
 	if (ColorDisplay) {
 	    if (!term) {
 		if (setenv("TERM", "cons25", 1) < 0)
@@ -93,7 +87,6 @@ set_termcap(void)
 		    return -1;
 	    }
 	}
-#endif
     }
     if (ioctl(0, TIOCGSIZE, &ts) == -1) {
 	msgDebug("Unable to get terminal size - errno %d\n", errno);

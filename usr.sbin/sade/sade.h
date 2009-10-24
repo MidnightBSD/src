@@ -269,11 +269,7 @@ extern Variable		*VarHead;		/* The head of the variable chain		*/
 extern int		BootMgr;		/* Which boot manager to use 			*/
 extern int		StatusLine;		/* Where to print our status messages		*/
 #if defined(__i386__) || defined(__amd64__)
-#ifdef PC98
-extern DMenu		MenuIPLType;		/* Type of IPL to write on the disk		*/
-#else
 extern DMenu		MenuMBRType;		/* Type of MBR to write on the disk		*/
-#endif
 #endif
 extern DMenu		MenuMain;       /* New main menu */
 extern DMenu    MenuDiskDevices;        /* Disk type devices                            */

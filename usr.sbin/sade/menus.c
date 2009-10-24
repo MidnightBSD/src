@@ -72,22 +72,6 @@ DMenu MenuMain = {
 };
 
 #if defined(__i386__) || defined(__amd64__)
-#ifdef PC98
-/* IPL type menu */
-DMenu MenuIPLType = {
-    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
-    "overwrite me",		/* will be disk specific label */
-    "If you want a FreeBSD Boot Manager, select \"BootMgr\".  If you would\n"
-    "prefer your Boot Manager to remain untouched then select \"None\".\n\n",
-    "Press F1 to read about drive setup",
-    "drives",
-    { { "BootMgr",	"Install the FreeBSD Boot Manager",
-	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, 0, 0, 0, 0 },
-      { "None",		"Leave the IPL untouched",
-	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 1 },
-      { NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0 } },
-};
-#else
 /* MBR type menu */
 DMenu MenuMBRType = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
@@ -111,7 +95,6 @@ DMenu MenuMBRType = {
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 2 },
       { NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0 } },
 };
-#endif /* PC98 */
 #endif /* __i386__ */
 
 
