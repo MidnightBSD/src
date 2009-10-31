@@ -36825,7 +36825,6 @@ usr.bin/m4/extern.h -text
 usr.bin/m4/gnum4.c -text
 usr.bin/m4/look.c -text
 usr.bin/m4/m4.1 -text
-usr.bin/m4/m4.ms -text
 usr.bin/m4/main.c -text
 usr.bin/m4/mdef.h -text
 usr.bin/m4/misc.c -text
