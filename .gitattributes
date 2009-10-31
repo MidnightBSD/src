@@ -36828,8 +36828,10 @@ usr.bin/m4/m4.1 -text
 usr.bin/m4/main.c -text
 usr.bin/m4/mdef.h -text
 usr.bin/m4/misc.c -text
+usr.bin/m4/parser.y -text
 usr.bin/m4/pathnames.h -text
 usr.bin/m4/stdd.h -text
+usr.bin/m4/tokenizer.l -text
 usr.bin/m4/trace.c -text
 usr.bin/mail/Makefile -text
 usr.bin/mail/USD.doc/mail0.nr -text

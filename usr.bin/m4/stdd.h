@@ -1,4 +1,4 @@
-/*	$OpenBSD: stdd.h,v 1.4 1999/11/09 18:16:18 deraadt Exp $	*/
+/*	$OpenBSD: stdd.h,v 1.5 2003/06/03 02:56:10 millert Exp $	*/
 /*	$NetBSD: stdd.h,v 1.2 1995/09/28 05:37:50 tls Exp $	*/
 
 /*-
@@ -16,11 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdd.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/m4/stdd.h,v 1.4 2002/07/15 02:15:12 jmallett Exp $
  */
 
 /*
@@ -49,9 +44,9 @@
 
 #define iswhite(c) ((c) == ' ' || (c) == '\t')
 
-/*
- * STREQ is an optimised strcmp(a,b)==0
- * STREQN is an optimised strncmp(a,b,n)==0; assumes n > 0
+/* 
+ * STREQ is an optimised strcmp(a,b)==0 
+ * STREQN is an optimised strncmp(a,b,n)==0; assumes n > 0 
  */
 #define STREQ(a, b) ((a)[0] == (b)[0] && strcmp(a, b) == 0)
 #define STREQN(a, b, n) ((a)[0] == (b)[0] && strncmp(a, b, n) == 0)

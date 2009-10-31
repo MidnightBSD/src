@@ -1,4 +1,4 @@
-/*	$OpenBSD: pathnames.h,v 1.4 1997/04/04 18:41:29 deraadt Exp $	*/
+/*	$OpenBSD: pathnames.h,v 1.5 2003/06/03 02:56:10 millert Exp $	*/
 /*	$NetBSD: pathnames.h,v 1.6 1995/09/29 00:27:55 cgd Exp $	*/
 
 /*
@@ -16,11 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/m4/pathnames.h,v 1.4 2002/05/02 05:25:23 jmallett Exp $
  */
 
 /*
@@ -50,8 +45,7 @@
 #define	UNIQUE		3			/* unique char location */
 #endif
 
-#if defined(unix) || defined(__FreeBSD__) || defined(__NetBSD__) || \
-	defined(__OpenBSD__)
+#if defined(unix) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define _PATH_DIVNAME	"/tmp/m4.0XXXXXXXXXX"	/* unix diversion files */
 #define UNIQUE		8			/* unique char location */
 #endif
