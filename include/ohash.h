@@ -1,6 +1,6 @@
 #ifndef OHASH_H
 #define OHASH_H
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/include/ohash.h,v 1.1 2007/03/24 07:56:45 archite Exp $ */
 /* $OpenBSD: ohash.h,v 1.7 2004/06/22 20:00:16 espie Exp $ */
 /* ex:ts=8 sw=4: 
  */
@@ -53,11 +53,11 @@ __BEGIN_DECLS
 void ohash_init(struct ohash *, unsigned, struct ohash_info *);
 void ohash_delete(struct ohash *);
 
-unsigned int ohash_lookup_string(struct ohash *, const char *, u_int32_t);
+unsigned int ohash_lookup_string(struct ohash *, const char *, uint32_t);
 unsigned int ohash_lookup_interval(struct ohash *, const char *,
-	    const char *, u_int32_t);
+	    const char *, uint32_t);
 unsigned int ohash_lookup_memory(struct ohash *, const char *,
-	    size_t, u_int32_t)
+	    size_t, uint32_t)
 		__attribute__ ((__bounded__(__string__,2,3)));
 void *ohash_find(struct ohash *, unsigned int);
 void *ohash_remove(struct ohash *, unsigned int);
@@ -67,7 +67,7 @@ void *ohash_next(struct ohash *, unsigned int *);
 unsigned int ohash_entries(struct ohash *);
 
 void *ohash_create_entry(struct ohash_info *, const char *, const char **);
-u_int32_t ohash_interval(const char *, const char **);
+uint32_t ohash_interval(const char *, const char **);
 
 unsigned int ohash_qlookupi(struct ohash *, const char *, const char **);
 unsigned int ohash_qlookup(struct ohash *, const char *);

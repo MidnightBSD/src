@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/lib/libc/ohash/ohash_qlookupi.c,v 1.1 2007/03/24 07:53:53 archite Exp $ */
 /* $OpenBSD: ohash_qlookupi.c,v 1.2 2004/06/22 20:00:17 espie Exp $ */
 /* ex:ts=8 sw=4: 
  */
@@ -23,7 +23,7 @@
 unsigned int
 ohash_qlookupi(struct ohash *h, const char *s, const char **e)
 {
-	u_int32_t hv;
+	uint32_t hv;
 
 	hv = ohash_interval(s, e);
 	return ohash_lookup_interval(h, s, *e, hv);
