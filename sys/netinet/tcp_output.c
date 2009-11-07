@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/netinet/tcp_output.c,v 1.5 2008/12/03 00:27:00 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/netinet/tcp_output.c,v 1.6 2009/01/11 02:45:04 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -938,7 +938,7 @@ send:
 	 * to read more data then can be buffered prior to transmitting on
 	 * the connection.
 	 */
-	if (recwin == 0)
+	if (th->th_win == 0)
 		tp->t_flags |= TF_RXWIN0SENT;
 	else
 		tp->t_flags &= ~TF_RXWIN0SENT;
