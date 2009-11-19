@@ -789,6 +789,7 @@ re_diag(sc)
 
 	ifp->if_flags |= IFF_PROMISC;
 	sc->rl_testmode = 1;
+	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	re_reset(sc);
 	re_init_locked(sc);
 	sc->rl_link = 1;
@@ -2047,6 +2048,7 @@ re_poll_locked(struct ifnet *ifp, enum poll_cmd cmd, int count)
 	sc->rxcycles = count;
 	re_rxeof(sc);
 	re_txeof(sc);
+	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
 		taskqueue_enqueue_fast(taskqueue_fast, &sc->rl_txtask);
@@ -2065,6 +2067,7 @@ re_poll_locked(struct ifnet *ifp, enum poll_cmd cmd, int count)
 		 */
 
 		if (status & RL_ISR_SYSTEM_ERR) {
+			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			re_reset(sc);
 			re_init_locked(sc);
 		}
@@ -2134,6 +2137,7 @@ re_int_task(arg, npending)
 		re_txeof(sc);
 
 	if (status & RL_ISR_SYSTEM_ERR) {
+		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 		re_reset(sc);
 		re_init_locked(sc);
 	}
@@ -2542,6 +2546,10 @@ re_init_locked(sc)
 
 	mii = device_get_softc(sc->rl_miibus);
 
+	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+		return;
+
+
 	/*
 	 * Cancel pending I/O and free all RX/TX buffers.
 	 */
@@ -2779,7 +2787,8 @@ re_ioctl(ifp, command, data)
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
 		RL_LOCK(sc);
-		re_setmulti(sc);
+		if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+			re_setmulti(sc);
 		RL_UNLOCK(sc);
 		break;
 	case SIOCGIFMEDIA:
@@ -2834,8 +2843,10 @@ re_ioctl(ifp, command, data)
 			else
 				ifp->if_hwassist &= ~CSUM_TSO;
 		}
-		if (reinit && ifp->if_drv_flags & IFF_DRV_RUNNING)
+		if (reinit && ifp->if_drv_flags & IFF_DRV_RUNNING) {
+			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			re_init(sc);
+		}
 		VLAN_CAPABILITIES(ifp);
 	    }
 		break;
@@ -2862,6 +2873,7 @@ re_watchdog(sc)
 
 	re_txeof(sc);
 	re_rxeof(sc);
+	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	re_init_locked(sc);
 }
 
