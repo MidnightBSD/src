@@ -1220,7 +1220,9 @@ static void
 pccard_intr(void *arg)
 {
 	struct pccard_function *pf = (struct pccard_function*) arg;
-	
+
+	if (pf->intr_handler == NULL)
+		return;	
 	pf->intr_handler(pf->intr_handler_arg);	
 }
 
