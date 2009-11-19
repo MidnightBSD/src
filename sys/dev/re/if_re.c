@@ -2873,7 +2873,6 @@ re_watchdog(sc)
 
 	re_txeof(sc);
 	re_rxeof(sc);
-	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	re_init_locked(sc);
 }
 
