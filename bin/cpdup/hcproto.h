@@ -1,15 +1,15 @@
 /*
  * HCPROTO.H
  *
- * $MidnightBSD: src/bin/cpdup/hcproto.h,v 1.2 2008/04/10 23:45:51 laffer1 Exp $
- * $DragonFly: src/bin/cpdup/hcproto.h,v 1.2 2008/04/10 22:09:08 dillon Exp $
+ * $MidnightBSD$
+ * $DragonFly: src/bin/cpdup/hcproto.h,v 1.4 2008/04/16 17:38:19 dillon Exp $
  */
 
 #ifndef _HCPROTO_H_
 #define _HCPROTO_H_
 
-#define HCPROTO_VERSION               2
-#define HCPROTO_VERSION_COMPAT        2
+#define HCPROTO_VERSION		2
+#define HCPROTO_VERSION_COMPAT	2
 
 #define HC_HELLO	0x0001
 

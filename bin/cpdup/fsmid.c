@@ -4,8 +4,8 @@
  * (c) Copyright 1997-1999,2006 by Matthew Dillon.  Permission to
  *     use and distribute based on the FreeBSD copyright.
  *
- * $MIdnightBSD$
- * $DragonFly: src/bin/cpdup/fsmid.c,v 1.2 2008/03/22 18:09:16 dillon Exp $
+ * $MidnightBSD$
+ * $DragonFly: src/bin/cpdup/fsmid.c,v 1.3 2008/11/10 14:30:02 swildner Exp $
  */
 
 #include "cpdup.h"
@@ -36,8 +36,8 @@ fsmid_flush(void)
 
 	    for (node = FSMIDBase; node; node = node->fid_Next) {
 		if (node->fid_Accessed && node->fid_Code) {
-		    fprintf(fo, "%016llx %d %s\n", 
-			node->fid_Code, 
+		    fprintf(fo, "%016jx %zu %s\n", 
+			(intmax_t)node->fid_Code, 
 			strlen(node->fid_Name),
 			node->fid_Name
 		    );
@@ -180,10 +180,7 @@ fsmid_check(int64_t fsmid, const char *dpath)
 {
     const char *dfile;
     int ddirlen;
-    int r;
     FSMIDNode *node;
-
-    r = -1;
 
     if ((dfile = strrchr(dpath, '/')) != NULL)
 	++dfile;

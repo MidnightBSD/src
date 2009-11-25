@@ -45,8 +45,8 @@
  *	- Is able to do incremental mirroring/backups via hardlinks from
  *	  the 'previous' version (supplied with -H path).
  *
- * $MidnightBSD: src/bin/cpdup/cpdup.c,v 1.2 2008/04/10 23:45:51 laffer1 Exp $
- * $DragonFly: src/bin/cpdup/cpdup.c,v 1.20 2008/04/10 22:09:08 dillon Exp $
+ * $MidnightBSD$
+ * $DragonFly: src/bin/cpdup/cpdup.c,v 1.32 2008/11/11 04:36:00 dillon Exp $
  */
 
 /*-
@@ -126,6 +126,7 @@ static void hltsetdino(struct hlink *, ino_t);
 int YesNo(const char *path);
 static int xrename(const char *src, const char *dst, u_long flags);
 static int xlink(const char *src, const char *dst, u_long flags);
+static int xremove(struct HostConf *host, const char *path);
 int WildCmp(const char *s1, const char *s2);
 static int DoCopy(copy_info_t info, int depth);
 
@@ -147,6 +148,10 @@ int ValidateOpt;
 int CurParallel;
 int MaxParallel = -1;
 int HardLinkCount;
+int ssh_argc;
+const char *ssh_argv[16];
+int RunningAsUser;
+int RunningAsRoot;
 const char *UseCpFile;
 const char *UseHLPath;
 const char *MD5CacheFile;
@@ -179,6 +184,9 @@ main(int ac, char **av)
     struct copy_info info;
 
     signal(SIGPIPE, SIG_IGN);
+
+    RunningAsUser = (geteuid() != 0);
+    RunningAsRoot = !RunningAsUser;
 
 #if USE_PTHREADS
     for (i = 0; i < HCTHASH_SIZE; ++i) {
@@ -245,6 +253,11 @@ main(int ac, char **av)
 	case 'H':
 	    UseHLPath = (*ptr) ? ptr : av[++i];
 	    break;
+	case 'F':
+	    if (ssh_argc >= 16)
+		fatal("too many -F options");
+	    ssh_argv[ssh_argc++] = (*ptr) ? ptr : av[++i];
+	    break;
 	case 'S':
 	    SlaveOpt = v;
 	    break;
@@ -305,7 +318,7 @@ main(int ac, char **av)
      * make any required connections.
      */
     if (src && (ptr = strchr(src, ':')) != NULL) {
-	asprintf(&SrcHost.host, "%*.*s", ptr - src, ptr - src, src);
+	asprintf(&SrcHost.host, "%*.*s", (int)(ptr - src), (int)(ptr - src), src);
 	src = ptr + 1;
 	if (UseCpFile) {
 	    fprintf(stderr, "The cpignore options are not currently supported for remote sources\n");
@@ -319,7 +332,7 @@ main(int ac, char **av)
 	    exit(1);
     }
     if (dst && (ptr = strchr(dst, ':')) != NULL) {
-	asprintf(&DstHost.host, "%*.*s", ptr - dst, ptr - dst, dst);
+	asprintf(&DstHost.host, "%*.*s", (int)(ptr - dst), (int)(ptr - dst), dst);
 	dst = ptr + 1;
 	if (UseFSMIDOpt) {
 	    fprintf(stderr, "The FSMID options are not currently supported for remote targets\n");
@@ -522,9 +535,9 @@ checkHLPath(struct stat *st1, const char *spath, const char *dpath)
      */
     if (hc_stat(&DstHost, hpath, &sthl) < 0 ||
 	st1->st_size != sthl.st_size ||
-	st1->st_uid != sthl.st_uid ||
-	st1->st_gid != sthl.st_gid ||
-	st1->st_mtime != sthl.st_mtime
+	st1->st_mtime != sthl.st_mtime ||
+	(RunningAsRoot && (st1->st_uid != sthl.st_uid ||
+			   st1->st_gid != sthl.st_gid))
     ) {
 	free(hpath);
 	return(NULL);
@@ -626,6 +639,7 @@ DoCopy(copy_info_t info, int depth)
     dev_t ddevNo = info->ddevNo;
     struct stat st1;
     struct stat st2;
+    unsigned long st2_flags;
     int r, mres, fres, st2Valid;
     struct hlink *hln;
     List *list = malloc(sizeof(List));
@@ -633,6 +647,7 @@ DoCopy(copy_info_t info, int depth)
 
     InitList(list);
     r = mres = fres = st2Valid = 0;
+    st2_flags = 0;
     size = 0;
     hln = NULL;
 
@@ -640,10 +655,19 @@ DoCopy(copy_info_t info, int depth)
 	r = 0;
 	goto done;
     }
+#ifdef SF_SNAPSHOT
+    /* skip snapshot files because they're sparse and _huge_ */
+    if (st1.st_flags & SF_SNAPSHOT)
+       return(0);
+#endif
     st2.st_mode = 0;	/* in case lstat fails */
     st2.st_flags = 0;	/* in case lstat fails */
-    if (dpath && hc_lstat(&DstHost, dpath, &st2) == 0)
+    if (dpath && hc_lstat(&DstHost, dpath, &st2) == 0) {
 	st2Valid = 1;
+#ifdef _ST_FLAGS_PRESENT_
+	st2_flags = st2.st_flags;
+#endif
+    }
 
     if (S_ISREG(st1.st_mode)) {
 	size = st1.st_size;
@@ -675,7 +699,7 @@ DoCopy(copy_info_t info, int depth)
 		    /*
 		     * hard link is not correct, attempt to unlink it
 		     */
-                    if (hc_remove(&DstHost, dpath) < 0) {
+                    if (xremove(&DstHost, dpath) < 0) {
 			logerr("%-32s hardlink: unable to unlink: %s\n", 
 			    ((dpath) ? dpath : spath), strerror(errno));
                         hltdelete(hln);
@@ -737,7 +761,7 @@ relink:
 	st2Valid
 	&& st1.st_mode == st2.st_mode
 #ifdef _ST_FLAGS_PRESENT_
-	&& st1.st_flags == st2.st_flags
+	&& (RunningAsUser || st1.st_flags == st2.st_flags)
 #endif
     ) {
 	if (S_ISLNK(st1.st_mode) || S_ISDIR(st1.st_mode)) {
@@ -762,9 +786,9 @@ relink:
 	} else {
 	    if (ForceOpt == 0 &&
 		st1.st_size == st2.st_size &&
-		st1.st_uid == st2.st_uid &&
-		st1.st_gid == st2.st_gid &&
-		st1.st_mtime == st2.st_mtime
+		st1.st_mtime == st2.st_mtime &&
+		(RunningAsUser || (st1.st_uid == st2.st_uid &&
+				   st1.st_gid == st2.st_gid))
 #ifndef NOMD5
 		&& (UseMD5Opt == 0 || !S_ISREG(st1.st_mode) ||
 		    (mres = md5_check(spath, dpath)) == 0)
@@ -776,20 +800,47 @@ relink:
 		&& (ValidateOpt == 0 || !S_ISREG(st1.st_mode) ||
 		    validate_check(spath, dpath) == 0)
 	    ) {
+		/*
+		 * The files are identical, but if we are not running as
+		 * root we might need to adjust ownership/group/flags.
+		 */
+		int changedown = 0;
+		int changedflags = 0;
                 if (hln)
 		    hltsetdino(hln, st2.st_ino);
+
+		if (RunningAsUser && (st1.st_uid != st2.st_uid ||
+				      st1.st_gid != st2.st_gid)) {
+			hc_chown(&DstHost, dpath, st1.st_uid, st1.st_gid);
+			changedown = 1;
+		}
+#ifdef _ST_FLAGS_PRESENT_
+		if (RunningAsUser && st1.st_flags != st2.st_flags) {
+			hc_chflags(&DstHost, dpath, st1.st_flags);
+			changedflags = 1;
+		}
+#endif
 		if (VerboseOpt >= 3) {
 #ifndef NOMD5
-		    if (UseMD5Opt)
-			logstd("%-32s md5-nochange\n", (dpath ? dpath : spath));
-		    else
+		    if (UseMD5Opt) {
+			logstd("%-32s md5-nochange",
+				(dpath ? dpath : spath));
+		    } else
 #endif
-		    if (UseFSMIDOpt)
-			logstd("%-32s fsmid-nochange\n", (dpath ? dpath : spath));
-		    else if (ValidateOpt)
-			logstd("%-32s nochange (contents validated)\n", (dpath ? dpath : spath));
-		    else
-			logstd("%-32s nochange\n", (dpath ? dpath : spath));
+		    if (UseFSMIDOpt) {
+			logstd("%-32s fsmid-nochange",
+				(dpath ? dpath : spath));
+		    } else if (ValidateOpt) {
+			logstd("%-32s nochange (contents validated)",
+				(dpath ? dpath : spath));
+		    } else {
+			logstd("%-32s nochange", (dpath ? dpath : spath));
+		    }
+		    if (changedown)
+			logstd(" (uid/gid differ)");
+		    if (changedflags)
+			logstd(" (flags differ)");
+		    logstd("\n");
 		}
 		CountSourceBytes += size;
 		CountSourceItems++;
@@ -814,6 +865,7 @@ relink:
 	}
 	if (dpath)
 	    RemoveRecur(dpath, ddevNo);
+	st2Valid = 0;
     }
 
     /*
@@ -830,18 +882,30 @@ relink:
 
 	    if (dpath) {
 		if (S_ISDIR(st2.st_mode) == 0) {
-		    hc_remove(&DstHost, dpath);
+		    xremove(&DstHost, dpath);
 		    if (hc_mkdir(&DstHost, dpath, st1.st_mode | 0700) != 0) {
 			logerr("%s: mkdir failed: %s\n", 
 			    (dpath ? dpath : spath), strerror(errno));
 			r = 1;
 			noLoop = 1;
 		    }
+
 		    /*
 		     * Matt: why don't you check error codes here?
+		     * (Because I'm an idiot... checks added!)
 		     */
-		    hc_lstat(&DstHost, dpath, &st2);
-		    hc_chown(&DstHost, dpath, st1.st_uid, st1.st_gid);
+		    if (hc_lstat(&DstHost, dpath, &st2) != 0) {
+			logerr("%s: lstat of newly made dir failed: %s\n",
+			    (dpath ? dpath : spath), strerror(errno));
+			r = 1;
+			noLoop = 1;
+		    }
+		    if (hc_chown(&DstHost, dpath, st1.st_uid, st1.st_gid) != 0){
+			logerr("%s: chown of newly made dir failed: %s\n",
+			    (dpath ? dpath : spath), strerror(errno));
+			r = 1;
+			noLoop = 1;
+		    }
 		    CountCopiedItems++;
 		} else {
 		    /*
@@ -859,16 +923,35 @@ relink:
 		}
 	    }
 
-	    if ((int)sdevNo >= 0 && st1.st_dev != sdevNo) {
+	    /*
+	     * When copying a directory, stop if the source crosses a mount
+	     * point.
+	     */
+	    if (sdevNo != (dev_t)-1 && st1.st_dev != sdevNo) {
 		noLoop = 1;
 	    } else {
 		sdevNo = st1.st_dev;
 	    }
 
-	    if ((int)ddevNo >= 0 && st2.st_dev != ddevNo) {
-		noLoop = 1;
-	    } else {
-		ddevNo = st2.st_dev;
+	    /*
+	     * When copying a directory, stop if the destination crosses
+	     * a mount point.
+	     *
+	     * The target directory will have been created and stat'd
+	     * for st2 if it did not previously exist.   st2Valid is left
+	     * as a flag.  If the stat failed st2 will still only have its
+	     * default initialization.
+	     *
+	     * So we simply assume here that the directory is within the
+	     * current target mount if we had to create it (aka st2Valid is 0)
+	     * and we leave ddevNo alone.
+	     */
+	    if (st2Valid) {
+		    if (ddevNo != (dev_t)-1 && st2.st_dev != ddevNo) {
+			noLoop = 1;
+		    } else {
+			ddevNo = st2.st_dev;
+		    }
 	    }
 
 	    /*
@@ -893,7 +976,7 @@ relink:
 			CountSourceReadBytes += l;
 			if (l && buf[l-1] == '\n')
 			    buf[--l] = 0;
-			if (buf[0] && buf[0] != '#')
+			if (buf[0])
 			    AddList(list, buf, 1);
 		    }
 		    fclose(fi);
@@ -1064,7 +1147,10 @@ relink:
 	int fd1;
 	int fd2;
 
-	path = mprintf("%s.tmp%d", dpath, (int)getpid());
+	if (st2Valid)
+		path = mprintf("%s.tmp%d", dpath, (int)getpid());
+	else
+		path = mprintf("%s", dpath);
 
 	/*
 	 * Handle check failure message.
@@ -1088,7 +1174,7 @@ relink:
 	 */
 	if (UseHLPath && (hpath = checkHLPath(&st1, spath, dpath)) != NULL) {
 		if (st2Valid)
-			hc_remove(&DstHost, dpath);
+			xremove(&DstHost, dpath);
 		if (hc_link(&DstHost, hpath, dpath) == 0) {
 			++CountLinkedItems;
 			if (VerboseOpt) {
@@ -1140,10 +1226,15 @@ relink:
 		    tv[0].tv_sec = st1.st_mtime;
 		    tv[1].tv_sec = st1.st_mtime;
 
-		    hc_utimes(&DstHost, path, tv);
 		    hc_chown(&DstHost, path, st1.st_uid, st1.st_gid);
 		    hc_chmod(&DstHost, path, st1.st_mode);
-		    if (xrename(path, dpath, st2.st_flags) != 0) {
+#ifdef _ST_FLAGS_PRESENT_
+		    if (st1.st_flags & (UF_IMMUTABLE|SF_IMMUTABLE))
+			hc_utimes(&DstHost, path, tv);
+#else
+		    hc_utimes(&DstHost, path, tv);
+#endif
+		    if (st2Valid && xrename(path, dpath, st2_flags) != 0) {
 			logerr("%-32s rename-after-copy failed: %s\n",
 			    (dpath ? dpath : spath), strerror(errno)
 			);
@@ -1156,6 +1247,10 @@ relink:
 			    hc_chflags(&DstHost, dpath, st1.st_flags);
 #endif
 		    }
+#ifdef _ST_FLAGS_PRESENT_
+		    if ((st1.st_flags & (UF_IMMUTABLE|SF_IMMUTABLE)) == 0)
+			hc_utimes(&DstHost, dpath, tv);
+#endif
 		    CountSourceReadBytes += size;
 		    CountWriteBytes += size;
 		    CountSourceBytes += size;
@@ -1198,17 +1293,22 @@ skip_copy:
     } else if (S_ISLNK(st1.st_mode)) {
 	char *link1 = malloc(GETLINKSIZE);
 	char *link2 = malloc(GETLINKSIZE);
-	char *path = malloc(GETPATHSIZE);
+	char *path;
 	int n1;
 	int n2;
 
-	snprintf(path, GETPATHSIZE, "%s.tmp%d", dpath, (int)getpid());
 	n1 = hc_readlink(&SrcHost, spath, link1, GETLINKSIZE - 1);
-	n2 = hc_readlink(&DstHost, dpath, link2, GETLINKSIZE - 1);
+	if (st2Valid) {
+		path = mprintf("%s.tmp%d", dpath, (int)getpid());
+		n2 = hc_readlink(&DstHost, dpath, link2, GETLINKSIZE - 1);
+	} else {
+		path = mprintf("%s", dpath);
+		n2 = -1;
+	}
 	if (n1 >= 0) {
 	    if (ForceOpt || n1 != n2 || bcmp(link1, link2, n1) != 0) {
 		hc_umask(&DstHost, ~st1.st_mode);
-		hc_remove(&DstHost, path);
+		xremove(&DstHost, path);
 		link1[n1] = 0;
 		if (hc_symlink(&DstHost, link1, path) < 0) {
                       logerr("%-32s symlink (%s->%s) failed: %s\n",
@@ -1222,7 +1322,7 @@ skip_copy:
 		     * there is no lchmod() or lchflags(), we 
 		     * cannot chmod or chflags a softlink.
 		     */
-		    if (xrename(path, dpath, st2.st_flags) != 0) {
+		    if (st2Valid && xrename(path, dpath, st2_flags) != 0) {
 			logerr("%-32s rename softlink (%s->%s) failed: %s\n",
 			    (dpath ? dpath : spath),
 			    path, dpath, strerror(errno));
@@ -1250,7 +1350,7 @@ skip_copy:
 	free(link2);
 	free(path);
     } else if ((S_ISCHR(st1.st_mode) || S_ISBLK(st1.st_mode)) && DeviceOpt) {
-	char *path = malloc(GETPATHSIZE);
+	char *path = NULL;
 
 	if (ForceOpt ||
 	    st2Valid == 0 || 
@@ -1259,14 +1359,19 @@ skip_copy:
 	    st1.st_uid != st2.st_uid ||
 	    st1.st_gid != st2.st_gid
 	) {
-	    snprintf(path, GETPATHSIZE, "%s.tmp%d", dpath, (int)getpid());
+	    if (st2Valid) {
+		path = mprintf("%s.tmp%d", dpath, (int)getpid());
+		xremove(&DstHost, path);
+	    } else {
+		path = mprintf("%s", dpath);
+	    }
 
-	    hc_remove(&DstHost, path);
 	    if (hc_mknod(&DstHost, path, st1.st_mode, st1.st_rdev) == 0) {
 		hc_chmod(&DstHost, path, st1.st_mode);
 		hc_chown(&DstHost, path, st1.st_uid, st1.st_gid);
-		hc_remove(&DstHost, dpath);
-		if (xrename(path, dpath, st2.st_flags) != 0) {
+		if (st2Valid)
+			xremove(&DstHost, dpath);
+		if (st2Valid && xrename(path, dpath, st2_flags) != 0) {
 		    logerr("%-32s dev-rename-after-create failed: %s\n",
 			(dpath ? dpath : spath),
 			strerror(errno)
@@ -1285,7 +1390,8 @@ skip_copy:
 	    if (VerboseOpt >= 3)
 		logstd("%-32s nochange\n", (dpath ? dpath : spath));
 	}
-	free(path);
+	if (path)
+		free(path);
 	CountSourceItems++;
     }
 done:
@@ -1312,7 +1418,7 @@ RemoveRecur(const char *dpath, dev_t devNo)
     struct stat st;
 
     if (hc_lstat(&DstHost, dpath, &st) == 0) {
-	if ((int)devNo < 0)
+	if (devNo == (dev_t)-1)
 	    devNo = st.st_dev;
 	if (st.st_dev == devNo) {
 	    if (S_ISDIR(st.st_mode)) {
@@ -1359,7 +1465,7 @@ RemoveRecur(const char *dpath, dev_t devNo)
 	    } else {
 		if (AskConfirmation && NoRemoveOpt == 0) {
 		    if (YesNo(dpath)) {
-			if (hc_remove(&DstHost, dpath) < 0) {
+			if (xremove(&DstHost, dpath) < 0) {
 			    logerr("%-32s remove failed: %s\n",
 				dpath, strerror(errno)
 			    );
@@ -1370,7 +1476,7 @@ RemoveRecur(const char *dpath, dev_t devNo)
 		    if (NoRemoveOpt) {
 			if (VerboseOpt)
 			    logstd("%-32s not-removed\n", dpath);
-		    } else if (hc_remove(&DstHost, dpath) == 0) {
+		    } else if (xremove(&DstHost, dpath) == 0) {
 			if (VerboseOpt)
 			    logstd("%-32s remove-ok\n", dpath);
 			CountRemovedItems++;
@@ -1548,8 +1654,6 @@ xrename(const char *src, const char *dst, u_long flags)
 {
     int r;
 
-    r = 0;
-
     if ((r = hc_rename(&DstHost, src, dst)) < 0) {
 #ifdef _ST_FLAGS_PRESENT_
 	hc_chflags(&DstHost, dst, 0);
@@ -1568,8 +1672,6 @@ xlink(const char *src, const char *dst, u_long flags)
     int e;
 #endif
 
-    r = 0;
-
     if ((r = hc_link(&DstHost, src, dst)) < 0) {
 #ifdef _ST_FLAGS_PRESENT_
 	hc_chflags(&DstHost, src, 0);
@@ -1582,5 +1684,20 @@ xlink(const char *src, const char *dst, u_long flags)
     if (r == 0)
 	    ++CountLinkedItems;
     return(r);
+}
+
+static int
+xremove(struct HostConf *host, const char *path)
+{
+    int res;
+
+    res = hc_remove(host, path);
+#ifdef _ST_FLAGS_PRESENT_
+    if (res == -EPERM) {
+	hc_chflags(host, path, 0);
+	res = hc_remove(host, path);
+    }
+#endif
+    return(res);
 }
 

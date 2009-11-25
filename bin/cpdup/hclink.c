@@ -3,8 +3,8 @@
  *
  * This module implements a simple remote control protocol
  *
- * $MidnightBSD: src/bin/cpdup/hclink.c,v 1.2 2008/04/10 23:45:51 laffer1 Exp $
- * $DragonFly: src/bin/cpdup/hclink.c,v 1.5 2008/04/10 22:09:08 dillon Exp $
+ * $MidnightBSD$
+ * $DragonFly: src/bin/cpdup/hclink.c,v 1.10 2008/05/24 17:21:36 dillon Exp $
  */
 
 #include "cpdup.h"
@@ -22,7 +22,7 @@ hcc_connect(struct HostConf *hc)
 {
     int fdin[2];
     int fdout[2];
-    const char *av[16];
+    const char *av[32];
 
     if (hc == NULL || hc->host == NULL)
 	return(0);
@@ -38,7 +38,7 @@ hcc_connect(struct HostConf *hc)
 	/*
 	 * Child process
 	 */
-	int n;
+	int n, m;
 
 	dup2(fdin[1], 1);
 	close(fdin[0]);
@@ -51,6 +51,8 @@ hcc_connect(struct HostConf *hc)
 	av[n++] = "ssh";
 	if (CompressOpt)
 	    av[n++] = "-C";
+	for (m = 0; m < ssh_argc; m++)
+	    av[n++] = ssh_argv[m];
 	av[n++] = "-T";
 	av[n++] = hc->host;
 	av[n++] = "cpdup";
@@ -249,8 +251,8 @@ hcc_read_command(struct HostConf *hc, hctransaction_t trans)
 #endif
 	{
 	    fprintf(stderr, 
-		    "cpdup hlink protocol error with %s (%04x %04x)\n",
-		    hc->host, trans->id, tmp.id);
+		    "cpdup hlink protocol error with %s (%04x)\n",
+		    hc->host, tmp.id);
 	    exit(1);
 	}
     }

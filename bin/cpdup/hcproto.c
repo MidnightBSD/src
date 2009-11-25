@@ -3,7 +3,8 @@
  *
  * This module implements a simple remote control protocol
  *
- * $DragonFly: src/bin/cpdup/hcproto.c,v 1.6 2008/04/16 17:38:19 dillon Exp $
+ * $MidnightBSD$
+ * $DragonFly: src/bin/cpdup/hcproto.c,v 1.8 2008/11/11 04:36:00 dillon Exp $
  */
 
 #include "cpdup.h"
@@ -68,6 +69,31 @@ struct HCDesc HCDispatchTable[] = {
     { HC_RENAME,	rc_rename },
     { HC_UTIMES,	rc_utimes },
 };
+
+static int chown_warning;
+static int chflags_warning;
+
+/*
+ * If not running as root generate a silent warning and return no error.
+ *
+ * If running as root return an error.
+ */
+static int
+silentwarning(int *didwarn, const char *ctl, ...)
+{
+    va_list va;
+
+    if (RunningAsRoot)
+	return(-1);
+    if (*didwarn == 0) {
+	*didwarn = 1;
+	fprintf(stderr, "WARNING: Not running as root, ");
+	va_start(va, ctl);
+	vfprintf(stderr, ctl, va);
+	va_end(va);
+    }
+    return(0);
+}
 
 int
 hc_connect(struct HostConf *hc)
@@ -336,7 +362,7 @@ hc_opendir(struct HostConf *hc, const char *path)
     struct HCHead *head;
     struct HCLeaf *item;
     struct dirent *den;
-    long desc = 0;
+    intptr_t desc = 0;
 
     if (hc == NULL || hc->host == NULL)
 	return(opendir(path));
@@ -355,8 +381,8 @@ hc_opendir(struct HostConf *hc, const char *path)
 	}
     }
     if (hcc_get_descriptor(hc, desc, HC_DESC_DIR)) {
-	fprintf(stderr, "hc_opendir: remote reused active descriptor %d\n",
-		desc);
+	    fprintf(stderr, "hc_opendir: remote reused active descriptor %jd\n",
+		(intmax_t)desc);
 	return(NULL);
     }
     den = malloc(sizeof(*den));
@@ -406,12 +432,12 @@ hc_readdir(struct HostConf *hc, DIR *dir)
 	return(readdir(dir));
 
     trans = hcc_start_command(hc, HC_READDIR);
-    hcc_leaf_int32(trans, LC_DESCRIPTOR, (long)dir);
+    hcc_leaf_int32(trans, LC_DESCRIPTOR, (intptr_t)dir);
     if ((head = hcc_finish_command(trans)) == NULL)
 	return(NULL);
     if (head->error)
 	return(NULL);	/* XXX errno */
-    den = hcc_get_descriptor(hc, (long)dir, HC_DESC_DIR);
+    den = hcc_get_descriptor(hc, (intptr_t)dir, HC_DESC_DIR);
     if (den == NULL)
 	return(NULL);	/* XXX errno */
     if (den->d_name)
@@ -476,13 +502,13 @@ hc_closedir(struct HostConf *hc, DIR *dir)
 
     if (hc == NULL || hc->host == NULL)
 	return(closedir(dir));
-    den = hcc_get_descriptor(hc, (long)dir, HC_DESC_DIR);
+    den = hcc_get_descriptor(hc, (intptr_t)dir, HC_DESC_DIR);
     if (den) {
 	free(den);
-	hcc_set_descriptor(hc, (long)dir, NULL, HC_DESC_DIR);
+	hcc_set_descriptor(hc, (intptr_t)dir, NULL, HC_DESC_DIR);
 
 	trans = hcc_start_command(hc, HC_CLOSEDIR);
-	hcc_leaf_int32(trans, LC_DESCRIPTOR, (long)dir);
+	hcc_leaf_int32(trans, LC_DESCRIPTOR, (intptr_t)dir);
 	if ((head = hcc_finish_command(trans)) == NULL)
 	    return(-1);
 	if (head->error)
@@ -859,22 +885,29 @@ rc_write(hctransaction_t trans, struct HCHead *head)
 
 /*
  * REMOVE
+ *
+ * NOTE: This function returns -errno if an error occured.
  */
 int
 hc_remove(struct HostConf *hc, const char *path)
 {
     hctransaction_t trans;
     struct HCHead *head;
+    int res;
 
-    if (hc == NULL || hc->host == NULL)
-	return(remove(path));
+    if (hc == NULL || hc->host == NULL) {
+	res = remove(path);
+	if (res < 0)
+		res = -errno;
+	return(res);
+    }
 
     trans = hcc_start_command(hc, HC_REMOVE);
     hcc_leaf_string(trans, LC_PATH1, path);
     if ((head = hcc_finish_command(trans)) == NULL)
-	return(-1);
+	return(-EIO);
     if (head->error)
-	return(-1);
+	return(-(int)head->error);
     return(0);
 }
 
@@ -981,15 +1014,22 @@ rc_rmdir(hctransaction_t trans __unused, struct HCHead *head)
 
 /*
  * CHOWN
+ *
+ * Almost silently ignore chowns that fail if we are not root.
  */
 int
 hc_chown(struct HostConf *hc, const char *path, uid_t owner, gid_t group)
 {
     hctransaction_t trans;
     struct HCHead *head;
+    int rc;
 
-    if (hc == NULL || hc->host == NULL)
-	return(chown(path, owner, group));
+    if (hc == NULL || hc->host == NULL) {
+	rc = chown(path, owner, group);
+	if (rc < 0)
+	    rc = silentwarning(&chown_warning, "file ownership may differ\n");
+	return(rc);
+    }
 
     trans = hcc_start_command(hc, HC_CHOWN);
     hcc_leaf_string(trans, LC_PATH1, path);
@@ -1009,6 +1049,7 @@ rc_chown(hctransaction_t trans __unused, struct HCHead *head)
     const char *path = NULL;
     uid_t uid = (uid_t)-1;
     gid_t gid = (gid_t)-1;
+    int rc;
 
     for (item = hcc_firstitem(head); item; item = hcc_nextitem(head, item)) {
 	switch(item->leafid) {
@@ -1025,7 +1066,10 @@ rc_chown(hctransaction_t trans __unused, struct HCHead *head)
     }
     if (path == NULL)
 	return(-1);
-    return(chown(path, uid, gid));
+    rc = chown(path, uid, gid);
+    if (rc < 0)
+	rc = silentwarning(&chown_warning, "file ownership may differ\n");
+    return(rc);
 }
 
 /*
@@ -1036,9 +1080,14 @@ hc_lchown(struct HostConf *hc, const char *path, uid_t owner, gid_t group)
 {
     hctransaction_t trans;
     struct HCHead *head;
+    int rc;
 
-    if (hc == NULL || hc->host == NULL)
-	return(lchown(path, owner, group));
+    if (hc == NULL || hc->host == NULL) {
+	rc = lchown(path, owner, group);
+	if (rc < 0)
+	    rc = silentwarning(&chown_warning, "file ownership may differ\n");
+	return(rc);
+    }
 
     trans = hcc_start_command(hc, HC_LCHOWN);
     hcc_leaf_string(trans, LC_PATH1, path);
@@ -1058,6 +1107,7 @@ rc_lchown(hctransaction_t trans __unused, struct HCHead *head)
     const char *path = NULL;
     uid_t uid = (uid_t)-1;
     gid_t gid = (gid_t)-1;
+    int rc;
 
     for (item = hcc_firstitem(head); item; item = hcc_nextitem(head, item)) {
 	switch(item->leafid) {
@@ -1074,7 +1124,10 @@ rc_lchown(hctransaction_t trans __unused, struct HCHead *head)
     }
     if (path == NULL)
 	return(-1);
-    return(lchown(path, uid, gid));
+    rc = lchown(path, uid, gid);
+    if (rc < 0)
+	rc = silentwarning(&chown_warning, "file ownership may differ\n");
+    return(rc);
 }
 
 /*
@@ -1223,9 +1276,20 @@ hc_chflags(struct HostConf *hc, const char *path, u_long flags)
 {
     hctransaction_t trans;
     struct HCHead *head;
+    int rc;
 
-    if (hc == NULL || hc->host == NULL)
-	return(chflags(path, flags));
+    if (hc == NULL || hc->host == NULL) {
+	rc = chflags(path, flags);
+	if (rc < 0) {
+	    if (RunningAsUser) {
+		flags &= UF_SETTABLE;
+		rc = chflags(path, flags);
+	    }
+	    if (rc < 0)
+		rc = silentwarning(&chflags_warning, "file flags may differ\n");
+	}
+	return (rc);
+    }
 
     trans = hcc_start_command(hc, HC_CHFLAGS);
     hcc_leaf_string(trans, LC_PATH1, path);
@@ -1243,6 +1307,7 @@ rc_chflags(hctransaction_t trans __unused, struct HCHead *head)
     struct HCLeaf *item;
     const char *path = NULL;
     u_long flags = 0;
+    int rc;
 
     for (item = hcc_firstitem(head); item; item = hcc_nextitem(head, item)) {
 	switch(item->leafid) {
@@ -1256,7 +1321,16 @@ rc_chflags(hctransaction_t trans __unused, struct HCHead *head)
     }
     if (path == NULL)
 	return(-2);
-    return(chflags(path, flags));
+    rc = chflags(path, flags);
+    if (rc < 0) {
+	if (RunningAsUser) {
+	    flags &= UF_SETTABLE;
+	    rc = chflags(path, flags);
+	}
+	if (rc < 0)
+	    rc = silentwarning(&chflags_warning, "file flags may differ\n");
+    }
+    return(rc);
 }
 
 #endif

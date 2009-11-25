@@ -1,8 +1,8 @@
 /*
  * CPDUP.H
  *
- * $MidnightBSD: src/bin/cpdup/cpdup.h,v 1.2 2008/04/10 23:45:51 laffer1 Exp $
- * $DragonFly: src/bin/cpdup/cpdup.h,v 1.7 2008/04/10 22:09:08 dillon Exp $
+ * $MidnightBSD$
+ * $DragonFly: src/bin/cpdup/cpdup.h,v 1.9 2008/04/14 05:40:51 dillon Exp $
  */
 
 #include <sys/param.h>
@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -49,6 +50,11 @@ extern const char *FSMIDCacheFile;
 extern int SummaryOpt;
 extern int CompressOpt;
 extern int CurParallel;
+extern int RunningAsUser;
+extern int RunningAsRoot;
+
+extern int ssh_argc;
+extern const char *ssh_argv[];
 
 extern int64_t CountSourceBytes;
 extern int64_t CountSourceItems;

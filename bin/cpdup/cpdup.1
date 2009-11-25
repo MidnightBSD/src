@@ -1,10 +1,9 @@
-.\" (c) Copyright 1997-1999 by Matthew Dillon and Dima Ruban.  Permission to
+.\" (c) Copyright 1997-2009 by Matthew Dillon and Dima Ruban.  Permission to
 .\"    use and distribute based on the DragonFly copyright.  Supplied as-is,
 .\"    USE WITH EXTREME CAUTION.
+.\" $MidnightBSD$
 .\"
-.\" $MidnightBSD: src/bin/cpdup/cpdup.1,v 1.2 2008/04/10 23:45:51 laffer1 Exp $
-.\" $DragonFly: src/bin/cpdup/cpdup.1,v 1.28 2008/04/10 22:09:08 dillon Exp $
-.Dd August 16, 2008
+.Dd November 24, 2009
 .Dt CPDUP 1
 .Os
 .Sh NAME
@@ -17,6 +16,7 @@
 .Op Fl u
 .Op Fl I
 .Op Fl f
+.Op Fl F<ssh-arg>
 .Op Fl s0
 .Op Fl i0
 .Op Fl j0
@@ -98,6 +98,8 @@ the
 option is used, this option will force a byte for byte comparison
 between the original file and the file in the hardlink path, even if
 all the stat info matches, but will still use a hardlink if they match.
+.It Fl F<ssh-arg>
+Pass <ssh-arg> to ssh.  For example '-F-p222'.  Note the lack of a space.
 .It Fl s0
 Disable the disallow-file-replaces-directory safety feature.  This
 safety feature is enabled by default to prevent user mistakes from blowing
@@ -162,7 +164,7 @@ WARNING: If this option is used
 must record the paths for all files it encounters while it operates
 and it is possible that you may run the process out of memory.
 .Pp
-The file found vi the hardlink path will be byte-by-byte compared with the
+The file found via the hardlink path will be byte-by-byte compared with the
 source if the
 .Fl V
 or
@@ -251,7 +253,8 @@ and was placed under the
 copyright for inclusion in the ports area in 1999.
 The program was written by Matthew Dillon and Dima Ruban.
 .Sh BUGS
-UFS has a hardlink limit of 32767.  Many programs, in particular CVS
+.Xr UFS 5
+has a hardlink limit of 32767.  Many programs, in particular CVS
 with regards to its CVS/Root file, will generate a lot of hard links.
 When using the
 .Fl H
