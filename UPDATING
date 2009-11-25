@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users
 
+20091024:
+	cpdup updated from DragonFly to 1.15
+
+	tzdata2009s updated with latest timezone data for November 2009.
+
 20091010:
 	amd64 users should use WITHOUT_LIB32=yes in /etc/make.conf for now
 	to test current.
@@ -759,4 +764,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.67 2009/10/08 01:27:04 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.68 2009/10/11 15:12:14 laffer1 Exp $
