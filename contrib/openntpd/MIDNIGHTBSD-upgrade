@@ -1,0 +1,16 @@
+$MidnightBSD: src/contrib/mksh/MIDNIGHTBSD-upgrade,v 1.2 2009/11/26 15:44:25 laffer1 Exp $
+
+Directions for updating OpenNTPD
+
+1) Obtain the latest sources from OpenBSD FTP
+2) Unpack sources.
+3) Port to MidnightBSD.  (portable version no longer available)
+4) Perform a test import of unpatched sources
+ (change version number as needed)
+cvs -q -n import -m "Import OpenNTPD 4.4" src/contrib/openntpd OPENNTPD v4_4
+
+5) if all goes well, 
+cvs import -m "Import OpenNTPD 4.4" src/contrib/openntpd OPENNTPD v4_4
+
+6) Commit local changes to non vendor branch
+7) update the Makefile and config files as necessary

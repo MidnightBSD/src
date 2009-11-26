@@ -11286,6 +11286,7 @@ contrib/openntpd/CREDITS -text
 contrib/openntpd/ChangeLog -text
 contrib/openntpd/INSTALL -text
 contrib/openntpd/LICENCE -text
+contrib/openntpd/MIDNIGHTBSD-upgrade -text
 contrib/openntpd/Makefile -text
 contrib/openntpd/Makefile.in -text
 contrib/openntpd/README -text
