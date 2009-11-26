@@ -1,4 +1,4 @@
-.\" $OpenBSD: ntpd.conf.5,v 1.9 2004/11/08 19:09:19 otto Exp $
+.\" $OpenBSD: ntpd.conf.5,v 1.20 2008/06/09 16:37:35 ckuethe Exp $
 .\"
 .\" Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
 .\"
@@ -14,7 +14,7 @@
 .\" AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 .\" OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd June 17, 2004
+.Dd $Mdocdate: June 9 2008 $
 .Dt NTPD.CONF 5
 .Os
 .Sh NAME
@@ -24,7 +24,20 @@
 This manual page describes the format of the
 .Xr ntpd 8
 configuration file.
-It has the following format:
+.Pp
+The optional
+.Ic weight
+keyword permits finer control over the relative importance
+of time sources (servers or sensor devices).
+Weights are specified in the range 1 to 10;
+if no weight is given,
+the default is 1.
+A server with a weight of 5, for example,
+will have five times more influence on time offset calculation
+than a server with a weight of 1.
+.Pp
+.Nm
+has the following format:
 .Pp
 Empty lines and lines beginning with the
 .Sq #
@@ -50,10 +63,61 @@ does not listen on any address by default.
 For example:
 .Bd -literal -offset indent
 listen on *
+.Ed
+.Pp
+or
+.Bd -literal -offset indent
 listen on 127.0.0.1
 listen on ::1
 .Ed
-.It Ic server Ar address
+.It Xo Ic sensor Ar device
+.Op Ic correction Ar microseconds
+.Op Ic weight Ar weight-value
+.Op Ic refid Ar string
+.Xc
+Specify a timedelta sensor device
+.Xr ntpd 8
+should use.
+The sensor can be specified multiple times:
+.Xr ntpd 8
+will use each given sensor that actually exists.
+Non-existent sensors are ignored.
+If
+.Sq *
+is given as device name,
+.Xr ntpd 8
+will use all timedelta sensors it finds.
+.Xr ntpd 8
+does not use any timedelta sensor by default.
+For example:
+.Bd -literal -offset indent
+sensor *
+sensor udcf0
+.Ed
+.Pp
+An optional correction in microseconds can be given to compensate
+for the sensor's offset.
+The maximum correction is 127 seconds.
+For example, if a DCF77 receiver is lagging 15ms behind
+actual time:
+.Bd -literal -offset indent
+sensor udcf0 correction 15000
+.Ed
+.Pp
+An optional reference ID string - up to 4 ASCII characters - can be
+given to publish the sensor type to clients.
+RFC 2030 suggests some common reference identifiers, but new identifiers
+"can be contrived as appropriate."
+If an ID string is not given,
+.Xr ntpd 8
+will use a generic reference ID.
+For example:
+.Bd -literal -offset indent
+sensor msts0 refid GPS
+.Ed
+.It Xo Ic server Ar address
+.Op Ic weight Ar weight-value
+.Xc
 Specify the IP address or the hostname of an NTP
 server to synchronize to.
 If it appears multiple times,
@@ -68,14 +132,16 @@ retries with the next address and continues to do so until a working address
 is found.
 For example:
 .Bd -literal -offset indent
-server 10.0.0.2
-server ntp.example.org
+server 10.0.0.2 weight 5
+server ntp.example.org weight 1
 .Ed
 .Pp
 To provide redundancy, it is good practice to configure multiple servers.
 In general, best accuracy is obtained by using servers that have a low
 network latency.
-.It Ic servers Ar address
+.It Xo Ic servers Ar address
+.Op Ic weight Ar weight-value
+.Xc
 As with
 .Cm server ,
 specify the IP address or hostname of an NTP server to synchronize to.
@@ -98,7 +164,8 @@ default
 configuration file
 .El
 .Sh SEE ALSO
-.Xr ntpd 8
+.Xr ntpd 8 ,
+.Xr sysctl 8
 .Sh HISTORY
 The
 .Nm

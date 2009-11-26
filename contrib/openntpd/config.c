@@ -1,4 +1,4 @@
-/*	$OpenBSD: config.c,v 1.18 2005/05/11 15:12:35 henning Exp $ */
+/*	$OpenBSD: config.c,v 1.19 2006/05/27 17:01:07 henning Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -15,8 +15,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
-#include "includes.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -77,9 +75,7 @@ host_v4(const char *s)
 	if ((h = calloc(1, sizeof(struct ntp_addr))) == NULL)
 		fatal(NULL);
 	sa_in = (struct sockaddr_in *)&h->ss;
-#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 	sa_in->sin_len = sizeof(struct sockaddr_in);
-#endif
 	sa_in->sin_family = AF_INET;
 	sa_in->sin_addr.s_addr = ina.s_addr;
 
@@ -101,17 +97,13 @@ host_v6(const char *s)
 		if ((h = calloc(1, sizeof(struct ntp_addr))) == NULL)
 			fatal(NULL);
 		sa_in6 = (struct sockaddr_in6 *)&h->ss;
-#ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
 		sa_in6->sin6_len = sizeof(struct sockaddr_in6);
-#endif
 		sa_in6->sin6_family = AF_INET6;
 		memcpy(&sa_in6->sin6_addr,
 		    &((struct sockaddr_in6 *)res->ai_addr)->sin6_addr,
 		    sizeof(sa_in6->sin6_addr));
-#ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_SCOPE_ID
 		sa_in6->sin6_scope_id =
 		    ((struct sockaddr_in6 *)res->ai_addr)->sin6_scope_id;
-#endif
 
 		freeaddrinfo(res);
 	}
@@ -149,16 +141,12 @@ host_dns(const char *s, struct ntp_addr **hn)
 		h->ss.ss_family = res->ai_family;
 		if (res->ai_family == AF_INET) {
 			sa_in = (struct sockaddr_in *)&h->ss;
-#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 			sa_in->sin_len = sizeof(struct sockaddr_in);
-#endif
 			sa_in->sin_addr.s_addr = ((struct sockaddr_in *)
 			    res->ai_addr)->sin_addr.s_addr;
 		} else {
 			sa_in6 = (struct sockaddr_in6 *)&h->ss;
-#ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
 			sa_in6->sin6_len = sizeof(struct sockaddr_in6);
-#endif
 			memcpy(&sa_in6->sin6_addr, &((struct sockaddr_in6 *)
 			    res->ai_addr)->sin6_addr, sizeof(struct in6_addr));
 		}
@@ -179,8 +167,21 @@ new_peer(void)
 	struct ntp_peer	*p;
 
 	if ((p = calloc(1, sizeof(struct ntp_peer))) == NULL)
-		fatal("conf_main server calloc");
+		fatal("new_peer calloc");
 	p->id = ++maxid;
 
 	return (p);
+}
+
+struct ntp_conf_sensor *
+new_sensor(char *device)
+{
+	struct ntp_conf_sensor	*s;
+
+	if ((s = calloc(1, sizeof(struct ntp_conf_sensor))) == NULL)
+		fatal("new_sensor calloc");
+	if ((s->device = strdup(device)) == NULL)
+		fatal("new_sensor strdup");
+
+	return (s);
 }

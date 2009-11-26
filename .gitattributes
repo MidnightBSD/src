@@ -11344,6 +11344,7 @@ contrib/openntpd/openbsd-compat/strlcpy.c -text
 contrib/openntpd/openbsd-compat/sys-queue.h -text
 contrib/openntpd/openbsd-compat/verrx.c -text
 contrib/openntpd/parse.y -text
+contrib/openntpd/sensors.c -text
 contrib/openntpd/server.c -text
 contrib/openntpd/util.c -text
 contrib/openntpd/version.h -text

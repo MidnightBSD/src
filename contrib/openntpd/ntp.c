@@ -1,4 +1,4 @@
-/*	$OpenBSD: ntp.c,v 1.67 2005/08/10 13:48:36 dtucker Exp $ */
+/*	$OpenBSD: ntp.c,v 1.106 2008/06/10 03:46:09 naddy Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -17,19 +17,13 @@
  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "includes.h"
-
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
-#ifdef HAVE_PATHS_H
-# include <paths.h>
-#endif
-#ifdef HAVE_POLL_H
-# include <poll.h>
-#endif
+#include <paths.h>
+#include <poll.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -38,21 +32,24 @@
 #include <unistd.h>
 
 #include "ntpd.h"
-#include "ntp.h"
 
 #define	PFD_PIPE_MAIN	0
-#define	PFD_MAX		1
+#define	PFD_HOTPLUG	1
+#define	PFD_MAX		2
 
 volatile sig_atomic_t	 ntp_quit = 0;
+volatile sig_atomic_t	 ntp_report = 0;
 struct imsgbuf		*ibuf_main;
 struct ntpd_conf	*conf;
 u_int			 peer_cnt;
+u_int			 sensors_cnt;
+time_t			 lastreport;
 
 void	ntp_sighdlr(int);
 int	ntp_dispatch_imsg(void);
 void	peer_add(struct ntp_peer *);
 void	peer_remove(struct ntp_peer *);
-int	offset_compare(const void *, const void *);
+void	report_peers(int);
 
 void
 ntp_sighdlr(int sig)
@@ -62,27 +59,30 @@ ntp_sighdlr(int sig)
 	case SIGTERM:
 		ntp_quit = 1;
 		break;
+	case SIGINFO:
+		ntp_report = 1;
+		break;
 	}
 }
 
 pid_t
-ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
+ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf, struct passwd *pw)
 {
-	int			 a, b, nfds, i, j, idx_peers, timeout, nullfd;
+	int			 a, b, nfds, i, j, idx_peers, timeout;
+	int			 hotplugfd, nullfd;
 	u_int			 pfd_elms = 0, idx2peer_elms = 0;
 	u_int			 listener_cnt, new_cnt, sent_cnt, trial_cnt;
 	pid_t			 pid;
 	struct pollfd		*pfd = NULL;
-	struct passwd		*pw;
 	struct servent		*se;
 	struct listen_addr	*la;
 	struct ntp_peer		*p;
 	struct ntp_peer		**idx2peer = NULL;
+	struct ntp_sensor	*s, *next_s;
 	struct timespec		 tp;
 	struct stat		 stb;
-	time_t			 nextaction;
+	time_t			 nextaction, last_sensor_scan = 0;
 	void			*newp;
-	char			*chrootdir;
 
 	switch (pid = fork()) {
 	case -1:
@@ -94,26 +94,24 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 		return (pid);
 	}
 
+	/* in this case the parent didn't init logging and didn't daemonize */
+	if (nconf->settime && !nconf->debug) {
+		log_init(nconf->debug);
+		if (setsid() == -1)
+			fatal("setsid");
+	}
 	if ((se = getservbyname("ntp", "udp")) == NULL)
 		fatal("getservbyname");
 
-	if ((pw = getpwnam(NTPD_USER)) == NULL)
-		fatal("getpwnam");
-
 	if ((nullfd = open(_PATH_DEVNULL, O_RDWR, 0)) == -1)
 		fatal(NULL);
+	hotplugfd = sensor_hotplugfd();
 
-#ifdef NTPD_CHROOT_DIR
-	chrootdir = NTPD_CHROOT_DIR;
-#else
-	chrootdir = pw->pw_dir;
-#endif
-
-	if (stat(chrootdir, &stb) == -1)
+	if (stat(pw->pw_dir, &stb) == -1)
 		fatal("stat");
 	if (stb.st_uid != 0 || (stb.st_mode & (S_IWGRP|S_IWOTH)) != 0)
-		fatal("bad privsep dir permissions");
-	if (chroot(chrootdir) == -1)
+		fatalx("bad privsep dir permissions");
+	if (chroot(pw->pw_dir) == -1)
 		fatal("chroot");
 	if (chdir("/") == -1)
 		fatal("chdir(\"/\")");
@@ -139,8 +137,10 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 
 	signal(SIGTERM, ntp_sighdlr);
 	signal(SIGINT, ntp_sighdlr);
+	signal(SIGINFO, ntp_sighdlr);
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, SIG_IGN);
+	signal(SIGCHLD, SIG_DFL);
 
 	close(pipe_prnt[0]);
 	if ((ibuf_main = malloc(sizeof(struct imsgbuf))) == NULL)
@@ -151,6 +151,15 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 		client_peer_init(p);
 
 	bzero(&conf->status, sizeof(conf->status));
+
+	conf->freq.num = 0;
+	conf->freq.samples = 0;
+	conf->freq.x = 0.0;
+	conf->freq.xx = 0.0;
+	conf->freq.xy = 0.0;
+	conf->freq.y = 0.0;
+	conf->freq.overall_offset = 0.0;
+
 	conf->status.synced = 0;
 	clock_getres(CLOCK_REALTIME, &tp);
 	b = 1000000000 / tp.tv_nsec;	/* convert to Hz */
@@ -159,11 +168,16 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 	conf->status.precision = a;
 	conf->scale = 1;
 
+	sensor_init();
+
 	log_info("ntp engine ready");
 
 	peer_cnt = 0;
 	TAILQ_FOREACH(p, &conf->ntp_peers, entry)
 		peer_cnt++;
+
+	/* wait 5 min before reporting first status to let things settle down */
+	lastreport = time(NULL) + (5 * 60) - REPORT_INTERVAL;
 
 	while (ntp_quit == 0) {
 		if (peer_cnt > idx2peer_elms) {
@@ -193,11 +207,13 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 
 		bzero(pfd, sizeof(struct pollfd) * pfd_elms);
 		bzero(idx2peer, sizeof(void *) * idx2peer_elms);
-		nextaction = time(NULL) + 3600;
+		nextaction = getmonotime() + 3600;
 		pfd[PFD_PIPE_MAIN].fd = ibuf_main->fd;
 		pfd[PFD_PIPE_MAIN].events = POLLIN;
+		pfd[PFD_HOTPLUG].fd = hotplugfd;
+		pfd[PFD_HOTPLUG].events = POLLIN;
 
-		i = 1;
+		i = PFD_MAX;
 		TAILQ_FOREACH(la, &conf->listen_addrs, entry) {
 			pfd[i].fd = la->fd;
 			pfd[i].events = POLLIN;
@@ -207,19 +223,14 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 		idx_peers = i;
 		sent_cnt = trial_cnt = 0;
 		TAILQ_FOREACH(p, &conf->ntp_peers, entry) {
-			if (p->next > 0 && p->next <= time(NULL)) {
+			if (p->next > 0 && p->next <= getmonotime()) {
 				if (p->state > STATE_DNS_INPROGRESS)
 					trial_cnt++;
 				if (client_query(p) == 0)
 					sent_cnt++;
 			}
-			if (p->next > 0 && p->next < nextaction)
-				nextaction = p->next;
-
-			if (p->deadline > 0 && p->deadline < nextaction)
-				nextaction = p->deadline;
-			if (p->deadline > 0 && p->deadline <= time(NULL)) {
-				timeout = error_interval();
+			if (p->deadline > 0 && p->deadline <= getmonotime()) {
+				timeout = 300;
 				log_debug("no reply from %s received in time, "
 				    "next query %ds", log_sockaddr(
 				    (struct sockaddr *)&p->addr->ss), timeout);
@@ -231,8 +242,22 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 				client_nextaddr(p);
 				set_next(p, timeout);
 			}
+			if (p->senderrors > MAX_SEND_ERRORS) {
+				log_debug("failed to send query to %s, "
+				    "next query %ds", log_sockaddr(
+				    (struct sockaddr *)&p->addr->ss),
+				    INTERVAL_QUERY_PATHETIC);
+				p->senderrors = 0;
+				client_nextaddr(p);
+				set_next(p, INTERVAL_QUERY_PATHETIC);
+			}
+			if (p->next > 0 && p->next < nextaction)
+				nextaction = p->next;
+			if (p->deadline > 0 && p->deadline < nextaction)
+				nextaction = p->deadline;
 
-			if (p->state == STATE_QUERY_SENT) {
+			if (p->state == STATE_QUERY_SENT &&
+			    p->query->fd != -1) {
 				pfd[i].fd = p->query->fd;
 				pfd[i].events = POLLIN;
 				idx2peer[i - idx_peers] = p;
@@ -240,14 +265,32 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 			}
 		}
 
+		if (last_sensor_scan == 0 ||
+		    last_sensor_scan + SENSOR_SCAN_INTERVAL < getmonotime()) {
+			sensors_cnt = sensor_scan();
+			last_sensor_scan = getmonotime();
+		}
+		if (!TAILQ_EMPTY(&conf->ntp_conf_sensors) && sensors_cnt == 0 &&
+		    nextaction > last_sensor_scan + SENSOR_SCAN_INTERVAL)
+			nextaction = last_sensor_scan + SENSOR_SCAN_INTERVAL;
+		sensors_cnt = 0;
+		TAILQ_FOREACH(s, &conf->ntp_sensors, entry) {
+			if (conf->settime && s->offsets[0].offset)
+				priv_settime(s->offsets[0].offset);
+			sensors_cnt++;
+			if (s->next > 0 && s->next < nextaction)
+				nextaction = s->next;
+		}
+
 		if (conf->settime &&
-		    ((trial_cnt > 0 && sent_cnt == 0) || peer_cnt == 0))
+		    ((trial_cnt > 0 && sent_cnt == 0) ||
+		    (peer_cnt == 0 && sensors_cnt == 0)))
 			priv_settime(0);	/* no good peers, don't wait */
 
 		if (ibuf_main->w.queued > 0)
 			pfd[PFD_PIPE_MAIN].events |= POLLOUT;
 
-		timeout = nextaction - time(NULL);
+		timeout = nextaction - getmonotime();
 		if (timeout < 0)
 			timeout = 0;
 
@@ -269,6 +312,11 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 				ntp_quit = 1;
 		}
 
+		if (nfds > 0 && pfd[PFD_HOTPLUG].revents & (POLLIN|POLLERR)) {
+			nfds--;
+			sensor_hotplugevent(hotplugfd);
+		}
+
 		for (j = 1; nfds > 0 && j < idx_peers; j++)
 			if (pfd[j].revents & (POLLIN|POLLERR)) {
 				nfds--;
@@ -283,6 +331,15 @@ ntp_main(int pipe_prnt[2], struct ntpd_conf *nconf)
 				    conf->settime) == -1)
 					ntp_quit = 1;
 			}
+
+		for (s = TAILQ_FIRST(&conf->ntp_sensors); s != NULL;
+		    s = next_s) {
+			next_s = TAILQ_NEXT(s, entry);
+			if (s->next <= getmonotime())
+				sensor_query(s);
+		}
+		report_peers(ntp_report);
+		ntp_report = 0;
 	}
 
 	msgbuf_write(&ibuf_main->w);
@@ -358,9 +415,13 @@ ntp_dispatch_imsg(void)
 				dlen -= sizeof(h->ss);
 				if (peer->addr_head.pool) {
 					npeer = new_peer();
+					npeer->weight = peer->weight;
 					h->next = NULL;
 					npeer->addr = h;
 					npeer->addr_head.a = h;
+					npeer->addr_head.name =
+					    peer->addr_head.name;
+					npeer->addr_head.pool = 1;
 					client_peer_init(npeer);
 					npeer->state = STATE_DNS_DONE;
 					peer_add(npeer);
@@ -401,87 +462,150 @@ peer_remove(struct ntp_peer *p)
 	peer_cnt--;
 }
 
-void
+static void
+priv_adjfreq(double offset)
+{
+	double curtime, freq;
+
+	if (!conf->status.synced)
+		return;
+
+	conf->freq.samples++;
+
+	if (conf->freq.samples <= 0)
+		return;
+
+	conf->freq.overall_offset += offset;
+	offset = conf->freq.overall_offset;
+
+	curtime = gettime_corrected();
+	conf->freq.xy += offset * curtime;
+	conf->freq.x += curtime;
+	conf->freq.y += offset;
+	conf->freq.xx += curtime * curtime;
+
+	if (conf->freq.samples % FREQUENCY_SAMPLES != 0)
+		return;
+
+	freq =
+	    (conf->freq.xy - conf->freq.x * conf->freq.y / conf->freq.samples)
+	    /
+	    (conf->freq.xx - conf->freq.x * conf->freq.x / conf->freq.samples);
+
+	if (freq > MAX_FREQUENCY_ADJUST)
+		freq = MAX_FREQUENCY_ADJUST;
+	else if (freq < -MAX_FREQUENCY_ADJUST)
+		freq = -MAX_FREQUENCY_ADJUST;
+
+	imsg_compose(ibuf_main, IMSG_ADJFREQ, 0, 0, &freq, sizeof(freq));
+	conf->freq.xy = 0.0;
+	conf->freq.x = 0.0;
+	conf->freq.y = 0.0;
+	conf->freq.xx = 0.0;
+	conf->freq.samples = 0;
+	conf->freq.overall_offset = 0.0;
+	conf->freq.num++;
+}
+
+int
 priv_adjtime(void)
 {
-	struct ntp_peer	 *p;
-	int		  offset_cnt = 0, i = 0;
-	struct ntp_peer	**peers;
-	double		  offset_median;
+	struct ntp_peer		 *p;
+	struct ntp_sensor	 *s;
+	int			  offset_cnt = 0, i = 0, j;
+	struct ntp_offset	**offsets;
+	double			  offset_median;
 
 	TAILQ_FOREACH(p, &conf->ntp_peers, entry) {
 		if (p->trustlevel < TRUSTLEVEL_BADPEER)
 			continue;
 		if (!p->update.good)
-			return;
-		offset_cnt++;
+			return (1);
+		offset_cnt += p->weight;
 	}
 
-	if ((peers = calloc(offset_cnt, sizeof(struct ntp_peer *))) == NULL)
+	TAILQ_FOREACH(s, &conf->ntp_sensors, entry) {
+		if (!s->update.good)
+			continue;
+		offset_cnt += s->weight;
+	}
+
+	if (offset_cnt == 0)
+		return (1);
+
+	if ((offsets = calloc(offset_cnt, sizeof(struct ntp_offset *))) == NULL)
 		fatal("calloc priv_adjtime");
 
 	TAILQ_FOREACH(p, &conf->ntp_peers, entry) {
 		if (p->trustlevel < TRUSTLEVEL_BADPEER)
 			continue;
-		peers[i++] = p;
+		for (j = 0; j < p->weight; j++)
+			offsets[i++] = &p->update;
 	}
 
-	qsort(peers, offset_cnt, sizeof(struct ntp_peer *), offset_compare);
-
-	if (offset_cnt > 0) {
-		if (offset_cnt > 1 && offset_cnt % 2 == 0) {
-			offset_median =
-			    (peers[offset_cnt / 2 - 1]->update.offset +
-			    peers[offset_cnt / 2]->update.offset) / 2;
-			conf->status.rootdelay =
-			    (peers[offset_cnt / 2 - 1]->update.delay +
-			    peers[offset_cnt / 2]->update.delay) / 2;
-			conf->status.stratum = MAX(
-			    peers[offset_cnt / 2 - 1]->update.status.stratum,
-			    peers[offset_cnt / 2]->update.status.stratum);
-		} else {
-			offset_median = peers[offset_cnt / 2]->update.offset;
-			conf->status.rootdelay =
-			    peers[offset_cnt / 2]->update.delay;
-			conf->status.stratum =
-			    peers[offset_cnt / 2]->update.status.stratum;
-		}
-		conf->status.leap = peers[offset_cnt / 2]->update.status.leap;
-
-		imsg_compose(ibuf_main, IMSG_ADJTIME, 0, 0,
-		    &offset_median, sizeof(offset_median));
-
-		conf->status.reftime = gettime();
-		conf->status.stratum++;	/* one more than selected peer */
-		update_scale(offset_median);
-
-		conf->status.refid4 =
-		    peers[offset_cnt / 2]->update.status.refid4;
-		if (peers[offset_cnt / 2]->addr->ss.ss_family == AF_INET)
-			conf->status.refid = ((struct sockaddr_in *)
-			    &peers[offset_cnt / 2]->addr->ss)->sin_addr.s_addr;
-		else
-			conf->status.refid = conf->status.refid4;
+	TAILQ_FOREACH(s, &conf->ntp_sensors, entry) {
+		if (!s->update.good)
+			continue;
+		for (j = 0; j < s->weight; j++)
+			offsets[i++] = &s->update;
 	}
 
-	free(peers);
+	qsort(offsets, offset_cnt, sizeof(struct ntp_offset *), offset_compare);
 
-	TAILQ_FOREACH(p, &conf->ntp_peers, entry)
+	i = offset_cnt / 2;
+	if (offset_cnt % 2 == 0) {
+		offset_median =
+		    (offsets[i - 1]->offset + offsets[i]->offset) / 2;
+		conf->status.rootdelay =
+		    (offsets[i - 1]->delay + offsets[i]->delay) / 2;
+		conf->status.stratum = MAX(
+		    offsets[i - 1]->status.stratum, offsets[i]->status.stratum);
+	} else {
+		offset_median = offsets[i]->offset;
+		conf->status.rootdelay = offsets[i]->delay;
+		conf->status.stratum = offsets[i]->status.stratum;
+	}
+	conf->status.leap = offsets[i]->status.leap;
+
+	imsg_compose(ibuf_main, IMSG_ADJTIME, 0, 0,
+	    &offset_median, sizeof(offset_median));
+
+	priv_adjfreq(offset_median);
+
+	conf->status.reftime = gettime();
+	conf->status.stratum++;	/* one more than selected peer */
+	update_scale(offset_median);
+
+	conf->status.refid = offsets[i]->status.send_refid;
+
+	free(offsets);
+
+	TAILQ_FOREACH(p, &conf->ntp_peers, entry) {
+		for (i = 0; i < OFFSET_ARRAY_SIZE; i++)
+			p->reply[i].offset -= offset_median;
 		p->update.good = 0;
+	}
+	TAILQ_FOREACH(s, &conf->ntp_sensors, entry) {
+		for (i = 0; i < SENSOR_OFFSETS; i++)
+			s->offsets[i].offset -= offset_median;
+		s->update.offset -= offset_median;
+	}
+
+	return (0);
 }
 
 int
 offset_compare(const void *aa, const void *bb)
 {
-	const struct ntp_peer * const *a;
-	const struct ntp_peer * const *b;
+	const struct ntp_offset * const *a;
+	const struct ntp_offset * const *b;
 
 	a = aa;
 	b = bb;
 
-	if ((*a)->update.offset < (*b)->update.offset)
+	if ((*a)->offset < (*b)->offset)
 		return (-1);
-	else if ((*a)->update.offset > (*b)->update.offset)
+	else if ((*a)->offset > (*b)->offset)
 		return (1);
 	else
 		return (0);
@@ -515,10 +639,12 @@ priv_host_dns(char *name, u_int32_t peerid)
 void
 update_scale(double offset)
 {
+	offset += getoffset();
 	if (offset < 0)
 		offset = -offset;
 
-	if (offset > QSCALE_OFF_MAX)
+	if (offset > QSCALE_OFF_MAX || !conf->status.synced ||
+	    conf->freq.num < 3)
 		conf->scale = 1;
 	else if (offset < QSCALE_OFF_MIN)
 		conf->scale = QSCALE_OFF_MAX / QSCALE_OFF_MIN;
@@ -532,7 +658,7 @@ scale_interval(time_t requested)
 	time_t interval, r;
 
 	interval = requested * conf->scale;
-	r = arc4random() % MAX(5, interval / 10);
+	r = arc4random_uniform(MAX(5, interval / 10));
 	return (interval + r);
 }
 
@@ -542,7 +668,63 @@ error_interval(void)
 	time_t interval, r;
 
 	interval = INTERVAL_QUERY_PATHETIC * QSCALE_OFF_MAX / QSCALE_OFF_MIN;
-	r = arc4random() % (interval / 10);
+	r = arc4random_uniform(interval / 10);
 	return (interval + r);
+}
+
+void
+report_peers(int always)
+{
+	time_t now;
+	u_int badpeers = 0;
+	u_int badsensors = 0;
+	struct ntp_peer *p;
+	struct ntp_sensor *s;
+
+	TAILQ_FOREACH(p, &conf->ntp_peers, entry) {
+		if (p->trustlevel < TRUSTLEVEL_BADPEER)
+			badpeers++;
+	}
+	TAILQ_FOREACH(s, &conf->ntp_sensors, entry) {
+		if (!s->update.good)
+			badsensors++;
+	}
+
+	now = time(NULL);
+	if (!always) {
+		if ((peer_cnt == 0 || badpeers == 0 || badpeers < peer_cnt / 2)
+		    && (sensors_cnt == 0 || badsensors == 0 ||
+		    badsensors < sensors_cnt / 2))
+			return;
+
+		if (lastreport + REPORT_INTERVAL > now)
+			return;
+	}
+	lastreport = now;
+	if (peer_cnt > 0) {
+		log_warnx("%u out of %u peers valid", peer_cnt - badpeers,
+		    peer_cnt);
+		TAILQ_FOREACH(p, &conf->ntp_peers, entry) {
+			if (p->trustlevel < TRUSTLEVEL_BADPEER) {
+				const char *a = "not resolved";
+				const char *pool = "";
+				if (p->addr)
+					a = log_sockaddr(
+					    (struct sockaddr *)&p->addr->ss);
+				if (p->addr_head.pool)
+					pool = "from pool ";
+				log_warnx("bad peer %s%s (%s)",  pool,
+				    p->addr_head.name, a);
+			}
+		}
+	}
+	if (sensors_cnt > 0) {
+		log_warnx("%u out of %u sensors valid",
+		    sensors_cnt - badsensors, sensors_cnt);
+		TAILQ_FOREACH(s, &conf->ntp_sensors, entry) {
+			if (!s->update.good)
+				log_warnx("bad sensor %s", s->device);
+		}
+	}
 }
 

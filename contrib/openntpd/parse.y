@@ -1,4 +1,4 @@
-/*	$OpenBSD: parse.y,v 1.25 2005/06/19 16:42:57 henning Exp $ */
+/*	$OpenBSD: parse.y,v 1.44 2008/06/09 18:26:35 deraadt Exp $ */
 
 /*
  * Copyright (c) 2002, 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -20,8 +20,6 @@
  */
 
 %{
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -32,31 +30,46 @@
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 
 #include "ntpd.h"
 
-static struct ntpd_conf		*conf;
-static FILE			*fin = NULL;
-static int			 lineno = 1;
-static int			 errors = 0;
-const char			*infile;
+TAILQ_HEAD(files, file)		 files = TAILQ_HEAD_INITIALIZER(files);
+static struct file {
+	TAILQ_ENTRY(file)	 entry;
+	FILE			*stream;
+	char			*name;
+	int			 lineno;
+	int			 errors;
+} *file, *topfile;
+struct file	*pushfile(const char *);
+int		 popfile(void);
+int		 yyparse(void);
+int		 yylex(void);
+int		 yyerror(const char *, ...);
+int		 kw_cmp(const void *, const void *);
+int		 lookup(char *);
+int		 lgetc(int);
+int		 lungetc(int);
+int		 findeol(void);
 
-int	 yyerror(const char *, ...);
-int	 yyparse(void);
-int	 kw_cmp(const void *, const void *);
-int	 lookup(char *);
-int	 lgetc(FILE *);
-int	 lungetc(int);
-int	 findeol(void);
-int	 yylex(void);
+struct ntpd_conf		*conf;
+
+struct opts {
+	int		weight;
+	int		correction;
+	char		*refstr;
+} opts;
+void		opts_default(void);
 
 typedef struct {
 	union {
-		u_int32_t		 number;
+		int64_t			 number;
 		char			*string;
 		struct ntp_addr_wrap	*addr;
+		struct opts		 opts;
 	} v;
 	int lineno;
 } YYSTYPE;
@@ -64,19 +77,25 @@ typedef struct {
 %}
 
 %token	LISTEN ON
-%token	SERVER SERVERS
+%token	SERVER SERVERS SENSOR CORRECTION REFID WEIGHT
 %token	ERROR
 %token	<v.string>		STRING
+%token	<v.number>		NUMBER
 %type	<v.addr>		address
+%type	<v.opts>		server_opts server_opts_l server_opt
+%type	<v.opts>		sensor_opts sensor_opts_l sensor_opt
+%type	<v.opts>		correction
+%type	<v.opts>		refid
+%type	<v.opts>		weight
 %%
 
 grammar		: /* empty */
 		| grammar '\n'
-		| grammar conf_main '\n'
-		| grammar error '\n'		{ errors++; }
+		| grammar main '\n'
+		| grammar error '\n'		{ file->errors++; }
 		;
 
-conf_main	: LISTEN ON address	{
+main		: LISTEN ON address	{
 			struct listen_addr	*la;
 			struct ntp_addr		*h, *next;
 
@@ -108,7 +127,7 @@ conf_main	: LISTEN ON address	{
 			free($3->name);
 			free($3);
 		}
-		| SERVERS address	{
+		| SERVERS address server_opts	{
 			struct ntp_peer		*p;
 			struct ntp_addr		*h, *next;
 
@@ -130,6 +149,7 @@ conf_main	: LISTEN ON address	{
 					next = NULL;
 
 				p = new_peer();
+				p->weight = $3.weight;
 				p->addr = h;
 				p->addr_head.a = h;
 				p->addr_head.pool = 1;
@@ -146,7 +166,7 @@ conf_main	: LISTEN ON address	{
 			free($2->name);
 			free($2);
 		}
-		| SERVER address	{
+		| SERVER address server_opts {
 			struct ntp_peer		*p;
 			struct ntp_addr		*h, *next;
 
@@ -167,6 +187,7 @@ conf_main	: LISTEN ON address	{
 				p->addr = h;
 			}
 
+			p->weight = $3.weight;
 			p->addr_head.a = p->addr;
 			p->addr_head.pool = 0;
 			p->addr_head.name = strdup($2->name);
@@ -177,6 +198,16 @@ conf_main	: LISTEN ON address	{
 			TAILQ_INSERT_TAIL(&conf->ntp_peers, p, entry);
 			free($2->name);
 			free($2);
+		}
+		| SENSOR STRING	sensor_opts {
+			struct ntp_conf_sensor	*s;
+
+			s = new_sensor($2);
+			s->weight = $3.weight;
+			s->correction = $3.correction;
+			s->refstr = $3.refstr;
+			free($2);
+			TAILQ_INSERT_TAIL(&conf->ntp_conf_sensors, s, entry);
 		}
 		;
 
@@ -195,7 +226,69 @@ address		: STRING		{
 		}
 		;
 
+server_opts	:	{ opts_default(); }
+		  server_opts_l
+			{ $$ = opts; }
+		|	{ opts_default(); $$ = opts; }
+		;
+server_opts_l	: server_opts_l server_opt
+		| server_opt
+		;
+server_opt	: weight
+		;
+
+sensor_opts	:	{ opts_default(); }
+		  sensor_opts_l
+			{ $$ = opts; }
+		|	{ opts_default(); $$ = opts; }
+		;
+sensor_opts_l	: sensor_opts_l sensor_opt
+		| sensor_opt
+		;
+sensor_opt	: correction
+		| refid
+		| weight
+		;
+
+correction	: CORRECTION NUMBER {
+			if ($2 < -127000000 || $2 > 127000000) {
+				yyerror("correction must be between "
+				    "-127000000 and 127000000 microseconds");
+				YYERROR;
+			}
+			opts.correction = $2;
+		}
+		;
+
+refid		: REFID STRING {
+			size_t l = strlen($2);
+
+			if (l < 1 || l > 4) {
+				yyerror("refid must be 1 to 4 characters");
+				free($2);
+				YYERROR;
+			}
+			opts.refstr = $2;
+		}
+		;
+
+weight		: WEIGHT NUMBER	{
+			if ($2 < 1 || $2 > 10) {
+				yyerror("weight must be between 1 and 10");
+				YYERROR;
+			}
+			opts.weight = $2;
+		}
+		;
+
 %%
+
+void
+opts_default(void)
+{
+	bzero(&opts, sizeof opts);
+	opts.weight = 1;
+}
 
 struct keywords {
 	const char	*k_name;
@@ -208,9 +301,9 @@ yyerror(const char *fmt, ...)
 	va_list		 ap;
 	char		*nfmt;
 
-	errors = 1;
+	file->errors++;
 	va_start(ap, fmt);
-	if (asprintf(&nfmt, "%s:%d: %s", infile, yylval.lineno, fmt) == -1)
+	if (asprintf(&nfmt, "%s:%d: %s", file->name, yylval.lineno, fmt) == -1)
 		fatalx("yyerror asprintf");
 	vlog(LOG_CRIT, nfmt, ap);
 	va_end(ap);
@@ -229,10 +322,14 @@ lookup(char *s)
 {
 	/* this has to be sorted always */
 	static const struct keywords keywords[] = {
+		{ "correction",		CORRECTION},
 		{ "listen",		LISTEN},
 		{ "on",			ON},
+		{ "refid",		REFID},
+		{ "sensor",		SENSOR},
 		{ "server",		SERVER},
-		{ "servers",		SERVERS}
+		{ "servers",		SERVERS},
+		{ "weight",		WEIGHT}
 	};
 	const struct keywords	*p;
 
@@ -253,9 +350,9 @@ char	 pushback_buffer[MAXPUSHBACK];
 int	 pushback_index = 0;
 
 int
-lgetc(FILE *f)
+lgetc(int quotec)
 {
-	int	c, next;
+	int		c, next;
 
 	if (parsebuf) {
 		/* Read character from the parsebuffer instead of input. */
@@ -271,26 +368,32 @@ lgetc(FILE *f)
 	if (pushback_index)
 		return (pushback_buffer[--pushback_index]);
 
-	while ((c = getc(f)) == '\\') {
-		next = getc(f);
-		if (next != '\n') {
-			if (isspace(next))
-				yyerror("whitespace after \\");
-			ungetc(next, f);
-			break;
+	if (quotec) {
+		if ((c = getc(file->stream)) == EOF) {
+			yyerror("reached end of file while parsing "
+			    "quoted string");
+			if (file == topfile || popfile() == EOF)
+				return (EOF);
+			return (quotec);
 		}
-		yylval.lineno = lineno;
-		lineno++;
-	}
-	if (c == '\t' || c == ' ') {
-		/* Compress blanks to a single space. */
-		do {
-			c = getc(f);
-		} while (c == '\t' || c == ' ');
-		ungetc(c, f);
-		c = ' ';
+		return (c);
 	}
 
+	while ((c = getc(file->stream)) == '\\') {
+		next = getc(file->stream);
+		if (next != '\n') {
+			c = next;
+			break;
+		}
+		yylval.lineno = file->lineno;
+		file->lineno++;
+	}
+
+	while (c == EOF) {
+		if (file == topfile || popfile() == EOF)
+			return (EOF);
+		c = getc(file->stream);
+	}
 	return (c);
 }
 
@@ -320,9 +423,9 @@ findeol(void)
 
 	/* skip to either EOF or the first real EOL */
 	while (1) {
-		c = lgetc(fin);
+		c = lgetc(0);
 		if (c == '\n') {
-			lineno++;
+			file->lineno++;
 			break;
 		}
 		if (c == EOF)
@@ -336,32 +439,40 @@ yylex(void)
 {
 	char	 buf[8096];
 	char	*p;
-	int	 endc, c;
+	int	 quotec, next, c;
 	int	 token;
 
 	p = buf;
-	while ((c = lgetc(fin)) == ' ')
+	while ((c = lgetc(0)) == ' ' || c == '\t')
 		; /* nothing */
 
-	yylval.lineno = lineno;
+	yylval.lineno = file->lineno;
 	if (c == '#')
-		while ((c = lgetc(fin)) != '\n' && c != EOF)
+		while ((c = lgetc(0)) != '\n' && c != EOF)
 			; /* nothing */
 
 	switch (c) {
 	case '\'':
 	case '"':
-		endc = c;
+		quotec = c;
 		while (1) {
-			if ((c = lgetc(fin)) == EOF)
+			if ((c = lgetc(quotec)) == EOF)
 				return (0);
-			if (c == endc) {
+			if (c == '\n') {
+				file->lineno++;
+				continue;
+			} else if (c == '\\') {
+				if ((next = lgetc(quotec)) == EOF)
+					return (0);
+				if (next == quotec || c == ' ' || c == '\t')
+					c = next;
+				else if (next == '\n')
+					continue;
+				else
+					lungetc(next);
+			} else if (c == quotec) {
 				*p = '\0';
 				break;
-			}
-			if (c == '\n') {
-				lineno++;
-				continue;
 			}
 			if (p + 1 >= buf + sizeof(buf) - 1) {
 				yyerror("string too long");
@@ -373,6 +484,42 @@ yylex(void)
 		if (yylval.v.string == NULL)
 			fatal("yylex: strdup");
 		return (STRING);
+	}
+
+#define allowed_to_end_number(x) \
+	(isspace(x) || x == ')' || x ==',' || x == '/' || x == '}' || x == '=')
+
+	if (c == '-' || isdigit(c)) {
+		do {
+			*p++ = c;
+			if ((unsigned)(p-buf) >= sizeof(buf)) {
+				yyerror("string too long");
+				return (findeol());
+			}
+		} while ((c = lgetc(0)) != EOF && isdigit(c));
+		lungetc(c);
+		if (p == buf + 1 && buf[0] == '-')
+			goto nodigits;
+		if (c == EOF || allowed_to_end_number(c)) {
+			const char *errstr = NULL;
+
+			*p = '\0';
+			yylval.v.number = strtonum(buf, LLONG_MIN,
+			    LLONG_MAX, &errstr);
+			if (errstr) {
+				yyerror("\"%s\" invalid number: %s",
+				    buf, errstr);
+				return (findeol());
+			}
+			return (NUMBER);
+		} else {
+nodigits:
+			while (p > buf + 1)
+				lungetc(*--p);
+			c = *--p;
+			if (c == '-')
+				return (c);
+		}
 	}
 
 #define allowed_in_string(x) \
@@ -388,7 +535,7 @@ yylex(void)
 				yyerror("string too long");
 				return (findeol());
 			}
-		} while ((c = lgetc(fin)) != EOF && (allowed_in_string(c)));
+		} while ((c = lgetc(0)) != EOF && (allowed_in_string(c)));
 		lungetc(c);
 		*p = '\0';
 		if ((token = lookup(buf)) == STRING)
@@ -397,32 +544,69 @@ yylex(void)
 		return (token);
 	}
 	if (c == '\n') {
-		yylval.lineno = lineno;
-		lineno++;
+		yylval.lineno = file->lineno;
+		file->lineno++;
 	}
 	if (c == EOF)
 		return (0);
 	return (c);
 }
 
+struct file *
+pushfile(const char *name)
+{
+	struct file	*nfile;
+
+	if ((nfile = calloc(1, sizeof(struct file))) == NULL ||
+	    (nfile->name = strdup(name)) == NULL) {
+		log_warn("malloc");
+		return (NULL);
+	}
+	if ((nfile->stream = fopen(nfile->name, "r")) == NULL) {
+		log_warn("%s", nfile->name);
+		free(nfile->name);
+		free(nfile);
+		return (NULL);
+	}
+	nfile->lineno = 1;
+	TAILQ_INSERT_TAIL(&files, nfile, entry);
+	return (nfile);
+}
+
+int
+popfile(void)
+{
+	struct file	*prev;
+
+	if ((prev = TAILQ_PREV(file, files, entry)) != NULL)
+		prev->errors += file->errors;
+
+	TAILQ_REMOVE(&files, file, entry);
+	fclose(file->stream);
+	free(file->name);
+	free(file);
+	file = prev;
+	return (file ? 0 : EOF);
+}
+
 int
 parse_config(const char *filename, struct ntpd_conf *xconf)
 {
+	int		 errors = 0;
+
 	conf = xconf;
-	lineno = 1;
-	errors = 0;
 	TAILQ_INIT(&conf->listen_addrs);
 	TAILQ_INIT(&conf->ntp_peers);
+	TAILQ_INIT(&conf->ntp_conf_sensors);
 
-	if ((fin = fopen(filename, "r")) == NULL) {
-		log_warn("%s", filename);
+	if ((file = pushfile(filename)) == NULL) {
 		return (-1);
 	}
-	infile = filename;
+	topfile = file;
 
 	yyparse();
-
-	fclose(fin);
+	errors = file->errors;
+	popfile();
 
 	return (errors ? -1 : 0);
 }

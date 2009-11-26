@@ -1,4 +1,4 @@
-/*	$OpenBSD: client.c,v 1.66 2005/09/24 00:32:03 dtucker Exp $ */
+/*	$OpenBSD: client.c,v 1.81 2008/06/10 03:51:53 naddy Exp $ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
@@ -19,6 +19,7 @@
 
 #include <sys/param.h>
 #include <errno.h>
+#include <md5.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -32,14 +33,14 @@ void	set_deadline(struct ntp_peer *, time_t);
 void
 set_next(struct ntp_peer *p, time_t t)
 {
-	p->next = time(NULL) + t;
+	p->next = getmonotime() + t;
 	p->deadline = 0;
 }
 
 void
 set_deadline(struct ntp_peer *p, time_t t)
 {
-	p->deadline = time(NULL) + t;
+	p->deadline = getmonotime() + t;
 	p->next = 0;
 }
 
@@ -54,6 +55,7 @@ client_peer_init(struct ntp_peer *p)
 	p->shift = 0;
 	p->trustlevel = TRUSTLEVEL_PATHETIC;
 	p->lasterror = 0;
+	p->senderrors = 0;
 
 	return (client_addr_init(p));
 }
@@ -80,7 +82,7 @@ client_addr_init(struct ntp_peer *p)
 			p->state = STATE_DNS_DONE;
 			break;
 		default:
-			fatal("king bula sez: wrong AF in client_addr_init");
+			fatalx("king bula sez: wrong AF in client_addr_init");
 			/* not reached */
 		}
 	}
@@ -94,8 +96,13 @@ client_addr_init(struct ntp_peer *p)
 int
 client_nextaddr(struct ntp_peer *p)
 {
-	close(p->query->fd);
-	p->query->fd = -1;
+	if (p->query->fd != -1) {
+		close(p->query->fd);
+		p->query->fd = -1;
+	}
+
+	if (p->state == STATE_DNS_INPROGRESS)
+		return (-1);
 
 	if (p->addr_head.a == NULL) {
 		priv_host_dns(p->addr_head.name, p->id);
@@ -118,7 +125,8 @@ client_query(struct ntp_peer *p)
 	int	tos = IPTOS_LOWDELAY;
 
 	if (p->addr == NULL && client_nextaddr(p) == -1) {
-		set_next(p, error_interval());
+		set_next(p, MAX(SETTIME_TIMEOUT,
+		    scale_interval(INTERVAL_QUERY_AGGRESSIVE)));
 		return (0);
 	}
 
@@ -133,9 +141,10 @@ client_query(struct ntp_peer *p)
 			fatal("client_query socket");
 		if (connect(p->query->fd, sa, SA_LEN(sa)) == -1) {
 			if (errno == ECONNREFUSED || errno == ENETUNREACH ||
-			    errno == EHOSTUNREACH) {
+			    errno == EHOSTUNREACH || errno == EADDRNOTAVAIL) {
 				client_nextaddr(p);
-				set_next(p, error_interval());
+				set_next(p, MAX(SETTIME_TIMEOUT,
+				    scale_interval(INTERVAL_QUERY_AGGRESSIVE)));
 				return (-1);
 			} else
 				fatal("client_query connect");
@@ -161,14 +170,17 @@ client_query(struct ntp_peer *p)
 
 	p->query->msg.xmttime.int_partl = arc4random();
 	p->query->msg.xmttime.fractionl = arc4random();
-	p->query->xmttime = gettime();
+	p->query->xmttime = gettime_corrected();
 
 	if (ntp_sendmsg(p->query->fd, NULL, &p->query->msg,
 	    NTP_MSGSIZE_NOAUTH, 0) == -1) {
+		p->senderrors++;
 		set_next(p, INTERVAL_QUERY_PATHETIC);
+		p->trustlevel = TRUSTLEVEL_PATHETIC;
 		return (-1);
 	}
 
+	p->senderrors = 0;
 	p->state = STATE_QUERY_SENT;
 	set_deadline(p, QUERYTIME_MAX);
 
@@ -196,7 +208,7 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 			fatal("recvfrom");
 	}
 
-	T4 = gettime();
+	T4 = gettime_corrected();
 
 	ntp_getmsg((struct sockaddr *)&p->addr->ss, buf, size, &msg);
 
@@ -237,13 +249,14 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 	if (p->reply[p->shift].delay < 0) {
 		interval = error_interval();
 		set_next(p, interval);
-		log_info("reply from %s: negative delay %f",
+		log_info("reply from %s: negative delay %fs, "
+		    "next query %ds",
 		    log_sockaddr((struct sockaddr *)&p->addr->ss),
-		    p->reply[p->shift].delay);
+		    p->reply[p->shift].delay, interval);
 		return (0);
 	}
 	p->reply[p->shift].error = (T2 - T1) - (T3 - T4);
-	p->reply[p->shift].rcvd = time(NULL);
+	p->reply[p->shift].rcvd = getmonotime();
 	p->reply[p->shift].good = 1;
 
 	p->reply[p->shift].status.leap = (msg.status & LIMASK);
@@ -251,15 +264,30 @@ client_dispatch(struct ntp_peer *p, u_int8_t settime)
 	p->reply[p->shift].status.rootdelay = sfp_to_d(msg.rootdelay);
 	p->reply[p->shift].status.rootdispersion = sfp_to_d(msg.dispersion);
 	p->reply[p->shift].status.refid = ntohl(msg.refid);
-	p->reply[p->shift].status.refid4 = msg.xmttime.fractionl;
 	p->reply[p->shift].status.reftime = lfp_to_d(msg.reftime);
 	p->reply[p->shift].status.poll = msg.ppoll;
 	p->reply[p->shift].status.stratum = msg.stratum;
 
+	if (p->addr->ss.ss_family == AF_INET) {
+		p->reply[p->shift].status.send_refid =
+		    ((struct sockaddr_in *)&p->addr->ss)->sin_addr.s_addr;
+	} else if (p->addr->ss.ss_family == AF_INET6) {
+		MD5_CTX		context;
+		u_int8_t	digest[MD5_DIGEST_LENGTH];
+
+		MD5Init(&context);
+		MD5Update(&context, ((struct sockaddr_in6 *)&p->addr->ss)->
+		    sin6_addr.s6_addr, sizeof(struct in6_addr));
+		MD5Final(digest, &context);
+		memcpy((char *)&p->reply[p->shift].status.send_refid, digest,
+		    sizeof(u_int32_t));
+	} else
+		p->reply[p->shift].status.send_refid = msg.xmttime.fractionl;
+
 	if (p->trustlevel < TRUSTLEVEL_PATHETIC)
 		interval = scale_interval(INTERVAL_QUERY_PATHETIC);
-	else if (p->trustlevel < TRUSTLEVEL_AGRESSIVE)
-		interval = scale_interval(INTERVAL_QUERY_AGRESSIVE);
+	else if (p->trustlevel < TRUSTLEVEL_AGGRESSIVE)
+		interval = scale_interval(INTERVAL_QUERY_AGGRESSIVE);
 	else
 		interval = scale_interval(INTERVAL_QUERY_NORMAL);
 
@@ -318,12 +346,11 @@ client_update(struct ntp_peer *p)
 		return (-1);
 
 	memcpy(&p->update, &p->reply[best], sizeof(p->update));
-	priv_adjtime();
-
-	for (i = 0; i < OFFSET_ARRAY_SIZE; i++)
-		if (p->reply[i].rcvd <= p->reply[best].rcvd)
-			p->reply[i].good = 0;
-
+	if (priv_adjtime() == 0) {
+		for (i = 0; i < OFFSET_ARRAY_SIZE; i++)
+			if (p->reply[i].rcvd <= p->reply[best].rcvd)
+				p->reply[i].good = 0;
+	}
 	return (0);
 }
 
