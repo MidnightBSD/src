@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/binutils/Makefile,v 1.29 2004/06/25 07:34:56 obrien Exp $
 
 SUBDIR=		libiberty libbfd libopcodes libbinutils \

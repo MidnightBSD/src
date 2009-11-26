@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/gnu/usr.bin/binutils/as/config.h,v 1.1 2004/07/08 17:05:30 obrien Exp $ */
 
 #define HAVE_DECL_GETOPT 1
@@ -245,7 +246,7 @@
 /* #define TARGET_CPU "i386" */
 
 /* Target vendor. */
-#define TARGET_VENDOR "obrien"
+#define TARGET_VENDOR "midnightbsd"
 
 /* Target OS. */
 #define TARGET_OS "freebsd5"

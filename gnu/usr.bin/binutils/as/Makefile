@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/binutils/as/Makefile,v 1.18 2006/10/09 04:52:14 kmacy Exp $
 
 
@@ -22,8 +23,6 @@ SRCS+=	app.c as.c atof-generic.c atof-ieee.c bignum-copy.c \
 
 .if ${TARGET_ARCH} == "amd64"
 SRCS+=	tc-i386.c
-.elif ${TARGET_ARCH} == "powerpc"
-SRCS+=	tc-ppc.c
 .elif ${TARGET_ARCH} == "sparc64"
 # change back to tc-sparc.c when new binutils is imported
 SRCS+=	tc-sparc-fixed.c
