@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.t,v 1.277 2009/05/16 18:40:04 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.298 2009/08/01 21:57:52 tg Stab $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
@@ -25,7 +25,7 @@
 # http://www.research.att.com/~gsf/public/ifs.sh
 
 expected-stdout:
-	@(#)MIRBSD KSH R38 2009/05/16
+	@(#)MIRBSD KSH R39 2009/08/01
 description:
 	Check version of shell.
 stdin:
@@ -1005,7 +1005,7 @@ expected-stdout:
 name: eglob-bad-2
 description:
 	Check that globbing isn't done when glob has syntax error
-	(at&t ksh fails this test)
+	(AT&T ksh fails this test)
 file-setup: file 644 "abcx"
 file-setup: file 644 "abcz"
 file-setup: file 644 "bbc"
@@ -1095,7 +1095,7 @@ expected-stdout:
 name: eglob-trim-1
 description:
 	Eglobbing in trim expressions...
-	(at&t ksh fails this - docs say # matches shortest string, ## matches
+	(AT&T ksh fails this - docs say # matches shortest string, ## matches
 	longest...)
 stdin:
 	x=abcdef
@@ -1216,12 +1216,12 @@ description:
 stdin:
 	pfx=/home/user
 	wd=/home/user/tmp
-	echo ${wd/#$pfx/~}
-	echo ${wd/#\$pfx/~}
-	echo ${wd/#"$pfx"/~}
-	echo ${wd/#'$pfx'/~}
-	echo ${wd/#"\$pfx"/~}
-	echo ${wd/#'\$pfx'/~}
+	echo "${wd/#$pfx/~}"
+	echo "${wd/#\$pfx/~}"
+	echo "${wd/#"$pfx"/~}"
+	echo "${wd/#'$pfx'/~}"
+	echo "${wd/#"\$pfx"/~}"
+	echo "${wd/#'\$pfx'/~}"
 expected-stdout:
 	~/tmp
 	/home/user/tmp
@@ -1232,13 +1232,13 @@ expected-stdout:
 ---
 name: eglob-substrpl-3b
 description:
-	More of this, bash fails it
+	More of this, bash fails it (bash4 passes)
 stdin:
 	pfx=/home/user
 	wd=/home/user/tmp
-	echo ${wd/#$(echo /home/user)/~}
-	echo ${wd/#"$(echo /home/user)"/~}
-	echo ${wd/#'$(echo /home/user)'/~}
+	echo "${wd/#$(echo /home/user)/~}"
+	echo "${wd/#"$(echo /home/user)"/~}"
+	echo "${wd/#'$(echo /home/user)'/~}"
 expected-stdout:
 	~/tmp
 	~/tmp
@@ -1373,7 +1373,7 @@ expected-stdout:
 name: glob-range-2
 description:
 	Test range matching
-	(at&t ksh fails this; POSIX says invalid)
+	(AT&T ksh fails this; POSIX says invalid)
 file-setup: file 644 "abc"
 stdin:
 	echo [a--]*
@@ -1403,7 +1403,7 @@ expected-stdout:
 name: glob-range-5
 description:
 	Results unspecified according to POSIX
-	(at&t ksh treats this like [a-cc-e]*)
+	(AT&T ksh treats this like [a-cc-e]*)
 file-setup: file 644 "abc"
 file-setup: file 644 "bbc"
 file-setup: file 644 "cbc"
@@ -2532,7 +2532,7 @@ expected-stdout:
 name: IFS-space-colon-2
 description:
 	Simple test, IFS=<white-space>:
-	At&t ksh fails this, POSIX says the test is correct.
+	AT&T ksh fails this, POSIX says the test is correct.
 stdin:
 	showargs() { for i; do echo -n " <$i>"; done; echo; }
 	IFS="$IFS:"
@@ -2572,7 +2572,7 @@ expected-stdout:
 name: IFS-space-colon-5
 description:
 	Simple test, IFS=<white-space>:
-	Don't know what POSIX thinks of this.  at&t ksh does not do this.
+	Don't know what POSIX thinks of this.  AT&T ksh does not do this.
 stdin:
 	showargs() { for i; do echo -n " <$i>"; done; echo; }
 	IFS="$IFS:"
@@ -3050,7 +3050,7 @@ description:
 	The following:
 		set -- `false`
 		echo $?
-	shoud not print 0. (according to /bin/sh, at&t ksh88, and the
+	shoud not print 0. (according to /bin/sh, AT&T ksh88, and the
 	getopt(1) man page - not according to POSIX)
 stdin:
 	set -- `false`
@@ -3113,7 +3113,7 @@ description:
 		foobar: not found
 	Also, the command
 		$ foobar 2> /dev/null
-	generates an error under /bin/sh and pdksh, but at&t ksh88 produces
+	generates an error under /bin/sh and pdksh, but AT&T ksh88 produces
 	no error (redirected to /dev/null).
 stdin:
 	(you/should/not/see/this/error/1) 2> /dev/null
@@ -3125,10 +3125,10 @@ description:
 	The command
 		$ whence foobar
 	generates a blank line under pdksh and sets the exit status to 0.
-	at&t ksh88 generates no output and sets the exit status to 1.  Also,
+	AT&T ksh88 generates no output and sets the exit status to 1.  Also,
 	the command
 		$ whence foobar cat
-	generates no output under at&t ksh88 (pdksh generates a blank line
+	generates no output under AT&T ksh88 (pdksh generates a blank line
 	and /bin/cat).
 stdin:
 	whence does/not/exist > /dev/null
@@ -3169,7 +3169,7 @@ name: regression-17
 description:
 	The command
 		. /foo/bar
-	should set the exit status to non-zero (sh and at&t ksh88 do).
+	should set the exit status to non-zero (sh and AT&T ksh88 do).
 	XXX doting a non existent file is a fatal error for a script
 stdin:
 	. does/not/exist
@@ -3213,7 +3213,7 @@ name: regression-22
 description:
 	Quoting backquotes inside backquotes doesn't work:
 	$ echo `echo hi \`echo there\` folks`
-	asks for more info.  sh and at&t ksh88 both echo
+	asks for more info.  sh and AT&T ksh88 both echo
 	hi there folks
 stdin:
 	echo `echo hi \`echo there\` folks`
@@ -3290,7 +3290,7 @@ expected-stderr-pattern: /a\.x=1/
 ---
 name: regression-29
 description:
-	alias expansion different from at&t ksh88
+	alias expansion different from AT&T ksh88
 stdin:
 	alias a='for ' b='i in'
 	a b hi ; do echo $i ; done
@@ -4679,7 +4679,11 @@ expected-stdout:
 ---
 name: utf8opt-2a
 description:
-	Check that the utf8-mode flag is set at interactive startup
+	Check that the utf8-mode flag is set at interactive startup.
+	-DMKSH_ASSUME_UTF8=0 => expected failure, please ignore
+	-DMKSH_ASSUME_UTF8=1 => not expected, please investigate
+	-UMKSH_ASSUME_UTF8 => not expected, but if your OS is old,
+	 try passing HAVE_SETLOCALE_CTYPE=0 to Build.sh
 category: !os:hpux
 arguments: !-i!
 env-setup: !PS1=!PS2=!LC_CTYPE=en_US.UTF-8!
@@ -4697,6 +4701,7 @@ expected-stderr-pattern:
 name: utf8opt-2b
 description:
 	Check that the utf8-mode flag is set at interactive startup
+	Expected failure if -DMKSH_ASSUME_UTF8=0
 category: os:hpux
 arguments: !-i!
 env-setup: !PS1=!PS2=!LC_CTYPE=en_US.utf8!
@@ -4714,6 +4719,7 @@ expected-stderr-pattern:
 name: aliases-1
 description:
 	Check if built-in shell aliases are okay
+category: !arge
 stdin:
 	alias
 	typeset -f
@@ -4730,6 +4736,26 @@ expected-stdout:
 	source='PATH=$PATH:. command .'
 	stop='kill -STOP'
 	suspend='kill -STOP $$'
+	type='whence -v'
+---
+name: aliases-1-hartz4
+description:
+	Check if built-in shell aliases are okay
+category: arge
+stdin:
+	alias
+	typeset -f
+expected-stdout:
+	autoload='typeset -fu'
+	functions='typeset -f'
+	hash='alias -t'
+	history='fc -l'
+	integer='typeset -i'
+	local=typeset
+	login='exec login'
+	nohup='nohup '
+	r='fc -e -'
+	source='PATH=$PATH:. command .'
 	type='whence -v'
 ---
 name: aliases-2a
@@ -4760,6 +4786,7 @@ expected-stdout:
 name: aliases-2b
 description:
 	Check if “set -o posix” does not influence built-in aliases
+category: !arge
 arguments: !-o!posix!
 stdin:
 	alias
@@ -4782,6 +4809,7 @@ expected-stdout:
 name: aliases-3b
 description:
 	Check if running as sh does not influence built-in aliases
+category: !arge
 arguments: !-o!posix!
 stdin:
 	cp "$__progname" sh
@@ -4801,6 +4829,85 @@ expected-stdout:
 	stop='kill -STOP'
 	suspend='kill -STOP $$'
 	type='whence -v'
+---
+name: aliases-2b-hartz4
+description:
+	Check if “set -o posix” does not influence built-in aliases
+category: arge
+arguments: !-o!posix!
+stdin:
+	alias
+	typeset -f
+expected-stdout:
+	autoload='typeset -fu'
+	functions='typeset -f'
+	hash='alias -t'
+	history='fc -l'
+	integer='typeset -i'
+	local=typeset
+	login='exec login'
+	nohup='nohup '
+	r='fc -e -'
+	source='PATH=$PATH:. command .'
+	type='whence -v'
+---
+name: aliases-3b-hartz4
+description:
+	Check if running as sh does not influence built-in aliases
+category: arge
+arguments: !-o!posix!
+stdin:
+	cp "$__progname" sh
+	./sh -c 'alias; typeset -f'
+	rm -f sh
+expected-stdout:
+	autoload='typeset -fu'
+	functions='typeset -f'
+	hash='alias -t'
+	history='fc -l'
+	integer='typeset -i'
+	local=typeset
+	login='exec login'
+	nohup='nohup '
+	r='fc -e -'
+	source='PATH=$PATH:. command .'
+	type='whence -v'
+---
+name: aliases-funcdef-1
+description:
+	Check if POSIX functions take precedences over aliases
+stdin:
+	alias foo='echo makro'
+	foo() {
+		echo funktion
+	}
+	foo
+expected-stdout:
+	funktion
+---
+name: aliases-funcdef-2
+description:
+	Check if POSIX functions take precedences over aliases
+stdin:
+	alias foo='echo makro'
+	foo () {
+		echo funktion
+	}
+	foo
+expected-stdout:
+	funktion
+---
+name: aliases-funcdef-3
+description:
+	Check if aliases take precedences over Korn functions
+stdin:
+	alias foo='echo makro'
+	function foo {
+		echo funktion
+	}
+	foo
+expected-stdout:
+	makro
 ---
 name: arrays-1
 description:
@@ -4885,12 +4992,12 @@ description:
 	This is by design. And that some things fail in both.
 stdin:
 	export x=abcdefghi n=2
-	"$__progname" -c 'print v${x:(n)}x'
-	"$__progname" -c 'print w${x: n}x'
-	"$__progname" -c 'print x${x:n}x'
-	"$__progname" -c 'print y${x:}x'
-	"$__progname" -c 'print z${x}x'
-	"$__progname" -c 'x=abcdef;y=123;echo ${x:${y:2:1}:2}' >/dev/null 2>&1; print $?
+	"$__progname" -c 'echo v${x:(n)}x'
+	"$__progname" -c 'echo w${x: n}x'
+	"$__progname" -c 'echo x${x:n}x'
+	"$__progname" -c 'echo y${x:}x'
+	"$__progname" -c 'echo z${x}x'
+	"$__progname" -c 'x=abcdef;y=123;echo ${x:${y:2:1}:2}' >/dev/null 2>&1; echo $?
 expected-stdout:
 	vcdefghix
 	wcdefghix
@@ -5375,7 +5482,7 @@ expected-stdout:
 name: bashiop-2c
 description:
 	Check if GNU bash-like I/O redirection works
-	Part 2: this is *not* supported by GNU bash
+	Part 2: this is supported by GNU bash 4 only
 stdin:
 	echo mir >foo
 	set -o noclobber
@@ -5605,7 +5712,7 @@ description:
 	COMSUB are currently parsed by hacking lex.c instead of
 	recursively (see regression-6): matching parenthesēs bug
 	Fails on: pdksh mksh bash2 bash3 zsh
-	Passes on: ksh93
+	Passes on: bash4 ksh93
 expected-fail: yes
 stdin:
 	echo $(case 1 in (1) echo yes;; (2) echo no;; esac)
@@ -5618,9 +5725,9 @@ name: comsub-2
 description:
 	RedHat BZ#496791 – another case of missing recursion
 	in parsing COMSUB expressions
-	Fails on: pdksh mksh bash2 bash3¹ zsh
+	Fails on: pdksh mksh bash2 bash3¹ bash4¹ zsh
 	Passes on: ksh93
-	① bash seems to choke on comment ending with backslash-newline
+	① bash[34] seem to choke on comment ending with backslash-newline
 expected-fail: yes
 stdin:
 	# a comment with " ' \
@@ -5631,4 +5738,285 @@ stdin:
 	echo $x
 expected-stdout:
 	yes
+---
+name: test-stnze-1
+description:
+	Check that the short form [ $x ] works
+stdin:
+	i=0
+	[ -n $x ]
+	rv=$?; echo $((++i)) $rv
+	[ $x ]
+	rv=$?; echo $((++i)) $rv
+	[ -n "$x" ]
+	rv=$?; echo $((++i)) $rv
+	[ "$x" ]
+	rv=$?; echo $((++i)) $rv
+	x=0
+	[ -n $x ]
+	rv=$?; echo $((++i)) $rv
+	[ $x ]
+	rv=$?; echo $((++i)) $rv
+	[ -n "$x" ]
+	rv=$?; echo $((++i)) $rv
+	[ "$x" ]
+	rv=$?; echo $((++i)) $rv
+	x='1 -a 1 = 2'
+	[ -n $x ]
+	rv=$?; echo $((++i)) $rv
+	[ $x ]
+	rv=$?; echo $((++i)) $rv
+	[ -n "$x" ]
+	rv=$?; echo $((++i)) $rv
+	[ "$x" ]
+	rv=$?; echo $((++i)) $rv
+expected-stdout:
+	1 0
+	2 1
+	3 1
+	4 1
+	5 0
+	6 0
+	7 0
+	8 0
+	9 1
+	10 1
+	11 0
+	12 0
+---
+name: test-stnze-2
+description:
+	Check that the short form [[ $x ]] works (ksh93 extension)
+stdin:
+	i=0
+	[[ -n $x ]]
+	rv=$?; echo $((++i)) $rv
+	[[ $x ]]
+	rv=$?; echo $((++i)) $rv
+	[[ -n "$x" ]]
+	rv=$?; echo $((++i)) $rv
+	[[ "$x" ]]
+	rv=$?; echo $((++i)) $rv
+	x=0
+	[[ -n $x ]]
+	rv=$?; echo $((++i)) $rv
+	[[ $x ]]
+	rv=$?; echo $((++i)) $rv
+	[[ -n "$x" ]]
+	rv=$?; echo $((++i)) $rv
+	[[ "$x" ]]
+	rv=$?; echo $((++i)) $rv
+	x='1 -a 1 = 2'
+	[[ -n $x ]]
+	rv=$?; echo $((++i)) $rv
+	[[ $x ]]
+	rv=$?; echo $((++i)) $rv
+	[[ -n "$x" ]]
+	rv=$?; echo $((++i)) $rv
+	[[ "$x" ]]
+	rv=$?; echo $((++i)) $rv
+expected-stdout:
+	1 1
+	2 1
+	3 1
+	4 1
+	5 0
+	6 0
+	7 0
+	8 0
+	9 0
+	10 0
+	11 0
+	12 0
+---
+name: event-subst-1a
+description:
+	Check that '!' substitution in interactive mode works
+file-setup: file 755 "falsetto"
+	#! /bin/sh
+	echo molto bene
+	exit 42
+file-setup: file 755 "!false"
+	#! /bin/sh
+	echo si
+arguments: !-i!
+stdin:
+	export PATH=.:$PATH
+	falsetto
+	echo yeap
+	!false
+expected-exit: 42
+expected-stdout:
+	molto bene
+	yeap
+	molto bene
+expected-stderr-pattern:
+	/.*/
+---
+name: event-subst-1b
+description:
+	Check that '!' substitution in interactive mode works
+	even when a space separates it from the search command,
+	which is not what GNU bash provides but required for the
+	other regression tests below to check
+file-setup: file 755 "falsetto"
+	#! /bin/sh
+	echo molto bene
+	exit 42
+file-setup: file 755 "!"
+	#! /bin/sh
+	echo si
+arguments: !-i!
+stdin:
+	export PATH=.:$PATH
+	falsetto
+	echo yeap
+	! false
+expected-exit: 42
+expected-stdout:
+	molto bene
+	yeap
+	molto bene
+expected-stderr-pattern:
+	/.*/
+---
+name: event-subst-2
+description:
+	Check that '!' substitution in interactive mode
+	does not break things
+file-setup: file 755 "falsetto"
+	#! /bin/sh
+	echo molto bene
+	exit 42
+file-setup: file 755 "!"
+	#! /bin/sh
+	echo si
+arguments: !-i!
+env-setup: !ENV=./Env!
+file-setup: file 644 "Env"
+	PS1=X
+stdin:
+	export PATH=.:$PATH
+	falsetto
+	echo yeap
+	!false
+	echo meow
+	! false
+	echo = $?
+	if
+	! false; then echo foo; else echo bar; fi
+expected-stdout:
+	molto bene
+	yeap
+	molto bene
+	meow
+	molto bene
+	= 42
+	foo
+expected-stderr-pattern:
+	/.*/
+---
+name: event-subst-3
+description:
+	Check that '!' substitution in noninteractive mode is ignored
+file-setup: file 755 "falsetto"
+	#! /bin/sh
+	echo molto bene
+	exit 42
+file-setup: file 755 "!false"
+	#! /bin/sh
+	echo si
+stdin:
+	export PATH=.:$PATH
+	falsetto
+	echo yeap
+	!false
+	echo meow
+	! false
+	echo = $?
+	if
+	! false; then echo foo; else echo bar; fi
+expected-stdout:
+	molto bene
+	yeap
+	si
+	meow
+	= 0
+	foo
+---
+name: nounset-1
+description:
+	Check that "set -u" matches (future) POSIX requirement
+stdin:
+	(set -u
+	try() {
+		local v
+		eval v=\$$1
+		if [[ -n $v ]]; then
+			echo $1=nz
+		else
+			echo $1=zf
+		fi
+	}
+	x=y
+	(echo $x)
+	echo =1
+	(echo $y)
+	echo =2
+	(try x)
+	echo =3
+	(try y)
+	echo =4
+	(try 0)
+	echo =5
+	(try 2)
+	echo =6
+	(try)
+	echo =7
+	(echo at=$@)
+	echo =8
+	(echo asterisk=$*)
+	echo =9
+	(echo $?)
+	echo =10
+	(echo $!)
+	echo =11
+	(echo $-)
+	echo =12
+	#(echo $_)
+	#echo =13
+	(echo $#)
+	echo =14
+	(mypid=$$; try mypid)
+	echo =15
+	) 2>&1 | sed -e 's/^[^]]*]//' -e 's/^[^:]*: *//'
+expected-stdout:
+	y
+	=1
+	y: parameter not set
+	=2
+	x=nz
+	=3
+	y: parameter not set
+	=4
+	0=nz
+	=5
+	2: parameter not set
+	=6
+	1: parameter not set
+	=7
+	at=
+	=8
+	asterisk=
+	=9
+	0
+	=10
+	!: parameter not set
+	=11
+	ush
+	=12
+	0
+	=14
+	mypid=nz
+	=15
 ---

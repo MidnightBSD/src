@@ -1,5 +1,5 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.393 2009/05/16 18:40:03 tg Stab $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.419 2009/08/01 21:58:06 tg Stab $'
 #-
 # Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
 #	Thorsten Glaser <tg@mirbsd.org>
@@ -19,10 +19,13 @@ srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.393 2009/05/16 18:40:03 tg Stab $'
 # damage or existence of a defect, except proven that it results out
 # of said person's immediate fault when using the work as intended.
 #-
-# Environment used: CC CFLAGS CPPFLAGS LDFLAGS LIBS NOWARN NROFF TARGET_OS
+# Environment used:	CC CFLAGS CPPFLAGS LDFLAGS LIBS NOWARN NROFF
+#			TARGET_OS TARGET_OSREV
+# Feature selectors:	USE_PRINTF_BUILTIN
 # CPPFLAGS recognised:	MKSH_SMALL MKSH_ASSUME_UTF8 MKSH_NOPWNAM MKSH_NOVI
 #			MKSH_CLS_STRING MKSH_BINSHREDUCED MKSH_UNEMPLOYED
 #			MKSH_CONSERVATIVE_FDS MKSH_MIDNIGHTBSD01ASH_COMPAT
+#			MKSH_NO_LIMITS
 
 LC_ALL=C
 export LC_ALL
@@ -162,6 +165,26 @@ ac_testn() {
 	ac_testdone
 }
 
+# ac_ifcpp cppexpr [!] label [!] checkif[!]0 [setlabelifcheckis[!]0] useroutput
+ac_ifcpp() {
+	expr=$1; shift
+	ac_testn "$@" <<-EOF
+		int main(void) { return (
+		#$expr
+		    0
+		#else
+		/* force a failure: expr is false */
+		    thiswillneverbedefinedIhope()
+		#endif
+		    ); }
+EOF
+	test x"$1" = x"!" && shift
+	f=$1
+	fu=`upper $f`
+	eval fv=\$HAVE_$fu
+	test x"$fv" = x"1"
+}
+
 ac_cppflags() {
 	test x"$1" = x"" || fu=$1
 	fv=$2
@@ -222,8 +245,14 @@ ac_header() {
 }
 
 addsrcs() {
+	if test x"$1" = x"!"; then
+		fr=0
+		shift
+	else
+		fr=1
+	fi
 	eval i=\$$1
-	test 0 = $i && case " $SRCS " in
+	test $fr = "$i" && case " $SRCS " in
 	*\ $2\ *)	;;
 	*)		SRCS="$SRCS $2" ;;
 	esac
@@ -283,11 +312,20 @@ else
 fi
 
 test x"$TARGET_OS" = x"" && TARGET_OS=`uname -s 2>/dev/null || uname`
-warn=
+oswarn=
 ccpc=-Wc,
 ccpl=-Wl,
 tsts=
 ccpr='|| rm -f ${tcfn}*'
+
+# Configuration depending on OS revision, on OSes that need them
+case $TARGET_OS in
+QNX)
+	test x"$TARGET_OSREV" = x"" && TARGET_OSREV=`uname -r`
+	;;
+esac
+
+# Configuration depending on OS name
 case $TARGET_OS in
 AIX)
 	CPPFLAGS="$CPPFLAGS -D_ALL_SOURCE"
@@ -302,7 +340,7 @@ __setkey_r' >crypt.exp
 	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 BeOS|Haiku)
-	warn=' and will currently not work'
+	oswarn=' and will currently not work'
 	;;
 BSD/OS)
 	: ${HAVE_SETLOCALE_CTYPE=0}
@@ -362,25 +400,29 @@ OSF1)
 Plan9)
 	CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE -D_LIMITS_EXTENSION"
 	CPPFLAGS="$CPPFLAGS -D_BSD_EXTENSION -D_SUSV2_SOURCE"
-	warn=' and will currently not work'
+	oswarn=' and will currently not work'
 	CPPFLAGS="$CPPFLAGS -DMKSH_ASSUME_UTF8 -DMKSH_UNEMPLOYED"
 	;;
 PW32*)
 	HAVE_SIG_T=0	# incompatible
-	warn=' and will currently not work'
-	# missing: killpg()
+	oswarn=' and will currently not work'
 	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 QNX)
-	oldish_ed=no-stderr-ed		# oldish /bin/ed is broken
+	CPPFLAGS="$CPPFLAGS -D__NO_EXT_QNX"
+	case $TARGET_OSREV in
+	[012345].*|6.[0123].*|6.4.[01])
+		oldish_ed=no-stderr-ed		# oldish /bin/ed is broken
+		;;
+	esac
 	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 SunOS)
 	CPPFLAGS="$CPPFLAGS -D_BSD_SOURCE -D__EXTENSIONS__"
 	;;
 syllable)
-	: ${HAVE_FLOCK_EX=0}
-	warn=' and will currently not work'
+	CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
+	oswarn=' and will currently not work'
 	;;
 ULTRIX)
 	: ${CC=cc -YPOSIX}
@@ -391,32 +433,14 @@ UWIN*)
 	ccpc='-Yc,'
 	ccpl='-Yl,'
 	tsts=" 3<>/dev/tty"
-	warn="; it will compile, but the target"
-	warn="$warn${nl}platform itself is very flakey/unreliable"
+	oswarn="; it will compile, but the target"
+	oswarn="$oswarn${nl}platform itself is very flakey/unreliable"
 	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 *)
-	warn='; it may or may not work'
+	oswarn='; it may or may not work'
 	;;
 esac
-
-case " $CPPFLAGS " in
-*\ -DMKSH_ASSUME_UTF8\ *|*\ -DMKSH_ASSUME_UTF8=*)
-	: ${HAVE_SETLOCALE_CTYPE=0}
-	;;
-esac
-case " $CPPFLAGS " in
-*\ -DMKSH_CONSERVATIVE_FDS\ *|*\ -DMKSH_CONSERVATIVE_FDS=*)
-	check_categories=$check_categories,convfds
-	;;
-esac
-
-if test -n "$warn"; then
-	echo "Warning: mksh has not yet been ported to or tested on your" >&2
-	echo "operating system '$TARGET_OS'$warn. If you can provide" >&2
-	echo "a shell account to the developer, this may improve; please" >&2
-	echo "drop us a success or failure notice or even send in diffs." >&2
-fi
 
 : ${CC=cc} ${NROFF=nroff}
 test 0 = $r && echo | $NROFF -v 2>&1 | grep GNU >/dev/null 2>&1 && \
@@ -442,6 +466,12 @@ OSF1)
 	vv '|' "uname -a >&2"
 	;;
 esac
+test -z "$oswarn" || echo >&2 "
+Warning: mksh has not yet been ported to or tested on your
+operating system '$TARGET_OS'$oswarn. If you can provide
+a shell account to the developer, this may improve; please
+drop us a success or failure notice or even send in diffs.
+"
 $e "$bi$me: Building the MirBSD Korn Shell$ao $ui$dstversion$ao"
 
 #
@@ -459,7 +489,8 @@ $e $bi$me: Scanning for functions... please ignore any errors.$ao
 # - nwcc defines __GNUC__ too
 CPP="$CC -E"
 $e ... which compiler seems to be used
-echo '#if defined(__ICC) || defined(__INTEL_COMPILER)
+cat >scn.c <<'EOF'
+#if defined(__ICC) || defined(__INTEL_COMPILER)
 ct=icc
 #elif defined(__xlC__) || defined(__IBMC__)
 ct=xlc
@@ -511,7 +542,8 @@ ct=hpcc
 ct=ucode
 #else
 ct=unknown
-#endif' >scn.c
+#endif
+EOF
 ct=unknown
 vv ']' "$CPP scn.c | grep ct= | tr -d \\\\015 >x"
 sed 's/^/[ /' x
@@ -664,10 +696,8 @@ ac_flags 0 compiler_works '' 'if the compiler works'
 test 1 = $HAVE_CAN_COMPILER_WORKS || exit 1
 HAVE_COMPILER_KNOWN=0
 test $ct = unknown || HAVE_COMPILER_KNOWN=1
-ac_testn compiler_fails '' 'if the compiler does not fail correctly' <<-EOF
-	int main(void) { return (thiswillneverbedefinedIhope()); }
-EOF
-if test 1 = $HAVE_COMPILER_FAILS; then
+if ac_ifcpp 'if 0' compiler_fails '' \
+    'if the compiler does not fail correctly'; then
 	save_CFLAGS=$CFLAGS
 	: ${HAVE_CAN_DELEXE=x}
 	if test $ct = dmc; then
@@ -688,15 +718,8 @@ if test 1 = $HAVE_COMPILER_FAILS; then
 	EOF
 	test 1 = $HAVE_COMPILER_STILL_FAILS && exit 1
 fi
-ac_testn couldbe_tcc '!' compiler_known 0 'if this could be tcc' <<-EOF
-	#ifdef __TINYC__
-	int main(void) { return (0); }
-	#else
-	/* force a failure: __TINYC__ not defined */
-	int main(void) { return (thiswillneverbedefinedIhope()); }
-	#endif
-EOF
-if test 1 = $HAVE_COULDBE_TCC; then
+if ac_ifcpp 'ifdef __TINYC__' couldbe_tcc '!' compiler_known 0 \
+    'if this could be tcc'; then
 	ct=tcc
 	CPP='cpp -D__TINYC__'
 fi
@@ -829,7 +852,8 @@ elif test $ct = tcc; then
 elif test $ct = clang; then
 	i=1
 elif test $ct = nwcc; then
-	ac_flags 1 ssp -stackprotect
+	i=1
+	#broken# ac_flags 1 ssp -stackprotect
 fi
 # flags common to a subset of compilers (run with -Werror on gcc)
 if test 1 = $i; then
@@ -867,7 +891,7 @@ ac_test attribute_bounded attribute 0 'for __attribute__((bounded))' <<-'EOF'
 	    __attribute__((bounded (buffer, 2, 3)));
 	int main(int ac, char *av[]) { return (xcopy(av[0], av[--ac], 1)); }
 	int xcopy(const void *s, void *d, size_t n) {
-		memmove(d, s, n); return (n);
+		memmove(d, s, n); return ((int)n);
 	}
 EOF
 
@@ -882,26 +906,8 @@ NOWARN=$save_NOWARN
 #
 # mksh: flavours (full/small mksh, omit certain stuff)
 #
-ac_testn mksh_full '' "if a full-featured mksh is requested" <<-'EOF'
-	#ifdef MKSH_SMALL
-	/* force a failure: we want a small mksh */
-	int main(void) { return (thiswillneverbedefinedIhope()); }
-	#else
-	/* force a success: we want a full mksh */
-	int main(void) { return (0); }
-	#endif
-EOF
-ac_testn mksh_reduced mksh_full 0 "if a reduced-feature sh is requested" <<-'EOF'
-	#ifdef MKSH_BINSHREDUCED
-	/* force a success: we want a reduced mksh-as-bin-sh */
-	int main(void) { return (0); }
-	#else
-	/* force a failure: we want a full mksh, always */
-	int main(void) { return (thiswillneverbedefinedIhope()); }
-	#endif
-EOF
-
-if test 0 = $HAVE_MKSH_FULL; then
+if ac_ifcpp 'ifdef MKSH_SMALL' isset_MKSH_SMALL '' \
+    "if a reduced-feature mksh is requested"; then
 	if test $ct = xlc; then
 		ac_flags 1 fnoinline -qnoinline
 	else
@@ -909,12 +915,23 @@ if test 0 = $HAVE_MKSH_FULL; then
 	fi
 
 	: ${HAVE_MKNOD=0}
+	: ${HAVE_REALPATH=0}
+	: ${HAVE_REVOKE=0}
+	: ${HAVE_PERSISTENT_HISTORY=0}
 	check_categories=$check_categories,smksh
-	check_categories=$check_categories,convfds
+	HAVE_ISSET_MKSH_CONSERVATIVE_FDS=1	# from sh.h
 fi
-if test 1 = $HAVE_MKSH_REDUCED; then
-	check_categories=$check_categories,binsh
-fi
+ac_ifcpp 'ifdef MKSH_BINSHREDUCED' isset_MKSH_BINSHREDUCED '' \
+    "if a reduced-feature sh is requested" && \
+    check_categories=$check_categories,binsh
+ac_ifcpp 'ifdef MKSH_UNEMPLOYED' isset_MKSH_UNEMPLOYED '' \
+    "if mksh will be built without job control" && \
+    check_categories=$check_categories,arge
+ac_ifcpp 'ifdef MKSH_ASSUME_UTF8' isset_MKSH_ASSUME_UTF8 '' \
+    'if the default UTF-8 mode is specified' && : ${HAVE_SETLOCALE_CTYPE=0}
+ac_ifcpp 'ifdef MKSH_CONSERVATIVE_FDS' isset_MKSH_CONSERVATIVE_FDS '' \
+    'if traditional/conservative fd use is requested' && \
+    check_categories=$check_categories,convfds
 
 #
 # Environment: headers
@@ -986,14 +1003,14 @@ ac_testn sig_t <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
 	#include <stddef.h>
-	int main(void) { return ((ptrdiff_t)(sig_t)0); }
+	int main(void) { return ((int)(ptrdiff_t)(sig_t)kill(0,0)); }
 EOF
 
 ac_testn sighandler_t '!' sig_t 0 <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
 	#include <stddef.h>
-	int main(void) { return ((ptrdiff_t)(sighandler_t)0); }
+	int main(void) { return ((int)(ptrdiff_t)(sighandler_t)kill(0,0)); }
 EOF
 if test 1 = $HAVE_SIGHANDLER_T; then
 	CPPFLAGS="$CPPFLAGS -Dsig_t=sighandler_t"
@@ -1004,7 +1021,7 @@ ac_testn __sighandler_t '!' sig_t 0 <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
 	#include <stddef.h>
-	int main(void) { return ((ptrdiff_t)(__sighandler_t)0); }
+	int main(void) { return ((int)(ptrdiff_t)(__sighandler_t)kill(0,0)); }
 EOF
 if test 1 = $HAVE___SIGHANDLER_T; then
 	CPPFLAGS="$CPPFLAGS -Dsig_t=__sighandler_t"
@@ -1060,7 +1077,7 @@ ac_testn arc4random <<-'EOF'
 	#include <stdint.h>
 	#endif
 	extern u_int32_t arc4random(void);
-	int main(void) { return (arc4random()); }
+	int main(void) { return ((int)(arc4random() & 0xFF)); }
 EOF
 
 save_LIBS=$LIBS
@@ -1070,8 +1087,18 @@ if test 0 = $HAVE_ARC4RANDOM; then
 		cp "$srcdir/arc4random.c" .
 	fi
 	if test -f arc4random.c; then
+		ac_testn can_uint8t '' "for uint8_t" <<-'EOF'
+			#include <sys/types.h>
+			#if HAVE_STDINT_H
+			#include <stdint.h>
+			#endif
+			int main(void) { return (1 - (uint8_t)1); }
+		EOF
+		test $HAVE_CAN_UINT8T = 1 || \
+		    CPPFLAGS="$CPPFLAGS -D\"uint8_t=unsigned char\""
+
 		ac_header sys/sysctl.h
-		addsrcs HAVE_ARC4RANDOM arc4random.c
+		addsrcs '!' HAVE_ARC4RANDOM arc4random.c
 		HAVE_ARC4RANDOM=1
 		LIBS="$LIBS arc4random.c"
 	fi
@@ -1084,7 +1111,8 @@ ac_test arc4random_pushb arc4random 0 <<-'EOF'
 	#include <stdint.h>
 	#endif
 	extern uint32_t arc4random_pushb(void *, size_t);
-	int main(int ac, char *av[]) { return (arc4random_pushb(*av, ac)); }
+	int main(int ac, char *av[]) { return ((int)(arc4random_pushb(*av,
+	    (size_t)ac)) & 0xFF); }
 EOF
 LIBS=$save_LIBS
 
@@ -1094,7 +1122,7 @@ ac_testn flock_ex '' 'flock and mmap' <<-'EOF'
 	#include <sys/mman.h>
 	#include <fcntl.h>
 	#include <stdlib.h>
-	int main(void) { return ((void *)mmap(NULL, flock(0, LOCK_EX),
+	int main(void) { return ((void *)mmap(NULL, (size_t)flock(0, LOCK_EX),
 	    PROT_READ, MAP_PRIVATE, 0, 0) == (void *)NULL ? 1 :
 	    munmap(NULL, 0)); }
 EOF
@@ -1104,8 +1132,14 @@ ac_test getrusage <<-'EOF'
 	#include "sh.h"
 	int main(void) {
 		struct rusage ru;
-		return (getrusage(RUSAGE_SELF + RUSAGE_CHILDREN, &ru));
+		return (getrusage(RUSAGE_SELF, &ru) +
+		    getrusage(RUSAGE_CHILDREN, &ru));
 	}
+EOF
+
+ac_test killpg <<-'EOF'
+	#include <signal.h>
+	int main(int ac, char *av[]) { return (av[0][killpg(123, ac)]); }
 EOF
 
 ac_test mknod '' 'if to use mknod(), makedev() and friends' <<-'EOF'
@@ -1113,13 +1147,14 @@ ac_test mknod '' 'if to use mknod(), makedev() and friends' <<-'EOF'
 	#include "sh.h"
 	int main(int ac, char *av[]) {
 		dev_t dv;
-		dv = makedev(ac, 1);
+		dv = makedev((unsigned int)ac, 1);
 		return (mknod(av[0], 0, dv) ? (int)major(dv) : (int)minor(dv));
 	}
 EOF
 
 ac_test mkstemp <<-'EOF'
 	#include <stdlib.h>
+	#include <unistd.h>
 	int main(void) { char tmpl[] = "X"; return (mkstemp(tmpl)); }
 EOF
 
@@ -1128,11 +1163,12 @@ ac_test nice <<-'EOF'
 	int main(void) { return (nice(4)); }
 EOF
 
-ac_test realpath mksh_full 0 <<-'EOF'
+ac_test realpath <<-'EOF'
 	#if HAVE_SYS_PARAM_H
 	#include <sys/param.h>
 	#endif
 	#include <stdlib.h>
+	#include <unistd.h>
 	#ifndef PATH_MAX
 	#define PATH_MAX 1024
 	#endif
@@ -1144,7 +1180,7 @@ ac_test realpath mksh_full 0 <<-'EOF'
 	}
 EOF
 
-ac_test revoke mksh_full 0 <<-'EOF'
+ac_test revoke <<-'EOF'
 	#include <sys/types.h>
 	#if HAVE_LIBUTIL_H
 	#include <libutil.h>
@@ -1156,16 +1192,18 @@ EOF
 ac_test setlocale_ctype '' 'setlocale(LC_CTYPE, "")' <<-'EOF'
 	#include <locale.h>
 	#include <stddef.h>
-	int main(void) { return ((ptrdiff_t)(void *)setlocale(LC_CTYPE, "")); }
+	int main(void) { return ((int)(ptrdiff_t)(void *)setlocale(LC_CTYPE, "")); }
 EOF
 
 ac_test langinfo_codeset setlocale_ctype 0 'nl_langinfo(CODESET)' <<-'EOF'
 	#include <langinfo.h>
 	#include <stddef.h>
-	int main(void) { return ((ptrdiff_t)(void *)nl_langinfo(CODESET)); }
+	int main(void) { return ((int)(ptrdiff_t)(void *)nl_langinfo(CODESET)); }
 EOF
 
 ac_test setmode mknod 1 <<-'EOF'
+	/* XXX imake style */
+	/* XXX conditions correct? */
 	#if defined(__MSVCRT__) || defined(__CYGWIN__)
 	/* force a failure: Win32 setmode() is not what we want... */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
@@ -1198,7 +1236,7 @@ ac_test strcasestr <<-'EOF'
 	#include <strings.h>
 	#endif
 	int main(int ac, char *av[]) {
-		return ((ptrdiff_t)(void *)strcasestr(*av, av[ac]));
+		return ((int)(ptrdiff_t)(void *)strcasestr(*av, av[ac]));
 	}
 EOF
 
@@ -1216,25 +1254,25 @@ ac_test '!' arc4random_decl arc4random 1 'if arc4random() does not need to be de
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
 	long arc4random(void);		/* this clashes if defined before */
-	int main(void) { return (arc4random()); }
+	int main(void) { return ((int)arc4random()); }
 EOF
 ac_test '!' arc4random_pushb_decl arc4random_pushb 1 'if arc4random_pushb() does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
 	int arc4random_pushb(char, int); /* this clashes if defined before */
-	int main(int ac, char *av[]) { return (arc4random_pushb(**av, ac)); }
+	int main(int ac, char *av[]) { return ((int)arc4random_pushb(**av, ac)); }
 EOF
 ac_test '!' flock_decl flock_ex 1 'if flock() does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
 	long flock(void);		/* this clashes if defined before */
-	int main(void) { return (flock()); }
+	int main(void) { return ((int)flock()); }
 EOF
 ac_test '!' revoke_decl revoke 1 'if revoke() does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
 	long revoke(void);		/* this clashes if defined before */
-	int main(void) { return (revoke()); }
+	int main(void) { return ((int)revoke()); }
 EOF
 ac_test sys_siglist_decl sys_siglist 1 'if sys_siglist[] does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
@@ -1247,7 +1285,7 @@ CC=$save_CC; LDFLAGS=$save_LDFLAGS; LIBS=$save_LIBS
 # other checks
 #
 fd='if to use persistent history'
-ac_cache PERSISTENT_HISTORY || test 11 != $HAVE_FLOCK_EX$HAVE_MKSH_FULL || fv=1
+ac_cache PERSISTENT_HISTORY || test 0 = $HAVE_FLOCK_EX || fv=1
 test 1 = $fv || check_categories=$check_categories,no-histfile
 ac_testdone
 ac_cppflags
@@ -1328,8 +1366,10 @@ mksh_cfg: NSIG' >scn.c
 	$e done.
 fi
 
-addsrcs HAVE_SETMODE setmode.c
-addsrcs HAVE_STRLCPY strlcpy.c
+addsrcs '!' HAVE_SETMODE setmode.c
+addsrcs '!' HAVE_STRLCPY strlcpy.c
+addsrcs USE_PRINTF_BUILTIN printf.c
+test 1 = "$USE_PRINTF_BUILTIN" && CPPFLAGS="$CPPFLAGS -DMKSH_PRINTF_BUILTIN"
 test 0 = "$HAVE_SETMODE" && CPPFLAGS="$CPPFLAGS -DHAVE_CONFIG_H -DCONFIG_H_FILENAME=\\\"sh.h\\\""
 test 1 = "$HAVE_CAN_VERB" && CFLAGS="$CFLAGS -verbose"
 

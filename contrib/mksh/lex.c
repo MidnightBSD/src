@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.83 2009/05/16 16:59:37 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.89 2009/07/06 15:06:23 tg Exp $");
 
 /*
  * states while lexing word
@@ -127,25 +127,21 @@ static int ignore_backslash_newline;
 #define	getsc_()	((*source->str != '\0') && !(source->flags & SF_FIRST) \
 			 ? *source->str++ : getsc__())
 
-#ifdef MKSH_SMALL
 #define STATE_BSIZE	32
-#else
-#define STATE_BSIZE	48
-#endif
 
-#define PUSH_STATE(s)	do { \
-			    if (++statep == state_info.end) \
-				statep = push_state_(&state_info, statep); \
-			    state = statep->ls_state = (s); \
-			} while (0)
+#define PUSH_STATE(s)	do {					\
+	if (++statep == state_info.end)				\
+		statep = push_state_(&state_info, statep);	\
+	state = statep->ls_state = (s);				\
+} while (0)
 
-#define POP_STATE()	do { \
-			    if (--statep == state_info.base) \
-				statep = pop_state_(&state_info, statep); \
-			    state = statep->ls_state; \
-			} while (0)
+#define POP_STATE()	do {					\
+	if (--statep == state_info.base)			\
+		statep = pop_state_(&state_info, statep);	\
+	state = statep->ls_state;				\
+} while (0)
 
-/*
+/**
  * Lexical analyser
  *
  * tokens are not regular expressions, they are LL(1).
@@ -163,7 +159,6 @@ yylex(int cf)
 	char *wp;		/* output word pointer */
 	char *sp, *dp;
 	int c2;
-	bool last_terminal_was_bracket;
 
  Again:
 	states[0].ls_state = -1;
@@ -263,9 +258,9 @@ yylex(int cf)
 						Source *s;
 
 						s = pushs(SREREAD,
-							  source->areap);
-						s->start = s->str
-							= s->u.freeme = tmp;
+						    source->areap);
+						s->start = s->str =
+						    s->u.freeme = tmp;
 						s->next = source;
 						source = s;
 					}
@@ -441,7 +436,7 @@ yylex(int cf)
 				PUSH_STATE(SBQUOTE);
 				*wp++ = COMSUB;
 				/* Need to know if we are inside double quotes
-				 * since sh/at&t-ksh translate the \" to " in
+				 * since sh/AT&T-ksh translate the \" to " in
 				 * "`..\"..`".
 				 * This is not done in posix mode (section
 				 * 3.2.3, Double Quotes: "The backquote shall
@@ -659,7 +654,7 @@ yylex(int cf)
 			/*(*/
 			if (c == ')') {
 				if (statep->ls_sletparen.nparen > 0)
-				    --statep->ls_sletparen.nparen;
+					--statep->ls_sletparen.nparen;
 				/*(*/
 				else if ((c2 = getsc()) == ')') {
 					c = 0;
@@ -669,7 +664,7 @@ yylex(int cf)
 					ungetsc(c2);
 			} else if (c == '(')
 				/* parenthesis inside quotes and backslashes
-				 * are lost, but at&t ksh doesn't count them
+				 * are lost, but AT&T ksh doesn't count them
 				 * either
 				 */
 				++statep->ls_sletparen.nparen;
@@ -795,7 +790,7 @@ yylex(int cf)
 
 	dp = Xstring(ws, wp);
 	if ((c == '<' || c == '>' || c == '&') && state == SBASE) {
-		struct ioword *iop = alloc(sizeof (struct ioword), ATEMP);
+		struct ioword *iop = alloc(sizeof(struct ioword), ATEMP);
 
 		if (Xlength(ws, wp) == 0)
 			iop->unit = c == '<' ? 0 : 1;
@@ -846,7 +841,7 @@ yylex(int cf)
 		iop->heredoc = NULL;
 		Xfree(ws, wp);	/* free word */
 		yylval.iop = iop;
-		return REDIR;
+		return (REDIR);
  no_iop:
 		;
 	}
@@ -859,11 +854,11 @@ yylex(int cf)
 				c = (c == ';') ? BREAK :
 				    (c == '|') ? LOGOR :
 				    (c == '&') ? LOGAND :
-				    /*
-				     * this is the place where
-				     * ((...); (...))
-				     * and similar is broken
-				     */
+				/*
+				 * this is the place where
+				 * ((...); (...))
+				 * and similar is broken
+				 */
 				    /* c == '(' ) */ MDPAREN;
 			else if (c == '|' && c2 == '&')
 				c = COPROC;
@@ -883,10 +878,16 @@ yylex(int cf)
 	yylval.cp = Xclose(ws, wp);
 	if (state == SWORD || state == SLETPAREN ||
 	    state == SLETARRAY)	/* ONEWORD? */
-		return LWORD;
+		return (LWORD);
 
-	last_terminal_was_bracket = c == '(';
-	ungetsc(c);		/* unget terminator */
+	/* unget terminator */
+	ungetsc(c);
+
+	/*
+	 * note: the alias-vs-function code below depends on several
+	 * interna: starting from here, source->str is not modified;
+	 * the way getsc() and ungetsc() operate; etc.
+	 */
 
 	/* copy word to unprefixed string ident */
 	sp = yylval.cp;
@@ -914,19 +915,42 @@ yylex(int cf)
 		if ((cf & KEYWORD) && (p = ktsearch(&keywords, ident, h)) &&
 		    (!(cf & ESACONLY) || p->val.i == ESAC || p->val.i == '}')) {
 			afree(yylval.cp, ATEMP);
-			return p->val.i;
+			return (p->val.i);
 		}
 		if ((cf & ALIAS) && (p = ktsearch(&aliases, ident, h)) &&
 		    (p->flag & ISSET)) {
-			if (last_terminal_was_bracket)
-				/* prefer functions over aliases */
+			/*
+			 * this still points to the same character as the
+			 * ungetsc'd terminator from above
+			 */
+			const char *cp = source->str;
+
+			/* prefer POSIX but not Korn functions over aliases */
+			while (*cp == ' ' || *cp == '\t')
+				/*
+				 * this is like getsc() without skipping
+				 * over Source boundaries (including not
+				 * parsing ungetsc'd characters that got
+				 * pushed into an SREREAD) which is what
+				 * we want here anyway: find out whether
+				 * the alias name is followed by a POSIX
+				 * function definition (only the opening
+				 * parenthesis is checked though)
+				 */
+				++cp;
+			/* prefer functions over aliases */
+			if (*cp == '(' /*)*/)
+				/*
+				 * delete alias upon encountering function
+				 * definition
+				 */
 				ktdelete(p);
 			else {
 				Source *s = source;
 
 				while (s->flags & SF_HASALIAS)
 					if (s->u.tblp == p)
-						return LWORD;
+						return (LWORD);
 					else
 						s = s->next;
 				/* push alias expansion */
@@ -947,7 +971,7 @@ yylex(int cf)
 		}
 	}
 
-	return LWORD;
+	return (LWORD);
 }
 
 static void
@@ -1061,7 +1085,7 @@ pushs(int type, Area *areap)
 {
 	Source *s;
 
-	s = alloc(sizeof (Source), areap);
+	s = alloc(sizeof(Source), areap);
 	s->type = type;
 	s->str = null;
 	s->start = NULL;
@@ -1075,7 +1099,7 @@ pushs(int type, Area *areap)
 		XinitN(s->xs, 256, s->areap);
 	else
 		memset(&s->xs, 0, sizeof(s->xs));
-	return s;
+	return (s);
 }
 
 static int
@@ -1090,7 +1114,7 @@ getsc__(void)
 		switch (s->type) {
 		case SEOF:
 			s->str = null;
-			return 0;
+			return (0);
 
 		case SSTDIN:
 		case SFILE:
@@ -1136,7 +1160,7 @@ getsc__(void)
 				/* At this point, we need to keep the current
 				 * alias in the source list so recursive
 				 * aliases can be detected and we also need
-				 * to return the next character.  Do this
+				 * to return the next character. Do this
 				 * by temporarily popping the alias to get
 				 * the next character and then put it back
 				 * in the source list with the SF_ALIASEND
@@ -1169,7 +1193,7 @@ getsc__(void)
 		if (s->str == NULL) {
 			s->type = SEOF;
 			s->start = s->str = null;
-			return '\0';
+			return ('\0');
 		}
 		if (s->flags & SF_ECHO) {
 			shf_puts(s->str, shl_out);
@@ -1187,13 +1211,13 @@ getsc__(void)
 			goto getsc_again;
 		}
 	}
-	return c;
+	return (c);
 }
 
 static void
 getsc_line(Source *s)
 {
-	char *xp = Xstring(s->xs, xp);
+	char *xp = Xstring(s->xs, xp), *cp;
 	int interactive = Flag(FTALKING) && s->type == SSTDIN;
 	int have_tty = interactive && (s->flags & SF_TTY);
 
@@ -1242,7 +1266,7 @@ getsc_line(Source *s)
 			xp--; /* ...and move back again */
 		}
 		/* flush any unwanted input so other programs/builtins
-		 * can read it.  Not very optimal, but less error prone
+		 * can read it. Not very optimal, but less error prone
 		 * than flushing else where, dealing with redirections,
 		 * etc..
 		 * todo: reduce size of shf buffer (~128?) if SSTDIN
@@ -1258,7 +1282,25 @@ getsc_line(Source *s)
 		ksh_tmout_state = TMOUT_EXECUTING;
 		alarm(0);
 	}
-	s->start = s->str = Xstring(s->xs, xp);
+	cp = Xstring(s->xs, xp);
+	if (interactive && *cp == '!' && cur_prompt == PS1) {
+		int linelen;
+
+		linelen = Xlength(s->xs, xp);
+		XcheckN(s->xs, xp, fc_e_n + /* NUL */ 1);
+		/* reload after potential realloc */
+		cp = Xstring(s->xs, xp);
+		/* change initial '!' into space */
+		*cp = ' ';
+		/* NUL terminate the current string */
+		*xp = '\0';
+		/* move the actual string forward */
+		memmove(cp + fc_e_n, cp, linelen + /* NUL */ 1);
+		xp += fc_e_n;
+		/* prepend it with "fc -e -" */
+		memcpy(cp, fc_e_, fc_e_n);
+	}
+	s->start = s->str = cp;
 	strip_nuls(Xstring(s->xs, xp), Xlength(s->xs, xp));
 	/* Note: if input is all nulls, this is not eof */
 	if (Xlength(s->xs, xp) == 0) { /* EOF */
@@ -1281,7 +1323,7 @@ set_prompt(int to, Source *s)
 	case PS1: /* command */
 		/* Substitute ! and !! here, before substitutions are done
 		 * so ! in expanded variables are not expanded.
-		 * NOTE: this is not what at&t ksh does (it does it after
+		 * NOTE: this is not what AT&T ksh does (it does it after
 		 * substitutions, POSIX doesn't say which is to be done.
 		 */
 		{
@@ -1304,7 +1346,7 @@ set_prompt(int to, Source *s)
 			if (sigsetjmp(e->jbuf, 0)) {
 				prompt = safe_prompt;
 				/* Don't print an error - assume it has already
-				 * been printed.  Reason is we may have forked
+				 * been printed. Reason is we may have forked
 				 * to run a command and the child may be
 				 * unwinding its stack through this code as it
 				 * exits.
@@ -1390,10 +1432,9 @@ static char *
 get_brace_var(XString *wsp, char *wp)
 {
 	enum parse_state {
-			   PS_INITIAL, PS_SAW_HASH, PS_IDENT,
-			   PS_NUMBER, PS_VAR1, PS_END
-			 }
-		state;
+		PS_INITIAL, PS_SAW_HASH, PS_IDENT,
+		PS_NUMBER, PS_VAR1, PS_END
+	} state;
 	char c;
 
 	state = PS_INITIAL;
@@ -1453,7 +1494,7 @@ get_brace_var(XString *wsp, char *wp)
 		Xcheck(*wsp, wp);
 		*wp++ = c;
 	}
-	return wp;
+	return (wp);
 }
 
 /*
@@ -1484,7 +1525,7 @@ arraysub(char **strp)
 	*wp++ = '\0';
 	*strp = Xclose(ws, wp);
 
-	return depth == 0 ? 1 : 0;
+	return (depth == 0 ? 1 : 0);
 }
 
 /* Unget a char: handles case when we are already at the start of the buffer */
@@ -1495,7 +1536,7 @@ ungetsc(int c)
 		backslash_skip--;
 	/* Don't unget eof... */
 	if (source->str == null && c == '\0')
-		return source->str;
+		return (source->str);
 	if (source->str > source->start)
 		source->str--;
 	else {
@@ -1507,7 +1548,7 @@ ungetsc(int c)
 		s->next = source;
 		source = s;
 	}
-	return source->str;
+	return (source->str);
 }
 
 
@@ -1518,11 +1559,11 @@ getsc_bn(void)
 	int c, c2;
 
 	if (ignore_backslash_newline)
-		return getsc_();
+		return (getsc_());
 
 	if (backslash_skip == 1) {
 		backslash_skip = 2;
-		return getsc_();
+		return (getsc_());
 	}
 
 	backslash_skip = 0;
@@ -1536,19 +1577,19 @@ getsc_bn(void)
 			ungetsc(c2);
 			backslash_skip = 1;
 		}
-		return c;
+		return (c);
 	}
 }
 
 static Lex_state *
 push_state_(State_info *si, Lex_state *old_end)
 {
-	Lex_state *new = alloc(STATE_BSIZE * sizeof (Lex_state), ATEMP);
+	Lex_state *new = alloc(STATE_BSIZE * sizeof(Lex_state), ATEMP);
 
 	new[0].ls_info.base = old_end;
 	si->base = &new[0];
 	si->end = &new[STATE_BSIZE];
-	return &new[1];
+	return (&new[1]);
 }
 
 static Lex_state *
@@ -1561,5 +1602,5 @@ pop_state_(State_info *si, Lex_state *old_end)
 
 	afree(old_base, ATEMP);
 
-	return si->base + STATE_BSIZE - 1;
+	return (si->base + STATE_BSIZE - 1);
 }

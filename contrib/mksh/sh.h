@@ -29,6 +29,7 @@
  */
 
 #ifdef __dietlibc__
+/* XXX imake style */
 #define _BSD_SOURCE	/* live, BSD, live! */
 #endif
 
@@ -108,9 +109,18 @@
 #define __attribute____used__	/* nothing */
 #endif
 
+#if (defined(MirBSD) && (MirBSD >= 0x09A1))
+/*
+ * We got usable __IDSTRING __COPYRIGHT __RCSID __SCCSID macros
+ * which work for all cases; no need to redefine them using the
+ * "portable" macros from below when we might have the "better"
+ * gcc+ELF specific macros or other system dependent ones.
+ */
+#else
 #undef __IDSTRING
 #undef __IDSTRING_CONCAT
 #undef __IDSTRING_EXPAND
+#undef __COPYRIGHT
 #undef __RCSID
 #undef __SCCSID
 #define __IDSTRING_CONCAT(l,p)		__LINTED__ ## l ## _ ## p
@@ -118,13 +128,15 @@
 #define __IDSTRING(prefix, string)				\
 	static const char __IDSTRING_EXPAND(__LINE__,prefix) []	\
 	    __attribute____used__ = "@(""#)" #prefix ": " string
-#define __RCSID(x)	__IDSTRING(rcsid,x)
-#define __SCCSID(x)	__IDSTRING(sccsid,x)
+#define __COPYRIGHT(x)		__IDSTRING(copyright,x)
+#define __RCSID(x)		__IDSTRING(rcsid,x)
+#define __SCCSID(x)		__IDSTRING(sccsid,x)
+#endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.300 2009/05/16 21:00:52 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.321 2009/08/01 20:32:45 tg Rel $");
 #endif
-#define MKSH_VERSION "R38 2009/05/16"
+#define MKSH_VERSION "R39 2009/08/01"
 
 #ifndef MKSH_INCLUDES_ONLY
 
@@ -224,6 +236,7 @@ typedef int bool;
 #endif
 
 #if !defined(MAP_FAILED)
+/* XXX imake style */
 #  if defined(__linux)
 #define MAP_FAILED	((void *)-1)
 #  elif defined(__bsdi__) || defined(__osf__) || defined(__ultrix)
@@ -271,6 +284,7 @@ void *setmode(const char *);
 #endif
 
 #ifdef __ultrix
+/* XXX imake style */
 int strcasecmp(const char *, const char *);
 #endif
 
@@ -287,6 +301,7 @@ extern const char *const sys_siglist[];
 #endif
 
 #ifdef __INTERIX
+/* XXX imake style */
 #define makedev mkdev
 extern int __cdecl seteuid(uid_t);
 extern int __cdecl setegid(gid_t);
@@ -301,7 +316,7 @@ extern int __cdecl setegid(gid_t);
 # define EXTERN_DEFINED
 #endif
 
-#define NELEM(a)	(sizeof (a) / sizeof ((a)[0]))
+#define NELEM(a)	(sizeof(a) / sizeof((a)[0]))
 #define BIT(i)		(1 << (i))	/* define bit in flag */
 
 /* Table flag type - needs > 16 and < 32 bits */
@@ -312,7 +327,7 @@ typedef int32_t mksh_ari_t;
 typedef uint32_t mksh_uari_t;
 
 /* these shall be smaller than 100 */
-#if defined(MKSH_SMALL) || defined(MKSH_CONSERVATIVE_FDS)
+#ifdef MKSH_CONSERVATIVE_FDS
 #define NUFILE		32	/* Number of user-accessible files */
 #define FDBASE		10	/* First file usable by Shell */
 #else
@@ -409,7 +424,7 @@ char *ucstrstr(char *, const char *);
 	if (strdup_src != NULL) {					\
 		size_t strdup_len = strlen(strdup_src) + 1;		\
 		strdup_dst = alloc(strdup_len, (ap));			\
-		strlcpy(strdup_dst, strdup_src, strdup_len);		\
+		memcpy(strdup_dst, strdup_src, strdup_len);		\
 	}								\
 	(d) = strdup_dst;						\
 } while (/* CONSTCOND */ 0)
@@ -418,9 +433,10 @@ char *ucstrstr(char *, const char *);
 	char *strdup_dst = NULL;					\
 									\
 	if (strdup_src != NULL) {					\
-		size_t strdup_len = (n) + 1;				\
-		strdup_dst = alloc(strdup_len, (ap));			\
-		strlcpy(strdup_dst, strdup_src, strdup_len);		\
+		size_t strndup_len = (n);				\
+		strdup_dst = alloc(strndup_len + 1, (ap));		\
+		memcpy(strdup_dst, strdup_src, strndup_len);		\
+		strdup_dst[strndup_len] = '\0';				\
 	}								\
 	(d) = strdup_dst;						\
 } while (/* CONSTCOND */ 0)
@@ -430,8 +446,16 @@ char *ucstrstr(char *, const char *);
 #define stristr(b,l)	((const char *)strcasestr((b), (l)))
 #endif
 
-#if defined(MKSH_SMALL) && !defined(MKSH_NOVI)
+#ifdef MKSH_SMALL
+#ifndef MKSH_CONSERVATIVE_FDS
+#define MKSH_CONSERVATIVE_FDS
+#endif
+#ifndef MKSH_NOPWNAM
+#define MKSH_NOPWNAM
+#endif
+#ifndef MKSH_NOVI
 #define MKSH_NOVI
+#endif
 #endif
 
 /*
@@ -445,7 +469,7 @@ struct lalloc {
 
 /* 2. sizes */
 #define ALLOC_ITEM	struct lalloc
-#define ALLOC_SIZE	(sizeof (ALLOC_ITEM))
+#define ALLOC_SIZE	(sizeof(ALLOC_ITEM))
 
 /* 3. group structure (only the same for lalloc.c) */
 typedef struct lalloc Area;
@@ -576,6 +600,9 @@ EXTERN char shell_flags[FNFLAGS];
 EXTERN char null[] I__("");
 /* helpers for string pooling */
 #define T_synerr "syntax error"
+EXTERN const char r_fc_e_[] I__("r=fc -e -");
+#define fc_e_	(r_fc_e_ + 2)		/* "fc -e -" */
+#define fc_e_n	7			/* strlen(fc_e_) */
 
 enum temp_type {
 	TT_HEREDOC_EXP,	/* expanded heredoc */
@@ -664,11 +691,11 @@ EXTERN int really_exit;
  */
 #define C_ALPHA	 BIT(0)		/* a-z_A-Z */
 #define C_DIGIT	 BIT(1)		/* 0-9 */
-#define C_LEX1	 BIT(2)		/* \0 \t\n|&;<>() */
+#define C_LEX1	 BIT(2)		/* \t \n\0|&;<>() */
 #define C_VAR1	 BIT(3)		/* *@#!$-? */
 #define C_IFSWS	 BIT(4)		/* \t \n (IFS white space) */
 #define C_SUBOP1 BIT(5)		/* "=-+?" */
-#define C_QUOTE	 BIT(6)		/*  \n\t"#$&'()*;<>?[]\`| (needing quoting) */
+#define C_QUOTE	 BIT(6)		/* \t \n"#$&'()*;<>?[]\`| (needing quoting) */
 #define C_IFS	 BIT(7)		/* $IFS */
 #define C_SUBOP2 BIT(8)		/* "#%" (magic, see below) */
 
@@ -882,8 +909,8 @@ struct tbl {			/* table item */
 /* Attributes that can be set by the user (used to decide if an unset param
  * should be repoted by set/typeset). Does not include ARRAY or LOCAL.
  */
-#define USERATTRIB	(EXPORT|INTEGER|RDONLY|LJUST|RJUST|ZEROFIL\
-			    |LCASEV|UCASEV_AL|INT_U|INT_L)
+#define USERATTRIB	(EXPORT|INTEGER|RDONLY|LJUST|RJUST|ZEROFIL|\
+			    LCASEV|UCASEV_AL|INT_U|INT_L)
 
 /* command types */
 #define CNONE		0	/* undefined */
@@ -948,7 +975,7 @@ EXTERN struct table taliases;	/* tracked aliases */
 EXTERN struct table builtins;	/* built-in commands */
 EXTERN struct table aliases;	/* aliases */
 EXTERN struct table keywords;	/* keywords */
-#ifndef MKSH_SMALL
+#ifndef MKSH_NOPWNAM
 EXTERN struct table homedirs;	/* homedir() cache */
 #endif
 
@@ -1184,7 +1211,7 @@ typedef struct XPtrV {
 
 #define XPinit(x, n) do {					\
 	void **vp__;						\
-	vp__ = alloc((n) * sizeof (void *), ATEMP);		\
+	vp__ = alloc((n) * sizeof(void *), ATEMP);		\
 	(x).cur = (x).beg = vp__;				\
 	(x).end = vp__ + (n);					\
 } while (/* CONSTCOND */ 0)
@@ -1193,7 +1220,7 @@ typedef struct XPtrV {
 	if ((x).cur >= (x).end) {				\
 		size_t n = XPsize(x);				\
 		(x).beg = aresize((x).beg,			\
-		    n * 2 * sizeof (void *), ATEMP);		\
+		    n * 2 * sizeof(void *), ATEMP);		\
 		(x).cur = (x).beg + n;				\
 		(x).end = (x).cur + n;				\
 	}							\
@@ -1202,7 +1229,7 @@ typedef struct XPtrV {
 
 #define XPptrv(x)	((x).beg)
 #define XPsize(x)	((x).cur - (x).beg)
-#define XPclose(x)	aresize((x).beg, XPsize(x) * sizeof (void *), ATEMP)
+#define XPclose(x)	aresize((x).beg, XPsize(x) * sizeof(void *), ATEMP)
 #define XPfree(x)	afree((x).beg, ATEMP)
 
 #define IDENT	64
@@ -1212,10 +1239,10 @@ struct source {
 	const char *str;	/* input pointer */
 	const char *start;	/* start of current buffer */
 	union {
-		const char **strv; /* string [] */
-		struct shf *shf;   /* shell file */
-		struct tbl *tblp;  /* alias (SF_HASALIAS) */
-		char *freeme;	   /* also for SREREAD */
+		const char **strv;	/* string [] */
+		struct shf *shf;	/* shell file */
+		struct tbl *tblp;	/* alias (SF_HASALIAS) */
+		char *freeme;		/* also for SREREAD */
 	} u;
 	const char *file;	/* input file name */
 	int	type;		/* input type */
@@ -1361,6 +1388,9 @@ int c_hash(const char **);
 int c_cd(const char **);
 int c_pwd(const char **);
 int c_print(const char **);
+#ifdef MKSH_PRINTF_BUILTIN
+int c_printf(const char **);
+#endif
 int c_whence(const char **);
 int c_command(const char **);
 int c_typeset(const char **);

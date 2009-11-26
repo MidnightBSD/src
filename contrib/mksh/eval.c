@@ -22,11 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.57 2009/05/16 18:40:05 tg Exp $");
-
-#ifdef MKSH_SMALL
-#define MKSH_NOPWNAM
-#endif
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.64 2009/08/01 19:31:02 tg Exp $");
 
 /*
  * string expansion
@@ -37,14 +33,14 @@ __RCSID("$MirOS: src/bin/mksh/eval.c,v 1.57 2009/05/16 18:40:05 tg Exp $");
 
 /* expansion generator state */
 typedef struct Expand {
-	/* int type; */		/* see expand() */
-	const char *str;	/* string */
+	/* int type; */			/* see expand() */
+	const char *str;		/* string */
 	union {
-		const char **strv;/* string[] */
-		struct shf *shf;  /* file */
-	} u;			/* source */
-	struct tbl *var;	/* variable in ${var..} */
-	short split;		/* split "$@" / call waitlast $() */
+		const char **strv;	/* string[] */
+		struct shf *shf;	/* file */
+	} u;				/* source */
+	struct tbl *var;		/* variable in ${var..} */
+	short split;			/* split "$@" / call waitlast $() */
 } Expand;
 
 #define	XBASE		0	/* scanning original */
@@ -115,7 +111,7 @@ substitute(const char *cp, int f)
 		internal_errorf("substitute");
 	source = sold;
 	afree(s, ATEMP);
-	return evalstr(yylval.cp, f);
+	return (evalstr(yylval.cp, f));
 }
 
 /*
@@ -137,7 +133,7 @@ eval(const char **ap, int f)
 	while (*ap != NULL)
 		expand(*ap++, &w, f);
 	XPput(w, NULL);
-	return (char **) XPclose(w) + 1;
+	return ((char **)XPclose(w) + 1);
 }
 
 /*
@@ -312,13 +308,12 @@ expand(const char *cp,	/* input word */
 					}
 				}
 				continue;
-			case OSUBST: /* ${{#}var{:}[=+-?#%]word} */
-			  /* format is:
-			   *   OSUBST [{x] plain-variable-part \0
-			   *     compiled-word-part CSUBST [}x]
-			   * This is where all syntax checking gets done...
-			   */
-			    {
+			case OSUBST: {	/* ${{#}var{:}[=+-?#%]word} */
+			/* format is:
+			 *	OSUBST [{x] plain-variable-part \0
+			 *	    compiled-word-part CSUBST [}x]
+			 * This is where all syntax checking gets done...
+			 */
 				const char *varname = ++sp; /* skip the { or x (}) */
 				int stype;
 				int slen = 0;
@@ -346,7 +341,7 @@ expand(const char *cp,	/* input word */
 					if (!st->next) {
 						SubType *newst;
 
-						newst = alloc(sizeof (SubType), ATEMP);
+						newst = alloc(sizeof(SubType), ATEMP);
 						newst->next = NULL;
 						newst->prev = st;
 						st->next = newst;
@@ -402,13 +397,13 @@ expand(const char *cp,	/* input word */
 								finc = flen + from;
 						} else
 							finc = from < flen ? from : flen;
-//						if (UTFMODE)
+						if (UTFMODE)
 							utfincptr(beg, &finc);
 						beg += finc;
 						flen = utflen(beg);
 						if (num < 0 || num > flen)
 							num = flen;
-//						if (UTFMODE)
+						if (UTFMODE)
 							utfincptr(beg, &num);
 						strndupx(x.str, beg, num, ATEMP);
 						goto do_CSUBST;
@@ -543,7 +538,7 @@ expand(const char *cp,	/* input word */
 						 * after :s here is
 						 * non-standard ksh, but is
 						 * consistent with rules for
-						 * other assignments.  Not
+						 * other assignments. Not
 						 * sure what POSIX thinks of
 						 * this.
 						 * Not doing tilde expansion
@@ -574,7 +569,7 @@ expand(const char *cp,	/* input word */
 					/* skip word */
 					sp += wdscan(sp, CSUBST) - sp;
 				continue;
-			    }
+			}
 			case CSUBST: /* only get here if expanding word */
  do_CSUBST:
 				sp++; /* ({) skip the } or x */
@@ -613,7 +608,7 @@ expand(const char *cp,	/* input word */
 					 * like x[i+=1] to be evaluated twice.
 					 */
 					/* Note: not exported by FEXPORT
-					 * in at&t ksh.
+					 * in AT&T ksh.
 					 */
 					/* XXX POSIX says readonly is only
 					 * fatal for special builtins (setstr
@@ -629,15 +624,14 @@ expand(const char *cp,	/* input word */
 						doblank++;
 					st = st->prev;
 					continue;
-				case '?':
-				    {
+				case '?': {
 					char *s = Xrestpos(ds, dp, st->base);
 
 					errorf("%s: %s", st->var->name,
 					    dp == s ?
 					    "parameter null or not set" :
 					    (debunk(s, s, strlen(s) + 1), s));
-				    }
+				}
 				case '0':
 				case '/':
 					dp = Xrestpos(ds, dp, st->base);
@@ -733,8 +727,9 @@ expand(const char *cp,	/* input word */
 				--newlines;
 			} else {
 				while ((c = shf_getc(x.u.shf)) == 0 || c == '\n')
-				    if (c == '\n')
-					    newlines++;	/* Save newlines */
+					if (c == '\n')
+						/* Save newlines */
+						newlines++;
 				if (newlines && c != EOF) {
 					shf_ungetc(c, x.u.shf);
 					c = '\n';
@@ -758,14 +753,14 @@ expand(const char *cp,	/* input word */
 		if (c == 0 || (!quote && (f & DOBLANK) && doblank &&
 		    !make_magic && ctype(c, C_IFS))) {
 			/* How words are broken up:
-			 *		   |       value of c
-			 *	  word	   |	ws	nws	0
+			 *			|	value of c
+			 *	word		|	ws	nws	0
 			 *	-----------------------------------
-			 *	IFS_WORD	w/WS	w/NWS	w
-			 *	IFS_WS		-/WS	w/NWS	-
-			 *	IFS_NWS		-/NWS	w/NWS	w
-			 *   (w means generate a word)
-			 * Note that IFS_NWS/0 generates a word (at&t ksh
+			 *	IFS_WORD		w/WS	w/NWS	w
+			 *	IFS_WS			-/WS	w/NWS	-
+			 *	IFS_NWS			-/NWS	w/NWS	w
+			 * (w means generate a word)
+			 * Note that IFS_NWS/0 generates a word (AT&T ksh
 			 * doesn't do this, but POSIX does).
 			 */
 			if (word == IFS_WORD ||
@@ -914,19 +909,18 @@ varsub(Expand *xp, const char *sp, const char *word,
 	int slen;
 	const char *p;
 	struct tbl *vp;
+	bool zero_ok = false;
 
 	if (sp[0] == '\0')	/* Bad variable name */
-		return -1;
+		return (-1);
 
 	xp->var = NULL;
 
 	/* ${#var}, string length or array size */
 	if (sp[0] == '#' && (c = sp[1]) != '\0') {
-		int zero_ok = 0;
-
 		/* Can't have any modifiers for ${#...} */
 		if (*word != CSUBST)
-			return -1;
+			return (-1);
 		sp++;
 		/* Check for size of array */
 		if ((p = cstrchr(sp, '[')) && (p[1] == '*' || p[1] == '@') &&
@@ -935,7 +929,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 
 			vp = global(arrayname(sp));
 			if (vp->flag & (ISSET|ARRAY))
-				zero_ok = 1;
+				zero_ok = true;
 			for (; vp; vp = vp->u.array)
 				if (vp->flag & ISSET)
 					n++;
@@ -951,7 +945,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 			errorf("%s: parameter not set", sp);
 		*stypep = 0; /* unqualified variable/string substitution */
 		xp->str = shf_smprintf("%lu", (unsigned long)c);
-		return XSUB;
+		return (XSUB);
 	}
 
 	/* Check for qualifiers in word part */
@@ -982,9 +976,9 @@ varsub(Expand *xp, const char *sp, const char *word,
 			slen += 2;
 		}
 	} else if (stype)	/* : is not ok */
-		return -1;
+		return (-1);
 	if (!stype && *word != CSUBST)
-		return -1;
+		return (-1);
 	*stypep = stype;
 	*slenp = slen;
 
@@ -994,7 +988,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 		case '=':	/* can't assign to a vector */
 		case '%':	/* can't trim a vector (yet) */
 		case '#':
-			return -1;
+			return (-1);
 		}
 		if (e->loc->argc == 0) {
 			xp->str = null;
@@ -1006,6 +1000,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 			xp->split = c == '@'; /* $@ */
 			state = XARG;
 		}
+		zero_ok = true;	/* POSIX 2009? */
 	} else {
 		if ((p = cstrchr(sp, '[')) && (p[1] == '*' || p[1] == '@') &&
 		    p[2] == ']') {
@@ -1016,7 +1011,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 			case '%':	/* can't trim a vector (yet) */
 			case '#':
 			case '?':
-				return -1;
+				return (-1);
 			}
 			XPinit(wv, 32);
 			vp = global(arrayname(sp));
@@ -1040,7 +1035,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 			/* Can't assign things like $! or $1 */
 			if ((stype & 0x7f) == '=' &&
 			    ctype(*sp, C_VAR1 | C_DIGIT))
-				return -1;
+				return (-1);
 			xp->var = global(sp);
 			xp->str = str_val(xp->var);
 			state = XSUB;
@@ -1053,10 +1048,10 @@ varsub(Expand *xp, const char *sp, const char *word,
 	    (((stype&0x80) ? *xp->str=='\0' : xp->str==null) ? /* undef? */
 	    c == '=' || c == '-' || c == '?' : c == '+'))
 		state = XBASE;	/* expand word instead of variable value */
-	if (Flag(FNOUNSET) && xp->str == null &&
+	if (Flag(FNOUNSET) && xp->str == null && !zero_ok &&
 	    (ctype(c, C_SUBOP2) || (state != XBASE && c != '+')))
 		errorf("%s: parameter not set", sp);
-	return state;
+	return (state);
 }
 
 /*
@@ -1077,7 +1072,7 @@ comsub(Expand *xp, const char *cp)
 	source = sold;
 
 	if (t == NULL)
-		return XBASE;
+		return (XBASE);
 
 	if (t != NULL && t->type == TCOM && /* $(<file) */
 	    *t->args == NULL && *t->vars == NULL && t->ioact != NULL) {
@@ -1108,7 +1103,7 @@ comsub(Expand *xp, const char *cp)
 	}
 
 	xp->u.shf = shf;
-	return XCOM;
+	return (XCOM);
 }
 
 /*
@@ -1127,7 +1122,7 @@ trimsub(char *str, char *pat, int how)
 			c = *p; *p = '\0';
 			if (gmatchx(str, pat, false)) {
 				*p = c;
-				return p;
+				return (p);
 			}
 			*p = c;
 		}
@@ -1137,7 +1132,7 @@ trimsub(char *str, char *pat, int how)
 			c = *p; *p = '\0';
 			if (gmatchx(str, pat, false)) {
 				*p = c;
-				return p;
+				return (p);
 			}
 			*p = c;
 		}
@@ -1157,7 +1152,7 @@ trimsub(char *str, char *pat, int how)
 		break;
 	}
 
-	return str;		/* no match, return string */
+	return (str);		/* no match, return string */
 }
 
 /*
@@ -1175,7 +1170,7 @@ glob(char *cp, XPtrV *wp, int markdirs)
 		XPput(*wp, debunk(cp, cp, strlen(cp) + 1));
 	else
 		qsort(XPptrv(*wp) + oldsize, XPsize(*wp) - oldsize,
-		    sizeof (void *), xstrcmp);
+		    sizeof(void *), xstrcmp);
 }
 
 #define GF_NONE		0
@@ -1183,7 +1178,7 @@ glob(char *cp, XPtrV *wp, int markdirs)
 #define GF_GLOBBED	BIT(1)		/* some globbing has been done */
 #define GF_MARKDIR	BIT(2)		/* add trailing / to directories */
 
-/* Apply file globbing to cp and store the matching files in wp.  Returns
+/* Apply file globbing to cp and store the matching files in wp. Returns
  * the number of matches found.
  */
 int
@@ -1197,7 +1192,7 @@ glob_str(char *cp, XPtrV *wp, int markdirs)
 	globit(&xs, &xp, cp, wp, markdirs ? GF_MARKDIR : GF_NONE);
 	Xfree(xs, xp);
 
-	return XPsize(*wp) - oldsize;
+	return (XPsize(*wp) - oldsize);
 }
 
 static void
@@ -1295,7 +1290,7 @@ globit(XString *xs,	/* dest string */
 		int len;
 		int prefix_len;
 
-		/* xp = *xpp;	   copy_non_glob() may have re-alloc'd xs */
+		/* xp = *xpp;	copy_non_glob() may have re-alloc'd xs */
 		*xp = '\0';
 		prefix_len = Xlength(*xs, xp);
 		dirp = opendir(prefix_len ? Xstring(*xs, xp) : ".");
@@ -1337,7 +1332,7 @@ debunk(char *dp, const char *sp, size_t dlen)
 
 	if ((s = cstrchr(sp, MAGIC))) {
 		if (s - sp >= (ssize_t)dlen)
-			return dp;
+			return (dp);
 		memcpy(dp, sp, s - sp);
 		for (d = dp + (s - sp); *s && (d - dp < (ssize_t)dlen); s++)
 			if (!ISMAGIC(*s) || !(*++s & 0x80) ||
@@ -1353,10 +1348,10 @@ debunk(char *dp, const char *sp, size_t dlen)
 		*d = '\0';
 	} else if (dp != sp)
 		strlcpy(dp, sp, dlen);
-	return dp;
+	return (dp);
 }
 
-/* Check if p is an unquoted name, possibly followed by a / or :.  If so
+/* Check if p is an unquoted name, possibly followed by a / or :. If so
  * puts the expanded version in *dcp,dp and returns a pointer in p just
  * past the name, otherwise returns 0.
  */
@@ -1390,7 +1385,7 @@ maybe_expand_tilde(const char *p, XString *dsp, char **dpp, int isassign)
 		*dpp = dp;
 		r = p;
 	}
-	return r;
+	return (r);
 }
 
 /*
@@ -1436,11 +1431,11 @@ homedir(char *name)
 
 		pw = getpwnam(name);
 		if (pw == NULL)
-			return NULL;
+			return (NULL);
 		strdupx(ap->val.s, pw->pw_dir, APERM);
 		ap->flag |= DEFINED|ISSET|ALLOC;
 	}
-	return ap->val.s;
+	return (ap->val.s);
 }
 #endif
 
@@ -1475,7 +1470,7 @@ alt_expand(XPtrV *wp, char *start, char *exp_start, char *end, int fdo)
 	/* no valid expansions... */
 	if (!p || count != 0) {
 		/* Note that given a{{b,c} we do not expand anything (this is
-		 * what at&t ksh does.  This may be changed to do the {b,c}
+		 * what AT&T ksh does. This may be changed to do the {b,c}
 		 * expansion. }
 		 */
 		if (fdo & DOGLOB)

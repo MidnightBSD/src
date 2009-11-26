@@ -20,7 +20,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.10 2009/05/16 16:59:37 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.10 2009/05/16 16:59:37 tg Stab $");
 
 /* build with CPPFLAGS+= -DUSE_REALLOC_MALLOC=0 on ancient systems */
 #if defined(USE_REALLOC_MALLOC) && (USE_REALLOC_MALLOC == 0)

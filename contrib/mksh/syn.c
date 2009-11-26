@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.35 2009/05/16 16:59:41 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.38 2009/06/11 12:42:20 tg Exp $");
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
@@ -143,7 +143,7 @@ c_list(int multi)
 			break;
 		else if (c == '&' || c == COPROC)
 			p = block(c == '&' ? TASYNC : TCOPROC,
-				  p, NOBLOCK, NOWORDS);
+			    p, NOBLOCK, NOWORDS);
 		else if (c != ';')
 			have_sep = 0;
 		if (!t)
@@ -156,7 +156,7 @@ c_list(int multi)
 			break;
 	}
 	REJECT;
-	return t;
+	return (t);
 }
 
 static struct ioword *
@@ -191,7 +191,7 @@ synio(int cf)
 	if (iop->flag & IOBASH) {
 		char *cp;
 
-		nextiop = alloc(sizeof (*iop), ATEMP);
+		nextiop = alloc(sizeof(*iop), ATEMP);
 		nextiop->name = cp = alloc(5, ATEMP);
 
 		if (iop->unit > 9) {
@@ -233,7 +233,7 @@ get_command(int cf)
 	XPtrV args, vars;
 	struct nesting_state old_nesting;
 
-	iops = alloc((NUFILE + 1) * sizeof (struct ioword *), ATEMP);
+	iops = alloc((NUFILE + 1) * sizeof(struct ioword *), ATEMP);
 	XPinit(args, 16);
 	XPinit(vars, 16);
 
@@ -244,7 +244,7 @@ get_command(int cf)
 		afree(iops, ATEMP);
 		XPfree(args);
 		XPfree(vars);
-		return NULL; /* empty line */
+		return (NULL); /* empty line */
 
 	case LWORD:
 	case REDIR:
@@ -267,7 +267,7 @@ get_command(int cf)
 			case LWORD:
 				ACCEPT;
 				/* the iopn == 0 and XPsize(vars) == 0 are
-				 * dubious but at&t ksh acts this way
+				 * dubious but AT&T ksh acts this way
 				 */
 				if (iopn == 0 && XPsize(vars) == 0 &&
 				    XPsize(args) == 0 &&
@@ -281,7 +281,7 @@ get_command(int cf)
 				break;
 
 			case '(':
-				/* Check for "> foo (echo hi)" which at&t ksh
+				/* Check for "> foo (echo hi)" which AT&T ksh
 				 * allows (not POSIX, but not disallowed)
 				 */
 				afree(t, ATEMP);
@@ -302,7 +302,7 @@ get_command(int cf)
 				t = function_body(XPptrv(args)[0], false);
 				goto Leave;
  is_wdarrassign:
-			  {
+			{
 				static const char set_cmd0[] = {
 					CHAR, 'e', CHAR, 'v',
 					CHAR, 'a', CHAR, 'l', EOS
@@ -335,7 +335,7 @@ get_command(int cf)
 				musthave(LWORD,LETARRAY);
 				XPput(args, yylval.cp);
 				break;
-			  }
+			}
 
 			default:
 				goto Leave;
@@ -353,8 +353,7 @@ get_command(int cf)
 		t = nested(TBRACE, '{', '}');
 		break;
 
-	case MDPAREN:
-	  {
+	case MDPAREN: {
 		static const char let_cmd[] = {
 			CHAR, 'l', CHAR, 'e',
 			CHAR, 't', EOS
@@ -367,7 +366,7 @@ get_command(int cf)
 		musthave(LWORD,LETEXPR);
 		XPput(args, yylval.cp);
 		break;
-	  }
+	}
 
 	case DBRACKET: /* [[ .. ]] */
 		/* Leave KEYWORD in syniocf (allow if [[ -n 1 ]] then ...) */
@@ -464,7 +463,7 @@ get_command(int cf)
 		t->ioact = NULL;
 	} else {
 		iops[iopn++] = NULL;
-		iops = aresize(iops, iopn * sizeof (struct ioword *), ATEMP);
+		iops = aresize(iops, iopn * sizeof(struct ioword *), ATEMP);
 		t->ioact = iops;
 	}
 
@@ -478,7 +477,7 @@ get_command(int cf)
 		XPfree(vars);
 	}
 
-	return t;
+	return (t);
 }
 
 static struct op *
@@ -501,7 +500,7 @@ dogroup(void)
 		syntaxerr(NULL);
 	list = c_list(true);
 	musthave(c, KEYWORD|ALIAS);
-	return list;
+	return (list);
 }
 
 static struct op *
@@ -538,7 +537,7 @@ elsepart(void)
 	default:
 		REJECT;
 	}
-	return NULL;
+	return (NULL);
 }
 
 static struct op *
@@ -603,11 +602,11 @@ function_body(char *name,
 	bool old_func_parse;
 
 	sname = wdstrip(name, false, false);
-	/* Check for valid characters in name.  posix and ksh93 say only
+	/* Check for valid characters in name. posix and ksh93 say only
 	 * allow [a-zA-Z_0-9] but this allows more as old pdkshs have
 	 * allowed more (the following were never allowed:
 	 *	nul space nl tab $ ' " \ ` ( ) & | ; = < >
-	 *  C_QUOTE covers all but = and adds # [ ] ? *)
+	 * C_QUOTE covers all but = and adds # [ ] ? *)
 	 */
 	for (p = sname; *p; p++)
 		if (ctype(*p, C_QUOTE) || *p == '=')
@@ -619,8 +618,8 @@ function_body(char *name,
 	t->lineno = source->line;
 
 	/* Note that POSIX allows only compound statements after foo(), sh and
-	 * at&t ksh allow any command, go with the later since it shouldn't
-	 * break anything.  However, for function foo, at&t ksh only accepts
+	 * AT&T ksh allow any command, go with the later since it shouldn't
+	 * break anything. However, for function foo, AT&T ksh only accepts
 	 * an open-brace.
 	 */
 	if (ksh_func) {
@@ -639,20 +638,20 @@ function_body(char *name,
 		 * be used as input), we pretend there is a colon here.
 		 */
 		t->left = newtp(TCOM);
-		t->left->args = alloc(2 * sizeof (char *), ATEMP);
+		t->left->args = alloc(2 * sizeof(char *), ATEMP);
 		t->left->args[0] = tv = alloc(3, ATEMP);
 		tv[0] = CHAR;
 		tv[1] = ':';
 		tv[2] = EOS;
 		t->left->args[1] = NULL;
-		t->left->vars = alloc(sizeof (char *), ATEMP);
+		t->left->vars = alloc(sizeof(char *), ATEMP);
 		t->left->vars[0] = NULL;
 		t->left->lineno = 1;
 	}
 	if (!old_func_parse)
 		e->flags &= ~EF_FUNC_PARSE;
 
-	return t;
+	return (t);
 }
 
 static char **
@@ -664,9 +663,9 @@ wordlist(void)
 	XPinit(args, 16);
 	/* Posix does not do alias expansion here... */
 	if ((c = token(CONTIN|KEYWORD|ALIAS)) != IN) {
-		if (c != ';') /* non-POSIX, but at&t ksh accepts a ; here */
+		if (c != ';') /* non-POSIX, but AT&T ksh accepts a ; here */
 			REJECT;
-		return NULL;
+		return (NULL);
 	}
 	while ((c = token(0)) == LWORD)
 		XPput(args, yylval.cp);
@@ -674,10 +673,10 @@ wordlist(void)
 		syntaxerr(NULL);
 	if (XPsize(args) == 0) {
 		XPfree(args);
-		return NULL;
+		return (NULL);
 	} else {
 		XPput(args, NULL);
-		return (char **) XPclose(args);
+		return ((char **)XPclose(args));
 	}
 }
 
@@ -822,7 +821,7 @@ newtp(int type)
 {
 	struct op *t;
 
-	t = alloc(sizeof (struct op), ATEMP);
+	t = alloc(sizeof(struct op), ATEMP);
 	t->type = type;
 	t->u.evalflags = 0;
 	t->args = NULL;
@@ -841,13 +840,13 @@ compile(Source *s)
 	herep = heres;
 	source = s;
 	yyparse();
-	return outtree;
+	return (outtree);
 }
 
-/* This kludge exists to take care of sh/at&t ksh oddity in which
+/* This kludge exists to take care of sh/AT&T ksh oddity in which
  * the arguments of alias/export/readonly/typeset have no field
  * splitting, file globbing, or (normal) tilde expansion done.
- * at&t ksh seems to do something similar to this since
+ * AT&T ksh seems to do something similar to this since
  *	$ touch a=a; typeset a=[ab]; echo "$a"
  *	a=[ab]
  *	$ x=typeset; $x a=[ab]; echo "$a"
@@ -858,11 +857,11 @@ static int
 assign_command(char *s)
 {
 	if (!*s)
-		return 0;
-	return (strcmp(s, "alias") == 0) ||
+		return (0);
+	return ((strcmp(s, "alias") == 0) ||
 	    (strcmp(s, "export") == 0) ||
 	    (strcmp(s, "readonly") == 0) ||
-	    (strcmp(s, "typeset") == 0);
+	    (strcmp(s, "typeset") == 0));
 }
 
 /* Check if we are in the middle of reading an alias */
@@ -871,8 +870,8 @@ inalias(struct source *s)
 {
 	for (; s && s->type == SALIAS; s = s->next)
 		if (!(s->flags & SF_ALIASEND))
-			return 1;
-	return 0;
+			return (1);
+	return (0);
 }
 
 
@@ -894,8 +893,8 @@ const char db_close[] = { CHAR, ']', CHAR, ']', EOS };
 const char db_lthan[] = { CHAR, '<', EOS };
 const char db_gthan[] = { CHAR, '>', EOS };
 
-/* Test if the current token is a whatever.  Accepts the current token if
- * it is.  Returns 0 if it is not, non-zero if it is (in the case of
+/* Test if the current token is a whatever. Accepts the current token if
+ * it is. Returns 0 if it is not, non-zero if it is (in the case of
  * TM_UNOP and TM_BINOP, the returned value is a Test_op).
  */
 static int
@@ -936,7 +935,7 @@ dbtestp_isa(Test_env *te, Test_meta meta)
 		if (save)
 			XPput(*te->pos.av, save);
 	}
-	return ret;
+	return (ret);
 }
 
 static const char *
@@ -945,12 +944,12 @@ dbtestp_getopnd(Test_env *te, Test_op op __unused, bool do_eval __unused)
 	int c = tpeek(ARRAYVAR);
 
 	if (c != LWORD)
-		return NULL;
+		return (NULL);
 
 	ACCEPT;
 	XPput(*te->pos.av, yylval.cp);
 
-	return null;
+	return (null);
 }
 
 static int
@@ -958,7 +957,7 @@ dbtestp_eval(Test_env *te __unused, Test_op op __unused,
     const char *opnd1 __unused, const char *opnd2 __unused,
     bool do_eval __unused)
 {
-	return 1;
+	return (1);
 }
 
 static void

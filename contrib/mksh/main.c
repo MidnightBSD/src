@@ -33,7 +33,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.128 2009/05/16 21:00:51 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.136 2009/07/25 21:31:26 tg Exp $");
 
 extern char **environ;
 
@@ -60,8 +60,7 @@ static const char *initcoms[] = {
 	"alias",
 	"hash=alias -t",	/* not "alias -t --": hash -r needs to work */
 	"type=whence -v",
-#ifndef notyet_MKSH_UNEMPLOYED
-	/* the alias list must be constant, for the regression test suite */
+#ifndef MKSH_UNEMPLOYED
 	"stop=kill -STOP",
 	"suspend=kill -STOP $$",
 #endif
@@ -69,11 +68,11 @@ static const char *initcoms[] = {
 	"functions=typeset -f",
 	"history=fc -l",
 	"nohup=nohup ",
-	"r=fc -e -",
+	r_fc_e_,
 	"source=PATH=$PATH:. command .",
 	"login=exec login",
 	NULL,
-	 /* this is what at&t ksh seems to track, with the addition of emacs */
+	 /* this is what AT&T ksh seems to track, with the addition of emacs */
 	"alias", "-tU",
 	"cat", "cc", "chmod", "cp", "date", "ed", "emacs", "grep", "ls",
 	"make", "mv", "pr", "rm", "sed", "sh", "vi", "who", NULL,
@@ -141,7 +140,7 @@ main(int argc, const char *argv[])
 	/* set up variable and command dictionaries */
 	ktinit(&taliases, APERM, 0);
 	ktinit(&aliases, APERM, 0);
-#ifndef MKSH_SMALL
+#ifndef MKSH_NOPWNAM
 	ktinit(&homedirs, APERM, 0);
 #endif
 
@@ -184,18 +183,18 @@ main(int argc, const char *argv[])
 
 	/* Turn on nohup by default for now - will change to off
 	 * by default once people are aware of its existence
-	 * (at&t ksh does not have a nohup option - it always sends
+	 * (AT&T ksh does not have a nohup option - it always sends
 	 * the hup).
 	 */
 	Flag(FNOHUP) = 1;
 
-	/* Turn on brace expansion by default.  AT&T kshs that have
+	/* Turn on brace expansion by default. AT&T kshs that have
 	 * alternation always have it on.
 	 */
 	Flag(FBRACEEXPAND) = 1;
 
 	/* Set edit mode to emacs by default, may be overridden
-	 * by the environment or the user.  Also, we want tab completion
+	 * by the environment or the user. Also, we want tab completion
 	 * on in vi by default. */
 	change_flag(FEMACS, OF_SPECIAL, 1);
 #ifndef MKSH_NOVI
@@ -359,8 +358,10 @@ main(int argc, const char *argv[])
 			UTFMODE = isuc(ccp);
 		}
 #undef isuc
-#else
+#elif MKSH_ASSUME_UTF8
 		UTFMODE = 1;
+#else
+		UTFMODE = 0;
 #endif
 		x_init();
 	}
@@ -421,7 +422,7 @@ main(int argc, const char *argv[])
 		Flag(FTRACKALL) = 1;	/* set after ENV */
 
 	shell(s, true);	/* doesn't return */
-	return 0;
+	return (0);
 }
 
 int
@@ -435,7 +436,7 @@ include(const char *name, int argc, const char **argv, int intr_ok)
 
 	shf = shf_open(name, O_RDONLY, 0, SHF_MAPHI | SHF_CLEXEC);
 	if (shf == NULL)
-		return -1;
+		return (-1);
 
 	if (argv) {
 		old_argv = e->loc->argv;
@@ -455,13 +456,13 @@ include(const char *name, int argc, const char **argv, int intr_ok)
 		switch (i) {
 		case LRETURN:
 		case LERROR:
-			return exstat & 0xff; /* see below */
+			return (exstat & 0xff); /* see below */
 		case LINTR:
 			/* intr_ok is set if we are including .profile or $ENV.
 			 * If user ^Cs out, we don't want to kill the shell...
 			 */
 			if (intr_ok && (exstat - 128) != SIGTERM)
-				return 1;
+				return (1);
 			/* FALLTHRU */
 		case LEXIT:
 		case LLEAVE:
@@ -486,7 +487,7 @@ include(const char *name, int argc, const char **argv, int intr_ok)
 		e->loc->argv = old_argv;
 		e->loc->argc = old_argc;
 	}
-	return i & 0xff;	/* & 0xff to ensure value not -1 */
+	return (i & 0xff);	/* & 0xff to ensure value not -1 */
 }
 
 int
@@ -496,7 +497,7 @@ command(const char *comm)
 
 	s = pushs(SSTRING, ATEMP);
 	s->start = s->str = comm;
-	return shell(s, false);
+	return (shell(s, false));
 }
 
 /*
@@ -533,7 +534,7 @@ shell(Source * volatile s, volatile int toplevel)
 				    wastty)
 					s->type = SSTDIN;
 				/* Used by exit command to get back to
-				 * top level shell.  Kind of strange since
+				 * top level shell. Kind of strange since
 				 * interactive is set if we are reading from
 				 * a tty, but to have stopped jobs, one only
 				 * needs FMONITOR set (not FTALKING/SF_TTY)...
@@ -601,14 +602,14 @@ shell(Source * volatile s, volatile int toplevel)
 	}
 	quitenv(NULL);
 	source = old_source;
-	return exstat;
+	return (exstat);
 }
 
 /* return to closest error handler or shell(), exit if none found */
 void
 unwind(int i)
 {
-	/* ordering for EXIT vs ERR is a bit odd (this is what at&t ksh does) */
+	/* ordering for EXIT vs ERR is a bit odd (this is what AT&T ksh does) */
 	if (i == LEXIT || (Flag(FERREXIT) && (i == LERROR || i == LINTR) &&
 	    sigtraps[SIGEXIT_].trap)) {
 		runtrap(&sigtraps[SIGEXIT_]);
@@ -646,7 +647,7 @@ newenv(int type)
 	 * struct env includes ALLOC_ITEM for alignment constraints
 	 * so first get the actually used memory, then assign it
 	 */
-	cp = alloc(sizeof (struct env) - ALLOC_SIZE, ATEMP);
+	cp = alloc(sizeof(struct env) - ALLOC_SIZE, ATEMP);
 	ep = (void *)(cp - ALLOC_SIZE);	/* undo what alloc() did */
 	/* initialise public members of struct env (not the ALLOC_ITEM) */
 	ainit(&ep->area);
@@ -690,7 +691,7 @@ quitenv(struct shf *shf)
 			if (ep->flags & EF_FAKE_SIGDIE) {
 				int sig = exstat - 128;
 
-				/* ham up our death a bit (at&t ksh
+				/* ham up our death a bit (AT&T ksh
 				 * only seems to do this for SIGTERM)
 				 * Don't do it for SIGQUIT, since we'd
 				 * dump a core..
@@ -771,7 +772,7 @@ remove_temps(struct temp *tp)
 			unlink(tp->name);
 }
 
-/* Initialise tty_fd.  Used for saving/reseting tty modes upon
+/* Initialise tty_fd. Used for saving/reseting tty modes upon
  * foreground job completion and for setting up tty process group.
  */
 void
@@ -787,6 +788,7 @@ tty_init(bool init_ttystate, bool need_tty)
 	tty_devtty = 1;
 
 #ifdef _UWIN
+	/* XXX imake style */
 	if (isatty(3))
 		tfd = 3;
 	else
@@ -980,8 +982,8 @@ can_seek(int fd)
 {
 	struct stat statb;
 
-	return fstat(fd, &statb) == 0 && !S_ISREG(statb.st_mode) ?
-	    SHF_UNBUF : 0;
+	return (fstat(fd, &statb) == 0 && !S_ISREG(statb.st_mode) ?
+	    SHF_UNBUF : 0);
 }
 
 struct shf shf_iob[3];
@@ -1005,6 +1007,7 @@ ksh_dup2(int ofd, int nfd, bool errok)
 		errorf("too many files open in shell");
 
 #ifdef __ultrix
+	/* XXX imake style */
 	if (rv >= 0)
 		fcntl(nfd, F_SETFD, 0);
 #endif
@@ -1023,7 +1026,7 @@ savefd(int fd)
 
 	if (fd < FDBASE && (nfd = fcntl(fd, F_DUPFD, FDBASE)) < 0 &&
 	    errno == EBADF)
-		return -1;
+		return (-1);
 	if (nfd < 0 || nfd > SHRT_MAX)
 		errorf("too many files open in shell");
 	fcntl(nfd, F_SETFD, FD_CLOEXEC);
@@ -1157,10 +1160,10 @@ coproc_getfd(int mode, const char **emsgp)
 	int fd = (mode & R_OK) ? coproc.read : coproc.write;
 
 	if (fd >= 0)
-		return fd;
+		return (fd);
 	if (emsgp)
 		*emsgp = "no coprocess";
-	return -1;
+	return (-1);
 }
 
 /* called to close file descriptors related to the coprocess (if any)
@@ -1202,7 +1205,7 @@ maketemp(Area *ap, Temp_type type, struct temp **tlist)
 	pathname = tempnam(dir, "mksh.");
 	len = ((pathname == NULL) ? 0 : strlen(pathname)) + 1;
 #endif
-	tp = alloc(sizeof (struct temp) + len, ap);
+	tp = alloc(sizeof(struct temp) + len, ap);
 	tp->name = (char *)&tp[1];
 #if !HAVE_MKSTEMP
 	if (pathname == NULL)
@@ -1226,7 +1229,7 @@ maketemp(Area *ap, Temp_type type, struct temp **tlist)
 
 	tp->next = *tlist;
 	*tlist = tp;
-	return tp;
+	return (tp);
 }
 
 #define	INIT_TBLS	8	/* initial table size (power of 2) */
@@ -1241,7 +1244,7 @@ hash(const char *n)
 
 	while (*n != '\0')
 		h = 2*h + *n++;
-	return h * 32821;	/* scatter bits */
+	return (h * 32821);	/* scatter bits */
 }
 
 void
@@ -1262,7 +1265,7 @@ texpand(struct table *tp, int nsize)
 	struct tbl **ntblp, **otblp = tp->tbls;
 	int osize = tp->size;
 
-	ntblp = alloc(nsize * sizeof (struct tbl *), tp->areap);
+	ntblp = alloc(nsize * sizeof(struct tbl *), tp->areap);
 	for (i = 0; i < nsize; i++)
 		ntblp[i] = NULL;
 	tp->size = nsize;
@@ -1295,18 +1298,18 @@ ktsearch(struct table *tp, const char *n, unsigned int h)
 	struct tbl **pp, *p;
 
 	if (tp->size == 0)
-		return NULL;
+		return (NULL);
 
 	/* search for name in hashed table */
 	for (pp = &tp->tbls[h & (tp->size - 1)]; (p = *pp) != NULL; pp--) {
 		if (*p->name == *n && strcmp(p->name, n) == 0 &&
 		    (p->flag & DEFINED))
-			return p;
+			return (p);
 		if (pp == tp->tbls)	/* wrap */
 			pp += tp->size;
 	}
 
-	return NULL;
+	return (NULL);
 }
 
 /* table */
@@ -1324,7 +1327,7 @@ ktenter(struct table *tp, const char *n, unsigned int h)
 	/* search for name in hashed table */
 	for (pp = &tp->tbls[h & (tp->size - 1)]; (p = *pp) != NULL; pp--) {
 		if (*p->name == *n && strcmp(p->name, n) == 0)
-			return p;	/* found */
+			return (p);	/* found */
 		if (pp == tp->tbls)	/* wrap */
 			pp += tp->size;
 	}
@@ -1346,7 +1349,7 @@ ktenter(struct table *tp, const char *n, unsigned int h)
 	/* enter in tp->tbls */
 	tp->nfree--;
 	*pp = p;
-	return p;
+	return (p);
 }
 
 void
@@ -1362,9 +1365,9 @@ ktnext(struct tstate *ts)
 	while (--ts->left >= 0) {
 		struct tbl *p = *ts->next++;
 		if (p != NULL && (p->flag & DEFINED))
-			return p;
+			return (p);
 	}
-	return NULL;
+	return (NULL);
 }
 
 static int
@@ -1382,14 +1385,14 @@ ktsort(struct table *tp)
 	size_t i;
 	struct tbl **p, **sp, **dp;
 
-	p = alloc((tp->size + 1) * sizeof (struct tbl *), ATEMP);
+	p = alloc((tp->size + 1) * sizeof(struct tbl *), ATEMP);
 	sp = tp->tbls;		/* source */
 	dp = p;			/* dest */
 	for (i = 0; i < (size_t)tp->size; i++)
 		if ((*dp = *sp++) != NULL && (((*dp)->flag & DEFINED) ||
 		    ((*dp)->flag & ARRAY)))
 			dp++;
-	qsort(p, (i = dp - p), sizeof (void *), tnamecmp);
+	qsort(p, (i = dp - p), sizeof(void *), tnamecmp);
 	p[i] = NULL;
-	return p;
+	return (p);
 }

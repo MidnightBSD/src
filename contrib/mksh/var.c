@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/var.c,v 1.72 2009/05/16 16:59:42 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/var.c,v 1.76 2009/08/01 20:32:45 tg Exp $");
 
 /*
  * Variables
@@ -57,7 +57,7 @@ newblock(void)
 	struct block *l;
 	static const char *empty[] = { null };
 
-	l = alloc(sizeof (struct block), ATEMP);
+	l = alloc(sizeof(struct block), ATEMP);
 	l->flags = 0;
 	ainit(&l->area); /* todo: could use e->area (l->area => l->areap) */
 	if (!e->loc) {
@@ -133,7 +133,7 @@ initvar(void)
 	}
 }
 
-/* Used to calculate an array index for global()/local().  Sets *arrayp to
+/* Used to calculate an array index for global()/local(). Sets *arrayp to
  * non-zero if this is an array, sets *valp to the array index, returns
  * the basename of the array.
  */
@@ -159,7 +159,7 @@ array_index_calc(const char *n, bool *arrayp, uint32_t *valp)
 		*valp = (uint32_t)rval;
 		afree(sub, ATEMP);
 	}
-	return n;
+	return (n);
 }
 
 /*
@@ -194,11 +194,11 @@ global(const char *n)
 				/* setstr can't fail here */
 				setstr(vp, l->argv[c], KSH_RETURN_ERROR);
 			vp->flag |= RDONLY;
-			return vp;
+			return (vp);
 		}
 		vp->flag |= RDONLY;
 		if (n[1] != '\0')
-			return vp;
+			return (vp);
 		vp->flag |= ISSET|INTEGER;
 		switch (c) {
 		case '$':
@@ -222,15 +222,15 @@ global(const char *n)
 		default:
 			vp->flag &= ~(ISSET|INTEGER);
 		}
-		return vp;
+		return (vp);
 	}
 	for (l = e->loc; ; l = l->next) {
 		vp = ktsearch(&l->vars, n, h);
 		if (vp != NULL) {
 			if (array)
-				return arraysearch(vp, val);
+				return (arraysearch(vp, val));
 			else
-				return vp;
+				return (vp);
 		}
 		if (l->next == NULL)
 			break;
@@ -241,7 +241,7 @@ global(const char *n)
 	vp->flag |= DEFINED;
 	if (special(n))
 		vp->flag |= SPECIAL;
-	return vp;
+	return (vp);
 }
 
 /*
@@ -264,7 +264,7 @@ local(const char *n, bool copy)
 		vp->flag = DEFINED|RDONLY;
 		vp->type = 0;
 		vp->areap = ATEMP;
-		return vp;
+		return (vp);
 	}
 	vp = ktenter(&l->vars, n, h);
 	if (copy && !(vp->flag & DEFINED)) {
@@ -287,7 +287,7 @@ local(const char *n, bool copy)
 	vp->flag |= DEFINED;
 	if (special(n))
 		vp->flag |= SPECIAL;
-	return vp;
+	return (vp);
 }
 
 /* get variable string value */
@@ -303,9 +303,10 @@ str_val(struct tbl *vp)
 	else if (!(vp->flag&INTEGER))	/* string source */
 		s = vp->val.s + vp->type;
 	else {				/* integer source */
-		/* worst case number length is when base=2, so use BITS(long) */
-		/*      minus  base #   number                     NUL */
-		char strbuf[1 + 2 + 1 + 8 * sizeof (mksh_uari_t) + 1];
+		/* worst case number length is when base=2 */
+		/* 1 (minus) + 2 (base, up to 36) + 1 ('#') + number of bits
+		 * in the mksh_uari_t + 1 (NUL) */
+		char strbuf[1 + 2 + 1 + 8 * sizeof(mksh_uari_t) + 1];
 		const char *digits = (vp->flag & UCASEV_AL) ?
 		    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" :
 		    "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -349,7 +350,7 @@ str_val(struct tbl *vp)
 		else
 			strdupx(s, s, ATEMP);
 	}
-	return s;
+	return (s);
 }
 
 /* get variable integer value, with error checking */
@@ -378,7 +379,7 @@ setstr(struct tbl *vq, const char *s, int error_ok)
 		warningf(true, "%s: is read only", vq->name);
 		if (!error_ok)
 			errorfz();
-		return 0;
+		return (0);
 	}
 	if (!(vq->flag&INTEGER)) { /* string dest */
 		if ((vq->flag&ALLOC)) {
@@ -442,10 +443,10 @@ getint(struct tbl *vp, mksh_ari_t *nump, bool arith)
 		getspec(vp);
 	/* XXX is it possible for ISSET to be set and val.s to be 0? */
 	if (!(vp->flag&ISSET) || (!(vp->flag&INTEGER) && vp->val.s == NULL))
-		return -1;
+		return (-1);
 	if (vp->flag&INTEGER) {
 		*nump = vp->val.i;
-		return vp->type;
+		return (vp->type);
 	}
 	s = vp->val.s + vp->type;
 	if (s == NULL)	/* redundant given initial test */
@@ -493,15 +494,15 @@ getint(struct tbl *vp, mksh_ari_t *nump, bool arith)
 		else if (ksh_isupper(c))
 			c -= 'A' - 10;
 		else
-			return -1;
+			return (-1);
 		if (c < 0 || c >= base)
-			return -1;
+			return (-1);
 		num = num * base + c;
 	}
 	if (neg)
 		num = -num;
 	*nump = num;
-	return base;
+	return (base);
 }
 
 /* convert variable vq to integer variable, setting its value from vp
@@ -514,7 +515,7 @@ setint_v(struct tbl *vq, struct tbl *vp, bool arith)
 	mksh_ari_t num;
 
 	if ((base = getint(vp, &num, arith)) == -1)
-		return NULL;
+		return (NULL);
 	if (!(vq->flag & INTEGER) && (vq->flag & ALLOC)) {
 		vq->flag &= ~ALLOC;
 		afree(vq->val.s, vq->areap);
@@ -525,7 +526,7 @@ setint_v(struct tbl *vq, struct tbl *vp, bool arith)
 	vq->flag |= ISSET|INTEGER;
 	if (vq->flag&SPECIAL)
 		setspec(vq);
-	return vq;
+	return (vq);
 }
 
 static char *
@@ -554,7 +555,7 @@ formatstr(struct tbl *vp, const char *s)
 
 			while (i < slen)
 				i += utf_widthadj(qq, &qq);
-			/* strip trailing spaces (at&t uses qq[-1] == ' ') */
+			/* strip trailing spaces (AT&T uses qq[-1] == ' ') */
 			while (qq > s && ksh_isspace(qq[-1])) {
 				--qq;
 				--slen;
@@ -601,7 +602,7 @@ formatstr(struct tbl *vp, const char *s)
 			*q = ksh_tolower(*q);
 	}
 
-	return p;
+	return (p);
 }
 
 /*
@@ -642,15 +643,15 @@ typeset(const char *var, Tflag set, Tflag clr, int field, int base)
 	/* check for valid variable name, search for value */
 	val = skip_varname(var, false);
 	if (val == var)
-		return NULL;
+		return (NULL);
 	if (*val == '[') {
 		int len;
 
 		len = array_ref_len(val);
 		if (len == 0)
-			return NULL;
+			return (NULL);
 		/* IMPORT is only used when the shell starts up and is
-		 * setting up its environment.  Allow only simple array
+		 * setting up its environment. Allow only simple array
 		 * references at this time since parameter/command substitution
 		 * is preformed on the [expression] which would be a major
 		 * security hole.
@@ -659,7 +660,7 @@ typeset(const char *var, Tflag set, Tflag clr, int field, int base)
 			int i;
 			for (i = 1; i < len - 1; i++)
 				if (!ksh_isdigit(val[i]))
-					return NULL;
+					return (NULL);
 		}
 		val += len;
 	}
@@ -668,7 +669,7 @@ typeset(const char *var, Tflag set, Tflag clr, int field, int base)
 	else {
 		/* Importing from original environment: must have an = */
 		if (set & IMPORT)
-			return NULL;
+			return (NULL);
 		strdupx(tvar, var, ATEMP);
 		val = NULL;
 	}
@@ -684,7 +685,7 @@ typeset(const char *var, Tflag set, Tflag clr, int field, int base)
 
 	vpbase = (vp->flag & ARRAY) ? global(arrayname(var)) : vp;
 
-	/* only allow export flag to be set.  at&t ksh allows any attribute to
+	/* only allow export flag to be set. AT&T ksh allows any attribute to
 	 * be changed which means it can be truncated or modified (-L/-R/-Z/-i)
 	 */
 	if ((vpbase->flag&RDONLY) &&
@@ -772,10 +773,10 @@ typeset(const char *var, Tflag set, Tflag clr, int field, int base)
 	    vpbase->type == 0)
 		export(vpbase, (vpbase->flag&ISSET) ? vpbase->val.s : null);
 
-	return vp;
+	return (vp);
 }
 
-/* Unset a variable.  array_ref is set if there was an array reference in
+/* Unset a variable. array_ref is set if there was an array reference in
  * the name lookup (eg, x[2]).
  */
 void
@@ -820,7 +821,7 @@ skip_varname(const char *s, int aok)
 	return (s);
 }
 
-/* Return a pointer to the first character past any legal variable name.  */
+/* Return a pointer to the first character past any legal variable name */
 const char *
 skip_wdvarname(const char *s,
     int aok)				/* skip array de-reference? */
@@ -858,7 +859,7 @@ is_wdvarname(const char *s, int aok)
 {
 	const char *p = skip_wdvarname(s, aok);
 
-	return p != s && p[0] == EOS;
+	return (p != s && p[0] == EOS);
 }
 
 /* Check if coded string s is a variable assignment */
@@ -867,7 +868,7 @@ is_wdvarassign(const char *s)
 {
 	const char *p = skip_wdvarname(s, true);
 
-	return p != s && p[0] == CHAR && p[1] == '=';
+	return (p != s && p[0] == CHAR && p[1] == '=');
 }
 
 /*
@@ -945,10 +946,10 @@ rnd_get(void)
 	if (Flag(FARC4RANDOM)) {
 		if (rnd_cache[0] || rnd_cache[1])
 #if HAVE_ARC4RANDOM_PUSHB
-			rv = arc4random_pushb(rnd_cache, sizeof (rnd_cache));
+			rv = arc4random_pushb(rnd_cache, sizeof(rnd_cache));
 #else
 			arc4random_addrandom((void *)rnd_cache,
-			    sizeof (rnd_cache));
+			    sizeof(rnd_cache));
 #endif
 		rnd_cache[0] = rnd_cache[1] = 0;
 		return ((
@@ -967,9 +968,9 @@ rnd_set(unsigned long newval)
 {
 #if HAVE_ARC4RANDOM && defined(MKSH_SMALL)
 #if HAVE_ARC4RANDOM_PUSHB
-	arc4random_pushb(&newval, sizeof (newval));
+	arc4random_pushb(&newval, sizeof(newval));
 #else
-	arc4random_addrandom((void *)&newval, sizeof (newval));
+	arc4random_addrandom((void *)&newval, sizeof(newval));
 #endif
 #else
 #if HAVE_ARC4RANDOM
@@ -1027,7 +1028,7 @@ special(const char *name)
 	struct tbl *tp;
 
 	tp = ktsearch(&specials, name, hash(name));
-	return tp && (tp->flag & ISSET) ? tp->type : V_NONE;
+	return (tp && (tp->flag & ISSET) ? tp->type : V_NONE);
 }
 
 /* Make a variable non-special */
@@ -1086,7 +1087,7 @@ getspec(struct tbl *vp)
 		break;
 	case V_COLUMNS:
 	case V_LINES:
-		/* Do NOT export COLUMNS/LINES.  Many applications
+		/* Do NOT export COLUMNS/LINES. Many applications
 		 * check COLUMNS/LINES before checking ws.ws_col/row,
 		 * so if the app is started with C/L in the environ
 		 * and the window is then resized, the app won't
@@ -1178,7 +1179,7 @@ setspec(struct tbl *vp)
 		vp->flag |= SPECIAL;
 		break;
 	case V_TMOUT:
-		/* at&t ksh seems to do this (only listen if integer) */
+		/* AT&T ksh seems to do this (only listen if integer) */
 		if (vp->flag & INTEGER)
 			ksh_tmout = vp->val.i >= 0 ? vp->val.i : 0;
 		break;
@@ -1215,18 +1216,18 @@ unsetspec(struct tbl *vp)
 	case V_LINENO:
 	case V_RANDOM:
 	case V_SECONDS:
-	case V_TMOUT:		/* at&t ksh leaves previous value in place */
+	case V_TMOUT:		/* AT&T ksh leaves previous value in place */
 		unspecial(vp->name);
 		break;
 
-	  /* at&t ksh man page says OPTIND, OPTARG and _ lose special meaning,
-	   * but OPTARG does not (still set by getopts) and _ is also still
-	   * set in various places.
-	   * Don't know what at&t does for:
-	   *		HISTSIZE, HISTFILE,
-	   * Unsetting these in at&t ksh does not loose the 'specialness':
-	   *    no effect: IFS, COLUMNS, PATH, TMPDIR
-	   */
+	/* AT&T ksh man page says OPTIND, OPTARG and _ lose special meaning,
+	 * but OPTARG does not (still set by getopts) and _ is also still
+	 * set in various places.
+	 * Don't know what AT&T does for:
+	 *		HISTSIZE, HISTFILE,
+	 * Unsetting these in AT&T ksh does not loose the 'specialness':
+	 * no effect: IFS, COLUMNS, PATH, TMPDIR
+	 */
 	}
 }
 
@@ -1238,13 +1239,13 @@ static struct tbl *
 arraysearch(struct tbl *vp, uint32_t val)
 {
 	struct tbl *prev, *curr, *new;
-	size_t namelen = strlen(vp->name) + 1;
+	size_t len;
 
 	vp->flag |= ARRAY|DEFINED;
 	vp->index = 0;
 	/* The table entry is always [0] */
 	if (val == 0)
-		return vp;
+		return (vp);
 	prev = vp;
 	curr = vp->u.array;
 	while (curr && curr->index < val) {
@@ -1253,12 +1254,14 @@ arraysearch(struct tbl *vp, uint32_t val)
 	}
 	if (curr && curr->index == val) {
 		if (curr->flag&ISSET)
-			return curr;
-		else
-			new = curr;
+			return (curr);
+		new = curr;
 	} else
-		new = alloc(sizeof (struct tbl) + namelen, vp->areap);
-	strlcpy(new->name, vp->name, namelen);
+		new = NULL;
+	len = strlen(vp->name) + 1;
+	if (!new)
+		new = alloc(offsetof(struct tbl, name[0]) + len, vp->areap);
+	memcpy(new->name, vp->name, len);
 	new->flag = vp->flag & ~(ALLOC|DEFINED|ISSET|SPECIAL);
 	new->type = vp->type;
 	new->areap = vp->areap;
@@ -1268,11 +1271,11 @@ arraysearch(struct tbl *vp, uint32_t val)
 		prev->u.array = new;
 		new->u.array = curr;
 	}
-	return new;
+	return (new);
 }
 
 /* Return the length of an array reference (eg, [1+2]) - cp is assumed
- * to point to the open bracket.  Returns 0 if there is no matching closing
+ * to point to the open bracket. Returns 0 if there is no matching closing
  * bracket.
  */
 int
@@ -1286,8 +1289,8 @@ array_ref_len(const char *cp)
 		if (c == '[')
 			depth++;
 	if (!c)
-		return 0;
-	return s - cp;
+		return (0);
+	return (s - cp);
 }
 
 /*
@@ -1319,7 +1322,7 @@ set_array(const char *var, int reset, const char **vals)
 	/* to get local array, use "typeset foo; set -A foo" */
 	vp = global(var);
 
-	/* Note: at&t ksh allows set -A but not set +A of a read-only var */
+	/* Note: AT&T ksh allows set -A but not set +A of a read-only var */
 	if ((vp->flag&RDONLY))
 		errorf("%s: is read only", var);
 	/* This code is quite non-optimal */
@@ -1327,7 +1330,7 @@ set_array(const char *var, int reset, const char **vals)
 		/* trash existing values and attributes */
 		unset(vp, 0);
 	/* todo: would be nice for assignment to completely succeed or
-	 * completely fail.  Only really effects integer arrays:
+	 * completely fail. Only really effects integer arrays:
 	 * evaluation of some of vals[] may fail...
 	 */
 	for (i = 0; vals[i]; i++) {

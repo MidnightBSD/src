@@ -1,4 +1,4 @@
-/*	$OpenBSD: expr.c,v 1.19 2006/04/10 14:38:59 jaredy Exp $	*/
+/*	$OpenBSD: expr.c,v 1.21 2009/06/01 19:00:57 deraadt Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.26 2009/05/16 16:59:35 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.29 2009/06/10 18:12:45 tg Exp $");
 
 /* The order of these enums is constrained by the order of opinfo[] */
 enum token {
@@ -79,7 +79,7 @@ struct opinfo {
 };
 
 /* Tokens in this table must be ordered so the longest are first
- * (eg, += before +).  If you change something, change the order
+ * (eg, += before +). If you change something, change the order
  * of enum token too.
  */
 static const struct opinfo opinfo[] = {
@@ -138,9 +138,9 @@ struct expr_state {
 };
 
 #define bivui(x, op, y)	(es->natural ?			\
-	    (mksh_ari_t)((x)->val.u op (y)->val.u) :	\
-	    (mksh_ari_t)((x)->val.i op (y)->val.i)	\
-	)
+	(mksh_ari_t)((x)->val.u op (y)->val.u) :	\
+	(mksh_ari_t)((x)->val.i op (y)->val.i)		\
+)
 #define chvui(x, op)	do {			\
 	if (es->natural)			\
 		(x)->val.u = op (x)->val.u;	\
@@ -592,7 +592,8 @@ do_ppmm(Expr_state *es, enum token op, struct tbl *vasn, bool is_prefix)
 static void
 assign_check(Expr_state *es, enum token op, struct tbl *vasn)
 {
-	if (vasn->name[0] == '\0' && !(vasn->flag & EXPRLVALUE))
+	if (es->tok == END ||
+	    (vasn->name[0] == '\0' && !(vasn->flag & EXPRLVALUE)))
 		evalerr(es, ET_LVALUE, opinfo[(int)op].name);
 	else if (vasn->flag & RDONLY)
 		evalerr(es, ET_RDONLY, opinfo[(int)op].name);
@@ -603,7 +604,7 @@ tempvar(void)
 {
 	struct tbl *vp;
 
-	vp = alloc(sizeof (struct tbl), ATEMP);
+	vp = alloc(sizeof(struct tbl), ATEMP);
 	vp->flag = ISSET|INTEGER;
 	vp->type = 0;
 	vp->areap = ATEMP;

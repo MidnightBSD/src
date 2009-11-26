@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.26 2009/05/16 16:59:41 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.28 2009/06/10 18:12:50 tg Exp $");
 
 #define INDENT	4
 
@@ -84,8 +84,7 @@ ptree(struct op *t, int indent, struct shf *shf)
 		shf_puts("! ", shf);
 		t = t->right;
 		goto Chain;
-	case TDBRACKET:
-	  {
+	case TDBRACKET: {
 		int i;
 
 		shf_puts("[[", shf);
@@ -93,7 +92,7 @@ ptree(struct op *t, int indent, struct shf *shf)
 			fptreef(shf, indent, " %S", t->args[i]);
 		shf_puts(" ]] ", shf);
 		break;
-	  }
+	}
 	case TSELECT:
 		fptreef(shf, indent, "select %s ", t->str);
 		/* FALLTHRU */
@@ -440,9 +439,9 @@ tcopy(struct op *t, Area *ap)
 	char **rw;
 
 	if (t == NULL)
-		return NULL;
+		return (NULL);
 
-	r = alloc(sizeof (struct op), ap);
+	r = alloc(sizeof(struct op), ap);
 
 	r->type = t->type;
 	r->u.evalflags = t->u.evalflags;
@@ -458,7 +457,7 @@ tcopy(struct op *t, Area *ap)
 		for (tw = (const char **)t->vars; *tw++ != NULL; )
 			;
 		rw = r->vars = alloc((tw - (const char **)t->vars + 1) *
-		    sizeof (*tw), ap);
+		    sizeof(*tw), ap);
 		for (tw = (const char **)t->vars; *tw != NULL; )
 			*rw++ = wdcopy(*tw++, ap);
 		*rw = NULL;
@@ -470,7 +469,7 @@ tcopy(struct op *t, Area *ap)
 		for (tw = t->args; *tw++ != NULL; )
 			;
 		r->args = (const char **)(rw = alloc((tw - t->args + 1) *
-		    sizeof (*tw), ap));
+		    sizeof(*tw), ap));
 		for (tw = t->args; *tw != NULL; )
 			*rw++ = wdcopy(*tw++, ap);
 		*rw = NULL;
@@ -482,14 +481,14 @@ tcopy(struct op *t, Area *ap)
 	r->right = tcopy(t->right, ap);
 	r->lineno = t->lineno;
 
-	return r;
+	return (r);
 }
 
 char *
 wdcopy(const char *wp, Area *ap)
 {
 	size_t len = wdscan(wp, EOS) - wp;
-	return memcpy(alloc(len, ap), wp, len);
+	return (memcpy(alloc(len, ap), wp, len));
 }
 
 /* return the position of prefix c in wp plus 1 */
@@ -567,7 +566,7 @@ wdstrip(const char *wp, bool keepq, bool make_magic)
 	while (1)
 		switch (*wp++) {
 		case EOS:
-			return shf_sclose(&shf); /* null terminates */
+			return (shf_sclose(&shf)); /* null terminates */
 		case ADELIM:
 		case CHAR:
 			c = *wp++;
@@ -639,13 +638,13 @@ iocopy(struct ioword **iow, Area *ap)
 
 	for (ior = iow; *ior++ != NULL; )
 		;
-	ior = alloc((ior - iow + 1) * sizeof (struct ioword *), ap);
+	ior = alloc((ior - iow + 1) * sizeof(struct ioword *), ap);
 
 	for (i = 0; iow[i] != NULL; i++) {
 		struct ioword *p, *q;
 
 		p = iow[i];
-		q = alloc(sizeof (struct ioword), ap);
+		q = alloc(sizeof(struct ioword), ap);
 		ior[i] = q;
 		*q = *p;
 		if (p->name != NULL)
@@ -657,7 +656,7 @@ iocopy(struct ioword **iow, Area *ap)
 	}
 	ior[i] = NULL;
 
-	return ior;
+	return (ior);
 }
 
 /*
