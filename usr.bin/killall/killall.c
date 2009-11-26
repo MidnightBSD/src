@@ -1,3 +1,4 @@
+/* $MidightBSD$ */
 /*-
  * Copyright (c) 2000 Peter Wemm <peter@FreeBSD.org>
  * Copyright (c) 2000 Paul Saab <ps@FreeBSD.org>
