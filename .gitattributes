@@ -21435,13 +21435,8 @@ gnu/usr.bin/binutils/libbinutils/config.h -text
 gnu/usr.bin/binutils/libiberty/Makefile -text
 gnu/usr.bin/binutils/libiberty/config.h -text
 gnu/usr.bin/binutils/libopcodes/Makefile -text
-gnu/usr.bin/binutils/libopcodes/Makefile.alpha -text
 gnu/usr.bin/binutils/libopcodes/Makefile.amd64 -text
-gnu/usr.bin/binutils/libopcodes/Makefile.arm -text
 gnu/usr.bin/binutils/libopcodes/Makefile.i386 -text
-gnu/usr.bin/binutils/libopcodes/Makefile.ia64 -text
-gnu/usr.bin/binutils/libopcodes/Makefile.m68k -text
-gnu/usr.bin/binutils/libopcodes/Makefile.powerpc -text
 gnu/usr.bin/binutils/libopcodes/Makefile.sparc -text
 gnu/usr.bin/binutils/libopcodes/Makefile.sparc64 -text
 gnu/usr.bin/binutils/libopcodes/config.h -text
