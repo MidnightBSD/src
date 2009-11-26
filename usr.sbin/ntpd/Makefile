@@ -1,20 +1,19 @@
-# $MidnightBSD: src/usr.sbin/ntpd/Makefile,v 1.2 2006/08/21 06:17:56 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/ntpd/Makefile,v 1.3 2006/08/22 01:22:12 laffer1 Exp $
 
 NTPD_DIR=${.CURDIR}/../../contrib/openntpd
-NTPD_CDIR=${NTPD_DIR}/openbsd-compat
 SYSCONFDIR=/etc
 
 PROG=	ntpd
 
-.PATH: ${NTPD_CDIR}
-SRCS+=	bsd-misc.c 
-
 .PATH: ${NTPD_DIR}
-SRCS+=	ntpd.c buffer.c log.c imsg.c ntp.c ntp_msg.c config.c \
-	server.c client.c util.c y.tab.c
+SRCS=   ntpd.c buffer.c log.c imsg.c ntp.c ntp_msg.c parse.y config.c \
+        server.c client.c util.c adjfreq.c arc4random.c
+
+DPADD= ${LIBMD}
+LDADD= -lmd
 
 MAN=	ntpd.8 ntpd.conf.5
-CFLAGS+=-I${NTPD_DIR} -I${NTPD_CDIR} -DSYSCONFDIR=\"${SYSCONFDIR}\"
+CFLAGS+=-I${NTPD_DIR} -DSYSCONFDIR=\"${SYSCONFDIR}\"
 
 .include <bsd.prog.mk>
 
