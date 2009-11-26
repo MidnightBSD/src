@@ -25251,13 +25251,6 @@ lib/msun/i387/s_tan.S -text
 lib/msun/i387/s_trunc.S -text
 lib/msun/i387/s_truncf.S -text
 lib/msun/i387/s_truncl.S -text
-lib/msun/ia64/Makefile.inc -text
-lib/msun/ia64/Symbol.map -text
-lib/msun/ia64/fenv.c -text
-lib/msun/ia64/fenv.h -text
-lib/msun/ia64/s_fma.S -text
-lib/msun/ia64/s_fmaf.S -text
-lib/msun/ia64/s_fmal.S -text
 lib/msun/man/acos.3 -text
 lib/msun/man/acosh.3 -text
 lib/msun/man/asin.3 -text
@@ -25304,10 +25297,6 @@ lib/msun/man/sqrt.3 -text
 lib/msun/man/tan.3 -text
 lib/msun/man/tanh.3 -text
 lib/msun/man/trunc.3 -text
-lib/msun/powerpc/Makefile.inc -text
-lib/msun/powerpc/Symbol.map -text
-lib/msun/powerpc/fenv.c -text
-lib/msun/powerpc/fenv.h -text
 lib/msun/sparc64/Makefile.inc -text
 lib/msun/sparc64/Symbol.map -text
 lib/msun/sparc64/e_sqrt.S -text
