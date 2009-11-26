@@ -69,11 +69,8 @@ extern const union __nan_un {
 #define	math_errhandling	MATH_ERREXCEPT
 
 /* XXX We need a <machine/math.h>. */
-#if defined(__ia64__) || defined(__sparc64__)
+#if defined(__sparc64__)
 #define	FP_FAST_FMA
-#endif
-#ifdef __ia64__
-#define	FP_FAST_FMAL
 #endif
 #define	FP_FAST_FMAF
 
