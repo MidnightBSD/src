@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/usr.bin/ssh/Makefile,v 1.5 2008/03/26 01:35:42 laffer1 Exp $
+# $MidnightBSD: src/secure/usr.bin/ssh/Makefile,v 1.6 2009/05/02 18:01:22 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -10,7 +10,7 @@ MLINKS=	ssh.1 slogin.1
 
 SRCS=	ssh.c readconf.c clientloop.c sshtty.c \
 	sshconnect.c sshconnect1.c sshconnect2.c mux.c \
-	gss-genr.c
+	gss-genr.c roaming_common.c
 
 DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ}
 LDADD=	-lssh -lutil -lz
