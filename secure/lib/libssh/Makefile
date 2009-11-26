@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.10 2009/01/10 22:20:18 laffer1 Exp $
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.11 2009/05/02 18:01:21 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -13,7 +13,7 @@ SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	atomicio.c key.c dispatch.c kex.c mac.c uidswap.c uuencode.c misc.c \
 	monitor_fdpass.c rijndael.c ssh-dss.c ssh-rsa.c dh.c kexdh.c \
 	kexgex.c kexdhc.c kexgexc.c scard.c msg.c progressmeter.c dns.c \
-	entropy.c scard-opensc.c umac.c
+	entropy.c scard-opensc.c umac.c jpake.c schnorr.c
 
 # gss-genr.c should be in $SRCS but causes linking problems, so it is
 # compiled directly into sshd instead.

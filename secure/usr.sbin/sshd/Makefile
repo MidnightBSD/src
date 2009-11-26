@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/usr.sbin/sshd/Makefile,v 1.6 2008/11/06 21:46:21 laffer1 Exp $
+# $MidnightBSD: src/secure/usr.sbin/sshd/Makefile,v 1.7 2009/05/02 18:01:59 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -14,7 +14,7 @@ SRCS=	sshd.c auth-rhosts.c auth-passwd.c auth-rsa.c auth-rh-rsa.c \
 	auth2-gss.c gss-serv.c gss-serv-krb5.c \
 	loginrec.c auth-pam.c auth-shadow.c auth-sia.c md5crypt.c \
 	audit.c audit-bsm.c platform.c sftp-server.c sftp-common.c \
-	gss-genr.c
+	roaming_common.c gss-genr.c
 
 # gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
 
