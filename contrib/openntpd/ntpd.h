@@ -29,6 +29,7 @@
 #include <pwd.h>
 #include <stdarg.h>
 
+#include "compat.h"
 #include "ntp.h"
 
 #define	NTPD_USER	"_ntp"

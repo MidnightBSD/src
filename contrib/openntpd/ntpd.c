@@ -449,7 +449,7 @@ readfreq(void)
 		log_warn("adjfreq failed");
 	else if (current == 0) {
 		if (fscanf(fp, "%le", &d) == 1)
-			ntpd_adjfreq(d, 0);
+			ntpd_adjfreq(d / 1e6, 0);
 	}
 	fclose(fp);
 }
@@ -470,7 +470,7 @@ writefreq(double d)
 		return 0;
 	}
 
-	fprintf(fp, "%e\n", d);
+	fprintf(fp, "%e\n", d * 1e6);
 	r = ferror(fp);
 	if (fclose(fp) != 0 || r != 0) {
 		if (warnonce) {

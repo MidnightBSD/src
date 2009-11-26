@@ -11290,8 +11290,11 @@ contrib/openntpd/MIDNIGHTBSD-upgrade -text
 contrib/openntpd/Makefile -text
 contrib/openntpd/Makefile.in -text
 contrib/openntpd/README -text
+contrib/openntpd/adjfreq.c -text
+contrib/openntpd/arc4random.c -text
 contrib/openntpd/buffer.c -text
 contrib/openntpd/client.c -text
+contrib/openntpd/compat.h -text
 contrib/openntpd/config.c -text
 contrib/openntpd/config.guess -text
 contrib/openntpd/config.h -text
@@ -11312,11 +11315,9 @@ contrib/openntpd/mdoc2man.awk -text
 contrib/openntpd/ntp.c -text
 contrib/openntpd/ntp.h -text
 contrib/openntpd/ntp_msg.c -text
-contrib/openntpd/ntpd.0 -text
 contrib/openntpd/ntpd.8 -text
 contrib/openntpd/ntpd.c -text
 contrib/openntpd/ntpd.conf -text
-contrib/openntpd/ntpd.conf.0 -text
 contrib/openntpd/ntpd.conf.5 -text
 contrib/openntpd/ntpd.h -text
 contrib/openntpd/openbsd-compat/Makefile -text
