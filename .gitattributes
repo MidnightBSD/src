@@ -18642,6 +18642,9 @@ crypto/openssh/regress/try-ciphers.sh -text
 crypto/openssh/regress/yes-head.sh -text
 crypto/openssh/rijndael.c -text
 crypto/openssh/rijndael.h -text
+crypto/openssh/roaming.h -text
+crypto/openssh/roaming_common.c -text
+crypto/openssh/roaming_dummy.c -text
 crypto/openssh/rsa.c -text
 crypto/openssh/rsa.h -text
 crypto/openssh/scard-opensc.c -text
@@ -18652,6 +18655,7 @@ crypto/openssh/scard/Ssh.bin -text svneol=unset#unset
 crypto/openssh/scard/Ssh.bin.uu -text
 crypto/openssh/scard/Ssh.java -text
 crypto/openssh/schnorr.c -text
+crypto/openssh/schnorr.h -text
 crypto/openssh/scp.1 -text
 crypto/openssh/scp.c -text
 crypto/openssh/servconf.c -text
