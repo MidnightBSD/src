@@ -24,7 +24,7 @@
 /* #undef BROKEN_GETGROUPS */
 
 /* FreeBSD glob does not do what we need */
-/* #undef BROKEN_GLOB */
+#define BROKEN_GLOB 1
 
 /* Define if you system's inet_ntoa is busted (e.g. Irix gcc issue) */
 /* #undef BROKEN_INET_NTOA */
@@ -68,6 +68,9 @@
 
 /* Define if your snprintf is busted */
 /* #undef BROKEN_SNPRINTF */
+
+/* tcgetattr with ICANON may hang */
+/* #undef BROKEN_TCGETATTR_ICANON */
 
 /* updwtmpx is broken (if present) */
 /* #undef BROKEN_UPDWTMPX */
@@ -123,8 +126,11 @@
 /* Builtin PRNG command timeout */
 #define ENTROPY_TIMEOUT_MSEC 200
 
-/* f_fsid has members */
+/* fsid_t has member val */
 /* #undef FSID_HAS_VAL */
+
+/* fsid_t has member __val */
+/* #undef FSID_HAS___VAL */
 
 /* Define to 1 if the `getpgrp' function requires zero arguments. */
 #define GETPGRP_VOID 1
@@ -518,6 +524,9 @@
 
 /* Define to 1 if the system has the type `in_addr_t'. */
 #define HAVE_IN_ADDR_T 1
+
+/* Define to 1 if the system has the type `in_port_t'. */
+#define HAVE_IN_PORT_T 1
 
 /* Define to 1 if you have the <lastlog.h> header file. */
 /* #undef HAVE_LASTLOG_H */
@@ -1182,7 +1191,7 @@
 /* #undef LLONG_MIN */
 
 /* Account locked with pw(1) */
-/* #undef LOCKED_PASSWD_PREFIX */
+#define LOCKED_PASSWD_PREFIX "*LOCKED*"
 
 /* String used in /etc/passwd to denote locked account */
 /* #undef LOCKED_PASSWD_STRING */
@@ -1226,6 +1235,9 @@
 
 /* Define if X11 doesn't support AF_UNIX sockets on that system */
 /* #undef NO_X11_UNIX_SOCKETS */
+
+/* Define if EVP_DigestUpdate returns void */
+/* #undef OPENSSL_EVP_DIGESTUPDATE_VOID */
 
 /* libcrypto is missing AES 192 and 256 bit functions */
 /* #undef OPENSSL_LOBOTOMISED_AES */
@@ -1310,6 +1322,9 @@
 /* Use audit debugging module */
 /* #undef SSH_AUDIT_EVENTS */
 
+/* Windows is sensitive to read buffer size */
+/* #undef SSH_IOBUFSZ */
+
 /* non-privileged user for privilege separation */
 #define SSH_PRIVSEP_USER "sshd"
 
@@ -1317,7 +1332,7 @@
 /* #undef SSH_TUN_COMPAT_AF */
 
 /* Open tunnel devices the FreeBSD way */
-/* #undef SSH_TUN_FREEBSD */
+#define SSH_TUN_FREEBSD 1
 
 /* Open tunnel devices the Linux tun/tap way */
 /* #undef SSH_TUN_LINUX */
