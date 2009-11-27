@@ -1,7 +1,7 @@
-# $MidnightBSD: src/secure/libexec/ssh-keysign/Makefile,v 1.3 2009/01/04 22:47:05 laffer1 Exp $
+# $MidnightBSD: src/secure/libexec/ssh-keysign/Makefile,v 1.4 2009/05/02 18:00:56 laffer1 Exp $
 
 PROG=	ssh-keysign
-SRCS=	ssh-keysign.c readconf.c
+SRCS=	ssh-keysign.c readconf.c roaming_dummy.c
 MAN=	ssh-keysign.8
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 .if defined(ENABLE_SUID_SSH)
