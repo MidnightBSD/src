@@ -1,7 +1,7 @@
-# $MidnightBSD: src/secure/libexec/sftp-server/Makefile,v 1.3 2008/04/06 16:06:52 laffer1 Exp $
+# $MidnightBSD: src/secure/libexec/sftp-server/Makefile,v 1.4 2009/05/02 18:00:56 laffer1 Exp $
 
 PROG=   sftp-server
-SRCS=   sftp-server.c sftp-common.c sftp-server-main.c
+SRCS=   sftp-server.c sftp-common.c sftp-server-main.c roaming_dummy.c
 MAN=	sftp-server.8
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 
