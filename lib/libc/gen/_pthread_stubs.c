@@ -82,6 +82,8 @@ pthread_func_entry_t __thr_jtable[PJT_MAX] = {
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CANCEL */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CLEANUP_POP */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CLEANUP_PUSH */
+	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_CONDATTR_DESTROY */
+	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_CONDATTR_INIT */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_COND_BROADCAST */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_COND_DESTROY */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_COND_INIT */
@@ -211,6 +213,8 @@ STUB_FUNC1(pthread_cond_destroy, PJT_COND_DESTROY, int, void *)
 STUB_FUNC2(pthread_cond_init,	PJT_COND_INIT, int, void *, void *)
 STUB_FUNC1(pthread_cond_signal,	PJT_COND_SIGNAL, int, void *)
 STUB_FUNC2(pthread_cond_wait,	PJT_COND_WAIT, int, void *, void *)
+STUB_FUNC1(pthread_condattr_destroy,	PJT_CONDATTR_DESTROY, int, void *)
+STUB_FUNC1(pthread_condattr_init,	PJT_CONDATTR_INIT, int, void *)
 STUB_FUNC1(pthread_getspecific,	PJT_GETSPECIFIC, void *, pthread_key_t)
 STUB_FUNC2(pthread_key_create,	PJT_KEY_CREATE, int, void *, void *)
 STUB_FUNC1(pthread_key_delete,	PJT_KEY_DELETE, int, pthread_key_t)

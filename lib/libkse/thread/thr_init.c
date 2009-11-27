@@ -186,6 +186,8 @@ static pthread_func_t jmp_table[][2] = {
 	{DUAL_ENTRY(_pthread_cancel)},	/* PJT_CANCEL */
 	{DUAL_ENTRY(_pthread_cleanup_pop)},	/* PJT_CLEANUP_POP */
 	{DUAL_ENTRY(_pthread_cleanup_push)},	/* PJT_CLEANUP_PUSH */
+	{DUAL_ENTRY(_pthread_condattr_destroy)}, /* PJT_CONDATTR_DESTROY */
+	{DUAL_ENTRY(_pthread_condattr_init)},	/* PJT_CONDATTR_INIT */
 	{DUAL_ENTRY(_pthread_cond_broadcast)},	/* PJT_COND_BROADCAST */
 	{DUAL_ENTRY(_pthread_cond_destroy)},	/* PJT_COND_DESTROY */
 	{DUAL_ENTRY(_pthread_cond_init)},	/* PJT_COND_INIT */
