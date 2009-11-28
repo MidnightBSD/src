@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/drm_vm.c,v 1.3 2008/12/03 00:30:44 laffer1 Exp $ */
 /*-
  * Copyright 2003 Eric Anholt
  * All Rights Reserved.
@@ -28,7 +28,7 @@ __FBSDID("$FreeBSD: src/sys/dev/drm/drm_vm.c,v 1.2 2005/11/28 23:13:53 anholt Ex
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500102
+#if defined(__MidnightBSD__) || defined(__FreeBSD__) && __FreeBSD_version >= 500102
 int drm_mmap(struct cdev *kdev, vm_offset_t offset, vm_paddr_t *paddr,
     int prot)
 #elif defined(__FreeBSD__)
@@ -41,7 +41,7 @@ paddr_t drm_mmap(dev_t kdev, off_t offset, int prot)
 	drm_local_map_t *map;
 	drm_file_t *priv;
 	drm_map_type_t type;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	vm_paddr_t phys;
 #else
 	paddr_t phys;
@@ -67,7 +67,7 @@ paddr_t drm_mmap(dev_t kdev, off_t offset, int prot)
 			unsigned long page = offset >> PAGE_SHIFT;
 			unsigned long phys = dma->pagelist[page];
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500102
+#if defined(__MidnightBSD__) || defined(__FreeBSD__) && __FreeBSD_version >= 500102
 			*paddr = phys;
 			DRM_SPINUNLOCK(&dev->dma_lock);
 			return 0;
@@ -125,7 +125,7 @@ paddr_t drm_mmap(dev_t kdev, off_t offset, int prot)
 		return -1;	/* This should never happen. */
 	}
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500102
+#if defined(__MidnightBSD__) || defined(__FreeBSD__) && __FreeBSD_version >= 500102
 	*paddr = phys;
 	return 0;
 #else

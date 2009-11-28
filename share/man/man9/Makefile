@@ -1,5 +1,5 @@
-# $MidnightBSD$
-# $FreeBSD: src/share/man/man9/Makefile,v 1.310.2.1.2.1 2008/02/15 15:19:26 brueffer Exp $
+# $MidnightBSD: src/share/man/man9/Makefile,v 1.3 2009/01/20 19:31:04 laffer1 Exp $
+# $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/share/man/man9/Makefile,v 1.311 2007/10/14 10:45:30 netchild Exp $
 
 MAN=	accept_filter.9 \
 	accf_data.9 \
@@ -210,6 +210,7 @@ MAN=	accept_filter.9 \
 	securelevel_gt.9 \
 	selrecord.9 \
 	sema.9 \
+	sensor_attach.9 \
 	sf_buf.9 \
 	signal.9 \
 	sleep.9 \
@@ -976,6 +977,13 @@ MLINKS+=sema.9 sema_destroy.9 \
 	sema.9 sema_trywait.9 \
 	sema.9 sema_value.9 \
 	sema.9 sema_wait.9
+MLINKS+=sensor_attach.9 sensordev_install.9 \
+	sensor_attach.9 sensordev_deinstall.9 \
+	sensor_attach.9 sensor_detach.9 \
+	sensor_attach.9 ksensordev.9 \
+	sensor_attach.9 ksensor.9 \
+	sensor_attach.9 sensor_task_register.9 \
+	sensor_attach.9 sensor_task_unregister.9
 MLINKS+=sf_buf.9 sf_buf_alloc.9 \
 	sf_buf.9 sf_buf_free.9 \
 	sf_buf.9 sf_buf_kva.9 \

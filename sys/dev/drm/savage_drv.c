@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/savage_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* savage_drv.c -- Savage DRI driver
  */
 /*-
@@ -67,7 +67,7 @@ static void savage_configure(drm_device_t *dev)
 	dev->driver.use_dma		= 1;
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 savage_probe(device_t dev)
 {
@@ -100,11 +100,7 @@ static driver_t savage_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(savage, vgapci, savage_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(savage, pci, savage_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(savage, drm, 1, 1, 1);
 
 #elif defined(__NetBSD__) || defined(__OpenBSD__)

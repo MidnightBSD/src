@@ -20888,6 +20888,7 @@ etc/rc.d/savecore -text
 etc/rc.d/sdpd -text
 etc/rc.d/securelevel -text
 etc/rc.d/sendmail -text
+etc/rc.d/sensorsd -text
 etc/rc.d/serial -text
 etc/rc.d/sound -text
 etc/rc.d/sppp -text
@@ -20930,6 +20931,7 @@ etc/sendmail/Makefile -text
 etc/sendmail/freebsd.mc -text
 etc/sendmail/freebsd.submit.mc -text
 etc/sendmail/freefall.mc -text
+etc/sensorsd.conf -text
 etc/services -text
 etc/shells -text
 etc/snmpd.config -text
@@ -28529,6 +28531,7 @@ share/man/man9/scheduler.9 -text
 share/man/man9/securelevel_gt.9 -text
 share/man/man9/selrecord.9 -text
 share/man/man9/sema.9 -text
+share/man/man9/sensor_attach.9 -text
 share/man/man9/sf_buf.9 -text
 share/man/man9/signal.9 -text
 share/man/man9/sleep.9 -text
@@ -33108,6 +33111,7 @@ sys/kern/kern_prot.c -text
 sys/kern/kern_resource.c -text
 sys/kern/kern_rwlock.c -text
 sys/kern/kern_sema.c -text
+sys/kern/kern_sensors.c -text
 sys/kern/kern_shutdown.c -text
 sys/kern/kern_sig.c -text
 sys/kern/kern_subr.c -text
@@ -35065,6 +35069,7 @@ sys/sys/selinfo.h -text
 sys/sys/sem.h -text
 sys/sys/sema.h -text
 sys/sys/semaphore.h -text
+sys/sys/sensors.h -text
 sys/sys/serial.h -text
 sys/sys/sf_buf.h -text
 sys/sys/shm.h -text
@@ -37158,6 +37163,7 @@ usr.bin/systat/mode.h -text
 usr.bin/systat/netcmds.c -text
 usr.bin/systat/netstat.c -text
 usr.bin/systat/pigs.c -text
+usr.bin/systat/sensors.c -text
 usr.bin/systat/swap.c -text
 usr.bin/systat/systat.1 -text
 usr.bin/systat/systat.h -text
@@ -39057,6 +39063,10 @@ usr.sbin/sade/termcap.c -text
 usr.sbin/sade/variable.c -text
 usr.sbin/sade/wizard.c -text
 usr.sbin/sendmail/Makefile -text
+usr.sbin/sensorsd/Makefile -text
+usr.sbin/sensorsd/sensorsd.8 -text
+usr.sbin/sensorsd/sensorsd.c -text
+usr.sbin/sensorsd/sensorsd.conf.5 -text
 usr.sbin/setfmac/Makefile -text
 usr.sbin/setfmac/setfmac.8 -text
 usr.sbin/setfmac/setfmac.c -text

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_primative.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/create_primative.c,v 1.4 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -39,6 +39,7 @@
 #include <md5.h>
 #include <archive.h>
 #include <archive_entry.h>
+#include <assert.h>
 #include "mport.h"
 #include "mport_private.h"
 
@@ -58,7 +59,7 @@ MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPack
 {
   
   int ret;
-  sqlite3 *db;
+  sqlite3 *db = NULL;
 
   char dirtmpl[] = "/tmp/mport.XXXXXXXX"; 
   char *tmpdir = mkdtemp(dirtmpl);
@@ -108,8 +109,8 @@ static int create_stub_db(sqlite3 **db, const char *tmpdir)
 
 static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
 {
-  mportAssetListEntry *e;
-  sqlite3_stmt *stmnt;
+  mportAssetListEntry *e = NULL;
+  sqlite3_stmt *stmnt = NULL;
   char sql[]  = "INSERT INTO assets (pkg, type, data, checksum) VALUES (?,?,?,?)";
   char md5[33];
   char file[FILENAME_MAX];
@@ -188,7 +189,7 @@ static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackage
 
 static int insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 {
-  sqlite3_stmt *stmnt;
+  sqlite3_stmt *stmnt = NULL;
   const char *rest  = 0;
   
   char sql[]  = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment) VALUES (?,?,?,?,?,?)";
@@ -235,10 +236,10 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *e
 
 static int insert_categories(sqlite3 *db, mportPackageMeta *pkg)
 {
-  sqlite3_stmt *stmt;
+  sqlite3_stmt *stmt = NULL;
   
   int i = 0;
-  
+  assert(pkg != NULL);
   if (pkg->categories == NULL)
     return MPORT_OK; // or should this be an error?
 
@@ -268,9 +269,10 @@ static int insert_categories(sqlite3 *db, mportPackageMeta *pkg)
 
 static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra) 
 {
-  sqlite3_stmt *stmnt;
+  sqlite3_stmt *stmnt = NULL;
+  assert(extra != NULL);
   char **conflict  = extra->conflicts;
-  char *version;
+  char *version = NULL;
   
   /* we're done if there are no conflicts to record. */
   if (conflict == NULL) 
@@ -316,10 +318,11 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack, mportCreateExtr
 
 static int insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra) 
 {
-  sqlite3_stmt *stmnt;
+  sqlite3_stmt *stmnt = NULL;
+  assert(extra != NULL);
   char **depend    = extra->depends;
-  char *pkgversion;
-  char *port;
+  char *pkgversion = NULL;
+  char *port = NULL;
   
   /* we're done if there are no deps to record. */
   if (depend == NULL) 
@@ -442,7 +445,7 @@ static int archive_metafiles(mportBundleWrite *bundle, mportPackageMeta *pack, m
 
 static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCreateExtras *extra, mportAssetList *assetlist)
 {
-  mportAssetListEntry *e;
+  mportAssetListEntry *e = NULL;
   char filename[FILENAME_MAX];
   char *cwd = pack->prefix;
   /*int total = 0;

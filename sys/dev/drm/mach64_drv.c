@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/mach64_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* mach64_drv.c -- ATI Rage 128 driver -*- linux-c -*-
  * Created: Mon Dec 13 09:47:27 1999 by faith@precisioninsight.com
  */
@@ -77,7 +77,7 @@ static void mach64_configure(drm_device_t *dev)
 	dev->driver.use_vbl_irq		= 1;
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 mach64_probe(device_t dev)
 {
@@ -110,11 +110,7 @@ static driver_t mach64_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(mach64, vgapci, mach64_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(mach64, pci, mach64_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(mach64, drm, 1, 1, 1);
 
 #elif defined(__NetBSD__) || defined(__OpenBSD__)

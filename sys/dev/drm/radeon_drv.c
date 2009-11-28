@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/radeon_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* radeon_drv.c -- ATI Radeon driver -*- linux-c -*-
  * Created: Wed Feb 14 17:10:04 2001 by gareth@valinux.com
  */
@@ -82,7 +82,7 @@ static void radeon_configure(drm_device_t *dev)
 	dev->driver.use_vbl_irq		= 1;
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 radeon_probe(device_t dev)
 {
@@ -115,11 +115,7 @@ static driver_t radeon_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(radeon, vgapci, radeon_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(radeon, pci, radeon_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(radeon, drm, 1, 1, 1);
 
 #elif defined(__NetBSD__) || defined(__OpenBSD__)

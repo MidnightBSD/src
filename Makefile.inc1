@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.23 2009/09/19 21:53:58 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.24 2009/09/19 23:53:43 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -105,7 +105,7 @@ OSRELDATE=	0
 
 # Guess machine architecture from machine type, and vice versa.
 .if !defined(TARGET_ARCH) && defined(TARGET)
-TARGET_ARCH=	${TARGET:S/sun4v/sparc64/}
+TARGET_ARCH=	${TARGET:S/pc98/i386/:S/sun4v/sparc64/}
 .elif !defined(TARGET) && defined(TARGET_ARCH) && \
     ${TARGET_ARCH} != ${MACHINE_ARCH}
 TARGET=		${TARGET_ARCH}

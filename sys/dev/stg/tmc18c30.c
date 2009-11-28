@@ -44,9 +44,7 @@ __FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30.c,v 1.15 2006/05/16 14:36:32 phk Ex
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500001
 #include <sys/bio.h>
-#endif	/* __FreeBSD__ */
 #include <sys/buf.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>

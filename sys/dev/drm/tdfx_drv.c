@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/tdfx_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* tdfx_drv.c -- tdfx driver -*- linux-c -*-
  * Created: Thu Oct  7 10:38:32 1999 by faith@precisioninsight.com
  */
@@ -61,7 +61,6 @@ static void tdfx_configure(drm_device_t *dev)
 	dev->driver.use_mtrr		= 1;
 }
 
-#ifdef __FreeBSD__
 static int
 tdfx_probe(device_t dev)
 {
@@ -94,18 +93,5 @@ static driver_t tdfx_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(tdfx, vgapci, tdfx_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(tdfx, pci, tdfx_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(tdfx, drm, 1, 1, 1);
-
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-#ifdef _LKM
-CFDRIVER_DECL(tdfx, DV_TTY, NULL);
-#else
-CFATTACH_DECL(tdfx, sizeof(drm_device_t), drm_probe, drm_attach, drm_detach,
-    drm_activate);
-#endif
-#endif

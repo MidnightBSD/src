@@ -1,6 +1,6 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.17 2009/05/16 20:27:36 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.18 2009/05/27 05:59:40 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -17,7 +17,7 @@ BIN1=	amd.map apmd.conf auth.conf \
 	ntpd.conf pf.conf pf.os phones profile protocols \
 	rc rc.bsdextended rc.firewall rc.firewall6 rc.initdiskless \
 	rc.sendmail rc.shutdown \
-	rc.subr remote rpc services shells \
+	rc.subr remote rpc ensorsd.conf services shells \
 	snmpd.config sysctl.conf syslog.conf \
 	etc.${MACHINE_ARCH}/ttys \
 	${.CURDIR}/../gnu/usr.bin/man/manpath/manpath.config \

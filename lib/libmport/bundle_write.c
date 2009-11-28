@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.2 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
@@ -42,12 +42,13 @@
 #include <errno.h>
 #include <archive.h>
 #include <archive_entry.h>
+#include <assert.h>
 #include "mport.h"
 #include "mport_private.h"
 
 
 #define	LINK_TABLE_SIZE 512
-#define BUFF_SIZE       131072 /* 128k */
+#define BUFF_SIZE       BUFSIZ * 16
 
 struct links_table {
   size_t nbuckets;
@@ -115,13 +116,13 @@ int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
 int mport_bundle_write_finish(mportBundleWrite *bundle)
 {
   int ret = MPORT_OK;
-  
+ 
   if (archive_write_finish(bundle->archive) != ARCHIVE_OK)
-    ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+    ret = SET_ERROR(MPORT_ERR_FATAL, strdup(archive_error_string(bundle->archive)));
 
-  free_linktable(bundle->links);      
-  free(bundle->filename);
-  free(bundle);
+  //free_linktable(bundle->links);      
+  //free(bundle->filename);
+  //free(bundle);
   
   return ret;
 }
@@ -135,7 +136,7 @@ int mport_bundle_write_finish(mportBundleWrite *bundle)
  */
 int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, const char *path) 
 {
-  struct archive_entry *entry;
+  struct archive_entry *entry = NULL;
   struct stat st;
   int fd, len;
   char buff[BUFF_SIZE];

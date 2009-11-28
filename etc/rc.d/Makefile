@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.15 2009/01/17 17:37:02 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.16 2009/01/17 22:23:54 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
@@ -33,7 +33,7 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	random rarpd rdate resolv root \
 	route6d routed routing rpcbind rtadvd rwho \
 	savecore sdpd securelevel sendmail \
-	serial sound sppp statd swap1 \
+	sensorsd serial sound sppp statd swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
 	ugidfw \

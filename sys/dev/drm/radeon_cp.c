@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/radeon_cp.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* radeon_cp.c -- CP support for Radeon -*- linux-c -*- */
 /*-
  * Copyright 2000 Precision Insight, Inc., Cedar Park, Texas.
@@ -1877,12 +1877,8 @@ void radeon_do_release(drm_device_t * dev)
 #ifdef __linux__
 				schedule();
 #else
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 				msleep(&ret, &dev->dev_lock, PZERO, "rdnrel",
 				       1);
-#else
-				tsleep(&ret, PZERO, "rdnrel", 1);
-#endif
 #endif
 			}
 			radeon_do_cp_stop(dev_priv);

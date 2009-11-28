@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/error.c,v 1.7 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/fetch.c,v 1.1 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -49,10 +49,10 @@ static int fetch(mportInstance *, const char *, const char *);
  */
 int mport_fetch_index(mportInstance *mport)
 {
-  char **mirrors;
-  char *url;
-  char *dest;
-  int i;
+  char **mirrors = NULL;
+  char *url = NULL;
+  char *dest = NULL;
+  int i = 0;
   
   MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_index()");
   
@@ -111,7 +111,7 @@ int mport_fetch_bundle(mportInstance *mport, const char *filename)
   char **mirrors;
   char *url;
   char *dest;
-  int i;
+  int i = 0;
 
   MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_bundle()");
   
@@ -142,13 +142,13 @@ int mport_fetch_bundle(mportInstance *mport, const char *filename)
 
 static int fetch(mportInstance *mport, const char *url, const char *dest) 
 {
-  FILE *remote;
-  FILE *local;
+  FILE *remote = NULL;
+  FILE *local = NULL;
   struct url_stat stat;
   char buffer[BUFFSIZE];
-  char *ptr;
+  char *ptr = NULL;
   size_t size;                                  
-  size_t got;
+  size_t got = 0;
   size_t wrote;
   
   if ((local = fopen(dest, "w")) == NULL) {

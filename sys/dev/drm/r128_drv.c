@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/r128_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* r128_drv.c -- ATI Rage 128 driver -*- linux-c -*-
  * Created: Mon Dec 13 09:47:27 1999 by faith@precisioninsight.com
  */
@@ -77,7 +77,7 @@ static void r128_configure(drm_device_t *dev)
 	dev->driver.use_vbl_irq		= 1;
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 r128_probe(device_t dev)
 {
@@ -110,11 +110,7 @@ static driver_t r128_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(r128, vgapci, r128_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(r128, pci, r128_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(r128, drm, 1, 1, 1);
 
 #elif defined(__NetBSD__) || defined(__OpenBSD__)

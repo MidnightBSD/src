@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/error.c,v 1.7 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.1 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -180,8 +180,8 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
  */
 MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndexEntry ***entry_vec)
 {
-  char *lookup;
-  int count, i, step;
+  char *lookup = NULL;
+  int count, i = 0, step;
   sqlite3_stmt *stmt;
   int ret = MPORT_OK;
   mportIndexEntry **e;

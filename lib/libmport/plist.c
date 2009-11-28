@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/plist.c,v 1.4 2008/01/05 22:18:20 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.6 2009/06/05 00:02:22 laffer1 Exp $
  */
 
 
@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include "mport.h"
 #include "mport_private.h"
 
@@ -48,6 +49,7 @@ static mportAssetListEntryType parse_command(const char*);
 MPORT_PUBLIC_API mportAssetList* mport_assetlist_new() 
 {
   mportAssetList *list = (mportAssetList*)malloc(sizeof(mportAssetList));
+  assert(list != NULL);
   STAILQ_INIT(list);
   return list;
 }
@@ -56,7 +58,7 @@ MPORT_PUBLIC_API mportAssetList* mport_assetlist_new()
 /* free all the entries in the list, and then the list itself. */
 MPORT_PUBLIC_API void mport_assetlist_free(mportAssetList *list) 
 {
-  mportAssetListEntry *n;
+  mportAssetListEntry *n = NULL;
 
   while (!STAILQ_EMPTY(list)) {
      n = STAILQ_FIRST(list);
@@ -76,7 +78,9 @@ MPORT_PUBLIC_API void mport_assetlist_free(mportAssetList *list)
 MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
 {
   size_t length;
-  char *line;
+  char *line = NULL;
+
+  assert(fp != NULL);
   
   while ((line = fgetln(fp, &length)) != NULL) {
     if (feof(fp)) {

@@ -68,9 +68,7 @@ __FBSDID("$FreeBSD: src/sys/dev/trm/trm.c,v 1.33 2007/06/17 05:55:52 scottl Exp 
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/queue.h>
-#if __FreeBSD_version >= 500000
 #include <sys/bio.h>
-#endif
 #include <sys/buf.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/sysctl.h,v 1.4 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -488,7 +488,8 @@ TAILQ_HEAD(sysctl_ctx_list, sysctl_ctx_entry);
 #define HW_FLOATINGPT	10		/* int: has HW floating point? */
 #define HW_MACHINE_ARCH	11		/* string: machine architecture */
 #define	HW_REALMEM	12		/* int: 'real' memory */
-#define	HW_MAXID	13		/* number of valid hw ids */
+#define	HW_SENSORS	13		/* node: hardware monitors */
+#define	HW_MAXID	14		/* number of valid hw ids */
 
 #define CTL_HW_NAMES { \
 	{ 0, 0 }, \
@@ -502,7 +503,9 @@ TAILQ_HEAD(sysctl_ctx_list, sysctl_ctx_entry);
 	{ "disknames", CTLTYPE_STRUCT }, \
 	{ "diskstats", CTLTYPE_STRUCT }, \
 	{ "floatingpoint", CTLTYPE_INT }, \
+	{ "machine_arch", CTLTYPE_STRING }, \
 	{ "realmem", CTLTYPE_ULONG }, \
+	{ "sensors", CTLTYPE_NODE}, \
 }
 
 /*

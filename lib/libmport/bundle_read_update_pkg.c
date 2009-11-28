@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/version_cmp.c,v 1.3 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.2 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -161,7 +161,6 @@ static int build_create_extras_copy_metafiles(mportInstance *mport, mportPackage
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
 
-  
 }
 
 static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *pkg, mportCreateExtras *extra) 

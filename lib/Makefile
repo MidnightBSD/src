@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.10 2009/05/31 17:51:52 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.11 2009/06/08 19:28:44 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -25,7 +25,7 @@
 # libypclnt must be built before libpam.
 # libkse must be built before libsqlite3
 # libbz2 must be built before libarchive
-# libmport must be built after libsqlite3
+# libsqlite3 must be built before libmport
 # Otherwise, the SUBDIR list should be in alphabetical order.
 
 SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf libkvm msun libmd \
@@ -33,14 +33,14 @@ SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf libkvm msun libmd \
 	${_libypclnt} libalias libbz2 libarchive ${_libatm} \
 	libbegemot ${_libbluetooth} libbsnmp \
 	libcalendar libcam libcompat libdevinfo libdevstat libdisk \
-	libedit libexpat libfetch libftpio libgeom ${_libgpib} \
+	libedit libexpat libfetch ${_libffi} libftpio libgeom ${_libgpib} \
 	${_libgssapi} libipsec \
 	libipx libkiconv libmagic libmemstat ${_libmilter} ${_libmp} \
 	${_libncp} ${_libngatm} libopie libpam libpcap \
 	libpmc ${_libkse} librt ${_libsdp} ${_libsm} ${_libsmb} ${_libsmdb} \
 	${_libsmutil} libstand libtelnet ${_libthr} libthread_db libufs \
-	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz ${_bind} \
-	libsqlite3 libmport
+	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz \
+	libsqlite3 libmport ${_bind}
 
 .if exists(${.CURDIR}/csu/${MACHINE_ARCH}-elf)
 _csu=csu/${MACHINE_ARCH}-elf
@@ -77,6 +77,7 @@ _libipx=	libipx
 .if ${MK_NCP} != "no"
 _libncp=	libncp
 .endif
+_libffi=	libffi
 _libsmb=	libsmb
 _libvgl=	libvgl
 .endif

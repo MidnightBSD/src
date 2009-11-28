@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/i915_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* i915_drv.c -- ATI Radeon driver -*- linux-c -*-
  * Created: Wed Feb 14 17:10:04 2001 by gareth@valinux.com
  */
@@ -74,7 +74,7 @@ static void i915_configure(drm_device_t *dev)
 	dev->driver.use_vbl_irq		= 1;
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 i915_probe(device_t dev)
 {
@@ -101,21 +101,13 @@ static device_method_t i915_methods[] = {
 };
 
 static driver_t i915_driver = {
-#if __FreeBSD_version >= 700010
 	"drm",
-#else
-	"drmsub",
-#endif
 	i915_methods,
 	sizeof(drm_device_t)
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(i915, vgapci, i915_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(i915, agp, i915_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(i915, drm, 1, 1, 1);
 
 #elif defined(__NetBSD__) || defined(__OpenBSD__)

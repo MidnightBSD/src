@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/sis_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* sis.c -- sis driver -*- linux-c -*-
  */
 /*-
@@ -60,7 +60,7 @@ static void sis_configure(drm_device_t *dev)
 	dev->driver.use_mtrr		= 1;
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 sis_probe(device_t dev)
 {
@@ -93,11 +93,7 @@ static driver_t sis_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(sisdrm, vgapci, sis_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(sisdrm, pci, sis_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(sisdrm, drm, 1, 1, 1);
 
 #elif defined(__NetBSD__) || defined(__OpenBSD__)

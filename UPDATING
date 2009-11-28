@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20091028:
+	OpenBSD sensors framework imported including sensorsd(8)
+
 20091026:
 	OpenNTPD 4.4 import
 
@@ -771,4 +774,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.70 2009/11/26 16:50:28 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.71 2009/11/26 18:25:29 laffer1 Exp $
