@@ -1,16 +1,22 @@
 Updating Information for MidnightBSD users
 
-20091028:
+20091205:
+	OpenSSL security fix
+
+	The SSL version 3 and TLS protocols support session renegotiation without
+	cryptographically tying the new session parameters to the old parameters.
+
+20091128:
 	OpenBSD sensors framework imported including sensorsd(8)
 
-20091026:
+20091126:
 	OpenNTPD 4.4 import
 
 	Update OpenSSH to 5.3p1
 
 	mksh R39
 
-20091024:
+20091124:
 	cpdup updated from DragonFly to 1.15
 
 	tzdata2009s updated with latest timezone data for November 2009.
@@ -774,4 +780,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.71 2009/11/26 18:25:29 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.72 2009/11/28 22:44:30 laffer1 Exp $
