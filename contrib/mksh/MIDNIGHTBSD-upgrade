@@ -1,4 +1,4 @@
-$MidnightBSD: src/contrib/mksh/MIDNIGHTBSD-upgrade,v 1.1 2009/03/25 16:05:12 laffer1 Exp $
+$MidnightBSD: src/contrib/mksh/MIDNIGHTBSD-upgrade,v 1.2 2009/11/26 15:44:25 laffer1 Exp $
 
 Directions for updating MKSH (work in progress)
 
@@ -11,5 +11,5 @@ cvs -q -n import -m "Virgin import of MKSH R39" src/contrib/mksh MIROS vR39
 cvs import -m "Virgin import of MKSH R39" src/contrib/mksh MIROS vR39
 
 5) Check the Makefile in src/bin/mksh and the Build script for changes.
-
+    Build.sh -M
 6) update the dot file used for skel if needed.
