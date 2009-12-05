@@ -1,4 +1,4 @@
-# $MidnightBSD: src/bin/mksh/Makefile,v 1.12 2009/05/16 21:59:57 laffer1 Exp $
+# $MidnightBSD: src/bin/mksh/Makefile,v 1.13 2009/05/20 19:51:11 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -12,7 +12,7 @@ SRCS=	edit.c eval.c exec.c expr.c funcs.c histrap.c \
 
 DEFS=	-std=c99
 CFLAGS+=	${DEFS} -I${SRCDIR}
-CFLAGS+=	-DHAVE_EXPSTMT=1 -DHAVE_ATTRIBUTE=1 \
+CFLAGS+=	-DHAVE_ATTRIBUTE=1 \
 		-DHAVE_ATTRIBUTE_BOUNDED=0 -DHAVE_ATTRIBUTE_USED=1 \
 		-DHAVE_SYS_PARAM_H=1 -DHAVE_SYS_MKDEV_H=0 \
 		-DHAVE_SYS_MMAN_H=1 -DHAVE_SYS_SYSMACROS_H=0 -DHAVE_LIBGEN_H=1 \
