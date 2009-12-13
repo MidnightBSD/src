@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/man/man9/Makefile,v 1.3 2009/01/20 19:31:04 laffer1 Exp $
+# $MidnightBSD: src/share/man/man9/Makefile,v 1.4 2009/11/28 22:44:32 laffer1 Exp $
 # $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/share/man/man9/Makefile,v 1.311 2007/10/14 10:45:30 netchild Exp $
 
 MAN=	accept_filter.9 \
@@ -96,6 +96,7 @@ MAN=	accept_filter.9 \
 	DRIVER_MODULE.9 \
 	EVENTHANDLER.9 \
 	extattr.9 \
+	fdclone.9 \
 	fetch.9 \
 	firmware.9 \
 	g_access.9 \

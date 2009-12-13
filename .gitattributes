@@ -28426,6 +28426,7 @@ share/man/man9/disk.9 -text
 share/man/man9/domain.9 -text
 share/man/man9/driver.9 -text
 share/man/man9/extattr.9 -text
+share/man/man9/fdclone.9 -text
 share/man/man9/fetch.9 -text
 share/man/man9/firmware.9 -text
 share/man/man9/g_access.9 -text
