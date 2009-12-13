@@ -59,7 +59,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/share/examples/kld/cdev/README,v 1.2 2000/10/02 14:14:04 sobomax Exp $
-#
+# $MidnightBSD$
 
 1.0	Overview
 

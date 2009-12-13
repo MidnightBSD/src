@@ -1,0 +1,27 @@
+$MidnightBSD$
+
+This is a sample for the fdclone KPI. It was original written by
+Kostik Belousov with help from Peter Holm for FreeBSD 7-CURRENT.
+
+From Kostik's original annoucement:
+
+with the important help from Peter Holm I have implemented the KPI that
+provides the ability for the driver to implement cloning on the open(2).
+This is another (IMHO, more UNIXy) way to provide per-fd private data
+for the driver. It seems that at least /dev/apm, /dev/drm and /dev/sg
+could immediately benefit from the fdclone() KPI.
+
+The driver that uses the fdclone() shall provide cdevsw for master device,
+and cdevsw for clones. Master shall have d_fdopen() method that could call
+int fdclone(struct cdevsw *_csw, struct file *_fp, int _fmode,
+    struct cdev **_clone, void *si_drv1, struct thread *td);
+to replace the reference in the _fp with newly created cdev.
+
+After successfull fdclone() call, all further calls on the _fp
+are dispatched to the clone _csw instead of master one. si_drv1 of the
+new cdev is set to respective argument, allowing the clone to find the
+master.
+
+The cloned cdev is not accessible for lookup through the devfs, and is
+destroyed automatically on the final close of the last filedescriptor that
+references the vnode.

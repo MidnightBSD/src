@@ -27451,12 +27451,16 @@ share/examples/kld/cdev/test/testcdev.c -text
 share/examples/kld/dyn_sysctl/Makefile -text
 share/examples/kld/dyn_sysctl/README -text
 share/examples/kld/dyn_sysctl/dyn_sysctl.c -text
+share/examples/kld/fdclone/Makefile -text
+share/examples/kld/fdclone/README -text
+share/examples/kld/fdclone/module/Makefile -text
+share/examples/kld/fdclone/module/fclone.c -text
 share/examples/kld/firmware/Makefile -text
 share/examples/kld/firmware/README -text
 share/examples/kld/firmware/fwconsumer/Makefile -text
 share/examples/kld/firmware/fwconsumer/fw_consumer.c -text
 share/examples/kld/firmware/fwimage/Makefile -text
-share/examples/kld/firmware/fwimage/firmware.img -text
+share/examples/kld/firmware/fwimage/firmware.img -text svneol=unset#unset
 share/examples/kld/syscall/Makefile -text
 share/examples/kld/syscall/module/Makefile -text
 share/examples/kld/syscall/module/syscall.c -text

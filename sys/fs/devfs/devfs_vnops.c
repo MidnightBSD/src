@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/fs/devfs/devfs_vnops.c,v 1.3 2008/12/03 00:25:41 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_vnops.c,v 1.4 2009/10/11 02:54:39 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000-2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -78,6 +78,9 @@ struct mtx	devfs_de_interlock;
 MTX_SYSINIT(devfs_de_interlock, &devfs_de_interlock, "devfs interlock", MTX_DEF);
 struct sx	clone_drain_lock;
 SX_SYSINIT(clone_drain_lock, &clone_drain_lock, "clone events drain lock");
+
+static int devfs_newvnode(struct devfs_dirent *de, struct mount *mp,
+    struct cdev *dev, struct vnode **vpp, struct thread *td);
 
 static int
 devfs_fp_check(struct file *fp, struct cdev **devp, struct cdevsw **dswp)
@@ -171,6 +174,65 @@ devfs_insmntque_dtr(struct vnode *vp, void *arg)
 	vput(vp);
 }
 
+static int
+devfs_newvnode(struct devfs_dirent *de, struct mount *mp, struct cdev *dev,
+    struct vnode **vpp, struct thread *td)
+{
+	struct devfs_mount *dmp;
+	struct vnode *vp;
+	int error;
+
+	dmp = VFSTODEVFS(mp);
+	sx_assert(&dmp->dm_lock, SA_XLOCKED);
+	error = getnewvnode("devfs", mp, &devfs_vnodeops, &vp);
+	if (error != 0) {
+		devfs_allocv_drop_refs(1, dmp, de);
+		printf("devfs_allocv: failed to allocate new vnode\n");
+		return (error);
+	}
+
+	if (de->de_dirent->d_type == DT_CHR) {
+		vp->v_type = VCHR;
+		VI_LOCK(vp);
+		dev_lock();
+		dev_refl(dev);
+		/* XXX: v_rdev should be protect by vnode lock */
+		vp->v_rdev = dev;
+		KASSERT(vp->v_usecount == 1,
+		    ("%s %d (%d)\n", __func__, __LINE__, vp->v_usecount));
+		dev->si_usecount += vp->v_usecount;
+		dev_unlock();
+		VI_UNLOCK(vp);
+		vp->v_op = &devfs_specops;
+	} else if (de->de_dirent->d_type == DT_DIR) {
+		vp->v_type = VDIR;
+	} else if (de->de_dirent->d_type == DT_LNK) {
+		vp->v_type = VLNK;
+	} else {
+		vp->v_type = VBAD;
+	}
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	mtx_lock(&devfs_de_interlock);
+	vp->v_data = de;
+	de->de_vnode = vp;
+	mtx_unlock(&devfs_de_interlock);
+	error = insmntque1(vp, mp, devfs_insmntque_dtr, de);
+	if (error != 0) {
+		(void) devfs_allocv_drop_refs(1, dmp, de);
+		return (error);
+	}
+	if (devfs_allocv_drop_refs(0, dmp, de)) {
+		vput(vp);
+		return (ENOENT);
+	}
+#ifdef MAC
+	mac_associate_vnode_devfs(mp, de, vp);
+#endif
+	sx_xunlock(&dmp->dm_lock);
+	*vpp = vp;
+	return (0);
+}
+
 /*
  * devfs_allocv shall be entered with dmp->dm_lock held, and it drops
  * it on return.
@@ -221,53 +283,7 @@ devfs_allocv(struct devfs_dirent *de, struct mount *mp, struct vnode **vpp, stru
 	} else {
 		dev = NULL;
 	}
-	error = getnewvnode("devfs", mp, &devfs_vnodeops, &vp);
-	if (error != 0) {
-		devfs_allocv_drop_refs(1, dmp, de);
-		printf("devfs_allocv: failed to allocate new vnode\n");
-		return (error);
-	}
-
-	if (de->de_dirent->d_type == DT_CHR) {
-		vp->v_type = VCHR;
-		VI_LOCK(vp);
-		dev_lock();
-		dev_refl(dev);
-		/* XXX: v_rdev should be protect by vnode lock */
-		vp->v_rdev = dev;
-		KASSERT(vp->v_usecount == 1,
-		    ("%s %d (%d)\n", __func__, __LINE__, vp->v_usecount));
-		dev->si_usecount += vp->v_usecount;
-		dev_unlock();
-		VI_UNLOCK(vp);
-		vp->v_op = &devfs_specops;
-	} else if (de->de_dirent->d_type == DT_DIR) {
-		vp->v_type = VDIR;
-	} else if (de->de_dirent->d_type == DT_LNK) {
-		vp->v_type = VLNK;
-	} else {
-		vp->v_type = VBAD;
-	}
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
-	mtx_lock(&devfs_de_interlock);
-	vp->v_data = de;
-	de->de_vnode = vp;
-	mtx_unlock(&devfs_de_interlock);
-	error = insmntque1(vp, mp, devfs_insmntque_dtr, de);
-	if (error != 0) {
-		(void) devfs_allocv_drop_refs(1, dmp, de);
-		return (error);
-	}
-	if (devfs_allocv_drop_refs(0, dmp, de)) {
-		vput(vp);
-		return (ENOENT);
-	}
-#ifdef MAC
-	mac_associate_vnode_devfs(mp, de, vp);
-#endif
-	sx_xunlock(&dmp->dm_lock);
-	*vpp = vp;
-	return (0);
+	return (devfs_newvnode(de, mp, dev, vpp, td));
 }
 
 static int
@@ -311,7 +327,9 @@ devfs_close(struct vop_close_args *ap)
 	struct thread *td = ap->a_td;
 	struct cdev *dev = vp->v_rdev;
 	struct cdevsw *dsw;
-	int vp_locked, error;
+	struct devfs_mount *dmp;
+	struct devfs_dirent *de;
+	int vp_locked, error, dmp_clean, unit;
 
 	/*
 	 * Hack: a tty device that is a controlling terminal
@@ -375,6 +393,37 @@ devfs_close(struct vop_close_args *ap)
 	dev_relthread(dev);
 	vn_lock(vp, vp_locked | LK_RETRY, td);
 	vdrop(vp);
+	/*
+	 * Recycle the dirent, vnode and cdev for fdcloned devices on
+	 * the last close.
+	 */
+	if (dev->si_flags & SI_FDCLONE) {
+		/*
+		 * Destroy the device before deleting the directory
+		 * entry. This way, vgonel call to VOP_CLOSE() gets
+		 * ENXIO above and does not recurse into the d_close
+		 * method.
+		 */
+		unit = dev2unit(dev);
+		destroy_dev(dev);
+		free_unr(fdclone_units, unit);
+		/*
+		 * Now, destroy the dirent (and vnode).
+		 */
+		dmp = VFSTODEVFS(vp->v_mount);
+		sx_xlock(&dmp->dm_lock);
+		mtx_lock(&devfs_de_interlock);
+		de = vp->v_data;
+		mtx_unlock(&devfs_de_interlock);
+		dmp_clean = 0;
+		DEVFS_DMP_HOLD(dmp);
+		TAILQ_REMOVE(&de->de_dir->de_dlist, de, de_list);
+		devfs_delete(dmp, de, 1);
+		dmp_clean = DEVFS_DMP_DROP(dmp);
+		sx_xunlock(&dmp->dm_lock);
+		if (dmp_clean)
+			devfs_unmount_final(dmp);
+	}
 	return (error);
 }
 
@@ -748,10 +797,12 @@ devfs_open(struct vop_open_args *ap)
 {
 	struct thread *td = ap->a_td;
 	struct vnode *vp = ap->a_vp;
+	struct vnode *rvp;
 	struct cdev *dev = vp->v_rdev;
 	struct file *fp = ap->a_fp;
 	int error;
 	struct cdevsw *dsw;
+	int fdcloned;
 
 	if (vp->v_type == VBLK)
 		return (ENXIO);
@@ -772,7 +823,12 @@ devfs_open(struct vop_open_args *ap)
 		vp->v_vflag |= VV_ISTTY;
 
 	VOP_UNLOCK(vp, 0, td);
-
+	if (dsw->d_fdopen != NULL) {
+		FILE_LOCK(fp);
+		fp->f_data = dev;
+		fp->f_vnode = vp;
+		FILE_UNLOCK(fp);
+	}
 	if(!(dsw->d_flags & D_NEEDGIANT)) {
 		DROP_GIANT();
 		if (dsw->d_fdopen != NULL)
@@ -786,7 +842,17 @@ devfs_open(struct vop_open_args *ap)
 		else
 			error = dsw->d_open(dev, ap->a_mode, S_IFCHR, td);
 	}
-
+	fdcloned = 0;
+	if (error == 0 && fp != NULL) {
+		FILE_LOCK(fp);
+		rvp = fp->f_vnode;
+		if (rvp != NULL && rvp != vp) {
+			vp = rvp;
+			ap->a_vp = rvp;
+			fdcloned = 1;
+		}
+		FILE_UNLOCK(fp);
+	}
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
 
 	dev_relthread(dev);
@@ -802,9 +868,11 @@ devfs_open(struct vop_open_args *ap)
 		return (error);
 #endif
 	FILE_LOCK(fp);
-	KASSERT(fp->f_ops == &badfileops,
-	     ("Could not vnode bypass device on fdops %p", fp->f_ops));
-	fp->f_data = dev;
+	if (!fdcloned) {
+		KASSERT(fp->f_ops == &badfileops,
+		   ("Could not vnode bypass device on fdops %p", fp->f_ops));
+		fp->f_data = dev;
+	}
 	fp->f_ops = &devfs_ops_f;
 	fp->f_vnode = vp;
 	FILE_UNLOCK(fp);
@@ -1325,6 +1393,123 @@ dev2udev(struct cdev *x)
 	if (x == NULL)
 		return (NODEV);
 	return (x->si_priv->cdp_inode);
+}
+
+struct unrhdr *fdclone_units;
+
+int
+fdclone(struct cdevsw *csw, struct file *fp, int fmode,
+    struct cdev **clone, void *si_drv1, struct thread *td)
+{
+	struct cdev *master, *rclone;
+	struct vnode *vp, *rvp;
+	struct devfs_dirent *de, *clones_dd;
+	struct mount *mp;
+	struct devfs_mount *dmp;
+	struct ucred *cr;
+	int unit;
+	int error;
+	static const char clones_dn[] = "clones";
+
+	/* 
+	 * fdclone shall be called from the fdopen(), and we do not
+	 * support tracking the close.
+	 */
+	if (fp == NULL || (csw->d_flags & D_TRACKCLOSE) != 0)
+		return (EOPNOTSUPP);
+	FILE_LOCK(fp);
+	KASSERT(fp->f_ops == &badfileops, ("not badfileops in fdclone"));
+	vp = fp->f_vnode;
+	master = (struct cdev *)fp->f_data;
+	FILE_UNLOCK(fp);
+	/*
+	 * fp holds ref on the vp. Do not try to proceed if the devfs
+	 * mountpoint is being unmounted.
+	 */
+	error = vn_lock(vp, LK_EXCLUSIVE, td);
+	if (error)
+		return (error);
+	mp = vp->v_mount;
+	MNT_ILOCK(mp);
+	if (mp->mnt_kern_flag & MNTK_UNMOUNT) {
+		MNT_IUNLOCK(mp);
+		VOP_UNLOCK(vp, 0, td);
+		return (EBUSY);
+	}
+	MNT_IUNLOCK(mp);
+	/*
+	 * Create the cloned cdev.
+	 */
+	cr = td->td_ucred;
+	unit = alloc_unr(fdclone_units);
+	if (unit == -1) {
+		VOP_UNLOCK(vp, 0, td);
+		return (ENOSPC);
+	}
+	rclone = make_dev_credf(MAKEDEV_WHTOUT | MAKEDEV_FDCLONE, csw,
+	    unit2minor(unit), cr,
+	    cr->cr_uid, cr->cr_gid, 0600, "clones/_fdclone");
+	if (rclone == NULL) {
+		VOP_UNLOCK(vp, 0, td);
+		free_unr(fdclone_units, unit);
+		return (ENOMEM);
+	}
+	/*
+	 * Create the fake devfs_dirent for the cloned cdev.
+	 */
+	de = devfs_newdirent("_fdclone", 8);
+	de->de_flags |= DE_FAKE | DE_WHITEOUT;
+	de->de_uid = rclone->si_uid;
+	de->de_gid = rclone->si_gid;
+	de->de_mode = rclone->si_mode;
+	de->de_dirent->d_type = DT_CHR;
+	dmp = VFSTODEVFS(mp);
+	sx_xlock(&dmp->dm_lock);
+	DEVFS_DE_HOLD(de);
+	DEVFS_DMP_HOLD(dmp);
+	clones_dd = devfs_find(dmp->dm_rootdir, clones_dn, sizeof(clones_dn) - 1);
+	if (clones_dd == NULL) {
+		clones_dd = devfs_vmkdir(dmp, clones_dn, sizeof(clones_dn) - 1,
+		    dmp->dm_rootdir, 0);
+		clones_dd->de_flags |= DE_WHITEOUT;
+	}
+	de->de_dir = clones_dd;
+	TAILQ_INSERT_TAIL(&clones_dd->de_dlist, de, de_list);
+	/*
+	 * Create the vnode for replacement of master cdev' vnode.
+	 */
+	error = devfs_newvnode(de, vp->v_mount, rclone, &rvp, td);
+	if (error) {
+		VOP_UNLOCK(vp, 0, td);
+		destroy_dev(rclone);
+		free_unr(fdclone_units, unit);
+		return (error);
+	}
+	/*
+	 * Flip the master and cloned vnode on fp.
+	 */
+	FILE_LOCK(fp);
+	fp->f_vnode = rvp;
+	fp->f_data = rclone;
+	FILE_UNLOCK(fp);
+	/*
+	 * Give the cloned device notification on open().
+	 */
+	rclone->si_drv1 = si_drv1;
+	VOP_UNLOCK(vp, 0, td);
+	if ((error = VOP_OPEN(rvp, fmode, cr, td, fp)) != 0) {
+		FILE_LOCK(fp);
+		fp->f_vnode = NULL;
+		fp->f_data = master;
+		FILE_UNLOCK(fp);
+		vput(rvp);
+		destroy_dev(rclone);
+		free_unr(fdclone_units, unit);
+		return (error);
+	}
+	VOP_UNLOCK(rvp, 0, td);
+	vrele(vp);
+	return (0);
 }
 
 static struct fileops devfs_ops_f = {

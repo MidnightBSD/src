@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_int.h,v 1.3 2008/12/03 00:25:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp.  All rights reserved.
  *
@@ -39,6 +39,7 @@
 #ifdef _KERNEL
 
 struct devfs_dirent;
+struct mount;
 
 struct cdev_priv {
 	struct cdev		cdp_c;
@@ -49,6 +50,7 @@ struct cdev_priv {
 	u_int			cdp_flags;
 #define CDP_ACTIVE		(1 << 0)
 #define CDP_SCHED_DTR		(1 << 1)
+#define	CDP_WHTOUT		(1 << 2)
 
 	u_int			cdp_inuse;
 	u_int			cdp_maxdirent;
@@ -70,6 +72,7 @@ extern struct mtx devmtx;
 extern struct mtx devfs_de_interlock;
 extern struct sx clone_drain_lock;
 extern TAILQ_HEAD(cdev_priv_list, cdev_priv) cdevp_list;
+extern struct unrhdr *fdclone_units;
 
 #endif /* _KERNEL */
 

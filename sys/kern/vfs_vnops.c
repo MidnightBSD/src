@@ -232,6 +232,13 @@ restart:
 	if ((error = VOP_OPEN(vp, fmode, cred, td, fp)) != 0)
 		goto bad;
 
+	if (fp != NULL) {
+		FILE_LOCK(fp);
+		if (fp->f_vnode != NULL && vp != fp->f_vnode)
+			/* reference to vp was dropped by fdclone() */
+			ndp->ni_vp = vp = fp->f_vnode;
+		FILE_UNLOCK(fp);
+	}
 	if (fmode & FWRITE)
 		vp->v_writecount++;
 	*flagp = fmode;

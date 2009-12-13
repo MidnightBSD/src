@@ -61,6 +61,8 @@ static struct cdev *make_dev_credv(int flags,
 
 static struct cdev_priv_list cdevp_free_list =
     TAILQ_HEAD_INITIALIZER(cdevp_free_list);
+static LIST_HEAD(, cdevsw) cdevsw_gt_post_list =
+    LIST_HEAD_INITIALIZER();
 
 void
 dev_lock(void)
@@ -69,16 +71,29 @@ dev_lock(void)
 	mtx_lock(&devmtx);
 }
 
+/*
+ * Free all the memory collected while the cdev mutex was
+ * locked. Since devmtx is after the system map mutex, free() cannot
+ * be called immediately and is postponed until cdev mutex can be
+ * dropped.
+ */
 static void
 dev_unlock_and_free(void)
 {
 	struct cdev_priv *cdp;
+	struct cdevsw *csw;
 
 	mtx_assert(&devmtx, MA_OWNED);
 	while ((cdp = TAILQ_FIRST(&cdevp_free_list)) != NULL) {
 		TAILQ_REMOVE(&cdevp_free_list, cdp, cdp_list);
 		mtx_unlock(&devmtx);
 		devfs_free(&cdp->cdp_c);
+		mtx_lock(&devmtx);
+	}
+	while ((csw = LIST_FIRST(&cdevsw_gt_post_list)) != NULL) {
+		LIST_REMOVE(csw, d_postfree_list);
+		mtx_unlock(&devmtx);
+		free(csw, M_DEVT);
 		mtx_lock(&devmtx);
 	}
 	mtx_unlock(&devmtx);
@@ -92,6 +107,14 @@ dev_free_devlocked(struct cdev *cdev)
 	mtx_assert(&devmtx, MA_OWNED);
 	cdp = cdev->si_priv;
 	TAILQ_INSERT_HEAD(&cdevp_free_list, cdp, cdp_list);
+}
+
+static void
+cdevsw_free_devlocked(struct cdevsw *csw)
+{
+
+	mtx_assert(&devmtx, MA_OWNED);
+	LIST_INSERT_HEAD(&cdevsw_gt_post_list, csw, d_postfree_list);
 }
 
 void
@@ -490,7 +513,7 @@ fini_cdevsw(struct cdevsw *devsw)
 	if (devsw->d_gianttrick != NULL) {
 		gt = devsw->d_gianttrick;
 		memcpy(devsw, gt, sizeof *devsw);
-		free(gt, M_DEVT);
+		cdevsw_free_devlocked(gt);
 		devsw->d_gianttrick = NULL;
 	}
 	devsw->d_flags &= ~D_INIT;
@@ -501,11 +524,17 @@ prep_cdevsw(struct cdevsw *devsw)
 {
 	struct cdevsw *dsw2;
 
+	mtx_assert(&devmtx, MA_OWNED);
+	if (devsw->d_flags & D_INIT)
+		return;
+	dev_unlock();
 	if (devsw->d_flags & D_NEEDGIANT)
 		dsw2 = malloc(sizeof *dsw2, M_DEVT, M_WAITOK);
 	else
 		dsw2 = NULL;
 	dev_lock();
+	if (devsw->d_flags & D_INIT)
+		return;
 
 	if (devsw->d_version != D_VERSION_01) {
 		printf(
@@ -536,8 +565,8 @@ prep_cdevsw(struct cdevsw *devsw)
 		if (devsw->d_gianttrick == NULL) {
 			memcpy(dsw2, devsw, sizeof *dsw2);
 			devsw->d_gianttrick = dsw2;
-		} else
-			free(dsw2, M_DEVT);
+			dsw2 = NULL;
+		}
 	}
 
 #define FIXUP(member, noop, giant) 				\
@@ -566,7 +595,8 @@ prep_cdevsw(struct cdevsw *devsw)
 
 	devsw->d_flags |= D_INIT;
 
-	dev_unlock();
+	if (dsw2 != NULL)
+		cdevsw_free_devlocked(dsw2);
 }
 
 struct cdev *
@@ -580,13 +610,16 @@ make_dev_credv(int flags, struct cdevsw *devsw, int minornr,
 	KASSERT((minornr & ~MAXMINOR) == 0,
 	    ("Invalid minor (0x%x) in make_dev", minornr));
 
-	if (!(devsw->d_flags & D_INIT)) 
-		prep_cdevsw(devsw);
 	dev = devfs_alloc();
 	dev_lock();
+	prep_cdevsw(devsw);
 	dev = newdev(devsw, minornr, dev);
 	if (flags & MAKEDEV_REF)
 		dev_refl(dev);
+	if (flags & MAKEDEV_WHTOUT)
+		dev->si_priv->cdp_flags |= CDP_WHTOUT;
+	if (flags & MAKEDEV_FDCLONE)
+		dev->si_flags |= SI_FDCLONE;
 	if (dev->si_flags & SI_CHEAPCLONE &&
 	    dev->si_flags & SI_NAMED) {
 		/*
@@ -620,7 +653,7 @@ make_dev_credv(int flags, struct cdevsw *devsw, int minornr,
 
 	devfs_create(dev);
 	clean_unrhdrl(devfs_inos);
-	dev_unlock();
+	dev_unlock_and_free();
 	return (dev);
 }
 
@@ -884,8 +917,6 @@ clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up, struct cdev **
 	KASSERT(*up <= CLONE_UNITMASK,
 	    ("Too high unit (0x%x) in clone_create", *up));
 
-	if (!(csw->d_flags & D_INIT))
-		prep_cdevsw(csw);
 
 	/*
 	 * Search the list for a lot of things in one go:
@@ -898,6 +929,7 @@ clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up, struct cdev **
 	unit = *up;
 	ndev = devfs_alloc();
 	dev_lock();
+	prep_cdevsw(csw);
 	low = extra;
 	de = dl = NULL;
 	cd = *cdp;
@@ -977,7 +1009,7 @@ clone_cleanup(struct clonedevs **cdp)
 			destroy_devl(dev);
 		}
 	}
-	dev_unlock();
+	dev_unlock_and_free();
 	free(cd, M_DEVBUF);
 	*cdp = NULL;
 }
@@ -1004,7 +1036,7 @@ destroy_dev_tq(void *ctx, int pending)
 		cb = cp->cdp_dtr_cb;
 		cb_arg = cp->cdp_dtr_cb_arg;
 		destroy_devl(dev);
-		dev_unlock();
+		dev_unlock_and_free();
 		dev_rel(dev);
 		if (cb != NULL)
 			cb(cb_arg);

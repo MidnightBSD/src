@@ -1,4 +1,5 @@
-#	$FreeBSD: src/share/examples/kld/firmware/fwconsumer/Makefile,v 1.1.2.1 2006/02/23 02:13:29 mlaier Exp $
+# $MidnightBSD$
+# $FreeBSD: src/share/examples/kld/firmware/fwconsumer/Makefile,v 1.1 2006/01/29 02:52:40 mlaier Exp $
 
 KMOD=	fw_consumer
 SRCS=	fw_consumer.c

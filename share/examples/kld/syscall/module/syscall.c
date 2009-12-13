@@ -23,13 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/share/examples/kld/syscall/module/syscall.c,v 1.4 2004/08/30 09:49:59 pjd Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/share/examples/kld/syscall/module/syscall.c,v 1.5 2007/07/22 06:48:34 kevlo Exp $
  */
 
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/module.h>
+#include <sys/sysproto.h>
 #include <sys/sysent.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>

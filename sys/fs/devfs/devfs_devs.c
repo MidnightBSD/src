@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_devs.c,v 1.4 2008/12/03 00:25:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000,2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -164,7 +164,7 @@ devfs_find(struct devfs_dirent *dd, const char *name, int namelen)
 }
 
 struct devfs_dirent *
-devfs_newdirent(char *name, int namelen)
+devfs_newdirent(const char *name, int namelen)
 {
 	int i;
 	struct devfs_dirent *de;
@@ -189,7 +189,8 @@ devfs_newdirent(char *name, int namelen)
 }
 
 struct devfs_dirent *
-devfs_vmkdir(struct devfs_mount *dmp, char *name, int namelen, struct devfs_dirent *dotdot, u_int inode)
+devfs_vmkdir(struct devfs_mount *dmp, const char *name, int namelen,
+    struct devfs_dirent *dotdot, u_int inode)
 {
 	struct devfs_dirent *dd;
 	struct devfs_dirent *de;
@@ -227,7 +228,8 @@ devfs_vmkdir(struct devfs_mount *dmp, char *name, int namelen, struct devfs_dire
 	}
 
 #ifdef MAC
-	mac_create_devfs_directory(dmp->dm_mount, name, namelen, dd);
+	mac_create_devfs_directory(dmp->dm_mount, __DECONST(char *, name),
+		namelen, dd);
 #endif
 	return (dd);
 }
@@ -405,6 +407,8 @@ devfs_populate_loop(struct devfs_mount *dm, int cleanup)
 		if (cleanup)
 			continue;
 		KASSERT((cdp->cdp_flags & CDP_ACTIVE), ("Bogons, I tell ya'!"));
+		if (cdp->cdp_flags & CDP_WHTOUT)
+			continue;
 
 		if (dm->dm_idx <= cdp->cdp_maxdirent &&
 		    cdp->cdp_dirents[dm->dm_idx] != NULL) {
@@ -537,6 +541,7 @@ devfs_devs_init(void *junk __unused)
 {
 
 	devfs_inos = new_unrhdr(DEVFS_ROOTINO + 1, INT_MAX, &devmtx);
+	fdclone_units = new_unrhdr(1, 0xffffff, NULL);
 }
 
 SYSINIT(devfs_devs, SI_SUB_DEVFS, SI_ORDER_FIRST, devfs_devs_init, NULL);

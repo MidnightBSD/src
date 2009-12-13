@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/conf.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -65,6 +65,7 @@ struct cdev {
 #define SI_DUMPDEV	0x0080	/* is kernel dumpdev */
 #define SI_CANDELETE	0x0100	/* can do BIO_DELETE */
 #define SI_CLONELIST	0x0200	/* on a clone list */
+#define SI_FDCLONE	0x0400	/* fdcloned */
 	struct timespec	si_atime;
 	struct timespec	si_ctime;
 	struct timespec	si_mtime;
@@ -211,7 +212,7 @@ struct cdevsw {
 	const char		*d_kind;
 
 	/* These fields should not be messed with by drivers */
-	LIST_ENTRY(cdevsw)	d_list;
+	LIST_ENTRY(cdevsw)	d_postfree_list;
 	LIST_HEAD(, cdev)	d_devs;
 	int			d_spare3;
 	struct cdevsw		*d_gianttrick;
@@ -243,6 +244,8 @@ void clone_cleanup(struct clonedevs **);
 #define CLONE_UNITMASK 0xfffff
 #define CLONE_FLAG0 (CLONE_UNITMASK + 1)
 int clone_create(struct clonedevs **, struct cdevsw *, int *unit, struct cdev **dev, int extra);
+int fdclone(struct cdevsw *_csw, struct file *_fp, int _fmode,
+    struct cdev **_clone, void *si_drv1, struct thread *td);
 
 int	count_dev(struct cdev *_dev);
 void	destroy_dev(struct cdev *_dev);
@@ -263,8 +266,9 @@ struct cdev *make_dev(struct cdevsw *_devsw, int _minor, uid_t _uid, gid_t _gid,
 struct cdev *make_dev_cred(struct cdevsw *_devsw, int _minor,
 		struct ucred *_cr, uid_t _uid, gid_t _gid, int _perms,
 		const char *_fmt, ...) __printflike(7, 8);
-#define MAKEDEV_REF     0x1
-#define MAKEDEV_WHTOUT	0x2
+#define	MAKEDEV_REF	0x1
+#define	MAKEDEV_WHTOUT	0x2
+#define	MAKEDEV_FDCLONE	0x4
 struct cdev *make_dev_credf(int _flags,
 		struct cdevsw *_devsw, int _minornr,
 		struct ucred *_cr, uid_t _uid, gid_t _gid, int _mode,

@@ -65,6 +65,7 @@
  * SUCH DAMAGE.
  *
  *
+ * $MidnightBSD$
  * $FreeBSD: src/share/examples/kld/cdev/module/cdev.c,v 1.8 2004/07/16 06:55:34 tjr Exp $
  */
 #include <sys/param.h>
