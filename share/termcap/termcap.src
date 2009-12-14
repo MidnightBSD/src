@@ -31,6 +31,7 @@
 #
 #	@(#)termcap.src	8.2 (Berkeley) 11/17/93
 # $FreeBSD: src/share/termcap/termcap.src,v 1.157 2009/12/10 22:25:53 ed Exp $
+# $MidnightBSD$
 
 #	Termcap source file
 #	John Kunze, Berkeley
