@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.18 2009/05/08 19:51:33 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.19 2009/12/28 19:38:40 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -20,7 +20,7 @@ MAN=	aac.4 \
 	altq.4 \
 	amd.4 \
 	${_amdsmb.4} \
-	amdtemp.4 \
+	${_amdtemp.4} \
 	amr.4 \
 	an.4 \
 	arcmsr.4 \
@@ -547,6 +547,7 @@ MLINKS+=watchdog.4 SW_WATCHDOG.4
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
 _acpi_dock.4=	acpi_dock.4
 _amdsmb.4=	amdsmb.4
+_amdtemp.4=	amdtemp.4
 _coretemp.4=	coretemp.4
 _hptiop.4=	hptiop.4
 _hptmv.4=	hptmv.4
