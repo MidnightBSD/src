@@ -27705,6 +27705,7 @@ share/man/man4/ale.4 -text
 share/man/man4/altq.4 -text
 share/man/man4/amd.4 -text
 share/man/man4/amdsmb.4 -text
+share/man/man4/amdtemp.4 -text
 share/man/man4/amr.4 -text
 share/man/man4/an.4 -text
 share/man/man4/arcmsr.4 -text
