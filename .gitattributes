@@ -30731,6 +30731,7 @@ sys/dev/ale/if_alereg.h -text
 sys/dev/ale/if_alevar.h -text
 sys/dev/amd/amd.c -text
 sys/dev/amd/amd.h -text
+sys/dev/amdtemp/amdtemp.c -text
 sys/dev/amr/amr.c -text
 sys/dev/amr/amr_cam.c -text
 sys/dev/amr/amr_compat.h -text
@@ -33320,6 +33321,7 @@ sys/modules/aic7xxx/aicasm/Makefile -text
 sys/modules/aio/Makefile -text
 sys/modules/ale/Makefile -text
 sys/modules/amd/Makefile -text
+sys/modules/amdtemp/Makefile -text
 sys/modules/amr/Makefile -text
 sys/modules/amr/amr_linux/Makefile -text
 sys/modules/an/Makefile -text
