@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.10 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.12 2009/06/05 00:02:22 laffer1 Exp $
  */
 
 
@@ -234,7 +234,7 @@ void mport_parselist(char *opt, char ***list)
   char *field;
 
   input = (char *)malloc(strlen(opt) + 1);
-  strlcpy(input, opt, strlen(opt) + 1);
+  strcpy(input, opt);
   
   /* first we need to get the length of the depends list */
   for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
