@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20100106:
+	Bind security update.  Fix a bug with DNSSEC that causes negative
+	cache entries and thus a possible DNS cache poisoning attack.
+
+	Fix a bug in ZFS that can reset permissions on system crashes.
+
 20091228:
 	amdtemp(4) was added.  It allows one to monitor to the temperature
 	of an AMD CPU such as a Phenom.
@@ -784,4 +790,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.73 2009/12/05 15:32:24 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.74 2009/12/29 02:39:02 laffer1 Exp $
