@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs_replay.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -60,10 +60,14 @@ zfs_init_vattr(vattr_t *vap, uint64_t mask, uint64_t mode,
 {
 	VATTR_NULL(vap);
 	vap->va_mask = (uint_t)mask;
-	vap->va_type = IFTOVT(mode);
-	vap->va_mode = mode & MODEMASK;
-	vap->va_uid = (uid_t)uid;
-	vap->va_gid = (gid_t)gid;
+	if (mask & AT_TYPE)
+		vap->va_type = IFTOVT(mode);
+	if (mask & AT_MODE)
+		vap->va_mode = mode & MODEMASK;
+	if (mask & AT_UID)
+		vap->va_uid = (uid_t)uid;
+	if (mask & AT_GID)
+		vap->va_gid = (gid_t)gid;
 	vap->va_rdev = zfs_cmpldev(rdev);
 	vap->va_nodeid = nodeid;
 }
