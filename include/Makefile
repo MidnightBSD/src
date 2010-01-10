@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.7 2009/01/20 20:13:55 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.8 2009/10/31 20:57:27 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -20,7 +20,7 @@ INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	printf.h proc_service.h pthread.h \
 	pthread_np.h pwd.h ranlib.h readpassphrase.h regex.h regexp.h \
 	res_update.h resolv.h runetype.h search.h setjmp.h sgtty.h \
-	signal.h stab.h \
+	signal.h spawn.h stab.h \
 	stdbool.h stddef.h stdio.h stdlib.h string.h stringlist.h \
 	strings.h sysexits.h tar.h tgmath.h \
 	time.h timeconv.h timers.h ttyent.h \
