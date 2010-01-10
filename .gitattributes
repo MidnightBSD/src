@@ -21985,6 +21985,7 @@ include/search.h -text
 include/setjmp.h -text
 include/sgtty.h -text
 include/signal.h -text
+include/spawn.h -text
 include/stab.h -text
 include/stdbool.h -text
 include/stddef.h -text
