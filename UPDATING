@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users
 
+20100110:
+	posix_spawn(3) added to MidnightBSD libc.  Users may need to build and
+	install libc before doing a full buildworld when upating from 0.2 or
+	older current systems.
+
+	kqueue(2) was modified to support portions of libdispatch functionality.
+
 20100106:
 	Bind security update.  Fix a bug with DNSSEC that causes negative
 	cache entries and thus a possible DNS cache poisoning attack.
@@ -790,4 +797,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.74 2009/12/29 02:39:02 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.75 2010/01/07 03:13:24 laffer1 Exp $
