@@ -557,54 +557,54 @@ filt_usertouch(struct knote *kn, struct kevent *kev, u_long type)
 
 	switch (type) {
 	case EVENT_REGISTER:
-                if (kev->fflags & NOTE_TRIGGER)
-                        kn->kn_hookid = 1;
+		if (kev->fflags & NOTE_TRIGGER)
+			kn->kn_hookid = 1;
 
-                ffctrl = kev->fflags & NOTE_FFCTRLMASK;
-                kev->fflags &= NOTE_FFLAGSMASK;
-                switch (ffctrl) {
-                case NOTE_FFNOP:
-                        break;
+		ffctrl = kev->fflags & NOTE_FFCTRLMASK;
+		kev->fflags &= NOTE_FFLAGSMASK;
+		switch (ffctrl) {
+		case NOTE_FFNOP:
+			break;
 
-                case NOTE_FFAND:
-                        kn->kn_sfflags &= kev->fflags;
-                        break;
+		case NOTE_FFAND:
+			kn->kn_sfflags &= kev->fflags;
+			break;
 
-                case NOTE_FFOR:
-                        kn->kn_sfflags |= kev->fflags;
-                        break;
+		case NOTE_FFOR:
+			kn->kn_sfflags |= kev->fflags;
+			break;
 
-                case NOTE_FFCOPY:
-                        kn->kn_sfflags = kev->fflags;
-                        break;
+		case NOTE_FFCOPY:
+			kn->kn_sfflags = kev->fflags;
+			break;
 
-                default:
-                        /* XXX Return error? */
-                        break;
-                }
-                kn->kn_sdata = kev->data;
-                if (kev->flags & EV_CLEAR) {
-                        kn->kn_hookid = 0;
-                        kn->kn_data = 0;
-                        kn->kn_fflags = 0;
-                }
+		default:
+			/* XXX Return error? */
+			break;
+		}
+		kn->kn_sdata = kev->data;
+		if (kev->flags & EV_CLEAR) {
+			kn->kn_hookid = 0;
+			kn->kn_data = 0;
+			kn->kn_fflags = 0;
+		}
 		break;
 
-        case EVENT_PROCESS:
-                *kev = kn->kn_kevent;
-                kev->fflags = kn->kn_sfflags;
-                kev->data = kn->kn_sdata;
-                if (kn->kn_flags & EV_CLEAR) {
-                        kn->kn_hookid = 0;
-                        kn->kn_data = 0;
-                        kn->kn_fflags = 0;
-                }
-                break;
+	case EVENT_PROCESS:
+		*kev = kn->kn_kevent;
+		kev->fflags = kn->kn_sfflags;
+		kev->data = kn->kn_sdata;
+		if (kn->kn_flags & EV_CLEAR) {
+			kn->kn_hookid = 0;
+			kn->kn_data = 0;
+			kn->kn_fflags = 0;
+		}
+		break;
 
-        default:
-                panic("filt_usertouch() - invalid type (%ld)", type);
-                break;
-        }
+	default:
+		panic("filt_usertouch() - invalid type (%ld)", type);
+		break;
+	}
 }
 
 int
