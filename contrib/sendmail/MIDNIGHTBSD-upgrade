@@ -1,6 +1,6 @@
-$MidnightBSD: src/contrib/sendmail/MIDNIGHTBSD-upgrade,v 1.1 2007/11/23 22:25:08 laffer1 Exp $
+$MidnightBSD: src/contrib/sendmail/MIDNIGHTBSD-upgrade,v 1.2 2008/05/28 22:03:33 laffer1 Exp $
 
-sendmail 8.14.3
+sendmail 8.14.4
 	originals can be found at: ftp://ftp.sendmail.org/pub/sendmail/
 
 For the import of sendmail, the following files were removed:
@@ -21,8 +21,8 @@ The following directories were renamed:
 
 Imported using:
 
-	cvs import -m 'Import sendmail 8.14.2' \
-		src/contrib/sendmail SENDMAIL v8_14_2
+	cvs import -m 'Import sendmail 8.14.4' \
+		src/contrib/sendmail SENDMAIL v8_14_4
 
 
 To make local changes to sendmail, simply patch and commit to the main
