@@ -6,7 +6,7 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- * $Id: example.c,v 1.1.1.1 2007-11-23 22:10:30 laffer1 Exp $
+ * $Id: example.c,v 1.1.1.2 2010-01-10 20:14:37 laffer1 Exp $
  */
 
 /*
@@ -252,7 +252,7 @@ struct smfiDesc smfilter =
 	mlfi_close,	/* connection cleanup */
 	mlfi_unknown,	/* unknown/unimplemented SMTP commands */
 	mlfi_data,	/* DATA command filter */
-	mlfi_negotiate	/* option negotation at connection startup */
+	mlfi_negotiate	/* option negotiation at connection startup */
 };
 
 int

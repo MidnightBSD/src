@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: savemail.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: savemail.c,v 1.1.1.5 2010-01-10 20:14:37 laffer1 Exp $")
 
 static bool	errbody __P((MCI *, ENVELOPE *, char *));
 static bool	pruneroute __P((char *));
@@ -705,7 +705,7 @@ returntosender(msg, returnq, flags, e)
 	sendall(ee, SM_DELIVER);
 
 	/* restore state */
-	dropenvelope(ee, true, false);
+	(void) dropenvelope(ee, true, false);
 	sm_rpool_free(ee->e_rpool);
 	CurEnv = oldcur;
 	returndepth--;

@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: collect.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
+SM_RCSID("@(#)$Id: collect.c,v 1.1.1.6 2010-01-10 20:14:37 laffer1 Exp $")
 
 static void	eatfrom __P((char *volatile, ENVELOPE *));
 static void	collect_doheader __P((ENVELOPE *));
@@ -847,6 +847,9 @@ readerr:
 	}
 
 	/* Log collection information. */
+	if (tTd(92, 2))
+		sm_dprintf("collect: e_id=%s, EF_LOGSENDER=%d, LogLevel=%d\n",
+			e->e_id, bitset(EF_LOGSENDER, e->e_flags), LogLevel);
 	if (bitset(EF_LOGSENDER, e->e_flags) && LogLevel > 4)
 	{
 		logsender(e, e->e_msgid);

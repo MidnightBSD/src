@@ -7,7 +7,7 @@
  * the sendmail distribution.
  *
  *
- *	$Id: mfapi.h,v 1.1.1.5 2008-05-28 21:04:00 laffer1 Exp $
+ *	$Id: mfapi.h,v 1.1.1.6 2010-01-10 20:14:36 laffer1 Exp $
  */
 
 /*
@@ -18,7 +18,14 @@
 # define _LIBMILTER_MFAPI_H	1
 
 #ifndef SMFI_VERSION
-# define SMFI_VERSION	0x01000001	/* libmilter version number */
+# if _FFR_MDS_NEGOTIATE
+#  define SMFI_VERSION	0x01000002	/* libmilter version number */
+
+   /* first libmilter version that has MDS support */
+#  define SMFI_VERSION_MDS	0x01000002
+# else /* _FFR_MDS_NEGOTIATE */
+#  define SMFI_VERSION	0x01000001	/* libmilter version number */
+# endif /* _FFR_MDS_NEGOTIATE */
 #endif /* ! SMFI_VERSION */
 
 #define SM_LM_VRS_MAJOR(v)	(((v) & 0x7f000000) >> 24)
@@ -163,9 +170,7 @@ LIBMILTER_API int smfi_setdbg __P((int));
 LIBMILTER_API int smfi_settimeout __P((int));
 LIBMILTER_API int smfi_setconn __P((char *));
 LIBMILTER_API int smfi_stop __P((void));
-#if _FFR_MAXDATASIZE
 LIBMILTER_API size_t smfi_setmaxdatasize __P((size_t));
-#endif /* _FFR_MAXDATASIZE */
 LIBMILTER_API int smfi_version __P((unsigned int *, unsigned int *, unsigned int *));
 
 /*

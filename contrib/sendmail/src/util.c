@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2007 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2007, 2009 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: util.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
+SM_RCSID("@(#)$Id: util.c,v 1.1.1.6 2010-01-10 20:14:37 laffer1 Exp $")
 
 #include <sm/sendmail.h>
 #include <sysexits.h>
@@ -868,7 +868,7 @@ xputs(fp, s)
 			c &= 0177;
 		}
   printchar:
-		if (isprint(c))
+		if (isascii(c) && isprint(c))
 		{
 			(void) sm_io_putc(fp, SM_TIME_DEFAULT, c);
 			continue;
@@ -895,7 +895,7 @@ xputs(fp, s)
 					     TermEscape.te_rv_on);
 			shiftout = true;
 		}
-		if (isprint(c))
+		if (isascii(c) && isprint(c))
 		{
 			(void) sm_io_putc(fp, SM_TIME_DEFAULT, '\\');
 			(void) sm_io_putc(fp, SM_TIME_DEFAULT, c);

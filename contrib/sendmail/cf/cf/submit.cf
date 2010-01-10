@@ -1,5 +1,5 @@
 #
-# Copyright (c) 1998-2004 Sendmail, Inc. and its suppliers.
+# Copyright (c) 1998-2004, 2009 Sendmail, Inc. and its suppliers.
 #	All rights reserved.
 # Copyright (c) 1983, 1995 Eric P. Allman.  All rights reserved.
 # Copyright (c) 1988, 1993
@@ -16,8 +16,8 @@
 #####
 #####		SENDMAIL CONFIGURATION FILE
 #####
-##### built by ca@wiz.smi.sendmail.com on Fri May 2 20:39:00 PDT 2008
-##### in /extra/home/ca/sm-8.14.3/OpenSource/sendmail-8.14.3/cf/cf
+##### built by ca@wiz.smi.sendmail.com on Tue Dec 22 20:49:09 PST 2009
+##### in /extra/home/ca/sm-8.14.4/OpenSource/sendmail-8.14.4/cf/cf
 ##### using ../ as configuration include directory
 #####
 ######################################################################
@@ -27,15 +27,15 @@
 ######################################################################
 ######################################################################
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $  #####
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $  #####
 
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $  #####
 
 # level 10 config file format
 V10/Berkeley
@@ -114,7 +114,7 @@ D{MTAHost}[127.0.0.1]
 
 
 # Configuration version number
-DZ8.14.3/Submit
+DZ8.14.4/Submit
 
 
 ###############
@@ -440,6 +440,7 @@ O RunAsUser=smmsp
 # once the threshold number of recipients have been rejected
 #O BadRcptThrottle=0
 
+
 # shall we get local names from our installed interfaces?
 O DontProbeInterfaces=True
 
@@ -499,6 +500,7 @@ O PidFile=/var/spool/clientmqueue/sm-client.pid
 
 # SMTP STARTTLS server options
 #O TLSSrvOptions
+
 
 # Input mail filters
 #O InputMailFilters
@@ -1296,7 +1298,7 @@ R$*			$#relay $@ ${MTAHost} $: $1 < @ $j >
 ###   Local and Program Mailer specification   ###
 ##################################################
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $  #####
 
 #
 #  Envelope sender rewriting
@@ -1348,7 +1350,7 @@ Mprog,		P=[IPC], F=lmDFMuXk5, S=EnvFromL/HdrFromL, R=EnvToL/HdrToL, D=$z:/,
 ###   SMTP Mailer specification   ###
 #####################################
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $  #####
 
 #
 #  common sender and masquerading recipient rewriting
@@ -1454,7 +1456,7 @@ Mrelay,		P=[IPC], F=mDFMuXa8k, S=EnvFromSMTP/HdrFromSMTP, R=MasqSMTP, E=\r\n, L=
 # #
 # 
 # divert(0)dnl
-# VERSIONID(`$Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $')
+# VERSIONID(`$Id: submit.cf,v 1.1.1.7 2010-01-10 20:14:36 laffer1 Exp $')
 # define(`confCF_VERSION', `Submit')dnl
 # define(`__OSTYPE__',`')dnl dirty hack to keep proto.m4 from complaining
 # define(`_USE_DECNET_SYNTAX_', `1')dnl support DECnet

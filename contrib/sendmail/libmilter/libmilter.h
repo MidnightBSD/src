@@ -19,7 +19,7 @@
 #ifdef _DEFINE
 # define EXTERN
 # define INIT(x)	= x
-SM_IDSTR(MilterlId, "@(#)$Id: libmilter.h,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
+SM_IDSTR(MilterlId, "@(#)$Id: libmilter.h,v 1.1.1.5 2010-01-10 20:14:37 laffer1 Exp $")
 #else /* _DEFINE */
 # define EXTERN extern
 # define INIT(x)
@@ -282,6 +282,7 @@ extern int	mi_handle_session __P((SMFICTX_PTR));
 extern int	mi_engine __P((SMFICTX_PTR));
 extern int	mi_listener __P((char *, int, smfiDesc_ptr, time_t, int));
 extern void	mi_clr_macros __P((SMFICTX_PTR, int));
+extern void	mi_clr_ctx __P((SMFICTX_PTR));
 extern int	mi_stop __P((void));
 extern int	mi_control_startup __P((char *));
 extern void	mi_stop_milters __P((int));

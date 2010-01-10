@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: handler.c,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: handler.c,v 1.1.1.4 2010-01-10 20:14:37 laffer1 Exp $")
 
 #include "libmilter.h"
 
@@ -43,24 +43,7 @@ mi_handle_session(ctx)
 		ret = MI_FAILURE;
 	else
 		ret = mi_engine(ctx);
-	if (ValidSocket(ctx->ctx_sd))
-	{
-		(void) closesocket(ctx->ctx_sd);
-		ctx->ctx_sd = INVALID_SOCKET;
-	}
-	if (ctx->ctx_reply != NULL)
-	{
-		free(ctx->ctx_reply);
-		ctx->ctx_reply = NULL;
-	}
-	if (ctx->ctx_privdata != NULL)
-	{
-		smi_log(SMI_LOG_WARN,
-			"%s: private data not NULL",
-			ctx->ctx_smfi->xxfi_name);
-	}
-	mi_clr_macros(ctx, 0);
-	free(ctx);
+	mi_clr_ctx(ctx);
 	ctx = NULL;
 	return ret;
 }

@@ -1,4 +1,6 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl -w
+
+# $Id: smcontrol.pl,v 1.1.1.2 2010-01-10 20:14:37 laffer1 Exp $
 
 use strict;
 use Getopt::Std;

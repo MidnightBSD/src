@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: sfsasl.c,v 1.1.1.4 2008-05-28 21:04:01 laffer1 Exp $")
+SM_RCSID("@(#)$Id: sfsasl.c,v 1.1.1.5 2010-01-10 20:14:37 laffer1 Exp $")
 #include <stdlib.h>
 #include <sendmail.h>
 #include <sm/time.h>
@@ -296,7 +296,7 @@ sasl_write(fp, buf, size)
 	/*
 	**  Fetch the maximum input buffer size for sasl_encode().
 	**  This can be less than the size set in attemptauth()
-	**  due to a negotation with the other side, e.g.,
+	**  due to a negotiation with the other side, e.g.,
 	**  Cyrus IMAP lmtp program sets maxbuf=4096,
 	**  digestmd5 substracts 25 and hence we'll get 4071
 	**  instead of 8192 (MAXOUTLEN).

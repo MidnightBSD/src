@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: listener.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: listener.c,v 1.1.1.5 2010-01-10 20:14:37 laffer1 Exp $")
 
 /*
 **  listener.c -- threaded network listener
@@ -777,8 +777,9 @@ mi_listener(conn, dbg, smfi, timeout, backlog)
 				continue;
 			scnt++;
 			smi_log(SMI_LOG_ERR,
-				"%s: select() failed (%s), %s",
-				smfi->xxfi_name, sm_errstring(save_errno),
+				"%s: %s() failed (%s), %s",
+				smfi->xxfi_name, MI_POLLSELECT,
+				sm_errstring(save_errno),
 				scnt >= MAX_FAILS_S ? "abort" : "try again");
 			MI_SLEEP(scnt);
 			if (scnt >= MAX_FAILS_S)

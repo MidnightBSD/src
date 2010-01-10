@@ -45,7 +45,7 @@
  */
 
 #include <sendmail.h>
-SM_RCSID("@(#)$Id: ratectrl.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
+SM_RCSID("@(#)$Id: ratectrl.c,v 1.1.1.6 2010-01-10 20:14:37 laffer1 Exp $")
 
 /*
 **  stuff included - given some warnings (inet_ntoa)
@@ -69,9 +69,6 @@ SM_RCSID("@(#)$Id: ratectrl.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
 /* forward declarations */
 static int client_rate __P((time_t, SOCKADDR *, bool));
 static int total_rate __P((time_t, bool));
-#if 0
-static int sockaddrcmp __P((SOCKADDR *, SOCKADDR *));
-#endif /* 0 */
 
 /*
 **  CONNECTION_RATE_CHECK - updates connection history data
@@ -485,50 +482,3 @@ total_rate(now, update)
 
 	return cnt;
 }
-
-#if 0
-/*
-** SOCKADDRCMP - compare two SOCKADDR structures
-**   this function may be used to compare SOCKADDR
-**   structures when using bsearch and qsort functions
-**   in the same way we do with strcmp
-**
-** Parameters:
-**   a, b - addresses
-**
-** Returns:
-**   1 if a > b
-**  -1 if a < b
-**   0 if a = b
-**
-** OBS: This call isn't used at the moment, it will
-** be used when code will be extended to work with IPV6
-*/
-
-static int
-sockaddrcmp(a, b)
-	 SOCKADDR *a;
-	 SOCKADDR *b;
-{
-	if (a->sa.sa_family > b->sa.sa_family)
-		return 1;
-	if (a->sa.sa_family < b->sa.sa_family)
-		return -1;
-
-	switch (a->sa.sa_family)
-	{
-	  case AF_INET:
-		if (a->sin.sin_addr.s_addr > b->sin.sin_addr.s_addr)
-			return 1;
-		if (a->sin.sin_addr.s_addr < b->sin.sin_addr.s_addr)
-			return -1;
-		return 0;
-		break;
-
-	  case AF_INET6:
-		/* TO BE DONE */
-		break;
-	}
-	return 0;
-}
-#endif /* 0 */

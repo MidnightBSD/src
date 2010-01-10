@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: main.c,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: main.c,v 1.1.1.4 2010-01-10 20:14:37 laffer1 Exp $")
 
 #define _DEFINE	1
 #include "libmilter.h"
@@ -52,7 +52,8 @@ smfi_register(smfilter)
 	(void) sm_strlcpy(smfi->xxfi_name, smfilter.xxfi_name, len);
 
 	/* compare milter version with hard coded version */
-	if (smfi->xxfi_version != SMFI_VERSION &&
+	if ((SM_LM_VRS_MAJOR(smfi->xxfi_version) != SM_LM_VRS_MAJOR(SMFI_VERSION) ||
+	     SM_LM_VRS_MINOR(smfi->xxfi_version) != SM_LM_VRS_MINOR(SMFI_VERSION)) &&
 	    smfi->xxfi_version != 2 &&
 	    smfi->xxfi_version != 3 &&
 	    smfi->xxfi_version != 4)

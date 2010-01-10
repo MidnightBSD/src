@@ -8,7 +8,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: debug.c,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $")
+SM_RCSID("@(#)$Id: debug.c,v 1.1.1.3 2010-01-10 20:14:36 laffer1 Exp $")
 
 /*
 **  libsm debugging and tracing
@@ -17,6 +17,10 @@ SM_RCSID("@(#)$Id: debug.c,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $")
 
 #include <ctype.h>
 #include <stdlib.h>
+#if _FFR_DEBUG_PID_TIME
+#include <unistd.h>
+#include <time.h>
+#endif /* _FFR_DEBUG_PID_TIME */
 #include <setjmp.h>
 #include <sm/io.h>
 #include <sm/assert.h>
@@ -112,6 +116,11 @@ sm_debug_close()
 **		none.
 */
 
+#if _FFR_DEBUG_PID_TIME
+SM_DEBUG_T SmDBGPidTime = SM_DEBUG_INITIALIZER("sm_trace_pid_time",
+	"@(#)$Debug: sm_trace_pid_time - print pid and time in debug $");
+#endif /* _FFR_DEBUG_PID_TIME */
+
 void
 #if SM_VA_STD
 sm_dprintf(char *fmt, ...)
@@ -125,6 +134,26 @@ sm_dprintf(fmt, va_alist)
 
 	if (SmDebugOutput == NULL)
 		return;
+#if _FFR_DEBUG_PID_TIME
+	/* note: this is ugly if the output isn't a full line! */
+	if (sm_debug_active(&SmDBGPidTime, 1))
+	{
+		static char str[32] = "[1900-00-00/00:00:00] ";
+		struct tm *tmp;
+		time_t currt;
+
+		currt = time((time_t *)0);
+		tmp = localtime(&currt);
+		snprintf(str, sizeof(str), "[%d-%02d-%02d/%02d:%02d:%02d] ",
+			1900 + tmp->tm_year,	/* HACK */
+			tmp->tm_mon + 1,
+			tmp->tm_mday,
+			tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+		sm_io_fprintf(SmDebugOutput, SmDebugOutput->f_timeout,
+			"%ld: %s ", (long) getpid(), str);
+	}
+#endif /* _FFR_DEBUG_PID_TIME */
+
 	SM_VA_START(ap, fmt);
 	sm_io_vfprintf(SmDebugOutput, SmDebugOutput->f_timeout, fmt, ap);
 	SM_VA_END(ap);

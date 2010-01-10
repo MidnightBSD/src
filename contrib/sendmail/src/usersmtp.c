@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2006, 2008 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2006, 2008, 2009 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: usersmtp.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
+SM_RCSID("@(#)$Id: usersmtp.c,v 1.1.1.6 2010-01-10 20:14:37 laffer1 Exp $")
 
 #include <sysexits.h>
 
@@ -1568,7 +1568,9 @@ attemptauth(m, mci, e, sai)
 	sasl_interact_t *client_interact = NULL;
 	char *mechusing;
 	sasl_security_properties_t ssp;
-	char in64[MAXOUTLEN];
+
+	/* MUST NOT be a multiple of 4: bug in some sasl_encode64() versions */
+	char in64[MAXOUTLEN + 1];
 #if NETINET || (NETINET6 && SASL >= 20000)
 	extern SOCKADDR CurHostAddr;
 #endif /* NETINET || (NETINET6 && SASL >= 20000) */
@@ -1770,7 +1772,8 @@ attemptauth(m, mci, e, sai)
 	}
 	else
 	{
-		saslresult = sasl_encode64(out, outlen, in64, MAXOUTLEN, NULL);
+		saslresult = sasl_encode64(out, outlen, in64, sizeof(in64),
+					   NULL);
 		if (saslresult != SASL_OK) /* internal error */
 		{
 			if (LogLevel > 8)
@@ -1837,7 +1840,7 @@ attemptauth(m, mci, e, sai)
 		if (outlen > 0)
 		{
 			saslresult = sasl_encode64(out, outlen, in64,
-						   MAXOUTLEN, NULL);
+						   sizeof(in64), NULL);
 			if (saslresult != SASL_OK)
 			{
 				/* give an error reply to the other side! */
