@@ -1036,36 +1036,36 @@ findkn:
 		goto done;
 	}
 
-        /*
-         * The user may change some filter values after the initial EV_ADD,
-         * but doing so will not reset any filter which has already been
-         * triggered.
-         */
-        kn->kn_status |= KN_INFLUX;
-        KQ_UNLOCK(kq);
-        KN_LIST_LOCK(kn);
-        kn->kn_kevent.udata = kev->udata;
-        if (!fops->f_isfd && fops->f_touch != NULL) {
-                fops->f_touch(kn, kev, EVENT_REGISTER);
-        } else {
-                kn->kn_sfflags = kev->fflags;
-                kn->kn_sdata = kev->data;
-        }
+	/*
+	 * The user may change some filter values after the initial EV_ADD,
+	 * but doing so will not reset any filter which has already been
+	 * triggered.
+	 */
+	kn->kn_status |= KN_INFLUX;
+	KQ_UNLOCK(kq);
+	KN_LIST_LOCK(kn);
+	kn->kn_kevent.udata = kev->udata;
+	if (!fops->f_isfd && fops->f_touch != NULL) {
+		fops->f_touch(kn, kev, EVENT_REGISTER);
+	} else {
+		kn->kn_sfflags = kev->fflags;
+		kn->kn_sdata = kev->data;
+	}
 
-        /*
-         * We can get here with kn->kn_knlist == NULL.  This can happen when
-         * the initial attach event decides that the event is "completed"
-         * already.  i.e. filt_procattach is called on a zombie process.  It
-         * will call filt_proc which will remove it from the list, and NULL
-         * kn_knlist.
-         */
+	/*
+	 * We can get here with kn->kn_knlist == NULL.  This can happen when
+	 * the initial attach event decides that the event is "completed"
+	 * already.  i.e. filt_procattach is called on a zombie process.  It
+	 * will call filt_proc which will remove it from the list, and NULL
+	 * kn_knlist.
+	 */
 done_ev_add:
-        event = kn->kn_fop->f_event(kn, 0);
-        KQ_LOCK(kq);
-        if (event)
-                KNOTE_ACTIVATE(kn, 1);
-        kn->kn_status &= ~KN_INFLUX;
-        KN_LIST_UNLOCK(kn);
+	event = kn->kn_fop->f_event(kn, 0);
+	KQ_LOCK(kq);
+	if (event)
+		KNOTE_ACTIVATE(kn, 1);
+	kn->kn_status &= ~KN_INFLUX;
+	KN_LIST_UNLOCK(kn);
 
 	if ((kev->flags & EV_DISABLE) &&
 	    ((kn->kn_status & KN_DISABLED) == 0)) {
@@ -1380,30 +1380,29 @@ start:
 				KN_LIST_UNLOCK(kn);
 				continue;
 			}
-                        touch = (!kn->kn_fop->f_isfd &&
-                            kn->kn_fop->f_touch != NULL);
-                        if (touch)
-                                kn->kn_fop->f_touch(kn, kevp, EVENT_PROCESS);
-                        else
-                                *kevp = kn->kn_kevent;
+			touch = (!kn->kn_fop->f_isfd &&
+			    kn->kn_fop->f_touch != NULL);
+			if (touch)
+				kn->kn_fop->f_touch(kn, kevp, EVENT_PROCESS);
+			else
+				*kevp = kn->kn_kevent;
 			KQ_LOCK(kq);
 			KQ_GLOBAL_UNLOCK(&kq_global, haskqglobal);
 			if (kn->kn_flags & (EV_CLEAR | EV_DISPATCH)) {
-                                /*
-                                 * Manually clear knotes who weren't
-                                 * 'touch'ed.
-                                 */
-                                if (touch == 0 && kn->kn_flags & EV_CLEAR) {
-                                        kn->kn_data = 0;
-                                        kn->kn_fflags = 0;
-                                }
-                                if (kn->kn_flags & EV_DISPATCH)
-                                        kn->kn_status |= KN_DISABLED;
+				/*
+				 * Manually clear knotes who weren't
+				 * 'touch'ed.
+			 	 */
+				if (touch == 0 && kn->kn_flags & EV_CLEAR) {
+					kn->kn_data = 0;
+					kn->kn_fflags = 0;
+				}
+				if (kn->kn_flags & EV_DISPATCH)
+					kn->kn_status |= KN_DISABLED;
 				kn->kn_status &= ~(KN_QUEUED | KN_ACTIVE);
 				kq->kq_count--;
 			} else
 				TAILQ_INSERT_TAIL(&kq->kq_head, kn, kn_tqe);
-			
 			kn->kn_status &= ~(KN_INFLUX);
 			KN_LIST_UNLOCK(kn);
 		}
