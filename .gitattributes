@@ -22585,6 +22585,7 @@ lib/libc/gen/pmadvise.c -text
 lib/libc/gen/popen.3 -text
 lib/libc/gen/popen.c -text
 lib/libc/gen/posix_spawn.3 -text
+lib/libc/gen/posix_spawn.c -text
 lib/libc/gen/posix_spawn_file_actions_addopen.3 -text
 lib/libc/gen/posix_spawn_file_actions_init.3 -text
 lib/libc/gen/posix_spawnattr_getflags.3 -text
