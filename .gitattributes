@@ -22584,6 +22584,16 @@ lib/libc/gen/pause.c -text
 lib/libc/gen/pmadvise.c -text
 lib/libc/gen/popen.3 -text
 lib/libc/gen/popen.c -text
+lib/libc/gen/posix_spawn.3 -text
+lib/libc/gen/posix_spawn_file_actions_addopen.3 -text
+lib/libc/gen/posix_spawn_file_actions_init.3 -text
+lib/libc/gen/posix_spawnattr_getflags.3 -text
+lib/libc/gen/posix_spawnattr_getpgroup.3 -text
+lib/libc/gen/posix_spawnattr_getschedparam.3 -text
+lib/libc/gen/posix_spawnattr_getschedpolicy.3 -text
+lib/libc/gen/posix_spawnattr_getsigdefault.3 -text
+lib/libc/gen/posix_spawnattr_getsigmask.3 -text
+lib/libc/gen/posix_spawnattr_init.3 -text
 lib/libc/gen/posixshm.c -text
 lib/libc/gen/pselect.3 -text
 lib/libc/gen/pselect.c -text

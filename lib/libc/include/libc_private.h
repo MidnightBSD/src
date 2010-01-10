@@ -194,4 +194,7 @@ extern __ssize_t __sys_freebsd6_pread(int, void *, __size_t, int, __off_t);
 extern __ssize_t __sys_freebsd6_pwrite(int, const void *, __size_t, int, __off_t);
 extern void *	__sys_freebsd6_mmap(void *, __size_t, int, int, int, int, __off_t);
 
+/* execve() with PATH processing to implement posix_spawnp() */
+int _execvpe(const char *, char * const *, char * const *);
+
 #endif /* _LIBC_PRIVATE_H_ */

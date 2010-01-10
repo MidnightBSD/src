@@ -1,6 +1,6 @@
 #	@(#)Makefile.inc	8.6 (Berkeley) 5/4/95
 # $FreeBSD: src/lib/libc/gen/Makefile.inc,v 1.128 2007/09/28 02:22:56 scf Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libc/gen/Makefile.inc,v 1.2 2008/10/19 23:43:46 laffer1 Exp $
 
 # machine-independent gen sources
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/gen ${.CURDIR}/gen
@@ -22,7 +22,7 @@ SRCS+=  __getosreldate.c __xuname.c \
 	initgroups.c isatty.c isinf.c isnan.c jrand48.c lcong48.c \
 	lockf.c lrand48.c mrand48.c nftw.c nice.c \
 	nlist.c nrand48.c opendir.c \
-	pause.c pmadvise.c popen.c posixshm.c pselect.c \
+	pause.c pmadvise.c popen.c posix_spawn.c posixshm.c pselect.c \
 	psignal.c pw_scan.c pwcache.c \
 	raise.c readdir.c readpassphrase.c rewinddir.c \
 	scandir.c seed48.c seekdir.c sem.c semctl.c \
@@ -56,7 +56,13 @@ MAN+=	alarm.3 arc4random.3 \
 	getttyent.3 getusershell.3 getvfsbyname.3 \
 	glob.3 initgroups.3 isgreater.3 ldexp.3 lockf.3 makecontext.3 \
 	modf.3 msgctl.3 msgget.3 msgrcv.3 msgsnd.3 \
-	nice.3 nlist.3 pause.3 popen.3 pselect.3 psignal.3 pwcache.3 \
+	nice.3 nlist.3 pause.3 popen.3 \
+	posix_spawn.3 posix_spawn_file_actions_addopen.3 \
+	posix_spawn_file_actions_init.3 posix_spawnattr_getflags.3 \
+	posix_spawnattr_getpgroup.3 posix_spawnattr_getschedparam.3 \
+	posix_spawnattr_getschedpolicy.3 posix_spawnattr_init.3 \
+	posix_spawnattr_getsigdefault.3 posix_spawnattr_getsigmask.3 \
+	pselect.3 psignal.3 pwcache.3 \
 	raise.3 rand48.3 readpassphrase.3 rfork_thread.3 \
 	scandir.3 sem_destroy.3 sem_getvalue.3 sem_init.3 \
 	sem_open.3 sem_post.3 sem_wait.3 \
@@ -80,7 +86,7 @@ MLINKS+=err.3 err_set_exit.3 err.3 err_set_file.3 err.3 errc.3 err.3 errx.3 \
 	err.3 verr.3 err.3 verrc.3 err.3 verrx.3 err.3 vwarn.3 err.3 vwarnc.3 \
 	err.3 vwarnx.3 err.3 warnc.3 err.3 warn.3 err.3 warnx.3
 MLINKS+=exec.3 execl.3 exec.3 execle.3 exec.3 execlp.3 exec.3 exect.3 \
-	exec.3 execv.3 exec.3 execvp.3 exec.3 execvP.3
+	exec.3 execv.3 exec.3 execvp.3 exec.3 execvpe.3 exec.3 execvP.3
 MLINKS+=fpclassify.3 finite.3 fpclassify.3 finitef.3 \
 	fpclassify.3 isfinite.3 fpclassify.3 isinf.3 fpclassify.3 isnan.3 \
 	fpclassify.3 isnormal.3
@@ -121,6 +127,17 @@ MLINKS+=isgreater.3 isgreaterequal.3 isgreater.3 isless.3 \
 MLINKS+=ldexp.3 ldexpf.3 ldexp.3 ldexpl.3
 MLINKS+=makecontext.3 swapcontext.3
 MLINKS+=popen.3 pclose.3
+MLINKS+=posix_spawn.3 posix_spawnp.3 \
+	posix_spawn_file_actions_addopen.3 posix_spawn_file_actions_addclose.3 \
+	posix_spawn_file_actions_addopen.3 posix_spawn_file_actions_adddup2.3 \
+	posix_spawn_file_actions_init.3 posix_spawn_file_actions_destroy.3 \
+	posix_spawnattr_getflags.3 posix_spawnattr_setflags.3 \
+	posix_spawnattr_getpgroup.3 posix_spawnattr_setpgroup.3 \
+	posix_spawnattr_getschedparam.3 posix_spawnattr_setschedparam.3 \
+	posix_spawnattr_getschedpolicy.3 posix_spawnattr_setschedpolicy.3 \
+	posix_spawnattr_getsigdefault.3 posix_spawnattr_setsigdefault.3 \
+	posix_spawnattr_getsigmask.3 posix_spawnattr_setsigmask.3 \
+	posix_spawnattr_init.3 posix_spawnattr_destroy.3
 MLINKS+=psignal.3 strsignal.3 psignal.3 sys_siglist.3 psignal.3 sys_signame.3
 MLINKS+=pwcache.3 group_from_gid.3 pwcache.3 user_from_uid.3
 MLINKS+=rand48.3 _rand48.3 rand48.3 drand48.3 rand48.3 erand48.3 \

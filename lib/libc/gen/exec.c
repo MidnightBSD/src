@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)exec.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/exec.c,v 1.23 2007/01/09 00:27:53 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/exec.c,v 1.25 2008/06/23 05:22:06 ed Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/exec.c,v 1.23 2007/01/09 00:27:53 imp Exp $
 
 #include <stdarg.h>
 #include "un-namespace.h"
+#include "libc_private.h"
 
 extern char **environ;
 
@@ -129,7 +130,9 @@ execlp(const char *name, const char *arg, ...)
 }
 
 int
-execv(const char *name, char * const *argv)
+execv(name, argv)
+	const char *name;
+	char * const *argv;
 {
 	(void)_execve(name, argv, environ);
 	return (-1);
@@ -138,17 +141,15 @@ execv(const char *name, char * const *argv)
 int
 execvp(const char *name, char * const *argv)
 {
-	const char *path;
-
-	/* Get the path we're searching. */
-	if ((path = getenv("PATH")) == NULL)
-		path = _PATH_DEFPATH;
-
-	return (execvP(name, path, argv));
+	return (_execvpe(name, argv, environ));
 }
 
-int
-execvP(const char *name, const char *path, char * const *argv)
+static int
+execvPe(name, path, argv, envp)
+	const char *name;
+	const char *path;
+	char * const *argv;
+	char * const *envp;
 {
 	char **memp;
 	int cnt, lp, ln;
@@ -263,4 +264,22 @@ retry:		(void)_execve(bp, argv, environ);
 		errno = ENOENT;
 done:
 	return (-1);
+}
+
+int
+execvP(const char *name, const char *path, char * const argv[])
+{
+	return execvPe(name, path, argv, environ);
+}
+
+int
+_execvpe(const char *name, char * const argv[], char * const envp[])
+{
+	const char *path;
+
+	/* Get the path we're searching. */
+	if ((path = getenv("PATH")) == NULL)
+		path = _PATH_DEFPATH;
+
+	return (execvPe(name, path, argv, envp));
 }
