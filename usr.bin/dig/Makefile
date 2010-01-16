@@ -1,7 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/dig/Makefile,v 1.2 2008/04/28 03:26:55 laffer1 Exp $
 # $FreeBSD: src/usr.bin/dig/Makefile,v 1.13 2007/06/02 23:19:57 dougb Exp $
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind9
+BIND_DIR=	${.CURDIR}/../../contrib/bind96
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/dig
@@ -15,6 +15,11 @@ SRCS+=		dig.c dighost.c
 
 CFLAGS+=	-I${SRCDIR}/include
 CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+
+.if ${MK_BIND_IDN} == "yes"
+CFLAGS+=	-DWITH_IDN -I/usr/local/include
+CFLAGS+=	-L/usr/local/lib -lidnkit -R/usr/local/lib -liconv
+.endif
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
