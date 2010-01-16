@@ -44,7 +44,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$MidnightBSD: src/etc/sendmail/freebsd.mc,v 1.2 2007/07/19 15:11:27 laffer1 Exp $')
+VERSIONID(`$MidnightBSD: src/etc/sendmail/freebsd.mc,v 1.3 2007/11/23 22:11:51 laffer1 Exp $')
 OSTYPE(freebsd6)
 DOMAIN(generic)
 
@@ -64,14 +64,14 @@ dnl --------------------------------
 dnl DNS based black hole lists come and go on a regular basis
 dnl so this file will not serve as a database of the available servers.
 dnl For that, visit
-dnl http://directory.google.com/Top/Computers/Internet/Abuse/Spam/Blacklists/
+dnl http://www.google.com/Top/Computers/Internet/E-mail/Spam/Blacklists/
 
 dnl Uncomment to activate Realtime Blackhole List
 dnl information available at http://www.mail-abuse.com/
 dnl NOTE: This is a subscription service as of July 31, 2001
 dnl FEATURE(dnsbl)
 dnl Alternatively, you can provide your own server and rejection message:
-dnl FEATURE(dnsbl, `blackholes.mail-abuse.org', `"550 Mail from " $&{client_addr} " rejected, see http://mail-abuse.org/cgi-bin/lookup?" $&{client_addr}')
+dnl FEATURE(dnsbl, `blackholes.mail-abuse.org', ``"550 Mail from " $&{client_addr} " rejected, see http://mail-abuse.org/cgi-bin/lookup?" $&{client_addr}'')
 
 dnl Dialup users should uncomment and define this appropriately
 dnl define(`SMART_HOST', `your.isp.mail.server')
