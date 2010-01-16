@@ -3347,6 +3347,8 @@ contrib/bind96/COPYRIGHT -text
 contrib/bind96/FAQ -text
 contrib/bind96/FAQ.xml -text
 contrib/bind96/KNOWN-DEFECTS -text
+contrib/bind96/MIDNIGHTBSD-Upgrade -text
+contrib/bind96/MIDNIGHTBSD-Xlist -text
 contrib/bind96/Makefile.in -text
 contrib/bind96/NSEC3-NOTES -text
 contrib/bind96/README -text
