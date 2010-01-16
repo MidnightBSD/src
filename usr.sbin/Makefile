@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.20 2009/05/27 05:49:38 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.21 2009/11/28 22:44:35 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -41,6 +41,8 @@ SUBDIR=	ac \
 	devinfo \
 	digictl \
 	diskinfo \
+	${_dnssec-dsfromkey} \
+	${_dnssec-keyfromlabel} \
 	${_dnssec-keygen} \
 	${_dnssec-signzone} \
 	${_editmap} \
@@ -207,6 +209,8 @@ _praudit=	praudit
 .endif
 
 .if ${MK_BIND_DNSSEC} != "no" && ${MK_OPENSSL} != "no"
+_dnssec-dsfromkey=	dnssec-dsfromkey
+_dnssec-keyfromlabel=	dnssec-keyfromlabel
 _dnssec-keygen=		dnssec-keygen
 _dnssec-signzone=	dnssec-signzone
 .endif

@@ -39246,6 +39246,8 @@ usr.sbin/digictl/digictl.c -text
 usr.sbin/diskinfo/Makefile -text
 usr.sbin/diskinfo/diskinfo.8 -text
 usr.sbin/diskinfo/diskinfo.c -text
+usr.sbin/dnssec-dsfromkey/Makefile -text
+usr.sbin/dnssec-keyfromlabel/Makefile -text
 usr.sbin/dnssec-keygen/Makefile -text
 usr.sbin/dnssec-signzone/Makefile -text
 usr.sbin/editmap/Makefile -text
