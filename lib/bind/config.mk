@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/bind/config.mk,v 1.4 2008/11/11 16:49:45 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/config.mk,v 1.5 2008/11/11 17:37:15 laffer1 Exp $
 # $FreeBSD: src/lib/bind/config.mk,v 1.14.2.1 2005/07/30 07:56:25 des Exp $
 
 .include <bsd.own.mk>
@@ -64,10 +64,24 @@ CFLAGS+=	-DRNDC_KEYFILE='"${SYSCONFDIR}/rndc.key"'
 CFLAGS+=	-I${LIB_BIND_DIR}
 .endif
 
+# Use the right version of the atomic.h file from lib/isc
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
 ISC_ATOMIC_ARCH=	x86_32
 .else
 ISC_ATOMIC_ARCH=	${MACHINE_ARCH}
+.endif
+
+# Optional features
+.if ${MK_BIND_LARGE_FILE} == "yes"
+CFLAGS+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+.endif
+.if ${MK_BIND_SIGCHASE} == "yes"
+CFLAGS+=	-DDIG_SIGCHASE
+.endif
+.if ${MK_BIND_XML} == "yes"
+CFLAGS+=	-DHAVE_LIBXML2
+CFLAGS+=	-I/usr/local/include -I/usr/local/include/libxml2
+CFLAGS+=	-L/usr/local/lib -lxml2 -lz -liconv -lm
 .endif
 
 # Link against BIND libraries
@@ -108,3 +122,4 @@ CRYPTO_LDADD=	-lcrypto
 
 PTHREAD_DPADD=	${LIBPTHREAD}
 PTHREAD_LDADD=	-lpthread
+

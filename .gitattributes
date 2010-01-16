@@ -23172,10 +23172,6 @@ kerberos5/usr.sbin/ktutil/Makefile -text
 lib/Makefile -text
 lib/Makefile.inc -text
 lib/bind/Makefile -text
-lib/bind/bind/Makefile -text
-lib/bind/bind/config.h -text
-lib/bind/bind/port_after.h -text
-lib/bind/bind/port_before.h -text
 lib/bind/bind9/Makefile -text
 lib/bind/config.h -text
 lib/bind/config.mk -text

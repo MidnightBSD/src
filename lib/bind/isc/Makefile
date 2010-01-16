@@ -1,9 +1,9 @@
-# $MidnightBSD: src/lib/bind/isc/Makefile,v 1.4 2008/11/11 16:49:47 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/isc/Makefile,v 1.5 2009/03/25 19:23:09 laffer1 Exp $
 # $FreeBSD: src/lib/bind/isc/Makefile,v 1.8 2007/06/02 23:19:56 dougb Exp $
 
 .include <bsd.own.mk>
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind9
+BIND_DIR=	${.CURDIR}/../../../contrib/bind96
 LIB_BIND_REL=	..
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/isc
@@ -28,14 +28,16 @@ SRCS+=		condition.c mutex.c \
 
 .PATH:		${SRCDIR}
 SRCS+=		inet_pton.c \
-		assertions.c base64.c bitstring.c buffer.c \
-		bufferlist.c commandline.c error.c event.c \
-		hash.c heap.c hex.c hmacmd5.c hmacsha.c \
-		lex.c lfsr.c lib.c log.c md5.c \
-		mem.c mutexblock.c netaddr.c netscope.c ondestroy.c \
-		parseint.c portset.c print.c quota.c random.c \
+		assertions.c base32.c base64.c bitstring.c buffer.c \
+		bufferlist.c commandline.c entropy.c error.c event.c \
+		fsaccess.c hash.c heap.c hex.c hmacmd5.c hmacsha.c \
+		httpd.c inet_aton.c inet_ntop.c iterated_hash.c \
+		lex.c lfsr.c lib.c log.c \
+		md5.c mem.c mutexblock.c \
+		netaddr.c netscope.c ondestroy.c \
+		parseint.c portset.c print.c quota.c radix.c random.c \
 		ratelimiter.c refcount.c region.c result.c rwlock.c \
-		serial.c sha1.c sha2.c sockaddr.c string.c strtoul.c \
+		serial.c sha1.c sha2.c sockaddr.c stats.c string.c strtoul.c \
 		symtab.c task.c taskpool.c timer.c version.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/pthreads/include
@@ -48,6 +50,7 @@ LDADD=		${PTHREAD_LDADD}
 .if ${MK_BIND_LIBS} != "no"
 INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/assertions.h \
+		${SRCDIR}/include/isc/base32.h \
 		${SRCDIR}/include/isc/base64.h \
 		${SRCDIR}/include/isc/bitstring.h \
 		${SRCDIR}/include/isc/boolean.h \
@@ -66,6 +69,8 @@ INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/hex.h \
 		${SRCDIR}/include/isc/hmacmd5.h \
 		${SRCDIR}/include/isc/hmacsha.h \
+		${SRCDIR}/include/isc/httpd.h \
+		${SRCDIR}/include/isc/iterated_hash.h \
 		${SRCDIR}/include/isc/interfaceiter.h \
 		${SRCDIR}/include/isc/ipv6.h \
 		${SRCDIR}/include/isc/lang.h \
@@ -88,6 +93,7 @@ INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/portset.h \
 		${SRCDIR}/include/isc/print.h \
 		${SRCDIR}/include/isc/quota.h \
+		${SRCDIR}/include/isc/radix.h \
 		${SRCDIR}/include/isc/random.h \
 		${SRCDIR}/include/isc/ratelimiter.h \
 		${SRCDIR}/include/isc/refcount.h \
@@ -101,6 +107,7 @@ INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/sha2.h \
 		${SRCDIR}/include/isc/sockaddr.h \
 		${SRCDIR}/include/isc/socket.h \
+		${SRCDIR}/include/isc/stats.h \
 		${SRCDIR}/include/isc/stdio.h \
 		${SRCDIR}/include/isc/stdlib.h \
 		${SRCDIR}/include/isc/string.h \
@@ -111,6 +118,7 @@ INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/types.h \
 		${SRCDIR}/include/isc/util.h \
 		${SRCDIR}/include/isc/version.h \
+		${SRCDIR}/include/isc/xml.h \
 		${SRCDIR}/pthreads/include/isc/condition.h \
 		${SRCDIR}/pthreads/include/isc/mutex.h \
 		${SRCDIR}/pthreads/include/isc/once.h \

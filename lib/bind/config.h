@@ -1,10 +1,10 @@
-/* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/lib/bind/config.h,v 1.7.2.3 2009/01/10 03:01:18 dougb Exp $ */
+/* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.in by autoheader.  */
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: config.h,v 1.5 2009-03-25 19:23:09 laffer1 Exp $ */
+/* $Id: config.h,v 1.6 2010-01-16 16:51:31 laffer1 Exp $ */
 
 /*! \file */
 
@@ -25,9 +25,6 @@
  *** This file is not to be included by any public header files, because
  *** it does not get installed.
  ***/
-
-/** define to `int' if <sys/types.h> doesn't define.  */
-/* #undef ssize_t */
 
 /** define on DEC OSF to enable 4.4BSD style sa_len support */
 /* #undef _SOCKADDR_LEN */
@@ -61,9 +58,6 @@
 
 /** define if you have the NET_RT_IFLIST sysctl variable and sys/sysctl.h */
 #define HAVE_IFLIST_SYSCTL 1
-
-/** define if chroot() is available */
-#define HAVE_CHROOT 1
 
 /** define if tzset() is available */
 #define HAVE_TZSET 1
@@ -116,7 +110,7 @@ int sigwait(const unsigned int *set, int *sig);
  * The silly continuation line is to keep configure from
  * commenting out the #undef.
  */
- 
+
 #undef \
 	va_start
 #define	va_start(ap, last) \
@@ -149,7 +143,7 @@ int sigwait(const unsigned int *set, int *sig);
 #define ISC_SOCKADDR_LEN_T socklen_t
 
 /* Define if threads need PTHREAD_SCOPE_SYSTEM */
-#define NEED_PTHREAD_SCOPE_SYSTEM 1
+/* #undef NEED_PTHREAD_SCOPE_SYSTEM */
 
 /* Define if recvmsg() does not meet all of the BSD socket API specifications.
    */
@@ -158,23 +152,35 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define if you cannot bind() before connect() for TCP sockets. */
 /* #undef BROKEN_TCP_BIND_BEFORE_CONNECT */
 
+/* Define to enable "rrset-order fixed" syntax. */
+/* #undef DNS_RDATASET_FIXED */
+
 /* Solaris hack to get select_large_fdset. */
 /* #undef FD_SETSIZE */
 
-/* Define to 1 if you have the `capset' function. */
-/* #undef HAVE_CAPSET */
+/* Define to 1 if you have the `chroot' function. */
+#define HAVE_CHROOT 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
-/* #undef HAVE_DLFCN_H */
+#define HAVE_DLFCN_H 1
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
+
+/* Define to 1 if you have the <gssapi/gssapi.h> header file. */
+/* #undef HAVE_GSSAPI_GSSAPI_H */
+
+/* Define to 1 if you have the <gssapi.h> header file. */
+/* #undef HAVE_GSSAPI_H */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
 
 /* Define to 1 if you have the `c' library (-lc). */
 /* #undef HAVE_LIBC */
+
+/* Define to 1 if you have the `cap' library (-lcap). */
+/* #undef HAVE_LIBCAP */
 
 /* Define to 1 if you have the `c_r' library (-lc_r). */
 /* #undef HAVE_LIBC_R */
@@ -194,6 +200,9 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to 1 if you have the `thr' library (-lthr). */
 /* #undef HAVE_LIBTHR */
 
+/* Define if libxml2 was found */
+/* #undef HAVE_LIBXML2 */
+
 /* Define to 1 if you have the <linux/capability.h> header file. */
 /* #undef HAVE_LINUX_CAPABILITY_H */
 
@@ -202,6 +211,9 @@ int sigwait(const unsigned int *set, int *sig);
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
+
+/* Define to 1 if you have the `nanosleep' function. */
+#define HAVE_NANOSLEEP 1
 
 /* Define to 1 if you have the <net/if6.h> header file. */
 /* #undef HAVE_NET_IF6_H */
@@ -263,6 +275,10 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#define LT_OBJDIR ".libs/"
+
 /* Defined if extern char *optarg is not declared. */
 /* #undef NEED_OPTARG */
 
@@ -302,9 +318,13 @@ int sigwait(const unsigned int *set, int *sig);
 /* define if idnkit support is to be included. */
 /* #undef WITH_IDN */
 
-/* Define to 1 if your processor stores words with the most significant byte
-   first (like Motorola and SPARC, unlike Intel and VAX). */
-/* #undef WORDS_BIGENDIAN */
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
+   significant byte first (like Motorola and SPARC, unlike Intel and VAX). */
+#if defined __BIG_ENDIAN__
+# define WORDS_BIGENDIAN 1
+#elif ! defined __LITTLE_ENDIAN__
+/* # undef WORDS_BIGENDIAN */
+#endif
 
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */
@@ -312,7 +332,7 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */
 #ifndef __cplusplus
-/* #undef inline */
+#define inline /**/
 #endif
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */

@@ -1,9 +1,9 @@
-# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.6 2008/11/11 16:52:12 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.7 2009/01/02 00:48:41 laffer1 Exp $
 # $FreeBSD: src/lib/bind/lwres/Makefile,v 1.7.2.1 2005/11/16 07:59:50 ru Exp $
 
 .include <bsd.own.mk>
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind9
+BIND_DIR=	${.CURDIR}/../../../contrib/bind96
 LIB_BIND_REL=	..
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/lwres
@@ -22,7 +22,8 @@ SRCS+=		context.c gai_strerror.c getaddrinfo.c gethost.c \
 		getipnode.c getnameinfo.c getrrset.c herror.c \
 		lwbuffer.c lwconfig.c lwpacket.c lwresutil.c \
 		lwres_gabn.c lwres_gnba.c lwres_grbn.c lwres_noop.c \
-		lwinetaton.c lwinetpton.c lwinetntop.c print.c
+		lwinetaton.c lwinetpton.c lwinetntop.c print.c \
+		strtoul.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include
 CFLAGS+=	-I${.CURDIR}

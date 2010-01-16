@@ -1,9 +1,9 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/bind/dns/Makefile,v 1.5 2008/11/11 16:49:46 laffer1 Exp $
 # $FreeBSD: src/lib/bind/dns/Makefile,v 1.5.2.1 2005/11/16 07:59:49 ru Exp $
 
 .include <bsd.own.mk>
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind9
+BIND_DIR=	${.CURDIR}/../../../contrib/bind96
 LIB_BIND_REL=	..
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/dns
@@ -20,12 +20,13 @@ SRCS+=		acache.c acl.c adb.c byaddr.c \
 		dst_api.c dst_lib.c dst_parse.c dst_result.c \
 		forward.c \
 		gssapi_link.c gssapictx.c hmac_link.c \
+		iptable.c \
 		journal.c \
 		key.c \
 		keytable.c \
 		lib.c log.c lookup.c \
 		master.c masterdump.c message.c \
-		name.c ncache.c nsec.c \
+		name.c ncache.c nsec.c nsec3.c \
 		openssl_link.c openssldh_link.c \
 		openssldsa_link.c opensslrsa_link.c \
 		order.c peer.c portlist.c \
@@ -65,6 +66,7 @@ DNSINCS=	${SRCDIR}/include/dns/acache.h \
 		${SRCDIR}/include/dns/events.h \
 		${SRCDIR}/include/dns/fixedname.h \
 		${SRCDIR}/include/dns/forward.h \
+		${SRCDIR}/include/dns/iptable.h \
 		${SRCDIR}/include/dns/journal.h \
 		${SRCDIR}/include/dns/keyflags.h \
 		${SRCDIR}/include/dns/keytable.h \
@@ -78,6 +80,7 @@ DNSINCS=	${SRCDIR}/include/dns/acache.h \
 		${SRCDIR}/include/dns/name.h \
 		${SRCDIR}/include/dns/ncache.h \
 		${SRCDIR}/include/dns/nsec.h \
+		${SRCDIR}/include/dns/nsec3.h \
 		${SRCDIR}/include/dns/opcode.h \
 		${SRCDIR}/include/dns/order.h \
 		${SRCDIR}/include/dns/peer.h \

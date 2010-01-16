@@ -1,7 +1,7 @@
-# $MidnightBSD: src/usr.bin/nsupdate/Makefile,v 1.2 2008/04/28 03:22:45 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/nsupdate/Makefile,v 1.3 2009/03/25 18:09:26 laffer1 Exp $
 # $FreeBSD: src/usr.bin/nsupdate/Makefile,v 1.7 2007/06/02 23:19:57 dougb Exp $
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind9
+BIND_DIR=	${.CURDIR}/../../contrib/bind96
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/nsupdate
