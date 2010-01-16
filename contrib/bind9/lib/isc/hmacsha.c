@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: hmacsha.c,v 1.1.1.1 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: hmacsha.c,v 1.1.1.2 2010-01-16 16:03:10 laffer1 Exp $ */
 
 /*
  * This code implements the HMAC-SHA1, HMAC-SHA224, HMAC-SHA256, HMAC-SHA384

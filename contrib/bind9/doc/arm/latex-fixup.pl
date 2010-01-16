@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 #
-# Copyright (C) 2005  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
 #
-# Permission to use, copy, modify, and distribute this software for any
+# Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
 # copyright notice and this permission notice appear in all copies.
 #
@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: latex-fixup.pl,v 1.1.1.2 2008-04-18 18:31:32 laffer1 Exp $
+# $Id: latex-fixup.pl,v 1.1.1.3 2010-01-16 16:03:09 laffer1 Exp $
 
 # Sadly, the final stages of generating a presentable PDF file always
 # seem to require some manual tweaking.  Doesn't seem to matter what

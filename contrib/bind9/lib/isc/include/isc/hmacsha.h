@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005, 2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2005-2007  Internet Systems Consortium, Inc. ("ISC")
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -14,9 +14,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: hmacsha.h,v 1.1.1.1 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: hmacsha.h,v 1.1.1.2 2010-01-16 16:03:10 laffer1 Exp $ */
 
-/*
+/*! \file isc/hmacsha.h
  * This is the header file for the HMAC-SHA1, HMAC-SHA224, HMAC-SHA256,
  * HMAC-SHA334 and HMAC-SHA512 hash algorithm described in RFC 2104.
  */

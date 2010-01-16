@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lex.h,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $ */
+/* $Id: lex.h,v 1.1.1.5 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef ISC_LEX_H
 #define ISC_LEX_H 1

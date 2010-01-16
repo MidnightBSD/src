@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: string.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: string.h,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef ISC_STRING_H
 #define ISC_STRING_H 1
 
-/*! \file */
+/*! \file isc/string.h */
 
 #include <isc/formatcheck.h>
 #include <isc/int.h>

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: xfrin.h,v 1.1.1.4 2008-04-18 18:31:33 laffer1 Exp $ */
+/* $Id: xfrin.h,v 1.1.1.5 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef DNS_XFRIN_H
 #define DNS_XFRIN_H 1
@@ -24,7 +24,7 @@
  ***** Module Info
  *****/
 
-/*! \file 
+/*! \file dns/xfrin.h
  * \brief
  * Incoming zone transfers (AXFR + IXFR).
  */
@@ -90,7 +90,7 @@ dns_xfrin_shutdown(dns_xfrin_ctx_t *xfr);
 /*%<
  * If the zone transfer 'xfr' has already finished,
  * do nothing.  Otherwise, abort it and cause it to call
- * its done callback with a status of ISC_R_CANCELLED.
+ * its done callback with a status of ISC_R_CANCELED.
  */
 
 void

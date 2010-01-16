@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: file.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: file.h,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef ISC_FILE_H
 #define ISC_FILE_H 1
 
-/*! \file */
+/*! \file isc/file.h */
 
 #include <stdio.h>
 
@@ -35,7 +35,7 @@ isc_file_settime(const char *file, isc_time_t *time);
 isc_result_t
 isc_file_getmodtime(const char *file, isc_time_t *time);
 /*!<
- * \brief Get the time of last modication of a file.
+ * \brief Get the time of last modification of a file.
  *
  * Notes:
  *\li	The time that is set is relative to the (OS-specific) epoch, as are
@@ -204,7 +204,7 @@ isc_result_t
 isc_file_progname(const char *filename, char *buf, size_t buflen);
 /*!<
  * \brief Given an operating system specific file name "filename"
- * referring to a program, return the canonical program name. 
+ * referring to a program, return the canonical program name.
  *
  *
  * Any directory prefix or executable file name extension (if

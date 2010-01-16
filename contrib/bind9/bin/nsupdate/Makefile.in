@@ -1,4 +1,4 @@
-# Copyright (C) 2004, 2008  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2006-2008  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2000-2002  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -13,7 +13,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: Makefile.in,v 1.1.1.4 2009-03-25 17:51:26 laffer1 Exp $
+# $Id: Makefile.in,v 1.1.1.5 2010-01-16 16:03:09 laffer1 Exp $
 
 srcdir =	@srcdir@
 VPATH =		@srcdir@
@@ -24,9 +24,9 @@ top_srcdir =	@top_srcdir@
 @BIND9_MAKE_INCLUDES@
 
 CINCLUDES =	${LWRES_INCLUDES} ${DNS_INCLUDES} ${BIND9_INCLUDES} \
-		${ISC_INCLUDES}
+		${ISC_INCLUDES} @DST_GSSAPI_INC@
 
-CDEFINES =
+CDEFINES =	@USE_GSSAPI@
 CWARNINGS =
 
 LWRESLIBS =	../../lib/lwres/liblwres.@A@

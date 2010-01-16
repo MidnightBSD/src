@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwdclient.c,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
+/* $Id: lwdclient.c,v 1.1.1.4 2010-01-16 16:03:08 laffer1 Exp $ */
 
 /*! \file */
 
@@ -102,6 +102,7 @@ ns_lwdclientmgr_create(ns_lwreslistener_t *listener, unsigned int nclients,
 	result = isc_task_create(taskmgr, 0, &cm->task);
 	if (result != ISC_R_SUCCESS)
 		goto errout;
+	isc_task_setname(cm->task, "lwdclient", NULL);
 
 	/*
 	 * This MUST be last, since there is no way to cancel an onshutdown...

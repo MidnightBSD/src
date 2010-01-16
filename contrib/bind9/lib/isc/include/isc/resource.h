@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: resource.h,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $ */
+/* $Id: resource.h,v 1.1.1.5 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef ISC_RESOURCE_H
 #define ISC_RESOURCE_H 1
 
-/*! \file */
+/*! \file isc/resource.h */
 
 #include <isc/lang.h>
 #include <isc/types.h>

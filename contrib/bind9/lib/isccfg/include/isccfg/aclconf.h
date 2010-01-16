@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: aclconf.h,v 1.1.1.1 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: aclconf.h,v 1.1.1.2 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef ISCCFG_ACLCONF_H
 #define ISCCFG_ACLCONF_H 1
@@ -28,6 +28,7 @@
 
 typedef struct cfg_aclconfctx {
 	ISC_LIST(dns_acl_t) named_acl_cache;
+	ISC_LIST(dns_iptable_t) named_iptable_cache;
 } cfg_aclconfctx_t;
 
 /***
@@ -54,6 +55,7 @@ cfg_acl_fromconfig(const cfg_obj_t *caml,
 		   isc_log_t *lctx,
 		   cfg_aclconfctx_t *ctx,
 		   isc_mem_t *mctx,
+		   unsigned int nest_level,
 		   dns_acl_t **target);
 /*
  * Construct a new dns_acl_t from configuration data in 'caml' and

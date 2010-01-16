@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: random.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: random.h,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef ISC_RANDOM_H
 #define ISC_RANDOM_H 1
@@ -23,9 +23,9 @@
 #include <isc/lang.h>
 #include <isc/types.h>
 
-/*! \file
+/*! \file isc/random.h
  * \brief Implements a random state pool which will let the caller return a
- * series of possibly non-reproducable random values.  
+ * series of possibly non-reproducible random values.
  *
  * Note that the
  * strength of these numbers is not all that high, and should not be

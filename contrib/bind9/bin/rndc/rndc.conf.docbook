@@ -18,7 +18,7 @@
  - PERFORMANCE OF THIS SOFTWARE.
 -->
 
-<!-- $Id: rndc.conf.docbook,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ -->
+<!-- $Id: rndc.conf.docbook,v 1.1.1.4 2010-01-16 16:03:09 laffer1 Exp $ -->
 <refentry id="man.rndc.conf">
   <refentryinfo>
     <date>June 30, 2000</date>

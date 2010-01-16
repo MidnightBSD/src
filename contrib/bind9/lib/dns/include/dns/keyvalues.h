@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: keyvalues.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+/* $Id: keyvalues.h,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef DNS_KEYVALUES_H
 #define DNS_KEYVALUES_H 1
 
-/*! \file */
+/*! \file dns/keyvalues.h */
 
 /*
  * Flags field of the KEY RR rdata
@@ -42,7 +42,7 @@
 #define DNS_KEYOWNER_ENTITY	0x0200	/*%< key is assoc. with entity eg host */
 #define DNS_KEYOWNER_ZONE	0x0100	/*%< key is zone key */
 #define DNS_KEYOWNER_RESERVED	0x0300	/*%< reserved meaning */
-#define DNS_KEYFLAG_RESERVED8	0x0080	/*%< reserved - must be zero */
+#define DNS_KEYFLAG_REVOKE	0x0080	/*%< key revoked (per rfc5001) */
 #define DNS_KEYFLAG_RESERVED9	0x0040	/*%< reserved - must be zero */
 #define DNS_KEYFLAG_RESERVED10	0x0020	/*%< reserved - must be zero */
 #define DNS_KEYFLAG_RESERVED11	0x0010	/*%< reserved - must be zero */
@@ -64,9 +64,11 @@
 #define DNS_KEYALG_RSA		DNS_KEYALG_RSAMD5
 #define DNS_KEYALG_DH		2       /*%< Diffie Hellman KEY */
 #define DNS_KEYALG_DSA		3       /*%< DSA KEY */
-#define DNS_KEYALG_DSS		NS_ALG_DSA
+#define DNS_KEYALG_NSEC3DSA	6
+#define DNS_KEYALG_DSS		DNS_ALG_DSA
 #define DNS_KEYALG_ECC		4
 #define DNS_KEYALG_RSASHA1	5
+#define DNS_KEYALG_NSEC3RSASHA1	7
 #define DNS_KEYALG_INDIRECT	252
 #define DNS_KEYALG_PRIVATEDNS	253
 #define DNS_KEYALG_PRIVATEOID	254     /*%< Key begins with OID giving alg */

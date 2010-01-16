@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: txt_16.c,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $ */
+/* $Id: txt_16.c,v 1.1.1.5 2010-01-16 16:03:10 laffer1 Exp $ */
 
 /* Reviewed: Thu Mar 16 15:40:00 PST 2000 by bwelling */
 

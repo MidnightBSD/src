@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2006, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwresd.c,v 1.1.1.5 2009-03-25 17:51:25 laffer1 Exp $ */
+/* $Id: lwresd.c,v 1.1.1.6 2010-01-16 16:03:08 laffer1 Exp $ */
 
 /*! \file
  * \brief

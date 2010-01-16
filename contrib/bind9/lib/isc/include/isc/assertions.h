@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1997-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -16,9 +16,9 @@
  */
 
 /*
- * $Id: assertions.h,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $
+ * $Id: assertions.h,v 1.1.1.5 2010-01-16 16:03:10 laffer1 Exp $
  */
-/*! \file assertions.h
+/*! \file isc/assertions.h
  */
 
 #ifndef ISC_ASSERTIONS_H

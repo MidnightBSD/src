@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: os.h,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
+/* $Id: os.h,v 1.1.1.4 2010-01-16 16:03:09 laffer1 Exp $ */
 
 /*! \file */
 
@@ -35,7 +35,7 @@ FILE *safe_create(const char *filename);
 
 int set_user(FILE *fd, const char *user);
 /*%<
- * Set the owner of the file refernced by 'fd' to 'user'.
+ * Set the owner of the file referenced by 'fd' to 'user'.
  * Returns:
  *   0 		success
  *   -1 	insufficient permissions, or 'user' does not exist.

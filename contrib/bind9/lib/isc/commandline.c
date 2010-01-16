@@ -1,8 +1,8 @@
 /*
- * Portions Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004, 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1999-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -48,7 +48,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: commandline.c,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: commandline.c,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 /*! \file
  * This file was adapted from the NetBSD project's source tree, RCS ID:
@@ -107,7 +107,10 @@ isc_commandline_parse(int argc, char * const *argv, const char *options) {
 	 * the previous argv was finished.
 	 */
 	if (isc_commandline_reset || *place == '\0') {
-		isc_commandline_reset = ISC_FALSE;
+		if (isc_commandline_reset) {
+			isc_commandline_index = 1;
+			isc_commandline_reset = ISC_FALSE;
+		}
 
 		if (isc_commandline_progname == NULL)
 			isc_commandline_progname = argv[0];

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsec.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+/* $Id: nsec.h,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef DNS_NSEC_H
 #define DNS_NSEC_H 1
 
-/*! \file */
+/*! \file dns/nsec.h */
 
 #include <isc/lang.h>
 
@@ -62,6 +62,17 @@ dns_nsec_typepresent(dns_rdata_t *nsec, dns_rdatatype_t type);
  *
  * Requires:
  *\li	'nsec' points to a valid rdataset of type NSEC
+ */
+
+isc_result_t
+dns_nsec_nseconly(dns_db_t *db, dns_dbversion_t *version,
+		  isc_boolean_t *answer);
+/*
+ * Report whether the DNSKEY RRset has a NSEC only algorithm.  Unknown
+ * algorithms are assumed to support NSEC3.
+ *
+ * Requires:
+ * 	'answer' to be non NULL.
  */
 
 ISC_LANG_ENDDECLS

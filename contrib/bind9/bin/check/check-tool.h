@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: check-tool.h,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
+/* $Id: check-tool.h,v 1.1.1.4 2010-01-16 16:03:08 laffer1 Exp $ */
 
 #ifndef CHECK_TOOL_H
 #define CHECK_TOOL_H
@@ -23,6 +23,7 @@
 /*! \file */
 
 #include <isc/lang.h>
+#include <isc/stdio.h>
 #include <isc/types.h>
 
 #include <dns/masterdump.h>
@@ -31,7 +32,7 @@
 ISC_LANG_BEGINDECLS
 
 isc_result_t
-setup_logging(isc_mem_t *mctx, isc_log_t **logp);
+setup_logging(isc_mem_t *mctx, FILE *errout, isc_log_t **logp);
 
 isc_result_t
 load_zone(isc_mem_t *mctx, const char *zonename, const char *filename,

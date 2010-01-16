@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: taskpool.c,v 1.1.1.4 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: taskpool.c,v 1.1.1.5 2010-01-16 16:03:10 laffer1 Exp $ */
 
 /*! \file */
 
@@ -66,6 +66,7 @@ isc_taskpool_create(isc_taskmgr_t *tmgr, isc_mem_t *mctx,
 			isc_taskpool_destroy(&pool);
 			return (result);
 		}
+		isc_task_setname(pool->tasks[i], "taskpool", NULL);
 	}
 	*poolp = pool;
 	return (ISC_R_SUCCESS);

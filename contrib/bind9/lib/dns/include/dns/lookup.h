@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lookup.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+/* $Id: lookup.h,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef DNS_LOOKUP_H
 #define DNS_LOOKUP_H 1
@@ -24,11 +24,11 @@
  ***** Module Info
  *****/
 
-/*! \file
+/*! \file dns/lookup.h
  * \brief
  * The lookup module performs simple DNS lookups.  It implements
- * the full resolver algorithm, both looking for local data and 
- * resoving external names as necessary.
+ * the full resolver algorithm, both looking for local data and
+ * resolving external names as necessary.
  *
  * MP:
  *\li	The module ensures appropriate synchronization of data structures it

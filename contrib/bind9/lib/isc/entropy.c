@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: entropy.c,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: entropy.c,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 /*! \file
  * \brief
@@ -290,7 +290,7 @@ entropypool_add_word(isc_entropypool_t *rp, isc_uint32_t val) {
 	 * If we have looped around the pool, increment the rotate
 	 * variable so the next value will get xored in rotated to
 	 * a different position.
-	 * Increment by a value that is relativly prime to the word size
+	 * Increment by a value that is relatively prime to the word size
 	 * to try to spread the bits throughout the pool quickly when the
 	 * pool is empty.
 	 */
@@ -1102,6 +1102,17 @@ isc_entropy_stats(isc_entropy_t *ent, FILE *out) {
 	UNLOCK(&ent->lock);
 }
 
+unsigned int
+isc_entropy_status(isc_entropy_t *ent) {
+	unsigned int estimate;
+
+	LOCK(&ent->lock);
+	estimate = ent->pool.entropy;
+	UNLOCK(&ent->lock);
+
+	return estimate;
+}
+
 void
 isc_entropy_attach(isc_entropy_t *ent, isc_entropy_t **entp) {
 	REQUIRE(VALID_ENTROPY(ent));
@@ -1251,7 +1262,7 @@ isc_entropy_usebestsource(isc_entropy_t *ectx, isc_entropysource_t **source,
 
 		if (final_result != ISC_R_SUCCESS)
 			final_result = result;
-	}	
+	}
 
 	/*
 	 * final_result is ISC_R_SUCCESS if at least one source of entropy

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: result.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+/* $Id: result.c,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 /*! \file */
 
@@ -155,7 +155,8 @@ static const char *text[DNS_R_NRESULTS] = {
 	"must-be-secure",		       /*%< 100 DNS_R_MUSTBESECURE */
 	"covering NSEC record returned",       /*%< 101 DNS_R_COVERINGNSEC */
 	"MX is an address",		       /*%< 102 DNS_R_MXISADDRESS */
-	"duplicate query"		       /*%< 103 DNS_R_DUPLICATE */
+	"duplicate query",		       /*%< 103 DNS_R_DUPLICATE */
+	"invalid NSEC3 owner name (wildcard)", /*%< 104 DNS_R_INVALIDNSEC3 */
 };
 
 static const char *rcode_text[DNS_R_NRCODERESULTS] = {

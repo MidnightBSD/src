@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: time.c,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $ */
+/* $Id: time.c,v 1.1.1.5 2010-01-16 16:03:10 laffer1 Exp $ */
 
 /*! \file */
 
@@ -411,4 +411,28 @@ isc_time_formattimestamp(const isc_time_t *t, char *buf, unsigned int len) {
 			 ".%03u", t->nanoseconds / 1000000);
 	else
 		snprintf(buf, len, "99-Bad-9999 99:99:99.999");
+}
+
+void
+isc_time_formathttptimestamp(const isc_time_t *t, char *buf, unsigned int len) {
+	time_t now;
+	unsigned int flen;
+
+	REQUIRE(len > 0);
+
+	now = (time_t)t->seconds;
+	flen = strftime(buf, len, "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now));
+	INSIST(flen < len);
+}
+
+void
+isc_time_formatISO8601(const isc_time_t *t, char *buf, unsigned int len) {
+	time_t now;
+	unsigned int flen;
+
+	REQUIRE(len > 0);
+
+	now = (time_t)t->seconds;
+	flen = strftime(buf, len, "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
+	INSIST(flen < len);
 }

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: log.c,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
+/* $Id: log.c,v 1.1.1.4 2010-01-16 16:03:08 laffer1 Exp $ */
 
 /*! \file */
 
@@ -33,7 +33,7 @@
 
 /*%
  * When adding a new category, be sure to add the appropriate
- * #define to <named/log.h> and to update the list in
+ * \#define to <named/log.h> and to update the list in
  * bin/check/check-tool.c.
  */
 static isc_logcategory_t categories[] = {
@@ -44,12 +44,13 @@ static isc_logcategory_t categories[] = {
 	{ "queries",	 		0 },
 	{ "unmatched",	 		0 },
 	{ "update-security",		0 },
+	{ "query-errors",		0 },
 	{ NULL, 			0 }
 };
 
 /*%
  * When adding a new module, be sure to add the appropriate
- * #define to <dns/log.h>.
+ * \#define to <dns/log.h>.
  */
 static isc_logmodule_t modules[] = {
 	{ "main",	 		0 },
@@ -120,7 +121,7 @@ ns_log_setdefaultchannels(isc_logconfig_t *lcfg) {
 	/*
 	 * By default, the logging library makes "default_debug" log to
 	 * stderr.  In BIND, we want to override this and log to named.run
-	 * instead, unless the the -g option was given.
+	 * instead, unless the -g option was given.
 	 */
 	if (! ns_g_logstderr) {
 		destination.file.stream = NULL;

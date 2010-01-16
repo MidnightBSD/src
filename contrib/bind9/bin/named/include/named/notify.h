@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: notify.h,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
+/* $Id: notify.h,v 1.1.1.4 2010-01-16 16:03:09 laffer1 Exp $ */
 
 #ifndef NAMED_NOTIFY_H
 #define NAMED_NOTIFY_H 1
@@ -41,7 +41,7 @@ void
 ns_notify_start(ns_client_t *client);
 
 /*%<
- *	Examines the incoming message to determine apporiate zone.
+ *	Examines the incoming message to determine appropriate zone.
  *	Returns FORMERR if there is not exactly one question.
  *	Returns REFUSED if we do not serve the listed zone.
  *	Pass the message to the zone module for processing

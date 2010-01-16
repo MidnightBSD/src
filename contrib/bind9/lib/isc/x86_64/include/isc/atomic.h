@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: atomic.h,v 1.1.1.1 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: atomic.h,v 1.1.1.2 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef ISC_ATOMIC_H
 #define ISC_ATOMIC_H 1
@@ -49,14 +49,31 @@ isc_atomic_xadd(isc_int32_t *p, isc_int32_t val) {
 		"lock;"
 #endif
 		"xadd %eax, (%rdx)\n"
-
 		/*
-		 * set the return value directly in the register so that we
-		 * can avoid guessing the correct position in the stack for a
-		 * local variable.
+		 * XXX: assume %eax will be used as the return value.
 		 */
 		);
 }
+
+#ifdef ISC_PLATFORM_HAVEXADDQ
+static isc_int64_t
+isc_atomic_xaddq(isc_int64_t *p, isc_int64_t val) {
+	UNUSED(p);
+	UNUSED(val);
+
+	__asm (
+		"movq %rdi, %rdx\n"
+		"movq %rsi, %rax\n"
+#ifdef ISC_PLATFORM_USETHREADS
+		"lock;"
+#endif
+		"xaddq %rax, (%rdx)\n"
+		/*
+		 * XXX: assume %rax will be used as the return value.
+		 */
+		);
+}
+#endif
 
 static void
 isc_atomic_store(isc_int32_t *p, isc_int32_t val) {
@@ -70,6 +87,9 @@ isc_atomic_store(isc_int32_t *p, isc_int32_t val) {
 		"lock;"
 #endif
 		"xchgl (%rax), %edx\n"
+		/*
+		 * XXX: assume %rax will be used as the return value.
+		 */
 		);
 }
 
@@ -89,7 +109,7 @@ isc_atomic_cmpxchg(isc_int32_t *p, isc_int32_t cmpval, isc_int32_t val) {
 #endif
 		/*
 		 * If (%rdi) == %eax then (%rdi) := %edx.
-		 % %eax is set to old (%ecx), which will be the return value.
+		 * %eax is set to old (%ecx), which will be the return value.
 		 */
 		"cmpxchgl %ecx, (%rdx)"
 		);

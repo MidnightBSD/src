@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ncache.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+/* $Id: ncache.h,v 1.1.1.4 2010-01-16 16:03:10 laffer1 Exp $ */
 
 #ifndef DNS_NCACHE_H
 #define DNS_NCACHE_H 1
@@ -24,7 +24,7 @@
  ***** Module Info
  *****/
 
-/*! \file
+/*! \file dns/ncache.h
  *\brief
  * DNS Ncache
  *
@@ -63,6 +63,11 @@ isc_result_t
 dns_ncache_add(dns_message_t *message, dns_db_t *cache, dns_dbnode_t *node,
 	       dns_rdatatype_t covers, isc_stdtime_t now, dns_ttl_t maxttl,
 	       dns_rdataset_t *addedrdataset);
+isc_result_t
+dns_ncache_addoptout(dns_message_t *message, dns_db_t *cache,
+		     dns_dbnode_t *node, dns_rdatatype_t covers,
+		     isc_stdtime_t now, dns_ttl_t maxttl,
+		     isc_boolean_t optout, dns_rdataset_t *addedrdataset);
 /*%<
  * Convert the authority data from 'message' into a negative cache
  * rdataset, and store it in 'cache' at 'node' with a TTL limited to
@@ -70,6 +75,8 @@ dns_ncache_add(dns_message_t *message, dns_db_t *cache, dns_dbnode_t *node,
  *
  * The 'covers' argument is the RR type whose nonexistence we are caching,
  * or dns_rdatatype_any when caching a NXDOMAIN response.
+ *
+ * 'optout' indicates a DNS_RATASETATTR_OPTOUT should be set.
  *
  * Note:
  *\li	If 'addedrdataset' is not NULL, then it will be attached to the added
@@ -152,6 +159,19 @@ dns_ncache_getrdataset(dns_rdataset_t *ncacherdataset, dns_name_t *name,
  *\li	#ISC_R_SUCCESS		- the rdataset was found.
  *\li	#ISC_R_NOTFOUND		- the rdataset was not found.
  *
+ */
+
+void
+dns_ncache_current(dns_rdataset_t *ncacherdataset, dns_name_t *found,
+		   dns_rdataset_t *rdataset);
+
+/*%<
+ * Extract the current rdataset and name from a ncache entry.
+ *
+ * Requires:
+ * \li	'ncacherdataset' to be valid and to be a negative cache entry
+ * \li	'found' to be valid.
+ * \li	'rdataset' to be unassociated.
  */
 
 ISC_LANG_ENDDECLS
