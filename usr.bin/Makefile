@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.26 2009/05/02 19:30:54 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.27 2009/06/06 23:40:17 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -217,6 +217,7 @@ SUBDIR=	alias \
 	users \
 	uudecode \
 	uuencode \
+	unzip \
 	${_vacation} \
 	vgrind \
 	vi \

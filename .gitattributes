@@ -38496,6 +38496,9 @@ usr.bin/units/units.lib -text
 usr.bin/unvis/Makefile -text
 usr.bin/unvis/unvis.1 -text
 usr.bin/unvis/unvis.c -text
+usr.bin/unzip/Makefile -text
+usr.bin/unzip/unzip.1 -text
+usr.bin/unzip/unzip.c -text
 usr.bin/usbhidaction/Makefile -text
 usr.bin/usbhidaction/usbhidaction.1 -text
 usr.bin/usbhidaction/usbhidaction.c -text
