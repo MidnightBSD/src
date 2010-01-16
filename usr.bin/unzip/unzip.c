@@ -24,6 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.bin/unzip/unzip.c,v 1.2.2.1 2009/08/03 08:13:06 kensmith Exp $
  *
  * This file would be much shorter if we didn't care about command-line
