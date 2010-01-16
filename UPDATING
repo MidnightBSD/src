@@ -1,7 +1,12 @@
 Updating Information for MidnightBSD users
 
+20100116:
+	Import ash changes from FreeBSD (bin/sh) 8-Stable.
+
+	BIND 9.6.1-P2
+
 20100110:
-	Import sendmail 8.14.4. Fix for SSL vulnerability.
+	Import Sendmail 8.14.4. Fix for SSL vulnerability.
 
 	posix_spawn(3) added to MidnightBSD libc.  Users may need to build and
 	install libc before doing a full buildworld when upating from 0.2 or
@@ -799,4 +804,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.76 2010/01/10 20:08:51 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.77 2010/01/10 20:31:08 laffer1 Exp $
