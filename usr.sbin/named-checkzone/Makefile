@@ -1,7 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/named-checkzone/Makefile,v 1.2 2008/04/28 03:44:18 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/named-checkzone/Makefile,v 1.5 2007/06/02 23:19:58 dougb Exp $
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind9
+BIND_DIR=	${.CURDIR}/../../contrib/bind96
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/check
