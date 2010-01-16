@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/jobs.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/jobs.h,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)jobs.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/jobs.h,v 1.18.8.1 2006/11/22 00:23:09 stefanf Exp $
+ * $FreeBSD: src/bin/sh/jobs.h,v 1.19.10.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 /* Mode argument to forkshell.  Don't change FORK_FG or FORK_BG. */

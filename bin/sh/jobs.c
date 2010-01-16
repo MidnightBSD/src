@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/jobs.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/jobs.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)jobs.c	8.5 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/jobs.c,v 1.68.2.3 2006/11/22 00:23:09 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/jobs.c,v 1.72.10.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <fcntl.h>
 #include <signal.h>
@@ -360,7 +360,7 @@ showjob(struct job *jp, pid_t pid, int mode)
 				    WEXITSTATUS(ps->status));
 		} else {
 #if JOBS
-			if (WIFSTOPPED(ps->status)) 
+			if (WIFSTOPPED(ps->status))
 				i = WSTOPSIG(ps->status);
 			else
 #endif
@@ -794,7 +794,7 @@ forkshell(struct job *jp, union node *n, int mode)
 			    ! fd0_redirected_p ()) {
 				close(0);
 				if (open(_PATH_DEVNULL, O_RDONLY) != 0)
-					error("Can't open %s: %s", 
+					error("Can't open %s: %s",
 					    _PATH_DEVNULL, strerror(errno));
 			}
 		}

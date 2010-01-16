@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/memalloc.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,8 +31,10 @@
  * SUCH DAMAGE.
  *
  *	@(#)memalloc.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/memalloc.h,v 1.9.8.1 2005/11/06 20:39:48 stefanf Exp $
+ * $FreeBSD: src/bin/sh/memalloc.h,v 1.11.2.1 2009/08/03 08:13:06 kensmith Exp $
  */
+
+#include <string.h>
 
 struct stackmark {
 	struct stack_block *stackp;
@@ -47,7 +49,7 @@ extern int stacknleft;
 extern int sstrnleft;
 extern int herefd;
 
-pointer ckmalloc(int);
+pointer ckmalloc(size_t);
 pointer ckrealloc(pointer, int);
 void ckfree(pointer);
 char *savestr(char *);

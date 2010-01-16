@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/show.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)show.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/show.c,v 1.21.8.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/show.c,v 1.23.10.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -145,6 +145,8 @@ shcmd(union node *cmd, FILE *fp)
 			case NFROM:	s = "<";  dftfd = 0; break;
 			case NFROMTO:	s = "<>"; dftfd = 0; break;
 			case NFROMFD:	s = "<&"; dftfd = 0; break;
+			case NHERE:	s = "<<"; dftfd = 0; break;
+			case NXHERE:	s = "<<"; dftfd = 0; break;
 			default:  	s = "*error*"; dftfd = 0; break;
 		}
 		if (np->nfile.fd != dftfd)
@@ -155,6 +157,10 @@ shcmd(union node *cmd, FILE *fp)
 				fprintf(fp, "%d", np->ndup.dupfd);
 			else
 				fprintf(fp, "-");
+		} else if (np->nfile.type == NHERE) {
+				fprintf(fp, "HERE");
+		} else if (np->nfile.type == NXHERE) {
+				fprintf(fp, "XHERE");
 		} else {
 			sharg(np->nfile.fname, fp);
 		}

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/var.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/var.h,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)var.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/var.h,v 1.12.8.1 2006/11/22 00:11:11 stefanf Exp $
+ * $FreeBSD: src/bin/sh/var.h,v 1.14.10.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 /*
@@ -41,8 +41,8 @@
 /* flags */
 #define VEXPORT		0x01	/* variable is exported */
 #define VREADONLY	0x02	/* variable cannot be modified */
-#define VSTRFIXED	0x04	/* variable struct is staticly allocated */
-#define VTEXTFIXED	0x08	/* text is staticly allocated */
+#define VSTRFIXED	0x04	/* variable struct is statically allocated */
+#define VTEXTFIXED	0x08	/* text is statically allocated */
 #define VSTACK		0x10	/* text is allocated on the stack */
 #define VUNSET		0x20	/* the variable is not set */
 #define VNOFUNC		0x40	/* don't call the callback function */

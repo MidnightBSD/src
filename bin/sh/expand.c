@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/expand.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/expand.c,v 1.4 2008/06/30 00:49:38 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)expand.c	8.5 (Berkeley) 5/15/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/expand.c,v 1.47.2.5 2008/04/27 20:43:26 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/expand.c,v 1.55.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -83,7 +83,7 @@ struct ifsregion {
 	struct ifsregion *next;	/* next region in list */
 	int begoff;		/* offset of start of region */
 	int endoff;		/* offset of end of region */
-	int nulonly;		/* search for nul bytes only */
+	int inquotes;		/* search for nul bytes only */
 };
 
 
@@ -101,7 +101,7 @@ STATIC char *evalvar(char *, int);
 STATIC int varisset(char *, int);
 STATIC void varvalue(char *, int, int, int);
 STATIC void recordregion(int, int, int);
-STATIC void removerecordregions(int); 
+STATIC void removerecordregions(int);
 STATIC void ifsbreakup(char *, struct arglist *);
 STATIC void expandmeta(struct strlist *, int);
 STATIC void expmeta(char *, char *);
@@ -310,7 +310,7 @@ lose:
 }
 
 
-STATIC void 
+STATIC void
 removerecordregions(int endoff)
 {
 	if (ifslastp == NULL)
@@ -333,7 +333,7 @@ removerecordregions(int endoff)
 		}
 		return;
 	}
-	
+
 	ifslastp = &ifsfirst;
 	while (ifslastp->next && ifslastp->next->begoff < endoff)
 		ifslastp=ifslastp->next;
@@ -357,7 +357,7 @@ void
 expari(int flag)
 {
 	char *p, *start;
-	int result;
+	arith_t result;
 	int begoff;
 	int quotes = flag & (EXP_FULL | EXP_CASE | EXP_REDIR);
 	int quoted;
@@ -373,10 +373,7 @@ expari(int flag)
 	 * have to rescan starting from the beginning since CTLESC
 	 * characters have to be processed left to right.
 	 */
-#if INT_MAX / 1000000000 >= 10 || INT_MIN / 1000000000 <= -10
-#error "integers with more than 10 digits are not supported"
-#endif
-	CHECKSTRSPACE(12 - 2, expdest);
+	CHECKSTRSPACE(DIGITS(result) - 2, expdest);
 	USTPUTC('\0', expdest);
 	start = stackblock();
 	p = expdest - 2;
@@ -398,7 +395,7 @@ expari(int flag)
 	if (quotes)
 		rmescapes(p+2);
 	result = arith(p+2);
-	fmtstr(p, 12, "%d", result);
+	fmtstr(p, DIGITS(result), ARITH_FORMAT_STR, result);
 	while (*p++)
 		;
 	if (quoted == 0)
@@ -577,7 +574,7 @@ subevalvar(char *p, char *str, int strloc, int subtype, int startloc,
 			}
 			loc--;
 			if ((varflags & VSQUOTE) && loc > startp &&
-			    *(loc - 1) == CTLESC) { 
+			    *(loc - 1) == CTLESC) {
 				for (q = startp; q < loc; q++)
 					if (*q == CTLESC)
 						q++;
@@ -642,7 +639,13 @@ evalvar(char *p, int flag)
 		special = 1;
 	p = strchr(p, '=') + 1;
 again: /* jump here after setting a variable with ${var=text} */
-	if (special) {
+	if (varflags & VSLINENO) {
+		set = 1;
+		special = 0;
+		val = var;
+		p[-1] = '\0';	/* temporarily overwrite '=' to have \0
+				   terminated string */
+	} else if (special) {
 		set = varisset(var, varflags & VSNUL);
 		val = NULL;
 	} else {
@@ -751,9 +754,9 @@ record:
 		if (!set) {
 			if (subevalvar(p, var, 0, subtype, startloc, varflags)) {
 				varflags &= ~VSNUL;
-				/* 
-				 * Remove any recorded regions beyond 
-				 * start of variable 
+				/*
+				 * Remove any recorded regions beyond
+				 * start of variable
 				 */
 				removerecordregions(startloc);
 				goto again;
@@ -772,6 +775,7 @@ record:
 	default:
 		abort();
 	}
+	p[-1] = '=';	/* recover overwritten '=' */
 
 	if (subtype != VSNORMAL) {	/* skip to end of alternative */
 		int nesting = 1;
@@ -933,13 +937,19 @@ numvar:
  */
 
 STATIC void
-recordregion(int start, int end, int nulonly)
+recordregion(int start, int end, int inquotes)
 {
 	struct ifsregion *ifsp;
 
 	if (ifslastp == NULL) {
 		ifsp = &ifsfirst;
 	} else {
+		if (ifslastp->endoff == start
+		    && ifslastp->inquotes == inquotes) {
+			/* extend previous area */
+			ifslastp->endoff = end;
+			return;
+		}
 		ifsp = (struct ifsregion *)ckmalloc(sizeof (struct ifsregion));
 		ifslastp->next = ifsp;
 	}
@@ -947,7 +957,7 @@ recordregion(int start, int end, int nulonly)
 	ifslastp->next = NULL;
 	ifslastp->begoff = start;
 	ifslastp->endoff = end;
-	ifslastp->nulonly = nulonly;
+	ifslastp->inquotes = inquotes;
 }
 
 
@@ -966,75 +976,89 @@ ifsbreakup(char *string, struct arglist *arglist)
 	char *p;
 	char *q;
 	char *ifs;
-	int ifsspc;
-	int nulonly;
-
+	const char *ifsspc;
+	int had_param_ch = 0;
 
 	start = string;
-	ifsspc = 0;
-	nulonly = 0;
-	if (ifslastp != NULL) {
-		ifsp = &ifsfirst;
-		do {
-			p = string + ifsp->begoff;
-			nulonly = ifsp->nulonly;
-			ifs = nulonly ? nullstr : 
-				( ifsset() ? ifsval() : " \t\n" );
-			ifsspc = 0;
-			while (p < string + ifsp->endoff) {
-				q = p;
-				if (*p == CTLESC)
+
+	if (ifslastp == NULL) {
+		/* Return entire argument, IFS doesn't apply to any of it */
+		sp = (struct strlist *)stalloc(sizeof *sp);
+		sp->text = start;
+		*arglist->lastp = sp;
+		arglist->lastp = &sp->next;
+		return;
+	}
+
+	ifs = ifsset() ? ifsval() : " \t\n";
+
+	for (ifsp = &ifsfirst; ifsp != NULL; ifsp = ifsp->next) {
+		p = string + ifsp->begoff;
+		while (p < string + ifsp->endoff) {
+			q = p;
+			if (*p == CTLESC)
+				p++;
+			if (ifsp->inquotes) {
+				/* Only NULs (should be from "$@") end args */
+				had_param_ch = 1;
+				if (*p != 0) {
 					p++;
-				if (strchr(ifs, *p)) {
-					if (!nulonly)
-						ifsspc = (strchr(" \t\n", *p) != NULL);
-					/* Ignore IFS whitespace at start */
-					if (q == start && ifsspc) {
-						p++;
-						start = p;
-						continue;
-					}
-					*q = '\0';
-					sp = (struct strlist *)stalloc(sizeof *sp);
-					sp->text = start;
-					*arglist->lastp = sp;
-					arglist->lastp = &sp->next;
+					continue;
+				}
+				ifsspc = NULL;
+			} else {
+				if (!strchr(ifs, *p)) {
+					had_param_ch = 1;
 					p++;
-					if (!nulonly) {
-						for (;;) {
-							if (p >= string + ifsp->endoff) {
-								break;
-							}
-							q = p;
-							if (*p == CTLESC)
-								p++;
-							if (strchr(ifs, *p) == NULL ) {
-								p = q;
-								break;
-							} else if (strchr(" \t\n",*p) == NULL) {
-								if (ifsspc) {
-									p++;
-									ifsspc = 0;
-								} else {
-									p = q;
-									break;
-								}
-							} else
-								p++;
-						}
-					}
+					continue;
+				}
+				ifsspc = strchr(" \t\n", *p);
+
+				/* Ignore IFS whitespace at start */
+				if (q == start && ifsspc != NULL) {
+					p++;
 					start = p;
-				} else
-					p++;
+					continue;
+				}
+				had_param_ch = 0;
 			}
-		} while ((ifsp = ifsp->next) != NULL);
-		if (*start || (!ifsspc && start > string)) {
+
+			/* Save this argument... */
+			*q = '\0';
 			sp = (struct strlist *)stalloc(sizeof *sp);
 			sp->text = start;
 			*arglist->lastp = sp;
 			arglist->lastp = &sp->next;
+			p++;
+
+			if (ifsspc != NULL) {
+				/* Ignore further trailing IFS whitespace */
+				for (; p < string + ifsp->endoff; p++) {
+					q = p;
+					if (*p == CTLESC)
+						p++;
+					if (strchr(ifs, *p) == NULL) {
+						p = q;
+						break;
+					}
+					if (strchr(" \t\n", *p) == NULL) {
+						p++;
+						break;
+					}
+				}
+			}
+			start = p;
 		}
-	} else {
+	}
+
+	/*
+	 * Save anything left as an argument.
+	 * Traditionally we have treated 'IFS=':'; set -- x$IFS' as
+	 * generating 2 arguments, the second of which is empty.
+	 * Some recent clarification of the Posix spec say that it
+	 * should only generate one....
+	 */
+	if (had_param_ch || *start != 0) {
 		sp = (struct strlist *)stalloc(sizeof *sp);
 		sp->text = start;
 		*arglist->lastp = sp;

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/options.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/options.c,v 1.4 2008/06/30 00:49:38 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/options.c,v 1.23.2.3 2008/04/20 18:08:46 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/options.c,v 1.27.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <signal.h>
 #include <unistd.h>
@@ -339,6 +339,7 @@ setparam(char **argv)
 	shellparam.malloc = 1;
 	shellparam.nparam = nparam;
 	shellparam.p = newparam;
+	shellparam.reset = 1;
 	shellparam.optnext = NULL;
 }
 
@@ -406,7 +407,6 @@ setcmd(int argc, char **argv)
 	if (*argptr != NULL) {
 		setparam(argptr);
 	}
-	shellparam.reset = 1;
 	INTON;
 	return 0;
 }

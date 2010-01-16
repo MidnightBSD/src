@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/trap.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)trap.h	8.3 (Berkeley) 6/5/95
- * $FreeBSD: src/bin/sh/trap.h,v 1.12 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: src/bin/sh/trap.h,v 1.13.2.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 extern int pendingsigs;
@@ -40,6 +40,7 @@ extern volatile sig_atomic_t gotwinch;
 
 int trapcmd(int, char **);
 void clear_traps(void);
+int have_traps(void);
 void setsignal(int);
 void ignoresig(int);
 void onsig(int);

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/memalloc.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)memalloc.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/memalloc.c,v 1.26.8.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/memalloc.c,v 1.28.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <sys/param.h>
 #include "shell.h"
@@ -54,7 +54,7 @@ __FBSDID("$FreeBSD: src/bin/sh/memalloc.c,v 1.26.8.1 2005/11/06 20:39:48 stefanf
  */
 
 pointer
-ckmalloc(int nbytes)
+ckmalloc(size_t nbytes)
 {
 	pointer p;
 

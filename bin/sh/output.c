@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/output.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)output.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/output.c,v 1.19.8.1 2005/12/26 15:43:54 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/output.c,v 1.21.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 /*
  * Shell output routines.  We use our own output routines because:
@@ -134,32 +134,38 @@ void
 outqstr(const char *p, struct output *file)
 {
 	char ch;
+	int inquotes;
 
 	if (p[0] == '\0') {
 		outstr("''", file);
 		return;
 	}
-	if (p[strcspn(p, "|&;<>()$`\\\"'")] == '\0' && (!ifsset() ||
-	    p[strcspn(p, ifsval())] == '\0')) {
+	/* Caller will handle '=' if necessary */
+	if (p[strcspn(p, "|&;<>()$`\\\"' \t\n*?[~#")] == '\0' ||
+			strcmp(p, "[") == 0) {
 		outstr(p, file);
 		return;
 	}
 
-	out1c('\'');
+	inquotes = 0;
 	while ((ch = *p++) != '\0') {
 		switch (ch) {
 		case '\'':
-			/*
-			 * Can't quote single quotes inside single quotes;
-			 * close them, write escaped single quote, open again.
-			 */
-			outstr("'\\''", file);
+			/* Can't quote single quotes inside single quotes. */
+			if (inquotes)
+				outc('\'', file);
+			inquotes = 0;
+			outstr("\\'", file);
 			break;
 		default:
+			if (!inquotes)
+				outc('\'', file);
+			inquotes = 1;
 			outc(ch, file);
 		}
 	}
-	out1c('\'');
+	if (inquotes)
+		outc('\'', file);
 }
 
 STATIC char out_junk[16];

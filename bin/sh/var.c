@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/var.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/var.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)var.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/var.c,v 1.27.2.3 2006/11/22 00:11:11 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/var.c,v 1.39.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -128,7 +128,7 @@ STATIC int varequal(char *, char *);
 STATIC int localevar(char *);
 
 /*
- * Initialize the varable symbol tables and import the environment
+ * Initialize the variable symbol tables and import the environment.
  */
 
 #ifdef mkinit
@@ -194,12 +194,8 @@ int
 setvarsafe(char *name, char *val, int flags)
 {
 	struct jmploc jmploc;
-	struct jmploc *volatile savehandler = handler;
+	struct jmploc *const savehandler = handler;
 	int err = 0;
-#if __GNUC__
-	/* Avoid longjmp clobbering */
-	(void) &err;
-#endif
 
 	if (setjmp(jmploc.loc))
 		err = 1;
@@ -212,7 +208,7 @@ setvarsafe(char *name, char *val, int flags)
 }
 
 /*
- * Set the value of a variable.  The flags argument is tored with the
+ * Set the value of a variable.  The flags argument is stored with the
  * flags of the variable.  If val is NULL, the variable is unset.
  */
 
@@ -279,6 +275,30 @@ localevar(char *s)
 	return 0;
 }
 
+
+/*
+ * Sets/unsets an environment variable from a pointer that may actually be a
+ * pointer into environ where the string should not be manipulated.
+ */
+static void
+change_env(char *s, int set)
+{
+	char *eqp;
+	char *ss;
+
+	ss = savestr(s);
+	if ((eqp = strchr(ss, '=')) != NULL)
+		*eqp = '\0';
+	if (set && eqp != NULL)
+		(void) setenv(ss, eqp + 1, 1);
+	else
+		(void) unsetenv(ss);
+	ckfree(ss);
+
+	return;
+}
+
+
 /*
  * Same as setvar except that the variable and value are passed in
  * the first argument as name=value.  Since the first argument will
@@ -320,7 +340,7 @@ setvareq(char *s, int flags)
 			if (vp == &vmpath || (vp == &vmail && ! mpathset()))
 				chkmail(1);
 			if ((vp->flags & VEXPORT) && localevar(s)) {
-				putenv(s);
+				change_env(s, 1);
 				(void) setlocale(LC_ALL, "");
 			}
 			INTON;
@@ -336,7 +356,7 @@ setvareq(char *s, int flags)
 	INTOFF;
 	*vpp = vp;
 	if ((vp->flags & VEXPORT) && localevar(s)) {
-		putenv(s);
+		change_env(s, 1);
 		(void) setlocale(LC_ALL, "");
 	}
 	INTON;
@@ -597,7 +617,7 @@ exportcmd(int argc, char **argv)
 
 						vp->flags |= flag;
 						if ((vp->flags & VEXPORT) && localevar(vp->text)) {
-							putenv(vp->text);
+							change_env(vp->text, 1);
 							(void) setlocale(LC_ALL, "");
 						}
 						goto found;
@@ -789,7 +809,7 @@ unsetvar(char *s)
 			if (*(strchr(vp->text, '=') + 1) != '\0')
 				setvar(s, nullstr, 0);
 			if ((vp->flags & VEXPORT) && localevar(vp->text)) {
-				unsetenv(s);
+				change_env(s, 0);
 				setlocale(LC_ALL, "");
 			}
 			vp->flags &= ~VEXPORT;

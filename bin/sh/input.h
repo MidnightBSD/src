@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/input.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)input.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/input.h,v 1.9 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: src/bin/sh/input.h,v 1.10.2.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 /* PEOF (the end of file marker) is defined in syntax.h */
@@ -49,6 +49,7 @@ extern int init_editline;	/* 0 == not setup, 1 == OK, -1 == failed */
 char *pfgets(char *, int);
 int pgetc(void);
 int preadbuffer(void);
+int preadateof(void);
 void pungetc(void);
 void pushstring(char *, int, void *);
 void popstring(void);

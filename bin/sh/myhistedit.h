@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/myhistedit.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)myhistedit.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/myhistedit.h,v 1.10 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: src/bin/sh/myhistedit.h,v 1.10.30.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 #include <histedit.h>

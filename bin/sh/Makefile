@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.4 (Berkeley) 5/5/95
 # $FreeBSD: src/bin/sh/Makefile,v 1.44.8.1 2005/11/06 20:39:47 stefanf Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/bin/sh/Makefile,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
 
 PROG=	sh
 INSTALLFLAGS= -S
@@ -14,7 +14,7 @@ SRCS= ${SHSRCS} ${GENSRCS} ${GENHDRS} y.tab.h
 
 # MLINKS for Shell built in commands for which there are no userland
 # utilities of the same name are handled with the associated manpage,
-# builtin.1 in share/man/man1/.  
+# builtin.1 in share/man/man1/.
 
 DPADD= ${LIBL} ${LIBEDIT} ${LIBTERMCAP}
 LDADD= -ll -ledit -ltermcap
@@ -23,7 +23,7 @@ LFLAGS= -8	# 8-bit lex scanner for arithmetic
 CFLAGS+=-DSHELL -I. -I${.CURDIR}
 # for debug:
 # CFLAGS+= -g -DDEBUG=2
-WARNS?=	3
+WARNS?=	2
 WFORMAT=0
 
 .PATH:	${.CURDIR}/bltin \

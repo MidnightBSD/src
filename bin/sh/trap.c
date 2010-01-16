@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/trap.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)trap.c	8.5 (Berkeley) 6/5/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/trap.c,v 1.29.8.2 2005/12/26 15:43:54 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/trap.c,v 1.34.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <signal.h>
 #include <unistd.h>
@@ -76,7 +76,7 @@ MKINIT char sigmode[NSIG];	/* current value of signal */
 int pendingsigs;		/* indicates some signal received */
 int in_dotrap;			/* do we execute in a trap handler? */
 static char *volatile trap[NSIG];	/* trap handler commands */
-static volatile sig_atomic_t gotsig[NSIG]; 
+static volatile sig_atomic_t gotsig[NSIG];
 				/* indicates specified signal received */
 static int ignore_sigchld;	/* Used while handling SIGCHLD traps. */
 volatile sig_atomic_t gotwinch;
@@ -221,6 +221,21 @@ clear_traps(void)
 	}
 }
 
+
+/*
+ * Check if we have any traps enabled.
+ */
+int
+have_traps(void)
+{
+	char *volatile *tp;
+
+	for (tp = trap ; tp <= &trap[NSIG - 1] ; tp++) {
+		if (*tp && **tp)	/* trap not NULL or SIG_IGN */
+			return 1;
+	}
+	return 0;
+}
 
 /*
  * Set the signal handler for the specified signal.  The routine figures
@@ -376,12 +391,12 @@ onsig(int signo)
 	/* If we are currently in a wait builtin, prepare to break it */
 	if ((signo == SIGINT || signo == SIGQUIT) && in_waitcmd != 0)
 		breakwaitcmd = 1;
-	/* 
-	 * If a trap is set, not ignored and not the null command, we need 
+	/*
+	 * If a trap is set, not ignored and not the null command, we need
 	 * to make sure traps are executed even when a child blocks signals.
 	 */
 	if (Tflag &&
-	    trap[signo] != NULL && 
+	    trap[signo] != NULL &&
 	    ! (trap[signo][0] == '\0') &&
 	    ! (trap[signo][0] == ':' && trap[signo][1] == '\0'))
 		breakwaitcmd = 1;
@@ -417,7 +432,7 @@ dotrap(void)
 					if (i == SIGCHLD)
 						ignore_sigchld++;
 					savestatus = exitstatus;
-					evalstring(trap[i]);
+					evalstring(trap[i], 0);
 					exitstatus = savestatus;
 					if (i == SIGCHLD)
 						ignore_sigchld--;
@@ -472,7 +487,7 @@ exitshell(int status)
 	handler = &loc1;
 	if ((p = trap[0]) != NULL && *p != '\0') {
 		trap[0] = NULL;
-		evalstring(p);
+		evalstring(p, 0);
 	}
 l1:   handler = &loc2;			/* probably unnecessary */
 	flushall();

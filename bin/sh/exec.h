@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/exec.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/exec.h,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)exec.h	8.3 (Berkeley) 6/8/95
- * $FreeBSD: src/bin/sh/exec.h,v 1.12.8.2 2006/06/03 15:38:07 stefanf Exp $
+ * $FreeBSD: src/bin/sh/exec.h,v 1.15.10.2 2009/10/11 16:35:12 jilles Exp $
  */
 
 /* values of cmdtype */
@@ -47,11 +47,12 @@ enum {
 	TYPECMD_TYPE		/* type */
 };
 
+union node;
 struct cmdentry {
 	int cmdtype;
 	union param {
 		int index;
-		union node *func;
+		struct funcdef *func;
 	} u;
 	int special;
 };

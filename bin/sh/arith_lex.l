@@ -1,5 +1,5 @@
 %{
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/arith_lex.l,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 
 /*-
  * Copyright (c) 1993
@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)arith_lex.l	8.3 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/arith_lex.l,v 1.22.8.1 2005/11/06 20:39:47 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/arith_lex.l,v 1.24.10.2 2009/12/06 22:01:45 jilles Exp $");
 
 #include <string.h>
 
@@ -52,6 +52,13 @@ __FBSDID("$FreeBSD: src/bin/sh/arith_lex.l,v 1.22.8.1 2005/11/06 20:39:47 stefan
 #include "var.h"
 
 int yylex(void);
+
+struct varname
+{
+	struct varname *next;
+	char name[1];
+};
+static struct varname *varnames;
 
 #undef YY_INPUT
 #define YY_INPUT(buf,result,max) \
@@ -82,11 +89,14 @@ int yylex(void);
 			 * If variable doesn't exist, we should initialize
 			 * it to zero.
 			 */
-			char *temp;
+			struct varname *temp;
 			if (lookupvar(yytext) == NULL)
 				setvarsafe(yytext, "0", 0);
-			temp = (char *)ckmalloc(strlen(yytext) + 1);
-			yylval.s_value = strcpy(temp, yytext);
+			temp = ckmalloc(sizeof(struct varname) +
+			    strlen(yytext));
+			temp->next = varnames;
+			varnames = temp;
+			yylval.s_value = strcpy(temp->name, yytext);
 
 			return ARITH_VAR;
 		}
@@ -132,5 +142,15 @@ int yylex(void);
 void
 arith_lex_reset(void)
 {
+	struct varname *name, *next;
+
 	YY_NEW_FILE;
+
+	name = varnames;
+	while (name != NULL) {
+		next = name->next;
+		ckfree(name);
+		name = next;
+	}
+	varnames = NULL;
 }

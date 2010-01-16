@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/mknodes.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)mknodes.c	8.2 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mknodes.c,v 1.17 2004/04/06 20:06:51 markm Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/mknodes.c,v 1.18.2.2 2009/10/11 16:35:12 jilles Exp $");
 
 /*
  * This program reads the nodetypes file and nodes.c.pat file.  It generates
@@ -104,7 +104,7 @@ static void indent(int, FILE *);
 static int nextfield(char *);
 static void skipbl(void);
 static int readline(void);
-static void error(const char *, ...) __printf0like(1, 2);
+static void error(const char *, ...) __printf0like(1, 2) __dead2;
 static char *savestr(const char *);
 
 
@@ -249,8 +249,11 @@ output(char *file)
 	fputs("\tstruct nodelist *next;\n", hfile);
 	fputs("\tunion node *n;\n", hfile);
 	fputs("};\n\n\n", hfile);
-	fputs("union node *copyfunc(union node *);\n", hfile);
-	fputs("void freefunc(union node *);\n", hfile);
+	fputs("struct funcdef;\n", hfile);
+	fputs("struct funcdef *copyfunc(union node *);\n", hfile);
+	fputs("union node *getfuncnode(struct funcdef *);\n", hfile);
+	fputs("void reffunc(struct funcdef *);\n", hfile);
+	fputs("void unreffunc(struct funcdef *);\n", hfile);
 
 	fputs(writer, cfile);
 	while (fgets(line, sizeof line, patfile) != NULL) {

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/error.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/error.c,v 1.3 2008/06/30 00:49:38 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)error.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/error.c,v 1.26 2006/02/04 14:37:50 schweikh Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/error.c,v 1.26.10.1 2009/08/03 08:13:06 kensmith Exp $");
 
 /*
  * Errors and exceptions.

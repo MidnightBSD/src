@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/bltin/echo.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/bltin/echo.c,v 1.14 2004/04/06 20:06:53 markm Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/bltin/echo.c,v 1.14.30.1 2009/08/03 08:13:06 kensmith Exp $");
 
 /*
  * Echo command.

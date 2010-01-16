@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/input.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/input.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/input.c,v 1.22.8.1 2006/06/03 15:38:07 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/input.c,v 1.25.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -119,9 +119,9 @@ INIT {
 }
 
 RESET {
+	popallfiles();
 	if (exception != EXSHELLPROC)
 		parselleft = parsenleft = 0;	/* clear input buffer */
-	popallfiles();
 }
 
 SHELLPROC {
@@ -319,6 +319,23 @@ check:
 	*q = savec;
 
 	return *parsenextc++;
+}
+
+/*
+ * Returns if we are certain we are at EOF. Does not cause any more input
+ * to be read from the outside world.
+ */
+
+int
+preadateof(void)
+{
+	if (parsenleft > 0)
+		return 0;
+	if (parsefile->strpush)
+		return 0;
+	if (parsenleft == EOF_NLEFT || parsefile->buf == NULL)
+		return 1;
+	return 0;
 }
 
 /*

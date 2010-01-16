@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/mkinit.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)mkinit.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mkinit.c,v 1.17.8.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/mkinit.c,v 1.19.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 /*
  * This program scans all the source files for code to handle various
@@ -160,7 +160,7 @@ void addstr(char *, struct text *);
 void addchar(int, struct text *);
 void writetext(struct text *, FILE *);
 FILE *ckfopen(char *, char *);
-void *ckmalloc(int);
+void *ckmalloc(size_t);
 char *savestr(char *);
 void error(char *);
 
@@ -465,7 +465,7 @@ ckfopen(char *file, char *mode)
 }
 
 void *
-ckmalloc(int nbytes)
+ckmalloc(size_t nbytes)
 {
 	char *p;
 

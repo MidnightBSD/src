@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/main.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/main.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.26.8.2 2006/11/22 00:23:09 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.31.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <stdio.h>
 #include <signal.h>
@@ -156,6 +156,8 @@ main(int argc, char *argv[])
 	procargs(argc, argv);
 	if (getpwd() == NULL && iflag)
 		out2str("sh: cannot determine working directory\n");
+	if (getpwd() != NULL)
+		setvar ("PWD", getpwd(), VEXPORT);
 	if (argv[0] && argv[0][0] == '-') {
 		state = 1;
 		read_profile("/etc/profile");
@@ -177,7 +179,7 @@ state2:
 state3:
 	state = 4;
 	if (minusc) {
-		evalstring(minusc);
+		evalstring(minusc, sflag ? 0 : EV_EXIT);
 	}
 	if (sflag || minusc == NULL) {
 state4:	/* XXX ??? - why isn't this before the "if" statement */

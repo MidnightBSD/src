@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/mksyntax.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)mksyntax.c	8.2 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mksyntax.c,v 1.23.8.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/mksyntax.c,v 1.26.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 /*
  * This program creates syntax.h and syntax.c.
@@ -140,10 +140,7 @@ main(int argc __unused, char **argv __unused)
 
 	/* Determine the characteristics of chars. */
 	c = -1;
-	if (c < 0)
-		sign = 1;
-	else
-		sign = 0;
+	sign = (c > 0) ? 0 : 1;
 	for (nbits = 1 ; ; nbits++) {
 		d = (1 << nbits) - 1;
 		if (d == c)
@@ -358,7 +355,7 @@ output_type_macros(void)
 	char **pp;
 
 	if (digit_contig)
-		macro[0] = "#define is_digit(c)\t((unsigned)((c) - '0') <= 9)";
+		macro[0] = "#define is_digit(c)\t((unsigned int)((c) - '0') <= 9)";
 	for (pp = macro ; *pp ; pp++)
 		fprintf(hfile, "%s\n", *pp);
 	if (digit_contig)

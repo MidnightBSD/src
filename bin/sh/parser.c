@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/parser.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/parser.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)parser.c	8.7 (Berkeley) 5/16/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/parser.c,v 1.52.2.3 2006/11/22 00:26:06 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/parser.c,v 1.63.2.2 2009/12/20 20:51:20 jilles Exp $");
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -95,6 +95,7 @@ STATIC union node *redirnode;
 STATIC struct heredoc *heredoc;
 STATIC int quoteflag;		/* set if (part of) last token was quoted */
 STATIC int startlinno;		/* line # where last token started */
+STATIC int funclinno;		/* line # where the current function started */
 
 /* XXX When 'noaliases' is set to one, no alias expansion takes place. */
 static int noaliases = 0;
@@ -250,6 +251,7 @@ pipeline(void)
 	int negate;
 
 	negate = 0;
+	checkkwd = 2;
 	TRACE(("pipeline: entered\n"));
 	while (readtoken() == TNOT)
 		negate = !negate;
@@ -568,12 +570,14 @@ simplecmd(union node **rpp, union node *redir)
 			/* We have a function */
 			if (readtoken() != TRP)
 				synexpect(TRP);
+			funclinno = plinno;
 #ifdef notdef
 			if (! goodname(n->narg.text))
 				synerror("Bad function name");
 #endif
 			n->type = NDEFUN;
 			n->narg.next = command();
+			funclinno = 0;
 			goto checkneg;
 		} else {
 			tokpushback++;
@@ -895,19 +899,6 @@ readtoken1(int firstc, char const *syntax, char *eofmark, int striptabs)
 	int oldstyle;
 	char const *prevsyntax;	/* syntax before arithmetic */
 	int synentry;
-#if __GNUC__
-	/* Avoid longjmp clobbering */
-	(void) &out;
-	(void) &quotef;
-	(void) &dblquote;
-	(void) &varnest;
-	(void) &arinest;
-	(void) &parenlevel;
-	(void) &oldstyle;
-	(void) &prevsyntax;
-	(void) &syntax;
-	(void) &synentry;
-#endif
 
 	startlinno = plinno;
 	dblquote = 0;
@@ -1177,12 +1168,16 @@ parseredir: {
  */
 
 parsesub: {
+	char buf[10];
 	int subtype;
 	int typeloc;
 	int flags;
 	char *p;
 	static const char types[] = "}-+?=";
-       int bracketed_name = 0; /* used to handle ${[0-9]*} variables */
+	int bracketed_name = 0; /* used to handle ${[0-9]*} variables */
+	int i;
+	int linno;
+	int length;
 
 	c = pgetc();
 	if (c != '(' && c != '{' && (is_eof(c) || !is_name(c)) &&
@@ -1201,6 +1196,7 @@ parsesub: {
 		typeloc = out - stackblock();
 		USTPUTC(VSNORMAL, out);
 		subtype = VSNORMAL;
+		flags = 0;
 		if (c == '{') {
 			bracketed_name = 1;
 			c = pgetc();
@@ -1214,10 +1210,25 @@ parsesub: {
 				subtype = 0;
 		}
 		if (!is_eof(c) && is_name(c)) {
+			length = 0;
 			do {
 				STPUTC(c, out);
 				c = pgetc();
+				length++;
 			} while (!is_eof(c) && is_in_name(c));
+			if (length == 6 &&
+			    strncmp(out - length, "LINENO", length) == 0) {
+				/* Replace the variable name with the
+				 * current line number. */
+				linno = plinno;
+				if (funclinno != 0)
+					linno -= funclinno - 1;
+				snprintf(buf, sizeof(buf), "%d", linno);
+				STADJUST(-6, out);
+				for (i = 0; buf[i] != '\0'; i++)
+					STPUTC(buf[i], out);
+				flags |= VSLINENO;
+			}
 		} else if (is_digit(c)) {
 			if (bracketed_name) {
 				do {
@@ -1240,11 +1251,10 @@ parsesub: {
 				c = pgetc();
 			}
 		}
-		flags = 0;
 		if (subtype == 0) {
 			switch (c) {
 			case ':':
-				flags = VSNUL;
+				flags |= VSNUL;
 				c = pgetc();
 				/*FALLTHROUGH*/
 			default:
@@ -1298,13 +1308,10 @@ parsebackq: {
 	union node *n;
 	char *volatile str;
 	struct jmploc jmploc;
-	struct jmploc *volatile savehandler;
+	struct jmploc *const savehandler = handler;
 	int savelen;
 	int saveprompt;
-#if __GNUC__
-	/* Avoid longjmp clobbering */
-	(void) &saveprompt;
-#endif
+	const int bq_startlinno = plinno;
 
 	savepbq = parsebackquote;
 	if (setjmp(jmploc.loc)) {
@@ -1312,6 +1319,10 @@ parsebackq: {
 			ckfree(str);
 		parsebackquote = 0;
 		handler = savehandler;
+		if (exception == EXERROR) {
+			startlinno = bq_startlinno;
+			synerror("Error in command substitution");
+		}
 		longjmp(handler->loc, 1);
 	}
 	INTOFF;
@@ -1321,7 +1332,6 @@ parsebackq: {
 		str = ckmalloc(savelen);
 		memcpy(str, stackblock(), savelen);
 	}
-	savehandler = handler;
 	handler = &jmploc;
 	INTON;
         if (oldstyle) {

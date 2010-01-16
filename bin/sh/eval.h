@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/eval.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)eval.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/eval.h,v 1.10.8.1 2005/12/26 15:43:54 stefanf Exp $
+ * $FreeBSD: src/bin/sh/eval.h,v 1.13.2.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 extern char *commandname;	/* currently executing command */
@@ -46,8 +46,13 @@ struct backcmd {		/* result of evalbackcmd */
 	struct job *jp;		/* job structure for command */
 };
 
+/* flags in argument to evaltree/evalstring */
+#define EV_EXIT 01		/* exit after evaluating tree */
+#define EV_TESTED 02		/* exit status is checked; ignore -e flag */
+#define EV_BACKCMD 04		/* command executing within back quotes */
+
 int evalcmd(int, char **);
-void evalstring(char *);
+void evalstring(char *, int);
 union node;	/* BLETCH for ansi C */
 void evaltree(union node *, int);
 void evalbackcmd(union node *, struct backcmd *);

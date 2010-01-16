@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/parser.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/parser.h,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)parser.h	8.3 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/parser.h,v 1.10.8.1 2006/11/22 00:26:06 stefanf Exp $
+ * $FreeBSD: src/bin/sh/parser.h,v 1.12.2.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 /* control characters in argument strings */
@@ -46,9 +46,11 @@
 #define	CTLQUOTEMARK '\210'
 
 /* variable substitution byte (follows CTLVAR) */
-#define VSTYPE	0x0f		/* type of variable substitution */
-#define VSNUL	0x10		/* colon--treat the empty string as unset */
-#define VSQUOTE 0x80		/* inside double quotes--suppress splitting */
+#define VSTYPE		0x0f	/* type of variable substitution */
+#define VSNUL		0x10	/* colon--treat the empty string as unset */
+#define VSLINENO	0x20	/* expansion of $LINENO, the line number \
+				   follows immediately */
+#define VSQUOTE		0x80	/* inside double quotes--suppress splitting */
 
 /* values of VSTYPE field */
 #define VSNORMAL	0x1		/* normal variable:  $var or ${var} */

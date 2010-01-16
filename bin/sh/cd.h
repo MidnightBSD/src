@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/cd.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/bin/sh/cd.h,v 1.7 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: src/bin/sh/cd.h,v 1.7.30.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 char	*getpwd(void);

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/exec.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/exec.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)exec.c	8.4 (Berkeley) 6/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/exec.c,v 1.25.2.3 2007/02/04 10:42:30 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/exec.c,v 1.34.2.2 2009/10/11 16:35:12 jilles Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -188,7 +188,8 @@ padvance(char **path, char *name)
 	if (*path == NULL)
 		return NULL;
 	start = *path;
-	for (p = start ; *p && *p != ':' && *p != '%' ; p++);
+	for (p = start; *p && *p != ':' && *p != '%'; p++)
+		; /* nothing */
 	len = p - start + strlen(name) + 2;	/* "2" is for '/' and '\0' */
 	while (stackblocksize() < len)
 		growstackblock();
@@ -286,7 +287,7 @@ printentry(struct tblentry *cmdp, int verbose)
 		out1fmt("function %s", cmdp->cmdname);
 		if (verbose) {
 			INTOFF;
-			name = commandtext(cmdp->param.func);
+			name = commandtext(getfuncnode(cmdp->param.func));
 			out1c(' ');
 			out1str(name);
 			ckfree(name);
@@ -583,7 +584,7 @@ deletefuncs(void)
 		while ((cmdp = *pp) != NULL) {
 			if (cmdp->cmdtype == CMDFUNCTION) {
 				*pp = cmdp->next;
-				freefunc(cmdp->param.func);
+				unreffunc(cmdp->param.func);
 				ckfree(cmdp);
 			} else {
 				pp = &cmdp->next;
@@ -670,7 +671,7 @@ addcmdentry(char *name, struct cmdentry *entry)
 	INTOFF;
 	cmdp = cmdlookup(name, 1);
 	if (cmdp->cmdtype == CMDFUNCTION) {
-		freefunc(cmdp->param.func);
+		unreffunc(cmdp->param.func);
 	}
 	cmdp->cmdtype = entry->cmdtype;
 	cmdp->param = entry->u;
@@ -705,7 +706,7 @@ unsetfunc(char *name)
 	struct tblentry *cmdp;
 
 	if ((cmdp = cmdlookup(name, 0)) != NULL && cmdp->cmdtype == CMDFUNCTION) {
-		freefunc(cmdp->param.func);
+		unreffunc(cmdp->param.func);
 		delete_cmd_entry();
 		return (0);
 	}
@@ -729,9 +730,6 @@ typecmd_impl(int argc, char **argv, int cmd)
 	extern char *const parsekwd[];
 
 	for (i = 1; i < argc; i++) {
-		if (cmd != TYPECMD_SMALLV)
-			out1str(argv[i]);
-
 		/* First look at the keywords */
 		for (pp = (char **)parsekwd; *pp; pp++)
 			if (**pp == *argv[i] && equal(*pp, argv[i]))
@@ -741,7 +739,7 @@ typecmd_impl(int argc, char **argv, int cmd)
 			if (cmd == TYPECMD_SMALLV)
 				out1fmt("%s\n", argv[i]);
 			else
-				out1str(" is a shell keyword\n");
+				out1fmt("%s is a shell keyword\n", argv[i]);
 			continue;
 		}
 
@@ -750,7 +748,8 @@ typecmd_impl(int argc, char **argv, int cmd)
 			if (cmd == TYPECMD_SMALLV)
 				out1fmt("alias %s='%s'\n", argv[i], ap->val);
 			else
-				out1fmt(" is an alias for %s\n", ap->val);
+				out1fmt("%s is an alias for %s\n", argv[i],
+				    ap->val);
 			continue;
 		}
 
@@ -758,6 +757,7 @@ typecmd_impl(int argc, char **argv, int cmd)
 		if ((cmdp = cmdlookup(argv[i], 0)) != NULL) {
 			entry.cmdtype = cmdp->cmdtype;
 			entry.u = cmdp->param;
+			entry.special = cmdp->special;
 		}
 		else {
 			/* Finally use brute force */
@@ -776,7 +776,7 @@ typecmd_impl(int argc, char **argv, int cmd)
 				if (cmd == TYPECMD_SMALLV)
 					out1fmt("%s\n", name);
 				else
-					out1fmt(" is%s %s\n",
+					out1fmt("%s is%s %s\n", argv[i],
 					    (cmdp && cmd == TYPECMD_TYPE) ?
 						" a tracked alias for" : "",
 					    name);
@@ -785,11 +785,12 @@ typecmd_impl(int argc, char **argv, int cmd)
 					if (cmd == TYPECMD_SMALLV)
 						out1fmt("%s\n", argv[i]);
 					else
-						out1fmt(" is %s\n", argv[i]);
+						out1fmt("%s is %s\n", argv[i],
+						    argv[i]);
 				} else {
 					if (cmd != TYPECMD_SMALLV)
-						out1fmt(": %s\n",
-						    strerror(errno));
+						outfmt(out2, "%s: %s\n",
+						    argv[i], strerror(errno));
 					error |= 127;
 				}
 			}
@@ -799,19 +800,22 @@ typecmd_impl(int argc, char **argv, int cmd)
 			if (cmd == TYPECMD_SMALLV)
 				out1fmt("%s\n", argv[i]);
 			else
-				out1str(" is a shell function\n");
+				out1fmt("%s is a shell function\n", argv[i]);
 			break;
 
 		case CMDBUILTIN:
 			if (cmd == TYPECMD_SMALLV)
 				out1fmt("%s\n", argv[i]);
+			else if (entry.special)
+				out1fmt("%s is a special shell builtin\n",
+				    argv[i]);
 			else
-				out1str(" is a shell builtin\n");
+				out1fmt("%s is a shell builtin\n", argv[i]);
 			break;
 
 		default:
 			if (cmd != TYPECMD_SMALLV)
-				out1str(": not found\n");
+				outfmt(out2, "%s: not found\n", argv[i]);
 			error |= 127;
 			break;
 		}

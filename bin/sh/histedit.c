@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/histedit.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)histedit.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/histedit.c,v 1.26.8.2 2005/11/06 20:39:47 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/histedit.c,v 1.31.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <sys/param.h>
 #include <limits.h>
@@ -174,25 +174,11 @@ histcmd(int argc, char **argv)
 	char *pat = NULL, *repl;
 	static int active = 0;
 	struct jmploc jmploc;
-	struct jmploc *volatile savehandler;
-	char editfile[PATH_MAX];
+	struct jmploc *savehandler;
+	char editfilestr[PATH_MAX];
+	char *volatile editfile;
 	FILE *efp;
 	int oldhistnum;
-#ifdef __GNUC__
-	/* Avoid longjmp clobbering */
-	(void) &editor;
-	(void) &lflg;
-	(void) &nflg;
-	(void) &rflg;
-	(void) &sflg;
-	(void) &firststr;
-	(void) &laststr;
-	(void) &pat;
-	(void) &repl;
-	(void) &efp;
-	(void) &argc;
-	(void) &argv;
-#endif
 
 	if (hist == NULL)
 		error("history not active");
@@ -233,19 +219,19 @@ histcmd(int argc, char **argv)
 	 */
 	if (lflg == 0 || editor || sflg) {
 		lflg = 0;	/* ignore */
-		editfile[0] = '\0';
+		editfile = NULL;
 		/*
 		 * Catch interrupts to reset active counter and
 		 * cleanup temp files.
 		 */
+		savehandler = handler;
 		if (setjmp(jmploc.loc)) {
 			active = 0;
-			if (*editfile)
+			if (editfile)
 				unlink(editfile);
 			handler = savehandler;
 			longjmp(handler->loc, 1);
 		}
-		savehandler = handler;
 		handler = &jmploc;
 		if (++active > MAXHISTLOOPS) {
 			active = 0;
@@ -319,9 +305,10 @@ histcmd(int argc, char **argv)
 	if (editor) {
 		int fd;
 		INTOFF;		/* easier */
-		sprintf(editfile, "%s/_shXXXXXX", _PATH_TMP);
-		if ((fd = mkstemp(editfile)) < 0)
+		sprintf(editfilestr, "%s/_shXXXXXX", _PATH_TMP);
+		if ((fd = mkstemp(editfilestr)) < 0)
 			error("can't create temporary file %s", editfile);
+		editfile = editfilestr;
 		if ((efp = fdopen(fd, "w")) == NULL) {
 			close(fd);
 			error("can't allocate stdio buffer for temp");
@@ -351,7 +338,7 @@ histcmd(int argc, char **argv)
 				if (displayhist) {
 					out2str(s);
 				}
-				evalstring(s);
+				evalstring(s, 0);
 				if (displayhist && hist) {
 					/*
 					 *  XXX what about recursive and
@@ -371,7 +358,7 @@ histcmd(int argc, char **argv)
 				fputs(s, efp);
 		}
 		/*
-		 * At end?  (if we were to loose last, we'd sure be
+		 * At end?  (if we were to lose last, we'd sure be
 		 * messed up).
 		 */
 		if (he.num == last)
@@ -383,7 +370,7 @@ histcmd(int argc, char **argv)
 		fclose(efp);
 		editcmd = stalloc(strlen(editor) + strlen(editfile) + 2);
 		sprintf(editcmd, "%s %s", editor, editfile);
-		evalstring(editcmd);	/* XXX - should use no JC command */
+		evalstring(editcmd, 0);	/* XXX - should use no JC command */
 		INTON;
 		readcmdfile(editfile);	/* XXX - should read back - quick tst */
 		unlink(editfile);

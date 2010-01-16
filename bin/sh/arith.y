@@ -1,5 +1,5 @@
 %{
-/* $MidnightBSD: src/bin/sh/arith.y,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/arith.y,v 1.3 2008/06/30 00:49:38 laffer1 Exp $ */
 
 /*-
  * Copyright (c) 1993
@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)arith.y	8.3 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/arith.y,v 1.19.8.3 2008/04/27 20:43:26 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/arith.y,v 1.22.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include <limits.h>
 #include <stdio.h>
@@ -77,7 +77,10 @@ __FBSDID("$FreeBSD: src/bin/sh/arith.y,v 1.19.8.3 2008/04/27 20:43:26 stefanf Ex
 
 exp:
 	expr
-		{ return ($1); }
+		{
+		*YYPARSE_PARAM = $1;
+		return (0);
+		}
 	;
 
 expr:
@@ -261,12 +264,13 @@ expr:
 #include "output.h"
 #include "memalloc.h"
 
-#define lstrlen(var) (3 + (2 + CHAR_BIT * sizeof((var))) / 3)
+#define YYPARSE_PARAM_TYPE arith_t *
+#define YYPARSE_PARAM result
 
 char *arith_buf, *arith_startbuf;
 
 int yylex(void);
-int yyparse(void);
+int yyparse(YYPARSE_PARAM_TYPE);
 
 static int
 arith_assign(char *name, arith_t value)
@@ -274,22 +278,22 @@ arith_assign(char *name, arith_t value)
 	char *str;
 	int ret;
 
-	str = (char *)ckmalloc(lstrlen(value));
+	str = (char *)ckmalloc(DIGITS(value));
 	sprintf(str, ARITH_FORMAT_STR, value);
 	ret = setvarsafe(name, str, 0);
 	free(str);
 	return ret;
 }
 
-int
+arith_t
 arith(char *s)
 {
-	long result;
+	arith_t result;
 
 	arith_buf = arith_startbuf = s;
 
 	INTOFF;
-	result = yyparse();
+	yyparse(&result);
 	arith_lex_reset();	/* Reprime lex. */
 	INTON;
 
@@ -315,7 +319,7 @@ expcmd(int argc, char **argv)
 	char *p;
 	char *concat;
 	char **ap;
-	long i;
+	arith_t i;
 
 	if (argc > 1) {
 		p = argv[1];
@@ -340,7 +344,7 @@ expcmd(int argc, char **argv)
 
 	i = arith(p);
 
-	out1fmt("%ld\n", i);
+	out1fmt(ARITH_FORMAT_STR "\n", i);
 	return !i;
 }
 
