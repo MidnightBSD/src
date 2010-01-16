@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/named,v 1.22.2.2 2006/02/24 09:38:36 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/named,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/named,v 1.31 2009/05/16 20:55:28 dougb Exp $
+# $MidnightBSD$
 
 # PROVIDE: named
 # REQUIRE: SERVERS cleanvar
@@ -16,7 +16,7 @@ command="/usr/sbin/named"
 extra_commands="reload"
 
 start_precmd="named_precmd"
-start_postcmd="make_symlinks"
+start_postcmd="named_poststart"
 reload_cmd="named_reload"
 stop_cmd="named_stop"
 stop_postcmd="named_poststop"
@@ -32,6 +32,8 @@ stop_postcmd="named_poststop"
 #
 chroot_autoupdate()
 {
+	local file
+
 	# Create (or update) the chroot directory structure
 	#
 	if [ -r /etc/mtree/BIND.chroot.dist ]; then
@@ -59,17 +61,32 @@ chroot_autoupdate()
 
 	# Mount a devfs in the chroot directory if needed
 	#
-	umount ${named_chrootdir}/dev 2>/dev/null
-	devfs_domount ${named_chrootdir}/dev devfsrules_hide_all
-	devfs -m ${named_chrootdir}/dev rule apply path null unhide
-	devfs -m ${named_chrootdir}/dev rule apply path random unhide
-
-	# Copy local timezone information if it is not up to date.
-	#
-	if [ -r /etc/localtime ]; then
-		cmp -s /etc/localtime "${named_chrootdir}/etc/localtime" ||
-		    cp -p /etc/localtime "${named_chrootdir}/etc/localtime"
+	if [ `${SYSCTL_N} security.jail.jailed` -eq 0 ]; then
+		umount ${named_chrootdir}/dev 2>/dev/null
+		devfs_domount ${named_chrootdir}/dev devfsrules_hide_all
+		devfs -m ${named_chrootdir}/dev rule apply path null unhide
+		devfs -m ${named_chrootdir}/dev rule apply path random unhide
+	else
+		if [ -c ${named_chrootdir}/dev/null -a \
+		    -c ${named_chrootdir}/dev/random ]; then
+			info "named chroot: using pre-mounted devfs."
+		else
+			err 1 "named chroot: devfs cannot be mounted from" \
+			    "within a jail. Thus a chrooted named cannot" \
+			    "be run from within a jail." \
+			    "To run named without chrooting it, set" \
+			    "named_chrootdir=\"\" in /etc/rc.conf."
+		fi
 	fi
+
+	# Copy and/or update key files to the chroot /etc
+	#
+	for file in localtime protocols services; do
+		if [ -r /etc/$file ]; then
+			cmp -s /etc/$file "${named_chrootdir}/etc/$file" ||
+			    cp -p /etc/$file "${named_chrootdir}/etc/$file"
+		fi
+	done
 }
 
 # Make symlinks to the correct pid file
@@ -78,6 +95,17 @@ make_symlinks()
 {
 	checkyesno named_symlink_enable &&
 	    ln -fs "${named_chrootdir}${pidfile}" ${pidfile}
+}
+
+named_poststart () {
+	make_symlinks
+
+	if checkyesno named_wait; then
+		until ${command%/sbin/named}/bin/host $named_wait_host >/dev/null 2>&1; do
+			echo "	Waiting for nameserver to resolve $named_wait_host"
+			sleep 1
+		done
+	fi
 }
 
 named_reload()
@@ -109,12 +137,28 @@ named_stop()
 named_poststop()
 {
 	if [ -n "${named_chrootdir}" -a -c ${named_chrootdir}/dev/null ]; then
-		umount ${named_chrootdir}/dev 2>/dev/null || true
+		if [ `${SYSCTL_N} security.jail.jailed` -eq 0 ]; then
+			umount ${named_chrootdir}/dev 2>/dev/null || true
+		else
+			warn "named chroot:" \
+			    "cannot unmount devfs from inside jail!"
+		fi
 	fi
+}
+
+create_file () {
+	if [ -e "$1" ]; then
+		unlink $1
+	fi
+	> $1
+	chown root:wheel $1
+	chmod 644 $1
 }
 
 named_precmd()
 {
+	local line nsip firstns
+
 	# Is the user using a sandbox?
 	#
 	if [ -n "$named_chrootdir" ]; then
@@ -139,6 +183,80 @@ named_precmd()
 	else
 		$confgen_command
 	fi
+
+	# Create a forwarder configuration based on /etc/resolv.conf
+	if checkyesno named_auto_forward; then
+		if [ ! -s /etc/resolv.conf ]; then
+			warn "named_auto_forward enabled, but no /etc/resolv.conf"
+
+			# Empty the file in case it is included in named.conf
+			[ -s "${named_chrootdir}/etc/namedb/auto_forward.conf" ] &&
+			    create_file ${named_chrootdir}/etc/namedb/auto_forward.conf
+
+			${command%/named}/named-checkconf $named_conf ||
+			    err 3 'named-checkconf for $named_conf failed'
+			return
+		fi
+
+		create_file /var/run/naf-resolv.conf
+		create_file /var/run/auto_forward.conf
+
+		echo '	forwarders {' > /var/run/auto_forward.conf
+
+		while read line; do
+			case "$line" in
+			'nameserver '*|'nameserver	'*)
+				nsip=${line##nameserver[         ]}
+
+				if [ -z "$firstns" ]; then
+					if [ ! "$nsip" = '127.0.0.1' ]; then
+						echo 'nameserver 127.0.0.1'
+						echo "		${nsip};" >> /var/run/auto_forward.conf
+					fi
+
+					firstns=1
+				else
+					[ "$nsip" = '127.0.0.1' ] && continue
+					echo "		${nsip};" >> /var/run/auto_forward.conf
+				fi
+				;;
+			esac
+
+			echo $line
+		done < /etc/resolv.conf > /var/run/naf-resolv.conf
+
+		echo '	};' >> /var/run/auto_forward.conf
+		echo '' >> /var/run/auto_forward.conf
+		if checkyesno named_auto_forward_only; then
+			echo "	forward only;" >> /var/run/auto_forward.conf
+		else
+			echo "	forward first;" >> /var/run/auto_forward.conf
+		fi
+
+		if cmp -s /etc/resolv.conf /var/run/naf-resolv.conf; then
+			unlink /var/run/naf-resolv.conf
+		else
+			[ -e /etc/resolv.conf ] && unlink /etc/resolv.conf
+			mv /var/run/naf-resolv.conf /etc/resolv.conf
+		fi
+
+		if cmp -s ${named_chrootdir}/etc/namedb/auto_forward.conf \
+		    /var/run/auto_forward.conf; then
+			unlink /var/run/auto_forward.conf
+		else
+			[ -e "${named_chrootdir}/etc/namedb/auto_forward.conf" ] &&
+			    unlink ${named_chrootdir}/etc/namedb/auto_forward.conf
+			mv /var/run/auto_forward.conf \
+			    ${named_chrootdir}/etc/namedb/auto_forward.conf
+		fi
+	else
+		# Empty the file in case it is included in named.conf
+		[ -s "${named_chrootdir}/etc/namedb/auto_forward.conf" ] &&
+		    create_file ${named_chrootdir}/etc/namedb/auto_forward.conf
+	fi
+
+	${command%/named}/named-checkconf $named_conf ||
+	    err 3 'named-checkconf for $named_conf failed'
 }
 
 load_rc_config $name
