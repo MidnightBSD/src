@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.sbin/powerd/powerd.c,v 1.3 2010/01/17 14:42:44 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Colin Percival
  * Copyright (c) 2005 Nate Lawson
@@ -258,7 +258,7 @@ get_freq_id(int freq, int *freqs, int numfreqs)
  * to APM.  If nothing succeeds, we'll just run in default mode.
  */
 static void
-acline_init()
+acline_init(void)
 {
 	size_t len;
 
