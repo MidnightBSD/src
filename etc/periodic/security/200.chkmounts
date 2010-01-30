@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/periodic/security/200.chkmounts,v 1.5 2002/10/25 15:14:16 thomas Exp $
+# $FreeBSD: src/etc/periodic/security/200.chkmounts,v 1.7 2009/09/28 03:32:35 cperciva Exp $
 # $MidnightBSD$
 
 # Show changes in the way filesystems are mounted
@@ -50,7 +50,10 @@ case "$daily_status_security_chkmounts_enable" in
 		ignore="${ignore}|^amd:"
 	esac
 	[ -n "$ignore" ] && cmd="egrep -v ${ignore#|}" || cmd=cat
-	mount -p | ${cmd} |
+	if ! [ -f /etc/fstab ]; then
+		export PATH_FSTAB=/dev/null
+	fi
+	mount -p | sort | ${cmd} |
 	  check_diff mount - "${host} changes in mounted filesystems:"
 	rc=$?;;
     *)	rc=0;;
