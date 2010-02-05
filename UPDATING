@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users
 
+20100204:
+	Fix a bug cropping up on AMD64 MidnightBSD with sftp
+	segfaulting.  
+
 20100116:
 	Import ash changes from FreeBSD (bin/sh) 8-Stable.
 
@@ -804,4 +808,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.77 2010/01/10 20:31:08 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.78 2010/01/16 17:42:06 laffer1 Exp $
