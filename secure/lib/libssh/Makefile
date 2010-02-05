@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.11 2009/05/02 18:01:21 laffer1 Exp $
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.12 2009/11/26 16:48:49 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -20,7 +20,7 @@ SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 
 # Portability layer
 SRCS+=	bsd-arc4random.c bsd-closefrom.c bsd-misc.c fmt_scaled.c \
-	getrrsetbyname.c openssl-compat.c port-tun.c \
+	getrrsetbyname.c glob.c openssl-compat.c port-tun.c \
 	vis.c xcrypt.c xmmap.c
 # MidnightBSD additions
 SRCS+=	version.c
