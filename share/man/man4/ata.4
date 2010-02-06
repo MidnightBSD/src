@@ -25,9 +25,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ata.4,v 1.52.2.6 2006/02/19 18:32:12 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/ata.4,v 1.74.2.2 2008/10/29 19:52:24 delphij Exp $
 .\"
-.Dd October 28, 2006
+.Dd October 4, 2008
 .Dt ATA 4
 .Os
 .Sh NAME
@@ -85,6 +85,8 @@ The following tunables are settable from the loader:
 .Bl -ohang
 .It Va hw.ata.ata_dma
 set to 1 for DMA access, 0 for PIO (default is DMA).
+.It Va hw.ata.ata_dma_check_80pin
+set to 0 to disable the 80pin cable check (default is 1, check the cable) 
 .It Va hw.ata.atapi_dma
 set to 1 for DMA access, 0 for PIO (default is DMA).
 .It Va hw.ata.wc
@@ -105,9 +107,9 @@ The currently supported ATA/SATA controller chips are:
 .It Acard:
 ATP850P, ATP860A, ATP860R, ATP865A, ATP865R.
 .It ALI:
-M5229, M5281, M5287, M5289.
+M5229, M5281, M5287, M5288, M5289.
 .It AMD:
-AMD756, AMD766, AMD768, AMD8111.
+AMD756, AMD766, AMD768, AMD8111, CS5536.
 .It ATI:
 IXP200, IXP300, IXP400.
 .It CMD:
@@ -119,27 +121,29 @@ Cyrix 5530.
 .It HighPoint:
 HPT302, HPT366, HPT368, HPT370, HPT371, HPT372, HPT372N, HPT374.
 .It Intel:
-6300ESB, 31244, PIIX, PIIX3, PIIX4, ICH, ICH0, ICH2, ICH3, ICH4, ICH5, ICH6, ICH7, ICH8.
+6300ESB, 31244, PIIX, PIIX3, PIIX4, ESB2, ICH, ICH0, ICH2, ICH3, ICH4, ICH5, ICH6, ICH7, ICH8, ICH9, ICH10.
 .It ITE:
-IT8211F, IT8212F.
+IT8211F, IT8212F, IT8213F.
 .It JMicron:
-JMB360, JMB361, JMB363, JMB365, JMB366.
+JMB360, JMB361, JMB363, JMB365, JMB366, JMB368.
 .It Marvell
-88SX5040, 88SX5041, 88SX5080, 88SX5081, 88SX6041, 88SX6081.
+88SX5040, 88SX5041, 88SX5080, 88SX5081, 88SX6041, 88SX6081, 88SX6101, 88SX6141.
 .It National:
 SC1100.
+.It NetCell:
+NC3000, NC5000.
 .It nVidia:
-nForce, nForce2, nForce2 MCP, nForce3, nForce3 MCP, nForce3 Pro, nForce4, nForce5.
+nForce, nForce2, nForce2 MCP, nForce3, nForce3 MCP, nForce3 Pro, nForce4.
 .It Promise:
 PDC20246, PDC20262, PDC20263, PDC20265, PDC20267, PDC20268, PDC20269, PDC20270, PDC20271, PDC20275, PDC20276, PDC20277, PDC20318, PDC20319, PDC20371, PDC20375, PDC20376, PDC20377, PDC20378, PDC20379, PDC20571, PDC20575, PDC20579, PDC20580, PDC20617, PDC20618, PDC20619, PDC20620, PDC20621, PDC20622, PDC40518, PDC40519, PDC40718, PDC40719.
 .It ServerWorks:
-ROSB4, CSB5, CSB6.
+HT1000, ROSB4, CSB5, CSB6, K2, Frodo4, Frodo8.
 .It Silicon Image:
-SiI0680, SiI3112, SiI3114, SiI3512.
+SiI0680, SiI3112, SiI3114, SiI3124, SiI3132, SiI3512.
 .It SiS:
 SIS180, SIS181, SIS182, SIS5513, SIS530, SIS540, SIS550, SIS620, SIS630, SIS630S, SIS633, SIS635, SIS730, SIS733, SIS735, SIS745, SIS961, SIS962, SIS963, SIS964, SIS965.
 .It VIA:
-VT6410, VT6420, VT6421, VT82C586, VT82C586B, VT82C596, VT82C596B, VT82C686, VT82C686A, VT82C686B, VT8231, VT8233, VT8233A, VT8233C, VT8235, VT8237, VT8251.
+VT6410, VT6420, VT6421, VT82C586, VT82C586B, VT82C596, VT82C596B, VT82C686, VT82C686A, VT82C686B, VT8231, VT8233, VT8233A, VT8233C, VT8235, VT8237, VT8237A, VT8237S, VT8251.
 .El
 .Pp
 Unknown ATA chipsets are supported in PIO modes, and if the standard
@@ -168,6 +172,9 @@ driver has detected that the required 80 conductor cable is not present
 or could not be detected properly,
 or that one of the devices on the channel only accepts up
 to UDMA2/ATA33.
+The
+.Va hw.ata.ata_dma_check_80pin
+tunable can be set to 0 to disable this check.
 .Pp
 Unknown ATAPI devices are initialized to DMA mode if the
 .Va hw.ata.atapi_dma
@@ -216,6 +223,8 @@ even when not present.
 This is useful in hotswap scenarios
 where disks should always show up as the same numbered device,
 and not depend on attach order.
+.Pp
+Native Command Queuing (NCQ) on SATA drives is not yet supported.
 .Sh SEE ALSO
 .Xr ataraid 4 ,
 .Xr atacontrol 8 ,
