@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users
 
+2010026:
+	WITHOUT_LIB32 is no longer needed on AMD64.  GCC was fixed to
+	properly pass arguments to ld.
+
+	re(4) and rl(4) have been updated to support several new
+	realtek chipsets.  Performance has been improved on re(4).
+
 20100204:
 	Fix a bug cropping up on AMD64 MidnightBSD with sftp
 	segfaulting.  
@@ -808,4 +815,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.78 2010/01/16 17:42:06 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.79 2010/02/05 00:58:03 laffer1 Exp $
