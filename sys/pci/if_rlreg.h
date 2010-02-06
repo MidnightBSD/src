@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/pci/if_rlreg.h,v 1.6 2009/05/20 16:34:45 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/pci/if_rlreg.h,v 1.7 2009/08/26 19:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998-2003
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -77,7 +77,11 @@
 #define RL_EECMD	0x0050		/* EEPROM command register */
 #define RL_CFG0		0x0051		/* config register #0 */
 #define RL_CFG1		0x0052		/* config register #1 */
-                                        /* 0053-0057 reserved */   
+#define	RL_CFG2		0x0053		/* config register #2 */
+#define	RL_CFG3		0x0054		/* config register #3 */
+#define	RL_CFG4		0x0055		/* config register #4 */
+#define	RL_CFG5		0x0056		/* config register #5 */
+					/* 0057 reserved */
 #define RL_MEDIASTAT	0x0058		/* media status register (8139) */
 					/* 0059-005A reserved */
 #define RL_MII		0x005A		/* 8129 chip only */
@@ -128,6 +132,8 @@
 #define RL_TBI_ANAR		0x0068
 #define RL_TBI_LPAR		0x006A
 #define RL_GMEDIASTAT		0x006C	/* 8 bits */
+#define RL_MACDBG		0x006D	/* 8 bits, 8168C SPIN2 only */
+#define RL_GPIO			0x006E	/* 8 bits, 8168C SPIN2 only */
 #define RL_MAXRXPKTLEN		0x00DA	/* 16 bits, chip multiplies by 8 */
 #define RL_GTXSTART		0x0038	/* 8 bits */
 
@@ -155,13 +161,17 @@
 #define RL_HWREV_8169_8110SC	0x18000000
 #define RL_HWREV_8102EL		0x24800000
 #define RL_HWREV_8102EL_SPIN1	0x24c00000
+#define RL_HWREV_8168D		0x28000000
+#define RL_HWREV_8168DP		0x28800000
 #define RL_HWREV_8168_SPIN1	0x30000000
-#define RL_HWREV_8168_8111C	0x3c000000
 #define RL_HWREV_8100E		0x30800000
 #define RL_HWREV_8101E		0x34000000
 #define RL_HWREV_8102E		0x34800000
 #define RL_HWREV_8168_SPIN2	0x38000000
 #define RL_HWREV_8168_SPIN3	0x38400000
+#define RL_HWREV_8168C		0x3C000000
+#define RL_HWREV_8168C_SPIN2	0x3C400000
+#define RL_HWREV_8168CP		0x3C800000
 #define RL_HWREV_8139		0x60000000
 #define RL_HWREV_8139A		0x70000000
 #define RL_HWREV_8139AG		0x70800000
@@ -304,6 +314,7 @@
 #define RL_CMD_TX_ENB		0x0004
 #define RL_CMD_RX_ENB		0x0008
 #define RL_CMD_RESET		0x0010
+#define RL_CMD_STOPREQ		0x0080
 
 /*
  * EEPROM control register
@@ -366,14 +377,49 @@
  * Config 1 register
  */
 #define RL_CFG1_PWRDWN		0x01
+#define RL_CFG1_PME		0x01	
 #define RL_CFG1_SLEEP		0x02
+#define RL_CFG1_VPDEN		0x02
 #define RL_CFG1_IOMAP		0x04
 #define RL_CFG1_MEMMAP		0x08
 #define RL_CFG1_RSVD		0x10
+#define	RL_CFG1_LWACT		0x10
 #define RL_CFG1_DRVLOAD		0x20
 #define RL_CFG1_LED0		0x40
 #define RL_CFG1_FULLDUPLEX	0x40	/* 8129 only */
 #define RL_CFG1_LED1		0x80
+
+/*
+ * Config 2 register
+ */
+#define	RL_CFG2_PCI33MHZ	0x00
+#define	RL_CFG2_PCI66MHZ	0x01
+#define	RL_CFG2_PCI64BIT	0x08
+#define	RL_CFG2_AUXPWR		0x10
+#define	RL_CFG2_MSI		0x20
+
+/*
+ * Config 3 register
+ */
+#define	RL_CFG3_GRANTSEL	0x80
+#define	RL_CFG3_WOL_MAGIC	0x20
+#define	RL_CFG3_WOL_LINK	0x10
+#define	RL_CFG3_FAST_B2B	0x01
+
+/*
+ * Config 4 register
+ */
+#define	RL_CFG4_LWPTN		0x04
+#define	RL_CFG4_LWPME		0x10
+
+/*
+ * Config 5 register
+ */
+#define	RL_CFG5_WOL_BCAST	0x40
+#define	RL_CFG5_WOL_MCAST	0x20
+#define	RL_CFG5_WOL_UCAST	0x10
+#define	RL_CFG5_WOL_LANWAKE	0x02
+#define	RL_CFG5_PME_STS		0x01
 
 /*
  * 8139C+ register definitions
@@ -410,6 +456,15 @@
 #define RL_CPLUSCMD_PCI_DAC	0x0010	/* PCI dual-address cycle only */
 #define RL_CPLUSCMD_RXCSUM_ENB	0x0020	/* enable RX checksum offload */
 #define RL_CPLUSCMD_VLANSTRIP	0x0040	/* enable VLAN tag stripping */
+#define	RL_CPLUSCMD_MACSTAT_DIS	0x0080	/* 8168B/C/CP */
+#define	RL_CPLUSCMD_ASF		0x0100	/* 8168C/CP */
+#define	RL_CPLUSCMD_DBG_SEL	0x0200	/* 8168C/CP */
+#define	RL_CPLUSCMD_FORCE_TXFC	0x0400	/* 8168C/CP */
+#define	RL_CPLUSCMD_FORCE_RXFC	0x0800	/* 8168C/CP */
+#define	RL_CPLUSCMD_FORCE_HDPX	0x1000	/* 8168C/CP */
+#define	RL_CPLUSCMD_NORMAL_MODE	0x2000	/* 8168C/CP */
+#define	RL_CPLUSCMD_DBG_ENB	0x4000	/* 8168C/CP */
+#define	RL_CPLUSCMD_BIST_ENB	0x8000	/* 8168C/CP */
 
 /* C+ early transmit threshold */
 
@@ -454,6 +509,11 @@
 #define RL_RXBUFLEN		(1 << ((RL_RX_BUF_SZ >> 11) + 13))
 #define RL_TX_LIST_CNT		4
 #define RL_MIN_FRAMELEN		60
+#define	RL_TX_8139_BUF_ALIGN	4
+#define	RL_RX_8139_BUF_ALIGN	8
+#define	RL_RX_8139_BUF_RESERVE	sizeof(int64_t)
+#define	RL_RX_8139_BUF_GUARD_SZ	\
+	(ETHER_MAX_LEN + ETHER_VLAN_ENCAP_LEN + RL_RX_8139_BUF_RESERVE)	
 #define RL_TXTHRESH(x)		((x) << 11)
 #define RL_TX_THRESH_INIT	96
 #define RL_RX_FIFOTHRESH	RL_RXFIFO_NOTHRESH
@@ -465,14 +525,23 @@
 
 #define RL_ETHER_ALIGN	2
 
+/*
+ * re(4) hardware ip4csum-tx could be mangled with 28 bytes or less IP packets.
+ */
+#define	RL_IP4CSUMTX_MINLEN	28
+#define	RL_IP4CSUMTX_PADLEN	(ETHER_HDR_LEN + RL_IP4CSUMTX_MINLEN)
+
 struct rl_chain_data {
 	uint16_t		cur_rx;
 	uint8_t			*rl_rx_buf;
 	uint8_t			*rl_rx_buf_ptr;
-	bus_dmamap_t		rl_rx_dmamap;
 
 	struct mbuf		*rl_tx_chain[RL_TX_LIST_CNT];
 	bus_dmamap_t		rl_tx_dmamap[RL_TX_LIST_CNT];
+	bus_dma_tag_t		rl_tx_tag;
+	bus_dma_tag_t		rl_rx_tag;
+	bus_dmamap_t		rl_rx_dmamap;
+	bus_addr_t		rl_rx_buf_paddr;
 	uint8_t			last_tx;
 	uint8_t			cur_tx;
 };
@@ -560,6 +629,10 @@ struct rl_desc {
 
 #define RL_TDESC_VLANCTL_TAG	0x00020000	/* Insert VLAN tag */
 #define RL_TDESC_VLANCTL_DATA	0x0000FFFF	/* TAG data */
+/* RTL8168C/RTL8168CP/RTL8111C/RTL8111CP */
+#define	RL_TDESC_CMD_UDPCSUMV2	0x80000000
+#define	RL_TDESC_CMD_TCPCSUMV2	0x40000000	
+#define	RL_TDESC_CMD_IPCSUMV2	0x20000000	
 
 /*
  * Error bits are valid only on the last descriptor of a frame
@@ -597,6 +670,8 @@ struct rl_desc {
 #define RL_RDESC_STAT_RUNT	0x00080000	/* runt packet received */
 #define RL_RDESC_STAT_CRCERR	0x00040000	/* CRC error */
 #define RL_RDESC_STAT_PROTOID	0x00030000	/* Protocol type */
+#define	RL_RDESC_STAT_UDP	0x00020000	/* UDP, 8168C/CP, 8111C/CP */
+#define	RL_RDESC_STAT_TCP	0x00010000	/* TCP, 8168C/CP, 8111C/CP */
 #define RL_RDESC_STAT_IPSUMBAD	0x00008000	/* IP header checksum bad */
 #define RL_RDESC_STAT_UDPSUMBAD	0x00004000	/* UDP checksum bad */
 #define RL_RDESC_STAT_TCPSUMBAD	0x00002000	/* TCP checksum bad */
@@ -608,6 +683,9 @@ struct rl_desc {
 #define RL_RDESC_VLANCTL_TAG	0x00010000	/* VLAN tag available
 						   (rl_vlandata valid)*/
 #define RL_RDESC_VLANCTL_DATA	0x0000FFFF	/* TAG data */
+/* RTL8168C/RTL8168CP/RTL8111C/RTL8111CP */
+#define	RL_RDESC_IPV6		0x80000000
+#define	RL_RDESC_IPV4		0x40000000
 
 #define RL_PROTOID_NONIP	0x00000000
 #define RL_PROTOID_TCPIP	0x00010000
@@ -683,14 +761,24 @@ struct rl_stats {
 #define RE_RX_DESC_BUFLEN	MCLBYTES
 #endif
 
-#define	RL_MSI_MESSAGES	2
+#define	RL_MSI_MESSAGES	1
 
 #define RL_ADDR_LO(y)		((uint64_t) (y) & 0xFFFFFFFF)
 #define RL_ADDR_HI(y)		((uint64_t) (y) >> 32)
 
+/*
+ * The number of bits reserved for MSS in RealTek controllers is
+ * 11bits. This limits the maximum interface MTU size in TSO case
+ * as upper stack should not generate TCP segments with MSS greater
+ * than the limit.
+ */
+#define	RL_TSO_MTU		(2047 - ETHER_HDR_LEN - ETHER_CRC_LEN)
+
 /* see comment in dev/re/if_re.c */
 #define RL_JUMBO_FRAMELEN	7440
 #define RL_JUMBO_MTU		(RL_JUMBO_FRAMELEN-ETHER_HDR_LEN-ETHER_CRC_LEN)
+#define	RL_MAX_FRAMELEN		\
+	(ETHER_MAX_LEN + ETHER_VLAN_ENCAP_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN)
 
 struct rl_txdesc {
 	struct mbuf		*tx_m;
@@ -735,11 +823,12 @@ struct rl_softc {
 	bus_space_tag_t		rl_btag;	/* bus space tag */
 	device_t		rl_dev;
 	struct resource		*rl_res;
+	int			rl_res_id;
+	int			rl_res_type;
 	struct resource		*rl_irq[RL_MSI_MESSAGES];
 	void			*rl_intrhand[RL_MSI_MESSAGES];
 	device_t		rl_miibus;
 	bus_dma_tag_t		rl_parent_tag;
-	bus_dma_tag_t		rl_tag;
 	uint8_t			rl_type;
 	int			rl_eecmd_read;
 	int			rl_eewidth;
@@ -765,8 +854,21 @@ struct rl_softc {
 	struct task		rl_inttask;
 
 	int			rl_txstart;
-	int			rl_link;
-	int			rl_msi;
+	uint32_t		rl_flags;
+#define	RL_FLAG_MSI		0x0001
+#define	RL_FLAG_AUTOPAD		0x0002
+#define	RL_FLAG_PHYWAKE		0x0008
+#define	RL_FLAG_NOJUMBO		0x0010
+#define	RL_FLAG_PAR		0x0020
+#define	RL_FLAG_DESCV2		0x0040
+#define	RL_FLAG_MACSTAT		0x0080
+#define	RL_FLAG_FASTETHER	0x0100
+#define	RL_FLAG_CMDSTOP		0x0200
+#define	RL_FLAG_MACRESET	0x0400
+#define	RL_FLAG_WOLRXENB	0x1000
+#define	RL_FLAG_MACSLEEP	0x2000
+#define	RL_FLAG_PCIE		0x4000
+#define	RL_FLAG_LINK		0x8000
 };
 
 #define	RL_LOCK(_sc)		mtx_lock(&(_sc)->rl_mtx)
@@ -811,6 +913,7 @@ struct rl_softc {
 	CSR_WRITE_4(sc, offset, CSR_READ_4(sc, offset) & ~(val))
 
 #define RL_TIMEOUT		1000
+#define RL_PHY_TIMEOUT		2000
 
 /*
  * General constants that are fun to know.
@@ -822,6 +925,7 @@ struct rl_softc {
 /*
  * RealTek chip device IDs.
  */
+#define RT_DEVICEID_8139D			0x8039
 #define	RT_DEVICEID_8129			0x8129
 #define RT_DEVICEID_8101E			0x8136
 #define	RT_DEVICEID_8138			0x8138
