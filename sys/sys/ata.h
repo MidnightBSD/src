@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/ata.h,v 1.5 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 - 2006 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -39,6 +39,7 @@ struct ata_params {
 #define ATA_PROTO_ATAPI                 0x8000
 #define ATA_PROTO_ATAPI_12              0x8000
 #define ATA_PROTO_ATAPI_16              0x8001
+#define ATA_PROTO_CFA                   0x848a
 #define ATA_ATAPI_TYPE_MASK             0x1f00
 #define ATA_ATAPI_TYPE_DIRECT           0x0000  /* disk/floppy */
 #define ATA_ATAPI_TYPE_TAPE             0x0100  /* streaming tape */
@@ -432,7 +433,8 @@ struct ata_ioc_request {
 #define IOCATAGPARM             _IOR('a', 101, struct ata_params)
 #define IOCATAGMODE             _IOR('a', 102, int)
 #define IOCATASMODE             _IOW('a', 103, int)
-
+#define IOCATAGSPINDOWN         _IOR('a', 104, int)
+#define IOCATASSPINDOWN         _IOW('a', 105, int)
 
 struct ata_ioc_raid_config {
 	    int                 lun;

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/disk.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -98,5 +98,9 @@ void disk_err(struct bio *bp, const char *what, int blkdone, int nl);
 	 * - ident is an ASCII string (is printable),
 	 * - ident is optional and applications can't relay on its presence.
 	 */
-
+#define DIOCGPROVIDERALIAS _IOR('d', 139, char[MAXPATHLEN])
+	/*-
+	 * Store the provider alias, if present, in a buffer. The buffer must
+	 * be at least MAXPATHLEN bytes long.
+	 */
 #endif /* _SYS_DISK_H_ */
