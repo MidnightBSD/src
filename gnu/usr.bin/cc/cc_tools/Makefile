@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.4 2009/05/26 04:47:03 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.5 2010/02/06 04:14:08 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.88 2007/05/28 00:25:07 kan Exp $
 
 .include <bsd.own.mk>
@@ -46,7 +46,7 @@ TARGET_INC+=	${GCC_CPU}/x86-64.h
 TARGET_INC+=	${GCC_CPU}/freebsd.h
 TARGET_INC+=	${GCC_CPU}/freebsd64.h
 TARGET_INC+=	freebsd64-fix.h
-TARGET_INC+=	${GCC_CPU}/freebsd.h
+#TARGET_INC+=	${GCC_CPU}/freebsd.h
 .else
 TARGET_INC+=	${GCC_CPU}/freebsd.h
 .endif
