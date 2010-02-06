@@ -7,3 +7,16 @@
  */
 #undef MCOUNT_NAME
 #define MCOUNT_NAME ".mcount"
+
+#undef  LINK_SPEC
+#define LINK_SPEC "\
+  %{m32:-m elf_i386_fbsd} \
+  %{v:-V} \
+  %{assert*} %{R*} %{rpath*} %{defsym*} \
+  %{shared:-Bshareable %{h*} %{soname*}} \
+    %{!shared: \
+      %{!static: \
+        %{rdynamic:-export-dynamic} \
+        %{!dynamic-linker:-dynamic-linker %(fbsd_dynamic_linker) }} \
+    %{static:-Bstatic}} \
+  %{symbolic:-Bsymbolic}"
