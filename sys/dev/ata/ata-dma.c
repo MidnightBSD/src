@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-dma.c,v 1.147.2.1.2.1 2008/01/09 08:55:10 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-dma.c,v 1.147.2.3 2009/10/31 17:28:08 mav Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -234,9 +234,9 @@ ata_dmaload(device_t dev, caddr_t data, int32_t count, int dir,
 	device_printf(dev, "FAILURE - zero length DMA transfer attempted\n");
 	return EIO;
     }
-    if (((uintptr_t)data & (ch->dma->alignment - 1)) ||
-	(count & (ch->dma->alignment - 1))) {
-	device_printf(dev, "FAILURE - non aligned DMA transfer attempted\n");
+    if (count & (ch->dma->alignment - 1)) {
+	device_printf(dev, "FAILURE - odd-sized DMA transfer attempt %d %% %d\n",
+	    count, ch->dma->alignment);
 	return EIO;
     }
     if (count > ch->dma->max_iosize) {

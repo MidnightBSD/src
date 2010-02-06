@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-all.c,v 1.280 2007/10/04 19:17:15 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-all.c,v 1.280.2.10 2009/07/31 07:53:09 mav Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -76,6 +76,7 @@ devclass_t ata_devclass;
 uma_zone_t ata_request_zone;
 uma_zone_t ata_composite_zone;
 int ata_wc = 1;
+int ata_dma_check_80pin = 1;
 
 /* local vars */
 static int ata_dma = 1;
@@ -86,6 +87,10 @@ SYSCTL_NODE(_hw, OID_AUTO, ata, CTLFLAG_RD, 0, "ATA driver parameters");
 TUNABLE_INT("hw.ata.ata_dma", &ata_dma);
 SYSCTL_INT(_hw_ata, OID_AUTO, ata_dma, CTLFLAG_RDTUN, &ata_dma, 0,
 	   "ATA disk DMA mode control");
+TUNABLE_INT("hw.ata.ata_dma_check_80pin", &ata_dma_check_80pin);
+SYSCTL_INT(_hw_ata, OID_AUTO, ata_dma_check_80pin,
+	   CTLFLAG_RDTUN, &ata_dma_check_80pin, 1,
+	   "Check for 80pin cable before setting ATA DMA mode");
 TUNABLE_INT("hw.ata.atapi_dma", &atapi_dma);
 SYSCTL_INT(_hw_ata, OID_AUTO, atapi_dma, CTLFLAG_RDTUN, &atapi_dma, 0,
 	   "ATAPI device DMA mode control");
@@ -136,7 +141,7 @@ ata_attach(device_t dev)
 	return ENXIO;
     }
     if ((error = bus_setup_intr(dev, ch->r_irq, ATA_INTR_FLAGS, NULL,
-				(driver_intr_t *)ata_interrupt, ch, &ch->ih))) {
+				ata_interrupt, ch, &ch->ih))) {
 	device_printf(dev, "unable to setup interrupt\n");
 	return error;
     }
@@ -308,7 +313,7 @@ ata_resume(device_t dev)
     return error;
 }
 
-int
+void
 ata_interrupt(void *data)
 {
     struct ata_channel *ch = (struct ata_channel *)data;
@@ -343,11 +348,10 @@ ata_interrupt(void *data)
 	    mtx_unlock(&ch->state_mtx);
 	    ATA_LOCKING(ch->dev, ATA_LF_UNLOCK);
 	    ata_finish(request);
-	    return 1;
+	    return;
 	}
     } while (0);
     mtx_unlock(&ch->state_mtx);
-    return 0;
 }
 
 /*
@@ -364,20 +368,20 @@ ata_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 
     switch (cmd) {
     case IOCATAGMAXCHANNEL:
+	/* In case we have channel 0..n this will return n+1. */
 	*value = devclass_get_maxunit(ata_devclass);
 	error = 0;
 	break;
 
     case IOCATAREINIT:
-	if (*value > devclass_get_maxunit(ata_devclass) ||
+	if (*value >= devclass_get_maxunit(ata_devclass) ||
 	    !(device = devclass_get_device(ata_devclass, *value)))
 	    return ENXIO;
 	error = ata_reinit(device);
-	ata_start(device);
 	break;
 
     case IOCATAATTACH:
-	if (*value > devclass_get_maxunit(ata_devclass) ||
+	if (*value >= devclass_get_maxunit(ata_devclass) ||
 	    !(device = devclass_get_device(ata_devclass, *value)))
 	    return ENXIO;
 	/* XXX SOS should enable channel HW on controller */
@@ -385,7 +389,7 @@ ata_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 	break;
 
     case IOCATADETACH:
-	if (*value > devclass_get_maxunit(ata_devclass) ||
+	if (*value >= devclass_get_maxunit(ata_devclass) ||
 	    !(device = devclass_get_device(ata_devclass, *value)))
 	    return ENXIO;
 	error = ata_detach(device);
@@ -393,7 +397,7 @@ ata_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 	break;
 
     case IOCATADEVICES:
-	if (devices->channel > devclass_get_maxunit(ata_devclass) ||
+	if (devices->channel >= devclass_get_maxunit(ata_devclass) ||
 	    !(device = devclass_get_device(ata_devclass, devices->channel)))
 	    return ENXIO;
 	bzero(devices->name[0], 32);
@@ -437,6 +441,7 @@ int
 ata_device_ioctl(device_t dev, u_long cmd, caddr_t data)
 {
     struct ata_device *atadev = device_get_softc(dev);
+    struct ata_channel *ch = device_get_softc(device_get_parent(dev));
     struct ata_ioc_request *ioc_request = (struct ata_ioc_request *)data;
     struct ata_params *params = (struct ata_params *)data;
     int *mode = (int *)data;
@@ -446,6 +451,10 @@ ata_device_ioctl(device_t dev, u_long cmd, caddr_t data)
 
     switch (cmd) {
     case IOCATAREQUEST:
+	if (ioc_request->count >
+	    (ch->dma->max_iosize ? ch->dma->max_iosize : DFLTPHYS)) {
+		return (EFBIG);
+	}
 	if (!(buf = malloc(ioc_request->count, M_ATA, M_NOWAIT))) {
 	    return ENOMEM;
 	}
@@ -514,6 +523,12 @@ ata_device_ioctl(device_t dev, u_long cmd, caddr_t data)
 
     case IOCATAGMODE:
 	*mode = atadev->mode;
+	return 0;
+    case IOCATASSPINDOWN:
+	atadev->spindown = *mode;
+	return 0;
+    case IOCATAGSPINDOWN:
+	*mode = atadev->spindown;
 	return 0;
     default:
 	return ENOTTY;

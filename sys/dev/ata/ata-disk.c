@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-disk.c,v 1.189.2.5 2006/09/30 14:51:49 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-disk.c,v 1.204.2.7 2010/01/07 09:02:30 mav Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -156,19 +156,28 @@ ad_attach(device_t dev)
 	adp->disk->d_maxsize = ch->dma->max_iosize;
     else
 	adp->disk->d_maxsize = DFLTPHYS;
+    if (atadev->param.support.command2 & ATA_SUPPORT_ADDRESS48)
+	adp->disk->d_maxsize = min(adp->disk->d_maxsize, 65536 * DEV_BSIZE);
+    else					/* 28bit ATA command limit */
+	adp->disk->d_maxsize = min(adp->disk->d_maxsize, 256 * DEV_BSIZE);
     adp->disk->d_sectorsize = DEV_BSIZE;
     adp->disk->d_mediasize = DEV_BSIZE * (off_t)adp->total_secs;
     adp->disk->d_fwsectors = adp->sectors;
     adp->disk->d_fwheads = adp->heads;
     adp->disk->d_unit = device_get_unit(dev);
     if (atadev->param.support.command2 & ATA_SUPPORT_FLUSHCACHE)
-	adp->disk->d_flags = DISKFLAG_CANFLUSHCACHE;
+	adp->disk->d_flags |= DISKFLAG_CANFLUSHCACHE;
+    if ((atadev->param.support.command2 & ATA_SUPPORT_CFA) ||
+	atadev->param.config == ATA_PROTO_CFA)
+	adp->disk->d_flags |= DISKFLAG_CANDELETE;
     snprintf(adp->disk->d_ident, sizeof(adp->disk->d_ident), "ad:%s",
 	atadev->param.serial);
     disk_create(adp->disk, DISK_VERSION);
     device_add_child(dev, "subdisk", device_get_unit(dev));
     ad_firmware_geom_adjust(dev, adp->disk);
     bus_generic_attach(dev);
+
+    callout_init(&atadev->spindown_timer, 1);
     return 0;
 }
 
@@ -176,6 +185,7 @@ static int
 ad_detach(device_t dev)
 {
     struct ad_softc *adp = device_get_ivars(dev);
+    struct ata_device *atadev = device_get_softc(dev);
     device_t *children;
     int nchildren, i;
 
@@ -183,6 +193,9 @@ ad_detach(device_t dev)
     if (!device_get_ivars(dev))
 	return ENXIO;
     
+    /* destroy the power timeout */
+    callout_drain(&atadev->spindown_timer);
+
     /* detach & delete all children */
     if (!device_get_children(dev, &children, &nchildren)) {
 	for (i = 0; i < nchildren; i++)
@@ -227,12 +240,48 @@ ad_reinit(device_t dev)
     return 0;
 }
 
+static void
+ad_power_callback(struct ata_request *request)
+{
+    device_printf(request->dev, "drive spun down.\n");
+    ata_free_request(request);
+}
+
+static void
+ad_spindown(void *priv)
+{
+    device_t dev = priv;
+    struct ata_device *atadev = device_get_softc(dev);
+    struct ata_request *request;
+
+    if(atadev->spindown == 0)
+	return;
+    device_printf(dev, "Idle, spin down\n");
+    atadev->spindown_state = 1;
+    if (!(request = ata_alloc_request())) {
+	device_printf(dev, "FAILURE - out of memory in ad_spindown\n");
+	return;
+    }
+    request->flags = ATA_R_CONTROL;
+    request->dev = dev;
+    request->timeout = ATA_REQUEST_TIMEOUT;
+    request->retries = 1;
+    request->callback = ad_power_callback;
+    request->u.ata.command = ATA_STANDBY_IMMEDIATE;
+    ata_queue_request(request);
+}
+
+
 static void 
 ad_strategy(struct bio *bp)
 {
     device_t dev =  bp->bio_disk->d_drv1;
     struct ata_device *atadev = device_get_softc(dev);
     struct ata_request *request;
+
+    if (atadev->spindown != 0)
+	callout_reset(&atadev->spindown_timer, hz * atadev->spindown,
+	    ad_spindown, dev);
 
     if (!(request = ata_alloc_request())) {
 	device_printf(dev, "FAILURE - out of memory in start\n");
@@ -244,7 +293,13 @@ ad_strategy(struct bio *bp)
     request->dev = dev;
     request->bio = bp;
     request->callback = ad_done;
-    request->timeout = 10;
+    if (atadev->spindown_state) {
+	device_printf(dev, "request while spun down, starting.\n");
+	atadev->spindown_state = 0;
+	request->timeout = MAX(ATA_REQUEST_TIMEOUT, 31);
+    } else {
+	request->timeout = ATA_REQUEST_TIMEOUT;
+    }
     request->retries = 2;
     request->data = bp->bio_data;
     request->bytecount = bp->bio_bcount;
@@ -274,6 +329,12 @@ ad_strategy(struct bio *bp)
 	    request->u.ata.command = ATA_WRITE_MUL;
 	else
 	    request->u.ata.command = ATA_WRITE;
+	break;
+    case BIO_DELETE:
+	request->flags = ATA_R_CONTROL;
+	request->u.ata.command = ATA_CFA_ERASE;
+	request->transfersize = 0;
+	request->donecount = bp->bio_bcount;
 	break;
     case BIO_FLUSH:
 	request->u.ata.lba = 0;
@@ -361,7 +422,7 @@ ad_init(device_t dev)
 
     /* use multiple sectors/interrupt if device supports it */
     if (ad_version(atadev->param.version_major)) {
-	int secsperint = max(1, min(atadev->param.sectors_intr, 16));
+	int secsperint = max(1, min(atadev->param.sectors_intr & 0xff, 16));
 
 	if (!ata_controlcmd(dev, ATA_SET_MULTI, 0, 0, secsperint))
 	    atadev->max_iosize = secsperint * DEV_BSIZE;

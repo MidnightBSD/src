@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/ata-all.h,v 1.124.2.1.2.1 2008/01/09 08:55:10 delphij Exp $
+ * $FreeBSD: src/sys/dev/ata/ata-all.h,v 1.124.2.7 2009/11/10 22:56:05 mav Exp $
  */
 
 /* ATA register defines */
@@ -309,6 +309,10 @@ struct ata_ahci_cmd_list {
 #define ATA_OP_FINISHED                 1
 #define ATA_MAX_28BIT_LBA               268435455UL
 
+#ifndef	ATA_REQUEST_TIMEOUT
+#define	ATA_REQUEST_TIMEOUT		10
+#endif
+
 /* structure used for composite atomic operations */
 #define MAX_COMPOSITES          32              /* u_int32_t bits */
 struct ata_composite {
@@ -404,6 +408,9 @@ struct ata_device {
     struct ata_params           param;          /* ata param structure */
     int                         mode;           /* current transfermode */
     u_int32_t                   max_iosize;     /* max IO size */
+    int				spindown;	/* idle spindown timeout */
+    struct callout              spindown_timer;
+    int                         spindown_state;
     int                         flags;
 #define         ATA_D_USE_CHS           0x0001
 #define         ATA_D_MEDIA_CHANGED     0x0002
@@ -522,7 +529,8 @@ extern int (*ata_raid_ioctl_func)(u_long cmd, caddr_t data);
 extern struct intr_config_hook *ata_delayed_attach;
 extern devclass_t ata_devclass;
 extern int ata_wc;
- 
+extern int ata_dma_check_80pin;
+
 /* public prototypes */
 /* ata-all.c: */
 int ata_probe(device_t dev);
@@ -531,7 +539,7 @@ int ata_detach(device_t dev);
 int ata_reinit(device_t dev);
 int ata_suspend(device_t dev);
 int ata_resume(device_t dev);
-int ata_interrupt(void *data);
+void ata_interrupt(void *data);
 int ata_device_ioctl(device_t dev, u_long cmd, caddr_t data);
 int ata_identify(device_t dev);
 void ata_default_registers(device_t dev);
@@ -580,56 +588,34 @@ MALLOC_DECLARE(M_ATA);
 
 /* macros to hide busspace uglyness */
 #define ATA_INB(res, offset) \
-	bus_space_read_1(rman_get_bustag((res)), \
-			 rman_get_bushandle((res)), (offset))
+	bus_read_1((res), (offset))
 
 #define ATA_INW(res, offset) \
-	bus_space_read_2(rman_get_bustag((res)), \
-			 rman_get_bushandle((res)), (offset))
+	bus_read_2((res), (offset))
 #define ATA_INL(res, offset) \
-	bus_space_read_4(rman_get_bustag((res)), \
-			 rman_get_bushandle((res)), (offset))
+	bus_read_4((res), (offset))
 #define ATA_INSW(res, offset, addr, count) \
-	bus_space_read_multi_2(rman_get_bustag((res)), \
-			       rman_get_bushandle((res)), \
-			       (offset), (addr), (count))
+	bus_read_multi_2((res), (offset), (addr), (count))
 #define ATA_INSW_STRM(res, offset, addr, count) \
-	bus_space_read_multi_stream_2(rman_get_bustag((res)), \
-				      rman_get_bushandle((res)), \
-				      (offset), (addr), (count))
+	bus_read_multi_stream_2((res), (offset), (addr), (count))
 #define ATA_INSL(res, offset, addr, count) \
-	bus_space_read_multi_4(rman_get_bustag((res)), \
-			       rman_get_bushandle((res)), \
-			       (offset), (addr), (count))
+	bus_read_multi_4((res), (offset), (addr), (count))
 #define ATA_INSL_STRM(res, offset, addr, count) \
-	bus_space_read_multi_stream_4(rman_get_bustag((res)), \
-				      rman_get_bushandle((res)), \
-				      (offset), (addr), (count))
+	bus_read_multi_stream_4((res), (offset), (addr), (count))
 #define ATA_OUTB(res, offset, value) \
-	bus_space_write_1(rman_get_bustag((res)), \
-			  rman_get_bushandle((res)), (offset), (value))
+	bus_write_1((res), (offset), (value))
 #define ATA_OUTW(res, offset, value) \
-	bus_space_write_2(rman_get_bustag((res)), \
-			  rman_get_bushandle((res)), (offset), (value))
+	bus_write_2((res), (offset), (value))
 #define ATA_OUTL(res, offset, value) \
-	bus_space_write_4(rman_get_bustag((res)), \
-			  rman_get_bushandle((res)), (offset), (value))
+	bus_write_4((res), (offset), (value))
 #define ATA_OUTSW(res, offset, addr, count) \
-	bus_space_write_multi_2(rman_get_bustag((res)), \
-				rman_get_bushandle((res)), \
-				(offset), (addr), (count))
+	bus_write_multi_2((res), (offset), (addr), (count))
 #define ATA_OUTSW_STRM(res, offset, addr, count) \
-	bus_space_write_multi_stream_2(rman_get_bustag((res)), \
-				       rman_get_bushandle((res)), \
-				       (offset), (addr), (count))
+	bus_write_multi_stream_2((res), (offset), (addr), (count))
 #define ATA_OUTSL(res, offset, addr, count) \
-	bus_space_write_multi_4(rman_get_bustag((res)), \
-				rman_get_bushandle((res)), \
-				(offset), (addr), (count))
+	bus_write_multi_4((res), (offset), (addr), (count))
 #define ATA_OUTSL_STRM(res, offset, addr, count) \
-	bus_space_write_multi_stream_4(rman_get_bustag((res)), \
-				       rman_get_bushandle((res)), \
-				       (offset), (addr), (count))
+	bus_write_multi_stream_4((res), (offset), (addr), (count))
 
 #define ATA_IDX_INB(ch, idx) \
 	ATA_INB(ch->r_io[idx].res, ch->r_io[idx].offset)

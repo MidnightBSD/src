@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ata/atapi-cd.c,v 1.7 2008/12/02 02:32:16 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/atapi-cd.c,v 1.193.2.2 2007/11/21 21:15:00 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/atapi-cd.c,v 1.193.2.5 2009/12/20 01:38:21 marius Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -219,7 +219,10 @@ acd_geom_ioctl(struct g_provider *pp, u_long cmd, void *addr, int fflag, struct 
 	case CDIOCRESET:
 	    acd_test_ready(dev);
 	    break;
-	   
+
+	case DIOCGPROVIDERALIAS:
+	    break;
+
 	default:
 	    acd_read_toc(dev);
 	    acd_prevent_allow(dev, 1);
@@ -397,10 +400,12 @@ acd_geom_ioctl(struct g_provider *pp, u_long cmd, void *addr, int fflag, struct 
 	}
 	break;
 
+#if __FreeBSD_version > 600008
     case CDIOCREADSUBCHANNEL_SYSSPACE:
 	nocopyout = 1;
 	/* FALLTHROUGH */
 
+#endif
     case CDIOCREADSUBCHANNEL:
 	{
 	    struct ioc_read_subchannel *args =
@@ -699,7 +704,7 @@ acd_geom_access(struct g_provider *pp, int dr, int dw, int de)
 	request->dev = dev;
 	bcopy(ccb, request->u.atapi.ccb, 16);
 	request->flags = ATA_R_ATAPI;
-	request->timeout = 5;
+	request->timeout = ATA_REQUEST_TIMEOUT;
 	ata_queue_request(request);
 	if (!request->error &&
 	    (request->u.atapi.sense.key == 2 ||
@@ -1207,6 +1212,7 @@ acd_read_track_info(device_t dev, int32_t lba, struct acd_track_info *info)
     if ((error = ata_atapicmd(dev, ccb, (caddr_t)info, sizeof(*info),
 			      ATA_R_READ, 30)))
 	return error;
+    info->data_length = ntohs(info->data_length);
     info->track_start_addr = ntohl(info->track_start_addr);
     info->next_writeable_addr = ntohl(info->next_writeable_addr);
     info->free_blocks = ntohl(info->free_blocks);
@@ -1645,12 +1651,17 @@ acd_get_cap(device_t dev)
     for (count = 0 ; count < 5 ; count++) {
 	if (!ata_atapicmd(dev, ccb, (caddr_t)&cdp->cap, sizeof(cdp->cap),
 			  ATA_R_READ | ATA_R_QUIET, 5)) {
+	    cdp->cap.data_length = ntohs(cdp->cap.data_length);
+	    cdp->cap.blk_desc_len = ntohs(cdp->cap.blk_desc_len);
+	    cdp->cap.media = ntohs(cdp->cap.media);
+	    cdp->cap.capabilities = ntohs(cdp->cap.capabilities);
 	    cdp->cap.max_read_speed = ntohs(cdp->cap.max_read_speed);
+	    cdp->cap.max_vol_levels = ntohs(cdp->cap.max_vol_levels);
+	    cdp->cap.buf_size = ntohs(cdp->cap.buf_size);
 	    cdp->cap.cur_read_speed = ntohs(cdp->cap.cur_read_speed);
 	    cdp->cap.max_write_speed = ntohs(cdp->cap.max_write_speed);
 	    cdp->cap.cur_write_speed = max(ntohs(cdp->cap.cur_write_speed),177);
-	    cdp->cap.max_vol_levels = ntohs(cdp->cap.max_vol_levels);
-	    cdp->cap.buf_size = ntohs(cdp->cap.buf_size);
+	    cdp->cap.copy_protect_rev = ntohs(cdp->cap.copy_protect_rev);
 	}
     }
 }

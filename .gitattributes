@@ -31904,8 +31904,10 @@ sys/dev/ata/ata-lowlevel.c -text
 sys/dev/ata/ata-pci.c -text
 sys/dev/ata/ata-pci.h -text
 sys/dev/ata/ata-queue.c -text
+sys/dev/ata/ata-raid-ddf.h -text
 sys/dev/ata/ata-raid.c -text
 sys/dev/ata/ata-raid.h -text
+sys/dev/ata/ata-usb.c -text
 sys/dev/ata/ata_if.m -text
 sys/dev/ata/atapi-cam.c -text
 sys/dev/ata/atapi-cd.c -text

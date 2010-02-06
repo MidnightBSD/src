@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2003 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2003 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/ata-pci.h,v 1.49.2.10 2006/09/30 14:51:49 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/ata-pci.h,v 1.81.2.11 2009/10/21 16:12:09 mav Exp $
  */
 
 /* structure holding chipset config info */
@@ -60,6 +60,7 @@ struct ata_pci_controller {
     void                (*function)(void *);
     void                *argument;
     } interrupt[8];     /* XXX SOS max ch# for now */
+    void                *chipset_data;
 };
 
 /* structure for SATA connection update hotplug/hotswap support */
@@ -81,14 +82,6 @@ struct ata_connect_task {
 #define ATA_ATP865A             0x00081191
 #define ATA_ATP865R             0x00091191
 
-#define ATA_AMD_ID              0x1022
-#define ATA_AMD755              0x74011022
-#define ATA_AMD756              0x74091022
-#define ATA_AMD766              0x74111022
-#define ATA_AMD768              0x74411022
-#define ATA_AMD8111             0x74691022
-#define ATA_AMD5536             0x209a1022
-
 #define ATA_ACER_LABS_ID        0x10b9
 #define ATA_ALI_1533            0x153310b9
 #define ATA_ALI_5229            0x522910b9
@@ -97,17 +90,28 @@ struct ata_connect_task {
 #define ATA_ALI_5288            0x528810b9
 #define ATA_ALI_5289            0x528910b9
 
+#define ATA_AMD_ID              0x1022
+#define ATA_AMD755              0x74011022
+#define ATA_AMD756              0x74091022
+#define ATA_AMD766              0x74111022
+#define ATA_AMD768              0x74411022
+#define ATA_AMD8111             0x74691022
+#define ATA_AMD5536             0x209a1022
+
+#define ATA_ADAPTEC_ID          0x9005
+#define ATA_ADAPTEC_1420        0x02419005
+
 #define ATA_ATI_ID              0x1002
 #define ATA_ATI_IXP200          0x43491002
 #define ATA_ATI_IXP300          0x43691002
-#define ATA_ATI_IXP400          0x43761002
 #define ATA_ATI_IXP300_S1       0x436e1002
+#define ATA_ATI_IXP400          0x43761002
 #define ATA_ATI_IXP400_S1       0x43791002
 #define ATA_ATI_IXP400_S2       0x437a1002
-#define ATA_ATI_IXP600_S1       0x43801002
 #define ATA_ATI_IXP600          0x438c1002
-#define ATA_ATI_IXP700_S1       0x43901002
+#define ATA_ATI_IXP600_S1       0x43801002
 #define ATA_ATI_IXP700          0x439c1002
+#define ATA_ATI_IXP700_S1       0x43901002
 
 #define ATA_CENATEK_ID          0x16ca
 #define ATA_CENATEK_ROCKET      0x000116ca
@@ -171,20 +175,30 @@ struct ata_connect_task {
 #define ATA_I82801HB_R1         0x28228086
 #define ATA_I82801HB_AH4        0x28248086
 #define ATA_I82801HB_S2         0x28258086
-#define ATA_I82801HBM_S3        0x28298086
-#define ATA_I82801HBM_S2        0x282a8086
-#define ATA_I82801HBM_S1        0x28288086
 #define ATA_I82801HBM           0x28508086
+#define ATA_I82801HBM_S1        0x28288086
+#define ATA_I82801HBM_S2        0x28298086
+#define ATA_I82801HBM_S3        0x282a8086
 #define ATA_I82801IB_S1         0x29208086
 #define ATA_I82801IB_AH2        0x29218086
 #define ATA_I82801IB_AH6        0x29228086
 #define ATA_I82801IB_AH4        0x29238086
+#define ATA_I82801IB_R1         0x29258086
 #define ATA_I82801IB_S2         0x29268086
+#define ATA_I82801JIB_S1        0x3a208086
+#define ATA_I82801JIB_AH        0x3a228086
+#define ATA_I82801JIB_R1        0x3a258086
+#define ATA_I82801JIB_S2        0x3a268086
+#define ATA_I82801JD_S1         0x3a008086
+#define ATA_I82801JD_AH         0x3a028086
+#define ATA_I82801JD_R1         0x3a058086
+#define ATA_I82801JD_S2         0x3a068086
 #define ATA_I31244              0x32008086
 
 #define ATA_ITE_ID              0x1283
 #define ATA_IT8211F             0x82111283
 #define ATA_IT8212F             0x82121283
+#define ATA_IT8213F             0x82131283
 
 #define ATA_JMICRON_ID          0x197b
 #define ATA_JMB360              0x2360197b
@@ -202,6 +216,7 @@ struct ata_connect_task {
 #define ATA_M88SX6041           0x604111ab
 #define ATA_M88SX6081           0x608111ab
 #define ATA_M88SX6101           0x610111ab
+#define ATA_M88SX6121           0x612111ab
 #define ATA_M88SX6145           0x614511ab
 
 #define ATA_MICRON_ID           0x1042
@@ -235,13 +250,37 @@ struct ata_connect_task {
 #define ATA_NFORCE_MCP55        0x036e10de
 #define ATA_NFORCE_MCP55_S1     0x037e10de
 #define ATA_NFORCE_MCP55_S2     0x037f10de
-#define ATA_NFORCE_MCP61        0x03ec10de 
-#define ATA_NFORCE_MCP61_S1     0x03f610de 
+#define ATA_NFORCE_MCP61        0x03ec10de
+#define ATA_NFORCE_MCP61_S1     0x03e710de
 #define ATA_NFORCE_MCP61_S2     0x03f610de
 #define ATA_NFORCE_MCP61_S3     0x03f710de
 #define ATA_NFORCE_MCP65        0x044810de
+#define ATA_NFORCE_MCP67_A0     0x055010de
+#define ATA_NFORCE_MCP67_A1     0x055110de
+#define ATA_NFORCE_MCP67_A2     0x055210de
+#define ATA_NFORCE_MCP67_A3     0x055310de
+#define ATA_NFORCE_MCP67_A4     0x055410de
+#define ATA_NFORCE_MCP67_A5     0x055510de
+#define ATA_NFORCE_MCP67_A6     0x055610de
+#define ATA_NFORCE_MCP67_A7     0x055710de
+#define ATA_NFORCE_MCP67_A8     0x055810de
+#define ATA_NFORCE_MCP67_A9     0x055910de
+#define ATA_NFORCE_MCP67_AA     0x055A10de
+#define ATA_NFORCE_MCP67_AB     0x055B10de
 #define ATA_NFORCE_MCP67        0x056010de
 #define ATA_NFORCE_MCP73        0x056c10de
+#define ATA_NFORCE_MCP73_A0     0x07f010de
+#define ATA_NFORCE_MCP73_A1     0x07f110de
+#define ATA_NFORCE_MCP73_A2     0x07f210de
+#define ATA_NFORCE_MCP73_A3     0x07f310de
+#define ATA_NFORCE_MCP73_A4     0x07f410de
+#define ATA_NFORCE_MCP73_A5     0x07f510de
+#define ATA_NFORCE_MCP73_A6     0x07f610de
+#define ATA_NFORCE_MCP73_A7     0x07f710de
+#define ATA_NFORCE_MCP73_A8     0x07f810de
+#define ATA_NFORCE_MCP73_A9     0x07f910de
+#define ATA_NFORCE_MCP73_AA     0x07fa10de
+#define ATA_NFORCE_MCP73_AB     0x07fb10de
 #define ATA_NFORCE_MCP77        0x075910de
 
 #define ATA_PROMISE_ID          0x105a
@@ -304,6 +343,7 @@ struct ata_connect_task {
 #define ATA_SII3112_1           0x02401095
 #define ATA_SII3124		0x31241095
 #define ATA_SII3132		0x31321095
+#define ATA_SII3132_1		0x02421095
 #define ATA_SII0680             0x06801095
 #define ATA_CMD646              0x06461095
 #define ATA_CMD648              0x06481095
@@ -388,6 +428,10 @@ struct ata_connect_task {
 #define ALINEW          0x02
 #define ALISATA         0x04
 
+#define ATIPATA		0x01
+#define ATISATA		0x02
+#define ATIAHCI		0x04
+
 #define HPT366          0
 #define HPT370          1
 #define HPT372          2
@@ -443,11 +487,11 @@ struct ata_connect_task {
 #define NVIDIA          0x0004
 #define NV4             0x0010
 #define NVQ             0x0020
+#define NVAHCI          0x0040
 #define VIACLK          0x0100
 #define VIABUG          0x0200
 #define VIABAR          0x0400
 #define VIAAHCI         0x0800
-#define ATISINGLE       0x1000
 
 
 /* global prototypes ata-pci.c */
@@ -471,6 +515,7 @@ int ata_ahci_ident(device_t);
 int ata_acard_ident(device_t);
 int ata_ali_ident(device_t);
 int ata_amd_ident(device_t);
+int ata_adaptec_ident(device_t);
 int ata_ati_ident(device_t);
 int ata_cyrix_ident(device_t);
 int ata_cypress_ident(device_t);

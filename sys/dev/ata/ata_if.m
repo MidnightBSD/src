@@ -1,3 +1,5 @@
+# $MidnightBSD$
+# -
 # Copyright (c) 2004 - 2007 Søren Schmidt <sos@FreeBSD.org>
 # All rights reserved.
 #

@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-queue.c,v 1.50.2.2 2006/01/25 08:13:45 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-queue.c,v 1.69.2.2 2009/11/10 22:56:05 mav Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -56,6 +56,7 @@ ata_queue_request(struct ata_request *request)
 
     /* treat request as virgin (this might be an ATA_R_REQUEUE) */
     request->result = request->status = request->error = 0;
+
     /* check that that the device is still valid */
     if (!(request->parent = device_get_parent(request->dev))) {
 	request->result = ENXIO;
@@ -119,6 +120,7 @@ int
 ata_controlcmd(device_t dev, u_int8_t command, u_int16_t feature,
 	       u_int64_t lba, u_int16_t count)
 {
+    struct ata_device *atadev = device_get_softc(dev);
     struct ata_request *request = ata_alloc_request();
     int error = ENOMEM;
 
@@ -129,7 +131,13 @@ ata_controlcmd(device_t dev, u_int8_t command, u_int16_t feature,
 	request->u.ata.count = count;
 	request->u.ata.feature = feature;
 	request->flags = ATA_R_CONTROL;
-	request->timeout = 1;
+	if (atadev->spindown_state) {
+	    device_printf(dev, "request while spun down, starting.\n");
+	    atadev->spindown_state = 0;
+	    request->timeout = MAX(ATA_REQUEST_TIMEOUT, 31);
+	} else {
+	    request->timeout = ATA_REQUEST_TIMEOUT;
+	}
 	request->retries = 0;
 	ata_queue_request(request);
 	error = request->result;
@@ -214,8 +222,10 @@ ata_start(device_t dev)
 		if (dumping) {
 		    mtx_unlock(&ch->state_mtx);
 		    mtx_unlock(&ch->queue_mtx);
-		    while (!ata_interrupt(ch))
+		    while (ch->running) {
+			ata_interrupt(ch);
 			DELAY(10);
+		    }
 		    return;
 		}       
 	    }
@@ -387,7 +397,7 @@ ata_completed(void *context, int dummy)
 	    request->bytecount = sizeof(struct atapi_sense);
 	    request->donecount = 0;
 	    request->transfersize = sizeof(struct atapi_sense);
-	    request->timeout = 10;
+	    request->timeout = ATA_REQUEST_TIMEOUT;
 	    request->flags &= (ATA_R_ATAPI | ATA_R_QUIET | ATA_R_DEBUG);
 	    request->flags |= (ATA_R_READ | ATA_R_AT_HEAD | ATA_R_REQUEUE);
 	    ATA_DEBUG_RQ(request, "autoissue request sense");

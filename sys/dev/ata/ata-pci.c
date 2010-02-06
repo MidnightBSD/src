@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.121.2.2 2007/11/21 21:15:00 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.121.2.5 2009/12/09 17:23:08 mav Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -77,12 +77,6 @@ ata_pci_probe(device_t dev)
     if (pci_get_class(dev) != PCIC_STORAGE)
 	return ENXIO;
 
-    /* if this is an AHCI chipset grab it */
-    if (pci_get_subclass(dev) == PCIS_STORAGE_SATA) {
-	if (!ata_ahci_ident(dev))
-	    return ATA_PROBE_OK;
-    }
-
     /* run through the vendor specific drivers */
     switch (pci_get_vendor(dev)) {
     case ATA_ACARD_ID: 
@@ -95,6 +89,10 @@ ata_pci_probe(device_t dev)
 	break;
     case ATA_AMD_ID:
 	if (!ata_amd_ident(dev))
+	    return ATA_PROBE_OK;
+	break;
+    case ATA_ADAPTEC_ID:
+	if (!ata_adaptec_ident(dev))
 	    return ATA_PROBE_OK;
 	break;
     case ATA_ATI_ID:
@@ -177,6 +175,12 @@ ata_pci_probe(device_t dev)
 	    return ATA_PROBE_OK;
 	}
 	break;
+    }
+
+    /* if this is an AHCI chipset grab it */
+    if (pci_get_subclass(dev) == PCIS_STORAGE_SATA) {
+	if (!ata_ahci_ident(dev))
+	    return ATA_PROBE_OK;
     }
 
     /* unknown chipset, try generic DMA if it seems possible */
@@ -442,8 +446,7 @@ ata_pci_status(device_t dev)
 		    (ch->dma->flags & ATA_DMA_ACTIVE))) {
 	int bmstat = ATA_IDX_INB(ch, ATA_BMSTAT_PORT) & ATA_BMSTAT_MASK;
 
-	if ((bmstat & (ATA_BMSTAT_ACTIVE | ATA_BMSTAT_INTERRUPT)) !=
-	    ATA_BMSTAT_INTERRUPT)
+	if ((bmstat & ATA_BMSTAT_INTERRUPT) == 0)
 	    return 0;
 	ATA_IDX_OUTB(ch, ATA_BMSTAT_PORT, bmstat & ~ATA_BMSTAT_ERROR);
 	DELAY(1);
@@ -518,6 +521,7 @@ ata_pcivendor2str(device_t dev)
     case ATA_ACARD_ID:          return "Acard";
     case ATA_ACER_LABS_ID:      return "AcerLabs";
     case ATA_AMD_ID:            return "AMD";
+    case ATA_ADAPTEC_ID:        return "Adaptec";
     case ATA_ATI_ID:            return "ATI";
     case ATA_CYRIX_ID:          return "Cyrix";
     case ATA_CYPRESS_ID:        return "Cypress";
