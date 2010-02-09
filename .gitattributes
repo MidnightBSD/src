@@ -39558,6 +39558,9 @@ usr.sbin/mountd/pathnames.h -text
 usr.sbin/moused/Makefile -text
 usr.sbin/moused/moused.8 -text
 usr.sbin/moused/moused.c -text
+usr.sbin/mport/Makefile -text
+usr.sbin/mport/mport.1 -text
+usr.sbin/mport/mport.c -text
 usr.sbin/mptable/Makefile -text
 usr.sbin/mptable/mptable.1 -text
 usr.sbin/mptable/mptable.c -text
