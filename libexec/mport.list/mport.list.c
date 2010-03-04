@@ -24,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.1 2010/03/04 01:09:58 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.2 2010/03/04 01:12:27 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.1 2010/03/04 01:09:58 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.2 2010/03/04 01:12:27 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -42,6 +42,7 @@ __MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.1 2010/03/04 01:
 #include <mport.h>
 
 static void usage(void);
+static char * str_remove( const char *str, const char ch );
 
 int main(int argc, char *argv[]) 
 {
@@ -49,7 +50,8 @@ int main(int argc, char *argv[])
   mportInstance *mport;
   mportPackageMeta **packs;
   bool quiet = false;
-  bool version = false;
+  bool verbose = false;
+  char *comment;
 
   if (argc > 2)
     usage();
@@ -60,7 +62,7 @@ int main(int argc, char *argv[])
         quiet = true;
         break;
       case 'v':
-        version = true;
+        verbose = true;
         break;
       case '?':
       default:
@@ -91,10 +93,15 @@ int main(int argc, char *argv[])
   }
   
   while (*packs != NULL) {
-    if (version)
-      (void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
-    else
+    if (verbose) {
+      comment = str_remove((*packs)->comment, '\\');
+      (void) printf("%s-%s\t%s\n", (*packs)->name, (*packs)->version, comment);
+      free(comment);
+    }
+    else if (quiet)
       (void) printf("%s\n", (*packs)->name);
+    else
+      (void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
     packs++;
   }
 
@@ -102,6 +109,32 @@ int main(int argc, char *argv[])
   
   return 0;
 }
+
+
+static char * str_remove( const char *str, const char ch )
+{
+   size_t i;
+   size_t x;
+   size_t len;
+   char *output;
+
+   if (str == NULL)
+       return NULL;
+
+  len = strlen(str);
+
+   output = calloc(len, sizeof(char));
+
+   for (i = 0, x = 0; i < len; i++) {
+      if (str[i] != ch) {
+          output[x] = str[i];
+          x++;
+      }
+    }
+    output[len -1] = '\0';
+
+    return output;
+} 
 
 
 static void usage() 
