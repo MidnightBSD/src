@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.2 2009/06/05 00:02:22 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.3 2010/03/04 00:58:52 laffer1 Exp $
  */
 
 
@@ -219,7 +219,7 @@ MPORT_PUBLIC_API int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta *
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages") != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages ORDER BY pkg, version") != MPORT_OK)
     RETURN_CURRENT_ERROR;
    
   ret = populate_vec_from_stmt(ref, len, db, stmt);
