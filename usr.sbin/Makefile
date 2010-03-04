@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.21 2009/11/28 22:44:35 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.22 2010/01/16 17:09:55 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -95,6 +95,7 @@ SUBDIR=	ac \
 	mount_portalfs \
 	${_mount_smbfs} \
 	moused \
+	mport \
 	${_mptable} \
 	mrouted \
 	mtest \
