@@ -4,7 +4,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.1 2010/02/09 01:41:45 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.2 2010/03/04 02:03:08 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +39,7 @@ main(int argc, char *argv[]) {
 		asprintf(&buf, "%s%s %s",
 			MPORT_TOOLS_PATH,
 			"delete",
-			argv[3]);
+			argv[2]);
         } else if (!strcmp(argv[1], "list")) {
 		asprintf(&buf, "%s%s",
                         MPORT_TOOLS_PATH,
