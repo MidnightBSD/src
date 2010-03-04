@@ -24,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.query/mport.query.c,v 1.3 2009/06/05 00:08:09 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.1 2010/03/04 01:09:58 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.query/mport.query.c,v 1.3 2009/06/05 00:08:09 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.1 2010/03/04 01:09:58 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
   
   while (*packs != NULL) {
     if (version)
-      (void) printf("%s\t%s\n", (*packs)->name, (*packs)->version);
+      (void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
     else
       (void) printf("%s\n", (*packs)->name);
     packs++;
