@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.10 2008/04/26 17:59:26 ctriv Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.12 2009/06/05 00:02:21 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -117,6 +117,7 @@ mportPackageMeta * mport_pkgmeta_new(void);
 void mport_pkgmeta_free(mportPackageMeta *);
 void mport_pkgmeta_vec_free(mportPackageMeta **);
 int mport_pkgmeta_search_master(mportInstance *, mportPackageMeta ***, const char *, ...);
+int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref);
 int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 

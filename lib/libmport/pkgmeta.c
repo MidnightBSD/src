@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2010 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.10 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.2 2009/06/05 00:02:22 laffer1 Exp $
  */
 
 
@@ -188,6 +189,46 @@ MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPack
   
   return ret;
 }
+
+
+/* int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
+ *
+ * List all packages currently installed
+ * 
+ * pack is set to NULL and MPORT_OK is returned if no packages where found.
+ */
+MPORT_PUBLIC_API int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
+{
+  sqlite3_stmt *stmt;
+  int ret, len;
+  sqlite3 *db = mport->db;
+  
+  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  if (sqlite3_step(stmt) != SQLITE_ROW) {
+    sqlite3_finalize(stmt);
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+  }
+   
+  len = sqlite3_column_int(stmt, 0);
+  sqlite3_finalize(stmt);
+
+  if (len == 0) {
+    *ref = NULL;
+    return MPORT_OK;
+  }
+
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+   
+  ret = populate_vec_from_stmt(ref, len, db, stmt);
+
+  sqlite3_finalize(stmt);
+ 
+  return ret;
+}
+
 
 
 /* mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec)
