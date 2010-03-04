@@ -4,7 +4,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.1 2010/02/09 01:41:45 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@ main(int argc, char *argv[]) {
 	if (argc < 2)
 		usage();
 
-	if (!strcmp(argv[2], "install")) {
+	if (!strcmp(argv[1], "install")) {
 		asprintf(&buf, "%s%s %s%s%s",
 			MPORT_TOOLS_PATH,
 			"install",
@@ -34,15 +34,21 @@ main(int argc, char *argv[]) {
 #else
 			"sparc64",
 #endif
-			argv[3]); 	
-	} else if (!strcmp(argv[2], "delete")) {
+			argv[2]); 	
+	} else if (!strcmp(argv[1], "delete")) {
 		asprintf(&buf, "%s%s %s",
 			MPORT_TOOLS_PATH,
 			"delete",
 			argv[3]);
+        } else if (!strcmp(argv[1], "list")) {
+		asprintf(&buf, "%s%s",
+                        MPORT_TOOLS_PATH,
+                        "mport.list -v");
 	} else {
 		usage();
 	}
+
+	system(buf);
 
 	return 0;
 }
@@ -53,6 +59,7 @@ usage(void) {
 		"usage: mport <command> args:\n"
 		"       mport delete [package name]\n"
 		"       mport install [package name]\n"
+		"       mport list\n"
 	);
 	exit(1);
 } 
