@@ -26700,6 +26700,8 @@ libexec/mport.init/Makefile -text
 libexec/mport.init/mport.init.c -text
 libexec/mport.install/Makefile -text
 libexec/mport.install/mport.install.c -text
+libexec/mport.list/Makefile -text
+libexec/mport.list/mport.list.c -text
 libexec/mport.merge/Makefile -text
 libexec/mport.merge/mport.merge.c -text
 libexec/mport.query/Makefile -text
