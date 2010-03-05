@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/i386/cpufreq/est.c,v 1.10 2010/03/05 04:36:59 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/i386/cpufreq/est.c,v 1.11 2010/03/05 04:43:31 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Colin Percival
  * Copyright (c) 2005 Nate Lawson
@@ -1032,14 +1032,17 @@ est_attach(device_t dev)
 static int
 est_detach(device_t dev)
 {
-#if 0
 	struct est_softc *sc;
+	int error;
+
+	error = cpufreq_unregister(dev);
+	if (error)
+		return (error);
 
 	sc = device_get_softc(dev);
 	if (sc->acpi_settings)
 		free(sc->freq_list, M_DEVBUF);
-#endif
-	return (ENXIO);
+	return (0);
 }
 
 /*
