@@ -33926,6 +33926,7 @@ sys/i386/conf/PAE -text
 sys/i386/conf/XBOX -text
 sys/i386/conf/ZFS -text
 sys/i386/cpufreq/est.c -text
+sys/i386/cpufreq/hwpstate.c -text
 sys/i386/cpufreq/p4tcc.c -text
 sys/i386/cpufreq/powernow.c -text
 sys/i386/cpufreq/smist.c -text
