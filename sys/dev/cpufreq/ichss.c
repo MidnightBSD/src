@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/cpufreq/ichss.c,v 1.2 2010/03/05 03:45:57 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/cpufreq/ichss.c,v 1.3 2010/03/05 03:48:39 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Nate Lawson (SDG)
  * All rights reserved.
@@ -182,7 +182,7 @@ ichss_identify(driver_t *driver, device_t parent)
 	}
 	DPRINT("ichss: PMBASE is %#x\n", pmbase);
 
-	child = BUS_ADD_CHILD(parent, 0, "ichss", 0);
+	child = BUS_ADD_CHILD(parent, 20, "ichss", 0);
 	if (child == NULL) {
 		device_printf(parent, "add SpeedStep child failed\n");
 		return;
