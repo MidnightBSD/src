@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/coretemp/coretemp.c,v 1.3 2009/07/11 12:19:33 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -141,6 +141,11 @@ coretemp_attach(device_t dev)
 	cpu_model += ((cpu_id >> 16) & 0xf) << 4;
 	cpu_mask = cpu_id & 15;
 
+#if 0 /*
+       * XXXrpaulo: I have this CPU model and when it returns from C3
+       * coretemp continues to function properly.
+       */
+	 
 	/*
 	 * Some CPUs, namely the PIII, don't have thermal sensors, but
 	 * report them when the CPUID check is performed in
@@ -166,6 +171,7 @@ coretemp_attach(device_t dev)
 			return (ENXIO);
 		}
 	}
+#endif
 	/*
 	 * On some Core 2 CPUs, there's an undocumented MSR that
 	 * can tell us if Tj(max) is 100 or 85.
