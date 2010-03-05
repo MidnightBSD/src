@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Bruno Ducrot
  * Copyright (c) 2004 FUKUDA Nobuhiko <nfukuda@spa.is.uec.ac.jp>
@@ -983,6 +984,5 @@ static int
 pn_detach(device_t dev)
 {
 
-	cpufreq_unregister(dev);
-	return (0);
+	return (cpufreq_unregister(dev));
 }
