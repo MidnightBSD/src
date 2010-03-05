@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/i386/cpufreq/powernow.c,v 1.5 2010/03/05 05:02:17 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/i386/cpufreq/powernow.c,v 1.6 2010/03/05 05:05:56 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Bruno Ducrot
  * Copyright (c) 2004 FUKUDA Nobuhiko <nfukuda@spa.is.uec.ac.jp>
@@ -868,7 +868,7 @@ pn_identify(driver_t *driver, device_t parent)
 {
 	device_t child;
 
-	if ((amd_pminfo & (AMDPM_FID | AMDPM_VID)) == 0)
+	if ((amd_pminfo & AMDPM_FID) == 0 || (amd_pminfo & AMDPM_VID) == 0)
 		return;
 	switch (cpu_id & 0xf00) {
 	case 0x600:
