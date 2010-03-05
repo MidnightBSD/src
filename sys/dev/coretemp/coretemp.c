@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/coretemp/coretemp.c,v 1.3 2009/07/11 12:19:33 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/coretemp/coretemp.c,v 1.4 2010/03/05 03:35:17 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -47,6 +47,8 @@ __FBSDID("$FreeBSD: src/sys/dev/coretemp/coretemp.c,v 1.2.4.3.2.1 2008/11/25 02:
 #include <machine/specialreg.h>
 #include <machine/cpufunc.h>
 #include <machine/md_var.h>
+
+#define	TZ_ZEROC	2732
 
 struct coretemp_softc {
 	device_t	sc_dev;
@@ -193,8 +195,8 @@ coretemp_attach(device_t dev)
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(pdev)),
 	    OID_AUTO, "temperature",
 	    CTLTYPE_INT | CTLFLAG_RD,
-	    dev, 0, coretemp_get_temp_sysctl, "I",
-	    "Current temperature in degC");
+	    dev, 0, coretemp_get_temp_sysctl, "IK",
+	    "Current temperature");
 
 	return (0);
 }
@@ -283,7 +285,7 @@ coretemp_get_temp_sysctl(SYSCTL_HANDLER_ARGS)
 	device_t dev = (device_t) arg1;
 	int temp;
 
-	temp = coretemp_get_temp(dev);
+	temp = coretemp_get_temp(dev) * 10 + TZ_ZEROC;
 
 	return (sysctl_handle_int(oidp, &temp, 0, req));
 }
