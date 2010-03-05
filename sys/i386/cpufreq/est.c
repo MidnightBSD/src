@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/i386/cpufreq/est.c,v 1.7 2010/03/05 04:26:48 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/i386/cpufreq/est.c,v 1.8 2010/03/05 04:28:06 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Colin Percival
  * Copyright (c) 2005 Nate Lawson
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/sys/i386/cpufreq/Attic/es
 
 #include "cpufreq_if.h"
 #include <machine/md_var.h>
+#include <machine/specialreg.h>
 
 #include <contrib/dev/acpica/acpi.h>
 #include <dev/acpica/acpivar.h>
@@ -947,7 +948,6 @@ static void
 est_identify(driver_t *driver, device_t parent)
 {
 	device_t child;
-	u_int p[4];
 
 	/* Make sure we're not being doubly invoked. */
 	if (device_find_child(parent, "est", -1) != NULL)
@@ -959,11 +959,9 @@ est_identify(driver_t *driver, device_t parent)
 		return;
 
 	/*
-	 * Read capability bits and check if the CPU supports EST.
-	 * This is indicated by bit 7 of ECX.
+	 * Check if the CPU supports EST.
 	 */
-	do_cpuid(1, p);
-	if ((p[2] & 0x80) == 0)
+	if (!(cpu_feature2 & CPUID2_EST))
 		return;
 
 	/*
@@ -1034,11 +1032,13 @@ est_attach(device_t dev)
 static int
 est_detach(device_t dev)
 {
+#if 0
 	struct est_softc *sc;
 
 	sc = device_get_softc(dev);
 	if (sc->acpi_settings)
 		free(sc->freq_list, M_DEVBUF);
+#endif
 	return (ENXIO);
 }
 
