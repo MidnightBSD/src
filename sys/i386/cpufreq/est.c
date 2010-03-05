@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/i386/cpufreq/est.c,v 1.6 2010/03/05 04:25:08 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/i386/cpufreq/est.c,v 1.7 2010/03/05 04:26:48 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Colin Percival
  * Copyright (c) 2005 Nate Lawson
@@ -1092,6 +1092,7 @@ est_acpi_info(device_t dev, freq_info **freqs)
 	sets = malloc(MAX_SETTINGS * sizeof(*sets), M_TEMP, M_NOWAIT);
 	if (sets == NULL)
 		return (ENOMEM);
+	count = MAX_SETTINGS;
 	error = CPUFREQ_DRV_SETTINGS(perf_dev, sets, &count);
 	if (error)
 		goto out;
