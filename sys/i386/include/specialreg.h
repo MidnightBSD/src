@@ -162,6 +162,12 @@
 #define	CPUID_LOCAL_APIC_ID	0xff000000
 
 /*
+ * AMD extended functions 8000_0007h edx info
+ */
+#define	AMDPM_FID		0x00000002
+#define	AMDPM_VID		0x00000004
+
+/*
  * AMD extended function 8000_0008h ecx info
  */
 #define	AMDID_CMP_CORES		0x000000ff
