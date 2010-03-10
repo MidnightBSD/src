@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.updepends/mport.updepends.c,v 1.2 2009/06/05 00:08:10 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.updepends/mport.updepends.c,v 1.2 2009/06/05 00:08:10 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -89,26 +89,31 @@ int main(int argc, char *argv[])
   
   if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
     warnx("%s", mport_err_string());
+    mport_instance_free(mport);
     exit(1);
   }
 
   if (packs == NULL) {
     warnx("No packages installed matching '%s'", arg);
+    mport_instance_free(mport);
     exit(3);
   }
   
   if (packs[1] != NULL) {
     warnx("Ambiguous package identifier: %s", arg);
+    mport_instance_free(mport);
     exit(3);
   }
   
   if (mport_pkgmeta_get_updepends(mport, packs[0], &depends) != MPORT_OK) {
     warnx("%s", mport_err_string());
+    mport_instance_free(mport);
     exit(1);
   }
   
   if (depends == NULL) {
     /* no depends, nothing to print. */
+    mport_instance_free(mport);
     exit(0);
   }
   
