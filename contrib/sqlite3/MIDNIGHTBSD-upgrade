@@ -1,4 +1,4 @@
-sqlite 3.6.11 - A simple, high-performance, self-contained, public domain,
+sqlite 3.6.23 - A simple, high-performance, self-contained, public domain,
 SQL database.
 
 Originals can be found at http://www.sqlite.org/
@@ -6,8 +6,8 @@ Originals can be found at http://www.sqlite.org/
 1) Download the amalgamation release
 
 2) Unpack with the xlist:
-	tar xf sqlite-amalgamation-3.6.11.tar.gz -X MIDNIGHTBSD-Xlist
+	tar xf sqlite-amalgamation-3.6.23.tar.gz -X MIDNIGHTBSD-Xlist
 
 3) Imported with:
 
-	cvs import -m "import sqlite 3.6.11 (very trimmed)" src/contrib/sqlite3 SQLite v3_6_11
+	cvs import -m "import sqlite 3.6.23 (very trimmed)" src/contrib/sqlite3 SQLite v3_6_23
