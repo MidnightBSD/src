@@ -1,9 +1,9 @@
-# $MirOS: src/bin/mksh/check.t,v 1.298 2009/08/01 21:57:52 tg Stab $
+# $MirOS: src/bin/mksh/check.t,v 1.359 2010/01/29 09:34:25 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
 #-
-# Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009
+# Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -25,7 +25,7 @@
 # http://www.research.att.com/~gsf/public/ifs.sh
 
 expected-stdout:
-	@(#)MIRBSD KSH R39 2009/08/01
+	@(#)MIRBSD KSH R39 2010/01/29
 description:
 	Check version of shell.
 stdin:
@@ -36,7 +36,7 @@ name: selftest-1
 description:
 	Regression test self-testing
 stdin:
-	print ${foo:-baz}
+	echo ${foo:-baz}
 expected-stdout:
 	baz
 ---
@@ -45,7 +45,7 @@ description:
 	Regression test self-testing
 env-setup: !foo=bar!
 stdin:
-	print ${foo:-baz}
+	echo ${foo:-baz}
 expected-stdout:
 	bar
 ---
@@ -54,7 +54,7 @@ description:
 	Regression test self-testing
 env-setup: !ENV=fnord!
 stdin:
-	print "<$ENV>"
+	echo "<$ENV>"
 expected-stdout:
 	<fnord>
 ---
@@ -220,9 +220,20 @@ expected-stdout:
 	30
 	1,j+=2
 ---
+name: arith-lazy-3
+description:
+	Check that assignments not done on non-evaluated side of ternary
+	operator and this construct is parsed correctly (Debian #445651)
+stdin:
+	x=4
+	y=$((0 ? x=1 : 2))
+	echo = $x $y =
+expected-stdout:
+	= 4 2 =
+---
 name: arith-ternary-prec-1
 description:
-	Check precidance of ternary operator vs assignment
+	Check precedence of ternary operator vs assignment
 stdin:
 	typeset -i x=2
 	y=$((1 ? 20 : x+=2))
@@ -232,7 +243,7 @@ expected-stderr-pattern:
 ---
 name: arith-ternary-prec-2
 description:
-	Check precidance of ternary operator vs assignment
+	Check precedence of ternary operator vs assignment
 stdin:
 	typeset -i x=2
 	echo $((0 ? x+=2 : 20))
@@ -263,29 +274,29 @@ description:
 	Check if unsigned arithmetics work
 stdin:
 	# signed vs unsigned
-	print x1 $((-1)) $((#-1))
+	echo x1 $((-1)) $((#-1))
 	# calculating
 	typeset -i vs
 	typeset -Ui vu
 	vs=4123456789; vu=4123456789
-	print x2 $vs $vu
+	echo x2 $vs $vu
 	(( vs %= 2147483647 ))
 	(( vu %= 2147483647 ))
-	print x3 $vs $vu
+	echo x3 $vs $vu
 	vs=4123456789; vu=4123456789
 	(( # vs %= 2147483647 ))
 	(( # vu %= 2147483647 ))
-	print x4 $vs $vu
+	echo x4 $vs $vu
 	# make sure the calculation does not change unsigned flag
 	vs=4123456789; vu=4123456789
-	print x5 $vs $vu
+	echo x5 $vs $vu
 	# short form
-	print x6 $((# vs % 2147483647)) $((# vu % 2147483647))
+	echo x6 $((# vs % 2147483647)) $((# vu % 2147483647))
 	# array refs
 	set -A va
 	va[1975973142]=right
 	va[4123456789]=wrong
-	print x7 ${va[#4123456789%2147483647]}
+	echo x7 ${va[#4123456789%2147483647]}
 expected-stdout:
 	x1 -1 4294967295
 	x2 -171510507 4123456789
@@ -300,20 +311,20 @@ description:
 	Check if arithmetics are 32 bit
 stdin:
 	# signed vs unsigned
-	print x1 $((-1)) $((#-1))
+	echo x1 $((-1)) $((#-1))
 	# calculating
 	typeset -i vs
 	typeset -Ui vu
 	vs=2147483647; vu=2147483647
-	print x2 $vs $vu
+	echo x2 $vs $vu
 	let vs++ vu++
-	print x3 $vs $vu
+	echo x3 $vs $vu
 	vs=4294967295; vu=4294967295
-	print x4 $vs $vu
+	echo x4 $vs $vu
 	let vs++ vu++
-	print x5 $vs $vu
+	echo x5 $vs $vu
 	let vs++ vu++
-	print x6 $vs $vu
+	echo x6 $vs $vu
 expected-stdout:
 	x1 -1 4294967295
 	x2 2147483647 2147483647
@@ -360,7 +371,7 @@ name: bksl-nl-ign-4
 description:
 	Check interaction of aliases, single quotes and here-documents
 	with backslash-newline
-	(don't know what posix has to say about this)
+	(don't know what POSIX has to say about this)
 stdin:
 	a=2
 	alias x='echo hi
@@ -383,7 +394,7 @@ expected-stdout:
 name: bksl-nl-ign-5
 description:
 	Check what happens with backslash at end of input
-	(the old bourne shell trashes them; so do we)
+	(the old Bourne shell trashes them; so do we)
 stdin: !
 	echo `echo foo\\`bar
 	echo hi\
@@ -583,7 +594,7 @@ name: bksl-nl-9
 description:
 	Check that \ at the end of an alias is collapsed when followed
 	by a newline
-	(don't know what posix has to say about this)
+	(don't know what POSIX has to say about this)
 stdin:
 	alias x='echo hi\'
 	x
@@ -1321,6 +1332,38 @@ expected-stdout:
 #	This is what GNU bash does:
 #	40: c/d$tp$tp_a/b$tp_*(a/b)_*($tp)
 #	41: c/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+---
+name: eglob-utf8-1
+description:
+	UTF-8 mode differences for eglobbing
+stdin:
+	s=blöd
+	set +U
+	print 1: ${s%???} .
+	print 2: ${s/b???d/x} .
+	set -U
+	print 3: ${s%???} .
+	print 4: ${s/b??d/x} .
+	x=nö
+	print 5: ${x%?} ${x%%?} .
+	x=äh
+	print 6: ${x#?} ${x##?} .
+	x=��
+	print 7: ${x%?} ${x%%?} .
+	x=mä�
+	print 8: ${x%?} ${x%%?} .
+	x=何
+	print 9: ${x%?} ${x%%?} .
+expected-stdout:
+	1: bl .
+	2: x .
+	3: b .
+	4: x .
+	5: n n .
+	6: h h .
+	7: � � .
+	8: mä mä .
+	9: .
 ---
 name: glob-bad-1
 description:
@@ -3050,13 +3093,32 @@ description:
 	The following:
 		set -- `false`
 		echo $?
-	shoud not print 0. (according to /bin/sh, AT&T ksh88, and the
-	getopt(1) man page - not according to POSIX)
+	should print 0 according to POSIX (dash, bash, ksh93, posh)
+	but not 0 according to the getopt(1) manual page, ksh88, and
+	Bourne sh (such as /bin/sh on Solaris).
+	In mksh R39b, we honour POSIX except when -o sh is set.
 stdin:
+	showf() {
+		[[ -o posix ]]; FPOSIX=$((1-$?))
+		[[ -o sh ]]; FSH=$((1-$?))
+		echo -n "FPOSIX=$FPOSIX FSH=$FSH "
+	}
+	set +o posix +o sh
+	showf
 	set -- `false`
-	echo $?
+	echo rv=$?
+	set -o sh
+	showf
+	set -- `false`
+	echo rv=$?
+	set -o posix
+	showf
+	set -- `false`
+	echo rv=$?
 expected-stdout:
-	1
+	FPOSIX=0 FSH=0 rv=0
+	FPOSIX=0 FSH=1 rv=1
+	FPOSIX=1 FSH=0 rv=0
 ---
 name: regression-11
 description:
@@ -3426,7 +3488,6 @@ stdin:
 #expected-fail: yes
 #expected-stdout:
 #	hi
-expected-fail: no
 expected-stdout:
 	
 ---
@@ -3466,21 +3527,6 @@ description:
 	this)
 stdin:
 	< /dev/null (sed 's/^/X/')
----
-name: regression-44
-description:
-	getopts sets OPTIND correctly for unparsed option
-stdin:
-	set -- -a -a -x
-	while getopts :a optc; do
-	    echo "OPTARG=$OPTARG, OPTIND=$OPTIND, optc=$optc."
-	done
-	echo done
-expected-stdout:
-	OPTARG=, OPTIND=2, optc=a.
-	OPTARG=, OPTIND=3, optc=a.
-	OPTARG=x, OPTIND=3, optc=?.
-	done
 ---
 name: regression-45
 description:
@@ -3762,32 +3808,6 @@ expected-stdout:
 	7 blah
 	8 blah
 ---
-name: regression-56
-description:
-	Check eval vs substitution exit codes
-	(this is what ksh88 does)
-stdin:
-	eval $(false)
-	echo A $?
-	eval ' $(false)'
-	echo B $?
-	eval " $(false)"
-	echo C $?
-	eval "eval $(false)"
-	echo D $?
-	eval 'eval '"$(false)"
-	echo E $?
-	IFS="$IFS:"
-	eval $(echo :; false)
-	echo F $?
-expected-stdout:
-	A 1
-	B 1
-	C 1
-	D 0
-	E 0
-	F 1
----
 name: regression-57
 description:
 	Check if typeset output is correct for
@@ -3885,7 +3905,7 @@ description:
 	Check if typeset, export, and readonly work
 stdin:
 	{
-		print FNORD-0
+		echo FNORD-0
 		FNORD_A=1
 		FNORD_B=2
 		FNORD_C=3
@@ -3897,21 +3917,21 @@ stdin:
 		integer FNORD_E FNORD_F FNORD_G FNORD_H
 		export FNORD_C FNORD_D FNORD_G FNORD_H
 		readonly FNORD_B FNORD_D FNORD_F FNORD_H
-		print FNORD-1
+		echo FNORD-1
 		export
-		print FNORD-2
+		echo FNORD-2
 		export -p
-		print FNORD-3
+		echo FNORD-3
 		readonly
-		print FNORD-4
+		echo FNORD-4
 		readonly -p
-		print FNORD-5
+		echo FNORD-5
 		typeset
-		print FNORD-6
+		echo FNORD-6
 		typeset -p
-		print FNORD-7
+		echo FNORD-7
 		typeset -
-		print FNORD-8
+		echo FNORD-8
 	} | fgrep FNORD
 expected-stdout:
 	FNORD-0
@@ -4042,9 +4062,20 @@ description:
 	isn't exec-ed
 stdin:
 	sortprog=$(whence -p sort) || sortprog=cat
-	env | $sortprog >bar1
-	FOO=bar exec; env | $sortprog >bar2
+	env | $sortprog | grep -v '^RANDOM=' >bar1
+	FOO=bar exec; env | $sortprog | grep -v '^RANDOM=' >bar2
 	cmp -s bar1 bar2
+---
+name: exec-function-environment-1
+description:
+	Check assignments in function calls and whether they affect
+	the current execution environment (ksh93, SUSv4)
+stdin:
+	f() { a=2; }; g() { b=3; echo y$c-; }; a=1 f; b=2; c=1 g
+	echo x$a-$b- z$c-
+expected-stdout:
+	y1-
+	x2-3- z1-
 ---
 name: xxx-what-do-you-call-this-1
 stdin:
@@ -4102,7 +4133,7 @@ description:
 	Check that exec exits for built-ins
 arguments: !-i!
 stdin:
-	exec print hi
+	exec echo hi
 	echo still herre
 expected-stdout:
 	hi
@@ -4197,7 +4228,7 @@ name: xxx-param-subst-qmark-1
 description:
 	Check suppresion of error message with null string.  According to
 	POSIX, it shouldn't print the error as 'word' isn't ommitted.
-	ksh88, Solaris /bin/sh and /usr/xpg4/bin/sh all print the error,
+	ksh88/93, Solaris /bin/sh and /usr/xpg4/bin/sh all print the error,
 	that's why the condition is reversed.
 stdin:
 	unset foo
@@ -4230,7 +4261,7 @@ expected-stdout:
 	a=/sweet b=/sweet c=d~ /sweet
 	a=~ b=~ c=d~ /sweet
 ---
-name: errexit-1
+name: exit-err-1
 description:
 	Check some "exit on error" conditions
 stdin:
@@ -4243,7 +4274,7 @@ expected-stderr:
 	+ /usr/bin/env false
 	+ echo END
 ---
-name: errexit-2
+name: exit-err-2
 description:
 	Check some "exit on error" edge conditions (POSIXly)
 stdin:
@@ -4259,7 +4290,7 @@ expected-stderr:
 	+ /usr/bin/env false
 	+ echo END
 ---
-name: errexit-3
+name: exit-err-3
 description:
 	pdksh regression which AT&T ksh does right
 	TFM says: [set] -e | errexit
@@ -4276,7 +4307,7 @@ expected-stdout:
 	EXIT
 expected-exit: e != 0
 ---
-name: errexit-4
+name: exit-err-4
 description:
 	"set -e" test suite (POSIX)
 stdin:
@@ -4290,7 +4321,7 @@ expected-stdout:
 	pre
 	bar
 ---
-name: errexit-5
+name: exit-err-5
 description:
 	"set -e" test suite (POSIX)
 stdin:
@@ -4313,7 +4344,7 @@ expected-stdout:
 	a b c
 	post
 ---
-name: errexit-6
+name: exit-err-6
 description:
 	"set -e" test suite (BSD make)
 category: os:mirbsd
@@ -4330,6 +4361,53 @@ expected-stdout:
 	*** Error code 42
 	
 	Stop in WD/zd/a (line 2 of Makefile).
+---
+name: exit-enoent-1
+description:
+	SUSv4 says that the shell should exit with 126/127 in some situations
+stdin:
+	i=0
+	(echo; echo :) >x
+	"$__progname" ./x >/dev/null 2>&1; r=$?; echo $((i++)) $r .
+	"$__progname" -c ./x >/dev/null 2>&1; r=$?; echo $((i++)) $r .
+	echo exit 42 >x
+	"$__progname" ./x >/dev/null 2>&1; r=$?; echo $((i++)) $r .
+	"$__progname" -c ./x >/dev/null 2>&1; r=$?; echo $((i++)) $r .
+	rm -f x
+	"$__progname" ./x >/dev/null 2>&1; r=$?; echo $((i++)) $r .
+	"$__progname" -c ./x >/dev/null 2>&1; r=$?; echo $((i++)) $r .
+expected-stdout:
+	0 0 .
+	1 126 .
+	2 42 .
+	3 126 .
+	4 127 .
+	5 127 .
+---
+name: exit-eval-1
+description:
+	Check eval vs substitution exit codes (ksh93 alike)
+stdin:
+	eval $(false)
+	echo A $?
+	eval ' $(false)'
+	echo B $?
+	eval " $(false)"
+	echo C $?
+	eval "eval $(false)"
+	echo D $?
+	eval 'eval '"$(false)"
+	echo E $?
+	IFS="$IFS:"
+	eval $(echo :; false)
+	echo F $?
+expected-stdout:
+	A 0
+	B 1
+	C 0
+	D 0
+	E 0
+	F 0
 ---
 name: test-stlt-1
 description:
@@ -4352,10 +4430,93 @@ description:
 stdin:
 	test \( -f = -f \)
 	rv=$?
-	set -o posix
+	test -n "$POSH_VERSION" || set -o sh
 	echo -e $rv
 expected-stdout:
 	-e 0
+---
+name: test-option-1
+description:
+	Test the test -o operator
+stdin:
+	runtest() {
+		test -o $1; echo $?
+		[ -o $1 ]; echo $?
+		[[ -o $1 ]]; echo $?
+	}
+	if_test() {
+		test -o $1 -o -o !$1; echo $?
+		[ -o $1 -o -o !$1 ]; echo $?
+		[[ -o $1 || -o !$1 ]]; echo $?
+		test -o ?$1; echo $?
+	}
+	echo 0y $(if_test utf8-mode) =
+	echo 0n $(if_test utf8-hack) =
+	echo 1= $(runtest utf8-hack) =
+	echo 2= $(runtest !utf8-hack) =
+	echo 3= $(runtest ?utf8-hack) =
+	set +U
+	echo 1+ $(runtest utf8-mode) =
+	echo 2+ $(runtest !utf8-mode) =
+	echo 3+ $(runtest ?utf8-mode) =
+	set -U
+	echo 1- $(runtest utf8-mode) =
+	echo 2- $(runtest !utf8-mode) =
+	echo 3- $(runtest ?utf8-mode) =
+	echo = short flags =
+	echo 0y $(if_test -U) =
+	echo 0y $(if_test +U) =
+	echo 0n $(if_test -_) =
+	echo 0n $(if_test -U-) =
+	echo 1= $(runtest -_) =
+	echo 2= $(runtest !-_) =
+	echo 3= $(runtest ?-_) =
+	set +U
+	echo 1+ $(runtest -U) =
+	echo 2+ $(runtest !-U) =
+	echo 3+ $(runtest ?-U) =
+	echo 1+ $(runtest +U) =
+	echo 2+ $(runtest !+U) =
+	echo 3+ $(runtest ?+U) =
+	set -U
+	echo 1- $(runtest -U) =
+	echo 2- $(runtest !-U) =
+	echo 3- $(runtest ?-U) =
+	echo 1- $(runtest +U) =
+	echo 2- $(runtest !+U) =
+	echo 3- $(runtest ?+U) =
+expected-stdout:
+	0y 0 0 0 0 =
+	0n 1 1 1 1 =
+	1= 1 1 1 =
+	2= 1 1 1 =
+	3= 1 1 1 =
+	1+ 1 1 1 =
+	2+ 0 0 0 =
+	3+ 0 0 0 =
+	1- 0 0 0 =
+	2- 1 1 1 =
+	3- 0 0 0 =
+	= short flags =
+	0y 0 0 0 0 =
+	0y 0 0 0 0 =
+	0n 1 1 1 1 =
+	0n 1 1 1 1 =
+	1= 1 1 1 =
+	2= 1 1 1 =
+	3= 1 1 1 =
+	1+ 1 1 1 =
+	2+ 0 0 0 =
+	3+ 0 0 0 =
+	1+ 1 1 1 =
+	2+ 0 0 0 =
+	3+ 0 0 0 =
+	1- 0 0 0 =
+	2- 1 1 1 =
+	3- 0 0 0 =
+	1- 0 0 0 =
+	2- 1 1 1 =
+	3- 0 0 0 =
 ---
 name: mkshrc-1
 description:
@@ -4405,44 +4566,44 @@ stdin:
 expected-stdout:
 	x
 ---
-name: posix-mode-1
+name: sh-mode-1
 description:
-	Check that posix mode turns braceexpand off
+	Check that sh mode turns braceexpand off
 	and that that works correctly
 stdin:
 	set -o braceexpand
-	set +o posix
-	[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix
+	set +o sh
+	[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh
 	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
 	echo {a,b,c}
 	set +o braceexpand
 	echo {a,b,c}
 	set -o braceexpand
 	echo {a,b,c}
-	set -o posix
+	set -o sh
 	echo {a,b,c}
-	[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix
+	[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh
 	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
 	set -o braceexpand
 	echo {a,b,c}
-	[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix
+	[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh
 	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
 expected-stdout:
-	noposix
+	nosh
 	brex
 	a b c
 	{a,b,c}
 	a b c
 	{a,b,c}
-	posix
+	sh
 	nobrex
 	a b c
-	posix
+	sh
 	brex
 ---
-name: posix-mode-2a
+name: sh-mode-2a
 description:
-	Check that posix mode is *not* automatically turned on
+	Check that sh mode is *not* automatically turned on
 category: !binsh
 stdin:
 	ln -s "$__progname" ksh
@@ -4451,17 +4612,17 @@ stdin:
 	ln -s "$__progname" ./-sh
 	for shell in {,-}{,k}sh; do
 		print -- $shell $(./$shell +l -c \
-		    '[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix')
+		    '[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh')
 	done
 expected-stdout:
-	sh noposix
-	ksh noposix
-	-sh noposix
-	-ksh noposix
+	sh nosh
+	ksh nosh
+	-sh nosh
+	-ksh nosh
 ---
-name: posix-mode-2b
+name: sh-mode-2b
 description:
-	Check that posix mode is automatically turned on
+	Check that sh mode *is* automatically turned on
 category: binsh
 stdin:
 	ln -s "$__progname" ksh
@@ -4470,13 +4631,13 @@ stdin:
 	ln -s "$__progname" ./-sh
 	for shell in {,-}{,k}sh; do
 		print -- $shell $(./$shell +l -c \
-		    '[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix')
+		    '[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh')
 	done
 expected-stdout:
-	sh posix
-	ksh noposix
-	-sh posix
-	-ksh noposix
+	sh sh
+	ksh nosh
+	-sh sh
+	-ksh nosh
 ---
 name: pipeline-1
 description:
@@ -4508,9 +4669,9 @@ name: pipeline-2
 description:
 	check that co-processes work with TCOMs, TPIPEs and TPARENs
 stdin:
-	"$__progname" -c 'i=100; print hi |& while read -p line; do print "$((i++)) $line"; done'
-	"$__progname" -c 'i=200; print hi | cat |& while read -p line; do print "$((i++)) $line"; done'
-	"$__progname" -c 'i=300; (print hi | cat) |& while read -p line; do print "$((i++)) $line"; done'
+	"$__progname" -c 'i=100; echo hi |& while read -p line; do echo "$((i++)) $line"; done'
+	"$__progname" -c 'i=200; echo hi | cat |& while read -p line; do echo "$((i++)) $line"; done'
+	"$__progname" -c 'i=300; (echo hi | cat) |& while read -p line; do echo "$((i++)) $line"; done'
 expected-stdout:
 	100 hi
 	200 hi
@@ -4540,7 +4701,7 @@ stdin:
 	typeset -ZL10 lz=0hall0
 	typeset -ZR10 rz=0hall0
 	typeset -Z10 rx=" hallo "
-	print "<$ln> <$rn> <$lz> <$rz> <$rx>"
+	echo "<$ln> <$rn> <$lz> <$rz> <$rx>"
 expected-stdout:
 	<0hall0    > <    0hall0> <hall0     > <00000hall0> <0000 hallo>
 ---
@@ -4554,7 +4715,7 @@ stdin:
 	typeset -L9 ls=16#1
 	typeset -R9 rs=16#1
 	typeset -Z9 zs=16#1
-	print "<$ln> <$rn> <$zn> <$ls> <$rs> <$zs>"
+	echo "<$ln> <$rn> <$zn> <$ls> <$rs> <$zs>"
 expected-stdout:
 	<16#1     > <     16#1> <16#000001> <16#1     > <     16#1> <0000016#1>
 ---
@@ -4572,7 +4733,7 @@ stdin:
 	print '﻿fnord\nfnord\n﻿fnord\nfnord' >foo/bar
 	print eval \''﻿fnord\nfnord\n﻿fnord\nfnord'\' >foo/zoo
 	set -A anzahl -- foo/*
-	print got ${#anzahl[*]} files
+	echo got ${#anzahl[*]} files
 	chmod +x foo/*
 	export PATH=$(pwd)/foo:$PATH
 	"$__progname" -c '﻿fnord'
@@ -4585,7 +4746,7 @@ stdin:
 	echo =
 	"$__progname" foo/zoo
 	echo =
-	"$__progname" -c 'print ﻿: $(﻿fnord)'
+	"$__progname" -c 'echo ﻿: $(﻿fnord)'
 	rm -rf foo
 expected-stdout:
 	got 4 files
@@ -4643,8 +4804,8 @@ name: utf8bom-3
 description:
 	Reading the UTF-8 BOM should enable the utf8-mode flag
 stdin:
-	"$__progname" -c ':; if [[ $- = *U* ]]; then print 1 on; else print 1 off; fi'
-	"$__progname" -c '﻿:; if [[ $- = *U* ]]; then print 2 on; else print 2 off; fi'
+	"$__progname" -c ':; if [[ $- = *U* ]]; then echo 1 on; else echo 1 off; fi'
+	"$__progname" -c '﻿:; if [[ $- = *U* ]]; then echo 2 on; else echo 2 off; fi'
 expected-stdout:
 	1 off
 	2 on
@@ -4656,9 +4817,9 @@ category: !os:hpux
 env-setup: !PS1=!PS2=!LC_CTYPE=en_US.UTF-8!
 stdin:
 	if [[ $- = *U* ]]; then
-		print is set
+		echo is set
 	else
-		print is not set
+		echo is not set
 	fi
 expected-stdout:
 	is not set
@@ -4670,9 +4831,9 @@ category: os:hpux
 env-setup: !PS1=!PS2=!LC_CTYPE=en_US.utf8!
 stdin:
 	if [[ $- = *U* ]]; then
-		print is set
+		echo is set
 	else
-		print is not set
+		echo is not set
 	fi
 expected-stdout:
 	is not set
@@ -4689,9 +4850,9 @@ arguments: !-i!
 env-setup: !PS1=!PS2=!LC_CTYPE=en_US.UTF-8!
 stdin:
 	if [[ $- = *U* ]]; then
-		print is set
+		echo is set
 	else
-		print is not set
+		echo is not set
 	fi
 expected-stdout:
 	is set
@@ -4707,14 +4868,33 @@ arguments: !-i!
 env-setup: !PS1=!PS2=!LC_CTYPE=en_US.utf8!
 stdin:
 	if [[ $- = *U* ]]; then
-		print is set
+		echo is set
 	else
-		print is not set
+		echo is not set
 	fi
 expected-stdout:
 	is set
 expected-stderr-pattern:
 	/(# )*/
+---
+name: utf8opt-3
+description:
+	Ensure ±U on the command line is honoured
+	(this test may pass falsely depending on CPPFLAGS)
+stdin:
+	export i=0
+	code='if [[ $- = *U* ]]; then echo $i on; else echo $i off; fi'
+	let i++; "$__progname" -U -c "$code"
+	let i++; "$__progname" +U -c "$code"
+	let i++; "$__progname" -U -ic "$code"
+	let i++; "$__progname" +U -ic "$code"
+	echo $((++i)) done
+expected-stdout:
+	1 on
+	2 off
+	3 on
+	4 off
+	5 done
 ---
 name: aliases-1
 description:
@@ -4731,6 +4911,7 @@ expected-stdout:
 	integer='typeset -i'
 	local=typeset
 	login='exec login'
+	nameref='typeset -n'
 	nohup='nohup '
 	r='fc -e -'
 	source='PATH=$PATH:. command .'
@@ -4753,6 +4934,7 @@ expected-stdout:
 	integer='typeset -i'
 	local=typeset
 	login='exec login'
+	nameref='typeset -n'
 	nohup='nohup '
 	r='fc -e -'
 	source='PATH=$PATH:. command .'
@@ -4760,9 +4942,9 @@ expected-stdout:
 ---
 name: aliases-2a
 description:
-	Check if “set -o posix” disables built-in aliases (except a few)
+	Check if “set -o sh” disables built-in aliases (except a few)
 category: disabled
-arguments: !-o!posix!
+arguments: !-o!sh!
 stdin:
 	alias
 	typeset -f
@@ -4774,7 +4956,7 @@ name: aliases-3a
 description:
 	Check if running as sh disables built-in aliases (except a few)
 category: disabled
-arguments: !-o!posix!
+arguments: !-o!sh!
 stdin:
 	cp "$__progname" sh
 	./sh -c 'alias; typeset -f'
@@ -4785,9 +4967,9 @@ expected-stdout:
 ---
 name: aliases-2b
 description:
-	Check if “set -o posix” does not influence built-in aliases
+	Check if “set -o sh” does not influence built-in aliases
 category: !arge
-arguments: !-o!posix!
+arguments: !-o!sh!
 stdin:
 	alias
 	typeset -f
@@ -4799,6 +4981,7 @@ expected-stdout:
 	integer='typeset -i'
 	local=typeset
 	login='exec login'
+	nameref='typeset -n'
 	nohup='nohup '
 	r='fc -e -'
 	source='PATH=$PATH:. command .'
@@ -4810,7 +4993,7 @@ name: aliases-3b
 description:
 	Check if running as sh does not influence built-in aliases
 category: !arge
-arguments: !-o!posix!
+arguments: !-o!sh!
 stdin:
 	cp "$__progname" sh
 	./sh -c 'alias; typeset -f'
@@ -4823,6 +5006,7 @@ expected-stdout:
 	integer='typeset -i'
 	local=typeset
 	login='exec login'
+	nameref='typeset -n'
 	nohup='nohup '
 	r='fc -e -'
 	source='PATH=$PATH:. command .'
@@ -4832,9 +5016,9 @@ expected-stdout:
 ---
 name: aliases-2b-hartz4
 description:
-	Check if “set -o posix” does not influence built-in aliases
+	Check if “set -o sh” does not influence built-in aliases
 category: arge
-arguments: !-o!posix!
+arguments: !-o!sh!
 stdin:
 	alias
 	typeset -f
@@ -4846,6 +5030,7 @@ expected-stdout:
 	integer='typeset -i'
 	local=typeset
 	login='exec login'
+	nameref='typeset -n'
 	nohup='nohup '
 	r='fc -e -'
 	source='PATH=$PATH:. command .'
@@ -4855,7 +5040,7 @@ name: aliases-3b-hartz4
 description:
 	Check if running as sh does not influence built-in aliases
 category: arge
-arguments: !-o!posix!
+arguments: !-o!sh!
 stdin:
 	cp "$__progname" sh
 	./sh -c 'alias; typeset -f'
@@ -4868,6 +5053,7 @@ expected-stdout:
 	integer='typeset -i'
 	local=typeset
 	login='exec login'
+	nameref='typeset -n'
 	nohup='nohup '
 	r='fc -e -'
 	source='PATH=$PATH:. command .'
@@ -4922,6 +5108,7 @@ expected-stdout:
 name: arrays-2
 description:
 	Check if bash-style arrays work as expected
+category: !smksh
 stdin:
 	v="c d"
 	foo=(a \$v "$v" '$v' b)
@@ -4936,12 +5123,192 @@ stdin:
 	set -A foo a b c
 	foo[4097]=d
 	foo[2147483637]=e
-	print ${foo[*]}
+	echo ${foo[*]}
 	foo[-1]=f
-	print ${foo[4294967295]} g ${foo[*]}
+	echo ${foo[4294967295]} g ${foo[*]}
 expected-stdout:
 	a b c d e
 	f g a b c d e f
+---
+name: arrays-4
+description:
+	Check if Korn Shell arrays with specified indices work as expected
+category: !smksh
+stdin:
+	v="c d"
+	set -A foo -- [1]=\$v [2]="$v" [4]='$v' [0]=a [5]=b
+	echo "${#foo[*]}|${foo[0]}|${foo[1]}|${foo[2]}|${foo[3]}|${foo[4]}|${foo[5]}|"
+expected-stdout:
+	5|a|$v|c d||$v|b|
+---
+name: arrays-5
+description:
+	Check if bash-style arrays with specified indices work as expected
+category: !smksh
+stdin:
+	v="c d"
+	foo=([1]=\$v [2]="$v" [4]='$v' [0]=a [5]=b)
+	echo "${#foo[*]}|${foo[0]}|${foo[1]}|${foo[2]}|${foo[3]}|${foo[4]}|${foo[5]}|"
+	x=([128]=foo bar baz)
+	echo k= ${!x[*]} .
+	echo v= ${x[*]} .
+expected-stdout:
+	5|a|$v|c d||$v|b|
+	k= 128 129 130 .
+	v= foo bar baz .
+---
+name: arrays-6
+description:
+	Check if we can get the array keys (indices) for indexed arrays,
+	Korn shell style
+stdin:
+	of() {
+		i=0
+		for x in "$@"; do
+			echo -n "$((i++))<$x>"
+		done
+		echo
+	}
+	foo[1]=eins
+	set | grep '^foo'
+	echo =
+	foo[0]=zwei
+	foo[4]=drei
+	set | grep '^foo'
+	echo =
+	echo a $(of ${foo[*]}) = $(of ${bar[*]}) a
+	echo b $(of "${foo[*]}") = $(of "${bar[*]}") b
+	echo c $(of ${foo[@]}) = $(of ${bar[@]}) c
+	echo d $(of "${foo[@]}") = $(of "${bar[@]}") d
+	echo e $(of ${!foo[*]}) = $(of ${!bar[*]}) e
+	echo f $(of "${!foo[*]}") = $(of "${!bar[*]}") f
+	echo g $(of ${!foo[@]}) = $(of ${!bar[@]}) g
+	echo h $(of "${!foo[@]}") = $(of "${!bar[@]}") h
+expected-stdout:
+	foo[1]=eins
+	=
+	foo[0]=zwei
+	foo[1]=eins
+	foo[4]=drei
+	=
+	a 0<zwei>1<eins>2<drei> = a
+	b 0<zwei eins drei> = 0<> b
+	c 0<zwei>1<eins>2<drei> = c
+	d 0<zwei>1<eins>2<drei> = d
+	e 0<0>1<1>2<4> = e
+	f 0<0 1 4> = 0<> f
+	g 0<0>1<1>2<4> = g
+	h 0<0>1<1>2<4> = h
+---
+name: arrays-7
+description:
+	Check if we can get the array keys (indices) for indexed arrays,
+	Korn shell style, in some corner cases
+stdin:
+	echo !arz: ${!arz}
+	echo !arz[0]: ${!arz[0]}
+	echo !arz[1]: ${!arz[1]}
+	arz=foo
+	echo !arz: ${!arz}
+	echo !arz[0]: ${!arz[0]}
+	echo !arz[1]: ${!arz[1]}
+	unset arz
+	echo !arz: ${!arz}
+	echo !arz[0]: ${!arz[0]}
+	echo !arz[1]: ${!arz[1]}
+expected-stdout:
+	!arz: 0
+	!arz[0]:
+	!arz[1]:
+	!arz: arz
+	!arz[0]: 0
+	!arz[1]:
+	!arz: 0
+	!arz[0]:
+	!arz[1]:
+---
+name: arrays-8
+description:
+	Check some behavioural rules for arrays.
+stdin:
+	fna() {
+		set -A aa 9
+	}
+	fnb() {
+		typeset ab
+		set -A ab 9
+	}
+	fnc() {
+		typeset ac
+		set -A ac 91
+		unset ac
+		set -A ac 92
+	}
+	fnd() {
+		set +A ad 9
+	}
+	fne() {
+		unset ae
+		set +A ae 9
+	}
+	fnf() {
+		unset af[0]
+		set +A af 9
+	}
+	fng() {
+		unset ag[*]
+		set +A ag 9
+	}
+	set -A aa 1 2
+	set -A ab 1 2
+	set -A ac 1 2
+	set -A ad 1 2
+	set -A ae 1 2
+	set -A af 1 2
+	set -A ag 1 2
+	set -A ah 1 2
+	typeset -Z3 aa ab ac ad ae af ag
+	print 1a ${aa[*]} .
+	print 1b ${ab[*]} .
+	print 1c ${ac[*]} .
+	print 1d ${ad[*]} .
+	print 1e ${ae[*]} .
+	print 1f ${af[*]} .
+	print 1g ${ag[*]} .
+	print 1h ${ah[*]} .
+	fna
+	fnb
+	fnc
+	fnd
+	fne
+	fnf
+	fng
+	typeset -Z5 ah[*]
+	print 2a ${aa[*]} .
+	print 2b ${ab[*]} .
+	print 2c ${ac[*]} .
+	print 2d ${ad[*]} .
+	print 2e ${ae[*]} .
+	print 2f ${af[*]} .
+	print 2g ${ag[*]} .
+	print 2h ${ah[*]} .
+expected-stdout:
+	1a 001 002 .
+	1b 001 002 .
+	1c 001 002 .
+	1d 001 002 .
+	1e 001 002 .
+	1f 001 002 .
+	1g 001 002 .
+	1h 1 2 .
+	2a 9 .
+	2b 001 002 .
+	2c 92 .
+	2d 009 002 .
+	2e 9 .
+	2f 9 002 .
+	2g 009 .
+	2h 00001 00002 .
 ---
 name: varexpand-substr-1
 description:
@@ -4951,13 +5318,13 @@ stdin:
 	x=abcdefghi
 	typeset -i y=123456789
 	typeset -i 16 z=123456789	# 16#75bcd15
-	print a t${x:2:2} ${y:2:3} ${z:2:3} a
-	print b ${x::3} ${y::3} ${z::3} b
-	print c ${x:2:} ${y:2:} ${z:2:} c
-	print d ${x:2} ${y:2} ${z:2} d
-	print e ${x:2:6} ${y:2:6} ${z:2:7} e
-	print f ${x:2:7} ${y:2:7} ${z:2:8} f
-	print g ${x:2:8} ${y:2:8} ${z:2:9} g
+	echo a t${x:2:2} ${y:2:3} ${z:2:3} a
+	echo b ${x::3} ${y::3} ${z::3} b
+	echo c ${x:2:} ${y:2:} ${z:2:} c
+	echo d ${x:2} ${y:2} ${z:2} d
+	echo e ${x:2:6} ${y:2:6} ${z:2:7} e
+	echo f ${x:2:7} ${y:2:7} ${z:2:8} f
+	echo g ${x:2:8} ${y:2:8} ${z:2:9} g
 expected-stdout:
 	a tcd 345 #75 a
 	b abc 123 16# b
@@ -4976,10 +5343,10 @@ stdin:
 	typeset -i y=123456789
 	typeset -i 16 z=123456789	# 16#75bcd15
 	n=2
-	print a ${x:$n:3} ${y:$n:3} ${z:$n:3} a
-	print b ${x:(n):3} ${y:(n):3} ${z:(n):3} b
-	print c ${x:(-2):1} ${y:(-2):1} ${z:(-2):1} c
-	print d t${x: n:2} ${y: n:3} ${z: n:3} d
+	echo a ${x:$n:3} ${y:$n:3} ${z:$n:3} a
+	echo b ${x:(n):3} ${y:(n):3} ${z:(n):3} b
+	echo c ${x:(-2):1} ${y:(-2):1} ${z:(-2):1} c
+	echo d t${x: n:2} ${y: n:3} ${z: n:3} d
 expected-stdout:
 	a cde 345 #75 a
 	b cde 345 #75 b
@@ -5012,7 +5379,7 @@ description:
 stdin:
 	x=abcdefghi
 	integer y=2
-	print a ${x:(y == 1 ? 2 : 3):4} a
+	echo a ${x:(y == 1 ? 2 : 3):4} a
 expected-stdout:
 	a defg a
 ---
@@ -5022,10 +5389,10 @@ description:
 stdin:
 	set +U
 	x=mäh
-	print a ${x::1} ${x: -1} a
-	print b ${x::3} ${x: -3} b
-	print c ${x:1:2} ${x: -3:2} c
-	print d ${#x} d
+	echo a ${x::1} ${x: -1} a
+	echo b ${x::3} ${x: -3} b
+	echo c ${x:1:2} ${x: -3:2} c
+	echo d ${#x} d
 expected-stdout:
 	a m h a
 	b mä äh b
@@ -5038,15 +5405,44 @@ description:
 stdin:
 	set -U
 	x=mäh
-	print a ${x::1} ${x: -1} a
-	print b ${x::2} ${x: -2} b
-	print c ${x:1:1} ${x: -2:1} c
-	print d ${#x} d
+	echo a ${x::1} ${x: -1} a
+	echo b ${x::2} ${x: -2} b
+	echo c ${x:1:1} ${x: -2:1} c
+	echo d ${#x} d
 expected-stdout:
 	a m h a
 	b mä äh b
 	c ä ä c
 	d 3 d
+---
+name: varexpand-substr-6
+description:
+	Check that string substitution works correctly
+stdin:
+	foo=1
+	bar=2
+	baz=qwertyuiop
+	echo a ${baz: foo: bar}
+	echo b ${baz: foo: $bar}
+	echo c ${baz: $foo: bar}
+	echo d ${baz: $foo: $bar}
+expected-stdout:
+	a we
+	b we
+	c we
+	d we
+---
+name: varexpand-null-1
+description:
+	Ensure empty strings expand emptily
+stdin:
+	print x ${a} ${b} y
+	print z ${a#?} ${b%?} w
+	print v ${a=} ${b/c/d} u
+expected-stdout:
+	x y
+	z w
+	v u
 ---
 name: print-funny-chars
 description:
@@ -5055,6 +5451,14 @@ stdin:
 	print '<\0144\0344\xDB\u00DB\u20AC\uDB\x40>'
 expected-stdout:
 	<d��Û€Û@>
+---
+name: print-bksl-c
+description:
+	Check print builtin's \c escape
+stdin:
+	print '\ca'; print b
+expected-stdout:
+	ab
 ---
 name: print-nul-chars
 description:
@@ -5068,6 +5472,145 @@ stdin:
 expected-stdout:
 	4
 	3 2
+---
+name: print-escapes
+description:
+	Check backslash expansion by the print builtin
+stdin:
+	print '\ \!\"\#\$\%\&'\\\''\(\)\*\+\,\-\.\/\0\1\2\3\4\5\6\7\8' \
+	    '\9\:\;\<\=\>\?\@\A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T' \
+	    '\U\V\W\X\Y\Z\[\\\]\^\_\`\a\b  \d\e\f\g\h\i\j\k\l\m\n\o\p' \
+	    '\q\r\s\t\u\v\w\x\y\z\{\|\}\~' '\u20acd' '\U20acd' '\x123' \
+	    '\0x' '\0123' '\01234' | {
+		typeset -Uui16 -Z11 pos=0
+		typeset -Uui16 -Z5 hv
+		typeset -i1 wc=0x0A
+		dasc=
+		nl=${wc#1#}
+		while IFS= read -r line; do
+			line=$line$nl
+			while [[ -n $line ]]; do
+				hv=1#${line::1}
+				if (( (pos & 15) == 0 )); then
+					(( pos )) && print "$dasc|"
+					print -n "${pos#16#}  "
+					dasc=' |'
+				fi
+				print -n "${hv#16#} "
+				if (( (hv < 32) || (hv > 126) )); then
+					dasc=$dasc.
+				else
+					dasc=$dasc${line::1}
+				fi
+				(( (pos++ & 15) == 7 )) && print -n -- '- '
+				line=${line:1}
+			done
+		done
+		if (( (pos & 15) != 1 )); then
+			while (( pos & 15 )); do
+				print -n '   '
+				(( (pos++ & 15) == 7 )) && print -n -- '- '
+			done
+			print "$dasc|"
+		fi
+	}
+expected-stdout:
+	00000000  5C 20 5C 21 5C 22 5C 23 - 5C 24 5C 25 5C 26 5C 27  |\ \!\"\#\$\%\&\'|
+	00000010  5C 28 5C 29 5C 2A 5C 2B - 5C 2C 5C 2D 5C 2E 5C 2F  |\(\)\*\+\,\-\.\/|
+	00000020  5C 31 5C 32 5C 33 5C 34 - 5C 35 5C 36 5C 37 5C 38  |\1\2\3\4\5\6\7\8|
+	00000030  20 5C 39 5C 3A 5C 3B 5C - 3C 5C 3D 5C 3E 5C 3F 5C  | \9\:\;\<\=\>\?\|
+	00000040  40 5C 41 5C 42 5C 43 5C - 44 1B 5C 46 5C 47 5C 48  |@\A\B\C\D.\F\G\H|
+	00000050  5C 49 5C 4A 5C 4B 5C 4C - 5C 4D 5C 4E 5C 4F 5C 50  |\I\J\K\L\M\N\O\P|
+	00000060  5C 51 5C 52 5C 53 5C 54 - 20 5C 56 5C 57 5C 58 5C  |\Q\R\S\T \V\W\X\|
+	00000070  59 5C 5A 5C 5B 5C 5C 5D - 5C 5E 5C 5F 5C 60 07 08  |Y\Z\[\]\^\_\`..|
+	00000080  20 20 5C 64 1B 0C 5C 67 - 5C 68 5C 69 5C 6A 5C 6B  |  \d..\g\h\i\j\k|
+	00000090  5C 6C 5C 6D 0A 5C 6F 5C - 70 20 5C 71 0D 5C 73 09  |\l\m.\o\p \q.\s.|
+	000000A0  0B 5C 77 5C 79 5C 7A 5C - 7B 5C 7C 5C 7D 5C 7E 20  |.\w\y\z\{\|\}\~ |
+	000000B0  E2 82 AC 64 20 EF BF BD - 20 12 33 20 78 20 53 20  |...d ... .3 x S |
+	000000C0  53 34 0A                -                          |S4.|
+---
+name: dollar-quoted-strings
+description:
+	Check backslash expansion by $'…' strings
+stdin:
+	printf '%s\n' $'\ \!\"\#\$\%\&\'\(\)\*\+\,\-\.\/ \1\2\3\4\5\6' \
+	    $'a\0b' $'a\01b' $'\7\8\9\:\;\<\=\>\?\@\A\B\C\D\E\F\G\H\I' \
+	    $'\J\K\L\M\N\O\P\Q\R\S\T\U1\V\W\X\Y\Z\[\\\]\^\_\`\a\b\d\e' \
+	    $'\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u1\v\w\x1\y\z\{\|\}\~ $x' \
+	    $'\u20acd' $'\U20acd' $'\x123' $'fn\x0rd' $'\0234' $'\234' \
+	    $'\2345' $'\ca' $'\c!' $'\c?' $'\c€' $'a\
+	b' | {
+		typeset -Uui16 -Z11 pos=0
+		typeset -Uui16 -Z5 hv
+		typeset -i1 wc=0x0A
+		dasc=
+		nl=${wc#1#}
+		while IFS= read -r line; do
+			line=$line$nl
+			while [[ -n $line ]]; do
+				hv=1#${line::1}
+				if (( (pos & 15) == 0 )); then
+					(( pos )) && print "$dasc|"
+					print -n "${pos#16#}  "
+					dasc=' |'
+				fi
+				print -n "${hv#16#} "
+				if (( (hv < 32) || (hv > 126) )); then
+					dasc=$dasc.
+				else
+					dasc=$dasc${line::1}
+				fi
+				(( (pos++ & 15) == 7 )) && print -n -- '- '
+				line=${line:1}
+			done
+		done
+		if (( (pos & 15) != 1 )); then
+			while (( pos & 15 )); do
+				print -n '   '
+				(( (pos++ & 15) == 7 )) && print -n -- '- '
+			done
+			print "$dasc|"
+		fi
+	}
+expected-stdout:
+	00000000  20 21 22 23 24 25 26 27 - 28 29 2A 2B 2C 2D 2E 2F  | !"#$%&'()*+,-./|
+	00000010  20 01 02 03 04 05 06 0A - 61 0A 61 01 62 0A 07 38  | .......a.a.b..8|
+	00000020  39 3A 3B 3C 3D 3E 3F 40 - 41 42 43 44 1B 46 47 48  |9:;<=>?@ABCD.FGH|
+	00000030  49 0A 4A 4B 4C 4D 4E 4F - 50 51 52 53 54 01 56 57  |I.JKLMNOPQRST.VW|
+	00000040  58 59 5A 5B 5C 5D 5E 5F - 60 07 08 64 1B 0A 0C 67  |XYZ[\]^_`..d...g|
+	00000050  68 69 6A 6B 6C 6D 0A 6F - 70 71 0D 73 09 01 0B 77  |hijklm.opq.s...w|
+	00000060  01 79 7A 7B 7C 7D 7E 20 - 24 78 0A E2 82 AC 64 0A  |.yz{|}~ $x....d.|
+	00000070  EF BF BD 0A C4 A3 0A 66 - 6E 0A 13 34 0A 9C 0A 9C  |.......fn..4....|
+	00000080  35 0A 01 0A 01 0A 7F 0A - 02 82 AC 0A 61 0A 62 0A  |5...........a.b.|
+---
+name: dollar-quotes-in-heredocs
+description:
+	They are, however, not parsed in here documents
+stdin:
+	cat <<EOF
+		dollar = strchr(s, '$');	/* ' */
+	EOF
+	cat <<$'a\tb'
+	a\tb
+	a	b
+expected-stdout:
+		dollar = strchr(s, '$');	/* ' */
+	a\tb
+---
+name: dollar-quotes-in-herestrings
+description:
+	They are, not parsed in here strings either
+stdin:
+	cat <<<"dollar = strchr(s, '$');	/* ' */"
+	cat <<<'dollar = strchr(s, '\''$'\'');	/* '\'' */'
+	x="dollar = strchr(s, '$');	/* ' */"
+	cat <<<"$x"
+	cat <<<$'a\E[0m\tb'
+expected-stdout:
+	dollar = strchr(s, '$');	/* ' */
+	dollar = strchr(s, '$');	/* ' */
+	dollar = strchr(s, '$');	/* ' */
+	a[0m	b
 ---
 name: dot-needs-argument
 description:
@@ -5102,6 +5645,33 @@ expected-stdout:
 	bar
 	rab
 ---
+name: bash-function-parens
+description:
+	ensure the keyword function is ignored when preceding
+	POSIX style function declarations (bashism)
+stdin:
+	mk() {
+		echo '#!'"$__progname"
+		echo "$1 {"
+		echo '	echo "bar='\''$0'\'\"
+		echo '}'
+		echo ${2:-foo}
+	}
+	mk 'function foo' >f-korn
+	mk 'foo ()' >f-dash
+	mk 'function foo ()' >f-bash
+	mk 'function stop ()' stop >f-stop
+	chmod +x f-*
+	echo "korn: $(./f-korn)"
+	echo "dash: $(./f-dash)"
+	echo "bash: $(./f-bash)"
+	echo "stop: $(./f-stop)"
+expected-stdout:
+	korn: bar='foo'
+	dash: bar='./f-dash'
+	bash: bar='./f-bash'
+	stop: bar='./f-stop'
+---
 name: integer-base-one-1
 description:
 	check if the use of fake integer base 1 works
@@ -5113,16 +5683,16 @@ stdin:
 	typeset -Uui1 o0b=0x7E
 	typeset -Uui1 o1b=0xFDD0
 	integer px=0xCAFE 'p0=1# ' p1=1#… pl=1#f
-	print "in <$i0> <$i1>"
-	print "out <${o0a#1#}|${o0b#1#}> <${o1a#1#}|${o1b#1#}>"
+	echo "in <$i0> <$i1>"
+	echo "out <${o0a#1#}|${o0b#1#}> <${o1a#1#}|${o1b#1#}>"
 	typeset -Uui1 i0 i1
-	print "pass <$px> <$p0> <$p1> <$pl> <${i0#1#}|${i1#1#}>"
+	echo "pass <$px> <$p0> <$p1> <$pl> <${i0#1#}|${i1#1#}>"
 	typeset -Uui16 tv1=1#~ tv2=1# tv3=1#� tv4=1#� tv5=1#� tv6=1#� tv7=1#  tv8=1#
-	print "specX <${tv1#16#}> <${tv2#16#}> <${tv3#16#}> <${tv4#16#}> <${tv5#16#}> <${tv6#16#}> <${tv7#16#}> <${tv8#16#}>"
+	echo "specX <${tv1#16#}> <${tv2#16#}> <${tv3#16#}> <${tv4#16#}> <${tv5#16#}> <${tv6#16#}> <${tv7#16#}> <${tv8#16#}>"
 	typeset -i1 tv1 tv2 tv3 tv4 tv5 tv6 tv7 tv8
-	print "specW <${tv1#1#}> <${tv2#1#}> <${tv3#1#}> <${tv4#1#}> <${tv5#1#}> <${tv6#1#}> <${tv7#1#}> <${tv8#1#}>"
+	echo "specW <${tv1#1#}> <${tv2#1#}> <${tv3#1#}> <${tv4#1#}> <${tv5#1#}> <${tv6#1#}> <${tv7#1#}> <${tv8#1#}>"
 	typeset -i1 xs1=0xEF7F xs2=0xEF80 xs3=0xFDD0
-	print "specU <${xs1#1#}> <${xs2#1#}> <${xs3#1#}>"
+	echo "specU <${xs1#1#}> <${xs2#1#}> <${xs3#1#}>"
 expected-stdout:
 	in <16#EFEF> <16#20AC>
 	out <@|~> <☺|﷐>
@@ -5137,7 +5707,7 @@ description:
 stdin:
 	set -U
 	integer x=1#foo
-	print /$x/
+	echo /$x/
 expected-stderr-pattern:
 	/1#foo: unexpected 'oo'/
 expected-exit: e != 0
@@ -5148,7 +5718,7 @@ description:
 stdin:
 	set -U
 	integer x=1#��
-	print /$x/
+	echo /$x/
 expected-stderr-pattern:
 	/1#��: unexpected '�'/
 expected-exit: e != 0
@@ -5159,7 +5729,7 @@ description:
 stdin:
 	set -U
 	integer x=1#…
-	print /$x/
+	echo /$x/
 expected-stdout:
 	/1#…/
 ---
@@ -5169,7 +5739,7 @@ description:
 stdin:
 	set +U
 	integer x=1#…
-	print /$x/
+	echo /$x/
 expected-stderr-pattern:
 	/1#…: unexpected '�'/
 expected-exit: e != 0
@@ -5180,7 +5750,7 @@ description:
 stdin:
 	set -U
 	typeset -i16 x=1#�
-	print /$x/	# invalid utf-8
+	echo /$x/	# invalid utf-8
 expected-stdout:
 	/16#efff/
 ---
@@ -5190,7 +5760,7 @@ description:
 stdin:
 	set -U
 	typeset -i16 x=1#�
-	print /$x/	# invalid 2-byte
+	echo /$x/	# invalid 2-byte
 expected-stdout:
 	/16#efc2/
 ---
@@ -5200,7 +5770,7 @@ description:
 stdin:
 	set -U
 	typeset -i16 x=1#�
-	print /$x/	# invalid 2-byte
+	echo /$x/	# invalid 2-byte
 expected-stdout:
 	/16#efef/
 ---
@@ -5210,7 +5780,7 @@ description:
 stdin:
 	set -U
 	typeset -i16 x=1#��
-	print /$x/	# invalid 3-byte
+	echo /$x/	# invalid 3-byte
 expected-stderr-pattern:
 	/1#��: unexpected '�'/
 expected-exit: e != 0
@@ -5221,7 +5791,7 @@ description:
 stdin:
 	set -U
 	typeset -i16 x=1#��
-	print /$x/	# non-minimalistic
+	echo /$x/	# non-minimalistic
 expected-stderr-pattern:
 	/1#��: unexpected '�'/
 expected-exit: e != 0
@@ -5232,7 +5802,7 @@ description:
 stdin:
 	set -U
 	typeset -i16 x=1#���
-	print /$x/	# non-minimalistic
+	echo /$x/	# non-minimalistic
 expected-stderr-pattern:
 	/1#���: unexpected '�'/
 expected-exit: e != 0
@@ -5407,14 +5977,35 @@ expected-stdout:
 	00000120  000A EFE0 EF80 EF80 - 000A FFFD EFEF EFBF  |.���.���|
 	00000128  EFBE EFEF EFBF EFBF - 000A                 |����.|
 ---
+name: integer-base-one-4
+description:
+	Check if ksh93-style base-one integers work
+category: !smksh
+stdin:
+	set -U
+	echo 1 $(('a'))
+	(echo 2f $(('aa'))) 2>&1 | sed "s/^[^']*'/2p '/"
+	echo 3 $(('…'))
+	x="'a'"
+	echo "4 <$x>"
+	echo 5 $(($x))
+	echo 6 $((x))
+expected-stdout:
+	1 97
+	2p 'aa': multi-character character constant
+	3 8230
+	4 <'a'>
+	5 97
+	6 97
+---
 name: ulimit-1
 description:
 	Check if we can use a specific syntax idiom for ulimit
 stdin:
 	if ! x=$(ulimit -d); then
-		print expected to fail on this OS
+		echo expected to fail on this OS
 	else
-		ulimit -dS $x && print okay
+		ulimit -dS $x && echo okay
 	fi
 expected-stdout:
 	okay
@@ -5577,7 +6168,7 @@ description:
 category: !convfds
 stdin:
 	read -u10 foo 10<<< bar
-	print x$foo
+	echo x$foo
 expected-stdout:
 	xbar
 ---
@@ -5588,7 +6179,7 @@ category: !convfds
 stdin:
 	exec 12>foo
 	print -u12 bar
-	print baz >&12
+	echo baz >&12
 	cat foo
 expected-stdout:
 	bar
@@ -5614,14 +6205,15 @@ stdin:
 		esac
 	done
 ---
-name: oksh-varfunction
+name: oksh-varfunction-mod1
 description:
 	$OpenBSD: varfunction.sh,v 1.1 2003/12/15 05:28:40 otto Exp $
 	Calling
 		FOO=bar f
 	where f is a ksh style function, should not set FOO in the current
-	env. If f is a bourne style function, FOO should be set. Furthermore,
-	the function should receive a correct value of FOO. Additionally,
+	env. If f is a Bourne style function, FOO should be set. Furthermore,
+	the function should receive a correct value of FOO. However, differing
+	from oksh, setting FOO in the function itself must change the value in
 	setting FOO in the function itself should not change the value in
 	global environment.
 	Inspired by PR 2450.
@@ -5663,7 +6255,7 @@ stdin:
 	if [ $? != 0 ]; then
 		exit 1
 	fi
-	if [ x$FOO != xbar ]; then
+	if [ x$FOO != xfoo ]; then
 		exit 1
 	fi
 	FOO=barbar
@@ -5678,7 +6270,7 @@ stdin:
 	if [ $? != 0 ]; then
 		exit 1
 	fi
-	if [ x$FOO != xbar ]; then
+	if [ x$FOO != xfoo ]; then
 		exit 1
 	fi
 ---
@@ -5701,7 +6293,7 @@ description:
 file-setup: file 644 "test.sh"
 	print -u3 Fowl
 stdin:
-	set -o posix
+	test -n "$POSH_VERSION" || set -o sh
 	exec 3>&1
 	"$__progname" test.sh
 expected-stdout:
@@ -5832,6 +6424,7 @@ expected-stdout:
 name: event-subst-1a
 description:
 	Check that '!' substitution in interactive mode works
+category: !smksh
 file-setup: file 755 "falsetto"
 	#! /bin/sh
 	echo molto bene
@@ -5859,6 +6452,7 @@ description:
 	even when a space separates it from the search command,
 	which is not what GNU bash provides but required for the
 	other regression tests below to check
+category: !smksh
 file-setup: file 755 "falsetto"
 	#! /bin/sh
 	echo molto bene
@@ -5884,6 +6478,7 @@ name: event-subst-2
 description:
 	Check that '!' substitution in interactive mode
 	does not break things
+category: !smksh
 file-setup: file 755 "falsetto"
 	#! /bin/sh
 	echo molto bene
@@ -5919,6 +6514,7 @@ expected-stderr-pattern:
 name: event-subst-3
 description:
 	Check that '!' substitution in noninteractive mode is ignored
+category: !smksh
 file-setup: file 755 "falsetto"
 	#! /bin/sh
 	echo molto bene
@@ -5946,7 +6542,7 @@ expected-stdout:
 ---
 name: nounset-1
 description:
-	Check that "set -u" matches (future) POSIX requirement
+	Check that "set -u" matches (future) SUSv4 requirement
 stdin:
 	(set -u
 	try() {
@@ -6019,4 +6615,314 @@ expected-stdout:
 	=14
 	mypid=nz
 	=15
+---
+name: nameref-1
+description:
+	Testsuite for nameref (bound variables)
+stdin:
+	bar=global
+	typeset -n ir2=bar
+	typeset -n ind=ir2
+	echo !ind: ${!ind}
+	echo ind: $ind
+	echo !ir2: ${!ir2}
+	echo ir2: $ir2
+	typeset +n ind
+	echo !ind: ${!ind}
+	echo ind: $ind
+	typeset -n ir2=ind
+	echo !ir2: ${!ir2}
+	echo ir2: $ir2
+	set|grep ^ir2|sed 's/^/s1: /'
+	typeset|grep ' ir2'|sed -e 's/^/s2: /' -e 's/nameref/typeset -n/'
+	set -A blub -- e1 e2 e3
+	typeset -n ind=blub
+	typeset -n ir2=blub[2]
+	echo !ind[1]: ${!ind[1]}
+	echo !ir2: $!ir2
+	echo ind[1]: ${ind[1]}
+	echo ir2: $ir2
+expected-stdout:
+	!ind: bar
+	ind: global
+	!ir2: bar
+	ir2: global
+	!ind: ind
+	ind: ir2
+	!ir2: ind
+	ir2: ir2
+	s1: ir2=ind
+	s2: typeset -n ir2
+	!ind[1]: 1
+	!ir2: ir2
+	ind[1]: e2
+	ir2: e3
+---
+name: nameref-2da
+description:
+	Testsuite for nameref (bound variables)
+	Functions, argument given directly, after local
+stdin:
+	function foo {
+		typeset bar=lokal baz=auch
+		typeset -n v=bar
+		echo entering
+		echo !v: ${!v}
+		echo !bar: ${!bar}
+		echo !baz: ${!baz}
+		echo bar: $bar
+		echo v: $v
+		v=123
+		echo bar: $bar
+		echo v: $v
+		echo exiting
+	}
+	bar=global
+	echo bar: $bar
+	foo bar
+	echo bar: $bar
+expected-stdout:
+	bar: global
+	entering
+	!v: bar
+	!bar: bar
+	!baz: baz
+	bar: lokal
+	v: lokal
+	bar: 123
+	v: 123
+	exiting
+	bar: global
+---
+name: nameref-3
+description:
+	Advanced testsuite for bound variables (ksh93 fails this)
+stdin:
+	typeset -n foo=bar[i]
+	set -A bar -- b c a
+	for i in 0 1 2 3; do
+		print $i $foo .
+	done
+expected-stdout:
+	0 b .
+	1 c .
+	2 a .
+	3 .
+---
+name: better-parens-1a
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	if ( (echo fubar) | tr u x); then
+		echo ja
+	else
+		echo nein
+	fi
+expected-stdout:
+	fxbar
+	ja
+---
+name: better-parens-1b
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	echo $( (echo fubar) | tr u x) $?
+expected-stdout:
+	fxbar 0
+---
+name: better-parens-2a
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	if ((echo fubar) | tr u x); then
+		echo ja
+	else
+		echo nein
+	fi
+expected-stdout:
+	fxbar
+	ja
+---
+name: better-parens-2b
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	echo $((echo fubar) | tr u x) $?
+expected-stdout:
+	fxbar 0
+---
+name: better-parens-3a
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	if ( (echo fubar) | (tr u x)); then
+		echo ja
+	else
+		echo nein
+	fi
+expected-stdout:
+	fxbar
+	ja
+---
+name: better-parens-3b
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	echo $( (echo fubar) | (tr u x)) $?
+expected-stdout:
+	fxbar 0
+---
+name: better-parens-4a
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	if ((echo fubar) | (tr u x)); then
+		echo ja
+	else
+		echo nein
+	fi
+expected-stdout:
+	fxbar
+	ja
+---
+name: better-parens-4b
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	echo $((echo fubar) | (tr u x)) $?
+expected-stdout:
+	fxbar 0
+---
+name: echo-test-1
+description:
+	Test what the echo builtin does (mksh)
+stdin:
+	echo -n 'foo\x40bar'
+	echo -e '\tbaz'
+expected-stdout:
+	foo@bar	baz
+---
+name: echo-test-2
+description:
+	Test what the echo builtin does (POSIX)
+	Note: this follows Debian Policy 10.4 which mandates
+	that -n shall be treated as an option, not XSI which
+	mandates it shall be treated as string but escapes
+	shall be expanded.
+stdin:
+	test -n "$POSH_VERSION" || set -o sh
+	echo -n 'foo\x40bar'
+	echo -e '\tbaz'
+expected-stdout:
+	foo\x40bar-e \tbaz
+---
+name: utilities-getopts-1
+description:
+	getopts sets OPTIND correctly for unparsed option
+stdin:
+	set -- -a -a -x
+	while getopts :a optc; do
+	    echo "OPTARG=$OPTARG, OPTIND=$OPTIND, optc=$optc."
+	done
+	echo done
+expected-stdout:
+	OPTARG=, OPTIND=2, optc=a.
+	OPTARG=, OPTIND=3, optc=a.
+	OPTARG=x, OPTIND=4, optc=?.
+	done
+---
+name: utilities-getopts-2
+description:
+	Check OPTARG
+stdin:
+	set -- -a Mary -x
+	while getopts a: optc; do
+	    echo "OPTARG=$OPTARG, OPTIND=$OPTIND, optc=$optc."
+	done
+	echo done
+expected-stdout:
+	OPTARG=Mary, OPTIND=3, optc=a.
+	OPTARG=, OPTIND=4, optc=?.
+	done
+expected-stderr-pattern: /.*-x.*option/
+---
+name: wcswidth-1
+description:
+	Check the new wcswidth feature
+stdin:
+	s=何
+	set +U
+	print octets: ${#s} .
+	print 8-bit width: ${%s} .
+	set -U
+	print characters: ${#s} .
+	print columns: ${%s} .
+	s=�
+	set +U
+	print octets: ${#s} .
+	print 8-bit width: ${%s} .
+	set -U
+	print characters: ${#s} .
+	print columns: ${%s} .
+expected-stdout:
+	octets: 3 .
+	8-bit width: -1 .
+	characters: 1 .
+	columns: 2 .
+	octets: 3 .
+	8-bit width: 3 .
+	characters: 1 .
+	columns: 1 .
+---
+name: wcswidth-2
+description:
+	Check some corner cases
+stdin:
+	print % $% .
+	set -U
+	x='a	b'
+	print c ${%x} .
+	set +U
+	x='a	b'
+	print d ${%x} .
+expected-stdout:
+	% $% .
+	c -1 .
+	d -1 .
+---
+name: wcswidth-3
+description:
+	Check some corner cases
+stdin:
+	print ${%} .
+expected-stderr-pattern:
+	/bad substitution/
+expected-exit: 1
+---
+name: wcswidth-4a
+description:
+	Check some corner cases
+stdin:
+	print ${%*} .
+expected-stderr-pattern:
+	/bad substitution/
+expected-exit: 1
+---
+name: wcswidth-4b
+description:
+	Check some corner cases
+stdin:
+	print ${%@} .
+expected-stderr-pattern:
+	/bad substitution/
+expected-exit: 1
+---
+name: wcswidth-4c
+description:
+	Check some corner cases
+stdin:
+	:
+	print ${%?} .
+expected-stdout:
+	1 .
 ---

@@ -1,7 +1,7 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.419 2009/08/01 21:58:06 tg Stab $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.439 2010/01/28 19:46:53 tg Exp $'
 #-
-# Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+# Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -22,10 +22,10 @@ srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.419 2009/08/01 21:58:06 tg Stab $'
 # Environment used:	CC CFLAGS CPPFLAGS LDFLAGS LIBS NOWARN NROFF
 #			TARGET_OS TARGET_OSREV
 # Feature selectors:	USE_PRINTF_BUILTIN
-# CPPFLAGS recognised:	MKSH_SMALL MKSH_ASSUME_UTF8 MKSH_NOPWNAM MKSH_NOVI
-#			MKSH_CLS_STRING MKSH_BINSHREDUCED MKSH_UNEMPLOYED
+# CPPFLAGS recognised:	MKSH_ASSUME_UTF8 MKSH_BINSHREDUCED MKSH_CLS_STRING
 #			MKSH_CONSERVATIVE_FDS MKSH_MIDNIGHTBSD01ASH_COMPAT
-#			MKSH_NO_LIMITS
+#			MKSH_NOPWNAM MKSH_NO_LIMITS MKSH_SMALL MKSH_S_NOVI
+#			MKSH_UNEMPLOYED
 
 LC_ALL=C
 export LC_ALL
@@ -39,7 +39,8 @@ vv() {
 	_c=$1
 	shift
 	$e "\$ $*" 2>&1
-	eval "$@" 2>&1 | sed "s^${_c} "
+	eval "$@" >vv.out 2>&1
+	sed "s^${_c} " <vv.out
 }
 
 vq() {
@@ -148,20 +149,27 @@ ac_testn() {
 		fr=0
 	fi
 	ac_testinit "$@" || return
-	cat >scn.c
-	vv ']' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN scn.c $LIBS $ccpr" | \
-	    sed 's^\] scn.c:\([0-9]*\):\] mirtoconf(\1):'
+	cat >conftest.c
+	vv ']' \
+	    "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN conftest.c $LIBS $ccpr" | \
+	    sed 's^\] conftest.c:\([0-9]*\):\] mirtoconf(\1):'
 	test $tcfn = no && test -f a.out && tcfn=a.out
 	test $tcfn = no && test -f a.exe && tcfn=a.exe
-	test $tcfn = no && test -f scn && tcfn=scn
+	test $tcfn = no && test -f conftest && tcfn=conftest
 	if test -f $tcfn; then
 		test 1 = $fr || fv=1
 	else
 		test 0 = $fr || fv=1
 	fi
-	test ugcc=$phase$ct && $CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN scn.c \
-	    $LIBS 2>&1 | grep 'unrecogni[sz]ed' >/dev/null 2>&1 && fv=$fr
-	rm -f scn.c scn.o ${tcfn}*
+	vscan=
+	if test $phase = u; then
+		test $ct = gcc && vscan='unrecogni[sz]ed'
+		test $ct = hpcc && vscan='unsupported'
+		test $ct = pcc && vscan='unsupported'
+		test $ct = sunpro && vscan='ignored'
+	fi
+	test -n "$vscan" && grep "$vscan" vv.out >/dev/null 2>&1 && fv=$fr
+	rm -f conftest.c conftest.o ${tcfn}* vv.out
 	ac_testdone
 }
 
@@ -216,6 +224,7 @@ ac_flags() {
 		ac_testn can_$vn '' "$ft"
 	else
 		ac_testn can_$vn '' "$ft" <<-'EOF'
+			/* evil apo'stroph in comment test */
 			int main(void) { return (0); }
 		EOF
 	fi
@@ -264,7 +273,7 @@ if test -d mksh || test -d mksh.exe; then
 	exit 1
 fi
 rm -f a.exe* a.out* *core crypt.exp lft mksh mksh.cat1 mksh.exe mksh.s \
-    no *.o scn.c signames.inc stdint.h test.sh x
+    no *.o conftest.c signames.inc stdint.h test.sh x vv.out
 
 curdir=`pwd` srcdir=`dirname "$0"` check_categories=
 
@@ -272,7 +281,8 @@ e=echo
 r=0
 eq=0
 pm=0
-llvm=NO
+cm=normal
+llvm=
 
 for i
 do
@@ -281,19 +291,28 @@ do
 		pm=1
 		;;
 	-combine)
-		llvm=COMBINE
+		cm=combine
 		;;
 	-llvm)
+		cm=llvm
 		llvm=-std-compile-opts
 		;;
 	-llvm=*)
+		cm=llvm
 		llvm=`echo "x$i" | sed 's/^x-llvm=//'`
+		;;
+	-M)
+		cm=makefile
 		;;
 	-Q)
 		eq=1
 		;;
 	-r)
 		r=1
+		;;
+	-valgrind)
+		CPPFLAGS="$CPPFLAGS -DDEBUG"
+		CFLAGS="$CFLAGS -g3 -fno-builtin"
 		;;
 	*)
 		echo "$me: Unknown option '$i'!" >&2
@@ -355,7 +374,8 @@ DragonFly)
 FreeBSD)
 	;;
 GNU)
-	CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
+	# define NO_PATH_MAX to use Hurd-only functions
+	CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE -DNO_PATH_MAX"
 	;;
 GNU/kFreeBSD)
 	CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
@@ -489,7 +509,7 @@ $e $bi$me: Scanning for functions... please ignore any errors.$ao
 # - nwcc defines __GNUC__ too
 CPP="$CC -E"
 $e ... which compiler seems to be used
-cat >scn.c <<'EOF'
+cat >conftest.c <<'EOF'
 #if defined(__ICC) || defined(__INTEL_COMPILER)
 ct=icc
 #elif defined(__xlC__) || defined(__IBMC__)
@@ -545,11 +565,12 @@ ct=unknown
 #endif
 EOF
 ct=unknown
-vv ']' "$CPP scn.c | grep ct= | tr -d \\\\015 >x"
+vv ']' "$CPP $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN conftest.c $LIBS | \
+    grep ct= | tr -d \\\\015 >x"
 sed 's/^/[ /' x
 eval `cat x`
-rm -f x
-echo 'int main(void) { return (0); }' >scn.c
+rm -f x vv.out
+echo 'int main(void) { return (0); }' >conftest.c
 case $ct in
 ack)
 	# work around "the famous ACK const bug"
@@ -568,7 +589,7 @@ bcc)
 	;;
 clang)
 	# does not work with current "ccc" compiler driver
-	vv '|' "$CC -version"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -version"
 	# this works, for now
 	vv '|' "${CLANG-clang} -version"
 	# ensure compiler and linker are in sync unless overridden
@@ -578,8 +599,8 @@ clang)
 	esac
 	;;
 dec)
-	vv '|' "$CC -V"
-	vv '|' "$CC -Wl,-V scn.c"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -V"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -Wl,-V conftest.c $LIBS"
 	;;
 dmc)
 	echo >&2 "Warning: Digital Mars Compiler detected. When running under"
@@ -588,11 +609,13 @@ dmc)
 	echo >&2 "    please report success/failure to the developers."
 	;;
 gcc)
-	vv '|' "$CC -v scn.c"
-	vv '|' 'echo `$CC -dumpmachine` gcc`$CC -dumpversion`'
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -v conftest.c $LIBS"
+	vv '|' 'echo `$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS \
+	    -dumpmachine` gcc`$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN \
+	    $LIBS -dumpversion`'
 	;;
 hpcc)
-	vv '|' "$CC -V scn.c"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -V conftest.c $LIBS"
 	;;
 iar)
 	echo >&2 'Warning: IAR Systems (http://www.iar.com) compiler for embedded
@@ -601,7 +624,7 @@ iar)
     own risk, please report success/failure to the developers.'
 	;;
 icc)
-	vv '|' "$CC -V"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -V"
 	;;
 metrowerks)
 	echo >&2 'Warning: Metrowerks C compiler detected. This has not yet
@@ -609,7 +632,7 @@ metrowerks)
     own risk, please report success/failure to the developers.'
 	;;
 mipspro)
-	vv '|' "$CC -version"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -version"
 	;;
 msc)
 	ccpr=		# errorlevels are not reliable
@@ -631,10 +654,10 @@ msc)
 	esac
 	;;
 nwcc)
-	vv '|' "$CC -version"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -version"
 	;;
 pcc)
-	vv '|' "$CC -v"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -v"
 	;;
 pgi)
 	echo >&2 'Warning: PGI detected. This unknown compiler has not yet
@@ -648,17 +671,18 @@ sdcc)
     own risk, please report success/failure to the developers.'
 	;;
 sunpro)
-	vv '|' "$CC -V scn.c"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -V conftest.c $LIBS"
 	;;
 tcc)
-	vv '|' "$CC -v"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -v"
 	;;
 tendra)
-	vv '|' "$CC -V 2>&1 | fgrep -i -e version -e release"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -V 2>&1 | \
+	    fgrep -i -e version -e release"
 	;;
 ucode)
-	vv '|' "$CC -V"
-	vv '|' "$CC -Wl,-V scn.c"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -V"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -Wl,-V conftest.c $LIBS"
 	;;
 watcom)
 	echo >&2 'Warning: Watcom C Compiler detected. This compiler has not yet
@@ -666,25 +690,16 @@ watcom)
     own risk, please report success/failure to the developers.'
 	;;
 xlc)
-	vv '|' "$CC -qversion=verbose"
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -qversion=verbose"
 	vv '|' "ld -V"
 	;;
 *)
 	ct=unknown
 	;;
 esac
-test x"$llvm" = x"NO" || test x"$llvm" = x"COMBINE" || vv '|' "llc -version"
+test $cm = llvm && vv '|' "llc -version"
 $e "$bi==> which compiler seems to be used...$ao $ui$ct$ao"
-rm -f scn.c scn.o scn a.out* a.exe*
-
-case $TARGET_OS in
-HP-UX)
-	case $ct:`uname -m` in
-	gcc:ia64) : ${CFLAGS='-mlp64'} ;;
-	hpcc:ia64) : ${CFLAGS='+DD64'} ;;
-	esac
-	;;
-esac
+rm -f conftest.c conftest.o conftest a.out* a.exe* vv.out
 
 #
 # Compiler: works as-is, with -Wno-error and -Werror
@@ -782,7 +797,9 @@ test x"$i" = x"" && if test $ct = sunpro; then
 	ac_flags - 1 otwo -xO2 <x
 	rm -f x
 elif test $ct = hpcc; then
+	phase=u
 	ac_flags 1 otwo +O2
+	phase=x
 elif test $ct = xlc; then
 	ac_flags 1 othree "-O3 -qstrict"
 	test 1 = $HAVE_CAN_OTHREE || ac_flags 1 otwo -O2
@@ -800,7 +817,7 @@ if test $ct = gcc; then
 	ac_flags 1 fnostrictaliasing -fno-strict-aliasing
 	ac_flags 1 fstackprotectorall -fstack-protector-all
 	ac_flags 1 fwrapv -fwrapv
-	test x"$llvm" = x"COMBINE" && ac_flags 0 combine \
+	test $cm = combine && ac_flags 0 combine \
 	    '-fwhole-program --combine' \
 	    'if gcc supports -fwhole-program --combine'
 	i=1
@@ -810,11 +827,16 @@ elif test $ct = icc; then
 	ac_flags 1 fstacksecuritycheck -fstack-security-check
 	i=1
 elif test $ct = sunpro; then
+	phase=u
 	ac_flags 1 v -v
 	ac_flags 1 xc99 -xc99 'for support of ISO C99'
+	ac_flags 1 ipo -xipo 'for cross-module optimisation'
+	phase=x
 elif test $ct = hpcc; then
+	phase=u
 	ac_flags 1 agcc -Agcc 'for support of GCC extensions'
 	ac_flags 1 ac99 -AC99 'for support of ISO C99'
+	phase=x
 elif test $ct = dec; then
 	ac_flags 0 verb -verbose
 	ac_flags 1 rodata -readonly_strings
@@ -866,11 +888,55 @@ phase=x
 
 # The following tests run with -Werror or similar (all compilers) if possible
 NOWARN=$DOWARN
+test $ct = pcc && phase=u
 
 #
 # Compiler: check for stuff that only generates warnings
 #
-ac_test attribute '' 'for basic __attribute__((...)) support' <<-'EOF'
+ac_test attribute_bounded '' 'for __attribute__((bounded))' <<-'EOF'
+	#if defined(__GNUC__) && (__GNUC__ < 2)
+	/* force a failure: gcc 1.42 has a false positive here */
+	int main(void) { return (thiswillneverbedefinedIhope()); }
+	#else
+	#include <string.h>
+	#undef __attribute__
+	int xcopy(const void *, void *, size_t)
+	    __attribute__((bounded (buffer, 1, 3)))
+	    __attribute__((bounded (buffer, 2, 3)));
+	int main(int ac, char *av[]) { return (xcopy(av[0], av[--ac], 1)); }
+	int xcopy(const void *s, void *d, size_t n) {
+		memmove(d, s, n); return ((int)n);
+	}
+	#endif
+EOF
+ac_test attribute_format '' 'for __attribute__((format))' <<-'EOF'
+	#if defined(__GNUC__) && (__GNUC__ < 2)
+	/* force a failure: gcc 1.42 has a false positive here */
+	int main(void) { return (thiswillneverbedefinedIhope()); }
+	#else
+	#include <stdio.h>
+	#undef __attribute__
+	#undef printf
+	extern int printf(const char *format, ...)
+	    __attribute__((format (printf, 1, 2)));
+	int main(int ac, char **av) { return (printf("%s%d", *av, ac)); }
+	#endif
+EOF
+ac_test attribute_nonnull '' 'for __attribute__((nonnull))' <<-'EOF'
+	#if defined(__GNUC__) && (__GNUC__ < 2)
+	/* force a failure: gcc 1.42 has a false positive here */
+	int main(void) { return (thiswillneverbedefinedIhope()); }
+	#else
+	int foo(char *s1, char *s2) __attribute__((nonnull));
+	int bar(char *s1, char *s2) __attribute__((nonnull (1, 2)));
+	int baz(char *s) __attribute__((nonnull (1)));
+	int foo(char *s1, char *s2) { return (bar(s2, s1)); }
+	int bar(char *s1, char *s2) { return (baz(s1) - baz(s2)); }
+	int baz(char *s) { return (*s); }
+	int main(int ac, char **av) { return (ac == foo(av[0], av[ac-1])); }
+	#endif
+EOF
+ac_test attribute_noreturn '' 'for __attribute__((noreturn))' <<-'EOF'
 	#if defined(__GNUC__) && (__GNUC__ < 2)
 	/* force a failure: gcc 1.42 has a false positive here */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
@@ -882,40 +948,53 @@ ac_test attribute '' 'for basic __attribute__((...)) support' <<-'EOF'
 	void fnord(void) { exit(0); }
 	#endif
 EOF
-
-ac_test attribute_bounded attribute 0 'for __attribute__((bounded))' <<-'EOF'
-	#include <string.h>
-	#undef __attribute__
-	int xcopy(const void *, void *, size_t)
-	    __attribute__((bounded (buffer, 1, 3)))
-	    __attribute__((bounded (buffer, 2, 3)));
-	int main(int ac, char *av[]) { return (xcopy(av[0], av[--ac], 1)); }
-	int xcopy(const void *s, void *d, size_t n) {
-		memmove(d, s, n); return ((int)n);
-	}
+ac_test attribute_unused '' 'for __attribute__((unused))' <<-'EOF'
+	#if defined(__GNUC__) && (__GNUC__ < 2)
+	/* force a failure: gcc 1.42 has a false positive here */
+	int main(void) { return (thiswillneverbedefinedIhope()); }
+	#else
+	int main(int ac __attribute__((unused)), char **av
+	    __attribute__((unused))) { return (0); }
+	#endif
 EOF
-
-ac_test attribute_used attribute 0 'for __attribute__((used))' <<-'EOF'
+ac_test attribute_used '' 'for __attribute__((used))' <<-'EOF'
+	#if defined(__GNUC__) && (__GNUC__ < 2)
+	/* force a failure: gcc 1.42 has a false positive here */
+	int main(void) { return (thiswillneverbedefinedIhope()); }
+	#else
 	static const char fnord[] __attribute__((used)) = "42";
 	int main(void) { return (0); }
+	#endif
 EOF
 
 # End of tests run with -Werror
 NOWARN=$save_NOWARN
+phase=x
 
 #
 # mksh: flavours (full/small mksh, omit certain stuff)
 #
 if ac_ifcpp 'ifdef MKSH_SMALL' isset_MKSH_SMALL '' \
     "if a reduced-feature mksh is requested"; then
-	if test $ct = xlc; then
-		ac_flags 1 fnoinline -qnoinline
-	else
+	#XXX this sucks; fix it for *all* compilers
+	case $ct in
+	clang|icc|nwcc)
 		ac_flags 1 fnoinline -fno-inline
-	fi
+		;;
+	gcc)
+		NOWARN=$DOWARN; phase=u
+		ac_flags 1 fnoinline -fno-inline
+		NOWARN=$save_NOWARN; phase=x
+		;;
+	sunpro)
+		ac_flags 1 fnoinline -xinline=
+		;;
+	xlc)
+		ac_flags 1 fnoinline -qnoinline
+		;;
+	esac
 
 	: ${HAVE_MKNOD=0}
-	: ${HAVE_REALPATH=0}
 	: ${HAVE_REVOKE=0}
 	: ${HAVE_PERSISTENT_HISTORY=0}
 	check_categories=$check_categories,smksh
@@ -972,7 +1051,7 @@ ac_cppflags STDINT_H
 #
 echo '#include <sys/types.h>
 /* check that off_t can represent 2^63-1 correctly, thx FSF */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T (((off_t)1 << 62) - 1 + ((off_t)1 << 62))
 int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721 &&
     LARGE_OFF_T % 2147483647 == 1) ? 1 : -1];
 int main(void) { return (0); }' >lft.c
@@ -1123,7 +1202,7 @@ ac_testn flock_ex '' 'flock and mmap' <<-'EOF'
 	#include <fcntl.h>
 	#include <stdlib.h>
 	int main(void) { return ((void *)mmap(NULL, (size_t)flock(0, LOCK_EX),
-	    PROT_READ, MAP_PRIVATE, 0, 0) == (void *)NULL ? 1 :
+	    PROT_READ, MAP_PRIVATE, 0, (off_t)0) == (void *)NULL ? 1 :
 	    munmap(NULL, 0)); }
 EOF
 
@@ -1147,8 +1226,9 @@ ac_test mknod '' 'if to use mknod(), makedev() and friends' <<-'EOF'
 	#include "sh.h"
 	int main(int ac, char *av[]) {
 		dev_t dv;
-		dv = makedev((unsigned int)ac, 1);
-		return (mknod(av[0], 0, dv) ? (int)major(dv) : (int)minor(dv));
+		dv = makedev((unsigned int)ac, (unsigned int)av[0][0]);
+		return (mknod(av[0], (mode_t)0, dv) ? (int)major(dv) :
+		    (int)minor(dv));
 	}
 EOF
 
@@ -1161,23 +1241,6 @@ EOF
 ac_test nice <<-'EOF'
 	#include <unistd.h>
 	int main(void) { return (nice(4)); }
-EOF
-
-ac_test realpath <<-'EOF'
-	#if HAVE_SYS_PARAM_H
-	#include <sys/param.h>
-	#endif
-	#include <stdlib.h>
-	#include <unistd.h>
-	#ifndef PATH_MAX
-	#define PATH_MAX 1024
-	#endif
-	char *res, dst[PATH_MAX];
-	const char src[] = ".";
-	int main(void) {
-		res = realpath(src, dst);
-		return (res == NULL ? 1 : 0);
-	}
 EOF
 
 ac_test revoke <<-'EOF'
@@ -1208,8 +1271,10 @@ ac_test setmode mknod 1 <<-'EOF'
 	/* force a failure: Win32 setmode() is not what we want... */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
+	#include <sys/types.h>
 	#include <unistd.h>
-	int main(int ac, char *av[]) { return (getmode(setmode(av[0]), ac)); }
+	int main(int ac, char *av[]) { return (getmode(setmode(av[0]),
+	    (mode_t)ac)); }
 	#endif
 EOF
 
@@ -1242,7 +1307,8 @@ EOF
 
 ac_test strlcpy <<-'EOF'
 	#include <string.h>
-	int main(int ac, char *av[]) { return (strlcpy(*av, av[1], ac)); }
+	int main(int ac, char *av[]) { return (strlcpy(*av, av[1],
+	    (size_t)ac)); }
 EOF
 
 #
@@ -1295,10 +1361,10 @@ ac_cppflags
 #
 test 0 = $HAVE_SYS_SIGNAME && if ac_testinit cpp_dd '' \
     'checking if the C Preprocessor supports -dD'; then
-	echo '#define foo bar' >scn.c
-	vv ']' "$CPP -dD scn.c >x"
+	echo '#define foo bar' >conftest.c
+	vv ']' "$CPP $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -dD conftest.c $LIBS >x"
 	grep '#define foo bar' x >/dev/null 2>&1 && fv=1
-	rm -f scn.c x
+	rm -f conftest.c x vv.out
 	ac_testdone
 fi
 
@@ -1312,7 +1378,7 @@ $e ... done.
 echo wq >x
 ed x <x 2>/dev/null | grep 3 >/dev/null 2>&1 && \
     check_categories=$check_categories,$oldish_ed
-rm -f x
+rm -f x vv.out
 
 if test 0 = $HAVE_SYS_SIGNAME; then
 	if test 1 = $HAVE_CPP_DD; then
@@ -1329,9 +1395,9 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 #define NSIG (SIGMAX+1)
 #endif
 #endif
-mksh_cfg: NSIG' >scn.c
-	NSIG=`vq "$CPP $CPPFLAGS scn.c" | grep mksh_cfg: | \
-	    sed 's/^mksh_cfg:[	 ]*\([0-9x ()+-]*\).*$/\1/'`
+mksh_cfg: NSIG' >conftest.c
+	NSIG=`vq "$CPP $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN conftest.c $LIBS" | \
+	    grep mksh_cfg: | sed 's/^mksh_cfg:[	 ]*\([0-9x ()+-]*\).*$/\1/'`
 	case $NSIG in
 	*[\ \(\)+-]*) NSIG=`awk "BEGIN { print $NSIG }"` ;;
 	esac
@@ -1343,13 +1409,15 @@ mksh_cfg: NSIG' >scn.c
 	sigs="$sigs KILL LOST PIPE PROF PWR QUIT RESV SAK SEGV STOP SYS TERM"
 	sigs="$sigs TRAP TSTP TTIN TTOU URG USR1 USR2 VTALRM WINCH XCPU XFSZ"
 	test 1 = $HAVE_CPP_DD && test $NSIG -gt 1 && sigs="$sigs "`vq \
-	    "$CPP $CPPFLAGS -dD scn.c" | grep '[	 ]SIG[A-Z0-9]*[	 ]' | \
+	    "$CPP $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -dD conftest.c $LIBS" | \
+	    grep '[	 ]SIG[A-Z0-9]*[	 ]' | \
 	    sed 's/^\(.*[	 ]SIG\)\([A-Z0-9]*\)\([	 ].*\)$/\2/' | sort`
 	test $NSIG -gt 1 || sigs=
 	for name in $sigs; do
-		echo '#include <signal.h>' >scn.c
-		echo mksh_cfg: SIG$name >>scn.c
-		vq "$CPP $CPPFLAGS scn.c" | grep mksh_cfg: | \
+		echo '#include <signal.h>' >conftest.c
+		echo mksh_cfg: SIG$name >>conftest.c
+		vq "$CPP $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN conftest.c $LIBS" | \
+		    grep mksh_cfg: | \
 		    sed 's/^mksh_cfg:[	 ]*\([0-9x]*\).*$/\1:'$name/
 	done | grep -v '^:' | while IFS=: read nr name; do
 		test $printf = echo || nr=`printf %d "$nr" 2>/dev/null`
@@ -1362,7 +1430,7 @@ mksh_cfg: NSIG' >scn.c
 			;;
 		esac
 	done 2>&1 >signames.inc
-	rm -f scn.c
+	rm -f conftest.c
 	$e done.
 fi
 
@@ -1373,7 +1441,11 @@ test 1 = "$USE_PRINTF_BUILTIN" && CPPFLAGS="$CPPFLAGS -DMKSH_PRINTF_BUILTIN"
 test 0 = "$HAVE_SETMODE" && CPPFLAGS="$CPPFLAGS -DHAVE_CONFIG_H -DCONFIG_H_FILENAME=\\\"sh.h\\\""
 test 1 = "$HAVE_CAN_VERB" && CFLAGS="$CFLAGS -verbose"
 
+$e $bi$me: Finished configuration testing, now producing output.$ao
+
+files=
 objs=
+sp=
 case $curdir in
 *\ *)	echo "#!./mksh" >test.sh ;;
 *)	echo "#!$curdir/mksh" >test.sh ;;
@@ -1395,45 +1467,87 @@ cat >>test.sh <<-EOF
 		print "Perl interpreter '\$perli' running on '\$perlos'"
 		[[ -n \$perlos ]] && break
 	done
-	exec \$perli '$srcdir/check.pl' -s '$srcdir/check.t' -p '$curdir/mksh' -C \${check_categories#,} \$*$tsts
+	exec \$perli '$srcdir/check.pl' -s '$srcdir/check.t' -p '$curdir/mksh' \${check_categories:+-C} \${check_categories#,} \$*$tsts
 EOF
 chmod 755 test.sh
-test "$HAVE_CAN_COMBINE$llvm" = "0COMBINE" && llvm=NO
-if test x"$llvm" = x"NO"; then
-	emitbc=-c
-elif test x"$llvm" = x"COMBINE"; then
-	emitbc="-fwhole-program --combine"
-else
+test $HAVE_CAN_COMBINE$cm = 0combine && cm=normal
+if test $cm = llvm; then
 	emitbc="-emit-llvm -c"
+else
+	emitbc=-c
 fi
 echo set -x >Rebuild.sh
 for file in $SRCS; do
-	objs="$objs `echo x"$file" | sed 's/^x\(.*\)\.c$/\1.o/'`"
+	of=`echo x"$file" | sed 's/^x\(.*\)\.c$/\1.o/'`
+	objs="$objs$sp$of"
 	test -f $file || file=$srcdir/$file
+	files="$files$sp$file"
+	sp=' '
 	echo "$CC $CFLAGS $CPPFLAGS $emitbc $file || exit 1" >>Rebuild.sh
 done
-if test x"$llvm" = x"NO" || test x"$llvm" = x"COMBINE"; then
-	lobjs=$objs
-else
+if test $cm = llvm; then
 	echo "rm -f mksh.s" >>Rebuild.sh
 	echo "llvm-link -o - $objs | opt $llvm | llc -o mksh.s" >>Rebuild.sh
 	lobjs=mksh.s
+else
+	lobjs=$objs
 fi
 case $tcfn in
-a.exe)	echo tcfn=mksh.exe >>Rebuild.sh ;;
-*)	echo tcfn=mksh >>Rebuild.sh ;;
+a.exe)	mkshexe=mksh.exe ;;
+*)	mkshexe=mksh ;;
 esac
+echo tcfn=$mkshexe >>Rebuild.sh
 echo "$CC $CFLAGS $LDFLAGS -o \$tcfn $lobjs $LIBS $ccpr" >>Rebuild.sh
 echo 'test -f $tcfn || exit 1; size $tcfn' >>Rebuild.sh
-if test x"$llvm" = x"COMBINE"; then
-	case $tcfn in
-	a.exe)	objs="-o mksh.exe" ;;
-	*)	objs="-o mksh" ;;
-	esac
+if test $cm = makefile; then
+	extras='emacsfn.h sh.h sh_flags.h var_spec.h'
+	test 0 = $HAVE_SYS_SIGNAME && extras="$extras signames.inc"
+	cat >Makefrag.inc <<EOF
+# Makefile fragment for building mksh $dstversion
+
+PROG=		$mkshexe
+MAN=		mksh.1
+SRCS=		$SRCS
+SRCS_FP=	$files
+OBJS_BP=	$objs
+INDSRCS=	$extras
+NONSRCS_INST=	dot.mkshrc \$(MAN)
+NONSRCS_NOINST=	Build.sh Makefile Rebuild.sh check.pl check.t test.sh
+CC=		$CC
+CFLAGS=		$CFLAGS
+CPPFLAGS=	$CPPFLAGS
+LDFLAGS=	$LDFLAGS
+LIBS=		$LIBS
+
+# not BSD make only:
+#VPATH=		$srcdir
+#all: \$(PROG)
+#\$(PROG): \$(OBJS_BP)
+#	\$(CC) \$(CFLAGS) \$(LDFLAGS) -o \$@ \$(OBJS_BP) \$(LIBS)
+#\$(OBJS_BP): \$(SRCS_FP) \$(NONSRCS)
+#.c.o:
+#	\$(CC) \$(CFLAGS) \$(CPPFLAGS) -c \$<
+
+# for all make variants:
+#REGRESS_FLAGS=	-v
+#regress:
+#	./test.sh \$(REGRESS_FLAGS)
+
+# for BSD make only:
+#.PATH: $srcdir
+#.include <bsd.prog.mk>
+EOF
+	$e
+	$e Generated Makefrag.inc successfully.
+	exit 0
+fi
+if test $cm = combine; then
+	objs="-o $mkshexe"
 	for file in $SRCS; do
 		test -f $file || file=$srcdir/$file
 		objs="$objs $file"
 	done
+	emitbc="-fwhole-program --combine"
 	v "$CC $CFLAGS $CPPFLAGS $LDFLAGS $emitbc $objs $LIBS $ccpr"
 elif test 1 = $pm; then
 	for file in $SRCS; do
@@ -1447,16 +1561,12 @@ else
 		v "$CC $CFLAGS $CPPFLAGS $emitbc $file" || exit 1
 	done
 fi
-if test x"$emitbc" = x"-emit-llvm -c"; then
+if test $cm = llvm; then
 	rm -f mksh.s
 	v "llvm-link -o - $objs | opt $llvm | llc -o mksh.s"
 fi
-case $tcfn in
-a.exe)	tcfn=mksh.exe ;;
-*)	tcfn=mksh ;;
-esac
-test x"$llvm" = x"COMBINE" || \
-    v "$CC $CFLAGS $LDFLAGS -o $tcfn $lobjs $LIBS $ccpr"
+tcfn=$mkshexe
+test $cm = combine || v "$CC $CFLAGS $LDFLAGS -o $tcfn $lobjs $LIBS $ccpr"
 test -f $tcfn || exit 1
 test 1 = $r || v "$NROFF -mdoc <'$srcdir/mksh.1' >mksh.cat1" || \
     rm -f mksh.cat1

@@ -4,7 +4,7 @@
 /*	$OpenBSD: vi.c,v 1.26 2009/06/29 22:50:19 martynas Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -25,7 +25,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.173 2009/08/01 20:32:43 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.189 2010/01/29 09:34:26 tg Exp $");
 
 /* tty driver characters we are interested in */
 typedef struct {
@@ -62,7 +62,7 @@ static int x_escape(const char *, size_t, int (*)(const char *, size_t));
 static int x_emacs(char *, size_t);
 static void x_init_emacs(void);
 static void x_init_prompt(void);
-#ifndef MKSH_NOVI
+#if !MKSH_S_NOVI
 static int x_vi(char *, size_t);
 #endif
 
@@ -70,15 +70,20 @@ static int x_vi(char *, size_t);
 #define x_putc(c)	shf_putc((c), shl_out)
 
 static int path_order_cmp(const void *aa, const void *bb);
-static char *add_glob(const char *, int);
+static char *add_glob(const char *, int)
+    MKSH_A_NONNULL((nonnull (1)))
+    MKSH_A_BOUNDED(string, 1, 2);
 static void glob_table(const char *, XPtrV *, struct table *);
 static void glob_path(int flags, const char *, XPtrV *, const char *);
-static int x_file_glob(int, const char *, int, char ***);
-static int x_command_glob(int, const char *, int, char ***);
+static int x_file_glob(int, const char *, int, char ***)
+    MKSH_A_NONNULL((nonnull (2)))
+    MKSH_A_BOUNDED(string, 2, 3);
+static int x_command_glob(int, const char *, int, char ***)
+    MKSH_A_NONNULL((nonnull (2)))
+    MKSH_A_BOUNDED(string, 2, 3);
 static int x_locate_word(const char *, int, int, int *, bool *);
 
 static int x_e_getmbc(char *);
-static int utf_wcwidth(unsigned int);
 
 /* +++ generic editing functions +++ */
 
@@ -107,7 +112,7 @@ x_read(char *buf, size_t len)
 	modified = 1;
 	if (Flag(FEMACS) || Flag(FGMACS))
 		i = x_emacs(buf, len);
-#ifndef MKSH_NOVI
+#if !MKSH_S_NOVI
 	else if (Flag(FVI))
 		i = x_vi(buf, len);
 #endif
@@ -249,10 +254,11 @@ x_print_expansions(int nwords, char * const *words, bool is_command)
  *	- returns number of matching strings
  */
 static int
-x_file_glob(int flags __unused, const char *str, int slen, char ***wordsp)
+x_file_glob(int flags MKSH_A_UNUSED, const char *str, int slen, char ***wordsp)
 {
 	char *toglob, **words;
-	int nwords, i, idx, escaping;
+	int nwords, i, idx;
+	bool escaping;
 	XPtrV w;
 	struct source *s, *sold;
 
@@ -262,20 +268,21 @@ x_file_glob(int flags __unused, const char *str, int slen, char ***wordsp)
 	toglob = add_glob(str, slen);
 
 	/* remove all escaping backward slashes */
-	escaping = 0;
+	escaping = false;
 	for (i = 0, idx = 0; toglob[i]; i++) {
 		if (toglob[i] == '\\' && !escaping) {
-			escaping = 1;
+			escaping = true;
 			continue;
 		}
-		/* specially escape escaped [ for globbing */
-		if (escaping && toglob[i] == '[')
+		/* specially escape escaped [ or $ or ` for globbing */
+		if (escaping && (toglob[i] == '[' ||
+		    toglob[i] == '$' || toglob[i] == '`'))
 			toglob[idx++] = QCHAR;
 
 		toglob[idx] = toglob[i];
 		idx++;
 		if (escaping)
-			escaping = 0;
+			escaping = false;
 	}
 	toglob[idx] = '\0';
 
@@ -527,6 +534,9 @@ add_glob(const char *str, int slen)
 	if (slen < 0)
 		return (NULL);
 
+	/* for clang's static analyser, the nonnull attribute isn't enough */
+	mkssert(str != NULL);
+
 	strndupx(toglob, str, slen + 1, ATEMP); /* + 1 for "*" */
 	toglob[slen] = '\0';
 
@@ -709,7 +719,7 @@ x_escape(const char *s, size_t len, int (*putbuf_func)(const char *, size_t))
 	int rval = 0;
 
 	while (wlen - add > 0)
-		if (vstrchr("\\$()[?{}*&;#|<>\"'`", s[add]) ||
+		if (vstrchr("\"#$&'()*:;<=>?[\\`{|}", s[add]) ||
 		    vstrchr(ifs, s[add])) {
 			if (putbuf_func(s, add) != 0) {
 				rval = -1;
@@ -732,241 +742,11 @@ x_escape(const char *s, size_t len, int (*putbuf_func)(const char *, size_t))
 	return (rval);
 }
 
-/* UTF-8 hack: high-level functions */
-
-int
-utf_widthadj(const char *src, const char **dst)
-{
-	size_t len;
-	unsigned int wc;
-	int width;
-
-	if (!UTFMODE || (len = utf_mbtowc(&wc, src)) == (size_t)-1 ||
-	    wc == 0)
-		len = width = 1;
-	else if ((width = utf_wcwidth(wc)) < 0)
-		/* XXX use 2 for x_zotc3 here? */
-		width = 1;
-
-	if (dst)
-		*dst = src + len;
-	return (width);
-}
-
-int
-utf_mbswidth(const char *s)
-{
-	size_t len;
-	unsigned int wc;
-	int width = 0, cw;
-
-	if (!UTFMODE)
-		return (strlen(s));
-
-	while (*s)
-		if (((len = utf_mbtowc(&wc, s)) == (size_t)-1) ||
-		    ((cw = utf_wcwidth(wc)) == -1)) {
-			s++;
-			width += 1;
-		} else {
-			s += len;
-			width += cw;
-		}
-	return (width);
-}
-
-const char *
-utf_skipcols(const char *p, int cols)
-{
-	int c = 0;
-
-	while (c < cols)
-		c += utf_widthadj(p, &p);
-	return (p);
-}
-
-size_t
-utf_ptradj(const char *src)
-{
-	register size_t n;
-
-	if (!UTFMODE ||
-	    *(const unsigned char *)(src) < 0xC2 ||
-	    (n = utf_mbtowc(NULL, src)) == (size_t)-1)
-		n = 1;
-	return (n);
-}
-
-/* UTF-8 hack: low-level functions */
-
-/* --- begin of wcwidth.c excerpt --- */
-/*-
- * Markus Kuhn -- 2007-05-26 (Unicode 5.0)
- *
- * Permission to use, copy, modify, and distribute this software
- * for any purpose and without fee is hereby granted. The author
- * disclaims all warranties with regard to this software.
- */
-
-__RCSID("$miros: src/lib/libc/i18n/wcwidth.c,v 1.8 2008/09/20 12:01:18 tg Exp $");
-
-static int
-utf_wcwidth(unsigned int c)
-{
-	static const struct cbset {
-		unsigned short first;
-		unsigned short last;
-	} comb[] = {
-		{ 0x0300, 0x036F }, { 0x0483, 0x0486 }, { 0x0488, 0x0489 },
-		{ 0x0591, 0x05BD }, { 0x05BF, 0x05BF }, { 0x05C1, 0x05C2 },
-		{ 0x05C4, 0x05C5 }, { 0x05C7, 0x05C7 }, { 0x0600, 0x0603 },
-		{ 0x0610, 0x0615 }, { 0x064B, 0x065E }, { 0x0670, 0x0670 },
-		{ 0x06D6, 0x06E4 }, { 0x06E7, 0x06E8 }, { 0x06EA, 0x06ED },
-		{ 0x070F, 0x070F }, { 0x0711, 0x0711 }, { 0x0730, 0x074A },
-		{ 0x07A6, 0x07B0 }, { 0x07EB, 0x07F3 }, { 0x0901, 0x0902 },
-		{ 0x093C, 0x093C }, { 0x0941, 0x0948 }, { 0x094D, 0x094D },
-		{ 0x0951, 0x0954 }, { 0x0962, 0x0963 }, { 0x0981, 0x0981 },
-		{ 0x09BC, 0x09BC }, { 0x09C1, 0x09C4 }, { 0x09CD, 0x09CD },
-		{ 0x09E2, 0x09E3 }, { 0x0A01, 0x0A02 }, { 0x0A3C, 0x0A3C },
-		{ 0x0A41, 0x0A42 }, { 0x0A47, 0x0A48 }, { 0x0A4B, 0x0A4D },
-		{ 0x0A70, 0x0A71 }, { 0x0A81, 0x0A82 }, { 0x0ABC, 0x0ABC },
-		{ 0x0AC1, 0x0AC5 }, { 0x0AC7, 0x0AC8 }, { 0x0ACD, 0x0ACD },
-		{ 0x0AE2, 0x0AE3 }, { 0x0B01, 0x0B01 }, { 0x0B3C, 0x0B3C },
-		{ 0x0B3F, 0x0B3F }, { 0x0B41, 0x0B43 }, { 0x0B4D, 0x0B4D },
-		{ 0x0B56, 0x0B56 }, { 0x0B82, 0x0B82 }, { 0x0BC0, 0x0BC0 },
-		{ 0x0BCD, 0x0BCD }, { 0x0C3E, 0x0C40 }, { 0x0C46, 0x0C48 },
-		{ 0x0C4A, 0x0C4D }, { 0x0C55, 0x0C56 }, { 0x0CBC, 0x0CBC },
-		{ 0x0CBF, 0x0CBF }, { 0x0CC6, 0x0CC6 }, { 0x0CCC, 0x0CCD },
-		{ 0x0CE2, 0x0CE3 }, { 0x0D41, 0x0D43 }, { 0x0D4D, 0x0D4D },
-		{ 0x0DCA, 0x0DCA }, { 0x0DD2, 0x0DD4 }, { 0x0DD6, 0x0DD6 },
-		{ 0x0E31, 0x0E31 }, { 0x0E34, 0x0E3A }, { 0x0E47, 0x0E4E },
-		{ 0x0EB1, 0x0EB1 }, { 0x0EB4, 0x0EB9 }, { 0x0EBB, 0x0EBC },
-		{ 0x0EC8, 0x0ECD }, { 0x0F18, 0x0F19 }, { 0x0F35, 0x0F35 },
-		{ 0x0F37, 0x0F37 }, { 0x0F39, 0x0F39 }, { 0x0F71, 0x0F7E },
-		{ 0x0F80, 0x0F84 }, { 0x0F86, 0x0F87 }, { 0x0F90, 0x0F97 },
-		{ 0x0F99, 0x0FBC }, { 0x0FC6, 0x0FC6 }, { 0x102D, 0x1030 },
-		{ 0x1032, 0x1032 }, { 0x1036, 0x1037 }, { 0x1039, 0x1039 },
-		{ 0x1058, 0x1059 }, { 0x1160, 0x11FF }, { 0x135F, 0x135F },
-		{ 0x1712, 0x1714 }, { 0x1732, 0x1734 }, { 0x1752, 0x1753 },
-		{ 0x1772, 0x1773 }, { 0x17B4, 0x17B5 }, { 0x17B7, 0x17BD },
-		{ 0x17C6, 0x17C6 }, { 0x17C9, 0x17D3 }, { 0x17DD, 0x17DD },
-		{ 0x180B, 0x180D }, { 0x18A9, 0x18A9 }, { 0x1920, 0x1922 },
-		{ 0x1927, 0x1928 }, { 0x1932, 0x1932 }, { 0x1939, 0x193B },
-		{ 0x1A17, 0x1A18 }, { 0x1B00, 0x1B03 }, { 0x1B34, 0x1B34 },
-		{ 0x1B36, 0x1B3A }, { 0x1B3C, 0x1B3C }, { 0x1B42, 0x1B42 },
-		{ 0x1B6B, 0x1B73 }, { 0x1DC0, 0x1DCA }, { 0x1DFE, 0x1DFF },
-		{ 0x200B, 0x200F }, { 0x202A, 0x202E }, { 0x2060, 0x2063 },
-		{ 0x206A, 0x206F }, { 0x20D0, 0x20EF }, { 0x302A, 0x302F },
-		{ 0x3099, 0x309A }, { 0xA806, 0xA806 }, { 0xA80B, 0xA80B },
-		{ 0xA825, 0xA826 }, { 0xFB1E, 0xFB1E }, { 0xFE00, 0xFE0F },
-		{ 0xFE20, 0xFE23 }, { 0xFEFF, 0xFEFF }, { 0xFFF9, 0xFFFB }
-	};
-	size_t min = 0, mid, max = NELEM(comb) - 1;
-
-	/* test for 8-bit control characters */
-	if (c < 32 || (c >= 0x7f && c < 0xa0))
-		return (c ? -1 : 0);
-
-	/* binary search in table of non-spacing characters */
-	if (c >= comb[0].first && c <= comb[max].last)
-		while (max >= min) {
-			mid = (min + max) / 2;
-			if (c > comb[mid].last)
-				min = mid + 1;
-			else if (c < comb[mid].first)
-				max = mid - 1;
-			else
-				return (0);
-		}
-
-	/* if we arrive here, c is not a combining or C0/C1 control char */
-	return ((c >= 0x1100 && (
-	    c <= 0x115f || /* Hangul Jamo init. consonants */
-	    c == 0x2329 || c == 0x232a ||
-	    (c >= 0x2e80 && c <= 0xa4cf && c != 0x303f) || /* CJK ... Yi */
-	    (c >= 0xac00 && c <= 0xd7a3) || /* Hangul Syllables */
-	    (c >= 0xf900 && c <= 0xfaff) || /* CJK Compatibility Ideographs */
-	    (c >= 0xfe10 && c <= 0xfe19) || /* Vertical forms */
-	    (c >= 0xfe30 && c <= 0xfe6f) || /* CJK Compatibility Forms */
-	    (c >= 0xff00 && c <= 0xff60) || /* Fullwidth Forms */
-	    (c >= 0xffe0 && c <= 0xffe6))) ? 2 : 1);
-}
-/* --- end of wcwidth.c excerpt --- */
-
-/* +++ CESU-8 multibyte and wide character conversion crafted for mksh +++ */
-
-size_t
-utf_mbtowc(unsigned int *dst, const char *src)
-{
-	const unsigned char *s = (const unsigned char *)src;
-	unsigned int c, wc;
-
-	if ((wc = *s++) < 0x80) {
- out:
-		if (dst != NULL)
-			*dst = wc;
-		return (wc ? ((const char *)s - src) : 0);
-	}
-	if (wc < 0xC2 || wc >= 0xF0)
-		/* < 0xC0: spurious second byte */
-		/* < 0xC2: non-minimalistic mapping error in 2-byte seqs */
-		/* > 0xEF: beyond BMP */
-		goto ilseq;
-
-	if (wc < 0xE0) {
-		wc = (wc & 0x1F) << 6;
-		if (((c = *s++) & 0xC0) != 0x80)
-			goto ilseq;
-		wc |= c & 0x3F;
-		goto out;
-	}
-
-	wc = (wc & 0x0F) << 12;
-
-	if (((c = *s++) & 0xC0) != 0x80)
-		goto ilseq;
-	wc |= (c & 0x3F) << 6;
-
-	if (((c = *s++) & 0xC0) != 0x80)
-		goto ilseq;
-	wc |= c & 0x3F;
-
-	/* Check for non-minimalistic mapping error in 3-byte seqs */
-	if (wc >= 0x0800 && wc <= 0xFFFD)
-		goto out;
- ilseq:
-	return ((size_t)(-1));
-}
-
-size_t
-utf_wctomb(char *dst, unsigned int wc)
-{
-	unsigned char *d;
-
-	if (wc < 0x80) {
-		*dst = wc;
-		return (1);
-	}
-
-	d = (unsigned char *)dst;
-	if (wc < 0x0800)
-		*d++ = (wc >> 6) | 0xC0;
-	else {
-		*d++ = ((wc = wc > 0xFFFD ? 0xFFFD : wc) >> 12) | 0xE0;
-		*d++ = ((wc >> 6) & 0x3F) | 0x80;
-	}
-	*d++ = (wc & 0x3F) | 0x80;
-	return ((char *)d - dst);
-}
 
 /* +++ emacs editing mode +++ */
 
 static	Area	aedit;
 #define	AEDIT	&aedit		/* area for kill ring and macro defns */
-
-#undef CTRL
-#define	CTRL(x)		((x) == '?' ? 0x7F : (x) & 0x1F)	/* ASCII */
-#define	UNCTRL(x)	((x) ^ 0x40)				/* ASCII */
 
 /* values returned by keyboard functions */
 #define	KSTD	0
@@ -1037,14 +817,18 @@ static int x_nextcmd;		/* for newline-and-next */
 static char *xmp;		/* mark pointer */
 static unsigned char x_last_command;
 static unsigned char (*x_tab)[X_TABSZ];	/* key definition */
+#ifndef MKSH_SMALL
 static char *(*x_atab)[X_TABSZ];	/* macro definitions */
+#endif
 static unsigned char x_bound[(X_TABSZ * X_NTABS + 7) / 8];
 #define KILLSIZE	20
 static char *killstack[KILLSIZE];
 static int killsp, killtp;
 static int x_curprefix;
+#ifndef MKSH_SMALL
 static char *macroptr = NULL;	/* bind key macro active? */
-#ifndef MKSH_NOVI
+#endif
+#if !MKSH_S_NOVI
 static int cur_col;		/* current column on line */
 static int pwidth;		/* width of prompt */
 static int prompt_trunc;	/* how much of prompt to truncate */
@@ -1071,11 +855,18 @@ static void x_zotc2(int);
 static void x_zotc3(char **);
 static void x_load_hist(char **);
 static int x_search(char *, int, int);
+#ifndef MKSH_SMALL
 static int x_search_dir(int);
+int x_bind(const char *, const char *, bool, bool)
+#else
+int x_bind(const char *, const char *, bool)
+#endif
+    MKSH_A_NONNULL((nonnull (1, 2)));
 static int x_match(char *, char *);
 static void x_redraw(int);
 static void x_push(int);
-static char *x_mapin(const char *, Area *);
+static char *x_mapin(const char *, Area *)
+    MKSH_A_NONNULL((nonnull (1)));
 static char *x_mapout(int);
 static void x_mapout2(int, char **);
 static void x_print(int, int);
@@ -1085,7 +876,9 @@ static int x_e_getc(void);
 static void x_e_putc2(int);
 static void x_e_putc3(const char **);
 static void x_e_puts(const char *);
+#ifndef MKSH_SMALL
 static int x_fold_case(int);
+#endif
 static char *x_lastcp(void);
 static void do_complete(int, Comp_type);
 
@@ -1094,186 +887,19 @@ static int unget_char = -1;
 static int x_do_ins(const char *, size_t);
 static void bind_if_not_bound(int, int, int);
 
-#define XFUNC_abort 0
-#define XFUNC_beg_hist 1
-#define XFUNC_cls 2
-#define XFUNC_comp_comm 3
-#define XFUNC_comp_file 4
-#define XFUNC_complete 5
-#define XFUNC_del_back 6
-#define XFUNC_del_bword 7
-#define XFUNC_del_char 8
-#define XFUNC_del_fword 9
-#define XFUNC_del_line 10
-#define XFUNC_draw_line 11
-#define XFUNC_end_hist 12
-#define XFUNC_end_of_text 13
-#define XFUNC_enumerate 14
-#define XFUNC_eot_del 15
-#define XFUNC_error 16
-#define XFUNC_goto_hist 17
-#define XFUNC_ins_string 18
-#define XFUNC_insert 19
-#define XFUNC_kill 20
-#define XFUNC_kill_region 21
-#define XFUNC_list_comm 22
-#define XFUNC_list_file 23
-#define XFUNC_literal 24
-#define XFUNC_meta1 25
-#define XFUNC_meta2 26
-#define XFUNC_meta_yank 27
-#define XFUNC_mv_back 28
-#define XFUNC_mv_begin 29
-#define XFUNC_mv_bword 30
-#define XFUNC_mv_end 31
-#define XFUNC_mv_forw 32
-#define XFUNC_mv_fword 33
-#define XFUNC_newline 34
-#define XFUNC_next_com 35
-#define XFUNC_nl_next_com 36
-#define XFUNC_noop 37
-#define XFUNC_prev_com 38
-#define XFUNC_prev_histword 39
-#define XFUNC_search_char_forw 40
-#define XFUNC_search_char_back 41
-#define XFUNC_search_hist 42
-#define XFUNC_set_mark 43
-#define XFUNC_transpose 44
-#define XFUNC_xchg_point_mark 45
-#define XFUNC_yank 46
-#define XFUNC_comp_list 47
-#define XFUNC_expand 48
-#define XFUNC_fold_capitalise 49
-#define XFUNC_fold_lower 50
-#define XFUNC_fold_upper 51
-#define XFUNC_set_arg 52
-#define XFUNC_comment 53
-#define XFUNC_version 54
-#define XFUNC_edit_line 55
-#define XFUNC_search_hist_up 56
-#define XFUNC_search_hist_dn 57
+enum emacs_funcs {
+#define EMACSFN_ENUMS
+#include "emacsfn.h"
+	XFUNC_MAX
+};
 
-/* XFUNC_* must be < 128 */
-
-static int x_abort(int);
-static int x_beg_hist(int);
-static int x_cls(int);
-static int x_comp_comm(int);
-static int x_comp_file(int);
-static int x_complete(int);
-static int x_del_back(int);
-static int x_del_bword(int);
-static int x_del_char(int);
-static int x_del_fword(int);
-static int x_del_line(int);
-static int x_draw_line(int);
-static int x_end_hist(int);
-static int x_end_of_text(int);
-static int x_enumerate(int);
-static int x_eot_del(int);
-static int x_error(int);
-static int x_goto_hist(int);
-static int x_ins_string(int);
-static int x_insert(int);
-static int x_kill(int);
-static int x_kill_region(int);
-static int x_list_comm(int);
-static int x_list_file(int);
-static int x_literal(int);
-static int x_meta1(int);
-static int x_meta2(int);
-static int x_meta_yank(int);
-static int x_mv_back(int);
-static int x_mv_begin(int);
-static int x_mv_bword(int);
-static int x_mv_end(int);
-static int x_mv_forw(int);
-static int x_mv_fword(int);
-static int x_newline(int);
-static int x_next_com(int);
-static int x_nl_next_com(int);
-static int x_noop(int);
-static int x_prev_com(int);
-static int x_prev_histword(int);
-static int x_search_char_forw(int);
-static int x_search_char_back(int);
-static int x_search_hist(int);
-static int x_set_mark(int);
-static int x_transpose(int);
-static int x_xchg_point_mark(int);
-static int x_yank(int);
-static int x_comp_list(int);
-static int x_expand(int);
-static int x_fold_capitalise(int);
-static int x_fold_lower(int);
-static int x_fold_upper(int);
-static int x_set_arg(int);
-static int x_comment(int);
-static int x_version(int);
-static int x_edit_line(int);
-static int x_search_hist_up(int);
-static int x_search_hist_down(int);
+#define EMACSFN_DEFNS
+#include "emacsfn.h"
 
 static const struct x_ftab x_ftab[] = {
-	{ x_abort,		"abort",			0 },
-	{ x_beg_hist,		"beginning-of-history",		0 },
-	{ x_cls,		"clear-screen",			0 },
-	{ x_comp_comm,		"complete-command",		0 },
-	{ x_comp_file,		"complete-file",		0 },
-	{ x_complete,		"complete",			0 },
-	{ x_del_back,		"delete-char-backward",		XF_ARG },
-	{ x_del_bword,		"delete-word-backward",		XF_ARG },
-	{ x_del_char,		"delete-char-forward",		XF_ARG },
-	{ x_del_fword,		"delete-word-forward",		XF_ARG },
-	{ x_del_line,		"kill-line",			0 },
-	{ x_draw_line,		"redraw",			0 },
-	{ x_end_hist,		"end-of-history",		0 },
-	{ x_end_of_text,	"eot",				0 },
-	{ x_enumerate,		"list",				0 },
-	{ x_eot_del,		"eot-or-delete",		XF_ARG },
-	{ x_error,		"error",			0 },
-	{ x_goto_hist,		"goto-history",			XF_ARG },
-	{ x_ins_string,		"macro-string",			XF_NOBIND },
-	{ x_insert,		"auto-insert",			XF_ARG },
-	{ x_kill,		"kill-to-eol",			XF_ARG },
-	{ x_kill_region,	"kill-region",			0 },
-	{ x_list_comm,		"list-command",			0 },
-	{ x_list_file,		"list-file",			0 },
-	{ x_literal,		"quote",			0 },
-	{ x_meta1,		"prefix-1",			XF_PREFIX },
-	{ x_meta2,		"prefix-2",			XF_PREFIX },
-	{ x_meta_yank,		"yank-pop",			0 },
-	{ x_mv_back,		"backward-char",		XF_ARG },
-	{ x_mv_begin,		"beginning-of-line",		0 },
-	{ x_mv_bword,		"backward-word",		XF_ARG },
-	{ x_mv_end,		"end-of-line",			0 },
-	{ x_mv_forw,		"forward-char",			XF_ARG },
-	{ x_mv_fword,		"forward-word",			XF_ARG },
-	{ x_newline,		"newline",			0 },
-	{ x_next_com,		"down-history",			XF_ARG },
-	{ x_nl_next_com,	"newline-and-next",		0 },
-	{ x_noop,		"no-op",			0 },
-	{ x_prev_com,		"up-history",			XF_ARG },
-	{ x_prev_histword,	"prev-hist-word",		XF_ARG },
-	{ x_search_char_forw,	"search-character-forward",	XF_ARG },
-	{ x_search_char_back,	"search-character-backward",	XF_ARG },
-	{ x_search_hist,	"search-history",		0 },
-	{ x_set_mark,		"set-mark-command",		0 },
-	{ x_transpose,		"transpose-chars",		0 },
-	{ x_xchg_point_mark,	"exchange-point-and-mark",	0 },
-	{ x_yank,		"yank",				0 },
-	{ x_comp_list,		"complete-list",		0 },
-	{ x_expand,		"expand-file",			0 },
-	{ x_fold_capitalise,	"capitalize-word",		XF_ARG },
-	{ x_fold_lower,		"downcase-word",		XF_ARG },
-	{ x_fold_upper,		"upcase-word",			XF_ARG },
-	{ x_set_arg,		"set-arg",			XF_NOBIND },
-	{ x_comment,		"comment",			0 },
-	{ x_version,		"version",			0 },
-	{ x_edit_line,		"edit-line",			XF_ARG },
-	{ x_search_hist_up,	"search-history-up",		0 },
-	{ x_search_hist_down,	"search-history-down",		0 },
-	{ 0,			NULL,				0 }
+#define EMACSFN_ITEMS
+#include "emacsfn.h"
+	{ 0, NULL, 0 }
 };
 
 static struct x_defbindings const x_defbindings[] = {
@@ -1339,12 +965,14 @@ static struct x_defbindings const x_defbindings[] = {
 	{ XFUNC_set_arg,		1,	'7'	},
 	{ XFUNC_set_arg,		1,	'8'	},
 	{ XFUNC_set_arg,		1,	'9'	},
+#ifndef MKSH_SMALL
 	{ XFUNC_fold_upper,		1,	'U'	},
 	{ XFUNC_fold_upper,		1,	'u'	},
 	{ XFUNC_fold_lower,		1,	'L'	},
 	{ XFUNC_fold_lower,		1,	'l'	},
 	{ XFUNC_fold_capitalise,	1,	'C'	},
 	{ XFUNC_fold_capitalise,	1,	'c'	},
+#endif
 	/* These for ansi arrow keys: arguablely shouldn't be here by
 	 * default, but its simpler/faster/smaller than using termcap
 	 * entries.
@@ -1355,7 +983,8 @@ static struct x_defbindings const x_defbindings[] = {
 	{ XFUNC_next_com,		2,	'B'	},
 	{ XFUNC_mv_forw,		2,	'C'	},
 	{ XFUNC_mv_back,		2,	'D'	},
-	{ XFUNC_mv_begin | 0x80,	2,	'1'	},
+#ifndef MKSH_SMALL
+	{ XFUNC_vt_hack,		2,	'1'	},
 	{ XFUNC_mv_begin | 0x80,	2,	'7'	},
 	{ XFUNC_mv_begin,		2,	'H'	},
 	{ XFUNC_mv_end | 0x80,		2,	'4'	},
@@ -1366,6 +995,7 @@ static struct x_defbindings const x_defbindings[] = {
 	{ XFUNC_search_hist_dn | 0x80,	2,	'6'	},
 	/* more non-standard ones */
 	{ XFUNC_edit_line,		2,	'e'	}
+#endif
 };
 
 #ifdef MKSH_SMALL
@@ -1378,6 +1008,7 @@ x_modified(void)
 		modified = 1;
 	}
 }
+#define XFUNC_VALUE(f) (f)
 #else
 #define x_modified() do {			\
 	if (!modified) {			\
@@ -1385,6 +1016,7 @@ x_modified(void)
 		modified = 1;			\
 	}					\
 } while (/* CONSTCOND */ 0)
+#define XFUNC_VALUE(f) (f & 0x7F)
 #endif
 
 static int
@@ -1469,6 +1101,7 @@ x_emacs(char *buf, size_t len)
 
 		f = x_curprefix == -1 ? XFUNC_insert :
 		    x_tab[x_curprefix][c];
+#ifndef MKSH_SMALL
 		if (f & 0x80) {
 			f &= 0x7F;
 			if ((i = x_e_getc()) != '~')
@@ -1478,6 +1111,7 @@ x_emacs(char *buf, size_t len)
 		/* avoid bind key macro recursion */
 		if (macroptr && f == XFUNC_ins_string)
 			f = XFUNC_insert;
+#endif
 
 		if (!(x_ftab[f].xf_flags & XF_PREFIX) &&
 		    x_last_command != XFUNC_set_arg) {
@@ -1561,6 +1195,7 @@ x_insert(int c)
 	return (KSTD);
 }
 
+#ifndef MKSH_SMALL
 static int
 x_ins_string(int c)
 {
@@ -1571,6 +1206,7 @@ x_ins_string(int c)
 	 */
 	return (KSTD);
 }
+#endif
 
 static int
 x_do_ins(const char *cp, size_t len)
@@ -1616,7 +1252,7 @@ x_ins(const char *s)
 }
 
 static int
-x_del_back(int c __unused)
+x_del_back(int c MKSH_A_UNUSED)
 {
 	int i = 0;
 
@@ -1632,7 +1268,7 @@ x_del_back(int c __unused)
 }
 
 static int
-x_del_char(int c __unused)
+x_del_char(int c MKSH_A_UNUSED)
 {
 	char *cp, *cp2;
 	int i = 0;
@@ -1724,28 +1360,28 @@ x_delete(int nc, int push)
 }
 
 static int
-x_del_bword(int c __unused)
+x_del_bword(int c MKSH_A_UNUSED)
 {
 	x_delete(x_bword(), true);
 	return (KSTD);
 }
 
 static int
-x_mv_bword(int c __unused)
+x_mv_bword(int c MKSH_A_UNUSED)
 {
 	x_bword();
 	return (KSTD);
 }
 
 static int
-x_mv_fword(int c __unused)
+x_mv_fword(int c MKSH_A_UNUSED)
 {
 	x_fword(1);
 	return (KSTD);
 }
 
 static int
-x_del_fword(int c __unused)
+x_del_fword(int c MKSH_A_UNUSED)
 {
 	x_delete(x_fword(0), true);
 	return (KSTD);
@@ -1900,7 +1536,7 @@ x_zotc3(char **cp)
 }
 
 static int
-x_mv_back(int c __unused)
+x_mv_back(int c MKSH_A_UNUSED)
 {
 	if (xcp == xbuf) {
 		x_e_putc2(7);
@@ -1915,7 +1551,7 @@ x_mv_back(int c __unused)
 }
 
 static int
-x_mv_forw(int c __unused)
+x_mv_forw(int c MKSH_A_UNUSED)
 {
 	char *cp = xcp, *cp2;
 
@@ -1934,7 +1570,7 @@ x_mv_forw(int c __unused)
 }
 
 static int
-x_search_char_forw(int c __unused)
+x_search_char_forw(int c MKSH_A_UNUSED)
 {
 	char *cp = xcp;
 	char tmp[4];
@@ -1956,7 +1592,7 @@ x_search_char_forw(int c __unused)
 }
 
 static int
-x_search_char_back(int c __unused)
+x_search_char_back(int c MKSH_A_UNUSED)
 {
 	char *cp = xcp, *p, tmp[4];
 	bool b;
@@ -1991,7 +1627,7 @@ x_search_char_back(int c __unused)
 }
 
 static int
-x_newline(int c __unused)
+x_newline(int c MKSH_A_UNUSED)
 {
 	x_e_putc2('\r');
 	x_e_putc2('\n');
@@ -2001,7 +1637,7 @@ x_newline(int c __unused)
 }
 
 static int
-x_end_of_text(int c __unused)
+x_end_of_text(int c MKSH_A_UNUSED)
 {
 	x_zotc2(edchars.eof);
 	x_putc('\r');
@@ -2011,28 +1647,28 @@ x_end_of_text(int c __unused)
 }
 
 static int
-x_beg_hist(int c __unused)
+x_beg_hist(int c MKSH_A_UNUSED)
 {
 	x_load_hist(history);
 	return (KSTD);
 }
 
 static int
-x_end_hist(int c __unused)
+x_end_hist(int c MKSH_A_UNUSED)
 {
 	x_load_hist(histptr);
 	return (KSTD);
 }
 
 static int
-x_prev_com(int c __unused)
+x_prev_com(int c MKSH_A_UNUSED)
 {
 	x_load_hist(x_histp - x_arg);
 	return (KSTD);
 }
 
 static int
-x_next_com(int c __unused)
+x_next_com(int c MKSH_A_UNUSED)
 {
 	x_load_hist(x_histp + x_arg);
 	return (KSTD);
@@ -2043,7 +1679,7 @@ x_next_com(int c __unused)
  * want so we'll simply go to the oldest one.
  */
 static int
-x_goto_hist(int c __unused)
+x_goto_hist(int c MKSH_A_UNUSED)
 {
 	if (x_arg_defaulted)
 		x_load_hist(history);
@@ -2083,7 +1719,7 @@ x_load_hist(char **hp)
 }
 
 static int
-x_nl_next_com(int c __unused)
+x_nl_next_com(int c MKSH_A_UNUSED)
 {
 	x_nextcmd = source->line - (histptr - x_histp) + 1;
 	return (x_newline('\n'));
@@ -2128,11 +1764,13 @@ x_search_hist(int c)
 			}
 			break;
 		}
+#ifndef MKSH_SMALL
 		if (f & 0x80) {
 			f &= 0x7F;
 			if ((c = x_e_getc()) != '~')
 				x_e_ungetc(c);
 		}
+#endif
 		if (f == XFUNC_search_hist)
 			offset = x_search(pat, 0, offset);
 		else if (f == XFUNC_del_back) {
@@ -2201,16 +1839,17 @@ x_search(char *pat, int sameline, int offset)
 	return (-1);
 }
 
+#ifndef MKSH_SMALL
 /* anchored search up from current line */
 static int
-x_search_hist_up(int c __unused)
+x_search_hist_up(int c MKSH_A_UNUSED)
 {
 	return (x_search_dir(-1));
 }
 
 /* anchored search down from current line */
 static int
-x_search_hist_down(int c __unused)
+x_search_hist_dn(int c MKSH_A_UNUSED)
 {
 	return (x_search_dir(1));
 }
@@ -2232,6 +1871,7 @@ x_search_dir(int search_dir /* should've been bool */)
 	}
 	return (KSTD);
 }
+#endif
 
 /* return position of first match of pattern in string, else -1 */
 static int
@@ -2246,7 +1886,7 @@ x_match(char *str, char *pat)
 }
 
 static int
-x_del_line(int c __unused)
+x_del_line(int c MKSH_A_UNUSED)
 {
 	int i, j;
 
@@ -2265,30 +1905,35 @@ x_del_line(int c __unused)
 }
 
 static int
-x_mv_end(int c __unused)
+x_mv_end(int c MKSH_A_UNUSED)
 {
 	x_goto(xep);
 	return (KSTD);
 }
 
 static int
-x_mv_begin(int c __unused)
+x_mv_begin(int c MKSH_A_UNUSED)
 {
 	x_goto(xbuf);
 	return (KSTD);
 }
 
 static int
-x_draw_line(int c __unused)
+x_draw_line(int c MKSH_A_UNUSED)
 {
 	x_redraw(-1);
 	return (KSTD);
 }
 
 static int
-x_cls(int c __unused)
+x_cls(int c MKSH_A_UNUSED)
 {
-/* in later versions we might use libtermcap for this */
+/*
+ * in later versions we might use libtermcap for this, but since external
+ * dependencies are problematic, this has not yet been decided on; another
+ * good string is "\033c" except on hardware terminals like the DEC VT420
+ * which do a full power cycle then...
+ */
 #ifndef MKSH_CLS_STRING
 #define MKSH_CLS_STRING	"\033[;H\033[J"
 #endif
@@ -2373,7 +2018,7 @@ x_redraw(int limit)
 }
 
 static int
-x_transpose(int c __unused)
+x_transpose(int c MKSH_A_UNUSED)
 {
 	unsigned int tmpa, tmpb;
 
@@ -2438,28 +2083,28 @@ x_transpose(int c __unused)
 }
 
 static int
-x_literal(int c __unused)
+x_literal(int c MKSH_A_UNUSED)
 {
 	x_curprefix = -1;
 	return (KSTD);
 }
 
 static int
-x_meta1(int c __unused)
+x_meta1(int c MKSH_A_UNUSED)
 {
 	x_curprefix = 1;
 	return (KSTD);
 }
 
 static int
-x_meta2(int c __unused)
+x_meta2(int c MKSH_A_UNUSED)
 {
 	x_curprefix = 2;
 	return (KSTD);
 }
 
 static int
-x_kill(int c __unused)
+x_kill(int c MKSH_A_UNUSED)
 {
 	int col = xcp - xbuf;
 	int lastcol = xep - xbuf;
@@ -2491,7 +2136,7 @@ x_push(int nchars)
 }
 
 static int
-x_yank(int c __unused)
+x_yank(int c MKSH_A_UNUSED)
 {
 	if (killsp == 0)
 		killtp = KILLSIZE;
@@ -2509,7 +2154,7 @@ x_yank(int c __unused)
 }
 
 static int
-x_meta_yank(int c __unused)
+x_meta_yank(int c MKSH_A_UNUSED)
 {
 	int len;
 
@@ -2534,7 +2179,7 @@ x_meta_yank(int c __unused)
 }
 
 static int
-x_abort(int c __unused)
+x_abort(int c MKSH_A_UNUSED)
 {
 	/* x_zotc(c); */
 	xlp = xep = xcp = xbp = xbuf;
@@ -2545,16 +2190,67 @@ x_abort(int c __unused)
 }
 
 static int
-x_error(int c __unused)
+x_error(int c MKSH_A_UNUSED)
 {
 	x_e_putc2(7);
 	return (KSTD);
 }
 
+#ifndef MKSH_SMALL
+/* special VT100 style key sequence hack */
+static int
+x_vt_hack(int c)
+{
+	/* we only support PF2-'1' for now */
+	if (c != (2 << 8 | '1'))
+		return (x_error(c));
+
+	/* what's the next character? */
+	switch ((c = x_e_getc())) {
+	case '~':
+		x_arg = 1;
+		x_arg_defaulted = 1;
+		return (x_mv_begin(0));
+	case ';':
+		/* "interesting" sequence detected */
+		break;
+	default:
+		goto unwind_err;
+	}
+
+	/* XXX x_e_ungetc is one-octet only */
+	if ((c = x_e_getc()) != '5' && c != '3')
+		goto unwind_err;
+
+	/*-
+	 * At this point, we have read the following octets so far:
+	 * - ESC+[ or ESC+O or Ctrl-X (Præfix 2)
+	 * - 1 (vt_hack)
+	 * - ;
+	 * - 5 (Ctrl key combiner) or 3 (Alt key combiner)
+	 * We can now accept one more octet designating the key.
+	 */
+
+	switch ((c = x_e_getc())) {
+	case 'C':
+		return (x_mv_fword(c));
+	case 'D':
+		return (x_mv_bword(c));
+	}
+
+ unwind_err:
+	x_e_ungetc(c);
+	return (x_error(c));
+}
+#endif
+
 static char *
 x_mapin(const char *cp, Area *ap)
 {
 	char *new, *op;
+
+	/* for clang's static analyser, the nonnull attribute isn't enough */
+	mkssert(cp != NULL);
 
 	strdupx(new, cp, ap);
 	op = new;
@@ -2610,22 +2306,33 @@ x_print(int prefix, int key)
 		/* prefix == 1 || prefix == 2 */
 		shf_puts(x_mapout(prefix == 1 ?
 		    CTRL('[') : CTRL('X')), shl_stdout);
+#ifdef MKSH_SMALL
+	shprintf("%s = ", x_mapout(key));
+#else
 	shprintf("%s%s = ", x_mapout(key), (f & 0x80) ? "~" : "");
-	if ((f & 0x7F) != XFUNC_ins_string)
-		shprintf("%s\n", x_ftab[f & 0x7F].xf_name);
+	if (XFUNC_VALUE(f) != XFUNC_ins_string)
+#endif
+		shprintf("%s\n", x_ftab[XFUNC_VALUE(f)].xf_name);
+#ifndef MKSH_SMALL
 	else
 		shprintf("'%s'\n", x_atab[prefix][key]);
+#endif
 }
 
 int
 x_bind(const char *a1, const char *a2,
+#ifndef MKSH_SMALL
     bool macro,			/* bind -m */
+#endif
     bool list)			/* bind -l */
 {
 	unsigned char f;
 	int prefix, key;
-	char *sp = NULL, *m1, *m2;
+	char *m1, *m2;
+#ifndef MKSH_SMALL
+	char *sp = NULL;
 	bool hastilde;
+#endif
 
 	if (x_tab == NULL) {
 		bi_errorf("cannot bind, not a tty");
@@ -2642,19 +2349,22 @@ x_bind(const char *a1, const char *a2,
 	if (a1 == NULL) {
 		for (prefix = 0; prefix < X_NTABS; prefix++)
 			for (key = 0; key < X_TABSZ; key++) {
-				f = x_tab[prefix][key] & 0x7F;
-				if (f == XFUNC_insert || f == XFUNC_error ||
-				    (macro && f != XFUNC_ins_string))
+				f = XFUNC_VALUE(x_tab[prefix][key]);
+				if (f == XFUNC_insert || f == XFUNC_error
+#ifndef MKSH_SMALL
+				    || (macro && f != XFUNC_ins_string)
+#endif
+				    )
 					continue;
 				x_print(prefix, key);
 			}
 		return (0);
 	}
 	m2 = m1 = x_mapin(a1, ATEMP);
-	prefix = key = 0;
+	prefix = 0;
 	for (;; m1++) {
 		key = (unsigned char)*m1;
-		f = x_tab[prefix][key] & 0x7F;
+		f = XFUNC_VALUE(x_tab[prefix][key]);
 		if (f == XFUNC_meta1)
 			prefix = 1;
 		else if (f == XFUNC_meta2)
@@ -2662,7 +2372,11 @@ x_bind(const char *a1, const char *a2,
 		else
 			break;
 	}
-	if (*++m1 && ((*m1 != '~') || *(m1+1))) {
+	if (*++m1
+#ifndef MKSH_SMALL
+	    && ((*m1 != '~') || *(m1 + 1))
+#endif
+	    ) {
 		char msg[256] = "key sequence '";
 		const char *c = a1;
 		m1 = msg + strlen(msg);
@@ -2671,16 +2385,23 @@ x_bind(const char *a1, const char *a2,
 		bi_errorf("%s' too long", msg);
 		return (1);
 	}
+#ifndef MKSH_SMALL
 	hastilde = *m1;
+#endif
 	afree(m2, ATEMP);
 
 	if (a2 == NULL) {
 		x_print(prefix, key);
 		return (0);
 	}
-	if (*a2 == 0)
+	if (*a2 == 0) {
 		f = XFUNC_insert;
-	else if (!macro) {
+#ifndef MKSH_SMALL
+	} else if (macro) {
+		f = XFUNC_ins_string;
+		sp = x_mapin(a2, AEDIT);
+#endif
+	} else {
 		for (f = 0; f < NELEM(x_ftab); f++)
 			if (x_ftab[f].xf_name &&
 			    strcmp(x_ftab[f].xf_name, a2) == 0)
@@ -2689,16 +2410,21 @@ x_bind(const char *a1, const char *a2,
 			bi_errorf("%s: no such function", a2);
 			return (1);
 		}
-	} else {
-		f = XFUNC_ins_string;
-		sp = x_mapin(a2, AEDIT);
 	}
 
-	if ((x_tab[prefix][key] & 0x7F) == XFUNC_ins_string &&
+#ifndef MKSH_SMALL
+	if (XFUNC_VALUE(x_tab[prefix][key]) == XFUNC_ins_string &&
 	    x_atab[prefix][key])
 		afree(x_atab[prefix][key], AEDIT);
-	x_tab[prefix][key] = f | (hastilde ? 0x80 : 0);
+#endif
+	x_tab[prefix][key] = f
+#ifndef MKSH_SMALL
+	    | (hastilde ? 0x80 : 0)
+#endif
+	    ;
+#ifndef MKSH_SMALL
 	x_atab[prefix][key] = sp;
+#endif
 
 	/* Track what the user has bound so x_mode(true) won't toast things */
 	if (f == XFUNC_insert)
@@ -2729,10 +2455,12 @@ x_init_emacs(void)
 		x_tab[x_defbindings[i].xdb_tab][x_defbindings[i].xdb_char]
 		    = x_defbindings[i].xdb_func;
 
+#ifndef MKSH_SMALL
 	x_atab = alloc(X_NTABS * sizeof(*x_atab), AEDIT);
 	for (i = 1; i < X_NTABS; i++)
 		for (j = 0; j < X_TABSZ; j++)
 			x_atab[i][j] = NULL;
+#endif
 }
 
 static void
@@ -2747,14 +2475,14 @@ bind_if_not_bound(int p, int k, int func)
 }
 
 static int
-x_set_mark(int c __unused)
+x_set_mark(int c MKSH_A_UNUSED)
 {
 	xmp = xcp;
 	return (KSTD);
 }
 
 static int
-x_kill_region(int c __unused)
+x_kill_region(int c MKSH_A_UNUSED)
 {
 	int rsize;
 	char *xr;
@@ -2777,7 +2505,7 @@ x_kill_region(int c __unused)
 }
 
 static int
-x_xchg_point_mark(int c __unused)
+x_xchg_point_mark(int c MKSH_A_UNUSED)
 {
 	char *tmp;
 
@@ -2792,7 +2520,7 @@ x_xchg_point_mark(int c __unused)
 }
 
 static int
-x_noop(int c __unused)
+x_noop(int c MKSH_A_UNUSED)
 {
 	return (KSTD);
 }
@@ -2801,56 +2529,56 @@ x_noop(int c __unused)
  *	File/command name completion routines
  */
 static int
-x_comp_comm(int c __unused)
+x_comp_comm(int c MKSH_A_UNUSED)
 {
 	do_complete(XCF_COMMAND, CT_COMPLETE);
 	return (KSTD);
 }
 
 static int
-x_list_comm(int c __unused)
+x_list_comm(int c MKSH_A_UNUSED)
 {
 	do_complete(XCF_COMMAND, CT_LIST);
 	return (KSTD);
 }
 
 static int
-x_complete(int c __unused)
+x_complete(int c MKSH_A_UNUSED)
 {
 	do_complete(XCF_COMMAND_FILE, CT_COMPLETE);
 	return (KSTD);
 }
 
 static int
-x_enumerate(int c __unused)
+x_enumerate(int c MKSH_A_UNUSED)
 {
 	do_complete(XCF_COMMAND_FILE, CT_LIST);
 	return (KSTD);
 }
 
 static int
-x_comp_file(int c __unused)
+x_comp_file(int c MKSH_A_UNUSED)
 {
 	do_complete(XCF_FILE, CT_COMPLETE);
 	return (KSTD);
 }
 
 static int
-x_list_file(int c __unused)
+x_list_file(int c MKSH_A_UNUSED)
 {
 	do_complete(XCF_FILE, CT_LIST);
 	return (KSTD);
 }
 
 static int
-x_comp_list(int c __unused)
+x_comp_list(int c MKSH_A_UNUSED)
 {
 	do_complete(XCF_COMMAND_FILE, CT_COMPLIST);
 	return (KSTD);
 }
 
 static int
-x_expand(int c __unused)
+x_expand(int c MKSH_A_UNUSED)
 {
 	char **words;
 	int start, end, nwords, i;
@@ -2971,11 +2699,13 @@ x_e_getc(void)
 		return (c);
 	}
 
+#ifndef MKSH_SMALL
 	if (macroptr) {
 		if ((c = (unsigned char)*macroptr++))
 			return (c);
 		macroptr = NULL;
 	}
+#endif
 
 	return (x_getc());
 }
@@ -3097,7 +2827,7 @@ x_set_arg(int c)
 
 /* Comment or uncomment the current line. */
 static int
-x_comment(int c __unused)
+x_comment(int c MKSH_A_UNUSED)
 {
 	int oldsize = x_size_str(xbuf);
 	int len = xep - xbuf;
@@ -3118,7 +2848,7 @@ x_comment(int c __unused)
 }
 
 static int
-x_version(int c __unused)
+x_version(int c MKSH_A_UNUSED)
 {
 	char *o_xbuf = xbuf, *o_xend = xend;
 	char *o_xbp = xbp, *o_xep = xep, *o_xcp = xcp;
@@ -3150,8 +2880,9 @@ x_version(int c __unused)
 	return (KSTD);
 }
 
+#ifndef MKSH_SMALL
 static int
-x_edit_line(int c __unused)
+x_edit_line(int c MKSH_A_UNUSED)
 {
 	if (x_arg_defaulted) {
 		if (xep == xbuf) {
@@ -3173,6 +2904,7 @@ x_edit_line(int c __unused)
 	xep = xbuf + strlen(xbuf);
 	return (x_newline('\n'));
 }
+#endif
 
 /* NAME:
  *	x_prev_histword - recover word from prev command
@@ -3191,7 +2923,7 @@ x_edit_line(int c __unused)
  *	KSTD
  */
 static int
-x_prev_histword(int c __unused)
+x_prev_histword(int c MKSH_A_UNUSED)
 {
 	char *rcp, *cp;
 	char **xhp;
@@ -3246,23 +2978,24 @@ x_prev_histword(int c __unused)
 	return (KSTD);
 }
 
+#ifndef MKSH_SMALL
 /* Uppercase N(1) words */
 static int
-x_fold_upper(int c __unused)
+x_fold_upper(int c MKSH_A_UNUSED)
 {
 	return (x_fold_case('U'));
 }
 
 /* Lowercase N(1) words */
 static int
-x_fold_lower(int c __unused)
+x_fold_lower(int c MKSH_A_UNUSED)
 {
 	return (x_fold_case('L'));
 }
 
 /* Lowercase N(1) words */
 static int
-x_fold_capitalise(int c __unused)
+x_fold_capitalise(int c MKSH_A_UNUSED)
 {
 	return (x_fold_case('C'));
 }
@@ -3318,6 +3051,7 @@ x_fold_case(int c)
 	x_modified();
 	return (KSTD);
 }
+#endif
 
 /* NAME:
  *	x_lastcp - last visible char
@@ -3432,7 +3166,7 @@ x_mode(bool onoff)
 	return (prev);
 }
 
-#ifndef MKSH_NOVI
+#if !MKSH_S_NOVI
 /* +++ vi editing mode +++ */
 
 #define Ctrl(c)		(c&0x1f)
@@ -4166,7 +3900,7 @@ vi_cmd(int argcnt, const char *cmd)
 					return (-1);
 				/* check if this is a recursive call... */
 				if ((p = (char *)macro.p))
-					while ((p = strchr(p, '\0')) && p[1])
+					while ((p = strnul(p)) && p[1])
 						if (*++p == cmd[1])
 							return (-1);
 				/* insert alias into macro buffer */
@@ -4300,7 +4034,7 @@ vi_cmd(int argcnt, const char *cmd)
 		case 'g':
 			if (!argcnt)
 				argcnt = hlast;
-			/* FALLTHRU */
+			/* FALLTHROUGH */
 		case 'G':
 			if (!argcnt)
 				argcnt = 1;
@@ -4454,7 +4188,7 @@ vi_cmd(int argcnt, const char *cmd)
 			c3 = 1;
 			srchlen = 0;
 			lastsearch = *cmd;
-			/* FALLTHRU */
+			/* FALLTHROUGH */
 		case 'n':
 		case 'N':
 			if (lastsearch == ' ')
@@ -5443,7 +5177,7 @@ complete_word(int cmd, int count)
 }
 
 static int
-print_expansions(struct edstate *est, int cmd __unused)
+print_expansions(struct edstate *est, int cmd MKSH_A_UNUSED)
 {
 	int start, end, nwords;
 	char **words;
@@ -5490,4 +5224,4 @@ vi_macro_reset(void)
 		memset((char *)&macro, 0, sizeof(macro));
 	}
 }
-#endif /* !MKSH_NOVI */
+#endif /* !MKSH_S_NOVI */

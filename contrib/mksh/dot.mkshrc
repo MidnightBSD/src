@@ -1,6 +1,7 @@
-# $MirOS: src/bin/mksh/dot.mkshrc,v 1.45 2009/06/22 17:38:39 tg Rel $
+# $Id: dot.mkshrc,v 1.1.1.10 2010-03-10 04:30:39 laffer1 Exp $
+# $MirOS: src/bin/mksh/dot.mkshrc,v 1.53 2010/01/25 14:29:34 tg Exp $
 #-
-# Copyright (c) 2002, 2003, 2004, 2006, 2007, 2008, 2009
+# Copyright (c) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -32,14 +33,13 @@ PS1='$(precmd)${USER:=$(ulimit -c 0;id -un 2>&-||print \?)}@${HOSTNAME%%.*}:$(
 	typeset d=${PWD:-?} n p=~; [[ $p = ?(*/) ]] || d=${d/#$p/~}
 	(( ${#d} > (n = (COLUMNS/3 < 7 ? 7 : COLUMNS/3)) )) && {
 	d=${d:(-n)}; p=...; } || p=; print -nr -- "$p$d") '"$PS1 "
-export EDITOR HOSTNAME LESSHISTFILE=- MKSH=$(whence -p mksh) PS1 TERM USER
+: ${MKSH:=$(whence -p mksh)}; export EDITOR HOSTNAME MKSH PS1 TERM USER
 alias ls=ls
 unalias ls
 alias l='ls -F'
 alias la='l -a'
 alias ll='l -l'
 alias lo='l -alo'
-alias which='whence -p'
 whence -p rot13 >&- || alias rot13='tr \
     abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ \
     nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM'
@@ -204,7 +204,7 @@ function pushd {
 
 # base64 encoder (not NUL safe) and decoder (NUL safe), RFC compliant
 function Lb64decode {
-	typeset u=$-
+	[[ -o utf8-mode ]]; typeset u=$?
 	set +U
 	typeset c s="$*" t=
 	[[ -n $s ]] || { s=$(cat;print x); s=${s%x}; }
@@ -234,14 +234,13 @@ function Lb64decode {
 		t=$t\\x${o#16#}
 	done
 	print -n $t
-	[[ $u = *U* ]] && set -U
-	:
+	(( u )) || set -U
 }
 
 set -A Lb64encode_code -- A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \
     a b c d e f g h i j k l m n o p q r s t u v w x y z 0 1 2 3 4 5 6 7 8 9 + /
 function Lb64encode {
-	typeset u=$-
+	[[ -o utf8-mode ]]; typeset u=$?
 	set +U
 	typeset c s="$*" t
 	[[ -n $s ]] || { s=$(cat;print x); s=${s%x}; }
@@ -270,29 +269,61 @@ function Lb64encode {
 			t=
 		fi
 	done
-	[[ $u = *U* ]] && set -U
-	:
+	(( u )) || set -U
 }
 
 # DJB cdb hash (not via stdio, for speed)
 typeset -Z11 -Uui16 Lcdbhash_result
 function Lcdbhash_add {
-	typeset u=$-
+	[[ -o utf8-mode ]]; typeset u=$?
 	set +U
 	typeset s="$*"
+	[[ -n $s ]] || { s=$(cat;print x); s=${s%x}; }
 	typeset -i i=0 n=${#s}
 
 	while (( i < n )); do
-		(( Lcdbhash_result = ((Lcdbhash_result << 5) + \
-		    Lcdbhash_result) ^ 1#${s:(i++):1} ))
+		((# Lcdbhash_result = (Lcdbhash_result * 33) ^ 1#${s:(i++):1} ))
 	done
 
-	[[ $u = *U* ]] && set -U
-	:
+	(( u )) || set -U
 }
 function Lcdbhash {
 	Lcdbhash_result=5381
 	Lcdbhash_add "$@"
+	print ${Lcdbhash_result#16#}
+}
+
+# Jenkins one-at-a-time hash (not via stdio, for speed)
+typeset -Z11 -Uui16 Loaathash_result
+function Loaathash_add {
+	[[ -o utf8-mode ]]; typeset u=$?
+	set +U
+	typeset s="$*"
+	[[ -n $s ]] || { s=$(cat;print x); s=${s%x}; }
+	typeset -i i=0 n=${#s}
+
+	while (( i < n )); do
+		((# Loaathash_result = (Loaathash_result + 1#${s:(i++):1}) *
+		    1025 ))
+		((# Loaathash_result ^= Loaathash_result >> 6 ))
+	done
+
+	(( u )) || set -U
+}
+function Loaathash_do {
+	Loaathash_add "$@"
+	((# Loaathash_result += Loaathash_result << 3 ))
+	((# Loaathash_result = (Loaathash_result ^
+	    (Loaathash_result >> 11)) * 32769 ))
+	print ${Loaathash_result#16#}
+}
+function Loaathash {
+	Loaathash_result=0
+	Loaathash_do "$@"
+}
+function Loaathash1 {
+	Loaathash_result=0x100
+	Loaathash_do "$@"
 }
 
 # strip comments (and leading/trailing whitespace if IFS is set) from
@@ -303,5 +334,22 @@ function Lstripcom {
 		[[ -n $_line ]] && print -r -- $_line
 	done; }
 }
+
+: place customsations below this line
+
+for p in ~/.etc/bin ~/bin; do
+	[[ -d $p/. ]] || continue
+	[[ :$PATH: = *:$p:* ]] || PATH=$p:$PATH
+done
+
+export SHELL=$MKSH MANWIDTH=80 LESSHISTFILE=-
+alias cls='print -n \\033c'
+
+#unset LANGUAGE LC_ADDRESS LC_ALL LC_COLLATE LC_IDENTIFICATION LC_MONETARY \
+#    LC_NAME LC_NUMERIC LC_TELEPHONE LC_TIME
+#p=en_GB.UTF-8
+#export LANG=C LC_CTYPE=$p LC_MEASUREMENT=$p LC_MESSAGES=$p LC_PAPER=$p
+
+unset p
 
 : place customsations above this line

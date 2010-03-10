@@ -22,12 +22,11 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.59 2009/06/11 12:42:17 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.72 2009/12/12 22:27:06 tg Exp $");
 
 static int comexec(struct op *, struct tbl *volatile, const char **,
     int volatile, volatile int *);
-static void scriptexec(struct op *, const char **)
-    __attribute__((noreturn));
+static void scriptexec(struct op *, const char **) MKSH_A_NORETURN;
 static int call_builtin(struct tbl *, const char **);
 static int iosetup(struct ioword *, struct tbl *);
 static int herein(const char *, int);
@@ -296,7 +295,7 @@ execute(struct op *volatile t,
 				}
 				is_first = false;
 				setstr(global(t->str), cp, KSH_UNWIND_ERROR);
-				rv = execute(t->left, flags & XERROK, xerrok);
+				execute(t->left, flags & XERROK, xerrok);
 			}
 		}
 		break;
@@ -408,7 +407,7 @@ comexec(struct op *t, struct tbl *volatile tp, const char **ap,
 	int type_flags;
 	int keepasn_ok;
 	int fcflags = FC_BI|FC_FUNC|FC_PATH;
-	int bourne_function_call = 0;
+	bool bourne_function_call = false;
 
 	/* snag the last argument for $_ XXX not the same as AT&T ksh,
 	 * which only seems to set $_ after a newline (but not in
@@ -496,8 +495,8 @@ comexec(struct op *t, struct tbl *volatile tp, const char **ap,
 		/* ksh functions don't keep assignments, POSIX functions do. */
 		if (keepasn_ok && tp && tp->type == CFUNC &&
 		    !(tp->flag & FKSH)) {
-			bourne_function_call = 1;
-			type_flags = 0;
+			bourne_function_call = true;
+			type_flags = EXPORT;
 		} else
 			type_flags = LOCAL|LOCAL_COPY|EXPORT;
 	}
@@ -537,7 +536,7 @@ comexec(struct op *t, struct tbl *volatile tp, const char **ap,
 		break;
 
 	case CFUNC: {			/* function call */
-		volatile char old_xflag;
+		volatile unsigned char old_xflag;
 		volatile Tflag old_inuse;
 		const char *volatile old_kshname;
 
@@ -591,7 +590,7 @@ comexec(struct op *t, struct tbl *volatile tp, const char **ap,
 			;
 		e->loc->argc = i - 1;
 		/* ksh-style functions handle getopts sanely,
-		 * bourne/posix functions are insane...
+		 * Bourne/POSIX functions are insane...
 		 */
 		if (tp->flag & FKSH) {
 			e->loc->flags |= BF_DOGETOPTS;
@@ -671,7 +670,11 @@ comexec(struct op *t, struct tbl *volatile tp, const char **ap,
 
 		if (flags&XEXEC) {
 			j_exit();
-			if (!(flags&XBGND) || Flag(FMONITOR)) {
+			if (!(flags&XBGND)
+#ifndef MKSH_UNEMPLOYED
+			    || Flag(FMONITOR)
+#endif
+			    ) {
 				setexecsig(&sigtraps[SIGINT], SS_RESTORE_ORIG);
 				setexecsig(&sigtraps[SIGQUIT], SS_RESTORE_ORIG);
 			}
@@ -800,7 +803,7 @@ shcomexec(const char **wp)
  * is created if none is found.
  */
 struct tbl *
-findfunc(const char *name, unsigned int h, int create)
+findfunc(const char *name, uint32_t h, bool create)
 {
 	struct block *l;
 	struct tbl *tp = NULL;
@@ -899,9 +902,9 @@ struct tbl *
 findcom(const char *name, int flags)
 {
 	static struct tbl temp;
-	unsigned int h = hash(name);
+	uint32_t h = hash(name);
 	struct tbl *tp = NULL, *tbi;
-	int insert = Flag(FTRACKALL);	/* insert if not found */
+	unsigned char insert = Flag(FTRACKALL);	/* insert if not found */
 	char *fpath;			/* for function autoloading */
 	union mksh_cchack npath;
 
@@ -1334,16 +1337,15 @@ do_selectargs(const char **ap, bool print_menu)
 }
 
 struct select_menu_info {
-	const char *const *args;
-	int arg_width;
+	const char * const *args;
 	int num_width;
 };
 
-static char *select_fmt_entry(const void *, int, char *, int);
+static char *select_fmt_entry(char *, int, int, const void *);
 
 /* format a single select menu item */
 static char *
-select_fmt_entry(const void *arg, int i, char *buf, int buflen)
+select_fmt_entry(char *buf, int buflen, int i, const void *arg)
 {
 	const struct select_menu_info *smi =
 	    (const struct select_menu_info *)arg;
@@ -1357,66 +1359,73 @@ select_fmt_entry(const void *arg, int i, char *buf, int buflen)
  *	print a select style menu
  */
 int
-pr_menu(const char *const *ap)
+pr_menu(const char * const *ap)
 {
 	struct select_menu_info smi;
-	const char *const *pp;
-	int nwidth, dwidth, i, n;
+	const char * const *pp;
+	int acols = 0, aocts = 0, i, n;
 
-	/* Width/column calculations were done once and saved, but this
-	 * means select can't be used recursively so we re-calculate each
-	 * time (could save in a structure that is returned, but its probably
-	 * not worth the bother).
+	/*
+	 * width/column calculations were done once and saved, but this
+	 * means select can't be used recursively so we re-calculate
+	 * each time (could save in a structure that is returned, but
+	 * it's probably not worth the bother)
 	 */
 
 	/*
 	 * get dimensions of the list
 	 */
-	for (n = 0, nwidth = 0, pp = ap; *pp; n++, pp++) {
+	for (n = 0, pp = ap; *pp; n++, pp++) {
+		i = strlen(*pp);
+		if (i > aocts)
+			aocts = i;
 		i = utf_mbswidth(*pp);
-		nwidth = (i > nwidth) ? i : nwidth;
+		if (i > acols)
+			acols = i;
 	}
+
 	/*
-	 * we will print an index of the form
-	 *	%d)
-	 * in front of each entry
-	 * get the max width of this
+	 * we will print an index of the form "%d) " in front of
+	 * each entry, so get the maximum width of this
 	 */
-	for (i = n, dwidth = 1; i >= 10; i /= 10)
-		dwidth++;
+	for (i = n, smi.num_width = 1; i >= 10; i /= 10)
+		smi.num_width++;
 
 	smi.args = ap;
-	smi.arg_width = nwidth;
-	smi.num_width = dwidth;
 	print_columns(shl_out, n, select_fmt_entry, (void *)&smi,
-	    dwidth + nwidth + 2, 1);
+	    smi.num_width + 2 + aocts, smi.num_width + 2 + acols,
+	    true);
 
 	return (n);
 }
 
 /* XXX: horrible kludge to fit within the framework */
-
-static char *plain_fmt_entry(const void *, int, char *, int);
+static char *plain_fmt_entry(char *, int, int, const void *);
 
 static char *
-plain_fmt_entry(const void *arg, int i, char *buf, int buflen)
+plain_fmt_entry(char *buf, int buflen, int i, const void *arg)
 {
-	shf_snprintf(buf, buflen, "%s", ((char *const *)arg)[i]);
+	shf_snprintf(buf, buflen, "%s", ((const char * const *)arg)[i]);
 	return (buf);
 }
 
 int
-pr_list(char *const *ap)
+pr_list(char * const *ap)
 {
-	char *const *pp;
-	int nwidth, i, n;
+	int acols = 0, aocts = 0, i, n;
+	char * const *pp;
 
-	for (n = 0, nwidth = 0, pp = ap; *pp; n++, pp++) {
+	for (n = 0, pp = ap; *pp; n++, pp++) {
+		i = strlen(*pp);
+		if (i > aocts)
+			aocts = i;
 		i = utf_mbswidth(*pp);
-		nwidth = (i > nwidth) ? i : nwidth;
+		if (i > acols)
+			acols = i;
 	}
+
 	print_columns(shl_out, n, plain_fmt_entry, (const void *)ap,
-	    nwidth + 1, 0);
+	    aocts, acols, false);
 
 	return (n);
 }

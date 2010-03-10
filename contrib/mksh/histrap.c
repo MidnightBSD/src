@@ -2,7 +2,7 @@
 /*	$OpenBSD: trap.c,v 1.22 2005/03/30 17:16:37 deraadt Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -26,7 +26,7 @@
 #include <sys/file.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.87 2009/08/01 14:07:42 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.92 2010/01/29 09:34:28 tg Exp $");
 
 /*-
  * MirOS: This is the default mapping type, and need not be specified.
@@ -51,7 +51,7 @@ static int sprinkle(int);
 
 static int hist_execute(char *);
 static int hist_replace(char **, const char *, const char *, int);
-static char **hist_get(const char *, int, int);
+static char **hist_get(const char *, bool, bool);
 static char **hist_get_oldest(void);
 static void histbackup(void);
 
@@ -108,7 +108,7 @@ c_fc(const char **wp)
 		case 'r':
 			rflag++;
 			break;
-		case 's':	/* posix version of -e - */
+		case 's':	/* POSIX version of -e - */
 			sflag++;
 			break;
 		/* kludge city - accept -num as -- -num (kind of) */
@@ -311,7 +311,7 @@ hist_execute(char *cmd)
 	}
 
 	/* Commands are executed here instead of pushing them onto the
-	 * input 'cause posix says the redirection and variable assignments
+	 * input 'cause POSIX says the redirection and variable assignments
 	 * in
 	 *	X=y fc -e - 42 2> /dev/null
 	 * are to effect the repeated commands environment.
@@ -368,7 +368,7 @@ hist_replace(char **hp, const char *pat, const char *rep, int globr)
  * pattern is a number or string
  */
 static char **
-hist_get(const char *str, int approx, int allow_cur)
+hist_get(const char *str, bool approx, bool allow_cur)
 {
 	char **hp = NULL;
 	int n;
@@ -407,7 +407,7 @@ hist_get(const char *str, int approx, int allow_cur)
 
 /* Return a pointer to the newest command in the history */
 char **
-hist_get_newest(int allow_cur)
+hist_get_newest(bool allow_cur)
 {
 	if (histptr < history || (!allow_cur && histptr == history)) {
 		bi_errorf("no history (yet)");
@@ -556,7 +556,7 @@ sethistfile(const char *name)
 	 */
 	if (histfd) {
 		/* yes the file is open */
-		(void) close(histfd);
+		(void)close(histfd);
 		histfd = 0;
 		hsize = 0;
 		afree(hname, APERM);
@@ -592,12 +592,33 @@ init_histvec(void)
  *	It turns out that there is a lot of ghastly hackery here
  */
 
+#if !defined(MKSH_SMALL) && HAVE_PERSISTENT_HISTORY
+/* do not save command in history but possibly sync */
+bool
+histsync(void)
+{
+	bool changed = false;
+
+	if (histfd) {
+		int lno = hist_source->line;
+
+		hist_source->line++;
+		writehistfile(0, NULL);
+		hist_source->line--;
+
+		if (lno != hist_source->line)
+			changed = true;
+	}
+
+	return (changed);
+}
+#endif
 
 /*
  * save command in history
  */
 void
-histsave(int *lnp, const char *cmd, bool dowrite __unused, bool ignoredups)
+histsave(int *lnp, const char *cmd, bool dowrite MKSH_A_UNUSED, bool ignoredups)
 {
 	char **hp;
 	char *c, *cp;
@@ -606,7 +627,11 @@ histsave(int *lnp, const char *cmd, bool dowrite __unused, bool ignoredups)
 	if ((cp = strchr(c, '\n')) != NULL)
 		*cp = '\0';
 
-	if (ignoredups && !strcmp(c, *histptr)) {
+	if (ignoredups && !strcmp(c, *histptr)
+#if !defined(MKSH_SMALL) && HAVE_PERSISTENT_HISTORY
+	    && !histsync()
+#endif
+	    ) {
 		afree(c, APERM);
 		return;
 	}
@@ -682,9 +707,9 @@ hist_init(Source *s)
 	if (histfd != fd)
 		close(fd);
 
-	(void) flock(histfd, LOCK_EX);
+	(void)flock(histfd, LOCK_EX);
 
-	hsize = lseek(histfd, 0L, SEEK_END);
+	hsize = lseek(histfd, (off_t)0, SEEK_END);
 
 	if (hsize == 0) {
 		/* add magic */
@@ -697,7 +722,7 @@ hist_init(Source *s)
 		 * we have some data
 		 */
 		base = (void *)mmap(NULL, hsize, PROT_READ,
-		    MAP_FILE | MAP_PRIVATE, histfd, 0);
+		    MAP_FILE | MAP_PRIVATE, histfd, (off_t)0);
 		/*
 		 * check on its validity
 		 */
@@ -731,8 +756,8 @@ hist_init(Source *s)
 		histload(hist_source, base+2, hsize-2);
 		munmap((caddr_t)base, hsize);
 	}
-	(void) flock(histfd, LOCK_UN);
-	hsize = lseek(histfd, 0L, SEEK_END);
+	(void)flock(histfd, LOCK_UN);
+	hsize = lseek(histfd, (off_t)0, SEEK_END);
 #endif
 }
 
@@ -765,8 +790,10 @@ hist_count_lines(unsigned char *base, int bytes)
 		case sn4:
 			state = sline; break;
 		case sline:
-			if (*base == '\0')
-				lines++, state = shdr;
+			if (*base == '\0') {
+				lines++;
+				state = shdr;
+			}
 		}
 		base++;
 	}
@@ -931,8 +958,8 @@ writehistfile(int lno, char *cmd)
 	int	bytes;
 	unsigned char	hdr[5];
 
-	(void) flock(histfd, LOCK_EX);
-	sizenow = lseek(histfd, 0L, SEEK_END);
+	(void)flock(histfd, LOCK_EX);
+	sizenow = lseek(histfd, (off_t)0, SEEK_END);
 	if (sizenow != hsize) {
 		/*
 		 *	Things have changed
@@ -941,7 +968,7 @@ writehistfile(int lno, char *cmd)
 			/* someone has added some lines */
 			bytes = sizenow - hsize;
 			base = (void *)mmap(NULL, sizenow, PROT_READ,
-			    MAP_FILE | MAP_PRIVATE, histfd, 0);
+			    MAP_FILE | MAP_PRIVATE, histfd, (off_t)0);
 			if (base == (unsigned char *)MAP_FAILED)
 				goto bad;
 			new = base + hsize;
@@ -962,20 +989,22 @@ writehistfile(int lno, char *cmd)
 			goto bad;
 		}
 	}
-	/*
-	 *	we can write our bit now
-	 */
-	hdr[0] = COMMAND;
-	hdr[1] = (lno>>24)&0xff;
-	hdr[2] = (lno>>16)&0xff;
-	hdr[3] = (lno>>8)&0xff;
-	hdr[4] = lno&0xff;
-	bytes = strlen(cmd) + 1;
-	if ((write(histfd, hdr, 5) != 5) ||
-	    (write(histfd, cmd, bytes) != bytes))
-		goto bad;
-	hsize = lseek(histfd, 0L, SEEK_END);
-	(void) flock(histfd, LOCK_UN);
+	if (cmd) {
+		/*
+		 *	we can write our bit now
+		 */
+		hdr[0] = COMMAND;
+		hdr[1] = (lno>>24)&0xff;
+		hdr[2] = (lno>>16)&0xff;
+		hdr[3] = (lno>>8)&0xff;
+		hdr[4] = lno&0xff;
+		bytes = strlen(cmd) + 1;
+		if ((write(histfd, hdr, 5) != 5) ||
+		    (write(histfd, cmd, bytes) != bytes))
+			goto bad;
+		hsize = lseek(histfd, (off_t)0, SEEK_END);
+	}
+	(void)flock(histfd, LOCK_UN);
 	return;
  bad:
 	hist_finish();
@@ -984,8 +1013,8 @@ writehistfile(int lno, char *cmd)
 void
 hist_finish(void)
 {
-	(void) flock(histfd, LOCK_UN);
-	(void) close(histfd);
+	(void)flock(histfd, LOCK_UN);
+	(void)close(histfd);
 	histfd = 0;
 }
 
@@ -1088,7 +1117,7 @@ alarm_init(void)
 
 /* ARGSUSED */
 static void
-alarm_catcher(int sig __unused)
+alarm_catcher(int sig MKSH_A_UNUSED)
 {
 	int errno_ = errno;
 

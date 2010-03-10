@@ -4,7 +4,7 @@
 /*	$OpenBSD: table.c,v 1.13 2009/01/17 22:06:44 millert Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -33,7 +33,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.136 2009/07/25 21:31:26 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.162 2010/01/29 09:34:29 tg Exp $");
 
 extern char **environ;
 
@@ -44,20 +44,22 @@ extern gid_t kshgid, kshegid;
 
 static void reclaim(void);
 static void remove_temps(struct temp *);
+void chvt_reinit(void);
+Source *mksh_init(int, const char *[]);
 
 static const char initifs[] = "IFS= \t\n";
 
-static const char initsubs[] = "${PS2=> } ${PS3=#? } ${PS4=+ }";
+static const char initsubs[] =
+    "${PS2=> } ${PS3=#? } ${PS4=+ } ${SECONDS=0} ${TMOUT=0}";
 
 static const char *initcoms[] = {
-	"typeset", "-r", initvsn, NULL,
-	"typeset", "-x", "SHELL", "PATH", "HOME", NULL,
-	"typeset", "-i10", "COLUMNS=0", "LINES=0", "OPTIND=1", NULL,
-	"typeset", "-Ui10", "PGRP", "PPID", "RANDOM", "USER_ID", NULL,
-	"eval", "typeset -i10 SECONDS=\"${SECONDS-0}\" TMOUT=\"${TMOUT-0}\"",
-	NULL,
-	"alias", "integer=typeset -i", "local=typeset", NULL,
+	T_typeset, "-r", initvsn, NULL,
+	T_typeset, "-x", "HOME", "PATH", "RANDOM", "SHELL", NULL,
+	T_typeset, "-i10", "COLUMNS", "LINES", "OPTIND", "PGRP", "PPID",
+	    "RANDOM", "SECONDS", "TMOUT", "USER_ID", NULL,
 	"alias",
+	"integer=typeset -i",
+	T_local_typeset,
 	"hash=alias -t",	/* not "alias -t --": hash -r needs to work */
 	"type=whence -v",
 #ifndef MKSH_UNEMPLOYED
@@ -67,6 +69,7 @@ static const char *initcoms[] = {
 	"autoload=typeset -fu",
 	"functions=typeset -f",
 	"history=fc -l",
+	"nameref=typeset -n",
 	"nohup=nohup ",
 	r_fc_e_,
 	"source=PATH=$PATH:. command .",
@@ -84,15 +87,27 @@ static int initio_done;
 static struct env env;
 struct env *e = &env;
 
-int
-main(int argc, const char *argv[])
+void
+chvt_reinit(void)
+{
+	kshpid = procpid = getpid();
+	ksheuid = geteuid();
+	kshpgrp = getpgrp();
+	kshppid = getppid();
+
+#if !HAVE_ARC4RANDOM
+	change_random(&kshstate_, sizeof(kshstate_));
+#endif
+}
+
+Source *
+mksh_init(int argc, const char *argv[])
 {
 	int argi, i;
 	Source *s;
 	struct block *l;
-	int restricted, errexit;
+	unsigned char restricted, errexit, utf_flag;
 	const char **wp;
-	pid_t ppid;
 	struct tbl *vp;
 	struct stat s_stdin;
 #if !defined(_PATH_DEFPATH) && defined(_CS_PATH)
@@ -100,9 +115,8 @@ main(int argc, const char *argv[])
 	char *cp;
 #endif
 
-#if !HAVE_ARC4RANDOM
-	change_random((unsigned long)time(NULL) * getpid());
-#endif
+	/* do things like getpgrp() et al. */
+	chvt_reinit();
 
 	/* make sure argv[] is sane */
 	if (!*argv) {
@@ -127,7 +141,7 @@ main(int argc, const char *argv[])
 
 	argi = parse_args(argv, OF_FIRSTTIME, NULL);
 	if (argi < 0)
-		exit(1);
+		return (NULL);
 
 	initvar();
 
@@ -148,7 +162,8 @@ main(int argc, const char *argv[])
 	initkeywords();
 
 	/* define built-in commands */
-	ktinit(&builtins, APERM, 64); /* must be 2^n (currently 44 builtins) */
+	ktinit(&builtins, APERM,
+	    /* must be 80% of 2^n (currently 44 builtins) */ 64);
 	for (i = 0; mkshbuiltins[i].name != NULL; i++)
 		builtin(mkshbuiltins[i].name, mkshbuiltins[i].func);
 
@@ -197,22 +212,23 @@ main(int argc, const char *argv[])
 	 * by the environment or the user. Also, we want tab completion
 	 * on in vi by default. */
 	change_flag(FEMACS, OF_SPECIAL, 1);
-#ifndef MKSH_NOVI
+#if !MKSH_S_NOVI
 	Flag(FVITABCOMPLETE) = 1;
 #endif
 
 #ifdef MKSH_BINSHREDUCED
-	/* Set FPOSIX if we're called as -sh or /bin/sh or so */
+	/* set FSH if we're called as -sh or /bin/sh or so */
 	{
 		const char *cc;
 
 		cc = kshname;
 		i = 0; argi = 0;
 		while (cc[i] != '\0')
+			/* the following line matches '-' and '/' ;-) */
 			if ((cc[i++] | 2) == '/')
 				argi = i;
 		if (((cc[argi] | 0x20) == 's') && ((cc[argi + 1] | 0x20) == 'h'))
-			change_flag(FPOSIX, OF_FIRSTTIME, 1);
+			change_flag(FSH, OF_FIRSTTIME, 1);
 	}
 #endif
 
@@ -221,7 +237,6 @@ main(int argc, const char *argv[])
 		for (wp = (const char **)environ; *wp != NULL; wp++)
 			typeset(*wp, IMPORT | EXPORT, 0, 0, 0);
 
-	kshpid = procpid = getpid();
 	typeset(initifs, 0, 0, 0, 0);	/* for security */
 
 	/* assign default shell variable values */
@@ -250,31 +265,34 @@ main(int argc, const char *argv[])
 			/* setstr can't fail here */
 			setstr(pwd_v, current_wd, KSH_RETURN_ERROR);
 	}
-	ppid = getppid();
-#if !HAVE_ARC4RANDOM || !defined(MKSH_SMALL)
-	change_random(((unsigned long)kshname) ^
-	    ((unsigned long)time(NULL) * kshpid * ppid));
-#endif
-#if HAVE_ARC4RANDOM
-	Flag(FARC4RANDOM) = 2;	/* use arc4random(3) until $RANDOM is written */
-#endif
 
 	for (wp = initcoms; *wp != NULL; wp++) {
 		shcomexec(wp);
 		while (*wp != NULL)
 			wp++;
 	}
+	setint(global("COLUMNS"), 0);
+	setint(global("LINES"), 0);
+	setint(global("OPTIND"), 1);
 
-	safe_prompt = (ksheuid = geteuid()) ? "$ " : "# ";
+	safe_prompt = ksheuid ? "$ " : "# ";
 	vp = global("PS1");
 	/* Set PS1 if unset or we are root and prompt doesn't contain a # */
 	if (!(vp->flag & ISSET) ||
 	    (!ksheuid && !strchr(str_val(vp), '#')))
 		/* setstr can't fail here */
 		setstr(vp, safe_prompt, KSH_RETURN_ERROR);
-	setint(global("PGRP"), (mksh_uari_t)(kshpgrp = getpgrp()));
-	setint(global("PPID"), (mksh_uari_t)ppid);
-	setint(global("USER_ID"), (mksh_uari_t)ksheuid);
+	setint((vp = global("PGRP")), (mksh_uari_t)kshpgrp);
+	vp->flag |= INT_U;
+	setint((vp = global("PPID")), (mksh_uari_t)kshppid);
+	vp->flag |= INT_U;
+	setint((vp = global("RANDOM")), (mksh_uari_t)hash(kshname));
+	vp->flag |= INT_U;
+	setint((vp = global("USER_ID")), (mksh_uari_t)ksheuid);
+	vp->flag |= INT_U;
+#if HAVE_ARC4RANDOM
+	Flag(FARC4RANDOM) = 1;		/* initialised */
+#endif
 
 	/* Set this before parsing arguments */
 #if HAVE_SETRESUGID
@@ -285,31 +303,44 @@ main(int argc, const char *argv[])
 #endif
 
 	/* this to note if monitor is set on command line (see below) */
+#ifndef MKSH_UNEMPLOYED
 	Flag(FMONITOR) = 127;
+#endif
+	/* this to note if utf-8 mode is set on command line (see below) */
+	UTFMODE = 2;
+
 	argi = parse_args(argv, OF_CMDLINE, NULL);
 	if (argi < 0)
-		exit(1);
+		return (NULL);
+
+	/* process this later only, default to off (hysterical raisins) */
+	utf_flag = UTFMODE;
+	UTFMODE = 0;
 
 	if (Flag(FCOMMAND)) {
 		s = pushs(SSTRING, ATEMP);
 		if (!(s->start = s->str = argv[argi++]))
 			errorf("-c requires an argument");
 #ifdef MKSH_MIDNIGHTBSD01ASH_COMPAT
-		/* compatibility to MidnightBSD 0.1 /bin/sh (not desired) */
-		if (Flag(FPOSIX) && argv[argi] && !strcmp(argv[argi], "--"))
+		/* compatibility to MidnightBSD 0.1 /bin/sh (kludge) */
+		if (Flag(FSH) && argv[argi] && !strcmp(argv[argi], "--"))
 			++argi;
 #endif
 		if (argv[argi])
 			kshname = argv[argi++];
 	} else if (argi < argc && !Flag(FSTDIN)) {
 		s = pushs(SFILE, ATEMP);
-		s->file = kshname = argv[argi++];
+		s->file = argv[argi++];
 		s->u.shf = shf_open(s->file, O_RDONLY, 0,
 		    SHF_MAPHI | SHF_CLEXEC);
 		if (s->u.shf == NULL) {
-			exstat = 127; /* POSIX */
-			errorf("%s: %s", s->file, strerror(errno));
+			shl_stdout_ok = 0;
+			warningf(true, "%s: %s", s->file, strerror(errno));
+			/* mandated by SUSv4 */
+			exstat = 127;
+			unwind(LERROR);
 		}
+		kshname = s->file;
 	} else {
 		Flag(FSTDIN) = 1;
 		s = pushs(SSTDIN, ATEMP);
@@ -325,20 +356,22 @@ main(int argc, const char *argv[])
 		}
 	}
 
-	/* This bizarreness is mandated by POSIX */
+	/* this bizarreness is mandated by POSIX */
 	if (fstat(0, &s_stdin) >= 0 && S_ISCHR(s_stdin.st_mode) &&
 	    Flag(FTALKING))
 		reset_nonblock(0);
 
 	/* initialise job control */
 	j_init();
+	/* set: 0/1; unset: 2->0 */
+	UTFMODE = utf_flag & 1;
 	/* Do this after j_init(), as tty_fd is not initialised until then */
 	if (Flag(FTALKING)) {
+		if (utf_flag == 2) {
 #ifndef MKSH_ASSUME_UTF8
 #define isuc(x)	(((x) != NULL) && \
 		    (stristr((x), "UTF-8") || stristr((x), "utf8")))
 		/* Check if we're in a UTF-8 locale */
-		if (!UTFMODE) {
 			const char *ccp;
 
 #if HAVE_SETLOCALE_CTYPE
@@ -348,21 +381,21 @@ main(int argc, const char *argv[])
 				ccp = nl_langinfo(CODESET);
 #endif
 #else
-			ccp = getenv("LC_ALL");
-			if (!ccp || !*ccp) {
-				ccp = getenv("LC_CTYPE");
-				if (!ccp || !*ccp)
-					ccp = getenv("LANG");
-			}
+			/* these were imported from environ earlier */
+			ccp = str_val(global("LC_ALL"));
+			if (ccp == null)
+				ccp = str_val(global("LC_CTYPE"));
+			if (ccp == null)
+				ccp = str_val(global("LANG"));
 #endif
 			UTFMODE = isuc(ccp);
-		}
 #undef isuc
 #elif MKSH_ASSUME_UTF8
-		UTFMODE = 1;
+			UTFMODE = 1;
 #else
-		UTFMODE = 0;
+			UTFMODE = 0;
 #endif
+		}
 		x_init();
 	}
 
@@ -404,7 +437,7 @@ main(int argc, const char *argv[])
 
 	if (restricted) {
 		static const char *restr_com[] = {
-			"typeset", "-r", "PATH",
+			T_typeset, "-r", "PATH",
 			"ENV", "SHELL",
 			NULL
 		};
@@ -412,8 +445,7 @@ main(int argc, const char *argv[])
 		/* After typeset command... */
 		Flag(FRESTRICTED) = 1;
 	}
-	if (errexit)
-		Flag(FERREXIT) = 1;
+	Flag(FERREXIT) = errexit;
 
 	if (Flag(FTALKING)) {
 		hist_init(s);
@@ -421,8 +453,18 @@ main(int argc, const char *argv[])
 	} else
 		Flag(FTRACKALL) = 1;	/* set after ENV */
 
-	shell(s, true);	/* doesn't return */
-	return (0);
+	return (s);
+}
+
+int
+main(int argc, const char *argv[])
+{
+	Source *s;
+
+	if ((s = mksh_init(argc, argv)))
+		/* doesn’t return */
+		shell(s, true);
+	return (1);
 }
 
 int
@@ -463,7 +505,7 @@ include(const char *name, int argc, const char **argv, int intr_ok)
 			 */
 			if (intr_ok && (exstat - 128) != SIGTERM)
 				return (1);
-			/* FALLTHRU */
+			/* FALLTHROUGH */
 		case LEXIT:
 		case LLEAVE:
 		case LSHELL:
@@ -543,7 +585,7 @@ shell(Source * volatile s, volatile int toplevel)
 				s->start = s->str = null;
 				break;
 			}
-			/* FALLTHRU */
+			/* FALLTHROUGH */
 		case LEXIT:
 		case LLEAVE:
 		case LRETURN:
@@ -630,7 +672,7 @@ unwind(int i)
 		case E_NONE:
 			if (i == LINTR)
 				e->flags |= EF_FAKE_SIGDIE;
-			/* FALLTHRU */
+			/* FALLTHROUGH */
 		default:
 			quitenv(NULL);
 		}
@@ -727,7 +769,10 @@ cleanup_parents_env(void)
 	struct env *ep;
 	int fd;
 
-	/* Don't clean up temporary files - parent will probably need them.
+	mkssert(e != NULL);
+
+	/*
+	 * Don't clean up temporary files - parent will probably need them.
 	 * Also, can't easily reclaim memory since variables, etc. could be
 	 * anywhere.
 	 */
@@ -1093,7 +1138,7 @@ check_fd(const char *name, int mode, const char **emsgp)
 	fl &= O_ACCMODE;
 	/* X_OK is a kludge to disable this check for dups (x<&1):
 	 * historical shells never did this check (XXX don't know what
-	 * posix has to say).
+	 * POSIX has to say).
 	 */
 	if (!(mode & X_OK) && fl != O_RDWR && (
 	    ((mode & R_OK) && fl != O_RDONLY) ||
@@ -1232,55 +1277,70 @@ maketemp(Area *ap, Temp_type type, struct temp **tlist)
 	return (tp);
 }
 
+/*
+ * We use a similar collision resolution algorithm as Python 2.5.4
+ * but with a slightly tweaked implementation written from scratch.
+ */
+
 #define	INIT_TBLS	8	/* initial table size (power of 2) */
+#define PERTURB_SHIFT	5	/* see Python 2.5.4 Objects/dictobject.c */
 
-static void texpand(struct table *, int);
+static void texpand(struct table *, size_t);
 static int tnamecmp(const void *, const void *);
+static struct tbl *ktscan(struct table *, const char *, uint32_t,
+    struct tbl ***);
 
-unsigned int
-hash(const char *n)
+/* Bob Jenkins' one-at-a-time hash */
+uint32_t
+oaathash_full(register const uint8_t *bp)
 {
-	unsigned int h = 0;
+	register uint32_t h = 0;
+	register uint8_t c;
 
-	while (*n != '\0')
-		h = 2*h + *n++;
-	return (h * 32821);	/* scatter bits */
-}
+	while ((c = *bp++)) {
+		h += c;
+		h += h << 10;
+		h ^= h >> 6;
+	}
 
-void
-ktinit(struct table *tp, Area *ap, int tsize)
-{
-	tp->areap = ap;
-	tp->tbls = NULL;
-	tp->size = tp->nfree = 0;
-	if (tsize)
-		texpand(tp, tsize);
+	h += h << 3;
+	h ^= h >> 11;
+	h += h << 15;
+
+	return (h);
 }
 
 static void
-texpand(struct table *tp, int nsize)
+texpand(struct table *tp, size_t nsize)
 {
-	int i;
-	struct tbl *tblp, **p;
+	size_t i, j, osize = tp->size, perturb;
+	struct tbl *tblp, **pp;
 	struct tbl **ntblp, **otblp = tp->tbls;
-	int osize = tp->size;
 
 	ntblp = alloc(nsize * sizeof(struct tbl *), tp->areap);
 	for (i = 0; i < nsize; i++)
 		ntblp[i] = NULL;
 	tp->size = nsize;
-	tp->nfree = 8 * nsize / 10;	/* table can get 80% full */
+	tp->nfree = (nsize * 4) / 5;	/* table can get 80% full */
 	tp->tbls = ntblp;
 	if (otblp == NULL)
 		return;
+	nsize--;			/* from here on nsize := mask */
 	for (i = 0; i < osize; i++)
 		if ((tblp = otblp[i]) != NULL) {
 			if ((tblp->flag & DEFINED)) {
-				for (p = &ntblp[hash(tblp->name) &
-				    (tp->size - 1)]; *p != NULL; p--)
-					if (p == ntblp)	/* wrap */
-						p += tp->size;
-				*p = tblp;
+				/* search for free hash table slot */
+				j = (perturb = tblp->ua.hval) & nsize;
+				goto find_first_empty_slot;
+ find_next_empty_slot:
+				j = (j << 2) + j + perturb + 1;
+				perturb >>= PERTURB_SHIFT;
+ find_first_empty_slot:
+				pp = &ntblp[j & nsize];
+				if (*pp != NULL)
+					goto find_next_empty_slot;
+				/* found an empty hash table slot */
+				*pp = tblp;
 				tp->nfree--;
 			} else if (!(tblp->flag & FINUSE)) {
 				afree(tblp, tp->areap);
@@ -1289,34 +1349,51 @@ texpand(struct table *tp, int nsize)
 	afree(otblp, tp->areap);
 }
 
-/* table */
-/* name to enter */
-/* hash(n) */
-struct tbl *
-ktsearch(struct table *tp, const char *n, unsigned int h)
+void
+ktinit(struct table *tp, Area *ap, size_t tsize)
 {
-	struct tbl **pp, *p;
-
-	if (tp->size == 0)
-		return (NULL);
-
-	/* search for name in hashed table */
-	for (pp = &tp->tbls[h & (tp->size - 1)]; (p = *pp) != NULL; pp--) {
-		if (*p->name == *n && strcmp(p->name, n) == 0 &&
-		    (p->flag & DEFINED))
-			return (p);
-		if (pp == tp->tbls)	/* wrap */
-			pp += tp->size;
-	}
-
-	return (NULL);
+	tp->areap = ap;
+	tp->tbls = NULL;
+	tp->size = tp->nfree = 0;
+	if (tsize)
+		texpand(tp, tsize);
 }
 
-/* table */
-/* name to enter */
-/* hash(n) */
+/* table, name (key) to search for, hash(name), rv pointer to tbl ptr */
+static struct tbl *
+ktscan(struct table *tp, const char *name, uint32_t h, struct tbl ***ppp)
+{
+	size_t j, perturb, mask;
+	struct tbl **pp, *p;
+
+	mask = tp->size - 1;
+	/* search for hash table slot matching name */
+	j = (perturb = h) & mask;
+	goto find_first_slot;
+ find_next_slot:
+	j = (j << 2) + j + perturb + 1;
+	perturb >>= PERTURB_SHIFT;
+ find_first_slot:
+	pp = &tp->tbls[j & mask];
+	if ((p = *pp) != NULL && (p->ua.hval != h || !(p->flag & DEFINED) ||
+	    strcmp(p->name, name)))
+		goto find_next_slot;
+	/* p == NULL if not found, correct found entry otherwise */
+	if (ppp)
+		*ppp = pp;
+	return (p);
+}
+
+/* table, name (key) to search for, hash(n) */
 struct tbl *
-ktenter(struct table *tp, const char *n, unsigned int h)
+ktsearch(struct table *tp, const char *n, uint32_t h)
+{
+	return (tp->size ? ktscan(tp, n, h, NULL) : NULL);
+}
+
+/* table, name (key) to enter, hash(n) */
+struct tbl *
+ktenter(struct table *tp, const char *n, uint32_t h)
 {
 	struct tbl **pp, *p;
 	int len;
@@ -1324,24 +1401,22 @@ ktenter(struct table *tp, const char *n, unsigned int h)
 	if (tp->size == 0)
 		texpand(tp, INIT_TBLS);
  Search:
-	/* search for name in hashed table */
-	for (pp = &tp->tbls[h & (tp->size - 1)]; (p = *pp) != NULL; pp--) {
-		if (*p->name == *n && strcmp(p->name, n) == 0)
-			return (p);	/* found */
-		if (pp == tp->tbls)	/* wrap */
-			pp += tp->size;
-	}
+	if ((p = ktscan(tp, n, h, &pp)))
+		return (p);
 
-	if (tp->nfree <= 0) {	/* too full */
+	if (tp->nfree <= 0) {
+		/* too full */
 		texpand(tp, 2 * tp->size);
 		goto Search;
 	}
+
 	/* create new tbl entry */
 	len = strlen(n) + 1;
 	p = alloc(offsetof(struct tbl, name[0]) + len, tp->areap);
 	p->flag = 0;
 	p->type = 0;
 	p->areap = tp->areap;
+	p->ua.hval = h;
 	p->u2.field = 0;
 	p->u.array = NULL;
 	memcpy(p->name, n, len);
@@ -1373,8 +1448,8 @@ ktnext(struct tstate *ts)
 static int
 tnamecmp(const void *p1, const void *p2)
 {
-	const struct tbl *a = *((struct tbl * const *)p1);
-	const struct tbl *b = *((struct tbl * const *)p2);
+	const struct tbl *a = *((const struct tbl * const *)p1);
+	const struct tbl *b = *((const struct tbl * const *)p2);
 
 	return (strcmp(a->name, b->name));
 }
@@ -1388,7 +1463,8 @@ ktsort(struct table *tp)
 	p = alloc((tp->size + 1) * sizeof(struct tbl *), ATEMP);
 	sp = tp->tbls;		/* source */
 	dp = p;			/* dest */
-	for (i = 0; i < (size_t)tp->size; i++)
+	i = (size_t)tp->size;
+	while (i--)
 		if ((*dp = *sp++) != NULL && (((*dp)->flag & DEFINED) ||
 		    ((*dp)->flag & ARRAY)))
 			dp++;

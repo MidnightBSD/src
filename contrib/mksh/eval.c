@@ -1,7 +1,7 @@
 /*	$OpenBSD: eval.c,v 1.34 2009/01/29 23:27:26 jaredy Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.64 2009/08/01 19:31:02 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.82 2010/01/29 09:34:27 tg Exp $");
 
 /*
  * string expansion
@@ -236,7 +236,8 @@ expand(const char *cp,	/* input word */
 	doblank = 0;
 	make_magic = 0;
 	word = (f&DOBLANK) ? IFS_WS : IFS_WORD;
-	st_head.next = NULL;
+	/* clang doesn't know OSUBST comes before CSUBST */
+	memset(&st_head, 0, sizeof(st_head));
 	st = &st_head;
 
 	while (1) {
@@ -360,10 +361,6 @@ expand(const char *cp,	/* input word */
 						char *beg, *mid, *end, *stg;
 						mksh_ari_t from = 0, num = -1, flen, finc = 0;
 
-						/* ! DOBLANK,DOBRACE_,DOTILDE */
-						f = DOPAT | (f&DONTRUNCOMMAND) |
-						    DOTEMP_;
-						quote = 0;
 						beg = wdcopy(sp, ATEMP);
 						mid = beg + (wdscan(sp, ADELIM) - sp);
 						stg = beg + (wdscan(sp, CSUBST) - sp);
@@ -385,7 +382,7 @@ expand(const char *cp,	/* input word */
 						    &from, KSH_UNWIND_ERROR, true);
 						afree(stg, ATEMP);
 						if (end) {
-							evaluate(stg = wdstrip(mid, false, false),
+							evaluate(substitute(stg = wdstrip(mid, false, false), 0),
 							    &num, KSH_UNWIND_ERROR, true);
 							afree(stg, ATEMP);
 						}
@@ -412,11 +409,6 @@ expand(const char *cp,	/* input word */
 						char *s, *p, *d, *sbeg, *end;
 						char *pat, *rrep;
 						char *tpat0, *tpat1, *tpat2;
-
-						/* ! DOBLANK,DOBRACE_,DOTILDE */
-						f = DOPAT | (f&DONTRUNCOMMAND) |
-						    DOTEMP_;
-						quote = 0;
 
 						s = wdcopy(sp, ATEMP);
 						p = s + (wdscan(sp, ADELIM) - sp);
@@ -559,7 +551,7 @@ expand(const char *cp,	/* input word */
 					case '?':
 						f &= ~DOBLANK;
 						f |= DOTEMP_;
-						/* FALLTHRU */
+						/* FALLTHROUGH */
 					default:
 						/* Enable tilde expansion */
 						tilde_ok = 1;
@@ -591,7 +583,7 @@ expand(const char *cp,	/* input word */
 					 */
 					x.str = trimsub(str_val(st->var),
 						dp, st->stype);
-					type = XSUB;
+					type = strlen(x.str) ? XSUB : XNULLSUB;
 					if (f&DOBLANK)
 						doblank++;
 					st = st->prev;
@@ -911,14 +903,20 @@ varsub(Expand *xp, const char *sp, const char *word,
 	struct tbl *vp;
 	bool zero_ok = false;
 
-	if (sp[0] == '\0')	/* Bad variable name */
+	if ((stype = sp[0]) == '\0')	/* Bad variable name */
 		return (-1);
 
 	xp->var = NULL;
 
-	/* ${#var}, string length or array size */
-	if (sp[0] == '#' && (c = sp[1]) != '\0') {
-		/* Can't have any modifiers for ${#...} */
+	/*-
+	 * ${#var}, string length (-U: characters, +U: octets) or array size
+	 * ${%var}, string width (-U: screen columns, +U: octets)
+	 */
+	c = sp[1];
+	if (stype == '%' && c == '\0')
+		return (-1);
+	if ((stype == '#' || stype == '%') && c != '\0') {
+		/* Can't have any modifiers for ${#...} or ${%...} */
 		if (*word != CSUBST)
 			return (-1);
 		sp++;
@@ -927,6 +925,8 @@ varsub(Expand *xp, const char *sp, const char *word,
 		    p[2] == ']') {
 			int n = 0;
 
+			if (stype != '#')
+				return (-1);
 			vp = global(arrayname(sp));
 			if (vp->flag & (ISSET|ARRAY))
 				zero_ok = true;
@@ -934,17 +934,45 @@ varsub(Expand *xp, const char *sp, const char *word,
 				if (vp->flag & ISSET)
 					n++;
 			c = n;
-		} else if (c == '*' || c == '@')
+		} else if (c == '*' || c == '@') {
+			if (stype != '#')
+				return (-1);
 			c = e->loc->argc;
-		else {
+		} else {
 			p = str_val(global(sp));
 			zero_ok = p != null;
-			c = utflen(p);
+			if (stype == '#')
+				c = utflen(p);
+			else {
+				/* partial utf_mbswidth reimplementation */
+				const char *s = p;
+				unsigned int wc;
+				size_t len;
+				int cw;
+
+				c = 0;
+				while (*s) {
+					if (!UTFMODE || (len = utf_mbtowc(&wc,
+					    s)) == (size_t)-1)
+						/* not UTFMODE or not UTF-8 */
+						wc = (unsigned char)(*s++);
+					else
+						/* UTFMODE and UTF-8 */
+						s += len;
+					/* wc == char or wchar at s++ */
+					if ((cw = utf_wcwidth(wc)) == -1) {
+						/* 646, 8859-1, 10646 C0/C1 */
+						c = -1;
+						break;
+					}
+					c += cw;
+				}
+			}
 		}
 		if (Flag(FNOUNSET) && c == 0 && !zero_ok)
 			errorf("%s: parameter not set", sp);
 		*stypep = 0; /* unqualified variable/string substitution */
-		xp->str = shf_smprintf("%lu", (unsigned long)c);
+		xp->str = shf_smprintf("%d", c);
 		return (XSUB);
 	}
 
@@ -995,7 +1023,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 			xp->var = global(sp);
 			state = c == '@' ? XNULLSUB : XSUB;
 		} else {
-			xp->u.strv = (const char **) e->loc->argv + 1;
+			xp->u.strv = (const char **)e->loc->argv + 1;
 			xp->str = *xp->u.strv++;
 			xp->split = c == '@'; /* $@ */
 			state = XARG;
@@ -1014,11 +1042,15 @@ varsub(Expand *xp, const char *sp, const char *word,
 				return (-1);
 			}
 			XPinit(wv, 32);
+			if ((c = sp[0]) == '!')
+				++sp;
 			vp = global(arrayname(sp));
 			for (; vp; vp = vp->u.array) {
 				if (!(vp->flag&ISSET))
 					continue;
-				XPput(wv, str_val(vp));
+				XPput(wv, c == '!' ? shf_smprintf("%lu",
+				    arrayindex(vp)) :
+				    str_val(vp));
 			}
 			if (XPsize(wv) == 0) {
 				xp->str = null;
@@ -1026,7 +1058,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 				XPfree(wv);
 			} else {
 				XPput(wv, 0);
-				xp->u.strv = (const char **) XPptrv(wv);
+				xp->u.strv = (const char **)XPptrv(wv);
 				xp->str = *xp->u.strv++;
 				xp->split = p[1] == '@'; /* ${foo[@]} */
 				state = XARG;
@@ -1036,8 +1068,23 @@ varsub(Expand *xp, const char *sp, const char *word,
 			if ((stype & 0x7f) == '=' &&
 			    ctype(*sp, C_VAR1 | C_DIGIT))
 				return (-1);
-			xp->var = global(sp);
-			xp->str = str_val(xp->var);
+			if (*sp == '!' && sp[1]) {
+				++sp;
+				xp->var = global(sp);
+				if (cstrchr(sp, '[')) {
+					if (xp->var->flag & ISSET)
+						xp->str = shf_smprintf("%lu",
+						    arrayindex(xp->var));
+					else
+						xp->str = null;
+				} else if (xp->var->flag & ISSET)
+					xp->str = xp->var->name;
+				else
+					xp->str = "0";	/* ksh93 compat */
+			} else {
+				xp->var = global(sp);
+				xp->str = str_val(xp->var);
+			}
 			state = XSUB;
 		}
 	}
@@ -1118,7 +1165,7 @@ trimsub(char *str, char *pat, int how)
 
 	switch (how & 0xFF) {
 	case '#':		/* shortest at beginning */
-		for (p = str; p <= end; p++) {
+		for (p = str; p <= end; p += utf_ptradj(p)) {
 			c = *p; *p = '\0';
 			if (gmatchx(str, pat, false)) {
 				*p = c;
@@ -1138,17 +1185,27 @@ trimsub(char *str, char *pat, int how)
 		}
 		break;
 	case '%':		/* shortest match at end */
-		for (p = end; p >= str; p--)
+		p = end;
+		while (p >= str) {
+			if (gmatchx(p, pat, false))
+				goto trimsub_match;
+			if (UTFMODE) {
+				char *op = p;
+				while ((p-- > str) && ((*p & 0xC0) == 0x80))
+					;
+				if ((p < str) || (p + utf_ptradj(p) != op))
+					p = op - 1;
+			} else
+				--p;
+		}
+		break;
+	case '%'|0x80:		/* longest match at end */
+		for (p = str; p <= end; p++)
 			if (gmatchx(p, pat, false)) {
  trimsub_match:
 				strndupx(end, str, p - str, ATEMP);
 				return (end);
 			}
-		break;
-	case '%'|0x80:		/* longest match at end */
-		for (p = str; p <= end; p++)
-			if (gmatchx(p, pat, false))
-				goto trimsub_match;
 		break;
 	}
 
@@ -1160,7 +1217,7 @@ trimsub(char *str, char *pat, int how)
  * Name derived from V6's /etc/glob, the program that expanded filenames.
  */
 
-/* XXX cp not const 'cause slashes are temporarily replaced with nulls... */
+/* XXX cp not const 'cause slashes are temporarily replaced with NULs... */
 static void
 glob(char *cp, XPtrV *wp, int markdirs)
 {
@@ -1333,7 +1390,7 @@ debunk(char *dp, const char *sp, size_t dlen)
 	if ((s = cstrchr(sp, MAGIC))) {
 		if (s - sp >= (ssize_t)dlen)
 			return (dp);
-		memcpy(dp, sp, s - sp);
+		memmove(dp, sp, s - sp);
 		for (d = dp + (s - sp); *s && (d - dp < (ssize_t)dlen); s++)
 			if (!ISMAGIC(*s) || !(*++s & 0x80) ||
 			    !vstrchr("*+?@! ", *s & 0x7f))

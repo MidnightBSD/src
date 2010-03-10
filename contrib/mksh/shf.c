@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/shf.c,v 1.30 2009/06/10 18:12:49 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/shf.c,v 1.35 2009/11/28 14:28:03 tg Exp $");
 
 /* flags to shf_emptybuf() */
 #define EB_READSW	0x01	/* about to switch to reading */
@@ -299,7 +299,7 @@ shf_flush(struct shf *shf)
 	if (shf->flags & SHF_READING) {
 		shf->flags &= ~(SHF_EOF | SHF_READING);
 		if (shf->rnleft > 0) {
-			lseek(shf->fd, (off_t) -shf->rnleft, SEEK_CUR);
+			lseek(shf->fd, (off_t)-shf->rnleft, SEEK_CUR);
 			shf->rnleft = 0;
 			shf->rp = shf->buf;
 		}
@@ -838,7 +838,7 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 
 		if (c >= 'A' && c <= 'Z') {
 			flags |= FL_UPPER;
-			c = c - 'A' + 'a';
+			c = ksh_tolower(c);
 		}
 
 		switch (c) {
@@ -907,8 +907,7 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 			case 'p':
 			case 'x': {
 				const char *digits = (flags & FL_UPPER) ?
-				    "0123456789ABCDEF" :
-				    "0123456789abcdef";
+				    digits_uc : digits_lc;
 				do {
 					*--cp = digits[lnum & 0xf];
 					lnum >>= 4;

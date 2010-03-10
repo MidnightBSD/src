@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.38 2009/06/11 12:42:20 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.48 2009/12/12 22:27:10 tg Exp $");
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
@@ -41,12 +41,11 @@ static struct op *thenpart(void);
 static struct op *elsepart(void);
 static struct op *caselist(void);
 static struct op *casepart(int);
-static struct op *function_body(char *, int);
+static struct op *function_body(char *, bool);
 static char **wordlist(void);
 static struct op *block(int, struct op *, struct op *, char **);
 static struct op *newtp(int);
-static void syntaxerr(const char *)
-    __attribute__((noreturn));
+static void syntaxerr(const char *) MKSH_A_NORETURN;
 static void nesting_push(struct nesting_state *, int);
 static void nesting_pop(struct nesting_state *);
 static int assign_command(char *);
@@ -55,8 +54,7 @@ static int dbtestp_isa(Test_env *, Test_meta);
 static const char *dbtestp_getopnd(Test_env *, Test_op, bool);
 static int dbtestp_eval(Test_env *, Test_op, const char *,
     const char *, bool);
-static void dbtestp_error(Test_env *, int, const char *)
-    __attribute__((noreturn));
+static void dbtestp_error(Test_env *, int, const char *) MKSH_A_NORETURN;
 
 static struct op *outtree;		/* yyparse output */
 static struct nesting_state nesting;	/* \n changed to ; */
@@ -289,9 +287,11 @@ get_command(int cf)
 					ACCEPT;
 					goto Subshell;
 				}
+#ifndef MKSH_SMALL
 				if ((XPsize(args) == 0 || Flag(FKEYWORD)) &&
 				    XPsize(vars) == 1 && is_wdvarassign(yylval.cp))
 					goto is_wdarrassign;
+#endif
 				/* Must be a function */
 				if (iopn != 0 || XPsize(args) != 1 ||
 				    XPsize(vars) != 0)
@@ -301,6 +301,7 @@ get_command(int cf)
 				musthave(')', 0);
 				t = function_body(XPptrv(args)[0], false);
 				goto Leave;
+#ifndef MKSH_SMALL
  is_wdarrassign:
 			{
 				static const char set_cmd0[] = {
@@ -336,6 +337,7 @@ get_command(int cf)
 				XPput(args, yylval.cp);
 				break;
 			}
+#endif
 
 			default:
 				goto Leave;
@@ -344,8 +346,8 @@ get_command(int cf)
  Leave:
 		break;
 
- Subshell:
 	case '(':
+ Subshell:
 		t = nested(TPAREN, '(', ')');
 		break;
 
@@ -354,16 +356,26 @@ get_command(int cf)
 		break;
 
 	case MDPAREN: {
+		int lno;
 		static const char let_cmd[] = {
 			CHAR, 'l', CHAR, 'e',
 			CHAR, 't', EOS
 		};
+
 		/* Leave KEYWORD in syniocf (allow if (( 1 )) then ...) */
-		t = newtp(TCOM);
-		t->lineno = source->line;
+		lno = source->line;
 		ACCEPT;
+		switch (token(LETEXPR)) {
+		case LWORD:
+			break;
+		case '(':	/* ) */
+			goto Subshell;
+		default:
+			syntaxerr(NULL);
+		}
+		t = newtp(TCOM);
+		t->lineno = lno;
 		XPput(args, wdcopy(let_cmd, ATEMP));
-		musthave(LWORD,LETEXPR);
 		XPput(args, yylval.cp);
 		break;
 	}
@@ -587,7 +599,7 @@ casepart(int endtok)
 	musthave(')', 0);
 
 	t->left = c_list(true);
-	/* Note: Posix requires the ;; */
+	/* Note: POSIX requires the ;; */
 	if ((tpeek(CONTIN|KEYWORD|ALIAS)) != endtok)
 		musthave(BREAK, CONTIN|KEYWORD|ALIAS);
 	return (t);
@@ -595,27 +607,22 @@ casepart(int endtok)
 
 static struct op *
 function_body(char *name,
-    int ksh_func)		/* function foo { ... } vs foo() { .. } */
+    bool ksh_func)		/* function foo { ... } vs foo() { .. } */
 {
 	char *sname, *p;
 	struct op *t;
 	bool old_func_parse;
 
 	sname = wdstrip(name, false, false);
-	/* Check for valid characters in name. posix and ksh93 say only
+	/* Check for valid characters in name. POSIX and AT&T ksh93 say only
 	 * allow [a-zA-Z_0-9] but this allows more as old pdkshs have
 	 * allowed more (the following were never allowed:
-	 *	nul space nl tab $ ' " \ ` ( ) & | ; = < >
-	 * C_QUOTE covers all but = and adds # [ ] ? *)
+	 *	NUL TAB NL SP " $ & ' ( ) ; < = > \ ` |
+	 * C_QUOTE covers all but adds # * ? [ ]
 	 */
 	for (p = sname; *p; p++)
-		if (ctype(*p, C_QUOTE) || *p == '=')
+		if (ctype(*p, C_QUOTE))
 			yyerror("%s: invalid function name\n", sname);
-
-	t = newtp(TFUNCT);
-	t->str = sname;
-	t->u.ksh_func = ksh_func;
-	t->lineno = source->line;
 
 	/* Note that POSIX allows only compound statements after foo(), sh and
 	 * AT&T ksh allow any command, go with the later since it shouldn't
@@ -623,9 +630,25 @@ function_body(char *name,
 	 * an open-brace.
 	 */
 	if (ksh_func) {
+		if (tpeek(CONTIN|KEYWORD|ALIAS) == '(' /* ) */) {
+			struct tbl *tp;
+
+			/* function foo () { */
+			ACCEPT;
+			musthave(')', 0);
+			/* degrade to POSIX function */
+			ksh_func = false;
+			if ((tp = ktsearch(&aliases, sname, hash(sname))))
+				ktdelete(tp);
+		}
 		musthave('{', CONTIN|KEYWORD|ALIAS); /* } */
 		REJECT;
 	}
+
+	t = newtp(TFUNCT);
+	t->str = sname;
+	t->u.ksh_func = ksh_func;
+	t->lineno = source->line;
 
 	old_func_parse = e->flags & EF_FUNC_PARSE;
 	e->flags |= EF_FUNC_PARSE;
@@ -661,7 +684,7 @@ wordlist(void)
 	XPtrV args;
 
 	XPinit(args, 16);
-	/* Posix does not do alias expansion here... */
+	/* POSIX does not do alias expansion here... */
 	if ((c = token(CONTIN|KEYWORD|ALIAS)) != IN) {
 		if (c != ';') /* non-POSIX, but AT&T ksh accepts a ; here */
 			REJECT;
@@ -696,10 +719,10 @@ block(int type, struct op *t1, struct op *t2, char **wp)
 	return (t);
 }
 
-const	struct tokeninfo {
+const struct tokeninfo {
 	const char *name;
-	short	val;
-	short	reserved;
+	short val;
+	short reserved;
 } tokentab[] = {
 	/* Reserved words */
 	{ "if",		IF,	true },
@@ -739,7 +762,8 @@ initkeywords(void)
 	struct tokeninfo const *tt;
 	struct tbl *p;
 
-	ktinit(&keywords, APERM, 32); /* must be 2^n (currently 20 keywords) */
+	ktinit(&keywords, APERM,
+	    /* must be 80% of 2^n (currently 20 keywords) */ 32);
 	for (tt = tokentab; tt->name; tt++) {
 		if (tt->reserved) {
 			p = ktenter(&keywords, tt->name, hash(tt->name));
@@ -861,7 +885,7 @@ assign_command(char *s)
 	return ((strcmp(s, "alias") == 0) ||
 	    (strcmp(s, "export") == 0) ||
 	    (strcmp(s, "readonly") == 0) ||
-	    (strcmp(s, "typeset") == 0));
+	    (strcmp(s, T_typeset) == 0));
 }
 
 /* Check if we are in the middle of reading an alias */
@@ -939,7 +963,8 @@ dbtestp_isa(Test_env *te, Test_meta meta)
 }
 
 static const char *
-dbtestp_getopnd(Test_env *te, Test_op op __unused, bool do_eval __unused)
+dbtestp_getopnd(Test_env *te, Test_op op MKSH_A_UNUSED,
+    bool do_eval MKSH_A_UNUSED)
 {
 	int c = tpeek(ARRAYVAR);
 
@@ -953,9 +978,9 @@ dbtestp_getopnd(Test_env *te, Test_op op __unused, bool do_eval __unused)
 }
 
 static int
-dbtestp_eval(Test_env *te __unused, Test_op op __unused,
-    const char *opnd1 __unused, const char *opnd2 __unused,
-    bool do_eval __unused)
+dbtestp_eval(Test_env *te MKSH_A_UNUSED, Test_op op MKSH_A_UNUSED,
+    const char *opnd1 MKSH_A_UNUSED, const char *opnd2 MKSH_A_UNUSED,
+    bool do_eval MKSH_A_UNUSED)
 {
 	return (1);
 }

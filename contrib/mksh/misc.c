@@ -2,7 +2,7 @@
 /*	$OpenBSD: path.c,v 1.12 2005/03/30 17:16:37 deraadt Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -29,13 +29,7 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.114 2009/08/01 20:31:47 tg Exp $");
-
-#undef USE_CHVT
-/* XXX conditions correct? */
-#if defined(TIOCSCTTY) && !defined(MKSH_SMALL)
-#define USE_CHVT
-#endif
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.138 2010/01/29 09:34:29 tg Exp $");
 
 unsigned char chtypes[UCHAR_MAX + 1];	/* type bits for unsigned char */
 
@@ -47,10 +41,9 @@ gid_t kshgid, kshegid;
 static int do_gmatch(const unsigned char *, const unsigned char *,
     const unsigned char *, const unsigned char *);
 static const unsigned char *cclass(const unsigned char *, int);
-#ifdef USE_CHVT
+#ifdef TIOCSCTTY
 static void chvt(const char *);
 #endif
-static char *do_phys_path(XString *, char *, const char *);
 
 /*
  * Fast character classes
@@ -84,7 +77,7 @@ initctypes(void)
 	setctypes("*@#!$-?", C_VAR1);
 	setctypes(" \t\n", C_IFSWS);
 	setctypes("=-+?", C_SUBOP1);
-	setctypes(" \n\t\"#$&'()*;<>?[]\\`|", C_QUOTE);
+	setctypes("\t\n \"#$&'()*;<=>?[\\]`|", C_QUOTE);
 }
 
 /* called from XcheckN() to grow buffer */
@@ -99,61 +92,12 @@ Xcheck_grow_(XString *xsp, const char *xp, unsigned int more)
 	return (xsp->beg + (xp - old_beg));
 }
 
+#define SHFLAGS_DEFNS
+#include "sh_flags.h"
+
 const struct shoption options[] = {
-	/* Special cases (see parse_args()): -A, -o, -s.
-	 * Options are sorted by their longnames - the order of these
-	 * entries MUST match the order of sh_flag F* enumerations in sh.h.
-	 */
-	{ "allexport",		'a',	OF_ANY },
-#if HAVE_ARC4RANDOM
-	{ "arc4random",		0,	OF_ANY },
-#endif
-	{ "braceexpand",	0,	OF_ANY },	/* non-standard */
-#if HAVE_NICE
-	{ "bgnice",		0,	OF_ANY },
-#endif
-	{ NULL,			'c',	OF_CMDLINE },
-	{ "emacs",		0,	OF_ANY },
-	{ "errexit",		'e',	OF_ANY },
-	{ "gmacs",		0,	OF_ANY },
-	{ "ignoreeof",		0,	OF_ANY },
-	{ "interactive",	'i',	OF_CMDLINE },
-	{ "keyword",		'k',	OF_ANY },
-	{ "login",		'l',	OF_CMDLINE },
-	{ "markdirs",		'X',	OF_ANY },
-#ifndef MKSH_UNEMPLOYED
-	{ "monitor",		'm',	OF_ANY },
-#else
-	{ NULL,			'm',	0 },		/* needed */
-#endif
-	{ "noclobber",		'C',	OF_ANY },
-	{ "noexec",		'n',	OF_ANY },
-	{ "noglob",		'f',	OF_ANY },
-	{ "nohup",		0,	OF_ANY },
-	{ "nolog",		0,	OF_ANY },	/* no effect */
-#ifndef MKSH_UNEMPLOYED
-	{ "notify",		'b',	OF_ANY },
-#endif
-	{ "nounset",		'u',	OF_ANY },
-	{ "physical",		0,	OF_ANY },	/* non-standard */
-	{ "posix",		0,	OF_ANY },	/* non-standard */
-	{ "privileged",		'p',	OF_ANY },
-	{ "restricted",		'r',	OF_CMDLINE },
-	{ "stdin",		's',	OF_CMDLINE },	/* pseudo non-st.. */
-	{ "trackall",		'h',	OF_ANY },
-	{ "utf8-mode",		'U',	OF_ANY },	/* non-standard */
-	{ "verbose",		'v',	OF_ANY },
-#ifndef MKSH_NOVI
-	{ "vi",			0,	OF_ANY },
-	{ "viraw",		0,	OF_ANY },	/* no effect */
-	{ "vi-tabcomplete",	0,	OF_ANY },	/* non-standard */
-	{ "vi-esccomplete",	0,	OF_ANY },	/* non-standard */
-#endif
-	{ "xtrace",		'x',	OF_ANY },
-	/* Anonymous flags: used internally by shell only
-	 * (not visible to user)
-	 */
-	{ NULL,			0,	OF_INTERNAL }, /* FTALKING_I */
+#define SHFLAGS_ITEMS
+#include "sh_flags.h"
 };
 
 /*
@@ -164,7 +108,11 @@ option(const char *n)
 {
 	size_t i;
 
-	for (i = 0; i < NELEM(options); i++)
+	if ((n[0] == '-' || n[0] == '+') && n[1] && !n[2]) {
+		for (i = 0; i < NELEM(options); i++)
+			if (options[i].c == n[1])
+				return (i);
+	} else for (i = 0; i < NELEM(options); i++)
 		if (options[i].name && strcmp(options[i].name, n) == 0)
 			return (i);
 
@@ -176,12 +124,12 @@ struct options_info {
 	int opts[NELEM(options)];
 };
 
-static char *options_fmt_entry(const void *arg, int, char *, int);
-static void printoptions(int);
+static char *options_fmt_entry(char *, int, int, const void *);
+static void printoptions(bool);
 
 /* format a single select menu item */
 static char *
-options_fmt_entry(const void *arg, int i, char *buf, int buflen)
+options_fmt_entry(char *buf, int buflen, int i, const void *arg)
 {
 	const struct options_info *oi = (const struct options_info *)arg;
 
@@ -192,32 +140,40 @@ options_fmt_entry(const void *arg, int i, char *buf, int buflen)
 }
 
 static void
-printoptions(int verbose)
+printoptions(bool verbose)
 {
-	unsigned int i;
+	int i = 0;
 
 	if (verbose) {
+		int n = 0, len, octs = 0;
 		struct options_info oi;
-		int n, len;
 
 		/* verbose version */
 		shf_puts("Current option settings\n", shl_stdout);
 
-		for (i = n = oi.opt_width = 0; i < NELEM(options); i++)
+		oi.opt_width = 0;
+		while (i < (int)NELEM(options)) {
 			if (options[i].name) {
-				len = strlen(options[i].name);
 				oi.opts[n++] = i;
+				len = strlen(options[i].name);
+				if (len > octs)
+					octs = len;
+				len = utf_mbswidth(options[i].name);
 				if (len > oi.opt_width)
 					oi.opt_width = len;
 			}
+			++i;
+		}
 		print_columns(shl_stdout, n, options_fmt_entry, &oi,
-		    oi.opt_width + 5, 1);
+		    octs + 4, oi.opt_width + 4, true);
 	} else {
-		/* short version ala ksh93 */
+		/* short version á la AT&T ksh93 */
 		shf_puts("set", shl_stdout);
-		for (i = 0; i < NELEM(options); i++)
+		while (i < (int)NELEM(options)) {
 			if (Flag(i) && options[i].name)
 				shprintf(" -o %s", options[i].name);
+			++i;
+		}
 		shf_putc('\n', shl_stdout);
 	}
 }
@@ -238,11 +194,9 @@ getoptions(void)
 
 /* change a Flag(*) value; takes care of special actions */
 void
-change_flag(enum sh_flag f,
-    int what,		/* flag to change */
-    char newval)	/* what is changing the flag (command line vs set) */
+change_flag(enum sh_flag f, int what, unsigned int newval)
 {
-	char oldval;
+	unsigned char oldval;
 
 	oldval = Flag(f);
 	Flag(f) = newval ? 1 : 0;	/* needed for tristates */
@@ -253,15 +207,15 @@ change_flag(enum sh_flag f,
 	} else
 #endif
 	  if ((
-#ifndef MKSH_NOVI
+#if !MKSH_S_NOVI
 	    f == FVI ||
 #endif
 	    f == FEMACS || f == FGMACS) && newval) {
-#ifndef MKSH_NOVI
+#if !MKSH_S_NOVI
 		Flag(FVI) =
 #endif
 		    Flag(FEMACS) = Flag(FGMACS) = 0;
-		Flag(f) = newval;
+		Flag(f) = (unsigned char)newval;
 	} else if (f == FPRIVILEGED && oldval && !newval) {
 		/* Turning off -p? */
 #if HAVE_SETRESUGID
@@ -278,13 +232,14 @@ change_flag(enum sh_flag f,
 		setegid(kshegid = kshgid = getgid());
 		setgid(kshegid);
 #endif
-	} else if (f == FPOSIX && newval) {
-		Flag(FBRACEEXPAND) = 0;
+	} else if ((f == FPOSIX || f == FSH) && newval) {
+		Flag(FPOSIX) = Flag(FSH) = Flag(FBRACEEXPAND) = 0;
+		Flag(f) = (unsigned char)newval;
 	}
 	/* Changing interactive flag? */
 	if (f == FTALKING) {
 		if ((what == OF_CMDLINE || what == OF_SET) && procpid == kshpid)
-			Flag(FTALKING_I) = newval;
+			Flag(FTALKING_I) = (unsigned char)newval;
 	}
 }
 
@@ -294,7 +249,7 @@ change_flag(enum sh_flag f,
 int
 parse_args(const char **argv,
     int what,			/* OF_CMDLINE or OF_SET */
-    int *setargsp)
+    bool *setargsp)
 {
 	static char cmd_opts[NELEM(options) + 5]; /* o:T:\0 */
 	static char set_opts[NELEM(options) + 6]; /* A:o;s\0 */
@@ -311,7 +266,7 @@ parse_args(const char **argv,
 		/* see cmd_opts[] declaration */
 		*p++ = 'o';
 		*p++ = ':';
-#ifndef MKSH_SMALL
+#if !defined(MKSH_SMALL) || defined(TIOCSCTTY)
 		*p++ = 'T';
 		*p++ = ':';
 #endif
@@ -389,11 +344,11 @@ parse_args(const char **argv,
 			}
 			break;
 
-#ifndef MKSH_SMALL
+#if !defined(MKSH_SMALL) || defined(TIOCSCTTY)
 		case 'T':
 			if (what != OF_FIRSTTIME)
 				break;
-#ifndef USE_CHVT
+#ifndef TIOCSCTTY
 			errorf("no TIOCSCTTY ioctl");
 #else
 			change_flag(FTALKING, OF_CMDLINE, 1);
@@ -447,11 +402,9 @@ parse_args(const char **argv,
 		qsort(&argv[go.optind], i - go.optind, sizeof(void *),
 		    xstrcmp);
 	}
-	if (arrayset) {
-		set_array(array, arrayset, argv + go.optind);
-		for (; argv[go.optind]; go.optind++)
-			;
-	}
+	if (arrayset)
+		go.optind += set_array(array, arrayset > 0 ? true : false,
+		    argv + go.optind);
 
 	return (go.optind);
 }
@@ -598,8 +551,10 @@ has_globbing(const char *xp, const char *xpe)
 			} else if (nest)
 				nest--;
 		}
-		/* else must be a MAGIC-MAGIC, or MAGIC-!, MAGIC--, MAGIC-]
-			 MAGIC-{, MAGIC-,, MAGIC-} */
+		/*
+		 * else must be a MAGIC-MAGIC, or MAGIC-!,
+		 * MAGIC--, MAGIC-], MAGIC-{, MAGIC-, MAGIC-}
+		 */
 	}
 	return (saw_glob && !in_bracket && !nest);
 }
@@ -633,6 +588,10 @@ do_gmatch(const unsigned char *s, const unsigned char *se,
 		case '?':
 			if (sc == 0)
 				return (0);
+			if (UTFMODE) {
+				--s;
+				s += utf_ptradj((const void *)s);
+			}
 			break;
 
 		case '*':
@@ -791,7 +750,7 @@ pat_scan(const unsigned char *p, const unsigned char *pe, int match_sep)
 int
 xstrcmp(const void *p1, const void *p2)
 {
-	return (strcmp(*(char * const *)p1, *(char * const *)p2));
+	return (strcmp(*(const char * const *)p1, *(const char * const *)p2));
 }
 
 /* Initialise a Getopt structure */
@@ -959,53 +918,64 @@ print_value_quoted(const char *s)
 		shf_putc('\'', shl_stdout);
 }
 
-/* Print things in columns and rows - func() is called to format the ith
- * element
+/*
+ * Print things in columns and rows - func() is called to format
+ * the i-th element
  */
 void
 print_columns(struct shf *shf, int n,
-    char *(*func) (const void *, int, char *, int),
-    const void *arg, int max_width, int prefcol)
+    char *(*func)(char *, int, int, const void *),
+    const void *arg, int max_oct, int max_col, bool prefcol)
 {
-	char *str = alloc(max_width + 1, ATEMP);
 	int i, r, c, rows, cols, nspace;
+	char *str;
+
+	if (n <= 0) {
+#ifndef MKSH_SMALL
+		internal_warningf("print_columns called with n=%d <= 0", n);
+#endif
+		return;
+	}
+
+	++max_oct;
+	str = alloc(max_oct, ATEMP);
 
 	/* ensure x_cols is valid first */
 	if (x_cols < MIN_COLS)
 		change_winsz();
 
-	/* max_width + 1 for the space. Note that no space
-	 * is printed after the last column to avoid problems
-	 * with terminals that have auto-wrap.
+	/*
+	 * We use (max_col + 1) to consider the space separator.
+	 * Note that no space is printed after the last column
+	 * to avoid problems with terminals that have auto-wrap.
 	 */
-	cols = x_cols / (max_width + 1);
+	cols = x_cols / (max_col + 1);
+
 	/* if we can only print one column anyway, skip the goo */
 	if (cols < 2) {
 		for (i = 0; i < n; ++i)
 			shf_fprintf(shf, "%s \n",
-			    (*func)(arg, i, str, max_width + 1));
+			    (*func)(str, max_oct, i, arg));
 		goto out;
 	}
-	rows = (n + cols - 1) / cols;
-	if (prefcol && n && cols > rows) {
-		int tmp = rows;
 
-		rows = cols;
-		cols = tmp;
-		if (rows > n)
-			rows = n;
+	rows = (n + cols - 1) / cols;
+	if (prefcol && cols > rows) {
+		i = rows;
+		rows = cols > n ? n : cols;
+		cols = i;
 	}
 
-	nspace = (x_cols - max_width * cols) / cols;
+	max_col = -max_col;
+	nspace = (x_cols + max_col * cols) / cols;
 	if (nspace <= 0)
 		nspace = 1;
 	for (r = 0; r < rows; r++) {
 		for (c = 0; c < cols; c++) {
 			i = c * rows + r;
 			if (i < n) {
-				shf_fprintf(shf, "%-*s",
-				    max_width,
-				    (*func)(arg, i, str, max_width + 1));
+				shf_fprintf(shf, "%*s", max_col,
+				    (*func)(str, max_oct, i, arg));
 				if (c + 1 < cols)
 					shf_fprintf(shf, "%*s", nspace, null);
 			}
@@ -1092,10 +1062,19 @@ ksh_get_wd(size_t *dlen)
 	char *ret, *b;
 	size_t len = 1;
 
+#ifdef NO_PATH_MAX
+	if ((b = get_current_dir_name())) {
+		len = strlen(b) + 1;
+		strndupx(ret, b, len - 1, ATEMP);
+		free(b);
+	} else
+		ret = NULL;
+#else
 	if ((ret = getcwd((b = alloc(PATH_MAX + 1, ATEMP)), PATH_MAX)))
 		ret = aresize(b, len = (strlen(b) + 1), ATEMP);
 	else
 		afree(b, ATEMP);
+#endif
 
 	if (dlen)
 		*dlen = len;
@@ -1277,81 +1256,9 @@ set_current_wd(char *pathl)
 		afree(p, ATEMP);
 }
 
-char *
-get_phys_path(const char *pathl)
-{
-	XString xs;
-	char *xp;
+#ifdef TIOCSCTTY
+extern void chvt_reinit(void);
 
-	Xinit(xs, xp, strlen(pathl) + 1, ATEMP);
-
-	xp = do_phys_path(&xs, xp, pathl);
-
-	if (!xp)
-		return (NULL);
-
-	if (Xlength(xs, xp) == 0)
-		Xput(xs, xp, '/');
-	Xput(xs, xp, '\0');
-
-	return (Xclose(xs, xp));
-}
-
-static char *
-do_phys_path(XString *xsp, char *xp, const char *pathl)
-{
-	const char *p, *q;
-	int len, llen, savepos;
-	char *lbuf;
-
-	lbuf = alloc(PATH_MAX, ATEMP);
-	Xcheck(*xsp, xp);
-	for (p = pathl; p; p = q) {
-		while (*p == '/')
-			p++;
-		if (!*p)
-			break;
-		len = (q = cstrchr(p, '/')) ? q - p : (int)strlen(p);
-		if (len == 1 && p[0] == '.')
-			continue;
-		if (len == 2 && p[0] == '.' && p[1] == '.') {
-			while (xp > Xstring(*xsp, xp)) {
-				xp--;
-				if (*xp == '/')
-					break;
-			}
-			continue;
-		}
-
-		savepos = Xsavepos(*xsp, xp);
-		Xput(*xsp, xp, '/');
-		XcheckN(*xsp, xp, len + 1);
-		memcpy(xp, p, len);
-		xp += len;
-		*xp = '\0';
-
-		llen = readlink(Xstring(*xsp, xp), lbuf, PATH_MAX - 1);
-		if (llen < 0) {
-			if (errno == EINVAL)
-				/* not a symbolic link */
-				continue;
-			xp = NULL;
-			goto out;
-		}
-		lbuf[llen] = '\0';
-
-		/* If absolute path, start from scratch.. */
-		xp = lbuf[0] == '/' ? Xstring(*xsp, xp) :
-		    Xrestpos(*xsp, xp, savepos);
-		if ((xp = do_phys_path(xsp, xp, lbuf)) == NULL)
-			break;
-	}
- out:
-	afree(lbuf, ATEMP);
-	return (xp);
-}
-
-#ifdef USE_CHVT
 static void
 chvt(const char *fn)
 {
@@ -1377,7 +1284,7 @@ chvt(const char *fn)
 			errorf("chvt: not a char device: %s", fn);
 		if ((sb.st_uid != 0) && chown(fn, 0, 0))
 			warningf(false, "chvt: cannot chown root %s", fn);
-		if (((sb.st_mode & 07777) != 0600) && chmod(fn, 0600))
+		if (((sb.st_mode & 07777) != 0600) && chmod(fn, (mode_t)0600))
 			warningf(false, "chvt: cannot chmod 0600 %s", fn);
 #if HAVE_REVOKE
 		if (revoke(fn))
@@ -1411,6 +1318,7 @@ chvt(const char *fn)
 	ksh_dup2(fd, 2, false);
 	if (fd > 2)
 		close(fd);
+	chvt_reinit();
 }
 #endif
 
@@ -1526,3 +1434,137 @@ getrusage(int what, struct rusage *ru)
 	return (0);
 }
 #endif
+
+/*
+ * process the string available via fg (get a char)
+ * and fp (put back a char) for backslash escapes,
+ * assuming the first call to *fg gets the char di-
+ * rectly after the backslash; return the character
+ * (0..0xFF), Unicode (wc + 0x100), or -1 if no known
+ * escape sequence was found
+ */
+int
+unbksl(bool cstyle, int (*fg)(void), void (*fp)(int))
+{
+	int wc, i, c, fc;
+
+	fc = (*fg)();
+	switch (fc) {
+	case 'a':
+		/*
+		 * according to the comments in pdksh, \007 seems
+		 * to be more portable than \a (due to HP-UX cc,
+		 * Ultrix cc, old pcc, etc.) so we avoid the escape
+		 * sequence altogether in mksh and assume ASCII
+		 */
+		wc = 7;
+		break;
+	case 'b':
+		wc = '\b';
+		break;
+	case 'c':
+		if (!cstyle)
+			goto unknown_escape;
+		c = (*fg)();
+		wc = CTRL(c);
+		break;
+	case 'E':
+	case 'e':
+		wc = 033;
+		break;
+	case 'f':
+		wc = '\f';
+		break;
+	case 'n':
+		wc = '\n';
+		break;
+	case 'r':
+		wc = '\r';
+		break;
+	case 't':
+		wc = '\t';
+		break;
+	case 'v':
+		/* assume ASCII here as well */
+		wc = 11;
+		break;
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+		if (!cstyle)
+			goto unknown_escape;
+		/* FALLTHROUGH */
+	case '0':
+		if (cstyle)
+			(*fp)(fc);
+		/*
+		 * look for an octal number with up to three
+		 * digits, not counting the leading zero;
+		 * convert it to a raw octet
+		 */
+		wc = 0;
+		i = 3;
+		while (i--)
+			if ((c = (*fg)()) >= '0' && c <= '7')
+				wc = (wc << 3) + (c - '0');
+			else {
+				(*fp)(c);
+				break;
+			}
+		break;
+	case 'U':
+		i = 8;
+		if (0)
+		/* FALLTHROUGH */
+	case 'u':
+		i = 4;
+		if (0)
+		/* FALLTHROUGH */
+	case 'x':
+		i = cstyle ? -1 : 2;
+		/*
+		 * x:	look for a hexadecimal number with up to
+		 *	two (C style: arbitrary) digits; convert
+		 *	to raw octet (C style: Unicode if >0xFF)
+		 * u/U:	look for a hexadecimal number with up to
+		 *	four (U: eight) digits; convert to Unicode
+		 */
+		wc = 0;
+		while (i--) {
+			wc <<= 4;
+			if ((c = (*fg)()) >= '0' && c <= '9')
+				wc += c - '0';
+			else if (c >= 'A' && c <= 'F')
+				wc += c - 'A' + 10;
+			else if (c >= 'a' && c <= 'f')
+				wc += c - 'a' + 10;
+			else {
+				wc >>= 4;
+				(*fp)(c);
+				break;
+			}
+		}
+		if ((cstyle && wc > 0xFF) || fc != 'x')
+			/* Unicode marker */
+			wc += 0x100;
+		break;
+	case '\'':
+		if (!cstyle)
+			goto unknown_escape;
+		wc = '\'';
+		break;
+	case '\\':
+		wc = '\\';
+		break;
+	default:
+ unknown_escape:
+		(*fp)(fc);
+		return (-1);
+	}
+
+	return (wc);
+}

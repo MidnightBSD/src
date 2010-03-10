@@ -1,4 +1,4 @@
-/*	$OpenBSD: sh.h,v 1.29 2005/12/11 18:53:51 deraadt Exp $	*/
+/*	$OpenBSD: sh.h,v 1.30 2010/01/04 18:07:11 deraadt Exp $	*/
 /*	$OpenBSD: shf.h,v 1.6 2005/12/11 18:53:51 deraadt Exp $	*/
 /*	$OpenBSD: table.h,v 1.7 2005/12/11 20:31:21 otto Exp $	*/
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
@@ -9,7 +9,7 @@
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -91,25 +91,41 @@
 #include <values.h>
 #endif
 
-#if HAVE_ATTRIBUTE
 #undef __attribute__
-#else
-#define __attribute__(x)	/* nothing */
-#endif
-#undef __unused
-#define __unused		__attribute__((unused))
 #if HAVE_ATTRIBUTE_BOUNDED
-#define __bound_att__(x)	__attribute__(x)
+#define MKSH_A_BOUNDED(x,y,z)	__attribute__((bounded (x, y, z)))
 #else
-#define __bound_att__(x)	/* nothing */
+#define MKSH_A_BOUNDED(x,y,z)	/* nothing */
+#endif
+#if HAVE_ATTRIBUTE_FORMAT
+#define MKSH_A_FORMAT(x,y,z)	__attribute__((format (x, y, z)))
+#else
+#define MKSH_A_FORMAT(x,y,z)	/* nothing */
+#endif
+#if HAVE_ATTRIBUTE_NONNULL
+#define MKSH_A_NONNULL(a)	__attribute__(a)
+#else
+#define MKSH_A_NONNULL(a)	/* nothing */
+#endif
+#if HAVE_ATTRIBUTE_NORETURN
+#define MKSH_A_NORETURN		__attribute__((noreturn))
+#else
+#define MKSH_A_NORETURN		/* nothing */
+#endif
+#if HAVE_ATTRIBUTE_UNUSED
+#define MKSH_A_UNUSED		__attribute__((unused))
+#else
+#define MKSH_A_UNUSED		/* nothing */
 #endif
 #if HAVE_ATTRIBUTE_USED
-#define __attribute____used__	__attribute__((used))
+#define MKSH_A_USED		__attribute__((used))
 #else
-#define __attribute____used__	/* nothing */
+#define MKSH_A_USED		/* nothing */
 #endif
 
-#if (defined(MirBSD) && (MirBSD >= 0x09A1))
+#if defined(MirBSD) && (MirBSD >= 0x09A1) && \
+    defined(__ELF__) && defined(__GNUC__) && \
+    !defined(__llvm__) && !defined(__NWCC__)
 /*
  * We got usable __IDSTRING __COPYRIGHT __RCSID __SCCSID macros
  * which work for all cases; no need to redefine them using the
@@ -127,16 +143,16 @@
 #define __IDSTRING_EXPAND(l,p)		__IDSTRING_CONCAT(l,p)
 #define __IDSTRING(prefix, string)				\
 	static const char __IDSTRING_EXPAND(__LINE__,prefix) []	\
-	    __attribute____used__ = "@(""#)" #prefix ": " string
+	    MKSH_A_USED = "@(""#)" #prefix ": " string
 #define __COPYRIGHT(x)		__IDSTRING(copyright,x)
 #define __RCSID(x)		__IDSTRING(rcsid,x)
 #define __SCCSID(x)		__IDSTRING(sccsid,x)
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.321 2009/08/01 20:32:45 tg Rel $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.380 2010/01/29 09:34:30 tg Exp $");
 #endif
-#define MKSH_VERSION "R39 2009/08/01"
+#define MKSH_VERSION "R39 2010/01/29"
 
 #ifndef MKSH_INCLUDES_ONLY
 
@@ -211,8 +227,12 @@ typedef int bool;
 #define ksh_isdash(s)	(((s) != NULL) && ((s)[0] == '-') && ((s)[1] == '\0'))
 #define ksh_isspace(c)	((((c) >= 0x09) && ((c) <= 0x0D)) || ((c) == 0x20))
 
+#ifdef NO_PATH_MAX
+#undef PATH_MAX
+#else
 #ifndef PATH_MAX
 #define PATH_MAX	1024
+#endif
 #endif
 #ifndef SIZE_MAX
 #ifdef SIZE_T_MAX
@@ -259,11 +279,11 @@ typedef int bool;
 #if !HAVE_ARC4RANDOM_DECL
 extern u_int32_t arc4random(void);
 extern void arc4random_addrandom(unsigned char *, int)
-    __bound_att__((bounded (string, 1, 2)));
+    MKSH_A_BOUNDED(string, 1, 2);
 #endif
 
 #if !HAVE_ARC4RANDOM_PUSHB_DECL
-extern uint32_t arc4random_pushb(void *, size_t);
+extern uint32_t arc4random_pushb(const void *, size_t);
 #endif
 
 #if !HAVE_FLOCK_DECL
@@ -344,20 +364,32 @@ typedef uint32_t mksh_uari_t;
 #define NOT		'!'	/* might use ^ (ie, [!...] vs [^..]) */
 
 #define LINE		4096	/* input line size */
-#ifndef PATH_MAX
-#define PATH_MAX	1024	/* pathname size */
-#endif
 
-EXTERN const char *kshname;	/* $0 */
-EXTERN pid_t kshpid;		/* $$, shell pid */
-EXTERN pid_t procpid;		/* pid of executing process */
-EXTERN pid_t kshpgrp;		/* process group of shell */
-EXTERN uid_t ksheuid;		/* effective uid of shell */
-EXTERN int exstat;		/* exit status */
-EXTERN int subst_exstat;	/* exit status of last $(..)/`..` */
+EXTERN struct {
+	const char *kshname_;	/* $0 */
+	pid_t kshpid_;		/* $$, shell PID */
+	pid_t procpid_;		/* PID of executing process */
+	pid_t kshpgrp_;		/* process group of shell */
+	uid_t ksheuid_;		/* effective UID of shell */
+	pid_t kshppid_;		/* PID of parent of shell */
+	int exstat_;		/* exit status */
+	int subst_exstat_;	/* exit status of last $(..)/`..` */
+} kshstate_;
+#define kshname		kshstate_.kshname_
+#define kshpid		kshstate_.kshpid_
+#define procpid		kshstate_.procpid_
+#define kshpgrp		kshstate_.kshpgrp_
+#define ksheuid		kshstate_.ksheuid_
+#define kshppid		kshstate_.kshppid_
+#define exstat		kshstate_.exstat_
+#define subst_exstat	kshstate_.subst_exstat_
+
 EXTERN const char *safe_prompt; /* safe prompt if PS1 substitution fails */
 EXTERN const char initvsn[] I__("KSH_VERSION=@(#)MIRBSD KSH " MKSH_VERSION);
 #define KSH_VERSION	(initvsn + /* "KSH_VERSION=@(#)" */ 16)
+
+EXTERN const char digits_uc[] I__("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+EXTERN const char digits_lc[] I__("0123456789abcdefghijklmnopqrstuvwxyz");
 
 /*
  * Evil hack for const correctness due to API brokenness
@@ -376,6 +408,7 @@ union mksh_ccphack {
     !defined(__INTEL_COMPILER) && !defined(__SUNPRO_C)
 char *ucstrchr(char *, int);
 char *ucstrstr(char *, const char *);
+#undef strchr
 #define strchr ucstrchr
 #define strstr ucstrstr
 #define cstrchr(s,c) ({			\
@@ -394,11 +427,13 @@ char *ucstrstr(char *, const char *);
 })
 #define vstrchr(s,c)	(cstrchr((s), (c)) != NULL)
 #define vstrstr(b,l)	(cstrstr((b), (l)) != NULL)
+#define mkssert(e)	((e) ? (void)0 : exit(255))
 #else /* !DEBUG, !gcc */
 #define cstrchr(s,c)	((const char *)strchr((s), (c)))
 #define cstrstr(s,c)	((const char *)strstr((s), (c)))
 #define vstrchr(s,c)	(strchr((s), (c)) != NULL)
 #define vstrstr(b,l)	(strstr((b), (l)) != NULL)
+#define mkssert(e)	((void)0)
 #endif
 
 /* use this ipv strchr(s, 0) but no side effects in s! */
@@ -448,14 +483,18 @@ char *ucstrstr(char *, const char *);
 
 #ifdef MKSH_SMALL
 #ifndef MKSH_CONSERVATIVE_FDS
-#define MKSH_CONSERVATIVE_FDS
+#define MKSH_CONSERVATIVE_FDS	/* defined */
 #endif
 #ifndef MKSH_NOPWNAM
-#define MKSH_NOPWNAM
+#define MKSH_NOPWNAM		/* defined */
 #endif
-#ifndef MKSH_NOVI
-#define MKSH_NOVI
+#ifndef MKSH_S_NOVI
+#define MKSH_S_NOVI		1
 #endif
+#endif
+
+#ifndef MKSH_S_NOVI
+#define MKSH_S_NOVI		0
 #endif
 
 /*
@@ -545,64 +584,26 @@ extern const struct shoption options[];
  * flags (the order of these enums MUST match the order in misc.c(options[]))
  */
 enum sh_flag {
-	FEXPORT = 0,	/* -a: export all */
-#if HAVE_ARC4RANDOM
-	FARC4RANDOM,	/* use 0:rand(3) 1:arc4random(3) 2:switch on write */
-#endif
-	FBRACEEXPAND,	/* enable {} globbing */
-#if HAVE_NICE
-	FBGNICE,	/* bgnice */
-#endif
-	FCOMMAND,	/* -c: (invocation) execute specified command */
-	FEMACS,		/* emacs command editing */
-	FERREXIT,	/* -e: quit on error */
-	FGMACS,		/* gmacs command editing */
-	FIGNOREEOF,	/* eof does not exit */
-	FTALKING,	/* -i: interactive */
-	FKEYWORD,	/* -k: name=value anywhere */
-	FLOGIN,		/* -l: a login shell */
-	FMARKDIRS,	/* mark dirs with / in file name completion */
-	FMONITOR,	/* -m: job control monitoring */
-	FNOCLOBBER,	/* -C: don't overwrite existing files */
-	FNOEXEC,	/* -n: don't execute any commands */
-	FNOGLOB,	/* -f: don't do file globbing */
-	FNOHUP,		/* -H: don't kill running jobs when login shell exits */
-	FNOLOG,		/* don't save functions in history (ignored) */
-#ifndef MKSH_UNEMPLOYED
-	FNOTIFY,	/* -b: asynchronous job completion notification */
-#endif
-	FNOUNSET,	/* -u: using an unset var is an error */
-	FPHYSICAL,	/* -o physical: don't do logical cds/pwds */
-	FPOSIX,		/* -o posix (try to be more compatible) */
-	FPRIVILEGED,	/* -p: use suid_profile */
-	FRESTRICTED,	/* -r: restricted shell */
-	FSTDIN,		/* -s: (invocation) parse stdin */
-	FTRACKALL,	/* -h: create tracked aliases for all commands */
-	FUTFMODE,	/* -U: enable utf-8 processing */
-	FVERBOSE,	/* -v: echo input */
-#ifndef MKSH_NOVI
-	FVI,		/* vi command editing */
-	FVIRAW,		/* always read in raw mode (ignored) */
-	FVITABCOMPLETE,	/* enable tab as file name completion char */
-	FVIESCCOMPLETE,	/* enable ESC as file name completion in command mode */
-#endif
-	FXTRACE,	/* -x: execution trace */
-	FTALKING_I,	/* (internal): initial shell was interactive */
+#define SHFLAGS_ENUMS
+#include "sh_flags.h"
 	FNFLAGS		/* (place holder: how many flags are there) */
 };
 
 #define Flag(f)	(shell_flags[(int)(f)])
-#define UTFMODE	Flag(FUTFMODE)
+#define UTFMODE	Flag(FUNICODE)
 
-EXTERN char shell_flags[FNFLAGS];
+EXTERN unsigned char shell_flags[FNFLAGS];
 
 /* null value for variable; comparision pointer for unset */
 EXTERN char null[] I__("");
 /* helpers for string pooling */
 #define T_synerr "syntax error"
 EXTERN const char r_fc_e_[] I__("r=fc -e -");
-#define fc_e_	(r_fc_e_ + 2)		/* "fc -e -" */
-#define fc_e_n	7			/* strlen(fc_e_) */
+#define fc_e_		(r_fc_e_ + 2)		/* "fc -e -" */
+#define fc_e_n		7			/* strlen(fc_e_) */
+EXTERN const char T_local_typeset[] I__("local=typeset");
+#define T__typeset	(T_local_typeset + 5)	/* "=typeset" */
+#define T_typeset	(T_local_typeset + 6)	/* "typeset" */
 
 enum temp_type {
 	TT_HEREDOC_EXP,	/* expanded heredoc */
@@ -695,7 +696,7 @@ EXTERN int really_exit;
 #define C_VAR1	 BIT(3)		/* *@#!$-? */
 #define C_IFSWS	 BIT(4)		/* \t \n (IFS white space) */
 #define C_SUBOP1 BIT(5)		/* "=-+?" */
-#define C_QUOTE	 BIT(6)		/* \t \n"#$&'()*;<>?[]\`| (needing quoting) */
+#define C_QUOTE	 BIT(6)		/* \t\n "#$&'()*;<=>?[\]`| (needing quoting) */
 #define C_IFS	 BIT(7)		/* $IFS */
 #define C_SUBOP2 BIT(8)		/* "#%" (magic, see below) */
 
@@ -766,8 +767,8 @@ EXTERN size_t	current_wd_size;
  */
 #define MIN_COLS	(2 + MIN_EDIT_SPACE + 3)
 #define MIN_LINS	3
-EXTERN int x_cols I__(80);	/* tty columns */
-EXTERN int x_lins I__(-1);	/* tty lines */
+EXTERN mksh_ari_t x_cols I__(80);	/* tty columns */
+EXTERN mksh_ari_t x_lins I__(-1);	/* tty lines */
 
 /* These to avoid bracket matching problems */
 #define OPAREN	'('
@@ -796,9 +797,11 @@ EXTERN int x_lins I__(-1);	/* tty lines */
 int shf_getc(struct shf *);
 int shf_putc(int, struct shf *);
 #else
-#define shf_getc(shf) ((shf)->rnleft > 0 ? (shf)->rnleft--, *(shf)->rp++ : \
-			shf_getchar(shf))
-#define shf_putc(c, shf)	((shf)->wnleft == 0 ? shf_putchar((c), (shf)) : \
+#define shf_getc(shf)		((shf)->rnleft > 0 ? \
+				    (shf)->rnleft--, *(shf)->rp++ : \
+				    shf_getchar(shf))
+#define shf_putc(c, shf)	((shf)->wnleft == 0 ? \
+				    shf_putchar((c), (shf)) : \
 				    ((shf)->wnleft--, *(shf)->wp++ = (c)))
 #endif
 #define shf_eof(shf)		((shf)->flags & SHF_EOF)
@@ -852,9 +855,6 @@ struct table {
 };
 
 struct tbl {			/* table item */
-	Tflag flag;		/* flags */
-	int type;		/* command type (see below), base (if INTEGER),
-				 * or offset from val.s of value (if EXPORT) */
 	Area *areap;		/* area to allocate from */
 	union {
 		char *s;		/* string */
@@ -863,15 +863,21 @@ struct tbl {			/* table item */
 		int (*f)(const char **);/* int function */
 		struct op *t;		/* "function" tree */
 	} val;			/* value */
-	uint32_t index;		/* index for an array */
-	union {
-		int field;	/* field with for -L/-R/-Z */
-		int errno_;	/* CEXEC/CTALIAS */
-	} u2;
 	union {
 		struct tbl *array;	/* array values */
 		const char *fpath;	/* temporary path to undef function */
 	} u;
+	union {
+		int field;	/* field with for -L/-R/-Z */
+		int errno_;	/* CEXEC/CTALIAS */
+	} u2;
+	int type;		/* command type (see below), base (if INTEGER),
+				 * or offset from val.s of value (if EXPORT) */
+	Tflag flag;		/* flags */
+	union {
+		uint32_t hval;		/* hash(name) */
+		uint32_t index;		/* index for an array */
+	} ua;
 	char name[4];		/* name -- variable length */
 };
 
@@ -892,13 +898,15 @@ struct tbl {			/* table item */
 #define RJUST		BIT(15)	/* right justify */
 #define ZEROFIL		BIT(16)	/* 0 filled if RJUSTIFY, strip 0s if LJUSTIFY */
 #define LCASEV		BIT(17)	/* convert to lower case */
-#define UCASEV_AL	BIT(18)/* convert to upper case / autoload function */
+#define UCASEV_AL	BIT(18) /* convert to upper case / autoload function */
 #define INT_U		BIT(19)	/* unsigned integer */
 #define INT_L		BIT(20)	/* long integer (no-op) */
 #define IMPORT		BIT(21)	/* flag to typeset(): no arrays, must have = */
 #define LOCAL_COPY	BIT(22)	/* with LOCAL - copy attrs from existing var */
 #define EXPRINEVAL	BIT(23)	/* contents currently being evaluated */
 #define EXPRLVALUE	BIT(24)	/* useable as lvalue (temp flag) */
+#define AINDEX		BIT(25) /* array index >0 = ua.index filled in */
+#define ASSOC		BIT(26) /* ARRAY ? associative : reference */
 /* flag bits used for taliases/builtins/aliases/keywords/functions */
 #define KEEPASN		BIT(8)	/* keep command assignments (eg, var=x cmd) */
 #define FINUSE		BIT(9)	/* function being executed */
@@ -911,6 +919,9 @@ struct tbl {			/* table item */
  */
 #define USERATTRIB	(EXPORT|INTEGER|RDONLY|LJUST|RJUST|ZEROFIL|\
 			    LCASEV|UCASEV_AL|INT_U|INT_L)
+
+#define arrayindex(vp)	((unsigned long)((vp)->flag & AINDEX ? \
+			    (vp)->ua.index : 0))
 
 /* command types */
 #define CNONE		0	/* undefined */
@@ -968,7 +979,7 @@ struct block {
  */
 struct tstate {
 	struct tbl **next;
-	int left;
+	ssize_t left;
 };
 
 EXTERN struct table taliases;	/* tracked aliases */
@@ -985,21 +996,6 @@ struct builtin {
 };
 
 extern const struct builtin mkshbuiltins[];
-
-/* var spec values */
-#define V_NONE		0
-#define V_COLUMNS	1
-#define V_HISTFILE	2
-#define V_HISTSIZE	3
-#define V_IFS		4
-#define V_LINENO	5
-#define V_LINES		6
-#define V_OPTIND	7
-#define V_PATH		8
-#define V_RANDOM	9
-#define V_SECONDS	10
-#define V_TMOUT		11
-#define V_TMPDIR	12
 
 /* values for set_prompt() */
 #define PS1	0	/* command */
@@ -1328,6 +1324,10 @@ typedef union {
 
 #define HERES	10		/* max << in line */
 
+#undef CTRL
+#define	CTRL(x)		((x) == '?' ? 0x7F : (x) & 0x1F)	/* ASCII */
+#define	UNCTRL(x)	((x) ^ 0x40)				/* ASCII */
+
 EXTERN Source *source;		/* yyparse/yylex source */
 EXTERN YYSTYPE	yylval;		/* result from yylex */
 EXTERN struct ioword *heres [HERES], **herep;
@@ -1352,14 +1352,6 @@ void afree(void *, Area *);	/* can take NULL */
 /* edit.c */
 void x_init(void);
 int x_read(char *, size_t);
-int x_bind(const char *, const char *, bool, bool);
-/* UTF-8 stuff */
-size_t utf_mbtowc(unsigned int *, const char *);
-size_t utf_wctomb(char *, unsigned int);
-int utf_widthadj(const char *, const char **);
-int utf_mbswidth(const char *);
-const char *utf_skipcols(const char *, int);
-size_t utf_ptradj(const char *);
 /* eval.c */
 char *substitute(const char *, int);
 char **eval(const char **, int);
@@ -1371,18 +1363,26 @@ int glob_str(char *, XPtrV *, int);
 /* exec.c */
 int execute(struct op * volatile, volatile int, volatile int * volatile);
 int shcomexec(const char **);
-struct tbl *findfunc(const char *, unsigned int, int);
+struct tbl *findfunc(const char *, uint32_t, bool);
 int define(const char *, struct op *);
 void builtin(const char *, int (*)(const char **));
 struct tbl *findcom(const char *, int);
 void flushcom(int);
 const char *search(const char *, const char *, int, int *);
 int search_access(const char *, int, int *);
-int pr_menu(const char *const *);
-int pr_list(char *const *);
+int pr_menu(const char * const *);
+int pr_list(char * const *);
 /* expr.c */
 int evaluate(const char *, mksh_ari_t *, int, bool);
 int v_evaluate(struct tbl *, const char *, volatile int, bool);
+/* UTF-8 stuff */
+size_t utf_mbtowc(unsigned int *, const char *);
+size_t utf_wctomb(char *, unsigned int);
+int utf_widthadj(const char *, const char **);
+int utf_mbswidth(const char *);
+const char *utf_skipcols(const char *, int);
+size_t utf_ptradj(const char *);
+int utf_wcwidth(unsigned int);
 /* funcs.c */
 int c_hash(const char **);
 int c_cd(const char **);
@@ -1427,9 +1427,7 @@ int c_test(const char **);
 #if HAVE_MKNOD
 int c_mknod(const char **);
 #endif
-#if HAVE_REALPATH
 int c_realpath(const char **);
-#endif
 int c_rename(const char **);
 /* histrap.c */
 void init_histvec(void);
@@ -1438,6 +1436,9 @@ void hist_init(Source *);
 void hist_finish(void);
 #endif
 void histsave(int *, const char *, bool, bool);
+#if !defined(MKSH_SMALL) && HAVE_PERSISTENT_HISTORY
+bool histsync(void);
+#endif
 int c_fc(const char **);
 void sethistsize(int);
 #if HAVE_PERSISTENT_HISTORY
@@ -1447,7 +1448,7 @@ char **histpos(void);
 int histnum(int);
 int findhist(int, int, const char *, int);
 int findhistrel(const char *);
-char **hist_get_newest(int);
+char **hist_get_newest(bool);
 void inittraps(void);
 void alarm_init(void);
 Trap *gettrap(const char *, int);
@@ -1486,8 +1487,8 @@ int j_stopped_running(void);
 /* lex.c */
 int yylex(int);
 void yyerror(const char *, ...)
-    __attribute__((noreturn))
-    __attribute__((format (printf, 1, 2)));
+    MKSH_A_NORETURN
+    MKSH_A_FORMAT(printf, 1, 2);
 Source *pushs(int, Area *);
 void set_prompt(int, Source *);
 void pprompt(const char *, int);
@@ -1496,33 +1497,32 @@ int promptlen(const char *);
 int include(const char *, int, const char **, int);
 int command(const char *);
 int shell(Source *volatile, int volatile);
-void unwind(int)
-    __attribute__((noreturn));
+void unwind(int) MKSH_A_NORETURN;
 void newenv(int);
 void quitenv(struct shf *);
 void cleanup_parents_env(void);
 void cleanup_proc_env(void);
 void errorf(const char *, ...)
-    __attribute__((noreturn))
-    __attribute__((format (printf, 1, 2)));
+    MKSH_A_NORETURN
+    MKSH_A_FORMAT(printf, 1, 2);
 void warningf(bool, const char *, ...)
-    __attribute__((format (printf, 2, 3)));
+    MKSH_A_FORMAT(printf, 2, 3);
 void bi_errorf(const char *, ...)
-    __attribute__((format (printf, 1, 2)));
+    MKSH_A_FORMAT(printf, 1, 2);
 #define errorfz()	errorf("\1")
 #define bi_errorfz()	bi_errorf("\1")
 void internal_verrorf(const char *, va_list)
-    __attribute__((format (printf, 1, 0)));
+    MKSH_A_FORMAT(printf, 1, 0);
 void internal_errorf(const char *, ...)
-    __attribute__((noreturn))
-    __attribute__((format (printf, 1, 2)));
+    MKSH_A_NORETURN
+    MKSH_A_FORMAT(printf, 1, 2);
 void internal_warningf(const char *, ...)
-    __attribute__((format (printf, 1, 2)));
+    MKSH_A_FORMAT(printf, 1, 2);
 void error_prefix(bool);
 void shellf(const char *, ...)
-    __attribute__((format (printf, 1, 2)));
+    MKSH_A_FORMAT(printf, 1, 2);
 void shprintf(const char *, ...)
-    __attribute__((format (printf, 1, 2)));
+    MKSH_A_FORMAT(printf, 1, 2);
 int can_seek(int);
 void initio(void);
 int ksh_dup2(int, int, bool);
@@ -1538,10 +1538,12 @@ void coproc_write_close(int);
 int coproc_getfd(int, const char **);
 void coproc_cleanup(int);
 struct temp *maketemp(Area *, Temp_type, struct temp **);
-unsigned int hash(const char *);
-void ktinit(struct table *, Area *, int);
-struct tbl *ktsearch(struct table *, const char *, unsigned int);
-struct tbl *ktenter(struct table *, const char *, unsigned int);
+#define hash(s) oaathash_full((const uint8_t *)(s))
+uint32_t oaathash_full(register const uint8_t *);
+uint32_t hashmem(const void *, size_t);
+void ktinit(struct table *, Area *, size_t);
+struct tbl *ktsearch(struct table *, const char *, uint32_t);
+struct tbl *ktenter(struct table *, const char *, uint32_t);
 #define ktdelete(p)	do { p->flag = 0; } while (/* CONSTCOND */ 0)
 void ktwalk(struct tstate *, struct table *);
 struct tbl *ktnext(struct tstate *);
@@ -1551,8 +1553,8 @@ void setctypes(const char *, int);
 void initctypes(void);
 size_t option(const char *);
 char *getoptions(void);
-void change_flag(enum sh_flag, int, char);
-int parse_args(const char **, int, int *);
+void change_flag(enum sh_flag, int, unsigned int);
+int parse_args(const char **, int, bool *);
 int getn(const char *, int *);
 int bi_getn(const char *, int *);
 int gmatchx(const char *, const char *, bool);
@@ -1563,21 +1565,21 @@ void ksh_getopt_reset(Getopt *, int);
 int ksh_getopt(const char **, Getopt *, const char *);
 void print_value_quoted(const char *);
 void print_columns(struct shf *, int,
-    char *(*)(const void *, int, char *, int),
-    const void *, int, int prefcol);
+    char *(*)(char *, int, int, const void *),
+    const void *, int, int, bool);
 void strip_nuls(char *, int);
 int blocking_read(int, char *, int)
-    __bound_att__((bounded (buffer, 2, 3)));
+    MKSH_A_BOUNDED(buffer, 2, 3);
 int reset_nonblock(int);
 char *ksh_get_wd(size_t *);
 int make_path(const char *, const char *, char **, XString *, int *);
 void simplify_path(char *);
-char *get_phys_path(const char *);
 void set_current_wd(char *);
 #ifdef MKSH_SMALL
 char *strdup_(const char *, Area *);
 char *strndup_(const char *, size_t, Area *);
 #endif
+int unbksl(bool, int (*)(void), void (*)(int));
 /* shf.c */
 struct shf *shf_open(const char *, int, int, int);
 struct shf *shf_fdopen(int, int, struct shf *);
@@ -1595,14 +1597,14 @@ int shf_putchar(int, struct shf *);
 int shf_puts(const char *, struct shf *);
 int shf_write(const char *, int, struct shf *);
 int shf_fprintf(struct shf *, const char *, ...)
-    __attribute__((format (printf, 2, 3)));
+    MKSH_A_FORMAT(printf, 2, 3);
 int shf_snprintf(char *, int, const char *, ...)
-    __attribute__((format (printf, 3, 4)))
-    __bound_att__((bounded (string, 1, 2)));
+    MKSH_A_FORMAT(printf, 3, 4)
+    MKSH_A_BOUNDED(string, 1, 2);
 char *shf_smprintf(const char *, ...)
-    __attribute__((format (printf, 1, 2)));
+    MKSH_A_FORMAT(printf, 1, 2);
 int shf_vfprintf(struct shf *, const char *, va_list)
-    __attribute__((format (printf, 2, 0)));
+    MKSH_A_FORMAT(printf, 2, 0);
 /* syn.c */
 void initkeywords(void);
 struct op *compile(Source *);
@@ -1621,25 +1623,24 @@ void initvar(void);
 struct tbl *global(const char *);
 struct tbl *local(const char *, bool);
 char *str_val(struct tbl *);
-mksh_ari_t intval(struct tbl *);
 int setstr(struct tbl *, const char *, int);
 struct tbl *setint_v(struct tbl *, struct tbl *, bool);
 void setint(struct tbl *, mksh_ari_t);
-int getint(struct tbl *, mksh_ari_t *, bool);
-struct tbl *typeset(const char *, Tflag, Tflag, int, int);
+struct tbl *typeset(const char *, Tflag, Tflag, int, int)
+    MKSH_A_NONNULL((nonnull (1)));
 void unset(struct tbl *, int);
 const char *skip_varname(const char *, int);
 const char *skip_wdvarname(const char *, int);
 int is_wdvarname(const char *, int);
 int is_wdvarassign(const char *);
 char **makenv(void);
-#if !HAVE_ARC4RANDOM || !defined(MKSH_SMALL)
-void change_random(unsigned long);
+#if !HAVE_ARC4RANDOM
+void change_random(const void *, size_t);
 #endif
 void change_winsz(void);
 int array_ref_len(const char *);
 char *arrayname(const char *);
-void set_array(const char *, int, const char **);
+mksh_uari_t set_array(const char *, bool, const char **);
 
 enum Test_op {
 	TO_NONOP = 0,	/* non-operator */

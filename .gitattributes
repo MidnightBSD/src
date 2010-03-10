@@ -11284,6 +11284,7 @@ contrib/mksh/check.t -text
 contrib/mksh/copyright -text
 contrib/mksh/dot.mkshrc -text
 contrib/mksh/edit.c -text
+contrib/mksh/emacsfn.h -text
 contrib/mksh/eval.c -text
 contrib/mksh/exec.c -text
 contrib/mksh/expr.c -text
@@ -11297,11 +11298,13 @@ contrib/mksh/misc.c -text
 contrib/mksh/mksh.1 -text
 contrib/mksh/setmode.c -text
 contrib/mksh/sh.h -text
+contrib/mksh/sh_flags.h -text
 contrib/mksh/shf.c -text
 contrib/mksh/strlcpy.c -text
 contrib/mksh/syn.c -text
 contrib/mksh/tree.c -text
 contrib/mksh/var.c -text
+contrib/mksh/var_spec.h -text
 contrib/ncurses/ANNOUNCE -text
 contrib/ncurses/AUTHORS -text
 contrib/ncurses/INSTALL -text

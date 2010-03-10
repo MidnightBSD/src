@@ -1,4 +1,4 @@
-/*	$OpenBSD: jobs.c,v 1.37 2009/01/29 23:27:26 jaredy Exp $	*/
+/*	$OpenBSD: jobs.c,v 1.38 2009/12/12 04:28:44 deraadt Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.59 2009/08/01 20:32:44 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.67 2009/12/31 14:05:43 tg Exp $");
 
 #if HAVE_KILLPG
 #define mksh_killpg		killpg
@@ -121,11 +121,7 @@ static int nzombie;		/* # of zombies owned by this process */
 static int32_t njobs;		/* # of jobs started */
 
 #ifndef CHILD_MAX
-#ifdef _POSIX_CHILD_MAX
-#define CHILD_MAX	_POSIX_CHILD_MAX
-#elif defined(__KLIBC__)	/* XXX imake style */
-#define CHILD_MAX	999	/* no limit :-) */
-#endif
+#define CHILD_MAX	25
 #endif
 
 /* held_sigchld is set if sigchld occurs before a job is completely started */
@@ -157,9 +153,9 @@ j_init(void)
 {
 #ifndef MKSH_UNEMPLOYED
 	bool mflagset = Flag(FMONITOR) != 127;
-#endif
 
 	Flag(FMONITOR) = 0;
+#endif
 
 	(void)sigemptyset(&sm_default);
 	sigprocmask(SIG_SETMASK, &sm_default, NULL);
@@ -339,15 +335,18 @@ exchild(struct op *t, int flags,
     volatile int *xerrok,
     /* used if XPCLOSE or XCCLOSE */ int close_fd)
 {
-	static Proc	*last_proc;	/* for pipelines */
+	static Proc *last_proc;		/* for pipelines */
 
-	int		i;
-	sigset_t	omask;
-	Proc		*p;
-	Job		*j;
-	int		rv = 0;
-	int		forksleep;
-	int		ischild;
+	int i, rv = 0, forksleep;
+	sigset_t omask;
+	Proc *p;
+	Job *j;
+	struct {
+#if !HAVE_ARC4RANDOM
+		pid_t thepid;
+#endif
+		unsigned char ischild;
+	} pi;
 
 	if (flags & XEXEC)
 		/* Clear XFORK|XPCLOSE|XCCLOSE|XCOPROC|XPIPEO|XPIPEI|XXCOM|XBGND
@@ -410,15 +409,21 @@ exchild(struct op *t, int flags,
 		sigprocmask(SIG_SETMASK, &omask, NULL);
 		errorf("cannot fork - try again");
 	}
-	ischild = i == 0;
-	if (ischild)
-		p->pid = procpid = getpid();
-	else
-		p->pid = i;
+#if !HAVE_ARC4RANDOM
+#ifdef DEBUG
+	/* reduce extra 3 bytes of entropy, for Valgrind */
+	memset(&pi, 0, sizeof(pi));
+#endif
+	pi.thepid =
+#endif
+	    p->pid = (pi.ischild = i == 0) ? (procpid = getpid()) : i;
 
-#if !HAVE_ARC4RANDOM || !defined(MKSH_SMALL)
-	/* Ensure next child gets a (slightly) different $RANDOM sequence */
-	change_random(((unsigned long)p->pid << 1) | (ischild ? 1 : 0));
+#if !HAVE_ARC4RANDOM
+	/*
+	 * ensure next child gets a (slightly) different $RANDOM sequence
+	 * from its parent process and other child processes
+	 */
+	change_random(&pi, sizeof(pi));
 #endif
 
 #ifndef MKSH_UNEMPLOYED
@@ -440,10 +445,10 @@ exchild(struct op *t, int flags,
 #endif
 
 	/* used to close pipe input fd */
-	if (close_fd >= 0 && (((flags & XPCLOSE) && !ischild) ||
-	    ((flags & XCCLOSE) && ischild)))
+	if (close_fd >= 0 && (((flags & XPCLOSE) && !pi.ischild) ||
+	    ((flags & XCCLOSE) && pi.ischild)))
 		close(close_fd);
-	if (ischild) {		/* child */
+	if (pi.ischild) {		/* child */
 		/* Do this before restoring signal */
 		if (flags & XCOPROC)
 			coproc_cleanup(false);
@@ -464,7 +469,11 @@ exchild(struct op *t, int flags,
 		if (Flag(FBGNICE) && (flags & XBGND))
 			(void)nice(4);
 #endif
-		if ((flags & XBGND) && !Flag(FMONITOR)) {
+		if ((flags & XBGND)
+#ifndef MKSH_UNEMPLOYED
+		    && !Flag(FMONITOR)
+#endif
+		    ) {
 			setsig(&sigtraps[SIGINT], SIG_IGN,
 			    SS_RESTORE_IGN|SS_FORCE);
 			setsig(&sigtraps[SIGQUIT], SIG_IGN,
@@ -970,7 +979,9 @@ j_waitj(Job *j,
 	if (flags & JW_ASYNCNOTIFY)
 		j->flags |= JF_W_ASYNCNOTIFY;
 
+#ifndef MKSH_UNEMPLOYED
 	if (!Flag(FMONITOR))
+#endif
 		flags |= JW_STOPPEDWAIT;
 
 	while (j->state == PRUNNING ||
@@ -1068,13 +1079,19 @@ j_waitj(Job *j,
 	j_systime = j->systime;
 	rv = j->status;
 
-	if (!(flags & JW_ASYNCNOTIFY) &&
-	    (!Flag(FMONITOR) || j->state != PSTOPPED)) {
+	if (!(flags & JW_ASYNCNOTIFY)
+#ifndef MKSH_UNEMPLOYED
+	    && (!Flag(FMONITOR) || j->state != PSTOPPED)
+#endif
+	    ) {
 		j_print(j, JP_SHORT, shl_out);
 		shf_flush(shl_out);
 	}
-	if (j->state != PSTOPPED &&
-	    (!Flag(FMONITOR) || !(flags & JW_ASYNCNOTIFY)))
+	if (j->state != PSTOPPED
+#ifndef MKSH_UNEMPLOYED
+	    && (!Flag(FMONITOR) || !(flags & JW_ASYNCNOTIFY))
+#endif
+	    )
 		remove_job(j, where);
 
 	return (rv);
@@ -1086,7 +1103,7 @@ j_waitj(Job *j,
  */
 /* ARGSUSED */
 static void
-j_sigchld(int sig __unused)
+j_sigchld(int sig MKSH_A_UNUSED)
 {
 	int		errno_ = errno;
 	Job		*j;
@@ -1103,7 +1120,7 @@ j_sigchld(int sig __unused)
 	for (j = job_list; j; j = j->next)
 		if (j->ppid == procpid && !(j->flags & JF_STARTED)) {
 			held_sigchld = 1;
-			return;
+			goto finished;
 		}
 
 	getrusage(RUSAGE_CHILDREN, &ru0);
@@ -1147,9 +1164,9 @@ j_sigchld(int sig __unused)
 			p->state = PEXITED;
 
 		check_job(j);	/* check to see if entire job is done */
-	}
-	while (1);
+	} while (1);
 
+ finished:
 	errno = errno_;
 }
 
@@ -1249,7 +1266,11 @@ check_job(Job *j)
 		}
 	}
 #endif
-	if (!Flag(FMONITOR) && !(j->flags & (JF_WAITING|JF_FG)) &&
+	if (
+#ifndef MKSH_UNEMPLOYED
+	    !Flag(FMONITOR) &&
+#endif
+	    !(j->flags & (JF_WAITING|JF_FG)) &&
 	    j->state != PSTOPPED) {
 		if (j == async_job || (j->flags & JF_KNOWN)) {
 			j->flags |= JF_ZOMBIE;
