@@ -1,14 +1,14 @@
-$MidnightBSD: src/contrib/mksh/MIDNIGHTBSD-upgrade,v 1.2 2009/11/26 15:44:25 laffer1 Exp $
+$MidnightBSD: src/contrib/mksh/MIDNIGHTBSD-upgrade,v 1.3 2009/12/05 15:11:38 laffer1 Exp $
 
 Directions for updating MKSH (work in progress)
 
 1) Obtain the latest sources
 2) Unpack sources.
 3) Perform a test import (change version number as needed)
-cvs -q -n import -m "Virgin import of MKSH R39" src/contrib/mksh MIROS vR39
+cvs -q -n import -m "Virgin import of MKSH R39b" src/contrib/mksh MIROS vR39b
 
 4) if all goes well, 
-cvs import -m "Virgin import of MKSH R39" src/contrib/mksh MIROS vR39
+cvs import -m "Virgin import of MKSH R39b" src/contrib/mksh MIROS vR39b
 
 5) Check the Makefile in src/bin/mksh and the Build script for changes.
     Build.sh -M
