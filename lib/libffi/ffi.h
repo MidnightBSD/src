@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------*-C-*-
-   libffi 3.0.8 - Copyright (c) 1996-2003, 2007, 2008  Red Hat, Inc.
+   libffi 3.0.9 - Copyright (c) 1996-2003, 2007, 2008  Red Hat, Inc.
 
    Permission is hereby granted, free of charge, to any person obtaining
    a copy of this software and associated documentation files (the
@@ -57,15 +57,17 @@ extern "C" {
 #endif
 
 /* Specify which architecture libffi is configured for. */
-#ifndef X86_FREEBSD
 #define X86_FREEBSD
-#endif
 
 /* ---- System configuration information --------------------------------- */
 
 #include <ffitarget.h>
 
 #ifndef LIBFFI_ASM
+
+#ifdef _MSC_VER
+#define __attribute__(X)
+#endif
 
 #include <stddef.h>
 #include <limits.h>
@@ -254,7 +256,11 @@ typedef struct {
   ffi_cif   *cif;
   void     (*fun)(ffi_cif*,void*,void**,void*);
   void      *user_data;
+#ifdef __GNUC__
 } ffi_closure __attribute__((aligned (8)));
+#else
+} ffi_closure;
+#endif
 
 void *ffi_closure_alloc (size_t size, void **code);
 void ffi_closure_free (void *);
