@@ -3,6 +3,12 @@ Updating Information for MidnightBSD users
 20100309:
 	Sudo 1.7.2p5
 
+	sqlite3 3.6.23
+
+	mksh R39b
+
+	libffi (ffi) 3.0.9
+
 20100206:
 	WITHOUT_LIB32 is no longer needed on AMD64.  GCC was fixed to
 	properly pass arguments to ld.
@@ -818,4 +824,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.80 2010/02/06 15:40:08 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.81 2010/03/10 03:58:20 laffer1 Exp $
