@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.3 2007/09/27 23:09:12 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.2 2008/01/05 22:20:02 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.3 2007/09/27 23:09:12 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.2 2008/01/05 22:20:02 ctriv Exp $");
 
 
 #include <stdlib.h>
@@ -73,6 +73,7 @@ int main(int argc, char *argv[])
   for (i=0; i<argc; i++) {
     if (mport_install_primative(mport, argv[i], prefix) != MPORT_OK) {
       warnx("%s", mport_err_string());
+      mport_instance_free(mport);
       exit(1);
     }
   }
