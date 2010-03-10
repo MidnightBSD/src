@@ -5,6 +5,6 @@ includedir=${prefix}/include
 
 Name: libffi
 Description: Library supporting Foreign Function Interfaces
-Version: 3.0.8
+Version: 3.0.9
 Libs: -L${libdir} -lffi
 Cflags: -I${includedir}
