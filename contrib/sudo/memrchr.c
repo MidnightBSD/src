@@ -19,7 +19,7 @@
 #include <compat.h>
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: memrchr.c,v 1.1.2.3 2007/11/27 17:06:54 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: memrchr.c,v 1.4 2007/11/27 17:13:03 millert Exp $";
 #endif /* lint */
 
 #include <sys/types.h>
@@ -29,9 +29,9 @@ __unused static const char rcsid[] = "$Sudo: memrchr.c,v 1.1.2.3 2007/11/27 17:0
  * Reverse memchr()
  * Find the last occurrence of 'c' in the buffer 's' of size 'n'.
  */
-VOID *
+void *
 memrchr(s, c, n)
-    const VOID *s;
+    const void *s;
     int c;
     size_t n;
 {
@@ -41,8 +41,8 @@ memrchr(s, c, n)
 	cp = (unsigned char *)s + n;
 	do {
 	    if (*(--cp) == (unsigned char)c)
-		return((VOID *)cp);
+		return((void *)cp);
 	} while (--n != 0);
     }
-    return((VOID *)0);
+    return((void *)0);
 }

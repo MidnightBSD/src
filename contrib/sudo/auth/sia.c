@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999-2005 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1999-2005, 2007 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -50,7 +50,7 @@
 #include "sudo_auth.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: sia.c,v 1.14.2.2 2007/06/12 01:28:42 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: sia.c,v 1.19 2008/11/09 14:13:13 millert Exp $";
 #endif /* lint */
 
 static int sudo_collect	__P((int, int, uchar_t *, int, prompt_t *));
@@ -108,7 +108,7 @@ sia_setup(pw, promptp, auth)
 	return(AUTH_FATAL);
     }
 
-    auth->data = (VOID *) siah;
+    auth->data = (void *) siah;
     return(AUTH_SUCCESS);
 }
 

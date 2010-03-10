@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2000-2007 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2000-2005, 2007-2009
+ *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -42,17 +43,14 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
-#ifdef HAVE_ERR_H
-# include <err.h>
-#else
-# include "emul/err.h"
-#endif /* HAVE_ERR_H */
+#include <ctype.h>
+#include <errno.h>
 #include <pwd.h>
 
 #include "sudo.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: env.c,v 1.39.2.21 2008/11/06 00:08:36 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: env.c,v 1.106 2009/06/23 18:24:42 millert Exp $";
 #endif /* lint */
 
 /*
@@ -93,7 +91,7 @@ __unused static const char rcsid[] = "$Sudo: env.c,v 1.39.2.21 2008/11/06 00:08:
 #define KEPT_MAX    	0xff00
 
 #undef VNULL
-#define	VNULL	(VOID *)NULL
+#define	VNULL	(void *)NULL
 
 struct environment {
     char **envp;		/* pointer to the new environment */
@@ -104,9 +102,11 @@ struct environment {
 /*
  * Prototypes
  */
-char **rebuild_env		__P((char **, int, int));
-static void insert_env		__P((char *, struct environment *, int));
-static char *format_env		__P((char *, ...));
+void rebuild_env		__P((int, int));
+static void sudo_setenv		__P((const char *, const char *, int));
+static void sudo_putenv		__P((char *, int, int));
+
+extern char **environ;		/* global environment */
 
 /*
  * Copy of the sudo-managed environment.
@@ -214,88 +214,257 @@ static const char *initial_keepenv_table[] = {
 };
 
 /*
- * Given a variable and value, allocate and format an environment string.
+ * Similar to setenv(3) but operates on sudo's private copy of the environment
+ * (not environ) and it always overwrites.  The dupcheck param determines
+ * whether we need to verify that the variable is not already set.
  */
-static char *
-#ifdef __STDC__
-format_env(char *var, ...)
-#else
-format_env(var, va_alist)
-    char *var;
-    va_dcl
-#endif
+static void
+sudo_setenv(var, val, dupcheck)
+    const char *var;
+    const char *val;
+    int dupcheck;
 {
     char *estring;
-    char *val;
     size_t esize;
-    va_list ap;
 
-#ifdef __STDC__
-    va_start(ap, var);
-#else
-    va_start(ap);
-#endif
-    esize = strlen(var) + 2;
-    while ((val = va_arg(ap, char *)) != NULL)
-	esize += strlen(val);
-    va_end(ap);
-    estring = (char *) emalloc(esize);
+    esize = strlen(var) + 1 + strlen(val) + 1;
+    estring = emalloc(esize);
 
-    /* Store variable name and the '=' separator.  */
+    /* Build environment string and insert it. */
     if (strlcpy(estring, var, esize) >= esize ||
-	strlcat(estring, "=", esize) >= esize) {
+	strlcat(estring, "=", esize) >= esize ||
+	strlcat(estring, val, esize) >= esize) {
 
-	errx(1, "internal error, format_env() overflow");
+	errorx(1, "internal error, sudo_setenv() overflow");
     }
-
-    /* Now store the variable's value (if any) */
-#ifdef __STDC__
-    va_start(ap, var);
-#else
-    va_start(ap);
-#endif
-    while ((val = va_arg(ap, char *)) != NULL) {
-	if (strlcat(estring, val, esize) >= esize)
-	    errx(1, "internal error, format_env() overflow");
-    }
-    va_end(ap);
-
-    return(estring);
+    sudo_putenv(estring, dupcheck, TRUE);
 }
 
 /*
- * Insert str into e->envp, assumes str has an '=' in it.
+ * Version of setenv(3) that uses our own environ pointer.
+ * Will sync with environ as needed.
  */
-static void
-insert_env(str, e, dupcheck)
-    char *str;
-    struct environment *e;
-    int dupcheck;
+int
+setenv(var, val, overwrite)
+    const char *var;
+    const char *val;
+    int overwrite;
 {
-    char **nep;
-    size_t varlen;
+    char *estring, *ep;
+    const char *cp;
+    size_t esize;
 
-    /* Make sure there is room for the new entry plus a NULL. */
-    if (e->env_len + 2 > e->env_size) {
-	e->env_size += 128;
-	e->envp = erealloc3(e->envp, e->env_size, sizeof(char *));
+    if (!var || *var == '\0')
+	return(EINVAL);
+
+    /*
+     * POSIX says a var name with '=' is an error but BSD
+     * just ignores the '=' and anything after it.
+     */
+    for (cp = var; *cp && *cp != '='; cp++)
+	;
+    esize = (size_t)(cp - var) + 2;
+    if (val) {
+	esize += strlen(val);	/* glibc treats a NULL val as "" */
     }
 
-    if (dupcheck) {
-	    varlen = (strchr(str, '=') - str) + 1;
+    /* Allocate and fill in estring. */
+    estring = ep = emalloc(esize);
+    for (cp = var; *cp && *cp != '='; cp++)
+	*ep++ = *cp;
+    *ep++ = '=';
+    if (val) {
+	for (cp = val; *cp; cp++)
+	    *ep++ = *cp;
+    }
+    *ep = '\0';
 
-	    for (nep = e->envp; *nep; nep++) {
-		if (strncmp(str, *nep, varlen) == 0) {
-		    *nep = str;
+    /* Sync env.envp with environ as needed. */
+    if (env.envp != environ) {
+	char **ep;
+	size_t len;
+
+	for (ep = environ; *ep != NULL; ep++)
+	    continue;
+	len = ep - environ;
+	if (len + 2 > env.env_size) {
+	    efree(env.envp);
+	    env.env_size = len + 2 + 128;
+	    env.envp = emalloc2(env.env_size, sizeof(char *));
+#ifdef ENV_DEBUG
+	    memset(env.envp, 0, env.env_size * sizeof(char *));
+#endif
+	}
+	memcpy(env.envp, environ, len * sizeof(char *));
+	env.envp[len] = NULL;
+	env.env_len = len;
+	environ = env.envp;
+#ifdef ENV_DEBUG
+    } else {
+	if (env.envp[env.env_len] != NULL)
+	    errorx(1, "setenv: corrupted envp, len mismatch");
+#endif
+    }
+    sudo_putenv(estring, TRUE, overwrite);
+    return(0);
+}
+
+/*
+ * Version of unsetenv(3) that uses our own environ pointer.
+ * Will sync with environ as needed.
+ */
+#ifdef UNSETENV_VOID
+void
+#else
+int
+#endif
+unsetenv(var)
+    const char *var;
+{
+    char **ep;
+    size_t len;
+
+    if (strchr(var, '=') != NULL) {
+	errno = EINVAL;
+#ifdef UNSETENV_VOID
+	return;
+#else
+	return(-1);
+#endif
+    }
+
+    /* Make sure we are operating on the current environment. */
+    /* XXX - this could be optimized to include the search */
+    if (env.envp != environ) {
+	for (ep = environ; *ep != NULL; ep++)
+	    continue;
+	len = ep - environ;
+	if (len + 1 > env.env_size) {
+	    efree(env.envp);
+	    env.env_size = len + 1 + 128;
+	    env.envp = emalloc2(env.env_size, sizeof(char *));
+#ifdef ENV_DEBUG
+	    memset(env.envp, 0, env.env_size * sizeof(char *));
+#endif
+	}
+	memcpy(env.envp, environ, len * sizeof(char *));
+	env.envp[len] = NULL;
+	env.env_len = len;
+	environ = env.envp;
+#ifdef ENV_DEBUG
+    } else {
+	if (env.envp[env.env_len] != NULL)
+	    errorx(1, "unsetenv: corrupted envp, len mismatch");
+#endif
+    }
+
+    len = strlen(var);
+    for (ep = env.envp; *ep; ep++) {
+	if (strncmp(var, *ep, len) == 0 && (*ep)[len] == '=') {
+	    /* Found it; shift remainder + NULL over by one and update len. */
+	    memmove(ep, ep + 1,
+		(env.env_len - (ep - env.envp)) * sizeof(char *));
+	    env.env_len--;
+	    break;
+	}
+    }
+#ifndef UNSETENV_VOID
+    return(0);
+#endif
+}
+
+/*
+ * Version of putenv(3) that uses our own environ pointer.
+ * Will sync with environ as needed.
+ */
+int
+#ifdef PUTENV_CONST
+putenv(const char *string)
+#else
+putenv(string)
+    char *string;
+#endif
+{
+    if (strchr(string, '=') == NULL) {
+	errno = EINVAL;
+	return(-1);
+    }
+    /* Sync env.envp with environ as needed. */
+    if (env.envp != environ) {
+	char **ep;
+	size_t len;
+
+	for (ep = environ; *ep != NULL; ep++)
+	    continue;
+	len = ep - environ;
+	if (len + 2 > env.env_size) {
+	    efree(env.envp);
+	    env.env_size = len + 2 + 128;
+	    env.envp = emalloc2(env.env_size, sizeof(char *));
+#ifdef ENV_DEBUG
+	    memset(env.envp, 0, env.env_size * sizeof(char *));
+#endif
+	}
+	memcpy(env.envp, environ, len * sizeof(char *));
+	env.envp[len] = NULL;
+	env.env_len = len;
+	environ = env.envp;
+#ifdef ENV_DEBUG
+    } else {
+	if (env.envp[env.env_len] != NULL)
+	    errorx(1, "putenv: corrupted envp, len mismatch");
+#endif
+    }
+    sudo_putenv((char *)string, TRUE, TRUE);
+    return(0);
+}
+
+/*
+ * Similar to putenv(3) but operates on sudo's private copy of the
+ * environment (not environ) and it always overwrites.  The dupcheck param
+ * determines whether we need to verify that the variable is not already set.
+ * Will only overwrite an existing variable if overwrite is set.
+ */
+static void
+sudo_putenv(str, dupcheck, overwrite)
+    char *str;
+    int dupcheck;
+    int overwrite;
+{
+    char **ep;
+    size_t len;
+
+    /* Make sure there is room for the new entry plus a NULL. */
+    if (env.env_len + 2 > env.env_size) {
+	env.env_size += 128;
+	env.envp = erealloc3(env.envp, env.env_size, sizeof(char *));
+#ifdef ENV_DEBUG
+	memset(env.envp + env.env_len, 0,
+	    (env.env_size - env.env_len) * sizeof(char *));
+#endif
+	environ = env.envp;
+    }
+
+#ifdef ENV_DEBUG
+    if (env.envp[env.env_len] != NULL)
+	errorx(1, "sudo_putenv: corrupted envp, len mismatch");
+#endif
+
+    if (dupcheck) {
+	    len = (strchr(str, '=') - str) + 1;
+	    for (ep = env.envp; *ep; ep++) {
+		if (strncmp(str, *ep, len) == 0) {
+		    if (overwrite)
+			*ep = str;
 		    return;
 		}
 	    }
     } else
-	nep = e->envp + e->env_len;
+	ep = env.envp + env.env_len;
 
-    e->env_len++;
-    *nep++ = str;
-    *nep = NULL;
+    env.env_len++;
+    *ep++ = str;
+    *ep = NULL;
 }
 
 /*
@@ -392,13 +561,13 @@ matches_env_keep(var)
  * variables from the old one or start with a clean slate.
  * Also adds sudo-specific variables (SUDO_*).
  */
-char **
-rebuild_env(envp, sudo_mode, noexec)
-    char **envp;
+void
+rebuild_env(sudo_mode, noexec)
     int sudo_mode;
     int noexec;
 {
-    char **ep, *cp, *ps1;
+    char **old_envp, **ep, *cp, *ps1;
+    char idbuf[MAX_UID_T_LEN];
     unsigned int didvar;
 
     /*
@@ -406,10 +575,16 @@ rebuild_env(envp, sudo_mode, noexec)
      */
     ps1 = NULL;
     didvar = 0;
-    zero_bytes(&env, sizeof(env));
+    env.env_len = 0;
+    env.env_size = 128;
+    old_envp = env.envp;
+    env.envp = emalloc2(env.env_size, sizeof(char *));
+#ifdef ENV_DEBUG
+    memset(env.envp, 0, env.env_size * sizeof(char *));
+#endif
     if (def_env_reset || ISSET(sudo_mode, MODE_LOGIN_SHELL)) {
 	/* Pull in vars we want to keep from the old environment. */
-	for (ep = envp; *ep; ep++) {
+	for (ep = environ; *ep; ep++) {
 	    int keepit;
 
 	    /* Skip variables with values beginning with () (bash functions) */
@@ -461,7 +636,7 @@ rebuild_env(envp, sudo_mode, noexec)
 			    SET(didvar, DID_USERNAME);
 			break;
 		}
-		insert_env(*ep, &env, 0);
+		sudo_putenv(*ep, FALSE, FALSE);
 	    }
 	}
 	didvar |= didvar << 8;		/* convert DID_* to KEPT_* */
@@ -472,35 +647,31 @@ rebuild_env(envp, sudo_mode, noexec)
 	 * on sudoers options).
 	 */
 	if (ISSET(sudo_mode, MODE_LOGIN_SHELL)) {
-	    insert_env(format_env("HOME", runas_pw->pw_dir, VNULL), &env,
-		ISSET(didvar, DID_HOME));
-	    insert_env(format_env("SHELL", runas_pw->pw_shell, VNULL), &env,
-		ISSET(didvar, DID_SHELL));
-	    insert_env(format_env("LOGNAME", runas_pw->pw_name, VNULL), &env,
+	    sudo_setenv("HOME", runas_pw->pw_dir, ISSET(didvar, DID_HOME));
+	    sudo_setenv("SHELL", runas_pw->pw_shell, ISSET(didvar, DID_SHELL));
+	    sudo_setenv("LOGNAME", runas_pw->pw_name,
 		ISSET(didvar, DID_LOGNAME));
-	    insert_env(format_env("USER", runas_pw->pw_name, VNULL), &env,
-		ISSET(didvar, DID_USER));
-	    insert_env(format_env("USERNAME", runas_pw->pw_name, VNULL), &env,
+	    sudo_setenv("USER", runas_pw->pw_name, ISSET(didvar, DID_USER));
+	    sudo_setenv("USERNAME", runas_pw->pw_name,
 		ISSET(didvar, DID_USERNAME));
 	} else {
 	    if (!ISSET(didvar, DID_HOME))
-		insert_env(format_env("HOME", user_dir, VNULL), &env, 0);
+		sudo_setenv("HOME", user_dir, FALSE);
 	    if (!ISSET(didvar, DID_SHELL))
-		insert_env(format_env("SHELL", sudo_user.pw->pw_shell, VNULL),
-		    &env, 0);
+		sudo_setenv("SHELL", sudo_user.pw->pw_shell, FALSE);
 	    if (!ISSET(didvar, DID_LOGNAME))
-		insert_env(format_env("LOGNAME", user_name, VNULL), &env, 0);
+		sudo_setenv("LOGNAME", user_name, FALSE);
 	    if (!ISSET(didvar, DID_USER))
-		insert_env(format_env("USER", user_name, VNULL), &env, 0);
+		sudo_setenv("USER", user_name, FALSE);
 	    if (!ISSET(didvar, DID_USERNAME))
-		insert_env(format_env("USERNAME", user_name, VNULL), &env, 0);
+		sudo_setenv("USERNAME", user_name, FALSE);
 	}
     } else {
 	/*
-	 * Copy envp entries as long as they don't match env_delete or
+	 * Copy environ entries as long as they don't match env_delete or
 	 * env_check.
 	 */
-	for (ep = envp; *ep; ep++) {
+	for (ep = environ; *ep; ep++) {
 	    int okvar;
 
 	    /* Skip variables with values beginning with () (bash functions) */
@@ -524,28 +695,25 @@ rebuild_env(envp, sudo_mode, noexec)
 		    SET(didvar, DID_PATH);
 		else if (strncmp(*ep, "TERM=", 5) == 0)
 		    SET(didvar, DID_TERM);
-		insert_env(*ep, &env, 0);
+		sudo_putenv(*ep, FALSE, FALSE);
 	    }
 	}
     }
-
-#ifdef SECURE_PATH
-    /* Replace the PATH envariable with a secure one. */
-    if (!user_is_exempt()) {
-	insert_env(format_env("PATH", SECURE_PATH, VNULL), &env, 1);
+    /* Replace the PATH envariable with a secure one? */
+    if (def_secure_path && !user_is_exempt()) {
+	sudo_setenv("PATH", def_secure_path, TRUE);
 	SET(didvar, DID_PATH);
     }
-#endif
 
     /* Set $USER, $LOGNAME and $USERNAME to target if "set_logname" is true. */
     /* XXX - not needed for MODE_LOGIN_SHELL */
     if (def_set_logname && runas_pw->pw_name) {
 	if (!ISSET(didvar, KEPT_LOGNAME))
-	    insert_env(format_env("LOGNAME", runas_pw->pw_name, VNULL), &env, 1);
+	    sudo_setenv("LOGNAME", runas_pw->pw_name, TRUE);
 	if (!ISSET(didvar, KEPT_USER))
-	    insert_env(format_env("USER", runas_pw->pw_name, VNULL), &env, 1);
+	    sudo_setenv("USER", runas_pw->pw_name, TRUE);
 	if (!ISSET(didvar, KEPT_USERNAME))
-	    insert_env(format_env("USERNAME", runas_pw->pw_name, VNULL), &env, 1);
+	    sudo_setenv("USERNAME", runas_pw->pw_name, TRUE);
     }
 
     /* Set $HOME for `sudo -H'.  Only valid at PERM_FULL_RUNAS. */
@@ -554,14 +722,14 @@ rebuild_env(envp, sudo_mode, noexec)
 	if (ISSET(sudo_mode, MODE_RESET_HOME) ||
 	    (ISSET(sudo_mode, MODE_RUN) && (def_always_set_home ||
 	    (ISSET(sudo_mode, MODE_SHELL) && def_set_home))))
-	    insert_env(format_env("HOME", runas_pw->pw_dir, VNULL), &env, 1);
+	    sudo_setenv("HOME", runas_pw->pw_dir, TRUE);
     }
 
     /* Provide default values for $TERM and $PATH if they are not set. */
     if (!ISSET(didvar, DID_TERM))
-	insert_env("TERM=unknown", &env, 0);
+	sudo_putenv("TERM=unknown", FALSE, FALSE);
     if (!ISSET(didvar, DID_PATH))
-	insert_env(format_env("PATH", _PATH_DEFPATH, VNULL), &env, 0);
+	sudo_setenv("PATH", _PATH_DEFPATH, FALSE);
 
     /*
      * Preload a noexec file?  For a list of LD_PRELOAD-alikes, see
@@ -570,78 +738,59 @@ rebuild_env(envp, sudo_mode, noexec)
      */
     if (noexec && def_noexec_file != NULL) {
 #if defined(__darwin__) || defined(__APPLE__)
-	insert_env(format_env("DYLD_INSERT_LIBRARIES", def_noexec_file, VNULL),
-	    &env, 1);
-	insert_env(format_env("DYLD_FORCE_FLAT_NAMESPACE", VNULL), &env, 1);
+	sudo_setenv("DYLD_INSERT_LIBRARIES", def_noexec_file, TRUE);
+	sudo_setenv("DYLD_FORCE_FLAT_NAMESPACE", "", TRUE);
 #else
 # if defined(__osf__) || defined(__sgi)
-	insert_env(format_env("_RLD_LIST", def_noexec_file, ":DEFAULT", VNULL),
-	    &env, 1);
+	easprintf(&cp, "%s:DEFAULT", def_noexec_file);
+	sudo_setenv("_RLD_LIST", cp, TRUE);
+	efree(cp);
 # else
 #  ifdef _AIX
-	insert_env(format_env("LDR_PRELOAD", def_noexec_file, VNULL), &env, 1);
+	sudo_setenv("LDR_PRELOAD", def_noexec_file, TRUE);
 #  else
-	insert_env(format_env("LD_PRELOAD", def_noexec_file, VNULL), &env, 1);
+	sudo_setenv("LD_PRELOAD", def_noexec_file, TRUE);
 #  endif /* _AIX */
 # endif /* __osf__ || __sgi */
 #endif /* __darwin__ || __APPLE__ */
     }
 
     /* Set PS1 if SUDO_PS1 is set. */
-    if (ps1)
-	insert_env(ps1, &env, 1);
+    if (ps1 != NULL)
+	sudo_putenv(ps1, TRUE, TRUE);
 
     /* Add the SUDO_COMMAND envariable (cmnd + args). */
-    if (user_args)
-	insert_env(format_env("SUDO_COMMAND", user_cmnd, " ", user_args, VNULL),
-	    &env, 1);
-    else
-	insert_env(format_env("SUDO_COMMAND", user_cmnd, VNULL), &env, 1);
+    if (user_args) {
+	easprintf(&cp, "%s %s", user_cmnd, user_args);
+	sudo_setenv("SUDO_COMMAND", cp, TRUE);
+	efree(cp);
+    } else
+	sudo_setenv("SUDO_COMMAND", user_cmnd, TRUE);
 
     /* Add the SUDO_USER, SUDO_UID, SUDO_GID environment variables. */
-    insert_env(format_env("SUDO_USER", user_name, VNULL), &env, 1);
-    easprintf(&cp, "SUDO_UID=%lu", (unsigned long) user_uid);
-    insert_env(cp, &env, 1);
-    easprintf(&cp, "SUDO_GID=%lu", (unsigned long) user_gid);
-    insert_env(cp, &env, 1);
+    sudo_setenv("SUDO_USER", user_name, TRUE);
+    snprintf(idbuf, sizeof(idbuf), "%lu", (unsigned long) user_uid);
+    sudo_setenv("SUDO_UID", idbuf, TRUE);
+    snprintf(idbuf, sizeof(idbuf), "%lu", (unsigned long) user_gid);
+    sudo_setenv("SUDO_GID", idbuf, TRUE);
 
-    return(env.envp);
+    /* Install new environment. */
+    environ = env.envp;
+    efree(old_envp);
 }
 
-char **
-insert_env_vars(envp, env_vars)
-    char **envp;
+void
+insert_env_vars(env_vars)
     struct list_member *env_vars;
 {
     struct list_member *cur;
 
     if (env_vars == NULL)
-	return (envp);
-
-    /*
-     * Make sure we still own the environment and steal it back if not.
-     */
-    if (env.envp != envp) {
-	size_t evlen;
-	char **ep;
-
-	for (ep = envp; *ep != NULL; ep++)
-	    continue;
-	evlen = ep - envp;
-	if (evlen + 1 > env.env_size) {
-	    efree(env.envp);
-	    env.env_size = evlen + 1 + 128;
-	    env.envp = emalloc2(env.env_size, sizeof(char *));
-	}
-	memcpy(env.envp, envp, (evlen + 1) * sizeof(char *));
-	env.env_len = evlen;
-    }
+	return;
 
     /* Add user-specified environment variables. */
     for (cur = env_vars; cur != NULL; cur = cur->next)
-	insert_env(cur->value, &env, 1);
-
-    return(env.envp);
+	putenv(cur->value);
 }
 
 /*
@@ -659,12 +808,10 @@ validate_env_vars(env_vars)
     int okvar;
 
     for (var = env_vars; var != NULL; var = var->next) {
-#ifdef SECURE_PATH
-	if (!user_is_exempt() && strncmp(var->value, "PATH=", 5) == 0) {
+	if (def_secure_path && !user_is_exempt() &&
+	    strncmp(var->value, "PATH=", 5) == 0) {
 	    okvar = FALSE;
-	} else
-#endif
-	if (def_env_reset) {
+	} else if (def_env_reset) {
 	    okvar = matches_env_check(var->value);
 	    if (okvar == -1)
 		okvar = matches_env_keep(var->value);
@@ -699,6 +846,65 @@ validate_env_vars(env_vars)
 	/* NOTREACHED */
 	efree(bad);
     }
+}
+
+/*
+ * Read in /etc/environment ala AIX and Linux.
+ * Lines may be in either of three formats:
+ *  NAME=VALUE
+ *  NAME="VALUE"
+ *  NAME='VALUE'
+ * with an optional "export" prefix so the shell can source the file.
+ * Invalid lines, blank lines, or lines consisting solely of a comment
+ * character are skipped.
+ */
+void
+read_env_file(path, overwrite)
+    const char *path;
+    int overwrite;
+{
+    FILE *fp;
+    char *cp, *var, *val;
+    size_t var_len, val_len;
+
+    if ((fp = fopen(path, "r")) == NULL)
+	return;
+
+    while ((var = sudo_parseln(fp)) != NULL) {
+	/* Skip blank or comment lines */
+	if (*var == '\0')
+	    continue;
+
+	/* Skip optional "export " */
+	if (strncmp(var, "export", 6) == 0 && isspace((unsigned char) var[6])) {
+	    var += 7;
+	    while (isspace((unsigned char) *var)) {
+		var++;
+	    }
+	}
+
+	/* Must be of the form name=["']value['"] */
+	for (val = var; *val != '\0' && *val != '='; val++)
+	    ;
+	if (var == val || *val != '=')
+	    continue;
+	var_len = (size_t)(val - var);
+	val_len = strlen(++val);
+
+	/* Strip leading and trailing single/double quotes */
+	if ((val[0] == '\'' || val[0] == '\"') && val[0] == val[val_len - 1]) {
+	    val[val_len - 1] = '\0';
+	    val++;
+	    val_len -= 2;
+	}
+
+	cp = emalloc(var_len + 1 + val_len + 1);
+	memcpy(cp, var, var_len + 1); /* includes '=' */
+	memcpy(cp + var_len + 1, val, val_len + 1); /* includes NUL */
+
+	sudo_putenv(cp, TRUE, overwrite);
+    }
+    fclose(fp);
 }
 
 void

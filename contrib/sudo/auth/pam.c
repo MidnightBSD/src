@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999-2005 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1999-2005, 2007-2009 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -45,6 +45,7 @@
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 #include <pwd.h>
+#include <errno.h>
 
 #ifdef HAVE_PAM_PAM_APPL_H
 # include <pam/pam_appl.h>
@@ -72,12 +73,13 @@
 #endif
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: pam.c,v 1.43.2.11 2008/11/22 18:19:22 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: pam.c,v 1.69 2009/08/07 14:21:51 millert Exp $";
 #endif /* lint */
 
 static int sudo_conv __P((int, PAM_CONST struct pam_message **,
-			  struct pam_response **, VOID *));
-static char *def_prompt;
+			  struct pam_response **, void *));
+static char *def_prompt = "Password:";
+static int gotintr;
 
 #ifndef PAM_DATA_SILENT
 #define PAM_DATA_SILENT	0
@@ -96,13 +98,21 @@ pam_init(pw, promptp, auth)
 
     /* Initial PAM setup */
     if (auth != NULL)
-	auth->data = (VOID *) &pam_status;
+	auth->data = (void *) &pam_status;
     pam_conv.conv = sudo_conv;
     pam_status = pam_start("sudo", pw->pw_name, &pam_conv, &pamh);
     if (pam_status != PAM_SUCCESS) {
 	log_error(USE_ERRNO|NO_EXIT|NO_MAIL, "unable to initialize PAM");
 	return(AUTH_FATAL);
     }
+
+    /*
+     * Set PAM_RUSER to the invoking user (the "from" user).
+     * We set PAM_RHOST to avoid a bug in Solaris 7 and below.
+     */
+    (void) pam_set_item(pamh, PAM_RUSER, user_name);
+    (void) pam_set_item(pamh, PAM_RHOST, user_host);
+
     /*
      * Some versions of pam_lastlog have a bug that
      * will cause a crash if PAM_TTY is not set so if
@@ -162,6 +172,10 @@ pam_verify(pw, prompt, auth)
 	    }
 	    /* FALLTHROUGH */
 	case PAM_AUTH_ERR:
+	    if (gotintr) {
+		/* error or ^C from tgetpass() */
+		return(AUTH_INTR);
+	    }
 	case PAM_MAXTRIES:
 	case PAM_PERM_DENIED:
 	    return(AUTH_FAILURE);
@@ -197,13 +211,10 @@ pam_prep_user(pw)
 	pam_init(pw, NULL, NULL);
 
     /*
-     * Set PAM_USER to the user we are changing *to* and
-     * set PAM_RUSER to the user we are coming *from*.
-     * We set PAM_RHOST to avoid a bug in Solaris 7 and below.
+     * Update PAM_USER to reference the user we are running the command
+     * as, as opposed to the user we authenticated as.
      */
     (void) pam_set_item(pamh, PAM_USER, pw->pw_name);
-    (void) pam_set_item(pamh, PAM_RUSER, user_name);
-    (void) pam_set_item(pamh, PAM_RHOST, user_host);
 
     /*
      * Set credentials (may include resource limits, device ownership, etc).
@@ -244,17 +255,16 @@ sudo_conv(num_msg, msg, response, appdata_ptr)
     int num_msg;
     PAM_CONST struct pam_message **msg;
     struct pam_response **response;
-    VOID *appdata_ptr;
+    void *appdata_ptr;
 {
     struct pam_response *pr;
     PAM_CONST struct pam_message *pm;
     const char *prompt;
     char *pass;
     int n, flags, std_prompt;
-    extern int nil_pw;
 
     if ((*response = malloc(num_msg * sizeof(struct pam_response))) == NULL)
-	return(PAM_CONV_ERR);
+	return(PAM_SYSTEM_ERR);
     zero_bytes(*response, num_msg * sizeof(struct pam_response));
 
     for (pr = *response, pm = *msg, n = num_msg; n--; pr++, pm++) {
@@ -266,7 +276,7 @@ sudo_conv(num_msg, msg, response, appdata_ptr)
 		prompt = def_prompt;
 
 		/* Is the sudo prompt standard? (If so, we'l just use PAM's) */
-		std_prompt = strncmp(def_prompt, "Password:", 9) == 0 &&
+		std_prompt =  strncmp(def_prompt, "Password:", 9) == 0 &&
 		    (def_prompt[9] == '\0' ||
 		    (def_prompt[9] == ' ' && def_prompt[10] == '\0'));
 
@@ -282,11 +292,12 @@ sudo_conv(num_msg, msg, response, appdata_ptr)
 		    && (pm->msg[9] != ' ' || pm->msg[10] != '\0'))))
 		    prompt = pm->msg;
 #endif
-		/* Read the password. */
+		/* Read the password unless interrupted. */
 		pass = tgetpass(prompt, def_passwd_timeout * 60, flags);
 		if (pass == NULL) {
 		    /* We got ^C instead of a password; abort quickly. */
-		    nil_pw = 1;
+		    if (errno == EINTR)
+			gotintr = 1;
 #if defined(__darwin__) || defined(__APPLE__)
 		    pass = "";
 #else
@@ -294,10 +305,7 @@ sudo_conv(num_msg, msg, response, appdata_ptr)
 #endif
 		}
 		pr->resp = estrdup(pass);
-		if (*pr->resp == '\0')
-		    nil_pw = 1;		/* empty password */
-		else
-		    zero_bytes(pass, strlen(pass));
+		zero_bytes(pass, strlen(pass));
 		break;
 	    case PAM_TEXT_INFO:
 		if (pm->msg)
@@ -328,5 +336,5 @@ err:
     zero_bytes(*response, num_msg * sizeof(struct pam_response));
     free(*response);
     *response = NULL;
-    return(PAM_CONV_ERR);
+    return(gotintr ? PAM_AUTH_ERR : PAM_CONV_ERR);
 }

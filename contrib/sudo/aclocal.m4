@@ -1,6 +1,7 @@
 dnl Local m4 macros for autoconf (used by sudo)
 dnl
-dnl Copyright (c) 1994-1996,1998-2007 Todd C. Miller <Todd.Miller@courtesan.com>
+dnl Copyright (c) 1994-1996, 1998-2005, 2007-2009
+dnl	Todd C. Miller <Todd.Miller@courtesan.com>
 dnl
 dnl XXX - should cache values in all cases!!!
 dnl
@@ -156,15 +157,6 @@ fi
 ])dnl
 
 dnl
-dnl check for fullly working void
-dnl
-AC_DEFUN(SUDO_FULL_VOID, [AC_MSG_CHECKING(for full void implementation)
-AC_TRY_COMPILE(, [void *foo;
-foo = (void *)0; (void *)"test";], AC_DEFINE(VOID, void, [Define to "void" if your compiler supports void pointers, else use "char"].)
-AC_MSG_RESULT(yes), AC_DEFINE(VOID, char)
-AC_MSG_RESULT(no))])
-
-dnl
 dnl SUDO_CHECK_TYPE(TYPE, DEFAULT)
 dnl XXX - should require the check for unistd.h...
 dnl
@@ -228,12 +220,51 @@ dnl
 dnl check for isblank(3)
 dnl
 AC_DEFUN([SUDO_FUNC_ISBLANK],
-  [AC_CACHE_CHECK([for isblank], sudo_cv_func_isblank,
+  [AC_CACHE_CHECK([for isblank], [sudo_cv_func_isblank],
     [AC_TRY_LINK([#include <ctype.h>], [return (isblank('a'));],
     sudo_cv_func_isblank=yes, sudo_cv_func_isblank=no)])
 ] [
   if test "$sudo_cv_func_isblank" = "yes"; then
     AC_DEFINE(HAVE_ISBLANK, 1, [Define if you have isblank(3).])
+  else
+    AC_LIBOBJ(isblank)
+  fi
+])
+
+dnl
+dnl check unsetenv() return value
+dnl
+AC_DEFUN([SUDO_FUNC_UNSETENV_VOID],
+  [AC_CACHE_CHECK([whether unsetenv returns void], [sudo_cv_func_unsetenv_void],
+    [AC_RUN_IFELSE([AC_LANG_PROGRAM(
+      [AC_INCLUDES_DEFAULT
+        int unsetenv();
+      ], [
+        [return unsetenv("FOO") != 0;]
+      ])
+    ],
+    [sudo_cv_func_unsetenv_void=no],
+    [sudo_cv_func_unsetenv_void=yes],
+    [sudo_cv_func_unsetenv_void=yes])])
+    if test $sudo_cv_func_unsetenv_void = yes; then
+      AC_DEFINE(UNSETENV_VOID, 1,
+        [Define to 1 if the `unsetenv' function returns void instead of `int'.])
+    fi
+  ])
+
+dnl
+dnl check putenv() argument for const
+dnl
+AC_DEFUN([SUDO_FUNC_PUTENV_CONST],
+[AC_CACHE_CHECK([whether putenv has a const argument],
+sudo_cv_func_putenv_const,
+[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
+int putenv(const char *string) {return 0;}], [])],
+    [sudo_cv_func_putenv_const=yes],
+    [sudo_cv_func_putenv_const=no])
+  ])
+  if test $sudo_cv_func_putenv_const = yes; then
+    AC_DEFINE(PUTENV_CONST, 1, [Define to 1 if the `putenv' has a const argument.])
   fi
 ])
 

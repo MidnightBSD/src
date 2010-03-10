@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999-2005 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1999-2005, 2007-2009 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Sudo: sudo_auth.h,v 1.20.2.5 2008/12/02 17:31:16 millert Exp $
+ * $Sudo: sudo_auth.h,v 1.29 2009/05/25 12:02:42 millert Exp $
  */
 
 #ifndef SUDO_AUTH_H
@@ -22,13 +22,14 @@
 /* Auth function return values.  */
 #define AUTH_SUCCESS	0
 #define AUTH_FAILURE	1
-#define AUTH_FATAL	2
+#define AUTH_INTR	2
+#define AUTH_FATAL	3
 
 typedef struct sudo_auth {
     short flags;		/* various flags, see below */
     short status;		/* status from verify routine */
     char *name;			/* name of the method as a string */
-    VOID *data;			/* method-specific data pointer */
+    void *data;			/* method-specific data pointer */
     int (*init) __P((struct passwd *pw, char **prompt, struct sudo_auth *auth));
     int (*setup) __P((struct passwd *pw, char **prompt, struct sudo_auth *auth));
     int (*verify) __P((struct passwd *pw, char *p, struct sudo_auth *auth));

@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 1996, 1998-2005 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1996, 1998-2005, 2007-2009
+ *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -59,11 +60,6 @@ struct rtentry;
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
-#ifdef HAVE_ERR_H
-# include <err.h>
-#else
-# include "emul/err.h"
-#endif /* HAVE_ERR_H */
 #include <netdb.h>
 #include <errno.h>
 #ifdef _ISC
@@ -89,9 +85,13 @@ struct rtentry;
 #include "interfaces.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: interfaces.c,v 1.72.2.9 2008/11/02 14:53:47 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: interfaces.c,v 1.87 2009/05/25 12:02:41 millert Exp $";
 #endif /* lint */
 
+/* Minix apparently lacks IFF_LOOPBACK */
+#ifndef IFF_LOOPBACK
+# define IFF_LOOPBACK	0
+#endif
 
 #ifdef HAVE_GETIFADDRS
 
@@ -143,9 +143,13 @@ load_interfaces()
 	switch(ifa->ifa_addr->sa_family) {
 	    case AF_INET:
 		sin = (struct sockaddr_in *)ifa->ifa_addr;
+		if (sin == NULL)
+		    continue;
 		memcpy(&interfaces[i].addr, &sin->sin_addr,
 		    sizeof(struct in_addr));
 		sin = (struct sockaddr_in *)ifa->ifa_netmask;
+		if (sin == NULL)
+		    continue;
 		memcpy(&interfaces[i].netmask, &sin->sin_addr,
 		    sizeof(struct in_addr));
 		interfaces[i].family = AF_INET;
@@ -154,9 +158,13 @@ load_interfaces()
 #ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
 		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		if (sin6 == NULL)
+		    continue;
 		memcpy(&interfaces[i].addr, &sin6->sin6_addr,
 		    sizeof(struct in6_addr));
 		sin6 = (struct sockaddr_in6 *)ifa->ifa_netmask;
+		if (sin6 == NULL)
+		    continue;
 		memcpy(&interfaces[i].netmask, &sin6->sin6_addr,
 		    sizeof(struct in6_addr));
 		interfaces[i].family = AF_INET6;
@@ -193,7 +201,7 @@ load_interfaces()
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0)
-	err(1, "cannot open socket");
+	error(1, "cannot open socket");
 
     /*
      * Get interface configuration or return (leaving num_interfaces == 0)

@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2004-2005 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2004-2005, 2007
+ *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +50,7 @@
 #include "sudo.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: closefrom.c,v 1.6.2.3 2007/06/20 11:06:50 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: closefrom.c,v 1.14 2008/11/09 14:13:12 millert Exp $";
 #endif /* lint */
 
 #ifndef HAVE_FCNTL_CLOSEM

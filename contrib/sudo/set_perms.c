@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1994-1996,1998-2006 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1994-1996,1998-2009 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -42,11 +42,6 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
-#ifdef HAVE_ERR_H
-# include <err.h>
-#else
-# include "emul/err.h"
-#endif /* HAVE_ERR_H */
 #include <pwd.h>
 #include <errno.h>
 #include <grp.h>
@@ -57,7 +52,7 @@
 #include "sudo.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: set_perms.c,v 1.30.2.7 2007/11/27 23:41:23 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: set_perms.c,v 1.49 2009/06/25 12:44:33 millert Exp $";
 #endif /* lint */
 
 #ifdef __TANDEM
@@ -82,17 +77,25 @@ static int current_perm = -1;
  * We only flip the effective gid since it only changes for PERM_SUDOERS.
  * This version of set_perms() works fine with the "stay_setuid" option.
  */
-void
+int
 set_perms(perm)
     int perm;
 {
+    const char *errstr;
+    int noexit;
+
+    noexit = ISSET(perm, PERM_NOEXIT);
+    CLR(perm, PERM_MASK);
+
     if (perm == current_perm)
-	return;
+	return(1);
 
     switch (perm) {
 	case PERM_ROOT:
-				if (setresuid(ROOT_UID, ROOT_UID, ROOT_UID))
-				    errx(1, "setresuid(ROOT_UID, ROOT_UID, ROOT_UID) failed, your operating system may have a broken setresuid() function\nTry running configure with --disable-setresuid");
+				if (setresuid(ROOT_UID, ROOT_UID, ROOT_UID)) {
+				    errstr = "setresuid(ROOT_UID, ROOT_UID, ROOT_UID)";
+				    goto bad;
+				}
 				(void) setresgid(-1, user_gid, -1);
 				if (current_perm == PERM_RUNAS)
 				    restore_groups();
@@ -100,22 +103,30 @@ set_perms(perm)
 
 	case PERM_USER:
     	    	    	        (void) setresgid(-1, user_gid, -1);
-				if (setresuid(user_uid, user_uid, ROOT_UID))
-				    err(1, "setresuid(user_uid, user_uid, ROOT_UID)");
+				if (setresuid(user_uid, user_uid, ROOT_UID)) {
+				    errstr = "setresuid(user_uid, user_uid, ROOT_UID)";
+				    goto bad;
+				}
 			      	break;
 				
 	case PERM_FULL_USER:
 				/* headed for exec() */
     	    	    	        (void) setgid(user_gid);
-				if (setresuid(user_uid, user_uid, user_uid))
-				    err(1, "setresuid(user_uid, user_uid, user_uid)");
+				if (setresuid(user_uid, user_uid, user_uid)) {
+				    errstr = "setresuid(user_uid, user_uid, user_uid)";
+				    goto bad;
+				}
 			      	break;
 				
 	case PERM_RUNAS:
 				runas_setgroups();
-				(void) setresgid(-1, runas_pw->pw_gid, -1);
-				if (setresuid(-1, runas_pw->pw_uid, -1))
-				    err(1, "unable to change to runas uid");
+				(void) setresgid(-1, runas_gr ?
+				    runas_gr->gr_gid : runas_pw->pw_gid, -1);
+				if (setresuid(-1, runas_pw ? runas_pw->pw_uid :
+				    user_uid, -1)) {
+				    errstr = "unable to change to runas uid";
+				    goto bad;
+				}
 			      	break;
 
 	case PERM_FULL_RUNAS:
@@ -123,14 +134,16 @@ set_perms(perm)
 				runas_setup();
 				if (setresuid(def_stay_setuid ?
 				    user_uid : runas_pw->pw_uid,
-				    runas_pw->pw_uid, runas_pw->pw_uid))
-				    err(1, "unable to change to runas uid");
+				    runas_pw->pw_uid, runas_pw->pw_uid)) {
+				    errstr = "unable to change to runas uid";
+				    goto bad;
+				}
 				break;
 
 	case PERM_SUDOERS:
 				/* assume euid == ROOT_UID, ruid == user */
 				if (setresgid(-1, SUDOERS_GID, -1))
-				    err(1, "unable to change to sudoers gid");
+				    error(1, "unable to change to sudoers gid");
 
 				/*
 				 * If SUDOERS_UID == ROOT_UID and SUDOERS_MODE
@@ -140,20 +153,33 @@ set_perms(perm)
 				 * work on all OS's.
 				 */
 				if (SUDOERS_UID == ROOT_UID) {
-				    if ((SUDOERS_MODE & 040) && setresuid(ROOT_UID, 1, ROOT_UID))
-					err(1, "setresuid(ROOT_UID, 1, ROOT_UID)");
+				    if ((SUDOERS_MODE & 040) && setresuid(ROOT_UID, 1, ROOT_UID)) {
+					errstr = "setresuid(ROOT_UID, 1, ROOT_UID)";
+					goto bad;
+				    }
 				} else {
-				    if (setresuid(ROOT_UID, SUDOERS_UID, ROOT_UID))
-					err(1, "setresuid(ROOT_UID, SUDOERS_UID, ROOT_UID)");
+				    if (setresuid(ROOT_UID, SUDOERS_UID, ROOT_UID)) {
+					errstr = "setresuid(ROOT_UID, SUDOERS_UID, ROOT_UID)";
+					goto bad;
+				    }
 				}
 			      	break;
 	case PERM_TIMESTAMP:
-				if (setresuid(ROOT_UID, timestamp_uid, ROOT_UID))
-				    err(1, "setresuid(ROOT_UID, timestamp_uid, ROOT_UID)");
+				if (setresuid(ROOT_UID, timestamp_uid, ROOT_UID)) {
+				    errstr = "setresuid(ROOT_UID, timestamp_uid, ROOT_UID)";
+				    goto bad;
+				}
 			      	break;
     }
 
     current_perm = perm;
+    return(1);
+bad:
+    warningx("%s: %s", errstr,
+	errno == EAGAIN ? "too many processes" : strerror(errno));
+    if (noexit)
+	return(0);
+    exit(1);
 }
 
 #else
@@ -165,19 +191,29 @@ set_perms(perm)
  * we are headed for an exec().
  * This version of set_perms() works fine with the "stay_setuid" option.
  */
-void
+int
 set_perms(perm)
     int perm;
 {
+    const char *errstr;
+    int noexit;
+
+    noexit = ISSET(perm, PERM_NOEXIT);
+    CLR(perm, PERM_MASK);
+
     if (perm == current_perm)
-	return;
+	return(1);
 
     switch (perm) {
 	case PERM_ROOT:
-				if (setreuid(-1, ROOT_UID))
-				    errx(1, "setreuid(-1, ROOT_UID) failed, your operating system may have a broken setreuid() function\nTry running configure with --disable-setreuid");
-				if (setuid(ROOT_UID))
-				    err(1, "setuid(ROOT_UID)");
+				if (setreuid(-1, ROOT_UID)) {
+				    errstr = "setreuid(-1, ROOT_UID)";
+				    goto bad;
+				}
+				if (setuid(ROOT_UID)) {
+				    errstr = "setuid(ROOT_UID)";
+				    goto bad;
+				}
 				(void) setregid(-1, user_gid);
 				if (current_perm == PERM_RUNAS)
 				    restore_groups();
@@ -185,36 +221,46 @@ set_perms(perm)
 
 	case PERM_USER:
     	    	    	        (void) setregid(-1, user_gid);
-				if (setreuid(ROOT_UID, user_uid))
-				    err(1, "setreuid(ROOT_UID, user_uid)");
+				if (setreuid(ROOT_UID, user_uid)) {
+				    errstr = "setreuid(ROOT_UID, user_uid)";
+				    goto bad;
+				}
 			      	break;
 				
 	case PERM_FULL_USER:
 				/* headed for exec() */
     	    	    	        (void) setgid(user_gid);
-				if (setreuid(user_uid, user_uid))
-				    err(1, "setreuid(user_uid, user_uid)");
+				if (setreuid(user_uid, user_uid)) {
+				    errstr = "setreuid(user_uid, user_uid)";
+				    goto bad;
+				}
 			      	break;
 				
 	case PERM_RUNAS:
 				runas_setgroups();
-				(void) setregid(-1, runas_pw->pw_gid);
-				if (setreuid(-1, runas_pw->pw_uid))
-				    err(1, "unable to change to runas uid");
+				(void) setregid(-1, runas_gr ?
+				    runas_gr->gr_gid : runas_pw->pw_gid);
+				if (setreuid(-1,
+				    runas_pw ? runas_pw->pw_uid : user_uid)) {
+				    errstr = "unable to change to runas uid";
+				    goto bad;
+				}
 			      	break;
 
 	case PERM_FULL_RUNAS:
 				/* headed for exec(), assume euid == ROOT_UID */
 				runas_setup();
 				if (setreuid(def_stay_setuid ? user_uid :
-				    runas_pw->pw_uid, runas_pw->pw_uid))
-				    err(1, "unable to change to runas uid");
+				    runas_pw->pw_uid, runas_pw->pw_uid)) {
+				    errstr = "unable to change to runas uid";
+				    goto bad;
+				}
 				break;
 
 	case PERM_SUDOERS:
 				/* assume euid == ROOT_UID, ruid == user */
 				if (setregid(-1, SUDOERS_GID))
-				    err(1, "unable to change to sudoers gid");
+				    error(1, "unable to change to sudoers gid");
 
 				/*
 				 * If SUDOERS_UID == ROOT_UID and SUDOERS_MODE
@@ -224,20 +270,33 @@ set_perms(perm)
 				 * work on all OS's.
 				 */
 				if (SUDOERS_UID == ROOT_UID) {
-				    if ((SUDOERS_MODE & 040) && setreuid(ROOT_UID, 1))
-					err(1, "setreuid(ROOT_UID, 1)");
+				    if ((SUDOERS_MODE & 040) && setreuid(ROOT_UID, 1)) {
+					errstr = "setreuid(ROOT_UID, 1)";
+					goto bad;
+				    }
 				} else {
-				    if (setreuid(ROOT_UID, SUDOERS_UID))
-					err(1, "setreuid(ROOT_UID, SUDOERS_UID)");
+				    if (setreuid(ROOT_UID, SUDOERS_UID)) {
+					errstr = "setreuid(ROOT_UID, SUDOERS_UID)";
+					goto bad;
+				    }
 				}
 			      	break;
 	case PERM_TIMESTAMP:
-				if (setreuid(ROOT_UID, timestamp_uid))
-				    err(1, "setreuid(ROOT_UID, timestamp_uid)");
+				if (setreuid(ROOT_UID, timestamp_uid)) {
+				    errstr = "setreuid(ROOT_UID, timestamp_uid)";
+				    goto bad;
+				}
 			      	break;
     }
 
     current_perm = perm;
+    return(1);
+bad:
+    warningx("%s: %s", errstr,
+	errno == EAGAIN ? "too many processes" : strerror(errno));
+    if (noexit)
+	return(0);
+    exit(1);
 }
 
 # else /* !HAVE_SETRESUID && !HAVE_SETREUID */
@@ -247,22 +306,32 @@ set_perms(perm)
  * Set real and effective uids and gids based on perm.
  * NOTE: does not support the "stay_setuid" option.
  */
-void
+int
 set_perms(perm)
     int perm;
 {
+    const char *errstr;
+    int noexit;
+
+    noexit = ISSET(perm, PERM_NOEXIT);
+    CLR(perm, PERM_MASK);
+
     if (perm == current_perm)
-	return;
+	return(1);
 
     /*
      * Since we only have setuid() and seteuid() and semantics
      * for these calls differ on various systems, we set
      * real and effective uids to ROOT_UID initially to be safe.
      */
-    if (seteuid(ROOT_UID))
-	err(1, "seteuid(ROOT_UID)");
-    if (setuid(ROOT_UID))
-	err(1, "setuid(ROOT_UID)");
+    if (seteuid(ROOT_UID)) {
+	errstr = "seteuid(ROOT_UID)";
+	goto bad;
+    }
+    if (setuid(ROOT_UID)) {
+	errstr = "setuid(ROOT_UID)";
+	goto bad;
+    }
 
     switch (perm) {
 	case PERM_ROOT:
@@ -274,34 +343,43 @@ set_perms(perm)
 
 	case PERM_USER:
     	    	    	        (void) setegid(user_gid);
-				if (seteuid(user_uid))
-				    err(1, "seteuid(user_uid)");
+				if (seteuid(user_uid)) {
+				    errstr = "seteuid(user_uid)";
+				    goto bad;
+				}
 			      	break;
 				
 	case PERM_FULL_USER:
 				/* headed for exec() */
     	    	    	        (void) setgid(user_gid);
-				if (setuid(user_uid))
-				    err(1, "setuid(user_uid)");
+				if (setuid(user_uid)) {
+				    errstr = "setuid(user_uid)";
+				    goto bad;
+				}
 			      	break;
 				
 	case PERM_RUNAS:
 				runas_setgroups();
-				(void) setegid(runas_pw->pw_gid);
-				if (seteuid(runas_pw->pw_uid))
-				    err(1, "unable to change to runas uid");
+				(void) setegid(runas_gr ?
+				    runas_gr->gr_gid : runas_pw->pw_gid);
+				if (seteuid(runas_pw ? runas_pw->pw_uid : user_uid)) {
+				    errstr = "unable to change to runas uid";
+				    goto bad;
+				}
 			      	break;
 
 	case PERM_FULL_RUNAS:
 				/* headed for exec() */
 				runas_setup();
-				if (setuid(runas_pw->pw_uid))
-				    err(1, "unable to change to runas uid");
+				if (setuid(runas_pw->pw_uid)) {
+				    errstr = "unable to change to runas uid";
+				    goto bad;
+				}
 				break;
 
 	case PERM_SUDOERS:
 				if (setegid(SUDOERS_GID))
-				    err(1, "unable to change to sudoers gid");
+				    error(1, "unable to change to sudoers gid");
 
 				/*
 				 * If SUDOERS_UID == ROOT_UID and SUDOERS_MODE
@@ -311,20 +389,33 @@ set_perms(perm)
 				 * work on all OS's.
 				 */
 				if (SUDOERS_UID == ROOT_UID) {
-				    if ((SUDOERS_MODE & 040) && seteuid(1))
-					err(1, "seteuid(1)");
+				    if ((SUDOERS_MODE & 040) && seteuid(1)) {
+					errstr = "seteuid(1)";
+					goto bad;
+				    }
 				} else {
-				    if (seteuid(SUDOERS_UID))
-					err(1, "seteuid(SUDOERS_UID)");
+				    if (seteuid(SUDOERS_UID)) {
+					errstr = "seteuid(SUDOERS_UID)";
+					goto bad;
+				    }
 				}
 			      	break;
 	case PERM_TIMESTAMP:
-				if (seteuid(timestamp_uid))
-				    err(1, "seteuid(timestamp_uid)");
+				if (seteuid(timestamp_uid)) {
+				    errstr = "seteuid(timestamp_uid)";
+				    goto bad;
+				}
 			      	break;
     }
 
     current_perm = perm;
+    return(1);
+bad:
+    warningx("%s: %s", errstr,
+	errno == EAGAIN ? "too many processes" : strerror(errno));
+    if (noexit)
+	return(0);
+    exit(1);
 }
 
 # else /* !HAVE_SETRESUID && !HAVE_SETREUID && !HAVE_SETEUID */
@@ -334,31 +425,43 @@ set_perms(perm)
  * NOTE: does not support the "stay_setuid" or timestampowner options.
  *       Also, SUDOERS_UID and SUDOERS_GID are not used.
  */
-void
+int
 set_perms(perm)
     int perm;
 {
+    const char *errstr;
+    int noexit;
+
+    noexit = ISSET(perm, PERM_NOEXIT);
+    CLR(perm, PERM_MASK);
+
     if (perm == current_perm)
-	return;
+	return(1);
 
     switch (perm) {
 	case PERM_ROOT:
-				if (setuid(ROOT_UID))
-					err(1, "setuid(ROOT_UID)");
+				if (setuid(ROOT_UID)) {
+				    errstr = "setuid(ROOT_UID)";
+				    goto bad;
+				}
 				if (current_perm == PERM_RUNAS)
 				    restore_groups();
 				break;
 
 	case PERM_FULL_USER:
     	    	    	        (void) setgid(user_gid);
-				if (setuid(user_uid))
-				    err(1, "setuid(user_uid)");
+				if (setuid(user_uid)) {
+				    errstr = "setuid(user_uid)";
+				    goto bad;
+				}
 			      	break;
 				
 	case PERM_FULL_RUNAS:
 				runas_setup();
-				if (setuid(runas_pw->pw_uid))
-				    err(1, "unable to change to runas uid");
+				if (setuid(runas_pw->pw_uid)) {
+				    errstr = "unable to change to runas uid";
+				    goto bad;
+				}
 				break;
 
 	case PERM_USER:
@@ -370,6 +473,13 @@ set_perms(perm)
     }
 
     current_perm = perm;
+    return(1);
+bad:
+    warningx("%s: %s", errstr,
+	errno == EAGAIN ? "too many processes" : strerror(errno));
+    if (noexit)
+	return(0);
+    exit(1);
 }
 #  endif /* HAVE_SETEUID */
 # endif /* HAVE_SETREUID */
@@ -380,7 +490,9 @@ static void
 runas_setgroups()
 {
     static int ngroups = -1;
+#ifdef HAVE_GETGROUPS
     static GETGROUPS_T *groups;
+#endif
     struct passwd *pw;
 
     if (def_preserve_groups)
@@ -393,14 +505,16 @@ runas_setgroups()
 	pw = runas_pw ? runas_pw : sudo_user.pw;
 	if (initgroups(pw->pw_name, pw->pw_gid) < 0)
 	    log_error(USE_ERRNO|MSG_ONLY, "can't set runas group vector");
-	if ((ngroups = getgroups(0, NULL)) < 0)
-	    log_error(USE_ERRNO|MSG_ONLY, "can't get runas ngroups");
-	groups = emalloc2(ngroups, sizeof(GETGROUPS_T));
-	if (getgroups(ngroups, groups) < 0)
-	    log_error(USE_ERRNO|MSG_ONLY, "can't get runas group vector");
+#ifdef HAVE_GETGROUPS
+	if ((ngroups = getgroups(0, NULL)) > 0) {
+	    groups = emalloc2(ngroups, sizeof(GETGROUPS_T));
+	    if (getgroups(ngroups, groups) < 0)
+		log_error(USE_ERRNO|MSG_ONLY, "can't get runas group vector");
+	}
     } else {
 	if (setgroups(ngroups, groups) < 0)
 	    log_error(USE_ERRNO|MSG_ONLY, "can't set runas group vector");
+#endif /* HAVE_GETGROUPS */
     }
 }
 
@@ -430,12 +544,17 @@ restore_groups()
 static void
 runas_setup()
 {
+    gid_t gid;
 #ifdef HAVE_LOGIN_CAP_H
     int flags;
     extern login_cap_t *lc;
 #endif
 
     if (runas_pw->pw_name != NULL) {
+	gid = runas_gr ? runas_gr->gr_gid : runas_pw->pw_gid;
+#ifdef HAVE_GETUSERATTR
+	aix_setlimits(runas_pw->pw_name);
+#endif
 #ifdef HAVE_PAM
 	pam_prep_user(runas_pw);
 #endif /* HAVE_PAM */
@@ -443,26 +562,26 @@ runas_setup()
 #ifdef HAVE_LOGIN_CAP_H
 	if (def_use_loginclass) {
 	    /*
-             * We only use setusercontext() set the nice value and rlimits.
+             * We only use setusercontext() to set the nice value and rlimits.
 	     */
 	    flags = LOGIN_SETRESOURCES|LOGIN_SETPRIORITY;
-	    if (!def_preserve_groups)
-		SET(flags, LOGIN_SETGROUP);
-	    else if (setgid(runas_pw->pw_gid))
-		warn("cannot set gid to runas gid");
 	    if (setusercontext(lc, runas_pw, runas_pw->pw_uid, flags)) {
 		if (runas_pw->pw_uid != ROOT_UID)
-		    err(1, "unable to set user context");
+		    error(1, "unable to set user context");
 		else
-		    warn("unable to set user context");
+		    warning("unable to set user context");
 	    }
 	}
 #endif /* HAVE_LOGIN_CAP_H */
-	if (setgid(runas_pw->pw_gid))
-	    warn("cannot set gid to runas gid");
 	/*
-	 * Initialize group vector unless asked not to.
+	 * Initialize group vector
 	 */
 	runas_setgroups();
+#ifdef HAVE_SETEUID
+	if (setegid(gid))
+	    warning("cannot set egid to runas gid");
+#endif
+	if (setgid(gid))
+	    warning("cannot set gid to runas gid");
     }
 }

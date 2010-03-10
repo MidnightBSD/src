@@ -77,6 +77,9 @@
 /* Define to 1 if you use BSD authentication. */
 /* #undef HAVE_BSD_AUTH_H */
 
+/* Define to 1 to enable BSM auditing. */
+/* #undef HAVE_BSM_AUDIT */
+
 /* Define to 1 if you have the `closefrom' function. */
 /* #undef HAVE_CLOSEFROM */
 
@@ -551,6 +554,20 @@
 
 /* The user sudo should run commands as by default. */
 #define RUNAS_DEFAULT "root"
+
+#define PACKAGE_BUGREPORT "http://bugreport.midnightbsd.org/"
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "sudo"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "sudo 1.7.2p5"
+
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME "sudo"
+
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "1.7.2p5"
 
 /* Define to 1 to override the user's path with a built-in one. */
 /* #undef SECURE_PATH */
