@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read.c,v 1.3 2009/06/06 21:52:41 laffer1 Exp $
  */
 
 
@@ -258,20 +258,22 @@ int mport_bundle_read_prep_for_install(mportInstance *mport, mportBundleRead *bu
     RETURN_CURRENT_ERROR;
 
   ret = sqlite3_step(stmt);
-  sqlite3_finalize(stmt);
     
   switch (ret) {
     case SQLITE_ROW:
       bundle_version = sqlite3_column_int(stmt, 0);
+      sqlite3_finalize(stmt);
       
       if (bundle_version > MPORT_BUNDLE_VERSION) {
         RETURN_ERRORX(MPORT_ERR_FATAL, "%s: bundle is version %i; this version of mport only supports up to version %i", bundle->filename, bundle_version, MPORT_BUNDLE_VERSION);
       }
       break;
     case SQLITE_DONE:
+      sqlite3_finalize(stmt);
       RETURN_ERRORX(MPORT_ERR_FATAL, "%s: no stub.meta table, or no bundle_format_version field", bundle->filename);    
       break;
     default:
+      sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       break;
   }
