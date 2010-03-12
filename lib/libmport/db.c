@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db.c,v 1.4 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/db.c,v 1.6 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -45,6 +45,7 @@ int mport_db_do(sqlite3 *db, const char *fmt, ...)
 {
   va_list args;
   char *sql;
+  int sqlcode;
   
   va_start(args, fmt);
   
@@ -55,8 +56,14 @@ int mport_db_do(sqlite3 *db, const char *fmt, ...)
   if (sql == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
   
-
-  if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
+  sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
+  /* if we get an error code, we want to run it again in some cases */
+  if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+    if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
+      sqlite3_free(sql);
+      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    }
+  } else {
     sqlite3_free(sql);
     RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
   }
