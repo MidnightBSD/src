@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db.c,v 1.6 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/db.c,v 1.7 2010/03/12 03:59:44 laffer1 Exp $
  */
 
 
@@ -63,7 +63,7 @@ int mport_db_do(sqlite3 *db, const char *fmt, ...)
       sqlite3_free(sql);
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
     }
-  } else {
+  } else if (sqlcode != SQLITE_OK) {
     sqlite3_free(sql);
     RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
   }
