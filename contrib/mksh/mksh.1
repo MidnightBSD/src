@@ -1,5 +1,5 @@
-.\" $MirOS: src/bin/mksh/mksh.1,v 1.215 2010/01/28 20:58:33 tg Exp $
-.\" $OpenBSD: ksh.1,v 1.129 2009/05/28 06:09:06 jmc Exp $
+.\" $MirOS: src/bin/mksh/mksh.1,v 1.217 2010/02/25 21:05:00 tg Exp $
+.\" $OpenBSD: ksh.1,v 1.130 2010/02/25 13:45:54 schwarze Exp $
 .\"-
 .\" Copyright © 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 .\"	Thorsten Glaser <tg@mirbsd.org>
@@ -71,7 +71,7 @@
 .\" with -mandoc, it might implement .Mx itself, but we want to
 .\" use our own definition. And .Dd must come *first*, always.
 .\"
-.Dd $Mdocdate: January 28 2010 $
+.Dd $Mdocdate: February 25 2010 $
 .\"
 .\" Check which macro package we use
 .\"
@@ -1416,6 +1416,13 @@ is a variable which expands to the null string, the
 error message is also printed.
 .El
 .Pp
+Note that, for all of the above,
+.Ar word
+is actually considered quoted, and special parsing rules apply.
+The parsing rules also differ on whether the expression is
+double-quoted with respect to the single quote
+.Pq Dq \*(aq .
+.Pp
 In the above modifiers, the
 .Ql \&:
 can be omitted, in which case the conditions only depend on
@@ -2477,14 +2484,14 @@ Assignment; the variable on the left is set to the value on the right.
 .Xc
 Assignment operators.
 .Sm off
-.Aq Xo Ar var
+.Ao Ar var Ac Xo
 .Aq Ar op
 .No = Aq Ar expr
 .Xc
 .Sm on
 is the same as
 .Sm off
-.Aq Xo Ar var
+.Ao Ar var Ac Xo
 .No = Aq Ar var
 .Aq Ar op
 .Aq Ar expr ,
@@ -5992,7 +5999,7 @@ foo \*(Ba bar \*(Ba read baz    # will not change $baz
 .Ed
 .Pp
 This document attempts to describe
-.Nm mksh\ R39b
+.Nm mksh\ R39c
 and up,
 compiled without any options impacting functionality, such as
 .Dv MKSH_SMALL ,

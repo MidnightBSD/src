@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.107 2010/01/29 09:34:28 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.110 2010/02/25 20:18:16 tg Exp $");
 
 /*
  * states while lexing word
@@ -32,18 +32,19 @@ __RCSID("$MirOS: src/bin/mksh/lex.c,v 1.107 2010/01/29 09:34:28 tg Exp $");
 #define SLETPAREN	2	/* inside (( )), implicit quoting */
 #define SSQUOTE		3	/* inside '' */
 #define SDQUOTE		4	/* inside "" */
-#define SBRACE		5	/* inside ${} */
-#define SCSPAREN	6	/* inside $() */
-#define SBQUOTE		7	/* inside `` */
-#define SASPAREN	8	/* inside $(( )) */
-#define SHEREDELIM	9	/* parsing <<,<<- delimiter */
-#define SHEREDQUOTE	10	/* parsing " in <<,<<- delimiter */
-#define SPATTERN	11	/* parsing *(...|...) pattern (*+?@!) */
-#define STBRACE		12	/* parsing ${...[#%]...} */
-#define SLETARRAY	13	/* inside =( ), just copy */
-#define SADELIM		14	/* like SBASE, looking for delimiter */
-#define SHERESTRING	15	/* parsing <<< string */
-#define SEQUOTE		16	/* inside $'' */
+#define SEQUOTE		5	/* inside $'' */
+#define SBRACE		6	/* inside ${} */
+#define SQBRACE		7	/* inside "${}" */
+#define SCSPAREN	8	/* inside $() */
+#define SBQUOTE		9	/* inside `` */
+#define SASPAREN	10	/* inside $(( )) */
+#define SHEREDELIM	11	/* parsing <<,<<- delimiter */
+#define SHEREDQUOTE	12	/* parsing " in <<,<<- delimiter */
+#define SPATTERN	13	/* parsing *(...|...) pattern (*+?@!) */
+#define STBRACE		14	/* parsing ${...[#%]...} */
+#define SLETARRAY	15	/* inside =( ), just copy */
+#define SADELIM		16	/* like SBASE, looking for delimiter */
+#define SHERESTRING	17	/* parsing <<< string */
 
 /* Structure to keep track of the lexing state and the various pieces of info
  * needed for each particular state. */
@@ -320,19 +321,21 @@ yylex(int cf)
  Sbase2:		/* doesn't include *(...|...) pattern (*+?@!) */
 			switch (c) {
 			case '\\':
-				c = getsc();
-				if (c) {
+ getsc_qchar:
+				if ((c = getsc())) {
 					/* trailing \ is lost */
 					*wp++ = QCHAR;
 					*wp++ = c;
 				}
 				break;
 			case '\'':
+ open_ssquote:
 				*wp++ = OQUOTE;
 				ignore_backslash_newline++;
 				PUSH_STATE(SSQUOTE);
 				break;
 			case '"':
+ open_sdquote:
 				*wp++ = OQUOTE;
 				PUSH_STATE(SDQUOTE);
 				break;
@@ -369,6 +372,7 @@ yylex(int cf)
 				}
 				break;
 			case '$':
+ subst_dollar:
 				c = getsc();
 				if (c == '(') /*)*/ {
 					c = getsc();
@@ -448,7 +452,10 @@ yylex(int cf)
 						PUSH_STATE(STBRACE);
 					} else {
 						ungetsc(c);
-						PUSH_STATE(SBRACE);
+						if (state == SDQUOTE)
+							PUSH_STATE(SQBRACE);
+						else
+							PUSH_STATE(SBRACE);
 					}
 				} else if (ksh_isalphx(c)) {
 					*wp++ = OSUBST;
@@ -484,6 +491,7 @@ yylex(int cf)
 				}
 				break;
 			case '`':
+ subst_gravis:
 				PUSH_STATE(SBQUOTE);
 				*wp++ = COMSUB;
 				/* Need to know if we are inside double quotes
@@ -531,6 +539,7 @@ yylex(int cf)
 				}
 				/* FALLTHROUGH */
 			default:
+ store_char:
 				*wp++ = CHAR;
 				*wp++ = c;
 			}
@@ -679,13 +688,23 @@ yylex(int cf)
 			break;
 
 		case SBRACE:
-			/*{*/
-			if (c == '}') {
-				POP_STATE();
-				*wp++ = CSUBST;
-				*wp++ = /*{*/ '}';
-			} else
-				goto Sbase1;
+			if (c == '\'')
+				goto open_ssquote;
+			/* FALLTHROUGH */
+		case SQBRACE:
+			if (c == '"')
+				goto open_sdquote;
+			else if (c == '\\')
+				goto getsc_qchar;
+			else if (c == '$')
+				goto subst_dollar;
+			else if (c == '`')
+				goto subst_gravis;
+			else if (c != /*{*/ '}')
+				goto store_char;
+			POP_STATE();
+			*wp++ = CSUBST;
+			*wp++ = /*{*/ '}';
 			break;
 
 		case STBRACE:
