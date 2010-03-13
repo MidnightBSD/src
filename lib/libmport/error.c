@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/error.c,v 1.7 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/error.c,v 1.9 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -38,7 +38,7 @@ static int mport_err;
 static char err_msg[256];
 
 /* This goes with the error codes in mport.h */
-static char *default_error_msg = "An error occured.";
+static char default_error_msg[] = "An error occured.";
   
 
 /* mport_err_code()
