@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.4 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -50,7 +50,7 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
   sqlite3_stmt *stmt;
   int ret, current, total;
   mportAssetListEntryType type;
-  char *data, *checksum, *cwd;
+  const char *data, *checksum, *cwd;
   struct stat st;
   char md5[33];
   
@@ -102,8 +102,8 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
     }
     
     type     = (mportAssetListEntryType)sqlite3_column_int(stmt, 0);
-    data     = (char *)sqlite3_column_text(stmt, 1);
-    checksum = (char *)sqlite3_column_text(stmt, 2);
+    data     = sqlite3_column_text(stmt, 1);
+    checksum = sqlite3_column_text(stmt, 2);
 
     char file[FILENAME_MAX];
     /* XXX TMP */
@@ -232,7 +232,8 @@ static int delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack)
 static int check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pack)
 {
   sqlite3_stmt *stmt;
-  char *depends, *msg;
+  const char *depends;
+  char *msg;
   int count;
       
   if (mport_db_prepare(mport->db, &stmt, "SELECT group_concat(packages.pkg),count(packages.pkg) FROM depends JOIN packages ON depends.pkg=packages.pkg WHERE depend_pkgname=%Q", pack->name) != MPORT_OK)
@@ -240,7 +241,7 @@ static int check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pac
   
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
-      depends = (char *)sqlite3_column_text(stmt, 0);
+      depends = sqlite3_column_text(stmt, 0);
       count   = sqlite3_column_int(stmt, 1);
       
       if (count != 0) {

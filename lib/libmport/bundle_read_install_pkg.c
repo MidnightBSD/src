@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/install_primative.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.2 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -81,7 +81,8 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
   int file_count = 0;
   mportAssetListEntryType type;
   struct archive_entry *entry;
-  char *data, *checksum, *orig_cwd; 
+  const char *data, *checksum;
+  char *orig_cwd; 
   char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
   sqlite3_stmt *assets, *count, *insert;
   sqlite3 *db;
@@ -145,8 +146,8 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
     }
     
     type     = (mportAssetListEntryType)sqlite3_column_int(assets, 0);
-    data     = (char *)sqlite3_column_text(assets, 1);
-    checksum = (char *)sqlite3_column_text(assets, 2);  
+    data     = sqlite3_column_text(assets, 1);
+    checksum = sqlite3_column_text(assets, 2);  
     
     switch (type) {
       case ASSET_CWD:      

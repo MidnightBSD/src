@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/install.c,v 1.1 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/install.c,v 1.2 2009/06/05 00:22:17 laffer1 Exp $
  */
 
 
@@ -134,7 +134,7 @@ static int install_bundle_file(mportInstance *mport, const char *filename, const
 static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const char *prefix)
 {
   sqlite3_stmt *stmt, *lookup;
-  char *dname, *dversion, *iversion;
+  const char *dname, *dversion, *iversion;
   int step, check;
   
   if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_version FROM stub.depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
@@ -147,8 +147,8 @@ static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const ch
     step = sqlite3_step(stmt);
     
     if (step == SQLITE_ROW) {
-      dname    = (char *)sqlite3_column_text(stmt, 0); 
-      dversion = (char *)sqlite3_column_text(stmt, 1);
+      dname    = sqlite3_column_text(stmt, 0); 
+      dversion = sqlite3_column_text(stmt, 1);
 
       if (sqlite3_bind_text(lookup, 1, dname, -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
@@ -162,7 +162,7 @@ static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const ch
             /* no minimal version */
             break;
         
-          iversion = (char *)sqlite3_column_text(stmt, 0);
+          iversion = sqlite3_column_text(stmt, 0);
           
           check = mport_version_require_check(iversion, dversion);
           

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.2 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.3 2009/11/28 22:44:31 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -41,18 +41,18 @@ static int build_create_extras_depends(mportInstance *, mportPackageMeta *, mpor
 
 int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-  char tmpfile[] = "/tmp/mport.XXXXXXXX";
+  char tmpfile2[] = "/tmp/mport.XXXXXXXX";
   int fd;
   
   mport_pkgmeta_logevent(mport, pkg, "Begining update");
 
-  if ((fd = mkstemp(tmpfile)) == -1) {
+  if ((fd = mkstemp(tmpfile2)) == -1) {
     RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't make tmp file: %s", strerror(errno));
   }
   
   close(fd);
 
-  if (make_backup_bundle(mport, pkg, tmpfile) != MPORT_OK) {
+  if (make_backup_bundle(mport, pkg, tmpfile2) != MPORT_OK) {
     RETURN_CURRENT_ERROR;
   }
 
@@ -62,18 +62,18 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
   ) 
   {
-    install_backup_bundle(mport, pkg, tmpfile);
+    install_backup_bundle(mport, pkg, tmpfile2);
     RETURN_CURRENT_ERROR;
   }           
   
   /* if we can't delete the tmpfile, just move on. */
-  (void)mport_rmtree(tmpfile);
+  (void)mport_rmtree(tmpfile2);
   
   return MPORT_OK;    
 }
   
   
-static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char *tmpfile)
+static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char *tempfile)
 {
   mportAssetList *alist;
   mportCreateExtras *extra;
@@ -82,7 +82,7 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
   if (mport_pkgmeta_get_assetlist(mport, pkg, &alist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
-  if (build_create_extras(mport, pkg, tmpfile, &extra) != MPORT_OK) 
+  if (build_create_extras(mport, pkg, tempfile, &extra) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
 
   ret = mport_create_primative(alist, pkg, extra);
@@ -104,14 +104,14 @@ static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, ch
 
 
 
-static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char *tmpfile, mportCreateExtras **extra_p)
+static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char *tempfile, mportCreateExtras **extra_p)
 {
   mportCreateExtras *extra;
   
   extra = mport_createextras_new();
   *extra_p = extra;
   
-  extra->pkg_filename = strdup(tmpfile); /* this MUST be on the heap, as it will be freed */
+  extra->pkg_filename = strdup(tempfile); /* this MUST be on the heap, as it will be freed */
   extra->sourcedir = strdup("");
   
   if (build_create_extras_depends(mport, pkg, extra) != MPORT_OK)
@@ -122,7 +122,6 @@ static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char
 
   
   return MPORT_OK;
-  
 }
 
 static int build_create_extras_copy_metafiles(mportInstance *mport, mportPackageMeta *pkg, mportCreateExtras *extra) 
@@ -161,6 +160,7 @@ static int build_create_extras_copy_metafiles(mportInstance *mport, mportPackage
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
 
+  return 0;
 }
 
 static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *pkg, mportCreateExtras *extra) 
