@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/initcpu.c,v 1.50 2006/06/19 22:59:28 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/initcpu.c,v 1.50.2.5 2010/01/26 20:58:09 jhb Exp $");
 
 #include "opt_cpu.h"
 
@@ -47,6 +47,12 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/initcpu.c,v 1.50 2006/06/19 22:59:28 dav
 static int	hw_instruction_sse;
 SYSCTL_INT(_hw, OID_AUTO, instruction_sse, CTLFLAG_RD,
     &hw_instruction_sse, 0, "SIMD/MMX2 instructions available in CPU");
+/*
+ * -1: automatic (default)
+ *  0: keep enable CLFLUSH
+ *  1: force disable CLFLUSH
+ */
+static int	hw_clflush_disable = -1;
 
 int	cpu;			/* Are we 386, 386sx, 486, etc? */
 u_int	cpu_feature;		/* Feature flags */
@@ -54,14 +60,87 @@ u_int	cpu_feature2;		/* Feature flags */
 u_int	amd_feature;		/* AMD feature flags */
 u_int	amd_feature2;		/* AMD feature flags */
 u_int	amd_pminfo;		/* AMD advanced power management info */
+u_int	via_feature_rng;	/* VIA RNG features */
+u_int	via_feature_xcrypt;	/* VIA ACE features */
 u_int	cpu_high;		/* Highest arg to CPUID */
 u_int	cpu_exthigh;		/* Highest arg to extended CPUID */
 u_int	cpu_id;			/* Stepping ID */
 u_int	cpu_procinfo;		/* HyperThreading Info / Brand Index / CLFUSH */
 u_int	cpu_procinfo2;		/* Multicore info */
 char	cpu_vendor[20];		/* CPU Origin code */
+u_int	cpu_vendor_id;		/* CPU vendor ID */
 u_int	cpu_fxsr;		/* SSE enabled */
 u_int	cpu_mxcsr_mask;		/* Valid bits in mxcsr */
+u_int	cpu_clflush_line_size = 32;
+
+SYSCTL_UINT(_hw, OID_AUTO, via_feature_rng, CTLFLAG_RD,
+	&via_feature_rng, 0, "VIA C3/C7 RNG feature available in CPU");
+SYSCTL_UINT(_hw, OID_AUTO, via_feature_xcrypt, CTLFLAG_RD,
+	&via_feature_xcrypt, 0, "VIA C3/C7 xcrypt feature available in CPU");
+
+/*
+ * Initialize special VIA C3/C7 features
+ */
+static void
+init_via(void)
+{
+	u_int regs[4], val;
+	u_int64_t msreg;
+
+	do_cpuid(0xc0000000, regs);
+	val = regs[0];
+	if (val >= 0xc0000001) {
+		do_cpuid(0xc0000001, regs);
+		val = regs[3];
+	} else
+		val = 0;
+
+	/* Enable RNG if present and disabled */
+	if (val & VIA_CPUID_HAS_RNG) {
+		if (!(val & VIA_CPUID_DO_RNG)) {
+			msreg = rdmsr(0x110B);
+			msreg |= 0x40;
+			wrmsr(0x110B, msreg);
+		}
+		via_feature_rng = VIA_HAS_RNG;
+	}
+	/* Enable AES engine if present and disabled */
+	if (val & VIA_CPUID_HAS_ACE) {
+		if (!(val & VIA_CPUID_DO_ACE)) {
+			msreg = rdmsr(0x1107);
+			msreg |= (0x01 << 28);
+			wrmsr(0x1107, msreg);
+		}
+		via_feature_xcrypt |= VIA_HAS_AES;
+	}
+	/* Enable ACE2 engine if present and disabled */
+	if (val & VIA_CPUID_HAS_ACE2) {
+		if (!(val & VIA_CPUID_DO_ACE2)) {
+			msreg = rdmsr(0x1107);
+			msreg |= (0x01 << 28);
+			wrmsr(0x1107, msreg);
+		}
+		via_feature_xcrypt |= VIA_HAS_AESCTR;
+	}
+	/* Enable SHA engine if present and disabled */
+	if (val & VIA_CPUID_HAS_PHE) {
+		if (!(val & VIA_CPUID_DO_PHE)) {
+			msreg = rdmsr(0x1107);
+			msreg |= (0x01 << 28/**/);
+			wrmsr(0x1107, msreg);
+		}
+		via_feature_xcrypt |= VIA_HAS_SHA;
+	}
+	/* Enable MM engine if present and disabled */
+	if (val & VIA_CPUID_HAS_PMM) {
+		if (!(val & VIA_CPUID_DO_PMM)) {
+			msreg = rdmsr(0x1107);
+			msreg |= (0x01 << 28/**/);
+			wrmsr(0x1107, msreg);
+		}
+		via_feature_xcrypt |= VIA_HAS_MM;
+	}
+}
 
 /*
  * Initialize CPU control registers
@@ -80,4 +159,36 @@ initializecpu(void)
 		wrmsr(MSR_EFER, msr);
 		pg_nx = PG_NX;
 	}
+	if (cpu_vendor_id == CPU_VENDOR_CENTAUR &&
+	    CPUID_TO_FAMILY(cpu_id) == 0x6 &&
+	    CPUID_TO_MODEL(cpu_id) >= 0xf)
+		init_via();
+}
+
+void
+initializecpucache()
+{
+
+	/*
+	 * CPUID with %eax = 1, %ebx returns
+	 * Bits 15-8: CLFLUSH line size
+	 * 	(Value * 8 = cache line size in bytes)
+	 */
+	if ((cpu_feature & CPUID_CLFSH) != 0)
+		cpu_clflush_line_size = ((cpu_procinfo >> 8) & 0xff) * 8;
+	/*
+	 * XXXKIB: (temporary) hack to work around traps generated when
+	 * CLFLUSHing APIC registers window.
+	 */
+	TUNABLE_INT_FETCH("hw.clflush_disable", &hw_clflush_disable);
+	if (cpu_vendor_id == CPU_VENDOR_INTEL && !(cpu_feature & CPUID_SS) &&
+	    hw_clflush_disable == -1)
+		cpu_feature &= ~CPUID_CLFSH;
+	/*
+	 * Allow to disable CLFLUSH feature manually by
+	 * hw.clflush_disable tunable.  This may help Xen guest on some AMD
+	 * CPUs.
+	 */
+	if (hw_clflush_disable == 1)
+		cpu_feature &= ~CPUID_CLFSH;
 }

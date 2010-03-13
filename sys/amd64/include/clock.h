@@ -3,7 +3,7 @@
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
  *
- * $FreeBSD: src/sys/amd64/include/clock.h,v 1.54.2.1 2007/10/29 22:26:33 peter Exp $
+ * $FreeBSD: src/sys/amd64/include/clock.h,v 1.54.2.2 2009/01/21 20:53:36 jkim Exp $
  */
 
 #ifndef _MACHINE_CLOCK_H_
@@ -22,6 +22,7 @@ extern u_int	timer_freq;
 extern int	timer0_max_count;
 extern uint64_t	tsc_freq;
 extern int	tsc_is_broken;
+extern int	tsc_is_invariant;
 
 void	i8254_init(void);
 

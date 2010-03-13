@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/md_var.h,v 1.81 2007/05/19 05:03:59 kan Exp $
+ * $FreeBSD: src/sys/amd64/include/md_var.h,v 1.81.2.4 2010/01/26 20:58:09 jhb Exp $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -45,6 +45,9 @@ extern	u_int	cpu_feature2;
 extern	u_int	amd_feature;
 extern	u_int	amd_feature2;
 extern	u_int	amd_pminfo;
+extern	u_int	via_feature_rng;
+extern	u_int	via_feature_xcrypt;
+extern	u_int	cpu_clflush_line_size;
 extern	u_int	cpu_fxsr;
 extern	u_int	cpu_high;
 extern	u_int	cpu_id;
@@ -52,6 +55,7 @@ extern	u_int	cpu_mxcsr_mask;
 extern	u_int	cpu_procinfo;
 extern	u_int	cpu_procinfo2;
 extern	char	cpu_vendor[];
+extern	u_int	cpu_vendor_id;
 extern	char	kstack[];
 extern	char	sigcode[];
 extern	int	szsigcode;
@@ -72,6 +76,7 @@ void	doreti_iret_fault(void) __asm(__STRING(doreti_iret_fault));
 void	dump_add_page(vm_paddr_t);
 void	dump_drop_page(vm_paddr_t);
 void	initializecpu(void);
+void	initializecpucache(void);
 void	fillw(int /*u_short*/ pat, void *base, size_t cnt);
 void	fpstate_drop(struct thread *td);
 int	is_physical_memory(vm_paddr_t addr);

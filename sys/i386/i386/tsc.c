@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/tsc.c,v 1.208 2007/06/04 18:25:06 dwmalone Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/tsc.c,v 1.208.2.1 2009/01/21 20:53:36 jkim Exp $");
 
 #include "opt_clock.h"
 
@@ -48,8 +48,13 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/tsc.c,v 1.208 2007/06/04 18:25:06 dwmalone
 
 uint64_t	tsc_freq;
 int		tsc_is_broken;
+int		tsc_is_invariant;
 u_int		tsc_present;
 static eventhandler_tag tsc_levels_tag, tsc_pre_tag, tsc_post_tag;
+
+SYSCTL_INT(_kern_timecounter, OID_AUTO, invariant_tsc, CTLFLAG_RDTUN,
+    &tsc_is_invariant, 0, "Indicates whether the TSC is P-state invariant");
+TUNABLE_INT("kern.timecounter.invariant_tsc", &tsc_is_invariant);
 
 #ifdef SMP
 static int	smp_tsc;
@@ -198,11 +203,12 @@ static void
 tsc_freq_changing(void *arg, const struct cf_level *level, int *status)
 {
 
-	if (*status != 0 || timecounter != &tsc_timecounter)
+	if (*status != 0 || timecounter != &tsc_timecounter ||
+	    tsc_is_invariant)
 		return;
 
 	printf("timecounter TSC must not be in use when "
-	     "changing frequencies; change denied\n");
+	    "changing frequencies; change denied\n");
 	*status = EBUSY;
 }
 
@@ -210,8 +216,11 @@ tsc_freq_changing(void *arg, const struct cf_level *level, int *status)
 static void
 tsc_freq_changed(void *arg, const struct cf_level *level, int status)
 {
-	/* If there was an error during the transition, don't do anything. */
-	if (status != 0)
+	/*
+	 * If there was an error during the transition or
+	 * TSC is P-state invariant, don't do anything.
+	 */
+	if (status != 0 || tsc_is_invariant)
 		return;
 
 	/* Total setting for this level gives the new frequency in MHz. */

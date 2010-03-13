@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/cpufunc.h,v 1.145 2007/08/09 20:14:35 njl Exp $
+ * $FreeBSD: src/sys/i386/include/cpufunc.h,v 1.145.2.3 2010/01/26 20:58:09 jhb Exp $
  */
 
 /*
@@ -79,6 +79,13 @@ bsrl(u_int mask)
 }
 
 static __inline void
+clflush(u_long addr)
+{
+
+	__asm __volatile("clflush %0" : : "m" (*(char *)addr));
+}
+
+static __inline void
 disable_intr(void)
 {
 	__asm __volatile("cli" : : : "memory");
@@ -104,6 +111,13 @@ static __inline void
 enable_intr(void)
 {
 	__asm __volatile("sti");
+}
+
+static __inline void
+mfence(void)
+{
+
+	__asm __volatile("mfence" : : : "memory");
 }
 
 #ifdef _KERNEL
@@ -646,6 +660,20 @@ load_dr7(u_int dr7)
 	__asm __volatile("movl %0,%%dr7" : : "r" (dr7));
 }
 
+static __inline u_char
+read_cyrix_reg(u_char reg)
+{
+	outb(0x22, reg);
+	return inb(0x23);
+}
+
+static __inline void
+write_cyrix_reg(u_char reg, u_char data)
+{
+	outb(0x22, reg);
+	outb(0x23, data);
+}
+
 static __inline register_t
 intr_disable(void)
 {
@@ -720,6 +748,7 @@ u_int	rdr5(void);
 u_int	rdr6(void);
 u_int	rdr7(void);
 uint64_t rdtsc(void);
+u_char	read_cyrix_reg(u_char reg);
 u_int	read_eflags(void);
 u_int	rfs(void);
 uint64_t rgdt(void);
@@ -728,11 +757,17 @@ uint64_t ridt(void);
 u_short	rldt(void);
 u_short	rtr(void);
 void	wbinvd(void);
+void	write_cyrix_reg(u_char reg, u_char data);
 void	write_eflags(u_int ef);
 void	wrmsr(u_int msr, uint64_t newval);
 
 #endif	/* __GNUCLIKE_ASM && __CC_SUPPORTS___INLINE */
 
 void    reset_dbregs(void);
+
+#ifdef _KERNEL
+int	rdmsr_safe(u_int msr, uint64_t *val);
+int	wrmsr_safe(u_int msr, uint64_t newval);
+#endif
 
 #endif /* !_MACHINE_CPUFUNC_H_ */

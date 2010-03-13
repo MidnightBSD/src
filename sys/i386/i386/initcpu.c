@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/initcpu.c,v 1.56 2007/04/06 18:15:02 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/initcpu.c,v 1.56.2.5 2010/01/26 20:58:09 jhb Exp $");
 
 #include "opt_cpu.h"
 
@@ -75,6 +75,12 @@ static void	init_mendocino(void);
 static int	hw_instruction_sse;
 SYSCTL_INT(_hw, OID_AUTO, instruction_sse, CTLFLAG_RD,
     &hw_instruction_sse, 0, "SIMD/MMX2 instructions available in CPU");
+/*
+ * -1: automatic (default)
+ *  0: keep enable CLFLUSH
+ *  1: force disable CLFLUSH
+ */
+static int	hw_clflush_disable = -1;
 
 /* Must *NOT* be BSS or locore will bzero these after setting them */
 int	cpu = 0;		/* Are we 386, 386sx, 486, etc? */
@@ -90,6 +96,8 @@ u_int	cpu_id = 0;		/* Stepping ID */
 u_int	cpu_procinfo = 0;	/* HyperThreading Info / Brand Index / CLFUSH */
 u_int	cpu_procinfo2 = 0;	/* Multicore info */
 char	cpu_vendor[20] = "";	/* CPU Origin code */
+u_int	cpu_vendor_id = 0;	/* CPU vendor ID */
+u_int	cpu_clflush_line_size = 32;
 
 SYSCTL_UINT(_hw, OID_AUTO, via_feature_rng, CTLFLAG_RD,
 	&via_feature_rng, 0, "VIA C3/C7 RNG feature available in CPU");
@@ -649,7 +657,7 @@ initializecpu(void)
 		init_6x86MX();
 		break;
 	case CPU_686:
-		if (strcmp(cpu_vendor, "GenuineIntel") == 0) {
+		if (cpu_vendor_id == CPU_VENDOR_INTEL) {
 			switch (cpu_id & 0xff0) {
 			case 0x610:
 				init_ppro();
@@ -658,7 +666,7 @@ initializecpu(void)
 				init_mendocino();
 				break;
 			}
-		} else if (strcmp(cpu_vendor, "AuthenticAMD") == 0) {
+		} else if (cpu_vendor_id == CPU_VENDOR_AMD) {
 #if defined(I686_CPU) && defined(CPU_ATHLON_SSE_HACK)
 			/*
 			 * Sometimes the BIOS doesn't enable SSE instructions.
@@ -677,13 +685,15 @@ initializecpu(void)
 				cpu_feature = regs[3];
 			}
 #endif
-		} else if (strcmp(cpu_vendor, "CentaurHauls") == 0) {
+		} else if (cpu_vendor_id == CPU_VENDOR_CENTAUR) {
 			switch (cpu_id & 0xff0) {
 			case 0x690:
 				if ((cpu_id & 0xf) < 3)
 					break;
 				/* fall through. */
 			case 0x6a0:
+			case 0x6d0:
+			case 0x6f0:
 				init_via();
 				break;
 			default:
@@ -706,6 +716,29 @@ initializecpu(void)
 	}
 	enable_sse();
 
+	/*
+	 * CPUID with %eax = 1, %ebx returns
+	 * Bits 15-8: CLFLUSH line size
+	 * 	(Value * 8 = cache line size in bytes)
+	 */
+	if ((cpu_feature & CPUID_CLFSH) != 0)
+		cpu_clflush_line_size = ((cpu_procinfo >> 8) & 0xff) * 8;
+	/*
+	 * XXXKIB: (temporary) hack to work around traps generated when
+	 * CLFLUSHing APIC registers window.
+	 */
+	TUNABLE_INT_FETCH("hw.clflush_disable", &hw_clflush_disable);
+	if (cpu_vendor_id == CPU_VENDOR_INTEL && !(cpu_feature & CPUID_SS) &&
+	    hw_clflush_disable == -1)
+		cpu_feature &= ~CPUID_CLFSH;
+	/*
+	 * Allow to disable CLFLUSH feature manually by
+	 * hw.clflush_disable tunable.  This may help Xen guest on some AMD
+	 * CPUs.
+	 */
+	if (hw_clflush_disable == 1)
+		cpu_feature &= ~CPUID_CLFSH;
+
 #if defined(PC98) && !defined(CPU_UPGRADE_HW_CACHE)
 	/*
 	 * OS should flush L1 cache by itself because no PC-98 supports
@@ -716,7 +749,7 @@ initializecpu(void)
 	 * CPU_UPGRADE_HW_CACHE option in your kernel configuration file.
 	 * This option eliminates unneeded cache flush instruction(s).
 	 */
-	if (strcmp(cpu_vendor, "CyrixInstead") == 0) {
+	if (cpu_vendor_id == CPU_VENDOR_CYRIX) {
 		switch (cpu) {
 #ifdef I486_CPU
 		case CPU_486DLC:
@@ -735,7 +768,7 @@ initializecpu(void)
 		default:
 			break;
 		}
-	} else if (strcmp(cpu_vendor, "AuthenticAMD") == 0) {
+	} else if (cpu_vendor_id == CPU_VENDOR_AMD) {
 		switch (cpu_id & 0xFF0) {
 		case 0x470:		/* Enhanced Am486DX2 WB */
 		case 0x490:		/* Enhanced Am486DX4 WB */
@@ -743,7 +776,7 @@ initializecpu(void)
 			need_pre_dma_flush = 1;
 			break;
 		}
-	} else if (strcmp(cpu_vendor, "IBM") == 0) {
+	} else if (cpu_vendor_id == CPU_VENDOR_IBM) {
 		need_post_dma_flush = 1;
 	} else {
 #ifdef CPU_I486_ON_386
@@ -939,7 +972,7 @@ DB_SHOW_COMMAND(cyrixreg, cyrixreg)
 	u_char	ccr0 = 0, ccr4 = 0, ccr5 = 0, pcr0 = 0;
 
 	cr0 = rcr0();
-	if (strcmp(cpu_vendor,"CyrixInstead") == 0) {
+	if (cpu_vendor_id == CPU_VENDOR_CYRIX) {
 		eflags = read_eflags();
 		disable_intr();
 
