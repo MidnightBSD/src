@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.2 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.3 2009/11/28 22:44:31 laffer1 Exp $
  */
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
@@ -138,7 +138,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
 {
   struct archive_entry *entry = NULL;
   struct stat st;
-  int fd, len;
+  int fd = -1, len;
   char buff[BUFF_SIZE];
 
   if (lstat(filename, &st) != 0) {
@@ -185,7 +185,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
   
   /* write the data to the archive if there is data to write */
-  if (archive_entry_size(entry) > 0) {
+  if (archive_entry_size(entry) > 0 && fd > -1) {
     len = read(fd, buff, sizeof(buff));
     while (len > 0) {
       if (archive_write_data(bundle->archive, buff, len) != len) {
@@ -198,7 +198,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
     
   archive_entry_free(entry);
   
-  if (fd != 0)
+  if (fd > -1)
     close(fd);
 
   return MPORT_OK;  
