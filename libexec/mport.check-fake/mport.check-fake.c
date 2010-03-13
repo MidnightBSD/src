@@ -23,20 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.1 2008/04/26 18:00:39 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.3 2009/06/05 00:07:59 laffer1 Exp $
  */
 
 
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.1 2008/04/26 18:00:39 ctriv Exp $");
-
+__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.3 2009/06/05 00:07:59 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
 #include <string.h>
 #include <unistd.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <mport.h>
 #include <sysexits.h>
 #include <sys/types.h>
@@ -52,6 +52,7 @@ __MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.1 20
 static void usage(void);
 static int check_fake(mportAssetList *, const char *, const char *, const char *);
 static int grep_file(const char *, const char *);
+static char *string_replace(const char *str, const char *old, const char *new);
 
 
 int main(int argc, char *argv[]) 
@@ -206,6 +207,7 @@ static int grep_file(const char *filename, const char *destdir)
 {
   FILE *file;
   char *line, *nline;
+  char *destdir_fixed;
   static regex_t regex;
   static int compiled = 0;
   size_t len;
@@ -215,8 +217,12 @@ static int grep_file(const char *filename, const char *destdir)
   
   /* Should we cache the compiled regex? */
   if (!compiled) {
-    if (regcomp(&regex, destdir, REG_EXTENDED|REG_NOSUB) != 0)
+    /* + is a special character, deal with it so archivers/zipios++ works */
+    destdir_fixed = string_replace(destdir, "+", "\\+");
+    DIAG("===> destdir_fixed for regular expression: %s", destdir_fixed)
+    if (regcomp(&regex, destdir_fixed, REG_EXTENDED|REG_NOSUB) != 0)
       errx(EX_DATAERR, "Could not compile destdir regex");
+    free(destdir_fixed);
     compiled++;
   }
   
@@ -248,6 +254,35 @@ static int grep_file(const char *filename, const char *destdir)
     err(EX_IOERR, "Error reading %s", filename);
   
   fclose(file);
+  return ret;
+}
+
+static char *string_replace(const char *str, const char *old, const char *new)
+{
+  char *ret, *r;
+  const char *p, *q;
+  size_t oldlen = strlen(old);
+  size_t count, retlen, newlen = strlen(new);
+
+  if (oldlen != newlen) {
+    for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
+      count++;
+    retlen = p - str + strlen(p) + count * (newlen - oldlen);
+  } else {
+    retlen = strlen(str);
+  }
+
+  ret = malloc(retlen + 1);
+
+  for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) {
+    ptrdiff_t l = q - p;
+    memcpy(r, p, l);
+    r += l;
+    memcpy(r, new, newlen);
+    r += newlen;
+  }
+  strcpy(r, p);
+
   return ret;
 }
       
