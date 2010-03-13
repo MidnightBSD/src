@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.10 2008/04/26 17:59:26 ctriv Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.2 2009/06/05 00:02:22 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -122,7 +122,7 @@ int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackag
 
 /* version compare functions */
 void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
-int mport_version_require_check(char *, char *);
+int mport_version_require_check(const char *, const char *);
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))

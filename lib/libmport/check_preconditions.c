@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.3 2008/04/29 01:35:50 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.5 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -171,7 +171,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
             /* no minimum version */
             break;
             
-          ok = mport_version_require_check((char *)inst_version, (char *)depend_version);
+          ok = mport_version_require_check(inst_version, depend_version);
           
           if (ok > 0) {
             RETURN_CURRENT_ERROR;

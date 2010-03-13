@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/version_cmp.c,v 1.3 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/version_cmp.c,v 1.5 2009/06/05 00:02:22 laffer1 Exp $
  */
 
 #include <string.h>
@@ -99,7 +99,7 @@ void mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value 
  * mport_version_require_check("4.1.2", ">5.1")  == -1
  * mport_version_require_check("3.1.4", "|")     > 0
  */
-int mport_version_require_check(char *baseline, char *require)
+int mport_version_require_check(const char *baseline, const char *require)
 {
   int ret = 0;
   
@@ -160,7 +160,7 @@ static int cmp_ints(int a, int b)
 
 static int cmp_versions(char *a, char *b)
 {
-  int a_sub, b_sub, result;
+  int a_sub, b_sub, result = 0;
 
   while (*a || *b) {
     if (*a) {
