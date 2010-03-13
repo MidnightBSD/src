@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/update_primative.c,v 1.2 2009/06/05 00:02:22 laffer1 Exp $
  */
 
 
@@ -79,14 +79,14 @@ static int set_prefix_to_installed(mportInstance *mport, mportPackageMeta *pkg)
 {
   sqlite3_stmt *stmt;
   int ret = MPORT_OK;
-  char *prefix;
+  const char *prefix;
   
   if (mport_db_prepare(mport->db, &stmt, "SELECT prefix FROM packages WHERE pkg=%Q", pkg->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
-      prefix = (char *)sqlite3_column_text(stmt, 0);
+      prefix = sqlite3_column_text(stmt, 0);
       
       if (strcmp(prefix, pkg->prefix) != 0) {
         free(pkg->prefix);

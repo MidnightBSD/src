@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/merge_primative.c,v 1.2 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -53,7 +53,7 @@ static int archive_package_files(mportBundleWrite *, sqlite3 *, struct table_ent
 static int extract_stub_db(const char *, const char *);
 
 static struct table_entry * find_in_table(struct table_entry **, const char *);
-static int insert_into_table(struct table_entry **, char *, const char *);
+static int insert_into_table(struct table_entry **, const char *, const char *);
 static uint32_t SuperFastHash(const char *);
 
 
@@ -133,8 +133,9 @@ MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *o
  */
 static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,  const char **filenames, struct table_entry **table) 
 {
-  char *tmpdbfile, *name;
-  const char *file     = NULL;
+  char *tmpdbfile;
+  const char *name;
+  const char *file = NULL;
   int made_table = 0, ret;
   sqlite3_stmt *stmt;
   
@@ -182,7 +183,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
       ret = sqlite3_step(stmt);
       
       if (ret == SQLITE_ROW) {
-        name = (char *)sqlite3_column_text(stmt, 0);
+        name = sqlite3_column_text(stmt, 0);
         if (insert_into_table(table, name, file) != MPORT_OK) {
           sqlite3_finalize(stmt);
           RETURN_CURRENT_ERROR;
@@ -256,7 +257,8 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
 {
   sqlite3_stmt *stmt;
   int ret, sret;
-  char *filename, *pkgname;
+  char *filename;
+  const char *pkgname;
   struct table_entry *match = NULL;
   mportBundleRead *inbundle= NULL;
   struct archive_entry *entry;
@@ -277,7 +279,7 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
     } 
     
     /* at this point, ret must be SQLITE_ROW */
-    pkgname  = (char *)sqlite3_column_text(stmt, 0);
+    pkgname  = sqlite3_column_text(stmt, 0);
     match = find_in_table(table, pkgname);
     
     if (match == NULL) {
@@ -344,7 +346,8 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
   sqlite3_stmt *stmt, *files;
   int ret;
   struct table_entry *cur;
-  char *pkgname, *file;
+  const char *pkgname;
+  const char *file;
   mportBundleRead *inbundle;
   struct archive_entry *entry;
   
@@ -363,7 +366,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
       RETURN_CURRENT_ERROR;
     }
     
-    pkgname = (char *)sqlite3_column_text(stmt, 0);
+    pkgname = sqlite3_column_text(stmt, 0);
     cur     = find_in_table(table, pkgname);
     
     if (cur == NULL) {
@@ -408,7 +411,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
         RETURN_CURRENT_ERROR;
       }
       
-      file = (char *)sqlite3_column_text(files, 0);
+      file = sqlite3_column_text(files, 0);
       
       if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
         mport_bundle_read_finish(NULL, inbundle);
@@ -492,7 +495,7 @@ static int extract_stub_db(const char *filename, const char *destfile)
 
 
 /* insert into a name => file pair into the given hash table. */
-static int insert_into_table(struct table_entry **table, char *name, const char *file)
+static int insert_into_table(struct table_entry **table, const char *name, const char *file)
 {
   struct table_entry *node, *cur;
   int hash = SuperFastHash(name) % TABLE_SIZE;
