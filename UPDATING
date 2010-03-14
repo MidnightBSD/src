@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users
 
+20100313:
+	CPU detection has been changed.  VIA Padlock detection added.
+
+20100312:
+	Fix a number of bugs and compiler warnings in libmport. Handle
+	plus signs in paths for mport.check-fake
+
 20100311:
 	mksh R39c
 
@@ -827,4 +834,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.82 2010/03/10 05:05:28 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.83 2010/03/12 01:04:34 laffer1 Exp $
