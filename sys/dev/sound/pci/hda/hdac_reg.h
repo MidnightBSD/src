@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/hda/hdac_reg.h,v 1.1 2006/10/01 11:12:59 ariff Exp $
+ * $FreeBSD: src/sys/dev/sound/pci/hda/hdac_reg.h,v 1.1.4.1 2009/12/11 01:11:56 mav Exp $
  */
 
 #ifndef _HDAC_REG_H_
@@ -136,6 +136,8 @@
 	(((gcap) & HDAC_GCAP_ISS_MASK) >> HDAC_GCAP_ISS_SHIFT)
 #define HDAC_GCAP_OSS(gcap)						\
 	(((gcap) & HDAC_GCAP_OSS_MASK) >> HDAC_GCAP_OSS_SHIFT)
+#define HDAC_GCAP_NSDO(gcap)						\
+	(((gcap) & HDAC_GCAP_NSDO_MASK) >> HDAC_GCAP_NSDO_SHIFT)
 
 /* GCTL - Global Control */
 #define HDAC_GCTL_CRST			0x00000001
