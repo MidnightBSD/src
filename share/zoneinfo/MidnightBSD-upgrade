@@ -18,6 +18,6 @@ To update timezone information, perform the following steps.
 
 __
 
-Last updated with tzdata2009s
+Last updated with tzdata2010e
 
-$MidnightBSD: src/share/zoneinfo/MidnightBSD-upgrade,v 1.5 2009/09/19 14:49:47 laffer1 Exp $
+$MidnightBSD: src/share/zoneinfo/MidnightBSD-upgrade,v 1.6 2009/11/25 03:39:39 laffer1 Exp $
