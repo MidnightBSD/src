@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Wind River Systems, Inc.
  * All rights reserved.
@@ -28,15 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/pcpu.h,v 1.22 2007/06/06 07:35:08 davidxu Exp $
+ * $FreeBSD: src/sys/sys/pcpu.h,v 1.22.2.3 2008/09/01 19:01:18 obrien Exp $
  */
 
 #ifndef _SYS_PCPU_H_
 #define	_SYS_PCPU_H_
-
-#ifndef _KERNEL
-#error "no user-serviceable parts inside"
-#endif
 
 #ifdef LOCORE
 #error "no assembler-serviceable parts inside"
@@ -44,6 +39,7 @@
 
 #include <sys/queue.h>
 #include <sys/vmmeter.h>
+#include <sys/resource.h>
 #include <machine/pcpu.h>
 
 struct pcb;
@@ -61,7 +57,7 @@ struct pcpu {
 	struct thread	*pc_fpcurthread;	/* Fp state owner */
 	struct thread	*pc_deadthread;		/* Zombie thread or NULL */
 	struct pcb	*pc_curpcb;		/* Current pcb */
-	uint64_t	pc_switchtime;	
+	uint64_t	pc_switchtime;
 	int		pc_switchticks;
 	u_int		pc_cpuid;		/* This cpu number */
 	cpumask_t	pc_cpumask;		/* This cpu mask */
@@ -74,8 +70,11 @@ struct pcpu {
 #endif
 	PCPU_MD_FIELDS;
 	struct vmmeter	pc_cnt;			/* VM stats counters */
+	long		pc_cp_time[CPUSTATES];	/* statclock ticks */
 	struct device	*pc_device;
 };
+
+#ifdef _KERNEL
 
 SLIST_HEAD(cpuhead, pcpu);
 
@@ -99,5 +98,7 @@ void	db_show_mdpcpu(struct pcpu *pcpu);
 void	pcpu_destroy(struct pcpu *pcpu);
 struct	pcpu *pcpu_find(u_int cpuid);
 void	pcpu_init(struct pcpu *pcpu, int cpuid, size_t size);
+
+#endif	/* _KERNEL */
 
 #endif /* !_SYS_PCPU_H_ */
