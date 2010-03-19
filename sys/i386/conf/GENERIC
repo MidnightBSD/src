@@ -12,10 +12,9 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.19 2009/08/29 04:44:16 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.20 2010/01/10 21:55:09 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
-cpu		I586_CPU
 cpu		I686_CPU
 ident		GENERIC
 
