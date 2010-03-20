@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20100319:
+	Removed i586 from default i386 generic kernel.
+
 20100317:
 	Update to tzdata2010e (time zones).  This includes changes in
 	Mexico.
@@ -841,4 +844,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.84 2010/03/14 00:01:08 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.85 2010/03/17 23:53:35 laffer1 Exp $
