@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/sys/conf/kern.pre.mk,v 1.92 2007/08/08 19:12:06 marcel Exp $
 
 # Part of a unified Makefile for building kernels.  This part contains all
@@ -88,7 +89,6 @@ CFLAGS+= -fno-common -finline-limit=${INLINE_LIMIT}
 CFLAGS+= --param inline-unit-growth=100
 CFLAGS+= --param large-function-growth=1000
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE} == "i386" || \
-    ${MACHINE_ARCH} == "ia64" || ${MACHINE_ARCH} == "powerpc" || \
     ${MACHINE_ARCH} == "sparc64"
 WERROR?= -Werror
 .endif
