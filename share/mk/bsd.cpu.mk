@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.4 2008/04/28 05:50:59 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.cpu.mk,v 1.62.2.1 2007/10/19 17:08:38 cognet Exp $
 
 # Set default CPU compile flags and baseline CPUTYPE for each arch.  The
@@ -11,8 +11,6 @@ _CPUCFLAGS =
 MACHINE_CPU = i486
 . elif ${MACHINE_ARCH} == "amd64"
 MACHINE_CPU = amd64 sse2 sse
-. elif ${MACHINE_ARCH} == "ia64"
-MACHINE_CPU = itanium
 . elif ${MACHINE_ARCH} == "sparc64"
 . elif ${MACHINE_ARCH} == "arm"
 MACHINE_CPU = arm
@@ -134,6 +132,8 @@ MACHINE_CPU = k5 i586 i486 i386
 MACHINE_CPU = 3dnow mmx i586 i486 i386
 .  elif ${CPUTYPE} == "c3-2"
 MACHINE_CPU = sse mmx i586 i486 i386
+.  elif ${CPUTYPE} == "c7"
+MACHINE_CPU = sse3 sse2 sse i686 mmx i586 i486 i386
 .  elif ${CPUTYPE} == "prescott"
 MACHINE_CPU = sse3 sse2 sse i686 mmx i586 i486 i386
 .  elif ${CPUTYPE} == "pentium4" || ${CPUTYPE} == "pentium4m" || ${CPUTYPE} == "pentium-m"
@@ -160,10 +160,6 @@ MACHINE_CPU = k8 3dnow
 MACHINE_CPU = sse3
 .  endif
 MACHINE_CPU += amd64 sse2 sse mmx
-. elif ${MACHINE_ARCH} == "ia64"
-.  if ${CPUTYPE} == "itanium"
-MACHINE_CPU = itanium
-.  endif
 . endif
 .endif
 
