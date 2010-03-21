@@ -26358,9 +26358,7 @@ lib/libz/CMakeLists.txt -text
 lib/libz/ChangeLog -text
 lib/libz/FAQ -text
 lib/libz/FREEBSD-upgrade -text
-lib/libz/INDEX -text
 lib/libz/Makefile -text
-lib/libz/Makefile.in -text
 lib/libz/README -text
 lib/libz/adler32.c -text
 lib/libz/algorithm.txt -text
@@ -26576,10 +26574,7 @@ lib/libz/win32/VisualC.txt -text
 lib/libz/win32/zlib.def -text
 lib/libz/win32/zlib1.rc -text
 lib/libz/zconf.h -text
-lib/libz/zconf.h.cmakein -text
-lib/libz/zconf.h.in -text
 lib/libz/zlib.3 -text
-lib/libz/zlib.3.pdf -text svneol=unset#unset
 lib/libz/zlib.h -text
 lib/libz/zlib.map -text
 lib/libz/zlib.pc.in -text
