@@ -1,5 +1,5 @@
 /* minigzip.c -- simulate gzip using the zlib compression library
- * Copyright (C) 1995-2005 Jean-loup Gailly.
+ * Copyright (C) 1995-2006, 2010 Jean-loup Gailly.
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
@@ -13,11 +13,10 @@
  * or in pipe mode.
  */
 
-#include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libz/minigzip.c,v 1.2 2006/10/02 00:16:53 laffer1 Exp $");
+/* @(#) $Id: minigzip.c,v 1.4 2010-03-21 19:56:28 laffer1 Exp $ */
 
-#include <stdio.h>
 #include "zlib.h"
+#include <stdio.h>
 
 #ifdef STDC
 #  include <string.h>
@@ -54,6 +53,70 @@ __MBSDID("$MidnightBSD: src/lib/libz/minigzip.c,v 1.2 2006/10/02 00:16:53 laffer
 #ifndef WIN32 /* unlink already in stdio.h for WIN32 */
   extern int unlink OF((const char *));
 #endif
+
+#if defined(UNDER_CE) && defined(NO_ERRNO_H)
+#  include <windows.h>
+#  define perror(s) pwinerror(s)
+
+/* Map the Windows error number in ERROR to a locale-dependent error
+   message string and return a pointer to it.  Typically, the values
+   for ERROR come from GetLastError.
+
+   The string pointed to shall not be modified by the application,
+   but may be overwritten by a subsequent call to strwinerror
+
+   The strwinerror function does not change the current setting
+   of GetLastError.  */
+
+static char *strwinerror (error)
+     DWORD error;
+{
+    static char buf[1024];
+
+    wchar_t *msgbuf;
+    DWORD lasterr = GetLastError();
+    DWORD chars = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM
+        | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+        NULL,
+        error,
+        0, /* Default language */
+        (LPVOID)&msgbuf,
+        0,
+        NULL);
+    if (chars != 0) {
+        /* If there is an \r\n appended, zap it.  */
+        if (chars >= 2
+            && msgbuf[chars - 2] == '\r' && msgbuf[chars - 1] == '\n') {
+            chars -= 2;
+            msgbuf[chars] = 0;
+        }
+
+        if (chars > sizeof (buf) - 1) {
+            chars = sizeof (buf) - 1;
+            msgbuf[chars] = 0;
+        }
+
+        wcstombs(buf, msgbuf, chars + 1);
+        LocalFree(msgbuf);
+    }
+    else {
+        sprintf(buf, "unknown win32 error (%ld)", error);
+    }
+
+    SetLastError(lasterr);
+    return buf;
+}
+
+static void pwinerror (s)
+    const char *s;
+{
+    if (s && *s)
+        fprintf(stderr, "%s: %s\n", s, strwinerror(GetLastError ()));
+    else
+        fprintf(stderr, "%s\n", strwinerror(GetLastError ()));
+}
+
+#endif /* UNDER_CE && NO_ERRNO_H */
 
 #ifndef GZ_SUFFIX
 #  define GZ_SUFFIX ".gz"
@@ -200,9 +263,10 @@ void file_compress(file, mode)
     gzFile out;
 
     if (strlen(file) + strlen(GZ_SUFFIX) >= sizeof(outfile)) {
-	fprintf(stderr, "%s: filename too long\n", prog);
-	exit(1);
+        fprintf(stderr, "%s: filename too long\n", prog);
+        exit(1);
     }
+
     strcpy(outfile, file);
     strcat(outfile, GZ_SUFFIX);
 
@@ -235,8 +299,8 @@ void file_uncompress(file)
     size_t len = strlen(file);
 
     if (len + strlen(GZ_SUFFIX) >= sizeof(buf)) {
-	fprintf(stderr, "%s: filename too long\n", prog);
-	exit(1);
+        fprintf(stderr, "%s: filename too long\n", prog);
+        exit(1);
     }
 
     strcpy(buf, file);
@@ -303,7 +367,7 @@ int main(argc, argv)
 
     while (argc > 0) {
       if (strcmp(*argv, "-c") == 0)
-          copyout = 1;
+        copyout = 1;
       else if (strcmp(*argv, "-d") == 0)
         uncompr = 1;
       else if (strcmp(*argv, "-f") == 0)
@@ -337,7 +401,6 @@ int main(argc, argv)
         if (copyout) {
             SET_BINARY_MODE(stdout);
         }
-
         do {
             if (uncompr) {
                 if (copyout) {
@@ -346,9 +409,9 @@ int main(argc, argv)
                         fprintf(stderr, "%s: can't gzopen %s\n", prog, *argv);
                     else
                         gz_uncompress(file, stdout);
-                 } else {
-                        file_uncompress(*argv);
-                 }
+                } else {
+                    file_uncompress(*argv);
+                }
             } else {
                 if (copyout) {
                     FILE * in = fopen(*argv, "rb");
@@ -357,11 +420,11 @@ int main(argc, argv)
                         perror(*argv);
                     } else {
                         file = gzdopen(fileno(stdout), outmode);
-                        if (file == NULL)
-                            error("can't gzdopen stdout");
+                        if (file == NULL) error("can't gzdopen stdout");
 
                         gz_compress(in, file);
                     }
+
                 } else {
                     file_compress(*argv, outmode);
                 }
