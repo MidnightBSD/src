@@ -26506,17 +26506,6 @@ lib/libz/doc/rfc1951.txt -text
 lib/libz/doc/rfc1952.txt -text
 lib/libz/doc/txtvsbin.txt -text
 lib/libz/example.c -text
-lib/libz/examples/README.examples -text
-lib/libz/examples/enough.c -text
-lib/libz/examples/fitblk.c -text
-lib/libz/examples/gun.c -text
-lib/libz/examples/gzappend.c -text
-lib/libz/examples/gzjoin.c -text
-lib/libz/examples/gzlog.c -text
-lib/libz/examples/gzlog.h -text
-lib/libz/examples/zlib_how.html -text
-lib/libz/examples/zpipe.c -text
-lib/libz/examples/zran.c -text
 lib/libz/gzclose.c -text
 lib/libz/gzguts.h -text
 lib/libz/gzio.c -text

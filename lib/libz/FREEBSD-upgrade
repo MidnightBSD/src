@@ -1,9 +1,8 @@
-$MidnightBSD$
-$FreeBSD: src/lib/libz/FREEBSD-upgrade,v 1.1 2005/05/11 03:50:50 kientzle Exp $
+$MidnightBSD: src/lib/libz/FREEBSD-upgrade,v 1.2 2006/10/02 00:24:29 laffer1 Exp $
 
-ZLib 1.2.3
+ZLib 1.2.4
 
-Original distribution from http://www.gzip.org/zlib/
+Original distribution from http://www.zlib.net/
 
 Vendor files removed from distribution before import:
 	 INDEX		 configure	 qnx/
@@ -36,8 +35,8 @@ Added files (not from vendor):
 To Update:
   1) Unpack vendor sources into a clean directory.
   2) Delete unnecessary files.
-  3) Import onto the vendor branch.  The 1.2.3 import was done like this:
-   cvs -d <CVSROOT> import -ko -m "ZLib 1.2.3" src/lib/libz ZLIB v1_2_3
+  3) Import onto the vendor branch.  The 1.2.4 import was done like this:
+   cvs -d <CVSROOT> import -ko -m "ZLib 1.2.4" src/lib/libz ZLIB v1_2_4
   4) In a clean directory, check out a fresh copy of HEAD,
 	 merging in vendor changes since the last import.
    cvs -d <CVSROOT> co -jZLIB:yesterday -jZLIB src/lib/libz
