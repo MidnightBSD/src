@@ -1,33 +1,5 @@
-#
-# $FreeBSD: src/lib/libz/Makefile,v 1.17 2005/06/03 15:25:13 imp Exp $
-#
+all:
+	-@echo "Please use ./configure first.  Thank you."
 
-LIB=		z
-SHLIBDIR?=	/lib
-MAN=		zlib.3
-
-#CFLAGS+=	-DMAX_WBITS=14 -DMAX_MEM_LEVEL=7
-#CFLAGS+=	-g -DDEBUG
-#CFLAGS+=	-Wall -Wwrite-strings -Wpointer-arith -Wconversion \
-#		-Wstrict-prototypes -Wmissing-prototypes
-
-CFLAGS+=	-DHAS_snprintf -DHAS_vsnprintf
-
-CLEANFILES+=	example.o example foo.gz minigzip.o minigzip
-
-SRCS = adler32.c compress.c crc32.c gzio.c uncompr.c deflate.c trees.c \
-       zutil.c inflate.c inftrees.c inffast.c zopen.c infback.c
-INCS=		zconf.h zlib.h
-
-minigzip:	all minigzip.o
-	$(CC) -o minigzip minigzip.o -L. -lz
-
-example:	all example.o
-	$(CC) -o example example.o -L. -lz
-
-test: example minigzip
-	(export LD_LIBRARY_PATH=. ; ./example )
-	(export LD_LIBRARY_PATH=. ; \
-		echo hello world | ./minigzip | ./minigzip -d )
-
-.include <bsd.lib.mk>
+distclean:
+	make -f Makefile.in distclean
