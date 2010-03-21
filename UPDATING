@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20100321:
+	Update zlib to 1.2.4
+
 20100319:
 	Removed i586 from default i386 generic kernel.
 
@@ -844,4 +847,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.85 2010/03/17 23:53:35 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.86 2010/03/20 03:48:49 laffer1 Exp $
