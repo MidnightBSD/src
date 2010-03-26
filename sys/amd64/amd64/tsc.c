@@ -28,7 +28,7 @@
 __FBSDID("$FreeBSD: src/sys/amd64/amd64/tsc.c,v 1.208.2.3 2009/07/09 14:53:05 avg Exp $");
 
 #include "opt_clock.h"
-#include "opt_kdtrace.h"
+/* #include "opt_kdtrace.h" */
 
 #include <sys/param.h>
 #include <sys/bus.h>
