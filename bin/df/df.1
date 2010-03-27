@@ -27,10 +27,10 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)df.1	8.3 (Berkeley) 5/8/95
-.\" $FreeBSD: src/bin/df/df.1,v 1.39 2005/01/16 16:41:56 ru Exp $
-.\" $MidnightBSD: src/bin/df/df.1,v 1.2 2006/07/07 15:48:30 laffer1 Exp $
+.\" $FreeBSD: src/bin/df/df.1,v 1.42.2.1 2009/08/03 08:13:06 kensmith Exp $
+.\" $MidnightBSD$
 .\"
-.Dd April 22, 2004
+.Dd March 27, 2010
 .Dt DF 1
 .Os
 .Sh NAME
@@ -39,7 +39,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl b | g | H | h | k | m | P
-.Op Fl aciln
+.Op Fl acilnT
 .Op Fl t Ar type
 .Op Ar file | filesystem ...
 .Sh DESCRIPTION
@@ -61,7 +61,7 @@ option below).
 The following options are available:
 .Bl -tag -width indent
 .It Fl a
-Show all mount points, including those that were mounted with the 
+Show all mount points, including those that were mounted with the
 .Dv MNT_IGNORE
 flag.
 .It Fl b
@@ -79,15 +79,20 @@ this overrides the
 .Ev BLOCKSIZE
 specification from the environment.
 .It Fl H
-"Human-readable" output.
+.Dq Human-readable
+output.
 Use unit suffixes: Byte, Kilobyte, Megabyte,
 Gigabyte, Terabyte and Petabyte in order to reduce the number of
 digits to four or fewer using base 10 for sizes.
 .It Fl h
-"Human-readable" output.
+.Dq Human-readable
+output.
 Use unit suffixes: Byte, Kilobyte, Megabyte,
 Gigabyte, Terabyte and Petabyte in order to reduce the number of
 digits to four or fewer using base 2 for sizes.
+Inodes statistics, if enabled with
+.Fl i ,
+are always printed in base 10.
 .It Fl i
 Include statistics on the number of free inodes.
 .It Fl k
@@ -141,6 +146,8 @@ The
 .Xr lsvfs 1
 command can be used to find out the types of file systems
 that are available on the system.
+.It Fl T
+Include file system type.
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width BLOCKSIZE

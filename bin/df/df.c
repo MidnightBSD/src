@@ -31,7 +31,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/df/df.c,v 1.64 2005/01/10 08:39:21 imp Exp $ */
 
 #if 0
 #ifndef lint
@@ -45,7 +44,8 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.8 2007/07/23 12:49:56 alex Exp $");
+/* $FreeBSD: src/bin/df/df.c,v 1.74.2.1 2009/08/03 08:13:06 kensmith Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -69,6 +69,7 @@ __MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.8 2007/07/23 12:49:56 alex Exp $");
 /* Maximum widths of various fields. */
 struct maxwidths {
 	int	mntfrom;
+	int	fstype;
 	int	total;
 	int	used;
 	int	avail;
@@ -94,7 +95,7 @@ imax(int a, int b)
 	return (a > b ? a : b);
 }
 
-static int	aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag, Pflag;
+static int	aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag, Tflag;
 static struct	ufs_args mdev;
 
 int
@@ -116,7 +117,7 @@ main(int argc, char *argv[])
 	totalbuf.f_bsize = DEV_BSIZE;
 	strlcpy(totalbuf.f_mntfromname, "total", MNAMELEN);
 	vfslist = NULL;
-	while ((ch = getopt(argc, argv, "abcgHhiklmnPt:")) != -1)
+	while ((ch = getopt(argc, argv, "abcgHhiklmnPt:T")) != -1)
 		switch (ch) {
 		case 'a':
 			aflag = 1;
@@ -124,17 +125,22 @@ main(int argc, char *argv[])
 		case 'b':
 				/* FALLTHROUGH */
 		case 'P':
-			if(kflag)
+			/*
+			 * POSIX specifically discusses the the behavior of
+			 * both -k and -P. It states that the blocksize should
+			 * be set to 1024. Thus, if this occurs, simply break
+			 * rather than clobbering the old blocksize.
+			 */
+			if (kflag)
 				break;
-			Pflag++;
-			putenv(strdup("BLOCKSIZE=512"));
+			setenv("BLOCKSIZE", "512", 1);
 			hflag = 0;
 			break;
 		case 'c':
 			cflag = 1;
 			break;
 		case 'g':
-			putenv(strdup("BLOCKSIZE=1g"));
+			setenv("BLOCKSIZE", "1g", 1);
 			hflag = 0;
 			break;
 		case 'H':
@@ -148,7 +154,7 @@ main(int argc, char *argv[])
 			break;
 		case 'k':
 			kflag++;
-			putenv(strdup("BLOCKSIZE=1024"));
+			setenv("BLOCKSIZE", "1024", 1);
 			hflag = 0;
 			break;
 		case 'l':
@@ -158,19 +164,22 @@ main(int argc, char *argv[])
 			lflag = 1;
 			break;
 		case 'm':
-			putenv(strdup("BLOCKSIZE=1m"));
+			setenv("BLOCKSIZE", "1m", 1);
 			hflag = 0;
 			break;
 		case 'n':
 			nflag = 1;
 			break;
 		case 't':
-			if(lflag)
+			if (lflag)
 				errx(1, "-l and -t are mutually exclusive.");
 			if (vfslist != NULL)
 				errx(1, "only one -t option may be specified");
 			fstype = optarg;
 			vfslist = makevfslist(optarg);
+			break;
+		case 'T':
+			Tflag = 1;
 			break;
 		case '?':
 		default:
@@ -179,12 +188,6 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	/*
-         * POSIX specifies that both -P and -k require 1k blocksize
-	 * when used together.
-         */
-	if(Pflag != 0 && kflag !=0)
-		putenv("BLOCKSIZE=1k");
 	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
 	bzero(&maxwidths, sizeof(maxwidths));
 	for (i = 0; i < mntsize; i++)
@@ -367,6 +370,23 @@ prthumanval(int64_t bytes)
 }
 
 /*
+ * Print an inode count in "human-readable" format.
+ */
+static void
+prthumanvalinode(int64_t bytes)
+{
+	char buf[6];
+	int flags;
+
+	flags = HN_NOSPACE | HN_DECIMAL | HN_DIVISOR_1000;
+
+	humanize_number(buf, sizeof(buf) - (bytes < 0 ? 0 : 1),
+	    bytes, "", HN_AUTOSCALE, flags);
+
+	(void)printf(" %5s", buf);
+}
+
+/*
  * Convert statfs returned file system size into BLOCKSIZE units.
  * Attempts to avoid overflow for large file systems.
  */
@@ -393,6 +413,7 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 
 	if (++timesthrough == 1) {
 		mwp->mntfrom = imax(mwp->mntfrom, (int)strlen("Filesystem"));
+		mwp->fstype = imax(mwp->fstype, (int)strlen("Type"));
 		if (hflag) {
 			header = "   Size";
 			mwp->total = mwp->used = mwp->avail =
@@ -404,18 +425,24 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 		mwp->used = imax(mwp->used, (int)strlen("Used"));
 		mwp->avail = imax(mwp->avail, (int)strlen("Avail"));
 
-		(void)printf("%-*s %-*s %*s %*s Capacity",
-		    mwp->mntfrom, "Filesystem", mwp->total, header,
+		(void)printf("%-*s", mwp->mntfrom, "Filesystem");
+		if (Tflag)
+			(void)printf("  %-*s", mwp->fstype, "Type");
+		(void)printf(" %-*s %*s %*s Capacity", mwp->total, header,
 		    mwp->used, "Used", mwp->avail, "Avail");
 		if (iflag) {
-			mwp->iused = imax(mwp->iused, (int)strlen("  iused"));
-			mwp->ifree = imax(mwp->ifree, (int)strlen("ifree"));
+			mwp->iused = imax(hflag ? 0 : mwp->iused,
+			    (int)strlen("  iused"));
+			mwp->ifree = imax(hflag ? 0 : mwp->ifree,
+			    (int)strlen("ifree"));
 			(void)printf(" %*s %*s %%iused",
 			    mwp->iused - 2, "iused", mwp->ifree, "ifree");
 		}
 		(void)printf("  Mounted on\n");
 	}
 	(void)printf("%-*s", mwp->mntfrom, sfsp->f_mntfromname);
+	if (Tflag)
+		(void)printf("  %-*s", mwp->fstype, sfsp->f_fstypename);
 	used = sfsp->f_blocks - sfsp->f_bfree;
 	availblks = sfsp->f_bavail + used;
 	if (hflag) {
@@ -433,8 +460,15 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 	if (iflag) {
 		inodes = sfsp->f_files;
 		used = inodes - sfsp->f_ffree;
-		(void)printf(" %*jd %*jd %4.0f%% ", mwp->iused, (intmax_t)used,
-		    mwp->ifree, (intmax_t)sfsp->f_ffree, inodes == 0 ? 100.0 :
+		if (hflag) {
+			(void)printf("  ");
+			prthumanvalinode(used);
+			prthumanvalinode(sfsp->f_ffree);
+		} else {
+			(void)printf(" %*jd %*jd", mwp->iused, (intmax_t)used,
+			    mwp->ifree, (intmax_t)sfsp->f_ffree);
+		}
+		(void)printf(" %4.0f%% ", inodes == 0 ? 100.0 :
 		    (double)used / (double)inodes * 100.0);
 	} else
 		(void)printf("  ");
@@ -443,7 +477,7 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 	(void)printf("\n");
 }
 
-void
+static void
 addstat(struct statfs *totalfsp, struct statfs *statfsp)
 {
 	uint64_t bsize;
@@ -470,6 +504,7 @@ update_maxwidths(struct maxwidths *mwp, const struct statfs *sfsp)
 		getbsize(&dummy, &blocksize);
 
 	mwp->mntfrom = imax(mwp->mntfrom, (int)strlen(sfsp->f_mntfromname));
+	mwp->fstype = imax(mwp->fstype, (int)strlen(sfsp->f_fstypename));
 	mwp->total = imax(mwp->total, int64width(
 	    fsbtoblk((int64_t)sfsp->f_blocks, sfsp->f_bsize, blocksize)));
 	mwp->used = imax(mwp->used,
@@ -507,7 +542,7 @@ usage(void)
 {
 
 	(void)fprintf(stderr,
-"usage: df [-b | -g | -H | -h | -k | -m | -P] [-aciln] [-t type] [file | filesystem ...]\n");
+"usage: df [-b | -g | -H | -h | -k | -m | -P] [-acilnT] [-t type] [file | filesystem ...]\n");
 	exit(EX_USAGE);
 }
 
