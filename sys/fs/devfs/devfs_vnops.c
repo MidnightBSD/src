@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/fs/devfs/devfs_vnops.c,v 1.4 2009/10/11 02:54:39 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_vnops.c,v 1.5 2009/12/13 01:09:43 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000-2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -251,7 +251,6 @@ devfs_allocv(struct devfs_dirent *de, struct mount *mp, struct vnode **vpp, stru
 		sx_xunlock(&dmp->dm_lock);
 		return (ENOENT);
 	}
- loop:
 	DEVFS_DE_HOLD(de);
 	DEVFS_DMP_HOLD(dmp);
 	mtx_lock(&devfs_de_interlock);
@@ -267,8 +266,10 @@ devfs_allocv(struct devfs_dirent *de, struct mount *mp, struct vnode **vpp, stru
 				vput(vp);
 			return (ENOENT);
 		}
-		else if (error)
-			goto loop;
+		else if (error) {
+			sx_xunlock(&dmp->dm_lock);
+			return(error);
+		}
 		sx_xunlock(&dmp->dm_lock);
 		*vpp = vp;
 		return (0);
