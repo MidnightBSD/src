@@ -31,10 +31,6 @@
 
 #include "sudo.h"
 
-#ifndef lint
-static const char rcsid[] = "$Sudo: mkstemp.c,v 1.2 2008/08/20 11:40:15 millert Exp $";
-#endif /* not lint */
-
 static unsigned int get_random __P((void));
 static void seed_random __P((void));
 

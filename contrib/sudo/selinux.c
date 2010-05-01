@@ -48,10 +48,6 @@
 #include "sudo.h"
 #include "pathnames.h"
 
-#ifndef lint
-__unused static const char rcsid[] = "$Sudo: selinux.c,v 1.5 2008/02/22 20:33:00 millert Exp $";
-#endif /* lint */
-
 /*
  * This function attempts to revert the relabeling done to the tty.
  * fd		   - referencing the opened ttyn

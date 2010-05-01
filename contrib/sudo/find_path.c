@@ -45,10 +45,6 @@
 
 #include "sudo.h"
 
-#ifndef lint
-__unused static const char rcsid[] = "$Sudo: find_path.c,v 1.115 2005/03/29 14:29:46 millert Exp $";
-#endif /* lint */
-
 /*
  * This function finds the full pathname for a command and
  * stores it in a statically allocated array, filling in a pointer
@@ -126,7 +122,10 @@ find_path(infile, outfile, sbp, path)
      * Check current dir if dot was in the PATH
      */
     if (!result && checkdot) {
-	result = sudo_goodpath(infile, sbp);
+	len = snprintf(command, sizeof(command), "./%s", infile);
+	if (len <= 0 || len >= sizeof(command))
+	    errorx(1, "%s: File name too long", infile);
+	result = sudo_goodpath(command, sbp);
 	if (result && def_ignore_dot)
 	    return(NOT_FOUND_DOT);
     }

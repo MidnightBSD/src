@@ -93,10 +93,6 @@
 # include "nonunix.h"
 #endif /* USING_NONUNIX_GROUPS */
 
-#ifndef lint
-__unused static const char rcsid[] = "$Sudo: match.c,v 1.48 2009/11/23 15:56:14 millert Exp $";
-#endif /* lint */
-
 static struct member_list empty;
 
 static int command_matches_dir __P((char *, size_t));
@@ -469,7 +465,7 @@ command_matches_glob(sudoers_cmnd, sudoers_args)
      * else return false.
      */
 #define GLOB_FLAGS	(GLOB_NOSORT | GLOB_MARK | GLOB_BRACE | GLOB_TILDE)
-    if (glob(sudoers_cmnd, GLOB_FLAGS, NULL, &gl) != 0) {
+    if (glob(sudoers_cmnd, GLOB_FLAGS, NULL, &gl) != 0 || gl.gl_pathc == 0) {
 	globfree(&gl);
 	return(FALSE);
     }

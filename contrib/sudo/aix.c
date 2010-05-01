@@ -32,10 +32,6 @@
 
 #include <compat.h>
 
-#ifndef lint
-__unused static const char rcsid[] = "$Sudo: aix.c,v 1.7 2008/11/06 00:42:37 millert Exp $";
-#endif /* lint */
-
 #ifdef HAVE_GETUSERATTR
 
 #ifndef HAVE_SETRLIMIT64

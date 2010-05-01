@@ -78,10 +78,6 @@
 	(dp->d_name[0] == '.' && (dp->d_name[1] == '\0' || \
 	    (dp->d_name[1] == '.' && dp->d_name[2] == '\0')))
 
-#ifndef lint
-__unused static const char rcsid[] = "$Sudo: getcwd.c,v 1.28 2005/02/08 03:55:42 millert Exp $";
-#endif /* lint */
-
 char *
 getcwd(pt, size)
 	char *pt;
