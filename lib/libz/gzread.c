@@ -3,7 +3,10 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+/* $FreeBSD$ */
+
 #include "gzguts.h"
+#include <unistd.h>
 
 /* Local functions */
 local int gz_load OF((gz_statep, unsigned char *, unsigned, unsigned *));
@@ -55,7 +58,8 @@ local int gz_avail(state)
     if (state->err != Z_OK)
         return -1;
     if (state->eof == 0) {
-        if (gz_load(state, state->in, state->size, &(strm->avail_in)) == -1)
+        if (gz_load(state, state->in, state->size,
+                (unsigned *)&(strm->avail_in)) == -1)
             return -1;
         strm->next_in = state->in;
     }
