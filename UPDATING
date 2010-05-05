@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20100505:
+	zlib 1.2.5
+
 20100430:
 	Sudo 1.7.2p6 imported
 
@@ -850,4 +853,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.87 2010/03/21 20:05:10 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.88 2010/05/01 00:14:17 laffer1 Exp $
