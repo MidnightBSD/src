@@ -26409,10 +26409,6 @@ lib/libz/contrib/minizip/unzip.c -text
 lib/libz/contrib/minizip/unzip.h -text
 lib/libz/contrib/minizip/zip.c -text
 lib/libz/contrib/minizip/zip.h -text
-lib/libz/contrib/pascal/example.pas -text
-lib/libz/contrib/pascal/readme.txt -text
-lib/libz/contrib/pascal/zlibd32.mak -text
-lib/libz/contrib/pascal/zlibpas.pas -text
 lib/libz/crc32.c -text
 lib/libz/crc32.h -text
 lib/libz/deflate.c -text
