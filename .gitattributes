@@ -26373,10 +26373,6 @@ lib/libz/contrib/blast/blast.c -text
 lib/libz/contrib/blast/blast.h -text
 lib/libz/contrib/blast/test.pk -text svneol=unset#unset
 lib/libz/contrib/blast/test.txt -text
-lib/libz/contrib/delphi/ZLib.pas -text
-lib/libz/contrib/delphi/ZLibConst.pas -text
-lib/libz/contrib/delphi/readme.txt -text
-lib/libz/contrib/delphi/zlibd32.mak -text
 lib/libz/contrib/gcc_gvmat64/gvmat64.S -text
 lib/libz/contrib/infback9/README -text
 lib/libz/contrib/infback9/infback9.c -text
