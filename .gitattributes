@@ -26367,12 +26367,6 @@ lib/libz/contrib/README.contrib -text
 lib/libz/contrib/amd64/amd64-match.S -text
 lib/libz/contrib/asm686/README.686 -text
 lib/libz/contrib/asm686/match.S -text
-lib/libz/contrib/blast/Makefile -text
-lib/libz/contrib/blast/README -text
-lib/libz/contrib/blast/blast.c -text
-lib/libz/contrib/blast/blast.h -text
-lib/libz/contrib/blast/test.pk -text svneol=unset#unset
-lib/libz/contrib/blast/test.txt -text
 lib/libz/contrib/gcc_gvmat64/gvmat64.S -text
 lib/libz/crc32.c -text
 lib/libz/crc32.h -text
