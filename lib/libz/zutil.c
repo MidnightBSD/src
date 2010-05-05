@@ -3,7 +3,7 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-/* @(#) $Id: zutil.c,v 1.1.1.4 2010-03-21 19:52:04 laffer1 Exp $ */
+/* @(#) $Id: zutil.c,v 1.2 2010-05-05 18:46:22 vganji Exp $ */
 
 #include "zutil.h"
 
@@ -34,25 +34,25 @@ uLong ZEXPORT zlibCompileFlags()
     uLong flags;
 
     flags = 0;
-    switch ((int)(sizeof(uInt))) {
+    switch (sizeof(uInt)) {
     case 2:     break;
     case 4:     flags += 1;     break;
     case 8:     flags += 2;     break;
     default:    flags += 3;
     }
-    switch ((int)(sizeof(uLong))) {
+    switch (sizeof(uLong)) {
     case 2:     break;
     case 4:     flags += 1 << 2;        break;
     case 8:     flags += 2 << 2;        break;
     default:    flags += 3 << 2;
     }
-    switch ((int)(sizeof(voidpf))) {
+    switch (sizeof(voidpf)) {
     case 2:     break;
     case 4:     flags += 1 << 4;        break;
     case 8:     flags += 2 << 4;        break;
     default:    flags += 3 << 4;
     }
-    switch ((int)(sizeof(z_off_t))) {
+    switch (sizeof(z_off_t)) {
     case 2:     break;
     case 4:     flags += 1 << 6;        break;
     case 8:     flags += 2 << 6;        break;

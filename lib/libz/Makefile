@@ -1,5 +1,5 @@
-# $MidnightBSD: src/lib/libz/Makefile,v 1.2 2010/03/21 20:01:16 laffer1 Exp $
-# $FreeBSD: src/lib/libz/Makefile,v 1.17 2005/06/03 15:25:13 imp Exp $
+#
+# $FreeBSD$
 #
 
 LIB=		z
@@ -11,13 +11,13 @@ MAN=		zlib.3
 #CFLAGS+=	-Wall -Wwrite-strings -Wpointer-arith -Wconversion \
 #		-Wstrict-prototypes -Wmissing-prototypes
 
-CFLAGS+=	-DHAS_snprintf -DHAS_vsnprintf -I${.CURDIR}
+CFLAGS+=	-DHAS_snprintf -DHAS_vsnprintf
 
 CLEANFILES+=	example.o example foo.gz minigzip.o minigzip
 
-SRCS = adler32.c compress.c crc32.c uncompr.c deflate.c trees.c \
-       zutil.c inflate.c inftrees.c inffast.c zopen.c infback.c gzclose.c \
-       gzlib.c gzread.c gzwrite.c zopen.c
+SRCS = adler32.c compress.c crc32.c gzio.c uncompr.c deflate.c trees.c \
+       zutil.c inflate.c inftrees.c inffast.c zopen.c infback.c
+INCS=		zconf.h zlib.h
 
 .if ${MACHINE_ARCH} == "i386" && ${MACHINE_CPU:M*i686*}
 .PATH:		${.CURDIR}/contrib/asm686
@@ -30,8 +30,6 @@ CFLAGS+=	-DASMV -DNO_UNDERLINE
 SRCS+=		gvmat64.S
 CFLAGS+=	-DASMV -DNO_UNDERLINE
 .endif
-
-INCS=		zconf.h zlib.h
 
 minigzip:	all minigzip.o
 	$(CC) -o minigzip minigzip.o -L. -lz
