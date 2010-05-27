@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/nfsclient/nfs_vfsops.c,v 1.4 2008/12/02 21:51:48 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -763,6 +763,11 @@ nfs_mount(struct mount *mp, struct thread *td)
 		    (nmp->nm_flag &
 			(NFSMNT_NFSV3 | NFSMNT_NOLOCKD /*|NFSMNT_XLATECOOKIE*/));
 		nfs_decode_args(mp, nmp, &args);
+		goto out;
+	}
+	if (args.fhsize < 0 || args.fhsize > NFSX_V3FHMAX) {
+		vfs_mount_error(mp, "Bad file handle");
+		error = EINVAL;
 		goto out;
 	}
 
