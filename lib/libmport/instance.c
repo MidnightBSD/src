@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/instance.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/instance.c,v 1.4 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -40,7 +40,7 @@
 /* allocate mem for a mportInstance */
 MPORT_PUBLIC_API mportInstance * mport_instance_new() 
 {
-  return (mportInstance *)malloc(sizeof(mportInstance)); 
+  return (mportInstance *)calloc(1, sizeof(mportInstance)); 
 }
  
 

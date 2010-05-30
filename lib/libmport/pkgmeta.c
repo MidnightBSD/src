@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.3 2010/03/04 00:58:52 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.4 2010/03/04 01:02:02 laffer1 Exp $
  */
 
 
@@ -332,7 +332,7 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
     }
     
-    e = (mportAssetListEntry *)malloc(sizeof(mportAssetListEntry));
+    e = (mportAssetListEntry *)calloc(1, sizeof(mportAssetListEntry));
     
     if (e == NULL) {
       sqlite3_finalize(stmt);
@@ -375,7 +375,7 @@ static int populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db,
 { 
   mportPackageMeta **vec;
   int done = 0;
-  vec  = (mportPackageMeta**)malloc((1+len) * sizeof(mportPackageMeta *));
+  vec  = (mportPackageMeta**)calloc((1+len), sizeof(mportPackageMeta *));
   *ref = vec;
 
   while (!done) { 

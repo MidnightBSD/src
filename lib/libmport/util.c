@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.12 2009/06/05 00:02:22 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.13 2009/12/29 18:58:48 laffer1 Exp $
  */
 
 
@@ -183,14 +183,18 @@ int mport_file_exists(const char *file)
 int mport_xsystem(mportInstance *mport, const char *fmt, ...) 
 {
   va_list args;
-  char *cmnd;
+  char *cmnd = NULL;
   int ret;
+
+  fprintf(stderr, "in mport_xsystem %s\n ", fmt);
   
   va_start(args, fmt);
   
   if (vasprintf(&cmnd, fmt, args) == -1) {
     /* XXX How will the caller know this is no mem, and not a failed exec? */
     va_end(args);
+    if (cmnd != NULL)
+        free(cmnd);
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate xsystem cmnd string.");
   }
   va_end(args);
@@ -205,6 +209,9 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   }
     
   ret = system(cmnd);
+
+  if (ret == 127)
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't execute sh(1)");
   
   free(cmnd);
   
@@ -233,7 +240,7 @@ void mport_parselist(char *opt, char ***list)
   char *input;
   char *field;
 
-  input = (char *)malloc(strlen(opt) + 1);
+  input = (char *)malloc((strlen(opt) + 1) * sizeof(char));
   strcpy(input, opt);
   
   /* first we need to get the length of the depends list */
@@ -242,7 +249,7 @@ void mport_parselist(char *opt, char ***list)
       len++;
   }    
 
-  *list = (char **)malloc((len + 1) * sizeof(char *));
+  *list = (char **)calloc((len + 1), sizeof(char *));
 
   if (len == 0) {
     **list = NULL;

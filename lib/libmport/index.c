@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.1 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.2 2009/11/28 22:44:31 laffer1 Exp $
  */
 
 
@@ -225,7 +225,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
     step = sqlite3_step(stmt);
     
     if (step == SQLITE_ROW) {
-      if ((e[i] = (mportIndexEntry *)malloc(sizeof(mportIndexEntry))) == NULL) {
+      if ((e[i] = (mportIndexEntry *)calloc(1, sizeof(mportIndexEntry))) == NULL) {
         ret = MPORT_ERR_FATAL;
         goto DONE;
       }

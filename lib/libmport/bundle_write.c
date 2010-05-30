@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.3 2009/11/28 22:44:31 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.4 2010/03/13 02:47:58 laffer1 Exp $
  */
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
@@ -77,7 +77,7 @@ static void free_linktable(struct links_table *);
  */
 mportBundleWrite* mport_bundle_write_new() 
 {
-  return (mportBundleWrite *)malloc(sizeof(mportBundleWrite));
+  return (mportBundleWrite *)calloc(1, sizeof(mportBundleWrite));
 }
  
 

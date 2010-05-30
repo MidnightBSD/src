@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/plist.c,v 1.6 2009/06/05 00:02:22 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.7 2009/11/28 22:44:31 laffer1 Exp $
  */
 
 
@@ -48,7 +48,7 @@ static mportAssetListEntryType parse_command(const char*);
  */
 MPORT_PUBLIC_API mportAssetList* mport_assetlist_new() 
 {
-  mportAssetList *list = (mportAssetList*)malloc(sizeof(mportAssetList));
+  mportAssetList *list = (mportAssetList*)calloc(1,sizeof(mportAssetList));
   assert(list != NULL);
   STAILQ_INIT(list);
   return list;
@@ -100,7 +100,7 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
     /* change the last \n to \0 */
     *(line + length - 1) = 0;
     
-    mportAssetListEntry *entry = (mportAssetListEntry *)malloc(sizeof(mportAssetListEntry));
+    mportAssetListEntry *entry = (mportAssetListEntry *)calloc(1, sizeof(mportAssetListEntry));
     
     if (entry == NULL) {
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -133,7 +133,7 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
         }
       }     
       
-      entry->data = (char  *)malloc(strlen(line) + 1);
+      entry->data = (char  *)calloc(strlen(line) + 1, sizeof(char));
       if (entry->data == NULL) {
         RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
       }

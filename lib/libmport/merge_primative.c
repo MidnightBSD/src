@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/merge_primative.c,v 1.2 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/merge_primative.c,v 1.3 2010/03/13 02:39:52 laffer1 Exp $
  */
 
 
@@ -500,7 +500,7 @@ static int insert_into_table(struct table_entry **table, const char *name, const
   struct table_entry *node, *cur;
   int hash = SuperFastHash(name) % TABLE_SIZE;
   
-  if ((node = (struct table_entry *)malloc(sizeof(struct table_entry))) == NULL)
+  if ((node = (struct table_entry *)calloc(1, sizeof(struct table_entry))) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate table entry");
 
   node->name     = strdup(name);

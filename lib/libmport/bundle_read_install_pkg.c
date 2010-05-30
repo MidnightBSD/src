@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.2 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.3 2010/03/13 02:33:48 laffer1 Exp $
  */
 
 
@@ -324,7 +324,7 @@ static int display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportP
   if ((file = fopen(filename, "r")) == NULL) 
     RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
   
-  if ((buf = (char *)malloc((st.st_size + 1) * sizeof(char))) == NULL)
+  if ((buf = (char *)calloc((st.st_size + 1), sizeof(char))) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
   

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/default_cbs.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/default_cbs.c,v 1.4 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -101,7 +101,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   width = win.ws_col;
   bar_width = width - 10;
 
-  if ((bar = (char *)malloc(sizeof(char) * width)) == NULL) {
+  if ((bar = (char *)calloc(width, sizeof(char))) == NULL) {
     /* no memory, we're outa here */
     (void)printf("%s\n", msg);
     return;
