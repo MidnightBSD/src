@@ -21887,6 +21887,7 @@ etc/newsyslog.conf -text
 etc/nls.alias -text
 etc/nscd.conf -text
 etc/nsmb.conf -text
+etc/nsswitch.conf -text
 etc/ntpd.conf -text
 etc/opieaccess -text
 etc/pam.d/Makefile -text
