@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.13 2009/12/29 18:58:48 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.14 2010/05/30 03:02:12 laffer1 Exp $
  */
 
 
@@ -186,8 +186,6 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   char *cmnd = NULL;
   int ret;
 
-  fprintf(stderr, "in mport_xsystem %s\n ", fmt);
-  
   va_start(args, fmt);
   
   if (vasprintf(&cmnd, fmt, args) == -1) {
