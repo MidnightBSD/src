@@ -18512,6 +18512,8 @@ contrib/wpa_supplicant/x509v3.h -text
 contrib/xz/AUTHORS -text
 contrib/xz/COPYING -text
 contrib/xz/ChangeLog -text
+contrib/xz/MIDNIGHTBSD-Xlist -text
+contrib/xz/MIDNIGHTBSD-upgrade -text
 contrib/xz/README -text
 contrib/xz/THANKS -text
 contrib/xz/TODO -text
