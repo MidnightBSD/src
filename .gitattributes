@@ -26046,6 +26046,10 @@ lib/libkvm/kvm_proc.c -text
 lib/libkvm/kvm_read.3 -text
 lib/libkvm/kvm_sparc.c -text
 lib/libkvm/kvm_sparc64.c -text
+lib/liblzma/Makefile -text
+lib/liblzma/Symbol.map -text
+lib/liblzma/Versions.def -text
+lib/liblzma/config.h -text
 lib/libmagic/Makefile -text
 lib/libmagic/config.h -text
 lib/libmd/Makefile -text
