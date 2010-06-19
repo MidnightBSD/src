@@ -29674,9 +29674,11 @@ share/man/man5/xfs.5 -text
 share/man/man6/Makefile -text
 share/man/man6/intro.6 -text
 share/man/man7/Makefile -text
+share/man/man7/adding_user.7 -text
 share/man/man7/ascii.7 -text
 share/man/man7/bsd.snmpmod.mk.7 -text
 share/man/man7/build.7 -text
+share/man/man7/c99.7 -text
 share/man/man7/clocks.7 -text
 share/man/man7/development.7 -text
 share/man/man7/environ.7 -text
