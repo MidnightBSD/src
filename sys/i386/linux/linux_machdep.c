@@ -669,9 +669,13 @@ linux_mmap_common(struct thread *td, struct l_mmap_argv *linux_args)
 		bsd_args.flags |= MAP_PRIVATE;
 	if (linux_args->flags & LINUX_MAP_FIXED)
 		bsd_args.flags |= MAP_FIXED;
-	if (linux_args->flags & LINUX_MAP_ANON)
+	if (linux_args->flags & LINUX_MAP_ANON) {
+		/* Enforce pos to be on page boundary, then ignore. */
+		if ((pos & PAGE_MASK) != 0)
+			return (EINVAL);
+		pos = 0;
 		bsd_args.flags |= MAP_ANON;
-	else
+	} else
 		bsd_args.flags |= MAP_NOSYNC;
 	if (linux_args->flags & LINUX_MAP_GROWSDOWN)
 		bsd_args.flags |= MAP_STACK;
