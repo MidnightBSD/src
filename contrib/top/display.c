@@ -1219,7 +1219,6 @@ time_t *tod;
 
     if (bt->tv_sec != -1) {
 	uptime = *tod - bt->tv_sec;
-	uptime += 30;
 	days = uptime / 86400;
 	uptime %= 86400;
 	hrs = uptime / 3600;
