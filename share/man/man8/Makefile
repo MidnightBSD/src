@@ -1,9 +1,8 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/man/man8/Makefile,v 1.35 2004/01/20 10:27:23 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/man/man8/Makefile,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 
-MAN=	adding_user.8 \
-	crash.8 \
+MAN=	crash.8 \
 	diskless.8 \
 	intro.8 \
 	picobsd.8 \

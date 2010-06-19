@@ -29698,7 +29698,6 @@ share/man/man7/sprog.7 -text
 share/man/man7/stdint.7 -text
 share/man/man7/tuning.7 -text
 share/man/man8/Makefile -text
-share/man/man8/adding_user.8 -text
 share/man/man8/crash.8 -text
 share/man/man8/diskless.8 -text
 share/man/man8/intro.8 -text
