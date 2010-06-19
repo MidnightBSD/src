@@ -29701,7 +29701,6 @@ share/man/man8/Makefile -text
 share/man/man8/crash.8 -text
 share/man/man8/diskless.8 -text
 share/man/man8/intro.8 -text
-share/man/man8/picobsd.8 -text
 share/man/man8/rc.8 -text
 share/man/man8/rc.sendmail.8 -text
 share/man/man8/rc.subr.8 -text

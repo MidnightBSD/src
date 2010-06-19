@@ -1,11 +1,10 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/man/man8/Makefile,v 1.35 2004/01/20 10:27:23 ru Exp $
-# $MidnightBSD: src/share/man/man8/Makefile,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
+# $MidnightBSD: src/share/man/man8/Makefile,v 1.3 2010/06/19 14:47:17 laffer1 Exp $
 
 MAN=	crash.8 \
 	diskless.8 \
 	intro.8 \
-	picobsd.8 \
 	rc.8 \
 	rc.sendmail.8 \
 	rc.subr.8 \
