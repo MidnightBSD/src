@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: if_nve.c,v 1.4 2008-12-02 22:45:00 laffer1 Exp $
+ * $Id: if_nve.c,v 1.5 2010-06-20 20:15:12 laffer1 Exp $
  */
 /*
  * NVIDIA nForce MCP Networking Adapter driver
@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/nve/if_nve.c,v 1.28 2007/06/12 02:21:02 yongari Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/nve/if_nve.c,v 1.28.2.3.2.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -130,7 +130,7 @@ static int      nve_detach(device_t);
 static void     nve_init(void *);
 static void     nve_init_locked(struct nve_softc *);
 static void     nve_stop(struct nve_softc *);
-static void     nve_shutdown(device_t);
+static int      nve_shutdown(device_t);
 static int      nve_init_rings(struct nve_softc *);
 static void     nve_free_rings(struct nve_softc *);
 
@@ -211,32 +211,52 @@ DRIVER_MODULE(nve, pci, nve_driver, nve_devclass, 0, 0);
 DRIVER_MODULE(miibus, nve, miibus_driver, miibus_devclass, 0, 0);
 
 static struct nve_type nve_devs[] = {
-	{NVIDIA_VENDORID, NFORCE_MCPNET1_DEVICEID,
-	"NVIDIA nForce MCP Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET2_DEVICEID,
-	"NVIDIA nForce MCP2 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET3_DEVICEID,
-	"NVIDIA nForce MCP3 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET4_DEVICEID,
-	"NVIDIA nForce MCP4 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET5_DEVICEID,
-	"NVIDIA nForce MCP5 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET6_DEVICEID,
-	"NVIDIA nForce MCP6 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET7_DEVICEID,
-	"NVIDIA nForce MCP7 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET8_DEVICEID,
-	"NVIDIA nForce MCP8 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET9_DEVICEID,
-	"NVIDIA nForce MCP9 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET10_DEVICEID,
-	"NVIDIA nForce MCP10 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET11_DEVICEID,
-	"NVIDIA nForce MCP11 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET12_DEVICEID,
-	"NVIDIA nForce MCP12 Networking Adapter"},
-	{NVIDIA_VENDORID, NFORCE_MCPNET13_DEVICEID,
-	"NVIDIA nForce MCP13 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE_LAN,
+	    "NVIDIA nForce MCP Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE2_LAN,
+	    "NVIDIA nForce2 MCP2 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE2_400_LAN1,
+	    "NVIDIA nForce2 400 MCP4 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE2_400_LAN2,
+	    "NVIDIA nForce2 400 MCP5 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE3_LAN1,
+	    "NVIDIA nForce3 MCP3 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE3_250_LAN,
+	    "NVIDIA nForce3 250 MCP6 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE3_LAN4,
+	    "NVIDIA nForce3 MCP7 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE4_LAN1,
+	    "NVIDIA nForce4 CK804 MCP8 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE4_LAN2,
+	    "NVIDIA nForce4 CK804 MCP9 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP04_LAN1,
+	    "NVIDIA nForce MCP04 Networking Adapter"},		// MCP10
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP04_LAN2,
+	    "NVIDIA nForce MCP04 Networking Adapter"},		// MCP11
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE430_LAN1,
+	    "NVIDIA nForce 430 MCP12 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_NFORCE430_LAN2,
+	    "NVIDIA nForce 430 MCP13 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP55_LAN1,
+	    "NVIDIA nForce MCP55 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP55_LAN2,
+	    "NVIDIA nForce MCP55 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP61_LAN1,
+	    "NVIDIA nForce MCP61 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP61_LAN2,
+	    "NVIDIA nForce MCP61 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP61_LAN3,
+	    "NVIDIA nForce MCP61 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP61_LAN4,
+	    "NVIDIA nForce MCP61 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP65_LAN1,
+	    "NVIDIA nForce MCP65 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP65_LAN2,
+	    "NVIDIA nForce MCP65 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP65_LAN3,
+	    "NVIDIA nForce MCP65 Networking Adapter"},
+	{PCI_VENDOR_NVIDIA, PCI_PRODUCT_NVIDIA_MCP65_LAN4,
+	    "NVIDIA nForce MCP65 Networking Adapter"},
 	{0, 0, NULL}
 };
 
@@ -506,14 +526,6 @@ nve_attach(device_t dev)
 		goto fail;
 	}
 
-	/* Probe device for MII interface to PHY */
-	DEBUGOUT(NVE_DEBUG_INIT, "nve: do mii_phy_probe\n");
-	if (mii_phy_probe(dev, &sc->miibus, nve_ifmedia_upd, nve_ifmedia_sts)) {
-		device_printf(dev, "MII without any phy!\n");
-		error = ENXIO;
-		goto fail;
-	}
-
 	/* Setup interface parameters */
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
@@ -531,6 +543,14 @@ nve_attach(device_t dev)
 	IFQ_SET_READY(&ifp->if_snd);
 	ifp->if_capabilities |= IFCAP_VLAN_MTU;
 	ifp->if_capenable |= IFCAP_VLAN_MTU;
+
+	/* Probe device for MII interface to PHY */
+	DEBUGOUT(NVE_DEBUG_INIT, "nve: do mii_phy_probe\n");
+	if (mii_phy_probe(dev, &sc->miibus, nve_ifmedia_upd, nve_ifmedia_sts)) {
+		device_printf(dev, "MII without any phy!\n");
+		error = ENXIO;
+		goto fail;
+	}
 
 	/* Attach to OS's managers. */
 	ether_ifattach(ifp, eaddr);
@@ -717,7 +737,7 @@ nve_stop(struct nve_softc *sc)
 }
 
 /* Shutdown interface for unload/reboot */
-static void
+static int
 nve_shutdown(device_t dev)
 {
 	struct nve_softc *sc;
@@ -730,6 +750,8 @@ nve_shutdown(device_t dev)
 	NVE_LOCK(sc);
 	nve_stop(sc);
 	NVE_UNLOCK(sc);
+
+	return (0);
 }
 
 /* Allocate TX ring buffers */
