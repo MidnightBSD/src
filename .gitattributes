@@ -37652,6 +37652,9 @@ usr.bin/bluetooth/rfcomm_sppd/Makefile -text
 usr.bin/bluetooth/rfcomm_sppd/rfcomm_sdp.c -text
 usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.1 -text
 usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.c -text
+usr.bin/brainfuck/Makefile -text
+usr.bin/brainfuck/brainfuck -text
+usr.bin/brainfuck/brainfuck.1 -text
 usr.bin/brandelf/Makefile -text
 usr.bin/brandelf/brandelf.1 -text
 usr.bin/brandelf/brandelf.c -text
