@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20100713:
+	mbuf readonly fix related to sendfile(2) data corruption.
+
 20100704:
 	brainfuck(1) imported from MirBSD.
 
@@ -856,4 +859,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.89 2010/05/05 20:40:34 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.90 2010/07/04 15:48:51 laffer1 Exp $
