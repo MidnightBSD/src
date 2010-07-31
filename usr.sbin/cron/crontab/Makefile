@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/cron/crontab/Makefile,v 1.2 2007/08/18 06:53:01 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/cron/crontab/Makefile,v 1.14 2004/11/03 18:01:21 ru Exp $
 
 BINDIR=	/usr/bin
@@ -8,6 +8,8 @@ MAN=	crontab.1 crontab.5
 BINOWN=	root
 BINMODE=4555
 PRECIOUSPROG=
+
+WARNS?=	3
 
 CFLAGS+= -I${.CURDIR}/../cron
 
