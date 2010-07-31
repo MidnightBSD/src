@@ -15,10 +15,10 @@
 .\" * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
 .\" */
 .\"
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/usr.sbin/cron/cron/cron.8,v 1.2 2007/08/18 07:37:09 laffer1 Exp $
 .\" $FreeBSD: src/usr.sbin/cron/cron/cron.8,v 1.24 2005/02/13 23:45:51 ru Exp $
 .\"
-.Dd August 18, 2007
+.Dd July 30, 2010
 .Dt CRON 8
 .Os
 .Sh NAME
@@ -28,6 +28,7 @@
 .Nm
 .Op Fl j Ar jitter
 .Op Fl J Ar rootjitter
+.Op Fl m Ar mailto
 .Op Fl s
 .Op Fl o
 .Op Fl x Ar debugflag Ns Op , Ns Ar ...
@@ -115,6 +116,23 @@ Enable time jitter for superuser jobs.
 The same as
 .Fl j
 except that it will affect jobs run by the superuser only.
+.It Fl m Ar mailto
+Overrides the default recipient for
+.Nm
+mail.
+Each
+.Xr crontab 5
+without
+.Ev MAILTO
+explicitly set will send mail to the
+.Ar mailto
+mailbox.
+Sending mail will be disabled by default if
+.Ar mailto
+set to a null string, usually specified in a shell as
+.Li ''
+or
+.Li \*q\*q .
 .It Fl s
 Enable special handling of situations when the GMT offset of the local
 timezone changes, such as the switches between the standard time and

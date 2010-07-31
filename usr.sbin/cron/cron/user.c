@@ -1,20 +1,24 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.sbin/cron/cron/user.c,v 1.2 2007/08/18 07:37:09 laffer1 Exp $ */
 /* $FreeBSD: src/usr.sbin/cron/cron/user.c,v 1.8 1999/08/28 01:15:50 peter Exp $ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
+ */
+
+/*
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1997,2000 by Internet Software Consortium, Inc.
  *
- * Distribute freely, except: don't remove my name from the source or
- * documentation (don't take credit for my work), mark your changes (don't
- * get me blamed for your possible bugs), don't alter or remove this
- * notice.  May be sold if buildable source is provided to buyer.  No
- * warrantee of any kind, express or implied, is included with this
- * software; use at your own risk, responsibility for damages (if any) to
- * anyone resulting from the use of this software rests entirely with the
- * user.
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * Send bug reports, bug fixes, enhancements, requests, flames, etc., and
- * I'll try to keep a version up to date.  I can be reached as follows:
- * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
 /* vix 26jan87 [log is in RCS file]
@@ -26,10 +30,8 @@
 static char *User_name;
 
 void
-free_user(u)
-	user	*u;
-{
-	entry	*e, *ne;
+free_user(user *u) {
+	entry *e, *ne;
 
 	free(u->name);
 	for (e = u->crontab;  e != NULL;  e = ne) {
@@ -40,28 +42,23 @@ free_user(u)
 }
 
 static void
-log_error(msg)
-	char	*msg;
+log_error(char *msg)
 {
 	log_it(User_name, getpid(), "PARSE", msg);
 }
 
 user *
-load_user(crontab_fd, pw, name)
-	int		crontab_fd;
-	struct passwd	*pw;		/* NULL implies syscrontab */
-	char		*name;
-{
-	char	envstr[MAX_ENVSTR];
-	FILE	*file;
-	user	*u;
-	entry	*e;
-	int	status;
-	char	**envp, **tenvp;
+load_user(int crontab_fd, struct passwd	*pw, const char *name) {
+	char envstr[MAX_ENVSTR];
+	FILE *file;
+	user *u;
+	entry *e;
+	int status, save_errno;
+	char **envp, **tenvp;
 
 	if (!(file = fdopen(crontab_fd, "r"))) {
-		warn("fdopen on crontab_fd in load_user");
-		return NULL;
+		perror("fdopen on crontab_fd in load_user");
+		return (NULL);
 	}
 
 	Debug(DPARS, ("load_user()\n"))
@@ -73,23 +70,24 @@ load_user(crontab_fd, pw, name)
 		return NULL;
 	}
 	if ((u->name = strdup(name)) == NULL) {
+		save_errno = errno;
 		free(u);
-		errno = ENOMEM;
-		return NULL;
+		errno = save_errno;
+		return (NULL);
 	}
 	u->crontab = NULL;
 
-	/* 
-	 * init environment.  this will be copied/augmented for each entry.
+	/* init environment.  this will be copied/augmented for each entry.
 	 */
 	if ((envp = env_init()) == NULL) {
+		save_errno = errno;
 		free(u->name);
 		free(u);
-		return NULL;
+		errno = save_errno;
+		return (NULL);
 	}
 
-	/*
-	 * load the crontab
+	/* load the crontab
 	 */
 	while ((status = load_env(envstr, file)) >= OK) {
 		switch (status) {
@@ -106,13 +104,14 @@ load_user(crontab_fd, pw, name)
 			}
 			break;
 		case TRUE:
-			if ((tenvp = env_set(envp, envstr))) {
-				envp = tenvp;
-			} else {
+			if ((tenvp = env_set(envp, envstr)) == NULL) {
+				save_errno = errno;
 				free_user(u);
 				u = NULL;
+				errno = save_errno;
 				goto done;
 			}
+			envp = tenvp;
 			break;
 		}
 	}
@@ -121,5 +120,5 @@ load_user(crontab_fd, pw, name)
 	env_free(envp);
 	fclose(file);
 	Debug(DPARS, ("...load_user() done\n"))
-	return u;
+	return (u);
 }

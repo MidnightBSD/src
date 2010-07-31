@@ -18,13 +18,14 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$MidnightBSD: src/usr.sbin/cron/cron/cron.c,v 1.2 2007/08/18 06:59:04 laffer1 Exp $";
 #endif
 
 #define	MAIN_PROGRAM
 
 
 #include "cron.h"
+#include <sys/mman.h>
 #include <sys/signal.h>
 #if SYS_TIME_H
 # include <sys/time.h>
@@ -54,7 +55,7 @@ usage() {
     char **dflags;
 
 	fprintf(stderr, "usage: cron [-j jitter] [-J rootjitter] "
-			"[-s] [-o] [-x debugflag[,...]]\n");
+			"[-m mailto] [-s] [-o] [-x debugflag[,...]]\n");
 	fprintf(stderr, "\ndebugflags: ");
 
         for(dflags = DebugFlagNames; *dflags; dflags++) {
@@ -134,6 +135,9 @@ main(argc, argv)
 			exit(0);
 		}
 	}
+
+	if (madvise(NULL, 0, MADV_PROTECT) != 0)
+		log_it("CRON", getpid(), "WARNING", "madvise() failed");
 
 	pidfile_write(pfh);
 	database.head = NULL;
@@ -399,7 +403,8 @@ cron_clean(db)
 
 #ifdef USE_SIGCHLD
 static void
-sigchld_handler(int x) {
+sigchld_handler(int x)
+{
 	WAIT_T		waiter;
 	PID_T		pid;
 
@@ -429,7 +434,8 @@ sigchld_handler(int x) {
 
 
 static void
-sighup_handler(int x) {
+sighup_handler(int x)
+{
 	log_close();
 }
 
@@ -442,7 +448,7 @@ parse_args(argc, argv)
 	int	argch;
 	char	*endp;
 
-	while ((argch = getopt(argc, argv, "j:J:osx:")) != -1) {
+	while ((argch = getopt(argc, argv, "j:J:m:osx:")) != -1) {
 		switch (argch) {
 		case 'j':
 			Jitter = strtoul(optarg, &endp, 10);
@@ -455,6 +461,9 @@ parse_args(argc, argv)
 			if (*optarg == '\0' || *endp != '\0' || RootJitter > 60)
 				errx(ERROR_EXIT,
 				     "bad value for root jitter: %s", optarg);
+			break;
+		case 'm':
+			defmailto = optarg;
 			break;
 		case 'o':
 			dst_enabled = 0;

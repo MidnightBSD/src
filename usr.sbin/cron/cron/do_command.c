@@ -17,7 +17,7 @@
 /* $FreeBSD: src/usr.sbin/cron/cron/do_command.c,v 1.22.8.1 2006/01/15 17:50:36 delphij Exp $ */
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$MidnightBSD: src/usr.sbin/cron/cron/do_command.c,v 1.2 2007/08/18 07:37:09 laffer1 Exp $";
 #endif
 
 
@@ -38,8 +38,8 @@ static const char rcsid[] =
 #endif
 
 
-static void		child_process __P((entry *, user *)),
-			do_univ __P((user *));
+static void		child_process(entry *, user *),
+			do_univ(user *);
 
 
 void
@@ -459,19 +459,17 @@ child_process(e, u)
 			/* get name of recipient.  this is MAILTO if set to a
 			 * valid local username; USER otherwise.
 			 */
-			if (mailto) {
-				/* MAILTO was present in the environment
+			if (mailto == NULL) {
+				/* MAILTO not present, set to USER,
+				 * unless globally overriden.
 				 */
-				if (!*mailto) {
-					/* ... but it's empty. set to NULL
-					 */
-					mailto = NULL;
-				}
-			} else {
-				/* MAILTO not present, set to USER.
-				 */
-				mailto = usernm;
+				if (defmailto)
+					mailto = defmailto;
+				else
+					mailto = usernm;
 			}
+			if (mailto && *mailto == '\0')
+				mailto = NULL;
 
 			/* if we are supposed to be mailing, MAILTO will
 			 * be non-NULL.  only in this case should we set
