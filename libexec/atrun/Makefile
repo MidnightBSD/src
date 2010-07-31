@@ -1,4 +1,4 @@
-# $FreeBSD: src/libexec/atrun/Makefile,v 1.12 2002/02/04 02:33:49 kris Exp $
+# $FreeBSD$
 
 MAINSRC=${.CURDIR}/../../usr.bin/at
 
@@ -12,7 +12,13 @@ BINDIR=	${ATLIB_DIR}
 CLEANFILES= ${MAN}
 
 CFLAGS+=-I${MAINSRC} -I${.CURDIR}
+CFLAGS+=-DLOGIN_CAP -DPAM
+
+WARNS?=	2
 WFORMAT=0
+
+DPADD=	${LIBPAM} ${LIBUTIL}
+LDADD=	${MINUSLPAM} -lutil
 
 atrun.8: atrun.man
 	@${ECHO} Making ${.TARGET:T} from ${.ALLSRC:T}; \
