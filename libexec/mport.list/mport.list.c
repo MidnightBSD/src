@@ -24,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.3 2010/03/04 01:51:21 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.4 2010/03/10 05:42:11 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.3 2010/03/04 01:51:21 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.4 2010/03/10 05:42:11 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -51,13 +51,17 @@ int main(int argc, char *argv[])
   mportPackageMeta **packs;
   bool quiet = false;
   bool verbose = false;
+  bool origin = false;
   char *comment;
 
   if (argc > 2)
     usage();
     
-  while ((ch = getopt(argc, argv, "qv")) != -1) {
+  while ((ch = getopt(argc, argv, "oqv")) != -1) {
     switch (ch) {
+      case 'o':
+        origin = true;
+        break;
       case 'q':
         quiet = true;
         break;
@@ -99,8 +103,13 @@ int main(int argc, char *argv[])
       (void) printf("%s-%s\t%s\n", (*packs)->name, (*packs)->version, comment);
       free(comment);
     }
-    else if (quiet)
+    else if (quiet && !origin)
       (void) printf("%s\n", (*packs)->name);
+    else if (quiet && origin)
+      (void) printf("%s\n", (*packs)->origin);
+    else if (origin)
+      (void) printf("Information for %s-%s:\n\nOrigin:\n%s\n\n",
+	(*packs)->name, (*packs)->version, (*packs)->origin);
     else
       (void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
     packs++;
