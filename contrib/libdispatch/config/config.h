@@ -2,27 +2,27 @@
 /* config/config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to compile out legacy API */
-/* #undef DISPATCH_NO_LEGACY */
+#define DISPATCH_NO_LEGACY 1
 
 /* Define to 1 if you have the declaration of `CLOCK_MONOTONIC', and to 0 if
    you don't. */
-#define HAVE_DECL_CLOCK_MONOTONIC 0
+#define HAVE_DECL_CLOCK_MONOTONIC 1
 
 /* Define to 1 if you have the declaration of `CLOCK_REALTIME', and to 0 if
    you don't. */
-#define HAVE_DECL_CLOCK_REALTIME 0
+#define HAVE_DECL_CLOCK_REALTIME 1
 
 /* Define to 1 if you have the declaration of `CLOCK_UPTIME', and to 0 if you
    don't. */
-#define HAVE_DECL_CLOCK_UPTIME 0
+#define HAVE_DECL_CLOCK_UPTIME 1
 
 /* Define to 1 if you have the declaration of `EVFILT_LIO', and to 0 if you
    don't. */
-#define HAVE_DECL_EVFILT_LIO 0
+#define HAVE_DECL_EVFILT_LIO 1
 
 /* Define to 1 if you have the declaration of `EVFILT_SESSION', and to 0 if
    you don't. */
-#define HAVE_DECL_EVFILT_SESSION 1
+#define HAVE_DECL_EVFILT_SESSION 0
 
 /* Define to 1 if you have the declaration of `FD_COPY', and to 0 if you
    don't. */
@@ -30,11 +30,11 @@
 
 /* Define to 1 if you have the declaration of `NOTE_NONE', and to 0 if you
    don't. */
-#define HAVE_DECL_NOTE_NONE 1
+#define HAVE_DECL_NOTE_NONE 0
 
 /* Define to 1 if you have the declaration of `NOTE_REAP', and to 0 if you
    don't. */
-#define HAVE_DECL_NOTE_REAP 1
+#define HAVE_DECL_NOTE_REAP 0
 
 /* Define to 1 if you have the declaration of `NOTE_REVOKE', and to 0 if you
    don't. */
@@ -42,11 +42,11 @@
 
 /* Define to 1 if you have the declaration of `NOTE_SIGNAL', and to 0 if you
    don't. */
-#define HAVE_DECL_NOTE_SIGNAL 1
+#define HAVE_DECL_NOTE_SIGNAL 0
 
 /* Define to 1 if you have the declaration of `POSIX_SPAWN_START_SUSPENDED',
    and to 0 if you don't. */
-#define HAVE_DECL_POSIX_SPAWN_START_SUSPENDED 1
+#define HAVE_DECL_POSIX_SPAWN_START_SUSPENDED 0
 
 /* Define to 1 if you have the declaration of `SIGEMT', and to 0 if you don't.
    */
@@ -54,11 +54,11 @@
 
 /* Define to 1 if you have the declaration of `VQ_UPDATE', and to 0 if you
    don't. */
-#define HAVE_DECL_VQ_UPDATE 1
+#define HAVE_DECL_VQ_UPDATE 0
 
 /* Define to 1 if you have the declaration of `VQ_VERYLOWDISK', and to 0 if
    you don't. */
-#define HAVE_DECL_VQ_VERYLOWDISK 1
+#define HAVE_DECL_VQ_VERYLOWDISK 0
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
@@ -67,25 +67,25 @@
 #define HAVE_INTTYPES_H 1
 
 /* Define if Apple leaks program is present */
-#define HAVE_LEAKS 1
+/* #undef HAVE_LEAKS */
 
 /* Define to 1 if you have the <libkern/OSAtomic.h> header file. */
-#define HAVE_LIBKERN_OSATOMIC_H 1
+/* #undef HAVE_LIBKERN_OSATOMIC_H */
 
 /* Define to 1 if you have the <libkern/OSCrossEndian.h> header file. */
-#define HAVE_LIBKERN_OSCROSSENDIAN_H 1
+/* #undef HAVE_LIBKERN_OSCROSSENDIAN_H */
 
 /* Define if mach is present */
-#define HAVE_MACH 1
+/* #undef HAVE_MACH */
 
 /* Define to 1 if you have the `mach_absolute_time' function. */
-#define HAVE_MACH_ABSOLUTE_TIME 1
+/* #undef HAVE_MACH_ABSOLUTE_TIME */
 
 /* Define to 1 if you have the `malloc_create_zone' function. */
-#define HAVE_MALLOC_CREATE_ZONE 1
+/* #undef HAVE_MALLOC_CREATE_ZONE */
 
 /* Define to 1 if you have the <malloc/malloc.h> header file. */
-#define HAVE_MALLOC_MALLOC_H 1
+/* #undef HAVE_MALLOC_MALLOC_H */
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
@@ -97,19 +97,19 @@
 #define HAVE_PRIVATE_EXTERN 1
 
 /* Define to 1 if you have the `pthread_key_init_np' function. */
-#define HAVE_PTHREAD_KEY_INIT_NP 1
+/* #undef HAVE_PTHREAD_KEY_INIT_NP */
 
 /* Define to 1 if you have the <pthread_machdep.h> header file. */
-#define HAVE_PTHREAD_MACHDEP_H 1
+/* #undef HAVE_PTHREAD_MACHDEP_H */
 
 /* Define to 1 if you have the `pthread_main_np' function. */
 #define HAVE_PTHREAD_MAIN_NP 1
 
 /* Define to 1 if you have the <pthread_np.h> header file. */
-/* #undef HAVE_PTHREAD_NP_H */
+#define HAVE_PTHREAD_NP_H 1
 
 /* Define if pthread work queues are present */
-#define HAVE_PTHREAD_WORKQUEUES 1
+/* #undef HAVE_PTHREAD_WORKQUEUES */
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -139,7 +139,7 @@
 #define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the <TargetConditionals.h> header file. */
-#define HAVE_TARGETCONDITIONALS_H 1
+/* #undef HAVE_TARGETCONDITIONALS_H */
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
@@ -170,37 +170,25 @@
 #define STDC_HEADERS 1
 
 /* Define to use Mac OS X crashreporter info */
-#define USE_APPLE_CRASHREPORTER_INFO 1
+/* #undef USE_APPLE_CRASHREPORTER_INFO */
 
 /* Define to use non-portablesemaphore optimizations for Mac OS X */
-#define USE_APPLE_SEMAPHORE_OPTIMIZATIONS 1
+/* #undef USE_APPLE_SEMAPHORE_OPTIMIZATIONS */
 
 /* Define to use non-portable pthread TSD optimizations for Mac OS X) */
-#define USE_APPLE_TSD_OPTIMIZATIONS 1
+/* #undef USE_APPLE_TSD_OPTIMIZATIONS */
 
 /* Define to tag libdispatch_init as a constructor */
-/* #undef USE_LIBDISPATCH_INIT_CONSTRUCTOR */
+#define USE_LIBDISPATCH_INIT_CONSTRUCTOR 1
 
 /* Define to use Mach semaphores */
-#define USE_MACH_SEM 1
+/* #undef USE_MACH_SEM */
 
 /* Define to use POSIX semaphores */
-/* #undef USE_POSIX_SEM */
+#define USE_POSIX_SEM 1
 
 /* Version number of package */
 #define VERSION "1.0"
-
-/* Define to 1 if on AIX 3.
-   System headers sometimes define this.
-   We just want to avoid a redefinition error message.  */
-#ifndef _ALL_SOURCE
-/* # undef _ALL_SOURCE */
-#endif
-
-/* Enable GNU extensions on systems that have them.  */
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE 1
-#endif
 
 /* Define to 1 if on MINIX. */
 /* #undef _MINIX */
@@ -212,16 +200,27 @@
 /* Define to 1 if you need to in order for `stat' and other things to work. */
 /* #undef _POSIX_SOURCE */
 
-/* Enable extensions on Solaris.  */
-#ifndef __EXTENSIONS__
-# define __EXTENSIONS__ 1
+/* Enable extensions on AIX 3, Interix.  */
+#ifndef _ALL_SOURCE
+# define _ALL_SOURCE 1
 #endif
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE 1
+#endif
+/* Enable threading extensions on Solaris.  */
 #ifndef _POSIX_PTHREAD_SEMANTICS
 # define _POSIX_PTHREAD_SEMANTICS 1
 #endif
+/* Enable extensions on HP NonStop.  */
 #ifndef _TANDEM_SOURCE
 # define _TANDEM_SOURCE 1
 #endif
+/* Enable general extensions on Solaris.  */
+#ifndef __EXTENSIONS__
+# define __EXTENSIONS__ 1
+#endif
+
 
 /* Define to a replacement for __private_extern */
-/* #undef __private_extern__ */
+#define __private_extern__ extern __attribute__ ((visibility ("hidden")))
