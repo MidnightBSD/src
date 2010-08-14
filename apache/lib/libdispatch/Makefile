@@ -1,4 +1,4 @@
-# $MidnightBSD: src/cddl/lib/libuutil/Makefile,v 1.2 2008/10/15 19:10:20 laffer1 Exp $
+# $MidnightBSD: src/apache/lib/libdispatch/Makefile,v 1.1 2010/08/14 20:26:14 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -68,7 +68,7 @@ MLINKS= dispatch_after.3 dispatch_after_f.3 \
         dispatch_source_create.3 dispatch_source_set_timer.3 \
         dispatch_time.3 dispatch_walltime.3
 
-DPADD=          ${PTHREAD_DPADD}
-LDADD=          ${PTHREAD_LDADD}
+DPADD=          ${LIBPTHREAD}
+LDADD=          -lpthread
 
 .include <bsd.lib.mk>
