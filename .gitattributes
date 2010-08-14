@@ -6,6 +6,13 @@
 /ObsoleteFiles.inc -text
 /README -text
 /UPDATING -text
+apache/LICENSE -text
+apache/Makefile -text
+apache/Makefile.inc -text
+apache/lib/Makefile -text
+apache/lib/Makefile.inc -text
+apache/lib/libdispatch/Makefile -text
+apache/lib/libdispatch/config.h -text
 bin/Makefile -text
 bin/Makefile.inc -text
 bin/cat/Makefile -text
