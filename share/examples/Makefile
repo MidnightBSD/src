@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
-# $MidnightBSD: src/share/examples/Makefile,v 1.7 2009/05/27 05:51:16 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.8 2009/05/30 19:05:44 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -14,6 +14,7 @@ LDIRS=	IPv6 \
 	ibcs2 \
 	ipfw \
 	kld \
+	libdispatch \
 	libvgl \
 	mdoc \
 	netgraph \
@@ -80,6 +81,7 @@ XFILES=	IPv6/USAGE \
 	kld/syscall/module/syscall.c \
 	kld/syscall/test/Makefile \
 	kld/syscall/test/call.c \
+	libdispatch/deferred_noblocks.c \
 	libvgl/Makefile \
 	libvgl/demo.c \
 	mdoc/POSIX-copyright \
