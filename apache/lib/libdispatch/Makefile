@@ -1,6 +1,4 @@
-# $MidnightBSD: src/apache/lib/libdispatch/Makefile,v 1.1 2010/08/14 20:26:14 laffer1 Exp $
-
-.include <bsd.own.mk>
+# $MidnightBSD: src/apache/lib/libdispatch/Makefile,v 1.2 2010/08/14 22:01:44 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../../contrib/libdispatch/src
 SRCDIR=	${.CURDIR}/../../../contrib/libdispatch/src
@@ -11,11 +9,16 @@ SRCS=	apply.c benchmark.c legacy.c object.c once.c \
 	queue.c queue_kevent.c semaphore.c source.c \
 	source_kevent.c time.c
 
+WARNS?= 2
+
 .PATH:  ${.CURDIR}/../../../contrib/libdispatch/dispatch
 INCS=	base.h dispatch.h group.h object.h once.h \
 	queue.h semaphore.h source.h time.h
 INCSDIR=	${INCLUDEDIR}/dispatch
 
+#if ${MACHINE_ARCH}x == "i386x"
+CFLAGS+=	-march=i586
+#end
 CFLAGS+=	-I${.CURDIR}
 CFLAGS+=	-I${.CURDIR}/../../../contrib/libdispatch/
 CFLAGS+=	-I${.CURDIR}/../../../contrib/libdispatch/src
