@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.include.dist,v 1.6 2009/05/22 02:44:59 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.include.dist,v 1.7 2010/06/16 12:59:44 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.include.dist,v 1.100.2.2 2005/11/16 10:50:10 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -121,6 +121,8 @@
         ..
         wi
         ..
+    ..
+    dispatch
     ..
     fs
         devfs
