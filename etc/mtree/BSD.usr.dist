@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.13 2009/04/15 23:55:11 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.14 2009/04/16 00:15:25 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -249,6 +249,8 @@
                 ..
             ..
             libdialog
+            ..
+            libdispatch
             ..
             libvgl
             ..
