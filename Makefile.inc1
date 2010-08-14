@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.24 2009/09/19 23:53:43 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.25 2009/11/28 22:44:29 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -38,6 +38,9 @@
 #
 SUBDIR=	share/info lib libexec
 SUBDIR+=bin
+.if ${MK_APACHE} != "no"
+SUBDIR+=apache
+.endif
 .if ${MK_GAMES} != "no"
 SUBDIR+=games
 .endif
@@ -1005,9 +1008,14 @@ _default_thread_lib=	lib/libthr
 _default_thread_lib=	lib/libkse
 .endif
 
-_generic_libs=	${_cddl_lib} gnu/lib ${_kerberos5_lib} lib ${_secure_lib} usr.bin/lex/lib
+_generic_libs=	${_cddl_lib} gnu/lib ${_kerberos5_lib} lib ${_secure_lib} usr.bin/lex/lib \
+		${_apache_lib}
 
 lib/libopie__L lib/libtacplus__L: lib/libmd__L
+
+.if ${MK_APACHE} != "no"
+_apache_lib= apache/lib
+.endif
 
 .if ${MK_CDDL} != "no"
 _cddl_lib= cddl/lib
