@@ -23964,6 +23964,7 @@ lib/libc/gen/Makefile.inc -text
 lib/libc/gen/Symbol.map -text
 lib/libc/gen/__getosreldate.c -text
 lib/libc/gen/__xuname.c -text
+lib/libc/gen/_once_stub.c -text
 lib/libc/gen/_pthread_stubs.c -text
 lib/libc/gen/_rand48.c -text
 lib/libc/gen/_spinlock_stub.c -text

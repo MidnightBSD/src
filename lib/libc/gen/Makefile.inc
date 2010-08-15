@@ -1,12 +1,13 @@
 #	@(#)Makefile.inc	8.6 (Berkeley) 5/4/95
 # $FreeBSD: src/lib/libc/gen/Makefile.inc,v 1.128 2007/09/28 02:22:56 scf Exp $
-# $MidnightBSD: src/lib/libc/gen/Makefile.inc,v 1.2 2008/10/19 23:43:46 laffer1 Exp $
+# $MidnightBSD: src/lib/libc/gen/Makefile.inc,v 1.3 2010/01/10 18:29:19 laffer1 Exp $
 
 # machine-independent gen sources
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/gen ${.CURDIR}/gen
 
 SRCS+=  __getosreldate.c __xuname.c \
-	_pthread_stubs.c _rand48.c _spinlock_stub.c _thread_init.c \
+	_once_stub.c _pthread_stubs.c _rand48.c _spinlock_stub.c \
+	_thread_init.c \
 	alarm.c arc4random.c assert.c basename.c check_utility_compat.c \
 	clock.c closedir.c confstr.c \
 	crypt.c ctermid.c daemon.c devname.c dirname.c disklabel.c \
