@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users
 
+20100814:
+	libdispatch added to MidnightBSD.  This provides functionality found in
+	Mac OS X's GCD.  We do not have blocks support yet.  As this code is
+	licensed under Apache 2, we create a new MK_APACHE option so that
+	it's not required for all users to run code under a license they
+	may not like.
+
 20100713:
 	mbuf readonly fix related to sendfile(2) data corruption.
 
@@ -859,4 +866,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.90 2010/07/04 15:48:51 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.91 2010/07/13 23:16:10 laffer1 Exp $
