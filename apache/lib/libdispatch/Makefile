@@ -1,4 +1,4 @@
-# $MidnightBSD: src/apache/lib/libdispatch/Makefile,v 1.2 2010/08/14 22:01:44 laffer1 Exp $
+# $MidnightBSD: src/apache/lib/libdispatch/Makefile,v 1.3 2010/08/14 22:15:14 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../../contrib/libdispatch/src
 SRCDIR=	${.CURDIR}/../../../contrib/libdispatch/src
@@ -16,9 +16,12 @@ INCS=	base.h dispatch.h group.h object.h once.h \
 	queue.h semaphore.h source.h time.h
 INCSDIR=	${INCLUDEDIR}/dispatch
 
-#if ${MACHINE_ARCH}x == "i386x"
+.if ${MACHINE_ARCH}x == "amd64x" 
+CFLAGS+=	-march=athlon64
+.endif
+.if ${MACHINE_ARCH}x == "i386x"
 CFLAGS+=	-march=i586
-#end
+.endif
 CFLAGS+=	-I${.CURDIR}
 CFLAGS+=	-I${.CURDIR}/../../../contrib/libdispatch/
 CFLAGS+=	-I${.CURDIR}/../../../contrib/libdispatch/src
