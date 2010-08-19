@@ -11550,6 +11550,7 @@ contrib/mDNSResponder/Clients/dns-sd.c -text
 contrib/mDNSResponder/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.manifest -text
 contrib/mDNSResponder/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.vcproj -text
 contrib/mDNSResponder/LICENSE -text
+contrib/mDNSResponder/MIDNIGHTBSD-upgrade -text
 contrib/mDNSResponder/Makefile -text
 contrib/mDNSResponder/PrivateDNS.txt -text
 contrib/mDNSResponder/README.txt -text
