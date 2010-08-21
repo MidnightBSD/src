@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.dep.mk,v 1.48 2005/01/06 11:12:43 krion Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.dep.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
 #
 # The include file <bsd.dep.mk> handles Makefile dependencies.
 #
@@ -126,15 +126,9 @@ depend: beforedepend ${DEPENDFILE} afterdepend
 
 # Different types of sources are compiled with slightly different flags.
 # Split up the sources, and filter out headers and non-applicable flags.
-.if ${CC} == "icc"
-MKDEP_CFLAGS=	${CFLAGS:M-X*} ${CFLAGS:M-[BID]*}
-MKDEP_CXXFLAGS=	${CXXFLAGS:M-X*} ${CXXFLAGS:M-[BID]*}
-MKDEP_OBJCFLAGS=${OBJCFLAGS:M-X*} ${OBJCFLAGS:M-[BID]*}
-.else
 MKDEP_CFLAGS=	${CFLAGS:M-nostdinc*} ${CFLAGS:M-[BID]*}
 MKDEP_CXXFLAGS=	${CXXFLAGS:M-nostdinc*} ${CXXFLAGS:M-[BID]*}
 MKDEP_OBJCFLAGS=${OBJCFLAGS:M-nostdinc*} ${OBJCFLAGS:M-[BID]*} ${OBJCFLAGS:M-Wno-import*}
-.endif
 
 DPSRCS+= ${SRCS}
 ${DEPENDFILE}: ${DPSRCS}

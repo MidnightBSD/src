@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.4 2008/04/28 05:50:59 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.5 2010/03/20 02:24:56 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.cpu.mk,v 1.62.2.1 2007/10/19 17:08:38 cognet Exp $
 
 # Set default CPU compile flags and baseline CPUTYPE for each arch.  The
@@ -73,31 +73,6 @@ _CPUCFLAGS = -march=pentium
 .  else
 _CPUCFLAGS = -march=${CPUTYPE}
 .  endif # GCC on 'i386'
-.  if ${CPUTYPE} == "crusoe"
-_ICC_CPUCFLAGS = -tpp6 -xiM
-.  elif ${CPUTYPE} == "athlon-mp" || ${CPUTYPE} == "athlon-xp" || \
-    ${CPUTYPE} == "athlon-4"
-_ICC_CPUCFLAGS = -tpp6 -xiMK
-.  elif ${CPUTYPE} == "athlon-tbird" || ${CPUTYPE} == "athlon"
-_ICC_CPUCFLAGS = -tpp6 -xiM
-.  elif ${CPUTYPE} == "k6-3" || ${CPUTYPE} == "k6-2" || ${CPUTYPE} == "k6"
-_ICC_CPUCFLAGS = -tpp6 -xi
-.  elif ${CPUTYPE} == "k5"
-_ICC_CPUCFLAGS = -tpp5
-.  elif ${CPUTYPE} == "pentium4" || ${CPUTYPE} == "pentium4m"
-_ICC_CPUCFLAGS = -tpp7 -xiMKW
-.  elif ${CPUTYPE} == "pentium3" || ${CPUTYPE} == "pentium3m" || \
-     ${CPUTYPE} == "pentium-m"
-_ICC_CPUCFLAGS = -tpp6 -xiMK
-.  elif ${CPUTYPE} == "pentium2" || ${CPUTYPE} == "pentiumpro"
-_ICC_CPUCFLAGS = -tpp6 -xiM
-.  elif ${CPUTYPE} == "pentium-mmx"
-_ICC_CPUCFLAGS = -tpp5 -xM
-.  elif ${CPUTYPE} == "pentium"
-_ICC_CPUCFLAGS = -tpp5
-.  else
-_ICC_CPUCFLAGS =
-.  endif # ICC on 'i386'
 . elif ${MACHINE_ARCH} == "amd64"
 _CPUCFLAGS = -march=${CPUTYPE}
 . elif ${MACHINE_ARCH} == "arm"
@@ -172,9 +147,5 @@ LD += -EB
 # NB: COPTFLAGS is handled in /usr/src/sys/conf/kern.pre.mk
 
 .if !defined(NO_CPU_CFLAGS)
-. if ${CC} == "icc"
-CFLAGS += ${_ICC_CPUCFLAGS}
-. else
 CFLAGS += ${_CPUCFLAGS}
-. endif
 .endif

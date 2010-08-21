@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.sys.mk,v 1.37 2005/01/16 21:18:16 obrien Exp $
-# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.6 2008/10/15 19:50:54 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.7 2009/05/22 02:06:18 laffer1 Exp $
 #
 # This file contains common settings used for building FreeBSD
 # sources.
@@ -12,7 +12,7 @@
 # Universally disable -Werror until src/ is in better shape for GCC 4.2
 NO_WERROR=
 
-.if !defined(NO_WARNS) && ${CC} != "icc"
+.if !defined(NO_WARNS)
 . if defined(CSTD)
 .  if ${CSTD} == "k&r"
 CFLAGS		+= -traditional
