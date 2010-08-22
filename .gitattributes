@@ -13,6 +13,11 @@ apache/lib/Makefile -text
 apache/lib/Makefile.inc -text
 apache/lib/libdispatch/Makefile -text
 apache/lib/libdispatch/config.h -text
+apache/usr.bin/Makefile -text
+apache/usr.bin/Makefile.inc -text
+apache/usr.sbin/Makefile -text
+apache/usr.sbin/Makefile.inc -text
+apache/usr.sbin/mdnsd/Makefile -text
 bin/Makefile -text
 bin/Makefile.inc -text
 bin/cat/Makefile -text
