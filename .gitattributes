@@ -22833,6 +22833,7 @@ etc/rc.d/lockd -text
 etc/rc.d/lpd -text
 etc/rc.d/mdconfig -text
 etc/rc.d/mdconfig2 -text
+etc/rc.d/mdnsd -text
 etc/rc.d/mixer -text
 etc/rc.d/motd -text
 etc/rc.d/mountcritlocal -text
