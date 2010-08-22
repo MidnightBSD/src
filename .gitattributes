@@ -18,6 +18,7 @@ apache/usr.bin/Makefile -text
 apache/usr.bin/Makefile.inc -text
 apache/usr.sbin/Makefile -text
 apache/usr.sbin/Makefile.inc -text
+apache/usr.sbin/dnsextd/Makefile -text
 apache/usr.sbin/mdnsd/Makefile -text
 bin/Makefile -text
 bin/Makefile.inc -text

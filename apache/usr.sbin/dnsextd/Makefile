@@ -2,25 +2,29 @@
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 
-PROG=   mdnsd
+PROG=   dnsextd
 
-SRCS=	PosixDaemon.c mDNSPosix.c mDNSUNP.c 
+SRCS=	mDNSPosix.c mDNSUNP.c 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
-SRCS+=	mDNS.c DNSDigest.c uDNS.c DNSCommon.c
+SRCS+=	DNSDigest.c DNSCommon.c
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
-SRCS+=	 uds_daemon.c \
-	mDNSDebug.c dnssd_ipc.c GenLinkedList.c \
-	PlatformCommon.c
+SRCS+=	 dnsextd.c \
+	mDNSDebug.c GenLinkedList.c \
+	PlatformCommon.c  dnsextd_parser.y dnsextd_lexer.l
 
 SRCDIRS= ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared \
 	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix \
 	${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
-MAN=    mDNSResponder.8
+#MAN=    mDNSResponder.8
+NO_MAN=	
 
 CFLAGS+= -I. -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
 CFLAGS+= -ITARGET_OS_FREEBSD
+
+DPADD=	${LIBPTHREAD}
+LDADD=	-lpthread
 
 .include <bsd.prog.mk>
 
