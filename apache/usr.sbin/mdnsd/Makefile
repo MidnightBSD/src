@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/apache/usr.sbin/mdnsd/Makefile,v 1.1 2010/08/22 19:54:58 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 
@@ -22,7 +22,7 @@ SRCS+=	 uds_daemon.c \
 SRCDIRS= ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared \
 	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix \
 	${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
-MAN=    mDNS.1 mDNSResponder.8
+MAN=    mDNSResponder.8
 
 CFLAGS+= -I. -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
