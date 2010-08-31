@@ -36890,6 +36890,7 @@ sys/sparc64/sbus/ofw_sbus.h -text
 sys/sparc64/sbus/sbus.c -text
 sys/sparc64/sbus/sbusreg.h -text
 sys/sparc64/sbus/sbusvar.h -text
+sys/sparc64/sparc64/ata_machdep.c -text
 sys/sparc64/sparc64/autoconf.c -text
 sys/sparc64/sparc64/bus_machdep.c -text
 sys/sparc64/sparc64/cache.c -text
