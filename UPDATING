@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users
 
+20100902:
+	Fix a security issue with libutil that allows users to bypass cpu limits in
+	login.conf in some cases.  This combined with OpenSSH for example can allow
+	the user to get more resources than they're allowed.
+
 20100822:
 	Import Apple's mDNSResponder (mdnsd).
 
@@ -869,4 +874,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.92 2010/08/15 04:37:10 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.93 2010/08/22 22:19:05 laffer1 Exp $
