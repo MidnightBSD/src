@@ -136,8 +136,8 @@ static struct part_type
 	,{0x03, "XENIX /usr file system"}
 	,{0x04, "Primary DOS with 16 bit FAT (< 32MB)"}
 	,{0x05, "Extended DOS"}
-	,{0x06, "Primary 'big' DOS (>= 32MB)"}
-	,{0x07, "OS/2 HPFS, NTFS, QNX-2 (16 bit) or Advanced UNIX"}
+	,{0x06, "Primary DOS, 16 bit FAT (>= 32MB)"}
+	,{0x07, "NTFS, OS/2 HPFS, QNX-2 (16 bit) or Advanced UNIX"}
 	,{0x08, "AIX file system or SplitDrive"}
 	,{0x09, "AIX boot partition or Coherent"}
 	,{0x0A, "OS/2 Boot Manager, OPUS or Coherent swap"}
@@ -152,6 +152,7 @@ static struct part_type
 	,{0x16, "OS/2 BM: hidden DOS with 16-bit FAT (>= 32MB)"}
 	,{0x17, "OS/2 BM: hidden IFS (e.g. HPFS)"}
 	,{0x18, "AST Windows swapfile"}
+	,{0x1b, "ASUS Recovery partition (NTFS)"}
 	,{0x24, "NEC DOS"}
 	,{0x3C, "PartitionMagic recovery"}
 	,{0x39, "plan9"}
@@ -165,6 +166,7 @@ static struct part_type
 	,{0x50, "DM (disk manager)"}
 	,{0x51, "DM6 Aux1 (or Novell)"}
 	,{0x52, "CP/M or Microport SysV/AT"}
+	,{0xDE, "DELL Utilities - FAT filesystem"}
 	,{0x53, "DM6 Aux3"}
 	,{0x54, "DM6"}
 	,{0x55, "EZ-Drive (disk manager)"}
@@ -191,7 +193,7 @@ static struct part_type
 	,{0x94, "Amoeba bad block table"}
 	,{0x9F, "BSD/OS"}
 	,{0xA0, "Suspend to Disk"}
-	,{0xA5, "FreeBSD/NetBSD/386BSD"}
+	,{0xA5, "FreeBSD/MidnightBSD/NetBSD/386BSD"}
 	,{0xA6, "OpenBSD"}
 	,{0xA7, "NeXTSTEP"}
 	,{0xA9, "NetBSD"}
