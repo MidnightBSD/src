@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount.8	8.8 (Berkeley) 6/16/94
-.\" $FreeBSD: src/sbin/mount/mount.8,v 1.82.2.1 2007/12/06 08:08:04 jhb Exp $
+.\" $FreeBSD: src/sbin/mount/mount.8,v 1.82.2.5 2009/03/24 01:31:42 obrien Exp $
 .\"
-.Dd July 12, 2006
+.Dd March 11, 2008
 .Dt MOUNT 8
 .Os
 .Sh NAME
@@ -163,6 +163,15 @@ is run with the
 flag but without the
 .Fl l
 flag.
+.It Cm mountprog Ns = Ns Aq Ar program
+Force
+.Nm
+to use the specified program to mount the file system, instead of calling
+.Xr nmount 2
+directly.  For example:
+.Bd -literal
+mount -t foofs -o mountprog=/mydir/fooprog /dev/acd0 /mnt
+.Ed
 .It Cm multilabel
 Enable multi-label Mandatory Access Control, or MAC, on the specified file
 system.
@@ -335,14 +344,14 @@ For example, the
 .Nm
 command:
 .Bd -literal -offset indent
-mount -t unionfs -o -b /sys $HOME/sys
+mount -t cd9660 -o -e /dev/cd0 /cdrom
 .Ed
 .Pp
 causes
 .Nm
 to execute the equivalent of:
 .Bd -literal -offset indent
-/sbin/mount_unionfs -b /sys $HOME/sys
+/sbin/mount_cd9660 -e /dev/cd0 /cdrom
 .Ed
 .Pp
 Additional options specific to file system types
@@ -415,7 +424,6 @@ However, for the following file system types:
 .Cm nfs ,
 .Cm nfs4 ,
 .Cm ntfs ,
-.Cm nwfs ,
 .Cm nullfs ,
 .Cm portalfs ,
 .Cm smbfs ,
@@ -510,7 +518,6 @@ support for a particular file system might be provided either on a static
 .Xr mount_nwfs 8 ,
 .Xr mount_portalfs 8 ,
 .Xr mount_smbfs 8 ,
-.Xr mount_std 8 ,
 .Xr mount_udf 8 ,
 .Xr mount_unionfs 8 ,
 .Xr umount 8
@@ -523,6 +530,19 @@ is accessible from the mounted file system.
 The minimum permissions for
 the mount point for traversal across the mount point in both
 directions to be possible for all users is 0111 (execute for all).
+.Pp
+Use of the
+.Nm
+is preferred over the use of the file system specific
+.Pa mount_ Ns Sy XXX
+commands.
+In particular,
+.Xr mountd 8
+gets a
+.Dv SIGHUP
+signal (that causes an update of the export list)
+only when the file system is mounted via
+.Nm .
 .Sh HISTORY
 A
 .Nm

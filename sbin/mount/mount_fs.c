@@ -45,7 +45,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_fs.c	8.6 (Berkeley) 4/26/95";
 #endif
 static const char rcsid[] =
-	"$FreeBSD: src/sbin/mount/mount_fs.c,v 1.3 2006/12/07 03:24:43 rodrigc Exp $";
+	"$FreeBSD: src/sbin/mount/mount_fs.c,v 1.3.2.1 2009/03/24 01:54:17 obrien Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -88,7 +88,7 @@ mount_fs(const char *vfstype, int argc, char *argv[])
 	char *p, *val;
 	int ret;
 
-	strncpy(fstype, vfstype, sizeof(fstype));
+	strlcpy(fstype, vfstype, sizeof(fstype));
 	memset(errmsg, 0, sizeof(errmsg));
 
 	getmnt_silent = 1;
