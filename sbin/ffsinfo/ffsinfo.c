@@ -48,7 +48,7 @@ All rights reserved.\n";
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ffsinfo/ffsinfo.c,v 1.13 2007/02/14 23:22:33 brian Exp $";
+  "$FreeBSD: src/sbin/ffsinfo/ffsinfo.c,v 1.13.2.1 2008/03/08 00:53:53 delphij Exp $";
 #endif /* not lint */
 
 /* ********************************************************** INCLUDES ***** */
@@ -141,7 +141,7 @@ main(int argc, char **argv)
 	cfg_lv = 0xff;
 	cfg_in = -2;
 	cfg_cg = -2;
-	out_file = "-";
+	out_file = strdup("-");
 
 	while ((ch = getopt(argc, argv, "g:i:l:o:")) != -1) {
 		switch (ch) {
