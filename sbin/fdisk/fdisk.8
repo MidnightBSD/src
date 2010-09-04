@@ -1,4 +1,4 @@
-.\" $FreeBSD: src/sbin/fdisk/fdisk.8,v 1.39 2007/04/30 18:29:36 maxim Exp $
+.\" $FreeBSD: src/sbin/fdisk/fdisk.8,v 1.39.2.2 2009/06/15 07:17:55 brian Exp $
 .\"
 .Dd April 30, 2007
 .Dt FDISK 8
@@ -8,7 +8,7 @@
 .Nd PC slice table maintenance utility
 .Sh SYNOPSIS
 .Nm
-.Op Fl BIaipstu
+.Op Fl BIaipqstu
 .Op Fl b Ar bootcode
 .Op Fl 1234
 .Op Ar disk
@@ -115,6 +115,9 @@ Print a slice table in
 configuration file format and exit; see
 .Sx CONFIGURATION FILE ,
 below.
+.It Fl q
+Be quiet.
+Benign warnings (such as "GEOM not found") are suppressed.
 .It Fl s
 Print summary information and exit.
 .It Fl t
@@ -369,6 +372,31 @@ starting at sector
 for
 .Ar length
 sectors.
+If the
+.Ar start
+or
+.Ar length
+is suffixed with a
+.Em K ,
+.Em M
+or
+.Em G ,
+it is taken as a
+.Em Kilobyte ,
+.Em Megabyte
+or
+.Em Gigabyte
+measurement respectively.
+If the
+.Ar start
+is given as
+.Qq *
+it is set to the value of the previous partition end.
+If the
+.Ar length
+is given as
+.Qq *
+the partition end is set to the end of the disk.
 .Pp
 Only those slices explicitly mentioned by these lines are modified;
 any slice not referenced by a
@@ -418,6 +446,17 @@ for 2503871 sectors (note: these numbers will be rounded upwards and
 downwards to correspond to head and cylinder boundaries):
 .Pp
 .Dl "p       1       165     1       2503871"
+.Pp
+Example: to set slices 1, 2 and 4 to
+.Fx
+slices, the first being 2 Gigabytes, the second being 10 Gigabytes and the
+forth being the remainder of the disk (again, numbers will be rounded
+appropriately):
+.Pp
+.Dl "p       1       165     63      2G"
+.Dl "p       2       165     *       10G"
+.Dl "p       3       0       0       0"
+.Dl "p       4       165     *       *"
 .It Ic a Ar slice
 Make
 .Ar slice
