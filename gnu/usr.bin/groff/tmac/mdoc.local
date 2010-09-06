@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.48.2.4 2006/01/12 15:44:42 ru Exp $
-.\" $MidnightBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.10 2008/12/07 04:00:12 laffer1 Exp $
+.\" $MidnightBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.11 2008/12/09 16:36:33 laffer1 Exp $
 .\"
 .\"     %beginstrip%
 .
@@ -81,12 +81,13 @@
 .
 .
 .\" Default .Os value
-.ds doc-default-operating-system MidnightBSD\~0.3
+.ds doc-default-operating-system MidnightBSD\~0.4
 .
 .\" MidnightBSD releases not found in doc-common
 .ds doc-operating-system-MidnightBSD-0.1  0.1
 .ds doc-operating-system-MidnightBSD-0.2  0.2
 .ds doc-operating-system-MidnightBSD-0.3  0.3
+.ds doc-operating-system-MidnightBSD-0.4  0.4
 .ds doc-operating-system-MidnightBSD-1.0  1.0
 .
 .\" FreeBSD releases not found in doc-common
@@ -94,9 +95,14 @@
 .ds doc-operating-system-FreeBSD-6.1	6.1
 .ds doc-operating-system-FreeBSD-6.2	6.2
 .ds doc-operating-system-FreeBSD-6.3	6.3
+.ds doc-operating-system-FreeBSD-6.4	6.4
 .ds doc-operating-system-FreeBSD-7.0    7.0
 .ds doc-operating-system-FreeBSD-7.1	7.1
+.ds doc-operating-system-FreeBSD-7.2	7.2
+.ds doc-operating-system-FreeBSD-7.3	7.3
 .ds doc-operating-system-FreeBSD-8.0	8.0
+.ds doc-operating-system-FreeBSD-8.1	8.1
+.ds doc-operating-system-FreeBSD-9.0	9.0
 .
 .\" DragonFly releases not found in doc-common
 .ds doc-operating-system-DragonFly-1.0   1.0
@@ -113,6 +119,12 @@
 .ds doc-operating-system-DragonFly-1.11	 1.11
 .ds doc-operating-system-DragonFly-1.12	 1.12
 .ds doc-operating-system-DragonFly-2.0   2.0
+.ds doc-operating-system-DragonFly-2.1	 2.1
+.ds doc-operating-system-DragonFly-2.2	 2.2
+.ds doc-operating-system-DragonFly-2.3	 2.3
+.ds doc-operating-system-DragonFly-2.4	 2.4
+.ds doc-operating-system-DragonFly-2.5	 2.5
+.ds doc-operating-system-DragonFly-2.6	 2.6
 .
 .\" NetBSD releases not found in doc-common.
 .ds doc-operating-system-NetBSD-1.6.1 1.6.1
@@ -123,6 +135,7 @@
 .ds doc-operating-system-NetBSD-2.0.2 2.0.2
 .ds doc-operating-system-NetBSD-3.0   3.0
 .ds doc-operating-system-NetBSD-4.0   4.0
+.ds doc-operating-system-NetBSD-5.0   5.0
 .
 .ec
 .

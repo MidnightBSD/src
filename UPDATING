@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users
 
+20100905:
+	MidnightBSD RELENG_0_3 branch created.  Aggressive development continues here
+	for 0.4.
+
 20100902:
 	Fix a security issue with libutil that allows users to bypass cpu limits in
 	login.conf in some cases.  This combined with OpenSSH for example can allow
@@ -874,4 +878,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.93 2010/08/22 22:19:05 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.94 2010/09/02 12:58:27 laffer1 Exp $
