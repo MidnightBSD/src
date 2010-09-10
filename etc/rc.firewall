@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/etc/rc.firewall,v 1.5 2008/10/01 21:11:18 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.firewall,v 1.6 2010/09/10 18:24:25 laffer1 Exp $
 # $FreeBSD: src/etc/rc.firewall,v 1.47.10.1 2005/11/19 06:06:59 ume Exp $
 #
 
@@ -148,11 +148,19 @@ case ${firewall_type} in
 
 [Dd][Ee][Ss][Kk][Tt][Oo][Pp])
 	setup_loopback
-	case ${mdnds_enable} in
+	# Multicast DNS (mdns)
+	case ${mdnsd_enable} in
 	[Yy][Ee][Ss])
-		${fwcmd} add pass udp from any to 224.0.0.0/3 5353 in
+		# (XXX: this should be link local)
+		${fwcmd} add pass udp from any 5353 to any 1024-65535 in
 		;;
 	esac
+ 	case ${avahi_daemon_enable} in
+        [Yy][Ee][Ss])
+                # (XXX: this should be link local)
+                ${fwcmd} add pass udp from any 5353 to any 1024-65535 in
+                ;;
+        esac
 	${fwcmd} add deny ip from 224.0.0.0/3 to any in
 	${fwcmd} add deny tcp from any to 224.0.0.0/3 in
 	${fwcmd} add allow tcp from any to any out
@@ -169,12 +177,6 @@ case ${firewall_type} in
         	${fwcmd} add pass udp from me to any 123 keep-state
 		;;
 	esac
-	case ${avahi_daemon_enable} in
-	[Yy][Ee][Ss])
-		# Avahi multicast dns (XXX: this should be local subnet)
-		${fwcmd} add pass udp from any 5353 to any 1024-65535 in
-		;;
-	esac 
 	${fwcmd} add 65000 deny tcp from any to any
 	${fwcmd} add 65100 deny icmp from any to me in icmptypes 8
 	${fwcmd} add 65200 allow all from any to any
