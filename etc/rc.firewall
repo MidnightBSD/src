@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/etc/rc.firewall,v 1.4 2007/09/02 18:04:31 ctriv Exp $
+# $MidnightBSD: src/etc/rc.firewall,v 1.5 2008/10/01 21:11:18 laffer1 Exp $
 # $FreeBSD: src/etc/rc.firewall,v 1.47.10.1 2005/11/19 06:06:59 ume Exp $
 #
 
@@ -148,6 +148,11 @@ case ${firewall_type} in
 
 [Dd][Ee][Ss][Kk][Tt][Oo][Pp])
 	setup_loopback
+	case ${mdnds_enable} in
+	[Yy][Ee][Ss])
+		${fwcmd} add pass udp from any to 224.0.0.0/3 5353 in
+		;;
+	esac
 	${fwcmd} add deny ip from 224.0.0.0/3 to any in
 	${fwcmd} add deny tcp from any to 224.0.0.0/3 in
 	${fwcmd} add allow tcp from any to any out
