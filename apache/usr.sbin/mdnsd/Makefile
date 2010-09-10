@@ -1,4 +1,6 @@
-# $MidnightBSD: src/apache/usr.sbin/mdnsd/Makefile,v 1.2 2010/08/22 20:05:37 laffer1 Exp $
+# $MidnightBSD: src/apache/usr.sbin/mdnsd/Makefile,v 1.3 2010/08/22 20:55:37 laffer1 Exp $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 
@@ -20,7 +22,13 @@ MAN=    mDNSResponder.8
 CFLAGS+= -I. -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
-CFLAGS+= -ITARGET_OS_FREEBSD
+CFLAGS+= -ITARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
+
+.if ${MK_INET6_SUPPORT} == "no"
+CFLAGS+=	-DHAVE_IPV6=0
+.else
+CFLAGS+=	-DHAVE_IPV6=1
+.endif
 
 .include <bsd.prog.mk>
 
