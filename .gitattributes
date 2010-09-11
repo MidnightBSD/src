@@ -22818,7 +22818,6 @@ etc/rc.d/ipmon -text
 etc/rc.d/ipnat -text
 etc/rc.d/ipsec -text
 etc/rc.d/ipxrouted -text
-etc/rc.d/isdnd -text
 etc/rc.d/jail -text
 etc/rc.d/kadmind -text
 etc/rc.d/kerberos -text

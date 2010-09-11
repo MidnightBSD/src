@@ -1,10 +1,10 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/ppp,v 1.13.2.1 2007/10/31 16:42:41 emax Exp $
-# $MidnightBSD: src/etc/rc.d/ppp,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/ppp,v 1.3 2009/01/17 17:24:51 laffer1 Exp $
 
 # PROVIDE: ppp
-# REQUIRE: netif isdnd
+# REQUIRE: netif
 # KEYWORD: nojail
 
 . /etc/rc.subr

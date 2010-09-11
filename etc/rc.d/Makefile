@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.17 2009/11/28 22:44:30 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.18 2010/08/22 22:06:29 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
@@ -17,7 +17,7 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	ike \
 	idmapd inetd initrandom \
 	ip6addrctl ip6fw ipfilter ipfs ipfw ipmon \
-	ipnat ipsec ipxrouted isdnd \
+	ipnat ipsec ipxrouted \
 	jail \
 	kadmind kerberos kernel keyserv kldxref kpasswdd \
 	ldconfig local localpkg lockd lpd \
