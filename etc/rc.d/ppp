@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/ppp,v 1.13.2.1 2007/10/31 16:42:41 emax Exp $
-# $MidnightBSD: src/etc/rc.d/ppp,v 1.3 2009/01/17 17:24:51 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/ppp,v 1.4 2010/09/11 17:18:22 laffer1 Exp $
 
 # PROVIDE: ppp
 # REQUIRE: netif
@@ -82,8 +82,12 @@ ppp_poststart()
 {
 	# Re-Sync ipfilter and pf so they pick up any new network interfaces
 	#
-	/etc/rc.d/ipfilter resync
-	/etc/rc.d/pf resync
+	if [ -f /etc/rc.d/ipfilter ]; then
+		/etc/rc.d/ipfilter resync
+	fi
+	if [ -f /etc/rc.d/pf ]; then
+		/etc/rc.d/pf resync
+	fi
 }
 
 ppp_stop_profile() {
