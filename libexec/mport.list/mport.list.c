@@ -24,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.4 2010/03/10 05:42:11 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.5 2010/07/31 03:56:38 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.4 2010/03/10 05:42:11 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.5 2010/07/31 03:56:38 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -44,7 +44,8 @@ __MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.4 2010/03/10 05:
 static void usage(void);
 static char * str_remove( const char *str, const char ch );
 
-int main(int argc, char *argv[]) 
+int 
+main(int argc, char *argv[]) 
 {
   int ch;
   mportInstance *mport;
@@ -94,6 +95,7 @@ int main(int argc, char *argv[])
   if (packs == NULL) {
     if (!quiet)
       warnx("No packages installed matching.");
+    mport_instance_free(mport);
     exit(3);
   }
   
@@ -121,7 +123,8 @@ int main(int argc, char *argv[])
 }
 
 
-static char * str_remove( const char *str, const char ch )
+static char * 
+str_remove( const char *str, const char ch )
 {
    size_t i;
    size_t x;
@@ -147,7 +150,8 @@ static char * str_remove( const char *str, const char ch )
 } 
 
 
-static void usage() 
+static void 
+usage() 
 {
   fprintf(stderr, "Usage: mport.list [-q | -v]\n");
   exit(2);
