@@ -27601,6 +27601,8 @@ libexec/mport.create/Makefile -text
 libexec/mport.create/mport.create.c -text
 libexec/mport.delete/Makefile -text
 libexec/mport.delete/mport.delete.c -text
+libexec/mport.info/Makefile -text
+libexec/mport.info/mport.info.c -text
 libexec/mport.init/Makefile -text
 libexec/mport.init/mport.init.c -text
 libexec/mport.install/Makefile -text
