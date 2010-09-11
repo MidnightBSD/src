@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.20 2009/05/27 06:02:01 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.21 2009/10/08 01:34:25 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,8 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+#20100911:
+OLD_FILES+=etc/rc.d/isdnd
 #20091007:
 OLD_FILES+=usr/sbin/tcpslice
 #20090525:
