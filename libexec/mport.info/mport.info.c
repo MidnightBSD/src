@@ -24,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.5 2010/07/31 03:56:38 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.info/mport.info.c,v 1.1 2010/09/11 20:07:15 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.5 2010/07/31 03:56:38 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.info/mport.info.c,v 1.1 2010/09/11 20:07:15 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -51,13 +51,9 @@ main(int argc, char *argv[])
   mportPackageMeta **packs;
   bool quiet = false;
   bool verbose = false;
-  bool origin = false;
 
-  while ((ch = getopt(argc, argv, "oqv")) != -1) {
+  while ((ch = getopt(argc, argv, "qv")) != -1) {
     switch (ch) {
-      case 'o':
-        origin = true;
-        break;
       case 'q':
         quiet = true;
         break;
@@ -99,7 +95,7 @@ main(int argc, char *argv[])
     exit(3);
   }
 
-  if (origin && !quiet)
+  if (!quiet)
     printf("The following installed package(s) has %s origin:\n", argv[0]);
  
   while (*packs != NULL) {
