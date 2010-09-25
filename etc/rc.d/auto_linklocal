@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/auto_linklocal,v 1.1 2007/10/26 13:51:03 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/auto_linklocal,v 1.1.2.3.2.2 2006/12/31 15:26:25 hrs Exp $
 #
 
@@ -19,7 +19,10 @@ stop_cmd=":"
 auto_linklocal_start()
 {
 	if ! checkyesno ipv6_enable && ${SYSCTL} net.inet6 > /dev/null 2>&1; then
-		${SYSCTL_W} net.inet6.ip6.auto_linklocal=0
+		if ! ${SYSCTL_W} net.inet6.ip6.auto_linklocal=0 >/dev/null 2>&1; then
+			warn "failed to set sysctl(8)"
+			return 1
+		fi
 		laddr=`network6_getladdr lo0`
 		if [ -z "${laddr}" ]; then
 			ifconfig lo0 inet6 fe80::1 prefixlen 64
