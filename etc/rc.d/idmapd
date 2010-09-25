@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/idmapd,v 1.1 2009/01/17 17:30:41 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/idmapd,v 1.1 2006/10/15 14:19:06 ceri Exp $
 #
 
 # PROVIDE: idmapd
 # REQUIRE: rpcbind
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
