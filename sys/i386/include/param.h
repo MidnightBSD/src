@@ -65,8 +65,8 @@
 #endif
 #define MID_MACHINE	MID_I386
 
-#ifdef SMP
-#define MAXCPU		16
+#if defined(SMP) || defined(KLD_MODULE)
+#define MAXCPU		32
 #else
 #define MAXCPU		1
 #endif /* SMP */

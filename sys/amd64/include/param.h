@@ -79,8 +79,8 @@
 #define	MACHINE_ARCH	"amd64"
 #endif
 
-#ifdef SMP
-#define MAXCPU		16
+#if defined(SMP) || defined(KLD_MODULE)
+#define MAXCPU		32
 #else
 #define MAXCPU		1
 #endif
