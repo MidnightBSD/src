@@ -22847,6 +22847,7 @@ etc/rc.d/named -text
 etc/rc.d/natd -text
 etc/rc.d/netif -text
 etc/rc.d/netoptions -text
+etc/rc.d/netwait -text
 etc/rc.d/network_ipv6 -text
 etc/rc.d/newsyslog -text
 etc/rc.d/nfsclient -text

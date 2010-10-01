@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.18 2010/08/22 22:06:29 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.19 2010/09/11 17:18:21 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
@@ -23,7 +23,7 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	ldconfig local localpkg lockd lpd \
 	mdnsd mixer motd mountcritlocal mountcritremote mountlate \
 	mdconfig mdconfig2 mountd moused mroute6d mrouted msgs \
-	named natd netif netoptions \
+	named natd netif netoptions netwait \
 	network_ipv6 newsyslog nfsclient nfsd \
 	nfsserver nisdomain nsswitch ntpd \
 	othermta \

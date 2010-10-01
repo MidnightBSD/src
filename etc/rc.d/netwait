@@ -1,0 +1,122 @@
+#!/bin/sh
+#
+# $MidnightBSD$
+
+# PROVIDE: netwait
+# REQUIRE: NETWORKING
+# BEFORE: mountcritremote
+# KEYWORD: nojail
+
+. /etc/rc.subr
+
+name="netwait"
+rc_var=`set_rcvar`
+start_cmd="${name}_start"
+stop_cmd=":"
+
+# Add the following lines to /etc/rc.conf to enable netwait:
+#
+# netwait_enable (bool): Set to "NO" by default.
+#                        Set it to "YES" to enable netwait.
+# netwait_ip (str):      Set to "" by default; MUST BE SET BY USER.
+#                        IP address/destination to be ping'd.
+# netwait_timeout (int): Set to "60" by default.
+#                        Total number of seconds to perform pings,
+#                        at a rate of one ping per second.  If any
+#                        of these are successful (exit code 0), the
+#                        network is considered usable.  The 1 second
+#                        delay between pings is indirectly controlled
+#                        using the ping -t flag.
+# netwait_if (str):      Set to "" by default.
+#                        The interface name to watch link state on
+#                        before attempting pings.  Uses ifconfig(8)
+#                        to monitor link status.
+# netwait_if_timeout (int): Set to "30" by default.
+#                        Total number of seconds to wait for link
+#                        state to change from "status: no carrier"
+#                        to something else (presumably "active").
+#                        There is a 1 second delay between attempts.
+
+: ${netwait_enable:="NO"}
+#: ${netwait_ip:=""}
+: ${netwait_timeout:="60"}
+#: ${netwait_if:=""}
+: ${netwait_if_timeout:="30"}
+
+netwait_start()
+{
+	local ip rc count output link
+
+	if [ -z "${netwait_ip}" ]; then
+		err 1 "You must define one or more IP addresses in netwait_ip"
+	fi
+
+	if [ ${netwait_timeout} -lt 1 ]; then
+		err 1 "netwait_timeout must be >= 1"
+	fi
+
+	# Handle SIGINT (Ctrl-C); force abort of while() loop
+	trap break SIGINT
+
+	if [ -n "${netwait_if}" ]; then
+		echo -n "Waiting for $netwait_if to have link"
+
+		count=1
+		while [ ${count} -le ${netwait_if_timeout} ]; do
+			if output=`/sbin/ifconfig ${netwait_if} 2>/dev/null`; then
+				link=`expr "${output}" : '.*[[:blank:]]status: \(no carrier\)'`
+				if [ -z "${link}" ]; then
+					echo '.'
+					break
+				fi
+			else
+				echo ''
+				err 1 "ifconfig ${netwait_if} failed"
+			fi
+			sleep 1
+			count=$((count+1))
+		done
+		if [ -n "${link}" ]; then
+			# Restore default SIGINT handler
+			trap - SIGINT
+
+			echo ''
+			warn "Interface still has no link.  Continuing with startup, but"
+			warn "be aware you may not have a fully functional networking"
+			warn "layer at this point."
+			return
+		fi
+	fi
+
+	# Handle SIGINT (Ctrl-C); force abort of while() loop
+	trap break SIGINT
+
+	for ip in ${netwait_ip}; do
+		echo -n "Waiting for ${ip} to respond to ICMP"
+
+		count=1
+		while [ ${count} -le ${netwait_timeout} ]; do
+			/sbin/ping -t 1 -c 1 -o ${ip} >/dev/null 2>&1
+			rc=$?
+
+			if [ $rc -eq 0 ]; then
+				# Restore default SIGINT handler
+				trap - SIGINT
+
+				echo '.'
+				return
+			fi
+			count=$((count+1))
+		done
+		echo ': No response from host.'
+	done
+
+	# Restore default SIGINT handler
+	trap - SIGINT
+
+	warn "Exhausted IP list.  Continuing with startup, but be aware you may"
+	warn "not have a fully functional networking layer at this point."
+}
+
+load_rc_config $name
+run_rc_command "$1"
