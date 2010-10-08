@@ -573,7 +573,7 @@ process_put(struct sftp_conn *conn, char *src, char *dst, char *pwd, int pflag)
 
 	memset(&g, 0, sizeof(g));
 	debug3("Looking up %s", src);
-	if (glob(src, GLOB_NOCHECK, NULL, &g)) {
+	if (glob(src, GLOB_NOCHECK|GLOB_LIMIT, NULL, &g)) {
 		error("File \"%s\" not found.", src);
 		err = -1;
 		goto out;
