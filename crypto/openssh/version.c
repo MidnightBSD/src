@@ -28,7 +28,7 @@
 #include "includes.h"
 #include "version.h"
 #include "xmalloc.h"
-
+#include <string.h>
 
 static char *version = NULL;
 
