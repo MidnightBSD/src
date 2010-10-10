@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.7 2009/04/23 04:23:54 ctriv Exp $
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.8 2010/09/26 16:02:20 laffer1 Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -22,7 +22,7 @@ CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
                 -Dmksymlinks -Dsrc=${SRCDIR} -Duse64bitint 
 
 .if defined(TARGET_ARCH)
-CONFIGURE_ARGS+=	-DDtargetarch=${TARGET_ARCH}
+CONFIGURE_ARGS+=	-Dtargetarch=${TARGET_ARCH}
 .endif
 CONFIGURE_SCRIPT=    Configure
                 
