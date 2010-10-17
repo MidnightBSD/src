@@ -9,5 +9,5 @@ Name: SQLite
 Description: SQL database engine
 Version: 3.6.11
 Libs: -lsqlite3
-Libs.private: -ldl -lpthread
+Libs.private: -lpthread
 Cflags: 
