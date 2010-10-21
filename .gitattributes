@@ -41222,6 +41222,8 @@ usr.sbin/syslogd/pathnames.h -text
 usr.sbin/syslogd/syslog.conf.5 -text
 usr.sbin/syslogd/syslogd.8 -text
 usr.sbin/syslogd/syslogd.c -text
+usr.sbin/sysrc/Makefile -text
+usr.sbin/sysrc/sysrc.sh -text
 usr.sbin/tcpdchk/Makefile -text
 usr.sbin/tcpdmatch/Makefile -text
 usr.sbin/tcpdrop/Makefile -text
