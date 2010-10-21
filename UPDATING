@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users
 
+20101021:
+	sysrc is a utility to print and modify name/value pairs in /etc/rc.conf easily.
+	This is similar to functions present in many linux distros. The utility was
+	written by Devin Teske for FreeBSD.
+
 20100920:
 	bzip2 security patch for integer overflow.
 
@@ -881,4 +886,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.95 2010/09/06 00:19:55 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.96 2010/09/20 15:52:51 laffer1 Exp $
