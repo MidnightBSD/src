@@ -65,6 +65,7 @@
 #   	RC_DEFAULTS      Location of `/etc/defaults/rc.conf' file.
 #   	SYSRC_VERBOSE    Default verbosity. Set to non-NULL to enable.
 #
+# $MidnightBSD$
 ############################################################ CONFIGURATION
 
 #
