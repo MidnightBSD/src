@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.4 (Berkeley) 5/5/95
 # $FreeBSD: src/bin/sh/Makefile,v 1.44.8.1 2005/11/06 20:39:47 stefanf Exp $
-# $MidnightBSD: src/bin/sh/Makefile,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
+# $MidnightBSD: src/bin/sh/Makefile,v 1.3 2010/01/16 17:38:41 laffer1 Exp $
 
 PROG=	sh
 INSTALLFLAGS= -S
@@ -22,12 +22,12 @@ LDADD= -ll -ledit -ltermcap
 LFLAGS= -8	# 8-bit lex scanner for arithmetic
 CFLAGS+=-DSHELL -I. -I${.CURDIR}
 # for debug:
-# CFLAGS+= -g -DDEBUG=2
+# DEBUG_FLAGS+= -g -DDEBUG=2 -fno-inline
 WARNS?=	2
 WFORMAT=0
 
 .PATH:	${.CURDIR}/bltin \
-	${.CURDIR}/../../bin/test
+	${.CURDIR}/../test
 
 CLEANFILES+= mkinit mkinit.o mknodes mknodes.o \
 	mksyntax mksyntax.o
