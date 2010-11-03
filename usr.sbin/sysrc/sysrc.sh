@@ -2,8 +2,8 @@
 # -*- tab-width:  4 -*- ;; Emacs
 # vi: set tabstop=4     :: Vi/ViM
 #
-# Revision: 2.4
-# Last Modified: October 20th, 2010
+# Revision: 2.5.1
+# Last Modified: November 2nd, 2010
 ############################################################ COPYRIGHT
 #
 # (c)2010. Devin Teske. All Rights Reserved.
@@ -30,12 +30,20 @@
 # SUCH DAMAGE.
 #
 # AUTHOR      DATE      DESCRIPTION
+# dteske   2010.11.02   Fix quotes when replacing null assignment.
+# dteske   2010.11.02   Preserve leading/trailing whitespace in sysrc_set().
+# dteske   2010.11.02   Deprecate lrev() in favor of tail(1)'s `-r' flag.
+# dteske   2010.11.02   Map `-R dir' to `-j jail' if `dir' maps to a single
+#                       running jail (or produce an error if `dir' maps to
+#                       many running jails).
 # dteske   2010.10.20   Make `-j jail' and `-R dir' more secure
 # dteske   2010.10.19   Add `-j jail' for operating on jails (see jexec(8)).
 # dteske   2010.10.18   Add `-R dir' for operating in different root-dir.
 # dteske   2010.10.13   Allow `-f file' multiple times.
 # dteske   2010.10.12   Updates per freebsd-hackers thread.
 # dteske   2010.09.29   Initial version.
+#
+# $MidnightBSD$
 #
 ############################################################ INFORMATION
 #
@@ -65,7 +73,6 @@
 #   	RC_DEFAULTS      Location of `/etc/defaults/rc.conf' file.
 #   	SYSRC_VERBOSE    Default verbosity. Set to non-NULL to enable.
 #
-# $MidnightBSD$
 ############################################################ CONFIGURATION
 
 #
@@ -105,6 +112,16 @@ SHOW_NAME=1
 SHOW_VALUE=1
 
 ############################################################ FUNCTION
+
+# have $anything
+#
+# A wrapper to the `type' built-in. Returns true if argument is a valid shell
+# built-in, keyword, or externally-tracked binary, otherwise false.
+#
+have()
+{
+	type "$@" > /dev/null 2>&1
+}
 
 # fprintf $fd $fmt [ $opts ... ]
 #
@@ -383,50 +400,6 @@ sysrc_find()
 	return $FAILURE # Not found
 }
 
-# ... | lrev
-# lrev $file ...
-#
-# Reverse lines of input. Unlike rev(1) which reverses the ordering of
-# characters on a single line, this function instead reverses the line
-# sequencing.
-#
-# For example, the following input:
-#
-# 	Line 1
-# 	Line 2
-# 	Line 3
-#
-# Becomes reversed in the following manner:
-#
-# 	Line 3
-# 	Line 2
-# 	Line 1
-#
-lrev()
-{
-	local stdin_rev=
-	if [ $# -gt 0 ]; then
-		#
-		# Reverse lines from files passed as positional arguments.
-		#
-		while [ $# -gt 0 ]; do
-			local file="$1"
-			[ -f "$file" ] && lrev < "$file"
-			shift 1
-		done
-	else
-		#
-		# Reverse lines from standard input
-		#
-		while read -r LINE; do
-			stdin_rev="$LINE
-$stdin_rev"
-		done
-	fi
-
-	echo -n "$stdin_rev"
-}
-
 # sysrc_set $varname $new_value
 #
 # Change a setting in the system configuration files (edits the files in-place
@@ -486,19 +459,58 @@ sysrc_set()
 	#
 	# Operate on the matching file, replacing only the last occurrence.
 	#
-	local new_contents="`lrev $file 2> /dev/null | \
+	local __IFS="$IFS"
+	local new_contents="`tail -r $file 2> /dev/null | \
 	( found=
+	  IFS=
 	  while read -r LINE; do
-	  	if [ ! "$found" ]; then
-	  		match="$( echo "$LINE" | grep "$regex" )"
-	  		if [ "$match" ]; then
-	  			LINE="$varname"'="'"$new_value"'"'
-	  			found=1
-	  		fi
-	  	fi
-	  	echo "$LINE"
+		# If already found, just spew...
+	  	if [ "$found" ]; then
+			echo "$LINE"
+			continue
+		fi
+
+		#
+		# Determine what type of assignment is being performed
+		# and append the proper expression to accurately replace
+		# the current value.
+		#
+		# NOTE: The base regular expression below should match
+		#       functionally the regex used by sysrc_find().
+		#
+		regex="^([[:space:]]*$varname=)"
+		if echo "$LINE" | grep -Eq "$regex'"; then
+			# found assignment w/ single-quoted value
+			found=1
+			regex="$regex(')([^']*)('{0,1})"
+		elif echo "$LINE" | grep -Eq "$regex"'"'; then
+			# found assignment w/ double-quoted value
+			found=1
+			regex="$regex"'(")([^\\\\]*\\\\")*[^"]*("{0,1})'
+		elif echo "$LINE" | grep -Eq "$regex[^[:space:]]"; then
+			# found assignment w/ non-quoted value
+			found=1
+			regex="$regex()([^[:space:]]*)()"
+
+			# Use quotes if replacing with multi-word value
+			[ "${new_value%[$__IFS]*}" != "$new_value" ] \
+				&& new_value='"'"$new_value"'"'
+		elif echo "$LINE" | grep -Eq "$regex"; then
+			# found null-assignment
+			found=1
+			regex="$regex()()()"
+
+			# Always use quotes
+			new_value='"'"$new_value"'"'
+		fi
+
+		# Do the deed...
+		[ "$found" ] && LINE="$( echo "$LINE" \
+			| sed -re "s/$regex/\1\2$new_value\4/" )"
+
+		echo "$LINE"
 	  done
-	) | lrev`"
+	) | tail -r`"
 
 	[ "$new_contents" ] || return $FAILURE
 
@@ -668,6 +680,52 @@ if [ "$JAIL" -o "$ROOTDIR" ]; then
 		    	/usr/sbin/jexec "$JAIL" /bin/sh
 		exit $?
 	elif [ "$ROOTDIR" ]; then
+		#
+		# Make sure that the root directory specified is not to any
+		# running jails.
+		#
+		# NOTE: To maintain backward compatibility with older jails on
+		# older systems, we will not perform this check if either the
+		# jls(8) or jexec(8) utilities are missing.
+		#
+		if have jexec && have jls; then
+			jid="`jls jid path | \
+			(
+				while read JID JROOT; do
+					[ "$JROOT" = "$ROOTDIR" ] || continue
+					echo $JID
+				done
+			)`"
+
+			#
+			# If multiple running jails match the specified root
+			# directory, exit with error.
+			#
+			if [ "$jid" -a "${jid%[$IFS]*}" != "$jid" ]; then
+				die "%s: %s: %s" "$progname" "$ROOTDIR" \
+					"$( echo "Multiple jails claim this" \
+					         "directory as their root." \
+					         "(use \`-j jail' instead)" )"
+			fi
+
+			#
+			# If only a single running jail matches the specified
+			# root directory, implicitly use `-j jail'.
+			#
+			if [ "$jid" ]; then
+				#
+				# Re-execute outselves with sh(1) via jexec(8)
+				#
+				( echo set -- $args
+				  cat $0
+				) | env - RC_DEFAULTS="$RC_DEFAULTS" \
+					/usr/sbin/jexec "$jid" /bin/sh
+				exit $?
+			fi
+
+			# Otherwise, fall through and allow chroot(8)
+		fi
+
 		#
 		# Re-execute ourselves with sh(1) via chroot(8)
 		#
