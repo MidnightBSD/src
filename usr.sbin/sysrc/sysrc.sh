@@ -2,8 +2,8 @@
 # -*- tab-width:  4 -*- ;; Emacs
 # vi: set tabstop=4     :: Vi/ViM
 #
-# Revision: 2.5.1
-# Last Modified: November 2nd, 2010
+# Revision: 3.0
+# Last Modified: November 4th, 2010
 ############################################################ COPYRIGHT
 #
 # (c)2010. Devin Teske. All Rights Reserved.
@@ -30,6 +30,9 @@
 # SUCH DAMAGE.
 #
 # AUTHOR      DATE      DESCRIPTION
+# dteske   2010.11.04   Add taint checking.
+# dteske   2010.11.04   Comments.
+# dteske   2010.11.04   Significant performance enhancements.
 # dteske   2010.11.02   Fix quotes when replacing null assignment.
 # dteske   2010.11.02   Preserve leading/trailing whitespace in sysrc_set().
 # dteske   2010.11.02   Deprecate lrev() in favor of tail(1)'s `-r' flag.
@@ -44,7 +47,6 @@
 # dteske   2010.09.29   Initial version.
 #
 # $MidnightBSD$
-#
 ############################################################ INFORMATION
 #
 # Command Usage:
@@ -72,6 +74,15 @@
 #   ENVIRONMENT:
 #   	RC_DEFAULTS      Location of `/etc/defaults/rc.conf' file.
 #   	SYSRC_VERBOSE    Default verbosity. Set to non-NULL to enable.
+#
+#
+# Dependencies (sorted alphabetically):
+#
+#    awk(1)    cat(1)     chmod(1)   chown(8)    chroot(8)   env(1)
+#    grep(1)   jexec(8)   jls(8)*    mktemp(1)   mv(1)       rm(1)
+#    sh(1)     stat(1)    tail(1)
+#
+# *optional
 #
 ############################################################ CONFIGURATION
 
@@ -111,7 +122,7 @@ SHOW_EQUALS=
 SHOW_NAME=1
 SHOW_VALUE=1
 
-############################################################ FUNCTION
+############################################################ FUNCTIONS
 
 # have $anything
 #
@@ -296,7 +307,7 @@ sysrc_get()
 		#
 		clean_env --except RC_CONFS RC_DEFAULTS
 
-		. "$RC_DEFAULTS"
+		. "$RC_DEFAULTS" > /dev/null 2>&1
 
 		#
 		# If the query is for `rc_conf_files' then store the value that
@@ -314,7 +325,7 @@ sysrc_get()
 		#
 		[ "$RC_CONFS" ] && rc_conf_files="$RC_CONFS"
 
-		source_rc_confs
+		source_rc_confs > /dev/null 2>&1
 
 		#
 		# If the query was for `rc_conf_files' AND after calling
@@ -357,6 +368,7 @@ sysrc_get()
 sysrc_find()
 {
 	local varname="$1"
+	local regex="^[[:space:]]*$varname="
 	local rc_conf_files="$( sysrc_get rc_conf_files )"
 	local conf_files=
 	local file
@@ -391,7 +403,7 @@ sysrc_find()
 	#
 	for file in $conf_files; do
 		[ -f "$file" -a -r "$file" ] || continue
-		if grep -q "^[[:space:]]*$varname=" $file; then
+		if grep -Eq "$regex" $file; then
 			echo $file
 			return $SUCCESS
 		fi
@@ -435,7 +447,7 @@ sysrc_set()
 		if [ "$RC_CONFS" ]; then
 			file="${RC_CONFS%%[$IFS]*}"
 		else
-			file="$( sysrc_get "rc_conf_files%%[$IFS]*" )"
+			file=$( sysrc_get "rc_conf_files%%[$IFS]*" )
 		fi
 	fi
 
@@ -450,69 +462,11 @@ sysrc_set()
 	#
 	# Perform sanity checks.
 	#
-	if [ ! -w $file ]; then
+	if [ ! -w "$file" ]; then
 		eprintf "\n%s: cannot create %s: Permission denied\n" \
 		        "$progname" "$file"
 		return $FAILURE
 	fi
-
-	#
-	# Operate on the matching file, replacing only the last occurrence.
-	#
-	local __IFS="$IFS"
-	local new_contents="`tail -r $file 2> /dev/null | \
-	( found=
-	  IFS=
-	  while read -r LINE; do
-		# If already found, just spew...
-	  	if [ "$found" ]; then
-			echo "$LINE"
-			continue
-		fi
-
-		#
-		# Determine what type of assignment is being performed
-		# and append the proper expression to accurately replace
-		# the current value.
-		#
-		# NOTE: The base regular expression below should match
-		#       functionally the regex used by sysrc_find().
-		#
-		regex="^([[:space:]]*$varname=)"
-		if echo "$LINE" | grep -Eq "$regex'"; then
-			# found assignment w/ single-quoted value
-			found=1
-			regex="$regex(')([^']*)('{0,1})"
-		elif echo "$LINE" | grep -Eq "$regex"'"'; then
-			# found assignment w/ double-quoted value
-			found=1
-			regex="$regex"'(")([^\\\\]*\\\\")*[^"]*("{0,1})'
-		elif echo "$LINE" | grep -Eq "$regex[^[:space:]]"; then
-			# found assignment w/ non-quoted value
-			found=1
-			regex="$regex()([^[:space:]]*)()"
-
-			# Use quotes if replacing with multi-word value
-			[ "${new_value%[$__IFS]*}" != "$new_value" ] \
-				&& new_value='"'"$new_value"'"'
-		elif echo "$LINE" | grep -Eq "$regex"; then
-			# found null-assignment
-			found=1
-			regex="$regex()()()"
-
-			# Always use quotes
-			new_value='"'"$new_value"'"'
-		fi
-
-		# Do the deed...
-		[ "$found" ] && LINE="$( echo "$LINE" \
-			| sed -re "s/$regex/\1\2$new_value\4/" )"
-
-		echo "$LINE"
-	  done
-	) | tail -r`"
-
-	[ "$new_contents" ] || return $FAILURE
 
 	#
 	# Create a new temporary file to write to.
@@ -526,19 +480,116 @@ sysrc_set()
 	# temporary file over the destination, the destination will inherit the
 	# permissions from the temporary file).
 	#
-	chmod $( stat -f '%#Lp' "$file" ) "$tmpfile" 2> /dev/null
+	chmod "$( stat -f '%#Lp' "$file" )" "$tmpfile" 2> /dev/null
 
 	#
 	# Fixup ownerhsip. The destination file _is_ writable (we tested
 	# earlier above). However, this will fail if we don't have sufficient
 	# permissions (so we throw stderr into the bit-bucket).
 	#
-	chown $( stat -f '%u:%g' "$file" ) "$tmpfile" 2> /dev/null
+	chown "$( stat -f '%u:%g' "$file" )" "$tmpfile" 2> /dev/null
 
 	#
-	# Write the temporary file contents and move it into place.
+	# Protect our awk(1) script from quotes in new_value
 	#
-	echo "$new_contents" > "$tmpfile" || return $FAILURE
+	local awk_new_value="$( echo "$new_value" \
+		| awk '{ gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); print }' )"
+
+	#
+	# Generate an awk(1) script to find/replace the appropriate line.
+	# If a line suitable-of-replacement is not found, awk will return
+	# error-status, indicating that we should append the new value.
+	#
+
+	local awkscript apos="'" quot='"' bquot='\"' bbtick='\`'
+	local regex="^[[:space:]]*$varname="
+		#NOTE: This should be the same regex as used by sysrc_find()
+
+	awkscript=$( cat << EOF
+	BEGIN { retval = 0; found = 0 }
+	{
+		# If already found... just spew
+		if ( found ) { print; next }
+
+		# Does this line match an assignment to our variable?
+		if ( ! match(\$0, /$regex/) ) { print; next }
+
+		# Save important match information
+		found = 1
+		matchlen = RSTART + RLENGTH - 1
+
+		# Store the value text for later munging
+		value = substr(\$0, matchlen + 1, length(\$0) - matchlen)
+
+		# Store the first character of the value
+		t1 = t2 = substr(value, 0, 1)
+
+		# Assignment w/ back-ticks, expression, or misc.
+		# We ignore these since we did not generate them
+		#
+		if ( t1 ~ /[$bbtick\\\$\\\\]/ )
+		{ retval = 1; print; next }
+
+		# Assignment w/ single-quoted value
+		else if ( t1 == "$apos" ) {
+			sub(/^$apos[^$apos]*/, "", value)
+			if ( length(value) == 0 ) t2 = ""
+			sub(/^$apos/, "", value)
+		}
+
+		# Assignment w/ double-quoted value
+		else if ( t1 == "$bquot" ) {
+			sub(/^$quot(.*\\\\+$quot)*[^$quot]*/, "", value)
+			if ( length(value) == 0 ) t2 = ""
+			sub(/^$quot/, "", value)
+		}
+
+		# Assignment w/ non-quoted value
+		else if ( t1 ~ /[^[:space:];#]/ ) {
+			t1 = t2 = "$bquot"
+			sub(/^[^[:space:]]*/, "", value)
+		}
+
+		# Null-assignment
+		else if ( t1 ~ /[[:space:]];#]/ )
+		{ t1 = t2 = "$bquot" }
+
+		printf "%s%c%s%c%s\n", substr(\$0, 0, matchlen), \
+			t1, "$awk_new_value", t2, value
+	}
+	END { exit retval }
+EOF
+	)
+
+	#
+	# Operate on the matching file, replacing only the last occurrence.
+	#
+	local new_contents retval
+	new_contents=$( tail -r $file 2> /dev/null )
+	new_contents=$( echo "$new_contents" | awk "$awkscript" )
+	retval=$?
+
+	#
+	# Write the temporary file contents.
+	#
+	echo "$new_contents" | tail -r > "$tmpfile" || return $FAILURE
+	if [ $retval -ne $SUCCESS ]; then
+		echo "$varname=\"$new_value\"" >> "$tmpfile"
+	fi
+
+	#
+	# Taint-check our results.
+	#
+	if ! /bin/sh -n "$tmpfile"; then
+		eprintf "%s: Not overwriting \`%s' due to %s\n" \
+		        "$progname" "$file" "previous syntax errors"
+		rm -f "$tmpfile"
+		return $FAILURE
+	fi
+
+	#
+	# Finally, move the temporary file into place.
+	#
 	mv "$tmpfile" "$file"
 }
 
@@ -553,49 +604,44 @@ sysrc_set()
 sysrc_desc()
 {
 	local varname="$1"
+	local regex="^[[:space:]]*$varname="
+	local vregex="[[:space:]]*[[:alpha:]_][[:alnum:]_]*"
+	local awkscript
 
-	(
-		buffer=
-		while read LINE; do
-			case "$LINE" in
-			$varname=*)
-				buffer="$LINE"
-				break
-			esac
-		done
+	awkscript=$( cat << EOF
+	BEGIN { found = 0; buffer = "" }
+	{
+		if ( ! found )
+		{
+			if ( ! match(\$0, /$regex/) ) next
 
-		# Return if the variable wasn't found
-		[ "$buffer" ] || return $FAILURE
+			found = 1
+			sub(/^[^#]*(#[[:space:]]*)?/, "")
+			buffer = \$0
+			next
+		}
 
-		regex='[[:alpha:]_][[:alnum:]_]*='
-		while read LINE; do
-			#
-			# Stop reading comments if we reach a new assignment
-			# directive or if the line contains only whitespace
-			#
-			echo "$LINE" | grep -q "^[[:space:]]*$regex" && break
-			echo "$LINE" | grep -q "^[[:space:]]*#$regex" && break
-			echo "$LINE" | grep -q "^[[:space:]]*$" && break
+		if ( !/^[[:space:]]*#/ ||
+		      /^[[:space:]]*$vregex=/ ||
+		      /^[[:space:]]*#$vregex=/ ||
+		      /^[[:space:]]*$/ ) exit
 
-			# Append new line to buffer
-			buffer="$buffer
-$LINE"
-		done
+		sub(/(.*#)*[[:space:]]*/, "")
+		buffer = buffer" "\$0
+	}
+	END \
+	{
+		# Clean up the buffer
+		sub(/^[[:space:]]*/, "", buffer)
+		sub(/[[:space:]]*$/, "", buffer)
 
-		# Return if the buffer is empty
-		[ "$buffer" ] || return $FAILURE
+		print buffer
+		exit ! found
+	}
+EOF
+	)
 
-		#
-		# Clean up the buffer.
-		#
-		regex='^[^#]*\(#[[:space:]]*\)\{0,1\}'
-		buffer="$( echo "$buffer" | sed -e "s/$regex//" )"
-		buffer="$( echo "$buffer" | tr '\n' ' ' \
-			| sed -e 's/^[[:space:]]*//;s/[[:space:]]*$//' )"
-
-		echo "$buffer"
-
-	) < "$RC_DEFAULTS"
+	awk "$awkscript" < "$RC_DEFAULTS"
 }
 
 ############################################################ MAIN SOURCE
@@ -632,6 +678,17 @@ while getopts hf:aAdevinNR:j: flag; do
 	esac
 done
 shift $(( $OPTIND - 1 ))
+
+#
+# Taint-check all rc.conf(5) files
+#
+errmsg="$progname: Exiting due to previous syntax errors"
+/bin/sh -n "$RC_DEFAULTS" || die "$errmsg"
+( . "$RC_DEFAULTS"
+  for i in ${RC_CONFS:-$rc_conf_files}; do
+  	/bin/sh -n "$i" || exit $FAILURE
+  done
+) || die "$errmsg"
 
 #
 # Process `-e', `-n', and `-N' command-line options
@@ -847,9 +904,9 @@ while [ $# -gt 0 ]; do
 		#
 
 		if [ "$SYSRC_VERBOSE" ]; then
-			file="$( sysrc_find "$NAME" )"
+			file=$( sysrc_find "$NAME" )
 			[ "$file" = "$RC_DEFAULTS" -o ! "$file" ] && \
-				file="$( sysrc_get "rc_conf_files%%[$IFS]*" )"
+				file=$( sysrc_get "rc_conf_files%%[$IFS]*" )
 			echo -n "$file: "
 		fi
 
@@ -860,9 +917,10 @@ while [ $# -gt 0 ]; do
 			echo "$NAME"
 			sysrc_set "$NAME" "${1#*}"
 		else
-			echo -n "${SHOW_NAME:+$NAME$SEP}$(
-			         sysrc_get "$NAME" )${SHOW_EQUALS:+\"}"
+			before=$( sysrc_get "$NAME" )
 			if sysrc_set "$NAME" "${1#*=}"; then
+				echo -n "${SHOW_NAME:+$NAME$SEP}"
+				echo -n "$before${SHOW_EQUALS:+\"}"
 				echo " -> $( sysrc_get "$NAME" )"
 			fi
 		fi
