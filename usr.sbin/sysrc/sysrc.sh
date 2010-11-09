@@ -2,8 +2,8 @@
 # -*- tab-width:  4 -*- ;; Emacs
 # vi: set tabstop=4     :: Vi/ViM
 #
-# Revision: 3.0
-# Last Modified: November 4th, 2010
+# Revision: 3.1
+# Last Modified: November 8th, 2010
 ############################################################ COPYRIGHT
 #
 # (c)2010. Devin Teske. All Rights Reserved.
@@ -30,6 +30,7 @@
 # SUCH DAMAGE.
 #
 # AUTHOR      DATE      DESCRIPTION
+# dteske   2010.11.08   Further significant performance enhancements.
 # dteske   2010.11.04   Add taint checking.
 # dteske   2010.11.04   Comments.
 # dteske   2010.11.04   Significant performance enhancements.
@@ -47,6 +48,7 @@
 # dteske   2010.09.29   Initial version.
 #
 # $MidnightBSD$
+#
 ############################################################ INFORMATION
 #
 # Command Usage:
@@ -83,6 +85,13 @@
 #    sh(1)     stat(1)    tail(1)
 #
 # *optional
+#
+# Special Thanks to (in order of appearance):
+# 	Brandon Gooch <jamesbrandongooch@gmail.com> - name suggestion
+# 	Garrett Cooper <gcooper@freebsd.org> - structure/mktemp suggestions
+# 	Julian Elischer <julian@freebsd.org> - jail suggestions
+# 	Pawel Jakub Dawidek <pjd@freebsd.org> - security suggestions
+# 	Cyrille Lefevre <cyrille.lefevre-lists@laposte.net> - awk suggestions
 #
 ############################################################ CONFIGURATION
 
@@ -419,6 +428,68 @@ sysrc_find()
 # does not appear in the source file, it is appended to the end of the primary
 # system configuration file `/etc/rc.conf'.
 #
+# This function is a two-parter. Below is the awk(1) portion of the function,
+# afterward is the sh(1) function which utilizes the below awk script.
+#
+sysrc_set_awk='
+# Variables that should be defined on the invocation line:
+# 	-v varname="varname"
+# 	-v new_value="new_value"
+#
+BEGIN {
+	regex = "^[[:space:]]*"varname"="
+	retval = found = 0
+}
+{
+	# If already found... just spew
+	if ( found ) { print; next }
+
+	# Does this line match an assignment to our variable?
+	if ( ! match($0, regex) ) { print; next }
+
+	# Save important match information
+	found = 1
+	matchlen = RSTART + RLENGTH - 1
+
+	# Store the value text for later munging
+	value = substr($0, matchlen + 1, length($0) - matchlen)
+
+	# Store the first character of the value
+	t1 = t2 = substr(value, 0, 1)
+
+	# Assignment w/ back-ticks, expression, or misc.
+	# We ignore these since we did not generate them
+	#
+	if ( t1 ~ /[\`$\\]/ ) { retval = 1; print; next }
+
+	# Assignment w/ single-quoted value
+	else if ( t1 == "'\''" ) {
+		sub(/^'\''[^'\'']*/, "", value)
+		if ( length(value) == 0 ) t2 = ""
+		sub(/^'\''/, "", value)
+	}
+
+	# Assignment w/ double-quoted value
+	else if ( t1 == "\"" ) {
+		sub(/^"(.*\\\\+")*[^"]*/, "", value)
+		if ( length(value) == 0 ) t2 = ""
+		sub(/^"/, "", value)
+	}
+
+	# Assignment w/ non-quoted value
+	else if ( t1 ~ /[^[:space:];#]/ ) {
+		t1 = t2 = "\""
+		sub(/^[^[:space:]]*/, "", value)
+	}
+
+	# Null-assignment
+	else if ( t1 ~ /[[:space:]];#]/ ) { t1 = t2 = "\"" }
+
+	printf "%s%c%s%c%s\n", substr($0, 0, matchlen), \
+		t1, new_value, t2, value
+}
+END { exit retval }
+'
 sysrc_set()
 {
 	local varname="$1" new_value="$2"
@@ -496,77 +567,12 @@ sysrc_set()
 		| awk '{ gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); print }' )"
 
 	#
-	# Generate an awk(1) script to find/replace the appropriate line.
-	# If a line suitable-of-replacement is not found, awk will return
-	# error-status, indicating that we should append the new value.
-	#
-
-	local awkscript apos="'" quot='"' bquot='\"' bbtick='\`'
-	local regex="^[[:space:]]*$varname="
-		#NOTE: This should be the same regex as used by sysrc_find()
-
-	awkscript=$( cat << EOF
-	BEGIN { retval = 0; found = 0 }
-	{
-		# If already found... just spew
-		if ( found ) { print; next }
-
-		# Does this line match an assignment to our variable?
-		if ( ! match(\$0, /$regex/) ) { print; next }
-
-		# Save important match information
-		found = 1
-		matchlen = RSTART + RLENGTH - 1
-
-		# Store the value text for later munging
-		value = substr(\$0, matchlen + 1, length(\$0) - matchlen)
-
-		# Store the first character of the value
-		t1 = t2 = substr(value, 0, 1)
-
-		# Assignment w/ back-ticks, expression, or misc.
-		# We ignore these since we did not generate them
-		#
-		if ( t1 ~ /[$bbtick\\\$\\\\]/ )
-		{ retval = 1; print; next }
-
-		# Assignment w/ single-quoted value
-		else if ( t1 == "$apos" ) {
-			sub(/^$apos[^$apos]*/, "", value)
-			if ( length(value) == 0 ) t2 = ""
-			sub(/^$apos/, "", value)
-		}
-
-		# Assignment w/ double-quoted value
-		else if ( t1 == "$bquot" ) {
-			sub(/^$quot(.*\\\\+$quot)*[^$quot]*/, "", value)
-			if ( length(value) == 0 ) t2 = ""
-			sub(/^$quot/, "", value)
-		}
-
-		# Assignment w/ non-quoted value
-		else if ( t1 ~ /[^[:space:];#]/ ) {
-			t1 = t2 = "$bquot"
-			sub(/^[^[:space:]]*/, "", value)
-		}
-
-		# Null-assignment
-		else if ( t1 ~ /[[:space:]];#]/ )
-		{ t1 = t2 = "$bquot" }
-
-		printf "%s%c%s%c%s\n", substr(\$0, 0, matchlen), \
-			t1, "$awk_new_value", t2, value
-	}
-	END { exit retval }
-EOF
-	)
-
-	#
 	# Operate on the matching file, replacing only the last occurrence.
 	#
 	local new_contents retval
 	new_contents=$( tail -r $file 2> /dev/null )
-	new_contents=$( echo "$new_contents" | awk "$awkscript" )
+	new_contents=$( echo "$new_contents" | awk -v varname="$varname" \
+		-v new_value="$new_value" "$sysrc_set_awk" )
 	retval=$?
 
 	#
@@ -601,47 +607,49 @@ EOF
 # Multi-line comments are joined together. Results are NULL if no description
 # could be found.
 #
+# This function is a two-parter. Below is the awk(1) portion of the function,
+# afterward is the sh(1) function which utilizes the below awk script.
+#
+sysrc_desc_awk='
+# Variables that should be defined on the invocation line:
+# 	-v varname="varname"
+#
+BEGIN {
+	regex = "^[[:space:]]*"varname"="
+	found = 0
+	buffer = ""
+}
+{
+	if ( ! found )
+	{
+		if ( ! match($0, regex) ) next
+
+		found = 1
+		sub(/^[^#]*(#[[:space:]]*)?/, "")
+		buffer = $0
+		next
+	}
+
+	if ( !/^[[:space:]]*#/ ||
+	      /^[[:space:]]*[[:alpha:]_][[:alnum:]_]*=/ ||
+	      /^[[:space:]]*#[[:alpha:]_][[:alnum:]_]*=/ ||
+	      /^[[:space:]]*$/ ) exit
+
+	sub(/(.*#)*[[:space:]]*/, "")
+	buffer = buffer" "$0
+}
+END {
+	# Clean up the buffer
+	sub(/^[[:space:]]*/, "", buffer)
+	sub(/[[:space:]]*$/, "", buffer)
+
+	print buffer
+	exit ! found
+}
+'
 sysrc_desc()
 {
-	local varname="$1"
-	local regex="^[[:space:]]*$varname="
-	local vregex="[[:space:]]*[[:alpha:]_][[:alnum:]_]*"
-	local awkscript
-
-	awkscript=$( cat << EOF
-	BEGIN { found = 0; buffer = "" }
-	{
-		if ( ! found )
-		{
-			if ( ! match(\$0, /$regex/) ) next
-
-			found = 1
-			sub(/^[^#]*(#[[:space:]]*)?/, "")
-			buffer = \$0
-			next
-		}
-
-		if ( !/^[[:space:]]*#/ ||
-		      /^[[:space:]]*$vregex=/ ||
-		      /^[[:space:]]*#$vregex=/ ||
-		      /^[[:space:]]*$/ ) exit
-
-		sub(/(.*#)*[[:space:]]*/, "")
-		buffer = buffer" "\$0
-	}
-	END \
-	{
-		# Clean up the buffer
-		sub(/^[[:space:]]*/, "", buffer)
-		sub(/[[:space:]]*$/, "", buffer)
-
-		print buffer
-		exit ! found
-	}
-EOF
-	)
-
-	awk "$awkscript" < "$RC_DEFAULTS"
+	awk -v varname="$1" "$sysrc_desc_awk" < "$RC_DEFAULTS"
 }
 
 ############################################################ MAIN SOURCE
@@ -816,7 +824,7 @@ if [ "$SHOW_ALL" ]; then
 		IFS="$IFS|"
 		EXCEPT="IFS|EXCEPT|PATH|RC_DEFAULTS|OPTIND|DESCRIBE|SEP"
 		EXCEPT="$EXCEPT|SHOW_ALL|SHOW_EQUALS|SHOW_NAME|SHOW_VALUE"
-		EXCEPT="$EXCEPT|SYSRC_VERBOSE|RC_CONFS"
+		EXCEPT="$EXCEPT|SYSRC_VERBOSE|RC_CONFS|sysrc_desc_awk"
 
 		#
 		# Clean the environment (except for our required variables)
