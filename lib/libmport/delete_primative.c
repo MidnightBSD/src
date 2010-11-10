@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.6 2010/11/10 17:29:20 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.7 2010/11/10 17:31:21 laffer1 Exp $
  */
 
 
@@ -107,13 +107,15 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
 
     char file[FILENAME_MAX];
     /* XXX TMP */
-    if (*data == '/') {
+    if (data == NULL) {
+      /* XXX data is null when ASSET_CHMOD (mode) or similar commands are in plist */
+      snprintf(file, sizeof(file), "%s", mport->root);
+    } else if (*data == '/') {
       snprintf(file, sizeof(file), "%s%s", mport->root, data);
     } else {
       snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
     }
 
-    
     switch (type) {
       case ASSET_FILE:
         (mport->progress_step_cb)(++current, total, file);
@@ -154,7 +156,7 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
         break;
     }
   }
-    
+
   sqlite3_finalize(stmt);
   
   if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
