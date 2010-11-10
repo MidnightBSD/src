@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.4 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.5 2010/03/13 02:33:48 laffer1 Exp $
  */
 
 
@@ -109,8 +109,10 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
     /* XXX TMP */
     if (*data == '/') {
       snprintf(file, sizeof(file), "%s%s", mport->root, data);
+      file[sizeof(file)-1] = '\0';
     } else {
       snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
+      file[sizeof(file)-1] = '\0';
     }
 
     
