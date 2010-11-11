@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users
 
+20101110:
+        Fix a security issue with pseudofs which could result in running code in kernel
+        context or a kernel panic depending on system configuration.  This affects file
+        systems such as procfs for instance.
+
 20101021:
 	sysrc is a utility to print and modify name/value pairs in /etc/rc.conf easily.
 	This is similar to functions present in many linux distros. The utility was
@@ -886,4 +891,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.96 2010/09/20 15:52:51 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.97 2010/10/21 15:55:20 laffer1 Exp $
