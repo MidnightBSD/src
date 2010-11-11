@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/pseudofs/pseudofs_vnops.c,v 1.4 2008/12/03 00:25:44 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -306,7 +306,6 @@ pfs_getextattr(struct vop_getextattr_args *va)
 	if (proc != NULL)
 		PROC_UNLOCK(proc);
 
-	pfs_unlock(pn);
 	PFS_RETURN (error);
 }
 
