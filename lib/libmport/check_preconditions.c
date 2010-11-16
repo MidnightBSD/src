@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.6 2010/03/13 01:42:55 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.7 2010/11/16 01:05:34 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -227,8 +227,10 @@ static int check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
   sqlite3_stmt *stmt;
   int ret;
     
-  if (mport_db_prepare(mport->db, &stmt, "SELECT 1 FROM packages WHERE pkg=%Q and mport_version_cmp(version, %Q) < 0", pkg->name, pkg->version) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT 1 FROM packages WHERE pkg=%Q and mport_version_cmp(version, %Q) < 0", pkg->name, pkg->version) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
   
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
