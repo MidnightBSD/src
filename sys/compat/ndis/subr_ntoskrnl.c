@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.3 2008/12/03 00:24:37 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.4 2009/01/18 19:28:02 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -4292,8 +4292,8 @@ image_patch_table ntoskrnl_functbl[] = {
 	IMPORT_FFUNC(ExInterlockedAddLargeStatistic, 2),
 	IMPORT_SFUNC(IoAllocateMdl, 5),
 	IMPORT_SFUNC(IoFreeMdl, 1),
-	IMPORT_SFUNC(MmAllocateContiguousMemory, 2),
-	IMPORT_SFUNC(MmAllocateContiguousMemorySpecifyCache, 5),
+	IMPORT_SFUNC(MmAllocateContiguousMemory, 2 + 1),
+	IMPORT_SFUNC(MmAllocateContiguousMemorySpecifyCache, 5 + 3),
 	IMPORT_SFUNC(MmFreeContiguousMemory, 1),
 	IMPORT_SFUNC(MmFreeContiguousMemorySpecifyCache, 3),
 	IMPORT_SFUNC_MAP(MmGetPhysicalAddress, pmap_kextract, 1),
