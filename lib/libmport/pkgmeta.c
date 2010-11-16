@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.4 2010/03/04 01:02:02 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.5 2010/05/30 03:02:12 laffer1 Exp $
  */
 
 
@@ -113,8 +113,10 @@ int mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
     RETURN_ERROR(MPORT_ERR_FATAL, "stub database contains no packages.");
   }
     
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM stub.packages") != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM stub.packages") != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
   
   ret = populate_vec_from_stmt(ref, len, db, stmt);
   
@@ -160,8 +162,10 @@ MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPack
     RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
   
   
-  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
 
   if (sqlite3_step(stmt) != SQLITE_ROW) {
     sqlite3_finalize(stmt);
@@ -178,9 +182,10 @@ MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPack
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages WHERE %s", where) != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages WHERE %s", where) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
-    
+  }
     
   ret = populate_vec_from_stmt(ref, len, db, stmt);
 
@@ -203,8 +208,10 @@ MPORT_PUBLIC_API int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta *
   int ret, len;
   sqlite3 *db = mport->db;
   
-  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages") != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages") != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
 
   if (sqlite3_step(stmt) != SQLITE_ROW) {
     sqlite3_finalize(stmt);
@@ -219,8 +226,10 @@ MPORT_PUBLIC_API int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta *
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages ORDER BY pkg, version") != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages ORDER BY pkg, version") != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
    
   ret = populate_vec_from_stmt(ref, len, db, stmt);
 
@@ -242,8 +251,10 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPa
   sqlite3_stmt *stmt;
   
   /* if the depends are set, there's nothing for us to do */
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
     
   if (sqlite3_step(stmt) != SQLITE_ROW) {
     sqlite3_finalize(stmt);
@@ -258,8 +269,12 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPa
     return MPORT_OK;  
   }
 
-  if (mport_db_prepare(mport->db, &stmt, "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", pkg->name) != MPORT_OK) 
+  if (mport_db_prepare(mport->db, &stmt, 
+      "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", 
+      pkg->name) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
 
   ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
  
@@ -280,8 +295,10 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_updepends(mportInstance *mport, mportPack
   sqlite3_stmt *stmt;
   
   /* if the depends are set, there's nothing for us to do */
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE depend_pkgname=%Q", pkg->name) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE depend_pkgname=%Q", pkg->name) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
     
   if (sqlite3_step(stmt) != SQLITE_ROW) {
     sqlite3_finalize(stmt);
@@ -296,8 +313,12 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_updepends(mportInstance *mport, mportPack
     return MPORT_OK;  
   }
 
-  if (mport_db_prepare(mport->db, &stmt, "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.pkg AND depends.depend_pkgname=%Q", pkg->name) != MPORT_OK) 
+  if (mport_db_prepare(mport->db, &stmt, 
+      "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.pkg AND depends.depend_pkgname=%Q", 
+                       pkg->name) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
 
   ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
  
@@ -318,8 +339,10 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 
   *alist_p = alist;
   
-  if (mport_db_prepare(mport->db, &stmt, "SELECT type, data FROM assets WHERE pkg=%Q", pkg->name) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT type, data FROM assets WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
     
   while (1) {
     ret = sqlite3_step(stmt);
