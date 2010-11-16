@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.5 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.6 2010/03/13 01:42:55 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -141,8 +141,10 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
   int ret;
   
   /* check for depends */
-  if (mport_db_prepare(db, &stmt, "SELECT depend_pkgname, depend_pkgversion FROM stub.depends WHERE pkg=%Q", pack->name) != MPORT_OK) 
+  if (mport_db_prepare(db, &stmt, "SELECT depend_pkgname, depend_pkgversion FROM stub.depends WHERE pkg=%Q", pack->name) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
  
   if (mport_db_prepare(db, &lookup, "SELECT version FROM packages WHERE pkg=? AND status='clean'") != MPORT_OK) {
     sqlite3_finalize(stmt);
@@ -158,7 +160,8 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
       
       if (sqlite3_bind_text(lookup, 1, depend_pkg, -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-        sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+        sqlite3_finalize(lookup); 
+        sqlite3_finalize(stmt);
         RETURN_CURRENT_ERROR;
       }
       
@@ -174,10 +177,13 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
           ok = mport_version_require_check(inst_version, depend_version);
           
           if (ok > 0) {
+            sqlite3_finalize(lookup); 
+            sqlite3_finalize(stmt);
             RETURN_CURRENT_ERROR;
           } else if (ok == -1) {
             SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
-            sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+            sqlite3_finalize(lookup); 
+            sqlite3_finalize(stmt);
             RETURN_CURRENT_ERROR;
           }
           
@@ -186,12 +192,14 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
           /* this depend isn't installed. */
            /* this depend isn't installed. */
            SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
-           sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+           sqlite3_finalize(lookup); 
+           sqlite3_finalize(stmt);
            RETURN_CURRENT_ERROR;
           break;
         default:
           SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-          sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+          sqlite3_finalize(lookup); 
+          sqlite3_finalize(stmt);
           RETURN_CURRENT_ERROR;
       }
       
@@ -199,10 +207,13 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
       sqlite3_clear_bindings(lookup);
     } else if (ret == SQLITE_DONE) {
       /* No more depends to check. */
+      sqlite3_finalize(lookup); 
+      sqlite3_finalize(stmt);
       break;
     } else {
       SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-      sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+      sqlite3_finalize(lookup); 
+      sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
   }        
