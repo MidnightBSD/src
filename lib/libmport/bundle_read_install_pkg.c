@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.3 2010/03/13 02:33:48 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.4 2010/05/30 03:02:12 laffer1 Exp $
  */
 
 
@@ -239,6 +239,8 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
   return MPORT_OK;
   
   ERROR:
+    sqlite3_finalize(assets); 
+    sqlite3_finalize(insert);
     (mport->progress_free_cb)();
     free(orig_cwd);
     //rollback();

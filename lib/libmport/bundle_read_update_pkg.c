@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.3 2009/11/28 22:44:31 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.4 2010/03/13 02:33:48 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -198,8 +198,10 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
     ret = sqlite3_step(stmt);
     
     if (ret == SQLITE_ROW) {
-      if (asprintf(&entry, "%s:%s:%s", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 2), sqlite3_column_text(stmt, 1)) == -1)
+      if (asprintf(&entry, "%s:%s:%s", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 2), sqlite3_column_text(stmt, 1)) == -1) {
+        sqlite3_finalize(stmt);
         RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");  
+      }
         
       extra->depends[i] = entry;
       i++;

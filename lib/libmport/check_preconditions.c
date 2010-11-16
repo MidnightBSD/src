@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.7 2010/11/16 01:05:34 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.8 2010/11/16 01:06:12 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -77,7 +77,7 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
 
   switch (sqlite3_step(stmt)) {
     case SQLITE_DONE:
-      /* No row found.  Do nothing */
+      /* No row found. */
       break;
     case SQLITE_ROW:
       /* Row was found */
