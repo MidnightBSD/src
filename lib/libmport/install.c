@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/install.c,v 1.2 2009/06/05 00:22:17 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/install.c,v 1.3 2010/03/13 02:33:48 laffer1 Exp $
  */
 
 
@@ -137,11 +137,17 @@ static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const ch
   const char *dname, *dversion, *iversion;
   int step, check;
   
-  if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_version FROM stub.depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, 
+       "SELECT depend_pkgname, depend_version FROM stub.depends WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
+  }
   
-  if (mport_db_prepare(mport->db, &lookup, "SELECT version FROM packages WHERE pkg=? AND status='clean'") != MPORT_OK)
+  if (mport_db_prepare(mport->db, &lookup, 
+        "SELECT version FROM packages WHERE pkg=? AND status='clean'") != MPORT_OK) {
+    sqlite3_finalize(lookup);
     RETURN_CURRENT_ERROR;
+  }
     
   while (1) {
     step = sqlite3_step(stmt);
@@ -181,7 +187,8 @@ static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const ch
             
           break;
         default:
-          sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+          sqlite3_finalize(lookup); 
+          sqlite3_finalize(stmt);
           RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
           break;
       }
@@ -191,11 +198,13 @@ static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const ch
     } else if (step == SQLITE_DONE) {
       break;
     } else {
-      sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+      sqlite3_finalize(lookup); 
+      sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
     }
   }
   
-  sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+  sqlite3_finalize(lookup); 
+  sqlite3_finalize(stmt);
   return MPORT_OK;           
 }

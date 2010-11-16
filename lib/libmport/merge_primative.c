@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/merge_primative.c,v 1.3 2010/03/13 02:39:52 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/merge_primative.c,v 1.4 2010/05/30 03:02:12 laffer1 Exp $
  */
 
 
@@ -176,8 +176,10 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
       RETURN_CURRENT_ERROR;
 
     /* build our hashtable (pkgname => metadata) up */      
-    if (mport_db_prepare(*db, &stmt, "SELECT pkg FROM subbundle.packages") != MPORT_OK)
+    if (mport_db_prepare(*db, &stmt, "SELECT pkg FROM subbundle.packages") != MPORT_OK) {
+      sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
+    }
     
     while (1) {
       ret = sqlite3_step(stmt);
@@ -214,8 +216,10 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   }
       
   /* Check that unsorted and packages have the same number of rows. */     
-  if (mport_db_prepare(*db, &stmt, "SELECT COUNT(DISTINCT pkg) FROM packages"))
+  if (mport_db_prepare(*db, &stmt, "SELECT COUNT(DISTINCT pkg) FROM packages")) {
+    sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;  
+  }
   if (sqlite3_step(stmt) != SQLITE_ROW) {
     SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
     sqlite3_finalize(stmt);
@@ -225,8 +229,10 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   int pkgs = sqlite3_column_int(stmt, 0);
   sqlite3_finalize(stmt);
   
-  if (mport_db_prepare(*db, &stmt, "SELECT COUNT(DISTINCT pkg) FROM unsorted"))
-    RETURN_CURRENT_ERROR;  
+  if (mport_db_prepare(*db, &stmt, "SELECT COUNT(DISTINCT pkg) FROM unsorted")) {
+    sqlite3_finalize(stmt);
+    RETURN_CURRENT_ERROR;
+  }
     
   if (sqlite3_step(stmt) != SQLITE_ROW) {
     SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
