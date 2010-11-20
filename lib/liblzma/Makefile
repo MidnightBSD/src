@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/liblzma/Makefile,v 1.1 2010/06/16 13:01:06 laffer1 Exp $
 
 LIB=		lzma
 LZMADIR=	${.CURDIR}/../../contrib/xz/src/liblzma
@@ -112,10 +112,6 @@ SRCS+=	simple_coder.c \
 	simple_encoder.c \
 	simple_decoder.c \
 	x86.c \
-	powerpc.c \
-	ia64.c \
-	arm.c \
-	armthumb.c \
 	sparc.c
 		
 WARNS?=	3
