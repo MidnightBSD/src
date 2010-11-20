@@ -1,6 +1,6 @@
 PROG= mport.delete
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -g
+CFLAGS+=	-I${.CURDIR}/../../lib/libmport/
 WARNS?= 	4
 
 NO_MAN=		yes
