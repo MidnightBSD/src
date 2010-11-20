@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users
 
+20101120:
+	Several portions of the kernel and userland code related to UFS file 
+	systems (and UFS2) cannot properly handle inode counts above 2^31 due
+	to use of int types.  Based on a patch from FreeBSD, I've modified
+	our UFS2 implementation to handle unsigned values for inode counts
+	which should allow for file systems greater than 16TB.
+
+	newfs and growfs was also modified.
+
 20101110:
         Fix a security issue with pseudofs which could result in running code in kernel
         context or a kernel panic depending on system configuration.  This affects file
@@ -891,4 +900,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.97 2010/10/21 15:55:20 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.98 2010/11/11 13:33:14 laffer1 Exp $

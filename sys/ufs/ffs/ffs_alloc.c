@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.4 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -89,24 +89,24 @@ __FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.147 2007/09/10 14:12:29 bz E
 #include <ufs/ffs/fs.h>
 #include <ufs/ffs/ffs_extern.h>
 
-typedef ufs2_daddr_t allocfcn_t(struct inode *ip, int cg, ufs2_daddr_t bpref,
+typedef ufs2_daddr_t allocfcn_t(struct inode *ip, u_int cg, ufs2_daddr_t bpref,
 				  int size);
 
-static ufs2_daddr_t ffs_alloccg(struct inode *, int, ufs2_daddr_t, int);
+static ufs2_daddr_t ffs_alloccg(struct inode *, u_int, ufs2_daddr_t, int);
 static ufs2_daddr_t
 	      ffs_alloccgblk(struct inode *, struct buf *, ufs2_daddr_t);
 #ifdef DIAGNOSTIC
 static int	ffs_checkblk(struct inode *, ufs2_daddr_t, long);
 #endif
-static ufs2_daddr_t ffs_clusteralloc(struct inode *, int, ufs2_daddr_t, int);
+static ufs2_daddr_t ffs_clusteralloc(struct inode *, u_int, ufs2_daddr_t, int);
 static void	ffs_clusteracct(struct ufsmount *, struct fs *, struct cg *,
 		    ufs1_daddr_t, int);
 static ino_t	ffs_dirpref(struct inode *);
-static ufs2_daddr_t ffs_fragextend(struct inode *, int, ufs2_daddr_t, int, int);
+static ufs2_daddr_t ffs_fragextend(struct inode *, u_int, ufs2_daddr_t, int, int);
 static void	ffs_fserr(struct fs *, ino_t, char *);
 static ufs2_daddr_t	ffs_hashalloc
-		(struct inode *, int, ufs2_daddr_t, int, allocfcn_t *);
-static ufs2_daddr_t ffs_nodealloccg(struct inode *, int, ufs2_daddr_t, int);
+		(struct inode *, u_int, ufs2_daddr_t, int, allocfcn_t *);
+static ufs2_daddr_t ffs_nodealloccg(struct inode *, u_int, ufs2_daddr_t, int);
 static ufs1_daddr_t ffs_mapsearch(struct fs *, struct cg *, ufs2_daddr_t, int);
 static int	ffs_reallocblks_ufs1(struct vop_reallocblks_args *);
 static int	ffs_reallocblks_ufs2(struct vop_reallocblks_args *);
@@ -141,7 +141,7 @@ ffs_alloc(ip, lbn, bpref, size, cred, bnp)
 	struct fs *fs;
 	struct ufsmount *ump;
 	ufs2_daddr_t bno;
-	int cg, reclaimed;
+	u_int cg, reclaimed;
 	static struct timeval lastfail;
 	static int curfail;
 	int64_t delta;
@@ -241,7 +241,8 @@ ffs_realloccg(ip, lbprev, bprev, bpref, osize, nsize, cred, bpp)
 	struct fs *fs;
 	struct buf *bp;
 	struct ufsmount *ump;
-	int cg, request, error, reclaimed;
+	u_int cg, request, reclaimed;
+	int error;
 	ufs2_daddr_t bno;
 	static struct timeval lastfail;
 	static int curfail;
@@ -920,7 +921,8 @@ ffs_valloc(pvp, mode, cred, vpp)
 	struct timespec ts;
 	struct ufsmount *ump;
 	ino_t ino, ipref;
-	int cg, error;
+	u_int cg;
+	int error;
 	static struct timeval lastfail;
 	static int curfail;
 
@@ -1020,11 +1022,11 @@ ffs_dirpref(pip)
 	struct inode *pip;
 {
 	struct fs *fs;
-	int cg, prefcg, dirsize, cgsize;
-	int avgifree, avgbfree, avgndir, curdirsize;
-	int minifree, minbfree, maxndir;
-	int mincg, minndir;
-	int maxcontigdirs;
+	u_int cg, prefcg, dirsize, cgsize;
+	u_int avgifree, avgbfree, avgndir, curdirsize;
+	u_int minifree, minbfree, maxndir;
+	u_int mincg, minndir;
+	u_int maxcontigdirs;
 
 	mtx_assert(UFS_MTX(pip->i_ump), MA_OWNED);
 	fs = pip->i_fs;
@@ -1148,8 +1150,8 @@ ffs_blkpref_ufs1(ip, lbn, indx, bap)
 	ufs1_daddr_t *bap;
 {
 	struct fs *fs;
-	int cg;
-	int avgbfree, startcg;
+	u_int cg;
+	u_int avgbfree, startcg;
 
 	mtx_assert(UFS_MTX(ip->i_ump), MA_OWNED);
 	fs = ip->i_fs;
@@ -1198,8 +1200,8 @@ ffs_blkpref_ufs2(ip, lbn, indx, bap)
 	ufs2_daddr_t *bap;
 {
 	struct fs *fs;
-	int cg;
-	int avgbfree, startcg;
+	u_int cg;
+	u_int avgbfree, startcg;
 
 	mtx_assert(UFS_MTX(ip->i_ump), MA_OWNED);
 	fs = ip->i_fs;
@@ -1252,14 +1254,14 @@ ffs_blkpref_ufs2(ip, lbn, indx, bap)
 static ufs2_daddr_t
 ffs_hashalloc(ip, cg, pref, size, allocator)
 	struct inode *ip;
-	int cg;
+	u_int cg;
 	ufs2_daddr_t pref;
 	int size;	/* size for data blocks, mode for inodes */
 	allocfcn_t *allocator;
 {
 	struct fs *fs;
 	ufs2_daddr_t result;
-	int i, icg = cg;
+	u_int i, icg = cg;
 
 	mtx_assert(UFS_MTX(ip->i_ump), MA_OWNED);
 #ifdef DIAGNOSTIC
@@ -1310,7 +1312,7 @@ ffs_hashalloc(ip, cg, pref, size, allocator)
 static ufs2_daddr_t
 ffs_fragextend(ip, cg, bprev, osize, nsize)
 	struct inode *ip;
-	int cg;
+	u_int cg;
 	ufs2_daddr_t bprev;
 	int osize, nsize;
 {
@@ -1393,7 +1395,7 @@ fail:
 static ufs2_daddr_t
 ffs_alloccg(ip, cg, bpref, size)
 	struct inode *ip;
-	int cg;
+	u_int cg;
 	ufs2_daddr_t bpref;
 	int size;
 {
@@ -1563,7 +1565,7 @@ gotit:
 static ufs2_daddr_t
 ffs_clusteralloc(ip, cg, bpref, len)
 	struct inode *ip;
-	int cg;
+	u_int cg;
 	ufs2_daddr_t bpref;
 	int len;
 {
@@ -1687,7 +1689,7 @@ fail:
 static ufs2_daddr_t
 ffs_nodealloccg(ip, cg, ipref, mode)
 	struct inode *ip;
-	int cg;
+	u_int cg;
 	ufs2_daddr_t ipref;
 	int mode;
 {
@@ -1788,7 +1790,7 @@ gotit:
 	bdwrite(bp);
 	if (ibp != NULL)
 		bawrite(ibp);
-	return (cg * fs->fs_ipg + ipref);
+	return ((ino_t)(cg * fs->fs_ipg + ipref));
 }
 
 /*
@@ -1833,7 +1835,8 @@ ffs_blkfree(ump, fs, devvp, bno, size, inum)
 	struct buf *bp;
 	ufs1_daddr_t fragno, cgbno;
 	ufs2_daddr_t cgblkno;
-	int i, cg, blk, frags, bbase;
+	int i, blk, frags, bbase;
+	u_int cg;
 	u_int8_t *blksfree;
 	struct cdev *dev;
 
@@ -2031,7 +2034,8 @@ ffs_freefile(ump, fs, devvp, ino, mode)
 	struct cg *cgp;
 	struct buf *bp;
 	ufs2_daddr_t cgbno;
-	int error, cg;
+	int error;
+	u_int cg;
 	u_int8_t *inosused;
 	struct cdev *dev;
 
@@ -2045,7 +2049,7 @@ ffs_freefile(ump, fs, devvp, ino, mode)
 		dev = devvp->v_rdev;
 		cgbno = fsbtodb(fs, cgtod(fs, cg));
 	}
-	if ((u_int)ino >= fs->fs_ipg * fs->fs_ncg)
+	if (ino >= fs->fs_ipg * fs->fs_ncg)
 		panic("ffs_freefile: range: dev = %s, ino = %lu, fs = %s",
 		    devtoname(dev), (u_long)ino, fs->fs_fsmnt);
 	if ((error = bread(devvp, cgbno, (int)fs->fs_cgsize, NOCRED, &bp))) {
@@ -2062,8 +2066,8 @@ ffs_freefile(ump, fs, devvp, ino, mode)
 	inosused = cg_inosused(cgp);
 	ino %= fs->fs_ipg;
 	if (isclr(inosused, ino)) {
-		printf("dev = %s, ino = %lu, fs = %s\n", devtoname(dev),
-		    (u_long)ino + cg * fs->fs_ipg, fs->fs_fsmnt);
+		printf("dev = %s, ino = %u, fs = %s\n", devtoname(dev),
+		    ino + cg * fs->fs_ipg, fs->fs_fsmnt);
 		if (fs->fs_ronly == 0)
 			panic("ffs_freefile: freeing free inode");
 	}
@@ -2098,7 +2102,8 @@ ffs_checkfreefile(fs, devvp, ino)
 	struct cg *cgp;
 	struct buf *bp;
 	ufs2_daddr_t cgbno;
-	int ret, cg;
+	int ret;
+	u_int cg;
 	u_int8_t *inosused;
 
 	cg = ino_to_cg(fs, ino);
@@ -2109,7 +2114,7 @@ ffs_checkfreefile(fs, devvp, ino)
 		/* devvp is a normal disk device */
 		cgbno = fsbtodb(fs, cgtod(fs, cg));
 	}
-	if ((u_int)ino >= fs->fs_ipg * fs->fs_ncg)
+	if (ino >= fs->fs_ipg * fs->fs_ncg)
 		return (1);
 	if (bread(devvp, cgbno, (int)fs->fs_cgsize, NOCRED, &bp)) {
 		brelse(bp);
