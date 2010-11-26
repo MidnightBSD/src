@@ -41,7 +41,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/growfs/debug.c,v 1.10 2006/10/31 22:02:24 pjd Exp $";
+  "$FreeBSD: src/sbin/growfs/debug.c,v 1.11 2010/11/22 20:10:48 brucec Exp $";
 #endif /* not lint */
 
 /* ********************************************************** INCLUDES ***** */
@@ -281,7 +281,7 @@ dbg_dump_fs(struct fs *sb, const char *comment)
  */
 	fprintf(dbg_log, "maxbsize          int32_t          0x%08x\n",
 	    sb->fs_maxbsize);
-	fprintf(dbg_log, "unrefs            int64_t          0x%08x\n",
+	fprintf(dbg_log, "unrefs            int64_t          0x%08jx\n",
 	    sb->fs_unrefs);
 	fprintf(dbg_log, "sblockloc         int64_t          0x%08x%08x\n",
 		((unsigned int *)&(sb->fs_sblockloc))[1],
