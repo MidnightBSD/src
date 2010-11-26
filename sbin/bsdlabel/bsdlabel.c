@@ -54,7 +54,7 @@ static char sccsid[] = "@(#)disklabel.c	8.2 (Berkeley) 1/7/94";
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sbin/bsdlabel/bsdlabel.c,v 1.110.2.1 2005/11/10 09:52:56 iedowse Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/bsdlabel/bsdlabel.c,v 1.3 2007/01/02 07:19:11 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <stdint.h>
@@ -335,7 +335,7 @@ makelabel(const char *type, struct disklabel *lp)
 static void
 readboot(void)
 {
-	int fd, i;
+	int fd;
 	struct stat st;
 	uint64_t *p;
 
@@ -346,8 +346,7 @@ readboot(void)
 		err(1, "cannot open %s", xxboot);
 	fstat(fd, &st);
 	if (alphacksum && st.st_size <= BBSIZE - 512) {
-		i = read(fd, bootarea + 512, st.st_size);
-		if (i != st.st_size)
+		if (read(fd, bootarea + 512, st.st_size) != st.st_size)
 			err(1, "read error %s", xxboot);
 
 		/*
@@ -360,8 +359,7 @@ readboot(void)
 		p[62] = 0;
 		return;
 	} else if ((!alphacksum) && st.st_size <= BBSIZE) {
-		i = read(fd, bootarea, st.st_size);
-		if (i != st.st_size)
+		if (read(fd, bootarea, st.st_size) != st.st_size)
 			err(1, "read error %s", xxboot);
 		return;
 	}
@@ -467,6 +465,7 @@ get_file_parms(int f)
 static int
 readlabel(int flag)
 {
+	ssize_t nbytes;
 	int f, i;
 	int error;
 	struct gctl_req *grq;
@@ -485,8 +484,11 @@ readlabel(int flag)
 		errx(1,
 		    "disks with more than 2^32-1 sectors are not supported");
 	(void)lseek(f, (off_t)0, SEEK_SET);
-	if (read(f, bootarea, BBSIZE) != BBSIZE)
+	nbytes = read(f, bootarea, BBSIZE);
+	if (nbytes == -1)
 		err(4, "%s read", specname);
+	if (nbytes != BBSIZE)
+		errx(4, "couldn't read %d bytes from %s", BBSIZE, specname);
 	close (f);
 	error = bsd_disklabel_le_dec(
 	    bootarea + (labeloffset + labelsoffset * secsize),
@@ -726,7 +728,7 @@ word(char *cp)
 static int
 getasciilabel(FILE *f, struct disklabel *lp)
 {
-	char *cp;
+	char *cp, *endp;
 	const char **cpp;
 	u_int part;
 	char *tp, line[BUFSIZ];
@@ -765,11 +767,15 @@ getasciilabel(FILE *f, struct disklabel *lp)
 				}
 			if (cpp < &dktypenames[DKMAXTYPES])
 				continue;
-			v = strtoul(tp, NULL, 10);
+			errno = 0;
+			v = strtoul(tp, &endp, 10);
+			if (errno != 0 || *endp != '\0')
+				v = DKMAXTYPES;
 			if (v >= DKMAXTYPES)
 				fprintf(stderr, "line %d:%s %lu\n", lineno,
 				    "Warning, unknown disk type", v);
-			lp->d_type = v;
+			else
+				lp->d_type = v;
 			continue;
 		}
 		if (!strcmp(cp, "flags")) {
@@ -994,7 +1000,7 @@ static int
 getasciipartspec(char *tp, struct disklabel *lp, int part, int lineno)
 {
 	struct partition *pp;
-	char *cp;
+	char *cp, *endp;
 	const char **cpp;
 	u_long v;
 
@@ -1030,9 +1036,12 @@ getasciipartspec(char *tp, struct disklabel *lp, int part, int lineno)
 	if (*cpp != NULL) {
 		pp->p_fstype = cpp - fstypenames;
 	} else {
-		if (isdigit(*cp))
-			v = strtoul(cp, NULL, 10);
-		else
+		if (isdigit(*cp)) {
+			errno = 0;
+			v = strtoul(cp, &endp, 10);
+			if (errno != 0 || *endp != '\0')
+				v = FSMAXTYPES;
+		} else
 			v = FSMAXTYPES;
 		if (v >= FSMAXTYPES) {
 			fprintf(stderr,
