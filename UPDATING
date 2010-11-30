@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users
 
+20101130:
+	A double free exists in the SSL client ECDH handling code, when
+	processing specially crafted public keys with invalid prime
+	numbers. [CVE-2010-2939]
+
 20101120:
 	Several portions of the kernel and userland code related to UFS file 
 	systems (and UFS2) cannot properly handle inode counts above 2^31 due
@@ -900,4 +905,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.98 2010/11/11 13:33:14 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.99 2010/11/20 17:48:29 laffer1 Exp $
