@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/instance.c,v 1.4 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/instance.c,v 1.5 2010/05/30 03:02:12 laffer1 Exp $
  */
 
 
@@ -166,7 +166,7 @@ MPORT_PUBLIC_API int mport_instance_free(mportInstance *mport)
     RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
   }
   
-  free(mport->root);  
+  free(mport->root);
   free(mport);
   return MPORT_OK;
 }

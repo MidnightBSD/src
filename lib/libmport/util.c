@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.14 2010/05/30 03:02:12 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.15 2010/05/30 03:03:24 laffer1 Exp $
  */
 
 
@@ -50,30 +50,41 @@ MPORT_PUBLIC_API void mport_createextras_free(mportCreateExtras *extra)
   int i;
   
   free(extra->pkg_filename);
+  extra->pkg_filename = NULL;
   free(extra->sourcedir);
+  extra->sourcedir = NULL;
   free(extra->mtree);
-  free(extra->conflicts);
+  extra->mtree = NULL:
   free(extra->pkginstall);
+  extra->pkginstall = NULL;
   free(extra->pkgdeinstall);
+  extra->pkgdeinstall = NULL;
   free(extra->pkgmessage);
+  extra->pkgmessage = NULL;
 
   i = 0;
   if (extra->conflicts != NULL)  {
-    while (extra->conflicts[i] != NULL)
-      free(extra->conflicts[i++]);
+    while (extra->conflicts[i] != NULL) {
+      free(extra->conflicts[i]);
+      extra->conflicts[i] = NULL;
+      i++;
+    }
   }
 
   free(extra->conflicts);
-  
+  extra->conflicts = NULL;
+
   i = 0;
   if (extra->depends != NULL) {
     while (extra->depends[i] != NULL) {
-      free(extra->depends[i++]);
+      free(extra->depends[i]);
+      extra->depends[i] = NULL;
+      i++;
     }
   }
   
   free(extra->depends);
-
+  extra->depends = NULL;
   
   free(extra);
 }

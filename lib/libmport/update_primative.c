@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/update_primative.c,v 1.2 2009/06/05 00:02:22 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/update_primative.c,v 1.3 2010/03/13 02:39:52 laffer1 Exp $
  */
 
 
@@ -90,7 +90,7 @@ static int set_prefix_to_installed(mportInstance *mport, mportPackageMeta *pkg)
       
       if (strcmp(prefix, pkg->prefix) != 0) {
         free(pkg->prefix);
-        if ((pkg->prefix = strdup(pkg->prefix)) == NULL) {
+        if ((pkg->prefix = strdup(prefix)) == NULL) {
           ret = MPORT_ERR_FATAL;
         }
       }

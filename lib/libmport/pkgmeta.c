@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.5 2010/05/30 03:02:12 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.6 2010/11/16 01:37:12 laffer1 Exp $
  */
 
 
@@ -52,18 +52,27 @@ MPORT_PUBLIC_API void mport_pkgmeta_free(mportPackageMeta *pack)
   int i;
   
   free(pack->name);
+  pack->name = NULL;
   free(pack->version);
+  pack->version = NULL;
   free(pack->lang);
+  pack->lang = NULL;
   free(pack->comment);
+  pack->comment = NULL;
   free(pack->desc);
+  pack->desc = NULL;
   free(pack->prefix);
+  pack->prefix = NULL;
   free(pack->origin);
+  pack->origin = NULL;
   
 
   i = 0;
   if (pack->categories != NULL) {
     while (pack->categories[i] != NULL) {
-      free(pack->categories[i++]);
+      free(pack->categories[i]);
+      pack->categories[i] = NULL;
+      i++;
     }
   }
   

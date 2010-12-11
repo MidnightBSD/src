@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/plist.c,v 1.7 2009/11/28 22:44:31 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.8 2010/05/30 03:02:12 laffer1 Exp $
  */
 
 
@@ -48,7 +48,7 @@ static mportAssetListEntryType parse_command(const char*);
  */
 MPORT_PUBLIC_API mportAssetList* mport_assetlist_new() 
 {
-  mportAssetList *list = (mportAssetList*)calloc(1,sizeof(mportAssetList));
+  mportAssetList *list = (mportAssetList*)calloc(1, sizeof(mportAssetList));
   assert(list != NULL);
   STAILQ_INIT(list);
   return list;
