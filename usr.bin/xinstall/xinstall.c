@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)xinstall.c	8.1 (Berkeley) 7/21/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/xinstall/xinstall.c,v 1.66 2005/01/25 14:34:57 ssouhlal Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/xinstall/xinstall.c,v 1.68 2007/12/14 08:46:57 edwin Exp $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -221,7 +221,12 @@ main(int argc, char *argv[])
 
 	/* can't do file1 file2 directory/file */
 	if (argc != 2) {
-		warnx("wrong number or types of arguments");
+		if (no_target)
+			warnx("target directory `%s' does not exist", 
+			    argv[argc - 1]);
+		else
+			warnx("target `%s' is not a directory",
+			    argv[argc - 1]);
 		usage();
 	}
 
