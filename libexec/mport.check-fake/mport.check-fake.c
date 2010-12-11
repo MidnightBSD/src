@@ -23,12 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.3 2009/06/05 00:07:59 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.4 2010/03/13 05:07:04 laffer1 Exp $
  */
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.3 2009/06/05 00:07:59 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.4 2010/03/13 05:07:04 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -230,6 +230,7 @@ static int grep_file(const char *filename, const char *destdir)
     err(EX_SOFTWARE, "Couldn't open %s", filename);
     
   while ((line = fgetln(file, &len)) != NULL) {
+    nline = NULL;
     /* if we end in \n just switch it to \0, otherwise we need more mem */
     if (line[len - 1] == '\n') {
       line[len - 1] = '\0';
@@ -240,14 +241,16 @@ static int grep_file(const char *filename, const char *destdir)
       
       memcpy(nline, line, len);
       nline[len] = '\0';
-      nline = line;
+      line = nline;
     }
     
     if (regexec(&regex, line, 0, NULL, 0) == 0) {
       DIAG("===> Match line: %s", line);
-      ret = 1;      
+      free(nline);
+      ret = 1;
       break;
     }
+    free(nline);
   }
   
   if (ferror(file) != 0)
@@ -288,7 +291,7 @@ static char *string_replace(const char *str, const char *old, const char *new)
       
 static void usage() 
 {
-  errx(EX_USAGE, "Usage: mport.delete [-s skip] <-f plistfile> <-d destdir> <-p prefix>");
+  errx(EX_USAGE, "Usage: mport.check-fake [-s skip] <-f plistfile> <-d destdir> <-p prefix>");
   exit(EX_USAGE);
 }
 
