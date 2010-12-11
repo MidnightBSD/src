@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.15 2010/05/30 03:03:24 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.16 2010/12/11 07:01:11 laffer1 Exp $
  */
 
 
@@ -54,7 +54,7 @@ MPORT_PUBLIC_API void mport_createextras_free(mportCreateExtras *extra)
   free(extra->sourcedir);
   extra->sourcedir = NULL;
   free(extra->mtree);
-  extra->mtree = NULL:
+  extra->mtree = NULL;
   free(extra->pkginstall);
   extra->pkginstall = NULL;
   free(extra->pkgdeinstall);
