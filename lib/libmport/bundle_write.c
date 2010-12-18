@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.4 2010/03/13 02:47:58 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.5 2010/05/30 03:02:12 laffer1 Exp $
  */
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
@@ -120,9 +120,9 @@ int mport_bundle_write_finish(mportBundleWrite *bundle)
   if (archive_write_finish(bundle->archive) != ARCHIVE_OK)
     ret = SET_ERROR(MPORT_ERR_FATAL, strdup(archive_error_string(bundle->archive)));
 
-  //free_linktable(bundle->links);      
-  //free(bundle->filename);
-  //free(bundle);
+  free_linktable(bundle->links);
+  free(bundle->filename);
+  free(bundle);
   
   return ret;
 }

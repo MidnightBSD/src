@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.16 2010/12/11 07:01:11 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.17 2010/12/11 07:02:48 laffer1 Exp $
  */
 
 
@@ -102,7 +102,6 @@ int mport_chdir(mportInstance *mport, const char *dir)
       RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't building root'ed dir");
     
     if (chdir(finaldir) != 0) {
-      free(finaldir);
       RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't chdir to %s: %s", finaldir, strerror(errno));
     }
   
