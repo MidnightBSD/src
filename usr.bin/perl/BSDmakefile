@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.8 2010/09/26 16:02:20 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.9 2010/10/10 16:29:59 laffer1 Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -8,10 +8,14 @@
 .include <bsd.obj.mk>
 .include <bsd.man.mk>
 
+NOPROFILE=
+
 SRCDIR= ${.CURDIR}/../../contrib/perl
 
 DPADD=${LIBC}
 
+# Perl builds with -fno-strict-aliasing, we want libperl to do the same
+CFLAGS+=	-fno-strict-aliasing
 
 #
 # mksymlinks is perl's way of building away from the src dir.  It builds a bunch of symlinks
