@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 #	$FreeBSD: src/share/man/man5/Makefile,v 1.58.2.2 2005/12/05 18:54:45 emax Exp $
-# $MidnightBSD: src/share/man/man5/Makefile,v 1.2 2006/12/31 22:31:45 laffer1 Exp $
+# $MidnightBSD: src/share/man/man5/Makefile,v 1.3 2009/05/02 21:12:44 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -12,6 +12,7 @@ MAN=	acct.5 \
 	bluetooth.hosts.5 \
 	bluetooth.protocols.5 \
 	${_boot.config.5} \
+	bsd.mport.mk.5 \
 	core.5 \
 	devfs.5 \
 	devfs.conf.5 \
