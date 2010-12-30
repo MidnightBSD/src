@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ncache.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: ncache.h,v 1.1.1.2 2010-12-30 02:32:42 laffer1 Exp $ */
 
 #ifndef DNS_NCACHE_H
 #define DNS_NCACHE_H 1
@@ -76,7 +76,7 @@ dns_ncache_addoptout(dns_message_t *message, dns_db_t *cache,
  * The 'covers' argument is the RR type whose nonexistence we are caching,
  * or dns_rdatatype_any when caching a NXDOMAIN response.
  *
- * 'optout' indicates a DNS_RATASETATTR_OPTOUT should be set.
+ * 'optout' indicates a DNS_RDATASETATTR_OPTOUT should be set.
  *
  * Note:
  *\li	If 'addedrdataset' is not NULL, then it will be attached to the added
