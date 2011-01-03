@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/pci/if_rlreg.h,v 1.7 2009/08/26 19:11:21 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/pci/if_rlreg.h,v 1.8 2010/02/06 06:49:38 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998-2003
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -126,6 +126,7 @@
 /*
  * Registers specific to the 8169 gigE chip
  */
+#define RL_GTXSTART		0x0038  /* 8 bits */
 #define RL_TIMERINT_8169	0x0058	/* different offset than 8139 */
 #define RL_PHYAR		0x0060
 #define RL_TBICSR		0x0064
@@ -135,7 +136,7 @@
 #define RL_MACDBG		0x006D	/* 8 bits, 8168C SPIN2 only */
 #define RL_GPIO			0x006E	/* 8 bits, 8168C SPIN2 only */
 #define RL_MAXRXPKTLEN		0x00DA	/* 16 bits, chip multiplies by 8 */
-#define RL_GTXSTART		0x0038	/* 8 bits */
+#define	RL_INTRMOD		0x00E2	/* 16 bits */
 
 /*
  * TX config register bits
@@ -167,6 +168,7 @@
 #define RL_HWREV_8100E		0x30800000
 #define RL_HWREV_8101E		0x34000000
 #define RL_HWREV_8102E		0x34800000
+#define	RL_HWREV_8103E		0x34C00000
 #define RL_HWREV_8168_SPIN2	0x38000000
 #define RL_HWREV_8168_SPIN3	0x38400000
 #define RL_HWREV_8168C		0x3C000000
