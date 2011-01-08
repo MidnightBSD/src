@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/usr.sbin/ndp/ndp.c,v 1.22 2007/03/06 09:32:40 kevlo Exp $	*/
+/*	$FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/usr.sbin/ndp/ndp.c,v 1.29 2011/01/08 01:57:23 delphij Exp $	*/
 /*	$KAME: ndp.c,v 1.104 2003/06/27 07:48:39 itojun Exp $	*/
 
 /*
@@ -133,7 +133,6 @@ void get __P((char *));
 int delete __P((char *));
 void dump __P((struct in6_addr *, int));
 static struct in6_nbrinfo *getnbrinfo __P((struct in6_addr *, int, int));
-static char *ether_str __P((struct sockaddr_dl *));
 int ndp_ether_aton __P((char *, u_char *));
 void usage __P((void));
 int rtmsg __P((int));
@@ -805,17 +804,14 @@ getnbrinfo(addr, ifindex, warning)
 }
 
 static char *
-ether_str(sdl)
-	struct sockaddr_dl *sdl;
+ether_str(struct sockaddr_dl *sdl)
 {
 	static char hbuf[NI_MAXHOST];
-	u_char *cp;
 
-	if (sdl->sdl_alen) {
-		cp = (u_char *)LLADDR(sdl);
-		snprintf(hbuf, sizeof(hbuf), "%x:%x:%x:%x:%x:%x",
-		    cp[0], cp[1], cp[2], cp[3], cp[4], cp[5]);
-	} else
+	if (sdl->sdl_alen > 0)
+		strlcpy(hbuf, ether_ntoa((struct ether_addr *)LLADDR(sdl)),
+		    sizeof(hbuf));
+	else
 		snprintf(hbuf, sizeof(hbuf), "(incomplete)");
 
 	return(hbuf);
