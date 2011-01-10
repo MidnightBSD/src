@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.10 2010/12/19 17:37:09 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.11 2011/01/09 16:53:26 laffer1 Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -23,7 +23,7 @@ CFLAGS+=	-fno-strict-aliasing
 #
 CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
 		-Dsiteman1dir=/usr/local/man/man1 -Dsiteman3dir=/usr/local/man/man3 \
-                -Dmksymlinks -Dsrc=${SRCDIR} -Duse64bitint -Duseshrplib='true'
+		-Dmksymlinks -Dsrc=${SRCDIR} -Duse64bitint -Duseshrplib
 
 .if defined(TARGET_ARCH)
 CONFIGURE_ARGS+=	-Dtargetarch=${TARGET_ARCH}
@@ -46,9 +46,11 @@ clean:
 
 install: install.perl install.man
 
+TARGET_ARCH?=`/usr/bin/uname -p`
+
 install.perl:
 	cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR}:${DESTDIR}/lib ./perl installperl --destdir=${DESTDIR} 
-
+	ln -fs ${DESTDIR}${LIBDIR}/perl5/5.10.0/${TARGET_ARCH}-midnightbsd/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
 
 #
 # perl doesn't compress man pages, so we do a staged install
