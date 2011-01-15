@@ -1,6 +1,6 @@
 PROG= mport.check-fake
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -g -DPRINT_DIAG
+CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ 
 WARNS?= 	6
 
 NO_MAN=		yes
