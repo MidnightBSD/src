@@ -29885,6 +29885,7 @@ share/man/man4/isp.4 -text
 share/man/man4/ispfw.4 -text
 share/man/man4/iwi.4 -text
 share/man/man4/ixgb.4 -text
+share/man/man4/jme.4 -text
 share/man/man4/joy.4 -text
 share/man/man4/kbdmux.4 -text
 share/man/man4/keyboard.4 -text
@@ -33545,6 +33546,9 @@ sys/dev/ixgb/ixgb_ee.h -text
 sys/dev/ixgb/ixgb_hw.c -text
 sys/dev/ixgb/ixgb_hw.h -text
 sys/dev/ixgb/ixgb_ids.h -text
+sys/dev/jme/if_jme.c -text
+sys/dev/jme/if_jmereg.h -text
+sys/dev/jme/if_jmevar.h -text
 sys/dev/joy/joy.c -text
 sys/dev/joy/joy_isa.c -text
 sys/dev/joy/joy_pccard.c -text
@@ -35628,6 +35632,7 @@ sys/modules/iwifw/iwi_bss/Makefile -text
 sys/modules/iwifw/iwi_ibss/Makefile -text
 sys/modules/iwifw/iwi_monitor/Makefile -text
 sys/modules/ixgb/Makefile -text
+sys/modules/jme/Makefile -text
 sys/modules/joy/Makefile -text
 sys/modules/kbdmux/Makefile -text
 sys/modules/kue/Makefile -text

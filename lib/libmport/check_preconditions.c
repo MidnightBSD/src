@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.8 2010/11/16 01:06:12 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.9 2010/11/16 01:21:00 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -189,7 +189,6 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
           
           break;
         case SQLITE_DONE:
-          /* this depend isn't installed. */
            /* this depend isn't installed. */
            SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
            sqlite3_finalize(lookup); 

@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20110115:
+	Add experimental jme(4) for Jmicron ethernet devices.
+
 20101130:
 	A double free exists in the SSL client ECDH handling code, when
 	processing specially crafted public keys with invalid prime
@@ -905,4 +908,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.99 2010/11/20 17:48:29 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.100 2010/11/30 14:01:00 laffer1 Exp $

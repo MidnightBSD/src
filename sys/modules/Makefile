@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.16 2009/12/28 19:39:57 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.17 2009/12/28 22:39:54 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -139,6 +139,7 @@ SUBDIR=	${_3dfx} \
 	${_iwi} \
 	${_iwifw} \
 	${_ixgb} \
+	jme  \
 	joy \
 	kbdmux \
 	kue \
