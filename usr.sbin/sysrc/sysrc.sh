@@ -2,11 +2,11 @@
 # -*- tab-width:  4 -*- ;; Emacs
 # vi: set tabstop=4     :: Vi/ViM
 #
-# Revision: 3.1
-# Last Modified: November 8th, 2010
+# Revision: 3.2
+# Last Modified: January 15th, 2011
 ############################################################ COPYRIGHT
 #
-# (c)2010. Devin Teske. All Rights Reserved.
+# (c)2010-2011. Devin Teske. All Rights Reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
 # SUCH DAMAGE.
 #
 # AUTHOR      DATE      DESCRIPTION
+# dteske   2011.01.15   Make `-A' override `-a' despite order-of-appearance.
+# dteske   2011.01.15   Add `-x' to remove variables from file(s).
+# dteske   2010.12.09   Fix taint-checking to not die on non-existent files.
+# dteske   2010.11.09   Minor fixes to sysrc_set/sysrc_set_awk.
 # dteske   2010.11.08   Further significant performance enhancements.
 # dteske   2010.11.04   Add taint checking.
 # dteske   2010.11.04   Comments.
@@ -47,8 +51,6 @@
 # dteske   2010.10.12   Updates per freebsd-hackers thread.
 # dteske   2010.09.29   Initial version.
 #
-# $MidnightBSD$
-#
 ############################################################ INFORMATION
 #
 # Command Usage:
@@ -59,11 +61,12 @@
 #   	-h         Print this message to stderr and exit.
 #   	-f file    Operate on the specified file(s) instead of rc_conf_files.
 #   	           Can be specified multiple times for additional files.
-#   	-a         Dump a list of non-default configuration variables.
+#   	-a         Dump a list of all non-default configuration variables.
 #   	-A         Dump a list of all configuration variables (incl. defaults).
+#   	-x         Remove variable(s) from specified file(s).
 #   	-d         Print a description of the given variable.
 #   	-e         Print query results as `var=value' (useful for producing
-#   	           output to be fed back in). Ignored if -n is specified.
+#   	           output to be fed back in). Ignored if `-n' is specified.
 #   	-v         Verbose. Print the pathname of the specific rc.conf(5)
 #   	           file where the directive was found.
 #   	-i         Ignore unknown variables.
@@ -92,6 +95,7 @@
 # 	Julian Elischer <julian@freebsd.org> - jail suggestions
 # 	Pawel Jakub Dawidek <pjd@freebsd.org> - security suggestions
 # 	Cyrille Lefevre <cyrille.lefevre-lists@laposte.net> - awk suggestions
+# 	Ross West <westr@connection.ca> - taint-checking bug report
 #
 ############################################################ CONFIGURATION
 
@@ -121,6 +125,7 @@ progname="${0##*/}"
 #
 # Options
 #
+DELETE=
 DESCRIBE=
 IGNORE_UNKNOWNS=
 JAIL=
@@ -197,15 +202,17 @@ usage()
 	eprintf "$optfmt" "" \
 	        "Can be specified multiple times for additional files."
 	eprintf "$optfmt" "-a" \
-	        "Dump a list of non-default configuration variables."
+	        "Dump a list of all non-default configuration variables."
 	eprintf "$optfmt" "-A" \
 	        "Dump a list of all configuration variables (incl. defaults)."
+	eprintf "$optfmt" "-x" \
+	        "Remove variable(s) from specified file(s)."
 	eprintf "$optfmt" "-d" \
 	        "Print a description of the given variable."
 	eprintf "$optfmt" "-e" \
 	        "Print query results as \`var=value' (useful for producing"
 	eprintf "$optfmt" "" \
-	        "output to be fed back in). Ignored if -n is specified."
+	        "output to be fed back in). Ignored if \`-n' is specified."
 	eprintf "$optfmt" "-v" \
 	        "Verbose. Print the pathname of the specific rc.conf(5)"
 	eprintf "$optfmt" "" \
@@ -438,7 +445,7 @@ sysrc_set_awk='
 #
 BEGIN {
 	regex = "^[[:space:]]*"varname"="
-	retval = found = 0
+	found = retval = 0
 }
 {
 	# If already found... just spew
@@ -460,7 +467,7 @@ BEGIN {
 	# Assignment w/ back-ticks, expression, or misc.
 	# We ignore these since we did not generate them
 	#
-	if ( t1 ~ /[\`$\\]/ ) { retval = 1; print; next }
+	if ( t1 ~ /[`$\\]/ ) { retval = 1; print; next }
 
 	# Assignment w/ single-quoted value
 	else if ( t1 == "'\''" ) {
@@ -477,13 +484,13 @@ BEGIN {
 	}
 
 	# Assignment w/ non-quoted value
-	else if ( t1 ~ /[^[:space:];#]/ ) {
+	else if ( t1 ~ /[^[:space:];]/ ) {
 		t1 = t2 = "\""
 		sub(/^[^[:space:]]*/, "", value)
 	}
 
 	# Null-assignment
-	else if ( t1 ~ /[[:space:]];#]/ ) { t1 = t2 = "\"" }
+	else if ( t1 ~ /[[:space:];]/ ) { t1 = t2 = "\"" }
 
 	printf "%s%c%s%c%s\n", substr($0, 0, matchlen), \
 		t1, new_value, t2, value
@@ -559,12 +566,6 @@ sysrc_set()
 	# permissions (so we throw stderr into the bit-bucket).
 	#
 	chown "$( stat -f '%u:%g' "$file" )" "$tmpfile" 2> /dev/null
-
-	#
-	# Protect our awk(1) script from quotes in new_value
-	#
-	local awk_new_value="$( echo "$new_value" \
-		| awk '{ gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); print }' )"
 
 	#
 	# Operate on the matching file, replacing only the last occurrence.
@@ -652,6 +653,118 @@ sysrc_desc()
 	awk -v varname="$1" "$sysrc_desc_awk" < "$RC_DEFAULTS"
 }
 
+# sysrc_delete $varname
+#
+# Remove a setting from the system configuration files (edits files in-place).
+# Deletes all assignments to the given variable in all config files. If the
+# `-f file' option is passed, the removal is restricted to only those files
+# specified, otherwise the system collection of rc_conf_files is used.
+#
+# This function is a two-parter. Below is the awk(1) portion of the function,
+# afterward is the sh(1) function which utilizes the below awk script.
+#
+sysrc_delete_awk='
+# Variables that should be defined on the invocation line:
+# 	-v varname="varname"
+#
+BEGIN {
+	regex = "^[[:space:]]*"varname"="
+	found = 0
+}
+{
+	if ( $0 ~ regex )
+		found = 1
+	else
+		print
+}
+END { exit ! found }
+'
+sysrc_delete()
+{
+	local varname="$1"
+	local file
+
+	# Check arguments
+	[ "$varname" ] || return $FAILURE
+
+	#
+	# Operate on each of the specified files
+	#
+	for file in ${RC_CONFS:-$( sysrc_get rc_conf_files )}; do
+		#
+		# Create a new temporary file to write to.
+		#
+		local tmpfile="$( mktemp -t "$progname" )"
+		[ "$tmpfile" ] || return $FAILURE
+
+		#
+		# Fixup permissions and ownership (mktemp(1) defaults to 0600
+		# permissions) to instead match the destination file.
+		#
+		chmod "$( stat -f '%#Lp' "$file" )" "$tmpfile" 2> /dev/null
+		chmod "$( stat -f '%u:%g' "$file" )" "$tmpfile" 2> /dev/null
+
+		#
+		# Operate on the file, removing all occurrences, saving the
+		# output in our temporary file.
+		#
+		awk -v varname="$varname" "$sysrc_delete_awk" "$file" \
+			> "$tmpfile"
+		if [ $? -ne $SUCCESS ]; then
+			# The file didn't contain any assignments
+			rm -f "$tmpfile"
+			continue
+		fi
+
+		#
+		# Taint-check our results.
+		#
+		if ! /bin/sh -n "$tmpfile"; then
+			eprintf "%s: Not overwriting \`%s' due to %s\n" \
+			        "$progname" "$file" "previous syntax errors"
+			rm -f "$tmpfile"
+			continue
+		fi
+
+		#
+		# Perform sanity checks
+		#
+		if [ ! -w "$file" ]; then
+			eprintf "%s: %s: Permission denied\n" \
+			        "$progname" "$file"
+			rm -f "$tmpfile"
+			continue
+		fi
+
+		#
+		# If verbose, now's the time to show it.
+		# 
+		if [ "$SYSRC_VERBOSE" ]; then
+			echo -n "$file: "
+
+			#
+			# If `-N' is passed, simplify the output
+			#
+			if [ ! "$SHOW_VALUE" ]; then
+				echo "$NAME"
+				continue
+			fi
+
+			echo -n "${SHOW_NAME:+$NAME$SEP}"
+			( # Operate in sub-shell to protect parent environment
+				. "$file" 2> /dev/null
+				eval echo -n '"${'"$NAME"'}"' 2> /dev/null
+			)
+			echo "${SHOW_EQUALS:+\"}"
+		fi
+
+		#
+		# Finally, move the temporary file into place.
+		#
+		mv "$tmpfile" "$file"
+	done
+}
+
 ############################################################ MAIN SOURCE
 
 #
@@ -662,14 +775,16 @@ sysrc_desc()
 #
 # Process command-line options
 #
-while getopts hf:aAdevinNR:j: flag; do
+while getopts hf:aAxXdevinNR:j: flag; do
 	case "$flag" in
 	h) usage;;
 	f) [ "$OPTARG" ] || die \
 	   	"%s: Missing or null argument to \`-f' flag" "$progname"
 	   RC_CONFS="$RC_CONFS${RC_CONFS:+ }$OPTARG";;
-	a) SHOW_ALL=1;;
+	a) SHOW_ALL=${SHOW_ALL:-1};;
 	A) SHOW_ALL=2;;
+	x) DELETE=${DELETE:-1};;
+	X) DELETE=2;;
 	d) DESCRIBE=1;;
 	e) SHOW_EQUALS=1;;
 	v) SYSRC_VERBOSE=1;;
@@ -694,9 +809,20 @@ errmsg="$progname: Exiting due to previous syntax errors"
 /bin/sh -n "$RC_DEFAULTS" || die "$errmsg"
 ( . "$RC_DEFAULTS"
   for i in ${RC_CONFS:-$rc_conf_files}; do
+  	[ -e "$i" ] || continue
   	/bin/sh -n "$i" || exit $FAILURE
   done
+  exit $SUCCESS
 ) || die "$errmsg"
+
+#
+# Process `-x' (and secret `-X') command-line options
+#
+errmsg="$progname: \`-x' option incompatible with \`-a'/\`-A' options"
+errmsg="$errmsg (use \`-X' to override)"
+if [ "$DELETE" -a "$SHOW_ALL" ]; then
+	[ "$DELETE" = "2" ] || die "$errmsg"
+fi
 
 #
 # Process `-e', `-n', and `-N' command-line options
@@ -720,6 +846,8 @@ if [ "$JAIL" -o "$ROOTDIR" ]; then
 	args="
 		${SYSRC_VERBOSE:+-v}
 		${RC_CONFS:+-f'$RC_CONFS'}
+		$( [ "$DELETE" = "1" ] && echo \ -x )
+		$( [ "$DELETE" = "2" ] && echo \ -X )
 		$( [ "$SHOW_ALL" = "1" ] && echo \ -a )
 		$( [ "$SHOW_ALL" = "2" ] && echo \ -A )
 		${DESCRIBE:+-d}
@@ -823,8 +951,10 @@ if [ "$SHOW_ALL" ]; then
 		#
 		IFS="$IFS|"
 		EXCEPT="IFS|EXCEPT|PATH|RC_DEFAULTS|OPTIND|DESCRIBE|SEP"
-		EXCEPT="$EXCEPT|SHOW_ALL|SHOW_EQUALS|SHOW_NAME|SHOW_VALUE"
-		EXCEPT="$EXCEPT|SYSRC_VERBOSE|RC_CONFS|sysrc_desc_awk"
+		EXCEPT="$EXCEPT|DELETE|SHOW_ALL|SHOW_EQUALS|SHOW_NAME"
+		EXCEPT="$EXCEPT|SHOW_VALUE|SYSRC_VERBOSE|RC_CONFS"
+		EXCEPT="$EXCEPT|progname|sysrc_desc_awk|sysrc_delete_awk"
+		EXCEPT="$EXCEPT|SUCCESS|FAILURE"
 
 		#
 		# Clean the environment (except for our required variables)
@@ -873,6 +1003,14 @@ if [ "$SHOW_ALL" ]; then
 				continue
 			fi
 
+			#
+			# If `-X' is passed, delete the variables
+			#
+			if [ "$DELETE" = "2" ]; then
+				sysrc_delete "$NAME"
+				continue
+			fi
+
 			[ "$SYSRC_VERBOSE" ] && \
 				echo -n "$( sysrc_find "$NAME" ): "
 
@@ -886,6 +1024,7 @@ if [ "$SHOW_ALL" ]; then
 
 			echo "${SHOW_NAME:+$NAME$SEP}$(
 			      sysrc_get "$NAME" )${SHOW_EQUALS:+\"}"
+
 		done
 	)
 
@@ -919,6 +1058,16 @@ while [ $# -gt 0 ]; do
 		fi
 
 		#
+		# If `-x' or `-X' is passed, delete the variable and ignore the
+		# desire to set some value
+		#
+		if [ "$DELETE" ]; then
+			sysrc_delete "$NAME"
+			shift 1
+			continue
+		fi
+
+		#
 		# If `-N' is passed, simplify the output
 		#
 		if [ ! "$SHOW_VALUE" ]; then
@@ -947,6 +1096,15 @@ while [ $# -gt 0 ]; do
 		#
 
 		if [ "$DESCRIBE" ]; then
+			shift 1
+			continue
+		fi
+
+		#
+		# If `-x' or `-X' is passed, delete the variable
+		#
+		if [ "$DELETE" ]; then
+			sysrc_delete "$NAME"
 			shift 1
 			continue
 		fi
