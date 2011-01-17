@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/vm/vm_phys.c,v 1.2 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002-2006 Rice University
  * Copyright (c) 2007 Alan L. Cox <alc@cs.rice.edu>
@@ -279,6 +279,7 @@ vm_phys_add_page(vm_paddr_t pa)
 	cnt.v_page_count++;
 	m = vm_phys_paddr_to_vm_page(pa);
 	m->phys_addr = pa;
+	m->queue = PQ_NONE;
 	m->segind = vm_phys_paddr_to_segind(pa);
 	m->flags = PG_FREE;
 	KASSERT(m->order == VM_NFREEORDER,
