@@ -293,6 +293,8 @@ i686_mrstoreone(void *arg)
 
     mrd = sc->mr_desc;
 
+    critical_enter();
+
     cr4save = rcr4();				/* save cr4 */
     if (cr4save & CR4_PGE)
 	load_cr4(cr4save & ~CR4_PGE);
@@ -362,6 +364,8 @@ i686_mrstoreone(void *arg)
     wrmsr(MSR_MTRRdefType, rdmsr(MSR_MTRRdefType) | 0x800);	/* restore MTRR state */
     load_cr0(rcr0() & ~(CR0_CD | CR0_NW));  			/* enable caches CD = 0 and NW = 0 */
     load_cr4(cr4save);						/* restore cr4 */
+
+    critical_exit();
 }
 
 /*
