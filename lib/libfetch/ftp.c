@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libfetch/ftp.c,v 1.2 2008/07/09 18:57:21 laffer1 Exp $");
 
 /*
  * Portions of this code were taken from or based on ftpio.c:
@@ -1133,8 +1133,11 @@ ftp_request(struct url *url, const char *op, struct url_stat *us,
 		return (NULL);
 
 	/* just a stat */
-	if (strcmp(op, "STAT") == 0)
+	if (strcmp(op, "STAT") == 0) {
+		--conn->ref;
+		ftp_disconnect(conn);
 		return (FILE *)1; /* bogus return value */
+	}
 	if (strcmp(op, "STOR") == 0 || strcmp(op, "APPE") == 0)
 		oflag = O_WRONLY;
 	else
