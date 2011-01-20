@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: config.h,v 1.6 2010-01-16 16:51:31 laffer1 Exp $ */
+/* $Id: config.h,v 1.7 2011-01-20 21:26:27 laffer1 Exp $ */
 
 /*! \file */
 
@@ -163,6 +163,12 @@ int sigwait(const unsigned int *set, int *sig);
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
+
+/* Define to 1 if you have the `EVP_sha256' function. */
+#define HAVE_EVP_SHA256 1
+
+/* Define to 1 if you have the `EVP_sha512' function. */
+#define HAVE_EVP_SHA512 1
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
