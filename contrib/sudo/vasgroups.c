@@ -43,8 +43,8 @@
 #include "compat.h"
 #include "logging.h"
 #include "nonunix.h"
-#include "parse.h"
 #include "sudo.h"
+#include "parse.h"
 
 
 /* Pseudo-boolean types */
@@ -111,7 +111,7 @@ sudo_nonunix_groupcheck( const char* group, const char* user, const struct passw
     if (!sudo_vas_available) {
 	if (error_cause_shown == FALSE) {
 	    /* Produce the saved error reason */
-	    log_error(NO_MAIL|NO_EXIT, "Non-unix group checking unavailable: %s",
+	    warningx("Non-unix group checking unavailable: %s",
 		    err_msg ? err_msg
 		    : "(unknown cause)");
 	    error_cause_shown = TRUE;
@@ -153,10 +153,8 @@ sudo_nonunix_groupcheck( const char* group, const char* user, const struct passw
 
 
 FINISHED: /* cleanups */
-    if (vaserr != VAS_ERR_SUCCESS) {
-	int error_flags = NO_MAIL | MSG_ONLY | (uses_inversion ? 0 : NO_EXIT);
-
-	log_error(error_flags, "Error while checking group membership "
+    if (vaserr != VAS_ERR_SUCCESS && vaserr != VAS_ERR_NOT_FOUND ) {
+	warningx("Error while checking group membership "
 		"for user \"%s\", group \"%s\", error: %s%s.", user, group,
 		v_err_get_string(sudo_vas_ctx, 1),
 		/* A helpful hint if there seems to be a non-FQDN as the domain */
@@ -281,7 +279,7 @@ sudo_nonunix_groupcheck_cleanup()
 
     if (libvas_handle) {
 	if (dlclose(libvas_handle) != 0)
-	    log_error(NO_MAIL|NO_EXIT, "dlclose() failed: %s", dlerror());
+	    warningx("dlclose() failed: %s", dlerror());
 	libvas_handle = NULL;
     }
 }

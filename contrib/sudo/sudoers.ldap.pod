@@ -1,4 +1,4 @@
-Copyright (c) 2003-2009
+Copyright (c) 2003-2010
 	Todd C. Miller <Todd.Miller@courtesan.com>
 
 Permission to use, copy, modify, and distribute this software for any
@@ -23,7 +23,7 @@ sudoers.ldap - sudo LDAP configuration
 =head1 DESCRIPTION
 
 In addition to the standard I<sudoers> file, B<sudo> may be configured
-via LAP.  This can be especially useful for synchronizing I<sudoers>
+via LDAP.  This can be especially useful for synchronizing I<sudoers>
 in a large, distributed environment.
 
 Using LDAP for I<sudoers> has several benefits:
@@ -259,14 +259,16 @@ below in upper case but are parsed in a case-independent manner.
 =item B<URI> ldap[s]://[hostname[:port]] ...
 
 Specifies a whitespace-delimited list of one or more URIs describing
-the LDAP server(s) to connect to.  The I<protocol> may be either B<ldap>
-or B<ldaps>, the latter being for servers that support TLS (SSL)
-encryption.  If no I<port> is specified, the default is port 389 for
-C<ldap://> or port 636 for C<ldaps://>.  If no I<hostname> is specified,
-B<sudo> will connect to B<localhost>.  Only systems using the OpenSSL
-libraries support the mixing of C<ldap://> and C<ldaps://> URIs.
-The Netscape-derived libraries used on most commercial versions of
-Unix are only capable of supporting one or the other.
+the LDAP server(s) to connect to.  The I<protocol> may be either
+B<ldap> or B<ldaps>, the latter being for servers that support TLS
+(SSL) encryption.  If no I<port> is specified, the default is port
+389 for C<ldap://> or port 636 for C<ldaps://>.  If no I<hostname>
+is specified, B<sudo> will connect to B<localhost>.  Multiple B<URI>
+lines are treated identically to a B<URI> line containing multiple
+entries.  Only systems using the OpenSSL libraries support the
+mixing of C<ldap://> and C<ldaps://> URIs.  The Netscape-derived
+libraries used on most commercial versions of Unix are only capable
+of supporting one or the other.
 
 =item B<HOST> name[:port] ...
 
@@ -301,7 +303,8 @@ to wait for a response to an LDAP query.
 
 The base DN to use when performing B<sudo> LDAP queries.  Typically
 this is of the form C<ou=SUDOers,dc=example,dc=com> for the domain
-C<example.com>.
+C<example.com>.  Multiple B<SUDOERS_BASE> lines may be specified,
+in which case they are queried in the order specified.
 
 =item B<SUDOERS_DEBUG> debug_level
 
@@ -360,7 +363,14 @@ If enabled, B<TLS_CHECKPEER> will cause the LDAP server's TLS
 certificated to be verified.  If the server's TLS certificate cannot
 be verified (usually because it is signed by an unknown certificate
 authority), B<sudo> will be unable to connect to it.  If B<TLS_CHECKPEER>
-is disabled, no check is made.
+is disabled, no check is made.  Note that disabling the check creates
+an opportunity for man-in-the-middle attacks since the server's
+identity will not be authenticated.  If possible, the CA's certificate
+should be installed locally so it can be verified.
+
+=item B<TLS_CACERT> file name
+
+An alias for B<TLS_CACERTFILE>.
 
 =item B<TLS_CACERTFILE> file name
 
@@ -368,6 +378,8 @@ The path to a certificate authority bundle which contains the certificates
 for all the Certificate Authorities the client knows to be valid,
 e.g. F</etc/ssl/ca-bundle.pem>.
 This option is only supported by the OpenLDAP libraries.
+Netscape-derived LDAP libraries use the same certificate
+database for CA and client certificates (see B<TLS_CERT>).
 
 =item B<TLS_CACERTDIR> directory
 
@@ -559,7 +571,7 @@ determines sudoers source order on AIX
   # The amount of time, in seconds, to wait while performing an LDAP query.
   timelimit 30
   #
-  # must be set or sudo will ignore LDAP
+  # Must be set or sudo will ignore LDAP; may be specified multiple times.
   sudoers_base   ou=SUDOers,dc=example,dc=com
   #
   # verbose sudoers matching from ldap
@@ -636,9 +648,9 @@ determines sudoers source order on AIX
   #
   # If using SASL authentication for LDAP (OpenSSL)
   # use_sasl yes
-  # sasl_auth_id <SASL username>
+  # sasl_auth_id <SASL user name>
   # rootuse_sasl yes
-  # rootsasl_auth_id <SASL username for root access>
+  # rootsasl_auth_id <SASL user name for root access>
   # sasl_secprops none
   # krb5_ccname /etc/.ldapcache
 

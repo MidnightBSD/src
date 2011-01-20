@@ -1,6 +1,6 @@
 %{
 /*
- * Copyright (c) 1996, 1998-2005, 2007-2009
+ * Copyright (c) 1996, 1998-2005, 2007-2010
  *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -37,11 +37,10 @@
 #endif /* STDC_HEADERS */
 #ifdef HAVE_STRING_H
 # include <string.h>
-#else
-# ifdef HAVE_STRINGS_H
-#  include <strings.h>
-# endif
 #endif /* HAVE_STRING_H */
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif /* HAVE_STRINGS_H */
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
@@ -142,6 +141,10 @@ yyerror(s)
 %token <tok> 	 EXEC			/* don't preload dummy execve() */
 %token <tok>	 SETENV			/* user may set environment for cmnd */
 %token <tok>	 NOSETENV		/* user may not set environment */
+%token <tok>	 LOG_INPUT		/* log user's cmnd input */
+%token <tok>	 NOLOG_INPUT		/* don't log user's cmnd input */
+%token <tok>	 LOG_OUTPUT		/* log cmnd output */
+%token <tok>	 NOLOG_OUTPUT		/* don't log cmnd output */
 %token <tok>	 ALL			/* ALL keyword */
 %token <tok>	 COMMENT		/* comment and/or carriage return */
 %token <tok>	 HOSTALIAS		/* Host_Alias keyword */
@@ -313,6 +316,10 @@ cmndspeclist	:	cmndspec
 			    if ($3->tags.setenv == UNSPEC &&
 				$3->prev->tags.setenv != IMPLIED)
 				$3->tags.setenv = $3->prev->tags.setenv;
+			    if ($3->tags.log_input == UNSPEC)
+				$3->tags.log_input = $3->prev->tags.log_input;
+			    if ($3->tags.log_output == UNSPEC)
+				$3->tags.log_output = $3->prev->tags.log_output;
 			    if ((tq_empty(&$3->runasuserlist) &&
 				 tq_empty(&$3->runasgrouplist)) &&
 				(!tq_empty(&$3->prev->runasuserlist) ||
@@ -418,7 +425,8 @@ runaslist	:	userlist {
 		;
 
 cmndtag		:	/* empty */ {
-			    $$.nopasswd = $$.noexec = $$.setenv = UNSPEC;
+			    $$.nopasswd = $$.noexec = $$.setenv =
+				$$.log_input = $$.log_output = UNSPEC;
 			}
 		|	cmndtag NOPASSWD {
 			    $$.nopasswd = TRUE;
@@ -437,6 +445,18 @@ cmndtag		:	/* empty */ {
 			}
 		|	cmndtag NOSETENV {
 			    $$.setenv = FALSE;
+			}
+		|	cmndtag LOG_INPUT {
+			    $$.log_input = TRUE;
+			}
+		|	cmndtag NOLOG_INPUT {
+			    $$.log_input = FALSE;
+			}
+		|	cmndtag LOG_OUTPUT {
+			    $$.log_output = TRUE;
+			}
+		|	cmndtag NOLOG_OUTPUT {
+			    $$.log_output = FALSE;
 			}
 		;
 

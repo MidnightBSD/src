@@ -14,21 +14,26 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $Sudo: sudo_usage.h.in,v 1.10 2009/05/25 12:02:42 millert Exp $
  */
 
 #ifndef _SUDO_USAGE_H
 #define _SUDO_USAGE_H
+
+void usage __P((int)) __attribute__((__noreturn__));
 
 /*
  * Usage strings for sudo.  These are here because we
  * need to be able to substitute values from configure.
  */
 #define SUDO_USAGE1 " -h | -K | -k | -L | -V"
-#define SUDO_USAGE2 " -v [-AknS] [-p prompt]"
-#define SUDO_USAGE3 " -l[l] [-AknS] [-g groupname|#gid] [-p prompt] [-U username] [-u username|#uid] [-g groupname|#gid] [command]"
-#define SUDO_USAGE4 " [-AbEHknPS] [-C fd] [-c class|-] [-g groupname|#gid] [-p prompt] [-u username|#uid] [-g groupname|#gid] [VAR=value] [-i|-s] [<command>]"
-#define SUDO_USAGE5 " -e [-AknS] [-C fd] [-c class|-] [-g groupname|#gid] [-p prompt] [-u username|#uid] file ..."
+#define SUDO_USAGE2 " -v [-AknS] [-g groupname|#gid] [-p prompt] [-u user name|#uid]"
+#define SUDO_USAGE3 " -l[l] [-AknS] [-g groupname|#gid] [-p prompt] [-U user name] [-u user name|#uid] [-g groupname|#gid] [command]"
+#define SUDO_USAGE4 " [-AbEHknPS] [-C fd] [-c class|-] [-g groupname|#gid] [-p prompt] [-u user name|#uid] [-g groupname|#gid] [VAR=value] [-i|-s] [<command>]"
+#define SUDO_USAGE5 " -e [-AknS] [-C fd] [-c class|-] [-g groupname|#gid] [-p prompt] [-u user name|#uid] file ..."
+
+/*
+ * Configure script arguments used to build sudo.
+ */
+#define CONFIGURE_ARGS "--with-all-insults --build=i386-midnightbsd-freebsd7.0"
 
 #endif /* _SUDO_USAGE_H */

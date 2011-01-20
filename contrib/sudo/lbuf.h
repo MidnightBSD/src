@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2007, 2010 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,17 +23,20 @@
  * Line buffer struct.
  */
 struct lbuf {
+    int (*output)__P((const char *));
     char *buf;
-    int continuation;
+    const char *continuation;
     int indent;
     int len;
     int size;
+    int cols;
 };
 
-void lbuf_init		__P((struct lbuf *, char *, int, int));
-void lbuf_destroy	__P((struct lbuf *));
+int get_ttycols		__P((void));
 void lbuf_append	__P((struct lbuf *, ...));
 void lbuf_append_quoted	__P((struct lbuf *, const char *, ...));
+void lbuf_destroy	__P((struct lbuf *));
+void lbuf_init		__P((struct lbuf *, int (*)(const char *), int, const char *));
 void lbuf_print		__P((struct lbuf *));
 
 #endif /* _SUDO_LBUF_H */

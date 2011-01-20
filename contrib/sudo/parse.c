@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2005, 2007-2009 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2004-2005, 2007-2010 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,11 +31,10 @@
 #endif /* STDC_HEADERS */
 #ifdef HAVE_STRING_H
 # include <string.h>
-#else
-# ifdef HAVE_STRINGS_H
-#  include <strings.h>
-# endif
 #endif /* HAVE_STRING_H */
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif /* HAVE_STRINGS_H */
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
@@ -250,6 +249,10 @@ sudo_file_lookup(nss, validated, pwflag)
 		def_noexec = tags->noexec;
 	    if (tags->setenv != UNSPEC)
 		def_setenv = tags->setenv;
+	    if (tags->log_input != UNSPEC)
+		def_log_input = tags->log_input;
+	    if (tags->log_output != UNSPEC)
+		def_log_output = tags->log_output;
 	}
     } else if (match == DENY) {
 	SET(validated, VALIDATE_NOT_OK);
@@ -291,6 +294,16 @@ sudo_file_append_cmnd(cs, tags, lbuf)
 	    "PASSWD: ", NULL);
 	tags->nopasswd = cs->tags.nopasswd;
     }
+    if (TAG_CHANGED(log_input)) {
+	lbuf_append(lbuf, cs->tags.log_input ? "LOG_INPUT: " :
+	    "NOLOG_INPUT: ", NULL);
+	tags->log_input = cs->tags.log_input;
+    }
+    if (TAG_CHANGED(log_output)) {
+	lbuf_append(lbuf, cs->tags.log_output ? "LOG_OUTPUT: " :
+	    "NOLOG_OUTPUT: ", NULL);
+	tags->log_output = cs->tags.log_output;
+    }
     m = cs->cmnd;
     print_member(lbuf, m->name, m->type, m->negated,
 	CMNDALIAS);
@@ -314,6 +327,8 @@ sudo_file_display_priv_short(pw, us, lbuf)
 	tags.noexec = UNSPEC;
 	tags.setenv = UNSPEC;
 	tags.nopasswd = UNSPEC;
+	tags.log_input = UNSPEC;
+	tags.log_output = UNSPEC;
 	lbuf_append(lbuf, "    ", NULL);
 	tq_foreach_fwd(&priv->cmndlist, cs) {
 	    if (cs != tq_first(&priv->cmndlist))
@@ -344,7 +359,7 @@ sudo_file_display_priv_short(pw, us, lbuf)
 	    sudo_file_append_cmnd(cs, &tags, lbuf);
 	    nfound++;
 	}
-	lbuf_print(lbuf);		/* forces a newline */
+	lbuf_append(lbuf, "\n", NULL);
     }
     return(nfound);
 }
@@ -367,9 +382,9 @@ sudo_file_display_priv_long(pw, us, lbuf)
 	tags.noexec = UNSPEC;
 	tags.setenv = UNSPEC;
 	tags.nopasswd = UNSPEC;
-	lbuf_print(lbuf);	/* force a newline */
-	lbuf_append(lbuf, "Sudoers entry:", NULL);
-	lbuf_print(lbuf);
+	tags.log_input = UNSPEC;
+	tags.log_output = UNSPEC;
+	lbuf_append(lbuf, "\nSudoers entry:\n", NULL);
 	tq_foreach_fwd(&priv->cmndlist, cs) {
 	    lbuf_append(lbuf, "    RunAsUsers: ", NULL);
 	    if (!tq_empty(&cs->runasuserlist)) {
@@ -384,7 +399,7 @@ sudo_file_display_priv_long(pw, us, lbuf)
 	    } else {
 		lbuf_append(lbuf, pw->pw_name, NULL);
 	    }
-	    lbuf_print(lbuf);
+	    lbuf_append(lbuf, "\n", NULL);
 	    if (!tq_empty(&cs->runasgrouplist)) {
 		lbuf_append(lbuf, "    RunAsGroups: ", NULL);
 		tq_foreach_fwd(&cs->runasgrouplist, m) {
@@ -393,13 +408,11 @@ sudo_file_display_priv_long(pw, us, lbuf)
 		    print_member(lbuf, m->name, m->type, m->negated,
 			RUNASALIAS);
 		}
-		lbuf_print(lbuf);
+		lbuf_append(lbuf, "\n", NULL);
 	    }
-	    lbuf_append(lbuf, "    Commands: ", NULL);
-	    lbuf_print(lbuf);
-	    lbuf_append(lbuf, "\t", NULL);
+	    lbuf_append(lbuf, "    Commands:\n\t", NULL);
 	    sudo_file_append_cmnd(cs, &tags, lbuf);
-	    lbuf_print(lbuf);
+	    lbuf_append(lbuf, "\n", NULL);
 	    nfound++;
 	}
     }
@@ -416,7 +429,7 @@ sudo_file_display_privs(nss, pw, lbuf)
     int nfound = 0;
 
     if (nss->handle == NULL)
-	return(-1);
+	goto done;
 
     tq_foreach_fwd(&userspecs, us) {
 	if (userlist_matches(pw, &us->users) != ALLOW)
@@ -427,6 +440,7 @@ sudo_file_display_privs(nss, pw, lbuf)
 	else
 	    nfound += sudo_file_display_priv_short(pw, us, lbuf);
     }
+done:
     return(nfound);
 }
 
@@ -440,13 +454,13 @@ sudo_file_display_defaults(nss, pw, lbuf)
     struct lbuf *lbuf;
 {
     struct defaults *d;
-    char *prefix = NULL;
+    char *prefix;
     int nfound = 0;
 
     if (nss->handle == NULL)
-	return(-1);
+	goto done;
 
-    if (lbuf->len == 0)
+    if (lbuf->len == 0 || isspace((unsigned char)lbuf->buf[lbuf->len - 1]))
 	prefix = "    ";
     else
 	prefix = ", ";
@@ -480,7 +494,7 @@ sudo_file_display_defaults(nss, pw, lbuf)
 	prefix = ", ";
 	nfound++;
     }
-
+done:
     return(nfound);
 }
 
@@ -547,6 +561,8 @@ display_bound_defaults(dtype, lbuf)
 	nfound++;
 	if (binding != tq_first(&d->binding)) {
 	    binding = tq_first(&d->binding);
+	    if (nfound != 1)
+		lbuf_append(lbuf, "\n", NULL);
 	    lbuf_append(lbuf, "    Defaults", dsep, NULL);
 	    for (m = binding; m != NULL; m = m->next) {
 		if (m != binding)
@@ -579,7 +595,7 @@ sudo_file_display_cmnd(nss, pw)
     int host_match, runas_match, cmnd_match;
 
     if (nss->handle == NULL)
-	return(rval);
+	goto done;
 
     match = NULL;
     tq_foreach_rev(&userspecs, us) {
@@ -610,6 +626,7 @@ sudo_file_display_cmnd(nss, pw)
 	    user_args ? user_args : "");
 	rval = 0;
     }
+done:
     return(rval);
 }
 

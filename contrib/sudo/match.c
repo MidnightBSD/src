@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 1998-2005, 2007-2009
+ * Copyright (c) 1996, 1998-2005, 2007-2010
  *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -38,11 +38,10 @@
 #endif /* STDC_HEADERS */
 #ifdef HAVE_STRING_H
 # include <string.h>
-#else
-# ifdef HAVE_STRINGS_H
-#  include <strings.h>
-# endif
 #endif /* HAVE_STRING_H */
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif /* HAVE_STRINGS_H */
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
@@ -171,76 +170,79 @@ _runaslist_matches(user_list, group_list)
 {
     struct member *m;
     struct alias *a;
-    int rval, matched = UNSPEC;
-
-    if (runas_gr != NULL) {
-	if (tq_empty(group_list))
-	    return(DENY); /* group was specified but none in sudoers */
-	if (runas_pw != NULL && strcmp(runas_pw->pw_name, user_name) &&
-	    tq_empty(user_list))
-	    return(DENY); /* user was specified but none in sudoers */
-    }
-
-    if (tq_empty(user_list) && tq_empty(group_list))
-	return(userpw_matches(def_runas_default, runas_pw->pw_name, runas_pw));
+    int rval;
+    int user_matched = UNSPEC;
+    int group_matched = UNSPEC;
 
     if (runas_pw != NULL) {
+	/* If no runas user or runas group listed in sudoers, use default. */
+	if (tq_empty(user_list) && tq_empty(group_list))
+	    return(userpw_matches(def_runas_default, runas_pw->pw_name, runas_pw));
+
 	tq_foreach_rev(user_list, m) {
 	    switch (m->type) {
 		case ALL:
-		    matched = !m->negated;
+		    user_matched = !m->negated;
 		    break;
 		case NETGROUP:
 		    if (netgr_matches(m->name, NULL, NULL, runas_pw->pw_name))
-			matched = !m->negated;
+			user_matched = !m->negated;
 		    break;
 		case USERGROUP:
 		    if (usergr_matches(m->name, runas_pw->pw_name, runas_pw))
-			matched = !m->negated;
+			user_matched = !m->negated;
 		    break;
 		case ALIAS:
 		    if ((a = alias_find(m->name, RUNASALIAS)) != NULL) {
 			rval = _runaslist_matches(&a->members, &empty);
 			if (rval != UNSPEC)
-			    matched = m->negated ? !rval : rval;
+			    user_matched = m->negated ? !rval : rval;
 			break;
 		    }
 		    /* FALLTHROUGH */
 		case WORD:
 		    if (userpw_matches(m->name, runas_pw->pw_name, runas_pw))
-			matched = !m->negated;
+			user_matched = !m->negated;
 		    break;
 	    }
-	    if (matched != UNSPEC)
+	    if (user_matched != UNSPEC)
 		break;
 	}
     }
 
     if (runas_gr != NULL) {
+	if (user_matched == UNSPEC) {
+	    if (runas_pw == NULL || strcmp(runas_pw->pw_name, user_name) == 0)
+		user_matched = ALLOW;	/* only changing group */
+	}
 	tq_foreach_rev(group_list, m) {
 	    switch (m->type) {
 		case ALL:
-		    matched = !m->negated;
+		    group_matched = !m->negated;
 		    break;
 		case ALIAS:
 		    if ((a = alias_find(m->name, RUNASALIAS)) != NULL) {
 			rval = _runaslist_matches(&a->members, &empty);
 			if (rval != UNSPEC)
-			    matched = m->negated ? !rval : rval;
+			    group_matched = m->negated ? !rval : rval;
 			break;
 		    }
 		    /* FALLTHROUGH */
 		case WORD:
 		    if (group_matches(m->name, runas_gr))
-			matched = !m->negated;
+			group_matched = !m->negated;
 		    break;
 	    }
-	    if (matched != UNSPEC)
+	    if (group_matched != UNSPEC)
 		break;
 	}
     }
 
-    return(matched);
+    if (user_matched == DENY || group_matched == DENY)
+	return(DENY);
+    if (user_matched == group_matched || runas_gr == NULL)
+	return(user_matched);
+    return(UNSPEC);
 }
 
 int
@@ -605,22 +607,21 @@ addr_matches_if(n)
     char *n;
 {
     int i;
-    struct in_addr addr;
+    union sudo_in_addr_un addr;
     struct interface *ifp;
 #ifdef HAVE_IN6_ADDR
-    struct in6_addr addr6;
     int j;
 #endif
     int family;
 
 #ifdef HAVE_IN6_ADDR
-    if (inet_pton(AF_INET6, n, &addr6) > 0) {
+    if (inet_pton(AF_INET6, n, &addr.ip6) > 0) {
 	family = AF_INET6;
     } else
 #endif
     {
 	family = AF_INET;
-	addr.s_addr = inet_addr(n);
+	addr.ip4.s_addr = inet_addr(n);
     }
 
     for (i = 0; i < num_interfaces; i++) {
@@ -629,21 +630,21 @@ addr_matches_if(n)
 	    continue;
 	switch(family) {
 	    case AF_INET:
-		if (ifp->addr.ip4.s_addr == addr.s_addr ||
+		if (ifp->addr.ip4.s_addr == addr.ip4.s_addr ||
 		    (ifp->addr.ip4.s_addr & ifp->netmask.ip4.s_addr)
-		    == addr.s_addr)
+		    == addr.ip4.s_addr)
 		    return(TRUE);
 		break;
 #ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
-		if (memcmp(ifp->addr.ip6.s6_addr, addr6.s6_addr,
-		    sizeof(addr6.s6_addr)) == 0)
+		if (memcmp(ifp->addr.ip6.s6_addr, addr.ip6.s6_addr,
+		    sizeof(addr.ip6.s6_addr)) == 0)
 		    return(TRUE);
-		for (j = 0; j < sizeof(addr6.s6_addr); j++) {
-		    if ((ifp->addr.ip6.s6_addr[j] & ifp->netmask.ip6.s6_addr[j]) != addr6.s6_addr[j])
+		for (j = 0; j < sizeof(addr.ip6.s6_addr); j++) {
+		    if ((ifp->addr.ip6.s6_addr[j] & ifp->netmask.ip6.s6_addr[j]) != addr.ip6.s6_addr[j])
 			break;
 		}
-		if (j == sizeof(addr6.s6_addr))
+		if (j == sizeof(addr.ip6.s6_addr))
 		    return(TRUE);
 #endif
 	}
@@ -658,46 +659,45 @@ addr_matches_if_netmask(n, m)
     char *m;
 {
     int i;
-    struct in_addr addr, mask;
+    union sudo_in_addr_un addr, mask;
     struct interface *ifp;
 #ifdef HAVE_IN6_ADDR
-    struct in6_addr addr6, mask6;
     int j;
 #endif
     int family;
 
 #ifdef HAVE_IN6_ADDR
-    if (inet_pton(AF_INET6, n, &addr6) > 0)
+    if (inet_pton(AF_INET6, n, &addr.ip6) > 0)
 	family = AF_INET6;
     else
 #endif
     {
 	family = AF_INET;
-	addr.s_addr = inet_addr(n);
+	addr.ip4.s_addr = inet_addr(n);
     }
 
     if (family == AF_INET) {
 	if (strchr(m, '.'))
-	    mask.s_addr = inet_addr(m);
+	    mask.ip4.s_addr = inet_addr(m);
 	else {
 	    i = 32 - atoi(m);
-	    mask.s_addr = 0xffffffff;
-	    mask.s_addr >>= i;
-	    mask.s_addr <<= i;
-	    mask.s_addr = htonl(mask.s_addr);
+	    mask.ip4.s_addr = 0xffffffff;
+	    mask.ip4.s_addr >>= i;
+	    mask.ip4.s_addr <<= i;
+	    mask.ip4.s_addr = htonl(mask.ip4.s_addr);
 	}
     }
 #ifdef HAVE_IN6_ADDR
     else {
-	if (inet_pton(AF_INET6, m, &mask6) <= 0) {
+	if (inet_pton(AF_INET6, m, &mask.ip6) <= 0) {
 	    j = atoi(m);
 	    for (i = 0; i < 16; i++) {
 		if (j < i * 8)
-		    mask6.s6_addr[i] = 0;
+		    mask.ip6.s6_addr[i] = 0;
 		else if (i * 8 + 8 <= j)
-		    mask6.s6_addr[i] = 0xff;
+		    mask.ip6.s6_addr[i] = 0xff;
 		else
-		    mask6.s6_addr[i] = 0xff00 >> (j - i * 8);
+		    mask.ip6.s6_addr[i] = 0xff00 >> (j - i * 8);
 	    }
 	}
     }
@@ -709,15 +709,15 @@ addr_matches_if_netmask(n, m)
 	    continue;
 	switch(family) {
 	    case AF_INET:
-		if ((ifp->addr.ip4.s_addr & mask.s_addr) == addr.s_addr)
+		if ((ifp->addr.ip4.s_addr & mask.ip4.s_addr) == addr.ip4.s_addr)
 		    return(TRUE);
 #ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
-		for (j = 0; j < sizeof(addr6.s6_addr); j++) {
-		    if ((ifp->addr.ip6.s6_addr[j] & mask6.s6_addr[j]) != addr6.s6_addr[j])
+		for (j = 0; j < sizeof(addr.ip6.s6_addr); j++) {
+		    if ((ifp->addr.ip6.s6_addr[j] & mask.ip6.s6_addr[j]) != addr.ip6.s6_addr[j])
 			break;
 		}
-		if (j == sizeof(addr6.s6_addr))
+		if (j == sizeof(addr.ip6.s6_addr))
 		    return(TRUE);
 #endif /* HAVE_IN6_ADDR */
 	}
@@ -815,10 +815,6 @@ usergr_matches(group, user, pw)
     char *user;
     struct passwd *pw;
 {
-    struct group *grp = NULL;
-    char **cur;
-    int i;
-
     /* make sure we have a valid usergroup, sudo style */
     if (*group++ != '%')
 	return(FALSE);
@@ -830,30 +826,10 @@ usergr_matches(group, user, pw)
 
     /* look up user's primary gid in the passwd file */
     if (pw == NULL && (pw = sudo_getpwnam(user)) == NULL)
-	goto try_supplementary;
+	return(FALSE);
 
-    /* check against user's primary (passwd file) gid */
-    if ((grp = sudo_getgrnam(group)) == NULL)
-	goto try_supplementary;
-    if (grp->gr_gid == pw->pw_gid)
+    if (user_in_group(pw, group))
 	return(TRUE);
-
-    /*
-     * If we are matching the invoking or list user and that user has a
-     * supplementary group vector, check it first.
-     */
-    if (strcmp(user, list_pw ? list_pw->pw_name : user_name) == 0) {
-	for (i = 0; i < user_ngroups; i++)
-	    if (grp->gr_gid == user_groups[i])
-		return(TRUE);
-    }
-
-try_supplementary:
-    if (grp != NULL && grp->gr_mem != NULL) {
-	for (cur = grp->gr_mem; *cur; cur++)
-	    if (strcmp(*cur, user) == 0)
-		return(TRUE);
-    }
 
 #ifdef USING_NONUNIX_GROUPS
     /* not a Unix group, could be an AD group */

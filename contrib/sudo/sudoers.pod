@@ -111,20 +111,20 @@ The definitions of what constitutes a valid I<alias> member follow.
  User_List ::= User |
 	       User ',' User_List
 
- User ::= '!'* username |
+ User ::= '!'* user name |
 	  '!'* '#'uid |
 	  '!'* '%'group |
 	  '!'* '+'netgroup |
 	  '!'* '%:'nonunix_group |
 	  '!'* User_Alias
 
-A C<User_List> is made up of one or more usernames, uids (prefixed
+A C<User_List> is made up of one or more user names, uids (prefixed
 with '#'), system groups (prefixed with '%'), netgroups (prefixed
 with '+') and C<User_Alias>es.  Each list item may be prefixed with
 zero or more '!' operators.  An odd number of '!' operators negate
 the value of the item; an even number just cancel each other out.
 
-A C<username>, C<group>, C<netgroup> and C<nonunix_groups> may
+A C<user name>, C<group>, C<netgroup> or C<nonunix_group> may
 be enclosed in double quotes to avoid the need for escaping special
 characters.  Alternately, special characters may be specified in
 escaped hex mode, e.g. \x20 for space.
@@ -154,7 +154,7 @@ use a backslash (\) to escape spaces and the '@' symbol.
  Runas_List ::= Runas_Member |
 		Runas_Member ',' Runas_List
 
- Runas_Member ::= '!'* username |
+ Runas_Member ::= '!'* user name |
 	          '!'* '#'uid |
 	          '!'* '%'group |
 	          '!'* +netgroup |
@@ -162,21 +162,21 @@ use a backslash (\) to escape spaces and the '@' symbol.
 
 A C<Runas_List> is similar to a C<User_List> except that instead
 of C<User_Alias>es it can contain C<Runas_Alias>es.  Note that
-usernames and groups are matched as strings.  In other words, two
+user names and groups are matched as strings.  In other words, two
 users (groups) with the same uid (gid) are considered to be distinct.
-If you wish to match all usernames with the same uid (e.g.E<nbsp>root
+If you wish to match all user names with the same uid (e.g.E<nbsp>root
 and toor), you can use a uid instead (#0 in the example given).
 
  Host_List ::= Host |
 	       Host ',' Host_List
 
- Host ::= '!'* hostname |
+ Host ::= '!'* host name |
 	  '!'* ip_addr |
 	  '!'* network(/netmask)? |
 	  '!'* '+'netgroup |
 	  '!'* Host_Alias
 
-A C<Host_List> is made up of one or more hostnames, IP addresses,
+A C<Host_List> is made up of one or more host names, IP addresses,
 network numbers, netgroups (prefixed with '+') and other aliases.
 Again, the value of an item may be negated with the '!' operator.
 If you do not specify a netmask along with the network number,
@@ -185,18 +185,22 @@ if the network number corresponds to one of the hosts's network
 interfaces, the corresponding netmask will be used.  The netmask
 may be specified either in standard IP address notation
 (e.g.E<nbsp>255.255.255.0 or ffff:ffff:ffff:ffff::),
-or CIDR notation (number of bits, e.g.E<nbsp>24 or 64).  A hostname may
+or CIDR notation (number of bits, e.g.E<nbsp>24 or 64).  A host name may
 include shell-style wildcards (see the L<Wildcards> section below),
-but unless the C<hostname> command on your machine returns the fully
-qualified hostname, you'll need to use the I<fqdn> option for
-wildcards to be useful.
+but unless the C<host name> command on your machine returns the fully
+qualified host name, you'll need to use the I<fqdn> option for
+wildcards to be useful.  Note B<sudo> only inspects actual network
+interfaces; this means that IP address 127.0.0.1 (localhost) will
+never match.  Also, the host name "localhost" will only match if
+that is the actual host name, which is usually only the case for
+non-networked systems.
 
  Cmnd_List ::= Cmnd |
 	       Cmnd ',' Cmnd_List
 
- commandname ::= filename |
-	         filename args |
-	         filename '""'
+ commandname ::= file name |
+	         file name args |
+	         file name '""'
 
  Cmnd ::= '!'* commandname |
 	  '!'* directory |
@@ -204,13 +208,13 @@ wildcards to be useful.
 	  '!'* Cmnd_Alias
 
 A C<Cmnd_List> is a list of one or more commandnames, directories, and other
-aliases.  A commandname is a fully qualified filename which may include
+aliases.  A commandname is a fully qualified file name which may include
 shell-style wildcards (see the L<Wildcards> section below).  A simple
-filename allows the user to run the command with any arguments he/she
+file name allows the user to run the command with any arguments he/she
 wishes.  However, you may also specify command line arguments (including
 wildcards).  Alternately, you can specify C<""> to indicate that the command
 may only be run B<without> command line arguments.  A directory is a
-fully qualified pathname ending in a '/'.  When you specify a directory
+fully qualified path name ending in a '/'.  When you specify a directory
 in a C<Cmnd_List>, the user will be able to run any file within that directory
 (but not in any subdirectories therein).
 
@@ -275,12 +279,15 @@ See L<"SUDOERS OPTIONS"> for a list of supported Defaults parameters.
  Cmnd_Spec_List ::= Cmnd_Spec |
 		    Cmnd_Spec ',' Cmnd_Spec_List
 
- Cmnd_Spec ::= Runas_Spec? Tag_Spec* Cmnd
+ Cmnd_Spec ::= Runas_Spec? SELinux_Spec? Tag_Spec* Cmnd
 
  Runas_Spec ::= '(' Runas_List? (':' Runas_List)? ')'
 
+ SELinux_Spec ::= ('ROLE=role' | 'TYPE=type')
+
  Tag_Spec ::= ('NOPASSWD:' | 'PASSWD:' | 'NOEXEC:' | 'EXEC:' |
-	       'SETENV:' | 'NOSETENV:' )
+	       'SETENV:' | 'NOSETENV:' | 'LOG_INPUT:' | 'NOLOG_INPUT:' |
+               'LOG_OUTPUT:' | 'NOLOG_OUTPUT:')
 
 A B<user specification> determines which commands a user may run
 (and as what user) on specified hosts.  By default, commands are
@@ -338,15 +345,23 @@ only the group will be set, the command still runs as user B<tcm>.
  tcm	boulder = (:dialer) /usr/bin/tip, /usr/bin/cu, \
 	/usr/local/bin/minicom
 
+=head2 SELinux_Spec
+
+On systems with SELinux support, I<sudoers> entries may optionally have
+an SELinux role and/or type associated with a command.  If a role or
+type is specified with the command it will override any default values
+specified in I<sudoers>.  A role or type specified on the command line,
+however, will supercede the values in I<sudoers>.
+
 =head2 Tag_Spec
 
 A command may have zero or more tags associated with it.  There are
-eight possible tag values, C<NOPASSWD>, C<PASSWD>, C<NOEXEC>, C<EXEC>,
-C<SETENV> and C<NOSETENV>.
-Once a tag is set on a C<Cmnd>, subsequent C<Cmnd>s in the
-C<Cmnd_Spec_List>, inherit the tag unless it is overridden by the
-opposite tag (i.e.: C<PASSWD> overrides C<NOPASSWD> and C<NOEXEC>
-overrides C<EXEC>).
+eight possible tag values, C<NOPASSWD>, C<PASSWD>, C<NOEXEC>,
+C<EXEC>, C<SETENV>, C<NOSETENV>, C<LOG_INPUT>, C<NOLOG_INPUT>,
+C<LOG_OUTPUT> and C<NOLOG_OUTPUT>.  Once a tag is set on a C<Cmnd>,
+subsequent C<Cmnd>s in the C<Cmnd_Spec_List>, inherit the tag unless
+it is overridden by the opposite tag (i.e.: C<PASSWD> overrides
+C<NOPASSWD> and C<NOEXEC> overrides C<EXEC>).
 
 =head3 NOPASSWD and PASSWD
 
@@ -399,12 +414,24 @@ to the restrictions imposed by I<env_check>, I<env_delete>, or
 I<env_keep>.  As such, only trusted users should be allowed to set
 variables in this manner.  If the command matched is B<ALL>, the
 C<SETENV> tag is implied for that command; this default may
-be overridden by use of the C<UNSETENV> tag.
+be overridden by use of the C<NOSETENV> tag.
+
+=head3 LOG_INPUT and NOLOG_INPUT
+
+These tags override the value of the I<log_input> option on a
+per-command basis.  For more information, see the description of
+I<log_input> in the L<"SUDOERS OPTIONS"> section below.
+
+=head3 LOG_OUTPUT and NOLOG_OUTPUT
+
+These tags override the value of the I<log_output> option on a
+per-command basis.  For more information, see the description of
+I<log_output> in the L<"SUDOERS OPTIONS"> section below.
 
 =head2 Wildcards
 
 B<sudo> allows shell-style I<wildcards> (aka meta or glob characters)
-to be used in hostnames, pathnames and command line arguments in
+to be used in host names, path names and command line arguments in
 the I<sudoers> file.  Wildcard matching is done via the B<POSIX>
 L<glob(3)> and L<fnmatch(3)> routines.  Note that these are I<not>
 regular expressions.
@@ -441,10 +468,10 @@ escaped.  For example:
 
     /bin/ls [[\:alpha\:]]*
 
-Would match any filename beginning with a letter.
+Would match any file name beginning with a letter.
 
 Note that a forward slash ('/') will B<not> be matched by
-wildcards used in the pathname.  When matching the command
+wildcards used in the path name.  When matching the command
 line arguments, however, a slash B<does> get matched by
 wildcards.  This is to make a path like:
 
@@ -492,8 +519,8 @@ F</etc/sudoers> will be processed.  Files that are included may
 themselves include other files.  A hard limit of 128 nested include
 files is enforced to prevent include file loops.
 
-The filename may include the C<%h> escape, signifying the short form
-of the hostname.  I.e., if the machine's hostname is "xerxes", then
+The file name may include the C<%h> escape, signifying the short form
+of the host name.  I.e., if the machine's host name is "xerxes", then
 
 C<#include /etc/sudoers.%h>
 
@@ -551,7 +578,7 @@ Whitespace between elements in a list as well as special syntactic
 characters in a I<User Specification> ('=', ':', '(', ')') is optional.
 
 The following characters must be escaped with a backslash ('\') when
-used as part of a word (e.g.E<nbsp>a username or hostname):
+used as part of a word (e.g.E<nbsp>a user name or host name):
 '@', '!', '=', ':', ',', '(', ')', '\'.
 
 =head1 SUDOERS OPTIONS
@@ -560,15 +587,18 @@ B<sudo>'s behavior can be modified by C<Default_Entry> lines, as
 explained earlier.  A list of all supported Defaults parameters,
 grouped by type, are listed below.
 
-B<Flags>:
+B<Boolean Flags>:
 
 =over 16
 
 =item always_set_home
 
-If set, B<sudo> will set the C<HOME> environment variable to the home
-directory of the target user (which is root unless the B<-u> option is used).
-This effectively means that the B<-H> option is always implied.
+If enabled, B<sudo> will set the C<HOME> environment variable to the
+home directory of the target user (which is root unless the B<-u>
+option is used).  This effectively means that the B<-H> option is
+always implied.  Note that C<HOME> is already set when the the
+I<env_reset> option is enabled, so I<always_set_home> is only
+effective for configurations where I<env_reset> is disabled.
 This flag is I<off> by default.
 
 =item authenticate
@@ -584,6 +614,12 @@ If set, the user may use B<sudo>'s B<-C> option which
 overrides the default starting point at which B<sudo> begins
 closing open file descriptors.  This flag is I<off> by default.
 
+=item compress_io
+
+If set, and B<sudo> is configured to log a command's input or output,
+the I/O logs will be compressed using B<zlib>.  This flag is I<on>
+by default when B<sudo> is compiled with B<zlib> support.
+
 =item env_editor
 
 If set, B<visudo> will use the value of the EDITOR or VISUAL
@@ -598,7 +634,7 @@ default.
 =item env_reset
 
 If set, B<sudo> will reset the environment to only contain the
-LOGNAME, SHELL, USER, USERNAME and the C<SUDO_*> variables.  Any
+LOGNAME, MAIL, SHELL, USER, USERNAME and the C<SUDO_*> variables.  Any
 variables in the caller's environment that match the C<env_keep>
 and C<env_check> lists are then added.  The default contents of the
 C<env_keep> and C<env_check> lists are displayed when B<sudo> is
@@ -606,9 +642,26 @@ run by root with the I<-V> option.  If the I<secure_path> option
 is set, its value will be used for the C<PATH> environment variable.
 This flag is I<on> by default.
 
+=item fast_glob
+
+Normally, B<sudo> uses the L<glob(3)> function to do shell-style
+globbing when matching path names.  However, since it accesses the
+file system, L<glob(3)> can take a long time to complete for some
+patterns, especially when the pattern references a network file
+system that is mounted on demand (automounted).  The I<fast_glob>
+option causes B<sudo> to use the L<fnmatch(3)> function, which does
+not access the file system to do its matching.  The disadvantage
+of I<fast_glob> is that it is unable to match relative path names
+such as F<./ls> or F<../bin/ls>.  This has security implications
+when path names that include globbing characters are used with the
+negation operator, C<'!'>, as such rules can be trivially bypassed.
+As such, this option should not be used when I<sudoers> contains rules 
+that contain negated path names which include globbing characters.
+This flag is I<off> by default.
+
 =item fqdn
 
-Set this flag if you want to put fully qualified hostnames in the
+Set this flag if you want to put fully qualified host names in the
 I<sudoers> file.  I.e., instead of myhost you would use myhost.mydomain.edu.
 You may still use the short form if you wish (and even mix the two).
 Beware that turning on I<fqdn> requires B<sudo> to make DNS lookups
@@ -617,7 +670,7 @@ if the machine is not plugged into the network).  Also note that
 you must use the host's official name as DNS knows it.  That is,
 you may not use a host alias (C<CNAME> entry) due to performance
 issues and the fact that there is no way to get all aliases from
-DNS.  If your machine's hostname (as returned by the C<hostname>
+DNS.  If your machine's host name (as returned by the C<hostname>
 command) is already fully qualified you shouldn't need to set
 I<fqdn>.  This flag is I<@fqdn@> by default.
 
@@ -645,7 +698,7 @@ password.  This flag is I<@insults@> by default.
 
 =item log_host
 
-If set, the hostname will be logged in the (non-syslog) B<sudo> log file.
+If set, the host name will be logged in the (non-syslog) B<sudo> log file.
 This flag is I<off> by default.
 
 =item log_year
@@ -711,7 +764,7 @@ by default.
 =item passprompt_override
 
 The password prompt specified by I<passprompt> will normally only
-be used if the passwod prompt provided by systems such as PAM matches
+be used if the password prompt provided by systems such as PAM matches
 the string "Password:".  If I<passprompt_override> is set, I<passprompt>
 will always be used.  This flag is I<off> by default.
 
@@ -746,7 +799,7 @@ This flag is I<off> by default.
 If set, root is allowed to run B<sudo> too.  Disabling this prevents users
 from "chaining" B<sudo> commands to get a root shell by doing something
 like C<"sudo sudo /bin/sh">.  Note, however, that turning off I<root_sudo>
-will also prevent root and from running B<sudoedit>.
+will also prevent root from running B<sudoedit>.
 Disabling I<root_sudo> provides no real additional security; it
 exists purely for historical reasons.
 This flag is I<@root_sudo@> by default.
@@ -764,10 +817,13 @@ password of the invoking user.  This flag is I<off> by default.
 
 =item set_home
 
-If set and B<sudo> is invoked with the B<-s> option the C<HOME>
+If enabled and B<sudo> is invoked with the B<-s> option the C<HOME>
 environment variable will be set to the home directory of the target
 user (which is root unless the B<-u> option is used).  This effectively
-makes the B<-s> option imply B<-H>.  This flag is I<off> by default.
+makes the B<-s> option imply B<-H>.  Note that C<HOME> is already
+set when the the I<env_reset> option is enabled, so I<set_home> is
+only effective for configurations where I<env_reset> is disabled.
+This flag is I<off> by default.
 
 =item set_logname
 
@@ -779,7 +835,7 @@ determine the real identity of the user, it may be desirable to
 change this behavior.  This can be done by negating the set_logname
 option.  Note that if the I<env_reset> option has not been disabled,
 entries in the I<env_keep> list will override the value of
-I<set_logname>.  This flag is I<off> by default.
+I<set_logname>.  This flag is I<on> by default.
 
 =item setenv
 
@@ -798,23 +854,6 @@ shell is determined by the C<SHELL> environment variable if it is
 set, falling back on the shell listed in the invoking user's
 /etc/passwd entry if not).  This flag is I<off> by default.
 
-=item fast_glob
-
-Normally, B<sudo> uses the L<glob(3)> function to do shell-style
-globbing when matching pathnames.  However, since it accesses the
-file system, L<glob(3)> can take a long time to complete for some
-patterns, especially when the pattern references a network file
-system that is mounted on demand (automounted).  The I<fast_glob>
-option causes B<sudo> to use the L<fnmatch(3)> function, which does
-not access the file system to do its matching.  The disadvantage
-of I<fast_glob> is that it is unable to match relative pathnames
-such as F<./ls> or F<../bin/ls>.  This has security implications
-when path names that include globbing characters are used with the
-negation operator, C<'!'>, as such rules can be trivially bypassed.
-As such, this option should not be used when I<sudoers> contains rules
-that contain negated path names which include globbing characters.
-This flag is I<off> by default.
-
 =item stay_setuid
 
 Normally, when B<sudo> executes a command the real and effective
@@ -828,19 +867,48 @@ function.  This flag is I<off> by default.
 
 =item targetpw
 
-If set, B<sudo> will prompt for the password of the user specified by
-the B<-u> option (defaults to C<root>) instead of the password of the
-invoking user.  Note that this precludes the use of a uid not listed
-in the passwd database as an argument to the B<-u> option.
-This flag is I<off> by default.
+If set, B<sudo> will prompt for the password of the user specified
+by the B<-u> option (defaults to C<root>) instead of the password
+of the invoking user.  In addition, the timestamp file name will
+include the target user's name.  Note that this flag precludes the
+use of a uid not listed in the passwd database as an argument to
+the B<-u> option.  This flag is I<off> by default.
+
+=item log_input
+
+If set, B<sudo> will run the command in a I<pseudo tty> and log all
+user input.
+If the standard input is not connected to the user's tty, due to
+I/O redirection or because the command is part of a pipeline, that
+input is also captured and stored in a separate log file.
+
+Input is logged to the F</var/log/sudo-io> directory using a unique
+session ID that is included in the normal B<sudo> log line, prefixed
+with I<TSID=>.
+
+=item log_output
+
+If set, B<sudo> will run the command in a I<pseudo tty> and log all
+output that is sent to the screen, similar to the script(1) command.
+If the standard output or standard error is not connected to the
+user's tty, due to I/O redirection or because the command is part
+of a pipeline, that output is also captured and stored in separate
+log files.
+
+Output is logged to the
+F</var/log/sudo-io> directory using a unique session ID that is
+included in the normal B<sudo> log line, prefixed with I<TSID=>.
+
+Output logs may be viewed with the L<sudoreplay(8)> utility, which
+can also be used to list or search the available logs.
 
 =item tty_tickets
 
-If set, users must authenticate on a per-tty basis.  Normally,
-B<sudo> uses a directory in the ticket dir with the same name as
-the user running it.  With this flag enabled, B<sudo> will use a
-file named for the tty the user is logged in on in that directory.
-This flag is I<@tty_tickets@> by default.
+If set, users must authenticate on a per-tty basis.  With this flag
+enabled, B<sudo> will use a file named for the tty the user is
+logged in on in the user's time stamp directory.  If disabled, the
+time stamp of the directory is used instead.  This flag is
+I<@tty_tickets@> by default.
 
 =item umask_override
 
@@ -856,6 +924,14 @@ I<sudoers>.  This flag is I<off> by default.
 If set, B<sudo> will apply the defaults specified for the target user's
 login class if one exists.  Only available if B<sudo> is configured with
 the --with-logincap option.  This flag is I<off> by default.
+
+=item use_pty
+
+If set, B<sudo> will run the command in a pseudo-pty even if no I/O
+logging is being gone.  A malicious program run under B<sudo> could
+conceivably fork a background process that retains to the user's
+terminal device after the main program has finished executing.  Use
+of this option will make that impossible.
 
 =item visiblepw
 
@@ -900,14 +976,17 @@ C<@loglen@> (use 0 or negate the option to disable word wrap).
 
 =item passwd_timeout
 
-Number of minutes before the B<sudo> password prompt times out.
-The default is C<@password_timeout@>; set this to C<0> for no password timeout.
+Number of minutes before the B<sudo> password prompt times out, or
+C<0> for no timeout.  The timeout may include a fractional component
+if minute granularity is insufficient, for example C<2.5>.  The
+default is C<@password_timeout@>.
 
 =item timestamp_timeout
 
 Number of minutes that can elapse before B<sudo> will ask for a
-passwd again.  The default is C<@timeout@>.  Set this to C<0> to always
-prompt for a password.
+passwd again.  The timeout may include a fractional component if
+minute granularity is insufficient, for example C<2.5>.  The default
+is C<@timeout@>.  Set this to C<0> to always prompt for a password.
 If set to a value less than C<0> the user's timestamp will never
 expire.  This can be used to allow users to create or delete their
 own timestamps via C<sudo -v> and C<sudo -k> respectively.
@@ -916,11 +995,11 @@ own timestamps via C<sudo -v> and C<sudo -k> respectively.
 
 Umask to use when running the command.  Negate this option or set
 it to 0777 to preserve the user's umask.  The actual umask that is
-used will be the union of the user's umask and C<@sudo_umask@>.
-This guarantees that B<sudo> never lowers the umask when running a
-command.  Note on systems that use PAM, the default PAM configuration
-may specify its own umask which will override the value set in
-I<sudoers>.
+used will be the union of the user's umask and the value of the
+I<umask> option, which defaults to C<@sudo_umask@>.  This guarantees
+that B<sudo> never lowers the umask when running a command.  Note
+on systems that use PAM, the default PAM configuration may specify
+its own umask which will override the value set in I<sudoers>.
 
 =back
 
@@ -938,13 +1017,12 @@ The default is C<@badpass_message@> unless insults are enabled.
 A colon (':') separated list of editors allowed to be used with
 B<visudo>.  B<visudo> will choose the editor that matches the user's
 EDITOR environment variable if possible, or the first editor in the
-list that exists and is executable.  The default is the path to vi
-on your system.
+list that exists and is executable.  The default is C<"@editor@">.
 
 =item mailsub
 
 Subject of the mail sent to the I<mailto> user. The escape C<%h>
-will expand to the hostname of the machine.
+will expand to the host name of the machine.
 Default is C<@mailsub@>.
 
 =item noexec_file
@@ -964,13 +1042,13 @@ The following percent (`C<%>') escapes are supported:
 
 =item C<%H>
 
-expanded to the local hostname including the domain name
-(on if the machine's hostname is fully qualified or the I<fqdn>
+expanded to the local host name including the domain name
+(on if the machine's host name is fully qualified or the I<fqdn>
 option is set)
 
 =item C<%h>
 
-expanded to the local hostname without the domain name
+expanded to the local host name without the domain name
 
 =item C<%p>
 
@@ -1279,12 +1357,22 @@ Local groups file
 
 List of network groups
 
+=item F</var/log/sudo-io>
+
+I/O log files
+
 =back
 
 =head1 EXAMPLES
 
 Below are example I<sudoers> entries.  Admittedly, some of
-these are a bit contrived.  First, we define our I<aliases>:
+these are a bit contrived.  First, we allow a few environment
+variables to pass and then define our I<aliases>:
+
+ # Run X applications through sudo; HOME is used to find the
+ # .Xauthority file.  Note that other programs use HOME to find
+ # configuration files and this may lead to privilege escalation!
+ Defaults env_keep += "DISPLAY HOME"
 
  # User alias specification
  User_Alias	FULLTIMERS = millert, mikef, dowdy
@@ -1396,7 +1484,7 @@ groups).
 
 The user B<pete> is allowed to change anyone's password except for
 root on the I<HPPA> machines.  Note that this assumes L<passwd(1)>
-does not take multiple usernames on the command line.
+does not take multiple user names on the command line.
 
  bob		SPARC = (OP) ALL : SGI = (OP) ALL
 
@@ -1510,7 +1598,7 @@ arbitrary commands.  Many editors have a restricted mode where shell
 escapes are disabled, though B<sudoedit> is a better solution to
 running editors via B<sudo>.  Due to the large number of programs that
 offer shell escapes, restricting users to the set of programs that
-do not if often unworkable.
+do not is often unworkable.
 
 =item noexec
 
@@ -1575,8 +1663,8 @@ imperative that I<sudoers> be free of syntax errors since B<sudo>
 will not run with a syntactically incorrect I<sudoers> file.
 
 When using netgroups of machines (as opposed to users), if you
-store fully qualified hostnames in the netgroup (as is usually the
-case), you either need to have the machine's hostname be fully qualified
+store fully qualified host name in the netgroup (as is usually the
+case), you either need to have the machine's host name be fully qualified
 as returned by the C<hostname> command or use the I<fqdn> option in
 I<sudoers>.
 

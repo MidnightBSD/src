@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2009-2010 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,11 +32,10 @@
 #  include <memory.h>
 # endif
 # include <string.h>
-#else
-# ifdef HAVE_STRINGS_H
-#  include <strings.h>
-# endif
 #endif /* HAVE_STRING_H */
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif /* HAVE_STRINGS_H */
 #ifdef HAVE_TERMIOS_H
 # include <termios.h>
 #else
@@ -59,6 +58,9 @@
 #ifndef IEXTEN
 # define IEXTEN		0
 #endif
+#ifndef IUCLC
+# define IUCLC		0
+#endif
 
 #ifndef _POSIX_VDISABLE
 # ifdef VDISABLE
@@ -79,6 +81,8 @@
 #  define tcsetattr(f, a, t)	ioctl(f, a, t)
 #  undef TCSAFLUSH
 #  define TCSAFLUSH		TCSETAF
+#  undef TCSADRAIN
+#  define TCSADRAIN		TCSETAW
 # else /* SGTTY */
 #  undef termios
 #  define termios		sgttyb
@@ -87,6 +91,8 @@
 #  define tcsetattr(f, a, t)	ioctl(f, a, t)
 #  undef TCSAFLUSH
 #  define TCSAFLUSH		TIOCSETP
+#  undef TCSADRAIN
+#  define TCSADRAIN		TIOCSETN
 # endif /* HAVE_TERMIO_H */
 #endif /* HAVE_TERMIOS_H */
 
@@ -98,11 +104,14 @@ int term_erase;
 int term_kill;
 
 int
-term_restore(fd)
+term_restore(fd, flush)
     int fd;
+    int flush;
 {
     if (changed) {
-	if (tcsetattr(fd, TCSAFLUSH|TCSASOFT, &oterm) != 0)
+	int flags = TCSASOFT;
+	flags |= flush ? TCSAFLUSH : TCSADRAIN;
+	if (tcsetattr(fd, flags, &oterm) != 0)
 	    return(0);
 	changed = 0;
     }
@@ -120,7 +129,7 @@ term_noecho(fd)
 #ifdef VSTATUS
     term.c_cc[VSTATUS] = _POSIX_VDISABLE;
 #endif
-    if (tcsetattr(fd, TCSAFLUSH|TCSASOFT, &term) == 0) {
+    if (tcsetattr(fd, TCSADRAIN|TCSASOFT, &term) == 0) {
 	changed = 1;
 	return(1);
     }
@@ -128,8 +137,34 @@ term_noecho(fd)
 }
 
 #if defined(HAVE_TERMIOS_H) || defined(HAVE_TERMIO_H)
+
 int
-term_raw(fd)
+term_raw(fd, isig)
+    int fd;
+    int isig;
+{
+    struct termios term;
+
+    if (!changed && tcgetattr(fd, &oterm) != 0)
+	return(0);
+    (void) memcpy(&term, &oterm, sizeof(term));
+    /* Set terminal to raw mode */
+    term.c_cc[VMIN] = 1;
+    term.c_cc[VTIME] = 0;
+    CLR(term.c_iflag, ICRNL | IGNCR | INLCR | IUCLC | IXON);
+    CLR(term.c_oflag, OPOST);
+    CLR(term.c_lflag, ECHO | ICANON | ISIG | IEXTEN);
+    if (isig)
+	SET(term.c_lflag, ISIG);
+    if (tcsetattr(fd, TCSADRAIN|TCSASOFT, &term) == 0) {
+	changed = 1;
+    	return(1);
+    }
+    return(0);
+}
+
+int
+term_cbreak(fd)
     int fd;
 {
     if (!changed && tcgetattr(fd, &oterm) != 0)
@@ -143,7 +178,7 @@ term_raw(fd)
 #ifdef VSTATUS
     term.c_cc[VSTATUS] = _POSIX_VDISABLE;
 #endif
-    if (tcsetattr(fd, TCSAFLUSH|TCSASOFT, &term) == 0) {
+    if (tcsetattr(fd, TCSADRAIN|TCSASOFT, &term) == 0) {
 	term_erase = term.c_cc[VERASE];
 	term_kill = term.c_cc[VKILL];
 	changed = 1;
@@ -152,10 +187,44 @@ term_raw(fd)
     return(0);
 }
 
+int
+term_copy(src, dst)
+    int src;
+    int dst;
+{
+    struct termios tt;
+
+    if (tcgetattr(src, &tt) != 0)
+	return(0);
+    /* XXX - add TCSANOW compat define */
+    if (tcsetattr(dst, TCSANOW|TCSASOFT, &tt) != 0)
+	return(0);
+    return(1);
+}
+
 #else /* SGTTY */
 
 int
-term_raw(fd)
+term_raw(fd, isig)
+    int fd;
+    int isig;
+{
+    if (!changed && ioctl(fd, TIOCGETP, &oterm) != 0)
+	return(0);
+    (void) memcpy(&term, &oterm, sizeof(term));
+    /* Set terminal to raw mode */
+    /* XXX - how to support isig? */
+    CLR(term.c_lflag, ECHO);
+    SET(term.sg_flags, RAW);
+    if (ioctl(fd, TIOCSETP, &term) == 0) {
+	changed = 1;
+	return(1);
+    }
+    return(0);
+}
+
+int
+term_cbreak(fd)
     int fd;
 {
     if (!changed && ioctl(fd, TIOCGETP, &oterm) != 0)
@@ -171,6 +240,29 @@ term_raw(fd)
 	return(1);
     }
     return(0);
+}
+
+int
+term_copy(src, dst)
+    int src;
+    int dst;
+{
+    struct sgttyb b;
+    struct tchars tc;
+    struct ltchars lc;
+    int l, lb;
+
+    if (ioctl(src, TIOCGETP, &b) != 0 || ioctl(src, TIOCGETC, &tc) != 0 ||
+	ioctl(src, TIOCGETD, &l) != 0 || ioctl(src, TIOCGLTC, &lc) != 0 ||
+	ioctl(src, TIOCLGET, &lb)) {
+	return(0);
+    }
+    if (ioctl(dst, TIOCSETP, &b) != 0 || ioctl(dst, TIOCSETC, &tc) != 0 ||
+	ioctl(dst, TIOCSLTC, &lc) != 0 || ioctl(dst, TIOCLSET, &lb) != 0 ||
+	ioctl(dst, TIOCSETD, &l) != 0) {
+	return(0);
+    }
+    return(1);
 }
 
 #endif

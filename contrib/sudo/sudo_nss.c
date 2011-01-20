@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2009 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2007-2010 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,11 +29,10 @@
 #endif /* STDC_HEADERS */
 #ifdef HAVE_STRING_H
 # include <string.h>
-#else
-# ifdef HAVE_STRINGS_H
-#  include <strings.h>
-# endif
 #endif /* HAVE_STRING_H */
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif /* HAVE_STRINGS_H */
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
@@ -212,18 +211,29 @@ reset_groups(pw)
 {
 #if defined(HAVE_INITGROUPS) && defined(HAVE_GETGROUPS)
     if (pw != sudo_user.pw) {
+# ifdef HAVE_SETAUTHDB
+        aix_setauthdb(pw->pw_name);
+# endif
 	(void) initgroups(pw->pw_name, pw->pw_gid);
+	efree(user_groups);
+	user_groups = NULL;
 	if ((user_ngroups = getgroups(0, NULL)) > 0) {
-	    user_groups = erealloc3(user_groups, user_ngroups,
-		sizeof(GETGROUPS_T));
+	    user_groups = emalloc2(user_ngroups, sizeof(GETGROUPS_T));
 	    if (getgroups(user_ngroups, user_groups) < 0)
 		log_error(USE_ERRNO|MSG_ONLY, "can't get group vector");
-	} else {
-	    user_ngroups = 0;
-	    efree(user_groups);
 	}
+# ifdef HAVE_SETAUTHDB
+        aix_restoreauthdb();
+# endif
     }
-#endif
+#endif /* HAVE_INITGROUPS && HAVE_GETGROUPS */
+}
+
+static int
+output(buf)
+    const char *buf;
+{
+    return fputs(buf, stdout);
 }
 
 /*
@@ -242,35 +252,45 @@ display_privs(snl, pw)
     /* Reset group vector so group matching works correctly. */
     reset_groups(pw);
 
-    lbuf_init(&lbuf, NULL, 4, 0);
+    lbuf_init(&lbuf, output, 4, NULL);
 
     /* Display defaults from all sources. */
+    lbuf_append(&lbuf, "Matching Defaults entries for ", pw->pw_name,
+	" on this host:\n", NULL);
     count = 0;
-    tq_foreach_fwd(snl, nss)
+    tq_foreach_fwd(snl, nss) {
 	count += nss->display_defaults(nss, pw, &lbuf);
+    }
     if (count) {
-	printf("Matching Defaults entries for %s on this host:\n", pw->pw_name);
+	lbuf_append(&lbuf, "\n\n", NULL);
 	lbuf_print(&lbuf);
-	putchar('\n');
     }
 
     /* Display Runas and Cmnd-specific defaults from all sources. */
+    lbuf.len = 0;
+    lbuf_append(&lbuf, "Runas and Command-specific defaults for ", pw->pw_name,
+	":\n", NULL);
     count = 0;
-    tq_foreach_fwd(snl, nss)
+    tq_foreach_fwd(snl, nss) {
 	count += nss->display_bound_defaults(nss, pw, &lbuf);
+    }
     if (count) {
-	printf("Runas and Command-specific defaults for %s:\n", pw->pw_name);
+	lbuf_append(&lbuf, "\n\n", NULL);
 	lbuf_print(&lbuf);
-	putchar('\n');
     }
 
     /* Display privileges from all sources. */
-    printf("User %s may run the following commands on this host:\n",
-	pw->pw_name);
-    tq_foreach_fwd(snl, nss)
-	(void) nss->display_privs(nss, pw, &lbuf);
-    if (lbuf.len != 0)
-	lbuf_print(&lbuf);		/* print remainder, if any */
+    lbuf.len = 0;
+    lbuf_append(&lbuf, "User ", pw->pw_name,
+	" may run the following commands on this host:\n", NULL);
+    count = 0;
+    tq_foreach_fwd(snl, nss) {
+	count += nss->display_privs(nss, pw, &lbuf);
+    }
+    if (count) {
+	lbuf_print(&lbuf);
+    }
+
     lbuf_destroy(&lbuf);
 }
 

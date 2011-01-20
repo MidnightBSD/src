@@ -1,4 +1,4 @@
-.\" Copyright (c) 2003-2009
+.\" Copyright (c) 2003-2010
 .\" 	Todd C. Miller <Todd.Miller@courtesan.com>
 .\" 
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -140,7 +140,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SUDOERS.LDAP @mansectform@"
-.TH SUDOERS.LDAP @mansectform@ "March  3, 2010" "1.7.2p6" "MAINTENANCE COMMANDS"
+.TH SUDOERS.LDAP @mansectform@ "July 12, 2010" "1.7.4" "MAINTENANCE COMMANDS"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -150,7 +150,7 @@ sudoers.ldap \- sudo LDAP configuration
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 In addition to the standard \fIsudoers\fR file, \fBsudo\fR may be configured
-via \s-1LAP\s0.  This can be especially useful for synchronizing \fIsudoers\fR
+via \s-1LDAP\s0.  This can be especially useful for synchronizing \fIsudoers\fR
 in a large, distributed environment.
 .PP
 Using \s-1LDAP\s0 for \fIsudoers\fR has several benefits:
@@ -364,14 +364,16 @@ below in upper case but are parsed in a case-independent manner.
 .IP "\fB\s-1URI\s0\fR ldap[s]://[hostname[:port]] ..." 4
 .IX Item "URI ldap[s]://[hostname[:port]] ..."
 Specifies a whitespace-delimited list of one or more URIs describing
-the \s-1LDAP\s0 server(s) to connect to.  The \fIprotocol\fR may be either \fBldap\fR
-or \fBldaps\fR, the latter being for servers that support \s-1TLS\s0 (\s-1SSL\s0)
-encryption.  If no \fIport\fR is specified, the default is port 389 for
-\&\f(CW\*(C`ldap://\*(C'\fR or port 636 for \f(CW\*(C`ldaps://\*(C'\fR.  If no \fIhostname\fR is specified,
-\&\fBsudo\fR will connect to \fBlocalhost\fR.  Only systems using the OpenSSL
-libraries support the mixing of \f(CW\*(C`ldap://\*(C'\fR and \f(CW\*(C`ldaps://\*(C'\fR URIs.
-The Netscape-derived libraries used on most commercial versions of
-Unix are only capable of supporting one or the other.
+the \s-1LDAP\s0 server(s) to connect to.  The \fIprotocol\fR may be either
+\&\fBldap\fR or \fBldaps\fR, the latter being for servers that support \s-1TLS\s0
+(\s-1SSL\s0) encryption.  If no \fIport\fR is specified, the default is port
+389 for \f(CW\*(C`ldap://\*(C'\fR or port 636 for \f(CW\*(C`ldaps://\*(C'\fR.  If no \fIhostname\fR
+is specified, \fBsudo\fR will connect to \fBlocalhost\fR.  Multiple \fB\s-1URI\s0\fR
+lines are treated identically to a \fB\s-1URI\s0\fR line containing multiple
+entries.  Only systems using the OpenSSL libraries support the
+mixing of \f(CW\*(C`ldap://\*(C'\fR and \f(CW\*(C`ldaps://\*(C'\fR URIs.  The Netscape-derived
+libraries used on most commercial versions of Unix are only capable
+of supporting one or the other.
 .IP "\fB\s-1HOST\s0\fR name[:port] ..." 4
 .IX Item "HOST name[:port] ..."
 If no \fB\s-1URI\s0\fR is specified, the \fB\s-1HOST\s0\fR parameter specifies a
@@ -401,7 +403,8 @@ to wait for a response to an \s-1LDAP\s0 query.
 .IX Item "SUDOERS_BASE base"
 The base \s-1DN\s0 to use when performing \fBsudo\fR \s-1LDAP\s0 queries.  Typically
 this is of the form \f(CW\*(C`ou=SUDOers,dc=example,dc=com\*(C'\fR for the domain
-\&\f(CW\*(C`example.com\*(C'\fR.
+\&\f(CW\*(C`example.com\*(C'\fR.  Multiple \fB\s-1SUDOERS_BASE\s0\fR lines may be specified,
+in which case they are queried in the order specified.
 .IP "\fB\s-1SUDOERS_DEBUG\s0\fR debug_level" 4
 .IX Item "SUDOERS_DEBUG debug_level"
 This sets the debug level for \fBsudo\fR \s-1LDAP\s0 queries.  Debugging
@@ -452,13 +455,21 @@ If enabled, \fB\s-1TLS_CHECKPEER\s0\fR will cause the \s-1LDAP\s0 server's \s-1T
 certificated to be verified.  If the server's \s-1TLS\s0 certificate cannot
 be verified (usually because it is signed by an unknown certificate
 authority), \fBsudo\fR will be unable to connect to it.  If \fB\s-1TLS_CHECKPEER\s0\fR
-is disabled, no check is made.
+is disabled, no check is made.  Note that disabling the check creates
+an opportunity for man-in-the-middle attacks since the server's
+identity will not be authenticated.  If possible, the \s-1CA\s0's certificate
+should be installed locally so it can be verified.
+.IP "\fB\s-1TLS_CACERT\s0\fR file name" 4
+.IX Item "TLS_CACERT file name"
+An alias for \fB\s-1TLS_CACERTFILE\s0\fR.
 .IP "\fB\s-1TLS_CACERTFILE\s0\fR file name" 4
 .IX Item "TLS_CACERTFILE file name"
 The path to a certificate authority bundle which contains the certificates
 for all the Certificate Authorities the client knows to be valid,
 e.g. \fI/etc/ssl/ca\-bundle.pem\fR.
 This option is only supported by the OpenLDAP libraries.
+Netscape-derived \s-1LDAP\s0 libraries use the same certificate
+database for \s-1CA\s0 and client certificates (see \fB\s-1TLS_CERT\s0\fR).
 .IP "\fB\s-1TLS_CACERTDIR\s0\fR directory" 4
 .IX Item "TLS_CACERTDIR directory"
 Similar to \fB\s-1TLS_CACERTFILE\s0\fR but instead of a file, it is a
@@ -647,7 +658,7 @@ determines sudoers source order on \s-1AIX\s0
 \&  # The amount of time, in seconds, to wait while performing an LDAP query.
 \&  timelimit 30
 \&  #
-\&  # must be set or sudo will ignore LDAP
+\&  # Must be set or sudo will ignore LDAP; may be specified multiple times.
 \&  sudoers_base   ou=SUDOers,dc=example,dc=com
 \&  #
 \&  # verbose sudoers matching from ldap
@@ -724,9 +735,9 @@ determines sudoers source order on \s-1AIX\s0
 \&  #
 \&  # If using SASL authentication for LDAP (OpenSSL)
 \&  # use_sasl yes
-\&  # sasl_auth_id <SASL username>
+\&  # sasl_auth_id <SASL user name>
 \&  # rootuse_sasl yes
-\&  # rootsasl_auth_id <SASL username for root access>
+\&  # rootsasl_auth_id <SASL user name for root access>
 \&  # sasl_secprops none
 \&  # krb5_ccname /etc/.ldapcache
 .Ve

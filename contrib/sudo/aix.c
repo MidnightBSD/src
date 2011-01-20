@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2008, 2010 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,8 +29,11 @@
 # endif
 #endif /* STDC_HEADERS */
 #include <usersec.h>
+#include <uinfo.h>
 
-#include <compat.h>
+#include "compat.h"
+#include "alloc.h"
+#include "error.h"
 
 #ifdef HAVE_GETUSERATTR
 
@@ -78,13 +81,16 @@ aix_getlimit(user, lim, valp)
     return(0);
 }
 
-void
+static void
 aix_setlimits(user)
     char *user;
 {
     struct rlimit64 rlim;
     rlim64_t val;
     int n;
+
+    if (setuserdb(S_READ) != 0)
+	error(1, "unable to open userdb");
 
     /*
      * For each resource limit, get the soft/hard values for the user
@@ -122,6 +128,64 @@ aix_setlimits(user)
 	}
 	(void)setrlimit64(aix_limits[n].resource, &rlim);
     }
+    enduserdb();
 }
 
+#ifdef HAVE_SETAUTHDB
+/*
+ * Look up administrative domain for user (SYSTEM in /etc/security/user) and
+ * set it as the default for the process.  This ensures that password and
+ * group lookups are made against the correct source (files, NIS, LDAP, etc).
+ */
+void
+aix_setauthdb(user)
+    char *user;
+{
+    char *registry;
+
+    if (user != NULL) {
+	if (setuserdb(S_READ) != 0)
+	    error(1, "unable to open userdb");
+	if (getuserattr(user, S_REGISTRY, &registry, SEC_CHAR) == 0) {
+	    if (setauthdb(registry, NULL) != 0)
+		error(1, "unable to switch to registry \"%s\" for %s",
+		    registry, user);
+	}
+	enduserdb();
+    }
+}
+
+/*
+ * Restore the saved administrative domain, if any.
+ */
+void
+aix_restoreauthdb()
+{
+    if (setauthdb(NULL, NULL) != 0)
+	error(1, "unable to restore registry");
+}
+#endif
+
+void
+aix_prep_user(user, tty)
+    char *user;
+    char *tty;
+{
+    char *info;
+    int len;
+
+    /* set usrinfo, like login(1) does */
+    len = easprintf(&info, "NAME=%s%cLOGIN=%s%cLOGNAME=%s%cTTY=%s%c",
+	user, '\0', user, '\0', user, '\0', tty ? tty : "", '\0');
+    (void)usrinfo(SETUINFO, info, len);
+    efree(info);
+
+#ifdef HAVE_SETAUTHDB
+    /* set administrative domain */
+    aix_setauthdb(user);
+#endif
+
+    /* set resource limits */
+    aix_setlimits(user);
+}
 #endif /* HAVE_GETUSERATTR */

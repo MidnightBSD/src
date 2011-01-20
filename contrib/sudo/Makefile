@@ -1,10 +1,563 @@
-#	$OpenBSD: Makefile,v 1.2 2004/09/28 15:10:50 millert Exp $
+#
+# Copyright (c) 1996, 1998-2005, 2007-2010
+#	Todd C. Miller <Todd.Miller@courtesan.com>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Sponsored in part by the Defense Advanced Research Projects
+# Agency (DARPA) and Air Force Research Laboratory, Air Force
+# Materiel Command, USAF, under agreement number F39502-99-1-0512.
+#
+# Makefile.  Generated from Makefile.in by configure.
+#
 
-.include <bsd.own.mk>
+#### Start of system configuration section. ####
 
-SUBDIR=	lib sudo visudo
-.if !defined(NOPIC)
-SUBDIR+= noexec
-.endif
+srcdir = .
+devdir = $(srcdir)
+authdir = $(srcdir)/auth
+top_builddir = .
 
-.include <bsd.subdir.mk>
+# Compiler & tools to use
+CC = gcc
+FLEX = /usr/bin/flex
+YACC = bison -y
+NROFF = nroff -Tascii
+LIBTOOL = $(SHELL) $(top_builddir)/libtool
+AR=ar
+RANLIB=ranlib
+
+# Our install program supports extra flags...
+INSTALL = $(SHELL) $(srcdir)/install-sh -c
+
+# Libraries
+LIBS = 
+NET_LIBS = 
+SUDO_LIBS =  -lutil -lutil -lpam   $(LIBS) $(NET_LIBS)
+
+# C preprocessor flags
+CPPFLAGS = -I. -I$(srcdir) 
+
+# Usually -O and/or -g
+CFLAGS = -O2
+
+# Flags to pass to the link stage
+LDFLAGS = -L. 
+SUDO_LDFLAGS =  $(LDFLAGS)
+
+# Where to install things...
+prefix = /usr/local
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
+sbindir = $(exec_prefix)/sbin
+sysconfdir = /etc
+libexecdir = $(exec_prefix)/libexec
+datarootdir = $(prefix)/share
+docdir = $(datarootdir)/doc/$(PACKAGE_TARNAME)
+mandir = $(prefix)/man
+timedir = /var/db/sudo
+noexecfile = sudo_noexec.so
+noexecdir = ${exec_prefix}/libexec
+
+# Directory in which to install sudo.
+sudodir = $(bindir)
+
+# Directory in which to install visudo
+visudodir = $(sbindir)
+
+# Directory in which to install the sudoers file
+sudoersdir = $(sysconfdir)
+
+# Directory in which to install the man page
+mantype = man
+mansectsu = 8
+mansectform = 5
+mandirsu = $(mandir)/$(mantype)$(mansectsu)
+mandirform = $(mandir)/$(mantype)$(mansectform)
+
+# User and group ids the installed files should be "owned" by
+install_uid = 0
+install_gid = 0
+
+# User, group, and mode the sudoers file should be "owned" by (configure)
+sudoers_uid = 0
+sudoers_gid = 0
+sudoers_mode = 0440
+
+# Pass in paths and uid/gid + OS dependent defined
+DEFS =  -D_PATH_SUDOERS=\"$(sudoersdir)/sudoers\" -DSUDOERS_UID=$(sudoers_uid) -DSUDOERS_GID=$(sudoers_gid) -DSUDOERS_MODE=$(sudoers_mode)
+
+#### End of system configuration section. ####
+
+SHELL = /bin/sh
+
+PROGS = sudo visudo sudoreplay libsudo_noexec.la
+
+SRCS = aix.c alias.c alloc.c audit.c boottime.c bsm_audit.c check.c \
+       closefrom.c def_data.c defaults.c env.c error.c exec.c exec_pty.c \
+       fileops.c find_path.c fnmatch.c get_pty.c getcwd.c getprogname.c \
+       getspwuid.c gettime.c glob.c goodpath.c gram.c gram.y interfaces.c \
+       iolog.c isblank.c lbuf.c ldap.c linux_audit.c list.c logging.c match.c \
+       mksiglist.c mkstemps.c memrchr.c nanosleep.c parse.c parse_args.c \
+       pwutil.c set_perms.c setsid.c sigaction.c snprintf.c strcasecmp.c \
+       strerror.c strlcat.c strlcpy.c strsignal.c sudo.c sudo_noexec.c \
+       sudo_edit.c sudo_nss.c term.c testsudoers.c tgetpass.c toke.c toke.l \
+       tsgetgrpw.c utimes.c vasgroups.c visudo.c zero_bytes.c redblack.c \
+       selinux.c sesh.c sudoreplay.c getdate.c getdate.y getline.c \
+       timestr.c $(AUTH_SRCS)
+
+AUTH_SRCS = auth/afs.c auth/aix_auth.c auth/bsdauth.c auth/dce.c auth/fwtk.c \
+	    auth/kerb4.c auth/kerb5.c auth/pam.c auth/passwd.c auth/rfc1938.c \
+	    auth/secureware.c auth/securid.c auth/securid5.c auth/sia.c \
+	    auth/sudo_auth.c
+
+HDRS = alloc.h bsm_audit.h compat.h def_data.h defaults.h error.h ins_2001.h \
+       ins_classic.h ins_csops.h ins_goons.h insults.h interfaces.h lbuf.h \
+       linux_audit.h list.h logging.h missing.h mksiglist.h nonunix.h \
+       redblack.h parse.h sudo.h sudo_exec.h sudo_nss.h gram.h \
+       auth/sudo_auth.h emul/charclass.h emul/fnmatch.h emul/glob.h \
+       emul/timespec.h emul/utime.h
+
+AUTH_OBJS = sudo_auth.o pam.o
+
+COMMON_OBJS = alias.o alloc.o defaults.o error.o gram.o \
+	      list.o match.o pwutil.o timestr.o toke.o redblack.o \
+	      term.o zero_bytes.o 
+
+SUDO_OBJS = $(AUTH_OBJS)  exec_pty.o get_pty.o iolog.o audit.o boottime.o check.o env.o \
+	    exec.o getspwuid.o gettime.o goodpath.o fileops.o find_path.o \
+	    interfaces.o lbuf.o logging.o parse.o parse_args.o set_perms.o \
+	    sudo.o sudo_edit.o sudo_nss.o tgetpass.o
+
+VISUDO_OBJS = visudo.o fileops.o gettime.o goodpath.o find_path.o
+
+REPLAY_OBJS = getdate.o sudoreplay.o
+
+TEST_OBJS = interfaces.o testsudoers.o tsgetgrpw.o
+
+LIB_OBJS =  ${LIBOBJDIR}getline$U.o ${LIBOBJDIR}memrchr$U.o ${LIBOBJDIR}closefrom$U.o
+
+VERSION = 1.7.4p6
+PACKAGE_TARNAME = sudo
+
+DISTFILES = $(SRCS) $(HDRS) ChangeLog HISTORY INSTALL INSTALL.configure \
+	    LICENSE Makefile.in NEWS PORTING README README.LDAP \
+	    TROUBLESHOOTING UPGRADE aclocal.m4 aixcrypt.exp config.guess \
+	    config.h.in config.sub configure configure.in def_data.in \
+	    indent.pro install-sh ltmain.sh m4 mkdefaults mkinstalldirs \
+	    mkpkg pathnames.h.in pp sample.pam sample.syslog.conf \
+	    sample.sudoers schema.ActiveDirectory schema.OpenLDAP \
+	    schema.iPlanet siglist.in sudo.cat sudo.man.in sudo.pod sudo.pp \
+	    sudo_usage.h.in sudoers.in sudoers.cat sudoers.man.in sudoers.pod \
+	    sudoers.ldap.cat sudoers.ldap.man.in sudoers.ldap.pod \
+	    sudoers2ldif sudoreplay.cat sudoreplay.man.in sudoreplay.pod \
+	    visudo.cat visudo.man.in visudo.pod auth/API sudo.man.pl \
+	    sudoers.man.pl
+
+SUDODEP = $(srcdir)/sudo.h $(srcdir)/alloc.h $(srcdir)/compat.h \
+	  $(srcdir)/defaults.h $(srcdir)/error.h $(srcdir)/list.h \
+	  $(srcdir)/logging.h $(srcdir)/missing.h $(srcdir)/sudo_nss.h \
+	  $(devdir)/def_data.h pathnames.h config.h
+
+AUTHDEP = $(SUDODEP) $(authdir)/sudo_auth.h
+
+INSDEP = $(srcdir)/ins_2001.h $(srcdir)/ins_classic.h $(srcdir)/ins_csops.h \
+	 $(srcdir)/ins_goons.h $(srcdir)/insults.h
+
+all: $(PROGS)
+
+.SUFFIXES: .o .c .h .l .y .lo
+
+.c.o:
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $<
+
+.c.lo:
+	$(LIBTOOL) --mode=compile $(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $<
+
+libsudo.a: $(LIB_OBJS) $(COMMON_OBJS)
+	$(AR) rv $@ $(LIB_OBJS) $(COMMON_OBJS)
+	$(RANLIB) $@
+
+sudo: libsudo.a $(SUDO_OBJS)
+	$(CC) -o $@ $(SUDO_OBJS) $(SUDO_LDFLAGS) -lsudo $(SUDO_LIBS) -lz
+
+visudo: libsudo.a $(VISUDO_OBJS)
+	$(CC) -o $@ $(VISUDO_OBJS) $(LDFLAGS) -lsudo $(LIBS) $(NET_LIBS)
+
+sudoreplay: libsudo.a $(REPLAY_OBJS)
+	$(CC) -o $@ $(REPLAY_OBJS) $(LDFLAGS) -lsudo $(LIBS) -lz
+
+testsudoers: $(TEST_OBJS)
+	$(CC) -o $@ $(TEST_OBJS) $(LDFLAGS) -lsudo $(LIBS) $(NET_LIBS)
+
+sudo_noexec.lo: $(srcdir)/sudo_noexec.c
+	$(LIBTOOL) --mode=compile $(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/sudo_noexec.c
+
+libsudo_noexec.la: sudo_noexec.lo
+	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ sudo_noexec.lo -avoid-version -rpath $(noexecdir)
+
+# Uncomment the following if you want "make distclean" to clean the parser
+#GENERATED = gram.h gram.c toke.c def_data.c def_data.h getdate
+
+# Uncomment the lines before -@true if you intend to modify gram.y
+$(devdir)/gram.c $(devdir)/gram.h: $(srcdir)/gram.y
+#	$(YACC) -d $(srcdir)/gram.y
+#	mv -f y.tab.c gram.c
+#	if cmp -s y.tab.h gram.h; then rm -f y.tab.h; else mv -f y.tab.h gram.h; fi
+	-@true
+
+# Uncomment the lines before -@true if you intend to modify toke.l
+$(devdir)/toke.c: $(srcdir)/toke.l
+#	$(FLEX) $(srcdir)/toke.l
+#	mv -f lex.yy.c toke.c
+	-@true
+
+# Uncomment the lines before -@true if you intend to modify getdate.y
+$(devdir)/getdate.c: $(srcdir)/getdate.y
+#	echo "expect 10 shift/reduce conflicts"
+#	$(YACC) $(srcdir)/getdate.y
+#	mv -f y.tab.c getdate.c
+	-@true
+
+# Uncomment the following if you intend to modify def_data.in
+#$(devdir)/def_data.h $(devdir)/def_data.c: $(srcdir)/def_data.in
+#	perl $(srcdir)/mkdefaults -o def_data $(srcdir)/def_data.in
+
+siglist.c: mksiglist
+	./mksiglist > $@
+
+mksiglist: $(srcdir)/mksiglist.c $(srcdir)/mksiglist.h $(srcdir)/compat.h $(top_builddir)/config.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEFS) $(srcdir)/mksiglist.c -o $@
+
+#$(srcdir)/mksiglist.h: $(srcdir)/siglist.in
+#	awk 'BEGIN {print "/* public domain */\n"} /^    [A-Z]/ {printf("#ifdef SIG%s\n    if (my_sys_siglist[SIG%s] == NULL)\n\tmy_sys_siglist[SIG%s] = \"%s\";\n#endif\n", $$1, $$1, $$1, substr($$0, 13))}' < $(srcdir)/siglist.in > $@
+
+# Dependencies (not counting auth functions)
+aix.o: $(srcdir)/aix.c
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/aix.c
+alias.o: $(srcdir)/alias.c $(SUDODEP) $(srcdir)/parse.h $(srcdir)/list.h $(srcdir)/redblack.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/alias.c
+alloc.o: $(srcdir)/alloc.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/alloc.c
+audit.o: $(srcdir)/audit.c $(SUDODEP) $(srcdir)/bsm_audit.h $(srcdir)/linux_audit.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/audit.c
+boottime.o: $(srcdir)/boottime.c config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/boottime.c
+bsm_audit.o: $(srcdir)/bsm_audit.c $(SUDODEP) $(srcdir)/bsm_audit.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/bsm_audit.c
+check.o: $(srcdir)/check.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/check.c
+closefrom.o: $(srcdir)/closefrom.c config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/closefrom.c
+defaults.o: $(srcdir)/defaults.c $(SUDODEP) $(srcdir)/def_data.c $(authdir)/sudo_auth.h $(devdir)/gram.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/defaults.c
+env.o: $(srcdir)/env.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/env.c
+error.o: $(srcdir)/error.c $(srcdir)/compat.h $(srcdir)/error.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/error.c
+exec.o: $(srcdir)/exec.c $(SUDODEP) $(srcdir)/sudo_exec.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/exec.c
+exec_pty.o: $(srcdir)/exec.c $(SUDODEP) $(srcdir)/sudo_exec.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/exec_pty.c
+fileops.o: $(srcdir)/fileops.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/fileops.c
+find_path.o: $(srcdir)/find_path.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/find_path.c
+fnmatch.o: $(srcdir)/fnmatch.c $(srcdir)/emul/fnmatch.h $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/fnmatch.c
+get_pty.o: $(srcdir)/get_pty.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/get_pty.c
+getcwd.o: $(srcdir)/getcwd.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/getcwd.c
+getdate.o: $(srcdir)/getdate.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/getdate.c
+getline.o: $(srcdir)/getline.c config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/getline.c
+getprogname.o: $(srcdir)/getprogname.c config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/getprogname.c
+getspwuid.o: $(srcdir)/getspwuid.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/getspwuid.c
+gettime.o: $(srcdir)/gettime.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/gettime.c
+glob.o: $(srcdir)/glob.c $(srcdir)/emul/glob.h $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/glob.c
+goodpath.o: $(srcdir)/goodpath.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/goodpath.c
+gram.o: $(devdir)/gram.c $(SUDODEP) $(srcdir)/parse.h $(srcdir)/list.h $(devdir)/gram.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(devdir)/gram.c
+interfaces.o: $(srcdir)/interfaces.c $(SUDODEP) $(srcdir)/interfaces.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/interfaces.c
+iolog.o: $(srcdir)/iolog.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/iolog.c
+isblank.o: $(srcdir)/isblank.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/isblank.c
+lbuf.o: $(srcdir)/lbuf.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/lbuf.c
+ldap.o: $(srcdir)/ldap.c $(SUDODEP) $(srcdir)/parse.h $(srcdir)/list.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/ldap.c
+linux_audit.o: $(srcdir)/linux_audit.c $(SUDODEP) $(srcdir)/linux_audit.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/linux_audit.c
+list.o: $(srcdir)/list.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/list.c
+logging.o: $(srcdir)/logging.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/logging.c
+match.o: $(srcdir)/match.c $(SUDODEP) $(srcdir)/parse.h $(srcdir)/list.h $(srcdir)/interfaces.h $(devdir)/gram.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/match.c
+memrchr.o: $(srcdir)/memrchr.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/memrchr.c
+mkstemps.o: $(srcdir)/mkstemps.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/mkstemps.c
+nanosleep.o: $(srcdir)/nanosleep.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/nanosleep.c
+parse.o: $(srcdir)/parse.c $(SUDODEP) $(srcdir)/parse.h $(srcdir)/list.h $(devdir)/gram.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/parse.c
+parse_args.o: $(srcdir)/parse_args.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/parse_args.c
+pwutil.o: $(srcdir)/pwutil.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/pwutil.c
+redblack.o: $(srcdir)/redblack.c $(SUDODEP) $(srcdir)/redblack.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/redblack.c
+set_perms.o: $(srcdir)/set_perms.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/set_perms.c
+setsid.o: $(srcdir)/setsid.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/setsid.c
+sigaction.o: $(srcdir)/sigaction.c $(srcdir)/compat.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/sigaction.c
+siglist.o: siglist.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/siglist.c
+snprintf.o: $(srcdir)/snprintf.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/snprintf.c
+strcasecmp.o: $(srcdir)/strcasecmp.c $(srcdir)/compat.h  config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/strcasecmp.c
+strerror.o: $(srcdir)/strerror.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/strerror.c
+strlcat.o: $(srcdir)/strlcat.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/strlcat.c
+strlcpy.o: $(srcdir)/strlcpy.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/strlcpy.c
+strsignal.o: $(srcdir)/strsignal.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/strsignal.c
+selinux.o: $(srcdir)/selinux.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/selinux.c
+sudo.o: $(srcdir)/sudo.c $(SUDODEP) sudo_usage.h $(srcdir)/interfaces.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/sudo.c
+sudoreplay.o: $(srcdir)/sudoreplay.c $(srcdir)/alloc.h $(srcdir)/compat.h $(srcdir)/error.h $(srcdir)/missing.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/sudoreplay.c
+sudo_edit.o: $(srcdir)/sudo_edit.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/sudo_edit.c
+sudo_noexec.o: $(srcdir)/sudo_noexec.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/sudo_noexec.c
+sudo_nss.o: $(srcdir)/sudo_nss.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/sudo_nss.c
+term.o: $(srcdir)/term.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/term.c
+testsudoers.o: $(srcdir)/testsudoers.c $(SUDODEP) $(srcdir)/parse.h $(srcdir)/list.h $(srcdir)/interfaces.h $(devdir)/gram.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/testsudoers.c
+tgetpass.o: $(srcdir)/tgetpass.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/tgetpass.c
+timestr.o: $(srcdir)/timestr.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/timestr.c
+toke.o: $(devdir)/toke.c $(SUDODEP) $(srcdir)/parse.h $(srcdir)/list.h $(devdir)/gram.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(devdir)/toke.c
+tsgetgrpw.o: $(srcdir)/tsgetgrpw.c $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/tsgetgrpw.c
+utimes.o: $(srcdir)/utimes.c $(srcdir)/compat.h $(srcdir)/emul/utime.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/utimes.c
+vasgroups.o: $(srcdir)/vasgroups.c $(srcdir)/nonunix.h $(SUDODEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/vasgroups.c
+visudo.o: $(srcdir)/visudo.c $(SUDODEP) $(devdir)/gram.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/visudo.c
+zero_bytes.o: $(srcdir)/zero_bytes.c $(srcdir)/compat.h config.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(srcdir)/zero_bytes.c
+sudo_auth.o: $(authdir)/sudo_auth.c $(AUTHDEP) $(INSDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/sudo_auth.c
+afs.o: $(authdir)/afs.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/afs.c
+aix_auth.o: $(authdir)/aix_auth.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/aix_auth.c
+bsdauth.o: $(authdir)/bsdauth.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/bsdauth.c
+dce.o: $(authdir)/dce.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/dce.c
+fwtk.o: $(authdir)/fwtk.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/fwtk.c
+kerb4.o: $(authdir)/kerb4.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/kerb4.c
+kerb5.o: $(authdir)/kerb5.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/kerb5.c
+pam.o: $(authdir)/pam.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/pam.c
+passwd.o: $(authdir)/passwd.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/passwd.c
+rfc1938.o: $(authdir)/rfc1938.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/rfc1938.c
+secureware.o: $(authdir)/secureware.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/secureware.c
+securid.o: $(authdir)/securid.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/securid.c
+securid5.o: $(authdir)/securid5.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/securid5.c
+sia.o: $(authdir)/sia.c $(AUTHDEP)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(DEFS) $(OPTIONS) $(authdir)/sia.c
+
+#varsub: $(srcdir)/configure.in
+#	printf 's#@%s@#1#\ns#@%s@#1#\ns#@%s@#1#\ns#@%s@#/etc#g\ns#@%s@#/usr/local#g\ns#@%s@#4#g\ns#@%s@#1m#g\n' SEMAN BAMAN LCMAN sysconfdir prefix mansectform mansectsu > $@; sed -n '/Begin initial values for man page substitution/,/End initial values for man page substitution/{;p;}' $(srcdir)/configure.in | sed -e '/^#/d' -e 's/^/s#@/' -e 's/=[\\"]*/@#/' -e 's/[\\"]*$$/#g/' >> $@
+
+#$(srcdir)/sudo.man.in: $(srcdir)/sudo.pod
+#	mansectsu=`echo @MANSECTSU@|tr A-Z a-z`; mansectform=`echo @MANSECTFORM@|tr A-Z a-z`; sed -n -e '/^=pod/q' -e 's/^/.\\" /p' $(srcdir)/sudo.pod > $@; pod2man --quotes=none --date="`date '+%B %e, %Y'`" --section=$$mansectsu --release=$(VERSION) --center="MAINTENANCE COMMANDS" $(srcdir)/sudo.pod | sed -e "s/(5)/($$mansectform)/" -e "s/(8)/($$mansectsu)/" | perl -p $(srcdir)/sudo.man.pl >> $@
+
+sudo.man: $(srcdir)/sudo.man.in
+	$(SHELL) config.status --file=$@
+
+#$(srcdir)/sudo.cat: varsub $(srcdir)/sudo.man.in
+#	sed -f varsub $(srcdir)/sudo.man.in | $(NROFF) -man > $@
+
+#$(srcdir)/visudo.man.in: $(srcdir)/visudo.pod
+#	mansectsu=`echo @MANSECTSU@|tr A-Z a-z`; mansectform=`echo @MANSECTFORM@|tr A-Z a-z`; sed -n -e '/^=pod/q' -e 's/^/.\\" /p' $(srcdir)/visudo.pod > $@; pod2man --quotes=none --date="`date '+%B %e, %Y'`" --section=$$mansectsu --release=$(VERSION) --center="MAINTENANCE COMMANDS" $(srcdir)/visudo.pod | sed -e "s/(5)/($$mansectform)/" -e "s/(8)/($$mansectsu)/" -e 's|\\fI\\f\((CW*\)*I@\([^@]*\)\\fI@|\\fI@\2@|g' >> $@
+
+visudo.man: $(srcdir)/visudo.man.in
+	$(SHELL) config.status --file=$@
+
+#$(srcdir)/visudo.cat: varsub $(srcdir)/visudo.man.in
+#	sed -f varsub $(srcdir)/visudo.man.in | $(NROFF) -man > $@
+
+#$(srcdir)/sudoers.man.in: $(srcdir)/sudoers.pod
+#	mansectsu=`echo @MANSECTSU@|tr A-Z a-z`; mansectform=`echo @MANSECTFORM@|tr A-Z a-z`; sed -n -e '/^=pod/q' -e 's/^/.\\" /p' $(srcdir)/sudoers.pod > $@; pod2man --quotes=none --date="`date '+%B %e, %Y'`" --section=$$mansectform --release=$(VERSION) --center="MAINTENANCE COMMANDS" $(srcdir)/sudoers.pod | sed -e "s/(5)/($$mansectform)/" -e "s/(8)/($$mansectsu)/" | perl -p $(srcdir)/sudoers.man.pl >> $@
+
+sudoers.man: $(srcdir)/sudoers.man.in
+	$(SHELL) config.status --file=$@
+
+#$(srcdir)/sudoers.cat: varsub $(srcdir)/sudoers.man.in
+#	sed -f varsub $(srcdir)/sudoers.man.in | $(NROFF) -man > $@
+
+#$(srcdir)/sudoers.ldap.man.in: $(srcdir)/sudoers.ldap.pod
+#	mansectsu=`echo @MANSECTSU@|tr A-Z a-z`; mansectform=`echo @MANSECTFORM@|tr A-Z a-z`; sed -n -e '/^=pod/q' -e 's/^/.\\" /p' $(srcdir)/sudoers.ldap.pod > $@; pod2man --quotes=none --date="`date '+%B %e, %Y'`" --section=$$mansectform --release=$(VERSION) --center="MAINTENANCE COMMANDS" $(srcdir)/sudoers.ldap.pod | sed -e "s/(5)/($$mansectform)/" -e "s/(8)/($$mansectsu)/" -e 's|\\fI\\f\((CW*\)*I@\([^@]*\)\\fI@|\\fI@\2@|g' >> $@
+
+sudoers.ldap.man: $(srcdir)/sudoers.ldap.man.in
+	$(SHELL) config.status --file=$@
+
+#$(srcdir)/sudoers.ldap.cat: varsub $(srcdir)/sudoers.ldap.man.in
+#	sed -f varsub $(srcdir)/sudoers.ldap.man.in | $(NROFF) -man > $@
+
+#$(srcdir)/sudoreplay.man.in: $(srcdir)/sudoreplay.pod
+#	mansectsu=`echo @MANSECTSU@|tr A-Z a-z`; mansectform=`echo @MANSECTFORM@|tr A-Z a-z`; sed -n -e '/^=pod/q' -e 's/^/.\\" /p' $(srcdir)/sudoreplay.pod > $@; pod2man --quotes=none --date="`date '+%B %e, %Y'`" --section=$$mansectsu --release=$(VERSION) --center="MAINTENANCE COMMANDS" $(srcdir)/sudoreplay.pod | sed -e "s/(5)/($$mansectform)/" -e "s/(8)/($$mansectsu)/" -e 's|\\fI\\f\((CW*\)*I@\([^@]*\)\\fI@|\\fI@\2@|g' >> $@
+
+sudoreplay.man: $(srcdir)/sudoreplay.man.in
+	$(SHELL) config.status --file=$@
+
+#$(srcdir)/sudoreplay.cat: varsub $(srcdir)/sudoreplay.man.in
+#	sed -f varsub $(srcdir)/sudoreplay.man.in | $(NROFF) -man > $@
+
+#HISTORY: $(srcdir)/history.pod
+#	pod2text -l -i0 $(srcdir)/history.pod > $@
+#
+#LICENSE: $(srcdir)/license.pod
+#	pod2text -l -i0 $(srcdir)/license.pod | sed '1,2d' > $@
+
+sudoers: $(srcdir)/sudoers.in
+	(cd $(top_builddir) && $(SHELL) config.status --file=plugins/sudoers/$@)
+
+# The 1.7 branch started Jan 18, 2010
+ChangeLog:
+	if test -d $(srcdir)/.hg; then \
+	    hg log --style=changelog -b 1.7 > $@; \
+	    hg log --style=changelog -b default --date '<2010-01-18 00:00:00' >> $@; \
+	fi
+
+install: install-dirs install-binaries install-noexec install-sudoers install-doc
+
+install-dirs:
+	$(SHELL) $(srcdir)/mkinstalldirs $(DESTDIR)$(sudodir) \
+	    $(DESTDIR)$(visudodir) $(DESTDIR)$(noexecdir) \
+	    $(DESTDIR)$(sudoersdir) $(DESTDIR)$(docdir) \
+	    $(DESTDIR)$(mandirsu) $(DESTDIR)$(mandirform)
+	$(SHELL) $(srcdir)/mkinstalldirs -m 0700 $(DESTDIR)$(timedir)
+
+install-binaries: install-dirs $(PROGS)
+	$(INSTALL) -b~ -O $(install_uid) -G $(install_gid) -M 04111 sudo $(DESTDIR)$(sudodir)/sudo
+	rm -f $(DESTDIR)$(sudodir)/sudoedit
+	ln $(DESTDIR)$(sudodir)/sudo $(DESTDIR)$(sudodir)/sudoedit
+	if [ -f sudoreplay ]; then $(INSTALL) -b~ -O $(install_uid) -G $(install_gid) -M 0111 sudoreplay $(DESTDIR)$(sudodir)/sudoreplay; fi
+	$(INSTALL) -b~ -O $(install_uid) -G $(install_gid) -M 0111 visudo $(DESTDIR)$(visudodir)/visudo
+	if [ -f sesh ]; then $(INSTALL) -b~ -O $(install_uid) -G $(install_gid) -M 0111 sesh $(DESTDIR)$(libexecdir)/sesh; fi
+
+install-noexec: install-dirs libsudo_noexec.la
+	if [ -f .libs/lib$(noexecfile) ]; then $(INSTALL) -b~ -O $(install_uid) -G $(install_gid) -M 0755 .libs/lib$(noexecfile) $(DESTDIR)$(noexecdir)/$(noexecfile); fi
+
+install-sudoers: install-dirs
+	$(INSTALL) -d -O $(sudoers_uid) -G $(sudoers_gid) -M 0750 \
+	    $(DESTDIR)$(sudoersdir)/sudoers.d
+	test -f $(DESTDIR)$(sudoersdir)/sudoers || \
+	    $(INSTALL) -O $(sudoers_uid) -G $(sudoers_gid) -M $(sudoers_mode) \
+		sudoers $(DESTDIR)$(sudoersdir)/sudoers
+
+install-doc: install-dirs ChangeLog
+	(cd $(srcdir) && for f in ChangeLog HISTORY LICENSE NEWS README TROUBLESHOOTING UPGRADE sample.*; do $(INSTALL) -O $(install_uid) -G $(install_gid) -M 0444 $$f $(DESTDIR)$(docdir); done)
+	#(cd $(srcdir) && for f in README.LDAP schema.* sudoers2ldif; do $(INSTALL) -O $(install_uid) -G $(install_gid) -M 0444 $$f $(DESTDIR)$(docdir); done)
+	$(INSTALL) -O $(install_uid) -G $(install_gid) -M 0444 ./sudo.$(mantype) $(DESTDIR)$(mandirsu)/sudo.$(mansectsu)
+	@rm -f $(DESTDIR)$(mandirsu)/sudoedit.$(mansectsu)
+	ln $(DESTDIR)$(mandirsu)/sudo.$(mansectsu) $(DESTDIR)$(mandirsu)/sudoedit.$(mansectsu)
+	$(INSTALL) -O $(install_uid) -G $(install_gid) -M 0444 ./sudoreplay.$(mantype) $(DESTDIR)$(mandirsu)/sudoreplay.$(mansectsu)
+	$(INSTALL) -O $(install_uid) -G $(install_gid) -M 0444 ./visudo.$(mantype) $(DESTDIR)$(mandirsu)/visudo.$(mansectsu)
+	$(INSTALL) -O $(install_uid) -G $(install_gid) -M 0444 ./sudoers.$(mantype) $(DESTDIR)$(mandirform)/sudoers.$(mansectform)
+	#$(INSTALL) -O $(install_uid) -G $(install_gid) -M 0444 ./sudoers.ldap.$(mantype) $(DESTDIR)$(mandirform)/sudoers.ldap.$(mansectform)
+
+
+check:
+	@echo nothing to check
+
+clean:
+	-rm -f *.a *.o *.lo stamp-* varsub $(PROGS) testsudoers core *.core core.*
+
+mostlyclean: clean
+
+distclean: clean
+	-rm -rf Makefile pathnames.h config.h config.status config.cache \
+		config.log libtool sudoers sudo_noexec.lo .libs $(GENERATED) \
+		sudo.man sudoers.man sudoers.ldap.man sudoreplay.man \
+		visudo.man sudo_usage.h Makefile.binary
+
+clobber: distclean
+
+realclean: distclean
+	rm -f TAGS tags
+
+cleandir: realclean
+
+dist: ChangeLog
+	pax -w -x ustar -s '/^/$(PACKAGE_TARNAME)-$(VERSION)\//' \
+	    -f ../$(PACKAGE_TARNAME)-$(VERSION).tar $(DISTFILES)
+	gzip -9f ../$(PACKAGE_TARNAME)-$(VERSION).tar
+	ls -l ../$(PACKAGE_TARNAME)-$(VERSION).tar.gz
+
+package: sudo.pp
+	DESTDIR=`cd $(top_builddir) && pwd`/destdir; rm -rf $$DESTDIR; \
+	$(MAKE) install DESTDIR=$$DESTDIR && \
+	$(SHELL) $(srcdir)/pp $(PPFLAGS) \
+	    --destdir=$$DESTDIR \
+	    $(srcdir)/sudo.pp \
+	    bindir=$(bindir) \
+	    sbindir=$(sbindir) \
+	    libexecdir=$(libexecdir) \
+	    timedir=$(timedir) \
+	    mandir=$(mandir) \
+	    docdir=$(docdir) \
+	    sysconfdir=$(sysconfdir) \
+	    sudoersdir=$(sudoersdir) \
+	    sudoers_uid=$(sudoers_uid) \
+	    sudoers_gid=$(sudoers_gid) \
+	    sudoers_mode=$(sudoers_mode) \
+	    version=$(VERSION) $(PPVARS)
+
+.PHONY:	ChangeLog

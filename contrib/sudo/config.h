@@ -4,10 +4,6 @@
 #ifndef _SUDO_CONFIG_H
 #define _SUDO_CONFIG_H
 
-#define SUDOERS_UID 0
-#define SUDOERS_GID 0
-#define SUDOERS_MODE 0440
-
 /* Define to 1 if the `syslog' function returns a non-zero int to denote
    failure. */
 /* #undef BROKEN_SYSLOG */
@@ -15,27 +11,22 @@
 /* Define to 1 if you want the insults from the "classic" version sudo. */
 #define CLASSIC_INSULTS 1
 
-/* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
-   systems. This function is required for `alloca.c' support on those systems.
-   */
-/* #undef CRAY_STACKSEG_END */
-
 /* Define to 1 if you want insults culled from the twisted minds of CSOps. */
-/* #undef CSOPS_INSULTS */
-
-/* Define to 1 if using `alloca.c'. */
-/* #undef C_ALLOCA */
+#define CSOPS_INSULTS 1
 
 /* Define to 1 if you want sudo to display "command not allowed" instead of
    "command not found" when a command cannot be found. */
-#define DONT_LEAK_PATH_INFO 1
+/* #undef DONT_LEAK_PATH_INFO */
 
 /* A colon-separated list of pathnames to be used as the editor for visudo. */
 #define EDITOR _PATH_VI
 
+/* Define to 1 to enable environment function debugging. */
+/* #undef ENV_DEBUG */
+
 /* Define to 1 if you want visudo to honor the EDITOR and VISUAL env
    variables. */
-#define ENV_EDITOR 1
+/* #undef ENV_EDITOR */
 
 /* If defined, users in this group need not enter a passwd (ie "sudo"). */
 /* #undef EXEMPTGROUP */
@@ -43,24 +34,21 @@
 /* Define to 1 if you want to require fully qualified hosts in sudoers. */
 /* #undef FQDN */
 
+/* Define to the type of elements in the array set by `getgroups'. Usually
+   this is either `int' or `gid_t'. */
+#define GETGROUPS_T gid_t
+
 /* Define to 1 if you want insults from the "Goon Show". */
-/* #undef GOONS_INSULTS */
+#define GOONS_INSULTS 1
 
 /* Define to 1 if you want 2001-like insults. */
-/* #undef HAL_INSULTS */
+#define HAL_INSULTS 1
 
 /* Define to 1 if you use AFS. */
 /* #undef HAVE_AFS */
 
 /* Define to 1 if you use AIX general authentication. */
 /* #undef HAVE_AIXAUTH */
-
-/* Define to 1 if you have `alloca', as a function or macro. */
-#define HAVE_ALLOCA 1
-
-/* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
-   */
-/* #undef HAVE_ALLOCA_H */
 
 /* Define to 1 if you have the `asprintf' function. */
 #define HAVE_ASPRINTF 1
@@ -77,7 +65,7 @@
 /* Define to 1 if you use BSD authentication. */
 /* #undef HAVE_BSD_AUTH_H */
 
-/* Define to 1 to enable BSM auditing. */
+/* Define to 1 to enable BSM audit support. */
 /* #undef HAVE_BSM_AUDIT */
 
 /* Define to 1 if you have the `closefrom' function. */
@@ -88,6 +76,18 @@
 
 /* Define to 1 if your `DIR' contains dd_fd. */
 /* #undef HAVE_DD_FD */
+
+/* Define to 1 if you have the declaration of `sys_siglist', and to 0 if you
+   don't. */
+/* #undef HAVE_DECL_SYS_SIGLIST */
+
+/* Define to 1 if you have the declaration of `_sys_siglist', and to 0 if you
+   don't. */
+/* #undef HAVE_DECL__SYS_SIGLIST */
+
+/* Define to 1 if you have the declaration of `__sys_siglist', and to 0 if you
+   don't. */
+/* #undef HAVE_DECL___SYS_SIGLIST */
 
 /* Define to 1 if you have the `dgettext' function. */
 /* #undef HAVE_DGETTEXT */
@@ -102,14 +102,17 @@
 /* Define to 1 if you have the `dispcrypt' function. */
 /* #undef HAVE_DISPCRYPT */
 
-/* Define to 1 if you have the <err.h> header file. */
-#define HAVE_ERR_H 1
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#define HAVE_DLFCN_H 1
 
 /* Define to 1 if your glob.h defines the GLOB_BRACE and GLOB_TILDE flags. */
 #define HAVE_EXTENDED_GLOB 1
 
 /* Define to 1 if your system has the F_CLOSEM fcntl. */
 /* #undef HAVE_FCNTL_CLOSEM */
+
+/* Define to 1 if you have the `fgetln' function. */
+#define HAVE_FGETLN 1
 
 /* Define to 1 if you have the `flock' function. */
 /* #undef HAVE_FLOCK */
@@ -154,6 +157,9 @@
 /* Define to 1 if you have the `getifaddrs' function. */
 #define HAVE_GETIFADDRS 1
 
+/* Define to 1 if you have the `getline' function. */
+/* #undef HAVE_GETLINE */
+
 /* Define to 1 if you have the `getprogname' function. */
 #define HAVE_GETPROGNAME 1
 
@@ -176,8 +182,26 @@
 /* Define to 1 if you have the `gettimeofday' function. */
 #define HAVE_GETTIMEOFDAY 1
 
+/* Define to 1 if you have the `getuserattr' function. */
+/* #undef HAVE_GETUSERATTR */
+
+/* Define to 1 if you have the `getutid' function. */
+/* #undef HAVE_GETUTID */
+
+/* Define to 1 if you have the `getutxid' function. */
+/* #undef HAVE_GETUTXID */
+
 /* Define to 1 if you have the `glob' function. */
 #define HAVE_GLOB 1
+
+/* Define to 1 if you have the `grantpt' function. */
+/* #undef HAVE_GRANTPT */
+
+/* Define to 1 if you have the <gssapi/gssapi_krb5.h> header file. */
+/* #undef HAVE_GSSAPI_GSSAPI_KRB5_H */
+
+/* Define to 1 if you have the `gss_krb5_ccache_name' function. */
+/* #undef HAVE_GSS_KRB5_CCACHE_NAME */
 
 /* Define to 1 if your Kerberos is Heimdal. */
 /* #undef HAVE_HEIMDAL */
@@ -214,10 +238,14 @@
 /* Define to 1 if you use Kerberos V. */
 /* #undef HAVE_KERB5 */
 
+/* Define to 1 if you have the `killpg' function. */
+#define HAVE_KILLPG 1
+
 /* Define to 1 if you have the `krb5_get_init_creds_opt_alloc' function. */
 /* #undef HAVE_KRB5_GET_INIT_CREDS_OPT_ALLOC */
 
-/* Define to 1 if your `krb5_get_init_creds_opt_alloc' function takes two arguments. */
+/* Define to 1 if your `krb5_get_init_creds_opt_free' function takes two
+   arguments. */
 /* #undef HAVE_KRB5_GET_INIT_CREDS_OPT_FREE_TWO_ARGS */
 
 /* Define to 1 if you have the `krb5_init_secure_context' function. */
@@ -232,8 +260,29 @@
 /* Define to 1 if you use LDAP for sudoers. */
 /* #undef HAVE_LDAP */
 
+/* Define to 1 if you have the `ldapssl_init' function. */
+/* #undef HAVE_LDAPSSL_INIT */
+
+/* Define to 1 if you have the `ldapssl_set_strength' function. */
+/* #undef HAVE_LDAPSSL_SET_STRENGTH */
+
+/* Define to 1 if you have the `ldap_create' function. */
+/* #undef HAVE_LDAP_CREATE */
+
 /* Define to 1 if you have the `ldap_initialize' function. */
 /* #undef HAVE_LDAP_INITIALIZE */
+
+/* Define to 1 if you have the `ldap_sasl_bind_s' function. */
+/* #undef HAVE_LDAP_SASL_BIND_S */
+
+/* Define to 1 if you have the `ldap_sasl_interactive_bind_s' function. */
+/* #undef HAVE_LDAP_SASL_INTERACTIVE_BIND_S */
+
+/* Define to 1 if you have the `ldap_search_ext_s' function. */
+/* #undef HAVE_LDAP_SEARCH_EXT_S */
+
+/* Define to 1 if you have the `ldap_ssl_client_init' function. */
+/* #undef HAVE_LDAP_SSL_CLIENT_INIT */
 
 /* Define to 1 if you have the <ldap_ssl.h> header file. */
 /* #undef HAVE_LDAP_SSL_H */
@@ -241,11 +290,20 @@
 /* Define to 1 if you have the `ldap_start_tls_s' function. */
 /* #undef HAVE_LDAP_START_TLS_S */
 
-/* Define to 1 if you have the `ldapssl_init' function. */
-/* #undef HAVE_LDAPSSL_INIT */
+/* Define to 1 if you have the `ldap_start_tls_s_np' function. */
+/* #undef HAVE_LDAP_START_TLS_S_NP */
 
-/* Define to 1 if you have the `ldapssl_set_strength' function. */
-/* #undef HAVE_LDAPSSL_SET_STRENGTH */
+/* Define to 1 if you have the `ldap_str2dn' function. */
+/* #undef HAVE_LDAP_STR2DN */
+
+/* Define to 1 if you have the `ldap_unbind_ext_s' function. */
+/* #undef HAVE_LDAP_UNBIND_EXT_S */
+
+/* Define to 1 if you have the `dl' library (-ldl). */
+/* #undef HAVE_LIBDL */
+
+/* Define to 1 to enable Linux audit support. */
+/* #undef HAVE_LINUX_AUDIT */
 
 /* Define to 1 if you have the `lockf' function. */
 #define HAVE_LOCKF 1
@@ -253,17 +311,20 @@
 /* Define to 1 if you have the <login_cap.h> header file. */
 #define HAVE_LOGIN_CAP_H 1
 
-/* Define if your compiler supports the "long long" type. */
-#define HAVE_LONG_LONG 1
+/* Define to 1 if the system has the type `long long int'. */
+#define HAVE_LONG_LONG_INT 1
 
 /* Define to 1 if you have the `lrand48' function. */
 /* #undef HAVE_LRAND48 */
 
-/* Define to 1 if you have the `lsearch' function. */
-#define HAVE_LSEARCH 1
+/* Define to 1 if you have the <maillock.h> header file. */
+/* #undef HAVE_MAILLOCK_H */
 
 /* Define to 1 if you have the <malloc.h> header file. */
 /* #undef HAVE_MALLOC_H */
+
+/* Define to 1 if you have the `mbr_check_membership' function. */
+/* #undef HAVE_MBR_CHECK_MEMBERSHIP */
 
 /* Define to 1 if you have the `memchr' function. */
 #define HAVE_MEMCHR 1
@@ -280,11 +341,14 @@
 /* Define to 1 if you have the `memset' function. */
 #define HAVE_MEMSET 1
 
-/* Define to 1 if you have the `mkstemp' function. */
-#define HAVE_MKSTEMP 1
+/* Define to 1 if you have the `mkstemps' function. */
+#define HAVE_MKSTEMPS 1
 
 /* Define to 1 if you have the <mps/ldap_ssl.h> header file. */
 /* #undef HAVE_MPS_LDAP_SSL_H */
+
+/* Define to 1 if you have the `nanosleep' function. */
+#define HAVE_NANOSLEEP 1
 
 /* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
 /* #undef HAVE_NDIR_H */
@@ -292,11 +356,17 @@
 /* Define to 1 if you have the <netgroup.h> header file. */
 /* #undef HAVE_NETGROUP_H */
 
+/* Define to 1 if you have the `openpty' function. */
+#define HAVE_OPENPTY 1
+
 /* Define to 1 if you use NRL OPIE. */
 /* #undef HAVE_OPIE */
 
 /* Define to 1 if you use PAM authentication. */
 #define HAVE_PAM 1
+
+/* Define to 1 if you use a specific PAM session for sudo -i. */
+/* #undef HAVE_PAM_LOGIN */
 
 /* Define to 1 if you have the <pam/pam_appl.h> header file. */
 /* #undef HAVE_PAM_PAM_APPL_H */
@@ -304,11 +374,29 @@
 /* Define to 1 if you have the <paths.h> header file. */
 #define HAVE_PATHS_H 1
 
+/* Define to 1 if you have the `posix_openpt' function. */
+/* #undef HAVE_POSIX_OPENPT */
+
 /* Define to 1 if you have the <project.h> header file. */
 /* #undef HAVE_PROJECT_H */
 
+/* Define to 1 if you have the <pty.h> header file. */
+/* #undef HAVE_PTY_H */
+
 /* Define to 1 if you have the `random' function. */
 /* #undef HAVE_RANDOM */
+
+/* Define to 1 if you have the `regcomp' function. */
+#define HAVE_REGCOMP 1
+
+/* Define to 1 if you have the `revoke' function. */
+/* #undef HAVE_REVOKE */
+
+/* Define to 1 if you have the <sasl.h> header file. */
+/* #undef HAVE_SASL_H */
+
+/* Define to 1 if you have the <sasl/sasl.h> header file. */
+/* #undef HAVE_SASL_SASL_H */
 
 /* Define if your struct sockadr has an sa_len field. */
 #define HAVE_SA_LEN 1
@@ -322,8 +410,17 @@
 /* Define to 1 to enable SELinux RBAC support. */
 /* #undef HAVE_SELINUX */
 
+/* Define to 1 if you have the `setauthdb' function. */
+/* #undef HAVE_SETAUTHDB */
+
+/* Define to 1 if you have the `setenv' function. */
+#define HAVE_SETENV 1
+
 /* Define to 1 if you have the `seteuid' function. */
 #define HAVE_SETEUID 1
+
+/* Define to 1 if you have the `setkeycreatecon' function. */
+/* #undef HAVE_SETKEYCREATECON */
 
 /* Define to 1 if you have the `setlocale' function. */
 #define HAVE_SETLOCALE 1
@@ -336,6 +433,9 @@
 
 /* Define to 1 if you have the `setrlimit' function. */
 #define HAVE_SETRLIMIT 1
+
+/* Define to 1 if you have the `setrlimit64' function. */
+/* #undef HAVE_SETRLIMIT64 */
 
 /* Define to 1 if you have the `setsid' function. */
 #define HAVE_SETSID 1
@@ -351,9 +451,6 @@
 
 /* Define to 1 if <signal.h> has the sigaction_t typedef. */
 /* #undef HAVE_SIGACTION_T */
-
-/* Define to 1 if the system has the type `sig_atomic_t'. */
-#define HAVE_SIG_ATOMIC_T 1
 
 /* Define to 1 if you use S/Key. */
 /* #undef HAVE_SKEY */
@@ -397,17 +494,26 @@
 /* Define to 1 if you have the `strrchr' function. */
 #define HAVE_STRRCHR 1
 
+/* Define to 1 if you have the `strsignal' function. */
+#define HAVE_STRSIGNAL 1
+
+/* Define to 1 if the system has the type `struct in6_addr'. */
+#define HAVE_STRUCT_IN6_ADDR 1
+
 /* Define to 1 if your struct stat has an st_mtim member */
 /* #undef HAVE_ST_MTIM */
-
-/* Define to 1 if your struct stat uses an st__tim union */
-/* #undef HAVE_ST__TIM */
 
 /* Define to 1 if your struct stat has an st_mtimespec member */
 #define HAVE_ST_MTIMESPEC 1
 
+/* Define to 1 if your struct stat uses an st__tim union */
+/* #undef HAVE_ST__TIM */
+
 /* Define to 1 if you have the `sysconf' function. */
 #define HAVE_SYSCONF 1
+
+/* Define to 1 if you have the `sysctl' function. */
+#define HAVE_SYSCTL 1
 
 /* Define to 1 if you have the <sys/bsdtypes.h> header file. */
 /* #undef HAVE_SYS_BSDTYPES_H */
@@ -429,8 +535,14 @@
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H 1
 
+/* Define to 1 if you have the <sys/stropts.h> header file. */
+/* #undef HAVE_SYS_STROPTS_H */
+
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
+
+/* Define to 1 if you have the `tcsetpgrp' function. */
+#define HAVE_TCSETPGRP 1
 
 /* Define to 1 if you have the <termios.h> header file and the `tcgetattr'
    function. */
@@ -442,10 +554,6 @@
 /* Define to 1 if you have struct timespec in sys/time.h */
 #define HAVE_TIMESPEC 1
 
-/* Define to 1 if you have a timespecsub macro or function that takes two
-   arguments (not three) */
-/* #undef HAVE_TIMESPECSUB2 */
-
 /* Define to 1 if you have the `tzset' function. */
 #define HAVE_TZSET 1
 
@@ -453,7 +561,10 @@
 #define HAVE_UNISTD_H 1
 
 /* Define to 1 if you have the `unsetenv' function. */
-/* #undef HAVE_UNSETENV */
+#define HAVE_UNSETENV 1
+
+/* Define to 1 if you have the <util.h> header file. */
+/* #undef HAVE_UTIL_H */
 
 /* Define to 1 if you have the `utimes' function. */
 #define HAVE_UTIMES 1
@@ -464,6 +575,9 @@
 /* Define to 1 if you have the `vasprintf' function. */
 #define HAVE_VASPRINTF 1
 
+/* Define to 1 if you have the `vhangup' function. */
+/* #undef HAVE_VHANGUP */
+
 /* Define to 1 if you have the `vsnprintf' function. */
 #define HAVE_VSNPRINTF 1
 
@@ -472,6 +586,12 @@
 
 /* Define to 1 if you have the `waitpid' function. */
 #define HAVE_WAITPID 1
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#define HAVE_ZLIB_H 1
+
+/* Define to 1 if you have the `_getpty' function. */
+/* #undef HAVE__GETPTY */
 
 /* Define to 1 if you have the `_innetgr' function. */
 /* #undef HAVE__INNETGR */
@@ -483,26 +603,26 @@
 /* #undef HOST_IN_LOG */
 
 /* Define to 1 if you want to ignore '.' and empty PATH elements */
-#define IGNORE_DOT_PATH 1
+/* #undef IGNORE_DOT_PATH */
 
 /* The message given when a bad password is entered. */
 #define INCORRECT_PASSWORD "Sorry, try again."
 
+/* The name of libvas.so */
+/* #undef LIBVAS_SO */
+
 /* The syslog facility sudo will use. */
-#define LOGFAC "local2"
+#define LOGFAC "authpriv"
 
 /* Define to SLOG_SYSLOG, SLOG_FILE, or SLOG_BOTH. */
 #define LOGGING SLOG_SYSLOG
 
-/* Define if sizeof(long) == sizeof(long long). */
-/* #undef LONG_IS_QUAD */
-
 /* Define to 1 if you want a two line OTP (S/Key or OPIE) prompt. */
-#define LONG_OTP_PROMPT 1
+/* #undef LONG_OTP_PROMPT */
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
-/* #undef LT_OBJDIR */
+#define LT_OBJDIR ".libs/"
 
 /* The subject of the mail sent by sudo to the MAILTO user/address. */
 #define MAILSUBJECT "*** SECURITY information for %h ***"
@@ -524,7 +644,7 @@
    sudo. */
 /* #undef NO_LECTURE */
 
-/* Define to 1 if you don't want to use sudo's PAM session support. */
+/* Define to 1 if you don't want to use sudo's PAM session support */
 /* #undef NO_PAM_SESSION */
 
 /* Define to avoid runing the mailer as root. */
@@ -532,6 +652,27 @@
 
 /* Define to 1 if root should not be allowed to use sudo. */
 /* #undef NO_ROOT_SUDO */
+
+/* Define to 1 if you want a single ticket file instead of per-tty files. */
+/* #undef NO_TTY_TICKETS */
+
+/* Define to the address where bug reports for this package should be sent. */
+#define PACKAGE_BUGREPORT "http://www.sudo.ws/bugs/"
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "sudo"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "sudo 1.7.4p6"
+
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME "sudo"
+
+/* Define to the home page for this package. */
+#define PACKAGE_URL ""
+
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "1.7.4p6"
 
 /* The default password prompt. */
 #define PASSPROMPT "Password:"
@@ -549,25 +690,14 @@
 /* The syslog priority sudo will use for successful attempts. */
 #define PRI_SUCCESS "notice"
 
+/* Define to 1 if the `putenv' has a const argument. */
+/* #undef PUTENV_CONST */
+
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void
 
 /* The user sudo should run commands as by default. */
 #define RUNAS_DEFAULT "root"
-
-#define PACKAGE_BUGREPORT "http://bugreport.midnightbsd.org/"
-
-/* Define to the full name of this package. */
-#define PACKAGE_NAME "sudo"
-
-/* Define to the full name and version of this package. */
-#define PACKAGE_STRING "sudo 1.7.2p5"
-
-/* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "sudo"
-
-/* Define to the version of this package. */
-#define PACKAGE_VERSION "1.7.2p5"
 
 /* Define to 1 to override the user's path with a built-in one. */
 /* #undef SECURE_PATH */
@@ -582,19 +712,17 @@
 /* Define to 1 to send mail when the user is not in the sudoers file. */
 #define SEND_MAIL_WHEN_NO_USER 1
 
+/* Define to 1 if the `setpgrp' function takes no argument. */
+/* #undef SETPGRP_VOID */
+
 /* Define to 1 if you want sudo to start a shell if given no arguments. */
 /* #undef SHELL_IF_NO_ARGS */
 
 /* Define to 1 if you want sudo to set $HOME in shell mode. */
 /* #undef SHELL_SETS_HOME */
 
-/* If using the C implementation of alloca, define if you know the
-   direction of stack growth for your system; otherwise it will be
-   automatically deduced at run-time.
-	STACK_DIRECTION > 0 => grows toward higher addresses
-	STACK_DIRECTION < 0 => grows toward lower addresses
-	STACK_DIRECTION = 0 => direction of growth unknown */
-/* #undef STACK_DIRECTION */
+/* The size of `long int', as computed by sizeof. */
+#define SIZEOF_LONG_INT 4
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -614,6 +742,13 @@
 /* The number of tries a user gets to enter their password. */
 #define TRIES_FOR_PASSWORD 3
 
+/* Define to 1 if the `unsetenv' function returns void instead of `int'. */
+/* #undef UNSETENV_VOID */
+
+/* Define to 1 if you want to create ~/.sudo_as_admin_successful if the user
+   is in the admin group the first time they run sudo. */
+/* #undef USE_ADMIN_FLAG */
+
 /* Define to 1 if you want to insult the user for entering an incorrect
    password. */
 /* #undef USE_INSULTS */
@@ -621,24 +756,15 @@
 /* Define to 1 if you use GNU stow packaging. */
 /* #undef USE_STOW */
 
-/* Define to 1 if you want a different ticket file for each tty. */
-#define USE_TTY_TICKETS 1
-
-/* Define to "void" if your compiler supports void pointers, else use "char".
-   */
-#define VOID void
+/* Define to 1 if using a non-Unix group lookup implementation. */
+/* #undef USING_NONUNIX_GROUPS */
 
 /* Define to avoid using the passwd/shadow file for authentication. */
 #define WITHOUT_PASSWD 1
 
-/* Path to the ldap.conf file */
-/* #undef _PATH_LDAP_CONF */
-
-/* Path to the ldap.secret file */
-/* #undef _PATH_LDAP_SECRET */
-
-/* The fully qualified pathname of sudo_noexec.so */
-#define _PATH_SUDO_NOEXEC "/usr/libexec/sudo_noexec.so"
+/* Define to `signed' or nothing if compiler does not support a signed type
+   qualifier. */
+/* #undef __signed */
 
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */
@@ -658,7 +784,7 @@
 /* Define to `int' if <signal.h> does not define. */
 /* #undef sig_atomic_t */
 
-/* Define if your system lacks the size_t type. */
+/* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
 
 /* Define if your system lacks the ssize_t type. */
@@ -667,34 +793,33 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 /* #undef uid_t */
 
-/* Define to the type of elements in the array set by `getgroups'.
-   Usually this is either `int' or `gid_t'. */
-#define GETGROUPS_T gid_t
-
 /* Define to empty if the keyword `volatile' does not work. Warning: valid
    code using `volatile' can become incorrect without. Disable with care. */
 /* #undef volatile */
 
 /*
- * Macros to pull sec and nsec parts of mtime from struct stat.
- * We need to be able to convert between timeval and timespec
- * so the last 3 digits of tv_nsec are not significant.
+ * Macros to convert ctime and mtime into timevals.
  */
+#define timespec2timeval(_ts, _tv) do {					\
+    (_tv)->tv_sec = (_ts)->tv_sec;					\
+    (_tv)->tv_usec = (_ts)->tv_nsec / 1000;				\
+} while (0)
+
 #ifdef HAVE_ST_MTIM
 # ifdef HAVE_ST__TIM
-#  define mtim_getsec(_x)	((_x).st_mtim.st__tim.tv_sec)
-#  define mtim_getnsec(_x)	(((_x).st_mtim.st__tim.tv_nsec / 1000) * 1000)
+#  define ctim_get(_x, _y)	timespec2timeval(&(_x)->st_ctim.st__tim, (_y))
+#  define mtim_get(_x, _y)	timespec2timeval(&(_x)->st_mtim.st__tim, (_y))
 # else
-#  define mtim_getsec(_x)	((_x).st_mtim.tv_sec)
-#  define mtim_getnsec(_x)	(((_x).st_mtim.tv_nsec / 1000) * 1000)
+#  define ctim_get(_x, _y)	timespec2timeval(&(_x)->st_ctim, (_y))
+#  define mtim_get(_x, _y)	timespec2timeval(&(_x)->st_mtim, (_y))
 # endif
 #else
 # ifdef HAVE_ST_MTIMESPEC
-#  define mtim_getsec(_x)	((_x).st_mtimespec.tv_sec)
-#  define mtim_getnsec(_x)	(((_x).st_mtimespec.tv_nsec / 1000) * 1000)
+#  define ctim_get(_x, _y)	timespec2timeval(&(_x)->st_ctimespec, (_y))
+#  define mtim_get(_x, _y)	timespec2timeval(&(_x)->st_mtimespec, (_y))
 # else
-#  define mtim_getsec(_x)	((_x).st_mtime)
-#  define mtim_getnsec(_x)	(0)
+#  define ctim_get(_x, _y)	do { (_y)->tv_sec = (_x)->st_ctime; (_y)->tv_usec = 0; } while (0)
+#  define mtim_get(_x, _y)	do { (_y)->tv_sec = (_x)->st_mtime; (_y)->tv_usec = 0; } while (0)
 # endif /* HAVE_ST_MTIMESPEC */
 #endif /* HAVE_ST_MTIM */
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 1998, 1999, 2001, 2004, 2005, 2007-2009
+ * Copyright (c) 1996, 1998, 1999, 2001, 2004, 2005, 2007-2010
  *	Todd C. Miller <Todd.Miller@courtesan.com>.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -27,6 +27,10 @@
 #include <paths.h>
 #endif /* HAVE_PATHS_H */
 
+#ifdef HAVE_MAILLOCK_H
+#include <maillock.h>
+#endif /* HAVE_MAILLOCK_H */
+
 #ifndef _PATH_DEV
 #define _PATH_DEV		"/dev/"
 #endif /* _PATH_DEV */
@@ -42,6 +46,10 @@
 #ifndef _PATH_DEFPATH
 #define _PATH_DEFPATH		"/usr/bin:/bin"
 #endif /* _PATH_DEFPATH */
+
+#ifndef _PATH_STDPATH
+#define _PATH_STDPATH		"/usr/bin:/bin:/usr/sbin:/sbin"
+#endif /* _PATH_STDPATH */
 
 #ifndef _PATH_ENVIRONMENT
 #define _PATH_ENVIRONMENT	"/etc/environment"
@@ -65,6 +73,14 @@
 #ifndef _PATH_SUDO_TIMEDIR
 #undef _PATH_SUDO_TIMEDIR
 #endif /* _PATH_SUDO_TIMEDIR */
+
+/*
+ * Where to put the I/O log files.  Defaults to /var/log/sudo-io,
+ * /var/adm/sudo-io or /usr/adm/sudo-io depending on what exists.
+ */
+#ifndef _PATH_SUDO_IO_LOGDIR
+#undef _PATH_SUDO_IO_LOGDIR
+#endif /* _PATH_SUDO_IO_LOGDIR */
 
 /*
  * Where to put the sudo log file when logging to a file.  Defaults to
@@ -109,6 +125,10 @@
 #ifndef _PATH_USRTMP
 #define	_PATH_USRTMP	"/usr/tmp/"
 #endif /* _PATH_USRTMP */
+
+#ifndef _PATH_MAILDIR
+#undef _PATH_MAILDIR
+#endif /* _PATH_MAILDIR */
 
 #ifndef _PATH_SUDO_SESH
 #undef _PATH_SUDO_SESH

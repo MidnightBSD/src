@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999-2005, 2007-2009 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1999-2005, 2007-2010 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,15 +32,11 @@
 # endif
 #endif /* STDC_HEADERS */
 #ifdef HAVE_STRING_H
-# if defined(HAVE_MEMORY_H) && !defined(STDC_HEADERS)
-#  include <memory.h>
-# endif
 # include <string.h>
-#else
-# ifdef HAVE_STRINGS_H
-#  include <strings.h>
-# endif
 #endif /* HAVE_STRING_H */
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif /* HAVE_STRINGS_H */
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
@@ -66,7 +62,8 @@
 #include "sudo_auth.h"
 
 /* Only OpenPAM and Linux PAM use const qualifiers. */
-#if defined(_OPENPAM) || defined(__LIBPAM_VERSION) || defined(__LINUX_PAM__)
+#if defined(_OPENPAM) || defined(OPENPAM_VERSION) || \
+    defined(__LIBPAM_VERSION) || defined(__LINUX_PAM__)
 # define PAM_CONST	const
 #else
 # define PAM_CONST
@@ -96,7 +93,13 @@ pam_init(pw, promptp, auth)
     if (auth != NULL)
 	auth->data = (void *) &pam_status;
     pam_conv.conv = sudo_conv;
-    pam_status = pam_start("sudo", pw->pw_name, &pam_conv, &pamh);
+#ifdef HAVE_PAM_LOGIN
+    if (ISSET(sudo_mode, MODE_LOGIN_SHELL))
+	pam_status = pam_start("sudo-i", pw->pw_name, &pam_conv, &pamh);
+    else
+#endif
+	pam_status = pam_start("sudo", pw->pw_name, &pam_conv, &pamh);
+
     if (pam_status != PAM_SUCCESS) {
 	log_error(USE_ERRNO|NO_EXIT|NO_MAIL, "unable to initialize PAM");
 	return(AUTH_FATAL);
@@ -107,7 +110,9 @@ pam_init(pw, promptp, auth)
      * We set PAM_RHOST to avoid a bug in Solaris 7 and below.
      */
     (void) pam_set_item(pamh, PAM_RUSER, user_name);
+#ifdef __sun__
     (void) pam_set_item(pamh, PAM_RHOST, user_host);
+#endif
 
     /*
      * Some versions of pam_lastlog have a bug that
@@ -198,11 +203,12 @@ pam_cleanup(pw, auth)
 }
 
 int
-pam_prep_user(pw)
+pam_begin_session(pw)
     struct passwd *pw;
 {
-    int eval;
+    int status =  PAM_SUCCESS;
 
+    /* If the user did not have to authenticate there is no pam handle yet. */
     if (pamh == NULL)
 	pam_init(pw, NULL, NULL);
 
@@ -223,23 +229,27 @@ pam_prep_user(pw)
     (void) pam_setcred(pamh, PAM_ESTABLISH_CRED);
 
 #ifndef NO_PAM_SESSION
-    /*
-     * To fully utilize PAM sessions we would need to keep a
-     * sudo process around until the command exits.  However, we
-     * can at least cause pam_limits to be run by opening and then
-     * immediately closing the session.
-     */
-    if ((eval = pam_open_session(pamh, 0)) != PAM_SUCCESS) {
-	(void) pam_end(pamh, eval | PAM_DATA_SILENT);
-	return(AUTH_FAILURE);
+    status = pam_open_session(pamh, 0);
+     if (status != PAM_SUCCESS) {
+	(void) pam_end(pamh, status | PAM_DATA_SILENT);
+	pamh = NULL;
     }
-    (void) pam_close_session(pamh, 0);
 #endif
+    return(status == PAM_SUCCESS ? AUTH_SUCCESS : AUTH_FAILURE);
+}
 
-    if (pam_end(pamh, PAM_SUCCESS | PAM_DATA_SILENT) == PAM_SUCCESS)
-	return(AUTH_SUCCESS);
-    else
-	return(AUTH_FAILURE);
+int
+pam_end_session()
+{
+    int status = PAM_SUCCESS;
+
+    if (pamh != NULL) {
+#ifndef NO_PAM_SESSION
+	(void) pam_close_session(pamh, 0);
+#endif
+	status = pam_end(pamh, PAM_SUCCESS | PAM_DATA_SILENT);
+    }
+    return(status == PAM_SUCCESS ? AUTH_SUCCESS : AUTH_FAILURE);
 }
 
 /*
@@ -270,6 +280,10 @@ sudo_conv(num_msg, msg, response, appdata_ptr)
 		SET(flags, TGP_ECHO);
 	    case PAM_PROMPT_ECHO_OFF:
 		prompt = def_prompt;
+
+		/* Error out if the last password read was interrupted. */
+		if (gotintr)
+		    goto err;
 
 		/* Is the sudo prompt standard? (If so, we'l just use PAM's) */
 		std_prompt =  strncmp(def_prompt, "Password:", 9) == 0 &&

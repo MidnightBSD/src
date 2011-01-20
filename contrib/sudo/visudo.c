@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 1998-2005, 2007-2009
+ * Copyright (c) 1996, 1998-2005, 2007-2010
  *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -51,11 +51,10 @@
 #endif /* STDC_HEADERS */
 #ifdef HAVE_STRING_H
 # include <string.h>
-#else
-# ifdef HAVE_STRINGS_H
-#  include <strings.h>
-# endif
 #endif /* HAVE_STRING_H */
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif /* HAVE_STRINGS_H */
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
@@ -76,9 +75,6 @@
 #else
 # include <varargs.h>
 #endif
-#ifndef HAVE_TIMESPEC
-# include <emul/timespec.h>
-#endif
 
 #include "sudo.h"
 #include "interfaces.h"
@@ -87,14 +83,14 @@
 #include <gram.h>
 
 struct sudoersfile {
+    struct sudoersfile *prev, *next;
     char *path;
     char *tpath;
     int fd;
-    int tfd;
     int modified;
     int doedit;
-    struct sudoersfile *next;
 };
+TQ_DECLARE(sudoersfile);
 
 /*
  * Function prototypes
@@ -111,7 +107,8 @@ static int install_sudoers	__P((struct sudoersfile *, int));
 static int print_unused		__P((void *, void *));
 static int reparse_sudoers	__P((char *, char *, int, int));
 static int run_command		__P((char *, char **));
-static void print_undefined	__P((char *name, int, int, int));
+static void print_selfref	__P((char *, int, int, int));
+static void print_undefined	__P((char *, int, int, int));
 static void setup_signals	__P((void));
 static void usage		__P((void)) __attribute__((__noreturn__));
 
@@ -138,9 +135,7 @@ int num_interfaces;
 struct interface *interfaces;
 struct sudo_user sudo_user;
 struct passwd *list_pw;
-static struct sudoerslist {
-    struct sudoersfile *first, *last;
-} sudoerslist;
+static struct sudoersfile_list sudoerslist;
 static struct rbtree *alias_freelist;
 
 int
@@ -266,8 +261,8 @@ edit_sudoers(sp, editor, args, lineno)
     char *cp;				/* scratch char pointer */
     char buf[PATH_MAX*2];		/* buffer used for copying files */
     char linestr[64];			/* string version of lineno */
-    struct timespec ts1, ts2;		/* time before and after edit */
-    struct timespec orig_mtim;		/* starting mtime of sudoers file */
+    struct timeval tv, tv1, tv2;	/* time before and after edit */
+    struct timeval orig_mtim;		/* starting mtime of sudoers file */
     off_t orig_size;			/* starting size of sudoers file */
     ssize_t nread;			/* number of bytes read */
     struct stat sb;			/* stat buffer */
@@ -279,8 +274,7 @@ edit_sudoers(sp, editor, args, lineno)
 #endif
 	error(1, "can't stat %s", sp->path);
     orig_size = sb.st_size;
-    orig_mtim.tv_sec = mtim_getsec(sb);
-    orig_mtim.tv_nsec = mtim_getnsec(sb);
+    mtim_get(&sb, &orig_mtim);
 
     /* Create the temp file if needed and set timestamp. */
     if (sp->tpath == NULL) {
@@ -346,9 +340,9 @@ edit_sudoers(sp, editor, args, lineno)
      *  XPG4 specifies that vi's exit value is a function of the
      *  number of errors during editing (?!?!).
      */
-    gettime(&ts1);
+    gettime(&tv1);
     if (run_command(editor, av) != -1) {
-	gettime(&ts2);
+	gettime(&tv2);
 	/*
 	 * Sanity checks.
 	 */
@@ -370,19 +364,14 @@ edit_sudoers(sp, editor, args, lineno)
 
     /* Set modified bit if use changed the file. */
     modified = TRUE;
-    if (orig_size == sb.st_size &&
-	orig_mtim.tv_sec == mtim_getsec(sb) &&
-	orig_mtim.tv_nsec == mtim_getnsec(sb)) {
+    mtim_get(&sb, &tv);
+    if (orig_size == sb.st_size && timevalcmp(&orig_mtim, &tv, ==)) {
 	/*
 	 * If mtime and size match but the user spent no measurable
 	 * time in the editor we can't tell if the file was changed.
 	 */
-#ifdef HAVE_TIMESPECSUB2
-	timespecsub(&ts1, &ts2);
-#else
-	timespecsub(&ts1, &ts2, &ts2);
-#endif
-	if (timespecisset(&ts2))
+	timevalsub(&tv1, &tv2);
+	if (timevalisset(&tv2))
 	    modified = FALSE;
     }
 
@@ -427,14 +416,20 @@ reparse_sudoers(editor, args, strict, quiet)
 
 	/* Parse the sudoers temp file */
 	yyrestart(fp);
-	if (yyparse() && parse_error != TRUE) {
+	if (yyparse() && !parse_error) {
 	    warningx("unabled to parse temporary file (%s), unknown error",
 		sp->tpath);
 	    parse_error = TRUE;
+	    errorfile = sp->path;
 	}
 	fclose(yyin);
-	if (check_aliases(strict, quiet) != 0)
-	    parse_error = TRUE;
+	if (!parse_error) {
+	    if (!update_defaults(SETDEF_GENERIC|SETDEF_HOST|SETDEF_USER) ||
+		check_aliases(strict, quiet) != 0) {
+		parse_error = TRUE;
+		errorfile = sp->path;
+	    }
+	}
 
 	/*
 	 * Got an error, prompt the user for what to do now
@@ -698,22 +693,27 @@ check_syntax(sudoers_path, quiet, strict)
 	exit(1);
     }
     init_parser(sudoers_path, quiet);
-    if (yyparse() && parse_error != TRUE) {
+    if (yyparse() && !parse_error) {
 	if (!quiet)
 	    warningx("failed to parse %s file, unknown error", sudoers_path);
 	parse_error = TRUE;
+	errorfile = sudoers_path;
     }
-    if (!parse_error) {
-	if (check_aliases(strict, quiet) != 0)
-	    parse_error = TRUE;
+    if (!parse_error && check_aliases(strict, quiet) != 0) {
+	parse_error = TRUE;
+	errorfile = sudoers_path;
     }
     error = parse_error;
     if (!quiet) {
-	if (parse_error)
-	    (void) printf("parse error in %s near line %d\n", errorfile,
-		errorlineno);
-	else
+	if (parse_error) {
+	    if (errorlineno != -1)
+		(void) printf("parse error in %s near line %d\n", errorfile,
+		    errorlineno);
+	    else
+		(void) printf("parse error in %s\n", errorfile);
+	} else {
 	    (void) printf("%s: parsed OK\n", sudoers_path);
+	}
     }
     /* Check mode and owner in strict mode. */
 #ifdef HAVE_FSTAT
@@ -763,10 +763,10 @@ open_sudoers(path, doedit, keepopen)
 	entry = emalloc(sizeof(*entry));
 	entry->path = estrdup(path);
 	entry->modified = 0;
+	entry->prev = entry;
 	entry->next = NULL;
 	entry->fd = open(entry->path, O_RDWR | O_CREAT, SUDOERS_MODE);
 	entry->tpath = NULL;
-	entry->tfd = -1;
 	entry->doedit = doedit;
 	if (entry->fd == -1) {
 	    warning("%s", entry->path);
@@ -777,13 +777,7 @@ open_sudoers(path, doedit, keepopen)
 	    errorx(1, "%s busy, try again later", entry->path);
 	if ((fp = fdopen(entry->fd, "r")) == NULL)
 	    error(1, "%s", entry->path);
-	/* XXX - macro here? */
-	if (sudoerslist.last == NULL)
-	    sudoerslist.first = sudoerslist.last = entry;
-	else {
-	    sudoerslist.last->next = entry;
-	    sudoerslist.last = entry;
-	}
+	tq_append(&sudoerslist, entry);
     } else {
 	/* Already exists, open .tmp version if there is one. */
 	if (entry->tpath != NULL) {
@@ -819,7 +813,7 @@ get_editor(args)
 	UserEditor = NULL;
     else if (UserEditor) {
 	UserEditorArgs = get_args(UserEditor);
-	if (find_path(UserEditor, &Editor, NULL, getenv("PATH")) == FOUND) {
+	if (find_path(UserEditor, &Editor, NULL, getenv("PATH"), 0) == FOUND) {
 	    UserEditor = Editor;
 	} else {
 	    if (def_env_editor) {
@@ -945,18 +939,27 @@ get_hostname()
     }
 }
 
-static void
-alias_remove_recursive(name, type)
+static int
+alias_remove_recursive(name, type, strict, quiet)
     char *name;
     int type;
+    int strict;
+    int quiet;
 {
     struct member *m;
     struct alias *a;
+    int error = 0;
 
     if ((a = alias_find(name, type)) != NULL) {
 	tq_foreach_fwd(&a->members, m) {
 	    if (m->type == ALIAS) {
-		alias_remove_recursive(m->name, type);
+		if (strcmp(name, m->name) == 0) {
+		    print_selfref(m->name, type, strict, quiet);
+		    error = 1;
+		} else {
+		    if (!alias_remove_recursive(m->name, type, strict, quiet))
+			error = 1;
+		}
 	    }
 	}
     }
@@ -964,6 +967,7 @@ alias_remove_recursive(name, type)
     a = alias_remove(name, type);
     if (a)
 	rbinsert(alias_freelist, a);
+    return(error);
 }
 
 /*
@@ -1030,21 +1034,28 @@ check_aliases(strict, quiet)
     tq_foreach_fwd(&userspecs, us) {
 	tq_foreach_fwd(&us->users, m) {
 	    if (m->type == ALIAS) {
-		(void) alias_remove_recursive(m->name, USERALIAS);
+		if (!alias_remove_recursive(m->name, USERALIAS, strict, quiet))
+		    error++;
 	    }
 	}
 	tq_foreach_fwd(&us->privileges, priv) {
 	    tq_foreach_fwd(&priv->hostlist, m) {
 		if (m->type == ALIAS)
-		    (void) alias_remove_recursive(m->name, HOSTALIAS);
+		    if (!alias_remove_recursive(m->name, HOSTALIAS, strict, 
+			quiet))
+			error++;
 	    }
 	    tq_foreach_fwd(&priv->cmndlist, cs) {
 		tq_foreach_fwd(&cs->runasuserlist, m) {
 		    if (m->type == ALIAS)
-			(void) alias_remove_recursive(m->name, RUNASALIAS);
+			if (!alias_remove_recursive(m->name, RUNASALIAS,
+			    strict, quiet))
+			    error++;
 		}
 		if ((m = cs->cmnd)->type == ALIAS)
-		    (void) alias_remove_recursive(m->name, CMNDALIAS);
+		    if (!alias_remove_recursive(m->name, CMNDALIAS, strict,
+			quiet))
+			error++;
 	    }
 	}
     }
@@ -1068,19 +1079,18 @@ check_aliases(strict, quiet)
 	tq_foreach_fwd(&d->binding, binding) {
 	    for (m = binding; m != NULL; m = m->next) {
 		if (m->type == ALIAS)
-		    (void) alias_remove_recursive(m->name, atype);
+		    if (!alias_remove_recursive(m->name, atype, strict, quiet))
+			error++;
 	    }
 	}
     }
     rbdestroy(alias_freelist, alias_free);
 
     /* If all aliases were referenced we will have an empty tree. */
-    if (no_aliases())
-	return(0);
-    if (!quiet) {
+    if (!no_aliases() && !quiet)
 	alias_apply(print_unused, strict ? "Error" : "Warning");
-    }
-    return (strict ? 1 : 0);
+
+    return (strict ? error : 0);
 }
 
 static void
@@ -1092,6 +1102,22 @@ print_undefined(name, type, strict, quiet)
 {
     if (!quiet) {
 	warningx("%s: %s_Alias `%s' referenced but not defined",
+	    strict ? "Error" : "Warning",
+	    type == HOSTALIAS ? "Host" : type == CMNDALIAS ? "Cmnd" :
+	    type == USERALIAS ? "User" : type == RUNASALIAS ? "Runas" :
+	    "Unknown", name);
+    }
+}
+
+static void
+print_selfref(name, type, strict, quiet)
+    char *name;
+    int type;
+    int strict;
+    int quiet;
+{
+    if (!quiet) {
+	warningx("%s: %s_Alias `%s' references self",
 	    strict ? "Error" : "Warning",
 	    type == HOSTALIAS ? "Host" : type == CMNDALIAS ? "Cmnd" :
 	    type == USERALIAS ? "User" : type == RUNASALIAS ? "Runas" :
