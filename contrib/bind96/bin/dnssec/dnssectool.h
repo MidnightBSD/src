@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007-2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssectool.h,v 1.1.1.1 2010-01-16 16:06:19 laffer1 Exp $ */
+/* $Id: dnssectool.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 #ifndef DNSSECTOOL_H
 #define DNSSECTOOL_H 1
@@ -45,7 +45,7 @@ type_format(const dns_rdatatype_t type, char *cp, unsigned int size);
 
 void
 alg_format(const dns_secalg_t alg, char *cp, unsigned int size);
-#define ALG_FORMATSIZE 10
+#define ALG_FORMATSIZE 20
 
 void
 sig_format(dns_rdata_rrsig_t *sig, char *cp, unsigned int size);

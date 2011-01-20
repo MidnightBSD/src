@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1997-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: heap.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: heap.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 /*! \file
  * Heap implementation of priority queues adapted from the following:
@@ -186,15 +186,17 @@ sink_down(isc_heap_t *heap, unsigned int i, void *elt) {
 
 isc_result_t
 isc_heap_insert(isc_heap_t *heap, void *elt) {
-	unsigned int i;
+	unsigned int new_last;
 
 	REQUIRE(VALID_HEAP(heap));
 
-	i = ++heap->last;
-	if (heap->last >= heap->size && !resize(heap))
+	new_last = heap->last + 1;
+	RUNTIME_CHECK(new_last > 0); /* overflow check */
+	if (new_last >= heap->size && !resize(heap))
 		return (ISC_R_NOMEMORY);
+	heap->last = new_last;
 
-	float_up(heap, i, elt);
+	float_up(heap, new_last, elt);
 
 	return (ISC_R_SUCCESS);
 }

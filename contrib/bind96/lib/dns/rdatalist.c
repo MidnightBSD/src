@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2008, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatalist.c,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $ */
+/* $Id: rdatalist.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 /*! \file */
 
@@ -44,6 +44,8 @@ static dns_rdatasetmethods_t methods = {
 	isc__rdatalist_getnoqname,
 	isc__rdatalist_addclosest,
 	isc__rdatalist_getclosest,
+	NULL,
+	NULL,
 	NULL,
 	NULL,
 	NULL

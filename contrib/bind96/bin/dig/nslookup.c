@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nslookup.c,v 1.1.1.1 2010-01-16 16:06:19 laffer1 Exp $ */
+/* $Id: nslookup.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -373,6 +373,7 @@ detailsection(dig_query_t *query, dns_message_t *msg, isc_boolean_t headers,
 					printrdata(&rdata);
 				}
 				dns_rdata_reset(&rdata);
+				printf("\tttl = %u\n", rdataset->ttl);
 				loopresult = dns_rdataset_next(rdataset);
 			}
 		}

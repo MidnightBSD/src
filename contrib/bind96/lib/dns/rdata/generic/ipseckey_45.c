@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ipseckey_45.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: ipseckey_45.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 #ifndef RDATA_GENERIC_IPSECKEY_45_C
 #define RDATA_GENERIC_IPSECKEY_45_C
@@ -243,6 +243,7 @@ fromwire_ipseckey(ARGS_FROMWIRE) {
 		isc_buffer_forward(source, 3);
 		RETERR(dns_name_fromwire(&name, source, dctx, options, target));
 		isc_buffer_activeregion(source, &region);
+		isc_buffer_forward(source, region.length);
 		return(mem_tobuffer(target, region.base, region.length));
 
 	default:

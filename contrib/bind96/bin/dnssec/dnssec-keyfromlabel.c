@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007, 2008, 2010  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-keyfromlabel.c,v 1.1.1.1 2010-01-16 16:06:19 laffer1 Exp $ */
+/* $Id: dnssec-keyfromlabel.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 /*! \file */
 
@@ -48,7 +48,8 @@ const char *program = "dnssec-keyfromlabel";
 int verbose;
 
 static const char *algs = "RSA | RSAMD5 | DH | DSA | RSASHA1 |"
-			  " NSEC3DSA | NSEC3RSASHA1";
+			  " NSEC3DSA | NSEC3RSASHA1 |"
+			  " RSASHA256 | RSASHA512";
 
 static void
 usage(void) {

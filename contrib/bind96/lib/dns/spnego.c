@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: spnego.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: spnego.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 /*! \file
  * \brief
@@ -265,8 +265,7 @@ decode_oid(const unsigned char *p, size_t len,
 	   oid * k, size_t * size);
 
 static int
-decode_enumerated(const unsigned char *p, size_t len,
-		  unsigned *num, size_t *size);
+decode_enumerated(const unsigned char *p, size_t len, void *num, size_t *size);
 
 static int
 decode_octet_string(const unsigned char *, size_t, octet_string *, size_t *);
@@ -291,8 +290,7 @@ der_put_length_and_tag(unsigned char *, size_t, size_t,
 		       Der_class, Der_type, int, size_t *);
 
 static int
-encode_enumerated(unsigned char *p, size_t len,
-		  const unsigned *data, size_t *);
+encode_enumerated(unsigned char *p, size_t len, const void *data, size_t *);
 
 static int
 encode_octet_string(unsigned char *p, size_t len,
@@ -622,7 +620,7 @@ gss_accept_sec_context_spnego(OM_uint32 *minor_status,
 	}
 
 	for (i = 0; !found && i < init_token.mechTypes.len; ++i) {
-		char mechbuf[17];
+		unsigned char mechbuf[17];
 		size_t mech_len;
 
 		ret = der_put_oid(mechbuf + sizeof(mechbuf) - 1,
@@ -956,8 +954,7 @@ der_match_tag_and_length(const unsigned char *p, size_t len,
 }
 
 static int
-decode_enumerated(const unsigned char *p, size_t len,
-		  unsigned *num, size_t *size)
+decode_enumerated(const unsigned char *p, size_t len, void *num, size_t *size)
 {
 	size_t ret = 0;
 	size_t l, reallen;
@@ -1269,10 +1266,9 @@ der_put_length_and_tag(unsigned char *p, size_t len, size_t len_val,
 }
 
 static int
-encode_enumerated(unsigned char *p, size_t len, const unsigned *data,
-		  size_t *size)
+encode_enumerated(unsigned char *p, size_t len, const void *data, size_t *size)
 {
-	unsigned num = *data;
+	unsigned num = *(const unsigned *)data;
 	size_t ret = 0;
 	size_t l;
 	int e;

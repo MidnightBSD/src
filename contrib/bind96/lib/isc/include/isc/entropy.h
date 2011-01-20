@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: entropy.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: entropy.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 #ifndef ISC_ENTROPY_H
 #define ISC_ENTROPY_H 1
@@ -182,8 +182,8 @@ isc_result_t
 isc_entropy_createsamplesource(isc_entropy_t *ent,
 			       isc_entropysource_t **sourcep);
 /*!<
- * \brief Create an entropy source that consists of samples.  Each sample is added
- * to the source via isc_entropy_addsamples(), below.
+ * \brief Create an entropy source that consists of samples.  Each sample is
+ * added to the source via isc_entropy_addsamples(), below.
  */
 
 isc_result_t
@@ -254,11 +254,11 @@ void
 isc_entropy_putdata(isc_entropy_t *ent, void *data, unsigned int length,
 		    isc_uint32_t entropy);
 /*!<
- * \brief Add "length" bytes in "data" to the entropy pool, incrementing the pool's
- * entropy count by "entropy."
+ * \brief Add "length" bytes in "data" to the entropy pool, incrementing the
+ * pool's entropy count by "entropy."
  *
- * These bytes will prime the pseudorandom portion even no entropy is actually
- * added.
+ * These bytes will prime the pseudorandom portion even if no entropy is
+ * actually added.
  */
 
 void

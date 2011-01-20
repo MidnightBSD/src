@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: validator.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: validator.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 #ifndef DNS_VALIDATOR_H
 #define DNS_VALIDATOR_H 1
@@ -159,6 +159,8 @@ struct dns_validator {
 	isc_boolean_t			mustbesecure;
 	unsigned int			dlvlabels;
 	unsigned int			depth;
+	unsigned int			authcount;
+	unsigned int			authfail;
 };
 
 /*%

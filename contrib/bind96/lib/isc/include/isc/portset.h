@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: portset.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: portset.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 /*! \file isc/portset.h
  * \brief Transport Protocol Port Manipulation Module
@@ -138,4 +138,4 @@ isc_portset_removerange(isc_portset_t *portset, in_port_t port_lo,
 
 ISC_LANG_ENDDECLS
 
-#endif	/* ISC_NETADDR_H */
+#endif	/* ISC_PORTSET_H */

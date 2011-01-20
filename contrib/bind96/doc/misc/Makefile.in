@@ -1,4 +1,4 @@
-# Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2001  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -13,7 +13,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: Makefile.in,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+# $Id: Makefile.in,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $
 
 srcdir =	@srcdir@
 VPATH =		@srcdir@
@@ -38,11 +38,13 @@ docclean manclean maintainer-clean::
 CFG_TEST = ../../bin/tests/cfg_test
 
 options: FORCE
-	if test -x ${CFG_TEST} && \
-	   ${CFG_TEST} --named --grammar | \
-	   ${PERL} ${srcdir}/sort-options.pl | \
-	   ${PERL} ${srcdir}/format-options.pl >$@.new ; then \
+	if test -x ${CFG_TEST} ; \
+	then \
+		${CFG_TEST} --named --grammar > $@.raw ; \
+		${PERL} ${srcdir}/sort-options.pl < $@.raw > $@.sorted ; \
+		${PERL} ${srcdir}/format-options.pl < $@.sorted > $@.new ; \
 		mv -f $@.new $@ ; \
+		rm -f $@.raw $@.sorted ; \
 	else \
-		rm -f $@.new ; \
+		rm -f $@.new $@.raw $@.sorted ; \
 	fi

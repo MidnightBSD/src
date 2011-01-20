@@ -770,6 +770,7 @@ contrib/bind96/NSEC3-NOTES -text
 contrib/bind96/README -text
 contrib/bind96/README.idnkit -text
 contrib/bind96/README.pkcs11 -text
+contrib/bind96/RELEASE-NOTES-BIND-9.6.txt -text
 contrib/bind96/acconfig.h -text
 contrib/bind96/aclocal.m4 -text
 contrib/bind96/bin/Makefile.in -text
@@ -2099,7 +2100,7 @@ contrib/bind96/doc/arm/Bv9ARM.pdf -text
 contrib/bind96/doc/arm/Makefile.in -text
 contrib/bind96/doc/arm/README-SGML -text
 contrib/bind96/doc/arm/isc-logo.eps -text
-contrib/bind96/doc/arm/isc-logo.pdf -text svneol=unset#unset
+contrib/bind96/doc/arm/isc-logo.pdf -text
 contrib/bind96/doc/arm/latex-fixup.pl -text
 contrib/bind96/doc/arm/man.dig.html -text
 contrib/bind96/doc/arm/man.dnssec-dsfromkey.html -text
@@ -2127,16 +2128,20 @@ contrib/bind96/doc/draft/draft-dnsext-opcode-discover-02.txt -text
 contrib/bind96/doc/draft/draft-durand-dnsop-dynreverse-00.txt -text
 contrib/bind96/doc/draft/draft-ietf-6man-text-addr-representation-01.txt -text
 contrib/bind96/doc/draft/draft-ietf-behave-dns64-01.txt -text
+contrib/bind96/doc/draft/draft-ietf-behave-dns64-06.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-2929bis-01.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-axfr-clarify-09.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-axfr-clarify-12.txt -text
+contrib/bind96/doc/draft/draft-ietf-dnsext-axfr-clarify-13.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dns-name-p-s-00.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dns-tcp-requirements-01.txt -text
+contrib/bind96/doc/draft/draft-ietf-dnsext-dns-tcp-requirements-02.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-2535typecode-change-06.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-bis-updates-01.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-bis-updates-09.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-experiments-03.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-gost-05.txt -text
+contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-gost-06.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-online-signing-02.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-opt-in-07.txt -text
 contrib/bind96/doc/draft/draft-ietf-dnsext-dnssec-rsasha256-06.txt -text

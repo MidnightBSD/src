@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsec3.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: nsec3.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 #ifndef DNS_NSEC3_H
 #define DNS_NSEC3_H 1
@@ -27,6 +27,8 @@
 #include <dns/name.h>
 #include <dns/rdatastruct.h>
 #include <dns/types.h>
+
+#define DNS_NSEC3_SALTSIZE 255
 
 /*
  * hash = 1, flags =1, iterations = 2, salt length = 1, salt = 255 (max)

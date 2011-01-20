@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ncache.h,v 1.1.1.2 2010-12-30 02:32:42 laffer1 Exp $ */
+/* $Id: ncache.h,v 1.1.1.3 2011-01-20 21:16:00 laffer1 Exp $ */
 
 #ifndef DNS_NCACHE_H
 #define DNS_NCACHE_H 1

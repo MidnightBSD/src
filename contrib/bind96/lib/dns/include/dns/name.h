@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: name.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: name.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 #ifndef DNS_NAME_H
 #define DNS_NAME_H 1
@@ -97,12 +97,6 @@ ISC_LANG_BEGINDECLS
  ***** Note that all names are not required to end with the root label,
  ***** as they are in the actual DNS wire protocol.
  *****/
-
-/***
- *** Compression pointer chaining limit
- ***/
-
-#define DNS_POINTER_MAXHOPS		16
 
 /***
  *** Types

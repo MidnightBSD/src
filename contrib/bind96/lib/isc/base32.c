@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: base32.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: base32.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
 
 /*! \file */
 
@@ -112,6 +112,8 @@ base32_totext(isc_region_t *source, int wordlength, const char *wordbreak,
 			RETERR(str_totext(wordbreak, target));
 		}
 	}
+	if (source->length > 0)
+		isc_region_consume(source, source->length);
 	return (ISC_R_SUCCESS);
 }
 
