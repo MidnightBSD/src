@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/contrib/bind96/MIDNIGHTBSD-Xlist,v 1.1 2010/01/16 16:10:58 laffer1 Exp $
 # Misc. stuff
 .cvsignore
 aclocal.m4
@@ -6,6 +6,9 @@ config.h.in
 configure
 contrib
 docutil
+RELEASE-NOTES-BIND-9.6.html
+RELEASE-NOTES-BIND-9.6.pdf
+release-notes.css
 
 # Tests
 bin/tests
