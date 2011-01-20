@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users
 20110120:
         BIND 9.6.2-P3
 
+        sudo 1.7.4-p6
+
 20110115:
 	Add experimental jme(4) for Jmicron ethernet devices.
 
@@ -911,4 +913,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.101 2011/01/15 05:56:21 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.102 2011/01/20 22:08:10 laffer1 Exp $
