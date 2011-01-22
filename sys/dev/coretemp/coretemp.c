@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/coretemp/coretemp.c,v 1.4 2010/03/05 03:35:17 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/coretemp/coretemp.c,v 1.5 2010/03/05 03:40:43 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: src/sys/dev/coretemp/coretemp.c,v 1.2.4.3.2.1 2008/11/25 02:
 #include <sys/module.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
-#include <sys/sysctl.h>
+#include <sys/sensors.h>
 #include <sys/proc.h>	/* for curthread */
 #include <sys/sched.h>
 
@@ -48,12 +48,13 @@ __FBSDID("$FreeBSD: src/sys/dev/coretemp/coretemp.c,v 1.2.4.3.2.1 2008/11/25 02:
 #include <machine/cpufunc.h>
 #include <machine/md_var.h>
 
-#define	TZ_ZEROC	2732
+extern int smp_cpus;
 
 struct coretemp_softc {
-	device_t	sc_dev;
-	int		sc_tjmax;
-	struct sysctl_oid *sc_oid;
+	struct ksensordev	sc_sensordev;
+	struct ksensor		sc_sensor;
+	device_t		sc_dev;
+	int			sc_tjmax;
 };
 
 /*
@@ -65,7 +66,7 @@ static int	coretemp_attach(device_t dev);
 static int	coretemp_detach(device_t dev);
 
 static int	coretemp_get_temp(device_t dev);
-static int	coretemp_get_temp_sysctl(SYSCTL_HANDLER_ARGS);
+static void	coretemp_refresh(void *arg);
 
 static device_method_t coretemp_methods[] = {
 	/* Device interface */
@@ -189,14 +190,17 @@ coretemp_attach(device_t dev)
 	}
 
 	/*
-	 * Add the "temperature" MIB to dev.cpu.N.
+	 * Add hw.sensors.cpuN.temp0 MIB.
 	 */
-	sc->sc_oid = SYSCTL_ADD_PROC(device_get_sysctl_ctx(pdev),
-	    SYSCTL_CHILDREN(device_get_sysctl_tree(pdev)),
-	    OID_AUTO, "temperature",
-	    CTLTYPE_INT | CTLFLAG_RD,
-	    dev, 0, coretemp_get_temp_sysctl, "IK",
-	    "Current temperature");
+	strlcpy(sc->sc_sensordev.xname, device_get_nameunit(pdev),
+	    sizeof(sc->sc_sensordev.xname));
+	sc->sc_sensor.type = SENSOR_TEMP;
+	sensor_attach(&sc->sc_sensordev, &sc->sc_sensor);
+	if (sensor_task_register(sc, coretemp_refresh, 2)) {
+		device_printf(dev, "unable to register update task\n");
+		return (ENXIO);
+	}
+	sensordev_install(&sc->sc_sensordev);
 
 	return (0);
 }
@@ -206,7 +210,8 @@ coretemp_detach(device_t dev)
 {
 	struct coretemp_softc *sc = device_get_softc(dev);
 
-	sysctl_remove_oid(sc->sc_oid, 1, 0);
+	sensordev_deinstall(&sc->sc_sensordev);
+	sensor_task_unregister(sc);
 
 	return (0);
 }
@@ -221,25 +226,21 @@ coretemp_get_temp(device_t dev)
 	struct coretemp_softc *sc = device_get_softc(dev);
 	char stemp[16];
 
-	thread_lock(curthread);
-	sched_bind(curthread, cpu);
-	thread_unlock(curthread);
-
 	/*
-	 * The digital temperature reading is located at bit 16
-	 * of MSR_THERM_STATUS.
-	 *
-	 * There is a bit on that MSR that indicates whether the
-	 * temperature is valid or not.
-	 *
-	 * The temperature is computed by subtracting the temperature
-	 * reading by Tj(max).
+	 * Bind to specific CPU to read the correct temperature.
+	 * If not all CPUs are initialised, then only read from
+	 * cpu0, returning -1 on all other CPUs.
 	 */
-	msr = rdmsr(MSR_THERM_STATUS);
-
-	thread_lock(curthread);
-	sched_unbind(curthread);
-	thread_unlock(curthread);
+	if (smp_cpus > 1) {
+		thread_lock(curthread);
+		sched_bind(curthread, cpu);
+		msr = rdmsr(MSR_THERM_STATUS);
+		sched_unbind(curthread);
+		thread_unlock(curthread);
+	} else if (cpu != 0)
+		return (-1);
+	else
+		msr = rdmsr(MSR_THERM_STATUS);
 
 	/*
 	 * Check for Thermal Status and Thermal Status Log.
@@ -279,13 +280,21 @@ coretemp_get_temp(device_t dev)
 	return (temp);
 }
 
-static int
-coretemp_get_temp_sysctl(SYSCTL_HANDLER_ARGS)
+static void
+coretemp_refresh(void *arg)
 {
-	device_t dev = (device_t) arg1;
+	struct coretemp_softc *sc = arg;
+	device_t dev = sc->sc_dev;
+	struct ksensor *s = &sc->sc_sensor;
 	int temp;
 
-	temp = coretemp_get_temp(dev) * 10 + TZ_ZEROC;
+	temp = coretemp_get_temp(dev);
 
-	return (sysctl_handle_int(oidp, &temp, 0, req));
+	if (temp == -1) {
+		s->flags |= SENSOR_FINVALID;
+		s->value = 0;
+	} else {
+		s->flags &= ~SENSOR_FINVALID;
+		s->value = temp * 1000000 + 273150000;
+	}
 }
