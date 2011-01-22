@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users
 
+20110122:
+	Import it(4) and lm(4), with support for Super I/O hardware monitors. This
+	uses the sensors framework ported by Constantine A. Murenin (GSOC2007)
+
 20110120:
         BIND 9.6.2-P3
 
@@ -913,4 +917,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.102 2011/01/20 22:08:10 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.103 2011/01/20 22:25:01 laffer1 Exp $
