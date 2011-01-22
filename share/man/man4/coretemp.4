@@ -24,8 +24,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man4/coretemp.4,v 1.1 2007/08/23 20:05:09 des Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 23, 2007
+.Dd January 22, 2010
 .Dt CORETEMP 4
 .Os
 .Sh NAME
@@ -51,24 +52,35 @@ The
 driver provides support for the on-die digital thermal sensor present
 in Intel Core and newer CPUs.
 .Pp
-The
-.Nm
-driver reports each core's temperature through a sysctl node in the
-corresponding CPU device's sysctl tree, named
-.Va dev.cpu.%d.temperature .
+The values are exposed through the
+.Va HW_SENSORS
+.Xr sysctl 3
+tree.
+For example:
+.Bd -literal -offset indent
+%sysctl hw.sensors
+hw.sensors.cpu0.temp0: 28.00 degC
+hw.sensors.cpu1.temp0: 29.00 degC
+.Ed
 .Sh SEE ALSO
+.Xr systat 1 ,
+.Xr sysctl 3 ,
+.Xr sensorsd 8 ,
 .Xr sysctl 8
 .Sh HISTORY
 The
 .Nm
 driver first appeared in
 .Fx 7.0 .
+It was imported into 
+.Mx 0.3 .
 .Sh AUTHORS
 .An -nosplit
 The
 .Nm
 driver was written by
 .An Rui Paulo Aq rpaulo@FreeBSD.org
-as part of a Google Summer of Code project.
+as part of a Google Summer of Code project. Constantine A. Murenin
+ported it to the sensors framework.
 This manual page was written by
 .An Dag-Erling Sm\(/orgrav Aq des@FreeBSD.org .
