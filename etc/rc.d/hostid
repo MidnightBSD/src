@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/etc/rc.d/hostid,v 1.1 2009/01/17 17:30:24 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/hostid,v 1.2 2010/09/10 18:08:20 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/hostid,v 1.7 2007/05/22 13:53:59 rse Exp $
 #
 
@@ -39,7 +39,6 @@ name="hostid"
 start_cmd="hostid_start"
 stop_cmd=":"
 reset_cmd="hostid_reset"
-/etc/rc.d/hostid start
 extra_commands="reset"
 rcvar="hostid_enable"
 
@@ -47,8 +46,9 @@ hostid_set()
 {
 	uuid=$1
 	# Generate hostid based on hostuuid - take first four bytes from md5(uuid).
-	id=`echo -n $uuid | md5`
+	id=`echo -n $uuid | /sbin/md5`
 	id="0x${id%????????????????????????}"
+
 	# Set both kern.hostuuid and kern.hostid.
 	echo "Setting hostuuid: ${uuid}."
 	${SYSCTL_W} kern.hostuuid="${uuid}" >/dev/null
@@ -58,7 +58,7 @@ hostid_set()
 
 hostid_hardware()
 {
-	uuid=`kenv smbios.system.uuid 2>/dev/null`
+	uuid=`kenv -q smbios.system.uuid`
 	x="[0-9a-f]"
 	y=$x$x$x$x
 	case "${uuid}" in
@@ -68,7 +68,7 @@ hostid_hardware()
 	esac
 }
 
-hostid_reset()
+hostid_generate()
 {
 	# First look for UUID in hardware.
 	uuid=`hostid_hardware`
@@ -76,12 +76,17 @@ hostid_reset()
 		# If not found, fall back to software-generated UUID.
 		uuid=`uuidgen`
 	fi
+	hostid_set $uuid
+}
+
+hostid_reset()
+{
+	hostid_generate
 	# Store newly generated UUID in ${hostid_file}.
 	echo $uuid > ${hostid_file}
 	if [ $? -ne 0 ]; then
 		warn "could not store hostuuid in ${hostid_file}."
 	fi
-	hostid_set $uuid
 }
 
 hostid_start()
@@ -91,7 +96,7 @@ hostid_start()
 		hostid_set `cat ${hostid_file}`
 	else
 		# No hostid file, generate UUID.
-		hostid_reset
+		hostid_generate
 	fi
 }
 
