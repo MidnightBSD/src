@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.21 2009/10/08 01:34:25 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.22 2010/09/11 17:19:39 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -547,7 +547,6 @@ OLD_FILES+=usr/lib/libgmp.a
 OLD_FILES+=usr/lib/libgmp.so
 OLD_FILES+=usr/lib/libgmp_p.a
 OLD_FILES+=usr/lib/libperl.a
-OLD_FILES+=usr/lib/libperl.so
 OLD_FILES+=usr/lib/libperl_p.a
 OLD_FILES+=usr/lib/libposix1e.a
 OLD_FILES+=usr/lib/libposix1e.so
