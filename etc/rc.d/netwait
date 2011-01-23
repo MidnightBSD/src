@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/netwait,v 1.1.2.3 2011/01/23 21:32:46 laffer1 Exp $
 
 # PROVIDE: netwait
 # REQUIRE: NETWORKING
@@ -10,7 +10,6 @@
 . /etc/rc.subr
 
 name="netwait"
-rc_var=`set_rcvar`
 start_cmd="${name}_start"
 stop_cmd=":"
 
@@ -37,15 +36,14 @@ stop_cmd=":"
 #                        to something else (presumably "active").
 #                        There is a 1 second delay between attempts.
 
-: ${netwait_enable:="NO"}
-#: ${netwait_ip:=""}
-: ${netwait_timeout:="60"}
-#: ${netwait_if:=""}
-: ${netwait_if_timeout:="30"}
-
 netwait_start()
 {
 	local ip rc count output link
+
+	if ! checkyesno netwait_enable 
+	then
+		return
+	fi
 
 	if [ -z "${netwait_ip}" ]; then
 		err 1 "You must define one or more IP addresses in netwait_ip"
