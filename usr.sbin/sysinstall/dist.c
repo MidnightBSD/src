@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.7 2008/09/02 01:30:29 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.8 2009/10/24 14:27:17 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dist.c,v 1.239.2.1 2005/08/30 20:01:32 murray Exp $
  *
  * Copyright (c) 1995
@@ -108,9 +108,9 @@ static Distribution KernelDistTable[] = {
 
 /* The /usr/src distribution */
 static Distribution SrcDistTable[] = {
+    DTE_TARBALL("sapache",  &SrcDists, SRC_APACHE,  "/usr/src"),
     DTE_TARBALL("sbase",    &SrcDists, SRC_BASE,    "/usr/src"),
     DTE_TARBALL("scddl",    &SrcDists, SRC_CDDL,    "/usr/src"),
-    DTE_TARBALL("scompat",  &SrcDists, SRC_COMPAT,  "/usr/src"),
     DTE_TARBALL("scontrib", &SrcDists, SRC_CONTRIB, "/usr/src"),
     DTE_TARBALL("scrypto",  &SrcDists, SRC_SCRYPTO, "/usr/src"),
     DTE_TARBALL("sgnu",	    &SrcDists, SRC_GNU,	    "/usr/src"),

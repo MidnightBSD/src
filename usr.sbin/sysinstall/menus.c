@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.16 2009/05/21 00:08:40 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.17 2009/10/24 14:27:17 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -652,12 +652,12 @@ DMenu MenuSrcDistributions = {
 	NULL,		setSrc, NULL, NULL, ' ', ' ', ' ' },
       { "Reset",	"Reset all of the below",
 	NULL,		clearSrc, NULL, NULL, ' ', ' ', ' ' },
+      { " apache",      "/usr/src/apache (software from Apple)",
+        dmenuFlagCheck, dmenuSetFlag,   NULL, &SrcDists, '[', 'X', ']', DIST_SRC_APACHE },
       { " base",	"top-level files in /usr/src",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_BASE },
       { " cddl",	"/usr/src/cddl (software from Sun)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_CDDL },
-      { " compat",	"/usr/src/compat (compatibility software)",
-	dmenuFlagCheck,	dmenuSetFlag,	NULL, &SrcDists, '[', 'X', ']', DIST_SRC_COMPAT },
       { " contrib",	"/usr/src/contrib (contributed software)",
 	dmenuFlagCheck,	dmenuSetFlag,	NULL, &SrcDists, '[', 'X', ']', DIST_SRC_CONTRIB },
       { " crypto",	"/usr/src/crypto (contrib encryption sources)",

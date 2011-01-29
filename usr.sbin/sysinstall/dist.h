@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.4 2008/05/02 07:18:57 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.5 2009/10/24 14:27:17 laffer1 Exp $ */
 /* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/usr.sbin/sysinstall/dist.h,v 1.67.2.4.2.1 2008/01/14 19:28:43 kensmith Exp $  */
 
 #ifndef _DIST_H_INCLUDE
@@ -45,7 +45,7 @@
 #define DIST_SRC_SKERBEROS5	0x40000
 #define DIST_SRC_RESCUE		0x80000
 #define DIST_SRC_CDDL		0x100000
-#define DIST_SRC_COMPAT		0x200000
+#define DIST_SRC_APACHE		0x200000
 #define DIST_SRC_ALL		0x3FFFFF
 
 /* Subtypes for X.Org packages */
