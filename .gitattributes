@@ -31139,6 +31139,7 @@ share/syscons/keymaps/cz.iso2.kbd -text
 share/syscons/keymaps/danish.cp865.kbd -text
 share/syscons/keymaps/danish.iso.kbd -text
 share/syscons/keymaps/dutch.iso.acc.kbd -text
+share/syscons/keymaps/eee_nordic.kbd -text
 share/syscons/keymaps/el.iso07.kbd -text
 share/syscons/keymaps/estonian.cp850.kbd -text
 share/syscons/keymaps/estonian.iso.kbd -text

@@ -9,7 +9,7 @@ FILES=	INDEX.keymaps \
 	cs.latin2.qwertz.kbd \
 	cz.iso2.kbd \
 	danish.iso.kbd danish.cp865.kbd dutch.iso.acc.kbd \
-	el.iso07.kbd \
+	eee_nordic.kbd el.iso07.kbd \
 	estonian.iso.kbd estonian.iso15.kbd estonian.cp850.kbd \
 	finnish.iso.kbd finnish.cp850.kbd \
 	fr.iso.kbd fr.iso.acc.kbd fr.dvorak.kbd fr.dvorak.acc.kbd \
