@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/ed.decls.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/ed.decls.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * ed.decls.h: Editor external definitions
  */
@@ -37,6 +37,7 @@
  * ed.chared.c
  */
 extern	int	InsertStr		(Char *);
+extern	int	ExpandHistory		(void);
 extern	void	DeleteBack		(int);
 extern	void	SetKillRing		(int);
 extern	CCRETVAL GetHistLine		(void);
@@ -194,6 +195,7 @@ extern	CCRETVAL	e_copyregion		(Char);
 extern	CCRETVAL	e_tty_int		(Char);
 extern	CCRETVAL	e_run_fg_editor		(Char);
 extern	CCRETVAL	e_list_eof		(Char);
+extern	int     	e_expand_history_rne	(Char);
 extern	CCRETVAL	e_expand_history	(Char);
 extern	CCRETVAL	e_magic_space		(Char);
 extern	CCRETVAL	e_list_glob		(Char);

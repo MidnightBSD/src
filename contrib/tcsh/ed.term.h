@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/ed.term.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/ed.term.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * ed.term.h: Local terminal header
  */
@@ -453,7 +453,7 @@
  * Also for RH6.2 on the alpha, defined TIOCGLTC, but does not have
  * struct ltchars
  */
-#if (defined(hpux) && defined(VSUSP) && defined(VDSUSP) && defined(VWERASE) && defined(VLNEXT)) || defined(__linux__) || defined(__GNU__) || defined(__GLIBC__)
+#if (defined(hpux) && defined(VSUSP) && defined(VDSUSP) && defined(VWERASE) && defined(VLNEXT)) || defined(__linux__) || defined(__GNU__) || defined(__GLIBC__) || defined(__QNXNTO__)
 # undef TIOCGLTC       /* not really needed */
 # undef TIOCSLTC
 #endif

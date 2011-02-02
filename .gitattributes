@@ -18236,12 +18236,18 @@ contrib/tcsh/Y2K -text
 contrib/tcsh/complete.tcsh -text
 contrib/tcsh/config.guess -text
 contrib/tcsh/config.h.in -text
+contrib/tcsh/config.rpath -text
 contrib/tcsh/config.sub -text
 contrib/tcsh/config/bsd4.4 -text
 contrib/tcsh/config_f.h -text
 contrib/tcsh/configure -text
 contrib/tcsh/configure.in -text
 contrib/tcsh/csh-mode.el -text
+contrib/tcsh/cygwin/bindkey.tcsh -text
+contrib/tcsh/cygwin/csh.cshrc -text
+contrib/tcsh/cygwin/csh.login -text
+contrib/tcsh/cygwin/postinstall.sh -text
+contrib/tcsh/cygwin/preremove.sh -text
 contrib/tcsh/ed.chared.c -text
 contrib/tcsh/ed.decls.h -text
 contrib/tcsh/ed.defns.c -text
@@ -18659,6 +18665,7 @@ contrib/tcsh/sh.time.c -text
 contrib/tcsh/sh.types.h -text
 contrib/tcsh/snames.h -text
 contrib/tcsh/src.desc -text
+contrib/tcsh/svn -text
 contrib/tcsh/tc.alloc.c -text
 contrib/tcsh/tc.bind.c -text
 contrib/tcsh/tc.const.c -text
@@ -18681,6 +18688,7 @@ contrib/tcsh/tc.wait.h -text
 contrib/tcsh/tc.who.c -text
 contrib/tcsh/tcsh.man -text
 contrib/tcsh/tcsh.man2html -text
+contrib/tcsh/tcsh.vcproj -text
 contrib/tcsh/termcap.vms -text
 contrib/tcsh/tests/aliases.at -text
 contrib/tcsh/tests/arguments.at -text

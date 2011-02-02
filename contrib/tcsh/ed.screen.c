@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/ed.screen.c,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/ed.screen.c,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * ed.screen.c: Editor/termcap-curses interface
  */
@@ -32,7 +32,7 @@
  */
 #include "sh.h"
 
-RCSID("$tcsh: ed.screen.c,v 3.75 2006/08/24 20:56:31 christos Exp $")
+RCSID("$tcsh: ed.screen.c,v 3.76 2009/06/25 21:15:37 christos Exp $")
 
 #include "ed.h"
 #include "tc.h"
@@ -383,8 +383,8 @@ TellTC(void)
     struct termcapstr *t;
     char *first, *s;
 
-    xprintf(CGETS(7, 1, "\n\tTcsh thinks your terminal has the\n"));
-    xprintf(CGETS(7, 2, "\tfollowing characteristics:\n\n"));
+    xprintf("%s", CGETS(7, 1, "\n\tTcsh thinks your terminal has the\n"));
+    xprintf("%s", CGETS(7, 2, "\tfollowing characteristics:\n\n"));
     xprintf(CGETS(7, 3, "\tIt has %d columns and %d lines\n"),
 	    Val(T_co), Val(T_li));
     s = strsave(T_HasMeta ? CGETS(7, 5, "a") : CGETS(7, 6, "no"));
@@ -610,7 +610,7 @@ EchoTC(Char **v)
 	scap = tgetstr(cv, &area);
     if (!scap || scap[0] == '\0') {
 	if (tgetflag(cv)) {
-	    xprintf(CGETS(7, 14, "yes\n"));
+	    xprintf("%s", CGETS(7, 14, "yes\n"));
 	    goto end;
 	}
 	if (silent)

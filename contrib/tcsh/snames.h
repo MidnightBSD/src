@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/snames.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/snames.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * snames.h: Short names for old compilers
  */
@@ -38,6 +38,7 @@
 #define	e_delwordnext		edelwrdnext
 #define	e_delwordprev		edelwrdprev
 #define	e_expand		eexp
+#define	e_expand_history_rne	eexphistrne
 #define	e_expand_history	eexphistory
 #define	e_expand_vars		eexpvars
 #define	e_tty_starto		ettystarto

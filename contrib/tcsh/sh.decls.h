@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.decls.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/sh.decls.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * sh.decls.h	 External declarations from sh*.c
  */
@@ -52,6 +52,7 @@ extern	void		  done		(int);
 #else
 extern	void		  xexit		(int);
 #endif
+extern	int		  grabpgrp	(int, pid_t);
 
 /*
  * sh.dir.c
@@ -357,7 +358,7 @@ extern  struct process   *pfind		(Char *);
 /*
  * sh.sem.c
  */
-extern	void		  execute	(struct command *, int, int *,
+extern	void		  execute	(struct command *, volatile int, int *,
 					 int *, int);
 extern	void		  mypipe	(int *);
 

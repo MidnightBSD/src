@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/config_f.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/config_f.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * config_f.h -- configure various defines for tcsh
  *
@@ -143,7 +143,7 @@
  *		This can be much slower and no memory statistics will be
  *		provided.
  */
-#if defined(__MACHTEN__) || defined(PURIFY) || defined(MALLOC_TRACE) || defined(_OSD_POSIX) || defined(__MVS__) || defined (__linux__)
+#if defined(__MACHTEN__) || defined(PURIFY) || defined(MALLOC_TRACE) || defined(_OSD_POSIX) || defined(__MVS__)
 # define SYSMALLOC
 #else
 # undef SYSMALLOC
@@ -189,7 +189,7 @@
 # ifndef __GNUC__
 #  define RCSID(id) static char *rcsid = (id);
 # else
-#  define RCSID(id) static char *rcsid(const char *a) { return rcsid(a = id); }
+#  define RCSID(id) static const char rcsid[] __attribute__((__used__)) = (id);
 # endif /* !__GNUC__ */
 #else
 # define RCSID(id)	/* Nothing */

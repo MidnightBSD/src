@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.proc.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/sh.proc.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * sh.proc.h: Process data structures and variables
  */
@@ -77,7 +77,7 @@ struct process {
 #  endif /* POSIX */
 # endif /* _SEQUENT_ */
 #endif /* BSDTIMES */
-    Char   *p_command;		/* first PMAXLEN chars of command */
+    Char   *p_command;		/* command */
 };
 
 /* flag values for p_flags */
@@ -102,8 +102,6 @@ struct process {
 #define	PNEEDNOTE	(1<<15)	/* notify as soon as practical */
 #define PBACKQ		(1<<16)	/* Process is `` evaluation */
 #define PHUP		(1<<17)	/* Process is marked for SIGHUP on exit */
-
-#define	PMAXLEN		80
 
 /* defines for arguments to pprint */
 #define	NUMBER		01

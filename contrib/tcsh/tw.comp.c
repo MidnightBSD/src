@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tw.comp.c,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tw.comp.c,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * tw.comp.c: File completion builtin
  */
@@ -32,7 +32,7 @@
  */
 #include "sh.h"
 
-RCSID("$tcsh: tw.comp.c,v 1.41 2006/03/02 18:46:45 christos Exp $")
+RCSID("$tcsh: tw.comp.c,v 1.42 2007/10/01 21:52:00 christos Exp $")
 
 #include "tw.h"
 #include "ed.h"
@@ -630,7 +630,9 @@ tw_complete(const Char *line, Char **word, Char **pat, int looking, eChar *suf)
 	default:
 	    abort();		       /* Cannot happen */
 	}
+	tsetenv(STRCOMMAND_LINE, line);
 	res = tw_result(com, pat);
+	Unsetenv(STRCOMMAND_LINE);
 	cleanup_until(buf);
 	return res;
     }

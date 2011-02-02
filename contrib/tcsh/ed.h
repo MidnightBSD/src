@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/ed.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/ed.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
 /*
  * ed.h: Editor declarations and globals
  */
@@ -42,6 +42,11 @@
 #ifndef WINNT_NATIVE
 # define NT_NUM_KEYS	256
 #endif /* WINNT_NATIVE */
+
+#ifdef __QNXNTO__
+#undef min
+#undef max
+#endif
 
 /****************************************************************************/
 /* stuff for the different states returned by the character editor routines */
