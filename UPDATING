@@ -1,7 +1,9 @@
 Updating Information for MidnightBSD users
 
-20100202:
+20110202:
 	tcsh 6.17.00
+
+	file  5.05
 
 20110122:
 	Import it(4) and lm(4), with support for Super I/O hardware monitors. This
@@ -920,4 +922,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.104 2011/01/22 19:55:16 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.105 2011/02/02 22:37:10 laffer1 Exp $
