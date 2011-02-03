@@ -20866,6 +20866,7 @@ crypto/openssh/version.c -text
 crypto/openssh/version.h -text
 crypto/openssh/xmalloc.c -text
 crypto/openssh/xmalloc.h -text
+crypto/openssl/ACKNOWLEDGMENTS -text
 crypto/openssl/CA.com -text
 crypto/openssl/CHANGES -text
 crypto/openssl/CHANGES.SSLeay -text
@@ -20954,6 +20955,7 @@ crypto/openssl/apps/ca.c -text
 crypto/openssl/apps/cert.pem -text
 crypto/openssl/apps/ciphers.c -text
 crypto/openssl/apps/client.pem -text
+crypto/openssl/apps/cms.c -text
 crypto/openssl/apps/crl.c -text
 crypto/openssl/apps/crl2p7.c -text
 crypto/openssl/apps/demoCA/cacert.pem -text
@@ -21046,6 +21048,7 @@ crypto/openssl/bugs/sgiccbug.c -text
 crypto/openssl/bugs/sslref.dif -text
 crypto/openssl/bugs/stream.c -text
 crypto/openssl/bugs/ultrixcc.c -text
+crypto/openssl/certs/README.RootCerts -text
 crypto/openssl/certs/RegTP-5R.pem -text
 crypto/openssl/certs/RegTP-6R.pem -text
 crypto/openssl/certs/aol1.pem -text
@@ -21103,8 +21106,10 @@ crypto/openssl/crypto/aes/aes_ige.c -text
 crypto/openssl/crypto/aes/aes_locl.h -text
 crypto/openssl/crypto/aes/aes_misc.c -text
 crypto/openssl/crypto/aes/aes_ofb.c -text
+crypto/openssl/crypto/aes/aes_wrap.c -text
 crypto/openssl/crypto/aes/asm/aes-586.pl -text
 crypto/openssl/crypto/aes/asm/aes-ia64.S -text
+crypto/openssl/crypto/aes/asm/aes-x86_64.pl -text
 crypto/openssl/crypto/asn1/Makefile -text
 crypto/openssl/crypto/asn1/a_bitstr.c -text
 crypto/openssl/crypto/asn1/a_bool.c -text
@@ -21138,6 +21143,7 @@ crypto/openssl/crypto/asn1/asn1_lib.c -text
 crypto/openssl/crypto/asn1/asn1_mac.h -text
 crypto/openssl/crypto/asn1/asn1_par.c -text
 crypto/openssl/crypto/asn1/asn1t.h -text
+crypto/openssl/crypto/asn1/asn_mime.c -text
 crypto/openssl/crypto/asn1/asn_moid.c -text
 crypto/openssl/crypto/asn1/asn_pack.c -text
 crypto/openssl/crypto/asn1/charmap.h -text
@@ -21237,6 +21243,7 @@ crypto/openssl/crypto/bn/asm/bn-586.pl -text
 crypto/openssl/crypto/bn/asm/co-586.pl -text
 crypto/openssl/crypto/bn/asm/ia64.S -text
 crypto/openssl/crypto/bn/asm/mips3.s -text
+crypto/openssl/crypto/bn/asm/mo-586.pl -text
 crypto/openssl/crypto/bn/asm/pa-risc2.s -text
 crypto/openssl/crypto/bn/asm/pa-risc2W.s -text
 crypto/openssl/crypto/bn/asm/ppc.pl -text
@@ -21253,6 +21260,7 @@ crypto/openssl/crypto/bn/asm/x86/mul_add.pl -text
 crypto/openssl/crypto/bn/asm/x86/sqr.pl -text
 crypto/openssl/crypto/bn/asm/x86/sub.pl -text
 crypto/openssl/crypto/bn/asm/x86_64-gcc.c -text
+crypto/openssl/crypto/bn/asm/x86_64-mont.pl -text
 crypto/openssl/crypto/bn/bn.h -text
 crypto/openssl/crypto/bn/bn.mul -text
 crypto/openssl/crypto/bn/bn_add.c -text
@@ -21275,6 +21283,7 @@ crypto/openssl/crypto/bn/bn_mont.c -text
 crypto/openssl/crypto/bn/bn_mpi.c -text
 crypto/openssl/crypto/bn/bn_mul.c -text
 crypto/openssl/crypto/bn/bn_nist.c -text
+crypto/openssl/crypto/bn/bn_opt.c -text
 crypto/openssl/crypto/bn/bn_prime.c -text
 crypto/openssl/crypto/bn/bn_prime.h -text
 crypto/openssl/crypto/bn/bn_prime.pl -text
@@ -21285,6 +21294,7 @@ crypto/openssl/crypto/bn/bn_shift.c -text
 crypto/openssl/crypto/bn/bn_sqr.c -text
 crypto/openssl/crypto/bn/bn_sqrt.c -text
 crypto/openssl/crypto/bn/bn_word.c -text
+crypto/openssl/crypto/bn/bn_x931p.c -text
 crypto/openssl/crypto/bn/bnspeed.c -text
 crypto/openssl/crypto/bn/bntest.c -text
 crypto/openssl/crypto/bn/divtest.c -text
@@ -21295,6 +21305,7 @@ crypto/openssl/crypto/bn/todo -text
 crypto/openssl/crypto/bn/vms-helper.c -text
 crypto/openssl/crypto/buffer/Makefile -text
 crypto/openssl/crypto/buffer/buf_err.c -text
+crypto/openssl/crypto/buffer/buf_str.c -text
 crypto/openssl/crypto/buffer/buffer.c -text
 crypto/openssl/crypto/buffer/buffer.h -text
 crypto/openssl/crypto/camellia/Makefile -text
@@ -21322,6 +21333,21 @@ crypto/openssl/crypto/cast/cast_spd.c -text
 crypto/openssl/crypto/cast/castopts.c -text
 crypto/openssl/crypto/cast/casts.cpp -text
 crypto/openssl/crypto/cast/casttest.c -text
+crypto/openssl/crypto/cms/Makefile -text
+crypto/openssl/crypto/cms/cms.h -text
+crypto/openssl/crypto/cms/cms_asn1.c -text
+crypto/openssl/crypto/cms/cms_att.c -text
+crypto/openssl/crypto/cms/cms_cd.c -text
+crypto/openssl/crypto/cms/cms_dd.c -text
+crypto/openssl/crypto/cms/cms_enc.c -text
+crypto/openssl/crypto/cms/cms_env.c -text
+crypto/openssl/crypto/cms/cms_err.c -text
+crypto/openssl/crypto/cms/cms_ess.c -text
+crypto/openssl/crypto/cms/cms_io.c -text
+crypto/openssl/crypto/cms/cms_lcl.h -text
+crypto/openssl/crypto/cms/cms_lib.c -text
+crypto/openssl/crypto/cms/cms_sd.c -text
+crypto/openssl/crypto/cms/cms_smime.c -text
 crypto/openssl/crypto/comp/Makefile -text
 crypto/openssl/crypto/comp/c_rle.c -text
 crypto/openssl/crypto/comp/c_zlib.c -text
@@ -21378,6 +21404,7 @@ crypto/openssl/crypto/des/des.h -text
 crypto/openssl/crypto/des/des.pod -text
 crypto/openssl/crypto/des/des3s.cpp -text
 crypto/openssl/crypto/des/des_enc.c -text
+crypto/openssl/crypto/des/des_lib.c -text
 crypto/openssl/crypto/des/des_locl.h -text
 crypto/openssl/crypto/des/des_old.c -text
 crypto/openssl/crypto/des/des_old.h -text
@@ -21453,6 +21480,7 @@ crypto/openssl/crypto/dsa/dsa_key.c -text
 crypto/openssl/crypto/dsa/dsa_lib.c -text
 crypto/openssl/crypto/dsa/dsa_ossl.c -text
 crypto/openssl/crypto/dsa/dsa_sign.c -text
+crypto/openssl/crypto/dsa/dsa_utl.c -text
 crypto/openssl/crypto/dsa/dsa_vrf.c -text
 crypto/openssl/crypto/dsa/dsagen.c -text
 crypto/openssl/crypto/dsa/dsatest.c -text
@@ -21468,6 +21496,7 @@ crypto/openssl/crypto/dso/dso_null.c -text
 crypto/openssl/crypto/dso/dso_openssl.c -text
 crypto/openssl/crypto/dso/dso_vms.c -text
 crypto/openssl/crypto/dso/dso_win32.c -text
+crypto/openssl/crypto/dyn_lck.c -text
 crypto/openssl/crypto/ebcdic.c -text
 crypto/openssl/crypto/ebcdic.h -text
 crypto/openssl/crypto/ec/Makefile -text
@@ -21539,7 +21568,10 @@ crypto/openssl/crypto/err/Makefile -text
 crypto/openssl/crypto/err/err.c -text
 crypto/openssl/crypto/err/err.h -text
 crypto/openssl/crypto/err/err_all.c -text
+crypto/openssl/crypto/err/err_bio.c -text
+crypto/openssl/crypto/err/err_def.c -text
 crypto/openssl/crypto/err/err_prn.c -text
+crypto/openssl/crypto/err/err_str.c -text
 crypto/openssl/crypto/err/openssl.ec -text
 crypto/openssl/crypto/evp/Makefile -text
 crypto/openssl/crypto/evp/bio_b64.c -text
@@ -21549,6 +21581,7 @@ crypto/openssl/crypto/evp/bio_ok.c -text
 crypto/openssl/crypto/evp/c_all.c -text
 crypto/openssl/crypto/evp/c_allc.c -text
 crypto/openssl/crypto/evp/c_alld.c -text
+crypto/openssl/crypto/evp/dig_eng.c -text
 crypto/openssl/crypto/evp/digest.c -text
 crypto/openssl/crypto/evp/e_aes.c -text
 crypto/openssl/crypto/evp/e_bf.c -text
@@ -21563,10 +21596,13 @@ crypto/openssl/crypto/evp/e_old.c -text
 crypto/openssl/crypto/evp/e_rc2.c -text
 crypto/openssl/crypto/evp/e_rc4.c -text
 crypto/openssl/crypto/evp/e_rc5.c -text
+crypto/openssl/crypto/evp/e_seed.c -text
 crypto/openssl/crypto/evp/e_xcbc_d.c -text
+crypto/openssl/crypto/evp/enc_min.c -text
 crypto/openssl/crypto/evp/encode.c -text
 crypto/openssl/crypto/evp/evp.h -text
 crypto/openssl/crypto/evp/evp_acnf.c -text
+crypto/openssl/crypto/evp/evp_cnf.c -text
 crypto/openssl/crypto/evp/evp_enc.c -text
 crypto/openssl/crypto/evp/evp_err.c -text
 crypto/openssl/crypto/evp/evp_key.c -text
@@ -21599,6 +21635,8 @@ crypto/openssl/crypto/evp/p_seal.c -text
 crypto/openssl/crypto/evp/p_sign.c -text
 crypto/openssl/crypto/evp/p_verify.c -text
 crypto/openssl/crypto/ex_data.c -text
+crypto/openssl/crypto/fips_err.c -text
+crypto/openssl/crypto/fips_err.h -text
 crypto/openssl/crypto/hmac/Makefile -text
 crypto/openssl/crypto/hmac/hmac.c -text
 crypto/openssl/crypto/hmac/hmac.h -text
@@ -21616,6 +21654,11 @@ crypto/openssl/crypto/idea/idea_spd.c -text
 crypto/openssl/crypto/idea/ideatest.c -text
 crypto/openssl/crypto/idea/version -text
 crypto/openssl/crypto/install.com -text
+crypto/openssl/crypto/jpake/Makefile -text
+crypto/openssl/crypto/jpake/jpake.c -text
+crypto/openssl/crypto/jpake/jpake.h -text
+crypto/openssl/crypto/jpake/jpake_err.c -text
+crypto/openssl/crypto/jpake/jpaketest.c -text
 crypto/openssl/crypto/krb5/Makefile -text
 crypto/openssl/crypto/krb5/krb5_asn.c -text
 crypto/openssl/crypto/krb5/krb5_asn.h -text
@@ -21662,6 +21705,7 @@ crypto/openssl/crypto/mem_dbg.c -text
 crypto/openssl/crypto/o_dir.c -text
 crypto/openssl/crypto/o_dir.h -text
 crypto/openssl/crypto/o_dir_test.c -text
+crypto/openssl/crypto/o_init.c -text
 crypto/openssl/crypto/o_str.c -text
 crypto/openssl/crypto/o_str.h -text
 crypto/openssl/crypto/o_time.c -text
@@ -21787,6 +21831,7 @@ crypto/openssl/crypto/rand/Makefile -text
 crypto/openssl/crypto/rand/md_rand.c -text
 crypto/openssl/crypto/rand/rand.h -text
 crypto/openssl/crypto/rand/rand_egd.c -text
+crypto/openssl/crypto/rand/rand_eng.c -text
 crypto/openssl/crypto/rand/rand_err.c -text
 crypto/openssl/crypto/rand/rand_lcl.h -text
 crypto/openssl/crypto/rand/rand_lib.c -text
@@ -21817,6 +21862,7 @@ crypto/openssl/crypto/rc4/asm/rc4-x86_64.pl -text
 crypto/openssl/crypto/rc4/rc4.c -text
 crypto/openssl/crypto/rc4/rc4.h -text
 crypto/openssl/crypto/rc4/rc4_enc.c -text
+crypto/openssl/crypto/rc4/rc4_fblk.c -text
 crypto/openssl/crypto/rc4/rc4_locl.h -text
 crypto/openssl/crypto/rc4/rc4_skey.c -text
 crypto/openssl/crypto/rc4/rc4s.cpp -text
@@ -21852,6 +21898,7 @@ crypto/openssl/crypto/rsa/rsa_asn1.c -text
 crypto/openssl/crypto/rsa/rsa_chk.c -text
 crypto/openssl/crypto/rsa/rsa_depr.c -text
 crypto/openssl/crypto/rsa/rsa_eay.c -text
+crypto/openssl/crypto/rsa/rsa_eng.c -text
 crypto/openssl/crypto/rsa/rsa_err.c -text
 crypto/openssl/crypto/rsa/rsa_gen.c -text
 crypto/openssl/crypto/rsa/rsa_lib.c -text
@@ -21865,12 +21912,23 @@ crypto/openssl/crypto/rsa/rsa_sign.c -text
 crypto/openssl/crypto/rsa/rsa_ssl.c -text
 crypto/openssl/crypto/rsa/rsa_test.c -text
 crypto/openssl/crypto/rsa/rsa_x931.c -text
+crypto/openssl/crypto/rsa/rsa_x931g.c -text
+crypto/openssl/crypto/seed/Makefile -text
+crypto/openssl/crypto/seed/seed.c -text
+crypto/openssl/crypto/seed/seed.h -text
+crypto/openssl/crypto/seed/seed_cbc.c -text
+crypto/openssl/crypto/seed/seed_cfb.c -text
+crypto/openssl/crypto/seed/seed_ecb.c -text
+crypto/openssl/crypto/seed/seed_locl.h -text
+crypto/openssl/crypto/seed/seed_ofb.c -text
 crypto/openssl/crypto/sha/Makefile -text
 crypto/openssl/crypto/sha/asm/README -text
 crypto/openssl/crypto/sha/asm/sha1-586.pl -text
 crypto/openssl/crypto/sha/asm/sha1-ia64.pl -text
+crypto/openssl/crypto/sha/asm/sha1-x86_64.pl -text
 crypto/openssl/crypto/sha/asm/sha512-ia64.pl -text
 crypto/openssl/crypto/sha/asm/sha512-sse2.pl -text
+crypto/openssl/crypto/sha/asm/sha512-x86_64.pl -text
 crypto/openssl/crypto/sha/sha.c -text
 crypto/openssl/crypto/sha/sha.h -text
 crypto/openssl/crypto/sha/sha1.c -text
@@ -22046,6 +22104,8 @@ crypto/openssl/demos/engines/zencod/hw_zencod.ec -text
 crypto/openssl/demos/engines/zencod/hw_zencod.h -text
 crypto/openssl/demos/engines/zencod/hw_zencod_err.c -text
 crypto/openssl/demos/engines/zencod/hw_zencod_err.h -text
+crypto/openssl/demos/jpake/Makefile -text
+crypto/openssl/demos/jpake/jpakedemo.c -text
 crypto/openssl/demos/maurice/Makefile -text
 crypto/openssl/demos/maurice/README -text
 crypto/openssl/demos/maurice/cert.pem -text
@@ -22395,6 +22455,7 @@ crypto/openssl/doc/standards.txt -text
 crypto/openssl/e_os.h -text
 crypto/openssl/e_os2.h -text
 crypto/openssl/engines/Makefile -text
+crypto/openssl/engines/alpha.opt -text
 crypto/openssl/engines/axp.opt -text
 crypto/openssl/engines/e_4758cca.c -text
 crypto/openssl/engines/e_4758cca.ec -text
@@ -22408,6 +22469,10 @@ crypto/openssl/engines/e_atalla.c -text
 crypto/openssl/engines/e_atalla.ec -text
 crypto/openssl/engines/e_atalla_err.c -text
 crypto/openssl/engines/e_atalla_err.h -text
+crypto/openssl/engines/e_capi.c -text
+crypto/openssl/engines/e_capi.ec -text
+crypto/openssl/engines/e_capi_err.c -text
+crypto/openssl/engines/e_capi_err.h -text
 crypto/openssl/engines/e_chil.c -text
 crypto/openssl/engines/e_chil.ec -text
 crypto/openssl/engines/e_chil_err.c -text
@@ -22433,6 +22498,7 @@ crypto/openssl/engines/e_ubsec.ec -text
 crypto/openssl/engines/e_ubsec_err.c -text
 crypto/openssl/engines/e_ubsec_err.h -text
 crypto/openssl/engines/engine_vector.mar -text
+crypto/openssl/engines/ia64.opt -text
 crypto/openssl/engines/makeengines.com -text
 crypto/openssl/engines/vax.opt -text
 crypto/openssl/engines/vendor_defns/aep.h -text
@@ -22559,6 +22625,7 @@ crypto/openssl/ssl/t1_clnt.c -text
 crypto/openssl/ssl/t1_enc.c -text
 crypto/openssl/ssl/t1_lib.c -text
 crypto/openssl/ssl/t1_meth.c -text
+crypto/openssl/ssl/t1_reneg.c -text
 crypto/openssl/ssl/t1_srvr.c -text
 crypto/openssl/ssl/tls1.h -text
 crypto/openssl/test/CAss.cnf -text
@@ -22568,12 +22635,16 @@ crypto/openssl/test/CAssrsa.cnf -text
 crypto/openssl/test/Makefile -text
 crypto/openssl/test/P1ss.cnf -text
 crypto/openssl/test/P2ss.cnf -text
+crypto/openssl/test/SHAmix.r -text
+crypto/openssl/test/SHAmix.x -text
 crypto/openssl/test/Sssdsa.cnf -text
 crypto/openssl/test/Sssrsa.cnf -text
 crypto/openssl/test/Uss.cnf -text
 crypto/openssl/test/VMSca-response.1 -text
 crypto/openssl/test/VMSca-response.2 -text
 crypto/openssl/test/bctest -text
+crypto/openssl/test/cms-examples.pl -text
+crypto/openssl/test/cms-test.pl -text
 crypto/openssl/test/dummytest.c -text
 crypto/openssl/test/evptests.txt -text
 crypto/openssl/test/igetest.c -text
@@ -22582,6 +22653,15 @@ crypto/openssl/test/methtest.c -text
 crypto/openssl/test/pkcs7-1.pem -text
 crypto/openssl/test/pkcs7.pem -text
 crypto/openssl/test/r160test.c -text
+crypto/openssl/test/smcont.txt -text
+crypto/openssl/test/smime-certs/smdsa1.pem -text
+crypto/openssl/test/smime-certs/smdsa2.pem -text
+crypto/openssl/test/smime-certs/smdsa3.pem -text
+crypto/openssl/test/smime-certs/smdsap.pem -text
+crypto/openssl/test/smime-certs/smroot.pem -text
+crypto/openssl/test/smime-certs/smrsa1.pem -text
+crypto/openssl/test/smime-certs/smrsa2.pem -text
+crypto/openssl/test/smime-certs/smrsa3.pem -text
 crypto/openssl/test/tcrl -text
 crypto/openssl/test/tcrl.com -text
 crypto/openssl/test/test.cnf -text
@@ -22693,6 +22773,7 @@ crypto/openssl/tools/c_rehash -text
 crypto/openssl/tools/c_rehash.in -text
 crypto/openssl/util/FreeBSD.sh -text
 crypto/openssl/util/add_cr.pl -text
+crypto/openssl/util/arx.pl -text
 crypto/openssl/util/bat.sh -text
 crypto/openssl/util/ck_errf.pl -text
 crypto/openssl/util/clean-depend.pl -text
@@ -22706,6 +22787,7 @@ crypto/openssl/util/err-ins.pl -text
 crypto/openssl/util/extract-names.pl -text
 crypto/openssl/util/extract-section.pl -text
 crypto/openssl/util/files.pl -text
+crypto/openssl/util/fipslink.pl -text
 crypto/openssl/util/fixNT.sh -text
 crypto/openssl/util/install.sh -text
 crypto/openssl/util/libeay.num -text
@@ -22716,6 +22798,7 @@ crypto/openssl/util/mkdir-p.pl -text
 crypto/openssl/util/mkerr.pl -text
 crypto/openssl/util/mkfiles.pl -text
 crypto/openssl/util/mklink.pl -text
+crypto/openssl/util/mksdef.pl -text
 crypto/openssl/util/mkstack.pl -text
 crypto/openssl/util/opensslwrap.sh -text
 crypto/openssl/util/perlpath.pl -text
