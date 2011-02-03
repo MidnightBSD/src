@@ -14,7 +14,7 @@ tar xf openssl-${OSSLVER}.tar.gz
 mv openssl-${OSSLVER} openssl
 cd openssl
 find . -type l -delete
-sh -c 'while read glob ; do rm -rvf $glob ; done' </usr/src/crypto/openssl/FREEBSD-Xlist
+sh -c 'while read glob ; do rm -rvf $glob ; done' </usr/src/crypto/openssl/MIDNIGHTBSD-Xlist
 # Check for new files
 cvs -n import src/crypto/openssl OPENSSL x | grep \^N
 cvs import -m "Vendor import of OpenSSL ${OSSLVER}." src/crypto/openssl OPENSSL ${OSSLTAG}
@@ -38,4 +38,4 @@ cvs update
 # check for files not added
 cvs ci -m "Upgrade to OpenSSL ${OSSLVER}."
 
-$MIdnightBSD$
+$MidnightBSD$
