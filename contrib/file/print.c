@@ -30,8 +30,11 @@
  */
 
 #include "file.h"
-#include <stdio.h>
-#include <errno.h>
+
+#ifndef lint
+FILE_RCSID("@(#)$File: print.c,v 1.69 2010/07/21 16:47:18 christos Exp $")
+#endif  /* lint */
+
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -39,10 +42,6 @@
 #include <unistd.h>
 #endif
 #include <time.h>
-
-#ifndef lint
-FILE_RCSID("@(#)$File: print.c,v 1.61 2007/12/27 16:35:59 christos Exp $")
-#endif  /* lint */
 
 #define SZOF(a)	(sizeof(a) / sizeof(a[0]))
 
@@ -64,7 +63,8 @@ file_mdump(struct magic *m)
 		if (m->in_op & FILE_OPINVERSE)
 			(void) fputc('~', stderr);
 		(void) fprintf(stderr, "%c%u),",
-			       ((m->in_op & FILE_OPS_MASK) < SZOF(optyp)) ? 
+			       ((size_t)(m->in_op & FILE_OPS_MASK) <
+			       SZOF(optyp)) ? 
 					optyp[m->in_op & FILE_OPS_MASK] : '?',
 				m->in_offset);
 	}
@@ -77,10 +77,10 @@ file_mdump(struct magic *m)
 	if (IS_STRING(m->type)) {
 		if (m->str_flags) {
 			(void) fputc('/', stderr);
-			if (m->str_flags & STRING_COMPACT_BLANK) 
-				(void) fputc(CHAR_COMPACT_BLANK, stderr);
-			if (m->str_flags & STRING_COMPACT_OPTIONAL_BLANK) 
-				(void) fputc(CHAR_COMPACT_OPTIONAL_BLANK,
+			if (m->str_flags & STRING_COMPACT_WHITESPACE) 
+				(void) fputc(CHAR_COMPACT_WHITESPACE, stderr);
+			if (m->str_flags & STRING_COMPACT_OPTIONAL_WHITESPACE) 
+				(void) fputc(CHAR_COMPACT_OPTIONAL_WHITESPACE,
 				    stderr);
 			if (m->str_flags & STRING_IGNORE_LOWERCASE) 
 				(void) fputc(CHAR_IGNORE_LOWERCASE, stderr);
@@ -89,11 +89,11 @@ file_mdump(struct magic *m)
 			if (m->str_flags & REGEX_OFFSET_START) 
 				(void) fputc(CHAR_REGEX_OFFSET_START, stderr);
 		}
-		if (m->str_count)
-			(void) fprintf(stderr, "/%u", m->str_count);
+		if (m->str_range)
+			(void) fprintf(stderr, "/%u", m->str_range);
 	}
 	else {
-		if ((m->mask_op & FILE_OPS_MASK) < SZOF(optyp))
+		if ((size_t)(m->mask_op & FILE_OPS_MASK) < SZOF(optyp))
 			(void) fputc(optyp[m->mask_op & FILE_OPS_MASK], stderr);
 		else
 			(void) fputc('?', stderr);
@@ -120,7 +120,7 @@ file_mdump(struct magic *m)
 		case FILE_BEQUAD:
 		case FILE_LEQUAD:
 		case FILE_QUAD:
-			(void) fprintf(stderr, "%lld",
+			(void) fprintf(stderr, "%" INT64_T_FORMAT "d",
 			    (unsigned long long)m->value.q);
 			break;
 		case FILE_PSTRING:
@@ -184,13 +184,15 @@ protected void
 file_magwarn(struct magic_set *ms, const char *f, ...)
 {
 	va_list va;
-	va_start(va, f);
 
 	/* cuz we use stdout for most, stderr here */
 	(void) fflush(stdout); 
 
-	(void) fprintf(stderr, "%s, %lu: Warning ", ms->file,
-	    (unsigned long)ms->line);
+	if (ms->file)
+		(void) fprintf(stderr, "%s, %lu: ", ms->file,
+		    (unsigned long)ms->line);
+	(void) fprintf(stderr, "Warning: ");
+	va_start(va, f);
 	(void) vfprintf(stderr, f, va);
 	va_end(va);
 	(void) fputc('\n', stderr);
@@ -216,7 +218,7 @@ file_fmttime(uint32_t v, int local)
 			(void)time(&now);
 			tm1 = localtime(&now);
 			if (tm1 == NULL)
-				return "*Invalid time*";
+				goto out;
 			daylight = tm1->tm_isdst;
 		}
 #endif /* HAVE_TM_ISDST */
@@ -225,10 +227,14 @@ file_fmttime(uint32_t v, int local)
 			t += 3600;
 		tm = gmtime(&t);
 		if (tm == NULL)
-			return "*Invalid time*";
+			goto out;
 		pp = asctime(tm);
 	}
 
+	if (pp == NULL)
+		goto out;
 	pp[strcspn(pp, "\n")] = '\0';
 	return pp;
+out:
+	return "*Invalid time*";
 }

@@ -32,7 +32,7 @@
  * appear at fixed offsets into the file. Don't make HOWMANY
  * too high unless you have a very fast CPU.
  *
- * $File: names.h,v 1.29 2007/12/27 20:30:35 christos Exp $
+ * $File: names.h,v 1.33 2010/10/08 21:58:44 christos Exp $
  */
 
 /*
@@ -57,8 +57,8 @@
 #define	L_PO	13		/* PO */
 
 static const struct {
-	const char *human;
-	const char *mime;
+	char human[48];
+	char mime[16];
 } types[] = {
 	{ "C program",					"text/x-c", },
 	{ "C++ program",				"text/x-c++" },
@@ -74,8 +74,7 @@ static const struct {
 	{ "BCPL program",				"text/x-bcpl" },
 	{ "M4 macro language pre-processor",		"text/x-m4" },
 	{ "PO (gettext message catalogue)",             "text/x-po" },
-	{ "cannot happen error on names.h/types",	"error/x-error" },
-	{ 0, 0}
+	{ "cannot happen error on names.h/types",	"error/x-error" }
 };
 
 /*
@@ -114,73 +113,64 @@ static const struct {
  * as Java, as it comes after "the" and "The".  Perhaps we need a fancier
  * heuristic to identify Java?
  */
-static struct names {
-	const char *name;
-	short type;
+static const struct names {
+	char name[14];
+	unsigned char type;
+	unsigned char score;
+
 } names[] = {
 	/* These must be sorted by eye for optimal hit rate */
 	/* Add to this list only after substantial meditation */
-	{"msgid",	L_PO},
-	{"dnl",		L_M4},
-	{"import",	L_JAVA},
-	{"\"libhdr\"",	L_BCPL},
-	{"\"LIBHDR\"",	L_BCPL},
-	{"//",		L_CC},
-	{"template",	L_CC},
-	{"virtual",	L_CC},
-	{"class",	L_CC},
-	{"public:",	L_CC},
-	{"private:",	L_CC},
-	{"/*",		L_C},	/* must precede "The", "the", etc. */
-	{"#include",	L_C},
-	{"char",	L_C},
-	{"The",		L_ENG},
-	{"the",		L_ENG},
-	{"double",	L_C},
-	{"extern",	L_C},
-	{"float",	L_C},
-	{"struct",	L_C},
-	{"union",	L_C},
-	{"CFLAGS",	L_MAKE},
-	{"LDFLAGS",	L_MAKE},
-	{"all:",	L_MAKE},
-	{".PRECIOUS",	L_MAKE},
-/* Too many files of text have these words in them.  Find another way
- * to recognize Fortrash.
- */
-#ifdef	NOTDEF
-	{"subroutine",	L_FORT},
-	{"function",	L_FORT},
-	{"block",	L_FORT},
-	{"common",	L_FORT},
-	{"dimension",	L_FORT},
-	{"integer",	L_FORT},
-	{"data",	L_FORT},
-#endif	/*NOTDEF*/
-	{".ascii",	L_MACH},
-	{".asciiz",	L_MACH},
-	{".byte",	L_MACH},
-	{".even",	L_MACH},
-	{".globl",	L_MACH},
-	{".text",	L_MACH},
-	{"clr",		L_MACH},
-	{"(input,",	L_PAS},
-	{"program",	L_PAS},
-	{"record",	L_PAS},
-	{"dcl",		L_PLI},
-	{"Received:",	L_MAIL},
-	{">From",	L_MAIL},
-	{"Return-Path:",L_MAIL},
-	{"Cc:",		L_MAIL},
-	{"Newsgroups:",	L_NEWS},
-	{"Path:",	L_NEWS},
-	{"Organization:",L_NEWS},
-	{"href=",	L_HTML},
-	{"HREF=",	L_HTML},
-	{"<body",	L_HTML},
-	{"<BODY",	L_HTML},
-	{"<html",	L_HTML},
-	{"<HTML",	L_HTML},
-	{NULL,		0}
+	{"msgid",	L_PO, 1 },
+	{"dnl",		L_M4, 2 },
+	{"import",	L_JAVA, 2 },
+	{"\"libhdr\"",	L_BCPL, 2 },
+	{"\"LIBHDR\"",	L_BCPL, 2 },
+	{"//",		L_CC, 2 },
+	{"template",	L_CC, 1 },
+	{"virtual",	L_CC, 1 },
+	{"class",	L_CC, 2 },
+	{"public:",	L_CC, 2 },
+	{"private:",	L_CC, 2 },
+	{"/*",		L_C, 2 },	/* must precede "The", "the", etc. */
+	{"#include",	L_C, 2 },
+	{"char",	L_C, 2 },
+	{"The",		L_ENG, 2 },
+	{"the",		L_ENG, 2 },
+	{"double",	L_C, 1 },
+	{"extern",	L_C, 2 },
+	{"float",	L_C, 1 },
+	{"struct",	L_C, 1 },
+	{"union",	L_C, 1 },
+	{"main(",	L_C, 2 },
+	{"CFLAGS",	L_MAKE, 2 },
+	{"LDFLAGS",	L_MAKE, 2 },
+	{"all:",	L_MAKE, 2 },
+	{".PRECIOUS",	L_MAKE, 2 },
+	{".ascii",	L_MACH, 2 },
+	{".asciiz",	L_MACH, 2 },
+	{".byte",	L_MACH, 2 },
+	{".even",	L_MACH, 2 },
+	{".globl",	L_MACH, 2 },
+	{".text",	L_MACH, 2 },
+	{"clr",		L_MACH, 2 },
+	{"(input,",	L_PAS, 2 },
+	{"program",	L_PAS, 1 },
+	{"record",	L_PAS, 1 },
+	{"dcl",		L_PLI, 2 },
+	{"Received:",	L_MAIL, 2 },
+	{">From",	L_MAIL, 2 },
+	{"Return-Path:",L_MAIL, 2 },
+	{"Cc:",		L_MAIL, 2 },
+	{"Newsgroups:",	L_NEWS, 2 },
+	{"Path:",	L_NEWS, 2 },
+	{"Organization:",L_NEWS, 2 },
+	{"href=",	L_HTML, 2 },
+	{"HREF=",	L_HTML, 2 },
+	{"<body",	L_HTML, 2 },
+	{"<BODY",	L_HTML, 2 },
+	{"<html",	L_HTML, 2 },
+	{"<HTML",	L_HTML, 2 },
+	{"<!--",	L_HTML, 2 },
 };
-#define NNAMES ((sizeof(names)/sizeof(struct names)) - 1)
+#define NNAMES (sizeof(names)/sizeof(struct names))

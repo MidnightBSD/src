@@ -1,0 +1,22 @@
+- Fix output so that tests for MIME and APPLE flags are not needed all
+  over the place, and actual output is only done in one place. This
+  needs a design. Suggestion: push possible outputs on to a list, then
+  pick the last-pushed (most specific, one hopes) value at the end, or
+  use a default if the list is empty. This should not slow down evaluation.
+
+- Continue to squash all magic bugs. See Debian BTS for a good source.
+
+- Store arbitrarily long strings, for example for %s patterns, so that
+  they can be printed out. Fixes Debian bug #271672. Would require more
+  complex store/load code in apprentice.
+
+- Add syntax for relative offsets after current level (Debian bug #466037).
+
+- Make file -ki work, i.e. give multiple MIME types.
+
+- Add a zip library so we can peek inside Office2007 documents to
+  figure out what they are.
+
+- Don't complain when ~/.magic is not compiled.
+
+- Add a separate option to print URL's for the sources of the file descriptions.

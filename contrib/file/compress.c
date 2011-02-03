@@ -33,16 +33,21 @@
  *					    using method, return sizeof new
  */
 #include "file.h"
+
+#ifndef lint
+FILE_RCSID("@(#)$File: compress.c,v 1.65 2010/07/21 16:47:17 christos Exp $")
+#endif
+
 #include "magic.h"
-#include <stdio.h>
 #include <stdlib.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 #include <string.h>
 #include <errno.h>
-#include <sys/types.h>
+#ifndef __MINGW32__
 #include <sys/ioctl.h>
+#endif
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
@@ -54,15 +59,10 @@
 #include <zlib.h>
 #endif
 
-
-#ifndef lint
-FILE_RCSID("@(#)$File: compress.c,v 1.54 2007/12/02 00:28:10 christos Exp $")
-#endif
-
-private struct {
-	const char *magic;
+private const struct {
+	const char magic[8];
 	size_t maglen;
-	const char *const argv[3];
+	const char *argv[3];
 	int silent;
 } compr[] = {
 	{ "\037\235", 2, { "gzip", "-cdq", NULL }, 1 },		/* compressed */
@@ -77,14 +77,15 @@ private struct {
 	{ "PK\3\4",   4, { "gzip", "-cdq", NULL }, 1 },		/* pkzipped, */
 					    /* ...only first file examined */
 	{ "BZh",      3, { "bzip2", "-cd", NULL }, 1 },		/* bzip2-ed */
+	{ "LZIP",     4, { "lzip", "-cdq", NULL }, 1 },
+ 	{ "\3757zXZ\0",6,{ "xz", "-cd", NULL }, 1 },		/* XZ Utils */
 };
-
-private size_t ncompr = sizeof(compr) / sizeof(compr[0]);
 
 #define NODATA ((size_t)~0)
 
-
 private ssize_t swrite(int, const void *, size_t);
+#if HAVE_FORK
+private size_t ncompr = sizeof(compr) / sizeof(compr[0]);
 private size_t uncompressbuf(struct magic_set *, int, size_t,
     const unsigned char *, unsigned char **, size_t);
 #ifdef BUILTIN_DECOMPRESS
@@ -137,14 +138,14 @@ error:
 	ms->flags |= MAGIC_COMPRESS;
 	return rv;
 }
-
+#endif
 /*
  * `safe' write for sockets and pipes.
  */
 private ssize_t
 swrite(int fd, const void *buf, size_t n)
 {
-	int rv;
+	ssize_t rv;
 	size_t rn = n;
 
 	do
@@ -155,7 +156,7 @@ swrite(int fd, const void *buf, size_t n)
 			return -1;
 		default:
 			n -= rv;
-			buf = ((const char *)buf) + rv;
+			buf = CAST(const char *, buf) + rv;
 			break;
 		}
 	while (n > 0);
@@ -167,9 +168,12 @@ swrite(int fd, const void *buf, size_t n)
  * `safe' read for sockets and pipes.
  */
 protected ssize_t
-sread(int fd, void *buf, size_t n, int canbepipe)
+sread(int fd, void *buf, size_t n, int canbepipe __attribute__ ((unused)))
 {
-	int rv, cnt;
+	ssize_t rv;
+#ifdef FD_ZERO
+	ssize_t cnt;
+#endif
 #ifdef FIONREAD
 	int t = 0;
 #endif
@@ -235,9 +239,13 @@ file_pipe2file(struct magic_set *ms, int fd, const void *startbuf,
     size_t nbytes)
 {
 	char buf[4096];
-	int r, tfd;
+	ssize_t r;
+	int tfd;
+#ifdef HAVE_MKSTEMP
+	int te;
+#endif
 
-	(void)strcpy(buf, "/tmp/file.XXXXXX");
+	(void)strlcpy(buf, "/tmp/file.XXXXXX", sizeof buf);
 #ifndef HAVE_MKSTEMP
 	{
 		char *ptr = mktemp(buf);
@@ -248,9 +256,9 @@ file_pipe2file(struct magic_set *ms, int fd, const void *startbuf,
 	}
 #else
 	tfd = mkstemp(buf);
-	r = errno;
+	te = errno;
 	(void)unlink(buf);
-	errno = r;
+	errno = te;
 #endif
 	if (tfd == -1) {
 		file_error(ms, errno,
@@ -293,7 +301,7 @@ file_pipe2file(struct magic_set *ms, int fd, const void *startbuf,
 	}
 	return fd;
 }
-
+#if HAVE_FORK
 #ifdef BUILTIN_DECOMPRESS
 
 #define FHCRC		(1 << 1)
@@ -330,20 +338,21 @@ uncompressgzipped(struct magic_set *ms, const unsigned char *old,
 
 	if (data_start >= n)
 		return 0;
-	if ((*newch = (unsigned char *)malloc(HOWMANY + 1)) == NULL) {
+	if ((*newch = CAST(unsigned char *, malloc(HOWMANY + 1))) == NULL) {
 		return 0;
 	}
 	
 	/* XXX: const castaway, via strchr */
 	z.next_in = (Bytef *)strchr((const char *)old + data_start,
 	    old[data_start]);
-	z.avail_in = n - data_start;
+	z.avail_in = CAST(uint32_t, (n - data_start));
 	z.next_out = *newch;
 	z.avail_out = HOWMANY;
 	z.zalloc = Z_NULL;
 	z.zfree = Z_NULL;
 	z.opaque = Z_NULL;
 
+	/* LINTED bug in header macro */
 	rc = inflateInit2(&z, -15);
 	if (rc != Z_OK) {
 		file_error(ms, 0, "zlib: %s", z.msg);
@@ -371,9 +380,10 @@ uncompressbuf(struct magic_set *ms, int fd, size_t method,
     const unsigned char *old, unsigned char **newch, size_t n)
 {
 	int fdin[2], fdout[2];
-	int r;
+	ssize_t r;
 
 #ifdef BUILTIN_DECOMPRESS
+        /* FIXME: This doesn't cope with bzip2 */
 	if (method == 2)
 		return uncompressgzipped(ms, old, newch, n);
 #endif
@@ -486,6 +496,9 @@ err:
 #else
 		(void)wait(NULL);
 #endif
+		(void) close(fdin[0]);
+	    
 		return n;
 	}
 }
+#endif

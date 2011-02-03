@@ -1,4 +1,6 @@
+
 # ------------------------------------------------------------------------
+# $File: mup,v 1.4 2009/09/19 16:28:11 christos Exp $
 # mup: file(1) magic for Mup (Music Publisher) input file.
 #
 # From: Abel Cheung <abel (@) oaka.org>
@@ -8,7 +10,7 @@
 # compatibility. Noteedit also use mup format, but is not forcing
 # user to use any header as well.
 #
-0		string		//!Mup		Mup music publication program input text
+0		search/1	//!Mup		Mup music publication program input text
 >6		string		-Arkkra		(Arkkra)
 >>13		string		-		
 >>>16		string		.		
