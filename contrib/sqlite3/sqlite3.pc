@@ -7,7 +7,7 @@ includedir=${prefix}/include
 
 Name: SQLite
 Description: SQL database engine
-Version: 3.6.11
+Version: 3.7.5
 Libs: -lsqlite3
 Libs.private: -lpthread
 Cflags: 
