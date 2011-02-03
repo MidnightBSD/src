@@ -8,6 +8,9 @@ Original sources were taken from the Brian Kernighan's home page
 (http://cm.bell-labs.com/who/bwk/) and include bug fixes up thru
 May 01, 2007.
 
+Kernighan's  got a new homepage at 
+http://www.cs.princeton.edu/~bwk/btl.mirror/
+
 The following files were removed for this import:
 
 	buildwin.bat
