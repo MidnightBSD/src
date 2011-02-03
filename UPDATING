@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users
 20110203:
 	one true awk 20100523 imported
 
+	sqlite 3.7.5
+
 20110202:
 	tcsh 6.17.00
 
@@ -925,4 +927,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.106 2011/02/03 04:27:20 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.107 2011/02/03 14:12:53 laffer1 Exp $
