@@ -24,10 +24,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
+#ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
-#include <sys/tree.h>
+#endif
 #include <sys/param.h>
+#include "openbsd-compat/sys-tree.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -94,9 +98,8 @@ mm_create(struct mm_master *mmalloc, size_t size)
 	 */
 	mm->mmalloc = mmalloc;
 
-	address = mmap(NULL, size, PROT_WRITE|PROT_READ, MAP_ANON|MAP_SHARED,
-	    -1, (off_t)0);
-	if (address == MAP_FAILED)
+	address = xmmap(size);
+	if (address == (void *)MAP_FAILED)
 		fatal("mmap(%lu): %s", (u_long)size, strerror(errno));
 
 	mm->address = address;
@@ -135,9 +138,14 @@ mm_destroy(struct mm_master *mm)
 	mm_freelist(mm->mmalloc, &mm->rb_free);
 	mm_freelist(mm->mmalloc, &mm->rb_allocated);
 
+#ifdef HAVE_MMAP
 	if (munmap(mm->address, mm->size) == -1)
 		fatal("munmap(%p, %lu): %s", mm->address, (u_long)mm->size,
 		    strerror(errno));
+#else
+	fatal("%s: UsePrivilegeSeparation=yes and Compression=yes not supported",
+	    __func__);
+#endif
 	if (mm->mmalloc == NULL)
 		xfree(mm);
 	else

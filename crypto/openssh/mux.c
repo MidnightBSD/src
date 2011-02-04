@@ -30,16 +30,16 @@
  *     sessions in master.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/param.h>
-#include <sys/queue.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
 #include <errno.h>
 #include <fcntl.h>
-#include <poll.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -47,10 +47,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <util.h>
+#ifdef HAVE_PATHS_H
 #include <paths.h>
+#endif
 
-#include "atomicio.h"
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#else
+# ifdef HAVE_SYS_POLL_H
+#  include <sys/poll.h>
+# endif
+#endif
+
+#ifdef HAVE_UTIL_H
+# include <util.h>
+#endif
+
+#ifdef HAVE_LIBUTIL_H
+# include <libutil.h>
+#endif
+
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "log.h"
 #include "ssh.h"
@@ -1007,6 +1024,7 @@ void
 muxserver_listen(void)
 {
 	struct sockaddr_un addr;
+	socklen_t sun_len;
 	mode_t old_umask;
 	char *orig_control_path = options.control_path;
 	char rbuf[16+1];
@@ -1037,7 +1055,7 @@ muxserver_listen(void)
 
 	memset(&addr, '\0', sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	addr.sun_len = offsetof(struct sockaddr_un, sun_path) +
+	sun_len = offsetof(struct sockaddr_un, sun_path) +
 	    strlen(options.control_path) + 1;
 
 	if (strlcpy(addr.sun_path, options.control_path,
@@ -1048,7 +1066,7 @@ muxserver_listen(void)
 		fatal("%s socket(): %s", __func__, strerror(errno));
 
 	old_umask = umask(0177);
-	if (bind(muxserver_sock, (struct sockaddr *)&addr, addr.sun_len) == -1) {
+	if (bind(muxserver_sock, (struct sockaddr *)&addr, sun_len) == -1) {
 		muxserver_sock = -1;
 		if (errno == EINVAL || errno == EADDRINUSE) {
 			error("ControlSocket %s already exists, "
@@ -1217,6 +1235,9 @@ mux_client_read(int fd, Buffer *b, u_int need)
 		len = read(fd, p + have, need - have);
 		if (len < 0) {
 			switch (errno) {
+#if defined(EWOULDBLOCK) && (EWOULDBLOCK != EAGAIN)
+			case EWOULDBLOCK:
+#endif
 			case EAGAIN:
 				(void)poll(&pfd, 1, -1);
 				/* FALLTHROUGH */
@@ -1261,6 +1282,9 @@ mux_client_write_packet(int fd, Buffer *m)
 		len = write(fd, ptr + have, need - have);
 		if (len < 0) {
 			switch (errno) {
+#if defined(EWOULDBLOCK) && (EWOULDBLOCK != EAGAIN)
+			case EWOULDBLOCK:
+#endif
 			case EAGAIN:
 				(void)poll(&pfd, 1, -1);
 				/* FALLTHROUGH */
@@ -1794,6 +1818,7 @@ void
 muxclient(const char *path)
 {
 	struct sockaddr_un addr;
+	socklen_t sun_len;
 	int sock;
 	u_int pid;
 
@@ -1817,7 +1842,7 @@ muxclient(const char *path)
 
 	memset(&addr, '\0', sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	addr.sun_len = offsetof(struct sockaddr_un, sun_path) +
+	sun_len = offsetof(struct sockaddr_un, sun_path) +
 	    strlen(path) + 1;
 
 	if (strlcpy(addr.sun_path, path,
@@ -1827,7 +1852,7 @@ muxclient(const char *path)
 	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) < 0)
 		fatal("%s socket(): %s", __func__, strerror(errno));
 
-	if (connect(sock, (struct sockaddr *)&addr, addr.sun_len) == -1) {
+	if (connect(sock, (struct sockaddr *)&addr, sun_len) == -1) {
 		switch (muxclient_command) {
 		case SSHMUX_COMMAND_OPEN:
 		case SSHMUX_COMMAND_STDIO_FWD:

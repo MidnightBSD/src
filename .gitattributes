@@ -20474,6 +20474,7 @@ crypto/openssh/README -text
 crypto/openssh/addrmatch.c -text
 crypto/openssh/atomicio.c -text
 crypto/openssh/atomicio.h -text
+crypto/openssh/audit-linux.c -text
 crypto/openssh/auth-bsdauth.c -text
 crypto/openssh/auth-chall.c -text
 crypto/openssh/auth-krb5.c -text
@@ -20579,6 +20580,10 @@ crypto/openssh/myproposal.h -text
 crypto/openssh/nchan.c -text
 crypto/openssh/nchan.ms -text
 crypto/openssh/nchan2.ms -text
+crypto/openssh/openbsd-compat/charclass.h -text
+crypto/openssh/openbsd-compat/pwcache.c -text
+crypto/openssh/openbsd-compat/strptime.c -text
+crypto/openssh/openbsd-compat/timingsafe_bcmp.c -text
 crypto/openssh/packet.c -text
 crypto/openssh/packet.h -text
 crypto/openssh/pathnames.h -text
@@ -20588,6 +20593,14 @@ crypto/openssh/progressmeter.h -text
 crypto/openssh/readconf.c -text
 crypto/openssh/readconf.h -text
 crypto/openssh/readpass.c -text
+crypto/openssh/regress/agent-pkcs11.sh -text
+crypto/openssh/regress/cert-hostkey.sh -text
+crypto/openssh/regress/cert-userkey.sh -text
+crypto/openssh/regress/host-expand.sh -text
+crypto/openssh/regress/kextype.sh -text
+crypto/openssh/regress/keygen-convert.sh -text
+crypto/openssh/regress/keytype.sh -text
+crypto/openssh/regress/portnum.sh -text
 crypto/openssh/roaming.h -text
 crypto/openssh/roaming_client.c -text
 crypto/openssh/roaming_common.c -text

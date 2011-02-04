@@ -88,7 +88,9 @@
  * sshd will change its privileges to this user and its
  * primary group.
  */
+#ifndef SSH_PRIVSEP_USER
 #define SSH_PRIVSEP_USER		"sshd"
+#endif
 
 /* Minimum modulus size (n) for RSA keys. */
 #define SSH_RSA_MINIMUM_MODULUS_SIZE	768

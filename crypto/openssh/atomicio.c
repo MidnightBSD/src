@@ -26,11 +26,19 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/param.h>
 #include <sys/uio.h>
 
 #include <errno.h>
+#ifdef HAVE_POLL_H
 #include <poll.h>
+#else
+# ifdef HAVE_SYS_POLL_H
+#  include <sys/poll.h>
+# endif
+#endif
 #include <string.h>
 #include <unistd.h>
 
@@ -56,7 +64,7 @@ atomicio6(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n,
 		case -1:
 			if (errno == EINTR)
 				continue;
-			if (errno == EAGAIN) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				(void)poll(&pfd, 1, -1);
 				continue;
 			}
@@ -101,16 +109,20 @@ atomiciov6(ssize_t (*f) (int, const struct iovec *, int), int fd,
 	/* Make a copy of the iov array because we may modify it below */
 	memcpy(iov, _iov, iovcnt * sizeof(*_iov));
 
+#ifndef BROKEN_READV_COMPARISON
 	pfd.fd = fd;
 	pfd.events = f == readv ? POLLIN : POLLOUT;
+#endif
 	for (; iovcnt > 0 && iov[0].iov_len > 0;) {
 		res = (f) (fd, iov, iovcnt);
 		switch (res) {
 		case -1:
 			if (errno == EINTR)
 				continue;
-			if (errno == EAGAIN) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+#ifndef BROKEN_READV_COMPARISON
 				(void)poll(&pfd, 1, -1);
+#endif
 				continue;
 			}
 			return 0;

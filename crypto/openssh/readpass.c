@@ -23,13 +23,16 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/wait.h>
 
 #include <errno.h>
 #include <fcntl.h>
-#include <paths.h>
-#include <readpassphrase.h>
+#ifdef HAVE_PATHS_H
+# include <paths.h>
+#endif
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>

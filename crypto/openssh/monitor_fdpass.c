@@ -24,12 +24,19 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#ifdef HAVE_SYS_UN_H
+#include <sys/un.h>
+#endif
 
 #include <errno.h>
+#ifdef HAVE_POLL_H
 #include <poll.h>
+#endif
 #include <string.h>
 #include <stdarg.h>
 
@@ -39,18 +46,25 @@
 int
 mm_send_fd(int sock, int fd)
 {
+#if defined(HAVE_SENDMSG) && (defined(HAVE_ACCRIGHTS_IN_MSGHDR) || defined(HAVE_CONTROL_IN_MSGHDR))
 	struct msghdr msg;
+#ifndef HAVE_ACCRIGHTS_IN_MSGHDR
 	union {
 		struct cmsghdr hdr;
 		char buf[CMSG_SPACE(sizeof(int))];
 	} cmsgbuf;
 	struct cmsghdr *cmsg;
+#endif
 	struct iovec vec;
 	char ch = '\0';
 	ssize_t n;
 	struct pollfd pfd;
 
 	memset(&msg, 0, sizeof(msg));
+#ifdef HAVE_ACCRIGHTS_IN_MSGHDR
+	msg.msg_accrights = (caddr_t)&fd;
+	msg.msg_accrightslen = sizeof(fd);
+#else
 	msg.msg_control = (caddr_t)&cmsgbuf.buf;
 	msg.msg_controllen = sizeof(cmsgbuf.buf);
 	cmsg = CMSG_FIRSTHDR(&msg);
@@ -58,6 +72,7 @@ mm_send_fd(int sock, int fd)
 	cmsg->cmsg_level = SOL_SOCKET;
 	cmsg->cmsg_type = SCM_RIGHTS;
 	*(int *)CMSG_DATA(cmsg) = fd;
+#endif
 
 	vec.iov_base = &ch;
 	vec.iov_len = 1;
@@ -83,17 +98,24 @@ mm_send_fd(int sock, int fd)
 		return -1;
 	}
 	return 0;
+#else
+	error("%s: file descriptor passing not supported", __func__);
+	return -1;
+#endif
 }
 
 int
 mm_receive_fd(int sock)
 {
+#if defined(HAVE_RECVMSG) && (defined(HAVE_ACCRIGHTS_IN_MSGHDR) || defined(HAVE_CONTROL_IN_MSGHDR))
 	struct msghdr msg;
+#ifndef HAVE_ACCRIGHTS_IN_MSGHDR
 	union {
 		struct cmsghdr hdr;
 		char buf[CMSG_SPACE(sizeof(int))];
 	} cmsgbuf;
 	struct cmsghdr *cmsg;
+#endif
 	struct iovec vec;
 	ssize_t n;
 	char ch;
@@ -105,8 +127,13 @@ mm_receive_fd(int sock)
 	vec.iov_len = 1;
 	msg.msg_iov = &vec;
 	msg.msg_iovlen = 1;
+#ifdef HAVE_ACCRIGHTS_IN_MSGHDR
+	msg.msg_accrights = (caddr_t)&fd;
+	msg.msg_accrightslen = sizeof(fd);
+#else
 	msg.msg_control = &cmsgbuf.buf;
 	msg.msg_controllen = sizeof(cmsgbuf.buf);
+#endif
 
 	pfd.fd = sock;
 	pfd.events = POLLIN;
@@ -126,17 +153,30 @@ mm_receive_fd(int sock)
 		return -1;
 	}
 
+#ifdef HAVE_ACCRIGHTS_IN_MSGHDR
+	if (msg.msg_accrightslen != sizeof(fd)) {
+		error("%s: no fd", __func__);
+		return -1;
+	}
+#else
 	cmsg = CMSG_FIRSTHDR(&msg);
 	if (cmsg == NULL) {
 		error("%s: no message header", __func__);
 		return -1;
 	}
 
+#ifndef BROKEN_CMSG_TYPE
 	if (cmsg->cmsg_type != SCM_RIGHTS) {
 		error("%s: expected type %d got %d", __func__,
 		    SCM_RIGHTS, cmsg->cmsg_type);
 		return -1;
 	}
+#endif
 	fd = (*(int *)CMSG_DATA(cmsg));
+#endif
 	return fd;
+#else
+	error("%s: file descriptor passing not supported", __func__);
+	return -1;
+#endif
 }

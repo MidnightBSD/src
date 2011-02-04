@@ -15,13 +15,21 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "includes.h"
+
+#ifdef ENABLE_PKCS11
+
 #include <sys/types.h>
-#include <sys/queue.h>
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 
 #include <string.h>
 #include <dlfcn.h>
+
+#include "openbsd-compat/sys-queue.h"
 
 #define CRYPTOKI_COMPAT
 #include "pkcs11.h"
@@ -98,9 +106,7 @@ pkcs11_provider_finalize(struct pkcs11_provider *p)
 		error("C_Finalize failed: %lu", rv);
 	p->valid = 0;
 	p->function_list = NULL;
-#ifdef HAVE_DLOPEN
 	dlclose(p->handle);
-#endif
 }
 
 /*
@@ -221,17 +227,22 @@ pkcs11_rsa_private_encrypt(int flen, const u_char *from, u_char *to, RSA *rsa,
 	CK_ULONG		tlen = 0;
 	CK_RV			rv;
 	CK_OBJECT_CLASS		private_key_class = CKO_PRIVATE_KEY;
-	CK_BBOOL		true = CK_TRUE;
+	CK_BBOOL		true_val = CK_TRUE;
 	CK_MECHANISM		mech = {
 		CKM_RSA_PKCS, NULL_PTR, 0
 	};
 	CK_ATTRIBUTE		key_filter[] = {
-		{CKA_CLASS, &private_key_class, sizeof(private_key_class) },
+		{CKA_CLASS, NULL, sizeof(private_key_class) },
 		{CKA_ID, NULL, 0},
-		{CKA_SIGN, &true, sizeof(true) }
+		{CKA_SIGN, NULL, sizeof(true_val) }
 	};
 	char			*pin, prompt[1024];
 	int			rval = -1;
+
+	/* some compilers complain about non-constant initializer so we
+	   use NULL in CK_ATTRIBUTE above and set the values here */
+	key_filter[0].pValue = &private_key_class;
+	key_filter[2].pValue = &true_val;
 
 	if ((k11 = RSA_get_app_data(rsa)) == NULL) {
 		error("RSA_get_app_data failed for rsa %p", rsa);
@@ -388,13 +399,17 @@ pkcs11_fetch_keys(struct pkcs11_provider *p, CK_ULONG slotidx, Key ***keysp,
 	CK_FUNCTION_LIST	*f;
 	CK_OBJECT_CLASS		pubkey_class = CKO_PUBLIC_KEY;
 	CK_ATTRIBUTE		pubkey_filter[] = {
-		{ CKA_CLASS, &pubkey_class, sizeof(pubkey_class) }
+		{ CKA_CLASS, NULL, sizeof(pubkey_class) }
 	};
 	CK_ATTRIBUTE		attribs[] = {
 		{ CKA_ID, NULL, 0 },
 		{ CKA_MODULUS, NULL, 0 },
 		{ CKA_PUBLIC_EXPONENT, NULL, 0 }
 	};
+
+	/* some compilers complain about non-constant initializer so we
+	   use NULL in CK_ATTRIBUTE above and set the value here */
+	pubkey_filter[0].pValue = &pubkey_class;
 
 	f = p->function_list;
 	session = p->slotinfo[slotidx].session;
@@ -462,7 +477,6 @@ pkcs11_fetch_keys(struct pkcs11_provider *p, CK_ULONG slotidx, Key ***keysp,
 	return (0);
 }
 
-#ifdef HAVE_DLOPEN
 /* register a new provider, fails if provider already exists */
 int
 pkcs11_add_provider(char *provider_id, char *pin, Key ***keyp)
@@ -575,11 +589,5 @@ fail:
 		dlclose(handle);
 	return (-1);
 }
-#else
-int
-pkcs11_add_provider(char *provider_id, char *pin, Key ***keyp)
-{
-	error("dlopen() not supported");
-	return (-1);
-}
-#endif
+
+#endif /* ENABLE_PKCS11 */

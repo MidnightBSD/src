@@ -14,15 +14,19 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <fcntl.h>
-#include <netgroup.h>
+#ifdef HAVE_NETGROUP_H
+# include <netgroup.h>
+#endif
 #include <pwd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "packet.h"

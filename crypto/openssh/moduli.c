@@ -37,6 +37,8 @@
  * Second step: test primes' safety (processor intensive)
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 
 #include <openssl/bn.h>
@@ -51,6 +53,8 @@
 #include "xmalloc.h"
 #include "dh.h"
 #include "log.h"
+
+#include "openbsd-compat/openssl-compat.h"
 
 /*
  * File output defines

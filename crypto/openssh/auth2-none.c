@@ -23,8 +23,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/types.h>
+#include "includes.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/uio.h>
+
+#include <fcntl.h>
+#include <stdarg.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "atomicio.h"
 #include "xmalloc.h"
 #include "key.h"
 #include "hostfile.h"

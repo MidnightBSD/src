@@ -23,6 +23,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/param.h>
 
@@ -37,7 +39,7 @@
 #include "log.h"
 
 static int ngroups;
-static char *groups_byname[NGROUPS_MAX + 1];	/* +1 for base/primary group */
+static char **groups_byname;
 
 /*
  * Initialize group access list for user with primary (base) and
@@ -46,19 +48,27 @@ static char *groups_byname[NGROUPS_MAX + 1];	/* +1 for base/primary group */
 int
 ga_init(const char *user, gid_t base)
 {
-	gid_t groups_bygid[NGROUPS_MAX + 1];
+	gid_t *groups_bygid;
 	int i, j;
 	struct group *gr;
 
 	if (ngroups > 0)
 		ga_free();
 
-	ngroups = sizeof(groups_bygid) / sizeof(gid_t);
+	ngroups = NGROUPS_MAX;
+#if defined(HAVE_SYSCONF) && defined(_SC_NGROUPS_MAX)
+	ngroups = MAX(NGROUPS_MAX, sysconf(_SC_NGROUPS_MAX));
+#endif
+
+	groups_bygid = xcalloc(ngroups, sizeof(*groups_bygid));
+	groups_byname = xcalloc(ngroups, sizeof(*groups_byname));
+
 	if (getgrouplist(user, base, groups_bygid, &ngroups) == -1)
 		logit("getgrouplist: groups list too small");
 	for (i = 0, j = 0; i < ngroups; i++)
 		if ((gr = getgrgid(groups_bygid[i])) != NULL)
 			groups_byname[j++] = xstrdup(gr->gr_name);
+	xfree(groups_bygid);
 	return (ngroups = j);
 }
 
@@ -114,5 +124,6 @@ ga_free(void)
 		for (i = 0; i < ngroups; i++)
 			xfree(groups_byname[i]);
 		ngroups = 0;
+		xfree(groups_byname);
 	}
 }

@@ -25,6 +25,8 @@
  * http://grouper.ieee.org/groups/1363/Research/contributions/hao-ryan-2008.pdf
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 
 #include <string.h>
@@ -39,6 +41,8 @@
 #include "log.h"
 
 #include "schnorr.h"
+
+#include "openbsd-compat/openssl-compat.h"
 
 /* #define SCHNORR_DEBUG */		/* Privacy-violating debugging */
 /* #define SCHNORR_MAIN */		/* Include main() selftest */

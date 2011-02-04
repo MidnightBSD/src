@@ -15,11 +15,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
+#include <stdarg.h>
 #include <string.h>
 
 #include "xmalloc.h"

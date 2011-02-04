@@ -24,11 +24,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <string.h>
 #include <signal.h>
-
-#include <openssl/ecdh.h>
 
 #include "xmalloc.h"
 #include "buffer.h"
@@ -43,6 +43,10 @@
 #include "ssh-gss.h"
 #endif
 #include "monitor_wrap.h"
+
+#ifdef OPENSSL_HAS_ECC
+
+#include <openssl/ecdh.h>
 
 void
 kexecdh_server(Kex *kex)
@@ -160,3 +164,10 @@ kexecdh_server(Kex *kex)
 	BN_clear_free(shared_secret);
 	kex_finish(kex);
 }
+#else /* OPENSSL_HAS_ECC */
+void
+kexecdh_server(Kex *kex)
+{
+	fatal("ECC support is not enabled");
+}
+#endif /* OPENSSL_HAS_ECC */

@@ -1,4 +1,4 @@
-/* $OpenBSD: key.c,v 1.96 2011/02/04 00:44:21 djm Exp $ */
+/* $OpenBSD: key.c,v 1.95 2010/11/10 01:33:07 djm Exp $ */
 /*
  * read_bignum():
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -34,11 +34,15 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/param.h>
 #include <sys/types.h>
 
 #include <openssl/evp.h>
+#include <openbsd-compat/openssl-compat.h>
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -107,10 +111,12 @@ key_new(int type)
 			fatal("key_new: BN_new failed");
 		k->dsa = dsa;
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 	case KEY_ECDSA_CERT:
 		/* Cannot do anything until we know the group */
 		break;
+#endif
 	case KEY_UNSPEC:
 		break;
 	default:
@@ -210,12 +216,14 @@ key_free(Key *k)
 			DSA_free(k->dsa);
 		k->dsa = NULL;
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 	case KEY_ECDSA_CERT:
 		if (k->ecdsa != NULL)
 			EC_KEY_free(k->ecdsa);
 		k->ecdsa = NULL;
 		break;
+#endif
 	case KEY_UNSPEC:
 		break;
 	default:
@@ -253,7 +261,9 @@ cert_compare(struct KeyCert *a, struct KeyCert *b)
 int
 key_equal_public(const Key *a, const Key *b)
 {
+#ifdef OPENSSL_HAS_ECC
 	BN_CTX *bnctx;
+#endif
 
 	if (a == NULL || b == NULL ||
 	    key_type_plain(a->type) != key_type_plain(b->type))
@@ -275,6 +285,7 @@ key_equal_public(const Key *a, const Key *b)
 		    BN_cmp(a->dsa->q, b->dsa->q) == 0 &&
 		    BN_cmp(a->dsa->g, b->dsa->g) == 0 &&
 		    BN_cmp(a->dsa->pub_key, b->dsa->pub_key) == 0;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA_CERT:
 	case KEY_ECDSA:
 		if (a->ecdsa == NULL || b->ecdsa == NULL ||
@@ -293,6 +304,7 @@ key_equal_public(const Key *a, const Key *b)
 		}
 		BN_CTX_free(bnctx);
 		return 1;
+#endif /* OPENSSL_HAS_ECC */
 	default:
 		fatal("key_equal: bad key type %d", a->type);
 	}
@@ -646,9 +658,12 @@ key_read(Key *ret, char **cpp)
 	Key *k;
 	int success = -1;
 	char *cp, *space;
-	int len, n, type, curve_nid = -1;
+	int len, n, type;
 	u_int bits;
 	u_char *blob;
+#ifdef OPENSSL_HAS_ECC
+	int curve_nid = -1;
+#endif
 
 	cp = *cpp;
 
@@ -691,11 +706,13 @@ key_read(Key *ret, char **cpp)
 		}
 		*space = '\0';
 		type = key_type_from_name(cp);
+#ifdef OPENSSL_HAS_ECC
 		if (key_type_plain(type) == KEY_ECDSA &&
 		    (curve_nid = key_ecdsa_nid_from_name(cp)) == -1) {
 			debug("key_read: invalid curve");
 			return -1;
 		}
+#endif
 		*space = ' ';
 		if (type == KEY_UNSPEC) {
 			debug3("key_read: missing keytype");
@@ -732,12 +749,14 @@ key_read(Key *ret, char **cpp)
 			key_free(k);
 			return -1;
 		}
+#ifdef OPENSSL_HAS_ECC
 		if (key_type_plain(type) == KEY_ECDSA &&
 		    curve_nid != k->ecdsa_nid) {
 			error("key_read: type mismatch: EC curve mismatch");
 			key_free(k);
 			return -1;
 		}
+#endif
 /*XXXX*/
 		if (key_is_cert(ret)) {
 			if (!key_is_cert(k)) {
@@ -768,6 +787,7 @@ key_read(Key *ret, char **cpp)
 			DSA_print_fp(stderr, ret->dsa, 8);
 #endif
 		}
+#ifdef OPENSSL_HAS_ECC
 		if (key_type_plain(ret->type) == KEY_ECDSA) {
 			if (ret->ecdsa != NULL)
 				EC_KEY_free(ret->ecdsa);
@@ -779,6 +799,7 @@ key_read(Key *ret, char **cpp)
 			key_dump_ec_key(ret->ecdsa);
 #endif
 		}
+#endif
 		success = 1;
 /*XXXX*/
 		key_free(k);
@@ -835,11 +856,13 @@ key_write(const Key *key, FILE *f)
 		if (key->dsa == NULL)
 			return 0;
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 	case KEY_ECDSA_CERT:
 		if (key->ecdsa == NULL)
 			return 0;
 		break;
+#endif
 	case KEY_RSA:
 	case KEY_RSA_CERT_V00:
 	case KEY_RSA_CERT:
@@ -873,8 +896,10 @@ key_type(const Key *k)
 		return "RSA";
 	case KEY_DSA:
 		return "DSA";
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 		return "ECDSA";
+#endif
 	case KEY_RSA_CERT_V00:
 		return "RSA-CERT-V00";
 	case KEY_DSA_CERT_V00:
@@ -883,8 +908,10 @@ key_type(const Key *k)
 		return "RSA-CERT";
 	case KEY_DSA_CERT:
 		return "DSA-CERT";
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA_CERT:
 		return "ECDSA-CERT";
+#endif
 	}
 	return "unknown";
 }
@@ -918,6 +945,7 @@ key_ssh_name_from_type_nid(int type, int nid)
 		return "ssh-rsa-cert-v01@openssh.com";
 	case KEY_DSA_CERT:
 		return "ssh-dss-cert-v01@openssh.com";
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 		switch (nid) {
 		case NID_X9_62_prime256v1:
@@ -942,6 +970,7 @@ key_ssh_name_from_type_nid(int type, int nid)
 			break;
 		}
 		break;
+#endif /* OPENSSL_HAS_ECC */
 	}
 	return "ssh-unknown";
 }
@@ -972,9 +1001,11 @@ key_size(const Key *k)
 	case KEY_DSA_CERT_V00:
 	case KEY_DSA_CERT:
 		return BN_num_bits(k->dsa->p);
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 	case KEY_ECDSA_CERT:
 		return key_curve_nid_to_bits(k->ecdsa_nid);
+#endif
 	}
 	return 0;
 }
@@ -1016,17 +1047,20 @@ int
 key_ecdsa_bits_to_nid(int bits)
 {
 	switch (bits) {
+#ifdef OPENSSL_HAS_ECC
 	case 256:
 		return NID_X9_62_prime256v1;
 	case 384:
 		return NID_secp384r1;
 	case 521:
 		return NID_secp521r1;
+#endif
 	default:
 		return -1;
 	}
 }
 
+#ifdef OPENSSL_HAS_ECC
 int
 key_ecdsa_key_to_nid(EC_KEY *k)
 {
@@ -1087,6 +1121,7 @@ ecdsa_generate_private_key(u_int bits, int *nid)
 	EC_KEY_set_asn1_flag(private, OPENSSL_EC_NAMED_CURVE);
 	return private;
 }
+#endif /* OPENSSL_HAS_ECC */
 
 Key *
 key_generate(int type, u_int bits)
@@ -1096,9 +1131,11 @@ key_generate(int type, u_int bits)
 	case KEY_DSA:
 		k->dsa = dsa_generate_private_key(bits);
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 		k->ecdsa = ecdsa_generate_private_key(bits, &k->ecdsa_nid);
 		break;
+#endif
 	case KEY_RSA:
 	case KEY_RSA1:
 		k->rsa = rsa_generate_private_key(bits);
@@ -1175,6 +1212,7 @@ key_from_private(const Key *k)
 		    (BN_copy(n->dsa->pub_key, k->dsa->pub_key) == NULL))
 			fatal("key_from_private: BN_copy failed");
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 	case KEY_ECDSA_CERT:
 		n = key_new(k->type);
@@ -1185,6 +1223,7 @@ key_from_private(const Key *k)
 		    EC_KEY_get0_public_key(k->ecdsa)) != 1)
 			fatal("%s: EC_KEY_set_public_key failed", __func__);
 		break;
+#endif
 	case KEY_RSA:
 	case KEY_RSA1:
 	case KEY_RSA_CERT_V00:
@@ -1216,11 +1255,13 @@ key_type_from_name(char *name)
 		return KEY_RSA;
 	} else if (strcmp(name, "ssh-dss") == 0) {
 		return KEY_DSA;
+#ifdef OPENSSL_HAS_ECC
 	} else if (strcmp(name, "ecdsa") == 0 ||
 	    strcmp(name, "ecdsa-sha2-nistp256") == 0 ||
 	    strcmp(name, "ecdsa-sha2-nistp384") == 0 ||
 	    strcmp(name, "ecdsa-sha2-nistp521") == 0) {
 		return KEY_ECDSA;
+#endif
 	} else if (strcmp(name, "ssh-rsa-cert-v00@openssh.com") == 0) {
 		return KEY_RSA_CERT_V00;
 	} else if (strcmp(name, "ssh-dss-cert-v00@openssh.com") == 0) {
@@ -1229,10 +1270,13 @@ key_type_from_name(char *name)
 		return KEY_RSA_CERT;
 	} else if (strcmp(name, "ssh-dss-cert-v01@openssh.com") == 0) {
 		return KEY_DSA_CERT;
+#ifdef OPENSSL_HAS_ECC
 	} else if (strcmp(name, "ecdsa-sha2-nistp256-cert-v01@openssh.com") == 0 ||
 	    strcmp(name, "ecdsa-sha2-nistp384-cert-v01@openssh.com") == 0 ||
-	    strcmp(name, "ecdsa-sha2-nistp521-cert-v01@openssh.com") == 0)
+	    strcmp(name, "ecdsa-sha2-nistp521-cert-v01@openssh.com") == 0) {
 		return KEY_ECDSA_CERT;
+#endif
+	}
 
 	debug2("key_type_from_name: unknown key type '%s'", name);
 	return KEY_UNSPEC;
@@ -1241,6 +1285,7 @@ key_type_from_name(char *name)
 int
 key_ecdsa_nid_from_name(const char *name)
 {
+#ifdef OPENSSL_HAS_ECC
 	if (strcmp(name, "ecdsa-sha2-nistp256") == 0 ||
 	    strcmp(name, "ecdsa-sha2-nistp256-cert-v01@openssh.com") == 0)
 		return NID_X9_62_prime256v1;
@@ -1250,6 +1295,7 @@ key_ecdsa_nid_from_name(const char *name)
 	if (strcmp(name, "ecdsa-sha2-nistp521") == 0 ||
 	    strcmp(name, "ecdsa-sha2-nistp521-cert-v01@openssh.com") == 0)
 		return NID_secp521r1;
+#endif /* OPENSSL_HAS_ECC */
 
 	debug2("%s: unknown/non-ECDSA key type '%s'", __func__, name);
 	return -1;
@@ -1417,10 +1463,13 @@ Key *
 key_from_blob(const u_char *blob, u_int blen)
 {
 	Buffer b;
-	int rlen, type, nid = -1;
+	int rlen, type;
 	char *ktype = NULL, *curve = NULL;
 	Key *key = NULL;
+#ifdef OPENSSL_HAS_ECC
 	EC_POINT *q = NULL;
+	int nid = -1;
+#endif
 
 #ifdef DEBUG_PK
 	dump_base64(stderr, blob, blen);
@@ -1433,8 +1482,10 @@ key_from_blob(const u_char *blob, u_int blen)
 	}
 
 	type = key_type_from_name(ktype);
+#ifdef OPENSSL_HAS_ECC
 	if (key_type_plain(type) == KEY_ECDSA)
 		nid = key_ecdsa_nid_from_name(ktype);
+#endif
 
 	switch (type) {
 	case KEY_RSA_CERT:
@@ -1472,6 +1523,7 @@ key_from_blob(const u_char *blob, u_int blen)
 		DSA_print_fp(stderr, key->dsa, 8);
 #endif
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA_CERT:
 		(void)buffer_get_string_ptr_ret(&b, NULL); /* Skip nonce */
 		/* FALLTHROUGH */
@@ -1507,6 +1559,7 @@ key_from_blob(const u_char *blob, u_int blen)
 		key_dump_ec_point(EC_KEY_get0_group(key->ecdsa), q);
 #endif
 		break;
+#endif /* OPENSSL_HAS_ECC */
 	case KEY_UNSPEC:
 		key = key_new(type);
 		break;
@@ -1526,8 +1579,10 @@ key_from_blob(const u_char *blob, u_int blen)
 		xfree(ktype);
 	if (curve != NULL)
 		xfree(curve);
+#ifdef OPENSSL_HAS_ECC
 	if (q != NULL)
 		EC_POINT_free(q);
+#endif
 	buffer_free(&b);
 	return key;
 }
@@ -1560,12 +1615,14 @@ key_to_blob(const Key *key, u_char **blobp, u_int *lenp)
 		buffer_put_bignum2(&b, key->dsa->g);
 		buffer_put_bignum2(&b, key->dsa->pub_key);
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 		buffer_put_cstring(&b, key_ssh_name(key));
 		buffer_put_cstring(&b, key_curve_nid_to_name(key->ecdsa_nid));
 		buffer_put_ecpoint(&b, EC_KEY_get0_group(key->ecdsa),
 		    EC_KEY_get0_public_key(key->ecdsa));
 		break;
+#endif
 	case KEY_RSA:
 		buffer_put_cstring(&b, key_ssh_name(key));
 		buffer_put_bignum2(&b, key->rsa->e);
@@ -1599,9 +1656,11 @@ key_sign(
 	case KEY_DSA_CERT:
 	case KEY_DSA:
 		return ssh_dss_sign(key, sigp, lenp, data, datalen);
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA_CERT:
 	case KEY_ECDSA:
 		return ssh_ecdsa_sign(key, sigp, lenp, data, datalen);
+#endif
 	case KEY_RSA_CERT_V00:
 	case KEY_RSA_CERT:
 	case KEY_RSA:
@@ -1630,9 +1689,11 @@ key_verify(
 	case KEY_DSA_CERT:
 	case KEY_DSA:
 		return ssh_dss_verify(key, signature, signaturelen, data, datalen);
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA_CERT:
 	case KEY_ECDSA:
 		return ssh_ecdsa_verify(key, signature, signaturelen, data, datalen);
+#endif
 	case KEY_RSA_CERT_V00:
 	case KEY_RSA_CERT:
 	case KEY_RSA:
@@ -1687,6 +1748,7 @@ key_demote(const Key *k)
 		if ((pk->dsa->pub_key = BN_dup(k->dsa->pub_key)) == NULL)
 			fatal("key_demote: BN_dup failed");
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA_CERT:
 		key_cert_copy(k, pk);
 		/* FALLTHROUGH */
@@ -1697,6 +1759,7 @@ key_demote(const Key *k)
 		    EC_KEY_get0_public_key(k->ecdsa)) != 1)
 			fatal("key_demote: EC_KEY_set_public_key failed");
 		break;
+#endif
 	default:
 		fatal("key_free: bad key type %d", k->type);
 		break;
@@ -1823,9 +1886,10 @@ key_certify(Key *k, Key *ca)
 	buffer_put_cstring(&k->cert->certblob, key_ssh_name(k));
 
 	/* -v01 certs put nonce first */
-	arc4random_buf(&nonce, sizeof(nonce));
-	if (!key_cert_is_legacy(k))
+	if (!key_cert_is_legacy(k)) {
+		arc4random_buf(&nonce, sizeof(nonce));
 		buffer_put_string(&k->cert->certblob, nonce, sizeof(nonce));
+	}
 
 	switch (k->type) {
 	case KEY_DSA_CERT_V00:
@@ -1835,6 +1899,7 @@ key_certify(Key *k, Key *ca)
 		buffer_put_bignum2(&k->cert->certblob, k->dsa->g);
 		buffer_put_bignum2(&k->cert->certblob, k->dsa->pub_key);
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA_CERT:
 		buffer_put_cstring(&k->cert->certblob,
 		    key_curve_nid_to_name(k->ecdsa_nid));
@@ -1842,6 +1907,7 @@ key_certify(Key *k, Key *ca)
 		    EC_KEY_get0_group(k->ecdsa),
 		    EC_KEY_get0_public_key(k->ecdsa));
 		break;
+#endif
 	case KEY_RSA_CERT_V00:
 	case KEY_RSA_CERT:
 		buffer_put_bignum2(&k->cert->certblob, k->rsa->e);
@@ -1971,12 +2037,14 @@ key_cert_is_legacy(Key *k)
 int
 key_curve_name_to_nid(const char *name)
 {
+#ifdef OPENSSL_HAS_ECC
 	if (strcmp(name, "nistp256") == 0)
 		return NID_X9_62_prime256v1;
 	else if (strcmp(name, "nistp384") == 0)
 		return NID_secp384r1;
 	else if (strcmp(name, "nistp521") == 0)
 		return NID_secp521r1;
+#endif
 
 	debug("%s: unsupported EC curve name \"%.100s\"", __func__, name);
 	return -1;
@@ -1986,12 +2054,14 @@ u_int
 key_curve_nid_to_bits(int nid)
 {
 	switch (nid) {
+#ifdef OPENSSL_HAS_ECC
 	case NID_X9_62_prime256v1:
 		return 256;
 	case NID_secp384r1:
 		return 384;
 	case NID_secp521r1:
 		return 521;
+#endif
 	default:
 		error("%s: unsupported EC curve nid %d", __func__, nid);
 		return 0;
@@ -2001,17 +2071,19 @@ key_curve_nid_to_bits(int nid)
 const char *
 key_curve_nid_to_name(int nid)
 {
+#ifdef OPENSSL_HAS_ECC
 	if (nid == NID_X9_62_prime256v1)
 		return "nistp256";
 	else if (nid == NID_secp384r1)
 		return "nistp384";
 	else if (nid == NID_secp521r1)
 		return "nistp521";
-
+#endif
 	error("%s: unsupported EC curve nid %d", __func__, nid);
 	return NULL;
 }
 
+#ifdef OPENSSL_HAS_ECC
 const EVP_MD *
 key_ec_nid_to_evpmd(int nid)
 {
@@ -2196,4 +2268,4 @@ key_dump_ec_key(const EC_KEY *key)
 	fputs("\n", stderr);
 }
 #endif /* defined(DEBUG_KEXECDH) || defined(DEBUG_PK) */
-
+#endif /* OPENSSL_HAS_ECC */

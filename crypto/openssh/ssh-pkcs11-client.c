@@ -15,8 +15,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "includes.h"
+
+#ifdef ENABLE_PKCS11
+
 #include <sys/types.h>
-#include <sys/time.h>
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 #include <sys/socket.h>
 
 #include <stdarg.h>
@@ -228,3 +234,5 @@ pkcs11_del_provider(char *name)
 	buffer_free(&msg);
 	return (ret);
 }
+
+#endif /* ENABLE_PKCS11 */

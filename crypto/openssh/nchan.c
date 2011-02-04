@@ -23,14 +23,16 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/queue.h>
 
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "ssh1.h"
 #include "ssh2.h"
 #include "buffer.h"
@@ -509,7 +511,13 @@ chan_shutdown_read(Channel *c)
 		return;
 	debug2("channel %d: close_read", c->self);
 	if (c->sock != -1) {
-		if (shutdown(c->sock, SHUT_RD) < 0)
+		/*
+		 * shutdown(sock, SHUT_READ) may return ENOTCONN if the
+		 * write side has been closed already. (bug on Linux)
+		 * HP-UX may return ENOTCONN also.
+		 */
+		if (shutdown(c->sock, SHUT_RD) < 0
+		    && errno != ENOTCONN)
 			error("channel %d: chan_shutdown_read: "
 			    "shutdown() failed for fd %d [i%d o%d]: %.100s",
 			    c->self, c->sock, c->istate, c->ostate,
