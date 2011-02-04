@@ -70,6 +70,10 @@
 #include "ssh-pkcs11.h"
 #endif
 
+#if defined(HAVE_SYS_PRCTL_H)
+#include <sys/prctl.h>	/* For prctl() and PR_SET_DUMPABLE */
+#endif
+
 typedef enum {
 	AUTH_UNUSED,
 	AUTH_SOCKET,
@@ -454,8 +458,11 @@ process_add_identity(SocketEntry *e, int version)
 	int type, success = 0, death = 0, confirm = 0;
 	char *type_name, *comment, *curve;
 	Key *k = NULL;
+#ifdef OPENSSL_HAS_ECC
 	BIGNUM *exponent;
 	EC_POINT *q;
+	char *curve;
+#endif
 	u_char *cert;
 	u_int len;
 
@@ -496,6 +503,7 @@ process_add_identity(SocketEntry *e, int version)
 			key_add_private(k);
 			buffer_get_bignum2(&e->request, k->dsa->priv_key);
 			break;
+#ifdef OPENSSL_HAS_ECC
 		case KEY_ECDSA:
 			k = key_new_private(type);
 			k->ecdsa_nid = key_ecdsa_nid_from_name(type_name);
@@ -547,6 +555,7 @@ process_add_identity(SocketEntry *e, int version)
 				fatal("%s: bad ECDSA key", __func__);
 			BN_clear_free(exponent);
 			break;
+#endif /* OPENSSL_HAS_ECC */
 		case KEY_RSA:
 			k = key_new_private(type);
 			buffer_get_bignum2(&e->request, k->rsa->n);
@@ -1020,6 +1029,7 @@ after_select(fd_set *readset, fd_set *writeset)
 				    buffer_ptr(&sockets[i].output),
 				    buffer_len(&sockets[i].output));
 				if (len == -1 && (errno == EAGAIN ||
+				    errno == EWOULDBLOCK ||
 				    errno == EINTR))
 					continue;
 				if (len <= 0) {
@@ -1031,6 +1041,7 @@ after_select(fd_set *readset, fd_set *writeset)
 			if (FD_ISSET(sockets[i].fd, readset)) {
 				len = read(sockets[i].fd, buf, sizeof(buf));
 				if (len == -1 && (errno == EAGAIN ||
+				    errno == EWOULDBLOCK ||
 				    errno == EINTR))
 					continue;
 				if (len <= 0) {
@@ -1122,7 +1133,16 @@ main(int ac, char **av)
 	setegid(getgid());
 	setgid(getgid());
 
+#if defined(HAVE_PRCTL) && defined(PR_SET_DUMPABLE)
+	/* Disable ptrace on Linux without sgid bit */
+	prctl(PR_SET_DUMPABLE, 0);
+#endif
+
 	OpenSSL_add_all_algorithms();
+
+	__progname = ssh_get_progname(av[0]);
+	init_rng();
+	seed_rng();
 
 	while ((ch = getopt(ac, av, "cdksa:t:")) != -1) {
 		switch (ch) {

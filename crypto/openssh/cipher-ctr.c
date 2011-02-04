@@ -51,7 +51,7 @@ ssh_ctr_inc(u_char *ctr, size_t len)
 
 static int
 ssh_aes_ctr(EVP_CIPHER_CTX *ctx, u_char *dest, const u_char *src,
-    size_t len)
+    LIBCRYPTO_EVP_INL_TYPE len)
 {
 	struct ssh_aes_ctr_ctx *c;
 	size_t n = 0;

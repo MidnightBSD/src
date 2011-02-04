@@ -259,6 +259,7 @@ add_local_forward(Options *options, const Forward *newfwd)
 
 	if (newfwd->listen_port < IPPORT_RESERVED && original_real_uid != 0)
 		fatal("Privileged ports can only be forwarded by root.");
+#endif
 	options->local_forwards = xrealloc(options->local_forwards,
 	    options->num_local_forwards + 1,
 	    sizeof(*options->local_forwards));
@@ -1248,12 +1249,13 @@ fill_default_options(Options * options)
 			    xmalloc(len);
 			snprintf(options->identity_files[options->num_identity_files++],
 			    len, "~/%.100s", _PATH_SSH_CLIENT_ID_DSA);
-
+#ifdef OPENSSL_HAS_ECC
 			len = 2 + strlen(_PATH_SSH_CLIENT_ID_ECDSA) + 1;
 			options->identity_files[options->num_identity_files] =
 			    xmalloc(len);
 			snprintf(options->identity_files[options->num_identity_files++],
 			    len, "~/%.100s", _PATH_SSH_CLIENT_ID_ECDSA);
+#endif
 		}
 	}
 	if (options->escape_char == -1)

@@ -46,9 +46,6 @@
 #include <sys/queue.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/time.h>
 #include <sys/wait.h>
 
 #include <ctype.h>
@@ -224,6 +221,12 @@ main(int ac, char **av)
 
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
 	sanitise_stdfd();
+
+	/*
+	 * Discard other fds that are hanging around. These can cause problem
+	 * with backgrounded ssh processes started by ControlPersist.
+	 */
+	closefrom(STDERR_FILENO + 1);
 
 	/*
 	 * Discard other fds that are hanging around. These can cause problem
@@ -765,20 +768,26 @@ main(int ac, char **av)
 		sensitive_data.nkeys = 7;
 		sensitive_data.keys = xcalloc(sensitive_data.nkeys,
 		    sizeof(Key));
+		for (i = 0; i < sensitive_data.nkeys; i++)
+			sensitive_data.keys[i] = NULL;
 
 		PRIV_START;
 		sensitive_data.keys[0] = key_load_private_type(KEY_RSA1,
 		    _PATH_HOST_KEY_FILE, "", NULL, NULL);
 		sensitive_data.keys[1] = key_load_private_cert(KEY_DSA,
 		    _PATH_HOST_DSA_KEY_FILE, "", NULL);
+#ifdef OPENSSL_HAS_ECC
 		sensitive_data.keys[2] = key_load_private_cert(KEY_ECDSA,
 		    _PATH_HOST_ECDSA_KEY_FILE, "", NULL);
+#endif
 		sensitive_data.keys[3] = key_load_private_cert(KEY_RSA,
 		    _PATH_HOST_RSA_KEY_FILE, "", NULL);
 		sensitive_data.keys[4] = key_load_private_type(KEY_DSA,
 		    _PATH_HOST_DSA_KEY_FILE, "", NULL, NULL);
+#ifdef OPENSSL_HAS_ECC
 		sensitive_data.keys[5] = key_load_private_type(KEY_ECDSA,
 		    _PATH_HOST_ECDSA_KEY_FILE, "", NULL, NULL);
+#endif
 		sensitive_data.keys[6] = key_load_private_type(KEY_RSA,
 		    _PATH_HOST_RSA_KEY_FILE, "", NULL, NULL);
 		PRIV_END;
@@ -790,14 +799,18 @@ main(int ac, char **av)
 		    sensitive_data.keys[6] == NULL) {
 			sensitive_data.keys[1] = key_load_cert(
 			    _PATH_HOST_DSA_KEY_FILE);
+#ifdef OPENSSL_HAS_ECC
 			sensitive_data.keys[2] = key_load_cert(
 			    _PATH_HOST_ECDSA_KEY_FILE);
+#endif
 			sensitive_data.keys[3] = key_load_cert(
 			    _PATH_HOST_RSA_KEY_FILE);
 			sensitive_data.keys[4] = key_load_public(
 			    _PATH_HOST_DSA_KEY_FILE, NULL);
+#ifdef OPENSSL_HAS_ECC
 			sensitive_data.keys[5] = key_load_public(
 			    _PATH_HOST_ECDSA_KEY_FILE, NULL);
+#endif
 			sensitive_data.keys[6] = key_load_public(
 			    _PATH_HOST_RSA_KEY_FILE, NULL);
 			sensitive_data.external_keysign = 1;
@@ -821,10 +834,19 @@ main(int ac, char **av)
 	 */
 	r = snprintf(buf, sizeof buf, "%s%s%s", pw->pw_dir,
 	    strcmp(pw->pw_dir, "/") ? "/" : "", _PATH_SSH_USER_DIR);
-	if (r > 0 && (size_t)r < sizeof(buf) && stat(buf, &st) < 0)
+	if (r > 0 && (size_t)r < sizeof(buf) && stat(buf, &st) < 0) {
+#ifdef WITH_SELINUX
+		char *scon;
+
+		matchpathcon(buf, 0700, &scon);
+		setfscreatecon(scon);
+#endif
 		if (mkdir(buf, 0700) < 0)
 			error("Could not create directory '%.200s'.", buf);
-
+#ifdef WITH_SELINUX
+		setfscreatecon(NULL);
+#endif
+	}
 	/* load options.identity_files */
 	load_public_identity_files();
 

@@ -1,4 +1,4 @@
-This release of OpenSSH is for OpenBSD systems only.
+See http://www.openssh.com/txt/release-5.7 for the release notes.
 
 Please read
 	http://www.openssh.com/portable.html
@@ -23,5 +23,3 @@ features and created OpenSSH.  Markus Friedl contributed the support
 for SSH protocol versions 1.5 and 2.0.
 
 See http://www.openssh.com/ for more information.
-
-$OpenBSD: README,v 1.7 2006/04/01 05:37:46 djm Exp $

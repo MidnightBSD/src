@@ -25,7 +25,14 @@
 
 #include <ctype.h>
 #include <errno.h>
-#include <glob.h>
+
+#ifdef HAVE_PATHS_H
+# include <paths.h>
+#endif
+#ifdef HAVE_LIBGEN_H
+#include <libgen.h>
+#endif
+#ifdef USE_LIBEDIT
 #include <histedit.h>
 #include <paths.h>
 #include <libgen.h>
@@ -1832,6 +1839,7 @@ complete(EditLine *el, int ch)
 	xfree(line);	
 	return ret;
 }
+#endif /* USE_LIBEDIT */
 
 int
 interactive_loop(struct sftp_conn *conn, char *file1, char *file2)
@@ -1931,6 +1939,10 @@ interactive_loop(struct sftp_conn *conn, char *file1, char *file2)
 					printf("\n");
 			}
 		} else {
+#ifdef USE_LIBEDIT
+			const char *line;
+			int count = 0;
+
 			if ((line = el_gets(el, &count)) == NULL ||
 			    count <= 0) {
 				printf("\n");
@@ -2219,6 +2231,8 @@ main(int argc, char **argv)
 		else
 			fprintf(stderr, "Attached to %s.\n", sftp_direct);
 	}
+
+	err = interactive_loop(conn, file1, file2);
 
 	err = interactive_loop(conn, file1, file2);
 

@@ -170,6 +170,32 @@ check_ip_options(int sock, char *ipaddr)
 		fatal("Connection from %.100s with IP options:%.800s",
 		    ipaddr, text);
 	}
+#endif /* IP_OPTIONS */
+}
+
+void
+ipv64_normalise_mapped(struct sockaddr_storage *addr, socklen_t *len)
+{
+	struct sockaddr_in6 *a6 = (struct sockaddr_in6 *)addr;
+	struct sockaddr_in *a4 = (struct sockaddr_in *)addr;
+	struct in_addr inaddr;
+	u_int16_t port;
+
+	if (addr->ss_family != AF_INET6 ||
+	    !IN6_IS_ADDR_V4MAPPED(&a6->sin6_addr))
+		return;
+
+	debug3("Normalising mapped IPv4 in IPv6 address");
+
+	memcpy(&inaddr, ((char *)&a6->sin6_addr) + 12, sizeof(inaddr));
+	port = a6->sin6_port;
+
+	bzero(a4, sizeof(*a4));
+
+	a4->sin_family = AF_INET;
+	*len = sizeof(*a4);
+	memcpy(&a4->sin_addr, &inaddr, sizeof(inaddr));
+	a4->sin_port = port;
 }
 
 /*

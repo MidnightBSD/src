@@ -47,6 +47,14 @@
 #include "monitor.h"
 #include "roaming.h"
 
+#if OPENSSL_VERSION_NUMBER >= 0x00907000L
+# if defined(HAVE_EVP_SHA256)
+# define evp_ssh_sha256 EVP_sha256
+# else
+extern const EVP_MD *evp_ssh_sha256(void);
+# endif
+#endif
+
 /* prototype */
 static void kex_kexinit_finish(Kex *);
 static void kex_choose_conf(Kex *);
@@ -340,11 +348,12 @@ choose_kex(Kex *k, char *client, char *server)
 		k->evp_md = EVP_sha1();
 	} else if (strcmp(k->name, KEX_DHGEX_SHA256) == 0) {
 		k->kex_type = KEX_DH_GEX_SHA256;
-		k->evp_md = EVP_sha256();
+		k->evp_md = evp_ssh_sha256();
 	} else if (strncmp(k->name, KEX_ECDH_SHA2_STEM,
 	    sizeof(KEX_ECDH_SHA2_STEM) - 1) == 0) {
-		k->kex_type = KEX_ECDH_SHA2;
+ 		k->kex_type = KEX_ECDH_SHA2;
 		k->evp_md = kex_ecdh_name_to_evpmd(k->name);
+#endif
 	} else
 		fatal("bad kex alg %s", k->name);
 }

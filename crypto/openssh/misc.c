@@ -29,7 +29,13 @@
 #include <sys/socket.h>
 #include <sys/param.h>
 
-#include <net/if.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
@@ -964,3 +970,14 @@ parse_ipqos(const char *cp)
 	return val;
 }
 
+void
+sock_set_v6only(int s)
+{
+#ifdef IPV6_V6ONLY
+	int on = 1;
+
+	debug3("%s: set socket %d IPV6_V6ONLY", __func__, s);
+	if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on)) == -1)
+		error("setsockopt IPV6_V6ONLY: %s", strerror(errno));
+#endif
+}

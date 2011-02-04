@@ -118,6 +118,11 @@
 /* Location of ssh-pkcs11-helper to support keys in tokens */
 #define _PATH_SSH_PKCS11_HELPER		"/usr/libexec/ssh-pkcs11-helper"
 
+/* Location of ssh-pkcs11-helper to support keys in tokens */
+#ifndef _PATH_SSH_PKCS11_HELPER
+#define _PATH_SSH_PKCS11_HELPER		"/usr/libexec/ssh-pkcs11-helper"
+#endif
+
 /* xauth for X11 forwarding */
 #define _PATH_XAUTH			"/usr/X11R6/bin/xauth"
 

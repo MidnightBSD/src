@@ -562,6 +562,13 @@ do_exec_no_pty(Session *s, const char *command)
 	packet_set_interactive(s->display != NULL,
 	    options.ip_qos_interactive, options.ip_qos_bulk);
 
+	/*
+	 * Clear loginmsg, since it's the child's responsibility to display
+	 * it to the user, otherwise multiple sessions may accumulate
+	 * multiple copies of the login messages.
+	 */
+	buffer_clear(&loginmsg);
+
 #ifdef USE_PIPES
 	/* We are the parent.  Close the child sides of the pipes. */
 	close(pin[0]);
@@ -1108,10 +1115,15 @@ do_nologin(struct passwd *pw)
 	char buf[1024], *nl, *def_nl = _PATH_NOLOGIN;
 	struct stat sb;
 
+#ifdef HAVE_LOGIN_CAP
 	if (login_getcapbool(lc, "ignorenologin", 0) && pw->pw_uid)
 		return;
 	nl = login_getcapstr(lc, "nologin", def_nl, def_nl);
-
+#else
+	if (pw->pw_uid == 0)
+		return;
+	nl = def_nl;
+#endif
 	if (stat(nl, &sb) == -1) {
 		if (nl != def_nl)
 			xfree(nl);
@@ -1121,10 +1133,10 @@ do_nologin(struct passwd *pw)
 	/* /etc/nologin exists.  Print its contents if we can and exit. */
 	logit("User %.100s not allowed because %s exists", pw->pw_name, nl);
 	if ((f = fopen(nl, "r")) != NULL) {
-		while (fgets(buf, sizeof(buf), f))
-			fputs(buf, stderr);
-		fclose(f);
-	}
+ 		while (fgets(buf, sizeof(buf), f))
+ 			fputs(buf, stderr);
+ 		fclose(f);
+ 	}
 	exit(254);
 }
 
@@ -1189,13 +1201,31 @@ do_setusercontext(struct passwd *pw)
 {
 	char *chroot_path, *tmp;
 
-	if (getuid() == 0 || geteuid() == 0) {
-		/* Prepare groups */
+	platform_setusercontext(pw);
+
+	if (platform_privileged_uidswap()) {
+#ifdef HAVE_LOGIN_CAP
 		if (setusercontext(lc, pw, pw->pw_uid,
 		    (LOGIN_SETALL & ~(LOGIN_SETPATH|LOGIN_SETUSER))) < 0) {
 			perror("unable to set user context");
 			exit(1);
 		}
+#else
+		if (setlogin(pw->pw_name) < 0)
+			error("setlogin failed: %s", strerror(errno));
+		if (setgid(pw->pw_gid) < 0) {
+			perror("setgid");
+			exit(1);
+		}
+		/* Initialize the group list. */
+		if (initgroups(pw->pw_name, pw->pw_gid) < 0) {
+			perror("initgroups");
+			exit(1);
+		}
+		endgrent();
+#endif
+
+		platform_setusercontext_post_groups(pw);
 
 		if (options.chroot_directory != NULL &&
 		    strcasecmp(options.chroot_directory, "none") != 0) {
@@ -1208,7 +1238,7 @@ do_setusercontext(struct passwd *pw)
 			free(chroot_path);
 		}
 
-		/* Set UID */
+#ifdef HAVE_LOGIN_CAP
 		if (setusercontext(lc, pw, pw->pw_uid, LOGIN_SETUSER) < 0) {
 			perror("unable to set user context (setuser)");
 			exit(1);
@@ -1383,6 +1413,7 @@ do_child(Session *s, const char *command)
 	if (chdir(pw->pw_dir) < 0) {
 		/* Suppress missing homedir warning for chroot case */
 		r = login_getcapbool(lc, "requirehome", 0);
+#endif
 		if (r || options.chroot_directory == NULL ||
 		    strcasecmp(options.chroot_directory, "none") == 0)
 			fprintf(stderr, "Could not chdir to home "
@@ -1417,6 +1448,9 @@ do_child(Session *s, const char *command)
 		argv[i] = NULL;
 		optind = optreset = 1;
 		__progname = argv[0];
+#ifdef WITH_SELINUX
+		ssh_selinux_change_context("sftpd_t");
+#endif
 		exit(sftp_server_main(i, argv, s->pw));
 	}
 

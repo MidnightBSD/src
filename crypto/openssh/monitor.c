@@ -722,6 +722,188 @@ mm_answer_bsdauthrespond(int sock, Buffer *m)
 
 	return (authok != 0);
 }
+#endif
+
+#ifdef SKEY
+int
+mm_answer_skeyquery(int sock, Buffer *m)
+{
+	struct skey skey;
+	char challenge[1024];
+	u_int success;
+
+	success = _compat_skeychallenge(&skey, authctxt->user, challenge,
+	    sizeof(challenge)) < 0 ? 0 : 1;
+
+	buffer_clear(m);
+	buffer_put_int(m, success);
+	if (success)
+		buffer_put_cstring(m, challenge);
+
+	debug3("%s: sending challenge success: %u", __func__, success);
+	mm_request_send(sock, MONITOR_ANS_SKEYQUERY, m);
+
+	return (0);
+}
+
+int
+mm_answer_skeyrespond(int sock, Buffer *m)
+{
+	char *response;
+	int authok;
+
+	response = buffer_get_string(m, NULL);
+
+	authok = (options.challenge_response_authentication &&
+	    authctxt->valid &&
+	    skey_haskey(authctxt->pw->pw_name) == 0 &&
+	    skey_passcheck(authctxt->pw->pw_name, response) != -1);
+
+	xfree(response);
+
+	buffer_clear(m);
+	buffer_put_int(m, authok);
+
+	debug3("%s: sending authenticated: %d", __func__, authok);
+	mm_request_send(sock, MONITOR_ANS_SKEYRESPOND, m);
+
+	auth_method = "skey";
+
+	return (authok != 0);
+}
+#endif
+
+#ifdef USE_PAM
+int
+mm_answer_pam_start(int sock, Buffer *m)
+{
+	if (!options.use_pam)
+		fatal("UsePAM not set, but ended up in %s anyway", __func__);
+
+	start_pam(authctxt);
+
+	monitor_permit(mon_dispatch, MONITOR_REQ_PAM_ACCOUNT, 1);
+
+	return (0);
+}
+
+int
+mm_answer_pam_account(int sock, Buffer *m)
+{
+	u_int ret;
+
+	if (!options.use_pam)
+		fatal("UsePAM not set, but ended up in %s anyway", __func__);
+
+	ret = do_pam_account();
+
+	buffer_put_int(m, ret);
+	buffer_put_string(m, buffer_ptr(&loginmsg), buffer_len(&loginmsg));
+
+	mm_request_send(sock, MONITOR_ANS_PAM_ACCOUNT, m);
+
+	return (ret);
+}
+
+static void *sshpam_ctxt, *sshpam_authok;
+extern KbdintDevice sshpam_device;
+
+int
+mm_answer_pam_init_ctx(int sock, Buffer *m)
+{
+
+	debug3("%s", __func__);
+	authctxt->user = buffer_get_string(m, NULL);
+	sshpam_ctxt = (sshpam_device.init_ctx)(authctxt);
+	sshpam_authok = NULL;
+	buffer_clear(m);
+	if (sshpam_ctxt != NULL) {
+		monitor_permit(mon_dispatch, MONITOR_REQ_PAM_FREE_CTX, 1);
+		buffer_put_int(m, 1);
+	} else {
+		buffer_put_int(m, 0);
+	}
+	mm_request_send(sock, MONITOR_ANS_PAM_INIT_CTX, m);
+	return (0);
+}
+
+int
+mm_answer_pam_query(int sock, Buffer *m)
+{
+	char *name = NULL, *info = NULL, **prompts = NULL;
+	u_int i, num = 0, *echo_on = 0;
+	int ret;
+
+	debug3("%s", __func__);
+	sshpam_authok = NULL;
+	ret = (sshpam_device.query)(sshpam_ctxt, &name, &info, &num, &prompts, &echo_on);
+	if (ret == 0 && num == 0)
+		sshpam_authok = sshpam_ctxt;
+	if (num > 1 || name == NULL || info == NULL)
+		ret = -1;
+	buffer_clear(m);
+	buffer_put_int(m, ret);
+	buffer_put_cstring(m, name);
+	xfree(name);
+	buffer_put_cstring(m, info);
+	xfree(info);
+	buffer_put_int(m, num);
+	for (i = 0; i < num; ++i) {
+		buffer_put_cstring(m, prompts[i]);
+		xfree(prompts[i]);
+		buffer_put_int(m, echo_on[i]);
+	}
+	if (prompts != NULL)
+		xfree(prompts);
+	if (echo_on != NULL)
+		xfree(echo_on);
+	auth_method = "keyboard-interactive/pam";
+	mm_request_send(sock, MONITOR_ANS_PAM_QUERY, m);
+	return (0);
+}
+
+int
+mm_answer_pam_respond(int sock, Buffer *m)
+{
+	char **resp;
+	u_int i, num;
+	int ret;
+
+	debug3("%s", __func__);
+	sshpam_authok = NULL;
+	num = buffer_get_int(m);
+	if (num > 0) {
+		resp = xcalloc(num, sizeof(char *));
+		for (i = 0; i < num; ++i)
+			resp[i] = buffer_get_string(m, NULL);
+		ret = (sshpam_device.respond)(sshpam_ctxt, num, resp);
+		for (i = 0; i < num; ++i)
+			xfree(resp[i]);
+		xfree(resp);
+	} else {
+		ret = (sshpam_device.respond)(sshpam_ctxt, num, NULL);
+	}
+	buffer_clear(m);
+	buffer_put_int(m, ret);
+	mm_request_send(sock, MONITOR_ANS_PAM_RESPOND, m);
+	auth_method = "keyboard-interactive/pam";
+	if (ret == 0)
+		sshpam_authok = sshpam_ctxt;
+	return (0);
+}
+
+int
+mm_answer_pam_free_ctx(int sock, Buffer *m)
+{
+
+	debug3("%s", __func__);
+	(sshpam_device.free_ctx)(sshpam_ctxt);
+	buffer_clear(m);
+	mm_request_send(sock, MONITOR_ANS_PAM_FREE_CTX, m);
+	auth_method = "keyboard-interactive/pam";
+	return (sshpam_authok == sshpam_ctxt);
+}
+#endif
 
 int
 mm_answer_keyallowed(int sock, Buffer *m)

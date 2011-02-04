@@ -1007,6 +1007,10 @@ server_listen(void)
 		    &on, sizeof(on)) == -1)
 			error("setsockopt SO_REUSEADDR: %s", strerror(errno));
 
+		/* Only communicate in IPv6 over AF_INET6 sockets. */
+		if (ai->ai_family == AF_INET6)
+			sock_set_v6only(listen_sock);
+
 		debug("Bind to port %s on %s.", strport, ntop);
 
 		/* Bind the socket to the desired port. */
@@ -1661,6 +1665,7 @@ main(int ac, char **av)
 	if (inetd_flag) {
 		server_accept_inetd(&sock_in, &sock_out);
 	} else {
+		platform_pre_listen();
 		server_listen();
 
 		if (options.protocol & SSH_PROTO_1)

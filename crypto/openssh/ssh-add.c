@@ -66,7 +66,9 @@ extern char *__progname;
 static char *default_files[] = {
 	_PATH_SSH_CLIENT_ID_RSA,
 	_PATH_SSH_CLIENT_ID_DSA,
+#ifdef OPENSSL_HAS_ECC
 	_PATH_SSH_CLIENT_ID_ECDSA,
+#endif
 	_PATH_SSH_CLIENT_IDENTITY,
 	NULL
 };
@@ -364,6 +366,10 @@ main(int argc, char **argv)
 
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
 	sanitise_stdfd();
+
+	__progname = ssh_get_progname(argv[0]);
+	init_rng();
+	seed_rng();
 
 	OpenSSL_add_all_algorithms();
 

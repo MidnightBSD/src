@@ -46,6 +46,9 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 
+/* compatibility with old or broken OpenSSL versions */
+#include "openbsd-compat/openssl-compat.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -166,7 +169,11 @@ key_private_pem_to_blob(Key *key, Buffer *blob, const char *_passphrase,
 	int success = 0;
 	int blen, len = strlen(_passphrase);
 	u_char *passphrase = (len > 0) ? (u_char *)_passphrase : NULL;
+#if (OPENSSL_VERSION_NUMBER < 0x00907000L)
+	const EVP_CIPHER *cipher = (len > 0) ? EVP_des_ede3_cbc() : NULL;
+#else
 	const EVP_CIPHER *cipher = (len > 0) ? EVP_aes_128_cbc() : NULL;
+#endif
 	const u_char *bptr;
 	BIO *bio;
 
@@ -183,10 +190,12 @@ key_private_pem_to_blob(Key *key, Buffer *blob, const char *_passphrase,
 		success = PEM_write_bio_DSAPrivateKey(bio, key->dsa,
 		    cipher, passphrase, len, NULL, NULL);
 		break;
+#ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 		success = PEM_write_bio_ECPrivateKey(bio, key->ecdsa,
 		    cipher, passphrase, len, NULL, NULL);
 		break;
+#endif
 	case KEY_RSA:
 		success = PEM_write_bio_RSAPrivateKey(bio, key->rsa,
 		    cipher, passphrase, len, NULL, NULL);
@@ -524,6 +533,7 @@ key_parse_private_pem(Buffer *blob, int type, const char *passphrase,
 #ifdef DEBUG_PK
 		DSA_print_fp(stderr, prv->dsa, 8);
 #endif
+#ifdef OPENSSL_HAS_ECC
 	} else if (pk->type == EVP_PKEY_EC &&
 	    (type == KEY_UNSPEC||type==KEY_ECDSA)) {
 		prv = key_new(KEY_UNSPEC);
@@ -543,6 +553,7 @@ key_parse_private_pem(Buffer *blob, int type, const char *passphrase,
 		if (prv != NULL && prv->ecdsa != NULL)
 			key_dump_ec_key(prv->ecdsa);
 #endif
+#endif /* OPENSSL_HAS_ECC */
 	} else {
 		error("%s: PEM_read_PrivateKey: mismatch or "
 		    "unknown EVP_PKEY save_type %d", __func__, pk->save_type);

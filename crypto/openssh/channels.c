@@ -1735,7 +1735,7 @@ channel_handle_efd(Channel *c, fd_set *readset, fd_set *writeset)
 		} else if (c->efd != -1 &&
 		    (c->extended_usage == CHAN_EXTENDED_READ ||
 		    c->extended_usage == CHAN_EXTENDED_IGNORE) &&
-		    FD_ISSET(c->efd, readset)) {
+		    (c->detach_close || FD_ISSET(c->efd, readset))) {
 			len = read(c->efd, buf, sizeof(buf));
 			debug2("channel %d: read %d from efd %d",
 			    c->self, len, c->efd);
@@ -1757,7 +1757,6 @@ channel_handle_efd(Channel *c, fd_set *readset, fd_set *writeset)
 	return 1;
 }
 
-/* ARGSUSED */
 static int
 channel_check_window(Channel *c)
 {
@@ -2728,6 +2727,8 @@ channel_setup_fwd_listener(int type, const char *listen_addr,
 		}
 
 		channel_set_reuseaddr(sock);
+		if (ai->ai_family == AF_INET6)
+			sock_set_v6only(sock);
 
 		debug("Local forwarding listening on %s port %s.",
 		    ntop, strport);
@@ -3250,11 +3251,24 @@ x11_create_display_inet(int x11_display_offset, int x11_use_localhost,
 			sock = socket(ai->ai_family, ai->ai_socktype,
 			    ai->ai_protocol);
 			if (sock < 0) {
-				error("socket: %.100s", strerror(errno));
-				freeaddrinfo(aitop);
-				return -1;
+				if ((errno != EINVAL) && (errno != EAFNOSUPPORT)
+#ifdef EPFNOSUPPORT
+				    && (errno != EPFNOSUPPORT)
+#endif 
+				    ) {
+					error("socket: %.100s", strerror(errno));
+					freeaddrinfo(aitop);
+					return -1;
+				} else {
+					debug("x11_create_display_inet: Socket family %d not supported",
+						 ai->ai_family);
+					continue;
+				}
 			}
-			channel_set_reuseaddr(sock);
+			if (ai->ai_family == AF_INET6)
+				sock_set_v6only(sock);
+			if (x11_use_localhost)
+				channel_set_reuseaddr(sock);
 			if (bind(sock, ai->ai_addr, ai->ai_addrlen) < 0) {
 				debug2("bind port %d: %.100s", port, strerror(errno));
 				close(sock);

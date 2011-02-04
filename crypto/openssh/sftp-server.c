@@ -1442,6 +1442,11 @@ sftp_server_main(int argc, char **argv, struct passwd *user_pw)
 	in = STDIN_FILENO;
 	out = STDOUT_FILENO;
 
+#ifdef HAVE_CYGWIN
+	setmode(in, O_BINARY);
+	setmode(out, O_BINARY);
+#endif
+
 	max = 0;
 	if (in > max)
 		max = in;

@@ -27,6 +27,9 @@
 
 #include <openssl/dh.h>
 
+#include <openssl/dh.h>
+
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
