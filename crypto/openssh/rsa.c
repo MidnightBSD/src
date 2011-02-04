@@ -60,11 +60,8 @@
  *     [gone - had to be deleted - what a pity]
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 
-#include <stdarg.h>
 #include <string.h>
 
 #include "xmalloc.h"

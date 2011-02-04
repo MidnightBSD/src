@@ -25,5 +25,3 @@ int		 get_remote_port(void);
 int		 get_local_port(void);
 int		 get_sock_port(int, int);
 void		 clear_cached_addr(void);
-
-void		 ipv64_normalise_mapped(struct sockaddr_storage *, socklen_t *);

@@ -1,4 +1,4 @@
-/* $OpenBSD: sshlogin.c,v 1.26 2007/09/11 15:47:17 gilles Exp $ */
+/* $OpenBSD: sshlogin.c,v 1.27 2011/01/11 06:06:09 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -39,23 +39,21 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 
-#include <netinet/in.h>
-
 #include <errno.h>
 #include <fcntl.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <util.h>
+#include <utmp.h>
+#include <stdarg.h>
 
-#include "loginrec.h"
+#include "sshlogin.h"
 #include "log.h"
 #include "buffer.h"
 #include "servconf.h"
@@ -72,11 +70,40 @@ time_t
 get_last_login_time(uid_t uid, const char *logname,
     char *buf, size_t bufsize)
 {
-	struct logininfo li;
+	struct lastlog ll;
+	char *lastlog;
+	int fd;
+	off_t pos, r;
 
-	login_get_lastlog(&li, uid);
-	strlcpy(buf, li.hostname, bufsize);
-	return (time_t)li.tv_sec;
+	lastlog = _PATH_LASTLOG;
+	buf[0] = '\0';
+
+	fd = open(lastlog, O_RDONLY);
+	if (fd < 0)
+		return 0;
+
+	pos = (long) uid * sizeof(ll);
+	r = lseek(fd, pos, SEEK_SET);
+	if (r == -1) {
+		error("%s: lseek: %s", __func__, strerror(errno));
+		close(fd);
+		return (0);
+	}
+	if (r != pos) {
+		debug("%s: truncated lastlog", __func__);
+		close(fd);
+		return (0);
+	}
+	if (read(fd, &ll, sizeof(ll)) != sizeof(ll)) {
+		close(fd);
+		return 0;
+	}
+	close(fd);
+	if (bufsize > sizeof(ll.ll_host) + 1)
+		bufsize = sizeof(ll.ll_host) + 1;
+	strncpy(buf, ll.ll_host, bufsize - 1);
+	buf[bufsize - 1] = '\0';
+	return (time_t)ll.ll_time;
 }
 
 /*
@@ -86,20 +113,12 @@ get_last_login_time(uid_t uid, const char *logname,
 static void
 store_lastlog_message(const char *user, uid_t uid)
 {
-#ifndef NO_SSH_LASTLOG
 	char *time_string, hostname[MAXHOSTNAMELEN] = "", buf[512];
 	time_t last_login_time;
 
 	if (!options.print_lastlog)
 		return;
 
-# ifdef CUSTOM_SYS_AUTH_GET_LASTLOGIN_MSG
-	time_string = sys_auth_get_lastlogin_msg(user, uid);
-	if (time_string != NULL) {
-		buffer_append(&loginmsg, time_string, strlen(time_string));
-		xfree(time_string);
-	}
-# else
 	last_login_time = get_last_login_time(uid, user, hostname,
 	    sizeof(hostname));
 
@@ -114,8 +133,6 @@ store_lastlog_message(const char *user, uid_t uid)
 			    time_string, hostname);
 		buffer_append(&loginmsg, buf, strlen(buf));
 	}
-# endif /* CUSTOM_SYS_AUTH_GET_LASTLOGIN_MSG */
-#endif /* NO_SSH_LASTLOG */
 }
 
 /*
@@ -126,38 +143,51 @@ void
 record_login(pid_t pid, const char *tty, const char *user, uid_t uid,
     const char *host, struct sockaddr *addr, socklen_t addrlen)
 {
-	struct logininfo *li;
+	int fd;
+	struct lastlog ll;
+	char *lastlog;
+	struct utmp u;
 
 	/* save previous login details before writing new */
 	store_lastlog_message(user, uid);
 
-	li = login_alloc_entry(pid, user, host, tty);
-	login_set_addr(li, addr, addrlen);
-	login_login(li);
-	login_free_entry(li);
-}
+	/* Construct an utmp/wtmp entry. */
+	memset(&u, 0, sizeof(u));
+	strncpy(u.ut_line, tty + 5, sizeof(u.ut_line));
+	u.ut_time = time(NULL);
+	strncpy(u.ut_name, user, sizeof(u.ut_name));
+	strncpy(u.ut_host, host, sizeof(u.ut_host));
 
-#ifdef LOGIN_NEEDS_UTMPX
-void
-record_utmp_only(pid_t pid, const char *ttyname, const char *user,
-		 const char *host, struct sockaddr *addr, socklen_t addrlen)
-{
-	struct logininfo *li;
+	login(&u);
+	lastlog = _PATH_LASTLOG;
 
-	li = login_alloc_entry(pid, user, host, ttyname);
-	login_set_addr(li, addr, addrlen);
-	login_utmp_only(li);
-	login_free_entry(li);
+	/* Update lastlog unless actually recording a logout. */
+	if (strcmp(user, "") != 0) {
+		/*
+		 * It is safer to bzero the lastlog structure first because
+		 * some systems might have some extra fields in it (e.g. SGI)
+		 */
+		memset(&ll, 0, sizeof(ll));
+
+		/* Update lastlog. */
+		ll.ll_time = time(NULL);
+		strncpy(ll.ll_line, tty + 5, sizeof(ll.ll_line));
+		strncpy(ll.ll_host, host, sizeof(ll.ll_host));
+		fd = open(lastlog, O_RDWR);
+		if (fd >= 0) {
+			lseek(fd, (off_t) ((long) uid * sizeof(ll)), SEEK_SET);
+			if (write(fd, &ll, sizeof(ll)) != sizeof(ll))
+				logit("Could not write %.100s: %.100s", lastlog, strerror(errno));
+			close(fd);
+		}
+	}
 }
-#endif
 
 /* Records that the user has logged out. */
 void
-record_logout(pid_t pid, const char *tty, const char *user)
+record_logout(pid_t pid, const char *tty)
 {
-	struct logininfo *li;
-
-	li = login_alloc_entry(pid, user, NULL, tty);
-	login_logout(li);
-	login_free_entry(li);
+	const char *line = tty + 5;	/* /dev/ttyq8 -> ttyq8 */
+	if (logout(line))
+		logwtmp(line, "", "");
 }

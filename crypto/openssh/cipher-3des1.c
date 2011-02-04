@@ -1,4 +1,4 @@
-/* $OpenBSD: cipher-3des1.c,v 1.6 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: cipher-3des1.c,v 1.7 2010/10/01 23:05:32 djm Exp $ */
 /*
  * Copyright (c) 2003 Markus Friedl.  All rights reserved.
  *
@@ -23,19 +23,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 
 #include <openssl/evp.h>
 
-#include <stdarg.h>
 #include <string.h>
 
 #include "xmalloc.h"
 #include "log.h"
-
-#include "openbsd-compat/openssl-compat.h"
 
 /*
  * This is used by SSH1:
@@ -85,11 +80,6 @@ ssh1_3des_init(EVP_CIPHER_CTX *ctx, const u_char *key, const u_char *iv,
 	EVP_CIPHER_CTX_init(&c->k1);
 	EVP_CIPHER_CTX_init(&c->k2);
 	EVP_CIPHER_CTX_init(&c->k3);
-#ifdef SSH_OLD_EVP
-	EVP_CipherInit(&c->k1, EVP_des_cbc(), k1, NULL, enc);
-	EVP_CipherInit(&c->k2, EVP_des_cbc(), k2, NULL, !enc);
-	EVP_CipherInit(&c->k3, EVP_des_cbc(), k3, NULL, enc);
-#else
 	if (EVP_CipherInit(&c->k1, EVP_des_cbc(), k1, NULL, enc) == 0 ||
 	    EVP_CipherInit(&c->k2, EVP_des_cbc(), k2, NULL, !enc) == 0 ||
 	    EVP_CipherInit(&c->k3, EVP_des_cbc(), k3, NULL, enc) == 0) {
@@ -98,12 +88,11 @@ ssh1_3des_init(EVP_CIPHER_CTX *ctx, const u_char *key, const u_char *iv,
 		EVP_CIPHER_CTX_set_app_data(ctx, NULL);
 		return (0);
 	}
-#endif
 	return (1);
 }
 
 static int
-ssh1_3des_cbc(EVP_CIPHER_CTX *ctx, u_char *dest, const u_char *src, u_int len)
+ssh1_3des_cbc(EVP_CIPHER_CTX *ctx, u_char *dest, const u_char *src, size_t len)
 {
 	struct ssh1_3des_ctx *c;
 
@@ -111,16 +100,10 @@ ssh1_3des_cbc(EVP_CIPHER_CTX *ctx, u_char *dest, const u_char *src, u_int len)
 		error("ssh1_3des_cbc: no context");
 		return (0);
 	}
-#ifdef SSH_OLD_EVP
-	EVP_Cipher(&c->k1, dest, (u_char *)src, len);
-	EVP_Cipher(&c->k2, dest, dest, len);
-	EVP_Cipher(&c->k3, dest, dest, len);
-#else
 	if (EVP_Cipher(&c->k1, dest, (u_char *)src, len) == 0 ||
 	    EVP_Cipher(&c->k2, dest, dest, len) == 0 ||
 	    EVP_Cipher(&c->k3, dest, dest, len) == 0)
 		return (0);
-#endif
 	return (1);
 }
 
@@ -175,8 +158,6 @@ evp_ssh1_3des(void)
 	ssh1_3des.init = ssh1_3des_init;
 	ssh1_3des.cleanup = ssh1_3des_cleanup;
 	ssh1_3des.do_cipher = ssh1_3des_cbc;
-#ifndef SSH_OLD_EVP
 	ssh1_3des.flags = EVP_CIPH_CBC_MODE | EVP_CIPH_VARIABLE_LENGTH;
-#endif
 	return (&ssh1_3des);
 }

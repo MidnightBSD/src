@@ -1,4 +1,4 @@
-/* $OpenBSD: cipher-bf1.c,v 1.5 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: cipher-bf1.c,v 1.6 2010/10/01 23:05:32 djm Exp $ */
 /*
  * Copyright (c) 2003 Markus Friedl.  All rights reserved.
  *
@@ -23,20 +23,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 
 #include <openssl/evp.h>
 
-#include <stdarg.h>
 #include <string.h>
 
 #include "xmalloc.h"
 #include "log.h"
-
-#include "openbsd-compat/openssl-compat.h"
-
 /*
  * SSH1 uses a variation on Blowfish, all bytes must be swapped before
  * and after encryption/decryption. Thus the swap_bytes stuff (yuk).
@@ -63,23 +57,11 @@ swap_bytes(const u_char *src, u_char *dst, int n)
 	}
 }
 
-#ifdef SSH_OLD_EVP
-static void bf_ssh1_init (EVP_CIPHER_CTX * ctx, const unsigned char *key,
-			  const unsigned char *iv, int enc)
-{
-	if (iv != NULL)
-		memcpy (&(ctx->oiv[0]), iv, 8);
-	memcpy (&(ctx->iv[0]), &(ctx->oiv[0]), 8);
-	if (key != NULL)
-		BF_set_key (&(ctx->c.bf_ks), EVP_CIPHER_CTX_key_length (ctx),
-			    key);
-}
-#endif
-
-static int (*orig_bf)(EVP_CIPHER_CTX *, u_char *, const u_char *, u_int) = NULL;
+static int (*orig_bf)(EVP_CIPHER_CTX *, u_char *,
+    const u_char *, size_t) = NULL;
 
 static int
-bf_ssh1_cipher(EVP_CIPHER_CTX *ctx, u_char *out, const u_char *in, u_int len)
+bf_ssh1_cipher(EVP_CIPHER_CTX *ctx, u_char *out, const u_char *in, size_t len)
 {
 	int ret;
 
@@ -97,9 +79,6 @@ evp_ssh1_bf(void)
 	memcpy(&ssh1_bf, EVP_bf_cbc(), sizeof(EVP_CIPHER));
 	orig_bf = ssh1_bf.do_cipher;
 	ssh1_bf.nid = NID_undef;
-#ifdef SSH_OLD_EVP
-	ssh1_bf.init = bf_ssh1_init;
-#endif
 	ssh1_bf.do_cipher = bf_ssh1_cipher;
 	ssh1_bf.key_len = 32;
 	return (&ssh1_bf);

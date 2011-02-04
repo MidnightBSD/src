@@ -34,8 +34,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 
 #include <stdarg.h>
@@ -45,9 +43,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <errno.h>
-#if defined(HAVE_STRNVIS) && defined(HAVE_VIS_H)
-# include <vis.h>
-#endif
+#include <vis.h>
 
 #include "xmalloc.h"
 #include "log.h"
@@ -59,9 +55,6 @@ static char *argv0;
 
 extern char *__progname;
 
-#define LOG_SYSLOG_VIS	(VIS_CSTYLE|VIS_NL|VIS_TAB|VIS_OCTAL)
-#define LOG_STDERR_VIS	(VIS_SAFE|VIS_OCTAL)
-
 /* textual representation of log-facilities/levels */
 
 static struct {
@@ -71,9 +64,6 @@ static struct {
 	{ "DAEMON",	SYSLOG_FACILITY_DAEMON },
 	{ "USER",	SYSLOG_FACILITY_USER },
 	{ "AUTH",	SYSLOG_FACILITY_AUTH },
-#ifdef LOG_AUTHPRIV
-	{ "AUTHPRIV",	SYSLOG_FACILITY_AUTHPRIV },
-#endif
 	{ "LOCAL0",	SYSLOG_FACILITY_LOCAL0 },
 	{ "LOCAL1",	SYSLOG_FACILITY_LOCAL1 },
 	{ "LOCAL2",	SYSLOG_FACILITY_LOCAL2 },
@@ -163,13 +153,11 @@ error(const char *fmt,...)
 void
 sigdie(const char *fmt,...)
 {
-#ifdef DO_LOG_SAFE_IN_SIGHAND
 	va_list args;
 
 	va_start(args, fmt);
 	do_log(SYSLOG_LEVEL_FATAL, fmt, args);
 	va_end(args);
-#endif
 	_exit(1);
 }
 
@@ -237,10 +225,6 @@ debug3(const char *fmt,...)
 void
 log_init(char *av0, LogLevel level, SyslogFacility facility, int on_stderr)
 {
-#if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT)
-	struct syslog_data sdata = SYSLOG_DATA_INIT;
-#endif
-
 	argv0 = av0;
 
 	switch (level) {
@@ -274,11 +258,6 @@ log_init(char *av0, LogLevel level, SyslogFacility facility, int on_stderr)
 	case SYSLOG_FACILITY_AUTH:
 		log_facility = LOG_AUTH;
 		break;
-#ifdef LOG_AUTHPRIV
-	case SYSLOG_FACILITY_AUTHPRIV:
-		log_facility = LOG_AUTHPRIV;
-		break;
-#endif
 	case SYSLOG_FACILITY_LOCAL0:
 		log_facility = LOG_LOCAL0;
 		break;
@@ -309,19 +288,6 @@ log_init(char *av0, LogLevel level, SyslogFacility facility, int on_stderr)
 		    (int) facility);
 		exit(1);
 	}
-
-	/*
-	 * If an external library (eg libwrap) attempts to use syslog
-	 * immediately after reexec, syslog may be pointing to the wrong
-	 * facility, so we force an open/close of syslog here.
-	 */
-#if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT)
-	openlog_r(argv0 ? argv0 : __progname, LOG_PID, log_facility, &sdata);
-	closelog_r(&sdata);
-#else
-	openlog(argv0 ? argv0 : __progname, LOG_PID, log_facility);
-	closelog();
-#endif
 }
 
 #define MSGBUFSIZ 1024
@@ -329,9 +295,7 @@ log_init(char *av0, LogLevel level, SyslogFacility facility, int on_stderr)
 void
 do_log(LogLevel level, const char *fmt, va_list args)
 {
-#if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT)
 	struct syslog_data sdata = SYSLOG_DATA_INIT;
-#endif
 	char msgbuf[MSGBUFSIZ];
 	char fmtbuf[MSGBUFSIZ];
 	char *txt = NULL;
@@ -381,21 +345,14 @@ do_log(LogLevel level, const char *fmt, va_list args)
 	} else {
 		vsnprintf(msgbuf, sizeof(msgbuf), fmt, args);
 	}
-	strnvis(fmtbuf, msgbuf, sizeof(fmtbuf),
-	    log_on_stderr ? LOG_STDERR_VIS : LOG_SYSLOG_VIS);
+	strnvis(fmtbuf, msgbuf, sizeof(fmtbuf), VIS_SAFE|VIS_OCTAL);
 	if (log_on_stderr) {
 		snprintf(msgbuf, sizeof msgbuf, "%s\r\n", fmtbuf);
 		write(STDERR_FILENO, msgbuf, strlen(msgbuf));
 	} else {
-#if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT)
 		openlog_r(argv0 ? argv0 : __progname, LOG_PID, log_facility, &sdata);
 		syslog_r(pri, &sdata, "%.500s", fmtbuf);
 		closelog_r(&sdata);
-#else
-		openlog(argv0 ? argv0 : __progname, LOG_PID, log_facility);
-		syslog(pri, "%.500s", fmtbuf);
-		closelog();
-#endif
 	}
 	errno = saved_errno;
 }

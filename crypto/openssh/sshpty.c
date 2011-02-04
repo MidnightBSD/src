@@ -12,45 +12,26 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <signal.h>
 
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
-#ifdef HAVE_PATHS_H
-# include <paths.h>
-#endif
+#include <paths.h>
 #include <pwd.h>
 #include <stdarg.h>
 #include <string.h>
 #include <termios.h>
-#ifdef HAVE_UTIL_H
-# include <util.h>
-#endif
 #include <unistd.h>
+#include <util.h>
 
 #include "sshpty.h"
 #include "log.h"
-#include "misc.h"
-
-#ifdef HAVE_PTY_H
-# include <pty.h>
-#endif
 
 #ifndef O_NOCTTY
 #define O_NOCTTY 0
-#endif
-
-#ifdef __APPLE__
-# include <AvailabilityMacros.h>
-# if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
-#  define __APPLE_PRIVPTY__
-# endif
 #endif
 
 /*
@@ -63,20 +44,15 @@
 int
 pty_allocate(int *ptyfd, int *ttyfd, char *namebuf, size_t namebuflen)
 {
-	/* openpty(3) exists in OSF/1 and some other os'es */
-	char *name;
+	char buf[64];
 	int i;
 
-	i = openpty(ptyfd, ttyfd, NULL, NULL, NULL);
+	i = openpty(ptyfd, ttyfd, buf, NULL, NULL);
 	if (i < 0) {
 		error("openpty: %.100s", strerror(errno));
 		return 0;
 	}
-	name = ttyname(*ttyfd);
-	if (!name)
-		fatal("openpty returns device for which ttyname fails.");
-
-	strlcpy(namebuf, name, namebuflen);	/* possible truncation */
+	strlcpy(namebuf, buf, namebuflen);	/* possible truncation */
 	return 1;
 }
 
@@ -85,12 +61,10 @@ pty_allocate(int *ptyfd, int *ttyfd, char *namebuf, size_t namebuflen)
 void
 pty_release(const char *tty)
 {
-#ifndef __APPLE_PRIVPTY__
 	if (chown(tty, (uid_t) 0, (gid_t) 0) < 0)
 		error("chown %.100s 0 0 failed: %.100s", tty, strerror(errno));
 	if (chmod(tty, (mode_t) 0666) < 0)
 		error("chmod %.100s 0666 failed: %.100s", tty, strerror(errno));
-#endif /* __APPLE_PRIVPTY__ */
 }
 
 /* Makes the tty the process's controlling tty and sets it to sane modes. */
@@ -99,33 +73,6 @@ void
 pty_make_controlling_tty(int *ttyfd, const char *tty)
 {
 	int fd;
-#ifdef USE_VHANGUP
-	void *old;
-#endif /* USE_VHANGUP */
-
-#ifdef _UNICOS
-	if (setsid() < 0)
-		error("setsid: %.100s", strerror(errno));
-
-	fd = open(tty, O_RDWR|O_NOCTTY);
-	if (fd != -1) {
-		signal(SIGHUP, SIG_IGN);
-		ioctl(fd, TCVHUP, (char *)NULL);
-		signal(SIGHUP, SIG_DFL);
-		setpgid(0, 0);
-		close(fd);
-	} else {
-		error("Failed to disconnect from controlling tty.");
-	}
-
-	debug("Setting controlling tty using TCSETCTTY.");
-	ioctl(*ttyfd, TCSETCTTY, NULL);
-	fd = open("/dev/tty", O_RDWR);
-	if (fd < 0)
-		error("%.100s: %.100s", tty, strerror(errno));
-	close(*ttyfd);
-	*ttyfd = fd;
-#else /* _UNICOS */
 
 	/* First disconnect from the old controlling tty. */
 #ifdef TIOCNOTTY
@@ -153,26 +100,12 @@ pty_make_controlling_tty(int *ttyfd, const char *tty)
 	if (ioctl(*ttyfd, TIOCSCTTY, NULL) < 0)
 		error("ioctl(TIOCSCTTY): %.100s", strerror(errno));
 #endif /* TIOCSCTTY */
-#ifdef NEED_SETPGRP
-	if (setpgrp(0,0) < 0)
-		error("SETPGRP %s",strerror(errno));
-#endif /* NEED_SETPGRP */
-#ifdef USE_VHANGUP
-	old = signal(SIGHUP, SIG_IGN);
-	vhangup();
-	signal(SIGHUP, old);
-#endif /* USE_VHANGUP */
 	fd = open(tty, O_RDWR);
-	if (fd < 0) {
+	if (fd < 0)
 		error("%.100s: %.100s", tty, strerror(errno));
-	} else {
-#ifdef USE_VHANGUP
-		close(*ttyfd);
-		*ttyfd = fd;
-#else /* USE_VHANGUP */
+	else
 		close(fd);
-#endif /* USE_VHANGUP */
-	}
+
 	/* Verify that we now have a controlling tty. */
 	fd = open(_PATH_TTY, O_WRONLY);
 	if (fd < 0)
@@ -180,7 +113,6 @@ pty_make_controlling_tty(int *ttyfd, const char *tty)
 		    strerror(errno));
 	else
 		close(fd);
-#endif /* _UNICOS */
 }
 
 /* Changes the window size associated with the pty. */
@@ -225,10 +157,6 @@ pty_setowner(struct passwd *pw, const char *tty)
 	if (stat(tty, &st))
 		fatal("stat(%.100s) failed: %.100s", tty,
 		    strerror(errno));
-
-#ifdef WITH_SELINUX
-	ssh_selinux_setup_pty(pw->pw_name, tty);
-#endif
 
 	if (st.st_uid != pw->pw_uid || st.st_gid != gid) {
 		if (chown(tty, pw->pw_uid, gid) < 0) {

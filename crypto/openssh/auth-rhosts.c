@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-rhosts.c,v 1.43 2008/06/13 14:18:51 dtucker Exp $ */
+/* $OpenBSD: auth-rhosts.c,v 1.44 2010/03/07 11:57:13 dtucker Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -14,19 +14,15 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#ifdef HAVE_NETGROUP_H
-# include <netgroup.h>
-#endif
+#include <fcntl.h>
+#include <netgroup.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 #include "packet.h"
@@ -317,11 +313,5 @@ int
 auth_rhosts2(struct passwd *pw, const char *client_user, const char *hostname,
     const char *ipaddr)
 {
-	int ret;
-
-	auth_debug_reset();
-	ret = auth_rhosts2_raw(pw, client_user, hostname, ipaddr);
-	if (!use_privsep)
-		auth_debug_send();
-	return ret;
+       return auth_rhosts2_raw(pw, client_user, hostname, ipaddr);
 }

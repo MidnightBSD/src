@@ -23,13 +23,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 
 #include <openssl/hmac.h>
 
-#include <stdarg.h>
 #include <string.h>
 #include <signal.h>
 

@@ -23,13 +23,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 
-#include <stdarg.h>
-
-#ifdef BSD_AUTH
 #include "xmalloc.h"
 #include "key.h"
 #include "hostfile.h"
@@ -135,4 +130,3 @@ KbdintDevice mm_bsdauth_device = {
 	mm_bsdauth_respond,
 	bsdauth_free_ctx
 };
-#endif

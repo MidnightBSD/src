@@ -63,8 +63,8 @@
 /* -- Global Includes --------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
 
-#include "includes.h"
 #include <sys/types.h>
+#include <sys/endian.h>
 
 #include "xmalloc.h"
 #include "umac.h"
@@ -123,11 +123,7 @@ typedef unsigned int	UWORD;  /* Register */
 /* --- Endian Conversion --- Forcing assembly on some platforms           */
 /* ---------------------------------------------------------------------- */
 
-#if HAVE_SWAP32
-#define LOAD_UINT32_REVERSED(p)		(swap32(*(UINT32 *)(p)))
-#define STORE_UINT32_REVERSED(p,v) 	(*(UINT32 *)(p) = swap32(v))
-#else /* HAVE_SWAP32 */
-
+#if 0
 static UINT32 LOAD_UINT32_REVERSED(void *ptr)
 {
     UINT32 temp = *(UINT32 *)ptr;
@@ -136,19 +132,20 @@ static UINT32 LOAD_UINT32_REVERSED(void *ptr)
     return (UINT32)temp;
 }
 
-# if (__LITTLE_ENDIAN__)
 static void STORE_UINT32_REVERSED(void *ptr, UINT32 x)
 {
     UINT32 i = (UINT32)x;
     *(UINT32 *)ptr = (i >> 24) | ((i & 0x00FF0000) >> 8 )
                    | ((i & 0x0000FF00) << 8 ) | (i << 24);
 }
-# endif /* __LITTLE_ENDIAN */
-#endif /* HAVE_SWAP32 */
+#endif
 
 /* The following definitions use the above reversal-primitives to do the right
  * thing on endian specific load and stores.
  */
+
+#define LOAD_UINT32_REVERSED(p)		(swap32(*(UINT32 *)(p)))
+#define STORE_UINT32_REVERSED(p,v) 	(*(UINT32 *)(p) = swap32(v))
 
 #if (__LITTLE_ENDIAN__)
 #define LOAD_UINT32_LITTLE(ptr)     (*(UINT32 *)(ptr))
@@ -157,6 +154,8 @@ static void STORE_UINT32_REVERSED(void *ptr, UINT32 x)
 #define LOAD_UINT32_LITTLE(ptr)     LOAD_UINT32_REVERSED(ptr)
 #define STORE_UINT32_BIG(ptr,x)     (*(UINT32 *)(ptr) = (UINT32)(x))
 #endif
+
+
 
 /* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
@@ -168,10 +167,7 @@ static void STORE_UINT32_REVERSED(void *ptr, UINT32 x)
 #define AES_BLOCK_LEN  16
 
 /* OpenSSL's AES */
-#include "openbsd-compat/openssl-compat.h"
-#ifndef USE_BUILTIN_RIJNDAEL
-# include <openssl/aes.h>
-#endif
+#include <openssl/aes.h>
 typedef AES_KEY aes_int_key[1];
 #define aes_encryption(in,out,int_key)                  \
   AES_encrypt((u_char *)(in),(u_char *)(out),(AES_KEY *)int_key)
@@ -181,14 +177,14 @@ typedef AES_KEY aes_int_key[1];
 /* The user-supplied UMAC key is stretched using AES in a counter
  * mode to supply all random bits needed by UMAC. The kdf function takes
  * an AES internal key representation 'key' and writes a stream of
- * 'nbytes' bytes to the memory pointed at by 'bufp'. Each distinct
+ * 'nbytes' bytes to the memory pointed at by 'buffer_ptr'. Each distinct
  * 'ndx' causes a distinct byte stream.
  */
-static void kdf(void *bufp, aes_int_key key, UINT8 ndx, int nbytes)
+static void kdf(void *buffer_ptr, aes_int_key key, UINT8 ndx, int nbytes)
 {
     UINT8 in_buf[AES_BLOCK_LEN] = {0};
     UINT8 out_buf[AES_BLOCK_LEN];
-    UINT8 *dst_buf = (UINT8 *)bufp;
+    UINT8 *dst_buf = (UINT8 *)buffer_ptr;
     int i;
     
     /* Setup the initial value */
@@ -546,7 +542,6 @@ static void nh_transform(nh_ctx *hc, UINT8 *buf, UINT32 nbytes)
 
 /* ---------------------------------------------------------------------- */
 
-#if (__LITTLE_ENDIAN__)
 static void endian_convert(void *buf, UWORD bpw, UINT32 num_bytes)
 /* We endian convert the keys on little-endian computers to               */
 /* compensate for the lack of big-endian memory reads during hashing.     */
@@ -569,6 +564,7 @@ static void endian_convert(void *buf, UWORD bpw, UINT32 num_bytes)
         } while (--iters);
     }
 }
+#if (__LITTLE_ENDIAN__)
 #define endian_convert_if_le(x,y,z) endian_convert((x),(y),(z))
 #else
 #define endian_convert_if_le(x,y,z) do{}while(0)  /* Do nothing */

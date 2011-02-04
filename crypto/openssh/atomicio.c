@@ -1,4 +1,4 @@
-/* $OpenBSD: atomicio.c,v 1.25 2007/06/25 12:02:27 dtucker Exp $ */
+/* $OpenBSD: atomicio.c,v 1.26 2010/09/22 22:58:51 djm Exp $ */
 /*
  * Copyright (c) 2006 Damien Miller. All rights reserved.
  * Copyright (c) 2005 Anil Madhavapeddy. All rights reserved.
@@ -26,19 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/param.h>
 #include <sys/uio.h>
 
 #include <errno.h>
-#ifdef HAVE_POLL_H
 #include <poll.h>
-#else
-# ifdef HAVE_SYS_POLL_H
-#  include <sys/poll.h>
-# endif
-#endif
 #include <string.h>
 #include <unistd.h>
 
@@ -48,7 +40,8 @@
  * ensure all of data on socket comes through. f==read || f==vwrite
  */
 size_t
-atomicio(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n)
+atomicio6(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n,
+    int (*cb)(void *, size_t), void *cb_arg)
 {
 	char *s = _s;
 	size_t pos = 0;
@@ -63,7 +56,7 @@ atomicio(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n)
 		case -1:
 			if (errno == EINTR)
 				continue;
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			if (errno == EAGAIN) {
 				(void)poll(&pfd, 1, -1);
 				continue;
 			}
@@ -73,17 +66,28 @@ atomicio(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n)
 			return pos;
 		default:
 			pos += (size_t)res;
+			if (cb != NULL && cb(cb_arg, (size_t)res) == -1) {
+				errno = EINTR;
+				return pos;
+			}
 		}
 	}
-	return (pos);
+	return pos;
+}
+
+size_t
+atomicio(ssize_t (*f) (int, void *, size_t), int fd, void *_s, size_t n)
+{
+	return atomicio6(f, fd, _s, n, NULL, NULL);
 }
 
 /*
  * ensure all of data on socket comes through. f==readv || f==writev
  */
 size_t
-atomiciov(ssize_t (*f) (int, const struct iovec *, int), int fd,
-    const struct iovec *_iov, int iovcnt)
+atomiciov6(ssize_t (*f) (int, const struct iovec *, int), int fd,
+    const struct iovec *_iov, int iovcnt,
+    int (*cb)(void *, size_t), void *cb_arg)
 {
 	size_t pos = 0, rem;
 	ssize_t res;
@@ -97,20 +101,16 @@ atomiciov(ssize_t (*f) (int, const struct iovec *, int), int fd,
 	/* Make a copy of the iov array because we may modify it below */
 	memcpy(iov, _iov, iovcnt * sizeof(*_iov));
 
-#ifndef BROKEN_READV_COMPARISON
 	pfd.fd = fd;
 	pfd.events = f == readv ? POLLIN : POLLOUT;
-#endif
 	for (; iovcnt > 0 && iov[0].iov_len > 0;) {
 		res = (f) (fd, iov, iovcnt);
 		switch (res) {
 		case -1:
 			if (errno == EINTR)
 				continue;
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-#ifndef BROKEN_READV_COMPARISON
+			if (errno == EAGAIN) {
 				(void)poll(&pfd, 1, -1);
-#endif
 				continue;
 			}
 			return 0;
@@ -137,6 +137,17 @@ atomiciov(ssize_t (*f) (int, const struct iovec *, int), int fd,
 			iov[0].iov_base = ((char *)iov[0].iov_base) + rem;
 			iov[0].iov_len -= rem;
 		}
+		if (cb != NULL && cb(cb_arg, (size_t)res) == -1) {
+			errno = EINTR;
+			return pos;
+		}
 	}
 	return pos;
+}
+
+size_t
+atomiciov(ssize_t (*f) (int, const struct iovec *, int), int fd,
+    const struct iovec *_iov, int iovcnt)
+{
+	return atomiciov6(f, fd, _iov, iovcnt, NULL, NULL);
 }
