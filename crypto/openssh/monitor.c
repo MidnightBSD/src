@@ -1,4 +1,4 @@
-/* $OpenBSD: monitor.c,v 1.104 2009/06/12 20:43:22 andreas Exp $ */
+/* $OpenBSD: monitor.c,v 1.110 2010/09/09 10:45:45 djm Exp $ */
 /*
  * Copyright 2002 Niels Provos <provos@citi.umich.edu>
  * Copyright 2002 Markus Friedl <markus@openbsd.org>
@@ -25,33 +25,24 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
-#include <sys/param.h>
-#include <sys/socket.h>
-#include "openbsd-compat/sys-tree.h"
 #include <sys/wait.h>
-
-#include <errno.h>
-#include <fcntl.h>
-#ifdef HAVE_PATHS_H
-#include <paths.h>
-#endif
-#include <pwd.h>
-#include <signal.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#ifdef SKEY
-#include <skey.h>
-#endif
+#include <sys/socket.h>
+#include <sys/tree.h>
+#include <sys/param.h>
+#include <sys/queue.h>
 
 #include <openssl/dh.h>
 
-#include "openbsd-compat/sys-queue.h"
+#include <errno.h>
+#include <fcntl.h>
+#include <paths.h>
+#include <pwd.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+
+
 #include "xmalloc.h"
 #include "ssh.h"
 #include "key.h"
@@ -61,13 +52,7 @@
 #include "cipher.h"
 #include "kex.h"
 #include "dh.h"
-#ifdef TARGET_OS_MAC	/* XXX Broken krb5 headers on Mac */
-#undef TARGET_OS_MAC
-#include "zlib.h"
-#define TARGET_OS_MAC 1
-#else
-#include "zlib.h"
-#endif
+#include <zlib.h>
 #include "packet.h"
 #include "auth-options.h"
 #include "sshpty.h"
@@ -158,25 +143,11 @@ int mm_answer_jpake_step2(int, Buffer *);
 int mm_answer_jpake_key_confirm(int, Buffer *);
 int mm_answer_jpake_check_confirm(int, Buffer *);
 
-#ifdef USE_PAM
-int mm_answer_pam_start(int, Buffer *);
-int mm_answer_pam_account(int, Buffer *);
-int mm_answer_pam_init_ctx(int, Buffer *);
-int mm_answer_pam_query(int, Buffer *);
-int mm_answer_pam_respond(int, Buffer *);
-int mm_answer_pam_free_ctx(int, Buffer *);
-#endif
-
 #ifdef GSSAPI
 int mm_answer_gss_setup_ctx(int, Buffer *);
 int mm_answer_gss_accept_ctx(int, Buffer *);
 int mm_answer_gss_userok(int, Buffer *);
 int mm_answer_gss_checkmic(int, Buffer *);
-#endif
-
-#ifdef SSH_AUDIT_EVENTS
-int mm_answer_audit_event(int, Buffer *);
-int mm_answer_audit_command(int, Buffer *);
 #endif
 
 static Authctxt *authctxt;
@@ -215,25 +186,8 @@ struct mon_table mon_dispatch_proto20[] = {
     {MONITOR_REQ_AUTHSERV, MON_ONCE, mm_answer_authserv},
     {MONITOR_REQ_AUTH2_READ_BANNER, MON_ONCE, mm_answer_auth2_read_banner},
     {MONITOR_REQ_AUTHPASSWORD, MON_AUTH, mm_answer_authpassword},
-#ifdef USE_PAM
-    {MONITOR_REQ_PAM_START, MON_ONCE, mm_answer_pam_start},
-    {MONITOR_REQ_PAM_ACCOUNT, 0, mm_answer_pam_account},
-    {MONITOR_REQ_PAM_INIT_CTX, MON_ISAUTH, mm_answer_pam_init_ctx},
-    {MONITOR_REQ_PAM_QUERY, MON_ISAUTH, mm_answer_pam_query},
-    {MONITOR_REQ_PAM_RESPOND, MON_ISAUTH, mm_answer_pam_respond},
-    {MONITOR_REQ_PAM_FREE_CTX, MON_ONCE|MON_AUTHDECIDE, mm_answer_pam_free_ctx},
-#endif
-#ifdef SSH_AUDIT_EVENTS
-    {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
-#endif
-#ifdef BSD_AUTH
     {MONITOR_REQ_BSDAUTHQUERY, MON_ISAUTH, mm_answer_bsdauthquery},
     {MONITOR_REQ_BSDAUTHRESPOND, MON_AUTH, mm_answer_bsdauthrespond},
-#endif
-#ifdef SKEY
-    {MONITOR_REQ_SKEYQUERY, MON_ISAUTH, mm_answer_skeyquery},
-    {MONITOR_REQ_SKEYRESPOND, MON_AUTH, mm_answer_skeyrespond},
-#endif
     {MONITOR_REQ_KEYALLOWED, MON_ISAUTH, mm_answer_keyallowed},
     {MONITOR_REQ_KEYVERIFY, MON_AUTH, mm_answer_keyverify},
 #ifdef GSSAPI
@@ -258,10 +212,6 @@ struct mon_table mon_dispatch_postauth20[] = {
     {MONITOR_REQ_PTY, 0, mm_answer_pty},
     {MONITOR_REQ_PTYCLEANUP, 0, mm_answer_pty_cleanup},
     {MONITOR_REQ_TERM, 0, mm_answer_term},
-#ifdef SSH_AUDIT_EVENTS
-    {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
-    {MONITOR_REQ_AUDIT_COMMAND, MON_PERMIT, mm_answer_audit_command},
-#endif
     {0, 0, NULL}
 };
 
@@ -274,25 +224,8 @@ struct mon_table mon_dispatch_proto15[] = {
     {MONITOR_REQ_KEYALLOWED, MON_ISAUTH|MON_ALOG, mm_answer_keyallowed},
     {MONITOR_REQ_RSACHALLENGE, MON_ONCE, mm_answer_rsa_challenge},
     {MONITOR_REQ_RSARESPONSE, MON_ONCE|MON_AUTHDECIDE, mm_answer_rsa_response},
-#ifdef BSD_AUTH
     {MONITOR_REQ_BSDAUTHQUERY, MON_ISAUTH, mm_answer_bsdauthquery},
     {MONITOR_REQ_BSDAUTHRESPOND, MON_AUTH, mm_answer_bsdauthrespond},
-#endif
-#ifdef SKEY
-    {MONITOR_REQ_SKEYQUERY, MON_ISAUTH, mm_answer_skeyquery},
-    {MONITOR_REQ_SKEYRESPOND, MON_AUTH, mm_answer_skeyrespond},
-#endif
-#ifdef USE_PAM
-    {MONITOR_REQ_PAM_START, MON_ONCE, mm_answer_pam_start},
-    {MONITOR_REQ_PAM_ACCOUNT, 0, mm_answer_pam_account},
-    {MONITOR_REQ_PAM_INIT_CTX, MON_ISAUTH, mm_answer_pam_init_ctx},
-    {MONITOR_REQ_PAM_QUERY, MON_ISAUTH, mm_answer_pam_query},
-    {MONITOR_REQ_PAM_RESPOND, MON_ISAUTH, mm_answer_pam_respond},
-    {MONITOR_REQ_PAM_FREE_CTX, MON_ONCE|MON_AUTHDECIDE, mm_answer_pam_free_ctx},
-#endif
-#ifdef SSH_AUDIT_EVENTS
-    {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
-#endif
     {0, 0, NULL}
 };
 
@@ -300,10 +233,6 @@ struct mon_table mon_dispatch_postauth15[] = {
     {MONITOR_REQ_PTY, MON_ONCE, mm_answer_pty},
     {MONITOR_REQ_PTYCLEANUP, MON_ONCE, mm_answer_pty_cleanup},
     {MONITOR_REQ_TERM, 0, mm_answer_term},
-#ifdef SSH_AUDIT_EVENTS
-    {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
-    {MONITOR_REQ_AUDIT_COMMAND, MON_PERMIT|MON_ONCE, mm_answer_audit_command},
-#endif
     {0, 0, NULL}
 };
 
@@ -349,8 +278,6 @@ monitor_child_preauth(Authctxt *_authctxt, struct monitor *pmonitor)
 	authctxt = _authctxt;
 	memset(authctxt, 0, sizeof(*authctxt));
 
-	authctxt->loginmsg = &loginmsg;
-
 	if (compat20) {
 		mon_dispatch = mon_dispatch_proto20;
 
@@ -374,18 +301,6 @@ monitor_child_preauth(Authctxt *_authctxt, struct monitor *pmonitor)
 			if (authctxt->pw->pw_uid == 0 &&
 			    !auth_root_allowed(auth_method))
 				authenticated = 0;
-#ifdef USE_PAM
-			/* PAM needs to perform account checks after auth */
-			if (options.use_pam && authenticated) {
-				Buffer m;
-
-				buffer_init(&m);
-				mm_request_receive_expect(pmonitor->m_sendfd,
-				    MONITOR_REQ_PAM_ACCOUNT, &m);
-				authenticated = mm_answer_pam_account(pmonitor->m_sendfd, &m);
-				buffer_free(&m);
-			}
-#endif
 		}
 
 		if (ent->flags & (MON_AUTHDECIDE|MON_ALOG)) {
@@ -518,7 +433,7 @@ monitor_allowed_key(u_char *blob, u_int bloblen)
 {
 	/* make sure key is allowed */
 	if (key_blob == NULL || key_bloblen != bloblen ||
-	    memcmp(key_blob, blob, key_bloblen))
+	    timingsafe_bcmp(key_blob, blob, key_bloblen))
 		return (0);
 	return (1);
 }
@@ -590,10 +505,10 @@ mm_answer_sign(int sock, Buffer *m)
 	p = buffer_get_string(m, &datlen);
 
 	/*
-	 * Supported KEX types will only return SHA1 (20 byte) or
-	 * SHA256 (32 byte) hashes
+	 * Supported KEX types use SHA1 (20 bytes), SHA256 (32 bytes),
+	 * SHA384 (48 bytes) and SHA512 (64 bytes).
 	 */
-	if (datlen != 20 && datlen != 32)
+	if (datlen != 20 && datlen != 32 && datlen != 48 && datlen != 64)
 		fatal("%s: data length incorrect: %u", __func__, datlen);
 
 	/* save session id, it will be passed on the first call */
@@ -663,9 +578,7 @@ mm_answer_pwnamallow(int sock, Buffer *m)
 	buffer_put_cstring(m, pwent->pw_name);
 	buffer_put_cstring(m, "*");
 	buffer_put_cstring(m, pwent->pw_gecos);
-#ifdef HAVE_PW_CLASS_IN_PASSWD
 	buffer_put_cstring(m, pwent->pw_class);
-#endif
 	buffer_put_cstring(m, pwent->pw_dir);
 	buffer_put_cstring(m, pwent->pw_shell);
 
@@ -685,10 +598,6 @@ mm_answer_pwnamallow(int sock, Buffer *m)
 		monitor_permit(mon_dispatch, MONITOR_REQ_AUTH2_READ_BANNER, 1);
 	}
 
-#ifdef USE_PAM
-	if (options.use_pam)
-		monitor_permit(mon_dispatch, MONITOR_REQ_PAM_START, 1);
-#endif
 
 	return (0);
 }
@@ -757,7 +666,6 @@ mm_answer_authpassword(int sock, Buffer *m)
 	return (authenticated);
 }
 
-#ifdef BSD_AUTH
 int
 mm_answer_bsdauthquery(int sock, Buffer *m)
 {
@@ -813,199 +721,6 @@ mm_answer_bsdauthrespond(int sock, Buffer *m)
 	auth_method = "bsdauth";
 
 	return (authok != 0);
-}
-#endif
-
-#ifdef SKEY
-int
-mm_answer_skeyquery(int sock, Buffer *m)
-{
-	struct skey skey;
-	char challenge[1024];
-	u_int success;
-
-	success = _compat_skeychallenge(&skey, authctxt->user, challenge,
-	    sizeof(challenge)) < 0 ? 0 : 1;
-
-	buffer_clear(m);
-	buffer_put_int(m, success);
-	if (success)
-		buffer_put_cstring(m, challenge);
-
-	debug3("%s: sending challenge success: %u", __func__, success);
-	mm_request_send(sock, MONITOR_ANS_SKEYQUERY, m);
-
-	return (0);
-}
-
-int
-mm_answer_skeyrespond(int sock, Buffer *m)
-{
-	char *response;
-	int authok;
-
-	response = buffer_get_string(m, NULL);
-
-	authok = (options.challenge_response_authentication &&
-	    authctxt->valid &&
-	    skey_haskey(authctxt->pw->pw_name) == 0 &&
-	    skey_passcheck(authctxt->pw->pw_name, response) != -1);
-
-	xfree(response);
-
-	buffer_clear(m);
-	buffer_put_int(m, authok);
-
-	debug3("%s: sending authenticated: %d", __func__, authok);
-	mm_request_send(sock, MONITOR_ANS_SKEYRESPOND, m);
-
-	auth_method = "skey";
-
-	return (authok != 0);
-}
-#endif
-
-#ifdef USE_PAM
-int
-mm_answer_pam_start(int sock, Buffer *m)
-{
-	if (!options.use_pam)
-		fatal("UsePAM not set, but ended up in %s anyway", __func__);
-
-	start_pam(authctxt);
-
-	monitor_permit(mon_dispatch, MONITOR_REQ_PAM_ACCOUNT, 1);
-
-	return (0);
-}
-
-int
-mm_answer_pam_account(int sock, Buffer *m)
-{
-	u_int ret;
-
-	if (!options.use_pam)
-		fatal("UsePAM not set, but ended up in %s anyway", __func__);
-
-	ret = do_pam_account();
-
-	buffer_put_int(m, ret);
-	buffer_put_string(m, buffer_ptr(&loginmsg), buffer_len(&loginmsg));
-
-	mm_request_send(sock, MONITOR_ANS_PAM_ACCOUNT, m);
-
-	return (ret);
-}
-
-static void *sshpam_ctxt, *sshpam_authok;
-extern KbdintDevice sshpam_device;
-
-int
-mm_answer_pam_init_ctx(int sock, Buffer *m)
-{
-
-	debug3("%s", __func__);
-	authctxt->user = buffer_get_string(m, NULL);
-	sshpam_ctxt = (sshpam_device.init_ctx)(authctxt);
-	sshpam_authok = NULL;
-	buffer_clear(m);
-	if (sshpam_ctxt != NULL) {
-		monitor_permit(mon_dispatch, MONITOR_REQ_PAM_FREE_CTX, 1);
-		buffer_put_int(m, 1);
-	} else {
-		buffer_put_int(m, 0);
-	}
-	mm_request_send(sock, MONITOR_ANS_PAM_INIT_CTX, m);
-	return (0);
-}
-
-int
-mm_answer_pam_query(int sock, Buffer *m)
-{
-	char *name, *info, **prompts;
-	u_int i, num, *echo_on;
-	int ret;
-
-	debug3("%s", __func__);
-	sshpam_authok = NULL;
-	ret = (sshpam_device.query)(sshpam_ctxt, &name, &info, &num, &prompts, &echo_on);
-	if (ret == 0 && num == 0)
-		sshpam_authok = sshpam_ctxt;
-	if (num > 1 || name == NULL || info == NULL)
-		ret = -1;
-	buffer_clear(m);
-	buffer_put_int(m, ret);
-	buffer_put_cstring(m, name);
-	xfree(name);
-	buffer_put_cstring(m, info);
-	xfree(info);
-	buffer_put_int(m, num);
-	for (i = 0; i < num; ++i) {
-		buffer_put_cstring(m, prompts[i]);
-		xfree(prompts[i]);
-		buffer_put_int(m, echo_on[i]);
-	}
-	if (prompts != NULL)
-		xfree(prompts);
-	if (echo_on != NULL)
-		xfree(echo_on);
-	auth_method = "keyboard-interactive/pam";
-	mm_request_send(sock, MONITOR_ANS_PAM_QUERY, m);
-	return (0);
-}
-
-int
-mm_answer_pam_respond(int sock, Buffer *m)
-{
-	char **resp;
-	u_int i, num;
-	int ret;
-
-	debug3("%s", __func__);
-	sshpam_authok = NULL;
-	num = buffer_get_int(m);
-	if (num > 0) {
-		resp = xcalloc(num, sizeof(char *));
-		for (i = 0; i < num; ++i)
-			resp[i] = buffer_get_string(m, NULL);
-		ret = (sshpam_device.respond)(sshpam_ctxt, num, resp);
-		for (i = 0; i < num; ++i)
-			xfree(resp[i]);
-		xfree(resp);
-	} else {
-		ret = (sshpam_device.respond)(sshpam_ctxt, num, NULL);
-	}
-	buffer_clear(m);
-	buffer_put_int(m, ret);
-	mm_request_send(sock, MONITOR_ANS_PAM_RESPOND, m);
-	auth_method = "keyboard-interactive/pam";
-	if (ret == 0)
-		sshpam_authok = sshpam_ctxt;
-	return (0);
-}
-
-int
-mm_answer_pam_free_ctx(int sock, Buffer *m)
-{
-
-	debug3("%s", __func__);
-	(sshpam_device.free_ctx)(sshpam_ctxt);
-	buffer_clear(m);
-	mm_request_send(sock, MONITOR_ANS_PAM_FREE_CTX, m);
-	auth_method = "keyboard-interactive/pam";
-	return (sshpam_authok == sshpam_ctxt);
-}
-#endif
-
-static void
-mm_append_debug(Buffer *m)
-{
-	if (auth_debug_init && buffer_len(&auth_debug)) {
-		debug3("%s: Appending debug messages for child", __func__);
-		buffer_append(m, buffer_ptr(&auth_debug),
-		    buffer_len(&auth_debug));
-		buffer_clear(&auth_debug);
-	}
 }
 
 int
@@ -1090,8 +805,6 @@ mm_answer_keyallowed(int sock, Buffer *m)
 	buffer_put_int(m, allowed);
 	buffer_put_int(m, forced_command != NULL);
 
-	mm_append_debug(m);
-
 	mm_request_send(sock, MONITOR_ANS_KEYALLOWED, m);
 
 	if (type == MM_RSAHOSTKEY)
@@ -1116,14 +829,14 @@ monitor_valid_userblob(u_char *data, u_int datalen)
 		len = buffer_len(&b);
 		if ((session_id2 == NULL) ||
 		    (len < session_id2_len) ||
-		    (memcmp(p, session_id2, session_id2_len) != 0))
+		    (timingsafe_bcmp(p, session_id2, session_id2_len) != 0))
 			fail++;
 		buffer_consume(&b, session_id2_len);
 	} else {
 		p = buffer_get_string(&b, &len);
 		if ((session_id2 == NULL) ||
 		    (len != session_id2_len) ||
-		    (memcmp(p, session_id2, session_id2_len) != 0))
+		    (timingsafe_bcmp(p, session_id2, session_id2_len) != 0))
 			fail++;
 		xfree(p);
 	}
@@ -1171,7 +884,7 @@ monitor_valid_hostbasedblob(u_char *data, u_int datalen, char *cuser,
 	p = buffer_get_string(&b, &len);
 	if ((session_id2 == NULL) ||
 	    (len != session_id2_len) ||
-	    (memcmp(p, session_id2, session_id2_len) != 0))
+	    (timingsafe_bcmp(p, session_id2, session_id2_len) != 0))
 		fail++;
 	xfree(p);
 
@@ -1475,8 +1188,6 @@ mm_answer_rsa_keyallowed(int sock, Buffer *m)
 	if (key != NULL)
 		key_free(key);
 
-	mm_append_debug(m);
-
 	mm_request_send(sock, MONITOR_ANS_RSAKEYALLOWED, m);
 
 	monitor_permit(mon_dispatch, MONITOR_REQ_RSACHALLENGE, allowed);
@@ -1578,11 +1289,6 @@ mm_answer_term(int sock, Buffer *req)
 	/* The child is terminating */
 	session_destroy_all(&mm_session_close);
 
-#ifdef USE_PAM
-	if (options.use_pam)
-		sshpam_cleanup();
-#endif
-
 	while (waitpid(pmonitor->m_pid, &status, 0) == -1)
 		if (errno != EINTR)
 			exit(1);
@@ -1592,48 +1298,6 @@ mm_answer_term(int sock, Buffer *req)
 	/* Terminate process */
 	exit(res);
 }
-
-#ifdef SSH_AUDIT_EVENTS
-/* Report that an audit event occurred */
-int
-mm_answer_audit_event(int socket, Buffer *m)
-{
-	ssh_audit_event_t event;
-
-	debug3("%s entering", __func__);
-
-	event = buffer_get_int(m);
-	switch(event) {
-	case SSH_AUTH_FAIL_PUBKEY:
-	case SSH_AUTH_FAIL_HOSTBASED:
-	case SSH_AUTH_FAIL_GSSAPI:
-	case SSH_LOGIN_EXCEED_MAXTRIES:
-	case SSH_LOGIN_ROOT_DENIED:
-	case SSH_CONNECTION_CLOSE:
-	case SSH_INVALID_USER:
-		audit_event(event);
-		break;
-	default:
-		fatal("Audit event type %d not permitted", event);
-	}
-
-	return (0);
-}
-
-int
-mm_answer_audit_command(int socket, Buffer *m)
-{
-	u_int len;
-	char *cmd;
-
-	debug3("%s entering", __func__);
-	cmd = buffer_get_string(m, &len);
-	/* sanity check command, if so how? */
-	audit_run_command(cmd);
-	xfree(cmd);
-	return (0);
-}
-#endif /* SSH_AUDIT_EVENTS */
 
 void
 monitor_apply_keystate(struct monitor *pmonitor)
@@ -1697,15 +1361,16 @@ mm_get_kex(Buffer *m)
 
 	kex = xcalloc(1, sizeof(*kex));
 	kex->session_id = buffer_get_string(m, &kex->session_id_len);
-	if ((session_id2 == NULL) ||
-	    (kex->session_id_len != session_id2_len) ||
-	    (memcmp(kex->session_id, session_id2, session_id2_len) != 0))
+	if (session_id2 == NULL ||
+	    kex->session_id_len != session_id2_len ||
+	    timingsafe_bcmp(kex->session_id, session_id2, session_id2_len) != 0)
 		fatal("mm_get_get: internal error: bad session id");
 	kex->we_need = buffer_get_int(m);
 	kex->kex[KEX_DH_GRP1_SHA1] = kexdh_server;
 	kex->kex[KEX_DH_GRP14_SHA1] = kexdh_server;
 	kex->kex[KEX_DH_GEX_SHA1] = kexgex_server;
 	kex->kex[KEX_DH_GEX_SHA256] = kexgex_server;
+	kex->kex[KEX_ECDH_SHA2] = kexecdh_server;
 	kex->server = 1;
 	kex->hostkey_type = buffer_get_int(m);
 	kex->kex_type = buffer_get_int(m);
@@ -1721,7 +1386,8 @@ mm_get_kex(Buffer *m)
 	kex->flags = buffer_get_int(m);
 	kex->client_version_string = buffer_get_string(m, NULL);
 	kex->server_version_string = buffer_get_string(m, NULL);
-	kex->load_host_key=&get_hostkey_by_type;
+	kex->load_host_public_key=&get_hostkey_public_by_type;
+	kex->load_host_private_key=&get_hostkey_private_by_type;
 	kex->host_key_index=&get_hostkey_index;
 
 	return (kex);
@@ -1854,13 +1520,8 @@ mm_init_compression(struct mm_master *mm)
 static void
 monitor_socketpair(int *pair)
 {
-#ifdef HAVE_SOCKETPAIR
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == -1)
 		fatal("%s: socketpair", __func__);
-#else
-	fatal("%s: UsePrivilegeSeparation=yes not supported",
-	    __func__);
-#endif
 	FD_CLOSEONEXEC(pair[0]);
 	FD_CLOSEONEXEC(pair[1]);
 }

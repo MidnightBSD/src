@@ -24,18 +24,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
+#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/queue.h>
 
 #ifdef GSSAPI
 
-#include <sys/types.h>
-#include <sys/param.h>
-
-#include <stdarg.h>
 #include <string.h>
-#include <unistd.h>
 
-#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "buffer.h"
 #include "key.h"

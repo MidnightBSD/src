@@ -1,4 +1,4 @@
-/* $OpenBSD: auth2.c,v 1.121 2009/06/22 05:39:28 dtucker Exp $ */
+/* $OpenBSD: auth2.c,v 1.122 2010/08/31 09:58:37 djm Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  *
@@ -23,7 +23,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -48,8 +47,6 @@
 #include "auth.h"
 #include "dispatch.h"
 #include "pathnames.h"
-#include "buffer.h"
-
 #ifdef GSSAPI
 #include "ssh-gss.h"
 #endif
@@ -59,7 +56,6 @@
 extern ServerOptions options;
 extern u_char *session_id2;
 extern u_int session_id2_len;
-extern Buffer loginmsg;
 
 /* methods */
 
@@ -132,19 +128,6 @@ auth2_read_banner(void)
 	return (banner);
 }
 
-void
-userauth_send_banner(const char *msg)
-{
-	if (datafellows & SSH_BUG_BANNER)
-		return;
-
-	packet_start(SSH2_MSG_USERAUTH_BANNER);
-	packet_put_cstring(msg);
-	packet_put_cstring("");		/* language, unused */
-	packet_send();
-	debug("%s: sent", __func__);
-}
-
 static void
 userauth_banner(void)
 {
@@ -157,8 +140,12 @@ userauth_banner(void)
 
 	if ((banner = PRIVSEP(auth2_read_banner())) == NULL)
 		goto done;
-	userauth_send_banner(banner);
 
+	packet_start(SSH2_MSG_USERAUTH_BANNER);
+	packet_put_cstring(banner);
+	packet_put_cstring("");		/* language, unused */
+	packet_send();
+	debug("userauth_banner: sent");
 done:
 	if (banner)
 		xfree(banner);
@@ -182,7 +169,7 @@ input_service_request(int type, u_int32_t seq, void *ctxt)
 	Authctxt *authctxt = ctxt;
 	u_int len;
 	int acceptit = 0;
-	char *service = packet_get_string(&len);
+	char *service = packet_get_cstring(&len);
 	packet_check_eom();
 
 	if (authctxt == NULL)
@@ -221,9 +208,9 @@ input_userauth_request(int type, u_int32_t seq, void *ctxt)
 	if (authctxt == NULL)
 		fatal("input_userauth_request: no authctxt");
 
-	user = packet_get_string(NULL);
-	service = packet_get_string(NULL);
-	method = packet_get_string(NULL);
+	user = packet_get_cstring(NULL);
+	service = packet_get_cstring(NULL);
+	method = packet_get_cstring(NULL);
 	debug("userauth-request for user %s service %s method %s", user, service, method);
 	debug("attempt %d failures %d", authctxt->attempt, authctxt->failures);
 
@@ -233,23 +220,16 @@ input_userauth_request(int type, u_int32_t seq, void *ctxt)
 	if (authctxt->attempt++ == 0) {
 		/* setup auth context */
 		authctxt->pw = PRIVSEP(getpwnamallow(user));
-		authctxt->user = xstrdup(user);
 		if (authctxt->pw && strcmp(service, "ssh-connection")==0) {
 			authctxt->valid = 1;
 			debug2("input_userauth_request: setting up authctxt for %s", user);
 		} else {
 			logit("input_userauth_request: invalid user %s", user);
 			authctxt->pw = fakepw();
-#ifdef SSH_AUDIT_EVENTS
-			PRIVSEP(audit_event(SSH_INVALID_USER));
-#endif
 		}
-#ifdef USE_PAM
-		if (options.use_pam)
-			PRIVSEP(start_pam(authctxt));
-#endif
 		setproctitle("%s%s", authctxt->valid ? user : "unknown",
 		    use_privsep ? " [net]" : "");
+		authctxt->user = xstrdup(user);
 		authctxt->service = xstrdup(service);
 		authctxt->style = style ? xstrdup(style) : NULL;
 		if (use_privsep)
@@ -299,34 +279,8 @@ userauth_finish(Authctxt *authctxt, int authenticated, char *method)
 
 	/* Special handling for root */
 	if (authenticated && authctxt->pw->pw_uid == 0 &&
-	    !auth_root_allowed(method)) {
+	    !auth_root_allowed(method))
 		authenticated = 0;
-#ifdef SSH_AUDIT_EVENTS
-		PRIVSEP(audit_event(SSH_LOGIN_ROOT_DENIED));
-#endif
-	}
-
-#ifdef USE_PAM
-	if (options.use_pam && authenticated) {
-		if (!PRIVSEP(do_pam_account())) {
-			/* if PAM returned a message, send it to the user */
-			if (buffer_len(&loginmsg) > 0) {
-				buffer_append(&loginmsg, "\0", 1);
-				userauth_send_banner(buffer_ptr(&loginmsg));
-				packet_write_wait();
-			}
-			fatal("Access denied for user %s by PAM account "
-			    "configuration", authctxt->user);
-		}
-	}
-#endif
-
-#ifdef _UNICOS
-	if (authenticated && cray_access_denied(authctxt->user)) {
-		authenticated = 0;
-		fatal("Access denied for user %s.",authctxt->user);
-	}
-#endif /* _UNICOS */
 
 	/* Log before sending the reply */
 	auth_log(authctxt, authenticated, method, " ssh2");
@@ -344,16 +298,11 @@ userauth_finish(Authctxt *authctxt, int authenticated, char *method)
 		/* now we can break out */
 		authctxt->success = 1;
 	} else {
-
 		/* Allow initial try of "none" auth without failure penalty */
 		if (authctxt->attempt > 1 || strcmp(method, "none") != 0)
 			authctxt->failures++;
-		if (authctxt->failures >= options.max_authtries) {
-#ifdef SSH_AUDIT_EVENTS
-			PRIVSEP(audit_event(SSH_LOGIN_EXCEED_MAXTRIES));
-#endif
+		if (authctxt->failures >= options.max_authtries)
 			packet_disconnect(AUTH_FAIL_MSG, authctxt->user);
-		}
 		methods = authmethods_get();
 		packet_start(SSH2_MSG_USERAUTH_FAILURE);
 		packet_put_cstring(methods);

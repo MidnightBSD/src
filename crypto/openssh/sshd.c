@@ -1,4 +1,4 @@
-/* $OpenBSD: sshd.c,v 1.367 2009/05/28 16:50:16 andreas Exp $ */
+/* $OpenBSD: sshd.c,v 1.381 2011/01/11 06:13:10 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -42,31 +42,21 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
-#ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-# include <sys/time.h>
-#endif
-#include "openbsd-compat/sys-tree.h"
-#include "openbsd-compat/sys-queue.h"
 #include <sys/wait.h>
+#include <sys/tree.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/queue.h>
 
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
-#ifdef HAVE_PATHS_H
 #include <paths.h>
-#endif
-#include <grp.h>
 #include <pwd.h>
 #include <signal.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,12 +66,6 @@
 #include <openssl/bn.h>
 #include <openssl/md5.h>
 #include <openssl/rand.h>
-#include "openbsd-compat/openssl-compat.h"
-
-#ifdef HAVE_SECUREWARE
-#include <sys/security.h>
-#include <prot.h>
-#endif
 
 #include "xmalloc.h"
 #include "ssh.h"
@@ -123,8 +107,8 @@
 #ifdef LIBWRAP
 #include <tcpd.h>
 #include <syslog.h>
-int allow_severity;
-int deny_severity;
+int allow_severity = LOG_INFO;
+int deny_severity = LOG_WARNING;
 #endif /* LIBWRAP */
 
 #ifndef O_NOCTTY
@@ -167,7 +151,6 @@ int log_stderr = 0;
 
 /* Saved arguments to main(). */
 char **saved_argv;
-int saved_argc;
 
 /* re-exec */
 int rexeced_flag = 0;
@@ -205,6 +188,7 @@ struct {
 	Key	*server_key;		/* ephemeral server key */
 	Key	*ssh1_host_key;		/* ssh1 host key */
 	Key	**host_keys;		/* all private host keys */
+	Key	**host_certificates;	/* all public host certificates */
 	int	have_ssh1_key;
 	int	have_ssh2_key;
 	u_char	ssh1_cookie[SSH_SESSION_KEY_LENGTH];
@@ -246,9 +230,6 @@ Buffer cfg;
 
 /* message to be displayed after login */
 Buffer loginmsg;
-
-/* Unprivileged user */
-struct passwd *privsep_pw = NULL;
 
 /* Prototypes for various functions defined later in this file. */
 void destroy_sensitive_data(void);
@@ -309,6 +290,7 @@ sighup_restart(void)
 	close_listen_socks();
 	close_startup_pipes();
 	alarm(0);  /* alarm timer persists across exec */
+	signal(SIGHUP, SIG_IGN); /* will be restored after exec */
 	execv(saved_argv[0], saved_argv);
 	logit("RESTART FAILED: av[0]='%.100s', error: %.100s.", saved_argv[0],
 	    strerror(errno));
@@ -544,6 +526,10 @@ destroy_sensitive_data(void)
 			key_free(sensitive_data.host_keys[i]);
 			sensitive_data.host_keys[i] = NULL;
 		}
+		if (sensitive_data.host_certificates[i]) {
+			key_free(sensitive_data.host_certificates[i]);
+			sensitive_data.host_certificates[i] = NULL;
+		}
 	}
 	sensitive_data.ssh1_host_key = NULL;
 	memset(sensitive_data.ssh1_cookie, 0, SSH_SESSION_KEY_LENGTH);
@@ -570,6 +556,7 @@ demote_sensitive_data(void)
 			if (tmp->type == KEY_RSA1)
 				sensitive_data.ssh1_host_key = tmp;
 		}
+		/* Certs do not need demotion */
 	}
 
 	/* We do not clear ssh1_host key and cookie.  XXX - Okay Niels? */
@@ -580,6 +567,7 @@ privsep_preauth_child(void)
 {
 	u_int32_t rnd[256];
 	gid_t gidset[1];
+	struct passwd *pw;
 
 	/* Enable challenge-response authentication for privilege separation */
 	privsep_challenge_enable();
@@ -591,6 +579,12 @@ privsep_preauth_child(void)
 	/* Demote the private keys to public keys. */
 	demote_sensitive_data();
 
+	if ((pw = getpwnam(SSH_PRIVSEP_USER)) == NULL)
+		fatal("Privilege separation user %s does not exist",
+		    SSH_PRIVSEP_USER);
+	memset(pw->pw_passwd, 0, strlen(pw->pw_passwd));
+	endpwent();
+
 	/* Change our root directory */
 	if (chroot(_PATH_PRIVSEP_CHROOT_DIR) == -1)
 		fatal("chroot(\"%s\"): %s", _PATH_PRIVSEP_CHROOT_DIR,
@@ -599,16 +593,16 @@ privsep_preauth_child(void)
 		fatal("chdir(\"/\"): %s", strerror(errno));
 
 	/* Drop our privileges */
-	debug3("privsep user:group %u:%u", (u_int)privsep_pw->pw_uid,
-	    (u_int)privsep_pw->pw_gid);
+	debug3("privsep user:group %u:%u", (u_int)pw->pw_uid,
+	    (u_int)pw->pw_gid);
 #if 0
 	/* XXX not ready, too heavy after chroot */
-	do_setusercontext(privsep_pw);
+	do_setusercontext(pw);
 #else
-	gidset[0] = privsep_pw->pw_gid;
+	gidset[0] = pw->pw_gid;
 	if (setgroups(1, gidset) < 0)
 		fatal("setgroups: %.100s", strerror(errno));
-	permanently_set_uid(privsep_pw);
+	permanently_set_uid(pw);
 #endif
 }
 
@@ -660,11 +654,7 @@ privsep_postauth(Authctxt *authctxt)
 {
 	u_int32_t rnd[256];
 
-#ifdef DISABLE_FD_PASSING
-	if (1) {
-#else
 	if (authctxt->pw->pw_uid == 0 || options.use_login) {
-#endif
 		/* File descriptor passing is broken or root login */
 		use_privsep = 0;
 		goto skip;
@@ -716,15 +706,33 @@ list_hostkey_types(void)
 	const char *p;
 	char *ret;
 	int i;
+	Key *key;
 
 	buffer_init(&b);
 	for (i = 0; i < options.num_host_key_files; i++) {
-		Key *key = sensitive_data.host_keys[i];
+		key = sensitive_data.host_keys[i];
 		if (key == NULL)
 			continue;
 		switch (key->type) {
 		case KEY_RSA:
 		case KEY_DSA:
+		case KEY_ECDSA:
+			if (buffer_len(&b) > 0)
+				buffer_append(&b, ",", 1);
+			p = key_ssh_name(key);
+			buffer_append(&b, p, strlen(p));
+			break;
+		}
+		/* If the private key has a cert peer, then list that too */
+		key = sensitive_data.host_certificates[i];
+		if (key == NULL)
+			continue;
+		switch (key->type) {
+		case KEY_RSA_CERT_V00:
+		case KEY_DSA_CERT_V00:
+		case KEY_RSA_CERT:
+		case KEY_DSA_CERT:
+		case KEY_ECDSA_CERT:
 			if (buffer_len(&b) > 0)
 				buffer_append(&b, ",", 1);
 			p = key_ssh_name(key);
@@ -739,17 +747,42 @@ list_hostkey_types(void)
 	return ret;
 }
 
-Key *
-get_hostkey_by_type(int type)
+static Key *
+get_hostkey_by_type(int type, int need_private)
 {
 	int i;
+	Key *key;
 
 	for (i = 0; i < options.num_host_key_files; i++) {
-		Key *key = sensitive_data.host_keys[i];
+		switch (type) {
+		case KEY_RSA_CERT_V00:
+		case KEY_DSA_CERT_V00:
+		case KEY_RSA_CERT:
+		case KEY_DSA_CERT:
+		case KEY_ECDSA_CERT:
+			key = sensitive_data.host_certificates[i];
+			break;
+		default:
+			key = sensitive_data.host_keys[i];
+			break;
+		}
 		if (key != NULL && key->type == type)
-			return key;
+			return need_private ?
+			    sensitive_data.host_keys[i] : key;
 	}
 	return NULL;
+}
+
+Key *
+get_hostkey_public_by_type(int type)
+{
+	return get_hostkey_by_type(type, 0);
+}
+
+Key *
+get_hostkey_private_by_type(int type)
+{
+	return get_hostkey_by_type(type, 1);
 }
 
 Key *
@@ -766,8 +799,13 @@ get_hostkey_index(Key *key)
 	int i;
 
 	for (i = 0; i < options.num_host_key_files; i++) {
-		if (key == sensitive_data.host_keys[i])
-			return (i);
+		if (key_is_cert(key)) {
+			if (key == sensitive_data.host_certificates[i])
+				return (i);
+		} else {
+			if (key == sensitive_data.host_keys[i])
+				return (i);
+		}
 	}
 	return (-1);
 }
@@ -804,11 +842,11 @@ static void
 usage(void)
 {
 	fprintf(stderr, "%s, %s\n",
-	    SSH_RELEASE, SSLeay_version(SSLEAY_VERSION));
+	    SSH_VERSION, SSLeay_version(SSLEAY_VERSION));
 	fprintf(stderr,
-"usage: sshd [-46DdeiqTt] [-b bits] [-C connection_spec] [-f config_file]\n"
-"            [-g login_grace_time] [-h host_key_file] [-k key_gen_time]\n"
-"            [-o option] [-p port] [-u len]\n"
+"usage: sshd [-46DdeiqTt] [-b bits] [-C connection_spec] [-c host_cert_file]\n"
+"            [-f config_file] [-g login_grace_time] [-h host_key_file]\n"
+"            [-k key_gen_time] [-o option] [-p port] [-u len]\n"
 	);
 	exit(1);
 }
@@ -831,7 +869,6 @@ send_rexec_state(int fd, Buffer *conf)
 	 *	bignum	iqmp			"
 	 *	bignum	p			"
 	 *	bignum	q			"
-	 *	string rngseed		(only if OpenSSL is not self-seeded)
 	 */
 	buffer_init(&m);
 	buffer_put_cstring(&m, buffer_ptr(conf));
@@ -847,10 +884,6 @@ send_rexec_state(int fd, Buffer *conf)
 		buffer_put_bignum(&m, sensitive_data.server_key->rsa->q);
 	} else
 		buffer_put_int(&m, 0);
-
-#ifndef OPENSSL_PRNG_ONLY
-	rexec_send_rng_seed(&m);
-#endif
 
 	if (ssh_msg_send(fd, 0, &m) == -1)
 		fatal("%s: ssh_msg_send failed", __func__);
@@ -894,11 +927,6 @@ recv_rexec_state(int fd, Buffer *conf)
 		rsa_generate_additional_parameters(
 		    sensitive_data.server_key->rsa);
 	}
-
-#ifndef OPENSSL_PRNG_ONLY
-	rexec_recv_rng_seed(&m);
-#endif
-
 	buffer_free(&m);
 
 	debug3("%s: done", __func__);
@@ -978,16 +1006,6 @@ server_listen(void)
 		if (setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR,
 		    &on, sizeof(on)) == -1)
 			error("setsockopt SO_REUSEADDR: %s", strerror(errno));
-
-#ifdef IPV6_V6ONLY
-		/* Only communicate in IPv6 over AF_INET6 sockets. */
-		if (ai->ai_family == AF_INET6) {
-			if (setsockopt(listen_sock, IPPROTO_IPV6, IPV6_V6ONLY,
-			    &on, sizeof(on)) == -1)
-				error("setsockopt IPV6_V6ONLY: %s",
-				    strerror(errno));
-		}
-#endif
 
 		debug("Bind to port %s on %s.", strport, ntop);
 
@@ -1096,8 +1114,7 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 			*newsock = accept(listen_socks[i],
 			    (struct sockaddr *)&from, &fromlen);
 			if (*newsock < 0) {
-				if (errno != EINTR && errno != EAGAIN &&
-				    errno != EWOULDBLOCK)
+				if (errno != EINTR && errno != EWOULDBLOCK)
 					error("accept: %.100s", strerror(errno));
 				continue;
 			}
@@ -1165,7 +1182,6 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 			 * the child process the connection. The
 			 * parent continues listening.
 			 */
-			platform_pre_fork();
 			if ((pid = fork()) == 0) {
 				/*
 				 * Child.  Close the listening and
@@ -1175,7 +1191,6 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 				 * We break out of the loop to handle
 				 * the connection.
 				 */
-				platform_post_fork_child();
 				startup_pipe = startup_p[1];
 				close_startup_pipes();
 				close_listen_socks();
@@ -1191,7 +1206,6 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 			}
 
 			/* Parent.  Stay in the loop. */
-			platform_post_fork_parent(pid);
 			if (pid < 0)
 				error("fork: %.100s", strerror(errno));
 			else
@@ -1241,7 +1255,7 @@ main(int ac, char **av)
 {
 	extern char *optarg;
 	extern int optind;
-	int opt, i, on = 1;
+	int opt, i, j, on = 1;
 	int sock_in = -1, sock_out = -1, newsock = -1;
 	const char *remote_ip;
 	char *test_user = NULL, *test_host = NULL, *test_addr = NULL;
@@ -1253,28 +1267,9 @@ main(int ac, char **av)
 	Key *key;
 	Authctxt *authctxt;
 
-#ifdef HAVE_SECUREWARE
-	(void)set_auth_parameters(ac, av);
-#endif
-	__progname = ssh_get_progname(av[0]);
-	init_rng();
-
-	/* Save argv. Duplicate so setproctitle emulation doesn't clobber it */
-	saved_argc = ac;
+	/* Save argv. */
+	saved_argv = av;
 	rexec_argc = ac;
-	saved_argv = xcalloc(ac + 1, sizeof(*saved_argv));
-	for (i = 0; i < ac; i++)
-		saved_argv[i] = xstrdup(av[i]);
-	saved_argv[i] = NULL;
-
-#ifndef HAVE_SETPROCTITLE
-	/* Prepare for later setproctitle emulation */
-	compat_init_setproctitle(ac, av);
-	av = saved_argv;
-#endif
-
-	if (geteuid() == 0 && setgroups(0, NULL) == -1)
-		debug("setgroups(): %.200s", strerror(errno));
 
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
 	sanitise_stdfd();
@@ -1293,6 +1288,14 @@ main(int ac, char **av)
 			break;
 		case 'f':
 			config_file_name = optarg;
+			break;
+		case 'c':
+			if (options.num_host_cert_files >= MAX_HOSTCERTS) {
+				fprintf(stderr, "too many host certificates.\n");
+				exit(1);
+			}
+			options.host_cert_files[options.num_host_cert_files++] =
+			   derelativise_path(optarg);
 			break;
 		case 'd':
 			if (debug_flag == 0) {
@@ -1356,7 +1359,8 @@ main(int ac, char **av)
 				fprintf(stderr, "too many host keys.\n");
 				exit(1);
 			}
-			options.host_key_files[options.num_host_key_files++] = optarg;
+			options.host_key_files[options.num_host_key_files++] = 
+			   derelativise_path(optarg);
 			break;
 		case 't':
 			test_flag = 1;
@@ -1409,7 +1413,7 @@ main(int ac, char **av)
 	else
 		closefrom(REEXEC_DEVCRYPTO_RESERVED_FD);
 
-	SSLeay_add_all_algorithms();
+	OpenSSL_add_all_algorithms();
 
 	/*
 	 * Force logging to stderr until we have loaded the private host
@@ -1421,20 +1425,6 @@ main(int ac, char **av)
 	    options.log_facility == SYSLOG_FACILITY_NOT_SET ?
 	    SYSLOG_FACILITY_AUTH : options.log_facility,
 	    log_stderr || !inetd_flag);
-
-	/*
-	 * Unset KRB5CCNAME, otherwise the user's session may inherit it from
-	 * root's environment
-	 */
-	if (getenv("KRB5CCNAME") != NULL)
-		unsetenv("KRB5CCNAME");
-
-#ifdef _UNICOS
-	/* Cray can define user privs drop all privs now!
-	 * Not needed on PRIV_SU systems!
-	 */
-	drop_cray_privs();
-#endif
 
 	sensitive_data.server_key = NULL;
 	sensitive_data.ssh1_host_key = NULL;
@@ -1466,8 +1456,6 @@ main(int ac, char **av)
 	parse_server_config(&options, rexeced_flag ? "rexec" : config_file_name,
 	    &cfg, NULL, NULL, NULL);
 
-	seed_rng();
-
 	/* Fill in default values for those options not explicitly set. */
 	fill_default_server_options(&options);
 
@@ -1484,20 +1472,7 @@ main(int ac, char **av)
 		exit(1);
 	}
 
-	debug("sshd version %.100s", SSH_RELEASE);
-
-	/* Store privilege separation user for later use if required. */
-	if ((privsep_pw = getpwnam(SSH_PRIVSEP_USER)) == NULL) {
-		if (use_privsep || options.kerberos_authentication)
-			fatal("Privilege separation user %s does not exist",
-			    SSH_PRIVSEP_USER);
-	} else {
-		memset(privsep_pw->pw_passwd, 0, strlen(privsep_pw->pw_passwd));
-		privsep_pw = pwcopy(privsep_pw);
-		xfree(privsep_pw->pw_passwd);
-		privsep_pw->pw_passwd = xstrdup("*");
-	}
-	endpwent();
+	debug("sshd version %.100s", SSH_VERSION);
 
 	/* load private host keys */
 	sensitive_data.host_keys = xcalloc(options.num_host_key_files,
@@ -1507,21 +1482,6 @@ main(int ac, char **av)
 
 	for (i = 0; i < options.num_host_key_files; i++) {
 		key = key_load_private(options.host_key_files[i], "", NULL);
-		if (key && blacklisted_key(key)) {
-			char *fp;
-			fp = key_fingerprint(key, SSH_FP_MD5, SSH_FP_HEX);
-			if (options.permit_blacklisted_keys)
-				error("Host key %s blacklisted (see "
-				    "ssh-vulnkey(1)); continuing anyway", fp);
-			else
-				error("Host key %s blacklisted (see "
-				    "ssh-vulnkey(1))", fp);
-			xfree(fp);
-			if (!options.permit_blacklisted_keys) {
-				sensitive_data.host_keys[i] = NULL;
-				continue;
-			}
-		}
 		sensitive_data.host_keys[i] = key;
 		if (key == NULL) {
 			error("Could not load host key: %s",
@@ -1536,6 +1496,7 @@ main(int ac, char **av)
 			break;
 		case KEY_RSA:
 		case KEY_DSA:
+		case KEY_ECDSA:
 			sensitive_data.have_ssh2_key = 1;
 			break;
 		}
@@ -1555,6 +1516,46 @@ main(int ac, char **av)
 		exit(1);
 	}
 
+	/*
+	 * Load certificates. They are stored in an array at identical
+	 * indices to the public keys that they relate to.
+	 */
+	sensitive_data.host_certificates = xcalloc(options.num_host_key_files,
+	    sizeof(Key *));
+	for (i = 0; i < options.num_host_key_files; i++)
+		sensitive_data.host_certificates[i] = NULL;
+
+	for (i = 0; i < options.num_host_cert_files; i++) {
+		key = key_load_public(options.host_cert_files[i], NULL);
+		if (key == NULL) {
+			error("Could not load host certificate: %s",
+			    options.host_cert_files[i]);
+			continue;
+		}
+		if (!key_is_cert(key)) {
+			error("Certificate file is not a certificate: %s",
+			    options.host_cert_files[i]);
+			key_free(key);
+			continue;
+		}
+		/* Find matching private key */
+		for (j = 0; j < options.num_host_key_files; j++) {
+			if (key_equal_public(key,
+			    sensitive_data.host_keys[j])) {
+				sensitive_data.host_certificates[j] = key;
+				break;
+			}
+		}
+		if (j >= options.num_host_key_files) {
+			error("No matching private key for certificate: %s",
+			    options.host_cert_files[i]);
+			key_free(key);
+			continue;
+		}
+		sensitive_data.host_certificates[j] = key;
+		debug("host certificate: #%d type %d %s", j, key->type,
+		    key_type(key));
+	}
 	/* Check certain values for sanity. */
 	if (options.protocol & SSH_PROTO_1) {
 		if (options.server_key_bits < 512 ||
@@ -1583,18 +1584,14 @@ main(int ac, char **av)
 	if (use_privsep) {
 		struct stat st;
 
+		if (getpwnam(SSH_PRIVSEP_USER) == NULL)
+			fatal("Privilege separation user %s does not exist",
+			    SSH_PRIVSEP_USER);
 		if ((stat(_PATH_PRIVSEP_CHROOT_DIR, &st) == -1) ||
 		    (S_ISDIR(st.st_mode) == 0))
 			fatal("Missing privilege separation directory: %s",
 			    _PATH_PRIVSEP_CHROOT_DIR);
-
-#ifdef HAVE_CYGWIN
-		if (check_ntsec(_PATH_PRIVSEP_CHROOT_DIR) &&
-		    (st.st_uid != getuid () ||
-		    (st.st_mode & (S_IWGRP|S_IWOTH)) != 0))
-#else
 		if (st.st_uid != 0 || (st.st_mode & (S_IWGRP|S_IWOTH)) != 0)
-#endif
 			fatal("%s must be owned by root and not group or "
 			    "world-writable.", _PATH_PRIVSEP_CHROOT_DIR);
 	}
@@ -1609,16 +1606,6 @@ main(int ac, char **av)
 	/* Configuration looks good, so exit if in test mode. */
 	if (test_flag)
 		exit(0);
-
-	/*
-	 * Clear out any supplemental groups we may have inherited.  This
-	 * prevents inadvertent creation of files with bad modes (in the
-	 * portable version at least, it's certainly possible for PAM
-	 * to create a file, and we can't control the code in every
-	 * module which might be used).
-	 */
-	if (setgroups(0, NULL) < 0)
-		debug("setgroups() failed: %.200s", strerror(errno));
 
 	if (rexec_flag) {
 		rexec_argv = xcalloc(rexec_argc + 2, sizeof(char *));
@@ -1645,20 +1632,17 @@ main(int ac, char **av)
 	 * exits.
 	 */
 	if (!(debug_flag || inetd_flag || no_daemon_flag)) {
-#ifdef TIOCNOTTY
 		int fd;
-#endif /* TIOCNOTTY */
+
 		if (daemon(0, 0) < 0)
 			fatal("daemon() failed: %.200s", strerror(errno));
 
 		/* Disconnect from the controlling tty. */
-#ifdef TIOCNOTTY
 		fd = open(_PATH_TTY, O_RDWR | O_NOCTTY);
 		if (fd >= 0) {
 			(void) ioctl(fd, TIOCNOTTY, NULL);
 			close(fd);
 		}
-#endif /* TIOCNOTTY */
 	}
 	/* Reinitialize the log (because of the fork above). */
 	log_init(__progname, options.log_level, options.log_facility, log_stderr);
@@ -1716,15 +1700,8 @@ main(int ac, char **av)
 	 * setlogin() affects the entire process group.  We don't
 	 * want the child to be able to affect the parent.
 	 */
-#if !defined(SSHD_ACQUIRES_CTTY)
-	/*
-	 * If setsid is called, on some platforms sshd will later acquire a
-	 * controlling terminal which will result in "could not set
-	 * controlling tty" errors.
-	 */
 	if (!debug_flag && !inetd_flag && setsid() < 0)
 		error("setsid: %.100s", strerror(errno));
-#endif
 
 	if (rexec_flag) {
 		int fd;
@@ -1766,6 +1743,10 @@ main(int ac, char **av)
 		    sock_in, sock_out, newsock, startup_pipe, config_s[0]);
 	}
 
+	/* Executed child processes don't need these. */
+	fcntl(sock_out, F_SETFD, FD_CLOEXEC);
+	fcntl(sock_in, F_SETFD, FD_CLOEXEC);
+
 	/*
 	 * Disable the key regeneration alarm.  We will not regenerate the
 	 * key since we are no longer in a position to give it to anyone. We
@@ -1777,7 +1758,6 @@ main(int ac, char **av)
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGQUIT, SIG_DFL);
 	signal(SIGCHLD, SIG_DFL);
-	signal(SIGINT, SIG_DFL);
 
 	/*
 	 * Register our connection.  This turns encryption off because we do
@@ -1808,12 +1788,7 @@ main(int ac, char **av)
 	 */
 	remote_ip = get_remote_ipaddr();
 
-#ifdef SSH_AUDIT_EVENTS
-	audit_connection_from(remote_ip, remote_port);
-#endif
 #ifdef LIBWRAP
-	allow_severity = options.log_facility|LOG_INFO;
-	deny_severity = options.log_facility|LOG_WARNING;
 	/* Check whether logins are denied from this host. */
 	if (packet_connection_is_on_socket()) {
 		struct request_info req;
@@ -1856,13 +1831,12 @@ main(int ac, char **av)
 	/* allocate authentication context */
 	authctxt = xcalloc(1, sizeof(*authctxt));
 
-	authctxt->loginmsg = &loginmsg;
-
 	/* XXX global for cleanup, access from other modules */
 	the_authctxt = authctxt;
 
 	/* prepare buffer to collect messages to display to user after login */
 	buffer_init(&loginmsg);
+	auth_debug_reset();
 
 	if (use_privsep)
 		if (privsep_preauth(authctxt) == 1)
@@ -1899,24 +1873,6 @@ main(int ac, char **av)
 		startup_pipe = -1;
 	}
 
-#ifdef SSH_AUDIT_EVENTS
-	audit_event(SSH_AUTH_SUCCESS);
-#endif
-
-#ifdef GSSAPI
-	if (options.gss_authentication) {
-		temporarily_use_uid(authctxt->pw);
-		ssh_gssapi_storecreds();
-		restore_uid();
-	}
-#endif
-#ifdef USE_PAM
-	if (options.use_pam) {
-		do_pam_setcred(1);
-		do_pam_session();
-	}
-#endif
-
 	/*
 	 * In privilege separation, we fork another child and prepare
 	 * file descriptor passing.
@@ -1937,19 +1893,10 @@ main(int ac, char **av)
 	/* The connection has been terminated. */
 	packet_get_state(MODE_IN, NULL, NULL, NULL, &ibytes);
 	packet_get_state(MODE_OUT, NULL, NULL, NULL, &obytes);
-	verbose("Transferred: sent %llu, received %llu bytes", obytes, ibytes);
+	verbose("Transferred: sent %llu, received %llu bytes",
+	    (unsigned long long)obytes, (unsigned long long)ibytes);
 
 	verbose("Closing connection to %.500s port %d", remote_ip, remote_port);
-
-#ifdef USE_PAM
-	if (options.use_pam)
-		finish_pam();
-#endif /* USE_PAM */
-
-#ifdef SSH_AUDIT_EVENTS
-	PRIVSEP(audit_event(SSH_CONNECTION_CLOSE));
-#endif
-
 	packet_close();
 
 	if (use_privsep)
@@ -2207,6 +2154,8 @@ do_ssh2_kex(void)
 		myproposal[PROPOSAL_COMP_ALGS_CTOS] =
 		myproposal[PROPOSAL_COMP_ALGS_STOC] = "none,zlib@openssh.com";
 	}
+	if (options.kex_algorithms != NULL)
+		myproposal[PROPOSAL_KEX_ALGS] = options.kex_algorithms;
 
 	myproposal[PROPOSAL_SERVER_HOST_KEY_ALGS] = list_hostkey_types();
 
@@ -2216,10 +2165,12 @@ do_ssh2_kex(void)
 	kex->kex[KEX_DH_GRP14_SHA1] = kexdh_server;
 	kex->kex[KEX_DH_GEX_SHA1] = kexgex_server;
 	kex->kex[KEX_DH_GEX_SHA256] = kexgex_server;
+	kex->kex[KEX_ECDH_SHA2] = kexecdh_server;
 	kex->server = 1;
 	kex->client_version_string=client_version_string;
 	kex->server_version_string=server_version_string;
-	kex->load_host_key=&get_hostkey_by_type;
+	kex->load_host_public_key=&get_hostkey_public_by_type;
+	kex->load_host_private_key=&get_hostkey_private_by_type;
 	kex->host_key_index=&get_hostkey_index;
 
 	xxx_kex = kex;
@@ -2245,10 +2196,5 @@ cleanup_exit(int i)
 {
 	if (the_authctxt)
 		do_cleanup(the_authctxt);
-#ifdef SSH_AUDIT_EVENTS
-	/* done after do_cleanup so it can cancel the PAM auth 'thread' */
-	if (!use_privsep || mm_is_monitor())
-		audit_event(SSH_CONNECTION_ABANDON);
-#endif
 	_exit(i);
 }

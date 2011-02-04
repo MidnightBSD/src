@@ -35,15 +35,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
-#include <sys/param.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
-#ifdef HAVE_SYS_TIME_H
-# include <sys/time.h>
-#endif
+#include <sys/time.h>
+#include <sys/param.h>
+#include <sys/queue.h>
 
 #include <netinet/in.h>
 
@@ -56,7 +53,6 @@
 #include <unistd.h>
 #include <stdarg.h>
 
-#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "packet.h"
 #include "buffer.h"
@@ -172,9 +168,7 @@ sigchld_handler(int sig)
 {
 	int save_errno = errno;
 	child_terminated = 1;
-#ifndef _UNICOS
-	mysignal(SIGCHLD, sigchld_handler);
-#endif
+	signal(SIGCHLD, sigchld_handler);
 	notify_parent();
 	errno = save_errno;
 }
@@ -282,7 +276,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	struct timeval tv, *tvp;
 	int ret;
 	int client_alive_scheduled = 0;
-	int program_alive_scheduled = 0;
 
 	/*
 	 * if using client_alive, set the max timeout accordingly,
@@ -320,7 +313,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		 * the client, try to get some more data from the program.
 		 */
 		if (packet_not_very_much_data_to_write()) {
-			program_alive_scheduled = child_terminated;
 			if (!fdout_eof)
 				FD_SET(fdout, *readsetp);
 			if (!fderr_eof)
@@ -366,16 +358,8 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		memset(*writesetp, 0, *nallocp);
 		if (errno != EINTR)
 			error("select: %.100s", strerror(errno));
-	} else {
-		if (ret == 0 && client_alive_scheduled)
-			client_alive_check();
-		if (!compat20 && program_alive_scheduled && fdin_is_tty) {
-			if (!fdout_eof)
-				FD_SET(fdout, *readsetp);
-			if (!fderr_eof)
-				FD_SET(fderr, *readsetp);
-		}
-	}
+	} else if (ret == 0 && client_alive_scheduled)
+		client_alive_check();
 
 	notify_done(*readsetp);
 }
@@ -404,8 +388,7 @@ process_input(fd_set *readset)
 				return;
 			cleanup_exit(255);
 		} else if (len < 0) {
-			if (errno != EINTR && errno != EAGAIN &&
-			    errno != EWOULDBLOCK) {
+			if (errno != EINTR && errno != EAGAIN) {
 				verbose("Read error from remote host "
 				    "%.100s: %.100s",
 				    get_remote_ipaddr(), strerror(errno));
@@ -421,17 +404,10 @@ process_input(fd_set *readset)
 
 	/* Read and buffer any available stdout data from the program. */
 	if (!fdout_eof && FD_ISSET(fdout, readset)) {
-		errno = 0;
 		len = read(fdout, buf, sizeof(buf));
-		if (len < 0 && (errno == EINTR || ((errno == EAGAIN ||
-		    errno == EWOULDBLOCK) && !child_terminated))) {
+		if (len < 0 && (errno == EINTR || errno == EAGAIN)) {
 			/* do nothing */
-#ifndef PTY_ZEROREAD
 		} else if (len <= 0) {
-#else
-		} else if ((!isatty(fdout) && len <= 0) ||
-		    (isatty(fdout) && (len < 0 || (len == 0 && errno != 0)))) {
-#endif
 			fdout_eof = 1;
 		} else {
 			buffer_append(&stdout_buffer, buf, len);
@@ -440,17 +416,10 @@ process_input(fd_set *readset)
 	}
 	/* Read and buffer any available stderr data from the program. */
 	if (!fderr_eof && FD_ISSET(fderr, readset)) {
-		errno = 0;
 		len = read(fderr, buf, sizeof(buf));
-		if (len < 0 && (errno == EINTR || ((errno == EAGAIN ||
-		    errno == EWOULDBLOCK) && !child_terminated))) {
+		if (len < 0 && (errno == EINTR || errno == EAGAIN)) {
 			/* do nothing */
-#ifndef PTY_ZEROREAD
 		} else if (len <= 0) {
-#else
-		} else if ((!isatty(fderr) && len <= 0) ||
-		    (isatty(fderr) && (len < 0 || (len == 0 && errno != 0)))) {
-#endif
 			fderr_eof = 1;
 		} else {
 			buffer_append(&stderr_buffer, buf, len);
@@ -474,8 +443,7 @@ process_output(fd_set *writeset)
 		data = buffer_ptr(&stdin_buffer);
 		dlen = buffer_len(&stdin_buffer);
 		len = write(fdin, data, dlen);
-		if (len < 0 &&
-		    (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) {
+		if (len < 0 && (errno == EINTR || errno == EAGAIN)) {
 			/* do nothing */
 		} else if (len <= 0) {
 			if (fdin != fdout)
@@ -566,7 +534,7 @@ server_loop(pid_t pid, int fdin_arg, int fdout_arg, int fderr_arg)
 
 	/* Initialize the SIGCHLD kludge. */
 	child_terminated = 0;
-	mysignal(SIGCHLD, sigchld_handler);
+	signal(SIGCHLD, sigchld_handler);
 
 	if (!use_privsep) {
 		signal(SIGTERM, sigterm_handler);
@@ -750,7 +718,7 @@ server_loop(pid_t pid, int fdin_arg, int fdout_arg, int fderr_arg)
 	channel_free_all();
 
 	/* We no longer want our SIGCHLD handler to be called. */
-	mysignal(SIGCHLD, SIG_DFL);
+	signal(SIGCHLD, SIG_DFL);
 
 	while ((wait_pid = waitpid(-1, &wait_status, 0)) < 0)
 		if (errno != EINTR)
@@ -823,7 +791,7 @@ server_loop2(Authctxt *authctxt)
 
 	debug("Entering interactive session for SSH2.");
 
-	mysignal(SIGCHLD, sigchld_handler);
+	signal(SIGCHLD, sigchld_handler);
 	child_terminated = 0;
 	connection_in = packet_get_connection_in();
 	connection_out = packet_get_connection_out();
@@ -1001,11 +969,6 @@ server_request_tun(void)
 	c = channel_new("tun", SSH_CHANNEL_OPEN, sock, sock, -1,
 	    CHAN_TCP_WINDOW_DEFAULT, CHAN_TCP_PACKET_DEFAULT, 0, "tun", 1);
 	c->datagram = 1;
-#if defined(SSH_TUN_FILTER)
-	if (mode == SSH_TUNMODE_POINTOPOINT)
-		channel_register_filter(c->self, sys_tun_infilter,
-		    sys_tun_outfilter, NULL, NULL);
-#endif
 
  done:
 	if (c == NULL)
@@ -1122,12 +1085,9 @@ server_input_global_request(int type, u_int32_t seq, void *ctxt)
 		/* check permissions */
 		if (!options.allow_tcp_forwarding ||
 		    no_port_forwarding_flag ||
-		    (!want_reply && listen_port == 0)
-#ifndef NO_IPPORT_RESERVED_CONCEPT
-		    || (listen_port != 0 && listen_port < IPPORT_RESERVED &&
-                    pw->pw_uid != 0)
-#endif
-		    ) {
+		    (!want_reply && listen_port == 0) ||
+		    (listen_port != 0 && listen_port < IPPORT_RESERVED &&
+		    pw->pw_uid != 0)) {
 			success = 0;
 			packet_send_debug("Server has disabled port forwarding.");
 		} else {

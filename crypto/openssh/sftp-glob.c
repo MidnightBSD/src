@@ -15,14 +15,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
-#ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>
-#endif
+#include <sys/stat.h>
 
 #include <dirent.h>
+#include <glob.h>
 #include <string.h>
 
 #include "xmalloc.h"
@@ -63,40 +60,16 @@ fudge_opendir(const char *path)
 static struct dirent *
 fudge_readdir(struct SFTP_OPENDIR *od)
 {
-	/* Solaris needs sizeof(dirent) + path length (see below) */
-	static char buf[sizeof(struct dirent) + MAXPATHLEN];
-	struct dirent *ret = (struct dirent *)buf;
-#ifdef __GNU_LIBRARY__
-	static int inum = 1;
-#endif /* __GNU_LIBRARY__ */
+	static struct dirent ret;
 
 	if (od->dir[od->offset] == NULL)
 		return(NULL);
 
-	memset(buf, 0, sizeof(buf));
+	memset(&ret, 0, sizeof(ret));
+	strlcpy(ret.d_name, od->dir[od->offset++]->filename,
+	    sizeof(ret.d_name));
 
-	/*
-	 * Solaris defines dirent->d_name as a one byte array and expects
-	 * you to hack around it.
-	 */
-#ifdef BROKEN_ONE_BYTE_DIRENT_D_NAME
-	strlcpy(ret->d_name, od->dir[od->offset++]->filename, MAXPATHLEN);
-#else
-	strlcpy(ret->d_name, od->dir[od->offset++]->filename,
-	    sizeof(ret->d_name));
-#endif
-#ifdef __GNU_LIBRARY__
-	/*
-	 * Idiot glibc uses extensions to struct dirent for readdir with
-	 * ALTDIRFUNCs. Not that this is documented anywhere but the
-	 * source... Fake an inode number to appease it.
-	 */
-	ret->d_ino = inum++;
-	if (!inum)
-		inum = 1;
-#endif /* __GNU_LIBRARY__ */
-
-	return(ret);
+	return(&ret);
 }
 
 static void

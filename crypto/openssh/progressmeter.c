@@ -23,8 +23,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
@@ -38,7 +36,6 @@
 
 #include "progressmeter.h"
 #include "atomicio.h"
-#include "misc.h"
 
 #define DEFAULT_WINSIZE 80
 #define MAX_WINSIZE 512

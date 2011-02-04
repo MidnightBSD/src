@@ -409,8 +409,6 @@
 #define modp_group_from_g_and_safe_p ssh_modp_group_from_g_and_safe_p
 #define schnorr_sign_buf ssh_schnorr_sign_buf
 #define schnorr_verify_buf ssh_schnorr_verify_buf
-#define blacklist_filename ssh_blacklist_filename
-#define blacklisted_key ssh_blacklisted_key
 #define arc4random_buf ssh_arc4random_buf
 #define arc4random_uniform ssh_arc4random_uniform
 #define packet_backup_state ssh_packet_backup_state

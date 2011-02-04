@@ -23,11 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
-
-#include <stdarg.h>
 
 #include "xmalloc.h"
 #include "packet.h"

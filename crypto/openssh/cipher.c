@@ -35,8 +35,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 
 #include <openssl/md5.h>
@@ -47,9 +45,6 @@
 #include "xmalloc.h"
 #include "log.h"
 #include "cipher.h"
-
-/* compatibility with old or broken OpenSSL versions */
-#include "openbsd-compat/openssl-compat.h"
 
 extern const EVP_CIPHER *evp_ssh1_bf(void);
 extern const EVP_CIPHER *evp_ssh1_3des(void);
@@ -85,9 +80,8 @@ struct Cipher {
 	{ "aes128-ctr",		SSH_CIPHER_SSH2, 16, 16, 0, 0, evp_aes_128_ctr },
 	{ "aes192-ctr",		SSH_CIPHER_SSH2, 16, 24, 0, 0, evp_aes_128_ctr },
 	{ "aes256-ctr",		SSH_CIPHER_SSH2, 16, 32, 0, 0, evp_aes_128_ctr },
-#ifdef USE_CIPHER_ACSS
 	{ "acss@openssh.org",	SSH_CIPHER_SSH2, 16, 5, 0, 0, EVP_acss },
-#endif
+
 	{ NULL,			SSH_CIPHER_INVALID, 0, 0, 0, 0, NULL }
 };
 
@@ -206,12 +200,8 @@ cipher_init(CipherContext *cc, Cipher *cipher,
     int do_encrypt)
 {
 	static int dowarn = 1;
-#ifdef SSH_OLD_EVP
-	EVP_CIPHER *type;
-#else
 	const EVP_CIPHER *type;
 	int klen;
-#endif
 	u_char *junk, *discard;
 
 	if (cipher->number == SSH_CIPHER_DES) {
@@ -236,15 +226,6 @@ cipher_init(CipherContext *cc, Cipher *cipher,
 	type = (*cipher->evptype)();
 
 	EVP_CIPHER_CTX_init(&cc->evp);
-#ifdef SSH_OLD_EVP
-	if (type->key_len > 0 && type->key_len != keylen) {
-		debug("cipher_init: set keylen (%d -> %d)",
-		    type->key_len, keylen);
-		type->key_len = keylen;
-	}
-	EVP_CipherInit(&cc->evp, type, (u_char *)key, (u_char *)iv,
-	    (do_encrypt == CIPHER_ENCRYPT));
-#else
 	if (EVP_CipherInit(&cc->evp, type, NULL, (u_char *)iv,
 	    (do_encrypt == CIPHER_ENCRYPT)) == 0)
 		fatal("cipher_init: EVP_CipherInit failed for %s",
@@ -259,7 +240,6 @@ cipher_init(CipherContext *cc, Cipher *cipher,
 	if (EVP_CipherInit(&cc->evp, NULL, (u_char *)key, NULL, -1) == 0)
 		fatal("cipher_init: EVP_CipherInit: set key failed for %s",
 		    cipher->name);
-#endif
 
 	if (cipher->discard_len > 0) {
 		junk = xmalloc(cipher->discard_len);
@@ -346,11 +326,6 @@ cipher_get_keyiv(CipherContext *cc, u_char *iv, u_int len)
 		if ((u_int)evplen != len)
 			fatal("%s: wrong iv length %d != %d", __func__,
 			    evplen, len);
-#ifdef USE_BUILTIN_RIJNDAEL
-		if (c->evptype == evp_rijndael)
-			ssh_rijndael_iv(&cc->evp, 0, iv, len);
-		else
-#endif
 		if (c->evptype == evp_aes_128_ctr)
 			ssh_aes_ctr_iv(&cc->evp, 0, iv, len);
 		else
@@ -377,11 +352,6 @@ cipher_set_keyiv(CipherContext *cc, u_char *iv)
 		evplen = EVP_CIPHER_CTX_iv_length(&cc->evp);
 		if (evplen == 0)
 			return;
-#ifdef USE_BUILTIN_RIJNDAEL
-		if (c->evptype == evp_rijndael)
-			ssh_rijndael_iv(&cc->evp, 1, iv, evplen);
-		else
-#endif
 		if (c->evptype == evp_aes_128_ctr)
 			ssh_aes_ctr_iv(&cc->evp, 1, iv, evplen);
 		else
@@ -395,13 +365,8 @@ cipher_set_keyiv(CipherContext *cc, u_char *iv)
 	}
 }
 
-#if OPENSSL_VERSION_NUMBER < 0x00907000L
-#define EVP_X_STATE(evp)	&(evp).c
-#define EVP_X_STATE_LEN(evp)	sizeof((evp).c)
-#else
 #define EVP_X_STATE(evp)	(evp).cipher_data
 #define EVP_X_STATE_LEN(evp)	(evp).cipher->ctx_size
-#endif
 
 int
 cipher_get_keycontext(const CipherContext *cc, u_char *dat)

@@ -1,4 +1,4 @@
-/* $OpenBSD: pathnames.h,v 1.17 2008/12/29 02:23:26 stevesk Exp $ */
+/* $OpenBSD: pathnames.h,v 1.20 2010/08/31 11:54:45 djm Exp $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -13,14 +13,8 @@
  */
 
 #define ETCDIR				"/etc"
-
-#ifndef SSHDIR
 #define SSHDIR				ETCDIR "/ssh"
-#endif
-
-#ifndef _PATH_SSH_PIDDIR
 #define _PATH_SSH_PIDDIR		"/var/run"
-#endif
 
 /*
  * System-wide file containing host keys of known hosts.  This file should be
@@ -38,16 +32,13 @@
 #define _PATH_HOST_CONFIG_FILE		SSHDIR "/ssh_config"
 #define _PATH_HOST_KEY_FILE		SSHDIR "/ssh_host_key"
 #define _PATH_HOST_DSA_KEY_FILE		SSHDIR "/ssh_host_dsa_key"
+#define _PATH_HOST_ECDSA_KEY_FILE	SSHDIR "/ssh_host_ecdsa_key"
 #define _PATH_HOST_RSA_KEY_FILE		SSHDIR "/ssh_host_rsa_key"
-#define _PATH_DH_MODULI			SSHDIR "/moduli"
+#define _PATH_DH_MODULI			ETCDIR "/moduli"
 /* Backwards compatibility */
-#define _PATH_DH_PRIMES			SSHDIR "/primes"
+#define _PATH_DH_PRIMES			ETCDIR "/primes"
 
-#define _PATH_BLACKLIST			SSHDIR "/blacklist"
-
-#ifndef _PATH_SSH_PROGRAM
 #define _PATH_SSH_PROGRAM		"/usr/bin/ssh"
-#endif
 
 /*
  * The process id of the daemon listening for connections is saved here to
@@ -76,6 +67,7 @@
  */
 #define _PATH_SSH_CLIENT_IDENTITY	".ssh/identity"
 #define _PATH_SSH_CLIENT_ID_DSA		".ssh/id_dsa"
+#define _PATH_SSH_CLIENT_ID_ECDSA	".ssh/id_ecdsa"
 #define _PATH_SSH_CLIENT_ID_RSA		".ssh/id_rsa"
 
 /*
@@ -112,65 +104,35 @@
  * Ssh-only version of /etc/hosts.equiv.  Additionally, the daemon may use
  * ~/.rhosts and /etc/hosts.equiv if rhosts authentication is enabled.
  */
-#define _PATH_SSH_HOSTS_EQUIV		SSHDIR "/shosts.equiv"
+#define _PATH_SSH_HOSTS_EQUIV		ETCDIR "/shosts.equiv"
 #define _PATH_RHOSTS_EQUIV		"/etc/hosts.equiv"
 
 /*
  * Default location of askpass
  */
-#ifndef _PATH_SSH_ASKPASS_DEFAULT
 #define _PATH_SSH_ASKPASS_DEFAULT	"/usr/X11R6/bin/ssh-askpass"
-#endif
 
 /* Location of ssh-keysign for hostbased authentication */
-#ifndef _PATH_SSH_KEY_SIGN
 #define _PATH_SSH_KEY_SIGN		"/usr/libexec/ssh-keysign"
-#endif
+
+/* Location of ssh-pkcs11-helper to support keys in tokens */
+#define _PATH_SSH_PKCS11_HELPER		"/usr/libexec/ssh-pkcs11-helper"
 
 /* xauth for X11 forwarding */
-#ifndef _PATH_XAUTH
 #define _PATH_XAUTH			"/usr/X11R6/bin/xauth"
-#endif
 
 /* UNIX domain socket for X11 server; displaynum will replace %u */
-#ifndef _PATH_UNIX_X
 #define _PATH_UNIX_X "/tmp/.X11-unix/X%u"
-#endif
 
 /* for scp */
-#ifndef _PATH_CP
 #define _PATH_CP			"cp"
-#endif
 
 /* for sftp */
-#ifndef _PATH_SFTP_SERVER
 #define _PATH_SFTP_SERVER		"/usr/libexec/sftp-server"
-#endif
+#define _PATH_LS			"ls"
 
 /* chroot directory for unprivileged user when UsePrivilegeSeparation=yes */
-#ifndef _PATH_PRIVSEP_CHROOT_DIR
 #define _PATH_PRIVSEP_CHROOT_DIR	"/var/empty"
-#endif
 
 /* for passwd change */
-#ifndef _PATH_PASSWD_PROG
-#define _PATH_PASSWD_PROG             "/usr/bin/passwd"
-#endif
-
-#ifndef _PATH_LS
-#define _PATH_LS			"ls"
-#endif
-
-/* path to login program */
-#ifndef LOGIN_PROGRAM
-# ifdef LOGIN_PROGRAM_FALLBACK
-#  define LOGIN_PROGRAM         LOGIN_PROGRAM_FALLBACK
-# else
-#  define LOGIN_PROGRAM         "/usr/bin/login"
-# endif
-#endif /* LOGIN_PROGRAM */
-
-/* Askpass program define */
-#ifndef ASKPASS_PROGRAM
-#define ASKPASS_PROGRAM         "/usr/lib/ssh/ssh-askpass"
-#endif /* ASKPASS_PROGRAM */
+#define _PATH_PASSWD_PROG		"/usr/bin/passwd"

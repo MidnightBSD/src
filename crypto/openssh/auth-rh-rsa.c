@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-rh-rsa.c,v 1.42 2006/08/03 03:34:41 deraadt Exp $ */
+/* $OpenBSD: auth-rh-rsa.c,v 1.43 2010/03/04 10:36:03 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -12,8 +12,6 @@
  * incompatible with the protocol description in the RFC file, it must be
  * called by a name other than "ssh" or "Secure Shell".
  */
-
-#include "includes.h"
 
 #include <sys/types.h>
 
@@ -47,18 +45,8 @@ auth_rhosts_rsa_key_allowed(struct passwd *pw, char *cuser, char *chost,
 	char *fp;
 	HostStatus host_status;
 
-	if (blacklisted_key(client_host_key)) {
-		fp = key_fingerprint(client_host_key, SSH_FP_MD5, SSH_FP_HEX);
-		if (options.permit_blacklisted_keys)
-			logit("Public key %s blacklisted (see "
-			    "ssh-vulnkey(1)); continuing anyway", fp);
-		else
-			logit("Public key %s blacklisted (see "
-			    "ssh-vulnkey(1))", fp);
-		xfree(fp);
-		if (!options.permit_blacklisted_keys)
-			return 0;
-	}
+	if (auth_key_is_revoked(client_host_key))
+		return 0;
 
 	/* Check if we would accept it using rhosts authentication. */
 	if (!auth_rhosts(pw, cuser))

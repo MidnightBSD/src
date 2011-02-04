@@ -1,4 +1,4 @@
-/* $OpenBSD: misc.h,v 1.38 2008/06/12 20:38:28 dtucker Exp $ */
+/* $OpenBSD: misc.h,v 1.47 2010/11/21 01:01:13 djm Exp $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -78,6 +78,17 @@ void		put_u32(void *, u_int32_t)
 void		put_u16(void *, u_int16_t)
     __attribute__((__bounded__( __minbytes__, 1, 2)));
 
+struct bwlimit {
+	size_t buflen;
+	u_int64_t rate, thresh, lamt;
+	struct timeval bwstart, bwend;
+};
+
+void bandwidth_limit_init(struct bwlimit *, u_int64_t, size_t);
+void bandwidth_limit(struct bwlimit *, size_t);
+
+int parse_ipqos(const char *);
+void mktemp_proto(char *, size_t);
 
 /* readpass.c */
 

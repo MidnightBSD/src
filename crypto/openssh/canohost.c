@@ -1,4 +1,4 @@
-/* $OpenBSD: canohost.c,v 1.65 2009/05/27 06:31:25 andreas Exp $ */
+/* $OpenBSD: canohost.c,v 1.66 2010/01/13 01:20:20 dtucker Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -12,13 +12,10 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
-#include <arpa/inet.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -27,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #include "xmalloc.h"
 #include "packet.h"
@@ -60,17 +58,12 @@ get_remote_hostname(int sock, int use_dns)
 		cleanup_exit(255);
 	}
 
-	if (from.ss_family == AF_INET)
-		check_ip_options(sock, ntop);
-
-	ipv64_normalise_mapped(&from, &fromlen);
-
-	if (from.ss_family == AF_INET6)
-		fromlen = sizeof(struct sockaddr_in6);
-
 	if (getnameinfo((struct sockaddr *)&from, fromlen, ntop, sizeof(ntop),
 	    NULL, 0, NI_NUMERICHOST) != 0)
 		fatal("get_remote_hostname: getnameinfo NI_NUMERICHOST failed");
+
+	if (from.ss_family == AF_INET)
+		check_ip_options(sock, ntop);
 
 	if (!use_dns)
 		return xstrdup(ntop);
@@ -156,7 +149,6 @@ get_remote_hostname(int sock, int use_dns)
 static void
 check_ip_options(int sock, char *ipaddr)
 {
-#ifdef IP_OPTIONS
 	u_char options[200];
 	char text[sizeof(options) * 3 + 1];
 	socklen_t option_size;
@@ -178,32 +170,6 @@ check_ip_options(int sock, char *ipaddr)
 		fatal("Connection from %.100s with IP options:%.800s",
 		    ipaddr, text);
 	}
-#endif /* IP_OPTIONS */
-}
-
-void
-ipv64_normalise_mapped(struct sockaddr_storage *addr, socklen_t *len)
-{
-	struct sockaddr_in6 *a6 = (struct sockaddr_in6 *)addr;
-	struct sockaddr_in *a4 = (struct sockaddr_in *)addr;
-	struct in_addr inaddr;
-	u_int16_t port;
-
-	if (addr->ss_family != AF_INET6 ||
-	    !IN6_IS_ADDR_V4MAPPED(&a6->sin6_addr))
-		return;
-
-	debug3("Normalising mapped IPv4 in IPv6 address");
-
-	memcpy(&inaddr, ((char *)&a6->sin6_addr) + 12, sizeof(inaddr));
-	port = a6->sin6_port;
-
-	memset(addr, 0, sizeof(*a4));
-
-	a4->sin_family = AF_INET;
-	*len = sizeof(*a4);
-	memcpy(&a4->sin_addr, &inaddr, sizeof(inaddr));
-	a4->sin_port = port;
 }
 
 /*
@@ -263,13 +229,6 @@ get_socket_address(int sock, int remote, int flags)
 		    < 0)
 			return NULL;
 	}
-
-	/* Work around Linux IPv6 weirdness */
-	if (addr.ss_family == AF_INET6)
-		addrlen = sizeof(struct sockaddr_in6);
-
-	ipv64_normalise_mapped(&addr, &addrlen);
-
 	/* Get the address in ascii. */
 	if ((r = getnameinfo((struct sockaddr *)&addr, addrlen, ntop,
 	    sizeof(ntop), NULL, 0, flags)) != 0) {
@@ -301,9 +260,22 @@ get_local_ipaddr(int sock)
 }
 
 char *
-get_local_name(int sock)
+get_local_name(int fd)
 {
-	return get_socket_address(sock, 0, NI_NAMEREQD);
+	char *host, myname[NI_MAXHOST];
+
+	/* Assume we were passed a socket */
+	if ((host = get_socket_address(fd, 0, NI_NAMEREQD)) != NULL)
+		return host;
+
+	/* Handle the case where we were passed a pipe */
+	if (gethostname(myname, sizeof(myname)) == -1) {
+		verbose("get_local_name: gethostname: %s", strerror(errno));
+	} else {
+		host = xstrdup(myname);
+	}
+
+	return host;
 }
 
 void
@@ -374,11 +346,6 @@ get_sock_port(int sock, int local)
 			return -1;
 		}
 	}
-
-	/* Work around Linux IPv6 weirdness */
-	if (from.ss_family == AF_INET6)
-		fromlen = sizeof(struct sockaddr_in6);
-
 	/* Return port number. */
 	if ((r = getnameinfo((struct sockaddr *)&from, fromlen, NULL, 0,
 	    strport, sizeof(strport), NI_NUMERICSERV)) != 0)

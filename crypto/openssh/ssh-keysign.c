@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh-keysign.c,v 1.29 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: ssh-keysign.c,v 1.35 2010/08/31 12:33:38 djm Exp $ */
 /*
  * Copyright (c) 2002 Markus Friedl.  All rights reserved.
  *
@@ -23,21 +23,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
-#include <fcntl.h>
-#ifdef HAVE_PATHS_H
-#include <paths.h>
-#endif
-#include <pwd.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <sys/types.h>
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
+
+#include <fcntl.h>
+#include <paths.h>
+#include <pwd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "xmalloc.h"
 #include "log.h"
@@ -55,8 +52,6 @@
 
 /* XXX readconf.c needs these */
 uid_t original_real_uid;
-
-extern char *__progname;
 
 static int
 valid_request(struct passwd *pw, char *host, Key **ret, u_char *data,
@@ -175,10 +170,6 @@ main(int argc, char **argv)
 
 	permanently_set_uid(pw);
 
-	init_rng();
-	seed_rng();
-	arc4random_stir();
-
 #ifdef DEBUG_SSH_KEYSIGN
 	log_init("ssh-keysign", SYSLOG_LEVEL_DEBUG3, SYSLOG_FACILITY_AUTH, 0);
 #endif
@@ -194,7 +185,7 @@ main(int argc, char **argv)
 	if (key_fd[0] == -1 && key_fd[1] == -1)
 		fatal("could not open any host key");
 
-	SSLeay_add_all_algorithms();
+	OpenSSL_add_all_algorithms();
 	for (i = 0; i < 256; i++)
 		rnd[i] = arc4random();
 	RAND_seed(rnd, sizeof(rnd));
@@ -222,7 +213,7 @@ main(int argc, char **argv)
 	if ((fd == STDIN_FILENO) || (fd == STDOUT_FILENO))
 		fatal("bad fd");
 	if ((host = get_local_name(fd)) == NULL)
-		fatal("cannot get sockname for fd");
+		fatal("cannot get local name for fd");
 
 	data = buffer_get_string(&b, &dlen);
 	if (valid_request(pw, host, &key, data, dlen) < 0)
@@ -232,7 +223,7 @@ main(int argc, char **argv)
 	found = 0;
 	for (i = 0; i < 2; i++) {
 		if (keys[i] != NULL &&
-		    key_equal(key, keys[i])) {
+		    key_equal_public(key, keys[i])) {
 			found = 1;
 			break;
 		}

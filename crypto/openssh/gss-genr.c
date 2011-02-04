@@ -24,16 +24,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #ifdef GSSAPI
 
-#include <sys/types.h>
 #include <sys/param.h>
 
 #include <stdarg.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "xmalloc.h"
 #include "buffer.h"

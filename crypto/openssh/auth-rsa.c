@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-rsa.c,v 1.73 2008/07/02 12:03:51 dtucker Exp $ */
+/* $OpenBSD: auth-rsa.c,v 1.79 2010/12/03 23:55:27 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -14,8 +14,6 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -24,7 +22,6 @@
 
 #include <pwd.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
 
 #include "xmalloc.h"
@@ -34,11 +31,11 @@
 #include "uidswap.h"
 #include "match.h"
 #include "buffer.h"
-#include "auth-options.h"
 #include "pathnames.h"
 #include "log.h"
 #include "servconf.h"
 #include "key.h"
+#include "auth-options.h"
 #include "hostfile.h"
 #include "authfile.h"
 #include "auth.h"
@@ -114,7 +111,7 @@ auth_rsa_verify_response(Key *key, BIGNUM *challenge, u_char response[16])
 	MD5_Final(mdbuf, &md);
 
 	/* Verify that the response is the original challenge. */
-	if (memcmp(response, mdbuf, 16) != 0) {
+	if (timingsafe_bcmp(response, mdbuf, 16) != 0) {
 		/* Wrong answer. */
 		return (0);
 	}
@@ -248,18 +245,9 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 			    "actual %d vs. announced %d.",
 			    file, linenum, BN_num_bits(key->rsa->n), bits);
 
-		if (blacklisted_key(key)) {
-			fp = key_fingerprint(key, SSH_FP_MD5, SSH_FP_HEX);
-			if (options.permit_blacklisted_keys)
-				logit("Public key %s blacklisted (see "
-				    "ssh-vulnkey(1)); continuing anyway", fp);
-			else
-				logit("Public key %s blacklisted (see "
-				    "ssh-vulnkey(1))", fp);
-			xfree(fp);
-			if (!options.permit_blacklisted_keys)
-				continue;
-		}
+		/* Never accept a revoked key */
+		if (auth_key_is_revoked(key))
+			break;
 
 		/* We have found the desired key. */
 		/*
@@ -268,7 +256,8 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 		 */
 		if (!auth_parse_options(pw, key_options, file, linenum))
 			continue;
-
+		if (key_is_cert_authority)
+			continue;
 		/* break out, this key is allowed */
 		allowed = 1;
 		break;
