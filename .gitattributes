@@ -20510,6 +20510,8 @@ crypto/openssh/canohost.h -text
 crypto/openssh/channels.c -text
 crypto/openssh/channels.h -text
 crypto/openssh/cipher-3des1.c -text
+crypto/openssh/cipher-acss.c -text
+crypto/openssh/cipher-aes.c -text
 crypto/openssh/cipher-bf1.c -text
 crypto/openssh/cipher-ctr.c -text
 crypto/openssh/cipher.c -text
