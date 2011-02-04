@@ -39,12 +39,15 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/un.h>
 #include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/queue.h>
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -59,6 +62,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "ssh.h"
 #include "ssh1.h"
@@ -240,6 +244,7 @@ channel_register_fds(Channel *c, int rfd, int wfd, int efd,
 
 	if ((c->isatty = is_tty) != 0)
 		debug2("channel %d: rfd %d isatty", c->self, c->rfd);
+	c->wfd_isatty = is_tty || isatty(c->wfd);
 
 	/* enable nonblocking mode */
 	if (nonblock) {
@@ -1586,14 +1591,21 @@ static int
 channel_handle_rfd(Channel *c, fd_set *readset, fd_set *writeset)
 {
 	char buf[CHAN_RBUF];
-	int len;
+	int len, force;
 
-	if (c->rfd != -1 &&
-	    FD_ISSET(c->rfd, readset)) {
+	force = c->isatty && c->detach_close && c->istate != CHAN_INPUT_CLOSED;
+	if (c->rfd != -1 && (force || FD_ISSET(c->rfd, readset))) {
+		errno = 0;
 		len = read(c->rfd, buf, sizeof(buf));
-		if (len < 0 && (errno == EINTR || errno == EAGAIN))
+		if (len < 0 && (errno == EINTR ||
+		    ((errno == EAGAIN || errno == EWOULDBLOCK) && !force)))
 			return 1;
+#ifndef PTY_ZEROREAD
 		if (len <= 0) {
+#else
+		if ((!c->isatty && len <= 0) ||
+		    (c->isatty && (len < 0 || (len == 0 && errno != 0)))) {
+#endif
 			debug2("channel %d: read<=0 rfd %d len %d",
 			    c->self, c->rfd, len);
 			if (c->type != SSH_CHANNEL_OPEN) {
@@ -1657,7 +1669,8 @@ channel_handle_wfd(Channel *c, fd_set *readset, fd_set *writeset)
 			/* ignore truncated writes, datagrams might get lost */
 			len = write(c->wfd, buf, dlen);
 			xfree(data);
-			if (len < 0 && (errno == EINTR || errno == EAGAIN))
+			if (len < 0 && (errno == EINTR || errno == EAGAIN ||
+			    errno == EWOULDBLOCK))
 				return 1;
 			if (len <= 0) {
 				if (c->type != SSH_CHANNEL_OPEN)
@@ -1668,9 +1681,15 @@ channel_handle_wfd(Channel *c, fd_set *readset, fd_set *writeset)
 			}
 			goto out;
 		}
+#ifdef _AIX
+		/* XXX: Later AIX versions can't push as much data to tty */
+		if (compat20 && c->wfd_isatty)
+			dlen = MIN(dlen, 8*1024);
+#endif
 
 		len = write(c->wfd, buf, dlen);
-		if (len < 0 && (errno == EINTR || errno == EAGAIN))
+		if (len < 0 &&
+		    (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK))
 			return 1;
 		if (len <= 0) {
 			if (c->type != SSH_CHANNEL_OPEN) {
@@ -1686,6 +1705,7 @@ channel_handle_wfd(Channel *c, fd_set *readset, fd_set *writeset)
 			}
 			return -1;
 		}
+#ifndef BROKEN_TCGETATTR_ICANON
 		if (compat20 && c->isatty && dlen >= 1 && buf[0] != '\r') {
 			if (tcgetattr(c->wfd, &tio) == 0 &&
 			    !(tio.c_lflag & ECHO) && (tio.c_lflag & ICANON)) {
@@ -1699,6 +1719,7 @@ channel_handle_wfd(Channel *c, fd_set *readset, fd_set *writeset)
 				packet_send();
 			}
 		}
+#endif
 		buffer_consume(&c->output, len);
 	}
  out:
@@ -1722,7 +1743,8 @@ channel_handle_efd(Channel *c, fd_set *readset, fd_set *writeset)
 			    buffer_len(&c->extended));
 			debug2("channel %d: written %d to efd %d",
 			    c->self, len, c->efd);
-			if (len < 0 && (errno == EINTR || errno == EAGAIN))
+			if (len < 0 && (errno == EINTR || errno == EAGAIN ||
+			    errno == EWOULDBLOCK))
 				return 1;
 			if (len <= 0) {
 				debug2("channel %d: closing write-efd %d",
@@ -1739,7 +1761,8 @@ channel_handle_efd(Channel *c, fd_set *readset, fd_set *writeset)
 			len = read(c->efd, buf, sizeof(buf));
 			debug2("channel %d: read %d from efd %d",
 			    c->self, len, c->efd);
-			if (len < 0 && (errno == EINTR || errno == EAGAIN))
+			if (len < 0 && (errno == EINTR || ((errno == EAGAIN ||
+			    errno == EWOULDBLOCK) && !c->detach_close)))
 				return 1;
 			if (len <= 0) {
 				debug2("channel %d: closing read-efd %d",
@@ -2736,7 +2759,11 @@ channel_setup_fwd_listener(int type, const char *listen_addr,
 		/* Bind the socket to the address. */
 		if (bind(sock, ai->ai_addr, ai->ai_addrlen) < 0) {
 			/* address can be in use ipv6 address is already bound */
-			verbose("bind: %.100s", strerror(errno));
+			if (!ai->ai_next)
+				error("bind: %.100s", strerror(errno));
+			else
+				verbose("bind: %.100s", strerror(errno));
+
 			close(sock);
 			continue;
 		}
@@ -2937,6 +2964,7 @@ channel_input_port_forward_request(int is_root, int gateway_ports)
 	hostname = packet_get_string(NULL);
 	host_port = packet_get_int();
 
+#ifndef HAVE_CYGWIN
 	/*
 	 * Check that an unprivileged user is not trying to forward a
 	 * privileged port.
@@ -2947,6 +2975,7 @@ channel_input_port_forward_request(int is_root, int gateway_ports)
 		    port);
 	if (host_port == 0)
 		packet_disconnect("Dynamic forwarding denied.");
+#endif
 
 	/* Initiate forwarding */
 	success = channel_setup_local_fwd_listener(NULL, port, hostname,
@@ -3320,7 +3349,7 @@ x11_create_display_inet(int x11_display_offset, int x11_use_localhost,
 }
 
 static int
-connect_local_xsocket(u_int dnr)
+connect_local_xsocket_path(const char *pathname)
 {
 	int sock;
 	struct sockaddr_un addr;
@@ -3330,12 +3359,20 @@ connect_local_xsocket(u_int dnr)
 		error("socket: %.100s", strerror(errno));
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	snprintf(addr.sun_path, sizeof addr.sun_path, _PATH_UNIX_X, dnr);
+	strlcpy(addr.sun_path, pathname, sizeof addr.sun_path);
 	if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0)
 		return sock;
 	close(sock);
 	error("connect %.100s: %.100s", addr.sun_path, strerror(errno));
 	return -1;
+}
+
+static int
+connect_local_xsocket(u_int dnr)
+{
+	char buf[1024];
+	snprintf(buf, sizeof buf, _PATH_UNIX_X, dnr);
+	return connect_local_xsocket_path(buf);
 }
 
 int
@@ -3359,6 +3396,17 @@ x11_connect_display(void)
 	 * connection to the real X server.
 	 */
 
+	/* Check if the display is from launchd. */
+#ifdef __APPLE__
+	if (strncmp(display, "/tmp/launch", 11) == 0) {
+		sock = connect_local_xsocket_path(display);
+		if (sock < 0)
+			return -1;
+
+		/* OK, we now have a connection to the display. */
+		return sock;
+	}
+#endif
 	/*
 	 * Check if it is a unix domain socket.  Unix domain displays are in
 	 * one of the following formats: unix:d[.s], :d[.s], ::d[.s]
