@@ -20533,6 +20533,7 @@ crypto/openssh/dispatch.c -text
 crypto/openssh/dispatch.h -text
 crypto/openssh/dns.c -text
 crypto/openssh/dns.h -text
+crypto/openssh/entropy.h -text
 crypto/openssh/fatal.c -text
 crypto/openssh/groupaccess.c -text
 crypto/openssh/groupaccess.h -text
