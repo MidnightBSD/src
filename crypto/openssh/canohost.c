@@ -12,10 +12,13 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -58,12 +61,17 @@ get_remote_hostname(int sock, int use_dns)
 		cleanup_exit(255);
 	}
 
+	if (from.ss_family == AF_INET)
+		check_ip_options(sock, ntop);
+
+	ipv64_normalise_mapped(&from, &fromlen);
+
+	if (from.ss_family == AF_INET6)
+		fromlen = sizeof(struct sockaddr_in6);
+
 	if (getnameinfo((struct sockaddr *)&from, fromlen, ntop, sizeof(ntop),
 	    NULL, 0, NI_NUMERICHOST) != 0)
 		fatal("get_remote_hostname: getnameinfo NI_NUMERICHOST failed");
-
-	if (from.ss_family == AF_INET)
-		check_ip_options(sock, ntop);
 
 	if (!use_dns)
 		return xstrdup(ntop);
@@ -149,6 +157,7 @@ get_remote_hostname(int sock, int use_dns)
 static void
 check_ip_options(int sock, char *ipaddr)
 {
+#ifdef IP_OPTIONS
 	u_char options[200];
 	char text[sizeof(options) * 3 + 1];
 	socklen_t option_size;
@@ -255,6 +264,13 @@ get_socket_address(int sock, int remote, int flags)
 		    < 0)
 			return NULL;
 	}
+
+	/* Work around Linux IPv6 weirdness */
+	if (addr.ss_family == AF_INET6)
+		addrlen = sizeof(struct sockaddr_in6);
+
+	ipv64_normalise_mapped(&addr, &addrlen);
+
 	/* Get the address in ascii. */
 	if ((r = getnameinfo((struct sockaddr *)&addr, addrlen, ntop,
 	    sizeof(ntop), NULL, 0, flags)) != 0) {
@@ -372,6 +388,11 @@ get_sock_port(int sock, int local)
 			return -1;
 		}
 	}
+
+	/* Work around Linux IPv6 weirdness */
+	if (from.ss_family == AF_INET6)
+		fromlen = sizeof(struct sockaddr_in6);
+
 	/* Return port number. */
 	if ((r = getnameinfo((struct sockaddr *)&from, fromlen, NULL, 0,
 	    strport, sizeof(strport), NI_NUMERICSERV)) != 0)
