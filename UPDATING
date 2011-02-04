@@ -5,6 +5,8 @@ Updating Information for MidnightBSD users
 
 	sqlite 3.7.5
 
+	OpenSSL 0.9.8q
+
 20110202:
 	tcsh 6.17.00
 
@@ -927,4 +929,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.107 2011/02/03 14:12:53 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.108 2011/02/03 14:31:14 laffer1 Exp $
