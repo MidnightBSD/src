@@ -20526,6 +20526,7 @@ crypto/openssh/crc32.c -text
 crypto/openssh/crc32.h -text
 crypto/openssh/deattack.c -text
 crypto/openssh/deattack.h -text
+crypto/openssh/defines.h -text
 crypto/openssh/dh.c -text
 crypto/openssh/dh.h -text
 crypto/openssh/dispatch.c -text
