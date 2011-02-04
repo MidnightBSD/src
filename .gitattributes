@@ -20590,6 +20590,7 @@ crypto/openssh/packet.c -text
 crypto/openssh/packet.h -text
 crypto/openssh/pathnames.h -text
 crypto/openssh/pkcs11.h -text
+crypto/openssh/platform.h -text
 crypto/openssh/progressmeter.c -text
 crypto/openssh/progressmeter.h -text
 crypto/openssh/readconf.c -text
