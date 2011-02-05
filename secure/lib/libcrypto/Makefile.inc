@@ -1,6 +1,10 @@
-# $FreeBSD: src/secure/lib/libcrypto/Makefile.inc,v 1.47 2007/05/09 19:37:00 gnn Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
+
+# OpenSSL version used for manual page generation
+OPENSSL_VER=	0.9.8q
+OPENSSL_DATE=	2010-12-02
 
 LCRYPTO_SRC=	${.CURDIR}/../../../crypto/openssl
 LCRYPTO_DOC=	${.CURDIR}/../../../crypto/openssl/doc
@@ -12,6 +16,8 @@ CFLAGS+=	-DOPENSSL_THREADS -DDSO_DLFCN -DHAVE_DLFCN_H
 .if ${MK_IDEA} == "no"
 CFLAGS+=	-DOPENSSL_NO_IDEA
 .endif
+
+MACHINE_CPUARCH?=	${MACHINE_ARCH}
 
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
 CFLAGS+= -DL_ENDIAN
@@ -34,7 +40,8 @@ man-update:
 	@(sec=${manpage:E}; \
 	pod=${manpage:R}.pod; \
 	cp ${LCRYPTO_DOC}/${_docs}/$$pod .; \
-	pod2man --section=$$sec --release="0.9.8q" --center="OpenSSL" \
+	pod2man --section=$$sec --release="${OPENSSL_VER}" \
+	  --date="${OPENSSL_DATE}" --center="OpenSSL"  \
 	  $$pod > ${.CURDIR}/man/${manpage}; \
 	rm -f $$pod; \
 	${ECHO} ${manpage})
@@ -42,7 +49,7 @@ man-update:
 
 man-makefile-update:
 	rm -f ${.CURDIR}/Makefile.man
-	echo '# $$'FreeBSD'$$' >> ${.CURDIR}/Makefile.man
+	echo '# $$'MidnightBSD'$$' >> ${.CURDIR}/Makefile.man
 	echo '# DO NOT EDIT: generated from man-makefile-update target' >> \
 	    ${.CURDIR}/Makefile.man
 	for i in ${LCRYPTO_DOC}/${_docs}/*.pod; do \

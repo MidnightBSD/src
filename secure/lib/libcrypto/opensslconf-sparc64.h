@@ -1,4 +1,4 @@
-/* $FreeBSD: src/secure/lib/libcrypto/opensslconf-sparc64.h,v 1.6 2006/10/01 07:56:44 simon Exp $ */
+/* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/secure/lib/libcrypto/opensslconf-sparc64.h,v 1.6.2.1 2010/11/28 13:45:51 simon Exp $ */
 /* opensslconf.h */
 /* WARNING: Generated automatically from opensslconf.h.in by Configure. */
 
@@ -8,6 +8,18 @@
 /* Disabled by default in OpenSSL 0.9.8. */
 #ifndef OPENSSL_NO_CAMELLIA
 # define OPENSSL_NO_CAMELLIA
+#endif
+/* Disabled by default in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_CMS
+# define OPENSSL_NO_CMS
+#endif
+/* Disabled by default in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_SEED
+# define OPENSSL_NO_SEED
+#endif
+/* jpake is marked experimental in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_JPAKE
+# define OPENSSL_NO_JPAKE
 #endif
 /* libgmp is not in the FreeBSD base system. */
 #ifndef OPENSSL_NO_GMP

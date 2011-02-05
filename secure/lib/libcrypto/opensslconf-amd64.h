@@ -1,13 +1,25 @@
-/* $FreeBSD: src/secure/lib/libcrypto/opensslconf-amd64.h,v 1.8 2007/05/09 19:37:01 gnn Exp $ */
+/* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/secure/lib/libcrypto/opensslconf-amd64.h,v 1.8.2.1 2010/11/28 13:45:51 simon Exp $ */
 /* opensslconf.h */
 /* WARNING: Generated automatically from opensslconf.h.in by Configure. */
 
 /* OpenSSL was configured with the following options: */
 #ifndef OPENSSL_DOING_MAKEDEPEND
 
+/* Disabled by default in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_CMS
+# define OPENSSL_NO_CMS
+#endif
+/* Disabled by default in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_SEED
+# define OPENSSL_NO_SEED
+#endif
 /* libgmp is not in the FreeBSD base system. */
 #ifndef OPENSSL_NO_GMP
 # define OPENSSL_NO_GMP
+#endif
+/* jpake is marked experimental in OpenSSL 0.9.8. */
+#ifndef OPENSSL_NO_JPAKE
+# define OPENSSL_NO_JPAKE
 #endif
 /* The Kerberos 5 support is MIT-specific. */
 #ifndef OPENSSL_NO_KRB5
