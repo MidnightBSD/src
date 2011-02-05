@@ -24,6 +24,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -44,13 +46,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
-#include <paths.h>
+#ifdef HAVE_PATHS_H
+# include <paths.h>
 #include <pwd.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#endif
+#ifdef SSH_TUN_OPENBSD
+#include <net/if.h>
+#endif
 
 #include "xmalloc.h"
 #include "misc.h"
@@ -207,9 +209,15 @@ pwcopy(struct passwd *pw)
 	copy->pw_gecos = xstrdup(pw->pw_gecos);
 	copy->pw_uid = pw->pw_uid;
 	copy->pw_gid = pw->pw_gid;
+#ifdef HAVE_PW_EXPIRE_IN_PASSWD
 	copy->pw_expire = pw->pw_expire;
+#endif
+#ifdef HAVE_PW_CHANGE_IN_PASSWD
 	copy->pw_change = pw->pw_change;
+#endif
+#ifdef HAVE_PW_CLASS_IN_PASSWD
 	copy->pw_class = xstrdup(pw->pw_class);
+#endif
 	copy->pw_dir = xstrdup(pw->pw_dir);
 	copy->pw_shell = xstrdup(pw->pw_shell);
 	return copy;
@@ -636,6 +644,9 @@ read_keyfile_line(FILE *f, const char *filename, char *buf, size_t bufsz,
 int
 tun_open(int tun, int mode)
 {
+#if defined(CUSTOM_SYS_TUN_OPEN)
+	return (sys_tun_open(tun, mode));
+#elif defined(SSH_TUN_OPENBSD)
 	struct ifreq ifr;
 	char name[100];
 	int fd = -1, sock;
@@ -695,6 +706,10 @@ tun_open(int tun, int mode)
 	debug("%s: failed to set %s mode %d: %s", __func__, name,
 	    mode, strerror(errno));
 	return (-1);
+#else
+	error("Tunnel interfaces are not supported on this platform");
+	return (-1);
+#endif
 }
 
 void
