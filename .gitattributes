@@ -23092,7 +23092,6 @@ etc/sensorsd.conf -text
 etc/services -text
 etc/shells -text
 etc/snmpd.config -text
-etc/ssh/Makefile -text
 etc/sysctl.conf -text
 etc/syslog.conf -text
 etc/termcap.small -text

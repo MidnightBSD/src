@@ -1,6 +1,6 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.20 2009/11/29 19:07:24 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.21 2010/05/30 21:24:10 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -141,7 +141,8 @@ distribution:
 	${_+_}cd ${.CURDIR}/sendmail; ${MAKE} distribution
 .endif
 .if ${MK_OPENSSH} != "no"
-	${_+_}cd ${.CURDIR}/ssh; ${MAKE} install; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 ${SSH} ${DESTDIR}/etc/ssh
+	${_+_}cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
+	    ${SSH} ${DESTDIR}/etc/ssh
 .endif
 .if ${MK_OPENSSL} != "no"
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
