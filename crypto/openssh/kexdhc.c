@@ -23,9 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/types.h>
+#include "includes.h"
 
-#include <openssl/dh.h>
+#include <sys/types.h>
 
 #include <openssl/dh.h>
 

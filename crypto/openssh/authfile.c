@@ -36,6 +36,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -51,6 +52,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,7 +68,6 @@
 #include "rsa.h"
 #include "misc.h"
 #include "atomicio.h"
-#include "pathnames.h"
 
 /* Version identification string for SSH v1 identity files. */
 static const char authfile_id_string[] =
@@ -596,6 +597,9 @@ key_perm_ok(int fd, const char *filename)
 	 * permissions of the file. if the key owned by a different user,
 	 * then we don't care.
 	 */
+#ifdef HAVE_CYGWIN
+	if (check_ntsec(filename))
+#endif
 	if ((st.st_uid == getuid()) && (st.st_mode & 077) != 0) {
 		error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
 		error("@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @");

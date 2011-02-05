@@ -10,14 +10,17 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
-#include <sys/types.h>
-#include <sys/queue.h>
+#include "includes.h"
 
+#include <sys/types.h>
+
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <pwd.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "rsa.h"
 #include "ssh1.h"
@@ -36,15 +39,19 @@
 #include "ssh-gss.h"
 #endif
 #include "monitor_wrap.h"
+#include "buffer.h"
 
 /* import */
 extern ServerOptions options;
+extern Buffer loginmsg;
 
 static int auth1_process_password(Authctxt *, char *, size_t);
 static int auth1_process_rsa(Authctxt *, char *, size_t);
 static int auth1_process_rhosts_rsa(Authctxt *, char *, size_t);
 static int auth1_process_tis_challenge(Authctxt *, char *, size_t);
 static int auth1_process_tis_response(Authctxt *, char *, size_t);
+
+static char *client_user = NULL;    /* Used to fill in remote user for PAM */
 
 struct AuthMethod1 {
 	int type;
@@ -152,7 +159,6 @@ auth1_process_rhosts_rsa(Authctxt *authctxt, char *info, size_t infolen)
 {
 	int keybits, authenticated = 0;
 	u_int bits;
-	char *client_user;
 	Key *client_host_key;
 	u_int ulen;
 
@@ -182,7 +188,6 @@ auth1_process_rhosts_rsa(Authctxt *authctxt, char *info, size_t infolen)
 	key_free(client_host_key);
 
 	snprintf(info, infolen, " ruser %.100s", client_user);
-	xfree(client_user);
 
 	return (authenticated);
 }
@@ -232,7 +237,7 @@ do_authloop(Authctxt *authctxt)
 {
 	int authenticated = 0;
 	char info[1024];
-	int type = 0;
+	int prev = 0, type = 0;
 	const struct AuthMethod1 *meth;
 
 	debug("Attempting authentication for %s%.100s.",
@@ -244,8 +249,13 @@ do_authloop(Authctxt *authctxt)
 	    (!options.kerberos_authentication || options.kerberos_or_local_passwd) &&
 #endif
 	    PRIVSEP(auth_password(authctxt, ""))) {
-		auth_log(authctxt, 1, "without authentication", "");
-		return;
+#ifdef USE_PAM
+		if (options.use_pam && (PRIVSEP(do_pam_account())))
+#endif
+		{
+			auth_log(authctxt, 1, "without authentication", "");
+			return;
+		}
 	}
 
 	/* Indicate that authentication is needed. */
@@ -260,7 +270,20 @@ do_authloop(Authctxt *authctxt)
 		info[0] = '\0';
 
 		/* Get a packet from the client. */
+		prev = type;
 		type = packet_read();
+
+		/*
+		 * If we started challenge-response authentication but the
+		 * next packet is not a response to our challenge, release
+		 * the resources allocated by get_challenge() (which would
+		 * normally have been released by verify_response() had we
+		 * received such a response)
+		 */
+		if (prev == SSH_CMSG_AUTH_TIS &&
+		    type != SSH_CMSG_AUTH_TIS_RESPONSE)
+			abandon_challenge_response(authctxt);
+
 		if (authctxt->failures >= options.max_authtries)
 			goto skip;
 		if ((meth = lookup_authmethod1(type)) == NULL) {
@@ -278,28 +301,73 @@ do_authloop(Authctxt *authctxt)
 		if (authenticated == -1)
 			continue; /* "postponed" */
 
+#ifdef BSD_AUTH
 		if (authctxt->as) {
 			auth_close(authctxt->as);
 			authctxt->as = NULL;
 		}
+#endif
 		if (!authctxt->valid && authenticated)
 			fatal("INTERNAL ERROR: authenticated invalid user %s",
 			    authctxt->user);
 
+#ifdef _UNICOS
+		if (authenticated && cray_access_denied(authctxt->user)) {
+			authenticated = 0;
+			fatal("Access denied for user %s.",authctxt->user);
+		}
+#endif /* _UNICOS */
+
+#ifndef HAVE_CYGWIN
 		/* Special handling for root */
 		if (authenticated && authctxt->pw->pw_uid == 0 &&
-		    !auth_root_allowed(meth->name))
-			authenticated = 0;
+		    !auth_root_allowed(meth->name)) {
+ 			authenticated = 0;
+# ifdef SSH_AUDIT_EVENTS
+			PRIVSEP(audit_event(SSH_LOGIN_ROOT_DENIED));
+# endif
+		}
+#endif
+
+#ifdef USE_PAM
+		if (options.use_pam && authenticated &&
+		    !PRIVSEP(do_pam_account())) {
+			char *msg;
+			size_t len;
+
+			error("Access denied for user %s by PAM account "
+			    "configuration", authctxt->user);
+			len = buffer_len(&loginmsg);
+			buffer_append(&loginmsg, "\0", 1);
+			msg = buffer_ptr(&loginmsg);
+			/* strip trailing newlines */
+			if (len > 0)
+				while (len > 0 && msg[--len] == '\n')
+					msg[len] = '\0';
+			else
+				msg = "Access denied.";
+			packet_disconnect("%s", msg);
+		}
+#endif
 
  skip:
 		/* Log before sending the reply */
 		auth_log(authctxt, authenticated, get_authname(type), info);
 
+		if (client_user != NULL) {
+			xfree(client_user);
+			client_user = NULL;
+		}
+
 		if (authenticated)
 			return;
 
-		if (++authctxt->failures >= options.max_authtries)
+		if (++authctxt->failures >= options.max_authtries) {
+#ifdef SSH_AUDIT_EVENTS
+			PRIVSEP(audit_event(SSH_LOGIN_EXCEED_MAXTRIES));
+#endif
 			packet_disconnect(AUTH_FAIL_MSG, authctxt->user);
+		}
 
 		packet_start(SSH_SMSG_FAILURE);
 		packet_send();
@@ -341,13 +409,20 @@ do_authentication(Authctxt *authctxt)
 	setproctitle("%s%s", authctxt->valid ? user : "unknown",
 	    use_privsep ? " [net]" : "");
 
+#ifdef USE_PAM
+	if (options.use_pam)
+		PRIVSEP(start_pam(authctxt));
+#endif
+
 	/*
 	 * If we are not running as root, the user must have the same uid as
 	 * the server.
 	 */
+#ifndef HAVE_CYGWIN
 	if (!use_privsep && getuid() != 0 && authctxt->pw &&
 	    authctxt->pw->pw_uid != getuid())
 		packet_disconnect("Cannot change user when server not running as root.");
+#endif
 
 	/*
 	 * Loop until the user has been authenticated or the connection is

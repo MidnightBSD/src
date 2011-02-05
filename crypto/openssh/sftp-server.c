@@ -15,16 +15,25 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/param.h>
+#include <sys/stat.h>
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
 #include <sys/mount.h>
+#endif
+#ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
+#endif
 
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pwd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -498,7 +507,7 @@ send_statvfs(u_int32_t id, struct statvfs *st)
 	buffer_put_int64(&msg, st->f_files);
 	buffer_put_int64(&msg, st->f_ffree);
 	buffer_put_int64(&msg, st->f_favail);
-	buffer_put_int64(&msg, st->f_fsid);
+	buffer_put_int64(&msg, FSID_TO_ULONG(st->f_fsid));
 	buffer_put_int64(&msg, flag);
 	buffer_put_int64(&msg, st->f_namemax);
 	send_msg(&msg);
@@ -830,7 +839,11 @@ process_fsetstat(void)
 		}
 		if (a->flags & SSH2_FILEXFER_ATTR_PERMISSIONS) {
 			logit("set \"%s\" mode %04o", name, a->perm);
+#ifdef HAVE_FCHMOD
 			ret = fchmod(fd, a->perm & 07777);
+#else
+			ret = chmod(name, a->perm & 07777);
+#endif
 			if (ret == -1)
 				status = errno_to_portable(errno);
 		}
@@ -841,14 +854,22 @@ process_fsetstat(void)
 			strftime(buf, sizeof(buf), "%Y%m%d-%H:%M:%S",
 			    localtime(&t));
 			logit("set \"%s\" modtime %s", name, buf);
+#ifdef HAVE_FUTIMES
 			ret = futimes(fd, attrib_to_tv(a));
+#else
+			ret = utimes(name, attrib_to_tv(a));
+#endif
 			if (ret == -1)
 				status = errno_to_portable(errno);
 		}
 		if (a->flags & SSH2_FILEXFER_ATTR_UIDGID) {
 			logit("set \"%s\" owner %lu group %lu", name,
 			    (u_long)a->uid, (u_long)a->gid);
+#ifdef HAVE_FCHOWN
 			ret = fchown(fd, a->uid, a->gid);
+#else
+			ret = chown(name, a->uid, a->gid);
+#endif
 			if (ret == -1)
 				status = errno_to_portable(errno);
 		}
@@ -1057,7 +1078,14 @@ process_rename(void)
 	else if (S_ISREG(sb.st_mode)) {
 		/* Race-free rename of regular files */
 		if (link(oldpath, newpath) == -1) {
-			if (errno == EOPNOTSUPP) {
+			if (errno == EOPNOTSUPP || errno == ENOSYS
+#ifdef EXDEV
+			    || errno == EXDEV
+#endif
+#ifdef LINK_OPNOTSUPP_ERRNO
+			    || errno == LINK_OPNOTSUPP_ERRNO
+#endif
+			    ) {
 				struct stat st;
 
 				/*
@@ -1380,6 +1408,7 @@ sftp_server_main(int argc, char **argv, struct passwd *user_pw)
 	extern char *optarg;
 	extern char *__progname;
 
+	__progname = ssh_get_progname(argv[0]);
 	log_init(__progname, log_level, log_facility, log_stderr);
 
 	while (!skipargs && (ch = getopt(argc, argv, "f:l:u:cehR")) != -1) {

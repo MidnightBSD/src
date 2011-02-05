@@ -12,6 +12,8 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -19,10 +21,16 @@
 
 #include <openssl/evp.h>
 #include <openssl/pem.h>
+#include "openbsd-compat/openssl-compat.h"
 
 #include <errno.h>
 #include <fcntl.h>
+#include <netdb.h>
+#ifdef HAVE_PATHS_H
+# include <paths.h>
+#endif
 #include <pwd.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -226,76 +234,6 @@ do_convert_to_ssh2(struct passwd *pw, Key *k)
 {
 	u_int len;
 	u_char *blob;
-<<<<<<< ssh-keygen.c
-	char comment[61];
-
-	if (key_to_blob(k, &blob, &len) <= 0) {
-		fprintf(stderr, "key_to_blob failed\n");
-		exit(1);
-	}
-	/* Comment + surrounds must fit into 72 chars (RFC 4716 sec 3.3) */
-	snprintf(comment, sizeof(comment),
-	    "%u-bit %s, converted by %s@%s from OpenSSH",
-	    key_size(k), key_type(k),
-	    pw->pw_name, hostname);
-
-	fprintf(stdout, "%s\n", SSH_COM_PUBLIC_BEGIN);
-	fprintf(stdout, "Comment: \"%s\"\n", comment);
-	dump_base64(stdout, blob, len);
-	fprintf(stdout, "%s\n", SSH_COM_PUBLIC_END);
-	key_free(k);
-	xfree(blob);
-	exit(0);
-}
-
-static void
-do_convert_to_pkcs8(Key *k)
-{
-	switch (key_type_plain(k->type)) {
-	case KEY_RSA:
-		if (!PEM_write_RSA_PUBKEY(stdout, k->rsa))
-			fatal("PEM_write_RSA_PUBKEY failed");
-		break;
-	case KEY_DSA:
-		if (!PEM_write_DSA_PUBKEY(stdout, k->dsa))
-			fatal("PEM_write_DSA_PUBKEY failed");
-		break;
-	case KEY_ECDSA:
-		if (!PEM_write_EC_PUBKEY(stdout, k->ecdsa))
-			fatal("PEM_write_EC_PUBKEY failed");
-		break;
-	default:
-		fatal("%s: unsupported key type %s", __func__, key_type(k));
-	}
-	exit(0);
-}
-
-static void
-do_convert_to_pem(Key *k)
-{
-	switch (key_type_plain(k->type)) {
-	case KEY_RSA:
-		if (!PEM_write_RSAPublicKey(stdout, k->rsa))
-			fatal("PEM_write_RSAPublicKey failed");
-		break;
-#if notyet /* OpenSSH 0.9.8 lacks this function */
-	case KEY_DSA:
-		if (!PEM_write_DSAPublicKey(stdout, k->dsa))
-			fatal("PEM_write_DSAPublicKey failed");
-		break;
-#endif
-	/* XXX ECDSA? */
-	default:
-		fatal("%s: unsupported key type %s", __func__, key_type(k));
-	}
-	exit(0);
-}
-
-static void
-do_convert_to(struct passwd *pw)
-{
-	Key *k;
-=======
 	char comment[61];
 
 	if (key_to_blob(k, &blob, &len) <= 0) {
@@ -366,7 +304,6 @@ static void
 do_convert_to(struct passwd *pw)
 {
 	Key *k;
->>>>>>> 1.1.1.8
 	struct stat st;
 
 	if (!have_identity)
@@ -605,63 +542,6 @@ do_convert_from_pkcs8(Key **k, int *private)
 		    identity_file);
 	}
 	fclose(fp);
-<<<<<<< ssh-keygen.c
-	switch (EVP_PKEY_type(pubkey->type)) {
-	case EVP_PKEY_RSA:
-		*k = key_new(KEY_UNSPEC);
-		(*k)->type = KEY_RSA;
-		(*k)->rsa = EVP_PKEY_get1_RSA(pubkey);
-		break;
-	case EVP_PKEY_DSA:
-		*k = key_new(KEY_UNSPEC);
-		(*k)->type = KEY_DSA;
-		(*k)->dsa = EVP_PKEY_get1_DSA(pubkey);
-		break;
-	case EVP_PKEY_EC:
-		*k = key_new(KEY_UNSPEC);
-		(*k)->type = KEY_ECDSA;
-		(*k)->ecdsa = EVP_PKEY_get1_EC_KEY(pubkey);
-		(*k)->ecdsa_nid = key_ecdsa_key_to_nid((*k)->ecdsa);
-		break;
-	default:
-		fatal("%s: unsupported pubkey type %d", __func__,
-		    EVP_PKEY_type(pubkey->type));
-	}
-	EVP_PKEY_free(pubkey);
-	return;
-}
-
-static void
-do_convert_from_pem(Key **k, int *private)
-{
-	FILE *fp;
-	RSA *rsa;
-#ifdef notyet
-	DSA *dsa;
-#endif
-
-	if ((fp = fopen(identity_file, "r")) == NULL)
-		fatal("%s: %s: %s", __progname, identity_file, strerror(errno));
-	if ((rsa = PEM_read_RSAPublicKey(fp, NULL, NULL, NULL)) != NULL) {
-		*k = key_new(KEY_UNSPEC);
-		(*k)->type = KEY_RSA;
-		(*k)->rsa = rsa;
-		fclose(fp);
-		return;
-	}
-#if notyet /* OpenSSH 0.9.8 lacks this function */
-	rewind(fp);
-	if ((dsa = PEM_read_DSAPublicKey(fp, NULL, NULL, NULL)) != NULL) {
-		*k = key_new(KEY_UNSPEC);
-		(*k)->type = KEY_DSA;
-		(*k)->dsa = dsa;
-		fclose(fp);
-		return;
-	}
-	/* XXX ECDSA */
-#endif
-	fatal("%s: unrecognised raw private key format", __func__);
-=======
 	switch (EVP_PKEY_type(pubkey->type)) {
 	case EVP_PKEY_RSA:
 		*k = key_new(KEY_UNSPEC);
@@ -719,7 +599,6 @@ do_convert_from_pem(Key **k, int *private)
 	/* XXX ECDSA */
 #endif
 	fatal("%s: unrecognised raw private key format", __func__);
->>>>>>> 1.1.1.8
 }
 
 static void
@@ -731,47 +610,6 @@ do_convert_from(struct passwd *pw)
 
 	if (!have_identity)
 		ask_filename(pw, "Enter file in which the key is");
-<<<<<<< ssh-keygen.c
-	if (stat(identity_file, &st) < 0)
-		fatal("%s: %s: %s", __progname, identity_file, strerror(errno));
-
-	switch (convert_format) {
-	case FMT_RFC4716:
-		do_convert_from_ssh2(pw, &k, &private);
-		break;
-	case FMT_PKCS8:
-		do_convert_from_pkcs8(&k, &private);
-		break;
-	case FMT_PEM:
-		do_convert_from_pem(&k, &private);
-		break;
-	default:
-		fatal("%s: unknown key format %d", __func__, convert_format);
-	}
-
-	if (!private)
-		ok = key_write(k, stdout);
-		if (ok)
-			fprintf(stdout, "\n");
-	else {
-		switch (k->type) {
-		case KEY_DSA:
-			ok = PEM_write_DSAPrivateKey(stdout, k->dsa, NULL,
-			    NULL, 0, NULL, NULL);
-			break;
-		case KEY_ECDSA:
-			ok = PEM_write_ECPrivateKey(stdout, k->ecdsa, NULL,
-			    NULL, 0, NULL, NULL);
-			break;
-		case KEY_RSA:
-			ok = PEM_write_RSAPrivateKey(stdout, k->rsa, NULL,
-			    NULL, 0, NULL, NULL);
-			break;
-		default:
-			fatal("%s: unsupported key type %s", __func__,
-			    key_type(k));
-		}
-=======
 	if (stat(identity_file, &st) < 0)
 		fatal("%s: %s: %s", __progname, identity_file, strerror(errno));
 
@@ -813,7 +651,6 @@ do_convert_from(struct passwd *pw)
 			fatal("%s: unsupported key type %s", __func__,
 			    key_type(k));
 		}
->>>>>>> 1.1.1.8
 	}
 
 	if (!ok) {
@@ -1975,14 +1812,13 @@ main(int argc, char **argv)
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
 	sanitise_stdfd();
 
-<<<<<<< ssh-keygen.c
-	OpenSSL_add_all_algorithms();
-=======
 	__progname = ssh_get_progname(argv[0]);
 
 	OpenSSL_add_all_algorithms();
->>>>>>> 1.1.1.8
 	log_init(argv[0], SYSLOG_LEVEL_INFO, SYSLOG_FACILITY_USER, 1);
+
+	init_rng();
+	seed_rng();
 
 	/* we need this for the home * directory.  */
 	pw = getpwuid(getuid());

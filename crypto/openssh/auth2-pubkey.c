@@ -23,6 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -45,7 +46,6 @@
 #include "compat.h"
 #include "key.h"
 #include "hostfile.h"
-#include "authfile.h"
 #include "auth.h"
 #include "pathnames.h"
 #include "uidswap.h"
@@ -436,7 +436,6 @@ user_cert_trusted_ca(struct passwd *pw, Key *key)
 int
 user_key_allowed(struct passwd *pw, Key *key)
 {
-	char *fp;
 	int success;
 	char *file;
 

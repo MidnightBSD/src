@@ -10,13 +10,10 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/queue.h>
-
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -32,6 +29,7 @@
 #include <stdarg.h>
 #include <errno.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "ssh.h"
 #include "log.h"
@@ -61,6 +59,11 @@ void
 initialize_server_options(ServerOptions *options)
 {
 	memset(options, 0, sizeof(*options));
+
+	/* Portable-specific options */
+	options->use_pam = -1;
+
+	/* Standard Options */
 	options->num_ports = 0;
 	options->ports_from_cmdline = 0;
 	options->listen_addrs = NULL;
@@ -141,6 +144,11 @@ initialize_server_options(ServerOptions *options)
 void
 fill_default_server_options(ServerOptions *options)
 {
+	/* Portable-specific options */
+	if (options->use_pam == -1)
+		options->use_pam = 0;
+
+	/* Standard Options */
 	if (options->protocol == SSH_PROTO_UNKNOWN)
 		options->protocol = SSH_PROTO_2;
 	if (options->num_host_key_files == 0) {
@@ -277,11 +285,24 @@ fill_default_server_options(ServerOptions *options)
 	/* Turn privilege separation on by default */
 	if (use_privsep == -1)
 		use_privsep = 1;
+
+#ifndef HAVE_MMAP
+	if (use_privsep && options->compression == 1) {
+		error("This platform does not support both privilege "
+		    "separation and compression");
+		error("Compression disabled");
+		options->compression = 0;
+	}
+#endif
+
 }
 
 /* Keyword tokens. */
 typedef enum {
 	sBadOption,		/* == unknown option */
+	/* Portable-specific options */
+	sUsePAM,
+	/* Standard Options */
 	sPort, sHostKeyFile, sServerKeyBits, sLoginGraceTime, sKeyRegenerationTime,
 	sPermitRootLogin, sLogFacility, sLogLevel,
 	sRhostsRSAAuthentication, sRSAAuthentication,
@@ -292,7 +313,7 @@ typedef enum {
 	sListenAddress, sAddressFamily,
 	sPrintMotd, sPrintLastLog, sIgnoreRhosts,
 	sX11Forwarding, sX11DisplayOffset, sX11UseLocalhost,
-	sStrictModes, sPermitBlacklistedKeys, sEmptyPasswd, sTCPKeepAlive,
+	sStrictModes, sEmptyPasswd, sTCPKeepAlive,
 	sPermitUserEnvironment, sUseLogin, sAllowTcpForwarding, sCompression,
 	sAllowUsers, sDenyUsers, sAllowGroups, sDenyGroups,
 	sIgnoreUserKnownHosts, sCiphers, sMacs, sProtocol, sPidFile,
@@ -320,6 +341,14 @@ static struct {
 	ServerOpCodes opcode;
 	u_int flags;
 } keywords[] = {
+	/* Portable-specific options */
+#ifdef USE_PAM
+	{ "usepam", sUsePAM, SSHCFG_GLOBAL },
+#else
+	{ "usepam", sUnsupported, SSHCFG_GLOBAL },
+#endif
+	{ "pamauthenticationviakbdint", sDeprecated, SSHCFG_GLOBAL },
+	/* Standard Options */
 	{ "port", sPort, SSHCFG_GLOBAL },
 	{ "hostkey", sHostKeyFile, SSHCFG_GLOBAL },
 	{ "hostdsakey", sHostKeyFile, SSHCFG_GLOBAL },		/* alias */
@@ -341,7 +370,11 @@ static struct {
 	{ "kerberosauthentication", sKerberosAuthentication, SSHCFG_ALL },
 	{ "kerberosorlocalpasswd", sKerberosOrLocalPasswd, SSHCFG_GLOBAL },
 	{ "kerberosticketcleanup", sKerberosTicketCleanup, SSHCFG_GLOBAL },
+#ifdef USE_AFS
 	{ "kerberosgetafstoken", sKerberosGetAFSToken, SSHCFG_GLOBAL },
+#else
+	{ "kerberosgetafstoken", sUnsupported, SSHCFG_GLOBAL },
+#endif
 #else
 	{ "kerberosauthentication", sUnsupported, SSHCFG_ALL },
 	{ "kerberosorlocalpasswd", sUnsupported, SSHCFG_GLOBAL },
@@ -686,6 +719,12 @@ process_server_config_line(ServerOptions *options, char *line,
 	}
 
 	switch (opcode) {
+	/* Portable-specific options */
+	case sUsePAM:
+		intptr = &options->use_pam;
+		goto parse_flag;
+
+	/* Standard Options */
 	case sBadOption:
 		return -1;
 	case sPort:
@@ -1633,6 +1672,9 @@ dump_config(ServerOptions *o)
 	}
 
 	/* integer arguments */
+#ifdef USE_PAM
+	dump_cfg_int(sUsePAM, o->use_pam);
+#endif
 	dump_cfg_int(sServerKeyBits, o->server_key_bits);
 	dump_cfg_int(sLoginGraceTime, o->login_grace_time);
 	dump_cfg_int(sKeyRegenerationTime, o->key_regeneration_time);
@@ -1656,7 +1698,9 @@ dump_config(ServerOptions *o)
 	dump_cfg_fmtint(sKerberosAuthentication, o->kerberos_authentication);
 	dump_cfg_fmtint(sKerberosOrLocalPasswd, o->kerberos_or_local_passwd);
 	dump_cfg_fmtint(sKerberosTicketCleanup, o->kerberos_ticket_cleanup);
+# ifdef USE_AFS
 	dump_cfg_fmtint(sKerberosGetAFSToken, o->kerberos_get_afs_token);
+# endif
 #endif
 #ifdef GSSAPI
 	dump_cfg_fmtint(sGssAuthentication, o->gss_authentication);

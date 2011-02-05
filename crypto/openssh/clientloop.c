@@ -59,19 +59,26 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/time.h>
 #include <sys/param.h>
-#include <sys/queue.h>
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
+#include <sys/socket.h>
 
 #include <ctype.h>
 #include <errno.h>
+#ifdef HAVE_PATHS_H
 #include <paths.h>
+#endif
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -79,6 +86,7 @@
 #include <pwd.h>
 #include <unistd.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "ssh.h"
 #include "ssh1.h"
@@ -682,7 +690,7 @@ static void
 client_process_net_input(fd_set *readset)
 {
 	int len, cont = 0;
-	char buf[8192];
+	char buf[SSH_IOBUFSZ];
 
 	/*
 	 * Read input from the server, and add any such data to the buffer of
@@ -707,7 +715,8 @@ client_process_net_input(fd_set *readset)
 		 * There is a kernel bug on Solaris that causes select to
 		 * sometimes wake up even though there is no data available.
 		 */
-		if (len < 0 && (errno == EAGAIN || errno == EINTR))
+		if (len < 0 &&
+		    (errno == EAGAIN || errno == EINTR || errno == EWOULDBLOCK))
 			len = 0;
 
 		if (len < 0) {
@@ -1175,13 +1184,14 @@ static void
 client_process_input(fd_set *readset)
 {
 	int len;
-	char buf[8192];
+	char buf[SSH_IOBUFSZ];
 
 	/* Read input from stdin. */
 	if (FD_ISSET(fileno(stdin), readset)) {
 		/* Read as much as possible. */
 		len = read(fileno(stdin), buf, sizeof(buf));
-		if (len < 0 && (errno == EAGAIN || errno == EINTR))
+		if (len < 0 &&
+		    (errno == EAGAIN || errno == EINTR || errno == EWOULDBLOCK))
 			return;		/* we'll try again later */
 		if (len <= 0) {
 			/*
@@ -1238,7 +1248,8 @@ client_process_output(fd_set *writeset)
 		len = write(fileno(stdout), buffer_ptr(&stdout_buffer),
 		    buffer_len(&stdout_buffer));
 		if (len <= 0) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || errno == EAGAIN ||
+			    errno == EWOULDBLOCK)
 				len = 0;
 			else {
 				/*
@@ -1261,7 +1272,8 @@ client_process_output(fd_set *writeset)
 		len = write(fileno(stderr), buffer_ptr(&stderr_buffer),
 		    buffer_len(&stderr_buffer));
 		if (len <= 0) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || errno == EAGAIN ||
+			    errno == EWOULDBLOCK)
 				len = 0;
 			else {
 				/*
@@ -1811,6 +1823,12 @@ client_request_tun_fwd(int tun_mode, int local_tun, int remote_tun)
 	c = channel_new("tun", SSH_CHANNEL_OPENING, fd, fd, -1,
 	    CHAN_TCP_WINDOW_DEFAULT, CHAN_TCP_PACKET_DEFAULT, 0, "tun", 1);
 	c->datagram = 1;
+
+#if defined(SSH_TUN_FILTER)
+	if (options.tun_open == SSH_TUNMODE_POINTOPOINT)
+		channel_register_filter(c->self, sys_tun_infilter,
+		    sys_tun_outfilter, NULL, NULL);
+#endif
 
 	packet_start(SSH2_MSG_CHANNEL_OPEN);
 	packet_put_cstring("tun@openssh.com");

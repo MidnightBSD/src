@@ -15,13 +15,19 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
 #include <sys/param.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
+#endif
 
 #include <ctype.h>
 #include <errno.h>
@@ -34,15 +40,23 @@
 #endif
 #ifdef USE_LIBEDIT
 #include <histedit.h>
-#include <paths.h>
-#include <libgen.h>
+#else
+typedef void EditLine;
+#endif
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <util.h>
 #include <stdarg.h>
+
+#ifdef HAVE_UTIL_H
+# include <util.h>
+#endif
+
+#ifdef HAVE_LIBUTIL_H
+# include <libutil.h>
+#endif
 
 #include "xmalloc.h"
 #include "log.h"
@@ -89,6 +103,8 @@ struct complete_ctx {
 
 int remote_glob(struct sftp_conn *, const char *, int,
     int (*)(const char *, int), glob_t *); /* proto for sftp-glob.c */
+
+extern char *__progname;
 
 /* Separators for interactive commands */
 #define WHITESPACE " \t\r\n"
@@ -1502,6 +1518,7 @@ parse_dispatch_command(struct sftp_conn *conn, const char *cmd, char **pwd,
 	return (0);
 }
 
+#ifdef USE_LIBEDIT
 static char *
 prompt(EditLine *el)
 {
@@ -1849,6 +1866,7 @@ interactive_loop(struct sftp_conn *conn, char *file1, char *file2)
 	char cmd[2048];
 	int err, interactive;
 	EditLine *el = NULL;
+#ifdef USE_LIBEDIT
 	History *hl = NULL;
 	HistEvent hev;
 	extern char *__progname;
@@ -1876,6 +1894,7 @@ interactive_loop(struct sftp_conn *conn, char *file1, char *file2)
 		el_set(el, EL_CLIENTDATA, (void*)&complete_ctx);
 		el_set(el, EL_BIND, "^I", "ftp-complete", NULL);
 	}
+#endif /* USE_LIBEDIT */
 
 	remote_path = do_realpath(conn, ".");
 	if (remote_path == NULL)
@@ -1912,15 +1931,18 @@ interactive_loop(struct sftp_conn *conn, char *file1, char *file2)
 		xfree(dir);
 	}
 
+#if defined(HAVE_SETVBUF) && !defined(BROKEN_SETVBUF)
 	setvbuf(stdout, NULL, _IOLBF, 0);
 	setvbuf(infile, NULL, _IOLBF, 0);
+#else
+	setlinebuf(stdout);
+	setlinebuf(infile);
+#endif
 
 	interactive = !batchmode && isatty(STDIN_FILENO);
 	err = 0;
 	for (;;) {
 		char *cp;
-		const char *line;
-		int count = 0;
 
 		signal(SIGINT, SIG_IGN);
 
@@ -1946,13 +1968,14 @@ interactive_loop(struct sftp_conn *conn, char *file1, char *file2)
 			if ((line = el_gets(el, &count)) == NULL ||
 			    count <= 0) {
 				printf("\n");
-				break;
+ 				break;
 			}
 			history(hl, &hev, H_ENTER, line);
 			if (strlcpy(cmd, line, sizeof(cmd)) >= sizeof(cmd)) {
 				fprintf(stderr, "Error: input line too long\n");
 				continue;
 			}
+#endif /* USE_LIBEDIT */
 		}
 
 		cp = strrchr(cmd, '\n');
@@ -1971,8 +1994,10 @@ interactive_loop(struct sftp_conn *conn, char *file1, char *file2)
 	xfree(remote_path);
 	xfree(conn);
 
+#ifdef USE_LIBEDIT
 	if (el != NULL)
 		el_end(el);
+#endif /* USE_LIBEDIT */
 
 	/* err == 1 signifies normal "quit" exit */
 	return (err >= 0 ? 0 : -1);
@@ -1983,12 +2008,23 @@ connect_to_server(char *path, char **args, int *in, int *out)
 {
 	int c_in, c_out;
 
+#ifdef USE_PIPES
+	int pin[2], pout[2];
+
+	if ((pipe(pin) == -1) || (pipe(pout) == -1))
+		fatal("pipe: %s", strerror(errno));
+	*in = pin[0];
+	*out = pout[1];
+	c_in = pout[0];
+	c_out = pin[1];
+#else /* USE_PIPES */
 	int inout[2];
 
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, inout) == -1)
 		fatal("socketpair: %s", strerror(errno));
 	*in = *out = inout[0];
 	c_in = c_out = inout[1];
+#endif /* USE_PIPES */
 
 	if ((sshpid = fork()) == -1)
 		fatal("fork: %s", strerror(errno));
@@ -2064,6 +2100,7 @@ main(int argc, char **argv)
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
 	sanitise_stdfd();
 
+	__progname = ssh_get_progname(argv[0]);
 	memset(&args, '\0', sizeof(args));
 	args.list = NULL;
 	addargs(&args, "%s", ssh_program);
@@ -2234,7 +2271,10 @@ main(int argc, char **argv)
 
 	err = interactive_loop(conn, file1, file2);
 
-	err = interactive_loop(conn, file1, file2);
+#if !defined(USE_PIPES)
+	shutdown(in, SHUT_RDWR);
+	shutdown(out, SHUT_RDWR);
+#endif
 
 	close(in);
 	close(out);

@@ -24,9 +24,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #ifdef GSSAPI
 
 #include <sys/types.h>
+
+#include <stdarg.h>
 
 #include "xmalloc.h"
 #include "key.h"
@@ -293,4 +297,5 @@ Authmethod method_gssapi = {
 	userauth_gssapi,
 	&options.gss_authentication
 };
-#endif
+
+#endif /* GSSAPI */

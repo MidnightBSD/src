@@ -25,24 +25,33 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/socket.h>
-#include <sys/tree.h>
-#include <sys/param.h>
-#include <sys/queue.h>
+#include "includes.h"
 
-#include <openssl/dh.h>
+#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/socket.h>
+#include "openbsd-compat/sys-tree.h"
+#include <sys/wait.h>
 
 #include <errno.h>
 #include <fcntl.h>
+#ifdef HAVE_PATHS_H
 #include <paths.h>
+#endif
 #include <pwd.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
+#ifdef SKEY
+#include <skey.h>
+#endif
 
+#include <openssl/dh.h>
+
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "ssh.h"
 #include "key.h"
@@ -52,7 +61,13 @@
 #include "cipher.h"
 #include "kex.h"
 #include "dh.h"
-#include <zlib.h>
+#ifdef TARGET_OS_MAC	/* XXX Broken krb5 headers on Mac */
+#undef TARGET_OS_MAC
+#include "zlib.h"
+#define TARGET_OS_MAC 1
+#else
+#include "zlib.h"
+#endif
 #include "packet.h"
 #include "auth-options.h"
 #include "sshpty.h"
@@ -143,11 +158,25 @@ int mm_answer_jpake_step2(int, Buffer *);
 int mm_answer_jpake_key_confirm(int, Buffer *);
 int mm_answer_jpake_check_confirm(int, Buffer *);
 
+#ifdef USE_PAM
+int mm_answer_pam_start(int, Buffer *);
+int mm_answer_pam_account(int, Buffer *);
+int mm_answer_pam_init_ctx(int, Buffer *);
+int mm_answer_pam_query(int, Buffer *);
+int mm_answer_pam_respond(int, Buffer *);
+int mm_answer_pam_free_ctx(int, Buffer *);
+#endif
+
 #ifdef GSSAPI
 int mm_answer_gss_setup_ctx(int, Buffer *);
 int mm_answer_gss_accept_ctx(int, Buffer *);
 int mm_answer_gss_userok(int, Buffer *);
 int mm_answer_gss_checkmic(int, Buffer *);
+#endif
+
+#ifdef SSH_AUDIT_EVENTS
+int mm_answer_audit_event(int, Buffer *);
+int mm_answer_audit_command(int, Buffer *);
 #endif
 
 static Authctxt *authctxt;
@@ -186,8 +215,25 @@ struct mon_table mon_dispatch_proto20[] = {
     {MONITOR_REQ_AUTHSERV, MON_ONCE, mm_answer_authserv},
     {MONITOR_REQ_AUTH2_READ_BANNER, MON_ONCE, mm_answer_auth2_read_banner},
     {MONITOR_REQ_AUTHPASSWORD, MON_AUTH, mm_answer_authpassword},
+#ifdef USE_PAM
+    {MONITOR_REQ_PAM_START, MON_ONCE, mm_answer_pam_start},
+    {MONITOR_REQ_PAM_ACCOUNT, 0, mm_answer_pam_account},
+    {MONITOR_REQ_PAM_INIT_CTX, MON_ISAUTH, mm_answer_pam_init_ctx},
+    {MONITOR_REQ_PAM_QUERY, MON_ISAUTH, mm_answer_pam_query},
+    {MONITOR_REQ_PAM_RESPOND, MON_ISAUTH, mm_answer_pam_respond},
+    {MONITOR_REQ_PAM_FREE_CTX, MON_ONCE|MON_AUTHDECIDE, mm_answer_pam_free_ctx},
+#endif
+#ifdef SSH_AUDIT_EVENTS
+    {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
+#endif
+#ifdef BSD_AUTH
     {MONITOR_REQ_BSDAUTHQUERY, MON_ISAUTH, mm_answer_bsdauthquery},
     {MONITOR_REQ_BSDAUTHRESPOND, MON_AUTH, mm_answer_bsdauthrespond},
+#endif
+#ifdef SKEY
+    {MONITOR_REQ_SKEYQUERY, MON_ISAUTH, mm_answer_skeyquery},
+    {MONITOR_REQ_SKEYRESPOND, MON_AUTH, mm_answer_skeyrespond},
+#endif
     {MONITOR_REQ_KEYALLOWED, MON_ISAUTH, mm_answer_keyallowed},
     {MONITOR_REQ_KEYVERIFY, MON_AUTH, mm_answer_keyverify},
 #ifdef GSSAPI
@@ -212,6 +258,10 @@ struct mon_table mon_dispatch_postauth20[] = {
     {MONITOR_REQ_PTY, 0, mm_answer_pty},
     {MONITOR_REQ_PTYCLEANUP, 0, mm_answer_pty_cleanup},
     {MONITOR_REQ_TERM, 0, mm_answer_term},
+#ifdef SSH_AUDIT_EVENTS
+    {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
+    {MONITOR_REQ_AUDIT_COMMAND, MON_PERMIT, mm_answer_audit_command},
+#endif
     {0, 0, NULL}
 };
 
@@ -224,8 +274,25 @@ struct mon_table mon_dispatch_proto15[] = {
     {MONITOR_REQ_KEYALLOWED, MON_ISAUTH|MON_ALOG, mm_answer_keyallowed},
     {MONITOR_REQ_RSACHALLENGE, MON_ONCE, mm_answer_rsa_challenge},
     {MONITOR_REQ_RSARESPONSE, MON_ONCE|MON_AUTHDECIDE, mm_answer_rsa_response},
+#ifdef BSD_AUTH
     {MONITOR_REQ_BSDAUTHQUERY, MON_ISAUTH, mm_answer_bsdauthquery},
     {MONITOR_REQ_BSDAUTHRESPOND, MON_AUTH, mm_answer_bsdauthrespond},
+#endif
+#ifdef SKEY
+    {MONITOR_REQ_SKEYQUERY, MON_ISAUTH, mm_answer_skeyquery},
+    {MONITOR_REQ_SKEYRESPOND, MON_AUTH, mm_answer_skeyrespond},
+#endif
+#ifdef USE_PAM
+    {MONITOR_REQ_PAM_START, MON_ONCE, mm_answer_pam_start},
+    {MONITOR_REQ_PAM_ACCOUNT, 0, mm_answer_pam_account},
+    {MONITOR_REQ_PAM_INIT_CTX, MON_ISAUTH, mm_answer_pam_init_ctx},
+    {MONITOR_REQ_PAM_QUERY, MON_ISAUTH, mm_answer_pam_query},
+    {MONITOR_REQ_PAM_RESPOND, MON_ISAUTH, mm_answer_pam_respond},
+    {MONITOR_REQ_PAM_FREE_CTX, MON_ONCE|MON_AUTHDECIDE, mm_answer_pam_free_ctx},
+#endif
+#ifdef SSH_AUDIT_EVENTS
+    {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
+#endif
     {0, 0, NULL}
 };
 
@@ -233,6 +300,10 @@ struct mon_table mon_dispatch_postauth15[] = {
     {MONITOR_REQ_PTY, MON_ONCE, mm_answer_pty},
     {MONITOR_REQ_PTYCLEANUP, MON_ONCE, mm_answer_pty_cleanup},
     {MONITOR_REQ_TERM, 0, mm_answer_term},
+#ifdef SSH_AUDIT_EVENTS
+    {MONITOR_REQ_AUDIT_EVENT, MON_PERMIT, mm_answer_audit_event},
+    {MONITOR_REQ_AUDIT_COMMAND, MON_PERMIT|MON_ONCE, mm_answer_audit_command},
+#endif
     {0, 0, NULL}
 };
 
@@ -278,6 +349,8 @@ monitor_child_preauth(Authctxt *_authctxt, struct monitor *pmonitor)
 	authctxt = _authctxt;
 	memset(authctxt, 0, sizeof(*authctxt));
 
+	authctxt->loginmsg = &loginmsg;
+
 	if (compat20) {
 		mon_dispatch = mon_dispatch_proto20;
 
@@ -301,6 +374,18 @@ monitor_child_preauth(Authctxt *_authctxt, struct monitor *pmonitor)
 			if (authctxt->pw->pw_uid == 0 &&
 			    !auth_root_allowed(auth_method))
 				authenticated = 0;
+#ifdef USE_PAM
+			/* PAM needs to perform account checks after auth */
+			if (options.use_pam && authenticated) {
+				Buffer m;
+
+				buffer_init(&m);
+				mm_request_receive_expect(pmonitor->m_sendfd,
+				    MONITOR_REQ_PAM_ACCOUNT, &m);
+				authenticated = mm_answer_pam_account(pmonitor->m_sendfd, &m);
+				buffer_free(&m);
+			}
+#endif
 		}
 
 		if (ent->flags & (MON_AUTHDECIDE|MON_ALOG)) {
@@ -578,7 +663,9 @@ mm_answer_pwnamallow(int sock, Buffer *m)
 	buffer_put_cstring(m, pwent->pw_name);
 	buffer_put_cstring(m, "*");
 	buffer_put_cstring(m, pwent->pw_gecos);
+#ifdef HAVE_PW_CLASS_IN_PASSWD
 	buffer_put_cstring(m, pwent->pw_class);
+#endif
 	buffer_put_cstring(m, pwent->pw_dir);
 	buffer_put_cstring(m, pwent->pw_shell);
 
@@ -598,6 +685,10 @@ mm_answer_pwnamallow(int sock, Buffer *m)
 		monitor_permit(mon_dispatch, MONITOR_REQ_AUTH2_READ_BANNER, 1);
 	}
 
+#ifdef USE_PAM
+	if (options.use_pam)
+		monitor_permit(mon_dispatch, MONITOR_REQ_PAM_START, 1);
+#endif
 
 	return (0);
 }
@@ -666,6 +757,7 @@ mm_answer_authpassword(int sock, Buffer *m)
 	return (authenticated);
 }
 
+#ifdef BSD_AUTH
 int
 mm_answer_bsdauthquery(int sock, Buffer *m)
 {
@@ -1471,6 +1563,11 @@ mm_answer_term(int sock, Buffer *req)
 	/* The child is terminating */
 	session_destroy_all(&mm_session_close);
 
+#ifdef USE_PAM
+	if (options.use_pam)
+		sshpam_cleanup();
+#endif
+
 	while (waitpid(pmonitor->m_pid, &status, 0) == -1)
 		if (errno != EINTR)
 			exit(1);
@@ -1480,6 +1577,48 @@ mm_answer_term(int sock, Buffer *req)
 	/* Terminate process */
 	exit(res);
 }
+
+#ifdef SSH_AUDIT_EVENTS
+/* Report that an audit event occurred */
+int
+mm_answer_audit_event(int socket, Buffer *m)
+{
+	ssh_audit_event_t event;
+
+	debug3("%s entering", __func__);
+
+	event = buffer_get_int(m);
+	switch(event) {
+	case SSH_AUTH_FAIL_PUBKEY:
+	case SSH_AUTH_FAIL_HOSTBASED:
+	case SSH_AUTH_FAIL_GSSAPI:
+	case SSH_LOGIN_EXCEED_MAXTRIES:
+	case SSH_LOGIN_ROOT_DENIED:
+	case SSH_CONNECTION_CLOSE:
+	case SSH_INVALID_USER:
+		audit_event(event);
+		break;
+	default:
+		fatal("Audit event type %d not permitted", event);
+	}
+
+	return (0);
+}
+
+int
+mm_answer_audit_command(int socket, Buffer *m)
+{
+	u_int len;
+	char *cmd;
+
+	debug3("%s entering", __func__);
+	cmd = buffer_get_string(m, &len);
+	/* sanity check command, if so how? */
+	audit_run_command(cmd);
+	xfree(cmd);
+	return (0);
+}
+#endif /* SSH_AUDIT_EVENTS */
 
 void
 monitor_apply_keystate(struct monitor *pmonitor)
@@ -1702,8 +1841,13 @@ mm_init_compression(struct mm_master *mm)
 static void
 monitor_socketpair(int *pair)
 {
+#ifdef HAVE_SOCKETPAIR
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == -1)
 		fatal("%s: socketpair", __func__);
+#else
+	fatal("%s: UsePrivilegeSeparation=yes not supported",
+	    __func__);
+#endif
 	FD_CLOSEONEXEC(pair[0]);
 	FD_CLOSEONEXEC(pair[1]);
 }

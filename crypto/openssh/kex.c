@@ -23,9 +23,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/param.h>
 
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -346,6 +349,7 @@ choose_kex(Kex *k, char *client, char *server)
 	} else if (strcmp(k->name, KEX_DHGEX_SHA1) == 0) {
 		k->kex_type = KEX_DH_GEX_SHA1;
 		k->evp_md = EVP_sha1();
+#if OPENSSL_VERSION_NUMBER >= 0x00907000L
 	} else if (strcmp(k->name, KEX_DHGEX_SHA256) == 0) {
 		k->kex_type = KEX_DH_GEX_SHA256;
 		k->evp_md = evp_ssh_sha256();

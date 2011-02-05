@@ -14,6 +14,8 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -22,6 +24,7 @@
 
 #include <pwd.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include "xmalloc.h"
@@ -37,7 +40,6 @@
 #include "key.h"
 #include "auth-options.h"
 #include "hostfile.h"
-#include "authfile.h"
 #include "auth.h"
 #ifdef GSSAPI
 #include "ssh-gss.h"
@@ -200,7 +202,6 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 		char *cp;
 		char *key_options;
 		int keybits;
-		char *fp;
 
 		/* Skip leading whitespace, empty and comment lines. */
 		for (cp = line; *cp == ' ' || *cp == '\t'; cp++)

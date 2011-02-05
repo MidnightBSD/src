@@ -37,15 +37,19 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+ 
 #include <sys/types.h>
-#include <sys/queue.h>
-#include <sys/socket.h>
-#include <sys/time.h>
+#include "openbsd-compat/sys-queue.h"
 #include <sys/param.h>
+#include <sys/socket.h>
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 
-#include <netinet/in_systm.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <arpa/inet.h>
 
 #include <errno.h>
 #include <stdarg.h>
@@ -430,9 +434,14 @@ packet_connection_is_ipv4(void)
 	if (getsockname(active_state->connection_out, (struct sockaddr *)&to,
 	    &tolen) < 0)
 		return 0;
-	if (to.ss_family != AF_INET)
-		return 0;
-	return 1;
+	if (to.ss_family == AF_INET)
+		return 1;
+#ifdef IPV4_IN_IPV6
+	if (to.ss_family == AF_INET6 &&
+	    IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6 *)&to)->sin6_addr))
+		return 1;
+#endif
+	return 0;
 }
 
 /* Sets the connection into non-blocking mode. */
@@ -1068,7 +1077,8 @@ packet_read_seqnr(u_int32_t *seqnr_p)
 			if ((ret = select(active_state->connection_in + 1, setp,
 			    NULL, NULL, timeoutp)) >= 0)
 				break;
-			if (errno != EAGAIN && errno != EINTR)
+			if (errno != EAGAIN && errno != EINTR &&
+			    errno != EWOULDBLOCK)
 				break;
 			if (active_state->packet_timeout_ms == -1)
 				continue;
@@ -1656,7 +1666,8 @@ packet_write_poll(void)
 		len = roaming_write(active_state->connection_out,
 		    buffer_ptr(&active_state->output), len, &cont);
 		if (len == -1) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || errno == EAGAIN ||
+			    errno == EWOULDBLOCK)
 				return;
 			fatal("Write failed: %.100s", strerror(errno));
 		}
@@ -1698,7 +1709,8 @@ packet_write_wait(void)
 			if ((ret = select(active_state->connection_out + 1,
 			    NULL, setp, NULL, timeoutp)) >= 0)
 				break;
-			if (errno != EAGAIN && errno != EINTR)
+			if (errno != EAGAIN && errno != EINTR &&
+			    errno != EWOULDBLOCK)
 				break;
 			if (active_state->packet_timeout_ms == -1)
 				continue;
@@ -1749,6 +1761,7 @@ packet_set_tos(int tos)
 	    sizeof(tos)) < 0)
 		error("setsockopt IP_TOS %d: %.100s:",
 		    tos, strerror(errno));
+#endif
 }
 
 /* Informs that the current session is interactive.  Sets IP flags for that. */

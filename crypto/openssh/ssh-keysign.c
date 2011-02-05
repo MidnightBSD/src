@@ -23,18 +23,21 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/types.h>
+#include "includes.h"
+
+#include <fcntl.h>
+#ifdef HAVE_PATHS_H
+#include <paths.h>
+#endif
+#include <pwd.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
-
-#include <fcntl.h>
-#include <paths.h>
-#include <pwd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 #include "xmalloc.h"
 #include "log.h"
@@ -52,6 +55,8 @@
 
 /* XXX readconf.c needs these */
 uid_t original_real_uid;
+
+extern char *__progname;
 
 static int
 valid_request(struct passwd *pw, char *host, Key **ret, u_char *data,
@@ -169,6 +174,10 @@ main(int argc, char **argv)
 	pw = pwcopy(pw);
 
 	permanently_set_uid(pw);
+
+	init_rng();
+	seed_rng();
+	arc4random_stir();
 
 #ifdef DEBUG_SSH_KEYSIGN
 	log_init("ssh-keysign", SYSLOG_LEVEL_DEBUG3, SYSLOG_FACILITY_AUTH, 0);

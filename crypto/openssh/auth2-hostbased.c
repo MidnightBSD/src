@@ -23,6 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
 
 #include <sys/types.h>
 
@@ -39,7 +40,6 @@
 #include "compat.h"
 #include "key.h"
 #include "hostfile.h"
-#include "authfile.h"
 #include "auth.h"
 #include "canohost.h"
 #ifdef GSSAPI

@@ -36,6 +36,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 
 #include <netinet/in.h>
@@ -44,6 +46,7 @@
 #include <openssl/sha.h>
 
 #include <resolv.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

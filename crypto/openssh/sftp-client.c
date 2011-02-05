@@ -20,13 +20,20 @@
 /* XXX: remove all logging, only return status codes */
 /* XXX: copy between two remote sites */
 
+#include "includes.h"
+
 #include <sys/types.h>
-#include <sys/poll.h>
-#include <sys/queue.h>
-#include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/param.h>
+#ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
+#endif
+#include "openbsd-compat/sys-queue.h"
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 #include <sys/uio.h>
 
 #include <dirent.h>
@@ -1191,7 +1198,11 @@ do_download(struct sftp_conn *conn, char *remote_path, char *local_path,
 		status = do_close(conn, handle, handle_len);
 
 		/* Override umask and utimes if asked */
+#ifdef HAVE_FCHMOD
 		if (pflag && fchmod(local_fd, mode) == -1)
+#else
+		if (pflag && chmod(local_path, mode) == -1)
+#endif /* HAVE_FCHMOD */
 			error("Couldn't set mode on \"%s\": %s", local_path,
 			    strerror(errno));
 		if (pflag && (a->flags & SSH2_FILEXFER_ATTR_ACMODTIME)) {
@@ -1411,7 +1422,8 @@ do_upload(struct sftp_conn *conn, char *local_path, char *remote_path,
 			len = 0;
 		else do
 			len = read(local_fd, data, conn->transfer_buflen);
-		while ((len == -1) && (errno == EINTR || errno == EAGAIN));
+		while ((len == -1) &&
+		    (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK));
 
 		if (len == -1)
 			fatal("Couldn't read from \"%s\": %s", local_path,

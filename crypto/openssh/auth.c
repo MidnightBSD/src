@@ -23,16 +23,29 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 
+#include <netinet/in.h>
+
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
-#include <login_cap.h>
-#include <paths.h>
+#ifdef HAVE_PATHS_H
+# include <paths.h>
+#endif
 #include <pwd.h>
+#ifdef HAVE_LOGIN_H
+#include <login.h>
+#endif
+#ifdef USE_SHADOW
+#include <shadow.h>
+#endif
+#ifdef HAVE_LIBGEN_H
+#include <libgen.h>
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -52,6 +65,7 @@
 #include "uidswap.h"
 #include "misc.h"
 #include "packet.h"
+#include "loginrec.h"
 #ifdef GSSAPI
 #include "ssh-gss.h"
 #endif
@@ -61,6 +75,8 @@
 /* import */
 extern ServerOptions options;
 extern int use_privsep;
+extern Buffer loginmsg;
+extern struct passwd *privsep_pw;
 
 /* Debugging messages */
 Buffer auth_debug;
@@ -81,6 +97,9 @@ allowed_user(struct passwd * pw)
 	struct stat st;
 	const char *hostname = NULL, *ipaddr = NULL, *passwd = NULL;
 	u_int i;
+#ifdef USE_SHADOW
+	struct spwd *spw = NULL;
+#endif
 
 	/* Shouldn't be called if pw is NULL, but better safe than sorry... */
 	if (!pw || !pw->pw_name)
@@ -221,6 +240,12 @@ allowed_user(struct passwd * pw)
 			}
 		ga_free();
 	}
+
+#ifdef CUSTOM_SYS_AUTH_ALLOWED_USER
+	if (!sys_auth_allowed_user(pw, &loginmsg))
+		return 0;
+#endif
+
 	/* We found no reason not to let this user try to log on... */
 	return 1;
 }
@@ -254,6 +279,24 @@ auth_log(Authctxt *authctxt, int authenticated, char *method, char *info)
 	    get_remote_ipaddr(),
 	    get_remote_port(),
 	    info);
+
+#ifdef CUSTOM_FAILED_LOGIN
+	if (authenticated == 0 && !authctxt->postponed &&
+	    (strcmp(method, "password") == 0 ||
+	    strncmp(method, "keyboard-interactive", 20) == 0 ||
+	    strcmp(method, "challenge-response") == 0))
+		record_failed_login(authctxt->user,
+		    get_canonical_hostname(options.use_dns), "ssh");
+# ifdef WITH_AIXAUTHENTICATE
+	if (authenticated)
+		sys_auth_record_login(authctxt->user,
+		    get_canonical_hostname(options.use_dns), "ssh", &loginmsg);
+# endif
+#endif
+#ifdef SSH_AUDIT_EVENTS
+	if (authenticated == 0 && !authctxt->postponed)
+		audit_event(audit_classify_auth(method));
+#endif
 }
 
 /*
@@ -509,8 +552,12 @@ auth_openprincipals(const char *file, struct passwd *pw, int strict_modes)
 struct passwd *
 getpwnamallow(const char *user)
 {
+#ifdef HAVE_LOGIN_CAP
 	extern login_cap_t *lc;
+#ifdef BSD_AUTH
 	auth_session_t *as;
+#endif
+#endif
 	struct passwd *pw;
 
 	parse_server_match_config(&options, user,
@@ -541,14 +588,23 @@ getpwnamallow(const char *user)
 	if (pw == NULL) {
 		logit("Invalid user %.100s from %.100s",
 		    user, get_remote_ipaddr());
+#ifdef CUSTOM_FAILED_LOGIN
+		record_failed_login(user,
+		    get_canonical_hostname(options.use_dns), "ssh");
+#endif
+#ifdef SSH_AUDIT_EVENTS
+		audit_event(SSH_INVALID_USER);
+#endif /* SSH_AUDIT_EVENTS */
 		return (NULL);
 	}
 	if (!allowed_user(pw))
 		return (NULL);
+#ifdef HAVE_LOGIN_CAP
 	if ((lc = login_getclass(pw->pw_class)) == NULL) {
 		debug("unable to get login class: %s", user);
 		return (NULL);
 	}
+#ifdef BSD_AUTH
 	if ((as = auth_open()) == NULL || auth_setpwd(as, pw) != 0 ||
 	    auth_approval(as, lc, pw->pw_name, "ssh") <= 0) {
 		debug("Approval failure for %s", user);
@@ -556,6 +612,8 @@ getpwnamallow(const char *user)
 	}
 	if (as != NULL)
 		auth_close(as);
+#endif
+#endif
 	if (pw != NULL)
 		return (pwcopy(pw));
 	return (NULL);
@@ -640,9 +698,11 @@ fakepw(void)
 	fake.pw_passwd =
 	    "$2a$06$r3.juUaHZDlIbQaO2dS9FuYxL1W9M81R1Tc92PoSNmzvpEqLkLGrK";
 	fake.pw_gecos = "NOUSER";
-	fake.pw_uid = (uid_t)-1;
-	fake.pw_gid = (gid_t)-1;
+	fake.pw_uid = privsep_pw == NULL ? (uid_t)-1 : privsep_pw->pw_uid;
+	fake.pw_gid = privsep_pw == NULL ? (gid_t)-1 : privsep_pw->pw_gid;
+#ifdef HAVE_PW_CLASS_IN_PASSWD
 	fake.pw_class = "";
+#endif
 	fake.pw_dir = "/nonexist";
 	fake.pw_shell = "/nonexist";
 

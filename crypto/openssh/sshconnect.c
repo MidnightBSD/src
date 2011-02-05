@@ -13,20 +13,26 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
-#include <sys/time.h>
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
+#ifdef HAVE_PATHS_H
 #include <paths.h>
-#include <signal.h>
+#endif
 #include <pwd.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -36,6 +42,8 @@
 #include <unistd.h>
 
 #include "xmalloc.h"
+#include "key.h"
+#include "hostfile.h"
 #include "ssh.h"
 #include "rsa.h"
 #include "buffer.h"

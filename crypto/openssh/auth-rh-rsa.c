@@ -13,12 +13,13 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 
 #include <pwd.h>
 #include <stdarg.h>
 
-#include "xmalloc.h"
 #include "packet.h"
 #include "uidswap.h"
 #include "log.h"
@@ -26,7 +27,6 @@
 #include "servconf.h"
 #include "key.h"
 #include "hostfile.h"
-#include "authfile.h"
 #include "pathnames.h"
 #include "auth.h"
 #include "canohost.h"
@@ -42,7 +42,6 @@ int
 auth_rhosts_rsa_key_allowed(struct passwd *pw, char *cuser, char *chost,
     Key *client_host_key)
 {
-	char *fp;
 	HostStatus host_status;
 
 	if (auth_key_is_revoked(client_host_key))

@@ -28,6 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <pwd.h>
 #include <stdarg.h>
@@ -45,6 +47,9 @@
 #include "auth.h"
 
 #ifdef KRB5
+#include <errno.h>
+#include <unistd.h>
+#include <string.h>
 #include <krb5.h>
 
 extern ServerOptions	 options;
@@ -59,7 +64,6 @@ krb5_init(void *context)
 		problem = krb5_init_context(&authctxt->krb5_ctx);
 		if (problem)
 			return (problem);
-		krb5_init_ets(authctxt->krb5_ctx);
 	}
 	return (0);
 }
@@ -67,6 +71,10 @@ krb5_init(void *context)
 int
 auth_krb5_password(Authctxt *authctxt, const char *password)
 {
+#ifndef HEIMDAL
+	krb5_creds creds;
+	krb5_principal server;
+#endif
 	krb5_error_code problem;
 	krb5_ccache ccache = NULL;
 	int len;
@@ -87,6 +95,7 @@ auth_krb5_password(Authctxt *authctxt, const char *password)
 	if (problem)
 		goto out;
 
+#ifdef HEIMDAL
 	problem = krb5_cc_gen_new(authctxt->krb5_ctx, &krb5_mcc_ops, &ccache);
 	if (problem)
 		goto out;
@@ -179,7 +188,7 @@ auth_krb5_password(Authctxt *authctxt, const char *password)
 		if (ccache)
 			krb5_cc_destroy(authctxt->krb5_ctx, ccache);
 
-		if (authctxt->krb5_ctx != NULL)
+		if (authctxt->krb5_ctx != NULL && problem!=-1)
 			debug("Kerberos password authentication failed: %s",
 			    krb5_get_err_text(authctxt->krb5_ctx, problem));
 		else
@@ -214,4 +223,34 @@ krb5_cleanup_proc(Authctxt *authctxt)
 	}
 }
 
+#ifndef HEIMDAL
+krb5_error_code
+ssh_krb5_cc_gen(krb5_context ctx, krb5_ccache *ccache) {
+	int tmpfd, ret;
+	char ccname[40];
+	mode_t old_umask;
+
+	ret = snprintf(ccname, sizeof(ccname),
+	    "FILE:/tmp/krb5cc_%d_XXXXXXXXXX", geteuid());
+	if (ret < 0 || (size_t)ret >= sizeof(ccname))
+		return ENOMEM;
+
+	old_umask = umask(0177);
+	tmpfd = mkstemp(ccname + strlen("FILE:"));
+	umask(old_umask);
+	if (tmpfd == -1) {
+		logit("mkstemp(): %.100s", strerror(errno));
+		return errno;
+	}
+
+	if (fchmod(tmpfd,S_IRUSR | S_IWUSR) == -1) {
+		logit("fchmod(): %.100s", strerror(errno));
+		close(tmpfd);
+		return errno;
+	}
+	close(tmpfd);
+
+	return (krb5_cc_resolve(ctx, ccname, ccache));
+}
+#endif /* !HEIMDAL */
 #endif /* KRB5 */

@@ -71,12 +71,24 @@
  *
  */
 
-#include <sys/param.h>
+#include "includes.h"
+
 #include <sys/types.h>
-#include <sys/poll.h>
+#include <sys/param.h>
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#else
+# ifdef HAVE_SYS_POLL_H
+#  include <sys/poll.h>
+# endif
+#endif
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 #include <sys/wait.h>
-#include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/uio.h>
 
 #include <ctype.h>
@@ -91,7 +103,9 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#if defined(HAVE_STRNVIS) && defined(HAVE_VIS_H)
 #include <vis.h>
+#endif
 
 #include "xmalloc.h"
 #include "atomicio.h"
@@ -99,6 +113,8 @@
 #include "log.h"
 #include "misc.h"
 #include "progressmeter.h"
+
+extern char *__progname;
 
 #define COPY_BUFLEN	16384
 
@@ -367,6 +383,8 @@ main(int argc, char **argv)
 		newargv[n] = xstrdup(argv[n]);
 	argv = newargv;
 
+	__progname = ssh_get_progname(argv[0]);
+
 	memset(&args, '\0', sizeof(args));
 	memset(&remote_remote_args, '\0', sizeof(remote_remote_args));
 	args.list = remote_remote_args.list = NULL;
@@ -449,6 +467,9 @@ main(int argc, char **argv)
 		case 't':	/* "to" */
 			iamremote = 1;
 			tflag = 1;
+#ifdef HAVE_CYGWIN
+			setmode(0, O_BINARY);
+#endif
 			break;
 		default:
 			usage();
@@ -1106,14 +1127,22 @@ bad:			run_err("%s: %s", np, strerror(errno));
 		}
 		if (pflag) {
 			if (exists || omode != mode)
+#ifdef HAVE_FCHMOD
 				if (fchmod(ofd, omode)) {
+#else /* HAVE_FCHMOD */
+				if (chmod(np, omode)) {
+#endif /* HAVE_FCHMOD */
 					run_err("%s: set mode: %s",
 					    np, strerror(errno));
 					wrerr = DISPLAYED;
 				}
 		} else {
 			if (!exists && omode != mode)
+#ifdef HAVE_FCHMOD
 				if (fchmod(ofd, omode & ~mask)) {
+#else /* HAVE_FCHMOD */
+				if (chmod(np, omode & ~mask)) {
+#endif /* HAVE_FCHMOD */
 					run_err("%s: set mode: %s",
 					    np, strerror(errno));
 					wrerr = DISPLAYED;
@@ -1264,6 +1293,7 @@ BUF *
 allocbuf(BUF *bp, int fd, int blksize)
 {
 	size_t size;
+#ifdef HAVE_STRUCT_STAT_ST_BLKSIZE
 	struct stat stb;
 
 	if (fstat(fd, &stb) < 0) {
@@ -1273,6 +1303,9 @@ allocbuf(BUF *bp, int fd, int blksize)
 	size = roundup(stb.st_blksize, blksize);
 	if (size == 0)
 		size = blksize;
+#else /* HAVE_STRUCT_STAT_ST_BLKSIZE */
+	size = blksize;
+#endif /* HAVE_STRUCT_STAT_ST_BLKSIZE */
 	if (bp->cnt >= size)
 		return (bp);
 	if (bp->buf == NULL)

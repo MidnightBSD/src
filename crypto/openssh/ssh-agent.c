@@ -34,26 +34,36 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
-#include <sys/time.h>
-#include <sys/queue.h>
-#include <sys/resource.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <sys/param.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_UN_H
+# include <sys/un.h>
+#endif
+#include "openbsd-compat/sys-queue.h"
 
 #include <openssl/evp.h>
 #include <openssl/md5.h>
+#include "openbsd-compat/openssl-compat.h"
 
 #include <errno.h>
 #include <fcntl.h>
-#include <paths.h>
+#ifdef HAVE_PATHS_H
+# include <paths.h>
+#endif
 #include <signal.h>
-#include <stdlib.h>
+#include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "xmalloc.h"
@@ -456,7 +466,7 @@ process_add_identity(SocketEntry *e, int version)
 	Idtab *tab = idtab_lookup(version);
 	Identity *id;
 	int type, success = 0, death = 0, confirm = 0;
-	char *type_name, *comment, *curve;
+	char *type_name, *comment;
 	Key *k = NULL;
 #ifdef OPENSSL_HAS_ECC
 	BIGNUM *exponent;
@@ -1118,7 +1128,10 @@ main(int ac, char **av)
 	char *shell, *format, *pidstr, *agentsocket = NULL;
 	fd_set *readsetp = NULL, *writesetp = NULL;
 	struct sockaddr_un sunaddr;
+#ifdef HAVE_SETRLIMIT
 	struct rlimit rlim;
+#endif
+	int prev_mask;
 	extern int optind;
 	extern char *optarg;
 	pid_t pid;
@@ -1245,11 +1258,14 @@ main(int ac, char **av)
 	memset(&sunaddr, 0, sizeof(sunaddr));
 	sunaddr.sun_family = AF_UNIX;
 	strlcpy(sunaddr.sun_path, socket_name, sizeof(sunaddr.sun_path));
-	if (bind(sock, (struct sockaddr *)&sunaddr, sizeof(sunaddr)) < 0) {
+	prev_mask = umask(0177);
+	if (bind(sock, (struct sockaddr *) &sunaddr, sizeof(sunaddr)) < 0) {
 		perror("bind");
 		*socket_name = '\0'; /* Don't unlink any existing file */
+		umask(prev_mask);
 		cleanup_exit(1);
 	}
+	umask(prev_mask);
 	if (listen(sock, SSH_LISTEN_BACKLOG) < 0) {
 		perror("listen");
 		cleanup_exit(1);
@@ -1311,12 +1327,14 @@ main(int ac, char **av)
 			close(fd);
 	}
 
+#ifdef HAVE_SETRLIMIT
 	/* deny core dumps, since memory contains unencrypted private keys */
 	rlim.rlim_cur = rlim.rlim_max = 0;
 	if (setrlimit(RLIMIT_CORE, &rlim) < 0) {
 		error("setrlimit RLIMIT_CORE: %s", strerror(errno));
 		cleanup_exit(1);
 	}
+#endif
 
 skip:
 

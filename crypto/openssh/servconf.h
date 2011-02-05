@@ -150,6 +150,8 @@ typedef struct {
 
 	char   *adm_forced_command;
 
+	int	use_pam;		/* Enable auth via PAM */
+
 	int	permit_tun;
 
 	int	num_permitted_opens;

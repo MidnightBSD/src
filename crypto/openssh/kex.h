@@ -26,6 +26,7 @@
 #ifndef KEX_H
 #define KEX_H
 
+#include <signal.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #ifdef OPENSSL_HAS_ECC

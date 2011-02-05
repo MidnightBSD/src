@@ -10,8 +10,9 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
-#include <sys/queue.h>
 
 #include <netdb.h>
 #include <pwd.h>
@@ -19,6 +20,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "match.h"
 #include "log.h"

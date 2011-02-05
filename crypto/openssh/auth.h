@@ -32,7 +32,12 @@
 
 #include <openssl/rsa.h>
 
+#ifdef HAVE_LOGIN_CAP
+#include <login_cap.h>
+#endif
+#ifdef BSD_AUTH
 #include <bsd_auth.h>
+#endif
 #ifdef KRB5
 #include <krb5.h>
 #endif
@@ -55,13 +60,17 @@ struct Authctxt {
 	char		*style;
 	void		*kbdintctxt;
 	void		*jpake_ctx;
+#ifdef BSD_AUTH
 	auth_session_t	*as;
+#endif
 #ifdef KRB5
 	krb5_context	 krb5_ctx;
 	krb5_ccache	 krb5_fwd_ccache;
 	krb5_principal	 krb5_user;
 	char		*krb5_ticket_file;
+	char		*krb5_ccname;
 #endif
+	Buffer		*loginmsg;
 	void		*methoddata;
 };
 /*
@@ -117,11 +126,24 @@ int	auth_krb5_password(Authctxt *authctxt, const char *password);
 void	krb5_cleanup_proc(Authctxt *authctxt);
 #endif /* KRB5 */
 
+#if defined(USE_SHADOW) && defined(HAS_SHADOW_EXPIRE)
+#include <shadow.h>
+int auth_shadow_acctexpired(struct spwd *);
+int auth_shadow_pwexpired(Authctxt *);
+#endif
+
+#include "auth-pam.h"
+#include "audit.h"
+void remove_kbdint_device(const char *);
+
+void disable_forwarding(void);
+
 void	do_authentication(Authctxt *);
 void	do_authentication2(Authctxt *);
 
 void	auth_log(Authctxt *, int, char *, char *);
 void	userauth_finish(Authctxt *, int, char *);
+void	userauth_send_banner(const char *);
 int	auth_root_allowed(char *);
 
 char	*auth2_read_banner(void);
@@ -143,6 +165,7 @@ struct passwd * getpwnamallow(const char *user);
 
 char	*get_challenge(Authctxt *);
 int	verify_response(Authctxt *, const char *);
+void	abandon_challenge_response(Authctxt *);
 
 char	*authorized_keys_file(struct passwd *);
 char	*authorized_keys_file2(struct passwd *);
@@ -170,6 +193,14 @@ void	 auth_debug_reset(void);
 
 struct passwd *fakepw(void);
 
+int	 sys_auth_passwd(Authctxt *, const char *);
+
 #define AUTH_FAIL_MSG "Too many authentication failures for %.100s"
 
+#define SKEY_PROMPT "\nS/Key Password: "
+
+#if defined(KRB5) && !defined(HEIMDAL)
+#include <krb5.h>
+krb5_error_code ssh_krb5_cc_gen(krb5_context, krb5_ccache *);
+#endif
 #endif

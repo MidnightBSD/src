@@ -7,16 +7,21 @@
  * OpenBSD project by leaving this copyright notice intact.
  */
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/queue.h>
-#include <sys/time.h>
+#include "includes.h"
+ 
+#include "openbsd-compat/sys-queue.h"
 #include <sys/resource.h>
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <openssl/bn.h>
 
-#include <errno.h>
 #include <netdb.h>
+#include <errno.h>
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -103,28 +108,38 @@ con *fdcon;
 static int
 fdlim_get(int hard)
 {
+#if defined(HAVE_GETRLIMIT) && defined(RLIMIT_NOFILE)
 	struct rlimit rlfd;
 
 	if (getrlimit(RLIMIT_NOFILE, &rlfd) < 0)
 		return (-1);
 	if ((hard ? rlfd.rlim_max : rlfd.rlim_cur) == RLIM_INFINITY)
-		return sysconf(_SC_OPEN_MAX);
+		return SSH_SYSFDMAX;
 	else
 		return hard ? rlfd.rlim_max : rlfd.rlim_cur;
+#else
+	return SSH_SYSFDMAX;
+#endif
 }
 
 static int
 fdlim_set(int lim)
 {
+#if defined(HAVE_SETRLIMIT) && defined(RLIMIT_NOFILE)
 	struct rlimit rlfd;
+#endif
 
 	if (lim <= 0)
 		return (-1);
+#if defined(HAVE_SETRLIMIT) && defined(RLIMIT_NOFILE)
 	if (getrlimit(RLIMIT_NOFILE, &rlfd) < 0)
 		return (-1);
 	rlfd.rlim_cur = lim;
 	if (setrlimit(RLIMIT_NOFILE, &rlfd) < 0)
 		return (-1);
+#elif defined (HAVE_SETDTABLESIZE)
+	setdtablesize(lim);
+#endif
 	return (0);
 }
 
@@ -528,7 +543,7 @@ conloop(void)
 	memcpy(e, read_wait, read_wait_nfdset * sizeof(fd_mask));
 
 	while (select(maxfd, r, NULL, e, &seltime) == -1 &&
-	    (errno == EAGAIN || errno == EINTR))
+	    (errno == EAGAIN || errno == EINTR || errno == EWOULDBLOCK))
 		;
 
 	for (i = 0; i < maxfd; i++) {
@@ -604,6 +619,9 @@ main(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 
+	__progname = ssh_get_progname(argv[0]);
+	init_rng();
+	seed_rng();
 	TAILQ_INIT(&tq);
 
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */

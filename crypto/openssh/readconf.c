@@ -12,6 +12,8 @@
  * called by a name other than "ssh" or "Secure Shell".
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -24,6 +26,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -255,8 +258,8 @@ void
 add_local_forward(Options *options, const Forward *newfwd)
 {
 	Forward *fwd;
+#ifndef NO_IPPORT_RESERVED_CONCEPT
 	extern uid_t original_real_uid;
-
 	if (newfwd->listen_port < IPPORT_RESERVED && original_real_uid != 0)
 		fatal("Privileged ports can only be forwarded by root.");
 #endif

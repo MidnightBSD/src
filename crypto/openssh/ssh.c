@@ -40,11 +40,15 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#include <sys/resource.h>
 #include <sys/ioctl.h>
 #include <sys/param.h>
-#include <sys/queue.h>
-#include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 
@@ -52,17 +56,25 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
+#ifdef HAVE_PATHS_H
 #include <paths.h>
+#endif
 #include <pwd.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include "openbsd-compat/openssl-compat.h"
+#include "openbsd-compat/sys-queue.h"
 
 #include "xmalloc.h"
 #include "ssh.h"
@@ -175,7 +187,6 @@ static int remote_forward_confirms_received = 0;
 extern int muxserver_sock;
 extern u_int muxclient_command;
 
-
 /* Prints a help message to the user.  This function never returns. */
 
 static void
@@ -222,11 +233,8 @@ main(int ac, char **av)
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
 	sanitise_stdfd();
 
-	/*
-	 * Discard other fds that are hanging around. These can cause problem
-	 * with backgrounded ssh processes started by ControlPersist.
-	 */
-	closefrom(STDERR_FILENO + 1);
+	__progname = ssh_get_progname(av[0]);
+	init_rng();
 
 	/*
 	 * Discard other fds that are hanging around. These can cause problem
@@ -250,6 +258,7 @@ main(int ac, char **av)
 	 */
 	PRIV_END;
 
+#ifdef HAVE_SETRLIMIT
 	/* If we are installed setuid root be careful to not drop core. */
 	if (original_real_uid != original_effective_uid) {
 		struct rlimit rlim;
@@ -257,6 +266,7 @@ main(int ac, char **av)
 		if (setrlimit(RLIMIT_CORE, &rlim) < 0)
 			fatal("setrlimit failed: %.100s", strerror(errno));
 	}
+#endif
 	/* Get user data. */
 	pw = getpwuid(original_real_uid);
 	if (!pw) {
@@ -393,7 +403,7 @@ main(int ac, char **av)
 			/* FALLTHROUGH */
 		case 'V':
 			fprintf(stderr, "%s, %s\n",
-			    SSH_VERSION, SSLeay_version(SSLEAY_VERSION));
+			    SSH_RELEASE, SSLeay_version(SSLEAY_VERSION));
 			if (opt == 'V')
 				exit(0);
 			break;
@@ -672,6 +682,8 @@ main(int ac, char **av)
 	/* reinit */
 	log_init(argv0, options.log_level, SYSLOG_FACILITY_USER, !use_syslog);
 
+	seed_rng();
+
 	if (options.user == NULL)
 		options.user = xstrdup(pw->pw_name);
 
@@ -745,7 +757,11 @@ main(int ac, char **av)
 	if (ssh_connect(host, &hostaddr, options.port,
 	    options.address_family, options.connection_attempts, &timeout_ms,
 	    options.tcp_keep_alive, 
+#ifdef HAVE_CYGWIN
+	    options.use_privileged_port,
+#else
 	    original_effective_uid == 0 && options.use_privileged_port,
+#endif
 	    options.proxy_command) != 0)
 		exit(255);
 

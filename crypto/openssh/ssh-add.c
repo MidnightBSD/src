@@ -35,14 +35,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 
 #include <openssl/evp.h>
+#include "openbsd-compat/openssl-compat.h"
 
 #include <fcntl.h>
 #include <pwd.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
