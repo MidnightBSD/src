@@ -1,11 +1,11 @@
-# $MidnightBSD: src/secure/usr.bin/scp/Makefile,v 1.4 2009/05/02 18:01:22 laffer1 Exp $
+# $MidnightBSD: src/secure/usr.bin/scp/Makefile,v 1.5 2009/11/26 16:40:51 laffer1 Exp $
 
 PROG=	scp
 SRCS=	scp.c
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 
 # required when linkind dynamic libssh
-SRCS+=	roaming_common.c
+SRCS+=	roaming_common.c roaming_serv.c
 
 DPADD=	${LIBSSH} ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
 LDADD=	-lssh -lcrypt -lcrypto -lz
