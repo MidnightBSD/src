@@ -20565,6 +20565,9 @@ crypto/openssh/key.h -text
 crypto/openssh/lib/Makefile -text
 crypto/openssh/log.c -text
 crypto/openssh/log.h -text
+crypto/openssh/loginrec.c -text
+crypto/openssh/loginrec.h -text
+crypto/openssh/logintest.c -text
 crypto/openssh/mac.c -text
 crypto/openssh/mac.h -text
 crypto/openssh/match.c -text
