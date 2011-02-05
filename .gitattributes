@@ -20471,6 +20471,8 @@ crypto/openssh/PROTOCOL.agent -text
 crypto/openssh/PROTOCOL.certkeys -text
 crypto/openssh/PROTOCOL.mux -text
 crypto/openssh/README -text
+crypto/openssh/acss.c -text
+crypto/openssh/acss.h -text
 crypto/openssh/addrmatch.c -text
 crypto/openssh/atomicio.c -text
 crypto/openssh/atomicio.h -text
