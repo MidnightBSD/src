@@ -1,11 +1,12 @@
-#$MidnightBSD: src/rescue/rescue/Makefile,v 1.6 2008/11/11 20:17:50 laffer1 Exp $
-#$FreeBSD: src/rescue/rescue/Makefile,v 1.45.2.1 2005/12/22 21:17:12 jhb Exp $
+# $MidnightBSD: src/rescue/rescue/Makefile,v 1.7 2011/02/06 21:15:22 laffer1 Exp $
+# $FreeBSD: src/rescue/rescue/Makefile,v 1.45.2.1 2005/12/22 21:17:12 jhb Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
 NO_MAN=
 
 .include <bsd.own.mk>
 MK_SSP=	no
+MK_ZFS= no
 
 PROG=	rescue
 BINDIR?=/rescue
@@ -204,11 +205,11 @@ CRUNCH_PROGS_usr.bin+= bzip2
 CRUNCH_ALIAS_bzip2= bunzip2 bzcat
 CRUNCH_LIBS+= -lbz2
 
-CRUNCH_PROGS_usr.bin+= tar
-CRUNCH_LIBS+= -larchive -lmd
-.if ${MK_OPENSSL} != "no"
-CRUNCH_LIBS+= -lcrypto
-.endif
+#CRUNCH_PROGS_usr.bin+= tar
+#CRUNCH_LIBS+= -larchive -lmd
+#.if ${MK_OPENSSL} != "no"
+#CRUNCH_LIBS+= -lcrypto
+#.endif
 
 CRUNCH_PROGS_usr.bin+= vi
 CRUNCH_ALIAS_vi= ex
