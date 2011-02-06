@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/sysctl.h,v 1.4 2008/12/03 00:11:23 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/sysctl.h,v 1.5 2009/11/28 22:44:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -294,6 +294,15 @@ TAILQ_HEAD(sysctl_ctx_list, sysctl_ctx_entry);
 #define SYSCTL_ADD_XLONG(ctx, parent, nbr, name, access, ptr, descr)	    \
 	sysctl_add_oid(ctx, parent, nbr, name, CTLTYPE_ULONG|(access),	    \
 	ptr, 0, sysctl_handle_long, "LX", __DESCR(descr))
+
+/* Oid for a quad.  The pointer must be non NULL. */
+#define SYSCTL_QUAD(parent, nbr, name, access, ptr, val, descr) \
+	SYSCTL_OID(parent, nbr, name, CTLTYPE_QUAD|CTLFLAG_MPSAFE|(access), \
+		ptr, val, sysctl_handle_quad, "Q", __DESCR(descr))
+
+#define SYSCTL_ADD_QUAD(ctx, parent, nbr, name, access, ptr, descr)	    \
+	sysctl_add_oid(ctx, parent, nbr, name, CTLTYPE_QUAD|CTLFLAG_MPSAFE|(access),	    \
+	ptr, 0, sysctl_handle_quad, "Q", __DESCR(descr))
 
 /* Oid for an opaque object.  Specified by a pointer and a length. */
 #define SYSCTL_OPAQUE(parent, nbr, name, access, ptr, len, fmt, descr) \

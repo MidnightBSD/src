@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/kernel.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995 Terrence R. Lambert
  * All rights reserved.
@@ -324,6 +324,25 @@ struct tunable_ulong {
 	    &__CONCAT(__tunable_ulong_, __LINE__))
 
 #define	TUNABLE_ULONG_FETCH(path, var)	getenv_ulong((path), (var))
+
+/*
+ * quad
+ */
+extern void tunable_quad_init(void *);
+struct tunable_quad {
+	const char *path;
+	quad_t *var;
+};
+#define	TUNABLE_QUAD(path, var)					\
+	static struct tunable_quad __CONCAT(__tunable_quad_, __LINE__) = { \
+		(path),						\
+		(var),						\
+	};							\
+	SYSINIT(__CONCAT(__Tunable_init_, __LINE__),		\
+	    SI_SUB_TUNABLES, SI_ORDER_MIDDLE, tunable_quad_init, \
+	    &__CONCAT(__tunable_quad_, __LINE__))
+
+#define	TUNABLE_QUAD_FETCH(path, var)	getenv_quad((path), (var))
 
 extern void tunable_str_init(void *);
 struct tunable_str {
