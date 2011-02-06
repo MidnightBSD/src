@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users
 
+20110205:
+	OpenSSH 5.7p1
+
+	GNU sort 6.9 (coreutils)
+
 20110203:
 	one true awk 20100523 imported
 
@@ -929,4 +934,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.108 2011/02/03 14:31:14 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.109 2011/02/04 01:56:17 laffer1 Exp $
