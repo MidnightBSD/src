@@ -23,10 +23,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_format_cpio.c,v 1.2.2.1 2008/02/11 00:31:09 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 /* The version stamp macro was introduced after cpio write support. */
-#if ARCHIVE_VERSION_STAMP >= 1009000
+#if ARCHIVE_VERSION_NUMBER >= 1009000
 static void
 test_format(int	(*set_format)(struct archive *))
 {
@@ -104,10 +104,10 @@ test_format(int	(*set_format)(struct archive *))
 
 	/* Close out the archive. */
 	assertA(0 == archive_write_close(a));
-#if ARCHIVE_API_VERSION > 1
-	assertA(0 == archive_write_finish(a));
-#else
+#if ARCHIVE_VERSION_NUMBER < 2000000
 	archive_write_finish(a);
+#else
+	assertA(0 == archive_write_finish(a));
 #endif
 
 	/*
@@ -134,7 +134,10 @@ test_format(int	(*set_format)(struct archive *))
 	assertA(0 == archive_read_support_compression_all(a));
 	assertA(0 == archive_read_open_memory(a, buff, used));
 
-	assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
+	if (!assertEqualIntA(a, 0, archive_read_next_header(a, &ae))) {
+		archive_read_finish(a);
+		return;
+	}
 
 	assertEqualInt(1, archive_entry_mtime(ae));
 	/* Not the same as above: cpio doesn't store hi-res times. */
@@ -182,10 +185,10 @@ test_format(int	(*set_format)(struct archive *))
 	/* Verify the end of the archive. */
 	assertEqualIntA(a, 1, archive_read_next_header(a, &ae));
 	assert(0 == archive_read_close(a));
-#if ARCHIVE_API_VERSION > 1
-	assert(0 == archive_read_finish(a));
-#else
+#if ARCHIVE_VERSION_NUMBER < 2000000
 	archive_read_finish(a);
+#else
+	assert(0 == archive_read_finish(a));
 #endif
 
 	free(buff);
@@ -194,7 +197,7 @@ test_format(int	(*set_format)(struct archive *))
 
 DEFINE_TEST(test_write_format_cpio)
 {
-#if ARCHIVE_VERSION_STAMP >= 1009000
+#if ARCHIVE_VERSION_NUMBER >= 1009000
 	test_format(archive_write_set_format_cpio);
 	test_format(archive_write_set_format_cpio_newc);
 #else

@@ -22,10 +22,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libarchive/archive_write_disk.3,v 1.1.4.2 2008/08/10 04:32:47 kientzle Exp $
+.\" $MidnightBSD$
 .\"
-.Dd March 2, 2007
-.Dt archive_write_disk 3
+.Dd August 5, 2008
+.Dt ARCHIVE_WRITE_DISK 3
 .Os
 .Sh NAME
 .Nm archive_write_disk_new ,
@@ -38,7 +38,7 @@
 .Nm archive_write_data ,
 .Nm archive_write_finish_entry ,
 .Nm archive_write_close ,
-.Nm archive_write_finish
+.Nm archive_write_free
 .Nd functions for creating objects on disk
 .Sh SYNOPSIS
 .In archive.h
@@ -73,7 +73,7 @@
 .Ft int
 .Fn archive_write_close "struct archive *"
 .Ft int
-.Fn archive_write_finish "struct archive *"
+.Fn archive_write_free "struct archive *"
 .Sh DESCRIPTION
 These functions provide a complete API for creating objects on
 disk from
@@ -169,11 +169,11 @@ The default is to not refuse such paths.
 Note that paths ending in
 .Pa ..
 always cause an error, regardless of this flag.
-.El
 .It Cm ARCHIVE_EXTRACT_SPARSE
 Scan data for blocks of NUL bytes and try to recreate them with holes.
 This results in sparse files, independent of whether the archive format
 supports or uses them.
+.El
 .It Xo
 .Fn archive_write_disk_set_group_lookup ,
 .Fn archive_write_disk_set_user_lookup
@@ -239,7 +239,7 @@ The
 .Nm
 library maintains a list of all such deferred attributes and
 sets them when this function is invoked.
-.It Fn archive_write_finish
+.It Fn archive_write_free
 Invokes
 .Fn archive_write_close
 if it was not invoked manually, then releases all resources.
@@ -339,7 +339,7 @@ In particular, the directory
 .Pa aa
 is created as well as the final object
 .Pa bb .
-In theory, this can be exploited to create an entire directory heirarchy
+In theory, this can be exploited to create an entire directory hierarchy
 with a single request.
 Of course, this does not work if the
 .Cm ARCHIVE_EXTRACT_NODOTDOT
@@ -371,5 +371,5 @@ compact implementation when appropriate.
 .Pp
 There should be a corresponding
 .Nm archive_read_disk
-interface that walks a directory heirarchy and returns archive
+interface that walks a directory hierarchy and returns archive
 entry objects.

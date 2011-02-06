@@ -1,4 +1,4 @@
-$FreeBSD: src/lib/libarchive/test/README,v 1.2.2.1 2008/02/11 00:31:08 kientzle Exp $
+$FreeBSD$
 
 This is the test harness for libarchive.
 

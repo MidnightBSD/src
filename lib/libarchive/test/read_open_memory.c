@@ -24,7 +24,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/read_open_memory.c,v 1.1.2.1 2008/02/11 00:31:08 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stdlib.h>
@@ -48,15 +48,35 @@ struct read_memory_data {
 
 static int	memory_read_close(struct archive *, void *);
 static int	memory_read_open(struct archive *, void *);
-#if ARCHIVE_API_VERSION < 2
+#if ARCHIVE_VERSION_NUMBER < 2000000
 static ssize_t	memory_read_skip(struct archive *, void *, size_t request);
 #else
 static off_t	memory_read_skip(struct archive *, void *, off_t request);
 #endif
 static ssize_t	memory_read(struct archive *, void *, const void **buff);
+static int	read_open_memory_internal(struct archive *a, void *buff,
+    size_t size, size_t read_size, int fullapi);
+
 
 int
 read_open_memory(struct archive *a, void *buff, size_t size, size_t read_size)
+{
+	return read_open_memory_internal(a, buff, size, read_size, 1);
+}
+
+/*
+ * As above, but don't register any optional part of the API, to verify
+ * that internals work correctly with just the minimal entry points.
+ */
+int
+read_open_memory2(struct archive *a, void *buff, size_t size, size_t read_size)
+{
+	return read_open_memory_internal(a, buff, size, read_size, 0);
+}
+
+static int
+read_open_memory_internal(struct archive *a, void *buff,
+    size_t size, size_t read_size, int fullapi)
 {
 	struct read_memory_data *mine;
 
@@ -71,8 +91,12 @@ read_open_memory(struct archive *a, void *buff, size_t size, size_t read_size)
 	mine->read_size = read_size;
 	mine->copy_buff_size = read_size + 64;
 	mine->copy_buff = malloc(mine->copy_buff_size);
-	return (archive_read_open2(a, mine, memory_read_open,
-		    memory_read, memory_read_skip, memory_read_close));
+	if (fullapi)
+		return (archive_read_open2(a, mine, memory_read_open,
+			    memory_read, memory_read_skip, memory_read_close));
+	else
+		return (archive_read_open2(a, mine, NULL,
+			    memory_read, NULL, memory_read_close));
 }
 
 /*
@@ -107,13 +131,13 @@ memory_read(struct archive *a, void *client_data, const void **buff)
 	*buff = mine->copy_buff;
 
         mine->buffer += size;
-	return (size);
+	return ((ssize_t)size);
 }
 
 /*
  * How mean can a skip() routine be?  Let's try to find out.
  */
-#if ARCHIVE_API_VERSION < 2
+#if ARCHIVE_VERSION_NUMBER < 2000000
 static ssize_t
 memory_read_skip(struct archive *a, void *client_data, size_t skip)
 #else

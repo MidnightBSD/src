@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_entry_strmode.c,v 1.1.2.4 2008/08/10 04:32:47 kientzle Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>

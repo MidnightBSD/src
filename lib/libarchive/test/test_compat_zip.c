@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_compat_zip.c,v 1.1.2.2 2008/05/21 04:14:39 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 /* Copy this function for each test file and adjust it accordingly. */
 static void
@@ -32,10 +32,11 @@ test_compat_zip_1(void)
 	char name[] = "test_compat_zip_1.zip";
 	struct archive_entry *ae;
 	struct archive *a;
+	int r;
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_zip(a));
 	extract_reference_file(name);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, name, 10240));
 
@@ -44,7 +45,16 @@ test_compat_zip_1(void)
 	assertEqualString("META-INF/MANIFEST.MF", archive_entry_pathname(ae));
 
 	/* Read second entry. */
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	r = archive_read_next_header(a, &ae);
+	if (r != ARCHIVE_OK) {
+		if (strcmp(archive_error_string(a),
+		    "libarchive compiled without deflate support (no libz)") == 0) {
+			skipping("Skipping ZIP compression check: %s",
+			    archive_error_string(a));
+			goto finish;
+		}
+	}
+	assertEqualIntA(a, ARCHIVE_OK, r);
 	assertEqualString("tmp.class", archive_entry_pathname(ae));
 
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
@@ -53,17 +63,51 @@ test_compat_zip_1(void)
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ZIP);
 
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
-#if ARCHIVE_API_VERSION > 1
-	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
-#else
+finish:
+#if ARCHIVE_VERSION_NUMBER < 2000000
 	archive_read_finish(a);
+#else
+	assertEqualInt(ARCHIVE_OK, archive_read_finish(a));
 #endif
+}
+
+/*
+ * Verify that we skip junk between entries.  The compat_zip_2.zip file
+ * has several bytes of junk between 'file1' and 'file2'.  Such
+ * junk is routinely introduced by some Zip writers when they manipulate
+ * existing zip archives.
+ */
+static void
+test_compat_zip_2(void)
+{
+	char name[] = "test_compat_zip_2.zip";
+	struct archive_entry *ae;
+	struct archive *a;
+
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_compression_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_zip(a));
+	extract_reference_file(name);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, name, 10240));
+
+	/* Read first entry. */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualString("file1", archive_entry_pathname(ae));
+
+	/* Read first entry. */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualString("file2", archive_entry_pathname(ae));
+
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
 
 DEFINE_TEST(test_compat_zip)
 {
 	test_compat_zip_1();
+	test_compat_zip_2();
 }
 
 

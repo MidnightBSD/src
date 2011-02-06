@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/archive_entry.h,v 1.23.2.4 2008/11/28 20:08:47 kientzle Exp $
+ * $MidnightBSD$
  */
 
 #ifndef ARCHIVE_ENTRY_H_INCLUDED
@@ -40,15 +40,28 @@
 #include <stddef.h>  /* for wchar_t */
 #include <time.h>
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#include <windows.h>
+#endif
+
 /* Get appropriate definitions of standard POSIX-style types. */
 /* These should match the types used in 'struct stat' */
-#ifdef _WIN32
-#define	__LA_UID_T	unsigned int
-#define	__LA_GID_T	unsigned int
-#define	__LA_DEV_T	unsigned int
-#define	__LA_MODE_T	unsigned short
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#define	__LA_INT64_T	__int64
+# if defined(__BORLANDC__)
+#  define	__LA_UID_T	uid_t
+#  define	__LA_GID_T	gid_t
+#  define	__LA_DEV_T	dev_t
+#  define	__LA_MODE_T	mode_t
+# else
+#  define	__LA_UID_T	short
+#  define	__LA_GID_T	short
+#  define	__LA_DEV_T	unsigned int
+#  define	__LA_MODE_T	unsigned short
+# endif
 #else
 #include <unistd.h>
+#define	__LA_INT64_T	int64_t
 #define	__LA_UID_T	uid_t
 #define	__LA_GID_T	gid_t
 #define	__LA_DEV_T	dev_t
@@ -69,7 +82,7 @@
  * .lib.  The default here assumes you're building a DLL.  Only
  * libarchive source should ever define __LIBARCHIVE_BUILD.
  */
-#if ((defined __WIN32__) || (defined _WIN32)) && (!defined LIBARCHIVE_STATIC)
+#if ((defined __WIN32__) || (defined _WIN32) || defined(__CYGWIN__)) && (!defined LIBARCHIVE_STATIC)
 # ifdef __LIBARCHIVE_BUILD
 #  ifdef __GNUC__
 #   define __LA_DECL	__attribute__((dllexport)) extern
@@ -172,6 +185,9 @@ __LA_DECL struct archive_entry	*archive_entry_new(void);
 __LA_DECL time_t	 archive_entry_atime(struct archive_entry *);
 __LA_DECL long		 archive_entry_atime_nsec(struct archive_entry *);
 __LA_DECL int		 archive_entry_atime_is_set(struct archive_entry *);
+__LA_DECL time_t	 archive_entry_birthtime(struct archive_entry *);
+__LA_DECL long		 archive_entry_birthtime_nsec(struct archive_entry *);
+__LA_DECL int		 archive_entry_birthtime_is_set(struct archive_entry *);
 __LA_DECL time_t	 archive_entry_ctime(struct archive_entry *);
 __LA_DECL long		 archive_entry_ctime_nsec(struct archive_entry *);
 __LA_DECL int		 archive_entry_ctime_is_set(struct archive_entry *);
@@ -189,6 +205,7 @@ __LA_DECL const wchar_t	*archive_entry_gname_w(struct archive_entry *);
 __LA_DECL const char	*archive_entry_hardlink(struct archive_entry *);
 __LA_DECL const wchar_t	*archive_entry_hardlink_w(struct archive_entry *);
 __LA_DECL __LA_INO_T	 archive_entry_ino(struct archive_entry *);
+__LA_DECL __LA_INT64_T	 archive_entry_ino64(struct archive_entry *);
 __LA_DECL __LA_MODE_T	 archive_entry_mode(struct archive_entry *);
 __LA_DECL time_t	 archive_entry_mtime(struct archive_entry *);
 __LA_DECL long		 archive_entry_mtime_nsec(struct archive_entry *);
@@ -200,7 +217,7 @@ __LA_DECL dev_t		 archive_entry_rdev(struct archive_entry *);
 __LA_DECL dev_t		 archive_entry_rdevmajor(struct archive_entry *);
 __LA_DECL dev_t		 archive_entry_rdevminor(struct archive_entry *);
 __LA_DECL const char	*archive_entry_sourcepath(struct archive_entry *);
-__LA_DECL int64_t	 archive_entry_size(struct archive_entry *);
+__LA_DECL __LA_INT64_T	 archive_entry_size(struct archive_entry *);
 __LA_DECL int		 archive_entry_size_is_set(struct archive_entry *);
 __LA_DECL const char	*archive_entry_strmode(struct archive_entry *);
 __LA_DECL const char	*archive_entry_symlink(struct archive_entry *);
@@ -222,6 +239,12 @@ __LA_DECL const wchar_t	*archive_entry_uname_w(struct archive_entry *);
 
 __LA_DECL void	archive_entry_set_atime(struct archive_entry *, time_t, long);
 __LA_DECL void  archive_entry_unset_atime(struct archive_entry *);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+__LA_DECL void archive_entry_copy_bhfi(struct archive_entry *,
+									   BY_HANDLE_FILE_INFORMATION *);
+#endif
+__LA_DECL void	archive_entry_set_birthtime(struct archive_entry *, time_t, long);
+__LA_DECL void  archive_entry_unset_birthtime(struct archive_entry *);
 __LA_DECL void	archive_entry_set_ctime(struct archive_entry *, time_t, long);
 __LA_DECL void  archive_entry_unset_ctime(struct archive_entry *);
 __LA_DECL void	archive_entry_set_dev(struct archive_entry *, dev_t);
@@ -244,7 +267,14 @@ __LA_DECL int	archive_entry_update_gname_utf8(struct archive_entry *, const char
 __LA_DECL void	archive_entry_set_hardlink(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_copy_hardlink(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_copy_hardlink_w(struct archive_entry *, const wchar_t *);
+__LA_DECL int	archive_entry_update_hardlink_utf8(struct archive_entry *, const char *);
+#if ARCHIVE_VERSION_NUMBER >= 3000000
+/* Starting with libarchive 3.0, this will be synonym for ino64. */
+__LA_DECL void	archive_entry_set_ino(struct archive_entry *, __LA_INT64_T);
+#else
 __LA_DECL void	archive_entry_set_ino(struct archive_entry *, unsigned long);
+#endif
+__LA_DECL void	archive_entry_set_ino64(struct archive_entry *, __LA_INT64_T);
 __LA_DECL void	archive_entry_set_link(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_copy_link(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_copy_link_w(struct archive_entry *, const wchar_t *);
@@ -261,12 +291,13 @@ __LA_DECL void	archive_entry_set_perm(struct archive_entry *, __LA_MODE_T);
 __LA_DECL void	archive_entry_set_rdev(struct archive_entry *, dev_t);
 __LA_DECL void	archive_entry_set_rdevmajor(struct archive_entry *, dev_t);
 __LA_DECL void	archive_entry_set_rdevminor(struct archive_entry *, dev_t);
-__LA_DECL void	archive_entry_set_size(struct archive_entry *, int64_t);
+__LA_DECL void	archive_entry_set_size(struct archive_entry *, __LA_INT64_T);
 __LA_DECL void	archive_entry_unset_size(struct archive_entry *);
 __LA_DECL void	archive_entry_copy_sourcepath(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_set_symlink(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_copy_symlink(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_copy_symlink_w(struct archive_entry *, const wchar_t *);
+__LA_DECL int	archive_entry_update_symlink_utf8(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_set_uid(struct archive_entry *, __LA_UID_T);
 __LA_DECL void	archive_entry_set_uname(struct archive_entry *, const char *);
 __LA_DECL void	archive_entry_copy_uname(struct archive_entry *, const char *);
@@ -434,7 +465,7 @@ __LA_DECL int	archive_entry_xattr_next(struct archive_entry *,
  * Note that archive_entry_size() is reset to zero if the file
  * body should not be written to the archive.  Pay attention!
  */
-__LA_DECL struct archive_entry_linkresolver;
+struct archive_entry_linkresolver;
 
 /*
  * There are three different strategies for marking hardlinks.

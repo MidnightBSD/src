@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_all.c,v 1.9.2.1 2008/02/11 00:31:07 kientzle Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "archive.h"
 
