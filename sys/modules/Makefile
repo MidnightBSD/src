@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.18 2011/01/15 05:56:21 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.19 2011/01/22 19:55:16 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -77,6 +77,7 @@ SUBDIR=	${_3dfx} \
 	${_drm} \
 	dummynet \
 	${_ed} \
+	${_eeemon} \
 	${_elink} \
 	${_em} \
 	en \
@@ -449,6 +450,7 @@ _coretemp=	coretemp
 _ctau=		ctau
 _cx=		cx
 _dpt=		dpt
+_eeemon=	eeemon
 _ex=		ex
 _hptiop=	hptiop
 _hptmv=		hptmv
@@ -503,6 +505,7 @@ _cpufreq=	cpufreq
 _digi=		digi
 _drm=		drm
 _ed=		ed
+_eeemon=	eeemon
 _em=		em
 _exca=		exca
 _ext2fs=	ext2fs

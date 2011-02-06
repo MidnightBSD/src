@@ -33495,6 +33495,8 @@ sys/dev/ed/if_edreg.h -text
 sys/dev/ed/if_edvar.h -text
 sys/dev/ed/rtl80x9reg.h -text
 sys/dev/ed/tc5299jreg.h -text
+sys/dev/eeemon/eeemon.c -text
+sys/dev/eeemon/eeemonreg.h -text
 sys/dev/eisa/eisa_if.m -text
 sys/dev/eisa/eisaconf.c -text
 sys/dev/eisa/eisaconf.h -text
@@ -35808,6 +35810,7 @@ sys/modules/drm/sis/Makefile -text
 sys/modules/drm/tdfx/Makefile -text
 sys/modules/dummynet/Makefile -text
 sys/modules/ed/Makefile -text
+sys/modules/eeemon/Makefile -text
 sys/modules/el/Makefile -text
 sys/modules/elink/Makefile -text
 sys/modules/em/Makefile -text
