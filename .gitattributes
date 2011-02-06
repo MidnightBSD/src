@@ -24346,6 +24346,7 @@ gnu/usr.bin/sdiff/sdiff.c.diff -text
 gnu/usr.bin/sort/Makefile -text
 gnu/usr.bin/sort/alloca.h -text
 gnu/usr.bin/sort/config.h -text
+gnu/usr.bin/sort/configmake.h -text
 gnu/usr.bin/sort/localedir.h -text
 gnu/usr.bin/sort/unlocked-io.h -text
 gnu/usr.bin/texinfo/Makefile -text
