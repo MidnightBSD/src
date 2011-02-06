@@ -1,7 +1,7 @@
 /* hard-locale.c -- Determine whether a locale is hard.
 
-   Copyright (C) 1997, 1998, 1999, 2002, 2003, 2004 Free Software
-   Foundation, Inc.
+   Copyright (C) 1997, 1998, 1999, 2002, 2003, 2004, 2006, 2007 Free
+   Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,62 +15,57 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
-   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
-/* $FreeBSD: src/contrib/gnu-sort/lib/hard-locale.c,v 1.5 2004/08/12 05:46:04 tjr Exp $ */
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
-#if HAVE_CONFIG_H
-# include <config.h>
-#endif
+#include <config.h>
 
 #include "hard-locale.h"
 
-#if HAVE_LOCALE_H
-# include <locale.h>
-#endif
-
+#include <locale.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __GLIBC__
+# define GLIBC_VERSION __GLIBC__
+#else
+# define GLIBC_VERSION 0
+#endif
 
 /* Return true if the current CATEGORY locale is hard, i.e. if you
    can't get away with assuming traditional C or POSIX behavior.  */
 bool
 hard_locale (int category)
 {
-#if ! HAVE_SETLOCALE
-  return false;
-#else
-
   bool hard = true;
   char const *p = setlocale (category, NULL);
 
   if (p)
     {
-# if defined(__FreeBSD__) || (defined __GLIBC__ && 2 <= __GLIBC__)
-      if (strcmp (p, "C") == 0 || strcmp (p, "POSIX") == 0)
-	hard = false;
-# else
-      char *locale = malloc (strlen (p) + 1);
-      if (locale)
+      if (2 <= GLIBC_VERSION)
 	{
-	  strcpy (locale, p);
-
-	  /* Temporarily set the locale to the "C" and "POSIX" locales
-	     to find their names, so that we can determine whether one
-	     or the other is the caller's locale.  */
-	  if (((p = setlocale (category, "C"))
-	       && strcmp (p, locale) == 0)
-	      || ((p = setlocale (category, "POSIX"))
-		  && strcmp (p, locale) == 0))
+	  if (strcmp (p, "C") == 0 || strcmp (p, "POSIX") == 0)
 	    hard = false;
-
-	  /* Restore the caller's locale.  */
-	  setlocale (category, locale);
-	  free (locale);
 	}
-# endif
+      else
+	{
+	  char *locale = strdup (p);
+	  if (locale)
+	    {
+	      /* Temporarily set the locale to the "C" and "POSIX" locales
+		 to find their names, so that we can determine whether one
+		 or the other is the caller's locale.  */
+	      if (((p = setlocale (category, "C"))
+		   && strcmp (p, locale) == 0)
+		  || ((p = setlocale (category, "POSIX"))
+		      && strcmp (p, locale) == 0))
+		hard = false;
+
+	      /* Restore the caller's locale.  */
+	      setlocale (category, locale);
+	      free (locale);
+	    }
+	}
     }
 
   return hard;
-
-#endif
 }

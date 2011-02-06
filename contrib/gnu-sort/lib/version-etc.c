@@ -1,5 +1,5 @@
 /* Utility to help print --version output in a consistent format.
-   Copyright (C) 1999-2004 Free Software Foundation, Inc.
+   Copyright (C) 1999-2007 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,15 +13,11 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
-   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
-
-/* $FreeBSD: src/contrib/gnu-sort/lib/version-etc.c,v 1.4 2004/08/27 03:52:29 kientzle Exp $ */
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
 /* Written by Jim Meyering. */
 
-#if HAVE_CONFIG_H
-# include <config.h>
-#endif
+#include <config.h>
 
 /* Specification.  */
 #include "version-etc.h"
@@ -29,17 +25,15 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "unlocked-io.h"
+
+#if USE_UNLOCKED_IO
+# include "unlocked-io.h"
+#endif
 
 #include "gettext.h"
 #define _(msgid) gettext (msgid)
 
-/* Default copyright goes to the FSF. */
-
-const char* version_etc_copyright =
-  /* Do *not* mark this string for translation.  */
-  "Copyright (C) 2004 Free Software Foundation, Inc.";
-
+enum { COPYRIGHT_YEAR = 2007 };
 
 /* Like version_etc, below, but with the NULL-terminated author list
    provided via a variable of type va_list.  */
@@ -54,24 +48,31 @@ version_etc_va (FILE *stream,
   {
     va_list tmp_authors;
 
-#ifdef va_copy
     va_copy (tmp_authors, authors);
-#else
-    tmp_authors = authors;
-#endif
 
     n_authors = 0;
     while (va_arg (tmp_authors, const char *) != NULL)
       ++n_authors;
-#ifdef va_copy
-    va_end (tmp_authors);
-#endif
   }
 
   if (command_name)
     fprintf (stream, "%s (%s) %s\n", command_name, package, version);
   else
     fprintf (stream, "%s %s\n", package, version);
+
+  /* TRANSLATORS: Translate "(C)" to the copyright symbol
+     (C-in-a-circle), if this symbol is available in the user's
+     locale.  Otherwise, do not translate "(C)"; leave it as-is.  */
+  fprintf (stream, version_etc_copyright, _("(C)"), COPYRIGHT_YEAR);
+
+  fputs (_("\
+\n\
+This is free software.  You may redistribute copies of it under the terms of\n\
+the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n\
+There is NO WARRANTY, to the extent permitted by law.\n\
+\n\
+"),
+	 stream);
 
   switch (n_authors)
     {
@@ -144,15 +145,6 @@ Written by %s, %s, %s,\n%s, %s, %s, %s,\n%s, %s, and others.\n"),
       break;
     }
   va_end (authors);
-  putc ('\n', stream);
-
-  fputs (version_etc_copyright, stream);
-  putc ('\n', stream);
-
-  fputs (_("\
-This is free software; see the source for copying conditions.  There is NO\n\
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"),
-	 stream);
 }
 
 

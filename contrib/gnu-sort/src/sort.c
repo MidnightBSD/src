@@ -1,6 +1,5 @@
-/* $FreeBSD: src/contrib/gnu-sort/src/sort.c,v 1.4 2004/08/12 05:46:04 tjr Exp $ */
 /* sort - sort lines of text (with all kinds of options).
-   Copyright (C) 88, 1991-2004 Free Software Foundation, Inc.
+   Copyright (C) 1988, 1991-2007 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,8 +12,8 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
    Written December 1988 by Mike Haertel.
    The author may be reached (Email) at the address mike@gnu.ai.mit.edu,
@@ -24,41 +23,26 @@
 
 #include <config.h>
 
-#include <assert.h>
 #include <getopt.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <signal.h>
-#include <stdio.h>
-
-/* Solaris 2.5 has a bug: <wchar.h> must be included before <wctype.h>.  */
-/* Get mbstate_t, mbrtowc(), wcwidth().  */
-#if HAVE_WCHAR_H
-# include <wchar.h>
-#endif
-
-/* Get isw* functions. */
-#if HAVE_WCTYPE_H
-# include <wctype.h>
-#endif
-
-/* Get nl_langinfo(). */
-#if HAVE_LANGINFO_CODESET
-# include <langinfo.h>
-#endif 
-
-/* Include this after wctype.h so that we `#undef' ISPRINT
-   (from Solaris's euc.h, from widec.h, from wctype.h) before
-   redefining and using it. */
 #include "system.h"
+#include "argmatch.h"
 #include "error.h"
 #include "hard-locale.h"
+#include "hash.h"
 #include "inttostr.h"
-#include "long-options.h"
+#include "md5.h"
 #include "physmem.h"
 #include "posixver.h"
 #include "quote.h"
-#include "stdio-safer.h"
+#include "randread.h"
+#include "stdio--.h"
+#include "stdlib--.h"
+#include "strnumcmp.h"
 #include "xmemcoll.h"
+#include "xmemxfrm.h"
 #include "xstrtol.h"
 
 #if HAVE_SYS_RESOURCE_H
@@ -67,17 +51,6 @@
 #ifndef RLIMIT_DATA
 struct rlimit { size_t rlim_cur; };
 # define getrlimit(Resource, Rlp) (-1)
-#endif
-
-/* MB_LEN_MAX is incorrectly defined to be 1 in at least one GCC
-   installation; work around this configuration error.  */
-#if !defined MB_LEN_MAX || MB_LEN_MAX == 1
-# define MB_LEN_MAX 16
-#endif
-
-/* Some systems, like BeOS, have multibyte encodings but lack mbstate_t.  */
-#if HAVE_MBRTOWC && defined mbstate_t
-# define mbrtowc(pwc, s, n, ps) (mbrtowc) (pwc, s, n, 0)
 #endif
 
 /* The official name of this program (e.g., no `g' prefix).  */
@@ -89,9 +62,16 @@ struct rlimit { size_t rlim_cur; };
 # include <langinfo.h>
 #endif
 
+/* Use SA_NOCLDSTOP as a proxy for whether the sigaction machinery is
+   present.  */
 #ifndef SA_NOCLDSTOP
-# define sigprocmask(How, Set, Oset) /* empty */
+# define SA_NOCLDSTOP 0
+/* No sigprocmask.  Always 'return' zero. */
+# define sigprocmask(How, Set, Oset) (0)
 # define sigset_t int
+# if ! HAVE_SIGINTERRUPT
+#  define siginterrupt(sig, flag) /* empty */
+# endif
 #endif
 
 #ifndef STDC_HEADERS
@@ -116,54 +96,33 @@ enum
     SORT_FAILURE = 2
   };
 
-#define C_DECIMAL_POINT '.'
-#define NEGATION_SIGN   '-'
-#define NUMERIC_ZERO    '0'
+enum
+  {
+    /* The number of times we should try to fork a compression process
+       (we retry if the fork call fails).  We don't _need_ to compress
+       temp files, this is just to reduce disk access, so this number
+       can be small.  */
+    MAX_FORK_TRIES_COMPRESS = 2,
 
-#if HAVE_SETLOCALE
+    /* The number of times we should try to fork a decompression process.
+       If we can't fork a decompression process, we can't sort, so this
+       number should be big.  */
+    MAX_FORK_TRIES_DECOMPRESS = 8
+  };
 
-static char decimal_point;
-static int th_sep; /* if CHAR_MAX + 1, then there is no thousands separator */
-static int force_general_numcompare = 0;
+/* The representation of the decimal point in the current locale.  */
+static int decimal_point;
+
+/* Thousands separator; if -1, then there isn't one.  */
+static int thousands_sep;
 
 /* Nonzero if the corresponding locales are hard.  */
 static bool hard_LC_COLLATE;
-# if HAVE_NL_LANGINFO
+#if HAVE_NL_LANGINFO
 static bool hard_LC_TIME;
-# endif
-
-# define IS_THOUSANDS_SEP(x) ((x) == th_sep)
-
-#else
-
-# define decimal_point C_DECIMAL_POINT
-# define IS_THOUSANDS_SEP(x) false
-
 #endif
 
-#define NONZERO(x) (x != 0)
-
-/* get a multibyte character's byte length. */
-#define GET_BYTELEN_OF_CHAR(LIM, PTR, MBLENGTH, STATE)			\
-  do									\
-    {									\
-      wchar_t wc;							\
-      mbstate_t state_bak;						\
-									\
-      state_bak = STATE;						\
-      mblength = mbrtowc (&wc, PTR, LIM - PTR, &STATE);			\
-									\
-      switch (MBLENGTH)							\
-	{								\
-	case (size_t)-1:						\
-	case (size_t)-2:						\
-	  STATE = state_bak;						\
-		/* Fall through. */					\
-	case 0:								\
-	  MBLENGTH = 1;							\
-      }									\
-    }									\
-  while (0)
+#define NONZERO(x) ((x) != 0)
 
 /* The kind of blanks for '-b' to skip in various options. */
 enum blanktype { bl_start, bl_end, bl_both };
@@ -209,6 +168,7 @@ struct keyfield
   bool numeric;			/* Flag for numeric comparison.  Handle
 				   strings of digits with optional decimal
 				   point, but no exponential notation. */
+  bool random;			/* Sort by random hash of key.  */
   bool general_numeric;		/* Flag for general, numeric comparison.
 				   Handle numbers in exponential notation. */
   bool month;			/* Flag for comparison by month name. */
@@ -301,12 +261,13 @@ static bool reverse;
    they were read if all keys compare equal.  */
 static bool stable;
 
-/* Tab character separating fields.  If tab_default, then fields are
+/* If TAB has this value, blanks separate fields.  */
+enum { TAB_DEFAULT = CHAR_MAX + 1 };
+
+/* Tab character separating fields.  If TAB_DEFAULT, then fields are
    separated by the empty string between a non-blank character and a blank
    character. */
-static bool tab_default = true;
-static unsigned char tab[MB_LEN_MAX + 1];
-static size_t tab_length = 1;
+static int tab = TAB_DEFAULT;
 
 /* Flag to remove consecutive duplicate lines from the output.
    Only the last of a sequence of equal lines will be output. */
@@ -318,7 +279,21 @@ static bool have_read_stdin;
 /* List of key field comparisons to be tried.  */
 static struct keyfield *keylist;
 
+/* Program used to (de)compress temp files.  Must accept -d.  */
+static char const *compress_program;
+
 static void sortlines_temp (struct line *, size_t, struct line *);
+
+/* Report MESSAGE for FILE, then clean up and exit.
+   If FILE is null, it represents standard output.  */
+
+static void die (char const *, char const *) ATTRIBUTE_NORETURN;
+static void
+die (char const *message, char const *file)
+{
+  error (0, errno, "%s: %s", message, file ? file : _("standard output"));
+  exit (SORT_FAILURE);
+}
 
 void
 usage (int status)
@@ -335,14 +310,16 @@ Usage: %s [OPTION]... [FILE]...\n\
       fputs (_("\
 Write sorted concatenation of all FILE(s) to standard output.\n\
 \n\
-Ordering options:\n\
-\n\
 "), stdout);
       fputs (_("\
 Mandatory arguments to long options are mandatory for short options too.\n\
 "), stdout);
       fputs (_("\
-  -b, --ignore-leading-blanks ignore leading blanks\n\
+Ordering options:\n\
+\n\
+"), stdout);
+      fputs (_("\
+  -b, --ignore-leading-blanks  ignore leading blanks\n\
   -d, --dictionary-order      consider only blanks and alphanumeric characters\n\
   -f, --ignore-case           fold lower case to upper case characters\n\
 "), stdout);
@@ -351,21 +328,28 @@ Mandatory arguments to long options are mandatory for short options too.\n\
   -i, --ignore-nonprinting    consider only printable characters\n\
   -M, --month-sort            compare (unknown) < `JAN' < ... < `DEC'\n\
   -n, --numeric-sort          compare according to string numerical value\n\
+  -R, --random-sort           sort by random hash of keys\n\
+      --random-source=FILE    get random bytes from FILE (default /dev/urandom)\n\
   -r, --reverse               reverse the result of comparisons\n\
 \n\
 "), stdout);
       fputs (_("\
 Other options:\n\
 \n\
-  -c, --check               check whether input is sorted; do not sort\n\
-  -k, --key=POS1[,POS2]     start a key at POS1, end it at POS 2 (origin 1)\n\
+  -c, --check, --check=diagnose-first  check for sorted input; do not sort\n\
+  -C, --check=quiet, --check=silent  like -c, but do not report first bad line\n\
+      --compress-program=PROG  compress temporaries with PROG;\n\
+                              decompress them with PROG -d\n\
+  -k, --key=POS1[,POS2]     start a key at POS1, end it at POS2 (origin 1)\n\
   -m, --merge               merge already sorted files; do not sort\n\
+"), stdout);
+      fputs (_("\
   -o, --output=FILE         write result to FILE instead of standard output\n\
   -s, --stable              stabilize sort by disabling last-resort comparison\n\
   -S, --buffer-size=SIZE    use SIZE for main memory buffer\n\
 "), stdout);
       printf (_("\
-  -t, --field-separator=SEP use SEP instead of non-blank to blank transition\n\
+  -t, --field-separator=SEP  use SEP instead of non-blank to blank transition\n\
   -T, --temporary-directory=DIR  use DIR for temporaries, not $TMPDIR or %s;\n\
                               multiple options specify multiple directories\n\
   -u, --unique              with -c, check for strict ordering;\n\
@@ -379,9 +363,10 @@ Other options:\n\
       fputs (_("\
 \n\
 POS is F[.C][OPTS], where F is the field number and C the character position\n\
-in the field.  OPTS is one or more single-letter ordering options, which\n\
-override global ordering options for that key.  If no key is given, use the\n\
-entire line as the key.\n\
+in the field; both are origin 1.  If neither -t nor -b is in effect, characters\n\
+in a field are counted from the beginning of the preceding whitespace.  OPTS is\n\
+one or more single-letter ordering options, which override global ordering\n\
+options for that key.  If no key is given, use the entire line as the key.\n\
 \n\
 SIZE may be followed by the following multiplicative suffixes:\n\
 "), stdout);
@@ -401,12 +386,22 @@ native byte values.\n\
   exit (status);
 }
 
-#define COMMON_SHORT_OPTIONS "-bcdfgik:mMno:rsS:t:T:uz"
+/* For long options that have no equivalent short option, use a
+   non-character as a pseudo short option, starting with CHAR_MAX + 1.  */
+enum
+{
+  CHECK_OPTION = CHAR_MAX + 1,
+  COMPRESS_PROGRAM_OPTION,
+  RANDOM_SOURCE_OPTION
+};
+
+static char const short_options[] = "-bcCdfgik:mMno:rRsS:t:T:uy:z";
 
 static struct option const long_options[] =
 {
   {"ignore-leading-blanks", no_argument, NULL, 'b'},
-  {"check", no_argument, NULL, 'c'},
+  {"check", optional_argument, NULL, CHECK_OPTION},
+  {"compress-program", required_argument, NULL, COMPRESS_PROGRAM_OPTION},
   {"dictionary-order", no_argument, NULL, 'd'},
   {"ignore-case", no_argument, NULL, 'f'},
   {"general-numeric-sort", no_argument, NULL, 'g'},
@@ -415,6 +410,8 @@ static struct option const long_options[] =
   {"merge", no_argument, NULL, 'm'},
   {"month-sort", no_argument, NULL, 'M'},
   {"numeric-sort", no_argument, NULL, 'n'},
+  {"random-sort", no_argument, NULL, 'R'},
+  {"random-source", required_argument, NULL, RANDOM_SOURCE_OPTION},
   {"output", required_argument, NULL, 'o'},
   {"reverse", no_argument, NULL, 'r'},
   {"stable", no_argument, NULL, 's'},
@@ -425,61 +422,224 @@ static struct option const long_options[] =
   {"zero-terminated", no_argument, NULL, 'z'},
   {GETOPT_HELP_OPTION_DECL},
   {GETOPT_VERSION_OPTION_DECL},
-  {0, 0, 0, 0},
+  {NULL, 0, NULL, 0},
 };
+
+static char const *const check_args[] =
+{
+  "quiet", "silent", "diagnose-first", NULL
+};
+static char const check_types[] =
+{
+  'C', 'C', 'c'
+};
+ARGMATCH_VERIFY (check_args, check_types);
 
 /* The set of signals that are caught.  */
 static sigset_t caught_signals;
+
+/* Critical section status.  */
+struct cs_status
+{
+  bool valid;
+  sigset_t sigs;
+};
+
+/* Enter a critical section.  */
+static struct cs_status
+cs_enter (void)
+{
+  struct cs_status status;
+  status.valid = (sigprocmask (SIG_BLOCK, &caught_signals, &status.sigs) == 0);
+  return status;
+}
+
+/* Leave a critical section.  */
+static void
+cs_leave (struct cs_status status)
+{
+  if (status.valid)
+    {
+      /* Ignore failure when restoring the signal mask. */
+      sigprocmask (SIG_SETMASK, &status.sigs, NULL);
+    }
+}
 
 /* The list of temporary files. */
 struct tempnode
 {
   struct tempnode *volatile next;
+  pid_t pid;     /* If compressed, the pid of compressor, else zero */
   char name[1];  /* Actual size is 1 + file name length.  */
 };
 static struct tempnode *volatile temphead;
+static struct tempnode *volatile *temptail = &temphead;
 
-/* Fucntion pointers. */
-static void
-(*inittables) (void);
-
-static char *
-(* begfield) (const struct line *line, const struct keyfield *key);
-
-static char *
-(* limfield) (const struct line *line, const struct keyfield *key);
-
-static int
-(*getmonth) (const char *s, size_t len);
-
-static int
-(* keycompare) (const struct line *a, const struct line *b);
-
-/* Test for white space multibyte character.
-   Set LENGTH the byte length of investigated multibyte character. */
-#if HAVE_MBRTOWC
-static int
-ismbblank (const char *str, size_t len, size_t *length)
+struct sortfile
 {
-  size_t mblength;
-  wchar_t wc;
-  mbstate_t state;
+  char const *name;
+  pid_t pid;     /* If compressed, the pid of compressor, else zero */
+};
 
-  memset (&state, '\0', sizeof(mbstate_t));
-  mblength = mbrtowc (&wc, str, len, &state);
+/* A table where we store compression process states.  We clean up all
+   processes in a timely manner so as not to exhaust system resources,
+   so we store the info on whether the process is still running, or has
+   been reaped here.  */
+static Hash_table *proctab;
 
-  if (mblength == (size_t)-1 || mblength == (size_t)-2)
+enum { INIT_PROCTAB_SIZE = 47 };
+
+enum procstate { ALIVE, ZOMBIE };
+
+/* A proctab entry.  The COUNT field is there in case we fork a new
+   compression process that has the same PID as an old zombie process
+   that is still in the table (because the process to decompress the
+   temp file it was associated with hasn't started yet).  */
+struct procnode
+{
+  pid_t pid;
+  enum procstate state;
+  size_t count;
+};
+
+static size_t
+proctab_hasher (const void *entry, size_t tabsize)
+{
+  const struct procnode *node = entry;
+  return node->pid % tabsize;
+}
+
+static bool
+proctab_comparator (const void *e1, const void *e2)
+{
+  const struct procnode *n1 = e1, *n2 = e2;
+  return n1->pid == n2->pid;
+}
+
+/* The total number of forked processes (compressors and decompressors)
+   that have not been reaped yet. */
+static size_t nprocs;
+
+/* The number of child processes we'll allow before we try to reap some. */
+enum { MAX_PROCS_BEFORE_REAP = 2 };
+
+/* If 0 < PID, wait for the child process with that PID to exit.
+   If PID is -1, clean up a random child process which has finished and
+   return the process ID of that child.  If PID is -1 and no processes
+   have quit yet, return 0 without waiting.  */
+
+static pid_t
+reap (pid_t pid)
+{
+  int status;
+  pid_t cpid = waitpid (pid, &status, pid < 0 ? WNOHANG : 0);
+
+  if (cpid < 0)
+    error (SORT_FAILURE, errno, _("waiting for %s [-d]"),
+           compress_program);
+  else if (0 < cpid)
     {
-      *length = 1;
-      return 0;
+      if (! WIFEXITED (status) || WEXITSTATUS (status))
+	error (SORT_FAILURE, 0, _("%s [-d] terminated abnormally"),
+	       compress_program);
+      --nprocs;
     }
 
-  *length = (mblength < 1) ? 1 : mblength;
-  return iswblank (wc);
+  return cpid;
 }
-#endif
 
-/* Clean up any remaining temporary files. */
+/* Add the PID of a running compression process to proctab, or update
+   the entry COUNT and STATE fields if it's already there.  This also
+   creates the table for us the first time it's called.  */
+
+static void
+register_proc (pid_t pid)
+{
+  struct procnode test, *node;
+
+  if (! proctab)
+    {
+      proctab = hash_initialize (INIT_PROCTAB_SIZE, NULL,
+				 proctab_hasher,
+				 proctab_comparator,
+				 free);
+      if (! proctab)
+	xalloc_die ();
+    }
+
+  test.pid = pid;
+  node = hash_lookup (proctab, &test);
+  if (node)
+    {
+      node->state = ALIVE;
+      ++node->count;
+    }
+  else
+    {
+      node = xmalloc (sizeof *node);
+      node->pid = pid;
+      node->state = ALIVE;
+      node->count = 1;
+      hash_insert (proctab, node);
+    }
+}
+
+/* This is called when we reap a random process.  We don't know
+   whether we have reaped a compression process or a decompression
+   process until we look in the table.  If there's an ALIVE entry for
+   it, then we have reaped a compression process, so change the state
+   to ZOMBIE.  Otherwise, it's a decompression processes, so ignore it.  */
+
+static void
+update_proc (pid_t pid)
+{
+  struct procnode test, *node;
+
+  test.pid = pid;
+  node = hash_lookup (proctab, &test);
+  if (node)
+    node->state = ZOMBIE;
+}
+
+/* This is for when we need to wait for a compression process to exit.
+   If it has a ZOMBIE entry in the table then it's already dead and has
+   been reaped.  Note that if there's an ALIVE entry for it, it still may
+   already have died and been reaped if a second process was created with
+   the same PID.  This is probably exceedingly rare, but to be on the safe
+   side we will have to wait for any compression process with this PID.  */
+
+static void
+wait_proc (pid_t pid)
+{
+  struct procnode test, *node;
+
+  test.pid = pid;
+  node = hash_lookup (proctab, &test);
+  if (node->state == ALIVE)
+    reap (pid);
+
+  node->state = ZOMBIE;
+  if (! --node->count)
+    {
+      hash_delete (proctab, node);
+      free (node);
+    }
+}
+
+/* Keep reaping finished children as long as there are more to reap.
+   This doesn't block waiting for any of them, it only reaps those
+   that are already dead.  */
+
+static void
+reap_some (void)
+{
+  pid_t pid;
+
+  while (0 < nprocs && (pid = reap (-1)))
+    update_proc (pid);
+}
+
+/* Clean up any remaining temporary files.  */
 
 static void
 cleanup (void)
@@ -488,61 +648,74 @@ cleanup (void)
 
   for (node = temphead; node; node = node->next)
     unlink (node->name);
+  temphead = NULL;
 }
 
-/* Report MESSAGE for FILE, then clean up and exit.
-   If FILE is null, it represents standard output.  */
+/* Cleanup actions to take when exiting.  */
 
-static void die (char const *, char const *) ATTRIBUTE_NORETURN;
 static void
-die (char const *message, char const *file)
+exit_cleanup (void)
 {
-  error (0, errno, "%s: %s", message, file ? file : _("standard output"));
-  exit (SORT_FAILURE);
+  if (temphead)
+    {
+      /* Clean up any remaining temporary files in a critical section so
+	 that a signal handler does not try to clean them too.  */
+      struct cs_status cs = cs_enter ();
+      cleanup ();
+      cs_leave (cs);
+    }
+
+  close_stdout ();
 }
 
-/* Create a new temporary file, returning its newly allocated name.
-   Store into *PFP a stream open for writing.  */
+/* Create a new temporary file, returning its newly allocated tempnode.
+   Store into *PFD the file descriptor open for writing.  */
 
-static char *
-create_temp_file (FILE **pfp)
+static struct tempnode *
+create_temp_file (int *pfd)
 {
   static char const slashbase[] = "/sortXXXXXX";
   static size_t temp_dir_index;
-  sigset_t oldset;
   int fd;
   int saved_errno;
   char const *temp_dir = temp_dirs[temp_dir_index];
   size_t len = strlen (temp_dir);
   struct tempnode *node =
-    xmalloc (sizeof node->next + len + sizeof slashbase);
+    xmalloc (offsetof (struct tempnode, name) + len + sizeof slashbase);
   char *file = node->name;
+  struct cs_status cs;
 
   memcpy (file, temp_dir, len);
   memcpy (file + len, slashbase, sizeof slashbase);
-  node->next = temphead;
+  node->next = NULL;
+  node->pid = 0;
   if (++temp_dir_index == temp_dir_count)
     temp_dir_index = 0;
 
   /* Create the temporary file in a critical section, to avoid races.  */
-  sigprocmask (SIG_BLOCK, &caught_signals, &oldset);
+  cs = cs_enter ();
   fd = mkstemp (file);
   if (0 <= fd)
-    temphead = node;
+    {
+      *temptail = node;
+      temptail = &node->next;
+    }
   saved_errno = errno;
-  sigprocmask (SIG_SETMASK, &oldset, NULL);
+  cs_leave (cs);
   errno = saved_errno;
 
-  if (fd < 0 || (*pfp = fdopen (fd, "w")) == NULL)
+  if (fd < 0)
     die (_("cannot create temporary file"), file);
 
-  return file;
+  *pfd = fd;
+  return node;
 }
 
 /* Return a stream for FILE, opened with mode HOW.  A null FILE means
    standard output; HOW should be "w".  When opening for input, "-"
    means standard input.  To avoid confusion, do not return file
-   descriptors 0, 1, or 2.  */
+   descriptors STDIN_FILENO, STDOUT_FILENO, or STDERR_FILENO when
+   opening an ordinary FILE.  */
 
 static FILE *
 xfopen (const char *file, const char *how)
@@ -558,7 +731,8 @@ xfopen (const char *file, const char *how)
     }
   else
     {
-      if ((fp = fopen_safer (file, how)) == NULL)
+      fp = fopen (file, how);
+      if (! fp)
 	die (_("open failed"), file);
     }
 
@@ -570,17 +744,191 @@ xfopen (const char *file, const char *how)
 static void
 xfclose (FILE *fp, char const *file)
 {
-  if (fp == stdin)
+  switch (fileno (fp))
     {
-      /* Allow reading stdin from tty more than once. */
+    case STDIN_FILENO:
+      /* Allow reading stdin from tty more than once.  */
       if (feof (fp))
 	clearerr (fp);
-    }
-  else
-    {
+      break;
+
+    case STDOUT_FILENO:
+      /* Don't close stdout just yet.  close_stdout does that.  */
+      if (fflush (fp) != 0)
+	die (_("fflush failed"), file);
+      break;
+
+    default:
       if (fclose (fp) != 0)
 	die (_("close failed"), file);
+      break;
     }
+}
+
+static void
+dup2_or_die (int oldfd, int newfd)
+{
+  if (dup2 (oldfd, newfd) < 0)
+    error (SORT_FAILURE, errno, _("dup2 failed"));
+}
+
+/* Fork a child process for piping to and do common cleanup.  The
+   TRIES parameter tells us how many times to try to fork before
+   giving up.  Return the PID of the child or -1 if fork failed.  */
+
+static pid_t
+pipe_fork (int pipefds[2], size_t tries)
+{
+#if HAVE_WORKING_FORK
+  struct tempnode *saved_temphead;
+  int saved_errno;
+  unsigned int wait_retry = 1;
+  pid_t pid IF_LINT (= -1);
+  struct cs_status cs;
+
+  if (pipe (pipefds) < 0)
+    return -1;
+
+  while (tries--)
+    {
+      /* This is so the child process won't delete our temp files
+	 if it receives a signal before exec-ing.  */
+      cs = cs_enter ();
+      saved_temphead = temphead;
+      temphead = NULL;
+
+      pid = fork ();
+      saved_errno = errno;
+      if (pid)
+	temphead = saved_temphead;
+
+      cs_leave (cs);
+      errno = saved_errno;
+
+      if (0 <= pid || errno != EAGAIN)
+	break;
+      else
+	{
+	  sleep (wait_retry);
+	  wait_retry *= 2;
+	  reap_some ();
+	}
+    }
+
+  if (pid < 0)
+    {
+      close (pipefds[0]);
+      close (pipefds[1]);
+    }
+  else if (pid == 0)
+    {
+      close (STDIN_FILENO);
+      close (STDOUT_FILENO);
+    }
+  else
+    ++nprocs;
+
+  return pid;
+
+#else  /* ! HAVE_WORKING_FORK */
+  return -1;
+#endif
+}
+
+/* Create a temporary file and start a compression program to filter output
+   to that file.  Set *PFP to the file handle and if *PPID is non-NULL,
+   set it to the PID of the newly-created process.  */
+
+static char *
+create_temp (FILE **pfp, pid_t *ppid)
+{
+  int tempfd;
+  struct tempnode *node = create_temp_file (&tempfd);
+  char *name = node->name;
+
+  if (compress_program)
+    {
+      int pipefds[2];
+
+      node->pid = pipe_fork (pipefds, MAX_FORK_TRIES_COMPRESS);
+      if (0 < node->pid)
+	{
+	  close (tempfd);
+	  close (pipefds[0]);
+	  tempfd = pipefds[1];
+
+	  register_proc (node->pid);
+	}
+      else if (node->pid == 0)
+	{
+	  close (pipefds[1]);
+	  dup2_or_die (tempfd, STDOUT_FILENO);
+	  close (tempfd);
+	  dup2_or_die (pipefds[0], STDIN_FILENO);
+	  close (pipefds[0]);
+
+	  if (execlp (compress_program, compress_program, (char *) NULL) < 0)
+	    error (SORT_FAILURE, errno, _("couldn't execute %s"),
+		   compress_program);
+	}
+      else
+	node->pid = 0;
+    }
+
+  *pfp = fdopen (tempfd, "w");
+  if (! *pfp)
+    die (_("couldn't create temporary file"), name);
+
+  if (ppid)
+    *ppid = node->pid;
+
+  return name;
+}
+
+/* Open a compressed temp file and start a decompression process through
+   which to filter the input.  PID must be the valid processes ID of the
+   process used to compress the file.  */
+
+static FILE *
+open_temp (const char *name, pid_t pid)
+{
+  int tempfd, pipefds[2];
+  pid_t child_pid;
+  FILE *fp;
+
+  wait_proc (pid);
+
+  tempfd = open (name, O_RDONLY);
+  if (tempfd < 0)
+    die (_("couldn't open temporary file"), name);
+
+  child_pid = pipe_fork (pipefds, MAX_FORK_TRIES_DECOMPRESS);
+  if (0 < child_pid)
+    {
+      close (tempfd);
+      close (pipefds[1]);
+    }
+  else if (child_pid == 0)
+    {
+      close (pipefds[0]);
+      dup2_or_die (tempfd, STDIN_FILENO);
+      close (tempfd);
+      dup2_or_die (pipefds[1], STDOUT_FILENO);
+      close (pipefds[1]);
+
+      if (execlp (compress_program, compress_program, "-d", (char *) NULL) < 0)
+	error (SORT_FAILURE, errno, _("couldn't execute %s -d"),
+	       compress_program);
+    }
+  else
+    error (SORT_FAILURE, errno, _("couldn't create process for %s -d"),
+	   compress_program);
+
+  fp = fdopen (pipefds[0], "r");
+  if (! fp)
+    die (_("couldn't create temporary file"), name);
+
+  return fp;
 }
 
 static void
@@ -595,31 +943,42 @@ static void
 add_temp_dir (char const *dir)
 {
   if (temp_dir_count == temp_dir_alloc)
-    temp_dirs = x2nrealloc (temp_dirs, &temp_dir_alloc, sizeof *temp_dirs);
+    temp_dirs = X2NREALLOC (temp_dirs, &temp_dir_alloc);
 
   temp_dirs[temp_dir_count++] = dir;
 }
 
-/* Search through the list of temporary files for NAME;
-   remove it if it is found on the list. */
+/* Remove NAME from the list of temporary files.  */
 
 static void
 zaptemp (const char *name)
 {
   struct tempnode *volatile *pnode;
   struct tempnode *node;
+  struct tempnode *next;
+  int unlink_status;
+  int unlink_errno = 0;
+  struct cs_status cs;
 
-  for (pnode = &temphead; (node = *pnode); pnode = &node->next)
-    if (node->name == name)
-      {
-	unlink (name);
-	*pnode = node->next;
-	free (node);
-	break;
-      }
+  for (pnode = &temphead; (node = *pnode)->name != name; pnode = &node->next)
+    continue;
+
+  /* Unlink the temporary file in a critical section to avoid races.  */
+  next = node->next;
+  cs = cs_enter ();
+  unlink_status = unlink (name);
+  unlink_errno = errno;
+  *pnode = next;
+  cs_leave (cs);
+
+  if (unlink_status != 0)
+    error (0, unlink_errno, _("warning: cannot remove: %s"), name);
+  if (! next)
+    temptail = pnode;
+  free (node);
 }
 
-#if HAVE_LANGINFO_CODESET
+#if HAVE_NL_LANGINFO
 
 static int
 struct_month_cmp (const void *m1, const void *m2)
@@ -634,16 +993,16 @@ struct_month_cmp (const void *m1, const void *m2)
 /* Initialize the character class tables. */
 
 static void
-inittables_uni (void)
+inittables (void)
 {
-  int i;
+  size_t i;
 
   for (i = 0; i < UCHAR_LIM; ++i)
     {
-      blanks[i] = !!ISBLANK (i);
-      nonprinting[i] = !ISPRINT (i);
-      nondictionary[i] = !ISALNUM (i) && !ISBLANK (i);
-      fold_toupper[i] = (ISLOWER (i) ? toupper (i) : i);
+      blanks[i] = !! isblank (i);
+      nonprinting[i] = ! isprint (i);
+      nondictionary[i] = ! isalnum (i) && ! isblank (i);
+      fold_toupper[i] = toupper (i);
     }
 
 #if HAVE_NL_LANGINFO
@@ -671,64 +1030,6 @@ inittables_uni (void)
     }
 #endif
 }
-
-#if HAVE_MBRTOWC
-static void
-inittables_mb (void)
-{
-  int i, j, k, l;
-  char *name, *s;
-  size_t s_len, mblength;
-  char mbc[MB_LEN_MAX];
-  wchar_t wc, pwc;
-  mbstate_t state_mb, state_wc;
-
-  for (i = 0; i < MONTHS_PER_YEAR; i++)
-    {
-      s = (char *) nl_langinfo (ABMON_1 + i);
-      s_len = strlen (s);
-      monthtab[i].name = name = (char *) xmalloc (s_len + 1);
-      monthtab[i].val = i + 1;
-
-      memset (&state_mb, '\0', sizeof (mbstate_t));
-      memset (&state_wc, '\0', sizeof (mbstate_t));
-
-      for (j = 0; j < s_len;)
-	{
-	  if (!ismbblank (s + j, s_len - j, &mblength))
-	    break;
-	  j += mblength;
-	}
-
-      for (k = 0; j < s_len;)
-	{
-	  mblength = mbrtowc (&wc, (s + j), (s_len - j), &state_mb);
-	  assert (mblength != (size_t)-1 && mblength != (size_t)-2);
-	  if (mblength == 0)
-	    break;
-
-	  pwc = towupper (wc);
-	  if (pwc == wc)
-	    {
-	      memcpy (mbc, s + j, mblength);
-	      j += mblength;
-	    }
-	  else
-	    {
-	      j += mblength;
-	      mblength = wcrtomb (mbc, pwc, &state_wc);
-	      assert (mblength != (size_t)0 && mblength != (size_t)-1);
-	    }
-
-	  for (l = 0; l < mblength; l++)
-	    name[k++] = mbc[l];
-	}
-      name[k] = '\0';
-    }
-  qsort ((void *) monthtab, MONTHS_PER_YEAR,
-      sizeof (struct month), struct_month_cmp);
-}
-#endif
 
 /* Specify the amount of main memory to use when sorting.  */
 static void
@@ -833,15 +1134,15 @@ default_sort_size (void)
 }
 
 /* Return the sort buffer size to use with the input files identified
-   by FPS and FILES, which are alternate paths to the same files.
+   by FPS and FILES, which are alternate names of the same files.
    NFILES gives the number of input files; NFPS may be less.  Assume
    that each input line requires LINE_BYTES extra bytes' worth of line
-   information.  Do not exceed a bound on the size: if the bound is
-   not specified by the user, use a default.  */
+   information.  Do not exceed the size bound specified by the user
+   (or a default size bound, if the user does not specify one).  */
 
 static size_t
-sort_buffer_size (FILE *const *fps, int nfps,
-		  char *const *files, int nfiles,
+sort_buffer_size (FILE *const *fps, size_t nfps,
+		  char *const *files, size_t nfiles,
 		  size_t line_bytes)
 {
   /* A bound on the input size.  If zero, the bound hasn't been
@@ -855,7 +1156,7 @@ sort_buffer_size (FILE *const *fps, int nfps,
      This extra room might be needed when preparing to read EOF.  */
   size_t size = worst_case_per_input_byte + 1;
 
-  int i;
+  size_t i;
 
   for (i = 0; i < nfiles; i++)
     {
@@ -940,20 +1241,20 @@ buffer_linelim (struct buffer const *buf)
    by KEY in LINE. */
 
 static char *
-begfield_uni (const struct line *line, const struct keyfield *key)
+begfield (const struct line *line, const struct keyfield *key)
 {
-  register char *ptr = line->text, *lim = ptr + line->length - 1;
-  register size_t sword = key->sword;
-  register size_t schar = key->schar;
-  register size_t remaining_bytes;
+  char *ptr = line->text, *lim = ptr + line->length - 1;
+  size_t sword = key->sword;
+  size_t schar = key->schar;
+  size_t remaining_bytes;
 
   /* The leading field separator itself is included in a field when -t
      is absent.  */
 
-  if (!tab_default)
+  if (tab != TAB_DEFAULT)
     while (ptr < lim && sword--)
       {
-	while (ptr < lim && *ptr != tab[0])
+	while (ptr < lim && *ptr != tab)
 	  ++ptr;
 	if (ptr < lim)
 	  ++ptr;
@@ -981,74 +1282,15 @@ begfield_uni (const struct line *line, const struct keyfield *key)
   return ptr;
 }
 
-#if HAVE_MBRTOWC
-static char *
-begfield_mb (const struct line *line, const struct keyfield *key)
-{
-  int i;
-  char *ptr = line->text, *lim = ptr + line->length - 1;
-  size_t sword = key->sword;
-  size_t schar = key->schar;
-  size_t mblength;
-  mbstate_t state;
-
-  memset (&state, '\0', sizeof(mbstate_t));
-
-  if (!tab_default)
-    while (ptr < lim && sword--)
-      {
-	while (ptr < lim && memcmp (ptr, tab, tab_length) != 0)
-	  {
-	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-	    ptr += mblength;
-	  }
-	if (ptr < lim)
-	  {
-	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-	    ptr += mblength;
-	  }
-      }
-  else
-    while (ptr < lim && sword--)
-      {
-	while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
-	  ptr += mblength;
-	if (ptr < lim)
-	  {
-	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-	    ptr += mblength;
-	  }
-	while (ptr < lim && !ismbblank (ptr, lim - ptr, &mblength))
-	  ptr += mblength;
-      }
-
-  if (key->skipsblanks)
-    while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
-      ptr += mblength;
-
-  for (i = 0; i < schar; i++)
-    {
-      GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-
-      if (ptr + mblength > lim)
-	break;
-      else
-	ptr += mblength;
-    }
-
-  return ptr;
-}
-#endif
-
 /* Return the limit of (a pointer to the first character after) the field
    in LINE specified by KEY. */
 
 static char *
-limfield_uni (const struct line *line, const struct keyfield *key)
+limfield (const struct line *line, const struct keyfield *key)
 {
-  register char *ptr = line->text, *lim = ptr + line->length - 1;
-  register size_t eword = key->eword, echar = key->echar;
-  register size_t remaining_bytes;
+  char *ptr = line->text, *lim = ptr + line->length - 1;
+  size_t eword = key->eword, echar = key->echar;
+  size_t remaining_bytes;
 
   /* Move PTR past EWORD fields or to one past the last byte on LINE,
      whichever comes first.  If there are more than EWORD fields, leave
@@ -1057,10 +1299,10 @@ limfield_uni (const struct line *line, const struct keyfield *key)
      `beginning' is the first character following the delimiting TAB.
      Otherwise, leave PTR pointing at the first `blank' character after
      the preceding field.  */
-  if (!tab_default)
+  if (tab != TAB_DEFAULT)
     while (ptr < lim && eword--)
       {
-	while (ptr < lim && *ptr != tab[0])
+	while (ptr < lim && *ptr != tab)
 	  ++ptr;
 	if (ptr < lim && (eword | echar))
 	  ++ptr;
@@ -1106,10 +1348,10 @@ limfield_uni (const struct line *line, const struct keyfield *key)
      */
 
   /* Make LIM point to the end of (one byte past) the current field.  */
-  if (!tab_default)
+  if (tab != TAB_DEFAULT)
     {
       char *newlim;
-      newlim = memchr (ptr, tab[0], lim - ptr);
+      newlim = memchr (ptr, tab, lim - ptr);
       if (newlim)
 	lim = newlim;
     }
@@ -1142,107 +1384,6 @@ limfield_uni (const struct line *line, const struct keyfield *key)
   return ptr;
 }
 
-#if HAVE_MBRTOWC
-static char *
-limfield_mb (const struct line *line, const struct keyfield *key)
-{
-  char *ptr = line->text, *lim = ptr + line->length - 1;
-  size_t eword = key->eword, echar = key->echar;
-  int i;
-  size_t mblength;
-  mbstate_t state;
-
-  memset (&state, '\0', sizeof(mbstate_t));
-
-  if (!tab_default)
-    while (ptr < lim && eword--)
-      {
-	while (ptr < lim && memcmp (ptr, tab, tab_length) != 0)
-	  {
-	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-	    ptr += mblength;
-	  }
-	if (ptr < lim && (eword | echar))
-	  {
-	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-	    ptr += mblength;
-	  }
-      }
-  else
-    while (ptr < lim && eword--)
-      {
-	while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
-	  ptr += mblength;
-	if (ptr < lim)
-	  {
-	    GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-	    ptr += mblength;
-	  }
-	while (ptr < lim && !ismbblank (ptr, lim - ptr, &mblength))
-	  ptr += mblength;
-      }
-
-
-# ifdef POSIX_UNSPECIFIED
-  /* Make LIM point to the end of (one byte past) the current field.  */
-  if (!tab_default)
-    {
-      char *newlim, *p;
-
-      newlim = NULL;
-      for (p = ptr; p < lim;)
- 	{
-	  if (memcmp (p, tab, tab_length) == 0)
-	    {
-	      newlim = p;
-	      break;
-	    }
-
-	  GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-	  p += mblength;
-	}
-    }
-  else
-    {
-      char *newlim;
-      newlim = ptr;
-
-      while (newlim < lim && ismbblank (newlim, lim - newlim, &mblength))
-	newlim += mblength;
-      if (ptr < lim)
-	{
-	  GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-	  ptr += mblength;
-	}
-      while (newlim < lim && !ismbblank (newlim, lim - newlim, &mblength))
-	newlim += mblength;
-      lim = newlim;
-    }
-# endif
-
-  /* If we're skipping leading blanks, don't start counting characters
-   *      until after skipping past any leading blanks.  */
-  if (key->skipeblanks)
-    while (ptr < lim && ismbblank (ptr, lim - ptr, &mblength))
-      ptr += mblength;
-
-  memset (&state, '\0', sizeof(mbstate_t));
-
-  /* Advance PTR by ECHAR (if possible), but no further than LIM.  */
-  for (i = 0; i < echar; i++)
-    {
-      GET_BYTELEN_OF_CHAR (lim, ptr, mblength, state);
-
-      if (ptr + mblength > lim)
-	break;
-      else
-	ptr += mblength;
-    }
-
-  return ptr;
-}
-#endif
-
 /* Fill BUF reading from FP, moving buf->left bytes from the end
    of buf->buf to the beginning first.  If EOF is reached and the
    file wasn't terminated by a newline, supply one.  Set up BUF's line
@@ -1250,7 +1391,7 @@ limfield_mb (const struct line *line, const struct keyfield *key)
    Return true if some input was read.  */
 
 static bool
-fillbuf (struct buffer *buf, register FILE *fp, char const *file)
+fillbuf (struct buffer *buf, FILE *fp, char const *file)
 {
   struct keyfield const *key = keylist;
   char eol = eolchar;
@@ -1315,7 +1456,7 @@ fillbuf (struct buffer *buf, register FILE *fp, char const *file)
 	      if (key)
 		{
 		  /* Precompute the position of the first key for
-                     efficiency. */
+		     efficiency.  */
 		  line->keylim = (key->eword == SIZE_MAX
 				  ? p
 				  : limfield (line, key));
@@ -1325,22 +1466,8 @@ fillbuf (struct buffer *buf, register FILE *fp, char const *file)
 		  else
 		    {
 		      if (key->skipsblanks)
-#if HAVE_MBRTOWC
-			{
-			  if (MB_CUR_MAX > 1)
-			    {
-			      size_t mblength;
-
-			      while (ismbblank (line_start, ptr - line_start, &mblength))
-				line_start += mblength;
-			    }
-			  else
-#endif
-			    {
-			      while (blanks[to_uchar (*line_start)])
-				line_start++;
-			    }
-			}
+			while (blanks[to_uchar (*line_start)])
+			  line_start++;
 		      line->keybeg = line_start;
 		    }
 		}
@@ -1364,73 +1491,8 @@ fillbuf (struct buffer *buf, register FILE *fp, char const *file)
 
       /* The current input line is too long to fit in the buffer.
 	 Double the buffer size and try again.  */
-      buf->buf = x2nrealloc (buf->buf, &buf->alloc, sizeof *(buf->buf));
+      buf->buf = X2REALLOC (buf->buf, &buf->alloc);
     }
-}
-
-/* Compare strings A and B containing decimal fractions < 1.  Each string
-   should begin with a decimal point followed immediately by the digits
-   of the fraction.  Strings not of this form are considered to be zero. */
-
-/* The goal here, is to take two numbers a and b... compare these
-   in parallel.  Instead of converting each, and then comparing the
-   outcome.  Most likely stopping the comparison before the conversion
-   is complete.  The algorithm used, in the old sort:
-
-   Algorithm: fraccompare
-   Action   : compare two decimal fractions
-   accepts  : char *a, char *b
-   returns  : -1 if a<b, 0 if a=b, 1 if a>b.
-   implement:
-
-   if *a == decimal_point AND *b == decimal_point
-     find first character different in a and b.
-     if both are digits, return the difference *a - *b.
-     if *a is a digit
-       skip past zeros
-       if digit return 1, else 0
-     if *b is a digit
-       skip past zeros
-       if digit return -1, else 0
-   if *a is a decimal_point
-     skip past decimal_point and zeros
-     if digit return 1, else 0
-   if *b is a decimal_point
-     skip past decimal_point and zeros
-     if digit return -1, else 0
-   return 0 */
-
-static int
-fraccompare (register const char *a, register const char *b)
-{
-  if (*a == decimal_point && *b == decimal_point)
-    {
-      while (*++a == *++b)
-	if (! ISDIGIT (*a))
-	  return 0;
-      if (ISDIGIT (*a) && ISDIGIT (*b))
-	return *a - *b;
-      if (ISDIGIT (*a))
-	goto a_trailing_nonzero;
-      if (ISDIGIT (*b))
-	goto b_trailing_nonzero;
-      return 0;
-    }
-  else if (*a++ == decimal_point)
-    {
-    a_trailing_nonzero:
-      while (*a == NUMERIC_ZERO)
-	a++;
-      return ISDIGIT (*a);
-    }
-  else if (*b++ == decimal_point)
-    {
-    b_trailing_nonzero:
-      while (*b == NUMERIC_ZERO)
-	b++;
-      return - ISDIGIT (*b);
-    }
-  return 0;
 }
 
 /* Compare strings A and B as numbers without explicitly converting them to
@@ -1438,164 +1500,14 @@ fraccompare (register const char *a, register const char *b)
    hideously fast. */
 
 static int
-numcompare (register const char *a, register const char *b)
+numcompare (const char *a, const char *b)
 {
-  char tmpa;
-  char tmpb;
-  int tmp;
-  size_t log_a;
-  size_t log_b;
+  while (blanks[to_uchar (*a)])
+    a++;
+  while (blanks[to_uchar (*b)])
+    b++;
 
-#if HAVE_MBRTOWC
-  if (MB_CUR_MAX > 1)
-    {
-      size_t mblength;
-      size_t alen = strnlen (a, MB_LEN_MAX);
-      size_t blen = strnlen (b, MB_LEN_MAX);
-
-      while (ismbblank (a, alen, &mblength))
-	a += mblength, alen -= mblength;
-      while (ismbblank (b, blen, &mblength))
-	b += mblength, blen -= mblength;
-
-      tmpa = *a;
-      tmpb = *b;
-    }
-  else
-#endif
-    {
-      tmpa = *a;
-      tmpb = *b;
-
-      while (blanks[to_uchar (tmpa)])
-	tmpa = *++a;
-      while (blanks[to_uchar (tmpb)])
-	tmpb = *++b;
-    }
-
-  if (tmpa == NEGATION_SIGN)
-    {
-      do
-	tmpa = *++a;
-      while (tmpa == NUMERIC_ZERO || IS_THOUSANDS_SEP (tmpa));
-      if (tmpb != NEGATION_SIGN)
-	{
-	  if (tmpa == decimal_point)
-	    do
-	      tmpa = *++a;
-	    while (tmpa == NUMERIC_ZERO);
-	  if (ISDIGIT (tmpa))
-	    return -1;
-	  while (tmpb == NUMERIC_ZERO || IS_THOUSANDS_SEP (tmpb))
-	    tmpb = *++b;
-	  if (tmpb == decimal_point)
-	    do
-	      tmpb = *++b;
-	    while (tmpb == NUMERIC_ZERO);
-	  if (ISDIGIT (tmpb))
-	    return -1;
-	  return 0;
-	}
-      do
-	tmpb = *++b;
-      while (tmpb == NUMERIC_ZERO || IS_THOUSANDS_SEP (tmpb));
-
-      while (tmpa == tmpb && ISDIGIT (tmpa))
-	{
-	  do
-	    tmpa = *++a;
-	  while (IS_THOUSANDS_SEP (tmpa));
-	  do
-	    tmpb = *++b;
-	  while (IS_THOUSANDS_SEP (tmpb));
-	}
-
-      if ((tmpa == decimal_point && !ISDIGIT (tmpb))
-	  || (tmpb == decimal_point && !ISDIGIT (tmpa)))
-	return -fraccompare (a, b);
-
-      tmp = tmpb - tmpa;
-
-      for (log_a = 0; ISDIGIT (tmpa); ++log_a)
-	do
-	  tmpa = *++a;
-	while (IS_THOUSANDS_SEP (tmpa));
-
-      for (log_b = 0; ISDIGIT (tmpb); ++log_b)
-	do
-	  tmpb = *++b;
-	while (IS_THOUSANDS_SEP (tmpb));
-
-      if (log_a != log_b)
-	return log_a < log_b ? 1 : -1;
-
-      if (!log_a)
-	return 0;
-
-      return tmp;
-    }
-  else if (tmpb == NEGATION_SIGN)
-    {
-      do
-	tmpb = *++b;
-      while (tmpb == NUMERIC_ZERO || IS_THOUSANDS_SEP (tmpb));
-      if (tmpb == decimal_point)
-	do
-	  tmpb = *++b;
-	while (tmpb == NUMERIC_ZERO);
-      if (ISDIGIT (tmpb))
-	return 1;
-      while (tmpa == NUMERIC_ZERO || IS_THOUSANDS_SEP (tmpa))
-	tmpa = *++a;
-      if (tmpa == decimal_point)
-	do
-	  tmpa = *++a;
-	while (tmpa == NUMERIC_ZERO);
-      if (ISDIGIT (tmpa))
-	return 1;
-      return 0;
-    }
-  else
-    {
-      while (tmpa == NUMERIC_ZERO || IS_THOUSANDS_SEP (tmpa))
-	tmpa = *++a;
-      while (tmpb == NUMERIC_ZERO || IS_THOUSANDS_SEP (tmpb))
-	tmpb = *++b;
-
-      while (tmpa == tmpb && ISDIGIT (tmpa))
-	{
-	  do
-	    tmpa = *++a;
-	  while (IS_THOUSANDS_SEP (tmpa));
-	  do
-	    tmpb = *++b;
-	  while (IS_THOUSANDS_SEP (tmpb));
-	}
-
-      if ((tmpa == decimal_point && !ISDIGIT (tmpb))
-	  || (tmpb == decimal_point && !ISDIGIT (tmpa)))
-	return fraccompare (a, b);
-
-      tmp = tmpa - tmpb;
-
-      for (log_a = 0; ISDIGIT (tmpa); ++log_a)
-	do
-	  tmpa = *++a;
-	while (IS_THOUSANDS_SEP (tmpa));
-
-      for (log_b = 0; ISDIGIT (tmpb); ++log_b)
-	do
-	  tmpb = *++b;
-	while (IS_THOUSANDS_SEP (tmpb));
-
-      if (log_a != log_b)
-	return log_a < log_b ? -1 : 1;
-
-      if (!log_a)
-	return 0;
-
-      return tmp;
-    }
+  return strnumcmp (a, b, decimal_point, thousands_sep);
 }
 
 static int
@@ -1605,60 +1517,15 @@ general_numcompare (const char *sa, const char *sb)
   /* FIXME: maybe add option to try expensive FP conversion
      only if A and B can't be compared more cheaply/accurately.  */
 
-  char *bufa, *ea;
-  char *bufb, *eb;
-  double a;
-  double b;
-
-  char *p;
-  struct lconv *lconvp = localeconv ();
-  size_t thousands_sep_len = strlen (lconvp->thousands_sep);
-
-  bufa = (char *) xmalloc (strlen (sa) + 1);
-  bufb = (char *) xmalloc (strlen (sb) + 1);
-  strcpy (bufa, sa);
-  strcpy (bufb, sb);
-
-  if (force_general_numcompare)
-    {
-      while (1)
-	{
-	  a = strtod (bufa, &ea);
-	  if (memcmp (ea, lconvp->thousands_sep, thousands_sep_len) == 0)
-	    {
-	      for (p = ea; *(p + thousands_sep_len) != '\0'; p++)
-		*p = *(p + thousands_sep_len);
-	      *p = '\0';
-	      continue;
-	    }
-	  break;
-	}
-
-      while (1)
-	{
-	  b = strtod (bufb, &eb);
-	  if (memcmp (eb, lconvp->thousands_sep, thousands_sep_len) == 0)
-	    {
-	      for (p = eb; *(p + thousands_sep_len) != '\0'; p++)
-		*p = *(p + thousands_sep_len);
-	      *p = '\0';
-	      continue;
-	    }
-	  break;
-	}
-    }
-  else
-    {
-      a = strtod (bufa, &ea);
-      b = strtod (bufb, &eb);
-    }
+  char *ea;
+  char *eb;
+  double a = strtod (sa, &ea);
+  double b = strtod (sb, &eb);
 
   /* Put conversion errors at the start of the collating sequence.  */
-  free (bufa);
-  free (bufb);
-  if (bufa == ea)
-    return bufb == eb ? 0 : -1;
-  if (bufb == eb)
+  if (sa == ea)
+    return sb == eb ? 0 : -1;
+  if (sb == eb)
     return 1;
 
   /* Sort numbers in the usual way, where -0 == +0.  Put NaNs after
@@ -1672,137 +1539,196 @@ general_numcompare (const char *sa, const char *sb)
 	  : memcmp ((char *) &a, (char *) &b, sizeof a));
 }
 
-/* Return an integer in 1..12 of the month name S with length LEN.
+/* Return an integer in 1..12 of the month name MONTH with length LEN.
    Return 0 if the name in S is not recognized.  */
 
 static int
-getmonth_uni (const char *s, size_t len)
+getmonth (char const *month, size_t len)
 {
-  char *month;
-  register size_t i;
-  register int lo = 0, hi = MONTHS_PER_YEAR, result;
+  size_t lo = 0;
+  size_t hi = MONTHS_PER_YEAR;
+  char const *monthlim = month + len;
 
-  while (len > 0 && blanks[to_uchar (*s)])
+  for (;;)
     {
-      ++s;
-      --len;
+      if (month == monthlim)
+	return 0;
+      if (!blanks[to_uchar (*month)])
+	break;
+      ++month;
     }
-
-  if (len == 0)
-    return 0;
-
-  month = alloca (len + 1);
-  for (i = 0; i < len; ++i)
-    month[i] = fold_toupper[to_uchar (s[i])];
-  month[len] = '\0';
 
   do
     {
-      int ix = (lo + hi) / 2;
+      size_t ix = (lo + hi) / 2;
+      char const *m = month;
+      char const *n = monthtab[ix].name;
 
-      if (strncmp (month, monthtab[ix].name, strlen (monthtab[ix].name)) < 0)
-	hi = ix;
-      else
-	lo = ix;
+      for (;; m++, n++)
+	{
+	  if (!*n)
+	    return monthtab[ix].val;
+	  if (m == monthlim || fold_toupper[to_uchar (*m)] < to_uchar (*n))
+	    {
+	      hi = ix;
+	      break;
+	    }
+	  else if (fold_toupper[to_uchar (*m)] > to_uchar (*n))
+	    {
+	      lo = ix + 1;
+	      break;
+	    }
+	}
     }
-  while (hi - lo > 1);
+  while (lo < hi);
 
-  result = (!strncmp (month, monthtab[lo].name, strlen (monthtab[lo].name))
-	    ? monthtab[lo].val : 0);
-
-  return result;
+  return 0;
 }
 
-#if HAVE_MBRTOWC
+/* A source of random data.  */
+static struct randread_source *randread_source;
+
+/* Return the Ith randomly-generated state.  The caller must invoke
+   random_state (H) for all H less than I before invoking random_state
+   (I).  */
+
+static struct md5_ctx
+random_state (size_t i)
+{
+  /* An array of states resulting from the random data, and counts of
+     its used and allocated members.  */
+  static struct md5_ctx *state;
+  static size_t used;
+  static size_t allocated;
+
+  struct md5_ctx *s = &state[i];
+
+  if (used <= i)
+    {
+      unsigned char buf[MD5_DIGEST_SIZE];
+
+      used++;
+
+      if (allocated <= i)
+	{
+	  state = X2NREALLOC (state, &allocated);
+	  s = &state[i];
+	}
+
+      randread (randread_source, buf, sizeof buf);
+      md5_init_ctx (s);
+      md5_process_bytes (buf, sizeof buf, s);
+    }
+
+  return *s;
+}
+
+/* Compare the hashes of TEXTA with length LENGTHA to those of TEXTB
+   with length LENGTHB.  Return negative if less, zero if equal,
+   positive if greater.  */
+
 static int
-getmonth_mb (const char *s, size_t len)
+cmp_hashes (char const *texta, size_t lena,
+	    char const *textb, size_t lenb)
 {
-  char *month;
-  register size_t i;
-  register int lo = 0, hi = MONTHS_PER_YEAR, result;
-  char *tmp;
-  size_t wclength, mblength;
-  const char **pp;
-  const wchar_t **wpp;
-  wchar_t *month_wcs;
-  mbstate_t state;
-
-  while (len > 0 && ismbblank (s, len, &mblength))
+  /* Try random hashes until a pair of hashes disagree.  But if the
+     first pair of random hashes agree, check whether the keys are
+     identical and if so report no difference.  */
+  int diff;
+  size_t i;
+  for (i = 0; ; i++)
     {
-      s += mblength;
-      len -= mblength;
+      uint32_t dig[2][MD5_DIGEST_SIZE / sizeof (uint32_t)];
+      struct md5_ctx s[2];
+      s[0] = s[1] = random_state (i);
+      md5_process_bytes (texta, lena, &s[0]);  md5_finish_ctx (&s[0], dig[0]);
+      md5_process_bytes (textb, lenb, &s[1]);  md5_finish_ctx (&s[1], dig[1]);
+      diff = memcmp (dig[0], dig[1], sizeof dig[0]);
+      if (diff != 0)
+	break;
+      if (i == 0 && lena == lenb && memcmp (texta, textb, lena) == 0)
+	break;
     }
 
-  if (len == 0)
-    return 0;
-
-  month = (char *) alloca (len + 1);
-
-  tmp = (char *) alloca (len + 1);
-  memcpy (tmp, s, len);
-  tmp[len] = '\0';
-  pp = (const char **)&tmp;
-  month_wcs = (wchar_t *) alloca ((len + 1) * sizeof (wchar_t));
-  memset (&state, '\0', sizeof(mbstate_t));
-
-  wclength = mbsrtowcs (month_wcs, pp, len + 1, &state);
-  assert (wclength != (size_t)-1 && *pp == NULL);
-
-  for (i = 0; i < wclength; i++)
-      month_wcs[i] = towupper(month_wcs[i]);
-  month_wcs[i] = L'\0';
-
-  wpp = (const wchar_t **)&month_wcs;
-
-  mblength = wcsrtombs (month, wpp, len + 1, &state);
-  assert (mblength != (-1) && *wpp == NULL);
-
-  do
-    {
-      int ix = (lo + hi) / 2;
-
-      if (strncmp (month, monthtab[ix].name, strlen (monthtab[ix].name)) < 0)
-	hi = ix;
-      else
-	lo = ix;
-    }
-  while (hi - lo > 1);
-
-  result = (!strncmp (month, monthtab[lo].name, strlen (monthtab[lo].name))
-      ? monthtab[lo].val : 0);
-
-  return result;
+  return diff;
 }
-#endif
+
+/* Compare the keys TEXTA (of length LENA) and TEXTB (of length LENB)
+   using one or more random hash functions.  */
+
+static int
+compare_random (char *restrict texta, size_t lena,
+		char *restrict textb, size_t lenb)
+{
+  int diff;
+
+  if (! hard_LC_COLLATE)
+    diff = cmp_hashes (texta, lena, textb, lenb);
+  else
+    {
+      /* Transform the text into the basis of comparison, so that byte
+	 strings that would otherwise considered to be equal are
+	 considered equal here even if their bytes differ.  */
+
+      char *buf = NULL;
+      char stackbuf[4000];
+      size_t tlena = xmemxfrm (stackbuf, sizeof stackbuf, texta, lena);
+      bool a_fits = tlena <= sizeof stackbuf;
+      size_t tlenb = xmemxfrm ((a_fits ? stackbuf + tlena : NULL),
+			       (a_fits ? sizeof stackbuf - tlena : 0),
+			       textb, lenb);
+
+      if (a_fits && tlena + tlenb <= sizeof stackbuf)
+	buf = stackbuf;
+      else
+	{
+	  /* Adding 1 to the buffer size lets xmemxfrm run a bit
+	     faster by avoiding the need for an extra buffer copy.  */
+	  buf = xmalloc (tlena + tlenb + 1);
+	  xmemxfrm (buf, tlena + 1, texta, lena);
+	  xmemxfrm (buf + tlena, tlenb + 1, textb, lenb);
+	}
+
+      diff = cmp_hashes (buf, tlena, buf + tlena, tlenb);
+
+      if (buf != stackbuf)
+	free (buf);
+    }
+
+  return diff;
+}
 
 /* Compare two lines A and B trying every key in sequence until there
    are no more keys or a difference is found. */
 
 static int
-keycompare_uni (const struct line *a, const struct line *b)
+keycompare (const struct line *a, const struct line *b)
 {
   struct keyfield const *key = keylist;
 
   /* For the first iteration only, the key positions have been
      precomputed for us. */
-  register char *texta = a->keybeg;
-  register char *textb = b->keybeg;
-  register char *lima = a->keylim;
-  register char *limb = b->keylim;
+  char *texta = a->keybeg;
+  char *textb = b->keybeg;
+  char *lima = a->keylim;
+  char *limb = b->keylim;
 
   int diff;
 
   for (;;)
     {
-      register char const *translate = key->translate;
-      register bool const *ignore = key->ignore;
+      char const *translate = key->translate;
+      bool const *ignore = key->ignore;
 
       /* Find the lengths. */
       size_t lena = lima <= texta ? 0 : lima - texta;
       size_t lenb = limb <= textb ? 0 : limb - textb;
 
       /* Actually compare the fields. */
-      if (key->numeric | key->general_numeric)
+
+      if (key->random)
+	diff = compare_random (texta, lena, textb, lenb);
+      else if (key->numeric | key->general_numeric)
 	{
 	  char savea = *lima, saveb = *limb;
 
@@ -1814,12 +1740,14 @@ keycompare_uni (const struct line *a, const struct line *b)
       else if (key->month)
 	diff = getmonth (texta, lena) - getmonth (textb, lenb);
       /* Sorting like this may become slow, so in a simple locale the user
-         can select a faster sort that is similar to ascii sort  */
-      else if (HAVE_SETLOCALE && hard_LC_COLLATE)
+	 can select a faster sort that is similar to ascii sort.  */
+      else if (hard_LC_COLLATE)
 	{
 	  if (ignore || translate)
 	    {
-	      char *copy_a = alloca (lena + 1 + lenb + 1);
+	      char buf[4000];
+	      size_t size = lena + 1 + lenb + 1;
+	      char *copy_a = (size <= sizeof buf ? buf : xmalloc (size));
 	      char *copy_b = copy_a + lena + 1;
 	      size_t new_len_a, new_len_b, i;
 
@@ -1845,6 +1773,9 @@ keycompare_uni (const struct line *a, const struct line *b)
 		}
 
 	      diff = xmemcoll (copy_a, new_len_a, copy_b, new_len_b);
+
+	      if (sizeof buf < size)
+		free (copy_a);
 	    }
 	  else if (lena == 0)
 	    diff = - NONZERO (lenb);
@@ -1944,182 +1875,11 @@ keycompare_uni (const struct line *a, const struct line *b)
   return key->reverse ? -diff : diff;
 }
 
-#if HAVE_MBRTOWC
-static int
-keycompare_mb (const struct line *a, const struct line *b)
-{
-  struct keyfield *key = keylist;
-
-  /* For the first iteration only, the key positions have been
-     precomputed for us. */
-  char *texta = a->keybeg;
-  char *textb = b->keybeg;
-  char *lima = a->keylim;
-  char *limb = b->keylim;
-
-  size_t mblength_a, mblength_b;
-  wchar_t wc_a, wc_b;
-  mbstate_t state_a, state_b;
-
-  int diff;
-
-  memset (&state_a, '\0', sizeof(mbstate_t));
-  memset (&state_b, '\0', sizeof(mbstate_t));
-
-  for (;;)
-    {
-      unsigned char *translate = (unsigned char *) key->translate;
-      bool const *ignore = key->ignore;
-
-      /* Find the lengths. */
-      size_t lena = lima <= texta ? 0 : lima - texta;
-      size_t lenb = limb <= textb ? 0 : limb - textb;
-
-      /* Actually compare the fields. */
-      if (key->numeric | key->general_numeric)
-	{
-	  char savea = *lima, saveb = *limb;
-
-	  *lima = *limb = '\0';
-	  if (force_general_numcompare)
-	    diff = general_numcompare (texta, textb);
-	  else
-	    diff = ((key->numeric ? numcompare : general_numcompare)
-		(texta, textb));
-	  *lima = savea, *limb = saveb;
-	}
-      else if (key->month)
-	diff = getmonth (texta, lena) - getmonth (textb, lenb);
-      else
-	{
-	  if (ignore || translate)
-	    {
-	      char *copy_a = (char *) alloca (lena + 1 + lenb + 1);
-	      char *copy_b = copy_a + lena + 1;
-	      size_t new_len_a, new_len_b;
-	      size_t i, j;
-
-	      /* Ignore and/or translate chars before comparing.  */
-# define IGNORE_CHARS(NEW_LEN, LEN, TEXT, COPY, WC, MBLENGTH, STATE)	\
-  do									\
-    {									\
-      wchar_t uwc;							\
-      char mbc[MB_LEN_MAX];						\
-      mbstate_t state_wc;						\
-									\
-      for (NEW_LEN = i = 0; i < LEN;)					\
-	{								\
-	  mbstate_t state_bak;						\
-									\
-	  state_bak = STATE;						\
-	  MBLENGTH = mbrtowc (&WC, TEXT + i, LEN - i, &STATE);		\
-									\
-	  if (MBLENGTH == (size_t)-2 || MBLENGTH == (size_t)-1		\
-	      || MBLENGTH == 0)						\
-	    {								\
-	      if (MBLENGTH == (size_t)-2 || MBLENGTH == (size_t)-1)	\
-		STATE = state_bak;					\
-	      if (!ignore)						\
-		COPY[NEW_LEN++] = TEXT[i++];				\
-	      continue;							\
-	    }								\
-									\
-	  if (ignore)							\
-	    {								\
-	      if ((ignore == nonprinting && !iswprint (WC))		\
-		   || (ignore == nondictionary				\
-		       && !iswalnum (WC) && !iswblank (WC)))		\
-		{							\
-		  i += MBLENGTH;					\
-		  continue;						\
-		}							\
-	    }								\
-									\
-	  if (translate)						\
-	    {								\
-									\
-	      uwc = toupper(WC);					\
-	      if (WC == uwc)						\
-		{							\
-		  memcpy (mbc, TEXT + i, MBLENGTH);			\
-		  i += MBLENGTH;					\
-		}							\
-	      else							\
-		{							\
-		  i += MBLENGTH;					\
-		  WC = uwc;						\
-		  memset (&state_wc, '\0', sizeof (mbstate_t));		\
-									\
-		  MBLENGTH = wcrtomb (mbc, WC, &state_wc);		\
-		  assert (MBLENGTH != (size_t)-1 && MBLENGTH != 0);	\
-		}							\
-									\
-	      for (j = 0; j < MBLENGTH; j++)				\
-		COPY[NEW_LEN++] = mbc[j];				\
-	    }								\
-	  else								\
-	    for (j = 0; j < MBLENGTH; j++)				\
-	      COPY[NEW_LEN++] = TEXT[i++];				\
-	}								\
-      COPY[NEW_LEN] = '\0';						\
-    }									\
-  while (0)
-	      IGNORE_CHARS (new_len_a, lena, texta, copy_a,
-			    wc_a, mblength_a, state_a);
-	      IGNORE_CHARS (new_len_b, lenb, textb, copy_b,
-			    wc_b, mblength_b, state_b);
-	      diff = xmemcoll (copy_a, new_len_a, copy_b, new_len_b);
-	    }
-	  else if (lena == 0)
-	    diff = - NONZERO (lenb);
-	  else if (lenb == 0)
-	    goto greater;
-	  else
-	    diff = xmemcoll (texta, lena, textb, lenb);
-	}
-
-      if (diff)
-	goto not_equal;
-
-      key = key->next;
-      if (! key)
-	break;
-
-      /* Find the beginning and limit of the next field.  */
-      if (key->eword != -1)
-	lima = limfield (a, key), limb = limfield (b, key);
-      else
-	lima = a->text + a->length - 1, limb = b->text + b->length - 1;
-
-      if (key->sword != -1)
-	texta = begfield (a, key), textb = begfield (b, key);
-      else
-	{
-	  texta = a->text, textb = b->text;
-	  if (key->skipsblanks)
-	    {
-	      while (texta < lima && ismbblank (texta, lima - texta, &mblength_a))
-		texta += mblength_a;
-	      while (textb < limb && ismbblank (textb, limb - textb, &mblength_b))
-		textb += mblength_b;
-	    }
-	}
-    }
-
-  return 0;
-
-greater:
-  diff = 1;
-not_equal:
-  return key->reverse ? -diff : diff;
-}
-#endif
-
 /* Compare two lines A and B, returning negative, zero, or positive
    depending on whether A compares less than, equal to, or greater than B. */
 
 static int
-compare (register const struct line *a, register const struct line *b)
+compare (const struct line *a, const struct line *b)
 {
   int diff;
   size_t alen, blen;
@@ -2130,7 +1890,6 @@ compare (register const struct line *a, register const struct line *b)
   if (keylist)
     {
       diff = keycompare (a, b);
-      alloca (0);
       if (diff | unique | stable)
 	return diff;
     }
@@ -2143,7 +1902,7 @@ compare (register const struct line *a, register const struct line *b)
     diff = - NONZERO (blen);
   else if (blen == 0)
     diff = 1;
-  else if (HAVE_SETLOCALE && hard_LC_COLLATE)
+  else if (hard_LC_COLLATE)
     diff = xmemcoll (a->text, alen, b->text, blen);
   else if (! (diff = memcmp (a->text, b->text, MIN (alen, blen))))
     diff = alen < blen ? -1 : alen != blen;
@@ -2151,13 +1910,13 @@ compare (register const struct line *a, register const struct line *b)
   return reverse ? -diff : diff;
 }
 
-/* Check that the lines read from FILE_NAME come in order.  Print a
-   diagnostic (FILE_NAME, line number, contents of line) to stderr and return
-   false if they are not in order.  Otherwise, print no diagnostic
-   and return true.  */
+/* Check that the lines read from FILE_NAME come in order.  Return
+   true if they are in order.  If CHECKONLY == 'c', also print a
+   diagnostic (FILE_NAME, line number, contents of line) to stderr if
+   they are not in order.  */
 
 static bool
-check (char const *file_name)
+check (char const *file_name, char checkonly)
 {
   FILE *fp = xfopen (file_name, "r");
   struct buffer buf;		/* Input buffer. */
@@ -2183,15 +1942,19 @@ check (char const *file_name)
 	{
 	found_disorder:
 	  {
-	    struct line const *disorder_line = line - 1;
-	    uintmax_t disorder_line_number =
-	      buffer_linelim (&buf) - disorder_line + line_number;
-	    char hr_buf[INT_BUFSIZE_BOUND (uintmax_t)];
-	    fprintf (stderr, _("%s: %s:%s: disorder: "),
-		     program_name, file_name,
-		     umaxtostr (disorder_line_number, hr_buf));
-	    write_bytes (disorder_line->text, disorder_line->length, stderr,
-			 _("standard error"));
+	    if (checkonly == 'c')
+	      {
+		struct line const *disorder_line = line - 1;
+		uintmax_t disorder_line_number =
+		  buffer_linelim (&buf) - disorder_line + line_number;
+		char hr_buf[INT_BUFSIZE_BOUND (uintmax_t)];
+		fprintf (stderr, _("%s: %s:%s: disorder: "),
+			 program_name, file_name,
+			 umaxtostr (disorder_line_number, hr_buf));
+		write_bytes (disorder_line->text, disorder_line->length,
+			     stderr, _("standard error"));
+	      }
+
 	    ordered = false;
 	    break;
 	  }
@@ -2231,20 +1994,21 @@ check (char const *file_name)
 
   xfclose (fp, file_name);
   free (buf.buf);
-  if (temp.text)
-    free (temp.text);
+  free (temp.text);
   return ordered;
 }
 
-/* Merge lines from FILES onto OFP.  NFILES cannot be greater than
-   NMERGE.  Close input and output files before returning.
+/* Merge lines from FILES onto OFP.  NTEMPS is the number of temporary
+   files (all of which are at the start of the FILES array), and
+   NFILES is the number of files; 0 <= NTEMPS <= NFILES <= NMERGE.
+   Close input and output files before returning.
    OUTPUT_FILE gives the name of the output file.  If it is NULL,
    the output file is standard output.  If OFP is NULL, the output
    file has not been opened yet (or written to, if standard output).  */
 
 static void
-mergefps (char **files, register int nfiles,
-	  FILE *ofp, const char *output_file)
+mergefps (struct sortfile *files, size_t ntemps, size_t nfiles,
+	  FILE *ofp, char const *output_file)
 {
   FILE *fps[NMERGE];		/* Input streams for each file.  */
   struct buffer buffer[NMERGE];	/* Input buffers for each file. */
@@ -2254,20 +2018,24 @@ mergefps (char **files, register int nfiles,
   size_t savealloc = 0;		/* Size allocated for the saved line. */
   struct line const *cur[NMERGE]; /* Current line in each line table. */
   struct line const *base[NMERGE]; /* Base of each line table.  */
-  int ord[NMERGE];		/* Table representing a permutation of fps,
+  size_t ord[NMERGE];		/* Table representing a permutation of fps,
 				   such that cur[ord[0]] is the smallest line
 				   and will be next output. */
-  register int i, j, t;
+  size_t i;
+  size_t j;
+  size_t t;
   struct keyfield const *key = keylist;
   saved.text = NULL;
 
   /* Read initial lines from each input file. */
   for (i = 0; i < nfiles; )
     {
-      fps[i] = xfopen (files[i], "r");
+      fps[i] = (files[i].pid
+		? open_temp (files[i].name, files[i].pid)
+		: xfopen (files[i].name, "r"));
       initbuf (&buffer[i], sizeof (struct line),
 	       MAX (merge_buffer_size, sort_size / nfiles));
-      if (fillbuf (&buffer[i], fps[i], files[i]))
+      if (fillbuf (&buffer[i], fps[i], files[i].name))
 	{
 	  struct line const *linelim = buffer_linelim (&buffer[i]);
 	  cur[i] = linelim - 1;
@@ -2277,8 +2045,12 @@ mergefps (char **files, register int nfiles,
       else
 	{
 	  /* fps[i] is empty; eliminate it from future consideration.  */
-	  xfclose (fps[i], files[i]);
-	  zaptemp (files[i]);
+	  xfclose (fps[i], files[i].name);
+	  if (i < ntemps)
+	    {
+	      ntemps--;
+	      zaptemp (files[i].name);
+	    }
 	  free (buffer[i].buf);
 	  --nfiles;
 	  for (j = i; j < nfiles; ++j)
@@ -2309,7 +2081,7 @@ mergefps (char **files, register int nfiles,
 	{
 	  if (savedline && compare (savedline, smallest))
 	    {
-	      savedline = 0;
+	      savedline = NULL;
 	      write_bytes (saved.text, saved.length, ofp, output_file);
 	    }
 	  if (!savedline)
@@ -2346,7 +2118,7 @@ mergefps (char **files, register int nfiles,
 	cur[ord[0]] = smallest - 1;
       else
 	{
-	  if (fillbuf (&buffer[ord[0]], fps[ord[0]], files[ord[0]]))
+	  if (fillbuf (&buffer[ord[0]], fps[ord[0]], files[ord[0]].name))
 	    {
 	      struct line const *linelim = buffer_linelim (&buffer[ord[0]]);
 	      cur[ord[0]] = linelim - 1;
@@ -2354,13 +2126,17 @@ mergefps (char **files, register int nfiles,
 	    }
 	  else
 	    {
-	      /* We reached EOF on fps[ord[0]]. */
+	      /* We reached EOF on fps[ord[0]].  */
 	      for (i = 1; i < nfiles; ++i)
 		if (ord[i] > ord[0])
 		  --ord[i];
 	      --nfiles;
-	      xfclose (fps[ord[0]], files[ord[0]]);
-	      zaptemp (files[ord[0]]);
+	      xfclose (fps[ord[0]], files[ord[0]].name);
+	      if (ord[0] < ntemps)
+		{
+		  ntemps--;
+		  zaptemp (files[ord[0]].name);
+		}
 	      free (buffer[ord[0]].buf);
 	      for (i = ord[0]; i < nfiles; ++i)
 		{
@@ -2377,20 +2153,35 @@ mergefps (char **files, register int nfiles,
 	}
 
       /* The new line just read in may be larger than other lines
-	 already in core; push it back in the queue until we encounter
-	 a line larger than it. */
-      for (i = 1; i < nfiles; ++i)
-	{
-	  t = compare (cur[ord[0]], cur[ord[i]]);
-	  if (!t)
-	    t = ord[0] - ord[i];
-	  if (t < 0)
-	    break;
-	}
-      t = ord[0];
-      for (j = 1; j < i; ++j)
-	ord[j - 1] = ord[j];
-      ord[i - 1] = t;
+	 already in main memory; push it back in the queue until we
+	 encounter a line larger than it.  Optimize for the common
+	 case where the new line is smallest.  */
+      {
+	size_t lo = 1;
+	size_t hi = nfiles;
+	size_t probe = lo;
+	size_t ord0 = ord[0];
+	size_t count_of_smaller_lines;
+
+	while (lo < hi)
+	  {
+	    int cmp = compare (cur[ord0], cur[ord[probe]]);
+	    if (cmp < 0 || (cmp == 0 && ord0 < ord[probe]))
+	      hi = probe;
+	    else
+	      lo = probe + 1;
+	    probe = (lo + hi) / 2;
+	  }
+
+	count_of_smaller_lines = lo - 1;
+	for (j = 0; j < count_of_smaller_lines; j++)
+	  ord[j] = ord[j + 1];
+	ord[count_of_smaller_lines] = ord0;
+      }
+
+      /* Free up some resources every once in a while.  */
+      if (MAX_PROCS_BEFORE_REAP < nprocs)
+	reap_some ();
     }
 
   if (unique && savedline)
@@ -2488,7 +2279,10 @@ sortlines_temp (struct line *lines, size_t nlines, struct line *temp)
 {
   if (nlines == 2)
     {
-      bool swap = (0 < compare (&lines[-1], &lines[-2]));
+      /* Declare `swap' as int, not bool, to work around a bug
+	 <http://lists.gnu.org/archive/html/bug-coreutils/2005-10/msg00086.html>
+	 in the IBM xlc 6.0.0.0 compiler in 64-bit mode.  */
+      int swap = (0 < compare (&lines[-1], &lines[-2]));
       temp[-1] = lines[-1 - swap];
       temp[-2] = lines[-2 + swap];
     }
@@ -2508,8 +2302,12 @@ sortlines_temp (struct line *lines, size_t nlines, struct line *temp)
     }
 }
 
-/* Return the index of the first of NFILES FILES that is the same file
-   as OUTFILE.  If none can be the same, return NFILES.
+/* Scan through FILES[NTEMPS .. NFILES-1] looking for a file that is
+   the same as OUTFILE.  If found, merge the found instances (and perhaps
+   some other files) into a temporary file so that it can in turn be
+   merged into OUTFILE without destroying OUTFILE before it is completely
+   read.  Return the new value of NFILES, which differs from the old if
+   some merging occurred.
 
    This test ensures that an otherwise-erroneous use like
    "sort -m -o FILE ... FILE ..." copies FILE before writing to it.
@@ -2521,77 +2319,131 @@ sortlines_temp (struct line *lines, size_t nlines, struct line *temp)
    Catching these obscure cases would slow down performance in
    common cases.  */
 
-static int
-first_same_file (char * const *files, int nfiles, char const *outfile)
+static size_t
+avoid_trashing_input (struct sortfile *files, size_t ntemps,
+		      size_t nfiles, char const *outfile)
 {
-  int i;
+  size_t i;
   bool got_outstat = false;
-  struct stat instat, outstat;
+  struct stat outstat;
 
-  for (i = 0; i < nfiles; i++)
+  for (i = ntemps; i < nfiles; i++)
     {
-      bool standard_input = STREQ (files[i], "-");
+      bool is_stdin = STREQ (files[i].name, "-");
+      bool same;
+      struct stat instat;
 
-      if (outfile && STREQ (outfile, files[i]) && ! standard_input)
-	return i;
-
-      if (! got_outstat)
+      if (outfile && STREQ (outfile, files[i].name) && !is_stdin)
+	same = true;
+      else
 	{
-	  got_outstat = true;
-	  if ((outfile
-	       ? stat (outfile, &outstat)
-	       : fstat (STDOUT_FILENO, &outstat))
-	      != 0)
-	    return nfiles;
+	  if (! got_outstat)
+	    {
+	      if ((outfile
+		   ? stat (outfile, &outstat)
+		   : fstat (STDOUT_FILENO, &outstat))
+		  != 0)
+		break;
+	      got_outstat = true;
+	    }
+
+	  same = (((is_stdin
+		    ? fstat (STDIN_FILENO, &instat)
+		    : stat (files[i].name, &instat))
+		   == 0)
+		  && SAME_INODE (instat, outstat));
 	}
 
-      if (((standard_input
-	    ? fstat (STDIN_FILENO, &instat)
-	    : stat (files[i], &instat))
-	   == 0)
-	  && SAME_INODE (instat, outstat))
-	return i;
+      if (same)
+	{
+	  FILE *tftp;
+	  pid_t pid;
+	  char *temp = create_temp (&tftp, &pid);
+	  mergefps (&files[i],0, nfiles - i, tftp, temp);
+	  files[i].name = temp;
+	  files[i].pid = pid;
+	  return i + 1;
+	}
     }
 
   return nfiles;
 }
 
-/* Merge NFILES FILES onto OUTPUT_FILE.  However, merge at most
-   MAX_MERGE input files directly onto OUTPUT_FILE.  MAX_MERGE cannot
-   exceed NMERGE.  A null OUTPUT_FILE stands for standard output.  */
+/* Merge the input FILES.  NTEMPS is the number of files at the
+   start of FILES that are temporary; it is zero at the top level.
+   NFILES is the total number of files.  Put the output in
+   OUTPUT_FILE; a null OUTPUT_FILE stands for standard output.  */
 
 static void
-merge (char **files, int nfiles, int max_merge, char const *output_file)
+merge (struct sortfile *files, size_t ntemps, size_t nfiles,
+       char const *output_file)
 {
-  while (max_merge < nfiles)
+  while (NMERGE < nfiles)
     {
-      FILE *tfp;
-      int i, t = 0;
-      char *temp;
-      for (i = 0; i < nfiles / NMERGE; ++i)
+      /* Number of input files processed so far.  */
+      size_t in;
+
+      /* Number of output files generated so far.  */
+      size_t out;
+
+      /* nfiles % NMERGE; this counts input files that are left over
+	 after all full-sized merges have been done.  */
+      size_t remainder;
+
+      /* Number of easily-available slots at the next loop iteration.  */
+      size_t cheap_slots;
+
+      /* Do as many NMERGE-size merges as possible.  */
+      for (out = in = 0; out < nfiles / NMERGE; out++, in += NMERGE)
 	{
-	  temp = create_temp_file (&tfp);
-	  mergefps (&files[i * NMERGE], NMERGE, tfp, temp);
-	  files[t++] = temp;
+	  FILE *tfp;
+	  pid_t pid;
+	  char *temp = create_temp (&tfp, &pid);
+	  size_t nt = MIN (ntemps, NMERGE);
+	  ntemps -= nt;
+	  mergefps (&files[in], nt, NMERGE, tfp, temp);
+	  files[out].name = temp;
+	  files[out].pid = pid;
 	}
-      temp = create_temp_file (&tfp);
-      mergefps (&files[i * NMERGE], nfiles % NMERGE, tfp, temp);
-      files[t++] = temp;
-      nfiles = t;
-      if (nfiles == 1)
-	break;
+
+      remainder = nfiles - in;
+      cheap_slots = NMERGE - out % NMERGE;
+
+      if (cheap_slots < remainder)
+	{
+	  /* So many files remain that they can't all be put into the last
+	     NMERGE-sized output window.  Do one more merge.  Merge as few
+	     files as possible, to avoid needless I/O.  */
+	  size_t nshortmerge = remainder - cheap_slots + 1;
+	  FILE *tfp;
+	  pid_t pid;
+	  char *temp = create_temp (&tfp, &pid);
+	  size_t nt = MIN (ntemps, nshortmerge);
+	  ntemps -= nt;
+	  mergefps (&files[in], nt, nshortmerge, tfp, temp);
+	  files[out].name = temp;
+	  files[out++].pid = pid;
+	  in += nshortmerge;
+	}
+
+      /* Put the remaining input files into the last NMERGE-sized output
+	 window, so they will be merged in the next pass.  */
+      memmove(&files[out], &files[in], (nfiles - in) * sizeof *files);
+      ntemps += out;
+      nfiles -= in - out;
     }
 
-  mergefps (files, nfiles, NULL, output_file);
+  nfiles = avoid_trashing_input (files, ntemps, nfiles, output_file);
+  mergefps (files, ntemps, nfiles, NULL, output_file);
 }
 
 /* Sort NFILES FILES onto OUTPUT_FILE. */
 
 static void
-sort (char * const *files, int nfiles, char const *output_file)
+sort (char * const *files, size_t nfiles, char const *output_file)
 {
   struct buffer buf;
-  int n_temp_files = 0;
+  size_t ntemps = 0;
   bool output_file_created = false;
 
   buf.alloc = 0;
@@ -2632,7 +2484,7 @@ sort (char * const *files, int nfiles, char const *output_file)
 	  linebase = line - buf.nlines;
 	  if (1 < buf.nlines)
 	    sortlines (line, buf.nlines, linebase);
-	  if (buf.eof && !nfiles && !n_temp_files && !buf.left)
+	  if (buf.eof && !nfiles && !ntemps && !buf.left)
 	    {
 	      xfclose (fp, file);
 	      tfp = xfopen (output_file, "w");
@@ -2641,8 +2493,8 @@ sort (char * const *files, int nfiles, char const *output_file)
 	    }
 	  else
 	    {
-	      ++n_temp_files;
-	      temp_output = create_temp_file (&tfp);
+	      ++ntemps;
+	      temp_output = create_temp (&tfp, NULL);
 	    }
 
 	  do
@@ -2657,6 +2509,10 @@ sort (char * const *files, int nfiles, char const *output_file)
 
 	  xfclose (tfp, temp_output);
 
+	  /* Free up some resources every once in a while.  */
+	  if (MAX_PROCS_BEFORE_REAP < nprocs)
+	    reap_some ();
+
 	  if (output_file_created)
 	    goto finish;
 	}
@@ -2668,22 +2524,27 @@ sort (char * const *files, int nfiles, char const *output_file)
 
   if (! output_file_created)
     {
-      int i = n_temp_files;
-      struct tempnode *node;
-      char **tempfiles = xnmalloc (n_temp_files, sizeof *tempfiles);
-      for (node = temphead; i > 0; node = node->next)
-	tempfiles[--i] = node->name;
-      merge (tempfiles, n_temp_files, NMERGE, output_file);
+      size_t i;
+      struct tempnode *node = temphead;
+      struct sortfile *tempfiles = xnmalloc (ntemps, sizeof *tempfiles);
+      for (i = 0; node; i++)
+	{
+	  tempfiles[i].name = node->name;
+	  tempfiles[i].pid = node->pid;
+	  node = node->next;
+	}
+      merge (tempfiles, ntemps, ntemps, output_file);
       free (tempfiles);
     }
 }
 
-/* Insert key KEY at the end of the key list.  */
+/* Insert a malloc'd copy of key KEY_ARG at the end of the key list.  */
 
 static void
-insertkey (struct keyfield *key)
+insertkey (struct keyfield *key_arg)
 {
   struct keyfield **p;
+  struct keyfield *key = xmemdup (key_arg, sizeof *key);
 
   for (p = &keylist; *p; p = &(*p)->next)
     continue;
@@ -2698,14 +2559,58 @@ static void badfieldspec (char const *, char const *)
 static void
 badfieldspec (char const *spec, char const *msgid)
 {
-  error (SORT_FAILURE, 0, _("%s: invalid field specification `%s'"),
-	 _(msgid), spec);
+  error (SORT_FAILURE, 0, _("%s: invalid field specification %s"),
+	 _(msgid), quote (spec));
   abort ();
+}
+
+/* Report incompatible options.  */
+
+static void incompatible_options (char const *) ATTRIBUTE_NORETURN;
+static void
+incompatible_options (char const *opts)
+{
+  error (SORT_FAILURE, 0, _("options `-%s' are incompatible"), opts);
+  abort ();
+}
+
+/* Check compatibility of ordering options.  */
+
+static void
+check_ordering_compatibility (void)
+{
+  struct keyfield const *key;
+
+  for (key = keylist; key; key = key->next)
+    if ((1 < (key->random + key->numeric + key->general_numeric + key->month
+	      + !!key->ignore))
+	|| (key->random && key->translate))
+      {
+	char opts[7];
+	char *p = opts;
+	if (key->ignore == nondictionary)
+	  *p++ = 'd';
+	if (key->translate)
+	  *p++ = 'f';
+	if (key->general_numeric)
+	  *p++ = 'g';
+	if (key->ignore == nonprinting)
+	  *p++ = 'i';
+	if (key->month)
+	  *p++ = 'M';
+	if (key->numeric)
+	  *p++ = 'n';
+	if (key->random)
+	  *p++ = 'R';
+	*p = '\0';
+	incompatible_options (opts);
+      }
 }
 
 /* Parse the leading integer in STRING and store the resulting value
    (which must fit into size_t) into *VAL.  Return the address of the
-   suffix after the integer.  If MSGID is NULL, return NULL after
+   suffix after the integer.  If the value is too large, silently
+   substitute SIZE_MAX.  If MSGID is NULL, return NULL after
    failure; otherwise, report MSGID and exit on failure.  */
 
 static char const *
@@ -2724,15 +2629,13 @@ parse_field_count (char const *string, size_t *val, char const *msgid)
       /* Fall through.  */
     case LONGINT_OVERFLOW:
     case LONGINT_OVERFLOW | LONGINT_INVALID_SUFFIX_CHAR:
-      if (msgid)
-	error (SORT_FAILURE, 0, _("%s: count `%.*s' too large"),
-	       _(msgid), (int) (suffix - string), string);
-      return NULL;
+      *val = SIZE_MAX;
+      break;
 
     case LONGINT_INVALID:
       if (msgid)
-	error (SORT_FAILURE, 0, _("%s: invalid count at start of `%s'"),
-	       _(msgid), string);
+	error (SORT_FAILURE, 0, _("%s: invalid count at start of %s"),
+	       _(msgid), quote (string));
       return NULL;
     }
 
@@ -2744,9 +2647,8 @@ parse_field_count (char const *string, size_t *val, char const *msgid)
 static void
 sighandler (int sig)
 {
-#ifndef SA_NOCLDSTOP
-  signal (sig, SIG_IGN);
-#endif
+  if (! SA_NOCLDSTOP)
+    signal (sig, SIG_IGN);
 
   cleanup ();
 
@@ -2760,8 +2662,7 @@ sighandler (int sig)
    BLANKTYPE is the kind of blanks that 'b' should skip. */
 
 static char *
-set_ordering (register const char *s, struct keyfield *key,
-	      enum blanktype blanktype)
+set_ordering (const char *s, struct keyfield *key, enum blanktype blanktype)
 {
   while (*s)
     {
@@ -2794,6 +2695,9 @@ set_ordering (register const char *s, struct keyfield *key,
 	case 'n':
 	  key->numeric = true;
 	  break;
+	case 'R':
+	  key->random = true;
+	  break;
 	case 'r':
 	  key->reverse = true;
 	  break;
@@ -2806,9 +2710,9 @@ set_ordering (register const char *s, struct keyfield *key,
 }
 
 static struct keyfield *
-new_key (void)
+key_init (struct keyfield *key)
 {
-  struct keyfield *key = xzalloc (sizeof *key);
+  memset (key, 0, sizeof *key);
   key->eword = SIZE_MAX;
   return key;
 }
@@ -2817,18 +2721,18 @@ int
 main (int argc, char **argv)
 {
   struct keyfield *key;
+  struct keyfield key_buf;
   struct keyfield gkey;
   char const *s;
   int c = 0;
-  bool checkonly = false;
+  char checkonly = 0;
   bool mergeonly = false;
-  int nfiles = 0;
+  char *random_source = NULL;
+  bool need_random = false;
+  size_t nfiles = 0;
   bool posixly_correct = (getenv ("POSIXLY_CORRECT") != NULL);
   bool obsolete_usage = (posix2_version () < 200112);
-  char const *short_options = (obsolete_usage
-			       ? COMMON_SHORT_OPTIONS "y::"
-			       : COMMON_SHORT_OPTIONS "y:");
-  char *minus = "-", **files;
+  char **files;
   char const *outfile = NULL;
 
   initialize_main (&argc, &argv);
@@ -2837,68 +2741,58 @@ main (int argc, char **argv)
   bindtextdomain (PACKAGE, LOCALEDIR);
   textdomain (PACKAGE);
 
-  atexit (cleanup);
-
   initialize_exit_failure (SORT_FAILURE);
-  atexit (close_stdout);
 
   hard_LC_COLLATE = hard_locale (LC_COLLATE);
 #if HAVE_NL_LANGINFO
   hard_LC_TIME = hard_locale (LC_TIME);
 #endif
 
-#if HAVE_SETLOCALE
-  /* Let's get locale's representation of the decimal point */
+  /* Get locale's representation of the decimal point.  */
   {
-    struct lconv const *lconvp = localeconv ();
+    struct lconv const *locale = localeconv ();
 
-    decimal_point = *lconvp->decimal_point;
-    if (! decimal_point || lconvp->decimal_point[1])
-      {
-	decimal_point = C_DECIMAL_POINT;
-	if (lconvp->decimal_point[0] && lconvp->decimal_point[1])
-	  force_general_numcompare = 1;
-      }
+    /* If the locale doesn't define a decimal point, or if the decimal
+       point is multibyte, use the C locale's decimal point.  FIXME:
+       add support for multibyte decimal points.  */
+    decimal_point = to_uchar (locale->decimal_point[0]);
+    if (! decimal_point || locale->decimal_point[1])
+      decimal_point = '.';
 
-    /* We don't support multibyte thousands separators yet.  */
-    th_sep = *lconvp->thousands_sep;
-    if (! th_sep || lconvp->thousands_sep[1])
-      {
-	th_sep = CHAR_MAX + 1;
-	if (lconvp->thousands_sep[0] && lconvp->thousands_sep[1])
-	  force_general_numcompare = 1;
-      }
+    /* FIXME: add support for multibyte thousands separators.  */
+    thousands_sep = to_uchar (*locale->thousands_sep);
+    if (! thousands_sep || locale->thousands_sep[1])
+      thousands_sep = -1;
   }
-#endif
-
-#if HAVE_MBRTOWC
-  if (MB_CUR_MAX > 1)
-    {
-      inittables = inittables_mb;
-      begfield = begfield_mb;
-      limfield = limfield_mb;
-      getmonth = getmonth_mb;
-      keycompare = keycompare_mb;
-    }
-  else
-#endif
-    {
-      inittables = inittables_uni;
-      begfield = begfield_uni;
-      limfield = limfield_uni;
-      keycompare = keycompare_uni;
-      getmonth = getmonth_uni;
-    }
 
   have_read_stdin = false;
   inittables ();
 
   {
-    int i;
-    static int const sig[] = { SIGHUP, SIGINT, SIGPIPE, SIGTERM };
+    size_t i;
+    static int const sig[] =
+      {
+	/* The usual suspects.  */
+	SIGALRM, SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM,
+#ifdef SIGPOLL
+	SIGPOLL,
+#endif
+#ifdef SIGPROF
+	SIGPROF,
+#endif
+#ifdef SIGVTALRM
+	SIGVTALRM,
+#endif
+#ifdef SIGXCPU
+	SIGXCPU,
+#endif
+#ifdef SIGXFSZ
+	SIGXFSZ,
+#endif
+      };
     enum { nsigs = sizeof sig / sizeof sig[0] };
 
-#ifdef SA_NOCLDSTOP
+#if SA_NOCLDSTOP
     struct sigaction act;
 
     sigemptyset (&caught_signals);
@@ -2919,14 +2813,21 @@ main (int argc, char **argv)
 #else
     for (i = 0; i < nsigs; i++)
       if (signal (sig[i], SIG_IGN) != SIG_IGN)
-	signal (sig[i], sighandler);
+	{
+	  signal (sig[i], sighandler);
+	  siginterrupt (sig[i], 1);
+	}
 #endif
   }
+
+  /* The signal mask is known, so it is safe to invoke exit_cleanup.  */
+  atexit (exit_cleanup);
 
   gkey.sword = gkey.eword = SIZE_MAX;
   gkey.ignore = NULL;
   gkey.translate = NULL;
-  gkey.numeric = gkey.general_numeric = gkey.month = gkey.reverse = false;
+  gkey.numeric = gkey.general_numeric = gkey.random = false;
+  gkey.month = gkey.reverse = false;
   gkey.skipsblanks = gkey.skipeblanks = false;
 
   files = xnmalloc (argc, sizeof *files);
@@ -2934,9 +2835,9 @@ main (int argc, char **argv)
   for (;;)
     {
       /* Parse an operand as a file after "--" was seen; or if
-         pedantic and a file was seen, unless the POSIX version
-         predates 1003.1-2001 and -c was not seen and the operand is
-         "-o FILE" or "-oFILE".  */
+	 pedantic and a file was seen, unless the POSIX version
+	 predates 1003.1-2001 and -c was not seen and the operand is
+	 "-o FILE" or "-oFILE".  */
 
       if (c == -1
 	  || (posixly_correct && nfiles != 0
@@ -2957,37 +2858,42 @@ main (int argc, char **argv)
 	{
 	case 1:
 	  key = NULL;
-	  if (obsolete_usage && optarg[0] == '+')
+	  if (optarg[0] == '+')
 	    {
-	      /* Treat +POS1 [-POS2] as a key if possible; but silently
-		 treat an operand as a file if it is not a valid +POS1.  */
-	      key = new_key ();
-	      s = parse_field_count (optarg + 1, &key->sword, NULL);
-	      if (s && *s == '.')
-		s = parse_field_count (s + 1, &key->schar, NULL);
-	      if (! (key->sword | key->schar))
-		key->sword = SIZE_MAX;
-	      if (! s || *set_ordering (s, key, bl_start))
+	      bool minus_pos_usage = (optind != argc && argv[optind][0] == '-'
+				      && ISDIGIT (argv[optind][1]));
+	      obsolete_usage |= minus_pos_usage & ~posixly_correct;
+	      if (obsolete_usage)
 		{
-		  free (key);
-		  key = NULL;
-		}
-	      else
-		{
-		  if (optind != argc && argv[optind][0] == '-'
-		      && ISDIGIT (argv[optind][1]))
+		  /* Treat +POS1 [-POS2] as a key if possible; but silently
+		     treat an operand as a file if it is not a valid +POS1.  */
+		  key = key_init (&key_buf);
+		  s = parse_field_count (optarg + 1, &key->sword, NULL);
+		  if (s && *s == '.')
+		    s = parse_field_count (s + 1, &key->schar, NULL);
+		  if (! (key->sword | key->schar))
+		    key->sword = SIZE_MAX;
+		  if (! s || *set_ordering (s, key, bl_start))
 		    {
-		      char const *optarg1 = argv[optind++];
-		      s = parse_field_count (optarg1 + 1, &key->eword,
-					     N_("invalid number after `-'"));
-		      if (*s == '.')
-			s = parse_field_count (s + 1, &key->echar,
-					       N_("invalid number after `.'"));
-		      if (*set_ordering (s, key, bl_end))
-			badfieldspec (optarg1,
-				      N_("stray character in field spec"));
+		      free (key);
+		      key = NULL;
 		    }
-		  insertkey (key);
+		  else
+		    {
+		      if (minus_pos_usage)
+			{
+			  char const *optarg1 = argv[optind++];
+			  s = parse_field_count (optarg1 + 1, &key->eword,
+					     N_("invalid number after `-'"));
+			  if (*s == '.')
+			    s = parse_field_count (s + 1, &key->echar,
+					       N_("invalid number after `.'"));
+			  if (*set_ordering (s, key, bl_end))
+			    badfieldspec (optarg1,
+				      N_("stray character in field spec"));
+			}
+		      insertkey (key);
+		    }
 		}
 	    }
 	  if (! key)
@@ -3002,6 +2908,7 @@ main (int argc, char **argv)
 	case 'M':
 	case 'n':
 	case 'r':
+	case 'R':
 	  {
 	    char str[2];
 	    str[0] = c;
@@ -3010,12 +2917,26 @@ main (int argc, char **argv)
 	  }
 	  break;
 
+	case CHECK_OPTION:
+	  c = (optarg
+	       ? XARGMATCH ("--check", optarg, check_args, check_types)
+	       : 'c');
+	  /* Fall through.  */
 	case 'c':
-	  checkonly = true;
+	case 'C':
+	  if (checkonly && checkonly != c)
+	    incompatible_options ("cC");
+	  checkonly = c;
+	  break;
+
+	case COMPRESS_PROGRAM_OPTION:
+	  if (compress_program && strcmp (compress_program, optarg) != 0)
+	    error (SORT_FAILURE, 0, _("multiple compress programs specified"));
+	  compress_program = optarg;
 	  break;
 
 	case 'k':
-	  key = new_key ();
+	  key = key_init (&key_buf);
 
 	  /* Get POS1. */
 	  s = parse_field_count (optarg, &key->sword,
@@ -3078,6 +2999,12 @@ main (int argc, char **argv)
 	  outfile = optarg;
 	  break;
 
+	case RANDOM_SOURCE_OPTION:
+	  if (random_source && !STREQ (random_source, optarg))
+	    error (SORT_FAILURE, 0, _("multiple random sources specified"));
+	  random_source = optarg;
+	  break;
+
 	case 's':
 	  stable = true;
 	  break;
@@ -3088,61 +3015,26 @@ main (int argc, char **argv)
 
 	case 't':
 	  {
-	    char newtab[MB_LEN_MAX + 1];
-	    size_t newtab_length = 1;
-	    strncpy (newtab, optarg, MB_LEN_MAX);
-	    if (! newtab[0])
+	    char newtab = optarg[0];
+	    if (! newtab)
 	      error (SORT_FAILURE, 0, _("empty tab"));
-#if HAVE_MBRTOWC
-	    if (MB_CUR_MAX > 1)
-	      {
-		wchar_t wc;
-		mbstate_t state;
-		size_t i;
-
-		memset (&state, '\0', sizeof (mbstate_t));
-		newtab_length = mbrtowc (&wc, newtab, strnlen (newtab, MB_LEN_MAX), &state);
-		switch (newtab_length)
-                  {
-                  case (size_t) -1:
-                  case (size_t) -2:
-                  case 0:
-                    newtab_length = 1;
-                  }
-
-                if (optarg[newtab_length])
-		  {
-		    /* Provoke with `sort -txx'.  Complain about
-		       "multi-character tab" instead of "multibyte tab", so
-		       that the diagnostic's wording does not need to be
-		       changed once multibyte characters are supported.  */
-		    error (SORT_FAILURE, 0, _("multi-character tab `%s'"),
-			   optarg);
-		  }
-	      }
-            else
-#endif
-
 	    if (optarg[1])
 	      {
 		if (STREQ (optarg, "\\0"))
-		  newtab[0] = '\0';
+		  newtab = '\0';
 		else
 		  {
 		    /* Provoke with `sort -txx'.  Complain about
 		       "multi-character tab" instead of "multibyte tab", so
 		       that the diagnostic's wording does not need to be
 		       changed once multibyte characters are supported.  */
-		    error (SORT_FAILURE, 0, _("multi-character tab `%s'"),
-			   optarg);
+		    error (SORT_FAILURE, 0, _("multi-character tab %s"),
+			   quote (optarg));
 		  }
 	      }
-	    if (!tab_default && (tab_length != newtab_length
-		|| memcmp(tab, newtab, tab_length) != 0))
+	    if (tab != TAB_DEFAULT && tab != newtab)
 	      error (SORT_FAILURE, 0, _("incompatible tabs"));
-	    memcpy(tab, newtab, newtab_length);
-	    tab_length = newtab_length;
-	    tab_default = false;
+	    tab = newtab;
 	  }
 	  break;
 
@@ -3155,9 +3047,23 @@ main (int argc, char **argv)
 	  break;
 
 	case 'y':
-	  /* Accept and ignore e.g. -y0 for compatibility with Solaris
-	     2.x through Solaris 7.  -y is marked as obsolete starting
-	     with Solaris 8.  */
+	  /* Accept and ignore e.g. -y0 for compatibility with Solaris 2.x
+	     through Solaris 7.  It is also accepted by many non-Solaris
+	     "sort" implementations, e.g., AIX 5.2, HP-UX 11i v2, IRIX 6.5.
+	     -y is marked as obsolete starting with Solaris 8 (1999), but is
+	     still accepted as of Solaris 10 prerelease (2004).
+
+	     Solaris 2.5.1 "sort -y 100" reads the input file "100", but
+	     emulate Solaris 8 and 9 "sort -y 100" which ignores the "100",
+	     and which in general ignores the argument after "-y" if it
+	     consists entirely of digits (it can even be empty).  */
+	  if (optarg == argv[optind - 1])
+	    {
+	      char const *p;
+	      for (p = optarg; ISDIGIT (*p); p++)
+		continue;
+	      optind -= (*p != '\0');
+	    }
 	  break;
 
 	case 'z':
@@ -3175,26 +3081,46 @@ main (int argc, char **argv)
 
   /* Inheritance of global options to individual keys. */
   for (key = keylist; key; key = key->next)
-    if (! (key->ignore || key->translate
-	   || (key->skipsblanks | key->reverse
-	       | key->skipeblanks | key->month | key->numeric
-	       | key->general_numeric)))
-      {
-	key->ignore = gkey.ignore;
-	key->translate = gkey.translate;
-	key->skipsblanks = gkey.skipsblanks;
-	key->skipeblanks = gkey.skipeblanks;
-	key->month = gkey.month;
-	key->numeric = gkey.numeric;
-	key->general_numeric = gkey.general_numeric;
-	key->reverse = gkey.reverse;
-      }
+    {
+      if (! (key->ignore || key->translate
+             || (key->skipsblanks | key->reverse
+                 | key->skipeblanks | key->month | key->numeric
+                 | key->general_numeric
+                 | key->random)))
+        {
+          key->ignore = gkey.ignore;
+          key->translate = gkey.translate;
+          key->skipsblanks = gkey.skipsblanks;
+          key->skipeblanks = gkey.skipeblanks;
+          key->month = gkey.month;
+          key->numeric = gkey.numeric;
+          key->general_numeric = gkey.general_numeric;
+          key->random = gkey.random;
+          key->reverse = gkey.reverse;
+        }
+
+      need_random |= key->random;
+    }
 
   if (!keylist && (gkey.ignore || gkey.translate
 		   || (gkey.skipsblanks | gkey.skipeblanks | gkey.month
-		       | gkey.numeric | gkey.general_numeric)))
-    insertkey (&gkey);
+		       | gkey.numeric | gkey.general_numeric
+                       | gkey.random)))
+    {
+      insertkey (&gkey);
+      need_random |= gkey.random;
+    }
+
+  check_ordering_compatibility ();
+
   reverse = gkey.reverse;
+
+  if (need_random)
+    {
+      randread_source = randread_new (random_source, MD5_DIGEST_SIZE);
+      if (! randread_source)
+	die (_("open failed"), random_source);
+    }
 
   if (temp_dir_count == 0)
     {
@@ -3204,28 +3130,39 @@ main (int argc, char **argv)
 
   if (nfiles == 0)
     {
+      static char *minus = "-";
       nfiles = 1;
+      free (files);
       files = &minus;
     }
 
   if (checkonly)
     {
       if (nfiles > 1)
+	error (SORT_FAILURE, 0, _("extra operand %s not allowed with -%c"),
+	       quote (files[1]), checkonly);
+
+      if (outfile)
 	{
-	  error (0, 0, _("extra operand %s not allowed with -c"),
-		 quote (files[1]));
-	  usage (SORT_FAILURE);
+	  static char opts[] = {0, 'o', 0};
+	  opts[0] = checkonly;
+	  incompatible_options (opts);
 	}
 
-      /* POSIX requires that sort return 1 IFF invoked with -c and the
+      /* POSIX requires that sort return 1 IFF invoked with -c or -C and the
 	 input is not properly sorted.  */
-      exit (check (files[0]) ? EXIT_SUCCESS : SORT_OUT_OF_ORDER);
+      exit (check (files[0], checkonly) ? EXIT_SUCCESS : SORT_OUT_OF_ORDER);
     }
 
   if (mergeonly)
     {
-      int max_merge = first_same_file (files, MIN (nfiles, NMERGE), outfile);
-      merge (files, nfiles, max_merge, outfile);
+      struct sortfile *sortfiles = xcalloc (nfiles, sizeof *sortfiles);
+      size_t i;
+
+      for (i = 0; i < nfiles; ++i)
+	sortfiles[i].name = files[i];
+
+      merge (sortfiles, 0, nfiles, outfile);
     }
   else
     sort (files, nfiles, outfile);

@@ -1,5 +1,7 @@
 /* Calculate the size of physical memory.
-   Copyright (C) 2000, 2001, 2003 Free Software Foundation, Inc.
+
+   Copyright (C) 2000, 2001, 2003, 2005, 2006 Free Software
+   Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,19 +15,15 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
-   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
 /* Written by Paul Eggert.  */
 
-#if HAVE_CONFIG_H
-# include <config.h>
-#endif
+#include <config.h>
 
 #include "physmem.h"
 
-#if HAVE_UNISTD_H
-# include <unistd.h>
-#endif
+#include <unistd.h>
 
 #if HAVE_SYS_PSTAT_H
 # include <sys/pstat.h>
@@ -302,6 +300,6 @@ main (void)
 
 /*
 Local Variables:
-compile-command: "gcc -DDEBUG -DHAVE_CONFIG_H -I.. -g -O -Wall -W physmem.c"
+compile-command: "gcc -DDEBUG -g -O -Wall -W physmem.c"
 End:
 */
