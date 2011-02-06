@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/tar/test/Makefile,v 1.2.2.4 2008/12/11 05:56:47 kientzle Exp $
+# $FreeBSD$
 
 # Where to find the tar sources (for the internal unit tests)
 TAR_SRCDIR=${.CURDIR}/..
@@ -6,7 +6,7 @@ TAR_SRCDIR=${.CURDIR}/..
 
 # Some tar sources are pulled in for white-box tests
 TAR_SRCS=					\
-	../getdate.y
+	../getdate.c
 
 TESTS=	\
 	test_0.c				\
@@ -16,6 +16,7 @@ TESTS=	\
 	test_help.c				\
 	test_option_T.c				\
 	test_option_q.c				\
+	test_option_s.c				\
 	test_patterns.c				\
 	test_stdio.c				\
 	test_strip_components.c			\
@@ -33,10 +34,10 @@ CLEANFILES+= list.h
 NO_MAN=yes
 
 PROG=bsdtar_test
-DPADD=${LIBARCHIVE} ${LIBBZ2} ${LIBZ}
+DPADD=${LIBARCHIVE} ${LIBBZ2} ${LIBZ} ${LIBLZMA}
 CFLAGS+=	-DPLATFORM_CONFIG_H=\"config_freebsd.h\"
 CFLAGS+=	-I..
-LDADD= -larchive -lz -lbz2
+LDADD= -larchive -lz -lbz2 -llzma
 CFLAGS+= -static -g -O2 -Wall
 CFLAGS+= -I${.OBJDIR}
 CFLAGS+= -I${TAR_SRCDIR}
@@ -44,7 +45,6 @@ CFLAGS+= -I${TAR_SRCDIR}
 # Uncomment to link against dmalloc
 #LDADD+= -L/usr/local/lib -ldmalloc
 #CFLAGS+= -I/usr/local/include -DUSE_DMALLOC
-WARNS=6
 
 check test:	bsdtar_test
 	./bsdtar_test -p ${.OBJDIR}/../bsdtar -r ${.CURDIR}

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2009 Joerg Sonnenberger
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -21,47 +21,17 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD$
  */
-#include "test.h"
-__FBSDID("$FreeBSD$");
 
-/*
- * This first test does basic sanity checks on the environment.  For
- * most of these, we just exit on failure.
- */
-#if !defined(_WIN32) || defined(__CYGWIN__)
-#define DEV_NULL "/dev/null"
-#else
-#define DEV_NULL "NUL"
+#ifndef LAFE_LINE_READER_H
+#define LAFE_LINE_READER_H
+
+struct lafe_line_reader;
+
+struct lafe_line_reader *lafe_line_reader(const char *, int nullSeparator);
+const char *lafe_line_reader_next(struct lafe_line_reader *);
+void	lafe_line_reader_free(struct lafe_line_reader *);
+
 #endif
-
-DEFINE_TEST(test_0)
-{
-	struct stat st;
-
-	failure("File %s does not exist?!", testprog);
-	if (!assertEqualInt(0, stat(testprog, &st)))
-		exit(1);
-
-	failure("%s is not executable?!", testprog);
-	if (!assert((st.st_mode & 0111) != 0))
-		exit(1);
-
-	/*
-	 * Try to succesfully run the program; this requires that
-	 * we know some option that will succeed.
-	 */
-	if (0 == systemf("%s --version >" DEV_NULL, testprog)) {
-		/* This worked. */
-	} else if (0 == systemf("%s -W version >" DEV_NULL, testprog)) {
-		/* This worked. */
-	} else {
-		failure("Unable to successfully run any of the following:\n"
-		    "  * %s --version\n"
-		    "  * %s -W version\n",
-		    testprog, testprog);
-		assert(0);
-	}
-
-	/* TODO: Ensure that our reference files are available. */
-}

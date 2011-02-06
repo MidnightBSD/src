@@ -24,7 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/matching.c,v 1.11.2.4 2008/08/27 04:59:00 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -36,7 +36,10 @@ __FBSDID("$FreeBSD: src/usr.bin/tar/matching.c,v 1.11.2.4 2008/08/27 04:59:00 ki
 #include <string.h>
 #endif
 
-#include "bsdtar.h"
+#include "err.h"
+#include "line_reader.h"
+#include "matching.h"
+#include "pathmatch.h"
 
 struct match {
 	struct match	 *next;
@@ -44,7 +47,7 @@ struct match {
 	char		  pattern[1];
 };
 
-struct matching {
+struct lafe_matching {
 	struct match	 *exclusions;
 	int		  exclusions_count;
 	struct match	 *inclusions;
@@ -52,14 +55,10 @@ struct matching {
 	int		  inclusions_unmatched_count;
 };
 
-
-static void	add_pattern(struct bsdtar *, struct match **list,
-		    const char *pattern);
-static int	bsdtar_fnmatch(const char *p, const char *s);
-static void	initialize_matching(struct bsdtar *);
+static void	add_pattern(struct match **list, const char *pattern);
+static void	initialize_matching(struct lafe_matching **);
 static int	match_exclusion(struct match *, const char *pathname);
 static int	match_inclusion(struct match *, const char *pathname);
-static int	pathmatch(const char *p, const char *s);
 
 /*
  * The matching logic here needs to be re-thought.  I started out to
@@ -73,55 +72,74 @@ static int	pathmatch(const char *p, const char *s);
  */
 
 int
-exclude(struct bsdtar *bsdtar, const char *pattern)
+lafe_exclude(struct lafe_matching **matching, const char *pattern)
 {
-	struct matching *matching;
 
-	if (bsdtar->matching == NULL)
-		initialize_matching(bsdtar);
-	matching = bsdtar->matching;
-	add_pattern(bsdtar, &(matching->exclusions), pattern);
-	matching->exclusions_count++;
+	if (*matching == NULL)
+		initialize_matching(matching);
+	add_pattern(&((*matching)->exclusions), pattern);
+	(*matching)->exclusions_count++;
 	return (0);
 }
 
 int
-exclude_from_file(struct bsdtar *bsdtar, const char *pathname)
+lafe_exclude_from_file(struct lafe_matching **matching, const char *pathname)
 {
-	return (process_lines(bsdtar, pathname, &exclude));
+	struct lafe_line_reader *lr;
+	const char *p;
+	int ret = 0;
+
+	lr = lafe_line_reader(pathname, 0);
+	while ((p = lafe_line_reader_next(lr)) != NULL) {
+		if (lafe_exclude(matching, p) != 0)
+			ret = -1;
+	}
+	lafe_line_reader_free(lr);
+	return (ret);
 }
 
 int
-include(struct bsdtar *bsdtar, const char *pattern)
+lafe_include(struct lafe_matching **matching, const char *pattern)
 {
-	struct matching *matching;
 
-	if (bsdtar->matching == NULL)
-		initialize_matching(bsdtar);
-	matching = bsdtar->matching;
-	add_pattern(bsdtar, &(matching->inclusions), pattern);
-	matching->inclusions_count++;
-	matching->inclusions_unmatched_count++;
+	if (*matching == NULL)
+		initialize_matching(matching);
+	add_pattern(&((*matching)->inclusions), pattern);
+	(*matching)->inclusions_count++;
+	(*matching)->inclusions_unmatched_count++;
 	return (0);
 }
 
 int
-include_from_file(struct bsdtar *bsdtar, const char *pathname)
+lafe_include_from_file(struct lafe_matching **matching, const char *pathname,
+    int nullSeparator)
 {
-	return (process_lines(bsdtar, pathname, &include));
+	struct lafe_line_reader *lr;
+	const char *p;
+	int ret = 0;
+
+	lr = lafe_line_reader(pathname, nullSeparator);
+	while ((p = lafe_line_reader_next(lr)) != NULL) {
+		if (lafe_include(matching, p) != 0)
+			ret = -1;
+	}
+	lafe_line_reader_free(lr);
+	return (ret);
 }
 
 static void
-add_pattern(struct bsdtar *bsdtar, struct match **list, const char *pattern)
+add_pattern(struct match **list, const char *pattern)
 {
 	struct match *match;
+	size_t len;
 
-	match = malloc(sizeof(*match) + strlen(pattern) + 1);
+	len = strlen(pattern);
+	match = malloc(sizeof(*match) + len + 1);
 	if (match == NULL)
-		bsdtar_errc(bsdtar, 1, errno, "Out of memory");
+		bsdtar_errc(1, errno, "Out of memory");
 	strcpy(match->pattern, pattern);
 	/* Both "foo/" and "foo" should match "foo/bar". */
-	if (match->pattern[strlen(match->pattern)-1] == '/')
+	if (len && match->pattern[len - 1] == '/')
 		match->pattern[strlen(match->pattern)-1] = '\0';
 	match->next = *list;
 	*list = match;
@@ -130,15 +148,28 @@ add_pattern(struct bsdtar *bsdtar, struct match **list, const char *pattern)
 
 
 int
-excluded(struct bsdtar *bsdtar, const char *pathname)
+lafe_excluded(struct lafe_matching *matching, const char *pathname)
 {
-	struct matching *matching;
 	struct match *match;
 	struct match *matched;
 
-	matching = bsdtar->matching;
 	if (matching == NULL)
 		return (0);
+
+	/* Mark off any unmatched inclusions. */
+	/* In particular, if a filename does appear in the archive and
+	 * is explicitly included and excluded, then we don't report
+	 * it as missing even though we don't extract it.
+	 */
+	matched = NULL;
+	for (match = matching->inclusions; match != NULL; match = match->next){
+		if (match->matches == 0
+		    && match_inclusion(match, pathname)) {
+			matching->inclusions_unmatched_count--;
+			match->matches++;
+			matched = match;
+		}
+	}
 
 	/* Exclusions take priority */
 	for (match = matching->exclusions; match != NULL; match = match->next){
@@ -146,33 +177,19 @@ excluded(struct bsdtar *bsdtar, const char *pathname)
 			return (1);
 	}
 
-	/* Then check for inclusions */
-	matched = NULL;
-	for (match = matching->inclusions; match != NULL; match = match->next){
-		if (match_inclusion(match, pathname)) {
-			/*
-			 * If this pattern has never been matched,
-			 * then we're done.
-			 */
-			if (match->matches == 0) {
-				match->matches++;
-				matching->inclusions_unmatched_count--;
-				return (0);
-			}
-			/*
-			 * Otherwise, remember the match but keep checking
-			 * in case we can tick off an unmatched pattern.
-			 */
-			matched = match;
-		}
-	}
-	/*
-	 * We didn't find a pattern that had never been matched, but
-	 * we did find a match, so count it and exit.
-	 */
-	if (matched != NULL) {
-		matched->matches++;
+	/* It's not excluded and we found an inclusion above, so it's included. */
+	if (matched != NULL)
 		return (0);
+
+
+	/* We didn't find an unmatched inclusion, check the remaining ones. */
+	for (match = matching->inclusions; match != NULL; match = match->next){
+		/* We looked at previously-unmatched inclusions already. */
+		if (match->matches > 0
+		    && match_inclusion(match, pathname)) {
+			match->matches++;
+			return (0);
+		}
 	}
 
 	/* If there were inclusions, default is to exclude. */
@@ -188,291 +205,77 @@ excluded(struct bsdtar *bsdtar, const char *pathname)
  * gtar.  In particular, 'a*b' will match 'foo/a1111/222b/bar'
  *
  */
-int
+static int
 match_exclusion(struct match *match, const char *pathname)
 {
-	const char *p;
-
-	if (*match->pattern == '*' || *match->pattern == '/')
-		return (pathmatch(match->pattern, pathname) == 0);
-
-	for (p = pathname; p != NULL; p = strchr(p, '/')) {
-		if (*p == '/')
-			p++;
-		if (pathmatch(match->pattern, p) == 0)
-			return (1);
-	}
-	return (0);
+	return (lafe_pathmatch(match->pattern,
+		    pathname,
+		    PATHMATCH_NO_ANCHOR_START | PATHMATCH_NO_ANCHOR_END));
 }
 
 /*
  * Again, mimic gtar:  inclusions are always anchored (have to match
  * the beginning of the path) even though exclusions are not anchored.
  */
-int
+static int
 match_inclusion(struct match *match, const char *pathname)
 {
-	return (pathmatch(match->pattern, pathname) == 0);
+	return (lafe_pathmatch(match->pattern, pathname, PATHMATCH_NO_ANCHOR_END));
 }
 
 void
-cleanup_exclusions(struct bsdtar *bsdtar)
+lafe_cleanup_exclusions(struct lafe_matching **matching)
 {
 	struct match *p, *q;
 
-	if (bsdtar->matching) {
-		p = bsdtar->matching->inclusions;
-		while (p != NULL) {
-			q = p;
-			p = p->next;
-			free(q);
-		}
-		p = bsdtar->matching->exclusions;
-		while (p != NULL) {
-			q = p;
-			p = p->next;
-			free(q);
-		}
-		free(bsdtar->matching);
+	if (*matching == NULL)
+		return;
+
+	for (p = (*matching)->inclusions; p != NULL; ) {
+		q = p;
+		p = p->next;
+		free(q);
 	}
+
+	for (p = (*matching)->exclusions; p != NULL; ) {
+		q = p;
+		p = p->next;
+		free(q);
+	}
+
+	free(*matching);
+	*matching = NULL;
 }
 
 static void
-initialize_matching(struct bsdtar *bsdtar)
+initialize_matching(struct lafe_matching **matching)
 {
-	bsdtar->matching = malloc(sizeof(*bsdtar->matching));
-	if (bsdtar->matching == NULL)
-		bsdtar_errc(bsdtar, 1, errno, "No memory");
-	memset(bsdtar->matching, 0, sizeof(*bsdtar->matching));
+	*matching = calloc(sizeof(**matching), 1);
+	if (*matching == NULL)
+		bsdtar_errc(1, errno, "No memory");
 }
 
 int
-unmatched_inclusions(struct bsdtar *bsdtar)
+lafe_unmatched_inclusions(struct lafe_matching *matching)
 {
-	struct matching *matching;
 
-	matching = bsdtar->matching;
 	if (matching == NULL)
 		return (0);
 	return (matching->inclusions_unmatched_count);
 }
 
-
 int
-unmatched_inclusions_warn(struct bsdtar *bsdtar, const char *msg)
+lafe_unmatched_inclusions_warn(struct lafe_matching *matching, const char *msg)
 {
-	struct matching *matching;
 	struct match *p;
 
-	matching = bsdtar->matching;
 	if (matching == NULL)
 		return (0);
 
-	p = matching->inclusions;
-	while (p != NULL) {
-		if (p->matches == 0) {
-			bsdtar->return_value = 1;
-			bsdtar_warnc(bsdtar, 0, "%s: %s",
-			    p->pattern, msg);
-		}
-		p = p->next;
+	for (p = matching->inclusions; p != NULL; p = p->next) {
+		if (p->matches == 0)
+			bsdtar_warnc(0, "%s: %s", p->pattern, msg);
 	}
+
 	return (matching->inclusions_unmatched_count);
 }
-
-/*
- * TODO: Extend this so that the following matches work:
- *     "foo//bar" == "foo/bar"
- *     "foo/./bar" == "foo/bar"
- *     "./foo" == "foo"
- *
- * The POSIX fnmatch() function doesn't handle any of these, but
- * all are common situations that arise when paths are generated within
- * large scripts.  E.g., the following is quite common:
- *      MYPATH=foo/  TARGET=$MYPATH/bar
- * It may be worthwhile to edit such paths at write time as well,
- * especially when such editing may avoid the need for long pathname
- * extensions.
- */
-static int
-pathmatch(const char *pattern, const char *string)
-{
-	/*
-	 * Strip leading "./" or ".//" so that, e.g.,
-	 * "foo" matches "./foo".  In particular, this
-	 * opens up an optimization for the writer to
-	 * elide leading "./".
-	 */
-	if (pattern[0] == '.' && pattern[1] == '/') {
-		pattern += 2;
-		while (pattern[0] == '/')
-			++pattern;
-	}
-	if (string[0] == '.' && string[1] == '/') {
-		string += 2;
-		while (string[0] == '/')
-			++string;
-	}
-	return (bsdtar_fnmatch(pattern, string));
-}
-
-
-#if defined(HAVE_FNMATCH) && defined(HAVE_FNM_LEADING_DIR)
-
-/* Use system fnmatch() if it suits our needs. */
-/* On Linux, _GNU_SOURCE must be defined to get FNM_LEADING_DIR. */
-#define _GNU_SOURCE
-#include <fnmatch.h>
-static int
-bsdtar_fnmatch(const char *pattern, const char *string)
-{
-	return (fnmatch(pattern, string, FNM_LEADING_DIR));
-}
-
-#else
-/*
- * The following was hacked from BSD C library
- * code:  src/lib/libc/gen/fnmatch.c,v 1.15 2002/02/01
- *
- * In particular, most of the flags were ripped out: this always
- * behaves like FNM_LEADING_DIR is set and other flags specified
- * by POSIX are unset.
- *
- * Normally, I would not conditionally compile something like this: If
- * I have to support it anyway, everyone may as well use it. ;-)
- * However, the full POSIX spec for fnmatch() includes a lot of
- * advanced character handling that I'm not ready to put in here, so
- * it's probably best if people use a local version when it's available.
- */
-
-/*
- * Copyright (c) 1989, 1993, 1994
- *	The Regents of the University of California.  All rights reserved.
- *
- * This code is derived from software contributed to Berkeley by
- * Guido van Rossum.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- */
-
-static int
-bsdtar_fnmatch(const char *pattern, const char *string)
-{
-	const char *saved_pattern;
-	int negate, matched;
-	char c;
-
-	for (;;) {
-		switch (c = *pattern++) {
-		case '\0':
-			if (*string == '/' || *string == '\0')
-				return (0);
-			return (1);
-		case '?':
-			if (*string == '\0')
-				return (1);
-			++string;
-			break;
-		case '*':
-			c = *pattern;
-			/* Collapse multiple stars. */
-			while (c == '*')
-				c = *++pattern;
-
-			/* Optimize for pattern with * at end. */
-			if (c == '\0')
-				return (0);
-
-			/* General case, use recursion. */
-			while (*string != '\0') {
-				if (!bsdtar_fnmatch(pattern, string))
-					return (0);
-				++string;
-			}
-			return (1);
-		case '[':
-			if (*string == '\0')
-				return (1);
-			saved_pattern = pattern;
-			if (*pattern == '!' || *pattern == '^') {
-				negate = 1;
-				++pattern;
-			} else
-				negate = 0;
-			matched = 0;
-			c = *pattern++;
-			do {
-				if (c == '\\')
-					c = *pattern++;
-				if (c == '\0') {
-					pattern = saved_pattern;
-					c = '[';
-					goto norm;
-				}
-				if (*pattern == '-') {
-					char c2 = *(pattern + 1);
-					if (c2 == '\0') {
-						pattern = saved_pattern;
-						c = '[';
-						goto norm;
-					}
-					if (c2 == ']') {
-						/* [a-] is not a range. */
-						if (c == *string
-						    || '-' == *string)
-							matched = 1;
-						pattern ++;
-					} else {
-						if (c <= *string
-						    && *string <= c2)
-							matched = 1;
-						pattern += 2;
-					}
-				} else if (c == *string)
-					matched = 1;
-				c = *pattern++;
-			} while (c != ']');
-			if (matched == negate)
-				return (1);
-			++string;
-			break;
-		case '\\':
-			if ((c = *pattern++) == '\0') {
-				c = '\\';
-				--pattern;
-			}
-			/* FALLTHROUGH */
-		default:
-		norm:
-			if (c != *string)
-				return (1);
-			string++;
-			break;
-		}
-	}
-	/* NOTREACHED */
-}
-
-#endif

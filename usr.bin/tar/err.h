@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2009 Joerg Sonnenberger
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -21,47 +21,23 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD$
  */
-#include "test.h"
-__FBSDID("$FreeBSD$");
 
-/*
- * This first test does basic sanity checks on the environment.  For
- * most of these, we just exit on failure.
- */
-#if !defined(_WIN32) || defined(__CYGWIN__)
-#define DEV_NULL "/dev/null"
+#ifndef LAFE_ERR_H
+#define LAFE_ERR_H
+
+#if defined(__GNUC__) && (__GNUC__ > 2 || \
+                          (__GNUC__ == 2 && __GNUC_MINOR__ >= 5))
+#define __LA_DEAD       __attribute__((__noreturn__))
 #else
-#define DEV_NULL "NUL"
+#define __LA_DEAD
 #endif
 
-DEFINE_TEST(test_0)
-{
-	struct stat st;
+extern const char *bsdtar_progname;
 
-	failure("File %s does not exist?!", testprog);
-	if (!assertEqualInt(0, stat(testprog, &st)))
-		exit(1);
+void	bsdtar_warnc(int code, const char *fmt, ...);
+void	bsdtar_errc(int eval, int code, const char *fmt, ...) __LA_DEAD;
 
-	failure("%s is not executable?!", testprog);
-	if (!assert((st.st_mode & 0111) != 0))
-		exit(1);
-
-	/*
-	 * Try to succesfully run the program; this requires that
-	 * we know some option that will succeed.
-	 */
-	if (0 == systemf("%s --version >" DEV_NULL, testprog)) {
-		/* This worked. */
-	} else if (0 == systemf("%s -W version >" DEV_NULL, testprog)) {
-		/* This worked. */
-	} else {
-		failure("Unable to successfully run any of the following:\n"
-		    "  * %s --version\n"
-		    "  * %s -W version\n",
-		    testprog, testprog);
-		assert(0);
-	}
-
-	/* TODO: Ensure that our reference files are available. */
-}
+#endif

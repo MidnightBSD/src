@@ -1,12 +1,13 @@
 /*-
- * Copyright (c) 2003-2007 Tim Kientzle
+ * Copyright (c) 2003-2010 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *    notice, this list of conditions and the following disclaimer
+ *    in this position and unchanged.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -22,46 +23,52 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "test.h"
+
+#include "bsdtar_platform.h"
 __FBSDID("$FreeBSD$");
 
-/*
- * This first test does basic sanity checks on the environment.  For
- * most of these, we just exit on failure.
- */
-#if !defined(_WIN32) || defined(__CYGWIN__)
-#define DEV_NULL "/dev/null"
-#else
-#define DEV_NULL "NUL"
+#ifdef HAVE_STDARG_H
+#include <stdarg.h>
+#endif
+#include <stdio.h>
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
+#include <string.h>
 #endif
 
-DEFINE_TEST(test_0)
+#include "err.h"
+
+const char *bsdtar_progname;
+
+static void
+bsdtar_vwarnc(int code, const char *fmt, va_list ap)
 {
-	struct stat st;
+	fprintf(stderr, "%s: ", bsdtar_progname);
+	vfprintf(stderr, fmt, ap);
+	if (code != 0)
+		fprintf(stderr, ": %s", strerror(code));
+	fprintf(stderr, "\n");
+}
 
-	failure("File %s does not exist?!", testprog);
-	if (!assertEqualInt(0, stat(testprog, &st)))
-		exit(1);
+void
+bsdtar_warnc(int code, const char *fmt, ...)
+{
+	va_list ap;
 
-	failure("%s is not executable?!", testprog);
-	if (!assert((st.st_mode & 0111) != 0))
-		exit(1);
+	va_start(ap, fmt);
+	bsdtar_vwarnc(code, fmt, ap);
+	va_end(ap);
+}
 
-	/*
-	 * Try to succesfully run the program; this requires that
-	 * we know some option that will succeed.
-	 */
-	if (0 == systemf("%s --version >" DEV_NULL, testprog)) {
-		/* This worked. */
-	} else if (0 == systemf("%s -W version >" DEV_NULL, testprog)) {
-		/* This worked. */
-	} else {
-		failure("Unable to successfully run any of the following:\n"
-		    "  * %s --version\n"
-		    "  * %s -W version\n",
-		    testprog, testprog);
-		assert(0);
-	}
+void
+bsdtar_errc(int eval, int code, const char *fmt, ...)
+{
+	va_list ap;
 
-	/* TODO: Ensure that our reference files are available. */
+	va_start(ap, fmt);
+	bsdtar_vwarnc(code, fmt, ap);
+	va_end(ap);
+	exit(eval);
 }
