@@ -30130,6 +30130,7 @@ share/man/man4/dpt.4 -text
 share/man/man4/dummynet.4 -text
 share/man/man4/ed.4 -text
 share/man/man4/edsc.4 -text
+share/man/man4/eeemon.4 -text
 share/man/man4/ef.4 -text
 share/man/man4/ehci.4 -text
 share/man/man4/em.4 -text

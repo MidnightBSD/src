@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.21 2011/01/15 05:56:21 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.22 2011/01/22 19:55:16 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -75,6 +75,7 @@ MAN=	aac.4 \
 	dummynet.4 \
 	ed.4 \
 	edsc.4 \
+	${_eeemon.4} \
 	ef.4 \
 	ehci.4 \
 	em.4 \
@@ -552,6 +553,7 @@ _acpi_dock.4=	acpi_dock.4
 _amdsmb.4=	amdsmb.4
 _amdtemp.4=	amdtemp.4
 _coretemp.4=	coretemp.4
+_eeemon.4=	eeemon.4
 _hptiop.4=	hptiop.4
 _hptmv.4=	hptmv.4
 _hptrr.4=	hptrr.4
