@@ -27,6 +27,8 @@
  * SUCH DAMAGE.
  */
 
+#include <sys/cdefs.h>
+
 #ifndef lint
 static const char copyright[] =
 "@(#) Copyright (c) 1983, 1993\n\
@@ -36,10 +38,12 @@ static const char copyright[] =
 #ifndef lint
 #if 0
 static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
-#endif
 static const char rcsid[] =
   "$FreeBSD: src/sbin/ifconfig/ifconfig.c,v 1.134 2007/10/04 09:45:41 thompsa Exp $";
+#endif
 #endif /* not lint */
+
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -289,8 +293,6 @@ main(int argc, char *argv[])
 		}
 		cp = ifa->ifa_name;
 
-		if ((ifa->ifa_flags & IFF_CANTCONFIG) != 0)
-			continue;
 		if (downonly && (ifa->ifa_flags & IFF_UP) != 0)
 			continue;
 		if (uponly && (ifa->ifa_flags & IFF_UP) == 0)
