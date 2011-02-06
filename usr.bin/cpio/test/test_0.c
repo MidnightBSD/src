@@ -23,12 +23,17 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/usr.bin/cpio/test/test_0.c,v 1.1 2008/05/26 17:15:35 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This first test does basic sanity checks on the environment.  For
  * most of these, we just exit on failure.
  */
+#if !defined(_WIN32) || defined(__CYGWIN__)
+#define DEV_NULL "/dev/null"
+#else
+#define DEV_NULL "NUL"
+#endif
 
 DEFINE_TEST(test_0)
 {
@@ -46,9 +51,9 @@ DEFINE_TEST(test_0)
 	 * Try to succesfully run the program; this requires that
 	 * we know some option that will succeed.
 	 */
-	if (0 == systemf("%s --version >/dev/null", testprog)) {
+	if (0 == systemf("%s --version >" DEV_NULL, testprog)) {
 		/* This worked. */
-	} else if (0 == systemf("%s -W version >/dev/null", testprog)) {
+	} else if (0 == systemf("%s -W version >" DEV_NULL, testprog)) {
 		/* This worked. */
 	} else {
 		failure("Unable to successfully run any of the following:\n"

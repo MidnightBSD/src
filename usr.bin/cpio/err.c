@@ -24,9 +24,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include "cpio_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/cpio/err.c,v 1.1 2008/05/26 17:15:34 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
@@ -39,12 +38,14 @@ __FBSDID("$FreeBSD: src/usr.bin/cpio/err.c,v 1.1 2008/05/26 17:15:34 kientzle Ex
 #include <string.h>
 #endif
 
-#include "cpio.h"
+#include "err.h"
+
+const char *progname;
 
 static void
-cpio_vwarnc(int code, const char *fmt, va_list ap)
+vwarnc(int code, const char *fmt, va_list ap)
 {
-	fprintf(stderr, "%s: ", cpio_progname);
+	fprintf(stderr, "%s: ", progname);
 	vfprintf(stderr, fmt, ap);
 	if (code != 0)
 		fprintf(stderr, ": %s", strerror(code));
@@ -52,22 +53,22 @@ cpio_vwarnc(int code, const char *fmt, va_list ap)
 }
 
 void
-cpio_warnc(int code, const char *fmt, ...)
+warnc(int code, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	cpio_vwarnc(code, fmt, ap);
+	vwarnc(code, fmt, ap);
 	va_end(ap);
 }
 
 void
-cpio_errc(int eval, int code, const char *fmt, ...)
+errc(int eval, int code, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	cpio_vwarnc(code, fmt, ap);
+	vwarnc(code, fmt, ap);
 	va_end(ap);
 	exit(eval);
 }

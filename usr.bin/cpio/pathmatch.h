@@ -23,14 +23,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/cpio/pathmatch.h,v 1.1 2008/05/26 17:15:34 kientzle Exp $
+ * $FreeBSD$
  */
 
-#ifndef PATHMATCH_H
-#define PATHMATCH_H
+#ifndef LAFE_PATHMATCH_H
+#define LAFE_PATHMATCH_H
 
+/* Don't anchor at beginning unless the pattern starts with "^" */
 #define PATHMATCH_NO_ANCHOR_START	1
-#define PATHMATCH_NO_ANCHOR_END	2
+/* Don't anchor at end unless the pattern ends with "$" */
+#define PATHMATCH_NO_ANCHOR_END 	2
+
+/* Note that "^" and "$" are not special unless you set the corresponding
+ * flag above. */
 
 int pathmatch(const char *p, const char *s, int flags);
 

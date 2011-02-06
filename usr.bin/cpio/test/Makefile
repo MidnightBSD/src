@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/cpio/test/Makefile,v 1.4 2008/08/24 05:49:36 kientzle Exp $
+# $FreeBSD$
 
 # Where to find the cpio sources (for the internal unit tests)
 CPIO_SRCDIR=${.CURDIR}/..
@@ -42,10 +42,10 @@ CLEANFILES+= list.h bsdcpio_test
 NO_MAN=yes
 
 PROG=bsdcpio_test
-DPADD=${LIBARCHIVE} ${LIBBZ2} ${LIBZ}
+DPADD=${LIBARCHIVE} ${LIBBZ2} ${LIBZ} ${LIBLZMA}
 CFLAGS+=	-DPLATFORM_CONFIG_H=\"config_freebsd.h\"
 CFLAGS+=	-I..
-LDADD= -larchive -lz -lbz2
+LDADD= -larchive -lz -lbz2 -llzma
 CFLAGS+= -static -g -O2 -Wall
 CFLAGS+= -I${.OBJDIR}
 CFLAGS+= -I${CPIO_SRCDIR}
@@ -53,7 +53,6 @@ CFLAGS+= -I${CPIO_SRCDIR}
 # Uncomment to link against dmalloc
 #LDADD+= -L/usr/local/lib -ldmalloc
 #CFLAGS+= -I/usr/local/include -DUSE_DMALLOC
-WARNS=6
 
 check test:	bsdcpio_test
 	${.OBJDIR}/bsdcpio_test -p ${.OBJDIR}/../bsdcpio -r ${.CURDIR}

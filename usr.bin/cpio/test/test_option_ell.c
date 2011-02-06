@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/usr.bin/cpio/test/test_option_ell.c,v 1.1 2008/05/26 17:15:35 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is called "test_option_ell" instead of "test_option_l" to

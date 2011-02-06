@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/usr.bin/cpio/test/test_option_d.c,v 1.1 2008/05/26 17:15:35 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 
 DEFINE_TEST(test_option_d)
@@ -42,7 +42,7 @@ DEFINE_TEST(test_option_d)
 	/* Create an archive. */
 	r = systemf("echo dir/file | %s -o > archive.cpio 2>archive.err", testprog);
 	assertEqualInt(r, 0);
-	assertFileContents("1 block\n", 8, "archive.err");
+	assertTextFileContents("1 block\n", "archive.err");
 	assertEqualInt(0, stat("archive.cpio", &st));
 	assertEqualInt(512, st.st_size);
 
@@ -62,7 +62,7 @@ DEFINE_TEST(test_option_d)
 	r = systemf("%s -id < ../archive.cpio >out 2>err", testprog);
 	assertEqualInt(r, 0);
 	assertEmptyFile("out");
-	assertFileContents("1 block\n", 8, "err");
+	assertTextFileContents("1 block\n", "err");
 	/* And the file should be restored. */
 	assertEqualInt(0, stat("dir/file", &st));
 }

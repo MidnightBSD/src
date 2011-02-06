@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/usr.bin/cpio/test/test_option_y.c,v 1.2 2008/08/24 06:21:00 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_option_y)
 {
@@ -43,10 +43,17 @@ DEFINE_TEST(test_option_y)
 	    testprog);
 	failure("-y (bzip) option seems to be broken");
 	if (assertEqualInt(r, 0)) {
-		assertFileContents("1 block\n", 8, "archive.err");
-		/* Check that the archive file has a bzip2 signature. */
-		p = slurpfile(&s, "archive.out");
-		assert(s > 2);
-		assertEqualMem(p, "BZh9", 4);
+		p = slurpfile(&s, "archive.err");
+		p[s] = '\0';
+		if (strstr(p, "bzip2 compression not supported") != NULL) {
+			skipping("This version of bsdcpio was compiled "
+			    "without bzip2 support");
+		} else {
+			assertTextFileContents("1 block\n", "archive.err");
+			/* Check that the archive file has a bzip2 signature. */
+			p = slurpfile(&s, "archive.out");
+			assert(s > 2);
+			assertEqualMem(p, "BZh9", 4);
+		}
 	}
 }
