@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/net/if.h,v 1.3 2008/12/03 00:26:54 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -164,7 +164,8 @@ struct if_data {
 /* flags set internally only: */
 #define	IFF_CANTCHANGE \
 	(IFF_BROADCAST|IFF_POINTOPOINT|IFF_DRV_RUNNING|IFF_DRV_OACTIVE|\
-	    IFF_SIMPLEX|IFF_MULTICAST|IFF_ALLMULTI|IFF_SMART|IFF_PROMISC)
+	    IFF_SIMPLEX|IFF_MULTICAST|IFF_ALLMULTI|IFF_SMART|IFF_PROMISC|\
+	    IFF_NEEDSGIANT)
 
 /*
  * Values for if_link_state.
@@ -199,20 +200,31 @@ struct if_data {
  *   more detailed or differenciated than IFCAP_*.
  *   Hwassist features are defined CSUM_* in sys/mbuf.h
  */
-#define IFCAP_RXCSUM		0x0001  /* can offload checksum on RX */
-#define IFCAP_TXCSUM		0x0002  /* can offload checksum on TX */
-#define IFCAP_NETCONS		0x0004  /* can be a network console */
-#define	IFCAP_VLAN_MTU		0x0008	/* VLAN-compatible MTU */
-#define	IFCAP_VLAN_HWTAGGING	0x0010	/* hardware VLAN tag support */
-#define	IFCAP_JUMBO_MTU		0x0020	/* 9000 byte MTU supported */
-#define	IFCAP_POLLING		0x0040	/* driver supports polling */
-#define	IFCAP_VLAN_HWCSUM	0x0080	/* can do IFCAP_HWCSUM on VLANs */
-#define	IFCAP_TSO4		0x0100	/* can do TCP Segmentation Offload */
-#define	IFCAP_TSO6		0x0200	/* can do TCP6 Segmentation Offload */
-#define	IFCAP_LRO		0x0400	/* can do Large Receive Offload */
+#define IFCAP_RXCSUM		0x00001  /* can offload checksum on RX */
+#define IFCAP_TXCSUM		0x00002  /* can offload checksum on TX */
+#define IFCAP_NETCONS		0x00004  /* can be a network console */
+#define	IFCAP_VLAN_MTU		0x00008	/* VLAN-compatible MTU */
+#define	IFCAP_VLAN_HWTAGGING	0x00010	/* hardware VLAN tag support */
+#define	IFCAP_JUMBO_MTU		0x00020	/* 9000 byte MTU supported */
+#define	IFCAP_POLLING		0x00040	/* driver supports polling */
+#define	IFCAP_VLAN_HWCSUM	0x00080	/* can do IFCAP_HWCSUM on VLANs */
+#define	IFCAP_TSO4		0x00100	/* can do TCP Segmentation Offload */
+#define	IFCAP_TSO6		0x00200	/* can do TCP6 Segmentation Offload */
+#define	IFCAP_LRO		0x00400	/* can do Large Receive Offload */
+#define IFCAP_WOL_UCAST		0x00800 /* wake on any unicast frame */
+#define IFCAP_WOL_MCAST		0x01000 /* wake on any multicast frame */
+#define IFCAP_WOL_MAGIC		0x02000 /* wake on any Magic Packet */
+#define IFCAP_TOE4		0x04000 /* interface can offload TCP */
+#define IFCAP_TOE6		0x08000 /* interface can offload TCP6 */
+#define IFCAP_VLAN_HWFILTER	0x10000 /* interface hw can filter vlan tag */
+#define IFCAP_POLLING_NOCOUNT	0x20000 /* polling ticks cannot be fragmented */
+#define IFCAP_VLAN_HWTSO	0x40000 /* can do IFCAP_TSO on VLANs */
+#define IFCAP_LINKSTATE		0x80000 /* the runtime link state is dynamic */
 
 #define IFCAP_HWCSUM		(IFCAP_RXCSUM | IFCAP_TXCSUM)
 #define	IFCAP_TSO		(IFCAP_TSO4 | IFCAP_TSO6)
+#define IFCAP_WOL		(IFCAP_WOL_UCAST | IFCAP_WOL_MCAST | IFCAP_WOL_MAGIC)
+#define IFCAP_TOE		(IFCAP_TOE4 | IFCAP_TOE6)
 
 #define	IFQ_MAXLEN	50
 #define	IFNET_SLOWHZ	1		/* granularity is 1 second */
