@@ -33101,6 +33101,9 @@ sys/dev/aic7xxx/aicasm/aicasm_macro_scan.l -text
 sys/dev/aic7xxx/aicasm/aicasm_scan.l -text
 sys/dev/aic7xxx/aicasm/aicasm_symbol.c -text
 sys/dev/aic7xxx/aicasm/aicasm_symbol.h -text
+sys/dev/alc/if_alc.c -text
+sys/dev/alc/if_alcreg.h -text
+sys/dev/alc/if_alcvar.h -text
 sys/dev/ale/if_ale.c -text
 sys/dev/ale/if_alereg.h -text
 sys/dev/ale/if_alevar.h -text
@@ -35707,6 +35710,7 @@ sys/modules/aic7xxx/ahc/ahc_pci/Makefile -text
 sys/modules/aic7xxx/ahd/Makefile -text
 sys/modules/aic7xxx/aicasm/Makefile -text
 sys/modules/aio/Makefile -text
+sys/modules/alc/Makefile -text
 sys/modules/ale/Makefile -text
 sys/modules/amd/Makefile -text
 sys/modules/amdtemp/Makefile -text
