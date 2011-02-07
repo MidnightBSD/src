@@ -30070,6 +30070,7 @@ share/man/man4/ahb.4 -text
 share/man/man4/ahc.4 -text
 share/man/man4/ahd.4 -text
 share/man/man4/aio.4 -text
+share/man/man4/alc.4 -text
 share/man/man4/ale.4 -text
 share/man/man4/altq.4 -text
 share/man/man4/amd.4 -text
