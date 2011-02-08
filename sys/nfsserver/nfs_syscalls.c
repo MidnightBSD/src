@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/nfsserver/nfs_syscalls.c,v 1.3 2008/12/02 21:52:45 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -372,6 +372,8 @@ nfssvc_nfsd(struct thread *td)
 			slp = nfsd->nfsd_slp;
 		}
 		if (error || (slp->ns_flag & SLP_VALID) == 0) {
+			if (slp->ns_flag & SLP_DISCONN)
+				nfsrv_zapsock(slp);
 			if (nd) {
 				if (nd->nd_cr != NULL)
 					crfree(nd->nd_cr);
