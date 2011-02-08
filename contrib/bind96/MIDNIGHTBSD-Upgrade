@@ -11,7 +11,7 @@ Note these directions are based on the FreeBSD Upgrade guide by Doug B.
 3) Remove unwanted files and directories:
 
 	$ while read pattern ; do rm -rf $pattern ; done \
-		</usr/src/contrib/bind96/FREEBSD-Xlist
+		</usr/src/contrib/bind96/MIDNIGHTBSD-Xlist
 
    Make sure that took care of everything, and if it didn't, make sure
    to update MIDNIGHTBSD-Xlist so you won't miss it the next time.  A good
@@ -113,4 +113,4 @@ B) Lather, rinse, repeat.
 
 C) Commit when everything builds cleanly and works properly.
 
-$MidnightBSD: src/contrib/bind96/MIDNIGHTBSD-Upgrade,v 1.1 2010/01/16 16:10:58 laffer1 Exp $
+$MidnightBSD: src/contrib/bind96/MIDNIGHTBSD-Upgrade,v 1.2 2010/01/16 22:54:25 laffer1 Exp $
