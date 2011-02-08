@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: mem.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: mem.h,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef ISC_MEM_H
 #define ISC_MEM_H 1
@@ -121,7 +121,7 @@ LIBISC_EXTERNAL_DATA extern unsigned int isc_mem_debugging;
 
 #if ISC_MEM_TRACKLINES
 #define _ISC_MEM_FILELINE	, __FILE__, __LINE__
-#define _ISC_MEM_FLARG		, const char *, int
+#define _ISC_MEM_FLARG		, const char *, unsigned int
 #else
 #define _ISC_MEM_FILELINE
 #define _ISC_MEM_FLARG

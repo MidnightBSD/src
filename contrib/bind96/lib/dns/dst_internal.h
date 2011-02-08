@@ -29,7 +29,7 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst_internal.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: dst_internal.h,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef DST_DST_INTERNAL_H
 #define DST_DST_INTERNAL_H 1
@@ -41,6 +41,7 @@
 #include <isc/region.h>
 #include <isc/types.h>
 #include <isc/md5.h>
+#include <isc/refcount.h>
 #include <isc/sha1.h>
 #include <isc/sha2.h>
 #include <isc/hmacmd5.h>
@@ -83,6 +84,7 @@ typedef struct dst_hmacsha512_key dst_hmacsha512_key_t;
 /*% DST Key Structure */
 struct dst_key {
 	unsigned int	magic;
+	isc_refcount_t	refs;
 	dns_name_t *	key_name;	/*%< name of the key */
 	unsigned int	key_size;	/*%< size of the key in bits */
 	unsigned int	key_proto;	/*%< protocols this key is used for */

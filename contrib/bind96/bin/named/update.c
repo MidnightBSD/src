@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: update.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: update.c,v 1.1.1.3 2011-02-08 21:24:35 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -1945,6 +1945,7 @@ add_sigs(ns_client_t *client, dns_zone_t *zone, dns_db_t *db,
 		CHECK(update_one_rr(db, ver, diff, DNS_DIFFOP_ADDRESIGN, name,
 				    rdataset.ttl, &sig_rdata));
 		dns_rdata_reset(&sig_rdata);
+		isc_buffer_init(&buffer, data, sizeof(data));
 		added_sig = ISC_TRUE;
 	}
 	if (!added_sig) {

@@ -50,7 +50,7 @@
  * USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: sdlz.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: sdlz.c,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*! \file */
 
@@ -800,13 +800,6 @@ find(dns_db_t *db, dns_name_t *name, dns_dbversion_t *version,
 	result = DNS_R_NXDOMAIN;
 
 	for (i = olabels; i <= nlabels; i++) {
-		/*
-		 * Unless this is an explicit lookup at the origin, don't
-		 * look at the origin.
-		 */
-		if (i == olabels && i != nlabels)
-			continue;
-
 		/*
 		 * Look up the next label.
 		 */

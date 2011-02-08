@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stdlib.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: stdlib.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef ISC_STDLIB_H
 #define ISC_STDLIB_H 1

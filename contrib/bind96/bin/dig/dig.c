@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dig.c,v 1.1.1.1 2010-01-16 16:06:19 laffer1 Exp $ */
+/* $Id: dig.c,v 1.1.1.2 2011-02-08 21:24:35 laffer1 Exp $ */
 
 /*! \file */
 
@@ -306,6 +306,8 @@ say_message(dns_rdata_t *rdata, dig_query_t *query, isc_buffer_t *buf) {
 		ADD_STRING(buf, " ");
 	}
 	result = dns_rdata_totext(rdata, NULL, buf);
+	if (result == ISC_R_NOSPACE)
+		return (result);
 	check_result(result, "dns_rdata_totext");
 	if (query->lookup->identify) {
 		TIME_NOW(&now);
@@ -328,10 +330,8 @@ short_answer(dns_message_t *msg, dns_messagetextflag_t flags,
 {
 	dns_name_t *name;
 	dns_rdataset_t *rdataset;
-	isc_buffer_t target;
 	isc_result_t result, loopresult;
 	dns_name_t empty_name;
-	char t[4096];
 	dns_rdata_t rdata = DNS_RDATA_INIT;
 
 	UNUSED(flags);
@@ -347,8 +347,6 @@ short_answer(dns_message_t *msg, dns_messagetextflag_t flags,
 		name = NULL;
 		dns_message_currentname(msg, DNS_SECTION_ANSWER, &name);
 
-		isc_buffer_init(&target, t, sizeof(t));
-
 		for (rdataset = ISC_LIST_HEAD(name->list);
 		     rdataset != NULL;
 		     rdataset = ISC_LIST_NEXT(rdataset, link)) {
@@ -357,6 +355,8 @@ short_answer(dns_message_t *msg, dns_messagetextflag_t flags,
 				dns_rdataset_current(rdataset, &rdata);
 				result = say_message(&rdata, query,
 						     buf);
+				if (result == ISC_R_NOSPACE)
+					return (result);
 				check_result(result, "say_message");
 				loopresult = dns_rdataset_next(rdataset);
 				dns_rdata_reset(&rdata);
@@ -505,6 +505,8 @@ printmessage(dig_query_t *query, dns_message_t *msg, isc_boolean_t headers) {
 				printf(" ad");
 			if ((msg->flags & DNS_MESSAGEFLAG_CD) != 0)
 				printf(" cd");
+			if ((msg->flags & 0x0040U) != 0)
+				printf("; MBZ: 0x4");
 
 			printf("; QUERY: %u, ANSWER: %u, "
 			       "AUTHORITY: %u, ADDITIONAL: %u\n",

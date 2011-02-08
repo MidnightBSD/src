@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: spnego_asn1.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: spnego_asn1.c,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*! \file
  * \brief Method routines generated from SPNEGO ASN.1 module.

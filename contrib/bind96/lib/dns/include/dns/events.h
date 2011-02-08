@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: events.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: events.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef DNS_EVENTS_H
 #define DNS_EVENTS_H 1
@@ -58,7 +58,7 @@
 #define DNS_EVENT_MASTERNEXTZONE		(ISC_EVENTCLASS_DNS + 28)
 #define DNS_EVENT_IOREADY			(ISC_EVENTCLASS_DNS + 29)
 #define DNS_EVENT_LOOKUPDONE			(ISC_EVENTCLASS_DNS + 30)
-/* #define DNS_EVENT_unused			(ISC_EVENTCLASS_DNS + 31) */
+#define DNS_EVENT_RBTDEADNODES			(ISC_EVENTCLASS_DNS + 31)
 #define DNS_EVENT_DISPATCHCONTROL		(ISC_EVENTCLASS_DNS + 32)
 #define DNS_EVENT_REQUESTCONTROL		(ISC_EVENTCLASS_DNS + 33)
 #define DNS_EVENT_DUMPQUANTUM			(ISC_EVENTCLASS_DNS + 34)

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: entropy.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: entropy.h,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef ISC_ENTROPY_H
 #define ISC_ENTROPY_H 1

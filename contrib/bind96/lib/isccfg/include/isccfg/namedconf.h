@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: namedconf.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: namedconf.h,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef ISCCFG_NAMEDCONF_H
 #define ISCCFG_NAMEDCONF_H 1

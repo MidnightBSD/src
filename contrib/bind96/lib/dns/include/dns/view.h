@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: view.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: view.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef DNS_VIEW_H
 #define DNS_VIEW_H 1
@@ -118,6 +118,8 @@ struct dns_view {
 	isc_boolean_t			enablevalidation;
 	isc_boolean_t			acceptexpired;
 	dns_transfer_format_t		transfer_format;
+	dns_acl_t *			cacheacl;
+	dns_acl_t *			cacheonacl;
 	dns_acl_t *			queryacl;
 	dns_acl_t *			queryonacl;
 	dns_acl_t *			recursionacl;

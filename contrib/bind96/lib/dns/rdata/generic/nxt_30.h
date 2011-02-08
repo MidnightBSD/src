@@ -18,7 +18,7 @@
 #ifndef GENERIC_NXT_30_H
 #define GENERIC_NXT_30_H 1
 
-/* $Id: nxt_30.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: nxt_30.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*!
  *  \brief RFC2535 */

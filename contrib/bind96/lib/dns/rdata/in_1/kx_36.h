@@ -18,7 +18,7 @@
 #ifndef IN_1_KX_36_H
 #define IN_1_KX_36_H 1
 
-/* $Id: kx_36.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: kx_36.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*! 
  *  \brief Per RFC2230 */

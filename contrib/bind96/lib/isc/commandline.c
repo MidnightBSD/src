@@ -48,7 +48,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: commandline.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: commandline.c,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*! \file
  * This file was adapted from the NetBSD project's source tree, RCS ID:

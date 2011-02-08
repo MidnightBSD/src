@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: view.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: view.c,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*! \file */
 
@@ -168,6 +168,8 @@ dns_view_create(isc_mem_t *mctx, dns_rdataclass_t rdclass,
 	view->acceptexpired = ISC_FALSE;
 	view->minimalresponses = ISC_FALSE;
 	view->transfer_format = dns_one_answer;
+	view->cacheacl = NULL;
+	view->cacheonacl = NULL;
 	view->queryacl = NULL;
 	view->queryonacl = NULL;
 	view->recursionacl = NULL;
@@ -294,6 +296,10 @@ destroy(dns_view_t *view) {
 		dns_acl_detach(&view->matchclients);
 	if (view->matchdestinations != NULL)
 		dns_acl_detach(&view->matchdestinations);
+	if (view->cacheacl != NULL)
+		dns_acl_detach(&view->cacheacl);
+	if (view->cacheonacl != NULL)
+		dns_acl_detach(&view->cacheonacl);
 	if (view->queryacl != NULL)
 		dns_acl_detach(&view->queryacl);
 	if (view->queryonacl != NULL)

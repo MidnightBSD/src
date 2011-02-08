@@ -18,7 +18,7 @@
 #ifndef IN_1_NSAP_PTR_23_H
 #define IN_1_NSAP_PTR_23_H 1
 
-/* $Id: nsap-ptr_23.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: nsap-ptr_23.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*! 
  *  \brief Per RFC1348.  Obsoleted in RFC 1706 - use PTR instead. */

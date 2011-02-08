@@ -18,7 +18,7 @@
 #ifndef GENERIC_LOC_29_H
 #define GENERIC_LOC_29_H 1
 
-/* $Id: loc_29.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: loc_29.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*!
  * \brief Per RFC1876 */

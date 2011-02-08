@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: task.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: task.c,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*! \file
  * \author Principal Author: Bob Halley
@@ -1292,8 +1292,15 @@ isc_task_endexclusive(isc_task_t *task) {
 #endif
 }
 
-#ifdef HAVE_LIBXML2
+isc_boolean_t
+isc_task_exiting(isc_task_t *t) {
+	isc_task_t *task = (isc_task_t *)t;
 
+	REQUIRE(VALID_TASK(task));
+	return (TASK_SHUTTINGDOWN(task));
+}
+
+#ifdef HAVE_LIBXML2
 void
 isc_taskmgr_renderxml(isc_taskmgr_t *mgr, xmlTextWriterPtr writer)
 {

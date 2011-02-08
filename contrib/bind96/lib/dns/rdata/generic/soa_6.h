@@ -19,7 +19,7 @@
 #ifndef GENERIC_SOA_6_H
 #define GENERIC_SOA_6_H 1
 
-/* $Id: soa_6.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: soa_6.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 typedef struct dns_rdata_soa {
 	dns_rdatacommon_t	common;

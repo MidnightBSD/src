@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: named-checkzone.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: named-checkzone.c,v 1.1.1.3 2011-02-08 21:24:35 laffer1 Exp $ */
 
 /*! \file */
 
@@ -419,6 +419,10 @@ main(int argc, char **argv) {
 	if (isc_commandline_index + 2 != argc)
 		usage();
 
+#ifdef _WIN32
+	InitSockets();
+#endif
+
 	RUNTIME_CHECK(isc_mem_create(0, 0, &mctx) == ISC_R_SUCCESS);
 	if (!quiet)
 		RUNTIME_CHECK(setup_logging(mctx, errout, &lctx)
@@ -453,5 +457,8 @@ main(int argc, char **argv) {
 	isc_hash_destroy();
 	isc_entropy_detach(&ectx);
 	isc_mem_destroy(&mctx);
+#ifdef _WIN32
+	DestroySockets();
+#endif
 	return ((result == ISC_R_SUCCESS) ? 0 : 1);
 }

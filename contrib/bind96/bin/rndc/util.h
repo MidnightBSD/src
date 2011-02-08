@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: util.h,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $ */
+/* $Id: util.h,v 1.1.1.2 2011-02-08 21:24:35 laffer1 Exp $ */
 
 #ifndef RNDC_UTIL_H
 #define RNDC_UTIL_H 1

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: log.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: log.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 /*! \file dns/log.h
  * \author  Principal Authors: DCL */

@@ -1,4 +1,4 @@
-# Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2007, 2010  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2000, 2001  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -13,7 +13,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: Makefile.in,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $
+# $Id: Makefile.in,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $
 
 srcdir =	@srcdir@
 VPATH =		@srcdir@
@@ -28,9 +28,11 @@ CINCLUDES =	-I${srcdir}/include \
 CDEFINES =
 CWARNINGS =
 
-OBJS =		condition.@O@ mutex.@O@ thread.@O@
+THREADOPTOBJS = condition.@O@ mutex.@O@
+OBJS =		@THREADOPTOBJS@ thread.@O@
 
-SRCS =		condition.c mutex.c thread.c
+THREADOPTSRCS = condition.c mutex.c
+SRCS =		@THREADOPTSRCS@ thread.c
 
 SUBDIRS =	include
 TARGETS =	${OBJS}

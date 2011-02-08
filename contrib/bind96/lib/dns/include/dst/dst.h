@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst.h,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: dst.h,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef DST_DST_H
 #define DST_DST_H 1
@@ -506,6 +506,16 @@ dst_key_paramcompare(const dst_key_t *key1, const dst_key_t *key2);
  * Returns:
  *\li 	ISC_TRUE
  * \li	ISC_FALSE
+ */
+
+void
+dst_key_attach(dst_key_t *source, dst_key_t **target);
+/*
+ * Attach to a existing key increasing the reference count.
+ *
+ * Requires:
+ *\li 'source' to be a valid key.
+ *\li 'target' to be non-NULL and '*target' to be NULL.
  */
 
 void

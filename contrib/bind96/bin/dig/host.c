@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: host.c,v 1.1.1.2 2011-01-20 21:16:00 laffer1 Exp $ */
+/* $Id: host.c,v 1.1.1.3 2011-02-08 21:24:35 laffer1 Exp $ */
 
 /*! \file */
 
@@ -625,7 +625,9 @@ pre_parse_args(int argc, char **argv) {
 		case 'v': break;
 		case 'w': break;
 		case 'C': break;
-		case 'D': break;
+		case 'D':
+			debugging = ISC_TRUE;
+			break;
 		case 'N': break;
 		case 'R': break;
 		case 'T': break;
@@ -792,7 +794,7 @@ parse_args(isc_boolean_t is_batchfile, int argc, char **argv) {
 			ndots = atoi(isc_commandline_argument);
 			break;
 		case 'D':
-			debugging = ISC_TRUE;
+			/* Handled by pre_parse_args(). */
 			break;
 		case '4':
 			if (have_ipv4) {

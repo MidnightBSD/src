@@ -18,7 +18,7 @@
 #ifndef IN_1_DHCID_49_H
 #define IN_1_DHCID_49_H 1
 
-/* $Id: dhcid_49.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: dhcid_49.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 typedef struct dns_rdata_in_dhcid {
 	dns_rdatacommon_t	common;

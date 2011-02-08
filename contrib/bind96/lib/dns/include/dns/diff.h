@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: diff.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: diff.h,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
 
 #ifndef DNS_DIFF_H
 #define DNS_DIFF_H 1
@@ -70,7 +70,7 @@ typedef enum {
 	DNS_DIFFOP_DEL = 1,		/*%< Delete an RR. */
 	DNS_DIFFOP_EXISTS = 2,		/*%< Assert RR existence. */
 	DNS_DIFFOP_ADDRESIGN = 4,	/*%< ADD + RESIGN. */
-	DNS_DIFFOP_DELRESIGN = 5,	/*%< DEL + RESIGN. */
+	DNS_DIFFOP_DELRESIGN = 5	/*%< DEL + RESIGN. */
 } dns_diffop_t;
 
 typedef struct dns_difftuple dns_difftuple_t;
