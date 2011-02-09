@@ -12,7 +12,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.20 2010/01/10 21:55:09 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.21 2010/03/19 13:05:50 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 cpu		I686_CPU
@@ -199,6 +199,9 @@ device		vx		# 3Com 3c590, 3c595 (``Vortex'')
 # PCI Ethernet NICs that use the common MII bus controller code.
 # NOTE: Be sure to keep the 'device miibus' line in order to use these NICs!
 device		miibus		# MII bus support
+device		age		# Attansic/Atheros L1 Gigabit Ethernet
+device		alc		# Atheros AR8131/AR8132 Ethernet
+device		ale		# Atheros AR8121/AR8113/AR8114 Ethernet
 device		bce		# Broadcom BCM5706/BCM5708 Gigabit Ethernet
 device		bfe		# Broadcom BCM440x 10/100 Ethernet
 device		bge		# Broadcom BCM570xx Gigabit Ethernet

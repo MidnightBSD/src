@@ -11,7 +11,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first
 # in NOTES.
 #
-# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.11 2010/01/10 21:55:09 laffer1 Exp $
+# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.12 2011/02/09 00:02:27 laffer1 Exp $
 # $FreeBSD: src/sys/amd64/conf/GENERIC,v 1.439.2.7 2005/10/28 19:21:27 jhb Exp $
 
 cpu		HAMMER
@@ -194,6 +194,9 @@ device		vx		# 3Com 3c590, 3c595 (``Vortex'')
 # PCI Ethernet NICs that use the common MII bus controller code.
 # NOTE: Be sure to keep the 'device miibus' line in order to use these NICs!
 device		miibus		# MII bus support
+device		age		# Attansic/Atheros L1 Gigabit Ethernet
+device		alc		# Atheros AR8131/AR8132 Ethernet
+device		ale		# Atheros AR8121/AR8113/AR8114 Ethernet
 device		bce		# Broadcom BCM5706/BCM5708 Gigabit Ethernet
 device		bfe		# Broadcom BCM440x 10/100 Ethernet
 device		bge		# Broadcom BCM570xx Gigabit Ethernet
