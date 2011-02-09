@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20110208:
+	BIND 9.6.3 which fixes a bug with DNSSEC records getting added.
+
 20110206:
 	eeemon(4) added to monitor Asus Eee PC.
 
@@ -937,4 +940,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.110 2011/02/06 01:01:18 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.111 2011/02/06 16:37:04 laffer1 Exp $
