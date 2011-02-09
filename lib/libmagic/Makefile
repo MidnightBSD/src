@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libmagic/Makefile,v 1.2 2008/12/06 03:05:38 laffer1 Exp $
 # $FreeBSD: src/lib/libmagic/Makefile,v 1.10 2007/05/21 02:49:05 deischen Exp $
 # Copyright (c) David E. O'Brien, 2000-2004
 
@@ -11,7 +11,7 @@ DPADD=	${LIBZ}
 LDADD=	-lz
 MAN=	libmagic.3 magic.5
 
-SRCS=	apprentice.c apptype.c ascmagic.c compress.c fsmagic.c funcs.c \
+SRCS=	apprentice.c apptype.c ascmagic.c compress.c encoding.c fsmagic.c funcs.c \
 	is_tar.c magic.c print.c readelf.c softmagic.c
 INCS=	magic.h
 
@@ -40,7 +40,7 @@ magic.mime.mgc: mkmagic magic.mime
 
 CLEANFILES+=	mkmagic
 build-tools: mkmagic
-mkmagic: apprentice.c funcs.c magic.c print.c
+mkmagic: apprentice.c funcs.c magic.c print.c encoding.c
 	${CC} -DHAVE_CONFIG_H -DCOMPILE_ONLY \
 	    -I${.CURDIR} -I${CONTRDIR} -o ${.TARGET} ${.ALLSRC}
 
