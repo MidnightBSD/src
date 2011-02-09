@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/libmagic/Makefile,v 1.4 2011/02/09 04:18:47 laffer1 Exp $
+# $MidnightBSD: src/lib/libmagic/Makefile,v 1.5 2011/02/09 12:31:33 laffer1 Exp $
 # $FreeBSD: src/lib/libmagic/Makefile,v 1.10 2007/05/21 02:49:05 deischen Exp $
 # Copyright (c) David E. O'Brien, 2000-2004
 
@@ -11,7 +11,7 @@ DPADD=	${LIBZ}
 LDADD=	-lz
 MAN=	libmagic.3 magic.5
 
-SRCS=	apprentice.c apptype.c ascmagic.c cdf.c compress.c encoding.c \
+SRCS=	apprentice.c apptype.c ascmagic.c cdf.c cdf_time.c compress.c encoding.c \
 	fsmagic.c funcs.c is_tar.c magic.c print.c readcdf.c readelf.c softmagic.c
 INCS=	magic.h
 
