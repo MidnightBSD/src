@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/net/route.c,v 1.3 2008/12/03 00:26:55 laffer1 Exp $ */
 /*-
  * Copyright (c) 1980, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -397,7 +397,7 @@ rtredirect(struct sockaddr *dst,
 		error = EHOSTUNREACH;
 done:
 	if (rt)
-		rtfree(rt);
+		RTFREE_LOCKED(rt);
 out:
 	if (error)
 		rtstat.rts_badredirect++;
