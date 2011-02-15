@@ -33074,6 +33074,9 @@ sys/dev/advansys/adwvar.h -text
 sys/dev/ae/if_ae.c -text
 sys/dev/ae/if_aereg.h -text
 sys/dev/ae/if_aevar.h -text
+sys/dev/age/if_age.c -text
+sys/dev/age/if_agereg.h -text
+sys/dev/age/if_agevar.h -text
 sys/dev/aha/aha.c -text
 sys/dev/aha/aha_isa.c -text
 sys/dev/aha/aha_mca.c -text
@@ -35716,6 +35719,7 @@ sys/modules/acpi/acpi_sony/Makefile -text
 sys/modules/acpi/acpi_toshiba/Makefile -text
 sys/modules/acpi/acpi_video/Makefile -text
 sys/modules/ae/Makefile -text
+sys/modules/age/Makefile -text
 sys/modules/agp/Makefile -text
 sys/modules/aha/Makefile -text
 sys/modules/ahb/Makefile -text
