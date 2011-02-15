@@ -38795,6 +38795,9 @@ usr.bin/cpio/cpio.c -text
 usr.bin/cpio/cpio.h -text
 usr.bin/cpio/cpio_platform.h -text
 usr.bin/cpio/err.c -text
+usr.bin/cpio/err.h -text
+usr.bin/cpio/line_reader.c -text
+usr.bin/cpio/line_reader.h -text
 usr.bin/cpio/matching.c -text
 usr.bin/cpio/matching.h -text
 usr.bin/cpio/pathmatch.c -text
