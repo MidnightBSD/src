@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ae/if_ae.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ae/if_ae.c,v 1.1.2.5.2.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -380,8 +380,10 @@ ae_attach(device_t dev)
 	ifp->if_snd.ifq_drv_maxlen = IFQ_MAXLEN;
 	IFQ_SET_MAXLEN(&ifp->if_snd, ifp->if_snd.ifq_drv_maxlen);
 	IFQ_SET_READY(&ifp->if_snd);
-	if (pci_find_extcap(dev, PCIY_PMG, &pmc) == 0)
+	if (pci_find_extcap(dev, PCIY_PMG, &pmc) == 0) {
+		ifp->if_capabilities |= IFCAP_WOL_MAGIC;
 		sc->flags |= AE_FLAG_PMG;
+	}
 	ifp->if_capenable = ifp->if_capabilities;
 
 	/*
@@ -1045,7 +1047,7 @@ ae_get_reg_eaddr(ae_softc_t *sc, uint32_t *eaddr)
 	if (AE_CHECK_EADDR_VALID(eaddr) != 0) {
 		if (bootverbose)
 			device_printf(sc->dev,
-			    "Ethetnet address registers are invalid.\n");
+			    "Ethernet address registers are invalid.\n");
 		return (EINVAL);
 	}
 	return (0);
@@ -1103,11 +1105,8 @@ ae_dmamap_cb(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 static int
 ae_alloc_rings(ae_softc_t *sc)
 {
-	bus_dma_tag_t bustag;
 	bus_addr_t busaddr;
 	int error;
-
-	bustag = bus_get_dma_tag(sc->dev);
 
 	/*
 	 * Create parent DMA tag.
@@ -1332,6 +1331,7 @@ ae_pm_init(ae_softc_t *sc)
 	struct ifnet *ifp;
 	uint32_t val;
 	uint16_t pmstat;
+	struct mii_data *mii;
 	int pmc;
 
 	AE_LOCK_ASSERT(sc);
@@ -1343,7 +1343,40 @@ ae_pm_init(ae_softc_t *sc)
 		return;
 	}
 
-	ae_powersave_enable(sc);
+	/*
+	 * Configure WOL if enabled.
+	 */
+	if ((ifp->if_capenable & IFCAP_WOL) != 0) {
+		mii = device_get_softc(sc->miibus);
+		mii_pollstat(mii);
+		if ((mii->mii_media_status & IFM_AVALID) != 0 &&
+		    (mii->mii_media_status & IFM_ACTIVE) != 0) {
+			AE_WRITE_4(sc, AE_WOL_REG, AE_WOL_MAGIC | \
+			    AE_WOL_MAGIC_PME);
+
+			/*
+			 * Configure MAC.
+			 */
+			val = AE_MAC_RX_EN | AE_MAC_CLK_PHY | \
+			    AE_MAC_TX_CRC_EN | AE_MAC_TX_AUTOPAD | \
+			    ((AE_HALFBUF_DEFAULT << AE_HALFBUF_SHIFT) & \
+			    AE_HALFBUF_MASK) | \
+			    ((AE_MAC_PREAMBLE_DEFAULT << \
+			    AE_MAC_PREAMBLE_SHIFT) & AE_MAC_PREAMBLE_MASK) | \
+			    AE_MAC_BCAST_EN | AE_MAC_MCAST_EN;
+			if ((IFM_OPTIONS(mii->mii_media_active) & \
+			    IFM_FDX) != 0)
+				val |= AE_MAC_FULL_DUPLEX;
+			AE_WRITE_4(sc, AE_MAC_REG, val);
+			    
+		} else {	/* No link. */
+			AE_WRITE_4(sc, AE_WOL_REG, AE_WOL_LNKCHG | \
+			    AE_WOL_LNKCHG_PME);
+			AE_WRITE_4(sc, AE_MAC_REG, 0);
+		}
+	} else {
+		ae_powersave_enable(sc);
+	}
 
 	/*
 	 * PCIE hacks. Magic numbers.
@@ -1361,6 +1394,8 @@ ae_pm_init(ae_softc_t *sc)
 	pci_find_extcap(sc->dev, PCIY_PMG, &pmc);
 	pmstat = pci_read_config(sc->dev, pmc + PCIR_POWER_STATUS, 2);
 	pmstat &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
+	if ((ifp->if_capenable & IFCAP_WOL) != 0)
+		pmstat |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
 	pci_write_config(sc->dev, pmc + PCIR_POWER_STATUS, pmstat, 2);
 }
 
@@ -1865,8 +1900,8 @@ ae_rxeof(ae_softc_t *sc, ae_rxd_t *rxd)
 	if_printf(ifp, "Rx interrupt occuried.\n");
 #endif
 	size = le16toh(rxd->len) - ETHER_CRC_LEN;
-	if (size < 0) {
-		if_printf(ifp, "Negative length packet received.");
+	if (size < (ETHER_MIN_LEN - ETHER_CRC_LEN - ETHER_VLAN_ENCAP_LEN)) {
+		if_printf(ifp, "Runt frame received.");
 		return (EIO);
 	}
 
@@ -2042,7 +2077,7 @@ ae_rxfilter(ae_softc_t *sc)
 	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
-		crc = ether_crc32_le(LLADDR((struct sockaddr_dl *)
+		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)
 			ifma->ifma_addr), ETHER_ADDR_LEN);
 		mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
 	}
