@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996 Naoki Hamada <nao@tom-yam.or.jp>
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/vx/if_vx_pci.c,v 1.37 2007/02/23 12:18:59 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/vx/if_vx_pci.c,v 1.37.2.1.6.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,7 +51,7 @@ __FBSDID("$FreeBSD: src/sys/dev/vx/if_vx_pci.c,v 1.37 2007/02/23 12:18:59 piso E
 #include <dev/vx/if_vxreg.h>
 #include <dev/vx/if_vxvar.h>
 
-static void vx_pci_shutdown(device_t);
+static int vx_pci_shutdown(device_t);
 static int vx_pci_probe(device_t);
 static int vx_pci_attach(device_t);
 
@@ -77,7 +76,7 @@ DRIVER_MODULE(vx, pci, vx_driver, vx_devclass, 0, 0);
 MODULE_DEPEND(vx, pci, 1, 1, 1);
 MODULE_DEPEND(vx, ether, 1, 1, 1);
 
-static void
+static int
 vx_pci_shutdown(device_t dev)
 {
 	struct vx_softc *sc;
@@ -86,6 +85,8 @@ vx_pci_shutdown(device_t dev)
 	VX_LOCK(sc);
 	vx_stop(sc);
 	VX_UNLOCK(sc);
+
+	return (0);
 }
 
 static int

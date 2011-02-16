@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Herb Peyerl <hpeyerl@novatel.ca>
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/vx/if_vx.c,v 1.60 2005/11/11 16:04:56 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/vx/if_vx.c,v 1.60.2.1.6.1 2010/02/10 00:26:20 kensmith Exp $");
 
 /*
  * Created from if_ep.c driver by Fred Gray (fgray@rice.edu) to support
@@ -201,7 +200,9 @@ vx_attach(device_t dev)
 
 	sc->vx_tx_start_thresh = 20;	/* probably a good starting point. */
 
+	VX_LOCK(sc);
 	vx_stop(sc);
+	VX_UNLOCK(sc);
 
 	return 1;
 }
@@ -301,7 +302,7 @@ vx_getlink(struct vx_softc *sc)
 		}
 	}
 	if (sc->vx_connectors == 0) {
-		printf("no connectors!");
+		printf("no connectors!\n");
 		return;
 	}
 	GO_WINDOW(3);
@@ -311,9 +312,9 @@ vx_getlink(struct vx_softc *sc)
 	if (sc->vx_connector & 0x10) {
 		sc->vx_connector &= 0x0f;
 		printf("[*%s*]", conn_tab[(int)sc->vx_connector].name);
-		printf(": disable 'auto select' with DOS util!");
+		printf(": disable 'auto select' with DOS util!\n");
 	} else {
-		printf("[*%s*]", conn_tab[(int)sc->vx_connector].name);
+		printf("[*%s*]\n", conn_tab[(int)sc->vx_connector].name);
 	}
 }
 
