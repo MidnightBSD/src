@@ -35946,6 +35946,7 @@ sys/modules/if_stf/Makefile -text
 sys/modules/if_tap/Makefile -text
 sys/modules/if_tun/Makefile -text
 sys/modules/if_vlan/Makefile -text
+sys/modules/igb/Makefile -text
 sys/modules/iir/Makefile -text
 sys/modules/io/Makefile -text
 sys/modules/ip6fw/Makefile -text

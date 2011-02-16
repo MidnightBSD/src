@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.20 2011/02/06 16:25:15 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.21 2011/02/07 00:18:45 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -125,6 +125,7 @@ SUBDIR=	${_3dfx} \
 	if_tap \
 	if_tun \
 	if_vlan \
+	igb \
 	${_iir} \
 	${_io} \
 	ipdivert \
