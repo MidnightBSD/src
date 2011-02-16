@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Stuart Walsh
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/sys/dev/bfe/if_bfereg.h,v 1.10 2006/05/28 18:44:39 silby Exp $ */
+/* $FreeBSD: src/sys/dev/bfe/if_bfereg.h,v 1.10.2.4.6.1 2010/02/10 00:26:20 kensmith Exp $ */
 
 #ifndef _BFE_H
 #define _BFE_H
@@ -73,6 +72,10 @@
 #define BFE_CTRL_EDET       0x00000008 /* Onchip EPHY Energy Detected */
 #define BFE_CTRL_LED        0x000000e0 /* Onchip EPHY LED Control */
 #define BFE_CTRL_LED_SHIFT  5
+
+#define BFE_MAC_FLOW        0x000000AC /* MAC Flow Control */
+#define BFE_FLOW_RX_HIWAT   0x000000ff /* Onchip FIFO HI Water Mark */
+#define BFE_FLOW_PAUSE_ENAB 0x00008000 /* Enable Pause Frame Generation */
 
 #define BFE_RCV_LAZY        0x00000100 /* Lazy Interrupt Control */
 #define BFE_LAZY_TO_MASK    0x00ffffff /* Timeout */
@@ -425,9 +428,6 @@
 #define PCI_CLRBIT(dev, reg, x, s)  \
     pci_write_config(dev, reg, (pci_read_config(dev, reg, s) & ~(x)), s)
 
-#define BFE_RX_RING_SIZE        512
-#define BFE_TX_RING_SIZE        512
-#define BFE_LINK_DOWN           5
 #define BFE_TX_LIST_CNT         128
 #define BFE_RX_LIST_CNT         128
 #define BFE_TX_LIST_SIZE        BFE_TX_LIST_CNT * sizeof(struct bfe_desc)
@@ -435,11 +435,15 @@
 #define BFE_RX_OFFSET           30
 #define BFE_TX_QLEN             256
 
-#define CSR_READ_4(sc, reg)                                                 \
-	bus_space_read_4(sc->bfe_btag, sc->bfe_bhandle, reg)
+#define	BFE_RX_RING_ALIGN	4096
+#define	BFE_TX_RING_ALIGN	4096
+#define	BFE_MAXTXSEGS		16
+#define	BFE_DMA_MAXADDR		0x3FFFFFFF	/* 1GB DMA address limit. */
+#define	BFE_ADDR_LO(x)		((uint64_t)(x) & 0xFFFFFFFF)
 
-#define CSR_WRITE_4(sc, reg, val)                                            \
-	bus_space_write_4(sc->bfe_btag, sc->bfe_bhandle, reg, val)
+#define CSR_READ_4(sc, reg)		bus_read_4(sc->bfe_res, reg)
+
+#define CSR_WRITE_4(sc, reg, val)	bus_write_4(sc->bfe_res, reg, val)
 
 #define BFE_OR(sc, name, val)                                               \
 	CSR_WRITE_4(sc, name, CSR_READ_4(sc, name) | val)
@@ -453,9 +457,15 @@
 
 #define BFE_INC(x, y)       (x) = ((x) == ((y)-1)) ? 0 : (x)+1
 
-struct bfe_data {
+struct bfe_tx_data {
     struct mbuf     *bfe_mbuf;
     bus_dmamap_t     bfe_map;
+};
+
+struct bfe_rx_data {
+    struct mbuf     *bfe_mbuf;
+    bus_dmamap_t     bfe_map;
+    u_int32_t        bfe_ctrl;
 };
 
 struct bfe_desc {
@@ -495,38 +505,35 @@ struct bfe_softc
     struct ifnet            *bfe_ifp;     /* interface info */
     device_t                bfe_dev;
     device_t                bfe_miibus;
-    bus_space_handle_t      bfe_bhandle;
-    vm_offset_t             bfe_vhandle;
-    bus_space_tag_t         bfe_btag;
     bus_dma_tag_t           bfe_tag;
     bus_dma_tag_t           bfe_parent_tag;
     bus_dma_tag_t           bfe_tx_tag, bfe_rx_tag;
     bus_dmamap_t            bfe_tx_map, bfe_rx_map;
+    bus_dma_tag_t           bfe_txmbuf_tag, bfe_rxmbuf_tag;
+    bus_dmamap_t            bfe_rx_sparemap;
     void                    *bfe_intrhand;
     struct resource         *bfe_irq;
     struct resource         *bfe_res;
-    struct callout_handle   bfe_stat_ch;
+    struct callout          bfe_stat_co;
     struct bfe_hw_stats     bfe_hwstats;
     struct bfe_desc         *bfe_tx_list, *bfe_rx_list;
-    struct bfe_data         bfe_tx_ring[BFE_TX_LIST_CNT]; /* XXX */
-    struct bfe_data         bfe_rx_ring[BFE_RX_LIST_CNT]; /* XXX */
+    struct bfe_tx_data      bfe_tx_ring[BFE_TX_LIST_CNT]; /* XXX */
+    struct bfe_rx_data      bfe_rx_ring[BFE_RX_LIST_CNT]; /* XXX */
     struct mtx              bfe_mtx;
     u_int32_t               bfe_flags;
+#define	BFE_FLAG_DETACH		0x4000
+#define	BFE_FLAG_LINK		0x8000
     u_int32_t               bfe_imask;
     u_int32_t               bfe_dma_offset;
     u_int32_t               bfe_tx_cnt, bfe_tx_cons, bfe_tx_prod;
-    u_int32_t               bfe_rx_cnt, bfe_rx_prod, bfe_rx_cons;
+    u_int32_t               bfe_rx_prod, bfe_rx_cons;
     u_int32_t               bfe_tx_dma, bfe_rx_dma;
-    u_int32_t               bfe_link;
+    int                     bfe_watchdog_timer;
     u_int8_t                bfe_phyaddr; /* Address of the card's PHY */
     u_int8_t                bfe_mdc_port;
-    u_int8_t                bfe_unit;   /* interface number */
     u_int8_t                bfe_core_unit;
-    u_int8_t                bfe_up;
     u_char                  bfe_enaddr[6];
     int                     bfe_if_flags;
-    char                    *bfe_vpd_prodname;
-    char                    *bfe_vpd_readonly;
 };
 
 struct bfe_type
