@@ -29,14 +29,15 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/bge.4,v 1.18.2.4 2006/02/02 07:50:00 trhodes Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: src/share/man/man4/bge.4,v 1.32.2.3.2.1 2010/02/10 00:26:20 kensmith Exp $
 .\"
-.Dd November 15, 2005
+.Dd February 6, 2011
 .Dt BGE 4
 .Os
 .Sh NAME
 .Nm bge
-.Nd "Broadcom BCM570x/5714/5721/5750/5751/5752/5789 PCI Gigabit Ethernet adapter driver"
+.Nd "Broadcom BCM570x/5714/5721/5722/5750/5751/5752/5761/5784/5789/57780 PCI Gigabit Ethernet adapter driver"
 .Sh SYNOPSIS
 To compile this driver into the kernel,
 place the following lines in your
@@ -56,8 +57,8 @@ if_bge_load="YES"
 The
 .Nm
 driver provides support for various NICs based on the Broadcom BCM570x,
-5714, 5721, 5750, 5751, 5752 and 5789 families of Gigabit Ethernet
-controller chips.
+5714, 5721, 5722, 5750, 5751, 5752, 5761, 5784, 5789 and 57780 families
+of Gigabit Ethernet controller chips.
 .Pp
 All of these NICs are capable of 10, 100 and 1000Mbps speeds over CAT5
 copper cable, except for the SysKonnect SK-9D41 which supports only
@@ -82,7 +83,8 @@ copper gigabit transceivers,
 which support autonegotiation of 10, 100 and 1000Mbps modes in
 full or half duplex.
 .Pp
-The BCM570x also supports jumbo frames, which can be configured
+The BCM5700, BCM5701, BCM5702, BCM5703 and BCM5704 also support
+jumbo frames, which can be configured
 via the interface MTU setting.
 Selecting an MTU larger than 1500 bytes with the
 .Xr ifconfig 8
@@ -175,6 +177,8 @@ following:
 .Pp
 .Bl -bullet -compact
 .It
+3Com 3c996-SX (1000baseSX)
+.It
 3Com 3c996-T (10/100/1000baseTX)
 .It
 Dell PowerEdge 1750 integrated BCM5704C NIC (10/100/1000baseTX)
@@ -191,6 +195,8 @@ HP ProLiant NC7760 embedded Gigabit NIC (10/100/1000baseTX)
 .It
 HP ProLiant NC7770 PCI-X Gigabit NIC (10/100/1000baseTX)
 .It
+HP ProLiant NC7771 PCI-X Gigabit NIC (10/100/1000baseTX)
+.It
 HP ProLiant NC7781 embedded PCI-X Gigabit NIC (10/100/1000baseTX)
 .It
 Netgear GA302T (10/100/1000baseTX)
@@ -198,6 +204,17 @@ Netgear GA302T (10/100/1000baseTX)
 SysKonnect SK-9D21 (10/100/1000baseTX)
 .It
 SysKonnect SK-9D41 (1000baseSX)
+.El
+.Sh LOADER TUNABLES
+The following tunable can be set at the
+.Xr loader 8
+prompt before booting the kernel, or stored in
+.Xr loader.conf 5 .
+.Bl -tag -width indent
+.It Va hw.bge.allow_asf
+Allow the ASF feature for cooperating with IPMI.
+Can cause system lockup problems on a small number of systems.
+Disabled by default.
 .El
 .Sh DIAGNOSTICS
 .Bl -diag
@@ -222,6 +239,7 @@ The device has stopped responding to the network, or there is a problem with
 the network connection (cable).
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
