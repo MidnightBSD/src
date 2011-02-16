@@ -12,7 +12,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.21 2010/03/19 13:05:50 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.22 2011/02/09 00:11:32 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 cpu		I686_CPU
@@ -190,7 +190,8 @@ device		ppi		# Parallel port interface device
 
 # PCI Ethernet NICs.
 device		de		# DEC/Intel DC21x4x (``Tulip'')
-device		em		# Intel PRO/1000 adapter Gigabit Ethernet Card
+device		em		# Intel PRO/1000 Gigabit Ethernet Family
+device		igb		# Intel PRO/1000 PCIE Server Gigabit Family
 device		ixgb		# Intel PRO/10GbE Ethernet Card
 device		le		# AMD Am7900 LANNCand Am79C9xx PCnet
 device		txp		# 3Com 3cR990 (``Typhoon'')
