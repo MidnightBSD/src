@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
 Copyright (c) 1999-2001, Intel Corporation 
 
@@ -30,7 +29,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
 /*
- * $FreeBSD: src/sys/dev/fxp/rcvbundl.h,v 1.3 2005/04/21 19:34:57 mux Exp $
+ * $FreeBSD: src/sys/dev/fxp/rcvbundl.h,v 1.3.24.1 2010/02/10 00:26:20 kensmith Exp $
  */
 /*
 rcvbundl.h
