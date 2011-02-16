@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/atkbdc/atkbdreg.h,v 1.9 2005/06/10 20:56:37 marius Exp $
+ * $FreeBSD: src/sys/dev/atkbdc/atkbdreg.h,v 1.9.24.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 #ifndef _DEV_ATKBDC_ATKBDREG_H_

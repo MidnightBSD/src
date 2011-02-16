@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbdc_subr.c,v 1.33 2005/06/10 20:56:37 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbdc_subr.c,v 1.33.24.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include "opt_kbd.h"
 
