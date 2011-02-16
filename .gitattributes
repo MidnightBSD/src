@@ -36849,6 +36849,8 @@ sys/netinet/tcp_debug.h -text
 sys/netinet/tcp_fsm.h -text
 sys/netinet/tcp_hostcache.c -text
 sys/netinet/tcp_input.c -text
+sys/netinet/tcp_lro.c -text
+sys/netinet/tcp_lro.h -text
 sys/netinet/tcp_output.c -text
 sys/netinet/tcp_reass.c -text
 sys/netinet/tcp_sack.c -text
