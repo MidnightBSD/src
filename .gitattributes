@@ -30083,6 +30083,7 @@ share/man/man4/acpi_video.4 -text
 share/man/man4/adv.4 -text
 share/man/man4/adw.4 -text
 share/man/man4/ae.4 -text
+share/man/man4/age.4 -text
 share/man/man4/agp.4 -text
 share/man/man4/aha.4 -text
 share/man/man4/ahb.4 -text
