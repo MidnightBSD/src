@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/ps/ps.c,v 1.2 2007/07/26 20:13:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -509,7 +509,7 @@ main(int argc, char *argv[])
 	if (nentries > 0) {
 		if ((kinfo = malloc(nentries * sizeof(*kinfo))) == NULL)
 			errx(1, "malloc failed");
-		for (i = nentries; --i >= 0; ++kp) {
+		for (i = 0; i < nentries; ++i) {
 			/*
 			 * If the user specified multiple selection-criteria,
 			 * then keep any process matched by the inclusive OR
@@ -517,7 +517,7 @@ main(int argc, char *argv[])
 			 */
 			if (pidlist.count > 0) {
 				for (elem = 0; elem < pidlist.count; elem++)
-					if (kp->ki_pid == pidlist.l.pids[elem])
+					if (kp[i].ki_pid == pidlist.l.pids[elem])
 						goto keepit;
 			}
 			/*
@@ -526,42 +526,42 @@ main(int argc, char *argv[])
 			 * a controlling terminal.
 			 */
 			if (xkeep == 0) {
-				if ((kp->ki_tdev == NODEV ||
-				    (kp->ki_flag & P_CONTROLT) == 0))
+				if ((kp[i].ki_tdev == NODEV ||
+				    (kp[i].ki_flag & P_CONTROLT) == 0))
 					continue;
 			}
 			if (nselectors == 0)
 				goto keepit;
 			if (gidlist.count > 0) {
 				for (elem = 0; elem < gidlist.count; elem++)
-					if (kp->ki_rgid == gidlist.l.gids[elem])
+					if (kp[i].ki_rgid == gidlist.l.gids[elem])
 						goto keepit;
 			}
 			if (pgrplist.count > 0) {
 				for (elem = 0; elem < pgrplist.count; elem++)
-					if (kp->ki_pgid ==
+					if (kp[i].ki_pgid ==
 					    pgrplist.l.pids[elem])
 						goto keepit;
 			}
 			if (ruidlist.count > 0) {
 				for (elem = 0; elem < ruidlist.count; elem++)
-					if (kp->ki_ruid ==
+					if (kp[i].ki_ruid ==
 					    ruidlist.l.uids[elem])
 						goto keepit;
 			}
 			if (sesslist.count > 0) {
 				for (elem = 0; elem < sesslist.count; elem++)
-					if (kp->ki_sid == sesslist.l.pids[elem])
+					if (kp[i].ki_sid == sesslist.l.pids[elem])
 						goto keepit;
 			}
 			if (ttylist.count > 0) {
 				for (elem = 0; elem < ttylist.count; elem++)
-					if (kp->ki_tdev == ttylist.l.ttys[elem])
+					if (kp[i].ki_tdev == ttylist.l.ttys[elem])
 						goto keepit;
 			}
 			if (uidlist.count > 0) {
 				for (elem = 0; elem < uidlist.count; elem++)
-					if (kp->ki_uid == uidlist.l.uids[elem])
+					if (kp[i].ki_uid == uidlist.l.uids[elem])
 						goto keepit;
 			}
 			/*
@@ -572,11 +572,11 @@ main(int argc, char *argv[])
 
 		keepit:
 			next_KINFO = &kinfo[nkept];
-			next_KINFO->ki_p = kp;
+			next_KINFO->ki_p = &kp[i];
 			next_KINFO->ki_pcpu = getpcpu(next_KINFO);
 			if (sortby == SORTMEM)
-				next_KINFO->ki_memsize = kp->ki_tsize +
-				    kp->ki_dsize + kp->ki_ssize;
+				next_KINFO->ki_memsize = kp[i].ki_tsize +
+				    kp[i].ki_dsize + kp[i].ki_ssize;
 			if (needuser)
 				saveuser(next_KINFO);
 			dynsizevars(next_KINFO);
