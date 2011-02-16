@@ -30196,6 +30196,7 @@ share/man/man4/idt.4 -text
 share/man/man4/ieee80211.4 -text
 share/man/man4/if_bridge.4 -text
 share/man/man4/ifmib.4 -text
+share/man/man4/igb.4 -text
 share/man/man4/iic.4 -text
 share/man/man4/iicbb.4 -text
 share/man/man4/iicbus.4 -text
