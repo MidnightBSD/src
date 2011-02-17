@@ -5,7 +5,7 @@ package Tie::CPHash;
 #
 # Author: Christopher J. Madsen <cjm@pobox.com>
 # Created: 08 Nov 1997
-# $Revision: 1.1.1.1 $  $Date: 2009-03-15 19:19:07 $
+# $Revision: 1.1.1.2 $  $Date: 2011-02-17 12:49:40 $
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.

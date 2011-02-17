@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-# $Id: filehandle.t,v 1.1.1.1 2009-03-15 19:19:12 ctriv Exp $
 #
 # filehandle.t -- Test the parse_from_filehandle interface.
 #

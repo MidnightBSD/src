@@ -27,7 +27,7 @@ esac
 echo "Extracting x2p/Makefile (with variable substitutions)"
 rm -f Makefile
 cat >Makefile <<!GROK!THIS!
-# $RCSfile: Makefile.SH,v $$Revision: 1.1.1.1 $$Date: 2009-03-15 19:20:09 $
+# $RCSfile: Makefile.SH,v $$Revision: 1.1.1.2 $$Date: 2011-02-17 12:49:38 $
 #
 # $Log: not supported by cvs2svn $
 
@@ -124,6 +124,9 @@ run_byacc:	FORCE
 	    -e 's/^yynewerror://' \
 	    -e 's/^    goto yynewerror;//' \
 	    -e 's|^static char yysccsid\(.*\)|/* static char yysccsid\1 */|' \
+	    -e 's/^\(char \*yyname\[\]\)/const \1/' \
+	    -e 's/^\(char \*yyrule\[\]\)/const \1/' \
+	    -e 's/^\(    register\) \(char \*yys;\)/\1 const \2/' \
 	    < y.tab.c > a2p.c
 
 FORCE:

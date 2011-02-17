@@ -1,9 +1,20 @@
 #!/usr/bin/perl -w
-
-#
-# Generate the reentr.c and reentr.h,
-# and optionally also the relevant metaconfig units (-U option).
 # 
+# Regenerate (overwriting only if changed):
+#
+#    reentr.h
+#    reentr.c
+#
+# from information stored in the DATA section of this file.
+#
+# With the -U option, it also unconditionally regenerates the relevant
+# metaconfig units:
+#
+#    d_${func}_r.U
+#
+# Also accepts the standard regen_lib -q and -v args.
+#
+# This script is normally invoked from regen.pl.
 
 BEGIN {
     # Get function prototypes
@@ -13,7 +24,7 @@ BEGIN {
 use strict;
 use Getopt::Std;
 my %opts;
-getopts('U', \%opts);
+getopts('Uv', \%opts);
 
 my %map = (
 	   V => "void",
@@ -40,10 +51,9 @@ my %map = (
 # Example #3: S_CBI   means type func_r(const char*, char*, int)
 
 
-safer_unlink 'reentr.h';
-die "reentr.h: $!" unless open(H, ">reentr.h");
-binmode H;
-select H;
+# safer_unlink 'reentr.h';
+my $h = safer_open("reentr.h-new");
+select $h;
 print <<EOF;
 /* -*- buffer-read-only: t -*-
  *
@@ -223,7 +233,7 @@ while (<DATA>) { # Read in the protypes.
 	}
 	# Output the metaconfig unit header.
 	print <<EOF;
-?RCS: \$Id: reentr.pl,v 1.1.1.1 2009-03-15 19:17:59 ctriv Exp ${func}_r.U,v $
+?RCS: \$Id: reentr.pl,v 1.1.1.2 2011-02-17 12:49:38 laffer1 Exp ${func}_r.U,v $
 ?RCS:
 ?RCS: Copyright (c) 2002,2003 Jarkko Hietaniemi
 ?RCS:
@@ -332,7 +342,7 @@ close DATA;
 
 # Prepare to continue writing the reentr.h.
 
-select H;
+select $h;
 
 {
     # Write out all the known prototype signatures.
@@ -752,13 +762,13 @@ EOF
 EOF
 		}
 	    }
-	    push @wrap, <<EOF;
-#  endif /* if defined(PERL_REENTR_API) && (PERL_REENTR_API+0 == 1) */
+	    push @wrap, <<EOF;  # !defined(xxx) && XXX_R_PROTO == REENTRANT_PROTO_Y_TS
+#   endif
 EOF
 	}
 
-	    push @wrap, <<EOF;
-#   endif /* HAS_\U$func */
+	    push @wrap, <<EOF;  # defined(PERL_REENTR_API) && (PERL_REENTR_API+0 == 1)
+#  endif
 EOF
 
 	push @wrap, $endif, "\n";
@@ -788,14 +798,14 @@ typedef struct {
 /* ex: set ro: */
 EOF
 
-close(H);
+safer_close($h);
+rename_if_different('reentr.h-new', 'reentr.h');
 
 # Prepare to write the reentr.c.
 
-safer_unlink 'reentr.c';
-die "reentr.c: $!" unless open(C, ">reentr.c");
-binmode C;
-select C;
+# safer_unlink 'reentr.c';
+my $c = safer_open("reentr.c-new");
+select $c;
 print <<EOF;
 /* -*- buffer-read-only: t -*-
  *
@@ -857,6 +867,11 @@ Perl_reentrant_retry(const char *f, ...)
     dTHX;
     void *retptr = NULL;
     va_list ap;
+#ifdef USE_REENTRANT_API
+    /* Easier to special case this here than in embed.pl. (Look at what it
+       generates for proto.h) */
+    PERL_ARGS_ASSERT_REENTRANT_RETRY;
+#endif
     va_start(ap, f);
     {
 #ifdef USE_REENTRANT_API
@@ -1084,6 +1099,9 @@ Perl_reentrant_retry(const char *f, ...)
 
 /* ex: set ro: */
 EOF
+
+safer_close($c);
+rename_if_different('reentr.c-new', 'reentr.c');
 
 __DATA__
 asctime S	|time	|const struct tm|B_SB|B_SBI|I_SB|I_SBI

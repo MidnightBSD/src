@@ -1,5 +1,5 @@
 #
-# $Id: GSM0338.pm,v 1.1.1.1 2009-03-15 19:18:12 ctriv Exp $
+# $Id: GSM0338.pm,v 1.1.1.2 2011-02-17 12:49:46 laffer1 Exp $
 #
 package Encode::GSM0338;
 
@@ -8,7 +8,7 @@ use warnings;
 use Carp;
 
 use vars qw($VERSION);
-$VERSION = do { my @r = ( q$Revision: 1.1.1.1 $ =~ /\d+/g ); sprintf "%d." . "%02d" x $#r, @r };
+$VERSION = do { my @r = ( q$Revision: 1.1.1.2 $ =~ /\d+/g ); sprintf "%d." . "%02d" x $#r, @r };
 
 use Encode qw(:fallbacks);
 
@@ -198,9 +198,11 @@ sub decode ($$;$) {
         }
         else {
             $u =
-              exists $GSM2UNI{$c} ? $GSM2UNI{$c}
-              : $chk
-              ? croak sprintf( "\\x%02X does not map to Unicode", ord($c) )
+              exists $GSM2UNI{$c}
+              ? $GSM2UNI{$c}
+              : $chk ? ref $chk eq 'CODE'
+                  ? $chk->( ord $c )
+                  : croak sprintf( "\\x%02X does not map to Unicode", ord($c) )
               : $FBCHAR;
         }
         $str .= $u;
@@ -218,10 +220,12 @@ sub encode($$;$) {
         my $u = substr( $str, 0, 1, '' );
         my $c;
         $bytes .=
-          exists $UNI2GSM{$u} ? $UNI2GSM{$u}
-          : $chk
-          ? croak sprintf( "\\x{%04x} does not map to %s", 
-			   ord($u), $obj->name )
+          exists $UNI2GSM{$u}
+          ? $UNI2GSM{$u}
+          : $chk ? ref $chk eq 'CODE'
+              ? $chk->( ord($u) )
+              : croak sprintf( "\\x{%04x} does not map to %s", 
+			       ord($u), $obj->name )
           : $FBCHAR;
     }
     $_[1] = $str if $chk;

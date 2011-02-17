@@ -10,7 +10,7 @@ static const char yysccsid[] = "@(#)yaccpar	1.9 (Berkeley) 02/21/93";
 extern int yyparse(void);
 #define YYPREFIX "yy"
 #line 2 "a2p.y"
-/* $RCSfile: a2p.c,v $$Revision: 1.1.1.1 $$Date: 2009-03-15 19:20:09 $
+/* $RCSfile: a2p.c,v $$Revision: 1.1.1.2 $$Date: 2011-02-17 12:49:38 $
  *
  *    Copyright (C) 1991, 1992, 1993, 1994, 1996, 1997, 1999, 2000,
  *    by Larry Wall and others
@@ -1984,7 +1984,7 @@ short yycheck[] = {                                      41,
 #endif
 #define YYMAXTOKEN 306
 #if YYDEBUG
-char *yyname[] = {
+const char *yyname[] = {
 "end-of-file",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,"'%'",0,0,"'('","')'","'*'","'+'","','","'-'",0,"'/'",0,0,0,0,0,0,0,0,0,0,
 "':'","';'","'<'",0,"'>'","'?'",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -1999,7 +1999,7 @@ char *yyname[] = {
 "DELETE","ASGNOP","OROR","ANDAND","NUMBER","VAR","SUBSTR","INDEX","MATCHOP",
 "RELOP","OR","STRING","UMINUS","NOT","INCR","DECR","FIELD","VFIELD","SVFIELD",
 };
-char *yyrule[] = {
+const char *yyrule[] = {
 "$accept : program",
 "program : junk hunks",
 "begin : BEGIN '{' maybe states '}' junk",
@@ -2193,7 +2193,7 @@ yyparse(void)
 {
     register int yym, yyn, yystate;
 #if YYDEBUG
-    register char *yys;
+    register const char *yys;
 
     if ((yys = getenv("YYDEBUG")))
     {

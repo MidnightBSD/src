@@ -1,5 +1,5 @@
 #
-# $Id: mime-header.t,v 1.1.1.1 2009-03-15 19:18:13 ctriv Exp $
+# $Id: mime-header.t,v 1.1.1.2 2011-02-17 12:49:46 laffer1 Exp $
 # This script is written in utf8
 #
 BEGIN {
@@ -23,7 +23,7 @@ no utf8;
 
 use strict;
 #use Test::More qw(no_plan);
-use Test::More tests => 12;
+use Test::More tests => 13;
 use_ok("Encode::MIME::Header");
 
 my $eheader =<<'EOS';
@@ -119,4 +119,10 @@ is(Encode::encode('MIME-Q', $dheader), $qheader, "Double decode Q");
 
 is(Encode::encode('MIME-Q', "\x{fc}"), '=?UTF-8?Q?=C3=BC?=', 'Encode latin1 characters');
 
+# RT42627
+
+my $rt42627 = Encode::decode_utf8("\x{c2}\x{a3}xxxxxxxxxxxxxxxxxxx0");
+is(Encode::encode('MIME-Q', $rt42627), 
+   '=?UTF-8?Q?=C2=A3xxxxxxxxxxxxxxxxxxx?==?UTF-8?Q?0?=',
+   'MIME-Q encoding does not truncate trailing zeros');
 __END__;

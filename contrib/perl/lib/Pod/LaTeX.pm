@@ -494,7 +494,7 @@ If used in conjunction with C<AddPostamble> a full latex document will
 be written that could be immediately processed by C<latex>.
 
 For some pod escapes it may be necessary to include the amsmath
-package. This is not yet added to the preamble automatically.
+package. This is not yet added to the preamble automaatically.
 
 =cut
 
@@ -1867,7 +1867,7 @@ it under the same terms as Perl itself.
 
 =head1 REVISION
 
-$Id: LaTeX.pm,v 1.1.1.1 2009-03-15 19:19:08 ctriv Exp $
+$Id: LaTeX.pm,v 1.1.1.2 2011-02-17 12:49:41 laffer1 Exp $
 
 =end __PRIVATE__
 

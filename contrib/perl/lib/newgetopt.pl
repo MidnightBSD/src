@@ -1,4 +1,4 @@
-# $Id: newgetopt.pl,v 1.1.1.1 2009-03-15 19:18:53 ctriv Exp $
+# $Id: newgetopt.pl,v 1.1.1.2 2011-02-17 12:49:38 laffer1 Exp $
 
 # This library is no longer being maintained, and is included for backward
 # compatibility with Perl 4 programs which may require it.
