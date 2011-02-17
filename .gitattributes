@@ -21206,6 +21206,8 @@ crypto/openssh/md5crypt.c -text
 crypto/openssh/md5crypt.h -text
 crypto/openssh/misc.c -text
 crypto/openssh/misc.h -text
+crypto/openssh/moduli -text
+crypto/openssh/moduli.5 -text
 crypto/openssh/moduli.c -text
 crypto/openssh/monitor.c -text
 crypto/openssh/monitor.h -text
