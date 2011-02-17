@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20110217:
+	Perl 5.10.1 imported
+
 20110216:
 	Introduce igb(4) and split Intel Gigabit Ethernet adapters between
 	igb(4) and em(4).  Newer devices use igb(4).  The code has moved
@@ -951,4 +954,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.113 2011/02/16 00:30:23 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.114 2011/02/16 13:57:06 laffer1 Exp $
