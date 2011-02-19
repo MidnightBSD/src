@@ -1,4 +1,5 @@
 .\"-
+.\" Copyright (c) 2011 Lucas Holt
 .\" Copyright (c) 2008 Rui Paulo
 .\" All rights reserved.
 .\"
@@ -23,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/share/man/man4/amdtemp.4,v 1.1 2009/12/28 19:38:40 laffer1 Exp $
 .\"
-.Dd December 28, 2009
+.Dd February 17, 2011
 .Dt AMDTEMP 4
 .Os
 .Sh NAME
@@ -49,32 +50,33 @@ amdtemp_load="YES"
 The
 .Nm
 driver provides support for the on-die digital thermal sensor present
-in AMD K8, K10 and K11 processors.
+in AMD K8, K10, and K11 processors.
 .Pp
-For the K8 family, the
+The 
 .Nm
-driver reports each cores' temperature through a sysctl node in the
-corresponding CPU devices's sysctl tree, named
-.Va dev.amdtemp.%d.sensor{0,1}.core{0,1} .
-The driver also creates
-.Va dev.cpu.%d.temperature
-displaying the maximum temperature of the two sensors 
-located in each CPU core.
-.Pp
-For the K10 and K11 families, the driver creates
-.Va dev.cpu.%d.temperature
-with the temperature of each core.
+driver creates entries in hw.sensors.hostb4.* for temperature sensors
+on the CPU. Each temp[n] corresponds to the max reading of two sensors
+on K10 and K11 processors.
 .Sh BUGS
 AMD K9 is not supported because temperature reporting has been replaced
 by Maltese.
 .Sh SEE ALSO
+.Xr systat 1 ,
+.Xr sysctl 3 ,
+.Xr sensorsd 8 ,
 .Xr sysctl 8
 .Sh HISTORY
 The
 .Nm
 driver first appeared in
-.Fx 7.1 .
+.Fx 7.1 
+and 
+.Mx 0.3 .
+It was rewritten to use the sensors framework in 
+.Mx 0.4 .
+
 .Sh AUTHORS
 .An
 .An Rui Paulo Aq rpaulo@FreeBSD.org
 .An Norikatsu Shigemura Aq nork@FreeBSD.org
+.An Lucas Holt Aq luke@foolishgames.com
