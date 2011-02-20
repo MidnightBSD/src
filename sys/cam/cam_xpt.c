@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cam/cam_xpt.c,v 1.4 2008/12/03 00:24:27 laffer1 Exp $ */
 /*-
  * Implementation of the Common Access Method Transport (XPT) layer.
  *
@@ -49,10 +49,6 @@ __FBSDID("$FreeBSD: src/sys/cam/cam_xpt.c,v 1.190.4.1 2008/01/31 14:19:06 brueff
 #include <sys/mutex.h>
 #include <sys/sysctl.h>
 #include <sys/kthread.h>
-
-#ifdef PC98
-#include <pc98/pc98/pc98_machdep.h>	/* geometry translation */
-#endif
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -3088,21 +3084,7 @@ xpt_action(union ccb *start_ccb)
 			start_ccb->ccb_h.status = CAM_REQ_CMP;
 			break;
 		}
-#ifdef PC98
-		/*
-		 * In a PC-98 system, geometry translation depens on
-		 * the "real" device geometry obtained from mode page 4.
-		 * SCSI geometry translation is performed in the
-		 * initialization routine of the SCSI BIOS and the result
-		 * stored in host memory.  If the translation is available
-		 * in host memory, use it.  If not, rely on the default
-		 * translation the device driver performs.
-		 */
-		if (scsi_da_bios_params(&start_ccb->ccg) != 0) {
-			start_ccb->ccb_h.status = CAM_REQ_CMP;
-			break;
-		}
-#endif
+
 		sim = start_ccb->ccb_h.path->bus->sim;
 		(*(sim->sim_action))(sim, start_ccb);
 		break;
