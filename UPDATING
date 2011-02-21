@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20110220:
+	cam(4) syncronized with FreeBSD 7.3.
+
+20110219:
+	amdtemp(4) updated to support sensors framework.
+
 20110217:
 	Perl 5.10.1 imported
 
@@ -12,7 +18,7 @@ Updating Information for MidnightBSD users
 	Update bfe(4) to support newer devices and WOL.
 
 20110215:
-	age(4)
+	age(4) added.
 
 20110208:
 	BIND 9.6.3 which fixes a bug with DNSSEC records getting added.
@@ -35,7 +41,7 @@ Updating Information for MidnightBSD users
 20110202:
 	tcsh 6.17.00
 
-	file  5.05
+	file 5.05
 
 20110122:
 	Import it(4) and lm(4), with support for Super I/O hardware monitors. This
@@ -954,4 +960,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.114 2011/02/16 13:57:06 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.115 2011/02/17 14:05:52 laffer1 Exp $
