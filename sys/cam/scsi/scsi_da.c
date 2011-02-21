@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Implementation of SCSI Direct Access Peripheral driver for CAM.
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.224 2007/07/01 17:42:07 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.224.2.6.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 
@@ -478,7 +477,7 @@ static struct da_quirk_entry da_quirk_table[] =
 		 * PR: usb/96546
 		 */
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "EM732X", "MP3 Player*",
-		"1.0"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+		"1.00"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
 	},
 	{
 		/*
@@ -536,6 +535,18 @@ static struct da_quirk_entry da_quirk_table[] =
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "ChipsBnk", "USB*",
 		 "*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
 	},
+	{
+		/*
+		 * Samsung YP-U3 mp3-player
+		 * PR: 125398
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Samsung", "YP-U3",
+		 "*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Netac", "OnlyDisk*",
+		 "2000"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	}
 };
 
 static	disk_strategy_t	dastrategy;
@@ -663,18 +674,19 @@ daopen(struct disk *dp)
 		softc->disk->d_fwheads = softc->params.heads;
 		softc->disk->d_devstat->block_size = softc->params.secsize;
 		softc->disk->d_devstat->flags &= ~DEVSTAT_BS_UNAVAILABLE;
-	}
-	
-	if (error == 0) {
+
 		if ((softc->flags & DA_FLAG_PACK_REMOVABLE) != 0 &&
 		    (softc->quirks & DA_Q_NO_PREVENT) == 0)
 			daprevent(periph, PR_PREVENT);
-	} else {
+	} else
 		softc->flags &= ~DA_FLAG_OPEN;
-		cam_periph_release(periph);
-	}
+
 	cam_periph_unhold(periph);
 	cam_periph_unlock(periph);
+
+	if (error != 0) {
+		cam_periph_release(periph);
+	}
 	return (error);
 }
 
@@ -760,8 +772,8 @@ daclose(struct disk *dp)
 
 	softc->flags &= ~DA_FLAG_OPEN;
 	cam_periph_unhold(periph);
-	cam_periph_release(periph);
 	cam_periph_unlock(periph);
+	cam_periph_release(periph);
 	return (0);	
 }
 
@@ -975,6 +987,8 @@ dacleanup(struct cam_periph *periph)
 	softc = (struct da_softc *)periph->softc;
 
 	xpt_print(periph->path, "removing device entry\n");
+	cam_periph_unlock(periph);
+
 	/*
 	 * If we can't free the sysctl tree, oh well...
 	 */
@@ -983,11 +997,10 @@ dacleanup(struct cam_periph *periph)
 		xpt_print(periph->path, "can't remove sysctl context\n");
 	}
 
-	cam_periph_unlock(periph);
 	disk_destroy(softc->disk);
 	callout_drain(&softc->sendordered_c);
-	cam_periph_lock(periph);
 	free(softc, M_DEVBUF);
+	cam_periph_lock(periph);
 }
 
 static void
@@ -1001,7 +1014,6 @@ daasync(void *callback_arg, u_int32_t code,
 	case AC_FOUND_DEVICE:
 	{
 		struct ccb_getdev *cgd;
-		struct cam_sim *sim;
 		cam_status status;
  
 		cgd = (struct ccb_getdev *)arg;
@@ -1018,7 +1030,6 @@ daasync(void *callback_arg, u_int32_t code,
 		 * this device and start the probe
 		 * process.
 		 */
-		sim = xpt_path_sim(cgd->ccb_h.path);
 		status = cam_periph_alloc(daregister, daoninvalidate,
 					  dacleanup, dastart,
 					  "da", CAM_PERIPH_BIO,
@@ -1068,7 +1079,6 @@ dasysctlinit(void *context, int pending)
 	snprintf(tmpstr, sizeof(tmpstr), "CAM DA unit %d", periph->unit_number);
 	snprintf(tmpstr2, sizeof(tmpstr2), "%d", periph->unit_number);
 
-	mtx_lock(&Giant);
 	sysctl_ctx_init(&softc->sysctl_ctx);
 	softc->flags |= DA_FLAG_SCTX_INIT;
 	softc->sysctl_tree = SYSCTL_ADD_NODE(&softc->sysctl_ctx,
@@ -1076,7 +1086,6 @@ dasysctlinit(void *context, int pending)
 		CTLFLAG_RD, 0, tmpstr);
 	if (softc->sysctl_tree == NULL) {
 		printf("dasysctlinit: unable to allocate sysctl tree\n");
-		mtx_unlock(&Giant);
 		cam_periph_release(periph);
 		return;
 	}
@@ -1090,7 +1099,6 @@ dasysctlinit(void *context, int pending)
 		&softc->minimum_cmd_size, 0, dacmdsizesysctl, "I",
 		"Minimum CDB size");
 
-	mtx_unlock(&Giant);
 	cam_periph_release(periph);
 }
 

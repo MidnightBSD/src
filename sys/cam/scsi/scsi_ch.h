@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/cam/scsi/scsi_ch.h,v 1.5 2005/01/05 22:34:34 imp Exp $ */
+/* $FreeBSD: src/sys/cam/scsi/scsi_ch.h,v 1.5.24.1 2010/02/10 00:26:20 kensmith Exp $ */
 /*	$NetBSD: scsi_changer.h,v 1.11 1998/02/13 08:28:32 enami Exp $	*/
 
 /*-

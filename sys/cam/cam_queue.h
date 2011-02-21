@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * CAM request queue management definitions.
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_queue.h,v 1.9 2005/01/05 22:34:34 imp Exp $
+ * $FreeBSD: src/sys/cam/cam_queue.h,v 1.9.24.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 #ifndef _CAM_CAM_QUEUE_H

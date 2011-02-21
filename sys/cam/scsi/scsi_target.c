@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cam/scsi/scsi_target.c,v 1.3 2008/12/03 00:24:27 laffer1 Exp $ */
 /*-
  * Generic SCSI Target Kernel Mode Driver
  *
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_target.c,v 1.73 2007/04/15 08:49:11 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_target.c,v 1.73.2.1.2.1 2010/02/10 00:26:20 kensmith Exp $");
 
 
 #include <sys/param.h>
@@ -195,7 +195,7 @@ targopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	TAILQ_INIT(&softc->work_queue);
 	TAILQ_INIT(&softc->abort_queue);
 	TAILQ_INIT(&softc->user_ccb_queue);
-	knlist_init(&softc->read_select.si_note, NULL, NULL, NULL, NULL);
+	knlist_init_mtx(&softc->read_select.si_note, NULL);
 
 	return (0);
 }

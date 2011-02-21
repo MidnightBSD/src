@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2002 Kenneth D. Merry
  * All rights reserved.
@@ -42,7 +41,7 @@
  * Ported to run under 386BSD by Julian Elischer (julian@tfs.com) Sept 1992
  *
  *	from: scsi_cd.h,v 1.10 1997/02/22 09:44:28 peter Exp $
- * $FreeBSD: src/sys/cam/scsi/scsi_cd.h,v 1.7 2003/02/21 06:19:38 ken Exp $
+ * $FreeBSD: src/sys/cam/scsi/scsi_cd.h,v 1.7.36.1 2010/02/10 00:26:20 kensmith Exp $
  */
 #ifndef	_SCSI_SCSI_CD_H
 #define _SCSI_SCSI_CD_H 1

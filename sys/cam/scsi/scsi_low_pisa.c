@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NecBSD: scsi_low_pisa.c,v 1.13.18.1 2001/06/08 06:27:48 honda Exp $	*/
 /*	$NetBSD$	*/
 /*-
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_low_pisa.c,v 1.8 2005/01/05 22:34:34 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_low_pisa.c,v 1.8.24.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #ifdef	__NetBSD__
 #include <sys/param.h>

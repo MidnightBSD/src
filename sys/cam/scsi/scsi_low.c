@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NecBSD: scsi_low.c,v 1.24.10.8 2001/06/26 07:39:44 honda Exp $	*/
 /*	$NetBSD$	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_low.c,v 1.29 2007/06/17 05:55:54 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_low.c,v 1.29.2.2.2.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #define	SCSI_LOW_STATICS
 #define	SCSI_LOW_DEBUG
@@ -639,7 +638,10 @@ scsi_low_attach_xs(slp)
 		return ENOMEM;
 	splp = SCSI_LOW_MALLOC(sizeof(*splp));
 	if (splp == NULL)
+	{
+		SCSI_LOW_FREE(sap);
 		return ENOMEM;
+	}
 
 	SCSI_LOW_BZERO(sap, sizeof(*sap));
 	SCSI_LOW_BZERO(splp, sizeof(*splp));
@@ -967,16 +969,16 @@ scsi_low_rescan_bus_cam(slp)
 	struct scsi_low_softc *slp;
 {
   	struct cam_path *path;
-	union ccb *ccb = xpt_alloc_ccb();
+	union ccb *ccb; 
 	cam_status status;
-
-	bzero(ccb, sizeof(union ccb));
 
 	status = xpt_create_path(&path, xpt_periph,
 				 cam_sim_path(slp->sl_si.sim), -1, 0);
 	if (status != CAM_REQ_CMP)
 		return;
 
+	ccb = xpt_alloc_ccb();
+	bzero(ccb, sizeof(union ccb));
 	xpt_setup_ccb(&ccb->ccb_h, path, 5);
 	ccb->ccb_h.func_code = XPT_SCAN_BUS;
 	ccb->ccb_h.cbfcnp = scsi_low_cam_rescan_callback;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Data structures and definitions for the CAM system.
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam.h,v 1.11 2005/01/05 22:34:34 imp Exp $
+ * $FreeBSD: src/sys/cam/cam.h,v 1.11.22.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 #ifndef _CAM_CAM_H

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Implementation of SCSI Sequential Access Peripheral driver for CAM.
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sa.c,v 1.113 2007/06/16 18:20:29 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sa.c,v 1.113.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -1378,17 +1377,16 @@ sacleanup(struct cam_periph *periph)
 
 	softc = (struct sa_softc *)periph->softc;
 
+	xpt_print(periph->path, "removing device entry\n");
 	devstat_remove_entry(softc->device_stats);
-
+	cam_periph_unlock(periph);
 	destroy_dev(softc->devs.ctl_dev);
-
 	for (i = 0; i < SA_NUM_MODES; i++) {
 		destroy_dev(softc->devs.mode_devs[i].r_dev);
 		destroy_dev(softc->devs.mode_devs[i].nr_dev);
 		destroy_dev(softc->devs.mode_devs[i].er_dev);
 	}
-
-	xpt_print(periph->path, "removing device entry\n");
+	cam_periph_lock(periph);
 	free(softc, M_SCSISA);
 }
 

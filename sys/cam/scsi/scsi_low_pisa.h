@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/cam/scsi/scsi_low_pisa.h,v 1.5 2005/01/05 22:34:34 imp Exp $	*/
+/*	$FreeBSD: src/sys/cam/scsi/scsi_low_pisa.h,v 1.5.24.1 2010/02/10 00:26:20 kensmith Exp $	*/
 /*	$NecBSD: scsi_low_pisa.h,v 1.3.14.1 2001/06/08 06:27:49 honda Exp $	*/
 /*	$NetBSD$	*/
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 1999 Kenneth D. Merry.
@@ -69,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_ch.c,v 1.46 2007/05/16 16:54:23 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_ch.c,v 1.46.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -263,9 +262,11 @@ chcleanup(struct cam_periph *periph)
 
 	softc = (struct ch_softc *)periph->softc;
 
-	devstat_remove_entry(softc->device_stats);
-	destroy_dev(softc->dev);
 	xpt_print(periph->path, "removing device entry\n");
+	devstat_remove_entry(softc->device_stats);
+	cam_periph_unlock(periph);
+	destroy_dev(softc->dev);
+	cam_periph_lock(periph);
 	free(softc, M_DEVBUF);
 }
 

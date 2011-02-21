@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998, 2000 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 1999 Kenneth D. Merry.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_pass.c,v 1.48 2007/05/16 16:54:23 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_pass.c,v 1.48.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -166,13 +165,12 @@ passcleanup(struct cam_periph *periph)
 
 	softc = (struct pass_softc *)periph->softc;
 
-	devstat_remove_entry(softc->device_stats);
-
-	destroy_dev(softc->dev);
-
-	if (bootverbose) {
+	if (bootverbose)
 		xpt_print(periph->path, "removing device entry\n");
-	}
+	devstat_remove_entry(softc->device_stats);
+	cam_periph_unlock(periph);
+	destroy_dev(softc->dev);
+	cam_periph_lock(periph);
 	free(softc, M_DEVBUF);
 }
 
@@ -347,12 +345,12 @@ passopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 
 	if ((softc->flags & PASS_FLAG_OPEN) == 0) {
 		softc->flags |= PASS_FLAG_OPEN;
+		cam_periph_unlock(periph);
 	} else {
 		/* Device closes aren't symmertical, so fix up the refcount */
+		cam_periph_unlock(periph);
 		cam_periph_release(periph);
 	}
-
-	cam_periph_unlock(periph);
 
 	return (error);
 }

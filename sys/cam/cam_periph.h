@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Data structures and definitions for CAM peripheral ("type") drivers.
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_periph.h,v 1.18 2007/04/19 22:46:26 scottl Exp $
+ * $FreeBSD: src/sys/cam/cam_periph.h,v 1.18.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 #ifndef _CAM_CAM_PERIPH_H
@@ -142,6 +141,7 @@ cam_status cam_periph_alloc(periph_ctor_t *periph_ctor,
 struct cam_periph *cam_periph_find(struct cam_path *path, char *name);
 cam_status	cam_periph_acquire(struct cam_periph *periph);
 void		cam_periph_release(struct cam_periph *periph);
+void		cam_periph_release_locked(struct cam_periph *periph);
 int		cam_periph_hold(struct cam_periph *periph, int priority);
 void		cam_periph_unhold(struct cam_periph *periph);
 void		cam_periph_invalidate(struct cam_periph *periph);

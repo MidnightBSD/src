@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cam/scsi/scsi_sg.c,v 1.2 2008/12/03 00:24:27 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007 Scott Long
  * All rights reserved.
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sg.c,v 1.9 2007/05/16 16:54:23 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sg.c,v 1.9.2.3.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -201,11 +201,12 @@ sgcleanup(struct cam_periph *periph)
 	struct sg_softc *softc;
 
 	softc = (struct sg_softc *)periph->softc;
-	devstat_remove_entry(softc->device_stats);
-	destroy_dev(softc->dev);
-	if (bootverbose) {
+	if (bootverbose)
 		xpt_print(periph->path, "removing device entry\n");
-	}
+	devstat_remove_entry(softc->device_stats);
+	cam_periph_unlock(periph);
+	destroy_dev(softc->dev);
+	cam_periph_lock(periph);
 	free(softc, M_DEVBUF);
 }
 
@@ -400,12 +401,12 @@ sgopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 
 	if ((softc->flags & SG_FLAG_OPEN) == 0) {
 		softc->flags |= SG_FLAG_OPEN;
+		cam_periph_unlock(periph);
 	} else {
 		/* Device closes aren't symmetrical, fix up the refcount. */
+		cam_periph_unlock(periph);
 		cam_periph_release(periph);
 	}
-
-	cam_periph_unlock(periph);
 
 	return (error);
 }
@@ -941,6 +942,7 @@ sg_scsiio_status(struct ccb_scsiio *csio, u_short *hoststat, u_short *drvstat)
 	case CAM_DEV_NOT_THERE:
 		*hoststat = DID_BAD_TARGET;
 		*drvstat = 0;
+		break;
 	case CAM_SEL_TIMEOUT:
 		*hoststat = DID_NO_CONNECT;
 		*drvstat = 0;

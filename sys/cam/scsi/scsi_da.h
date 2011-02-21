@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Structures and definitions for SCSI commands to Direct Access Devices
  */
@@ -47,7 +46,7 @@
  *
  * Ported to run under 386BSD by Julian Elischer (julian@tfs.com) Sept 1992
  *
- * $FreeBSD: src/sys/cam/scsi/scsi_da.h,v 1.8 2005/01/05 22:34:34 imp Exp $
+ * $FreeBSD: src/sys/cam/scsi/scsi_da.h,v 1.8.24.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 #ifndef	_SCSI_SCSI_DA_H

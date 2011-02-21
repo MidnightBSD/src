@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Common functions for SCSI Interface Modules (SIMs).
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/cam_sim.c,v 1.11 2007/04/19 14:28:43 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/cam_sim.c,v 1.11.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -85,6 +84,7 @@ cam_sim_alloc(sim_action_func sim_action, sim_poll_func sim_poll,
 	sim->max_tagged_dev_openings = max_tagged_dev_transactions;
 	sim->max_dev_openings = max_dev_transactions;
 	sim->flags = 0;
+	sim->refcount = 1;
 	sim->devq = queue;
 	sim->mtx = mtx;
 	if (mtx == &Giant) {
@@ -104,9 +104,39 @@ cam_sim_alloc(sim_action_func sim_action, sim_poll_func sim_poll,
 void
 cam_sim_free(struct cam_sim *sim, int free_devq)
 {
+	int error;
+
+	sim->refcount--;
+	if (sim->refcount > 0) {
+		error = msleep(sim, sim->mtx, PRIBIO, "simfree", 0);
+		KASSERT(error == 0, ("invalid error value for msleep(9)"));
+	}
+
+	KASSERT(sim->refcount == 0, ("sim->refcount == 0"));
+
 	if (free_devq)
 		cam_simq_free(sim->devq);
 	free(sim, M_CAMSIM);
+}
+
+void
+cam_sim_release(struct cam_sim *sim)
+{
+	KASSERT(sim->refcount >= 1, ("sim->refcount >= 1"));
+	mtx_assert(sim->mtx, MA_OWNED);
+
+	sim->refcount--;
+	if (sim->refcount == 0)
+		wakeup(sim);
+}
+
+void
+cam_sim_hold(struct cam_sim *sim)
+{
+	KASSERT(sim->refcount >= 1, ("sim->refcount >= 1"));
+	mtx_assert(sim->mtx, MA_OWNED);
+
+	sim->refcount++;
 }
 
 void

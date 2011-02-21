@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * CAM request queue management functions.
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/cam_queue.c,v 1.9 2005/07/01 15:21:29 avatar Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/cam_queue.c,v 1.9.24.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
