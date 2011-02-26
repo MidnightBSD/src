@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010 Lucas Holt
+ * Copyright (c) 2010, 2011 Lucas Holt
  * Copyright (c) 2008 Chris Reinhardt
  * All rights reserved.
  *
@@ -24,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.5 2010/07/31 03:56:38 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.6 2010/09/11 20:06:10 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.5 2010/07/31 03:56:38 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.6 2010/09/11 20:06:10 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -50,15 +50,17 @@ main(int argc, char *argv[])
   int ch;
   mportInstance *mport;
   mportPackageMeta **packs;
+  mportIndexEntry **indexEntries;
   bool quiet = false;
   bool verbose = false;
   bool origin = false;
+  bool update = false;
   char *comment;
 
   if (argc > 2)
     usage();
     
-  while ((ch = getopt(argc, argv, "oqv")) != -1) {
+  while ((ch = getopt(argc, argv, "oqvu")) != -1) {
     switch (ch) {
       case 'o':
         origin = true;
@@ -69,6 +71,9 @@ main(int argc, char *argv[])
       case 'v':
         verbose = true;
         break;
+      case 'u':
+        update = true;
+        break; 
       case '?':
       default:
         usage();
@@ -98,9 +103,25 @@ main(int argc, char *argv[])
     mport_instance_free(mport);
     exit(3);
   }
+
+  if (update)
+  {
+    if (mport_index_load(mport) != MPORT_OK)
+        errx(4, "Unable to load updates index");
+  }
   
   while (*packs != NULL) {
-    if (verbose) {
+    if (update) {
+      mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries);
+
+     while (*indexEntries != NULL) {
+       if (mport_version_cmp((*packs)->version, (*indexEntries)->version) == 1)
+         (void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
+       indexEntries++;
+     }
+
+      mport_index_entry_free_vec(indexEntries);
+    } else if (verbose) {
       comment = str_remove((*packs)->comment, '\\');
       (void) printf("%s-%s\t%s\n", (*packs)->name, (*packs)->version, comment);
       free(comment);
@@ -153,6 +174,6 @@ str_remove( const char *str, const char ch )
 static void 
 usage() 
 {
-  fprintf(stderr, "Usage: mport.list [-q | -v]\n");
+  fprintf(stderr, "Usage: mport.list [-q | -v | -u]\n");
   exit(2);
 }
