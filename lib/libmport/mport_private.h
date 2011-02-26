@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.3 2010/03/13 01:42:55 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.4 2011/02/26 21:22:44 laffer1 Exp $
  *
  * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -162,7 +162,9 @@ int mport_set_errx(int , const char *, ...);
 #error "Unable to detect arch!"
 #endif
 
-#if __MidnightBSD_version >= 3000
+#if __MidnightBSD_version >= 4000
+#define MPORT_OSVERSION "0.4"
+#elif _MidnightBSD_version < 4000 && __MidnightBSD_version >= 3000
 #define MPORT_OSVERSION "0.3"
 #elif __MidnightBSD_version < 3000 && __MidnightBSD_version >= 2000
 #define MPORT_OSVERSION "0.2"
