@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.3 2010/05/30 03:02:12 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.4 2011/02/26 14:12:38 laffer1 Exp $
  */
 
 
@@ -216,7 +216,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
   if (count == 0) 
     return MPORT_OK;
   
-  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg, version, comment, bundlefile FROM index.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
+  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg, version, comment, bundlefile, license FROM index.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
     ret = mport_err_code();
     goto DONE;
   }
@@ -234,8 +234,9 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
       e[i]->version    = strdup(sqlite3_column_text(stmt, 1));
       e[i]->comment    = strdup(sqlite3_column_text(stmt, 2));
       e[i]->bundlefile = strdup(sqlite3_column_text(stmt, 3));
+      e[i]->license    = strdup(sqlite3_column_text(stmt, 4));
       
-      if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->bundlefile == NULL) {
+      if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
         ret = MPORT_ERR_FATAL;
         goto DONE;
       }
@@ -301,5 +302,6 @@ MPORT_PUBLIC_API void mport_index_entry_free(mportIndexEntry *e)
   free(e->comment);
   free(e->version);
   free(e->bundlefile);
+  free(e->license);
   free(e);
 }
