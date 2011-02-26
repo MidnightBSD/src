@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.4 2011/02/26 14:12:38 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.5 2011/02/26 15:15:24 laffer1 Exp $
  */
 
 
@@ -53,7 +53,7 @@ static int lookup_alias(mportInstance *, const char *, char **);
 MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 {
   if (mport_file_exists(MPORT_INDEX_FILE)) {
-    if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
+    if (mport_db_do(mport->db, "ATTACH \"%Q\" AS idx", MPORT_INDEX_FILE) != MPORT_OK)
         RETURN_CURRENT_ERROR;
         
     mport->flags |= MPORT_INST_HAVE_INDEX;
@@ -62,12 +62,12 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
       if (mport_fetch_index(mport) != MPORT_OK)
         RETURN_CURRENT_ERROR;
         
-      if (mport_db_do(mport->db, "DETACH index") != MPORT_OK)
+      if (mport_db_do(mport->db, "DETACH idx") != MPORT_OK)
         RETURN_CURRENT_ERROR;
         
       mport->flags &= ~MPORT_INST_HAVE_INDEX;
         
-      if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
+      if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
         RETURN_CURRENT_ERROR;
         
       mport->flags |= MPORT_INST_HAVE_INDEX;
@@ -76,7 +76,7 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
     if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
       RETURN_CURRENT_ERROR;
     
-    if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
+    if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
       RETURN_CURRENT_ERROR;
       
     mport->flags |= MPORT_INST_HAVE_INDEX;
@@ -119,7 +119,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
   sqlite3_stmt *stmt;
   
   /* XXX the country is hard coded until a configuration system is created */    
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM index.mirrors WHERE country='us'") != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM idx.mirrors WHERE country='us'") != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(stmt)) {
@@ -142,7 +142,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
   *list_p = list;  
   i = 0;
     
-  if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM index.mirrors WHERE country='us'") != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM idx.mirrors WHERE country='us'") != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   while (1) {
@@ -191,7 +191,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
   if (lookup_alias(mport, pkgname, &lookup) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM index.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM idx.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   switch (sqlite3_step(stmt)) {
@@ -216,7 +216,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
   if (count == 0) 
     return MPORT_OK;
   
-  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg, version, comment, bundlefile, license FROM index.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
+  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg, version, comment, bundlefile, license FROM idx.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
     ret = mport_err_code();
     goto DONE;
   }
@@ -263,7 +263,7 @@ static int lookup_alias(mportInstance *mport, const char *query, char **result)
   sqlite3_stmt *stmt;
   int ret = MPORT_OK;
   
-  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM index.aliases WHERE alias=%Q", query) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM idx.aliases WHERE alias=%Q", query) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   switch (sqlite3_step(stmt)) {
