@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/fetch.c,v 1.1 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/fetch.c,v 1.2 2009/11/28 22:44:31 laffer1 Exp $
  */
 
 
@@ -55,7 +56,8 @@ int mport_fetch_index(mportInstance *mport)
   int i = 0;
   
   MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_index()");
-  
+ 
+  // XXX: is this used? 
   asprintf(&dest, "%s/%s.bz2", MPORT_FETCH_STAGING_DIR, MPORT_INDEX_FILE);
   
   if (dest == NULL)
@@ -73,7 +75,8 @@ int mport_fetch_index(mportInstance *mport)
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
     }
 
-    if (fetch(mport, url, MPORT_INDEX_FILE) == MPORT_OK) {
+    if (fetch(mport, url, MPORT_INDEX_FILE_BZ2) == MPORT_OK) {
+      mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, MPORT_INDEX_FILE);
       free(url);
       free(dest);
       mport_free_vec(mirrors);
@@ -97,7 +100,10 @@ int mport_fetch_index(mportInstance *mport)
  */
 int mport_fetch_bootstrap_index(mportInstance *mport)
 {
-  return fetch(mport, MPORT_BOOTSTRAP_INDEX_URL, MPORT_INDEX_FILE);
+  int result;
+  result = fetch(mport, MPORT_BOOTSTRAP_INDEX_URL, MPORT_INDEX_FILE_BZ2);
+  mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, MPORT_INDEX_FILE);
+  return result;
 }
 
 /* mport_fetch_bundle(mport, filename)

@@ -1,5 +1,6 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.2 2009/06/05 00:02:22 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.3 2010/03/13 01:42:55 laffer1 Exp $
  *
+ * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -37,6 +38,7 @@
 #endif
 
 #include <osreldate.h>
+#include "bzlib.h"
 
 #define MPORT_PUBLIC_API 
 
@@ -81,7 +83,7 @@ int mport_file_exists(const char *);
 int mport_xsystem(mportInstance *mport, const char *, ...);
 int mport_run_asset_exec(mportInstance *mport, const char *, const char *, const char *);
 void mport_free_vec(void *);
-
+int mport_decompress_bzip2(const char *input, const char *output);
 
 
 /* Mport Bundle (a file containing packages) */
@@ -146,6 +148,7 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_MASTER_DB_FILE	"/var/db/mport/master.db"
 #define MPORT_INST_INFRA_DIR	"/var/db/mport/infrastructure"
 #define MPORT_INDEX_FILE	"/var/db/mport/index.db"
+#define MPORT_INDEX_FILE_BZ2	"/var/db/mport/index.db.bz2"
 #define MPORT_FETCH_STAGING_DIR "/var/db/mport/downloads"
 
 

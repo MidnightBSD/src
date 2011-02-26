@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.17 2010/12/11 07:02:48 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.18 2010/12/18 07:59:46 laffer1 Exp $
  */
 
 
@@ -365,4 +366,55 @@ void mport_free_vec(void *vec)
   }
   
   free(vec);
+}
+
+/* mport_decompress_bzip2(char * input, char * output)
+ *
+ * Extract a bzip2 file such as an index
+ */
+int mport_decompress_bzip2(const char *input, const char *output)
+{
+  FILE    *f;
+  FILE    *fout;
+  BZFILE  *b;
+  int     nBuf;
+  char    buf[4096];
+  int     bzerror;
+
+  f = fopen(input, "r");
+  if (!f) {
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open bzip2 file for reading");
+  }
+
+  fout = fopen(output, "w");
+  if (!fout) {
+    fclose(f);
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open file for writing");
+  }
+
+  b = BZ2_bzReadOpen(&bzerror, f, 0, 0, NULL, 0);
+  if (bzerror != BZ_OK) {
+    BZ2_bzReadClose(&bzerror, b);
+    RETURN_ERROR(MPORT_ERR_FATAL, "Input error reading bzip2 file");
+  }
+
+  bzerror = BZ_OK;
+  while (bzerror == BZ_OK) {
+    nBuf = BZ2_bzRead ( &bzerror, b, buf, 4096 );
+    if ( bzerror == BZ_OK ) {
+      if (fwrite(buf, nBuf, 1, fout) < 1) {
+          fclose(fout);
+          RETURN_ERROR(MPORT_ERR_FATAL, "Error writing decompressed file");
+      }
+    }
+  }
+
+  if ( bzerror != BZ_STREAM_END ) {
+    BZ2_bzReadClose ( &bzerror, b );
+    RETURN_ERROR(MPORT_ERR_FATAL, "Unknown error decompressing bzip2 file");
+  } else {
+    BZ2_bzReadClose ( &bzerror, b );
+  }
+
+  return MPORT_OK;
 }
