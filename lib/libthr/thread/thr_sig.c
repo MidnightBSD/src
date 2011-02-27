@@ -213,7 +213,8 @@ _sigprocmask(int how, const sigset_t *set, sigset_t *oset)
 __weak_reference(_pthread_sigmask, pthread_sigmask);
 
 int
-_pthread_sigmask(int how, const sigset_t *set, sigset_t *oset)
+_pthread_sigmask(int how, const sigset_t * __restrict set,
+		sigset_t * __restrict oset)
 {
 	if (_sigprocmask(how, set, oset))
 		return (errno);
