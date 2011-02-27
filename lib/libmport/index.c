@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.5 2011/02/26 15:15:24 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.6 2011/02/26 21:36:15 laffer1 Exp $
  */
 
 
@@ -53,9 +53,9 @@ static int lookup_alias(mportInstance *, const char *, char **);
 MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 {
   if (mport_file_exists(MPORT_INDEX_FILE)) {
-    if (mport_db_do(mport->db, "ATTACH \"%Q\" AS idx", MPORT_INDEX_FILE) != MPORT_OK)
-        RETURN_CURRENT_ERROR;
-        
+    if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+
     mport->flags |= MPORT_INST_HAVE_INDEX;
   
     if (!index_is_recentish(mport)) {
