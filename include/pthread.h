@@ -225,7 +225,8 @@ int		pthread_rwlockattr_setpshared(pthread_rwlockattr_t *, int);
 int		pthread_rwlockattr_destroy(pthread_rwlockattr_t *);
 pthread_t	pthread_self(void);
 int		pthread_setspecific(pthread_key_t, const void *);
-int		pthread_sigmask(int, const __sigset_t *, __sigset_t *);
+int		pthread_sigmask(int, const __sigset_t * __restrict,
+				 __sigset_t * __restrict);
 
 int		pthread_spin_init(pthread_spinlock_t *, int);
 int		pthread_spin_destroy(pthread_spinlock_t *);
