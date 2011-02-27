@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/mport/mport.c,v 1.5 2010/03/04 03:03:55 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/mport/mport.c,v 1.6 2011/02/26 21:25:40 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.5 2010/03/04 03:03:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.6 2011/02/26 21:25:40 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,7 +64,7 @@ main(int argc, char *argv[]) {
 			"mport.delete -n",
 			argv[2]);
         } else if (!strcmp(argv[1], "list")) {
-		if (argc > 2 && strcmp(argv[2], "updates"))
+		if (argc > 2 && !strcmp(argv[2], "updates"))
 			asprintf(&buf, "%s%s",
 				MPORT_TOOLS_PATH,
 				"mport.list -u");
