@@ -23,15 +23,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.6 2010/09/11 20:06:10 laffer1 Exp $
  */
 
-
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.6 2010/09/11 20:06:10 laffer1 Exp $");
-
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.7 2011/02/26 21:24:18 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -104,8 +99,7 @@ main(int argc, char *argv[])
     exit(3);
   }
 
-  if (update)
-  {
+  if (update) {
     if (mport_index_load(mport) != MPORT_OK)
         errx(4, "Unable to load updates index");
   }
@@ -114,13 +108,15 @@ main(int argc, char *argv[])
     if (update) {
       mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries);
 
-     while (*indexEntries != NULL) {
-       if (mport_version_cmp((*packs)->version, (*indexEntries)->version) == 1)
-         (void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
-       indexEntries++;
-     }
+      if (indexEntries != NULL) {
+        while (*indexEntries != NULL) {
+          if (mport_version_cmp((*packs)->version, (*indexEntries)->version) == 1)
+            (void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
+          indexEntries++;
+        }
 
-      mport_index_entry_free_vec(indexEntries);
+        mport_index_entry_free_vec(indexEntries);
+      }
     } else if (verbose) {
       comment = str_remove((*packs)->comment, '\\');
       (void) printf("%s-%s\t%s\n", (*packs)->name, (*packs)->version, comment);
