@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.7 2011/02/26 21:24:18 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.8 2011/02/27 19:38:12 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -110,7 +110,7 @@ main(int argc, char *argv[])
 
       if (indexEntries != NULL) {
         while (*indexEntries != NULL) {
-          if (mport_version_cmp((*packs)->version, (*indexEntries)->version) == 1)
+          if ((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) == 1)
             (void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
           indexEntries++;
         }
