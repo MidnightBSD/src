@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.8 2011/02/27 19:38:12 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.9 2011/03/01 14:59:55 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,7 +37,7 @@ __MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.8 2011/02/27 19:
 #include <mport.h>
 
 static void usage(void);
-static char * str_remove( const char *str, const char ch );
+static char * str_remove(const char *str, const char ch);
 
 int 
 main(int argc, char *argv[]) 
@@ -106,16 +106,20 @@ main(int argc, char *argv[])
   
   while (*packs != NULL) {
     if (update) {
-      mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries);
+      if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
+        fprintf(stderr, "Error Looking up package name %s: %d %s\n", (*packs)->name,  mport_err_code(), mport_err_string());
+        exit(mport_err_code());
+      }
 
       if (indexEntries != NULL) {
         while (*indexEntries != NULL) {
-          if ((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) == 1)
+          if ((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0)
             (void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
           indexEntries++;
         }
 
         mport_index_entry_free_vec(indexEntries);
+        indexEntries = NULL;
       }
     } else if (verbose) {
       comment = str_remove((*packs)->comment, '\\');
