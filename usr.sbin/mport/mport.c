@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.11 2011/03/06 18:58:14 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.12 2011/03/06 20:26:39 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -118,7 +118,7 @@ int
 info(mportInstance *mport, const char *packageName) {
 	mportIndexEntry **indexEntry;
 	mportPackageMeta **packs;
-	char *status;
+	char *status, *origin;
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL) {
@@ -131,18 +131,20 @@ info(mportInstance *mport, const char *packageName) {
 		return 1;
 	}
 
-	if (packs == NULL)
+	if (packs == NULL) {
 		status = "N/A";
-	else if ((*packs)->version)
+		origin = "";
+	} else {
 		status = (*packs)->version;
-	else
-		status = "unknown";
+		origin = (*packs)->origin;
+	}
 
-	printf("%s\nlatest: %s\ninstalled: %s\nlicense: %s\n\n%s\n",
+	printf("%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\n\n%s\n",
 		(*indexEntry)->pkgname,
 		(*indexEntry)->version,
 		status,
 		(*indexEntry)->license,
+		origin,
 		(*indexEntry)->comment);
 
 	mport_index_entry_free_vec(indexEntry);
