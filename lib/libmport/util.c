@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.18 2010/12/18 07:59:46 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.19 2011/02/26 21:22:44 laffer1 Exp $
  */
 
 
@@ -358,7 +358,12 @@ int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd,
  */
 void mport_free_vec(void *vec)
 {
-  char *p = (char *)*(char **)vec;
+  char *p;
+
+  if (vec == NULL)
+    return;
+
+  p = (char *)*(char **)vec;
   
   while (p != NULL) {
     free(p);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.6 2011/02/26 21:36:15 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.7 2011/02/27 17:37:06 laffer1 Exp $
  */
 
 
@@ -187,13 +187,13 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
   mportIndexEntry **e;
   
   MPORT_CHECK_FOR_INDEX(mport, "mport_index_lookup_pkgname()")
-  
+
   if (lookup_alias(mport, pkgname, &lookup) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM idx.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-    
+ 
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
       count = sqlite3_column_int(stmt, 0);

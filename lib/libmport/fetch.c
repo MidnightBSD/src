@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/fetch.c,v 1.2 2009/11/28 22:44:31 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/fetch.c,v 1.3 2011/02/26 21:22:44 laffer1 Exp $
  */
 
 
@@ -81,11 +81,10 @@ int mport_fetch_index(mportInstance *mport)
       free(dest);
       mport_free_vec(mirrors);
       return MPORT_OK;
-    } 
-    
-    free(url);
+    }
+    free(url); 
   }
-    
+   
   free(dest);
   mport_free_vec(mirrors);
   RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to fetch index file: %s", mport_err_string());
@@ -115,9 +114,9 @@ int mport_fetch_bootstrap_index(mportInstance *mport)
 int mport_fetch_bundle(mportInstance *mport, const char *filename)
 {
   char **mirrors;
+  char **mirrorsPtr;
   char *url;
   char *dest;
-  int i = 0;
 
   MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_bundle()");
   
@@ -125,23 +124,28 @@ int mport_fetch_bundle(mportInstance *mport, const char *filename)
     RETURN_CURRENT_ERROR;
     
   asprintf(&dest, "%s/%s", MPORT_FETCH_STAGING_DIR, filename);
-  
-  while (mirrors[i] != NULL) {
-    asprintf(&url, "%s/%s/%s", mirrors[i], MPORT_URL_PATH, filename);
+ 
+  mirrorsPtr = mirrors;
+ 
+  while (mirrorsPtr != NULL) {
+    if (*mirrorsPtr == NULL)
+        break;
+    asprintf(&url, "%s/%s/%s", *mirrorsPtr, MPORT_URL_PATH, filename);
 
     if (fetch(mport, url, dest) == MPORT_OK) {
       free(url);
       free(dest);
-      mport_free_vec(mirrors);
+      //mport_free_vec(mirrors);
       return MPORT_OK;
     } 
     
     free(url);
+    mirrorsPtr++;
   }
   
   free(dest);
-  mport_free_vec(mirrors); 
-  RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to fetch %s: %s", filename, mport_err_string());
+//  mport_free_vec(mirrors);
+  RETURN_CURRENT_ERROR; 
 }
 
 
