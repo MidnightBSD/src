@@ -25,13 +25,16 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.13 2011/03/06 21:20:53 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.14 2011/03/06 22:06:28 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <mport.h>
+
+/* XXX for mport_file_exists */
+#include "mport_private.h"
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
 #define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
@@ -164,14 +167,17 @@ install(mportInstance *mport, const char *packageName) {
 	if (indexEntry == NULL || *indexEntry == NULL)
 		return 1;
 
-	/* TODO: verify package isn't already downloaded */
-	if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
-		fprintf(stderr, "%s\n", mport_err_string());
-		return mport_err_code();
+	asprintf(&packagePath, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
+
+	if (!mport_file_exists(packagePath)) {
+		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
+			fprintf(stderr, "%s\n", mport_err_string());
+			free(packagePath);
+			return mport_err_code();
+		}
 	}
 
 	asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.install");
-	asprintf(&packagePath, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
 
 	resultCode = execl(buf, "mport.install", packagePath, (char *)0);
 	free(buf);
@@ -202,13 +208,16 @@ update(mportInstance *mport, const char *packageName) {
         if (indexEntry == NULL || *indexEntry == NULL)
                 return 1;
 
-        /* TODO: verify package isn't already downloaded */
-        if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
-                fprintf(stderr, "%s\n", mport_err_string());
-                return mport_err_code();
-        }
-
 	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
+
+	if (!mport_file_exists(path)) {
+        	if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
+                	fprintf(stderr, "%s\n", mport_err_string());
+			free(path);
+                	return mport_err_code();
+        	}
+	}
+
 	if (mport_update_primative(mport, path) != MPORT_OK) {
 		fprintf(stderr, "%s\n", mport_err_string());
 		free(path);
