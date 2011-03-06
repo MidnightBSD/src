@@ -25,11 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.8 2011/03/06 00:40:02 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.9 2011/03/06 17:20:25 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <mport.h>
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
@@ -43,7 +44,7 @@ static int update(mportInstance *mport, const char *packageName);
 
 int 
 main(int argc, char *argv[]) {
-	char *buf = NULL;
+	char *flag, *buf = NULL;
 	mportInstance *mport;
 	int resultCode;
 
@@ -64,17 +65,14 @@ main(int argc, char *argv[]) {
 	} else if (!strcmp(argv[1], "update")) {
 		resultCode = update(mport, argv[2]);
         } else if (!strcmp(argv[1], "list")) {
-		if (argc > 2 && !strcmp(argv[2], "updates"))
-			asprintf(&buf, "%s%s",
-				MPORT_TOOLS_PATH,
-				"mport.list -u");
-		else
-			asprintf(&buf, "%s%s",
-                        	MPORT_TOOLS_PATH,
-                        	"mport.list -v");
-		system(buf);
+		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
+		if (argc > 2 && !strcmp(argv[2], "updates")) {
+			flag = "-u";
+		} else {
+			flag = "-v";
+		}
+		resultCode = execl(buf, "mport.list", flag, (char *)0);
 		free(buf);
-		resultCode = 0;
 	} else {
 		mport_instance_free(mport);
 		usage();
@@ -114,8 +112,9 @@ lookupIndex(mportInstance *mport, const char *packageName)
 
 int
 install(mportInstance *mport, const char *packageName) {
-	char *buf;
+	char *buf, *packagePath;
 	mportIndexEntry **indexEntry;
+	int resultCode;
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL)
@@ -127,35 +126,37 @@ install(mportInstance *mport, const char *packageName) {
 		exit(mport_err_code());
 	}
 
-	asprintf(&buf, "%s%s %s/%s",
-			MPORT_TOOLS_PATH,
-			"mport.install",
-			MPORT_LOCAL_PKG_PATH,
-			(*indexEntry)->bundlefile);
-	system(buf);
+	asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.install");
+	asprintf(&packagePath, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
+
+	resultCode = execl(buf, "mport.install", packagePath, (char *)0);
 	free(buf);
+	free(packagePath);
 	mport_index_entry_free_vec(indexEntry);
 
-	return 0;
+	return resultCode;
 }
 
 int
 delete(mportInstance *mport, const char *packageName) {
 	char *buf;
+	int resultCode;
 
-	asprintf(&buf, "%s%s %s",
-			MPORT_TOOLS_PATH,
-			"mport.delete -n",
-			packageName);
-	system(buf);
+	asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.delete");
+ 	resultCode = execl(buf, "mport.delete", "-n", packageName, (char *)0);	
 	free(buf);
 
-	return 0;
+	return resultCode;
 }
 
 int
 update(mportInstance *mport, const char *packageName) {
+	int resultCode;
+
 	/* TODO: verify installed, do updepends */
-	delete(mport, packageName);
+	resultCode = delete(mport, packageName);
+	/* TODO: resultCode is non zero for bad plist command even. FATAL vs NON FATAL? */
+	if (resultCode != 0)
+		return resultCode;
 	return install(mport, packageName);
 } 
