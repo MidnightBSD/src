@@ -22,13 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.4 2010/03/13 05:07:04 laffer1 Exp $
  */
 
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.4 2010/03/13 05:07:04 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.5 2010/12/11 08:24:39 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -54,8 +51,8 @@ static int check_fake(mportAssetList *, const char *, const char *, const char *
 static int grep_file(const char *, const char *);
 static char *string_replace(const char *str, const char *old, const char *new);
 
-
-int main(int argc, char *argv[]) 
+int
+main(int argc, char *argv[]) 
 {
   int ch, ret;
   const char *skip = NULL, *prefix = NULL, *destdir = NULL, *assetlistfile = NULL;
@@ -116,7 +113,8 @@ int main(int argc, char *argv[])
   return ret;
 }
 
-static int check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, const char *skip)
+static int
+check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, const char *skip)
 {
   mportAssetListEntry *e;
   char cwd[FILENAME_MAX], file[FILENAME_MAX];
@@ -136,7 +134,6 @@ static int check_fake(mportAssetList *assetlist, const char *destdir, const char
     if (regcomp(&skipre, anchored_skip, REG_EXTENDED|REG_NOSUB) != 0)
       errx(EX_DATAERR, "Could not compile skip regex");
       
-     
     free(anchored_skip);  
   }
   
@@ -182,11 +179,9 @@ static int check_fake(mportAssetList *assetlist, const char *destdir, const char
     if (S_ISLNK(st.st_mode))
       continue;  /* skip symlinks */
 
-
     /* if file matches skip continue */
     if (skip != NULL && (regexec(&skipre, e->data, 0, NULL, 0) == 0))
       continue;      
-    
     
     DIAG("==> Grepping %s", file)
     /* grep file for fake destdir */
@@ -203,7 +198,8 @@ static int check_fake(mportAssetList *assetlist, const char *destdir, const char
 } 
       
 
-static int grep_file(const char *filename, const char *destdir)
+static int
+grep_file(const char *filename, const char *destdir)
 {
   FILE *file;
   char *line, *nline;
@@ -260,7 +256,8 @@ static int grep_file(const char *filename, const char *destdir)
   return ret;
 }
 
-static char *string_replace(const char *str, const char *old, const char *new)
+static char *
+string_replace(const char *str, const char *old, const char *new)
 {
   char *ret, *r;
   const char *p, *q;
@@ -289,10 +286,10 @@ static char *string_replace(const char *str, const char *old, const char *new)
   return ret;
 }
       
-static void usage() 
+static void
+usage() 
 {
   errx(EX_USAGE, "Usage: mport.check-fake [-s skip] <-f plistfile> <-d destdir> <-p prefix>");
-  exit(EX_USAGE);
 }
 
 
