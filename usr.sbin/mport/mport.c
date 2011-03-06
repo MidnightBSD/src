@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/mport/mport.c,v 1.6 2011/02/26 21:25:40 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/mport/mport.c,v 1.7 2011/02/27 17:15:29 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.6 2011/02/26 21:25:40 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.7 2011/02/27 17:15:29 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,7 +90,7 @@ usage(void) {
 		"usage: mport <command> args:\n"
 		"       mport delete [package name]\n"
 		"       mport install [package name]\n"
-		"       mport list\n"
+		"       mport list [updates]\n"
 	);
 	exit(1);
 } 
