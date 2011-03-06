@@ -22,15 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $
  */
 
-
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $");
-
+__MBSDID("$MidnightBSD: src/libexec/mport.check-for-older/mport.check-for-older.c,v 1.2 2009/06/05 00:08:02 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -39,10 +34,10 @@ __MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05
 #include <unistd.h>
 #include <mport.h>
 
-
 static void usage(void);
 
-int main(int argc, char *argv[]) 
+int
+main(int argc, char *argv[]) 
 {
   int ch;
   mportInstance *mport;
@@ -82,27 +77,32 @@ int main(int argc, char *argv[])
   
   if (mport_instance_init(mport, NULL) != MPORT_OK) {
     warnx("%s", mport_err_string());
+    mport_instance_free(mport);
     exit(1);
   }
 
   if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
     warnx("%s", mport_err_string());
+    mport_instance_free(mport);
     exit(1);
   }
   
   if (packs == NULL) {
     (void)printf("No packages installed matching '%s'\n", arg);
+    mport_instance_free(mport);
     exit(1);
   }
   
 
   if (packs[1] != NULL) {
     warnx("Ambiguous package identifier: %s", arg);
+    mport_instance_free(mport);
     exit(3);
   }
   
   if (mport_version_cmp(packs[0]->version, version) >= 0) {
     (void)printf("%s is installed, but installed version (%s) is not older than port (%s).\n", packs[0]->name, packs[0]->version, version);
+    mport_instance_free(mport);
     exit(1);
   }
   
@@ -112,9 +112,10 @@ int main(int argc, char *argv[])
 }
 
 
-static void usage() 
+static void
+usage() 
 {
-  fprintf(stderr, "Usage: mport.check-for-older -n pkgname -v newversion \n");
-  fprintf(stderr, "Usage: mport.check-for-older -o origin -v newversion\n");
+  fprintf(stderr, "Usage: mport.check-for-older -n pkgname -v newversion \n"
+                  "       mport.check-for-older -o origin -v newversion\n");
   exit(2);
 }
