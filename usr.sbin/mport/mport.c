@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.10 2011/03/06 18:49:47 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.11 2011/03/06 18:58:14 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +41,7 @@ static mportIndexEntry ** lookupIndex(mportInstance *mport, const char *packageN
 static int install(mportInstance *mport, const char *packageName);
 static int delete(mportInstance *mport, const char *packageName);
 static int update(mportInstance *mport, const char *packageName);
+static int info(mportInstance *mport, const char *packageName);
 
 int 
 main(int argc, char *argv[]) {
@@ -73,6 +74,8 @@ main(int argc, char *argv[]) {
 		}
 		resultCode = execl(buf, "mport.list", flag, (char *)0);
 		free(buf);
+	} else if (!strcmp(argv[1], "info")) {
+		resultCode = info(mport, argv[2]);
 	} else {
 		mport_instance_free(mport);
 		usage();
@@ -87,9 +90,10 @@ usage(void) {
 	fprintf( stderr, 
 		"usage: mport <command> args:\n"
 		"       mport delete [package name]\n"
+		"       mport info [package name]\n"
 		"       mport install [package name]\n"
-		"       mport update [package name]\n"
 		"       mport list [updates]\n"
+		"       mport update [package name]\n"
 	);
 	exit(1);
 }
@@ -108,6 +112,41 @@ lookupIndex(mportInstance *mport, const char *packageName)
 	}
 
 	return indexEntries;
+}
+
+int
+info(mportInstance *mport, const char *packageName) {
+	mportIndexEntry **indexEntry;
+	mportPackageMeta **packs;
+	char *status;
+
+	indexEntry = lookupIndex(mport, packageName);
+	if (indexEntry == NULL || *indexEntry == NULL) {
+		fprintf(stderr, "%s not found in index.\n", packageName);
+		return 1;
+	}
+
+	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return 1;
+	}
+
+	if (packs == NULL)
+		status = "N/A";
+	else if ((*packs)->version)
+		status = (*packs)->version;
+	else
+		status = "unknown";
+
+	printf("%s\nlatest: %s\ninstalled: %s\nlicense: %s\n\n%s\n",
+		(*indexEntry)->pkgname,
+		(*indexEntry)->version,
+		status,
+		(*indexEntry)->license,
+		(*indexEntry)->comment);
+
+	mport_index_entry_free_vec(indexEntry);
+	return 0;
 }
 
 int
