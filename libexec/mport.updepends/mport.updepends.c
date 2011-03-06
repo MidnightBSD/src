@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.updepends/mport.updepends.c,v 1.2 2009/06/05 00:08:10 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.updepends/mport.updepends.c,v 1.3 2010/03/10 05:45:23 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.updepends/mport.updepends.c,v 1.2 2009/06/05 00:08:10 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.updepends/mport.updepends.c,v 1.3 2010/03/10 05:45:23 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
-  if (arg == NULL)
+  if (arg == NULL || where == NULL)
     usage();
 
   if ((mport = mport_instance_new()) == NULL) {
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 
 static void usage() 
 {
-  fprintf(stderr, "Usage: mport.updepends -n pkgname\n");
-  fprintf(stderr, "Usage: mport.updepends -o origin\n");
+  fprintf(stderr, "Usage: mport.updepends -n pkgname\n"
+                  "       mport.updepends -o origin\n");
   exit(2);
 }
