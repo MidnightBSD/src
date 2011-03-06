@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/libexec/Makefile,v 1.77 2007/07/03 12:46:04 mlaier Exp $
-# $MidnightBSD: src/libexec/Makefile,v 1.7 2010/09/11 20:07:15 laffer1 Exp $
+# $MidnightBSD: src/libexec/Makefile,v 1.8 2011/03/06 03:57:00 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -17,7 +17,7 @@ SUBDIR=	atrun \
 	mport.check-for-older \
 	mport.create \
 	mport.delete \
-	mport.fetch \ 
+	mport.fetch \
 	mport.info \
 	mport.init \
 	mport.install \
