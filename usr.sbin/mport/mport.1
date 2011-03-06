@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/usr.bin/batt/batt.1,v 1.5 2008/12/09 16:33:34 laffer1 Exp $
+.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.1 2010/02/09 01:41:45 laffer1 Exp $
 .\"
-.Dd January 27, 2010
+.Dd March 6, 2011
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -32,16 +32,50 @@
 .Nd "mport utility"
 .Sh SYNOPSIS
 .Nm
+.Cm list
+.Ar updates
+.Nm
+.Cm info
+.Op Ar name
+.Nm
+.Cm delete
+.Op Ar name
+.Nm
+.Cm install
+.Op Ar name
+.Nm
+.Cm update
+.Op Ar name
+.Nm
+.Cm upgrade
 .Sh DESCRIPTION
 The
 .Nm
-command allows the installation or removal of mport packages.
+command installs or removes mport packages, and displays information on
+installed packages.
+.Pp
+Here is the list of standard commands:
+.Bl -tag -width ".Cm list"
+.It Cm list
+List all currently installed packages
+.It Cm info
+Print detailed information about a package
+.It Cm delete
+Delete or uninstall a package
+.It Cm install
+Fetch and install a package
+.It Cm update
+Fetch and update a specific package
+.It Cm upgrade
+Upgrade all currently installed packages with the latest version
 .Sh HISTORY
 The
 .Nm
 command first appeared in
 .Mx 0.3 .
 .Sh AUTHORS
-This
-manual page was written by
+The
+.Nm
+utility and 
+manual page were written by
 .An Lucas Holt Aq luke@MidnightBSD.org .
