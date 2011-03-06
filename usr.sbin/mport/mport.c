@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.12 2011/03/06 20:26:39 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.13 2011/03/06 21:20:53 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +41,7 @@ static mportIndexEntry ** lookupIndex(mportInstance *mport, const char *packageN
 static int install(mportInstance *mport, const char *packageName);
 static int delete(mportInstance *mport, const char *packageName);
 static int update(mportInstance *mport, const char *packageName);
+static int upgrade(mportInstance *mport);
 static int info(mportInstance *mport, const char *packageName);
 
 int 
@@ -65,6 +66,8 @@ main(int argc, char *argv[]) {
 		resultCode = delete(mport, argv[2]);
 	} else if (!strcmp(argv[1], "update")) {
 		resultCode = update(mport, argv[2]);
+	} else if (!strcmp(argv[1], "upgrade")) {
+		resultCode = upgrade(mport);
         } else if (!strcmp(argv[1], "list")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		if (argc > 2 && !strcmp(argv[2], "updates")) {
@@ -164,7 +167,7 @@ install(mportInstance *mport, const char *packageName) {
 	/* TODO: verify package isn't already downloaded */
 	if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
 		fprintf(stderr, "%s\n", mport_err_string());
-		exit(mport_err_code());
+		return mport_err_code();
 	}
 
 	asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.install");
@@ -192,12 +195,55 @@ delete(mportInstance *mport, const char *packageName) {
 
 int
 update(mportInstance *mport, const char *packageName) {
-	int resultCode;
+	mportIndexEntry **indexEntry;
+	char *path;
 
-	/* TODO: verify installed, do updepends */
-	resultCode = delete(mport, packageName);
-	/* TODO: resultCode is non zero for bad plist command even. FATAL vs NON FATAL? */
-	if (resultCode != 0)
-		return resultCode;
-	return install(mport, packageName);
-} 
+	indexEntry = lookupIndex(mport, packageName);
+        if (indexEntry == NULL || *indexEntry == NULL)
+                return 1;
+
+        /* TODO: verify package isn't already downloaded */
+        if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
+                fprintf(stderr, "%s\n", mport_err_string());
+                return mport_err_code();
+        }
+
+	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
+	if (mport_update_primative(mport, path) != MPORT_OK) {
+		fprintf(stderr, "%s\n", mport_err_string());
+		free(path);
+		return mport_err_code();
+	}
+	free(path);
+	mport_index_entry_free_vec(indexEntry);
+
+	return 0;
+}
+
+int
+upgrade(mportInstance *mport) {
+	mportPackageMeta **packs;
+	int total = 0;
+	int errors = 0;
+
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return(1);
+	}
+
+	if (packs == NULL) {
+		fprintf(stderr, "No packages installed.\n");
+		return(1);
+	}
+
+	while (*packs != NULL) {
+		if (update(mport, (*packs)->name) != 0) {
+			fprintf(stderr, "Error updating %s\n", (*packs)->name);
+			errors++;
+		}
+		total++;
+		packs++;
+	}
+	printf("Packages updated: %d\nErrors: %d\nTotal: %d", total - errors, errors, total);
+	return 0;
+}
