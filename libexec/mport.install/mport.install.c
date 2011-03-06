@@ -22,15 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.2 2008/01/05 22:20:02 ctriv Exp $
  */
 
-
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.2 2008/01/05 22:20:02 ctriv Exp $");
-
+__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.3 2010/03/10 05:38:26 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -39,10 +34,10 @@ __MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.2 2008/01/
 #include <unistd.h>
 #include <mport.h>
 
-
 static void usage(void);
 
-int main(int argc, char *argv[]) 
+int
+main(int argc, char *argv[]) 
 {
   int ch, i;
   char *prefix = NULL;
@@ -70,7 +65,7 @@ int main(int argc, char *argv[])
     exit(1);
   }
   
-  for (i=0; i<argc; i++) {
+  for (i = 0; i < argc; i++) {
     if (mport_install_primative(mport, argv[i], prefix) != MPORT_OK) {
       warnx("%s", mport_err_string());
       mport_instance_free(mport);
@@ -83,10 +78,8 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-
-    
-
-static void usage() 
+static 
+void usage() 
 {
   fprintf(stderr, "Usage: mport.install [-p prefix] pkgfile1 pkgfile2 ...\n");
   exit(2);
