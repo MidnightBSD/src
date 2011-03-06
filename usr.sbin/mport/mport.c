@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.14 2011/03/06 22:06:28 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.15 2011/03/06 22:21:03 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,6 +125,11 @@ info(mportInstance *mport, const char *packageName) {
 	mportIndexEntry **indexEntry;
 	mportPackageMeta **packs;
 	char *status, *origin;
+
+	if (packageName == NULL) {
+		fprintf(stderr, "Specify package name\n");
+		return 1;
+	}
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL) {
