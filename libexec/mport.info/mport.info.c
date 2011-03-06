@@ -23,15 +23,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/libexec/mport.info/mport.info.c,v 1.1 2010/09/11 20:07:15 laffer1 Exp $
  */
 
-
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.info/mport.info.c,v 1.1 2010/09/11 20:07:15 laffer1 Exp $");
-
+__MBSDID("$MidnightBSD: src/libexec/mport.info/mport.info.c,v 1.2 2010/09/12 17:28:34 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -114,6 +109,6 @@ main(int argc, char *argv[])
 static void 
 usage() 
 {
-  fprintf(stderr, "Usage: mport.info [-q | -v] -o <origin>\n");
+  fprintf(stderr, "Usage: mport.info [-q | -v] <origin>\n");
   exit(2);
 }
