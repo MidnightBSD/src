@@ -27564,6 +27564,7 @@ lib/libmport/bundle_read_install_pkg.c -text
 lib/libmport/bundle_read_update_pkg.c -text
 lib/libmport/bundle_write.c -text
 lib/libmport/check_preconditions.c -text
+lib/libmport/clean.c -text
 lib/libmport/create_primative.c -text
 lib/libmport/db.c -text
 lib/libmport/default_cbs.c -text
