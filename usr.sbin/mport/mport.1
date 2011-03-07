@@ -22,15 +22,17 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.2 2011/03/06 23:04:48 laffer1 Exp $
+.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.3 2011/03/07 20:02:23 laffer1 Exp $
 .\"
-.Dd March 6, 2011
+.Dd March 7, 2011
 .Dt MPORT 1
 .Os
 .Sh NAME
 .Nm mport
 .Nd "mport utility"
 .Sh SYNOPSIS
+.Nm
+.Cm clean
 .Nm
 .Cm list
 .Ar updates
@@ -58,7 +60,10 @@ command installs or removes mport packages, and displays information on
 installed packages.
 .Pp
 Here is the list of standard commands:
-.Bl -tag -width ".Cm list"
+.Bl -tag -width ".Cm install"
+.It Cm clean
+Clean up old packages not found in the index and perform maintenence on the
+database.
 .It Cm list
 List all currently installed packages
 .It Cm info

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.17 2011/03/07 20:02:23 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.18 2011/03/07 21:11:15 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,13 +41,14 @@ __MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.17 2011/03/07 20:02:23 la
 
 static void usage(void);
 static void loadIndex(mportInstance *);
-static mportIndexEntry ** lookupIndex(mportInstance *mport, const char *packageName);
-static int install(mportInstance *mport, const char *packageName);
-static int delete(mportInstance *mport, const char *packageName);
-static int update(mportInstance *mport, const char *packageName);
-static int upgrade(mportInstance *mport);
-static int info(mportInstance *mport, const char *packageName);
-static int search(mportInstance *mport, char **query);
+static mportIndexEntry ** lookupIndex(mportInstance *, const char *);
+static int install(mportInstance *, const char *);
+static int delete(mportInstance *, const char *);
+static int update(mportInstance *, const char *);
+static int upgrade(mportInstance *);
+static int info(mportInstance *, const char *);
+static int search(mportInstance *, char **);
+static int clean(mportInstance *);
 
 int 
 main(int argc, char *argv[]) {
@@ -98,6 +99,8 @@ main(int argc, char *argv[]) {
 			free(searchQuery[i-2]);
 		}
 		free(searchQuery);
+	} else if (!strcmp(argv[1], "clean")) {
+		resultCode = clean(mport);
 	} else {
 		mport_instance_free(mport);
 		usage();
@@ -117,6 +120,7 @@ usage(void) {
 		"       mport list [updates]\n"
 		"       mport search [query ...]\n"
 		"       mport update [package name]\n"
+		"       mport clean\n"
 	);
 	exit(1);
 }
@@ -310,4 +314,14 @@ upgrade(mportInstance *mport) {
 	}
 	printf("Packages updated: %d\nErrors: %d\nTotal: %d", total - errors, errors, total);
 	return 0;
+}
+
+int
+clean(mportInstance *mport) {
+	int ret;
+
+	ret = mport_clean_database(mport);
+	if (ret == MPORT_OK)
+		ret = mport_clean_oldpackages(mport);
+	return ret;
 }
