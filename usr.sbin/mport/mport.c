@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.16 2011/03/06 23:11:41 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.17 2011/03/07 20:02:23 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -144,7 +144,7 @@ search(mportInstance *mport, char **query) {
 	mportIndexEntry **indexEntry;
 	mportPackageMeta **packs;
 
-	if (query == NULL) {
+	if (query == NULL || *query == NULL) {
 		fprintf(stderr, "Search terms required\n");
 		return 1;
 	}
