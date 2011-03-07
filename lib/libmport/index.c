@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.7 2011/02/27 17:37:06 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.8 2011/03/06 03:57:53 laffer1 Exp $
  */
 
 
@@ -37,7 +37,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
-static int index_is_recentish(mportInstance *);
+static int index_is_recentish(void);
 static int lookup_alias(mportInstance *, const char *, char **);
 
 /*
@@ -58,7 +58,7 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 
     mport->flags |= MPORT_INST_HAVE_INDEX;
   
-    if (!index_is_recentish(mport)) {
+    if (!index_is_recentish()) {
       if (mport_fetch_index(mport) != MPORT_OK)
         RETURN_CURRENT_ERROR;
         
@@ -88,7 +88,7 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 
 
 /* return 1 if the index is younger than the max age, 0 otherwise */
-static int index_is_recentish(mportInstance *mport) 
+static int index_is_recentish(void) 
 {
   struct stat st;
   struct timespec now;
@@ -255,6 +255,98 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
     free(lookup);
     sqlite3_finalize(stmt);
     return ret; 
+}
+
+
+/* mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const char *where, ...)
+ *
+ * Allocate and populate the index meta for the given package in the index.
+ *
+ * 'where' and the vargs are used to be build a where clause.  For example to search by
+ * name:
+ *
+ * mport_index_search(mport, &indexEntries, "pkg=%Q", name);
+ *
+ * indexEntries is set to an empty allocated list and MPORT_OK is returned if no packages where found.
+ */
+MPORT_PUBLIC_API int mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const char *fmt, ...)
+{
+  va_list args;
+  sqlite3_stmt *stmt;
+  int ret = MPORT_OK, len;
+  int i = 0, step;
+  char *where;
+  sqlite3 *db = mport->db;
+  mportIndexEntry **e;
+
+  va_start(args, fmt);
+  where = sqlite3_vmprintf(fmt, args);
+  va_end(args);
+
+  if (where == NULL)
+    RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
+
+
+  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM idx.packages WHERE %s", where) != MPORT_OK) {
+    sqlite3_finalize(stmt);
+    RETURN_CURRENT_ERROR;
+  }
+
+  if (sqlite3_step(stmt) != SQLITE_ROW) {
+    sqlite3_finalize(stmt);
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+  }
+
+  len = sqlite3_column_int(stmt, 0);
+  sqlite3_finalize(stmt);
+
+  e = (mportIndexEntry **)calloc(len + 1, sizeof(mportIndexEntry *));
+  *entry_vec = e;
+
+  if (len == 0) {
+    sqlite3_free(where);
+    return MPORT_OK;
+  }
+
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, comment, bundlefile, license FROM idx.packages WHERE %s", where) != MPORT_OK) {
+    sqlite3_finalize(stmt);
+    RETURN_CURRENT_ERROR;
+  }
+
+  while (1) {
+    step = sqlite3_step(stmt);
+
+    if (step == SQLITE_ROW) {
+      if ((e[i] = (mportIndexEntry *)calloc(1, sizeof(mportIndexEntry))) == NULL) {
+        ret = MPORT_ERR_FATAL;
+        break;
+      }
+
+      e[i]->pkgname    = strdup(sqlite3_column_text(stmt, 0));
+      e[i]->version    = strdup(sqlite3_column_text(stmt, 1));
+      e[i]->comment    = strdup(sqlite3_column_text(stmt, 2));
+      e[i]->bundlefile = strdup(sqlite3_column_text(stmt, 3));
+      e[i]->license    = strdup(sqlite3_column_text(stmt, 4));
+
+      if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
+        ret = MPORT_ERR_FATAL;
+        break;
+      }
+
+      i++;
+    } else if (step == SQLITE_DONE) {
+      e[i] = NULL;
+      break;
+    } else {
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+      break;
+    }
+  }
+
+  sqlite3_free(where);
+  sqlite3_finalize(stmt);
+
+  return ret;
 }
 
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.14 2011/02/26 14:12:38 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.15 2011/02/26 15:15:24 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -133,6 +133,7 @@ typedef struct {
 
 int mport_index_load(mportInstance *);
 int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry ***);
+int mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const char *fmt, ...);
 void mport_index_entry_free_vec(mportIndexEntry **);
 void mport_index_entry_free(mportIndexEntry *);
 
