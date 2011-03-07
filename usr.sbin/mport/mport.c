@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.15 2011/03/06 22:21:03 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.16 2011/03/06 23:11:41 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,18 +40,22 @@ __MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.15 2011/03/06 22:21:03 la
 #define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
 
 static void usage(void);
+static void loadIndex(mportInstance *);
 static mportIndexEntry ** lookupIndex(mportInstance *mport, const char *packageName);
 static int install(mportInstance *mport, const char *packageName);
 static int delete(mportInstance *mport, const char *packageName);
 static int update(mportInstance *mport, const char *packageName);
 static int upgrade(mportInstance *mport);
 static int info(mportInstance *mport, const char *packageName);
+static int search(mportInstance *mport, char **query);
 
 int 
 main(int argc, char *argv[]) {
 	char *flag, *buf = NULL;
 	mportInstance *mport;
 	int resultCode;
+	int i;
+	char **searchQuery;
 
 	if (argc < 2)
 		usage();
@@ -62,6 +66,8 @@ main(int argc, char *argv[]) {
 		warnx("%s", mport_err_string());
 		exit(1);
 	}
+
+	loadIndex(mport);
 
 	if (!strcmp(argv[1], "install")) {
 		resultCode = install(mport, argv[2]);
@@ -82,6 +88,16 @@ main(int argc, char *argv[]) {
 		free(buf);
 	} else if (!strcmp(argv[1], "info")) {
 		resultCode = info(mport, argv[2]);
+	} else if (!strcmp(argv[1], "search")) {
+		searchQuery = calloc(argc - 1, sizeof(char*));
+		for (i = 2; i < argc; i++) {
+			searchQuery[i-2] = strdup(argv[i]);
+		}
+		resultCode = search(mport, searchQuery);
+		for (i = 2; i < argc; i++) {
+			free(searchQuery[i-2]);
+		}
+		free(searchQuery);
 	} else {
 		mport_instance_free(mport);
 		usage();
@@ -99,25 +115,59 @@ usage(void) {
 		"       mport info [package name]\n"
 		"       mport install [package name]\n"
 		"       mport list [updates]\n"
+		"       mport search [query ...]\n"
 		"       mport update [package name]\n"
 	);
 	exit(1);
 }
 
+void
+loadIndex(mportInstance *mport) {
+	if (mport_index_load(mport) != MPORT_OK)
+                errx(4, "Unable to load updates index");
+}
+
 mportIndexEntry **
-lookupIndex(mportInstance *mport, const char *packageName)
-{
+lookupIndex(mportInstance *mport, const char *packageName) {
 	mportIndexEntry **indexEntries;
 
-	if (mport_index_load(mport) != MPORT_OK)
-		errx(4, "Unable to load updates index");
-	
 	if (mport_index_lookup_pkgname(mport, packageName, &indexEntries) != MPORT_OK) {
 		fprintf(stderr, "Error looking up package name %s: %d %s\n", packageName,  mport_err_code(), mport_err_string());
 		exit(mport_err_code());
 	}
 
 	return indexEntries;
+}
+
+int
+search(mportInstance *mport, char **query) {
+	mportIndexEntry **indexEntry;
+	mportPackageMeta **packs;
+
+	if (query == NULL) {
+		fprintf(stderr, "Search terms required\n");
+		return 1;
+	}
+
+	while (query != NULL && *query != NULL) {
+		mport_index_search(mport, &indexEntry, "pkg glob %Q or comment glob %Q", *query, *query);
+		if (indexEntry == NULL || *indexEntry == NULL) {
+			query++;
+			continue;
+		}
+
+		while (indexEntry != NULL && *indexEntry != NULL) {
+			fprintf(stdout, "%s\t%s\t%s\n", (*indexEntry)->pkgname,
+					  		(*indexEntry)->version,
+							(*indexEntry)->comment);
+			indexEntry++;
+		}
+
+		mport_index_entry_free_vec(indexEntry);
+		query++;	
+	}
+
+	return 0;
 }
 
 int

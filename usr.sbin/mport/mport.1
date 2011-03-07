@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.1 2010/02/09 01:41:45 laffer1 Exp $
+.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.2 2011/03/06 23:04:48 laffer1 Exp $
 .\"
 .Dd March 6, 2011
 .Dt MPORT 1
@@ -44,6 +44,9 @@
 .Cm install
 .Op Ar name
 .Nm
+.Cm search
+.Op Ar name ...
+.Nm
 .Cm update
 .Op Ar name
 .Nm
@@ -64,6 +67,9 @@ Print detailed information about a package
 Delete or uninstall a package
 .It Cm install
 Fetch and install a package
+.It Cm search
+Search package names and descriptions.  Supports globbing queries such as 
+"*php*".
 .It Cm update
 Fetch and update a specific package
 .It Cm upgrade
