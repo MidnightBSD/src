@@ -40589,6 +40589,7 @@ usr.bin/xstr/Makefile -text
 usr.bin/xstr/pathnames.h -text
 usr.bin/xstr/xstr.1 -text
 usr.bin/xstr/xstr.c -text
+usr.bin/xz/Makefile -text
 usr.bin/yacc/ACKNOWLEDGEMENTS -text
 usr.bin/yacc/Makefile -text
 usr.bin/yacc/NEW_FEATURES -text
