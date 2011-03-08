@@ -5,6 +5,10 @@ Updating Information for MidnightBSD users
 
 	Patch for OpenSSL security issue CVE-2011-0014.
 
+	"OSREVISION 4004"
+
+	nsswitch module for multicast dns (nss_mdns) added.
+
 20110220:
 	cam(4) syncronized with FreeBSD 7.3.
 
@@ -965,4 +969,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.117 2011/03/08 13:41:59 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.118 2011/03/08 14:11:36 laffer1 Exp $
