@@ -1,6 +1,6 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.21 2010/05/30 21:24:10 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.22 2011/02/05 14:30:17 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -150,6 +150,8 @@ distribution:
 .endif
 	cd ${.CURDIR}; ${INSTALL} -o root -g wheel -m 440 \
 	    ${SUDO} ${DESTDIR}/etc
+	cd ${.CURDIR}; ${INSTALL} -o root -g wheel -m 644 \
+	    ${.CURDIR}/../contrib/mDNSResponder/mDNSPosix/nss_mdns.conf ${DESTDIR}/etc
 .if ${MK_KERBEROS} != "no"
 	cd ${.CURDIR}/root; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
