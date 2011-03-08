@@ -19881,7 +19881,21 @@ contrib/xz/TODO -text
 contrib/xz/po/LINGUAS -text
 contrib/xz/po/Makevars -text
 contrib/xz/po/POTFILES.in -text
+contrib/xz/po/Rules-quot -text
+contrib/xz/po/boldquot.sed -text
+contrib/xz/po/cs.gmo -text svneol=unset#unset
 contrib/xz/po/cs.po -text
+contrib/xz/po/de.gmo -text svneol=unset#unset
+contrib/xz/po/de.po -text
+contrib/xz/po/en@boldquot.header -text
+contrib/xz/po/en@quot.header -text
+contrib/xz/po/insert-header.sin -text
+contrib/xz/po/it.gmo -text svneol=unset#unset
+contrib/xz/po/it.po -text
+contrib/xz/po/quot.sed -text
+contrib/xz/po/remove-potcdate.sin -text
+contrib/xz/po/stamp-po -text
+contrib/xz/po/xz.pot -text
 contrib/xz/src/common/mythread.h -text
 contrib/xz/src/common/sysdefs.h -text
 contrib/xz/src/common/tuklib_common.h -text
@@ -19892,6 +19906,9 @@ contrib/xz/src/common/tuklib_exit.c -text
 contrib/xz/src/common/tuklib_exit.h -text
 contrib/xz/src/common/tuklib_gettext.h -text
 contrib/xz/src/common/tuklib_integer.h -text
+contrib/xz/src/common/tuklib_mbstr.h -text
+contrib/xz/src/common/tuklib_mbstr_fw.c -text
+contrib/xz/src/common/tuklib_mbstr_width.c -text
 contrib/xz/src/common/tuklib_open_stdxxx.c -text
 contrib/xz/src/common/tuklib_open_stdxxx.h -text
 contrib/xz/src/common/tuklib_physmem.c -text
