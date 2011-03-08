@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20110308:
+	Introduce liblzma & xz 5.0.1 to the base system
+
 20110220:
 	cam(4) syncronized with FreeBSD 7.3.
 
@@ -960,4 +963,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.115 2011/02/17 14:05:52 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.116 2011/02/21 00:57:08 laffer1 Exp $
