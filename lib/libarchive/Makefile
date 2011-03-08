@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libarchive/Makefile,v 1.7 2011/02/06 03:07:04 laffer1 Exp $
 .include <bsd.own.mk>
 
 LIB=	archive
@@ -9,9 +9,9 @@ DPADD+= ${LIBBZ2}
 LDADD+= -lbz2
 CFLAGS+= -DHAVE_BZLIB_H=1
 
-#DPADD+= ${LIBLZMA}
-#LDADD+= -llzma
-#CFLAGS+= -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1
+DPADD+= ${LIBLZMA}
+LDADD+= -llzma
+CFLAGS+= -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1
 
 # FreeBSD SHLIB_MAJOR value is managed as part of the FreeBSD system.
 # It has no real relation to the libarchive version number.

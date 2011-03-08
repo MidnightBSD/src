@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/cpio/Makefile,v 1.2 2011/02/06 22:29:51 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -12,8 +12,8 @@ CFLAGS+= -DPLATFORM_CONFIG_H=\"config_midnightbsd.h\"
 # statically linked, cannot use -lcrypto, and are size sensitive.
 CFLAGS+= -DSMALLER
 .endif
-DPADD=	${LIBARCHIVE} ${LIBZ} ${LIBBZ2} ${LIBMD}
-LDADD=	-larchive -lz -lbz2 -lmd
+DPADD=	${LIBARCHIVE} ${LIBZ} ${LIBBZ2} ${LIBMD} ${LIBLZMA}
+LDADD=	-larchive -lz -lbz2 -lmd -llzma
 .if ${MK_OPENSSL} != "no"
 DPADD+=	${LIBCRYPTO}
 LDADD+= -lcrypto
