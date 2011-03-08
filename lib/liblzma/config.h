@@ -1,4 +1,4 @@
-// $MidnightBSD$
+// $MidnightBSD: src/lib/liblzma/config.h,v 1.1 2010/06/16 13:01:06 laffer1 Exp $
 #define ASSUME_RAM 128
 #define HAVE_CHECK_CRC32 1
 #define HAVE_CHECK_CRC64 1
@@ -66,7 +66,6 @@
 #define SIZEOF_SIZE_T 8
 #define STDC_HEADERS 1
 #define TUKLIB_CPUCORES_SYSCONF 1
-#define TUKLIB_FAST_UNALIGNED_ACCESS 1
 #define TUKLIB_PHYSMEM_SYSCONF 1
 #ifndef _ALL_SOURCE
 # define _ALL_SOURCE 1
