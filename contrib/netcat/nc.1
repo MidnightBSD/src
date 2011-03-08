@@ -1,4 +1,4 @@
-.\"     $OpenBSD: nc.1,v 1.44 2006/12/02 01:08:30 jmc Exp $
+.\"     $OpenBSD: nc.1,v 1.57 2011/01/09 22:16:46 jeremy Exp $
 .\"
 .\" Copyright (c) 1996 David Sacerdote
 .\" All rights reserved.
@@ -25,9 +25,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.\"
-.Dd May 21, 2006
+.Dd $Mdocdate: January 9 2011 $
 .Dt NC 1
 .Os
 .Sh NAME
@@ -36,29 +34,33 @@
 .Sh SYNOPSIS
 .Nm nc
 .Bk -words
-.Op Fl 46DEdhklnorStUuvz
-.Op Fl e Ar IPsec_policy
+.Op Fl 46DdhklnrStUuvz
+.Op Fl I Ar length
 .Op Fl i Ar interval
+.Op Fl O Ar length
 .Op Fl P Ar proxy_username
 .Op Fl p Ar source_port
-.Op Fl s Ar source_ip_address
+.Op Fl s Ar source
 .Op Fl T Ar ToS
+.Op Fl V Ar rtable
 .Op Fl w Ar timeout
 .Op Fl X Ar proxy_protocol
 .Oo Xo
 .Fl x Ar proxy_address Ns Oo : Ns
-.Ar port Oc Oc
-.Xc
-.Op Ar hostname
-.Op Ar port Ns Bq Ar s
+.Ar port Oc
+.Xc Oc
+.Op Ar destination
+.Op Ar port
 .Ek
 .Sh DESCRIPTION
 The
 .Nm
 (or
 .Nm netcat )
-utility is used for just about anything under the sun involving TCP
-or UDP.
+utility is used for just about anything under the sun involving TCP,
+UDP, or
+.Ux Ns -domain
+sockets.
 It can open TCP connections, send UDP packets, listen on arbitrary
 TCP and UDP ports, do port scanning, and deal with both IPv4 and
 IPv6.
@@ -104,20 +106,8 @@ Do not attempt to read from stdin.
 Prints out
 .Nm
 help.
-.It Fl E
-Shortcut for
-.Qo
-.Li "-e 'in ipsec esp/transport//require'"
-.Li "-e 'out ipsec esp/transport//require'" 
-.Qc ,
-which enables IPsec ESP transport mode in both
-directions.
-.It Fl e
-If IPsec support is available, then one can specify the IPsec policies
-to be used using the syntax described in
-.Xr ipsec_set_policy 3 .
-This flag can be specified up to two times, as typically one policy for
-each direction is needed.
+.It Fl I Ar length
+Specifies the size of the TCP receive buffer.
 .It Fl i Ar interval
 Specifies a delay time interval between lines of text sent and received.
 Also causes a delay time between connections to multiple ports.
@@ -146,15 +136,8 @@ option are ignored.
 .It Fl n
 Do not do any DNS or service lookups on any specified addresses,
 hostnames or ports.
-.It Fl o
-.Dq Once-only mode .
-By default,
-.Nm
-does not terminate on EOF condition on input,
-but continues until the network side has been closed down.
-Specifying
-.Fl o
-will make it terminate on EOF as well.
+.It Fl O Ar length
+Specifies the size of the TCP send buffer.
 .It Fl P Ar proxy_username
 Specifies a username to present to a proxy server that requires authentication.
 If no username is specified then authentication will not be attempted.
@@ -172,8 +155,12 @@ instead of sequentially within a range or in the order that the system
 assigns them.
 .It Fl S
 Enables the RFC 2385 TCP MD5 signature option.
-.It Fl s Ar source_ip_address
+.It Fl s Ar source
 Specifies the IP of the interface which is used to send the packets.
+For
+.Ux Ns -domain
+datagram sockets, specifies the local temporary socket file
+to create and use so that datagrams can be received.
 It is an error to use this option in conjunction with the
 .Fl l
 option.
@@ -193,9 +180,24 @@ This makes it possible to use
 .Nm
 to script telnet sessions.
 .It Fl U
-Specifies to use Unix Domain Sockets.
+Specifies to use
+.Ux Ns -domain
+sockets.
 .It Fl u
 Use UDP instead of the default option of TCP.
+For
+.Ux Ns -domain
+sockets, use a datagram socket instead of a stream socket.
+If a
+.Ux Ns -domain
+socket is used, a temporary receiving socket is created in
+.Pa /tmp
+unless the
+.Fl s
+flag is given.
+.It Fl V Ar rtable
+Set the routing table to be used.
+The default is 0.
 .It Fl v
 Have
 .Nm
@@ -234,7 +236,7 @@ If the protocol is not specified, SOCKS version 5 is used.
 Requests that
 .Nm
 should connect to
-.Ar hostname
+.Ar destination
 using a proxy at
 .Ar proxy_address
 and
@@ -252,26 +254,31 @@ It is an error to use this option in conjunction with the
 option.
 .El
 .Pp
-.Ar hostname
+.Ar destination
 can be a numerical IP address or a symbolic hostname
 (unless the
 .Fl n
 option is given).
-In general, a hostname must be specified,
+In general, a destination must be specified,
 unless the
 .Fl l
 option is given
 (in which case the local host is used).
+For
+.Ux Ns -domain
+sockets, a destination is required and is the socket path to connect to
+(or listen on if the
+.Fl l
+option is given).
 .Pp
-.Ar port Ns Op Ar s
-can be single integers or ranges.
+.Ar port
+can be a single integer or a range of ports.
 Ranges are in the form nn-mm.
 In general,
 a destination port must be specified,
 unless the
 .Fl U
-option is given
-(in which case a socket must be specified).
+option is given.
 .Sh CLIENT/SERVER MODEL
 It is quite simple to build a very basic client/server model using
 .Nm .
@@ -331,7 +338,7 @@ when it might be necessary to verify what data a server is sending
 in response to commands issued by the client.
 For example, to retrieve the home page of a web site:
 .Bd -literal -offset indent
-$ echo -n "GET / HTTP/1.0\er\en\er\en" | nc host.example.com 80
+$ printf "GET / HTTP/1.0\er\en\er\en" | nc host.example.com 80
 .Ed
 .Pp
 Note that this also displays the headers sent by the web server.
@@ -402,17 +409,9 @@ IP for the local end of the connection:
 .Pp
 .Dl $ nc -s 10.1.2.3 host.example.com 42
 .Pp
-Open a TCP connection to port 42 of host.example.com using IPsec ESP for
-incoming and outgoing traffic.
-.Pp
-.Dl $ nc -E host.example.com 42
-.Pp
-Open a TCP connection to port 42 of host.example.com using IPsec ESP for
-outgoing traffic only.
-.Pp
-.Dl $ nc -e 'out ipsec esp/transport//require' host.example.com 42
-.Pp
-Create and listen on a Unix Domain Socket:
+Create and listen on a
+.Ux Ns -domain
+stream socket:
 .Pp
 .Dl $ nc -lU /var/tmp/dsocket
 .Pp
