@@ -1,4 +1,4 @@
-# $MidnightBSD: src/apache/usr.sbin/mdnsd/Makefile,v 1.5 2011/03/09 05:31:59 laffer1 Exp $
+# $MidnightBSD: src/apache/usr.sbin/mdnsd/Makefile,v 1.6 2011/03/09 05:44:52 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -25,11 +25,12 @@ CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
 CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
 CFLAGS+= -DIDLESLEEPCONTROL_DISABLED
 
-.if ${MK_INET6_SUPPORT} == "no"
+# Dual stack freaks out mdnsd and it dies
+#.if ${MK_INET6_SUPPORT} == "no"
 CFLAGS+=	-DHAVE_IPV6=0
-.else
-CFLAGS+=	-DHAVE_IPV6=1
-.endif
+#.else
+#CFLAGS+=	-DHAVE_IPV6=1
+#.endif
 
 .include <bsd.prog.mk>
 
