@@ -1,4 +1,4 @@
-# $MidnightBSD: src/apache/lib/libnss_mdns/Makefile,v 1.1 2011/03/08 22:13:48 laffer1 Exp $
+# $MidnightBSD: src/apache/lib/libnss_mdns/Makefile,v 1.2 2011/03/09 20:03:22 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 SRCDIR=	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
@@ -6,6 +6,10 @@ SHLIB_MAJOR=	1
 
 LIB=	nss_mdns
 SRCS=	nss_mdns.c netbsd.c
+SHLIB_NAME?=    ${LIB}.so.${SHLIB_MAJOR}
+
+NO_PROFILE=
+NO_INSTALLLIB=
 
 WARNS?= 0
 
