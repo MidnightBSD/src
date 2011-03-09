@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/apache/lib/libnss_mdns/netbsd.c,v 1.1 2011/03/08 22:13:48 laffer1 Exp $ */
+/* $MidnightBSD: src/apache/lib/libnss_mdns/netbsd.c,v 1.2 2011/03/09 15:11:22 laffer1 Exp $ */
 /* $NetBSD: netbsd.c,v 1.1.1.1 2006/07/10 17:35:30 drochner Exp $ */
 
 #include <sys/param.h>
@@ -10,26 +10,27 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <errno.h>
+#include <nss.h>
 
-#include "netbsd.h"
-typedef enum nss_status NSS_STATUS;
-
-extern NSS_STATUS _nss_mdns_gethostbyname2_r(const char *,
+extern enum nss_status _nss_mdns_gethostbyname2_r(const char *,
 	int, struct hostent *, char *, size_t, int *, int *);
 static int netbsd_gethostbyname(void *, void *, va_list);
 static int netbsd_gethostbyname2_r(void *, void *, va_list);
 static int netbsd_getaddrinfo(void *, void *, va_list);
-extern NSS_STATUS _nss_mdns_gethostbyaddr_r(const void *, socklen_t,
+extern enum nss_status _nss_mdns_gethostbyaddr_r(const void *, socklen_t,
 	int, struct hostent *, char *, size_t, int *, int *);
 static int netbsd_gethostbyaddr(void *, void *, va_list);
 static int netbsd_gethostbyaddr_r(void *rv, void *cb_data, va_list ap);
 
-static int nss2netbsderr[] = {
-	NS_SUCCESS, NS_NOTFOUND, NS_UNAVAIL, NS_TRYAGAIN, NS_RETURN
-};
-
 static struct hostent host;
 static char hostbuf[8*1024];
+
+static NSS_METHOD_PROTOTYPE(netbsd_gethostbyname);
+static NSS_METHOD_PROTOTYPE(netbsd_gethostbyname2_r);
+static NSS_METHOD_PROTOTYPE(netbsd_getaddrinfo);
+static NSS_METHOD_PROTOTYPE(netbsd_gethostbyaddr);
+static NSS_METHOD_PROTOTYPE(netbsd_gethostbyaddr_r);
 
 static ns_mtab methods[] = {
 	{ NSDB_HOSTS, "gethostbyname", netbsd_gethostbyname, 0 },
@@ -42,7 +43,7 @@ static ns_mtab methods[] = {
 static int
 netbsd_gethostbyname(void *rv, void *cb_data, va_list ap)
 {
-	NSS_STATUS s;
+	enum nss_status s;
 	int err, herr;
 	const char *name = va_arg(ap, char *);
 	size_t namlen = va_arg(ap, size_t);
@@ -51,19 +52,16 @@ netbsd_gethostbyname(void *rv, void *cb_data, va_list ap)
 	s = _nss_mdns_gethostbyname2_r(name, af, &host,
 		hostbuf, sizeof(hostbuf), &err, &herr);
 
-	if (s == NSS_STATUS_SUCCESS)
+	s = __nss_compat_result(s, herr);
+	if (s == NS_SUCCESS)
 		*(struct hostent **)rv = &host;
-	else {
-		h_errno = HOST_NOT_FOUND;
-		*(struct hostent **)rv = 0;
-	}
-	return nss2netbsderr[s];
+	return s;
 }
 
 static int
 netbsd_gethostbyname2_r(void *rv, void *cb_data, va_list ap)
 {
-        NSS_STATUS s;
+        enum nss_status s;
         int err, herr;
 	char *buf;
 	size_t buflen;
@@ -86,20 +84,18 @@ netbsd_gethostbyname2_r(void *rv, void *cb_data, va_list ap)
         s = _nss_mdns_gethostbyname2_r(name, af, hostentp,
                 buf, buflen, &err, &herr);
 
-        if (s == NSS_STATUS_SUCCESS)
+	s = __nss_compat_result(s, herr);
+
+        if (s == NS_SUCCESS)
                 *result_hostent = hostentp;
-        else {
-                h_errno = HOST_NOT_FOUND;
-                *result_hostent = NULL;
-        }
-        return nss2netbsderr[s];
+        return s;
 }
 
 
 static void
 aiforaf(const char *name, int af, struct addrinfo *pai, struct addrinfo **aip)
 {
-	NSS_STATUS s;
+	enum nss_status s;
 	int err, herr;
 	char **addrp;
 	char addrstr[INET6_ADDRSTRLEN];
@@ -107,7 +103,9 @@ aiforaf(const char *name, int af, struct addrinfo *pai, struct addrinfo **aip)
 
 	s = _nss_mdns_gethostbyname2_r(name, af, &host,
 		hostbuf, sizeof(hostbuf), &err, &herr);
-	if (s != NSS_STATUS_SUCCESS)
+	s = __nss_compat_result(s, herr);
+
+	if (s != NS_SUCCESS)
 		return;
 
 	for (addrp = host.h_addr_list; *addrp; addrp++) {
@@ -156,7 +154,7 @@ static int
 netbsd_gethostbyaddr(void *rv, void *cb_data, va_list ap)
 {
 	int err, herr;
-	NSS_STATUS s;
+	enum nss_status s;
 	const unsigned char *addr = va_arg(ap, unsigned char *);
 	socklen_t addrlen = va_arg(ap, socklen_t);
 	int af = va_arg(ap, int);
@@ -164,13 +162,11 @@ netbsd_gethostbyaddr(void *rv, void *cb_data, va_list ap)
 	s = _nss_mdns_gethostbyaddr_r(addr, addrlen, af, &host,
 		hostbuf, sizeof(hostbuf), &err, &herr);
 
-	if (s == NSS_STATUS_SUCCESS)
+	s = __nss_compat_result(s, herr);
+
+	if (s == NS_SUCCESS)
 		*(struct hostent **)rv = &host;
-	else {
-		h_errno = HOST_NOT_FOUND;
-		*(struct hostent **)rv = 0;
-	}
-	return nss2netbsderr[s];
+	return s;
 }
 
 static int
@@ -178,7 +174,7 @@ netbsd_gethostbyaddr_r(void *rv, void *cb_data, va_list ap)
 {
         int err;
 	int *herrp;
-        NSS_STATUS s;
+        enum nss_status s;
 	char *buf;
 	size_t buflen;
 	struct hostent *hostentp;
@@ -197,13 +193,11 @@ netbsd_gethostbyaddr_r(void *rv, void *cb_data, va_list ap)
         s = _nss_mdns_gethostbyaddr_r(addr, addrlen, af, hostentp,
                 buf, buflen, &err, herrp);
 
+	s = __nss_compat_result(s, *herrp);
+
         if (s == NSS_STATUS_SUCCESS)
                 *result_hostent = hostentp;
-        else {
-                h_errno = HOST_NOT_FOUND;
-                *result_hostent = NULL;
-        }
-        return nss2netbsderr[s];
+        return s;
 }
 
 
