@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.9 2011/03/09 16:27:46 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.10 2011/03/09 16:30:05 laffer1 Exp $
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -95,7 +95,6 @@ LIBNCURSESW?=	${DESTDIR}${LIBDIR}/libncursesw.a
 LIBNETGRAPH?=	${DESTDIR}${LIBDIR}/libnetgraph.a
 LIBNETPGP?=	${DESTDIR}${LIBDIR}/libnetpgp.a
 LIBNGATM?=	${DESTDIR}${LIBDIR}/libngatm.a
-LIBNSS_MDNS?=	${DESTDIR}${LIBDIR}/libnss_mdns.a
 LIBNVPAIR?=	${DESTDIR}${LIBDIR}/libnvpair.a
 LIBOBJC?=	${DESTDIR}${LIBDIR}/libobjc.a
 LIBOPIE?=	${DESTDIR}${LIBDIR}/libopie.a
