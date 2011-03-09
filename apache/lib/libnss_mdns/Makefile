@@ -1,4 +1,4 @@
-# $MidnightBSD: src/apache/lib/libnss_mdns/Makefile,v 1.2 2011/03/09 20:03:22 laffer1 Exp $
+# $MidnightBSD: src/apache/lib/libnss_mdns/Makefile,v 1.3 2011/03/09 20:19:01 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 SRCDIR=	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
@@ -26,6 +26,7 @@ CFLAGS+=	-I${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 DPADD=	${LIBDNS_SD}
 LDADD=	-ldns_sd
 
-MAN= nss_mdns.conf.5
+MAN=	nss_mdns.conf.5 \
+	libnss_mdns.8
 
 .include <bsd.lib.mk>
