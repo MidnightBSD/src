@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.8 2011/03/08 13:25:12 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.9 2011/03/09 16:27:46 laffer1 Exp $
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -41,6 +41,7 @@ LIBDIALOG?=	${DESTDIR}${LIBDIR}/libdialog.a
 LIBDISK?=	${DESTDIR}${LIBDIR}/libdisk.a
 LIBDISPATCH?=	${DESTDIR}${LIBDIR}/libdispatch.a
 LIBDNS?=	${DESTDIR}${LIBDIR}/libdns.a
+LIBDNS_SD?=	${DESTDIR}${LIBDIR}/libdns_sd.a
 LIBEDIT?=	${DESTDIR}${LIBDIR}/libedit.a
 LIBFETCH?=	${DESTDIR}${LIBDIR}/libfetch.a
 LIBFL?=		"don't use LIBFL, use LIBL"
