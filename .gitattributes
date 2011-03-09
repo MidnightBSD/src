@@ -11638,6 +11638,8 @@ contrib/mDNSResponder/Clients/ClientCommon.h -text
 contrib/mDNSResponder/Clients/DNS-SD.VisualStudio/DNS-SD.manifest -text
 contrib/mDNSResponder/Clients/DNS-SD.VisualStudio/DNS-SD64.manifest -text
 contrib/mDNSResponder/Clients/DNS-SD.VisualStudio/dns-sd.rc -text
+contrib/mDNSResponder/Clients/DNS-SD.VisualStudio/dns-sd.sdk.rc -text
+contrib/mDNSResponder/Clients/DNS-SD.VisualStudio/dns-sd.sdk.vcproj -text
 contrib/mDNSResponder/Clients/DNS-SD.VisualStudio/dns-sd.vcproj -text
 contrib/mDNSResponder/Clients/DNS-SD.VisualStudio/resource.h -text
 contrib/mDNSResponder/Clients/DNS-SD.xcodeproj/project.pbxproj -text
@@ -11701,6 +11703,33 @@ contrib/mDNSResponder/Clients/ExplorerPlugin/res/logo.bmp -text svneol=unset#uns
 contrib/mDNSResponder/Clients/ExplorerPlugin/resource_dll.h -text
 contrib/mDNSResponder/Clients/ExplorerPlugin/resource_loc_res.h -text
 contrib/mDNSResponder/Clients/ExplorerPlugin/resource_res.h -text
+contrib/mDNSResponder/Clients/FirefoxExtension/CDNSSDService.cpp -text
+contrib/mDNSResponder/Clients/FirefoxExtension/CDNSSDService.h -text
+contrib/mDNSResponder/Clients/FirefoxExtension/CDNSSDServiceModule.cpp -text
+contrib/mDNSResponder/Clients/FirefoxExtension/DNSSDService.sln -text
+contrib/mDNSResponder/Clients/FirefoxExtension/FirefoxExtension.rc -text
+contrib/mDNSResponder/Clients/FirefoxExtension/FirefoxExtension.vcproj -text
+contrib/mDNSResponder/Clients/FirefoxExtension/IDNSSDService.h -text
+contrib/mDNSResponder/Clients/FirefoxExtension/IDNSSDService.idl -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/chrome.manifest -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/components/IDNSSDService.xpt -text svneol=unset#unset
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/content/bonjour4firefox.css -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/content/bonjour4firefox.png -text svneol=unset#unset
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/content/bonjour4firefox.xul -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/content/browserOverlay.xul -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/content/listImage.png -text svneol=unset#unset
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/content/overlay.js -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/defaults/preferences/bonjour4firefox.js -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/install.rdf -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/locale/en-US/bonjour4firefox.dtd -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/locale/en-US/bonjour4firefox.properties -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/readme.txt -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/skin-darwin/overlay.css -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/skin-darwin/toolbar-button.png -text svneol=unset#unset
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/skin/overlay.css -text
+contrib/mDNSResponder/Clients/FirefoxExtension/extension/skin/toolbar-button.png -text svneol=unset#unset
+contrib/mDNSResponder/Clients/FirefoxExtension/readme.txt -text
+contrib/mDNSResponder/Clients/FirefoxExtension/resource.h -text
 contrib/mDNSResponder/Clients/Java/BrowserApp.java -text
 contrib/mDNSResponder/Clients/Java/BrowserApp.manifest -text
 contrib/mDNSResponder/Clients/Java/DNSSDUnitTest.java -text
@@ -11775,7 +11804,9 @@ contrib/mDNSResponder/Clients/SimpleChat.VB/SimpleChat.resx -text
 contrib/mDNSResponder/Clients/SimpleChat.VB/SimpleChat.vb -text
 contrib/mDNSResponder/Clients/dns-sd.c -text
 contrib/mDNSResponder/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.manifest -text
+contrib/mDNSResponder/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.rc -text
 contrib/mDNSResponder/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.vcproj -text
+contrib/mDNSResponder/Clients/mDNSNetMonitor.VisualStudio/resource.h -text
 contrib/mDNSResponder/LICENSE -text
 contrib/mDNSResponder/MIDNIGHTBSD-upgrade -text
 contrib/mDNSResponder/Makefile -text
@@ -11811,6 +11842,8 @@ contrib/mDNSResponder/mDNSMacOSX/DNSServiceDiscovery.h -text
 contrib/mDNSResponder/mDNSMacOSX/DNSServiceDiscoveryDefines.h -text
 contrib/mDNSResponder/mDNSMacOSX/DNSServiceDiscoveryReply.defs -text
 contrib/mDNSResponder/mDNSMacOSX/DNSServiceDiscoveryRequest.defs -text
+contrib/mDNSResponder/mDNSMacOSX/LaunchDaemonInfo-Tiger.helper.plist -text
+contrib/mDNSResponder/mDNSMacOSX/LaunchDaemonInfo-Tiger.plist -text
 contrib/mDNSResponder/mDNSMacOSX/LaunchDaemonInfo.dnsextd.plist -text
 contrib/mDNSResponder/mDNSMacOSX/LaunchDaemonInfo.helper.plist -text
 contrib/mDNSResponder/mDNSMacOSX/LaunchDaemonInfo.plist -text
@@ -11842,6 +11875,7 @@ contrib/mDNSResponder/mDNSMacOSX/PreferencePane/installtool -text
 contrib/mDNSResponder/mDNSMacOSX/README.privsep -text
 contrib/mDNSResponder/mDNSMacOSX/SamplemDNSClient.c -text
 contrib/mDNSResponder/mDNSMacOSX/daemon.c -text
+contrib/mDNSResponder/mDNSMacOSX/helper-entitlements.plist -text
 contrib/mDNSResponder/mDNSMacOSX/helper-error.h -text
 contrib/mDNSResponder/mDNSMacOSX/helper-main.c -text
 contrib/mDNSResponder/mDNSMacOSX/helper-server.h -text
@@ -11933,6 +11967,8 @@ contrib/mDNSResponder/mDNSVxWorks/mDNSVxWorks.c -text
 contrib/mDNSResponder/mDNSVxWorks/mDNSVxWorks.h -text
 contrib/mDNSResponder/mDNSVxWorks/mDNSVxWorksIPv4Only.c -text
 contrib/mDNSResponder/mDNSVxWorks/mDNSVxWorksIPv4Only.h -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/BrowsingPage.cpp -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/BrowsingPage.h -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/ConfigDialog.cpp -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/ConfigDialog.h -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/ConfigPropertySheet.cpp -text
@@ -11947,12 +11983,20 @@ contrib/mDNSResponder/mDNSWindows/ControlPanel/ControlPanelExe.cpp -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/ControlPanelExe.h -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/ControlPanelExe.rc -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/ControlPanelExe.vcproj -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/ControlPanelLocRes.rc -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/ControlPanelLocRes.vcproj -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/ControlPanelRes.rc -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/ControlPanelRes.vcproj -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/FirstPage.cpp -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/FirstPage.h -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/FourthPage.cpp -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/FourthPage.h -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/RegistrationPage.cpp -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/RegistrationPage.h -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/SecondPage.cpp -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/SecondPage.h -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/ServicesPage.cpp -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/ServicesPage.h -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/SharedSecret.cpp -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/SharedSecret.h -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/ThirdPage.cpp -text
@@ -11962,6 +12006,7 @@ contrib/mDNSResponder/mDNSWindows/ControlPanel/res/ControlPanel.exe.manifest -te
 contrib/mDNSResponder/mDNSWindows/ControlPanel/res/ControlPanel.manifest -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/res/ControlPanel.rc2 -text
 contrib/mDNSResponder/mDNSWindows/ControlPanel/res/ControlPanel64.manifest -text
+contrib/mDNSResponder/mDNSWindows/ControlPanel/res/EnergySaver.ico -text svneol=unset#unset
 contrib/mDNSResponder/mDNSWindows/ControlPanel/res/controlpanel.ico -text svneol=unset#unset
 contrib/mDNSResponder/mDNSWindows/ControlPanel/res/failure.ico -text svneol=unset#unset
 contrib/mDNSResponder/mDNSWindows/ControlPanel/res/success.ico -text svneol=unset#unset
@@ -12048,6 +12093,7 @@ contrib/mDNSResponder/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/StdAfx.h -
 contrib/mDNSResponder/mDNSWindows/Java/Java.vcproj -text
 contrib/mDNSResponder/mDNSWindows/Java/jdns_sd.rc -text
 contrib/mDNSResponder/mDNSWindows/Java/makefile -text
+contrib/mDNSResponder/mDNSWindows/Java/makefile64 -text
 contrib/mDNSResponder/mDNSWindows/NSPTool/NSPTool.aps -text svneol=unset#unset
 contrib/mDNSResponder/mDNSWindows/NSPTool/NSPTool.c -text
 contrib/mDNSResponder/mDNSWindows/NSPTool/NSPTool.rc -text
@@ -12060,6 +12106,7 @@ contrib/mDNSResponder/mDNSWindows/README.txt -text
 contrib/mDNSResponder/mDNSWindows/RegNames.h -text
 contrib/mDNSResponder/mDNSWindows/Secret.c -text
 contrib/mDNSResponder/mDNSWindows/Secret.h -text
+contrib/mDNSResponder/mDNSWindows/SystemService/EventLog.mc -text
 contrib/mDNSResponder/mDNSWindows/SystemService/EventLogMessages.bin -text svneol=unset#unset
 contrib/mDNSResponder/mDNSWindows/SystemService/Firewall.cpp -text
 contrib/mDNSResponder/mDNSWindows/SystemService/Firewall.h -text
