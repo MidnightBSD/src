@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.7 2009/06/09 17:41:34 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.8 2011/03/08 13:25:12 laffer1 Exp $
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -39,6 +39,7 @@ LIBDEVINFO?=	${DESTDIR}${LIBDIR}/libdevinfo.a
 LIBDEVSTAT?=	${DESTDIR}${LIBDIR}/libdevstat.a
 LIBDIALOG?=	${DESTDIR}${LIBDIR}/libdialog.a
 LIBDISK?=	${DESTDIR}${LIBDIR}/libdisk.a
+LIBDISPATCH?=	${DESTDIR}${LIBDIR}/libdispatch.a
 LIBDNS?=	${DESTDIR}${LIBDIR}/libdns.a
 LIBEDIT?=	${DESTDIR}${LIBDIR}/libedit.a
 LIBFETCH?=	${DESTDIR}${LIBDIR}/libfetch.a
@@ -93,6 +94,7 @@ LIBNCURSESW?=	${DESTDIR}${LIBDIR}/libncursesw.a
 LIBNETGRAPH?=	${DESTDIR}${LIBDIR}/libnetgraph.a
 LIBNETPGP?=	${DESTDIR}${LIBDIR}/libnetpgp.a
 LIBNGATM?=	${DESTDIR}${LIBDIR}/libngatm.a
+LIBNSS_MDNS?=	${DESTDIR}${LIBDIR}/libnss_mdns.a
 LIBNVPAIR?=	${DESTDIR}${LIBDIR}/libnvpair.a
 LIBOBJC?=	${DESTDIR}${LIBDIR}/libobjc.a
 LIBOPIE?=	${DESTDIR}${LIBDIR}/libopie.a
