@@ -16,7 +16,6 @@ apache/lib/libdispatch/config.h -text
 apache/lib/libdns_sd/Makefile -text
 apache/lib/libnss_mdns/Makefile -text
 apache/lib/libnss_mdns/netbsd.c -text
-apache/lib/libnss_mdns/netbsd.h -text
 apache/usr.bin/Makefile -text
 apache/usr.bin/Makefile.inc -text
 apache/usr.bin/dns-sd/Makefile -text
