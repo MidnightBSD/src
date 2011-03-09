@@ -4017,11 +4017,11 @@ mDNSexport void mDNS_UpdateAllowSleep(mDNS *const m)
 					}
 				}
 			}
-#endif /* !defined(IDLESLEEPCONTROL_DISABLED) */
 		}
 	
 	// Call the platform code to enable/disable sleep
 	mDNSPlatformSetAllowSleep(m, allowSleep);
+#endif /* !defined(IDLESLEEPCONTROL_DISABLED) */
 	}
 
 mDNSlocal void SendSPSRegistration(mDNS *const m, NetworkInterfaceInfo *intf, const mDNSOpaque16 id)
