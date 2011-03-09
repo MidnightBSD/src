@@ -1,4 +1,4 @@
-# $MidnightBSD: src/apache/usr.sbin/dnsextd/Makefile,v 1.2 2010/08/22 21:03:02 laffer1 Exp $
+# $MidnightBSD: src/apache/usr.sbin/dnsextd/Makefile,v 1.3 2010/09/10 18:52:58 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -21,7 +21,7 @@ MAN=	dnsextd.8
 CFLAGS+= -I. -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
-CFLAGS+= -ITARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
+CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
 
 .if ${MK_INET6_SUPPORT} == "no"
 CFLAGS+=	-DHAVE_IPV6=0
