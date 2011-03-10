@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.18 2011/03/07 21:11:15 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.19 2011/03/07 22:04:04 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -236,6 +236,12 @@ install(mportInstance *mport, const char *packageName) {
 		}
 	}
 
+	if (!mport_verify_hash(packagePath, (*indexEntry)->hash)) {
+		fprintf(stderr, "Package fails hash verification.\n");
+		free(packagePath);
+		return 1;
+        }
+
 	asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.install");
 
 	resultCode = execl(buf, "mport.install", packagePath, (char *)0);
@@ -275,6 +281,12 @@ update(mportInstance *mport, const char *packageName) {
 			free(path);
                 	return mport_err_code();
         	}
+	}
+
+	if (!mport_verify_hash(path, (*indexEntry)->hash)) {
+		fprintf(stderr, "Package fails hash verification.\n");
+		free(path);
+		return 1;
 	}
 
 	if (mport_update_primative(mport, path) != MPORT_OK) {
