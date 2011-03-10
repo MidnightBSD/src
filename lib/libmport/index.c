@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.8 2011/03/06 03:57:53 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.9 2011/03/07 19:43:00 laffer1 Exp $
  */
 
 
@@ -216,7 +216,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
   if (count == 0) 
     return MPORT_OK;
   
-  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg, version, comment, bundlefile, license FROM idx.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
+  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
     ret = mport_err_code();
     goto DONE;
   }
@@ -235,6 +235,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
       e[i]->comment    = strdup(sqlite3_column_text(stmt, 2));
       e[i]->bundlefile = strdup(sqlite3_column_text(stmt, 3));
       e[i]->license    = strdup(sqlite3_column_text(stmt, 4));
+      e[i]->hash       = strdup(sqlite3_column_text(stmt, 5));
       
       if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
         ret = MPORT_ERR_FATAL;
@@ -308,7 +309,7 @@ MPORT_PUBLIC_API int mport_index_search(mportInstance *mport, mportIndexEntry **
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, comment, bundlefile, license FROM idx.packages WHERE %s", where) != MPORT_OK) {
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages WHERE %s", where) != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -327,6 +328,7 @@ MPORT_PUBLIC_API int mport_index_search(mportInstance *mport, mportIndexEntry **
       e[i]->comment    = strdup(sqlite3_column_text(stmt, 2));
       e[i]->bundlefile = strdup(sqlite3_column_text(stmt, 3));
       e[i]->license    = strdup(sqlite3_column_text(stmt, 4));
+      e[i]->hash       = strdup(sqlite3_column_text(stmt, 5));
 
       if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
         ret = MPORT_ERR_FATAL;
@@ -395,5 +397,6 @@ MPORT_PUBLIC_API void mport_index_entry_free(mportIndexEntry *e)
   free(e->version);
   free(e->bundlefile);
   free(e->license);
+  free(e->hash);
   free(e);
 }

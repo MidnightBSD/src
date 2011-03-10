@@ -24,10 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.19 2011/02/26 21:22:44 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.20 2011/03/06 03:57:53 laffer1 Exp $
  */
 
-
+#include <sys/types.h>
+#include <sha256.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -90,6 +91,27 @@ MPORT_PUBLIC_API void mport_createextras_free(mportCreateExtras *extra)
   free(extra);
 }
 
+MPORT_PUBLIC_API int mport_verify_hash(const char *filename, const char *hash)
+{
+  char *filehash;
+
+  filehash = mport_hash_file(filename);
+  if (strcmp(filehash, hash) == 0)
+  {
+    free(filehash);
+    return 1;
+  }
+  else
+  {
+    free(filehash);
+    return 0;
+  }
+}
+
+char * mport_hash_file(const char *filename)
+{
+  return SHA256_File(filename, NULL);
+}
 
 /* a wrapper around chdir, to work with our error system */
 int mport_chdir(mportInstance *mport, const char *dir)

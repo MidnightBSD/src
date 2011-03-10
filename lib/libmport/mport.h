@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.16 2011/03/07 19:43:00 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.17 2011/03/07 22:01:00 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -129,6 +129,7 @@ typedef struct {
   char *comment;
   char *bundlefile;
   char *license;
+  char *hash;
 } mportIndexEntry;
 
 int mport_index_load(mportInstance *);
@@ -186,7 +187,7 @@ int mport_clean_oldpackages(mportInstance *);
 
 /* Utils */
 void mport_parselist(char *, char ***);
-
+int mport_verify_hash(const char *, const char *);
 
 #endif /* ! defined _MPORT_H */
 

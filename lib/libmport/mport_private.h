@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.4 2011/02/26 21:22:44 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.5 2011/02/26 21:30:31 laffer1 Exp $
  *
  * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -74,6 +74,7 @@ int mport_pkgmeta_logevent(mportInstance *, mportPackageMeta *, const char *);
 
 
 /* Utils */
+char * mport_hash_file(const char *);
 int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
