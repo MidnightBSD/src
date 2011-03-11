@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.4 2008/01/05 22:19:30 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.6 2009/06/05 00:08:03 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.4 2008/01/05 22:19:30 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.6 2009/06/05 00:08:03 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -81,8 +81,10 @@ int main(int argc, char *argv[])
         }
         if (mport_parse_plistfile(fp, assetlist) != 0) {
           warnx("Could not parse plist file '%s'.\n", optarg);
+          fclose(fp);
           exit(1);
         }
+        fclose(fp);
         
         plist_seen++;
         
