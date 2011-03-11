@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.21 2011/03/10 22:29:07 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.22 2011/03/11 18:28:09 laffer1 Exp $
  */
 
 #include <sys/types.h>
@@ -108,6 +108,10 @@ MPORT_PUBLIC_API int mport_verify_hash(const char *filename, const char *hash)
   }
 }
 
+/* mport_hash_file(const char * filename)
+ *
+ * Return a SHA256 hash of a file.  Must free result
+ */
 char * mport_hash_file(const char *filename)
 {
   return SHA256_File(filename, NULL);
@@ -269,12 +273,14 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
  */
 void mport_parselist(char *opt, char ***list) 
 {
-  int len;
+  size_t len;
   char *input;
   char *field;
 
-  input = (char *)malloc((strlen(opt) + 1) * sizeof(char));
-  strcpy(input, opt);
+  if ((input = strdup(opt)) == NULL) {
+    *list = NULL;
+    return;
+  }
   
   /* first we need to get the length of the depends list */
   for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
@@ -282,7 +288,9 @@ void mport_parselist(char *opt, char ***list)
       len++;
   }    
 
-  *list = (char **)calloc((len + 1), sizeof(char *));
+  if ((*list = (char **)calloc((len + 1), sizeof(char *))) == NULL) {
+    return;
+  }
 
   if (len == 0) {
     **list = NULL;
