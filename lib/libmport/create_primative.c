@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_primative.c,v 1.4 2009/06/05 00:02:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/create_primative.c,v 1.5 2009/11/28 22:44:31 laffer1 Exp $
  */
 
 
@@ -153,14 +153,13 @@ static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackage
       } else {
         (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
       }
-      
+
       if (lstat(file, &st) != 0) {
         sqlite3_finalize(stmnt);
         RETURN_ERRORX(MPORT_ERR_FATAL, "Couln't stat %s: %s", file, strerror(errno));
       }
 
       if (S_ISREG(st.st_mode)) {
-
         if (MD5File(file, md5) == NULL) 
           RETURN_ERRORX(MPORT_ERR_FATAL, "File not found: %s", file);
       

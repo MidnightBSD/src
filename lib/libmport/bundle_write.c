@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.5 2010/05/30 03:02:12 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.6 2010/12/18 07:59:46 laffer1 Exp $
  */
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
@@ -116,11 +116,15 @@ int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
 int mport_bundle_write_finish(mportBundleWrite *bundle)
 {
   int ret = MPORT_OK;
+
+  if (bundle == NULL)
+      RETURN_ERROR(MPORT_ERR_FATAL, "mport bundle is missing");
  
   if (archive_write_finish(bundle->archive) != ARCHIVE_OK)
     ret = SET_ERROR(MPORT_ERR_FATAL, strdup(archive_error_string(bundle->archive)));
 
   free_linktable(bundle->links);
+ 
   free(bundle->filename);
   free(bundle);
   
@@ -138,7 +142,8 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
 {
   struct archive_entry *entry = NULL;
   struct stat st;
-  int fd = -1, len;
+  int fd = -1;
+  ssize_t len;
   char buff[BUFF_SIZE];
 
   if (lstat(filename, &st) != 0) {
@@ -361,8 +366,6 @@ static void free_linktable(struct links_table *links)
     while (links->buckets[i] != NULL) {
       node = links->buckets[i];
       links->buckets[i] = node->next;
-      
-      free(node->name);
       
       if (node->name != NULL)
         free(node->name);
