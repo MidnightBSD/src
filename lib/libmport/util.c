@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.20 2011/03/06 03:57:53 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.21 2011/03/10 22:29:07 laffer1 Exp $
  */
 
 #include <sys/types.h>
@@ -241,8 +241,10 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
     
   ret = system(cmnd);
 
-  if (ret == 127)
+  if (ret == 127) {
+    free(cmnd);
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't execute sh(1)");
+  }
   
   free(cmnd);
   
@@ -369,7 +371,7 @@ int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd,
   
   *pos = '\0';
 
-  /* cmnd now hold the expaded command, now execute it*/
+  /* cmnd now hold the expanded command, now execute it*/
   return mport_xsystem(mport, cmnd);
 }          
 
@@ -427,8 +429,8 @@ int mport_decompress_bzip2(const char *input, const char *output)
 
   bzerror = BZ_OK;
   while (bzerror == BZ_OK) {
-    nBuf = BZ2_bzRead ( &bzerror, b, buf, 4096 );
-    if ( bzerror == BZ_OK ) {
+    nBuf = BZ2_bzRead(&bzerror, b, buf, 4096);
+    if (bzerror == BZ_OK) {
       if (fwrite(buf, nBuf, 1, fout) < 1) {
           fclose(fout);
           RETURN_ERROR(MPORT_ERR_FATAL, "Error writing decompressed file");
@@ -436,11 +438,11 @@ int mport_decompress_bzip2(const char *input, const char *output)
     }
   }
 
-  if ( bzerror != BZ_STREAM_END ) {
-    BZ2_bzReadClose ( &bzerror, b );
+  if (bzerror != BZ_STREAM_END) {
+    BZ2_bzReadClose(&bzerror, b);
     RETURN_ERROR(MPORT_ERR_FATAL, "Unknown error decompressing bzip2 file");
   } else {
-    BZ2_bzReadClose ( &bzerror, b );
+    BZ2_bzReadClose(&bzerror, b);
   }
 
   return MPORT_OK;

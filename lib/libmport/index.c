@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.9 2011/03/07 19:43:00 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.10 2011/03/10 22:29:07 laffer1 Exp $
  */
 
 
@@ -82,7 +82,6 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
     mport->flags |= MPORT_INST_HAVE_INDEX;
   }
   
-
   return MPORT_OK;
 }
 
