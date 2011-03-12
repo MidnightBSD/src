@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.4 2010/03/13 02:33:48 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.5 2010/11/16 01:21:00 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -36,7 +36,7 @@
 static int make_backup_bundle(mportInstance *, mportPackageMeta *, char *);
 static int install_backup_bundle(mportInstance *, mportPackageMeta *, char *);
 static int build_create_extras(mportInstance *, mportPackageMeta *, char *, mportCreateExtras **);
-static int build_create_extras_copy_metafiles(mportInstance *, mportPackageMeta *, mportCreateExtras *);
+static int build_create_extras_copy_metafiles(const mportPackageMeta *, mportCreateExtras *);
 static int build_create_extras_depends(mportInstance *, mportPackageMeta *, mportCreateExtras *);
 
 int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
@@ -117,14 +117,14 @@ static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char
   if (build_create_extras_depends(mport, pkg, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
-  if (build_create_extras_copy_metafiles(mport, pkg, extra) != MPORT_OK)
+  if (build_create_extras_copy_metafiles(pkg, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   
   return MPORT_OK;
 }
 
-static int build_create_extras_copy_metafiles(mportInstance *mport, mportPackageMeta *pkg, mportCreateExtras *extra) 
+static int build_create_extras_copy_metafiles(const mportPackageMeta *pkg, mportCreateExtras *extra) 
 {
   char file[FILENAME_MAX];
   

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/plist.c,v 1.8 2010/05/30 03:02:12 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.9 2010/12/11 07:01:11 laffer1 Exp $
  */
 
 
@@ -78,7 +78,7 @@ MPORT_PUBLIC_API void mport_assetlist_free(mportAssetList *list)
 MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
 {
   size_t length;
-  char *line = NULL;
+  char *line;
 
   assert(fp != NULL);
   
@@ -98,8 +98,8 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
     
     
     /* change the last \n to \0 */
-    *(line + length - 1) = 0;
-    
+    *(line + length - 1) = '\0';
+
     mportAssetListEntry *entry = (mportAssetListEntry *)calloc(1, sizeof(mportAssetListEntry));
     
     if (entry == NULL) {

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/fetch.c,v 1.3 2011/02/26 21:22:44 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/fetch.c,v 1.4 2011/03/06 03:57:53 laffer1 Exp $
  */
 
 
@@ -154,7 +154,7 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
 {
   FILE *remote = NULL;
   FILE *local = NULL;
-  struct url_stat stat;
+  struct url_stat ustat;
   char buffer[BUFFSIZE];
   char *ptr = NULL;
   size_t size;                                  
@@ -167,7 +167,7 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
 
   mport_call_progress_init_cb(mport, "Downloading %s", url);
   
-  if ((remote = fetchXGetURL(url, &stat, "p")) == NULL) {
+  if ((remote = fetchXGetURL(url, &ustat, "p")) == NULL) {
     fclose(local);
     unlink(dest);
     RETURN_ERRORX(MPORT_ERR_FATAL, "Fetch error: %s: %s", url, fetchLastErrString);
@@ -189,7 +189,7 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
   
     got += size;
   
-    (mport->progress_step_cb)(got, stat.size, "XXX Rate");
+    (mport->progress_step_cb)(got, ustat.size, "XXX Rate");
 
     for (ptr = buffer; size > 0; ptr += wrote, size -= wrote) {
       wrote = fwrite(ptr, 1, size, local);
