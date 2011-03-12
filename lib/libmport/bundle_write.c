@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.7 2011/03/11 22:07:35 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.8 2011/03/12 03:31:33 laffer1 Exp $
  */
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
@@ -272,16 +272,15 @@ static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry
   }
 
   /* if the number of entires is twice the number of buckets, increase the table size */
-  if (links->nentries > (links->nbuckets * 2)) {
+  if (links->nentries > links->nbuckets * 2) {
     new_size = links->nbuckets * 2;
-    new_buckets = (struct link_node **)calloc(new_size, sizeof(struct link_node *));
+    new_buckets = calloc(new_size, sizeof(links->buckets[0]));
     
     if (new_buckets != NULL) {
-      for (i=0; i < links->nbuckets; i++) {
-        while (links->buckets[i] != NULL) {
+      for (i = 0; i < links->nbuckets; i++) {
+        if (links->buckets[i] != NULL) {
           /* remove old from bucket */
           node = links->buckets[i];
-          links->buckets[i] = node;
                 
           hash = (node->dev ^ node->ino) % new_size;
           if (new_buckets[hash] != NULL)
