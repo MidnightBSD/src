@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read.c,v 1.3 2009/06/06 21:52:41 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read.c,v 1.4 2010/03/10 05:28:05 laffer1 Exp $
  */
 
 
@@ -60,8 +60,10 @@ int mport_bundle_read_init(mportBundleRead *bundle, const char *filename)
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename");
     
   
-  archive_read_support_format_tar(bundle->archive);
-  archive_read_support_compression_bzip2(bundle->archive);
+  if (archive_read_support_format_tar(bundle->archive) != ARCHIVE_OK)
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+  if (archive_read_support_compression_xz(bundle->archive) != ARCHIVE_OK)
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
   
   if (archive_read_open_filename(bundle->archive, bundle->filename, 10240) != ARCHIVE_OK) {
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));

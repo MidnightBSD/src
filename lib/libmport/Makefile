@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/libmport/Makefile,v 1.10 2010/12/18 07:59:46 laffer1 Exp $
+# $MidnightBSD: src/lib/libmport/Makefile,v 1.11 2011/03/07 22:01:00 laffer1 Exp $
 
 LIB=		mport
 SRCS=		bundle_write.c bundle_read.c plist.c create_primative.c db.c \
@@ -14,7 +14,7 @@ WARNS?=		6
 WFORMAT?=	1
 SHLIB_MAJOR=	1
 
-DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBZ} ${LIBFETCH} ${LIBSQLITE3}
-LDADD=	-lmd -larchive -lbz2 -lz -lfetch -lsqlite3
+DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} ${LIBSQLITE3}
+LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3
 
 .include <bsd.lib.mk>

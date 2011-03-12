@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.8 2011/03/12 03:31:33 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.9 2011/03/12 14:47:48 laffer1 Exp $
  */
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
@@ -95,8 +95,11 @@ int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
   if ((bundle->archive = archive_write_new()) == NULL) 
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate archive struct");
 
-  archive_write_set_compression_bzip2(bundle->archive);
-  archive_write_set_format_pax(bundle->archive);
+  if (archive_write_set_compression_xz(bundle->archive) != ARCHIVE_OK)
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+
+  if (archive_write_set_format_pax(bundle->archive) != ARCHIVE_OK)
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
   bundle->links = NULL; 
 

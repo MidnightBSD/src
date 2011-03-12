@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/merge_primative.c,v 1.4 2010/05/30 03:02:12 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/merge_primative.c,v 1.5 2010/11/16 01:53:54 laffer1 Exp $
  */
 
 
@@ -465,8 +465,10 @@ static int extract_stub_db(const char *filename, const char *destfile)
   if (a == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate read archive struct");
 
-  archive_read_support_format_tar(a);
-  archive_read_support_compression_bzip2(a);
+  if (archive_read_support_format_tar(a) != ARCHIVE_OK)
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
+  if (archive_read_support_compression_xz(a))
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
     
   if (archive_read_open_filename(a, filename, 10240) != ARCHIVE_OK) {
     SET_ERRORX(MPORT_ERR_FATAL, "Could not open %s: %s", filename, archive_error_string(a));
