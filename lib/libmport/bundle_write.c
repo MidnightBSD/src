@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.6 2010/12/18 07:59:46 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.7 2011/03/11 22:07:35 laffer1 Exp $
  */
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
@@ -47,7 +47,7 @@
 #include "mport_private.h"
 
 
-#define	LINK_TABLE_SIZE 512
+#define	LINK_TABLE_SIZE 1024
 #define BUFF_SIZE       BUFSIZ * 16
 
 struct links_table {
@@ -142,7 +142,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
 {
   struct archive_entry *entry = NULL;
   struct stat st;
-  int fd = -1;
+  int fd = -1, ret = MPORT_OK;
   ssize_t len;
   char buff[BUFF_SIZE];
 
@@ -152,7 +152,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
 
   entry = archive_entry_new();
   archive_entry_set_pathname(entry, path);
- 
+
   if (!S_ISDIR(st.st_mode) && (st.st_nlink > 1))
     if (lookup_hardlink(bundle, entry, &st) != MPORT_OK)
       RETURN_CURRENT_ERROR;
@@ -176,7 +176,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
     archive_entry_set_fflags(entry, st.st_flags, 0);
     
   archive_entry_copy_stat(entry, &st);
-  
+ 
   /* non-regular files get archived with zero size */
   if (!S_ISREG(st.st_mode)) {
     archive_entry_set_size(entry, 0);
@@ -185,7 +185,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
   else if ((fd = open(filename, O_RDONLY)) == -1) {
    RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
   }
-    
+   
   if (archive_write_header(bundle->archive, entry) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
   
@@ -194,19 +194,19 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
     len = read(fd, buff, sizeof(buff));
     while (len > 0) {
       if (archive_write_data(bundle->archive, buff, len) != len) {
-        SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+        ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
         break;
       }
       len = read(fd, buff, sizeof(buff));
     }
   }
-    
+   
   archive_entry_free(entry);
-  
+ 
   if (fd > -1)
     close(fd);
 
-  return MPORT_OK;  
+  return ret;  
 }
 
 
