@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.11 2009/06/08 19:28:44 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.12 2009/11/28 22:44:30 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -23,14 +23,15 @@
 # libtacplus must be built before libpam.
 # libutil must be built before libpam.
 # libypclnt must be built before libpam.
-# libkse must be built before libsqlite3
-# libbz2 must be built before libarchive
-# libsqlite3 must be built before libmport
+# libkse must be built before libsqlite3.
+# libbz2 must be built before libarchive.
+# liblzma must be built before libarchive.
+# libsqlite3 must be built before libmport.
 # Otherwise, the SUBDIR list should be in alphabetical order.
 
 SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf libkvm msun libmd \
 	ncurses libnetgraph libradius librpcsvc libsbuf libtacplus libutil \
-	${_libypclnt} libalias libbz2 libarchive ${_libatm} \
+	${_libypclnt} libalias libbz2 liblzma libarchive ${_libatm} \
 	libbegemot ${_libbluetooth} libbsnmp \
 	libcalendar libcam libcompat libdevinfo libdevstat libdisk \
 	libedit libexpat libfetch ${_libffi} libftpio libgeom ${_libgpib} \
