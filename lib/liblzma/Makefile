@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/liblzma/Makefile,v 1.3 2011/03/08 12:53:10 laffer1 Exp $
 # $NetBSD: Makefile,v 1.3 2010/11/09 23:07:09 joerg Exp $
 
 LIB=		lzma
@@ -38,7 +38,7 @@ CFLAGS+=	-I${XZSRCDIR}/src/liblzma/lz
 CFLAGS+=	-I${XZSRCDIR}/src/liblzma/lzma
 CFLAGS+=	-I${XZSRCDIR}/src/liblzma/rangecoder
 CFLAGS+=	-I${XZSRCDIR}/src/liblzma/simple
-CFLAGS+=	-I${XZSRCDIR}/src/common -I.
+CFLAGS+=	-I${XZSRCDIR}/src/common -I${.CURDIR}
 CFLAGS+=	-DTUKLIB_SYMBOL_PREFIX=lzma_
 CFLAGS+=	-DHAVE_CONFIG_H
 CFLAGS+=	-std=c99
