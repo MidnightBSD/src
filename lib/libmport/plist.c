@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/plist.c,v 1.9 2010/12/11 07:01:11 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.10 2011/03/12 01:29:38 laffer1 Exp $
  */
 
 
@@ -133,7 +133,7 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
         }
       }     
       
-      entry->data = (char  *)calloc(strlen(line) + 1, sizeof(char));
+      entry->data = (char *)calloc(strlen(line) + 1, sizeof(char));
       if (entry->data == NULL) {
         RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
       }

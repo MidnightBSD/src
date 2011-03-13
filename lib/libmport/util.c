@@ -24,10 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.22 2011/03/11 18:28:09 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.23 2011/03/11 18:59:57 laffer1 Exp $
  */
 
 #include <sys/types.h>
+#include <sys/sysctl.h>
 #include <sha256.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -220,7 +221,7 @@ int mport_file_exists(const char *file)
 int mport_xsystem(mportInstance *mport, const char *fmt, ...) 
 {
   va_list args;
-  char *cmnd = NULL;
+  char *cmnd;
   int ret;
 
   va_start(args, fmt);
@@ -233,7 +234,7 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate xsystem cmnd string.");
   }
   va_end(args);
-  
+ 
   if (mport != NULL && *(mport->root) != '\0') {
     char *chroot_cmd;
     if (asprintf(&chroot_cmd, "%s %s %s", MPORT_CHROOT_BIN, mport->root, cmnd) == -1)
@@ -244,13 +245,11 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   }
     
   ret = system(cmnd);
+  free(cmnd);
 
   if (ret == 127) {
-    free(cmnd);
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't execute sh(1)");
   }
-  
-  free(cmnd);
   
   return ret;
 }
@@ -274,13 +273,14 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
 void mport_parselist(char *opt, char ***list) 
 {
   size_t len;
-  char *input;
+  char *input, *input_orig;
   char *field;
 
   if ((input = strdup(opt)) == NULL) {
     *list = NULL;
     return;
   }
+  input_orig = input;
   
   /* first we need to get the length of the depends list */
   for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
@@ -309,6 +309,7 @@ void mport_parselist(char *opt, char ***list)
   }
 
   *vec = NULL;
+  free(input_orig);
 }
 
 /*
@@ -327,10 +328,19 @@ void mport_parselist(char *opt, char ***list)
 int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
 {
   size_t l;
-  size_t max = FILENAME_MAX * 2;
-  char cmnd[max];
-  char *pos = cmnd;
+  char *cmnd;
+  char *pos;
   char *name;
+  int ret;
+  int max;
+  size_t maxlen = sizeof(max);
+
+  if (sysctlbyname("kern.argmax", &max, &maxlen, NULL, 0) < 0)
+     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't determine maximum argument length");
+
+  if ((cmnd = malloc(max * sizeof(char))) == NULL)
+     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
+  pos = cmnd;
 
   while (*fmt && max > 0) {
     if (*fmt == '%') {
@@ -380,7 +390,9 @@ int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd,
   *pos = '\0';
 
   /* cmnd now hold the expanded command, now execute it*/
-  return mport_xsystem(mport, cmnd);
+  ret = mport_xsystem(mport, cmnd);
+  free(cmnd);
+  return ret;
 }          
 
 
