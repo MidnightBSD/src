@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/dev/drm/drm-subprocess.pl,v 1.1 2005/11/28 23:13:52 anholt Exp $
+# $FreeBSD: src/sys/dev/drm/drm-subprocess.pl,v 1.1.4.1.4.1 2010/02/10 00:26:20 kensmith Exp $
 #
 # Props to Daniel Stone for starting this script for me.  I hate perl.
 
@@ -23,7 +23,7 @@ while (<>) {
 			print $lastline;
 		}
 	} elsif ($foundopening && !$foundclosing && /\*\//) {
-		# print the $FreeBSD: src/sys/dev/drm/drm-subprocess.pl,v 1.1 2005/11/28 23:13:52 anholt Exp $ bits after the end of the license block
+		# print the $FreeBSD: src/sys/dev/drm/drm-subprocess.pl,v 1.1.4.1.4.1 2010/02/10 00:26:20 kensmith Exp $ bits after the end of the license block
 		$foundclosing = 1;
 		print;
 		print "\n";
@@ -37,6 +37,7 @@ while (<>) {
 		s/#include "(.*)_drm.h/#include "dev\/drm\/\1_drm.h/;
 		s/#include "mga_ucode.h/#include "dev\/drm\/mga_ucode.h/;
 		s/#include "r300_reg.h/#include "dev\/drm\/r300_reg.h/;
+		s/#include "radeon_microcode.h/#include "dev\/drm\/radeon_microcode.h/;
 		s/#include "sis_ds.h/#include "dev\/drm\/sis_ds.h/;
 		s/#include "drm/#include "dev\/drm\/drm/;
 		print;

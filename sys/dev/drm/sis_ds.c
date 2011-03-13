@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* sis_ds.c -- Private header for Direct Rendering Manager -*- linux-c -*-
  * Created: Mon Jan  4 10:05:05 1999 by sclin@sis.com.tw
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/sis_ds.c,v 1.5 2006/04/09 20:45:45 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/sis_ds.c,v 1.5.12.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/fs/devfs/devfs_vnops.c,v 1.5 2009/12/13 01:09:43 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_vnops.c,v 1.6 2010/03/27 22:39:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000-2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -74,10 +74,14 @@ static struct fileops devfs_ops_f;
 
 #include <security/mac/mac_framework.h>
 
+static MALLOC_DEFINE(M_CDEVPDATA, "DEVFSP", "Metainfo for cdev-fp data");
+
 struct mtx	devfs_de_interlock;
 MTX_SYSINIT(devfs_de_interlock, &devfs_de_interlock, "devfs interlock", MTX_DEF);
 struct sx	clone_drain_lock;
 SX_SYSINIT(clone_drain_lock, &clone_drain_lock, "clone events drain lock");
+struct mtx	cdevpriv_mtx;
+MTX_SYSINIT(cdevpriv_mtx, &cdevpriv_mtx, "cdevpriv lock", MTX_DEF);
 
 static int devfs_newvnode(struct devfs_dirent *de, struct mount *mp,
     struct cdev *dev, struct vnode **vpp, struct thread *td);
@@ -96,7 +100,93 @@ devfs_fp_check(struct file *fp, struct cdev **devp, struct cdevsw **dswp)
 	    ("devfs: un-referenced struct cdev *(%s)", devtoname(*devp)));
 	if (*dswp == NULL)
 		return (ENXIO);
+	curthread->td_fpop = fp;
 	return (0);
+}
+
+int
+devfs_get_cdevpriv(void **datap)
+{
+	struct file *fp;
+	struct cdev_privdata *p;
+	int error;
+
+	fp = curthread->td_fpop;
+	if (fp == NULL)
+		return (EBADF);
+	p = fp->f_cdevpriv;
+	if (p != NULL) {
+		error = 0;
+		*datap = p->cdpd_data;
+	} else
+		error = ENOENT;
+	return (error);
+}
+
+int
+devfs_set_cdevpriv(void *priv, cdevpriv_dtr_t priv_dtr)
+{
+	struct file *fp;
+	struct cdev_priv *cdp;
+	struct cdev_privdata *p;
+	int error;
+
+	fp = curthread->td_fpop;
+	if (fp == NULL)
+		return (ENOENT);
+	cdp = ((struct cdev *)fp->f_data)->si_priv;
+	p = malloc(sizeof(struct cdev_privdata), M_CDEVPDATA, M_WAITOK);
+	p->cdpd_data = priv;
+	p->cdpd_dtr = priv_dtr;
+	p->cdpd_fp = fp;
+	mtx_lock(&cdevpriv_mtx);
+	if (fp->f_cdevpriv == NULL) {
+		LIST_INSERT_HEAD(&cdp->cdp_fdpriv, p, cdpd_list);
+		fp->f_cdevpriv = p;
+		mtx_unlock(&cdevpriv_mtx);
+		error = 0;
+	} else {
+		mtx_unlock(&cdevpriv_mtx);
+		free(p, M_CDEVPDATA);
+		error = EBUSY;
+	}
+	return (error);
+}
+
+void
+devfs_destroy_cdevpriv(struct cdev_privdata *p)
+{
+
+	mtx_assert(&cdevpriv_mtx, MA_OWNED);
+	p->cdpd_fp->f_cdevpriv = NULL;
+	LIST_REMOVE(p, cdpd_list);
+	mtx_unlock(&cdevpriv_mtx);
+	(p->cdpd_dtr)(p->cdpd_data);
+	free(p, M_CDEVPDATA);
+}
+
+void
+devfs_fpdrop(struct file *fp)
+{
+	struct cdev_privdata *p;
+
+	mtx_lock(&cdevpriv_mtx);
+	if ((p = fp->f_cdevpriv) == NULL) {
+		mtx_unlock(&cdevpriv_mtx);
+		return;
+	}
+	devfs_destroy_cdevpriv(p);
+}
+
+void
+devfs_clear_cdevpriv(void)
+{
+	struct file *fp;
+
+	fp = curthread->td_fpop;
+	if (fp == NULL)
+		return;
+	devfs_fpdrop(fp);
 }
 
 /*

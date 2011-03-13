@@ -30,6 +30,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_conf.c,v 1.208.2.1 2007/12/07 03:45:16 tho
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
+#include <sys/bus.h>
 #include <sys/bio.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -215,6 +216,8 @@ dev_relthread(struct cdev *dev)
 
 	mtx_assert(&devmtx, MA_NOTOWNED);
 	dev_lock();
+	KASSERT(dev->si_threadcount > 0,
+	    ("%s threadcount is wrong", dev->si_name));
 	dev->si_threadcount--;
 	dev_unlock();
 }
@@ -473,6 +476,37 @@ unit2minor(int unit)
 	return ((unit & 0xff) | ((unit << 8) & ~0xffff));
 }
 
+static void
+notify(struct cdev *dev, const char *ev)
+{
+	static const char prefix[] = "cdev=";
+	char *data;
+	int namelen;
+
+	if (cold)
+		return;
+	namelen = strlen(dev->si_name);
+	data = malloc(namelen + sizeof(prefix), M_TEMP, M_WAITOK);
+	memcpy(data, prefix, sizeof(prefix) - 1);
+	memcpy(data + sizeof(prefix) - 1, dev->si_name, namelen + 1);
+	devctl_notify("DEVFS", "CDEV", ev, data);
+	free(data, M_TEMP);
+}
+
+static void
+notify_create(struct cdev *dev)
+{
+
+	notify(dev, "CREATE");
+}
+
+static void
+notify_destroy(struct cdev *dev)
+{
+
+	notify(dev, "DESTROY");
+} 
+
 static struct cdev *
 newdev(struct cdevsw *csw, int y, struct cdev *si)
 {
@@ -654,6 +688,9 @@ make_dev_credv(int flags, struct cdevsw *devsw, int minornr,
 	devfs_create(dev);
 	clean_unrhdrl(devfs_inos);
 	dev_unlock_and_free();
+
+	notify_create(dev);
+
 	return (dev);
 }
 
@@ -726,6 +763,7 @@ make_dev_alias(struct cdev *pdev, const char *fmt, ...)
 	va_list ap;
 	int i;
 
+	KASSERT(pdev != NULL, ("NULL pdev"));
 	dev = devfs_alloc();
 	dev_lock();
 	dev->si_flags |= SI_ALIAS;
@@ -739,9 +777,12 @@ make_dev_alias(struct cdev *pdev, const char *fmt, ...)
 	va_end(ap);
 
 	devfs_create(dev);
+	dev_dependsl(pdev, dev);
 	clean_unrhdrl(devfs_inos);
 	dev_unlock();
-	dev_depends(pdev, dev);
+
+	notify_create(dev);
+
 	return (dev);
 }
 
@@ -749,6 +790,7 @@ static void
 destroy_devl(struct cdev *dev)
 {
 	struct cdevsw *csw;
+	struct cdev_privdata *p, *p1;
 
 	mtx_assert(&devmtx, MA_OWNED);
 	KASSERT(dev->si_flags & SI_NAMED,
@@ -789,6 +831,16 @@ destroy_devl(struct cdev *dev)
 		/* Use unique dummy wait ident */
 		msleep(&csw, &devmtx, PRIBIO, "devdrn", hz / 10);
 	}
+
+	dev_unlock();
+	notify_destroy(dev);
+	mtx_lock(&cdevpriv_mtx);
+	LIST_FOREACH_SAFE(p, &dev->si_priv->cdp_fdpriv, cdpd_list, p1) {
+		devfs_destroy_cdevpriv(p);
+		mtx_lock(&cdevpriv_mtx);
+	}
+	mtx_unlock(&cdevpriv_mtx);
+	dev_lock();
 
 	dev->si_drv1 = 0;
 	dev->si_drv2 = 0;

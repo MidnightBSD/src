@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/fs/devfs/devfs_int.h,v 1.3 2008/12/03 00:25:41 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_int.h,v 1.4 2009/12/13 01:09:43 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp.  All rights reserved.
  *
@@ -41,6 +41,13 @@
 struct devfs_dirent;
 struct mount;
 
+struct cdev_privdata {
+	struct file		*cdpd_fp;
+	void			*cdpd_data;
+	void			(*cdpd_dtr)(void *);
+	LIST_ENTRY(cdev_privdata) cdpd_list;
+};
+
 struct cdev_priv {
 	struct cdev		cdp_c;
 	TAILQ_ENTRY(cdev_priv)	cdp_list;
@@ -59,17 +66,21 @@ struct cdev_priv {
 
 	TAILQ_ENTRY(cdev_priv)	cdp_dtr_list;
 	void			(*cdp_dtr_cb)(void *);
+
+	LIST_HEAD(, cdev_privdata) cdp_fdpriv;
 	void			*cdp_dtr_cb_arg;
 };
 
 struct cdev *devfs_alloc(void);
 void devfs_free(struct cdev *);
 void devfs_create(struct cdev *dev);
+void devfs_destroy_cdevpriv(struct cdev_privdata *p);
 void devfs_destroy(struct cdev *dev);
 
 extern struct unrhdr *devfs_inos;
 extern struct mtx devmtx;
 extern struct mtx devfs_de_interlock;
+extern struct mtx cdevpriv_mtx;
 extern struct sx clone_drain_lock;
 extern TAILQ_HEAD(cdev_priv_list, cdev_priv) cdevp_list;
 extern struct unrhdr *fdclone_units;

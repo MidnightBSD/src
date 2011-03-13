@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* radeon_drm.h -- Public header for the radeon driver -*- linux-c -*-
  *
  * Copyright 2000 Precision Insight, Inc., Cedar Park, Texas.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/radeon_drm.h,v 1.14 2006/09/07 23:04:47 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/radeon_drm.h,v 1.14.2.3.2.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #ifndef __RADEON_DRM_H__
 #define __RADEON_DRM_H__
@@ -227,11 +226,24 @@ typedef union {
 #define R300_CMD_CP_DELAY		5
 #define R300_CMD_DMA_DISCARD		6
 #define R300_CMD_WAIT			7
-#	define R300_WAIT_2D  		0x1
-#	define R300_WAIT_3D  		0x2
-#	define R300_WAIT_2D_CLEAN  	0x3
-#	define R300_WAIT_3D_CLEAN  	0x4
+#	define R300_WAIT_2D		0x1
+#	define R300_WAIT_3D		0x2
+/* these two defines are DOING IT WRONG - however
+ * we have userspace which relies on using these.
+ * The wait interface is backwards compat new 
+ * code should use the NEW_WAIT defines below
+ * THESE ARE NOT BIT FIELDS
+ */
+#	define R300_WAIT_2D_CLEAN	0x3
+#	define R300_WAIT_3D_CLEAN	0x4
+
+#	define R300_NEW_WAIT_2D_3D	0x3
+#	define R300_NEW_WAIT_2D_2D_CLEAN	0x4
+#	define R300_NEW_WAIT_3D_3D_CLEAN	0x6
+#	define R300_NEW_WAIT_2D_2D_CLEAN_3D_3D_CLEAN	0x8
+
 #define R300_CMD_SCRATCH		8
+#define R300_CMD_R500FP                 9
 
 typedef union {
 	unsigned int u;
@@ -260,6 +272,9 @@ typedef union {
 	struct {
 		unsigned char cmd_type, reg, n_bufs, flags;
 	} scratch;
+	struct {
+		unsigned char cmd_type, count, adrlo, adrhi_flags;
+	} r500fp;
 } drm_r300_cmd_header_t;
 
 #define RADEON_FRONT			0x1
@@ -269,6 +284,9 @@ typedef union {
 #define RADEON_CLEAR_FASTZ		0x80000000
 #define RADEON_USE_HIERZ		0x40000000
 #define RADEON_USE_COMP_ZBUF		0x20000000
+
+#define R500FP_CONSTANT_TYPE  (1 << 1)
+#define R500FP_CONSTANT_CLAMP (1 << 2)
 
 /* Primitive types
  */
@@ -288,6 +306,7 @@ typedef union {
 #define RADEON_INDEX_PRIM_OFFSET	20
 
 #define RADEON_SCRATCH_REG_OFFSET	32
+#define R600_SCRATCH_REG_OFFSET	        256
 
 #define RADEON_NR_SAREA_CLIPRECTS	12
 
@@ -421,7 +440,7 @@ typedef struct {
 
 	/* The current cliprects, or a subset thereof.
 	 */
-	drm_clip_rect_t boxes[RADEON_NR_SAREA_CLIPRECTS];
+	struct drm_clip_rect boxes[RADEON_NR_SAREA_CLIPRECTS];
 	unsigned int nbox;
 
 	/* Counters for client-side throttling of rendering clients.
@@ -430,7 +449,7 @@ typedef struct {
 	unsigned int last_dispatch;
 	unsigned int last_clear;
 
-	drm_tex_region_t tex_list[RADEON_NR_TEX_HEAPS][RADEON_NR_TEX_REGIONS +
+	struct drm_tex_region tex_list[RADEON_NR_TEX_HEAPS][RADEON_NR_TEX_REGIONS +
 						       1];
 	unsigned int tex_age[RADEON_NR_TEX_HEAPS];
 	int ctx_owner;
@@ -478,6 +497,8 @@ typedef struct {
 #define DRM_RADEON_SURF_ALLOC 0x1a
 #define DRM_RADEON_SURF_FREE  0x1b
 
+#define DRM_RADEON_CS         0x26
+
 #define DRM_IOCTL_RADEON_CP_INIT    DRM_IOW( DRM_COMMAND_BASE + DRM_RADEON_CP_INIT, drm_radeon_init_t)
 #define DRM_IOCTL_RADEON_CP_START   DRM_IO(  DRM_COMMAND_BASE + DRM_RADEON_CP_START)
 #define DRM_IOCTL_RADEON_CP_STOP    DRM_IOW( DRM_COMMAND_BASE + DRM_RADEON_CP_STOP, drm_radeon_cp_stop_t)
@@ -505,13 +526,15 @@ typedef struct {
 #define DRM_IOCTL_RADEON_SETPARAM   DRM_IOW( DRM_COMMAND_BASE + DRM_RADEON_SETPARAM, drm_radeon_setparam_t)
 #define DRM_IOCTL_RADEON_SURF_ALLOC DRM_IOW( DRM_COMMAND_BASE + DRM_RADEON_SURF_ALLOC, drm_radeon_surface_alloc_t)
 #define DRM_IOCTL_RADEON_SURF_FREE  DRM_IOW( DRM_COMMAND_BASE + DRM_RADEON_SURF_FREE, drm_radeon_surface_free_t)
+#define DRM_IOCTL_RADEON_CS DRM_IOWR(DRM_COMMAND_BASE + DRM_RADEON_CS, struct drm_radeon_cs)
 
 typedef struct drm_radeon_init {
 	enum {
 		RADEON_INIT_CP = 0x01,
 		RADEON_CLEANUP_CP = 0x02,
 		RADEON_INIT_R200_CP = 0x03,
-		RADEON_INIT_R300_CP = 0x04
+		RADEON_INIT_R300_CP = 0x04,
+		RADEON_INIT_R600_CP = 0x05,
 	} func;
 	unsigned long sarea_priv_offset;
 	int is_pci; /* for overriding only */
@@ -608,7 +631,7 @@ typedef struct drm_radeon_cmd_buffer {
 	int bufsz;
 	char __user *buf;
 	int nbox;
-	drm_clip_rect_t __user *boxes;
+	struct drm_clip_rect __user *boxes;
 } drm_radeon_cmd_buffer_t;
 
 typedef struct drm_radeon_tex_image {
@@ -637,6 +660,9 @@ typedef struct drm_radeon_indirect {
 	int discard;
 } drm_radeon_indirect_t;
 
+#define RADEON_INDIRECT_DISCARD (1 << 0)
+#define RADEON_INDIRECT_NOFLUSH (1 << 1)
+
 /* enum for card type parameters */
 #define RADEON_CARD_PCI 0
 #define RADEON_CARD_AGP 1
@@ -659,6 +685,11 @@ typedef struct drm_radeon_indirect {
 #define RADEON_PARAM_GART_TEX_HANDLE       10
 #define RADEON_PARAM_SCRATCH_OFFSET        11
 #define RADEON_PARAM_CARD_TYPE             12
+#define RADEON_PARAM_VBLANK_CRTC           13   /* VBLANK CRTC */
+#define RADEON_PARAM_FB_LOCATION           14   /* FB location */
+#define RADEON_PARAM_NUM_GB_PIPES          15   /* num GB pipes */
+#define RADEON_PARAM_DEVICE_ID             16
+#define RADEON_PARAM_NUM_Z_PIPES           17   /* num Z pipes */
 
 typedef struct drm_radeon_getparam {
 	int param;
@@ -712,7 +743,8 @@ typedef struct drm_radeon_setparam {
 #define RADEON_SETPARAM_PCIGART_LOCATION 3	/* PCI Gart Location */
 
 #define RADEON_SETPARAM_NEW_MEMMAP 4		/* Use new memory map */
-
+#define RADEON_SETPARAM_PCIGART_TABLE_SIZE 5    /* PCI GART Table Size */
+#define RADEON_SETPARAM_VBLANK_CRTC 6           /* VBLANK CRTC */
 /* 1.14: Clients can allocate/free a surface
  */
 typedef struct drm_radeon_surface_alloc {
@@ -725,5 +757,26 @@ typedef struct drm_radeon_surface_free {
 	unsigned int address;
 } drm_radeon_surface_free_t;
 
+#define	DRM_RADEON_VBLANK_CRTC1		1
+#define	DRM_RADEON_VBLANK_CRTC2		2
+
+/* New interface which obsolete all previous interface.
+ */
+#define RADEON_CHUNK_ID_RELOCS 0x01
+#define RADEON_CHUNK_ID_IB     0x02
+#define RADEON_CHUNK_ID_OLD 0xff
+
+struct drm_radeon_cs_chunk {
+	uint32_t chunk_id;
+	uint32_t length_dw;
+	uint64_t chunk_data;
+};
+
+struct drm_radeon_cs {
+	uint32_t        num_chunks;
+	uint32_t        cs_id;
+	uint64_t        chunks; /* this points to uint64_t * which point to
+				   cs chunks */
+};
 
 #endif

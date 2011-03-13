@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/conf.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/conf.h,v 1.4 2009/12/13 01:09:44 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -280,6 +280,12 @@ void	dev_unlock(void);
 int	unit2minor(int _unit);
 u_int	minor2unit(u_int _minor);
 void	setconf(void);
+
+typedef		void (*cdevpriv_dtr_t)(void *data);
+int	devfs_get_cdevpriv(void **datap);
+int	devfs_set_cdevpriv(void *priv, cdevpriv_dtr_t dtr);
+void	devfs_clear_cdevpriv(void);
+void	devfs_fpdrop(struct file *fp); /* XXX This is not public KPI */
 
 #define		UID_ROOT	0
 #define		UID_BIN		3

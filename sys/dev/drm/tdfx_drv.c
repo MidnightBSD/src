@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/drm/tdfx_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* tdfx_drv.c -- tdfx driver -*- linux-c -*-
  * Created: Thu Oct  7 10:38:32 1999 by faith@precisioninsight.com
  */
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/tdfx_drv.c,v 1.10 2005/12/20 22:44:36 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/tdfx_drv.c,v 1.10.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include "dev/drm/tdfx_drv.h"
 #include "dev/drm/drmP.h"
@@ -45,43 +44,60 @@ static drm_pci_id_list_t tdfx_pciidlist[] = {
 	tdfx_PCI_IDS
 };
 
-static void tdfx_configure(drm_device_t *dev)
+static void tdfx_configure(struct drm_device *dev)
 {
-	dev->driver.buf_priv_size	= 1; /* No dev_priv */
+	dev->driver->driver_features =
+	    DRIVER_USE_MTRR;
 
-	dev->driver.max_ioctl		= 0;
+	dev->driver->buf_priv_size	= 1; /* No dev_priv */
 
-	dev->driver.name		= DRIVER_NAME;
-	dev->driver.desc		= DRIVER_DESC;
-	dev->driver.date		= DRIVER_DATE;
-	dev->driver.major		= DRIVER_MAJOR;
-	dev->driver.minor		= DRIVER_MINOR;
-	dev->driver.patchlevel		= DRIVER_PATCHLEVEL;
+	dev->driver->max_ioctl		= 0;
 
-	dev->driver.use_mtrr		= 1;
+	dev->driver->name		= DRIVER_NAME;
+	dev->driver->desc		= DRIVER_DESC;
+	dev->driver->date		= DRIVER_DATE;
+	dev->driver->major		= DRIVER_MAJOR;
+	dev->driver->minor		= DRIVER_MINOR;
+	dev->driver->patchlevel		= DRIVER_PATCHLEVEL;
 }
 
 static int
-tdfx_probe(device_t dev)
+tdfx_probe(device_t kdev)
 {
-	return drm_probe(dev, tdfx_pciidlist);
+	return drm_probe(kdev, tdfx_pciidlist);
 }
 
 static int
-tdfx_attach(device_t nbdev)
+tdfx_attach(device_t kdev)
 {
-	drm_device_t *dev = device_get_softc(nbdev);
+	struct drm_device *dev = device_get_softc(kdev);
 
-	bzero(dev, sizeof(drm_device_t));
+	dev->driver = malloc(sizeof(struct drm_driver_info), DRM_MEM_DRIVER,
+	    M_WAITOK | M_ZERO);
+
 	tdfx_configure(dev);
-	return drm_attach(nbdev, tdfx_pciidlist);
+
+	return drm_attach(kdev, tdfx_pciidlist);
+}
+
+static int
+tdfx_detach(device_t kdev)
+{
+	struct drm_device *dev = device_get_softc(kdev);
+	int ret;
+
+	ret = drm_detach(kdev);
+
+	free(dev->driver, DRM_MEM_DRIVER);
+
+	return ret;
 }
 
 static device_method_t tdfx_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		tdfx_probe),
 	DEVMETHOD(device_attach,	tdfx_attach),
-	DEVMETHOD(device_detach,	drm_detach),
+	DEVMETHOD(device_detach,	tdfx_detach),
 
 	{ 0, 0 }
 };
@@ -89,9 +105,13 @@ static device_method_t tdfx_methods[] = {
 static driver_t tdfx_driver = {
 	"drm",
 	tdfx_methods,
-	sizeof(drm_device_t)
+	sizeof(struct drm_device)
 };
 
 extern devclass_t drm_devclass;
+#if __FreeBSD_version >= 700010
 DRIVER_MODULE(tdfx, vgapci, tdfx_driver, drm_devclass, 0, 0);
+#else
+DRIVER_MODULE(tdfx, pci, tdfx_driver, drm_devclass, 0, 0);
+#endif
 MODULE_DEPEND(tdfx, drm, 1, 1, 1);

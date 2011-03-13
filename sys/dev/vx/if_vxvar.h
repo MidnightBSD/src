@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Herb Peyerl (hpeyerl@novatel.ca) All rights reserved.
  *
@@ -20,7 +19,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/vx/if_vxvar.h,v 1.6 2005/10/06 18:27:59 jhb Exp $
+ * $FreeBSD: src/sys/dev/vx/if_vxvar.h,v 1.6.12.1 2010/02/10 00:26:20 kensmith Exp $
  *
  October 2, 1994
 

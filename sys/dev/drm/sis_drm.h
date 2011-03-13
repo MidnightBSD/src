@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* sis_drv.h -- Private header for sis driver -*- linux-c -*- */
 /*-
  * Copyright 2005 Eric Anholt
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/sis_drm.h,v 1.6 2005/11/28 23:13:55 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/sis_drm.h,v 1.6.12.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #ifndef __SIS_DRM_H__
 #define __SIS_DRM_H__

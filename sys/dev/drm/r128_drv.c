@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/drm/r128_drv.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* r128_drv.c -- ATI Rage 128 driver -*- linux-c -*-
  * Created: Mon Dec 13 09:47:27 1999 by faith@precisioninsight.com
  */
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/r128_drv.c,v 1.11 2005/12/20 22:44:36 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/r128_drv.c,v 1.11.2.3.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -46,59 +45,78 @@ static drm_pci_id_list_t r128_pciidlist[] = {
 	r128_PCI_IDS
 };
 
-static void r128_configure(drm_device_t *dev)
+static void r128_configure(struct drm_device *dev)
 {
-	dev->driver.buf_priv_size	= sizeof(drm_r128_buf_priv_t);
-	dev->driver.preclose		= r128_driver_preclose;
-	dev->driver.lastclose		= r128_driver_lastclose;
-	dev->driver.vblank_wait		= r128_driver_vblank_wait;
-	dev->driver.irq_preinstall	= r128_driver_irq_preinstall;
-	dev->driver.irq_postinstall	= r128_driver_irq_postinstall;
-	dev->driver.irq_uninstall	= r128_driver_irq_uninstall;
-	dev->driver.irq_handler		= r128_driver_irq_handler;
-	dev->driver.dma_ioctl		= r128_cce_buffers;
+	dev->driver->driver_features =
+	    DRIVER_USE_AGP | DRIVER_USE_MTRR | DRIVER_PCI_DMA |
+	    DRIVER_SG | DRIVER_HAVE_DMA | DRIVER_HAVE_IRQ;
 
-	dev->driver.ioctls		= r128_ioctls;
-	dev->driver.max_ioctl		= r128_max_ioctl;
+	dev->driver->buf_priv_size	= sizeof(drm_r128_buf_priv_t);
+	dev->driver->load		= r128_driver_load;
+	dev->driver->preclose		= r128_driver_preclose;
+	dev->driver->lastclose		= r128_driver_lastclose;
+	dev->driver->get_vblank_counter	= r128_get_vblank_counter;
+	dev->driver->enable_vblank	= r128_enable_vblank;
+	dev->driver->disable_vblank	= r128_disable_vblank;
+	dev->driver->irq_preinstall	= r128_driver_irq_preinstall;
+	dev->driver->irq_postinstall	= r128_driver_irq_postinstall;
+	dev->driver->irq_uninstall	= r128_driver_irq_uninstall;
+	dev->driver->irq_handler	= r128_driver_irq_handler;
+	dev->driver->dma_ioctl		= r128_cce_buffers;
 
-	dev->driver.name		= DRIVER_NAME;
-	dev->driver.desc		= DRIVER_DESC;
-	dev->driver.date		= DRIVER_DATE;
-	dev->driver.major		= DRIVER_MAJOR;
-	dev->driver.minor		= DRIVER_MINOR;
-	dev->driver.patchlevel		= DRIVER_PATCHLEVEL;
+	dev->driver->ioctls		= r128_ioctls;
+	dev->driver->max_ioctl		= r128_max_ioctl;
 
-	dev->driver.use_agp		= 1;
-	dev->driver.use_mtrr		= 1;
-	dev->driver.use_pci_dma		= 1;
-	dev->driver.use_sg		= 1;
-	dev->driver.use_dma		= 1;
-	dev->driver.use_irq		= 1;
-	dev->driver.use_vbl_irq		= 1;
-}
-
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
-static int
-r128_probe(device_t dev)
-{
-	return drm_probe(dev, r128_pciidlist);
+	dev->driver->name		= DRIVER_NAME;
+	dev->driver->desc		= DRIVER_DESC;
+	dev->driver->date		= DRIVER_DATE;
+	dev->driver->major		= DRIVER_MAJOR;
+	dev->driver->minor		= DRIVER_MINOR;
+	dev->driver->patchlevel		= DRIVER_PATCHLEVEL;
 }
 
 static int
-r128_attach(device_t nbdev)
+r128_probe(device_t kdev)
 {
-	drm_device_t *dev = device_get_softc(nbdev);
+	return drm_probe(kdev, r128_pciidlist);
+}
 
-	bzero(dev, sizeof(drm_device_t));
+static int
+r128_attach(device_t kdev)
+{
+	struct drm_device *dev = device_get_softc(kdev);
+
+	dev->driver = malloc(sizeof(struct drm_driver_info), DRM_MEM_DRIVER,
+	    M_WAITOK | M_ZERO);
+
 	r128_configure(dev);
-	return drm_attach(nbdev, r128_pciidlist);
+
+	return drm_attach(kdev, r128_pciidlist);
+}
+
+int r128_driver_load(struct drm_device * dev, unsigned long flags)
+{
+	return drm_vblank_init(dev, 1);
+}
+
+static int
+r128_detach(device_t kdev)
+{
+	struct drm_device *dev = device_get_softc(kdev);
+	int ret;
+
+	ret = drm_detach(kdev);
+
+	free(dev->driver, DRM_MEM_DRIVER);
+
+	return ret;
 }
 
 static device_method_t r128_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		r128_probe),
 	DEVMETHOD(device_attach,	r128_attach),
-	DEVMETHOD(device_detach,	drm_detach),
+	DEVMETHOD(device_detach,	r128_detach),
 
 	{ 0, 0 }
 };
@@ -106,18 +124,13 @@ static device_method_t r128_methods[] = {
 static driver_t r128_driver = {
 	"drm",
 	r128_methods,
-	sizeof(drm_device_t)
+	sizeof(struct drm_device)
 };
 
 extern devclass_t drm_devclass;
+#if __FreeBSD_version >= 700010
 DRIVER_MODULE(r128, vgapci, r128_driver, drm_devclass, 0, 0);
-MODULE_DEPEND(r128, drm, 1, 1, 1);
-
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-#ifdef _LKM
-CFDRIVER_DECL(r128, DV_TTY, NULL);
 #else
-CFATTACH_DECL(r128, sizeof(drm_device_t), drm_probe, drm_attach, drm_detach,
-    drm_activate);
+DRIVER_MODULE(r128, pci, r128_driver, drm_devclass, 0, 0);
 #endif
-#endif
+MODULE_DEPEND(r128, drm, 1, 1, 1);

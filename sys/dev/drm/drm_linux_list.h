@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* drm_linux_list.h -- linux list functions for the BSDs.
  * Created: Mon Apr 7 14:30:16 1999 by anholt@FreeBSD.org
  */
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_linux_list.h,v 1.4 2005/11/28 23:13:52 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm_linux_list.h,v 1.4.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 struct list_head {
 	struct list_head *next, *prev;
@@ -68,8 +67,12 @@ list_del(struct list_head *entry) {
 #define list_for_each(entry, head)				\
     for (entry = (head)->next; entry != head; entry = (entry)->next)
 
+#define list_for_each_prev(entry, head) \
+        for (entry = (head)->prev; entry != (head); \
+                entry = entry->prev)
+
 #define list_for_each_safe(entry, temp, head)			\
     for (entry = (head)->next, temp = (entry)->next;		\
-	temp != head; 						\
-	entry = temp, temp = temp->next)
+	entry != head; 						\
+	entry = temp, temp = entry->next)
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Herb Peyerl (hpeyerl@novatel.ca) All rights reserved.
  *
@@ -20,7 +19,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/vx/if_vxreg.h,v 1.13 2005/01/06 01:43:32 imp Exp $
+ * $FreeBSD: src/sys/dev/vx/if_vxreg.h,v 1.13.24.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 /*

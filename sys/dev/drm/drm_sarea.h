@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_sarea.h
  * \brief SAREA definitions
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_sarea.h,v 1.6 2005/11/28 23:13:52 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm_sarea.h,v 1.6.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #ifndef _DRM_SAREA_H_
 #define _DRM_SAREA_H_
@@ -45,38 +44,44 @@ __FBSDID("$FreeBSD: src/sys/dev/drm/drm_sarea.h,v 1.6 2005/11/28 23:13:52 anholt
 #define SAREA_MAX                       0x10000	/* 64kB */
 #else
 /* Intel 830M driver needs at least 8k SAREA */
-#define SAREA_MAX                       0x2000
+#define SAREA_MAX                       0x2000UL
 #endif
 
 /** Maximum number of drawables in the SAREA */
-#define SAREA_MAX_DRAWABLES 		256
+#define SAREA_MAX_DRAWABLES		256
 
 #define SAREA_DRAWABLE_CLAIMED_ENTRY    0x80000000
 
 /** SAREA drawable */
-typedef struct drm_sarea_drawable {
+struct drm_sarea_drawable {
 	unsigned int stamp;
 	unsigned int flags;
-} drm_sarea_drawable_t;
+};
 
 /** SAREA frame */
-typedef struct drm_sarea_frame {
+struct drm_sarea_frame {
 	unsigned int x;
 	unsigned int y;
 	unsigned int width;
 	unsigned int height;
 	unsigned int fullscreen;
-} drm_sarea_frame_t;
+};
 
 /** SAREA */
-typedef struct drm_sarea {
+struct drm_sarea {
     /** first thing is always the DRM locking structure */
-	drm_hw_lock_t lock;
+	struct drm_hw_lock lock;
     /** \todo Use readers/writer lock for drm_sarea::drawable_lock */
-	drm_hw_lock_t drawable_lock;
-	drm_sarea_drawable_t drawableTable[SAREA_MAX_DRAWABLES];	/**< drawables */
-	drm_sarea_frame_t frame;	/**< frame */
+	struct drm_hw_lock drawable_lock;
+	struct drm_sarea_drawable drawableTable[SAREA_MAX_DRAWABLES];	/**< drawables */
+	struct drm_sarea_frame frame;	/**< frame */
 	drm_context_t dummy_context;
-} drm_sarea_t;
+};
+
+#ifndef __KERNEL__
+typedef struct drm_sarea_drawable drm_sarea_drawable_t;
+typedef struct drm_sarea_frame drm_sarea_frame_t;
+typedef struct drm_sarea drm_sarea_t;
+#endif
 
 #endif				/* _DRM_SAREA_H_ */

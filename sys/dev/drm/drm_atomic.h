@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm_atomic.h
  * Atomic operations used in the DRM which may or may not be provided by the OS.
@@ -31,71 +30,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_atomic.h,v 1.2 2005/11/28 23:13:52 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm_atomic.h,v 1.2.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 /* Many of these implementations are rather fake, but good enough. */
 
 typedef u_int32_t atomic_t;
 
-#ifdef __FreeBSD__
 #define atomic_set(p, v)	(*(p) = (v))
 #define atomic_read(p)		(*(p))
 #define atomic_inc(p)		atomic_add_int(p, 1)
 #define atomic_dec(p)		atomic_subtract_int(p, 1)
 #define atomic_add(n, p)	atomic_add_int(p, n)
 #define atomic_sub(n, p)	atomic_subtract_int(p, n)
-#else /* __FreeBSD__ */
-/* FIXME */
-#define atomic_set(p, v)	(*(p) = (v))
-#define atomic_read(p)		(*(p))
-#define atomic_inc(p)		(*(p) += 1)
-#define atomic_dec(p)		(*(p) -= 1)
-#define atomic_add(n, p)	(*(p) += (n))
-#define atomic_sub(n, p)	(*(p) -= (n))
-/* FIXME */
-#define atomic_add_int(p, v)      *(p) += v
-#define atomic_subtract_int(p, v) *(p) -= v
-#define atomic_set_int(p, bits)   *(p) |= (bits)
-#define atomic_clear_int(p, bits) *(p) &= ~(bits)
-#endif /* !__FreeBSD__ */
-
-#if !defined(__FreeBSD_version) || (__FreeBSD_version < 500000)
-#if defined(__i386__)
-/* The extra atomic functions from 5.0 haven't been merged to 4.x */
-static __inline int
-atomic_cmpset_int(volatile u_int *dst, u_int exp, u_int src)
-{
-	int res = exp;
-
-	__asm __volatile (
-	"	lock ;			"
-	"	cmpxchgl %1,%2 ;	"
-	"       setz	%%al ;		"
-	"	movzbl	%%al,%0 ;	"
-	"1:				"
-	"# atomic_cmpset_int"
-	: "+a" (res)			/* 0 (result) */
-	: "r" (src),			/* 1 */
-	  "m" (*(dst))			/* 2 */
-	: "memory");				 
-
-	return (res);
-}
-#else /* __i386__ */
-static __inline int
-atomic_cmpset_int(__volatile__ int *dst, int old, int new)
-{
-	int s = splhigh();
-	if (*dst==old) {
-		*dst = new;
-		splx(s);
-		return 1;
-	}
-	splx(s);
-	return 0;
-}
-#endif /* !__i386__ */
-#endif /* !__FreeBSD_version || __FreeBSD_version < 500000 */
 
 static __inline atomic_t
 test_and_set_bit(int b, volatile void *p)

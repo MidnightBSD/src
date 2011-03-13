@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/file.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -102,6 +102,7 @@ struct fileops {
  *
  * (fl)	filelist_lock
  * (f)	f_mtx in struct file
+ * (d) cdevpriv_mtx
  * none	not locked
  */
 
@@ -118,7 +119,7 @@ struct file {
 
 	/* DFLAG_SEEKABLE specific fields */
 	off_t	f_offset;
-	short     f_vnread_flags; /* 
+	short	f_vnread_flags; /* 
 				   * (f) home grown sleep lock for f_offset
 				   * Used only for shared vnode locking in
 				   * vnread()
@@ -141,6 +142,7 @@ struct file {
 				 * offset of next expected read or write
 				 */
 	void	*f_label;	/* Place-holder for struct label pointer. */
+	struct cdev_privdata *f_cdevpriv; /* (d) Private data for the cdev. */
 };
 
 #endif /* _KERNEL */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* mga_drm.h -- Public header for the Matrox g200/g400 driver -*- linux-c -*-
  * Created: Tue Jan 25 01:50:01 1999 by jhartmann@precisioninsight.com
  *
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/mga_drm.h,v 1.7 2005/11/28 23:13:53 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/mga_drm.h,v 1.7.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 #ifndef __MGA_DRM_H__
 #define __MGA_DRM_H__
@@ -185,7 +184,7 @@ typedef struct _drm_mga_sarea {
 
 	/* The current cliprects, or a subset thereof.
 	 */
-	drm_clip_rect_t boxes[MGA_NR_SAREA_CLIPRECTS];
+	struct drm_clip_rect boxes[MGA_NR_SAREA_CLIPRECTS];
 	unsigned int nbox;
 
 	/* Information about the most recently used 3d drawable.  The
@@ -206,7 +205,7 @@ typedef struct _drm_mga_sarea {
 	unsigned int exported_nback;
 	int exported_back_x, exported_front_x, exported_w;
 	int exported_back_y, exported_front_y, exported_h;
-	drm_clip_rect_t exported_boxes[MGA_NR_SAREA_CLIPRECTS];
+	struct drm_clip_rect exported_boxes[MGA_NR_SAREA_CLIPRECTS];
 
 	/* Counters for aging textures and for client-side throttling.
 	 */
@@ -220,7 +219,7 @@ typedef struct _drm_mga_sarea {
 
 	/* LRU lists for texture memory in agp space and on the card.
 	 */
-	drm_tex_region_t texList[MGA_NR_TEX_HEAPS][MGA_NR_TEX_REGIONS + 1];
+	struct drm_tex_region texList[MGA_NR_TEX_HEAPS][MGA_NR_TEX_REGIONS + 1];
 	unsigned int texAge[MGA_NR_TEX_HEAPS];
 
 	/* Mechanism to validate card state.
@@ -306,10 +305,10 @@ typedef struct drm_mga_init {
 typedef struct drm_mga_dma_bootstrap {
 	/**
 	 * \name AGP texture region
-	 * 
+	 *
 	 * On return from the DRM_MGA_DMA_BOOTSTRAP ioctl, these fields will
 	 * be filled in with the actual AGP texture settings.
-	 * 
+	 *
 	 * \warning
 	 * If these fields are non-zero, but dma_mga_dma_bootstrap::agp_mode
 	 * is zero, it means that PCI memory (most likely through the use of
@@ -323,7 +322,7 @@ typedef struct drm_mga_dma_bootstrap {
 
 	/**
 	 * Requested size of the primary DMA region.
-	 * 
+	 *
 	 * On return from the DRM_MGA_DMA_BOOTSTRAP ioctl, this field will be
 	 * filled in with the actual AGP mode.  If AGP was not available
 	 */
@@ -332,18 +331,18 @@ typedef struct drm_mga_dma_bootstrap {
 
 	/**
 	 * Requested number of secondary DMA buffers.
-	 * 
+	 *
 	 * On return from the DRM_MGA_DMA_BOOTSTRAP ioctl, this field will be
 	 * filled in with the actual number of secondary DMA buffers
 	 * allocated.  Particularly when PCI DMA is used, this may be
 	 * (subtantially) less than the number requested.
 	 */
 	uint32_t secondary_bin_count;
-	
-	
+
+
 	/**
 	 * Requested size of each secondary DMA buffer.
-	 * 
+	 *
 	 * While the kernel \b is free to reduce
 	 * dma_mga_dma_bootstrap::secondary_bin_count, it is \b not allowed
 	 * to reduce dma_mga_dma_bootstrap::secondary_bin_size.
@@ -356,7 +355,7 @@ typedef struct drm_mga_dma_bootstrap {
 	 * \c AGPSTAT2_2X, and \c AGPSTAT2_4X are supported.  If this value is
 	 * zero, it means that PCI DMA should be used, even if AGP is
 	 * possible.
-	 * 
+	 *
 	 * On return from the DRM_MGA_DMA_BOOTSTRAP ioctl, this field will be
 	 * filled in with the actual AGP mode.  If AGP was not available
 	 * (i.e., PCI DMA was used), this value will be zero.
