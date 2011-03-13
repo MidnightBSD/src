@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.26 2010/08/14 21:17:41 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.27 2010/09/08 21:34:36 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -998,7 +998,8 @@ _prebuild_libs=	${_kerberos5_lib_libasn1} ${_kerberos5_lib_libkrb5} \
 		lib/libradius lib/libsbuf lib/libtacplus lib/libutil \
 		${_lib_libypclnt} lib/libz lib/msun \
 		${_secure_lib_libcrypto} ${_secure_lib_libssh} \
-		${_secure_lib_libssl} lib/libsqlite3 lib/libarchive lib/libfetch
+		${_secure_lib_libssl} lib/libsqlite3 lib/liblzma \
+		lib/libarchive lib/libfetch
 
 .if ${MK_LIBTHR} != "no" && ${MK_LIBKSE} != "no"
 _default_thread_lib=	lib/${DEFAULT_THREAD_LIB}
