@@ -34021,6 +34021,7 @@ sys/dev/drm/drm_dma.c -text
 sys/dev/drm/drm_drawable.c -text
 sys/dev/drm/drm_drv.c -text
 sys/dev/drm/drm_fops.c -text
+sys/dev/drm/drm_internal.h -text
 sys/dev/drm/drm_ioctl.c -text
 sys/dev/drm/drm_irq.c -text
 sys/dev/drm/drm_linux_list.h -text
@@ -34038,6 +34039,8 @@ sys/dev/drm/i915_drv.c -text
 sys/dev/drm/i915_drv.h -text
 sys/dev/drm/i915_irq.c -text
 sys/dev/drm/i915_mem.c -text
+sys/dev/drm/i915_reg.h -text
+sys/dev/drm/i915_suspend.c -text
 sys/dev/drm/mach64_dma.c -text
 sys/dev/drm/mach64_drm.h -text
 sys/dev/drm/mach64_drv.c -text
@@ -34060,12 +34063,17 @@ sys/dev/drm/r128_irq.c -text
 sys/dev/drm/r128_state.c -text
 sys/dev/drm/r300_cmdbuf.c -text
 sys/dev/drm/r300_reg.h -text
+sys/dev/drm/r600_blit.c -text
+sys/dev/drm/r600_cp.c -text
+sys/dev/drm/r600_microcode.h -text
 sys/dev/drm/radeon_cp.c -text
+sys/dev/drm/radeon_cs.c -text
 sys/dev/drm/radeon_drm.h -text
 sys/dev/drm/radeon_drv.c -text
 sys/dev/drm/radeon_drv.h -text
 sys/dev/drm/radeon_irq.c -text
 sys/dev/drm/radeon_mem.c -text
+sys/dev/drm/radeon_microcode.h -text
 sys/dev/drm/radeon_state.c -text
 sys/dev/drm/savage_bci.c -text
 sys/dev/drm/savage_drm.h -text
