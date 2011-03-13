@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.27 2010/09/08 21:34:36 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.28 2011/03/13 02:05:39 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -434,6 +434,9 @@ build32:
 .for _t in obj includes
 	cd ${.CURDIR}/include; ${LIB32WMAKE} ${_t}
 	cd ${.CURDIR}/lib; ${LIB32WMAKE} ${_t}
+.if ${MK_APACHE} != "no"
+	cd ${.CURDIR}/apache/lib; ${LIB32WMAKE} ${_t}
+.endif
 .if ${MK_CDDL} != "no"
 	cd ${.CURDIR}/cddl/lib; ${LIB32WMAKE} ${_t}
 .endif
@@ -1009,8 +1012,7 @@ _default_thread_lib=	lib/libthr
 _default_thread_lib=	lib/libkse
 .endif
 
-_generic_libs=	${_cddl_lib} gnu/lib ${_kerberos5_lib} lib ${_secure_lib} usr.bin/lex/lib \
-		${_apache_lib}
+_generic_libs=	${_apache_lib} ${_cddl_lib} gnu/lib ${_kerberos5_lib} lib ${_secure_lib} usr.bin/lex/lib
 
 lib/libopie__L lib/libtacplus__L: lib/libmd__L
 
