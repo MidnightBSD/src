@@ -38,6 +38,7 @@ LIBS="
 	secure/lib
 	usr.bin/lex/lib
 	cddl/lib
+	apache/lib
 "				# where to scan for libraries
 
 # This sed(1) filter is used to convert -lfoo to path/to/libfoo.
