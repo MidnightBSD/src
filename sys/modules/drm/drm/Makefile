@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/drm/drm/Makefile,v 1.1 2005/04/16 03:44:47 anholt Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/modules/drm/drm/Makefile,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../../dev/drm
 KMOD	= drm

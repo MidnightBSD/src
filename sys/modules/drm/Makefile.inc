@@ -1,3 +1,4 @@
-# $FreeBSD: src/sys/modules/drm/Makefile.inc,v 1.1 2002/11/06 13:41:39 nyan Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/modules/drm/Makefile.inc,v 1.1.34.1 2008/11/25 02:59:29 kensmith Exp $
 
 .include "../Makefile.inc"

@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/drm/i915/Makefile,v 1.1.2.1 2005/12/14 00:52:58 anholt Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/modules/drm/i915/Makefile,v 1.1.8.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../../dev/drm
 KMOD	= i915
