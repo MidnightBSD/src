@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libutil/libutil.h,v 1.3 2008/05/17 06:39:48 laffer1 Exp $
+ * $MidnightBSD: src/lib/libutil/libutil.h,v 1.4 2010/11/26 04:24:31 laffer1 Exp $
  * $FreeBSD: src/lib/libutil/libutil.h,v 1.40.8.1 2006/01/15 17:50:35 delphij Exp $
  */
 
@@ -99,6 +99,7 @@ int	_secure_path(const char *_path, uid_t _uid, gid_t _gid);
 properties properties_read(int fd);
 void	properties_free(properties list);
 char	*property_find(properties list, const char *name);
+int	property_count(properties list);
 char	*auth_getval(const char *name);
 int	realhostname(char *host, size_t hsize, const struct in_addr *ip);
 struct sockaddr;

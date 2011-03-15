@@ -2,6 +2,8 @@
  *
  * Simple property list handling code.
  *
+ * Copyright (c) 2005
+ *      R. Tyler Ballance <tyler@tamu.edu>
  * Copyright (c) 1998
  *	Jordan Hubbard.  All rights reserved.
  *
@@ -30,7 +32,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/property.c,v 1.14 2005/11/28 16:30:16 jhb Exp $");
+/* $FreeBSD: src/lib/libutil/property.c,v 1.14 2005/11/28 16:30:16 jhb Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -240,6 +243,25 @@ property_find(properties list, const char *name)
 	list = list->next;
     }
     return (NULL);
+}
+
+int
+property_count(properties list)
+{
+	int count = 1;
+	struct _property *next_ptr;
+
+	if (list == NULL)
+		return (0);
+
+	next_ptr = (struct _property *)(list->next);
+
+	while (next_ptr != NULL) {
+		count++;
+		next_ptr = (struct _property *)(next_ptr->next);
+	}
+
+	return (count);
 }
 
 void

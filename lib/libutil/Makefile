@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 #	$FreeBSD: src/lib/libutil/Makefile,v 1.56.8.2 2006/01/15 17:50:35 delphij Exp $
-# 	$MidnightBSD: src/lib/libutil/Makefile,v 1.5 2008/11/20 15:41:06 laffer1 Exp $
+# 	$MidnightBSD: src/lib/libutil/Makefile,v 1.6 2008/12/13 22:53:26 laffer1 Exp $
 
 SHLIBDIR?= /lib
 
@@ -31,7 +31,7 @@ MAN+=	kld.3 login.3 login_auth.3 login_tty.3 logout.3 logwtmp.3 pty.3 \
 	pidfile.3 efun.3 expand_number.3 flopen.3
 MAN+=	login.conf.5 auth.conf.5
 MLINKS+= property.3 properties_read.3  property.3 properties_free.3
-MLINKS+= property.3 property_find.3
+MLINKS+= property.3 property_find.3 property.3 property_count.3
 MLINKS+= auth.3 auth_getval.3
 MLINKS+= pty.3 openpty.3  pty.3 forkpty.3
 MLINKS+= kld.3 kld_isloaded.3 kld.3 kld_load.3
