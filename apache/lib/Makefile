@@ -1,8 +1,7 @@
-# $MidnightBSD: src/apache/lib/Makefile,v 1.4 2011/03/08 22:13:47 laffer1 Exp $
-
-.include <bsd.own.mk>
+# $MidnightBSD: src/apache/lib/Makefile,v 1.5 2011/03/14 14:06:28 laffer1 Exp $
 
 SUBDIR= libdispatch \
-	libdns_sd
+	libdns_sd \
+	libnss_mdns
 
 .include <bsd.subdir.mk>
