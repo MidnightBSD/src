@@ -462,7 +462,7 @@
 // - Windows
 
 #if( TARGET_LANGUAGE_C_LIKE )
-	#if( !defined(_SSIZE_T) && ( TARGET_OS_WIN32 || !defined( _BSD_SSIZE_T_DEFINED_ ) ) && !TARGET_OS_LINUX && !TARGET_OS_VXWORKS && !TARGET_OS_MAC)
+	#if( !defined(_SSIZE_T) && ( TARGET_OS_WIN32 || !defined( _BSD_SSIZE_T_DEFINED_ ) ) && !TARGET_OS_LINUX && !TARGET_OS_VXWORKS && !TARGET_OS_MAC && !TARGET_OS_FREEBSD)
 		typedef int						ssize_t;
 	#endif
 #endif
