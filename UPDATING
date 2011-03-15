@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users
 
+20110314:
+	DRM/DRI code updated to support newer video cards. (FreeBSD 7.1)
+
+	cdevpriv wrappers added
+
+	nss_mdns hack introduced to work around linking problem.
+
+	dnsextd fixed after update to mDNSResponder code.
+
 20110308:
 	Introduce liblzma & xz 5.0.1 to the base system
 
@@ -971,4 +980,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.119 2011/03/08 22:28:57 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.120 2011/03/08 22:34:16 laffer1 Exp $
