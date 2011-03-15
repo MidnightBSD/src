@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.6 2009/06/05 00:08:03 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.7 2011/03/11 20:31:25 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.6 2009/06/05 00:08:03 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.7 2011/03/11 20:31:25 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -41,7 +41,7 @@ __MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.6 2009/06/05
 
 
 static void usage(void);
-static void check_for_required_args(mportPackageMeta *, mportCreateExtras *);
+static void check_for_required_args(const mportPackageMeta *, const mportCreateExtras *);
 
 int main(int argc, char *argv[]) 
 {
@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
     usage(); \
   }
   
-static void check_for_required_args(mportPackageMeta *pkg, mportCreateExtras *extra)
+static void check_for_required_args(const mportPackageMeta *pkg, const mportCreateExtras *extra)
 {
   CHECK_ARG(pkg->name, "package name")
   CHECK_ARG(pkg->version, "package version");

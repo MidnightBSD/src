@@ -1,7 +1,7 @@
 PROG= mport.create
 
 CFLAGS+=	-g -I${.CURDIR}/../../lib/libmport/
-WARNS?= 	4
+WARNS?= 	6
 
 NO_MAN=		yes
 
