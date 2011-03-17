@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.23 2011/03/11 18:59:57 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.24 2011/03/13 18:18:55 laffer1 Exp $
  */
 
 #include <sys/types.h>
@@ -273,14 +273,14 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
 void mport_parselist(char *opt, char ***list) 
 {
   size_t len;
-  char *input, *input_orig;
+  char *input;
   char *field;
 
+  /* intentionally not freed in here */
   if ((input = strdup(opt)) == NULL) {
     *list = NULL;
     return;
   }
-  input_orig = input;
   
   /* first we need to get the length of the depends list */
   for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
@@ -309,7 +309,6 @@ void mport_parselist(char *opt, char ***list)
   }
 
   *vec = NULL;
-  free(input_orig);
 }
 
 /*
