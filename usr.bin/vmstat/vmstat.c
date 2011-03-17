@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)vmstat.c	8.1 (Berkeley) 6/6/93";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/vmstat/vmstat.c,v 1.98 2007/07/27 20:01:22 alc Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/vmstat/vmstat.c,v 1.3 2008/12/09 17:16:40 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -398,14 +398,10 @@ static long
 getuptime(void)
 {
 	struct timespec sp;
-	time_t uptime;
 
 	(void)clock_gettime(CLOCK_MONOTONIC, &sp);
-	uptime = sp.tv_sec;
-	if (uptime <= 0 || uptime > 60*60*24*365*10)
-		errx(1, "time makes no sense; namelist must be wrong");
 
-	return(uptime);
+	return(sp.tv_sec);
 }
 
 static void
