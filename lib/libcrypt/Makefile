@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libcrypt/Makefile,v 1.3 2008/09/30 22:03:53 laffer1 Exp $
 # $FreeBSD: src/lib/libcrypt/Makefile,v 1.39 2007/05/21 02:49:03 deischen Exp $
 #
 
@@ -27,7 +27,7 @@ CFLAGS+=	-I${.CURDIR} -DHAS_DES -DHAS_BLOWFISH
 # And the auth_getval() code and support.
 .PATH:		${.CURDIR}/../libutil
 SRCS+=		auth.c property.c
-.for sym in auth_getval property_find properties_read properties_free \
+.for sym in auth_getval property_find properties_read properties_free property_count \
 	    MD4Init MD4Final MD4Update MD4Pad \
 	    MD5Init MD5Final MD5Update MD5Pad
 CFLAGS+=	-D${sym}=__${sym}
