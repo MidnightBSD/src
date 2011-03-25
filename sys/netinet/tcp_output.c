@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/netinet/tcp_output.c,v 1.7 2009/11/07 01:41:53 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/netinet/tcp_output.c,v 1.8 2011/02/09 00:27:18 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -547,7 +547,7 @@ after_sack_rexmit:
 		 * TCP_MAXWIN << tp->rcv_scale.
 		 */
 		long adv = min(recwin, (long)TCP_MAXWIN << tp->rcv_scale) -
-			(tp->rcv_adv - tp->rcv_nxt);
+			(long)(tp->rcv_adv - tp->rcv_nxt);
 
 		/* 
 		 * If the new window size ends up being the same as the old
