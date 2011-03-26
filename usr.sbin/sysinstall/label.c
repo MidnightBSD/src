@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.8 2008/05/29 20:50:14 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.9 2011/03/26 16:53:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/label.c,v 1.148.8.2 2006/01/24 15:51:33 ceri Exp $
  *
  * Copyright (c) 1995
@@ -76,7 +76,11 @@
 /*
  * Swap size limit for auto-partitioning (4G).
  */
+#if defined(__amd64__)
+#define SWAP_AUTO_LIMIT_SIZE		8192	
+#else
 #define SWAP_AUTO_LIMIT_SIZE		4096
+#endif 
 
 /*
  * Default partition sizes.  If we do not have sufficient disk space
