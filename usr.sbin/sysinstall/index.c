@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/index.c,v 1.3.2.3 2008/08/30 16:36:06 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/index.c,v 1.4 2008/09/02 01:30:29 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/index.c,v 1.106 2005/07/02 22:34:22 dwhite Exp $
  */
 
@@ -184,7 +184,6 @@ static char *descrs[] = {
     "x11-toolkits", "X Window System based development toolkits.",
     "x11-wm", "X Window System window managers.",
     "xfce", "Software related to the Xfce Desktop Environment.",
-    "zope", "Software related to the Zope platform.",
     NULL, NULL,
 };
 
