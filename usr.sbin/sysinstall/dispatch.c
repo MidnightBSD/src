@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/dispatch.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/dispatch.c,v 1.3 2009/05/21 00:08:40 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dispatch.c,v 1.47.2.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -80,7 +80,6 @@ static struct _word {
     { "docBrowser",		docBrowser		},
     { "docShowDocument",	docShowDocument		},
     { "installCommit",		installCommit		},
-    { "installExpress",		installExpress		},
     { "installStandard",	installStandard		},
     { "installUpgrade",		installUpgrade		},
     { "installFixupBase",	installFixupBase	},

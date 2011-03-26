@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.17 2009/10/24 14:27:17 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.18 2011/01/29 23:36:46 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -210,8 +210,6 @@ DMenu MenuIndex = {
       { " HTML Docs",		"The HTML documentation menu",		NULL, docBrowser },
       { " inetd Configuration",	"Configure inetd and simple internet services.",	dmenuVarCheck, configInetd, NULL, "inetd_enable=YES" },
       { " Install, Standard",	"A standard system installation.",	NULL, installStandard },
-      { " Install, Express",	"An express system installation.",	NULL, installExpress },
-      { " Install, Custom",	"The custom installation menu",		NULL, dmenuSubmenu, NULL, &MenuInstallCustom },
       { " Label",		"The disk Label editor",		NULL, diskLabelEditor },
       { " Media",		"Top level media selection menu.",	NULL, dmenuSubmenu, NULL, &MenuMedia },
       { " Media, NFS",		"Select NFS installation media.",	NULL, mediaSetNFS },
@@ -273,9 +271,7 @@ DMenu MenuInitial = {
     { { " Select " },
       { "X Exit Install",	NULL, NULL, dmenuExit },
       { " Usage",	"Quick start - How to use this menu system",	NULL, dmenuDisplayFile, NULL, "usage" },
-      { "Standard",	"Begin a standard installation (recommended)",	NULL, installStandard },
-      { "Express",	"Begin a quick installation (for experts)", NULL, installExpress },
-      { " Custom",	"Begin a custom installation (for experts)",	NULL, dmenuSubmenu, NULL, &MenuInstallCustom },
+      { "Install",	"Begin installation",	NULL, installStandard },
       { "Configure",	"Do post-install configuration of MidnightBSD",	NULL, dmenuSubmenu, NULL, &MenuConfigure },
       { "Doc",	"Copyright, Shortcut, etc.",	NULL, dmenuSubmenu, NULL, &MenuDocumentation },
 #ifdef WITH_SYSCONS
@@ -285,7 +281,7 @@ DMenu MenuInitial = {
       { "Fixit",	"Repair mode with CDROM/DVD/floppy or start shell",	NULL, dmenuSubmenu, NULL, &MenuFixit },
       { "Upgrade",	"Upgrade an existing system",			NULL, installUpgrade },
       { "Load Config","Load default install configuration",		NULL, dispatch_load_floppy },
-      { "Index",	"Glossary of functions",			NULL, dmenuSubmenu, NULL, &MenuIndex },
+      { "Glossary",	"Glossary of functions",			NULL, dmenuSubmenu, NULL, &MenuIndex },
       { NULL } },
 };
 
@@ -727,32 +723,6 @@ DMenu MenuHTMLDoc = {
       { "3 FAQ",	"The Frequently Asked Questions guide.",		NULL, docShowDocument },
       { "4 Home",	"The Home Pages for the MidnightBSD Project (requires net)", NULL, docShowDocument },
       { "5 Other",	"Enter a URL.",						NULL, docShowDocument },
-      { NULL } },
-};
-
-/* The main installation menu */
-DMenu MenuInstallCustom = {
-    DMENU_NORMAL_TYPE,
-    "Choose Custom Installation Options",
-    "This is the custom installation menu. You may use this menu to specify\n"
-    "details on the type of distribution you wish to have, where you wish\n"
-    "to install it from and how you wish to allocate disk storage to MidnightBSD.",
-    "Press F1 to read the installation guide",
-    "INSTALL",
-    { { "X Exit",		"Exit this menu (returning to previous)", NULL,	dmenuExit },
-      { "2 Options",		"View/Set various installation options", NULL, optionsEditor },
-#ifndef WITH_SLICES
-      { "3 Label",		"Label disk partitions",		NULL, diskLabelEditor },
-      { "4 Distributions",	"Select distribution(s) to extract",	NULL, dmenuSubmenu, NULL, &MenuDistributions },
-      { "5 Media",		"Choose the installation media type",	NULL, dmenuSubmenu, NULL, &MenuMedia },
-      { "6 Commit",		"Perform any pending Partition/Label/Extract actions", NULL, installCustomCommit },
-#else
-      { "3 Partition",		"Allocate disk space for MidnightBSD",	NULL, diskPartitionEditor },
-      { "4 Label",		"Label allocated disk partitions",	NULL, diskLabelEditor },
-      { "5 Distributions",	"Select distribution(s) to extract",	NULL, dmenuSubmenu, NULL, &MenuDistributions },
-      { "6 Media",		"Choose the installation media type",	NULL, dmenuSubmenu, NULL, &MenuMedia },
-      { "7 Commit",		"Perform any pending Partition/Label/Extract actions", NULL, installCustomCommit },
-#endif
       { NULL } },
 };
 

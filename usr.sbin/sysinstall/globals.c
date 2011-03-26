@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$ 
+ * $MidnightBSD: src/usr.sbin/sysinstall/globals.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $ 
  * $FreeBSD: src/usr.sbin/sysinstall/globals.c,v 1.27 2004/08/07 01:19:54 marcel Exp $
  *
  * Copyright (c) 1995
@@ -61,9 +61,6 @@ Chunk		*SwapChunk;
 Chunk		*TmpChunk;
 Chunk		*UsrChunk;
 Chunk		*VarChunk;
-#ifdef __ia64__
-Chunk		*EfiChunk;
-#endif
 
 /*
  * Yes, I know some of these are already automatically initialized as
@@ -88,7 +85,4 @@ globalsInit(void)
     TmpChunk = NULL;
     UsrChunk = NULL;
     VarChunk = NULL;
-#ifdef __ia64__
-    EfiChunk = NULL;
-#endif
 }

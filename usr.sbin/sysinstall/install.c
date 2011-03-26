@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.7 2008/09/02 01:30:29 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.8 2009/10/24 14:27:17 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
@@ -88,9 +88,6 @@ checkLabels(Boolean whinge)
     status = TRUE;
     HomeChunk = RootChunk = SwapChunk = NULL;
     TmpChunk = UsrChunk = VarChunk = NULL;
-#ifdef __ia64__
-    EfiChunk = NULL;
-#endif
 
     /* We don't need to worry about root/usr/swap if we're already multiuser */
     if (!RunningAsInit)
@@ -106,12 +103,8 @@ checkLabels(Boolean whinge)
 	if (!disk->chunks)
 	    msgFatal("No chunk list found for %s!", disk->name);
 	for (c1 = disk->chunks->part; c1; c1 = c1->next) {
-#ifdef __ia64__
-	    c2 = c1;
-#else
 	    if (c1->type == freebsd) {
 		for (c2 = c1->part; c2; c2 = c2->next) {
-#endif
 		    pi = (PartInfo *)c2->private_data;
 		    if (c2->type == part && c2->subtype != FS_SWAP && pi != NULL) {
 			if (!strcmp(pi->mountpoint, "/")) {
@@ -178,10 +171,8 @@ checkLabels(Boolean whinge)
 			    }
 			}
 		    }
-#ifndef __ia64__
 		}
 	    }
-#endif
 	}
     }
 
@@ -195,37 +186,18 @@ checkLabels(Boolean whinge)
 	    msgFatal("No chunk list found for %s!", disk->name);
 	for (c1 = disk->chunks->part; c1; c1 = c1->next) {
 
-#ifdef __ia64__
-	    c2 = c1;
-#else
 	    if (c1->type == freebsd) {
 		for (c2 = c1->part; c2; c2 = c2->next) {
-#endif
 		    if (c2->type == part && c2->subtype == FS_SWAP && !SwapChunk) {
 			SwapChunk = c2;
 			if (isDebug())
 			    msgDebug("Found swapdev at %s!\n", SwapChunk->name);
 			break;
 		    }
-#ifndef __ia64__
 		}
 	    }
-#endif
 	}
     }
-
-#ifdef __ia64__
-    for (i = 0; devs[i] != NULL; i++) {
-	if (!devs[i]->enabled)
-	    continue;
-	disk = (Disk *)devs[i]->private;
-	for (c1 = disk->chunks->part; c1 != NULL; c1 = c1->next) {
-		pi = (PartInfo *)c1->private_data;
-	    if (c1->type == efi && pi != NULL && pi->mountpoint[0] == '/')
-		EfiChunk = c1;
-	}
-    }
-#endif
 
     if (!RootChunk && whinge) {
 	msgConfirm("No root device found - you must label a partition as /\n"
@@ -238,12 +210,6 @@ checkLabels(Boolean whinge)
 		     "if you do not have enough RAM.  Continue anyway?"))
 	    status = FALSE;
     }
-#ifdef __ia64__
-    if (EfiChunk == NULL && whinge) {
-	if (msgYesNo("No (mounted) EFI system partition found. Is this what you want?"))
-	    status = FALSE;
-    }
-#endif
     return status;
 }
 
@@ -547,30 +513,6 @@ fixit_common(void)
 }
 
 
-int
-installExpress(dialogMenuItem *self)
-{
-    int i;
-
-    dialog_clear_norefresh();
-    variable_set2(SYSTEM_STATE, "express", 0);
-#ifdef WITH_SLICES
-    if (DITEM_STATUS((i = diskPartitionEditor(self))) == DITEM_FAILURE)
-	return i;
-#endif
-    
-    if (DITEM_STATUS((i = diskLabelEditor(self))) == DITEM_FAILURE)
-	return i;
-
-    if (DITEM_STATUS((i = installCommit(self))) == DITEM_SUCCESS) {
-	i |= DITEM_LEAVE_MENU;
-
-	/* Give user the option of one last configuration spree */
-	installConfigure();
-    }
-    return i;
-}
-
 /* Standard mode installation */
 int
 installStandard(dialogMenuItem *self)
@@ -828,9 +770,6 @@ int
 installFixupBase(dialogMenuItem *self)
 {
     FILE *fp;
-#ifdef __ia64__
-    const char *efi_mntpt;
-#endif
 
     /* All of this is done only as init, just to be safe */
     if (RunningAsInit) {
@@ -865,18 +804,6 @@ installFixupBase(dialogMenuItem *self)
         vsystem("mtree -deU -f /etc/mtree/BSD.root.dist -p /");
         vsystem("mtree -deU -f /etc/mtree/BSD.var.dist -p /var");
         vsystem("mtree -deU -f /etc/mtree/BSD.usr.dist -p /usr");
-
-#ifdef __ia64__
-	/* Move /boot to the the EFI partition and make /boot a link to it. */
-	efi_mntpt = (EfiChunk != NULL) ? ((PartInfo *)EfiChunk->private_data)->mountpoint : NULL;
-	if (efi_mntpt != NULL) {
-		vsystem("if [ ! -L /boot ]; then mv /boot %s; fi", efi_mntpt);
-		vsystem("if [ ! -e /boot ]; then ln -sf %s/boot /boot; fi",
-		    efi_mntpt + 1);	/* Skip leading '/' */
-		/* Make sure the kernel knows which partition is the root file system. */
-		vsystem("echo 'vfs.root.mountfrom=\"ufs:/dev/%s\"' >> /boot/loader.conf", RootChunk->name);
-	}
-#endif
 
 	/* Do all the last ugly work-arounds here */
     }
@@ -1083,14 +1010,8 @@ installFilesystems(dialogMenuItem *self)
 	    return DITEM_FAILURE | DITEM_RESTORE;
 	}
 	for (c1 = disk->chunks->part; c1; c1 = c1->next) {
-#ifdef __ia64__
-	if (c1->type == part) {
-		c2 = c1;
-		{
-#else
 	    if (c1->type == freebsd) {
 		for (c2 = c1->part; c2; c2 = c2->next) {
-#endif
 		    if (c2->type == part && c2->subtype != FS_SWAP && c2->private_data) {
 			PartInfo *tmp = (PartInfo *)c2->private_data;
 

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.8 2009/05/20 23:48:28 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.9 2009/10/24 05:13:57 laffer1 Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -469,7 +469,6 @@ extern DMenu            MenuSysconsTtys;        /* System console terminal type 
 #endif
 extern DMenu		MenuNetworking;		/* Network configuration menu			*/
 extern DMenu		MenuMTA;		/* MTA selection menu				*/
-extern DMenu		MenuInstallCustom;	/* Custom Installation menu			*/
 extern DMenu		MenuDistributions;	/* Distribution menu				*/
 extern DMenu		MenuDiskDevices;	/* Disk type devices				*/
 extern DMenu		MenuSubDistributions;	/* Custom distribution menu			*/
@@ -489,9 +488,6 @@ extern Chunk *SwapChunk;
 extern Chunk *TmpChunk;
 extern Chunk *UsrChunk;
 extern Chunk *VarChunk;
-#ifdef __ia64__
-extern Chunk *EfiChunk;
-#endif
 
 /* Stuff from libdialog which isn't properly declared outside */
 extern void display_helpfile(void);
@@ -675,7 +671,6 @@ PkgNodePtr	index_search(PkgNodePtr top, char *str, PkgNodePtr *tp);
 extern Boolean	checkLabels(Boolean whinge);
 extern int	installCommit(dialogMenuItem *self);
 extern int	installCustomCommit(dialogMenuItem *self);
-extern int	installExpress(dialogMenuItem *self);
 extern int	installStandard(dialogMenuItem *self);
 extern int	installFixitHoloShell(dialogMenuItem *self);
 extern int	installFixitCDROM(dialogMenuItem *self);

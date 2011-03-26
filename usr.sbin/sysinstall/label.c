@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.6 2008/05/02 05:30:54 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.8 2008/05/29 20:50:14 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/label.c,v 1.148.8.2 2006/01/24 15:51:33 ceri Exp $
  *
  * Copyright (c) 1995
@@ -62,10 +62,10 @@
 /*
  * Minimum partition sizes
  */
-#if defined(__ia64__) || defined(__sparc64__) || defined(__amd64__)
-#define ROOT_MIN_SIZE			128
+#if defined(__sparc64__) || defined(__amd64__)
+#define ROOT_MIN_SIZE			280
 #else
-#define ROOT_MIN_SIZE			118
+#define ROOT_MIN_SIZE			180
 #endif
 #define SWAP_MIN_SIZE			32
 #define USR_MIN_SIZE			160
@@ -83,10 +83,10 @@
  * for this configuration we scale things relative to the NOM vs DEFAULT
  * sizes.  If the disk is larger then /home will get any remaining space.
  */
-#define ROOT_DEFAULT_SIZE		512
+#define ROOT_DEFAULT_SIZE		1024
 #define USR_DEFAULT_SIZE		8192
-#define VAR_DEFAULT_SIZE		1024
-#define TMP_DEFAULT_SIZE		512
+#define VAR_DEFAULT_SIZE		4096
+#define TMP_DEFAULT_SIZE		1024	
 #define HOME_DEFAULT_SIZE		USR_DEFAULT_SIZE
 
 /*
@@ -94,9 +94,9 @@
  * when we have insufficient disk space.  If this isn't sufficient we scale
  * down using the MIN sizes instead.
  */
-#define ROOT_NOMINAL_SIZE		256
+#define ROOT_NOMINAL_SIZE		512
 #define USR_NOMINAL_SIZE		1536
-#define VAR_NOMINAL_SIZE		128
+#define VAR_NOMINAL_SIZE		512
 #define TMP_NOMINAL_SIZE		128
 #define HOME_NOMINAL_SIZE		USR_NOMINAL_SIZE
 
@@ -279,12 +279,6 @@ record_label_chunks(Device **devs, Device *dev)
 	if (!d->chunks)
 	    msgFatal("No chunk list found for %s!", d->name);
 
-#ifdef __ia64__
-	label_chunk_info[j].type = PART_SLICE;
-	label_chunk_info[j].c = d->chunks;
-	j++;
-#endif
-
 	/* Put the slice entries first */
 	for (c1 = d->chunks->part; c1; c1 = c1->next) {
 	    if (c1->type == freebsd) {
@@ -319,21 +313,6 @@ record_label_chunks(Device **devs, Device *dev)
 		label_chunk_info[j].c = c1;
 		++j;
 	    }
-#ifdef __ia64__
-	    else if (c1->type == efi) {
-		label_chunk_info[j].type = PART_EFI;
-		label_chunk_info[j].c = c1;
-		++j;
-	    }
-	    else if (c1->type == part) {
-		if (c1->subtype == FS_SWAP)
-		    label_chunk_info[j].type = PART_SWAP;
-		else
-		    label_chunk_info[j].type = PART_FILESYSTEM;
-		label_chunk_info[j].c = c1;
-		++j;
-	    }
-#endif
 	}
     }
     label_chunk_info[j].c = NULL;
@@ -443,9 +422,6 @@ get_partition_type(void)
     char selection[20];
     int i;
     static unsigned char *fs_types[] = {
-#ifdef __ia64__
-	"EFI",	"An EFI system partition",
-#endif
 	"FS",	"A file system",
 	"Swap",	"A swap partition.",
     };
@@ -455,18 +431,10 @@ get_partition_type(void)
 	"If you want to use this partition for swap space, select Swap.\n"
 	"If you want to put a filesystem on it, choose FS.",
 	-1, -1,
-#ifdef __ia64__
-	3, 3,
-#else
 	2, 2,
-#endif
 	fs_types, selection, NULL, NULL);
     restorescr(w);
     if (!i) {
-#ifdef __ia64__
-	if (!strcmp(selection, "EFI"))
-	    return PART_EFI;
-#endif
 	if (!strcmp(selection, "FS"))
 	    return PART_FILESYSTEM;
 	else if (!strcmp(selection, "Swap"))
@@ -709,16 +677,6 @@ print_label_chunks(void)
 	    /* Now display the newfs field */
 	    if (label_chunk_info[i].type == PART_FAT)
 		strcpy(newfs, "DOS");
-#if defined(__ia64__)
-	    else if (label_chunk_info[i].type == PART_EFI) {
-		strcpy(newfs, "EFI");
-		if (label_chunk_info[i].c->private_data) {
-		    strcat(newfs, "  ");
-		    PartInfo *pi = (PartInfo *)label_chunk_info[i].c->private_data;
-		    strcat(newfs, pi->do_newfs ? " Y" : " N");
-		}
-	    }
-#endif
 	    else if (label_chunk_info[i].c->private_data && label_chunk_info[i].type == PART_FILESYSTEM) {
 		PartInfo *pi = (PartInfo *)label_chunk_info[i].c->private_data;
 
@@ -990,11 +948,7 @@ diskLabel(Device *dev)
 		sprintf(osize, "%jd", (intmax_t)sz);
 		val = msgGetInput(osize,
 				  "Please specify the partition size in blocks or append a trailing G for\n"
-#ifdef __ia64__
-				  "gigabytes, M for megabytes.\n"
-#else
 				  "gigabytes, M for megabytes, or C for cylinders.\n"
-#endif
 				  "%jd blocks (%jdMB) are free.",
 				  (intmax_t)sz, (intmax_t)sz / ONE_MEG);
 		if (!val || (size = strtoimax(val, &cp, 0)) <= 0) {
@@ -1007,10 +961,6 @@ diskLabel(Device *dev)
 			size *= ONE_MEG;
 		    else if (toupper(*cp) == 'G')
 			size *= ONE_GIG;
-#ifndef __ia64__
-		    else if (toupper(*cp) == 'C')
-			size *= (label_chunk_info[here].c->disk->bios_hd * label_chunk_info[here].c->disk->bios_sect);
-#endif
 		}
 		if (size <= FS_MIN_SIZE) {
 		    msgConfirm("The minimum filesystem size is %dMB", FS_MIN_SIZE / ONE_MEG);
@@ -1052,12 +1002,7 @@ diskLabel(Device *dev)
 		}
 		tmp = Create_Chunk_DWIM(label_chunk_info[here].c->disk,
 		    label_chunk_info[here].c, size,
-#ifdef __ia64__
-		    (type == PART_EFI) ? efi : part,
-		    (type == PART_EFI) ? 0 : (type == PART_SWAP) ? FS_SWAP : FS_BSDFFS,
-#else
 		    part, (type == PART_SWAP) ? FS_SWAP : FS_BSDFFS,
-#endif
 		    flags);
 		if (!tmp) {
 		    msgConfirm("Unable to create the partition. Too big?");
@@ -1254,7 +1199,6 @@ diskLabel(Device *dev)
 	    clear_wins();
 	    break;
 
-#ifndef __ia64__
 	case '|':
 	    if (!msgNoYes("Are you sure you want to go into Wizard mode?\n\n"
 			  "This is an entirely undocumented feature which you are not\n"
@@ -1283,7 +1227,6 @@ diskLabel(Device *dev)
 	    else
 		msg = "A most prudent choice!";
 	    break;
-#endif
 
 	case '\033':	/* ESC */
 	case 'Q':
@@ -1341,9 +1284,6 @@ try_auto_label(Device **devs, Device *dev, int perc, int *req)
     daddr_t sz;
     Chunk *AutoHome, *AutoRoot, *AutoSwap;
     Chunk *AutoTmp, *AutoUsr, *AutoVar;
-#ifdef __ia64__
-    Chunk *AutoEfi;
-#endif
     int mib[2];
     unsigned long physmem;
     size_t size;
@@ -1356,24 +1296,6 @@ try_auto_label(Device **devs, Device *dev, int perc, int *req)
     (void)checkLabels(FALSE);
     AutoHome = AutoRoot = AutoSwap = NULL;
     AutoTmp = AutoUsr = AutoVar = NULL;
-
-#ifdef __ia64__
-    AutoEfi = NULL;
-    if (EfiChunk == NULL) {
-	sz = 100 * ONE_MEG;
-	AutoEfi = Create_Chunk_DWIM(label_chunk_info[here].c->disk,
-	    label_chunk_info[here].c, sz, efi, 0, 0);
-	if (AutoEfi == NULL) {
-	    *req = 1;
-	    msg = "Unable to create the EFI system partition. Too big?";
-	    goto done;
-	}
-	AutoEfi->private_data = new_part(PART_EFI, "/efi", TRUE);
-	AutoEfi->private_free = safe_free;
-	AutoEfi->flags |= CHUNK_NEWFS;
-	record_label_chunks(devs, dev);
-    }
-#endif
 
     if (RootChunk == NULL) {
 	sz = requested_part_size(VAR_ROOT_SIZE, ROOT_NOMINAL_SIZE, ROOT_DEFAULT_SIZE, perc);
@@ -1622,6 +1544,8 @@ diskLabelNonInteractive(Device *dev)
 			pi = tmp->private_data = new_part(PART_FILESYSTEM, mpoint, TRUE);
 			tmp->private_free = safe_free;
 			pi->newfs_data.newfs_ufs.softupdates = soft;
+			if (!strcmp(typ, "ufs1"))
+				pi->newfs_data.newfs_ufs.ufs1 = TRUE;
 		    }
 		}
 	    }

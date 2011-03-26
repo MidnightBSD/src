@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.5 2008/05/29 20:50:14 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.6 2009/10/24 05:19:58 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/disks.c,v 1.154.2.1 2006/01/31 22:07:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -744,7 +744,7 @@ diskPartitionWrite(dialogMenuItem *self)
 	if (!boot1) boot1 = bootalloc("boot1", NULL);
 	if (!boot2) boot2 = bootalloc("boot2", NULL);
 	Set_Boot_Blocks(d, boot1, boot2);
-#elif !defined(__ia64__)
+#else
 	if (!boot1) boot1 = bootalloc("boot1", NULL);
 	Set_Boot_Blocks(d, boot1, NULL);
 #endif
