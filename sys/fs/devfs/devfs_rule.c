@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_rule.c,v 1.3 2008/12/03 00:25:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Dima Dorfman.
  * All rights reserved.
@@ -728,6 +728,11 @@ static int
 devfs_ruleset_use(devfs_rsnum rsnum, struct devfs_mount *dm)
 {
 	struct devfs_ruleset *cds, *ds;
+
+	if (rsnum == 0) {
+		dm->dm_ruleset = 0;
+		return(0);
+	}
 
 	ds = devfs_ruleset_bynum(rsnum);
 	if (ds == NULL)
