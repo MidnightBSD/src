@@ -1824,6 +1824,12 @@ knlist_init(struct knlist *knl, void *lock, void (*kl_lock)(void *),
 }
 
 void
+knlist_init_mtx(struct knlist *knl, struct mtx *lock)
+{
+	knlist_init(knl, lock, NULL, NULL, NULL);
+}
+
+void
 knlist_destroy(struct knlist *knl)
 {
 
