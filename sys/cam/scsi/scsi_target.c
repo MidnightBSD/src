@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/cam/scsi/scsi_target.c,v 1.3 2008/12/03 00:24:27 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/cam/scsi/scsi_target.c,v 1.4 2011/02/21 00:49:34 laffer1 Exp $ */
 /*-
  * Generic SCSI Target Kernel Mode Driver
  *
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_target.c,v 1.73.2.1.2.1 2010/02/10 00:
 #include <sys/mutex.h>
 #include <sys/devicestat.h>
 #include <sys/proc.h>
+#include <sys/event.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
