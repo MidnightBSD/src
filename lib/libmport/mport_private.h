@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.5 2011/02/26 21:30:31 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.6 2011/03/10 22:29:07 laffer1 Exp $
  *
  * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -187,7 +187,7 @@ int mport_fetch_bundle(mportInstance *, const char *);
 int mport_index_get_mirror_list(mportInstance *, char ***);
 
 #define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", func);
-#define MPORT_MAX_INDEX_AGE 3600 * 24 * 7 /* two weeks */
+#define MPORT_MAX_INDEX_AGE 3600 * 24 * 14 /* two weeks */
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"
