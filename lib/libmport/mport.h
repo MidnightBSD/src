@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.17 2011/03/07 22:01:00 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.18 2011/03/10 22:29:07 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -180,6 +180,7 @@ const char * mport_err_string(void);
 
 #define MPORT_OK			0
 #define MPORT_ERR_FATAL 		1
+#define MPORT_ERR_WARN			2
 
 /* Clean */
 int mport_clean_database(mportInstance *);

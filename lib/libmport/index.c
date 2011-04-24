@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/index.c,v 1.10 2011/03/10 22:29:07 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/index.c,v 1.11 2011/03/11 18:28:09 laffer1 Exp $
  */
 
 
@@ -59,13 +59,16 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
     mport->flags |= MPORT_INST_HAVE_INDEX;
   
     if (!index_is_recentish()) {
-      if (mport_fetch_index(mport) != MPORT_OK)
-        RETURN_CURRENT_ERROR;
-        
+
       if (mport_db_do(mport->db, "DETACH idx") != MPORT_OK)
         RETURN_CURRENT_ERROR;
-        
+
       mport->flags &= ~MPORT_INST_HAVE_INDEX;
+
+      if (mport_fetch_index(mport) != MPORT_OK) {
+        SET_ERROR(MPORT_ERR_WARN, "Could not fetch updated index; previous index used.");
+        RETURN_CURRENT_ERROR;
+      }
         
       if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
         RETURN_CURRENT_ERROR;

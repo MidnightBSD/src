@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/fetch.c,v 1.4 2011/03/06 03:57:53 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/fetch.c,v 1.5 2011/03/12 01:29:38 laffer1 Exp $
  */
 
 
@@ -51,26 +51,22 @@ static int fetch(mportInstance *, const char *, const char *);
 int mport_fetch_index(mportInstance *mport)
 {
   char **mirrors = NULL;
+  char **mirrorsPtr = NULL;
   char *url = NULL;
-  char *dest = NULL;
-  int i = 0;
   
   MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_index()");
  
-  // XXX: is this used? 
-  asprintf(&dest, "%s/%s.bz2", MPORT_FETCH_STAGING_DIR, MPORT_INDEX_FILE);
-  
-  if (dest == NULL)
-    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-
   if (mport_index_get_mirror_list(mport, &mirrors) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-    
-  while (mirrors[i] != NULL) {
-    asprintf(&url, "%s/%s", mirrors[i], MPORT_INDEX_URL_PATH);
+ 
+  mirrorsPtr = mirrors;
+   
+  while (mirrorsPtr != NULL) {
+    if (*mirrorsPtr == NULL)
+        break;
+    asprintf(&url, "%s/%s", *mirrorsPtr, MPORT_INDEX_URL_PATH);
 
     if (url == NULL) {
-      free(dest);
       mport_free_vec(mirrors);
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
     }
@@ -78,15 +74,18 @@ int mport_fetch_index(mportInstance *mport)
     if (fetch(mport, url, MPORT_INDEX_FILE_BZ2) == MPORT_OK) {
       mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, MPORT_INDEX_FILE);
       free(url);
-      free(dest);
       mport_free_vec(mirrors);
       return MPORT_OK;
     }
-    free(url); 
+    free(url);
+    mirrorsPtr++;
   }
+
+  /* fallback to mport bootstrap site in a pinch */
+  if (mport_fetch_bootstrap_index(mport) == MPORT_OK)
+    return MPORT_OK;
    
-  free(dest);
-  mport_free_vec(mirrors);
+  /* XXX mport_free_vec(mirrors); */
   RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to fetch index file: %s", mport_err_string());
 }
 
