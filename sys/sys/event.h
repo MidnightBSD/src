@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/event.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/event.h,v 1.4 2010/01/10 18:34:47 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999,2000,2001 Jonathan Lemon <jlemon@FreeBSD.org>
  * All rights reserved.
@@ -158,8 +158,11 @@ struct knlist {
 MALLOC_DECLARE(M_KQUEUE);
 #endif
 
-#define KNOTE(list, hist, lock)		knote(list, hist, lock)
-#define KNOTE_LOCKED(list, hint)	knote(list, hint, 1)
+#define	KNF_LISTLOCKED	0x0001		/* knlist is locked */
+#define	KNF_NOKQLOCK	0x002		/* do not keep KQ_LOCK */
+
+#define KNOTE(list, hist, flags)	knote(list, hist, flags)
+#define KNOTE_LOCKED(list, hint)	knote(list, hint, KNF_LISTLOCKED)
 #define KNOTE_UNLOCKED(list, hint)	knote(list, hint, 0)
 
 #define	KNLIST_EMPTY(list)		SLIST_EMPTY(&(list)->kl_list)
@@ -238,8 +241,10 @@ struct kevent_copyops {
 struct thread;
 struct proc;
 struct knlist;
+struct mtx;
 
-extern void	knote(struct knlist *list, long hint, int islocked);
+extern void	knote(struct knlist *list, long hint, int lockflags);
+extern void	knote_fork(struct knlist *list, int pid);
 extern void	knlist_add(struct knlist *knl, struct knote *kn, int islocked);
 extern void	knlist_remove(struct knlist *knl, struct knote *kn, int islocked);
 extern void	knlist_remove_inevent(struct knlist *knl, struct knote *kn);
@@ -247,6 +252,7 @@ extern int	knlist_empty(struct knlist *knl);
 extern void	knlist_init(struct knlist *knl, void *lock,
     void (*kl_lock)(void *), void (*kl_unlock)(void *),
     int (*kl_locked)(void *));
+extern void	knlist_init_mtx(struct knlist *knl, struct mtx *lock);
 extern void	knlist_destroy(struct knlist *knl);
 extern void	knlist_cleardel(struct knlist *knl, struct thread *td,
 	int islocked, int killkn);
