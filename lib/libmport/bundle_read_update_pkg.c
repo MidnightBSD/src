@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.5 2010/11/16 01:21:00 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.6 2011/03/12 01:29:38 laffer1 Exp $
  */
 
 #include "mport.h"
@@ -43,7 +43,7 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
 {
   char tmpfile2[] = "/tmp/mport.XXXXXXXX";
   int fd;
-  
+
   mport_pkgmeta_logevent(mport, pkg, "Begining update");
 
   if ((fd = mkstemp(tmpfile2)) == -1) {
@@ -78,7 +78,7 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
   mportAssetList *alist;
   mportCreateExtras *extra;
   int ret;
-  
+ 
   if (mport_pkgmeta_get_assetlist(mport, pkg, &alist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
@@ -107,16 +107,16 @@ static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, ch
 static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char *tempfile, mportCreateExtras **extra_p)
 {
   mportCreateExtras *extra;
-  
+ 
   extra = mport_createextras_new();
   *extra_p = extra;
-  
+ 
   extra->pkg_filename = strdup(tempfile); /* this MUST be on the heap, as it will be freed */
   extra->sourcedir = strdup("");
-  
+ 
   if (build_create_extras_depends(mport, pkg, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  
+ 
   if (build_create_extras_copy_metafiles(pkg, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
@@ -168,35 +168,37 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
   int count, ret, i;
   sqlite3_stmt *stmt;
   char *entry;
-  
+ 
   if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   ret = sqlite3_step(stmt);
-  sqlite3_finalize(stmt);  
-    
+   
   switch (ret) {
     case SQLITE_ROW:
       count = sqlite3_column_int(stmt, 0);
+      sqlite3_finalize(stmt);
       break;
     case SQLITE_DONE:
+      sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, "SQLite returned no rows for a COUNT(*) select.");
       break;
     default:
+      sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       break;
   }
-  
+
   if ((extra->depends = (char **)calloc(count + 1, sizeof(char *))) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-  
+ 
   if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_pkgversion, depend_port FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   i = 0;
   while (1) {
     ret = sqlite3_step(stmt);
-    
+   
     if (ret == SQLITE_ROW) {
       if (asprintf(&entry, "%s:%s:%s", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 2), sqlite3_column_text(stmt, 1)) == -1) {
         sqlite3_finalize(stmt);
