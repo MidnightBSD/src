@@ -26,7 +26,7 @@
 #
 #	@(#)rc	5.27 (Berkeley) 6/5/91
 # $FreeBSD: src/etc/rc,v 1.336.2.2 2006/02/24 21:42:43 dougb Exp $
-# $MidnightBSD: src/etc/rc,v 1.2 2006/08/28 02:13:43 laffer1 Exp $
+# $MidnightBSD: src/etc/rc,v 1.3 2007/10/26 13:52:20 laffer1 Exp $
 
 # System startup script run by init on autoboot
 # or after single-user.
@@ -85,8 +85,10 @@ fi
 #
 files=`rcorder ${skip} /etc/rc.d/* 2>/dev/null`
 
+_rc_elem_done=' '
 for _rc_elem in ${files}; do
 	run_rc_script ${_rc_elem} ${_boot}
+	_rc_elem_done="${_rc_elem_done}${_rc_elem} "
 
 	case "$_rc_elem" in
 	*/${early_late_divider})	break ;;
@@ -104,14 +106,9 @@ case ${local_startup} in
 esac
 
 files=`rcorder ${skip} /etc/rc.d/* ${local_rc} 2>/dev/null`
-_skip_early=1
 for _rc_elem in ${files}; do
-	case "$_skip_early" in
-	1)	case "$_rc_elem" in
-		*/${early_late_divider})	_skip_early=0 ;;
-		esac
-		continue
-		;;
+	case "$_rc_elem_done" in
+	*" $_rc_elem "*)	continue ;;
 	esac
 
 	run_rc_script ${_rc_elem} ${_boot}
