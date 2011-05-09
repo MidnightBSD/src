@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netipsec/key.c,v 1.3 2008/12/03 00:30:02 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/netipsec/key.c,v 1.28 2007/07/01 11:38:29 gnn Exp $	*/
 /*	$KAME: key.c,v 1.191 2001/06/27 10:46:49 sakane Exp $	*/
 
@@ -2230,6 +2230,7 @@ key_spdget(so, m, mhp)
 	}
 
 	n = key_setdumpsp(sp, SADB_X_SPDGET, 0, mhp->msg->sadb_msg_pid);
+	KEY_FREESP(&sp);
 	if (n != NULL) {
 		m_freem(m);
 		return key_sendup_mbuf(so, n, KEY_SENDUP_ONE);
