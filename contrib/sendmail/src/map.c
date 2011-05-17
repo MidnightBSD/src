@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: map.c,v 1.1.1.5 2010-01-10 20:14:37 laffer1 Exp $")
+SM_RCSID("@(#)$Id: map.c,v 1.1.1.6 2011-05-17 22:19:51 laffer1 Exp $")
 
 #if LDAPMAP
 # include <sm/ldap.h>
@@ -5985,7 +5985,7 @@ stab_map_store(map, lhs, rhs)
 /*
 **  STAB_MAP_OPEN -- initialize (reads data file)
 **
-**	This is a wierd case -- it is only intended as a fallback for
+**	This is a weird case -- it is only intended as a fallback for
 **	aliases.  For this reason, opens for write (only during a
 **	"newaliases") always fails, and opens for read open the
 **	actual underlying text file instead of the database.

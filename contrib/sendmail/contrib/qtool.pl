@@ -3,7 +3,7 @@
 ## Copyright (c) 1998-2002 Sendmail, Inc. and its suppliers.
 ##	All rights reserved.
 ##
-## $Id: qtool.pl,v 1.1.1.4 2010-01-10 20:14:37 laffer1 Exp $
+## $Id: qtool.pl,v 1.1.1.5 2011-05-17 22:19:51 laffer1 Exp $
 ##
 use strict;
 use File::Basename;
@@ -607,7 +607,7 @@ sub parse_header
 	$first_char = substr($line, 0, 1);
 	if ($first_char eq "?")
 	{
-		$line = substr($line, 3);
+		$line = (split(/\?/, $line,3))[2];
 	}
 	elsif ($first_char eq "\t")
 	{

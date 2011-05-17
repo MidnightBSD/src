@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: envelope.c,v 1.1.1.6 2010-01-10 20:14:37 laffer1 Exp $")
+SM_RCSID("@(#)$Id: envelope.c,v 1.1.1.7 2011-05-17 22:19:51 laffer1 Exp $")
 
 /*
 **  CLRSESSENVELOPE -- clear session oriented data in an envelope
@@ -246,11 +246,13 @@ dropenvelope(e, fulldrop, split)
 		e->e_flags |= EF_FATALERRS|EF_CLRQUEUE;
 	}
 
+
 	e->e_flags &= ~EF_QUEUERUN;
 	for (q = e->e_sendqueue; q != NULL; q = q->q_next)
 	{
 		if (QS_IS_UNDELIVERED(q->q_state))
 			queueit = true;
+
 
 		/* see if a notification is needed */
 		if (bitset(QPINGONFAILURE, q->q_flags) &&

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2007, 2009 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2007, 2009, 2010 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -14,7 +14,7 @@
 #include <sendmail.h>
 #include "map.h"
 
-SM_RCSID("@(#)$Id: daemon.c,v 1.1.1.6 2010-01-10 20:14:37 laffer1 Exp $")
+SM_RCSID("@(#)$Id: daemon.c,v 1.1.1.7 2011-05-17 22:19:51 laffer1 Exp $")
 
 #if defined(SOCK_STREAM) || defined(__GNU_LIBRARY__)
 # define USE_SOCK_STREAM	1
@@ -1267,7 +1267,8 @@ setupdaemon(daemonaddr)
 	  case AF_INET6:
 		if (IN6_IS_ADDR_UNSPECIFIED(&daemonaddr->sin6.sin6_addr))
 			daemonaddr->sin6.sin6_addr =
-			    LocalDaemon ? in6addr_loopback : in6addr_any;
+			    (LocalDaemon && V6LoopbackAddrFound) ?
+			    in6addr_loopback : in6addr_any;
 		port = daemonaddr->sin6.sin6_port;
 		break;
 #endif /* NETINET6 */
@@ -2219,7 +2220,8 @@ makeconnection(host, port, mci, e, enough)
 #if NETINET6
 		  case AF_INET6:
 			if (IN6_IS_ADDR_UNSPECIFIED(&clt_addr.sin6.sin6_addr))
-				clt_addr.sin6.sin6_addr = LocalDaemon ?
+				clt_addr.sin6.sin6_addr =
+					(LocalDaemon && V6LoopbackAddrFound) ?
 					in6addr_loopback : in6addr_any;
 			else
 				clt_bind = true;
@@ -2665,6 +2667,7 @@ gothostent:
 #if NETINET
 			  case AF_INET:
 				addr.sin.sin_addr.s_addr = ConnectOnlyTo.sin.sin_addr.s_addr;
+				addr.sa.sa_family = ConnectOnlyTo.sa.sa_family;
 				break;
 #endif /* NETINET */
 
@@ -2872,7 +2875,10 @@ nextaddr:
 
 	/* Use the configured HeloName as appropriate */
 	if (HeloName != NULL && HeloName[0] != '\0')
+	{
+		SM_FREE_CLR(mci->mci_heloname);
 		mci->mci_heloname = newstr(HeloName);
+	}
 
 	mci_setstat(mci, EX_OK, NULL, NULL);
 	return EX_OK;

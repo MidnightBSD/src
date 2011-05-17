@@ -17916,6 +17916,7 @@ contrib/sendmail/cf/ostype/riscos4.5.m4 -text
 contrib/sendmail/cf/ostype/sco-uw-2.1.m4 -text
 contrib/sendmail/cf/ostype/sco3.2.m4 -text
 contrib/sendmail/cf/ostype/sinix.m4 -text
+contrib/sendmail/cf/ostype/solaris11.m4 -text
 contrib/sendmail/cf/ostype/solaris2.m4 -text
 contrib/sendmail/cf/ostype/solaris2.ml.m4 -text
 contrib/sendmail/cf/ostype/solaris2.pre5.m4 -text

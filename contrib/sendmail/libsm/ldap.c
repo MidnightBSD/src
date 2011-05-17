@@ -11,7 +11,7 @@
 #define LDAP_DEPRECATED	1
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: ldap.c,v 1.1.1.5 2010-01-10 20:14:36 laffer1 Exp $")
+SM_RCSID("@(#)$Id: ldap.c,v 1.1.1.6 2011-05-17 22:19:51 laffer1 Exp $")
 
 #if LDAPMAP
 # include <sys/types.h>
@@ -1098,10 +1098,8 @@ sm_ldap_results(lmap, msgid, flags, delim, rpool, result,
 
 	if (ret == 0)
 		save_errno = ETIMEDOUT;
-	else
+	else if (ret == LDAP_RES_SEARCH_RESULT)
 	{
-		int rc;
-
 		/*
 		**  We may have gotten an LDAP_RES_SEARCH_RESULT response
 		**  with an error inside it, so we have to extract that
@@ -1109,11 +1107,21 @@ sm_ldap_results(lmap, msgid, flags, delim, rpool, result,
 		**  to an LDAP proxy whose backend has gone down.
 		*/
 
-		save_errno = ldap_parse_result(lmap->ldap_ld, lmap->ldap_res,
-				       &rc, NULL, NULL, NULL, NULL, 0);
-		if (save_errno == LDAP_SUCCESS)
-			save_errno = rc;
+		if (lmap->ldap_res == NULL)
+			save_errno = LDAP_UNAVAILABLE;
+		else
+		{
+			int rc;
+
+			save_errno = ldap_parse_result(lmap->ldap_ld,
+					lmap->ldap_res, &rc, NULL, NULL,
+					NULL, NULL, 0);
+			if (save_errno == LDAP_SUCCESS)
+				save_errno = rc;
+		}
 	}
+	else
+		save_errno = sm_ldap_geterrno(lmap->ldap_ld);
 	if (save_errno != LDAP_SUCCESS)
 	{
 		statp = EX_TEMPFAIL;
