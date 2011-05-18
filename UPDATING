@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20110518:
+	Perl 5.14.0
+
+20110517:
+	Sendmail 8.14.5
+
 20110314:
 	DRM/DRI code updated to support newer video cards. (FreeBSD 7.1)
 
@@ -980,4 +986,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.120 2011/03/08 22:34:16 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.121 2011/03/15 01:08:09 laffer1 Exp $
