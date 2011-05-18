@@ -234,7 +234,7 @@ of C<h2xs> may gain the ability to make educated guesses.
 
 When B<--compat-version> (B<-b>) is present the generated tests will use
 C<Test::More> rather than C<Test> which is the default for versions before
-5.7.2 .   C<Test::More> will be added to PREREQ_PM in the generated
+5.6.2.  C<Test::More> will be added to PREREQ_PM in the generated
 C<Makefile.PL>.
 
 =item B<--use-old-tests>
@@ -498,7 +498,7 @@ See L<perlxs> and L<perlxstut> for additional details.
 use strict;
 
 
-my( $H2XS_VERSION ) = ' $Revision: 1.1.1.2 $ ' =~ /\$Revision:\s+([^\s]+)/;
+my( $H2XS_VERSION ) = ' $Revision: 1.1.1.3 $ ' =~ /\$Revision:\s+([^\s]+)/;
 my $TEMPLATE_VERSION = '0.01';
 my @ARGS = @ARGV;
 my $compat_version = $];
@@ -530,7 +530,7 @@ OPTIONS:
     -X, --omit-XS         Omit the XS portion (implies both -c and -f).
     -a, --gen-accessors   Generate get/set accessors for struct and union members
                           (used with -x).
-    -b, --compat-version  Specify a perl version to be backwards compatibile with.
+    -b, --compat-version  Specify a perl version to be backwards compatible with.
     -c, --omit-constant   Omit the constant() function and specialised AUTOLOAD
                           from the XS file.
     -d, --debugging       Turn on debugging messages.
@@ -1724,7 +1724,7 @@ sub accessor_docs {
 #  my \$buffer = $name->new();
 #  my \$obj = \$buffer->_to_ptr();
 #
-#This exersizes the following two methods, and an additional class
+#This exercises the following two methods, and an additional class
 #C<$name>, the internal representation of which is a reference to a
 #packed string with the C structure.  Keep in mind that \$buffer should
 #better survive longer than \$obj.
@@ -1801,7 +1801,7 @@ sub get_typemap {
 sub normalize_type {		# Second arg: do not strip const's before \*
   my $type = shift;
   my $do_keep_deep_const = shift;
-  # If $do_keep_deep_const this is heuristical only
+  # If $do_keep_deep_const this is heuristic only
   my $keep_deep_const = ($do_keep_deep_const ? '\b(?![^(,)]*\*)' : '');
   my $ignore_mods
     = "(?:\\b(?:(?:__const__|const)$keep_deep_const|static|inline|__inline__)\\b\\s*)*";
@@ -1903,14 +1903,18 @@ open(PL, ">Makefile.PL") || die "Can't create $ext$modpname/Makefile.PL: $!\n";
 
 my $prereq_pm = '';
 
-if ( $compat_version < 5.00702 and $new_test )
+if ( $compat_version < 5.006002 and $new_test )
 {
   $prereq_pm .= q%'Test::More'  =>  0, %;
 }
-
-if ( $compat_version < 5.00600 and !$opt_X and $use_xsloader)
+elsif ( $compat_version < 5.006002 )
 {
-  $prereq_pm .= q%'XSLoader'  =>  0, %;
+  $prereq_pm .= q%'Test'        =>  0, %;
+}
+
+if ( $compat_version < 5.006 and !$opt_X and $use_xsloader)
+{
+  $prereq_pm .= q%'XSLoader'    =>  0, %;
 }
 
 print PL <<"END";
@@ -2017,7 +2021,7 @@ EOM
 close(PL) || die "Can't close $ext$modpname/Makefile.PL: $!\n";
 
 # Create a simple README since this is a CPAN requirement
-# and it doesnt hurt to have one
+# and it doesn't hurt to have one
 warn "Writing $ext$modpname/README\n";
 open(RM, ">README") || die "Can't create $ext$modpname/README:$!\n";
 my $thisyear = (gmtime)[5] + 1900;
@@ -2026,13 +2030,17 @@ my $rmheadeq = "=" x length($rmhead);
 
 my $rm_prereq;
 
-if ( $compat_version < 5.00702 and $new_test )
+if ( $compat_version < 5.006002 and $new_test )
 {
-   $rm_prereq = 'Test::More';
+  $rm_prereq = 'Test::More';
+}
+elsif ( $compat_version < 5.006002 )
+{
+  $rm_prereq = 'Test';
 }
 else
 {
-   $rm_prereq = 'blah blah blah';
+  $rm_prereq = 'blah blah blah';
 }
 
 print RM <<_RMEND_;
@@ -2092,11 +2100,14 @@ print EX <<_END_;
 
 # change 'tests => $tests' to 'tests => last_test_to_print';
 
+use strict;
+use warnings;
+
 _END_
 
 my $test_mod = 'Test::More';
 
-if ( $old_test or ($compat_version < 5.007 and not $new_test ))
+if ( $old_test or ($compat_version < 5.006002 and not $new_test ))
 {
   my $test_mod = 'Test';
 

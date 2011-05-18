@@ -92,7 +92,7 @@ C<system> operator. See L<perlvar> for details. (Contributed by Gisle Aas.)
 
 This variable controls the state of the internal UTF-8 offset caching code.
 1 for on (the default), 0 for off, -1 to debug the caching code by checking
-all its results against linear scans, and panicing on any discrepancy.
+all its results against linear scans, and panicking on any discrepancy.
 
 =back
 
@@ -1166,7 +1166,7 @@ between C<""> and C<< E<lt>E<gt> >> quoting in C<#include> statements.
 
 =item *
 
-now generates correct correct code for C<#if defined A || defined B>
+now generates correct code for C<#if defined A || defined B>
 [RT #39130]
 
 =back
@@ -1655,7 +1655,7 @@ a C<system> call.
 
 =item *
 
-Fixed bug RT #37886, symbolic deferencing was allowed in the argument of
+Fixed bug RT #37886, symbolic dereferencing was allowed in the argument of
 C<defined> even under the influence of C<use strict 'refs'>.
 
 =item *
@@ -1811,7 +1811,7 @@ The process id is no longer truncated to 16 bits on some Windows platforms
 
 =item *
 
-Fixed bug RT #54828 in F<perlio.c> where calling C<binmode> on Win32 and Cgywin
+Fixed bug RT #54828 in F<perlio.c> where calling C<binmode> on Win32 and Cygwin
 may cause a segmentation fault.
 
 =back
@@ -1834,7 +1834,7 @@ The reference count of C<PerlIO> file descriptors is now correctly handled.
 
 =item *
 
-On VMS, escaped dots will be preserved when converted to UNIX syntax.
+On VMS, escaped dots will be preserved when converted to Unix syntax.
 
 =item *
 
@@ -2096,7 +2096,7 @@ Calls all tests in F<t/op/inccode.t> after first tying C<@INC>.
 
 =item t/op/incfilter.t
 
-Tests for for source filters returned from code references in C<@INC>.
+Tests for source filters returned from code references in C<@INC>.
 
 =item t/op/kill0.t
 

@@ -1,37 +1,15 @@
 package File::Glob;
 
 use strict;
-our($VERSION, @ISA, @EXPORT_OK, @EXPORT_FAIL, %EXPORT_TAGS,
-    $AUTOLOAD, $DEFAULT_FLAGS);
+our($VERSION, @ISA, @EXPORT_OK, @EXPORT_FAIL, %EXPORT_TAGS, $DEFAULT_FLAGS);
 
-use XSLoader ();
+require XSLoader;
+use feature 'switch';
 
 @ISA = qw(Exporter);
 
 # NOTE: The glob() export is only here for compatibility with 5.6.0.
 # csh_glob() should not be used directly, unless you know what you're doing.
-
-@EXPORT_OK   = qw(
-    csh_glob
-    bsd_glob
-    glob
-    GLOB_ABEND
-    GLOB_ALPHASORT
-    GLOB_ALTDIRFUNC
-    GLOB_BRACE
-    GLOB_CSH
-    GLOB_ERR
-    GLOB_ERROR
-    GLOB_LIMIT
-    GLOB_MARK
-    GLOB_NOCASE
-    GLOB_NOCHECK
-    GLOB_NOMAGIC
-    GLOB_NOSORT
-    GLOB_NOSPACE
-    GLOB_QUOTE
-    GLOB_TILDE
-);
 
 %EXPORT_TAGS = (
     'glob' => [ qw(
@@ -56,70 +34,33 @@ use XSLoader ();
     ) ],
 );
 
-$VERSION = '1.06';
+@EXPORT_OK   = (@{$EXPORT_TAGS{'glob'}}, 'csh_glob');
+
+$VERSION = '1.12';
 
 sub import {
     require Exporter;
-    my $i = 1;
-    while ($i < @_) {
-	if ($_[$i] =~ /^:(case|nocase|globally)$/) {
-	    splice(@_, $i, 1);
-	    $DEFAULT_FLAGS &= ~GLOB_NOCASE() if $1 eq 'case';
-	    $DEFAULT_FLAGS |= GLOB_NOCASE() if $1 eq 'nocase';
-	    if ($1 eq 'globally') {
-		local $^W;
+    local $Exporter::ExportLevel = $Exporter::ExportLevel + 1;
+    Exporter::import(grep {
+	my $passthrough;
+	given ($_) {
+	    $DEFAULT_FLAGS &= ~GLOB_NOCASE() when ':case';
+	    $DEFAULT_FLAGS |= GLOB_NOCASE() when ':nocase';
+	    when (':globally') {
+		no warnings 'redefine';
 		*CORE::GLOBAL::glob = \&File::Glob::csh_glob;
 	    }
-	    next;
+	    $passthrough = 1;
 	}
-	++$i;
-    }
-    goto &Exporter::import;
+	$passthrough;
+    } @_);
 }
 
-sub AUTOLOAD {
-    # This AUTOLOAD is used to 'autoload' constants from the constant()
-    # XS function.  If a constant is not found then control is passed
-    # to the AUTOLOAD in AutoLoader.
-
-    my $constname;
-    ($constname = $AUTOLOAD) =~ s/.*:://;
-    my ($error, $val) = constant($constname);
-    if ($error) {
-	require Carp;
-	Carp::croak($error);
-    }
-    eval "sub $AUTOLOAD { $val }";
-    goto &$AUTOLOAD;
-}
-
-XSLoader::load 'File::Glob', $VERSION;
-
-# Preloaded methods go here.
-
-sub GLOB_ERROR {
-    return (constant('GLOB_ERROR'))[1];
-}
-
-sub GLOB_CSH () {
-    GLOB_BRACE()
-	| GLOB_NOMAGIC()
-	| GLOB_QUOTE()
-	| GLOB_TILDE()
-	| GLOB_ALPHASORT()
-}
+XSLoader::load();
 
 $DEFAULT_FLAGS = GLOB_CSH();
-if ($^O =~ /^(?:MSWin32|VMS|os2|dos|riscos|MacOS)$/) {
+if ($^O =~ /^(?:MSWin32|VMS|os2|dos|riscos)$/) {
     $DEFAULT_FLAGS |= GLOB_NOCASE();
-}
-
-# Autoload methods go after =cut, and are processed by the autosplit program.
-
-sub bsd_glob {
-    my ($pat,$flags) = @_;
-    $flags = $DEFAULT_FLAGS if @_ < 2;
-    return doglob($pat,$flags);
 }
 
 # File::Glob::glob() is deprecated because its prototype is different from

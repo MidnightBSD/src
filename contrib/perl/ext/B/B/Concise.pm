@@ -14,7 +14,7 @@ use warnings; # uses #3 and #4, since warnings uses Carp
 
 use Exporter (); # use #5
 
-our $VERSION   = "0.76";
+our $VERSION   = "0.83";
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw( set_style set_style_standard add_callback
 		     concise_subref concise_cv concise_main
@@ -299,14 +299,14 @@ sub compileOpts {
 	elsif ($o =~ /^-stash=(.*)/) {
 	    my $pkg = $1;
 	    no strict 'refs';
-	    if (!defined %{$pkg.'::'}) {
+	    if (! %{$pkg.'::'}) {
 		eval "require $pkg";
 	    } else {
 		require Config;
 		if (!$Config::Config{usedl}
 		    && keys %{$pkg.'::'} == 1
 		    && $pkg->can('bootstrap')) {
-		    # It is something that we're staticly linked to, but hasn't
+		    # It is something that we're statically linked to, but hasn't
 		    # yet been used.
 		    eval "require $pkg";
 		}
@@ -462,7 +462,7 @@ sub walk_topdown {
 	    walk_topdown($kid, $sub, $level + 1);
 	}
     }
-    elsif (class($op) eq "PMOP") {
+    if (class($op) eq "PMOP") {
 	my $maybe_root = $op->pmreplroot;
 	if (ref($maybe_root) and $maybe_root->isa("B::OP")) {
 	    # It really is the root of the replacement, not something
@@ -586,7 +586,7 @@ sub fmt_line {    # generate text-line for op.
     $text = "# $hr->{src}\n$text" if $show_src and $hr->{src};
 
     chomp $text;
-    return "$text\n" if $text ne "";
+    return "$text\n" if $text ne "" and $order ne "tree";
     return $text; # suppress empty lines
 }
 
@@ -604,8 +604,10 @@ $priv{"sassign"}{64} = "BKWARD";
 $priv{$_}{64} = "RTIME" for ("match", "subst", "substcont", "qr");
 @{$priv{"trans"}}{1,2,4,8,16,64} = ("<UTF", ">UTF", "IDENT", "SQUASH", "DEL",
 				    "COMPL", "GROWS");
+$priv{transr} = $priv{trans};
 $priv{"repeat"}{64} = "DOLIST";
 $priv{"leaveloop"}{64} = "CONT";
+$priv{$_}{4} = "DREFed" for (qw(rv2sv rv2av rv2hv));
 @{$priv{$_}}{32,64,96} = ("DREFAV", "DREFHV", "DREFSV")
   for (qw(rv2gv rv2sv padsv aelem helem));
 $priv{$_}{16} = "STATE" for ("padav", "padhv", "padsv");
@@ -634,6 +636,7 @@ $priv{"list"}{64} = "GUESSED";
 $priv{"delete"}{64} = "SLICE";
 $priv{"exists"}{64} = "SUB";
 @{$priv{"sort"}}{1,2,4,8,16,32,64} = ("NUM", "INT", "REV", "INPLACE","DESC","QSORT","STABLE");
+$priv{"reverse"}{8} = "INPLACE";
 $priv{"threadsv"}{64} = "SVREFd";
 @{$priv{$_}}{16,32,64,128} = ("INBIN","INCR","OUTBIN","OUTCR")
   for ("open", "backtick");
@@ -834,7 +837,7 @@ sub concise_op {
 	} else {
 	    $h{arg} = "($precomp)";
 	}
-    } elsif ($h{class} eq "PVOP" and $h{name} ne "trans") {
+    } elsif ($h{class} eq "PVOP" and $h{name} !~ '^transr?\z') {
 	$h{arg} = '("' . $op->pv . '")';
 	$h{svval} = '"' . $op->pv . '"';
     } elsif ($h{class} eq "COP") {
@@ -1741,14 +1744,14 @@ This restores one of the standard line-styles: C<terse>, C<concise>,
 C<linenoise>, C<debug>, C<env>, into effect.  It also accepts style
 names previously defined with add_style().
 
-=head2 add_style()
+=head2 add_style ()
 
 This subroutine accepts a new style name and three style arguments as
 above, and creates, registers, and selects the newly named style.  It is
 an error to re-add a style; call set_style_standard() to switch between
 several styles.
 
-=head2 add_callback()
+=head2 add_callback ()
 
 If your newly minted styles refer to any new #variables, you'll need
 to define a callback subroutine that will populate (or modify) those

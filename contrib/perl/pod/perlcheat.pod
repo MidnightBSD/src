@@ -35,11 +35,11 @@ already be overwhelming.
   << >>                   while  ( ) { }, until ( ) { }
   named uops              if     ( ) { } elsif ( ) { } else { }
   < > <= >= lt gt le ge   unless ( ) { } elsif ( ) { } else { }
-  == != <=> eq ne cmp     for equals foreach (ALWAYS)
+  == != <=> eq ne cmp ~~  for equals foreach (ALWAYS)
   &
   | ^              REGEX METACHARS            REGEX MODIFIERS
   &&               ^     string begin         /i case insens.
-  ||               $     str. end (before \n) /m line based ^$
+  || //            $     str. end (before \n) /m line based ^$
   .. ...           +     one or more          /s . includes \n
   ?:               *     zero or more         /x ign. wh.space
   = += -= *= etc.  ?     zero or one          /g global
@@ -88,6 +88,18 @@ Juerd Waalboer <#####@juerd.nl>, with the help of many Perl Monks.
 
 =head1 SEE ALSO
 
- http://perlmonks.org/?node_id=216602      the original PM post
- http://perlmonks.org/?node_id=238031      Damian Conway's Perl 6 version
- http://juerd.nl/site.plp/perlcheat        home of the Perl Cheat Sheet
+=over 4
+
+=item *
+
+L<http://perlmonks.org/?node_id=216602> - the original PM post
+
+=item *
+
+L<http://perlmonks.org/?node_id=238031> - Damian Conway's Perl 6 version
+
+=item *
+
+L<http://juerd.nl/site.plp/perlcheat> - home of the Perl Cheat Sheet
+
+=back

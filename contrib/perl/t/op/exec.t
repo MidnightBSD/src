@@ -25,7 +25,7 @@ if ($^O eq 'VMS') {
 }
 
 
-# supress VMS whinging about bad execs.
+# suppress VMS whinging about bad execs.
 use vmsish qw(hushed);
 
 $| = 1;				# flush stdout
@@ -35,8 +35,6 @@ $ENV{LANGUAGE} = 'C';		# Ditto in GNU.
 
 my $Is_VMS   = $^O eq 'VMS';
 my $Is_Win32 = $^O eq 'MSWin32';
-
-skip_all("Tests mostly usesless on MacOS") if $^O eq 'MacOS';
 
 plan(tests => 22);
 

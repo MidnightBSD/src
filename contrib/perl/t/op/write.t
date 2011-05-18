@@ -61,7 +61,7 @@ for my $tref ( @NumTests ){
 my $bas_tests = 20;
 
 # number of tests in section 3
-my $bug_tests = 4 + 3 * 3 * 5 * 2 * 3 + 2 + 1 + 1;
+my $bug_tests = 4 + 3 * 3 * 5 * 2 * 3 + 2 + 2 + 1;
 
 # number of tests in section 4
 my $hmb_tests = 35;
@@ -95,7 +95,7 @@ now @<<the@>>>> for all@|||||men to come @<<<<
 .
 
 open(OUT, '>Op_write.tmp') || die "Can't create Op_write.tmp";
-END { 1 while unlink 'Op_write.tmp' }
+END { unlink_all 'Op_write.tmp' }
 
 $fox = 'foxiness';
 $good = 'good';
@@ -115,7 +115,7 @@ the course
 of huma...
 now is the time for all good men to come to\n";
 
-is cat('Op_write.tmp'), $right and do { 1 while unlink 'Op_write.tmp'; };
+is cat('Op_write.tmp'), $right and unlink_all 'Op_write.tmp';
 
 $fox = 'wolfishness';
 my $fox = 'foxiness';		# Test a lexical variable.
@@ -154,7 +154,7 @@ becomes
 necessary
 now is the time for all good men to come to\n";
 
-is cat('Op_write.tmp'), $right and do { 1 while unlink 'Op_write.tmp'; };
+is cat('Op_write.tmp'), $right and unlink_all 'Op_write.tmp';
 
 eval <<'EOFORMAT';
 format OUT2 =
@@ -195,7 +195,7 @@ becomes
 necessary
 now is the time for all good men to come to\n";
 
-is cat('Op_write.tmp'), $right and do { 1 while unlink 'Op_write.tmp' };
+is cat('Op_write.tmp'), $right and unlink_all 'Op_write.tmp';
 
 # formline tests
 
@@ -248,7 +248,7 @@ close OUT3 or die "Could not close: $!";
 $right =
 "fit\n";
 
-is cat('Op_write.tmp'), $right and do { 1 while unlink 'Op_write.tmp' };
+is cat('Op_write.tmp'), $right and unlink_all 'Op_write.tmp';
 
 
 # test lexicals and globals
@@ -276,7 +276,7 @@ format OUT4 =
 open   OUT4, ">Op_write.tmp" or die "Can't create Op_write.tmp";
 write (OUT4);
 close  OUT4 or die "Could not close: $!";
-is cat('Op_write.tmp'), "1\n" and do { 1 while unlink "Op_write.tmp" };
+is cat('Op_write.tmp'), "1\n" and unlink_all "Op_write.tmp";
 
 eval <<'EOFORMAT';
 format OUT10 =
@@ -293,7 +293,7 @@ write(OUT10);
 close OUT10 or die "Could not close: $!";
 
 $right = "   12.95 00012.95\n";
-is cat('Op_write.tmp'), $right and do { 1 while unlink 'Op_write.tmp' };
+is cat('Op_write.tmp'), $right and unlink_all 'Op_write.tmp';
 
 eval <<'EOFORMAT';
 format OUT11 =
@@ -316,7 +316,7 @@ $right =
 "00012.95
 1 0#
 10 #\n";
-is cat('Op_write.tmp'), $right and do { 1 while unlink 'Op_write.tmp' };
+is cat('Op_write.tmp'), $right and unlink_all 'Op_write.tmp';
 
 {
     my $test = curr_test();
@@ -610,6 +610,18 @@ close STDOUT_DUP;
 *CmT =  *{$::{Comment}}{FORMAT};
 ok  defined *{$::{CmT}}{FORMAT}, "glob assign";
 
+SKIP: {
+    skip_if_miniperl('miniperl does not support scalario');
+    my $buf = "";
+    open my $fh, ">", \$buf;
+    my $old_fh = select $fh;
+    local $~ = "CmT";
+    write;
+    select $old_fh;
+    close $fh;
+    is $buf, "ok $test\n", "write to duplicated format";
+}
+
 fresh_perl_like(<<'EOP', qr/^Format STDOUT redefined at/, {stderr => 1}, '#64562 - Segmentation fault with redefined formats and warnings');
 #!./perl
 
@@ -637,7 +649,7 @@ EOP
 # Just a complete test for format, including top-, left- and bottom marging
 # and format detection through glob entries
 
-if ($^O eq 'VMS' || $^O eq 'MSWin32' || $^O eq 'dos' || $^O eq 'MacOS' ||
+if ($^O eq 'VMS' || $^O eq 'MSWin32' || $^O eq 'dos' ||
     ($^O eq 'os2' and not eval '$OS2::can_fork')) {
   $test = curr_test();
  SKIP: {

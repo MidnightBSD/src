@@ -27,7 +27,7 @@ case "$cc" in
     ;;  
 esac
 
-# Hardwire the processor to 586 for consistancy with autoconf
+# Hardwire the processor to 586 for consistency with autoconf
 # archname='i586-svr5'
 #  -- seems this is generally disliked by perl porters so leave it to float
 
@@ -48,14 +48,15 @@ esac
 	want_dbm='yes'		# use dbm if can find library in /usr/local/lib
 	want_gdbm='yes'		# use gdbm if can find library in /usr/local/lib
 	want_udk70=''		# link with old static libc pieces
-            # link with udk70 if building on 7.1 abd want resulting binary 
+            # link with udk70 if building on 7.1 and want resulting binary
             # to run on uw7.0* - it will link in referenced static symbols 
             # of libc that are (now) in the shared libc.so on 7.1 but were 
             # not there in 7.0.
             # There are still scenarios where this is still insufficient so 
             # overall it is preferable to get ptf7051e 
             #   ftp://ftp.sco.com/SLS/ptf7051e.Z
-            # installed on any/all 7.0 systems and leave the above unset.
+            # installed on any/all 7.0 systems and leave the above unset
+            # (sadly this is unavailable as of 2009-08-03)
 
 if [ "$want_ucb" ] ; then 
     ldflags= '-L/usr/ucblib'
@@ -65,7 +66,7 @@ else
     libswanted=`echo " $libswanted " | sed -e 's/ ucb / /'`
     glibpth=`echo " $glibpth " | sed -e 's/ \/usr\/ucblib / /'`
 
-    # If see libdbm in /usr/local and not overidden assume its the 
+    # If see libdbm in /usr/local and not overridden assume its the
     # non ucblib rebuild from skunkware  and use it
     if [ ! -f /usr/local/lib/libdbm.so -o ! "$want_dbm" ] ; then
         i_dbm='undef'

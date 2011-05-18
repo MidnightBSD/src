@@ -5,7 +5,7 @@ perltodo - Perl TO-DO List
 =head1 DESCRIPTION
 
 This is a list of wishes for Perl. The most up to date version of this file
-is at http://perl5.git.perl.org/perl.git/blob_plain/HEAD:/pod/perltodo.pod
+is at L<http://perl5.git.perl.org/perl.git/blob_plain/HEAD:/pod/perltodo.pod>
 
 The tasks we think are smaller or easier are listed first. Anyone is welcome
 to work on any of these, but it's a good idea to first contact
@@ -15,9 +15,8 @@ prefer.
 
 Whilst patches to make the list shorter are most welcome, ideas to add to
 the list are also encouraged. Check the perl5-porters archives for past
-ideas, and any discussion about them. One set of archives may be found at:
-
-    http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/
+ideas, and any discussion about them. One set of archives may be found at
+L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/>
 
 What can we offer you in return? Fame, fortune, and everlasting glory? Maybe
 not, but if your patch is incorporated, then we'll add your name to the
@@ -26,9 +25,36 @@ programming languages offer you 1 line of immortality?
 
 =head1 Tasks that only need Perl knowledge
 
-=head2 Remove macperl references from tests
+=head2 Migrate t/ from custom TAP generation
 
-MacPerl is gone. The tests don't need to be there.
+Many tests below F<t/> still generate TAP by "hand", rather than using library
+functions. As explained in L<perlhack/TESTING>, tests in F<t/> are
+written in a particular way to test that more complex constructions actually
+work before using them routinely. Hence they don't use C<Test::More>, but
+instead there is an intentionally simpler library, F<t/test.pl>. However,
+quite a few tests in F<t/> have not been refactored to use it. Refactoring
+any of these tests, one at a time, is a useful thing TODO.
+
+The subdirectories F<base>, F<cmd> and F<comp>, that contain the most
+basic tests, should be excluded from this task.
+
+=head2 Automate perldelta generation
+
+The perldelta file accompanying each release summaries the major changes.
+It's mostly manually generated currently, but some of that could be
+automated with a bit of perl, specifically the generation of
+
+=over
+
+=item Modules and Pragmata
+
+=item New Documentation
+
+=item New Tests
+
+=back
+
+See F<Porting/how_to_write_a_perldelta.pod> for details.
 
 =head2 Remove duplication of test setup.
 
@@ -61,18 +87,6 @@ The more practical approach, to break the task down into manageable chunks, is
 to work your way though the code from bottom to top, or if necessary adding
 extra C<{ ... }> blocks, and turning on strict within them.
 
-=head2 Parallel testing
-
-(This probably impacts much more than the core: also the Test::Harness
-and TAP::* modules on CPAN.)
-
-All of the tests in F<t/> can now be run in parallel, if C<$ENV{TEST_JOBS}>
-is set. However, tests within each directory in F<ext> and F<lib> are still
-run in series, with directories run in parallel. This is an adequate
-heuristic, but it might be possible to relax it further, and get more
-throughput. Specifically, it would be good to audit all of F<lib/*.t>, and
-make them use C<File::Temp>.
-
 =head2 Make Schwern poorer
 
 We should have tests for everything. When all the core's modules are tested,
@@ -82,7 +96,7 @@ cash.
 
 =head2 Improve the coverage of the core tests
 
-Use Devel::Cover to ascertain the core modules's test coverage, then add
+Use Devel::Cover to ascertain the core modules' test coverage, then add
 tests that are currently missing.
 
 =head2 test B
@@ -112,12 +126,6 @@ do so. Test it with older perl releases, and fix the problems you find.
 
 To make a minimal perl distribution, it's useful to look at
 F<t/lib/commonsense.t>.
-
-=head2 Bundle dual life modules in ext/
-
-For maintenance (and branch merging) reasons, it would be useful to move
-some architecture-independent dual-life modules from lib/ to ext/, if this
-has no negative impact on the build of perl itself.
 
 =head2 POSIX memory footprint
 
@@ -162,6 +170,11 @@ The F<installman> script is slow. All it is doing text processing, which we're
 told is something Perl is good at. So it would be nice to know what it is doing
 that is taking so much CPU, and where possible address it.
 
+=head2 enable lexical enabling/disabling of individual warnings
+
+Currently, warnings can only be enabled or disabled by category. There
+are times when it would be useful to quash a single warning, not a
+whole category.
 
 =head1 Tasks that need a little sysadmin-type knowledge
 
@@ -217,7 +230,7 @@ to do this manually are roughly
 =item *
 
 do a normal C<Configure>, but include Devel::Cover as a module to install
-(see F<INSTALL> for how to do this)
+(see L<INSTALL> for how to do this)
 
 =item *
 
@@ -294,7 +307,8 @@ visibility just to symbols declared in that file. It would be good to extend
 F<makedef.pl> to support this format, and to provide a means within
 C<Configure> to enable it. This would allow Unix users to test that the
 export list is correct, and to build a perl that does not pollute the global
-namespace with private symbols.
+namespace with private symbols, and will fail in the same way as msvc or mingw 
+builds or when using PERL_DL_NONLAZY=1.
 
 =head2 Cross-compile support
 
@@ -385,7 +399,7 @@ course, we all know what step 3 is.
 
 Currently F<Configure> automatically adds C<-DDEBUGGING> to the C compiler
 flags if it spots C<-g> in the optimiser flags. The pre-processor directive
-C<DEBUGGING> enables F<perl>'s command line <-D> options, but in the process
+C<DEBUGGING> enables F<perl>'s command line C<-D> options, but in the process
 makes F<perl> slower. It would be good to disentangle this logic, so that
 C-level debugging with C<-g> and Perl level debugging with C<-D> can easily
 be enabled independently.
@@ -422,7 +436,7 @@ The way @INC is laid out by default, one cannot upgrade core (dual-life)
 modules without overwriting files. This causes problems for binary
 package builders.  One possible proposal is laid out in this
 message:
-L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2002-04/msg02380.html>.
+L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2002-04/msg02380.html>
 
 =head2 -Duse32bit*
 
@@ -430,7 +444,7 @@ Natively 64-bit systems need neither -Duse64bitint nor -Duse64bitall.
 On these systems, it might be the default compilation mode, and there
 is currently no guarantee that passing no use64bitall option to the
 Configure process will build a 32bit perl. Implementing -Duse32bit*
-options would be nice for perl 5.12.
+options would be nice for perl 5.14.
 
 =head2 Profile Perl - am I hot or not?
 
@@ -510,7 +524,7 @@ bug is fixed in the VC8 and VC9 CRTs (but, of course, the directory may still
 not actually be writable if access is indeed denied by DACLs).
 
 For the chdir() issue, see ActiveState bug #74552:
-http://bugs.activestate.com/show_bug.cgi?id=74552
+L<http://bugs.activestate.com/show_bug.cgi?id=74552>
 
 Therefore, DACLs should be checked both for consistency across CRTs and for
 the correct answer.
@@ -564,6 +578,80 @@ not-yet-allocated part of an arena.
 These tasks would need C knowledge, and roughly the level of knowledge of
 the perl API that comes from writing modules that use XS to interface to
 C.
+
+=head2 Write an XS cookbook
+
+Create pod/perlxscookbook.pod with short, task-focused 'recipes' in XS that
+demonstrate common tasks and good practices.  (Some of these might be
+extracted from perlguts.) The target audience should be XS novices, who need
+more examples than perlguts but something less overwhelming than perlapi.
+Recipes should provide "one pretty good way to do it" instead of TIMTOWTDI.
+
+Rather than focusing on interfacing Perl to C libraries, such a cookbook
+should probably focus on how to optimize Perl routines by re-writing them
+in XS.  This will likely be more motivating to those who mostly work in
+Perl but are looking to take the next step into XS.
+
+Deconstructing and explaining some simpler XS modules could be one way to
+bootstrap a cookbook.  (List::Util? Class::XSAccessor? Tree::Ternary_XS?)
+Another option could be deconstructing the implementation of some simpler
+functions in op.c.
+
+=head2 Allow XSUBs to inline themselves as OPs
+
+For a simple XSUB, often the subroutine dispatch takes more time than the
+XSUB itself. The tokeniser already has the ability to inline constant
+subroutines - it would be good to provide a way to inline other subroutines.
+
+Specifically, simplest approach looks to be to allow an XSUB to provide an
+alternative implementation of itself as a custom OP. A new flag bit in
+C<CvFLAGS()> would signal to the peephole optimiser to take an optree
+such as this:
+
+    b  <@> leave[1 ref] vKP/REFC ->(end)
+    1     <0> enter ->2
+    2     <;> nextstate(main 1 -e:1) v:{ ->3
+    a     <2> sassign vKS/2 ->b
+    8        <1> entersub[t2] sKS/TARG,1 ->9
+    -           <1> ex-list sK ->8
+    3              <0> pushmark s ->4
+    4              <$> const(IV 1) sM ->5
+    6              <1> rv2av[t1] lKM/1 ->7
+    5                 <$> gv(*a) s ->6
+    -              <1> ex-rv2cv sK ->-
+    7                 <$> gv(*x) s/EARLYCV ->8
+    -        <1> ex-rv2sv sKRM*/1 ->a
+    9           <$> gvsv(*b) s ->a
+
+perform the symbol table lookup of C<rv2cv> and C<gv(*x)>, locate the
+pointer to the custom OP that provides the direct implementation, and re-
+write the optree something like:
+
+    b  <@> leave[1 ref] vKP/REFC ->(end)
+    1     <0> enter ->2
+    2     <;> nextstate(main 1 -e:1) v:{ ->3
+    a     <2> sassign vKS/2 ->b
+    7        <1> custom_x -> 8
+    -           <1> ex-list sK ->7
+    3              <0> pushmark s ->4
+    4              <$> const(IV 1) sM ->5
+    6              <1> rv2av[t1] lKM/1 ->7
+    5                 <$> gv(*a) s ->6
+    -              <1> ex-rv2cv sK ->-
+    -                 <$> ex-gv(*x) s/EARLYCV ->7
+    -        <1> ex-rv2sv sKRM*/1 ->a
+    8           <$> gvsv(*b) s ->a
+
+I<i.e.> the C<gv(*)> OP has been nulled and spliced out of the execution
+path, and the C<entersub> OP has been replaced by the custom op.
+
+This approach should provide a measurable speed up to simple XSUBs inside
+tight loops. Initially one would have to write the OP alternative
+implementation by hand, but it's likely that this should be reasonably
+straightforward for the type of XSUB that would benefit the most. Longer
+term, once the run-time implementation is proven, it should be possible to
+progressively update ExtUtils::ParseXS to generate OP implementations for
+some XSUBs.
 
 =head2 Remove the use of SVs as temporaries in dump.c
 
@@ -659,7 +747,7 @@ of running Perl code inside the signal handler context. (With all the dangers
 of things like C<malloc> corruption that that currently offers us)
 
 For more information see the thread starting with this message:
-http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2008-03/msg00305.html
+L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2008-03/msg00305.html>
 
 =head2 autovivification
 
@@ -702,12 +790,6 @@ See L</"Virtualize operating system access">.
 
 Currently glob patterns and filenames returned from File::Glob::glob()
 are always byte strings.  See L</"Virtualize operating system access">.
-
-=head2 Unicode and lc/uc operators
-
-Some built-in operators (C<lc>, C<uc>, etc.) behave differently, based on
-what the internal encoding of their argument is. That should not be the
-case. Maybe add a pragma to switch behaviour.
 
 =head2 use less 'memory'
 
@@ -777,25 +859,6 @@ only the interpretation of non-ASCII characters, and not for the script file
 handle. To make it work needs some investigation of the ordering of function
 calls during startup, and (by implication) a bit of tweaking of that order.
 
-=head2 Duplicate logic in S_method_common() and Perl_gv_fetchmethod_autoload()
-
-A comment in C<S_method_common> notes
-
-	/* This code tries to figure out just what went wrong with
-	   gv_fetchmethod.  It therefore needs to duplicate a lot of
-	   the internals of that function.  We can't move it inside
-	   Perl_gv_fetchmethod_autoload(), however, since that would
-	   cause UNIVERSAL->can("NoSuchPackage::foo") to croak, and we
-	   don't want that.
-	*/
-
-If C<Perl_gv_fetchmethod_autoload> gets rewritten to take (more) flag bits,
-then it ought to be possible to move the logic from C<S_method_common> to
-the "right" place. When making this change it would probably be good to also
-pass in at least the method name length, if not also pre-computed hash values
-when known. (I'm contemplating a plan to pre-compute hash values for common
-fixed strings such as C<ISA> and pass them in to functions.)
-
 =head2 Organize error messages
 
 Perl's diagnostics (error messages, see L<perldiag>) could use
@@ -834,7 +897,9 @@ Currently C<goto keyword> "computes" the label value:
     $ perl -e 'goto print'
     Can't find label 1 at -e line 1.
 
-It would be nice to forbid labels with keyword names, to avoid confusion.
+It is controversial if the right way to avoid the confusion is to forbid
+labels with keyword names, or if it would be better to always treat
+bareword expressions after a "goto" as a label and never as a keyword.
 
 =head2 truncate() prototype
 
@@ -845,7 +910,7 @@ be C<*$> instead. (This is changed in F<opcode.pl>)
 
 Currently C<$foo ~~ $object> will die with the message "Smart matching a
 non-overloaded object breaks encapsulation". It would be nice to allow
-to bypass this by using explictly the syntax C<$foo ~~ %$object> or
+to bypass this by using explicitly the syntax C<$foo ~~ %$object> or
 C<$foo ~~ @$object>.
 
 =head2 error reporting of [$a ; $b]
@@ -863,7 +928,7 @@ C<;> is parsed where it is not legal as a statement terminator (ie inside
 C<{}> used as a hashref, C<[]> or C<()>) it issues an error something like
 I<';' isn't legal inside an expression - if you need multiple statements use a
 do {...} block>. See the thread starting at
-http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2008-09/msg00573.html
+L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2008-09/msg00573.html>
 
 =head2 lexicals used only once
 
@@ -882,11 +947,13 @@ years for this discrepancy.
 
 =head2 UTF-8 revamp
 
-The handling of Unicode is unclean in many places. For example, the regexp
-engine matches in Unicode semantics whenever the string or the pattern is
-flagged as UTF-8, but that should not be dependent on an internal storage
-detail of the string. Likewise, case folding behaviour is dependent on the
-UTF8 internal flag being on or off.
+The handling of Unicode is unclean in many places.  In the regex engine
+there are especially many problems.  The swash data structure could be
+replaced my something better.  Inversion lists and maps are likely
+candidates.  The whole Unicode database could be placed in-core for a
+huge speed-up.  Only minimal work was done on the optimizer when utf8
+was added, with the result that the synthetic start class often will
+fail to narrow down the possible choices when given non-Latin1 input.
 
 =head2 Properly Unicode safe tokeniser and pads.
 
@@ -952,11 +1019,6 @@ slices. This would be good to fix.
 The regexp optimiser is not optional. It should configurable to be, to allow
 its performance to be measured, and its bugs to be easily demonstrated.
 
-=head2 delete &function
-
-Allow to delete functions. One can already undef them, but they're still
-in the stash.
-
 =head2 C</w> regex modifier
 
 That flag would enable to match whole words, and also to interpolate
@@ -964,7 +1026,8 @@ arrays as alternations. With it, C</P/w> would be roughly equivalent to:
 
     do { local $"='|'; /\b(?:P)\b/ }
 
-See L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2007-01/msg00400.html>
+See
+L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2007-01/msg00400.html>
 for the discussion.
 
 =head2 optional optimizer
@@ -1003,16 +1066,6 @@ reinstated.
 
 The old perltodo notes "Look at the "reification" code in C<av.c>".
 
-=head2 The yada yada yada operators
-
-Perl 6's Synopsis 3 says:
-
-I<The ... operator is the "yada, yada, yada" list operator, which is used as
-the body in function prototypes. It complains bitterly (by calling fail)
-if it is ever executed. Variant ??? calls warn, and !!! calls die.>
-
-Those would be nice to add to Perl 5. That could be done without new ops.
-
 =head2 Virtualize operating system access
 
 Implement a set of "vtables" that virtualizes operating system access
@@ -1028,7 +1081,7 @@ in fact, all of L<perlport> is.)
 This has actually already been implemented (but only for Win32),
 take a look at F<iperlsys.h> and F<win32/perlhost.h>.  While all Win32
 variants go through a set of "vtables" for operating system access,
-non-Win32 systems currently go straight for the POSIX/UNIX-style
+non-Win32 systems currently go straight for the POSIX/Unix-style
 system/library call.  Similar system as for Win32 should be
 implemented for all platforms.  The existing Win32 implementation
 probably does not need to survive alongside this proposed new
@@ -1052,7 +1105,8 @@ See also L</"Extend PerlIO and PerlIO::Scalar">.
 
 The peephole optimiser converts constants used for hash key lookups to shared
 hash key scalars. Under ithreads, something is undoing this work.
-See http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2007-09/msg00793.html
+See
+L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2007-09/msg00793.html>
 
 =head2 Store the current pad in the OP slab allocator
 
@@ -1081,7 +1135,8 @@ Note that the slab allocator allocates ops downwards in memory, so one would
 have to actually "allocate" the ops in reverse-execution order to get them
 contiguous in memory in execution order.
 
-See http://www.nntp.perl.org/group/perl.perl5.porters/2007/12/msg131975.html
+See
+L<http://www.nntp.perl.org/group/perl.perl5.porters/2007/12/msg131975.html>
 
 Note that running this copy, and then freeing all the old location ops would
 cause their slabs to be freed, which would eliminate possible memory wastage if
@@ -1164,16 +1219,16 @@ combines the code in pp_entersub, pp_leavesub.  This should probably
 be done 1st in XS, and using B::Generate to patch the new OP into the
 optrees.
 
-=head2 C<\N>
+=head2 Add C<00dddd>
 
-It should be possible to add a C<\N> regex assertion, meaning "every
-character except C<\n>° independently of the context. That would
-of course imply that C<\N> couldn't be followed by an opening C<{>.
+It has been proposed that octal constants be specifiable through the syntax
+C<0oddddd>, parallel to the existing construct to specify hex constants
+C<0xddddd>
 
 =head1 Big projects
 
 Tasks that will get your name mentioned in the description of the "Highlights
-of 5.12"
+of 5.14"
 
 =head2 make ithreads more robust
 
@@ -1182,7 +1237,8 @@ Generally make ithreads more robust. See also L</iCOW>
 This task is incremental - even a little bit of work on it will help, and
 will be greatly appreciated.
 
-One bit would be to write the missing code in sv.c:Perl_dirp_dup.
+One bit would be to determine how to clone directory handles on systems
+without a C<fchdir> function (in sv.c:Perl_dirp_dup).
 
 Fix Perl_sv_dup, et al so that threads can return objects.
 
@@ -1195,11 +1251,6 @@ it would be a good thing.
 =head2 (?{...}) closures in regexps
 
 Fix (or rewrite) the implementation of the C</(?{...})/> closures.
-
-=head2 A re-entrant regexp engine
-
-This will allow the use of a regex from inside (?{ }), (??{ }) and
-(?(?{ })|) constructs.
 
 =head2 Add class set operations to regexp engine
 

@@ -1,6 +1,6 @@
 package UNIVERSAL;
 
-our $VERSION = '1.05';
+our $VERSION = '1.08';
 
 # UNIVERSAL should not contain any extra subs/methods beyond those
 # that it exists to define. The use of Exporter below is a historical
@@ -15,6 +15,12 @@ require Exporter;
 # anything unless called on UNIVERSAL.
 sub import {
     return unless $_[0] eq __PACKAGE__;
+    return unless @_ > 1;
+    require warnings;
+    warnings::warnif(
+      'deprecated',
+      'UNIVERSAL->import is deprecated and will be removed in a future perl',
+    );
     goto &Exporter::import;
 }
 
@@ -93,7 +99,7 @@ If you're not sure what you have (the C<VAL> case), wrap the method call in an
 C<eval> block to catch the exception if C<VAL> is undefined.
 
 If you want to be sure that you're calling C<isa> as a method, not a class,
-check the invocant with C<blessed> from L<Scalar::Util> first:
+check the invocand with C<blessed> from L<Scalar::Util> first:
 
   use Scalar::Util 'blessed';
 
@@ -113,7 +119,7 @@ itself.  For example, logging or serialization may be roles.
 C<DOES> and C<isa> are similar, in that if either is true, you know that the
 object or class on which you call the method can perform specific behavior.
 However, C<DOES> is different from C<isa> in that it does not care I<how> the
-invocant performs the operations, merely that it does.  (C<isa> of course
+invocand performs the operations, merely that it does.  (C<isa> of course
 mandates an inheritance relationship.  Other relationships include aggregation,
 delegation, and mocking.)
 
@@ -141,7 +147,7 @@ I<undef>.  This includes methods inherited or imported by C<$obj>, C<CLASS>, or
 C<VAL>.
 
 C<can> cannot know whether an object will be able to provide a method through
-AUTOLOAD (unless the object's class has overriden C<can> appropriately), so a
+AUTOLOAD (unless the object's class has overridden C<can> appropriately), so a
 return value of I<undef> does not necessarily mean the object will not be able
 to handle the method call. To get around this some module authors use a forward
 declaration (see L<perlsub>) for methods they will handle via AUTOLOAD. For
@@ -151,7 +157,7 @@ calling the coderef will cause an error.
 
 You may call C<can> as a class (static) method or an object method.
 
-Again, the same rule about having a valid invocant applies -- use an C<eval>
+Again, the same rule about having a valid invocand applies -- use an C<eval>
 block or C<blessed> if you need to be extra paranoid.
 
 =item C<VERSION ( [ REQUIRE ] )>
@@ -159,7 +165,9 @@ block or C<blessed> if you need to be extra paranoid.
 C<VERSION> will return the value of the variable C<$VERSION> in the
 package the object is blessed into. If C<REQUIRE> is given then
 it will do a comparison and die if the package version is not
-greater than or equal to C<REQUIRE>.
+greater than or equal to C<REQUIRE>.  Both C<$VERSION> or C<REQUIRE>
+must be "lax" version numbers (as defined by the L<version> module)
+or C<VERSION> will die with an error.
 
 C<VERSION> can be called as either a class (static) method or an object
 method.
@@ -181,7 +189,8 @@ available to your program (and you should not do so).
 None by default.
 
 You may request the import of three functions (C<isa>, C<can>, and C<VERSION>),
-however it is usually harmful to do so.  Please don't do this in new code.
+B<but this feature is deprecated and will be removed>.  Please don't do this in
+new code.
 
 For example, previous versions of this documentation suggested using C<isa> as
 a function to determine the type of a reference:

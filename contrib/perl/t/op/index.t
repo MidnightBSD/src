@@ -7,7 +7,7 @@ BEGIN {
 }
 
 use strict;
-plan( tests => 111 );
+plan( tests => 113 );
 
 run_tests() unless caller;
 
@@ -92,13 +92,8 @@ is(rindex($a, "foo",    ), 0);
 {
     my $search;
     my $text;
-    if (ord('A') == 193) {
-	$search = "foo \x71 bar";
-	$text = "a\xb1\xb1a $search    $search quux";
-    } else {
-	$search = "foo \xc9 bar";
-	$text = "a\xa3\xa3a $search    $search quux";
-    }
+    $search = latin1_to_native("foo \xc9 bar");
+    $text = latin1_to_native("a\xa3\xa3a $search    $search quux");
 
     my $text_utf8 = $text;
     utf8::upgrade($text_utf8);
@@ -137,7 +132,8 @@ foreach my $utf8 ('', ', utf-8') {
     foreach my $arraybase (0, 1, -1, -2) {
 	my $expect_pos = 2 + $arraybase;
 
-	my $prog = "\$[ = $arraybase; \$big = \"N\\xabN\\xab\"; ";
+	my $prog = "no warnings 'deprecated';\n";
+	$prog .= "\$[ = $arraybase; \$big = \"N\\xabN\\xab\"; ";
 	$prog .= '$big .= chr 256; chop $big; ' if $utf8;
 	$prog .= 'print rindex $big, "N", 2 + $[';
 
@@ -196,6 +192,15 @@ SKIP: {
             die $@ if $@;
         }
     }
+}
+
+{
+    # RT#75898
+    is(eval { utf8::upgrade($_ = " "); index $_, " ", 72 }, -1,
+       'UTF-8 cache handles offset beyond the end of the string');
+    $_ = "\x{100}BC";
+    is(index($_, "C", 4), -1,
+       'UTF-8 cache handles offset beyond the end of the string');
 }
 
 }

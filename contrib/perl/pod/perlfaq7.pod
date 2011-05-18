@@ -29,7 +29,8 @@ They are type specifiers, as detailed in L<perldata>:
 	* for all types of that symbol name.  In version 4 you used them like
 	  pointers, but in modern perls you can just use references.
 
-There are couple of other symbols that you're likely to encounter that aren't
+There are a couple of other symbols that
+you're likely to encounter that aren't
 really type specifiers:
 
 	<> are used for inputting a record from a filehandle.
@@ -48,8 +49,8 @@ I<not> use the brackets.  These are correct: C<eof(FH)>, C<seek(FH, 0,
 
 Normally, a bareword doesn't need to be quoted, but in most cases
 probably should be (and must be under C<use strict>).  But a hash key
-consisting of a simple word (that isn't the name of a defined
-subroutine) and the left-hand operand to the C<< => >> operator both
+consisting of a simple word and the left-hand
+operand to the C<< => >> operator both
 count as though they were quoted:
 
 	This                    is like this
@@ -202,9 +203,6 @@ distributions.
 
 (contributed by brian d foy)
 
-The full answer to this can be found at
-http://cpan.org/modules/04pause.html#takeover
-
 The easiest way to take over a module is to have the current
 module maintainer either make you a co-maintainer or transfer
 the module to you.
@@ -215,23 +213,23 @@ treat each case individually.
 
 =over 4
 
-=item
+=item *
 
 Get a login for the Perl Authors Upload Server (PAUSE) if you don't
 already have one: http://pause.perl.org
 
-=item
+=item *
 
 Write to modules@perl.org explaining what you did to contact the
 current maintainer. The PAUSE admins will also try to reach the
 maintainer.
 
-=item
+=item *
 
 Post a public message in a heavily trafficked site announcing your
 intention to take over the module.
 
-=item
+=item *
 
 Wait a bit. The PAUSE admins don't want to act too quickly in case
 the current maintainer is on holiday. If there's no response to
@@ -335,7 +333,7 @@ package:
 		sub next_id { ++$id }
 	}
 
-This is discussed in more detail in L<perlsub>, see the entry on
+This is discussed in more detail in L<perlsub>; see the entry on
 I<Persistent Private Variables>.
 
 =head2 What is variable suicide and how can I prevent it?
@@ -378,12 +376,9 @@ The expected output is:
 
 =head2 How can I pass/return a {Function, FileHandle, Array, Hash, Method, Regex}?
 
-With the exception of regexes, you need to pass references to these
-objects.  See L<perlsub/"Pass by Reference"> for this particular
-question, and L<perlref> for information on references.
-
-See "Passing Regexes", later in L<perlfaq7>, for information on
-passing regular expressions.
+You need to pass references to these objects.  See L<perlsub/"Pass by
+Reference"> for this particular question, and L<perlref> for
+information on references.
 
 =over 4
 
@@ -423,12 +418,9 @@ and especially L<perlsub/"Pass by Reference"> for more information.
 
 =item Passing Regexes
 
-To pass regexes around, you'll need to be using a release of Perl
-sufficiently recent as to support the C<qr//> construct, pass around
-strings and use an exception-trapping eval, or else be very, very clever.
-
-Here's an example of how to pass in a string to be regex compared
-using C<qr//>:
+Here's an example of how to pass in a string and a regular expression
+for it to match against. You construct the pattern with the C<qr//>
+operator:
 
 	sub compare($$) {
 		my ($val1, $regex) = @_;
@@ -436,37 +428,6 @@ using C<qr//>:
 	return $retval;
 	}
 	$match = compare("old McDonald", qr/d.*D/i);
-
-Notice how C<qr//> allows flags at the end.  That pattern was compiled
-at compile time, although it was executed later.  The nifty C<qr//>
-notation wasn't introduced until the 5.005 release.  Before that, you
-had to approach this problem much less intuitively.  For example, here
-it is again if you don't have C<qr//>:
-
-	sub compare($$) {
-		my ($val1, $regex) = @_;
-		my $retval = eval { $val1 =~ /$regex/ };
-	die if $@;
-	return $retval;
-	}
-
-	$match = compare("old McDonald", q/($?i)d.*D/);
-
-Make sure you never say something like this:
-
-	return eval "\$val =~ /$regex/";   # WRONG
-
-or someone can sneak shell escapes into the regex due to the double
-interpolation of the eval and the double-quoted string.  For example:
-
-	$pattern_of_evil = 'danger ${ system("rm -rf * &") } danger';
-
-	eval "\$string =~ /$pattern_of_evil/";
-
-Those preferring to be very, very clever might see the O'Reilly book,
-I<Mastering Regular Expressions>, by Jeffrey Friedl.  Page 273's
-Build_MatchMany_Function() is particularly interesting.  A complete
-citation of this book is given in L<perlfaq2>.
 
 =item Passing Methods
 
@@ -593,7 +554,7 @@ For instance:
 
 Notice how at no point does the value "private" get printed.  That's
 because $var only has that value within the block of the lexical()
-function, and it is hidden from called subroutine.
+function, and it is hidden from the called subroutine.
 
 In summary, local() doesn't make what you think of as private, local
 variables.  It gives a global variable a temporary value.  my() is
@@ -673,8 +634,7 @@ Why do you want to do that? :-)
 
 If you want to override a predefined function, such as open(),
 then you'll have to import the new definition from a different
-module.  See L<perlsub/"Overriding Built-in Functions">.  There's
-also an example in L<perltoot/"Class::Template">.
+module.  See L<perlsub/"Overriding Built-in Functions">.
 
 If you want to overload a Perl operator, such as C<+> or C<**>,
 then you'll want to use the C<use overload> pragma, documented
@@ -688,9 +648,9 @@ see L<perltoot/"Overridden Methods">.
 (contributed by brian d foy)
 
 Calling a subroutine as C<&foo> with no trailing parentheses ignores
-the prototype of C<foo> and passes it the current value of the argumet
+the prototype of C<foo> and passes it the current value of the argument
 list, C<@_>. Here's an example; the C<bar> subroutine calls C<&foo>,
-which prints what its arguments list:
+which prints its arguments list:
 
 	sub bar { &foo }
 
@@ -837,7 +797,7 @@ out L<perltoot> for details about any of the above cases.  You may
 also use C<print ref($object)> to find out the class C<$object> was
 blessed into.
 
-Another possible reason for problems is because you've used the
+Another possible reason for problems is that you've used the
 indirect object syntax (eg, C<find Guru "Samy">) on a class name
 before Perl has seen that such a package exists.  It's wisest to make
 sure your packages are all defined before you start using them, which
@@ -861,6 +821,19 @@ into strings like you can with variables:
 	my $current_package = __PACKAGE__;
 	print "I am in package $current_package\n";
 
+If you want to find the package calling your code, perhaps to give better
+diagnostics as C<Carp> does, use the C<caller> built-in:
+
+	sub foo {
+		my @args = ...;
+		my( $package, $filename, $line ) = caller;
+
+		print "I was called from package $package\n";
+		);
+
+By default, your program starts in package C<main>, so you will
+always be in some package.
+
 This is different from finding out the package an object is blessed
 into, which might not be the current package. For that, use C<blessed>
 from C<Scalar::Util>, part of the Standard Library since Perl 5.8:
@@ -873,20 +846,13 @@ into, however, as long as it claims to inherit from that class:
 
 	my $is_right_class = eval { $object->isa( $package ) }; # true or false
 
-If you want to find the package calling your code, perhaps to give better
-diagnostics as C<Carp> does, use the C<caller> built-in:
+And, with Perl 5.10 and later, you don't have to check for an
+inheritance to see if the object can handle a role. For that, you can
+use C<DOES>, which comes from C<UNIVERSAL>:
 
-	sub foo {
-		my @args = ...;
-		my( $package, $filename, $line ) = caller;
+	my $class_does_it = eval { $object->DOES( $role ) }; # true or false
 
-		print "I was called from package $package\n";
-		);
-
-By default, your program starts in package C<main>, so you should
-always be in some package unless someone uses the C<package> built-in
-with no namespace. See the C<package> entry in L<perlfunc> for the
-details of empty packges.
+You can safely replace C<isa> with C<DOES> (although the converse is not true).
 
 =head2 How can I comment out a large block of Perl code?
 
@@ -908,10 +874,10 @@ comments). You end the comment with C<=cut>, ending the Pod section:
 
 	=cut
 
-The quick-and-dirty method only works well when you don't plan to 
+The quick-and-dirty method only works well when you don't plan to
 leave the commented code in the source. If a Pod parser comes along,
 you're multiline comment is going to show up in the Pod translation.
-A better way hides it from Pod parsers as well. 
+A better way hides it from Pod parsers as well.
 
 The C<=begin> directive can mark a section for a particular purpose.
 If the Pod parser doesn't want to handle it, it just ignores it. Label
@@ -977,8 +943,8 @@ altogether.  Global variables are bad because they can easily collide
 accidentally and in general make for non-scalable and confusing code.
 
 Symbolic references are forbidden under the C<use strict> pragma.
-They are not true references and consequently are not reference counted
-or garbage collected.
+They are not true references and consequently are not reference-counted
+or garbage-collected.
 
 The other reason why using a variable to hold the name of another
 variable is a bad idea is that the question often stems from a lack of
@@ -1015,7 +981,7 @@ make it less confusing, like bracketed percent symbols, etc.
 	$str =~ s/%(\w+)%/$USER_VARS{$1}/g;   # no /e here at all
 
 Another reason that folks sometimes think they want a variable to
-contain the name of a variable is because they don't know how to build
+contain the name of a variable is that they don't know how to build
 proper data structures using hashes.  For example, let's say they
 wanted two hashes in their program: %fred and %barney, and that they
 wanted to use another scalar variable to refer to those by name.
@@ -1036,7 +1002,7 @@ And just use a multilevel hash to start with.
 
 The only times that you absolutely I<must> use symbolic references are
 when you really must refer to the symbol table.  This may be because it's
-something that can't take a real reference to, such as a format name.
+something that one can't take a real reference to, such as a format name.
 Doing so may also be important for method calls, since these always go
 through the symbol table for resolution.
 
@@ -1052,8 +1018,8 @@ can play around with the symbol table.  For example:
 All those functions (red(), blue(), green(), etc.) appear to be separate,
 but the real code in the closure actually was compiled only once.
 
-So, sometimes you might want to use symbolic references to directly
-manipulate the symbol table.  This doesn't matter for formats, handles, and
+So, sometimes you might want to use symbolic references to manipulate
+the symbol table directly.  This doesn't matter for formats, handles, and
 subroutines, because they are always global--you can't use my() on them.
 For scalars, arrays, and hashes, though--and usually for subroutines--
 you probably only want to use hard references.
@@ -1088,17 +1054,9 @@ If you get a message like "perl: command not found", perl is not in
 your PATH, which might also mean that the location of perl is not
 where you expect it so you need to adjust your shebang line.
 
-=head1 REVISION
-
-Revision: $Revision: 1.1.1.2 $
-
-Date: $Date: 2011-02-17 12:49:38 $
-
-See L<perlfaq> for source control details and availability.
-
 =head1 AUTHOR AND COPYRIGHT
 
-Copyright (c) 1997-2009 Tom Christiansen, Nathan Torkington, and
+Copyright (c) 1997-2010 Tom Christiansen, Nathan Torkington, and
 other authors as noted. All rights reserved.
 
 This documentation is free; you can redistribute it and/or modify it

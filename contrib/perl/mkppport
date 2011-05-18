@@ -2,7 +2,6 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use Pod::Usage;
 use File::Spec;
 use File::Compare qw( compare );
 use File::Copy qw( copy );
@@ -12,7 +11,7 @@ sub iterdirs(&);
 
 my $rootdir = dirname($0);
 
-unshift @INC, File::Spec->catdir($rootdir, 't', 'lib');
+unshift @INC, File::Spec->catdir($rootdir, qw(cpan ExtUtils-MakeMaker t lib));
 
 eval q{ use MakeMaker::Test::Utils qw( which_perl ) };
 $@ and die $@;
@@ -22,7 +21,10 @@ my %opt = (
   clean  => 0,
 );
 
-GetOptions(\%opt, qw( clean list=s )) or pod2usage(2);
+unless ( GetOptions(\%opt, qw( clean list=s )) ) {
+  require Pod::Usage;
+  Pod::Usage::pod2usage(2);
+}
 
 my $absroot = File::Spec->rel2abs($rootdir);
 my @destdirs = readlist($opt{list});
@@ -56,7 +58,7 @@ unshift @INC, File::Spec->catdir($absroot, 'lib');
 
 # Change to Devel::PPPort directory, as it needs the stuff
 # from the parts/ directory
-chdir File::Spec->catdir($rootdir, 'ext', 'Devel-PPPort');
+chdir File::Spec->catdir($rootdir, 'cpan', 'Devel-PPPort');
 
 # Capture and remove temporary files
 my @unlink;

@@ -1,8 +1,10 @@
-# $Id: newgetopt.pl,v 1.1.1.2 2011-02-17 12:49:38 laffer1 Exp $
+warn "Legacy library @{[(caller(0))[6]]} will be removed from the Perl core distribution in the next major release. Please install it from the CPAN distribution Perl4::CoreLibs. It is being used at @{[(caller)[1]]}, line @{[(caller)[2]]}.\n";
 
 # This library is no longer being maintained, and is included for backward
 # compatibility with Perl 4 programs which may require it.
 # It is now just a wrapper around the Getopt::Long module.
+# This legacy library is deprecated and will be removed in a future
+# release of perl.
 #
 # In particular, this should not be used as an example of modern Perl
 # programming techniques.
@@ -16,7 +18,7 @@
     $PERMUTE = 1;
     $RETURN_IN_ORDER = 2;
 
-    # Handle POSIX compliancy.
+    # Handle POSIX compliance.
     if ( defined $ENV{"POSIXLY_CORRECT"} ) {
 	$autoabbrev = 0;	# no automatic abbrev of options (???)
 	$getopt_compat = 0;	# disallow '+' to start options

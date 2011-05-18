@@ -1,5 +1,3 @@
-# $Id: dgux.sh,v 1.1.1.1 2009-03-15 19:18:48 ctriv Exp $
-
 # This is a hints file for DGUX, which is EMC's Data General's Unix.  It 
 # was originally developed with version 5.4.3.10 of the OS, and then was
 # later updated running under version 4.11.2 (running on m88k hardware).
@@ -24,7 +22,7 @@
 
 ##########################################
 # Modified by Takis Psarogiannakopoulos
-# Universirty of Cambridge
+# University of Cambridge
 # Centre for Mathematical Sciences
 # Department of Pure Mathematics
 # Wilberforce road
@@ -54,14 +52,14 @@ libpth="/usr/lib"
 #####################################
 
 prefix=/usr/local
-perlpath="$prefix/bin/perl510"
-startperl="#! $prefix/bin/perl510"
-privlib="$prefix/lib/perl510"
+perlpath="$prefix/bin/perl514"
+startperl="#! $prefix/bin/perl514"
+privlib="$prefix/lib/perl514"
 man1dir="$prefix/man/man1"
 man3dir="$prefix/man/man3"
 
-sitearch="$prefix/lib/perl510/$archname"
-sitelib="$prefix/lib/perl510"
+sitearch="$prefix/lib/perl514/$archname"
+sitelib="$prefix/lib/perl514"
 
 #Do not overwrite by default /usr/bin/perl of DG/UX
 installusrbinperl="$undef"
@@ -140,7 +138,7 @@ unset sde_path default_sde sde
 # <takis@XFree86.Org>
 #####################################
 
-libperl="libperl510.so"
+libperl="libperl514.so"
 
 # Many functions (eg, gethostent(), killpg(), getpriority(), setruid()
 # dbm_*(), and plenty more) are defined in -ldgc.  Usually you don't
@@ -207,8 +205,8 @@ $define|true|[yY]*)
 	# DG/UX library!
 	libswanted="dbm posix resolv socket nsl dl m rte"
 	archname="ix86-dgux-thread"
-	sitearch="$prefix/lib/perl510/$archname"
-	sitelib="$prefix/lib/perl510"
+	sitearch="$prefix/lib/perl514/$archname"
+	sitelib="$prefix/lib/perl514"
   case "$cc" in
 	*gcc*)
 	   #### Use GCC -2.95.2/3 rev (DG/UX) and -pthread

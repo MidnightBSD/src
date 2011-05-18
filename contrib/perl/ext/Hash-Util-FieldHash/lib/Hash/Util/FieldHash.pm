@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Scalar::Util qw( reftype);
 
-our $VERSION = '1.04';
+our $VERSION = '1.09';
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -26,7 +26,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
     require XSLoader;
     my %ob_reg; # private object registry
     sub _ob_reg { \ %ob_reg }
-    XSLoader::load('Hash::Util::FieldHash', $VERSION);
+    XSLoader::load();
 }
 
 sub fieldhash (\%) {
@@ -753,7 +753,7 @@ incompatibility of object bodies.
 =head1 GUTS
 
 To make C<Hash::Util::FieldHash> work, there were two changes to
-F<perl> itself.  C<PERL_MAGIC_uvar> was made avalaible for hashes,
+F<perl> itself.  C<PERL_MAGIC_uvar> was made available for hashes,
 and weak references now call uvar C<get> magic after a weakref has been
 cleared.  The first feature is used to make field hashes intercept
 their keys upon access.  The second one triggers garbage collection.

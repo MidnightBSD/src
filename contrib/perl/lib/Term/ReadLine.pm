@@ -156,22 +156,6 @@ empty, the best available package is loaded.
 (Note that processing of C<PERL_RL> for ornaments is in the discretion of the 
 particular used C<Term::ReadLine::*> package).
 
-=head1 CAVEATS
-
-It seems that using Term::ReadLine from Emacs minibuffer doesn't work
-quite right and one will get an error message like
-
-    Cannot open /dev/tty for read at ...
-
-One possible workaround for this is to explicitly open /dev/tty like this
-
-    open (FH, "/dev/tty" )
-      or eval 'sub Term::ReadLine::findConsole { ("&STDIN", "&STDERR") }';
-    die $@ if $@;
-    close (FH);
-
-or you can try using the 4-argument form of Term::ReadLine->new().
-
 =cut
 
 use strict;
@@ -196,7 +180,6 @@ sub readline {
 	and defined &Tk::DoOneEvent;
   #$str = scalar <$in>;
   $str = $self->get_line;
-  $str =~ s/^\s*\Q$prompt\E// if ($^O eq 'MacOS');
   utf8::upgrade($str)
       if (${^UNICODE} & PERL_UNICODE_STDIN || defined ${^ENCODING}) &&
          utf8::valid($str);
@@ -211,9 +194,7 @@ sub findConsole {
     my $console;
     my $consoleOUT;
 
-    if ($^O eq 'MacOS') {
-        $console = "Dev:Console";
-    } elsif (-e "/dev/tty") {
+    if (-e "/dev/tty") {
 	$console = "/dev/tty";
     } elsif (-e "con" or $^O eq 'MSWin32') {
        $console = 'CONIN$';
@@ -235,6 +216,10 @@ sub findConsole {
 
     $consoleOUT = $console unless defined $consoleOUT;
     $console = "&STDIN" unless defined $console;
+    if ($console eq "/dev/tty" && !open(my $fh, "<", $console)) {
+      $console = "&STDIN";
+      undef($consoleOUT);
+    }
     if (!defined $consoleOUT) {
       $consoleOUT = defined fileno(STDERR) && $^O ne 'MSWin32' ? "&STDERR" : "&STDOUT";
     }
@@ -303,7 +288,7 @@ sub get_line {
 
 package Term::ReadLine;		# So late to allow the above code be defined?
 
-our $VERSION = '1.04';
+our $VERSION = '1.07';
 
 my ($which) = exists $ENV{PERL_RL} ? split /\s+/, $ENV{PERL_RL} : undef;
 if ($which) {
@@ -311,6 +296,9 @@ if ($which) {
     eval "use Term::ReadLine::Gnu;";
   } elsif ($which =~ /\bperl\b/i) {
     eval "use Term::ReadLine::Perl;";
+  } elsif ($which =~ /^(Stub|TermCap|Tk)$/) {
+    # it is already in memory to avoid false exception as seen in:
+    # PERL_RL=Stub perl -e'$SIG{__DIE__} = sub { print @_ }; require Term::ReadLine'
   } else {
     eval "use Term::ReadLine::$which;";
   }

@@ -6,7 +6,7 @@ BEGIN {
     require 'test.pl';
 }
 use warnings;
-plan( tests => 144 );
+plan( tests => 162 );
 
 # these shouldn't hang
 {
@@ -701,8 +701,8 @@ $fail_msg = q(Can't undef active subroutine);
 cmp_ok(substr($@,0,length($fail_msg)),'eq',$fail_msg,'undef active subr');
 
 
-
-{
+for(1,2) # We run this twice, to make sure sort does not lower the ref
+{        # count. See bug 71076.
     my $failed = 0;
 
     sub rec {
@@ -768,16 +768,22 @@ cmp_ok($answer,'eq','good','sort subr called from other package');
     cmp_ok(substr($@,0,length($fail_msg)),'eq',$fail_msg,'bug 7567');
 }
 
+{
+    local $TODO = "sort should make sure elements are not freed in the sort block";
+    eval { @nomodify_x=(1..8); our @copy = sort { @nomodify_x = (0) } (@nomodify_x, 3); };
+    is($@, "");
+}
+
 
 # Sorting shouldn't increase the refcount of a sub
 {
-    sub foo {(1+$a) <=> (1+$b)}
-    my $refcnt = &Internals::SvREFCNT(\&foo);
-    @output = sort foo 3,7,9;
+    sub sportello {(1+$a) <=> (1+$b)}
+    my $refcnt = &Internals::SvREFCNT(\&sportello);
+    @output = sort sportello 3,7,9;
 
     {
-        package Foo;
-        ::is($refcnt, &Internals::SvREFCNT(\&foo), "sort sub refcnt");
+        package Doc;
+        ::is($refcnt, &Internals::SvREFCNT(\&::sportello), "sort sub refcnt");
         $fail_msg = q(Modification of a read-only value attempted);
         # Sorting a read-only array in-place shouldn't be allowed
         my @readonly = (1..10);
@@ -801,3 +807,134 @@ is("@b", "10 9 8 7 6 5 4 3 2 1", "return with SVs on stack");
 sub ret_with_stacked { $_ = ($a<=>$b) + do {return $b <=> $a} }
 @b = sort ret_with_stacked 1..10;
 is("@b", "10 9 8 7 6 5 4 3 2 1", "return with SVs on stack");
+
+# Comparison code should be able to give result in non-integer representation.
+sub cmp_as_string($$) { $_[0] < $_[1] ? "-1" : $_[0] == $_[1] ? "0" : "+1" }
+@b = sort { cmp_as_string($a, $b) } (1,5,4,7,3,2,3);
+is("@b", "1 2 3 3 4 5 7", "comparison result as string");
+@b = sort cmp_as_string (1,5,4,7,3,2,3);
+is("@b", "1 2 3 3 4 5 7", "comparison result as string");
+
+# RT #34604: sort didn't honour overloading if the overloaded elements
+# were retrieved via tie
+
+{
+    package RT34604;
+
+    sub TIEHASH { bless {
+			p => bless({ val => 2 }),
+			q => bless({ val => 1 }),
+		    }
+		}
+    sub FETCH { $_[0]{$_[1] } }
+
+    my $cc = 0;
+    sub compare { $cc++; $_[0]{val} cmp $_[1]{val} }
+    my $cs = 0;
+    sub str { $cs++; $_[0]{val} }
+
+    use overload 'cmp' => \&compare, '""' => \&str;
+
+    package main;
+
+    tie my %h, 'RT34604';
+    my @sorted = sort @h{qw(p q)};
+    is($cc, 1, 'overload compare called once');
+    is("@sorted","1 2", 'overload sort result');
+    is($cs, 2, 'overload string called twice');
+}
+
+fresh_perl_is('sub w ($$) {my ($l, my $r) = @_; my $v = \@_; undef @_; $l <=> $r}; print join q{ }, sort w 3, 1, 2, 0',
+             '0 1 2 3',
+             {stderr => 1, switches => ['-w']},
+             'RT #72334');
+
+fresh_perl_is('sub w ($$) {my ($l, my $r) = @_; my $v = \@_; undef @_; @_ = 0..2; $l <=> $r}; print join q{ }, sort w 3, 1, 2, 0',
+             '0 1 2 3',
+             {stderr => 1, switches => ['-w']},
+             'RT #72334');
+
+{
+    my $count = 0;
+    {
+	package Counter;
+
+	sub new {
+	    ++$count;
+	    bless [];
+	}
+
+	sub DESTROY {
+	    --$count;
+	}
+    }
+
+    sub sorter ($$) {
+	my ($l, $r) = @_;
+	my $q = \@_;
+	$l <=> $r;
+    }
+
+    is($count, 0, 'None before we start');
+    my @a = map { Counter->new() } 0..1;
+    is($count, 2, '2 here');
+
+    my @b = sort sorter @a;
+
+    is(scalar @b, 2);
+    cmp_ok($b[0], '<', $b[1], 'sorted!');
+
+    is($count, 2, 'still the same 2 here');
+
+    @a = (); @b = ();
+
+    is($count, 0, 'all gone');
+}
+
+# [perl #77930] The context stack may be reallocated during a sort, as a
+#               result of deeply-nested (or not-so-deeply-nested) calls
+#               from a custom sort subroutine.
+fresh_perl_is
+ '
+   $sub = sub {
+    local $count = $count+1;
+    ()->$sub if $count < 1000;
+    $a cmp $b
+   };
+   () = sort $sub qw<a b c d e f g>;
+   print "ok"
+ ',
+ 'ok',
+  {},
+ '[perl #77930] cx_stack reallocation during sort'
+;
+
+# [perl #76026]
+# Match vars should not leak from one sort sub call to the next
+{
+  my $output = '';
+  sub soarter {
+    $output .= $1;
+    "Leakage" =~ /(.*)/;
+    1
+  }
+  sub soarterdd($$) {
+    $output .= $1;
+    "Leakage" =~ /(.*)/;
+    1
+  }
+
+  "Win" =~ /(.*)/;
+  my @b = sort soarter 0..2;
+
+  like $output, qr/^(?:Win)+\z/,
+   "Match vars do not leak from one plain sort sub to the next";
+
+  $output = '';
+
+  "Win" =~ /(.*)/;
+  @b = sort soarterdd 0..2;
+
+  like $output, qr/^(?:Win)+\z/,
+   'Match vars do not leak from one $$ sort sub to the next';
+}

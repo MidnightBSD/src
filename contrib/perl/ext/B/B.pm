@@ -6,28 +6,38 @@
 #      License or the Artistic License, as specified in the README file.
 #
 package B;
+use strict;
 
-our $VERSION = '1.22';
-
-use XSLoader ();
 require Exporter;
-@ISA = qw(Exporter);
+@B::ISA = qw(Exporter);
 
 # walkoptree_slow comes from B.pm (you are there),
 # walkoptree comes from B.xs
-@EXPORT_OK = qw(minus_c ppname save_BEGINs
-		class peekop cast_I32 cstring cchar hash threadsv_names
-		main_root main_start main_cv svref_2object opnumber
-		sub_generation amagic_generation perlstring
-		walkoptree_slow walkoptree walkoptree_exec walksymtable
-		parents comppadlist sv_undef compile_stats timing_info
-		begin_av init_av check_av end_av regex_padav dowarn defstash
-		curstash warnhook diehook inc_gv @optype @specialsv_name
-		);
-push @EXPORT_OK, qw(unitcheck_av) if $] > 5.009;
 
-sub OPf_KIDS ();
-use strict;
+BEGIN {
+    $B::VERSION = '1.29';
+    @B::EXPORT_OK = ();
+
+    # Our BOOT code needs $VERSION set, and will append to @EXPORT_OK.
+    # Want our constants loaded before the compiler meets OPf_KIDS below, as
+    # the combination of having the constant stay a Proxy Constant Subroutine
+    # and its value being inlined saves a little over .5K
+
+    require XSLoader;
+    XSLoader::load();
+}
+
+push @B::EXPORT_OK, (qw(minus_c ppname save_BEGINs
+			class peekop cast_I32 cstring cchar hash threadsv_names
+			main_root main_start main_cv svref_2object opnumber
+			sub_generation amagic_generation perlstring
+			walkoptree_slow walkoptree walkoptree_exec walksymtable
+			parents comppadlist sv_undef compile_stats timing_info
+			begin_av init_av check_av end_av regex_padav dowarn
+			defstash curstash warnhook diehook inc_gv @optype
+			@specialsv_name
+		      ), $] > 5.009 && 'unitcheck_av');
+
 @B::SV::ISA = 'B::OBJECT';
 @B::NULL::ISA = 'B::SV';
 @B::PV::ISA = 'B::SV';
@@ -97,8 +107,15 @@ sub B::IV::int_value {
 }
 
 sub B::NULL::as_string() {""}
-sub B::IV::as_string()   {goto &B::IV::int_value}
-sub B::PV::as_string()   {goto &B::PV::PV}
+*B::IV::as_string = \*B::IV::int_value;
+*B::PV::as_string = \*B::PV::PV;
+
+#  The input typemap checking makes no distinction between different SV types,
+#  so the XS body will generate the same C code, despite the different XS
+#  "types". So there is no change in behaviour from doing "newXS" like this,
+#  compared with the old approach of having a (near) duplicate XS body.
+#  We should fix the typemap checking.
+*B::IV::RV = \*B::PV::RV if $] > 5.012;
 
 my $debug;
 my $op_count = 0;
@@ -315,15 +332,13 @@ sub walksymtable {
     }
 }
 
-XSLoader::load 'B';
-
 1;
 
 __END__
 
 =head1 NAME
 
-B - The Perl Compiler
+B - The Perl Compiler Backend
 
 =head1 SYNOPSIS
 
@@ -530,7 +545,7 @@ per-thread threadsv variables.
 
 =back
 
-=head2 Exported utility variabiles
+=head2 Exported utility variables
 
 =over 4
 
@@ -1098,8 +1113,6 @@ This returns the op description from the global C PL_op_desc array
 =item pmnext
 
 Only up to Perl 5.9.4
-
-=item pmregexp
 
 =item pmflags
 

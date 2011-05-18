@@ -6,7 +6,7 @@ BEGIN {
     @INC = '../lib';
 }
 
-plan (tests => 22);
+plan (tests => 37);
 
 print "not " unless length("")    == 0;
 print "ok 1\n";
@@ -161,3 +161,67 @@ tie $u, 'Tie::StdScalar', chr 256;
 is(length $u, 1, "Length of a UTF-8 scalar returned from tie");
 is(length $u, 1, "Again! Again!");
 
+$^W = 1;
+
+my $warnings = 0;
+
+$SIG{__WARN__} = sub {
+    $warnings++;
+    warn @_;
+};
+
+is(length(undef), undef, "Length of literal undef");
+
+my $u;
+
+is(length($u), undef, "Length of regular scalar");
+
+$u = "Gotcha!";
+
+tie $u, 'Tie::StdScalar';
+
+is(length($u), undef, "Length of tied scalar (MAGIC)");
+
+is($u, undef);
+
+{
+    package U;
+    use overload '""' => sub {return undef;};
+}
+
+my $uo = bless [], 'U';
+
+is(length($uo), undef, "Length of overloaded reference");
+
+my $ul = 3;
+is(($ul = length(undef)), undef, 
+                    "Returned length of undef with result in TARG");
+is($ul, undef, "Assigned length of undef with result in TARG");
+
+$ul = 3;
+is(($ul = length($u)), undef,
+                "Returned length of tied undef with result in TARG");
+is($ul, undef, "Assigned length of tied undef with result in TARG");
+
+$ul = 3;
+is(($ul = length($uo)), undef,
+                "Returned length of overloaded undef with result in TARG");
+is($ul, undef, "Assigned length of overloaded undef with result in TARG");
+
+# ok(!defined $uo); Turns you can't test this. FIXME for pp_defined?
+
+{
+    my $y = "\x{100}BC";
+    is(index($y, "B"), 1, 'adds an intermediate position to the offset cache');
+    is(length $y, 3,
+       'Check that sv_len_utf8() can take advantage of the offset cache');
+}
+
+{
+    local $SIG{__WARN__} = sub {
+        pass("'print length undef' warned");
+    };
+    print length undef;
+}
+
+is($warnings, 0, "There were no other warnings");

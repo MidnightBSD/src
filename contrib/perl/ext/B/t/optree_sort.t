@@ -1,26 +1,20 @@
 #!perl
 
 BEGIN {
-    if ($ENV{PERL_CORE}){
-	chdir('t') if -d 't';
-	@INC = ('.', '../lib', '../ext/B/t');
-    } else {
-	unshift @INC, 't';
-	push @INC, "../../t";
-    }
+    unshift @INC, 't';
     require Config;
     if (($Config::Config{'extensions'} !~ /\bB\b/) ){
         print "1..0 # Skip -- Perl configured without B module\n";
         exit 0;
     }
-    # require 'test.pl'; # now done by OptreeCheck
+    if (!$Config::Config{useperlio}) {
+        print "1..0 # Skip -- need perlio to walk the optree\n";
+        exit 0;
+    }
 }
 use OptreeCheck;
 use Config;
-plan tests => 11;
-
-SKIP: {
-skip "no perlio in this build", 11 unless $Config::Config{useperlio};
+plan tests => 21;
 
 pass("SORT OPTIMIZATION");
 
@@ -309,8 +303,3 @@ EOT_EOT
 # 9  <$> const(IV 1) s
 # a  <1> leavesub[1 ref] K/REFC,1
 EONT_EONT
-
-} #skip
-
-__END__
-

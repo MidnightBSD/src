@@ -26,8 +26,16 @@ esac
 
 echo "Extracting x2p/Makefile (with variable substitutions)"
 rm -f Makefile
+
+# The .PL extractions use the Cwd extension.  For statically-built
+# perls, we need perl, not just miniperl.
+case "$usedl" in
+    define) perl="../miniperl" ;;
+    *)      perl="../perl" ;;
+esac
+
 cat >Makefile <<!GROK!THIS!
-# $RCSfile: Makefile.SH,v $$Revision: 1.1.1.2 $$Date: 2011-02-17 12:49:38 $
+# $RCSfile: Makefile.SH,v $$Revision: 1.1.1.3 $$Date: 2011-05-18 13:33:34 $
 #
 # $Log: not supported by cvs2svn $
 
@@ -63,6 +71,7 @@ OPTIMIZE = $optimize
 .SUFFIXES: .c \$(OBJ_EXT)
 
 RUN = $run
+PERL = $perl
 
 !GROK!THIS!
 
@@ -143,6 +152,8 @@ a2p$(OBJ_EXT): a2p.c a2py.c a2p.h EXTERN.h util.h INTERN.h \
 clean:
 	rm -f a2p$(EXE_EXT) psed *$(OBJ_EXT) $(plexe) $(plc) $(plm)
 
+distclean: veryclean
+
 realclean: clean
 	-rmdir .depending
 	rm -f core $(addedbyconf) all malloc.c
@@ -171,10 +182,8 @@ hlist:
 shlist:
 	echo $(sh) | tr ' ' $(TRNL) >.shlist
 
-# These should be automatically generated
-
 $(plextract):
-	$(RUN) ../miniperl -I../lib $@.PL
+	$(RUN) $(PERL) -I../lib $@.PL
 
 find2perl: find2perl.PL
 

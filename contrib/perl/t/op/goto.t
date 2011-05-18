@@ -10,28 +10,37 @@ BEGIN {
 
 use warnings;
 use strict;
-plan tests => 58;
+plan tests => 77;
 our $TODO;
+
+my $deprecated = 0;
+local $SIG{__WARN__} = sub { if ($_[0] =~ m/jump into a construct/) { $deprecated++; } else { warn $_[0] } };
 
 our $foo;
 while ($?) {
     $foo = 1;
   label1:
+    is($deprecated, 1);
+    $deprecated = 0;
     $foo = 2;
     goto label2;
 } continue {
     $foo = 0;
     goto label4;
   label3:
+    is($deprecated, 1);
+    $deprecated = 0;
     $foo = 4;
     goto label4;
 }
+is($deprecated, 0);
 goto label1;
 
 $foo = 3;
 
 label2:
 is($foo, 2, 'escape while loop');
+is($deprecated, 0);
 goto label3;
 
 label4:
@@ -60,7 +69,7 @@ sub bar {
 exit;
 
 FINALE:
-is(curr_test(), 16, 'FINALE');
+is(curr_test(), 20, 'FINALE');
 
 # does goto LABEL handle block contexts correctly?
 # note that this scope-hopping differs from last & next,
@@ -174,13 +183,18 @@ ok($ok, 'works correctly in a nested eval string');
 	A: { if ($false) { redo A; B: $ok = 1; redo A; } }
 	goto B unless $count++;
     }
+    is($deprecated, 0);
     a();
     ok($ok, '#19061 loop label wiped away by goto');
+    is($deprecated, 1);
+    $deprecated = 0;
 
     $ok = 0;
     my $p;
     for ($p=1;$p && goto A;$p=0) { A: $ok = 1 }
     ok($ok, 'weird case of goto and for(;;) loop');
+    is($deprecated, 1);
+    $deprecated = 0;
 }
 
 # bug #9990 - don't prematurely free the CV we're &going to.
@@ -217,7 +231,7 @@ close $f;
 
 $r = runperl(prog => 'use Op_goto01; print qq[DONE\n]');
 is($r, "OK\nDONE\n", "goto within use-d file"); 
-unlink "Op_goto01.pm";
+unlink_all "Op_goto01.pm";
 
 # test for [perl #24108]
 $ok = 1;
@@ -250,7 +264,7 @@ exit;
 
 bypass:
 
-is(curr_test(), 5, 'eval "goto $x"');
+is(curr_test(), 9, 'eval "goto $x"');
 
 # Test autoloading mechanism.
 
@@ -459,3 +473,126 @@ TODO: {
     }
 }
 
+is($deprecated, 0);
+
+#74290
+{
+    my $x;
+    my $y;
+    F1:++$x and eval 'return if ++$y == 10; goto F1;';
+    is($x, 10,
+       'labels outside evals can be distinguished from the start of the eval');
+}
+
+goto wham_eth;
+die "You can't get here";
+
+wham_eth: 1 if 0;
+ouch_eth: pass('labels persist even if their statement is optimised away');
+
+$foo = "(0)";
+if($foo eq $foo) {
+    goto bungo;
+}
+$foo .= "(9)";
+bungo:
+format CHOLET =
+wellington
+.
+$foo .= "(1)";
+SKIP: {
+    skip_if_miniperl("no dynamic loading on miniperl, so can't load PerlIO::scalar", 1);
+    my $cholet;
+    open(CHOLET, ">", \$cholet);
+    write CHOLET;
+    close CHOLET;
+    $foo .= "(".$cholet.")";
+    is($foo, "(0)(1)(wellington\n)", "label before format decl");
+}
+
+$foo = "(A)";
+if($foo eq $foo) {
+    goto orinoco;
+}
+$foo .= "(X)";
+orinoco:
+sub alderney { return "tobermory"; }
+$foo .= "(B)";
+$foo .= "(".alderney().")";
+is($foo, "(A)(B)(tobermory)", "label before sub decl");
+
+$foo = "[0:".__PACKAGE__."]";
+if($foo eq $foo) {
+    goto bulgaria;
+}
+$foo .= "[9]";
+bulgaria:
+package Tomsk;
+$foo .= "[1:".__PACKAGE__."]";
+$foo .= "[2:".__PACKAGE__."]";
+package main;
+$foo .= "[3:".__PACKAGE__."]";
+is($foo, "[0:main][1:Tomsk][2:Tomsk][3:main]", "label before package decl");
+
+$foo = "[A:".__PACKAGE__."]";
+if($foo eq $foo) {
+    goto adelaide;
+}
+$foo .= "[Z]";
+adelaide:
+package Cairngorm {
+    $foo .= "[B:".__PACKAGE__."]";
+}
+$foo .= "[C:".__PACKAGE__."]";
+is($foo, "[A:main][B:Cairngorm][C:main]", "label before package block");
+
+our $obidos;
+$foo = "{0}";
+if($foo eq $foo) {
+    goto shansi;
+}
+$foo .= "{9}";
+shansi:
+BEGIN { $obidos = "x"; }
+$foo .= "{1$obidos}";
+is($foo, "{0}{1x}", "label before BEGIN block");
+
+$foo = "{A:".(1.5+1.5)."}";
+if($foo eq $foo) {
+    goto stepney;
+}
+$foo .= "{Z}";
+stepney:
+use integer;
+$foo .= "{B:".(1.5+1.5)."}";
+is($foo, "{A:3}{B:2}", "label before use decl");
+
+$foo = "<0>";
+if($foo eq $foo) {
+    goto tom;
+}
+$foo .= "<9>";
+tom: dick: harry:
+$foo .= "<1>";
+$foo .= "<2>";
+is($foo, "<0><1><2>", "first of three stacked labels");
+
+$foo = "<A>";
+if($foo eq $foo) {
+    goto beta;
+}
+$foo .= "<Z>";
+alpha: beta: gamma:
+$foo .= "<B>";
+$foo .= "<C>";
+is($foo, "<A><B><C>", "second of three stacked labels");
+
+$foo = ",0.";
+if($foo eq $foo) {
+    goto gimel;
+}
+$foo .= ",9.";
+alef: bet: gimel:
+$foo .= ",1.";
+$foo .= ",2.";
+is($foo, ",0.,1.,2.", "third of three stacked labels");

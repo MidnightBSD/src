@@ -2513,6 +2513,16 @@ sub flags { 'ims@' }
 sub args { 'F? L' }
 
 
+package PLXML::op_say;
+
+our @ISA = ('PLXML::listop');
+
+sub key { 'say' }
+sub desc { 'say' }
+sub check { 'ck_listiob' }
+sub flags { 'ims@' }
+sub args { 'F? L' }
+
 
 package PLXML::op_sysopen;
 
@@ -3440,10 +3450,6 @@ sub args { 'S S S' }
 
 
 # Time calls.
-
-# NOTE: MacOS patches the 'i' of time() away later when the interpreter
-# is created because in MacOS time() is already returning times > 2**31-1,
-# that is, non-integers.
 
 package PLXML::op_time;
 

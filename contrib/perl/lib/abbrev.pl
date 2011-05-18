@@ -1,3 +1,5 @@
+warn "Legacy library @{[(caller(0))[6]]} will be removed from the Perl core distribution in the next major release. Please install it from the CPAN distribution Perl4::CoreLibs. It is being used at @{[(caller)[1]]}, line @{[(caller)[2]]}.\n";
+
 ;# Usage:
 ;#	%foo = ();
 ;#	&abbrev(*foo,LIST);
@@ -7,6 +9,8 @@
 #
 # This library is no longer being maintained, and is included for backward
 # compatibility with Perl 4 programs which may require it.
+# This legacy library is deprecated and will be removed in a future
+# release of perl.
 #
 # In particular, this should not be used as an example of modern Perl
 # programming techniques.
@@ -20,7 +24,6 @@ sub main'abbrev {
     local(*domain) = @_;
     shift(@_);
     @cmp = @_;
-    local($[) = 0;
     foreach $name (@_) {
 	@extra = split(//,$name);
 	$abbrev = shift(@extra);

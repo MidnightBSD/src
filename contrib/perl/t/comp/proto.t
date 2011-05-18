@@ -14,9 +14,11 @@ BEGIN {
     @INC = '../lib';
 }
 
+# We need this, as in places we're testing the interaction of prototypes with
+# strict
 use strict;
 
-print "1..141\n";
+print "1..172\n";
 
 my $i = 1;
 
@@ -544,16 +546,45 @@ sub sreftest (\$$) {
     sreftest $aelem[0], $i++;
 }
 
+# test single term
+sub lazy (+$$) {
+    print "not " unless @_ == 3 && ref $_[0] eq $_[1];
+    print "ok $_[2] - non container test\n";
+}
+sub quietlazy (+) { return shift(@_) }
+sub give_aref { [] }
+sub list_or_scalar { wantarray ? (1..10) : [] }
+{
+    my @multiarray = ("a".."z");
+    my %bighash = @multiarray;
+    lazy(\@multiarray, 'ARRAY', $i++);
+    lazy(\%bighash, 'HASH', $i++);
+    lazy({}, 'HASH', $i++);
+    lazy(give_aref, 'ARRAY', $i++);
+    lazy(3, '', $i++); # allowed by prototype, even if runtime error
+    lazy(list_or_scalar, 'ARRAY', $i++); # propagate scalar context
+}
+
 # test prototypes when they are evaled and there is a syntax error
 # Byacc generates the string "syntax error".  Bison gives the
 # string "parse error".
 #
 for my $p ( "", qw{ () ($) ($@) ($%) ($;$) (&) (&\@) (&@) (%) (\%) (\@) } ) {
-  no warnings 'prototype';
+  my $warn = "";
+  local $SIG{__WARN__} = sub {
+    my $thiswarn = join("",@_);
+    return if $thiswarn =~ /^Prototype mismatch: sub main::evaled_subroutine/;
+    $warn .= $thiswarn;
+  };
   my $eval = "sub evaled_subroutine $p { &void *; }";
   eval $eval;
   print "# eval[$eval]\nnot " unless $@ && $@ =~ /(parse|syntax) error/i;
   print "ok ", $i++, "\n";
+  if ($warn eq '') {
+     print "ok ", $i++, "\n";
+  } else {
+    print "not ok ", $i++, "# $warn \n";
+  }
 }
 
 # Not $$;$;$
@@ -609,7 +640,7 @@ print "ok ", $i++, "\n";
 
 # check that obviously bad prototypes are getting warnings
 {
-  use warnings 'syntax';
+  local $^W = 1;
   my $warn = "";
   local $SIG{__WARN__} = sub { $warn .= join("",@_) };
   
@@ -639,3 +670,74 @@ print "ok ", $i++, "\n";
 eval 'sub bug (\[%@]) {  } my $array = [0 .. 1]; bug %$array;';
 print "not " unless $@ =~ /Not a HASH reference/;
 print "ok ", $i++, "\n";
+
+# [perl #75904]
+# Test that the following prototypes make subs parse as unary functions:
+#  * \sigil \[...] ;$ ;* ;\sigil ;\[...]
+print "not "
+ unless eval 'sub uniproto1 (*) {} uniproto1 $_, 1' or warn $@;
+print "ok ", $i++, "\n";
+print "not "
+ unless eval 'sub uniproto2 (\$) {} uniproto2 $_, 1' or warn $@;
+print "ok ", $i++, "\n";
+print "not "
+ unless eval 'sub uniproto3 (\[$%]) {} uniproto3 %_, 1' or warn $@;
+print "ok ", $i++, "\n";
+print "not "
+ unless eval 'sub uniproto4 (;$) {} uniproto4 $_, 1' or warn $@;
+print "ok ", $i++, "\n";
+print "not "
+ unless eval 'sub uniproto5 (;*) {} uniproto5 $_, 1' or warn $@;
+print "ok ", $i++, "\n";
+print "not "
+ unless eval 'sub uniproto6 (;\@) {} uniproto6 @_, 1' or warn $@;
+print "ok ", $i++, "\n";
+print "not "
+ unless eval 'sub uniproto7 (;\[$%@]) {} uniproto7 @_, 1' or warn $@;
+print "ok ", $i++, "\n";
+print "not "
+ unless eval 'sub uniproto8 (+) {} uniproto8 $_, 1' or warn $@;
+print "ok ", $i++, "\n";
+print "not "
+ unless eval 'sub uniproto9 (;+) {} uniproto9 $_, 1' or warn $@;
+print "ok ", $i++, "\n";
+
+{
+  # Lack of prototype on a subroutine definition should override any prototype
+  # on the declaration.
+  sub z_zwap (&);
+
+  local $SIG{__WARN__} = sub {
+    my $thiswarn = join "",@_;
+    if ($thiswarn =~ /^Prototype mismatch: sub main::z_zwap/) {
+      print 'ok ', $i++, "\n";
+    } else {
+      print 'not ok ', $i++, "\n";
+      print STDERR $thiswarn;
+    }
+  };
+
+  eval q{sub z_zwap {return @_}};
+
+  if ($@) {
+    print "not ok ", $i++, "# $@";
+  } else {
+    print "ok ", $i++, "\n";
+  }
+
+
+  my @a = (6,4,2);
+  my @got  = eval q{z_zwap(@a)};
+
+  if ($@) {
+    print "not ok ", $i++, " # $@";
+  } else {
+    print "ok ", $i++, "\n";
+  }
+
+  if ("@got" eq "@a") {
+    print "ok ", $i++, "\n";
+  } else {
+    print "not ok ", $i++, " # >@got<\n";
+  }
+}

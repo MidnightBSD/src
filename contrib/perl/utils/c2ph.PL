@@ -278,7 +278,7 @@ Anyway, here it is.  Should run on perl v4 or greater.  Maybe less.
 
 =cut
 
-$RCSID = '$Id: c2ph.PL,v 1.1.1.1 2009-03-15 19:20:08 ctriv Exp $';
+$RCSID = '$Id: c2ph.PL,v 1.1.1.2 2011-05-18 13:33:26 laffer1 Exp $';
 
 use File::Temp;
 
@@ -369,13 +369,13 @@ $DEFINES = '';
 
 $perl++ if $0 =~ m#/?c2ph$#;
 
-require 'getopts.pl';
+use Getopt::Std qw(getopts);
 
 use File::Temp 'tempdir';
 
 eval '$'.$1.'$2;' while $ARGV[0] =~ /^([A-Za-z_]+=)(.*)/ && shift;
 
-&Getopts('aixdpvtnws:') || &usage(0);
+getopts('aixdpvtnws:') || &usage(0);
 
 $opt_d && $debug++;
 $opt_t && $trace++;
@@ -394,7 +394,7 @@ eval '$'.$1.'$2;' while $ARGV[0] =~ /^([A-Za-z_]+=)(.*)/ && shift;
 
 sub PLUMBER {
     select(STDERR);
-    print "oops, apperent pager foulup\n";
+    print "oops, apparent pager foulup\n";
     $isatty++;
     &usage(1);
 }

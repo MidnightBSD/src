@@ -1,13 +1,16 @@
+warn "Legacy library @{[(caller(0))[6]]} will be removed from the Perl core distribution in the next major release. Please install it from the CPAN distribution Perl4::CoreLibs. It is being used at @{[(caller)[1]]}, line @{[(caller)[2]]}.\n";
+
 # By Brandon S. Allbery
 #
 # This library is no longer being maintained, and is included for backward
 # compatibility with Perl 4 programs which may require it.
-#
+# This legacy library is deprecated and will be removed in a future
+# release of perl.
 # In particular, this should not be used as an example of modern Perl
 # programming techniques.
 #
 # Suggested alternative: Cwd
-#
+
 #
 # Usage: $cwd = &getcwd;
 
@@ -37,7 +40,7 @@ sub getcwd
 	    closedir(getcwd'PARENT);					#');
 	    return '';
 	}
-	if ($pst[$[] == $cst[$[] && $pst[$[ + 1] == $cst[$[ + 1])
+	if ($pst[0] == $cst[0] && $pst[1] == $cst[1])
 	{
 	    $dir = '';
 	}
@@ -58,8 +61,8 @@ sub getcwd
 		    # return '';
 		}
 	    }
-	    while ($dir eq '.' || $dir eq '..' || $tst[$[] != $pst[$[] ||
-		   $tst[$[ + 1] != $pst[$[ + 1]);
+	    while ($dir eq '.' || $dir eq '..' || $tst[0] != $pst[0] ||
+		   $tst[1] != $pst[1]);
 	}
 	$cwd = "$dir/$cwd";
 	closedir(getcwd'PARENT);					#');

@@ -1,5 +1,5 @@
 use ExtUtils::MakeMaker;
-use ExtUtils::Constant 0.11 'WriteConstants';
+use ExtUtils::Constant 0.23 'WriteConstants';
 use Config;
 WriteMakefile(
     NAME	 => 'Socket',
@@ -14,12 +14,16 @@ my @names = (qw(AF_802 AF_AAL AF_APPLETALK AF_CCITT AF_CHAOS AF_CTF
 		AF_LAST AF_LAT AF_LINK AF_MAX AF_NBS AF_NIT AF_NS
 		AF_OSI AF_OSINET AF_PUP AF_ROUTE AF_SNA
 		AF_UNIX AF_UNSPEC AF_USER AF_WAN AF_X25
+		AI_CANONNAME AI_NUMERICHOST AI_NUMERICSERV AI_PASSIVE
+		EAI_ADDRFAMILY EAI_AGAIN EAI_BADFLAGS EAI_FAIL EAI_FAMILY
+		EAI_NODATA EAI_NONAME EAI_SERVICE EAI_SOCKTYPE
 		IOV_MAX IP_OPTIONS IP_HDRINCL IP_TOS IP_TTL IP_RECVOPTS
 	        IP_RECVRETOPTS IP_RETOPTS
 		MSG_BCAST MSG_BTAG MSG_CTLFLAGS MSG_CTLIGNORE MSG_DONTWAIT
 		MSG_EOF MSG_EOR MSG_ERRQUEUE MSG_ETAG MSG_FIN
 		MSG_MAXIOVLEN MSG_MCAST MSG_NOSIGNAL MSG_RST MSG_SYN
 		MSG_TRUNC MSG_URG MSG_WAITALL MSG_WIRE
+		NI_DGRAM NI_NAMEREQD NI_NUMERICHOST NI_NUMERICSERV
 		PF_802 PF_AAL PF_APPLETALK PF_CCITT PF_CHAOS PF_CTF
 		PF_DATAKIT PF_DECnet PF_DLI PF_ECMA PF_GOSIP PF_HYLINK
 		PF_IMPLINK PF_INET PF_INET6 PF_ISO PF_KEY
@@ -43,6 +47,9 @@ my @names = (qw(AF_802 AF_AAL AF_APPLETALK AF_CCITT AF_CHAOS AF_CTF
 		SO_SNDBUF SO_SNDLOWAT SO_SNDTIMEO
 		SO_STATE SO_TYPE SO_USELOOPBACK SO_XOPEN SO_XSE
 		TCP_KEEPALIVE TCP_MAXRT TCP_MAXSEG TCP_NODELAY TCP_STDURG
+		TCP_CORK TCP_KEEPIDLE TCP_KEEPINTVL TCP_KEEPCNT
+		TCP_SYNCNT TCP_LINGER2 TCP_DEFER_ACCEPT TCP_WINDOW_CLAMP
+		TCP_INFO TCP_QUICKACK TCP_CONGESTION TCP_MD5SIG
 		UIO_MAXIOV
 		),
             {name=>"IPPROTO_IP", type=>"IV", default=>["IV", 0]},
@@ -65,11 +72,19 @@ foreach qw (MSG_CTRUNC MSG_DONTROUTE MSG_OOB MSG_PEEK MSG_PROXY SCM_RIGHTS);
 push @names, 
 {name => $_, type => "SV",
  pre=>"struct in_addr ip_address; ip_address.s_addr = htonl($_);",
- value => "sv_2mortal(newSVpvn((char *)&ip_address,sizeof ip_address ))",}
+ value => "newSVpvn_flags((char *)&ip_address,sizeof(ip_address), SVs_TEMP)",}
          foreach qw(INADDR_ANY INADDR_LOOPBACK INADDR_NONE INADDR_BROADCAST);
 
+push @names,
+{name => $_, type => "SV",
+ macro=>["#ifdef ${_}_INIT\n",
+         "#endif\n"],
+ pre=>"struct in6_addr ip6_address = ${_}_INIT;",
+ value => "newSVpvn_flags((char *)&ip6_address,sizeof(ip6_address), SVs_TEMP)",}
+	 foreach qw(IN6ADDR_ANY IN6ADDR_LOOPBACK);
+
 WriteConstants(
-    ($] > 5.009002 ? (PROXYSUBS => 1) : ()),
+    PROXYSUBS => {autoload => 1},
     NAME => 'Socket',
     NAMES => \@names,
 );

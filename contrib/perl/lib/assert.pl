@@ -1,3 +1,11 @@
+warn "Legacy library @{[(caller(0))[6]]} will be removed from the Perl core distribution in the next major release. Please install it from the CPAN distribution Perl4::CoreLibs. It is being used at @{[(caller)[1]]}, line @{[(caller)[2]]}.\n";
+
+#
+# This library is no longer being maintained, and is included for backward
+# compatibility with Perl 4 programs which may require it.
+# This legacy library is deprecated and will be removed in a future
+# release of perl.
+#
 # assert.pl
 # tchrist@convex.com (Tom Christiansen)
 # 
@@ -12,7 +20,7 @@
 # routine shamelessly borrowed from the perl debugger.
 
 sub assert {
-    &panic("ASSERTION BOTCHED: $_[$[]",$@) unless eval $_[$[];
+    &panic("ASSERTION BOTCHED: $_[0]",$@) unless eval $_[0];
 } 
 
 sub panic {

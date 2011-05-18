@@ -1,10 +1,5 @@
 #!./perl
 
-BEGIN {
-	chdir 't' if -d 't';
-	unshift @INC, '../lib';
-}
-
 BEGIN{
 	# Don't do anything if POSIX is missing, or sigaction missing.
 	use Config;
@@ -16,7 +11,7 @@ BEGIN{
 	}
 }
 
-use Test::More tests => 31;
+use Test::More tests => 32;
 
 use strict;
 use vars qw/$bad $bad7 $ok10 $bad18 $ok/;
@@ -197,6 +192,7 @@ SKIP: {
 SKIP: {
     eval 'use POSIX qw(SA_SIGINFO); SA_SIGINFO';
     skip("no SA_SIGINFO", 1) if $@;
+    skip("SA_SIGINFO is broken on AIX 4.2", 1) if ($^O.$Config{osvers}) =~ m/^aix4\.2/;
     sub hiphup {
 	is($_[1]->{signo}, SIGHUP, "SA_SIGINFO got right signal");
     }
@@ -208,3 +204,10 @@ SKIP: {
 eval { sigaction(-999, "foo"); };
 like($@, qr/Negative signals/,
     "Prevent negative signals instead of core dumping");
+
+# RT 77432 - assertion failure with POSIX::SigAction
+{
+  local *SIG = {};
+  ok(sigaction(SIGHUP, POSIX::SigAction->new),
+     "sigaction would crash/assert with a replaced %SIG");
+}

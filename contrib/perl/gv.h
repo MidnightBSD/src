@@ -27,10 +27,15 @@ struct gp {
 
 #if defined (DEBUGGING) && defined(__GNUC__) && !defined(PERL_GCC_BRACE_GROUPS_FORBIDDEN) && !defined(__INTEL_COMPILER)
 #  define GvGP(gv)							\
-	(*({GV *const _gvgp = (GV *) (gv);				\
+	(0+(*({GV *const _gvgp = (GV *) (gv);				\
 	    assert(SvTYPE(_gvgp) == SVt_PVGV || SvTYPE(_gvgp) == SVt_PVLV); \
 	    assert(isGV_with_GP(_gvgp));				\
-	    &((_gvgp)->sv_u.svu_gp);}))
+	    &((_gvgp)->sv_u.svu_gp);})))
+#  define GvGP_set(gv,gp)						\
+	{GV *const _gvgp = (GV *) (gv);				\
+	    assert(SvTYPE(_gvgp) == SVt_PVGV || SvTYPE(_gvgp) == SVt_PVLV); \
+	    assert(isGV_with_GP(_gvgp));				\
+	    (_gvgp)->sv_u.svu_gp = (gp); }
 #  define GvFLAGS(gv)							\
 	(*({GV *const _gvflags = (GV *) (gv);				\
 	    assert(SvTYPE(_gvflags) == SVt_PVGV || SvTYPE(_gvflags) == SVt_PVLV); \
@@ -49,10 +54,11 @@ struct gp {
 	   assert(!SvVALID(_gvname_hek));				\
 	   &(GvXPVGV(_gvname_hek)->xiv_u.xivu_namehek);			\
 	 }))
-#  define GvNAME_get(gv)	({ assert(GvNAME_HEK(gv)); HEK_KEY(GvNAME_HEK(gv)); })
+#  define GvNAME_get(gv)	({ assert(GvNAME_HEK(gv)); (char *)HEK_KEY(GvNAME_HEK(gv)); })
 #  define GvNAMELEN_get(gv)	({ assert(GvNAME_HEK(gv)); HEK_LEN(GvNAME_HEK(gv)); })
 #else
-#  define GvGP(gv)	((gv)->sv_u.svu_gp)
+#  define GvGP(gv)	(0+(gv)->sv_u.svu_gp)
+#  define GvGP_set(gv,gp)	((gv)->sv_u.svu_gp = (gp))
 #  define GvFLAGS(gv)	(GvXPVGV(gv)->xpv_cur)
 #  define GvSTASH(gv)	(GvXPVGV(gv)->xnv_u.xgv_stash)
 #  define GvNAME_HEK(gv)	(GvXPVGV(gv)->xiv_u.xivu_namehek)
@@ -88,15 +94,22 @@ Return the SV from the GV.
 #endif
 
 #define GvREFCNT(gv)	(GvGP(gv)->gp_refcnt)
-#define GvIO(gv)	((gv) && SvTYPE((const SV*)gv) == SVt_PVGV && GvGP(gv) ? GvIOp(gv) : NULL)
+#define GvIO(gv)                         \
+ (                                        \
+     (gv)                                  \
+  && (                                      \
+         SvTYPE((const SV*)(gv)) == SVt_PVGV \
+      || SvTYPE((const SV*)(gv)) == SVt_PVLV  \
+     )                                         \
+  && GvGP(gv)                                   \
+   ? GvIOp(gv)                                   \
+   : NULL                                         \
+ )
 #define GvIOp(gv)	(GvGP(gv)->gp_io)
 #define GvIOn(gv)	(GvIO(gv) ? GvIOp(gv) : GvIOp(gv_IOadd(gv)))
 
 #define GvFORM(gv)	(GvGP(gv)->gp_form)
 #define GvAV(gv)	(GvGP(gv)->gp_av)
-
-/* This macro is deprecated.  Do not use! */
-#define GvREFCNT_inc(gv) ((GV*)SvREFCNT_inc(gv))	/* DO NOT USE */
 
 #define GvAVn(gv)	(GvGP(gv)->gp_av ? \
 			 GvGP(gv)->gp_av : \
@@ -107,7 +120,8 @@ Return the SV from the GV.
 			 GvGP(gv)->gp_hv : \
 			 GvGP(gv_HVadd(gv))->gp_hv)
 
-#define GvCV(gv)	(GvGP(gv)->gp_cv)
+#define GvCV(gv)	(0+GvGP(gv)->gp_cv)
+#define GvCV_set(gv,cv)	(GvGP(gv)->gp_cv = (cv))
 #define GvCVGEN(gv)	(GvGP(gv)->gp_cvgen)
 #define GvCVu(gv)	(GvGP(gv)->gp_cvgen ? NULL : GvGP(gv)->gp_cv)
 
@@ -117,6 +131,7 @@ Return the SV from the GV.
 #define GvFILEGV(gv)	(gv_fetchfile(GvFILE(gv)))
 
 #define GvEGV(gv)	(GvGP(gv)->gp_egv)
+#define GvEGVx(gv)	(isGV_with_GP(gv) ? GvEGV(gv) : NULL)
 #define GvENAME(gv)	GvNAME(GvEGV(gv) ? GvEGV(gv) : gv)
 #define GvESTASH(gv)	GvSTASH(GvEGV(gv) ? GvEGV(gv) : gv)
 
@@ -129,6 +144,9 @@ Return the SV from the GV.
 #define GVf_IMPORTED_AV	  0x20
 #define GVf_IMPORTED_HV	  0x40
 #define GVf_IMPORTED_CV	  0x80
+
+/* Temporary flag for the tie $handle deprecation warnings. */
+#define GVf_TIEWARNED	0x100
 
 #define GvINTRO(gv)		(GvFLAGS(gv) & GVf_INTRO)
 #define GvINTRO_on(gv)		(GvFLAGS(gv) |= GVf_INTRO)
@@ -166,26 +184,18 @@ Return the SV from the GV.
 #define GvIN_PAD_on(gv)		(GvFLAGS(gv) |= GVf_IN_PAD)
 #define GvIN_PAD_off(gv)	(GvFLAGS(gv) &= ~GVf_IN_PAD)
 
-#define GvUNIQUE(gv)            0
-#define GvUNIQUE_on(gv)         NOOP
-#define GvUNIQUE_off(gv)        NOOP
-
-#ifdef USE_ITHREADS
-#define GV_UNIQUE_CHECK
-#else
-#undef  GV_UNIQUE_CHECK
+#ifndef PERL_CORE
+#  define Nullgv Null(GV*)
 #endif
 
-#define Nullgv Null(GV*)
-
-#define DM_UID   0x003
-#define DM_RUID   0x001
-#define DM_EUID   0x002
-#define DM_ARRAY 0x004
-#define DM_GID   0x030
-#define DM_RGID   0x010
-#define DM_EGID   0x020
-#define DM_DELAY 0x100
+#define DM_RUID      0x001
+#define DM_EUID      0x002
+#define DM_UID       (DM_RUID|DM_EUID)
+#define DM_ARRAY_ISA 0x004
+#define DM_RGID      0x010
+#define DM_EGID      0x020
+#define DM_GID       (DM_RGID|DM_EGID)
+#define DM_DELAY     0x100
 
 /*
  * symbol creation flags, for use in gv_fetchpv() and get_*v()
@@ -204,6 +214,8 @@ Return the SV from the GV.
 #define GV_NOEXPAND	0x40	/* Don't expand SvOK() entries to PVGV */
 #define GV_NOTQUAL	0x80	/* A plain symbol name, not qualified with a
 				   package (so skip checks for :: and ')  */
+#define GV_AUTOLOAD	0x100	/* gv_fetchmethod_flags() should AUTOLOAD  */
+#define GV_CROAK	0x200	/* gv_fetchmethod_flags() should croak  */
 
 /*      SVf_UTF8 (more accurately the return value from SvUTF8) is also valid
 	as a flag to gv_fetch_pvn_flags, so ensure it lies outside this range.
@@ -215,6 +227,11 @@ Return the SV from the GV.
 #define gv_fullname3(sv,gv,prefix) gv_fullname4(sv,gv,prefix,TRUE)
 #define gv_efullname3(sv,gv,prefix) gv_efullname4(sv,gv,prefix,TRUE)
 #define gv_fetchmethod(stash, name) gv_fetchmethod_autoload(stash, name, TRUE)
+
+#define gv_AVadd(gv) gv_add_by_type((gv), SVt_PVAV)
+#define gv_HVadd(gv) gv_add_by_type((gv), SVt_PVHV)
+#define gv_IOadd(gv) gv_add_by_type((gv), SVt_PVIO)
+#define gv_SVadd(gv) gv_add_by_type((gv), SVt_NULL)
 
 /*
  * Local variables:

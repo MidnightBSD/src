@@ -8,11 +8,11 @@
  *
  */
 
-/****************/
-/* Truly global */
-/****************/
+/*
+=head1 Global Variables
+*/
 
-/* Don't forget to re-run embed.pl to propagate changes! */
+/* Don't forget to re-run regen/embed.pl to propagate changes! */
 
 /* This file describes the "global" variables used by perl
  * This used to be in perl.h directly but we want to abstract out into
@@ -102,10 +102,6 @@ PERLVARA(Gsig_ignoring, SIG_SIZE, int)	/* which signals we are ignoring */
 PERLVARA(Gsig_defaulting, SIG_SIZE, int)
 #endif
 
-#ifndef PERL_IMPLICIT_CONTEXT
-PERLVAR(Gsig_sv, SV*)
-#endif
-
 /* XXX signals are process-wide anyway, so we
  * ignore the implications of this for threading */
 #ifndef HAS_SIGACTION
@@ -120,6 +116,7 @@ PERLVAR(Gwatch_pvx, char*)
 PERLVAR(Gppaddr, Perl_ppaddr_t*) /* or opcode.h */
 PERLVAR(Gcheck,  Perl_check_t *) /* or opcode.h */
 PERLVARA(Gfold_locale, 256, unsigned char) /* or perl.h */
+PERLVARA(Gcharclass, 256, U32)
 #endif
 
 #ifdef PERL_NEED_APPCTX
@@ -157,8 +154,8 @@ PERLVARI(Gveto_cleanup,	int, FALSE)	/* exit without cleanup */
 /* dummy variables that hold pointers to both runops functions, thus forcing
  * them *both* to get linked in (useful for Peek.xs, debugging etc) */
 
-PERLVARI(Grunops_std,	runops_proc_t,	MEMBER_TO_FPTR(Perl_runops_standard))
-PERLVARI(Grunops_dbg,	runops_proc_t,	MEMBER_TO_FPTR(Perl_runops_debug))
+PERLVARI(Grunops_std,	runops_proc_t,	Perl_runops_standard)
+PERLVARI(Grunops_dbg,	runops_proc_t,	Perl_runops_debug)
 
 
 /* These are baked at compile time into any shared perl library.
@@ -186,3 +183,58 @@ PERLVARI(Gglobal_struct_size,	U16,	sizeof(struct perl_vars))
 PERLVARI(Ginterp_size_5_10_0, U16,
 	 PERL_INTERPRETER_SIZE_UPTO_MEMBER(PERL_LAST_5_10_0_INTERP_MEMBER))
 #endif
+
+/*
+=for apidoc AmUx|Perl_keyword_plugin_t|PL_keyword_plugin
+
+Function pointer, pointing at a function used to handle extended keywords.
+The function should be declared as
+
+	int keyword_plugin_function(pTHX_
+		char *keyword_ptr, STRLEN keyword_len,
+		OP **op_ptr)
+
+The function is called from the tokeniser, whenever a possible keyword
+is seen.  C<keyword_ptr> points at the word in the parser's input
+buffer, and C<keyword_len> gives its length; it is not null-terminated.
+The function is expected to examine the word, and possibly other state
+such as L<%^H|perlvar/%^H>, to decide whether it wants to handle it
+as an extended keyword.  If it does not, the function should return
+C<KEYWORD_PLUGIN_DECLINE>, and the normal parser process will continue.
+
+If the function wants to handle the keyword, it first must
+parse anything following the keyword that is part of the syntax
+introduced by the keyword.  See L</Lexer interface> for details.
+
+When a keyword is being handled, the plugin function must build
+a tree of C<OP> structures, representing the code that was parsed.
+The root of the tree must be stored in C<*op_ptr>.  The function then
+returns a constant indicating the syntactic role of the construct that
+it has parsed: C<KEYWORD_PLUGIN_STMT> if it is a complete statement, or
+C<KEYWORD_PLUGIN_EXPR> if it is an expression.  Note that a statement
+construct cannot be used inside an expression (except via C<do BLOCK>
+and similar), and an expression is not a complete statement (it requires
+at least a terminating semicolon).
+
+When a keyword is handled, the plugin function may also have
+(compile-time) side effects.  It may modify C<%^H>, define functions, and
+so on.  Typically, if side effects are the main purpose of a handler,
+it does not wish to generate any ops to be included in the normal
+compilation.  In this case it is still required to supply an op tree,
+but it suffices to generate a single null op.
+
+That's how the C<*PL_keyword_plugin> function needs to behave overall.
+Conventionally, however, one does not completely replace the existing
+handler function.  Instead, take a copy of C<PL_keyword_plugin> before
+assigning your own function pointer to it.  Your handler function should
+look for keywords that it is interested in and handle those.  Where it
+is not interested, it should call the saved plugin function, passing on
+the arguments it received.  Thus C<PL_keyword_plugin> actually points
+at a chain of handler functions, all of which have an opportunity to
+handle keywords, and only the last function in the chain (built into
+the Perl core) will normally return C<KEYWORD_PLUGIN_DECLINE>.
+
+=cut
+*/
+
+PERLVARI(Gkeyword_plugin, Perl_keyword_plugin_t, Perl_keyword_plugin_standard)

@@ -22,6 +22,25 @@ Throughout this document you'll see references to other parts of the
 Perl documentation.  You can read that documentation using the C<perldoc>
 command or whatever method you're using to read this document.
 
+Throughout Perl's documentation, you'll find numerous examples intended
+to help explain the discussed features.  Please keep in mind that many
+of them are code fragments rather than complete programs.
+
+These examples often reflect the style and preference of the author of
+that piece of the documentation, and may be briefer than a corresponding
+line of code in a real program.  Except where otherwise noted, you
+should assume that C<use strict> and C<use warnings> statements
+appear earlier in the "program", and that any variables used have
+already been declared, even if those declarations have been omitted
+to make the example easier to read.
+
+Do note that the examples have been written by many different authors over
+a period of several decades. Styles and techniques will therefore differ,
+although some effort has been made to not vary styles too widely in the
+same sections. Do not consider one style to be better than others - "There
+Is More Than One Way Of Doing It" is one Perl's mottos. After all, in your
+journey as a programmer, you are likely to encounter different styles.
+
 =head2 What is Perl?
 
 Perl is a general-purpose programming language originally developed for
@@ -188,7 +207,7 @@ of elements in the array:
     if (@animals < 5) { ... }
 
 The elements we're getting from the array start with a C<$> because
-we're getting just a single value out of the array -- you ask for a scalar,
+we're getting just a single value out of the array; you ask for a scalar,
 you get a scalar.
 
 To get multiple values from an array:
@@ -307,10 +326,9 @@ running the program.  Using C<strict> is highly recommended.
 
 =head2 Conditional and looping constructs
 
-Perl has most of the usual conditional and looping constructs except for
-case/switch (but if you really want it, there is a Switch module in Perl
-5.8 and newer, and on CPAN. See the section on modules, below, for more
-information about modules and CPAN).
+Perl has most of the usual conditional and looping constructs.  As of Perl
+5.10, it even has a case/switch statement (spelled C<given>/C<when>).  See
+L<perlsyn/"Switch statements"> for more details.
 
 The conditions can be any Perl expression.  See the list of operators in
 the next section for information on comparison and boolean logic operators,
@@ -443,7 +461,7 @@ before 99).
     !   not
 
 (C<and>, C<or> and C<not> aren't just in the above table as descriptions
-of the operators -- they're also supported as operators in their own
+of the operators. They're also supported as operators in their own
 right.  They're more readable than the C-style operators, but have
 different precedence to C<&&> and friends.  Check L<perlop> for more
 detail.)

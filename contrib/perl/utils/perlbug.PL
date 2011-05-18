@@ -42,7 +42,7 @@ while (<PATCH_LEVEL>) {
     last if /^\s*}/;
     next if /^\s*#/;  # preprocessor stuff
     next if /PERL_GIT_UNPUSHED_COMMITS/;    # XXX expand instead
-    next if /PERL_GIT_UNCOMMITTED_CHANGES/; # XXX expand instead
+    next if /"uncommitted-changes"/;        # XXX determine if active instead
     chomp;
     s/^\s+,?\s*"?//;
     s/"?\s*,?$//;
@@ -168,7 +168,7 @@ my $Version = "1.39";
 my( $file, $usefile, $cc, $address, $bugaddress, $testaddress, $thanksaddress,
     $filename, $messageid, $domain, $subject, $from, $verbose, $ed, $outfile,
     $fh, $me, $body, $andcc, %REP, $ok, $thanks, $progname,
-    $Is_MacOS, $Is_MSWin32, $Is_Linux, $Is_VMS, $Is_OpenBSD,
+    $Is_MSWin32, $Is_Linux, $Is_VMS, $Is_OpenBSD,
     $report_about_module, $category, $severity,
 
 );
@@ -254,11 +254,6 @@ sub Init {
     $Is_VMS = $^O eq 'VMS';
     $Is_Linux = lc($^O) eq 'linux';
     $Is_OpenBSD = lc($^O) eq 'openbsd';
-    $Is_MacOS = $^O eq 'MacOS';
-
-    @ARGV = split m/\s+/,
-        MacPerl::Ask('Provide command line args here (-h for help):')
-        if $Is_MacOS && $MacPerl::Version =~ /App/;
 
     if (!getopts("Adhva:s:b:f:F:r:e:SCc:to:n:T")) { Help(); exit; };
 
@@ -291,7 +286,7 @@ sub Init {
     $address = $::opt_a || ($::opt_t ? $testaddress
 			    : $thanks ? $thanksaddress : $bugaddress);
 
-    # Users address, used in message and in Reply-To header
+    # Users address, used in message and in From and Reply-To headers
     $from = $::opt_r || "";
 
     # Include verbose configuration information
@@ -316,7 +311,6 @@ sub Init {
     $ed = $::opt_e || $ENV{VISUAL} || $ENV{EDITOR} || $ENV{EDIT}
 	|| ($Is_VMS && "edit/tpu")
 	|| ($Is_MSWin32 && "notepad")
-	|| ($Is_MacOS && '')
 	|| "vi";
 
     # Not OK - provide build failure template by finessing OK report
@@ -388,7 +382,6 @@ EOF
     # My username
     $me = $Is_MSWin32 ? $ENV{'USERNAME'}
 	    : $^O eq 'os2' ? $ENV{'USER'} || $ENV{'LOGNAME'}
-	    : $Is_MacOS ? $ENV{'USER'}
 	    : eval { getpwuid($<) };	# May be missing
 
     $from = $::Config{'cf_email'}
@@ -456,17 +449,12 @@ EOF
     }
 
     # Prompt for return address, if needed
-    unless ($from) {
+    unless ($::opt_r) {
 	# Try and guess return address
 	my $guess;
 
-	$guess = $ENV{'REPLY-TO'} || $ENV{'REPLYTO'} || '';
-        if ($Is_MacOS) {
-            require Mac::InternetConfig;
-            $guess = $Mac::InternetConfig::InternetConfig{
-                Mac::InternetConfig::kICEmail()
-            };
-        }
+	$guess = $ENV{'REPLY-TO'} || $ENV{'REPLYTO'} || $ENV{'EMAIL'}
+	    || $from || '';
 
 	unless ($guess) {
 		# move $domain to where we can use it elsewhere	
@@ -606,6 +594,12 @@ for $entry on http://rt.cpan.org, and report your issue there.
 EOF
 
             $entry = '';
+	} elsif (my $bug_tracker = $Module::CoreList::bug_tracker{$entry}) {
+		paraprint <<"EOF";
+$entry included with core Perl is copied directly from the CPAN distribution.
+Please report bugs in $entry directly to its maintainers using $bug_tracker
+EOF
+            $entry = '';
         } elsif ($entry) {
 	        $category ||= 'library';
 	        $report_about_module = $entry;
@@ -710,6 +704,10 @@ EOF
 sub Dump {
     local(*OUT) = @_;
 
+    # these won't have been set if run with -d
+    $category ||= 'core';
+    $severity ||= 'low';
+
     print OUT <<EFF;
 ---
 Flags:
@@ -778,6 +776,7 @@ EOF
 	my $value;
 	foreach (sort keys %::Config) {
 	    $value = $::Config{$_};
+	    $value = '' unless defined $value;
 	    $value =~ s/'/\\'/g;
 	    print OUT "$_='$value'\n";
 	}
@@ -801,29 +800,23 @@ sub _edit_file {
     my $report_written = 0;
 
     while ( !$report_written ) {
-        if ($Is_MacOS) {
-            require ExtUtils::MakeMaker;
-            ExtUtils::MM_MacOS::launch_file($filename);
-            _prompt('', "Press Enter when done." );
-        } else {    # we're not on oldschool mac os
-            my $exit_status = system("$editor $filename");
-            if ($exit_status) {
-                my $desc = <<EOF;
+        my $exit_status = system("$editor $filename");
+        if ($exit_status) {
+            my $desc = <<EOF;
 The editor you chose ('$editor') could not be run!
 
 If you mistyped its name, please enter it now, otherwise just press Enter.
 EOF
-                my $entry = _prompt( $desc, 'Editor', $editor );
-                if ( $entry ne "" ) {
-                    $editor = $entry;
-                    next;
-                } else {
-                    paraprint <<EOF;
+            my $entry = _prompt( $desc, 'Editor', $editor );
+            if ( $entry ne "" ) {
+                $editor = $entry;
+                next;
+            } else {
+                paraprint <<EOF;
 You may want to save your report to a file, so you can edit and
 mail it later.
 EOF
-                    return;
-                }
+                return;
             }
         }
         return if ( $ok and not $::opt_n ) || $body;
@@ -865,7 +858,7 @@ sub NowWhat {
 You have finished composing your message. At this point, you have 
 a few options. You can:
 
-    * [Se]end the message to $address$andcc, 
+    * [Se]nd the message to $address$andcc, 
     * [D]isplay the message on the screen,
     * [R]e-edit the message
     * Display or change the message's [su]bject
@@ -1077,6 +1070,7 @@ sub _message_headers {
     $headers{'Cc'}         = $cc        if ($cc);
     $headers{'Message-Id'} = $messageid if ($messageid);
     $headers{'Reply-To'}   = $from      if ($from);
+    $headers{'From'}       = $from      if ($from);
     return \%headers;
 }
 
@@ -1128,7 +1122,7 @@ sub _send_message_mailsend {
     open(REP, "<$filename") or die "Couldn't open '$filename': $!\n";
     while (<REP>) { print $fh $_ }
     close(REP) or die "Error closing $filename: $!";
-    $fh->close;
+    $fh->close or die "Error sending mail: $!";
 
     print "\nMessage sent.\n";
 }
@@ -1153,9 +1147,15 @@ sub _probe_for_sendmail {
 sub _send_message_sendmail {
     my $sendmail = _probe_for_sendmail();
     unless ($sendmail) {
-        paraprint(<<"EOF"), die "\n";
+        my $message_start = !$Is_Linux && !$Is_OpenBSD ? <<'EOT' : <<'EOT';
 It appears that there is no program which looks like "sendmail" on
 your system and that the Mail::Send library from CPAN isn't available.
+EOT
+It appears that there is no program which looks like "sendmail" on
+your system.
+EOT
+        paraprint(<<"EOF"), die "\n";
+$message_start
 Because of this, there's no easy way to automatically send your
 message.
 
@@ -1164,8 +1164,8 @@ send to '$address' with your normal mail client.
 EOF
     }
 
-    open( SENDMAIL, "|$sendmail -t -oi" )
-        || die "'|$sendmail -t -oi' failed: $!";
+    open( SENDMAIL, "|-", $sendmail, "-t", "-oi", "-f", $from )
+        || die "'|$sendmail -t -oi -f $from' failed: $!";
     print SENDMAIL build_complete_message();
     if ( close(SENDMAIL) ) {
         print "\nMessage sent\n";
@@ -1273,7 +1273,7 @@ release of Perl, are likely to receive less attention from the
 volunteers who build and maintain Perl than reports about bugs in
 the current release.
 
-This tool isn't apropriate for reporting bugs in any version
+This tool isn't appropriate for reporting bugs in any version
 prior to Perl 5.0.
 
 =item Are you sure what you have is a bug?

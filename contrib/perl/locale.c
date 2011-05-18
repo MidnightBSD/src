@@ -46,7 +46,7 @@
  * (1) "xx_YY" if the first argument of setlocale() is not LC_ALL
  * (2) "xa_YY xb_YY ..." if the first argument of setlocale() is LC_ALL
  *     (the space-separated values represent the various sublocales,
- *      in some unspecificed order)
+ *      in some unspecified order)
  *
  * In some platforms it has a form like "LC_SOMETHING=Lang_Country.866\n",
  * which is harmful for further use of the string in setlocale().
@@ -522,23 +522,23 @@ Perl_init_i18nl10n(pTHX_ int printwarn)
 	 codeset = nl_langinfo(CODESET);
 #endif
 	 if (codeset)
-	      utf8locale = (Perl_ibcmp(aTHX_ codeset, STR_WITH_LEN("UTF-8")) == 0 ||
- 			    Perl_ibcmp(aTHX_ codeset, STR_WITH_LEN("UTF8") ) == 0);
+	      utf8locale = (foldEQ(codeset, STR_WITH_LEN("UTF-8"))
+			    || foldEQ(codeset, STR_WITH_LEN("UTF8") ));
 #if defined(USE_LOCALE)
 	 else { /* nl_langinfo(CODESET) is supposed to correctly
 		 * interpret the locale environment variables,
 		 * but just in case it fails, let's do this manually. */ 
 	      if (lang)
-		   utf8locale = (Perl_ibcmp(aTHX_ lang, STR_WITH_LEN("UTF-8")) == 0 ||
-			         Perl_ibcmp(aTHX_ lang, STR_WITH_LEN("UTF8") ) == 0);
+		   utf8locale = (foldEQ(lang, STR_WITH_LEN("UTF-8"))
+				 || foldEQ(lang, STR_WITH_LEN("UTF8") ));
 #ifdef USE_LOCALE_CTYPE
 	      if (curctype)
-		   utf8locale = (Perl_ibcmp(aTHX_ curctype, STR_WITH_LEN("UTF-8")) == 0 ||
-			         Perl_ibcmp(aTHX_ curctype, STR_WITH_LEN("UTF8") ) == 0);
+		   utf8locale = (foldEQ(curctype, STR_WITH_LEN("UTF-8"))
+				 || foldEQ(curctype, STR_WITH_LEN("UTF8") ));
 #endif
 	      if (lc_all)
-		   utf8locale = (Perl_ibcmp(aTHX_ lc_all, STR_WITH_LEN("UTF-8")) == 0 ||
-			         Perl_ibcmp(aTHX_ lc_all, STR_WITH_LEN("UTF8") ) == 0);
+		   utf8locale = (foldEQ(lc_all, STR_WITH_LEN("UTF-8"))
+				 || foldEQ(lc_all, STR_WITH_LEN("UTF8") ));
 	 }
 #endif /* USE_LOCALE */
 	 if (utf8locale)

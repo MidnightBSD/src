@@ -5,7 +5,7 @@ BEGIN {
     @INC = qw(. ../lib);
     require './test.pl';
 }
-plan tests => 123;
+plan tests => 306;
 
 my $list_assignment_supported = 1;
 
@@ -96,6 +96,58 @@ ok(!defined $a[0]);
 
 @a = ('a', 'b', 'c');
 {
+    local($a[4]) = 'x';
+    ok(!defined $a[3]);
+    is($a[4], 'x');
+}
+is(scalar(@a), 3);
+ok(!exists $a[3]);
+ok(!exists $a[4]);
+
+@a = ('a', 'b', 'c');
+{
+    local($a[5]) = 'z';
+    $a[4] = 'y';
+    ok(!defined $a[3]);
+    is($a[4], 'y');
+    is($a[5], 'z');
+}
+is(scalar(@a), 5);
+ok(!defined $a[3]);
+is($a[4], 'y');
+ok(!exists $a[5]);
+
+@a = ('a', 'b', 'c');
+{
+    local(@a[4,6]) = ('x', 'z');
+    ok(!defined $a[3]);
+    is($a[4], 'x');
+    ok(!defined $a[5]);
+    is($a[6], 'z');
+}
+is(scalar(@a), 3);
+ok(!exists $a[3]);
+ok(!exists $a[4]);
+ok(!exists $a[5]);
+ok(!exists $a[6]);
+
+@a = ('a', 'b', 'c');
+{
+    local(@a[4,6]) = ('x', 'z');
+    $a[5] = 'y';
+    ok(!defined $a[3]);
+    is($a[4], 'x');
+    is($a[5], 'y');
+    is($a[6], 'z');
+}
+is(scalar(@a), 6);
+ok(!defined $a[3]);
+ok(!defined $a[4]);
+is($a[5], 'y');
+ok(!exists $a[6]);
+
+@a = ('a', 'b', 'c');
+{
     local($a[1]) = "X";
     shift @a;
 }
@@ -105,6 +157,109 @@ is($a[0].$a[1], "Xb");
     local @a = @a;
     is("@a", $d);
 }
+
+@a = ('a', 'b', 'c');
+$a[4] = 'd';
+{
+    delete local $a[1];
+    is(scalar(@a), 5);
+    is($a[0], 'a');
+    ok(!exists($a[1]));
+    is($a[2], 'c');
+    ok(!exists($a[3]));
+    is($a[4], 'd');
+
+    ok(!exists($a[888]));
+    delete local $a[888];
+    is(scalar(@a), 5);
+    ok(!exists($a[888]));
+
+    ok(!exists($a[999]));
+    my ($d, $zzz) = delete local @a[4, 999];
+    is(scalar(@a), 3);
+    ok(!exists($a[4]));
+    ok(!exists($a[999]));
+    is($d, 'd');
+    is($zzz, undef);
+
+    my $c = delete local $a[2];
+    is(scalar(@a), 1);
+    ok(!exists($a[2]));
+    is($c, 'c');
+
+    $a[888] = 'yyy';
+    $a[999] = 'zzz';
+}
+is(scalar(@a), 5);
+is($a[0], 'a');
+is($a[1], 'b');
+is($a[2], 'c');
+ok(!defined($a[3]));
+is($a[4], 'd');
+ok(!exists($a[5]));
+ok(!exists($a[888]));
+ok(!exists($a[999]));
+
+%h = (a => 1, b => 2, c => 3, d => 4);
+{
+    delete local $h{b};
+    is(scalar(keys(%h)), 3);
+    is($h{a}, 1);
+    ok(!exists($h{b}));
+    is($h{c}, 3);
+    is($h{d}, 4);
+
+    ok(!exists($h{yyy}));
+    delete local $h{yyy};
+    is(scalar(keys(%h)), 3);
+    ok(!exists($h{yyy}));
+
+    ok(!exists($h{zzz}));
+    my ($d, $zzz) = delete local @h{qw/d zzz/};
+    is(scalar(keys(%h)), 2);
+    ok(!exists($h{d}));
+    ok(!exists($h{zzz}));
+    is($d, 4);
+    is($zzz, undef);
+
+    my $c = delete local $h{c};
+    is(scalar(keys(%h)), 1);
+    ok(!exists($h{c}));
+    is($c, 3);
+
+    $h{yyy} = 888;
+    $h{zzz} = 999;
+}
+is(scalar(keys(%h)), 4);
+is($h{a}, 1);
+is($h{b}, 2);
+is($h{c}, 3);
+ok($h{d}, 4);
+ok(!exists($h{yyy}));
+ok(!exists($h{zzz}));
+
+%h = ('a' => { 'b' => 1 }, 'c' => 2);
+{
+    my $a = delete local $h{a};
+    is(scalar(keys(%h)), 1);
+    ok(!exists($h{a}));
+    is($h{c}, 2);
+    is(scalar(keys(%$a)), 1);
+
+    my $b = delete local $a->{b};
+    is(scalar(keys(%$a)), 0);
+    is($b, 1);
+
+    $a->{d} = 3;
+}
+is(scalar(keys(%h)), 2);
+{
+    my $a = $h{a};
+    is(scalar(keys(%$a)), 2);
+    is($a->{b}, 1);
+    is($a->{d}, 3);
+}
+is($h{c}, 2);
 
 %h = ('a' => 1, 'b' => 2, 'c' => 3);
 {
@@ -145,6 +300,8 @@ is($m, 5);
     sub TIEARRAY { bless [], $_[0] }
     sub STORE { print "# STORE [@_]\n"; $_[0]->[$_[1]] = $_[2] }
     sub FETCH { my $v = $_[0]->[$_[1]]; print "# FETCH [@_=$v]\n"; $v }
+    sub EXISTS { print "# EXISTS [@_]\n"; exists $_[0]->[$_[1]]; }
+    sub DELETE { print "# DELETE [@_]\n"; delete $_[0]->[$_[1]]; }
     sub CLEAR { print "# CLEAR [@_]\n"; @{$_[0]} = (); }
     sub FETCHSIZE { scalar(@{$_[0]}) }
     sub SHIFT { shift (@{$_[0]}) }
@@ -168,7 +325,118 @@ ok(!defined $a[0]);
     local @a = @a;
     is("@a", $d);
 }
+# RT #7938: localising an array should make it temporarily untied
+{
+    @a = qw(a b c);
+    local @a = (6,7,8);
+    is("@a", "6 7 8", 'local @a assigned 6,7,8');
+    {
+	my $c = 0;
+	local *TA::STORE = sub { $c++ };
+	$a[0] = 9;
+	is($c, 0, 'STORE not called after array localised');
+    }
+    is("@a", "9 7 8", 'local @a should now be 9 7 8');
+}
+is("@a", "a b c", '@a should now contain original value');
 
+
+# local() should preserve the existenceness of tied array elements
+@a = ('a', 'b', 'c');
+{
+    local($a[4]) = 'x';
+    ok(!defined $a[3]);
+    is($a[4], 'x');
+}
+is(scalar(@a), 3);
+ok(!exists $a[3]);
+ok(!exists $a[4]);
+
+@a = ('a', 'b', 'c');
+{
+    local($a[5]) = 'z';
+    $a[4] = 'y';
+    ok(!defined $a[3]);
+    is($a[4], 'y');
+    is($a[5], 'z');
+}
+is(scalar(@a), 5);
+ok(!defined $a[3]);
+is($a[4], 'y');
+ok(!exists $a[5]);
+
+@a = ('a', 'b', 'c');
+{
+    local(@a[4,6]) = ('x', 'z');
+    ok(!defined $a[3]);
+    is($a[4], 'x');
+    ok(!defined $a[5]);
+    is($a[6], 'z');
+}
+is(scalar(@a), 3);
+ok(!exists $a[3]);
+ok(!exists $a[4]);
+ok(!exists $a[5]);
+ok(!exists $a[6]);
+
+@a = ('a', 'b', 'c');
+{
+    local(@a[4,6]) = ('x', 'z');
+    $a[5] = 'y';
+    ok(!defined $a[3]);
+    is($a[4], 'x');
+    is($a[5], 'y');
+    is($a[6], 'z');
+}
+is(scalar(@a), 6);
+ok(!defined $a[3]);
+ok(!defined $a[4]);
+is($a[5], 'y');
+ok(!exists $a[6]);
+
+@a = ('a', 'b', 'c');
+$a[4] = 'd';
+{
+    delete local $a[1];
+    is(scalar(@a), 5);
+    is($a[0], 'a');
+    ok(!exists($a[1]));
+    is($a[2], 'c');
+    ok(!exists($a[3]));
+    is($a[4], 'd');
+
+    ok(!exists($a[888]));
+    delete local $a[888];
+    is(scalar(@a), 5);
+    ok(!exists($a[888]));
+
+    ok(!exists($a[999]));
+    my ($d, $zzz) = delete local @a[4, 999];
+    is(scalar(@a), 3);
+    ok(!exists($a[4]));
+    ok(!exists($a[999]));
+    is($d, 'd');
+    is($zzz, undef);
+
+    my $c = delete local $a[2];
+    is(scalar(@a), 1);
+    ok(!exists($a[2]));
+    is($c, 'c');
+
+    $a[888] = 'yyy';
+    $a[999] = 'zzz';
+}
+is(scalar(@a), 5);
+is($a[0], 'a');
+is($a[1], 'b');
+is($a[2], 'c');
+ok(!defined($a[3]));
+is($a[4], 'd');
+ok(!exists($a[5]));
+ok(!exists($a[888]));
+ok(!exists($a[999]));
+
+# see if localization works on tied hashes
 {
     package TH;
     sub TIEHASH { bless {}, $_[0] }
@@ -181,7 +449,6 @@ ok(!defined $a[0]);
     sub NEXTKEY { print "# NEXTKEY [@_]\n"; each %{$_[0]} }
 }
 
-# see if localization works on tied hashes
 tie %h, 'TH';
 %h = ('a' => 1, 'b' => 2, 'c' => 3);
 
@@ -198,6 +465,7 @@ tie %h, 'TH';
 is($h{'a'}, 1);
 is($h{'b'}, 2);
 is($h{'c'}, 3);
+
 # local() should preserve the existenceness of tied hash elements
 ok(! exists $h{'y'});
 ok(! exists $h{'z'});
@@ -207,6 +475,62 @@ TODO: {
     local %h = %h;
     is(join("\n", map { "$_=>$h{$_}" } sort keys %h), $d);
 }
+
+# RT #7939: localising a hash should make it temporarily untied
+{
+    %h = qw(a 1 b 2 c 3);
+    local %h = qw(x 6 y 7 z 8);
+    is(join('', sort keys   %h), "xyz", 'local %h has new keys');
+    is(join('', sort values %h), "678", 'local %h has new values');
+    {
+	my $c = 0;
+	local *TH::STORE = sub { $c++ };
+	$h{x} = 9;
+	is($c, 0, 'STORE not called after hash localised');
+    }
+    is($h{x}, 9, '$h{x} should now be 9');
+}
+is(join('', sort keys   %h), "abc", 'restored %h has original keys');
+is(join('', sort values %h), "123", 'restored %h has original values');
+
+
+%h = (a => 1, b => 2, c => 3, d => 4);
+{
+    delete local $h{b};
+    is(scalar(keys(%h)), 3);
+    is($h{a}, 1);
+    ok(!exists($h{b}));
+    is($h{c}, 3);
+    is($h{d}, 4);
+
+    ok(!exists($h{yyy}));
+    delete local $h{yyy};
+    is(scalar(keys(%h)), 3);
+    ok(!exists($h{yyy}));
+
+    ok(!exists($h{zzz}));
+    my ($d, $zzz) = delete local @h{qw/d zzz/};
+    is(scalar(keys(%h)), 2);
+    ok(!exists($h{d}));
+    ok(!exists($h{zzz}));
+    is($d, 4);
+    is($zzz, undef);
+
+    my $c = delete local $h{c};
+    is(scalar(keys(%h)), 1);
+    ok(!exists($h{c}));
+    is($c, 3);
+
+    $h{yyy} = 888;
+    $h{zzz} = 999;
+}
+is(scalar(keys(%h)), 4);
+is($h{a}, 1);
+is($h{b}, 2);
+is($h{c}, 3);
+ok($h{d}, 4);
+ok(!exists($h{yyy}));
+ok(!exists($h{zzz}));
 
 @a = ('a', 'b', 'c');
 {
@@ -320,12 +644,23 @@ while (/(o.+?),/gc) {
 eval { local $1 = 1 };
 like($@, qr/Modification of a read-only value attempted/);
 
+# local($_) always strips all magic
 eval { for ($1) { local $_ = 1 } };
-like($@, qr/Modification of a read-only value attempted/);
+is($@, "");
 
-# make sure $1 is still read-only
-eval { for ($1) { local $_ = 1 } };
-like($@, qr/Modification of a read-only value attempted/);
+{
+    my $STORE = 0;
+    package TieHash;
+    sub TIEHASH { bless $_[1], $_[0] }
+    sub FETCH   { 42 }
+    sub STORE   { ++$STORE }
+
+    package main;
+    tie my %hash, "TieHash", {};
+
+    eval { for ($hash{key}) {local $_ = 2} };
+    is($STORE, 0);
+}
 
 # The s/// adds 'g' magic to $_, but it should remain non-readonly
 eval { for("a") { for $x (1,2) { local $_="b"; s/(.*)/+$1/ } } };
@@ -333,6 +668,7 @@ is($@, "");
 
 # RT #4342 Special local() behavior for $[
 {
+    no warnings 'deprecated';
     local $[ = 1;
     ok(1 == $[, 'lexcical scope of local $[');
     f();

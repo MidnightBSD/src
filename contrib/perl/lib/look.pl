@@ -1,11 +1,15 @@
+warn "Legacy library @{[(caller(0))[6]]} will be removed from the Perl core distribution in the next major release. Please install it from the CPAN distribution Perl4::CoreLibs. It is being used at @{[(caller)[1]]}, line @{[(caller)[2]]}.\n";
+
 ;# Usage: &look(*FILEHANDLE,$key,$dict,$fold)
 #
 # This library is no longer being maintained, and is included for backward
 # compatibility with Perl 4 programs which may require it.
+# This legacy library is deprecated and will be removed in a future
+# release of perl.
 #
 # In particular, this should not be used as an example of modern Perl
 # programming techniques.
-#
+
 ;# Sets file position in FILEHANDLE to be first line greater than or equal
 ;# (stringwise) to $key.  Pass flags for dictionary order and case folding.
 

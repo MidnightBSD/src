@@ -1,3 +1,10 @@
+warn "Legacy library @{[(caller(0))[6]]} will be removed from the Perl core distribution in the next major release. Please install it from the CPAN distribution Perl4::CoreLibs. It is being used at @{[(caller)[1]]}, line @{[(caller)[2]]}.\n";
+
+# This library is deprecated and unmaintained. It is included for
+# compatibility with Perl 4 scripts which may use it, but it will be
+# removed in a future version of Perl. Please use the File::Find module
+# instead.
+
 # Usage:
 #	require "find.pl";
 #
@@ -10,11 +17,11 @@
 #		to $dir when the function is called.  The function may
 #		set $prune to prune the tree.
 #
-# This library is primarily for find2perl, which, when fed
+# For example,
 #
-#   find2perl / -name .nfs\* -mtime +7 -exec rm -f {} \; -o -fstype nfs -prune
+#   find / -name .nfs\* -mtime +7 -exec rm -f {} \; -o -fstype nfs -prune
 #
-# spits out something like this
+# corresponds to this
 #
 #	sub wanted {
 #	    /^\.nfs.*$/ &&

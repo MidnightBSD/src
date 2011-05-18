@@ -3,25 +3,15 @@
 BEGIN {
     chdir 't' if -d 't';
     @INC = '../lib';
-    if ($ENV{PERL_CORE_MINITEST}) {
-	print "1..0 # Skip: no Fcntl under miniperl\n";
-	exit 0;
-    }
-    unless (find PerlIO::Layer 'perlio') {
-	print "1..0 # Skip: not perlio\n";
-	exit 0;
-    }
-    use Config;
-    unless (" $Config{extensions} " =~ / Fcntl /) {
-	print "1..0 # Skip: no Fcntl (how did you get this far?)\n";
-	exit 0;
-    }
+    require './test.pl';
+    skip_all_without_perlio();
+    skip_all_without_dynamic_extension('Fcntl'); # how did you get this far?
 }
 
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+plan tests => 6;
 
 use Fcntl qw(:seek);
 

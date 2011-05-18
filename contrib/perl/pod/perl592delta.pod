@@ -128,7 +128,7 @@ A new variable, ${^RE_DEBUG_FLAGS}, controls what debug flags are in
 effect for the regular expression engine when running under C<use re
 "debug">. See L<re> for details.
 
-A new variable ${^UTF8LOCALE} indicates where an UTF-8 locale was detected
+A new variable ${^UTF8LOCALE} indicates where a UTF-8 locale was detected
 by perl at startup.
 
 =head1 Modules and Pragmata
@@ -242,7 +242,7 @@ C<map> in scalar context is now optimized.
 =item *
 
 The regexp engine now implements the trie optimization : it's able to
-factorize common prefixes and suffixes in regular expressions. A new
+factor out common prefixes and suffixes in regular expressions. A new
 special variable, ${^RE_TRIE_MAXBUF}, has been added to fine-tune this
 optimization.
 

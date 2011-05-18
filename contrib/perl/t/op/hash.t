@@ -8,7 +8,7 @@ BEGIN {
 
 use strict;
 
-plan tests => 6;
+plan tests => 8;
 
 my %h;
 
@@ -118,3 +118,31 @@ my $dummy = index 'foo', PVBM;
 eval { my %h = (a => PVBM); 1 };
 
 ok (!$@, 'fbm scalar can be inserted into a hash');
+
+
+my $destroyed;
+{ package Class; DESTROY { ++$destroyed; } }
+
+$destroyed = 0;
+{
+    my %h;
+    keys(%h) = 1;
+    $h{key} = bless({}, 'Class');
+}
+is($destroyed, 1, 'Timely hash destruction with lvalue keys');
+
+
+# [perl #79178] Hash keys must not be stringified during compilation
+# Run perl -MO=Concise -e '$a{\"foo"}' on a non-threaded pre-5.13.8 version
+# to see why.
+{
+    my $key;
+    package bar;
+    sub TIEHASH { bless {}, $_[0] }
+    sub FETCH { $key = $_[1] }
+    package main;
+    tie my %h, "bar";
+    () = $h{\'foo'};
+    is ref $key, SCALAR =>
+     'hash keys are not stringified during compilation';
+}

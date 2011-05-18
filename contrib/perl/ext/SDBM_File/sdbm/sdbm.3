@@ -1,4 +1,4 @@
-.\" $Id: sdbm.3,v 1.1.1.1 2009-03-15 19:18:42 ctriv Exp $
+.\" $Id: sdbm.3,v 1.1.1.2 2011-05-18 13:33:26 laffer1 Exp $
 .TH SDBM 3 "1 March 1990"
 .SH NAME
 sdbm, sdbm_open, sdbm_prep, sdbm_close, sdbm_fetch, sdbm_store, sdbm_delete, sdbm_exists, sdbm_firstkey, sdbm_nextkey, sdbm_hash, sdbm_rdonly, sdbm_error, sdbm_clearerr, sdbm_dirfno, sdbm_pagfno \- data base subroutines
@@ -186,7 +186,7 @@ you notice clustering or other effects that may be due to the hashing
 algorithm used by this package, you can override it by supplying your
 own
 .BR sdbm_hash (\|)
-routine.  Doing so will make the database unintelligable to any other
+routine.  Doing so will make the database unintelligible to any other
 applications that do not use your specialized hash function.
 .sp
 .LP

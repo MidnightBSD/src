@@ -173,9 +173,11 @@ Send in a patch if you can clear up, fill out, or clarify an C<XXX>.
 There are a number of special data structures provided to the debugger by
 the Perl interpreter.
 
-The array C<@{$main::{'_<'.$filename}}> (aliased locally to C<@dbline> via glob
-assignment) contains the text from C<$filename>, with each element
-corresponding to a single line of C<$filename>.
+The array C<@{$main::{'_<'.$filename}}> (aliased locally to C<@dbline>
+via glob assignment) contains the text from C<$filename>, with each
+element corresponding to a single line of C<$filename>. Additionally,
+breakable lines will be dualvars with the numeric component being the
+memory address of a COP node. Non-breakable lines are dualvar to 0.
 
 The hash C<%{'_<'.$filename}> (aliased locally to C<%dbline> via glob 
 assignment) contains breakpoints and actions.  The keys are line numbers; 
@@ -511,7 +513,7 @@ package DB;
 BEGIN {eval 'use IO::Handle'};	# Needed for flush only? breaks under miniperl
 
 # Debugger for Perl 5.00x; perl5db.pl patch level:
-$VERSION = 1.32;
+$VERSION = '1.33';
 
 $header = "perl5db.pl version $VERSION";
 
@@ -888,7 +890,7 @@ sub eval {
 #   + Forgot a my() declaration (Ilya Zakharevich in 11085)
 # Changes: 1.15: Nov  6, 2001 Michael G Schwern <schwern@pobox.com>
 #   + Updated 1.14 change log
-#   + Added *dbline explainatory comments
+#   + Added *dbline explanatory comments
 #   + Mentioning perldebguts man page
 # Changes: 1.16: Feb 15, 2002 Mark-Jason Dominus <mjd@plover.com>
 #   + $onetimeDump improvements
@@ -949,6 +951,21 @@ sub eval {
 #   + [perl #57016] debugger: o warn=0 die=0 ignored
 #   + Note, but don't use, PERLDBf_SAVESRC
 #   + Fix #7013: lvalue subs not working inside debugger
+# Changes: 1.32: Jun 03, 2009 Jonathan Leto <jonathan@leto.net>
+#   + Fix bug where a key _< with undefined value was put into the symbol table
+#   +   when the $filename variable is not set
+# Changes: 1.33:
+#   + Debugger prints lines to the remote port when it forks and openes a new port (f633fd2)
+#   + The debugger now continues to use RemotePort when it's been configured to use it. (11653f7)
+#   + Stop using $ENV{LESS} for parameters not intended for less (d463cf2)
+#   + Configure has a path to less and perl5db.pl can use it (bf320d6)
+#   + Die with $@ instead of empty message (86755f4)
+#   + Remove extra/useless $@ check after eval { require PadWalker } (which is still checked) (dab8d6d)
+#   + Promote eval( "require ..." ) to eval { require ... } (4a49187)
+#   + Promote eval { require( ... )} || die to mere require( ... ) (999f23b)
+#   + Remove indirect object notation from debugger (bee4b46)
+#   + Document that @{$main::{'_<'.$filename}} lines are dualvar to (COP*). (7e17a74)
+#   + Remove MacOS classic support from the debugger. (2b894b7)
 ########################################################################
 
 =head1 DEBUGGER INITIALIZATION
@@ -967,7 +984,7 @@ terminates, and defaulting to printing return values for the C<r> command.
 # Needed for the statement after exec():
 #
 # This BEGIN block is simply used to switch off warnings during debugger
-# compiliation. Probably it would be better practice to fix the warnings,
+# compilation. Probably it would be better practice to fix the warnings,
 # but this is how it's done at the moment.
 
 BEGIN {
@@ -1053,8 +1070,9 @@ warn(               # Do not ;-)
   )
   if 0;
 
+# without threads, $filename is not defined until DB::DB is called
 foreach my $k (keys (%INC)) {
-	&share(\$main::{'_<'.$filename});
+	&share(\$main::{'_<'.$filename}) if defined $filename;
 };
 
 # Command-line + PERLLIB:
@@ -1457,7 +1475,8 @@ if ( defined $ENV{PERLDB_OPTS} ) {
 
 The last thing we do during initialization is determine which subroutine is
 to be used to obtain a new terminal when a new debugger is started. Right now,
-the debugger only handles X Windows, OS/2, and Mac OS X (darwin).
+the debugger only handles TCP sockets, X Windows, OS/2, amd Mac OS X
+(darwin).
 
 =cut
 
@@ -1467,7 +1486,11 @@ the debugger only handles X Windows, OS/2, and Mac OS X (darwin).
 
 if (not defined &get_fork_TTY)       # only if no routine exists
 {
-    if (defined $ENV{TERM}                       # If we know what kind
+    if ( defined $remoteport ) {                 
+                                                 # Expect an inetd-like server
+        *get_fork_TTY = \&socket_get_fork_TTY;   # to listen to us
+    }
+    elsif (defined $ENV{TERM}                    # If we know what kind
                                                  # of terminal this is,
         and $ENV{TERM} eq 'xterm'                # and it's an xterm,
         and defined $ENV{DISPLAY}                # and what display it's on,
@@ -1626,23 +1649,6 @@ We then determine what the console should be on various systems:
         $console = "con";
     }
 
-=item * MacOS - use C<Dev:Console:Perl Debug> if this is the MPW version; C<Dev:
-Console> if not.
-
-Note that Mac OS X returns C<darwin>, not C<MacOS>. Also note that the debugger doesn't do anything special for C<darwin>. Maybe it should.
-
-=cut
-
-    elsif ( $^O eq 'MacOS' ) {
-        if ( $MacPerl::Version !~ /MPW/ ) {
-            $console =
-              "Dev:Console:Perl Debug";    # Separate window for application
-        }
-        else {
-            $console = "Dev:Console";
-        }
-    } ## end elsif ($^O eq 'MacOS')
-
 =item * VMS - use C<sys$command>.
 
 =cut
@@ -1712,14 +1718,7 @@ and then tries to connect the input and output filehandles to it.
 
         # If RemotePort was defined in the options, connect input and output
         # to the socket.
-        require IO::Socket;
-        $OUT = new IO::Socket::INET(
-            Timeout  => '10',
-            PeerAddr => $remoteport,
-            Proto    => 'tcp',
-        );
-        if ( !$OUT ) { die "Unable to connect to remote host: $remoteport\n"; }
-        $IN = $OUT;
+        $IN = $OUT = connect_remoteport();
     } ## end if (defined $remoteport)
 
 =pod
@@ -1846,7 +1845,7 @@ $I_m_init = 1;
 This gigantic subroutine is the heart of the debugger. Called before every
 statement, its job is to determine if a breakpoint has been reached, and
 stop if so; read commands from the user, parse them, and execute
-them, and hen send execution off to the next statement.
+them, and then send execution off to the next statement.
 
 Note that the order in which the commands are processed is very important;
 some commands earlier in the loop will actually alter the C<$cmd> variable
@@ -1918,13 +1917,6 @@ sub DB {
     # Create an alias to the active file magical array to simplify
     # the code here.
     local (*dbline) = $main::{ '_<' . $filename };
-
-    # we need to check for pseudofiles on Mac OS (these are files
-    # not attached to a filename, but instead stored in Dev:Pseudo)
-    if ( $^O eq 'MacOS' && $#dbline < 0 ) {
-        $filename_ini = $filename = 'Dev:Pseudo';
-        *dbline = $main::{ '_<' . $filename };
-    }
 
     # Last line in the program.
     local $max = $#dbline;
@@ -2817,7 +2809,7 @@ appropriately, and force us out of the command loop.
                 # r - return from the current subroutine.
                 $cmd =~ /^r$/ && do {
 
-                    # Can't do anythign if the program's over.
+                    # Can't do anything if the program's over.
                     end_report(), next CMD if $finished and $level <= 1;
 
                     # Turn on stack trace.
@@ -3233,7 +3225,7 @@ Manipulates C<%alias> to add or list command aliases.
                     # List aliases.
                     for my $k (@keys) {
 
-                        # Messy metaquoting: Trim the substiution code off.
+                        # Messy metaquoting: Trim the substitution code off.
                         # We use control-G as the delimiter because it's not
                         # likely to appear in the alias.
                         if ( ( my $v = $alias{$k} ) =~ ss\a$k\a(.*)\a$1 ) {
@@ -3692,7 +3684,7 @@ sub sub {
       )
       if $frame;
 
-    # Determine the sub's return type,and capture approppriately.
+    # Determine the sub's return type, and capture appropriately.
     if (wantarray) {
 
         # Called in array context. call sub and capture output.
@@ -3756,7 +3748,7 @@ sub sub {
 
         # If we're doing exit messages...
         (
-            $frame & 4    # Extended messsages
+            $frame & 4    # Extended messages
             ? (
                 print_lineinfo( ' ' x $stack_depth, "out " ),
                 print_trace( $LINEINFO, -1, 1, 1, "$sub$al" )
@@ -4831,30 +4823,21 @@ Display the (nested) parentage of the module or object given.
 sub cmd_i {
     my $cmd  = shift;
     my $line = shift;
-    eval { require Class::ISA };
-    if ($@) {
-        &warn( $@ =~ /locate/
-            ? "Class::ISA module not found - please install\n"
-            : $@ );
-    }
-    else {
-      ISA:
-        foreach my $isa ( split( /\s+/, $line ) ) {
-            $evalarg = $isa;
-            ($isa) = &eval;
-            no strict 'refs';
-            print join(
-                ', ',
-                map {    # snaffled unceremoniously from Class::ISA
-                    "$_"
-                      . (
-                        defined( ${"$_\::VERSION"} )
-                        ? ' ' . ${"$_\::VERSION"}
-                        : undef )
-                  } Class::ISA::self_and_super_path(ref($isa) || $isa)
-            );
-            print "\n";
-        }
+    foreach my $isa ( split( /\s+/, $line ) ) {
+        $evalarg = $isa;
+        ($isa) = &eval;
+        no strict 'refs';
+        print join(
+            ', ',
+            map {
+                "$_"
+                  . (
+                    defined( ${"$_\::VERSION"} )
+                    ? ' ' . ${"$_\::VERSION"}
+                    : undef )
+              } @{mro::get_linear_isa(ref($isa) || $isa)}
+        );
+        print "\n";
     }
 } ## end sub cmd_i
 
@@ -5529,7 +5512,7 @@ sub postponed {
     # Yes. Mark this file as having breakpoints.
     $had_breakpoints{$filename} |= 1;
 
-    # "Cannot be done: unsufficient magic" - we can't just put the
+    # "Cannot be done: insufficient magic" - we can't just put the
     # breakpoints saved in %postponed_file into %dbline by assigning
     # the whole hash; we have to do it one item at a time for the
     # breakpoints to be set properly.
@@ -6027,7 +6010,7 @@ sub setterm {
     # Load Term::Readline, but quietly; don't debug it and don't trace it.
     local $frame = 0;
     local $doret = -2;
-    eval { require Term::ReadLine } or die $@;
+    require Term::ReadLine;
 
     # If noTTY is set, but we have a TTY name, go ahead and hook up to it.
     if ($notty) {
@@ -6045,14 +6028,14 @@ sub setterm {
 
         # We don't have a TTY - try to find one via Term::Rendezvous.
         else {
-            eval "require Term::Rendezvous;" or die;
+            require Term::Rendezvous;
 
             # See if we have anything to pass to Term::Rendezvous.
             # Use $HOME/.perldbtty$$ if not.
             my $rv = $ENV{PERLDB_NOTTY} || "$ENV{HOME}/.perldbtty$$";
 
             # Rendezvous and get the filehandles.
-            my $term_rv = new Term::Rendezvous $rv;
+            my $term_rv = Term::Rendezvous->new( $rv );
             $IN  = $term_rv->IN;
             $OUT = $term_rv->OUT;
         } ## end else [ if ($tty)
@@ -6065,12 +6048,12 @@ sub setterm {
 
     # If we shouldn't use Term::ReadLine, don't.
     if ( !$rl ) {
-        $term = new Term::ReadLine::Stub 'perldb', $IN, $OUT;
+        $term = Term::ReadLine::Stub->new( 'perldb', $IN, $OUT );
     }
 
     # We're using Term::ReadLine. Get all the attributes for this terminal.
     else {
-        $term = new Term::ReadLine 'perldb', $IN, $OUT;
+        $term = Term::ReadLine->new( 'perldb', $IN, $OUT );
 
         $rl_attribs = $term->Attribs;
         $rl_attribs->{basic_word_break_characters} .= '-:+/*,[])}'
@@ -6140,10 +6123,37 @@ is tasked with doing all the necessary operating system mojo to get a new
 TTY (and probably another window) and to direct the new debugger to read and
 write there.
 
-The debugger provides C<get_fork_TTY> functions which work for X Windows,
-OS/2, and Mac OS X. Other systems are not supported. You are encouraged
-to write C<get_fork_TTY> functions which work for I<your> platform
-and contribute them.
+The debugger provides C<get_fork_TTY> functions which work for TCP
+socket servers, X Windows, OS/2, and Mac OS X. Other systems are not
+supported. You are encouraged to write C<get_fork_TTY> functions which
+work for I<your> platform and contribute them.
+
+=head3 C<socket_get_fork_TTY>
+
+=cut 
+
+sub connect_remoteport {
+    require IO::Socket;
+
+    my $socket = IO::Socket::INET->new(
+        Timeout  => '10',
+        PeerAddr => $remoteport,
+        Proto    => 'tcp',
+    );
+    if ( ! $socket ) {
+        die "Unable to connect to remote host: $remoteport\n";
+    }
+    return $socket;
+}
+
+sub socket_get_fork_TTY {
+    $tty = $LINEINFO = $IN = $OUT = connect_remoteport();
+
+    # Do I need to worry about setting $term?
+
+    reset_IN_OUT( $IN, $OUT );
+    return '';
+}
 
 =head3 C<xterm_get_fork_TTY>
 
@@ -6177,12 +6187,12 @@ qq[3>&1 xterm -title "Daughter Perl debugger $pids $name" -e sh -c 'tty 1>&3;\
 
     # We need $term defined or we can not switch to the newly created xterm
     if ($tty ne '' && !defined $term) {
-        eval { require Term::ReadLine } or die $@;
+        require Term::ReadLine;
         if ( !$rl ) {
-            $term = new Term::ReadLine::Stub 'perldb', $IN, $OUT;
+            $term = Term::ReadLine::Stub->new( 'perldb', $IN, $OUT );
         }
         else {
-            $term = new Term::ReadLine 'perldb', $IN, $OUT;
+            $term = Term::ReadLine->new( 'perldb', $IN, $OUT );
         }
     }
     # There's our new TTY.
@@ -6478,7 +6488,7 @@ sub readline {
     # Nothing on the filehandle stack. Socket?
     if ( ref $OUT and UNIVERSAL::isa( $OUT, 'IO::Socket::INET' ) ) {
 
-        # Send anyting we have to send.
+        # Send anything we have to send.
         $OUT->write( join( '', @_ ) );
 
         # Receive anything there is to receive.
@@ -6687,7 +6697,7 @@ sub parse_options {
                 local \$doret = -2; 
                 require '$optionRequire{$option}';
                 1;
-               } || die    # XXX: shouldn't happen
+               } || die $@   # XXX: shouldn't happen
           if defined $optionRequire{$option}
           && defined $val;
 
@@ -7279,7 +7289,7 @@ B<H> I<-number>    Display last number commands (default all).
 B<H> I<*>          Delete complete history.
 B<p> I<expr>        Same as \"I<print {DB::OUT} expr>\" in current package.
 B<|>I<dbcmd>        Run debugger command, piping DB::OUT to current pager.
-B<||>I<dbcmd>        Same as B<|>I<dbcmd> but DB::OUT is temporarilly select()ed as well.
+B<||>I<dbcmd>        Same as B<|>I<dbcmd> but DB::OUT is temporarily select()ed as well.
 B<\=> [I<alias> I<value>]    Define a command alias, or list current aliases.
 I<command>        Execute as a perl statement in current package.
 B<R>        Pure-man-restart of debugger, some of debugger state
@@ -7604,14 +7614,14 @@ sub print_help {
 
 This routine does a lot of gyrations to be sure that the pager is C<less>.
 It checks for C<less> masquerading as C<more> and records the result in
-C<$ENV{LESS}> so we don't have to go through doing the stats again.
+C<$fixed_less> so we don't have to go through doing the stats again.
 
 =cut
 
 sub fix_less {
 
     # We already know if this is set.
-    return if defined $ENV{LESS} && $ENV{LESS} =~ /r/;
+    return if $fixed_less;
 
     # Pager is less for sure.
     my $is_less = $pager =~ /\bless\b/;
@@ -7630,7 +7640,7 @@ sub fix_less {
 
     # changes environment!
     # 'r' added so we don't do (slow) stats again.
-    $ENV{LESS} .= 'r' if $is_less;
+    $fixed_less = 1 if $is_less;
 } ## end sub fix_less
 
 =head1 DIE AND WARN MANAGEMENT
@@ -7764,7 +7774,7 @@ sub dbdie {
         die @_ if $^S;    # in eval propagate
     }
 
-    # The code used to check $^S to see if compiliation of the current thing
+    # The code used to check $^S to see if compilation of the current thing
     # hadn't finished. We don't do it anymore, figuring eval is pretty stable.
     eval { require Carp };
 
@@ -8045,7 +8055,7 @@ Just checks the contents of C<$^O> and sets the C<$doccmd> global accordingly.
 =cut
 
 sub setman {
-    $doccmd = $^O !~ /^(?:MSWin32|VMS|os2|dos|amigaos|riscos|MacOS|NetWare)\z/s
+    $doccmd = $^O !~ /^(?:MSWin32|VMS|os2|dos|amigaos|riscos|NetWare)\z/s
       ? "man"         # O Happy Day!
       : "perldoc";    # Alas, poor unfortunates
 } ## end sub setman
@@ -8120,7 +8130,6 @@ my @pods = qw(
     amiga
     apio
     api
-    apollo
     artistic
     beos
     book
@@ -8179,10 +8188,8 @@ my @pods = qw(
     lexwarn
     locale
     lol
-    machten
     macos
     macosx
-    mint
     modinstall
     modlib
     mod
@@ -8197,7 +8204,6 @@ my @pods = qw(
     os2
     os390
     os400
-    othrtut
     packtut
     plan9
     pod
@@ -8613,7 +8619,6 @@ If there's only one hit, and it's a package qualifier, and it's not equal to the
 =cut
 
     if ( $text =~ /^[\$@%]/ ) {    # symbols (in $package + packages in main)
-
 =pod
 
 =over 4
@@ -8637,6 +8642,32 @@ We set the prefix to the item's sigil, and trim off the sigil to get the text to
         $prefix = substr $text, 0, 1;
         $text   = substr $text, 1;
 
+        my @out;
+
+=pod
+
+=item *
+
+We look for the lexical scope above DB::DB and auto-complete lexical variables
+if PadWalker could be loaded.
+
+=cut
+
+        if (not $text =~ /::/ and eval { require PadWalker } ) {
+            my $level = 1;
+            while (1) {
+                my @info = caller($level);
+                $level++;
+                $level = -1, last
+                  if not @info;
+                last if $info[3] eq 'DB::DB';
+            }
+            if ($level > 0) {
+                my $lexicals = PadWalker::peek_my($level);
+                push @out, grep /^\Q$prefix$text/, keys %$lexicals;
+            }
+        }
+
 =pod
 
 =item *
@@ -8645,7 +8676,7 @@ If the package is C<::> (C<main>), create an empty list; if it's something else,
 
 =cut
 
-        my @out = map "$prefix$_", grep /^\Q$text/,
+        push @out, map "$prefix$_", grep /^\Q$text/,
           ( grep /^_?[a-zA-Z]/, keys %$pack ),
           ( $pack eq '::' ? () : ( grep /::$/, keys %:: ) );
 
@@ -8849,7 +8880,7 @@ Rerun the current session to:
     rerun -4     current command minus 4 (go back 4 steps)
 
 Whether this always makes sense, in the current context is unknowable, and is
-in part left as a useful exersize for the reader.  This sub returns the
+in part left as a useful exercise for the reader.  This sub returns the
 appropriate arguments to rerun the current session.
 
 =cut
@@ -9043,7 +9074,7 @@ variable via C<DB::set_list>.
     set_list( "PERLDB_POST",      @$post );
     set_list( "PERLDB_TYPEAHEAD", @typeahead );
 
-    # We are oficially restarting.
+    # We are officially restarting.
     $ENV{PERLDB_RESTART} = 1;
 
     # We are junking all child debuggers.

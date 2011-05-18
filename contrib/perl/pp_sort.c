@@ -105,7 +105,7 @@ typedef SV * gptr;		/* pointers in our lists */
 #define FROMTOUPTO(src, dst, lim) do *dst++ = *src++; while(src<lim)
 
 
-/* Runs are identified by a pointer in the auxilliary list.
+/* Runs are identified by a pointer in the auxiliary list.
 ** The pointer is at the start of the list,
 ** and it points to the start of the next list.
 ** NEXT is used as an lvalue, too.
@@ -342,7 +342,7 @@ typedef struct {
 
 
 static I32
-cmp_desc(pTHX_ gptr a, gptr b)
+cmp_desc(pTHX_ gptr const a, gptr const b)
 {
     dVAR;
     return -PL_sort_RealCmp(aTHX_ a, b);
@@ -372,7 +372,7 @@ S_mergesortsv(pTHX_ gptr *base, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
     }
 
     if (nmemb <= SMALLSORT) aux = small;	/* use stack for aux array */
-    else { Newx(aux,nmemb,gptr); }		/* allocate auxilliary array */
+    else { Newx(aux,nmemb,gptr); }		/* allocate auxiliary array */
     level = 0;
     stackp = stack;
     stackp->runs = dynprep(aTHX_ base, aux, nmemb, cmp);
@@ -549,7 +549,7 @@ S_mergesortsv(pTHX_ gptr *base, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
 		t = NEXT(t);			/* where second run will end */
 		t = PINDEX(base, PNELEM(aux, t)); /* where it now ends */
 		FROMTOUPTO(f1, f2, t);		/* copy both runs */
-		NEXT(b) = p;			/* paralled pointer for 1st */
+		NEXT(b) = p;			/* paralleled pointer for 1st */
 		NEXT(p) = t;			/* ... and for second */
 	    }
 	}
@@ -781,7 +781,7 @@ S_qsortsvu(pTHX_ SV ** array, size_t num_elts, SVCOMPARE_t compare)
       return;
    }
 
-   /* Innoculate large partitions against quadratic behavior */
+   /* Inoculate large partitions against quadratic behavior */
    if (num_elts > QSORT_PLAY_SAFE) {
       register size_t n;
       register SV ** const q = array;
@@ -1291,7 +1291,7 @@ S_qsortsvu(pTHX_ SV ** array, size_t num_elts, SVCOMPARE_t compare)
  * by the original comparison routine on the elements pointed to.
  * Because we don't move the elements of list1 around through
  * this phase, we can break ties on elements that compare equal
- * using their address in the list1 array, ensuring stabilty.
+ * using their address in the list1 array, ensuring stability.
  * This leaves us with something looking like
  *
  *  indir                  list1
@@ -1317,7 +1317,7 @@ S_qsortsvu(pTHX_ SV ** array, size_t num_elts, SVCOMPARE_t compare)
 
 
 static I32
-cmpindir(pTHX_ gptr a, gptr b)
+cmpindir(pTHX_ gptr const a, gptr const b)
 {
     dVAR;
     gptr * const ap = (gptr *)a;
@@ -1330,7 +1330,7 @@ cmpindir(pTHX_ gptr a, gptr b)
 }
 
 static I32
-cmpindir_desc(pTHX_ gptr a, gptr b)
+cmpindir_desc(pTHX_ gptr const a, gptr const b)
 {
     dVAR;
     gptr * const ap = (gptr *)a;
@@ -1376,7 +1376,7 @@ S_qsortsv(pTHX_ gptr *list1, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
 	 q = list1;
 	 for (n = nmemb; n--; ) {
 	      /* Assert A: all elements of q with index > n are already
-	       * in place.  This is vacuosly true at the start, and we
+	       * in place.  This is vacuously true at the start, and we
 	       * put element n where it belongs below (if it wasn't
 	       * already where it belonged). Assert B: we only move
 	       * elements that aren't where they belong,
@@ -1568,7 +1568,7 @@ PP(pp_sort)
 	}
 	else {
 	    if (SvREADONLY(av))
-		Perl_croak(aTHX_ "%s", PL_no_modify);
+		Perl_croak_no_modify(aTHX);
 	    else
 		SvREADONLY_on(av);
 	    p1 = p2 = AvARRAY(av);
@@ -1589,33 +1589,23 @@ PP(pp_sort)
 	    if (!PL_sortcop) {
 		if (priv & OPpSORT_NUMERIC) {
 		    if (priv & OPpSORT_INTEGER) {
-			if (!SvIOK(*p1)) {
-			    if (SvAMAGIC(*p1))
-				overloading = 1;
-			    else
-				(void)sv_2iv(*p1);
-			}
+			if (!SvIOK(*p1))
+			    (void)sv_2iv_flags(*p1, SV_GMAGIC|SV_SKIP_OVERLOAD);
 		    }
 		    else {
-			if (!SvNSIOK(*p1)) {
-			    if (SvAMAGIC(*p1))
-				overloading = 1;
-			    else
-				(void)sv_2nv(*p1);
-			}
+			if (!SvNSIOK(*p1))
+			    (void)sv_2nv_flags(*p1, SV_GMAGIC|SV_SKIP_OVERLOAD);
 			if (all_SIVs && !SvSIOK(*p1))
 			    all_SIVs = 0;
 		    }
 		}
 		else {
-		    if (!SvPOK(*p1)) {
-			if (SvAMAGIC(*p1))
-			    overloading = 1;
-			else
-			    (void)sv_2pv_flags(*p1, 0,
-					       SV_GMAGIC|SV_CONST_RETURN);
-		    }
+		    if (!SvPOK(*p1))
+			(void)sv_2pv_flags(*p1, 0,
+			    SV_GMAGIC|SV_CONST_RETURN|SV_SKIP_OVERLOAD);
 		}
+		if (SvAMAGIC(*p1))
+		    overloading = 1;
 	    }
 	    p1++;
 	}
@@ -1652,6 +1642,11 @@ PP(pp_sort)
 	    if (!(flags & OPf_SPECIAL)) {
 		cx->cx_type = CXt_SUB;
 		cx->blk_gimme = G_SCALAR;
+		/* If our comparison routine is already active (CvDEPTH is
+		 * is not 0),  then PUSHSUB does not increase the refcount,
+		 * so we have to do it ourselves, because the LEAVESUB fur-
+		 * ther down lowers it. */
+		if (CvDEPTH(cv)) SvREFCNT_inc_simple_void_NN(cv);
 		PUSHSUB(cx);
 		if (!is_xsub) {
 		    AV* const padlist = CvPADLIST(cv);
@@ -1683,9 +1678,12 @@ PP(pp_sort)
 		    sort_flags);
 
 	    if (!(flags & OPf_SPECIAL)) {
-		LEAVESUB(cv);
-		if (!is_xsub)
-		    CvDEPTH(cv)--;
+		SV *sv;
+		/* Reset cx, in case the context stack has been
+		   reallocated. */
+		cx = &cxstack[cxstack_ix];
+		POPSUB(cx, sv);
+		LEAVESUB(sv);
 	    }
 	    POPBLOCK(cx,PL_curpm);
 	    PL_stack_sp = newsp;
@@ -1741,12 +1739,13 @@ PP(pp_sort)
 }
 
 static I32
-S_sortcv(pTHX_ SV *a, SV *b)
+S_sortcv(pTHX_ SV *const a, SV *const b)
 {
     dVAR;
     const I32 oldsaveix = PL_savestack_ix;
     const I32 oldscopeix = PL_scopestack_ix;
     I32 result;
+    PMOP * const pm = PL_curpm;
  
     PERL_ARGS_ASSERT_SORTCV;
 
@@ -1757,29 +1756,34 @@ S_sortcv(pTHX_ SV *a, SV *b)
     CALLRUNOPS(aTHX);
     if (PL_stack_sp != PL_stack_base + 1)
 	Perl_croak(aTHX_ "Sort subroutine didn't return single value");
-    if (!SvNIOKp(*PL_stack_sp))
-	Perl_croak(aTHX_ "Sort subroutine didn't return a numeric value");
     result = SvIV(*PL_stack_sp);
     while (PL_scopestack_ix > oldscopeix) {
 	LEAVE;
     }
     leave_scope(oldsaveix);
+    PL_curpm = pm;
     return result;
 }
 
 static I32
-S_sortcv_stacked(pTHX_ SV *a, SV *b)
+S_sortcv_stacked(pTHX_ SV *const a, SV *const b)
 {
     dVAR;
     const I32 oldsaveix = PL_savestack_ix;
     const I32 oldscopeix = PL_scopestack_ix;
     I32 result;
     AV * const av = GvAV(PL_defgv);
+    PMOP * const pm = PL_curpm;
 
     PERL_ARGS_ASSERT_SORTCV_STACKED;
 
+    if (AvREAL(av)) {
+	av_clear(av);
+	AvREAL_off(av);
+	AvREIFY_on(av);
+    }
     if (AvMAX(av) < 1) {
-	SV** ary = AvALLOC(av);
+	SV **ary = AvALLOC(av);
 	if (AvARRAY(av) != ary) {
 	    AvMAX(av) += AvARRAY(av) - AvALLOC(av);
 	    AvARRAY(av) = ary;
@@ -1788,6 +1792,7 @@ S_sortcv_stacked(pTHX_ SV *a, SV *b)
 	    AvMAX(av) = 1;
 	    Renew(ary,2,SV*);
 	    AvARRAY(av) = ary;
+	    AvALLOC(av) = ary;
 	}
     }
     AvFILLp(av) = 1;
@@ -1799,24 +1804,24 @@ S_sortcv_stacked(pTHX_ SV *a, SV *b)
     CALLRUNOPS(aTHX);
     if (PL_stack_sp != PL_stack_base + 1)
 	Perl_croak(aTHX_ "Sort subroutine didn't return single value");
-    if (!SvNIOKp(*PL_stack_sp))
-	Perl_croak(aTHX_ "Sort subroutine didn't return a numeric value");
     result = SvIV(*PL_stack_sp);
     while (PL_scopestack_ix > oldscopeix) {
 	LEAVE;
     }
     leave_scope(oldsaveix);
+    PL_curpm = pm;
     return result;
 }
 
 static I32
-S_sortcv_xsub(pTHX_ SV *a, SV *b)
+S_sortcv_xsub(pTHX_ SV *const a, SV *const b)
 {
     dVAR; dSP;
     const I32 oldsaveix = PL_savestack_ix;
     const I32 oldscopeix = PL_scopestack_ix;
     CV * const cv=MUTABLE_CV(PL_sortcop);
     I32 result;
+    PMOP * const pm = PL_curpm;
 
     PERL_ARGS_ASSERT_SORTCV_XSUB;
 
@@ -1829,19 +1834,18 @@ S_sortcv_xsub(pTHX_ SV *a, SV *b)
     (void)(*CvXSUB(cv))(aTHX_ cv);
     if (PL_stack_sp != PL_stack_base + 1)
 	Perl_croak(aTHX_ "Sort subroutine didn't return single value");
-    if (!SvNIOKp(*PL_stack_sp))
-	Perl_croak(aTHX_ "Sort subroutine didn't return a numeric value");
     result = SvIV(*PL_stack_sp);
     while (PL_scopestack_ix > oldscopeix) {
 	LEAVE;
     }
     leave_scope(oldsaveix);
+    PL_curpm = pm;
     return result;
 }
 
 
 static I32
-S_sv_ncmp(pTHX_ SV *a, SV *b)
+S_sv_ncmp(pTHX_ SV *const a, SV *const b)
 {
     const NV nv1 = SvNSIV(a);
     const NV nv2 = SvNSIV(b);
@@ -1852,7 +1856,7 @@ S_sv_ncmp(pTHX_ SV *a, SV *b)
 }
 
 static I32
-S_sv_i_ncmp(pTHX_ SV *a, SV *b)
+S_sv_i_ncmp(pTHX_ SV *const a, SV *const b)
 {
     const IV iv1 = SvIV(a);
     const IV iv2 = SvIV(b);
@@ -1863,17 +1867,17 @@ S_sv_i_ncmp(pTHX_ SV *a, SV *b)
 }
 
 #define tryCALL_AMAGICbin(left,right,meth) \
-    (PL_amagic_generation && (SvAMAGIC(left)||SvAMAGIC(right))) \
-	? amagic_call(left, right, CAT2(meth,_amg), 0) \
+    (SvAMAGIC(left)||SvAMAGIC(right)) \
+	? amagic_call(left, right, meth, 0) \
 	: NULL;
 
 #define SORT_NORMAL_RETURN_VALUE(val)  (((val) > 0) ? 1 : ((val) ? -1 : 0))
 
 static I32
-S_amagic_ncmp(pTHX_ register SV *a, register SV *b)
+S_amagic_ncmp(pTHX_ register SV *const a, register SV *const b)
 {
     dVAR;
-    SV * const tmpsv = tryCALL_AMAGICbin(a,b,ncmp);
+    SV * const tmpsv = tryCALL_AMAGICbin(a,b,ncmp_amg);
 
     PERL_ARGS_ASSERT_AMAGIC_NCMP;
 
@@ -1891,10 +1895,10 @@ S_amagic_ncmp(pTHX_ register SV *a, register SV *b)
 }
 
 static I32
-S_amagic_i_ncmp(pTHX_ register SV *a, register SV *b)
+S_amagic_i_ncmp(pTHX_ register SV *const a, register SV *const b)
 {
     dVAR;
-    SV * const tmpsv = tryCALL_AMAGICbin(a,b,ncmp);
+    SV * const tmpsv = tryCALL_AMAGICbin(a,b,ncmp_amg);
 
     PERL_ARGS_ASSERT_AMAGIC_I_NCMP;
 
@@ -1912,10 +1916,10 @@ S_amagic_i_ncmp(pTHX_ register SV *a, register SV *b)
 }
 
 static I32
-S_amagic_cmp(pTHX_ register SV *str1, register SV *str2)
+S_amagic_cmp(pTHX_ register SV *const str1, register SV *const str2)
 {
     dVAR;
-    SV * const tmpsv = tryCALL_AMAGICbin(str1,str2,scmp);
+    SV * const tmpsv = tryCALL_AMAGICbin(str1,str2,scmp_amg);
 
     PERL_ARGS_ASSERT_AMAGIC_CMP;
 
@@ -1933,10 +1937,10 @@ S_amagic_cmp(pTHX_ register SV *str1, register SV *str2)
 }
 
 static I32
-S_amagic_cmp_locale(pTHX_ register SV *str1, register SV *str2)
+S_amagic_cmp_locale(pTHX_ register SV *const str1, register SV *const str2)
 {
     dVAR;
-    SV * const tmpsv = tryCALL_AMAGICbin(str1,str2,scmp);
+    SV * const tmpsv = tryCALL_AMAGICbin(str1,str2,scmp_amg);
 
     PERL_ARGS_ASSERT_AMAGIC_CMP_LOCALE;
 

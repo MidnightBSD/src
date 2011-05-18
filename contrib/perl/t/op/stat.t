@@ -7,7 +7,18 @@ BEGIN {
 }
 
 use Config;
-use File::Spec;
+
+my ($Null, $Curdir);
+if(eval {require File::Spec; 1}) {
+    $Null = File::Spec->devnull;
+    $Curdir = File::Spec->curdir;
+} else {
+    die $@ unless is_miniperl();
+    $Curdir = '.';
+    diag("miniperl failed to load File::Spec, error is:\n$@");
+    diag("\ncontinuing, assuming '.' for current directory. Some tests will be skipped.");
+}
+
 
 plan tests => 107;
 
@@ -17,7 +28,6 @@ $Is_Amiga   = $^O eq 'amigaos';
 $Is_Cygwin  = $^O eq 'cygwin';
 $Is_Darwin  = $^O eq 'darwin';
 $Is_Dos     = $^O eq 'dos';
-$Is_MacOS   = $^O eq 'MacOS';
 $Is_MPE     = $^O eq 'mpeix';
 $Is_MSWin32 = $^O eq 'MSWin32';
 $Is_NetWare = $^O eq 'NetWare';
@@ -28,21 +38,23 @@ $Is_DGUX    = $^O eq 'dgux';
 $Is_MPRAS   = $^O =~ /svr4/ && -f '/etc/.relid';
 $Is_Rhapsody= $^O eq 'rhapsody';
 
-$Is_Dosish  = $Is_Dos || $Is_OS2 || $Is_MSWin32 || $Is_NetWare || $Is_Cygwin;
+$Is_Dosish  = $Is_Dos || $Is_OS2 || $Is_MSWin32 || $Is_NetWare;
 
 $Is_UFS     = $Is_Darwin && (() = `df -t ufs . 2>/dev/null`) == 2;
 
+if ($Is_Cygwin) {
+  require Win32;
+  Win32->import;
+}
+
 my($DEV, $INO, $MODE, $NLINK, $UID, $GID, $RDEV, $SIZE,
    $ATIME, $MTIME, $CTIME, $BLKSIZE, $BLOCKS) = (0..12);
-
-my $Curdir = File::Spec->curdir;
-
 
 my $tmpfile = tempfile();
 my $tmpfile_link = tempfile();
 
 chmod 0666, $tmpfile;
-1 while unlink $tmpfile;
+unlink_all $tmpfile;
 open(FOO, ">$tmpfile") || DIE("Can't open temp test file: $!");
 close FOO;
 
@@ -64,7 +76,7 @@ SKIP: {
 
 SKIP: {
   skip "mtime and ctime not reliable", 2
-    if $Is_MSWin32 or $Is_NetWare or $Is_Cygwin or $Is_Dos or $Is_MacOS or $Is_Darwin;
+    if $Is_MSWin32 or $Is_NetWare or $Is_Cygwin or $Is_Dos or $Is_Darwin;
 
   ok( $mtime,           'mtime' );
   is( $mtime, $ctime,   'mtime == ctime' );
@@ -101,6 +113,7 @@ SKIP: {
     }
 
     SKIP: {
+	skip_if_miniperl("File::Spec not built for minitest", 2);
         my $cwd = File::Spec->rel2abs($Curdir);
         skip "Solaris tmpfs has different mtime/ctime link semantics", 2
                                      if $Is_Solaris and $cwd =~ m#^/tmp# and
@@ -164,10 +177,10 @@ SKIP: {
         my $olduid = $>;
         eval { $> = 1; };
         skip "Can't test -r or -w meaningfully if you're superuser", 2
-          if $> == 0;
+          if ($Is_Cygwin ? Win32::IsAdminUser : $> == 0);
 
         SKIP: {
-            skip "Can't test -r meaningfully?", 1 if $Is_Dos || $Is_Cygwin;
+            skip "Can't test -r meaningfully?", 1 if $Is_Dos;
             ok(!-r $tmpfile,    "   -r");
         }
 
@@ -188,7 +201,7 @@ ok(-w $tmpfile,     '   -w');
 
 SKIP: {
     skip "-x simply determines if a file ends in an executable suffix", 1
-      if $Is_Dosish || $Is_MacOS;
+      if $Is_Dosish;
 
     ok(-x $tmpfile,     '   -x');
 }
@@ -197,8 +210,8 @@ ok(  -f $tmpfile,   '   -f');
 ok(! -d $tmpfile,   '   !-d');
 
 # Is this portable?
-ok(  -d $Curdir,          '-d cwd' );
-ok(! -f $Curdir,          '!-f cwd' );
+ok(  -d '.',          '-d cwd' );
+ok(! -f '.',          '!-f cwd' );
 
 
 SKIP: {
@@ -348,7 +361,6 @@ SKIP: {
     }
 }
 
-my $Null = File::Spec->devnull;
 SKIP: {
     skip "No null device to test with", 1 unless -e $Null;
     skip "We know Win32 thinks '$Null' is a TTY", 1 if $Is_MSWin32;
@@ -360,7 +372,7 @@ SKIP: {
 
 
 # These aren't strictly "stat" calls, but so what?
-my $statfile = File::Spec->catfile($Curdir, 'op', 'stat.t');
+my $statfile = './op/stat.t';
 ok(  -T $statfile,    '-T');
 ok(! -B $statfile,    '!-B');
 
@@ -495,9 +507,12 @@ SKIP: {
     ok(-d -r _ , "chained -x's on dirhandle"); 
     ok(-d DIR, "-d on a dirhandle works");
 
-    # And now for the ambigious bareword case
-    ok(open(DIR, "TEST"), 'Can open "TEST" dir')
-	|| diag "Can't open 'TEST':  $!";
+    # And now for the ambiguous bareword case
+    {
+	no warnings 'deprecated';
+	ok(open(DIR, "TEST"), 'Can open "TEST" dir')
+	    || diag "Can't open 'TEST':  $!";
+    }
     my $size = (stat(DIR))[7];
     ok(defined $size, "stat() on bareword works");
     is($size, -s "TEST", "size returned by stat of bareword is for the file");
@@ -525,9 +540,12 @@ SKIP: {
 	ok(-d _ , "The special file handle _ is set correctly"); 
         ok(-d -r *DIR{IO} , "chained -x's on *DIR{IO}");
 
-	# And now for the ambigious bareword case
-	ok(open(DIR, "TEST"), 'Can open "TEST" dir')
-	    || diag "Can't open 'TEST':  $!";
+	# And now for the ambiguous bareword case
+	{
+	    no warnings 'deprecated';
+	    ok(open(DIR, "TEST"), 'Can open "TEST" dir')
+		|| diag "Can't open 'TEST':  $!";
+	}
 	my $size = (stat(*DIR{IO}))[7];
 	ok(defined $size, "stat() on *THINGY{IO} works");
 	is($size, -s "TEST",
@@ -541,5 +559,5 @@ SKIP: {
 
 END {
     chmod 0666, $tmpfile;
-    1 while unlink $tmpfile;
+    unlink_all $tmpfile;
 }

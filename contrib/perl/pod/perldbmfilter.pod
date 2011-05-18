@@ -17,7 +17,7 @@ The four C<filter_*> methods shown above are available in all the DBM
 modules that ship with Perl, namely DB_File, GDBM_File, NDBM_File,
 ODBM_File and SDBM_File.
 
-Each of the methods work identically, and are used to install (or
+Each of the methods works identically, and is used to install (or
 uninstall) a single DBM Filter. The only difference between them is the
 place that the filter is installed.
 
@@ -51,7 +51,7 @@ every time you read a value from a DBM database.
 You can use any combination of the methods from none to all four.
 
 All filter methods return the existing filter, if present, or C<undef>
-in not.
+if not.
 
 To delete a filter pass C<undef> to it.
 
@@ -61,7 +61,7 @@ When each filter is called by Perl, a local copy of C<$_> will contain
 the key or value to be filtered. Filtering is achieved by modifying
 the contents of C<$_>. The return code from the filter is ignored.
 
-=head2 An Example -- the NULL termination problem.
+=head2 An Example: the NULL termination problem.
 
 DBM Filters are useful for a class of problems where you I<always>
 want to make the same transformation to all keys, all values or both.
@@ -118,7 +118,7 @@ self-explanatory. Both "fetch" filters remove the terminating NULL,
 and both "store" filters add a terminating NULL.
 
 
-=head2 Another Example -- Key is a C int.
+=head2 Another Example: Key is a C int.
 
 Here is another real-life example. By default, whenever Perl writes to
 a DBM database it always writes the key and value as strings. So when
@@ -154,7 +154,7 @@ Here is a DBM Filter that does it:
 The code above uses DB_File, but again it will work with any of the
 DBM modules.
 
-This time only two filters have been used -- we only need to manipulate
+This time only two filters have been used; we only need to manipulate
 the contents of the key, so it wasn't necessary to install any value
 filters.
 

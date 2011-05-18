@@ -1,19 +1,28 @@
 package feature;
 
-our $VERSION = '1.13';
+our $VERSION = '1.20';
 
 # (feature name) => (internal name, used in %^H)
 my %feature = (
-    switch => 'feature_switch',
-    say    => "feature_say",
-    state  => "feature_state",
+    switch          => 'feature_switch',
+    say             => "feature_say",
+    state           => "feature_state",
+    unicode_strings => "feature_unicode",
 );
+
+# This gets set (for now) in $^H as well as in %^H,
+# for runtime speed of the uc/lc/ucfirst/lcfirst functions.
+# See HINT_UNI_8_BIT in perl.h.
+our $hint_uni8bit = 0x00000800;
 
 # NB. the latest bundle must be loaded by the -E switch (see toke.c)
 
 my %feature_bundle = (
     "5.10" => [qw(switch say state)],
-### "5.11" => [qw(switch say state)],
+    "5.11" => [qw(switch say state unicode_strings)],
+    "5.12" => [qw(switch say state unicode_strings)],
+    "5.13" => [qw(switch say state unicode_strings)],
+    "5.14" => [qw(switch say state unicode_strings)],
 );
 
 # special case
@@ -24,7 +33,7 @@ $feature_bundle{"5.9.5"} = $feature_bundle{"5.10"};
 
 =head1 NAME
 
-feature - Perl pragma to enable new syntactic features
+feature - Perl pragma to enable new features
 
 =head1 SYNOPSIS
 
@@ -43,9 +52,9 @@ feature - Perl pragma to enable new syntactic features
 
 It is usually impossible to add new syntax to Perl without breaking
 some existing programs. This pragma provides a way to minimize that
-risk. New syntactic constructs can be enabled by C<use feature 'foo'>,
-and will be parsed only when the appropriate feature pragma is in
-scope.
+risk. New syntactic constructs, or new semantic meanings to older
+constructs, can be enabled by C<use feature 'foo'>, and will be parsed
+only when the appropriate feature pragma is in scope.
 
 =head2 Lexical effect
 
@@ -94,6 +103,25 @@ C<use feature 'state'> tells the compiler to enable C<state>
 variables.
 
 See L<perlsub/"Persistent Private Variables"> for details.
+
+=head2 the 'unicode_strings' feature
+
+C<use feature 'unicode_strings'> tells the compiler to use Unicode semantics
+in all string operations executed within its scope (unless they are also
+within the scope of either C<use locale> or C<use bytes>).  The same applies
+to all regular expressions compiled within the scope, even if executed outside
+it.
+
+C<no feature 'unicode_strings'> tells the compiler to use the traditional
+Perl semantics wherein the native character set semantics is used unless it is
+clear to Perl that Unicode is desired.  This can lead to some surprises
+when the behavior suddenly changes.  (See
+L<perlunicode/The "Unicode Bug"> for details.)  For this reason, if you are
+potentially using Unicode in your program, the
+C<use feature 'unicode_strings'> subpragma is B<strongly> recommended.
+
+This subpragma is available starting with Perl 5.11.3, but was not fully
+implemented until 5.13.8.
 
 =head1 FEATURE BUNDLES
 
@@ -164,6 +192,7 @@ sub import {
 	    unknown_feature($name);
 	}
 	$^H{$feature{$name}} = 1;
+        $^H |= $hint_uni8bit if $name eq 'unicode_strings';
     }
 }
 
@@ -173,6 +202,7 @@ sub unimport {
     # A bare C<no feature> should disable *all* features
     if (!@_) {
 	delete @^H{ values(%feature) };
+        $^H &= ~ $hint_uni8bit;
 	return;
     }
 
@@ -194,6 +224,7 @@ sub unimport {
 	}
 	else {
 	    delete $^H{$feature{$name}};
+            $^H &= ~ $hint_uni8bit if $name eq 'unicode_strings';
 	}
     }
 }

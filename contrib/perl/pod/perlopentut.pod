@@ -55,7 +55,7 @@ If you prefer the low-punctuation version, you could write that this way:
     open RESULTS,">  runstats"  or die "can't open runstats: $!";
     open LOG,    ">> logfile "  or die "can't open logfile:  $!";
 
-A few things to notice.  First, the leading less-than is optional.
+A few things to notice.  First, the leading C<< < >> is optional.
 If omitted, Perl assumes that you want to open the file for reading.
 
 Note also that the first example uses the C<||> logical operator, and the
@@ -117,11 +117,28 @@ like C<my $infile>, there's no clash and no need to worry about future
 conflicts.
 
 Another convenient behavior is that an indirect filehandle automatically
-closes when it goes out of scope or when you undefine it:
+closes when there are no more references to it:
 
     sub firstline {
 	open( my $in, shift ) && return scalar <$in>;
 	# no close() required
+    }
+
+Indirect filehandles also make it easy to pass filehandles to and return
+filehandles from subroutines:
+
+    for my $file ( qw(this.conf that.conf) ) {
+        my $fin = open_or_throw('<', $file);
+        process_conf( $fin );
+        # no close() needed
+    }
+
+    use Carp;
+    sub open_or_throw {
+        my ($mode, $filename) = @_;
+        open my $h, $mode, $filename
+            or croak "Could not open '$filename': $!";
+        return $h;
     }
 
 =head2 Pipe Opens
@@ -449,7 +466,7 @@ be 0777, and for anything else, 0666.
 Why so permissive?  Well, it isn't really.  The MASK will be modified
 by your process's current C<umask>.  A umask is a number representing
 I<disabled> permissions bits; that is, bits that will not be turned on
-in the created files' permissions field.
+in the created file's permissions field.
 
 For example, if your C<umask> were 027, then the 020 part would
 disable the group from writing, and the 007 part would disable others
@@ -779,7 +796,7 @@ the doctor ordered.  There's no filehandle interface, but
 it's still easy to get the contents of a document:
 
     use LWP::Simple;
-    $doc = get('http://www.linpro.no/lwp/');
+    $doc = get('http://www.cpan.org/');
 
 =head2 Binary Files
 

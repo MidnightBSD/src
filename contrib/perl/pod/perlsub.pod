@@ -351,7 +351,7 @@ it.  Similarly, in the conditional
 
 the scope of $answer extends from its declaration through the rest
 of that conditional, including any C<elsif> and C<else> clauses, 
-but not beyond it.  See L<perlsyn/"Simple statements"> for information
+but not beyond it.  See L<perlsyn/"Simple Statements"> for information
 on the scope of variables in statements with modifiers.
 
 The C<foreach> loop defaults to scoping its index variable dynamically
@@ -535,6 +535,7 @@ Synopsis:
     local @oof = @bar;		# make @oof dynamic, and init it
 
     local $hash{key} = "val";	# sets a local value for this hash entry
+    delete local $hash{key};    # delete this entry for the current block
     local ($cond ? $v1 : $v2);	# several types of lvalues support
 				# localization
 
@@ -607,16 +608,9 @@ magical and read-only :
 
     local $1 = 2;
 
-Similarly, but in a way more difficult to spot, the following snippet will
-die in perl 5.9.0 :
-
-    sub f { local $_ = "foo"; print }
-    for ($1) {
-	# now $_ is aliased to $1, thus is magic and readonly
-	f();
-    }
-
-See next section for an alternative to this situation.
+One exception is the default scalar variable: starting with perl 5.14
+C<local($_)> will always strip all magic from $_, to make it possible
+to safely reuse $_ in a subroutine.
 
 B<WARNING>: Localization of tied arrays and hashes does not currently
 work as described.
@@ -642,12 +636,6 @@ This implies, among other things, that any magic eventually carried by
 those variables is locally lost.  In other words, saying C<local */>
 will not have any effect on the internal value of the input record
 separator.
-
-Notably, if you want to work with a brand new value of the default scalar
-$_, and avoid the potential problem listed above about $_ previously
-carrying a magic value, you should use C<local *_> instead of C<local $_>.
-As of perl 5.9.1, you can also use the lexical form of C<$_> (declaring it
-with C<my $_>), which avoids completely this problem.
 
 =head3 Localization of elements of composite types
 X<local, composite type element> X<local, array element> X<local, hash element>
@@ -691,6 +679,55 @@ Perl will print
 
 The behavior of local() on non-existent members of composite
 types is subject to change in future.
+
+=head3 Localized deletion of elements of composite types
+X<delete> X<local, composite type element> X<local, array element> X<local, hash element>
+
+You can use the C<delete local $array[$idx]> and C<delete local $hash{key}>
+constructs to delete a composite type entry for the current block and restore
+it when it ends. They return the array/hash value before the localization,
+which means that they are respectively equivalent to
+
+    do {
+        my $val = $array[$idx];
+        local  $array[$idx];
+        delete $array[$idx];
+        $val
+    }
+
+and
+
+    do {
+        my $val = $hash{key};
+        local  $hash{key};
+        delete $hash{key};
+        $val
+    }
+
+except that for those the C<local> is scoped to the C<do> block. Slices are
+also accepted.
+
+    my %hash = (
+     a => [ 7, 8, 9 ],
+     b => 1,
+    )
+
+    {
+     my $a = delete local $hash{a};
+     # $a is [ 7, 8, 9 ]
+     # %hash is (b => 1)
+
+     {
+      my @nums = delete local @$a[0, 2]
+      # @nums is (7, 9)
+      # $a is [ undef, 8 ]
+
+      $a[0] = 999; # will be erased when the scope ends
+     }
+     # $a is back to [ 7, 8, 9 ]
+
+    }
+    # %hash is back to its original state
 
 =head2 Lvalue subroutines
 X<lvalue> X<subroutine, lvalue>
@@ -1003,7 +1040,7 @@ X<prototype> X<subroutine, prototype>
 Perl supports a very limited kind of compile-time argument checking
 using function prototyping.  If you declare
 
-    sub mypush (\@@)
+    sub mypush (+@)
 
 then C<mypush()> takes arguments exactly like C<push()> does.  The
 function declaration must be visible at compile time.  The prototype
@@ -1033,9 +1070,9 @@ corresponding built-in.
     sub mysyswrite ($$$;$)   mysyswrite $buf, 0, length($buf) - $off, $off
     sub myreverse (@)	     myreverse $a, $b, $c
     sub myjoin ($@)	     myjoin ":", $a, $b, $c
-    sub mypop (\@)	     mypop @array
-    sub mysplice (\@$$@)     mysplice @array, 0, 2, @pushme
-    sub mykeys (\%)	     mykeys %{$hashref}
+    sub mypop (+)	     mypop @array
+    sub mysplice (+$$@)	     mysplice @array, 0, 2, @pushme
+    sub mykeys (+)	     mykeys %{$hashref}
     sub myopen (*;$)	     myopen HANDLE, $name
     sub mypipe (**)	     mypipe READHANDLE, WRITEHANDLE
     sub mygrep (&@)	     mygrep { /foo/ } $a, $b, $c
@@ -1043,12 +1080,15 @@ corresponding built-in.
     sub mytime ()	     mytime
 
 Any backslashed prototype character represents an actual argument
-that absolutely must start with that character.  The value passed
-as part of C<@_> will be a reference to the actual argument given
-in the subroutine call, obtained by applying C<\> to that argument.
+that must start with that character (optionally preceded by C<my>,
+C<our> or C<local>), with the exception of C<$>, which will accept a
+hash or array element even without a dollar sign, such as
+C<< my_function()->[0] >>. The value passed as part of C<@_> will be a
+reference to the actual argument given in the subroutine call,
+obtained by applying C<\> to that argument.
 
-You can also backslash several argument types simultaneously by using
-the C<\[]> notation:
+You can use the C<\[]> backslash group notation to specify more than one
+allowed argument type. For example:
 
     sub myref (\[$@%&*])
 
@@ -1082,6 +1122,20 @@ follows:
 	my $fh = qualify_to_ref(shift, caller);
 	...
     }
+
+The C<+> prototype is a special alternative to C<$> that will act like
+C<\[@%]> when given a literal array or hash variable, but will otherwise
+force scalar context on the argument.  This is useful for functions which
+should accept either a literal array or an array reference as the argument:
+
+    sub mypush (+@) {
+        my $aref = shift;
+        die "Not an array or arrayref" unless ref $aref eq 'ARRAY';
+        push @$aref, @_;
+    }
+
+When using the C<+> prototype, your function must check that the argument
+is of an acceptable type.
 
 A semicolon (C<;>) separates mandatory arguments from optional arguments.
 It is redundant before C<@> or C<%>, which gobble up everything else.
@@ -1375,7 +1429,11 @@ of the original subroutine magically appears in the global $AUTOLOAD
 variable of the same package as the C<AUTOLOAD> routine.  The name
 is not passed as an ordinary argument because, er, well, just
 because, that's why.  (As an exception, a method call to a nonexistent
-C<import> or C<unimport> method is just skipped instead.)
+C<import> or C<unimport> method is just skipped instead.  Also, if
+the AUTOLOAD subroutine is an XSUB, C<$AUTOLOAD> is not populated;
+instead, you should call L<< C<SvPVX>E<sol>C<SvCUR>|perlapi >> on the
+C<CV> for C<AUTOLOAD> to retrieve the method name.)
+
 
 Many C<AUTOLOAD> routines load in a definition for the requested
 subroutine using eval(), then execute that subroutine using a special

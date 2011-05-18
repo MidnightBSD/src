@@ -7,9 +7,7 @@ BEGIN {
 }
 
 use Config;
-use File::Spec::Functions;
 
-my $Is_MacOS  = ($^O eq 'MacOS');
 my $Is_VMSish = ($^O eq 'VMS');
 
 if (($^O eq 'MSWin32') || ($^O eq 'NetWare')) {
@@ -27,9 +25,8 @@ my $has_link            = $Config{d_link};
 my $accurate_timestamps =
     !($^O eq 'MSWin32' || $^O eq 'NetWare' ||
       $^O eq 'dos'     || $^O eq 'os2'     ||
-      $^O eq 'mint'    || $^O eq 'cygwin'  ||
-      $^O eq 'amigaos' || $wd =~ m#$Config{afsroot}/# ||
-      $Is_MacOS
+      $^O eq 'cygwin'  || $^O eq 'amigaos' ||
+	  $wd =~ m#$Config{afsroot}/#
      );
 
 if (defined &Win32::IsWinNT && Win32::IsWinNT()) {
@@ -64,21 +61,18 @@ elsif ($^O eq 'VMS') {
     `if f\$search("$tmpdir.dir") .nes. "" then delete/nolog/noconfirm $tmpdir.dir;`;
     `create/directory [.$tmpdir]`;
 }
-elsif ($Is_MacOS) {
-    rmdir "$tmpdir"; mkdir "$tmpdir";
-}
 else {
     `rm -f $tmpdir 2>/dev/null; mkdir $tmpdir 2>/dev/null`;
 }
 
-chdir catdir(curdir(), $tmpdir);
+chdir $tmpdir;
 
 `/bin/rm -rf a b c x` if -x '/bin/rm';
 
 umask(022);
 
 SKIP: {
-    skip "bogus umask", 1 if ($^O eq 'MSWin32') || ($^O eq 'NetWare') || ($^O eq 'epoc') || $Is_MacOS;
+    skip "bogus umask", 1 if ($^O eq 'MSWin32') || ($^O eq 'NetWare') || ($^O eq 'epoc');
 
     is((umask(0)&0777), 022, 'umask'),
 }
@@ -429,7 +423,7 @@ SKIP: {
     # this works on win32 only, because fs isn't casesensitive
     ok(-e 'X', "rename working");
 
-    1 while unlink 'X';
+    unlink_all 'X';
     chdir $wd || die "Can't cd back to $wd";
 }
 

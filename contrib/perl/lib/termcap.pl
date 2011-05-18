@@ -1,13 +1,18 @@
-;# $RCSfile: termcap.pl,v $$Revision: 1.1.1.1 $$Date: 2009-03-15 19:18:55 $
+warn "Legacy library @{[(caller(0))[6]]} will be removed from the Perl core distribution in the next major release. Please install it from the CPAN distribution Perl4::CoreLibs. It is being used at @{[(caller)[1]]}, line @{[(caller)[2]]}.\n";
+
+;# $RCSfile: termcap.pl,v $$Revision: 1.1.1.2 $$Date: 2011-05-18 13:33:26 $
 #
 # This library is no longer being maintained, and is included for backward
 # compatibility with Perl 4 programs which may require it.
+# This legacy library is deprecated and will be removed in a future
+# release of perl.
 #
 # In particular, this should not be used as an example of modern Perl
 # programming techniques.
 #
 # Suggested alternative: Term::Cap
 #
+
 ;#
 ;# Usage:
 ;#	require 'ioctl.pl';
@@ -152,8 +157,8 @@ sub Tgoto {
 	}
 	elsif ($code eq '>') {
 	    ($code,$tmp,$string) = unpack("CCa99",$string);
-	    if ($tmp[$[] > $code) {
-		$tmp[$[] += $tmp;
+	    if ($tmp[0] > $code) {
+		$tmp[0] += $tmp;
 	    }
 	}
 	elsif ($code eq '2') {

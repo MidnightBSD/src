@@ -117,7 +117,7 @@ is treated as 0.
 
 =head2 Statement Modifiers
 X<statement modifier> X<modifier> X<if> X<unless> X<while>
-X<until> X<foreach> X<for>
+X<until> X<when> X<foreach> X<for>
 
 Any simple statement may optionally be followed by a I<SINGLE> modifier,
 just before the terminating semicolon (or block ending).  The possible
@@ -127,6 +127,8 @@ modifiers are:
     unless EXPR
     while EXPR
     until EXPR
+    when EXPR
+    for LIST
     foreach LIST
 
 The C<EXPR> following the modifier is referred to as the "condition".
@@ -138,6 +140,22 @@ the condition is true (i.e., if the condition is false).
 
     print "Basset hounds got long ears" if length $ear >= 10;
     go_outside() and play() unless $is_raining;
+
+C<when> executes the statement I<when> C<$_> smart matches C<EXPR>, and
+then either C<break>s out if it's enclosed in a C<given> scope or skips
+to the C<next> element when it lies directly inside a C<for> loop.
+See also L</"Switch statements">.
+
+    given ($something) {
+        $abc    = 1 when /^abc/;
+        $just_a = 1 when /^a/;
+        $other  = 1;
+    }
+
+    for (@names) {
+	admin($_)   when [ qw/Alice Bob/ ];
+	regular($_) when [ qw/Chris David Ellen/ ];
+    }
 
 The C<foreach> modifier is an iterator: it executes the statement once
 for each item in the LIST (with C<$_> aliased to each item in turn).
@@ -210,6 +228,9 @@ The following compound statements may be used to control flow:
     if (EXPR) BLOCK
     if (EXPR) BLOCK else BLOCK
     if (EXPR) BLOCK elsif (EXPR) BLOCK ... else BLOCK
+    unless (EXPR) BLOCK
+    unless (EXPR) BLOCK else BLOCK
+    unless (EXPR) BLOCK elsif (EXPR) BLOCK ... else BLOCK
     LABEL while (EXPR) BLOCK
     LABEL while (EXPR) BLOCK continue BLOCK
     LABEL until (EXPR) BLOCK
@@ -234,7 +255,11 @@ all do the same thing:
 The C<if> statement is straightforward.  Because BLOCKs are always
 bounded by curly brackets, there is never any ambiguity about which
 C<if> an C<else> goes with.  If you use C<unless> in place of C<if>,
-the sense of the test is reversed.
+the sense of the test is reversed. Like C<if>, C<unless> can be followed
+by C<else>. C<unless> can even be followed by one or more C<elsif>
+statements, though you may want to think twice before using that particular
+language construct, as everyone reading your code will have to think at least
+twice before they can understand what's going on.
 
 The C<while> statement executes the block as long as the expression is
 L<true|/"Truth and Falsehood">.
@@ -253,6 +278,14 @@ If there is a C<continue> BLOCK, it is always executed just before the
 conditional is about to be evaluated again.  Thus it can be used to
 increment a loop variable, even when the loop has been continued via
 the C<next> statement.
+
+Extension modules can also hook into the Perl parser to define new
+kinds of compound statement.  These are introduced by a keyword which
+the extension recognizes, and the syntax following the keyword is
+defined entirely by the extension.  If you are an implementor, see
+L<perlapi/PL_keyword_plugin> for the mechanism.  If you are using such
+a module, see the module's documentation for details of the syntax that
+it defines.
 
 =head2 Loop Control
 X<loop control> X<loop, control> X<next> X<last> X<redo> X<continue>
@@ -304,17 +337,17 @@ which is Perl short-hand for the more explicitly written version:
 Note that if there were a C<continue> block on the above code, it would
 get executed only on lines discarded by the regex (since redo skips the
 continue block). A continue block is often used to reset line counters
-or C<?pat?> one-time matches:
+or C<m?pat?> one-time matches:
 
     # inspired by :1,$g/fred/s//WILMA/
     while (<>) {
-	?(fred)?    && s//WILMA $1 WILMA/;
-	?(barney)?  && s//BETTY $1 BETTY/;
-	?(homer)?   && s//MARGE $1 MARGE/;
+	m?(fred)?    && s//WILMA $1 WILMA/;
+	m?(barney)?  && s//BETTY $1 BETTY/;
+	m?(homer)?   && s//MARGE $1 MARGE/;
     } continue {
 	print "$ARGV $.: $_";
-	close ARGV  if eof();		# reset $.
-	reset	    if eof();		# reset ?pat?
+	close ARGV  if eof;		# reset $.
+	reset	    if eof;		# reset ?pat?
     }
 
 If the word C<while> is replaced by the word C<until>, the sense of the
@@ -393,7 +426,7 @@ is therefore visible only within the loop.  Otherwise, the variable is
 implicitly local to the loop and regains its former value upon exiting
 the loop.  If the variable was previously declared with C<my>, it uses
 that variable instead of the global one, but it's still localized to
-the loop.  This implicit localisation occurs I<only> in a C<foreach>
+the loop.  This implicit localization occurs I<only> in a C<foreach>
 loop.
 X<my> X<local>
 
@@ -593,28 +626,70 @@ the C<..> and C<...> flip-flop operators.
 
 In those cases the value of EXPR is used directly as a boolean.
 
-Furthermore:
+Furthermore, Perl inspects the operands of the binary boolean operators to
+decide whether to use smart matching for each one by applying the above test to
+the operands:
 
 =over 4
 
 =item *
 
 If EXPR is C<... && ...> or C<... and ...>, the test
-is applied recursively to both arguments. If I<both>
-arguments pass the test, then the argument is treated
-as boolean.
+is applied recursively to both operands. If I<both>
+operands pass the test, then the expression is treated
+as boolean; otherwise, smart matching is used.
 
 =item *
 
 If EXPR is C<... || ...>, C<... // ...> or C<... or ...>, the test
-is applied recursively to the first argument.
+is applied recursively to the first operand (which may be a
+higher-precedence AND operator, for example). If the first operand
+is to use smart matching, then both operands will do so; if it is
+not, then the second argument will not be either.
 
 =back
 
 These rules look complicated, but usually they will do what
-you want. For example you could write:
+you want. For example:
 
     when (/^\d+$/ && $_ < 75) { ... }
+
+will be treated as a boolean match because the rules say both a regex match and
+an explicit test on $_ will be treated as boolean.
+
+Also:
+
+    when ([qw(foo bar)] && /baz/) { ... }
+
+will use smart matching because only I<one> of the operands is a boolean; the
+other uses smart matching, and that wins.
+
+Further:
+
+    when ([qw(foo bar)] || /^baz/) { ... }
+
+will use smart matching (only the first operand is considered), whereas
+
+    when (/^baz/ || [qw(foo bar)]) { ... }
+
+will test only the regex, which causes both operands to be treated as boolean.
+Watch out for this one, then, because an arrayref is always a true value, which
+makes it effectively redundant.
+
+Tautologous boolean operators are still going to be optimized away. Don't be
+tempted to write
+
+    when ('foo' or 'bar') { ... }
+
+This will optimize down to C<'foo'>, so C<'bar'> will never be considered (even
+though the rules say to use a smart match on C<'foo'>). For an alternation like
+this, an array ref will work, because this will instigate smart matching:
+
+    when ([qw(foo bar)] { ... }
+
+This is somewhat equivalent to the C-style switch statement's fallthrough
+functionality (not to be confused with I<Perl's> fallthrough functionality - see
+below), wherein the same block is used for several C<case> statements.
 
 Another useful shortcut is that, if you use a literal array
 or hash as the argument to C<given>, it is turned into a
@@ -641,6 +716,45 @@ case to the next:
 	default    { say '$foo does not contain a y' }
     }
 
+=head3 Return value
+
+When a C<given> statement is also a valid expression (e.g.
+when it's the last statement of a block), it evaluates to :
+
+=over 4
+
+=item *
+
+an empty list as soon as an explicit C<break> is encountered.
+
+=item *
+
+the value of the last evaluated expression of the successful
+C<when>/C<default> clause, if there's one.
+
+=item *
+
+the value of the last evaluated expression of the C<given> block if no
+condition is true.
+
+=back
+
+In both last cases, the last expression is evaluated in the context that
+was applied to the C<given> block.
+
+Note that, unlike C<if> and C<unless>, failed C<when> statements always
+evaluate to an empty list.
+
+    my $price = do { given ($item) {
+	when ([ 'pear', 'apple' ]) { 1 }
+	break when 'vote';      # My vote cannot be bought
+        1e10  when /Mona Lisa/;
+        'unknown';
+    } };
+
+Currently, C<given> blocks can't always be used as proper expressions. This
+may be addressed in a future version of perl.
+
 =head3 Switching in a loop
 
 Instead of using C<given()>, you can use a C<foreach()> loop.
@@ -653,7 +767,7 @@ string occurs in an array:
     }
     print "\@array contains $count copies of 'foo'\n";
 
-On exit from the C<when> block, there is an implicit C<next>.
+At the end of all C<when> blocks, there is an implicit C<next>.
 You can override that with an explicit C<last> if you're only
 interested in the first match.
 
@@ -686,12 +800,12 @@ C<grep> does not.
     Any     CodeRef   scalar sub truth          $b->($a)
 
     Hash    Hash      hash keys identical (every key is found in both hashes)
-    Array   Hash      hash slice existence     grep { exists $b->{$_} } @$a
+    Array   Hash      hash keys intersection   grep { exists $b->{$_} } @$a
     Regex   Hash      hash key grep            grep /$a/, keys %$b
     undef   Hash      always false (undef can't be a key)
     Any     Hash      hash entry existence     exists $b->{$a}
 
-    Hash    Array     hash slice existence     grep { exists $a->{$_} } @$b
+    Hash    Array     hash keys intersection   grep { exists $a->{$_} } @$b
     Array   Array     arrays are comparable[2]
     Regex   Array     array grep               grep /$a/, @$b
     undef   Array     array contains undef     grep !defined, @$b
@@ -739,7 +853,8 @@ See L<overload>.
 The Perl 5 smart match and C<given>/C<when> constructs are not
 absolutely identical to their Perl 6 analogues. The most visible
 difference is that, in Perl 5, parentheses are required around
-the argument to C<given()> and C<when()>. Parentheses in Perl 6
+the argument to C<given()> and C<when()> (except when this last
+one is used as a statement modifier). Parentheses in Perl 6
 are always optional in a control construct such as C<if()>,
 C<while()>, or C<when()>; they can't be made optional in Perl
 5 without a great deal of potential confusion, because Perl 5
@@ -852,17 +967,18 @@ X<comment> X<line> X<#> X<preprocessor> X<eval>
 Perl can process line directives, much like the C preprocessor.  Using
 this, one can control Perl's idea of filenames and line numbers in
 error or warning messages (especially for strings that are processed
-with C<eval()>).  The syntax for this mechanism is the same as for most
-C preprocessors: it matches the regular expression
+with C<eval()>).  The syntax for this mechanism is almost the same as for
+most C preprocessors: it matches the regular expression
 
     # example: '# line 42 "new_filename.plx"'
     /^\#   \s*
       line \s+ (\d+)   \s*
-      (?:\s("?)([^"]+)\2)? \s*
+      (?:\s("?)([^"]+)\g2)? \s*
      $/x
 
 with C<$1> being the line number for the next line, and C<$3> being
-the optional filename (specified with or without quotes).
+the optional filename (specified with or without quotes). Note that
+no whitespace may precede the C<< # >>, unlike modern C preprocessors.
 
 There is a fairly obvious gotcha included with the line directive:
 Debuggers and profilers will only show the last source line to appear

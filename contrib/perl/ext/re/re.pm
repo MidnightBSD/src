@@ -1,36 +1,36 @@
 package re;
 
-# pragma for controlling the regex engine
+# pragma for controlling the regexp engine
 use strict;
 use warnings;
 
-our $VERSION     = "0.09";
+our $VERSION     = "0.18";
 our @ISA         = qw(Exporter);
-my @XS_FUNCTIONS = qw(regmust);
-my %XS_FUNCTIONS = map { $_ => 1 } @XS_FUNCTIONS;
-our @EXPORT_OK   = (@XS_FUNCTIONS,
+our @EXPORT_OK   = ('regmust',
                     qw(is_regexp regexp_pattern
                        regname regnames regnames_count));
 our %EXPORT_OK = map { $_ => 1 } @EXPORT_OK;
-
-# *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING ***
-#
-# If you modify these values see comment below!
 
 my %bitmask = (
     taint   => 0x00100000, # HINT_RE_TAINT
     eval    => 0x00200000, # HINT_RE_EVAL
 );
 
-# - File::Basename contains a literal for 'taint' as a fallback.  If
-# taint is changed here, File::Basename must be updated as well.
-#
-# - ExtUtils::ParseXS uses a hardcoded 
-# BEGIN { $^H |= 0x00200000 } 
-# in it to allow re.xs to be built. So if 'eval' is changed here then
-# ExtUtils::ParseXS must be changed as well.
-#
-# *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING ***
+my $flags_hint = 0x02000000; # HINT_RE_FLAGS
+my $PMMOD_SHIFT = 0;
+my %reflags = (
+    m => 1 << ($PMMOD_SHIFT + 0),
+    s => 1 << ($PMMOD_SHIFT + 1),
+    i => 1 << ($PMMOD_SHIFT + 2),
+    x => 1 << ($PMMOD_SHIFT + 3),
+    p => 1 << ($PMMOD_SHIFT + 4),
+# special cases:
+    d => 0,
+    l => 1,
+    u => 2,
+    a => 3,
+    aa => 4,
+);
 
 sub setcolor {
  eval {				# Ignore errors
@@ -71,42 +71,35 @@ my %flags = (
     OPTIMISEM       => 0x100000,
     STACK           => 0x280000,
     BUFFERS         => 0x400000,
+    GPOS            => 0x800000,
 );
 $flags{ALL} = -1 & ~($flags{OFFSETS}|$flags{OFFSETSDBG}|$flags{BUFFERS});
 $flags{All} = $flags{all} = $flags{DUMP} | $flags{EXECUTE};
-$flags{Extra} = $flags{EXECUTE} | $flags{COMPILE};
+$flags{Extra} = $flags{EXECUTE} | $flags{COMPILE} | $flags{GPOS};
 $flags{More} = $flags{MORE} = $flags{All} | $flags{TRIEC} | $flags{TRIEM} | $flags{STATE};
 $flags{State} = $flags{DUMP} | $flags{EXECUTE} | $flags{STATE};
 $flags{TRIE} = $flags{DUMP} | $flags{EXECUTE} | $flags{TRIEC};
 
-my $installed;
-my $installed_error;
-
-sub _do_install {
-    if ( ! defined($installed) ) {
-        require XSLoader;
-        $installed = eval { XSLoader::load('re', $VERSION) } || 0;
-        $installed_error = $@;
-    }
+if (defined &DynaLoader::boot_DynaLoader) {
+    require XSLoader;
+    XSLoader::load();
 }
+# else we're miniperl
+# We need to work for miniperl, because the XS toolchain uses Text::Wrap, which
+# uses re 'taint'.
 
 sub _load_unload {
     my ($on)= @_;
     if ($on) {
-        _do_install();        
-        if ( ! $installed ) {
-            die "'re' not installed!? ($installed_error)";
-	} else {
-	    # We call install() every time, as if we didn't, we wouldn't
-	    # "see" any changes to the color environment var since
-	    # the last time it was called.
+	# We call install() every time, as if we didn't, we wouldn't
+	# "see" any changes to the color environment var since
+	# the last time it was called.
 
-	    # install() returns an integer, which if casted properly
-	    # in C resolves to a structure containing the regex
-	    # hooks. Setting it to a random integer will guarantee
-	    # segfaults.
-	    $^H{regcomp} = install();
-        }
+	# install() returns an integer, which if casted properly
+	# in C resolves to a structure containing the regexp
+	# hooks. Setting it to a random integer will guarantee
+	# segfaults.
+	$^H{regcomp} = install();
     } else {
         delete $^H{regcomp};
     }
@@ -119,6 +112,7 @@ sub bits {
 	require Carp;
 	Carp::carp("Useless use of \"re\" pragma"); 
     }
+   ARG:
     foreach my $idx (0..$#_){
         my $s=$_[$idx];
         if ($s eq 'Debug' or $s eq 'Debugcolor') {
@@ -145,17 +139,71 @@ sub bits {
 	    last;
         } elsif (exists $bitmask{$s}) {
 	    $bits |= $bitmask{$s};
-        } elsif ($XS_FUNCTIONS{$s}) {
-            _do_install();
-            if (! $installed) {
-                require Carp;
-                Carp::croak("\"re\" function '$s' not available");
-            }
-            require Exporter;
-            re->export_to_level(2, 're', $s);
 	} elsif ($EXPORT_OK{$s}) {
 	    require Exporter;
 	    re->export_to_level(2, 're', $s);
+	} elsif ($s =~ s/^\///) {
+	    my $reflags = $^H{reflags} || 0;
+	    my $seen_charset;
+	    while ($s =~ m/( . )/gx) {
+                $_ = $1;
+		if (/[adul]/) {
+                    # The 'a' may be repeated; hide this from the rest of the
+                    # code by counting and getting rid of all of them, then
+                    # changing to 'aa' if there is a repeat.
+                    if ($_ eq 'a') {
+                        my $sav_pos = pos $s;
+                        my $a_count = $s =~ s/a//g;
+                        pos $s = $sav_pos - 1;  # -1 because got rid of the 'a'
+                        if ($a_count > 2) {
+			    require Carp;
+                            Carp::carp(
+                            qq 'The "a" flag may only appear a maximum of twice'
+                            );
+                        }
+                        elsif ($a_count == 2) {
+                            $_ = 'aa';
+                        }
+                    }
+		    if ($on) {
+			if ($seen_charset) {
+			    require Carp;
+                            if ($seen_charset ne $_) {
+                                Carp::carp(
+                                qq 'The "$seen_charset" and "$_" flags '
+                                .qq 'are exclusive'
+                                );
+                            }
+                            else {
+                                Carp::carp(
+                                qq 'The "$seen_charset" flag may not appear '
+                                .qq 'twice'
+                                );
+                            }
+			}
+			$^H{reflags_charset} = $reflags{$_};
+			$seen_charset = $_;
+		    }
+		    else {
+			delete $^H{reflags_charset}
+			 if  defined $^H{reflags_charset}
+			  && $^H{reflags_charset} == $reflags{$_};
+		    }
+		} elsif (exists $reflags{$_}) {
+		    $on
+		      ? $reflags |= $reflags{$_}
+		      : ($reflags &= ~$reflags{$_});
+		} else {
+		    require Carp;
+		    Carp::carp(
+		     qq'Unknown regular expression flag "$_"'
+		    );
+		    next ARG;
+		}
+	    }
+	    ($^H{reflags} = $reflags or defined $^H{reflags_charset})
+	     ? $^H |= $flags_hint
+	     : ($^H &= ~$flags_hint);
 	} else {
 	    require Carp;
 	    Carp::carp("Unknown \"re\" subpragma '$s' (known ones are: ",
@@ -201,6 +249,11 @@ re - Perl pragma to alter regular expression behaviour
 	/foo${pat}bar/;		   # disallowed (with or without -T switch)
     }
 
+    use re '/ix';
+    "FOO" =~ / foo /; # /ix implied
+    no re '/x';
+    "FOO" =~ /foo/; # just /i implied
+
     use re 'debug';		   # output debugging info during
     /^(.*)$/s;			   #     compile and run time
 
@@ -226,19 +279,21 @@ re - Perl pragma to alter regular expression behaviour
 =head2 'taint' mode
 
 When C<use re 'taint'> is in effect, and a tainted string is the target
-of a regex, the regex memories (or values returned by the m// operator
-in list context) are tainted.  This feature is useful when regex operations
+of a regexp, the regexp memories (or values returned by the m// operator
+in list context) are tainted.  This feature is useful when regexp operations
 on tainted data aren't meant to extract safe substrings, but to perform
 other transformations.
 
 =head2 'eval' mode
 
-When C<use re 'eval'> is in effect, a regex is allowed to contain
-C<(?{ ... })> zero-width assertions even if regular expression contains
+When C<use re 'eval'> is in effect, a regexp is allowed to contain
+C<(?{ ... })> zero-width assertions and C<(??{ ... })> postponed
+subexpressions, even if the regular expression contains
 variable interpolation.  That is normally disallowed, since it is a
 potential security risk.  Note that this pragma is ignored when the regular
 expression is obtained from tainted data, i.e.  evaluation is always
-disallowed with tainted regular expressions.  See L<perlre/(?{ code })>.
+disallowed with tainted regular expressions.  See L<perlre/(?{ code })> 
+and L<perlre/(??{ code })>.
 
 For the purpose of this pragma, interpolation of precompiled regular
 expressions (i.e., the result of C<qr//>) is I<not> considered variable
@@ -247,7 +302,42 @@ interpolation.  Thus:
     /foo${pat}bar/
 
 I<is> allowed if $pat is a precompiled regular expression, even
-if $pat contains C<(?{ ... })> assertions.
+if $pat contains C<(?{ ... })> assertions or C<(??{ ... })> subexpressions.
+
+=head2 '/flags' mode
+
+When C<use re '/flags'> is specified, the given flags are automatically
+added to every regular expression till the end of the lexical scope.
+
+C<no re '/flags'> will turn off the effect of C<use re '/flags'> for the
+given flags.
+
+For example, if you want all your regular expressions to have /msx on by
+default, simply put
+
+    use re '/msx';
+
+at the top of your code.
+
+The character set /adul flags cancel each other out. So, in this example,
+
+    use re "/u";
+    "ss" =~ /\xdf/;
+    use re "/d";
+    "ss" =~ /\xdf/;
+
+the second C<use re> does an implicit C<no re '/u'>.
+
+Turning on one of the character set flags with C<use re> takes precedence over the
+C<locale> pragma and the 'unicode_strings' C<feature>, for regular
+expressions. Turning off one of these flags when it is active reverts to
+the behaviour specified by whatever other pragmata are in scope. For
+example:
+
+    use feature "unicode_strings";
+    no re "/u"; # does nothing
+    use re "/l";
+    no re "/l"; # reverts to unicode_strings behaviour
 
 =head2 'debug' mode
 
@@ -260,7 +350,7 @@ form of output that can be used to get a colorful display on terminals
 that understand termcap color sequences.  Set C<$ENV{PERL_RE_TC}> to a
 comma-separated list of C<termcap> properties to use for highlighting
 strings on/off, pre-point part on/off.
-See L<perldebug/"Debugging regular expressions"> for additional info.
+See L<perldebug/"Debugging Regular Expressions"> for additional info.
 
 As of 5.9.5 the directive C<use re 'debug'> and its equivalents are
 lexically scoped, as the other directives are.  However they have both 
@@ -336,7 +426,7 @@ Turns on all "extra" debugging options.
 
 =item BUFFERS
 
-Enable debugging the capture buffer storage during match. Warning,
+Enable debugging the capture group storage during match. Warning,
 this can potentially produce extremely large output.
 
 =item TRIEM
@@ -357,7 +447,7 @@ states as well. This output from this can be quite large.
 =item OPTIMISEM
 
 Enable enhanced optimisation debugging and start point optimisations.
-Probably not useful except when debugging the regex engine itself.
+Probably not useful except when debugging the regexp engine itself.
 
 =item OFFSETS
 
@@ -426,7 +516,7 @@ by C<qr//>, false if it is not.
 
 This function will not be confused by overloading or blessing. In
 internals terms, this extracts the regexp pointer out of the
-PERL_MAGIC_qr structure so it it cannot be fooled.
+PERL_MAGIC_qr structure so it cannot be fooled.
 
 =item regexp_pattern($ref)
 
@@ -439,12 +529,12 @@ the pattern was compiled.
 
   my ($pat, $mods) = regexp_pattern($ref);
 
-In scalar context it returns the same as perl would when strigifying a raw
+In scalar context it returns the same as perl would when stringifying a raw
 C<qr//> with the same pattern inside.  If the argument is not a compiled
 reference then this routine returns false but defined in scalar context,
 and the empty list in list context. Thus the following
 
-    if (regexp_pattern($ref) eq '(?i-xsm:foo)')
+    if (regexp_pattern($ref) eq '(?^i:foo)')
 
 will be warning free regardless of what $ref actually is.
 
@@ -454,7 +544,7 @@ or blessing of the object.
 =item regmust($ref)
 
 If the argument is a compiled regular expression as returned by C<qr//>,
-then this function returns what the optimiser consiers to be the longest
+then this function returns what the optimiser considers to be the longest
 anchored fixed string and longest floating fixed string in the pattern.
 
 A I<fixed string> is defined as being a substring that must appear for the

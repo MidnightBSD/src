@@ -9,11 +9,8 @@ require 5.006;
 our $Debug = 0;
 our $ExportLevel = 0;
 our $Verbose ||= 0;
-our $VERSION = '5.63';
+our $VERSION = '5.64_03';
 our (%Cache);
-
-# Carp 1.05+ does this now for us, but we may be running with an old Carp
-$Carp::Internal{Exporter}++;
 
 sub as_heavy {
   require Exporter::Heavy;
@@ -38,9 +35,12 @@ sub import {
   }
 
   # We *need* to treat @{"$pkg\::EXPORT_FAIL"} since Carp uses it :-(
-  my($exports, $fail) = (\@{"$pkg\::EXPORT"}, \@{"$pkg\::EXPORT_FAIL"});
+  my $exports = \@{"$pkg\::EXPORT"};
+  # But, avoid creating things if they don't exist, which saves a couple of
+  # hundred bytes per package processed.
+  my $fail = ${$pkg . '::'}{EXPORT_FAIL} && \@{"$pkg\::EXPORT_FAIL"};
   return export $pkg, $callpkg, @_
-    if $Verbose or $Debug or @$fail > 1;
+    if $Verbose or $Debug or $fail && @$fail > 1;
   my $export_cache = ($Cache{$pkg} ||= {});
   my $args = @_ or @_ = @$exports;
 
@@ -54,7 +54,7 @@ sub import {
   # We bomb out of the loop with last as soon as heavy is set.
   if ($args or $fail) {
     ($heavy = (/\W/ or $args and not exists $export_cache->{$_}
-               or @$fail and $_ eq $fail->[0])) and last
+               or $fail and @$fail and $_ eq $fail->[0])) and last
                  foreach (@_);
   } else {
     ($heavy = /\W/) and last
@@ -62,7 +62,7 @@ sub import {
   }
   return export $pkg, $callpkg, ($args ? @_ : ()) if $heavy;
   local $SIG{__WARN__} = 
-	sub {require Carp; &Carp::carp};
+	sub {require Carp; &Carp::carp} if not $SIG{__WARN__};
   # shortcut for the common case of no type character
   *{"$callpkg\::$_"} = \&{"$pkg\::$_"} foreach @_;
 }

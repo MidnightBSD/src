@@ -24,17 +24,12 @@
 #
 
 BEGIN {
-    if (ord("A") == 193) {
-	print "1..0 # Skip: EBCDIC\n"; # For now, until someone has time.
-	exit(0);
-    }
     chdir 't' if -d 't';
     @INC = '../lib';
     require "./test.pl";
+    skip_all('EBCDIC') if $::IS_EBCDIC;
     undef &skip;
 }
-
-skip_all "Unhappy on MacOS" if $^O eq 'MacOS';
 
 #
 # ./test.pl does real evilness by jumping to a label.
@@ -256,8 +251,7 @@ truncate$0,-1+-s$0;exec$0;}}//rekcaH_lreP_rehtona_tsuJ
         close   $fh or die "Failed to close $progfile: $!\n";
 
         chmod 0755   => $progfile or die "Failed to chmod $progfile: $!\n";
-        my $command  = "./$progfile";
-           $command .= ' 2>&1' unless $^O eq 'MacOS';
+        my $command  = "./$progfile 2>&1";
         if ( $^O eq 'qnx' ) {
           skip "#!./perl not supported in QNX4";
           skip "#!./perl not supported in QNX4";
@@ -611,12 +605,14 @@ $;=$";$;{Just=>another=>Perl=>Hacker=>}=$/;print%;
 $_ = "\112\165\163\1648\141\156\157\164\150\145\1628\120\145"
    . "\162\1548\110\141\143\153\145\162\0128\177"  and &japh;
 sub japh {print "@_" and return if pop; split /\d/ and &japh}
+SKIP: As of 5.12.0, split() in void context no longer populates @_.
 
 ####### magic goto.
 sub _ {$_ = shift and y/b-yB-Y/a-yB-Y/                xor      !@ _?
        exit print                                                  :
             print and push @_ => shift and goto &{(caller (0)) [3]}}
             split // => "KsvQtbuf fbsodpmu\ni flsI "  xor       & _
+SKIP: As of 5.12.0, split() in void context no longer populates @_.
 
 ####### $: fun 1
 :$:=~s:$":Just$&another$&:;$:=~s:

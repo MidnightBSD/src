@@ -1,4 +1,3 @@
-# $Id: Embed.pm,v 1.1.1.2 2011-02-17 12:49:38 laffer1 Exp $
 require 5.002;
 
 package ExtUtils::Embed;
@@ -19,7 +18,7 @@ use vars qw(@ISA @EXPORT $VERSION
 use strict;
 
 # This is not a dual-life module, so no need for development version numbers
-$VERSION = '1.28';
+$VERSION = '1.30';
 
 @ISA = qw(Exporter);
 @EXPORT = qw(&xsinit &ldopts 
@@ -144,6 +143,7 @@ sub static_ext {
 
 sub _escape {
     my $arg = shift;
+    return $$arg if $^O eq 'VMS'; # parens legal in qualifier lists
     $$arg =~ s/([\(\)])/\\$1/g;
 }
 

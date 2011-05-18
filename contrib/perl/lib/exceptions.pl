@@ -1,15 +1,18 @@
+warn "Legacy library @{[(caller(0))[6]]} will be removed from the Perl core distribution in the next major release. Please install it from the CPAN distribution Perl4::CoreLibs. It is being used at @{[(caller)[1]]}, line @{[(caller)[2]]}.\n";
+
 # exceptions.pl
 # tchrist@convex.com
 #
 # This library is no longer being maintained, and is included for backward
 # compatibility with Perl 4 programs which may require it.
+# This legacy library is deprecated and will be removed in a future
+# release of perl.
 #
 # In particular, this should not be used as an example of modern Perl
 # programming techniques.
-#
-# 
+
 # Here's a little code I use for exception handling.  It's really just
-# glorfied eval/die.  The way to use use it is when you might otherwise
+# glorified eval/die.  The way to use use it is when you might otherwise
 # exit, use &throw to raise an exception.  The first enclosing &catch
 # handler looks at the exception and decides whether it can catch this kind
 # (catch takes a list of regexps to catch), and if so, it returns the one it

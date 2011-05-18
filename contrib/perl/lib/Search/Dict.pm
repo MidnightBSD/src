@@ -4,7 +4,7 @@ require Exporter;
 
 use strict;
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 our @ISA = qw(Exporter);
 our @EXPORT = qw(look);
 
@@ -35,7 +35,7 @@ If I<$fold> is true, ignore case.  The default is to honour case.
 
 If there are only three arguments and the third argument is a hash
 reference, the keys of that hash can have values C<dict>, C<fold>, and
-C<comp> or C<xfrm> (see below), and their correponding values will be
+C<comp> or C<xfrm> (see below), and their corresponding values will be
 used as the parameters.
 
 If a comparison subroutine (comp) is defined, it must return less than zero,

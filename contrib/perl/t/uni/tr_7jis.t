@@ -1,38 +1,18 @@
-#
-# $Id: tr_7jis.t,v 1.1.1.1 2009-03-15 19:20:08 ctriv Exp $
+#! perl -w
 #
 # This script is written intentionally in ISO-2022-JP
 # requires Encode 1.83 or better to work
 # -- dankogai
 
 BEGIN {
-    if ($ENV{'PERL_CORE'}){
-        chdir 't';
-        @INC = '../lib';
-    }
-    require Config; import Config;
-    if ($Config{'extensions'} !~ /\bEncode\b/) {
-      print "1..0 # Skip: Encode was not built\n";
-      exit 0;
-    }
-    if (ord("A") == 193) {
-        print "1..0 # Skip: EBCDIC\n";
-        exit 0;
-    }
-    unless (PerlIO::Layer->find('perlio')){
-        print "1..0 # Skip: PerlIO required\n";
-        exit 0;
-    }
-    if ($ENV{PERL_CORE_MINITEST}) {
-        print "1..0 # Skip: no dynamic loading on miniperl, no Encode\n";
-        exit 0;
-    }
-    $| = 1;
+    require './test.pl';
+    skip_all_without_dynamic_extension('Encode');
+    skip_all("EBCDIC") if $::IS_EBCDIC;
+    skip_all_without_perlio();
 }
 
 use strict;
-use Test::More tests => 6;
-use Encode;
+plan(tests => 6);
 use encoding 'iso-2022-jp';
 
 my @hiragana =  map {chr} ord("ぁ")..ord("ん");

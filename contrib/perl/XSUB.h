@@ -72,8 +72,9 @@ Sets up the C<ix> variable for an XSUB which has aliases.  This is usually
 handled automatically by C<xsubpp>.
 
 =for apidoc Ams||dUNDERBAR
-Sets up the C<padoff_du> variable for an XSUB that wishes to use
-C<UNDERBAR>.
+Sets up any variable needed by the C<UNDERBAR> macro. It used to define
+C<padoff_du>, but it is currently a noop. However, it is strongly advised
+to still use it for ensuring past and future compatibility.
 
 =for apidoc AmU||UNDERBAR
 The SV* corresponding to the $_ variable. Works even if there
@@ -166,10 +167,8 @@ is a lexical $_ in scope.
 #define XSINTERFACE_FUNC_SET(cv,f)	\
 		CvXSUBANY(cv).any_dxptr = (void (*) (pTHX_ void*))(f)
 
-#define dUNDERBAR PADOFFSET padoff_du = find_rundefsvoffset()
-#define UNDERBAR ((padoff_du == NOT_IN_PAD \
-	    || PAD_COMPNAME_FLAGS_isOUR(padoff_du)) \
-	? DEFSV : PAD_SVl(padoff_du))
+#define dUNDERBAR dNOOP
+#define UNDERBAR  find_rundefsv()
 
 /* Simple macros to put new mortal values onto the stack.   */
 /* Typically used to return values from XS functions.       */
@@ -244,6 +243,10 @@ Macro to verify that a PM module's $VERSION variable matches the XS
 module's C<XS_VERSION> variable.  This is usually handled automatically by
 C<xsubpp>.  See L<perlxs/"The VERSIONCHECK: Keyword">.
 
+=for apidoc Ams||XS_APIVERSION_BOOTCHECK
+Macro to verify that the perl api version an XS module has been compiled against
+matches the api version of the perl interpreter it's being loaded into.
+
 =head1 Simple Exception Handling Macros
 
 =for apidoc Ams||dXCPT
@@ -294,35 +297,14 @@ Rethrows a previously caught exception.  See L<perlguts/"Exception Handling">.
 #define newXSproto(a,b,c,d)	newXS_flags(a,b,c,d,0)
 
 #ifdef XS_VERSION
-#  define XS_VERSION_BOOTCHECK \
-    STMT_START {							\
-	SV *_sv;							\
-	const char *vn = NULL, *module = SvPV_nolen_const(ST(0));	\
-	if (items >= 2)	 /* version supplied as bootstrap arg */	\
-	    _sv = ST(1);						\
-	else {								\
-	    /* XXX GV_ADDWARN */					\
-	    _sv = get_sv(Perl_form(aTHX_ "%s::%s", module,		\
-				vn = "XS_VERSION"), FALSE);		\
-	    if (!_sv || !SvOK(_sv))					\
-		_sv = get_sv(Perl_form(aTHX_ "%s::%s", module,	\
-				    vn = "VERSION"), FALSE);		\
-	}								\
-	if (_sv) {							\
-	    SV *xssv = Perl_newSVpv(aTHX_ XS_VERSION, 0);		\
-	    xssv = new_version(xssv);					\
-	    if ( !sv_derived_from(_sv, "version") )			\
-		_sv = new_version(_sv);				\
-	    if ( vcmp(_sv,xssv) )					\
-		Perl_croak(aTHX_ "%s object version %"SVf" does not match %s%s%s%s %"SVf,\
-		      module, SVfARG(vstringify(xssv)),			\
-		      vn ? "$" : "", vn ? module : "", vn ? "::" : "",	\
-		      vn ? vn : "bootstrap parameter", SVfARG(vstringify(_sv)));\
-	}                                                               \
-    } STMT_END
+#  define XS_VERSION_BOOTCHECK						\
+    Perl_xs_version_bootcheck(aTHX_ items, ax, STR_WITH_LEN(XS_VERSION))
 #else
 #  define XS_VERSION_BOOTCHECK
 #endif
+
+#define XS_APIVERSION_BOOTCHECK						\
+    Perl_xs_apiversion_bootcheck(aTHX_ ST(0), STR_WITH_LEN("v" PERL_API_VERSION_STRING))
 
 #ifdef NO_XSLOCKS
 #  define dXCPT             dJMPENV; int rEtV = 0
@@ -332,9 +314,9 @@ Rethrows a previously caught exception.  See L<perlguts/"Exception Handling">.
 #  define XCPT_RETHROW      JMPENV_JUMP(rEtV)
 #endif
 
-/* 
-   The DBM_setFilter & DBM_ckFilter macros are only used by 
-   the *DB*_File modules 
+/*
+   The DBM_setFilter & DBM_ckFilter macros are only used by
+   the *DB*_File modules
 */
 
 #define DBM_setFilter(db_type,code)				\
@@ -478,6 +460,12 @@ Rethrows a previously caught exception.  See L<perlguts/"Exception Handling">.
 #	undef setservent
 #endif	/* NETWARE */
 
+/* to avoid warnings: "xyz" redefined */
+#ifdef WIN32
+#    undef  popen
+#    undef  pclose
+#endif /* WIN32 */
+
 #    undef  socketpair
 
 #    define mkdir		PerlDir_mkdir
@@ -501,6 +489,7 @@ Rethrows a previously caught exception.  See L<perlguts/"Exception Handling">.
 #    define ferror		PerlSIO_ferror
 #    define clearerr		PerlSIO_clearerr
 #    define getc		PerlSIO_getc
+#    define fgets		PerlSIO_fgets
 #    define fputc		PerlSIO_fputc
 #    define fputs		PerlSIO_fputs
 #    define fflush		PerlSIO_fflush

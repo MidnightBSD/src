@@ -8,14 +8,11 @@ BEGIN {
     chdir 't' if -d 't';
     @INC = '../lib';
     require Config; import Config;
-    unless ($Config{'d_fork'}) {
-        print "1..0 # Skip: no fork\n";
-	    exit 0;
-    }
-    require './test.pl'
+    require './test.pl';
+    skip_all_without_config('d_fork');
 }
 
-plan tests => 17;
+plan tests => 84;
 
 my $STDOUT = tempfile();
 my $STDERR = tempfile();
@@ -27,10 +24,10 @@ delete $ENV{PERL5LIB};
 delete $ENV{PERL5OPT};
 
 
+# Run perl with specified environment and arguments, return (STDOUT, STDERR)
 sub runperl_and_capture {
   local *F;
   my ($env, $args) = @_;
-  unshift @$args, '-I../lib';
 
   local %ENV = %ENV;
   delete $ENV{PERLLIB};
@@ -39,54 +36,35 @@ sub runperl_and_capture {
   my $pid = fork;
   return (0, "Couldn't fork: $!") unless defined $pid;   # failure
   if ($pid) {                   # parent
-    my ($actual_stdout, $actual_stderr);
     wait;
     return (0, "Failure in child.\n") if ($?>>8) == $FAILURE_CODE;
 
-    open F, "< $STDOUT" or return (0, "Couldn't read $STDOUT file");
-    { local $/; $actual_stdout = <F> }
-    open F, "< $STDERR" or return (0, "Couldn't read $STDERR file");
-    { local $/; $actual_stderr = <F> }
-
-    return ($actual_stdout, $actual_stderr);
+    open my $stdout, '<', $STDOUT
+	or return (0, "Couldn't read $STDOUT file: $!");
+    open my $stderr, '<', $STDERR
+	or return (0, "Couldn't read $STDERR file: $!");
+    local $/;
+    # Empty file with <$stderr> returns nothing in list context
+    # (because there are no lines) Use scalar to force it to ''
+    return (scalar <$stdout>, scalar <$stderr>);
   } else {                      # child
     for my $k (keys %$env) {
       $ENV{$k} = $env->{$k};
     }
-    open STDOUT, "> $STDOUT" or exit $FAILURE_CODE;
-    open STDERR, "> $STDERR" or it_didnt_work();
-    { exec $PERL, @$args }
-    it_didnt_work();
-  }
-}
-
-# Run perl with specified environment and arguments returns a list.
-# First element is true if Perl's stdout and stderr match the
-# supplied $stdout and $stderr argument strings exactly.
-# second element is an explanation of the failure
-sub runperl {
-  local *F;
-  my ($env, $args, $stdout, $stderr) = @_;
-  my ($actual_stdout, $actual_stderr) = runperl_and_capture($env, $args);
-  if ($actual_stdout ne $stdout) {
-    return (0, "Stdout mismatch: expected [$stdout], saw [$actual_stdout]");
-  } elsif ($actual_stderr ne $stderr) {
-    return (0, "Stderr mismatch: expected [$stderr], saw [$actual_stderr]");
-  } else {
-    return 1;                 # success
-  }
-}
-
-sub it_didnt_work {
+    open STDOUT, '>', $STDOUT or exit $FAILURE_CODE;
+    open STDERR, '>', $STDERR and do { exec $PERL, @$args };
+    # it didn't_work:
     print STDOUT "IWHCWJIHCI\cNHJWCJQWKJQJWCQW\n";
     exit $FAILURE_CODE;
+  }
 }
 
 sub try {
-  my ($success, $reason) = runperl(@_);
-  $reason =~ s/\n/\\n/g if defined $reason;
+  my ($env, $args, $stdout, $stderr) = @_;
+  my ($actual_stdout, $actual_stderr) = runperl_and_capture($env, $args);
   local $::Level = $::Level + 1;
-  ok( $success, $reason );
+  is ($stdout, $actual_stdout);
+  is ($stderr, $actual_stderr);
 }
 
 #  PERL5OPT    Command-line options (switches).  Switches in
@@ -103,20 +81,20 @@ try({PERL5OPT => '-w'}, ['-e', 'print $::x'],
     "", 
     qq{Name "main::x" used only once: possible typo at -e line 1.\nUse of uninitialized value \$x in print at -e line 1.\n});
 
-try({PERL5OPT => '-Mstrict'}, ['-e', 'print $::x'],
+try({PERL5OPT => '-Mstrict'}, ['-I../lib', '-e', 'print $::x'],
     "", "");
 
-try({PERL5OPT => '-Mstrict'}, ['-e', 'print $x'],
+try({PERL5OPT => '-Mstrict'}, ['-I../lib', '-e', 'print $x'],
     "", 
     qq{Global symbol "\$x" requires explicit package name at -e line 1.\nExecution of -e aborted due to compilation errors.\n});
 
 # Fails in 5.6.0
-try({PERL5OPT => '-Mstrict -w'}, ['-e', 'print $x'],
+try({PERL5OPT => '-Mstrict -w'}, ['-I../lib', '-e', 'print $x'],
     "", 
     qq{Global symbol "\$x" requires explicit package name at -e line 1.\nExecution of -e aborted due to compilation errors.\n});
 
 # Fails in 5.6.0
-try({PERL5OPT => '-w -Mstrict'}, ['-e', 'print $::x'],
+try({PERL5OPT => '-w -Mstrict'}, ['-I../lib', '-e', 'print $::x'],
     "", 
     <<ERROR
 Name "main::x" used only once: possible typo at -e line 1.
@@ -125,7 +103,7 @@ ERROR
     );
 
 # Fails in 5.6.0
-try({PERL5OPT => '-w -Mstrict'}, ['-e', 'print $::x'],
+try({PERL5OPT => '-w -Mstrict'}, ['-I../lib', '-e', 'print $::x'],
     "", 
     <<ERROR
 Name "main::x" used only once: possible typo at -e line 1.
@@ -133,17 +111,32 @@ Use of uninitialized value \$x in print at -e line 1.
 ERROR
     );
 
-try({PERL5OPT => '-MExporter'}, ['-e0'],
+try({PERL5OPT => '-MExporter'}, ['-I../lib', '-e0'],
     "", 
     "");
 
 # Fails in 5.6.0
-try({PERL5OPT => '-MExporter -MExporter'}, ['-e0'],
+try({PERL5OPT => '-MExporter -MExporter'}, ['-I../lib', '-e0'],
     "", 
     "");
 
 try({PERL5OPT => '-Mstrict -Mwarnings'}, 
-    ['-e', 'print "ok" if $INC{"strict.pm"} and $INC{"warnings.pm"}'],
+    ['-I../lib', '-e', 'print "ok" if $INC{"strict.pm"} and $INC{"warnings.pm"}'],
+    "ok",
+    "");
+
+open my $fh, ">", "Oooof.pm" or die "Can't write Oooof.pm: $!";
+print $fh "package Oooof; 1;\n";
+close $fh;
+END { 1 while unlink "Oooof.pm" }
+
+try({PERL5OPT => '-I. -MOooof'}, 
+    ['-e', 'print "ok" if $INC{"Oooof.pm"} eq "Oooof.pm"'],
+    "ok",
+    "");
+
+try({PERL5OPT => '-I./ -MOooof'}, 
+    ['-e', 'print "ok" if $INC{"Oooof.pm"} eq "Oooof.pm"'],
     "ok",
     "");
 
@@ -156,6 +149,15 @@ try({PERL5OPT => '-t'},
     ['-e', 'print ${^TAINT}'],
     '-1',
     '');
+
+try({PERL5OPT => '-W'},
+    ['-I../lib','-e', 'local $^W = 0;  no warnings;  print $x'],
+    '',
+    <<ERROR
+Name "main::x" used only once: possible typo at -e line 1.
+Use of uninitialized value \$x in print at -e line 1.
+ERROR
+);
 
 try({PERLLIB => "foobar$Config{path_sep}42"},
     ['-e', 'print grep { $_ eq "foobar" } @INC'],
@@ -189,9 +191,48 @@ try({PERL5LIB => "foo",
     '',
     '');
 
-# PERL5LIB tests with included arch directories still missing
+# Tests for S_incpush_use_sep():
 
-END {
-    1 while unlink $STDOUT;
-    1 while unlink $STDERR;
+my @dump_inc = ('-e', 'print "$_\n" foreach @INC');
+
+my ($out, $err) = runperl_and_capture({}, [@dump_inc]);
+
+is ($err, '', 'No errors when determining @INC');
+
+my @default_inc = split /\n/, $out;
+
+is ($default_inc[-1], '.', '. is last in @INC');
+
+my $sep = $Config{path_sep};
+foreach (['nothing', ''],
+	 ['something', 'zwapp', 'zwapp'],
+	 ['two things', "zwapp${sep}bam", 'zwapp', 'bam'],
+	 ['two things, ::', "zwapp${sep}${sep}bam", 'zwapp', 'bam'],
+	 [': at start', "${sep}zwapp", 'zwapp'],
+	 [': at end', "zwapp${sep}", 'zwapp'],
+	 [':: sandwich ::', "${sep}${sep}zwapp${sep}${sep}", 'zwapp'],
+	 [':', "${sep}"],
+	 ['::', "${sep}${sep}"],
+	 [':::', "${sep}${sep}${sep}"],
+	 ['two things and :', "zwapp${sep}bam${sep}", 'zwapp', 'bam'],
+	 [': and two things', "${sep}zwapp${sep}bam", 'zwapp', 'bam'],
+	 [': two things :', "${sep}zwapp${sep}bam${sep}", 'zwapp', 'bam'],
+	 ['three things', "zwapp${sep}bam${sep}${sep}owww",
+	  'zwapp', 'bam', 'owww'],
+	) {
+  my ($name, $lib, @expect) = @$_;
+  push @expect, @default_inc;
+
+  ($out, $err) = runperl_and_capture({PERL5LIB => $lib}, [@dump_inc]);
+
+  is ($err, '', "No errors when determining \@INC for $name");
+
+  my @inc = split /\n/, $out;
+
+  is (scalar @inc, scalar @expect,
+      "expected number of elements in \@INC for $name");
+
+  is ("@inc", "@expect", "expected elements in \@INC for $name");
 }
+
+# PERL5LIB tests with included arch directories still missing

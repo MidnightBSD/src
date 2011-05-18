@@ -1,17 +1,18 @@
+#!./perl -w
 #
 # This script is written intentionally in UTF-8
 
 BEGIN {
-    if (ord("A") == 193) {
-        print "1..0 # Skip: EBCDIC\n";
-        exit 0;
-    }
     $| = 1;
+
+    require './test.pl';
+    skip_all_if_miniperl("no dynamic loading on miniperl, no re");
+    skip_all('EBCDIC') if $::IS_EBCDIC;
 }
 
 use strict;
 
-use Test::More tests => 10;
+plan (tests => 10);
 use charnames ':full';
 
 use utf8;

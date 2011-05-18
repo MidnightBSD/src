@@ -2,17 +2,9 @@
 use strict;
 
 BEGIN {
-    chdir 't' if -d 't';
-    @INC = qw(../lib .);
-    require "test.pl";
-    unless (PerlIO::Layer->find('perlio')){
-        print "1..0 # Skip: PerlIO required\n";
-        exit 0;
-    }
-    if (ord("A") == 193) {
-        print "1..0 # Skip: EBCDIC porting needed\n";
-        exit 0;
-    }
+    require './test.pl';
+    skip_all("EBCDIC porting needed") if $::IS_EBCDIC;
+    skip_all_without_perlio();
 }
 
 plan tests => 6;
@@ -101,4 +93,4 @@ $ulite1
 $bmulti$blite2
 EOEXPECT
 
-1 while unlink 'Uni_write.tmp';
+unlink_all 'Uni_write.tmp';

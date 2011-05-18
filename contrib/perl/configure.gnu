@@ -1,7 +1,5 @@
 #! /bin/sh
 #
-# $Id: configure.gnu,v 1.1.1.1 2009-03-15 19:17:49 ctriv Exp $
-#
 # GNU configure-like front end to metaconfig's Configure.
 #
 # Written by Andy Dougherty <doughera@lafayette.edu>

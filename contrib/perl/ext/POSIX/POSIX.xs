@@ -70,9 +70,6 @@
 #ifdef I_UNISTD
 #include <unistd.h>
 #endif
-#ifdef MACOS_TRADITIONAL
-#undef fdopen
-#endif
 #include <fcntl.h>
 
 #ifdef HAS_TZNAME
@@ -196,7 +193,7 @@ char *tzname[] = { "" , "" };
 #else
 
 #  ifndef HAS_MKFIFO
-#    if defined(OS2) || defined(MACOS_TRADITIONAL)
+#    if defined(OS2)
 #      define mkfifo(a,b) not_here("mkfifo")
 #    else	/* !( defined OS2 ) */
 #      ifndef mkfifo
@@ -205,24 +202,173 @@ char *tzname[] = { "" , "" };
 #    endif
 #  endif /* !HAS_MKFIFO */
 
-#  ifdef MACOS_TRADITIONAL
-#    define ttyname(a) (char*)not_here("ttyname")
-#    define tzset() not_here("tzset")
-#  else
-#    ifdef I_GRP
-#      include <grp.h>
-#    endif
-#    include <sys/times.h>
-#    ifdef HAS_UNAME
-#      include <sys/utsname.h>
-#    endif
-#    include <sys/wait.h>
+#  ifdef I_GRP
+#    include <grp.h>
 #  endif
+#  include <sys/times.h>
+#  ifdef HAS_UNAME
+#    include <sys/utsname.h>
+#  endif
+#  include <sys/wait.h>
 #  ifdef I_UTIME
 #    include <utime.h>
 #  endif
 #endif /* WIN32 || NETWARE */
 #endif /* __VMS */
+
+#ifdef WIN32
+   /* Perl on Windows assigns WSAGetLastError() return values to errno
+    * (in win32/win32sck.c).  Therefore we need to map these values
+    * back to standard symbolic names, but only for those names having
+    * no existing value or an existing value >= 100. (VC++ 2010 defines
+    * a group of names with values >= 100 in its errno.h which we *do*
+    * need to redefine.) The Errno.pm module does a similar mapping.
+    */
+#  ifdef EWOULDBLOCK
+#    undef EWOULDBLOCK
+#  endif
+#  define EWOULDBLOCK WSAEWOULDBLOCK
+#  ifdef EINPROGRESS
+#    undef EINPROGRESS
+#  endif
+#  define EINPROGRESS WSAEINPROGRESS
+#  ifdef EALREADY
+#    undef EALREADY
+#  endif
+#  define EALREADY WSAEALREADY
+#  ifdef ENOTSOCK
+#    undef ENOTSOCK
+#  endif
+#  define ENOTSOCK WSAENOTSOCK
+#  ifdef EDESTADDRREQ
+#    undef EDESTADDRREQ
+#  endif
+#  define EDESTADDRREQ WSAEDESTADDRREQ
+#  ifdef EMSGSIZE
+#    undef EMSGSIZE
+#  endif
+#  define EMSGSIZE WSAEMSGSIZE
+#  ifdef EPROTOTYPE
+#    undef EPROTOTYPE
+#  endif
+#  define EPROTOTYPE WSAEPROTOTYPE
+#  ifdef ENOPROTOOPT
+#    undef ENOPROTOOPT
+#  endif
+#  define ENOPROTOOPT WSAENOPROTOOPT
+#  ifdef EPROTONOSUPPORT
+#    undef EPROTONOSUPPORT
+#  endif
+#  define EPROTONOSUPPORT WSAEPROTONOSUPPORT
+#  ifdef ESOCKTNOSUPPORT
+#    undef ESOCKTNOSUPPORT
+#  endif
+#  define ESOCKTNOSUPPORT WSAESOCKTNOSUPPORT
+#  ifdef EOPNOTSUPP
+#    undef EOPNOTSUPP
+#  endif
+#  define EOPNOTSUPP WSAEOPNOTSUPP
+#  ifdef EPFNOSUPPORT
+#    undef EPFNOSUPPORT
+#  endif
+#  define EPFNOSUPPORT WSAEPFNOSUPPORT
+#  ifdef EAFNOSUPPORT
+#    undef EAFNOSUPPORT
+#  endif
+#  define EAFNOSUPPORT WSAEAFNOSUPPORT
+#  ifdef EADDRINUSE
+#    undef EADDRINUSE
+#  endif
+#  define EADDRINUSE WSAEADDRINUSE
+#  ifdef EADDRNOTAVAIL
+#    undef EADDRNOTAVAIL
+#  endif
+#  define EADDRNOTAVAIL WSAEADDRNOTAVAIL
+#  ifdef ENETDOWN
+#    undef ENETDOWN
+#  endif
+#  define ENETDOWN WSAENETDOWN
+#  ifdef ENETUNREACH
+#    undef ENETUNREACH
+#  endif
+#  define ENETUNREACH WSAENETUNREACH
+#  ifdef ENETRESET
+#    undef ENETRESET
+#  endif
+#  define ENETRESET WSAENETRESET
+#  ifdef ECONNABORTED
+#    undef ECONNABORTED
+#  endif
+#  define ECONNABORTED WSAECONNABORTED
+#  ifdef ECONNRESET
+#    undef ECONNRESET
+#  endif
+#  define ECONNRESET WSAECONNRESET
+#  ifdef ENOBUFS
+#    undef ENOBUFS
+#  endif
+#  define ENOBUFS WSAENOBUFS
+#  ifdef EISCONN
+#    undef EISCONN
+#  endif
+#  define EISCONN WSAEISCONN
+#  ifdef ENOTCONN
+#    undef ENOTCONN
+#  endif
+#  define ENOTCONN WSAENOTCONN
+#  ifdef ESHUTDOWN
+#    undef ESHUTDOWN
+#  endif
+#  define ESHUTDOWN WSAESHUTDOWN
+#  ifdef ETOOMANYREFS
+#    undef ETOOMANYREFS
+#  endif
+#  define ETOOMANYREFS WSAETOOMANYREFS
+#  ifdef ETIMEDOUT
+#    undef ETIMEDOUT
+#  endif
+#  define ETIMEDOUT WSAETIMEDOUT
+#  ifdef ECONNREFUSED
+#    undef ECONNREFUSED
+#  endif
+#  define ECONNREFUSED WSAECONNREFUSED
+#  ifdef ELOOP
+#    undef ELOOP
+#  endif
+#  define ELOOP WSAELOOP
+#  ifdef EHOSTDOWN
+#    undef EHOSTDOWN
+#  endif
+#  define EHOSTDOWN WSAEHOSTDOWN
+#  ifdef EHOSTUNREACH
+#    undef EHOSTUNREACH
+#  endif
+#  define EHOSTUNREACH WSAEHOSTUNREACH
+#  ifdef EPROCLIM
+#    undef EPROCLIM
+#  endif
+#  define EPROCLIM WSAEPROCLIM
+#  ifdef EUSERS
+#    undef EUSERS
+#  endif
+#  define EUSERS WSAEUSERS
+#  ifdef EDQUOT
+#    undef EDQUOT
+#  endif
+#  define EDQUOT WSAEDQUOT
+#  ifdef ESTALE
+#    undef ESTALE
+#  endif
+#  define ESTALE WSAESTALE
+#  ifdef EREMOTE
+#    undef EREMOTE
+#  endif
+#  define EREMOTE WSAEREMOTE
+#  ifdef EDISCON
+#    undef EDISCON
+#  endif
+#  define EDISCON WSAEDISCON
+#endif
 
 typedef int SysRet;
 typedef long SysRetLong;
@@ -471,7 +617,7 @@ restore_sigmask(pTHX_ SV *osset_sv)
  *
  * Note that we don't free() the malloc()ed memory unless and until we call
  * malloc() again ourselves because the CRT putenv() function simply puts its
- * pointer argument into the environ[] arrary (it doesn't make a copy of it)
+ * pointer argument into the environ[] array (it doesn't make a copy of it)
  * so this memory must otherwise be leaked.
  */
 
@@ -772,8 +918,8 @@ WEXITSTATUS(status)
 	POSIX::WSTOPSIG = 4
 	POSIX::WTERMSIG = 5
     CODE:
-#if !(defined(WEXITSTATUS) || defined(WIFEXITED) || defined(WIFSIGNALED) \
-      || defined(WIFSTOPPED) || defined(WSTOPSIG) || defined (WTERMSIG))
+#if !defined(WEXITSTATUS) || !defined(WIFEXITED) || !defined(WIFSIGNALED) \
+      || !defined(WIFSTOPPED) || !defined(WSTOPSIG) || !defined(WTERMSIG)
         RETVAL = 0; /* Silence compilers that notice this, but don't realise
 		       that not_here() can't return.  */
 #endif
@@ -821,7 +967,7 @@ WEXITSTATUS(status)
 #endif
 	    break;
 	default:
-	    Perl_croak(aTHX_ "Illegal alias %d for POSIX::W*", ix);
+	    Perl_croak(aTHX_ "Illegal alias %d for POSIX::W*", (int)ix);
 	}
     OUTPUT:
 	RETVAL
@@ -1003,65 +1149,65 @@ localeconv()
 	if ((lcbuf = localeconv())) {
 	    /* the strings */
 	    if (lcbuf->decimal_point && *lcbuf->decimal_point)
-		hv_store(RETVAL, "decimal_point", 13,
+		(void) hv_store(RETVAL, "decimal_point", 13,
 		    newSVpv(lcbuf->decimal_point, 0), 0);
 	    if (lcbuf->thousands_sep && *lcbuf->thousands_sep)
-		hv_store(RETVAL, "thousands_sep", 13,
+		(void) hv_store(RETVAL, "thousands_sep", 13,
 		    newSVpv(lcbuf->thousands_sep, 0), 0);
 #ifndef NO_LOCALECONV_GROUPING
 	    if (lcbuf->grouping && *lcbuf->grouping)
-		hv_store(RETVAL, "grouping", 8,
+		(void) hv_store(RETVAL, "grouping", 8,
 		    newSVpv(lcbuf->grouping, 0), 0);
 #endif
 	    if (lcbuf->int_curr_symbol && *lcbuf->int_curr_symbol)
-		hv_store(RETVAL, "int_curr_symbol", 15,
+		(void) hv_store(RETVAL, "int_curr_symbol", 15,
 		    newSVpv(lcbuf->int_curr_symbol, 0), 0);
 	    if (lcbuf->currency_symbol && *lcbuf->currency_symbol)
-		hv_store(RETVAL, "currency_symbol", 15,
+		(void) hv_store(RETVAL, "currency_symbol", 15,
 		    newSVpv(lcbuf->currency_symbol, 0), 0);
 	    if (lcbuf->mon_decimal_point && *lcbuf->mon_decimal_point)
-		hv_store(RETVAL, "mon_decimal_point", 17,
+		(void) hv_store(RETVAL, "mon_decimal_point", 17,
 		    newSVpv(lcbuf->mon_decimal_point, 0), 0);
 #ifndef NO_LOCALECONV_MON_THOUSANDS_SEP
 	    if (lcbuf->mon_thousands_sep && *lcbuf->mon_thousands_sep)
-		hv_store(RETVAL, "mon_thousands_sep", 17,
+		(void) hv_store(RETVAL, "mon_thousands_sep", 17,
 		    newSVpv(lcbuf->mon_thousands_sep, 0), 0);
 #endif
 #ifndef NO_LOCALECONV_MON_GROUPING
 	    if (lcbuf->mon_grouping && *lcbuf->mon_grouping)
-		hv_store(RETVAL, "mon_grouping", 12,
+		(void) hv_store(RETVAL, "mon_grouping", 12,
 		    newSVpv(lcbuf->mon_grouping, 0), 0);
 #endif
 	    if (lcbuf->positive_sign && *lcbuf->positive_sign)
-		hv_store(RETVAL, "positive_sign", 13,
+		(void) hv_store(RETVAL, "positive_sign", 13,
 		    newSVpv(lcbuf->positive_sign, 0), 0);
 	    if (lcbuf->negative_sign && *lcbuf->negative_sign)
-		hv_store(RETVAL, "negative_sign", 13,
+		(void) hv_store(RETVAL, "negative_sign", 13,
 		    newSVpv(lcbuf->negative_sign, 0), 0);
 	    /* the integers */
 	    if (lcbuf->int_frac_digits != CHAR_MAX)
-		hv_store(RETVAL, "int_frac_digits", 15,
+		(void) hv_store(RETVAL, "int_frac_digits", 15,
 		    newSViv(lcbuf->int_frac_digits), 0);
 	    if (lcbuf->frac_digits != CHAR_MAX)
-		hv_store(RETVAL, "frac_digits", 11,
+		(void) hv_store(RETVAL, "frac_digits", 11,
 		    newSViv(lcbuf->frac_digits), 0);
 	    if (lcbuf->p_cs_precedes != CHAR_MAX)
-		hv_store(RETVAL, "p_cs_precedes", 13,
+		(void) hv_store(RETVAL, "p_cs_precedes", 13,
 		    newSViv(lcbuf->p_cs_precedes), 0);
 	    if (lcbuf->p_sep_by_space != CHAR_MAX)
-		hv_store(RETVAL, "p_sep_by_space", 14,
+		(void) hv_store(RETVAL, "p_sep_by_space", 14,
 		    newSViv(lcbuf->p_sep_by_space), 0);
 	    if (lcbuf->n_cs_precedes != CHAR_MAX)
-		hv_store(RETVAL, "n_cs_precedes", 13,
+		(void) hv_store(RETVAL, "n_cs_precedes", 13,
 		    newSViv(lcbuf->n_cs_precedes), 0);
 	    if (lcbuf->n_sep_by_space != CHAR_MAX)
-		hv_store(RETVAL, "n_sep_by_space", 14,
+		(void) hv_store(RETVAL, "n_sep_by_space", 14,
 		    newSViv(lcbuf->n_sep_by_space), 0);
 	    if (lcbuf->p_sign_posn != CHAR_MAX)
-		hv_store(RETVAL, "p_sign_posn", 11,
+		(void) hv_store(RETVAL, "p_sign_posn", 11,
 		    newSViv(lcbuf->p_sign_posn), 0);
 	    if (lcbuf->n_sign_posn != CHAR_MAX)
-		hv_store(RETVAL, "n_sign_posn", 11,
+		(void) hv_store(RETVAL, "n_sign_posn", 11,
 		    newSViv(lcbuf->n_sign_posn), 0);
 	}
 #else
@@ -1225,7 +1371,7 @@ sigaction(sig, optaction, oldaction = 0)
 	{
 	    dVAR;
 	    POSIX__SigAction action;
-	    GV *siggv = gv_fetchpv("SIG", TRUE, SVt_PVHV);
+	    GV *siggv = gv_fetchpvs("SIG", GV_ADD, SVt_PVHV);
 	    struct sigaction act;
 	    struct sigaction oact;
 	    sigset_t sset;
@@ -1288,7 +1434,7 @@ sigaction(sig, optaction, oldaction = 0)
                XSRETURN_UNDEF;
 	    ENTER;
 	    /* Restore signal mask no matter how we exit this block. */
-	    osset_sv = newSVpv((char *)(&osset), sizeof(sigset_t));
+	    osset_sv = newSVpvn((char *)(&osset), sizeof(sigset_t));
 	    SAVEFREESV( osset_sv );
 	    SAVEDESTRUCTOR_X(restore_sigmask, osset_sv);
 
@@ -1303,11 +1449,13 @@ sigaction(sig, optaction, oldaction = 0)
 			sv_setsv(*svp, *sigsvp);
 		}
 		else {
-			sv_setpv(*svp, "DEFAULT");
+			sv_setpvs(*svp, "DEFAULT");
 		}
 		RETVAL = sigaction(sig, (struct sigaction *)0, & oact);
-		if(RETVAL == -1)
+		if(RETVAL == -1) {
+                   LEAVE;
                    XSRETURN_UNDEF;
+                }
 		/* Get back the mask. */
 		svp = hv_fetchs(oldaction, "MASK", TRUE);
 		if (sv_isa(*svp, "POSIX::SigSet")) {
@@ -1354,7 +1502,7 @@ sigaction(sig, optaction, oldaction = 0)
 		   right settings, including appropriate interpretation
 		   of DEFAULT and IGNORE.  However, why are we doing
 		   this when we're about to do it again just below?  XXX */
-		mg_set(*sigsvp);
+		SvSETMAGIC(*sigsvp);
 
 		/* And here again we duplicate -- DEFAULT/IGNORE checking. */
 		if(SvPOK(*svp)) {
@@ -1387,8 +1535,10 @@ sigaction(sig, optaction, oldaction = 0)
 		 * essentially meaningless anyway.
 		 */
 		RETVAL = sigaction(sig, & act, (struct sigaction *)0);
-		if(RETVAL == -1)
+		if(RETVAL == -1) {
+                    LEAVE;
 		    XSRETURN_UNDEF;
+                }
 	    }
 
 	    LEAVE;
@@ -1465,7 +1615,7 @@ nice(incr)
 	errno = 0;
 	if ((incr = nice(incr)) != -1 || errno == 0) {
 	    if (incr == 0)
-		XPUSHs(sv_2mortal(newSVpvn("0 but true", 10)));
+		XPUSHs(newSVpvs_flags("0 but true", SVs_TEMP));
 	    else
 		XPUSHs(sv_2mortal(newSViv(incr)));
 	}
@@ -1520,11 +1670,11 @@ uname()
 	struct utsname buf;
 	if (uname(&buf) >= 0) {
 	    EXTEND(SP, 5);
-	    PUSHs(sv_2mortal(newSVpv(buf.sysname, 0)));
-	    PUSHs(sv_2mortal(newSVpv(buf.nodename, 0)));
-	    PUSHs(sv_2mortal(newSVpv(buf.release, 0)));
-	    PUSHs(sv_2mortal(newSVpv(buf.version, 0)));
-	    PUSHs(sv_2mortal(newSVpv(buf.machine, 0)));
+	    PUSHs(newSVpvn_flags(buf.sysname, strlen(buf.sysname), SVs_TEMP));
+	    PUSHs(newSVpvn_flags(buf.nodename, strlen(buf.nodename), SVs_TEMP));
+	    PUSHs(newSVpvn_flags(buf.release, strlen(buf.release), SVs_TEMP));
+	    PUSHs(newSVpvn_flags(buf.version, strlen(buf.version), SVs_TEMP));
+	    PUSHs(newSVpvn_flags(buf.machine, strlen(buf.machine), SVs_TEMP));
 	}
 #else
 	uname((char *) 0); /* A stub to call not_here(). */
@@ -1789,7 +1939,7 @@ mktime(sec, min, hour, mday, mon, year, wday = 0, yday = 0, isdst = -1)
 #     ST(0) = sv_2mortal(newSVpv(...))
 void
 strftime(fmt, sec, min, hour, mday, mon, year, wday = -1, yday = -1, isdst = -1)
-	char *		fmt
+	SV *		fmt
 	int		sec
 	int		min
 	int		hour
@@ -1801,10 +1951,14 @@ strftime(fmt, sec, min, hour, mday, mon, year, wday = -1, yday = -1, isdst = -1)
 	int		isdst
     CODE:
 	{
-	    char *buf = my_strftime(fmt, sec, min, hour, mday, mon, year, wday, yday, isdst);
+	    char *buf = my_strftime(SvPV_nolen(fmt), sec, min, hour, mday, mon, year, wday, yday, isdst);
 	    if (buf) {
-		ST(0) = sv_2mortal(newSVpv(buf, 0));
-		Safefree(buf);
+		SV *const sv = sv_newmortal();
+		sv_usepvn_flags(sv, buf, strlen(buf), SV_HAS_TRAILING_NUL);
+		if (SvUTF8(fmt)) {
+		    SvUTF8_on(sv);
+		}
+		ST(0) = sv;
 	    }
 	}
 
@@ -1817,8 +1971,8 @@ void
 tzname()
     PPCODE:
 	EXTEND(SP,2);
-	PUSHs(sv_2mortal(newSVpvn(tzname[0],strlen(tzname[0]))));
-	PUSHs(sv_2mortal(newSVpvn(tzname[1],strlen(tzname[1]))));
+	PUSHs(newSVpvn_flags(tzname[0], strlen(tzname[0]), SVs_TEMP));
+	PUSHs(newSVpvn_flags(tzname[1], strlen(tzname[1]), SVs_TEMP));
 
 SysRet
 access(filename, mode)

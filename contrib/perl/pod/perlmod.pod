@@ -66,7 +66,7 @@ main, but we decided it was more useful for package writers to be able
 to use leading underscore to indicate private variables and method names.
 However, variables and functions named with a single C<_>, such as
 $_ and C<sub _>, are still forced into the package C<main>.  See also
-L<perlvar/"Technical Note on the Syntax of Variable Names">.
+L<perlvar/"The Syntax of Variable Names">.
 
 C<eval>ed strings are compiled in the package in which the eval() was
 compiled.  (Assignments to C<$SIG{}>, however, assume the signal
@@ -134,7 +134,7 @@ refer to the same scalar value. This means that the following code:
     }
 
 Would print '1', because C<$foo> holds a reference to the I<original>
-C<$bar> -- the one that was stuffed away by C<local()> and which will be
+C<$bar>. The one that was stuffed away by C<local()> and which will be
 restored when the block ends. Because variables are accessed through the
 typeglob, you can use C<*foo = *bar> to create an alias which can be
 localized. (But be aware that this means you can't have a separate
@@ -267,7 +267,7 @@ these code blocks by name.
 A C<BEGIN> code block is executed as soon as possible, that is, the moment
 it is completely defined, even before the rest of the containing file (or
 string) is parsed.  You may have multiple C<BEGIN> blocks within a file (or
-eval'ed string) -- they will execute in order of definition.  Because a C<BEGIN>
+eval'ed string); they will execute in order of definition.  Because a C<BEGIN>
 code block executes immediately, it can pull in definitions of subroutines
 and such from other files in time to be visible to the rest of the compile
 and run time.  Once a C<BEGIN> has run, it is immediately undefined and any
@@ -294,6 +294,9 @@ value of the program.  Beware of changing C<$?> by accident (e.g. by
 running something via C<system>).
 X<$?>
 
+Inside of a C<END> block, the value of C<${^GLOBAL_PHASE}> will be
+C<"END">.
+
 C<UNITCHECK>, C<CHECK> and C<INIT> code blocks are useful to catch the
 transition between the compilation phase and the execution phase of
 the main program.
@@ -304,17 +307,25 @@ compilation units, as are string C<eval>s, code compiled using the
 C<(?{ })> construct in a regex, calls to C<do FILE>, C<require FILE>,
 and code after the C<-e> switch on the command line.
 
+C<BEGIN> and C<UNITCHECK> blocks are not directly related to the phase of
+the interpreter.  They can be created and executed during any phase.
+
 C<CHECK> code blocks are run just after the B<initial> Perl compile phase ends
 and before the run time begins, in LIFO order.  C<CHECK> code blocks are used
 in the Perl compiler suite to save the compiled state of the program.
 
+Inside of a C<CHECK> block, the value of C<${^GLOBAL_PHASE}> will be
+C<"CHECK">.
+
 C<INIT> blocks are run just before the Perl runtime begins execution, in
 "first in, first out" (FIFO) order.
 
-The C<CHECK> and C<INIT> code blocks will not be executed inside a string
-eval(), if that eval() happens after the end of the main compilation
-phase; that can be a problem in mod_perl and other persistent environments
-which use C<eval STRING> to load code at runtime.
+Inside of an C<INIT> block, the value of C<${^GLOBAL_PHASE}> will be C<"INIT">.
+
+The C<CHECK> and C<INIT> blocks in code compiled by C<require>, string C<do>,
+or string C<eval> will not be executed if they occur after the end of the
+main compilation phase; that can be a problem in mod_perl and other persistent
+environments which use those functions to load code at runtime.
 
 When you use the B<-n> and B<-p> switches to Perl, C<BEGIN> and
 C<END> work just as they do in B<awk>, as a degenerate case.
@@ -395,7 +406,7 @@ create a file called F<Some/Module.pm> and start with this template:
         # set the version for version checking
         $VERSION     = 1.00;
         # if using RCS/CVS, this may be preferred
-        $VERSION = sprintf "%d.%03d", q$Revision: 1.1.1.2 $ =~ /(\d+)/g;
+        $VERSION = sprintf "%d.%03d", q$Revision: 1.1.1.3 $ =~ /(\d+)/g;
 
         @ISA         = qw(Exporter);
         @EXPORT      = qw(&func1 &func2 &func4);
@@ -560,7 +571,7 @@ like for example handle the cloning of non-Perl data, if necessary.
 C<CLONE> will be called once as a class method for every package that has it
 defined (or inherits it).  It will be called in the context of the new thread,
 so all modifications are made in the new area.  Currently CLONE is called with
-no parameters other than the invocant package name, but code should not assume
+no parameters other than the invocand package name, but code should not assume
 that this will remain unchanged, as it is likely that in future extra parameters
 will be passed in to give more information about the state of cloning.
 
@@ -576,13 +587,13 @@ For example: if in the parent there are two references to a single blessed
 hash, then in the child there will be two references to a single undefined
 scalar value instead.
 This provides a simple mechanism for making a module threadsafe; just add
-C<sub CLONE_SKIP { 1 }> at the top of the class, and C<DESTROY()> will be
+C<sub CLONE_SKIP { 1 }> at the top of the class, and C<DESTROY()> will
 now only be called once per object. Of course, if the child thread needs
 to make use of the objects, then a more sophisticated approach is
 needed.
 
 Like C<CLONE>, C<CLONE_SKIP> is currently called with no parameters other
-than the invocant package name, although that may change. Similarly, to
+than the invocand package name, although that may change. Similarly, to
 allow for future expansion, the return value should be a single C<0> or
 C<1> value.
 

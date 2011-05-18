@@ -6,13 +6,15 @@ use warnings;
 chdir 't' if -d 't';
 require q(./test.pl); plan(tests => 7);
 
+require mro;
+
 {
     package Foo;
     our @ISA = qw//;
 }
 
 ok(!mro::get_pkg_gen('ReallyDoesNotExist'),
-    "pkg_gen 0 for non-existant pkg");
+    "pkg_gen 0 for non-existent pkg");
 
 my $f_gen = mro::get_pkg_gen('Foo');
 ok($f_gen > 0, 'Foo pkg_gen > 0');

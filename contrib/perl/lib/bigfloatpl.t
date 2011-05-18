@@ -5,7 +5,17 @@ BEGIN {
     @INC = '../lib';
 }
 
-require "bigfloat.pl";
+{
+    # Silence the deprecation warnings from bigfloat.pl for the purpose
+    # of testing. These tests will be removed along with bigfloat.pl in
+    # the next major release of perl.
+    local $SIG{__WARN__} = sub {
+        if ($_[0] !~ /will be removed from the Perl core distribution/) {
+            print(STDERR @_);
+        }
+    };
+    require "bigfloat.pl";
+}
 
 $test = 0;
 $| = 1;

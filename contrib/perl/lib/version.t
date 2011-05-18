@@ -1,8 +1,4 @@
 #! /usr/local/perl -w
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl test.pl'
-
-#########################
 
 use Test::More qw(no_plan);
 use Data::Dumper;
@@ -27,7 +23,7 @@ BaseTests("version","new","declare");
 BaseTests("version","parse", "qv");
 BaseTests("version","parse", "declare");
 
-# dummy up a redundant call to satify David Wheeler
+# dummy up a redundant call to satisfy David Wheeler
 local $SIG{__WARN__} = sub { die $_[0] };
 eval 'use version;';
 unlike ($@, qr/^Subroutine main::declare redefined/,
@@ -97,6 +93,75 @@ eval { my $test = ($testobj > 1.0) };
 like($@, qr/Invalid version object/,
     "Bad subclass vcmp");
 
+# Invalid structure
+eval { $a = \\version->new(1); bless $a, "version"; print "# $a\n" };
+like($@, qr/Invalid version object/,
+    "Bad internal structure (RT#78286)");
+
+# do strict lax tests in a sub to isolate a package to test importing
+strict_lax_tests();
+
+sub strict_lax_tests {
+  package temp12345;
+  # copied from perl core test t/op/packagev.t
+  # format: STRING STRICT_OK LAX_OK
+  my $strict_lax_data = << 'CASE_DATA';
+1.00		pass	pass
+1.00001		pass	pass
+0.123		pass	pass
+12.345		pass	pass
+42		pass	pass
+0		pass	pass
+0.0		pass	pass
+v1.2.3		pass	pass
+v1.2.3.4	pass	pass
+v0.1.2		pass	pass
+v0.0.0		pass	pass
+01		fail	pass
+01.0203		fail	pass
+v01		fail	pass
+v01.02.03	fail	pass
+.1		fail	pass
+.1.2		fail	pass
+1.		fail	pass
+1.a		fail	fail
+1._		fail	fail
+1.02_03		fail	pass
+v1.2_3		fail	pass
+v1.02_03	fail	pass
+v1.2_3_4	fail	fail
+v1.2_3.4	fail	fail
+1.2_3.4		fail	fail
+0_		fail	fail
+1_		fail	fail
+1_.		fail	fail
+1.1_		fail	fail
+1.02_03_04	fail	fail
+1.2.3		fail	pass
+v1.2		fail	pass
+v0		fail	pass
+v1		fail	pass
+v.1.2.3		fail	fail
+v		fail	fail
+v1.2345.6	fail	pass
+undef		fail	pass
+1a		fail	fail
+1.2a3		fail	fail
+bar		fail	fail
+_		fail	fail
+CASE_DATA
+
+  require version;
+  version->import( qw/is_strict is_lax/ );
+  for my $case ( split qr/\n/, $strict_lax_data ) {
+    my ($v, $strict, $lax) = split qr/\t+/, $case;
+    main::ok( $strict eq 'pass' ? is_strict($v) : ! is_strict($v), "is_strict($v) [$strict]" );
+    main::ok( $strict eq 'pass' ? version::is_strict($v) : ! version::is_strict($v), "version::is_strict($v) [$strict]" );
+    main::ok( $lax eq 'pass' ? is_lax($v) : ! is_lax($v), "is_lax($v) [$lax]" );
+    main::ok( $lax eq 'pass' ? version::is_lax($v) : ! version::is_lax($v), "version::is_lax($v) [$lax]" );
+  }
+}
+
 sub BaseTests {
 
     my ($CLASS, $method, $qv_declare) = @_;
@@ -144,31 +209,20 @@ sub BaseTests {
     like($@, qr/alpha without decimal/,
 	"Invalid version format (alpha without decimal)");
     
-    # for this test, upgrade the warn() to die()
-    eval {
-	local $SIG{__WARN__} = sub { die $_[0] };
-	$version = $CLASS->$method("1.2b3");
-    };
-    my $warnregex = "Version string '.+' contains invalid data; ".
-	    "ignoring: '.+'";
-
-    like($@, qr/$warnregex/,
-	"Version string contains invalid data; ignoring");
+    eval { $version = $CLASS->$method("1.2b3")};
+    like($@, qr/non-numeric data/,
+	"Invalid version format (non-numeric data)");
 
     # from here on out capture the warning and test independently
     {
-    $version = $CLASS->$method("99 and 44/100 pure");
+    eval{$version = $CLASS->$method("99 and 44/100 pure")};
 
-    like($warning, qr/$warnregex/,
-	"Version string contains invalid data; ignoring");
-    is ("$version", "99", '$version eq "99"');
-    ok ($version->numify == 99.0, '$version->numify == 99.0');
-    ok ($version->normal eq "v99.0.0", '$version->normal eq v99.0.0');
+    like($@, qr/non-numeric data/,
+	"Invalid version format (non-numeric data)");
     
-    $version = $CLASS->$method("something");
-    like($warning, qr/$warnregex/,
-	"Version string contains invalid data; ignoring");
-    ok (defined $version, 'defined $version');
+    eval{$version = $CLASS->$method("something")};
+    like($@, qr/non-numeric data/,
+	"Invalid version format (non-numeric data)");
     
     # reset the test object to something reasonable
     $version = $CLASS->$method("1.2.3");
@@ -295,7 +349,7 @@ SKIP: {
     ok (eval {$new_version = $CLASS->$method($version)},
 	    "new from existing object");
     ok ($new_version == $version, "class->$method($version) identical");
-    $new_version = $version->$method();
+    $new_version = $version->$method(0);
     isa_ok ($new_version, $CLASS );
     is ($new_version, "0", "version->$method() doesn't clone");
     $new_version = $version->$method("1.2.3");
@@ -303,10 +357,10 @@ SKIP: {
 
     # test the CVS revision mode
     diag "testing CVS Revision" unless $ENV{PERL_CORE};
-    $version = new $CLASS qw$Revision: 1.1.1.2 $;
-    ok ( $version == "1.2.0", 'qw$Revision: 1.1.1.2 $ == 1.2.0' );
-    $version = new $CLASS qw$Revision: 1.1.1.2 $;
-    ok ( $version == "1.2.3.4", 'qw$Revision: 1.1.1.2 $ == 1.2.3.4' );
+    $version = new $CLASS qw$Revision: 1.1.1.3 $;
+    ok ( $version == "1.2.0", 'qw$Revision: 1.1.1.3 $ == 1.2.0' );
+    $version = new $CLASS qw$Revision: 1.1.1.3 $;
+    ok ( $version == "1.2.3.4", 'qw$Revision: 1.1.1.3 $ == 1.2.3.4' );
     
     # test the CPAN style reduced significant digit form
     diag "testing CPAN-style versions" unless $ENV{PERL_CORE};
@@ -422,14 +476,24 @@ SKIP: 	{
 		if $] < 5.006_000; 
 	diag "Tests with v-strings" unless $ENV{PERL_CORE};
 	$version = $CLASS->$method(1.2.3);
-	ok("$version" == "v1.2.3", '"$version" == 1.2.3');
+	ok("$version" eq "v1.2.3", '"$version" eq 1.2.3');
 	$version = $CLASS->$method(1.0.0);
 	$new_version = $CLASS->$method(1);
 	ok($version == $new_version, '$version == $new_version');
 	skip "version require'd instead of use'd, cannot test declare", 1
 	    unless defined $qv_declare;
 	$version = &$qv_declare(1.2.3);
-	ok("$version" == "v1.2.3", 'v-string initialized $qv_declare()');
+	ok("$version" eq "v1.2.3", 'v-string initialized $qv_declare()');
+    }
+
+SKIP: 	{
+	skip 'Cannot test bare alpha v-strings with Perl < 5.8.1', 2
+		if $] lt 5.008_001; 
+	diag "Tests with bare alpha v-strings" unless $ENV{PERL_CORE};
+	$version = $CLASS->$method(v1.2.3_4);
+	is($version, "v1.2.3_4", '"$version" eq "v1.2.3_4"');
+	$version = $CLASS->$method(eval "v1.2.3_4");
+	is($version, "v1.2.3_4", '"$version" eq "v1.2.3_4" (from eval)');
     }
 
     diag "Tests with real-world (malformed) data" unless $ENV{PERL_CORE};
@@ -557,9 +621,8 @@ SKIP: {
 	local $SIG{__WARN__} = sub { $warning = $_[0] };
 
 $DB::single = 1;
-	my $v = $CLASS->$method('1,7');
-	unlike($warning, qr"Version string '1,7' contains invalid data",
-	    'Directly test comma as decimal compliance');
+	my $v = eval { $CLASS->$method('1,7') };
+#	is( $@, "", 'Directly test comma as decimal compliance');
 
 	my $ver = 1.23;  # has to be floating point number
 	my $orig_loc = setlocale( LC_ALL );
@@ -632,6 +695,28 @@ EOF
 	is $badv, '1.002003', "Deal with badly serialized versions from YAML";	
 	my $badv2 = bless { qv => 1, version => [1,2,3] }, "version";
 	is $badv2, 'v1.2.3', "Deal with badly serialized versions from YAML ";	
+    }
+SKIP: {
+	if ( $] < 5.006_000 ) {
+	    skip 'No v-string support at all < 5.6.0', 2; 
+	}
+	# https://rt.cpan.org/Ticket/Display.html?id=49348
+	my $v = $CLASS->$method("420");
+	is "$v", "420", 'Correctly guesses this is not a v-string';
+	$v = $CLASS->$method(4.2.0);
+	is "$v", 'v4.2.0', 'Correctly guess that this is a v-string';
+    }
+SKIP: {
+	if ( $] < 5.006_000 ) {
+	    skip 'No v-string support at all < 5.6.0', 4; 
+	}
+	# https://rt.cpan.org/Ticket/Display.html?id=50347
+	# Check that the qv() implementation does not change
+
+	ok $CLASS->$method(1.2.3) < $CLASS->$method(1.2.3.1), 'Compare 3 and 4 digit v-strings' ;
+	ok $CLASS->$method(v1.2.3) < $CLASS->$method(v1.2.3.1), 'Compare 3 and 4 digit v-strings, leaving v';
+	ok $CLASS->$method("1.2.3") < $CLASS->$method("1.2.3.1"), 'Compare 3 and 4 digit v-strings, quoted';
+	ok $CLASS->$method("v1.2.3") < $CLASS->$method("v1.2.3.1"), 'Compare 3 and 4 digit v-strings, quoted leading v';
     }
 }
 

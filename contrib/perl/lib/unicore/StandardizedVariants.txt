@@ -1,5 +1,5 @@
-# StandardizedVariants-5.1.0.txt
-# Date: 2008-03-24, 13:39:00 PDT [KW]
+# StandardizedVariants-6.0.0.txt
+# Date: 2010-05-19, 11:22:00 PDT [KW]
 #
 # Specification of the variant sequences that are defined in the
 # Unicode Standard.
@@ -7,11 +7,11 @@
 # This file is a normative contributory data file in the
 # Unicode Character Database.
 #
-# Copyright (c) 1991-2008 Unicode, Inc.
+# Copyright (c) 1991-2010 Unicode, Inc.
 # For terms of use, see http://www.unicode.org/terms_of_use.html
 #
 # Standardized variation sequences are defined in this file.
-# Ideographic variation sequences are defined acording to the registration
+# Ideographic variation sequences are defined according to the registration
 # process specified in UTS #37, and are listed in the Ideographic
 # Variation Database. Only those two types of variation sequences
 # are sanctioned for use by conformant implementations.
@@ -21,7 +21,7 @@
 #
 # For more information on standardized variation sequences, 
 # see Section 16.4, Variation Selectors, 
-# in The Unicode Standard, Version 5.0.
+# in The Unicode Standard, Version 6.0.
 #
 # For more information on the Ideographic Variation Database
 # see http://www.unicode.org/ivd/
@@ -29,7 +29,7 @@
 # Format:
 #   Field 0: the variation sequence
 #   Field 1: the description of the desired appearance
-#   Field 2: where the appearance is only different in in particular shaping environments
+#   Field 2: where the appearance is only different in particular shaping environments
 #	this field lists them. The possible values are: isolate, initial, medial, final.
 #	If more than one is present, there are spaces between them.
 # =============================
@@ -42,6 +42,10 @@
 2269 FE00; with vertical stroke; # GREATER-THAN BUT NOT EQUAL TO
 2272 FE00; following the slant of the lower leg; # LESS-THAN OR EQUIVALENT TO
 2273 FE00; following the slant of the lower leg; # GREATER-THAN OR EQUIVALENT TO
+# The following two entries were originally defined for Unicode 3.2
+# but were determined to be in error and were removed from the list
+# of standardized variation sequences. The entries are left commented
+# in the file for the historical record of changes made to the data.
 #2278 FE00; with vertical stroke; # NEITHER LESS-THAN NOR GREATER-THAN
 #2279 FE00; with vertical stroke; # NEITHER GREATER-THAN NOR LESS-THAN
 228A FE00; with stroke through bottom members; # SUBSET OF WITH NOT EQUAL TO

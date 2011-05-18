@@ -42,7 +42,7 @@
 static void xs_init (pTHX);
 static PerlInterpreter *my_perl;
 
-#if defined (__MINT__) || defined (atarist)
+#if defined (atarist)
 /* The Atari operating system doesn't have a dynamic stack.  The
    stack size is determined from this value.  */
 long _stksize = 64 * 1024;
@@ -67,14 +67,16 @@ main(int argc, char **argv, char **env)
 #endif
 {
     dVAR;
-    int exitstatus;
+    int exitstatus, i;
 #ifdef PERL_GLOBAL_STRUCT
     struct perl_vars *plvarsp = init_global_struct();
 #  ifdef PERL_GLOBAL_STRUCT_PRIVATE
     my_vars = my_plvarsp = plvarsp;
 #  endif
 #endif /* PERL_GLOBAL_STRUCT */
-    (void)env;
+#ifndef NO_ENV_ARRAY_IN_MAIN
+    PERL_UNUSED_ARG(env);
+#endif
 #ifndef PERL_USE_SAFE_PUTENV
     PL_use_safe_putenv = 0;
 #endif /* PERL_USE_SAFE_PUTENV */
@@ -115,6 +117,15 @@ main(int argc, char **argv, char **env)
     exitstatus = perl_parse(my_perl, xs_init, argc, argv, (char **)NULL);
     if (!exitstatus)
         perl_run(my_perl);
+
+#ifndef PERL_MICRO
+    /* Unregister our signal handler before destroying my_perl */
+    for (i = 0; PL_sig_name[i]; i++) {
+	if (rsignal_state(PL_sig_num[i]) == (Sighandler_t) PL_csighandlerp) {
+	    rsignal(PL_sig_num[i], (Sighandler_t) SIG_DFL);
+	}
+    }
+#endif
 
     exitstatus = perl_destruct(my_perl);
 

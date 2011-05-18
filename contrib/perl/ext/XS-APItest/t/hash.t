@@ -1,22 +1,9 @@
 #!perl -w
 
-BEGIN {
-  chdir 't' if -d 't';
-  @INC = '../lib';
-  push @INC, "::lib:$MacPerl::Architecture:" if $^O eq 'MacOS';
-  require Config; import Config;
-  if ($Config{'extensions'} !~ /\bXS\/APItest\b/) {
-    # Look, I'm using this fully-qualified variable more than once!
-    my $arch = $MacPerl::Architecture;
-    print "1..0 # Skip: XS::APItest was not built\n";
-    exit 0;
-  }
-}
-
 use strict;
 use utf8;
 use Tie::Hash;
-use Test::More 'no_plan';
+use Test::More;
 
 BEGIN {use_ok('XS::APItest')};
 
@@ -53,12 +40,12 @@ main_tests (\@keys, \@testkeys, ' [utf8 hash]');
   my $result = ($] > 5.009) ? undef : 1;
 
   is (XS::APItest::Hash::store(\%h, chr 258,  1), $result);
-    
+
   ok (!exists $h{$utf8_for_258},
       "hv_store doesn't insert a key with the raw utf8 on a tied hash");
 }
 
-if ($] > 5.009) {
+{
     my $strtab = strtab();
     is (ref $strtab, 'HASH', "The shared string table quacks like a hash");
     my $wibble = "\0";
@@ -98,7 +85,7 @@ foreach my $in ("", "N", "a\0b") {
     is ($got, $in, "test_share_unshare_pvn");
 }
 
-if ($] > 5.009) {
+{
     foreach ([\&XS::APItest::Hash::rot13_hash, \&rot13, "rot 13"],
 	     [\&XS::APItest::Hash::bitflip_hash, \&bitflip, "bitflip"],
 	    ) {
@@ -193,6 +180,7 @@ sub test_precomputed_hashes {
     }
 }
 
+done_testing;
 exit;
 
 ################################   The End   ################################

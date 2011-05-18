@@ -150,6 +150,11 @@ bin (bin.U):
 	is most often a local directory such as /usr/local/bin. Programs using
 	this variable must be prepared to deal with ~name substitution.
 
+bin_ELF (dlsrc.U):
+	This variable saves the result from configure if generated binaries
+	are in ELF format. Only set to defined when the test has actually
+	been performed, and the result was positive.
+
 binexp (bin.U):
 	This is the same as the bin variable, but is filename expanded at
 	configuration time, for use in your makefiles.
@@ -244,6 +249,14 @@ cf_time (cf_who.U):
 	Holds the output of the "date" command when the configuration file was
 	produced. This is used to tag both config.sh and config_h.SH.
 
+charbits (charsize.U):
+	This variable contains the value of the CHARBITS symbol, which
+	indicates to the C program how many bits there are in a character.
+
+charsize (charsize.U):
+	This variable contains the value of the CHARSIZE symbol, which
+	indicates to the C program how many bytes there are in a character.
+
 chgrp (Loc.U):
 	This variable is defined but not used by Configure.
 	The value is the empty string and is not useful.
@@ -270,6 +283,23 @@ comm (Loc.U):
 compress (Loc.U):
 	This variable is defined but not used by Configure.
 	The value is the empty string and is not useful.
+
+config_arg0 (Options.U):
+	This variable contains the string used to invoke the Configure
+	command, as reported by the shell in the $0 variable.
+
+config_argc (Options.U):
+	This variable contains the number of command-line arguments
+	passed to Configure, as reported by the shell in the $# variable.
+	The individual arguments are stored as variables config_argc1,
+	config_argc2, etc.
+
+config_args (Options.U):
+	This variable contains a single string giving the command-line
+	arguments passed to Configure.	Spaces within arguments,
+	quotes, and escaped characters are not correctly preserved.
+	To reconstruct the command line, you must assemble the individual
+	command line pieces, given in config_arg[0-9]*.
 
 contains (contains.U):
 	This variable holds the command to do a grep with a proper return
@@ -498,7 +528,7 @@ d_casti32 (d_casti32.U):
 
 d_castneg (d_castneg.U):
 	This variable conditionally defines CASTNEG, which indicates
-	wether the C compiler can cast negative float to unsigned.
+	whether the C compiler can cast negative float to unsigned.
 
 d_charvspr (d_vprintf.U):
 	This variable conditionally defines CHARVSPRINTF if this system
@@ -719,7 +749,7 @@ d_eofnblk (nblock_io.U):
 
 d_eunice (Guess.U):
 	This variable conditionally defines the symbols EUNICE and VAX, which
-	alerts the C program that it must deal with ideosyncracies of VMS.
+	alerts the C program that it must deal with idiosyncrasies of VMS.
 
 d_faststdio (d_faststdio.U):
 	This variable conditionally defines the HAS_FAST_STDIO symbol,
@@ -911,7 +941,7 @@ d_getcwd (d_getcwd.U):
 
 d_getespwnam (d_getespwnam.U):
 	This variable conditionally defines HAS_GETESPWNAM if getespwnam() is
-	available to retrieve enchanced (shadow) password entries by name.
+	available to retrieve enhanced (shadow) password entries by name.
 
 d_getfsstat (d_getfsstat.U):
 	This variable conditionally defines the HAS_GETFSSTAT symbol, which
@@ -1369,7 +1399,7 @@ d_memcpy (d_memcpy.U):
 d_memmove (d_memmove.U):
 	This variable conditionally defines the HAS_MEMMOVE symbol, which
 	indicates to the C program that the memmove() routine is available
-	to copy potentatially overlapping blocks of memory.
+	to copy potentially overlapping blocks of memory.
 
 d_memset (d_memset.U):
 	This variable conditionally defines the HAS_MEMSET symbol, which
@@ -1587,43 +1617,52 @@ d_portable (d_portable.U):
 	indicates to the C program that it should not assume that it is
 	running on the machine it was compiled on.
 
+d_prctl (d_prctl.U):
+	This variable conditionally defines the HAS_PRCTL symbol, which
+	indicates to the C program that the prctl() routine is available.
+
+d_prctl_set_name (d_prctl.U):
+	This variable conditionally defines the HAS_PRCTL_SET_NAME symbol,
+	which indicates to the C program that the prctl() routine supports
+	the PR_SET_NAME option.
+
 d_PRId64 (quadfio.U):
 	This variable conditionally defines the PERL_PRId64 symbol, which
-	indiciates that stdio has a symbol to print 64-bit decimal numbers.
+	indicates that stdio has a symbol to print 64-bit decimal numbers.
 
 d_PRIeldbl (longdblfio.U):
 	This variable conditionally defines the PERL_PRIfldbl symbol, which
-	indiciates that stdio has a symbol to print long doubles.
+	indicates that stdio has a symbol to print long doubles.
 
 d_PRIEUldbl (longdblfio.U):
 	This variable conditionally defines the PERL_PRIfldbl symbol, which
-	indiciates that stdio has a symbol to print long doubles.
+	indicates that stdio has a symbol to print long doubles.
 	The 'U' in the name is to separate this from d_PRIeldbl so that even
 	case-blind systems can see the difference.
 
 d_PRIfldbl (longdblfio.U):
 	This variable conditionally defines the PERL_PRIfldbl symbol, which
-	indiciates that stdio has a symbol to print long doubles.
+	indicates that stdio has a symbol to print long doubles.
 
 d_PRIFUldbl (longdblfio.U):
 	This variable conditionally defines the PERL_PRIfldbl symbol, which
-	indiciates that stdio has a symbol to print long doubles.
+	indicates that stdio has a symbol to print long doubles.
 	The 'U' in the name is to separate this from d_PRIfldbl so that even
 	case-blind systems can see the difference.
 
 d_PRIgldbl (longdblfio.U):
 	This variable conditionally defines the PERL_PRIfldbl symbol, which
-	indiciates that stdio has a symbol to print long doubles.
+	indicates that stdio has a symbol to print long doubles.
 
 d_PRIGUldbl (longdblfio.U):
 	This variable conditionally defines the PERL_PRIfldbl symbol, which
-	indiciates that stdio has a symbol to print long doubles.
+	indicates that stdio has a symbol to print long doubles.
 	The 'U' in the name is to separate this from d_PRIgldbl so that even
 	case-blind systems can see the difference.
 
 d_PRIi64 (quadfio.U):
 	This variable conditionally defines the PERL_PRIi64 symbol, which
-	indiciates that stdio has a symbol to print 64-bit decimal numbers.
+	indicates that stdio has a symbol to print 64-bit decimal numbers.
 
 d_printf_format_null (d_attribut.U):
 	This variable conditionally defines PRINTF_FORMAT_NULL_OK, which
@@ -1631,20 +1670,20 @@ d_printf_format_null (d_attribut.U):
 
 d_PRIo64 (quadfio.U):
 	This variable conditionally defines the PERL_PRIo64 symbol, which
-	indiciates that stdio has a symbol to print 64-bit octal numbers.
+	indicates that stdio has a symbol to print 64-bit octal numbers.
 
 d_PRIu64 (quadfio.U):
 	This variable conditionally defines the PERL_PRIu64 symbol, which
-	indiciates that stdio has a symbol to print 64-bit unsigned decimal
+	indicates that stdio has a symbol to print 64-bit unsigned decimal
 	numbers.
 
 d_PRIx64 (quadfio.U):
 	This variable conditionally defines the PERL_PRIx64 symbol, which
-	indiciates that stdio has a symbol to print 64-bit hexadecimal numbers.
+	indicates that stdio has a symbol to print 64-bit hexadecimal numbers.
 
 d_PRIXU64 (quadfio.U):
 	This variable conditionally defines the PERL_PRIXU64 symbol, which
-	indiciates that stdio has a symbol to print 64-bit hExADECimAl numbers.
+	indicates that stdio has a symbol to print 64-bit hExADECimAl numbers.
 	The 'U' in the name is to separate this from d_PRIx64 so that even
 	case-blind systems can see the difference.
 
@@ -1794,7 +1833,7 @@ d_scm_rights (d_socket.U):
 
 d_SCNfldbl (longdblfio.U):
 	This variable conditionally defines the PERL_PRIfldbl symbol, which
-	indiciates that stdio has a symbol to scan long doubles.
+	indicates that stdio has a symbol to scan long doubles.
 
 d_seekdir (d_readdir.U):
 	This variable conditionally defines HAS_SEEKDIR if seekdir() is
@@ -2032,6 +2071,11 @@ d_sigsetjmp (d_sigsetjmp.U):
 	which indicates that the sigsetjmp() routine is available to
 	call setjmp() and optionally save the process's signal mask.
 
+d_sin6_scope_id (d_socket.U):
+	This variable conditionally defines the HAS_SIN6_SCOPE_ID symbol, which
+	indicates that a struct sockaddr_in6 structure has the sin6_scope_id
+	member.
+
 d_sitearch (sitearch.U):
 	This variable conditionally defines SITEARCH to hold the pathname
 	of architecture-dependent library files for $package.  If
@@ -2041,6 +2085,11 @@ d_snprintf (d_snprintf.U):
 	This variable conditionally defines the HAS_SNPRINTF symbol, which
 	indicates to the C program that the snprintf () library function
 	is available.
+
+d_sockaddr_sa_len (d_socket.U):
+	This variable conditionally defines the HAS_SOCKADDR_SA_LEN symbol,
+	which indicates that a struct sockaddr structure has the sa_len
+	member.
 
 d_sockatmark (d_sockatmark.U):
 	This variable conditionally defines the HAS_SOCKATMARK symbol, which
@@ -2113,6 +2162,12 @@ d_statfs_f_flags (d_statfs_f_flags.U):
 d_statfs_s (d_statfs_s.U):
 	This variable conditionally defines the HAS_STRUCT_STATFS symbol,
 	which indicates that the struct statfs is supported.
+
+d_static_inline (d_static_inline.U):
+	This variable conditionally defines the HAS_STATIC_INLINE symbol,
+	which indicates that the C compiler supports C99-style static
+	inline.  That is, the function can't be called from another
+	translation unit.
 
 d_statvfs (d_statvfs.U):
 	This variable conditionally defines the HAS_STATVFS symbol, which
@@ -2286,7 +2341,7 @@ d_telldirproto (d_telldirproto.U):
 
 d_time (d_time.U):
 	This variable conditionally defines the HAS_TIME symbol, which indicates
-	that the time() routine exists.  The time() routine is normaly
+	that the time() routine exists.  The time() routine is normally
 	provided on UNIX systems.
 
 d_timegm (d_timegm.U):
@@ -2295,7 +2350,7 @@ d_timegm (d_timegm.U):
 
 d_times (d_times.U):
 	This variable conditionally defines the HAS_TIMES symbol, which indicates
-	that the times() routine exists.  The times() routine is normaly
+	that the times() routine exists.  The times() routine is normally
 	provided on UNIX systems. You may have to include <sys/times.h>.
 
 d_tm_tm_gmtoff (i_time.U):
@@ -2397,7 +2452,7 @@ d_voidtty (i_sysioctl.U):
 	This variable conditionally defines USE_IOCNOTTY to indicate that the
 	ioctl() call with TIOCNOTTY should be used to void tty association.
 	Otherwise (on USG probably), it is enough to close the standard file
-	decriptors and do a setpgrp().
+	descriptors and do a setpgrp().
 
 d_volatile (d_volatile.U):
 	This variable conditionally defines the HASVOLATILE symbol, which
@@ -2586,7 +2641,7 @@ expr (Loc.U):
 extensions (Extensions.U):
 	This variable holds a list of all extension files (both XS and
 	non-xs linked into the package.  It is propagated to Config.pm
-	and is typically used to test whether a particular extesion
+	and is typically used to test whether a particular extension
 	is available.
 
 extern_C (Csym.U):
@@ -3319,7 +3374,7 @@ inc_version_list_init (inc_version_list.U):
 	suitable for use in the PERL_INC_VERSION_LIST initialization.
 
 incpath (usrinc.U):
-	This variable must preceed the normal include path to get hte
+	This variable must precede the normal include path to get the
 	right one, as in "$incpath/usr/include" or "$incpath/usr/lib".
 	Value can be "" or "/bsd43" on mips.
 
@@ -3342,7 +3397,7 @@ installarchlib (archlib.U):
 
 installbin (bin.U):
 	This variable is the same as binexp unless AFS is running in which case
-	the user is explicitely prompted for it. This variable should always
+	the user is explicitly prompted for it. This variable should always
 	be used in your makefiles for maximum portability.
 
 installhtml1dir (html1dir.U):
@@ -4022,8 +4077,9 @@ path_sep (Unix.U):
 	used to separate elements in the command shell search PATH.
 
 perl (Loc.U):
-	This variable is defined but not used by Configure.
-	The value is the empty string and is not useful.
+	This variable is used internally by Configure to determine the
+	full pathname (if any) of the perl program.  After Configure runs,
+	the value is reset to a plain "perl" and is not useful.
 
 perl5 (perl5.U):
 	This variable contains the full path (if any) to a previously
@@ -4071,6 +4127,16 @@ perl_patchlevel (patchlevel.U):
 PERL_REVISION (Oldsyms.U):
 	In a Perl version number such as 5.6.2, this is the 5.
 	This value is manually set in patchlevel.h
+
+perl_static_inline (d_static_inline.U):
+	This variable defines the PERL_STATIC_INLINE symbol to
+	the best-guess incantation to use for static inline functions.
+	Possibilities include
+	static inline       (c99)
+	static __inline__   (gcc -ansi)
+	static __inline     (MSVC)
+	static _inline      (older MSVC)
+	static              (c89 compilers)
 
 PERL_SUBVERSION (Oldsyms.U):
 	In a Perl version number such as 5.6.2, this is the 2.
@@ -4692,7 +4758,7 @@ startperl (startperl.U):
 	eval 'exec perl -S $0 ${1+"$@"}'
 	if $running_under_some_shell;
 	to guarantee perl startup should the shell execute the script. Note
-	that this magic incatation is not understood by csh.
+	that this magic incantation is not understood by csh.
 
 startsh (startsh.U):
 	This variable contains the string to put on the front of a shell
@@ -4962,7 +5028,7 @@ usemultiplicity (usemultiplicity.U):
 usemymalloc (mallocsrc.U):
 	This variable contains y if the malloc that comes with this package
 	is desired over the system's version of malloc.  People often include
-	special versions of malloc for effiency, but such versions are often
+	special versions of malloc for efficiency, but such versions are often
 	less portable.  See also mallocsrc and mallocobj.
 	If this is 'y', then -lmalloc is removed from $libs.
 
@@ -5006,7 +5072,7 @@ userelocatableinc (bin.U):
 usesfio (d_sfio.U):
 	This variable is set to true when the user agrees to use sfio.
 	It is set to false when sfio is not available or when the user
-	explicitely requests not to use sfio.  It is here primarily so
+	explicitly requests not to use sfio.  It is here primarily so
 	that command-line settings can override the auto-detection of
 	d_sfio without running into a "WHOA THERE".
 
@@ -5034,7 +5100,7 @@ usevendorprefix (vendorprefix.U):
 usevfork (d_vfork.U):
 	This variable is set to true when the user accepts to use vfork.
 	It is set to false when no vfork is available or when the user
-	explicitely requests not to use vfork.
+	explicitly requests not to use vfork.
 
 usrinc (usrinc.U):
 	This variable holds the path of the include files, which is
@@ -5065,6 +5131,11 @@ uvxformat (perlxvf.U):
 uvXUformat (perlxvf.U):
 	This variable contains the format string used for printing
 	a Perl UV as an unsigned hexadecimal integer in uppercase ABCDEF.
+
+vaproto (vaproto.U):
+	This variable conditionally defines CAN_VAPROTO on systems supporting
+	prototype declaration of functions with a variable number of
+	arguments. See also prototype.
 
 vendorarch (vendorarch.U):
 	This variable contains the value of the PERL_VENDORARCH symbol.

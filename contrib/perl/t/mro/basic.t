@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-require q(./test.pl); plan(tests => 42);
+BEGIN { require q(./test.pl); } plan(tests => 52);
 
 require mro;
 
@@ -57,10 +57,10 @@ ok(!mro::is_universal('MRO_B'));
 ok(mro::is_universal('MRO_B'));
 
 @UNIVERSAL::ISA = ();
-ok(mro::is_universal('MRO_B'));
+ok(!mro::is_universal('MRO_B'));
 
 # is_universal, get_mro, and get_linear_isa should
-# handle non-existant packages sanely
+# handle non-existent packages sanely
 ok(!mro::is_universal('Does_Not_Exist'));
 is(mro::get_mro('Also_Does_Not_Exist'), 'dfs');
 ok(eq_array(
@@ -247,4 +247,84 @@ is(eval { MRO_N->testfunc() }, 123);
   no warnings 'once';  # otherwise it'll bark about P1::bark used only once
   *{P1::bark} = sub { "[bark]" };
   is(scalar eval { $foo->bark }, "[bark]", "can bark now");
+}
+
+{
+  # assigning @ISA via arrayref then modifying it RT 72866
+  {
+    package Q1;
+    sub foo {  }
+
+    package Q2;
+    sub bar { }
+
+    package Q3;
+  }
+  push @Q3::ISA, "Q1";
+  can_ok("Q3", "foo");
+  *Q3::ISA = [];
+  push @Q3::ISA, "Q1";
+  can_ok("Q3", "foo");
+  *Q3::ISA = [];
+  push @Q3::ISA, "Q2";
+  can_ok("Q3", "bar");
+  ok(!Q3->can("foo"), "can't call foo method any longer");
+}
+
+{
+    # test mro::method_changed_in
+    my $count = mro::get_pkg_gen("MRO_A");
+    mro::method_changed_in("MRO_A");
+    my $count_new = mro::get_pkg_gen("MRO_A");
+
+    is($count_new, $count + 1);
+}
+
+{
+    # test if we can call mro::invalidate_all_method_caches;
+    eval {
+        mro::invalidate_all_method_caches();
+    };
+    is($@, "");
+}
+
+{
+    # @main::ISA
+    no warnings 'once';
+    @main::ISA = 'parent';
+    my $output = '';
+    *parent::do = sub { $output .= 'parent' };
+    *parent2::do = sub { $output .= 'parent2' };
+    main->do;
+    @main::ISA = 'parent2';
+    main->do;
+    is $output, 'parentparent2', '@main::ISA is magical';
+}
+
+{
+    # Undefining *ISA, then modifying @ISA
+    # This broke Class::Trait. See [perl #79024].
+    {package Class::Trait::Base}
+    no strict 'refs';
+    undef   *{"Extra::TSpouse::ISA"};
+    'Extra::TSpouse'->isa('Class::Trait::Base'); # cache the mro
+    unshift @{"Extra::TSpouse::ISA"}, 'Class::Trait::Base';
+    ok 'Extra::TSpouse'->isa('Class::Trait::Base'),
+     'a isa b after undef *a::ISA and @a::ISA modification';
+}
+
+{
+    # Deleting $package::{ISA}
+    # Broken in 5.10.0; fixed in 5.13.7
+    @Blength::ISA = 'Bladd';
+    delete $Blength::{ISA};
+    ok !Blength->isa("Bladd"), 'delete $package::{ISA}';
+}
+
+{
+    # Undefining stashes
+    @Thrext::ISA = "Thwit";
+    @Thwit::ISA = "Sile";
+    undef %Thwit::;
+    ok !Thrext->isa('Sile'), 'undef %package:: updates subclasses';
 }

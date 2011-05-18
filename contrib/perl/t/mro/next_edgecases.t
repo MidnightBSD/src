@@ -3,7 +3,9 @@
 use strict;
 use warnings;
 
-require q(./test.pl); plan(tests => 12);
+BEGIN { chdir 't'; require q(./test.pl); @INC = qw "../lib lib" }
+
+plan(tests => 12);
 
 {
 
@@ -52,7 +54,7 @@ require q(./test.pl); plan(tests => 12);
 
         can_ok($bar, 'bar');
         my $value = eval { $bar->bar() };
-        ok(!$@, '... calling bar() succedded') || diag $@;
+        ok(!$@, '... calling bar() succeeded') || diag $@;
         is($value, 'Foo::bar', '... got the right return value too');
     }
     
