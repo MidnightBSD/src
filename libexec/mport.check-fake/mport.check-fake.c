@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.5 2010/12/11 08:24:39 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.6 2011/03/06 18:28:26 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -54,242 +54,242 @@ static char *string_replace(const char *str, const char *old, const char *new);
 int
 main(int argc, char *argv[]) 
 {
-  int ch, ret;
-  const char *skip = NULL, *prefix = NULL, *destdir = NULL, *assetlistfile = NULL;
-  mportAssetList *assetlist;
-  FILE *fp;
+	int ch, ret;
+	const char *skip = NULL, *prefix = NULL, *destdir = NULL, *assetlistfile = NULL;
+	mportAssetList *assetlist;
+	FILE *fp;
 
-  while ((ch = getopt(argc, argv, "f:d:s:p:")) != -1) {
-    switch (ch) {
-      case 's':
-        skip = optarg;
-        break;
-      case 'p':
-        prefix = optarg;
-        break;
-      case 'd':
-        destdir = optarg;
-        break;
-      case 'f':
-        assetlistfile = optarg;
-        break;
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
+	while ((ch = getopt(argc, argv, "f:d:s:p:")) != -1) {
+		switch (ch) {
+			case 's':
+				skip = optarg;
+				break;
+			case 'p':
+				prefix = optarg;
+				break;
+			case 'd':
+				destdir = optarg;
+				break;
+			case 'f':
+				assetlistfile = optarg;
+				break;
+			case '?':
+			default:
+				usage();
+				break; 
+		}
+	} 
 
-  argc -= optind;
-  argv += optind;
+	argc -= optind;
+	argv += optind;
 
-  DIAG("assetlist = %s; destdir = %s; prefix = %s; skip = %s", assetlistfile, destdir, prefix, skip)
+	DIAG("assetlist = %s; destdir = %s; prefix = %s; skip = %s", assetlistfile, destdir, prefix, skip)
 
-  if (!prefix || !destdir || !assetlistfile) 
-    usage();
-  
-  if ((fp = fopen(assetlistfile, "r")) == NULL)
-    err(EX_NOINPUT, "Could not open assetlist file %s", assetlistfile);
-      
-  if ((assetlist = mport_assetlist_new()) == NULL) 
-    err(EX_OSERR, "Could not not allocate assetlist");
-  
-  if (mport_parse_plistfile(fp, assetlist) != MPORT_OK)
-    err(EX_DATAERR, "Invalid assetlist");
+	if (!prefix || !destdir || !assetlistfile) 
+		usage();
+	
+	if ((fp = fopen(assetlistfile, "r")) == NULL)
+		err(EX_NOINPUT, "Could not open assetlist file %s", assetlistfile);
+			
+	if ((assetlist = mport_assetlist_new()) == NULL) 
+		err(EX_OSERR, "Could not not allocate assetlist");
+	
+	if (mport_parse_plistfile(fp, assetlist) != MPORT_OK)
+		err(EX_DATAERR, "Invalid assetlist");
 
-  DIAG("running check_fake")
-  
-  printf("Checking %s\n", destdir);
-  ret = check_fake(assetlist, destdir, prefix, skip);
-  
-  if (ret == 0) {
-    printf("Fake succeeded.\n");
-  } else {
-    printf("Fake failed.\n");
-  }
-  
-  mport_assetlist_free(assetlist);
-  
-  return ret;
+	DIAG("running check_fake")
+	
+	printf("Checking %s\n", destdir);
+	ret = check_fake(assetlist, destdir, prefix, skip);
+	
+	if (ret == 0) {
+		printf("Fake succeeded.\n");
+	} else {
+		printf("Fake failed.\n");
+	}
+	
+	mport_assetlist_free(assetlist);
+	
+	return ret;
 }
 
 static int
 check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, const char *skip)
 {
-  mportAssetListEntry *e;
-  char cwd[FILENAME_MAX], file[FILENAME_MAX];
-  char *anchored_skip;
-  struct stat st;
-  regex_t skipre;
-  int ret = 0;
+	mportAssetListEntry *e;
+	char cwd[FILENAME_MAX], file[FILENAME_MAX];
+	char *anchored_skip;
+	struct stat st;
+	regex_t skipre;
+	int ret = 0;
 
-  DIAG("checking skip: %s", skip)
-    
-  if (skip != NULL) {
-    DIAG("Compiling skip: %s", skip)
-    
-    if (asprintf(&anchored_skip, "^%s$", skip) == -1)
-      err(EX_OSERR, "Could not build skip regex");
-    
-    if (regcomp(&skipre, anchored_skip, REG_EXTENDED|REG_NOSUB) != 0)
-      errx(EX_DATAERR, "Could not compile skip regex");
-      
-    free(anchored_skip);  
-  }
-  
-  DIAG("Coping prefix (%s) to cwd", prefix)
-  
-  (void)strlcpy(cwd, prefix, FILENAME_MAX);
+	DIAG("checking skip: %s", skip)
+		
+	if (skip != NULL) {
+		DIAG("Compiling skip: %s", skip)
+		
+		if (asprintf(&anchored_skip, "^%s$", skip) == -1)
+			err(EX_OSERR, "Could not build skip regex");
+		
+		if (regcomp(&skipre, anchored_skip, REG_EXTENDED|REG_NOSUB) != 0)
+			errx(EX_DATAERR, "Could not compile skip regex");
+			
+		free(anchored_skip);	
+	}
+	
+	DIAG("Coping prefix (%s) to cwd", prefix)
+	
+	(void)strlcpy(cwd, prefix, FILENAME_MAX);
 
-  DIAG("Starting loop, cwd: %s", cwd)
-  
-  STAILQ_FOREACH(e, assetlist, next) {
-    if (e->type == ASSET_CWD) {
-        if (e->data == NULL) {
-          DIAG("Setting cwd to '%s'", prefix)
-          (void)strlcpy(cwd, prefix, FILENAME_MAX);
-        } else {
-          DIAG("Setting cwd to '%s'", e->data)
-          (void)strlcpy(cwd, e->data, FILENAME_MAX);
-        }
-        
-        break;
-    }
-    
-    if (e->type != ASSET_FILE)
-      continue;
-    
-    (void)snprintf(file, FILENAME_MAX, "%s%s/%s", destdir, cwd, e->data);
+	DIAG("Starting loop, cwd: %s", cwd)
+	
+	STAILQ_FOREACH(e, assetlist, next) {
+		if (e->type == ASSET_CWD) {
+				if (e->data == NULL) {
+					DIAG("Setting cwd to '%s'", prefix)
+					(void)strlcpy(cwd, prefix, FILENAME_MAX);
+				} else {
+					DIAG("Setting cwd to '%s'", e->data)
+					(void)strlcpy(cwd, e->data, FILENAME_MAX);
+				}
+				
+				break;
+		}
+		
+		if (e->type != ASSET_FILE)
+			continue;
+		
+		(void)snprintf(file, FILENAME_MAX, "%s%s/%s", destdir, cwd, e->data);
 
-    DIAG("checking %s", file)
-      
-    if (lstat(file, &st) != 0) {
-      (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
-      
-      if (lstat(file, &st) == 0) {
-        (void)printf("    %s installed in %s\n", e->data, cwd);
-      } else {
-        (void)printf("    %s not installed.\n", e->data);
-      }
-      
-      ret = 1;
-      continue;
-    }
-    
-    if (S_ISLNK(st.st_mode))
-      continue;  /* skip symlinks */
+		DIAG("checking %s", file)
+			
+		if (lstat(file, &st) != 0) {
+			(void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
+			
+			if (lstat(file, &st) == 0) {
+				(void)printf("		%s installed in %s\n", e->data, cwd);
+			} else {
+				(void)printf("		%s not installed.\n", e->data);
+			}
+			
+			ret = 1;
+			continue;
+		}
+		
+		if (S_ISLNK(st.st_mode))
+			continue;	 /* skip symlinks */
 
-    /* if file matches skip continue */
-    if (skip != NULL && (regexec(&skipre, e->data, 0, NULL, 0) == 0))
-      continue;      
-    
-    DIAG("==> Grepping %s", file)
-    /* grep file for fake destdir */
-    if (grep_file(file, destdir)) {
-      (void)printf("    %s contains the fake destdir\n", e->data);
-      ret = 1;
-    }
-  }
-  
-  if (skip != NULL)
-    regfree(&skipre);
-  
-  return ret;
+		/* if file matches skip continue */
+		if (skip != NULL && (regexec(&skipre, e->data, 0, NULL, 0) == 0))
+			continue;			 
+		
+		DIAG("==> Grepping %s", file)
+		/* grep file for fake destdir */
+		if (grep_file(file, destdir)) {
+			(void)printf("		%s contains the fake destdir\n", e->data);
+			ret = 1;
+		}
+	}
+	
+	if (skip != NULL)
+		regfree(&skipre);
+	
+	return ret;
 } 
-      
+			
 
 static int
 grep_file(const char *filename, const char *destdir)
 {
-  FILE *file;
-  char *line, *nline;
-  char *destdir_fixed;
-  static regex_t regex;
-  static int compiled = 0;
-  size_t len;
-  int ret = 0;
-  
-  DIAG("===> Compiling destdir: %s", destdir)
-  
-  /* Should we cache the compiled regex? */
-  if (!compiled) {
-    /* + is a special character, deal with it so archivers/zipios++ works */
-    destdir_fixed = string_replace(destdir, "+", "\\+");
-    DIAG("===> destdir_fixed for regular expression: %s", destdir_fixed)
-    if (regcomp(&regex, destdir_fixed, REG_EXTENDED|REG_NOSUB) != 0)
-      errx(EX_DATAERR, "Could not compile destdir regex");
-    free(destdir_fixed);
-    compiled++;
-  }
-  
-  if ((file = fopen(filename, "r")) == NULL)
-    err(EX_SOFTWARE, "Couldn't open %s", filename);
-    
-  while ((line = fgetln(file, &len)) != NULL) {
-    nline = NULL;
-    /* if we end in \n just switch it to \0, otherwise we need more mem */
-    if (line[len - 1] == '\n') {
-      line[len - 1] = '\0';
-    } else {
-      nline = (char *)malloc((len + 1) * sizeof(char));
-      if (nline == NULL)
-        err(EX_OSERR, "Couldn't allocate nline buf");
-      
-      memcpy(nline, line, len);
-      nline[len] = '\0';
-      line = nline;
-    }
-    
-    if (regexec(&regex, line, 0, NULL, 0) == 0) {
-      DIAG("===> Match line: %s", line);
-      free(nline);
-      ret = 1;
-      break;
-    }
-    free(nline);
-  }
-  
-  if (ferror(file) != 0)
-    err(EX_IOERR, "Error reading %s", filename);
-  
-  fclose(file);
-  return ret;
+	FILE *file;
+	char *line, *nline;
+	char *destdir_fixed;
+	static regex_t regex;
+	static int compiled = 0;
+	size_t len;
+	int ret = 0;
+	
+	DIAG("===> Compiling destdir: %s", destdir)
+	
+	/* Should we cache the compiled regex? */
+	if (!compiled) {
+		/* + is a special character, deal with it so archivers/zipios++ works */
+		destdir_fixed = string_replace(destdir, "+", "\\+");
+		DIAG("===> destdir_fixed for regular expression: %s", destdir_fixed)
+		if (regcomp(&regex, destdir_fixed, REG_EXTENDED|REG_NOSUB) != 0)
+			errx(EX_DATAERR, "Could not compile destdir regex");
+		free(destdir_fixed);
+		compiled++;
+	}
+	
+	if ((file = fopen(filename, "r")) == NULL)
+		err(EX_SOFTWARE, "Couldn't open %s", filename);
+		
+	while ((line = fgetln(file, &len)) != NULL) {
+		nline = NULL;
+		/* if we end in \n just switch it to \0, otherwise we need more mem */
+		if (line[len - 1] == '\n') {
+			line[len - 1] = '\0';
+		} else {
+			nline = (char *)malloc((len + 1) * sizeof(char));
+			if (nline == NULL)
+				err(EX_OSERR, "Couldn't allocate nline buf");
+			
+			memcpy(nline, line, len);
+			nline[len] = '\0';
+			line = nline;
+		}
+		
+		if (regexec(&regex, line, 0, NULL, 0) == 0) {
+			DIAG("===> Match line: %s", line);
+			free(nline);
+			ret = 1;
+			break;
+		}
+		free(nline);
+	}
+	
+	if (ferror(file) != 0)
+		err(EX_IOERR, "Error reading %s", filename);
+	
+	fclose(file);
+	return ret;
 }
 
 static char *
 string_replace(const char *str, const char *old, const char *new)
 {
-  char *ret, *r;
-  const char *p, *q;
-  size_t oldlen = strlen(old);
-  size_t count, retlen, newlen = strlen(new);
+	char *ret, *r;
+	const char *p, *q;
+	size_t oldlen = strlen(old);
+	size_t count, retlen, newlen = strlen(new);
 
-  if (oldlen != newlen) {
-    for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
-      count++;
-    retlen = p - str + strlen(p) + count * (newlen - oldlen);
-  } else {
-    retlen = strlen(str);
-  }
+	if (oldlen != newlen) {
+		for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
+			count++;
+		retlen = p - str + strlen(p) + count * (newlen - oldlen);
+	} else {
+		retlen = strlen(str);
+	}
 
-  ret = malloc(retlen + 1);
+	ret = malloc(retlen + 1);
 
-  for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) {
-    ptrdiff_t l = q - p;
-    memcpy(r, p, l);
-    r += l;
-    memcpy(r, new, newlen);
-    r += newlen;
-  }
-  strcpy(r, p);
+	for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) {
+		ptrdiff_t l = q - p;
+		memcpy(r, p, l);
+		r += l;
+		memcpy(r, new, newlen);
+		r += newlen;
+	}
+	strcpy(r, p);
 
-  return ret;
+	return ret;
 }
-      
+			
 static void
 usage() 
 {
-  errx(EX_USAGE, "Usage: mport.check-fake [-s skip] <-f plistfile> <-d destdir> <-p prefix>");
+	errx(EX_USAGE, "Usage: mport.check-fake [-s skip] <-f plistfile> <-d destdir> <-p prefix>");
 }
 
 
