@@ -6,15 +6,15 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *		notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ *		notice, this list of conditions and the following disclaimer in the
+ *		documentation and/or other materials provided with the distribution.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.	IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.3 2010/03/10 05:38:26 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.4 2011/03/06 18:20:49 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -39,48 +39,49 @@ static void usage(void);
 int
 main(int argc, char *argv[]) 
 {
-  int ch, i;
-  char *prefix = NULL;
-  mportInstance *mport;
-    
-  while ((ch = getopt(argc, argv, "p:")) != -1) {
-    switch (ch) {
-      case 'p':
-        prefix = optarg;
-        break;
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
+	int ch, i;
+	char *prefix = NULL;
+	mportInstance *mport;
+		
+	while ((ch = getopt(argc, argv, "p:")) != -1) {
+		switch (ch) {
+			case 'p':
+				prefix = optarg;
+				break;
+			case '?':
+			default:
+				usage();
+				break; 
+		}
+	} 
 
-  argc -= optind;
-  argv += optind;
+	argc -= optind;
+	argv += optind;
 
-  mport = mport_instance_new();
-  
-  if (mport_instance_init(mport, NULL) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
-  
-  for (i = 0; i < argc; i++) {
-    if (mport_install_primative(mport, argv[i], prefix) != MPORT_OK) {
-      warnx("%s", mport_err_string());
-      mport_instance_free(mport);
-      exit(1);
-    }
-  }
+	mport = mport_instance_new();
+	
+	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		exit(1);
+	}
+	
+	for (i = 0; i < argc; i++) {
+		if (mport_install_primative(mport, argv[i], prefix) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			mport_instance_free(mport);
+			exit(1);
+		}
+	}
  
-  mport_instance_free(mport); 
-  
-  return 0;
+	mport_instance_free(mport); 
+	
+	return 0;
 }
 
 static 
 void usage() 
 {
-  fprintf(stderr, "Usage: mport.install [-p prefix] pkgfile1 pkgfile2 ...\n");
-  exit(2);
+
+	fprintf(stderr, "Usage: mport.install [-p prefix] pkgfile1 pkgfile2 ...\n");
+	exit(2);
 }
