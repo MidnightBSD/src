@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/fetch.c,v 1.5 2011/03/12 01:29:38 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/fetch.c,v 1.6 2011/04/24 22:40:10 laffer1 Exp $
  */
 
 
@@ -53,11 +53,16 @@ int mport_fetch_index(mportInstance *mport)
   char **mirrors = NULL;
   char **mirrorsPtr = NULL;
   char *url = NULL;
+  int mirrorCount = 0;
   
   MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_index()");
  
-  if (mport_index_get_mirror_list(mport, &mirrors) != MPORT_OK)
+  if (mport_index_get_mirror_list(mport, &mirrors, &mirrorCount) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+#ifdef DEBUGGING 
+  fprintf(stderr, "Mirror count is %d\n", mirrorCount);
+#endif
  
   mirrorsPtr = mirrors;
    
@@ -116,10 +121,11 @@ int mport_fetch_bundle(mportInstance *mport, const char *filename)
   char **mirrorsPtr;
   char *url;
   char *dest;
+  int mirrorCount;
 
   MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_bundle()");
   
-  if (mport_index_get_mirror_list(mport, &mirrors) != MPORT_OK)
+  if (mport_index_get_mirror_list(mport, &mirrors, &mirrorCount) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   asprintf(&dest, "%s/%s", MPORT_FETCH_STAGING_DIR, filename);
