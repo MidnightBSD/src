@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.7 2011/04/24 21:58:53 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.8 2011/05/20 12:49:37 laffer1 Exp $
  *
  * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -80,7 +80,6 @@ int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_rmdir(const char *, int);
 int mport_chdir(mportInstance *, const char *);
-int mport_file_exists(const char *);
 int mport_xsystem(mportInstance *mport, const char *, ...);
 int mport_run_asset_exec(mportInstance *mport, const char *, const char *, const char *);
 void mport_free_vec(void *);

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.24 2011/03/13 18:18:55 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.25 2011/03/17 04:41:46 laffer1 Exp $
  */
 
 #include <sys/types.h>
@@ -202,7 +202,7 @@ int mport_rmdir(const char *dir, int ignore_nonempty)
 /*
  * Quick test to see if a file exists.
  */
-int mport_file_exists(const char *file) 
+MPORT_PUBLIC_API int mport_file_exists(const char *file) 
 {
   struct stat st;
   
