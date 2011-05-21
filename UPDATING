@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20110521:
+	mport tool now has a deleteall command.  This can be used to remove
+	all packages from a system.
+
+	A few bugs with the perl 5.14 import have been fixed.
+
 20110518:
 	Perl 5.14.0
 
@@ -986,4 +992,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.121 2011/03/15 01:08:09 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.122 2011/05/18 13:59:13 laffer1 Exp $
