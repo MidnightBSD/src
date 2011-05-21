@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.22 2011/05/20 12:07:11 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.23 2011/05/20 12:50:13 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +44,7 @@ static void loadIndex(mportInstance *);
 static mportIndexEntry ** lookupIndex(mportInstance *, const char *);
 static int install(mportInstance *, const char *);
 static int delete(mportInstance *, const char *);
+static int deleteAll(mportInstance *);
 static int update(mportInstance *, const char *);
 static int upgrade(mportInstance *);
 static int info(mportInstance *, const char *);
@@ -101,6 +102,8 @@ main(int argc, char *argv[]) {
 		free(searchQuery);
 	} else if (!strcmp(argv[1], "clean")) {
 		resultCode = clean(mport);
+	} else if (!strcmp(argv[1], "deleteall")) {
+		resultCode = deleteAll(mport);
 	} else {
 		mport_instance_free(mport);
 		usage();
@@ -114,13 +117,15 @@ void
 usage(void) {
 	fprintf( stderr, 
 		"usage: mport <command> args:\n"
+		"       mport clean\n"
 		"       mport delete [package name]\n"
+		"       mport deleteall\n"
 		"       mport info [package name]\n"
 		"       mport install [package name]\n"
 		"       mport list [updates]\n"
 		"       mport search [query ...]\n"
 		"       mport update [package name]\n"
-		"       mport clean\n"
+		"       mport upgrade\n"
 	);
 	exit(1);
 }
@@ -260,8 +265,9 @@ delete(mportInstance *mport, const char *packageName) {
 	char *buf;
 	int resultCode;
 
-	asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.delete");
- 	resultCode = execl(buf, "mport.delete", "-n", packageName, (char *)0);	
+	asprintf(&buf, "%s%s %s %s", MPORT_TOOLS_PATH, "mport.delete", "-n", packageName);
+	resultCode = system(buf);
+ 	//resultCode = execl(buf, "mport.delete", "-n", packageName, (char *)0);	
 	free(buf);
 
 	return resultCode;
@@ -328,6 +334,34 @@ upgrade(mportInstance *mport) {
 		packs++;
 	}
 	printf("Packages updated: %d\nErrors: %d\nTotal: %d", total - errors, errors, total);
+	return 0;
+}
+
+int
+deleteAll(mportInstance *mport) {
+	mportPackageMeta **packs;
+	int total = 0;
+	int errors = 0;
+
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return(1);
+	}
+
+	if (packs == NULL) {
+		fprintf(stderr, "No packages installed.\n");
+		return(1);
+	}
+
+	while (*packs != NULL) {
+		if (delete(mport, (*packs)->name) != 0) {
+			fprintf(stderr, "Error deleting %s\n", (*packs)->name);
+			errors++;
+		}
+		total++;
+		packs++;
+	}
+	printf("Packages deleted: %d\nErrors: %d\nTotal: %d", total - errors, errors, total);
 	return 0;
 }
 
