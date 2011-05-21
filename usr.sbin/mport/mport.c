@@ -25,16 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.23 2011/05/20 12:50:13 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.24 2011/05/21 16:15:33 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <mport.h>
-
-/* XXX for mport_file_exists */
-#include "mport_private.h"
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
 #define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
