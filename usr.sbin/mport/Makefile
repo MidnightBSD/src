@@ -1,8 +1,8 @@
-# $MidnightBSD: src/usr.sbin/mport/Makefile,v 1.3 2011/03/06 22:21:03 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/mport/Makefile,v 1.4 2011/03/07 20:02:23 laffer1 Exp $
 
 PROG= mport
 
-CFLAGS= -I${.CURDIR}/../../lib/libmport/ -g
+CFLAGS= -I${.CURDIR}/../../lib/libmport/
 
 DPADD=  ${LIBMPORT}
 LDADD=  -lmport
