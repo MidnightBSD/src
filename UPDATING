@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users
 
+20110526:
+	newfs:
+	Raised the default blocksize for UFS/FFS filesystems from
+	16K to 32K and the default fragment size from 2K to 4K.
+
+	This should slightly imporve performance on "advanced format"
+	hard drives such as the WD EARS drives. Drives of this type
+	have emulation modes that slow down with lower sizes.  Of course
+	the drive must still be aligned properly when using fdisk.
+
 20110521:
 	mport tool now has a deleteall command.  This can be used to remove
 	all packages from a system.
@@ -992,4 +1002,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.122 2011/05/18 13:59:13 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.123 2011/05/21 20:00:01 laffer1 Exp $
