@@ -58,20 +58,20 @@ sub _succeed {
         *VERSION = \'1.01';
         use version; $VERSION = qv('0.0.2');
         use version; $VERSION = qv('3.0.14');
-        ($VERSION) = '$Revision: 1.1.1.1 $' =~ /\s(\d+\.\d+)\s/; 
-        ( $VERSION ) = sprintf "%d.%02d", q$Revision: 1.1.1.1 $ =~ m/ (\d+) \. (\d+) /gx;
-        ($GD::Graph::area::VERSION) = '$Revision: 1.1.1.1 $' =~ /\s([\d.]+)/;
-        ($GD::Graph::axestype::VERSION) = '$Revision: 1.1.1.1 $' =~ /\s([\d.]+)/;
-        ($GD::Graph::colour::VERSION) = '$Revision: 1.1.1.1 $' =~ /\s([\d.]+)/;
-        ($GD::Graph::pie::VERSION) = '$Revision: 1.1.1.1 $' =~ /\s([\d.]+)/;
-        ($GD::Text::Align::VERSION) = '$Revision: 1.1.1.1 $' =~ /\s([\d.]+)/;
+        ($VERSION) = '$Revision: 1.2 $' =~ /\s(\d+\.\d+)\s/; 
+        ( $VERSION ) = sprintf "%d.%02d", q$Revision: 1.2 $ =~ m/ (\d+) \. (\d+) /gx;
+        ($GD::Graph::area::VERSION) = '$Revision: 1.2 $' =~ /\s([\d.]+)/;
+        ($GD::Graph::axestype::VERSION) = '$Revision: 1.2 $' =~ /\s([\d.]+)/;
+        ($GD::Graph::colour::VERSION) = '$Revision: 1.2 $' =~ /\s([\d.]+)/;
+        ($GD::Graph::pie::VERSION) = '$Revision: 1.2 $' =~ /\s([\d.]+)/;
+        ($GD::Text::Align::VERSION) = '$Revision: 1.2 $' =~ /\s([\d.]+)/;
         $VERSION = qv('0.0.1');
         use version; $VERSION = qv('0.0.3');
         $VERSION = do { my @r = ( ( $v = q<Version value="0.20.1"> ) =~ /\d+/g ); sprintf "%d.%02d", $r[0], int( $r[1] / 10 ) };
-        ($VERSION) = sprintf '%i.%03i', split(/\./,('$Revision: 1.1.1.1 $' =~ /Revision: (\S+)\s/)[0]); # $Date: 2011-05-18 13:33:29 $
-        ( $VERSION = q($Id: 02_Parse_Version.t,v 1.1.1.1 2011-05-18 13:33:29 laffer1 Exp $) ) =~ s/^.*\s+(\d+)\/(\d+)\/(\d+).*$/$1$2$3/; # all one line for MakeMaker
-        ($VERSION) = q $Revision: 1.1.1.1 $ =~ /([\d.]+)/;
-        ($VERSION) = q$Revision: 1.1.1.1 $ =~ /([\d.]+)/;
+        ($VERSION) = sprintf '%i.%03i', split(/\./,('$Revision: 1.2 $' =~ /Revision: (\S+)\s/)[0]); # $Date: 2011-06-05 02:36:39 $
+        ( $VERSION = q($Id: 02_Parse_Version.t,v 1.2 2011-06-05 02:36:39 laffer1 Exp $) ) =~ s/^.*\s+(\d+)\/(\d+)\/(\d+).*$/$1$2$3/; # all one line for MakeMaker
+        ($VERSION) = q $Revision: 1.2 $ =~ /([\d.]+)/;
+        ($VERSION) = q$Revision: 1.2 $ =~ /([\d.]+)/;
         $VERSION = "3.0.8";
         $VERSION = '1.0.5';
     ];
@@ -92,7 +92,7 @@ sub _fail {
         use vars qw( $VERSION $seq @FontDirs );
         $VERSION
         # *VERSION = \'1.01';
-        # ( $VERSION ) = '$Revision: 1.1.1.1 $ ' =~ /\$Revision:\s+([^\s]+)/;
+        # ( $VERSION ) = '$Revision: 1.2 $ ' =~ /\$Revision:\s+([^\s]+)/;
         #$VERSION = sprintf("%d.%s", map {s/_//g; $_} q$Name: not supported by cvs2svn $ =~ /-(\d+)_([\d_]+)/);
         #$VERSION = sprintf("%d.%s", map {s/_//g; $_} q$Name: not supported by cvs2svn $ =~ /-(\d+)_([\d_]+)/);
     ];

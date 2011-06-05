@@ -400,8 +400,8 @@ sub run {
           $_ = "v$1"
             if m{^v?["']?([0-9_]+(\.[0-9_]+)*)["']?$}s
              # like in $VERSION = "3.14159";
-             or m{\$Revision: 1.1.1.1 $}s
-             # like in sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
+             or m{\$Revision: 1.2 $}s
+             # like in sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
           ;
            
           # Like in sprintf("%d.%s", map {s/_//g; $_} q$Name: not supported by cvs2svn $ =~ /-(\d+)_([\d_]+)/)
