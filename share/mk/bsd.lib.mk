@@ -1,6 +1,6 @@
 #	from: @(#)bsd.lib.mk	5.26 (Berkeley) 5/2/91
 # $FreeBSD: src/share/mk/bsd.lib.mk,v 1.168.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.lib.mk,v 1.4 2010/08/21 01:48:10 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.lib.mk,v 1.5 2011/03/08 13:23:42 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -59,16 +59,16 @@ PICFLAG=-fpic
 PO_FLAG=-pg
 
 .c.po:
-	${CC} ${PO_FLAG} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} ${PO_FLAG} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .c.So:
-	${CC} ${PICFLAG} -DPIC ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} ${PICFLAG} -DPIC ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .cc.po .C.po .cpp.po .cxx.po:
-	${CXX} ${PO_FLAG} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CXX} ${PO_FLAG} ${CPPFLAGS} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .cc.So .C.So .cpp.So .cxx.So:
-	${CXX} ${PICFLAG} -DPIC ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CXX} ${PICFLAG} -DPIC ${CPPFLAGS} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .f.po:
 	${FC} -pg ${FFLAGS} -o ${.TARGET} -c ${.IMPSRC}
@@ -93,10 +93,10 @@ PO_FLAG=-pg
 	    -c ${.IMPSRC} -o ${.TARGET}
 
 .S.po:
-	${CC} -DPROF ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} -DPROF ${CPPFLAGS} ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .S.So:
-	${CC} ${PICFLAG} -DPIC ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} ${PICFLAG} -DPIC ${CPPFLAGS} ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 all: objwarn
 

@@ -1,6 +1,6 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/share/mk/bsd.prog.mk,v 1.144.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.3 2007/04/13 05:35:11 ctriv Exp $
+# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.4 2008/10/14 21:13:54 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -58,9 +58,9 @@ OBJS+=  ${SRCS:N*.h:R:S/$/.o/g}
 
 ${PROG}: ${OBJS}
 .if defined(PROG_CXX)
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .else
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .endif
 
 .else	# !defined(SRCS)
@@ -81,9 +81,9 @@ OBJS=	${PROG}.o
 
 ${PROG}: ${OBJS}
 .if defined(PROG_CXX)
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .else
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .endif
 .endif
 

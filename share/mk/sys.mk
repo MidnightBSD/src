@@ -43,6 +43,7 @@ CXX		?=	c++
 CXXFLAGS	?=	${CFLAGS:N-std=*:N-Wnested-externs:N-W*-prototypes}
 
 CPP		?=	cpp
+CPPFLAGS	?=
 
 .if empty(.MAKEFLAGS:M-s)
 ECHO		?=	echo
@@ -116,7 +117,7 @@ YFLAGS		?=	-d
 
 # SINGLE SUFFIX RULES
 .c:
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${.IMPSRC}
+	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${.IMPSRC}
 
 .f:
 	${FC} ${FFLAGS} ${LDFLAGS} -o ${.TARGET} ${.IMPSRC}
@@ -128,20 +129,20 @@ YFLAGS		?=	-d
 # DOUBLE SUFFIX RULES
 
 .c.o:
-	${CC} ${CFLAGS} -c ${.IMPSRC}
+	${CC} ${CPPFLAGS} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC}
 
 .f.o:
 	${FC} ${FFLAGS} -c ${.IMPSRC}
 
 .y.o:
 	${YACC} ${YFLAGS} ${.IMPSRC}
-	${CC} ${CFLAGS} -c y.tab.c
+	${CC} ${CPPFLAGS} ${CFLAGS} -c y.tab.c
 	rm -f y.tab.c
 	mv y.tab.o ${.TARGET}
 
 .l.o:
 	${LEX} ${LFLAGS} ${.IMPSRC}
-	${CC} ${CFLAGS} -c lex.yy.c
+	${CC} ${CPPFLAGS} ${CFLAGS} -c lex.yy.c
 	rm -f lex.yy.c
 	mv lex.yy.o ${.TARGET}
 
@@ -154,7 +155,7 @@ YFLAGS		?=	-d
 	mv lex.yy.c ${.TARGET}
 
 .c.a:
-	${CC} ${CFLAGS} -c ${.IMPSRC}
+	${CC} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC}
 	${AR} ${ARFLAGS} ${.TARGET} ${.PREFIX}.o
 	rm -f ${.PREFIX}.o
 
@@ -180,16 +181,16 @@ YFLAGS		?=	-d
 	    touch ${.TARGET}
 
 .c:
-	${CC} ${CFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
+	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
 
 .c.o:
-	${CC} ${CFLAGS} -c ${.IMPSRC}
+	${CC} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC}
 
 .cc .cpp .cxx .C:
-	${CXX} ${CXXFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
+	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
 
 .cc.o .cpp.o .cxx.o .C.o:
-	${CXX} ${CXXFLAGS} -c ${.IMPSRC}
+	${CXX} ${CPPFLAGS} ${CXXFLAGS} -c ${.IMPSRC}
 
 .m.o:
 	${OBJC} ${OBJCFLAGS} -c ${.IMPSRC}
