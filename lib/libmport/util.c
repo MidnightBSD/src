@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.25 2011/03/17 04:41:46 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.26 2011/05/21 19:35:29 laffer1 Exp $
  */
 
 #include <sys/types.h>
@@ -36,6 +36,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <sys/signal.h>
 #include <unistd.h>
 #include <libgen.h>
 #include "mport.h"
@@ -247,6 +249,11 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   ret = system(cmnd);
   free(cmnd);
 
+  /* system(3) ignores SIGINT and SIGQUIT */
+  if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
+    RETURN_ERROR(MPORT_ERR_FATAL, "SIGINT or SIGQUIT while running command.");
+  }
+
   if (ret == 127) {
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't execute sh(1)");
   }
@@ -331,11 +338,13 @@ int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd,
   char *pos;
   char *name;
   int ret;
-  int max;
+  static int max = 0;
   size_t maxlen = sizeof(max);
 
-  if (sysctlbyname("kern.argmax", &max, &maxlen, NULL, 0) < 0)
-     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't determine maximum argument length");
+  if (max == 0) {
+     if (sysctlbyname("kern.argmax", &max, &maxlen, NULL, 0) < 0)
+       RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't determine maximum argument length");
+  }
 
   if ((cmnd = malloc(max * sizeof(char))) == NULL)
      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
