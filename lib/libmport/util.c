@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.26 2011/05/21 19:35:29 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.27 2011/06/05 05:12:13 laffer1 Exp $
  */
 
 #include <sys/types.h>
@@ -458,7 +458,7 @@ int mport_decompress_bzip2(const char *input, const char *output)
   bzerror = BZ_OK;
   while (bzerror == BZ_OK) {
     nBuf = BZ2_bzRead(&bzerror, b, buf, 4096);
-    if (bzerror == BZ_OK) {
+    if (bzerror == BZ_OK || bzerror ==  BZ_STREAM_END) {
       if (fwrite(buf, nBuf, 1, fout) < 1) {
           fclose(fout);
           RETURN_ERROR(MPORT_ERR_FATAL, "Error writing decompressed file");
