@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netinet/ip_fw2.c,v 1.4 2008/12/03 00:26:59 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Luigi Rizzo, Universita` di Pisa
  *
@@ -776,6 +776,7 @@ ipfw_log(struct ip_fw *f, u_int hlen, struct ip_fw_args *args,
 	char *action;
 	int limit_reached = 0;
 	char action2[40], proto[128], fragment[32];
+	u_short mf = 0;
 
 	fragment[0] = '\0';
 	proto[0] = '\0';
@@ -917,6 +918,8 @@ ipfw_log(struct ip_fw *f, u_int hlen, struct ip_fw_args *args,
 			snprintf(dst, sizeof(dst), "[%s]",
 			    ip6_sprintf(ip6buf, &args->f_id.dst_ip6));
 
+			mf = offset & IP6F_MORE_FRAG;
+			offset &= IP6F_OFF_MASK;
 			ip6 = (struct ip6_hdr *)ip;
 			tcp = (struct tcphdr *)(((char *)ip) + hlen);
 			udp = (struct udphdr *)(((char *)ip) + hlen);
@@ -986,13 +989,13 @@ ipfw_log(struct ip_fw *f, u_int hlen, struct ip_fw_args *args,
 
 #ifdef INET6
 		if (IS_IP6_FLOW_ID(&(args->f_id))) {
-			if (offset & (IP6F_OFF_MASK | IP6F_MORE_FRAG))
+			if (offset || mf)
 				snprintf(SNPARGS(fragment, 0),
 				    " (frag %08x:%d@%d%s)",
 				    args->f_id.frag_id6,
 				    ntohs(ip6->ip6_plen) - hlen,
-				    ntohs(offset & IP6F_OFF_MASK) << 3,
-				    (offset & IP6F_MORE_FRAG) ? "+" : "");
+				    ntohs(offset) << 3,
+				    mf ? "+" : "");
 		} else
 #endif
 		{
@@ -2340,16 +2343,13 @@ ipfw_chk(struct ip_fw_args *args)
 
 	/*
 	 * offset	The offset of a fragment. offset != 0 means that
-	 *	we have a fragment at this offset of an IPv4 packet.
-	 *	offset == 0 means that (if this is an IPv4 packet)
-	 *	this is the first or only fragment.
-	 *	For IPv6 offset == 0 means there is no Fragment Header. 
-	 *	If offset != 0 for IPv6 always use correct mask to
-	 *	get the correct offset because we add IP6F_MORE_FRAG
-	 *	to be able to dectect the first fragment which would
-	 *	otherwise have offset = 0.
+	 *	we have a fragment at this offset.
+	 *	offset == 0 means that this is the first or only fragment.
+	 *
+	 * mf		The MF bit masked out of IPv6 packets.
 	 */
 	u_short offset = 0;
+	u_short mf = 0;
 
 	/*
 	 * Local copies of addresses. They are only valid if we have
@@ -2435,7 +2435,7 @@ do {									\
 		proto = ip6->ip6_nxt;
 
 		/* Search extension headers to find upper layer protocols */
-		while (ulp == NULL) {
+		while (ulp == NULL && offset == 0) {
 			switch (proto) {
 			case IPPROTO_ICMPV6:
 				PULLUP_TO(hlen, ulp, struct icmp6_hdr);
@@ -2499,17 +2499,8 @@ do {									\
 				proto = ((struct ip6_frag *)ulp)->ip6f_nxt;
 				offset = ((struct ip6_frag *)ulp)->ip6f_offlg &
 					IP6F_OFF_MASK;
-				/* Add IP6F_MORE_FRAG for offset of first
-				 * fragment to be != 0. */
-				offset |= ((struct ip6_frag *)ulp)->ip6f_offlg &
+				mf = ((struct ip6_frag *)ulp)->ip6f_offlg &
 					IP6F_MORE_FRAG;
-				if (offset == 0) {
-					printf("IPFW2: IPV6 - Invalid Fragment "
-					    "Header\n");
-					if (fw_deny_unknown_exthdrs)
-					    return (IP_FW_DENY);
-					break;
-				}
 				args->f_id.frag_id6 =
 				    ntohl(((struct ip6_frag *)ulp)->ip6f_ident);
 				ulp = NULL;
@@ -3089,7 +3080,7 @@ check_body:
 			case O_LOG:
 				if (fw_verbose)
 					ipfw_log(f, hlen, args, m,
-					    oif, offset, tablearg, ip);
+					    oif, offset|mf, tablearg, ip);
 				match = 1;
 				break;
 
