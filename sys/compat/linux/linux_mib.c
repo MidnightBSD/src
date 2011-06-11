@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/linux/linux_mib.c,v 1.3 2008/12/03 00:24:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.
@@ -83,8 +83,8 @@ SYSCTL_PROC(_compat_linux, OID_AUTO, osname,
 	    0, 0, linux_sysctl_osname, "A",
 	    "Linux kernel OS name");
 
-static char	linux_osrelease[LINUX_MAX_UTSNAME] = "2.4.2";
-static int	linux_use_linux26 = 0;
+static char	linux_osrelease[LINUX_MAX_UTSNAME] = "2.6.16";
+static int	linux_use_linux26 = 1;
 
 static int
 linux_sysctl_osrelease(SYSCTL_HANDLER_ARGS)
