@@ -1,9 +1,9 @@
-# $MirOS: src/bin/mksh/check.t,v 1.365 2010/02/25 20:18:14 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.467 2011/06/12 14:58:43 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
 #-
-# Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -25,7 +25,7 @@
 # http://www.research.att.com/~gsf/public/ifs.sh
 
 expected-stdout:
-	@(#)MIRBSD KSH R39 2010/02/25
+	@(#)MIRBSD KSH R40 2011/06/12
 description:
 	Check version of shell.
 stdin:
@@ -64,6 +64,16 @@ description:
 category: disabled
 stdin:
 	set
+---
+name: selftest-direct-builtin-call
+description:
+	Check that direct builtin calls work
+stdin:
+	ln -s "$__progname" cat
+	ln -s "$__progname" echo
+	./echo -c 'echo  foo' | ./cat -u
+expected-stdout:
+	-c echo  foo
 ---
 name: alias-1
 description:
@@ -184,6 +194,17 @@ stdin:
 expected-stdout:
 	tf
 	tf
+---
+name: alias-10
+description:
+	Check that recursion is detected/avoided in aliases.
+	Regression, introduced during an old bugfix.
+stdin:
+	alias foo='print hello '
+	alias bar='foo world'
+	echo $(bar)
+expected-stdout:
+	hello world
 ---
 name: arith-lazy-1
 description:
@@ -335,7 +356,7 @@ expected-stdout:
 ---
 name: bksl-nl-ign-1
 description:
-	Check that \newline is not collasped after #
+	Check that \newline is not collapsed after #
 stdin:
 	echo hi #there \
 	echo folks
@@ -345,7 +366,7 @@ expected-stdout:
 ---
 name: bksl-nl-ign-2
 description:
-	Check that \newline is not collasped inside single quotes
+	Check that \newline is not collapsed inside single quotes
 stdin:
 	echo 'hi \
 	there'
@@ -357,7 +378,7 @@ expected-stdout:
 ---
 name: bksl-nl-ign-3
 description:
-	Check that \newline is not collasped inside single quotes
+	Check that \newline is not collapsed inside single quotes
 stdin:
 	cat << \EOF
 	hi \
@@ -407,7 +428,7 @@ expected-stdout:
 #
 name: bksl-nl-1
 description:
-	Check that \newline is collasped before, in the middle of, and
+	Check that \newline is collapsed before, in the middle of, and
 	after words
 stdin:
 	 	 	\
@@ -419,7 +440,7 @@ expected-stdout:
 ---
 name: bksl-nl-2
 description:
-	Check that \newline is collasped in $ sequences
+	Check that \newline is collapsed in $ sequences
 	(ksh93 fails this)
 stdin:
 	a=12
@@ -443,7 +464,7 @@ expected-stdout:
 ---
 name: bksl-nl-3
 description:
-	Check that \newline is collasped in $(..) and `...` sequences
+	Check that \newline is collapsed in $(..) and `...` sequences
 	(ksh93 fails this)
 stdin:
 	echo $\
@@ -468,7 +489,7 @@ expected-stdout:
 ---
 name: bksl-nl-4
 description:
-	Check that \newline is collasped in $((..)) sequences
+	Check that \newline is collapsed in $((..)) sequences
 	(ksh93 fails this)
 stdin:
 	echo $\
@@ -490,7 +511,7 @@ expected-stdout:
 ---
 name: bksl-nl-5
 description:
-	Check that \newline is collasped in double quoted strings
+	Check that \newline is collapsed in double quoted strings
 stdin:
 	echo "\
 	hi"
@@ -505,7 +526,7 @@ expected-stdout:
 ---
 name: bksl-nl-6
 description:
-	Check that \newline is collasped in here document delimiters
+	Check that \newline is collapsed in here document delimiters
 	(ksh93 fails second part of this)
 stdin:
 	a=12
@@ -528,7 +549,7 @@ expected-stdout:
 ---
 name: bksl-nl-7
 description:
-	Check that \newline is collasped in double-quoted here-document
+	Check that \newline is collapsed in double-quoted here-document
 	delimiter.
 stdin:
 	a=12
@@ -547,7 +568,7 @@ expected-stdout:
 ---
 name: bksl-nl-8
 description:
-	Check that \newline is collasped in various 2+ character tokens
+	Check that \newline is collapsed in various 2+ character tokens
 	delimiter.
 	(ksh93 fails this)
 stdin:
@@ -984,6 +1005,45 @@ expected-stdout:
 	  1 /bin
 	  0 /tmp
 ---
+name: cd-pe
+description:
+	Check package for cd -Pe
+need-pass: no
+# the mv command fails on Cygwin
+category: !os:cygwin
+file-setup: file 644 "x"
+	mkdir noread noread/target noread/target/subdir
+	ln -s noread link
+	chmod 311 noread
+	cd -P$1 .
+	echo 0=$?
+	bwd=$PWD
+	cd -P$1 link/target
+	echo 1=$?,${PWD#$bwd/}
+	epwd=$($TSHELL -c pwd 2>/dev/null)
+	# This unexpectedly succeeds on GNU/Linux and MidnightBSD
+	#echo pwd=$?,$epwd
+	# expect:	pwd=1,
+	mv ../../noread ../../renamed
+	cd -P$1 subdir
+	echo 2=$?,${PWD#$bwd/}
+	cd $bwd
+	chmod 755 renamed
+	rm -rf noread link renamed
+stdin:
+	export TSHELL="$__progname"
+	"$__progname" x
+	echo "now with -e:"
+	"$__progname" x e
+expected-stdout:
+	0=0
+	1=0,noread/target
+	2=0,noread/target/subdir
+	now with -e:
+	0=0
+	1=0,noread/target
+	2=1,noread/target/subdir
+---
 name: env-prompt
 description:
 	Check that prompt not printed when processing ENV
@@ -992,6 +1052,7 @@ file-setup: file 644 "foo"
 	XXX=_
 	PS1=X
 	false && echo hmmm
+need-ctty: yes
 arguments: !-i!
 stdin:
 	echo hi${XXX}there
@@ -1036,11 +1097,17 @@ stdin:
 	(echo -n '30 '; printf '<%s> ' ${IFS+foo 'b\
 	ar' baz}; echo .) 2>&- || (echo failed in 30; echo failed in 31)
 	(echo -n '32 '; printf '<%s> ' ${IFS+foo "b\
-	ar" baz}; echo .) 2>&- || (echo failed in 32; echo failed in 33)
-	(echo -n '34 '; printf '<%s> ' "${IFS+foo 'b\
-	ar' baz}"; echo .) 2>&- || (echo failed in 34; echo failed in 35)
-	(echo -n '36 '; printf '<%s> ' "${IFS+foo "b\
-	ar" baz}"; echo .) 2>&- || (echo failed in 36; echo failed in 37)
+	ar" baz}; echo .) 2>&- || echo failed in 32
+	(echo -n '33 '; printf '<%s> ' "${IFS+foo 'b\
+	ar' baz}"; echo .) 2>&- || echo failed in 33
+	(echo -n '34 '; printf '<%s> ' "${IFS+foo "b\
+	ar" baz}"; echo .) 2>&- || echo failed in 34
+	(echo -n '35 '; printf '<%s> ' ${v=a\ b} x ${v=c\ d}; echo .) 2>&- || echo failed in 35
+	(echo -n '36 '; printf '<%s> ' "${v=a\ b}" x "${v=c\ d}"; echo .) 2>&- || echo failed in 36
+	(echo -n '37 '; printf '<%s> ' ${v-a\ b} x ${v-c\ d}; echo .) 2>&- || echo failed in 37
+	(echo 38 ${IFS+x'a'y} / "${IFS+x'a'y}" .) 2>&- || echo failed in 38
+	foo="x'a'y"; (echo 39 ${foo%*'a'*} / "${foo%*'a'*}" .) 2>&- || echo failed in 39
+	foo="a b c"; (echo -n '40 '; printf '<%s> ' "${foo#a}"; echo .) 2>&- || echo failed in 40
 expected-stdout:
 	1 }z
 	2 ''z}
@@ -1074,8 +1141,14 @@ expected-stdout:
 	30 <foo> <b\
 	ar> <baz> .
 	32 <foo> <bar> <baz> .
-	34 <foo 'bar' baz> .
-	36 <foo bar baz> .
+	33 <foo 'bar' baz> .
+	34 <foo bar baz> .
+	35 <a> <b> <x> <a> <b> .
+	36 <a\ b> <x> <a\ b> .
+	37 <a b> <x> <c d> .
+	38 xay / x'a'y .
+	39 x' / x' .
+	40 < b c> .
 ---
 name: expand-unglob-dblq
 description:
@@ -1337,6 +1410,56 @@ expected-stdout:
 	9 EQAL brac foo x c x} baz
 	9 QSTN brac foo x c x} baz
 ---
+name: expand-threecolons-dblq
+description:
+	Check for a particular thing that used to segfault
+stdin:
+	TEST=1234
+	echo "${TEST:1:2:3}"
+	echo $? but still living
+expected-stderr-pattern:
+	/bad substitution/
+expected-exit: 1
+---
+name: expand-threecolons-unq
+description:
+	Check for a particular thing that used to not error out
+stdin:
+	TEST=1234
+	echo ${TEST:1:2:3}
+	echo $? but still living
+expected-stderr-pattern:
+	/bad substitution/
+expected-exit: 1
+---
+name: expand-weird-1
+description:
+	Check corner case of trim expansion vs. $# vs. ${#var}
+stdin:
+	set 1 2 3 4 5 6 7 8 9 10 11
+	echo ${#}	# value of $#
+	echo ${##}	# length of $#
+	echo ${##1}	# $# trimmed 1
+	set 1 2 3 4 5 6 7 8 9 10 11 12
+	echo ${##1}
+expected-stdout:
+	11
+	2
+	1
+	2
+---
+name: expand-weird-2
+description:
+	Check corner case of ${var?} vs. ${#var}
+stdin:
+	(exit 0)
+	echo $? = ${#?} .
+	(exit 111)
+	echo $? = ${#?} .
+expected-stdout:
+	0 = 1 .
+	111 = 3 .
+---
 name: eglob-bad-1
 description:
 	Check that globbing isn't done when glob has syntax error
@@ -1471,6 +1594,26 @@ expected-stdout:
 	2: ef
 	3: abcdef
 	4: cdef
+---
+name: eglob-trim-3
+description:
+	Check eglobbing works in trims, for Korn Shell
+	Ensure eglobbing does not work for reduced-feature /bin/sh
+stdin:
+	set +o sh
+	x=foobar
+	y=foobaz
+	echo "<${x%bar|baz},${y%bar|baz}>"
+	echo "<${x%ba(r|z)},${y%ba(r|z)}>"
+	set -o sh
+	echo "<${x%bar|baz},${y%bar|baz}>"
+	z='foo(bar'
+	echo "<${z%(*}>"
+expected-stdout:
+	<foo,foo>
+	<foo,foo>
+	<foobar,foobaz>
+	<foo>
 ---
 name: eglob-substrpl-1
 description:
@@ -1719,6 +1862,8 @@ expected-stdout:
 name: glob-bad-2
 description:
 	Check that symbolic links aren't stat()'d
+# breaks on FreeMiNT (cannot unlink dangling symlinks)
+category: !os:mint
 file-setup: dir 755 "dir"
 file-setup: symlink 644 "dir/abc"
 	non-existent-file
@@ -1764,7 +1909,8 @@ name: glob-range-3
 description:
 	Check that globbing matches the right things...
 # breaks on Mac OSX (HFS+ non-standard Unicode canonical decomposition)
-category: !os:darwin
+# breaks on Cygwin 1.7 (files are now UTF-16 or something)
+category: !os:cygwin,!os:darwin
 file-setup: file 644 "a�c"
 stdin:
 	echo a[�-�]*
@@ -1984,6 +2130,243 @@ stdin:
 expected-stdout:
 	one
 ---
+name: heredoc-9e
+description:
+	Check here string related regression with multiple iops
+stdin:
+	echo $(tr r z <<<'bar' 2>&-)
+expected-stdout:
+	baz
+---
+name: heredoc-10
+description:
+	Check direct here document assignment
+stdin:
+	x=u
+	va=<<EOF
+	=a $x \x40=
+	EOF
+	vb=<<'EOF'
+	=b $x \x40=
+	EOF
+	function foo {
+		vc=<<-EOF
+			=c $x \x40=
+		EOF
+	}
+	typeset -f foo
+	foo
+	# rather nonsensical, but…
+	vd=<<<"=d $x \x40="
+	ve=<<<'=e $x \x40='
+	vf=<<<$'=f $x \x40='
+	# now check
+	print -r -- "| va={$va} vb={$vb} vc={$vc} vd={$vd} ve={$ve} vf={$vf} |"
+expected-stdout:
+	function foo {
+		vc= <<-EOF 
+	=c $x \x40=
+	EOF
+	
+	} 
+	| va={=a u \x40=
+	} vb={=b $x \x40=
+	} vc={=c u \x40=
+	} vd={=d u \x40=
+	} ve={=e $x \x40=
+	} vf={=f $x @=
+	} |
+---
+name: heredoc-11
+description:
+	Check here documents with no or empty delimiter
+stdin:
+	x=u
+	va=<<
+	=a $x \x40=
+	<<
+	vb=<<''
+	=b $x \x40=
+	
+	function foo {
+		vc=<<-
+			=c $x \x40=
+		<<
+		vd=<<-''
+			=d $x \x40=
+	
+	}
+	typeset -f foo
+	foo
+	print -r -- "| va={$va} vb={$vb} vc={$vc} vd={$vd} |"
+expected-stdout:
+	function foo {
+		vc= <<- 
+	=c $x \x40=
+	<<
+	
+		vd= <<-"" 
+	=d $x \x40=
+	
+	
+	} 
+	| va={=a u \x40=
+	} vb={=b $x \x40=
+	} vc={=c u \x40=
+	} vd={=d $x \x40=
+	} |
+---
+name: heredoc-comsub-1
+description:
+	Tests for here documents in COMSUB, taken from Austin ML
+stdin:
+	text=$(cat <<EOF
+	here is the text
+	EOF)
+	echo = $text =
+expected-stdout:
+	= here is the text =
+---
+name: heredoc-comsub-2
+description:
+	Tests for here documents in COMSUB, taken from Austin ML
+stdin:
+	unbalanced=$(cat <<EOF
+	this paren ) is a problem
+	EOF)
+	echo = $unbalanced =
+expected-stdout:
+	= this paren ) is a problem =
+---
+name: heredoc-comsub-3
+description:
+	Tests for here documents in COMSUB, taken from Austin ML
+stdin:
+	balanced=$(cat <<EOF
+	these parens ( ) are not a problem
+	EOF)
+	echo = $balanced =
+expected-stdout:
+	= these parens ( ) are not a problem =
+---
+name: heredoc-comsub-4
+description:
+	Tests for here documents in COMSUB, taken from Austin ML
+stdin:
+	balanced=$(cat <<EOF
+	these parens \( ) are a problem
+	EOF)
+	echo = $balanced =
+expected-stdout:
+	= these parens \( ) are a problem =
+---
+name: heredoc-subshell-1
+description:
+	Tests for here documents in subshells, taken from Austin ML
+stdin:
+	(cat <<EOF
+	some text
+	EOF)
+	echo end
+expected-stdout:
+	some text
+	end
+---
+name: heredoc-subshell-2
+description:
+	Tests for here documents in subshells, taken from Austin ML
+stdin:
+	(cat <<EOF
+	some text
+	EOF
+	)
+	echo end
+expected-stdout:
+	some text
+	end
+---
+name: heredoc-subshell-3
+description:
+	Tests for here documents in subshells, taken from Austin ML
+stdin:
+	(cat <<EOF; )
+	some text
+	EOF
+	echo end
+expected-stdout:
+	some text
+	end
+---
+name: heredoc-weird-1
+description:
+	Tests for here documents, taken from Austin ML
+	Documents current state in mksh, *NOT* necessarily correct!
+stdin:
+	cat <<END
+	hello
+	END\
+	END
+	END
+	echo end
+expected-stdout:
+	hello
+	ENDEND
+	end
+---
+name: heredoc-weird-2
+description:
+	Tests for here documents, taken from Austin ML
+stdin:
+	cat <<'    END    '
+	hello
+	    END    
+	echo end
+expected-stdout:
+	hello
+	end
+---
+name: heredoc-weird-3
+description:
+	Tests for here documents, taken from Austin ML
+need-pass: no
+stdin:
+	cat <<x*x & touch 'x*x'
+	hello
+	x*x
+	echo end
+expected-stdout:
+	hello
+	end
+---
+name: heredoc-weird-4
+description:
+	Tests for here documents, taken from Austin ML
+	Documents current state in mksh, *NOT* necessarily correct!
+stdin:
+	cat <<END
+	hello\
+	END
+	END
+	echo end
+expected-stdout:
+	helloEND
+	end
+---
+name: heredoc-weird-5
+description:
+	Tests for here documents, taken from Austin ML
+	Documents current state in mksh, *NOT* necessarily correct!
+stdin:
+	cat <<END
+	hello
+	\END
+	END
+	echo end
+expected-stdout:
+	hello
+	\END
+	end
+---
 name: heredoc-quoting-unsubst
 description:
 	Check for correct handling of quoted characters in
@@ -2165,6 +2548,7 @@ description:
 	late. Heredoc in function, backgrounded call to function.
 	This check can fail on slow machines (<100 MHz), or Cygwin,
 	that's normal.
+need-pass: no
 stdin:
 	TMPDIR=$PWD
 	# Background eval so main shell doesn't do parsing
@@ -2192,6 +2576,7 @@ expected-stdout:
 name: history-basic
 description:
 	See if we can test history at all
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2208,6 +2593,7 @@ expected-stderr-pattern:
 name: history-dups
 description:
 	Verify duplicates and spaces are not entered
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2228,6 +2614,7 @@ expected-stderr-pattern:
 name: history-unlink
 description:
 	Check if broken HISTFILEs do not cause trouble
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=foo/hist.file!
 file-setup: file 644 "Env"
@@ -2245,11 +2632,12 @@ expected-stdout:
 	hi
 	1	echo hi
 expected-stderr-pattern:
-	/(.*cannot unlink HISTFILE.*\n)?X*$/
+	/(.*can't unlink HISTFILE.*\n)?X*$/
 ---
 name: history-e-minus-1
 description:
 	Check if more recent command is executed
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2269,6 +2657,7 @@ name: history-e-minus-2
 description:
 	Check that repeated command is printed before command
 	is re-executed.
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2288,6 +2677,7 @@ description:
 	fc -e - fails when there is no history
 	(ksh93 has a bug that causes this to fail)
 	(ksh88 loops on this)
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2303,6 +2693,7 @@ expected-stderr-pattern:
 name: history-e-minus-4
 description:
 	Check if "fc -e -" command output goes to stdout.
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2321,6 +2712,7 @@ expected-stderr-pattern:
 name: history-e-minus-5
 description:
 	fc is replaced in history by new command.
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2346,6 +2738,7 @@ name: history-list-1
 description:
 	List lists correct range
 	(ksh88 fails 'cause it lists the fc command)
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2369,6 +2762,7 @@ description:
 	Lists oldest history if given pre-historic number
 	(ksh93 has a bug that causes this to fail)
 	(ksh88 fails 'cause it lists the fc command)
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2391,6 +2785,7 @@ expected-stderr-pattern:
 name: history-list-3
 description:
 	Can give number 'options' to fc
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2414,6 +2809,7 @@ expected-stderr-pattern:
 name: history-list-4
 description:
 	-1 refers to previous command
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2436,6 +2832,7 @@ expected-stderr-pattern:
 name: history-list-5
 description:
 	List command stays in history
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2462,6 +2859,7 @@ name: history-list-6
 description:
 	HISTSIZE limits about of history kept.
 	(ksh88 fails 'cause it lists the fc command)
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!HISTSIZE=3!
 file-setup: file 644 "Env"
@@ -2487,6 +2885,7 @@ expected-stderr-pattern:
 name: history-list-7
 description:
 	fc allows too old/new errors in range specification
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!HISTSIZE=3!
 file-setup: file 644 "Env"
@@ -2513,6 +2912,7 @@ expected-stderr-pattern:
 name: history-list-r-1
 description:
 	test -r flag in history
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2539,6 +2939,7 @@ expected-stderr-pattern:
 name: history-list-r-2
 description:
 	If first is newer than last, -r is implied.
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2565,6 +2966,7 @@ expected-stderr-pattern:
 name: history-list-r-3
 description:
 	If first is newer than last, -r is cancelled.
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2591,6 +2993,7 @@ expected-stderr-pattern:
 name: history-subst-1
 description:
 	Basic substitution
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2609,6 +3012,7 @@ expected-stderr-pattern:
 name: history-subst-2
 description:
 	Does subst find previous command?
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2627,6 +3031,7 @@ expected-stderr-pattern:
 name: history-subst-3
 description:
 	Does subst find previous command when no arguments given
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2646,6 +3051,7 @@ name: history-subst-4
 description:
 	Global substitutions work
 	(ksh88 and ksh93 do not have -g option)
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2663,6 +3069,7 @@ name: history-subst-5
 description:
 	Make sure searches don't find current (fc) command
 	(ksh88/ksh93 don't have the ? prefix thing so they fail this test)
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2684,6 +3091,8 @@ description:
 	that prints no prompts). This is for oldish ed(1) which write
 	the character count to stdout.
 category: stdout-ed
+need-ctty: yes
+need-pass: no
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2706,6 +3115,8 @@ name: history-ed-2-old
 description:
 	Correct command is edited when number given
 category: stdout-ed
+need-ctty: yes
+need-pass: no
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2737,6 +3148,8 @@ description:
 	(NOTE: adjusted for COMPLEX HISTORY compile time option)
 	(ksh88 fails 'cause it lists the fc command)
 category: stdout-ed
+need-ctty: yes
+need-pass: no
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2768,6 +3181,8 @@ description:
 	Basic (ed) editing works (assumes you have generic ed editor
 	that prints no prompts). This is for newish ed(1) and stderr.
 category: !no-stderr-ed
+need-ctty: yes
+need-pass: no
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2788,6 +3203,8 @@ name: history-ed-2
 description:
 	Correct command is edited when number given
 category: !no-stderr-ed
+need-ctty: yes
+need-pass: no
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2815,6 +3232,8 @@ description:
 	Newly created multi line commands show up as single command
 	in history.
 category: !no-stderr-ed
+need-ctty: yes
+need-pass: no
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2920,23 +3339,6 @@ stdin:
 expected-stdout:
 	 <:>
 ---
-name: IFS-space-colon-3
-description:
-	Simple test, IFS=<white-space>:
-	pdksh fails both of these tests
-	not sure whether #2 is correct
-stdin:
-	showargs() { for i; do echo -n " <$i>"; done; echo; }
-	IFS="$IFS:"
-	x=
-	set --
-	showargs "$x$@" 1
-	showargs "$@$x" 2
-expected-fail: yes
-expected-stdout:
-	 <> <1>
-	 <> <2>
----
 name: IFS-space-colon-4
 description:
 	Simple test, IFS=<white-space>:
@@ -3028,6 +3430,7 @@ description:
 	Syntax errors in expressions and effects on bases
 	(interactive so errors don't cause exits)
 	(ksh88 fails this test - shell exits, even with -i)
+need-ctty: yes
 arguments: !-i!
 stdin:
 	PS1= # minimise prompt hassles
@@ -3309,6 +3712,40 @@ expected-stdout:
 	dot B 3
 	C 3
 ---
+name: lineno-trap
+description:
+	Check if LINENO is tracked in traps
+stdin:
+	fail() {
+		echo "line <$1>"
+		exit 1
+	}
+	trap 'fail $LINENO' INT ERR
+	false
+expected-stdout:
+	line <6>
+expected-exit: 1
+---
+name: unknown-trap
+description:
+	Ensure unknown traps are not a syntax error
+stdin:
+	(
+	trap "echo trap 1 executed" UNKNOWNSIGNAL || echo "foo"
+	echo =1
+	trap "echo trap 2 executed" UNKNOWNSIGNAL EXIT 999999 FNORD
+	echo = $?
+	) 2>&1 | sed "s^${__progname}: <stdin>\[[0-9]*]PROG"
+expected-stdout:
+	PROG: trap: bad signal 'UNKNOWNSIGNAL'
+	foo
+	=1
+	PROG: trap: bad signal 'UNKNOWNSIGNAL'
+	PROG: trap: bad signal '999999'
+	PROG: trap: bad signal 'FNORD'
+	= 3
+	trap 2 executed
+---
 name: read-IFS-1
 description:
 	Simple test, default IFS
@@ -3334,6 +3771,74 @@ stdin:
 	echo "[$REPLY]";
 expected-stdout:
 	[abc]
+---
+name: read-regress-1
+description:
+	Check a regression of read
+file-setup: file 644 "foo"
+	foo bar
+	baz
+	blah
+stdin:
+	while read a b c; do
+		read d
+		break
+	done <foo
+	echo "<$a|$b|$c><$d>"
+expected-stdout:
+	<foo|bar|><baz>
+---
+name: read-delim-1
+description:
+	Check read with delimiters
+stdin:
+	emit() {
+		printf 'foo bar\tbaz\nblah \0blub\tblech\nmyok meck \0'
+	}
+	emit | while IFS= read -d "" foo; do print -r -- "<$foo>"; done
+	emit | while read -d "" foo; do print -r -- "<$foo>"; done
+	emit | while read -d "eh?" foo; do print -r -- "<$foo>"; done
+expected-stdout:
+	<foo bar	baz
+	blah >
+	<blub	blech
+	myok meck >
+	<foo bar	baz
+	blah>
+	<blub	blech
+	myok meck>
+	<foo bar	baz
+	blah blub	bl>
+	<ch
+	myok m>
+---
+name: read-ext-1
+description:
+	Check read with number of bytes specified, and -A
+stdin:
+	print 'foo\nbar' >x1
+	print -n x >x2
+	print 'foo\\ bar baz' >x3
+	x1a=u; read x1a <x1
+	x1b=u; read -N-1 x1b <x1
+	x2a=u; read x2a <x2; r2a=$?
+	x2b=u; read -N2 x2c <x2; r2b=$?
+	x2c=u; read -n2 x2c <x2; r2c=$?
+	x3a=u; read -A x3a <x3
+	print -r "x1a=<$x1a>"
+	print -r "x1b=<$x1b>"
+	print -r "x2a=$r2a<$x2a>"
+	print -r "x2b=$r2b<$x2b>"
+	print -r "x2c=$r2c<$x2c>"
+	print -r "x3a=<${x3a[0]}|${x3a[1]}|${x3a[2]}>"
+expected-stdout:
+	x1a=<foo>
+	x1b=<foo
+	bar>
+	x2a=1<x>
+	x2b=1<u>
+	x2c=0<x>
+	x3a=<foo bar|baz|>
 ---
 name: regression-1
 description:
@@ -3745,6 +4250,9 @@ name: regression-33
 description:
 	Does umask print a leading 0 when umask is 3 digits?
 stdin:
+	# on MiNT, the first umask call seems to fail
+	umask 022
+	# now, the test proper
 	umask 222
 	umask
 expected-stdout:
@@ -3969,6 +4477,7 @@ file-setup: file 644 "env"
 	PS1=Y
 	PS2=X
 env-setup: !ENV=./env!
+need-ctty: yes
 arguments: !-i!
 stdin:
 	alias foo='echo hi ; '
@@ -3999,6 +4508,7 @@ file-setup: file 644 "env"
 file-setup: file 644 "abc"
 	stuff
 env-setup: !ENV=./env!
+need-ctty: yes
 arguments: !-i!
 stdin:
 	sed 's/^/X /' < ab*
@@ -4332,6 +4842,78 @@ stdin:
 		time
 	}
 ---
+name: regression-65
+description:
+	check for a regression with sleep builtin and signal mask
+category: !nojsig
+time-limit: 3
+stdin:
+	sleep 1
+	echo blub |&
+	while read -p line; do :; done
+	echo ok
+expected-stdout:
+	ok
+---
+name: readonly-0
+description:
+	Ensure readonly is honoured for assignments and unset
+stdin:
+	"$__progname" -c 'u=x; echo $? $u .' || echo aborted, $?
+	echo =
+	"$__progname" -c 'readonly u; u=x; echo $? $u .' || echo aborted, $?
+	echo =
+	"$__progname" -c 'u=x; readonly u; unset u; echo $? $u .' || echo aborted, $?
+expected-stdout:
+	0 x .
+	=
+	aborted, 2
+	=
+	1 x .
+expected-stderr-pattern:
+	/read *only/
+---
+name: readonly-1
+description:
+	http://austingroupbugs.net/view.php?id=367 for export
+stdin:
+	"$__progname" -c 'readonly foo; export foo=a; echo $?' || echo aborted, $?
+expected-stdout:
+	aborted, 2
+expected-stderr-pattern:
+	/read *only/
+---
+name: readonly-2a
+description:
+	Check that getopts works as intended, for readonly-2b to be valid
+stdin:
+	"$__progname" -c 'set -- -a b; getopts a c; echo $? $c .; getopts a c; echo $? $c .' || echo aborted, $?
+expected-stdout:
+	0 a .
+	1 ? .
+---
+name: readonly-2b
+description:
+	http://austingroupbugs.net/view.php?id=367 for getopts
+stdin:
+	"$__progname" -c 'readonly c; set -- -a b; getopts a c; echo $? $c .' || echo aborted, $?
+expected-stdout:
+	2 .
+expected-stderr-pattern:
+	/read *only/
+---
+name: readonly-3
+description:
+	http://austingroupbugs.net/view.php?id=367 for read
+stdin:
+	echo x | "$__progname" -c 'read s; echo $? $s .' || echo aborted, $?
+	echo y | "$__progname" -c 'readonly s; read s; echo $? $s .' || echo aborted, $?
+expected-stdout:
+	0 x .
+	2 .
+expected-stderr-pattern:
+	/read *only/
+---
 name: syntax-1
 description:
 	Check that lone ampersand is a syntax error
@@ -4383,6 +4965,53 @@ stdin:
 	echo $BAR
 expected-stdout:
 	123
+---
+name: xxx-multi-assignment-posix-cmd
+description:
+	Check that the behaviour for multiple assignments with a
+	command name matches POSIX. See:
+	http://thread.gmane.org/gmane.comp.standards.posix.austin.general/1925
+stdin:
+	X=a Y=b; X=$Y Y=$X "$__progname" -c 'echo 1 $X $Y .'; echo 2 $X $Y .
+	unset X Y Z
+	X=a Y=${X=b} Z=$X "$__progname" -c 'echo 3 $Z .'
+	unset X Y Z
+	X=a Y=${X=b} Z=$X; echo 4 $Z .
+expected-stdout:
+	1 b a .
+	2 a b .
+	3 b .
+	4 a .
+---
+name: xxx-multi-assignment-posix-nocmd
+description:
+	Check that the behaviour for multiple assignments with no
+	command name matches POSIX (Debian #334182). See:
+	http://thread.gmane.org/gmane.comp.standards.posix.austin.general/1925
+stdin:
+	X=a Y=b; X=$Y Y=$X; echo 1 $X $Y .
+expected-stdout:
+	1 b b .
+---
+name: xxx-multi-assignment-posix-subassign
+description:
+	Check that the behaviour for multiple assignments matches POSIX:
+	- The assignment words shall be expanded in the current execution
+	  environment.
+	- The assignments happen in the temporary execution environment.
+stdin:
+	unset X Y Z
+	Z=a Y=${X:=b} sh -c 'echo +$X+ +$Y+ +$Z+'
+	echo /$X/
+	# Now for the special case:
+	unset X Y Z
+	X= Y=${X:=b} sh -c 'echo +$X+ +$Y+'
+	echo /$X/
+expected-stdout:
+	++ +b+ +a+
+	/b/
+	++ +b+
+	/b/
 ---
 name: xxx-exec-environment-1
 description:
@@ -4441,6 +5070,22 @@ expected-stderr-pattern:
 	/bad substitution/
 expected-exit: 1
 ---
+name: xxx-variable-syntax-2
+stdin:
+	set 0
+	echo ${*:0}
+expected-stderr-pattern:
+	/bad substitution/
+expected-exit: 1
+---
+name: xxx-variable-syntax-3
+stdin:
+	set -A foo 0
+	echo ${foo[*]:0}
+expected-stderr-pattern:
+	/bad substitution/
+expected-exit: 1
+---
 name: xxx-substitution-eval-order
 description:
 	Check order of evaluation of expressions
@@ -4467,6 +5112,7 @@ expected-stdout:
 name: xxx-exec-1
 description:
 	Check that exec exits for built-ins
+need-ctty: yes
 arguments: !-i!
 stdin:
 	exec echo hi
@@ -4514,6 +5160,7 @@ expected-stdout:
 name: xxx-status-1
 description:
 	Check that blank lines don't clear $?
+need-ctty: yes
 arguments: !-i!
 stdin:
 	(exit 1)
@@ -4602,12 +5249,12 @@ description:
 	Check some "exit on error" conditions
 stdin:
 	set -ex
-	/usr/bin/env false && echo something
+	env false && echo something
 	echo END
 expected-stdout:
 	END
 expected-stderr:
-	+ /usr/bin/env false
+	+ env false
 	+ echo END
 ---
 name: exit-err-2
@@ -4615,15 +5262,15 @@ description:
 	Check some "exit on error" edge conditions (POSIXly)
 stdin:
 	set -ex
-	if /usr/bin/env true; then
-		/usr/bin/env false && echo something
+	if env true; then
+		env false && echo something
 	fi
 	echo END
 expected-stdout:
 	END
 expected-stderr:
-	+ /usr/bin/env true
-	+ /usr/bin/env false
+	+ env true
+	+ env false
 	+ echo END
 ---
 name: exit-err-3
@@ -4744,6 +5391,16 @@ expected-stdout:
 	D 0
 	E 0
 	F 0
+---
+name: exit-trap-1
+description:
+	Check that "exit" with no arguments behaves SUSv4 conformant.
+stdin:
+	trap 'echo hi; exit' EXIT
+	exit 9
+expected-stdout:
+	hi
+expected-exit: 9
 ---
 name: test-stlt-1
 description:
@@ -4881,6 +5538,7 @@ description:
 	Part 2: verify mkshrc can be read (interactive shells)
 file-setup: file 644 ".mkshrc"
 	FNORD=42
+need-ctty: yes
 arguments: !-i!
 env-setup: !HOME=.!ENV=!PS1=!
 stdin:
@@ -5004,6 +5662,7 @@ expected-stdout:
 name: pipeline-2
 description:
 	check that co-processes work with TCOMs, TPIPEs and TPARENs
+category: !nojsig
 stdin:
 	"$__progname" -c 'i=100; echo hi |& while read -p line; do echo "$((i++)) $line"; done'
 	"$__progname" -c 'i=200; echo hi | cat |& while read -p line; do echo "$((i++)) $line"; done'
@@ -5013,10 +5672,33 @@ expected-stdout:
 	200 hi
 	300 hi
 ---
+name: pipeline-3
+description:
+	Check that PIPESTATUS does what it's supposed to
+stdin:
+	echo 1 $PIPESTATUS .
+	echo 2 ${PIPESTATUS[0]} .
+	echo 3 ${PIPESTATUS[1]} .
+	(echo x; exit 12) | (cat; exit 23) | (cat; exit 42)
+	echo 5 $? , $PIPESTATUS , ${PIPESTATUS[0]} , ${PIPESTATUS[1]} , ${PIPESTATUS[2]} , ${PIPESTATUS[3]} .
+	echo 6 ${PIPESTATUS[0]} .
+	set | fgrep PIPESTATUS
+	echo 8 $(set | fgrep PIPESTATUS) .
+expected-stdout:
+	1 0 .
+	2 0 .
+	3 .
+	x
+	5 42 , 12 , 12 , 23 , 42 , .
+	6 0 .
+	PIPESTATUS[0]=0
+	8 PIPESTATUS[0]=0 PIPESTATUS[1]=0 .
+---
 name: persist-history-1
 description:
 	Check if persistent history saving works
 category: !no-histfile
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -5108,7 +5790,7 @@ expected-stdout:
 	mit
 	ohne
 	=
-	﻿: mit
+	﻿: ohne
 ---
 name: utf8bom-2
 description:
@@ -5116,6 +5798,7 @@ description:
 	XXX if the OS can already execute them, we lose
 	note: cygwin execve(2) doesn't return to us with ENOEXEC, we lose
 	note: Ultrix perl5 t4 returns 65280 (exit-code 255) and no text
+need-pass: no
 category: !os:cygwin,!os:uwin-nt,!os:ultrix,!smksh
 env-setup: !FOO=BAR!
 stdin:
@@ -5139,12 +5822,17 @@ expected-stderr-pattern:
 name: utf8bom-3
 description:
 	Reading the UTF-8 BOM should enable the utf8-mode flag
+	(temporarily for COMSUBs)
 stdin:
 	"$__progname" -c ':; if [[ $- = *U* ]]; then echo 1 on; else echo 1 off; fi'
 	"$__progname" -c '﻿:; if [[ $- = *U* ]]; then echo 2 on; else echo 2 off; fi'
+	"$__progname" -c 'if [[ $- = *U* ]]; then echo 3 on; else echo 3 off; fi; x=$(﻿:; if [[ $- = *U* ]]; then echo 4 on; else echo 4 off; fi); echo $x; if [[ $- = *U* ]]; then echo 5 on; else echo 5 off; fi'
 expected-stdout:
 	1 off
 	2 on
+	3 off
+	4 on
+	5 off
 ---
 name: utf8opt-1a
 description:
@@ -5182,6 +5870,7 @@ description:
 	-UMKSH_ASSUME_UTF8 => not expected, but if your OS is old,
 	 try passing HAVE_SETLOCALE_CTYPE=0 to Build.sh
 category: !os:hpux
+need-ctty: yes
 arguments: !-i!
 env-setup: !PS1=!PS2=!LC_CTYPE=en_US.UTF-8!
 stdin:
@@ -5200,6 +5889,7 @@ description:
 	Check that the utf8-mode flag is set at interactive startup
 	Expected failure if -DMKSH_ASSUME_UTF8=0
 category: os:hpux
+need-ctty: yes
 arguments: !-i!
 env-setup: !PS1=!PS2=!LC_CTYPE=en_US.utf8!
 stdin:
@@ -5235,7 +5925,7 @@ expected-stdout:
 name: aliases-1
 description:
 	Check if built-in shell aliases are okay
-category: !arge
+category: !android,!arge
 stdin:
 	alias
 	typeset -f
@@ -5258,7 +5948,7 @@ expected-stdout:
 name: aliases-1-hartz4
 description:
 	Check if built-in shell aliases are okay
-category: arge
+category: android,arge
 stdin:
 	alias
 	typeset -f
@@ -5292,7 +5982,6 @@ name: aliases-3a
 description:
 	Check if running as sh disables built-in aliases (except a few)
 category: disabled
-arguments: !-o!sh!
 stdin:
 	cp "$__progname" sh
 	./sh -c 'alias; typeset -f'
@@ -5304,7 +5993,7 @@ expected-stdout:
 name: aliases-2b
 description:
 	Check if “set -o sh” does not influence built-in aliases
-category: !arge
+category: !android,!arge
 arguments: !-o!sh!
 stdin:
 	alias
@@ -5328,8 +6017,7 @@ expected-stdout:
 name: aliases-3b
 description:
 	Check if running as sh does not influence built-in aliases
-category: !arge
-arguments: !-o!sh!
+category: !android,!arge
 stdin:
 	cp "$__progname" sh
 	./sh -c 'alias; typeset -f'
@@ -5353,7 +6041,7 @@ expected-stdout:
 name: aliases-2b-hartz4
 description:
 	Check if “set -o sh” does not influence built-in aliases
-category: arge
+category: android,arge
 arguments: !-o!sh!
 stdin:
 	alias
@@ -5375,8 +6063,7 @@ expected-stdout:
 name: aliases-3b-hartz4
 description:
 	Check if running as sh does not influence built-in aliases
-category: arge
-arguments: !-o!sh!
+category: android,arge
 stdin:
 	cp "$__progname" sh
 	./sh -c 'alias; typeset -f'
@@ -5431,6 +6118,17 @@ stdin:
 expected-stdout:
 	makro
 ---
+name: aliases-funcdef-4
+description:
+	Functions should only take over if actually being defined
+stdin:
+	alias local
+	:|| local() { :; }
+	alias local
+expected-stdout:
+	local=typeset
+	local=typeset
+---
 name: arrays-1
 description:
 	Check if Korn Shell arrays work as expected
@@ -5441,7 +6139,7 @@ stdin:
 expected-stdout:
 	5|a|$v|c d|$v|b|
 ---
-name: arrays-2
+name: arrays-2a
 description:
 	Check if bash-style arrays work as expected
 category: !smksh
@@ -5451,6 +6149,33 @@ stdin:
 	echo "${#foo[*]}|${foo[0]}|${foo[1]}|${foo[2]}|${foo[3]}|${foo[4]}|"
 expected-stdout:
 	5|a|$v|c d|$v|b|
+---
+name: arrays-2b
+description:
+	Check if bash-style arrays work as expected, with newlines
+category: !smksh
+stdin:
+	test -n "$ZSH_VERSION" && setopt KSH_ARRAYS
+	v="e f"
+	foo=(a
+		bc
+		d \$v "$v" '$v' g
+	)
+	printf '%s|' "${#foo[*]}" "${foo[0]}" "${foo[1]}" "${foo[2]}" "${foo[3]}" "${foo[4]}" "${foo[5]}" "${foo[6]}"; echo
+	foo=(a\
+		bc
+		d \$v "$v" '$v' g
+	)
+	printf '%s|' "${#foo[*]}" "${foo[0]}" "${foo[1]}" "${foo[2]}" "${foo[3]}" "${foo[4]}" "${foo[5]}" "${foo[6]}"; echo
+	foo=(a\
+	bc\\
+		d \$v "$v" '$v'
+	g)
+	printf '%s|' "${#foo[*]}" "${foo[0]}" "${foo[1]}" "${foo[2]}" "${foo[3]}" "${foo[4]}" "${foo[5]}" "${foo[6]}"; echo
+expected-stdout:
+	7|a|bc|d|$v|e f|$v|g|
+	7|a|bc|d|$v|e f|$v|g|
+	6|abc\|d|$v|e f|$v|g||
 ---
 name: arrays-3
 description:
@@ -5646,6 +6371,29 @@ expected-stdout:
 	2g 009 .
 	2h 00001 00002 .
 ---
+name: arrays-9a
+description:
+	Check that we can concatenate arrays
+category: !smksh
+stdin:
+	unset foo; foo=(bar); foo+=(baz); echo 1 ${!foo[*]} : ${foo[*]} .
+	unset foo; foo=(foo bar); foo+=(baz); echo 2 ${!foo[*]} : ${foo[*]} .
+	unset foo; foo=([2]=foo [0]=bar); foo+=(baz [5]=quux); echo 3 ${!foo[*]} : ${foo[*]} .
+expected-stdout:
+	1 0 1 : bar baz .
+	2 0 1 2 : foo bar baz .
+	3 0 2 3 5 : bar foo baz quux .
+---
+name: arrays-9b
+description:
+	Check that we can concatenate parameters too
+stdin:
+	unset foo; foo=bar; foo+=baz; echo 1 $foo .
+	unset foo; typeset -i16 foo=10; foo+=20; echo 2 $foo .
+expected-stdout:
+	1 barbaz .
+	2 16#a20 .
+---
 name: varexpand-substr-1
 description:
 	Check if bash-style substring expansion works
@@ -5768,6 +6516,16 @@ expected-stdout:
 	c we
 	d we
 ---
+name: varexpand-special-hash
+description:
+	Check special ${var@x} expansion for x=hash
+stdin:
+	typeset -i8 foo=10
+	bar=baz
+	print ${bar@#} ${baz@#} .
+expected-stdout:
+	57F1BA9A 04808901 .
+---
 name: varexpand-null-1
 description:
 	Ensure empty strings expand emptily
@@ -5779,6 +6537,15 @@ expected-stdout:
 	x y
 	z w
 	v u
+---
+name: varexpand-null-2
+description:
+	Ensure empty strings, when quoted, are expanded as empty strings
+stdin:
+	printf '<%s> ' 1 "${a}" 2 "${a#?}" + "${b%?}" 3 "${a=}" + "${b/c/d}"
+	echo .
+expected-stdout:
+	<1> <> <2> <> <+> <> <3> <> <+> <> .
 ---
 name: print-funny-chars
 description:
@@ -5818,8 +6585,9 @@ stdin:
 	    '\U\V\W\X\Y\Z\[\\\]\^\_\`\a\b  \d\e\f\g\h\i\j\k\l\m\n\o\p' \
 	    '\q\r\s\t\u\v\w\x\y\z\{\|\}\~' '\u20acd' '\U20acd' '\x123' \
 	    '\0x' '\0123' '\01234' | {
+		# integer-base-one-3As
 		typeset -Uui16 -Z11 pos=0
-		typeset -Uui16 -Z5 hv
+		typeset -Uui16 -Z5 hv=2147483647
 		typeset -i1 wc=0x0A
 		dasc=
 		nl=${wc#1#}
@@ -5842,13 +6610,11 @@ stdin:
 				line=${line:1}
 			done
 		done
-		if (( (pos & 15) != 1 )); then
-			while (( pos & 15 )); do
-				print -n '   '
-				(( (pos++ & 15) == 7 )) && print -n -- '- '
-			done
-			print "$dasc|"
-		fi
+		while (( pos & 15 )); do
+			print -n '   '
+			(( (pos++ & 15) == 7 )) && print -n -- '- '
+		done
+		(( hv == 2147483647 )) || print "$dasc|"
 	}
 expected-stdout:
 	00000000  5C 20 5C 21 5C 22 5C 23 - 5C 24 5C 25 5C 26 5C 27  |\ \!\"\#\$\%\&\'|
@@ -5865,6 +6631,22 @@ expected-stdout:
 	000000B0  E2 82 AC 64 20 EF BF BD - 20 12 33 20 78 20 53 20  |...d ... .3 x S |
 	000000C0  53 34 0A                -                          |S4.|
 ---
+name: dollar-doublequoted-strings
+description:
+	Check that a $ preceding "…" is ignored
+stdin:
+	echo $"Localise me!"
+	cat <<<$"Me too!"
+	V=X
+	aol=aol
+	cat <<-$"aol"
+		I do not take a $V for a V!
+	aol
+expected-stdout:
+	Localise me!
+	Me too!
+	I do not take a $V for a V!
+---
 name: dollar-quoted-strings
 description:
 	Check backslash expansion by $'…' strings
@@ -5876,8 +6658,9 @@ stdin:
 	    $'\u20acd' $'\U20acd' $'\x123' $'fn\x0rd' $'\0234' $'\234' \
 	    $'\2345' $'\ca' $'\c!' $'\c?' $'\c€' $'a\
 	b' | {
+		# integer-base-one-3As
 		typeset -Uui16 -Z11 pos=0
-		typeset -Uui16 -Z5 hv
+		typeset -Uui16 -Z5 hv=2147483647
 		typeset -i1 wc=0x0A
 		dasc=
 		nl=${wc#1#}
@@ -5900,13 +6683,11 @@ stdin:
 				line=${line:1}
 			done
 		done
-		if (( (pos & 15) != 1 )); then
-			while (( pos & 15 )); do
-				print -n '   '
-				(( (pos++ & 15) == 7 )) && print -n -- '- '
-			done
-			print "$dasc|"
-		fi
+		while (( pos & 15 )); do
+			print -n '   '
+			(( (pos++ & 15) == 7 )) && print -n -- '- '
+		done
+		(( hv == 2147483647 )) || print "$dasc|"
 	}
 expected-stdout:
 	00000000  20 21 22 23 24 25 26 27 - 28 29 2A 2B 2C 2D 2E 2F  | !"#$%&'()*+,-./|
@@ -6143,9 +6924,10 @@ expected-stderr-pattern:
 	/1#���: unexpected '�'/
 expected-exit: e != 0
 ---
-name: integer-base-one-3A
+name: integer-base-one-3As
 description:
 	some sample code for hexdumping
+	not NUL safe; input lines must be NL terminated
 stdin:
 	{
 		print 'Hello, World!\\\nこんにちは！'
@@ -6155,10 +6937,11 @@ stdin:
 		while (( i++ < 0x1FF )); do
 			print -n "\x${i#16#1}"
 		done
-		print
+		print '\0z'
 	} | {
+		# integer-base-one-3As
 		typeset -Uui16 -Z11 pos=0
-		typeset -Uui16 -Z5 hv
+		typeset -Uui16 -Z5 hv=2147483647
 		typeset -i1 wc=0x0A
 		dasc=
 		nl=${wc#1#}
@@ -6181,13 +6964,11 @@ stdin:
 				line=${line:1}
 			done
 		done
-		if (( (pos & 15) != 1 )); then
-			while (( pos & 15 )); do
-				print -n '   '
-				(( (pos++ & 15) == 7 )) && print -n -- '- '
-			done
-			print "$dasc|"
-		fi
+		while (( pos & 15 )); do
+			print -n '   '
+			(( (pos++ & 15) == 7 )) && print -n -- '- '
+		done
+		(( hv == 2147483647 )) || print "$dasc|"
 	}
 expected-stdout:
 	00000000  48 65 6C 6C 6F 2C 20 57 - 6F 72 6C 64 21 5C 0A E3  |Hello, World!\..|
@@ -6208,11 +6989,12 @@ expected-stdout:
 	000000F0  CF D0 D1 D2 D3 D4 D5 D6 - D7 D8 D9 DA DB DC DD DE  |................|
 	00000100  DF E0 E1 E2 E3 E4 E5 E6 - E7 E8 E9 EA EB EC ED EE  |................|
 	00000110  EF F0 F1 F2 F3 F4 F5 F6 - F7 F8 F9 FA FB FC FD FE  |................|
-	00000120  FF 0A                   -                          |..|
+	00000120  FF 7A 0A                -                          |.z.|
 ---
-name: integer-base-one-3W
+name: integer-base-one-3Ws
 description:
 	some sample code for hexdumping Unicode
+	not NUL safe; input lines must be NL terminated
 stdin:
 	set -U
 	{
@@ -6230,7 +7012,9 @@ stdin:
 		print \\xc0\\x80	# non-minimalistic
 		print \\xe0\\x80\\x80	# non-minimalistic
 		print '�￾￿'	# end of range
+		print '\0z'		# embedded NUL
 	} | {
+		# integer-base-one-3Ws
 		typeset -Uui16 -Z11 pos=0
 		typeset -Uui16 -Z7 hv
 		typeset -i1 wc=0x0A
@@ -6265,13 +7049,11 @@ stdin:
 				dasc=$dasc$dch
 			done
 		done
-		if (( pos & 7 )); then
-			while (( pos & 7 )); do
-				print -n '     '
-				(( (pos++ & 7) == 3 )) && print -n -- '- '
-			done
-			print "$dasc|"
-		fi
+		while (( pos & 7 )); do
+			print -n '     '
+			(( (pos++ & 7) == 3 )) && print -n -- '- '
+		done
+		(( hv == 2147483647 )) || print "$dasc|"
 	}
 expected-stdout:
 	00000000  0048 0065 006C 006C - 006F 002C 0020 0057  |Hello, W|
@@ -6311,7 +7093,170 @@ expected-stdout:
 	00000110  00FB 00FC 00FD 00FE - 00FF 000A EFFF 000A  |ûüýþÿ.�.|
 	00000118  EFC2 000A EFEF EFBF - EFC0 000A EFC0 EF80  |�.���.��|
 	00000120  000A EFE0 EF80 EF80 - 000A FFFD EFEF EFBF  |.���.���|
-	00000128  EFBE EFEF EFBF EFBF - 000A                 |����.|
+	00000128  EFBE EFEF EFBF EFBF - 000A 007A 000A       |����.z.|
+---
+name: integer-base-one-3Ar
+description:
+	some sample code for hexdumping; NUL and binary safe
+stdin:
+	{
+		print 'Hello, World!\\\nこんにちは！'
+		typeset -Uui16 i=0x100
+		# change that to 0xFF once we can handle embedded
+		# NUL characters in strings / here documents
+		while (( i++ < 0x1FF )); do
+			print -n "\x${i#16#1}"
+		done
+		print '\0z'
+	} | {
+		# integer-base-one-3Ar
+		typeset -Uui16 -Z11 pos=0
+		typeset -Uui16 -Z5 hv=2147483647
+		dasc=
+		if read -arN -1 line; then
+			typeset -i1 line
+			i=0
+			while (( i < ${#line[*]} )); do
+				hv=${line[i++]}
+				if (( (pos & 15) == 0 )); then
+					(( pos )) && print "$dasc|"
+					print -n "${pos#16#}  "
+					dasc=' |'
+				fi
+				print -n "${hv#16#} "
+				if (( (hv < 32) || (hv > 126) )); then
+					dasc=$dasc.
+				else
+					dasc=$dasc${line[i-1]#1#}
+				fi
+				(( (pos++ & 15) == 7 )) && print -n -- '- '
+			done
+		fi
+		while (( pos & 15 )); do
+			print -n '   '
+			(( (pos++ & 15) == 7 )) && print -n -- '- '
+		done
+		(( hv == 2147483647 )) || print "$dasc|"
+	}
+expected-stdout:
+	00000000  48 65 6C 6C 6F 2C 20 57 - 6F 72 6C 64 21 5C 0A E3  |Hello, World!\..|
+	00000010  81 93 E3 82 93 E3 81 AB - E3 81 A1 E3 81 AF EF BC  |................|
+	00000020  81 0A 01 02 03 04 05 06 - 07 08 09 0A 0B 0C 0D 0E  |................|
+	00000030  0F 10 11 12 13 14 15 16 - 17 18 19 1A 1B 1C 1D 1E  |................|
+	00000040  1F 20 21 22 23 24 25 26 - 27 28 29 2A 2B 2C 2D 2E  |. !"#$%&'()*+,-.|
+	00000050  2F 30 31 32 33 34 35 36 - 37 38 39 3A 3B 3C 3D 3E  |/0123456789:;<=>|
+	00000060  3F 40 41 42 43 44 45 46 - 47 48 49 4A 4B 4C 4D 4E  |?@ABCDEFGHIJKLMN|
+	00000070  4F 50 51 52 53 54 55 56 - 57 58 59 5A 5B 5C 5D 5E  |OPQRSTUVWXYZ[\]^|
+	00000080  5F 60 61 62 63 64 65 66 - 67 68 69 6A 6B 6C 6D 6E  |_`abcdefghijklmn|
+	00000090  6F 70 71 72 73 74 75 76 - 77 78 79 7A 7B 7C 7D 7E  |opqrstuvwxyz{|}~|
+	000000A0  7F 80 81 82 83 84 85 86 - 87 88 89 8A 8B 8C 8D 8E  |................|
+	000000B0  8F 90 91 92 93 94 95 96 - 97 98 99 9A 9B 9C 9D 9E  |................|
+	000000C0  9F A0 A1 A2 A3 A4 A5 A6 - A7 A8 A9 AA AB AC AD AE  |................|
+	000000D0  AF B0 B1 B2 B3 B4 B5 B6 - B7 B8 B9 BA BB BC BD BE  |................|
+	000000E0  BF C0 C1 C2 C3 C4 C5 C6 - C7 C8 C9 CA CB CC CD CE  |................|
+	000000F0  CF D0 D1 D2 D3 D4 D5 D6 - D7 D8 D9 DA DB DC DD DE  |................|
+	00000100  DF E0 E1 E2 E3 E4 E5 E6 - E7 E8 E9 EA EB EC ED EE  |................|
+	00000110  EF F0 F1 F2 F3 F4 F5 F6 - F7 F8 F9 FA FB FC FD FE  |................|
+	00000120  FF 00 7A 0A             -                          |..z.|
+---
+name: integer-base-one-3Wr
+description:
+	some sample code for hexdumping Unicode; NUL and binary safe
+stdin:
+	set -U
+	{
+		print 'Hello, World!\\\nこんにちは！'
+		typeset -Uui16 i=0x100
+		# change that to 0xFF once we can handle embedded
+		# NUL characters in strings / here documents
+		while (( i++ < 0x1FF )); do
+			print -n "\u${i#16#1}"
+		done
+		print
+		print \\xff		# invalid utf-8
+		print \\xc2		# invalid 2-byte
+		print \\xef\\xbf\\xc0	# invalid 3-byte
+		print \\xc0\\x80	# non-minimalistic
+		print \\xe0\\x80\\x80	# non-minimalistic
+		print '�￾￿'	# end of range
+		print '\0z'		# embedded NUL
+	} | {
+		# integer-base-one-3Wr
+		typeset -Uui16 -Z11 pos=0
+		typeset -Uui16 -Z7 hv=2147483647
+		dasc=
+		if read -arN -1 line; then
+			typeset -i1 line
+			i=0
+			while (( i < ${#line[*]} )); do
+				hv=${line[i++]}
+				if (( (hv < 32) || \
+				    ((hv > 126) && (hv < 160)) )); then
+					dch=.
+				elif (( (hv & 0xFF80) == 0xEF80 )); then
+					dch=�
+				else
+					dch=${line[i-1]#1#}
+				fi
+				if (( (pos & 7) == 7 )); then
+					dasc=$dasc$dch
+					dch=
+				elif (( (pos & 7) == 0 )); then
+					(( pos )) && print "$dasc|"
+					print -n "${pos#16#}  "
+					dasc=' |'
+				fi
+				print -n "${hv#16#} "
+				(( (pos++ & 7) == 3 )) && \
+				    print -n -- '- '
+				dasc=$dasc$dch
+			done
+		fi
+		while (( pos & 7 )); do
+			print -n '     '
+			(( (pos++ & 7) == 3 )) && print -n -- '- '
+		done
+		(( hv == 2147483647 )) || print "$dasc|"
+	}
+expected-stdout:
+	00000000  0048 0065 006C 006C - 006F 002C 0020 0057  |Hello, W|
+	00000008  006F 0072 006C 0064 - 0021 005C 000A 3053  |orld!\.こ|
+	00000010  3093 306B 3061 306F - FF01 000A 0001 0002  |んにちは！...|
+	00000018  0003 0004 0005 0006 - 0007 0008 0009 000A  |........|
+	00000020  000B 000C 000D 000E - 000F 0010 0011 0012  |........|
+	00000028  0013 0014 0015 0016 - 0017 0018 0019 001A  |........|
+	00000030  001B 001C 001D 001E - 001F 0020 0021 0022  |..... !"|
+	00000038  0023 0024 0025 0026 - 0027 0028 0029 002A  |#$%&'()*|
+	00000040  002B 002C 002D 002E - 002F 0030 0031 0032  |+,-./012|
+	00000048  0033 0034 0035 0036 - 0037 0038 0039 003A  |3456789:|
+	00000050  003B 003C 003D 003E - 003F 0040 0041 0042  |;<=>?@AB|
+	00000058  0043 0044 0045 0046 - 0047 0048 0049 004A  |CDEFGHIJ|
+	00000060  004B 004C 004D 004E - 004F 0050 0051 0052  |KLMNOPQR|
+	00000068  0053 0054 0055 0056 - 0057 0058 0059 005A  |STUVWXYZ|
+	00000070  005B 005C 005D 005E - 005F 0060 0061 0062  |[\]^_`ab|
+	00000078  0063 0064 0065 0066 - 0067 0068 0069 006A  |cdefghij|
+	00000080  006B 006C 006D 006E - 006F 0070 0071 0072  |klmnopqr|
+	00000088  0073 0074 0075 0076 - 0077 0078 0079 007A  |stuvwxyz|
+	00000090  007B 007C 007D 007E - 007F 0080 0081 0082  |{|}~....|
+	00000098  0083 0084 0085 0086 - 0087 0088 0089 008A  |........|
+	000000A0  008B 008C 008D 008E - 008F 0090 0091 0092  |........|
+	000000A8  0093 0094 0095 0096 - 0097 0098 0099 009A  |........|
+	000000B0  009B 009C 009D 009E - 009F 00A0 00A1 00A2  |..... ¡¢|
+	000000B8  00A3 00A4 00A5 00A6 - 00A7 00A8 00A9 00AA  |£¤¥¦§¨©ª|
+	000000C0  00AB 00AC 00AD 00AE - 00AF 00B0 00B1 00B2  |«¬­®¯°±²|
+	000000C8  00B3 00B4 00B5 00B6 - 00B7 00B8 00B9 00BA  |³´µ¶·¸¹º|
+	000000D0  00BB 00BC 00BD 00BE - 00BF 00C0 00C1 00C2  |»¼½¾¿ÀÁÂ|
+	000000D8  00C3 00C4 00C5 00C6 - 00C7 00C8 00C9 00CA  |ÃÄÅÆÇÈÉÊ|
+	000000E0  00CB 00CC 00CD 00CE - 00CF 00D0 00D1 00D2  |ËÌÍÎÏÐÑÒ|
+	000000E8  00D3 00D4 00D5 00D6 - 00D7 00D8 00D9 00DA  |ÓÔÕÖ×ØÙÚ|
+	000000F0  00DB 00DC 00DD 00DE - 00DF 00E0 00E1 00E2  |ÛÜÝÞßàáâ|
+	000000F8  00E3 00E4 00E5 00E6 - 00E7 00E8 00E9 00EA  |ãäåæçèéê|
+	00000100  00EB 00EC 00ED 00EE - 00EF 00F0 00F1 00F2  |ëìíîïðñò|
+	00000108  00F3 00F4 00F5 00F6 - 00F7 00F8 00F9 00FA  |óôõö÷øùú|
+	00000110  00FB 00FC 00FD 00FE - 00FF 000A EFFF 000A  |ûüýþÿ.�.|
+	00000118  EFC2 000A EFEF EFBF - EFC0 000A EFC0 EF80  |�.���.��|
+	00000120  000A EFE0 EF80 EF80 - 000A FFFD EFEF EFBF  |.���.���|
+	00000128  EFBE EFEF EFBF EFBF - 000A 0000 007A 000A  |����..z.|
 ---
 name: integer-base-one-4
 description:
@@ -6334,12 +7279,39 @@ expected-stdout:
 	5 97
 	6 97
 ---
+name: integer-base-one-5A
+description:
+	Check to see that we’re NUL and Unicode safe
+stdin:
+	set +U
+	print 'a\0b\xfdz' >x
+	read -a y <x
+	set -U
+	typeset -Uui16 y
+	print ${y[*]} .
+expected-stdout:
+	16#61 16#0 16#62 16#FD 16#7A .
+---
+name: integer-base-one-5W
+description:
+	Check to see that we’re NUL and Unicode safe
+stdin:
+	set -U
+	print 'a\0b€c' >x
+	read -a y <x
+	set +U
+	typeset -Uui16 y
+	print ${y[*]} .
+expected-stdout:
+	16#61 16#0 16#62 16#20AC 16#63 .
+---
 name: ulimit-1
 description:
 	Check if we can use a specific syntax idiom for ulimit
 stdin:
-	if ! x=$(ulimit -d); then
-		echo expected to fail on this OS
+	if ! x=$(ulimit -d) || [[ $x = unknown ]]; then
+		#echo expected to fail on this OS
+		echo okay
 	else
 		ulimit -dS $x && echo okay
 	fi
@@ -6448,7 +7420,7 @@ stdin:
 expected-stdout:
 	===
 	mir
-expected-stderr-pattern: /.*: cannot (create|overwrite) .*/
+expected-stderr-pattern: /.*: can't (create|overwrite) .*/
 ---
 name: bashiop-3b
 description:
@@ -6613,21 +7585,22 @@ stdin:
 name: fd-cloexec-1
 description:
 	Verify that file descriptors > 2 are private for Korn shells
+	AT&T ksh93 does this still, which means we must keep it as well
 file-setup: file 644 "test.sh"
-	print -u3 Fowl
+	echo >&3 Fowl
 stdin:
 	exec 3>&1
 	"$__progname" test.sh
 expected-exit: e != 0
-expected-stderr:
-	test.sh[1]: print: -u: 3: bad file descriptor
+expected-stderr-pattern:
+	/bad file descriptor/
 ---
 name: fd-cloexec-2
 description:
 	Verify that file descriptors > 2 are not private for POSIX shells
 	See Debian Bug #154540, Closes: #499139
 file-setup: file 644 "test.sh"
-	print -u3 Fowl
+	echo >&3 Fowl
 stdin:
 	test -n "$POSH_VERSION" || set -o sh
 	exec 3>&1
@@ -6635,28 +7608,61 @@ stdin:
 expected-stdout:
 	Fowl
 ---
-name: comsub-1
+name: comsub-1a
 description:
-	COMSUB are currently parsed by hacking lex.c instead of
-	recursively (see regression-6): matching parenthesēs bug
-	Fails on: pdksh mksh bash2 bash3 zsh
-	Passes on: bash4 ksh93
-expected-fail: yes
+	COMSUB are now parsed recursively, so this works
+	see also regression-6: matching parenthesēs bug
+	Fails on: pdksh bash2 bash3 zsh
+	Passes on: bash4 ksh93 mksh(20110313+)
 stdin:
 	echo $(case 1 in (1) echo yes;; (2) echo no;; esac)
 	echo $(case 1 in 1) echo yes;; 2) echo no;; esac)
+	TEST=1234; echo ${TEST: $(case 1 in (1) echo 1;; (*) echo 2;; esac)}
+	TEST=5678; echo ${TEST: $(case 1 in 1) echo 1;; *) echo 2;; esac)}
 expected-stdout:
 	yes
 	yes
+	234
+	678
+---
+name: comsub-1b
+description:
+	COMSUB are now parsed recursively, so this works
+	Fails on GNU bash even, ksh93 passes
+stdin:
+	echo $(($(case 1 in (1) echo 1;; (*) echo 2;; esac)+10))
+	echo $(($(case 1 in 1) echo 1;; *) echo 2;; esac)+20))
+	(( a = $(case 1 in (1) echo 1;; (*) echo 2;; esac) )); echo $a.
+	(( a = $(case 1 in 1) echo 1;; *) echo 2;; esac) )); echo $a.
+expected-stdout:
+	11
+	21
+	1.
+	1.
+---
+name: comsub-1c
+description:
+	COMSUB are now parsed recursively, so this works (ksh93, mksh)
+	First test passes on bash4, second fails there
+category: !smksh
+stdin:
+	a=($(case 1 in (1) echo 1;; (*) echo 2;; esac)); echo ${a[0]}.
+	a=($(case 1 in 1) echo 1;; *) echo 2;; esac)); echo ${a[0]}.
+	a=($(($(case 1 in (1) echo 1;; (*) echo 2;; esac)+10))); echo ${a[0]}.
+	a=($(($(case 1 in 1) echo 1;; *) echo 2;; esac)+20))); echo ${a[0]}.
+expected-stdout:
+	1.
+	1.
+	11.
+	21.
 ---
 name: comsub-2
 description:
 	RedHat BZ#496791 – another case of missing recursion
 	in parsing COMSUB expressions
-	Fails on: pdksh mksh bash2 bash3¹ bash4¹ zsh
-	Passes on: ksh93
+	Fails on: pdksh bash2 bash3¹ bash4¹ zsh
+	Passes on: ksh93 mksh(20110305+)
 	① bash[34] seem to choke on comment ending with backslash-newline
-expected-fail: yes
 stdin:
 	# a comment with " ' \
 	x=$(
@@ -6666,6 +7672,707 @@ stdin:
 	echo $x
 expected-stdout:
 	yes
+---
+name: comsub-3
+description:
+	Extended test for COMSUB explaining why a recursive parser
+	is a must (a non-recursive parser cannot pass all three of
+	these test cases, especially the ‘#’ is difficult)
+stdin:
+	echo $(typeset -i10 x=16#20; echo $x)
+	echo $(typeset -Uui16 x=16#$(id -u)
+	) .
+	echo $(c=1; d=1
+	typeset -Uui16 a=36#foo; c=2
+	typeset -Uui16 b=36 #foo; d=2
+	echo $a $b $c $d)
+expected-stdout:
+	32
+	.
+	16#4F68 16#24 2 1
+---
+name: comsub-4
+description:
+	Check the tree dump functions for !MKSH_SMALL functionality
+category: !smksh
+stdin:
+	x() { case $1 in a) a+=b ;;& *) c+=(d e) ;; esac; }
+	typeset -f x
+expected-stdout:
+	x() {
+		case $1 in
+		(a)
+			a+=b 
+			;|
+		(*)
+			set -A c+ -- d e 
+			;;
+		esac 
+	} 
+---
+name: comsub-torture
+description:
+	Check the tree dump functions work correctly
+stdin:
+	if [[ -z $__progname ]]; then echo >&2 call me with __progname; exit 1; fi
+	while IFS= read -r line; do
+		if [[ $line = '#1' ]]; then
+			lastf=0
+			continue
+		elif [[ $line = EOFN* ]]; then
+			fbody=$fbody$'\n'$line
+			continue
+		elif [[ $line != '#'* ]]; then
+			fbody=$fbody$'\n\t'$line
+			continue
+		fi
+		if (( lastf )); then
+			x="inline_${nextf}() {"$fbody$'\n}\n'
+			print -nr -- "$x"
+			print -r -- "${x}typeset -f inline_$nextf" | "$__progname"
+			x="function comsub_$nextf { x=\$("$fbody$'\n); }\n'
+			print -nr -- "$x"
+			print -r -- "${x}typeset -f comsub_$nextf" | "$__progname"
+			x="function reread_$nextf { x=\$(("$fbody$'\n)|tr u x); }\n'
+			print -nr -- "$x"
+			print -r -- "${x}typeset -f reread_$nextf" | "$__progname"
+		fi
+		lastf=1
+		fbody=
+		nextf=${line#?}
+	done <<'EOD'
+	#1
+	#TCOM
+	vara=1  varb='2  3'  cmd  arg1  $arg2  "$arg3  4"
+	#TPAREN_TPIPE_TLIST
+	(echo $foo  |  tr -dc 0-9; echo)
+	#TAND_TOR
+	cmd  &&  echo ja  ||  echo nein
+	#TSELECT
+	select  file  in  *;  do  echo  "<$file>" ;  break ;  done
+	#TFOR_TTIME
+	for  i  in  {1,2,3}  ;  do  time  echo  $i ;  done
+	#TCASE
+	case  $foo  in  1)  echo eins;& 2) echo zwei  ;| *) echo kann net bis drei zählen;;  esac
+	#TIF_TBANG_TDBRACKET_TELIF
+	if  !  [[  1  =  1  ]]  ;  then  echo eins;  elif [[ 1 = 2 ]]; then echo zwei  ;else echo drei; fi
+	#TWHILE
+	i=1; while (( i < 10 )); do echo $i; let ++i; done
+	#TUNTIL
+	i=10; until  (( !--i )) ; do echo $i; done
+	#TCOPROC
+	cat  *  |&  ls
+	#TFUNCT_TBRACE_TASYNC
+	function  korn  {  echo eins; echo zwei ;  }
+	bourne  ()  {  logger *  &  }
+	#IOREAD_IOCAT
+	tr  x  u  0<foo  >>bar
+	#IOWRITE_IOCLOB_IOHERE_noIOSKIP
+	cat  >|bar  <<'EOFN'
+	foo
+	EOFN
+	#IOWRITE_noIOCLOB_IOHERE_IOSKIP
+	cat  1>bar  <<-EOFI
+	foo
+	EOFI
+	#IORDWR_IODUP
+	sh  1<>/dev/console  0<&1  2>&1
+	#COMSUB_EXPRSUB
+	echo $(true) $((1+ 2))
+	#QCHAR_OQUOTE_CQUOTE
+	echo fo\ob\"a\`r\'b\$az
+	echo "fo\ob\"a\`r\'b\$az"
+	echo 'fo\ob\"a\`r'\''b\$az'
+	#OSUBST_CSUBST_OPAT_SPAT_CPAT
+	[[ ${foo#bl\(u\)b} = @(bar|baz) ]]
+	#heredoc_closed
+	x=$(cat <<EOFN
+	note there must be no space between EOFN and )
+	EOFN); echo $x
+	#heredoc_space
+	x=$(cat <<EOFN\ 
+	note the space between EOFN and ) is actually part of the here document marker
+	EOFN ); echo $x
+	#patch_motd
+	x=$(sysctl -n kern.version | sed 1q)
+	[[ -s /etc/motd && "$([[ "$(head -1 /etc/motd)" != $x ]] && \
+	    ed -s /etc/motd 2>&1 <<-EOF
+		1,/^\$/d
+		0a
+			$x
+	
+		.
+		wq
+	EOF)" = @(?) ]] && rm -f /etc/motd
+	if [[ ! -s /etc/motd ]]; then
+		install -c -o root -g wheel -m 664 /dev/null /etc/motd
+		print -- "$x\n" >/etc/motd
+	fi
+	#0
+	EOD
+expected-stdout:
+	inline_TCOM() {
+		vara=1  varb='2  3'  cmd  arg1  $arg2  "$arg3  4"
+	}
+	inline_TCOM() {
+		vara=1 varb="2  3" cmd arg1 $arg2 "$arg3  4" 
+	} 
+	function comsub_TCOM { x=$(
+		vara=1  varb='2  3'  cmd  arg1  $arg2  "$arg3  4"
+	); }
+	function comsub_TCOM {
+		x=$(vara=1 varb="2  3" cmd arg1 $arg2 "$arg3  4" ) 
+	} 
+	function reread_TCOM { x=$((
+		vara=1  varb='2  3'  cmd  arg1  $arg2  "$arg3  4"
+	)|tr u x); }
+	function reread_TCOM {
+		x=$(( vara=1 varb="2  3" cmd arg1 $arg2 "$arg3  4" ) | tr u x ) 
+	} 
+	inline_TPAREN_TPIPE_TLIST() {
+		(echo $foo  |  tr -dc 0-9; echo)
+	}
+	inline_TPAREN_TPIPE_TLIST() {
+		( echo $foo | tr -dc 0-9 
+		  echo ) 
+	} 
+	function comsub_TPAREN_TPIPE_TLIST { x=$(
+		(echo $foo  |  tr -dc 0-9; echo)
+	); }
+	function comsub_TPAREN_TPIPE_TLIST {
+		x=$(( echo $foo | tr -dc 0-9 ; echo ) ) 
+	} 
+	function reread_TPAREN_TPIPE_TLIST { x=$((
+		(echo $foo  |  tr -dc 0-9; echo)
+	)|tr u x); }
+	function reread_TPAREN_TPIPE_TLIST {
+		x=$(( ( echo $foo | tr -dc 0-9 ; echo ) ) | tr u x ) 
+	} 
+	inline_TAND_TOR() {
+		cmd  &&  echo ja  ||  echo nein
+	}
+	inline_TAND_TOR() {
+		cmd && echo ja || echo nein 
+	} 
+	function comsub_TAND_TOR { x=$(
+		cmd  &&  echo ja  ||  echo nein
+	); }
+	function comsub_TAND_TOR {
+		x=$(cmd && echo ja || echo nein ) 
+	} 
+	function reread_TAND_TOR { x=$((
+		cmd  &&  echo ja  ||  echo nein
+	)|tr u x); }
+	function reread_TAND_TOR {
+		x=$(( cmd && echo ja || echo nein ) | tr u x ) 
+	} 
+	inline_TSELECT() {
+		select  file  in  *;  do  echo  "<$file>" ;  break ;  done
+	}
+	inline_TSELECT() {
+		select file in * 
+		do
+			echo "<$file>" 
+			break 
+		done 
+	} 
+	function comsub_TSELECT { x=$(
+		select  file  in  *;  do  echo  "<$file>" ;  break ;  done
+	); }
+	function comsub_TSELECT {
+		x=$(select file in * ; do echo "<$file>" ; break ; done ) 
+	} 
+	function reread_TSELECT { x=$((
+		select  file  in  *;  do  echo  "<$file>" ;  break ;  done
+	)|tr u x); }
+	function reread_TSELECT {
+		x=$(( select file in * ; do echo "<$file>" ; break ; done ) | tr u x ) 
+	} 
+	inline_TFOR_TTIME() {
+		for  i  in  {1,2,3}  ;  do  time  echo  $i ;  done
+	}
+	inline_TFOR_TTIME() {
+		for i in {1,2,3} 
+		do
+			time echo $i 
+		done 
+	} 
+	function comsub_TFOR_TTIME { x=$(
+		for  i  in  {1,2,3}  ;  do  time  echo  $i ;  done
+	); }
+	function comsub_TFOR_TTIME {
+		x=$(for i in {1,2,3} ; do time echo $i ; done ) 
+	} 
+	function reread_TFOR_TTIME { x=$((
+		for  i  in  {1,2,3}  ;  do  time  echo  $i ;  done
+	)|tr u x); }
+	function reread_TFOR_TTIME {
+		x=$(( for i in {1,2,3} ; do time echo $i ; done ) | tr u x ) 
+	} 
+	inline_TCASE() {
+		case  $foo  in  1)  echo eins;& 2) echo zwei  ;| *) echo kann net bis drei zählen;;  esac
+	}
+	inline_TCASE() {
+		case $foo in
+		(1)
+			echo eins 
+			;&
+		(2)
+			echo zwei 
+			;|
+		(*)
+			echo kann net bis drei zählen 
+			;;
+		esac 
+	} 
+	function comsub_TCASE { x=$(
+		case  $foo  in  1)  echo eins;& 2) echo zwei  ;| *) echo kann net bis drei zählen;;  esac
+	); }
+	function comsub_TCASE {
+		x=$(case $foo in (1) echo eins  ;& (2) echo zwei  ;| (*) echo kann net bis drei zählen  ;; esac ) 
+	} 
+	function reread_TCASE { x=$((
+		case  $foo  in  1)  echo eins;& 2) echo zwei  ;| *) echo kann net bis drei zählen;;  esac
+	)|tr u x); }
+	function reread_TCASE {
+		x=$(( case $foo in (1) echo eins  ;& (2) echo zwei  ;| (*) echo kann net bis drei zählen  ;; esac ) | tr u x ) 
+	} 
+	inline_TIF_TBANG_TDBRACKET_TELIF() {
+		if  !  [[  1  =  1  ]]  ;  then  echo eins;  elif [[ 1 = 2 ]]; then echo zwei  ;else echo drei; fi
+	}
+	inline_TIF_TBANG_TDBRACKET_TELIF() {
+		if ! [[ 1 = 1 ]] 
+		then
+			echo eins 
+		elif [[ 1 = 2 ]] 
+		then
+			echo zwei 
+		else
+			echo drei 
+		fi 
+	} 
+	function comsub_TIF_TBANG_TDBRACKET_TELIF { x=$(
+		if  !  [[  1  =  1  ]]  ;  then  echo eins;  elif [[ 1 = 2 ]]; then echo zwei  ;else echo drei; fi
+	); }
+	function comsub_TIF_TBANG_TDBRACKET_TELIF {
+		x=$(if ! [[ 1 = 1 ]] ; then echo eins ; elif [[ 1 = 2 ]] ; then echo zwei ; else echo drei ; fi ) 
+	} 
+	function reread_TIF_TBANG_TDBRACKET_TELIF { x=$((
+		if  !  [[  1  =  1  ]]  ;  then  echo eins;  elif [[ 1 = 2 ]]; then echo zwei  ;else echo drei; fi
+	)|tr u x); }
+	function reread_TIF_TBANG_TDBRACKET_TELIF {
+		x=$(( if ! [[ 1 = 1 ]] ; then echo eins ; elif [[ 1 = 2 ]] ; then echo zwei ; else echo drei ; fi ) | tr u x ) 
+	} 
+	inline_TWHILE() {
+		i=1; while (( i < 10 )); do echo $i; let ++i; done
+	}
+	inline_TWHILE() {
+		i=1 
+		while let " i < 10 " 
+		do
+			echo $i 
+			let ++i 
+		done 
+	} 
+	function comsub_TWHILE { x=$(
+		i=1; while (( i < 10 )); do echo $i; let ++i; done
+	); }
+	function comsub_TWHILE {
+		x=$(i=1 ; while let " i < 10 " ; do echo $i ; let ++i ; done ) 
+	} 
+	function reread_TWHILE { x=$((
+		i=1; while (( i < 10 )); do echo $i; let ++i; done
+	)|tr u x); }
+	function reread_TWHILE {
+		x=$(( i=1 ; while let " i < 10 " ; do echo $i ; let ++i ; done ) | tr u x ) 
+	} 
+	inline_TUNTIL() {
+		i=10; until  (( !--i )) ; do echo $i; done
+	}
+	inline_TUNTIL() {
+		i=10 
+		until let " !--i " 
+		do
+			echo $i 
+		done 
+	} 
+	function comsub_TUNTIL { x=$(
+		i=10; until  (( !--i )) ; do echo $i; done
+	); }
+	function comsub_TUNTIL {
+		x=$(i=10 ; until let " !--i " ; do echo $i ; done ) 
+	} 
+	function reread_TUNTIL { x=$((
+		i=10; until  (( !--i )) ; do echo $i; done
+	)|tr u x); }
+	function reread_TUNTIL {
+		x=$(( i=10 ; until let " !--i " ; do echo $i ; done ) | tr u x ) 
+	} 
+	inline_TCOPROC() {
+		cat  *  |&  ls
+	}
+	inline_TCOPROC() {
+		cat * |& 
+		ls 
+	} 
+	function comsub_TCOPROC { x=$(
+		cat  *  |&  ls
+	); }
+	function comsub_TCOPROC {
+		x=$(cat * |&  ls ) 
+	} 
+	function reread_TCOPROC { x=$((
+		cat  *  |&  ls
+	)|tr u x); }
+	function reread_TCOPROC {
+		x=$(( cat * |&  ls ) | tr u x ) 
+	} 
+	inline_TFUNCT_TBRACE_TASYNC() {
+		function  korn  {  echo eins; echo zwei ;  }
+		bourne  ()  {  logger *  &  }
+	}
+	inline_TFUNCT_TBRACE_TASYNC() {
+		function korn {
+			echo eins 
+			echo zwei 
+		} 
+		bourne() {
+			logger * & 
+		} 
+	} 
+	function comsub_TFUNCT_TBRACE_TASYNC { x=$(
+		function  korn  {  echo eins; echo zwei ;  }
+		bourne  ()  {  logger *  &  }
+	); }
+	function comsub_TFUNCT_TBRACE_TASYNC {
+		x=$(function korn { echo eins ; echo zwei ; } ; bourne() { logger * &  } ) 
+	} 
+	function reread_TFUNCT_TBRACE_TASYNC { x=$((
+		function  korn  {  echo eins; echo zwei ;  }
+		bourne  ()  {  logger *  &  }
+	)|tr u x); }
+	function reread_TFUNCT_TBRACE_TASYNC {
+		x=$(( function korn { echo eins ; echo zwei ; } ; bourne() { logger * &  } ) | tr u x ) 
+	} 
+	inline_IOREAD_IOCAT() {
+		tr  x  u  0<foo  >>bar
+	}
+	inline_IOREAD_IOCAT() {
+		tr x u <foo >>bar 
+	} 
+	function comsub_IOREAD_IOCAT { x=$(
+		tr  x  u  0<foo  >>bar
+	); }
+	function comsub_IOREAD_IOCAT {
+		x=$(tr x u <foo >>bar ) 
+	} 
+	function reread_IOREAD_IOCAT { x=$((
+		tr  x  u  0<foo  >>bar
+	)|tr u x); }
+	function reread_IOREAD_IOCAT {
+		x=$(( tr x u <foo >>bar ) | tr u x ) 
+	} 
+	inline_IOWRITE_IOCLOB_IOHERE_noIOSKIP() {
+		cat  >|bar  <<'EOFN'
+		foo
+	EOFN
+	}
+	inline_IOWRITE_IOCLOB_IOHERE_noIOSKIP() {
+		cat >|bar <<"EOFN" 
+		foo
+	EOFN
+	
+	} 
+	function comsub_IOWRITE_IOCLOB_IOHERE_noIOSKIP { x=$(
+		cat  >|bar  <<'EOFN'
+		foo
+	EOFN
+	); }
+	function comsub_IOWRITE_IOCLOB_IOHERE_noIOSKIP {
+		x=$(cat >|bar <<"EOFN" 
+		foo
+	EOFN
+	) 
+	} 
+	function reread_IOWRITE_IOCLOB_IOHERE_noIOSKIP { x=$((
+		cat  >|bar  <<'EOFN'
+		foo
+	EOFN
+	)|tr u x); }
+	function reread_IOWRITE_IOCLOB_IOHERE_noIOSKIP {
+		x=$(( cat >|bar <<"EOFN" 
+		foo
+	EOFN
+	) | tr u x ) 
+	} 
+	inline_IOWRITE_noIOCLOB_IOHERE_IOSKIP() {
+		cat  1>bar  <<-EOFI
+		foo
+		EOFI
+	}
+	inline_IOWRITE_noIOCLOB_IOHERE_IOSKIP() {
+		cat >bar <<-EOFI 
+	foo
+	EOFI
+	
+	} 
+	function comsub_IOWRITE_noIOCLOB_IOHERE_IOSKIP { x=$(
+		cat  1>bar  <<-EOFI
+		foo
+		EOFI
+	); }
+	function comsub_IOWRITE_noIOCLOB_IOHERE_IOSKIP {
+		x=$(cat >bar <<-EOFI 
+	foo
+	EOFI
+	) 
+	} 
+	function reread_IOWRITE_noIOCLOB_IOHERE_IOSKIP { x=$((
+		cat  1>bar  <<-EOFI
+		foo
+		EOFI
+	)|tr u x); }
+	function reread_IOWRITE_noIOCLOB_IOHERE_IOSKIP {
+		x=$(( cat >bar <<-EOFI 
+	foo
+	EOFI
+	) | tr u x ) 
+	} 
+	inline_IORDWR_IODUP() {
+		sh  1<>/dev/console  0<&1  2>&1
+	}
+	inline_IORDWR_IODUP() {
+		sh 1<>/dev/console <&1 2>&1 
+	} 
+	function comsub_IORDWR_IODUP { x=$(
+		sh  1<>/dev/console  0<&1  2>&1
+	); }
+	function comsub_IORDWR_IODUP {
+		x=$(sh 1<>/dev/console <&1 2>&1 ) 
+	} 
+	function reread_IORDWR_IODUP { x=$((
+		sh  1<>/dev/console  0<&1  2>&1
+	)|tr u x); }
+	function reread_IORDWR_IODUP {
+		x=$(( sh 1<>/dev/console <&1 2>&1 ) | tr u x ) 
+	} 
+	inline_COMSUB_EXPRSUB() {
+		echo $(true) $((1+ 2))
+	}
+	inline_COMSUB_EXPRSUB() {
+		echo $(true ) $((1+ 2)) 
+	} 
+	function comsub_COMSUB_EXPRSUB { x=$(
+		echo $(true) $((1+ 2))
+	); }
+	function comsub_COMSUB_EXPRSUB {
+		x=$(echo $(true ) $((1+ 2)) ) 
+	} 
+	function reread_COMSUB_EXPRSUB { x=$((
+		echo $(true) $((1+ 2))
+	)|tr u x); }
+	function reread_COMSUB_EXPRSUB {
+		x=$(( echo $(true ) $((1+ 2)) ) | tr u x ) 
+	} 
+	inline_QCHAR_OQUOTE_CQUOTE() {
+		echo fo\ob\"a\`r\'b\$az
+		echo "fo\ob\"a\`r\'b\$az"
+		echo 'fo\ob\"a\`r'\''b\$az'
+	}
+	inline_QCHAR_OQUOTE_CQUOTE() {
+		echo fo\ob\"a\`r\'b\$az 
+		echo "fo\ob\"a\`r\'b\$az" 
+		echo "fo\\ob\\\"a\\\`r"\'"b\\\$az" 
+	} 
+	function comsub_QCHAR_OQUOTE_CQUOTE { x=$(
+		echo fo\ob\"a\`r\'b\$az
+		echo "fo\ob\"a\`r\'b\$az"
+		echo 'fo\ob\"a\`r'\''b\$az'
+	); }
+	function comsub_QCHAR_OQUOTE_CQUOTE {
+		x=$(echo fo\ob\"a\`r\'b\$az ; echo "fo\ob\"a\`r\'b\$az" ; echo "fo\\ob\\\"a\\\`r"\'"b\\\$az" ) 
+	} 
+	function reread_QCHAR_OQUOTE_CQUOTE { x=$((
+		echo fo\ob\"a\`r\'b\$az
+		echo "fo\ob\"a\`r\'b\$az"
+		echo 'fo\ob\"a\`r'\''b\$az'
+	)|tr u x); }
+	function reread_QCHAR_OQUOTE_CQUOTE {
+		x=$(( echo fo\ob\"a\`r\'b\$az ; echo "fo\ob\"a\`r\'b\$az" ; echo "fo\\ob\\\"a\\\`r"\'"b\\\$az" ) | tr u x ) 
+	} 
+	inline_OSUBST_CSUBST_OPAT_SPAT_CPAT() {
+		[[ ${foo#bl\(u\)b} = @(bar|baz) ]]
+	}
+	inline_OSUBST_CSUBST_OPAT_SPAT_CPAT() {
+		[[ ${foo#bl\(u\)b} = @(bar|baz) ]] 
+	} 
+	function comsub_OSUBST_CSUBST_OPAT_SPAT_CPAT { x=$(
+		[[ ${foo#bl\(u\)b} = @(bar|baz) ]]
+	); }
+	function comsub_OSUBST_CSUBST_OPAT_SPAT_CPAT {
+		x=$([[ ${foo#bl\(u\)b} = @(bar|baz) ]] ) 
+	} 
+	function reread_OSUBST_CSUBST_OPAT_SPAT_CPAT { x=$((
+		[[ ${foo#bl\(u\)b} = @(bar|baz) ]]
+	)|tr u x); }
+	function reread_OSUBST_CSUBST_OPAT_SPAT_CPAT {
+		x=$(( [[ ${foo#bl\(u\)b} = @(bar|baz) ]] ) | tr u x ) 
+	} 
+	inline_heredoc_closed() {
+		x=$(cat <<EOFN
+		note there must be no space between EOFN and )
+	EOFN); echo $x
+	}
+	inline_heredoc_closed() {
+		x=$(cat <<EOFN 
+		note there must be no space between EOFN and )
+	EOFN
+	) 
+		echo $x 
+	} 
+	function comsub_heredoc_closed { x=$(
+		x=$(cat <<EOFN
+		note there must be no space between EOFN and )
+	EOFN); echo $x
+	); }
+	function comsub_heredoc_closed {
+		x=$(x=$(cat <<EOFN 
+		note there must be no space between EOFN and )
+	EOFN
+	) ; echo $x ) 
+	} 
+	function reread_heredoc_closed { x=$((
+		x=$(cat <<EOFN
+		note there must be no space between EOFN and )
+	EOFN); echo $x
+	)|tr u x); }
+	function reread_heredoc_closed {
+		x=$(( x=$(cat <<EOFN 
+		note there must be no space between EOFN and )
+	EOFN
+	) ; echo $x ) | tr u x ) 
+	} 
+	inline_heredoc_space() {
+		x=$(cat <<EOFN\ 
+		note the space between EOFN and ) is actually part of the here document marker
+	EOFN ); echo $x
+	}
+	inline_heredoc_space() {
+		x=$(cat <<EOFN\  
+		note the space between EOFN and ) is actually part of the here document marker
+	EOFN 
+	) 
+		echo $x 
+	} 
+	function comsub_heredoc_space { x=$(
+		x=$(cat <<EOFN\ 
+		note the space between EOFN and ) is actually part of the here document marker
+	EOFN ); echo $x
+	); }
+	function comsub_heredoc_space {
+		x=$(x=$(cat <<EOFN\  
+		note the space between EOFN and ) is actually part of the here document marker
+	EOFN 
+	) ; echo $x ) 
+	} 
+	function reread_heredoc_space { x=$((
+		x=$(cat <<EOFN\ 
+		note the space between EOFN and ) is actually part of the here document marker
+	EOFN ); echo $x
+	)|tr u x); }
+	function reread_heredoc_space {
+		x=$(( x=$(cat <<EOFN\  
+		note the space between EOFN and ) is actually part of the here document marker
+	EOFN 
+	) ; echo $x ) | tr u x ) 
+	} 
+	inline_patch_motd() {
+		x=$(sysctl -n kern.version | sed 1q)
+		[[ -s /etc/motd && "$([[ "$(head -1 /etc/motd)" != $x ]] && \
+		    ed -s /etc/motd 2>&1 <<-EOF
+			1,/^\$/d
+			0a
+				$x
+		
+			.
+			wq
+		EOF)" = @(?) ]] && rm -f /etc/motd
+		if [[ ! -s /etc/motd ]]; then
+			install -c -o root -g wheel -m 664 /dev/null /etc/motd
+			print -- "$x\n" >/etc/motd
+		fi
+	}
+	inline_patch_motd() {
+		x=$(sysctl -n kern.version | sed 1q ) 
+		[[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF 
+	1,/^\$/d
+	0a
+	$x
+	
+	.
+	wq
+	EOF
+	)" = @(?) ]] && rm -f /etc/motd 
+		if [[ ! -s /etc/motd ]] 
+		then
+			install -c -o root -g wheel -m 664 /dev/null /etc/motd 
+			print -- "$x\n" >/etc/motd 
+		fi 
+	} 
+	function comsub_patch_motd { x=$(
+		x=$(sysctl -n kern.version | sed 1q)
+		[[ -s /etc/motd && "$([[ "$(head -1 /etc/motd)" != $x ]] && \
+		    ed -s /etc/motd 2>&1 <<-EOF
+			1,/^\$/d
+			0a
+				$x
+		
+			.
+			wq
+		EOF)" = @(?) ]] && rm -f /etc/motd
+		if [[ ! -s /etc/motd ]]; then
+			install -c -o root -g wheel -m 664 /dev/null /etc/motd
+			print -- "$x\n" >/etc/motd
+		fi
+	); }
+	function comsub_patch_motd {
+		x=$(x=$(sysctl -n kern.version | sed 1q ) ; [[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF 
+	1,/^\$/d
+	0a
+	$x
+	
+	.
+	wq
+	EOF
+	)" = @(?) ]] && rm -f /etc/motd ; if [[ ! -s /etc/motd ]] ; then install -c -o root -g wheel -m 664 /dev/null /etc/motd ; print -- "$x\n" >/etc/motd ; fi ) 
+	} 
+	function reread_patch_motd { x=$((
+		x=$(sysctl -n kern.version | sed 1q)
+		[[ -s /etc/motd && "$([[ "$(head -1 /etc/motd)" != $x ]] && \
+		    ed -s /etc/motd 2>&1 <<-EOF
+			1,/^\$/d
+			0a
+				$x
+		
+			.
+			wq
+		EOF)" = @(?) ]] && rm -f /etc/motd
+		if [[ ! -s /etc/motd ]]; then
+			install -c -o root -g wheel -m 664 /dev/null /etc/motd
+			print -- "$x\n" >/etc/motd
+		fi
+	)|tr u x); }
+	function reread_patch_motd {
+		x=$(( x=$(sysctl -n kern.version | sed 1q ) ; [[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF 
+	1,/^\$/d
+	0a
+	$x
+	
+	.
+	wq
+	EOF
+	)" = @(?) ]] && rm -f /etc/motd ; if [[ ! -s /etc/motd ]] ; then install -c -o root -g wheel -m 664 /dev/null /etc/motd ; print -- "$x\n" >/etc/motd ; fi ) | tr u x ) 
+	} 
 ---
 name: test-stnze-1
 description:
@@ -6768,6 +8475,7 @@ file-setup: file 755 "falsetto"
 file-setup: file 755 "!false"
 	#! /bin/sh
 	echo si
+need-ctty: yes
 arguments: !-i!
 stdin:
 	export PATH=.:$PATH
@@ -6796,6 +8504,7 @@ file-setup: file 755 "falsetto"
 file-setup: file 755 "!"
 	#! /bin/sh
 	echo si
+need-ctty: yes
 arguments: !-i!
 stdin:
 	export PATH=.:$PATH
@@ -6822,6 +8531,7 @@ file-setup: file 755 "falsetto"
 file-setup: file 755 "!"
 	#! /bin/sh
 	echo si
+need-ctty: yes
 arguments: !-i!
 env-setup: !ENV=./Env!
 file-setup: file 644 "Env"
@@ -7049,7 +8759,7 @@ name: better-parens-1a
 description:
 	Check support for ((…)) and $((…)) vs (…) and $(…)
 stdin:
-	if ( (echo fubar) | tr u x); then
+	if ( (echo fubar)|tr u x); then
 		echo ja
 	else
 		echo nein
@@ -7062,7 +8772,15 @@ name: better-parens-1b
 description:
 	Check support for ((…)) and $((…)) vs (…) and $(…)
 stdin:
-	echo $( (echo fubar) | tr u x) $?
+	echo $( (echo fubar)|tr u x) $?
+expected-stdout:
+	fxbar 0
+---
+name: better-parens-1c
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	x=$( (echo fubar)|tr u x); echo $x $?
 expected-stdout:
 	fxbar 0
 ---
@@ -7070,7 +8788,7 @@ name: better-parens-2a
 description:
 	Check support for ((…)) and $((…)) vs (…) and $(…)
 stdin:
-	if ((echo fubar) | tr u x); then
+	if ((echo fubar)|tr u x); then
 		echo ja
 	else
 		echo nein
@@ -7083,7 +8801,15 @@ name: better-parens-2b
 description:
 	Check support for ((…)) and $((…)) vs (…) and $(…)
 stdin:
-	echo $((echo fubar) | tr u x) $?
+	echo $((echo fubar)|tr u x) $?
+expected-stdout:
+	fxbar 0
+---
+name: better-parens-2c
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	x=$((echo fubar)|tr u x); echo $x $?
 expected-stdout:
 	fxbar 0
 ---
@@ -7091,7 +8817,7 @@ name: better-parens-3a
 description:
 	Check support for ((…)) and $((…)) vs (…) and $(…)
 stdin:
-	if ( (echo fubar) | (tr u x)); then
+	if ( (echo fubar)|(tr u x)); then
 		echo ja
 	else
 		echo nein
@@ -7104,7 +8830,15 @@ name: better-parens-3b
 description:
 	Check support for ((…)) and $((…)) vs (…) and $(…)
 stdin:
-	echo $( (echo fubar) | (tr u x)) $?
+	echo $( (echo fubar)|(tr u x)) $?
+expected-stdout:
+	fxbar 0
+---
+name: better-parens-3c
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	x=$( (echo fubar)|(tr u x)); echo $x $?
 expected-stdout:
 	fxbar 0
 ---
@@ -7112,7 +8846,7 @@ name: better-parens-4a
 description:
 	Check support for ((…)) and $((…)) vs (…) and $(…)
 stdin:
-	if ((echo fubar) | (tr u x)); then
+	if ((echo fubar)|(tr u x)); then
 		echo ja
 	else
 		echo nein
@@ -7125,7 +8859,15 @@ name: better-parens-4b
 description:
 	Check support for ((…)) and $((…)) vs (…) and $(…)
 stdin:
-	echo $((echo fubar) | (tr u x)) $?
+	echo $((echo fubar)|(tr u x)) $?
+expected-stdout:
+	fxbar 0
+---
+name: better-parens-4c
+description:
+	Check support for ((…)) and $((…)) vs (…) and $(…)
+stdin:
+	x=$((echo fubar)|(tr u x)); echo $x $?
 expected-stdout:
 	fxbar 0
 ---
@@ -7261,4 +9003,190 @@ stdin:
 	print ${%?} .
 expected-stdout:
 	1 .
+---
+name: realpath-1
+description:
+	Check proper return values for realpath
+category: os:mirbsd
+stdin:
+	wd=$(realpath .)
+	mkdir dir
+	:>file
+	:>dir/file
+	ln -s dir lndir
+	ln -s file lnfile
+	ln -s nix lnnix
+	ln -s . lnself
+	i=0
+	chk() {
+		typeset x y
+		x=$(realpath "$wd/$1" 2>&1); y=$?
+		print $((++i)) "?$1" =${x##*$wd/} !$y
+	}
+	chk dir
+	chk dir/
+	chk dir/file
+	chk dir/nix
+	chk file
+	chk file/
+	chk file/file
+	chk file/nix
+	chk nix
+	chk nix/
+	chk nix/file
+	chk nix/nix
+	chk lndir
+	chk lndir/
+	chk lndir/file
+	chk lndir/nix
+	chk lnfile
+	chk lnfile/
+	chk lnfile/file
+	chk lnfile/nix
+	chk lnnix
+	chk lnnix/
+	chk lnnix/file
+	chk lnnix/nix
+	chk lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself
+	rm lnself
+expected-stdout:
+	1 ?dir =dir !0
+	2 ?dir/ =dir !0
+	3 ?dir/file =dir/file !0
+	4 ?dir/nix =dir/nix !0
+	5 ?file =file !0
+	6 ?file/ =file/: Not a directory !20
+	7 ?file/file =file/file: Not a directory !20
+	8 ?file/nix =file/nix: Not a directory !20
+	9 ?nix =nix !0
+	10 ?nix/ =nix !0
+	11 ?nix/file =nix/file: No such file or directory !2
+	12 ?nix/nix =nix/nix: No such file or directory !2
+	13 ?lndir =dir !0
+	14 ?lndir/ =dir !0
+	15 ?lndir/file =dir/file !0
+	16 ?lndir/nix =dir/nix !0
+	17 ?lnfile =file !0
+	18 ?lnfile/ =lnfile/: Not a directory !20
+	19 ?lnfile/file =lnfile/file: Not a directory !20
+	20 ?lnfile/nix =lnfile/nix: Not a directory !20
+	21 ?lnnix =nix !0
+	22 ?lnnix/ =nix !0
+	23 ?lnnix/file =lnnix/file: No such file or directory !2
+	24 ?lnnix/nix =lnnix/nix: No such file or directory !2
+	25 ?lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself =lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself/lnself: Too many levels of symbolic links !62
+---
+name: realpath-2
+description:
+	Ensure that exactly two leading slashes are not collapsed
+	POSIX guarantees this exception, e.g. for UNC paths on Cygwin
+category: os:mirbsd
+stdin:
+	ln -s /bin t1
+	ln -s //bin t2
+	ln -s ///bin t3
+	realpath /bin
+	realpath //bin
+	realpath ///bin
+	realpath /usr/bin
+	realpath /usr//bin
+	realpath /usr///bin
+	realpath t1
+	realpath t2
+	realpath t3
+	rm -f t1 t2 t3
+	cd //usr/bin
+	pwd
+	cd ../lib
+	pwd
+	realpath //usr/include/../bin
+expected-stdout:
+	/bin
+	//bin
+	/bin
+	/usr/bin
+	/usr/bin
+	/usr/bin
+	/bin
+	//bin
+	/bin
+	//usr/bin
+	//usr/lib
+	//usr/bin
+---
+name: crash-1
+description:
+	Crashed during March 2011, fixed on vernal equinōx ☺
+category: os:mirbsd,os:openbsd
+stdin:
+	export MALLOC_OPTIONS=FGJPRSX
+	"$__progname" -c 'x=$(tr z r <<<baz); echo $x'
+expected-stdout:
+	bar
+---
+name: debian-117-1
+description:
+	Check test - bug#465250
+stdin:
+	test \( ! -e \) ; echo $?
+expected-stdout:
+	1
+---
+name: debian-117-2
+description:
+	Check test - bug#465250
+stdin:
+	test \(  -e \) ; echo $?
+expected-stdout:
+	0
+---
+name: debian-117-3
+description:
+	Check test - bug#465250
+stdin:
+	test ! -e  ; echo $?
+expected-stdout:
+	1
+---
+name: debian-117-4
+description:
+	Check test - bug#465250
+stdin:
+	test  -e  ; echo $?
+expected-stdout:
+	0
+---
+name: case-zsh
+description:
+	Check that zsh case variants work
+stdin:
+	case 'b' in
+	  a) echo a ;;
+	  b) echo b ;;
+	  c) echo c ;;
+	  *) echo x ;;
+	esac
+	echo =
+	case 'b' in
+	  a) echo a ;&
+	  b) echo b ;&
+	  c) echo c ;&
+	  *) echo x ;&
+	esac
+	echo =
+	case 'b' in
+	  a) echo a ;|
+	  b) echo b ;|
+	  c) echo c ;|
+	  *) echo x ;|
+	esac
+expected-stdout:
+	b
+	=
+	b
+	c
+	x
+	=
+	b
+	x
 ---

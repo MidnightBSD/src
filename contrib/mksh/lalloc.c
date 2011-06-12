@@ -1,32 +1,32 @@
 /*-
- * Copyright © 2009
+ * Copyright (c) 2009, 2010, 2011
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
  * are retained or reproduced in an accompanying document, permission
- * is granted to deal in this work without restriction, including un‐
+ * is granted to deal in this work without restriction, including un-
  * limited rights to use, publicly perform, distribute, sell, modify,
  * merge, give away, or sublicence.
  *
- * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
  * the utmost extent permitted by applicable law, neither express nor
  * implied; without malicious intent or gross negligence. In no event
  * may a licensor, author or contributor be held liable for indirect,
  * direct, other damage, loss, or other issues arising in any way out
  * of dealing in the work, even if advised of the possibility of such
  * damage or existence of a defect, except proven that it results out
- * of said person’s immediate fault when using the work as intended.
+ * of said person's immediate fault when using the work as intended.
  */
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.11 2009/08/08 13:08:51 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.17 2011/03/13 10:50:44 tg Exp $");
 
 /* build with CPPFLAGS+= -DUSE_REALLOC_MALLOC=0 on ancient systems */
 #if defined(USE_REALLOC_MALLOC) && (USE_REALLOC_MALLOC == 0)
-#define remalloc(p,n)	((p) == NULL ? malloc(n) : realloc((p), (n)))
+#define remalloc(p,n)	((p) == NULL ? malloc_osi(n) : realloc_osi((p), (n)))
 #else
-#define remalloc(p,n)	realloc((p), (n))
+#define remalloc(p,n)	realloc_osi((p), (n))
 #endif
 
 #define ALLOC_ISUNALIGNED(p) (((ptrdiff_t)(p)) % ALLOC_SIZE)
@@ -61,9 +61,26 @@ findptr(ALLOC_ITEM **lpp, char *ptr, Area *ap)
 #ifndef MKSH_SMALL
  fail:
 #endif
-			internal_errorf("rogue pointer %p", ptr);
+#ifdef DEBUG
+			internal_warningf("rogue pointer %lX in ap %lX",
+			    (long)(ptrdiff_t)ptr, (long)(ptrdiff_t)ap);
+			/* try to get a coredump */
+			abort();
+#else
+			internal_errorf("rogue pointer %lX",
+			    (long)(ptrdiff_t)ptr);
+#endif
 		}
 	return (ap);
+}
+
+void *
+aresize2(void *ptr, size_t fac1, size_t fac2, Area *ap)
+{
+	if (notoktomul(fac1, fac2))
+		internal_errorf(T_intovfl, (unsigned long)fac1, '*',
+		    (unsigned long)fac2);
+	return (aresize(ptr, fac1 * fac2, ap));
 }
 
 void *
@@ -79,14 +96,13 @@ aresize(void *ptr, size_t numb, Area *ap)
 		pp->next = lp->next;
 	}
 
-	if ((numb >= SIZE_MAX - ALLOC_SIZE) ||
+	if (notoktoadd(numb, ALLOC_SIZE) ||
 	    (lp = remalloc(lp, numb + ALLOC_SIZE)) == NULL
 #ifndef MKSH_SMALL
 	    || ALLOC_ISUNALIGNED(lp)
 #endif
 	    )
-		internal_errorf("cannot allocate %lu data bytes",
-		    (unsigned long)numb);
+		internal_errorf(T_oomem, (unsigned long)numb);
 	/* this only works because Area is an ALLOC_ITEM */
 	lp->next = ap->next;
 	ap->next = lp;
@@ -104,7 +120,7 @@ afree(void *ptr, Area *ap)
 		/* unhook */
 		pp->next = lp->next;
 		/* now free ALLOC_ITEM */
-		free(lp);
+		free_osimalloc(lp);
 	}
 }
 
@@ -118,6 +134,6 @@ afreeall(Area *ap)
 		/* make next ALLOC_ITEM head of list */
 		ap->next = lp->next;
 		/* free old head */
-		free(lp);
+		free_osimalloc(lp);
 	}
 }

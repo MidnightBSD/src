@@ -1,5 +1,5 @@
 #if defined(SHFLAGS_DEFNS)
-__RCSID("$MirOS: src/bin/mksh/sh_flags.h,v 1.5 2010/01/28 15:18:51 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh_flags.h,v 1.8 2011/02/11 01:18:23 tg Exp $");
 #define FN(sname,cname,ochar,flags)	/* nothing */
 #elif defined(SHFLAGS_ENUMS)
 #define FN(sname,cname,ochar,flags)	cname,
@@ -21,10 +21,8 @@ __RCSID("$MirOS: src/bin/mksh/sh_flags.h,v 1.5 2010/01/28 15:18:51 tg Exp $");
 /* -a	all new parameters are created with the export attribute */
 F0("allexport", FEXPORT, 'a', OF_ANY)
 
-#if HAVE_ARC4RANDOM
-/* ./.	backwards compat: available if arc4random(3) is used for $RANDOM */
-FN("arc4random", FARC4RANDOM, 0, OF_INTERNAL)
-#endif
+/* ./.	backwards compat: dummy, emits a warning */
+FN("arc4random", FARC4RANDOM, 0, OF_ANY)
 
 #if HAVE_NICE
 /* ./.	bgnice */
@@ -136,6 +134,9 @@ FN(NULL, FCOMMAND, 'c', OF_CMDLINE)
 /*
  * anonymous flags: used internally by shell only (not visible to user)
  */
+
+/* ./.	direct builtin call (divined from argv[0] multi-call binary) */
+FN(NULL, FAS_BUILTIN, 0, OF_INTERNAL)
 
 /* ./.	(internal) initial shell was interactive */
 FN(NULL, FTALKING_I, 0, OF_INTERNAL)

@@ -2,7 +2,7 @@
 /*	$OpenBSD: path.c,v 1.12 2005/03/30 17:16:37 deraadt Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -29,20 +29,32 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.138 2010/01/29 09:34:29 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.167 2011/06/12 14:45:34 tg Exp $");
 
-unsigned char chtypes[UCHAR_MAX + 1];	/* type bits for unsigned char */
+/* type bits for unsigned char */
+unsigned char chtypes[UCHAR_MAX + 1];
 
-#if !HAVE_SETRESUGID
-uid_t kshuid;
-gid_t kshgid, kshegid;
-#endif
-
+static const unsigned char *pat_scan(const unsigned char *,
+    const unsigned char *, bool);
 static int do_gmatch(const unsigned char *, const unsigned char *,
     const unsigned char *, const unsigned char *);
 static const unsigned char *cclass(const unsigned char *, int);
 #ifdef TIOCSCTTY
 static void chvt(const char *);
+#endif
+
+/*XXX this should go away */
+static int make_path(const char *, const char *, char **, XString *, int *);
+
+#ifdef SETUID_CAN_FAIL_WITH_EAGAIN
+/* we don't need to check for other codes, EPERM won't happen */
+#define DO_SETUID(func, argvec) do {					\
+	if ((func argvec) && errno == EAGAIN)				\
+		errorf("%s failed with EAGAIN, probably due to a"	\
+		    " too low process limit; aborting", #func);		\
+} while (/* CONSTCOND */ 0)
+#else
+#define DO_SETUID(func, argvec) func argvec
 #endif
 
 /*
@@ -56,7 +68,8 @@ setctypes(const char *s, int t)
 	if (t & C_IFS) {
 		for (i = 0; i < UCHAR_MAX + 1; i++)
 			chtypes[i] &= ~C_IFS;
-		chtypes[0] |= C_IFS; /* include \0 in C_IFS */
+		/* include \0 in C_IFS */
+		chtypes[0] |= C_IFS;
 	}
 	while (*s != 0)
 		chtypes[(unsigned char)*s++] |= t;
@@ -73,7 +86,8 @@ initctypes(void)
 		chtypes[c] |= C_ALPHA;
 	chtypes['_'] |= C_ALPHA;
 	setctypes("0123456789", C_DIGIT);
-	setctypes(" \t\n|&;<>()", C_LEX1); /* \0 added automatically */
+	/* \0 added automatically */
+	setctypes(" \t\n|&;<>()", C_LEX1);
 	setctypes("*@#!$-?", C_VAR1);
 	setctypes(" \t\n", C_IFSWS);
 	setctypes("=-+?", C_SUBOP1);
@@ -82,12 +96,15 @@ initctypes(void)
 
 /* called from XcheckN() to grow buffer */
 char *
-Xcheck_grow_(XString *xsp, const char *xp, unsigned int more)
+Xcheck_grow_(XString *xsp, const char *xp, size_t more)
 {
 	const char *old_beg = xsp->beg;
 
-	xsp->len += more > xsp->len ? more : xsp->len;
-	xsp->beg = aresize(xsp->beg, xsp->len + 8, xsp->areap);
+	if (more < xsp->len)
+		more = xsp->len;
+	/* (xsp->len + X_EXTRA) never overflows */
+	checkoktoadd(more, xsp->len + X_EXTRA);
+	xsp->beg = aresize(xsp->beg, (xsp->len += more) + X_EXTRA, xsp->areap);
 	xsp->end = xsp->beg + xsp->len;
 	return (xsp->beg + (xp - old_beg));
 }
@@ -167,11 +184,12 @@ printoptions(bool verbose)
 		print_columns(shl_stdout, n, options_fmt_entry, &oi,
 		    octs + 4, oi.opt_width + 4, true);
 	} else {
-		/* short version á la AT&T ksh93 */
-		shf_puts("set", shl_stdout);
+		/* short version like AT&T ksh93 */
+		shf_puts(T_set, shl_stdout);
 		while (i < (int)NELEM(options)) {
 			if (Flag(i) && options[i].name)
-				shprintf(" -o %s", options[i].name);
+				shprintf("%s %s %s", null, "-o",
+				    options[i].name);
 			++i;
 		}
 		shf_putc('\n', shl_stdout);
@@ -182,7 +200,7 @@ char *
 getoptions(void)
 {
 	unsigned int i;
-	char m[(int) FNFLAGS + 1];
+	char m[(int)FNFLAGS + 1];
 	char *cp = m;
 
 	for (i = 0; i < NELEM(options); i++)
@@ -199,7 +217,8 @@ change_flag(enum sh_flag f, int what, unsigned int newval)
 	unsigned char oldval;
 
 	oldval = Flag(f);
-	Flag(f) = newval ? 1 : 0;	/* needed for tristates */
+	/* needed for tristates */
+	Flag(f) = newval ? 1 : 0;
 #ifndef MKSH_UNEMPLOYED
 	if (f == FMONITOR) {
 		if (what != OF_CMDLINE && newval != oldval)
@@ -218,18 +237,21 @@ change_flag(enum sh_flag f, int what, unsigned int newval)
 		Flag(f) = (unsigned char)newval;
 	} else if (f == FPRIVILEGED && oldval && !newval) {
 		/* Turning off -p? */
-#if HAVE_SETRESUGID
-		gid_t kshegid = getgid();
 
-		setresgid(kshegid, kshegid, kshegid);
+		/*XXX this can probably be optimised */
+		kshegid = kshgid = getgid();
+#if HAVE_SETRESUGID
+		DO_SETUID(setresgid, (kshegid, kshegid, kshegid));
 #if HAVE_SETGROUPS
+		/* setgroups doesn't EAGAIN on Linux */
 		setgroups(1, &kshegid);
 #endif
-		setresuid(ksheuid, ksheuid, ksheuid);
+		DO_SETUID(setresuid, (ksheuid, ksheuid, ksheuid));
 #else
+		/* seteuid, setegid, setgid don't EAGAIN on Linux */
 		seteuid(ksheuid = kshuid = getuid());
-		setuid(ksheuid);
-		setegid(kshegid = kshgid = getgid());
+		DO_SETUID(setuid, (ksheuid));
+		setegid(kshegid);
 		setgid(kshegid);
 #endif
 	} else if ((f == FPOSIX || f == FSH) && newval) {
@@ -243,12 +265,14 @@ change_flag(enum sh_flag f, int what, unsigned int newval)
 	}
 }
 
-/* Parse command line & set command arguments. Returns the index of
+/*
+ * Parse command line and set command arguments. Returns the index of
  * non-option arguments, -1 if there is an error.
  */
 int
 parse_args(const char **argv,
-    int what,			/* OF_CMDLINE or OF_SET */
+    /* OF_CMDLINE or OF_SET */
+    int what,
     bool *setargsp)
 {
 	static char cmd_opts[NELEM(options) + 5]; /* o:T:\0 */
@@ -257,7 +281,8 @@ parse_args(const char **argv,
 	const char *array = NULL;
 	Getopt go;
 	size_t i;
-	int optc, sortargs = 0, arrayset = 0;
+	int optc, arrayset = 0;
+	bool sortargs = false;
 
 	/* First call? Build option strings... */
 	if (cmd_opts[0] == '\0') {
@@ -291,7 +316,8 @@ parse_args(const char **argv,
 
 	if (what == OF_CMDLINE) {
 		const char *p = argv[0], *q;
-		/* Set FLOGIN before parsing options so user can clear
+		/*
+		 * Set FLOGIN before parsing options so user can clear
 		 * flag using +l.
 		 */
 		if (*p != '-')
@@ -319,7 +345,8 @@ parse_args(const char **argv,
 			if (what == OF_FIRSTTIME)
 				break;
 			if (go.optarg == NULL) {
-				/* lone -o: print options
+				/*
+				 * lone -o: print options
 				 *
 				 * Note that on the command line, -o requires
 				 * an option (ie, can't get here if what is
@@ -329,8 +356,17 @@ parse_args(const char **argv,
 				break;
 			}
 			i = option(go.optarg);
+#ifndef MKSH_NO_DEPRECATED_WARNING
+			if ((enum sh_flag)i == FARC4RANDOM) {
+				warningf(true, "Do not use set ±o arc4random,"
+				    " it will be removed in the next version"
+				    " of mksh!");
+				return (0);
+			}
+#endif
 			if ((i != (size_t)-1) && set == Flag(i))
-				/* Don't check the context if the flag
+				/*
+				 * Don't check the context if the flag
 				 * isn't changing - makes "set -o interactive"
 				 * work if you're already interactive. Needed
 				 * if the output of "set +o" is to be used.
@@ -339,7 +375,7 @@ parse_args(const char **argv,
 			else if ((i != (size_t)-1) && (options[i].flags & what))
 				change_flag((enum sh_flag)i, what, set);
 			else {
-				bi_errorf("%s: bad option", go.optarg);
+				bi_errorf("%s: %s", go.optarg, "bad option");
 				return (-1);
 			}
 			break;
@@ -365,7 +401,7 @@ parse_args(const char **argv,
 				break;
 			/* -s: sort positional params (AT&T ksh stupidity) */
 			if (what == OF_SET && optc == 's') {
-				sortargs = 1;
+				sortargs = true;
 				break;
 			}
 			for (i = 0; i < NELEM(options); i++)
@@ -392,9 +428,15 @@ parse_args(const char **argv,
 		*setargsp = !arrayset && ((go.info & GI_MINUSMINUS) ||
 		    argv[go.optind]);
 
-	if (arrayset && (!*array || *skip_varname(array, false))) {
-		bi_errorf("%s: is not an identifier", array);
-		return (-1);
+	if (arrayset) {
+		const char *ccp = NULL;
+
+		if (*array)
+			ccp = skip_varname(array, false);
+		if (!ccp || !(!ccp[0] || (ccp[0] == '+' && !ccp[1]))) {
+			bi_errorf("%s: %s", array, "is not an identifier");
+			return (-1);
+		}
 	}
 	if (sortargs) {
 		for (i = go.optind; argv[i]; i++)
@@ -403,7 +445,7 @@ parse_args(const char **argv,
 		    xstrcmp);
 	}
 	if (arrayset)
-		go.optind += set_array(array, arrayset > 0 ? true : false,
+		go.optind += set_array(array, tobool(arrayset > 0),
 		    argv + go.optind);
 
 	return (go.optind);
@@ -450,8 +492,81 @@ bi_getn(const char *as, int *ai)
 	int rv;
 
 	if (!(rv = getn(as, ai)))
-		bi_errorf("%s: bad number", as);
+		bi_errorf("%s: %s", as, "bad number");
 	return (rv);
+}
+
+/**
+ * pattern simplifications:
+ * - @(x) -> x (not @(x|y) though)
+ * - ** -> *
+ */
+static void *
+simplify_gmatch_pattern(const unsigned char *sp)
+{
+	uint8_t c;
+	unsigned char *cp, *dp;
+	const unsigned char *ps, *se;
+
+	cp = alloc(strlen((const void *)sp) + 1, ATEMP);
+	goto simplify_gmatch_pat1a;
+
+	/* foo@(b@(a)r)b@(a|a)z -> foobarb@(a|a)z */
+ simplify_gmatch_pat1:
+	sp = cp;
+ simplify_gmatch_pat1a:
+	dp = cp;
+	se = sp + strlen((const void *)sp);
+	while ((c = *sp++)) {
+		if (!ISMAGIC(c)) {
+			*dp++ = c;
+			continue;
+		}
+		switch ((c = *sp++)) {
+		case 0x80|'@':
+		/* simile for @ */
+		case 0x80|' ':
+			/* check whether it has only one clause */
+			ps = pat_scan(sp, se, true);
+			if (!ps || ps[-1] != /*(*/ ')')
+				/* nope */
+				break;
+			/* copy inner clause until matching close */
+			ps -= 2;
+			while ((const unsigned char *)sp < ps)
+				*dp++ = *sp++;
+			/* skip MAGIC and closing parenthesis */
+			sp += 2;
+			/* copy the rest of the pattern */
+			memmove(dp, sp, strlen((const void *)sp) + 1);
+			/* redo from start */
+			goto simplify_gmatch_pat1;
+		}
+		*dp++ = MAGIC;
+		*dp++ = c;
+	}
+	*dp = '\0';
+
+	/* collapse adjacent asterisk wildcards */
+	sp = dp = cp;
+	while ((c = *sp++)) {
+		if (!ISMAGIC(c)) {
+			*dp++ = c;
+			continue;
+		}
+		switch ((c = *sp++)) {
+		case '*':
+			while (ISMAGIC(sp[0]) && sp[1] == c)
+				sp += 2;
+			break;
+		}
+		*dp++ = MAGIC;
+		*dp++ = c;
+	}
+	*dp = '\0';
+
+	/* return the result, allocated from ATEMP */
+	return (cp);
 }
 
 /* -------- gmatch.c -------- */
@@ -463,18 +578,20 @@ bi_getn(const char *as, int *ai)
  * Match a pattern as in sh(1).
  * pattern character are prefixed with MAGIC by expand.
  */
-
 int
 gmatchx(const char *s, const char *p, bool isfile)
 {
 	const char *se, *pe;
+	char *pnew;
+	int rv;
 
 	if (s == NULL || p == NULL)
 		return (0);
 
 	se = s + strlen(s);
 	pe = p + strlen(p);
-	/* isfile is false iff no syntax check has been done on
+	/*
+	 * isfile is false iff no syntax check has been done on
 	 * the pattern. If check fails, just to a strcmp().
 	 */
 	if (!isfile && !has_globbing(p, pe)) {
@@ -484,11 +601,22 @@ gmatchx(const char *s, const char *p, bool isfile)
 		debunk(t, p, len);
 		return (!strcmp(t, s));
 	}
-	return (do_gmatch((const unsigned char *) s, (const unsigned char *) se,
-	    (const unsigned char *) p, (const unsigned char *) pe));
+
+	/*
+	 * since the do_gmatch() engine sucks so much, we must do some
+	 * pattern simplifications
+	 */
+	pnew = simplify_gmatch_pattern((const unsigned char *)p);
+	pe = pnew + strlen(pnew);
+
+	rv = do_gmatch((const unsigned char *)s, (const unsigned char *)se,
+	    (const unsigned char *)pnew, (const unsigned char *)pe);
+	afree(pnew, ATEMP);
+	return (rv);
 }
 
-/* Returns if p is a syntacticly correct globbing pattern, false
+/**
+ * Returns if p is a syntacticly correct globbing pattern, false
  * if it contains no pattern characters or if there is a syntax error.
  * Syntax errors are:
  *	- [ with no closing ]
@@ -496,14 +624,14 @@ gmatchx(const char *s, const char *p, bool isfile)
  *	- [...] and *(...) not nested (eg, [a$(b|]c), *(a[b|c]d))
  */
 /*XXX
-- if no magic,
-	if dest given, copy to dst
-	return ?
-- if magic && (no globbing || syntax error)
-	debunk to dst
-	return ?
-- return ?
-*/
+ * - if no magic,
+ *	if dest given, copy to dst
+ *	return ?
+ * - if magic && (no globbing || syntax error)
+ *	debunk to dst
+ *	return ?
+ * - return ?
+ */
 int
 has_globbing(const char *xp, const char *xpe)
 {
@@ -511,42 +639,46 @@ has_globbing(const char *xp, const char *xpe)
 	const unsigned char *pe = (const unsigned char *) xpe;
 	int c;
 	int nest = 0, bnest = 0;
-	int saw_glob = 0;
-	int in_bracket = 0; /* inside [...] */
+	bool saw_glob = false;
+	/* inside [...] */
+	bool in_bracket = false;
 
 	for (; p < pe; p++) {
 		if (!ISMAGIC(*p))
 			continue;
 		if ((c = *++p) == '*' || c == '?')
-			saw_glob = 1;
+			saw_glob = true;
 		else if (c == '[') {
 			if (!in_bracket) {
-				saw_glob = 1;
-				in_bracket = 1;
+				saw_glob = true;
+				in_bracket = true;
 				if (ISMAGIC(p[1]) && p[2] == NOT)
 					p += 2;
 				if (ISMAGIC(p[1]) && p[2] == ']')
 					p += 2;
 			}
-			/* XXX Do we need to check ranges here? POSIX Q */
+			/*XXX Do we need to check ranges here? POSIX Q */
 		} else if (c == ']') {
 			if (in_bracket) {
-				if (bnest)		/* [a*(b]) */
+				if (bnest)
+					/* [a*(b]) */
 					return (0);
-				in_bracket = 0;
+				in_bracket = false;
 			}
 		} else if ((c & 0x80) && vstrchr("*+?@! ", c & 0x7f)) {
-			saw_glob = 1;
+			saw_glob = true;
 			if (in_bracket)
 				bnest++;
 			else
 				nest++;
 		} else if (c == '|') {
-			if (in_bracket && !bnest)	/* *(a[foo|bar]) */
+			if (in_bracket && !bnest)
+				/* *(a[foo|bar]) */
 				return (0);
 		} else if (c == /*(*/ ')') {
 			if (in_bracket) {
-				if (!bnest--)		/* *(a[b)c] */
+				if (!bnest--)
+					/* *(a[b)c] */
 					return (0);
 			} else if (nest)
 				nest--;
@@ -608,9 +740,12 @@ do_gmatch(const unsigned char *s, const unsigned char *se,
 		 * [*+?@!](pattern|pattern|..)
 		 * This is also needed for ${..%..}, etc.
 		 */
-		case 0x80|'+': /* matches one or more times */
-		case 0x80|'*': /* matches zero or more times */
-			if (!(prest = pat_scan(p, pe, 0)))
+
+		/* matches one or more times */
+		case 0x80|'+':
+		/* matches zero or more times */
+		case 0x80|'*':
+			if (!(prest = pat_scan(p, pe, false)))
 				return (0);
 			s--;
 			/* take care of zero matches */
@@ -618,7 +753,7 @@ do_gmatch(const unsigned char *s, const unsigned char *se,
 			    do_gmatch(s, se, prest, pe))
 				return (1);
 			for (psub = p; ; psub = pnext) {
-				pnext = pat_scan(psub, pe, 1);
+				pnext = pat_scan(psub, pe, true);
 				for (srest = s; srest <= se; srest++) {
 					if (do_gmatch(s, srest, psub, pnext - 2) &&
 					    (do_gmatch(srest, se, prest, pe) ||
@@ -631,10 +766,13 @@ do_gmatch(const unsigned char *s, const unsigned char *se,
 			}
 			return (0);
 
-		case 0x80|'?': /* matches zero or once */
-		case 0x80|'@': /* matches one of the patterns */
-		case 0x80|' ': /* simile for @ */
-			if (!(prest = pat_scan(p, pe, 0)))
+		/* matches zero or once */
+		case 0x80|'?':
+		/* matches one of the patterns */
+		case 0x80|'@':
+		/* simile for @ */
+		case 0x80|' ':
+			if (!(prest = pat_scan(p, pe, false)))
 				return (0);
 			s--;
 			/* Take care of zero matches */
@@ -642,7 +780,7 @@ do_gmatch(const unsigned char *s, const unsigned char *se,
 			    do_gmatch(s, se, prest, pe))
 				return (1);
 			for (psub = p; ; psub = pnext) {
-				pnext = pat_scan(psub, pe, 1);
+				pnext = pat_scan(psub, pe, true);
 				srest = prest == pe ? se : s;
 				for (; srest <= se; srest++) {
 					if (do_gmatch(s, srest, psub, pnext - 2) &&
@@ -654,15 +792,16 @@ do_gmatch(const unsigned char *s, const unsigned char *se,
 			}
 			return (0);
 
-		case 0x80|'!': /* matches none of the patterns */
-			if (!(prest = pat_scan(p, pe, 0)))
+		/* matches none of the patterns */
+		case 0x80|'!':
+			if (!(prest = pat_scan(p, pe, false)))
 				return (0);
 			s--;
 			for (srest = s; srest <= se; srest++) {
 				int matched = 0;
 
 				for (psub = p; ; psub = pnext) {
-					pnext = pat_scan(psub, pe, 1);
+					pnext = pat_scan(psub, pe, true);
 					if (do_gmatch(s, srest, psub,
 					    pnext - 2)) {
 						matched = 1;
@@ -689,19 +828,21 @@ do_gmatch(const unsigned char *s, const unsigned char *se,
 static const unsigned char *
 cclass(const unsigned char *p, int sub)
 {
-	int c, d, not, found = 0;
+	int c, d, notp, found = 0;
 	const unsigned char *orig_p = p;
 
-	if ((not = (ISMAGIC(*p) && *++p == NOT)))
+	if ((notp = (ISMAGIC(*p) && *++p == NOT)))
 		p++;
 	do {
 		c = *p++;
 		if (ISMAGIC(c)) {
 			c = *p++;
 			if ((c & 0x80) && !ISMAGIC(c)) {
-				c &= 0x7f;/* extended pattern matching: *+?@! */
+				/* extended pattern matching: *+?@! */
+				c &= 0x7F;
 				/* XXX the ( char isn't handled as part of [] */
-				if (c == ' ') /* simile for @: plain (..) */
+				if (c == ' ')
+					/* simile for @: plain (..) */
 					c = '(' /*)*/;
 			}
 		}
@@ -710,7 +851,8 @@ cclass(const unsigned char *p, int sub)
 			return (sub == '[' ? orig_p : NULL);
 		if (ISMAGIC(p[0]) && p[1] == '-' &&
 		    (!ISMAGIC(p[2]) || p[3] != ']')) {
-			p += 2; /* MAGIC- */
+			/* MAGIC- */
+			p += 2;
 			d = *p++;
 			if (ISMAGIC(d)) {
 				d = *p++;
@@ -726,12 +868,12 @@ cclass(const unsigned char *p, int sub)
 			found = 1;
 	} while (!(ISMAGIC(p[0]) && p[1] == ']'));
 
-	return ((found != not) ? p+2 : NULL);
+	return ((found != notp) ? p+2 : NULL);
 }
 
 /* Look for next ) or | (if match_sep) in *(foo|bar) pattern */
-const unsigned char *
-pat_scan(const unsigned char *p, const unsigned char *pe, int match_sep)
+static const unsigned char *
+pat_scan(const unsigned char *p, const unsigned char *pe, bool match_sep)
 {
 	int nest = 0;
 
@@ -766,7 +908,8 @@ ksh_getopt_reset(Getopt *go, int flags)
 }
 
 
-/* getopt() used for shell built-in commands, the getopts command, and
+/**
+ * getopt() used for shell built-in commands, the getopts command, and
  * command line options.
  * A leading ':' in options means don't print errors, instead return '?'
  * or ':' and set go->optarg to the offending option character.
@@ -807,7 +950,8 @@ ksh_getopt(const char **argv, Getopt *go, const char *optionsp)
 			return (-1);
 		}
 		if (arg == NULL ||
-		    ((flag != '-' ) && /* neither a - nor a + (if + allowed) */
+		    ((flag != '-' ) &&
+		    /* neither a - nor a + (if + allowed) */
 		    (!(go->flags & GF_PLUSOPT) || flag != '+')) ||
 		    (c = arg[1]) == '\0') {
 			go->p = 0;
@@ -824,15 +968,17 @@ ksh_getopt(const char **argv, Getopt *go, const char *optionsp)
 			go->buf[0] = c;
 			go->optarg = go->buf;
 		} else {
-			warningf(true, "%s%s-%c: unknown option",
+			warningf(true, "%s%s-%c: %s",
 			    (go->flags & GF_NONAME) ? "" : argv[0],
-			    (go->flags & GF_NONAME) ? "" : ": ", c);
+			    (go->flags & GF_NONAME) ? "" : ": ", c,
+			    "unknown option");
 			if (go->flags & GF_ERROR)
 				bi_errorfz();
 		}
 		return ('?');
 	}
-	/* : means argument must be present, may be part of option argument
+	/**
+	 * : means argument must be present, may be part of option argument
 	 *   or the next argument
 	 * ; same as : but argument may be missing
 	 * , means argument is part of option argument, and may be null.
@@ -850,9 +996,10 @@ ksh_getopt(const char **argv, Getopt *go, const char *optionsp)
 				go->optarg = go->buf;
 				return (':');
 			}
-			warningf(true, "%s%s-'%c' requires argument",
+			warningf(true, "%s%s-%c: %s",
 			    (go->flags & GF_NONAME) ? "" : argv[0],
-			    (go->flags & GF_NONAME) ? "" : ": ", c);
+			    (go->flags & GF_NONAME) ? "" : ": ", c,
+			    "requires an argument");
 			if (go->flags & GF_ERROR)
 				bi_errorfz();
 			return ('?');
@@ -863,7 +1010,8 @@ ksh_getopt(const char **argv, Getopt *go, const char *optionsp)
 		go->optarg = argv[go->optind - 1] + go->p;
 		go->p = 0;
 	} else if (*o == '#') {
-		/* argument is optional and may be attached or unattached
+		/*
+		 * argument is optional and may be attached or unattached
 		 * but must start with a digit. optarg is set to 0 if the
 		 * argument is missing.
 		 */
@@ -884,7 +1032,8 @@ ksh_getopt(const char **argv, Getopt *go, const char *optionsp)
 	return (c);
 }
 
-/* print variable/alias value using necessary quotes
+/*
+ * print variable/alias value using necessary quotes
  * (POSIX says they should be suitable for re-entry...)
  * No trailing newline is printed.
  */
@@ -892,25 +1041,33 @@ void
 print_value_quoted(const char *s)
 {
 	const char *p;
-	int inquote = 0;
+	bool inquote = false;
 
-	/* Test if any quotes are needed */
+	/* first, check whether any quotes are needed */
 	for (p = s; *p; p++)
 		if (ctype(*p, C_QUOTE))
 			break;
 	if (!*p) {
+		/* nope, use the shortcut */
 		shf_puts(s, shl_stdout);
 		return;
 	}
+
+	/* quote via state machine */
 	for (p = s; *p; p++) {
 		if (*p == '\'') {
-			if (inquote)
+			/*
+			 * multiple '''s or any ' at beginning of string
+			 * look nicer this way than when simply substituting
+			 */
+			if (inquote) {
 				shf_putc('\'', shl_stdout);
+				inquote = false;
+			}
 			shf_putc('\\', shl_stdout);
-			inquote = 0;
 		} else if (!inquote) {
 			shf_putc('\'', shl_stdout);
-			inquote = 1;
+			inquote = true;
 		}
 		shf_putc(*p, shl_stdout);
 	}
@@ -992,8 +1149,9 @@ strip_nuls(char *buf, int nbytes)
 {
 	char *dst;
 
-	/* nbytes check because some systems (older FreeBSDs) have a buggy
-	 * memchr()
+	/*
+	 * nbytes check because some systems (older FreeBSDs) have a
+	 * buggy memchr()
 	 */
 	if (nbytes && (dst = memchr(buf, '\0', nbytes))) {
 		char *end = buf + nbytes;
@@ -1013,19 +1171,20 @@ strip_nuls(char *buf, int nbytes)
 	}
 }
 
-/* Like read(2), but if read fails due to non-blocking flag, resets flag
- * and restarts read.
+/*
+ * Like read(2), but if read fails due to non-blocking flag,
+ * resets flag and restarts read.
  */
-int
-blocking_read(int fd, char *buf, int nbytes)
+ssize_t
+blocking_read(int fd, char *buf, size_t nbytes)
 {
-	int ret;
-	int tried_reset = 0;
+	ssize_t ret;
+	bool tried_reset = false;
 
 	while ((ret = read(fd, buf, nbytes)) < 0) {
 		if (!tried_reset && errno == EAGAIN) {
 			if (reset_nonblock(fd) > 0) {
-				tried_reset = 1;
+				tried_reset = true;
 				continue;
 			}
 			errno = EAGAIN;
@@ -1035,7 +1194,8 @@ blocking_read(int fd, char *buf, int nbytes)
 	return (ret);
 }
 
-/* Reset the non-blocking flag on the specified file descriptor.
+/*
+ * Reset the non-blocking flag on the specified file descriptor.
  * Returns -1 if there was an error, 0 if non-blocking wasn't set,
  * 1 if it was.
  */
@@ -1054,34 +1214,225 @@ reset_nonblock(int fd)
 	return (1);
 }
 
-
-/* Like getcwd(), except bsize is ignored if buf is 0 (PATH_MAX is used) */
+/* getcwd(3) equivalent, allocates from ATEMP but doesn't resize */
 char *
-ksh_get_wd(size_t *dlen)
+ksh_get_wd(void)
 {
-	char *ret, *b;
-	size_t len = 1;
-
 #ifdef NO_PATH_MAX
-	if ((b = get_current_dir_name())) {
-		len = strlen(b) + 1;
-		strndupx(ret, b, len - 1, ATEMP);
-		free(b);
+	char *rv, *cp;
+
+	if ((cp = get_current_dir_name())) {
+		strdupx(rv, cp, ATEMP);
+		free_gnu_gcdn(cp);
 	} else
-		ret = NULL;
+		rv = NULL;
 #else
-	if ((ret = getcwd((b = alloc(PATH_MAX + 1, ATEMP)), PATH_MAX)))
-		ret = aresize(b, len = (strlen(b) + 1), ATEMP);
-	else
-		afree(b, ATEMP);
+	char *rv;
+
+	if (!getcwd((rv = alloc(PATH_MAX + 1, ATEMP)), PATH_MAX)) {
+		afree(rv, ATEMP);
+		rv = NULL;
+	}
 #endif
 
-	if (dlen)
-		*dlen = len;
-	return (ret);
+	return (rv);
 }
 
-/*
+char *
+do_realpath(const char *upath)
+{
+	char *xp, *ip, *tp, *ipath, *ldest = NULL;
+	XString xs;
+	ptrdiff_t pos;
+	size_t len;
+	int llen;
+	struct stat sb;
+#ifdef NO_PATH_MAX
+	size_t ldestlen = 0;
+#define pathlen sb.st_size
+#define pathcnd (ldestlen < (pathlen + 1))
+#else
+#define pathlen PATH_MAX
+#define pathcnd (!ldest)
+#endif
+	/* max. recursion depth */
+	int symlinks = 32;
+
+	if (upath[0] == '/') {
+		/* upath is an absolute pathname */
+		strdupx(ipath, upath, ATEMP);
+	} else {
+		/* upath is a relative pathname, prepend cwd */
+		if ((tp = ksh_get_wd()) == NULL || tp[0] != '/')
+			return (NULL);
+		ipath = shf_smprintf("%s%s%s", tp, "/", upath);
+		afree(tp, ATEMP);
+	}
+
+	/* ipath and upath are in memory at the same time -> unchecked */
+	Xinit(xs, xp, strlen(ip = ipath) + 1, ATEMP);
+
+	/* now jump into the deep of the loop */
+	goto beginning_of_a_pathname;
+
+	while (*ip) {
+		/* skip slashes in input */
+		while (*ip == '/')
+			++ip;
+		if (!*ip)
+			break;
+
+		/* get next pathname component from input */
+		tp = ip;
+		while (*ip && *ip != '/')
+			++ip;
+		len = ip - tp;
+
+		/* check input for "." and ".." */
+		if (tp[0] == '.') {
+			if (len == 1)
+				/* just continue with the next one */
+				continue;
+			else if (len == 2 && tp[1] == '.') {
+				/* strip off last pathname component */
+				while (xp > Xstring(xs, xp))
+					if (*--xp == '/')
+						break;
+				/* then continue with the next one */
+				continue;
+			}
+		}
+
+		/* store output position away, then append slash to output */
+		pos = Xsavepos(xs, xp);
+		/* 1 for the '/' and len + 1 for tp and the NUL from below */
+		XcheckN(xs, xp, 1 + len + 1);
+		Xput(xs, xp, '/');
+
+		/* append next pathname component to output */
+		memcpy(xp, tp, len);
+		xp += len;
+		*xp = '\0';
+
+		/* lstat the current output, see if it's a symlink */
+		if (lstat(Xstring(xs, xp), &sb)) {
+			/* lstat failed */
+			if (errno == ENOENT) {
+				/* because the pathname does not exist */
+				while (*ip == '/')
+					/* skip any trailing slashes */
+					++ip;
+				/* no more components left? */
+				if (!*ip)
+					/* we can still return successfully */
+					break;
+				/* more components left? fall through */
+			}
+			/* not ENOENT or not at the end of ipath */
+			goto notfound;
+		}
+
+		/* check if we encountered a symlink? */
+		if (S_ISLNK(sb.st_mode)) {
+			/* reached maximum recursion depth? */
+			if (!symlinks--) {
+				/* yep, prevent infinite loops */
+				errno = ELOOP;
+				goto notfound;
+			}
+
+			/* get symlink(7) target */
+			if (pathcnd) {
+#ifdef NO_PATH_MAX
+				if (notoktoadd(pathlen, 1)) {
+					errno = ENAMETOOLONG;
+					goto notfound;
+				}
+#endif
+				ldest = aresize(ldest, pathlen + 1, ATEMP);
+			}
+			llen = readlink(Xstring(xs, xp), ldest, pathlen);
+			if (llen < 0)
+				/* oops... */
+				goto notfound;
+			ldest[llen] = '\0';
+
+			/*
+			 * restart if symlink target is an absolute path,
+			 * otherwise continue with currently resolved prefix
+			 */
+			/* append rest of current input path to link target */
+			tp = shf_smprintf("%s%s%s", ldest, *ip ? "/" : "", ip);
+			afree(ipath, ATEMP);
+			ip = ipath = tp;
+			if (ldest[0] != '/') {
+				/* symlink target is a relative path */
+				xp = Xrestpos(xs, xp, pos);
+			} else {
+				/* symlink target is an absolute path */
+				xp = Xstring(xs, xp);
+ beginning_of_a_pathname:
+				/* assert: (ip == ipath)[0] == '/' */
+				/* assert: xp == xs.beg => start of path */
+
+				/* exactly two leading slashes? (SUSv4 3.266) */
+				if (ip[1] == '/' && ip[2] != '/') {
+					/* keep them, e.g. for UNC pathnames */
+					Xput(xs, xp, '/');
+				}
+			}
+		}
+		/* otherwise (no symlink) merely go on */
+	}
+
+	/*
+	 * either found the target and successfully resolved it,
+	 * or found its parent directory and may create it
+	 */
+	if (Xlength(xs, xp) == 0)
+		/*
+		 * if the resolved pathname is "", make it "/",
+		 * otherwise do not add a trailing slash
+		 */
+		Xput(xs, xp, '/');
+	Xput(xs, xp, '\0');
+
+	/*
+	 * if source path had a trailing slash, check if target path
+	 * is not a non-directory existing file
+	 */
+	if (ip > ipath && ip[-1] == '/') {
+		if (stat(Xstring(xs, xp), &sb)) {
+			if (errno != ENOENT)
+				goto notfound;
+		} else if (!S_ISDIR(sb.st_mode)) {
+			errno = ENOTDIR;
+			goto notfound;
+		}
+		/* target now either does not exist or is a directory */
+	}
+
+	/* return target path */
+	if (ldest != NULL)
+		afree(ldest, ATEMP);
+	afree(ipath, ATEMP);
+	return (Xclose(xs, xp));
+
+ notfound:
+	/* save; freeing memory might trash it */
+	llen = errno;
+	if (ldest != NULL)
+		afree(ldest, ATEMP);
+	afree(ipath, ATEMP);
+	Xfree(xs, xp);
+	errno = llen;
+	return (NULL);
+
+#undef pathlen
+#undef pathcnd
+}
+
+/**
  *	Makes a filename into result using the following algorithm.
  *	- make result NULL
  *	- if file starts with '/', append file to result & set cdpathp to NULL
@@ -1096,9 +1447,10 @@ ksh_get_wd(size_t *dlen)
  *	The return value indicates whether a non-null element from cdpathp
  *	was appended to result.
  */
-int
+static int
 make_path(const char *cwd, const char *file,
-    char **cdpathp,		/* & of : separated list */
+    /* pointer to colon-separated list */
+    char **cdpathp,
     XString *xsp,
     int *phys_pathp)
 {
@@ -1166,95 +1518,295 @@ make_path(const char *cwd, const char *file,
 	return (rval);
 }
 
-/*
+/*-
  * Simplify pathnames containing "." and ".." entries.
- * ie, simplify_path("/a/b/c/./../d/..") returns "/a/b"
+ *
+ * simplify_path(this)			= that
+ * /a/b/c/./../d/..			/a/b
+ * //./C/foo/bar/../baz			//C/foo/baz
+ * /foo/				/foo
+ * /foo/../../bar			/bar
+ * /foo/./blah/..			/foo
+ * .					.
+ * ..					..
+ * ./foo				foo
+ * foo/../../../bar			../../bar
  */
 void
-simplify_path(char *pathl)
+simplify_path(char *p)
 {
-	char *cur, *t;
-	bool isrooted;
-	char *very_start = pathl, *start;
+	char *dp, *ip, *sp, *tp;
+	size_t len;
+	bool needslash;
 
-	if (!*pathl)
+	switch (*p) {
+	case 0:
 		return;
+	case '/':
+		/* exactly two leading slashes? (SUSv4 3.266) */
+		if (p[1] == '/' && p[2] != '/')
+			/* keep them, e.g. for UNC pathnames */
+			++p;
+		needslash = true;
+		break;
+	default:
+		needslash = false;
+	}
+	dp = ip = sp = p;
 
-	if ((isrooted = pathl[0] == '/'))
-		very_start++;
-
-	/* Before			After
-	 * /foo/			/foo
-	 * /foo/../../bar		/bar
-	 * /foo/./blah/..		/foo
-	 * .				.
-	 * ..				..
-	 * ./foo			foo
-	 * foo/../../../bar		../../bar
-	 */
-
-	for (cur = t = start = very_start; ; ) {
-		/* treat multiple '/'s as one '/' */
-		while (*t == '/')
-			t++;
-
-		if (*t == '\0') {
-			if (cur == pathl)
-				/* convert empty path to dot */
-				*cur++ = '.';
-			*cur = '\0';
+	while (*ip) {
+		/* skip slashes in input */
+		while (*ip == '/')
+			++ip;
+		if (!*ip)
 			break;
-		}
 
-		if (t[0] == '.') {
-			if (!t[1] || t[1] == '/') {
-				t += 1;
+		/* get next pathname component from input */
+		tp = ip;
+		while (*ip && *ip != '/')
+			++ip;
+		len = ip - tp;
+
+		/* check input for "." and ".." */
+		if (tp[0] == '.') {
+			if (len == 1)
+				/* just continue with the next one */
 				continue;
-			} else if (t[1] == '.' && (!t[2] || t[2] == '/')) {
-				if (!isrooted && cur == start) {
-					if (cur != very_start)
-						*cur++ = '/';
-					*cur++ = '.';
-					*cur++ = '.';
-					start = cur;
-				} else if (cur != start)
-					while (--cur > start && *cur != '/')
-						;
-				t += 2;
+			else if (len == 2 && tp[1] == '.') {
+				/* parent level, but how? */
+				if (*p == '/')
+					/* absolute path, only one way */
+					goto strip_last_component;
+				else if (dp > sp) {
+					/* relative path, with subpaths */
+					needslash = false;
+ strip_last_component:
+					/* strip off last pathname component */
+					while (dp > sp)
+						if (*--dp == '/')
+							break;
+				} else {
+					/* relative path, at its beginning */
+					if (needslash)
+						/* or already dotdot-slash'd */
+						*dp++ = '/';
+					/* keep dotdot-slash if not absolute */
+					*dp++ = '.';
+					*dp++ = '.';
+					needslash = true;
+					sp = dp;
+				}
+				/* then continue with the next one */
 				continue;
 			}
 		}
 
-		if (cur != very_start)
-			*cur++ = '/';
+		if (needslash)
+			*dp++ = '/';
 
-		/* find/copy next component of pathname */
-		while (*t && *t != '/')
-			*cur++ = *t++;
+		/* append next pathname component to output */
+		memmove(dp, tp, len);
+		dp += len;
+
+		/* append slash if we continue */
+		needslash = true;
+		/* try next component */
 	}
+	if (dp == p)
+		/* empty path -> dot */
+		*dp++ = needslash ? '/' : '.';
+	*dp = '\0';
 }
-
 
 void
-set_current_wd(char *pathl)
+set_current_wd(const char *nwd)
 {
-	size_t len = 1;
-	char *p = pathl;
+	char *allocd = NULL;
 
-	if (p == NULL) {
-		if ((p = ksh_get_wd(&len)) == NULL)
-			p = null;
-	} else
-		len = strlen(p) + 1;
-
-	if (len > current_wd_size) {
-		afree(current_wd, APERM);
-		current_wd = alloc(current_wd_size = len, APERM);
+	if (nwd == NULL) {
+		allocd = ksh_get_wd();
+		nwd = allocd ? allocd : null;
 	}
-	memcpy(current_wd, p, len);
-	if (p != pathl && p != null)
-		afree(p, ATEMP);
+
+	afree(current_wd, APERM);
+	strdupx(current_wd, nwd, APERM);
+
+	afree(allocd, ATEMP);
 }
+
+int
+c_cd(const char **wp)
+{
+	int optc, rv, phys_path;
+	bool physical = tobool(Flag(FPHYSICAL));
+	/* was a node from cdpath added in? */
+	int cdnode;
+	/* show where we went?, error for $PWD */
+	bool printpath = false, eflag = false;
+	struct tbl *pwd_s, *oldpwd_s;
+	XString xs;
+	char *dir, *allocd = NULL, *tryp, *pwd, *cdpath;
+
+	while ((optc = ksh_getopt(wp, &builtin_opt, "eLP")) != -1)
+		switch (optc) {
+		case 'e':
+			eflag = true;
+			break;
+		case 'L':
+			physical = false;
+			break;
+		case 'P':
+			physical = true;
+			break;
+		case '?':
+			return (2);
+		}
+	wp += builtin_opt.optind;
+
+	if (Flag(FRESTRICTED)) {
+		bi_errorf("restricted shell - can't cd");
+		return (2);
+	}
+
+	pwd_s = global("PWD");
+	oldpwd_s = global("OLDPWD");
+
+	if (!wp[0]) {
+		/* No arguments - go home */
+		if ((dir = str_val(global("HOME"))) == null) {
+			bi_errorf("no home directory (HOME not set)");
+			return (2);
+		}
+	} else if (!wp[1]) {
+		/* One argument: - or dir */
+		strdupx(allocd, wp[0], ATEMP);
+		if (ksh_isdash((dir = allocd))) {
+			afree(allocd, ATEMP);
+			allocd = NULL;
+			dir = str_val(oldpwd_s);
+			if (dir == null) {
+				bi_errorf("no OLDPWD");
+				return (2);
+			}
+			printpath = true;
+		}
+	} else if (!wp[2]) {
+		/* Two arguments - substitute arg1 in PWD for arg2 */
+		size_t ilen, olen, nlen, elen;
+		char *cp;
+
+		if (!current_wd[0]) {
+			bi_errorf("can't determine current directory");
+			return (2);
+		}
+		/*
+		 * substitute arg1 for arg2 in current path.
+		 * if the first substitution fails because the cd fails
+		 * we could try to find another substitution. For now
+		 * we don't
+		 */
+		if ((cp = strstr(current_wd, wp[0])) == NULL) {
+			bi_errorf("bad substitution");
+			return (2);
+		}
+		/*-
+		 * ilen = part of current_wd before wp[0]
+		 * elen = part of current_wd after wp[0]
+		 * because current_wd and wp[1] need to be in memory at the
+		 * same time beforehand the addition can stay unchecked
+		 */
+		ilen = cp - current_wd;
+		olen = strlen(wp[0]);
+		nlen = strlen(wp[1]);
+		elen = strlen(current_wd + ilen + olen) + 1;
+		dir = allocd = alloc(ilen + nlen + elen, ATEMP);
+		memcpy(dir, current_wd, ilen);
+		memcpy(dir + ilen, wp[1], nlen);
+		memcpy(dir + ilen + nlen, current_wd + ilen + olen, elen);
+		printpath = true;
+	} else {
+		bi_errorf("too many arguments");
+		return (2);
+	}
+
+#ifdef NO_PATH_MAX
+	/* only a first guess; make_path will enlarge xs if necessary */
+	XinitN(xs, 1024, ATEMP);
+#else
+	XinitN(xs, PATH_MAX, ATEMP);
+#endif
+
+	cdpath = str_val(global("CDPATH"));
+	do {
+		cdnode = make_path(current_wd, dir, &cdpath, &xs, &phys_path);
+		if (physical)
+			rv = chdir(tryp = Xstring(xs, xp) + phys_path);
+		else {
+			simplify_path(Xstring(xs, xp));
+			rv = chdir(tryp = Xstring(xs, xp));
+		}
+	} while (rv < 0 && cdpath != NULL);
+
+	if (rv < 0) {
+		if (cdnode)
+			bi_errorf("%s: %s", dir, "bad directory");
+		else
+			bi_errorf("%s: %s", tryp, strerror(errno));
+		afree(allocd, ATEMP);
+		Xfree(xs, xp);
+		return (2);
+	}
+
+	rv = 0;
+
+	/* allocd (above) => dir, which is no longer used */
+	afree(allocd, ATEMP);
+	allocd = NULL;
+
+	/* Clear out tracked aliases with relative paths */
+	flushcom(false);
+
+	/*
+	 * Set OLDPWD (note: unsetting OLDPWD does not disable this
+	 * setting in AT&T ksh)
+	 */
+	if (current_wd[0])
+		/* Ignore failure (happens if readonly or integer) */
+		setstr(oldpwd_s, current_wd, KSH_RETURN_ERROR);
+
+	if (Xstring(xs, xp)[0] != '/') {
+		pwd = NULL;
+	} else if (!physical) {
+		goto norealpath_PWD;
+	} else if ((pwd = allocd = do_realpath(Xstring(xs, xp))) == NULL) {
+		if (eflag)
+			rv = 1;
+ norealpath_PWD:
+		pwd = Xstring(xs, xp);
+	}
+
+	/* Set PWD */
+	if (pwd) {
+		char *ptmp = pwd;
+
+		set_current_wd(ptmp);
+		/* Ignore failure (happens if readonly or integer) */
+		setstr(pwd_s, ptmp, KSH_RETURN_ERROR);
+	} else {
+		set_current_wd(null);
+		pwd = Xstring(xs, xp);
+		/* XXX unset $PWD? */
+		if (eflag)
+			rv = 1;
+	}
+	if (printpath || cdnode)
+		shprintf("%s\n", pwd);
+
+	afree(allocd, ATEMP);
+	Xfree(xs, xp);
+	return (rv);
+}
+
 
 #ifdef TIOCSCTTY
 extern void chvt_reinit(void);
@@ -1276,53 +1828,66 @@ chvt(const char *fn)
 			if (stat(dv, &sb)) {
 				strlcpy(dv + 8, fn, sizeof(dv) - 8);
 				if (stat(dv, &sb))
-					errorf("chvt: can't find tty %s", fn);
+					errorf("%s: %s %s", "chvt",
+					    "can't find tty", fn);
 			}
 			fn = dv;
 		}
 		if (!(sb.st_mode & S_IFCHR))
-			errorf("chvt: not a char device: %s", fn);
+			errorf("%s %s %s", "chvt: not a char", "device", fn);
 		if ((sb.st_uid != 0) && chown(fn, 0, 0))
-			warningf(false, "chvt: cannot chown root %s", fn);
+			warningf(false, "%s: %s %s", "chvt", "can't chown root", fn);
 		if (((sb.st_mode & 07777) != 0600) && chmod(fn, (mode_t)0600))
-			warningf(false, "chvt: cannot chmod 0600 %s", fn);
+			warningf(false, "%s: %s %s", "chvt", "can't chmod 0600", fn);
 #if HAVE_REVOKE
 		if (revoke(fn))
 #endif
-			warningf(false, "chvt: cannot revoke %s, new shell is"
-			    " potentially insecure", fn);
+			warningf(false, "%s: %s %s", "chvt",
+			    "new shell is potentially insecure, can't revoke",
+			    fn);
 	}
 	if ((fd = open(fn, O_RDWR)) == -1) {
 		sleep(1);
 		if ((fd = open(fn, O_RDWR)) == -1)
-			errorf("chvt: cannot open %s", fn);
+			errorf("%s: %s %s", "chvt", "can't open", fn);
 	}
 	switch (fork()) {
 	case -1:
-		errorf("chvt: %s failed", "fork");
+		errorf("%s: %s %s", "chvt", "fork", "failed");
 	case 0:
 		break;
 	default:
 		exit(0);
 	}
 	if (setsid() == -1)
-		errorf("chvt: %s failed", "setsid");
+		errorf("%s: %s %s", "chvt", "setsid", "failed");
 	if (fn != dv + 1) {
 		if (ioctl(fd, TIOCSCTTY, NULL) == -1)
-			errorf("chvt: %s failed", "TIOCSCTTY");
+			errorf("%s: %s %s", "chvt", "TIOCSCTTY", "failed");
 		if (tcflush(fd, TCIOFLUSH))
-			errorf("chvt: %s failed", "TCIOFLUSH");
+			errorf("%s: %s %s", "chvt", "TCIOFLUSH", "failed");
 	}
 	ksh_dup2(fd, 0, false);
 	ksh_dup2(fd, 1, false);
 	ksh_dup2(fd, 2, false);
 	if (fd > 2)
 		close(fd);
+	{
+		register uint32_t h;
+
+		oaat1_init_impl(h);
+		oaat1_addmem_impl(h, &rndsetupstate, sizeof(rndsetupstate));
+		oaat1_fini_impl(h);
+		rndset((long)h);
+	}
 	chvt_reinit();
 }
 #endif
 
 #ifdef DEBUG
+char intsize_is_okay[sizeof(int) >= 4 ? 1 : -1];
+char intsizes_are_okay[sizeof(int) == sizeof(unsigned int) ? 1 : -1];
+char longsize_is_okay[sizeof(long) >= sizeof(int) ? 1 : -1];
 char longsizes_are_okay[sizeof(long) == sizeof(unsigned long) ? 1 : -1];
 char arisize_is_okay[sizeof(mksh_ari_t) == 4 ? 1 : -1];
 char uarisize_is_okay[sizeof(mksh_uari_t) == 4 ? 1 : -1];
@@ -1518,15 +2083,15 @@ unbksl(bool cstyle, int (*fg)(void), void (*fp)(int))
 		break;
 	case 'U':
 		i = 8;
-		if (0)
+		if (/* CONSTCOND */ 0)
 		/* FALLTHROUGH */
 	case 'u':
 		i = 4;
-		if (0)
+		if (/* CONSTCOND */ 0)
 		/* FALLTHROUGH */
 	case 'x':
 		i = cstyle ? -1 : 2;
-		/*
+		/**
 		 * x:	look for a hexadecimal number with up to
 		 *	two (C style: arbitrary) digits; convert
 		 *	to raw octet (C style: Unicode if >0xFF)

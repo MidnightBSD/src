@@ -1,7 +1,7 @@
 /*	$OpenBSD: syn.c,v 1.28 2008/07/23 16:34:38 jaredy Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -22,7 +22,9 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.48 2009/12/12 22:27:10 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.67 2011/06/05 19:58:20 tg Exp $");
+
+extern short subshell_nesting_level;
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
@@ -32,7 +34,7 @@ struct nesting_state {
 static void yyparse(void);
 static struct op *pipeline(int);
 static struct op *andor(void);
-static struct op *c_list(int);
+static struct op *c_list(bool);
 static struct ioword *synio(int);
 static struct op *nested(int, int, int);
 static struct op *get_command(int);
@@ -50,7 +52,7 @@ static void nesting_push(struct nesting_state *, int);
 static void nesting_pop(struct nesting_state *);
 static int assign_command(char *);
 static int inalias(struct source *);
-static int dbtestp_isa(Test_env *, Test_meta);
+static Test_op dbtestp_isa(Test_env *, Test_meta);
 static const char *dbtestp_getopnd(Test_env *, Test_op, bool);
 static int dbtestp_eval(Test_env *, Test_op, const char *,
     const char *, bool);
@@ -59,14 +61,14 @@ static void dbtestp_error(Test_env *, int, const char *) MKSH_A_NORETURN;
 static struct op *outtree;		/* yyparse output */
 static struct nesting_state nesting;	/* \n changed to ; */
 
-static int reject;		/* token(cf) gets symbol again */
-static int symbol;		/* yylex value */
+static bool reject;			/* token(cf) gets symbol again */
+static int symbol;			/* yylex value */
 
-#define REJECT		(reject = 1)
-#define ACCEPT		(reject = 0)
+#define REJECT		(reject = true)
+#define ACCEPT		(reject = false)
 #define token(cf)	((reject) ? (ACCEPT, symbol) : (symbol = yylex(cf)))
 #define tpeek(cf)	((reject) ? (symbol) : (REJECT, symbol = yylex(cf)))
-#define musthave(c,cf)	do { if (token(cf) != (c)) syntaxerr(NULL); } while (0)
+#define musthave(c,cf)	do { if (token(cf) != (c)) syntaxerr(NULL); } while (/* CONSTCOND */ 0)
 
 static void
 yyparse(void)
@@ -122,20 +124,23 @@ andor(void)
 }
 
 static struct op *
-c_list(int multi)
+c_list(bool multi)
 {
 	struct op *t = NULL, *p, *tl = NULL;
-	int c, have_sep;
+	int c;
+	bool have_sep;
 
-	while (1) {
+	while (/* CONSTCOND */ 1) {
 		p = andor();
-		/* Token has always been read/rejected at this point, so
+		/*
+		 * Token has always been read/rejected at this point, so
 		 * we don't worry about what flags to pass token()
 		 */
 		c = token(0);
-		have_sep = 1;
+		have_sep = true;
 		if (c == '\n' && (multi || inalias(source))) {
-			if (!p) /* ignore blank lines */
+			if (!p)
+				/* ignore blank lines */
 				continue;
 		} else if (!p)
 			break;
@@ -143,7 +148,7 @@ c_list(int multi)
 			p = block(c == '&' ? TASYNC : TCOPROC,
 			    p, NOBLOCK, NOWORDS);
 		else if (c != ';')
-			have_sep = 0;
+			have_sep = false;
 		if (!t)
 			t = p;
 		else if (!tl)
@@ -161,7 +166,7 @@ static struct ioword *
 synio(int cf)
 {
 	struct ioword *iop;
-	static struct ioword *nextiop = NULL;
+	static struct ioword *nextiop;
 	bool ishere;
 
 	if (nextiop != NULL) {
@@ -174,14 +179,18 @@ synio(int cf)
 		return (NULL);
 	ACCEPT;
 	iop = yylval.iop;
-	ishere = (iop->flag&IOTYPE) == IOHERE;
+	if (iop->flag & IONDELIM)
+		goto gotnulldelim;
+	ishere = (iop->flag & IOTYPE) == IOHERE;
 	musthave(LWORD, ishere ? HEREDELIM : 0);
 	if (ishere) {
 		iop->delim = yylval.cp;
-		if (*ident != 0) /* unquoted */
+		if (*ident != 0)
+			/* unquoted */
+ gotnulldelim:
 			iop->flag |= IOEVAL;
 		if (herep > &heres[HERES - 1])
-			yyerror("too many <<s\n");
+			yyerror("too many %ss\n", "<<");
 		*herep++ = iop;
 	} else
 		iop->name = yylval.cp;
@@ -231,7 +240,8 @@ get_command(int cf)
 	XPtrV args, vars;
 	struct nesting_state old_nesting;
 
-	iops = alloc((NUFILE + 1) * sizeof(struct ioword *), ATEMP);
+	/* NUFILE is small enough to leave this addition unchecked */
+	iops = alloc2((NUFILE + 1), sizeof(struct ioword *), ATEMP);
 	XPinit(args, 16);
 	XPinit(vars, 16);
 
@@ -242,7 +252,8 @@ get_command(int cf)
 		afree(iops, ATEMP);
 		XPfree(args);
 		XPfree(vars);
-		return (NULL); /* empty line */
+		/* empty line */
+		return (NULL);
 
 	case LWORD:
 	case REDIR:
@@ -250,21 +261,23 @@ get_command(int cf)
 		syniocf &= ~(KEYWORD|ALIAS);
 		t = newtp(TCOM);
 		t->lineno = source->line;
-		while (1) {
+		while (/* CONSTCOND */ 1) {
 			cf = (t->u.evalflags ? ARRAYVAR : 0) |
 			    (XPsize(args) == 0 ? ALIAS|VARASN : CMDWORD);
 			switch (tpeek(cf)) {
 			case REDIR:
 				while ((iop = synio(cf)) != NULL) {
 					if (iopn >= NUFILE)
-						yyerror("too many redirections\n");
+						yyerror("too many %ss\n",
+						    "redirection");
 					iops[iopn++] = iop;
 				}
 				break;
 
 			case LWORD:
 				ACCEPT;
-				/* the iopn == 0 and XPsize(vars) == 0 are
+				/*
+				 * the iopn == 0 and XPsize(vars) == 0 are
 				 * dubious but AT&T ksh acts this way
 				 */
 				if (iopn == 0 && XPsize(vars) == 0 &&
@@ -279,7 +292,13 @@ get_command(int cf)
 				break;
 
 			case '(':
-				/* Check for "> foo (echo hi)" which AT&T ksh
+#ifndef MKSH_SMALL
+				if ((XPsize(args) == 0 || Flag(FKEYWORD)) &&
+				    XPsize(vars) == 1 && is_wdvarassign(yylval.cp))
+					goto is_wdarrassign;
+#endif
+				/*
+				 * Check for "> foo (echo hi)" which AT&T ksh
 				 * allows (not POSIX, but not disallowed)
 				 */
 				afree(t, ATEMP);
@@ -287,55 +306,50 @@ get_command(int cf)
 					ACCEPT;
 					goto Subshell;
 				}
-#ifndef MKSH_SMALL
-				if ((XPsize(args) == 0 || Flag(FKEYWORD)) &&
-				    XPsize(vars) == 1 && is_wdvarassign(yylval.cp))
-					goto is_wdarrassign;
-#endif
-				/* Must be a function */
+
+				/* must be a function */
 				if (iopn != 0 || XPsize(args) != 1 ||
 				    XPsize(vars) != 0)
 					syntaxerr(NULL);
 				ACCEPT;
-				/*(*/
-				musthave(')', 0);
+				musthave(/*(*/')', 0);
 				t = function_body(XPptrv(args)[0], false);
 				goto Leave;
 #ifndef MKSH_SMALL
  is_wdarrassign:
 			{
 				static const char set_cmd0[] = {
-					CHAR, 'e', CHAR, 'v',
-					CHAR, 'a', CHAR, 'l', EOS
+					CHAR, 's', CHAR, 'e',
+					CHAR, 't', EOS
 				};
 				static const char set_cmd1[] = {
-					CHAR, 's', CHAR, 'e',
-					CHAR, 't', CHAR, ' ',
 					CHAR, '-', CHAR, 'A', EOS
 				};
 				static const char set_cmd2[] = {
 					CHAR, '-', CHAR, '-', EOS
 				};
 				char *tcp;
-				XPfree(vars);
-				XPinit(vars, 16);
-				/*
-				 * we know (or rather hope) that yylval.cp
-				 * contains a string "varname="
-				 */
-				tcp = wdcopy(yylval.cp, ATEMP);
-				tcp[wdscan(tcp, EOS) - tcp - 3] = EOS;
-				/* now make an array assignment command */
-				t = newtp(TCOM);
-				t->lineno = source->line;
+
 				ACCEPT;
+
+				/* manipulate the vars string */
+				tcp = *(--vars.cur);
+				/* 'varname=' -> 'varname' */
+				tcp[wdscan(tcp, EOS) - tcp - 3] = EOS;
+
+				/* construct new args strings */
 				XPput(args, wdcopy(set_cmd0, ATEMP));
 				XPput(args, wdcopy(set_cmd1, ATEMP));
 				XPput(args, tcp);
 				XPput(args, wdcopy(set_cmd2, ATEMP));
-				musthave(LWORD,LETARRAY);
-				XPput(args, yylval.cp);
-				break;
+
+				/* slurp in words till closing paren */
+				while (token(CONTIN) == LWORD)
+					XPput(args, yylval.cp);
+				if (symbol != /*(*/ ')')
+					syntaxerr(NULL);
+
+				goto Leave;
 			}
 #endif
 
@@ -348,7 +362,9 @@ get_command(int cf)
 
 	case '(':
  Subshell:
+		++subshell_nesting_level;
 		t = nested(TPAREN, '(', ')');
+		--subshell_nesting_level;
 		break;
 
 	case '{': /*}*/
@@ -362,13 +378,13 @@ get_command(int cf)
 			CHAR, 't', EOS
 		};
 
-		/* Leave KEYWORD in syniocf (allow if (( 1 )) then ...) */
+		/* leave KEYWORD in syniocf (allow if (( 1 )) then ...) */
 		lno = source->line;
 		ACCEPT;
 		switch (token(LETEXPR)) {
 		case LWORD:
 			break;
-		case '(':	/* ) */
+		case '(': /*)*/
 			goto Subshell;
 		default:
 			syntaxerr(NULL);
@@ -381,7 +397,7 @@ get_command(int cf)
 	}
 
 	case DBRACKET: /* [[ .. ]] */
-		/* Leave KEYWORD in syniocf (allow if [[ -n 1 ]] then ...) */
+		/* leave KEYWORD in syniocf (allow if [[ -n 1 ]] then ...) */
 		t = newtp(TDBRACKET);
 		ACCEPT;
 		{
@@ -403,8 +419,8 @@ get_command(int cf)
 		t = newtp((c == FOR) ? TFOR : TSELECT);
 		musthave(LWORD, ARRAYVAR);
 		if (!is_wdvarname(yylval.cp, true))
-			yyerror("%s: bad identifier\n",
-			    c == FOR ? "for" : "select");
+			yyerror("%s: %s\n", c == FOR ? "for" : T_select,
+			    "bad identifier");
 		strdupx(t->str, ident, ATEMP);
 		nesting_push(&old_nesting, c);
 		t->vars = wordlist();
@@ -452,7 +468,8 @@ get_command(int cf)
 		t = pipeline(0);
 		if (t) {
 			t->str = alloc(2, ATEMP);
-			t->str[0] = '\0';	/* TF_* flags */
+			/* TF_* flags */
+			t->str[0] = '\0';
 			t->str[1] = '\0';
 		}
 		t = block(TTIME, t, NOBLOCK, NOWORDS);
@@ -466,7 +483,7 @@ get_command(int cf)
 
 	while ((iop = synio(syniocf)) != NULL) {
 		if (iopn >= NUFILE)
-			yyerror("too many redirections\n");
+			yyerror("too many %ss\n", "redirection");
 		iops[iopn++] = iop;
 	}
 
@@ -475,7 +492,7 @@ get_command(int cf)
 		t->ioact = NULL;
 	} else {
 		iops[iopn++] = NULL;
-		iops = aresize(iops, iopn * sizeof(struct ioword *), ATEMP);
+		iops = aresize2(iops, iopn, sizeof(struct ioword *), ATEMP);
 		t->ioact = iops;
 	}
 
@@ -499,7 +516,8 @@ dogroup(void)
 	struct op *list;
 
 	c = token(CONTIN|KEYWORD|ALIAS);
-	/* A {...} can be used instead of do...done for for/select loops
+	/*
+	 * A {...} can be used instead of do...done for for/select loops
 	 * but not for while/until loops - we don't need to check if it
 	 * is a while loop because it would have been parsed as part of
 	 * the conditional command list...
@@ -567,7 +585,8 @@ caselist(void)
 	else
 		syntaxerr(NULL);
 	t = tl = NULL;
-	while ((tpeek(CONTIN|KEYWORD|ESACONLY)) != c) { /* no ALIAS here */
+	/* no ALIAS here */
+	while ((tpeek(CONTIN|KEYWORD|ESACONLY)) != c) {
 		struct op *tc = casepart(c);
 		if (tl == NULL)
 			t = tl = tc, tl->right = NULL;
@@ -601,53 +620,62 @@ casepart(int endtok)
 	t->left = c_list(true);
 	/* Note: POSIX requires the ;; */
 	if ((tpeek(CONTIN|KEYWORD|ALIAS)) != endtok)
-		musthave(BREAK, CONTIN|KEYWORD|ALIAS);
+		switch (symbol) {
+		default:
+			syntaxerr(NULL);
+		case BREAK:
+		case BRKEV:
+		case BRKFT:
+			t->u.charflag =
+			    (symbol == BRKEV) ? '|' :
+			    (symbol == BRKFT) ? '&' : ';';
+			ACCEPT;
+		}
 	return (t);
 }
 
 static struct op *
 function_body(char *name,
-    bool ksh_func)		/* function foo { ... } vs foo() { .. } */
+    /* function foo { ... } vs foo() { .. } */
+    bool ksh_func)
 {
 	char *sname, *p;
 	struct op *t;
 	bool old_func_parse;
 
-	sname = wdstrip(name, false, false);
-	/* Check for valid characters in name. POSIX and AT&T ksh93 say only
-	 * allow [a-zA-Z_0-9] but this allows more as old pdkshs have
-	 * allowed more (the following were never allowed:
+	sname = wdstrip(name, 0);
+	/*-
+	 * Check for valid characters in name. POSIX and AT&T ksh93 say
+	 * only allow [a-zA-Z_0-9] but this allows more as old pdkshs
+	 * have allowed more; the following were never allowed:
 	 *	NUL TAB NL SP " $ & ' ( ) ; < = > \ ` |
 	 * C_QUOTE covers all but adds # * ? [ ]
 	 */
 	for (p = sname; *p; p++)
 		if (ctype(*p, C_QUOTE))
-			yyerror("%s: invalid function name\n", sname);
+			yyerror("%s: %s\n", sname, "invalid function name");
 
-	/* Note that POSIX allows only compound statements after foo(), sh and
-	 * AT&T ksh allow any command, go with the later since it shouldn't
-	 * break anything. However, for function foo, AT&T ksh only accepts
-	 * an open-brace.
+	/*
+	 * Note that POSIX allows only compound statements after foo(),
+	 * sh and AT&T ksh allow any command, go with the later since it
+	 * shouldn't break anything. However, for function foo, AT&T ksh
+	 * only accepts an open-brace.
 	 */
 	if (ksh_func) {
-		if (tpeek(CONTIN|KEYWORD|ALIAS) == '(' /* ) */) {
-			struct tbl *tp;
-
+		if (tpeek(CONTIN|KEYWORD|ALIAS) == '(' /*)*/) {
 			/* function foo () { */
 			ACCEPT;
 			musthave(')', 0);
 			/* degrade to POSIX function */
 			ksh_func = false;
-			if ((tp = ktsearch(&aliases, sname, hash(sname))))
-				ktdelete(tp);
 		}
-		musthave('{', CONTIN|KEYWORD|ALIAS); /* } */
+		musthave('{' /*}*/, CONTIN|KEYWORD|ALIAS);
 		REJECT;
 	}
 
 	t = newtp(TFUNCT);
 	t->str = sname;
-	t->u.ksh_func = ksh_func;
+	t->u.ksh_func = tobool(ksh_func);
 	t->lineno = source->line;
 
 	old_func_parse = e->flags & EF_FUNC_PARSE;
@@ -655,12 +683,13 @@ function_body(char *name,
 	if ((t->left = get_command(CONTIN)) == NULL) {
 		char *tv;
 		/*
-		 * Probably something like foo() followed by eof or ;.
+		 * Probably something like foo() followed by EOF or ';'.
 		 * This is accepted by sh and ksh88.
 		 * To make "typeset -f foo" work reliably (so its output can
 		 * be used as input), we pretend there is a colon here.
 		 */
 		t->left = newtp(TCOM);
+		/* (2 * sizeof(char *)) is small enough */
 		t->left->args = alloc(2 * sizeof(char *), ATEMP);
 		t->left->args[0] = tv = alloc(3, ATEMP);
 		tv[0] = CHAR;
@@ -686,7 +715,8 @@ wordlist(void)
 	XPinit(args, 16);
 	/* POSIX does not do alias expansion here... */
 	if ((c = token(CONTIN|KEYWORD|ALIAS)) != IN) {
-		if (c != ';') /* non-POSIX, but AT&T ksh accepts a ; here */
+		if (c != ';')
+			/* non-POSIX, but AT&T ksh accepts a ; here */
 			REJECT;
 		return (NULL);
 	}
@@ -733,13 +763,13 @@ const struct tokeninfo {
 	{ "case",	CASE,	true },
 	{ "esac",	ESAC,	true },
 	{ "for",	FOR,	true },
-	{ "select",	SELECT,	true },
+	{ T_select,	SELECT,	true },
 	{ "while",	WHILE,	true },
 	{ "until",	UNTIL,	true },
 	{ "do",		DO,	true },
 	{ "done",	DONE,	true },
 	{ "in",		IN,	true },
-	{ "function",	FUNCTION, true },
+	{ T_function,	FUNCTION, true },
 	{ "time",	TIME,	true },
 	{ "{",		'{',	true },
 	{ "}",		'}',	true },
@@ -749,6 +779,8 @@ const struct tokeninfo {
 	{ "&&",		LOGAND,	false },
 	{ "||",		LOGOR,	false },
 	{ ";;",		BREAK,	false },
+	{ ";|",		BRKEV,	false },
+	{ ";&",		BRKFT,	false },
 	{ "((",		MDPAREN, false },
 	{ "|&",		COPROC,	false },
 	/* and some special cases... */
@@ -762,8 +794,9 @@ initkeywords(void)
 	struct tokeninfo const *tt;
 	struct tbl *p;
 
-	ktinit(&keywords, APERM,
-	    /* must be 80% of 2^n (currently 20 keywords) */ 32);
+	ktinit(APERM, &keywords,
+	    /* currently 28 keywords -> 80% of 64 (2^6) */
+	    6);
 	for (tt = tokentab; tt->name; tt++) {
 		if (tt->reserved) {
 			p = ktenter(&keywords, tt->name, hash(tt->name));
@@ -777,7 +810,8 @@ initkeywords(void)
 static void
 syntaxerr(const char *what)
 {
-	char redir[6];	/* 2<<- is the longest redirection, I think */
+	/* 2<<- is the longest redirection, I think */
+	char redir[6];
 	const char *s;
 	struct tokeninfo const *tt;
 	int c;
@@ -796,7 +830,7 @@ syntaxerr(const char *what)
 			goto Again;
 		}
 		/* don't quote the EOF */
-		yyerror("%s: unexpected EOF\n", T_synerr);
+		yyerror("%s: %s %s\n", T_synerr, "unexpected", "EOF");
 		/* NOTREACHED */
 
 	case LWORD:
@@ -857,17 +891,22 @@ newtp(int type)
 }
 
 struct op *
-compile(Source *s)
+compile(Source *s, bool skiputf8bom)
 {
+	extern void yyskiputf8bom(void);
+
 	nesting.start_token = 0;
 	nesting.start_line = 0;
 	herep = heres;
 	source = s;
+	if (skiputf8bom)
+		yyskiputf8bom();
 	yyparse();
 	return (outtree);
 }
 
-/* This kludge exists to take care of sh/AT&T ksh oddity in which
+/*-
+ * This kludge exists to take care of sh/AT&T ksh oddity in which
  * the arguments of alias/export/readonly/typeset have no field
  * splitting, file globbing, or (normal) tilde expansion done.
  * AT&T ksh seems to do something similar to this since
@@ -882,7 +921,7 @@ assign_command(char *s)
 {
 	if (!*s)
 		return (0);
-	return ((strcmp(s, "alias") == 0) ||
+	return ((strcmp(s, T_alias) == 0) ||
 	    (strcmp(s, "export") == 0) ||
 	    (strcmp(s, "readonly") == 0) ||
 	    (strcmp(s, T_typeset) == 0));
@@ -899,7 +938,8 @@ inalias(struct source *s)
 }
 
 
-/* Order important - indexed by Test_meta values
+/*
+ * Order important - indexed by Test_meta values
  * Note that ||, &&, ( and ) can't appear in as unquoted strings
  * in normal shell input, so these can be interpreted unambiguously
  * in the evaluation pass.
@@ -917,42 +957,46 @@ const char db_close[] = { CHAR, ']', CHAR, ']', EOS };
 const char db_lthan[] = { CHAR, '<', EOS };
 const char db_gthan[] = { CHAR, '>', EOS };
 
-/* Test if the current token is a whatever. Accepts the current token if
+/*
+ * Test if the current token is a whatever. Accepts the current token if
  * it is. Returns 0 if it is not, non-zero if it is (in the case of
  * TM_UNOP and TM_BINOP, the returned value is a Test_op).
  */
-static int
+static Test_op
 dbtestp_isa(Test_env *te, Test_meta meta)
 {
 	int c = tpeek(ARRAYVAR | (meta == TM_BINOP ? 0 : CONTIN));
 	int uqword;
 	char *save = NULL;
-	int ret = 0;
+	Test_op ret = TO_NONOP;
 
 	/* unquoted word? */
 	uqword = c == LWORD && *ident;
 
 	if (meta == TM_OR)
-		ret = c == LOGOR;
+		ret = c == LOGOR ? TO_NONNULL : TO_NONOP;
 	else if (meta == TM_AND)
-		ret = c == LOGAND;
+		ret = c == LOGAND ? TO_NONNULL : TO_NONOP;
 	else if (meta == TM_NOT)
-		ret = uqword && strcmp(yylval.cp, dbtest_tokens[(int) TM_NOT]) == 0;
+		ret = (uqword && !strcmp(yylval.cp,
+		    dbtest_tokens[(int)TM_NOT])) ? TO_NONNULL : TO_NONOP;
 	else if (meta == TM_OPAREN)
-		ret = c == '(' /*)*/;
+		ret = c == '(' /*)*/ ? TO_NONNULL : TO_NONOP;
 	else if (meta == TM_CPAREN)
-		ret = c == /*(*/ ')';
+		ret = c == /*(*/ ')' ? TO_NONNULL : TO_NONOP;
 	else if (meta == TM_UNOP || meta == TM_BINOP) {
 		if (meta == TM_BINOP && c == REDIR &&
 		    (yylval.iop->flag == IOREAD || yylval.iop->flag == IOWRITE)) {
-			ret = 1;
+			ret = TO_NONNULL;
 			save = wdcopy(yylval.iop->flag == IOREAD ?
 			    db_lthan : db_gthan, ATEMP);
 		} else if (uqword && (ret = test_isop(meta, ident)))
 			save = yylval.cp;
-	} else /* meta == TM_END */
-		ret = uqword && strcmp(yylval.cp, db_close) == 0;
-	if (ret) {
+	} else
+		/* meta == TM_END */
+		ret = (uqword && !strcmp(yylval.cp,
+		    db_close)) ? TO_NONNULL : TO_NONOP;
+	if (ret != TO_NONOP) {
 		ACCEPT;
 		if (meta < NELEM(dbtest_tokens))
 			save = wdcopy(dbtest_tokens[(int)meta], ATEMP);
@@ -998,4 +1042,97 @@ dbtestp_error(Test_env *te, int offset, const char *msg)
 		    offset);
 	}
 	syntaxerr(msg);
+}
+
+#if HAVE_SELECT
+
+#ifndef EOVERFLOW
+#ifdef ERANGE
+#define EOVERFLOW	ERANGE
+#else
+#define EOVERFLOW	EINVAL
+#endif
+#endif
+
+bool
+parse_usec(const char *s, struct timeval *tv)
+{
+	struct timeval tt;
+	int i;
+
+	tv->tv_sec = 0;
+	/* parse integral part */
+	while (ksh_isdigit(*s)) {
+		tt.tv_sec = tv->tv_sec * 10 + (*s++ - '0');
+		if (tt.tv_sec / 10 != tv->tv_sec) {
+			errno = EOVERFLOW;
+			return (true);
+		}
+		tv->tv_sec = tt.tv_sec;
+	}
+
+	tv->tv_usec = 0;
+	if (!*s)
+		/* no decimal fraction */
+		return (false);
+	else if (*s++ != '.') {
+		/* junk after integral part */
+		errno = EINVAL;
+		return (true);
+	}
+
+	/* parse decimal fraction */
+	i = 100000;
+	while (ksh_isdigit(*s)) {
+		tv->tv_usec += i * (*s++ - '0');
+		if (i == 1)
+			break;
+		i /= 10;
+	}
+	/* check for junk after fractional part */
+	while (ksh_isdigit(*s))
+		++s;
+	if (*s) {
+		errno = EINVAL;
+		return (true);
+	}
+
+	/* end of input string reached, no errors */
+	return (false);
+}
+#endif
+
+/*
+ * Helper function called from within lex.c:yylex() to parse
+ * a COMSUB recursively using the main shell parser and lexer
+ */
+char *
+yyrecursive(void)
+{
+	struct op *t;
+	char *cp;
+	bool old_reject;
+	int old_symbol;
+	struct ioword **old_herep;
+
+	/* tell the lexer to accept a closing parenthesis as EOD */
+	++subshell_nesting_level;
+
+	/* push reject state, parse recursively, pop reject state */
+	old_reject = reject;
+	old_symbol = symbol;
+	ACCEPT;
+	old_herep = herep;
+	/* we use TPAREN as a helper container here */
+	t = nested(TPAREN, '(', ')');
+	herep = old_herep;
+	reject = old_reject;
+	symbol = old_symbol;
+
+	/* t->left because nested(TPAREN, ...) hides our goodies there */
+	cp = snptreef(NULL, 0, "%T", t->left);
+	tfree(t, ATEMP);
+
+	--subshell_nesting_level;
+	return (cp);
 }

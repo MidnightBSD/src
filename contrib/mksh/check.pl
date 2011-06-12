@@ -1,7 +1,7 @@
-# $MirOS: src/bin/mksh/check.pl,v 1.23 2009/06/10 18:12:43 tg Rel $
+# $MirOS: src/bin/mksh/check.pl,v 1.27 2011/05/29 02:18:47 tg Exp $
 # $OpenBSD: th,v 1.13 2006/05/18 21:27:23 miod Exp $
 #-
-# Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+# Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -71,7 +71,8 @@
 #					environment. Programs are run with
 #					the following minimal environment:
 #					    HOME, LD_LIBRARY_PATH, LOCPATH,
-#					    LOGNAME, PATH, SHELL, USER
+#					    LOGNAME, PATH, SHELL, UNIXMODE,
+#					    USER
 #					(values taken from the environment of
 #					the test harness).
 #					ENV is set to /nonexistant.
@@ -135,6 +136,8 @@
 #					One category os:XXX is predefined
 #					(XXX is the operating system name,
 #					eg, linux, dec_osf).
+#	need-ctty			'yes' if the test needs a ctty, run
+#					with -C regress:no-ctty to disable.
 # Flag meanings:
 #	r	tag is required (eg, a test must have a name tag).
 #	m	value can be multiple lines. Lines must be prefixed with
@@ -156,19 +159,19 @@ $os = defined $^O ? $^O : 'unknown';
 ($prog = $0) =~ s#.*/##;
 
 $Usage = <<EOF ;
-Usage: $prog [-s test-set] [-C category] [-p prog] [-v] [-e e=v] name ...
-	-p p	Use p as the program to test
+Usage: $prog [-Pv] [-C cat] [-e e=v] [-p prog] [-s fn] [-t tmo] name ...
 	-C c	Specify the comma separated list of categories the program
 		belongs to (see category field).
-	-s s	Read tests from file s; if s is a directory, it is recursively
-		scaned for test files (which end in .t).
-	-t t	Use t as default time limit for tests (default is unlimited)
-	-P	program (-p) string has multiple words, and the program is in
-		the path (kludge option)
-	-v	Verbose mode: print reason test failed.
 	-e e=v	Set the environment variable e to v for all tests
 		(if no =v is given, the current value is used)
 		Only one -e option can be given at the moment, sadly.
+	-P	program (-p) string has multiple words, and the program is in
+		the path (kludge option)
+	-p p	Use p as the program to test
+	-s s	Read tests from file s; if s is a directory, it is recursively
+		scaned for test files (which end in .t).
+	-t t	Use t as default time limit for tests (default is unlimited)
+	-v	Verbose mode: print reason test failed.
 	name	specifies the name of the test(s) to run; if none are
 		specified, all tests are run.
 EOF
@@ -193,6 +196,8 @@ EOF
 	'expected-stderr',		'm',
 	'expected-stderr-pattern',	'm',
 	'category',			'm',
+	'need-ctty',			'',
+	'need-pass',			'',
 	);
 # Filled in by read_test()
 %internal_test_fields = (
@@ -213,13 +218,14 @@ $tempe = "/tmp/rte$$";
 $tempdir = "/tmp/rtd$$";
 
 $nfailed = 0;
+$nifailed = 0;
 $nxfailed = 0;
 $npassed = 0;
 $nxpassed = 0;
 
 %known_tests = ();
 
-if (!getopts('C:p:Ps:t:ve:')) {
+if (!getopts('C:e:Pp:s:t:v')) {
     print STDERR $Usage;
     exit 1;
 }
@@ -253,7 +259,7 @@ $all_tests = @ARGV == 0;
 # Set up a very minimal environment
 %new_env = ();
 foreach $env (('HOME', 'LD_LIBRARY_PATH', 'LOCPATH', 'LOGNAME',
-  'PATH', 'SHELL', 'USER')) {
+  'PATH', 'SHELL', 'UNIXMODE', 'USER')) {
     $new_env{$env} = $ENV{$env} if defined $ENV{$env};
 }
 $new_env{'ENV'} = '/nonexistant';
@@ -300,12 +306,13 @@ if (-d $test_set) {
 }
 &cleanup_exit() if !defined $ret;
 
-$tot_failed = $nfailed + $nxfailed;
+$tot_failed = $nfailed + $nifailed + $nxfailed;
 $tot_passed = $npassed + $nxpassed;
 if ($tot_failed || $tot_passed) {
     print "Total failed: $tot_failed";
+    print " ($nifailed ignored)" if $nifailed;
     print " ($nxfailed unexpected)" if $nxfailed;
-    print " (as expected)" if $nfailed && !$nxfailed;
+    print " (as expected)" if $nfailed && !$nxfailed && !$nifailed;
     print "\nTotal passed: $tot_passed";
     print " ($nxpassed unexpected)" if $nxpassed;
     print "\n";
@@ -319,7 +326,11 @@ cleanup_exit
     local($sig, $exitcode) = ('', 1);
 
     if ($_[0] eq 'ok') {
-	$exitcode = 0;
+	unless ($nxfailed) {
+		$exitcode = 0;
+	} else {
+		$exitcode = 1;
+	}
     } elsif ($_[0] ne '') {
 	$sig = $_[0];
     }
@@ -616,8 +627,13 @@ run_test
 
     if ($failed) {
 	if (!$test{'expected-fail'}) {
-	    print "FAIL $name\n";
-	    $nxfailed++;
+	    if ($test{'need-pass'}) {
+		print "FAIL $name\n";
+		$nxfailed++;
+	    } else {
+		print "FAIL $name (ignored)\n";
+		$nifailed++;
+	    }
 	} else {
 	    print "fail $name (as expected)\n";
 	    $nfailed++;
@@ -642,6 +658,7 @@ category_check
     local(*test) = @_;
     local($c);
 
+    return 0 if ($test{'need-ctty'} && defined $categories{'regress:no-ctty'});
     return 1 if (!defined $test{'category'});
     local($ok) = 0;
     foreach $c (split(',', $test{'category'})) {
@@ -1063,6 +1080,26 @@ read_test
 	$test{'expected-fail'} = $1 eq 'yes';
     } else {
 	$test{'expected-fail'} = 0;
+    }
+    if (defined $test{'need-ctty'}) {
+	if ($test{'need-ctty'} !~ /^(yes|no)$/) {
+	    print STDERR
+	      "$prog:$test{':long-name'}: bad value for need-ctty field\n";
+	    return undef;
+	}
+	$test{'need-ctty'} = $1 eq 'yes';
+    } else {
+	$test{'need-ctty'} = 0;
+    }
+    if (defined $test{'need-pass'}) {
+	if ($test{'need-pass'} !~ /^(yes|no)$/) {
+	    print STDERR
+	      "$prog:$test{':long-name'}: bad value for need-pass field\n";
+	    return undef;
+	}
+	$test{'need-pass'} = $1 eq 'yes';
+    } else {
+	$test{'need-pass'} = 1;
     }
     if (defined $test{'arguments'}) {
 	local($firstc) = substr($test{'arguments'}, 0, 1);
