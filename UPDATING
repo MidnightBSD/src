@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20110612:
+	Update mksh to R40
+
+	Catch up ObsoleteFiles.inc to remove Perl 5.10.x.  Good to run when
+	updating current (cd /usr/src && make check-old)
+
 20110528:
 	Fix CVE-2011-1910 in BIND 9.6.x.  This affects caching resolvers.
 
@@ -1005,4 +1011,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.124 2011/05/27 01:01:59 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.125 2011/05/28 17:54:09 laffer1 Exp $
