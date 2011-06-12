@@ -1,28 +1,45 @@
-# $MidnightBSD: src/share/skel/dot.mkshrc,v 1.5 2009/03/29 02:52:03 laffer1 Exp $
-# $MirOS: src/bin/mksh/dot.mkshrc,v 1.39 2008/12/13 17:09:45 tg Rel $
+# $MidnightBSD$
+# $MirOS: src/bin/mksh/dot.mkshrc,v 1.60 2011/05/29 02:18:49 tg Exp $
 #-
-# ~/.mkshrc: mksh initialisation file for interactive shells
+# Copyright (c) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
+#	Thorsten Glaser <tg@mirbsd.org>
+#
+# Provided that these terms and disclaimer and all copyright notices
+# are retained or reproduced in an accompanying document, permission
+# is granted to deal in this work without restriction, including un-
+# limited rights to use, publicly perform, distribute, sell, modify,
+# merge, give away, or sublicence.
+#
+# This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+# the utmost extent permitted by applicable law, neither express nor
+# implied; without malicious intent or gross negligence. In no event
+# may a licensor, author or contributor be held liable for indirect,
+# direct, other damage, loss, or other issues arising in any way out
+# of dealing in the work, even if advised of the possibility of such
+# damage or existence of a defect, except proven that it results out
+# of said person's immediate fault when using the work as intended.
+#-
+# ${ENV:-~/.mkshrc}: mksh initialisation file for interactive shells
 
 : ${EDITOR:=/bin/ed} ${TERM:=vt100} ${HOSTNAME:=$(ulimit -c 0;hostname -s 2>&-)}
 [[ $HOSTNAME = @(localhost|*([	 ])) ]] && HOSTNAME=$(ulimit -c 0;hostname 2>&-)
 : ${HOSTNAME:=nil}; if (( USER_ID )); then PS1='$'; else PS1='#'; fi
 function precmd {
-	typeset -i e=$?
+	typeset e=$?
 
 	(( e )) && print -n "$e|"
 }
 PS1='$(precmd)${USER:=$(ulimit -c 0;id -un 2>&-||print \?)}@${HOSTNAME%%.*}:$(
 	typeset d=${PWD:-?} n p=~; [[ $p = ?(*/) ]] || d=${d/#$p/~}
-	(( ${#d} > (n = (COLUMNS/3 < 7 ? 7 : COLUMNS/3)) )) && {
+	(( (${%d}>0 ? ${%d}: ${#d}) > (n = (COLUMNS/3<7 ? 7: COLUMNS/3)) )) && {
 	d=${d:(-n)}; p=...; } || p=; print -nr -- "$p$d") '"$PS1 "
-export EDITOR HOSTNAME LESSHISTFILE=- MKSH=$(whence -p mksh) PS1 TERM USER
+: ${MKSH:=$(whence -p mksh)}; export EDITOR HOSTNAME MKSH TERM USER
 alias ls=ls
 unalias ls
-alias l='/bin/ls -F'
+alias l='ls -F'
 alias la='l -a'
 alias ll='l -l'
 alias lo='l -alo'
-alias which='whence -p'
 whence -p rot13 >&- || alias rot13='tr \
     abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ \
     nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM'
@@ -56,7 +73,7 @@ function cd_csh {
 	cd "$t"
 }
 function dirs {
-	typeset d
+	typeset d dwidth
 	typeset -i isnoglob=0 fl=0 fv=0 fn=0 cpos=0
 
 	[[ $(set +o) == *@(-o noglob)@(| *) ]] && isnoglob=1
@@ -88,9 +105,11 @@ function dirs {
 		while (( fv < ${#DIRSTACK[*]} )); do
 			d=${DIRSTACK[fv]}
 			(( fl )) && d=${d/#~/$DIRSTACKBASE}
-			if (( fn && (cpos+=${#d}+1) >= 79 && ${#d} < 80 )); then
+			(( dwidth = (${%d} > 0 ? ${%d} : ${#d}) ))
+			if (( fn && (cpos += dwidth + 1) >= 79 && \
+			    dwidth < 80 )); then
 				print
-				(( cpos = ${#d} + 1 ))
+				(( cpos = dwidth + 1 ))
 			fi
 			print -nr -- "$d "
 			let fv++
@@ -185,14 +204,158 @@ function pushd {
 	dirs $fa
 }
 
-# ash (freebsd) compatibility
+# pager (not control character safe)
+function smores {
+	typeset dummy line llen curlin=0
 
-function setvar {
-	if [[ -z $2 ]]; then eval unset $1
-	elif [[ $1 != +([a-zA-Z0-9_]) ]]; then print -u2 -r -- "setvar: $1: bad variable name"; return 1
+	cat "$@" | while IFS= read -r line; do
+		llen=${%line}
+		(( llen == -1 )) && llen=${#line}
+		(( llen = llen ? (llen + COLUMNS - 1) / COLUMNS : 1 ))
+		if (( (curlin += llen) >= LINES )); then
+			print -n -- '\033[7m--more--\033[0m'
+			read -u1 dummy
+			[[ $dummy = [Qq]* ]] && return 0
+			curlin=$llen
+		fi
+		print -r -- "$line"
+	done
+}
+
+# base64 encoder and decoder, RFC compliant, NUL safe
+function Lb64decode {
+	[[ -o utf8-mode ]]; typeset u=$?
+	set +U
+	typeset c s="$*" t=
+	[[ -n $s ]] || { s=$(cat;print x); s=${s%x}; }
+	typeset -i i=0 n=${#s} p=0 v x
+	typeset -i16 o
+
+	while (( i < n )); do
+		c=${s:(i++):1}
+		case $c {
+		(=)	break ;;
+		([A-Z])	(( v = 1#$c - 65 )) ;;
+		([a-z])	(( v = 1#$c - 71 )) ;;
+		([0-9])	(( v = 1#$c + 4 )) ;;
+		(+)	v=62 ;;
+		(/)	v=63 ;;
+		(*)	continue ;;
+		}
+		(( x = (x << 6) | v ))
+		case $((p++)) {
+		(0)	continue ;;
+		(1)	(( o = (x >> 4) & 255 )) ;;
+		(2)	(( o = (x >> 2) & 255 )) ;;
+		(3)	(( o = x & 255 ))
+			p=0
+			;;
+		}
+		t=$t\\x${o#16#}
+	done
+	print -n $t
+	(( u )) || set -U
+}
+
+set -A Lb64encode_code -- A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \
+    a b c d e f g h i j k l m n o p q r s t u v w x y z 0 1 2 3 4 5 6 7 8 9 + /
+function Lb64encode {
+	[[ -o utf8-mode ]]; typeset u=$?
+	set +U
+	typeset c s t
+	if (( $# )); then
+		read -raN-1 s <<<"$*"
+		unset s[${#s[*]}-1]
 	else
-		eval export $1=\$2
+		read -raN-1 s
 	fi
+	typeset -i i=0 n=${#s[*]} j v
+
+	while (( i < n )); do
+		(( v = s[i++] << 16 ))
+		(( j = i < n ? s[i++] : 0 ))
+		(( v |= j << 8 ))
+		(( j = i < n ? s[i++] : 0 ))
+		(( v |= j ))
+		t=$t${Lb64encode_code[v >> 18]}${Lb64encode_code[v >> 12 & 63]}
+		c=${Lb64encode_code[v >> 6 & 63]}
+		if (( i <= n )); then
+			t=$t$c${Lb64encode_code[v & 63]}
+		elif (( i == n + 1 )); then
+			t=$t$c=
+		else
+			t=$t==
+		fi
+		if (( ${#t} == 76 || i >= n )); then
+			print $t
+			t=
+		fi
+	done
+	(( u )) || set -U
+}
+
+# DJB cdb hash (not via stdio, for speed)
+typeset -Z11 -Uui16 Lcdbhash_result
+function Lcdbhash_add {
+	[[ -o utf8-mode ]]; typeset u=$?
+	set +U
+	typeset s
+	if (( $# )); then
+		read -raN-1 s <<<"$*"
+		unset s[${#s[*]}-1]
+	else
+		read -raN-1 s
+	fi
+	typeset -i i=0 n=${#s[*]}
+
+	while (( i < n )); do
+		((# Lcdbhash_result = (Lcdbhash_result * 33) ^ s[i++] ))
+	done
+
+	(( u )) || set -U
+}
+function Lcdbhash {
+	Lcdbhash_result=5381
+	Lcdbhash_add "$@"
+	print ${Lcdbhash_result#16#}
+}
+
+# Jenkins one-at-a-time hash (not via stdio, for speed)
+typeset -Z11 -Uui16 Loaathash_result
+function Loaathash_add {
+	[[ -o utf8-mode ]]; typeset u=$?
+	set +U
+	typeset s
+	if (( $# )); then
+		read -raN-1 s <<<"$*"
+		unset s[${#s[*]}-1]
+	else
+		read -raN-1 s
+	fi
+	typeset -i i=0 n=${#s[*]}
+
+	while (( i < n )); do
+		((# Loaathash_result = (Loaathash_result + s[i++]) *
+		    1025 ))
+		((# Loaathash_result ^= Loaathash_result >> 6 ))
+	done
+
+	(( u )) || set -U
+}
+function Loaathash_do {
+	Loaathash_add "$@"
+	((# Loaathash_result += Loaathash_result << 3 ))
+	((# Loaathash_result = (Loaathash_result ^
+	    (Loaathash_result >> 11)) * 32769 ))
+	print ${Loaathash_result#16#}
+}
+function Loaathash {
+	Loaathash_result=0
+	Loaathash_do "$@"
+}
+function Loaathash1 {
+	Loaathash_result=0x100
+	Loaathash_do "$@"
 }
 
 # strip comments (and leading/trailing whitespace if IFS is set) from
@@ -204,4 +367,32 @@ function Lstripcom {
 	done; }
 }
 
-: place customsations above this line!
+: place customisations below this line
+
+# ash (freebsd) compatibility
+
+function setvar {
+        if [[ -z $2 ]]; then eval unset $1
+        elif [[ $1 != +([a-zA-Z0-9_]) ]]; then print -u2 -r -- "setvar: $1: bad variable name"; return 1
+        else
+                eval export $1=\$2
+        fi
+}
+
+for p in ~/.etc/bin ~/bin; do
+	[[ -d $p/. ]] || continue
+	[[ :$PATH: = *:$p:* ]] || PATH=$p:$PATH
+done
+
+export SHELL=$MKSH MANWIDTH=80 LESSHISTFILE=-
+alias cls='print -n \\033c'
+
+#unset LANGUAGE LC_ADDRESS LC_ALL LC_COLLATE LC_IDENTIFICATION LC_MONETARY \
+#    LC_NAME LC_NUMERIC LC_TELEPHONE LC_TIME
+#p=en_GB.UTF-8
+#set -U
+#export LANG=C LC_CTYPE=$p LC_MEASUREMENT=$p LC_MESSAGES=$p LC_PAPER=$p
+
+unset p
+
+: place customisations above this line
