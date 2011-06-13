@@ -12140,7 +12140,6 @@ contrib/mDNSResponder/mDNSWindows/mdnsNSP/mdnsNSP.vcproj -text
 contrib/mDNSResponder/mDNSWindows/mdnsNSP/resource.h -text
 contrib/mksh/Build.sh -text
 contrib/mksh/MIDNIGHTBSD-upgrade -text
-contrib/mksh/Makefile -text
 contrib/mksh/check.pl -text
 contrib/mksh/check.t -text
 contrib/mksh/copyright -text
@@ -12158,7 +12157,6 @@ contrib/mksh/lex.c -text
 contrib/mksh/main.c -text
 contrib/mksh/misc.c -text
 contrib/mksh/mksh.1 -text
-contrib/mksh/setmode.c -text
 contrib/mksh/sh.h -text
 contrib/mksh/sh_flags.h -text
 contrib/mksh/shf.c -text
