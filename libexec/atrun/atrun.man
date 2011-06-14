@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $MidnightBSD$
 .Dd June 17, 2007
 .Dt ATRUN 8
 .Os

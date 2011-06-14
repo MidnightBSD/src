@@ -25,7 +25,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 /* System Headers */
@@ -49,7 +49,7 @@ static const char rcsid[] =
 #include <syslog.h>
 #include <time.h>
 #include <unistd.h>
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <paths.h>
 #else
 #include <getopt.h>
@@ -375,7 +375,7 @@ run_file(const char *filename, uid_t uid, gid_t gid)
 	if (chdir(pentry->pw_dir))
 		chdir("/");
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	execl(_PATH_SENDMAIL, "sendmail", "-F", "Atrun Service",
 			"-odi", "-oem",
 			mailname, (char *) NULL);
