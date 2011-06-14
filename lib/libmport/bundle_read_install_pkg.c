@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.5 2010/11/16 01:21:00 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.6 2011/04/25 23:49:07 laffer1 Exp $
  */
 
 
@@ -50,8 +50,10 @@ int mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle,
 {
   if (do_pre_install(mport, bundle, pkg) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
   if (do_actual_install(mport, bundle, pkg) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
   if (do_post_install(mport, bundle, pkg) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
@@ -84,7 +86,7 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
   const char *data, *checksum;
   char *orig_cwd; 
   char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
-  sqlite3_stmt *assets, *count, *insert;
+  sqlite3_stmt *assets = NULL, *count, *insert;
   sqlite3 *db;
   
   db = mport->db;
@@ -150,7 +152,7 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
     checksum = sqlite3_column_text(assets, 2);  
     
     switch (type) {
-      case ASSET_CWD:      
+      case ASSET_CWD:
         (void)strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
         if (mport_chdir(mport, cwd) != MPORT_OK)
           goto ERROR;
@@ -165,7 +167,6 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
           goto ERROR;
         
         (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
-
         archive_entry_set_pathname(entry, file);
 
         if (mport_bundle_read_extract_next_file(bundle, entry) != MPORT_OK) 
@@ -224,13 +225,10 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
                         
     sqlite3_reset(insert);
   }
-
   sqlite3_finalize(assets); 
   sqlite3_finalize(insert);
-  
   if (mport_db_do(db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pkg->name) != MPORT_OK) 
     goto ERROR;
-
   mport_pkgmeta_logevent(mport, pkg, "Installed");
     
   (mport->progress_free_cb)();

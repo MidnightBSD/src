@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/install_primative.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/install_primative.c,v 1.4 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -69,7 +69,7 @@ MPORT_PUBLIC_API int mport_install_primative(mportInstance *mport, const char *f
       mport_set_err(MPORT_OK, NULL);
     }
   }
-  
+
   if (mport_bundle_read_finish(mport, bundle) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     

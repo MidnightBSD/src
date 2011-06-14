@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.7 2010/11/10 17:31:21 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.8 2010/11/10 18:03:16 laffer1 Exp $
  */
 
 
@@ -217,12 +217,11 @@ static int run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const
 static int delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack)
 {
   char dir[FILENAME_MAX];
-  int ret;
 
   (void)snprintf(dir, FILENAME_MAX, "%s%s/%s-%s", mport->root, MPORT_INST_INFRA_DIR, pack->name, pack->version);
   
   if (mport_file_exists(dir)) {
-    if ((ret = mport_rmtree(dir)) != MPORT_OK) 
+    if (mport_rmtree(dir) != MPORT_OK) 
       RETURN_ERRORX(MPORT_ERR_FATAL, "mport_rmtree(%s) failed.",  dir);
   }
   
