@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.9 2011/03/01 14:59:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.10 2011/03/03 20:59:44 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -75,9 +75,6 @@ main(int argc, char *argv[])
         break; 
     }
   } 
-
-  argc -= optind;
-  argv += optind;
 
   mport = mport_instance_new();
   
