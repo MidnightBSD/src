@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.6 2011/04/25 23:49:07 laffer1 Exp $
+ * $MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.7 2011/06/14 01:41:26 laffer1 Exp $
  */
 
 
@@ -86,7 +86,7 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
   const char *data, *checksum;
   char *orig_cwd; 
   char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
-  sqlite3_stmt *assets = NULL, *count, *insert;
+  sqlite3_stmt *assets = NULL, *count, *insert = NULL;
   sqlite3 *db;
   
   db = mport->db;
