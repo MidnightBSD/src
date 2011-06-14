@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 5/4/95";
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/find/main.c,v 1.15 2003/06/14 13:00:21 markm Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/find/main.c,v 1.2 2007/09/11 23:01:20 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -125,6 +125,7 @@ main(int argc, char *argv[])
 			break;
 		case '?':
 		default:
+			usage();
 			break;
 		}
 
