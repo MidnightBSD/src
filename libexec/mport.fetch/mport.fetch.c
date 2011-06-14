@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.10 2011/03/03 20:59:44 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.fetch/mport.fetch.c,v 1.1 2011/03/06 03:57:02 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -45,7 +45,7 @@ main(int argc, char *argv[])
   mportInstance *mport;
   mportIndexEntry **indexEntries;
   bool verbose = false;
-  char *bundleFile;
+  char *bundleFile = NULL;
 
   if (argc < 2)
     usage();
@@ -62,7 +62,6 @@ main(int argc, char *argv[])
     }
   } 
 
-  argc -= optind;
   argv += optind;
 
   mport = mport_instance_new();
