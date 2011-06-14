@@ -44,7 +44,7 @@
  *  ========================================================================  */
 
 #include <sys/param.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/mined/mined2.c,v 1.1 2008/08/17 03:26:36 laffer1 Exp $");
 
 #include "mined.h"
 #include <signal.h>
@@ -95,12 +95,10 @@ static const char *help_string=
 void
 HLP(int u __unused)
 {
-	char c;
-
 	string_print(enter_string);
 	string_print(help_string);
 	flush();
-	c=getchar();
+	getchar();
 	RD(0);
 	return;
 }

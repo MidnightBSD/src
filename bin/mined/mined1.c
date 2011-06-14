@@ -448,7 +448,7 @@
  *  ========================================================================  */
 
 #include <sys/param.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/mined/mined1.c,v 1.1 2008/08/17 03:26:36 laffer1 Exp $");
 
 #include "mined.h"
 #include <signal.h>
@@ -1393,7 +1393,7 @@ load_file(const char *file)
   		nr_of_chars += (long) len;
   	}
   	if (nlines == 0)		/* The file was empty! */
-  		line = line_insert(line, "\n", 1);
+  		line_insert(line, "\n", 1);
   	clear_buffer();		/* Clear output buffer */
   	cur_line = header->next;
   	fstatus("Read", nr_of_chars);
