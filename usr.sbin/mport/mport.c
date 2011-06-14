@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.24 2011/05/21 16:15:33 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.25 2011/05/21 19:36:19 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ int
 main(int argc, char *argv[]) {
 	char *flag, *buf = NULL;
 	mportInstance *mport;
-	int resultCode;
+	int resultCode = MPORT_ERR_FATAL;
 	int i;
 	char **searchQuery;
 
