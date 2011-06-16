@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.25 2011/05/21 19:36:19 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.26 2011/06/14 01:48:45 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -309,6 +309,7 @@ update(mportInstance *mport, const char *packageName) {
 int
 upgrade(mportInstance *mport) {
 	mportPackageMeta **packs;
+	mportIndexEntry **indexEntries;
 	int total = 0;
 	int errors = 0;
 
@@ -323,9 +324,27 @@ upgrade(mportInstance *mport) {
 	}
 
 	while (*packs != NULL) {
-		if (update(mport, (*packs)->name) != 0) {
-			fprintf(stderr, "Error updating %s\n", (*packs)->name);
+		if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
+	        fprintf(stderr, "Error Looking up package name %s: %d %s\n", (*packs)->name,  mport_err_code(), mport_err_string());
 			errors++;
+			total++;
+			packs++;
+			continue;
+		}
+
+		if (indexEntries != NULL) {
+			while (*indexEntries != NULL) {
+				if ((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) {
+					if (update(mport, (*packs)->name) != 0) {
+						fprintf(stderr, "Error updating %s\n", (*packs)->name);
+						errors++;
+					}
+					break;
+				}
+				indexEntries++;
+			}
+			mport_index_entry_free_vec(indexEntries);
+			indexEntries = NULL;
 		}
 		total++;
 		packs++;
