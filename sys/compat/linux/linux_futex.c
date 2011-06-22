@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/linux/linux_futex.c,v 1.3 2009/03/01 19:19:22 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/linux/linux_futex.c,v 1.4 2009/03/01 19:21:37 laffer1 Exp $ */
 /*	$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $ */
 
 /*-
@@ -59,6 +59,7 @@ __KERNEL_RCSID(1, "$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $")
 #include <machine/../linux/linux_proto.h>
 #endif
 #include <compat/linux/linux_futex.h>
+#include <compat/linux/linux_util.h>
 
 struct futex;
 
@@ -102,8 +103,7 @@ int futex_xorl(int oparg, caddr_t uaddr, int *oldval);
 int
 linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 {
-	int val;
-	int ret;
+	int clockrt, op_ret, ret, val;
 	struct l_timespec timeout = {0, 0};
 	int error = 0;
 	struct futex *f;
@@ -111,7 +111,6 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 	int timeout_hz;
 	struct timeval tv = {0, 0};
 	struct futex *f2;
-	int op_ret;
 
 #ifdef	DEBUG
 	if (ldebug(sys_futex))
@@ -126,7 +125,19 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 	 * in most cases (ie. when futexes are not shared on file descriptor
 	 * or between different processes.).
 	 */
-	args->op = (args->op & ~LINUX_FUTEX_PRIVATE_FLAG);
+	args->op = args->op & ~LINUX_FUTEX_PRIVATE_FLAG;
+
+	/*
+	 * Currently support for switching between CLOCK_MONOTONIC and
+	 * CLOCK_REALTIME is not present. However Linux forbids the use of
+	 * FUTEX_CLOCK_REALTIME with any op except FUTEX_WAIT_BITSET and
+	 * FUTEX_WAIT_REQUEUE_PI.
+	 */
+	clockrt = args->op & LINUX_FUTEX_CLOCK_REALTIME;
+	args->op = args->op & ~LINUX_FUTEX_CLOCK_REALTIME;
+	if (clockrt && args->op != LINUX_FUTEX_WAIT_BITSET &&
+		args->op != LINUX_FUTEX_WAIT_REQUEUE_PI)
+		return (ENOSYS);
 
 	switch (args->op) {
 	case LINUX_FUTEX_WAIT:
@@ -347,8 +358,23 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 		/* not yet implemented */
 		return (ENOSYS);
 
+	case LINUX_FUTEX_WAIT_BITSET:
+		/* not yet implemented */
+		linux_msg(td,
+			  "linux_sys_futex: "
+			  "op FUTEX_WAIT_BITSET not implemented.\n");
+		return (ENOSYS);
+
+	case LINUX_FUTEX_WAIT_REQUEUE_PI:
+		/* not yet implemented */
+		linux_msg(td,
+			  "linux_sys_futex: "
+			  "op FUTEX_WAIT_REQUEUE_PI not implemented.\n");
+		return (ENOSYS);
+
 	default:
-		printf("linux_sys_futex: unknown op %d\n",
+		linux_msg(td,
+		    "linux_sys_futex: unknown op %d\n",
 		    args->op);
 		return (ENOSYS);
 	}
