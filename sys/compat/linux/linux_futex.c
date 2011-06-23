@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/linux/linux_futex.c,v 1.4 2009/03/01 19:21:37 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/linux/linux_futex.c,v 1.5 2011/06/22 23:56:22 laffer1 Exp $ */
 /*	$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $ */
 
 /*-
@@ -59,6 +59,7 @@ __KERNEL_RCSID(1, "$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $")
 #include <machine/../linux/linux_proto.h>
 #endif
 #include <compat/linux/linux_futex.h>
+#include <compat/linux/linux_emul.h>
 #include <compat/linux/linux_util.h>
 
 struct futex;

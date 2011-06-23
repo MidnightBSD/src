@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/linux/linux_emul.h,v 1.2 2008/12/03 00:24:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 Roman Divacky
  * All rights reserved.
@@ -32,8 +32,12 @@
 #ifndef _LINUX_EMUL_H_
 #define	_LINUX_EMUL_H_
 
+#define EMUL_SHARED_HASXSTAT	0x01
+
 struct linux_emuldata_shared {
 	int	refs;
+	int	flags;
+	int	xstat;
 	pid_t	group_pid;
 
 	LIST_HEAD(, linux_emuldata) threads; /* head of list of linux threads */
@@ -74,6 +78,7 @@ int	linux_proc_init(struct thread *, pid_t, int);
 void	linux_proc_exit(void *, struct proc *);
 void	linux_schedtail(void *, struct proc *);
 void	linux_proc_exec(void *, struct proc *, struct image_params *);
+void	linux_kill_threads(struct thread *, int);
 
 extern struct sx	emul_shared_lock;
 extern struct mtx	emul_lock;
