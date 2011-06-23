@@ -31,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/truss/i386-fbsd.c,v 1.23 2004/08/08 23:29:36 alfred Exp $";
+  "$FreeBSD: src/usr.bin/truss/i386-fbsd.c,v 1.29 2007/07/28 23:15:04 marcel Exp $";
 #endif /* not lint */
 
 /*
@@ -43,9 +43,8 @@ static const char rcsid[] =
  */
 
 #include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/pioctl.h>
 #include <sys/syscall.h>
+#include <sys/ptrace.h>
 
 #include <machine/reg.h>
 #include <machine/psl.h>
@@ -63,7 +62,6 @@ static const char rcsid[] =
 #include "syscall.h"
 #include "extern.h"
 
-static int fd = -1;
 static int cpid = -1;
 
 #include "syscalls.h"
@@ -113,26 +111,18 @@ clear_fsc(void) {
 
 void
 i386_syscall_entry(struct trussinfo *trussinfo, int nargs) {
-  char buf[32];
   struct reg regs;
   int syscall_num;
   int i;
   unsigned int parm_offset;
-  struct syscall *sc;
-
-  if (fd == -1 || trussinfo->pid != cpid) {
-    sprintf(buf, "/proc/%d/regs", trussinfo->pid);
-    fd = open(buf, O_RDWR);
-    if (fd == -1) {
-      fprintf(trussinfo->outfile, "-- CANNOT OPEN REGISTERS --\n");
-      return;
-    }
-    cpid = trussinfo->pid;
-  }
+  struct syscall *sc = NULL;
+  struct ptrace_io_desc iorequest;
+  cpid = trussinfo->curthread->tid;
 
   clear_fsc();
-  lseek(fd, 0L, 0);
-  if (read(fd, &regs, sizeof(regs)) != sizeof(regs)) {
+  
+  if (ptrace(PT_GETREGS, cpid, (caddr_t)&regs, 0) < 0)
+  {
     fprintf(trussinfo->outfile, "-- CANNOT READ REGISTERS --\n");
     return;
   }
@@ -146,13 +136,11 @@ i386_syscall_entry(struct trussinfo *trussinfo, int nargs) {
   syscall_num = regs.r_eax;
   switch (syscall_num) {
   case SYS_syscall:
-    lseek(Procfd, parm_offset, SEEK_SET);
-    read(Procfd, &syscall_num, sizeof(int));
+    syscall_num = ptrace(PT_READ_D, cpid, (caddr_t)parm_offset, 0);
     parm_offset += sizeof(int);
     break;
   case SYS___syscall:
-    lseek(Procfd, parm_offset, SEEK_SET);
-    read(Procfd, &syscall_num, sizeof(int));
+    syscall_num = ptrace(PT_READ_D, cpid, (caddr_t)parm_offset, 0);
     parm_offset += sizeof(quad_t);
     break;
   }
@@ -169,18 +157,23 @@ i386_syscall_entry(struct trussinfo *trussinfo, int nargs) {
     || !strcmp(fsc.name, "rfork")
     || !strcmp(fsc.name, "vfork"))))
   {
-    trussinfo->in_fork = 1;
+    trussinfo->curthread->in_fork = 1;
   }
 
   if (nargs == 0)
     return;
 
   fsc.args = malloc((1+nargs) * sizeof(unsigned long));
-  lseek(Procfd, parm_offset, SEEK_SET);
-  if (read(Procfd, fsc.args, nargs * sizeof(unsigned long)) == -1)
+  iorequest.piod_op = PIOD_READ_D;
+  iorequest.piod_offs = (void *)parm_offset;
+  iorequest.piod_addr = fsc.args;
+  iorequest.piod_len = (1+nargs) * sizeof(unsigned long);
+  ptrace(PT_IO, cpid, (caddr_t)&iorequest, 0);
+  if (iorequest.piod_len == 0)
     return;
 
-  sc = get_syscall(fsc.name);
+  if (fsc.name)
+  	sc = get_syscall(fsc.name);
   if (sc) {
     fsc.nargs = sc->nargs;
   } else {
@@ -217,7 +210,7 @@ i386_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 	      i < (fsc.nargs - 1) ? "," : "");
 #endif
       if (sc && !(sc->args[i].type & OUT)) {
-	fsc.s_args[i] = print_arg(Procfd, &sc->args[i], fsc.args, 0);
+	fsc.s_args[i] = print_arg(&sc->args[i], fsc.args, 0, trussinfo);
       }
     }
 #if DEBUG
@@ -228,13 +221,6 @@ i386_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 #if DEBUG
   fprintf(trussinfo->outfile, "\n");
 #endif
-
-  /*
-   * Some system calls should be printed out before they are done --
-   * execve() and exit(), for example, never return.  Possibly change
-   * this to work for any system call that doesn't have an OUT
-   * parameter?
-   */
 
   if (fsc.name != NULL &&
       (!strcmp(fsc.name, "execve") || !strcmp(fsc.name, "exit"))) {
@@ -256,8 +242,6 @@ i386_syscall_entry(struct trussinfo *trussinfo, int nargs) {
           }
     }
 
-    print_syscall(trussinfo, fsc.name, fsc.nargs, fsc.s_args);
-    fprintf(trussinfo->outfile, "\n");
   }
 
   return;
@@ -273,28 +257,22 @@ i386_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 long
 i386_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused)
 {
-  char buf[32];
   struct reg regs;
   long retval;
   int i;
   int errorp;
   struct syscall *sc;
 
-  if (fd == -1 || trussinfo->pid != cpid) {
-    sprintf(buf, "/proc/%d/regs", trussinfo->pid);
-    fd = open(buf, O_RDONLY);
-    if (fd == -1) {
-      fprintf(trussinfo->outfile, "-- CANNOT OPEN REGISTERS --\n");
-      return (-1);
-    }
-    cpid = trussinfo->pid;
-  }
+  if (fsc.name == NULL)
+    return (-1);
+  cpid = trussinfo->curthread->tid;
 
-  lseek(fd, 0L, 0);
-  if (read(fd, &regs, sizeof(regs)) != sizeof(regs)) {
+  if (ptrace(PT_GETREGS, cpid, (caddr_t)&regs, 0) < 0)
+  {
     fprintf(trussinfo->outfile, "-- CANNOT READ REGISTERS --\n");
     return (-1);
   }
+  
   retval = regs.r_eax;
   errorp = !!(regs.r_eflags & PSL_C);
 
@@ -316,16 +294,34 @@ i386_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused)
       char *temp;
       if (sc->args[i].type & OUT) {
 	/*
-	 * If an error occurred, than don't bothe getting the data;
+	 * If an error occurred, then don't bother getting the data;
 	 * it may not be valid.
 	 */
 	if (errorp)
 	  asprintf(&temp, "0x%lx", fsc.args[sc->args[i].offset]);
 	else
-	  temp = print_arg(Procfd, &sc->args[i], fsc.args, retval);
+	  temp = print_arg(&sc->args[i], fsc.args, retval, trussinfo);
 	fsc.s_args[i] = temp;
       }
     }
+  }
+
+  /*
+   * The pipe syscall returns its fds in two registers and has assembly glue
+   * to provide the libc API, so it cannot be handled like regular syscalls.
+   * The nargs check is so we don't have to do yet another strcmp on every
+   * syscall.
+   */
+  if (!errorp && fsc.nargs == 0 && fsc.name && strcmp(fsc.name, "pipe") == 0) {
+      fsc.nargs = 1;
+      fsc.s_args = malloc((1+fsc.nargs) * sizeof(char*));
+      asprintf(&fsc.s_args[0], "[%d,%d]", (int)retval, regs.r_edx);
+      retval = 0;
+  }
+
+  if (fsc.name != NULL &&
+      (!strcmp(fsc.name, "execve") || !strcmp(fsc.name, "exit"))) {
+	trussinfo->curthread->in_syscall = 1;
   }
 
   /*

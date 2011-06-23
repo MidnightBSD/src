@@ -31,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/truss/sparc64-fbsd.c,v 1.7 2004/07/17 19:48:49 alfred Exp $";
+  "$FreeBSD: src/usr.bin/truss/sparc64-fbsd.c,v 1.11 2007/06/26 22:42:37 delphij Exp $";
 #endif /* not lint */
 
 /*
@@ -45,8 +45,7 @@ static const char rcsid[] =
  */
 
 #include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/pioctl.h>
+#include <sys/ptrace.h>
 #include <sys/syscall.h>
 
 #include <machine/frame.h>
@@ -68,7 +67,6 @@ static const char rcsid[] =
 #include "syscall.h"
 #include "extern.h"
 
-static int fd = -1;
 static int cpid = -1;
 
 #include "syscalls.h"
@@ -118,26 +116,18 @@ clear_fsc(void) {
 
 void
 sparc64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
-  char buf[32];
   struct reg regs;
   int syscall_num;
   int i;
   struct syscall *sc;
   int indir = 0;	/* indirect system call */
+  struct ptrace_io_desc iorequest;
 
-  if (fd == -1 || trussinfo->pid != cpid) {
-    sprintf(buf, "/proc/%d/regs", trussinfo->pid);
-    fd = open(buf, O_RDWR);
-    if (fd == -1) {
-      fprintf(trussinfo->outfile, "-- CANNOT OPEN REGISTERS --\n");
-      return;
-    }
-    cpid = trussinfo->pid;
-  }
+  cpid = trussinfo->curthread->tid;
 
   clear_fsc();
-  lseek(fd, 0L, 0);
-  if (read(fd, &regs, sizeof(regs)) != sizeof(regs)) {
+  
+  if (ptrace(PT_GETREGS, cpid, (caddr_t)&regs, 0) < 0) {
     fprintf(trussinfo->outfile, "-- CANNOT READ REGISTERS --\n");
     return;
   }
@@ -165,7 +155,7 @@ sparc64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
     || !strcmp(fsc.name, "rfork")
     || !strcmp(fsc.name, "vfork"))))
   {
-    trussinfo->in_fork = 1;
+    trussinfo->curthread->in_fork = 1;
   }
 
   if (nargs == 0)
@@ -186,9 +176,14 @@ sparc64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 	 * on the stack, as is normal for other processors.
 	 * The fall-through for all of these is deliberate!!!
 	 */
-	lseek(Procfd, regs.r_out[6] + SPOFF +
-	    offsetof(struct frame, fr_pad[6]), SEEK_SET);
-	read(fd, &fsc.args[6], (nargs - 6) * sizeof(fsc.args[0]));
+	iorequest.piod_op = PIOD_READ_D;
+	iorequest.piod_offs = (void *)(regs.r_out[6] + SPOFF +
+	    offsetof(struct frame, fr_pad[6]));
+	iorequest.piod_addr = &fsc.args[6];
+	iorequest.piod_len = (nargs - 6) * sizeof(fsc.args[0]);
+	ptrace(PT_IO, cpid, (caddr_t)&iorequest, 0);
+	if (iorequest.piod_len == 0) return;
+
   case 6:	fsc.args[5] = regs.r_out[5];
   case 5:	fsc.args[4] = regs.r_out[4];
   case 4:	fsc.args[3] = regs.r_out[3];
@@ -240,7 +235,7 @@ sparc64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 	      i < (fsc.nargs - 1) ? "," : "");
 #endif
       if (sc && !(sc->args[i].type & OUT)) {
-	fsc.s_args[i] = print_arg(Procfd, &sc->args[i], fsc.args, 0);
+	fsc.s_args[i] = print_arg(&sc->args[i], fsc.args, 0, trussinfo);
       }
     }
 #if DEBUG
@@ -252,14 +247,8 @@ sparc64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
   fprintf(trussinfo->outfile, "\n");
 #endif
 
-  /*
-   * Some system calls should be printed out before they are done --
-   * execve() and exit(), for example, never return.  Possibly change
-   * this to work for any system call that doesn't have an OUT
-   * parameter?
-   */
-
-  if (!strcmp(fsc.name, "execve") || !strcmp(fsc.name, "exit")) {
+  if (fsc.name != NULL &&
+      (!strcmp(fsc.name, "execve") || !strcmp(fsc.name, "exit"))) {
 
     /* XXX
      * This could be done in a more general
@@ -277,9 +266,6 @@ sparc64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
             fsc.s_args[2] = NULL;
           }
     }
-
-    print_syscall(trussinfo, fsc.name, fsc.nargs, fsc.s_args);
-    fprintf(trussinfo->outfile, "\n");
   }
 
   return;
@@ -294,25 +280,17 @@ sparc64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 
 long
 sparc64_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused) {
-  char buf[32];
   struct reg regs;
   long retval;
   int i;
   int errorp;
   struct syscall *sc;
 
-  if (fd == -1 || trussinfo->pid != cpid) {
-    sprintf(buf, "/proc/%d/regs", trussinfo->pid);
-    fd = open(buf, O_RDONLY);
-    if (fd == -1) {
-      fprintf(trussinfo->outfile, "-- CANNOT OPEN REGISTERS --\n");
-      return (-1);
-    }
-    cpid = trussinfo->pid;
-  }
+  if (fsc.name == NULL)
+	return (-1);
+  cpid = trussinfo->curthread->tid;
 
-  lseek(fd, 0L, 0);
-  if (read(fd, &regs, sizeof(regs)) != sizeof(regs)) {
+  if (ptrace(PT_GETREGS, cpid, (caddr_t)&regs, 0) < 0) {
     fprintf(trussinfo->outfile, "\n");
     return (-1);
   }
@@ -343,12 +321,16 @@ sparc64_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused) {
 	if (errorp)
 	  asprintf(&temp, "0x%lx", fsc.args[sc->args[i].offset]);
 	else
-	  temp = print_arg(Procfd, &sc->args[i], fsc.args, retval);
+	  temp = print_arg(&sc->args[i], fsc.args, retval, trussinfo);
 	fsc.s_args[i] = temp;
       }
     }
   }
 
+  if (fsc.name != NULL &&
+      (!strcmp(fsc.name, "execve") || !strcmp(fsc.name, "exit"))) {
+	trussinfo->curthread->in_syscall = 1;
+  }
   /*
    * It would probably be a good idea to merge the error handling,
    * but that complicates things considerably.

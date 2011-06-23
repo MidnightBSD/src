@@ -1,6 +1,6 @@
-.\" $FreeBSD: src/usr.bin/truss/truss.1,v 1.18.2.1 2005/08/18 15:01:25 keramida Exp $
+.\" $FreeBSD: src/usr.bin/truss/truss.1,v 1.24 2007/05/21 20:33:51 keramida Exp $
 .\"
-.Dd September 3, 2004
+.Dd January 2, 2004
 .Dt TRUSS 1
 .Os
 .Sh NAME
@@ -10,19 +10,20 @@
 .Nm
 .Op Fl faedDS
 .Op Fl o Ar file
+.Op Fl s Ar strsize
 .Fl p Ar pid
 .Nm
 .Op Fl faedDS
 .Op Fl o Ar file
-command
-.Op args
+.Op Fl s Ar strsize
+.Ar command Op Ar args
 .Sh DESCRIPTION
 The
 .Nm
 utility traces the system calls called by the specified process or program.
 Output is to the specified output file, or standard error by default.
 It does this by stopping and restarting the process being monitored via
-.Xr procfs 5 .
+.Xr ptrace 2 .
 .Pp
 The options are as follows:
 .Bl -tag -width indent
@@ -54,11 +55,21 @@ displays signal as well as system call events.)
 Print the output to the specified
 .Ar file
 instead of standard error.
+.It Fl s Ar strsize
+Display strings using at most
+.Ar strsize
+characters.
+If the buffer is larger,
+.Dq Li ...
+will be displayed at the end of the string.
+The default
+.Ar strsize
+is 32.
 .It Fl p Ar pid
 Follow the process specified by
 .Ar pid
 instead of a new command.
-.It Ar command Op args
+.It Ar command Op Ar args
 Execute
 .Ar command
 and trace the system calls of it.
@@ -68,13 +79,6 @@ and
 .Ar command
 options are mutually exclusive.)
 .El
-.Pp
-The
-.Xr procctl 8
-utility can be used to clear tracepoints in a stuck process
-left behind if
-.Nm
-terminates abnormally.
 .Sh EXAMPLES
 # Follow the system calls used in echoing "hello"
 .Dl $ truss /bin/echo hello
@@ -85,8 +89,7 @@ terminates abnormally.
 .Sh SEE ALSO
 .Xr kdump 1 ,
 .Xr ktrace 1 ,
-.Xr procfs 5 ,
-.Xr procctl 8
+.Xr ptrace 2
 .Sh HISTORY
 The
 .Nm

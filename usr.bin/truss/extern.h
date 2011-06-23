@@ -28,12 +28,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/truss/extern.h,v 1.10 2005/03/27 12:53:25 alfred Exp $
+ * $FreeBSD: src/usr.bin/truss/extern.h,v 1.12 2007/04/10 04:03:34 delphij Exp $
  */
 
 extern int setup_and_wait(char **);
-extern int start_tracing(int, int, int, int);
+extern int start_tracing(int);
 extern void restore_proc(int);
+extern void waitevent(struct trussinfo *);
 extern const char *ioctlname(register_t val);
 extern char *strsig(int sig);
 #ifdef __alpha__
@@ -54,9 +55,12 @@ extern long i386_linux_syscall_exit(struct trussinfo *, int);
 extern void ia64_syscall_entry(struct trussinfo *, int);
 extern long ia64_syscall_exit(struct trussinfo *, int);
 #endif
+#ifdef __powerpc__
+extern void powerpc_syscall_entry(struct trussinfo *, int);
+extern long powerpc_syscall_exit(struct trussinfo *, int);
+#endif
 #ifdef __sparc64__
 extern void sparc64_syscall_entry(struct trussinfo *, int);
 extern long sparc64_syscall_exit(struct trussinfo *, int);
 #endif
 
-extern int Procfd;

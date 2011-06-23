@@ -31,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/truss/i386-linux.c,v 1.23 2004/07/17 19:48:49 alfred Exp $";
+  "$FreeBSD: src/usr.bin/truss/i386-linux.c,v 1.27 2007/06/26 22:42:37 delphij Exp $";
 #endif /* not lint */
 
 /*
@@ -41,8 +41,7 @@ static const char rcsid[] =
  */
 
 #include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/pioctl.h>
+#include <sys/ptrace.h>
 
 #include <machine/reg.h>
 #include <machine/psl.h>
@@ -60,7 +59,6 @@ static const char rcsid[] =
 #include "syscall.h"
 #include "extern.h"
 
-static int fd = -1;
 static int cpid = -1;
 
 #include "linux_syscalls.h"
@@ -108,28 +106,20 @@ clear_fsc(void) {
 
 void
 i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs) {
-  char buf[32];
   struct reg regs;
   int syscall_num;
   int i;
   struct syscall *sc;
 
-  if (fd == -1 || trussinfo->pid != cpid) {
-    sprintf(buf, "/proc/%d/regs", trussinfo->pid);
-    fd = open(buf, O_RDWR);
-    if (fd == -1) {
-      fprintf(trussinfo->outfile, "-- CANNOT OPEN REGISTERS --\n");
-      return;
-    }
-    cpid = trussinfo->pid;
-  }
+  cpid = trussinfo->curthread->tid;
 
   clear_fsc();
-  lseek(fd, 0L, 0);
-  if (read(fd, &regs, sizeof(regs)) != sizeof(regs)) {
+  
+  if (ptrace(PT_GETREGS, cpid, (caddr_t)&regs, 0) < 0)
+  {
     fprintf(trussinfo->outfile, "-- CANNOT READ REGISTERS --\n");
     return;
-  }
+  } 
   syscall_num = regs.r_eax;
 
   fsc.number = syscall_num;
@@ -143,7 +133,7 @@ i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs) {
    && ((!strcmp(fsc.name, "linux_fork")
     || !strcmp(fsc.name, "linux_vfork"))))
   {
-    trussinfo->in_fork = 1;
+    trussinfo->curthread->in_fork = 1;
   }
 
   if (nargs == 0)
@@ -200,7 +190,7 @@ i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 	      i < (fsc.nargs - 1) ? "," : "");
 #endif
       if (sc && !(sc->args[i].type & OUT)) {
-	fsc.s_args[i] = print_arg(Procfd, &sc->args[i], fsc.args, 0);
+	fsc.s_args[i] = print_arg(&sc->args[i], fsc.args, 0, trussinfo);
       }
     }
 #if DEBUG
@@ -212,14 +202,8 @@ i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs) {
   fprintf(trussinfo->outfile, "\n");
 #endif
 
-  /*
-   * Some system calls should be printed out before they are done --
-   * execve() and exit(), for example, never return.  Possibly change
-   * this to work for any system call that doesn't have an OUT
-   * parameter?
-   */
-
-  if (!strcmp(fsc.name, "linux_execve") || !strcmp(fsc.name, "exit")) {
+  if (fsc.name != NULL &&
+      (!strcmp(fsc.name, "linux_execve") || !strcmp(fsc.name, "exit"))) {
 
     /* XXX
      * This could be done in a more general
@@ -237,9 +221,6 @@ i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs) {
             fsc.s_args[2] = NULL;
           }
     }
-
-    print_syscall(trussinfo, fsc.name, fsc.nargs, fsc.s_args);
-    fprintf(trussinfo->outfile, "\n");
   }
 
   return;
@@ -263,28 +244,22 @@ const int bsd_to_linux_errno[] = {
 long
 i386_linux_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused)
 {
-  char buf[32];
   struct reg regs;
   long retval;
   int i;
   int errorp;
   struct syscall *sc;
 
-  if (fd == -1 || trussinfo->pid != cpid) {
-    sprintf(buf, "/proc/%d/regs", trussinfo->pid);
-    fd = open(buf, O_RDONLY);
-    if (fd == -1) {
-      fprintf(trussinfo->outfile, "-- CANNOT OPEN REGISTERS --\n");
-      return (-1);
-    }
-    cpid = trussinfo->pid;
-  }
+  if (fsc.name == NULL)
+	return (-1);
 
-  lseek(fd, 0L, 0);
-  if (read(fd, &regs, sizeof(regs)) != sizeof(regs)) {
-    fprintf(trussinfo->outfile, "\n");
+  cpid = trussinfo->curthread->tid;
+  if (ptrace(PT_GETREGS, cpid, (caddr_t)&regs, 0) < 0)
+  {
+    fprintf(trussinfo->outfile, "-- CANNOT READ REGISTERS --\n");
     return (-1);
   }
+
   retval = regs.r_eax;
   errorp = !!(regs.r_eflags & PSL_C);
 
@@ -312,7 +287,7 @@ i386_linux_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused)
 	if (errorp)
 	  asprintf(&temp, "0x%lx", fsc.args[sc->args[i].offset]);
 	else
-	  temp = print_arg(Procfd, &sc->args[i], fsc.args, retval);
+	  temp = print_arg(&sc->args[i], fsc.args, retval, trussinfo);
 	fsc.s_args[i] = temp;
       }
     }
@@ -327,6 +302,12 @@ i386_linux_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused)
       if (retval == bsd_to_linux_errno[i])
       break;
   }
+
+  if (fsc.name != NULL &&
+      (!strcmp(fsc.name, "linux_execve") || !strcmp(fsc.name, "exit"))) {
+	trussinfo->curthread->in_syscall = 1;
+  }
+
   print_syscall_ret(trussinfo, fsc.name, fsc.nargs, fsc.s_args, errorp,
                     errorp ? i : retval);
   clear_fsc();
