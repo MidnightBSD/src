@@ -131,7 +131,7 @@ i386_linux_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 
   if (fsc.name && (trussinfo->flags & FOLLOWFORKS)
    && ((!strcmp(fsc.name, "linux_fork")
-    || !strcmp(fsc.name, "linux_vfork"))))
+    || !strcmp(fsc.name, "linux_vfork")|| !strcmp(fsc.name, "linux_clone"))))
   {
     trussinfo->curthread->in_fork = 1;
   }
