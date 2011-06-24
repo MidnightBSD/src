@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/linux/linux_socket.c,v 1.4 2011/06/23 12:41:19 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995 Søren Schmidt
  * All rights reserved.
@@ -551,15 +551,40 @@ linux_socket(struct thread *td, struct linux_socket_args *args)
 		int type;
 		int protocol;
 	} */ bsd_args;
-	int retval_socket;
+	int retval_socket, socket_flags;
 
 	bsd_args.protocol = args->protocol;
-	bsd_args.type = args->type;
+	socket_flags = args->type & ~LINUX_SOCK_TYPE_MASK;
+	if (socket_flags & ~(LINUX_SOCK_CLOEXEC | LINUX_SOCK_NONBLOCK))
+		return (EINVAL);
+	bsd_args.type = args->type & LINUX_SOCK_TYPE_MASK;
+	if (bsd_args.type < 0 || bsd_args.type > LINUX_SOCK_MAX)
+ 		return (EINVAL);
 	bsd_args.domain = linux_to_bsd_domain(args->domain);
 	if (bsd_args.domain == -1)
-		return (EINVAL);
+		return (EAFNOSUPPORT);
 
 	retval_socket = socket(td, &bsd_args);
+	if (retval_socket)
+		return (retval_socket);
+
+	if (socket_flags & LINUX_SOCK_NONBLOCK) {
+		retval_socket = kern_fcntl(td, td->td_retval[0],
+		    F_SETFL, O_NONBLOCK);
+		if (retval_socket) {
+			(void)kern_close(td, td->td_retval[0]);
+			goto out;
+		}
+	}
+	if (socket_flags & LINUX_SOCK_CLOEXEC) {
+		retval_socket = kern_fcntl(td, td->td_retval[0],
+		    F_SETFD, FD_CLOEXEC);
+		if (retval_socket) {
+			(void)kern_close(td, td->td_retval[0]);
+			goto out;
+		}
+	}
+
 	if (bsd_args.type == SOCK_RAW
 	    && (bsd_args.protocol == IPPROTO_RAW || bsd_args.protocol == 0)
 	    && bsd_args.domain == AF_INET
@@ -596,6 +621,7 @@ linux_socket(struct thread *td, struct linux_socket_args *args)
 	}
 #endif
 
+out:
 	return (retval_socket);
 }
 
