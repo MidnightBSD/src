@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/share/skel/dot.mkshrc,v 1.7 2011/06/12 20:02:36 laffer1 Exp $
 # $MirOS: src/bin/mksh/dot.mkshrc,v 1.60 2011/05/29 02:18:49 tg Exp $
 #-
 # Copyright (c) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
@@ -21,7 +21,7 @@
 #-
 # ${ENV:-~/.mkshrc}: mksh initialisation file for interactive shells
 
-: ${EDITOR:=/bin/ed} ${TERM:=vt100} ${HOSTNAME:=$(ulimit -c 0;hostname -s 2>&-)}
+: ${EDITOR:=/usr/bin/vi} ${TERM:=vt100} ${HOSTNAME:=$(ulimit -c 0;hostname -s 2>&-)}
 [[ $HOSTNAME = @(localhost|*([	 ])) ]] && HOSTNAME=$(ulimit -c 0;hostname 2>&-)
 : ${HOSTNAME:=nil}; if (( USER_ID )); then PS1='$'; else PS1='#'; fi
 function precmd {
