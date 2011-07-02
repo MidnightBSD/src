@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/netinet/tcp_output.c,v 1.8 2011/02/09 00:27:18 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/netinet/tcp_output.c,v 1.9 2011/03/25 04:12:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -82,10 +82,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_output.c,v 1.141.2.3 2007/12/05 10:37:17
 #include <machine/in_cksum.h>
 
 #include <security/mac/mac_framework.h>
-
-#ifdef notyet
-extern struct mbuf *m_copypack();
-#endif
 
 int path_mtu_discovery = 1;
 SYSCTL_INT(_net_inet_tcp, OID_AUTO, path_mtu_discovery, CTLFLAG_RW,
@@ -771,19 +767,6 @@ send:
 			tcpstat.tcps_sndpack++;
 			tcpstat.tcps_sndbyte += len;
 		}
-#ifdef notyet
-		if ((m = m_copypack(so->so_snd.sb_mb, off,
-		    (int)len, max_linkhdr + hdrlen)) == 0) {
-			SOCKBUF_UNLOCK(&so->so_snd);
-			error = ENOBUFS;
-			goto out;
-		}
-		/*
-		 * m_copypack left space for our hdr; use it.
-		 */
-		m->m_len += hdrlen;
-		m->m_data -= hdrlen;
-#else
 		MGETHDR(m, M_DONTWAIT, MT_DATA);
 		if (m == NULL) {
 			SOCKBUF_UNLOCK(&so->so_snd);
@@ -823,7 +806,7 @@ send:
 				goto out;
 			}
 		}
-#endif
+
 		/*
 		 * If we're sending everything we've got, set PUSH.
 		 * (This will keep happy those implementations which only
