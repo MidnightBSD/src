@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/skel/dot.mkshrc,v 1.7 2011/06/12 20:02:36 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.mkshrc,v 1.8 2011/06/26 14:50:00 laffer1 Exp $
 # $MirOS: src/bin/mksh/dot.mkshrc,v 1.60 2011/05/29 02:18:49 tg Exp $
 #-
 # Copyright (c) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
@@ -365,6 +365,11 @@ function Lstripcom {
 		_line=${_line%%#*}
 		[[ -n $_line ]] && print -r -- $_line
 	done; }
+}
+
+# give MidnightBSD's laffer1 a bit of csh feeling
+function setenv {
+	eval export $1'="$2"'
 }
 
 : place customisations below this line
