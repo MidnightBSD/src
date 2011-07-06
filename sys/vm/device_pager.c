@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/vm/device_pager.c,v 1.3 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 University of Utah.
  * Copyright (c) 1991, 1993
@@ -217,8 +217,10 @@ dev_pager_getpages(object, m, count, reqpage)
 	offset = m[reqpage]->pindex;
 	VM_OBJECT_UNLOCK(object);
 	csw = dev_refthread(dev);
-	if (csw == NULL)
-		panic("dev_pager_getpage: no cdevsw");
+	if (csw == NULL) {
+		VM_OBJECT_LOCK(object);
+		return (VM_PAGER_FAIL);
+	}
 	prot = PROT_READ;	/* XXX should pass in? */
 
 	ret = (*csw->d_mmap)(dev, (vm_offset_t)offset << PAGE_SHIFT, &paddr, prot);
