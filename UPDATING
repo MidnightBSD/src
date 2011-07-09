@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users
 
+20110709:
+	cpufreq(1) is a new utility to monitor CPU frequency which may change
+	with use of powerd(8) and cpufreq(4).
+
 20110612:
 	Update mksh to R40
 
@@ -1011,4 +1015,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.125 2011/05/28 17:54:09 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.126 2011/06/12 20:06:20 laffer1 Exp $
