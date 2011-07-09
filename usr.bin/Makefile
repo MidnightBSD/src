@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.29 2010/07/04 13:59:09 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.30 2011/03/08 13:06:48 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -47,6 +47,7 @@ SUBDIR=	alias \
 	compile_et \
 	compress \
 	cpio \
+	cpufreq \
 	csplit \
 	ctags \
 	cut \
