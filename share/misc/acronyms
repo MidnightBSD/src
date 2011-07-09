@@ -1,0 +1,2337 @@
+$MidnightBSD$
+$MirOS: src/share/misc/acronyms,v 1.113 2011/07/08 19:19:37 tg Exp $
+$NetBSD: acronyms,v 1.206 2011/03/26 12:39:16 dholland Exp $
+$NetBSD: acronyms.comp,v 1.126 2011/06/14 05:43:37 jruoho Exp $
+10Q	thank you
+10X	tenx (thanks)
+1337	elite ("leet")
+224	today, tomorrow, forever
+2IC	second in charge
+31337	elite ("eleet")
+3WHS	three-way handshake
+4TF	[gc] fourth to find
+4TW	for the win
+</3	emoticon (a broken heart)
+<3	emoticon (a heart)
+AA	anti-aliasing
+AAA	authentication, authorisation, accounting
+AAMOF	as a matter of fact
+AAT	average access time
+ABI	application binary interface
+ABR	available bit rate
+AC	alternating current
+AC	audible chuckle
+ACID	atomicity, consistency, isolation, durability
+ACK	Amsterdam compiler kit
+ACK	achja, cönnt klappen
+ACK	acknowledged / [japanese] Hai!
+ACK	acknowledgement
+ACL	access control list
+ACL	active current loop
+ACP	auxillary control {program, process}
+ACPI	advanced configuration and power interface
+ACPI	advanced conflagration punishment interface
+ACS	access control set
+ACU	automatic calling unit
+ADB	Apple desktop bus
+ADC	analog [to] digital converter
+ADD	acronym driven development
+ADN	any day now
+ADO	active data objects
+ADP	automatic data processing
+ADPCM	adaptive differential pulse code modulation
+ADS	alternate data stream
+ADSL	asymmetric digital subscriber line
+ADT	abstract data type
+AEAP	as early as possible
+AES	Advanced Encryption Standard
+AES	application environment services (for GEM)
+AFAIAC	as far as I am concerned
+AFAIC	as far as I'm concerned
+AFAICR	as far as I can recall
+AFAICS	as far as I can see
+AFAICT	as far as I can tell
+AFAIHH	as far as I have heard
+AFAIK	as far as I know
+AFAIR	as far as I {recall, remember}
+AFAIU	as far as I understand
+AFD	away from desktop
+AFK	away from keyboard
+AFS	Andrew File System
+AFU	all fucked up
+AFW	away from window
+AGC	automatic gain control
+AGM	annual general meeting
+AGP	accelerated graphics port
+AI	analog input
+AI	artificial intelligence
+AINEC	and it's not even close
+AISE	as I see it
+AIU	as I understand
+AIUI	as I understand it
+AIX	Ain't unIX
+AKA	also known as
+AKUEFI	Abkürzungsfimmel
+AKÜFI	Abkürzungsfimmel
+AL	access list
+AL	active link
+ALE	address latch enable
+ALS	ambient light sensor
+ALU	arithmetic and logical unit
+AM	access method
+AM	alignment mask
+AM	amplitude modulation
+AMI	alternate mark inversion
+AMOL	a mountain of love
+AMT	active management technology
+AN	Arabic number
+ANSI	American National Standards Institute
+AO	analog output
+AOL	alert on LAN
+AOS	add or subtract
+AP	access point
+AP	application processor
+API	application programming interface
+APIC	advanced programmable interrupt controller
+APINKE	[gc] Another Place (originally Park, in the USA) I Never Knew Existed (spoken 'apinky')
+AQM	active queue management
+ARAT	always running APIC timer
+ARC	adaptive replacement cache
+ARM	Acorn RISC Machine
+ARM	Advanced RISC Machines
+ARP	address resolution protocol
+ARPA	Advanced Research Projects Agency
+ARQ	automatic repeat request
+ARR	address range register
+ARU	audio response unit
+AS	autonomous system
+ASAIC	as soon as I can
+ASAP	as soon as possible
+ASC	advanced smart cache
+ASCII	American standard code for information interchange
+ASD	agile software development
+ASE	advanced software environment
+ASF	The Apache™ Foundation
+ASIC	application-specific integrated circuit
+ASK	amplitude shif keying
+ASLR	address space layout randomisation
+ASN	autonomous system number
+ASPM	active state power management
+ASQ	automated software quality
+ASR	address space register
+AST	abstract syntax tree
+AST	asynchronous trap
+AT	access time
+AT	advanced technology
+ATA	advanced technology attachment
+ATAPI	advanced technology attachment packet interface
+ATC	address translation cache
+ATEOTD	at the end of the day
+ATM	asynchronous transfer mode
+ATM	at the moment
+ATM	automatic teller machine
+ATW	around the world
+ATX	advanced technology extended
+AUB	please (dutch: alstublieft / als het u belieft)
+AV	anti virus
+AVL	Adelson-Velsky-Landis
+AVX	advanced vector extensions
+AWK	Aho, Werner, and Kernighan
+AWOL	absent without official leave
+AYB	all your base are belong to us
+AYBABTU	all your base are belong to us
+AYF	all your fault
+AYOR	at your own risk
+AYT	are you there
+B/C	because
+B/S	bullshit
+B/W	bandwidth
+B/W	between
+B4	before
+BAK	back at keyboard
+BAL	basic assembly language
+BALGE	by and large good enough
+BAMF	Bad Ass Mother Fucker
+BAMP	BSD Apache MySQL {Perl,PHP,Python}
+BAMPP	BSD Apache MySQL {Perl,PHP,Python}
+BAR	base address register
+BASH	GNU Bourne-Again Shell
+BASIC	beginners' all-purpose symbolic instruction code (_the_ programming language per se)
+BBIAB	be back in a bit
+BBIAF	be back in a few
+BBL	[I'll] be back later
+BBR	burnt beyond repair
+BBS	be back soon
+BBS	bulletin board system
+BBT	be back tomorrow
+BCB	[gc] Bookcrossing Book
+BCC	blind carbon copy
+BCD	binary coded decimal
+BCNU	be seeing you
+BCNUL8R	be seeing you later
+BCP	best current practice
+BCR	byte count register
+BCS	base configuration space
+BD	baud
+BDD	binary decision diagram
+BDFL	Benevolent Dictator for Life
+BDUF	big design up front
+BEDO	burst extended data output
+BER	basic encoding rules
+BER	bit error rate
+BF	best friend
+BF	boyfriend
+BFD	big fucking deal
+BFD	binary {file, format} descriptor
+BFF	best friend forever
+BFG	big fat grin
+BFH	big fucking hammer
+BFKL	big fscking kernel lock
+BFS	breadth-first search
+BFT	binary file transfer
+BGA	ball grid array
+BGP	border gateway protocol
+BIAB	back in a bit
+BIAF	back in a few
+BIALW	back in a little while
+BIAS	back in a second
+BIAW	back in a while
+BIND	Berkeley Internet Name Daemon
+BIND	Buggy Internet Name Dæmon
+BIOS	basic input/output system
+BIST	built-in self-test
+BIU	bus interface unit
+BKDG	BIOS and kernel developer's guide
+BLAS	basic linear algebra subprograms
+BLC	back light control
+BLOB	binary large object
+BM	bus master
+BMC	baseboard management controller
+BMIC	bus master interface controller
+BN	boundary neutral
+BNF	Backus-Naur form
+BNYA	burned now you are
+BO	binary output
+BOATILAS	bend over and take it like a slut
+BOC	but of course
+BOF	beginning of file
+BOFH	bastard operator from hell
+BOGAHICA	bend over, grab ankles, here it comes again
+BOHICA	bend over here it comes again
+BOM	beginning of message
+BOM	byte order mark
+BOT	back on topic
+BP	base pointer
+BP	boot processor
+BPB	BIOS parameter block
+BPF	Berkeley packet filter
+BPI	bits per inch
+BPM	business process modelling
+BPS	bits per second
+BQS	Berkeley quality software
+BRB	[I'll] be right back
+BRE	basic regular expression
+BRT	[I'll] be right there
+BS	binary sequence
+BS	bullshit
+BSD	Berkeley software distribution
+BSD	Blobs Schaden Dir
+BSD	Blobs Sind Doof
+BSD	basically secure and dependable
+BSD	big scary daemons
+BSF	bit scan forward
+BSOD	blue screen of death
+BSP	binary space partition
+BSP	bootstrap processor
+BSR	bit scan reverse
+BSS	block started by symbol
+BT	BitTorrent
+BT	Bluetooth
+BT	bit test
+BTAT	been there, ate that
+BTC	bit test [and] complement
+BTDB	been there, done both
+BTDT	been there, done that
+BTFIT	been there, fell into that
+BTFT	been there, fixed that
+BTR	bit test [and] reset
+BTS	bit test [and] set
+BTS	bits per second
+BTST	been there, seen that
+BTTH	boot to the head
+BTTT	been there, tried that
+BTU	British Thermal Units
+BTU	back to you
+BTW	by the way
+BTX	(new form factor like ATX, ITX, BAT)
+BTX	Balanced Technology Extended
+BTX	Bildschirmtext (der Deutschen Bundespost Telekom)
+BW	bandwidth
+BWC	because we can
+BWM	block-write mode
+BYOP	[gc] bring your own pen
+BYOP	[gc] bring your own pencil
+CA	certificate authority
+CAD	computer-aided design
+CAM	computer-aided (or -assisted) manufacturing
+CAM	content addressable memory
+CARP	common address redundancy protocol
+CAS	(atomic) compare and swap
+CAS	column address strobe
+CAS	computer algebra system
+CASE	computer aided software engineering
+CAU	control access unit
+CAV	constant angular velocity (as opposed to CLV)
+CBC	cipher block chaining
+CBR	constant bit rate
+CC	Creative Commons
+CC	carbon coby
+CC	credit card
+CCD	charge coupled device
+CD	cache disable
+CD	compact disc
+CDDA	compact disc digital audio
+CDMA	code division multiple access
+CDRAM	cache dynamic random access memory
+CER	canonical encoding rules
+CF	compact flash
+CFG	context-free grammar
+CFG	control-flow graph
+CFV	call for votes
+CFY	calling for you
+CG	center of gravity
+CG	control gate
+CGA	color graphics adapter
+CGI	common gateway interface
+CHAP	challenge-handshake authentication protocol
+CHS	cylinder/head/sector
+CI	continuous integration
+CI	{common, component} interface
+CICS	Customer Information Control System
+CIDR	classless inter-domain routing
+CIFS	Common Internet File System (old SMB)
+CIG	common interest group
+CIL	common intermediate language
+CIR	carrier to interference ratio
+CIS	contact image sensor
+CITO	[gc] cache in, trash out
+CJK	Chinese, Japanese, and Korean
+CLF	common log format
+CLI	command line interface
+CLIP	Calling Line Identification Presentation (feature on callee side to present incoming transmitted phone number)
+CLIR	Calling Line Identification Restriction (feature on caller side to prevent transmitting the own phone number - three modi: CLIR presentation (off by default, on by dial prefix), CLIR restriction (on by default, off by dial prefix), always enabled)
+CLR	common language runtime
+CLTT	closed loop thermal throttling
+CLUT	color look-up table
+CLV	constant linear velocity (as opposed to CAV)
+CM	configuration management
+CMA	concert multithread architecture
+CMI	control management interface
+CMI	control method interface
+CMIIW	correct me if I'm wrong
+CMOS	complementary metal-oxide-semiconductor
+CMP	chip multi-processing
+CMS	content management system
+CMYK	cyan magenta yellow black
+CN	{common, canonical} name
+CNC	computer numerical control
+CNP	continued [in my] next post
+CNR	carrier to noise ratio
+CO	[gc] cache owner
+COB	close of business [day]
+COF	current operating frequency
+COFF	common object file format
+COLP	Connected Line Identification Presentation (feature on caller side to see which phone number was actually connected)
+COLR	Connected Line Identification Restriction (feature on callee side to prevent caller to see the actually connected phone number)
+COM	component object model
+COMA	cache-only memory architecture
+CORBA	common object request broker architecture
+COTS	commercial off-the-shelf
+COW	copy-on-write
+CPB	core performance boost
+CPC	cost per click
+CPG	clock pulse generator
+CPL	current privilege level
+CPLD	complex programmable logic device
+CPS	characters per second
+CPT	command pass through
+CPU	central processing unit
+CR	carriage return
+CRC	cyclic redundancy check
+CRLF	carriage return / line feed
+CRT	cathode ray tube
+CS	cable select
+CS	chip select
+CS	code segment
+CS	computer science
+CSH	C Shell
+CSI	common system interface
+CSMA	carrier sense multiple access
+CSMA/CA	carrier sense multiple access with collision avoidance
+CSMA/CD	carrier sense multiple access with collision detection
+CSRF	cross-site request forgery
+CSS	Content Scrambling System
+CSS	cascading style sheets
+CSV	comma-separated values
+CTM	close to metal
+CTN	can't talk now
+CTS	clear to send
+CU	see you
+CUA	common user access
+CUI	(n)curses user interface
+CUT	coordinated universal time (UTC)
+CV	control voltage
+CVS	concurrent versions system
+CW	[gc] CacheWolf
+CYA	see you around
+CYE	check your email
+C|N>K	coffee pipe nose to keyboard
+D&R	duck and run
+D/L	download
+D/W	don't worry
+DA	destination address
+DAA	distributed application architecture
+DAC	digital [to] analog converter
+DAC	discretionary access control
+DAEMON	disk and execution monitor
+DAEMON	that cuddly red BSD mascot)
+DAO	disk at once
+DAP	directory access protocol
+DAT	digital audio tape
+DAT	dynamic acceleration technology
+DB	database
+DBA	dynamic bandwidth allocation
+DBC	design by contract
+DBDDHKP	doof bleibt doof, da helfen keine Pillen
+DBEYR	don't believe everything you read
+DBL	dynamic buffer limiting
+DBMS	database management system
+DBS	database server
+DC	direct current
+DCC	direct cable connect
+DCC	direct client [to] client
+DCD	data carrier detect
+DCE	data control equipment
+DCE	distributed computing environment
+DCOM	distributed component object model
+DCOP	desktop communication protocol
+DCS	data collection systems
+DCT	discrete cosine transform
+DCU	data cache unit
+DD	Debian developer
+DDC	display data channel
+DDE	dynamic data exchange
+DDK	device driver kit
+DDL	data description language
+DDPO	Debian developer's package overview (http://qa.debian.org/developer.php)
+DDR	double data rate
+DDS	direct digital sound
+DDTT	don't do that then
+DDWG	digital display working group
+DE	debugging extensions
+DE	desktop environment
+DEA	data encryption algorithm
+DEBILIAN	ancient GNU/Linux distribution, nearly forgotten
+DEBILLIAN	ancient GNU/Linux distribution, nearly forgotten
+DEK	data encryption key
+DEP	data execution prevention
+DER	distinguished encoding rules
+DES	Data Encryption Standard
+DF	don't fragment
+DFA	deterministic finite automaton
+DFC	data flow control
+DFDC	[gc] Danke für den Cache (TFTC)
+DFDD	[gc] Danke für die Dose (TFTC)
+DFS	depth first search
+DFS	distributed file system
+DFT	diagnostic function test
+DFT	discrete Fourier transformation
+DGAS	don't give a shit
+DGL	data generation language
+DH	Diffie-Hellman
+DHCP	dynamic host configuration protocol
+DHL	Da Haste Lauferei
+DIAFYO	did I ask for your opinion?
+DIFS	distributed inter-frame space
+DIMM	dual inline memory module
+DIRT	design in real time
+DIY	do it yourself
+DJB	Dan J Bernstein -- http://cr.yp.to/
+DKDC	don't know, don't care
+DL	diode logic
+DL	download
+DLE	data link escape
+DLL	dynamic link library (shared object)
+DMA	direct memory access
+DMCA	(USA) digital milennium copyright act
+DMCA	don't make content accessible
+DMI	desktop management interface
+DMS	document management system
+DMZ	demilitarised zone
+DNARD	Digital network appliance reference design
+DND	do not disturb
+DNF	[gc] did not find
+DNS	domain name system
+DOA	dead on arrival
+DOCH	German for "yes" answering "you don't ..., do you?"
+DOE	distributed object environment
+DOF	data over fibre
+DOM	document object model
+DOS	Disc Operating System
+DOS	denial of service
+DPC	deferred procedure call
+DPCM	differential pulse code modulation
+DPD	Deutscher Paketdienst
+DPD	dead peer detection
+DPI	deep packet inspection
+DPI	dots per inch
+DPL	Debian Project Leader
+DPL	descriptor privilege level
+DPST	display power savings technology
+DRAM	dynamic random access memory
+DRI	direct rendering infrastructure
+DRM	digital restriction management
+DRM	digital rights management
+DRM	direct rendering module
+DRRS	display refresh rate switching
+DRY	don't repeat yourself
+DS	debug store
+DSB	double-sideband modulation
+DSDT	differentiated system descriptor table
+DSL	digital subscriber line
+DSL	domain specific language
+DSLAM	digital subscriber line access multiplexer
+DSN	delivery status notification
+DSO	dynamic shared object
+DSP	digital signal processor
+DSSS	direct sequence spread spectrum
+DST	daylife sucking time
+DST	daylight saving time
+DSTM	don't shoot the messenger
+DTD	document type definition
+DTE	data terminal equipment
+DTE	dumb terminal emulator
+DTL	diode-transistor logic
+DTRT	do the right thing
+DTS	digital thermal sensor
+DTST	did the same thing
+DTWT	do the wrong thing
+DUT	device under test
+DVB	digital video broadcasting
+DVCS	distributed version control system
+DVD	digital versatile disc
+DVFS	dynamic voltage and frequency scaling
+DVI	digital visual interface
+DVR	digital video recorder
+DWIM	do what I mean
+DWZ	dat wil zeggen?
+DYK	do you know?
+E-XER	extended XML encoding rules
+EABI	embedded-application binary interface
+EAP	extensible authentication protocol
+EBR	extended boot record
+ECC	error correction code
+ECL	emitter-coupled logic
+ECN	explicit congestion notification
+ECP	enhanced capability port
+ECS	enhanced chip set
+ECS	extended configuration space
+EDAT	enhanced dynamic acceleration technology
+EDID	extended display identification data
+EDO	extended data out
+EDS	electronical data sheet
+EDS	eternal downward spiral
+EEPROM	electrically erasable programmable read only memory
+EFI	extensible firmware interface
+EFL	emitter follower logic
+EFM	eight to fourteen modulation
+EG	evil grin
+EGA	enhanced graphics adapter
+EGP	exterior gateway protocol
+EH	extension header
+EIDE	enchanced IDE
+EIE	enough is enough
+EISA	extended industry standard architecture
+ELF	endless long to wait for
+ELF	executable and linking format
+ELF	extrem langsames Format
+ELS	entry level system
+ELWMS	Eierlegende Wollmilchsau
+EMI	electro-magnetic interference
+EMP	electro-magnetic pulse
+EMR	electro-magnetic radiation
+EMSG	email message
+EOB	end of business [day]
+EOD	end of {day, discussion}
+EOF	end of file
+EOI	end of interrupt
+EOL	end of life
+EOL	end of line
+EOM	end of message
+EOS	end of story
+EOT	end of transmission
+EPIC	explicitly parallel instruction computing
+EPP	enhanced parallel port
+EPRML	extended partial response, maximum likelihood
+EPROM	erasable programmable read only memory
+ERD	emergency recovery disk
+ERE	extended regular expression
+ESCON	Enterprise Systems Connection
+ESDRAM	enhanced synchronous dynamic random access memory
+ESR	Eric Steven Raymond -- http://www.catb.org/~esr/
+ESS	electronic switching system
+EST	enhanced speedstep
+ETA	edited to add
+ETA	estimated time of arrival (usually infinite)
+ETC	et cetera
+ETL	extract, transform, load
+ETLA	extended three letter acronym
+ETR	early to rise
+EU	European Union
+EU	execution unit
+EULA	end user licence agreement
+EWAG	experienced wild-ass guess
+EWE	Epilogue? What Epilogue? (usually in HP context)
+F9	fine
+FAQ	frequently asked question
+FAT	file allocation table
+FBOW	for better or worse
+FBRAM	frame buffer random access memory
+FCFS	first come first served
+FCL	fiber channel loop
+FCOL	for crying out loud
+FCS	frame check sequence
+FDA	Federal Drug Administration
+FDA	Für den Arsch
+FDC	floppy disk controller
+FDD	floppy disk drive
+FDDI	fiber distributed data interface
+FDE	full disk encryption
+FEA	finite element analysis
+FEAR	false evidence appearing real
+FEC	forward error correction
+FET	field-effect transistor
+FFH	functional fixed hardware
+FFI	foreign function interface
+FFS	fast file system
+FFS	find first set
+FFS	for fuck's sake
+FFS	free for shipping
+FFT	fast Fourier transform
+FFTFT	feel free to fix that
+FG	floating gate
+FHOG	first hit on google
+FHSS	frequency hop spread spectrum
+FIAT	Fehler in allen Teilen
+FIAT	Feuer in allen Töpfen
+FICON	Fiber Connectivity
+FID	frequency identifier
+FIFO	first in, first out
+FIGJAM	fuck I'm good, just ask me
+FIIK	fuck[ed] if I know
+FIIR	fuck[ed] if I remember
+FILO	first in, last out
+FIR	fast infrared
+FITB	fill in the blank
+FKA	formerly known as
+FLOPS	floating [point] operations per second
+FLOSS	(dental care product)
+FLOSS	free / libre / open source software
+FM	frequency modulation
+FM	fucking magic
+FML	fuck my life
+FMR	false match rate
+FNO	for nerds only
+FNO	from now on
+FOAD	{fuck off,fall over} and die
+FOC	free of charge
+FORD	er fuhr ford und kam nie wieder
+FORD	fix or repair daily
+FORD	für Ossis reicht det
+FOS	full of shit
+FOSS	free / open source software
+FPGA	field programmable gate array
+FPM	fast page mode
+FPOS	Financial Point of Sale
+FPOS	First Person On Scene (first responders training)
+FPOS	Food Point of Sale (restaurant industry)
+FPOS	Fort Pierce Orchid Society (Ft. Pierce, Florida)
+FPOS	Fucking Piece of Shit
+FPOS	Future Point of Sale
+FPR	floating point register
+FPS	first person shooter
+FPS	frames per second
+FPU	Floating Point Unit
+FQDN	fully qualified domain name
+FREEBSD	most 1337 open source operating system -- http://www.freebsd.org/
+FRR	false rejection rate
+FRU	field replaceable unit
+FS	file system
+FSB	front side bus
+FSCK	file system check
+FSCK	fuck
+FSDO	for some definition of
+FSF	Free Software Foundation -- http://www.fsf.org/ http://www.fsf-europe.org/
+FSK	frequency shift keying
+FSM	finite-state machine
+FSVO	for sane values of
+FSVO	for some value of
+FTA	fault tree analysis
+FTBFS	fails to build from source
+FTBFS	failure to build from source
+FTF	[gc] first to find
+FTFA	from the fucking article
+FTFM	fuck the fuckin' manual!
+FTFY	fixed that for you
+FTHOI	for the {heck,hell} of it
+FTL	[gc] first to log (when you beat FTF on the log - lame)
+FTL	for the loss
+FTMFW	for the motherfucking win
+FTP	file transfer protocol (needs to die)
+FTPS	file transfer protocol, ssl secured
+FTS	fuck that shit
+FTTT	from time to time
+FTW	for the win
+FU	fuck you
+FUBAR	fucked up beyond all recognition
+FUD	fear, uncertainty and doubt
+FUQ	frequently unanswered questions
+FUS	fast user switching
+FWH	firmware hub
+FWIW	for what it's worth
+FWS	folding white space
+FYEO	for your eyes only
+FYI	for your information
+G	grin
+G/C	garbage collect{,ion}
+G2G	got to go
+G2K	good to know
+GAC	get a clue
+GAL	generic array logic
+GAL	get a life
+GAS	generic address structure
+GBTW	get back to work
+GC	[gc] The Frog Site (gc.com)
+GC	[gc] gc.com listed geocache
+GC	[gc] geocache
+GC	[gc] geocoin (also used as common name for trackable items, cf. TB)
+GC	garbage collector
+GCC	gcc can't compile
+GCR	group-coded recording
+GDT	global descriptor table
+GEM	graphics environment manager
+GEM	graphics execution manager
+GENA	general event notification architecture
+GF	girlfriend
+GFU	good for you
+GFY	go fuck yourself
+GFY	good for you
+GG	good game
+GGWP	good game, well played
+GHC	Glasgow Haskell compiler
+GID	group identifier
+GIF	graphics interchange format
+GIGO	garbage in, garbage out
+GIT	content addressable filesystem written by finnish study aborter
+GIYF	google is your friend
+GJ	good job
+GL	"gl hf" - geek l33t hack forever
+GL	"gl hf" - gentoo linux: hack freedumbly
+GL	"gl hf" - gentoo linux: hack freely
+GL	"gl hf" - gentoo linux: half finished
+GL	"gl hf" - get a life: hack forever
+GL	"gl hf" - get a life: hack freebsd
+GL	"gl hf" - go liberate half-born fetuses
+GL	"gl hf" - go lick hairy females
+GL	"gl hf" - go lick hairy folksingers
+GL	"gl hf" - good luck, have fun [StarCraft]
+GL	[gc] GeoLutin, free trackable item (see also: TB)
+GL	good luck
+GLHF	good luck, have fun
+GLWT	good luck with that
+GMBH	Geh {mir,mal} Bier holen (german pun)
+GMBH	Gesellschaft mit beschränkter Haftung (german/austrian/swiss)
+GMCH	graphics and memory controller hub
+GMTA	great minds think alike
+GN8	goodneight
+GNU	GNU's Not UNIX®
+GOK	god only knows
+GOT	global offset table
+GOWI	get on with it
+GPE	general purpose event
+GPF	general protection fault
+GPL	GNU General Public License
+GPR	general purpose register
+GPS	generalized processor sharing
+GPS	global positioning system
+GPSR	GPSr = GPS receiver
+GPT	GUID partition table
+GPU	graphics processing unit
+GR	golden ratio
+GR8	great
+GRE	generic routing encapsulation
+GRML	(Ausruf der Unzufriedenheit, z.B. mit dem Schicksal)
+GRML	austrian GNU/Linux live distribution, contains MirOS bsd4grml
+GSI	global system interrupt
+GTFO	get the fuck out
+GTG	got to go
+GTH	go to hell
+GTSY	{good, glad} to see you
+GUI	graphic{al,s} user interface
+GUID	globally unique identifier
+GWS	get well soon
+GZ	[gc] Ground Zero - the spot your GPSr takes you to the cache location
+H8	hate
+HA	high availability
+HAL	hardware abstraction layer
+HAND	have a nice day
+HAT	hashed array tree
+HBA	host bus adapter
+HBCI	half correct banking interface
+HBCI	hand codeded banking interface
+HBCI	hardcore banking interface
+HBCI	hopefully correct banking interface
+HBCI	hopelessly catastrophic banking interface
+HBCI	hopelessly corrupt banking interface
+HCF	halt and catch fire
+HCI	host controller interface
+HCI	human-computer interaction
+HCL	hardware compatibility list
+HDA	Heil den Asen (=OMG)
+HDB	Heil Dir, Bruder
+HDCP	high-bandwidth digital content protection
+HDD	hard disc drive
+HDL	hardware description language
+HDW	Heil den Wansen (=OMG)
+HE	how embarrasing
+HF	hardware floating point (Debian/armhf)
+HF	have fun (see also: GL)
+HF	high frequency
+HFIW	HOLY FUCK IT WORKS
+HFM	highest frequency mode
+HHDD	hybrid hard disc drive
+HHIS	hanging head in shame
+HHOS	ha ha, only serious
+HICA	here it comes again
+HID	human interface device
+HLL	high-level language
+HMA	high memory area
+HMI	human-machine interface
+HNY	happy new year
+HOAS	hold on a second
+HOOD	hierarchical object oriented design
+HP	Hewlett-Packard
+HPC	high performance computing
+HPET	high precision event timer
+HSIW	HOLY SHIT IT WORKS
+HT	hyper-threading
+HTC	hardware thermal control
+HTCC	high temperature co-fired ceramic
+HTH	hoffentlich tut's helfen
+HTH	hope this helps
+HTML	hyper-text markup language
+HTT	hyper-threading technology
+HTTP	Hot Tits Transport Pr0nocol
+HTTP	hyper-text transfer protocol
+HTTPS	hyper-text transfer protocol, ssl secured
+HVM	hardware virtual machine
+HWRNG	hardware random number generator
+HZ	Hertz
+I C	I see
+I2O	intelligent input/output
+IA	information assurance
+IAC	in any case
+IAE	in any event
+IANA	Internet Assigned Numbers Authority
+IANADD	I am not a Debian developer
+IANAL	I am not a lawyer
+IAW	in another window
+IAWTC	I agree with this comment
+IAY	I adore you
+IB	I'm back
+IBC	iterated block cipher
+IBM	International Business Machines
+IBS	instruction based sampling
+IBTD	I beg to differ
+IBTD	in before the delete (web fora)
+IC	I see
+IC	integrated circuit
+ICA	independent computer architecture
+ICANN	(also jokingly: ICAN't)
+ICANN	Internet Corporation for Assigned Names and Numbers
+ICB	internet citizen's band
+ICBW	I could be wrong
+ICBW	It could be worse
+ICCL	I couldn't care less
+ICE	in-circuit emulator
+ICE	internal compiler error
+ICH	I/O controller hub
+ICMP	internet control message protocol
+ICT	information and communications technology
+ICUR	I see you are
+IDA	Intel dynamic acceleration
+IDC	I don't care
+IDD	indeed (dutch: inderdaad)
+IDE	integrated development environment
+IDE	integrated drive electronics
+IDGI	I don't get it
+IDGW	in a good way (?)
+IDI	I doubt it
+IDK	I don't know
+IDPS	intrusion detection [and] prevention system
+IDRC	I don't really care
+IDRP	inter-domain routing protocol
+IDS	intrusion detection system
+IDT	interrupt descriptor table
+IDTS	I don't think so
+IDTT	I drink to that
+IE	Microsoft Internet Explorer
+IEC	international electrotechnical commission
+IEEE	Institute [of] Electrical [and] Electronics Engineers
+IESG	Internet Engineering Steering Group
+IETF	Internet Engineering Task Force
+IFCM	isochronous flow control mode
+IGD	Internet gateway device
+IGMP	Internet group management protocol
+IGP	interior gateway protocol
+IHAFC	I haven't a fucking clue
+IHBW	I have been wrong
+IHNFC	I have no fucking clue
+IHV	independent hardware vendor
+IIANM	if I am not mistaken
+IINM	if I'm not mistaken
+IIRC	if I recall/remember correctly
+IIUC	if I understand correctly
+IKE	internet key exchange
+IKWYM	I know what you mean
+ILM	internal loopback mode
+ILP	instruction level parallelism
+ILU	I love you
+ILY	I love you
+IM	instant messaging
+IMAO	in my arrogant opinion
+IMAP	internet mail access protocol
+IMBO	in my biased opinion
+IMC	integrated memory controller
+IMCO	in my considered opinion
+IMCR	interrupt mode configuration register
+IMHO	in my humble opinion
+IMNSHO	in my not so humble opinion
+IMO	in my opinion
+IMS	information management system
+INCITS	international committee on information technology standards
+INPO	in no particular order
+IO	input/output
+IOCTL	input/output control
+IOMMU	input/output memory management unit
+IOU	I owe you (debt)
+IOW	in other words
+IP	Internet Protocol
+IP	intellectual property
+IPC	interprocess communication
+IPE	integrated programming environment
+IPI	interprocessor interrupt
+IPL	IBM Public License
+IPL	Information Processing Language
+IPL	Initial Program Load
+IPL	Interrupt priority level
+IPML	I pissed myself laughing
+IPNG	Internet Protocol, next generation
+IPS	in-plane switching
+IPS	intrusion prevention system
+IPSEC	Internet Protocol security
+IPV	in place of (dutch: in plaats van)
+IPV6	next generation Internet Protocol, triggers japanese simple-mind ideas
+IQ	intelligence quotient
+IRC	internet relay chat
+IRDA	infrared data association
+IRL	in real life
+IRQ	interrupt request
+IRQL	interrupt request level
+IRT	in real time
+IRT	in regards to
+IRTF	internet research task force
+IS	information system
+ISA	industry standard architecture
+ISA	instruction set architecture
+ISAGN	I see a great need
+ISBN	international standard book number
+ISDN	integrated services digital network
+ISI	inter-symbol interference
+ISM	industrial, scientific and medical
+ISN	initial serial number
+ISO	international standards organisation
+ISOC	internet society
+ISP	internet service provider
+ISR	interrupt service routine
+ISSN	international standard serial number
+IST	interrupt stack table
+ISTM	it seems to me
+ISTR	I seem to recall
+ISV	independent software vendor
+IT	information technology
+ITB	Intel turbo boost
+ITYM	I think you mean
+ITYM	Is it this you mean
+ITYM	It's this you mean
+ITYW	I think you want
+ITYW	I'll tell you what
+ITYW	Is it this you want
+ITYW	It's this you want
+IUD	insert usual disclaimers
+IUSS	if you say so
+IV	initialisation vector
+IVT	interrupt vector table
+IW	it's worse
+IWBNI	it would be nice if
+IYD	in your dreams
+IYKWIM	if you know what I mean
+IYSS	if you say so
+IYSWIM	if you see what I mean
+J/K	just kidding
+JAJAJAJA	yes yes yes yes (common German expression in OpenBSD development)
+JAM	just a minute
+JARGON	hacker slang collection - http://catb.org/~esr/jargon/
+JARGON	hacker slang, censored - http://catb.org/~esr/jargon/chaff.html
+JAS	just a second
+JBOD	just a bunch of disks
+JFET	junction [gate] field-effect transistor
+JFGI	just fucking google it
+JFK	John Fitzgerald Kennedy
+JFTR	just falls Thema reinkarniert
+JFTR	just for the record
+JFW	just fucking works
+JGI	just google it
+JGI	just got it
+JHD	just hit "delete"
+JIC	just in case
+JIHBED	it is word arabic == TOP AND POWER INTELLIGENT</quote> (a TNF joke)
+JIT	just in time
+JJA	just joking around
+JK	just kidding
+JMO	just my opinion
+JPEG	joint photography experts group
+JRE	Java™ runtime environment
+JSYK	just so you know
+JTAG	joint test action group
+JTLYK	just to let you know
+JW	just wondering
+KB	keyboard
+KB	kilobyte
+KBD	keyboard
+KBD	kilobaud
+KISS	keep it short and simple
+KISS	keep it simple and smart
+KISS	keep it simple and straightforward
+KISS	keep it simple and stupid
+KISS	keep it simple, stupid
+KISS	keep it small and simple
+KISS	keep it strictly simple
+KISS	keep it sweet and simple
+KITA	kick in the arse
+KK	okay, okay
+KLOC	thousand lines of code
+KMA	keep me advised
+KMA	keep moving ahead
+KMA	kill me already
+KMS	kernel-mode setting
+KNF	kernel normal form - https://www.mirbsd.org/man9/style
+KOD	kiss of death
+KOS	kill on sight
+KPI	kernel programming interface
+KSH	Korn Shell
+KTHX	okay, thanks
+KUNDE	kann ungestraft nerven, da Einnahmequelle
+KVA	kernel virtual address
+KVM	kernel virtual memory
+KVM	keyboard, video, mouse switch
+KWIM	know what I mean?
+L8	late
+L8ER	later
+L8R	later
+LACP	Link Aggregation Control Protocol
+LAMP	Linux Apache MySQL {Perl,PHP,Python}
+LAMPP	Linux Apache MySQL {Perl,PHP,Python}
+LAN	local area network
+LAPIC	local advanced programmable interrupt controller
+LAR	load access rights
+LART	luser attitude readjustment tool (ie, hammer)
+LBA	logical block addressing
+LBNL	last but not least
+LBS	location-based service
+LC	[gc] locationless cache (usually tracked at TC)
+LCD	liquid crystal display
+LCL	[gc] left calling card
+LCP	link control protocol
+LDA	local delivery agent
+LDAP	lightweight directory access protocol (not lightweight)
+LDR	light-dependent resistor
+LDT	local descriptor table
+LE	logical extent
+LED	light emitting diode
+LER	label edge router
+LER	light emitting resistant
+LF	line feed
+LF	low frequency
+LFM	lowest frequency mode
+LFN	long file names
+LFO	low-frequency oscillation
+LFS	Linux from Scratch
+LFS	Live for Speed (online racing simulator)
+LFS	log-structured file system
+LFU	least frequently used
+LGPL	GNU Lesser General Public License
+LGTM	looks good to me
+LIFO	last in, first out
+LILO	Linux loader
+LILO	last in, last out
+LINT	local interrupt
+LINUX	free (as in GNU) operating system kernel -- http://www.kernel.org/
+LINUX	life is not utterly exciting
+LIR	local internet registry
+LJBF	let's just be friends
+LKM	Linux kernel module
+LKM	loadable kernel module
+LKML	linux-kernel mailing list (vger.rutgers.edu -> vger.kernel.org)
+LL	load linked
+LL/SC	load linked / store conditional
+LLC	logical link control
+LLF	low level format
+LLMNR	link-local multicast name resolution
+LLVM	Low Level Virtual Machine
+LM	long mode
+LMAA	Leck' mich am Arsch
+LMAO	laughing my arse off
+LMB	lick my balls
+LMC	let me check
+LMFAO	laughing my fucking ass off
+LMGTFY	let me google that for you
+LMHO	laughing my head off
+LMK	let me know
+LMM	link management mode
+LMNO	laughing my nuts off
+LMSO	laughing my socks off
+LNO	loop nest optimisation
+LOC	lines of code
+LOL	lachend, oba laut
+LOL	laughing out loud
+LP	Langspielplatte (Schallplatte)
+LP	long playing (record)
+LPC	low pin count
+LPS	local positioning system
+LRC	longitudinal redundancy check
+LRM	left-to-right mark
+LRO	left-to-right override
+LRU	least recently used
+LSB	least significant bit [or: byte]
+LSB	linux standards base
+LSI	large scale integration
+LSL	load segment limit
+LSR	label switch router
+LTCC	low temperature co-fired ceramic
+LTNS	long time no see
+LTO	link-time optimisation
+LTR	left to right
+LTR	load task register
+LTS	*buntu equivalent of Debian unstable
+LTS	long term Schrott
+LTS	long term shlock
+LTS	long time support
+LUG	Linux user group
+LUG	local user group
+LUN	logical unit number
+LV	logical volume
+LVM	logical volume management
+LVT	local vector table
+LWP	light-weight process
+LWYL	laugh with you later
+LZW	Lempel Ziv Welch
+M8	mate
+MAC	mandatory access control
+MAC	medium access control
+MAD	mutually assured destruction
+MADT	multiple APIC descriptor table
+MARC	http://marc.theaimsgroup.com/
+MB	megabyte
+MBR	master boot record
+MBS	megabits per second
+MC	memory controller
+MCA	machine check architecture
+MCC	multiversion concurrency control
+MCE	machine check exception
+MCGA	multicolor graphics adapter
+MCH	memory controller hub
+MCM	multi-chip module
+MCQ	memory controlled queue
+MCSE	"Mayday", called some experts
+MCSE	Minesweeper Consultant and Solitaire Expert
+MCSE	mad consultants slurping ethanol
+MCSE	madly causing slashdot effect
+MCSE	mail consumed somewhere in exchange
+MCSE	mainframe computers seemed extinct
+MCSE	maintenance contracts seem expensive
+MCSE	maintenance costs significantly extra
+MCSE	making companies surrender everyday
+MCSE	making computers slow everyday
+MCSE	making computers spew errors
+MCSE	making computers susceptible to exploit
+MCSE	making cretins self-employed
+MCSE	maledictis confutatious sounds exquisite
+MCSE	management can't send e-mail
+MCSE	management conned by something expensive
+MCSE	management coronaries soon enough
+MCSE	management will catch you with a screenful of erotica
+MCSE	managers contain significant egos
+MCSE	managing computers by slapdash empiricism
+MCSE	managing crap systems everyday
+MCSE	manipulative closed-source economics
+MCSE	many collisions saturate ethernet
+MCSE	marginal computer software enthusiast
+MCSE	marketing cancels software efficiency
+MCSE	marksmanship can solve everything
+MCSE	mass c squared is energy
+MCSE	massive computational solar eclipse
+MCSE	massive cyberspace sheepshearing empire
+MCSE	maybe could suggest exorcism
+MCSE	me-too computer science education
+MCSE	meandering cosmicrays 'sodded explorer
+MCSE	megabytes can soon evaporate
+MCSE	meowing cats suggest evil
+MCSE	migrane-causing suckage extravaganza
+MCSE	millenium caused societal extinction
+MCSE	mindfscked computers swapping egregiously
+MCSE	minimally cheerful software experience
+MCSE	minimising competence is so exhausting
+MCSE	minion of the crappy software empire
+MCSE	mischief causing shipwrecked equipment
+MCSE	misconceived computer science experiment
+MCSE	misguided consultant slagging eunuchs
+MCSE	misunderstanding cryptically strange errors
+MCSE	moe and curly's software emporium
+MCSE	molasses comparitively seems expeditious
+MCSE	molotov cocktails shutdown electricity
+MCSE	monetary compensation sounds exciting
+MCSE	mongolian clusterfsck swallows everything
+MCSE	monkies composing shakespearian equivalents
+MCSE	moot crypto software is exportable
+MCSE	more co-opted standards everyday
+MCSE	morning comes so early
+MCSE	moron confused by sun equipment
+MCSE	morons crudely simulating expertise
+MCSE	mortifying crackle of static electricity
+MCSE	most computers suck eggs
+MCSE	most computers suck exasperatingly
+MCSE	motherboard chips simulate encephalopathy
+MCSE	mounteback causing significant expenses
+MCSE	mouse clickings of sophomoric experimentation
+MCSE	mouse clicks selected "erase"
+MCSE	mozilla couldn't stomach explorer
+MCSE	multiple corrective servicepack exorcist
+MCSE	must consult someone experienced
+MCSE	must... contain... STR. Eaaaaaaaaaaaurgh!
+MCSE	mutant computer solutions evangelist
+MCSE	mutant computers seem eviscerated
+MCSE	mutated CP/M system emulator
+MCSE	mutated convoluted strokery everywhere
+MCSE	my cat studies ecclesiastes
+MCSE	my company screws everyone
+MCSE	my computer's software exploded
+MCSE	my cranium softened easily
+MCSE	my customers support extravagance
+MD	machine-dependent
+MDA	mail delivery agent
+MDA	monochrome display adapter
+MDRAM	multibank dynamic random access memory
+MDWDW	Mach' doch, was Du willst!
+MESI	modified, exclusive, shared, invalid
+MFC	merge from -current
+MFG	with friendly greetings
+MFM	modified frequency modulation
+MFS	Memory File System
+MI	machine-independent
+MIA	missing in action
+MIB	management information base
+MID	mobile internet device
+MIDI	musical instrument digital interface
+MIF	management information format
+MILF	mother i'd like to fuck
+MIMD	multiple instruction stream, multiple data stream
+MIME	multipurpose internet mail extensions
+MIMO	multiple input multiple output
+MIPS	Microprocessor without Interlocked Pipeline Stages
+MIPS	meaningless indicator of processor speed
+MIPS	meaningless information for a pushy salesman
+MIPS	meaningless information provided by salesperson
+MIPS	million instructions per second
+MIPS	{def.} die Zahl von Millionen Maschinenoperationen pro Sekunde, von der der Hersteller garantiert, daß sie unter keinerlei Betriebsbedingungen überschritten wird
+MIRBSD	split of OpenBSD with a lot of improvements -- http://mirbsd.de/
+MISD	multiple instruction, single data
+MIT	Massachusetts Institute of Technology
+ML	machine language
+ML	machine learning
+ML	mailing list
+ML	markup language
+ML	maximum likelihood
+MLC	multi-level cell
+MMB	message me back
+MMIC	monolithic microwave integrated circuit
+MMIO	memory mapped input/output
+MMU	memory management unit
+MMX	matrix math extension
+MMX	multimedia extension
+MMX	multiple math extension
+MO	magneto-optical
+MO	modus operandi
+MODE	Mann, opfere dein Erspartes!
+MODE	die teuerste Stoffwechselkrankheit
+MOESI	modified, owned, exclusive, shared, invalid
+MOF	maximum operating frequency
+MOSFET	metal-oxide-semiconductor field-effect transistor
+MOSI	modified, owned, shared, invalid
+MOTAS	member of the appropriate sex
+MOTOS	member of the opposite sex
+MOTSS	member of the same sex
+MOTU	masters of the universe (Ubuntu developer)
+MP	multi-platform
+MP	multiplayer
+MP	multiprocessing
+MP	multiprocessor
+MPEG	moving picture experts group
+MPI	message passing interface
+MPL	Mozilla Public License
+MPLS	multiprotocol label switching
+MPP	massively parallel processor
+MPS	memory pool system
+MPS	multiprocessor specification
+MR	modem ready
+MRU	most recently used
+MS	Microsoft
+MSB	most significant bit [or: byte]
+MSE	mean square error
+MSF	minutes seconds frames
+MSI	message signaled interrupt
+MSI	modified, shared, invalid
+MSIE	Microsoft Slaves' Incessant Exasperation
+MSIE	Microsoft® Internet Explorer
+MSR	machine state register
+MSS	maximum segment size
+MT	machine translation
+MTA	mail transfer agent
+MTBF	mean time between failures
+MTF	more to follow
+MTRR	memory type range register
+MTTF	mean time to failure
+MTU	maximum transmission unit
+MUA	mail user agent
+MUC	multi user chat (jabber/xmpp equivalent to irc channel)
+MUD	multi-user domain
+MUD	multi-user dungeon
+MUGGLE	[gc] person not knowing about geocaching
+MVCC	multiversion concurrency control
+MVS	Multiple Virtual Systems
+MWDW	Mach' was Du willst!
+MWE	module width encoding
+MX	mail exchange
+MYOB	mind your own business
+N/M	never mind
+N/T	[gc] no trade
+N/T	no text (also: nt)
+N1	nice one
+N8	goodneight
+NACK	negative acknowledgement
+NAFAIK	not as far as I know
+NAK	negative acknowledgement (see ACK)
+NAN	not a number
+NAS	network attached storage
+NAT	network address translation
+NAV	network allocation vector
+NBD	network block device
+NBD	no big deal
+NC	[gc] navicache
+NC	numerical control
+NCO	numerically-controlled oscillator
+NCP	network control protocol
+NCQ	native command queuing
+ND	neighbor discovery
+NE	numeric error
+NE1	anyone
+NERD	non emotionally responding dude
+NETBSD	... is a registered trademark of TNF
+NETBSD	most portable open source operating system -- http://www.netbsd.org/
+NFA	no flaming allowed
+NFA	nondeterministic finite automaton
+NFC	no fucking clue
+NFI	no flame intended (usually: NOFI)
+NFI	no fucking idea
+NFS	Need for Speed (computer game)
+NFS	need file server
+NFS	network[ing] file system
+NFS	nightmare file system
+NFS	no filesystem
+NFW	no fucking way
+NIA	next instruction address
+NIC	network interface card
+NIFOC	naked in front of computer
+NIH	not invented here
+NIMB	not in my backyard
+NIMBY	not in my backyard
+NINU	[gc] niets in, niets uit (cf. TNLN)
+NIP	network interface protocol
+NIS	network information service
+NLS	native language support
+NM	[gc] needs maintenance
+NM	never mind
+NMF	not my fault
+NMI	non-maskable interrupt
+NMP	not my problem
+NNTP	network news transfer protocol
+NOFI	no flame intended
+NOM	no offence meant
+NOOB	newbie
+NOP	no operation
+NOYB	none of your business
+NOYFB	none of your fucking business
+NP	no problem
+NP	nondeterministic polynomial time
+NP	now playing
+NPC	non-player character
+NR	not really
+NRFPT	not ready for prime time
+NRN	no reply necessary
+NRN	not right now
+NRNR	[gc] nichts rein, nichts raus (cf. TNLN)
+NRZ	non-return to zero
+NSA	National Security Agency
+NSFW	not safe for work
+NSFW	not suitable for work
+NT	[gc] no trade
+NT	new technology
+NT	no text (also: n/t)
+NTM	non-deterministic Turing machine
+NTN	no thanks needed
+NTP	network time protocol
+NTSC	Never Twice Same Color
+NUMA	non-uniform memory access
+NUNP	no users, no problems
+NVM	never mind
+NVRAM	non-volatile random access memory
+NW	no way
+NW	not write-through
+NX	no execute
+NXT	next
+NÄHMLICH	Wer nämlich mit h schreibt, ist dämlich.
+NÄMLICH	Wer nämlich mit h schreibt, ist dämlich.
+O I C	oh, I see
+O2W	off to work
+OAEP	optimal asymmetric encryption padding
+OAO	over and out
+OBO	off by one
+OBOE	off by one error
+OC	[gc] opencaching.{cz,de,pl}
+OC	original character
+OCL	object constraint language
+OCR	optical character recognition
+ODCM	on-demand clock modulation
+ODT	on-die termination
+OEM	original equipment manufacturer
+OFC	original female character (OC)
+OFDM	orthogonal frequency division multiplexing
+OFET	organic field-effect transistor
+OH	other half
+OIC	oh, I see
+OLE	object linking and embedding
+OMC	original male character (OC)
+OMFG	oh my fucking god
+OMG	Oh my Goddess!
+OMG	oh, my god
+OMW	on my way
+ONFI	open nand flash interface
+ONNA	oh no, not again
+ONNTA	oh no, not this again
+OO	OpenOffice
+OO	object oriented
+OOB	out of band
+OOB	out of bounds
+OOC	out of curiosity
+OOE	out of order execution
+OOI	out of interest
+OOM	out of memory
+OOO	OpenOffice
+OOP	object oriented programming
+OOSE	object oriented software engineering
+OOSOOM	out of sight, out of mind
+OPENBSD	most secure open source operating system -- http://www.OpenBSD.org/
+OPM	operations per minute
+OPS	operations per second
+OPTU	Octet Pass-Through for Unicode (encoding) -- MirOS OPTU-8 and OPTU-16
+OQL	object query language
+ORM	object-relational mapping
+OS	operating system
+OSD	open source definition
+OSF	open software foundation
+OSI	open systems interconnection
+OSI	open-source initiative
+OSPF	open shortest path first
+OSPM	OS power management
+OSS	open sound system
+OSS	open source software
+OSVW	operating system visible workarounds
+OT	off topic
+OT	ohne Themenbezug
+OTL	out to lunch
+OTOH	on the other hand
+OTP	one time password
+OTS	off the shelf
+OTT	over the top
+OTTOMH	off the top of my head
+OU	organisational unit
+OUI	organisationally unique identifier
+OWL	Web ontology language
+OWTTE	or words to that effect
+P2P	PCI to PCI
+P2P	peer to peer
+PA	phase accumulator
+PA	physical address
+PAC	phase-amplitude converter
+PAE	physical address extension
+PAF	[gc] phone a friend (usually required for webcam caches)
+PAL	phase alternating line
+PAL	programmable array logic
+PAM	pluggable authentication modules
+PAM	pulse amplitude modulation
+PAP	password authentication protocol
+PAT	page attribute table
+PAT	port address translation
+PATA	parallel ATA (IDE, AT-Bus)
+PAX	portable archive exchange
+PB	powerbook
+PB	problem
+PBE	pending break encoding
+PBE	programming by example
+PC	personal computer
+PCB	printed circuit board
+PCC	Portable C Compiler
+PCD	page-level cache disable
+PCE	performance-monitor counter enable
+PCI	peripheral component interconnect
+PCM	phase change memory
+PCM	pulse code modulation
+PCMCIA	personal computer memory card international association
+PD	public domain
+PDA	personal digital assistant
+PDA	pushdown automaton
+PDAG	propositional directed acyclic graph
+PDB	power distribution board
+PDF	portable document format
+PDM	pulse-duration modulation
+PDN	pull-down network
+PDP	page descriptor page
+PDQ	pretty darn quick
+PDS	please don't shout
+PDS	product data sheet
+PDU	protocol data unit
+PE	protection enable
+PEBCAK	reverse'ism for PEBKAC
+PEBKAC	problem exists between keyboard and chair
+PEP	protocol extension protocol
+PER	packed encoding rules
+PERL	Pathologically Eclectic Rubbish Lister
+PERL	practical extraction [and] report language
+PFI	pay for inclusion
+PFO	please fuck off
+PFS	perfect forward secrecy
+PFY	pimply faced youth
+PGAS	partitioned global address space
+PGE	page global enable
+PGP	pretty good privacy
+PHB	PCI host bridge
+PHB	pointy haired boss
+PHD	Doctor of Philosophy
+PHP	people hate PHP
+PIC	position independent code
+PIC	programmable interrupt controller
+PID	process id
+PIE	position independent executable
+PIM	personal information manager
+PIM	platform-independent model
+PIN	personal identification number
+PIO	programmed input/output
+PIPT	physically indexed, physically tagged
+PIQ	prefetch input queue
+PIT	programmable interrupt timer
+PITA	pain in the arse
+PIV	personal identity verification
+PKCS	public-key cryptography standards
+PKI	public key infrastructure
+PKSP	pound keys and spew profanity
+PLC	programmable logic controller
+PLD	programmable logic device
+PLL	phase locked loop
+PLONK	Poster liest Originalposter nicht konsequent
+PLRU	pseudo LRU
+PLTM	package level thermal management
+PLZ	please
+PM	post meridiem
+PM	power management
+PM	pulse modulation
+PMD	poor man's debugging (aka printf)
+PME	power management event
+PMFI	problem magically fixed itself
+PMFJI	pardon me for jumping in
+PMI	platform management interrupt
+PMIO	port-mapped input/output
+PMSL	pissing myself laughing
+PMT	photo-multiplier tube
+PMU	power management unit
+PNG	persona non grata
+PNG	portable network graphics
+PNP	plug and play
+PNP	{pay,plug} and pray
+POC	piece of crap
+POC	point of contact
+POC	proof of concept
+POE	power over ethernet
+POF	probability of failure
+POI	[gc] point of interest
+POLA	principle of least astonishment
+POLS	principle of least surprise
+POP	post office protocol
+POP	power on password
+POS	piece of shit
+POS	point of sale
+POSIX	portable operating system interface [for] unix
+POST	power on self test
+POTS	plain old telephone system
+POV	point of view
+POWER	performance optimisation with enhanced RISC (as in IBM's POWER CPUs)
+PP	pair programming
+PPB	PCI [to] PCI bridge
+PPC	Pocket PC
+PPC	PowerPC
+PPI	pixels per inch
+PPL	people
+PPL	pretty please
+PPM	pages per minute
+PPM	parts per million
+PPP	petty pet peeve
+PPP	point-to-point protocol
+PPPOA	point-to-point protocol over ATM
+PPPOE	point-to-point protocol over ethernet
+PPU	physics processing unit
+PR	public relations
+PRBS	pseudo-random bit sequence
+PRML	partial response, maximum likelihood
+PRN	pseudo random noise
+PRN	pseudo random number
+PRNG	pseudo random number generator
+PROM	programmable read only memory
+PSD	power spectral density
+PSE	page size extensions
+PSK	phase shift keying
+PSK	pre-shared key
+PSTN	public switched telephone network
+PSU	power supply unit
+PSW	program status word (flags register)
+PTE	page table entry
+PTLA	pseudo top level aggregator
+PTP	page table page
+PTV	parental tunnel vision
+PTV	perceived target value
+PU	processing unit
+PUN	physical unit number
+PV	physical volume
+PVG	physical volume group
+PVI	protected-mode virtual interrupt
+PWM	pulse width modulation
+PWP	Plot? What Plot?
+PXE	preboot execution environment
+QA	quality assurance
+QAM	quadrature amplitude modulation
+QAM	quality assurance management
+QBE	query by example
+QC	quality control
+QDI	quasi delay insensitive
+QED	quod erat demonstrandum
+QFT	quoted for truth
+QOS	quality of service
+QOTD	quote of the day
+RA	receiver address
+RA	remote assistance
+RA	residential advisor
+RA	resource affinity
+RA	router advertisement
+RAD	rapid application development
+RAID	redundant array of inexpensive disks
+RAM	random access memory
+RAS	remote access service
+RAS	restartable atomic sequence
+RAS	row address strobe
+RATIBIBUGLE	french-specific version of ROTOTILL
+RBF	radial basis function
+RBT	red-black tree
+RC	release candidate
+RC	remote control
+RCS	revision control system
+RCU	read, copy, update
+RCU	read-copy-update
+RDF	reality distortion field
+RDF	resource description format
+RDM	relational data model
+RDMA	remote direct memory access
+RE	regular expression
+REST	representational state transfer
+RF	radio frequency
+RFA	request for assistance
+RFC	request for comments
+RFD	request for discussion
+RFE	request for enhancements
+RFI	radio frequency interference
+RFO	request for ownership
+RFP	request for package/packaging
+RFS	request for sponsorship
+RGB	red green blue
+RGR	roger
+RH	read hit
+RHEL	Red Hat Enterprise Linux
+RHL	Red Hat Linux (now either RHEL or Fedora)
+RIA	rich internet application
+RIB	routing information base
+RIFF	Resource Interchange File Format
+RIP	requiescat in pacem
+RIP	rest in peace
+RIP	routing information protocol
+RIR	regional internet registry
+RISC	reduced instruction set computing
+RKM	ROM Kernel Manual
+RL	real life
+RLC	rod length check
+RLE	run length encoding
+RLL	run length limited
+RLO	right-to-left override
+RM	read miss
+RMI	remote method invocation
+RMPM	rapid memory power management
+RMS	Richard Matthew Stallman
+RMS	root mean square
+RMW	read, modify, write
+RNG	random number generator
+ROFL	Respekt, Originalposting fein lustig
+ROFL	rolling on floor laughing
+ROFLMAO	rolling on floor laughing my arse off
+ROI	return on investment
+ROM	read only memory
+ROTFL	Respekt, Originalposting tatsächlich fein lustig
+ROTFL	rolling on the floor laughing
+ROTFLBTCDICAJTTWADBSIHPWTRHITSBKABAYB	rolling on the floor laughing, biting the carpet, dancing in circles and jumping through the window almost dieing by smashing into hp who's then running horrified into the street being killed accidentally by a yellow bulldozer
+ROTFLMAO	rolling on the floor laughing my arse off
+ROTOTILL	"nuke with a chain saw device", to die with extreme prejudice (see GC)
+RP	responsible person
+RPC	remote procedure call
+RPL	requested privilege level
+RPM	revolutions per minute
+RR	railroad
+RR	random replacement
+RR	round robin
+RS	relay station
+RSA	Rivest, Shamir and Adleman
+RSI	repetitive strain injury
+RSN	real soon now
+RSS	really simple syndication
+RSS	residual sum of squares
+RSVP	please reply (french: repondez s'il vous plaît)
+RT	real time
+RTC	real time clock
+RTC	real time computing
+RTF	rich text format
+RTFB	read the fine/fucking book
+RTFC	read the fine/fucking code (see also UTFS)
+RTFD	read the fine/fucking documentation
+RTFJF	read the fine jargon file: http://www.catb.org/~esr/jargon/
+RTFM	read the fine/fucking manual
+RTFMF	read the fucking Makefile
+RTFMP	read the fine/fucking man page
+RTFRFC	read the boring RFC
+RTFRFC	read the {fine,fucking} RFC
+RTFS	read the fine/fucking source
+RTFS	read the fine/fucking spec
+RTFWS	read the {fine,fucking} web site
+RTFWS	return to frankensteins wooly sheep
+RTL	resistor-transistor logic
+RTOS	real time operating system
+RTS	ready to send
+RTS	request to send
+RTSL	read the source, Luke (open source programming)
+RTSL	real-time shading language (Stanford University)
+RTSL	real-time systems laboratory
+RTT	round time trip
+RUP	rational unified process
+RWM	read-write memory
+RX	receive, receiver
+S/PDIF	Sony/Phillips digital interface
+SA	security advisory
+SA	security association
+SA	source address
+SA	structured analysis
+SAAS	software as a service
+SACD	super audio compact disc
+SAD	security association database
+SAL	system abstraction layer
+SAM	serial access memory
+SAM	sum addressed memory
+SAN	storage area network
+SAP	Salary Appreciation Program.
+SAP	Sammelstelle Arbeitsloser Physiker
+SAP	Sanduhr-Anzeige-Programm
+SAP	Save and pray
+SAP	Schafft Arbeits-Plätze
+SAP	Schlimmstes Aller Probleme der Deutschen Telekom
+SAP	Schrecken, Angst und Panik
+SAP	Secondary Audio Programming
+SAP	See Administrators Panic
+SAP	See After Playing
+SAP	Service Access Point
+SAP	Sex And Pornography
+SAP	Sicherer Arbeitsplatz
+SAP	Sichert Arbeits-Plätze
+SAP	Simple Application Program
+SAP	Software Ante Portas
+SAP	Software aus Pakistan
+SAP	Solves All Problems (before purchase)
+SAP	Sorgen, Angst & Panik
+SAP	Spend And Pray!
+SAP	Spitze aller Programmierkunst
+SAP	Start Adding Patches
+SAP	Stop All Production
+SAP	Submit And Pray
+SAP	Such A Pain (after purchase)
+SAP	Suchen Anklicken Pause
+SAP	Suffer After Purchase
+SAP	Suffer and Pay
+SAP	Summe Aller Probleme
+SAP	Systeme, Anwendungen, Programme in der Datenverarbeitung
+SAP	ich sag's ja: SS, SA, SAP
+SAPIC	streamlined advanced programmable interrupt controller
+SAR	some assembly required
+SASD	structured analysis, structured design
+SASI	shugart associates system interface (predecessor to SCSI)
+SASL	simple authentication [and] security layer (neither simple nor secure)
+SATA	satan
+SATA	serial advanced technology attachment
+SB	sound blaster
+SBA	[gc] should be archived (needs archived)
+SBU	standard build unit
+SC	store conditional
+SCA	source code analyzer
+SCADA	supervisory control and data acquisition
+SCC	second class citizen
+SCC	single chip cloud
+SCC	source code control
+SCCS	source code control system
+SCI	scalable coherent interface
+SCI	system control interrupt
+SCM	software configuration management
+SCM	source code management
+SCNR	schulljung, connte nit rückhalten
+SCNR	sorry, could not resist
+SCP	secure copy
+SCSI	small computer system interface
+SCTP	stream control transmission protocol
+SDK	software development kit
+SDL	simple declarative language
+SDRAM	synchronous dynamic random access memory
+SDT	syntax-directed translation
+SECAM	Something Essentialy Contrary to the American Method
+SED	smoke emitting diode
+SEGV	segmentation violation
+SEP	someone else's problem
+SERP	search engine results page
+SFA	sweet fuck all
+SFAICT	so far as I can tell
+SFC	sequential function chart
+SFI	simple firmware interface
+SGRAM	synchronous graphics random access memory
+SH	Bourne Shell
+SH	POSIX Shell
+SH	Shell
+SHID	slaps head in disgust
+SHIT	FSF - Shit happens: http://www.fsf.org/fun/jokes/shit-happens.html
+SHIT	FSF - Shit part 2: http://www.fsf.org/fun/jokes/more-shit.html
+SHIT	FSF - Shit part 3: http://www.fsf.org/fun/jokes/religions.html
+SHOK	smashing head on keyboard
+SIEMENS	Schon Im Ersten Moment Eigenartiger Nichtfunktionierender Scheiß
+SIEMENS	Sicher Ist Eins: Man Erhält Nur Schrott
+SIEMENS	Super Im Ersten Moment, Erst Nachher Scheiße
+SIFS	short inter-frame space
+SIGNAL	Stallman is (a) GNU, not a Lawyer
+SIMCA	sitting in my chair amused
+SIMD	single instruction, multiple data
+SIMM	single inline memory module
+SIP	session initiation protocol
+SIR	slow infrared
+SISD	single instruction, single data
+SITD	still in the dark
+SIYH	sooner if you help
+SLC	single-level cell
+SLDRAM	synchronous-link dynamic random access memory
+SLI	scalable link interface
+SLI	scan-line interleave
+SLOB	source BLOB
+SLOC	source lines of code
+SLRU	segmented LRU
+SMA	smart memory access
+SMAF	system management action field
+SMART	self-monitoring analysis and reporting technology
+SMB	Server Message Block
+SMBFS	Server Message Block File System (see CIFS)
+SMBIOS	system management BIOS
+SMC	system management controller
+SMH	shaking my head
+SMI	structure of management information
+SMI	system management interrupt
+SMIDF	schieß mir in den Fuß
+SMIDF	simple-minded incompetent drooling fool
+SMLSFB	so many losers, so few bullets
+SMM	system management mode
+SMOP	simple matter of programming
+SMP	symmetric multiprocessing
+SMT	simultaneous multithreading
+SMTP	simple mail transfer protocol
+SMU	system management unit
+SNAFU	situation normal, all fucked up
+SNERT	snot-nosed egotistical rude teenager
+SNMP	security's not my problem
+SNMP	simple network management protocol
+SNMP	sorry, not my problem
+SNR	signal [to] noise ratio
+SNR	signal to noise ratio
+SO	shared object file (cf. DLL)
+SO	significant other
+SOA	STD (dutch: Seksueel Overdraagbare Aandoening)
+SOA	Service Oriented Architecture
+SOA	Start Of Authority (DNS record type)
+SOA	service oriented architecture
+SOAP	simple object access protocol
+SOB	son of [a] bitch
+SOC	system on chip
+SOHO	small office / home office
+SOL	serial over LAN
+SOL	shit out [of] luck
+SOP	standard operating procedure
+SP	service pack
+SP	stack pointer
+SPARC	Scalable Processor Architecture
+SPARK	annotated subset of Ada for formal verification
+SPARQL	SPARQL protocol and RDF query language
+SPD	security policy database
+SPD	serial presence detect
+SPI	serial peripheral interface
+SPI	stateful packet inspection
+SPIT	spam over internet telephony
+SPMD	single process, multiple data
+SPR	special purpose register
+SPT	sectors per track
+SQA	software quality assurance
+SQL	structured query language
+SRAM	static random access memory
+SRC	sample rate conversion
+SRGG	secure random number generator
+SRNG	stretched random number generator
+SRU	stable release update
+SS	self-snoop
+SS	stack segment
+SSB	single-sideband modulation
+SSD	solid state drive
+SSE	streaming SIMD extensions
+SSFDC	solid state floppy disc card
+SSH	secure shell
+SSI	server side includes
+SSIA	subject says it all
+SSL	secure sockets layer
+SSP	stack smashing protection
+SSTO	single stage to orbit
+STC	software thermal control
+STD	Sexually Trasmittable Disease
+STD	Standard
+STD	state transition diagram
+STF	[gc] second to find
+STFA	search the f{s,u}cking archives
+STFU	search the f{ine,ucking} usenet
+STFU	shut the fuck up
+STFW	search the fucking web
+STP	shielded twisted pair
+STP	spanning-tree protocol
+STW	search the web
+SUS	Single UNIX® Specification
+SUS	stupid user syndrome
+SUSE	Software- und Systementwicklung (now Novell ):
+SUT	system under test
+SUX	sucks
+SUX2BU	sucks to be you
+SVG	scalable vector graphics
+SVGA	super video graphics array
+SVM	secure virtual machine
+SVM	support vector machine
+SVP	please (french: s'il vous plaît)
+SWAG	silly, wild-assed guess
+SWAHBI	silly, wild-assed hare-brained idea
+SWAP	[gc] Some say this is short for "Stuff We All Get." Swag means the trade items that we swap at geocaches and carry in our backpacks.
+SWF	Shockwave Flash
+SWFG	search with fucking google
+SWIG	simplified wrapper [and] interface generator
+SWMBO	she who must be obeyed
+SYS	see you soon
+T4TC	[gc] thanks for the cache
+TA	teaching assistant
+TA	test assertion
+TA	thanks (pre-net slang, pronounced tar)
+TA	transmitter address
+TAI	international atomic time
+TANSTA	there ain't (no) such thing as ...
+TANSTAAFL	there ain't no such thing as a free lunch
+TAO	track at once
+TAOCP	The Art of Computer Programming
+TAP	test anything protocol
+TAS	test and set
+TATMWTDI	there are too many ways to do it (in Perl)
+TB	[gc] travel bug (also used as common name for trackable items, cf. GC)
+TB	terabyte
+TBA	to be announced
+TBC	to be continued
+TBD	to be {decided,determined,done}
+TBF	to be fixed
+TBH	to be honest
+TBOMK	the best of my knowledge
+TC	[gc] Terracache
+TCB	taking care of business
+TCB	trace capture buffer
+TCB	trusted computing base
+TCC	thermal control circuit
+TCL	tool command language
+TCO	taken care of
+TCP	transmission control protocol
+TCQ	tagged command queueing
+TCSH	Tenex C Shell
+TDC	time [to] digital converter
+TDD	test driven development
+TDD	time division duplex
+TDM	time division multiplexing
+TDMA	time division multiple access
+TDOA	time difference of arrival
+TDP	thermal design point
+TDP	thermal design power
+TDR	Theo de Raadt -- http://theos.com/
+TEAM	toll, ein Anderer macht's!
+TECO	Text Editor and Corrector
+TFB	too fucking bad
+TFT	thin film transistor
+TFTC	[gc] thanks for the cache
+TFTC	thanks for the cache
+TFTH	[gc] thanks for the hunt
+TFTP	trivial file transfer protocol
+TGIF	Thank God It’s Friday
+THGTTG	the hitchhiker's guide to the galaxy
+THNX	thanks
+THRB	thumb hits reset button
+THX	thanks
+TIA	thanks in advance
+TIAS	try it and see
+TIAVP	this is a volunteer project
+TIC	tonque in cheek
+TIFF	tagged image file format
+TIL	today I learned
+TIMTOWTDI	there is more than one way to do it (perl sucks, now we all know why)
+TINASOTODP	this is not a statement of the official Debian position
+TINC	there is no cabal
+TINLA	this is not legal advice
+TINSTA	there is no such thing as ...
+TINWIS	this is not what I said
+TIOOWTDI	There is only one way to do it
+TITS	try it to see
+TJM	that's just me
+TK	temporal key
+TL;DR	too long; didn't read
+TL;DS	too long; didn't see
+TLA	three letter acronym
+TLA	tom lord's arch
+TLA	top level aggregator
+TLB	transition lookaside buffer
+TLB	translation lookaside buffer
+TLC	tender loving care
+TLD	top level domain
+TLDR	too long, didn't read
+TLS	thread-local storage
+TLS	transport layer security
+TM	Turing machine
+TM	thanks much (lilo lingo, from IRC)
+TM	thermal monitor
+TM	trademark
+TM	trust me
+TMA	too many abbreviations
+TMDS	transition minimised differential signaling
+TMG	too much government
+TMI	too much information
+TMJ	temporomandibular joint
+TMK	to my knowledge
+TMO	timeout
+TMTOWTDI	there's more than one way to do it
+TNF	The NetBSD® Foundation
+TNF	Tinnef (german dialect)
+TNLN	[gc] took nothing, left nothing (also: N/T)
+TNLNSL	[gc] took nothing, left nothing, signed log (also: N/T)
+TNX	thanks
+TOC	table of contents
+TOCTOU	time of check to time of use
+TOCTTOU	time of check to time of use
+TOD	time of day
+TOEFL	test of english as a foreign language
+TOH	to other half
+TOS	terms of service
+TOS	the (atari) operating system
+TOS	trusted operating system
+TOS	type of service
+TP	transaction processing
+TPM	transactions per minute
+TPM	trusted platform module
+TPR	task priority register
+TPTB	the person to bug
+TPTB	the powers that be
+TR	task register
+TR	token ring
+TRNG	true random number generator
+TRT	the right thing
+TS	terminal services
+TS	time series
+TS	time stamp
+TSC	time stamp counter
+TSD	time stamp disable
+TSL	test, set, lock
+TSO	time sharing option
+TSP	time stamp protocol
+TSP	traveling salesman problem
+TSP	tunnel service provider
+TSP	tunnel setup protocol
+TSS	task state segment
+TTBOMK	to the best of my knowledge
+TTF	[gc] third to find
+TTFN	ta ta for now
+TTL	time to live
+TTL	transistor-transistor logic
+TTM	to the moderator
+TTM	translation table maps
+TTT	thought that too
+TTY	teletype [terminal]
+TTYL	talk to you later
+TTYL8ER	tty (read) you later [usenet]
+TTYS	talk to you soon
+TUI	text user interface
+TWAIN	thing without an interesting name
+TWDT	the whole damn thing
+TWIAVBP	the world is a very big place
+TWKMHNNOARN	those who know me have no need of a real name
+TWKMHNNOMRN	those who know me have no need of my real name
+TX	transmit out, transmitter
+TY	thank you
+TYVM	thank you very much
+TZ	time zone
+U/L	upload
+UAC	user {account, access} control
+UART	universal asynchronous receiver/transmitter
+UAT	user acceptance testing
+UBUNTU	I am too stupid to configure Debian.
+UC	uncacheable
+UCS	uniform-cost search
+UDMA	Ultra-DMA
+UDO	ultra density optical (storage)
+UDP	user datagram protocol
+UFS	Unix filesystem
+UI	unit interval
+UI	user interface
+UID	unique identifier
+UID	user identifier
+UL	upload
+UMA	uniform memory access
+UMA	upper memory area
+UMB	upper memory block
+UML	unified modeling language
+UMPC	ultra-mobile PC
+UPNP	universal plug and play
+UPS	[gc] unnatural pile of sticks
+UPS	uninterruptible power supply
+UPS	united parcel service
+URI	uniform resource identifier
+URL	uniform resource locator
+URN	uniform resource name
+USART	universal synchronous/asynchronous receiver/transmitter
+USB	universal serial bus
+USR	Unix Source Repository
+USR	Unix System Resources
+USWC	uncacheable speculative write combining
+UT	unit test
+UTC	coordinated universal time
+UTFG	use the fscking google
+UTFS	use the {fine,fucking} source
+UTP	unshielded twisted pair
+UTRTFTJ	use the right tool for the job
+UTSL	use the source, Luke (open source programming)
+UUCP	Unix-to-Unix copy protocol
+UUID	universally unique identifier
+UUOC	useless use of cat
+UUT	unit under test
+VA	vertical alignment
+VA	virtual address
+VA	volt-ampere
+VAR	Volatile Access Region
+VAX	virtual address extension
+VB	Visual Basic
+VCA	variable-gain amplifier
+VCC	common collector voltage
+VCF	voltage-controlled filter
+VCM	virtual channel memory
+VCO	voltage-controlled oscillator
+VCR	video cassette recorder
+VCS	version control system
+VDFDC	[gc] Vielen Dank für den Cache (TFTC)
+VDFDD	[gc] Vielen Dank für die Dose (TFTC)
+VEG	very evil grin
+VERPEILUNGSFAKTOR	never forget it
+VESA	video electronics standards association
+VFO	variable-frequency oscillator
+VFS	Virtual File System
+VG	volume group
+VGA	video graphics array
+VH	very helpful (lilo lingo, from IRC)
+VHDCI	very high density cable interconnect
+VID	voltage level identifier
+VIP	very important person
+VIPT	virtually indexed, physically tagged
+VIVT	virtually indexed, virtually tagged
+VLAN	virtual local area network
+VLIW	very long instruction word
+VLSI	very large scale integration
+VLSM	variable length subnet mask
+VM	virtual machine
+VM	virtual memory
+VME	virtual mode extension
+VMS	Very Much Strange
+VMS	Virtual Memory System (aka OpenVMS, operating system by HP)
+VMX	vector multimedia extensions
+VMX	virtual machine extensions
+VOD	video on demand
+VPN	virtual private network
+VR	virtual reality
+VRAM	video random access memory
+VRM	voltage regulator module
+VRRP	virtual router redundancy protocol
+VVV	Voilà, Vivement Vendredi
+VVV	veni, vidi, vici
+W	Watt
+W/	with
+W/O	without
+W3C	World Wide Web Consortium
+W8	wait
+WAFWOT	what a foolish waste of time
+WAG	wild-ass guess
+WAMP	Windows Apache MySQL {Perl,PHP,Python}
+WAMPP	Windows Apache MySQL {Perl,PHP,Python}
+WAN	wide area network
+WAP	Wireless Access Point
+WAP	wireless application protocol
+WB	welcome back
+WCPGW	what could possibly go wrong
+WDT	watchdog timer
+WDYM	what do you mean
+WDYMBT	what do you mean by that
+WELC	working effectively with legacy code
+WEP	wired equivalent privacy (yikes! it's as insecure as hell)
+WFH	working from home
+WFI	wait for interrupt
+WFM	works for me
+WFQ	weighted fair queuing
+WFY	works for you
+WH	write hit
+WHY	because.
+WIBNI	wouldn't it be nice if
+WIFI	wireless fidelity
+WINDOWS	Which Idiot Needs Definitly Obsolete (and) Worse Software
+WINDOWS	Will ich nicht doch ohne WINDOWS sein?
+WINDOWS	will install needless data on whole system
+WINDOWS	work is never done on WINDOWS systems.
+WINFX	Windows Fix Everyday
+WINFX	Windows Freakout Extension
+WIP	work in progress
+WIR	when it's ready
+WLAN	wireless local area network
+WM	write miss
+WMNC	watch me not care
+WOFTAM	waste of fucking time and money
+WOL	wake on LAN
+WOMBAT	waste of money, brain, and time
+WOR	wake on ring
+WORM	write once, read many (CD-R predecessor)
+WORN	write once, read never (usually bad code)
+WP	WordPerfect
+WP	[gc] waypoint
+WP	word processor
+WP	write protect
+WPA	wi-fi protected access
+WRAM	window random access memory
+WRT	with respect to
+WS	web services
+WTB	{want,willing,waiting} to buy
+WTC	write through caching
+WTF	oh, it's me! *g*
+WTF	{what,when,where,who,why} the fuck
+WTFM	write the fucking manual (GRUB2...)
+WTFRUD	what the fuck are you doing
+WTG	way to go
+WTH	{what,when,where,who,why} the hell
+WTS	{want,willing,waiting} to sell
+WTT	{want,willing,waiting} to trade
+WTX	Workstation Technology Extended
+WWAN	wireless wide area network
+WWJD	what would Jesus do?
+WWW	weltweit warten
+WWW	world wide waiting
+WWW	world wide web
+WYSIWYG	what you see is what you get
+XBAR	crossbar
+XD	;-) on español
+XER	XML encoding rules
+XGA	extended graphics adapter
+XGA	extended graphics array
+XHTML	Extensible Hyper-Text Markup Language
+XIP	execute in place
+XML	extensible markup language
+XMPP	Extensible Messaging and Presence Protocol (aka. Jabber)
+XNSL	[gc] exchanged nothing, signed log (cf. TNLNSL, N/T)
+XOR	exclusive or
+XP	extreme programming
+XSL	extensible stylesheet language
+XSS	Cross-Site Scripting (sometimes CSS)
+XT	extended technology
+XUL	XML user interface language
+YACC	yet another compiler compiler
+YAGNI	you ain't gonna need it
+YAHOO	Yet Another Hierarchically Officious Oracle
+YALIMO	you are lame, in my opinion
+YAOTM	yet another off-topic message
+YAWPFAPR	you are welcome; please file a problem report
+YGM	you got mail
+YGWYPF	you get what you {pay,prayed} for
+YHBT	you have been trolled
+YHL	you have lost
+YKWIM	you know what I mean
+YMA	yo momma's arse
+YMMD	you made my day!
+YMMV	your mileage may vary
+YNS	Yeah, No Shit!
+YP	yellow pages (aka NIS)
+YTD	year to date
+YW	you're welcome
+YWSYLS	you win some, you lose some
+ZBR	zone bit recording
+ZFOD	zero-filled on demand
+ZIF	zero insertion force
+ZIFS	zero insertion force socket
+ZMA	zone multicast address
+ZSH	Z Shell
