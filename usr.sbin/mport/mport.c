@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.29 2011/07/10 01:51:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.30 2011/07/10 01:54:20 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +47,8 @@ static int upgrade(mportInstance *);
 static int info(mportInstance *, const char *);
 static int search(mportInstance *, char **);
 static int clean(mportInstance *);
+static int indexCheck(mportInstance *, mportPackageMeta *);
+static int updateDown(mportInstance *, mportPackageMeta *);
 
 int 
 main(int argc, char *argv[]) {
@@ -311,7 +313,7 @@ upgrade(mportInstance *mport) {
 	mportPackageMeta **packs;
 	mportIndexEntry **indexEntries;
 	int total = 0;
-	int errors = 0;
+	int updated = 0;
 
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
@@ -324,35 +326,83 @@ upgrade(mportInstance *mport) {
 	}
 
 	while (*packs != NULL) {
-		if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
-	        fprintf(stderr, "Error Looking up package name %s: %d %s\n", (*packs)->name,  mport_err_code(), mport_err_string());
-			errors++;
-			total++;
-			packs++;
-			continue;
+		if (indexCheck(mport, *packs)) {
+			updated += updateDown(mport, *packs);
 		}
-
-		if (indexEntries != NULL) {
-			while (*indexEntries != NULL) {
-				if ((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) {
-					if (update(mport, (*packs)->name) != 0) {
-						fprintf(stderr, "Error updating %s\n", (*packs)->name);
-						errors++;
-					}
-					break;
-				}
-				indexEntries++;
-			}
-			mport_index_entry_free_vec(indexEntries);
-			indexEntries = NULL;
-		}
-		total++;
 		packs++;
+		total++;
 	}
 	mport_pkgmeta_vec_free(packs);
-
-	printf("Packages updated: %d\nErrors: %d\nTotal: %d", total - errors, errors, total);
+	printf("Packages updated: %d\nTotal: %d\n", updated, total);
 	return (0);
+}
+
+int
+indexCheck(mportInstance *mport, mportPackageMeta *pack) {
+	mportIndexEntry **indexEntries;
+	int ret = 0;
+
+	if (mport_index_lookup_pkgname(mport, pack->name, &indexEntries) != MPORT_OK) {
+		fprintf(stderr, "Error Looking up package name %s: %d %s\n", pack->name,  mport_err_code(), mport_err_string());
+		return 0;
+	}
+
+	if (indexEntries != NULL) {
+		while (*indexEntries != NULL) {
+			if ((*indexEntries)->version != NULL && mport_version_cmp(pack->version, (*indexEntries)->version) < 0) {
+				ret = 1;
+				break;
+			}
+			indexEntries++;
+		}
+		mport_index_entry_free_vec(indexEntries);
+	}
+
+	return ret;
+}
+
+int
+updateDown(mportInstance *mport, mportPackageMeta *pack) {
+	mportPackageMeta **depends;
+	int ret = 0;
+
+	fprintf(stderr, "Entering %s\n", pack->name);
+
+	if (mport_pkgmeta_get_downdepends(mport, pack, &depends) == MPORT_OK) {
+		if (depends == NULL) {
+			if (indexCheck(mport, pack)) {
+				fprintf(stderr, "Updating %s\n", pack->name); 
+				if (update(mport, pack->name) !=0) {
+					fprintf(stderr, "Error updating %s\n", pack->name);
+					ret = 0;
+				} else
+					ret = 1;
+			} else
+				ret = 0;
+		} else {
+			while (*depends != NULL) {
+				ret += updateDown(mport, (*depends));
+				if (indexCheck(mport, *depends)) {
+					fprintf(stderr, "Updating depends %s\n", (*depends)->name);
+					if (update(mport, (*depends)->name) != 0) {
+						fprintf(stderr, "Error updating %s\n", (*depends)->name);
+					} else
+						ret++;
+				}
+				depends++;
+			}
+			if (indexCheck(mport, pack)) {
+				fprintf(stderr, "Updating port called %s\n", pack->name);
+				if (update(mport, pack->name) != 0) {
+					fprintf(stderr, "Error updating %s\n", pack->name);
+				} else
+					ret++;
+			}
+		}
+		mport_pkgmeta_vec_free(depends);
+	}
+
+	return ret;
 }
 
 int
