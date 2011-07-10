@@ -201,39 +201,19 @@ dcons_check_break(struct dcons_softc *dc, int c)
 	if (c < 0)
 		return (c);
 
-#if __FreeBSD_version >= 502122
 	if (kdb_alt_break(c, &dc->brk_state)) {
 		if ((dc->flags & DC_GDB) != 0) {
 #ifdef GDB
 			if (gdb_cur == &dcons_gdb_dbgport) {
 				kdb_dbbe_select("gdb");
-				kdb_enter("Break sequence on dcons gdb port");
+				kdb_enter_why(KDB_WHY_BREAK,
+				    "Break sequence on dcons gdb port");
 			}
 #endif
 		} else
 			kdb_enter("Break sequence on dcons console port");
 	}
-#else
-	switch (dc->brk_state) {
-	case STATE1:
-		if (c == KEY_TILDE)
-			dc->brk_state = STATE2;
-		else
-			dc->brk_state = STATE0;
-		break;
-	case STATE2:
-		dc->brk_state = STATE0;
-		if (c == KEY_CTRLB) {
-#if DCONS_FORCE_GDB
-			if (dc->flags & DC_GDB)
-				boothowto |= RB_GDB;
-#endif
-			breakpoint();
-		}
-	}
-	if (c == KEY_CR)
-		dc->brk_state = STATE1;
-#endif
+
 	return (c);
 }
 #else
