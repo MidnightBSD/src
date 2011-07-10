@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20110710:
+	kdb_enter_why added to MidnightBSD to allow the kernel debugger to 
+	know why it's in use and thus script can be run.
+
+	Yet another problem with the perl manifest was fixed
+
 20110709:
 	cpufreq(1) is a new utility to monitor CPU frequency which may change
 	with use of powerd(8) and cpufreq(4).
@@ -1015,4 +1021,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.126 2011/06/12 20:06:20 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.127 2011/07/09 20:18:56 laffer1 Exp $
