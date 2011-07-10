@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ofw/ofw_console.c,v 1.3 2008/12/03 20:12:59 laffer1 Exp $ */
 /*-
  * Copyright (C) 2001 Benno Rice.
  * All rights reserved.
@@ -283,7 +283,8 @@ ofw_cngetc(struct consdev *cp)
 	if (OF_read(stdin, &ch, 1) > 0) {
 #if defined(KDB) && defined(ALT_BREAK_TO_DEBUGGER)
 		if (kdb_alt_break(ch, &alt_break_state))
-			kdb_enter("Break sequence on console");
+			kdb_enter_why(KDB_WHY_BREAK,
+			    "Break sequence on console");
 #endif
 		return (ch);
 	}
