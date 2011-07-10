@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_witness.c,v 1.4 2008-09-27 23:02:14 laffer1 Exp $
- *	and BSDI $Id: subr_witness.c,v 1.4 2008-09-27 23:02:14 laffer1 Exp $
+ *	from BSDI $Id: subr_witness.c,v 1.5 2011-07-10 17:02:04 laffer1 Exp $
+ *	and BSDI $Id: subr_witness.c,v 1.5 2011-07-10 17:02:04 laffer1 Exp $
  */
 
 /*
@@ -1122,7 +1122,7 @@ debugger:
 	if (witness_trace)
 		kdb_backtrace();
 	if (witness_kdb)
-		kdb_enter(__func__);
+		kdb_enter_why(KDB_WHY_WITNESS, __func__);
 #endif
 }
 
@@ -1395,7 +1395,7 @@ witness_warn(int flags, struct lock_object *lock, const char *fmt, ...)
 		panic("witness_warn");
 #ifdef KDB
 	else if (witness_kdb && n)
-		kdb_enter(__func__);
+		kdb_enter_why(KDB_WHY_WITNESS, __func__);
 	else if (witness_trace && n)
 		kdb_backtrace();
 #endif

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/Osd/OsdDebug.c,v 1.3 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -74,13 +74,13 @@ AcpiOsSignal(UINT32 Function, void *Info)
 	printf("ACPI fatal signal, type 0x%x code 0x%x argument 0x%x",
 	      fatal->Type, fatal->Code, fatal->Argument);
 #ifdef ACPI_DEBUG
-	kdb_enter("AcpiOsSignal");
+	kdb_enter_why(KDB_WHY_ACPI, "AcpiOsSignal");
 #endif
 	break;
 
     case ACPI_SIGNAL_BREAKPOINT:
 #ifdef ACPI_DEBUG
-	kdb_enter((char *)Info);
+	kdb_enter_why(KDB_WHY_ACPI, (char *)Info);
 #endif
 	break;
 

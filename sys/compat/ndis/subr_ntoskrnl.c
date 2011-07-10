@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.4 2009/01/18 19:28:02 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.5 2010/11/16 14:21:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -3572,7 +3572,7 @@ static void
 DbgBreakPoint(void)
 {
 
-	kdb_enter("DbgBreakPoint(): breakpoint");
+	kdb_enter_why(KDB_WHY_NDIS, "DbgBreakPoint(): breakpoint");
 }
 
 static void
