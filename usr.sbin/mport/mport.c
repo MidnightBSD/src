@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.27 2011/06/16 03:22:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.28 2011/07/10 01:50:42 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -399,7 +399,7 @@ deleteAll(mportInstance *mport) {
 
 	mport_pkgmeta_vec_free(packs);
 
-	printf("Packages deleted: %d\nErrors: %d\nTotal: %d", total - errors, errors, total);
+	printf("Packages deleted: %d\nErrors: %d\nTotal: %d\n", total - errors, errors, total);
 	return (0);
 }
 
