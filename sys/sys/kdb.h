@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/kdb.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -68,6 +68,7 @@ int	kdb_alt_break(int, int *);
 void	kdb_backtrace(void);
 int	kdb_dbbe_select(const char *);
 void	kdb_enter(const char *);
+void	kdb_enter_why(const char *, const char *);
 void	kdb_init(void);
 void *	kdb_jmpbuf(jmp_buf);
 void	kdb_reenter(void);
@@ -78,5 +79,32 @@ struct thread *kdb_thr_lookup(lwpid_t);
 struct thread *kdb_thr_next(struct thread *);
 int	kdb_thr_select(struct thread *);
 int	kdb_trap(int, int, struct trapframe *);
+
+/*
+ * KDB enters the debugger via breakpoint(), which leaves the debugger without
+ * a lot of information about why it was entered.  This simple enumerated set
+ * captures some basic information.
+ *
+ * It is recommended that values here be short (<16 character) alpha-numeric
+ * strings, as they will be used to construct DDB(4) script names.
+ */
+extern const char * volatile kdb_why;
+#define	KDB_WHY_UNSET		NULL		/* No reason set. */
+#define	KDB_WHY_PANIC		"panic"		/* panic() was called. */
+#define	KDB_WHY_SYSCTL		"sysctl"	/* Sysctl entered debugger. */
+#define	KDB_WHY_BOOTFLAGS	"bootflags"	/* Boot flags were set. */
+#define	KDB_WHY_WITNESS		"witness"	/* Witness entered debugger. */
+#define	KDB_WHY_VFSLOCK		"vfslock"	/* VFS detected lock problem. */
+#define	KDB_WHY_NETGRAPH	"netgraph"	/* Netgraph entered debugger. */
+#define	KDB_WHY_BREAK		"break"		/* Console or serial break. */
+#define	KDB_WHY_WATCHDOG	"watchdog"	/* Watchdog entered debugger. */
+#define	KDB_WHY_CAM		"cam"		/* CAM has entered debugger. */
+#define	KDB_WHY_NDIS		"ndis"		/* NDIS entered debugger. */
+#define	KDB_WHY_ACPI		"acpi"		/* ACPI entered debugger. */
+#define	KDB_WHY_TRAPSIG		"trapsig"	/* Sun4v/Sparc fault. */
+#define	KDB_WHY_POWERFAIL	"powerfail"	/* Powerfail NMI. */
+#define	KDB_WHY_MAC		"mac"		/* MAC Framework. */
+#define	KDB_WHY_POWERPC		"powerpc"	/* Unhandled powerpc intr. */
+#define	KDB_WHY_UNIONFS		"unionfs"	/* Unionfs bug. */
 
 #endif /* !_SYS_KDB_H_ */
