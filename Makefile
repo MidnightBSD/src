@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile,v 1.8 2008/10/05 21:14:01 laffer1 Exp $
+# $MidnightBSD: src/Makefile,v 1.9 2011/03/15 01:56:14 laffer1 Exp $
 #
 # The user-driven targets are:
 #
@@ -271,7 +271,7 @@ make: .PHONY
 # existing system is.
 #
 .if make(universe)
-TARGETS?=amd64 i386 sparc64 sun4v
+TARGETS?=amd64 i386 sparc64
 
 universe: universe_prologue
 universe_prologue:
