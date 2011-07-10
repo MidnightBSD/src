@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/unionfs/union_subr.c,v 1.3 2008/12/03 00:25:45 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994 Jan-Simon Pendry
  * Copyright (c) 1994
@@ -1063,7 +1063,8 @@ unionfs_checkuppervp(struct vnode *vp, char *fil, int lno)
 	if (vp->v_op != unionfs_vnodeop_p) {
 		printf("unionfs_checkuppervp: on non-unionfs-node.\n");
 #ifdef KDB
-		kdb_enter("unionfs_checkuppervp: on non-unionfs-node.\n");
+		kdb_enter_why(KDB_WHY_UNIONFS,
+		    "unionfs_checkuppervp: on non-unionfs-node.\n");
 #endif
 		panic("unionfs_checkuppervp");
 	};
@@ -1082,7 +1083,8 @@ unionfs_checklowervp(struct vnode *vp, char *fil, int lno)
 	if (vp->v_op != unionfs_vnodeop_p) {
 		printf("unionfs_checklowervp: on non-unionfs-node.\n");
 #ifdef KDB
-		kdb_enter("unionfs_checklowervp: on non-unionfs-node.\n");
+		kdb_enter_why(KDB_WHY_UNIONFS,
+		   "unionfs_checklowervp: on non-unionfs-node.\n");
 #endif
 		panic("unionfs_checklowervp");
 	};

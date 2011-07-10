@@ -1502,7 +1502,8 @@ siointr1(com)
 #ifdef ALT_BREAK_TO_DEBUGGER
 			if (com->unit == comconsole &&
 			    kdb_alt_break(recv_data, &com->alt_brk_state) != 0)
-				kdb_enter("Break sequence on console");
+				kdb_enter_why(KDB_WHY_BREAK,
+				    "Break sequence on console");
 #endif /* ALT_BREAK_TO_DEBUGGER */
 #endif /* KDB */
 			if (line_status & (LSR_BI | LSR_FE | LSR_PE)) {

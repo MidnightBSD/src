@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/syscons.c,v 1.11 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992-1998 Søren Schmidt
  * All rights reserved.
@@ -3376,7 +3376,8 @@ next_code:
 	    case DBG:
 #ifndef SC_DISABLE_KDBKEY
 		if (enable_kdbkey)
-			kdb_enter("manual escape to debugger");
+			kdb_enter_why(KDB_WHY_BREAK,
+			   "manual escape to debugger");
 #endif
 		break;
 
