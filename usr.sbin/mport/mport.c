@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.26 2011/06/14 01:48:45 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.27 2011/06/16 03:22:51 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -356,8 +356,10 @@ upgrade(mportInstance *mport) {
 int
 deleteAll(mportInstance *mport) {
 	mportPackageMeta **packs;
+	mportPackageMeta **depends;
 	int total = 0;
 	int errors = 0;
+	int skip;
 
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
@@ -369,16 +371,36 @@ deleteAll(mportInstance *mport) {
 		return(1);
 	}
 
-	while (*packs != NULL) {
-		if (delete(mport, (*packs)->name) != 0) {
-			fprintf(stderr, "Error deleting %s\n", (*packs)->name);
-			errors++;
+	while (1) {
+		skip = 0;
+		while (*packs != NULL) {
+			if (mport_pkgmeta_get_updepends(mport, *packs, &depends) == MPORT_OK) {
+				if (depends == NULL) {
+					if (delete(mport, (*packs)->name) != 0) {
+						fprintf(stderr, "Error deleting %s\n", (*packs)->name);
+						errors++;
+					}
+					total++;
+				} else {
+					skip++;
+					mport_pkgmeta_vec_free(depends);
+				}
+			}
+			packs++;
 		}
-		total++;
-		packs++;
+		if (skip == 0)
+			break;
+		mport_pkgmeta_vec_free(packs);
+		if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			return(1);
+		}
 	}
+
+	mport_pkgmeta_vec_free(packs);
+
 	printf("Packages deleted: %d\nErrors: %d\nTotal: %d", total - errors, errors, total);
-	return 0;
+	return (0);
 }
 
 int
