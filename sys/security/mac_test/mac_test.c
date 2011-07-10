@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/security/mac_test/mac_test.c,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2005 McAfee, Inc.
@@ -113,7 +113,7 @@ SYSCTL_NODE(_security_mac_test, OID_AUTO, counter, CTLFLAG_RW, 0,
 #define	COUNTER_INC(variable)	atomic_add_int(&counter_##variable, 1)
 
 #ifdef KDB
-#define	DEBUGGER(func, string)	kdb_enter((string))
+#define	DEBUGGER(func, string)	kdb_enter_why(KDB_WHY_MAC, (string))
 #else
 #define	DEBUGGER(func, string)	printf("mac_test: %s: %s\n", (func), (string))
 #endif
