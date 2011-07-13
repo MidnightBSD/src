@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/geom/class/multipath/gmultipath.8,v 1.4 2007/05/06 00:31:38 pjd Exp $
+.\" $FreeBSD: src/sbin/geom/class/multipath/gmultipath.8,v 1.4.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
 .\"
 .Dd February 26, 2007
 .Dt GMULTIPATH 8
@@ -59,7 +59,7 @@ command.
 This operation writes a label on the last sector of the underlying
 disk device with a contained name and UUID.
 The UUID guarantees uniqueness
-in in a shared storage environment but is in general too cumbersome to use.
+in a shared storage environment but is in general too cumbersome to use.
 The name is what is exported via the device interface.
 .Pp
 The first argument to
@@ -213,15 +213,15 @@ with their storage is qualified to make this judgement.
 .Pp
 You can then use the
 .Nm
-command to label and create the
+command to label and create a
 .Nm MULTIPATH
-GEOM class named 
-.Ar Fred .
+GEOM provider named
+.Ar FRED .
 .Bd -literal -offset indent
-gmultipath label -v Fred /dev/da0 /dev/da2
-disklabel -Brw /dev/multipath/Fred auto
-newfs /dev/multipath/Freda
-mount /dev/mutlpath/Freda /mnt....
+gmultipath label -v FRED /dev/da0 /dev/da2
+disklabel -Brw /dev/multipath/FRED auto
+newfs /dev/multipath/FREDa
+mount /dev/multipath/FREDa /mnt....
 .Ed
 .Pp
 The resultant console output looks something like:
