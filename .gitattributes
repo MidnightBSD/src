@@ -39348,6 +39348,7 @@ sys/sys/utsname.h -text
 sys/sys/uuid.h -text
 sys/sys/vmmeter.h -text
 sys/sys/vnode.h -text
+sys/sys/vtoc.h -text
 sys/sys/wait.h -text
 sys/sys/watchdog.h -text
 sys/sys/xrpuio.h -text

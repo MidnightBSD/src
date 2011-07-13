@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/apm.h,v 1.1.2.1 2007/10/29 00:11:40 marcel Exp $
+ * $FreeBSD: src/sys/sys/apm.h,v 1.1.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_APM_H_
@@ -38,6 +38,9 @@ struct apm_ddr {
 	uint32_t	ddr_blkcount;
 };
 
+#define	APM_ENT_NAMELEN		32
+#define	APM_ENT_TYPELEN		32
+
 /* Partition Map Entry Record. */
 struct apm_ent {
 	uint16_t	ent_sig;
@@ -46,8 +49,8 @@ struct apm_ent {
 	uint32_t	ent_pmblkcnt;
 	uint32_t	ent_start;
 	uint32_t	ent_size;
-	char		ent_name[32];
-	char		ent_type[32];
+	char		ent_name[APM_ENT_NAMELEN];
+	char		ent_type[APM_ENT_TYPELEN];
 };
 
 #define	APM_ENT_TYPE_SELF		"Apple_partition_map"
