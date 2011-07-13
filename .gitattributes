@@ -31941,6 +31941,7 @@ share/man/man4/gdb.4 -text
 share/man/man4/gem.4 -text
 share/man/man4/geom.4 -text
 share/man/man4/geom_fox.4 -text
+share/man/man4/geom_linux_lvm.4 -text
 share/man/man4/geom_uzip.4 -text
 share/man/man4/gif.4 -text
 share/man/man4/gre.4 -text

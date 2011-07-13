@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.25 2011/02/16 00:28:43 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.26 2011/02/16 13:38:47 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -101,6 +101,7 @@ MAN=	aac.4 \
 	gem.4 \
 	geom.4 \
 	geom_fox.4 \
+	geom_linux_lvm.4 \
 	geom_uzip.4 \
 	gif.4 \
 	gre.4 \
