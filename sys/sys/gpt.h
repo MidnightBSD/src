@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/gpt.h,v 1.10.2.1 2007/10/29 00:11:40 marcel Exp $
+ * $FreeBSD: src/sys/sys/gpt.h,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_GPT_H_
@@ -85,6 +85,8 @@ struct gpt_ent {
 	{0x516e7cb8,0x6ecf,0x11d6,0x8f,0xf8,{0x00,0x02,0x2d,0x09,0x71,0x2b}}
 #define	GPT_ENT_TYPE_FREEBSD_ZFS	\
 	{0x516e7cba,0x6ecf,0x11d6,0x8f,0xf8,{0x00,0x02,0x2d,0x09,0x71,0x2b}}
+#define	GPT_ENT_TYPE_FREEBSD_BOOT	\
+	{0x83bd6b9d,0x7f41,0x11dc,0xbe,0x0b,{0x00,0x15,0x60,0xb8,0x4f,0x0f}}
 
 /*
  * The following are unused but documented here to avoid reuse.
@@ -96,7 +98,7 @@ struct gpt_ent {
 /*
  * Foreign partition types that we're likely to encounter. Note that Linux
  * apparently choose to share data partitions with MS. I don't what the
- * advantage might be. I can see how sharing swap partitions is advantaous
+ * advantage might be. I can see how sharing swap partitions is advantageous
  * though.
  */
 #define	GPT_ENT_TYPE_MS_RESERVED	\
