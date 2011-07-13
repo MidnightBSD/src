@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2007 Marcel Moolenaar
+ * Copyright (c) 2007, 2008 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/part/g_part_mbr.c,v 1.2 2007/06/17 22:19:19 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/part/g_part_mbr.c,v 1.2.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -60,8 +60,11 @@ struct g_part_mbr_entry {
 
 static int g_part_mbr_add(struct g_part_table *, struct g_part_entry *,
     struct g_part_parms *);
+static int g_part_mbr_bootcode(struct g_part_table *, struct g_part_parms *);
 static int g_part_mbr_create(struct g_part_table *, struct g_part_parms *);
 static int g_part_mbr_destroy(struct g_part_table *, struct g_part_parms *);
+static int g_part_mbr_dumpconf(struct g_part_table *, struct g_part_entry *,
+    struct sbuf *, const char *);
 static int g_part_mbr_dumpto(struct g_part_table *, struct g_part_entry *);
 static int g_part_mbr_modify(struct g_part_table *, struct g_part_entry *,  
     struct g_part_parms *);
@@ -69,19 +72,24 @@ static char *g_part_mbr_name(struct g_part_table *, struct g_part_entry *,
     char *, size_t);
 static int g_part_mbr_probe(struct g_part_table *, struct g_consumer *);
 static int g_part_mbr_read(struct g_part_table *, struct g_consumer *);
+static int g_part_mbr_setunset(struct g_part_table *, struct g_part_entry *,
+    const char *, unsigned int);
 static const char *g_part_mbr_type(struct g_part_table *, struct g_part_entry *,
     char *, size_t);
 static int g_part_mbr_write(struct g_part_table *, struct g_consumer *);
 
 static kobj_method_t g_part_mbr_methods[] = {
 	KOBJMETHOD(g_part_add,		g_part_mbr_add),
+	KOBJMETHOD(g_part_bootcode,	g_part_mbr_bootcode),
 	KOBJMETHOD(g_part_create,	g_part_mbr_create),
 	KOBJMETHOD(g_part_destroy,	g_part_mbr_destroy),
+	KOBJMETHOD(g_part_dumpconf,	g_part_mbr_dumpconf),
 	KOBJMETHOD(g_part_dumpto,	g_part_mbr_dumpto),
 	KOBJMETHOD(g_part_modify,	g_part_mbr_modify),
 	KOBJMETHOD(g_part_name,		g_part_mbr_name),
 	KOBJMETHOD(g_part_probe,	g_part_mbr_probe),
 	KOBJMETHOD(g_part_read,		g_part_mbr_read),
+	KOBJMETHOD(g_part_setunset,	g_part_mbr_setunset),
 	KOBJMETHOD(g_part_type,		g_part_mbr_type),
 	KOBJMETHOD(g_part_write,	g_part_mbr_write),
 	{ 0, 0 }
@@ -94,8 +102,9 @@ static struct g_part_scheme g_part_mbr_scheme = {
 	.gps_entrysz = sizeof(struct g_part_mbr_entry),
 	.gps_minent = NDOSPART,
 	.gps_maxent = NDOSPART,
+	.gps_bootcodesz = MBRSIZE,
 };
-G_PART_SCHEME_DECLARE(g_part_mbr_scheme);
+G_PART_SCHEME_DECLARE(g_part_mbr);
 
 static int
 mbr_parse_type(const char *type, u_char *dp_typ)
@@ -117,6 +126,24 @@ mbr_parse_type(const char *type, u_char *dp_typ)
 		return (0);
 	}
 	return (EINVAL);
+}
+
+static int
+mbr_probe_bpb(u_char *bpb)
+{
+	uint16_t secsz;
+	uint8_t clstsz;
+
+#define PO2(x)	((x & (x - 1)) == 0)
+	secsz = le16dec(bpb);
+	if (secsz < 512 || secsz > 4096 || !PO2(secsz))
+		return (0);
+	clstsz = bpb[2];
+	if (clstsz < 1 || clstsz > 128 || !PO2(clstsz))
+		return (0);
+#undef PO2
+
+	return (1);
 }
 
 static void
@@ -184,6 +211,16 @@ g_part_mbr_add(struct g_part_table *basetable, struct g_part_entry *baseentry,
 }
 
 static int
+g_part_mbr_bootcode(struct g_part_table *basetable, struct g_part_parms *gpp)
+{
+	struct g_part_mbr_table *table;
+
+	table = (struct g_part_mbr_table *)basetable;
+	bcopy(gpp->gpp_codeptr, table->mbr, DOSPARTOFF);
+	return (0);
+}
+
+static int
 g_part_mbr_create(struct g_part_table *basetable, struct g_part_parms *gpp)
 {
 	struct g_consumer *cp;
@@ -212,6 +249,28 @@ g_part_mbr_destroy(struct g_part_table *basetable, struct g_part_parms *gpp)
 
 	/* Wipe the first sector to clear the partitioning. */
 	basetable->gpt_smhead |= 1;
+	return (0);
+}
+
+static int
+g_part_mbr_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry, 
+    struct sbuf *sb, const char *indent)
+{
+	struct g_part_mbr_entry *entry;
+ 
+	entry = (struct g_part_mbr_entry *)baseentry;
+	if (indent == NULL) {
+		/* conftxt: libdisk compatibility */
+		sbuf_printf(sb, " xs MBR xt %u", entry->ent.dp_typ);
+	} else if (entry != NULL) {
+		/* confxml: partition entry information */
+		sbuf_printf(sb, "%s<rawtype>%u</rawtype>\n", indent,
+		    entry->ent.dp_typ);
+		if (entry->ent.dp_flag & 0x80)
+			sbuf_printf(sb, "%s<attrib>active</attrib>\n", indent);
+	} else {
+		/* confxml: scheme information */
+	}
 	return (0);
 }
 
@@ -253,22 +312,53 @@ static int
 g_part_mbr_probe(struct g_part_table *table, struct g_consumer *cp)
 {
 	struct g_provider *pp;
-	u_char *buf;
-	int error, res;
+	u_char *buf, *p;
+	int error, index, res, sum;
+	uint16_t magic;
 
 	pp = cp->provider;
 
 	/* Sanity-check the provider. */
 	if (pp->sectorsize < MBRSIZE || pp->mediasize < pp->sectorsize)
 		return (ENOSPC);
+	if (pp->sectorsize > 4096)
+		return (ENXIO);
 
 	/* Check that there's a MBR. */
 	buf = g_read_data(cp, 0L, pp->sectorsize, &error);
 	if (buf == NULL)
 		return (error);
-	res = le16dec(buf + DOSMAGICOFFSET);
+
+	/* We goto out on mismatch. */
+	res = ENXIO;
+
+	magic = le16dec(buf + DOSMAGICOFFSET);
+	if (magic != DOSMAGIC)
+		goto out;
+
+	for (index = 0; index < NDOSPART; index++) {
+		p = buf + DOSPARTOFF + index * DOSPARTSIZE;
+		if (p[0] != 0 && p[0] != 0x80)
+			goto out;
+	}
+
+	/*
+	 * If the partition table does not consist of all zeroes,
+	 * assume we have a MBR. If it's all zeroes, we could have
+	 * a boot sector. For example, a boot sector that doesn't
+	 * have boot code -- common on non-i386 hardware. In that
+	 * case we check if we have a possible BPB. If so, then we
+	 * assume we have a boot sector instead.
+	 */
+	sum = 0;
+	for (index = 0; index < NDOSPART * DOSPARTSIZE; index++)
+		sum += buf[DOSPARTOFF + index];
+	if (sum != 0 || !mbr_probe_bpb(buf + 0x0b))
+		res = G_PART_PROBE_PRI_NORM;
+
+ out:
 	g_free(buf);
-	return ((res == DOSMAGIC) ? G_PART_PROBE_PRI_NORM : ENXIO);
+	return (res);
 }
 
 static int
@@ -306,8 +396,6 @@ g_part_mbr_read(struct g_part_table *basetable, struct g_consumer *cp)
 		ent.dp_size = le32dec(p + 12);
 		if (ent.dp_typ == 0 || ent.dp_typ == DOSPTYP_PMBR)
 			continue;
-		if (ent.dp_flag != 0 && ent.dp_flag != 0x80)
-			continue;
 		if (ent.dp_start == 0 || ent.dp_size == 0)
 			continue;
 		sectors = ent.dp_esect & 0x3f;
@@ -335,6 +423,43 @@ g_part_mbr_read(struct g_part_table *basetable, struct g_consumer *cp)
 	basetable->gpt_first = basetable->gpt_sectors;
 	basetable->gpt_last = msize - (msize % basetable->gpt_sectors) - 1;
 
+	return (0);
+}
+
+static int
+g_part_mbr_setunset(struct g_part_table *table, struct g_part_entry *baseentry,
+    const char *attrib, unsigned int set)
+{
+	struct g_part_entry *iter;
+	struct g_part_mbr_entry *entry;
+	int changed;
+
+	if (strcasecmp(attrib, "active") != 0)
+		return (EINVAL);
+
+	/* Only one entry can have the active attribute. */
+	LIST_FOREACH(iter, &table->gpt_entry, gpe_entry) {
+		if (iter->gpe_deleted)
+			continue;
+		changed = 0;
+		entry = (struct g_part_mbr_entry *)iter;
+		if (iter == baseentry) {
+			if (set && (entry->ent.dp_flag & 0x80) == 0) {
+				entry->ent.dp_flag |= 0x80;
+				changed = 1;
+			} else if (!set && (entry->ent.dp_flag & 0x80)) {
+				entry->ent.dp_flag &= ~0x80;
+				changed = 1;
+			}
+		} else {
+			if (set && (entry->ent.dp_flag & 0x80)) {
+				entry->ent.dp_flag &= ~0x80;
+				changed = 1;
+			}
+		}
+		if (changed && !iter->gpe_created)
+			iter->gpe_modified = 1;
+	}
 	return (0);
 }
 

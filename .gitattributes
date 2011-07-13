@@ -36716,6 +36716,8 @@ sys/geom/label/g_label_msdosfs.h -text
 sys/geom/label/g_label_ntfs.c -text
 sys/geom/label/g_label_reiserfs.c -text
 sys/geom/label/g_label_ufs.c -text
+sys/geom/linux_lvm/g_linux_lvm.c -text
+sys/geom/linux_lvm/g_linux_lvm.h -text
 sys/geom/mirror/g_mirror.c -text
 sys/geom/mirror/g_mirror.h -text
 sys/geom/mirror/g_mirror_ctl.c -text
@@ -36727,9 +36729,12 @@ sys/geom/notes -text
 sys/geom/part/g_part.c -text
 sys/geom/part/g_part.h -text
 sys/geom/part/g_part_apm.c -text
+sys/geom/part/g_part_bsd.c -text
 sys/geom/part/g_part_gpt.c -text
 sys/geom/part/g_part_if.m -text
 sys/geom/part/g_part_mbr.c -text
+sys/geom/part/g_part_pc98.c -text
+sys/geom/part/g_part_vtoc8.c -text
 sys/geom/raid3/g_raid3.c -text
 sys/geom/raid3/g_raid3.h -text
 sys/geom/raid3/g_raid3_ctl.c -text

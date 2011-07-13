@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  Copyright (c) 2004 Lukas Ertl
  *  All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_rm.c,v 1.13 2007/04/12 17:54:35 le Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_rm.c,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>

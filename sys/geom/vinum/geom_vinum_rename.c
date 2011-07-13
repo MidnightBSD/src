@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *  Copyright (c) 2005 Chris Jones
  *  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_rename.c,v 1.3 2005/11/20 12:14:18 le Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_rename.c,v 1.3.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
@@ -143,6 +142,7 @@ gv_rename_drive(struct gv_softc *sc, struct gctl_req *req, struct gv_drive *d, c
 	}
 
 	strncpy(d->name, newname, GV_MAXDRIVENAME);
+	strncpy(d->hdr->label.name, newname, GV_MAXDRIVENAME);
 
 	/* XXX can we rename providers here? */
 

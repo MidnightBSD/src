@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2006, 2007 Marcel Moolenaar
+ * Copyright (c) 2006-2008 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/part/g_part_apm.c,v 1.3.2.1 2007/10/29 00:11:39 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/part/g_part_apm.c,v 1.3.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/apm.h>
@@ -62,6 +61,8 @@ static int g_part_apm_add(struct g_part_table *, struct g_part_entry *,
     struct g_part_parms *);
 static int g_part_apm_create(struct g_part_table *, struct g_part_parms *);
 static int g_part_apm_destroy(struct g_part_table *, struct g_part_parms *);
+static int g_part_apm_dumpconf(struct g_part_table *, struct g_part_entry *,
+    struct sbuf *, const char *);
 static int g_part_apm_dumpto(struct g_part_table *, struct g_part_entry *);
 static int g_part_apm_modify(struct g_part_table *, struct g_part_entry *,
     struct g_part_parms *);
@@ -77,6 +78,7 @@ static kobj_method_t g_part_apm_methods[] = {
 	KOBJMETHOD(g_part_add,		g_part_apm_add),
 	KOBJMETHOD(g_part_create,	g_part_apm_create),
 	KOBJMETHOD(g_part_destroy,	g_part_apm_destroy),
+	KOBJMETHOD(g_part_dumpconf,	g_part_apm_dumpconf),
 	KOBJMETHOD(g_part_dumpto,	g_part_apm_dumpto),
 	KOBJMETHOD(g_part_modify,	g_part_apm_modify),
 	KOBJMETHOD(g_part_name,		g_part_apm_name),
@@ -95,7 +97,7 @@ static struct g_part_scheme g_part_apm_scheme = {
 	.gps_minent = 16,
 	.gps_maxent = INT_MAX,
 };
-G_PART_SCHEME_DECLARE(g_part_apm_scheme);
+G_PART_SCHEME_DECLARE(g_part_apm);
 
 static int
 apm_parse_type(const char *type, char *buf, size_t bufsz)
@@ -226,6 +228,34 @@ g_part_apm_destroy(struct g_part_table *basetable, struct g_part_parms *gpp)
 
 	/* Wipe the first 2 sectors to clear the partitioning. */
 	basetable->gpt_smhead |= 3;
+	return (0);
+}
+
+static int
+g_part_apm_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
+    struct sbuf *sb, const char *indent)
+{
+	union {
+		char name[APM_ENT_NAMELEN + 1];
+		char type[APM_ENT_TYPELEN + 1];
+	} u;
+	struct g_part_apm_entry *entry;
+
+	entry = (struct g_part_apm_entry *)baseentry;
+	if (indent == NULL) {
+		/* conftxt: libdisk compatibility */
+		sbuf_printf(sb, " xs APPLE xt %s", entry->ent.ent_type);
+	} else if (entry != NULL) {
+		/* confxml: partition entry information */
+		strncpy(u.name, entry->ent.ent_name, APM_ENT_NAMELEN);
+		u.name[APM_ENT_NAMELEN] = '\0';
+		sbuf_printf(sb, "%s<label>%s</label>\n", indent, u.name);
+		strncpy(u.type, entry->ent.ent_type, APM_ENT_TYPELEN);
+		u.type[APM_ENT_TYPELEN] = '\0';
+		sbuf_printf(sb, "%s<rawtype>%s</rawtype>\n", indent, u.type);
+	} else {
+		/* confxml: scheme information */
+	}
 	return (0);
 }
 

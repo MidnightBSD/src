@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004, 2005 Lukas Ertl
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_drive.c,v 1.25 2006/01/06 18:03:17 le Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_drive.c,v 1.25.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -470,9 +469,11 @@ gv_drive_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 			/* Check if this drive already has a geom. */
 			if (d->geom != NULL) {
 				g_topology_unlock();
+				g_free(vhdr);
 				break;
 			}
 			bcopy(vhdr, d->hdr, sizeof(*vhdr));
+			g_free(vhdr);
 
 		/* This is a new drive. */
 		} else {

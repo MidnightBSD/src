@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2006, 2007 Marcel Moolenaar
+ * Copyright (c) 2006-2008 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/part/g_part.h,v 1.3.2.1 2007/10/29 00:11:39 marcel Exp $
+ * $FreeBSD: src/sys/geom/part/g_part.h,v 1.3.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _GEOM_PART_H_
@@ -39,6 +38,7 @@
 enum g_part_alias {
 	G_PART_ALIAS_EFI,		/* A EFI system partition entry. */
 	G_PART_ALIAS_FREEBSD,		/* A BSD labeled partition entry. */
+	G_PART_ALIAS_FREEBSD_BOOT,	/* A FreeBSD boot partition entry. */
 	G_PART_ALIAS_FREEBSD_SWAP,	/* A swap partition entry. */
 	G_PART_ALIAS_FREEBSD_UFS,	/* A UFS/UFS2 file system entry. */
 	G_PART_ALIAS_FREEBSD_VINUM,	/* A Vinum partition entry. */
@@ -56,8 +56,9 @@ struct g_part_scheme {
 	size_t		gps_entrysz;
 	int		gps_minent;
 	int		gps_maxent;
+	int		gps_bootcodesz;
+	TAILQ_ENTRY(g_part_scheme) scheme_list;
 };
-#define	G_PART_SCHEME_DECLARE(s)	DATA_SET(g_part_scheme_set, s)
 
 struct g_part_entry {
 	LIST_ENTRY(g_part_entry) gpe_entry;
@@ -69,6 +70,7 @@ struct g_part_entry {
 	int		gpe_created:1;	/* Entry is newly created. */
 	int		gpe_deleted:1;	/* Entry has been deleted. */
 	int		gpe_modified:1;	/* Entry has been modified. */
+	int		gpe_internal:1;	/* Entry is not a used entry. */
 };
 
 /* G_PART table (KOBJ instance). */
@@ -101,6 +103,13 @@ struct g_part_table {
 	 */
 	uint32_t	gpt_sectors;
 	uint32_t	gpt_heads;
+	/*
+	 * gpt_offset holds the absolute block address of the scheme
+	 * on disk. Some partitioning schemes (historically) use
+	 * absolute addressing. Relative addresses are obtained by
+	 * subtracting gpt_offset from the absolute addresses.
+	 */
+	uint64_t	gpt_offset;
 
 	int		gpt_depth;	/* Sub-partitioning level. */
 	int		gpt_isleaf:1;	/* Cannot be sub-partitioned. */
@@ -126,6 +135,8 @@ struct g_part_entry *g_part_new_entry(struct g_part_table *, int, quad_t,
 #define	G_PART_PARM_START	0x0200
 #define	G_PART_PARM_TYPE	0x0400
 #define	G_PART_PARM_VERSION	0x0800
+#define	G_PART_PARM_BOOTCODE	0x1000
+#define	G_PART_PARM_ATTRIB	0x2000
 
 struct g_part_parms {
 	unsigned int	gpp_parms;
@@ -140,8 +151,25 @@ struct g_part_parms {
 	quad_t		gpp_start;
 	const char	*gpp_type;
 	unsigned int	gpp_version;
+	const void	*gpp_codeptr;
+	unsigned int	gpp_codesize;
+	const char	*gpp_attrib;
 };
 
 void g_part_geometry_heads(off_t, u_int, off_t *, u_int *);
+
+int g_part_modevent(module_t, int, struct g_part_scheme *);
+
+#define	G_PART_SCHEME_DECLARE(name)				\
+    static int name##_modevent(module_t mod, int tp, void *d)	\
+    {								\
+	return (g_part_modevent(mod, tp, d));			\
+    }								\
+    static moduledata_t name##_mod = {				\
+	#name,							\
+	name##_modevent,					\
+	&name##_scheme						\
+    };								\
+    DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_ANY)
 
 #endif /* !_GEOM_PART_H_ */

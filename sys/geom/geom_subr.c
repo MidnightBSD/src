@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_subr.c,v 1.91 2007/05/05 16:33:44 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_subr.c,v 1.91.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 
@@ -247,6 +247,72 @@ g_modevent(module_t mod, int type, void *data)
 		g_free(hh);
 		break;
 	}
+	return (error);
+}
+
+static void
+g_retaste_event(void *arg, int flag)
+{
+	struct g_class *cp, *mp;
+	struct g_geom *gp, *gp2;
+	struct g_hh00 *hh;
+	struct g_provider *pp;
+
+	g_topology_assert();
+	if (flag == EV_CANCEL)  /* XXX: can't happen ? */
+		return;
+	if (g_shutdown)
+		return;
+
+	hh = arg;
+	mp = hh->mp;
+	hh->error = 0;
+	if (hh->post) {
+		g_free(hh);
+		hh = NULL;
+	}
+	g_trace(G_T_TOPOLOGY, "g_retaste(%s)", mp->name);
+
+	LIST_FOREACH(cp, &g_classes, class) {
+		LIST_FOREACH(gp, &cp->geom, geom) {
+			LIST_FOREACH(pp, &gp->provider, provider) {
+				if (pp->acr || pp->acw || pp->ace)
+					continue;
+				LIST_FOREACH(gp2, &mp->geom, geom) {
+					if (!strcmp(pp->name, gp2->name))
+						break;
+				}
+				if (gp2 != NULL)
+					g_wither_geom(gp2, ENXIO);
+				mp->taste(mp, pp, 0);
+				g_topology_assert();
+			}
+		}
+	}
+}
+
+int
+g_retaste(struct g_class *mp)
+{
+	struct g_hh00 *hh;
+	int error;
+
+	if (mp->taste == NULL)
+		return (EINVAL);
+
+	hh = g_malloc(sizeof *hh, M_WAITOK | M_ZERO);
+	hh->mp = mp;
+
+	if (cold) {
+		hh->post = 1;
+		error = g_post_event(g_retaste_event, hh, M_WAITOK, NULL);
+	} else {
+		error = g_waitfor_event(g_retaste_event, hh, M_WAITOK, NULL);
+		if (error == 0)
+			error = hh->error;
+		g_free(hh);
+	}
+
 	return (error);
 }
 

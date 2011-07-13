@@ -1,5 +1,5 @@
 #-
-# Copyright (c) 2006, 2007 Marcel Moolenaar
+# Copyright (c) 2006-2008 Marcel Moolenaar
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/geom/part/g_part_if.m,v 1.2 2007/02/08 04:02:56 rodrigc Exp $
+# $FreeBSD: src/sys/geom/part/g_part_if.m,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -44,6 +44,12 @@ INTERFACE g_part;
 METHOD int add {
 	struct g_part_table *table;
 	struct g_part_entry *entry;
+	struct g_part_parms *gpp;
+};
+
+# bootcode() - scheme specific processing for the bootcode verb.
+METHOD int bootcode {
+	struct g_part_table *table;
 	struct g_part_parms *gpp;
 };
 
@@ -100,6 +106,14 @@ METHOD int probe {
 METHOD int read {
 	struct g_part_table *table;
 	struct g_consumer *cp;
+};
+
+# setunset() - set or unset partition entry attributes.
+METHOD int setunset {
+	struct g_part_table *table;
+	struct g_part_entry *entry;
+	const char *attrib;
+	unsigned int set;
 };
 
 # type() - return a string representation of the partition type.

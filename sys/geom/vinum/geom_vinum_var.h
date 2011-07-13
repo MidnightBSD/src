@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Lukas Ertl
  * Copyright (c) 1997, 1998, 1999
@@ -36,7 +35,7 @@
  * otherwise) arising in any way out of the use of this software, even if
  * advised of the possibility of such damage.
  *  
- * $FreeBSD: src/sys/geom/vinum/geom_vinum_var.h,v 1.11 2006/01/06 18:03:17 le Exp $
+ * $FreeBSD: src/sys/geom/vinum/geom_vinum_var.h,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_GEOM_VINUM_VAR_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2005, 2006, 2007 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/part/g_part_gpt.c,v 1.3.2.1 2007/10/29 00:11:39 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/part/g_part_gpt.c,v 1.3.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -53,6 +52,8 @@ CTASSERT(sizeof(struct gpt_ent) == 128);
 
 #define	EQUUID(a,b)	(memcmp(a, b, sizeof(struct uuid)) == 0)
 
+#define	MBRSIZE		512
+
 enum gpt_elt {
 	GPT_ELT_PRIHDR,
 	GPT_ELT_PRITBL,
@@ -71,6 +72,7 @@ enum gpt_state {
 
 struct g_part_gpt_table {
 	struct g_part_table	base;
+	u_char			mbr[MBRSIZE];
 	struct gpt_hdr		hdr;
 	quad_t			lba[GPT_ELT_COUNT];
 	enum gpt_state		state[GPT_ELT_COUNT];
@@ -81,10 +83,16 @@ struct g_part_gpt_entry {
 	struct gpt_ent		ent;
 };
 
+static void g_gpt_printf_utf16(struct sbuf *, uint16_t *, size_t);
+static void g_gpt_utf8_to_utf16(const uint8_t *, uint16_t *, size_t);
+
 static int g_part_gpt_add(struct g_part_table *, struct g_part_entry *,
     struct g_part_parms *);
+static int g_part_gpt_bootcode(struct g_part_table *, struct g_part_parms *);
 static int g_part_gpt_create(struct g_part_table *, struct g_part_parms *);
 static int g_part_gpt_destroy(struct g_part_table *, struct g_part_parms *);
+static int g_part_gpt_dumpconf(struct g_part_table *, struct g_part_entry *,
+    struct sbuf *, const char *);
 static int g_part_gpt_dumpto(struct g_part_table *, struct g_part_entry *);
 static int g_part_gpt_modify(struct g_part_table *, struct g_part_entry *,  
     struct g_part_parms *);
@@ -98,8 +106,10 @@ static int g_part_gpt_write(struct g_part_table *, struct g_consumer *);
 
 static kobj_method_t g_part_gpt_methods[] = {
 	KOBJMETHOD(g_part_add,		g_part_gpt_add),
+	KOBJMETHOD(g_part_bootcode,	g_part_gpt_bootcode),
 	KOBJMETHOD(g_part_create,	g_part_gpt_create),
 	KOBJMETHOD(g_part_destroy,	g_part_gpt_destroy),
+	KOBJMETHOD(g_part_dumpconf,	g_part_gpt_dumpconf),
 	KOBJMETHOD(g_part_dumpto,	g_part_gpt_dumpto),
 	KOBJMETHOD(g_part_modify,	g_part_gpt_modify),
 	KOBJMETHOD(g_part_name,		g_part_gpt_name),
@@ -117,11 +127,13 @@ static struct g_part_scheme g_part_gpt_scheme = {
 	.gps_entrysz = sizeof(struct g_part_gpt_entry),
 	.gps_minent = 128,
 	.gps_maxent = INT_MAX,
+	.gps_bootcodesz = MBRSIZE,
 };
-G_PART_SCHEME_DECLARE(g_part_gpt_scheme);
+G_PART_SCHEME_DECLARE(g_part_gpt);
 
 static struct uuid gpt_uuid_efi = GPT_ENT_TYPE_EFI;
 static struct uuid gpt_uuid_freebsd = GPT_ENT_TYPE_FREEBSD;
+static struct uuid gpt_uuid_freebsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
 static struct uuid gpt_uuid_freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
 static struct uuid gpt_uuid_freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
 static struct uuid gpt_uuid_freebsd_vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
@@ -216,7 +228,6 @@ gpt_read_tbl(struct g_part_gpt_table *table, struct g_consumer *cp,
 	char *buf, *p;
 	unsigned int idx, sectors, tblsz;
 	int error;
-	uint16_t ch;
 
 	pp = cp->provider;
 	table->lba[elt] = hdr->hdr_lba_table;
@@ -247,8 +258,8 @@ gpt_read_tbl(struct g_part_gpt_table *table, struct g_consumer *cp,
 		ent->ent_lba_start = le64dec(p + 32);
 		ent->ent_lba_end = le64dec(p + 40);
 		ent->ent_attr = le64dec(p + 48);
-		for (ch = 0; ch < sizeof(ent->ent_name)/2; ch++)
-			ent->ent_name[ch] = le16dec(p + 56 + ch * 2);
+		/* Keep UTF-16 in little-endian. */
+		bcopy(p + 56, ent->ent_name, sizeof(ent->ent_name));
 	}
 
 	g_free(buf);
@@ -294,6 +305,11 @@ gpt_parse_type(const char *type, struct uuid *uuid)
 	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD);
 	if (!strcasecmp(type, alias)) {
 		*uuid = gpt_uuid_freebsd;
+		return (0);
+	}
+	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_BOOT);
+	if (!strcasecmp(type, alias)) {
+		*uuid = gpt_uuid_freebsd_boot;
 		return (0);
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP);
@@ -342,7 +358,19 @@ g_part_gpt_add(struct g_part_table *basetable, struct g_part_entry *baseentry,
 		entry->ent.ent_attr = 0;
 		bzero(entry->ent.ent_name, sizeof(entry->ent.ent_name));
 	}
-	/* XXX label */
+	if (gpp->gpp_parms & G_PART_PARM_LABEL)
+		g_gpt_utf8_to_utf16(gpp->gpp_label, entry->ent.ent_name,
+		    sizeof(entry->ent.ent_name));
+	return (0);
+}
+
+static int
+g_part_gpt_bootcode(struct g_part_table *basetable, struct g_part_parms *gpp)
+{
+	struct g_part_gpt_table *table;
+
+	table = (struct g_part_gpt_table *)basetable;
+	bcopy(gpp->gpp_codeptr, table->mbr, DOSPARTOFF);
 	return (0);
 }
 
@@ -358,12 +386,23 @@ g_part_gpt_create(struct g_part_table *basetable, struct g_part_parms *gpp)
 	pp = gpp->gpp_provider;
 	tblsz = (basetable->gpt_entries * sizeof(struct gpt_ent) +
 	    pp->sectorsize - 1) / pp->sectorsize;
-	if (pp->sectorsize < 512 ||
+	if (pp->sectorsize < MBRSIZE ||
 	    pp->mediasize < (3 + 2 * tblsz + basetable->gpt_entries) *
 	    pp->sectorsize)
 		return (ENOSPC);
 
 	last = (pp->mediasize / pp->sectorsize) - 1;
+
+	le16enc(table->mbr + DOSMAGICOFFSET, DOSMAGIC);
+	table->mbr[DOSPARTOFF + 1] = 0xff;		/* shd */
+	table->mbr[DOSPARTOFF + 2] = 0xff;		/* ssect */
+	table->mbr[DOSPARTOFF + 3] = 0xff;		/* scyl */
+	table->mbr[DOSPARTOFF + 4] = 0xee;		/* typ */
+	table->mbr[DOSPARTOFF + 5] = 0xff;		/* ehd */
+	table->mbr[DOSPARTOFF + 6] = 0xff;		/* esect */
+	table->mbr[DOSPARTOFF + 7] = 0xff;		/* ecyl */
+	le32enc(table->mbr + DOSPARTOFF + 8, 1);	/* start */
+	le32enc(table->mbr + DOSPARTOFF + 12, MIN(last, 0xffffffffLL));
 
 	table->lba[GPT_ELT_PRIHDR] = 1;
 	table->lba[GPT_ELT_PRITBL] = 2;
@@ -398,6 +437,32 @@ g_part_gpt_destroy(struct g_part_table *basetable, struct g_part_parms *gpp)
 }
 
 static int
+g_part_gpt_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry, 
+    struct sbuf *sb, const char *indent)
+{
+	struct g_part_gpt_entry *entry;
+ 
+	entry = (struct g_part_gpt_entry *)baseentry;
+	if (indent == NULL) {
+		/* conftxt: libdisk compatibility */
+		sbuf_printf(sb, " xs GPT xt ");
+		sbuf_printf_uuid(sb, &entry->ent.ent_type);
+	} else if (entry != NULL) {
+		/* confxml: partition entry information */
+		sbuf_printf(sb, "%s<label>", indent);
+		g_gpt_printf_utf16(sb, entry->ent.ent_name,
+		    sizeof(entry->ent.ent_name) >> 1);
+		sbuf_printf(sb, "</label>\n");
+		sbuf_printf(sb, "%s<rawtype>", indent);
+		sbuf_printf_uuid(sb, &entry->ent.ent_type);
+		sbuf_printf(sb, "</rawtype>\n");
+	} else {
+		/* confxml: scheme information */
+	}
+	return (0);
+}
+
+static int
 g_part_gpt_dumpto(struct g_part_table *table, struct g_part_entry *baseentry)  
 {
 	struct g_part_gpt_entry *entry;
@@ -420,7 +485,9 @@ g_part_gpt_modify(struct g_part_table *basetable,
 		if (error)
 			return (error);
 	}
-	/* XXX label */
+	if (gpp->gpp_parms & G_PART_PARM_LABEL)
+		g_gpt_utf8_to_utf16(gpp->gpp_label, entry->ent.ent_name,
+		    sizeof(entry->ent.ent_name));
 	return (0);
 }
 
@@ -464,7 +531,7 @@ g_part_gpt_probe(struct g_part_table *table, struct g_consumer *cp)
 	 * It's better to catch this pathological case early than behaving
 	 * pathologically later on...
 	 */
-	if (pp->sectorsize < 512 || pp->mediasize < 6 * pp->sectorsize)
+	if (pp->sectorsize < MBRSIZE || pp->mediasize < 6 * pp->sectorsize)
 		return (ENOSPC);
 
 	/* Check that there's a MBR. */
@@ -503,10 +570,18 @@ g_part_gpt_read(struct g_part_table *basetable, struct g_consumer *cp)
 	struct g_provider *pp;
 	struct g_part_gpt_table *table;
 	struct g_part_gpt_entry *entry;
-	int index;
+	u_char *buf;
+	int error, index;
 
 	table = (struct g_part_gpt_table *)basetable;
 	pp = cp->provider;
+
+	/* Read the PMBR */
+	buf = g_read_data(cp, 0, pp->sectorsize, &error);
+	if (buf == NULL)
+		return (error);
+	bcopy(buf, table->mbr, MBRSIZE);
+	g_free(buf);
 
 	/* Read the primary header and table. */
 	gpt_read_hdr(table, cp, GPT_ELT_PRIHDR, &prihdr);
@@ -544,13 +619,16 @@ g_part_gpt_read(struct g_part_table *basetable, struct g_consumer *cp)
 	if (table->state[GPT_ELT_PRIHDR] == GPT_STATE_OK &&
 	    table->state[GPT_ELT_SECHDR] == GPT_STATE_OK &&
 	    !gpt_matched_hdrs(&prihdr, &sechdr)) {
-		if (table->state[GPT_ELT_PRITBL] == GPT_STATE_OK)
+		if (table->state[GPT_ELT_PRITBL] == GPT_STATE_OK) {
 			table->state[GPT_ELT_SECHDR] = GPT_STATE_INVALID;
-		else
+			table->state[GPT_ELT_SECTBL] = GPT_STATE_MISSING;
+		} else {
 			table->state[GPT_ELT_PRIHDR] = GPT_STATE_INVALID;
+			table->state[GPT_ELT_PRITBL] = GPT_STATE_MISSING;
+		}
 	}
 
-	if (table->state[GPT_ELT_PRIHDR] != GPT_STATE_OK) {
+	if (table->state[GPT_ELT_PRITBL] != GPT_STATE_OK) {
 		printf("GEOM: %s: the primary GPT table is corrupt or "
 		    "invalid.\n", pp->name);
 		printf("GEOM: %s: using the secondary instead -- recovery "
@@ -560,7 +638,7 @@ g_part_gpt_read(struct g_part_table *basetable, struct g_consumer *cp)
 		if (pritbl != NULL)
 			g_free(pritbl);
 	} else {
-		if (table->state[GPT_ELT_SECHDR] != GPT_STATE_OK) {
+		if (table->state[GPT_ELT_SECTBL] != GPT_STATE_OK) {
 			printf("GEOM: %s: the secondary GPT table is corrupt "
 			    "or invalid.\n", pp->name);
 			printf("GEOM: %s: using the primary only -- recovery "
@@ -601,6 +679,8 @@ g_part_gpt_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
 		return (g_part_alias_name(G_PART_ALIAS_EFI));
 	if (EQUUID(type, &gpt_uuid_freebsd))
 		return (g_part_alias_name(G_PART_ALIAS_FREEBSD));
+	if (EQUUID(type, &gpt_uuid_freebsd_boot))
+		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_BOOT));
 	if (EQUUID(type, &gpt_uuid_freebsd_swap))
 		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP));
 	if (EQUUID(type, &gpt_uuid_freebsd_ufs))
@@ -633,24 +713,13 @@ g_part_gpt_write(struct g_part_table *basetable, struct g_consumer *cp)
 	tlbsz = (table->hdr.hdr_entries * table->hdr.hdr_entsz +
 	    pp->sectorsize - 1) / pp->sectorsize;
 
-	if (basetable->gpt_created) {
-		buf = g_malloc(pp->sectorsize, M_WAITOK | M_ZERO);
-		le16enc(buf + DOSMAGICOFFSET, DOSMAGIC);
-		buf[DOSPARTOFF + 1] = 0xff;		/* shd */
-		buf[DOSPARTOFF + 2] = 0xff;		/* ssect */
-		buf[DOSPARTOFF + 3] = 0xff;		/* scyl */
-		buf[DOSPARTOFF + 4] = 0xee;		/* typ */
-		buf[DOSPARTOFF + 5] = 0xff;		/* ehd */
-		buf[DOSPARTOFF + 6] = 0xff;		/* esect */
-		buf[DOSPARTOFF + 7] = 0xff;		/* ecyl */
-		le32enc(buf + DOSPARTOFF + 8, 1);	/* start */
-		le32enc(buf + DOSPARTOFF + 12,
-		    MIN(pp->mediasize / pp->sectorsize - 1, 0xffffffffLL));
-		error = g_write_data(cp, 0, buf, pp->sectorsize);
-		g_free(buf);
-		if (error)
-			return (error);
-	}
+	/* Write the PMBR */
+	buf = g_malloc(pp->sectorsize, M_WAITOK | M_ZERO);
+	bcopy(table->mbr, buf, MBRSIZE);
+	error = g_write_data(cp, 0, buf, pp->sectorsize);
+	g_free(buf);
+	if (error)
+		return (error);
 
 	/* Allocate space for the header and entries. */
 	buf = g_malloc((tlbsz + 1) * pp->sectorsize, M_WAITOK | M_ZERO);
@@ -720,15 +789,14 @@ g_part_gpt_write(struct g_part_table *basetable, struct g_consumer *cp)
 	return (error);
 }
 
-#if 0
 static void
-g_gpt_to_utf8(struct sbuf *sb, uint16_t *str, size_t len)
+g_gpt_printf_utf16(struct sbuf *sb, uint16_t *str, size_t len)
 {
 	u_int bo;
 	uint32_t ch;
 	uint16_t c;
 
-	bo = BYTE_ORDER;
+	bo = LITTLE_ENDIAN;	/* GPT is little-endian */
 	while (len > 0 && *str != 0) {
 		ch = (bo == BIG_ENDIAN) ? be16toh(*str) : le16toh(*str);
 		str++, len--;
@@ -750,6 +818,7 @@ g_gpt_to_utf8(struct sbuf *sb, uint16_t *str, size_t len)
 		} else if (ch == 0xfeff) /* BOM (U+FEFF) unswapped. */
 			continue;
 
+		/* Write the Unicode character in UTF-8 */
 		if (ch < 0x80)
 			sbuf_printf(sb, "%c", ch);
 		else if (ch < 0x800)
@@ -764,4 +833,71 @@ g_gpt_to_utf8(struct sbuf *sb, uint16_t *str, size_t len)
 			    0x80 | ((ch >> 6) & 0x3f), 0x80 | (ch & 0x3f));
 	}
 }
-#endif
+
+static void
+g_gpt_utf8_to_utf16(const uint8_t *s8, uint16_t *s16, size_t s16len)
+{
+	size_t s16idx, s8idx;
+	uint32_t utfchar;
+	unsigned int c, utfbytes;
+
+	s8idx = s16idx = 0;
+	utfchar = 0;
+	utfbytes = 0;
+	bzero(s16, s16len << 1);
+	while (s8[s8idx] != 0 && s16idx < s16len) {
+		c = s8[s8idx++];
+		if ((c & 0xc0) != 0x80) {
+			/* Initial characters. */
+			if (utfbytes != 0) {
+				/* Incomplete encoding of previous char. */
+				s16[s16idx++] = htole16(0xfffd);
+			}
+			if ((c & 0xf8) == 0xf0) {
+				utfchar = c & 0x07;
+				utfbytes = 3;
+			} else if ((c & 0xf0) == 0xe0) {
+				utfchar = c & 0x0f;
+				utfbytes = 2;
+			} else if ((c & 0xe0) == 0xc0) {
+				utfchar = c & 0x1f;
+				utfbytes = 1;
+			} else {
+				utfchar = c & 0x7f;
+				utfbytes = 0;
+			}
+		} else {
+			/* Followup characters. */
+			if (utfbytes > 0) {
+				utfchar = (utfchar << 6) + (c & 0x3f);
+				utfbytes--;
+			} else if (utfbytes == 0)
+				utfbytes = ~0;
+		}
+		/*
+		 * Write the complete Unicode character as UTF-16 when we
+		 * have all the UTF-8 charactars collected.
+		 */
+		if (utfbytes == 0) {
+			/*
+			 * If we need to write 2 UTF-16 characters, but
+			 * we only have room for 1, then we truncate the
+			 * string by writing a 0 instead.
+			 */
+			if (utfchar >= 0x10000 && s16idx < s16len - 1) {
+				s16[s16idx++] =
+				    htole16(0xd800 | ((utfchar >> 10) - 0x40));
+				s16[s16idx++] =
+				    htole16(0xdc00 | (utfchar & 0x3ff));
+			} else
+				s16[s16idx++] = (utfchar >= 0x10000) ? 0 :
+				    htole16(utfchar);
+		}
+	}
+	/*
+	 * If our input string was truncated, append an invalid encoding
+	 * character to the output string.
+	 */
+	if (utfbytes != 0 && s16idx < s16len)
+		s16[s16idx++] = htole16(0xfffd);
+}
