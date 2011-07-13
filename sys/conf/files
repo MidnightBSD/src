@@ -1286,6 +1286,7 @@ geom/label/g_label_msdosfs.c	optional geom_label
 geom/label/g_label_ntfs.c	optional geom_label
 geom/label/g_label_reiserfs.c	optional geom_label
 geom/label/g_label_ufs.c	optional geom_label
+geom/linux_lvm/g_linux_lvm.c	optional geom_linux_lvm
 geom/mirror/g_mirror.c		optional geom_mirror
 geom/mirror/g_mirror_ctl.c	optional geom_mirror
 geom/multipath/g_multipath.c	optional geom_multipath
@@ -1293,8 +1294,10 @@ geom/nop/g_nop.c		optional geom_nop
 geom/part/g_part.c		standard
 geom/part/g_part_if.m		standard
 geom/part/g_part_apm.c		optional geom_part_apm
+geom/part/g_part_bsd.c		optional geom_part_bsd
 geom/part/g_part_gpt.c		optional geom_part_gpt
 geom/part/g_part_mbr.c		optional geom_part_mbr
+geom/part/g_part_vtoc8.c	optional geom_part_vtoc8
 geom/raid3/g_raid3.c		optional geom_raid3
 geom/raid3/g_raid3_ctl.c	optional geom_raid3
 geom/shsec/g_shsec.c		optional geom_shsec
