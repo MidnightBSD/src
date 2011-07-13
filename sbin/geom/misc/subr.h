@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/geom/misc/subr.h,v 1.8 2007/01/25 11:35:27 pjd Exp $
+ * $FreeBSD: src/sbin/geom/misc/subr.h,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SUBR_H_
@@ -47,4 +47,7 @@ intmax_t gctl_get_intmax(struct gctl_req *req, const char *pfmt, ...) __printfli
 const char *gctl_get_ascii(struct gctl_req *req, const char *pfmt, ...) __printflike(2, 3);
 int gctl_change_param(struct gctl_req *req, const char *name, int len,
     const void *value);
+int gctl_delete_param(struct gctl_req *req, const char *name);
+int gctl_has_param(struct gctl_req *req, const char *name);
+
 #endif	/* !_SUBR_H_ */

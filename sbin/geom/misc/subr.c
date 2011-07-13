@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/misc/subr.c,v 1.7 2007/01/25 11:35:27 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/misc/subr.c,v 1.7.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -413,4 +413,48 @@ gctl_change_param(struct gctl_req *req, const char *name, int len,
 		return (0);
 	}
 	return (ENOENT);
+}
+
+int
+gctl_delete_param(struct gctl_req *req, const char *name)
+{
+	struct gctl_req_arg *ap;
+	unsigned int i;
+
+	if (req == NULL || req->error != NULL)
+		return (EDOOFUS);
+
+	i = 0;
+	while (i < req->narg) {
+		ap = &req->arg[i];
+		if (strcmp(ap->name, name) == 0)
+			break;
+		i++;
+	}
+	if (i == req->narg)
+		return (ENOENT);
+
+	req->narg--;
+	while (i < req->narg) {
+		req->arg[i] = req->arg[i + 1];
+		i++;
+	}
+	return (0);
+}
+
+int
+gctl_has_param(struct gctl_req *req, const char *name)
+{
+	struct gctl_req_arg *ap;
+	unsigned int i;
+
+	if (req == NULL || req->error != NULL)
+		return (0);
+
+	for (i = 0; i < req->narg; i++) {
+		ap = &req->arg[i];
+		if (strcmp(ap->name, name) == 0)
+			return (1);
+	}
+	return (0);
 }
