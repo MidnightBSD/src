@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.31 2011/07/10 15:42:48 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.32 2011/07/17 19:10:30 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,6 +55,7 @@ main(int argc, char *argv[]) {
 	char *flag, *buf = NULL;
 	mportInstance *mport;
 	int resultCode = MPORT_ERR_FATAL;
+	int tempResultCode;
 	int i;
 	char **searchQuery;
 
@@ -74,10 +75,16 @@ main(int argc, char *argv[]) {
 		resultCode = install(mport, argv[2]);
 	} else if (!strcmp(argv[1], "delete")) {
 		for (i = 2; i < argc; i++) {
-			resultCode = delete(mport, argv[i]);
+			tempResultCode = delete(mport, argv[i]);
+			if (tempResultCode != 0)
+				resultCode = tempResultCode;
 		}
 	} else if (!strcmp(argv[1], "update")) {
-		resultCode = update(mport, argv[2]);
+		for (i = 2; i < argc; i++) {
+			tempResultCode = update(mport, argv[2]);
+			if (tempResultCode != 0)
+				resultCode = tempResultCode;
+		}
 	} else if (!strcmp(argv[1], "upgrade")) {
 		resultCode = upgrade(mport);
         } else if (!strcmp(argv[1], "list")) {
