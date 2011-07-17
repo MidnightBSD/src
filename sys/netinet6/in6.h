@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/netinet6/in6.h,v 1.5 2008/12/03 00:27:01 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/netinet6/in6.h,v 1.6 2009/01/11 02:40:53 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/netinet6/in6.h,v 1.51 2007/07/19 09:16:40 bz Exp $	*/
 /*	$KAME: in6.h,v 1.89 2001/05/27 13:28:35 itojun Exp $	*/
 
@@ -75,7 +75,7 @@
  * has the table of implementation/integration differences.
  */
 #define __KAME__
-#define __KAME_VERSION		"FreeBSD"
+#define __KAME_VERSION		"MidnightBSD"
 
 /*
  * IPv6 port allocation rules should mirror the IPv4 rules and are controlled
