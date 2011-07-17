@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.30 2011/07/10 01:54:20 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.31 2011/07/10 15:42:48 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,7 +73,9 @@ main(int argc, char *argv[]) {
 	if (!strcmp(argv[1], "install")) {
 		resultCode = install(mport, argv[2]);
 	} else if (!strcmp(argv[1], "delete")) {
-		resultCode = delete(mport, argv[2]);
+		for (i = 2; i < argc; i++) {
+			resultCode = delete(mport, argv[i]);
+		}
 	} else if (!strcmp(argv[1], "update")) {
 		resultCode = update(mport, argv[2]);
 	} else if (!strcmp(argv[1], "upgrade")) {
