@@ -2,7 +2,7 @@
 ############
 # Setup system for IPv6 firewall service.
 # $FreeBSD: src/etc/rc.firewall6,v 1.15.8.1 2005/10/09 04:35:10 ume Exp $
-# $MidnightBSD: src/etc/rc.firewall6,v 1.3 2008/03/22 05:50:39 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.firewall6,v 1.4 2011/07/18 00:38:12 laffer1 Exp $
 
 # Suck in the configuration variables.
 if [ -z "${source_rc_confs_defined}" ]; then
@@ -103,27 +103,28 @@ ${fw6cmd} -f flush
 case ${ipv6_firewall_type} in
 [Oo][Pp][Ee][Nn])
 	setup_local
-	${fw6cmd} add 65000 pass all from any to any
+	${fw6cmd} add 65000 pass ip6 from any to any
 	;;
 
 [Dd][Ee][Ss][Kk][Tt][Oo][Pp])
 	setup_local
-	${fw6cmd} add allow tcp from any to any out
-	${fw6cmd} add allow tcp from any to any established
-	${fw6cmd} add allow tcp from any to any frag
+
+	${fw6cmd} add pass ip6 from any to any out proto tcp
+	${fw6cmd} add pass ip6 from any to any established proto tcp
+	${fw6cmd} add pass ip6 from any to any frag
 	case ${sshd_enable} in
 	[Yy][Ee][Ss])
-		${fw6cmd} add pass tcp from any to me 22 setup
+		${fw6cmd} add pass ip6 from any to me 22 setup proto tcp
 		;;
 	esac
-	${fw6cmd} add 65000 deny tcp from any to any
+	${fw6cmd} add 65000 deny ip6 from any to any proto tcp
 	# Allow ICMPv6 destination unreach
         ${fw6cmd} add pass ipv6-icmp from any to any icmptypes 1
 
         # Allow NS/NA/toobig (don't filter it out)
         ${fw6cmd} add pass ipv6-icmp from any to any icmptypes 2,135,136
 	# Allow other traffic
-	${fw6cmd} add 65200 allow all from any to any
+	${fw6cmd} add 65000 pass ip6 from any to any
 	;;
 
 [Cc][Ll][Ii][Ee][Nn][Tt])
@@ -143,8 +144,8 @@ case ${ipv6_firewall_type} in
 	setup_local
 
 	# Allow any traffic to or from my own net.
-	${fw6cmd} add pass all from ${ip} to ${net}/${prefixlen}
-	${fw6cmd} add pass all from ${net}/${prefixlen} to ${ip}
+	${fw6cmd} add pass ip6 from ${ip} to ${net}/${prefixlen}
+	${fw6cmd} add pass ip6 from ${net}/${prefixlen} to ${ip}
 
 	# Allow any link-local multicast traffic
 	${fw6cmd} add pass ip6 from fe80::/10 to ff02::/16
