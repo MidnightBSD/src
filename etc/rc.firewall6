@@ -2,7 +2,7 @@
 ############
 # Setup system for IPv6 firewall service.
 # $FreeBSD: src/etc/rc.firewall6,v 1.15.8.1 2005/10/09 04:35:10 ume Exp $
-# $MidnightBSD: src/etc/rc.firewall6,v 1.4 2011/07/18 00:38:12 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.firewall6,v 1.5 2011/07/18 00:54:45 laffer1 Exp $
 
 # Suck in the configuration variables.
 if [ -z "${source_rc_confs_defined}" ]; then
@@ -112,6 +112,11 @@ case ${ipv6_firewall_type} in
 	${fw6cmd} add pass ip6 from any to any out proto tcp
 	${fw6cmd} add pass ip6 from any to any established proto tcp
 	${fw6cmd} add pass ip6 from any to any frag
+
+	# Allow any link-local multicast traffic
+	${fw6cmd} add pass ip6 from fe80::/10 to ff02::/16
+	${fw6cmd} add pass ip6 from ${net}/${prefixlen} to ff02::/16
+
 	case ${sshd_enable} in
 	[Yy][Ee][Ss])
 		${fw6cmd} add pass ip6 from any to me 22 setup proto tcp
