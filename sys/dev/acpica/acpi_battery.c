@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_battery.c,v 1.4 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -198,7 +198,7 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 	 * is 0 (due to some error reading the battery), skip this
 	 * conversion.
 	 */
-	if (bif->units == ACPI_BIF_UNITS_MA && bif->dvol != 0) {
+	if (bif->units == ACPI_BIF_UNITS_MA && bif->dvol != 0 && dev == NULL) {
 	    bst[i].rate = (bst[i].rate * bif->dvol) / 1000;
 	    bst[i].cap = (bst[i].cap * bif->dvol) / 1000;
 	    bif->lfcap = (bif->lfcap * bif->dvol) / 1000;
