@@ -29751,6 +29751,8 @@ libexec/mport.updepends/Makefile -text
 libexec/mport.updepends/mport.updepends.c -text
 libexec/mport.version_cmp/Makefile -text
 libexec/mport.version_cmp/mport.version_cmp.c -text
+libexec/msearch.index/Makefile -text
+libexec/msearch.index/msearch.index.c -text
 libexec/pppoed/Makefile -text
 libexec/pppoed/pppoed.8 -text
 libexec/pppoed/pppoed.c -text
