@@ -41175,6 +41175,8 @@ usr.bin/mktemp/mktemp.c -text
 usr.bin/mkuzip/Makefile -text
 usr.bin/mkuzip/mkuzip.8 -text
 usr.bin/mkuzip/mkuzip.c -text
+usr.bin/msearch/Makefile -text
+usr.bin/msearch/msearch.c -text
 usr.bin/msgs/Makefile -text
 usr.bin/msgs/msgs.1 -text
 usr.bin/msgs/msgs.c -text
