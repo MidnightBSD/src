@@ -28841,6 +28841,12 @@ lib/libmport/plist.c -text
 lib/libmport/update_primative.c -text
 lib/libmport/util.c -text
 lib/libmport/version_cmp.c -text
+lib/libmsearch/Makefile -text
+lib/libmsearch/db.c -text
+lib/libmsearch/msearch.h -text
+lib/libmsearch/msearch_index.c -text
+lib/libmsearch/msearch_private.h -text
+lib/libmsearch/msearch_search.c -text
 lib/libncp/CREDITS -text
 lib/libncp/Makefile -text
 lib/libncp/ipx.c -text
