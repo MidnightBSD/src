@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2011 Lucas Holt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,6 +23,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
  */
 
 #include <sys/cdefs.h>
@@ -29,52 +31,50 @@ __MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
-
-#include <sys/types.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <dirent.h>
 
-MPORT_PUBLIC_API int 
-mport_clean_database(mportInstance *mport) {
-	if (mport_db_do(mport->db, "vacuum") != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-	return MPORT_OK;
-}
+MPORT_PUBLIC_API char * mport_setting_get(mportInstance *mport, const char *name) {
+	sqlite3_stmt *stmt;
+	char *val;
 
-MPORT_PUBLIC_API int
-mport_clean_oldpackages(mportInstance *mport) {
-	mportIndexEntry **indexEntry;
-	struct dirent *de;
-	DIR *d;
-	char *path;
+	if (name == NULL)
+		return NULL;
 
-	d = opendir(MPORT_FETCH_STAGING_DIR);
-	if (d == NULL)
-		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open directory %s: %s", MPORT_FETCH_STAGING_DIR, strerror(errno));
+	if (mport_db_prepare(mport->db, &stmt, "SELECT val FROM settings WHERE name=%Q", name) != MPORT_OK)
+		return NULL;
 
-	while ((de = readdir(d)) != NULL) {
-		if (strcmp(".", de->d_name) == 0 || strcmp("..", de->d_name) == 0)
-			continue;
-		if (mport_index_search(mport, &indexEntry, "bundlefile=%Q", de->d_name) != MPORT_OK)
-			RETURN_CURRENT_ERROR;
-
-		if (indexEntry == NULL || *indexEntry == NULL) {
-			asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
-			if (path != NULL)
-				if (unlink(path) < 0) {
-					closedir(d);
-					RETURN_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s", path, strerror(errno));
-				}
-			free(path);
-		} else {
-			 mport_index_entry_free_vec(indexEntry);
-		}
+	switch (sqlite3_step(stmt)) {
+		case SQLITE_ROW:
+			val = strdup(sqlite3_column_text(stmt, 0));
+			sqlite3_finalize(stmt);
+			break;
+		case SQLITE_DONE:
+			SET_ERROR(MPORT_ERR_FATAL, "Setting not found.");
+			sqlite3_finalize(stmt);
+			return NULL;
+			break; /* NOT REACHED */
+		default:
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			sqlite3_finalize(stmt);
+			return NULL;
 	}
 
-	closedir(d);
+	return val;
+}
+
+MPORT_PUBLIC_API int mport_setting_set(mportInstance *mport, const char *name, const char *val) {
+	char *tmpval;
+	
+	tmpval = mport_setting_get(mport, name);
+	if (tmpval == NULL) {
+		if (mport_db_do(mport->db, "INSERT INTO settings (name, val) VALUES(%Q, %Q)", name, val) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+	} else {
+		free(tmpval);
+		if (mport_db_do(mport->db, "UPDATE settings set val=%Q where name=%Q", val, name) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+	}
 
 	return MPORT_OK;
 }

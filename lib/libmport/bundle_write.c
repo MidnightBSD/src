@@ -22,9 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/lib/libmport/bundle_write.c,v 1.9 2011/03/12 14:47:48 laffer1 Exp $
  */
+
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
  * from write.c in bsdtar by Tim Kientzle. Copyright (c) 2003-2007 Tim Kientzle.

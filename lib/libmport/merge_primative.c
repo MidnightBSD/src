@@ -22,10 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/lib/libmport/merge_primative.c,v 1.5 2010/11/16 01:53:54 laffer1 Exp $
  */
 
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <archive.h>
 #include <archive_entry.h>

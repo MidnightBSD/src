@@ -22,11 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/lib/libmport/db.c,v 1.7 2010/03/12 03:59:44 laffer1 Exp $
  */
 
-
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <sqlite3.h>
 #include <stdlib.h>
@@ -182,5 +181,9 @@ int mport_generate_master_schema(sqlite3 *db)
   
   RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS categories_pkg ON categories (pkg, category)");
+
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS settings (name text NOT NULL, val text NOT NULL)");
+  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS settings_name ON settings (name)");
+
   return MPORT_OK;
 }

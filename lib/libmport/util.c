@@ -23,9 +23,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.27 2011/06/05 05:12:13 laffer1 Exp $
  */
+
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

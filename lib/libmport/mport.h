@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.19 2011/04/24 22:40:10 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.20 2011/05/21 19:35:29 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -185,6 +185,10 @@ const char * mport_err_string(void);
 /* Clean */
 int mport_clean_database(mportInstance *);
 int mport_clean_oldpackages(mportInstance *);
+
+/* Setting */
+char * mport_setting_get(mportInstance *, const char *);
+int mport_setting_set(mportInstance *, const char *, const char *);
 
 /* Utils */
 void mport_parselist(char *, char ***);

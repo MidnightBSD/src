@@ -22,11 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/lib/libmport/create_primative.c,v 1.6 2011/03/11 22:07:35 laffer1 Exp $
  */
 
-
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <sys/cdefs.h>
 #include <sys/stat.h>
