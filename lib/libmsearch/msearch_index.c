@@ -25,16 +25,19 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.27 2011/06/16 03:22:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.1 2011/07/24 15:07:37 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ftw.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #include "msearch_private.h"
 
+static msearch_index *mindex;
+static int msearch_index_path_file(const char *, const struct stat *, int);
 
 msearch_index * 
 msearch_index_open(const char *filename) {
@@ -99,8 +102,31 @@ msearch_index_file(msearch_index *idx, const char *file, int /* NOTUSED */ flag)
 	return 0;
 }
 
+static int 
+msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
+	sqlite3_stmt *stmt;
+
+	if (flag == FTW_F) {
+                if (sqlite3_prepare_v2(mindex->db, "INSERT INTO files (path, size, owner, created, modified) VALUES(?,?,?,?,?)", -1, &stmt, 0) != SQLITE_OK)
+        	        return 3;
+
+                sqlite3_bind_text(stmt, 1, file, strlen(file), SQLITE_TRANSIENT);
+                sqlite3_bind_int64(stmt, 2, (sqlite3_int64) fst->st_size);
+                sqlite3_bind_int(stmt, 3, fst->st_uid);
+                sqlite3_bind_int64(stmt, 4, (sqlite3_int64) fst->st_birthtime);
+                sqlite3_bind_int64(stmt, 5, (sqlite3_int64) fst->st_mtime);
+
+                if (sqlite3_step(stmt) != SQLITE_DONE)
+                        return 4;
+                sqlite3_reset(stmt);
+                sqlite3_finalize(stmt);
+	}
+	return 0;
+}
+
 int
 msearch_index_path(msearch_index *idx, const char *path) {
-	return 0;
+	mindex = idx;
+	return ftw(path, &msearch_index_path_file, 5);
 }
 
