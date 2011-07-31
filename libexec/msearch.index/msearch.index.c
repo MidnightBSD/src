@@ -25,27 +25,50 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.1 2011/07/24 15:11:27 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.1 2011/07/24 15:14:51 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <msearch.h>
+#include <unistd.h>
+
+static void usage(void);
 
 int
 main(int argc, char *argv[]) {
 	msearch_index *index;
 	int i;
+	int fflag, pflag, ch;
 
-	if (argc < 2) {
-		fprintf(stderr, "Missing file\n");
-		exit(1);
+	fflag = pflag = 0;
+
+	while ((ch = getopt(argc, argv, "pf:")) != -1) {
+		switch (ch) {
+			case 'f':
+         			fflag = 1;
+				break;
+			case 'p':
+				pflag = 1;
+				break;
+             		case '?':
+             		default:
+                     		usage();
+             	}
 	}
+	argc -= optind;
+	argv += optind;
 
 	index = msearch_index_open(MSEARCH_DEFAULT_INDEX_FILE);
 	msearch_index_create(index);
 
-	for (i = 1; i < argc; i++) {
-		msearch_index_file(index, argv[i], 0);
+	if (fflag) {
+		for (i = 1; i < argc; i++) {
+			msearch_index_file(index, argv[i], 0);
+		}
+	} else if (pflag) {
+		msearch_index_path(index, argv[1]);
+	} else {
+		msearch_index_path(index, "/");
 	}
 
 	msearch_index_close(index);
@@ -53,3 +76,8 @@ main(int argc, char *argv[]) {
 	return 0;
 }
 
+static void
+usage() {
+	fprintf(stderr, "msearch.index [-p path | -f files ...]\n");
+	exit(1); 
+}
