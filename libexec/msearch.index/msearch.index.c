@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.1 2011/07/24 15:14:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.2 2011/07/31 21:25:52 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,17 +38,20 @@ int
 main(int argc, char *argv[]) {
 	msearch_index *index;
 	int i;
-	int fflag, pflag, ch;
+	int fflag, pflag, rflag, ch;
 
-	fflag = pflag = 0;
+	fflag = pflag = rflag = 0;
 
-	while ((ch = getopt(argc, argv, "pf:")) != -1) {
+	while ((ch = getopt(argc, argv, "prf:")) != -1) {
 		switch (ch) {
 			case 'f':
          			fflag = 1;
 				break;
 			case 'p':
 				pflag = 1;
+				break;
+			case 'r':
+				rflag = 1;
 				break;
              		case '?':
              		default:
@@ -57,6 +60,9 @@ main(int argc, char *argv[]) {
 	}
 	argc -= optind;
 	argv += optind;
+
+	if (rflag)
+		unlink(MSEARCH_DEFAULT_INDEX_FILE);
 
 	index = msearch_index_open(MSEARCH_DEFAULT_INDEX_FILE);
 	msearch_index_create(index);
@@ -78,6 +84,6 @@ main(int argc, char *argv[]) {
 
 static void
 usage() {
-	fprintf(stderr, "msearch.index [-p path | -f files ...]\n");
+	fprintf(stderr, "msearch.index [-r] [-p path | -f files ...]\n");
 	exit(1); 
 }
