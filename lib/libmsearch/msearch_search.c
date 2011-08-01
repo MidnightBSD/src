@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.27 2011/06/16 03:22:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.1 2011/07/24 15:07:37 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -53,7 +53,9 @@ msearch(msearch_query *query, msearch_result *result) {
 
 	idx = msearch_index_open(MSEARCH_DEFAULT_INDEX_FILE);
 	current = result;
-	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where path like '%%%s%%'", query->terms) == 0) {
+	params = msearch_query_expand(query);
+
+	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where %s", params) == 0) {
 		while (1) {
 			ret = sqlite3_step(stmt);
 			if (ret == SQLITE_ROW) {
@@ -89,6 +91,7 @@ msearch(msearch_query *query, msearch_result *result) {
 	}
 	sqlite3_finalize(stmt);
 	msearch_index_close(idx);
+	free(params);
 
 	return i;
 }
@@ -119,13 +122,17 @@ msearch_query_expand(msearch_query *query) {
 	int i;
 	size_t rlen = 1;
 	char *result;
-	char like[10] = " like '%%"; 
+	char like[14] = "path like '%%"; 
 	char like2[5] = "%%' ";
+	char like3[5] = "and ";
 
 	for (i = 0; i < query->term_count; i++) {
 		rlen += strlen(query->terms[i]);
-		rlen += strlen(like);
-		rlen += strlen(like2);
+		rlen += sizeof(like) -1;
+		rlen += sizeof(like2) -1;
+	}
+	if (query->term_count > 1) {
+		rlen += (query->term_count - 1) * sizeof(like3);
 	}
 
 	result = calloc(rlen, sizeof(char));
@@ -135,7 +142,10 @@ msearch_query_expand(msearch_query *query) {
 	for (i = 0; i < query->term_count; i++) {
 		strcat(result, like);
 		strcat(result, query->terms[i]);
-		strcat(result, like2);		
+		strcat(result, like2);
+		if (i < query->term_count -1)
+			strcat(result, like3);
 	}
+
 	return result;
 }
