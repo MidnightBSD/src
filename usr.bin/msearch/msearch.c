@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.1 2011/07/24 15:11:27 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.2 2011/08/01 02:44:16 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,17 +41,22 @@ main(int argc, char *argv[]) {
 	msearch_result *result;
 	msearch_result *current;
 	int results;
-	int ch, zeroflag, cflag;
+	int ch, zeroflag, cflag, lflag;
+	int limit, i;
 
-	zeroflag = cflag = 0;
+	zeroflag = cflag = lflag = 0;
 
-	while ((ch = getopt(argc, argv, "cz")) != -1) {
+	while ((ch = getopt(argc, argv, "czl:")) != -1) {
 		switch(ch) {
 			case 'z': 
 				zeroflag = 1;
 				break;
 			case 'c':
 				cflag = 1;
+				break;
+			case 'l':
+				lflag = 1;
+				limit = (int)strtol(optarg, (char **)NULL, 10);
 				break;
 			case '?':
 			default:
@@ -83,7 +88,10 @@ main(int argc, char *argv[]) {
 		printf("%d\n", results);
 	} else {
 		current = result;
+		i = 0;
 		while (current != NULL) {
+			if (lflag && i >= limit)
+				break;
 			if (current->path != NULL) {
 				if (zeroflag)
 					printf("%s\0", current->path);
@@ -91,6 +99,7 @@ main(int argc, char *argv[]) {
 					printf("%s\n", current->path);
 			}
 			current = current->next;
+			i++;
 		}
 	}
 
