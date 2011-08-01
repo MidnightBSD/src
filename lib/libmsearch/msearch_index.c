@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.2 2011/07/31 21:27:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.3 2011/07/31 23:05:07 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,7 +71,7 @@ msearch_index_close(msearch_index *idx) {
 int
 msearch_index_create(msearch_index *idx) {
 	msearch_db_do(idx->db, "CREATE TABLE IF NOT EXISTS files (path text NOT NULL, size int64, owner int, created int64, modified int64)");
-  	msearch_db_do(idx->db, "CREATE INDEX IF NOT EXISTS pathidx ON files (path)");
+  	/* msearch_db_do(idx->db, "CREATE INDEX IF NOT EXISTS pathidx ON files (path)"); */
 	return 0;
 }
 
@@ -119,7 +119,7 @@ static int
 msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
 	sqlite3_stmt *stmt;
 
-	if (flag == FTW_F) {
+	if (flag == FTW_F && S_ISREG(fst->st_mode)) {
 		if (msearch_index_exists(mindex, file) == 0) {
                 	if (sqlite3_prepare_v2(mindex->db, "INSERT INTO files (path, size, owner, created, modified) VALUES(?,?,?,?,?)", -1, &stmt, 0) != SQLITE_OK)
 				return 3;
@@ -149,8 +149,14 @@ msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
 
 int
 msearch_index_path(msearch_index *idx, const char *path) {
+	int ret;
+
 	mindex = idx;
-	return ftw(path, &msearch_index_path_file, 5);
+	ret = ftw(path, &msearch_index_path_file, 5);
+
+	msearch_db_clean(idx->db);
+
+	return ret;
 }
 
 static int

@@ -27,12 +27,16 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.27 2011/06/16 03:22:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/db.c,v 1.1 2011/07/24 15:07:37 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdarg.h>
 
 #include "msearch_private.h"
+
+int msearch_db_clean(sqlite3 *db) {
+	return msearch_db_do(db, "vacuum");
+}
 
 int msearch_db_do(sqlite3 *db, const char *fmt, ...)
 {
