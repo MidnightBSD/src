@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.1 2011/07/24 15:07:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 2011 Lucas Holt
  * All rights reserved.
@@ -39,6 +39,7 @@ typedef struct _msearch_query {
 	char **	terms;
 	int 	term_count;
 	int	type;
+	int	limit; /* limit results */
 } msearch_query;
 
 typedef struct _msearch_result {

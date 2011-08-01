@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.1 2011/07/24 15:07:37 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.2 2011/08/01 02:55:56 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -55,7 +55,12 @@ msearch(msearch_query *query, msearch_result *result) {
 	current = result;
 	params = msearch_query_expand(query);
 
-	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where %s", params) == 0) {
+	if (query->limit < 1)
+		ret = msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where %s", params);
+	else
+		ret = msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where %s limit %d", params, query->limit);
+
+	if (ret == 0) {
 		while (1) {
 			ret = sqlite3_step(stmt);
 			if (ret == SQLITE_ROW) {
