@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.27 2011/06/16 03:22:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.1 2011/07/24 15:11:27 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,6 +75,7 @@ main(int argc, char *argv[]) {
 
 	query->type = MSEARCH_QUERY_TYPE_FILE;
 	query->terms = argv;
+	query->term_count = argc;
 
 	results = msearch(query, result);
 
