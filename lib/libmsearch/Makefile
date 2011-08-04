@@ -1,7 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libmsearch/Makefile,v 1.1 2011/07/24 15:07:37 laffer1 Exp $
 
 LIB=	msearch
-SRCS=	msearch_index.c msearch_search.c db.c
+SRCS=	db.c msearch_fulltext.c msearch_index.c msearch_search.c
 INCS=	msearch.h
 
 CFLAGS+=	-I${.CURDIR} -g
