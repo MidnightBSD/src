@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.3 2011/08/04 01:11:39 laffer1 Exp $ */
+/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.4 2011/08/05 02:23:40 laffer1 Exp $ */
 /*-
  * Copyright (c) 2011 Lucas Holt
  * All rights reserved.
@@ -35,6 +35,8 @@
 #define MSEARCH_DEFAULT_FULLTEXT_FILE "/var/db/msearch_full.db"
 
 #define MSEARCH_QUERY_TYPE_FILE 1
+#define MSEARCH_QUERY_TYPE_FULL 2
+#define MSEARCH_QUERY_TYPE_FILE_FULL 3
 
 typedef struct _msearch_query {
 	char **	terms;
@@ -79,9 +81,11 @@ int msearch_fulltext_close(msearch_fulltext *);
 int msearch_fulltext_create(msearch_fulltext *);
 int msearch_fulltext_index_file(msearch_fulltext *, const char *);
 int msearch_fulltext_index(msearch_fulltext *, msearch_index *);
+int msearch_fulltext_search(msearch_query *, msearch_result *);
 
 /* Search */
 int msearch(msearch_query *, msearch_result *);
+int msearch_search(msearch_query *, msearch_result *);
 void msearch_free(msearch_result *);
 
 #endif

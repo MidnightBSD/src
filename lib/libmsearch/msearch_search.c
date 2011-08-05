@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.2 2011/08/01 02:55:56 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.3 2011/08/01 23:17:45 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,8 +37,17 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.2 2011/08/01 02:
 
 #include "msearch_private.h"
 
-int 
+int
 msearch(msearch_query *query, msearch_result *result) {
+	if (query->type == MSEARCH_QUERY_TYPE_FILE)
+		return msearch_search(query, result);
+	if (query->type == MSEARCH_QUERY_TYPE_FULL)
+		return msearch_fulltext_search(query, result);
+	return -1; /* not yet implemented */
+}
+
+int 
+msearch_search(msearch_query *query, msearch_result *result) {
 	sqlite3_stmt *stmt;
 	int ret;
 	int i = 0;

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmsearch/msearch_private.h,v 1.1 2011/07/24 15:07:37 laffer1 Exp $ */
+/* $MidnightBSD: src/lib/libmsearch/msearch_private.h,v 1.2 2011/08/01 01:46:12 laffer1 Exp $ */
 /*-
  * Copyright (c) 2011 Lucas Holt
  * All rights reserved.
@@ -34,6 +34,7 @@ int msearch_db_do(sqlite3 *, const char *, ...);
 int msearch_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 int msearch_db_clean(sqlite3 *);
 
-char * msearch_query_expand(msearch_query *); 
+char * msearch_fulltext_query_expand(msearch_query *); 
+char * msearch_query_expand(msearch_query *);
 
 #endif

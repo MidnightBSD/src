@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.2 2011/08/05 02:23:40 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.3 2011/08/05 02:25:59 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,11 +33,72 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.2 2011/08/05 0
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <libgen.h>
 #include <magic.h>
 
 #include "msearch_private.h"
 
 #define MAX_INDEX_SIZE 1048576
+
+int
+msearch_fulltext_search(msearch_query *query, msearch_result *result) {
+        sqlite3_stmt *stmt;
+        int ret;
+        int i = 0;
+        msearch_fulltext *idx;
+        msearch_result *current;
+        struct stat sb;
+        char *params;
+
+	if (query->type != MSEARCH_QUERY_TYPE_FULL && query->type != MSEARCH_QUERY_TYPE_FILE_FULL)
+		return -1;
+
+        idx = msearch_fulltext_open(MSEARCH_DEFAULT_FULLTEXT_FILE);
+        current = result;
+        params = msearch_fulltext_query_expand(query);
+
+        if (query->limit < 1)
+                ret = msearch_db_prepare(idx->db, &stmt, "SELECT path FROM data where %s", params);
+        else
+                ret = msearch_db_prepare(idx->db, &stmt, "SELECT path FROM data where %s limit %d", params, query->limit);
+
+        if (ret == 0) {
+                while (1) {
+                        ret = sqlite3_step(stmt);
+                        if (ret == SQLITE_ROW) {
+                                if (i > 0) {
+                                        current->next = malloc(sizeof(msearch_result));
+                                        if (current->next == NULL) {
+                                                i = -1;
+                                                break;
+                                        }
+                                        current = current->next;
+                                }
+                                current->filename = NULL;
+                                if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
+                                        if (S_ISREG(sb.st_mode)) {
+                                                current->filename = strdup(basename(sqlite3_column_text(stmt, 0)));
+                                        }
+                                }
+                                current->path = strdup(sqlite3_column_text(stmt, 0));
+                                current->size = -1;
+                                current->uid = -1;
+                                current->owner = NULL;
+                                current->created =  0;
+                                current->modified = 0;
+                                current->next = NULL;
+                                i++;
+                        } else if (ret == SQLITE_DONE) {
+                                break;
+                        }
+                }
+        }
+        sqlite3_finalize(stmt);
+        msearch_fulltext_close(idx);
+        free(params);
+
+        return i;
+}
 
 msearch_fulltext *
 msearch_fulltext_open(const char *filename) {
@@ -165,3 +226,37 @@ msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
 	free(filedata);
 	return 0;
 }
+
+char *
+msearch_fulltext_query_expand(msearch_query *query) {
+        int i;
+        size_t rlen = 1;
+        char *result;
+        char like[17] = "textdata match '";
+        char like2[5] = "' ";
+        char like3[5] = "and ";
+
+        for (i = 0; i < query->term_count; i++) {
+		rlen += sizeof(like) -1;
+                rlen += strlen(query->terms[i]);
+                rlen += sizeof(like2) -1;
+        }
+        if (query->term_count > 1) {
+                rlen += (query->term_count - 1) * sizeof(like3);
+        }
+
+        result = calloc(rlen, sizeof(char));
+        if (result == NULL)
+                return result;
+
+        for (i = 0; i < query->term_count; i++) {
+                strcat(result, like);
+                strcat(result, query->terms[i]);
+                strcat(result, like2);
+                if (i < query->term_count -1)
+                        strcat(result, like3);
+        }
+
+        return result;
+}
+
