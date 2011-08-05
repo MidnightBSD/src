@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.1 2011/08/04 01:11:39 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.2 2011/08/05 02:23:40 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,7 +37,7 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.1 2011/08/04 0
 
 #include "msearch_private.h"
 
-#define MAX_INDEX_SIZE 20971520
+#define MAX_INDEX_SIZE 1048576
 
 msearch_fulltext *
 msearch_fulltext_open(const char *filename) {
