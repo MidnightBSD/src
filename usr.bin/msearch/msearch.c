@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.3 2011/08/01 22:51:15 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.4 2011/08/01 23:16:41 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,12 +41,12 @@ main(int argc, char *argv[]) {
 	msearch_result *result;
 	msearch_result *current;
 	int results;
-	int ch, zeroflag, cflag;
+	int ch, zeroflag, cflag, tflag;
 	int limit;
 
-	zeroflag = cflag = 0;
+	zeroflag = cflag = tflag = 0;
 
-	while ((ch = getopt(argc, argv, "czl:")) != -1) {
+	while ((ch = getopt(argc, argv, "ctzl:")) != -1) {
 		switch(ch) {
 			case 'z': 
 				zeroflag = 1;
@@ -56,6 +56,9 @@ main(int argc, char *argv[]) {
 				break;
 			case 'l':
 				limit = (int)strtol(optarg, (char **)NULL, 10);
+				break;
+			case 't':
+				tflag = 1;
 				break;
 			case '?':
 			default:
@@ -77,7 +80,10 @@ main(int argc, char *argv[]) {
 		err(1, NULL);
 	}
 
-	query->type = MSEARCH_QUERY_TYPE_FILE;
+	if (tflag)
+		query->type = MSEARCH_QUERY_TYPE_FULL;
+	else
+		query->type = MSEARCH_QUERY_TYPE_FILE;
 	query->terms = argv;
 	query->term_count = argc;
 	query->limit = limit;
