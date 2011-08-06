@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.3 2011/08/05 02:25:59 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.4 2011/08/05 03:01:12 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,11 +39,12 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.3 2011/08/05 0
 #include "msearch_private.h"
 
 #define MAX_INDEX_SIZE 1048576
+#define DEFAULT_RESULT_LIMIT 15
 
 int
 msearch_fulltext_search(msearch_query *query, msearch_result *result) {
         sqlite3_stmt *stmt;
-        int ret;
+        int ret, limit;
         int i = 0;
         msearch_fulltext *idx;
         msearch_result *current;
@@ -54,13 +55,17 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
 		return -1;
 
         idx = msearch_fulltext_open(MSEARCH_DEFAULT_FULLTEXT_FILE);
+	
         current = result;
         params = msearch_fulltext_query_expand(query);
 
         if (query->limit < 1)
-                ret = msearch_db_prepare(idx->db, &stmt, "SELECT path FROM data where %s", params);
-        else
-                ret = msearch_db_prepare(idx->db, &stmt, "SELECT path FROM data where %s limit %d", params, query->limit);
+		limit = DEFAULT_RESULT_LIMIT;
+	else
+		limit = query->limit;
+
+	ret = msearch_db_prepare(idx->db, &stmt, "SELECT path, msearch_rank(matchinfo(data)) FROM data where %s ORDER BY msearch_rank(matchinfo(data)) DESC limit %d OFFSET 0", 	
+		params, limit);
 
         if (ret == 0) {
                 while (1) {
@@ -74,18 +79,25 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
                                         }
                                         current = current->next;
                                 }
+				current->path = strdup(sqlite3_column_text(stmt, 0));
+				current->weight = sqlite3_column_double(stmt, 1);
                                 current->filename = NULL;
                                 if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
                                         if (S_ISREG(sb.st_mode)) {
                                                 current->filename = strdup(basename(sqlite3_column_text(stmt, 0)));
                                         }
-                                }
-                                current->path = strdup(sqlite3_column_text(stmt, 0));
-                                current->size = -1;
-                                current->uid = -1;
-                                current->owner = NULL;
-                                current->created =  0;
-                                current->modified = 0;
+					current->size = sb.st_size;
+					current->uid = sb.st_uid;
+					current->created =  sb.st_birthtime;
+                                	current->modified = sb.st_mtime;
+					current->owner = NULL;
+                                } else {
+                                	current->size = 0; 
+                                	current->uid = -1;
+                                	current->owner = NULL;
+                                	current->created =  0;
+                                	current->modified = 0;
+				}
                                 current->next = NULL;
                                 i++;
                         } else if (ret == SQLITE_DONE) {
@@ -113,6 +125,10 @@ msearch_fulltext_open(const char *filename) {
                 sqlite3_close(idx->db);
                 return NULL;
         }
+
+	sqlite3_enable_load_extension(idx->db, 1);
+	msearch_db_do(idx->db, "SELECT load_extension('/usr/lib/libmsearch.so')");
+	sqlite3_enable_load_extension(idx->db, 0);
 
         return idx;
 }
@@ -166,7 +182,7 @@ msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
 	FILE *fp;
 	struct stat st;
 	magic_t magic;
-	char *mimetype;
+	const char *mimetype;
 
 	if (path == NULL)
 		return 1;
@@ -209,7 +225,6 @@ msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
 	filedata[st.st_size -1] = '\0'; 
 	fclose(fp);
 
-	fprintf(stderr, "file data: %d `%s`\n", strlen(filedata), filedata);
 	if (filedata != NULL && *filedata != '\0') {
 		if (sqlite3_prepare_v2(idx->db, "INSERT INTO data VALUES(?,?)", -1, &stmt, 0) != SQLITE_OK)
                                 return 4;

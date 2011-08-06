@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.3 2011/08/01 23:17:45 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.4 2011/08/05 03:01:12 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -120,12 +120,9 @@ msearch_free(msearch_result *result) {
 
 	while (current != NULL) {
 		next = current->next;
-		if (current->filename != NULL)
-			free(current->filename);
-		if (current->path != NULL)
-			free(current->path);
-		if (current->owner != NULL)
-			free(current->owner);
+		free(current->filename);
+		free(current->path);
+		free(current->owner);
 		free(current);
 		current = next;
 	}
