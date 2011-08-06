@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.4 2011/08/05 03:01:12 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.5 2011/08/06 23:02:51 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,7 +146,7 @@ msearch_fulltext_close(msearch_fulltext *idx) {
 
 int
 msearch_fulltext_create(msearch_fulltext *idx) {
-        msearch_db_do(idx->db, "CREATE VIRTUAL TABLE data using fts4 (path, textdata, tokenize=porter)");
+        msearch_db_do(idx->db, "CREATE VIRTUAL TABLE data using fts4 (path, textdata, compress=msearch_compress, uncompress=msearch_uncompress, tokenize=porter)");
         return 0;
 }
 
