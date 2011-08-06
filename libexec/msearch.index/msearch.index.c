@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.3 2011/07/31 23:16:59 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.4 2011/08/05 03:02:09 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,9 +39,9 @@ main(int argc, char *argv[]) {
 	msearch_index *index;
 	msearch_fulltext *findex;
 	int i;
-	int fflag, pflag, rflag, ch;
+	int fflag, pflag, rflag, tflag, ch;
 
-	fflag = pflag = rflag = 0;
+	fflag = pflag = rflag = tflag = 0;
 
 	while ((ch = getopt(argc, argv, "prf:")) != -1) {
 		switch (ch) {
@@ -54,6 +54,9 @@ main(int argc, char *argv[]) {
 			case 'r':
 				rflag = 1;
 				break;
+			case 't':
+				tflag = 1;
+				break;
              		case '?':
              		default:
                      		usage();
@@ -62,8 +65,19 @@ main(int argc, char *argv[]) {
 	argc -= optind;
 	argv += optind;
 
-	if (rflag)
-		unlink(MSEARCH_DEFAULT_INDEX_FILE);
+	if (tflag && pflag)
+		usage();
+
+	if (rflag) {
+		if (tflag)
+			unlink(MSEARCH_DEFAULT_FULLTEXT_FILE);
+		else if (pflag)
+			unlink(MSEARCH_DEFAULT_INDEX_FILE);
+		else {
+			unlink(MSEARCH_DEFAULT_INDEX_FILE);
+			unlink(MSEARCH_DEFAULT_FULLTEXT_FILE);
+		}
+	}
 
 	index = msearch_index_open(MSEARCH_DEFAULT_INDEX_FILE);
 	msearch_index_create(index);
