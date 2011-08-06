@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.4 2011/08/05 03:02:09 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.5 2011/08/06 23:10:29 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,7 +43,7 @@ main(int argc, char *argv[]) {
 
 	fflag = pflag = rflag = tflag = 0;
 
-	while ((ch = getopt(argc, argv, "prf:")) != -1) {
+	while ((ch = getopt(argc, argv, "prtf:")) != -1) {
 		switch (ch) {
 			case 'f':
          			fflag = 1;
@@ -91,6 +91,8 @@ main(int argc, char *argv[]) {
 		}
 	} else if (pflag) {
 		msearch_index_path(index, argv[1]);
+	} else if (tflag) {
+		msearch_fulltext_index(findex, index);
 	} else {
 		msearch_index_path(index, "/");
 		msearch_fulltext_index(findex, index);
