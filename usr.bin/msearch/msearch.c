@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.4 2011/08/01 23:16:41 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.5 2011/08/05 03:00:36 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,12 +41,12 @@ main(int argc, char *argv[]) {
 	msearch_result *result;
 	msearch_result *current;
 	int results;
-	int ch, zeroflag, cflag, tflag;
+	int ch, zeroflag, cflag, rflag, tflag;
 	int limit;
 
-	zeroflag = cflag = tflag = 0;
+	zeroflag = cflag = tflag = rflag = 0;
 
-	while ((ch = getopt(argc, argv, "ctzl:")) != -1) {
+	while ((ch = getopt(argc, argv, "crtzl:")) != -1) {
 		switch(ch) {
 			case 'z': 
 				zeroflag = 1;
@@ -56,6 +56,9 @@ main(int argc, char *argv[]) {
 				break;
 			case 'l':
 				limit = (int)strtol(optarg, (char **)NULL, 10);
+				break;
+			case 'r':
+				rflag = 1;
 				break;
 			case 't':
 				tflag = 1;
@@ -69,8 +72,8 @@ main(int argc, char *argv[]) {
 	argv += optind;
 
 	if (argc < 1) {
-                usage();
-        }
+		usage();
+	}
 
 	if ((result = (msearch_result *) calloc(1, sizeof(msearch_result))) == NULL) {
 		err(1, NULL);
@@ -96,10 +99,17 @@ main(int argc, char *argv[]) {
 		current = result;
 		while (current != NULL) {
 			if (current->path != NULL) {
-				if (zeroflag)
-					printf("%s\0", current->path);
-				else
-					printf("%s\n", current->path);
+				if (tflag && rflag) {
+					if (zeroflag)
+						printf("%0.2f %s\0", current->weight, current->path);
+					else
+						printf("%0.2f %s\n", current->weight, current->path);
+				} else {
+					if (zeroflag)
+						printf("%s\0", current->path);
+					else
+						printf("%s\n", current->path);
+				}
 			}
 			current = current->next;
 		}
@@ -113,6 +123,6 @@ main(int argc, char *argv[]) {
 
 void
 usage() {
-	fprintf(stderr, "usage: msearch [-cz] pattern ...\n");
+	fprintf(stderr, "usage: msearch [-crtz] [-l limit] pattern ...\n");
 	exit(1);
 }
