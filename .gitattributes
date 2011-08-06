@@ -28849,6 +28849,7 @@ lib/libmsearch/msearch_fulltext.c -text
 lib/libmsearch/msearch_index.c -text
 lib/libmsearch/msearch_private.h -text
 lib/libmsearch/msearch_search.c -text
+lib/libmsearch/sqlite_functions.c -text
 lib/libncp/CREDITS -text
 lib/libncp/Makefile -text
 lib/libncp/ipx.c -text
