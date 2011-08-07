@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.12 2009/11/28 22:44:30 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.13 2011/03/12 18:29:44 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -41,7 +41,7 @@ SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf libkvm msun libmd \
 	libpmc ${_libkse} librt ${_libsdp} ${_libsm} ${_libsmb} ${_libsmdb} \
 	${_libsmutil} libstand libtelnet ${_libthr} libthread_db libufs \
 	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz \
-	libsqlite3 libmport ${_bind}
+	libsqlite3 libmport libmsearch ${_bind}
 
 .if exists(${.CURDIR}/csu/${MACHINE_ARCH}-elf)
 _csu=csu/${MACHINE_ARCH}-elf
