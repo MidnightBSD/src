@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/libexec/Makefile,v 1.77 2007/07/03 12:46:04 mlaier Exp $
-# $MidnightBSD: src/libexec/Makefile,v 1.8 2011/03/06 03:57:00 laffer1 Exp $
+# $MidnightBSD: src/libexec/Makefile,v 1.9 2011/03/06 16:17:36 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -27,6 +27,7 @@ SUBDIR=	atrun \
 	mport.update \
 	mport.updepends \
 	mport.version_cmp \
+	msearch.index \
 	pppoed \
 	pt_chown \
 	rbootd \
