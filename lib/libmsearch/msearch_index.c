@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.4 2011/08/01 01:46:12 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.5 2011/08/07 02:12:26 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,7 +87,7 @@ msearch_index_file(msearch_index *idx, const char *file, int /* NOTUSED */ flag)
 			if (sqlite3_prepare_v2(idx->db, "INSERT INTO files (path, size, owner, created, modified) VALUES(?,?,?,?,?)", -1, &stmt, 0) != SQLITE_OK)
 				return 3;
 
-			sqlite3_bind_text(stmt, 1, file, strlen(file), SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt, 1, file, strlen(file), SQLITE_STATIC);
 			sqlite3_bind_int64(stmt, 2, (sqlite3_int64) st.st_size);
 			sqlite3_bind_int(stmt, 3, st.st_uid);
 			sqlite3_bind_int64(stmt, 4, (sqlite3_int64) st.st_birthtime);
@@ -96,7 +96,7 @@ msearch_index_file(msearch_index *idx, const char *file, int /* NOTUSED */ flag)
 			if (sqlite3_prepare_v2(idx->db, "UPDATE files set size=?, owner=?, created=?, modified=? where path=?", -1, &stmt, 0) != SQLITE_OK)
 				return 3;
 
-			sqlite3_bind_text(stmt, 5, file, strlen(file), SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt, 5, file, strlen(file), SQLITE_STATIC);
 			sqlite3_bind_int64(stmt, 1, (sqlite3_int64) st.st_size);
 			sqlite3_bind_int(stmt, 2, st.st_uid);
 			sqlite3_bind_int64(stmt, 3, (sqlite3_int64) st.st_birthtime);
@@ -122,7 +122,7 @@ msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
 		if (msearch_index_exists(mindex, file) == 0) {
                 	if (sqlite3_prepare_v2(mindex->db, "INSERT INTO files (path, size, owner, created, modified) VALUES(?,?,?,?,?)", -1, &stmt, 0) != SQLITE_OK)
 				return 3;
-			sqlite3_bind_text(stmt, 1, file, strlen(file), SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt, 1, file, strlen(file), SQLITE_STATIC);
 			sqlite3_bind_int64(stmt, 2, (sqlite3_int64) fst->st_size);
 			sqlite3_bind_int(stmt, 3, fst->st_uid);
 			sqlite3_bind_int64(stmt, 4, (sqlite3_int64) fst->st_birthtime);
@@ -130,7 +130,7 @@ msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
 		} else {
 			if (sqlite3_prepare_v2(mindex->db, "UPDATE files set size=?, owner=?, created=?, modified=? where path=?", -1, &stmt, 0) != SQLITE_OK)
 				return 3;
-			sqlite3_bind_text(stmt, 5, file, strlen(file), SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt, 5, file, strlen(file), SQLITE_STATIC);
 			sqlite3_bind_int64(stmt, 1, (sqlite3_int64) fst->st_size);
 			sqlite3_bind_int(stmt, 2, fst->st_uid);
 			sqlite3_bind_int64(stmt, 3, (sqlite3_int64) fst->st_birthtime);

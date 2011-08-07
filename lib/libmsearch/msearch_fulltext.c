@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.8 2011/08/07 00:49:47 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.9 2011/08/07 02:12:26 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -237,8 +237,8 @@ msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
                                 return 4;
 		}
 
-		sqlite3_bind_text(stmt, 1, path, strlen(path), SQLITE_TRANSIENT);
-		sqlite3_bind_text(stmt, 2, filedata, st.st_size, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 1, path, strlen(path), SQLITE_STATIC);
+		sqlite3_bind_text(stmt, 2, filedata, st.st_size, SQLITE_STATIC);
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
 			free(filedata);
                         sqlite3_finalize(stmt);
