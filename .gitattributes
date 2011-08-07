@@ -24788,6 +24788,7 @@ etc/periodic/weekly/310.locate -text
 etc/periodic/weekly/320.whatis -text
 etc/periodic/weekly/330.catman -text
 etc/periodic/weekly/340.noid -text
+etc/periodic/weekly/350.msearch -text
 etc/periodic/weekly/400.status-pkg -text
 etc/periodic/weekly/999.local -text
 etc/periodic/weekly/Makefile -text

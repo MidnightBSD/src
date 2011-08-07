@@ -1,0 +1,31 @@
+#!/bin/sh -
+#
+# $MidnightBSD: src/etc/periodic/weekly/310.locate,v 1.3 2009/03/20 03:13:19 laffer1 Exp $
+
+# If there is a global system configuration file, suck it in.
+#
+if [ -r /etc/defaults/periodic.conf ]
+then
+    . /etc/defaults/periodic.conf
+    source_periodic_confs
+fi
+
+case "$weekly_locate_enable" in
+    [Yy][Ee][Ss])
+	echo ""
+	echo "Rebuilding msearch database:"
+
+	msearchdb=/var/db/msearch.db
+	msearchfulldb=/var/db/msearch_full.db
+
+	cd /
+	echo /usr/libexec/msearch.index -r | nice -n 5 su -fm nobody || rc=3
+	chown nobody $msearchdb || rc=3
+	chown nobody $msearchfulldb || rc=3
+	chmod 444 $msearchdb || rc=3
+	chmod 444 $msearchfulldb || rc=3;;
+
+    *)  rc=0;;
+esac
+
+exit $rc
