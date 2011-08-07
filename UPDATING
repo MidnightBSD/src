@@ -1,5 +1,18 @@
 Updating Information for MidnightBSD users
 
+20110806:
+	sqlite 3.7.7.1 imported
+
+	msearch(1), libmsearch and msearch.import added.  msearch(1) provides
+	a full text search command line tool.  libmsearch can also be used
+	to build a graphical based search in the future. You can enable
+	index building for msearch in periodic.conf or manually run the
+	/usr/libexec/msearch.index tool.  Full text indexes take considerable
+	space in /var.  I'm using approximately 500MB currently.
+
+	Fix a long standing bug with the periodic script to check package
+	versions.  This will be obsolete with mport though.
+
 20110710:
 	kdb_enter_why added to MidnightBSD to allow the kernel debugger to 
 	know why it's in use and thus script can be run.
@@ -1021,4 +1034,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.127 2011/07/09 20:18:56 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.128 2011/07/10 21:01:53 laffer1 Exp $
