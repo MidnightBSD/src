@@ -1,8 +1,8 @@
-# $MidnightBSD: src/usr.bin/msearch/Makefile,v 1.1 2011/07/24 15:11:27 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/msearch/Makefile,v 1.2 2011/08/01 22:51:15 laffer1 Exp $
 
 PROG=	msearch
 
-CFLAGS+= -I${.CURDIR}/../../lib/libsearch -g
+CFLAGS+= -I${.CURDIR}/../../lib/libsearch
 
 NO_MAN=	
 
