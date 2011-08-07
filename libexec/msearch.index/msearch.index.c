@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.7 2011/08/07 01:42:46 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.8 2011/08/07 15:26:46 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -85,14 +85,24 @@ main(int argc, char *argv[]) {
 	}
 
 	index = msearch_index_open(MSEARCH_DEFAULT_INDEX_FILE);
+	if (index == NULL) {
+		fprintf(stderr, "msearch.index: unable to open index file %s\n", MSEARCH_DEFAULT_INDEX_FILE);
+		exit(1);
+	}
 	msearch_index_create(index);
 
 	findex = msearch_fulltext_open(MSEARCH_DEFAULT_FULLTEXT_FILE);
+	if (findex == NULL) {
+		fprintf(stderr, "msearch.index: unable to open index file %s\n", MSEARCH_DEFAULT_FULLTEXT_FILE);
+		exit(1);
+	}
 	msearch_fulltext_create(findex);
 
 	if (fflag) {
 		for (i = 1; i < argc; i++) {
-			msearch_index_file(index, argv[i], 0);
+			ret = msearch_index_file(index, argv[i], 0);
+			if (ret != 0)
+				fprintf(stderr, "msearch.index: could not index file %s\n", argv[i]);
 		}
 	} else if (pflag) {
 		ret = msearch_index_path(index, argv[1]);
