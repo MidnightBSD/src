@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.3 2011/07/31 23:05:07 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.4 2011/08/01 01:46:12 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,7 +71,6 @@ msearch_index_close(msearch_index *idx) {
 int
 msearch_index_create(msearch_index *idx) {
 	msearch_db_do(idx->db, "CREATE TABLE IF NOT EXISTS files (path text NOT NULL, size int64, owner int, created int64, modified int64)");
-  	/* msearch_db_do(idx->db, "CREATE INDEX IF NOT EXISTS pathidx ON files (path)"); */
 	return 0;
 }
 
@@ -165,12 +164,12 @@ msearch_index_exists(msearch_index *idx, const char *file) {
 	int ret;
 
 	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where path=%s", file) == 0) {
-                        ret = sqlite3_step(stmt);
-                        if (ret == SQLITE_ROW) {
-				sqlite3_finalize(stmt);
-				return 1;
-                        }
-        }
-        sqlite3_finalize(stmt);
+		ret = sqlite3_step(stmt);
+		if (ret == SQLITE_ROW) {
+			sqlite3_finalize(stmt);
+			return 1;
+		}
+	}
+	sqlite3_finalize(stmt);
 	return 0;
 }

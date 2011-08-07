@@ -15,7 +15,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.	IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -27,68 +27,70 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/db.c,v 1.1 2011/07/24 15:07:37 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/db.c,v 1.2 2011/08/01 01:46:12 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdarg.h>
 
 #include "msearch_private.h"
 
-int msearch_db_clean(sqlite3 *db) {
+int
+msearch_db_clean(sqlite3 *db) {
+
 	return msearch_db_do(db, "vacuum");
 }
 
-int msearch_db_do(sqlite3 *db, const char *fmt, ...)
-{
-  va_list args;
-  char *sql;
-  int sqlcode;
+int
+msearch_db_do(sqlite3 *db, const char *fmt, ...) {
+	va_list args;
+	char *sql;
+	int sqlcode;
 
-  va_start(args, fmt);
+	va_start(args, fmt);
 
-  sql = sqlite3_vmprintf(fmt, args);
+	sql = sqlite3_vmprintf(fmt, args);
 
-  va_end(args);
+	va_end(args);
 
-  if (sql == NULL)
-    return 2;
+	if (sql == NULL)
+		return 2;
 
-  sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
-  /* if we get an error code, we want to run it again in some cases */
-  if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
-    if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
-      sqlite3_free(sql);
-      return 1;
-    }
-  } else if (sqlcode != SQLITE_OK) {
-    sqlite3_free(sql);
-    return 1;
-  }
+	sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
+	/* if we get an error code, we want to run it again in some cases */
+	if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+		if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
+			sqlite3_free(sql);
+			return 1;
+		}
+	} else if (sqlcode != SQLITE_OK) {
+		sqlite3_free(sql);
+		return 1;
+	}
 
-  sqlite3_free(sql);
+	sqlite3_free(sql);
 
-  return 0;
+	return 0;
 }
 
-int msearch_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
-{
-  va_list args;
-  char *sql;
+int
+msearch_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...) {
+	va_list args;
+	char *sql;
  
-  va_start(args, fmt);
-  sql = sqlite3_vmprintf(fmt, args);
-  va_end(args);
+	va_start(args, fmt);
+	sql = sqlite3_vmprintf(fmt, args);
+	va_end(args);
  
-  if (sql == NULL)
-	return 1;
+	if (sql == NULL)
+		return 1;
  
-  if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
-    sqlite3_free(sql);
-    return 2;
-  }
+	if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
+		sqlite3_free(sql);
+		return 2;
+	}
  
-  sqlite3_free(sql);
+	sqlite3_free(sql);
  
-  return 0;
+	return 0;
 }
 

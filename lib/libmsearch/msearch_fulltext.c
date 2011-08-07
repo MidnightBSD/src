@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.7 2011/08/06 23:44:44 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.8 2011/08/07 00:49:47 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,12 +54,16 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
 	if (query->type != MSEARCH_QUERY_TYPE_FULL && query->type != MSEARCH_QUERY_TYPE_FILE_FULL)
 		return -1;
 
-        idx = msearch_fulltext_open(MSEARCH_DEFAULT_FULLTEXT_FILE);
+	idx = msearch_fulltext_open(MSEARCH_DEFAULT_FULLTEXT_FILE);
+	if (idx == NULL)
+		return -1;
 	
-        current = result;
-        params = msearch_fulltext_query_expand(query);
+	current = result;
+	params = msearch_fulltext_query_expand(query);
+	if (params == NULL)
+		return -1;
 
-        if (query->limit < 1)
+	if (query->limit < 1)
 		limit = DEFAULT_RESULT_LIMIT;
 	else
 		limit = query->limit;
@@ -67,7 +71,7 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
 	ret = msearch_db_prepare(idx->db, &stmt, "SELECT path, msearch_rank(matchinfo(data)) FROM data where %s ORDER BY msearch_rank(matchinfo(data)) DESC limit %d OFFSET 0", 	
 		params, limit);
 
-        if (ret == 0) {
+	if (ret == 0) {
                 while (1) {
                         ret = sqlite3_step(stmt);
                         if (ret == SQLITE_ROW) {
@@ -114,40 +118,42 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
 
 msearch_fulltext *
 msearch_fulltext_open(const char *filename) {
-        msearch_fulltext *idx;
+	msearch_fulltext *idx;
 
-        if ((idx = calloc(1, sizeof(msearch_fulltext))) == NULL) {
-                return NULL;
-        }
-        idx->index_file = strdup(filename);
+	if ((idx = calloc(1, sizeof(msearch_fulltext))) == NULL) {
+		return NULL;
+	}
+	idx->index_file = strdup(filename);
 
-        if (sqlite3_open(filename, &(idx->db)) != SQLITE_OK) {
-                sqlite3_close(idx->db);
-                return NULL;
-        }
+	if (sqlite3_open(filename, &(idx->db)) != SQLITE_OK) {
+		free(idx->index_file);
+		free(idx);
+		sqlite3_close(idx->db);
+		return NULL;
+	}
 
 	sqlite3_enable_load_extension(idx->db, 1);
 	msearch_db_do(idx->db, "SELECT load_extension('/usr/lib/libmsearch.so')");
 	sqlite3_enable_load_extension(idx->db, 0);
 
-        return idx;
+	return idx;
 }
 
 int
 msearch_fulltext_close(msearch_fulltext *idx) {
-        if (idx == NULL)
-                return -1;
-        sqlite3_close(idx->db);
-        free(idx->index_file);
-        free(idx);
+	if (idx == NULL)
+		return -1;
+	sqlite3_close(idx->db);
+	free(idx->index_file);
+	free(idx);
 
-        return 0;
+	return 0;
 }
 
 int
 msearch_fulltext_create(msearch_fulltext *idx) {
-        msearch_db_do(idx->db, "CREATE VIRTUAL TABLE data using fts4 (path, textdata, compress=msearch_compress, uncompress=msearch_uncompress, tokenize=porter)");
-        return 0;
+	msearch_db_do(idx->db, "CREATE VIRTUAL TABLE data using fts4 (path, textdata, compress=msearch_compress, uncompress=msearch_uncompress, tokenize=porter)");
+	return 0;
 }
 
 int
@@ -226,12 +232,15 @@ msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
 	fclose(fp);
 
 	if (filedata != NULL && *filedata != '\0') {
-		if (sqlite3_prepare_v2(idx->db, "INSERT OR REPLACE INTO data VALUES(?,?)", -1, &stmt, 0) != SQLITE_OK)
+		if (sqlite3_prepare_v2(idx->db, "INSERT OR REPLACE INTO data VALUES(?,?)", -1, &stmt, 0) != SQLITE_OK) {
+				free(filedata);
                                 return 4;
+		}
 
 		sqlite3_bind_text(stmt, 1, path, strlen(path), SQLITE_TRANSIENT);
 		sqlite3_bind_text(stmt, 2, filedata, st.st_size, SQLITE_TRANSIENT);
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
+			free(filedata);
                         sqlite3_finalize(stmt);
                         return 4;
                 }
@@ -244,35 +253,35 @@ msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
 
 char *
 msearch_fulltext_query_expand(msearch_query *query) {
-        int i;
-        size_t rlen = 1;
-        char *result;
-        char like[17] = "textdata match '";
-        char like2[5] = "' ";
-        char like3[2] = " ";
+	int i;
+	size_t rlen = 1;
+	char *result;
+	char like[17] = "textdata match '";
+	char like2[3] = "' ";
+	char like3[2] = " ";
 
 	rlen += sizeof(like) -1;
-        for (i = 0; i < query->term_count; i++) {
-                rlen += strlen(query->terms[i]);
-        }
+	for (i = 0; i < query->term_count; i++) {
+		rlen += strlen(query->terms[i]);
+	}
 	rlen += sizeof(like2) -1;
 
-        if (query->term_count > 1) {
-                rlen += (query->term_count - 1) * sizeof(like3);
-        }
+	if (query->term_count > 1) {
+		rlen += (query->term_count - 1) * sizeof(like3);
+	}
 
-        result = calloc(rlen, sizeof(char));
-        if (result == NULL)
-                return result;
+	result = calloc(rlen, sizeof(char));
+	if (result == NULL)
+		return result;
 
 	strcat(result, like);
-        for (i = 0; i < query->term_count; i++) {
-                strcat(result, query->terms[i]);
-                if (i < query->term_count -1)
-                        strcat(result, like3);
+	for (i = 0; i < query->term_count; i++) {
+		strcat(result, query->terms[i]);
+		if (i < query->term_count -1)
+			strcat(result, like3);
         }
 	strcat(result, like2);
 
-        return result;
+	return result;
 }
 

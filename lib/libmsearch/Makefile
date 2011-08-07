@@ -1,11 +1,11 @@
-# $MidnightBSD: src/lib/libmsearch/Makefile,v 1.3 2011/08/05 02:23:40 laffer1 Exp $
+# $MidnightBSD: src/lib/libmsearch/Makefile,v 1.4 2011/08/06 23:02:51 laffer1 Exp $
 
 LIB=	msearch
 SRCS=	db.c msearch_fulltext.c msearch_index.c msearch_search.c sqlite_functions.c
 INCS=	msearch.h
 
 CFLAGS+=	-I${.CURDIR} -g 
-WARNS?=		6
+WARNS?=		3
 WFORMAT?=       1
 SHLIB_MAJOR=	1
 
