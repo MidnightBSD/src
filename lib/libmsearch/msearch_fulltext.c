@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.6 2011/08/06 23:05:38 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.7 2011/08/06 23:44:44 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -249,13 +249,14 @@ msearch_fulltext_query_expand(msearch_query *query) {
         char *result;
         char like[17] = "textdata match '";
         char like2[5] = "' ";
-        char like3[5] = "and ";
+        char like3[2] = " ";
 
+	rlen += sizeof(like) -1;
         for (i = 0; i < query->term_count; i++) {
-		rlen += sizeof(like) -1;
                 rlen += strlen(query->terms[i]);
-                rlen += sizeof(like2) -1;
         }
+	rlen += sizeof(like2) -1;
+
         if (query->term_count > 1) {
                 rlen += (query->term_count - 1) * sizeof(like3);
         }
@@ -264,13 +265,13 @@ msearch_fulltext_query_expand(msearch_query *query) {
         if (result == NULL)
                 return result;
 
+	strcat(result, like);
         for (i = 0; i < query->term_count; i++) {
-                strcat(result, like);
                 strcat(result, query->terms[i]);
-                strcat(result, like2);
                 if (i < query->term_count -1)
                         strcat(result, like3);
         }
+	strcat(result, like2);
 
         return result;
 }
