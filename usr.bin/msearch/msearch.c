@@ -25,15 +25,16 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.5 2011/08/05 03:00:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.6 2011/08/06 23:02:26 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <err.h>
 #include <unistd.h>
 #include <msearch.h>
 
-static void	usage();
+static void usage(void);
 
 int
 main(int argc, char *argv[]) {
@@ -42,7 +43,7 @@ main(int argc, char *argv[]) {
 	msearch_result *current;
 	int results;
 	int ch, zeroflag, cflag, rflag, tflag;
-	int limit;
+	int limit = 0;
 
 	zeroflag = cflag = tflag = rflag = 0;
 
