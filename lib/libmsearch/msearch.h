@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.5 2011/08/05 03:01:12 laffer1 Exp $ */
+/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.6 2011/08/06 23:02:51 laffer1 Exp $ */
 /*-
  * Copyright (c) 2011 Lucas Holt
  * All rights reserved.
@@ -31,8 +31,8 @@
 #include <sys/types.h>
 #include <sqlite3.h>
 
-#define MSEARCH_DEFAULT_INDEX_FILE "/var/db/msearch.db"
-#define MSEARCH_DEFAULT_FULLTEXT_FILE "/var/db/msearch_full.db"
+#define MSEARCH_DEFAULT_INDEX_FILE "/var/db/msearch/msearch.db"
+#define MSEARCH_DEFAULT_FULLTEXT_FILE "/var/db/msearch/msearch_full.db"
 
 #define MSEARCH_QUERY_TYPE_FILE 1
 #define MSEARCH_QUERY_TYPE_FULL 2
