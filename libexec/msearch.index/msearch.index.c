@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.5 2011/08/06 23:10:29 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.6 2011/08/06 23:14:51 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +64,11 @@ main(int argc, char *argv[]) {
 	}
 	argc -= optind;
 	argv += optind;
+
+	if (geteuid()  == 0) {
+		fprintf(stderr, "msearch.index should not be run as root.\n");
+		usage();
+	}
 
 	if (tflag && pflag)
 		usage();
