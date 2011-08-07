@@ -1,6 +1,6 @@
 #!/bin/sh -
 #
-# $MidnightBSD: src/etc/periodic/weekly/350.msearch,v 1.1 2011/08/07 01:28:59 laffer1 Exp $
+# $MidnightBSD: src/etc/periodic/weekly/350.msearch,v 1.2 2011/08/07 01:33:09 laffer1 Exp $
 
 # If there is a global system configuration file, suck it in.
 #
@@ -15,13 +15,18 @@ case "$weekly_msearch_enable" in
 	echo ""
 	echo "Rebuilding msearch database:"
 
-	msearchdb=/var/db/msearch.db
-	msearchfulldb=/var/db/msearch_full.db
+	msearchdb=/var/db/msearch/msearch.db
+	msearchfulldb=/var/db/msearch/msearch_full.db
 
-	cd /
-	echo /usr/libexec/msearch.index -r | nice -n 5 su -fm nobody || rc=3
+	touch $msearchdb && rc=0 || rc=3
+	touch $msearchfulldb && rc=0 || rc=3
 	chown nobody $msearchdb || rc=3
 	chown nobody $msearchfulldb || rc=3
+	chmod 644 $msearchdb || rc=3
+	chmod 644 $msearchfulldb || rc=3
+
+	cd /
+	echo /usr/libexec/msearch.index -r | nice su -fm nobody || rc=3
 	chmod 444 $msearchdb || rc=3
 	chmod 444 $msearchfulldb || rc=3;;
 
