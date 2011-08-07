@@ -1,0 +1,78 @@
+.\" Copyright (c) 2011 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $MidnightBSD: src/usr.bin/batt/batt.1,v 1.5 2008/12/09 16:33:34 laffer1 Exp $
+.\"
+.Dd August 6, 2011
+.Dt MSEARCH 1
+.Os
+.Sh NAME
+.Nm msearch
+.Nd "MidnightBSD search"
+.Sh SYNOPSIS
+.Nm
+.Op Fl crtz
+.Op Fl l Ar limit
+.Ar pattern ...
+.Sh DESCRIPTION
+The
+.Nm
+command searches for files on the system using an index. The file name or
+contents of the file are checked depending on the arguments to
+.Nm
+.
+.Pp
+The following options are available:
+.Bl -tag -width indent
+.It Fl c
+Print the number of matches only.
+.It Fl l Ar number
+Limit output to
+.Ar number
+of file names and exit.
+.It Fl r
+Print the rank with full text search results. 
+.It Fl t
+Perform a full text search.
+.It Fl z
+Print pathnames separated by an
+.Tn ASCII NUL
+character (character code 0) instead of default NL
+(newline, character code 10).
+.Sh SEE ALSO
+.Xr find 1 ,
+.Xr locate 1 ,
+.Xr whereis 1 ,
+.Xr which 1
+.Sh HISTORY
+The
+.Nm
+command first appeared in
+.Mx 0.4 .
+.Sh AUTHORS
+This
+manual page was written by
+.An Lucas Holt Aq luke@MidnightBSD.org .
+.Sh BUGS
+The index is often outdated.
