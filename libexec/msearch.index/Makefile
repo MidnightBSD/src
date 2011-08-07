@@ -1,4 +1,4 @@
-# $MidnightBSD: src/libexec/msearch.index/Makefile,v 1.1 2011/07/24 15:14:51 laffer1 Exp $
+# $MidnightBSD: src/libexec/msearch.index/Makefile,v 1.2 2011/08/07 01:43:09 laffer1 Exp $
 
 PROG=	msearch.index
 
@@ -7,7 +7,7 @@ WARNS?=	6
 
 NO_MAN=	yes
 
-LDADD=	-lmsearch
-DPADD=	${LIBMPORT}
+LDADD=	-lmsearch -lz -lsqlite3
+DPADD=	${LIBMPORT} ${LIBZ} ${LIBSQLITE3}
 
 .include <bsd.prog.mk>
