@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.6 2011/08/06 23:14:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.7 2011/08/07 01:42:46 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,7 +38,7 @@ int
 main(int argc, char *argv[]) {
 	msearch_index *index;
 	msearch_fulltext *findex;
-	int i;
+	int i, ret = 0;
 	int fflag, pflag, rflag, tflag, ch;
 
 	fflag = pflag = rflag = tflag = 0;
@@ -66,7 +66,7 @@ main(int argc, char *argv[]) {
 	argv += optind;
 
 	if (geteuid()  == 0) {
-		fprintf(stderr, "msearch.index should not be run as root.\n");
+		fprintf(stderr, "msearch.index: should not be run as root.\n");
 		usage();
 	}
 
@@ -95,18 +95,22 @@ main(int argc, char *argv[]) {
 			msearch_index_file(index, argv[i], 0);
 		}
 	} else if (pflag) {
-		msearch_index_path(index, argv[1]);
+		ret = msearch_index_path(index, argv[1]);
 	} else if (tflag) {
-		msearch_fulltext_index(findex, index);
+		ret = msearch_fulltext_index(findex, index);
 	} else {
-		msearch_index_path(index, "/");
-		msearch_fulltext_index(findex, index);
+		ret = msearch_index_path(index, "/");
+		if (ret == 0)
+			ret = msearch_fulltext_index(findex, index);
 	}
+
+	if (ret != 0)
+		fprintf(stderr, "msearch.index: Unable to generate indexes.\n");
 
 	msearch_index_close(index);
 	msearch_fulltext_close(findex);
 
-	return 0;
+	return ret;
 }
 
 static void
