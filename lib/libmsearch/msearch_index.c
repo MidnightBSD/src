@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.6 2011/08/07 02:28:50 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.7 2011/08/09 12:38:55 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,7 +60,7 @@ msearch_index_open(const char *filename) {
 int
 msearch_index_close(msearch_index *idx) {
 	if (idx == NULL)
-		return -1;
+		return 1;
 	sqlite3_close(idx->db);
 	free(idx->index_file);
 	free(idx);
@@ -70,6 +70,8 @@ msearch_index_close(msearch_index *idx) {
 
 int
 msearch_index_create(msearch_index *idx) {
+	if (idx == NULL)
+		return 1;
 	msearch_db_do(idx->db, "CREATE TABLE IF NOT EXISTS files (path text NOT NULL, size int64, owner int, created int64, modified int64)");
 	return 0;
 }
@@ -78,6 +80,9 @@ int
 msearch_index_file(msearch_index *idx, const char *file, int /* NOTUSED */ flag) {
 	struct stat st;
 	sqlite3_stmt *stmt;
+
+	if (idx == NULL || file == NULL)
+		return 5;
 
 	if (lstat(file, &st) != 0)
 		return 1;
@@ -118,6 +123,9 @@ static int
 msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
 	sqlite3_stmt *stmt;
 
+	if (file == NULL || fst == NULL)
+		return 1;
+
 	if (strncmp(file, "/tmp/", 5) == 0 || 
 	    strncmp(file, "/var/", 5) == 0 ||
 	    strncmp(file, "/dev/", 5) == 0 ||
@@ -157,6 +165,9 @@ int
 msearch_index_path(msearch_index *idx, const char *path) {
 	int ret;
 
+	if (idx == NULL || path == NULL)
+		return 1;
+
 	mindex = idx;
 	ret = ftw(path, &msearch_index_path_file, 5);
 
@@ -169,6 +180,9 @@ static int
 msearch_index_exists(msearch_index *idx, const char *file) {
 	sqlite3_stmt *stmt;
 	int ret;
+
+	if (idx == NULL || file == NULL)
+		return 1;
 
 	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where path=%s", file) == 0) {
 		ret = sqlite3_step(stmt);

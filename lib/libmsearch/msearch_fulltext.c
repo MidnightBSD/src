@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.10 2011/08/07 02:28:50 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.11 2011/08/09 12:38:55 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +50,9 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
         msearch_result *current;
         struct stat sb;
         char *params;
+
+	if (query == NULL)
+		return -1;
 
 	if (query->type != MSEARCH_QUERY_TYPE_FULL && query->type != MSEARCH_QUERY_TYPE_FILE_FULL)
 		return -1;
@@ -120,6 +123,9 @@ msearch_fulltext *
 msearch_fulltext_open(const char *filename) {
 	msearch_fulltext *idx;
 
+	if (filename == NULL)
+		return NULL;
+
 	if ((idx = calloc(1, sizeof(msearch_fulltext))) == NULL) {
 		return NULL;
 	}
@@ -142,7 +148,7 @@ msearch_fulltext_open(const char *filename) {
 int
 msearch_fulltext_close(msearch_fulltext *idx) {
 	if (idx == NULL)
-		return -1;
+		return 1;
 	sqlite3_close(idx->db);
 	free(idx->index_file);
 	free(idx);
@@ -152,6 +158,10 @@ msearch_fulltext_close(msearch_fulltext *idx) {
 
 int
 msearch_fulltext_create(msearch_fulltext *idx) {
+
+	if (idx == NULL)
+		return 1;
+
 	msearch_db_do(idx->db, "CREATE VIRTUAL TABLE data using fts4 (path, textdata, compress=msearch_compress, uncompress=msearch_uncompress, tokenize=porter)");
 	return 0;
 }
@@ -161,6 +171,9 @@ msearch_fulltext_index(msearch_fulltext *idx, msearch_index *iidx) {
 	sqlite3_stmt *stmt;
 	int ret;
 	char *pathname;
+
+	if (idx == NULL || iidx == NULL)
+		return 1;
 
 	ret = msearch_db_prepare(iidx->db, &stmt, "SELECT path FROM files");
 
@@ -196,7 +209,7 @@ msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
 	magic_t magic;
 	const char *mimetype;
 
-	if (path == NULL)
+	if (idx == NULL || path == NULL)
 		return 1;
 
 	if (stat(path, &st) != 0)
@@ -265,6 +278,9 @@ msearch_fulltext_query_expand(msearch_query *query) {
 	char like[17] = "textdata match '";
 	char like2[3] = "' ";
 	char like3[2] = " ";
+
+	if (query == NULL)
+		return NULL;
 
 	rlen += sizeof(like) -1;
 	for (i = 0; i < query->term_count; i++) {

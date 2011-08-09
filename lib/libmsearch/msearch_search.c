@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.4 2011/08/05 03:01:12 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.5 2011/08/06 23:02:51 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -39,10 +39,15 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.4 2011/08/05 03:
 
 int
 msearch(msearch_query *query, msearch_result *result) {
+
+	if (query == NULL)
+		return -1;
+
 	if (query->type == MSEARCH_QUERY_TYPE_FILE)
 		return msearch_search(query, result);
 	if (query->type == MSEARCH_QUERY_TYPE_FULL)
 		return msearch_fulltext_search(query, result);
+
 	return -1; /* not yet implemented */
 }
 
@@ -59,6 +64,9 @@ msearch_search(msearch_query *query, msearch_result *result) {
 	struct passwd* pwdbuf;
 	uid_t uid = 0;
 	char *params;
+
+	if (query == NULL)
+		return -1;
 
 	idx = msearch_index_open(MSEARCH_DEFAULT_INDEX_FILE);
 	current = result;
@@ -136,6 +144,9 @@ msearch_query_expand(msearch_query *query) {
 	char like[14] = "path like '%%"; 
 	char like2[5] = "%%' ";
 	char like3[5] = "and ";
+
+	if (query == NULL)
+		return NULL;
 
 	for (i = 0; i < query->term_count; i++) {
 		rlen += strlen(query->terms[i]);
