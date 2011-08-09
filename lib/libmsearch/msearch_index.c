@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.5 2011/08/07 02:12:26 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.6 2011/08/07 02:28:50 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -117,6 +117,13 @@ msearch_index_file(msearch_index *idx, const char *file, int /* NOTUSED */ flag)
 static int 
 msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
 	sqlite3_stmt *stmt;
+
+	if (strncmp(file, "/tmp/", 5) == 0 || 
+	    strncmp(file, "/var/", 5) == 0 ||
+	    strncmp(file, "/dev/", 5) == 0 ||
+	    strncmp(file, "/proc/", 6) == 0 ||
+	    strncmp(file, "/usr/obj/", 9) == 0)
+		return 0;
 
 	if (flag == FTW_F && S_ISREG(fst->st_mode)) {
 		if (msearch_index_exists(mindex, file) == 0) {
