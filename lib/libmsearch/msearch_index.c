@@ -25,19 +25,20 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.7 2011/08/09 12:38:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.8 2011/08/09 12:50:17 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ftw.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fts.h>
 
 #include "msearch_private.h"
 
 static msearch_index *mindex;
-static int msearch_index_path_file(const char *, const struct stat *, int);
+static int msearch_index_path_file(const char *, const struct stat *);
 static int msearch_index_exists(msearch_index *, const char *);
 
 msearch_index * 
@@ -120,7 +121,7 @@ msearch_index_file(msearch_index *idx, const char *file, int /* NOTUSED */ flag)
 }
 
 static int 
-msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
+msearch_index_path_file(const char *file, const struct stat *fst) {
 	sqlite3_stmt *stmt;
 
 	if (file == NULL || fst == NULL)
@@ -133,7 +134,7 @@ msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
 	    strncmp(file, "/usr/obj/", 9) == 0)
 		return 0;
 
-	if (flag == FTW_F && S_ISREG(fst->st_mode)) {
+	if (S_ISREG(fst->st_mode)) {
 		if (msearch_index_exists(mindex, file) == 0) {
                 	if (sqlite3_prepare_v2(mindex->db, "INSERT INTO files (path, size, owner, created, modified) VALUES(?,?,?,?,?)", -1, &stmt, 0) != SQLITE_OK)
 				return 3;
@@ -163,13 +164,37 @@ msearch_index_path_file(const char *file, const struct stat *fst, int flag) {
 
 int
 msearch_index_path(msearch_index *idx, const char *path) {
-	int ret;
+	int ret = 0;
+	char * const paths[2] = { (char *)path, NULL };
+	FTSENT *cur;
+	FTS *ftsp;
 
 	if (idx == NULL || path == NULL)
 		return 1;
 
 	mindex = idx;
-	ret = ftw(path, &msearch_index_path_file, 5);
+
+	ftsp = fts_open(paths, FTS_LOGICAL | FTS_COMFOLLOW | FTS_NOCHDIR, NULL);
+	if (ftsp == NULL)
+		return -1;
+	while ((cur = fts_read(ftsp)) != NULL) {
+		switch (cur->fts_info) {
+			case FTS_F:
+			case FTS_DEFAULT:
+				break;
+			case FTS_DC:
+				fprintf(stderr, "Cycle in the file tree detected %s\n", cur->fts_path);
+				/* FALLTHROUGH */
+			default:
+				continue;
+		}
+		ret = msearch_index_path_file(cur->fts_path, cur->fts_statp);
+		if (ret != 0)
+			break;
+	}
+
+        if (fts_close(ftsp) != 0 && ret == 0)
+		ret = -1;
 
 	msearch_db_clean(idx->db);
 
