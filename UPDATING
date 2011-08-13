@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20110813:
+	synced the sparc64 GENERIC kernel configuration with amd64.
+
 20110806:
 	sqlite 3.7.7.1 imported
 
@@ -1034,4 +1037,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.128 2011/07/10 21:01:53 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.129 2011/08/07 04:05:16 laffer1 Exp $
