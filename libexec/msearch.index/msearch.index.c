@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.8 2011/08/07 15:26:46 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.9 2011/08/07 15:39:40 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -110,7 +110,8 @@ main(int argc, char *argv[]) {
 		ret = msearch_fulltext_index(findex, index);
 	} else {
 		ret = msearch_index_path(index, "/");
-		if (ret == 0)
+		/* XXX -1 can be caused by loops on the file system */
+		if (ret == 0 || ret == -1)
 			ret = msearch_fulltext_index(findex, index);
 	}
 
