@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.28 2011/03/13 02:05:39 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.29 2011/03/13 17:16:38 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -458,8 +458,8 @@ build32:
 	cd ${.CURDIR}; \
 	    ${LIB32WMAKE} -f Makefile.inc1 libraries
 .for _t in obj depend all
-	cd ${.CURDIR}/libexec/rtld-elf; \
-	    PROG=ld-elf32.so.1 ${LIB32WMAKE} ${_t}
+	cd ${.CURDIR}/libexec/rtld-elf; PROG=ld-elf32.so.1 ${LIB32WMAKE} ${_t}
+	cd ${.CURDIR}/usr.bin/ldd; PROG=ldd32 ${LIB32WMAKE} ${_t}
 .endfor
 
 distribute32 install32:
@@ -473,7 +473,11 @@ distribute32 install32:
 .if ${MK_CRYPT} != "no"
 	cd ${.CURDIR}/secure/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
 .endif
+.if ${MK_KERBEROS} != "no"
+	cd ${.CURDIR}/kerberos5/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
+.endif
 	cd ${.CURDIR}/libexec/rtld-elf; PROG=ld-elf32.so.1 ${LIB32IMAKE} ${.TARGET:S/32$//}
+	cd ${.CURDIR}/usr.bin/ldd; PROG=ldd32 ${LIB32IMAKE} ${.TARGET:S/32$//}
 .endif
 
 
@@ -1002,7 +1006,7 @@ _prebuild_libs=	${_kerberos5_lib_libasn1} ${_kerberos5_lib_libkrb5} \
 		${_lib_libypclnt} lib/libz lib/msun \
 		${_secure_lib_libcrypto} ${_secure_lib_libssh} \
 		${_secure_lib_libssl} lib/libsqlite3 lib/liblzma \
-		lib/libarchive lib/libfetch
+		lib/libarchive lib/libfetch lib/libmagic
 
 .if ${MK_LIBTHR} != "no" && ${MK_LIBKSE} != "no"
 _default_thread_lib=	lib/${DEFAULT_THREAD_LIB}
