@@ -37,6 +37,7 @@ options 	SCHED_4BSD		# 4BSD scheduler
 #options 	PREEMPTION		# Enable kernel thread preemption
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
+options 	SCTP			# Stream Control Transmission Protocol
 options 	FFS			# Berkeley Fast Filesystem
 options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	UFS_ACL			# Support for access control lists
@@ -54,8 +55,10 @@ options 	GEOM_PART_GPT		# GUID Partition Tables.
 options 	GEOM_LABEL		# Support for labels with ISO, UFS
 options 	COMPAT_43		# Compatible with BSD 4.3 [KEEP THIS!]
 options 	COMPAT_FREEBSD5		# Compatible with FreeBSD5
+options 	COMPAT_FREEBSD6		# Compatible with FreeBSD6
 options 	SCSI_DELAY=5000		# Delay (in ms) before probing SCSI
 options 	KTRACE			# ktrace(1) support
+options 	STACK			# stack(9) support
 options 	SYSVSHM			# SYSV-style shared memory
 options 	SYSVMSG			# SYSV-style message queues
 options 	SYSVSEM			# SYSV-style semaphores
@@ -64,6 +67,7 @@ options 	_KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
 options 	AHC_REG_PRETTY_PRINT	# Print register bitfields in debug
 					# output.  Adds ~128k to driver.
 options 	ADAPTIVE_GIANT		# Giant mutex is adaptive.
+options 	AUDIT			# Security event auditing
 
 # To make an SMP kernel, the next line is needed
 options 	SMP			# Symmetric MultiProcessor Kernel
@@ -94,7 +98,6 @@ device		ahc		# AHA2940 and onboard AIC7xxx devices
 device		isp		# Qlogic family
 device		ispfw		# Firmware module for Qlogic host adapters
 #device		mpt		# LSI-Logic MPT-Fusion (not yet)
-#device		ncr		# NCR/Symbios Logic
 device		sym		# NCR/Symbios Logic (newer chipsets + those of `ncr')
 device		esp		# NCR53c9x (FEPS/FAS366)
 
@@ -116,6 +119,8 @@ device		atkbdc		# AT keyboard controller
 device		atkbd		# AT keyboard
 device		psm		# PS/2 mouse
 
+device		kbdmux		# keyboard multiplexer
+
 # syscons is the default console driver, resembling an SCO console
 device		sc
 device		creator		# Creator, Creator3D and Elite3D framebuffers
@@ -136,6 +141,7 @@ device		mc146818	# Motorola MC146818 and compatible clocks
 
 # Serial (COM) ports
 device		uart		# Multi-uart driver
+device		scc		# Serial communications controllers.
 device		puc		# Multi-channel uarts
 
 # Parallel port
@@ -158,7 +164,7 @@ device		le		# AMD Am7900 LANCE and Am79C9xx PCnet
 # NOTE: Be sure to keep the 'device miibus' line in order to use these NICs!
 device		miibus		# MII bus support
 #device		bfe		# Broadcom BCM440x 10/100 Ethernet
-#device		bge		# Broadcom BCM570xx Gigabit Ethernet
+device		bge		# Broadcom BCM570xx Gigabit Ethernet
 device		dc		# DEC/Intel 21143 and various workalikes
 device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)
 device		gem		# Sun GEM/Sun ERI/Apple GMAC
@@ -166,20 +172,31 @@ device		hme		# Sun HME (Happy Meal Ethernet)
 #device		pcn		# AMD Am79C97x PCI 10/100 (precedence over 'le')
 device		re		# RealTek 8139C+/8169/8169S/8110S
 device		rl		# RealTek 8129/8139
-#device		sf		# Adaptec AIC-6915 (``Starfire'')
+device		sf		# Adaptec AIC-6915 (``Starfire'')
 #device		sis		# Silicon Integrated Systems SiS 900/SiS 7016
-#device		sk		# SysKonnect SK-984x & SK-982x gigabit Ethernet
+device		sk		# SysKonnect SK-984x & SK-982x gigabit Ethernet
 #device		ste		# Sundance ST201 (D-Link DFE-550TX)
-#device		ti		# Alteon Networks Tigon I/II gigabit Ethernet
+device		stge		# Sundance/Tamarack TC9021 gigabit Ethernet
+device		ti		# Alteon Networks Tigon I/II gigabit Ethernet
 #device		tl		# Texas Instruments ThunderLAN
 #device		tx		# SMC EtherPower II (83c170 ``EPIC'')
-#device		vr		# VIA Rhine, Rhine II
+device		vr		# VIA Rhine, Rhine II
 #device		wb		# Winbond W89C840F
 device		xl		# 3Com 3c90x (``Boomerang'', ``Cyclone'')
 
+# Wireless NIC cards
+device		wlan		# 802.11 support
+device		wlan_wep	# 802.11 WEP support
+device		wlan_ccmp	# 802.11 CCMP support
+device		wlan_tkip	# 802.11 TKIP support
+device		wlan_scan_ap	# 802.11 AP mode scanning
+device		wlan_scan_sta	# 802.11 STA mode scanning
+device		ath		# Atheros pci/cardbus NIC's
+device		ath_hal		# Atheros HAL (Hardware Access Layer)
+device		ath_rate_sample	# SampleRate tx rate control for ath
+
 # Pseudo devices.
 device		loop		# Network loopback
-device		mem		# Memory and kernel memory devices
 device		random		# Entropy device
 device		ether		# Ethernet support
 device		sl		# Kernel SLIP
@@ -189,6 +206,7 @@ device		pty		# Pseudo-ttys (telnet etc)
 device		md		# Memory "disks"
 device		gif		# IPv6 and IPv4 tunneling
 device		faith		# IPv6-to-IPv4 relaying (translation)
+device		firmware	# firmware assist module
 
 # The `bpf' device enables the Berkeley Packet Filter.
 # Be aware of the administrative consequences of enabling this!
@@ -220,3 +238,6 @@ device		ums		# Mouse
 device		firewire	# FireWire bus code
 device		sbp		# SCSI over FireWire (Requires scbus and da)
 device		fwe		# Ethernet over FireWire (non-standard!)
+device		fwip		# IP over FireWire (RFC 2734,3146)
+device		dcons		# Dumb console driver
+device		dcons_crom	# Configuration ROM for dcons
