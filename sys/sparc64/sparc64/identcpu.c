@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/identcpu.c,v 1.17.2.1 2009/06/30 14:11:43 avg Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/identcpu.c,v 1.17 2007/05/20 13:47:36 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -28,6 +28,19 @@ SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD,
     cpu_model, 0, "Machine model");
 
 int cpu_impl;
+
+void setPQL2(int *const size, int *const ways);
+
+void
+setPQL2(int *const size, int *const ways)
+{
+#ifdef SUN4V
+/* XXX hardcoding is lame */
+	*size = 3*1024;
+	*ways = 12;
+#endif
+	return;
+}
 
 void
 cpu_identify(u_long vers, u_int freq, u_int id)
