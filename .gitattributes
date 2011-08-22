@@ -24672,6 +24672,7 @@ etc/hosts.allow -text
 etc/hosts.equiv -text
 etc/hosts.lpd -text
 etc/inetd.conf -text
+etc/libalias.conf -text
 etc/login.access -text
 etc/login.conf -text
 etc/mac.conf -text

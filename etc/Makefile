@@ -1,6 +1,6 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.22 2011/02/05 14:30:17 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.23 2011/03/08 22:19:31 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -12,7 +12,7 @@ BIN1=	amd.map apmd.conf auth.conf \
 	crontab csh.cshrc csh.login csh.logout devd.conf \
 	devfs.conf dhclient.conf disktab fbtab ftpusers gettytab \
 	group hosts hosts.allow hosts.equiv hosts.lpd \
-	inetd.conf login.access login.conf \
+	inetd.conf libalias.conf login.access login.conf \
 	mac.conf motd netconfig network.subr networks newsyslog.conf \
 	nsswitch.conf ntpd.conf pf.conf pf.os phones profile protocols \
 	rc rc.bsdextended rc.firewall rc.firewall6 rc.initdiskless \
