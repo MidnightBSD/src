@@ -38978,8 +38978,10 @@ sys/security/mac_test/mac_test.c -text
 sys/sparc64/central/central.c -text
 sys/sparc64/compile/.cvsignore -text
 sys/sparc64/conf/.cvsignore -text
+sys/sparc64/conf/DEFAULTS -text
 sys/sparc64/conf/GENERIC -text
 sys/sparc64/conf/GENERIC.hints -text
+sys/sparc64/conf/MAC -text
 sys/sparc64/conf/Makefile -text
 sys/sparc64/conf/NOTES -text
 sys/sparc64/ebus/ebus.c -text

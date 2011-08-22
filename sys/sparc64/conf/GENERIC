@@ -20,7 +20,6 @@
 #
 # $FreeBSD: src/sys/sparc64/conf/GENERIC,v 1.96.2.6 2006/02/13 11:39:02 marius Exp $
 
-machine		sparc64
 cpu		SUN4U
 ident		GENERIC
 
@@ -42,7 +41,7 @@ options 	FFS			# Berkeley Fast Filesystem
 options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	UFS_ACL			# Support for access control lists
 options 	UFS_DIRHASH		# Improve performance on big directories
-options		UFS_GJOURNAL		# Enable gjournal-based UFS journaling
+options 	UFS_GJOURNAL		# Enable gjournal-based UFS journaling
 options 	MD_ROOT			# MD is a potential root device
 options 	NFSCLIENT		# Network Filesystem Client
 options 	NFSSERVER		# Network Filesystem Server
@@ -139,6 +138,7 @@ device		rtc		# rtc (really a front-end for the MC146818)
 device		mc146818	# Motorola MC146818 and compatible clocks
 
 # Serial (COM) ports
+device 		scc		# Serial communication controllers.
 device		uart		# Multi-uart driver
 device		scc		# Serial communications controllers.
 device		puc		# Multi-channel uarts
