@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.8 2011/05/20 12:49:37 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.9 2011/05/21 19:35:29 laffer1 Exp $
  *
  * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -49,7 +49,6 @@
 void mport_call_msg_cb(mportInstance *, const char *, ...);
 void mport_call_progress_init_cb(mportInstance *, const char *, ...);
 
-
 /* precondition checking */
 #define MPORT_PRECHECK_INSTALLED   1
 #define MPORT_PRECHECK_DEPENDS     2
@@ -72,7 +71,6 @@ int mport_pkgmeta_read_stub(mportInstance *, mportPackageMeta ***);
 int mport_pkgmeta_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
 int mport_pkgmeta_logevent(mportInstance *, mportPackageMeta *, const char *);
 
-
 /* Utils */
 char * mport_hash_file(const char *);
 int mport_copy_file(const char *, const char *);
@@ -80,10 +78,10 @@ int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_rmdir(const char *, int);
 int mport_chdir(mportInstance *, const char *);
-int mport_xsystem(mportInstance *mport, const char *, ...);
-int mport_run_asset_exec(mportInstance *mport, const char *, const char *, const char *);
+int mport_xsystem(mportInstance *, const char *, ...);
+int mport_run_asset_exec(mportInstance *, const char *, const char *, const char *);
 void mport_free_vec(void *);
-int mport_decompress_bzip2(const char *input, const char *output);
+int mport_decompress_bzip2(const char *, const char *);
 
 
 /* Mport Bundle (a file containing packages) */
@@ -186,7 +184,9 @@ int mport_fetch_bundle(mportInstance *, const char *);
 int mport_index_get_mirror_list(mportInstance *, char ***, int *);
 
 #define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", func);
-#define MPORT_MAX_INDEX_AGE 3600 * 24 * 14 /* two weeks */
+#define MPORT_DAY 3600 * 24
+#define MPORT_MAX_INDEX_AGE MPORT_DAY * 14 /* two weeks */
+#define MPORT_SETTING_INDEX_LAST_CHECKED "index_last_check"
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"

@@ -27,14 +27,15 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/setting.c,v 1.1 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>
 #include <string.h>
 
-MPORT_PUBLIC_API char * mport_setting_get(mportInstance *mport, const char *name) {
+MPORT_PUBLIC_API char *
+mport_setting_get(mportInstance *mport, const char *name) {
 	sqlite3_stmt *stmt;
 	char *val;
 
@@ -63,7 +64,8 @@ MPORT_PUBLIC_API char * mport_setting_get(mportInstance *mport, const char *name
 	return val;
 }
 
-MPORT_PUBLIC_API int mport_setting_set(mportInstance *mport, const char *name, const char *val) {
+MPORT_PUBLIC_API int
+mport_setting_set(mportInstance *mport, const char *name, const char *val) {
 	char *tmpval;
 	
 	tmpval = mport_setting_get(mport, name);

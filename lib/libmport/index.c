@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.14 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -38,6 +38,9 @@ __MBSDID("$MidnightBSD$");
 #include <errno.h>
 
 static int index_is_recentish(void);
+static int index_last_checked_recentish(mportInstance *); 
+static int index_update_last_checked(mportInstance *);
+static time_t get_time(void);
 static int lookup_alias(mportInstance *, const char *, char **);
 
 /*
@@ -50,15 +53,20 @@ static int lookup_alias(mportInstance *, const char *, char **);
  * index is present, the mirror list will be used; otherwise the bootstrap
  * url will be used.
  */
-MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
+MPORT_PUBLIC_API int
+mport_index_load(mportInstance *mport)
 {
+
   if (mport_file_exists(MPORT_INDEX_FILE)) {
     if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
     mport->flags |= MPORT_INST_HAVE_INDEX;
-  
+
     if (!index_is_recentish()) {
+      if (index_last_checked_recentish(mport))
+          return MPORT_OK;
+
       if (mport_fetch_index(mport) != MPORT_OK) {
         SET_ERROR(MPORT_ERR_WARN, "Could not fetch updated index; previous index used.");
         RETURN_CURRENT_ERROR;
@@ -72,6 +80,8 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
           RETURN_CURRENT_ERROR;
         
         mport->flags |= MPORT_INST_HAVE_INDEX;
+        if (index_update_last_checked(mport) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
       }
     }
   } else {
@@ -82,6 +92,8 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
       RETURN_CURRENT_ERROR;
       
     mport->flags |= MPORT_INST_HAVE_INDEX;
+    if (index_update_last_checked(mport) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
   }
   
   return MPORT_OK;
@@ -89,22 +101,59 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 
 
 /* return 1 if the index is younger than the max age, 0 otherwise */
-static int index_is_recentish(void) 
+static int
+index_is_recentish(void) 
 {
   struct stat st;
-  struct timespec now;
   
   if (stat(MPORT_INDEX_FILE, &st) != 0) 
     return 0;
    
-  if (clock_gettime(CLOCK_REALTIME, &now) != 0) 
-    RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
-      
-  if ((st.st_birthtime + MPORT_MAX_INDEX_AGE) < now.tv_sec) 
+  if ((st.st_birthtime + MPORT_MAX_INDEX_AGE) < get_time()) 
     return 0;
     
   return 1;
-}  
+}
+
+static int
+index_last_checked_recentish(mportInstance *mport) {
+	char *recent;
+	int ret;
+
+	recent = mport_setting_get(mport, MPORT_SETTING_INDEX_LAST_CHECKED);
+	if (recent && get_time() < atoi(recent) + MPORT_DAY)
+		ret = 1;
+	else
+		ret = 0;
+
+	free(recent);
+
+	return ret;
+}
+
+static int
+index_update_last_checked(mportInstance *mport) {
+	char *utime;
+	int ret;
+
+	asprintf(&utime, "%d", get_time());
+	if (utime)
+		ret = mport_setting_set(mport, MPORT_SETTING_INDEX_LAST_CHECKED, utime);
+	else
+		RETURN_CURRENT_ERROR;
+	free(utime);
+
+	return ret;
+} 
+
+static time_t 
+get_time(void) {
+	struct timespec now;
+	if (clock_gettime(CLOCK_REALTIME, &now) != 0)
+		RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
+
+	return now.tv_sec;
+}
 
 
 /*
