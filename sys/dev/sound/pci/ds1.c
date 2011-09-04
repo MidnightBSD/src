@@ -33,7 +33,7 @@
 #include <dev/sound/pci/ds1.h>
 #include <dev/sound/pci/ds1-fw.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/ds1.c,v 1.52 2007/06/17 06:10:41 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/ds1.c,v 1.52.2.1 2009/02/12 15:26:00 cognet Exp $");
 
 /* -------------------------------------------------------------------- */
 
@@ -396,7 +396,7 @@ ds_initpbank(volatile struct pbank *pb, int ch, int b16, int stereo, u_int32_t r
 	pb->Format |= b16? 0 : 0x80000000;
 	pb->Format |= (stereo && (ch == 2 || ch == 4))? 0x00000001 : 0;
 	pb->LoopDefault = 0;
-	pb->PgBase = base? base : 0;
+	pb->PgBase = base;
 	pb->PgLoop = 0;
 	pb->PgLoopEnd = len >> ss;
 	pb->PgLoopFrac = 0;
