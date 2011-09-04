@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/tdfx/tdfx_pci.c,v 1.37.2.1 2006/03/09 21:51:00 yar Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/tdfx/tdfx_pci.c,v 1.39.2.1.6.1 2010/02/10 00:26:20 kensmith Exp $");
 
 /* 3dfx driver for FreeBSD 4.x - Finished 11 May 2000, 12:25AM ET
  *
@@ -90,7 +90,7 @@ static device_method_t tdfx_methods[] = {
 	{ 0, 0 }
 };
 
-MALLOC_DEFINE(M_TDFX,"TDFX Driver","3DFX Graphics[/2D]/3D Accelerator(s)");
+MALLOC_DEFINE(M_TDFX,"tdfx_driver","3DFX Graphics[/2D]/3D Accelerator(s)");
 
 /* Char. Dev. file operations structure */
 static struct cdevsw tdfx_cdev = {
@@ -823,4 +823,5 @@ static driver_t tdfx_driver = {
 
 /* Tell Mr. Kernel about us! */
 DRIVER_MODULE(tdfx, pci, tdfx_driver, tdfx_devclass, 0, 0);
+MODULE_DEPEND(tdfx, mem, 1, 1, 1);
 MODULE_VERSION(tdfx, 1);
