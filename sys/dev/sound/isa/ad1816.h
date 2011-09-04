@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/isa/ad1816.h,v 1.4 2007/02/02 13:44:09 joel Exp $
+ * $FreeBSD: src/sys/dev/sound/isa/ad1816.h,v 1.4.2.1 2008/07/28 15:49:26 thompsa Exp $
  */
 
 /*
@@ -34,7 +34,7 @@
 /* AD1816 register macros */
 
 #define AD1816_ALE	0 	/* indirect reg access 		*/
-#define AD1816_INT	1 	/* interupt status     		*/
+#define AD1816_INT	1 	/* interrupt status		*/
 #define AD1816_LOW	2 	/* indirect low byte   		*/
 #define AD1816_HIGH	3 	/* indirect high byte  		*/
 

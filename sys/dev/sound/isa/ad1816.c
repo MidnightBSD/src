@@ -33,7 +33,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/ad1816.c,v 1.45 2007/06/17 06:10:40 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/ad1816.c,v 1.45.2.1 2008/07/28 15:49:26 thompsa Exp $");
 
 struct ad1816_info;
 
@@ -128,22 +128,22 @@ ad1816_intr(void *arg)
     	unsigned char   c, served = 0;
 
 	ad1816_lock(ad1816);
-    	/* get interupt status */
+    	/* get interrupt status */
     	c = io_rd(ad1816, AD1816_INT);
 
-    	/* check for stray interupts */
+    	/* check for stray interrupts */
     	if (c & ~(AD1816_INTRCI | AD1816_INTRPI)) {
 		printf("pcm: stray int (%x)\n", c);
 		c &= AD1816_INTRCI | AD1816_INTRPI;
     	}
-    	/* check for capture interupt */
+    	/* check for capture interrupt */
     	if (sndbuf_runsz(ad1816->rch.buffer) && (c & AD1816_INTRCI)) {
 		ad1816_unlock(ad1816);
 		chn_intr(ad1816->rch.channel);
 		ad1816_lock(ad1816);
 		served |= AD1816_INTRCI;		/* cp served */
     	}
-    	/* check for playback interupt */
+    	/* check for playback interrupt */
     	if (sndbuf_runsz(ad1816->pch.buffer) && (c & AD1816_INTRPI)) {
 		ad1816_unlock(ad1816);
 		chn_intr(ad1816->pch.channel);
