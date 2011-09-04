@@ -59,7 +59,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/es137x.c,v 1.71 2007/07/05 10:22:37 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/es137x.c,v 1.71.2.1 2011/02/24 10:45:41 brucec Exp $");
 
 #define MEM_MAP_REG 0x14
 
@@ -555,7 +555,7 @@ eschan1370_setspeed(kobj_t obj, void *data, uint32_t speed)
 		/*
 		 * DAC1 does not support continuous rate settings.
 		 * Pick the nearest and use it since FEEDER_RATE will
-		 * do the the proper conversion for us.
+		 * do the proper conversion for us.
 		 */
 		es->ctrl &= ~CTRL_WTSRSEL;
 		if (speed < 8268) {
