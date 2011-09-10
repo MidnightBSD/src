@@ -25,10 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.33 2011/07/17 19:15:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.34 2011/09/10 05:24:31 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <mport.h>
@@ -293,6 +294,7 @@ int
 download(mportInstance *mport, const char *packageName) {
 	mportIndexEntry **indexEntry;
 	char *path;
+	bool existed = true;
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL) {
@@ -305,18 +307,22 @@ download(mportInstance *mport, const char *packageName) {
 	if (!mport_file_exists(path)) {
 		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
 			fprintf(stderr, "%s\n", mport_err_string());
-                        free(path);
-                        return mport_err_code();
-                }
+			free(path);
+			return mport_err_code();
+		}
+		existed = false;
         }
 
-        if (!mport_verify_hash(path, (*indexEntry)->hash)) {
-                fprintf(stderr, "Package %s fails hash verification.\n", packageName);
-                free(path);
-                return 1;
-        }
+	if (!mport_verify_hash(path, (*indexEntry)->hash)) {
+		fprintf(stderr, "Package %s fails hash verification.\n", packageName);
+		free(path);
+		return 1;
+	}
 
-	printf("Package saved as %s\n", path);
+	if (!existed)
+		printf("Package %s saved as %s\n", packageName, path);
+	else
+		printf("Package %s exists at %s\n", packageName, path);
 
 	free(path);
 	mport_index_entry_free_vec(indexEntry);
