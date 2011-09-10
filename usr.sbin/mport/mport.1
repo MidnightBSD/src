@@ -1,4 +1,4 @@
-.\" Copyright (c) 2010 Lucas Holt
+.\" Copyright (c) 2010, 2011 Lucas Holt
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.4 2011/03/07 22:04:04 laffer1 Exp $
+.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.5 2011/05/21 19:16:42 laffer1 Exp $
 .\"
-.Dd May 21, 2011
+.Dd September 10, 2011
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -44,6 +44,9 @@
 .Op Ar name
 .Nm
 .Cm deleteall
+.Nm
+.Cm download
+.Op Ar name
 .Nm
 .Cm install
 .Op Ar name
@@ -75,6 +78,8 @@ Delete or uninstall a package
 .It Cm deleteall
 Delete or uninstall all packages on the system.  Useful for major OS upgrades,
 or testing.
+.It Cm download
+Download a package, but do not install it. Useful for later offline installations.
 .It Cm install
 Fetch and install a package
 .It Cm search
