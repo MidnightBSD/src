@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.32 2011/07/17 19:10:30 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.33 2011/07/17 19:15:55 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,6 +42,7 @@ static mportIndexEntry ** lookupIndex(mportInstance *, const char *);
 static int install(mportInstance *, const char *);
 static int delete(mportInstance *, const char *);
 static int deleteAll(mportInstance *);
+static int download(mportInstance *, const char *);
 static int update(mportInstance *, const char *);
 static int upgrade(mportInstance *);
 static int info(mportInstance *, const char *);
@@ -82,6 +83,12 @@ main(int argc, char *argv[]) {
 	} else if (!strcmp(argv[1], "update")) {
 		for (i = 2; i < argc; i++) {
 			tempResultCode = update(mport, argv[2]);
+			if (tempResultCode != 0)
+				resultCode = tempResultCode;
+		}
+        } else if (!strcmp(argv[1], "download")) {
+		for (i = 2; i < argc; i++) {
+			tempResultCode = download(mport, argv[2]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
@@ -128,6 +135,7 @@ usage(void) {
 		"       mport clean\n"
 		"       mport delete [package name]\n"
 		"       mport deleteall\n"
+		"       mport download [package name]\n"
 		"       mport info [package name]\n"
 		"       mport install [package name]\n"
 		"       mport list [updates]\n"
@@ -279,6 +287,41 @@ delete(mportInstance *mport, const char *packageName) {
 	free(buf);
 
 	return resultCode;
+}
+
+int
+download(mportInstance *mport, const char *packageName) {
+	mportIndexEntry **indexEntry;
+	char *path;
+
+	indexEntry = lookupIndex(mport, packageName);
+	if (indexEntry == NULL || *indexEntry == NULL) {
+		fprintf(stderr, "Package %s not found in index.\n");
+		return 1;
+	}
+
+	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
+
+	if (!mport_file_exists(path)) {
+		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
+			fprintf(stderr, "%s\n", mport_err_string());
+                        free(path);
+                        return mport_err_code();
+                }
+        }
+
+        if (!mport_verify_hash(path, (*indexEntry)->hash)) {
+                fprintf(stderr, "Package %s fails hash verification.\n", packageName);
+                free(path);
+                return 1;
+        }
+
+	printf("Package saved as %s\n", path);
+
+	free(path);
+	mport_index_entry_free_vec(indexEntry);
+
+	return 0;
 }
 
 int
