@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20110914:
+	Import xz 5.0.3 with liblzma 5.0.3
+
 20110813:
 	synced the sparc64 GENERIC kernel configuration with amd64.
 
@@ -1037,4 +1040,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.129 2011/08/07 04:05:16 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.130 2011/08/13 14:01:23 laffer1 Exp $
