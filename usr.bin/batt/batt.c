@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.4 2008/12/06 15:20:36 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.5 2009/04/11 04:43:26 laffer1 Exp $ */
 /*- 
  * Copyright (c) 2008 Lucas Holt
  * All rights reserved.
@@ -115,6 +115,6 @@ static void
 usage()
 {
 
-	fprintf(stderr, "usage: batt [-cltf]\n");
+	fprintf(stderr, "usage: batt [-cltu]\n");
 	exit(1);
 }
