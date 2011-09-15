@@ -21130,9 +21130,13 @@ contrib/xz/po/de.gmo -text svneol=unset#unset
 contrib/xz/po/de.po -text
 contrib/xz/po/en@boldquot.header -text
 contrib/xz/po/en@quot.header -text
+contrib/xz/po/fr.gmo -text svneol=unset#unset
+contrib/xz/po/fr.po -text
 contrib/xz/po/insert-header.sin -text
 contrib/xz/po/it.gmo -text svneol=unset#unset
 contrib/xz/po/it.po -text
+contrib/xz/po/pl.gmo -text svneol=unset#unset
+contrib/xz/po/pl.po -text
 contrib/xz/po/quot.sed -text
 contrib/xz/po/remove-potcdate.sin -text
 contrib/xz/po/stamp-po -text
