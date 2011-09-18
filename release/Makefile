@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.22 2009/05/20 21:30:19 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.23 2009/10/24 04:45:16 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -142,7 +142,7 @@ NOPORTSATALL=	YES
 
 #
 # Doing 'make index' in /usr/mports requires Perl.
-MAKEINDEXPORTS=	lang/perl5.8
+MAKEINDEXPORTS=
 # By default, documentation (Handbook, FAQ, etc.) is built for all
 # the languages.  To speed up building, set the DOC_LANG to just
 # the languages you need.  (The language for the release notes is
