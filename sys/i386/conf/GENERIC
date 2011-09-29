@@ -12,7 +12,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.22 2011/02/09 00:11:32 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.23 2011/02/16 13:53:26 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 cpu		I686_CPU
@@ -33,7 +33,7 @@ options 	FFS			# Berkeley Fast Filesystem
 options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	UFS_ACL			# Support for access control lists
 options 	UFS_DIRHASH		# Improve performance on big directories
-options 	UFS_GJOURNAL		# Enable gjournal based UFS journaling
+options 	UFS_GJOURNAL		# Enable gjournal-based UFS journaling
 options 	MD_ROOT			# MD is a potential root device
 options 	NFSCLIENT		# Network Filesystem Client
 options 	NFSSERVER		# Network Filesystem Server
@@ -51,10 +51,11 @@ options 	COMPAT_FREEBSD5		# Compatible with FreeBSD5
 options 	COMPAT_FREEBSD6		# Compatible with FreeBSD6
 options 	SCSI_DELAY=5000		# Delay (in ms) before probing SCSI
 options 	KTRACE			# ktrace(1) support
+options 	STACK			# stack(9) support
 options 	SYSVSHM			# SYSV-style shared memory
 options 	SYSVMSG			# SYSV-style message queues
 options 	SYSVSEM			# SYSV-style semaphores
-options		P1003_1B_SEMAPHORES	# POSIX-style semaphores
+options 	P1003_1B_SEMAPHORES	# POSIX-style semaphores
 options 	_KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
 options 	KBD_INSTALL_CDEV	# install a CDEV entry in /dev
 options 	ADAPTIVE_GIANT		# Giant mutex is adaptive.
@@ -193,7 +194,7 @@ device		de		# DEC/Intel DC21x4x (``Tulip'')
 device		em		# Intel PRO/1000 Gigabit Ethernet Family
 device		igb		# Intel PRO/1000 PCIE Server Gigabit Family
 device		ixgb		# Intel PRO/10GbE Ethernet Card
-device		le		# AMD Am7900 LANNCand Am79C9xx PCnet
+device		le		# AMD Am7900 LANCE and Am79C9xx PCnet
 device		txp		# 3Com 3cR990 (``Typhoon'')
 device		vx		# 3Com 3c590, 3c595 (``Vortex'')
 
@@ -210,7 +211,7 @@ device		dc		# DEC/Intel 21143 and various workalikes
 device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)
 device		lge		# Level 1 LXT1001 gigabit Ethernet
 device		msk		# Marvell/SysKonnect Yukon II Gigabit Ethernet
-device		nfe		# nVidia nForce MCP onboard Ethernet
+device		nfe		# nVidia nForce MCP on-board Ethernet
 device		nge		# NatSemi DP83820 gigabit Ethernet
 #device		nve		# nVidia nForce MCP on-board Ethernet Networking
 device		pcn		# AMD Am79C97x PCI 10/100
@@ -249,9 +250,10 @@ device		wlan_amrr	# AMRR transmit rate control algorithm
 device		wlan_scan_ap	# 802.11 AP mode scanning
 device		wlan_scan_sta	# 802.11 STA mode scanning
 device		an		# Aironet 4500/4800 802.11 wireless NICs.
-device		ath		# Atheros AR5210, AR5211, and AR5212
-device		ath_hal		# Atheros Hardwar Abstraction Layer
-device		ath_rate_sample # Atheros rate sampling.
+device		ath		# Atheros pci/cardbus NIC's
+device		ath_hal		# Atheros HAL (Hardware Access Layer)
+options		AH_SUPPORT_AR5416	# enable AR5416 tx/rx descriptors
+device		ath_rate_sample	# SampleRate tx rate control for ath
 device		awi		# BayStack 660 and others
 #device		bwi		# Broadcom Wireless 4300 
 #device		bwifw		# Broadcom Wireless firmware (normally module)
@@ -306,4 +308,4 @@ device		sbp		# SCSI over FireWire (Requires scbus and da)
 device		fwe		# Ethernet over FireWire (non-standard!)
 device		fwip		# IP over FireWire (RFC 2734, 3146)
 device		dcons		# Dumb console driver
-device		dcons_crom	# Configuration rom for dcons
+device		dcons_crom	# Configuration ROM for dcons
