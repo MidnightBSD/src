@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20110928:
+	Fix security issues with gzip and compress related to .Z
+	files that are corrupted.
+
+	Fix path validation with unix domain sockets.
+
 20110917:
 	Remove dependance on mports perl for generating releases as
 	it's in the base system.
@@ -1044,4 +1050,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.131 2011/09/15 02:21:01 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.132 2011/09/18 20:20:42 laffer1 Exp $
