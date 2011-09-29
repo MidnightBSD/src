@@ -33972,14 +33972,12 @@ sys/compat/svr4/syscalls.master -text
 sys/conf/Makefile.amd64 -text
 sys/conf/Makefile.i386 -text
 sys/conf/Makefile.sparc64 -text
-sys/conf/Makefile.sun4v -text
 sys/conf/NOTES -text
 sys/conf/defines -text
 sys/conf/files -text
 sys/conf/files.amd64 -text
 sys/conf/files.i386 -text
 sys/conf/files.sparc64 -text
-sys/conf/files.sun4v -text
 sys/conf/kern.mk -text
 sys/conf/kern.post.mk -text
 sys/conf/kern.pre.mk -text
@@ -33995,7 +33993,6 @@ sys/conf/options -text
 sys/conf/options.amd64 -text
 sys/conf/options.i386 -text
 sys/conf/options.sparc64 -text
-sys/conf/options.sun4v -text
 sys/conf/systags.sh -text
 sys/contrib/altq/altq/altq.h -text
 sys/contrib/altq/altq/altq_cbq.c -text

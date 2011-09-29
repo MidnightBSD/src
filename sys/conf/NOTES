@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/conf/NOTES,v 1.7 2011/01/15 05:56:21 laffer1 Exp $
+# $MidnightBSD: src/sys/conf/NOTES,v 1.8 2011/07/13 12:56:33 laffer1 Exp $
 # $FreeBSD: src/sys/conf/NOTES,v 1.1454 2007/09/26 21:14:17 marius Exp $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
@@ -475,6 +475,13 @@ options 	REGRESSION
 #
 options 	COMPILING_LINT
 
+#
+# STACK enables the stack(9) facility, allowing the capture of kernel stack
+# for the purpose of procinfo(1), etc.  stack(9) will also be compiled in
+# automatically if DDB(4) is compiled into the kernel.
+#
+options 	STACK
+
 
 #####################################################################
 # PERFORMANCE MONITORING OPTIONS
@@ -889,38 +896,6 @@ options 	DUMMYNET
 # page size of your architecture and that support header splitting.  See
 # zero_copy(9) for more details.
 options 	ZERO_COPY_SOCKETS
-
-#
-# ATM (HARP version) options
-#
-# XXX: These have been disabled in FreeBSD 7.0 as they are not MPSAFE.
-#
-# ATM_CORE includes the base ATM functionality code.  This must be included
-#	for ATM support.
-#
-# ATM_IP includes support for running IP over ATM.
-#
-# At least one (and usually only one) of the following signalling managers
-# must be included (note that all signalling managers include PVC support):
-# ATM_SIGPVC includes support for the PVC-only signalling manager `sigpvc'.
-# ATM_SPANS includes support for the `spans' signalling manager, which runs
-#	the FORE Systems's proprietary SPANS signalling protocol.
-# ATM_UNI includes support for the `uni30' and `uni31' signalling managers,
-#	which run the ATM Forum UNI 3.x signalling protocols.
-#
-# The `hfa' driver provides support for the FORE Systems, Inc.
-# PCA-200E ATM PCI Adapter.
-#
-# The `harp' pseudo-driver makes all NATM interface drivers available to HARP.
-#
-#options 	ATM_CORE		#core ATM protocol family
-#options 	ATM_IP			#IP over ATM support
-#options 	ATM_SIGPVC		#SIGPVC signalling manager
-#options 	ATM_SPANS		#SPANS signalling manager
-#options 	ATM_UNI			#UNI signalling manager
-
-#device		hfa			#FORE PCA-200E ATM PCI
-#device		harp			#Pseudo-interface for NATM
 
 
 #####################################################################
@@ -1741,6 +1716,7 @@ device		miibus
 #       Harris (Intersil) Chipset with PCnetMobile firmware by AMD.
 # age:  Support for gigabit ethernet adapters based on the Attansic/Atheros
 #       L1 PCI express gigabit ethernet controllers.
+# alc:  Support for Atheros AR8131/AR8132 PCIe ethernet controllers.
 # ale:  Support for Atheros AR8121/AR8113/AR8114 PCIe ethernet controllers.
 # bce:	Broadcom NetXtreme II (BCM5706/BCM5708) PCI/PCIe Gigabit Ethernet
 #       adapters.
@@ -1886,6 +1862,7 @@ device		xe
 # PCI Ethernet NICs that use the common MII bus controller code.
 device		ae		# Attansic/Atheros L2 FastEthernet
 device		age		# Attansic/Atheros L1 Gigabit Ethernet
+device		alc		# Atheros AR8131/AR8132 Ethernet
 device		ale		# Atheros AR8121/AR8113/AR8114 Ethernet
 device		bce		# Broadcom BCM5706/BCM5708 Gigabit Ethernet
 device		bfe		# Broadcom BCM440x 10/100 Ethernet
@@ -2007,8 +1984,6 @@ device		sound
 # snd_ad1816:		Analog Devices AD1816 ISA PnP/non-PnP.
 # snd_als4000:		Avance Logic ALS4000 PCI.
 # snd_atiixp:		ATI IXP 200/300/400 PCI.
-# snd_au88x0		Aureal Vortex 1/2/Advantage PCI. This driver
-#			lacks support for playback and recording.
 # snd_audiocs:		Crystal Semiconductor CS4231 SBus/EBus. Only
 #			for sparc64.
 # snd_cmi:		CMedia CMI8338/CMI8738 PCI.
@@ -2027,7 +2002,7 @@ device		sound
 # snd_gusc:		Gravis UltraSound ISA PnP/non-PnP.
 # snd_hda:		Intel High Definition Audio (Controller) and
 #			compatible.
-# snd_ich:		Intel ICH PCI and some more audio controllers
+# snd_ich:		Intel ICH AC'97 and some more audio controllers
 #			embedded in a chipset, for example nVidia
 #			nForce controllers.
 # snd_maestro:		ESS Technology Maestro-1/2x PCI.
@@ -2052,7 +2027,6 @@ device		sound
 device		snd_ad1816
 device		snd_als4000
 device		snd_atiixp
-#device		snd_au88x0
 #device		snd_audiocs
 device		snd_cmi
 device		snd_cs4281
