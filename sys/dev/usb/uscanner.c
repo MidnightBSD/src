@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uscanner.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: uscanner.c,v 1.30 2002/07/11 21:14:36 augustss Exp$	*/
 
 /* Also already merged from NetBSD:
@@ -6,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uscanner.c,v 1.89 2007/10/05 07:26:39 luigi Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uscanner.c,v 1.89.2.3 2010/07/28 16:58:36 gavin Exp $");
 
 /*-
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
@@ -130,6 +130,7 @@ static const struct uscan_info uscanner_devs[] = {
  {{ USB_VENDOR_HP, USB_PRODUCT_HP_2200C }, 0 },
  {{ USB_VENDOR_HP, USB_PRODUCT_HP_3300C }, 0 },
  {{ USB_VENDOR_HP, USB_PRODUCT_HP_3400CSE }, 0 },
+ {{ USB_VENDOR_HP, USB_PRODUCT_HP_3570C }, 0 },
  {{ USB_VENDOR_HP, USB_PRODUCT_HP_4100C }, 0 },
  {{ USB_VENDOR_HP, USB_PRODUCT_HP_4200C }, 0 },
  {{ USB_VENDOR_HP, USB_PRODUCT_HP_4300C }, 0 },
@@ -203,6 +204,7 @@ static const struct uscan_info uscanner_devs[] = {
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_1260 }, 0 },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_1270 }, 0 },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_RX425 }, 0 },
+ {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_RX620 }, 0 },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_3200 }, USC_KEEP_OPEN },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_GT9700F }, USC_KEEP_OPEN },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_GT9300UF }, 0 },
@@ -210,9 +212,13 @@ static const struct uscan_info uscanner_devs[] = {
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_3500 }, USC_KEEP_OPEN },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_3590 }, 0 },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_4200 }, 0 },
+ {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_4800 }, 0 },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_4990 }, 0 },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_5000 }, 0 },
  {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_6000 }, 0 },
+ {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_CX5400 }, 0 },
+ {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_DX7400 }, 0 },
+ {{ USB_VENDOR_EPSON, USB_PRODUCT_EPSON_DX8400 }, 0 },
 
   /* UMAX */
  {{ USB_VENDOR_UMAX, USB_PRODUCT_UMAX_ASTRA1220U }, 0 },
