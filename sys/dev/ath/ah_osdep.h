@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,18 +26,35 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/ah_osdep.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/sys/dev/ath/ah_osdep.h,v 1.2.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $
  */
 #ifndef _ATH_AH_OSDEP_H_
 #define _ATH_AH_OSDEP_H_
 /*
  * Atheros Hardware Access Layer (HAL) OS Dependent Definitions.
  */
+#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/endian.h>
+#include <sys/linker_set.h>
 
 #include <machine/bus.h>
+
+/*
+ * Bus i/o type definitions.
+ */
+typedef void *HAL_SOFTC;
+typedef bus_space_tag_t HAL_BUS_TAG;
+typedef bus_space_handle_t HAL_BUS_HANDLE;
+
+/*
+ * Linker set writearounds for chip and RF backend registration.
+ */
+#define	OS_DATA_SET(set, item)	DATA_SET(set, item)
+#define	OS_SET_DECLARE(set, ptype)	SET_DECLARE(set, ptype)
+#define	OS_SET_FOREACH(pvar, set)	SET_FOREACH(pvar, set)
 
 /*
  * Delay n microseconds.

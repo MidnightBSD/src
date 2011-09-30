@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 John Bicket
  * All rights reserved.
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/sample/sample.c,v 1.18.2.1 2007/10/16 19:07:26 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/sample/sample.c,v 1.18.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 /*
  * John Bicket's SampleRate control algorithm.
@@ -47,7 +46,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/sample/sample.c,v 1.18.2.1 2007/10/
 #include <sys/param.h>
 #include <sys/systm.h> 
 #include <sys/sysctl.h>
-#include <sys/module.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -75,7 +73,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/sample/sample.c,v 1.18.2.1 2007/10/
 
 #include <dev/ath/if_athvar.h>
 #include <dev/ath/ath_rate/sample/sample.h>
-#include <contrib/dev/ath/ah_desc.h>
+#include <dev/ath/ath_hal/ah_desc.h>
 
 #define	SAMPLE_DEBUG
 #ifdef SAMPLE_DEBUG
@@ -841,30 +839,3 @@ ath_rate_detach(struct ath_ratectrl *arc)
 	
 	free(osc, M_DEVBUF);
 }
-
-/*
- * Module glue.
- */
-static int
-sample_modevent(module_t mod, int type, void *unused)
-{
-	switch (type) {
-	case MOD_LOAD:
-		if (bootverbose)
-			printf("ath_rate: version 1.2 <SampleRate bit-rate selection algorithm>\n");
-		return 0;
-	case MOD_UNLOAD:
-		return 0;
-	}
-	return EINVAL;
-}
-
-static moduledata_t sample_mod = {
-	"ath_rate",
-	sample_modevent,
-	0
-};
-DECLARE_MODULE(ath_rate, sample_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);
-MODULE_VERSION(ath_rate, 1);
-MODULE_DEPEND(ath_rate, ath_hal, 1, 1, 1);	/* Atheros HAL */
-MODULE_DEPEND(ath_rate, wlan, 1, 1, 1);

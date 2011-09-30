@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2007 Sam Leffler, Errno Consulting
  * Copyright (c) 2004 Video54 Technologies, Inc.
@@ -28,7 +27,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/if_athrate.h,v 1.6 2007/06/06 15:49:15 sam Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/sys/dev/ath/if_athrate.h,v 1.6.10.1 2010/02/10 00:26:20 kensmith Exp $
  */
 #ifndef _ATH_RATECTRL_H_
 #define _ATH_RATECTRL_H_

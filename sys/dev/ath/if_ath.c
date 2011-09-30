@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ath/if_ath.c,v 1.177.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ath/if_ath.c,v 1.177.2.3.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 /*
  * Driver for the Atheros Wireless LAN controller.
@@ -78,12 +78,16 @@ __FBSDID("$FreeBSD: src/sys/dev/ath/if_ath.c,v 1.177.2.2.2.1 2008/11/25 02:59:29
 #endif
 
 #include <dev/ath/if_athvar.h>
-#include <contrib/dev/ath/ah_desc.h>
-#include <contrib/dev/ath/ah_devid.h>		/* XXX for softled */
+#include <dev/ath/ath_hal/ah_devid.h>		/* XXX for softled */
 
 #ifdef ATH_TX99_DIAG
 #include <dev/ath/ath_tx99/ath_tx99.h>
 #endif
+
+/*
+ * We require a HAL w/ the changes for split tx/rx MIC.
+ */
+CTASSERT(HAL_ABI_VERSION > 0x06052200);
 
 /* unaligned little endian access */
 #define LE_READ_2(p)							\
@@ -379,7 +383,6 @@ ath_attach(u_int16_t devid, struct ath_softc *sc)
 		goto bad;
 	}
 	callout_init(&sc->sc_cal_ch, CALLOUT_MPSAFE);
-	callout_init(&sc->sc_dfs_ch, CALLOUT_MPSAFE);
 
 	ATH_TXBUF_LOCK_INIT(sc);
 
@@ -2251,14 +2254,13 @@ ath_key_update_end(struct ieee80211com *ic)
 static u_int32_t
 ath_calcrxfilter(struct ath_softc *sc)
 {
-#define	RX_FILTER_PRESERVE	(HAL_RX_FILTER_PHYERR | HAL_RX_FILTER_PHYRADAR)
 	struct ieee80211com *ic = &sc->sc_ic;
-	struct ath_hal *ah = sc->sc_ah;
 	struct ifnet *ifp = sc->sc_ifp;
 	u_int32_t rfilt;
 
-	rfilt = (ath_hal_getrxfilter(ah) & RX_FILTER_PRESERVE)
-	      | HAL_RX_FILTER_UCAST | HAL_RX_FILTER_BCAST | HAL_RX_FILTER_MCAST;
+	rfilt = HAL_RX_FILTER_UCAST | HAL_RX_FILTER_BCAST | HAL_RX_FILTER_MCAST;
+	if (!sc->sc_needmib && !sc->sc_scanning)
+		rfilt |= HAL_RX_FILTER_PHYERR;
 	if (ic->ic_opmode != IEEE80211_M_STA)
 		rfilt |= HAL_RX_FILTER_PROBEREQ;
 	if (ic->ic_opmode != IEEE80211_M_HOSTAP &&
@@ -4891,42 +4893,6 @@ ath_chan_change(struct ath_softc *sc, struct ieee80211_channel *chan)
 }
 
 /*
- * Poll for a channel clear indication; this is required
- * for channels requiring DFS and not previously visited
- * and/or with a recent radar detection.
- */
-static void
-ath_dfswait(void *arg)
-{
-	struct ath_softc *sc = arg;
-	struct ath_hal *ah = sc->sc_ah;
-	HAL_CHANNEL hchan;
-
-	ath_hal_radar_wait(ah, &hchan);
-	DPRINTF(sc, ATH_DEBUG_DFS, "%s: radar_wait %u/%x/%x\n",
-	    __func__, hchan.channel, hchan.channelFlags, hchan.privFlags);
-
-	if (hchan.privFlags & CHANNEL_INTERFERENCE) {
-		if_printf(sc->sc_ifp,
-		    "channel %u/0x%x/0x%x has interference\n",
-		    hchan.channel, hchan.channelFlags, hchan.privFlags);
-		return;
-	}
-	if ((hchan.privFlags & CHANNEL_DFS) == 0) {
-		/* XXX should not happen */
-		return;
-	}
-	if (hchan.privFlags & CHANNEL_DFS_CLEAR) {
-		sc->sc_curchan.privFlags |= CHANNEL_DFS_CLEAR;
-		sc->sc_ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-		if_printf(sc->sc_ifp,
-		    "channel %u/0x%x/0x%x marked clear\n",
-		    hchan.channel, hchan.channelFlags, hchan.privFlags);
-	} else
-		callout_reset(&sc->sc_dfs_ch, 2 * hz, ath_dfswait, sc);
-}
-
-/*
  * Set/change channels.  If the channel is really being changed,
  * it's done by reseting the chip.  To accomplish this we must
  * first cleanup any pending DMA, then restart stuff after a la
@@ -4995,25 +4961,6 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 		 * if we're switching; e.g. 11a to 11b/g.
 		 */
 		ath_chan_change(sc, chan);
-
-		/*
-		 * Handle DFS required waiting period to determine
-		 * if channel is clear of radar traffic.
-		 */
-		if (ic->ic_opmode == IEEE80211_M_HOSTAP) {
-#define	DFS_AND_NOT_CLEAR(_c) \
-	(((_c)->privFlags & (CHANNEL_DFS | CHANNEL_DFS_CLEAR)) == CHANNEL_DFS)
-			if (DFS_AND_NOT_CLEAR(&sc->sc_curchan)) {
-				if_printf(sc->sc_ifp,
-					"wait for DFS clear channel signal\n");
-				/* XXX stop sndq */
-				sc->sc_ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-				callout_reset(&sc->sc_dfs_ch,
-					2 * hz, ath_dfswait, sc);
-			} else
-				callout_stop(&sc->sc_dfs_ch);
-#undef DFS_NOT_CLEAR
-		}
 
 		/*
 		 * Re-enable interrupts.
@@ -5164,7 +5111,6 @@ ath_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 		ieee80211_state_name[nstate]);
 
 	callout_stop(&sc->sc_cal_ch);
-	callout_stop(&sc->sc_dfs_ch);
 	ath_hal_setledstate(ah, leds[nstate]);	/* set LED */
 
 	if (nstate == IEEE80211_S_INIT) {

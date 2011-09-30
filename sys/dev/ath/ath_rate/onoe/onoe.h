@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/ath_rate/onoe/onoe.h,v 1.3 2007/06/06 15:49:16 sam Exp $
+ * $FreeBSD: src/sys/dev/ath/ath_rate/onoe/onoe.h,v 1.3.10.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 /*

@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/amrr/amrr.c,v 1.14 2007/07/27 11:59:55 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/amrr/amrr.c,v 1.14.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
 
 /*
  * AMRR rate control. See:
@@ -51,7 +51,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/amrr/amrr.c,v 1.14 2007/07/27 11:59
 #include <sys/param.h>
 #include <sys/systm.h> 
 #include <sys/sysctl.h>
-#include <sys/module.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -79,7 +78,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/amrr/amrr.c,v 1.14 2007/07/27 11:59
 
 #include <dev/ath/if_athvar.h>
 #include <dev/ath/ath_rate/amrr/amrr.h>
-#include <contrib/dev/ath/ah_desc.h>
+#include <dev/ath/ath_hal/ah_desc.h>
 
 #define	AMRR_DEBUG
 #ifdef AMRR_DEBUG
@@ -519,29 +518,3 @@ ath_rate_detach(struct ath_ratectrl *arc)
 	callout_drain(&asc->timer);
 	free(asc, M_DEVBUF);
 }
-
-/*
- * Module glue.
- */
-static int
-amrr_modevent(module_t mod, int type, void *unused)
-{
-	switch (type) {
-	case MOD_LOAD:
-		if (bootverbose)
-			printf("ath_rate: <AMRR rate control algorithm> version 0.1\n");
-		return 0;
-	case MOD_UNLOAD:
-		return 0;
-	}
-	return EINVAL;
-}
-
-static moduledata_t amrr_mod = {
-	"ath_rate",
-	amrr_modevent,
-	0
-};
-DECLARE_MODULE(ath_rate, amrr_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);
-MODULE_VERSION(ath_rate, 1);
-MODULE_DEPEND(ath_rate, wlan, 1, 1, 1);

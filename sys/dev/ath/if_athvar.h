@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,7 +26,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/if_athvar.h,v 1.62 2007/06/11 03:36:49 sam Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/sys/dev/ath/if_athvar.h,v 1.62.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 /*
@@ -36,8 +36,8 @@
 #ifndef _DEV_ATH_ATHVAR_H
 #define _DEV_ATH_ATHVAR_H
 
-#include <contrib/dev/ath/ah.h>
-#include <contrib/dev/ath/ah_desc.h>
+#include <dev/ath/ath_hal/ah.h>
+#include <dev/ath/ath_hal/ah_desc.h>
 #include <net80211/ieee80211_radiotap.h>
 #include <dev/ath/if_athioctl.h>
 #include <dev/ath/if_athrate.h>
@@ -316,7 +316,6 @@ struct ath_softc {
 	int			sc_calinterval;	/* current polling interval */
 	int			sc_caltries;	/* cals at current interval */
 	HAL_NODE_STATS		sc_halstats;	/* station-mode rssi stats */
-	struct callout		sc_dfs_ch;	/* callout handle for dfs */
 };
 #define	sc_tx_th		u_tx_rt.th
 #define	sc_rx_th		u_rx_rt.th
@@ -484,7 +483,7 @@ void	ath_intr(void *);
 #define	ath_hal_getregdomain(_ah, _prd) \
 	(ath_hal_getcapability(_ah, HAL_CAP_REG_DMN, 0, (_prd)) == HAL_OK)
 #define	ath_hal_setregdomain(_ah, _rd) \
-	((*(_ah)->ah_setRegulatoryDomain)((_ah), (_rd), NULL))
+	ath_hal_setcapability(_ah, HAL_CAP_REG_DMN, 0, _rd, NULL)
 #define	ath_hal_getcountrycode(_ah, _pcc) \
 	(*(_pcc) = (_ah)->ah_countryCode)
 #define	ath_hal_hastkipsplit(_ah) \
@@ -618,8 +617,5 @@ void	ath_intr(void *);
         ((*(_ah)->ah_gpioGet)((_ah), (_gpio)))
 #define ath_hal_gpiosetintr(_ah, _gpio, _b) \
         ((*(_ah)->ah_gpioSetIntr)((_ah), (_gpio), (_b)))
-
-#define ath_hal_radar_wait(_ah, _chan) \
-	((*(_ah)->ah_radarWait)((_ah), (_chan)))
 
 #endif /* _DEV_ATH_ATHVAR_H */

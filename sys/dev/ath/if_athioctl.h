@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,7 +26,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/if_athioctl.h,v 1.19 2007/06/11 03:36:49 sam Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/sys/dev/ath/if_athioctl.h,v 1.19.10.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 /*
