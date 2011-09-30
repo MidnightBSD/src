@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users
 
+20110929:
+	Sync ath(4) with FreeBSD 7.3.
+
+	alc(4) would hibernate when a cable was unplugged and often
+	required bring the interface down and up to "wake up" so that
+	a connection could be established.  Disable hibernation.
+
 20110928:
 	Fix security issues with gzip and compress related to .Z
 	files that are corrupted.
@@ -1050,4 +1057,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.132 2011/09/18 20:20:42 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.133 2011/09/29 00:04:55 laffer1 Exp $
