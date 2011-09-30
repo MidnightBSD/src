@@ -37406,7 +37406,6 @@ sys/modules/ata/atapist/Makefile -text
 sys/modules/ata/ataraid/Makefile -text
 sys/modules/ata/atausb/Makefile -text
 sys/modules/ath/Makefile -text
-sys/modules/ath_hal/Makefile -text
 sys/modules/aue/Makefile -text
 sys/modules/auxio/Makefile -text
 sys/modules/awi/Makefile -text
