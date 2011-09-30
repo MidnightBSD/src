@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_zyd.c,v 1.2 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$OpenBSD: if_zyd.c,v 1.52 2007/02/11 00:08:04 jsg Exp $	*/
 /*	$NetBSD: if_zyd.c,v 1.7 2007/06/21 04:04:29 kiyohara Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/if_zyd.c,v 1.4.2.4 2007/11/30 15:39:22 ariff Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_zyd.c,v 1.4.2.8 2010/11/16 04:40:03 sobomax Exp $	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>
@@ -120,6 +120,7 @@ static const struct zyd_type {
 	ZYD_ZD1211_DEV(ZYXEL,		AG225H),
 	ZYD_ZD1211_DEV(ZYXEL,		ZYAIRG220),
 	ZYD_ZD1211_DEV(ZYXEL,		G200V2),
+	ZYD_ZD1211_DEV(ZYXEL,		G202),
 
 	ZYD_ZD1211B_DEV(ACCTON,		SMCWUSBG),
 	ZYD_ZD1211B_DEV(ACCTON,		ZD1211B),
@@ -307,7 +308,7 @@ zyd_attach(device_t dev)
 	ifp->if_init = zyd_init;
 	ifp->if_ioctl = zyd_ioctl;
 	ifp->if_start = zyd_start;
-	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
 	IFQ_SET_READY(&ifp->if_snd);
 
 	STAILQ_INIT(&sc->sc_rqh);
@@ -2494,8 +2495,7 @@ zyd_init(void *priv)
 		return;
 
 	/* promiscuous mode */
-	(void)zyd_write32(sc, ZYD_MAC_SNIFFER,
-	    (ic->ic_opmode == IEEE80211_M_MONITOR) ? 1 : 0);
+	(void)zyd_write32(sc, ZYD_MAC_SNIFFER, 0);
 
 	/* multicast setup */
 	(void)zyd_set_multi(sc);
@@ -2777,6 +2777,6 @@ static driver_t zyd_driver = {
 static devclass_t zyd_devclass;
 
 DRIVER_MODULE(zyd, uhub, zyd_driver, zyd_devclass, usbd_driver_load, 0);
-MODULE_DEPEND(rum, wlan, 1, 1, 1);
-MODULE_DEPEND(rum, wlan_amrr, 1, 1, 1);
-MODULE_DEPEND(rum, usb, 1, 1, 1);
+MODULE_DEPEND(zyd, wlan, 1, 1, 1);
+MODULE_DEPEND(zyd, wlan_amrr, 1, 1, 1);
+MODULE_DEPEND(zyd, usb, 1, 1, 1);
