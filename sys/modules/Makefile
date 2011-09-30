@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.21 2011/02/07 00:18:45 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.22 2011/02/16 13:36:44 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -30,11 +30,7 @@ SUBDIR=	${_3dfx} \
 	${_arl} \
 	${_asr} \
 	ata \
-	${_ath} \
-	${_ath_hal} \
-	${_ath_rate_amrr} \
-	${_ath_rate_onoe} \
-	${_ath_rate_sample} \
+	ath \
 	aue \
 	${_auxio} \
 	${_awi} \
@@ -373,11 +369,6 @@ _aout=		aout
 _apm=		apm
 _ar=		ar
 _arcnet=	arcnet
-_ath=		ath
-_ath_hal=	ath_hal
-_ath_rate_amrr=	ath_rate_amrr
-_ath_rate_onoe=	ath_rate_onoe
-_ath_rate_sample=ath_rate_sample
 _awi=		awi
 _bktr=		bktr
 _cardbus=	cardbus
@@ -494,11 +485,6 @@ _agp=		agp
 _amdtemp=	amdtemp
 _an=		an
 _arcmsr=	arcmsr
-_ath=		ath
-_ath_hal=	ath_hal
-_ath_rate_amrr=	ath_rate_amrr
-_ath_rate_onoe=	ath_rate_onoe
-_ath_rate_sample=ath_rate_sample
 _cardbus=	cardbus
 _cbb=		cbb
 _ciss=		ciss
@@ -554,11 +540,6 @@ _zfs=		zfs
 .endif
 
 .if ${MACHINE_ARCH} == "sparc64"
-_ath=		ath
-_ath_hal=	ath_hal
-_ath_rate_amrr=	ath_rate_amrr
-_ath_rate_onoe=	ath_rate_onoe
-_ath_rate_sample=ath_rate_sample
 _auxio=		auxio
 _em=		em
 _i2c=		i2c
