@@ -30211,6 +30211,7 @@ sbin/geom/Makefile.inc -text
 sbin/geom/class/Makefile -text
 sbin/geom/class/Makefile.inc -text
 sbin/geom/class/cache/Makefile -text
+sbin/geom/class/cache/gcache.8 -text
 sbin/geom/class/cache/geom_cache.c -text
 sbin/geom/class/concat/Makefile -text
 sbin/geom/class/concat/gconcat.8 -text
