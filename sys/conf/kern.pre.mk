@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/conf/kern.pre.mk,v 1.3 2010/03/20 03:06:38 laffer1 Exp $
 # $FreeBSD: src/sys/conf/kern.pre.mk,v 1.92 2007/08/08 19:12:06 marcel Exp $
 
 # Part of a unified Makefile for building kernels.  This part contains all
@@ -69,7 +69,7 @@ INCLUDES+= -I$S/contrib/ipfilter
 INCLUDES+= -I$S/contrib/pf
 
 # ... and the same for Atheros HAL
-INCLUDES+= -I$S/dev/ath
+INCLUDES+= -I$S/dev/ath -I$S/dev/ath/ath_hal
 
 # ... and the same for the NgATM stuff
 INCLUDES+= -I$S/contrib/ngatm
