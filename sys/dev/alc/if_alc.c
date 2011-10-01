@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/dev/alc/if_alc.c,v 1.1.2.9 2010/08/30 21:17:11 yongari Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.2 2011/09/30 03:02:06 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.3 2011/10/01 02:29:26 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1976,6 +1976,8 @@ alc_encap(struct alc_softc *sc, struct mbuf **m_head)
 			 * Reset IP checksum and recompute TCP pseudo
 			 * checksum as NDIS specification said.
 			 */
+			ip = (struct ip *)(mtod(m, char *) + ip_off);
+			tcp = (struct tcphdr *)(mtod(m, char *) + poff);
 			ip->ip_sum = 0;
 			tcp->th_sum = in_pseudo(ip->ip_src.s_addr,
 			    ip->ip_dst.s_addr, htons(IPPROTO_TCP));
