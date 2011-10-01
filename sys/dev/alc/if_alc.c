@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/dev/alc/if_alc.c,v 1.1.2.9 2010/08/30 21:17:11 yongari Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.4 2011/10/01 02:31:45 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.5 2011/10/01 02:34:01 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,7 +69,6 @@ __MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.4 2011/10/01 02:31:45 laffe
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-#include <machine/atomic.h>
 #include <machine/bus.h>
 #include <machine/in_cksum.h>
 
@@ -2548,9 +2547,10 @@ alc_int_task(void *arg, int pending)
 	ifp = sc->alc_ifp;
 
 	status = CSR_READ_4(sc, ALC_INTR_STATUS);
-	more = atomic_readandclear_int(&sc->alc_morework);
-	if (more != 0)
+	if (sc->alc_morework != 0) {
+		sc->alc_morework = 0;
 		status |= INTR_RX_PKT;
+	}
 	if ((status & ALC_INTRS) == 0)
 		goto done;
 
@@ -2562,7 +2562,7 @@ alc_int_task(void *arg, int pending)
 		if ((status & INTR_RX_PKT) != 0) {
 			more = alc_rxintr(sc, sc->alc_process_limit);
 			if (more == EAGAIN)
-				atomic_set_int(&sc->alc_morework, 1);
+				sc->alc_morework = 1;
 			else if (more == EIO) {
 				ALC_LOCK(sc);
 				ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
