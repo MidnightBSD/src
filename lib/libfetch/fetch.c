@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998-2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 1998-2004 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/lib/libfetch/fetch.c,v 1.41 2007/12/19 00:26:36 des Exp $
  */
 
 #include <sys/cdefs.h>
@@ -76,9 +74,7 @@ static struct fetcherr url_errlist[] = {
 FILE *
 fetchXGet(struct url *URL, struct url_stat *us, const char *flags)
 {
-	int direct;
 
-	direct = CHECK_FLAG('d');
 	if (us != NULL) {
 		us->size = -1;
 		us->atime = us->mtime = 0;
@@ -112,9 +108,7 @@ fetchGet(struct url *URL, const char *flags)
 FILE *
 fetchPut(struct url *URL, const char *flags)
 {
-	int direct;
 
-	direct = CHECK_FLAG('d');
 	if (strcasecmp(URL->scheme, SCHEME_FILE) == 0)
 		return (fetchPutFile(URL, flags));
 	else if (strcasecmp(URL->scheme, SCHEME_FTP) == 0)
@@ -134,9 +128,7 @@ fetchPut(struct url *URL, const char *flags)
 int
 fetchStat(struct url *URL, struct url_stat *us, const char *flags)
 {
-	int direct;
 
-	direct = CHECK_FLAG('d');
 	if (us != NULL) {
 		us->size = -1;
 		us->atime = us->mtime = 0;
@@ -160,9 +152,7 @@ fetchStat(struct url *URL, struct url_stat *us, const char *flags)
 struct url_ent *
 fetchList(struct url *URL, const char *flags)
 {
-	int direct;
 
-	direct = CHECK_FLAG('d');
 	if (strcasecmp(URL->scheme, SCHEME_FILE) == 0)
 		return (fetchListFile(URL, flags));
 	else if (strcasecmp(URL->scheme, SCHEME_FTP) == 0)

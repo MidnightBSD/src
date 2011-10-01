@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998-2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 1998-2004 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/lib/libfetch/fetch.h,v 1.26 2004/09/21 18:35:20 des Exp $
  */
 
 #ifndef _FETCH_H_INCLUDED
@@ -47,6 +46,7 @@ struct url {
 	char		*doc;
 	off_t		 offset;
 	size_t		 length;
+	time_t		 ims_time;
 };
 
 struct url_stat {

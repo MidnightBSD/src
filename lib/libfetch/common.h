@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998-2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 1998-2011 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/lib/libfetch/common.h,v 1.30 2007/12/18 11:03:07 des Exp $
  */
 
 #ifndef _COMMON_H_INCLUDED

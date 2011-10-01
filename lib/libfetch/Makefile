@@ -1,5 +1,4 @@
-# $MidnightBSD: src/lib/libfetch/Makefile,v 1.2 2008/07/09 18:57:20 laffer1 Exp $
-# $FreeBSD: src/lib/libfetch/Makefile,v 1.44.2.1 2005/07/22 17:29:05 kensmith Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -17,14 +16,16 @@ CFLAGS+=	-DINET6
 
 .if ${MK_OPENSSL} != "no"
 CFLAGS+=	-DWITH_SSL
-DPADD=		${LIBSSL} ${LIBCRYPTO}
-LDADD=		-lssl -lcrypto
+DPADD=		${LIBSSL} ${LIBCRYPTO} ${LIBMD}
+LDADD=		-lssl -lcrypto -lmd
+.else
+DPADD=		${LIBMD}
+LDADD=		-lmd
 .endif
 
 CFLAGS+=	-DFTP_COMBINE_CWDS
 
 CSTD?=		c99
-WARNS?=		2
 
 SHLIB_MAJOR=    5
 

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998-2004 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 1998-2011 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/lib/libfetch/file.c,v 1.18 2007/12/14 10:26:58 des Exp $
  */
 
 #include <sys/cdefs.h>
@@ -35,6 +33,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/stat.h>
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -59,6 +58,7 @@ fetchXGetFile(struct url *u, struct url_stat *us, const char *flags)
 		fetch_syserr();
 	}
 
+	fcntl(fileno(f), F_SETFD, FD_CLOEXEC);
 	return (f);
 }
 
@@ -86,6 +86,7 @@ fetchPutFile(struct url *u, const char *flags)
 		fetch_syserr();
 	}
 
+	fcntl(fileno(f), F_SETFD, FD_CLOEXEC);
 	return (f);
 }
 

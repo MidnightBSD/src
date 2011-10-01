@@ -1,5 +1,5 @@
 .\"-
-.\" Copyright (c) 1998-2004 Dag-Erling Coïdan Smørgrav
+.\" Copyright (c) 1998-2011 Dag-Erling Smørgrav
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: src/lib/libfetch/fetch.3,v 1.65 2008/02/08 09:44:34 des Exp $
 .\"
-.Dd July 9, 2008
+.Dd September 27, 2011
 .Dt FETCH 3
 .Os
 .Sh NAME
@@ -166,8 +165,15 @@ struct url {
     char	*doc;
     off_t	 offset;
     size_t	 length;
+    time_t	 ims_time;
 };
 .Ed
+.Pp
+The
+.Va ims_time
+field stores the time value for
+.Li If-Modified-Since
+HTTP requests.
 .Pp
 The pointer returned by
 .Fn fetchMakeURL
@@ -312,9 +318,19 @@ and
 implement the FTP protocol as described in RFC959.
 .Pp
 If the
+.Ql P
+(not passive) flag is specified, an active (rather than passive)
+connection will be attempted.
+.Pp
+The
 .Ql p
-(passive) flag is specified, a passive (rather than active) connection
-will be attempted.
+flag is supported for compatibility with earlier versions where active
+connections were the default.
+It has precedence over the
+.Ql P
+flag, so if both are specified,
+.Nm
+will use a passive connection.
 .Pp
 If the
 .Ql l
@@ -353,6 +369,22 @@ If the
 and
 .Fn fetchPutHTTP
 will use a direct connection even if a proxy server is defined.
+.Pp
+If the
+.Ql i
+(if-modified-since) flag is specified, and
+the
+.Va ims_time
+field is set in 
+.Vt "struct url" ,
+then
+.Fn fetchXGetHTTP
+and
+.Fn fetchGetHTTP
+will send a conditional
+.Li If-Modified-Since
+HTTP header to only fetch the content if it is newer than
+.Va ims_time .
 .Pp
 Since there seems to be no good way of implementing the HTTP PUT
 method in a manner consistent with the rest of the
@@ -453,9 +485,11 @@ connections will be bound.
 .It Ev FTP_LOGIN
 Default FTP login if none was provided in the URL.
 .It Ev FTP_PASSIVE_MODE
-If set to anything but
+If set to
 .Ql no ,
-forces the FTP code to use passive mode.
+forces the FTP code to use active mode.
+If set to any other value, forces passive mode even if the application
+requested active mode.
 .It Ev FTP_PASSWORD
 Default FTP password if the remote server requests one and none was
 provided in the URL.
@@ -487,9 +521,13 @@ Specifies HTTP authorization parameters as a colon-separated list of
 items.
 The first and second item are the authorization scheme and realm
 respectively; further items are scheme-dependent.
-Currently, only basic authorization is supported.
+Currently, the
+.Dq basic
+and
+.Dq digest
+authorization methods are supported.
 .Pp
-Basic authorization requires two parameters: the user name and
+Both methods require two parameters: the user name and
 password, in that order.
 .Pp
 This variable is only used if the server requires authorization and
@@ -634,12 +672,14 @@ The
 .Nm fetch
 library was mostly written by
 .An Dag-Erling Sm\(/orgrav Aq des@FreeBSD.org
-with numerous suggestions from
+with numerous suggestions and contributions from
 .An Jordan K. Hubbard Aq jkh@FreeBSD.org ,
-.An Eugene Skepner Aq eu@qub.com
-and other
-.Fx
-developers.
+.An Eugene Skepner Aq eu@qub.com ,
+.An Hajimu Umemoto Aq ume@FreeBSD.org ,
+.An Henry Whincup Aq henry@techiebod.com ,
+.An Jukka A. Ukkonen Aq jau@iki.fi ,
+.An Jean-Fran\(,cois Dockes Aq jf@dockes.org
+and others.
 It replaces the older
 .Nm ftpio
 library written by
