@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/dev/alc/if_alc.c,v 1.1.2.9 2010/08/30 21:17:11 yongari Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.3 2011/10/01 02:29:26 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.4 2011/10/01 02:31:45 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -336,8 +336,8 @@ alc_miibus_statchg(device_t dev)
 		reg = CSR_READ_4(sc, ALC_MAC_CFG);
 		reg |= MAC_CFG_TX_ENB | MAC_CFG_RX_ENB;
 		CSR_WRITE_4(sc, ALC_MAC_CFG, reg);
+		alc_aspm(sc, IFM_SUBTYPE(mii->mii_media_active));
 	}
-	alc_aspm(sc, IFM_SUBTYPE(mii->mii_media_active));
 }
 
 static void
