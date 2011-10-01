@@ -1,7 +1,25 @@
 Updating Information for MidnightBSD users
 
+20110930:
+	Introduce quirks handling for several umass devices including
+	USB cameras.  Add workaround for Cyberpower UPS devices.
+
+	Bring in further bug fixes from FreeBSD and NetBSD for alc(4).
+	Stale ip/tcp header pointers are no longer used, lockups fixed
+	when network cable is unplugged on bootup, enable TX checksum
+	offloading.
+
+	Add a new man page for gcache(8), a useful geom class when
+	working with large raid3 sets.
+
+	Restore previous workaround for Cypress pata storage controller.
+
 20110929:
 	Sync ath(4) with FreeBSD 7.3.
+
+	The following modules are no longer available, and should be
+	removed from loader.conf:
+	ath_hal ath_rate_amrr ath_rate_onoe ath_rate_sample
 
 	alc(4) would hibernate when a cable was unplugged and often
 	required bring the interface down and up to "wake up" so that
@@ -1057,4 +1075,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.133 2011/09/29 00:04:55 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.134 2011/09/30 03:05:14 laffer1 Exp $
