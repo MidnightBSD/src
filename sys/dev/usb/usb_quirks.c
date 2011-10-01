@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/usb_quirks.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: usb_quirks.c,v 1.50 2004/06/23 02:30:52 mycroft Exp $	*/
 
 /*-
@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb_quirks.c,v 1.63.4.1 2008/01/07 23:12:45 brix Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb_quirks.c,v 1.63.2.5 2010/08/03 22:06:34 gavin Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -91,19 +91,31 @@ static const struct usbd_quirk_entry {
    ANY, { UQ_MS_BAD_CLASS | UQ_MS_LEADING_BYTE }},
  { USB_VENDOR_MICROSOFT, USB_PRODUCT_MICROSOFT_WLINTELLIMOUSE,
    ANY, { UQ_MS_LEADING_BYTE }},
+ { USB_VENDOR_SONY, USB_PRODUCT_SONY_RF_RECEIVER,
+   ANY,{ UQ_MS_BAD_CLASS }},
 
  /* Devices which should be ignored by uhid */
  { USB_VENDOR_APC, USB_PRODUCT_APC_UPS,
 	ANY, { UQ_HID_IGNORE }},
  { USB_VENDOR_BELKIN, USB_PRODUCT_BELKIN_F6C550AVR,
 	ANY, { UQ_HID_IGNORE }},
+ { USB_VENDOR_CYBERPOWER, USB_PRODUCT_CYBERPOWER_1500CAVRLCD,
+	ANY, { UQ_HID_IGNORE }},
+ { USB_VENDOR_CYPRESS, USB_PRODUCT_CYPRESS_SILVERSHIELD,
+	ANY, { UQ_HID_IGNORE }},
  { USB_VENDOR_DELORME, USB_PRODUCT_DELORME_EARTHMATE,
+	ANY, { UQ_HID_IGNORE }},
+ { USB_VENDOR_LIEBERT, USB_PRODUCT_LIEBERT_POWERSURE_PXT,
 	ANY, { UQ_HID_IGNORE }},
  { USB_VENDOR_ITUNERNET, USB_PRODUCT_ITUNERNET_USBLCD2X20,
 	ANY, { UQ_HID_IGNORE }},
  { USB_VENDOR_MGE, USB_PRODUCT_MGE_UPS1,
 	ANY, { UQ_HID_IGNORE }},
  { USB_VENDOR_MGE, USB_PRODUCT_MGE_UPS2,
+	ANY, { UQ_HID_IGNORE }},
+ { USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPHONE,
+	ANY, { UQ_HID_IGNORE }},
+ { USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPHONE_3G,
 	ANY, { UQ_HID_IGNORE }},
 
  /* Devices which should be ignored by both ukbd and uhid */
@@ -112,6 +124,8 @@ static const struct usbd_quirk_entry {
  { USB_VENDOR_METAGEEK, USB_PRODUCT_METAGEEK_WISPY1B,
 	ANY, { UQ_KBD_IGNORE }},
  { USB_VENDOR_METAGEEK, USB_PRODUCT_METAGEEK_WISPY24X,
+	ANY, { UQ_KBD_IGNORE }},
+ { USB_VENDOR_METAGEEK, USB_PRODUCT_METAGEEK2_WISPYDBX,
 	ANY, { UQ_KBD_IGNORE }},
  { 0, 0, 0, { 0 } }
 };
