@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.7 2009/06/06 04:34:08 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.8 2009/06/06 06:37:20 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 MAEKAWA Masahide <bishop@rr.iij4u.or.jp>,
  *		      Nick Hibma <n_hibma@freebsd.org>
@@ -324,10 +324,10 @@ struct umass_devdescr_t {
 	 * sector number.
 	 */
 #	define READ_CAPACITY_OFFBY1	0x2000
-	/*
-	 * Handle failing SCSI synchronize cache commands for
-	 * IDE Bridges since it cannnot be done in the CAM layer.
-	 * Note this fakes a success.
+	/* Device cannot handle a SCSI synchronize cache command.  Normally
+	 * this quirk would be handled in the cam layer, but for IDE bridges
+	 * we need to associate the quirk with the bridge and not the
+	 * underlying disk device.  This is handled by faking a success result.
 	 */
 #	define NO_SYNCHRONIZE_CACHE	0x4000
 };
@@ -340,6 +340,14 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_AIPTEK, USB_PRODUCT_AIPTEK_POCKETCAM3M, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  NO_QUIRKS
+	},
+	{ USB_VENDOR_ALCOR, USB_PRODUCT_ALCOR_TRANSCEND, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_GETMAXLUN
+	},
+	{ USB_VENDOR_ALCOR, USB_PRODUCT_ALCOR_UMCR_9361, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_GETMAXLUN
 	},
 	{ USB_VENDOR_ASAHIOPTICAL, USB_PRODUCT_ASAHIOPTICAL_OPTIO230, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
@@ -415,7 +423,8 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	},
 	{ USB_VENDOR_GENESYS,  USB_PRODUCT_GENESYS_GL641USB2IDE, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
-	  FORCE_SHORT_INQUIRY | NO_START_STOP | IGNORE_RESIDUE
+	  FORCE_SHORT_INQUIRY | NO_START_STOP | IGNORE_RESIDUE |
+	  NO_SYNCHRONIZE_CACHE
 	},
 	{ USB_VENDOR_GENESYS,  USB_PRODUCT_GENESYS_GL641USB2IDE_2, RID_WILDCARD,
 	  UMASS_PROTO_ATAPI | UMASS_PROTO_BBB,
@@ -565,7 +574,15 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	},
 	{ USB_VENDOR_MYSON,  USB_PRODUCT_MYSON_HEDEN, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
-	  NO_INQUIRY | IGNORE_RESIDUE
+	  NO_INQUIRY | IGNORE_RESIDUE | NO_SYNCHRONIZE_CACHE
+	},
+	{ USB_VENDOR_MYSON, USB_PRODUCT_MYSON_HEDEN_8813, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_SYNCHRONIZE_CACHE
+	},
+	{ USB_VENDOR_MYSON, USB_PRODUCT_MYSON_STARREADER, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_SYNCHRONIZE_CACHE
 	},
 	{ USB_VENDOR_NEODIO, USB_PRODUCT_NEODIO_ND3260, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
@@ -575,9 +592,17 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  NO_INQUIRY
 	},
+	{ USB_VENDOR_NETAC, USB_PRODUCT_NETAC_ONLYDISK, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  IGNORE_RESIDUE
+	},
 	{ USB_VENDOR_NETCHIP, USB_PRODUCT_NETCHIP_CLIK_40, RID_WILDCARD,
 	  UMASS_PROTO_ATAPI,
 	  NO_INQUIRY
+	},
+	{ USB_VENDOR_NIKON, USB_PRODUCT_NIKON_D300, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_QUIRKS
 	},
 	{ USB_VENDOR_OLYMPUS, USB_PRODUCT_OLYMPUS_C1, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
@@ -602,6 +627,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_ONSPEC, USB_PRODUCT_ONSPEC_CFSM_READER2, RID_WILDCARD,
 	  UMASS_PROTO_SCSI,
 	  NO_QUIRKS
+	},
+	{ USB_VENDOR_ONSPEC, USB_PRODUCT_ONSPEC_SDS_HOTFIND_D, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_GETMAXLUN | NO_SYNCHRONIZE_CACHE
 	},
 	{ USB_VENDOR_ONSPEC, USB_PRODUCT_ONSPEC_MDCFE_B_CF_READER, RID_WILDCARD,
 	  UMASS_PROTO_SCSI,
@@ -755,6 +784,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	  UMASS_PROTO_RBC | UMASS_PROTO_CBI,
 	  NO_QUIRKS
 	},
+	{ USB_VENDOR_SONY, USB_PRODUCT_SONY_HANDYCAM, 0x0500,
+	  UMASS_PROTO_RBC | UMASS_PROTO_CBI,
+	  RBC_PAD_TO_12
+	},
 	{ USB_VENDOR_SONY, USB_PRODUCT_SONY_HANDYCAM, RID_WILDCARD,
 	  UMASS_PROTO_RBC | UMASS_PROTO_CBI,
 	  NO_QUIRKS
@@ -782,6 +815,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_SONY, USB_PRODUCT_SONY_PORTABLE_HDD_V2, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  NO_QUIRKS
+	},
+	{ USB_VENDOR_SUPERTOP, USB_PRODUCT_SUPERTOP_IDE, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  IGNORE_RESIDUE | NO_SYNCHRONIZE_CACHE
 	},
 	{ USB_VENDOR_TAUGA, USB_PRODUCT_TAUGA_CAMERAMATE, RID_WILDCARD,
 	  UMASS_PROTO_SCSI,
@@ -814,6 +851,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_TWINMOS, USB_PRODUCT_TWINMOS_MDIV, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  NO_QUIRKS
+	},
+	{ USB_VENDOR_VIA, USB_PRODUCT_VIA_USB2IDEBRIDGE, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_SYNCHRONIZE_CACHE
 	},
 	{ USB_VENDOR_VIVITAR, USB_PRODUCT_VIVITAR_35XX, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
@@ -850,6 +891,14 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_ZORAN, USB_PRODUCT_ZORAN_EX20DSC, RID_WILDCARD,
 	  UMASS_PROTO_ATAPI | UMASS_PROTO_CBI,
 	  NO_QUIRKS
+	},
+	{ USB_VENDOR_MEIZU, USB_PRODUCT_MEIZU_M6_SL, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_INQUIRY | NO_SYNCHRONIZE_CACHE
+	},
+	{ USB_VENDOR_ACTIONS, USB_PRODUCT_ACTIONS_MP4, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_SYNCHRONIZE_CACHE
 	},
 	{ VID_EOT, PID_EOT, RID_EOT, 0, 0 }
 };
@@ -1265,6 +1314,7 @@ umass_match(device_t self)
 	sc->sc_dev = self;
 	if (uaa->iface == NULL)
 		return(UMATCH_NONE);
+	
 	return(umass_match_proto(sc, uaa->iface, uaa->device));
 }
 
@@ -3504,9 +3554,10 @@ umass_atapi_transform(struct umass_softc *sc, unsigned char *cmd, int cmdlen,
 	case READ_12:
 	case WRITE_12:
 	default:
-		printf("%s: Unsupported ATAPI command 0x%02x"
-			" - trying anyway\n",
-			device_get_nameunit(sc->sc_dev), cmd[0]);
+		if (bootverbose)
+			printf("%s: Unsupported ATAPI command 0x%02x"
+				" - trying anyway\n",
+				device_get_nameunit(sc->sc_dev), cmd[0]);
 		memcpy(*rcmd, cmd, cmdlen);
 		return 1;
 	}
