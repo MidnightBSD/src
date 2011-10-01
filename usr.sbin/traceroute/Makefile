@@ -1,11 +1,12 @@
-# $FreeBSD: src/usr.sbin/traceroute/Makefile,v 1.21 2004/12/21 12:44:20 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: src/usr.sbin/traceroute/Makefile,v 1.22.2.2 2010/01/17 15:21:24 bz Exp $
 
 TRACEROUTE_DISTDIR?= ${.CURDIR}/../../contrib/traceroute
 .PATH: ${TRACEROUTE_DISTDIR}
 
 PROG=	traceroute
 MAN=	traceroute.8
-SRCS=	version.c traceroute.c ifaddrlist.c findsaddr-socket.c
+SRCS=	as.c version.c traceroute.c ifaddrlist.c findsaddr-socket.c
 BINOWN=	root
 BINMODE=4555
 CLEANFILES=	version.c
@@ -29,7 +30,7 @@ DPADD=	${LIBIPSEC}
 LDADD=	-lipsec
 .endif
 
-CFLAGS+= -I${TRACEROUTE_DISTDIR}/lbl
+CFLAGS+= -I${TRACEROUTE_DISTDIR}/lbl -I${TRACEROUTE_DISTDIR}
 
 version.c: ${TRACEROUTE_DISTDIR}/VERSION
 	@rm -f ${.TARGET}

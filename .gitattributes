@@ -20860,6 +20860,8 @@ contrib/traceroute/README -text
 contrib/traceroute/VERSION -text
 contrib/traceroute/aclocal.m4 -text
 contrib/traceroute/acsite.m4 -text
+contrib/traceroute/as.c -text
+contrib/traceroute/as.h -text
 contrib/traceroute/config.guess -text
 contrib/traceroute/config.sub -text
 contrib/traceroute/configure -text

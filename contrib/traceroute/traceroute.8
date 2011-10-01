@@ -13,10 +13,10 @@
 .\" IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 .\" WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 .\"
-.\"	$Id: traceroute.8,v 1.1.1.3 2008-11-19 22:13:33 laffer1 Exp $
-.\"	$FreeBSD: src/contrib/traceroute/traceroute.8,v 1.16 2006/10/15 17:44:49 dwmalone Exp $
+.\"	$Id: traceroute.8,v 1.2 2011-10-01 04:58:18 laffer1 Exp $
+.\"	$FreeBSD: src/contrib/traceroute/traceroute.8,v 1.16.2.1 2008/11/13 15:27:48 rpaulo Exp $
 .\"
-.TH TRACEROUTE 8 "21 September 2000"
+.TH TRACEROUTE 8 "19 February 2008"
 .UC 6
 .SH NAME
 traceroute \- print the route packets take to network host
@@ -24,7 +24,7 @@ traceroute \- print the route packets take to network host
 .na
 .B traceroute
 [
-.B \-dDeFISnrvx
+.B \-adDeFISnrvx
 ] [
 .B \-f
 .I first_ttl
@@ -71,6 +71,9 @@ traceroute \- print the route packets take to network host
 .B \-w
 .I waittime
 ] [
+.B \-A
+.I as_server
+] [
 .B \-z
 .I pausemsecs
 ]
@@ -97,6 +100,13 @@ by specifying a packet length (in bytes) after the destination host
 name.
 .PP
 Other options are:
+.TP
+.B \-a
+Turn on AS# lookups for each hop encountered.
+.TP
+.B -A
+Turn  on  AS#  lookups  and  use the given server instead of the
+default.
 .TP
 .B \-e
 Firewall evasion mode.
@@ -443,3 +453,7 @@ should listen for a RST from the destination host (or an intermediate
 router that's filtering packets), but this is not implemented yet.
 .PP
 Please send bug reports to traceroute@ee.lbl.gov.
+.PP
+The AS number capability reports information that may sometimes be
+inaccurate due to discrepancies between the contents of the
+routing database server and the current state of the Internet.

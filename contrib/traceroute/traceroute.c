@@ -25,10 +25,10 @@ static const char copyright[] =
 The Regents of the University of California.  All rights reserved.\n";
 #if 0
 static const char rcsid[] =
-    "@(#)$Id: traceroute.c,v 1.1.1.3 2008-11-19 22:13:33 laffer1 Exp $ (LBL)";
+    "@(#)$Id: traceroute.c,v 1.2 2011-10-01 04:58:18 laffer1 Exp $ (LBL)";
 #endif
 static const char rcsid[] =
-    "$FreeBSD: src/contrib/traceroute/traceroute.c,v 1.34 2007/07/01 12:08:05 gnn Exp $";
+    "$FreeBSD: src/contrib/traceroute/traceroute.c,v 1.34.2.3 2011/06/29 16:46:12 dim Exp $";
 #endif
 
 /*
@@ -263,6 +263,7 @@ static const char rcsid[] =
 
 #include "findsaddr.h"
 #include "ifaddrlist.h"
+#include "as.h"
 #include "traceroute.h"
 
 /* Maximum number of gateways (include room for one noop) */
@@ -350,6 +351,9 @@ int options;			/* socket options */
 int verbose;
 int waittime = 5;		/* time to wait for response (in seconds) */
 int nflag;			/* print addresses numerically */
+int as_path;			/* print as numbers for each hop */
+char *as_server = NULL;
+void *asn;
 #ifdef CANT_HACK_IPCKSUM
 int doipcksum = 0;		/* don't calculate ip checksums by default */
 #else
@@ -535,9 +539,17 @@ main(int argc, char **argv)
 		prog = argv[0];
 
 	opterr = 0;
-	while ((op = getopt(argc, argv, "edDFInrSvxf:g:i:M:m:P:p:q:s:t:w:z:")) != EOF)
+	while ((op = getopt(argc, argv, "aA:edDFInrSvxf:g:i:M:m:P:p:q:s:t:w:z:")) != EOF)
 		switch (op) {
-
+		case 'a':
+			as_path = 1;
+			break;
+			
+		case 'A':
+			as_path = 1;
+			as_server = optarg;
+			break;
+			    
 		case 'd':
 			options |= SO_DEBUG;
 			break;
@@ -913,6 +925,16 @@ main(int argc, char **argv)
 		exit (1);
 	}
 
+	if (as_path) {
+		asn = as_setup(as_server);
+		if (asn == NULL) {
+			Fprintf(stderr, "%s: as_setup failed, AS# lookups"
+			    " disabled\n", prog);
+			(void)fflush(stderr);
+			as_path = 0;
+		}
+	}
+	
 #if	defined(IPSEC) && defined(IPSEC_POLICY_IPSEC)
 	if (setpolicy(sndsock, "in bypass") < 0)
 		errx(1, "%s", ipsec_strerror());
@@ -1118,6 +1140,8 @@ main(int argc, char **argv)
 		    (unreachable > 0 && unreachable >= nprobes - 1))
 			break;
 	}
+	if (as_path)
+		as_shutdown(asn);
 	exit(0);
 }
 
@@ -1453,16 +1477,21 @@ print(register u_char *buf, register int cc, register struct sockaddr_in *from)
 {
 	register struct ip *ip;
 	register int hlen;
+	char addr[INET_ADDRSTRLEN];
 
 	ip = (struct ip *) buf;
 	hlen = ip->ip_hl << 2;
 	cc -= hlen;
 
+	strlcpy(addr, inet_ntoa(from->sin_addr), sizeof(addr));
+
+	if (as_path)
+		Printf(" [AS%u]", as_lookup(asn, addr, AF_INET));
+
 	if (nflag)
-		Printf(" %s", inet_ntoa(from->sin_addr));
+		Printf(" %s", addr);
 	else
-		Printf(" %s (%s)", inetname(from->sin_addr),
-		    inet_ntoa(from->sin_addr));
+		Printf(" %s (%s)", inetname(from->sin_addr), addr);
 
 	if (verbose)
 		Printf(" %d bytes to %s", cc, inet_ntoa (ip->ip_dst));
@@ -1596,7 +1625,7 @@ gethostinfo(register char *hostname)
 	register char **p;
 	register u_int32_t addr, *ap;
 
-	if (strlen(hostname) > 64) {
+	if (strlen(hostname) >= MAXHOSTNAMELEN) {
 		Fprintf(stderr, "%s: hostname \"%.32s...\" is too long\n",
 		    prog, hostname);
 		exit(1);
@@ -1764,8 +1793,8 @@ usage(void)
 
 	Fprintf(stderr, "Version %s\n", version);
 	Fprintf(stderr,
-	    "Usage: %s [-dDeFInrSvx] [-f first_ttl] [-g gateway] [-i iface]\n"
+	    "Usage: %s [-adDeFInrSvx] [-f first_ttl] [-g gateway] [-i iface]\n"
 	    "\t[-m max_ttl] [-p port] [-P proto] [-q nqueries] [-s src_addr]\n"
-	    "\t[-t tos] [-w waittime] [-z pausemsecs] host [packetlen]\n", prog);
+	    "\t[-t tos] [-w waittime] [-A as_server] [-z pausemsecs] host [packetlen]\n", prog);
 	exit(1);
 }
