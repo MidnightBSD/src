@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users
 
+20111004:
+	Fix a problem with unix socket handling caused by the recent
+	patch to unix socket path handling. This allows network
+	apps to work under the linuxolator again.
+
 20111001:
 	Import libfetch & fetch(1) from FreeBSD 9. Passive FTP is 
 	now default and an environment variable must be set to use
@@ -1080,4 +1085,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.135 2011/10/01 03:26:55 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.136 2011/10/01 04:47:31 laffer1 Exp $
