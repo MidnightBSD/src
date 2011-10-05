@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)script.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/script/script.1,v 1.21 2004/07/03 00:24:43 ru Exp $
+.\" $FreeBSD: src/usr.bin/script/script.1,v 1.21.18.2 2011/10/04 11:10:11 trociny Exp $
 .\"
 .Dd January 22, 2004
 .Dt SCRIPT 1
@@ -114,9 +114,22 @@ The
 utility works best with commands that do not manipulate the screen.
 The results are meant to emulate a hardcopy terminal, not an addressable one.
 .Sh ENVIRONMENT
-The following environment variable is utilized by
+The following environment variables are utilized by
 .Nm :
 .Bl -tag -width SHELL
+.It Ev SCRIPT
+The
+.Ev SCRIPT
+environment variable is added to the sub-shell.
+If
+.Ev SCRIPT
+already existed in the users environment,
+its value is overwritten within the sub-shell.
+The value of
+.Ev SCRIPT
+is the name of the
+.Ar typescript
+file.
 .It Ev SHELL
 If the variable
 .Ev SHELL
@@ -157,3 +170,12 @@ The slave terminal mode is checked
 for ECHO mode to check when to avoid manual echo logging.
 This does not
 work when in a raw mode where the program being run is doing manual echo.
+.Pp
+If the
+.Nm
+reads zero bytes from the terminal it switches to a mode when it probes read
+only once a second until it gets some data.
+This prevents the
+.Nm
+spinning on zero-byte reads, but might cause a 1-second delay in
+processing of the user input.
