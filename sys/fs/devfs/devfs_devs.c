@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/fs/devfs/devfs_devs.c,v 1.4 2008/12/03 00:25:41 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_devs.c,v 1.5 2009/12/13 01:09:43 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000,2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -534,6 +534,21 @@ devfs_destroy(struct cdev *dev)
 	cdp = dev->si_priv;
 	cdp->cdp_flags &= ~CDP_ACTIVE;
 	devfs_generation++;
+}
+
+ino_t
+devfs_alloc_cdp_inode(void)
+{
+
+	return (alloc_unr(devfs_inos));
+}
+
+void
+devfs_free_cdp_inode(ino_t ino)
+{
+
+	if (ino > 0)
+		free_unr(devfs_inos, ino);
 }
 
 static void

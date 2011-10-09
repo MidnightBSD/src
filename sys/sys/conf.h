@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/conf.h,v 1.4 2009/12/13 01:09:44 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/conf.h,v 1.5 2011/03/13 21:43:59 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -286,6 +286,9 @@ int	devfs_get_cdevpriv(void **datap);
 int	devfs_set_cdevpriv(void *priv, cdevpriv_dtr_t dtr);
 void	devfs_clear_cdevpriv(void);
 void	devfs_fpdrop(struct file *fp); /* XXX This is not public KPI */
+
+ino_t	devfs_alloc_cdp_inode(void);
+void	devfs_free_cdp_inode(ino_t ino);
 
 #define		UID_ROOT	0
 #define		UID_BIN		3

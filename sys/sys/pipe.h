@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/pipe.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1996 John S. Dyson
  * All rights reserved.
@@ -113,6 +113,7 @@ struct pipe {
 	u_int	pipe_state;		/* pipe status info */
 	int	pipe_busy;		/* busy flag, mostly to handle rundown sanely */
 	int	pipe_present;		/* still present? */
+	ino_t	pipe_ino;		/* fake inode for stat(2) */
 };
 
 /*
