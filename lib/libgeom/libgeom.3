@@ -26,9 +26,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libgeom/libgeom.3,v 1.8 2007/05/06 01:17:46 pjd Exp $
+.\" $FreeBSD: src/lib/libgeom/libgeom.3,v 1.8.2.2 2011/06/18 05:13:48 jh Exp $
 .\"
-.Dd May 6, 2007
+.Dd December 4, 2010
 .Dt LIBGEOM 3
 .Os
 .Sh NAME
@@ -117,7 +117,7 @@ interacting with the GEOM subsystem in the kernel.
 .Ss "Statistics Functions"
 GEOM collects statistics data for all consumers and providers, but does
 not perform any normalization or presentation on the raw data, this is
-left as an excercize for user-land presentation utilities.
+left as an exercise for user-land presentation utilities.
 .Pp
 The
 .Fn geom_stats_open
@@ -345,8 +345,6 @@ if (errstr != NULL)
     err(1, "could not destroy ccd: %s", errstr);
 gctl_free(H);
 .Ed
-.Sh SEE ALSO
-.Pa http://ezine.daemonnews.org/200308/blueprints.html
 .Sh HISTORY
 The
 .Nm geom
