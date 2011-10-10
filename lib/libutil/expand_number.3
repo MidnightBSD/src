@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libutil/expand_number.3,v 1.3 2007/09/28 15:31:44 obrien Exp $
+.\" $FreeBSD: src/lib/libutil/expand_number.3,v 1.3.2.1 2009/06/10 14:52:34 des Exp $
 .\"
 .Dd April 16, 2007
 .Dt EXPAND_NUMBER 3
@@ -37,7 +37,7 @@
 .In libutil.h
 .Ft int
 .Fo expand_number
-.Fa "char *buf" "int64_t *num"
+.Fa "const char *buf" "int64_t *num"
 .Fc
 .Sh DESCRIPTION
 The

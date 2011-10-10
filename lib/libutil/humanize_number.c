@@ -1,4 +1,4 @@
-/*	$NetBSD: humanize_number.c,v 1.8 2004/07/27 01:56:24 enami Exp $	*/
+/*	$NetBSD: humanize_number.c,v 1.13 2007/12/14 17:26:19 christos Exp $	*/
 
 /*
  * Copyright (c) 1997, 1998, 1999, 2002 The NetBSD Foundation, Inc.
@@ -38,10 +38,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/humanize_number.c,v 1.2 2004/09/25 14:11:34 pjd Exp $");
+__FBSDID("$FreeBSD: src/lib/libutil/humanize_number.c,v 1.2.10.2 2011/04/22 00:32:16 delphij Exp $");
 
 #include <sys/types.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,17 +50,19 @@ __FBSDID("$FreeBSD: src/lib/libutil/humanize_number.c,v 1.2 2004/09/25 14:11:34 
 #include <libutil.h>
 
 int
-humanize_number(char *buf, size_t len, int64_t bytes,
+humanize_number(char *buf, size_t len, int64_t quotient,
     const char *suffix, int scale, int flags)
 {
 	const char *prefixes, *sep;
-	int	b, i, r, maxscale, s1, s2, sign;
+	int	i, r, remainder, maxscale, s1, s2, sign;
 	int64_t	divisor, max;
 	size_t	baselen;
 
 	assert(buf != NULL);
 	assert(suffix != NULL);
 	assert(scale >= 0);
+
+	remainder = 0;
 
 	if (flags & HN_DIVISOR_1000) {
 		/* SI for decimal multiplies */
@@ -92,13 +95,12 @@ humanize_number(char *buf, size_t len, int64_t bytes,
 
 	if (len > 0)
 		buf[0] = '\0';
-	if (bytes < 0) {
+	if (quotient < 0) {
 		sign = -1;
-		bytes *= -100;
+		quotient = -quotient;
 		baselen = 3;		/* sign, digit, prefix */
 	} else {
 		sign = 1;
-		bytes *= 100;
 		baselen = 2;		/* digit, prefix */
 	}
 	if (flags & HN_NOSPACE)
@@ -115,34 +117,45 @@ humanize_number(char *buf, size_t len, int64_t bytes,
 
 	if (scale & (HN_AUTOSCALE | HN_GETSCALE)) {
 		/* See if there is additional columns can be used. */
-		for (max = 100, i = len - baselen; i-- > 0;)
+		for (max = 1, i = len - baselen; i-- > 0;)
 			max *= 10;
 
-		for (i = 0; bytes >= max && i < maxscale; i++)
-			bytes /= divisor;
+		/*
+		 * Divide the number until it fits the given column.
+		 * If there will be an overflow by the rounding below,
+		 * divide once more.
+		 */
+		for (i = 0;
+		    (quotient >= max || (quotient == max - 1 && remainder >= 950)) &&
+		    i < maxscale; i++) {
+			remainder = quotient % divisor;
+			quotient /= divisor;
+		}
 
 		if (scale & HN_GETSCALE)
 			return (i);
-	} else
-		for (i = 0; i < scale && i < maxscale; i++)
-			bytes /= divisor;
+	} else {
+		for (i = 0; i < scale && i < maxscale; i++) {
+			remainder = quotient % divisor;
+			quotient /= divisor;
+		}
+	}
 
 	/* If a value <= 9.9 after rounding and ... */
-	if (bytes < 995 && i > 0 && flags & HN_DECIMAL) {
+	if (quotient <= 9 && remainder < 950 && i > 0 && flags & HN_DECIMAL) {
 		/* baselen + \0 + .N */
 		if (len < baselen + 1 + 2)
 			return (-1);
-		b = ((int)bytes + 5) / 10;
-		s1 = b / 10;
-		s2 = b % 10;
+		s1 = (int)quotient + ((remainder + 50) / 1000);
+		s2 = ((remainder + 50) / 100) % 10;
 		r = snprintf(buf, len, "%d%s%d%s%s%s",
 		    sign * s1, localeconv()->decimal_point, s2,
 		    sep, SCALE2PREFIX(i), suffix);
 	} else
-		r = snprintf(buf, len, "%lld%s%s%s",
-		    /* LONGLONG */
-		    (long long)(sign * ((bytes + 50) / 100)),
+		r = snprintf(buf, len, "%" PRId64 "%s%s%s",
+		    sign * (quotient + (remainder + 50) / 1000),
 		    sep, SCALE2PREFIX(i), suffix);
 
 	return (r);
 }
+

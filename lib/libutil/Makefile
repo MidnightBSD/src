@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 #	$FreeBSD: src/lib/libutil/Makefile,v 1.56.8.2 2006/01/15 17:50:35 delphij Exp $
-# 	$MidnightBSD: src/lib/libutil/Makefile,v 1.6 2008/12/13 22:53:26 laffer1 Exp $
+# 	$MidnightBSD: src/lib/libutil/Makefile,v 1.7 2011/03/15 16:21:34 laffer1 Exp $
 
 SHLIBDIR?= /lib
 
@@ -9,12 +9,14 @@ SHLIBDIR?= /lib
 LIB=	util
 SHLIB_MAJOR= 7
 SRCS=	_secure_path.c auth.c expand_number.c flopen.c efun.c fparseln.c \
-	humanize_number.c kld.c login.c \
+	gr_util.c humanize_number.c kld.c login.c \
 	login_auth.c login_cap.c login_class.c login_crypt.c login_ok.c \
 	login_times.c login_tty.c logout.c logwtmp.c \
 	pidfile.c property.c pty.c pw_util.c realhostname.c stub.c \
 	trimdomain.c uucplock.c
 INCS=	libutil.h login_cap.h
+
+WARNS?=	6
 
 CFLAGS+= -DLIBC_SCCS
 

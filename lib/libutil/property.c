@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/lib/libutil/property.c,v 1.14 2005/11/28 16:30:16 jhb Exp $ */
-__MBSDID("$MidnightBSD: src/lib/libutil/property.c,v 1.3 2011/03/19 19:30:28 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libutil/property.c,v 1.4 2011/03/19 23:37:16 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -246,7 +246,7 @@ property_find(properties list, const char *name)
 }
 
 int
-property_count(properties list)
+properties_count(properties list)
 {
 	int count = 1;
 	struct _property *next_ptr;

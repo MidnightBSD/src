@@ -26,11 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/expand_number.c,v 1.2 2007/09/05 14:27:13 pjd Exp $");
+__FBSDID("$FreeBSD: src/lib/libutil/expand_number.c,v 1.2.4.2 2009/06/10 14:52:34 des Exp $");
 
 #include <sys/types.h>
 #include <ctype.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <libutil.h>
 #include <stdint.h>
 
@@ -46,7 +47,7 @@ __FBSDID("$FreeBSD: src/lib/libutil/expand_number.c,v 1.2 2007/09/05 14:27:13 pj
  *	8) A positive decimal number followed by a 'e' or 'E' (mult by 1 << 60).
  */
 int
-expand_number(char *buf, int64_t *num)
+expand_number(const char *buf, int64_t *num)
 {
 	static const char unit[] = "bkmgtpe";
 	char *endptr, s;

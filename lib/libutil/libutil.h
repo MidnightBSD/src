@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libutil/libutil.h,v 1.5 2011/03/15 16:21:34 laffer1 Exp $
+ * $MidnightBSD: src/lib/libutil/libutil.h,v 1.6 2011/03/19 19:30:28 laffer1 Exp $
  * $FreeBSD: src/lib/libutil/libutil.h,v 1.40.8.1 2006/01/15 17:50:35 delphij Exp $
  */
 
@@ -90,7 +90,7 @@ int	forkpty(int *_amaster, char *_name,
 		     struct termios *_termp, struct winsize *_winp);
 int	humanize_number(char *_buf, size_t _len, int64_t _number,
 	    const char *_suffix, int _scale, int _flags);
-int	expand_number(char *_buf, int64_t *_num);
+int	expand_number(const char *_buf, int64_t *_num);
 const char *uu_lockerr(int _uu_lockresult);
 int	uu_lock(const char *_ttyname);
 int	uu_unlock(const char *_ttyname);
@@ -141,6 +141,13 @@ int	pw_lock(void);
 struct passwd *pw_scan(const char *_line, int _flags);
 const char *pw_tempname(void);
 int	pw_tmp(int _mfd);
+#endif
+
+#ifdef _GRP_H_
+int	gr_equal(const struct group *gr1, const struct group *gr2);
+char	*gr_make(const struct group *gr);
+struct group *gr_dup(const struct group *gr);
+struct group *gr_scan(const char *line);
 #endif
 
 #ifdef _SYS_PARAM_H_

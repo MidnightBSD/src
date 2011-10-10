@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/login_cap.c,v 1.34 2007/06/14 06:42:49 yar Exp $");
+__FBSDID("$FreeBSD: src/lib/libutil/login_cap.c,v 1.34.2.1 2009/05/14 01:38:06 des Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -60,6 +60,8 @@ static size_t internal_stringsz = 0;
 static char * internal_string = NULL;
 static size_t internal_arraysz = 0;
 static const char ** internal_array = NULL;
+
+static char path_login_conf[] = _PATH_LOGIN_CONF;
 
 static char *
 allocstr(const char *str)
@@ -215,15 +217,14 @@ login_getclassbyname(char const *name, const struct passwd *pwd)
 
 	if (dir && snprintf(userpath, MAXPATHLEN, "%s/%s", dir,
 			    _FILE_LOGIN_CONF) < MAXPATHLEN) {
-	    login_dbarray[i] = userpath;
 	    if (_secure_path(userpath, pwd->pw_uid, pwd->pw_gid) != -1)
-		i++;		/* only use 'secure' data */
+		login_dbarray[i++] = userpath;
 	}
 	/*
 	 * XXX: Why to add the system database if the class is `me'?
 	 */
-	if (_secure_path(_PATH_LOGIN_CONF, 0, 0) != -1)
-	    login_dbarray[i++] = _PATH_LOGIN_CONF;
+	if (_secure_path(path_login_conf, 0, 0) != -1)
+	    login_dbarray[i++] = path_login_conf;
 	login_dbarray[i] = NULL;
 
 	memset(lc, 0, sizeof(login_cap_t));

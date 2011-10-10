@@ -147,8 +147,10 @@ int in_ltms(const login_time_t *, struct tm *, time_t *);
 
 /* helper functions */
 
+int in_lt(const login_time_t *, time_t *);
 int login_strinlist(const char **, char const *, int);
 int login_str2inlist(const char **, const char *, const char *, int);
+int in_lts(const login_time_t *, time_t *);
 login_time_t * login_timelist(login_cap_t *, char const *, int *, login_time_t **);
 int login_ttyok(login_cap_t *, const char *, const char *, const char *);
 int login_hostok(login_cap_t *, const char *, const char *, const char *, const char *);

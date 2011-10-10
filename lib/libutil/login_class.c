@@ -89,7 +89,7 @@ setclassresources(login_cap_t *lc)
 	if (getrlimit(lr->why, &rlim) != 0)
 	    syslog(LOG_ERR, "getting %s resource limit: %m", lr->what);
 	else {
-	    char  	name_cur[40];
+	    char 	name_cur[40];
 	    char	name_max[40];
 	    rlim_t	rcur = rlim.rlim_cur;
 	    rlim_t	rmax = rlim.rlim_max;
@@ -137,14 +137,13 @@ substvar(const char * var, const struct passwd * pwd, int hlen, int pch, int nle
 	int	tildes = 0;
 	int	dollas = 0;
 	char	*p;
+        const char *q;
 
 	if (pwd != NULL) {
-	    /* Count the number of ~'s in var to substitute */
-	    for (p = (char *)var; (p = strchr(p, '~')) != NULL; p++)
-		++tildes;
-	    /* Count the number of $'s in var to substitute */
-	    for (p = (char *)var; (p = strchr(p, '$')) != NULL; p++)
-		++dollas;
+		for (q = var; *q != '\0'; ++q) {
+			tildes += (*q == '~');
+			dollas += (*q == '$');
+		}
 	}
 
 	np = malloc(strlen(var) + (dollas * nlen)
@@ -182,7 +181,7 @@ substvar(const char * var, const struct passwd * pwd, int hlen, int pch, int nle
 	}
     }
 
-    return np;
+    return (np);
 }
 
 
