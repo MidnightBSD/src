@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/inf.c,v 1.16 2005/05/15 19:46:14 wpaul Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/inf.c,v 1.16.10.2 2008/08/22 03:15:50 thompsa Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -258,10 +258,7 @@ dump_deviceids_pci()
 	struct section *sec;
 	struct assign *assign;
 	char xpsec[256];
-	int found = 0;
-
-	/* Emit start of PCI device table */
-	fprintf (ofp, "#define NDIS_PCI_DEV_TABLE");
+	int first = 1, found = 0;
 
 	/* Find manufacturer name */
 	manf = find_assign("Manufacturer", NULL);
@@ -297,6 +294,12 @@ nextmanf:
 		goto done;
 
 	found = 0;
+
+	if (first == 1) {
+		/* Emit start of PCI device table */
+		fprintf (ofp, "#define NDIS_PCI_DEV_TABLE");
+		first = 0;
+	}
 
 retry:
 
@@ -348,7 +351,7 @@ dump_deviceids_pcmcia()
 	struct section *sec;
 	struct assign *assign;
 	char xpsec[256];
-	int found = 0;
+	int first = 1, found = 0;
 
 	/* Find manufacturer name */
 	manf = find_assign("Manufacturer", NULL);
@@ -385,8 +388,11 @@ nextmanf:
 
 	found = 0;
 
-	/* Emit start of PCMCIA device table */
-	fprintf (ofp, "#define NDIS_PCMCIA_DEV_TABLE");
+	if (first == 1) {
+		/* Emit start of PCMCIA device table */
+		fprintf (ofp, "#define NDIS_PCMCIA_DEV_TABLE");
+		first = 0;
+	}
 
 retry:
 
@@ -539,8 +545,10 @@ dump_defaultinfo(const struct section *s, const struct reg *r, int devidx)
 			continue;
 		fprintf(ofp, "\n\t{ \"%s\" }, %d },", reg->value == NULL ? "" :
 		    stringcvt(reg->value), devidx);
-			break;
+		return;
 	}
+	/* Default registry entry missing */
+	fprintf(ofp, "\n\t{ \"\" }, %d },", devidx);
 	return;
 }
 
