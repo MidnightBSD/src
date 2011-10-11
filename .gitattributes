@@ -43154,6 +43154,9 @@ usr.sbin/sensorsd/Makefile -text
 usr.sbin/sensorsd/sensorsd.8 -text
 usr.sbin/sensorsd/sensorsd.c -text
 usr.sbin/sensorsd/sensorsd.conf.5 -text
+usr.sbin/service/Makefile -text
+usr.sbin/service/service.8 -text
+usr.sbin/service/service.sh -text
 usr.sbin/setfmac/Makefile -text
 usr.sbin/setfmac/setfmac.8 -text
 usr.sbin/setfmac/setfmac.c -text
