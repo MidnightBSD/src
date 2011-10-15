@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/cd9660/cd9660_rrip.c,v 1.2 2008/12/03 00:25:40 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/cd9660/cd9660_rrip.c,v 1.30 2007/02/11 13:54:25 rodrigc Exp $");
+__FBSDID("$FreeBSD: src/sys/fs/cd9660/cd9660_rrip.c,v 1.30.6.2 2008/11/29 05:08:49 kientzle Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -468,8 +468,12 @@ cd9660_rrip_extref(p,ana)
 	ISO_RRIP_EXTREF *p;
 	ISO_RRIP_ANALYZE *ana;
 {
-	if (isonum_711(p->len_id) != 10
-	    || bcmp((char *)p + 8,"RRIP_1991A",10)
+	if ( ! ((isonum_711(p->len_id) == 10
+	      && bcmp((char *)p + 8,"RRIP_1991A",10) == 0)
+	    || (isonum_711(p->len_id) == 10
+	      && bcmp((char *)p + 8,"IEEE_P1282",10) == 0)
+	    || (isonum_711(p->len_id) ==  9
+	      && bcmp((char *)p + 8,"IEEE_1282",  9) == 0))
 	    || isonum_711(p->version) != 1)
 		return 0;
 	ana->fields &= ~ISO_SUSP_EXTREF;

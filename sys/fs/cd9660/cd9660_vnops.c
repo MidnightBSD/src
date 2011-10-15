@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/cd9660/cd9660_vnops.c,v 1.2 2008/12/03 00:25:40 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -496,6 +496,7 @@ cd9660_readdir(ap)
 	}
 	idp->eofflag = 1;
 	idp->curroff = uio->uio_offset;
+	idp->uio_off = uio->uio_offset;
 
 	if ((entryoffsetinblock = idp->curroff & bmask) &&
 	    (error = cd9660_blkatoff(vdp, (off_t)idp->curroff, NULL, &bp))) {
