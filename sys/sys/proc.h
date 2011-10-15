@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/proc.h,v 1.6 2008/12/03 00:11:22 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/proc.h,v 1.7 2011/03/13 21:43:59 laffer1 Exp $ */
 /*-
  * Copyright (c) 1986, 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -164,6 +164,7 @@ struct thread;
 struct trapframe;
 struct turnstile;
 struct mqueue_notifier;
+struct cpuset;
 
 /*
  * Here we define the two structures used for process information.
@@ -300,6 +301,8 @@ struct thread {
 	struct td_sched	*td_sched;	/* (*) Scheduler-specific data. */
 	struct kaudit_record	*td_ar;	/* (k) Active audit record, if any. */
 	int		td_syscalls;	/* per-thread syscall count (used by NFS :)) */
+	uint64_t        td_incruntime;  /* (t) Cpu ticks to transfer to proc. */
+	struct cpuset   *td_cpuset;     /* (t) CPU affinity mask. */
 };
 
 struct mtx *thread_lock_block(struct thread *);

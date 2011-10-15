@@ -1,5 +1,6 @@
 /*
- * $FreeBSD: src/lib/libc/sys/Symbol.map,v 1.9 2007/08/22 01:56:35 davidxu Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/lib/libc/sys/Symbol.map,v 1.9.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -335,6 +336,14 @@ FBSD_1.0 {
 	truncate;
 };
 
+FBSD_1.1 {
+	cpuset;
+	cpuset_getid;
+	cpuset_setid;
+	cpuset_getaffinity;
+	cpuset_setaffinity;
+};
+
 FBSDprivate_1.0 {
 	___acl_aclcheck_fd;
 	__sys___acl_aclcheck_fd;
@@ -450,6 +459,16 @@ FBSDprivate_1.0 {
 	__sys_close;
 	_connect;
 	__sys_connect;
+	_cpuset;
+	__sys_cpuset;
+	_cpuset_getid;
+	__sys_cpuset_getid;
+	_cpuset_setid;
+	__sys_cpuset_setid;
+	_cpuset_getaffinity;
+	__sys_cpuset_getaffinity;
+	_cpuset_setaffinity;
+	__sys_cpuset_setaffinity;
 	_dup;
 	__sys_dup;
 	_dup2;

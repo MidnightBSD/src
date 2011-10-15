@@ -1,5 +1,18 @@
 Updating Information for MidnightBSD users
 
+20111015:
+	Introduce CPU Affinity in MidnightBSD. cpuset(1) can be used
+	to control which core or group of cores can be used for a given
+	process. Several new system calls were added to support this
+	functionality in the running kernel and for 32bit binary
+	compatibility on amd64. 
+
+	The scheduler default has been changed to ULE in i386 and
+	amd64.  Changes were made to both schedulers (4BSD AND ULE)
+	for this feature. 
+
+	This work is based on Jeff Roberson's FreeBSD 7.1 patches.
+
 20111004:
 	Fix a problem with unix socket handling caused by the recent
 	patch to unix socket path handling. This allows network
@@ -1085,4 +1098,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.136 2011/10/01 04:47:31 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.137 2011/10/05 02:05:38 laffer1 Exp $

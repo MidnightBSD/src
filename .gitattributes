@@ -37134,6 +37134,7 @@ sys/kern/kern_condvar.c -text
 sys/kern/kern_conf.c -text
 sys/kern/kern_context.c -text
 sys/kern/kern_cpu.c -text
+sys/kern/kern_cpuset.c -text
 sys/kern/kern_descrip.c -text
 sys/kern/kern_environment.c -text
 sys/kern/kern_event.c -text
@@ -39013,6 +39014,7 @@ sys/sys/cons.h -text
 sys/sys/consio.h -text
 sys/sys/copyright.h -text
 sys/sys/cpu.h -text
+sys/sys/cpuset.h -text
 sys/sys/ctype.h -text
 sys/sys/dataacq.h -text
 sys/sys/device_port.h -text
@@ -40487,6 +40489,9 @@ usr.bin/cpio/test/test_pathmatch.c -text
 usr.bin/cpufreq/Makefile -text
 usr.bin/cpufreq/cpufreq.1 -text
 usr.bin/cpufreq/cpufreq.c -text
+usr.bin/cpuset/Makefile -text
+usr.bin/cpuset/cpuset.1 -text
+usr.bin/cpuset/cpuset.c -text
 usr.bin/csplit/Makefile -text
 usr.bin/csplit/csplit.1 -text
 usr.bin/csplit/csplit.c -text

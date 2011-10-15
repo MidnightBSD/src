@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/priv.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 nCircle Network Security, Inc.
  * All rights reserved.
@@ -188,6 +188,7 @@
 #define	PRIV_SCHED_SETPOLICY	203	/* Can set scheduler policy. */
 #define	PRIV_SCHED_SET		204	/* Can set thread scheduler. */
 #define	PRIV_SCHED_SETPARAM	205	/* Can set thread scheduler params. */
+#define PRIV_SCHED_CPUSET	206	/* Can manipulate cpusets. */
 
 /*
  * POSIX semaphore privileges.

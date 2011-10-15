@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/_types.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -62,6 +62,9 @@ typedef	struct __timer	*__timer_t;	/* timer_gettime()... */
 typedef	struct __mq	*__mqd_t;	/* mq_open()... */
 typedef	__uint32_t	__uid_t;
 typedef	unsigned int	__useconds_t;	/* microseconds (unsigned) */
+typedef	int		__cpuwhich_t;	/* which parameter for cpuset. */
+typedef	int		__cpulevel_t;	/* level parameter for cpuset. */
+typedef	int		__cpusetid_t;	/* cpuset identifier. */
 
 /*
  * Unusual type definitions.

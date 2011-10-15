@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.4 2008/12/03 00:24:35 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -31,13 +31,11 @@ __FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.67.2.3 2007/12
 #include "opt_compat.h"
 
 #include <sys/param.h>
-#include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/clock.h>
 #include <sys/exec.h>
 #include <sys/fcntl.h>
 #include <sys/filedesc.h>
-#include <sys/namei.h>
 #include <sys/imgact.h>
 #include <sys/kernel.h>
 #include <sys/limits.h>
@@ -49,6 +47,7 @@ __FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.67.2.3 2007/12
 #include <sys/module.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
+#include <sys/namei.h>
 #include <sys/proc.h>
 #include <sys/reboot.h>
 #include <sys/resource.h>
@@ -66,6 +65,7 @@ __FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.67.2.3 2007/12
 #include <sys/sysctl.h>
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
+#include <sys/systm.h>
 #include <sys/thr.h>
 #include <sys/unistd.h>
 #include <sys/ucontext.h>
@@ -85,6 +85,8 @@ __FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.67.2.3 2007/12
 #include <vm/vm_extern.h>
 
 #include <machine/cpu.h>
+
+#include <security/audit/audit.h>
 
 #include <compat/freebsd32/freebsd32_util.h>
 #include <compat/freebsd32/freebsd32.h>
@@ -1723,6 +1725,24 @@ freebsd32_ftruncate(struct thread *td, struct freebsd32_ftruncate_args *uap)
 	return (ftruncate(td, &ap));
 }
 
+int
+freebsd32_getdirentries(struct thread *td,
+    struct freebsd32_getdirentries_args *uap)
+{
+	long base;
+	int32_t base32;
+	int error;
+
+	error = kern_getdirentries(td, uap->fd, uap->buf, uap->count, &base);
+	if (error)
+		return (error);
+	if (uap->basep != NULL) {
+		base32 = base;
+		error = copyout(&base32, uap->basep, sizeof(int32_t));
+	}
+	return (error);
+}
+
 #ifdef COMPAT_FREEBSD6
 /* versions with the 'int pad' argument */
 int
@@ -2370,7 +2390,7 @@ siginfo_to_siginfo32(siginfo_t *src, struct siginfo32 *dst)
 	dst->si_pid = src->si_pid;
 	dst->si_uid = src->si_uid;
 	dst->si_status = src->si_status;
-	dst->si_addr = dst->si_addr;
+	dst->si_addr = (uintptr_t)src->si_addr;
 	dst->si_value.sigval_int = src->si_value.sival_int;
 	dst->si_timerid = src->si_timerid;
 	dst->si_overrun = src->si_overrun;
@@ -2443,14 +2463,115 @@ freebsd32_sigwaitinfo(struct thread *td, struct freebsd32_sigwaitinfo_args *uap)
 	return (error);
 }
 
-#if 0
+int
+freebsd32_cpuset_setid(struct thread *td,
+    struct freebsd32_cpuset_setid_args *uap)
+{
+	struct cpuset_setid_args ap;
 
+	ap.which = uap->which;
+	ap.id = (uap->idlo | ((id_t)uap->idhi << 32));
+	ap.setid = uap->setid;
+
+	return cpuset_setid(td, &ap);
+}
+
+int
+freebsd32_cpuset_getid(struct thread *td,
+    struct freebsd32_cpuset_getid_args *uap)
+{
+	struct cpuset_getid_args ap;
+
+	ap.level = uap->level;
+	ap.which = uap->which;
+	ap.id = (uap->idlo | ((id_t)uap->idhi << 32));
+	ap.setid = uap->setid;
+
+	return cpuset_getid(td, &ap);
+}
+
+int
+freebsd32_cpuset_getaffinity(struct thread *td,
+    struct freebsd32_cpuset_getaffinity_args *uap)
+{
+	struct cpuset_getaffinity_args ap;
+
+	ap.level = uap->level;
+	ap.which = uap->which;
+	ap.id = (uap->idlo | ((id_t)uap->idhi << 32));
+	ap.cpusetsize = uap->cpusetsize;
+	ap.mask = uap->mask;
+
+	return cpuset_getaffinity(td, &ap);
+}
+
+int
+freebsd32_cpuset_setaffinity(struct thread *td,
+    struct freebsd32_cpuset_setaffinity_args *uap)
+{
+	struct cpuset_setaffinity_args ap;
+
+	ap.level = uap->level;
+	ap.which = uap->which;
+	ap.id = (uap->idlo | ((id_t)uap->idhi << 32));
+	ap.cpusetsize = uap->cpusetsize;
+	ap.mask = uap->mask;
+
+	return cpuset_setaffinity(td, &ap);
+}
+
+int
+freebsd32_nmount(struct thread *td,
+    struct freebsd32_nmount_args /* {
+    	struct iovec *iovp;
+    	unsigned int iovcnt;
+    	int flags;
+    } */ *uap)
+{
+	struct uio *auio;
+	struct iovec *iov;
+	int error, k;
+
+	AUDIT_ARG(fflags, uap->flags);
+
+	/*
+	 * Filter out MNT_ROOTFS.  We do not want clients of nmount() in
+	 * userspace to set this flag, but we must filter it out if we want
+	 * MNT_UPDATE on the root file system to work.
+	 * MNT_ROOTFS should only be set in the kernel in vfs_mountroot_try().
+	 */
+	uap->flags &= ~MNT_ROOTFS;
+
+	/*
+	 * check that we have an even number of iovec's
+	 * and that we have at least two options.
+	 */
+	if ((uap->iovcnt & 1) || (uap->iovcnt < 4))
+		return (EINVAL);
+
+	error = freebsd32_copyinuio(uap->iovp, uap->iovcnt, &auio);
+	if (error)
+		return (error);
+	for (iov = auio->uio_iov, k = 0; k < uap->iovcnt; ++k, ++iov) {
+		if (iov->iov_len > MMAXOPTIONLEN) {
+			free(auio, M_IOV);
+			return (EINVAL);
+		}
+	}
+
+	error = vfs_donmount(td, uap->flags, auio);
+	free(auio, M_IOV);
+	return error;
+}
+
+#if 0
 int
 freebsd32_xxx(struct thread *td, struct freebsd32_xxx_args *uap)
 {
-	int error;
 	struct yyy32 *p32, s32;
 	struct yyy *p = NULL, s;
+	struct xxx_arg ap;
+	int error;
 
 	if (uap->zzz) {
 		error = copyin(uap->zzz, &s32, sizeof(s32));
@@ -2468,5 +2589,4 @@ freebsd32_xxx(struct thread *td, struct freebsd32_xxx_args *uap)
 	}
 	return (error);
 }
-
 #endif

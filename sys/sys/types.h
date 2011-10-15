@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/types.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -124,6 +124,10 @@ typedef	__volatile char *v_caddr_t;	/* core address, pointer to volatile */
 typedef	__blksize_t	blksize_t;
 #define	_BLKSIZE_T_DECLARED
 #endif
+
+typedef	__cpuwhich_t	cpuwhich_t;
+typedef	__cpulevel_t	cpulevel_t;
+typedef	__cpusetid_t	cpusetid_t;
 
 #ifndef _BLKCNT_T_DECLARED
 typedef	__blkcnt_t	blkcnt_t;

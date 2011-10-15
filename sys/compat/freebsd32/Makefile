@@ -1,6 +1,7 @@
 # Makefile for syscall tables
 #
 # $FreeBSD: src/sys/compat/freebsd32/Makefile,v 1.4 2005/10/23 23:58:23 obrien Exp $
+# $MidnightBSD$
 
 all:
 	@echo "make sysent only"

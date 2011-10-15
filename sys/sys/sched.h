@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/sched.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1996, 1997
  *      HD Associates, Inc.  All rights reserved.
@@ -130,6 +130,7 @@ static __inline void sched_pin(void);
 void	sched_unbind(struct thread *td);
 static __inline void sched_unpin(void);
 int	sched_is_bound(struct thread *td);
+void	sched_affinity(struct thread *td);
 
 /*
  * These procedures tell the process data structure allocation code how

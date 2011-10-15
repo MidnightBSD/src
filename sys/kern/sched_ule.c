@@ -36,7 +36,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sched_ule.c,v 1.214.2.2 2007/12/20 07:15:40 davidxu Exp $");
+/* $FreeBSD: src/sys/kern/sched_ule.c,v 1.214.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include "opt_hwpmc_hooks.h"
 #include "opt_sched.h"
@@ -59,6 +60,7 @@ __FBSDID("$FreeBSD: src/sys/kern/sched_ule.c,v 1.214.2.2 2007/12/20 07:15:40 dav
 #include <sys/turnstile.h>
 #include <sys/umtx.h>
 #include <sys/vmmeter.h>
+#include <sys/cpuset.h>
 #ifdef KTRACE
 #include <sys/uio.h>
 #include <sys/ktrace.h>
@@ -66,6 +68,12 @@ __FBSDID("$FreeBSD: src/sys/kern/sched_ule.c,v 1.214.2.2 2007/12/20 07:15:40 dav
 
 #ifdef HWPMC_HOOKS
 #include <sys/pmckern.h>
+#endif
+
+#ifdef KDTRACE_HOOKS
+#include <sys/dtrace_bsd.h>
+int				dtrace_vtime_active;
+dtrace_vtime_switch_func_t	dtrace_vtime_switch_func;
 #endif
 
 #include <machine/cpu.h>
@@ -104,6 +112,10 @@ struct td_sched {
 #define	TSF_XFERABLE	0x0002		/* Thread was added as transferable. */
 
 static struct td_sched td_sched0;
+
+#define	THREAD_CAN_MIGRATE(td)	((td)->td_pinned == 0)
+#define	THREAD_CAN_SCHED(td, cpu)	\
+    CPU_ISSET((cpu), &(td)->td_cpuset->cs_mask)
 
 /*
  * Cpu percentage computation macros and defines.
@@ -297,9 +309,9 @@ static void tdq_add(struct tdq *, struct thread *, int);
 static void tdq_move(struct tdq *, struct tdq *);
 static int tdq_idled(struct tdq *);
 static void tdq_notify(struct td_sched *);
-static struct td_sched *tdq_steal(struct tdq *);
-static struct td_sched *runq_steal(struct runq *);
-static int sched_pickcpu(struct td_sched *, int);
+static struct td_sched *tdq_steal(struct tdq *, int);
+static struct td_sched *runq_steal(struct runq *, int);
+static int sched_pickcpu(struct thread *, int);
 static void sched_balance(void);
 static void sched_balance_groups(void);
 static void sched_balance_group(struct tdq_group *);
@@ -308,15 +320,14 @@ static inline struct tdq *sched_setcpu(struct td_sched *, int, int);
 static inline struct mtx *thread_block_switch(struct thread *);
 static inline void thread_unblock_switch(struct thread *, struct mtx *);
 static struct mtx *sched_switch_migrate(struct tdq *, struct thread *, int);
-
-#define	THREAD_CAN_MIGRATE(td)	 ((td)->td_pinned == 0)
 #endif
 
 static void sched_setup(void *dummy);
-SYSINIT(sched_setup, SI_SUB_RUN_QUEUE, SI_ORDER_FIRST, sched_setup, NULL)
+SYSINIT(sched_setup, SI_SUB_RUN_QUEUE, SI_ORDER_FIRST, sched_setup, NULL);
 
 static void sched_initticks(void *dummy);
-SYSINIT(sched_initticks, SI_SUB_CLOCKS, SI_ORDER_THIRD, sched_initticks, NULL)
+SYSINIT(sched_initticks, SI_SUB_CLOCKS, SI_ORDER_THIRD, sched_initticks,
+    NULL);
 
 /*
  * Print the threads waiting on a run-queue.
@@ -699,7 +710,7 @@ tdq_move(struct tdq *from, struct tdq *to)
 
 	tdq = from;
 	cpu = TDQ_ID(to);
-	ts = tdq_steal(tdq);
+	ts = tdq_steal(tdq, cpu);
 	if (ts == NULL) {
 		struct tdq_group *tdg;
 
@@ -707,7 +718,7 @@ tdq_move(struct tdq *from, struct tdq *to)
 		LIST_FOREACH(tdq, &tdg->tdg_members, tdq_siblings) {
 			if (tdq == from || tdq->tdq_transferable == 0)
 				continue;
-			ts = tdq_steal(tdq);
+			ts = tdq_steal(tdq, cpu);
 			break;
 		}
 		if (ts == NULL)
@@ -845,7 +856,6 @@ tdq_notify(struct td_sched *ts)
 	if (pri > preempt_thresh)
 		return;
 sendipi:
-	ctd->td_flags |= TDF_NEEDRESCHED;
 	ipi_selected(1 << cpu, IPI_PREEMPT);
 }
 
@@ -854,7 +864,7 @@ sendipi:
  * index.
  */
 static struct td_sched *
-runq_steal_from(struct runq *rq, u_char start)
+runq_steal_from(struct runq *rq, int cpu, u_char start)
 {
 	struct td_sched *ts;
 	struct rqbits *rqb;
@@ -883,7 +893,8 @@ again:
 		pri += (i << RQB_L2BPW);
 		rqh = &rq->rq_queues[pri];
 		TAILQ_FOREACH(ts, rqh, ts_procq) {
-			if (first && THREAD_CAN_MIGRATE(ts->ts_thread))
+			if (first && THREAD_CAN_MIGRATE(ts->ts_thread) &&
+			    THREAD_CAN_SCHED(ts->ts_thread, cpu))
 				return (ts);
 			first = 1;
 		}
@@ -900,7 +911,7 @@ again:
  * Steals load from a standard linear queue.
  */
 static struct td_sched *
-runq_steal(struct runq *rq)
+runq_steal(struct runq *rq, int cpu)
 {
 	struct rqhead *rqh;
 	struct rqbits *rqb;
@@ -917,7 +928,8 @@ runq_steal(struct runq *rq)
 				continue;
 			rqh = &rq->rq_queues[bit + (word << RQB_L2BPW)];
 			TAILQ_FOREACH(ts, rqh, ts_procq)
-				if (THREAD_CAN_MIGRATE(ts->ts_thread))
+				if (THREAD_CAN_MIGRATE(ts->ts_thread) &&
+				    THREAD_CAN_SCHED(ts->ts_thread, cpu))
 					return (ts);
 		}
 	}
@@ -928,16 +940,17 @@ runq_steal(struct runq *rq)
  * Attempt to steal a thread in priority order from a thread queue.
  */
 static struct td_sched *
-tdq_steal(struct tdq *tdq)
+tdq_steal(struct tdq *tdq, int cpu)
 {
 	struct td_sched *ts;
 
 	TDQ_LOCK_ASSERT(tdq, MA_OWNED);
-	if ((ts = runq_steal(&tdq->tdq_realtime)) != NULL)
+	if ((ts = runq_steal(&tdq->tdq_realtime, cpu)) != NULL)
 		return (ts);
-	if ((ts = runq_steal_from(&tdq->tdq_timeshare, tdq->tdq_ridx)) != NULL)
+	if ((ts = runq_steal_from(&tdq->tdq_timeshare,
+	    cpu, tdq->tdq_ridx)) != NULL)
 		return (ts);
-	return (runq_steal(&tdq->tdq_idle));
+	return (runq_steal(&tdq->tdq_idle, cpu));
 }
 
 /*
@@ -985,7 +998,7 @@ sched_setcpu(struct td_sched *ts, int cpu, int flags)
  * Find the thread queue running the lowest priority thread.
  */
 static int
-tdq_lowestpri(void)
+tdq_lowestpri(struct thread *td)
 {
 	struct tdq *tdq;
 	int lowpri;
@@ -999,6 +1012,8 @@ tdq_lowestpri(void)
 	lowpri = lowcpu = 0;
 	for (cpu = 0; cpu <= mp_maxid; cpu++) {
 		if (CPU_ABSENT(cpu))
+			continue;
+		if (!THREAD_CAN_SCHED(td, cpu))
 			continue;
 		tdq = TDQ_CPU(cpu);
 		pri = tdq->tdq_lowpri;
@@ -1022,7 +1037,7 @@ tdq_lowestpri(void)
  * Find the thread queue with the least load.
  */
 static int
-tdq_lowestload(void)
+tdq_lowestload(struct thread *td)
 {
 	struct tdq *tdq;
 	int lowload;
@@ -1037,6 +1052,8 @@ tdq_lowestload(void)
 	lowpri = TDQ_CPU(0)->tdq_lowpri;
 	for (cpu = 1; cpu <= mp_maxid; cpu++) {
 		if (CPU_ABSENT(cpu))
+			continue;
+		if (!THREAD_CAN_SCHED(td, cpu))
 			continue;
 		tdq = TDQ_CPU(cpu);
 		load = tdq->tdq_load;
@@ -1060,14 +1077,17 @@ tdq_lowestload(void)
  * a determination based on load or priority of available processors.
  */
 static int
-sched_pickcpu(struct td_sched *ts, int flags)
+sched_pickcpu(struct thread *td, int flags)
 {
 	struct tdq *tdq;
+	struct td_sched *ts;
+	cpumask_t mask;
 	int self;
 	int pri;
 	int cpu;
 
-	cpu = self = PCPU_GET(cpuid);
+	self = PCPU_GET(cpuid);
+	ts = td->td_sched;
 	if (smp_started == 0)
 		return (self);
 	/*
@@ -1080,40 +1100,50 @@ sched_pickcpu(struct td_sched *ts, int flags)
 	}
 	pri = ts->ts_thread->td_priority;
 	cpu = ts->ts_cpu;
-	/*
-	 * Regardless of affinity, if the last cpu is idle send it there.
-	 */
-	tdq = TDQ_CPU(cpu);
-	if (tdq->tdq_lowpri > PRI_MIN_IDLE) {
-		CTR5(KTR_ULE,
+	if (THREAD_CAN_SCHED(td, cpu)) {
+		/*
+		 * Regardless of affinity, if the last cpu is idle
+		 * send it there.
+		 */
+		tdq = TDQ_CPU(cpu);
+		if (tdq->tdq_lowpri > PRI_MIN_IDLE) {
+			CTR5(KTR_ULE,
 		    "ts_cpu %d idle, ltick %d ticks %d pri %d curthread %d",
-		    ts->ts_cpu, ts->ts_rltick, ticks, pri,
-		    tdq->tdq_lowpri);
-		return (ts->ts_cpu);
-	}
-	/*
-	 * If we have affinity, try to place it on the cpu we last ran on.
-	 */
-	if (SCHED_AFFINITY(ts) && tdq->tdq_lowpri > pri) {
-		CTR5(KTR_ULE,
+			    ts->ts_cpu, ts->ts_rltick, ticks, pri,
+			    tdq->tdq_lowpri);
+			return (ts->ts_cpu);
+		}
+		/*
+		 * If we have affinity, try to place it on the cpu we
+		 * last ran on.
+		 */
+		if (SCHED_AFFINITY(ts) && tdq->tdq_lowpri > pri) {
+			CTR5(KTR_ULE,
 		    "affinity for %d, ltick %d ticks %d pri %d curthread %d",
-		    ts->ts_cpu, ts->ts_rltick, ticks, pri,
-		    tdq->tdq_lowpri);
-		return (ts->ts_cpu);
+			    ts->ts_cpu, ts->ts_rltick, ticks, pri,
+			    tdq->tdq_lowpri);
+			return (ts->ts_cpu);
+		}
 	}
+
 	/*
 	 * Look for an idle group.
 	 */
 	CTR1(KTR_ULE, "tdq_idle %X", tdq_idle);
-	cpu = ffs(tdq_idle);
-	if (cpu)
-		return (--cpu);
+	mask = tdq_idle;
+	while ((cpu = ffs(mask)) != 0) {
+		--cpu;
+		if (THREAD_CAN_SCHED(td, cpu))
+			return (cpu);
+		mask &= ~(1 << cpu);
+	}
 	/*
 	 * If there are no idle cores see if we can run the thread locally.
 	 * This may improve locality among sleepers and wakers when there
 	 * is shared data.
 	 */
-	if (tryself && pri < curthread->td_priority) {
+	if (tryself && THREAD_CAN_SCHED(td, self) &&
+	    pri < curthread->td_priority) {
 		CTR1(KTR_ULE, "tryself %d",
 		    curthread->td_priority);
 		return (self);
@@ -1123,9 +1153,9 @@ sched_pickcpu(struct td_sched *ts, int flags)
 	 * the least load.
 	 */
 	if (pick_pri)
-		cpu = tdq_lowestpri();
+		cpu = tdq_lowestpri(td);
 	else
-		cpu = tdq_lowestload();
+		cpu = tdq_lowestload(td);
 	return (cpu);
 }
 
@@ -1758,6 +1788,23 @@ sched_switchin(struct tdq *tdq, struct thread *td)
 }
 
 /*
+ * Block a thread for switching.  Similar to thread_block() but does not
+ * bump the spin count.
+ */
+static inline struct mtx *
+thread_block_switch(struct thread *td)
+{
+	struct mtx *lock;
+
+	THREAD_LOCK_ASSERT(td, MA_OWNED);
+	lock = td->td_lock;
+	td->td_lock = &blocked_lock;
+	mtx_unlock_spin(lock);
+
+	return (lock);
+}
+
+/*
  * Handle migration from sched_switch().  This happens only for
  * cpu binding.
  */
@@ -1791,23 +1838,6 @@ sched_switch_migrate(struct tdq *tdq, struct thread *td, int flags)
 	spinlock_exit();
 #endif
 	return (TDQ_LOCKPTR(tdn));
-}
-
-/*
- * Block a thread for switching.  Similar to thread_block() but does not
- * bump the spin count.
- */
-static inline struct mtx *
-thread_block_switch(struct thread *td)
-{
-	struct mtx *lock;
-
-	THREAD_LOCK_ASSERT(td, MA_OWNED);
-	lock = td->td_lock;
-	td->td_lock = &blocked_lock;
-	mtx_unlock_spin(lock);
-
-	return (lock);
 }
 
 /*
@@ -1895,6 +1925,16 @@ sched_switch(struct thread *td, struct thread *newtd, int flags)
 			PMC_SWITCH_CONTEXT(td, PMC_FN_CSW_OUT);
 #endif
 		TDQ_LOCKPTR(tdq)->mtx_lock = (uintptr_t)newtd;
+
+#ifdef KDTRACE_HOOKS
+		/*
+		 * If DTrace has set the active vtime enum to anything
+		 * other than INACTIVE (0), then it should have set the
+		 * function to call.
+		 */
+		if (dtrace_vtime_active)
+			(*dtrace_vtime_switch_func)(newtd);
+#endif
 		cpu_switch(td, newtd, mtx);
 		/*
 		 * We may return from cpu_switch on a different cpu.  However,
@@ -2019,6 +2059,7 @@ sched_fork_thread(struct thread *td, struct thread *child)
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
 	sched_newthread(child);
 	child->td_lock = TDQ_LOCKPTR(TDQ_SELF());
+	child->td_cpuset = cpuset_ref(td->td_cpuset);
 	ts = td->td_sched;
 	ts2 = child->td_sched;
 	ts2->ts_cpu = ts->ts_cpu;
@@ -2183,17 +2224,16 @@ sched_clock(struct thread *td)
 			tdq->tdq_ridx = tdq->tdq_idx;
 	}
 	ts = td->td_sched;
-	/*
-	 * We only do slicing code for TIMESHARE threads.
-	 */
-	if (td->td_pri_class != PRI_TIMESHARE)
+	if (td->td_pri_class & PRI_FIFO_BIT)
 		return;
-	/*
-	 * We used a tick; charge it to the thread so that we can compute our
-	 * interactivity.
-	 */
-	td->td_sched->ts_runtime += tickincr;
-	sched_interact_update(td);
+	if (td->td_pri_class == PRI_TIMESHARE) {
+		/*
+		 * We used a tick; charge it to the thread so
+		 * that we can compute our interactivity.
+		 */
+		td->td_sched->ts_runtime += tickincr;
+		sched_interact_update(td);
+	}
 	/*
 	 * We used up one time slice.
 	 */
@@ -2216,6 +2256,12 @@ sched_tick(void)
 	struct td_sched *ts;
 
 	ts = curthread->td_sched;
+	/*
+	 * Ticks is updated asynchronously on a single cpu.  Check here to
+	 * avoid incrementing ts_ticks multiple times in a single tick.
+	 */
+	if (ts->ts_ltick == ticks)
+		return;
 	/* Adjust ticks for pctcpu */
 	ts->ts_ticks += 1 << SCHED_TICK_SHIFT;
 	ts->ts_ltick = ticks;
@@ -2408,12 +2454,13 @@ sched_add(struct thread *td, int flags)
 	 * Pick the destination cpu and if it isn't ours transfer to the
 	 * target cpu.
 	 */
-	if (td->td_priority <= PRI_MAX_ITHD && THREAD_CAN_MIGRATE(td))
-		cpu = cpuid;
-	else if (!THREAD_CAN_MIGRATE(td))
+	if (td->td_priority <= PRI_MAX_ITHD && THREAD_CAN_MIGRATE(td) &&
+	    curthread->td_intr_nesting_level)
+		ts->ts_cpu = cpuid;
+	if (!THREAD_CAN_MIGRATE(td))
 		cpu = ts->ts_cpu;
 	else
-		cpu = sched_pickcpu(ts, flags);
+		cpu = sched_pickcpu(td, flags);
 	tdq = sched_setcpu(ts, cpu, flags);
 	tdq_add(tdq, td, flags);
 	if (cpu != cpuid) {
@@ -2485,6 +2532,38 @@ sched_pctcpu(struct thread *td)
 	thread_unlock(td);
 
 	return (pctcpu);
+}
+
+/*
+ * Enforce affinity settings for a thread.  Called after adjustments to
+ * cpumask.
+ */
+void
+sched_affinity(struct thread *td)
+{
+#ifdef SMP
+	struct td_sched *ts;
+	int cpu;
+
+	THREAD_LOCK_ASSERT(td, MA_OWNED);
+	ts = td->td_sched;
+	if (THREAD_CAN_SCHED(td, ts->ts_cpu))
+		return;
+	if (!TD_IS_RUNNING(td))
+		return;
+	td->td_flags |= TDF_NEEDRESCHED;
+	if (!THREAD_CAN_MIGRATE(td))
+		return;
+	/*
+	 * Assign the new cpu and force a switch before returning to
+	 * userspace.  If the target thread is not running locally send
+	 * an ipi to force the issue.
+	 */
+	cpu = ts->ts_cpu;
+	ts->ts_cpu = sched_pickcpu(td, 0);
+	if (cpu != PCPU_GET(cpuid))
+		ipi_selected(1 << cpu, IPI_PREEMPT);
+#endif
 }
 
 /*
