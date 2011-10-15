@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/nullfs/null_vnops.c,v 1.4 2008/12/03 00:25:42 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -366,11 +366,10 @@ null_lookup(struct vop_lookup_args *ap)
 			vrele(lvp);
 		} else {
 			error = null_nodeget(dvp->v_mount, lvp, &vp);
-			if (error) {
-				/* XXX Cleanup needed... */
-				panic("null_nodeget failed");
-			}
-			*ap->a_vpp = vp;
+			if (error)
+				vput(lvp);
+			else
+				*ap->a_vpp = vp;
 		}
 	}
 	return (error);
