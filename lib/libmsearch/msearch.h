@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.6 2011/08/06 23:02:51 laffer1 Exp $ */
+/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.7 2011/08/07 15:41:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 2011 Lucas Holt
  * All rights reserved.
@@ -46,12 +46,12 @@ typedef struct _msearch_query {
 } msearch_query;
 
 typedef struct _msearch_result {
+	double	weight;
 	char *	filename;
 	char *	path;
 	size_t	size;
 	int	uid;
 	char *	owner;
-	double	weight;
 	time_t	created;
 	time_t	modified;
 	struct _msearch_result *	next;
