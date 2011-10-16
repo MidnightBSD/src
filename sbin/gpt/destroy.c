@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/gpt/destroy.c,v 1.6 2005/08/31 01:47:19 marcel Exp $");
+__FBSDID("$FreeBSD: src/sbin/gpt/destroy.c,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 

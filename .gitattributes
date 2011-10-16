@@ -30263,6 +30263,7 @@ sbin/ggate/shared/ggate.c -text
 sbin/ggate/shared/ggate.h -text
 sbin/gpt/Makefile -text
 sbin/gpt/add.c -text
+sbin/gpt/boot.c -text
 sbin/gpt/create.c -text
 sbin/gpt/destroy.c -text
 sbin/gpt/gpt.8 -text

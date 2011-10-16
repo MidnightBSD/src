@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/gpt/gpt.c,v 1.16.2.1 2007/11/09 02:29:43 jhb Exp $");
+__FBSDID("$FreeBSD: src/sbin/gpt/gpt.c,v 1.16.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -268,6 +268,13 @@ parse_uuid(const char *s, uuid_t *uuid)
 		return (0);
 
 	switch (*s) {
+	case 'b':
+		if (strcmp(s, "boot") == 0) {
+			uuid_t boot = GPT_ENT_TYPE_FREEBSD_BOOT;
+			*uuid = boot;
+			return (0);
+		}
+		break;
 	case 'e':
 		if (strcmp(s, "efi") == 0) {
 			uuid_t efi = GPT_ENT_TYPE_EFI;
@@ -307,6 +314,13 @@ parse_uuid(const char *s, uuid_t *uuid)
 		if (strcmp(s, "windows") == 0) {
 			uuid_t win = GPT_ENT_TYPE_MS_BASIC_DATA;
 			*uuid = win;
+			return (0);
+		}
+		break;
+	case 'z':
+		if (strcmp(s, "zfs") == 0) {
+			uuid_t zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+			*uuid = zfs;
 			return (0);
 		}
 		break;
@@ -615,6 +629,7 @@ static struct {
 	const char *name;
 } cmdsw[] = {
 	{ cmd_add, "add" },
+	{ cmd_boot, "boot" },
 	{ cmd_create, "create" },
 	{ cmd_destroy, "destroy" },
 	{ NULL, "help" },

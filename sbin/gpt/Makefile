@@ -1,8 +1,8 @@
-# $FreeBSD: src/sbin/gpt/Makefile,v 1.7 2005/09/01 02:49:20 marcel Exp $
+# $FreeBSD: src/sbin/gpt/Makefile,v 1.7.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 PROG=	gpt
-SRCS=	add.c create.c destroy.c gpt.c label.c map.c migrate.c recover.c \
-	remove.c show.c
+SRCS=	add.c boot.c create.c destroy.c gpt.c label.c map.c migrate.c \
+	recover.c remove.c show.c
 WARNS?=	4
 MAN=	gpt.8
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/gpt/migrate.c,v 1.16 2005/09/01 02:42:52 marcel Exp $");
+__FBSDID("$FreeBSD: src/sbin/gpt/migrate.c,v 1.16.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/disklabel.h>
@@ -115,6 +115,13 @@ migrate_disklabel(int fd, off_t start, struct gpt_ent *ent)
 			uuid_t vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
 			le_uuid_enc(&ent->ent_type, &vinum);
 			utf8_to_utf16("FreeBSD vinum partition",
+			    ent->ent_name, 36);
+			break;
+		}
+		case FS_ZFS: {
+			uuid_t zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+			le_uuid_enc(&ent->ent_type, &zfs);
+			utf8_to_utf16("FreeBSD ZFS partition",
 			    ent->ent_name, 36);
 			break;
 		}

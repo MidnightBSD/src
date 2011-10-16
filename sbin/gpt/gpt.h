@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/gpt/gpt.h,v 1.11 2006/06/22 22:05:28 marcel Exp $
+ * $FreeBSD: src/sbin/gpt/gpt.h,v 1.11.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _GPT_H_
@@ -67,6 +67,7 @@ extern u_int secsz;
 extern int readonly, verbose;
 
 uint32_t crc32(const void *, size_t);
+map_t	*gpt_add_part(int, uuid_t, off_t, off_t, unsigned int *);
 void	gpt_close(int);
 int	gpt_open(const char *);
 void*	gpt_read(int, off_t, size_t);
@@ -76,6 +77,7 @@ uint8_t *utf16_to_utf8(uint16_t *);
 void	utf8_to_utf16(const uint8_t *, uint16_t *, size_t);
 
 int	cmd_add(int, char *[]);
+int	cmd_boot(int, char *[]);
 int	cmd_create(int, char *[]);
 int	cmd_destroy(int, char *[]);
 int	cmd_label(int, char *[]);

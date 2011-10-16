@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/gpt/show.c,v 1.14 2006/06/22 22:22:32 marcel Exp $");
+__FBSDID("$FreeBSD: src/sbin/gpt/show.c,v 1.14.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 
@@ -54,6 +54,7 @@ usage_show(void)
 static const char *
 friendly(uuid_t *t)
 {
+	static uuid_t boot = GPT_ENT_TYPE_FREEBSD_BOOT;
 	static uuid_t efi_slice = GPT_ENT_TYPE_EFI;
 	static uuid_t mslinux = GPT_ENT_TYPE_MS_BASIC_DATA;
 	static uuid_t freebsd = GPT_ENT_TYPE_FREEBSD;
@@ -63,6 +64,7 @@ friendly(uuid_t *t)
 	static uuid_t swap = GPT_ENT_TYPE_FREEBSD_SWAP;
 	static uuid_t ufs = GPT_ENT_TYPE_FREEBSD_UFS;
 	static uuid_t vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
+	static uuid_t zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
 	static char buf[80];
 	char *s;
 
@@ -71,12 +73,16 @@ friendly(uuid_t *t)
 
 	if (uuid_equal(t, &efi_slice, NULL))
 		return ("EFI System");
+	if (uuid_equal(t, &boot, NULL))
+		return ("FreeBSD boot");
 	if (uuid_equal(t, &swap, NULL))
 		return ("FreeBSD swap");
 	if (uuid_equal(t, &ufs, NULL))
 		return ("FreeBSD UFS/UFS2");
 	if (uuid_equal(t, &vinum, NULL))
 		return ("FreeBSD vinum");
+	if (uuid_equal(t, &zfs, NULL))
+		return ("FreeBSD ZFS");
 
 	if (uuid_equal(t, &freebsd, NULL))
 		return ("FreeBSD legacy");
