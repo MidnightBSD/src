@@ -28056,6 +28056,7 @@ lib/libc/uuid/uuid_equal.c -text
 lib/libc/uuid/uuid_from_string.c -text
 lib/libc/uuid/uuid_hash.c -text
 lib/libc/uuid/uuid_is_nil.c -text
+lib/libc/uuid/uuid_stream.c -text
 lib/libc/uuid/uuid_to_string.c -text
 lib/libc/xdr/Makefile.inc -text
 lib/libc/xdr/Symbol.map -text
