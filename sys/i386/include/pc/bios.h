@@ -24,7 +24,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/pc/bios.h,v 1.18 2005/07/21 09:48:37 phk Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/sys/i386/include/pc/bios.h,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PC_BIOS_H_
@@ -271,10 +272,16 @@ struct PIR_table
 
 /*
  * Int 15:E820 'SMAP' structure
- *
- * XXX add constants for type
  */
+
 #define SMAP_SIG	0x534D4150			/* 'SMAP' */
+
+#define	SMAP_TYPE_MEMORY	1
+#define	SMAP_TYPE_RESERVED	2
+#define	SMAP_TYPE_ACPI_RECLAIM	3
+#define	SMAP_TYPE_ACPI_NVS	4
+#define	SMAP_TYPE_ACPI_ERROR	5
+
 struct bios_smap {
     u_int64_t	base;
     u_int64_t	length;
