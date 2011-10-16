@@ -33469,6 +33469,9 @@ sys/boot/i386/btx/lib/btxv86.h -text
 sys/boot/i386/btx/lib/btxv86.s -text
 sys/boot/i386/cdboot/Makefile -text
 sys/boot/i386/cdboot/cdboot.s -text
+sys/boot/i386/gptboot/Makefile -text
+sys/boot/i386/gptboot/gptboot.c -text
+sys/boot/i386/gptboot/gptldr.S -text
 sys/boot/i386/kgzldr/Makefile -text
 sys/boot/i386/kgzldr/boot.c -text
 sys/boot/i386/kgzldr/crt.s -text
