@@ -1,13 +1,10 @@
-# $FreeBSD: src/sys/boot/i386/btx/btx/Makefile,v 1.19 2004/12/21 08:47:13 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/boot/i386/btx/btx/Makefile,v 1.19.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 PROG=	btx
 INTERNALPROG=
 NO_MAN=
 SRCS=	btx.S
-
-.if defined(PAGING)
-CFLAGS+=-DPAGING
-.endif
 
 .if defined(BOOT_BTX_NOHANG)
 BOOT_BTX_FLAGS=0x1

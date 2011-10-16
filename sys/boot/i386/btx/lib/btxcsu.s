@@ -13,7 +13,8 @@
 # purpose.
 #
 
-# $FreeBSD: src/sys/boot/i386/btx/lib/btxcsu.s,v 1.4 2004/08/05 06:00:05 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/boot/i386/btx/lib/btxcsu.s,v 1.4.26.1 2008/11/25 02:59:29 kensmith Exp $
 
 #
 # BTX C startup code (ELF).

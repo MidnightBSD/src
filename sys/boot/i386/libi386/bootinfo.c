@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/bootinfo.c,v 1.39 2005/09/22 15:14:12 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/bootinfo.c,v 1.39.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <stand.h>
 #include <sys/param.h>

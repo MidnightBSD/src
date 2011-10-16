@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/loader/main.c,v 1.40.2.1 2007/11/01 18:19:18 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/loader/main.c,v 1.40.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * MD bootstrap main() and assorted miscellaneous
@@ -35,6 +35,7 @@ __FBSDID("$FreeBSD: src/sys/boot/i386/loader/main.c,v 1.40.2.1 2007/11/01 18:19:
 #include <stand.h>
 #include <string.h>
 #include <machine/bootinfo.h>
+#include <machine/psl.h>
 #include <sys/reboot.h>
 
 #include "bootstrap.h"
@@ -85,6 +86,10 @@ main(void)
     initial_howto = kargs->howto;
     initial_bootdev = kargs->bootdev;
     initial_bootinfo = kargs->bootinfo ? (struct bootinfo *)PTOV(kargs->bootinfo) : NULL;
+
+    /* Initialize the v86 register set to a known-good state. */
+    bzero(&v86, sizeof(v86));
+    v86.efl = PSL_RESERVED_DEFAULT | PSL_I;
 
     /* 
      * Initialise the heap as early as possible.  Once this is done, malloc() is usable.

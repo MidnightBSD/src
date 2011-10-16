@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.675.2.2.2.1 2008/01/19 18:15:01 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.675.2.10.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_atalk.h"
 #include "opt_atpic.h"
@@ -149,7 +149,7 @@ extern void panicifcpuunsupported(void);
 static void cpu_startup(void *);
 static void get_fpcontext(struct thread *td, mcontext_t *mcp);
 static int  set_fpcontext(struct thread *td, const mcontext_t *mcp);
-SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
+SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL);
 
 #ifdef DDB
 extern vm_offset_t ksym_start, ksym_end;
@@ -357,7 +357,7 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 
 	regs->tf_rsp = (long)sfp;
 	regs->tf_rip = PS_STRINGS - *(p->p_sysent->sv_szsigcode);
-	regs->tf_rflags &= ~PSL_T;
+	regs->tf_rflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	PROC_LOCK(p);
 	mtx_lock(&psp->ps_mtx);
@@ -604,6 +604,7 @@ exec_setregs(td, entry, stack, ps_strings)
 	pcb->pcb_fsbase = 0;
 	pcb->pcb_gsbase = 0;
 	critical_exit();
+	pcb->pcb_flags &= ~(PCB_32BIT | PCB_GS32BIT);
 	load_ds(_udatasel);
 	load_es(_udatasel);
 	load_fs(_udatasel);
@@ -672,7 +673,7 @@ cpu_setregs(void)
  * Initialize segments & interrupt table
  */
 
-struct user_segment_descriptor gdt[NGDT * MAXCPU];/* global descriptor table */
+struct user_segment_descriptor gdt[NGDT * MAXCPU];/* global descriptor tables */
 static struct gate_descriptor idt0[NIDT];
 struct gate_descriptor *idt = &idt0[0];	/* interrupt descriptor table */
 
@@ -739,7 +740,7 @@ struct soft_segment_descriptor gdt_segs[] = {
 /* GPROC0_SEL	6 Proc 0 Tss Descriptor */
 {
 	0x0,			/* segment base address */
-	sizeof(struct amd64tss)-1,/* length - all address space */
+	sizeof(struct amd64tss)-1,/* length */
 	SDT_SYSTSS,		/* segment type */
 	SEL_KPL,		/* segment descriptor priority level */
 	1,			/* segment descriptor present */
@@ -905,7 +906,7 @@ getmemsize(caddr_t kmdp, u_int64_t first)
 			printf("SMAP type=%02x base=%016lx len=%016lx\n",
 			    smap->type, smap->base, smap->length);
 
-		if (smap->type != 0x01)
+		if (smap->type != SMAP_TYPE_MEMORY)
 			continue;
 
 		if (smap->length == 0)
@@ -1204,6 +1205,7 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	PCPU_SET(curthread, &thread0);
 	PCPU_SET(curpcb, thread0.td_pcb);
 	PCPU_SET(tssp, &common_tss[0]);
+	PCPU_SET(gs32p, &gdt[GUGS32_SEL]);
 
 	/*
 	 * Initialize mutexes.
@@ -1277,7 +1279,8 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 
 #ifdef KDB
 	if (boothowto & RB_KDB)
-		kdb_enter_why(KDB_WHY_BOOTFLAGS, "Boot flags requested debugger");
+		kdb_enter_why(KDB_WHY_BOOTFLAGS,
+		    "Boot flags requested debugger");
 #endif
 
 	identify_cpu();		/* Final stage of CPU initialization */

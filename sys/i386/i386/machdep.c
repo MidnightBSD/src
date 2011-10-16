@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.658.2.1.2.1 2008/01/19 18:15:03 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.658.2.9.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_apic.h"
 #include "opt_atalk.h"
@@ -115,6 +115,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.658.2.1.2.1 2008/01/19 18:15
 #include <machine/cputypes.h>
 #include <machine/intr_machdep.h>
 #include <machine/md_var.h>
+#include <machine/metadata.h>
 #include <machine/pc/bios.h>
 #include <machine/pcb.h>
 #include <machine/pcb_ext.h>
@@ -127,7 +128,6 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.658.2.1.2.1 2008/01/19 18:15
 #include <machine/perfmon.h>
 #endif
 #ifdef SMP
-#include <machine/privatespace.h>
 #include <machine/smp.h>
 #endif
 
@@ -168,7 +168,7 @@ static int  set_fpcontext(struct thread *td, const mcontext_t *mcp);
 static void set_fpregs_xmm(struct save87 *, struct savexmm *);
 static void fill_fpregs_xmm(struct savexmm *, struct save87 *);
 #endif /* CPU_ENABLE_SSE */
-SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
+SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL);
 
 #ifdef DDB
 extern vm_offset_t ksym_start, ksym_end;
@@ -193,6 +193,10 @@ static void freebsd4_sendsig(sig_t catcher, ksiginfo_t *, sigset_t *mask);
 long Maxmem = 0;
 long realmem = 0;
 
+#ifdef PAE
+FEATURE(pae, "Physical Address Extensions");
+#endif
+
 /*
  * The number of PHYSMAP entries must be one less than the number of
  * PHYSSEG entries because the PHYSMAP entry that spans the largest
@@ -211,9 +215,7 @@ vm_paddr_t dump_avail[PHYSMAP_SIZE + 2];
 struct kva_md_info kmi;
 
 static struct trapframe proc0_tf;
-#ifndef SMP
-static struct pcpu __pcpu;
-#endif
+struct pcpu __pcpu[MAXCPU];
 
 struct mtx icu_lock;
 
@@ -416,7 +418,7 @@ osendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 
 	regs->tf_esp = (int)fp;
 	regs->tf_eip = PS_STRINGS - szosigcode;
-	regs->tf_eflags &= ~PSL_T;
+	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
 	regs->tf_es = _udatasel;
@@ -537,7 +539,7 @@ freebsd4_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 
 	regs->tf_esp = (int)sfp;
 	regs->tf_eip = PS_STRINGS - szfreebsd4_sigcode;
-	regs->tf_eflags &= ~PSL_T;
+	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
 	regs->tf_es = _udatasel;
@@ -673,7 +675,7 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 
 	regs->tf_esp = (int)sfp;
 	regs->tf_eip = PS_STRINGS - *(p->p_sysent->sv_szsigcode);
-	regs->tf_eflags &= ~PSL_T;
+	regs->tf_eflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucodesel;
 	regs->tf_ds = _udatasel;
 	regs->tf_es = _udatasel;
@@ -1647,6 +1649,57 @@ sdtossd(sd, ssd)
 	ssd->ssd_gran  = sd->sd_gran;
 }
 
+static int
+add_smap_entry(struct bios_smap *smap, vm_paddr_t *physmap, int *physmap_idxp)
+{
+	int i, physmap_idx;
+
+	physmap_idx = *physmap_idxp;
+	
+	if (boothowto & RB_VERBOSE)
+		printf("SMAP type=%02x base=%016llx len=%016llx\n",
+		    smap->type, smap->base, smap->length);
+
+	if (smap->type != SMAP_TYPE_MEMORY)
+		return (1);
+
+	if (smap->length == 0)
+		return (1);
+
+#ifndef PAE
+	if (smap->base >= 0xffffffff) {
+		printf("%uK of memory above 4GB ignored\n",
+		    (u_int)(smap->length / 1024));
+		return (1);
+	}
+#endif
+
+	for (i = 0; i <= physmap_idx; i += 2) {
+		if (smap->base < physmap[i + 1]) {
+			if (boothowto & RB_VERBOSE)
+				printf(
+	"Overlapping or non-monotonic memory region, ignoring second region\n");
+			return (1);
+		}
+	}
+
+	if (smap->base == physmap[physmap_idx + 1]) {
+		physmap[physmap_idx + 1] += smap->length;
+		return (1);
+	}
+
+	physmap_idx += 2;
+	*physmap_idxp = physmap_idx;
+	if (physmap_idx == PHYSMAP_SIZE) {
+		printf(
+		"Too many segments in the physical address map, giving up\n");
+		return (0);
+	}
+	physmap[physmap_idx] = smap->base;
+	physmap[physmap_idx + 1] = smap->base + smap->length;
+	return (1);
+}
+
 /*
  * Populate the (physmap) array with base/bound pairs describing the
  * available physical memory in the system, then test this memory and
@@ -1671,8 +1724,10 @@ getmemsize(int first)
 	struct vm86context vmc;
 	vm_paddr_t pa, physmap[PHYSMAP_SIZE];
 	pt_entry_t *pte;
-	struct bios_smap *smap;
+	struct bios_smap *smap, *smapbase, *smapend;
+	u_int32_t smapsize;
 	quad_t dcons_addr, dcons_size;
+	caddr_t kmdp;
 
 	has_smap = 0;
 #ifdef XBOX
@@ -1750,69 +1805,54 @@ getmemsize(int first)
 
 int15e820:
 	/*
-	 * map page 1 R/W into the kernel page table so we can use it
-	 * as a buffer.  The kernel will unmap this page later.
+	 * Fetch the memory map with INT 15:E820.  First, check to see
+	 * if the loader supplied it and use that if so.  Otherwise,
+	 * use vm86 to invoke the BIOS call directly.
 	 */
-	pmap_kenter(KERNBASE + (1 << PAGE_SHIFT), 1 << PAGE_SHIFT);
-
-	/*
-	 * get memory map with INT 15:E820
-	 */
-	vmc.npages = 0;
-	smap = (void *)vm86_addpage(&vmc, 1, KERNBASE + (1 << PAGE_SHIFT));
-	vm86_getptr(&vmc, (vm_offset_t)smap, &vmf.vmf_es, &vmf.vmf_di);
-
 	physmap_idx = 0;
-	vmf.vmf_ebx = 0;
-	do {
-		vmf.vmf_eax = 0xE820;
-		vmf.vmf_edx = SMAP_SIG;
-		vmf.vmf_ecx = sizeof(struct bios_smap);
-		i = vm86_datacall(0x15, &vmf, &vmc);
-		if (i || vmf.vmf_eax != SMAP_SIG)
-			break;
-		if (boothowto & RB_VERBOSE)
-			printf("SMAP type=%02x base=%016llx len=%016llx\n",
-			    smap->type, smap->base, smap->length);
+	smapbase = NULL;
+	kmdp = preload_search_by_type("elf kernel");
+	if (kmdp == NULL)
+		kmdp = preload_search_by_type("elf32 kernel");
+	if (kmdp != NULL)
+		smapbase = (struct bios_smap *)preload_search_info(kmdp,
+		    MODINFO_METADATA | MODINFOMD_SMAP);
+	if (smapbase != NULL) {
+		/* subr_module.c says:
+		 * "Consumer may safely assume that size value precedes data."
+		 * ie: an int32_t immediately precedes smap.
+		 */
+		smapsize = *((u_int32_t *)smapbase - 1);
+		smapend = (struct bios_smap *)((uintptr_t)smapbase + smapsize);
 		has_smap = 1;
 
-		if (smap->type != 0x01)
-			continue;
+		for (smap = smapbase; smap < smapend; smap++)
+			if (!add_smap_entry(smap, physmap, &physmap_idx))
+				break;
+	} else {
+		/*
+		 * map page 1 R/W into the kernel page table so we can use it
+		 * as a buffer.  The kernel will unmap this page later.
+		 */
+		pmap_kenter(KERNBASE + (1 << PAGE_SHIFT), 1 << PAGE_SHIFT);
+		vmc.npages = 0;
+		smap = (void *)vm86_addpage(&vmc, 1, KERNBASE +
+		    (1 << PAGE_SHIFT));
+		vm86_getptr(&vmc, (vm_offset_t)smap, &vmf.vmf_es, &vmf.vmf_di);
 
-		if (smap->length == 0)
-			continue;
-
-#ifndef PAE
-		if (smap->base >= 0xffffffff) {
-			printf("%uK of memory above 4GB ignored\n",
-			    (u_int)(smap->length / 1024));
-			continue;
-		}
-#endif
-
-		for (i = 0; i <= physmap_idx; i += 2) {
-			if (smap->base < physmap[i + 1]) {
-				if (boothowto & RB_VERBOSE)
-					printf(
-	"Overlapping or non-monotonic memory region, ignoring second region\n");
-				continue;
-			}
-		}
-
-		if (smap->base == physmap[physmap_idx + 1]) {
-			physmap[physmap_idx + 1] += smap->length;
-			continue;
-		}
-
-		physmap_idx += 2;
-		if (physmap_idx == PHYSMAP_SIZE) {
-			printf(
-		"Too many segments in the physical address map, giving up\n");
-			break;
-		}
-		physmap[physmap_idx] = smap->base;
-		physmap[physmap_idx + 1] = smap->base + smap->length;
-	} while (vmf.vmf_ebx != 0);
+		vmf.vmf_ebx = 0;
+		do {
+			vmf.vmf_eax = 0xE820;
+			vmf.vmf_edx = SMAP_SIG;
+			vmf.vmf_ecx = sizeof(struct bios_smap);
+			i = vm86_datacall(0x15, &vmf, &vmc);
+			if (i || vmf.vmf_eax != SMAP_SIG)
+				break;
+			has_smap = 1;
+			if (!add_smap_entry(smap, physmap, &physmap_idx))
+				break;
+		} while (vmf.vmf_ebx != 0);
+	}
 
 	/*
 	 * Perform "base memory" related probes & setup based on SMAP
@@ -2141,11 +2181,7 @@ init386(first)
 	gdt_segs[GUFS_SEL].ssd_limit = atop(0 - 1);
 	gdt_segs[GUGS_SEL].ssd_limit = atop(0 - 1);
 
-#ifdef SMP
-	pc = &SMP_prvspace[0].pcpu;
-#else
-	pc = &__pcpu;
-#endif
+	pc = &__pcpu[0];
 	gdt_segs[GPRIV_SEL].ssd_limit = atop(0 - 1);
 	gdt_segs[GPRIV_SEL].ssd_base = (int) pc;
 	gdt_segs[GPROC0_SEL].ssd_base = (int) &pc->pc_common_tss;
@@ -2283,7 +2319,7 @@ init386(first)
 #ifdef KDB
 	if (boothowto & RB_KDB)
 		kdb_enter_why(KDB_WHY_BOOTFLAGS,
-		   "Boot flags requested debugger");
+		    "Boot flags requested debugger");
 #endif
 
 	finishidentcpu();	/* Final stage of CPU initialization */
@@ -2398,7 +2434,7 @@ spinlock_exit(void)
 
 #if defined(I586_CPU) && !defined(NO_F00F_HACK)
 static void f00f_hack(void *unused);
-SYSINIT(f00f_hack, SI_SUB_INTRINSIC, SI_ORDER_FIRST, f00f_hack, NULL)
+SYSINIT(f00f_hack, SI_SUB_INTRINSIC, SI_ORDER_FIRST, f00f_hack, NULL);
 
 static void
 f00f_hack(void *unused)

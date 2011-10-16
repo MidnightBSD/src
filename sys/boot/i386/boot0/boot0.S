@@ -13,7 +13,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: src/sys/boot/i386/boot0/boot0.S,v 1.14 2005/02/08 20:43:04 des Exp $
+ * $FreeBSD: src/sys/boot/i386/boot0/boot0.S,v 1.16.6.2 2008/11/30 00:00:35 luigi Exp $
  */
 
 /* A 512-byte boot manager. */
@@ -96,7 +96,7 @@ main:
 /*
  * Initialize the serial port.  bioscom preserves the driver number in DX.
  */
-		movw COMSPEED,%ax		# defined by Makefile
+		movw $COMSPEED,%ax		# defined by Makefile
 		callw bioscom
 #endif
 /*
@@ -200,10 +200,13 @@ main.7:		movw $prompt,%si		# Display
 		callw putkey			#  key
 		jmp main.7_1			# Skip beep
 /*
- * Start of input loop.  Beep and take note of time
+ * Users's last try was bad, beep in displeasure.
  */
 main.10:	movb $ASCII_BEL,%al		# Signal
 		callw putchr			#  beep!
+/*
+ * Start of input loop.  Take note of time
+ */
 main.7_1:	xorb %ah,%ah			# BIOS: Get
 		int $0x1a			#  system time
 		movw %dx,%di			# Ticks when
@@ -316,8 +319,9 @@ main.15:	movw $LOAD,%bx			# Address for read
 		jc main.10			# If error
 		cmpw $MAGIC,0x1fe(%bx)		# Bootable?
 		jne main.10			# No
-		movw $crlf,%si			# Leave some
-		callw puts			#  space
+		pushw %si			# Save ptr to selected part.
+		callw putn			# Leave some space
+		popw %si			# Restore, next stage uses it
 		jmp *%bx			# Invoke bootstrap
 
 /*

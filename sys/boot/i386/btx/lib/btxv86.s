@@ -13,7 +13,8 @@
 # purpose.
 #
 
-# $FreeBSD: src/sys/boot/i386/btx/lib/btxv86.s,v 1.3 1999/08/28 00:40:08 peter Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/boot/i386/btx/lib/btxv86.s,v 1.3.52.1 2008/11/25 02:59:29 kensmith Exp $
 
 #
 # BTX V86 interface.

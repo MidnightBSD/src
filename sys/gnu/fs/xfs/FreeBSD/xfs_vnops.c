@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_vnops.c,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
 /*
  * Copyright (c) 2001, Alexander Kabaev
  * Copyright (c) 2006, Russell Cattelan Digital Elves Inc.
@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_vnops.c,v 1.6 2007/02/15 22:08:34 pjd Exp $
+ * $FreeBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_vnops.c,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1232,13 +1232,13 @@ _xfs_advlock(
 #ifdef notyet
 	switch (ap->a_op) {
 	    case F_SETLK:
-		error = lf_advlock(ap, &np->n_lockf, size);
+		error = lf_advlock(ap, &vp->v_lockf, size);
 		break;
 	    case F_UNLCK:
-		lf_advlock(ap, &np->n_lockf, size);
+		lf_advlock(ap, &vp->v_lockf, size);
 		break;
 	    case F_GETLK:
-		error = lf_advlock(ap, &np->n_lockf, size);
+		error = lf_advlock(ap, &vp->v_lockf, size);
 		break;
 	    default:
 		return (EINVAL);

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biospci.c,v 1.6 2006/09/29 20:27:41 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biospci.c,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * PnP enumerator using the PCI BIOS.

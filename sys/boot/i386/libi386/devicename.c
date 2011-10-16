@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/devicename.c,v 1.8 2006/11/02 01:23:17 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/devicename.c,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <stand.h>
 #include <string.h>
@@ -120,21 +120,35 @@ i386_parsedev(struct i386_devdesc **dev, const char *devspec, const char **path)
 		err = EUNIT;
 		goto fail;
 	    }
-	    if (*cp == 's') {		/* got a slice number */
+	    if (*cp == 'p') {		/* got a GPT partition */
 		np = cp + 1;
 		slice = strtol(np, &cp, 10);
 		if (cp == np) {
 		    err = ESLICE;
 		    goto fail;
 		}
-	    }
-	    if (*cp && (*cp != ':')) {
-		partition = *cp - 'a';		/* get a partition number */
-		if ((partition < 0) || (partition >= MAXPARTITIONS)) {
-		    err = EPART;
+		if (*cp && (*cp != ':')) {
+		    err = EINVAL;
 		    goto fail;
 		}
-		cp++;
+		partition = 0xff;
+	    } else {
+		if (*cp == 's') {		/* got a slice number */
+		    np = cp + 1;
+		    slice = strtol(np, &cp, 10);
+		    if (cp == np) {
+			err = ESLICE;
+			goto fail;
+		    }
+		}
+		if (*cp && (*cp != ':')) {
+		    partition = *cp - 'a';	/* got a partition number */
+		    if ((partition < 0) || (partition >= MAXPARTITIONS)) {
+			err = EPART;
+			goto fail;
+		    }
+		    cp++;
+		}
 	    }
 	}
 	if (*cp && (*cp != ':')) {
@@ -208,10 +222,14 @@ i386_fmtdev(void *vdev)
     case DEVT_DISK:
 	cp = buf;
 	cp += sprintf(cp, "%s%d", dev->d_dev->dv_name, dev->d_unit);
-	if (dev->d_kind.biosdisk.slice > 0)
-	    cp += sprintf(cp, "s%d", dev->d_kind.biosdisk.slice);
-	if (dev->d_kind.biosdisk.partition >= 0)
-	    cp += sprintf(cp, "%c", dev->d_kind.biosdisk.partition + 'a');
+	if (dev->d_kind.biosdisk.partition == 0xff) {
+	    cp += sprintf(cp, "p%d", dev->d_kind.biosdisk.slice);
+	} else {
+	    if (dev->d_kind.biosdisk.slice > 0)
+		cp += sprintf(cp, "s%d", dev->d_kind.biosdisk.slice);
+	    if (dev->d_kind.biosdisk.partition >= 0)
+		cp += sprintf(cp, "%c", dev->d_kind.biosdisk.partition + 'a');
+	}
 	strcat(cp, ":");
 	break;
 
@@ -238,4 +256,3 @@ i386_setcurrdev(struct env_var *ev, int flags, const void *value)
     env_setenv(ev->ev_name, flags | EV_NOHOOK, value, NULL, NULL);
     return(0);
 }
-

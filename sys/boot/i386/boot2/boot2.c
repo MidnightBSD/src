@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/boot2/boot2.c,v 1.83.2.2 2007/11/08 21:31:38 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/boot2/boot2.c,v 1.83.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -24,6 +24,7 @@ __FBSDID("$FreeBSD: src/sys/boot/i386/boot2/boot2.c,v 1.83.2.2 2007/11/08 21:31:
 
 #include <machine/bootinfo.h>
 #include <machine/elf.h>
+#include <machine/psl.h>
 
 #include <stdarg.h>
 
@@ -83,8 +84,8 @@ __FBSDID("$FreeBSD: src/sys/boot/i386/boot2/boot2.c,v 1.83.2.2 2007/11/08 21:31:
 #define NDEV		3
 #define MEM_BASE	0x12
 #define MEM_EXT 	0x15
-#define V86_CY(x)	((x) & 1)
-#define V86_ZR(x)	((x) & 0x40)
+#define V86_CY(x)	((x) & PSL_C)
+#define V86_ZR(x)	((x) & PSL_Z)
 
 #define DRV_HARD	0x80
 #define DRV_MASK	0x7f
@@ -129,7 +130,7 @@ static struct dsk {
     unsigned start;
     int init;
 } dsk;
-static char cmd[512];
+static char cmd[512], cmddup[512];
 static char kname[1024];
 static uint32_t opts;
 static int comspeed = SIOSPD;
@@ -237,6 +238,7 @@ main(void)
 
     dmadat = (void *)(roundup2(__base + (int32_t)&_end, 0x10000) - __base);
     v86.ctl = V86_FLAGS;
+    v86.efl = PSL_RESERVED_DEFAULT | PSL_I;
     dsk.drive = *(uint8_t *)PTOV(ARGS);
     dsk.type = dsk.drive & DRV_HARD ? TYPE_AD : TYPE_FD;
     dsk.unit = dsk.drive & DRV_MASK;
@@ -255,10 +257,11 @@ main(void)
 	fsread(ino, cmd, sizeof(cmd));
 
     if (*cmd) {
+	memcpy(cmddup, cmd, sizeof(cmd));
 	if (parse())
 	    autoboot = 0;
 	if (!OPT_CHECK(RBX_QUIET))
-	    printf("%s: %s", PATH_CONFIG, cmd);
+	    printf("%s: %s", PATH_CONFIG, cmddup);
 	/* Do not process this command twice */
 	*cmd = 0;
     }
@@ -471,7 +474,7 @@ parse()
 		dsk.slice = WHOLE_DISK_SLICE;
 		if (arg[1] == ',') {
 		    dsk.slice = *arg - '0' + 1;
-		    if (dsk.slice > NDOSPART)
+		    if (dsk.slice > NDOSPART + 1)
 			return -1;
 		    arg += 2;
 		}
