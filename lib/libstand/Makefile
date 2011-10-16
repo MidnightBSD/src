@@ -48,6 +48,10 @@ SRCS+=	bcmp.c bcopy.c bzero.c ffs.c index.c memccpy.c memchr.c memcmp.c \
 	strpbrk.c strrchr.c strsep.c strspn.c strstr.c strtok.c swab.c
 .endif
 
+# uuid functions from libc
+.PATH: ${.CURDIR}/../libc/uuid
+SRCS+= uuid_equal.c uuid_is_nil.c
+
 # _setjmp/_longjmp
 .if ${MACHINE_ARCH} == "amd64"
 .PATH: ${.CURDIR}/i386
@@ -115,9 +119,10 @@ SRCS+=	splitfs.c
 .include <bsd.lib.mk>
 
 .if ${MACHINE_ARCH} == "amd64"
-${SRCS:M*.c:R:S/$/.o/g}:	machine
-
-beforedepend:	machine
+beforedepend ${OBJS}: machine
+cleandepend: cleanmachine
+cleanmachine:
+	rm -f machine
 
 machine:
 	ln -s ${.CURDIR}/../../sys/i386/include machine
