@@ -244,6 +244,33 @@ intr_enable_eoi(void *arg)
 	ic->ic_eoi(iv);
 }
 
+static int
+intr_assign_cpu(void *arg, u_char cpu)
+{
+#ifdef SMP
+	struct pcpu *pc;
+	struct intr_vector *iv;
+
+	/*
+	 * Don't do anything during early boot.  We will pick up the
+	 * assignment once the APs are started.
+	 */
+	if (assign_cpu && cpu != NOCPU) {
+		pc = pcpu_find(cpu);
+		if (pc == NULL)
+			return (EINVAL);
+		iv = arg;
+		sx_xlock(&intr_table_lock);
+		iv->iv_mid = pc->pc_mid;
+		iv->iv_ic->ic_assign(iv);
+		sx_xunlock(&intr_table_lock);
+	}
+	return (0);
+#else
+	return (EOPNOTSUPP);
+#endif
+}
+
 static void
 intr_execute_handlers(void *cookie)
 {
@@ -410,6 +437,7 @@ inthand_add(const char *name, int vec, driver_filter_t *filt,
 int
 inthand_remove(int vec, void *cookie)
 {
+	struct pcpu *pc;
 	struct intr_vector *iv;
 	int error;
 
