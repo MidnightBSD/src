@@ -1,7 +1,7 @@
 To update timezone information, perform the following steps.
 
 1. Download the new tzdata file from 
-   ftp://elsie.nci.nih.gov/pub/
+   http://www.iana.org/time-zones
 
 2. Verify the zones were not broken up into seperate files from the last import.
 
@@ -18,6 +18,6 @@ To update timezone information, perform the following steps.
 
 __
 
-Last updated with tzdata2011c
+Last updated with tzdata2011l
 
-$MidnightBSD: src/share/zoneinfo/MidnightBSD-upgrade,v 1.7 2010/03/17 23:51:34 laffer1 Exp $
+$MidnightBSD: src/share/zoneinfo/MidnightBSD-upgrade,v 1.8 2011/03/08 22:33:35 laffer1 Exp $
