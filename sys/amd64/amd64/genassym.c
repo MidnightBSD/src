@@ -136,6 +136,7 @@ ASSYM(PCB_DR6, offsetof(struct pcb, pcb_dr6));
 ASSYM(PCB_DR7, offsetof(struct pcb, pcb_dr7));
 ASSYM(PCB_DBREGS, PCB_DBREGS);
 ASSYM(PCB_32BIT, PCB_32BIT);
+ASSYM(PCB_GS32BIT, PCB_GS32BIT);
 ASSYM(PCB_FULLCTX, PCB_FULLCTX);
 
 ASSYM(PCB_FLAGS, offsetof(struct pcb, pcb_flags));
@@ -194,6 +195,7 @@ ASSYM(PC_SCRATCH_RSP, offsetof(struct pcpu, pc_scratch_rsp));
 ASSYM(PC_CURPMAP, offsetof(struct pcpu, pc_curpmap));
 ASSYM(PC_TSSP, offsetof(struct pcpu, pc_tssp));
 ASSYM(PC_RSP0, offsetof(struct pcpu, pc_rsp0));
+ASSYM(PC_GS32P, offsetof(struct pcpu, pc_gs32p));
  
 ASSYM(LA_VER, offsetof(struct LAPIC, version));
 ASSYM(LA_TPR, offsetof(struct LAPIC, tpr));
