@@ -40811,9 +40811,6 @@ usr.bin/lex/yylex.c -text
 usr.bin/limits/Makefile -text
 usr.bin/limits/limits.1 -text
 usr.bin/limits/limits.c -text
-usr.bin/lndir/Makefile -text
-usr.bin/lndir/lndir.1 -text
-usr.bin/lndir/lndir.c -text
 usr.bin/locale/Makefile -text
 usr.bin/locale/locale.1 -text
 usr.bin/locale/locale.c -text
