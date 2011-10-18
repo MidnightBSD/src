@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/local_apic.c,v 1.44 2007/09/11 22:54:09 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/local_apic.c,v 1.44.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_hwpmc_hooks.h"
 
@@ -65,15 +65,16 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/local_apic.c,v 1.44 2007/09/11 22:54:09 at
 #include <ddb/ddb.h>
 #endif
 
+#ifdef KDTRACE_HOOKS
+#include <sys/dtrace_bsd.h>
+cyclic_clock_func_t	lapic_cyclic_clock_func[MAXCPU];
+#endif
+
 /* Sanity checks on IDT vectors. */
 CTASSERT(APIC_IO_INTS + APIC_NUM_IOINTS == APIC_TIMER_INT);
 CTASSERT(APIC_TIMER_INT < APIC_LOCAL_INTS);
 CTASSERT(APIC_LOCAL_INTS == 240);
 CTASSERT(IPI_STOP < APIC_SPURIOUS_INT);
-
-#define	LAPIC_TIMER_HZ_DIVIDER		2
-#define	LAPIC_TIMER_STATHZ_DIVIDER	15
-#define	LAPIC_TIMER_PROFHZ_DIVIDER	3
 
 /* Magic IRQ values for the timer and syscalls. */
 #define	IRQ_TIMER	(NUM_IO_INTS + 1)
@@ -385,13 +386,27 @@ lapic_setup_clock(void)
 		    lapic_timer_divisor, value);
 
 	/*
-	 * We will drive the timer at a small multiple of hz and drive
-	 * both of the other timers with similarly small but relatively
-	 * prime divisors.
+	 * We want to run stathz in the neighborhood of 128hz.  We would
+	 * like profhz to run as often as possible, so we let it run on
+	 * each clock tick.  We try to honor the requested 'hz' value as
+	 * much as possible.
+	 *
+	 * If 'hz' is above 1500, then we just let the lapic timer
+	 * (and profhz) run at hz.  If 'hz' is below 1500 but above
+	 * 750, then we let the lapic timer run at 2 * 'hz'.  If 'hz'
+	 * is below 750 then we let the lapic timer run at 4 * 'hz'.
 	 */
-	lapic_timer_hz = hz * LAPIC_TIMER_HZ_DIVIDER;
-	stathz = lapic_timer_hz / LAPIC_TIMER_STATHZ_DIVIDER;
-	profhz = lapic_timer_hz / LAPIC_TIMER_PROFHZ_DIVIDER;
+	if (hz >= 1500)
+		lapic_timer_hz = hz;
+	else if (hz >= 750)
+		lapic_timer_hz = hz * 2;
+	else
+		lapic_timer_hz = hz * 4;
+	if (lapic_timer_hz < 128)
+		stathz = lapic_timer_hz;
+	else
+		stathz = lapic_timer_hz / (lapic_timer_hz / 128);
+	profhz = lapic_timer_hz;
 	lapic_timer_period = value / lapic_timer_hz;
 
 	/*
@@ -669,6 +684,17 @@ lapic_handle_timer(struct trapframe *frame)
 	la = &lapics[PCPU_GET(apic_id)];
 	(*la->la_timer_count)++;
 	critical_enter();
+
+#ifdef KDTRACE_HOOKS
+	/*
+	 * If the DTrace hooks are configured and a callback function
+	 * has been registered, then call it to process the high speed
+	 * timers.
+	 */
+	int cpu = PCPU_GET(cpuid);
+	if (lapic_cyclic_clock_func[cpu] != NULL)
+		(*lapic_cyclic_clock_func[cpu])(frame);
+#endif
 
 	/* Fire hardclock at hz. */
 	la->la_hard_ticks += hz;
@@ -1065,7 +1091,7 @@ apic_init(void *dummy __unused)
 		printf("%s: Failed to setup the local APIC: returned %d\n",
 		    best_enum->apic_name, retval);
 }
-SYSINIT(apic_init, SI_SUB_CPU, SI_ORDER_SECOND, apic_init, NULL)
+SYSINIT(apic_init, SI_SUB_CPU, SI_ORDER_SECOND, apic_init, NULL);
 
 /*
  * Setup the I/O APICs.
@@ -1094,7 +1120,7 @@ apic_setup_io(void *dummy __unused)
 	/* Enable the MSI "pic". */
 	msi_init();
 }
-SYSINIT(apic_setup_io, SI_SUB_INTR, SI_ORDER_SECOND, apic_setup_io, NULL)
+SYSINIT(apic_setup_io, SI_SUB_INTR, SI_ORDER_SECOND, apic_setup_io, NULL);
 
 #ifdef SMP
 /*

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/kern/bus_if.m,v 1.34 2007/02/23 12:19:01 piso Exp $
+# $FreeBSD: src/sys/kern/bus_if.m,v 1.34.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 #include <sys/bus.h>
@@ -492,6 +492,23 @@ METHOD int child_location_str {
 	char		*_buf;
 	size_t		_buflen;
 };
+
+/**
+ * @brief Allow drivers to request that an interrupt be bound to a specific
+ * CPU.
+ * 
+ * @param _dev		the parent device of @p _child
+ * @param _child	the device which allocated the resource
+ * @param _irq		the resource representing the interrupt
+ * @param _cpu		the CPU to bind the interrupt to
+ */
+METHOD int bind_intr {
+	device_t	_dev;
+	device_t	_child;
+	struct resource *_irq;
+	int		_cpu;
+} DEFAULT bus_generic_bind_intr;
+
 
 /**
  * @brief Allow (bus) drivers to specify the trigger mode and polarity
