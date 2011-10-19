@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gdb/gdb_cons.c,v 1.2 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 Sam Leffler
  * All rights reserved.
@@ -127,7 +127,7 @@ oktousecallout(void *data __unused)
 {
 	calloutok = 1;
 }
-SYSINIT(gdbhack, SI_SUB_RUN_SCHEDULER, SI_ORDER_ANY, oktousecallout, NULL)
+SYSINIT(gdbhack, SI_SUB_RUN_SCHEDULER, SI_ORDER_ANY, oktousecallout, NULL);
 
 static void
 gdb_cnputc(struct consdev *cp, int c)
