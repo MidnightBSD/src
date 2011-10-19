@@ -33,7 +33,7 @@
 
 #define	PIL_MAX		(1 << 4)
 #define	IV_MAX		(1 << 11)
-#define IV_NAMLEN	1024
+#define	IV_NAMLEN	1024
 
 #define	IR_FREE		(PIL_MAX * 2)
 
@@ -46,6 +46,7 @@
 #define	PIL_RENDEZVOUS	3	/* smp rendezvous ipi */
 #define	PIL_AST		4	/* ast ipi */
 #define	PIL_STOP	5	/* stop cpu ipi */
+#define	PIL_PREEMPT	6	/* preempt idle thread cpu ipi */
 #define	PIL_FAST	13	/* fast interrupts */
 #define	PIL_TICK	14
 
@@ -67,7 +68,8 @@ struct intr_request {
 struct intr_controller {
 	void	(*ic_enable)(void *);
 	void	(*ic_disable)(void *);
-	void	(*ic_eoi)(void *);
+	void	(*ic_assign)(void *);
+	void	(*ic_clear)(void *);
 };
 
 struct intr_vector {
@@ -85,6 +87,7 @@ struct intr_vector {
 
 extern ih_func_t *intr_handlers[];
 extern struct intr_vector intr_vectors[];
+
 #ifdef SMP
 void	intr_add_cpu(u_int cpu);
 #endif
