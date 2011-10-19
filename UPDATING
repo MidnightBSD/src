@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20111019:
+	awk 20110810 imported
+
 20111017:
 	Time Zone Data v. 2011l (Released 10 October 2011)
 
@@ -1103,4 +1106,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.138 2011/10/15 20:18:30 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.139 2011/10/17 18:33:33 laffer1 Exp $
