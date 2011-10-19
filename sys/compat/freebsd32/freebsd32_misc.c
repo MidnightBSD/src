@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.4 2008/12/03 00:24:35 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.5 2011/10/15 20:18:31 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -2520,6 +2520,7 @@ freebsd32_cpuset_setaffinity(struct thread *td,
 	return cpuset_setaffinity(td, &ap);
 }
 
+#if 0
 int
 freebsd32_nmount(struct thread *td,
     struct freebsd32_nmount_args /* {
@@ -2563,6 +2564,8 @@ freebsd32_nmount(struct thread *td,
 	free(auio, M_IOV);
 	return error;
 }
+
+#endif
 
 #if 0
 int
