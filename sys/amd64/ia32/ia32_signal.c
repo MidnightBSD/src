@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/ia32/ia32_signal.c,v 1.15 2006/10/05 01:56:10 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/ia32/ia32_signal.c,v 1.15.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 
@@ -391,7 +391,7 @@ freebsd4_ia32_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 
 	regs->tf_rsp = (uintptr_t)sfp;
 	regs->tf_rip = FREEBSD32_PS_STRINGS - sz_freebsd4_ia32_sigcode;
-	regs->tf_rflags &= ~PSL_T;
+	regs->tf_rflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucode32sel;
 	regs->tf_ss = _udatasel;
 	load_ds(_udatasel);
@@ -511,7 +511,7 @@ ia32_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 
 	regs->tf_rsp = (uintptr_t)sfp;
 	regs->tf_rip = FREEBSD32_PS_STRINGS - *(p->p_sysent->sv_szsigcode);
-	regs->tf_rflags &= ~PSL_T;
+	regs->tf_rflags &= ~(PSL_T | PSL_D);
 	regs->tf_cs = _ucode32sel;
 	regs->tf_ss = _udatasel;
 	load_ds(_udatasel);
@@ -740,6 +740,6 @@ ia32_setregs(td, entry, stack, ps_strings)
 
 	/* Return via doreti so that we can change to a different %cs */
 	pcb->pcb_flags |= PCB_FULLCTX | PCB_32BIT;
-	pcb=>pcb_flags &= ~PCB_GS32BIT;
+	pcb->pcb_flags &= ~PCB_GS32BIT;
 	td->td_retval[1] = 0;
 }

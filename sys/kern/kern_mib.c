@@ -36,8 +36,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mib.c,v 1.84.2.1 2007/12/06 14:19:42 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_mib.c,v 1.84.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
+#include "opt_compat.h"
 #include "opt_posix.h"
 #include "opt_config.h"
 
@@ -153,14 +154,18 @@ SYSCTL_INT(_hw, HW_PAGESIZE, pagesize, CTLFLAG_RD,
 static int
 sysctl_kern_arnd(SYSCTL_HANDLER_ARGS)
 {
-	u_long val;
+	char buf[256];
+	size_t len;
 
-	arc4rand(&val, sizeof(val), 0);
-	return (sysctl_handle_long(oidp, &val, 0, req));
+	len = req->oldlen;
+	if (len > sizeof(buf))
+		len = sizeof(buf);
+	arc4rand(buf, len, 0);
+	return (SYSCTL_OUT(req, buf, len));
 }
 
-SYSCTL_PROC(_kern, KERN_ARND, arandom, CTLFLAG_RD,
-	0, 0, sysctl_kern_arnd, "L", "arc4rand");
+SYSCTL_PROC(_kern, KERN_ARND, arandom, CTLTYPE_OPAQUE | CTLFLAG_RD,
+    NULL, 0, sysctl_kern_arnd, "", "arc4rand");
 
 static int
 sysctl_hw_physmem(SYSCTL_HANDLER_ARGS)
@@ -332,6 +337,20 @@ SYSCTL_ULONG(_kern, KERN_HOSTID, hostid, CTLFLAG_RW, &hostid, 0, "Host ID");
 char hostuuid[64] = "00000000-0000-0000-0000-000000000000";
 SYSCTL_STRING(_kern, KERN_HOSTUUID, hostuuid, CTLFLAG_RW, hostuuid,
     sizeof(hostuuid), "Host UUID");
+
+SYSCTL_NODE(_kern, OID_AUTO, features, CTLFLAG_RD, 0, "Kernel Features");
+
+#ifdef COMPAT_FREEBSD4
+FEATURE(compat_freebsd4, "Compatible with FreeBSD 4");
+#endif
+
+#ifdef COMPAT_FREEBSD5
+FEATURE(compat_freebsd5, "Compatible with FreeBSD 5");
+#endif
+
+#ifdef COMPAT_FREEBSD6
+FEATURE(compat_freebsd6, "Compatible with FreeBSD 6");
+#endif
 
 /*
  * This is really cheating.  These actually live in the libc, something
