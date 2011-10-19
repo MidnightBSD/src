@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/rlphy.c,v 1.31 2007/06/06 07:07:23 yongari Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/rlphy.c,v 1.31.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * driver for RealTek 8139 internal PHYs
@@ -261,10 +261,10 @@ rlphy_status(struct mii_softc *phy)
 
 		if ((anlpar = PHY_READ(phy, MII_ANAR) &
 		    PHY_READ(phy, MII_ANLPAR))) {
-			if (anlpar & ANLPAR_T4)
-				mii->mii_media_active |= IFM_100_T4;
-			else if (anlpar & ANLPAR_TX_FD)
+			if (anlpar & ANLPAR_TX_FD)
 				mii->mii_media_active |= IFM_100_TX|IFM_FDX;
+			else if (anlpar & ANLPAR_T4)
+				mii->mii_media_active |= IFM_100_T4;
 			else if (anlpar & ANLPAR_TX)
 				mii->mii_media_active |= IFM_100_TX;
 			else if (anlpar & ANLPAR_10_FD)

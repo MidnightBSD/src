@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/e1000phy.c,v 1.18.2.1 2007/11/01 04:26:33 yongari Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/e1000phy.c,v 1.18.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * driver for the Marvell 88E1000 series external 1000/100/10-BT PHY.
@@ -151,6 +151,20 @@ e1000phy_attach(device_t dev)
 	case MII_MODEL_MARVELL_E1112:
 		if (PHY_READ(sc, E1000_ESSR) & E1000_ESSR_FIBER_LINK)
 			sc->mii_flags |= MIIF_HAVEFIBER;
+		break;
+	case MII_MODEL_MARVELL_E1149:
+		/*
+		 * Some 88E1149 PHY's page select is initialized to
+		 * point to other bank instead of copper/fiber bank
+		 * which in turn resulted in wrong registers were
+		 * accessed during PHY operation. It is believed that
+		 * page 0 should be used for copper PHY so reinitialize
+		 * E1000_EADR to select default copper PHY. If parent
+		 * device know the type of PHY(either copper or fiber),
+		 * that information should be used to select default
+		 * type of PHY.
+		 */
+		PHY_WRITE(sc, E1000_EADR, 0);
 		break;
 	case MII_MODEL_MARVELL_E3082:
 		/* 88E3082 10/100 Fast Ethernet PHY. */
@@ -397,8 +411,10 @@ done:
 		/*
 		 * Only used for autonegotiation.
 		 */
-		if (IFM_SUBTYPE(ife->ifm_media) != IFM_AUTO)
+		if (IFM_SUBTYPE(ife->ifm_media) != IFM_AUTO) {
+			sc->mii_ticks = 0;
 			break;
+		}
 
 		/*
 		 * check for link.
@@ -411,6 +427,8 @@ done:
 		}
 
 		/* Announce link loss right after it happens. */
+		if (sc->mii_ticks++ == 0)
+			break;
 		if (sc->mii_ticks <= sc->mii_anegticks)
 			return (0);
 

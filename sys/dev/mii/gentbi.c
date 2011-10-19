@@ -74,7 +74,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/gentbi.c,v 1.3 2007/01/26 17:06:02 dwhite Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/gentbi.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Driver for generic unknown ten-bit interfaces(1000BASE-{LX,SX}
@@ -182,7 +182,6 @@ gentbi_attach(device_t dev)
 	sc->mii_phy = ma->mii_phyno;
 	sc->mii_service = gentbi_service;
 	sc->mii_pdata = mii;
-	sc->mii_flags |= MIIF_NOISOLATE;
 
 	mii->mii_instance++;
 
@@ -287,7 +286,7 @@ gentbi_status(struct mii_softc *sc)
 
 	if (bmcr & BMCR_AUTOEN) {
 		/*
-		 * The media status bits are only valid of autonegotiation
+		 * The media status bits are only valid if autonegotiation
 		 * has completed (or it's disabled).
 		 */
 		if ((bmsr & BMSR_ACOMP) == 0) {

@@ -35577,13 +35577,14 @@ sys/dev/mii/acphy.c -text
 sys/dev/mii/acphyreg.h -text
 sys/dev/mii/amphy.c -text
 sys/dev/mii/amphyreg.h -text
+sys/dev/mii/atphy.c -text
+sys/dev/mii/atphyreg.h -text
 sys/dev/mii/bmtphy.c -text
 sys/dev/mii/bmtphyreg.h -text
 sys/dev/mii/brgphy.c -text
 sys/dev/mii/brgphyreg.h -text
 sys/dev/mii/ciphy.c -text
 sys/dev/mii/ciphyreg.h -text
-sys/dev/mii/dcphy.c -text
 sys/dev/mii/e1000phy.c -text
 sys/dev/mii/e1000phyreg.h -text
 sys/dev/mii/exphy.c -text
@@ -35594,6 +35595,8 @@ sys/dev/mii/inphy.c -text
 sys/dev/mii/inphyreg.h -text
 sys/dev/mii/ip1000phy.c -text
 sys/dev/mii/ip1000phyreg.h -text
+sys/dev/mii/jmphy.c -text
+sys/dev/mii/jmphyreg.h -text
 sys/dev/mii/lxtphy.c -text
 sys/dev/mii/lxtphyreg.h -text
 sys/dev/mii/mii.c -text
@@ -35607,8 +35610,9 @@ sys/dev/mii/nsgphy.c -text
 sys/dev/mii/nsgphyreg.h -text
 sys/dev/mii/nsphy.c -text
 sys/dev/mii/nsphyreg.h -text
+sys/dev/mii/nsphyter.c -text
+sys/dev/mii/nsphyterreg.h -text
 sys/dev/mii/pnaphy.c -text
-sys/dev/mii/pnphy.c -text
 sys/dev/mii/qsphy.c -text
 sys/dev/mii/qsphyreg.h -text
 sys/dev/mii/rgephy.c -text
@@ -35621,6 +35625,8 @@ sys/dev/mii/tdkphy.c -text
 sys/dev/mii/tdkphyreg.h -text
 sys/dev/mii/tlphy.c -text
 sys/dev/mii/tlphyreg.h -text
+sys/dev/mii/truephy.c -text
+sys/dev/mii/truephyreg.h -text
 sys/dev/mii/ukphy.c -text
 sys/dev/mii/ukphy_subr.c -text
 sys/dev/mii/xmphy.c -text

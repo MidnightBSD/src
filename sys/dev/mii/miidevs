@@ -1,4 +1,4 @@
-$FreeBSD: src/sys/dev/mii/miidevs,v 1.46.2.1 2007/11/05 01:42:02 yongari Exp $
+$FreeBSD: src/sys/dev/mii/miidevs,v 1.46.2.9.2.1 2008/11/25 02:59:29 kensmith Exp $
 /*$NetBSD: miidevs,v 1.6 1999/05/14 11:37:30 drochner Exp $*/
 
 /*-
@@ -49,15 +49,19 @@ $FreeBSD: src/sys/dev/mii/miidevs,v 1.46.2.1 2007/11/05 01:42:02 yongari Exp $
  * mangled accordingly to compensate.
  */
 
+oui AGERE			0x00a0bc	Agere Systems
 oui ALTIMA			0x0010a9	Altima Communications
 oui AMD				0x00001a	Advanced Micro Devices
+oui ATHEROS			0x001374	Atheros Communications
 oui BROADCOM			0x001018	Broadcom Corporation
+oui BROADCOM2			0x000af7	Broadcom Corporation
 oui CICADA			0x0003F1	Cicada Semiconductor
 oui DAVICOM			0x00606e	Davicom Semiconductor
 oui ICPLUS			0x0090c3	IC Plus Corp.
 oui ICS				0x00a0be	Integrated Circuit Systems
 oui INTEL			0x00aa00	Intel
 oui JATO			0x00e083	Jato Technologies
+oui JMICRON			0x001b8c	JMicron Technologies
 oui LEVEL1			0x00207b	Level 1
 oui NATSEMI			0x080017	National Semiconductor
 oui QUALSEMI			0x006051	Quality Semiconductor
@@ -102,6 +106,9 @@ oui xxREALTEK			0x000732
  * List of known models.  Grouped by oui.
  */
 
+/* Agere Systems PHYs */
+model AGERE ET1011C		0x0004 ET1011C 10/100/1000baseT PHY
+
 /* Altima Communications PHYs */
 model xxALTIMA AC101		0x0021 AC101 10/100 media interface
 model xxALTIMA AC101L		0x0012 AC101L 10/100 media interface
@@ -111,6 +118,10 @@ model xxALTIMA ACXXX		0x0001 ACXXX 10/100 media interface
 model AMD 79c973phy		0x0036 Am79c973 internal PHY
 model AMD 79c978		0x0039 Am79c978 HomePNA PHY
 model xxAMD 79C873		0x0000 Am79C873/DM9101 10/100 media interface
+
+/* Atheros Communications/Attansic PHYs. */
+model ATHEROS F1		0x0001 Atheros F1 10/100/1000 PHY
+model ATHEROS F2		0x0002 Atheros F2 10/100 PHY
 
 /* Broadcom Corp. PHYs. */
 model BROADCOM 3C905B		0x0012 3c905B 10/100 internal PHY
@@ -135,6 +146,8 @@ model xxBROADCOM BCM5708C	0x0036 BCM5708C 10/100/1000baseTX PHY
 model xxBROADCOM_ALT1 BCM5755	0x000c BCM5755 10/100/1000baseTX PHY
 model xxBROADCOM_ALT1 BCM5787	0x000e BCM5787 10/100/1000baseTX PHY
 model xxBROADCOM_ALT1 BCM5708S	0x0015 BCM5708S 1000/2500BaseSX PHY
+model xxBROADCOM_ALT1 BCM5722	0x002d BCM5722 10/100/1000baseTX PHY
+model BROADCOM2 BCM5906		0x0004 BCM5906 10/100baseTX PHY
 
 /* Cicada Semiconductor PHYs (now owned by Vitesse?) */
 model CICADA CS8201		0x0001 Cicada CS8201 10/100/1000TX PHY
@@ -155,6 +168,7 @@ model xxICS 1893		0x0004 ICS1893 10/100 media interface
 /* IC Plus Corp. PHYs */
 model ICPLUS IP101		0x0005 IC Plus 10/100 PHY
 model ICPLUS IP1000A		0x0008 IC Plus 10/100/1000 media interface
+model ICPLUS IP1001		0x0019 IC Plus IP1001 10/100/1000 media interface
 
 /* Intel PHYs */
 model xxINTEL I82553AB		0x0000 i83553 10/100 media interface
@@ -166,12 +180,18 @@ model INTEL I82553C		0x0035 i82553 10/100 media interface
 /* Jato Technologies PHYs */
 model JATO BASEX		0x0000 Jato 1000baseX media interface
 
+/* JMicron Technologies PHYs */
+model JMICRON JMP211		0x0021 JMP211 10/100/1000 media interface
+model JMICRON JMP202		0x0022 JMP202 10/100 media interface
+
 /* Level 1 PHYs */
 model xxLEVEL1 LXT970		0x0000 LXT970 10/100 media interface
 
 /* National Semiconductor PHYs */
 model NATSEMI DP83840		0x0000 DP83840 10/100 media interface
 model NATSEMI DP83843		0x0001 DP83843 10/100 media interface
+model NATSEMI DP83815		0x0002 DP83815 10/100 media interface
+model NATSEMI DP83847		0x0003 DP83847 10/100 media interface
 model NATSEMI DP83891		0x0005 DP83891 10/100/1000 media interface
 model NATSEMI DP83861		0x0006 DP83861 10/100/1000 media interface
 

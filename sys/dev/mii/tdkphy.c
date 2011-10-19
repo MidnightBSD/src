@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.22 2006/12/02 20:16:45 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Driver for the TDK 78Q2120 MII
@@ -239,10 +239,10 @@ tdkphy_status(struct mii_softc *phy)
 		 * ANLPAR doesn't get set on my card, but we check it anyway,
 		 * since it is mentioned in the 78Q2120 specs.
 		 */
-		if (anlpar & ANLPAR_T4)
-			mii->mii_media_active |= IFM_100_T4;
-		else if (anlpar & ANLPAR_TX_FD)
+		if (anlpar & ANLPAR_TX_FD)
 			mii->mii_media_active |= IFM_100_TX|IFM_FDX;
+		else if (anlpar & ANLPAR_T4)
+			mii->mii_media_active |= IFM_100_T4;
 		else if (anlpar & ANLPAR_TX)
 			mii->mii_media_active |= IFM_100_TX;
 		else if (anlpar & ANLPAR_10_FD)

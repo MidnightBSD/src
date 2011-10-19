@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/amphy.c,v 1.22 2007/01/12 22:27:46 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/amphy.c,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * driver for AMD AM79c873 PHYs
@@ -228,10 +228,10 @@ amphy_status(struct mii_softc *sc)
 		if (PHY_READ(sc, MII_ANER) & ANER_LPAN) {
 			anlpar = PHY_READ(sc, MII_ANAR) &
 			    PHY_READ(sc, MII_ANLPAR);
-			if (anlpar & ANLPAR_T4)
-				mii->mii_media_active |= IFM_100_T4;
-			else if (anlpar & ANLPAR_TX_FD)
+			if (anlpar & ANLPAR_TX_FD)
 				mii->mii_media_active |= IFM_100_TX|IFM_FDX;
+			else if (anlpar & ANLPAR_T4)
+				mii->mii_media_active |= IFM_100_T4;
 			else if (anlpar & ANLPAR_TX)
 				mii->mii_media_active |= IFM_100_TX;
 			else if (anlpar & ANLPAR_10_FD)
