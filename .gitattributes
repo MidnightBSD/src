@@ -13104,7 +13104,7 @@ contrib/nvi/vi/vs_relative.c -text
 contrib/nvi/vi/vs_smap.c -text
 contrib/nvi/vi/vs_split.c -text
 contrib/one-true-awk/FIXES -text
-contrib/one-true-awk/FREEBSD-upgrade -text
+contrib/one-true-awk/MIDNIGHTBSD-upgrade -text
 contrib/one-true-awk/README -text
 contrib/one-true-awk/awk.1 -text
 contrib/one-true-awk/awk.h -text
