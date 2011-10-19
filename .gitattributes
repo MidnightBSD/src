@@ -35200,6 +35200,9 @@ sys/dev/esp/esp_sbus.c -text
 sys/dev/esp/ncr53c9x.c -text
 sys/dev/esp/ncr53c9xreg.h -text
 sys/dev/esp/ncr53c9xvar.h -text
+sys/dev/et/if_et.c -text
+sys/dev/et/if_etreg.h -text
+sys/dev/et/if_etvar.h -text
 sys/dev/ex/if_ex.c -text
 sys/dev/ex/if_ex_isa.c -text
 sys/dev/ex/if_ex_pccard.c -text
@@ -37480,6 +37483,7 @@ sys/modules/em/Makefile -text
 sys/modules/en/Makefile -text
 sys/modules/ep/Makefile -text
 sys/modules/esp/Makefile -text
+sys/modules/et/Makefile -text
 sys/modules/ex/Makefile -text
 sys/modules/exca/Makefile -text
 sys/modules/ext2fs/Makefile -text

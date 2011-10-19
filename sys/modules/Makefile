@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.22 2011/02/16 13:36:44 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.23 2011/09/30 01:08:51 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -79,6 +79,7 @@ SUBDIR=	${_3dfx} \
 	${_em} \
 	en \
 	${_ep} \
+	et \
 	${_ex} \
 	${_exca} \
 	${_ext2fs} \
