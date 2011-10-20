@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.26 2011/10/20 16:56:45 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.27 2011/10/20 17:21:23 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -59,9 +59,8 @@ CVSROOT=:pserver:anonymous@ds9.midnightbsd.org:/home/cvs
 .if defined(RELEASETAG)
 ISRELEASE!=	expr "${RELEASETAG}" : '^RELENG_.*_RELEASE$$' || true
 .if ${ISRELEASE} != 0
-# Convert "RELENG_ver_RELEASE" to "RELEASE_ver" for mports and doc trees.
+# Convert "RELENG_ver_RELEASE" to "RELEASE_ver" for mports.
 AUXRELEASETAG!=	echo ${RELEASETAG} | sed -e 's/^RELENG_/RELEASE_/' -e 's/_RELEASE$$//'
-DOCRELEASETAG?=		${AUXRELEASETAG}
 PORTSRELEASETAG?=	${AUXRELEASETAG}
 .endif
 .endif
@@ -86,23 +85,8 @@ NATIVEMAKE=	${MAKE} TARGET_ARCH=${MACHINE_ARCH} TARGET=${MACHINE}
 # non-standard modules, override these on the make commandline or
 # in the environment.
 RELEASESRCMODULE?=	src
-RELEASEDOCMODULE?=	doc
 RELEASEPORTSMODULE?=	mports
 
-# Uncomment this to disable the doc.1 target.  Docs normally require
-# the mports tree, so NOPORTS can be set together with NODOC in order
-# to have neither mports or docs.  If only NOPORTS is set to YES, but
-# docs are still desired, the DOMINIMALDOCPORTS logic below will only
-# install the mports that are minimally required for the docs.  This is
-# intended as a compromise, less disk space is required than for using
-# the entire mports collection (and much less time due to the huge number
-# of directories it would create), but still quite a bit as well as some
-# CPU cycles (some of the programs are C++, and things like ghostscript
-# belong to the required mports nevertheless).
-#
-# Setting this also disables building of release note documentation
-# (RELNOTESng).
-NODOC=  YES
 #NOPORTS=  YES
 
 # When retrieving mports using the pkg_add -r method, set your proxies to these.
@@ -119,51 +103,13 @@ NODOC=  YES
 # (another "s" for "source" will be prepended).
 #EXTRA_SRC=	games/fortune fortune
 
-# Modify this definition if you want the release notes 
-# and other release documentation in a language other than English.
-RELNOTES_LANG?=	en_US.ISO8859-1
-
-# As an alternative to installing the entire mports collection (which
-# can take a huge amount of time, in particular on slower disks),
-# setting ${MINIMALDOCPORTS} allows to install and build just those
-# mports that are really required for getting the docs up & running.
-.if defined(NOPORTS) && !defined(NODOC)
-DOMINIMALDOCPORTS=	YES
-.include "Makefile.inc.docports"
-RELEASEPORTSMODULE=	${MINIMALDOCPORTS}
-.endif
-
-# Helper variable
-.if defined(NOPORTS)
-.if !defined(DOMINIMALDOCPORTS) || ${DOMINIMALDOCPORTS} != "YES"
-NOPORTSATALL=	YES
-.endif
-.endif
-
 #
 # Doing 'make index' in /usr/mports requires Perl.
 MAKEINDEXPORTS=
-# By default, documentation (Handbook, FAQ, etc.) is built for all
-# the languages.  To speed up building, set the DOC_LANG to just
-# the languages you need.  (The language for the release notes is
-# controlled by the RELNOTES_LANG variable above.)
-#DOC_LANG=	en_US.ISO8859-1
-DOCPORTS=	textproc/docproj
-# Set this to wherever the distfiles required by release procedures.
-.if defined(DOCDISTFILES)
-# Respect DOCDISTFILES which is used before.
-RELEASEDISTFILES?=	${DOCDISTFILES}
-.else
 RELEASEDISTFILES?=	${.CURDIR}/../../mports/Distfiles
-.endif
 # Set this to 1 if you want -P to be used for automatic keyboard detection
 # WARNING: Breaks on some Athlon (K7) motherboards.
 AUTO_KEYBOARD_DETECT?= 0
-
-.if !defined(NODOC)
-DIST_DOCS_ARCH_INDEP=	hardware readme relnotes errata
-DIST_DOCS_ARCH_DEP=
-.endif
 
 # Things which without too much trouble can be considered variables
 # BASE_DISTS are special in that they get full /etc installation sets.
@@ -210,9 +156,6 @@ CD_DISC3=		${CD}/disc3
 .if defined(MAKE_DVD)
 CD_DVD1=		${CD}/dvd1
 .endif
-.if !defined(NODOC)
-CD_DOCS=		${CD}/docs
-.endif
 .if defined(SEPARATE_LIVEFS)
 CD_LIVEFS=		${CD}/livefs
 .else
@@ -220,7 +163,6 @@ CD_LIVEFS=		${CD_DISC1}
 .endif
 _MK?=			${CHROOTDIR}/mk
 
-# Where the bootstrap mports (see DOCPORTS) get installed.
 LOCALDIR=		/usr/local/bin
 
 .if ${TARGET} != ${MACHINE} && ${DISKLABEL} == "bsdlabel"
@@ -243,10 +185,6 @@ EXTRAS+= iso.1
 BOOTABLE="-b"
 .endif
 
-.if !defined(NODOC)
-DOCREL= doc.1 doc.2
-.endif
-
 .if !make(release) && !make(rerelease) && !make(package-split)
 BINMAKE!=	cd ${.CURDIR}/..; ${MAKE} -V BINMAKE
 WMAKEENV!=	cd ${.CURDIR}/..; \
@@ -259,11 +197,6 @@ CVS_SRCARGS=	-P
 CVS_SRCARGS+=	-r ${RELEASETAG}
 .endif
 
-CVS_DOCARGS=	-P
-.if defined(DOCRELEASETAG)
-CVS_DOCARGS+=	-r ${DOCRELEASETAG}
-.endif
-
 CVS_PORTSARGS=	-P
 .if defined(PORTSRELEASETAG)
 CVS_PORTSARGS+=	-r ${PORTSRELEASETAG}
@@ -274,11 +207,6 @@ WORLDDIR?=	${.CURDIR}/..
 release rerelease:
 .if !defined(CHROOTDIR) || !defined(BUILDNAME) || !defined(CVSROOT)
 	@echo "To make a release you must set CHROOTDIR, BUILDNAME and CVSROOT" && false
-.endif
-.if defined(NOPORTSATALL) && !defined(NODOC)
-	@echo "Ports are required for building the docs.  Either set NODOC or"
-	@echo "unset NOPORTS, or set at least DOMINIMALDOCPORTS to YES!"
-	@exit 1
 .endif
 .if defined(LOCAL_PATCHES) && !empty(LOCAL_PATCHES)
 .for p in ${LOCAL_PATCHES}
@@ -343,14 +271,6 @@ release rerelease:
 	    co ${CVSCMDARGS} ${CVS_PORTSARGS} ${RELEASEPORTSMODULE}
 .endif
 .endif
-.if !defined(NODOC)
-	rm -rf ${CHROOTDIR}/usr/doc
-.if defined(EXTDOCDIR)
-	cd ${CHROOTDIR}/usr && cp -R -H ${EXTDOCDIR} doc
-.else
-	cd ${CHROOTDIR}/usr && ${CVSPREFIX} cvs ${CVSARGS} -d ${CVSROOT} \
-	    co ${CVSCMDARGS} ${CVS_DOCARGS} ${RELEASEDOCMODULE}
-.endif
 	if [ -d ${RELEASEDISTFILES}/ ]; then \
 		cp -rp ${RELEASEDISTFILES} ${CHROOTDIR}/usr/mports/Distfiles; \
 	else \
@@ -358,7 +278,6 @@ release rerelease:
 	fi
 .if !defined(NO_PREFETCHDISTFILES)
 	@cd ${.CURDIR} && ${MAKE} fetch-distfiles
-.endif
 .endif
 .endif
 .if make(rerelease)
@@ -375,16 +294,6 @@ release rerelease:
 	cd ${CHROOTDIR}/usr/mports && ${CVSPREFIX} cvs ${CVSARGS} -q \
 	    update ${CVSCMDARGS} -P -d
 	rm -f ${CHROOTDIR}/tmp/.skip_ports_index
-.endif
-.if defined(DOMINIMALDOCPORTS) && ${DOMINIMALDOCPORTS} == "YES"
-	for i in ${MINIMALDOCPORTS}; do \
-	    ( cd ${CHROOTDIR}/usr/$$i && ${CVSPREFIX} cvs ${CVSARGS} -q \
-		update ${CVSCMDARGS} -P -d ) ; \
-	done
-.endif
-.if !defined(NODOC)
-	cd ${CHROOTDIR}/usr/doc && ${CVSPREFIX} cvs ${CVSARGS} -q \
-	    update ${CVSCMDARGS} -P -d
 .endif
 .endif
 .endif
@@ -405,8 +314,6 @@ release rerelease:
 	BUILDNAME \
 	CD_PACKAGE_TREE \
 	DISTRIBUTIONS \
-	DOC_LANG \
-	DOMINIMALDOCPORTS \
 	EXTRA_SRC \
 	FTP_PASSIVE_MODE \
 	FTP_PROXY \
@@ -417,7 +324,6 @@ release rerelease:
 	MAKE_DVD \
 	MAKE_ISOS \
 	NOCDROM \
-	NODOC \
 	NOPORTS \
 	NO_SHARED \
 	NOSRC \
@@ -489,12 +395,6 @@ fetch-distfiles:
 	@for i in ${MAKEINDEXPORTS}; do \
 		cd ${CHROOTDIR}/usr/mports/$$i && \
 			make PORTSDIR=${CHROOTDIR}/usr/mports BATCH=yes \
-			checksum-recursive ; \
-	done
-	@for i in ${DOCPORTS}; do \
-		cd ${CHROOTDIR}/usr/mports/$$i && \
-			make PORTSDIR=${CHROOTDIR}/usr/mports BATCH=yes \
-			WITHOUT_X11=yes JADETEX=no WITHOUT_PYTHON=yes \
 			checksum-recursive ; \
 	done
 
@@ -691,16 +591,6 @@ release.8:
 	ln ${RD}/mfsfd/stand/etc/group ${RD}/mfsfd/etc/group
 	ln ${RD}/mfsfd/stand/etc/netconfig ${RD}/mfsfd/etc/netconfig
 	cp ${RD}/trees/base/COPYRIGHT ${RD}/mfsfd/stand/help/COPYRIGHT.hlp
-.if !defined(NODOC)
-	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
-	  cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
-	      ${RD}/mfsfd/stand/help/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
-	done
-	@for i in ${DIST_DOCS_ARCH_DEP}; do \
-	  cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.txt \
-	      ${RD}/mfsfd/stand/help/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
-	done
-.endif
 	-test -f ${.CURDIR}/install.cfg \
 	    && cp ${.CURDIR}/install.cfg ${RD}/mfsfd
 	@mkdir -p ${RD}/mfsfd/boot
@@ -724,21 +614,6 @@ ftp.1:
 	@mkdir -p ${FD}
 	-@ln -s . ${FD}/${BUILDNAME}
 	@cd ${RD}/dists && pax -rw -k -p e -t -u . ${FD}
-.if !defined(NODOC)
-	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
-		cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
-		    ${FD}/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
-		cp ${RND}/${RELNOTES_LANG}/$$i/article.html \
-		    ${FD}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
-	done
-	@for i in ${DIST_DOCS_ARCH_DEP}; do \
-		cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.txt \
-		    ${FD}/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
-		cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.html \
-		    ${FD}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
-	done
-	@cp ${RND}/${RELNOTES_LANG}/readme/docbook.css ${FD}
-.endif
 	@echo "CD_VERSION = ${BUILDNAME}" > ${FD}/cdrom.inf
 	touch ${.TARGET}
 
@@ -808,21 +683,6 @@ cdrom.2:
 	@echo "Building CDROM disc1 filesystem image"
 	@mkdir -p ${CD_DISC1}/${BUILDNAME}
 	@cd ${RD}/dists && pax -rw -k -t -u . ${CD_DISC1}/${BUILDNAME}
-.if !defined(NODOC)
-	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
-	  cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
-	      ${CD_DISC1}/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
-	  cp ${RND}/${RELNOTES_LANG}/$$i/article.html \
-	      ${CD_DISC1}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
-	done
-	@for i in ${DIST_DOCS_ARCH_DEP}; do \
-	  cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.txt \
-	      ${CD_DISC1}/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
-	  cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.html \
-	      ${CD_DISC1}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
-	done
-	@cp ${RND}/${RELNOTES_LANG}/readme/docbook.css ${CD_DISC1}
-.endif
 .if defined(SEPARATE_LIVEFS)
 	@cp -Rp ${CD_LIVEFS}/boot ${CD_DISC1}
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DISC1}/cdrom.inf
@@ -838,43 +698,8 @@ cdrom.2:
 	@echo "CD_VOLUME = 3" >> ${CD_DISC3}/cdrom.inf
 .if defined(MAKE_DVD)
 	@cd ${RD}/dists && pax -rw -k -t -u . ${CD_DVD1}/${BUILDNAME}
-.if !defined(NODOC)
-	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
-		cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
-		${CD_DVD1}/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
-		cp ${RND}/${RELNOTES_LANG}/$$i/article.html \
-		${CD_DVD1}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
-	done
-	@for i in ${DIST_DOCS_ARCH_DEP}; do \
-		cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.txt \
-			${CD_DVD1}/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
-		cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.html \
-			${CD_DVD1}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
-	done
-	@cp ${RND}/${RELNOTES_LANG}/readme/docbook.css ${CD_DVD1}
-.endif
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DVD1}/cdrom.inf
 	@echo "CD_VOLUME = 1" >> ${CD_DVD1}/cdrom.inf
-.endif
-.if !defined(NODOC)
-	@echo "Building CDROM docs filesystem image"
-	@mkdir -p ${CD_DOCS}
-	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DOCS}/cdrom.inf
-	@mkdir -p ${CD_DOCS}/usr/share/doc
-.if defined(MAKE_DVD)
-	@mkdir -p ${CD_DVD1}/usr/share/doc
-.endif
-	@for i in `ls ${CD_LIVEFS}/usr/share/doc`; do \
-		if [ -L ${CD_LIVEFS}/usr/share/doc/$$i -o \
-		    -d /usr/doc/$$i ]; then \
-			mv ${CD_LIVEFS}/usr/share/doc/$$i \
-			    ${CD_DOCS}/usr/share/doc; \
-		fi \
-	done
-.if defined(MAKE_DVD)
-	@cd ${CD_DOCS}/usr/share/doc && find . -print | \
-		cpio -dumpl ${CD_DVD1}/usr/share/doc
-.endif
 .endif
 	touch ${.TARGET}
 
@@ -940,11 +765,6 @@ iso.1:
 	    ${CD}/MidnightBSD-${BUILDNAME}-${TARGET}-dvd1.iso ${CD_DVD1} \
 	    ${CD_DVD1_PKGS}
 .endif
-.if !defined(NODOC)
-	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh \
-	    MidnightBSD_Documentation \
-	    ${CD}/${BUILDNAME}-${TARGET}-docs.iso ${CD_DOCS}
-.endif
 .if defined(SEPARATE_LIVEFS)
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh ${BOOTABLE} \
 	    MidnightBSD_LiveFS \
@@ -957,31 +777,6 @@ iso.1:
 .else
 	@echo "Do not know how to create an ISO for ${TARGET_ARCH}."
 .endif
-
-#
-# --==## Documentation Project files such as the Handbook and FAQ ##==--
-#
-doc.1:
-	@echo "Making docs..."
-	@for i in ${DOCPORTS}; do \
-	    cd /usr/mports/$$i && \
-	    env -i FTP_PASSIVE_MODE=$${FTP_PASSIVE_MODE:-no} PATH=$${PATH} \
-		make all install clean BATCH=yes WITHOUT_X11=yes JADETEX=no \
-		WITHOUT_PYTHON=yes FORCE_PKG_REGISTER=yes; \
-	done
-	@cd /usr/doc && make all install 'FORMATS=html html-split txt' \
-	    INSTALL_COMPRESSED='' DOCDIR=${RD}/trees/base/usr/share/doc \
-	    URLS_ABSOLUTE=YES	
-	touch ${.TARGET}
-
-#
-# --==## RELNOTESng:  Next-generation replacements for *.TXT files ##==--
-#
-doc.2:
-	@echo "Making release documentation..."
-	@cd ${.CURDIR}/doc && make all install clean 'FORMATS=html txt' \
-	    INSTALL_COMPRESSED='' URLS_ABSOLUTE=YES DOCDIR=${RND}
-	touch ${.TARGET}
 
 # Various "subroutine" and other supporting targets.
 
@@ -1028,7 +823,7 @@ doTARBALL:
 		mv .CHECKSUM.SHA256 CHECKSUM.SHA256) \
 	)
 
-doRELEASE: release.1 release.2 ${DOCREL} release.3 release.4 \
+doRELEASE: release.1 release.2 release.3 release.4 \
     release.5 release.6 release.7 release.8 ${EXTRAS}
 	@echo "Release done"
 
