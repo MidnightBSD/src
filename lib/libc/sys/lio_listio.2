@@ -37,9 +37,9 @@
 .Ft int
 .Fo lio_listio
 .Fa "int mode"
-.Fa "struct aiocb * const list[]"
+.Fa "struct aiocb *restrict const list[restrict]"
 .Fa "int nent"
-.Fa "struct sigevent *sig"
+.Fa "struct sigevent *restrict sig"
 .Fc
 .Sh DESCRIPTION
 The

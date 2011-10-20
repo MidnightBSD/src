@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/aio.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997 John S. Dyson.  All rights reserved.
  *
@@ -96,7 +96,7 @@ int	aio_write(struct aiocb *);
  *	"acb_list" is an array of "nacb_listent" I/O control blocks.
  *	when all I/Os are complete, the optional signal "sig" is sent.
  */
-int	lio_listio(int, struct aiocb * const [], int, struct sigevent *);
+int	lio_listio(int, struct aiocb *restrict const [restrict], int, struct sigevent *restrict);
 
 /*
  * Get completion status
