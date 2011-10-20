@@ -4,7 +4,7 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-# $MidnightBSD: src/sys/i386/conf/NOTES,v 1.8 2009/01/20 17:39:34 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/NOTES,v 1.9 2009/05/27 05:54:58 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/NOTES,v 1.1244.2.3.2.1 2008/02/06 03:24:28 scottl Exp $
 #
 
@@ -679,6 +679,7 @@ device		wpi
 
 device		ath
 device		ath_hal		# Atheros HAL (includes binary component)
+options		AH_SUPPORT_AR5416	# enable AR5416 tx/rx descriptors
 #device		ath_rate_amrr	# AMRR rate control for ath driver
 #device		ath_rate_onoe	# Onoe rate control for ath driver
 device		ath_rate_sample	# SampleRate rate control for the ath driver
@@ -863,8 +864,10 @@ device		ichwd
 #
 # Temperature sensors:
 #
+# amdtemp: on-die sensor on AMD K8/K10/K11 CPUs
 # coretemp: on-die sensor on Intel Core and newer CPUs
 #
+device		amdtemp
 device		coretemp
 
 #
