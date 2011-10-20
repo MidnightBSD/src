@@ -1,11 +1,11 @@
 # $FreeBSD: src/usr.bin/less/Makefile,v 1.10 2005/05/17 11:41:01 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/less/Makefile,v 1.2 2007/04/10 22:05:46 laffer1 Exp $
 
 PROG=	less
-SRCS=	main.c screen.c brac.c ch.c charset.c cmdbuf.c command.c decode.c \
+SRCS=	main.c screen.c brac.c ch.c charset.c cmdbuf.c command.c cvt.c decode.c \
 	edit.c filename.c forwback.c help.c ifile.c input.c jump.c line.c \
 	linenum.c lsystem.c mark.c optfunc.c option.c opttbl.c os.c output.c \
-	position.c prompt.c search.c signal.c tags.c ttyin.c version.c
+	pattern.c position.c prompt.c search.c signal.c tags.c ttyin.c version.c
 SCRIPTS=lesspipe.sh zless.sh
 SCRIPTSNAME_lesspipe.sh=lesspipe.sh
 DPADD=	${LIBTERMCAP}
