@@ -42453,6 +42453,17 @@ usr.sbin/mailwrapper/pathnames.h -text
 usr.sbin/makefs/Makefile -text
 usr.sbin/makefs/cd9660.c -text
 usr.sbin/makefs/cd9660.h -text
+usr.sbin/makefs/cd9660/Makefile.inc -text
+usr.sbin/makefs/cd9660/cd9660_archimedes.c -text
+usr.sbin/makefs/cd9660/cd9660_archimedes.h -text
+usr.sbin/makefs/cd9660/cd9660_conversion.c -text
+usr.sbin/makefs/cd9660/cd9660_debug.c -text
+usr.sbin/makefs/cd9660/cd9660_eltorito.c -text
+usr.sbin/makefs/cd9660/cd9660_eltorito.h -text
+usr.sbin/makefs/cd9660/cd9660_strings.c -text
+usr.sbin/makefs/cd9660/cd9660_write.c -text
+usr.sbin/makefs/cd9660/iso9660_rrip.c -text
+usr.sbin/makefs/cd9660/iso9660_rrip.h -text
 usr.sbin/makefs/compat/Makefile.inc -text
 usr.sbin/makefs/compat/pwcache.c -text
 usr.sbin/makefs/compat/pwcache.h -text
