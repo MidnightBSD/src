@@ -22,32 +22,6 @@
 #define	MINPOS(a,b)	(((a) < (b)) ? (a) : (b))
 #define	MAXPOS(a,b)	(((a) > (b)) ? (a) : (b))
 
-#if HAVE_POSIX_REGCOMP
-#include <regex.h>
-#ifdef REG_EXTENDED
-#define	REGCOMP_FLAG	(less_is_more ? 0 : REG_EXTENDED)
-#else
-#define	REGCOMP_FLAG	0
-#endif
-#endif
-#if HAVE_PCRE
-#include <pcre.h>
-#endif
-#if HAVE_RE_COMP
-char *re_comp();
-int re_exec();
-#endif
-#if HAVE_REGCMP
-char *regcmp();
-char *regex();
-extern char *__loc1;
-#endif
-#if HAVE_V8_REGCOMP
-#include "regexp.h"
-#endif
-
-static int match();
-
 extern int sigs;
 extern int how_search;
 extern int caseless;

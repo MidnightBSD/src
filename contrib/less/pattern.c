@@ -16,6 +16,7 @@
 #include "pattern.h"
 
 extern int caseless;
+extern int less_is_more;
 
 /*
  * Compile a search pattern, for future use by match_pattern.

@@ -508,7 +508,6 @@ mca_char(c)
 			if (less_is_more)
 				break;
 		case CONTROL('E'): /* ignore END of file */
-		case '*':
 			if (mca != A_FILTER)
 				flag = SRCH_PAST_EOF;
 			break;
@@ -516,7 +515,6 @@ mca_char(c)
 			if (less_is_more)
 				break;
 		case CONTROL('F'): /* FIRST file */
-		case '@':
 			if (mca != A_FILTER)
 				flag = SRCH_FIRST_FILE;
 			break;
