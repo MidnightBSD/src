@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.24 2011/09/18 20:19:27 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.25 2011/09/30 03:22:10 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -19,16 +19,16 @@
 # Set these, release builder!
 #
 # Fixed version:
-#BUILDNAME=0.3-RELEASE
+#BUILDNAME=0.4-RELEASE
 #
 # Automatic SNAP versioning:
 DATE != date +%Y%m%d
-BASE = 0.3
+BASE = 0.4
 BUILDNAME?=${BASE}-${DATE}-SNAP
 #
 #CHROOTDIR=/junk/release
 # If this is a -stable snapshot, then set
-#RELEASETAG=RELENG_0_3
+#RELEASETAG=RELENG_0_4
 #
 # To test a release with a source tree containing patches and
 # other work. This tree will get copied instead of getting the
