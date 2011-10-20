@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gdb/gdb_main.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -144,6 +144,11 @@ gdb_trap(int type, int code)
 			}
 			kdb_cpu_clear_singlestep();
 			gdb_listening = 1;
+			return (1);
+		}
+		case 'D': {     /* Detach */
+			gdb_tx_ok();
+			kdb_cpu_clear_singlestep();
 			return (1);
 		}
 		case 'g': {	/* Read registers. */

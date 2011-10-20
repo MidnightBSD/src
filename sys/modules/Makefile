@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.23 2011/09/30 01:08:51 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.24 2011/10/19 15:17:28 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -19,6 +19,7 @@ SUBDIR=	${_3dfx} \
 	alc \
 	ale \
 	${_amd} \
+	${_amdsbwd} \
 	${_amdtemp} \
 	amr \
 	${_an} \
@@ -364,6 +365,7 @@ _3dfx_linux=	3dfx_linux
 _agp=		agp
 _aic=		aic
 _amd=		amd
+_amdsbwd=	amdsbwd
 _amdtemp=	amdtemp
 _an=		an
 _aout=		aout
@@ -483,6 +485,7 @@ _vesa=		vesa
 _aac=		aac
 _acpi=		acpi
 _agp=		agp
+_amdsbwd=	amdsbwd
 _amdtemp=	amdtemp
 _an=		an
 _arcmsr=	arcmsr
