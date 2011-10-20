@@ -10011,6 +10011,7 @@ contrib/less/cmdbuf.c -text
 contrib/less/command.c -text
 contrib/less/configure -text
 contrib/less/configure.ac -text
+contrib/less/cvt.c -text
 contrib/less/decode.c -text
 contrib/less/defines.ds -text
 contrib/less/defines.h.in -text
@@ -10052,6 +10053,8 @@ contrib/less/option.h -text
 contrib/less/opttbl.c -text
 contrib/less/os.c -text
 contrib/less/output.c -text
+contrib/less/pattern.c -text
+contrib/less/pattern.h -text
 contrib/less/pckeys.h -text
 contrib/less/position.c -text
 contrib/less/position.h -text
