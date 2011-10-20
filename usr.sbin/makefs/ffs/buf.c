@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/buf.c,v 1.1.2.1 2009/03/19 00:28:54 sam Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/buf.c,v 1.1.2.2 2011/07/26 14:41:54 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -118,7 +118,7 @@ brelse(struct buf *bp)
 		bp->b_bcount = 0;
 		return;
 	}
-		
+
 	TAILQ_REMOVE(&buftail, bp, b_tailq);
 	free(bp->b_data);
 	free(bp);
@@ -160,7 +160,7 @@ bcleanup(void)
 	 *	know why there's still some buffers lying around that
 	 *	aren't brelse()d
 	 */
-	
+
 	if (TAILQ_EMPTY(&buftail))
 		return;
 
@@ -201,7 +201,7 @@ getblk(int fd, struct fs *fs, daddr_t blkno, int size)
 	if (bp == NULL) {
 		if ((bp = calloc(1, sizeof(struct buf))) == NULL)
 			err(1, "getblk: calloc");
-			
+
 		bp->b_bufsize = 0;
 		bp->b_blkno = bp->b_lblkno = blkno;
 		bp->b_fd = fd;
