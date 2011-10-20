@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.25 2011/09/30 03:22:10 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.26 2011/10/20 16:56:45 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -46,7 +46,7 @@ BUILDNAME?=${BASE}-${DATE}-SNAP
 # To add other options to the CVS command, set
 #CVSARGS="-lfq"
 #
-# To prefix the cvs command
+# To prefix the CVS command
 #CVSPREFIX="/usr/bin/time"
 #
 # Where the CVS repository is
@@ -207,6 +207,9 @@ CD_BOOT=		${CD}/bootonly
 CD_DISC1=		${CD}/disc1
 CD_DISC2=		${CD}/disc2
 CD_DISC3=		${CD}/disc3
+.if defined(MAKE_DVD)
+CD_DVD1=		${CD}/dvd1
+.endif
 .if !defined(NODOC)
 CD_DOCS=		${CD}/docs
 .endif
@@ -411,6 +414,7 @@ release rerelease:
 	KERNELS \
 	KERNELS_BASE \
 	KERNEL_FLAGS \
+	MAKE_DVD \
 	MAKE_ISOS \
 	NOCDROM \
 	NODOC \
@@ -455,7 +459,7 @@ release rerelease:
 	echo "	for i in ${MAKEINDEXPORTS}"	>> ${_MK}
 	echo "	do"			>> ${_MK}
 	echo "		cd /usr/mports/\$${i}"	>> ${_MK}
-	echo "		env -i FTP_PASSIVE_MODE=$${FTP_PASSIVE_MODE:-no} PATH=$${PATH} \\" >> ${_MK}
+	echo "		env -i HTTP_PROXY=$${HTTP_PROXY} FTP_PROXY=$${FTP_PROXY} FTP_PASSIVE_MODE=$${FTP_PASSIVE_MODE:-no} PATH=$${PATH} \\" >> ${_MK}
 	echo "		make all install clean BATCH=yes FORCE_PKG_REGISTER=yes" >> ${_MK}
 	echo "	done"				>> ${_MK}
 	echo "	cd /usr/mports"			>> ${_MK}
@@ -524,6 +528,7 @@ release.2:
 	cd ${.CURDIR}/.. && ${CROSSMAKE} distrib-dirs DESTDIR=${RD}/trees/base
 	cd ${.CURDIR}/.. && ${CROSSMAKE} ${WORLD_FLAGS} distributeworld \
 	    DISTDIR=${RD}/trees
+	sh ${.CURDIR}/scripts/mm-mtree.sh -F "${CROSSENV}" -D "${RD}/trees/base"
 	touch ${.TARGET}
 
 # Make and install the generic kernel(s).
@@ -531,8 +536,8 @@ release.3:
 .for kernel in ${KERNELS_BASE} ${KERNELS}
 	cd ${.CURDIR}/..; \
 	${CROSSMAKE} ${KERNEL_FLAGS} \
-	KERNCONF=${kernel} kernel \
-	DESTDIR=${RD}/kernels KODIR=/${kernel}
+		KERNCONF=${kernel} kernel \
+		DESTDIR=${RD}/kernels KODIR=/${kernel}
 .endfor
 	touch ${.TARGET}
 
@@ -749,6 +754,18 @@ cdrom.1:
 			    pax -rw -k -p e -t -u . ${CD_LIVEFS} ) ; \
 		fi \
 	done
+.if defined(MAKE_DVD)
+	@echo "Building DVD filesystem image as well as CDROM"
+	@mkdir -p ${CD_DVD1}/${BUILDNAME}
+	@for i in ${DISTRIBUTIONS} ; \
+	do \
+		if [ -d ${RD}/trees/$${i} ] ; then \
+			chflags -R noschg ${RD}/trees/$${i} || true ; \
+			( cd ${RD}/trees/$${i} && \
+			find . -depth -print | cpio -dumpl ${CD_DVD1} ) ; \
+		fi \
+	done
+.endif
 	@echo "Copy GENERIC kernel to boot area"
 	@cp -Rp ${RD}/kernels/GENERIC/ ${CD_LIVEFS}/boot/kernel
 	@rm -f ${CD_LIVEFS}/boot/kernel/*.symbols
@@ -767,6 +784,23 @@ cdrom.1:
 	@cp ${RD}/trees/base/boot/device.hints ${CD_LIVEFS}/boot/device.hints
 .endif
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_LIVEFS}/cdrom.inf
+.if defined(MAKE_DVD)
+	@cp -Rp ${RD}/kernels/GENERIC/ ${CD_DVD1}/boot/kernel
+	@rm -f ${CD_DVD1}/boot/kernel/*.symbols
+	@rm -f ${CD_DVD1}/.profile
+	@cp ${.CURDIR}/fixit.profile ${CD_DVD1}/.profile
+	@ln -sf /rescue ${CD_DVD1}/stand
+	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DVD1}/cdrom.inf
+	@rm -f ${CD_DVD1}/boot/loader.conf
+	@cp ${RD}/mfsroot/mfsroot.gz ${CD_DVD1}/boot/mfsroot.gz
+	@echo 'mfsroot_load="YES"' > ${CD_DVD1}/boot/loader.conf
+	@echo 'mfsroot_type="mfs_root"' >> ${CD_DVD1}/boot/loader.conf
+	@echo 'mfsroot_name="/boot/mfsroot"' >> ${CD_DVD1}/boot/loader.conf
+.if exists(${RD}/trees/base/boot/device.hints)
+	@rm -f ${CD_DVD1}/boot/device.hints
+	@cp ${RD}/trees/base/boot/device.hints ${CD_DVD1}/boot/device.hints
+.endif
+.endif
 	touch ${.TARGET}
 
 # Build disc1, disc2, and disc3 cdrom images
@@ -802,11 +836,34 @@ cdrom.2:
 	@mkdir -p ${CD_DISC3}
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DISC3}/cdrom.inf
 	@echo "CD_VOLUME = 3" >> ${CD_DISC3}/cdrom.inf
+.if defined(MAKE_DVD)
+	@cd ${RD}/dists && pax -rw -k -t -u . ${CD_DVD1}/${BUILDNAME}
 .if !defined(NODOC)
-	echo "Building CDROM docs filesystem image"
+	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
+		cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
+		${CD_DVD1}/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
+		cp ${RND}/${RELNOTES_LANG}/$$i/article.html \
+		${CD_DVD1}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
+	done
+	@for i in ${DIST_DOCS_ARCH_DEP}; do \
+		cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.txt \
+			${CD_DVD1}/`echo $${i} | tr 'a-z' 'A-Z'`.TXT; \
+		cp ${RND}/${RELNOTES_LANG}/$$i/${TARGET}/article.html \
+			${CD_DVD1}/`echo $${i} | tr 'a-z' 'A-Z'`.HTM; \
+	done
+	@cp ${RND}/${RELNOTES_LANG}/readme/docbook.css ${CD_DVD1}
+.endif
+	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DVD1}/cdrom.inf
+	@echo "CD_VOLUME = 1" >> ${CD_DVD1}/cdrom.inf
+.endif
+.if !defined(NODOC)
+	@echo "Building CDROM docs filesystem image"
 	@mkdir -p ${CD_DOCS}
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DOCS}/cdrom.inf
 	@mkdir -p ${CD_DOCS}/usr/share/doc
+.if defined(MAKE_DVD)
+	@mkdir -p ${CD_DVD1}/usr/share/doc
+.endif
 	@for i in `ls ${CD_LIVEFS}/usr/share/doc`; do \
 		if [ -L ${CD_LIVEFS}/usr/share/doc/$$i -o \
 		    -d /usr/doc/$$i ]; then \
@@ -814,6 +871,10 @@ cdrom.2:
 			    ${CD_DOCS}/usr/share/doc; \
 		fi \
 	done
+.if defined(MAKE_DVD)
+	@cd ${CD_DOCS}/usr/share/doc && find . -print | \
+		cpio -dumpl ${CD_DVD1}/usr/share/doc
+.endif
 .endif
 	touch ${.TARGET}
 
@@ -847,6 +908,9 @@ CD_DISC2_PKGS=	${CD_PACKAGE_TREE}/disc2
 .if exists(${CD_PACKAGE_TREE}/disc3)
 CD_DISC3_PKGS=	${CD_PACKAGE_TREE}/disc3
 .endif
+.if exists(${CD_PACKAGE_TREE}/dvd1)
+CD_DVD1_PKGS=  ${CD_PACKAGE_TREE}/dvd1
+.endif
 .endif
 .endif
 
@@ -860,16 +924,22 @@ iso.1:
 .endif
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh ${BOOTABLE} \
 	    MidnightBSD_Install \
-	    ${CD}/${BUILDNAME}-${TARGET}-disc1.iso ${CD_DISC1} \
+	    ${CD}/MidnightBSD-${BUILDNAME}-${TARGET}-disc1.iso ${CD_DISC1} \
 	    ${CD_DISC1_PKGS}
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh \
 	    MidnightBSD_Packages \
-	    ${CD}/${BUILDNAME}-${TARGET}-disc2.iso ${CD_DISC2} \
+	    ${CD}/MidnightBSD-${BUILDNAME}-${TARGET}-disc2.iso ${CD_DISC2} \
 	    ${CD_DISC2_PKGS}
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh \
 	    MidnightBSD_Packages_2 \
-	    ${CD}/${BUILDNAME}-${TARGET}-disc3.iso ${CD_DISC3} \
+	    ${CD}/MidnightBSD-${BUILDNAME}-${TARGET}-disc3.iso ${CD_DISC3} \
 	    ${CD_DISC3_PKGS}
+.if defined(MAKE_DVD)
+	@sh ${.CURDIR}/${TARGET}/mkisoimages.sh ${BOOTABLE} \
+	    MidnightBSD_Install \
+	    ${CD}/MidnightBSD-${BUILDNAME}-${TARGET}-dvd1.iso ${CD_DVD1} \
+	    ${CD_DVD1_PKGS}
+.endif
 .if !defined(NODOC)
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh \
 	    MidnightBSD_Documentation \
@@ -881,8 +951,8 @@ iso.1:
 	    ${CD}/${BUILDNAME}-${TARGET}-livefs.iso ${CD_LIVEFS}
 .endif
 	@echo "Generating MD5 and SHA256 sums..."
-	@(cd ${CD} && md5 *.iso > ${BUILDNAME}-${TARGET}-iso.CHECKSUM.MD5)
-	@(cd ${CD} && sha256 *.iso > ${BUILDNAME}-${TARGET}-iso.CHECKSUM.SHA256)
+	@(cd ${CD} && md5 *.iso > MidnightBSD-${BUILDNAME}-${TARGET}-iso.CHECKSUM.MD5)
+	@(cd ${CD} && sha256 *.iso > MidnightBSD-${BUILDNAME}-${TARGET}-iso.CHECKSUM.SHA256)
 	touch ${.TARGET}
 .else
 	@echo "Do not know how to create an ISO for ${TARGET_ARCH}."
