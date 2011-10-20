@@ -29992,6 +29992,7 @@ release/scripts/manpages-install.sh -text
 release/scripts/manpages-make.sh -text
 release/scripts/mkpkghier -text
 release/scripts/mkpkgindex.sh -text
+release/scripts/mm-mtree.sh -text
 release/scripts/package-split.py -text
 release/scripts/package-trees.sh -text
 release/scripts/ports-install.sh -text
