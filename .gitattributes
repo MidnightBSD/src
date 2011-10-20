@@ -9992,7 +9992,6 @@ contrib/less/LICENSE -text
 contrib/less/Makefile.aut -text
 contrib/less/Makefile.dsb -text
 contrib/less/Makefile.dsg -text
-contrib/less/Makefile.dsm -text
 contrib/less/Makefile.dsu -text
 contrib/less/Makefile.in -text
 contrib/less/Makefile.o2e -text
