@@ -1,7 +1,19 @@
 Updating Information for MidnightBSD users
 
+20111020:
+	less v436 imported
+
+	amdsbwd(4) AMD southbridge watchdog 
+
 20111019:
 	awk 20110810 imported
+
+	et(4) Agere Gigabit Ethernet/Fast Ethernet driver added, but
+	not included in GENERIC kernel.  The kernel module needs
+	testing before we can include it in GENERIC.
+
+	intr_bind code ported to allow an IRQ to be bound to one
+	specific CPU core.
 
 20111017:
 	Time Zone Data v. 2011l (Released 10 October 2011)
@@ -1106,4 +1118,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.139 2011/10/17 18:33:33 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.140 2011/10/19 15:08:26 laffer1 Exp $
