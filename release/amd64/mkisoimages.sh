@@ -4,7 +4,7 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
-# $MidnightBSD: src/release/amd64/mkisoimages.sh,v 1.2 2007/03/17 16:00:12 laffer1 Exp $
+# $MidnightBSD: src/release/amd64/mkisoimages.sh,v 1.3 2007/03/17 16:03:29 laffer1 Exp $
 # $FreeBSD: src/release/amd64/mkisoimages.sh,v 1.11 2005/01/30 21:10:51 kensmith Exp $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
@@ -24,10 +24,9 @@
 # extra-bits-dir, if provided, contains additional files to be merged
 # into base-bits-dir as part of making the image.
 
-publisher="The MidnightBSD Project.  http://www.midnightbsd.org/"
 if [ "x$1" = "x-b" ]; then
 	# This is highly x86-centric and will be used directly below.
-	bootable="-b boot/cdboot -no-emul-boot"
+	bootable="-o bootimage=i386;$4/boot/cdboot -o no-emul-boot"
 	shift
 else
 	bootable=""
@@ -38,21 +37,7 @@ if [ $# -lt 3 ]; then
 	exit 1
 fi
 
-type mkisofs 2>&1 | grep " is " >/dev/null
-if [ $? -ne 0 ]; then
-	echo The cdrtools port is not installed.  Trying to get it now.
-	if [ -f /usr/mports/sysutils/cdrtools/Makefile ]; then
-		cd /usr/mports/sysutils/cdrtools && make install BATCH=yes && make clean
-	else
-		if ! pkg_add -r cdrtools; then
-			echo "Could not get it via pkg_add - please go install this"
-			echo "from the ports collection and run this script again."
-			exit 2
-		fi
-	fi
-fi
-
 LABEL=$1; shift
 NAME=$1; shift
 
-mkisofs $bootable -r -J -V $LABEL -publisher "$publisher" -o $NAME $*
+makefs -t cd9660 $bootable -o rockridge -o label=$LABEL $NAME $*
