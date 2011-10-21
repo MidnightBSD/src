@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.7 2011/08/07 15:41:36 laffer1 Exp $ */
+/* $MidnightBSD: src/lib/libmsearch/msearch.h,v 1.8 2011/10/15 04:29:35 laffer1 Exp $ */
 /*-
  * Copyright (c) 2011 Lucas Holt
  * All rights reserved.
@@ -58,30 +58,30 @@ typedef struct _msearch_result {
 } msearch_result;
 
 typedef struct _msearch_index {
-	char *	index_file;
-	sqlite3 *db; 
+	char *restrict	index_file;
+	sqlite3 *	db; 
 	int	state;
 } msearch_index;
 
 typedef struct _msearch_fulltext {
-        char *  index_file;
-        sqlite3 *db;
+        char *restrict  index_file;
+        sqlite3 *	db;
         int     state;
 } msearch_fulltext;
 
 /* Index */
 msearch_index * msearch_index_open(const char *);
-int msearch_index_close(msearch_index *);
-int msearch_index_create(msearch_index *);
-int msearch_index_path(msearch_index *, const char *);
-int msearch_index_file(msearch_index *, const char *, int);
+int msearch_index_close(msearch_index *restrict);
+int msearch_index_create(msearch_index *restrict);
+int msearch_index_path(msearch_index *restrict, const char *);
+int msearch_index_file(msearch_index *restrict, const char *, int);
 
 /* Full text */
-msearch_fulltext * msearch_fulltext_open(const char *filename);
-int msearch_fulltext_close(msearch_fulltext *);
-int msearch_fulltext_create(msearch_fulltext *);
-int msearch_fulltext_index_file(msearch_fulltext *, const char *);
-int msearch_fulltext_index(msearch_fulltext *, msearch_index *);
+msearch_fulltext * msearch_fulltext_open(const char *);
+int msearch_fulltext_close(msearch_fulltext *restrict);
+int msearch_fulltext_create(msearch_fulltext *restrict);
+int msearch_fulltext_index_file(msearch_fulltext *restrict, const char *);
+int msearch_fulltext_index(msearch_fulltext *restrict, msearch_index *restrict);
 int msearch_fulltext_search(msearch_query *, msearch_result *);
 
 /* Search */

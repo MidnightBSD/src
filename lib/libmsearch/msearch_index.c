@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.8 2011/08/09 12:50:17 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.9 2011/08/13 20:19:30 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,10 +39,10 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.8 2011/08/09 12:5
 
 static msearch_index *mindex;
 static int msearch_index_path_file(const char *, const struct stat *);
-static int msearch_index_exists(msearch_index *, const char *);
+static int msearch_index_exists(msearch_index *restrict, const char *);
 
 msearch_index * 
-msearch_index_open(const char *filename) {
+msearch_index_open(const char * filename) {
 	msearch_index *idx;
 
 	if ((idx = calloc(1, sizeof(msearch_index))) == NULL) {
@@ -59,7 +59,7 @@ msearch_index_open(const char *filename) {
 }
 
 int
-msearch_index_close(msearch_index *idx) {
+msearch_index_close(msearch_index *restrict idx) {
 	if (idx == NULL)
 		return 1;
 	sqlite3_close(idx->db);
@@ -70,7 +70,7 @@ msearch_index_close(msearch_index *idx) {
 }
 
 int
-msearch_index_create(msearch_index *idx) {
+msearch_index_create(msearch_index *restrict idx) {
 	if (idx == NULL)
 		return 1;
 	msearch_db_do(idx->db, "CREATE TABLE IF NOT EXISTS files (path text NOT NULL, size int64, owner int, created int64, modified int64)");
@@ -78,7 +78,7 @@ msearch_index_create(msearch_index *idx) {
 }
 
 int
-msearch_index_file(msearch_index *idx, const char *file, int /* NOTUSED */ flag) {
+msearch_index_file(msearch_index *restrict idx, const char *file, int /* NOTUSED */ flag) {
 	struct stat st;
 	sqlite3_stmt *stmt;
 
@@ -163,7 +163,7 @@ msearch_index_path_file(const char *file, const struct stat *fst) {
 }
 
 int
-msearch_index_path(msearch_index *idx, const char *path) {
+msearch_index_path(msearch_index *restrict idx, const char *path) {
 	int ret = 0;
 	char * const paths[2] = { (char *)path, NULL };
 	FTSENT *cur;
@@ -202,7 +202,7 @@ msearch_index_path(msearch_index *idx, const char *path) {
 }
 
 static int
-msearch_index_exists(msearch_index *idx, const char *file) {
+msearch_index_exists(msearch_index *restrict idx, const char *file) {
 	sqlite3_stmt *stmt;
 	int ret;
 

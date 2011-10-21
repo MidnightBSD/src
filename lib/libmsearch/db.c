@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/db.c,v 1.2 2011/08/01 01:46:12 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/db.c,v 1.3 2011/08/07 02:12:26 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -35,13 +35,13 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/db.c,v 1.2 2011/08/01 01:46:12 laffer
 #include "msearch_private.h"
 
 int
-msearch_db_clean(sqlite3 *db) {
+msearch_db_clean(sqlite3 *restrict db) {
 
 	return msearch_db_do(db, "vacuum");
 }
 
 int
-msearch_db_do(sqlite3 *db, const char *fmt, ...) {
+msearch_db_do(sqlite3 *restrict db, const char *fmt, ...) {
 	va_list args;
 	char *sql;
 	int sqlcode;
@@ -73,7 +73,7 @@ msearch_db_do(sqlite3 *db, const char *fmt, ...) {
 }
 
 int
-msearch_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...) {
+msearch_db_prepare(sqlite3 *restrict db, sqlite3_stmt **stmt, const char * fmt, ...) {
 	va_list args;
 	char *sql;
  

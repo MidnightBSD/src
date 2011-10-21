@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.11 2011/08/09 12:38:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.12 2011/08/09 12:50:17 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,7 +146,7 @@ msearch_fulltext_open(const char *filename) {
 }
 
 int
-msearch_fulltext_close(msearch_fulltext *idx) {
+msearch_fulltext_close(msearch_fulltext *restrict idx) {
 	if (idx == NULL)
 		return 1;
 	sqlite3_close(idx->db);
@@ -157,7 +157,7 @@ msearch_fulltext_close(msearch_fulltext *idx) {
 }
 
 int
-msearch_fulltext_create(msearch_fulltext *idx) {
+msearch_fulltext_create(msearch_fulltext *restrict idx) {
 
 	if (idx == NULL)
 		return 1;
@@ -167,7 +167,7 @@ msearch_fulltext_create(msearch_fulltext *idx) {
 }
 
 int
-msearch_fulltext_index(msearch_fulltext *idx, msearch_index *iidx) {
+msearch_fulltext_index(msearch_fulltext *restrict idx, msearch_index *restrict iidx) {
 	sqlite3_stmt *stmt;
 	int ret;
 	char *pathname;
@@ -200,7 +200,7 @@ msearch_fulltext_index(msearch_fulltext *idx, msearch_index *iidx) {
 }
 
 int
-msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
+msearch_fulltext_index_file(msearch_fulltext *restrict idx, const char *path) {
 	sqlite3_stmt *stmt;
 	size_t len;
 	char *filedata;
@@ -271,7 +271,7 @@ msearch_fulltext_index_file(msearch_fulltext *idx, const char *path) {
 }
 
 char *
-msearch_fulltext_query_expand(msearch_query *query) {
+msearch_fulltext_query_expand(msearch_query *restrict query) {
 	int i;
 	size_t rlen = 1;
 	char *result;
