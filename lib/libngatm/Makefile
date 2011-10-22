@@ -6,6 +6,7 @@ LIB=	ngatm
 SHLIB_MAJOR= 3
 MAN=	libngatm.3 uniaddr.3 unifunc.3 unimsg.3 unisap.3 unistruct.3
 WARNS?=	6
+CSTD=	c89
 
 # source of the library lives in contrib
 SDIR=	${.CURDIR}/../../sys
