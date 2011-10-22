@@ -38,14 +38,14 @@ __RCSID("$NetBSD: strndup.c,v 1.1.2.1 2006/08/27 06:08:51 riz Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
 
-__MBSDID("$MidnightBSD: src/lib/libc/string/strndup.c,v 1.1 2007/01/04 06:22:04 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libc/string/strndup.c,v 1.2 2007/01/04 06:44:43 laffer1 Exp $");
 
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 char *
-strndup(const char __restrict *str, size_t n)
+strndup(const char *str, size_t n)
 {
 	size_t len;
 	char *copy;
