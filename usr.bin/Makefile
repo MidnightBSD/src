@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.33 2011/10/15 20:18:30 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.34 2011/10/18 14:33:04 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -13,6 +13,7 @@
 SUBDIR=	alias \
 	apply \
 	asa \
+	asmgraph \
 	at \
 	${_atm} \
 	awk \
@@ -32,6 +33,8 @@ SUBDIR=	alias \
 	${_calendar} \
 	cap_mkdb \
 	${_catman} \
+	cflow \
+	cgraph \
 	chat \
 	checknr \
 	${_chkey} \

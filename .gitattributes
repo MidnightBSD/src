@@ -40219,6 +40219,7 @@ usr.bin/apply/apply.c -text
 usr.bin/asa/Makefile -text
 usr.bin/asa/asa.1 -text
 usr.bin/asa/asa.c -text
+usr.bin/asmgraph/Makefile -text
 usr.bin/at/LEGAL -text
 usr.bin/at/Makefile -text
 usr.bin/at/Makefile.inc -text
@@ -40357,6 +40358,8 @@ usr.bin/cap_mkdb/cap_mkdb.c -text
 usr.bin/catman/Makefile -text
 usr.bin/catman/catman.1 -text
 usr.bin/catman/catman.c -text
+usr.bin/cflow/Makefile -text
+usr.bin/cgraph/Makefile -text
 usr.bin/chat/Makefile -text
 usr.bin/chat/chat.8 -text
 usr.bin/chat/chat.c -text
