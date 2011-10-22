@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.8 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -35,7 +35,7 @@ __MBSDID("$MidnightBSD$");
 #include <stdlib.h>
 
 static int make_backup_bundle(mportInstance *, mportPackageMeta *, char *);
-static int install_backup_bundle(mportInstance *, mportPackageMeta *, char *);
+static int install_backup_bundle(mportInstance *, char *);
 static int build_create_extras(mportInstance *, mportPackageMeta *, char *, mportCreateExtras **);
 static int build_create_extras_copy_metafiles(const mportPackageMeta *, mportCreateExtras *);
 static int build_create_extras_depends(mportInstance *, mportPackageMeta *, mportCreateExtras *);
@@ -63,7 +63,7 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
   ) 
   {
-    install_backup_bundle(mport, pkg, tmpfile2);
+    install_backup_bundle(mport, tmpfile2);
     RETURN_CURRENT_ERROR;
   }           
   
@@ -95,7 +95,7 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
 }        
 
 
-static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char *filename) 
+static int install_backup_bundle(mportInstance *mport, char *filename) 
 {
   /* at some point we might want to look into making this more forceful, but
    * this will do for the moment.  Wrap in a function for this future. */
