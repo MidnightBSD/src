@@ -1,11 +1,13 @@
 #
 # $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile,v 1.9 2011/03/15 01:56:14 laffer1 Exp $
+# $MidnightBSD: src/Makefile,v 1.10 2011/07/10 21:10:28 laffer1 Exp $
 #
 # The user-driven targets are:
 #
 # universe            - *Really* build *everything* (buildworld and
 #                       all kernels on all architectures).
+# tinderbox           - Same as universe, but presents a list of failed build
+#                       targets and exits with an error if there were any.
 # buildworld          - Rebuild *everything*, including glue to help do
 #                       upgrades.
 # installworld        - Install everything built by "buildworld".
@@ -16,6 +18,7 @@
 # reinstallkernel     - Reinstall the kernel and the kernel-modules.
 # reinstallkernel.debug
 # kernel              - buildkernel + installkernel.
+# kernel-toolchain    - Builds the subset of world necessary to build a kernel
 # doxygen             - Build API documentation of the kernel, needs doxygen.
 # update              - Convenient way to update your source tree (cvs).
 # check-old           - List obsolete directories/files/libraries.
@@ -26,6 +29,9 @@
 # delete-old-dirs     - Delete obsolete directories.
 # delete-old-files    - Delete obsolete files.
 # delete-old-libs     - Delete obsolete libraries.
+# targets             - Print a list of supported TARGET/TARGET_ARCH pairs
+#                       for world and kernel targets.
+# toolchains          - Build a toolchain for all world and kernel targets.
 #
 # This makefile is simple by design. The MidnightBSD make automatically reads
 # the /usr/share/mk/sys.mk unless the -m argument is specified on the
@@ -34,10 +40,12 @@
 # tree. This makefile executes a child make process, forcing it to use
 # the mk files from the source tree which are supposed to DTRT.
 #
-# The user-driven targets (as listed above) are implemented in Makefile.inc1.
+# Most of the user-driven targets (as listed above) are implemented in
+# Makefile.inc1.  The exceptions are universe, tinderbox and targets.
 #
 # If you want to build your system from source be sure that /usr/obj has
-# at least 400MB of diskspace available.
+# at least 1GB of diskspace available.  A complete 'universe' build requires
+# about 15GB of space.
 #
 # For individuals wanting to build from the sources currently on their
 # system, the simple instructions are:
@@ -117,7 +125,24 @@ MAKEPATH=	${MAKEOBJDIRPREFIX}${.CURDIR}/make.${MACHINE}
 BINMAKE= \
 	`if [ -x ${MAKEPATH}/make ]; then echo ${MAKEPATH}/make; else echo ${MAKE}; fi` \
 	-m ${.CURDIR}/share/mk
-_MAKE=	PATH=${PATH} ${BINMAKE} -f Makefile.inc1
+_MAKE=	PATH=${PATH} ${BINMAKE} -f Makefile.inc1 TARGET=${_TARGET} TARGET_ARCH=${_TARGET_ARCH}
+
+# Guess machine architecture from machine type, and vice versa.
+.if !defined(TARGET_ARCH) && defined(TARGET)
+_TARGET_ARCH= ${TARGET}
+.elif !defined(TARGET) && defined(TARGET_ARCH) && \
+    ${TARGET_ARCH} != ${MACHINE_ARCH}
+_TARGET=	${TARGET_ARCH}
+.endif
+.if defined(TARGET) && !defined(_TARGET)
+_TARGET=${TARGET}
+.endif
+.if defined(TARGET_ARCH) && !defined(_TARGET_ARCH)
+_TARGET_ARCH=${TARGET_ARCH}
+.endif
+# Otherwise, default to current machine type and architecture.
+_TARGET?=	${MACHINE}
+_TARGET_ARCH?=	${MACHINE_ARCH}
 
 #
 # Make sure we have an up-to-date make(1). Only world and buildworld
@@ -166,13 +191,16 @@ cleanworld:
 #
 
 ${TGTS}:
-	${_+_}@cd ${.CURDIR}; \
-		${_MAKE} ${.TARGET}
+	${_+_}@cd ${.CURDIR}; ${_MAKE} ${.TARGET}
 
 # Set a reasonable default
 .MAIN:	all
 
 STARTTIME!= LC_ALL=C date
+CHECK_TIME!= find ${.CURDIR}/sys/sys/param.h -mtime -0s
+.if !empty(CHECK_TIME)
+.error check your date/time: ${STARTTIME}
+.endif
 
 .if defined(HISTORICAL_MAKE_WORLD) || defined(DESTDIR)
 #
@@ -237,17 +265,18 @@ upgrade_checks:
 	    PATH=${PATH} ${BINMAKE} obj >/dev/null 2>&1 && \
 	    PATH=${PATH} ${BINMAKE} >/dev/null 2>&1); \
 	then \
-	    (cd ${.CURDIR} && make make); \
+	    (cd ${.CURDIR} && ${MAKE} make); \
 	fi
 
 #
 # Upgrade make(1) to the current version using the installed
-# headers, libraries and tools.
+# headers, libraries and tools.  Also, allow the location of
+# the system bsdmake-like utility to be overridden.
 #
 MMAKEENV=	MAKEOBJDIRPREFIX=${MAKEPATH} \
 		DESTDIR= \
 		INSTALL="sh ${.CURDIR}/tools/install.sh"
-MMAKE=		${MMAKEENV} make \
+MMAKE=		${MMAKEENV} ${MAKE} \
 		-D_UPGRADING \
 		-DNOMAN -DNO_MAN -DNOSHARED -DNO_SHARED \
 		-DNO_CPU_CFLAGS -DNO_WERROR
@@ -263,6 +292,12 @@ make: .PHONY
 		${MMAKE} all && \
 		${MMAKE} install DESTDIR=${MAKEPATH} BINDIR=
 
+tinderbox:
+	@cd ${.CURDIR} && ${MAKE} DOING_TINDERBOX=YES universe
+
+toolchains:
+	@cd ${.CURDIR} && ${MAKE} UNIVERSE_TARGET=toolchain universe
+
 #
 # universe
 #
@@ -270,48 +305,101 @@ make: .PHONY
 # with a reasonable chance of success, regardless of how old your
 # existing system is.
 #
-.if make(universe)
+.if make(universe) || make(universe_kernels) || make(tinderbox) || make(targets)
 TARGETS?=amd64 i386 sparc64
+.for target in ${TARGETS}
+TARGET_ARCHES_${target}?= ${target}
+.endfor
+
+.if defined(UNIVERSE_TARGET)
+MAKE_JUST_WORLDS=	YES
+.else
+UNIVERSE_TARGET?=	buildworld
+.endif
+KERNSRCDIR?=		${.CURDIR}/sys
+
+targets:
+	@echo "Supported TARGET/TARGET_ARCH pairs for world and kernel targets"
+.for target in ${TARGETS}
+.for target_arch in ${TARGET_ARCHES_${target}}
+	@echo "    ${target}/${target_arch}"
+.endfor
+.endfor
+
+.if defined(DOING_TINDERBOX)
+FAILFILE=${.CURDIR}/_.tinderbox.failed
+MAKEFAIL=tee -a ${FAILFILE}
+.else
+MAKEFAIL=cat
+.endif
 
 universe: universe_prologue
 universe_prologue:
 	@echo "--------------------------------------------------------------"
 	@echo ">>> make universe started on ${STARTTIME}"
 	@echo "--------------------------------------------------------------"
+.if defined(DOING_TINDERBOX)
+	@rm -f ${FAILFILE}
+.endif
 .for target in ${TARGETS}
-KERNCONFS!=	cd ${.CURDIR}/sys/${target}/conf && \
-		find [A-Z0-9]*[A-Z0-9] -type f -maxdepth 0 \
-		! -name DEFAULTS ! -name LINT
-KERNCONFS:=	${KERNCONFS:S/^NOTES$/LINT/}
 universe: universe_${target}
 .ORDER: universe_prologue universe_${target} universe_epilogue
-universe_${target}:
-.if !defined(MAKE_JUST_KERNELS)
+universe_${target}: universe_${target}_prologue
+universe_${target}_prologue:
 	@echo ">> ${target} started on `LC_ALL=C date`"
+.if !defined(MAKE_JUST_KERNELS)
+.for target_arch in ${TARGET_ARCHES_${target}}
+universe_${target}: universe_${target}_${target_arch}
+universe_${target}_${target_arch}: universe_${target}_prologue
+	@echo ">> ${target}.${target_arch} ${UNIVERSE_TARGET} started on `LC_ALL=C date`"
 	@(cd ${.CURDIR} && env __MAKE_CONF=/dev/null \
-	    ${MAKE} ${JFLAG} buildworld \
+	    ${MAKE} ${JFLAG} ${UNIVERSE_TARGET} \
 	    TARGET=${target} \
-	    > _.${target}.buildworld 2>&1 || \
-	    echo "${target} world failed," \
-	    "check _.${target}.buildworld for details")
-	@echo ">> ${target} buildworld completed on `LC_ALL=C date`"
+	    TARGET_ARCH=${target_arch} \
+	    > _.${target}.${target_arch}.${UNIVERSE_TARGET} 2>&1 || \
+	    (echo "${target}.${target_arch} ${UNIVERSE_TARGET} failed," \
+	    "check _.${target}.${target_arch}.${UNIVERSE_TARGET} for details" | \
+	    ${MAKEFAIL}))
+	@echo ">> ${target}.${target_arch} ${UNIVERSE_TARGET} completed on `LC_ALL=C date`"
+.endfor
 .endif
-.if exists(${.CURDIR}/sys/${target}/conf/NOTES)
-	@(cd ${.CURDIR}/sys/${target}/conf && env __MAKE_CONF=/dev/null \
+.if !defined(MAKE_JUST_WORLDS)
+.if exists(${KERNSRCDIR}/${target}/conf/NOTES)
+	@(cd ${KERNSRCDIR}/${target}/conf && env __MAKE_CONF=/dev/null \
 	    ${MAKE} LINT > ${.CURDIR}/_.${target}.makeLINT 2>&1 || \
-	    echo "${target} 'make LINT' failed," \
-	    "check _.${target}.makeLINT for details")
+	    (echo "${target} 'make LINT' failed," \
+	    "check _.${target}.makeLINT for details"| ${MAKEFAIL}))
 .endif
+	@cd ${.CURDIR} && ${MAKE} ${.MAKEFLAGS} TARGET=${target} \
+	    universe_kernels
+.endif
+	@echo ">> ${target} completed on `LC_ALL=C date`"
+.endfor
+universe_kernels: universe_kernconfs
+.if !defined(TARGET)
+TARGET!=	uname -m
+.endif
+KERNCONFS!=	cd ${KERNSRCDIR}/${TARGET}/conf && \
+		find [A-Z0-9]*[A-Z0-9] -type f -maxdepth 0 \
+		! -name DEFAULTS ! -name NOTES
+universe_kernconfs:
 .for kernel in ${KERNCONFS}
+TARGET_ARCH_${kernel}!=	cd ${KERNSRCDIR}/${TARGET}/conf && \
+	config -m ${KERNSRCDIR}/${TARGET}/conf/${kernel} 2> /dev/null | \
+	grep -v WARNING: | cut -f 2
+.if empty(TARGET_ARCH_${kernel})
+.error "Target architecture for ${TARGET}/conf/${kernel} unknown.  config(8) likely too old."
+.endif
+universe_kernconfs: universe_kernconf_${TARGET}_${kernel}
+universe_kernconf_${TARGET}_${kernel}:
 	@(cd ${.CURDIR} && env __MAKE_CONF=/dev/null \
 	    ${MAKE} ${JFLAG} buildkernel \
-	    TARGET=${target} \
+	    TARGET=${TARGET} \
+	    TARGET_ARCH=${TARGET_ARCH_${kernel}} \
 	    KERNCONF=${kernel} \
-	    > _.${target}.${kernel} 2>&1 || \
-	    echo "${target} ${kernel} kernel failed," \
-	    "check _.${target}.${kernel} for details")
-.endfor
-	@echo ">> ${target} completed on `LC_ALL=C date`"
+	    > _.${TARGET}.${kernel} 2>&1 || \
+	    (echo "${TARGET} ${kernel} kernel failed," \
+	    "check _.${TARGET}.${kernel} for details"| ${MAKEFAIL}))
 .endfor
 universe: universe_epilogue
 universe_epilogue:
@@ -319,4 +407,11 @@ universe_epilogue:
 	@echo ">>> make universe completed on `LC_ALL=C date`"
 	@echo "                      (started ${STARTTIME})"
 	@echo "--------------------------------------------------------------"
+.if defined(DOING_TINDERBOX)
+	@if [ -e ${FAILFILE} ] ; then \
+		echo "Tinderbox failed:" ;\
+		cat ${FAILFILE} ;\
+		exit 1 ;\
+	fi
+.endif
 .endif

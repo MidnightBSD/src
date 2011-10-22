@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.29 2011/03/13 17:16:38 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.30 2011/08/13 21:20:12 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -24,6 +24,17 @@
 # Standard targets (not defined here) are documented in the makefiles in
 # /usr/share/mk.  These include:
 #		obj depend all install clean cleandepend cleanobj
+
+# You are supposed to define both of these when calling Makefile.inc1
+# directly.  However, some old scripts don't.  Cope for the moment, but
+# issue a new warning for a transition period.
+.if defined(TARGET) && !defined(TARGET_ARCH)
+.warning "You must pass both TARGET and TARGET_ARCH to Makefile.inc1.  Setting TARGET_ARCH=${TARGET}."
+TARGET_ARCH=${TARGET}
+.endif
+.if !defined(TARGET) || !defined(TARGET_ARCH)
+.error "Both TARGET and TARGET_ARCH must be defined."
+.endif
 
 .include <bsd.own.mk>
 
@@ -108,7 +119,7 @@ OSRELDATE=	0
 
 # Guess machine architecture from machine type, and vice versa.
 .if !defined(TARGET_ARCH) && defined(TARGET)
-TARGET_ARCH=	${TARGET:S/pc98/i386/:S/sun4v/sparc64/}
+TARGET_ARCH=	${TARGET}
 .elif !defined(TARGET) && defined(TARGET_ARCH) && \
     ${TARGET_ARCH} != ${MACHINE_ARCH}
 TARGET=		${TARGET_ARCH}
@@ -117,7 +128,7 @@ TARGET=		${TARGET_ARCH}
 TARGET?=	${MACHINE}
 TARGET_ARCH?=	${MACHINE_ARCH}
 
-KNOWN_ARCHES?=	amd64 i386 sparc64 sparc64/sun4v
+KNOWN_ARCHES?=	amd64 i386 sparc64
 .if ${TARGET} == ${TARGET_ARCH}
 _t=		${TARGET}
 .else
@@ -163,7 +174,14 @@ XPATH=		${WORLDTMP}/usr/sbin:${WORLDTMP}/usr/bin:${WORLDTMP}/usr/games
 STRICTTMPPATH=	${BPATH}:${XPATH}
 TMPPATH=	${STRICTTMPPATH}:${PATH}
 
+#
+# Avoid running mktemp(1) unless actually needed.
+# It may not be functional, e.g., due to new ABI
+# when in the middle of installing over this system.
+#
+.if make(distributeworld) || make(installworld)
 INSTALLTMP!=	/usr/bin/mktemp -d -u -t install
+.endif
 
 #
 # Building a world goes through the following stages
@@ -269,14 +287,16 @@ LIB32IMAKE=	${LIB32WMAKE:NINSTALL=*:NDESTDIR=*} -DNO_INCS
 .endif
 
 # install stage
-.if empty(.MAKEFLAGS:M-n)
-IMAKEENV=	${CROSSENV} \
-		PATH=${STRICTTMPPATH}:${INSTALLTMP}
-.else
-IMAKEENV=	${CROSSENV} \
-		PATH=${TMPPATH}:${INSTALLTMP}
-.endif
+IMAKEENV=	${CROSSENV}
 IMAKE=		${IMAKEENV} ${MAKE} -f Makefile.inc1
+.if empty(.MAKEFLAGS:M-n)
+IMAKEENV+=	PATH=${STRICTTMPPATH}:${INSTALLTMP} \
+		LD_LIBRARY_PATH=${INSTALLTMP} \
+		PATH_LOCALE=${INSTALLTMP}/locale
+IMAKE+=		__MAKE_SHELL=${INSTALLTMP}/sh
+.else
+IMAKEENV+=	PATH=${TMPPATH}:${INSTALLTMP}
+.endif
 
 # kernel stage
 KMAKEENV=	${WMAKEENV}
@@ -310,33 +330,17 @@ _worldtmp:
 	rm -rf ${WORLDTMP}/legacy/usr/include
 #	XXX - These two can depend on any header file.
 	rm -f ${OBJTREE}${.CURDIR}/usr.bin/kdump/ioctl.c
+	rm -f ${OBJTREE}${.CURDIR}/usr.bin/kdump/kdump_subr.c
 	rm -f ${OBJTREE}${.CURDIR}/usr.bin/truss/ioctl.c
 .endif
 .for _dir in \
-    usr/bin usr/games usr/include/sys usr/lib \
-    usr/libexec usr/sbin usr/share/dict \
-    usr/share/groff_font/devX100 \
-    usr/share/groff_font/devX100-12 \
-    usr/share/groff_font/devX75 \
-    usr/share/groff_font/devX75-12 \
-    usr/share/groff_font/devascii \
-    usr/share/groff_font/devcp1047 \
-    usr/share/groff_font/devdvi \
-    usr/share/groff_font/devhtml \
-    usr/share/groff_font/devkoi8-r \
-    usr/share/groff_font/devlatin1 \
-    usr/share/groff_font/devlbp \
-    usr/share/groff_font/devlj4 \
-    usr/share/groff_font/devps \
-    usr/share/groff_font/devutf8 \
-    usr/share/tmac/mdoc usr/share/tmac/mm
-	mkdir -p ${WORLDTMP}/legacy/${_dir}
-.endfor
-.for _dir in \
-    lib usr/bin usr/include usr/lib/compat/aout usr/libdata/ldscripts \
-    usr/libdata/pkgconfig usr/libexec usr/sbin usr/share/misc
+    lib usr legacy/usr
 	mkdir -p ${WORLDTMP}/${_dir}
 .endfor
+	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
+	    -p ${WORLDTMP}/legacy/usr >/dev/null
+	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
+	    -p ${WORLDTMP}/usr >/dev/null
 	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
 	    -p ${WORLDTMP}/usr/include >/dev/null
 	ln -sf ${.CURDIR}/sys ${WORLDTMP}
@@ -417,10 +421,9 @@ build32:
 	@echo "--------------------------------------------------------------"
 	@echo ">>> stage 5.1: building 32 bit shim libraries"
 	@echo "--------------------------------------------------------------"
-.for _dir in \
-    usr/include usr/lib32 usr/share/misc
-	mkdir -p ${LIB32TMP}/${_dir}
-.endfor
+	mkdir -p ${LIB32TMP}/usr/include
+	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
+	    -p ${LIB32TMP}/usr >/dev/null
 	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
 	    -p ${LIB32TMP}/usr/include >/dev/null
 	mkdir -p ${WORLDTMP}
@@ -438,28 +441,31 @@ build32:
 	cd ${.CURDIR}/apache/lib; ${LIB32WMAKE} ${_t}
 .endif
 .if ${MK_CDDL} != "no"
-	cd ${.CURDIR}/cddl/lib; ${LIB32WMAKE} ${_t}
+	cd ${.CURDIR}/cddl/lib; ${LIB32WMAKE} DIRPRFX=cddl/lib/ ${_t}
 .endif
-	cd ${.CURDIR}/gnu/lib; ${LIB32WMAKE} ${_t}
+	cd ${.CURDIR}/gnu/lib; ${LIB32WMAKE} DIRPRFX=gnu/lib/ ${_t}
 .if ${MK_CRYPT} != "no"
-	cd ${.CURDIR}/secure/lib; ${LIB32WMAKE} ${_t}
+	cd ${.CURDIR}/secure/lib; ${LIB32WMAKE} DIRPRFX=secure/lib/ ${_t}
 .endif
 .if ${MK_KERBEROS} != "no"
-	cd ${.CURDIR}/kerberos5/lib; ${LIB32WMAKE} ${_t}
+	cd ${.CURDIR}/kerberos5/lib; ${LIB32WMAKE} DIRPRFX=kerberos5/lib ${_t}
 .endif
 .endfor
 .for _dir in usr.bin/lex/lib
-	cd ${.CURDIR}/${_dir}; ${LIB32WMAKE} obj
+	cd ${.CURDIR}/${_dir}; ${LIB32WMAKE} DIRPRFX=${_dir}/ obj
 .endfor
 .for _dir in lib/ncurses/ncurses lib/ncurses/ncursesw lib/libmagic
 	cd ${.CURDIR}/${_dir}; \
-	    MAKEOBJDIRPREFIX=${OBJTREE}/lib32 ${MAKE} DESTDIR= build-tools
+	    MAKEOBJDIRPREFIX=${OBJTREE}/lib32 ${MAKE} SSP_CFLAGS= DESTDIR= \
+	    DIRPRFX=${_dir}/ build-tools
 .endfor
 	cd ${.CURDIR}; \
 	    ${LIB32WMAKE} -f Makefile.inc1 libraries
 .for _t in obj depend all
-	cd ${.CURDIR}/libexec/rtld-elf; PROG=ld-elf32.so.1 ${LIB32WMAKE} ${_t}
-	cd ${.CURDIR}/usr.bin/ldd; PROG=ldd32 ${LIB32WMAKE} ${_t}
+	cd ${.CURDIR}/libexec/rtld-elf; PROG=ld-elf32.so.1 ${LIB32WMAKE} \
+	    DIRPRFX=libexec/rtld-elf/ ${_t}
+	cd ${.CURDIR}/usr.bin/ldd; PROG=ldd32 ${LIB32WMAKE} \
+	    DIRPRFX=usr.bin/ldd ${_t}
 .endfor
 
 distribute32 install32:
@@ -469,6 +475,9 @@ distribute32 install32:
 	mkdir -p ${DESTDIR}/usr/lib32			# XXX add to mtree
 .endif
 	cd ${.CURDIR}/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
+.if ${MK_CDDL} != "no"
+	cd ${.CURDIR}/cddl/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
+.endif
 	cd ${.CURDIR}/gnu/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
 .if ${MK_CRYPT} != "no"
 	cd ${.CURDIR}/secure/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
@@ -476,10 +485,10 @@ distribute32 install32:
 .if ${MK_KERBEROS} != "no"
 	cd ${.CURDIR}/kerberos5/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
 .endif
-	cd ${.CURDIR}/libexec/rtld-elf; PROG=ld-elf32.so.1 ${LIB32IMAKE} ${.TARGET:S/32$//}
+	cd ${.CURDIR}/libexec/rtld-elf; \
+	    PROG=ld-elf32.so.1 ${LIB32IMAKE} ${.TARGET:S/32$//}
 	cd ${.CURDIR}/usr.bin/ldd; PROG=ldd32 ${LIB32IMAKE} ${.TARGET:S/32$//}
 .endif
-
 
 WMAKE_TGTS=
 .if !defined(SUBDIR_OVERRIDE)
@@ -575,6 +584,21 @@ installcheck_UGID:
 .endfor
 
 #
+# Required install tools to be saved in a scratch dir for safety.
+#
+.if ${MK_INFO} != "no"
+_install-info=	install-info
+.endif
+.if ${MK_ZONEINFO} != "no"
+_zoneinfo=	zic tzsetup
+.endif
+
+ITOOLS=	[ awk cap_mkdb cat chflags chmod chown \
+	date echo egrep find grep ${_install-info} \
+	ln lockf make mkdir mtree mv pwd_mkdb rm sed sh sysctl \
+	test true uname wc ${_zoneinfo}
+
+#
 # distributeworld
 #
 # Distributes everything compiled by a `buildworld'.
@@ -583,16 +607,62 @@ installcheck_UGID:
 #
 # Installs everything compiled by a 'buildworld'.
 #
+
+# Non-base distributions produced by the base system
+EXTRA_DISTRIBUTIONS=	games
+.if defined(LIB32TMP) && ${MK_LIB32} != "no"
+EXTRA_DISTRIBUTIONS+=	lib32
+.endif
+
 distributeworld installworld: installcheck
 	mkdir -p ${INSTALLTMP}
-	for prog in [ awk cap_mkdb cat chflags chmod chown \
-	    date echo egrep find grep install-info \
-	    ln lockf make mkdir mtree mv pwd_mkdb rm sed sh sysctl \
-	    test true uname wc zic; do \
-		cp `which $$prog` ${INSTALLTMP}; \
-	done
-	${_+_}cd ${.CURDIR}; ${IMAKE} re${.TARGET:S/world$//}
-	rm -rf ${INSTALLTMP}
+	progs=$$(for prog in ${ITOOLS}; do \
+		if progpath=`which $$prog`; then \
+			echo $$progpath; \
+		else \
+			echo "Required tool $$prog not found in PATH." >&2; \
+			exit 1; \
+		fi; \
+	    done); \
+	libs=$$(ldd -f "%o %p\n" -f "%o %p\n" $$progs 2>/dev/null | sort -u | \
+	    while read line; do \
+		set -- $$line; \
+		if [ "$$2 $$3" != "not found" ]; then \
+			echo $$2; \
+		else \
+			echo "Required library $$1 not found." >&2; \
+			exit 1; \
+		fi; \
+	    done); \
+	cp $$libs $$progs ${INSTALLTMP}
+	cp -R $${PATH_LOCALE:-"/usr/share/locale"} ${INSTALLTMP}/locale
+.if make(distributeworld)
+.for dist in ${EXTRA_DISTRIBUTIONS}
+	-mkdir ${DESTDIR}/${DISTDIR}/${dist}
+	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.root.dist \
+	    -p ${DESTDIR}/${DISTDIR}/${dist} >/dev/null
+	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
+	    -p ${DESTDIR}/${DISTDIR}/${dist}/usr >/dev/null
+	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
+	    -p ${DESTDIR}/${DISTDIR}/${dist}/usr/include >/dev/null
+.endfor
+	-mkdir ${DESTDIR}/${DISTDIR}/base
+	${_+_}cd ${.CURDIR}; ${IMAKE} distrib-dirs \
+	    DESTDIR=${DESTDIR}/${DISTDIR}/base
+.endif
+	${_+_}cd ${.CURDIR}; ${IMAKE} re${.TARGET:S/world$//}; \
+	    ${IMAKEENV} rm -rf ${INSTALLTMP}
+.if make(distributeworld)
+.for dist in ${EXTRA_DISTRIBUTIONS}
+	find ${DESTDIR}/${DISTDIR}/${dist} -empty -delete
+.endfor
+.endif
+
+packageworld:
+.for dist in base ${EXTRA_DISTRIBUTIONS}
+	${_+_}cd ${DESTDIR}/${DISTDIR}/${dist}; \
+	    tar cvJf ${DESTDIR}/${DISTDIR}/${dist}.txz .
+.endfor
 
 #
 # reinstall
@@ -620,8 +690,9 @@ redistribute:
 	@echo ">>> Distributing everything"
 	@echo "--------------------------------------------------------------"
 	${_+_}cd ${.CURDIR}; ${MAKE} -f Makefile.inc1 distribute
-.if ${TARGET_ARCH} == "amd64" && ${MK_LIB32} != "no"
-	${_+_}cd ${.CURDIR}; ${MAKE} -f Makefile.inc1 distribute32 DISTRIBUTION=lib32
+.if defined(LIB32TMP) && ${MK_LIB32} != "no"
+	${_+_}cd ${.CURDIR}; ${MAKE} -f Makefile.inc1 distribute32 \
+	    DISTRIBUTION=lib32
 .endif
 
 distrib-dirs distribution:
@@ -641,6 +712,16 @@ distrib-dirs distribution:
 # be set to cross-build, we have to make sure TARGET is set
 # properly.
 
+.if defined(KERNFAST)
+NO_KERNELCLEAN=	t
+NO_KERNELCONFIG=	t
+NO_KERNELDEPEND=	t
+NO_KERNELOBJ=		t
+# Shortcut for KERNCONF=Blah -DKERNFAST is now KERNFAST=Blah
+.if !defined(KERNCONF) && ${KERNFAST} != "1"
+KERNCONF=${KERNFAST}
+.endif
+.endif
 .if !defined(KERNCONF) && defined(KERNEL)
 KERNCONF=	${KERNEL}
 KERNWARN=
@@ -705,24 +786,27 @@ buildkernel:
 	@echo "--------------------------------------------------------------"
 	cd ${KRNLOBJDIR}/${_kernel}; ${KMAKE} ${CLEANDIR}
 .endif
+.if !defined(NO_KERNELOBJ)
 	@echo
 	@echo "--------------------------------------------------------------"
 	@echo ">>> stage 2.2: rebuilding the object tree"
 	@echo "--------------------------------------------------------------"
 	cd ${KRNLOBJDIR}/${_kernel}; ${KMAKE} obj
+.endif
 	@echo
 	@echo "--------------------------------------------------------------"
 	@echo ">>> stage 2.3: build tools"
 	@echo "--------------------------------------------------------------"
 	cd ${KRNLOBJDIR}/${_kernel}; \
 	    MAKESRCPATH=${KERNSRCDIR}/dev/aic7xxx/aicasm \
-	    ${MAKE} -DNO_CPU_CFLAGS -f ${KERNSRCDIR}/dev/aic7xxx/aicasm/Makefile
+	    ${MAKE} SSP_CFLAGS= -DNO_CPU_CFLAGS -DNO_CTF \
+	    -f ${KERNSRCDIR}/dev/aic7xxx/aicasm/Makefile
 # XXX - Gratuitously builds aicasm in the ``makeoptions NO_MODULES'' case.
 .if !defined(MODULES_WITH_WORLD) && !defined(NO_MODULES) && exists(${KERNSRCDIR}/modules)
 .for target in obj depend all
 	cd ${KERNSRCDIR}/modules/aic7xxx/aicasm; \
 	    MAKEOBJDIRPREFIX=${KRNLOBJDIR}/${_kernel}/modules \
-	    ${MAKE} -DNO_CPU_CFLAGS ${target}
+	    ${MAKE} SSP_CFLAGS= -DNO_CPU_CFLAGS -DNO_CTF ${target}
 .endfor
 .endif
 .if !defined(NO_KERNELDEPEND)
@@ -754,11 +838,25 @@ reinstallkernel reinstallkernel.debug: installcheck
 	false
 .endif
 	@echo "--------------------------------------------------------------"
-	@echo ">>> Installing kernel"
+	@echo ">>> Installing kernel ${INSTALLKERNEL}"
 	@echo "--------------------------------------------------------------"
 	cd ${KRNLOBJDIR}/${INSTALLKERNEL}; \
 	    ${CROSSENV} PATH=${TMPPATH} \
 	    ${MAKE} KERNEL=${INSTKERNNAME} ${.TARGET:S/kernel//}
+
+distributekernel distributekernel.debug:
+.if empty(INSTALLKERNEL)
+	@echo "ERROR: No kernel \"${KERNCONF}\" to install."; \
+	false
+.endif
+	cd ${KRNLOBJDIR}/${INSTALLKERNEL}; \
+	    ${CROSSENV} PATH=${TMPPATH} ${MAKE} KERNEL=${INSTKERNNAME} \
+	    DESTDIR=${DESTDIR}/${DISTDIR}/kernel \
+	    ${.TARGET:S/distributekernel/install/}
+
+packagekernel:
+	${_+_}cd ${DESTDIR}/${DISTDIR}/kernel; \
+	    tar cvJf ${DESTDIR}/${DISTDIR}/kernel.txz .
 
 #
 # doxygen
@@ -977,7 +1075,7 @@ libraries:
 #
 # static libgcc.a prerequisite for shared libc
 #
-_prereq_libs= gnu/lib/libgcc
+_prereq_libs= gnu/lib/libssp/libssp_nonshared gnu/lib/libgcc
 
 # These dependencies are not automatically generated:
 #
@@ -997,7 +1095,8 @@ gnu/lib/libgcc__L: lib/libc__L
 
 _prebuild_libs=	${_kerberos5_lib_libasn1} ${_kerberos5_lib_libkrb5} \
 		${_kerberos5_lib_libroken} \
-		lib/libbz2 lib/libcom_err lib/libcrypt lib/libexpat \
+		lib/libbz2 lib/libcom_err lib/libcrypt \
+		lib/libexpat \
 		${_lib_libgssapi} ${_lib_libipx} \
 		lib/libkiconv lib/libkvm lib/libmd \
 		lib/ncurses/ncurses lib/ncurses/ncursesw \
@@ -1151,27 +1250,35 @@ delete-old-files:
 	@echo ">>> Removing old files (only deletes safe to delete libs)"
 # Ask for every old file if the user really wants to remove it.
 # It's annoying, but better safe than sorry.
-	@for file in ${OLD_FILES}; do \
+# NB: We cannot pass the list of OLD_FILES as a parameter because the
+# argument list will get too long. Using .for/.endfor make "loops" will make
+# the Makefile parser segfault.
+	@exec 3<&0; \
+	${MAKE} -f ${.CURDIR}/Makefile.inc1 ${.MAKEFLAGS} ${.TARGET} \
+	    -V OLD_FILES -V "OLD_FILES:Musr/share/*.gz:R" | xargs -n1 | \
+	while read file; do \
 		if [ -f "${DESTDIR}/$${file}" -o -L "${DESTDIR}/$${file}" ]; then \
 			chflags noschg "${DESTDIR}/$${file}" 2>/dev/null || true; \
-			rm ${RM_I} "${DESTDIR}/$${file}"; \
+			rm ${RM_I} "${DESTDIR}/$${file}" <&3; \
 		fi; \
 	done
 # Remove catpages without corresponding manpages.
-	@3<&0; \
+	@exec 3<&0; \
 	find ${DESTDIR}/usr/share/man/cat* ! -type d | \
 	sed -ep -e's:${DESTDIR}/usr/share/man/cat:${DESTDIR}/usr/share/man/man:' | \
 	while read catpage; do \
 		read manpage; \
 		if [ ! -e "$${manpage}" ]; then \
-			rm ${RM_I} $${catpage} <&3 ; \
+			rm ${RM_I} $${catpage} <&3; \
 	        fi; \
 	done
 	@echo ">>> Old files removed"
 
 check-old-files:
 	@echo ">>> Checking for old files"
-	@for file in ${OLD_FILES}; do \
+	@${MAKE} -f ${.CURDIR}/Makefile.inc1 ${.MAKEFLAGS} ${.TARGET} \
+	    -V OLD_FILES -V "OLD_FILES:Musr/share/*.gz:R" | xargs -n1 | \
+	while read file; do \
 		if [ -f "${DESTDIR}/$${file}" -o -L "${DESTDIR}/$${file}" ]; then \
 		 	echo "${DESTDIR}/$${file}"; \
 		fi; \
@@ -1182,24 +1289,29 @@ check-old-files:
 	while read catpage; do \
 		read manpage; \
 		if [ ! -e "$${manpage}" ]; then \
-			echo $${catpage} ; \
+			echo $${catpage}; \
 	        fi; \
 	done
 
 delete-old-libs:
 	@echo ">>> Removing old libraries"
 	@echo "${OLD_LIBS_MESSAGE}" | fmt
-	@for file in ${OLD_LIBS}; do \
+	@exec 3<&0; \
+	${MAKE} -f ${.CURDIR}/Makefile.inc1 ${.MAKEFLAGS} ${.TARGET} \
+	    -V OLD_LIBS | xargs -n1 | \
+	while read file; do \
 		if [ -f "${DESTDIR}/$${file}" -o -L "${DESTDIR}/$${file}" ]; then \
 			chflags noschg "${DESTDIR}/$${file}" 2>/dev/null || true; \
-			rm ${RM_I} "${DESTDIR}/$${file}"; \
+			rm ${RM_I} "${DESTDIR}/$${file}" <&3; \
 		fi; \
 	done
 	@echo ">>> Old libraries removed"
 
 check-old-libs:
 	@echo ">>> Checking for old libraries"
-	@for file in ${OLD_LIBS}; do \
+	@${MAKE} -f ${.CURDIR}/Makefile.inc1 ${.MAKEFLAGS} ${.TARGET} \
+	    -V OLD_LIBS | xargs -n1 | \
+	while read file; do \
 		if [ -f "${DESTDIR}/$${file}" -o -L "${DESTDIR}/$${file}" ]; then \
 			echo "${DESTDIR}/$${file}"; \
 		fi; \
@@ -1207,7 +1319,9 @@ check-old-libs:
 
 delete-old-dirs:
 	@echo ">>> Removing old directories"
-	@for dir in ${OLD_DIRS}; do \
+	@${MAKE} -f ${.CURDIR}/Makefile.inc1 ${.MAKEFLAGS} ${.TARGET} \
+	    -V OLD_DIRS | xargs -n1 | \
+	while read dir; do \
 		if [ -d "${DESTDIR}/$${dir}" ]; then \
 			rmdir -v "${DESTDIR}/$${dir}" || true; \
 		elif [ -L "${DESTDIR}/$${dir}" ]; then \
@@ -1218,7 +1332,9 @@ delete-old-dirs:
 
 check-old-dirs:
 	@echo ">>> Checking for old directories"
-	@for dir in ${OLD_DIRS}; do \
+	@${MAKE} -f ${.CURDIR}/Makefile.inc1 ${.MAKEFLAGS} ${.TARGET} \
+	    -V OLD_DIRS | xargs -n1 | \
+	while read dir; do \
 		if [ -d "${DESTDIR}/$${dir}" ]; then \
 			echo "${DESTDIR}/$${dir}"; \
 		elif [ -L "${DESTDIR}/$${dir}" ]; then \
