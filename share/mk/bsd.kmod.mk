@@ -1,9 +1,9 @@
 # $FreeBSD: src/share/mk/bsd.kmod.mk,v 1.91 2004/06/21 16:12:02 bde Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.kmod.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
 
 # Search for kernel source tree in standard places.
 .for _dir in ${.CURDIR}/../.. ${.CURDIR}/../../.. ${.CURDIR}/../../../.. \
-    /sys /usr/src/sys
+    ${.CURDIR}/../../../../.. /sys /usr/src/sys
 .if !defined(SYSDIR) && exists(${_dir}/kern/) && exists(${_dir}/conf/kmod.mk)
 SYSDIR=	${_dir}
 .endif
