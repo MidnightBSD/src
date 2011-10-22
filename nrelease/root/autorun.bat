@@ -1,3 +1,0 @@
-@echo Loading "index.html"...
-@start index.html
-@exit

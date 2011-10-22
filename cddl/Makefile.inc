@@ -1,3 +1,0 @@
-# $MidnightBSD$
-
-CFLAGS+= -D_SOLARIS_C_SOURCE
