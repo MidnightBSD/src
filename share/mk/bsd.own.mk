@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.7 2010/01/16 16:38:06 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.8 2010/08/14 20:42:19 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -45,9 +45,9 @@
 # KMODDIR	Base path for loadable kernel modules
 #		(see kld(4)). [/boot/kernel]
 #
-# KMODOWN	KLD owner. [${BINOWN}]
+# KMODOWN	Kernel and KLD owner. [${BINOWN}]
 #
-# KMODGRP	KLD group. [${BINGRP}]
+# KMODGRP	Kernel and KLD group. [${BINGRP}]
 #
 # KMODMODE	KLD mode. [${BINMODE}]
 #

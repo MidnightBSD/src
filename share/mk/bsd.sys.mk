@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.sys.mk,v 1.37 2005/01/16 21:18:16 obrien Exp $
-# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.7 2009/05/22 02:06:18 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.8 2010/08/21 01:48:10 laffer1 Exp $
 #
 # This file contains common settings used for building FreeBSD
 # sources.
@@ -9,8 +9,8 @@
 
 # for GCC:  http://gcc.gnu.org/onlinedocs/gcc-3.0.4/gcc_3.html#IDX143
 
-# Universally disable -Werror until src/ is in better shape for GCC 4.2
-NO_WERROR=
+# the default is gnu99 for now
+CSTD           ?= gnu99
 
 .if !defined(NO_WARNS)
 . if defined(CSTD)
@@ -76,6 +76,11 @@ CWARNFLAGS	+=	-Werror
 
 .if defined(IGNORE_PRAGMA)
 CWARNFLAGS	+=	-Wno-unknown-pragmas
+.endif
+
+.if ${MK_SSP} != "no"
+SSP_CFLAGS	?=	-fstack-protector
+CFLAGS		+=	${SSP_CFLAGS}
 .endif
 
 # Allow user-specified additional warning flags

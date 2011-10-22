@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.5 2010/03/20 02:24:56 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.6 2010/08/21 01:48:10 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.cpu.mk,v 1.62.2.1 2007/10/19 17:08:38 cognet Exp $
 
 # Set default CPU compile flags and baseline CPUTYPE for each arch.  The
@@ -10,7 +10,7 @@ _CPUCFLAGS =
 . if ${MACHINE_ARCH} == "i386"
 MACHINE_CPU = i486
 . elif ${MACHINE_ARCH} == "amd64"
-MACHINE_CPU = amd64 sse2 sse
+MACHINE_CPU = amd64 sse2 sse mmx
 . elif ${MACHINE_ARCH} == "sparc64"
 . elif ${MACHINE_ARCH} == "arm"
 MACHINE_CPU = arm
@@ -59,9 +59,6 @@ CPUTYPE = nocona
 # Logic to set up correct gcc optimization flag.  This must be included
 # after /etc/make.conf so it can react to the local value of CPUTYPE
 # defined therein.  Consult:
-#	http://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
-#	http://gcc.gnu.org/onlinedocs/gcc/IA-64-Options.html
-#	http://gcc.gnu.org/onlinedocs/gcc/RS-6000-and-PowerPC-Options.html
 #	http://gcc.gnu.org/onlinedocs/gcc/SPARC-Options.html
 #	http://gcc.gnu.org/onlinedocs/gcc/i386-and-x86-64-Options.html
 
