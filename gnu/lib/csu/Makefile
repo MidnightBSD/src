@@ -1,5 +1,8 @@
-# $MidnightBSD: src/gnu/lib/csu/Makefile,v 1.4 2007/10/22 02:31:00 laffer1 Exp $
+# $MidnightBSD: src/gnu/lib/csu/Makefile,v 1.5 2009/05/22 00:27:10 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/csu/Makefile,v 1.24 2004/09/10 06:48:04 ru Exp $
+
+.include <bsd.own.mk>
+MK_SSP=	no
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
@@ -15,7 +18,8 @@ CSTD?=		gnu89
 CFLAGS+=	-DIN_GCC -DHAVE_LD_EH_FRAME_HDR -DDT_CONFIG -D__GLIBC__=3
 CFLAGS+=	-finhibit-size-directive -fno-inline-functions \
 		-fno-exceptions -fno-zero-initialized-in-bss \
-		-fno-zero-initialized-in-bss -fno-toplevel-reorder
+		-fno-zero-initialized-in-bss -fno-toplevel-reorder \
+		-fno-asynchronous-unwind-tables -fno-omit-frame-pointer
 CFLAGS+=	-I${GCCLIB}/include -I${GCCDIR}/config -I${GCCDIR} -I. \
 		-I${CCDIR}/cc_tools
 CRTS_CFLAGS=	-DCRTSTUFFS_O -DSHARED ${PICFLAG}

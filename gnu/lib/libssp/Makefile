@@ -1,4 +1,9 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/libssp/Makefile,v 1.1 2009/05/22 00:27:23 laffer1 Exp $
+
+SHLIBDIR?=	/lib
+
+.include <bsd.own.mk>
+MK_SSP=		no
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
@@ -8,7 +13,6 @@ SRCDIR=	${GCCLIB}/libssp
 
 LIB=		ssp
 SHLIB_MAJOR=	0
-SHLIBDIR?=	/lib
 NO_PROFILE=
 
 SRCS=	ssp.c gets-chk.c memcpy-chk.c memmove-chk.c mempcpy-chk.c \

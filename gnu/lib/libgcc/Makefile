@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/lib/libgcc/Makefile,v 1.6 2009/05/22 00:27:12 laffer1 Exp $
+# $MidnightBSD: src/gnu/lib/libgcc/Makefile,v 1.7 2009/05/26 02:25:21 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libgcc/Makefile,v 1.58 2007/08/14 20:49:57 kan Exp $
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
@@ -8,6 +8,13 @@ SHLIB_NAME=	libgcc_s.so.1
 SHLIBDIR?=	/lib
 
 .include <bsd.own.mk>
+
+#
+# libgcc is linked in last and thus cannot depend on ssp symbols coming
+# from earlier libraries. Disable stack protection for this library.
+#
+MK_SSP=	no
+
 .include "${.CURDIR}/../../usr.bin/cc/Makefile.tgt"
 
 .PATH: ${GCCDIR}/config/${GCC_CPU} ${GCCDIR}/config ${GCCDIR}

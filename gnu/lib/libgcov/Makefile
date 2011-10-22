@@ -1,8 +1,11 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/libgcov/Makefile,v 1.3 2009/05/22 00:27:15 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libgcov/Makefile,v 1.5 2007/05/19 04:25:55 kan Exp $
 
 NO_PROFILE=
 .include <bsd.own.mk>
+
+MK_SSP=		no
+
 .include "${.CURDIR}/../../usr.bin/cc/Makefile.tgt"
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
