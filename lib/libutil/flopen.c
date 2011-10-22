@@ -26,7 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/flopen.c,v 1.9.4.1 2009/06/09 01:43:58 des Exp $");
+/* $FreeBSD: src/lib/libutil/flopen.c,v 1.9.4.1 2009/06/09 01:43:58 des Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -40,22 +41,25 @@ __FBSDID("$FreeBSD: src/lib/libutil/flopen.c,v 1.9.4.1 2009/06/09 01:43:58 des E
 int
 flopen(const char *path, int flags, ...)
 {
-	int fd, operation, serrno, trunc;
+	int fd, operation, serrno, trunc, flags2;
 	struct stat sb, fsb;
-	mode_t mode;
+	mode_t mode = 0;
 
+/* this is an ugly hack to work around va_args second arg bug with GCC */
+	flags2 = flags;
 #ifdef O_EXLOCK
-	flags &= ~O_EXLOCK;
+	flags2 &= ~O_EXLOCK;
 #endif
-
-	mode = 0;
-	if (flags & O_CREAT) {
+	if (flags2 & O_CREAT) {
 		va_list ap;
 
 		va_start(ap, flags);
 		mode = (mode_t)va_arg(ap, int); /* mode_t promoted to int */
 		va_end(ap);
 	}
+#ifdef O_EXLOCK
+	flags = flags2;
+#endif
 
         operation = LOCK_EX;
         if (flags & O_NONBLOCK)
