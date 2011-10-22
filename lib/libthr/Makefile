@@ -10,6 +10,8 @@
 
 .include <bsd.own.mk>
 
+MK_SSP=	no
+
 .if (${DEFAULT_THREAD_LIB} == "libthr" || ${MK_LIBKSE} == "no") && \
     ${SHLIBDIR} == "/usr/lib"
 SHLIBDIR= /lib

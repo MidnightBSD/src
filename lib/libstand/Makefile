@@ -6,6 +6,9 @@
 #   quite large.
 #
 
+.include <bsd.own.mk>
+MK_SSP=               no
+
 LIB=		stand
 NO_PROFILE=
 NO_PIC=

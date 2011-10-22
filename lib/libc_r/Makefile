@@ -10,6 +10,8 @@
 
 .include <bsd.own.mk>
 
+MK_SSP=	no
+
 .if ${DEFAULT_THREAD_LIB} == "libc_r" && ${SHLIBDIR} == "/usr/lib"
 SHLIBDIR= /lib
 .endif

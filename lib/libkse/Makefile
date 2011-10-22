@@ -10,6 +10,8 @@
 
 .include <bsd.own.mk>
 
+MK_SSP=	no
+
 .if ${DEFAULT_THREAD_LIB} == "libkse" || ${MK_LIBTHR} == "no"
 LIB=kse
 .if ${SHLIBDIR} == "/usr/lib"
