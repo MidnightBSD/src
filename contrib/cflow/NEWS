@@ -1,0 +1,30 @@
+0.0.6 2010-04-03:
+-----------------
+* Fixed operator expressions for ! and |.
+
+0.0.5 2010-01-07:
+-----------------
+* Fixed path bug in cflow script. (thanks Till Plewe)
+* Removed unimplemented -f flag from cflow manpage.
+
+0.0.4 2009-12-24:
+-----------------
+* Added Win32 platform support.
+* Added Visual Studio.NET support.
+* Minor ANSI/C99 keyword fixes.
+
+0.0.3 2009-10-05:
+-----------------
+* Fixed multiple file targets for cflow script.
+* Fixed FreeBSD-specific code.
+* Fixed compiler warnings.
+* Added missing POSIX.1 fstat() keyword.
+
+0.0.2 2009-03-28:
+-----------------
+* Added GNU make support in gnu/.
+
+0.0.1 2009-01-20:
+-----------------
+* Initial release
+

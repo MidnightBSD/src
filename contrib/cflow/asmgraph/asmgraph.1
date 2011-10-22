@@ -1,0 +1,102 @@
+.\"-
+.\" Copyright (c) 2007-2009, Marcus von Appen
+.\" All rights reserved.
+.\" 
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer 
+.\"    in this position and unchanged.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+.\" IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+.\" INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+.\" NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+.\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" $FreeBSD$
+.\"
+.Dd October 02, 2009
+.Dt ASMGRAPH 1
+.Os
+.Sh NAME
+.Nm asmgraph
+.Nd build call graphs from assembler files
+.Sh SYNOPSIS
+.Nm
+.Op Fl acgnr
+.Op Fl d Ar num
+.Op Fl i Ar incl
+.Op Fl R Ar root
+.Op Ar
+.Sh DESCRIPTION
+The
+.Nm
+utility reads assembler source code files and prints call graphs from
+their contents.
+.Sh OPTIONS
+The following options are supported:
+.Bl -tag -width indent
+.It Fl a
+Use the GNU
+.Cm as(1)
+syntax parser for assembler files.
+.It Fl c
+Print all calls within a function, including subsequent invocations of
+the same function.
+.It Fl d Ar num
+The depth at which the graph is cut off. The
+.Ar num
+argument must be a positive integer >=0.
+.It Fl g
+Produce a
+.Cm dot(1)
+graph for graphviz output.
+.It Fl i Ar incl
+Increase the number of included symbols. The
+.Ar incl
+argument can be one of the following characters:
+.Bl -tag -offset indent -width ".Li 10"
+.It Li x
+Include external and static data symbols.
+.It Li _
+Include names that begin with an underscore.
+.El
+.It Fl n
+Use the
+.Cm nasm(1)
+syntax parser for assembler files. This flag will be the default, if
+neither
+.Op Fl a
+nor
+.Op Fl n
+are set.
+.It Fl r
+Print the flowgraph in reversed order, producing an inverted listing
+showing the callers of each function.
+.It Fl R Ar root
+The function to use as root function. The default is "main". If set to a
+name, that cannot be found in the file, all functions are printed.
+.El
+.Sh EXAMPLES
+TODO
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr cflow 1 ,
+.Xr cgraph 1
+.\".Xr lexgraph 1 ,
+.\".Xr yaccgraph 1
+.Sh BUGS
+TODO
+.Sh AUTHORS
+.An Marcus von Appen Aq marcus@sysfault.org
