@@ -1,4 +1,4 @@
-# $MidnightBSD: src/apache/lib/libdispatch/Makefile,v 1.3 2010/08/14 22:15:14 laffer1 Exp $
+# $MidnightBSD: src/apache/lib/libdispatch/Makefile,v 1.4 2010/08/16 00:04:23 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../../contrib/libdispatch/src
 SRCDIR=	${.CURDIR}/../../../contrib/libdispatch/src
@@ -10,6 +10,7 @@ SRCS=	apply.c benchmark.c legacy.c object.c once.c \
 	source_kevent.c time.c
 
 WARNS?= 2
+CSTD=	gnu89
 
 .PATH:  ${.CURDIR}/../../../contrib/libdispatch/dispatch
 INCS=	base.h dispatch.h group.h object.h once.h \
