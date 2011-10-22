@@ -4253,6 +4253,7 @@ contrib/bzip2/words1 -text
 contrib/bzip2/words2 -text
 contrib/bzip2/words3 -text
 contrib/cflow/AUTHORS -text
+contrib/cflow/MIDNIGHTBSD-upgrade -text
 contrib/cflow/Makefile -text
 contrib/cflow/NEWS -text
 contrib/cflow/asmgraph/Makefile -text

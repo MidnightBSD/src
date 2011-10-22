@@ -1,0 +1,11 @@
+# $MidnightBSD$
+
+
+Marcus von Appen's cflow
+	originals can be found at: 	http://www.sysfault.org/projects
+
+Imported by:
+
+cvs import -m "Virgin import of cflow 0.0.6 (trimmed)" src/contrib/cflow APPEN v0_0_6
+
+win32 and gnu directories removed prior to import
