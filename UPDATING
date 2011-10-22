@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20111022:
+	cflow 0.0.6 imported
+
 20111020:
 	less v436 imported
 
@@ -1118,4 +1121,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.140 2011/10/19 15:08:26 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.141 2011/10/20 14:33:13 laffer1 Exp $
