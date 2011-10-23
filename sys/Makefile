@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/Makefile,v 1.6 2008/09/27 23:06:33 laffer1 Exp $
+# $MidnightBSD: src/sys/Makefile,v 1.7 2008/10/01 16:44:38 laffer1 Exp $
 # $FreeBSD: src/sys/Makefile,v 1.33 2005/03/08 00:09:41 grog Exp $
 
 .include <bsd.own.mk>
@@ -9,13 +9,17 @@ SUBDIR=	boot
 .endif
 
 # Directories to include in cscope name file and TAGS.
-CSCOPEDIRS=	bsm cam compat conf contrib crypto ddb dev fs geom gnu \
+CSCOPEDIRS=	bsm cam cddl compat conf contrib crypto ddb dev fs geom gnu \
 		isa kern libkern modules net net80211 netatalk netatm \
 		netgraph netinet netinet6 netipsec netipx netnatm netncp \
 		netsmb nfs nfsclient nfs4client rpc pccard pci security sys \
-		ufs vm ${ARCHDIR}
+		ufs vm ${CSCOPE_ARCHDIR}
 
-ARCHDIR	?=	${MACHINE}
+.if defined(ALL_ARCH)
+CSCOPE_ARCHDIR ?= amd64 i386 sparc64 x86
+.else
+CSCOPE_ARCHDIR ?= ${MACHINE}
+.endif
 
 # Loadable kernel modules
 
@@ -26,15 +30,27 @@ SUBDIR+=modules
 HTAGSFLAGS+= -at `awk -F= '/^RELEASE *=/{release=$2}; END {print "MidnightBSD", release, "kernel"}' < conf/newvers.sh`
 
 # You need the devel/cscope port for this.
-cscope:	${.CURDIR}/cscopenamefile
-	cd ${.CURDIR}; cscope -k -p4 -i cscopenamefile
+cscope: cscope.out
+cscope.out: ${.CURDIR}/cscope.files
+	cd ${.CURDIR}; cscope -k -buq -p4
 
-${.CURDIR}/cscopenamefile: 
-	cd ${.CURDIR}; find ${CSCOPEDIRS} -name "*.[csh]" > ${.TARGET}
+${.CURDIR}/cscope.files: .PHONY
+	cd ${.CURDIR}; \
+		find ${CSCOPEDIRS} -name "*.[chSs]" -a -type f > ${.TARGET}
+
+cscope-clean:
+	rm -f cscope.files cscope.out cscope.in.out cscope.po.out
 
 # You need the devel/global and one of editor/emacs* ports for that.
-TAGS ${.CURDIR}/TAGS:	${.CURDIR}/cscopenamefile
+TAGS ${.CURDIR}/TAGS: ${.CURDIR}/cscope.files
 	rm -f ${.CURDIR}/TAGS
-	cd ${.CURDIR}; xargs etags -a < ${.CURDIR}/cscopenamefile
+	cd ${.CURDIR}; xargs etags -a < ${.CURDIR}/cscope.files
+
+# You need the textproc/glimpse ports for this.
+glimpse:
+	cd ${.CURDIR}; glimpseindex -H . -B -f -o .
+
+glimpse-clean:
+	cd ${.CURDIR}; rm -f .glimpse_*
 
 .include <bsd.subdir.mk>
