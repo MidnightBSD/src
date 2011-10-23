@@ -31,6 +31,8 @@ struct nesting_state {
 	int start_line;		/* line nesting began on */
 };
 
+void yyskiputf8bom(void);
+
 static void yyparse(void);
 static struct op *pipeline(int);
 static struct op *andor(void);
@@ -893,8 +895,6 @@ newtp(int type)
 struct op *
 compile(Source *s, bool skiputf8bom)
 {
-	extern void yyskiputf8bom(void);
-
 	nesting.start_token = 0;
 	nesting.start_line = 0;
 	herep = heres;
