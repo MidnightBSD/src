@@ -39285,6 +39285,7 @@ sys/vm/vm_unix.c -text
 sys/vm/vm_zeroidle.c -text
 sys/vm/vnode_pager.c -text
 sys/vm/vnode_pager.h -text
+sys/x86/include/README -text
 sys/x86/pci/qpi.c -text
 tools/KSE/ksetest/Makefile -text
 tools/KSE/ksetest/kse_asm.S -text
