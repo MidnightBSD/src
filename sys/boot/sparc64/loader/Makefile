@@ -2,6 +2,8 @@
 
 .include <bsd.own.mk>
 
+MK_SSP=		no
+
 PROG=		loader
 NEWVERSWHAT=	"bootstrap loader" sparc64
 INSTALLFLAGS=	-b

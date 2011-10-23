@@ -2,6 +2,8 @@
 
 .include <bsd.own.mk>
 
+MK_SSP=		no
+
 PROG=		loader.sym
 INTERNALPROG=
 NEWVERSWHAT=	"bootstrap loader" i386
