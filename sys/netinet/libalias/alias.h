@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* lint -save -library Flexelint comment for external headers */
 
 /*-

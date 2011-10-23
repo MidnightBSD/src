@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * alias_skinny.c
  *

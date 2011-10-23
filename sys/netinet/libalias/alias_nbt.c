@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Written by Atsushi Murai <amurai@spec.co.jp>
  * Copyright (c) 1998, System Planning and Engineering Co.
@@ -51,6 +50,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_nbt.c,v 1.20 2006/09/26 23:26
 #include <errno.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <strings.h>
 #endif
 
 #include <netinet/in_systm.h>

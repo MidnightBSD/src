@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_db.c,v 1.71 2007/04/07 09:47:39 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_db.c,v 1.71.2.2 2008/10/12 23:19:23 csjp Exp $");
 
 /*
     Alias_db.c encapsulates all data structures used for storing
@@ -181,8 +180,9 @@ static		LIST_HEAD(, libalias) instancehead = LIST_HEAD_INITIALIZER(instancehead)
 */
 
 /* Parameters used for cleanup of expired links */
-#define ALIAS_CLEANUP_INTERVAL_SECS  60
-#define ALIAS_CLEANUP_MAX_SPOKES     30
+/* NOTE: ALIAS_CLEANUP_INTERVAL_SECS must be less then LINK_TABLE_OUT_SIZE */
+#define ALIAS_CLEANUP_INTERVAL_SECS  64
+#define ALIAS_CLEANUP_MAX_SPOKES     (LINK_TABLE_OUT_SIZE/5)
 
 /* Timeouts (in seconds) for different link types */
 #define ICMP_EXPIRE_TIME             60
@@ -606,7 +606,7 @@ GetNewPort(struct libalias *la, struct alias_link *lnk, int alias_port_param)
 			port_sys = ntohs(port_net);
 		} else {
 			/* First trial and all subsequent are random. */
-			port_sys = random() & ALIAS_PORT_MASK;
+			port_sys = arc4random() & ALIAS_PORT_MASK;
 			port_sys += ALIAS_PORT_BASE;
 			port_net = htons(port_sys);
 		}
@@ -657,7 +657,7 @@ GetNewPort(struct libalias *la, struct alias_link *lnk, int alias_port_param)
 			}
 #endif
 		}
-		port_sys = random() & ALIAS_PORT_MASK;
+		port_sys = arc4random() & ALIAS_PORT_MASK;
 		port_sys += ALIAS_PORT_BASE;
 		port_net = htons(port_sys);
 	}
@@ -772,9 +772,9 @@ FindNewPortGroup(struct libalias *la,
 
 		/* First trial and all subsequent are random. */
 		if (align == FIND_EVEN_ALIAS_BASE)
-			port_sys = random() & ALIAS_PORT_MASK_EVEN;
+			port_sys = arc4random() & ALIAS_PORT_MASK_EVEN;
 		else
-			port_sys = random() & ALIAS_PORT_MASK;
+			port_sys = arc4random() & ALIAS_PORT_MASK;
 
 		port_sys += ALIAS_PORT_BASE;
 	}
@@ -796,9 +796,9 @@ FindNewPortGroup(struct libalias *la,
 
 		/* Find a new base to try */
 		if (align == FIND_EVEN_ALIAS_BASE)
-			port_sys = random() & ALIAS_PORT_MASK_EVEN;
+			port_sys = arc4random() & ALIAS_PORT_MASK_EVEN;
 		else
-			port_sys = random() & ALIAS_PORT_MASK;
+			port_sys = arc4random() & ALIAS_PORT_MASK;
 
 		port_sys += ALIAS_PORT_BASE;
 	}
@@ -815,17 +815,13 @@ static void
 CleanupAliasData(struct libalias *la)
 {
 	struct alias_link *lnk;
-	int i, icount;
+	int i;
 
 	LIBALIAS_LOCK_ASSERT(la);
-	icount = 0;
 	for (i = 0; i < LINK_TABLE_OUT_SIZE; i++) {
 		lnk = LIST_FIRST(&la->linkTableOut[i]);
 		while (lnk != NULL) {
-			struct alias_link *link_next;
-
-			link_next = LIST_NEXT(lnk, list_out);
-			icount++;
+			struct alias_link *link_next = LIST_NEXT(lnk, list_out);
 			DeleteLink(lnk);
 			lnk = link_next;
 		}
@@ -838,39 +834,13 @@ CleanupAliasData(struct libalias *la)
 static void
 IncrementalCleanup(struct libalias *la)
 {
-	int icount;
-	struct alias_link *lnk;
+	struct alias_link *lnk, *lnk_tmp;
 
 	LIBALIAS_LOCK_ASSERT(la);
-	icount = 0;
-	lnk = LIST_FIRST(&la->linkTableOut[la->cleanupIndex++]);
-	while (lnk != NULL) {
-		int idelta;
-		struct alias_link *link_next;
-
-		link_next = LIST_NEXT(lnk, list_out);
-		idelta = la->timeStamp - lnk->timestamp;
-		switch (lnk->link_type) {
-		case LINK_TCP:
-			if (idelta > lnk->expire_time) {
-				struct tcp_dat *tcp_aux;
-
-				tcp_aux = lnk->data.tcp;
-				if (tcp_aux->state.in != ALIAS_TCP_STATE_CONNECTED
-				    || tcp_aux->state.out != ALIAS_TCP_STATE_CONNECTED) {
-					DeleteLink(lnk);
-					icount++;
-				}
-			}
-			break;
-		default:
-			if (idelta > lnk->expire_time) {
-				DeleteLink(lnk);
-				icount++;
-			}
-			break;
-		}
-		lnk = link_next;
+	LIST_FOREACH_SAFE(lnk, &la->linkTableOut[la->cleanupIndex++],
+	    list_out, lnk_tmp) {
+		if (la->timeStamp - lnk->timestamp > lnk->expire_time)
+			DeleteLink(lnk);
 	}
 
 	if (la->cleanupIndex == LINK_TABLE_OUT_SIZE)
@@ -1138,12 +1108,12 @@ _FindLinkOut(struct libalias *la, struct in_addr src_addr,
 	LIBALIAS_LOCK_ASSERT(la);
 	i = StartPointOut(src_addr, dst_addr, src_port, dst_port, link_type);
 	LIST_FOREACH(lnk, &la->linkTableOut[i], list_out) {
-		if (lnk->src_addr.s_addr == src_addr.s_addr
-		    && lnk->server == NULL
-		    && lnk->dst_addr.s_addr == dst_addr.s_addr
-		    && lnk->dst_port == dst_port
-		    && lnk->src_port == src_port
-		    && lnk->link_type == link_type) {
+		if (lnk->dst_addr.s_addr == dst_addr.s_addr &&
+		    lnk->src_addr.s_addr == src_addr.s_addr &&
+		    lnk->src_port == src_port &&
+		    lnk->dst_port == dst_port &&
+		    lnk->link_type == link_type &&
+		    lnk->server == NULL) {
 			lnk->timestamp = la->timeStamp;
 			break;
 		}
@@ -2202,7 +2172,7 @@ SetDestCallId(struct alias_link *lnk, u_int16_t cid)
 void
 HouseKeeping(struct libalias *la)
 {
-	int i, n, n100;
+	int i, n;
 #ifndef	_KERNEL
 	struct timeval tv;
 	struct timezone tz;
@@ -2222,24 +2192,14 @@ HouseKeeping(struct libalias *la)
 #endif
 
 	/* Compute number of spokes (output table link chains) to cover */
-	n100 = LINK_TABLE_OUT_SIZE * 100 + la->houseKeepingResidual;
-	n100 *= la->timeStamp - la->lastCleanupTime;
-	n100 /= ALIAS_CLEANUP_INTERVAL_SECS;
-
-	n = n100 / 100;
+	n = LINK_TABLE_OUT_SIZE * (la->timeStamp - la->lastCleanupTime);
+	n /= ALIAS_CLEANUP_INTERVAL_SECS;
 
 	/* Handle different cases */
-	if (n > ALIAS_CLEANUP_MAX_SPOKES) {
-		n = ALIAS_CLEANUP_MAX_SPOKES;
+	if (n > 0) {
+		if (n > ALIAS_CLEANUP_MAX_SPOKES)
+			n = ALIAS_CLEANUP_MAX_SPOKES;
 		la->lastCleanupTime = la->timeStamp;
-		la->houseKeepingResidual = 0;
-
-		for (i = 0; i < n; i++)
-			IncrementalCleanup(la);
-	} else if (n > 0) {
-		la->lastCleanupTime = la->timeStamp;
-		la->houseKeepingResidual = n100 - 100 * n;
-
 		for (i = 0; i < n; i++)
 			IncrementalCleanup(la);
 	} else if (n < 0) {
@@ -2248,7 +2208,6 @@ HouseKeeping(struct libalias *la)
 		fprintf(stderr, "something unexpected in time values\n");
 #endif
 		la->lastCleanupTime = la->timeStamp;
-		la->houseKeepingResidual = 0;
 	}
 }
 
@@ -2542,7 +2501,6 @@ LibAliasInit(struct libalias *la)
 		la->timeStamp = tv.tv_sec;
 		la->lastCleanupTime = tv.tv_sec;
 #endif
-		la->houseKeepingResidual = 0;
 
 		for (i = 0; i < LINK_TABLE_OUT_SIZE; i++)
 			LIST_INIT(&la->linkTableOut[i]);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/libalias/alias_local.h,v 1.34 2006/12/15 12:50:06 piso Exp $
+ * $FreeBSD: src/sys/netinet/libalias/alias_local.h,v 1.34.2.1 2008/06/23 14:28:32 mav Exp $
  */
 
 /*
@@ -61,7 +60,7 @@
 #endif
 
 /* Sizes of input and output link tables */
-#define LINK_TABLE_OUT_SIZE         101
+#define LINK_TABLE_OUT_SIZE        4001
 #define LINK_TABLE_IN_SIZE         4001
 
 struct proxy_entry;
@@ -110,8 +109,6 @@ struct libalias {
 	int		lastCleanupTime;	/* Last time
 						 * IncrementalCleanup()  */
 	/* was called                      */
-
-	int		houseKeepingResidual;	/* used by HouseKeeping()          */
 
 	int		deleteAllLinks;	/* If equal to zero, DeleteLink()  */
 	/* will not remove permanent links */

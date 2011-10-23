@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_ftp.c,v 1.29 2007/04/04 03:14:15 kan Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_ftp.c,v 1.29.2.1 2008/07/07 18:39:47 mav Exp $");
 
 /*
     Alias_ftp.c performs special processing for FTP sessions under
@@ -79,6 +78,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_ftp.c,v 1.29 2007/04/04 03:14
 #else
 #include <errno.h>
 #include <sys/types.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #endif
@@ -271,36 +271,14 @@ ParseFtpPortCommand(struct libalias *la, char *sptr, int dlen)
 	if (dlen < 18)
 		return (0);
 
+	if (strncasecmp("PORT ", sptr, 5))
+		return (0);
+
 	addr = port = octet = 0;
-	state = -4;
-	for (i = 0; i < dlen; i++) {
+	state = 0;
+	for (i = 5; i < dlen; i++) {
 		ch = sptr[i];
 		switch (state) {
-		case -4:
-			if (ch == 'P')
-				state++;
-			else
-				return (0);
-			break;
-		case -3:
-			if (ch == 'O')
-				state++;
-			else
-				return (0);
-			break;
-		case -2:
-			if (ch == 'R')
-				state++;
-			else
-				return (0);
-			break;
-		case -1:
-			if (ch == 'T')
-				state++;
-			else
-				return (0);
-			break;
-
 		case 0:
 			if (isspace(ch))
 				break;
@@ -366,37 +344,15 @@ ParseFtpEprtCommand(struct libalias *la, char *sptr, int dlen)
 	if (dlen < 18)
 		return (0);
 
+	if (strncasecmp("EPRT ", sptr, 5))
+		return (0);
+
 	addr = port = octet = 0;
 	delim = '|';		/* XXX gcc -Wuninitialized */
-	state = -4;
-	for (i = 0; i < dlen; i++) {
+	state = 0;
+	for (i = 5; i < dlen; i++) {
 		ch = sptr[i];
 		switch (state) {
-		case -4:
-			if (ch == 'E')
-				state++;
-			else
-				return (0);
-			break;
-		case -3:
-			if (ch == 'P')
-				state++;
-			else
-				return (0);
-			break;
-		case -2:
-			if (ch == 'R')
-				state++;
-			else
-				return (0);
-			break;
-		case -1:
-			if (ch == 'T')
-				state++;
-			else
-				return (0);
-			break;
-
 		case 0:
 			if (!isspace(ch)) {
 				delim = ch;
@@ -478,31 +434,15 @@ ParseFtp227Reply(struct libalias *la, char *sptr, int dlen)
 	if (dlen < 17)
 		return (0);
 
+	if (strncmp("227 ", sptr, 4))
+		return (0);
+
 	addr = port = octet = 0;
 
-	state = -3;
-	for (i = 0; i < dlen; i++) {
+	state = 0;
+	for (i = 4; i < dlen; i++) {
 		ch = sptr[i];
 		switch (state) {
-		case -3:
-			if (ch == '2')
-				state++;
-			else
-				return (0);
-			break;
-		case -2:
-			if (ch == '2')
-				state++;
-			else
-				return (0);
-			break;
-		case -1:
-			if (ch == '7')
-				state++;
-			else
-				return (0);
-			break;
-
 		case 0:
 			if (ch == '(')
 				state++;
@@ -565,32 +505,16 @@ ParseFtp229Reply(struct libalias *la, char *sptr, int dlen)
 	if (dlen < 11)
 		return (0);
 
+	if (strncmp("229 ", sptr, 4))
+		return (0);
+
 	port = 0;
 	delim = '|';		/* XXX gcc -Wuninitialized */
 
-	state = -3;
-	for (i = 0; i < dlen; i++) {
+	state = 0;
+	for (i = 4; i < dlen; i++) {
 		ch = sptr[i];
 		switch (state) {
-		case -3:
-			if (ch == '2')
-				state++;
-			else
-				return (0);
-			break;
-		case -2:
-			if (ch == '2')
-				state++;
-			else
-				return (0);
-			break;
-		case -1:
-			if (ch == '9')
-				state++;
-			else
-				return (0);
-			break;
-
 		case 0:
 			if (ch == '(')
 				state++;
@@ -690,6 +614,7 @@ NewFtpMessage(struct libalias *la, struct ip *pip,
 
 			alias_port = GetAliasPort(ftp_lnk);
 
+/* Prepare new command */
 			switch (ftp_message_type) {
 			case FTP_PORT_COMMAND:
 			case FTP_227_REPLY:

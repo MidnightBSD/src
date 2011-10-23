@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * alias_smedia.c
  *
