@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.merge/mport.merge.c,v 1.2 2009/06/05 00:08:07 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.merge/mport.merge.c,v 1.2 2009/06/05 00:08:07 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 {
   int ch, i;
   const char *outfile = NULL;
-  const char **inputfiles;
+  char **inputfiles;
   if (argc == 1)
     usage();
     
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
   if (outfile == NULL)
     usage();
 
-  if ((inputfiles = (const char **)malloc((argc + 1) * sizeof(char **))) == NULL)
+  if ((inputfiles = (char **)malloc((argc + 1) * sizeof(char **))) == NULL)
     err(EX_OSERR, "Couldn't allocate input array");
   
   for (i = 0; i < argc; i++) { 
@@ -79,11 +79,11 @@ int main(int argc, char *argv[])
   
   inputfiles[i] = NULL;
 
-  if (mport_merge_primative(inputfiles, outfile) != MPORT_OK) 
+  if (mport_merge_primative((const char **)inputfiles, outfile) != MPORT_OK) 
     errx(EX_SOFTWARE, "Could not merge package files: %s", mport_err_string());
    
   for (i = 0; i <= argc; i++) 
-    free((char *)inputfiles[i]);
+    free(inputfiles[i]);
    
   free(inputfiles); 
     
