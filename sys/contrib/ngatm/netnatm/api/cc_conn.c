@@ -66,7 +66,7 @@ cc_conn_state2str(u_int s)
 	return (stab[s]);
 }
 
-__inline void
+void
 cc_conn_set_state(struct ccconn *conn, enum conn_state ns)
 {
 	if (conn->state != ns) {
@@ -85,7 +85,7 @@ cc_party_state2str(u_int s)
 	return (ptab[s]);
 }
 
-__inline void
+void
 cc_party_set_state(struct ccparty *party, enum party_state ns)
 {
 
@@ -100,7 +100,7 @@ cc_party_set_state(struct ccparty *party, enum party_state ns)
 /*
  * Remove connection from its user's queue
  */
-__inline void
+void
 cc_disconnect_from_user(struct ccconn *conn)
 {
 
@@ -116,7 +116,7 @@ cc_disconnect_from_user(struct ccconn *conn)
 /*
  * Put connection on user queue
  */
-__inline void
+void
 cc_connect_to_user(struct ccconn *conn, struct ccuser *user)
 {
 
@@ -292,7 +292,7 @@ cc_conn_flush_cookies(struct ccconn *conn)
 	}
 }
 
-__inline void
+void
 cc_conn_reset_acceptor(struct ccconn *conn)
 {
 	if (conn->acceptor != NULL) {
