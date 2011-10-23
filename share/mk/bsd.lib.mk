@@ -1,6 +1,6 @@
 #	from: @(#)bsd.lib.mk	5.26 (Berkeley) 5/2/91
 # $FreeBSD: src/share/mk/bsd.lib.mk,v 1.168.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.lib.mk,v 1.5 2011/03/08 13:23:42 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.lib.mk,v 1.6 2011/06/05 16:49:54 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -102,7 +102,7 @@ all: objwarn
 
 .include <bsd.symver.mk>
 
-# Allow librararies to specify their own version map or have it
+# Allow libraries to specify their own version map or have it
 # automatically generated (see bsd.symver.mk above).
 .if ${MK_SYMVER} == "yes" && !empty(VERSION_MAP)
 ${SHLIB_NAME}:	${VERSION_MAP}
@@ -159,11 +159,11 @@ ${SHLIB_NAME}: ${SOBJS}
 	@ln -fs ${.TARGET} ${SHLIB_LINK}
 .endif
 .if !defined(NM)
-	@${CC} ${LDFLAGS} -shared -Wl,-x \
+	@${CC} ${LDFLAGS} ${SSP_CFLAGS} -shared -Wl,-x \
 	    -o ${.TARGET} -Wl,-soname,${SONAME} \
 	    `lorder ${SOBJS} | tsort -q` ${LDADD}
 .else
-	@${CC} ${LDFLAGS} -shared -Wl,-x \
+	@${CC} ${LDFLAGS} ${SSP_CFLAGS} -shared -Wl,-x \
 	    -o ${.TARGET} -Wl,-soname,${SONAME} \
 	    `NM='${NM}' lorder ${SOBJS} | tsort -q` ${LDADD}
 .endif
