@@ -12,7 +12,12 @@
 .if defined(DESTDIR)
 MKMODULESENV+=	DESTDIR="${DESTDIR}"
 .endif
-MKMODULESENV+=	KERNBUILDDIR="${.CURDIR}"
+SYSDIR?= ${S:C;^[^/];${.CURDIR}/&;}
+MKMODULESENV+=	KERNBUILDDIR="${.CURDIR}" SYSDIR="${SYSDIR}"
+
+.if defined(CONF_CFLAGS)
+MKMODULESENV+=	CONF_CFLAGS="${CONF_CFLAGS}"
+.endif
 
 .MAIN: all
 
@@ -29,7 +34,6 @@ modules-${target}:
 
 # Handle out of tree ports 
 .if !defined(NO_MODULES) && defined(PORTS_MODULES)
-SYSDIR?= ${S:C;^[^/];${.CURDIR}/&;}
 PORTSMODULESENV=SYSDIR=${SYSDIR}
 .for __target in all install reinstall clean
 ${__target}: ports-${__target}
@@ -166,6 +170,9 @@ _ILINKS= machine
 .if ${MACHINE} != ${MACHINE_ARCH}
 _ILINKS+= ${MACHINE_ARCH}
 .endif
+.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
+_ILINKS+= x86
+.endif
 
 # Ensure that the link exists without depending on it when it exists.
 .for _link in ${_ILINKS}
@@ -178,8 +185,8 @@ ${_ILINKS}:
 	@case ${.TARGET} in \
 	machine) \
 		path=${S}/${MACHINE}/include ;; \
-	${MACHINE_ARCH}) \
-		path=${S}/${MACHINE_ARCH}/include ;; \
+	*) \
+		path=${S}/${.TARGET}/include ;; \
 	esac ; \
 	${ECHO} ${.TARGET} "->" $$path ; \
 	ln -s $$path ${.TARGET}
@@ -220,21 +227,21 @@ kernel-install:
 	fi
 .endif
 	mkdir -p ${DESTDIR}${KODIR}
-	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_KO} ${DESTDIR}${KODIR}
+	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO} ${DESTDIR}${KODIR}
 .if defined(DEBUG) && !defined(INSTALL_NODEBUG)
-	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
+	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
 .endif
 .if defined(KERNEL_EXTRA_INSTALL)
-	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_EXTRA_INSTALL} ${DESTDIR}${KODIR}
+	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_EXTRA_INSTALL} ${DESTDIR}${KODIR}
 .endif
 
 
 
 kernel-reinstall:
 	@-chflags -R noschg ${DESTDIR}${KODIR}
-	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_KO} ${DESTDIR}${KODIR}
+	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO} ${DESTDIR}${KODIR}
 .if defined(DEBUG) && !defined(INSTALL_NODEBUG)
-	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
+	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
 .endif
 
 config.o env.o hints.o vers.o vnode_if.o:

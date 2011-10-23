@@ -37180,6 +37180,7 @@ sys/kern/posix4_mib.c -text
 sys/kern/sched_4bsd.c -text
 sys/kern/sched_ule.c -text
 sys/kern/serdev_if.m -text
+sys/kern/stack_protector.c -text
 sys/kern/subr_acl_posix1e.c -text
 sys/kern/subr_autoconf.c -text
 sys/kern/subr_blist.c -text
@@ -39284,6 +39285,7 @@ sys/vm/vm_unix.c -text
 sys/vm/vm_zeroidle.c -text
 sys/vm/vnode_pager.c -text
 sys/vm/vnode_pager.h -text
+sys/x86/pci/qpi.c -text
 tools/KSE/ksetest/Makefile -text
 tools/KSE/ksetest/kse_asm.S -text
 tools/KSE/ksetest/kse_threads_test.c -text

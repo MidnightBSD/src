@@ -129,6 +129,9 @@ amd64/pci/pci_bus.c		optional	pci
 amd64/pci/pci_cfgreg.c		optional	pci
 crypto/blowfish/bf_enc.c	optional	crypto | ipsec 
 crypto/des/des_enc.c		optional	crypto | ipsec | netsmb
+crypto/via/padlock.c		optional	padlock
+crypto/via/padlock_cipher.c	optional	padlock
+crypto/via/padlock_hash.c	optional	padlock
 dev/acpica/acpi_if.m		standard
 dev/amdtemp/amdtemp.c		optional	amdtemp
 dev/arcmsr/arcmsr.c		optional	arcmsr pci
@@ -263,3 +266,7 @@ i386/cpufreq/est.c		optional	cpufreq
 i386/cpufreq/p4tcc.c		optional	cpufreq
 #
 libkern/memset.c		standard
+#
+# x86 shared code between IA32, AMD64 and PC98 architectures
+#
+x86/pci/qpi.c			standard

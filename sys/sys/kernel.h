@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/kernel.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/kernel.h,v 1.4 2011/02/06 21:43:53 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995 Terrence R. Lambert
  * All rights reserved.
@@ -116,6 +116,7 @@ enum sysinit_sub_id {
 	SI_SUB_EVENTHANDLER	= 0x1C00000,	/* eventhandler init */
 	SI_SUB_KLD		= 0x2000000,	/* KLD and module setup */
 	SI_SUB_CPU		= 0x2100000,	/* CPU resource(s)*/
+	SI_SUB_RANDOM		= 0x2120000,	/* random number generator */
 	SI_SUB_MAC		= 0x2180000,	/* TrustedBSD MAC subsystem */
 	SI_SUB_MAC_POLICY	= 0x21C0000,	/* TrustedBSD MAC policies */
 	SI_SUB_MAC_LATE		= 0x21D0000,	/* TrustedBSD MAC subsystem */

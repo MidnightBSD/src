@@ -1,8 +1,10 @@
-# $MidnightBSD: src/sys/conf/kern.pre.mk,v 1.3 2010/03/20 03:06:38 laffer1 Exp $
+# $MidnightBSD: src/sys/conf/kern.pre.mk,v 1.4 2011/09/30 02:06:01 laffer1 Exp $
 # $FreeBSD: src/sys/conf/kern.pre.mk,v 1.92 2007/08/08 19:12:06 marcel Exp $
 
 # Part of a unified Makefile for building kernels.  This part contains all
 # of the definitions that need to be before %BEFORE_DEPEND.
+
+.include <bsd.own.mk>
 
 SRCCONF?=	/etc/src.conf
 .if exists(${SRCCONF})
@@ -13,8 +15,10 @@ SRCCONF?=	/etc/src.conf
 KERNEL_KO?=	kernel
 KERNEL?=	kernel
 KODIR?=		/boot/${KERNEL}
+LDSCRIPT_NAME?=	ldscript.$M
+LDSCRIPT?=	$S/conf/${LDSCRIPT_NAME}
 
-M=	${MACHINE_ARCH}
+M=		${MACHINE_ARCH}
 
 AWK?=		awk
 LINT?=		lint
@@ -22,37 +26,24 @@ NM?=		nm
 OBJCOPY?=	objcopy
 SIZE?=		size
 
-.if ${CC} == "icc"
-COPTFLAGS?=	-O
-.else
-. if defined(DEBUG)
+.if defined(DEBUG)
 _MINUS_O=	-O
-. else
+.else
 _MINUS_O=	-O2
-. endif
-. if ${MACHINE_ARCH} == "amd64"
+.endif
+.if ${MACHINE_ARCH} == "amd64"
 COPTFLAGS?=-O2 -frename-registers -pipe
-. else
+.else
 COPTFLAGS?=${_MINUS_O} -pipe
-. endif
-. if !empty(COPTFLAGS:M-O[23s]) && empty(COPTFLAGS:M-fno-strict-aliasing)
+.endif
+.if !empty(COPTFLAGS:M-O[23s]) && empty(COPTFLAGS:M-fno-strict-aliasing)
 COPTFLAGS+= -fno-strict-aliasing
-. endif
 .endif
 .if !defined(NO_CPU_COPTFLAGS)
-. if ${CC} == "icc"
-COPTFLAGS+= ${_ICC_CPUCFLAGS:C/(-x[^M^K^W]+)[MKW]+|-x[MKW]+/\1/}
-. else
 COPTFLAGS+= ${_CPUCFLAGS}
-. endif
 .endif
-.if ${CC} == "icc"
-C_DIALECT=
-NOSTDINC= -X
-.else
 C_DIALECT= -std=c99
 NOSTDINC= -nostdinc
-.endif
 
 INCLUDES= ${NOSTDINC} ${INCLMAGIC} -I. -I$S
 
@@ -68,7 +59,7 @@ INCLUDES+= -I$S/contrib/ipfilter
 # ... and the same for pf
 INCLUDES+= -I$S/contrib/pf
 
-# ... and the same for Atheros HAL
+# ... and the same for ath
 INCLUDES+= -I$S/dev/ath -I$S/dev/ath/ath_hal
 
 # ... and the same for the NgATM stuff
@@ -80,27 +71,24 @@ INCLUDES+= -I$S/dev/twa
 # ...  and XFS
 INCLUDES+= -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs
 
+# ... and the same for cxgb and cxgbe
+INCLUDES+= -I$S/dev/cxgb -I$S/dev/cxgbe
+
 .endif
 
 CFLAGS=	${COPTFLAGS} ${C_DIALECT} ${DEBUG} ${CWARNFLAGS}
 CFLAGS+= ${INCLUDES} -D_KERNEL -DHAVE_KERNEL_OPTION_HEADERS -include opt_global.h
-.if ${CC} != "icc"
+.if ${CC:T:Mclang} != "clang"
 CFLAGS+= -fno-common -finline-limit=${INLINE_LIMIT}
 CFLAGS+= --param inline-unit-growth=100
 CFLAGS+= --param large-function-growth=1000
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE} == "i386" || \
-    ${MACHINE_ARCH} == "sparc64"
+.endif
 WERROR?= -Werror
-.endif
-.endif
 
 # XXX LOCORE means "don't declare C stuff" not "for locore.s".
 ASM_CFLAGS= -x assembler-with-cpp -DLOCORE ${CFLAGS}
 
 .if defined(PROFLEVEL) && ${PROFLEVEL} >= 1
-.if ${CC} == "icc"
-.error "Profiling doesn't work with icc yet"
-.endif
 CFLAGS+=	-DGPROF -falign-functions=16
 .if ${PROFLEVEL} >= 2
 CFLAGS+=	-DGPROF4 -DGUPROF
@@ -134,22 +122,27 @@ SYSTEM_DEP= Makefile ${SYSTEM_OBJS}
 SYSTEM_OBJS= locore.o ${MDOBJS} ${OBJS}
 SYSTEM_OBJS+= ${SYSTEM_CFILES:.c=.o}
 SYSTEM_OBJS+= hack.So
-SYSTEM_LD= @${LD} -Bdynamic -T $S/conf/ldscript.$M \
+
+SYSTEM_LD= @${LD} -Bdynamic -T ${LDSCRIPT} \
 	-warn-common -export-dynamic -dynamic-linker /red/herring \
 	-o ${.TARGET} -X ${SYSTEM_OBJS} vers.o
 SYSTEM_LD_TAIL= @${OBJCOPY} --strip-symbol gcc2_compiled. ${.TARGET} ; \
 	${SIZE} ${.TARGET} ; chmod 755 ${.TARGET}
-SYSTEM_DEP+= $S/conf/ldscript.$M
+SYSTEM_DEP+= ${LDSCRIPT}
 
 # MKMODULESENV is set here so that port makefiles can augment
 # them.
 
-MKMODULESENV=	MAKEOBJDIRPREFIX=${.OBJDIR}/modules KMODDIR=${KODIR}
+MKMODULESENV+=	MAKEOBJDIRPREFIX=${.OBJDIR}/modules KMODDIR=${KODIR}
+MKMODULESENV+=	MACHINE_ARCH=${MACHINE_ARCH}
 .if (${KERN_IDENT} == LINT)
 MKMODULESENV+=	ALL_MODULES=LINT
 .endif
 .if defined(MODULES_OVERRIDE)
 MKMODULESENV+=	MODULES_OVERRIDE="${MODULES_OVERRIDE}"
+.endif
+.if defined(WITHOUT_MODULES)
+MKMODULESENV+=	WITHOUT_MODULES="${WITHOUT_MODULES}"
 .endif
 .if defined(DEBUG)
 MKMODULESENV+=	DEBUG_FLAGS="${DEBUG}"
