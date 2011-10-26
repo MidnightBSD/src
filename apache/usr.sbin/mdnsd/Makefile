@@ -1,6 +1,8 @@
-# $MidnightBSD: src/apache/usr.sbin/mdnsd/Makefile,v 1.6 2011/03/09 05:44:52 laffer1 Exp $
+# $MidnightBSD: src/apache/usr.sbin/mdnsd/Makefile,v 1.7 2011/03/09 05:53:49 laffer1 Exp $
 
 .include <bsd.own.mk>
+
+MK_SSP=	no
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 
