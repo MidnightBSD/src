@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.9 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -327,7 +327,7 @@ static int display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportP
   if ((buf = (char *)calloc((st.st_size + 1), sizeof(char))) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-  if (fread(buf, 1, st.st_size, file) != st.st_size) {
+  if (fread(buf, 1, st.st_size, file) != (size_t)st.st_size) {
     free(buf);
     RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
   }
