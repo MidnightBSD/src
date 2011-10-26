@@ -33306,6 +33306,7 @@ sys/amd64/linux32/syscalls.master -text
 sys/amd64/pci/pci_bus.c -text
 sys/amd64/pci/pci_cfgreg.c -text
 sys/boot/Makefile -text
+sys/boot/Makefile.inc -text
 sys/boot/README -text
 sys/boot/common/Makefile.inc -text
 sys/boot/common/bcache.c -text
