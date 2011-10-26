@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/opensolaris/sys/atomic.h,v 1.1 2007/06/08 12:35:46 pjd Exp $
+ * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/atomic.h,v 1.3.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _OPENSOLARIS_SYS_ATOMIC_H_
@@ -32,6 +31,10 @@
 
 #include <sys/types.h>
 #include <machine/atomic.h>
+
+#define	casptr(_a, _b, _c)	\
+	atomic_cmpset_ptr((volatile uintptr_t *)(_a), (uintptr_t)(_b), (uintptr_t) (_c))
+#define cas32	atomic_cmpset_32
 
 #ifndef __LP64__
 extern void atomic_add_64(volatile uint64_t *target, int64_t delta);
@@ -107,7 +110,7 @@ atomic_inc_64_nv(volatile uint64_t *target)
 static __inline void *
 atomic_cas_ptr(volatile void *target, void *cmp,  void *newval)
 {
-	return ((void *)atomic_cas_64((uint64_t *)target, (uint64_t)cmp,
+	return ((void *)atomic_cas_64((volatile uint64_t *)target, (uint64_t)cmp,
 	    (uint64_t)newval));
 }
 #endif

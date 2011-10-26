@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -18,6 +17,8 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
+ *
+ * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/byteorder.h,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

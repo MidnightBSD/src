@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/opensolaris/sys/string.h,v 1.2 2007/04/10 21:42:12 wkoszek Exp $
+ * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/string.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _OPENSOLARIS_SYS_STRING_H_

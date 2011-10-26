@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/opensolaris/sys/proc.h,v 1.2 2007/08/16 20:33:20 pjd Exp $
+ * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/proc.h,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _OPENSOLARIS_SYS_PROC_H_
@@ -44,8 +43,6 @@
 #define	maxclsyspri	0
 #define	max_ncpus	mp_ncpus
 #define	boot_max_ncpus	mp_ncpus
-
-extern int hz;	/* system clock's frequency */
 
 #define	TS_RUN	0
 
