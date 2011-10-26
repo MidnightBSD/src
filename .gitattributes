@@ -11870,6 +11870,8 @@ contrib/mDNSResponder/mDNSMacOS9/mDNSLibraryResources.r -text
 contrib/mDNSResponder/mDNSMacOS9/mDNSMacOS9.c -text
 contrib/mDNSResponder/mDNSMacOS9/mDNSMacOS9.h -text
 contrib/mDNSResponder/mDNSMacOS9/mDNSPrefix.h -text
+contrib/mDNSResponder/mDNSMacOSX/BonjourEvents-Info.plist -text
+contrib/mDNSResponder/mDNSMacOSX/BonjourEvents.c -text
 contrib/mDNSResponder/mDNSMacOSX/DNSServiceDiscovery.c -text
 contrib/mDNSResponder/mDNSMacOSX/DNSServiceDiscovery.h -text
 contrib/mDNSResponder/mDNSMacOSX/DNSServiceDiscoveryDefines.h -text
@@ -11881,6 +11883,8 @@ contrib/mDNSResponder/mDNSMacOSX/LaunchDaemonInfo.dnsextd.plist -text
 contrib/mDNSResponder/mDNSMacOSX/LaunchDaemonInfo.helper.plist -text
 contrib/mDNSResponder/mDNSMacOSX/LaunchDaemonInfo.plist -text
 contrib/mDNSResponder/mDNSMacOSX/LegacyNATTraversal.c -text
+contrib/mDNSResponder/mDNSMacOSX/P2PPacketFilter.c -text
+contrib/mDNSResponder/mDNSMacOSX/P2PPacketFilter.h -text
 contrib/mDNSResponder/mDNSMacOSX/PreferencePane/Artwork/add_idle.tiff -text svneol=unset#unset
 contrib/mDNSResponder/mDNSMacOSX/PreferencePane/Artwork/add_pressed.tiff -text svneol=unset#unset
 contrib/mDNSResponder/mDNSMacOSX/PreferencePane/Artwork/failure.tiff -text svneol=unset#unset
