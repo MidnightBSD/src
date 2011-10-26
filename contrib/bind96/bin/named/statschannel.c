@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2008-2011  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: statschannel.c,v 1.1.1.3 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: statschannel.c,v 1.1.1.4 2011-10-26 11:58:38 laffer1 Exp $ */
 
 /*! \file */
 
@@ -637,7 +637,7 @@ rdatasetstats_dump(dns_rdatastatstype_t type, isc_uint64_t val, void *arg) {
 
 static void
 opcodestat_dump(dns_opcode_t code, isc_uint64_t val, void *arg) {
-	FILE *fp = arg;
+	FILE *fp;
 	isc_buffer_t b;
 	char codebuf[64];
 	stats_dumparg_t *dumparg = arg;

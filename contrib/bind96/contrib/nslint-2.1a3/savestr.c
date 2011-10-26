@@ -21,7 +21,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-    "@(#) $Header: /home/cvs/src/contrib/bind96/contrib/nslint-2.1a3/Attic/savestr.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/bind96/contrib/nslint-2.1a3/Attic/savestr.c,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ (LBL)";
 #endif
 
 #include <sys/types.h>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: keydelete.c,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $ */
+/* $Id: keydelete.c,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -232,6 +232,7 @@ main(int argc, char **argv) {
 					   DNS_TSIG_HMACMD5_NAME,
 					   dstkey, ISC_TRUE, NULL, 0, 0,
 					   mctx, ring, &tsigkey);
+	dst_key_free(&dstkey);
 	CHECK("dns_tsigkey_createfromkey", result);
 
 	(void)isc_app_run();

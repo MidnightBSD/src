@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: net.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: net.c,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -197,7 +197,7 @@ try_ipv6only(void) {
 	ipv6only_result = ISC_R_SUCCESS;
 
 close:
-	closeocket(s);
+	closesocket(s);
 	return;
 #endif /* IPV6_V6ONLY */
 }

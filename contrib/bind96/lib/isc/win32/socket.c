@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: socket.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: socket.c,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 
 /* This code uses functions which are only available on Server 2003 and
  * higher, and Windows XP and higher.
@@ -716,21 +716,31 @@ queue_receive_request(isc_socket_t *sock) {
 	int total_bytes = 0;
 	int Result;
 	int Error;
+	int need_retry;
 	WSABUF iov[1];
-	IoCompletionInfo *lpo;
+	IoCompletionInfo *lpo = NULL;
 	isc_result_t isc_result;
+
+ retry:
+	need_retry = ISC_FALSE;
 
 	/*
 	 * If we already have a receive pending, do nothing.
 	 */
-	if (sock->pending_recv > 0)
+	if (sock->pending_recv > 0) {
+		if (lpo != NULL)
+			HeapFree(hHeapHandle, 0, lpo);
 		return;
+	}
 
 	/*
 	 * If no one is waiting, do nothing.
 	 */
-	if (ISC_LIST_EMPTY(sock->recv_list))
+	if (ISC_LIST_EMPTY(sock->recv_list)) {
+		if (lpo != NULL)
+			HeapFree(hHeapHandle, 0, lpo);
 		return;
+	}
 
 	INSIST(sock->recvbuf.remaining == 0);
 	INSIST(sock->fd != INVALID_SOCKET);
@@ -738,10 +748,13 @@ queue_receive_request(isc_socket_t *sock) {
 	iov[0].len = sock->recvbuf.len;
 	iov[0].buf = sock->recvbuf.base;
 
-	lpo = (IoCompletionInfo *)HeapAlloc(hHeapHandle,
-					    HEAP_ZERO_MEMORY,
-					    sizeof(IoCompletionInfo));
-	RUNTIME_CHECK(lpo != NULL);
+	if (lpo == NULL) {
+		lpo = (IoCompletionInfo *)HeapAlloc(hHeapHandle,
+						    HEAP_ZERO_MEMORY,
+						    sizeof(IoCompletionInfo));
+		RUNTIME_CHECK(lpo != NULL);
+	} else
+		ZeroMemory(lpo, sizeof(IoCompletionInfo));
 	lpo->request_type = SOCKET_RECV;
 
 	sock->recvbuf.from_addr_len = sizeof(sock->recvbuf.from_addr);
@@ -763,6 +776,17 @@ queue_receive_request(isc_socket_t *sock) {
 			sock->pending_recv++;
 			break;
 
+		/* direct error: no completion event */
+		case ERROR_HOST_UNREACHABLE:
+		case WSAENETRESET:
+		case WSAECONNRESET:
+			if (!sock->connected) {
+				/* soft error */
+				need_retry = ISC_TRUE;
+				break;
+			}
+			/* FALLTHROUGH */
+
 		default:
 			isc_result = isc__errno2result(Error);
 			if (isc_result == ISC_R_UNEXPECTED)
@@ -770,6 +794,8 @@ queue_receive_request(isc_socket_t *sock) {
 					"WSARecvFrom: Windows error code: %d, isc result %d",
 					Error, isc_result);
 			send_recvdone_abort(sock, isc_result);
+			HeapFree(hHeapHandle, 0, lpo);
+			lpo = NULL;
 			break;
 		}
 	} else {
@@ -789,6 +815,9 @@ queue_receive_request(isc_socket_t *sock) {
 		   sock->fd, Result, Error);
 
 	CONSISTENT(sock);
+
+	if (need_retry)
+		goto retry;
 }
 
 static void
@@ -866,7 +895,7 @@ make_nonblock(SOCKET fd) {
 }
 
 /*
- * Windows 2000 systems incorrectly cause UDP sockets using WASRecvFrom
+ * Windows 2000 systems incorrectly cause UDP sockets using WSARecvFrom
  * to not work correctly, returning a WSACONNRESET error when a WSASendTo
  * fails with an "ICMP port unreachable" response and preventing the
  * socket from using the WSARecvFrom in subsequent operations.
@@ -1318,7 +1347,7 @@ completeio_send(isc_socket_t *sock, isc_socketevent_t *dev,
 		UNEXPECTED_ERROR(__FILE__, __LINE__, "completeio_send: %s: %s",
 				 addrbuf, strbuf);
 		dev->result = isc__errno2result(send_errno);
-	return (DOIO_HARD);
+		return (DOIO_HARD);
 	}
 
 	/*
@@ -1387,6 +1416,7 @@ startio_send(isc_socket_t *sock, isc_socketevent_t *dev, int *nbytes,
 				   "bytes, err %d/%s",
 				   sock->fd, *nbytes, *send_errno, strbuf);
 		}
+		status = DOIO_HARD;
 		goto done;
 	}
 	dev->result = ISC_R_SUCCESS;
@@ -2273,6 +2303,63 @@ connectdone_is_active(isc_socket_t *sock, isc_socket_connev_t *dev)
 	return (sock->connect_ev == dev ? ISC_TRUE : ISC_FALSE);
 }
 
+//
+// The Windows network stack seems to have two very distinct paths depending
+// on what is installed.  Specifically, if something is looking at network
+// connections (like an anti-virus or anti-malware application, such as
+// McAfee products) Windows may return additional error conditions which
+// were not previously returned.
+//
+// One specific one is when a TCP SYN scan is used.  In this situation,
+// Windows responds with the SYN-ACK, but the scanner never responds with
+// the 3rd packet, the ACK.  Windows consiers this a partially open connection.
+// Most Unix networking stacks, and Windows without McAfee installed, will
+// not return this to the caller.  However, with this product installed,
+// Windows returns this as a failed status on the Accept() call.  Here, we
+// will just re-issue the ISCAcceptEx() call as if nothing had happened.
+//
+// This code should only be called when the listening socket has received
+// such an error.  Additionally, the "parent" socket must be locked.
+// Additionally, the lpo argument is re-used here, and must not be freed
+// by the caller.
+//
+static isc_result_t
+restart_accept(isc_socket_t *parent, IoCompletionInfo *lpo)
+{
+	isc_socket_t *nsock = lpo->adev->newsocket;
+	SOCKET new_fd;
+
+	/*
+	 * AcceptEx() requires we pass in a socket.  Note that we carefully
+	 * do not close the previous socket in case of an error message returned by
+	 * our new socket() call.  If we return an error here, our caller will
+	 * clean up.
+	 */
+	new_fd = socket(parent->pf, SOCK_STREAM, IPPROTO_TCP);
+	if (nsock->fd == INVALID_SOCKET) {
+		return (ISC_R_FAILURE); // parent will ask windows for error message
+	}
+	closesocket(nsock->fd);
+	nsock->fd = new_fd;
+
+	memset(&lpo->overlapped, 0, sizeof(lpo->overlapped));
+
+	ISCAcceptEx(parent->fd,
+		    nsock->fd,				/* Accepted Socket */
+		    lpo->acceptbuffer,			/* Buffer for initial Recv */
+		    0,					/* Length of Buffer */
+		    sizeof(SOCKADDR_STORAGE) + 16,	/* Local address length + 16 */
+		    sizeof(SOCKADDR_STORAGE) + 16,	/* Remote address lengh + 16 */
+		    (LPDWORD)&lpo->received_bytes,	/* Bytes Recved */
+		    (LPOVERLAPPED)lpo			/* Overlapped structure */
+		    );
+
+	InterlockedDecrement(&nsock->manager->iocp_total);
+	iocompletionport_update(nsock);
+
+	return (ISC_R_SUCCESS);
+}
+
 /*
  * This is the I/O Completion Port Worker Function. It loops forever
  * waiting for I/O to complete and then forwards them for further
@@ -2313,6 +2400,7 @@ SocketIoThread(LPVOID ThreadContext) {
 	 * Loop forever waiting on I/O Completions and then processing them
 	 */
 	while (TRUE) {
+		wait_again:
 		bSuccess = GetQueuedCompletionStatus(manager->hIoCompletionPort,
 						     &nbytes, (LPDWORD)&sock,
 						     (LPWSAOVERLAPPED *)&lpo,
@@ -2331,7 +2419,7 @@ SocketIoThread(LPVOID ThreadContext) {
 			/*
 			 * Did the I/O operation complete?
 			 */
-			errstatus = WSAGetLastError();
+			errstatus = GetLastError();
 			isc_result = isc__errno2resultx(errstatus, __FILE__, __LINE__);
 
 			LOCK(&sock->lock);
@@ -2342,6 +2430,14 @@ SocketIoThread(LPVOID ThreadContext) {
 				sock->pending_iocp--;
 				INSIST(sock->pending_recv > 0);
 				sock->pending_recv--;
+				if (!sock->connected &&
+				    ((errstatus == ERROR_HOST_UNREACHABLE) ||
+				     (errstatus == WSAENETRESET) ||
+				     (errstatus == WSAECONNRESET))) {
+					/* ignore soft errors */
+					queue_receive_request(sock);
+					break;
+				}
 				send_recvdone_abort(sock, isc_result);
 				if (isc_result == ISC_R_UNEXPECTED) {
 					UNEXPECTED_ERROR(__FILE__, __LINE__,
@@ -2365,8 +2461,25 @@ SocketIoThread(LPVOID ThreadContext) {
 
 			case SOCKET_ACCEPT:
 				INSIST(sock->pending_iocp > 0);
-				sock->pending_iocp--;
 				INSIST(sock->pending_accept > 0);
+
+				socket_log(__LINE__, sock, NULL, EVENT, NULL, 0, 0,
+					"Accept: errstatus=%d isc_result=%d", errstatus, isc_result);
+
+				if (acceptdone_is_active(sock, lpo->adev)) {
+					if (restart_accept(sock, lpo) == ISC_R_SUCCESS) {
+						UNLOCK(&sock->lock);
+						goto wait_again;
+					} else {
+						errstatus = GetLastError();
+						isc_result = isc__errno2resultx(errstatus, __FILE__, __LINE__);
+						socket_log(__LINE__, sock, NULL, EVENT, NULL, 0, 0,
+							"restart_accept() failed: errstatus=%d isc_result=%d",
+							errstatus, isc_result);
+					}
+				}
+
+				sock->pending_iocp--;
 				sock->pending_accept--;
 				if (acceptdone_is_active(sock, lpo->adev)) {
 					closesocket(lpo->adev->newsocket->fd);
@@ -3198,6 +3311,12 @@ isc_socket_accept(isc_socket_t *sock,
 	 * Attach to socket and to task.
 	 */
 	isc_task_attach(task, &ntask);
+	if (isc_task_exiting(ntask)) {
+		isc_task_detach(&ntask);
+		isc_event_free(ISC_EVENT_PTR(&adev));
+		UNLOCK(&sock->lock);
+		return (ISC_R_SHUTTINGDOWN);
+	}
 	nsock->references++;
 
 	adev->ev_sender = ntask;

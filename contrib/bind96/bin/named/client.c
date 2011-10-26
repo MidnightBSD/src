@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: client.c,v 1.1.1.2 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: client.c,v 1.1.1.3 2011-10-26 11:58:38 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -633,6 +633,7 @@ ns_client_endrequest(ns_client_t *client) {
 		dns_message_puttemprdataset(client->message, &client->opt);
 	}
 
+	client->signer = NULL;
 	client->udpsize = 512;
 	client->extflags = 0;
 	client->ednsversion = -1;
@@ -2087,6 +2088,7 @@ client_create(ns_clientmgr_t *manager, ns_client_t **clientp) {
 	client->next = NULL;
 	client->shutdown = NULL;
 	client->shutdown_arg = NULL;
+	client->signer = NULL;
 	dns_name_init(&client->signername, NULL);
 	client->mortal = ISC_FALSE;
 	client->tcpquota = NULL;

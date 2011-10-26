@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: BINDInstall.cpp,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $ */
+/* $Id: BINDInstall.cpp,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $ */
 
 /*
  * Copyright (c) 1999-2000 by Nortel Networks Corporation
@@ -88,7 +88,7 @@ BOOL CBINDInstallApp::InitInstance()
 
 	CBINDInstallDlg dlg;
 	m_pMainWnd = &dlg;
-	int nResponse = dlg.DoModal();
+	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)
 	{
 		// TODO: Place code here to handle when the dialog is

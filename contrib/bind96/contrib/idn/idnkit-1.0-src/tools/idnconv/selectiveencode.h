@@ -1,4 +1,4 @@
-/* $Id: selectiveencode.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: selectiveencode.h,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 /*
  * Copyright (c) 2000,2002 Japan Network Information Center.
  * All rights reserved.
@@ -42,8 +42,8 @@
  *    ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
  */
 
-#ifndef IDN_SELECTIVENCODE_H
-#define IDN_SELECTIVENCODE_H 1
+#ifndef IDN_SELECTIVEENCODE_H
+#define IDN_SELECTIVEENCODE_H 1
 
 /*
  * Find where to convert.
@@ -67,4 +67,4 @@
 extern idn_result_t
 idn_selectiveencode_findregion(const char *s, char **startp, char **endp);
 
-#endif /* IDN_SELECTIVENCODE_H */
+#endif /* IDN_SELECTIVEENCODE_H */

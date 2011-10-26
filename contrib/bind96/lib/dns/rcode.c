@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2008, 2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008, 2010, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rcode.c,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
+/* $Id: rcode.c,v 1.1.1.4 2011-10-26 11:58:39 laffer1 Exp $ */
 
 #include <config.h>
 #include <ctype.h>
@@ -473,6 +473,9 @@ dns_rdataclass_format(dns_rdataclass_t rdclass,
 	isc_result_t result;
 	isc_buffer_t buf;
 
+	if (size == 0U)
+		return;
+
 	isc_buffer_init(&buf, array, size);
 	result = dns_rdataclass_totext(rdclass, &buf);
 	/*
@@ -484,8 +487,6 @@ dns_rdataclass_format(dns_rdataclass_t rdclass,
 		else
 			result = ISC_R_NOSPACE;
 	}
-	if (result != ISC_R_SUCCESS) {
-		snprintf(array, size, "<unknown>");
-		array[size - 1] = '\0';
-	}
+	if (result != ISC_R_SUCCESS)
+		strlcpy(array, "<unknown>", size);
 }

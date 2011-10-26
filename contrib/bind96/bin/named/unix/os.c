@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: os.c,v 1.1.1.2 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: os.c,v 1.1.1.3 2011-10-26 11:58:38 laffer1 Exp $ */
 
 /*! \file */
 
@@ -838,7 +838,7 @@ ns_os_shutdownmsg(char *command, isc_buffer_t *text) {
 		     isc_buffer_availablelength(text),
 		     "pid: %ld", (long)pid);
 	/* Only send a message if it is complete. */
-	if (n < isc_buffer_availablelength(text))
+	if (n > 0 && n < isc_buffer_availablelength(text))
 		isc_buffer_add(text, n);
 }
 

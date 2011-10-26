@@ -12,7 +12,7 @@
 ; OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 ; PERFORMANCE OF THIS SOFTWARE.
 
-; $Id: insecure.nsec3.example.db,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+; $Id: insecure.nsec3.example.db,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $
 
 $TTL 300	; 5 minutes
 @			IN SOA	mname1. . (

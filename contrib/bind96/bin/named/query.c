@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: query.c,v 1.1.1.4 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: query.c,v 1.1.1.5 2011-10-26 11:58:38 laffer1 Exp $ */
 
 /*! \file */
 
@@ -1511,6 +1511,7 @@ query_addadditional2(void *arg, dns_name_t *name, dns_rdatatype_t qtype) {
 	need_addname = ISC_FALSE;
 	zone = NULL;
 	needadditionalcache = ISC_FALSE;
+	POST(needadditionalcache);
 	additionaltype = dns_rdatasetadditional_fromauth;
 	dns_name_init(&cfname, NULL);
 
@@ -4583,18 +4584,19 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			goto cleanup;
 		}
 		result = dns_name_concatenate(prefix, tname, fname, NULL);
+
+		/*
+		 * RFC2672, section 4.1, subsection 3c says
+		 * we should return YXDOMAIN if the constructed
+		 * name would be too long.
+		 */
+		if (result == DNS_R_NAMETOOLONG)
+			client->message->rcode = dns_rcode_yxdomain;
 		if (result != ISC_R_SUCCESS) {
 			dns_message_puttempname(client->message, &tname);
-			if (result == ISC_R_NOSPACE) {
-				/*
-				 * RFC2672, section 4.1, subsection 3c says
-				 * we should return YXDOMAIN if the constructed
-				 * name would be too long.
-				 */
-				client->message->rcode = dns_rcode_yxdomain;
-			}
 			goto cleanup;
 		}
+
 		query_keepname(client, fname, dbuf);
 		/*
 		 * Synthesize a CNAME for this DNAME.

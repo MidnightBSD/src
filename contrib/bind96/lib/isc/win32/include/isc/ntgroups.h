@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ntgroups.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: ntgroups.h,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 
 #ifndef ISC_NTGROUPS_H
 #define ISC_NTGROUPS_H 1

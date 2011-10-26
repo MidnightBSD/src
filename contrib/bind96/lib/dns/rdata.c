@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdata.c,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
+/* $Id: rdata.c,v 1.1.1.3 2011-10-26 11:58:39 laffer1 Exp $ */
 
 /*! \file */
 
@@ -693,6 +693,7 @@ rdata_totext(dns_rdata_t *rdata, dns_rdata_textctx_t *tctx,
 	if (use_default) {
 		strlcpy(buf, "\\# ", sizeof(buf));
 		result = str_totext(buf, target);
+		INSIST(result == ISC_R_SUCCESS);
 		dns_rdata_toregion(rdata, &sr);
 		INSIST(sr.length < 65536);
 		snprintf(buf, sizeof(buf), "%u", sr.length);
@@ -948,6 +949,9 @@ dns_rdatatype_format(dns_rdatatype_t rdtype,
 	isc_result_t result;
 	isc_buffer_t buf;
 
+	if (size == 0U)
+		return;
+
 	isc_buffer_init(&buf, array, size);
 	result = dns_rdatatype_totext(rdtype, &buf);
 	/*
@@ -959,10 +963,8 @@ dns_rdatatype_format(dns_rdatatype_t rdtype,
 		else
 			result = ISC_R_NOSPACE;
 	}
-	if (result != ISC_R_SUCCESS) {
-		snprintf(array, size, "<unknown>");
-		array[size - 1] = '\0';
-	}
+	if (result != ISC_R_SUCCESS)
+		strlcpy(array, "<unknown>", size);
 }
 
 /*

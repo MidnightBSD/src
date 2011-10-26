@@ -23,7 +23,7 @@ static const char copyright[] =
     "@(#) Copyright (c) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001\n\
 The Regents of the University of California.  All rights reserved.\n";
 static const char rcsid[] =
-    "@(#) $Id: nslint.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ (LBL)";
+    "@(#) $Id: nslint.c,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ (LBL)";
 #endif
 /*
  * nslint - perform consistency checks on dns files

@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004-2008, 2010  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004-2008, 2010, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -29,7 +29,7 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-keygen.c,v 1.1.1.3 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: dnssec-keygen.c,v 1.1.1.4 2011-10-26 11:58:38 laffer1 Exp $ */
 
 /*! \file */
 
@@ -513,10 +513,11 @@ main(int argc, char **argv) {
 			if (verbose > 0) {
 				isc_buffer_clear(&buf);
 				ret = dst_key_buildfilename(key, 0, NULL, &buf);
-				fprintf(stderr,
-					"%s: %s already exists, "
-					"generating a new key\n",
-					program, filename);
+				if (ret == ISC_R_SUCCESS)
+					fprintf(stderr,
+						"%s: %s already exists, "
+						"generating a new key\n",
+						program, filename);
 			}
 			dst_key_free(&key);
 		}
@@ -537,6 +538,9 @@ main(int argc, char **argv) {
 
 	isc_buffer_clear(&buf);
 	ret = dst_key_buildfilename(key, 0, NULL, &buf);
+	if (ret != ISC_R_SUCCESS)
+		fatal("dst_key_buildfilename returned: %s\n",
+		      isc_result_totext(ret));
 	printf("%s\n", filename);
 	dst_key_free(&key);
 

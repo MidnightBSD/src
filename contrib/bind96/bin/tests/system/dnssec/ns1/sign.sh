@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/sh -e
 #
-# Copyright (C) 2004, 2006-2009  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2006-2011  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2000-2003  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: sign.sh,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+# $Id: sign.sh,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $
 
 SYSTEMTESTTOP=../..
 . $SYSTEMTESTTOP/conf.sh
@@ -28,15 +28,15 @@ zonefile=root.db
 
 (cd ../ns2 && sh sign.sh )
 
-cp ../ns2/keyset-example. .
-cp ../ns2/keyset-dlv. .
+cp ../ns2/dsset-example. .
+cp ../ns2/dsset-dlv. .
+grep "8 [12] " ../ns2/dsset-algroll. > dsset-algroll.
 
 keyname=`$KEYGEN -r $RANDFILE -a RSAMD5 -b 768 -n zone $zone`
 
-cat $infile $keyname.key > $zonefile
+cat $infile $keyname.key dsset-example. dsset-dlv. dsset-algroll. > $zonefile
 
-echo $SIGNER -g -r $RANDFILE -o $zone $zonefile
-$SIGNER -g -r $RANDFILE -o $zone $zonefile > /dev/null
+$SIGNER -P -r $RANDFILE -o $zone $zonefile > /dev/null
 
 # Configure the resolving server with a trusted key.
 

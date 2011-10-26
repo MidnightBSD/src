@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: time.c,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
+/* $Id: time.c,v 1.1.1.3 2011-10-26 11:58:39 laffer1 Exp $ */
 
 /*! \file */
 
@@ -319,7 +319,7 @@ isc_time_microdiff(const isc_time_t *t1, const isc_time_t *t2) {
 	/*
 	 * Convert to microseconds.
 	 */
-	i3 = (i1 - i2) / NS_PER_US;
+	i3 /= NS_PER_US;
 
 	return (i3);
 }

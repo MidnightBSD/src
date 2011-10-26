@@ -1,4 +1,4 @@
-;; $Id: patch-db2latex-nested-param-bug,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $
+;; $Id: patch-db2latex-nested-param-bug,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $
 ;;
 ;; Latest version of xsltproc doesn't like <xsl:param><xsl:param/></xsl:param>.
 

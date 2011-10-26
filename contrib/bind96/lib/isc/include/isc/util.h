@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2010, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: util.h,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
+/* $Id: util.h,v 1.1.1.4 2011-10-26 11:58:39 laffer1 Exp $ */
 
 #ifndef ISC_UTIL_H
 #define ISC_UTIL_H 1
@@ -47,6 +47,11 @@
  * \endcode
  */
 #define UNUSED(x)      (void)(x)
+
+/*%
+ * The opposite: silent warnings about stored values which are never read.
+ */
+#define POST(x)        (void)(x)
 
 #define ISC_MAX(a, b)  ((a) > (b) ? (a) : (b))
 #define ISC_MIN(a, b)  ((a) < (b) ? (a) : (b))

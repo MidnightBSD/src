@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2007, 2011  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2000, 2001  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: clean.sh,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+# $Id: clean.sh,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $
 
 #
 # Clean up after zone transfer tests.
@@ -26,3 +26,7 @@ rm -f dig.out.ns1 dig.out.ns2 dig.out.ns1.after ns1/*.jnl ns2/*.jnl \
 rm -f ns2/example.bk
 rm -f ns2/update.bk
 rm -f */named.memstats
+rm -f ns3/dnskey.test.db.signed.jnl ns3/dnskey.test.db ns3/dnskey.test.db.signed ns3/dsset-dnskey.test.
+rm -f ns3/K*
+rm -f dig.out.ns3.*
+rm -f Kxxx.*

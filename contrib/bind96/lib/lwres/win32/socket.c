@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: socket.c,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: socket.c,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 
 #include <stdio.h>
 #include <lwres/platform.h>

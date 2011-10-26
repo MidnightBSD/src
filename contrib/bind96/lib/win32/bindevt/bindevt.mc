@@ -13,7 +13,7 @@
 ; OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 ; PERFORMANCE OF THIS SOFTWARE.
 
-; $Id: bindevt.mc,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $
+; $Id: bindevt.mc,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $
 
 MessageIdTypedef=DWORD
 

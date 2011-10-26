@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2007, 2011  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2001, 2002  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,15 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: setup.sh,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+# $Id: setup.sh,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $
 
+sh clean.sh
+
+sh ../genzone.sh 1 6 7 >ns1/slave.db
 sh ../genzone.sh 2 3 >ns2/example.db
 sh ../genzone.sh 2 3 >ns2/tsigzone.db
+sh ../genzone.sh 6 3 >ns6/master.db
+sh ../genzone.sh 7 >ns7/master2.db
+
+rm -f ns4/*.db ns4/*.jnl
+cp -f ns4/named.conf.base ns4/named.conf

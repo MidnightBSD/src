@@ -1,5 +1,5 @@
 /* config.h.in.  Generated from configure.in by autoheader.  */
-/* $Id: config.h.in,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: config.h.in,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 
 
 /* Define to 1 if you have the <inttypes.h> header file. */

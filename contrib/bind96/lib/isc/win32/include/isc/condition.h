@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: condition.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: condition.h,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 
 #ifndef ISC_CONDITION_H
 #define ISC_CONDITION_H 1

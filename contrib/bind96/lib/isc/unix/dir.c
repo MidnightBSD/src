@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dir.c,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
+/* $Id: dir.c,v 1.1.1.3 2011-10-26 11:58:39 laffer1 Exp $ */
 
 /*! \file
  * \author  Principal Authors: DCL */
@@ -79,7 +79,7 @@ isc_dir_open(isc_dir_t *dir, const char *dirname) {
 	if (dir->dirname < p && *(p - 1) != '/')
 		*p++ = '/';
 	*p++ = '*';
-	*p++ = '\0';
+	*p = '\0';
 
 	/*
 	 * Open stream.

@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: setup.sh,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+# $Id: setup.sh,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $
 
 sh ../genzone.sh 2 3 >ns2/example.db
 sh ../genzone.sh 2 3 >ns2/tsigzone.db

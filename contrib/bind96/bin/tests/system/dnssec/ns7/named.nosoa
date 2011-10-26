@@ -1,0 +1,6 @@
+Copyright (C) 2010  Internet Systems Consortium, Inc. ("ISC")
+See COPYRIGHT in the source root or http://isc.org/copyright.html for terms.
+
+$Id: named.nosoa,v 1.1.1.1 2011-10-26 11:58:38 laffer1 Exp $
+
+Add -T nosoa.

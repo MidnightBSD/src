@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: journal.c,v 1.1.1.3 2011-02-08 21:24:36 laffer1 Exp $ */
+/* $Id: journal.c,v 1.1.1.4 2011-10-26 11:58:39 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -163,7 +163,7 @@ dns_db_createsoatuple(dns_db_t *db, dns_dbversion_t *ver, isc_mem_t *mctx,
 
 	dns_rdataset_disassociate(&rdataset);
 	dns_db_detachnode(db, &node);
-	return (ISC_R_SUCCESS);
+	return (result);
 
  freenode:
 	dns_db_detachnode(db, &node);
@@ -2172,6 +2172,7 @@ dns_journal_compact(isc_mem_t *mctx, char *filename, isc_uint32_t serial,
 		CHECK(journal_fsync(new));
 
 		indexend = new->header.end.offset;
+		POST(indexend);
 	}
 
 	/*

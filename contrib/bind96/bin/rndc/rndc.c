@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rndc.c,v 1.1.1.2 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: rndc.c,v 1.1.1.3 2011-10-26 11:58:38 laffer1 Exp $ */
 
 /*! \file */
 
@@ -92,7 +92,7 @@ static void rndc_startconnect(isc_sockaddr_t *addr, isc_task_t *task);
 static void
 usage(int status) {
 	fprintf(stderr, "\
-Usage: %s [-c config] [-s server] [-p port]\n\
+Usage: %s [-b address] [-c config] [-s server] [-p port]\n\
 	[-k key-file ] [-y key] [-V] command\n\
 \n\
 command is one of the following:\n\

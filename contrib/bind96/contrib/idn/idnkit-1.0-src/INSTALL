@@ -306,4 +306,4 @@ sometimes doesn't work correctly.  You may want to install the GNU
 version of the command (http://www.gnu.org/software/patch/) and use
 it.
 
-; $Id: INSTALL,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $
+; $Id: INSTALL,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $

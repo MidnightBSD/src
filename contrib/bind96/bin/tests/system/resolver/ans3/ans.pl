@@ -15,7 +15,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: ans.pl,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+# $Id: ans.pl,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $
 
 #
 # Ad hoc name server

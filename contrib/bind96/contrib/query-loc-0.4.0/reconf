@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: reconf,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $
+# $Id: reconf,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $
 
 autoreconf
 # We do not use automake but we need its install-sh file. We do not 

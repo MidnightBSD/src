@@ -1,4 +1,4 @@
-/* $Id: api.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: api.h,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 /*
  * Copyright (c) 2001,2002 Japan Network Information Center.
  * All rights reserved.

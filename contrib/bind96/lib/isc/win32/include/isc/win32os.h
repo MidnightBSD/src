@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: win32os.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: win32os.h,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 
 #ifndef ISC_WIN32OS_H
 #define ISC_WIN32OS_H 1
@@ -68,4 +68,4 @@ isc_win32os_versioncheck(unsigned int major, unsigned int minor,
 
 ISC_LANG_ENDDECLS
 
-#endif /* ISC_OS_H */
+#endif /* ISC_WIN32OS_H */

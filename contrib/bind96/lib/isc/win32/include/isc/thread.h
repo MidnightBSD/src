@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: thread.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ */
+/* $Id: thread.h,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ */
 
 #ifndef ISC_THREAD_H
 #define ISC_THREAD_H 1
@@ -37,18 +37,18 @@ inline BOOL IsValidHandle( HANDLE hHandle) {
 /* validate wait return codes... */
 inline BOOL WaitSucceeded( DWORD dwWaitResult, DWORD dwHandleCount) {
     return ((dwWaitResult >= WAIT_OBJECT_0) &&
-            (dwWaitResult < WAIT_OBJECT_0 + dwHandleCount));
+	    (dwWaitResult < WAIT_OBJECT_0 + dwHandleCount));
 }
 
 inline BOOL WaitAbandoned( DWORD dwWaitResult, DWORD dwHandleCount) {
     return ((dwWaitResult >= WAIT_ABANDONED_0) &&
-            (dwWaitResult < WAIT_ABANDONED_0 + dwHandleCount));
+	    (dwWaitResult < WAIT_ABANDONED_0 + dwHandleCount));
 }
 
 inline BOOL WaitTimeout( DWORD dwWaitResult) {
     return (dwWaitResult == WAIT_TIMEOUT);
 }
-    
+
 inline BOOL WaitFailed( DWORD dwWaitResult) {
     return (dwWaitResult == WAIT_FAILED);
 }
@@ -65,7 +65,7 @@ inline DWORD WaitAbandonedIndex( DWORD dwWaitResult) {
 
 
 typedef HANDLE isc_thread_t;
-typedef unsigned int isc_threadresult_t;
+typedef DWORD isc_threadresult_t;
 typedef void * isc_threadarg_t;
 typedef isc_threadresult_t (WINAPI *isc_threadfunc_t)(isc_threadarg_t);
 typedef DWORD isc_thread_key_t;
@@ -90,7 +90,7 @@ int
 isc_thread_key_delete(isc_thread_key_t key);
 
 void *
-isc_thread_key_getspecific(isc_thread_key);
+isc_thread_key_getspecific(isc_thread_key_t);
 
 int
 isc_thread_key_setspecific(isc_thread_key_t key, void *value);

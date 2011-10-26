@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dig.h,v 1.1.1.2 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: dig.h,v 1.1.1.3 2011-10-26 11:58:38 laffer1 Exp $ */
 
 #ifndef DIG_H
 #define DIG_H
@@ -287,6 +287,9 @@ extern int idnoptions;
  */
 isc_result_t
 get_address(char *host, in_port_t port, isc_sockaddr_t *sockaddr);
+
+int
+getaddresses(dig_lookup_t *lookup, const char *host);
 
 isc_result_t
 get_reverse(char *reverse, size_t len, char *value, isc_boolean_t ip6_int,

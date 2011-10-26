@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2009, 2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: named-checkconf.c,v 1.1.1.2 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: named-checkconf.c,v 1.1.1.3 2011-10-26 11:58:37 laffer1 Exp $ */
 
 /*! \file */
 
@@ -187,7 +187,7 @@ configure_zone(const char *vclass, const char *view,
 		if (obj != NULL)
 			maps[i++] = obj;
 	}
-	maps[i++] = NULL;
+	maps[i] = NULL;
 
 	cfg_map_get(zoptions, "type", &typeobj);
 	if (typeobj == NULL)

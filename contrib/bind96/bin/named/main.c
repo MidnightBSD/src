@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: main.c,v 1.1.1.2 2011-02-08 21:24:35 laffer1 Exp $ */
+/* $Id: main.c,v 1.1.1.3 2011-10-26 11:58:38 laffer1 Exp $ */
 
 /*! \file */
 
@@ -484,6 +484,7 @@ parse_command_line(int argc, char *argv[]) {
 
 	argc -= isc_commandline_index;
 	argv += isc_commandline_index;
+	POST(argv);
 
 	if (argc > 0) {
 		usage();

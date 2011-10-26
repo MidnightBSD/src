@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2007, 2011  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2001  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -15,11 +15,11 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: send.pl,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+# $Id: send.pl,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $
 
 #
 # Send a file to a given address and port using TCP.  Used for
-# configuring the test server in ixfr/ans2/ans.pl.
+# configuring the test server in ans.pl.
 #
 
 use IO::File;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stdio.c,v 1.1.1.2 2011-02-08 21:24:36 laffer1 Exp $ */
+/* $Id: stdio.c,v 1.1.1.3 2011-10-26 11:58:39 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include <isc/stdio.h>
+#include <isc/stat.h>
 
 #include "errno2result.h"
 

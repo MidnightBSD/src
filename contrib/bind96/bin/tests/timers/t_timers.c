@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2007-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007-2009, 2011  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: t_timers.c,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $ */
+/* $Id: t_timers.c,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -63,8 +63,8 @@ static void
 tx_sde(isc_task_t *task, isc_event_t *event) {
 	isc_result_t	isc_result;
 
-	task = task;
-	event = event;
+	UNUSED(task);
+	UNUSED(event);
 
 	/*
 	 * Signal shutdown processing complete.
@@ -776,7 +776,7 @@ t5_tick_event(isc_task_t *task, isc_event_t *event) {
 	isc_time_t	expires;
 	isc_interval_t	interval;
 
-	task = task;
+	UNUSED(task);
 
 	++T5_eventcnt;
 	t_info("t5_tick_event %d\n", T5_eventcnt);

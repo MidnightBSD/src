@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/bind96/contrib/nslint-2.1a3/lbl/Attic/os-irix5.h,v 1.1.1.1 2010-01-16 16:06:21 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/bind96/contrib/nslint-2.1a3/lbl/Attic/os-irix5.h,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $ (LBL)
  */
 
 /* Prototypes missing in IRIX 5 */

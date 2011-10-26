@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2004, 2007  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2007, 2011  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2000, 2001  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: run.sh,v 1.1.1.1 2010-01-16 16:06:20 laffer1 Exp $
+# $Id: run.sh,v 1.1.1.2 2011-10-26 11:58:38 laffer1 Exp $
 
 #
 # Run a system test.
@@ -58,14 +58,14 @@ $PERL testsock.pl || {
 
 
 # Check for test-specific prerequisites.
-if
-    test ! -f $test/prereq.sh ||
-    ( cd $test && sh prereq.sh "$@" )
-then
+test ! -f $test/prereq.sh || ( cd $test && sh prereq.sh "$@" )
+result=$?
+
+if [ $result -eq 0 ]; then
     : prereqs ok
 else
     echo "I:Prerequisites for $test missing, skipping test." >&2
-    echo "R:UNTESTED" >&2
+    [ $result -eq 255 ] && echo "R:SKIPPED" || echo "R:UNTESTED"
     echo "E:$test:`date`" >&2
     exit 0
 fi
