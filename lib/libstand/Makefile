@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libstand/Makefile,v 1.57.2.1 2007/10/18 12:08:52 nyan Exp $
 # Originally from	$NetBSD: Makefile,v 1.21 1997/10/26 22:08:38 lukem Exp $
 #
@@ -7,7 +8,7 @@
 #
 
 .include <bsd.own.mk>
-MK_SSP=               no
+MK_SSP=		no
 
 LIB=		stand
 NO_PROFILE=
@@ -43,7 +44,7 @@ SRCS+= ntoh.c
 
 # string functions from libc
 .PATH: ${.CURDIR}/../libc/string
-.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "powerpc" || \
+.if ${MACHINE_ARCH} == "i386" || \
 	${MACHINE_ARCH} == "sparc64" || ${MACHINE_ARCH} == "amd64"
 SRCS+=	bcmp.c bcopy.c bzero.c ffs.c index.c memccpy.c memchr.c memcmp.c \
         memcpy.c memmove.c memset.c qdivrem.c rindex.c strcat.c strchr.c \
