@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <err.h>
 #include <libgen.h>
 #include <libintl.h>
 #include <libuutil.h>
