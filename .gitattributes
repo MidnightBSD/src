@@ -29092,7 +29092,6 @@ lib/libstand/nfsv2.h -text
 lib/libstand/nullfs.c -text
 lib/libstand/open.c -text
 lib/libstand/pager.c -text
-lib/libstand/powerpc/_setjmp.S -text
 lib/libstand/printf.c -text
 lib/libstand/qdivrem.c -text
 lib/libstand/quad.h -text
