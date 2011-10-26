@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sbin/fsck/fsutil.h,v 1.3 2007/01/02 06:37:58 laffer1 Exp $ */
+/* $MidnightBSD: src/sbin/fsck/fsutil.h,v 1.4 2007/01/02 06:54:22 laffer1 Exp $ */
 /*	$NetBSD: fsutil.h,v 1.4 1998/07/26 20:02:36 mycroft Exp $	*/
 
 /*
@@ -46,6 +46,7 @@ struct statfs *getmntpt(const char *);
 #define	CHECK_DEBUG	0x0004
 #define	CHECK_BACKGRD	0x0008
 #define	DO_BACKGRD	0x0010
+#define	CHECK_CLEAN	0x0020
 
 struct fstab;
 int checkfstab(int, int (*)(struct fstab *), 

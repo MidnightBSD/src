@@ -35,7 +35,7 @@
 #ifndef lint
 __RCSID("$NetBSD: main.c,v 1.10 1997/10/01 02:18:14 enami Exp $");
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/fsck_msdosfs/main.c,v 1.15 2005/02/10 09:39:51 ru Exp $";
+  "$FreeBSD: src/sbin/fsck_msdosfs/main.c,v 1.15.10.1 2009/06/17 09:29:18 avg Exp $";
 #endif /* not lint */
 
 #include <stdlib.h>
@@ -74,8 +74,10 @@ main(int argc, char **argv)
 	int ch;
 
 	skipclean = 1;
-	while ((ch = getopt(argc, argv, "fFnpy")) != -1) {
+	while ((ch = getopt(argc, argv, "CfFnpy")) != -1) {
 		switch (ch) {
+		case 'C': /* for fsck_ffs compatibility */
+			break;
 		case 'f':
 			skipclean = 0;
 			break;

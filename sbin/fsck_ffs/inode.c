@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)inode.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/inode.c,v 1.38 2006/10/31 22:06:56 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/fsck_ffs/inode.c,v 1.38.2.1 2009/01/12 00:39:22 delphij Exp $");
 
 #include <sys/param.h>
 #include <sys/stdint.h>
@@ -617,8 +617,7 @@ allocino(ino_t request, int type)
 		return (0);
 	cg = ino_to_cg(&sblock, ino);
 	getblk(&cgblk, cgtod(&sblock, cg), sblock.fs_cgsize);
-	if (!cg_chkmagic(cgp))
-		pfatal("CG %d: BAD MAGIC NUMBER\n", cg);
+	check_cgmagic(cg, cgp);
 	setbit(cg_inosused(cgp), ino % sblock.fs_ipg);
 	cgp->cg_cs.cs_nifree--;
 	switch (type & IFMT) {

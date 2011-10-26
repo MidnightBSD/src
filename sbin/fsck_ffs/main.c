@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/main.c,v 1.47 2007/09/19 01:24:19 rodrigc Exp $");
+__FBSDID("$FreeBSD: src/sbin/fsck_ffs/main.c,v 1.47.2.6 2009/04/27 19:15:14 delphij Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -81,7 +81,8 @@ main(int argc, char *argv[])
 
 	sync();
 	skipclean = 1;
-	while ((ch = getopt(argc, argv, "b:Bc:dfFm:npy")) != -1) {
+	damagedflag = 0;
+	while ((ch = getopt(argc, argv, "b:Bc:CdDfFm:npy")) != -1) {
 		switch (ch) {
 		case 'b':
 			skipclean = 0;
@@ -105,6 +106,10 @@ main(int argc, char *argv[])
 			debug++;
 			break;
 
+		case 'D':
+			damagedflag = 1;
+			/* FALLTHROUGH */
+
 		case 'f':
 			skipclean = 0;
 			break;
@@ -127,6 +132,10 @@ main(int argc, char *argv[])
 
 		case 'p':
 			preen++;
+			/*FALLTHROUGH*/
+
+		case 'C':
+			ckclean++;
 			break;
 
 		case 'y':
@@ -146,7 +155,7 @@ main(int argc, char *argv[])
 
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
 		(void)signal(SIGINT, catch);
-	if (preen)
+	if (ckclean)
 		(void)signal(SIGQUIT, catchquit);
 	signal(SIGINFO, infohandler);
 	if (bkgrdflag) {
@@ -211,7 +220,7 @@ checkfilesys(char *filesys)
 	errmsg[0] = '\0';
 
 	cdevname = filesys;
-	if (debug && preen)
+	if (debug && ckclean)
 		pwarn("starting\n");
 	/*
 	 * Make best effort to get the disk name. Check first to see
@@ -246,7 +255,7 @@ checkfilesys(char *filesys)
 			exit(7);	/* Filesystem clean, report it now */
 		exit(0);
 	}
-	if (preen && skipclean) {
+	if (ckclean && skipclean) {
 		/*
 		 * If file system is gjournaled, check it here.
 		 */
@@ -297,7 +306,7 @@ checkfilesys(char *filesys)
 					    "CANNOT RUN IN BACKGROUND\n");
 				}
 				if ((sblock.fs_flags & FS_UNCLEAN) == 0 &&
-				    skipclean && preen) {
+				    skipclean && ckclean) {
 					/*
 					 * file system is clean;
 					 * skip snapshot and report it clean
@@ -542,7 +551,7 @@ chkdoreload(struct statfs *mntp)
 		 * nmount().
 		 */
 		fflags &= ~MNT_ROOTFS;
-		fflags = fflags | MNT_UPDATE | MNT_RELOAD;
+		fflags = fflags | MNT_RELOAD;
 		build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
 		build_iovec(&iov, &iovlen, "from", mntp->f_mntfromname,
 		    (size_t)-1);
@@ -550,6 +559,12 @@ chkdoreload(struct statfs *mntp)
 		    (size_t)-1);
 		build_iovec(&iov, &iovlen, "errmsg", errmsg,
 		    sizeof(errmsg));
+		build_iovec(&iov, &iovlen, "update", NULL, 0);
+		/*
+		 * XX: We need the following line until we clean up
+		 * nmount parsing of root mounts and NFS root mounts.
+		 */ 
+		build_iovec(&iov, &iovlen, "ro", NULL, 0);
 		if (nmount(iov, iovlen, fflags) == 0) {
 			return (0);
 		}
@@ -604,7 +619,7 @@ static void
 usage(void)
 {
         (void) fprintf(stderr,
-            "usage: %s [-BFpfny] [-b block] [-c level] [-m mode] "
+            "usage: %s [-BCFpfny] [-b block] [-c level] [-m mode] "
                         "filesystem ...\n",
             getprogname());
         exit(1);

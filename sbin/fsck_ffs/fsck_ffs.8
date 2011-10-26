@@ -27,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)fsck.8	8.4 (Berkeley) 5/9/95
-.\" $FreeBSD: src/sbin/fsck_ffs/fsck_ffs.8,v 1.34 2005/09/20 08:02:38 delphij Exp $
+.\" $FreeBSD: src/sbin/fsck_ffs/fsck_ffs.8,v 1.34.2.7 2011/01/27 20:53:03 remko Exp $
 .\"
-.Dd April 24, 2001
+.Dd January 25, 2009
 .Dt FSCK_FFS 8
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 .Nd file system consistency check and interactive repair
 .Sh SYNOPSIS
 .Nm
-.Op Fl BFpfny
+.Op Fl BDFpfny
 .Op Fl b Ar block
 .Op Fl c Ar level
 .Op Fl m Ar mode
@@ -46,9 +46,9 @@
 .Ar ...
 .Sh DESCRIPTION
 The specified disk partitions and/or file systems are checked.
-In "preen" mode the clean flag of each file system's superblock is examined
-and only those file systems that
-are not marked clean are checked.
+In "preen" or "check clean" mode the clean flag of each file system's
+superblock is examined and only those file systems that are not marked clean
+are checked.
 File systems are marked clean when they are unmounted,
 when they have been mounted read-only, or when
 .Nm
@@ -175,6 +175,14 @@ Use the block specified immediately after the flag as
 the super block for the file system.
 An alternate super block is usually located at block 32 for UFS1,
 and block 160 for UFS2.
+.It Fl C
+Check if file system was dismouted cleanly.
+If so, skip file system checks (like "preen").
+However, if the file system was not cleanly dismounted, do full checks,
+is if
+.Nm
+was invoked without
+.Fl C .
 .It Fl c
 Convert the file system to the specified level.
 Note that the level of a file system can only be raised.
@@ -208,6 +216,26 @@ are being converted at once.
 The format of a file system can be determined from the
 first line of output from
 .Xr dumpfs 8 .
+.It Fl D
+Run
+.Nm
+in 'damaged recovery' mode, which will enable certain aggressive
+operations that can make
+.Nm
+to survive with file systems that has very serious data damage, which
+is an useful last resort when on disk data damage is very serious
+and causes
+.Nm
+to crash otherwise.  Be
+.Em very careful
+using this flag, it is dangerous if there are data transmission hazards
+because a false positive cylinder group magic number mismatch could
+cause
+.Em irrevertible data loss!
+.Pp
+This option implies the
+.Fl f
+flag.
 .It Fl f
 Force
 .Nm
@@ -301,6 +329,12 @@ contains default list of file systems to check.
 .El
 .Sh EXIT STATUS
 .Ex -std
+.Pp
+If the option
+.Fl F
+is used,
+.Nm
+exits 7 if the file system is clean.
 .Sh DIAGNOSTICS
 The diagnostics produced by
 .Nm

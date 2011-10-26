@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sbin/fsck/fsck.c,v 1.3 2007/01/02 06:37:58 laffer1 Exp $ */
+/* $MidnightBSD: src/sbin/fsck/fsck.c,v 1.4 2007/01/02 06:54:22 laffer1 Exp $ */
 /*	$NetBSD: fsck.c,v 1.21 1999/04/22 04:20:53 abs Exp $	*/
 
 /*
@@ -42,7 +42,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD: src/sbin/fsck/fsck.c,v 1.3 2007/01/02 06:37:58 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sbin/fsck/fsck.c,v 1.4 2007/01/02 06:54:22 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -107,7 +107,7 @@ main(int argc, char *argv[])
 	TAILQ_INIT(&selhead);
 	TAILQ_INIT(&opthead);
 
-	while ((i = getopt(argc, argv, "BdvpfFnyl:t:T:")) != -1)
+	while ((i = getopt(argc, argv, "BCdvpfFnyl:t:T:")) != -1)
 		switch (i) {
 		case 'B':
 			if (flags & CHECK_BACKGRD)
@@ -131,6 +131,9 @@ main(int argc, char *argv[])
 
 		case 'p':
 			flags |= CHECK_PREEN;
+			/*FALLTHROUGH*/
+		case 'C':
+			flags |= CHECK_CLEAN;
 			/*FALLTHROUGH*/
 		case 'n':
 		case 'y':
@@ -283,7 +286,7 @@ static int
 checkfs(const char *pvfstype, const char *spec, const char *mntpt,
     const char *auxopt, pid_t *pidp)
 {
-	const char **argv;
+	const char **cargv;
 	pid_t pid;
 	int argc, i, status, maxargc;
 	char *optbuf, execbase[MAXPATHLEN];
@@ -326,21 +329,21 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 		catopt(&optbuf, "-B");
 
 	maxargc = 64;
-	argv = emalloc(sizeof(char *) * maxargc);
+	cargv = emalloc(sizeof(char *) * maxargc);
 
 	(void) snprintf(execbase, sizeof(execbase), "fsck_%s", vfstype);
 	argc = 0;
-	argv[argc++] = execbase;
+	cargv[argc++] = execbase;
 	if (optbuf)
-		mangle(optbuf, &argc, &argv, &maxargc);
-	argv[argc++] = spec;
-	argv[argc] = NULL;
+		mangle(optbuf, &argc, &cargv, &maxargc);
+	cargv[argc++] = spec;
+	cargv[argc] = NULL;
 
 	if (flags & (CHECK_DEBUG|CHECK_VERBOSE)) {
 		(void)printf("start %s %swait", mntpt, 
 			pidp ? "no" : "");
 		for (i = 0; i < argc; i++)
-			(void)printf(" %s", argv[i]);
+			(void)printf(" %s", cargv[i]);
 		(void)printf("\n");
 	}
 
@@ -350,7 +353,7 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 		if (optbuf)
 			free(optbuf);
 		free(vfstype);
-		free(argv);
+		free(cargv);
 		return (1);
 
 	case 0:					/* Child. */
@@ -358,7 +361,7 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 			_exit(0);
 
 		/* Go find an executable. */
-		execvP(execbase, _PATH_SYSPATH, __DECONST(char * const *, argv));
+		execvP(execbase, _PATH_SYSPATH, __DECONST(char * const *, cargv));
 		if (spec)
 			warn("exec %s for %s in %s", execbase, spec, _PATH_SYSPATH);
 		else
@@ -371,7 +374,7 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 			free(optbuf);
 
 		free(vfstype);
-		free(argv);
+		free(cargv);
 
 		if (pidp) {
 			*pidp = pid;
@@ -572,7 +575,7 @@ static void
 usage(void)
 {
 	static const char common[] =
-	    "[-dfnpvy] [-B | -F] [-T fstype:fsoptions] [-t fstype]";
+	    "[-Cdfnpvy] [-B | -F] [-T fstype:fsoptions] [-t fstype]";
 
 	(void)fprintf(stderr, "usage: %s %s [special | node] ...\n",
 	    getprogname(), common);

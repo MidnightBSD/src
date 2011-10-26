@@ -28,9 +28,9 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/sbin/fsck/fsck.8,v 1.37 2005/02/10 09:19:29 ru Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/sbin/fsck/fsck.8,v 1.2 2007/01/02 06:37:58 laffer1 Exp $
 .\"
-.Dd April 25, 2001
+.Dd January 25, 2009
 .Dt FSCK 8
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 .Nd file system consistency check and interactive repair
 .Sh SYNOPSIS
 .Nm
-.Op Fl dfnpvy
+.Op Fl Cdfnpvy
 .Op Fl B | F
 .Op Fl T Ar fstype : Ns Ar fsoptions
 .Op Fl t Ar fstype
@@ -113,6 +113,11 @@ to be the partition and slice designators.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
+.It Fl C
+Check if the
+.Dq clean
+flag is set in the superblock and skip file system checks if file system was
+properly dismounted and marked clean.
 .It Fl d
 Debugging mode.
 Just print the commands without executing them.
