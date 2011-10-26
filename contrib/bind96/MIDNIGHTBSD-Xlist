@@ -1,4 +1,4 @@
-# $MidnightBSD: src/contrib/bind96/MIDNIGHTBSD-Xlist,v 1.1 2010/01/16 16:10:58 laffer1 Exp $
+# $MidnightBSD: src/contrib/bind96/MIDNIGHTBSD-Xlist,v 1.2 2011/01/20 21:23:24 laffer1 Exp $
 # Misc. stuff
 .cvsignore
 aclocal.m4
@@ -63,3 +63,17 @@ lib/bind/port/unixware20
 lib/bind/port/unixware212
 lib/bind/port/unixware7
 lib/bind/port/unknown
+
+# Windows stuff
+win32utils/BINDBuild.dsw
+win32utils/BuildAll.bat
+win32utils/BuildOpenSSL.bat
+win32utils/BuildPost.bat
+win32utils/BuildSetup.bat
+win32utils/dnsheadergen.bat
+win32utils/index.html
+win32utils/makedefs.pl
+win32utils/makeversion.pl
+win32utils/readme1st.txt
+win32utils/updateopenssl.pl
+win32utils/win32-build.txt

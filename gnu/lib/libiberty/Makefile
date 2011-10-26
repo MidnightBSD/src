@@ -1,9 +1,11 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/libiberty/Makefile,v 1.3 2009/05/22 00:27:16 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libiberty/Makefile,v 1.4 2002/05/13 10:53:23 ru Exp $
 
 SRCDIR=	${.CURDIR}/../../../contrib/binutils/libiberty
 
 .PATH: ${SRCDIR} ${SRCDIR}/../include
+
+NO_WERROR=	yes
 
 #LIB=    iberty
 

@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.sys.mk,v 1.37 2005/01/16 21:18:16 obrien Exp $
-# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.8 2010/08/21 01:48:10 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.9 2011/10/22 19:17:47 laffer1 Exp $
 #
 # This file contains common settings used for building FreeBSD
 # sources.
@@ -11,6 +11,8 @@
 
 # the default is gnu99 for now
 CSTD           ?= gnu99
+
+NO_WERROR=	yes
 
 .if !defined(NO_WARNS)
 . if defined(CSTD)

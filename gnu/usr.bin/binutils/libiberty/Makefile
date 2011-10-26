@@ -4,6 +4,8 @@
 
 .PATH: ${SRCDIR}/libiberty
 
+NO_WERROR=	yes
+
 LIB=	iberty
 SRCS=	argv.c concat.c choose-temp.c cp-demangle.c cp-demint.c		\
 	cplus-dem.c dyn-string.c getpwd.c getruntime.c floatformat.c	\
@@ -14,7 +16,7 @@ SRCS=	argv.c concat.c choose-temp.c cp-demangle.c cp-demint.c		\
 # The following files are needed by gdb(1)
 SRCS+=	splay-tree.c
 
-WARNS?=	1
+#WARNS?=	1
 CFLAGS+=	-DHAVE_CONFIG_H
 INTERNALLIB=
 
