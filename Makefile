@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile,v 1.10 2011/07/10 21:10:28 laffer1 Exp $
+# $MidnightBSD: src/Makefile,v 1.11 2011/10/22 19:19:33 laffer1 Exp $
 #
 # The user-driven targets are:
 #
@@ -90,9 +90,11 @@ TGTS=	all all-man buildenv buildenvvars buildkernel buildworld \
 	check-old check-old-dirs check-old-files check-old-libs \
 	checkdpadd clean cleandepend cleandir \
 	delete-old delete-old-dirs delete-old-files delete-old-libs \
-	depend distribute distributeworld distrib-dirs distribution doxygen \
+	depend distribute distributekernel distributekernel.debug \
+	distributeworld distrib-dirs distribution doxygen \
 	everything hierarchy install installcheck installkernel \
-	installkernel.debug reinstallkernel reinstallkernel.debug \
+	installkernel.debug packagekernel packageworld \
+	reinstallkernel reinstallkernel.debug \
 	installworld kernel-toolchain libraries lint maninstall \
 	obj objlink regress rerelease showconfig tags toolchain update \
 	_worldtmp _legacy _bootstrap-tools _cleanobj _obj \
