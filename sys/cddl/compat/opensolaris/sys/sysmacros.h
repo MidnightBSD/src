@@ -18,8 +18,6 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
- *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/sysmacros.h,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
 /*	  All Rights Reserved  	*/

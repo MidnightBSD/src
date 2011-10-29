@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/uio.h,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: src/sys/compat/opensolaris/sys/uio.h,v 1.1 2007/04/06 01:09:06 pjd Exp $
  */
 
 #ifndef _OPENSOLARIS_SYS_UIO_H_
@@ -51,7 +51,6 @@ typedef	struct iovec	iovec_t;
 
 #define	uio_loffset	uio_offset
 
-#ifdef BUILDING_ZFS
 static __inline int
 zfs_uiomove(void *cp, size_t n, enum uio_rw dir, uio_t *uio)
 {
@@ -60,6 +59,5 @@ zfs_uiomove(void *cp, size_t n, enum uio_rw dir, uio_t *uio)
 	return (uiomove(cp, (int)n, uio));
 }
 #define	uiomove(cp, n, dir, uio)	zfs_uiomove((cp), (n), (dir), (uio))
-#endif
 
 #endif	/* !_OPENSOLARIS_SYS_UIO_H_ */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/rwlock.h,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: src/sys/compat/opensolaris/sys/rwlock.h,v 1.3 2007/05/26 21:37:14 pjd Exp $
  */
 
 #ifndef _OPENSOLARIS_SYS_RWLOCK_H_
@@ -60,17 +60,10 @@ typedef	struct sx	krwlock_t;
 #define	RW_ISWRITER(x)		(rw_iswriter(x))
 
 #define	rw_init(lock, desc, type, arg)	do {				\
-	const char *_name;						\
 	KASSERT(((lock)->lock_object.lo_flags & LO_ALLMASK) !=		\
 	    LO_EXPECTED, ("lock %s already initialized", #lock));	\
 	bzero((lock), sizeof(struct sx));				\
-	for (_name = #lock; *_name != '\0'; _name++) {			\
-		if (*_name >= 'a' && *_name <= 'z')			\
-			break;						\
-	}								\
-	if (*_name == '\0')						\
-		_name = #lock;						\
-	sx_init_flags((lock), _name, RW_FLAGS);				\
+	sx_init_flags((lock), "zfs:" #lock, RW_FLAGS);			\
 } while (0)
 #define	rw_destroy(lock)	sx_destroy(lock)
 #define	rw_enter(lock, how)	do {					\
