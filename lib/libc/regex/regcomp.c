@@ -85,7 +85,7 @@ static void p_ere(struct parse *p, wint_t stop, size_t reclimit);
 static void p_ere_exp(struct parse *p, size_t reclimit);
 static void p_str(struct parse *p);
 static void p_bre(struct parse *p, wint_t end1, wint_t end2, size_t reclimit);
-static int p_simp_re(struct parse *p, int starordinary);
+static int p_simp_re(struct parse *p, int starordinary, size_t reclimit);
 static int p_count(struct parse *p);
 static void p_bracket(struct parse *p);
 static void p_b_term(struct parse *p, cset *cs);
@@ -164,7 +164,7 @@ static int never = 0;		/* for use in asserts; shuts lint up */
 
 #define MEMLIMIT    0x8000000
 #define MEMSIZE(p) \
-((p)->ncsalloc / CHAR_BIT * (p)->g->csetsize + \
+((p)->ncsalloc / CHAR_BIT + \
 (p)->ncsalloc * sizeof(cset) + \
 (p)->ssize * sizeof(sop))
 #define RECLIMIT    256
@@ -251,11 +251,11 @@ regcomp(regex_t * __restrict preg,
 	EMIT(OEND, 0);
 	g->firststate = THERE();
 	if (cflags&REG_EXTENDED)
-		p_ere(p, OUT);
+		p_ere(p, OUT, 0);
 	else if (cflags&REG_NOSPEC)
 		p_str(p);
 	else
-		p_bre(p, OUT, OUT);
+		p_bre(p, OUT, OUT, 0);
 	EMIT(OEND, 0);
 	g->laststate = THERE();
 
