@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/dev/alc/if_alcvar.h,v 1.1 2011/02/07 00:17:46 laffer1 Exp $
  * $FreeBSD: src/sys/dev/alc/if_alcvar.h,v 1.1.2.3 2010/08/30 21:17:11 yongari Exp $
  */
 
@@ -231,7 +231,6 @@ struct alc_softc {
 #define	ALC_FLAG_L0S		0x0400
 #define	ALC_FLAG_L1S		0x0800
 #define	ALC_FLAG_APS		0x1000
-#define	ALC_FLAG_DETACH		0x4000
 #define	ALC_FLAG_LINK		0x8000
 
 	struct callout		alc_tick_ch;
