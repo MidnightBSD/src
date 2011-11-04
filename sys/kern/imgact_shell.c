@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/imgact_shell.c,v 1.35 2005/06/19 02:21:03 gad Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/imgact_shell.c,v 1.35.10.2 2011/03/13 13:37:23 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/vnode.h>
@@ -179,7 +179,7 @@ exec_shell_imgact(imgp)
 	length = (imgp->args->argc == 0) ? 0 :
 	    strlen(imgp->args->begin_argv) + 1;		/* bytes to delete */
 
-	if (offset - length > imgp->args->stringspace)
+	if (offset > imgp->args->stringspace + length)
 		return (E2BIG);
 
 	bcopy(imgp->args->begin_argv + length, imgp->args->begin_argv + offset,
