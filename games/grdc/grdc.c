@@ -12,7 +12,7 @@
 *     - Samy Al Bahra <samy@kerneled.com>
 *
 * $FreeBSD: src/games/grdc/grdc.c,v 1.12 2003/06/23 16:02:40 will Exp $
-* $MidnightBSD$
+* $MidnightBSD: src/games/grdc/grdc.c,v 1.2 2007/07/17 10:11:11 laffer1 Exp $
 */
 
 #include <err.h>
@@ -30,10 +30,10 @@
 #define YDEPTH  7
 
 /* it won't be */
-time_t now; /* yeah! */
-struct tm *tm;
+static time_t now; /* yeah! */
+static struct tm *tm;
 
-short disp[11] = {
+static short disp[11] = {
 075557, 011111, 071747, 071717, 055711,
 074717, 074757, 071111, 075757, 075717, 002020
 };
@@ -41,24 +41,21 @@ long old[6], next[6], new[6], mask;
 
 volatile sig_atomic_t sigtermed;
 
-int hascolor = 0;
+static int hascolor = 0;
 
-void set(int, int);
-void standt(int);
-void movto(int, int);
-void sighndl(int);
-void usage(void);
+static void set(int, int);
+static void standt(int);
+static void movto(int, int);
+static void sighndl(int);
+static void usage(void);
 
-void sighndl(signo)
-int signo;
+static void sighndl(int signo)
 {
-sigtermed=signo;
+	sigtermed=signo;
 }
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char *argv[])
 {
 long t, a;
 int i, j, s, k;
@@ -210,7 +207,7 @@ endwin();
 return(0);
 }
 
-void
+static void
 set(int t, int n)
 {
 int i, m;
@@ -224,7 +221,7 @@ if(mask&m)
 mask |= m;
 }
 
-void
+static void
 standt(int on)
 {
 if (on) {
@@ -242,13 +239,13 @@ attroff(A_STANDOUT);
 }
 }
 
-void
+static void
 movto(int line, int col)
 {
 move(line, col);
 }
 
-void
+static void
 usage(void)
 {
 

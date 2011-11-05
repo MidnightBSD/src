@@ -79,19 +79,16 @@ static const char	*name1[] = {
 "novemdecillion",		"vigintillion",
 };
 
-void	convert(char *);
-int	number(char *, int);
-void	pfract(int);
-void	toobig(void);
-int	unit(int, char *);
-void	usage(void);
+static void	convert(char *);
+static int	number(char *, int);
+static void	pfract(int);
+static int	unit(int, char *);
+static void	usage(void);
 
-int lflag;
+static int lflag;
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 int ch, first;
 char line[256];
@@ -127,9 +124,8 @@ convert(*argv);
 exit(0);
 }
 
-void
-convert(line)
-char *line;
+static void
+convert(char *line)
 {
 int flen, len, rval;
 char *p, *fraction;
@@ -196,10 +192,8 @@ if (lflag)
 (void)printf("n");
 }
 
-int
-unit(len, p)
-int len;
-char *p;
+static int
+unit(int len, char *p)
 {
 int off, rval;
 
@@ -232,10 +226,8 @@ rval = 1;
 return (rval);
 }
 
-int
-number(p, len)
-char *p;
-int len;
+static int
+number(char *p, int len)
 {
 int val, rval;
 
@@ -272,9 +264,8 @@ rval = 1;
 return (rval);
 }
 
-void
-pfract(len)
-int len;
+static void
+pfract(int len)
 {
 static char *pref[] = { "", "ten-", "hundred-" };
 
@@ -291,9 +282,9 @@ break;
 }
 }
 
-void
+static void
 usage()
 {
-(void)fprintf(stderr, "usage: number [-l] [# ...]n");
-exit(1);
+	(void)fprintf(stderr, "usage: number [-l] [# ...]n");
+	exit(1);
 }
