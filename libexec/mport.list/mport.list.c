@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.10 2011/03/03 20:59:44 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.11 2011/06/14 02:29:03 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,128 +42,128 @@ static char * str_remove(const char *str, const char ch);
 int 
 main(int argc, char *argv[]) 
 {
-  int ch;
-  mportInstance *mport;
-  mportPackageMeta **packs;
-  mportIndexEntry **indexEntries;
-  bool quiet = false;
-  bool verbose = false;
-  bool origin = false;
-  bool update = false;
-  char *comment;
-
-  if (argc > 2)
-    usage();
+	int ch;
+	mportInstance *mport;
+	mportPackageMeta **packs;
+	mportIndexEntry **indexEntries;
+	bool quiet = false;
+	bool verbose = false;
+	bool origin = false;
+	bool update = false;
+	char *comment;
+	
+	if (argc > 2)
+		usage();
     
-  while ((ch = getopt(argc, argv, "oqvu")) != -1) {
-    switch (ch) {
-      case 'o':
-        origin = true;
-        break;
-      case 'q':
-        quiet = true;
-        break;
-      case 'v':
-        verbose = true;
-        break;
-      case 'u':
-        update = true;
-        break; 
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
-
-  mport = mport_instance_new();
-  
-  if (mport_instance_init(mport, NULL) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
-
-  if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    mport_instance_free(mport);
-    exit(1);
-  }
-  
-  if (packs == NULL) {
-    if (!quiet)
-      warnx("No packages installed matching.");
-    mport_instance_free(mport);
-    exit(3);
-  }
-
-  if (update) {
-    if (mport_index_load(mport) != MPORT_OK)
-        errx(4, "Unable to load updates index");
-  }
-  
-  while (*packs != NULL) {
-    if (update) {
-      if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
-        fprintf(stderr, "Error Looking up package name %s: %d %s\n", (*packs)->name,  mport_err_code(), mport_err_string());
-        exit(mport_err_code());
-      }
-
-      if (indexEntries != NULL) {
-        while (*indexEntries != NULL) {
-          if ((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0)
-            (void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
-          indexEntries++;
-        }
-
-        mport_index_entry_free_vec(indexEntries);
-        indexEntries = NULL;
-      }
-    } else if (verbose) {
-      comment = str_remove((*packs)->comment, '\\');
-      (void) printf("%s-%s\t%s\n", (*packs)->name, (*packs)->version, comment);
-      free(comment);
-    }
-    else if (quiet && !origin)
-      (void) printf("%s\n", (*packs)->name);
-    else if (quiet && origin)
-      (void) printf("%s\n", (*packs)->origin);
-    else if (origin)
-      (void) printf("Information for %s-%s:\n\nOrigin:\n%s\n\n",
-	(*packs)->name, (*packs)->version, (*packs)->origin);
-    else
-      (void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
-    packs++;
-  }
-
-  mport_instance_free(mport); 
-  
-  return 0;
+	while ((ch = getopt(argc, argv, "oqvu")) != -1) {
+		switch (ch) {
+			case 'o':
+				origin = true;
+				break;
+			case 'q':
+				quiet = true;
+				break;
+			case 'v':
+				verbose = true;
+				break;
+			case 'u':
+				update = true;
+				break; 
+			case '?':
+			default:
+				usage();
+				break; 
+		}
+	} 
+	
+	mport = mport_instance_new();
+	
+	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		exit(1);
+	}
+	
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		exit(1);
+	}
+	
+	if (packs == NULL) {
+		if (!quiet)
+			warnx("No packages installed matching.");
+		mport_instance_free(mport);
+		exit(3);
+	}
+	
+	if (update) {
+		if (mport_index_load(mport) != MPORT_OK)
+			errx(4, "Unable to load updates index");
+	}
+	
+	while (*packs != NULL) {
+		if (update) {
+			if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
+				fprintf(stderr, "Error Looking up package name %s: %d %s\n", (*packs)->name,  mport_err_code(), mport_err_string());
+				exit(mport_err_code());
+			}
+			
+			if (indexEntries != NULL) {
+				while (*indexEntries != NULL) {
+					if ((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0)
+						(void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
+					indexEntries++;
+				}
+				
+				mport_index_entry_free_vec(indexEntries);
+				indexEntries = NULL;
+			}
+		} else if (verbose) {
+			comment = str_remove((*packs)->comment, '\\');
+			(void) printf("%s-%s\t%s\n", (*packs)->name, (*packs)->version, comment);
+			free(comment);
+		}
+		else if (quiet && !origin)
+			(void) printf("%s\n", (*packs)->name);
+		else if (quiet && origin)
+			(void) printf("%s\n", (*packs)->origin);
+		else if (origin)
+			(void) printf("Information for %s-%s:\n\nOrigin:\n%s\n\n",
+						  (*packs)->name, (*packs)->version, (*packs)->origin);
+		else
+			(void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
+		packs++;
+	}
+	
+	mport_instance_free(mport); 
+	
+	return 0;
 }
 
 
 static char * 
 str_remove( const char *str, const char ch )
 {
-   size_t i;
-   size_t x;
-   size_t len;
-   char *output;
-
-   if (str == NULL)
-       return NULL;
-
-  len = strlen(str);
-
-   output = calloc(len, sizeof(char));
-
-   for (i = 0, x = 0; i < len; i++) {
-      if (str[i] != ch) {
-          output[x] = str[i];
-          x++;
-      }
+	size_t i;
+	size_t x;
+	size_t len;
+	char *output;
+	
+	if (str == NULL)
+		return NULL;
+	
+	len = strlen(str);
+	
+	output = calloc(len, sizeof(char));
+	
+	for (i = 0, x = 0; i < len; i++) {
+		if (str[i] != ch) {
+			output[x] = str[i];
+			x++;
+		}
     }
     output[len -1] = '\0';
-
+	
     return output;
 } 
 
@@ -171,6 +171,7 @@ str_remove( const char *str, const char ch )
 static void 
 usage() 
 {
-  fprintf(stderr, "Usage: mport.list [-q | -v | -u]\n");
-  exit(2);
+	
+	fprintf(stderr, "Usage: mport.list [-q | -v | -u]\n");
+	exit(2);
 }
