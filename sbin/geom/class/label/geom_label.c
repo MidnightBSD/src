@@ -118,6 +118,12 @@ label_label(struct gctl_req *req)
 		return;
 	}
 
+	label = gctl_get_ascii(req, "arg0");
+	if (strlen(label) > 15) {
+		gctl_error(req, "Label cannot exceed 15 characters");
+		return;
+	}
+
 	/*
 	 * Clear last sector first to spoil all components if device exists.
 	 */
@@ -131,7 +137,6 @@ label_label(struct gctl_req *req)
 
 	strlcpy(md.md_magic, G_LABEL_MAGIC, sizeof(md.md_magic));
 	md.md_version = G_LABEL_VERSION;
-	label = gctl_get_ascii(req, "arg0");
 	strlcpy(md.md_label, label, sizeof(md.md_label));
 	md.md_provsize = g_get_mediasize(name);
 	if (md.md_provsize == 0) {
