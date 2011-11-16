@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.5 2009/04/11 04:43:26 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.6 2011/09/15 02:02:56 laffer1 Exp $ */
 /*- 
  * Copyright (c) 2008 Lucas Holt
  * All rights reserved.
@@ -29,6 +29,8 @@
 #include <sys/sysctl.h>
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <err.h>
 #include <unistd.h>
 
 static void	usage();
