@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20111117:
+	BIND 9.6 ESV R5 P1
+
 20111107:
 	tzdata 2011n
 
@@ -1129,4 +1132,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.143 2011/10/26 13:13:30 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.144 2011/11/08 04:54:20 laffer1 Exp $
