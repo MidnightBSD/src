@@ -66,10 +66,10 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_query.c,v 1.1.1.1 2008-10-30 20:39:06 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_query.c,v 1.2 2011-11-18 01:15:50 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/resolv/res_query.c,v 1.5 2007/06/03 17:20:27 ume Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/resolv/res_query.c,v 1.5.2.1 2008/12/17 12:31:04 ume Exp $");
 
 #include "port_before.h"
 #include <sys/types.h>
@@ -115,8 +115,9 @@ res_nquery(res_state statp,
 {
 	u_char buf[MAXPACKET];
 	HEADER *hp = (HEADER *) answer;
-	int n;
 	u_int oflags;
+	u_char *rdata;
+	int n;
 
 	oflags = statp->_flags;
 
@@ -131,8 +132,14 @@ again:
 			 buf, sizeof(buf));
 #ifdef RES_USE_EDNS0
 	if (n > 0 && (statp->_flags & RES_F_EDNS0ERR) == 0 &&
-	    (statp->options & (RES_USE_EDNS0|RES_USE_DNSSEC)) != 0U)
+	    (statp->options & (RES_USE_EDNS0|RES_USE_DNSSEC|RES_NSID))) {
 		n = res_nopt(statp, n, buf, sizeof(buf), anslen);
+		rdata = &buf[n];
+		if (n > 0 && (statp->options & RES_NSID) != 0U) {
+			n = res_nopt_rdata(statp, n, buf, sizeof(buf), rdata,
+					   NS_OPT_NSID, 0, NULL);
+		}
+	}
 #endif
 	if (n <= 0) {
 #ifdef DEBUG
@@ -142,6 +149,7 @@ again:
 		RES_SET_H_ERRNO(statp, NO_RECOVERY);
 		return (n);
 	}
+
 	n = res_nsend(statp, buf, n, answer, anslen);
 	if (n < 0) {
 #ifdef RES_USE_EDNS0

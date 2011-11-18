@@ -66,10 +66,10 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_comp.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_comp.c,v 1.1.1.1 2008-10-30 20:39:06 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_comp.c,v 1.2 2011-11-18 01:15:50 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/resolv/res_comp.c,v 1.4 2007/06/03 17:20:27 ume Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/resolv/res_comp.c,v 1.4.2.2 2009/09/28 22:29:28 delphij Exp $");
 
 #include "port_before.h"
 #include <sys/types.h>
@@ -140,6 +140,7 @@ dn_skipname(const u_char *ptr, const u_char *eom) {
 #define PERIOD 0x2e
 #define	hyphenchar(c) ((c) == 0x2d)
 #define bslashchar(c) ((c) == 0x5c)
+#define underscorechar(c) ((c) == 0x5f)
 #define periodchar(c) ((c) == PERIOD)
 #define asterchar(c) ((c) == 0x2a)
 #define alphachar(c) (((c) >= 0x41 && (c) <= 0x5a) \
@@ -147,7 +148,11 @@ dn_skipname(const u_char *ptr, const u_char *eom) {
 #define digitchar(c) ((c) >= 0x30 && (c) <= 0x39)
 
 #define borderchar(c) (alphachar(c) || digitchar(c))
+#ifdef	RES_ENFORCE_RFC1034
 #define middlechar(c) (borderchar(c) || hyphenchar(c))
+#else
+#define middlechar(c) (borderchar(c) || hyphenchar(c) || underscorechar(c))
+#endif
 #define	domainchar(c) ((c) > 0x20 && (c) < 0x7f)
 
 int

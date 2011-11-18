@@ -49,8 +49,8 @@
  */
 
 /*
- *	$Id: nameser.h,v 1.2 2008-10-01 14:01:16 laffer1 Exp $
- * $FreeBSD: src/include/arpa/nameser.h,v 1.20 2007/06/03 17:20:25 ume Exp $
+ *	$Id: nameser.h,v 1.3 2011-11-18 01:15:50 laffer1 Exp $
+ * $FreeBSD: src/include/arpa/nameser.h,v 1.20.2.1 2008/12/17 12:31:04 ume Exp $
  */
 
 #ifndef _ARPA_NAMESER_H_
@@ -424,9 +424,10 @@ typedef enum __ns_cert_types {
 #define NS_NXT_MAX 127
 
 /*%
- * EDNS0 extended flags, host order.
+ * EDNS0 extended flags and option codes, host order.
  */
 #define NS_OPT_DNSSEC_OK	0x8000U
+#define NS_OPT_NSID             3
 
 /*%
  * Inline versions of get/put short/long.  Pointer is advanced.
