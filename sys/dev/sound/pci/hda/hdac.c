@@ -84,7 +84,7 @@
 
 #define HDA_DRV_TEST_REV	"20091113_0138"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/hda/hdac.c,v 1.44.2.19 2009/12/22 20:24:06 mav Exp $");
+SND_DECLARE_FILE("$MidnightBSD$");
 
 #define HDA_BOOTVERBOSE(stmt)	do {			\
 	if (bootverbose != 0 || snd_verbose > 3) {	\
@@ -295,6 +295,7 @@ SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/hda/hdac.c,v 1.44.2.19 2009/12
 #define LENOVO_VENDORID		0x17aa
 #define LENOVO_3KN100_SUBVENDOR	HDA_MODEL_CONSTRUCT(LENOVO, 0x2066)
 #define LENOVO_3KN200_SUBVENDOR	HDA_MODEL_CONSTRUCT(LENOVO, 0x384e)
+#define LENOVO_B450_SUBVENDOR HDA_MODEL_CONSTRUCT(LENOVO, 0x3a0d)
 #define LENOVO_TCA55_SUBVENDOR	HDA_MODEL_CONSTRUCT(LENOVO, 0x1015)
 #define LENOVO_ALL_SUBVENDOR	HDA_MODEL_CONSTRUCT(LENOVO, 0xffff)
 
@@ -2572,6 +2573,13 @@ hdac_widget_pin_getconfig(struct hdac_widget *w)
 			break;
 		}
 	    }
+	} else if (id == HDA_CODEC_CX20561 &&
+	    sc->pci_subvendor == LENOVO_B450_SUBVENDOR) {
+		switch (nid) {
+		case 22:
+			patch = "as=1 seq=15";
+			break;
+		}
 	}
 
 	if (patch != NULL)
