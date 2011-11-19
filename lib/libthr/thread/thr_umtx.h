@@ -49,7 +49,7 @@ int _thr_umtx_wait(volatile umtx_t *mtx, umtx_t exp,
 	const struct timespec *timeout) __hidden;
 int _thr_umtx_wake(volatile umtx_t *mtx, int count) __hidden;
 int _thr_ucond_wait(struct ucond *cv, struct umutex *m,
-        const struct timespec *timeout, int check_unpaking) __hidden;
+        const struct timespec *timeout, int flags) __hidden;
 void _thr_ucond_init(struct ucond *cv) __hidden;
 int _thr_ucond_signal(struct ucond *cv) __hidden;
 int _thr_ucond_broadcast(struct ucond *cv) __hidden;
