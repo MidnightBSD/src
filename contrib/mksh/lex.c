@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.153 2011/06/04 16:11:18 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.157 2011/10/25 22:36:36 tg Exp $");
 
 /*
  * states while lexing word
@@ -40,9 +40,10 @@ __RCSID("$MirOS: src/bin/mksh/lex.c,v 1.153 2011/06/04 16:11:18 tg Exp $");
 #define SHEREDELIM	10	/* parsing <<,<<- delimiter */
 #define SHEREDQUOTE	11	/* parsing " in <<,<<- delimiter */
 #define SPATTERN	12	/* parsing *(...|...) pattern (*+?@!) */
-#define STBRACE		13	/* parsing ${...[#%]...} */
-#define SADELIM		14	/* like SBASE, looking for delimiter */
-#define SHERESTRING	15	/* parsing <<< string */
+#define SADELIM		13	/* like SBASE, looking for delimiter */
+#define SHERESTRING	14	/* parsing <<< string */
+#define STBRACEKORN	15	/* parsing ${...[#%]...} !FSH */
+#define STBRACEBOURNE	16	/* parsing ${...[#%]...} FSH */
 #define SINVALID	255	/* invalid state */
 
 struct sretrace_info {
@@ -89,8 +90,8 @@ typedef struct {
 
 static void readhere(struct ioword *);
 static void ungetsc(int);
-static void ungetsc_(int);
-static int getsc__(void);
+static void ungetsc_i(int);
+static int getsc_uu(void);
 static void getsc_line(Source *);
 static int getsc_bn(void);
 static int s_get(void);
@@ -98,8 +99,8 @@ static void s_put(int);
 static char *get_brace_var(XString *, char *);
 static bool arraysub(char **);
 static void gethere(bool);
-static Lex_state *push_state_(State_info *, Lex_state *);
-static Lex_state *pop_state_(State_info *, Lex_state *);
+static Lex_state *push_state_i(State_info *, Lex_state *);
+static Lex_state *pop_state_i(State_info *, Lex_state *);
 
 static int dopprompt(const char *, int, bool);
 void yyskiputf8bom(void);
@@ -110,13 +111,13 @@ static struct sretrace_info *retrace_info;
 short subshell_nesting_level = 0;
 
 /* optimised getsc_bn() */
-#define _getsc()	(*source->str != '\0' && *source->str != '\\' && \
+#define o_getsc()	(*source->str != '\0' && *source->str != '\\' && \
 			    !backslash_skip ? *source->str++ : getsc_bn())
-/* optimised getsc__() */
-#define	_getsc_()	((*source->str != '\0') ? *source->str++ : getsc__())
+/* optimised getsc_uu() */
+#define	o_getsc_u()	((*source->str != '\0') ? *source->str++ : getsc_uu())
 
 /* retrace helper */
-#define _getsc_r(carg)	{				\
+#define o_getsc_r(carg)	{				\
 	int cev = (carg);				\
 	struct sretrace_info *rp = retrace_info;	\
 							\
@@ -135,7 +136,7 @@ static int getsc(void);
 static int
 getsc(void)
 {
-	_getsc_r(_getsc());
+	o_getsc_r(o_getsc());
 }
 #else
 static int getsc_r(int);
@@ -143,23 +144,23 @@ static int getsc_r(int);
 static int
 getsc_r(int c)
 {
-	_getsc_r(c);
+	o_getsc_r(c);
 }
 
-#define getsc()		getsc_r(_getsc())
+#define getsc()		getsc_r(o_getsc())
 #endif
 
 #define STATE_BSIZE	8
 
 #define PUSH_STATE(s)	do {					\
 	if (++statep == state_info.end)				\
-		statep = push_state_(&state_info, statep);	\
+		statep = push_state_i(&state_info, statep);	\
 	state = statep->type = (s);				\
 } while (/* CONSTCOND */ 0)
 
 #define POP_STATE()	do {					\
 	if (--statep == state_info.base)			\
-		statep = pop_state_(&state_info, statep);	\
+		statep = pop_state_i(&state_info, statep);	\
 	state = statep->type;					\
 } while (/* CONSTCOND */ 0)
 
@@ -196,6 +197,7 @@ yylex(int cf)
 	Lex_state states[STATE_BSIZE], *statep, *s2, *base;
 	State_info state_info;
 	int c, c2, state;
+	size_t cz;
 	XString ws;		/* expandable output word */
 	char *wp;		/* output word pointer */
 	char *sp, *dp;
@@ -393,11 +395,11 @@ yylex(int cf)
 						ungetsc(c);
  subst_command:
 						sp = yyrecursive();
-						c2 = strlen(sp) + 1;
-						XcheckN(ws, wp, c2);
+						cz = strlen(sp) + 1;
+						XcheckN(ws, wp, cz);
 						*wp++ = COMSUB;
-						memcpy(wp, sp, c2);
-						wp += c2;
+						memcpy(wp, sp, cz);
+						wp += cz;
 					}
 				} else if (c == '{') /*}*/ {
 					*wp++ = OSUBST;
@@ -456,9 +458,12 @@ yylex(int cf)
 					 * If this is a trim operation,
 					 * treat (,|,) specially in STBRACE.
 					 */
-					if (!Flag(FSH) && ctype(c, C_SUBOP2)) {
+					if (ctype(c, C_SUBOP2)) {
 						ungetsc(c);
-						PUSH_STATE(STBRACE);
+						if (Flag(FSH))
+							PUSH_STATE(STBRACEBOURNE);
+						else
+							PUSH_STATE(STBRACEKORN);
 					} else {
 						ungetsc(c);
 						if (state == SDQUOTE)
@@ -576,11 +581,11 @@ yylex(int cf)
 						*wp++ = QCHAR;
 						*wp++ = c2;
 					} else {
-						c = utf_wctomb(ts, c2 - 0x100);
-						ts[c] = 0;
-						for (c = 0; ts[c]; ++c) {
+						cz = utf_wctomb(ts, c2 - 0x100);
+						ts[cz] = 0;
+						for (cz = 0; ts[cz]; ++cz) {
 							*wp++ = QCHAR;
-							*wp++ = ts[c];
+							*wp++ = ts[cz];
 						}
 					}
 				}
@@ -621,10 +626,10 @@ yylex(int cf)
 					POP_STATE();
 
 					if ((c2 = getsc()) == /*(*/ ')') {
-						c = strlen(sp) - 2;
-						XcheckN(ws, wp, c);
-						memcpy(wp, sp + 1, c);
-						wp += c;
+						cz = strlen(sp) - 2;
+						XcheckN(ws, wp, cz);
+						memcpy(wp, sp + 1, cz);
+						wp += cz;
 						afree(sp, ATEMP);
 						*wp++ = '\0';
 						break;
@@ -687,19 +692,21 @@ yylex(int cf)
 			*wp++ = /*{*/ '}';
 			break;
 
-		case STBRACE:
-			/* Same as SBASE, except (,|,) treated specially */
-			if (c == /*{*/ '}') {
-				POP_STATE();
-				*wp++ = CSUBST;
-				*wp++ = /*{*/ '}';
-			} else if (c == '|') {
+		/* Same as SBASE, except (,|,) treated specially */
+		case STBRACEKORN:
+			if (c == '|')
 				*wp++ = SPAT;
-			} else if (c == '(') {
+			else if (c == '(') {
 				*wp++ = OPAT;
 				/* simile for @ */
 				*wp++ = ' ';
 				PUSH_STATE(SPATTERN);
+			} else /* FALLTHROUGH */
+		case STBRACEBOURNE:
+			  if (c == /*{*/ '}') {
+				POP_STATE();
+				*wp++ = CSUBST;
+				*wp++ = /*{*/ '}';
 			} else
 				goto Sbase1;
 			break;
@@ -1132,9 +1139,9 @@ readhere(struct ioword *iop)
 	if (iop->flag & IOHERESTR) {
 		/* process the here string */
 		iop->heredoc = xp = evalstr(iop->delim, DOBLANK);
-		c = strlen(xp) - 1;
-		memmove(xp, xp + 1, c);
-		xp[c] = '\n';
+		xpos = strlen(xp) - 1;
+		memmove(xp, xp + 1, xpos);
+		xp[xpos] = '\n';
 		return;
 	}
 
@@ -1253,7 +1260,7 @@ pushs(int type, Area *areap)
 }
 
 static int
-getsc__(void)
+getsc_uu(void)
 {
 	Source *s = source;
 	int c;
@@ -1321,7 +1328,7 @@ getsc__(void)
 				/* pop source stack */
 				source = s->next;
 				source->flags |= s->flags & SF_ALIAS;
-				c = getsc__();
+				c = getsc_uu();
 				if (c) {
 					s->flags |= SF_ALIASEND;
 					s->ugbuf[0] = c; s->ugbuf[1] = '\0';
@@ -1438,7 +1445,7 @@ getsc_line(Source *s)
 		int linelen;
 
 		linelen = Xlength(s->xs, xp);
-		XcheckN(s->xs, xp, Tn_fc_e_ + /* NUL */ 1);
+		XcheckN(s->xs, xp, Zfc_e_dash + /* NUL */ 1);
 		/* reload after potential realloc */
 		cp = Xstring(s->xs, xp);
 		/* change initial '!' into space */
@@ -1446,10 +1453,10 @@ getsc_line(Source *s)
 		/* NUL terminate the current string */
 		*xp = '\0';
 		/* move the actual string forward */
-		memmove(cp + Tn_fc_e_, cp, linelen + /* NUL */ 1);
-		xp += Tn_fc_e_;
+		memmove(cp + Zfc_e_dash, cp, linelen + /* NUL */ 1);
+		xp += Zfc_e_dash;
 		/* prepend it with "fc -e -" */
-		memcpy(cp, T_fc_e_, Tn_fc_e_);
+		memcpy(cp, Tfc_e_dash, Zfc_e_dash);
 	}
 #endif
 	s->start = s->str = cp;
@@ -1720,10 +1727,10 @@ ungetsc(int c)
 			rp->xp--;
 		rp = rp->next;
 	}
-	ungetsc_(c);
+	ungetsc_i(c);
 }
 static void
-ungetsc_(int c)
+ungetsc_i(int c)
 {
 	if (source->str > source->start)
 		source->str--;
@@ -1746,22 +1753,22 @@ getsc_bn(void)
 	int c, c2;
 
 	if (ignore_backslash_newline)
-		return (_getsc_());
+		return (o_getsc_u());
 
 	if (backslash_skip == 1) {
 		backslash_skip = 2;
-		return (_getsc_());
+		return (o_getsc_u());
 	}
 
 	backslash_skip = 0;
 
 	while (/* CONSTCOND */ 1) {
-		c = _getsc_();
+		c = o_getsc_u();
 		if (c == '\\') {
-			if ((c2 = _getsc_()) == '\n')
+			if ((c2 = o_getsc_u()) == '\n')
 				/* ignore the \newline; get the next char... */
 				continue;
-			ungetsc_(c2);
+			ungetsc_i(c2);
 			backslash_skip = 1;
 		}
 		return (c);
@@ -1773,26 +1780,26 @@ yyskiputf8bom(void)
 {
 	int c;
 
-	if ((unsigned char)(c = _getsc_()) != 0xEF) {
-		ungetsc_(c);
+	if ((unsigned char)(c = o_getsc_u()) != 0xEF) {
+		ungetsc_i(c);
 		return;
 	}
-	if ((unsigned char)(c = _getsc_()) != 0xBB) {
-		ungetsc_(c);
-		ungetsc_(0xEF);
+	if ((unsigned char)(c = o_getsc_u()) != 0xBB) {
+		ungetsc_i(c);
+		ungetsc_i(0xEF);
 		return;
 	}
-	if ((unsigned char)(c = _getsc_()) != 0xBF) {
-		ungetsc_(c);
-		ungetsc_(0xBB);
-		ungetsc_(0xEF);
+	if ((unsigned char)(c = o_getsc_u()) != 0xBF) {
+		ungetsc_i(c);
+		ungetsc_i(0xBB);
+		ungetsc_i(0xEF);
 		return;
 	}
 	UTFMODE |= 8;
 }
 
 static Lex_state *
-push_state_(State_info *si, Lex_state *old_end)
+push_state_i(State_info *si, Lex_state *old_end)
 {
 	Lex_state *news = alloc2(STATE_BSIZE, sizeof(Lex_state), ATEMP);
 
@@ -1803,7 +1810,7 @@ push_state_(State_info *si, Lex_state *old_end)
 }
 
 static Lex_state *
-pop_state_(State_info *si, Lex_state *old_end)
+pop_state_i(State_info *si, Lex_state *old_end)
 {
 	Lex_state *old_base = si->base;
 

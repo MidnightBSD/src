@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.t,v 1.467 2011/06/12 14:58:43 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.474.2.7 2011/11/22 18:01:42 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
@@ -25,7 +25,7 @@
 # http://www.research.att.com/~gsf/public/ifs.sh
 
 expected-stdout:
-	@(#)MIRBSD KSH R40 2011/06/12
+	@(#)MIRBSD KSH R40 2011/11/22
 description:
 	Check version of shell.
 stdin:
@@ -1010,7 +1010,8 @@ description:
 	Check package for cd -Pe
 need-pass: no
 # the mv command fails on Cygwin
-category: !os:cygwin
+# Hurd aborts the testsuite (permission denied)
+category: !os:cygwin,!os:gnu,!os:msys
 file-setup: file 644 "x"
 	mkdir noread noread/target noread/target/subdir
 	ln -s noread link
@@ -1603,16 +1604,17 @@ stdin:
 	set +o sh
 	x=foobar
 	y=foobaz
-	echo "<${x%bar|baz},${y%bar|baz}>"
+	z=fooba\?
+	echo "<${x%bar|baz},${y%bar|baz},${z%\?}>"
 	echo "<${x%ba(r|z)},${y%ba(r|z)}>"
 	set -o sh
-	echo "<${x%bar|baz},${y%bar|baz}>"
+	echo "<${x%bar|baz},${y%bar|baz},${z%\?}>"
 	z='foo(bar'
 	echo "<${z%(*}>"
 expected-stdout:
+	<foo,foo,fooba>
 	<foo,foo>
-	<foo,foo>
-	<foobar,foobaz>
+	<foobar,foobaz,fooba>
 	<foo>
 ---
 name: eglob-substrpl-1
@@ -1863,7 +1865,8 @@ name: glob-bad-2
 description:
 	Check that symbolic links aren't stat()'d
 # breaks on FreeMiNT (cannot unlink dangling symlinks)
-category: !os:mint
+# breaks on MSYS (does not support symlinks)
+category: !os:mint,!os:msys
 file-setup: dir 755 "dir"
 file-setup: symlink 644 "dir/abc"
 	non-existent-file
@@ -1910,7 +1913,7 @@ description:
 	Check that globbing matches the right things...
 # breaks on Mac OSX (HFS+ non-standard Unicode canonical decomposition)
 # breaks on Cygwin 1.7 (files are now UTF-16 or something)
-category: !os:cygwin,!os:darwin
+category: !os:cygwin,!os:darwin,!os:msys
 file-setup: file 644 "aÂc"
 stdin:
 	echo a[Á-Ú]*
@@ -2320,19 +2323,6 @@ stdin:
 	cat <<'    END    '
 	hello
 	    END    
-	echo end
-expected-stdout:
-	hello
-	end
----
-name: heredoc-weird-3
-description:
-	Tests for here documents, taken from Austin ML
-need-pass: no
-stdin:
-	cat <<x*x & touch 'x*x'
-	hello
-	x*x
 	echo end
 expected-stdout:
 	hello
@@ -5710,6 +5700,40 @@ expected-stdout-pattern:
 expected-stderr-pattern:
 	/^X*$/
 ---
+name: typeset-1
+description:
+	Check that global does what typeset is supposed to do
+stdin:
+	set -A arrfoo 65
+	foo() {
+		global -Uui16 arrfoo[*]
+	}
+	echo before ${arrfoo[0]} .
+	foo
+	echo after ${arrfoo[0]} .
+	set -A arrbar 65
+	bar() {
+		echo inside before ${arrbar[0]} .
+		arrbar[0]=97
+		echo inside changed ${arrbar[0]} .
+		global -Uui16 arrbar[*]
+		echo inside typeset ${arrbar[0]} .
+		arrbar[0]=48
+		echo inside changed ${arrbar[0]} .
+	}
+	echo before ${arrbar[0]} .
+	bar
+	echo after ${arrbar[0]} .
+expected-stdout:
+	before 65 .
+	after 16#41 .
+	before 65 .
+	inside before 65 .
+	inside changed 97 .
+	inside typeset 16#61 .
+	inside changed 16#30 .
+	after 16#30 .
+---
 name: typeset-padding-1
 description:
 	Check if left/right justification works as per TFM
@@ -5799,7 +5823,7 @@ description:
 	note: cygwin execve(2) doesn't return to us with ENOEXEC, we lose
 	note: Ultrix perl5 t4 returns 65280 (exit-code 255) and no text
 need-pass: no
-category: !os:cygwin,!os:uwin-nt,!os:ultrix,!smksh
+category: !os:cygwin,!os:msys,!os:ultrix,!os:uwin-nt,!smksh
 env-setup: !FOO=BAR!
 stdin:
 	print '#!'"$__progname"'\nprint "1 a=$ENV{FOO}";' >t1
@@ -5869,6 +5893,7 @@ description:
 	-DMKSH_ASSUME_UTF8=1 => not expected, please investigate
 	-UMKSH_ASSUME_UTF8 => not expected, but if your OS is old,
 	 try passing HAVE_SETLOCALE_CTYPE=0 to Build.sh
+need-pass: no
 category: !os:hpux
 need-ctty: yes
 arguments: !-i!
@@ -5903,24 +5928,35 @@ expected-stdout:
 expected-stderr-pattern:
 	/(# )*/
 ---
-name: utf8opt-3
+name: utf8opt-3a
 description:
 	Ensure Â±U on the command line is honoured
-	(this test may pass falsely depending on CPPFLAGS)
+	(these two tests may pass falsely depending on CPPFLAGS)
 stdin:
 	export i=0
 	code='if [[ $- = *U* ]]; then echo $i on; else echo $i off; fi'
 	let i++; "$__progname" -U -c "$code"
 	let i++; "$__progname" +U -c "$code"
+	echo $((++i)) done
+expected-stdout:
+	1 on
+	2 off
+	3 done
+---
+name: utf8opt-3b
+description:
+	Ensure Â±U on the command line is honoured, interactive shells
+need-ctty: yes
+stdin:
+	export i=0
+	code='if [[ $- = *U* ]]; then echo $i on; else echo $i off; fi'
 	let i++; "$__progname" -U -ic "$code"
 	let i++; "$__progname" +U -ic "$code"
 	echo $((++i)) done
 expected-stdout:
 	1 on
 	2 off
-	3 on
-	4 off
-	5 done
+	3 done
 ---
 name: aliases-1
 description:
@@ -6142,7 +6178,6 @@ expected-stdout:
 name: arrays-2a
 description:
 	Check if bash-style arrays work as expected
-category: !smksh
 stdin:
 	v="c d"
 	foo=(a \$v "$v" '$v' b)
@@ -6153,7 +6188,6 @@ expected-stdout:
 name: arrays-2b
 description:
 	Check if bash-style arrays work as expected, with newlines
-category: !smksh
 stdin:
 	test -n "$ZSH_VERSION" && setopt KSH_ARRAYS
 	v="e f"
@@ -6194,7 +6228,6 @@ expected-stdout:
 name: arrays-4
 description:
 	Check if Korn Shell arrays with specified indices work as expected
-category: !smksh
 stdin:
 	v="c d"
 	set -A foo -- [1]=\$v [2]="$v" [4]='$v' [0]=a [5]=b
@@ -6205,7 +6238,6 @@ expected-stdout:
 name: arrays-5
 description:
 	Check if bash-style arrays with specified indices work as expected
-category: !smksh
 stdin:
 	v="c d"
 	foo=([1]=\$v [2]="$v" [4]='$v' [0]=a [5]=b)
@@ -6374,7 +6406,6 @@ expected-stdout:
 name: arrays-9a
 description:
 	Check that we can concatenate arrays
-category: !smksh
 stdin:
 	unset foo; foo=(bar); foo+=(baz); echo 1 ${!foo[*]} : ${foo[*]} .
 	unset foo; foo=(foo bar); foo+=(baz); echo 2 ${!foo[*]} : ${foo[*]} .
@@ -6522,9 +6553,10 @@ description:
 stdin:
 	typeset -i8 foo=10
 	bar=baz
-	print ${bar@#} ${baz@#} .
+	unset baz
+	print ${foo@#} ${bar@#} ${baz@#} .
 expected-stdout:
-	57F1BA9A 04808901 .
+	E76664C2 57F1BA9A 04808901 .
 ---
 name: varexpand-null-1
 description:
@@ -7615,46 +7647,39 @@ description:
 	Fails on: pdksh bash2 bash3 zsh
 	Passes on: bash4 ksh93 mksh(20110313+)
 stdin:
-	echo $(case 1 in (1) echo yes;; (2) echo no;; esac)
-	echo $(case 1 in 1) echo yes;; 2) echo no;; esac)
-	TEST=1234; echo ${TEST: $(case 1 in (1) echo 1;; (*) echo 2;; esac)}
-	TEST=5678; echo ${TEST: $(case 1 in 1) echo 1;; *) echo 2;; esac)}
+	echo 1 $(case 1 in (1) echo yes;; (2) echo no;; esac) .
+	echo 2 $(case 1 in 1) echo yes;; 2) echo no;; esac) .
+	TEST=1234; echo 3 ${TEST: $(case 1 in (1) echo 1;; (*) echo 2;; esac)} .
+	TEST=5678; echo 4 ${TEST: $(case 1 in 1) echo 1;; *) echo 2;; esac)} .
+	a=($(case 1 in (1) echo 1;; (*) echo 2;; esac)); echo 5 ${a[0]} .
+	a=($(case 1 in 1) echo 1;; *) echo 2;; esac)); echo 6 ${a[0]} .
 expected-stdout:
-	yes
-	yes
-	234
-	678
+	1 yes .
+	2 yes .
+	3 234 .
+	4 678 .
+	5 1 .
+	6 1 .
 ---
 name: comsub-1b
 description:
 	COMSUB are now parsed recursively, so this works
-	Fails on GNU bash even, ksh93 passes
+	Fails on: pdksh bash2 bash3 bash4 zsh
+	Passes on: ksh93 mksh(20110313+)
 stdin:
-	echo $(($(case 1 in (1) echo 1;; (*) echo 2;; esac)+10))
-	echo $(($(case 1 in 1) echo 1;; *) echo 2;; esac)+20))
-	(( a = $(case 1 in (1) echo 1;; (*) echo 2;; esac) )); echo $a.
-	(( a = $(case 1 in 1) echo 1;; *) echo 2;; esac) )); echo $a.
+	echo 1 $(($(case 1 in (1) echo 1;; (*) echo 2;; esac)+10)) .
+	echo 2 $(($(case 1 in 1) echo 1;; *) echo 2;; esac)+20)) .
+	(( a = $(case 1 in (1) echo 1;; (*) echo 2;; esac) )); echo 3 $a .
+	(( a = $(case 1 in 1) echo 1;; *) echo 2;; esac) )); echo 4 $a .
+	a=($(($(case 1 in (1) echo 1;; (*) echo 2;; esac)+10))); echo 5 ${a[0]} .
+	a=($(($(case 1 in 1) echo 1;; *) echo 2;; esac)+20))); echo 6 ${a[0]} .
 expected-stdout:
-	11
-	21
-	1.
-	1.
----
-name: comsub-1c
-description:
-	COMSUB are now parsed recursively, so this works (ksh93, mksh)
-	First test passes on bash4, second fails there
-category: !smksh
-stdin:
-	a=($(case 1 in (1) echo 1;; (*) echo 2;; esac)); echo ${a[0]}.
-	a=($(case 1 in 1) echo 1;; *) echo 2;; esac)); echo ${a[0]}.
-	a=($(($(case 1 in (1) echo 1;; (*) echo 2;; esac)+10))); echo ${a[0]}.
-	a=($(($(case 1 in 1) echo 1;; *) echo 2;; esac)+20))); echo ${a[0]}.
-expected-stdout:
-	1.
-	1.
-	11.
-	21.
+	1 11 .
+	2 21 .
+	3 1 .
+	4 1 .
+	5 11 .
+	6 21 .
 ---
 name: comsub-2
 description:
@@ -7696,16 +7721,16 @@ description:
 	Check the tree dump functions for !MKSH_SMALL functionality
 category: !smksh
 stdin:
-	x() { case $1 in a) a+=b ;;& *) c+=(d e) ;; esac; }
+	x() { case $1 in u) echo x ;;& *) echo $1 ;; esac; }
 	typeset -f x
 expected-stdout:
 	x() {
 		case $1 in
-		(a)
-			a+=b 
+		(u)
+			echo x 
 			;|
 		(*)
-			set -A c+ -- d e 
+			echo $1 
 			;;
 		esac 
 	} 
@@ -7808,6 +7833,10 @@ stdin:
 		install -c -o root -g wheel -m 664 /dev/null /etc/motd
 		print -- "$x\n" >/etc/motd
 	fi
+	#wdarrassign
+	case x in
+	x) a+=b; c+=(d e)
+	esac
 	#0
 	EOD
 expected-stdout:
@@ -8373,6 +8402,35 @@ expected-stdout:
 	EOF
 	)" = @(?) ]] && rm -f /etc/motd ; if [[ ! -s /etc/motd ]] ; then install -c -o root -g wheel -m 664 /dev/null /etc/motd ; print -- "$x\n" >/etc/motd ; fi ) | tr u x ) 
 	} 
+	inline_wdarrassign() {
+		case x in
+		x) a+=b; c+=(d e)
+		esac
+	}
+	inline_wdarrassign() {
+		case x in
+		(x)
+			a+=b 
+			set -A c+ -- d e 
+			;;
+		esac 
+	} 
+	function comsub_wdarrassign { x=$(
+		case x in
+		x) a+=b; c+=(d e)
+		esac
+	); }
+	function comsub_wdarrassign {
+		x=$(case x in (x) a+=b ; set -A c+ -- d e  ;; esac ) 
+	} 
+	function reread_wdarrassign { x=$((
+		case x in
+		x) a+=b; c+=(d e)
+		esac
+	)|tr u x); }
+	function reread_wdarrassign {
+		x=$(( case x in (x) a+=b ; set -A c+ -- d e  ;; esac ) | tr u x ) 
+	} 
 ---
 name: test-stnze-1
 description:
@@ -8754,6 +8812,23 @@ expected-stdout:
 	1 c .
 	2 a .
 	3 .
+---
+name: nameref-4
+description:
+	Ensure we don't run in an infinite loop
+time-limit: 3
+stdin:
+	baz() {
+		typeset -n foo=foo
+		foo[0]=bar
+	}
+	set -A foo bad
+	echo sind $foo .
+	baz
+	echo blah $foo .
+expected-stdout:
+	sind bad .
+	blah bar .
 ---
 name: better-parens-1a
 description:

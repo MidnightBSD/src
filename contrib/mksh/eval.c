@@ -1,4 +1,4 @@
-/*	$OpenBSD: eval.c,v 1.36 2011/03/15 08:39:54 okan Exp $	*/
+/*	$OpenBSD: eval.c,v 1.37 2011/10/11 14:32:43 otto Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.105 2011/06/12 14:45:33 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.109 2011/10/11 19:06:07 tg Exp $");
 
 /*
  * string expansion
@@ -67,11 +67,11 @@ static char *tilde(char *);
 static char *homedir(char *);
 #endif
 static void alt_expand(XPtrV *, char *, char *, char *, int);
-static size_t utflen(const char *);
+static int utflen(const char *);
 static void utfincptr(const char *, mksh_ari_t *);
 
 /* UTFMODE functions */
-static size_t
+static int
 utflen(const char *s)
 {
 	size_t n;
@@ -84,7 +84,10 @@ utflen(const char *s)
 		}
 	} else
 		n = strlen(s);
-	return (n);
+
+	if (n > 2147483647)
+		n = 2147483647;
+	return ((int)n);
 }
 
 static void
@@ -229,7 +232,7 @@ expand(const char *cp,	/* input word */
 	if (Flag(FMARKDIRS))
 		f |= DOMARKDIRS;
 	if (Flag(FBRACEEXPAND) && (f & DOGLOB))
-		f |= DOBRACE_;
+		f |= DOBRACE;
 
 	/* init destination string */
 	Xinit(ds, dp, 128, ATEMP);
@@ -570,9 +573,9 @@ expand(const char *cp,	/* input word */
 					}
 					case '#':
 					case '%':
-						/* ! DOBLANK,DOBRACE_,DOTILDE */
+						/* ! DOBLANK,DOBRACE,DOTILDE */
 						f = DOPAT | (f&DONTRUNCOMMAND) |
-						    DOTEMP_;
+						    DOTEMP;
 						st->quotew = quote = 0;
 						/*
 						 * Prepend open pattern (so |
@@ -581,8 +584,7 @@ expand(const char *cp,	/* input word */
 						 */
 						if (!Flag(FSH)) {
 							*dp++ = MAGIC;
-							*dp++ = (char)('@' |
-							    0x80);
+							*dp++ = '@' | 0x80;
 						}
 						break;
 					case '=':
@@ -602,17 +604,17 @@ expand(const char *cp,	/* input word */
 						 */
 						if (!(x.var->flag & INTEGER))
 							f |= DOASNTILDE|DOTILDE;
-						f |= DOTEMP_;
+						f |= DOTEMP;
 						/*
 						 * These will be done after the
 						 * value has been assigned.
 						 */
-						f &= ~(DOBLANK|DOGLOB|DOBRACE_);
+						f &= ~(DOBLANK|DOGLOB|DOBRACE);
 						tilde_ok = 1;
 						break;
 					case '?':
 						f &= ~DOBLANK;
-						f |= DOTEMP_;
+						f |= DOTEMP;
 						/* FALLTHROUGH */
 					default:
 						/* Enable tilde expansion */
@@ -719,7 +721,7 @@ expand(const char *cp,	/* input word */
 				/* open pattern: *(foo|bar) */
 				/* Next char is the type of pattern */
 				make_magic = 1;
-				c = *sp++ + 0x80;
+				c = *sp++ | 0x80;
 				break;
 
 			case SPAT:
@@ -847,14 +849,14 @@ expand(const char *cp,	/* input word */
 
 				*dp++ = '\0';
 				p = Xclose(ds, dp);
-				if (fdo & DOBRACE_)
+				if (fdo & DOBRACE)
 					/* also does globbing */
 					alt_expand(wp, p, p,
 					    p + Xlength(ds, (dp - 1)),
 					    fdo | (f & DOMARKDIRS));
 				else if (fdo & DOGLOB)
 					glob(p, wp, f & DOMARKDIRS);
-				else if ((f & DOPAT) || !(fdo & DOMAGIC_))
+				else if ((f & DOPAT) || !(fdo & DOMAGIC))
 					XPput(*wp, p);
 				else
 					XPput(*wp, debunk(p, p, strlen(p) + 1));
@@ -895,7 +897,7 @@ expand(const char *cp,	/* input word */
 					 * [...] expressions.
 					 */
 					if (f & (DOPAT | DOGLOB)) {
-						fdo |= DOMAGIC_;
+						fdo |= DOMAGIC;
 						if (c == '[')
 							fdo |= f & DOGLOB;
 						*dp++ = MAGIC;
@@ -904,22 +906,22 @@ expand(const char *cp,	/* input word */
 				case '*':
 				case '?':
 					if (f & (DOPAT | DOGLOB)) {
-						fdo |= DOMAGIC_ | (f & DOGLOB);
+						fdo |= DOMAGIC | (f & DOGLOB);
 						*dp++ = MAGIC;
 					}
 					break;
 				case OBRACE:
 				case ',':
 				case CBRACE:
-					if ((f & DOBRACE_) && (c == OBRACE ||
-					    (fdo & DOBRACE_))) {
-						fdo |= DOBRACE_|DOMAGIC_;
+					if ((f & DOBRACE) && (c == OBRACE ||
+					    (fdo & DOBRACE))) {
+						fdo |= DOBRACE|DOMAGIC;
 						*dp++ = MAGIC;
 					}
 					break;
 				case '=':
 					/* Note first unquoted = for ~ */
-					if (!(f & DOTEMP_) && !saw_eq &&
+					if (!(f & DOTEMP) && !saw_eq &&
 					    (Flag(FBRACEEXPAND) ||
 					    (f & DOASNTILDE))) {
 						saw_eq = 1;
@@ -929,7 +931,7 @@ expand(const char *cp,	/* input word */
 				case ':':
 					/* : */
 					/* Note unquoted : for ~ */
-					if (!(f & DOTEMP_) && (f & DOASNTILDE))
+					if (!(f & DOTEMP) && (f & DOASNTILDE))
 						tilde_ok = 1;
 					break;
 				case '~':
@@ -965,10 +967,10 @@ expand(const char *cp,	/* input word */
 
 			if (make_magic) {
 				make_magic = 0;
-				fdo |= DOMAGIC_ | (f & DOGLOB);
+				fdo |= DOMAGIC | (f & DOGLOB);
 				*dp++ = MAGIC;
 			} else if (ISMAGIC(c)) {
-				fdo |= DOMAGIC_;
+				fdo |= DOMAGIC;
 				*dp++ = MAGIC;
 			}
 			/* save output char */
@@ -1181,7 +1183,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 			if (*sp == '!' && sp[1]) {
 				++sp;
 				xp->var = global(sp);
-				if (cstrchr(sp, '[')) {
+				if (vstrchr(sp, '[')) {
 					if (xp->var->flag & ISSET)
 						xp->str = shf_smprintf("%lu",
 						    arrayindex(xp->var));
@@ -1474,8 +1476,7 @@ globit(XString *xs,	/* dest string */
 		DIR *dirp;
 		struct dirent *d;
 		char *name;
-		int len;
-		int prefix_len;
+		size_t len, prefix_len;
 
 		/* xp = *xpp;	copy_non_glob() may have re-alloc'd xs */
 		*xp = '\0';

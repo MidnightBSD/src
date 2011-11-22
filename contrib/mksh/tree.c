@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.49 2011/05/29 02:18:57 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.52 2011/10/25 22:36:39 tg Exp $");
 
 #define INDENT	8
 
@@ -100,7 +100,7 @@ ptree(struct op *t, int indent, struct shf *shf)
 	case TSELECT:
 	case TFOR:
 		fptreef(shf, indent, "%s %s ",
-		    (t->type == TFOR) ? "for" : T_select, t->str);
+		    (t->type == TFOR) ? "for" : Tselect, t->str);
 		if (t->vars != NULL) {
 			shf_puts("in ", shf);
 			w = (const char **)t->vars;
@@ -386,7 +386,7 @@ fptreef(struct shf *shf, int indent, const char *fmt, ...)
 
 /* VARARGS */
 char *
-snptreef(char *s, int n, const char *fmt, ...)
+snptreef(char *s, ssize_t n, const char *fmt, ...)
 {
 	va_list va;
 	struct shf shf;
@@ -701,7 +701,7 @@ void
 fpFUNCTf(struct shf *shf, int i, bool isksh, const char *k, struct op *v)
 {
 	if (isksh)
-		fptreef(shf, i, "%s %s %T", T_function, k, v);
+		fptreef(shf, i, "%s %s %T", Tfunction, k, v);
 	else
 		fptreef(shf, i, "%s() %T", k, v);
 }
@@ -747,7 +747,7 @@ dumpchar(struct shf *shf, int c)
 
 /* see: wdvarput */
 static const char *
-dumpwdvar_(struct shf *shf, const char *wp, int quotelevel)
+dumpwdvar_i(struct shf *shf, const char *wp, int quotelevel)
 {
 	int c;
 
@@ -799,7 +799,7 @@ dumpwdvar_(struct shf *shf, const char *wp, int quotelevel)
 			while ((c = *wp++) != 0)
 				dumpchar(shf, c);
 			shf_putc('|', shf);
-			wp = dumpwdvar_(shf, wp, 0);
+			wp = dumpwdvar_i(shf, wp, 0);
 			break;
 		case CSUBST:
 			shf_puts("]CSUBST(", shf);
@@ -826,7 +826,7 @@ dumpwdvar_(struct shf *shf, const char *wp, int quotelevel)
 void
 dumpwdvar(struct shf *shf, const char *wp)
 {
-	dumpwdvar_(shf, wp, 0);
+	dumpwdvar_i(shf, wp, 0);
 }
 
 void

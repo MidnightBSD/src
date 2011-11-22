@@ -38,7 +38,7 @@
 #endif
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.189 2011/06/11 03:14:49 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.199 2011/11/19 17:42:24 tg Exp $");
 
 #if HAVE_KILLPG
 /*
@@ -53,18 +53,28 @@ __RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.189 2011/06/11 03:14:49 tg Exp $");
 
 /* XXX conditions correct? */
 #if !defined(RLIM_INFINITY) && !defined(MKSH_NO_LIMITS)
-#define MKSH_NO_LIMITS
+#define MKSH_NO_LIMITS	1
 #endif
 
 #ifdef MKSH_NO_LIMITS
-#define c_ulimit c_label
+#define c_ulimit	c_true
 #endif
 
 #if defined(ANDROID)
 static int c_android_lsmod(const char **);
 #endif
 
-extern uint8_t set_refflag;
+static int
+c_true(const char **wp MKSH_A_UNUSED)
+{
+	return (0);
+}
+
+static int
+c_false(const char **wp MKSH_A_UNUSED)
+{
+	return (1);
+}
 
 /*
  * A leading = means assignments before command are kept;
@@ -74,29 +84,29 @@ extern uint8_t set_refflag;
  */
 const struct builtin mkshbuiltins[] = {
 	{"*=.", c_dot},
-	{"*=:", c_label},
+	{"*=:", c_true},
 	{"[", c_test},
 	{"*=break", c_brkcont},
-	{T_gbuiltin, c_builtin},
+	{Tgbuiltin, c_builtin},
 	{"*=continue", c_brkcont},
 	{"*=eval", c_eval},
 	{"*=exec", c_exec},
 	{"*=exit", c_exitreturn},
-	{"+false", c_label},
+	{"+false", c_false},
 	{"*=return", c_exitreturn},
-	{T_sgset, c_set},
+	{Tsgset, c_set},
 	{"*=shift", c_shift},
 	{"=times", c_times},
 	{"*=trap", c_trap},
 	{"+=wait", c_wait},
 	{"+read", c_read},
 	{"test", c_test},
-	{"+true", c_label},
+	{"+true", c_true},
 	{"ulimit", c_ulimit},
 	{"+umask", c_umask},
 	{"*=unset", c_unset},
 	/* no =: AT&T manual wrong */
-	{T_palias, c_alias},
+	{Tpalias, c_alias},
 	{"+cd", c_cd},
 	/* dash compatibility hack */
 	{"chdir", c_cd},
@@ -105,6 +115,7 @@ const struct builtin mkshbuiltins[] = {
 	{"*=export", c_typeset},
 	{"+fc", c_fc},
 	{"+getopts", c_getopts},
+	{"=global", c_typeset},
 	{"+jobs", c_jobs},
 	{"+kill", c_kill},
 	{"let", c_let},
@@ -114,8 +125,8 @@ const struct builtin mkshbuiltins[] = {
 #endif
 	{"pwd", c_pwd},
 	{"*=readonly", c_typeset},
-	{T__typeset, c_typeset},
-	{T_punalias, c_unalias},
+	{T_typeset, c_typeset},
+	{Tpunalias, c_unalias},
 	{"whence", c_whence},
 #ifndef MKSH_UNEMPLOYED
 	{"+bg", c_fgbg},
@@ -133,7 +144,7 @@ const struct builtin mkshbuiltins[] = {
 #endif
 #ifdef __MirBSD__
 	/* alias to "true" for historical reasons */
-	{"domainname", c_label},
+	{"domainname", c_true},
 #endif
 #if defined(ANDROID)
 	{"lsmod", c_android_lsmod},
@@ -194,7 +205,6 @@ static const struct t_op b_ops[] = {
 	{"",	TO_NONOP }
 };
 
-static int test_eaccess(const char *, int);
 static int test_oexpr(Test_env *, bool);
 static int test_aexpr(Test_env *, bool);
 static int test_nexpr(Test_env *, bool);
@@ -202,7 +212,7 @@ static int test_primary(Test_env *, bool);
 static Test_op ptest_isa(Test_env *, Test_meta);
 static const char *ptest_getopnd(Test_env *, Test_op, bool);
 static void ptest_error(Test_env *, int, const char *);
-static char *kill_fmt_entry(char *, int, int, const void *);
+static char *kill_fmt_entry(char *, size_t, int, const void *);
 static void p_time(struct shf *, bool, long, int, int,
     const char *, const char *)
     MKSH_A_NONNULL((__nonnull__ (6, 7)));
@@ -233,6 +243,7 @@ c_pwd(const char **wp)
 	}
 	p = current_wd[0] ? (physical ? allocd = do_realpath(current_wd) :
 	    current_wd) : NULL;
+	/* LINTED use of access */
 	if (p && access(p, R_OK) < 0)
 		p = NULL;
 	if (!p && !(p = allocd = ksh_get_wd())) {
@@ -390,8 +401,7 @@ c_print(const char **wp)
 					/* generic function returned Unicode */
 					char ts[4];
 
-					c = utf_wctomb(ts, c - 0x100);
-					ts[c] = 0;
+					ts[utf_wctomb(ts, c - 0x100)] = 0;
 					for (c = 0; ts[c]; ++c)
 						Xput(xs, xp, ts[c]);
 					continue;
@@ -534,9 +544,9 @@ c_whence(const char **wp)
 			if (vflag)
 				shprintf("n %s%s for ",
 				    (tp->flag & EXPORT) ? "exported " : null,
-				    T_alias);
+				    Talias);
 			if (!iam_whence && !vflag)
-				shprintf("%s %s=", T_alias, id);
+				shprintf("%s %s=", Talias, id);
 			print_value_quoted(tp->val.s);
 			break;
 		case CFUNC:
@@ -551,14 +561,14 @@ c_whence(const char **wp)
 						shprintf(" (autoload from %s)",
 						    tp->u.fpath);
 				}
-				shf_puts(T__function, shl_stdout);
+				shf_puts(T_function, shl_stdout);
 			}
 			break;
 		case CSHELL:
 			if (vflag)
 				shprintf("%s %s %s",
 				    (tp->flag & SPEC_BI) ? " special" : null,
-				    "shell", T_builtin);
+				    "shell", Tbuiltin);
 			break;
 		case CTALIAS:
 		case CEXEC:
@@ -569,7 +579,7 @@ c_whence(const char **wp)
 						shprintf("a tracked %s%s for ",
 						    (tp->flag & EXPORT) ?
 						    "exported " : null,
-						    T_alias);
+						    Talias);
 				}
 				shf_puts(tp->val.s, shl_stdout);
 			} else {
@@ -599,13 +609,13 @@ c_command(const char **wp)
 	return (c_whence(wp));
 }
 
-/* typeset, export, and readonly */
+/* typeset, global, export, and readonly */
 int
 c_typeset(const char **wp)
 {
 	struct block *l;
 	struct tbl *vp, **p;
-	Tflag fset = 0, fclr = 0, flag;
+	uint32_t fset = 0, fclr = 0, flag;
 	int thing = 0, field, base, optc;
 	const char *opts;
 	const char *fieldstr, *basestr;
@@ -691,7 +701,8 @@ c_typeset(const char **wp)
 			flag = LCASEV;
 			break;
 		case 'n':
-			set_refflag = (builtin_opt.info & GI_PLUS) ? 2 : 1;
+			set_refflag = (builtin_opt.info & GI_PLUS) ?
+			    SRF_DISABLE : SRF_ENABLE;
 			break;
 		/* export, readonly: POSIX -p flag */
 		case 'p':
@@ -742,9 +753,10 @@ c_typeset(const char **wp)
 		builtin_opt.optind++;
 	}
 
-	if (func && (((fset|fclr) & ~(TRACE|UCASEV_AL|EXPORT)) || set_refflag)) {
+	if (func && (((fset|fclr) & ~(TRACE|UCASEV_AL|EXPORT)) ||
+	    set_refflag != SRF_NOP)) {
 		bi_errorf("only -t, -u and -x options may be used with -f");
-		set_refflag = 0;
+		set_refflag = SRF_NOP;
 		return (1);
 	}
 	if (wp[builtin_opt.optind]) {
@@ -769,7 +781,7 @@ c_typeset(const char **wp)
 		 * are also set in this command
 		 */
 		if ((fset & (LJUST | RJUST | ZEROFIL | UCASEV_AL | LCASEV |
-		    INTEGER | INT_U | INT_L)) || set_refflag)
+		    INTEGER | INT_U | INT_L)) || set_refflag != SRF_NOP)
 			fclr |= ~fset & (LJUST | RJUST | ZEROFIL | UCASEV_AL |
 			    LCASEV | INTEGER | INT_U | INT_L);
 	}
@@ -801,11 +813,11 @@ c_typeset(const char **wp)
 				}
 			} else if (!typeset(wp[i], fset, fclr, field, base)) {
 				bi_errorf("%s: %s", wp[i], "not identifier");
-				set_refflag = 0;
+				set_refflag = SRF_NOP;
 				return (1);
 			}
 		}
-		set_refflag = 0;
+		set_refflag = SRF_NOP;
 		return (rv);
 	}
 
@@ -965,7 +977,7 @@ c_alias(const char **wp)
 	struct table *t = &aliases;
 	int rv = 0, prefix = 0;
 	bool rflag = false, tflag, Uflag = false, pflag = false;
-	Tflag xflag = 0;
+	uint32_t xflag = 0;
 	int optc;
 
 	builtin_opt.flags |= GF_PLUSOPT;
@@ -1019,12 +1031,12 @@ c_alias(const char **wp)
 	/* "hash -r" means reset all the tracked aliases.. */
 	if (rflag) {
 		static const char *args[] = {
-			T_unalias, "-ta", NULL
+			Tunalias, "-ta", NULL
 		};
 
 		if (!tflag || *wp) {
 			shprintf("%s: -r flag can only be used with -t"
-			    " and without arguments\n", T_alias);
+			    " and without arguments\n", Talias);
 			return (1);
 		}
 		ksh_getopt_reset(&builtin_opt, GF_ERROR);
@@ -1037,7 +1049,7 @@ c_alias(const char **wp)
 		for (p = ktsort(t); (ap = *p++) != NULL; )
 			if ((ap->flag & (ISSET|xflag)) == (ISSET|xflag)) {
 				if (pflag)
-					shprintf("%s ", T_alias);
+					shprintf("%s ", Talias);
 				shf_puts(ap->name, shl_stdout);
 				if (prefix != '+') {
 					shf_putc('=', shl_stdout);
@@ -1062,7 +1074,7 @@ c_alias(const char **wp)
 			ap = ktsearch(t, alias, h);
 			if (ap != NULL && (ap->flag&ISSET)) {
 				if (pflag)
-					shprintf("%s ", T_alias);
+					shprintf("%s ", Talias);
 				shf_puts(ap->name, shl_stdout);
 				if (prefix != '+') {
 					shf_putc('=', shl_stdout);
@@ -1070,7 +1082,7 @@ c_alias(const char **wp)
 				}
 				shf_putc('\n', shl_stdout);
 			} else {
-				shprintf("%s %s %s\n", alias, T_alias,
+				shprintf("%s %s %s\n", alias, Talias,
 				    "not found");
 				rv = 1;
 			}
@@ -1085,7 +1097,9 @@ c_alias(const char **wp)
 				afree(ap->val.s, APERM);
 			}
 			/* ignore values for -t (AT&T ksh does this) */
-			newval = tflag ? search(alias, path, X_OK, NULL) : val;
+			newval = tflag ?
+			    search_path(alias, path, X_OK, NULL) :
+			    val;
 			if (newval) {
 				strdupx(ap->val.s, newval, APERM);
 				ap->flag |= ALLOC|ISSET;
@@ -1245,7 +1259,7 @@ c_fgbg(const char **wp)
 
 /* format a single kill item */
 static char *
-kill_fmt_entry(char *buf, int buflen, int i, const void *arg)
+kill_fmt_entry(char *buf, size_t buflen, int i, const void *arg)
 {
 	const struct kill_info *ki = (const struct kill_info *)arg;
 
@@ -1316,7 +1330,8 @@ c_kill(const char **wp)
 					shprintf("%d\n", n);
 			}
 		} else {
-			int w, j, mess_cols, mess_octs;
+			ssize_t w, mess_cols, mess_octs;
+			int j;
 			struct kill_info ki;
 
 			for (j = NSIG, ki.num_width = 1; j >= 10; j /= 10)
@@ -1521,17 +1536,6 @@ c_bind(const char **wp)
 	return (rv);
 }
 
-/**
- * :, false and true
- * ulimit if MKSH_NO_LIMITS
- * domainname on MirBSD (hysterical raisins, just don't ask)
- */
-int
-c_label(const char **wp)
-{
-	return (wp[0][0] == 'f' ? 1 : 0);
-}
-
 int
 c_shift(const char **wp)
 {
@@ -1709,9 +1713,8 @@ c_dot(const char **wp)
 		bi_errorf("missing argument");
 		return (1);
 	}
-	if ((file = search(cp, path, R_OK, &errcode)) == NULL) {
-		bi_errorf("%s: %s", cp,
-		    errcode ? strerror(errcode) : "not found");
+	if ((file = search_path(cp, path, R_OK, &errcode)) == NULL) {
+		bi_errorf("%s: %s", cp, strerror(errcode));
 		return (1);
 	}
 
@@ -1819,7 +1822,7 @@ c_read(const char **wp)
 #if HAVE_SELECT
 	case 't':
 		if (parse_usec(builtin_opt.optarg, &tv)) {
-			bi_errorf("%s: %s '%s'", T_synerr, strerror(errno),
+			bi_errorf("%s: %s '%s'", Tsynerr, strerror(errno),
 			    builtin_opt.optarg);
 			return (2);
 		}
@@ -1901,7 +1904,7 @@ c_read(const char **wp)
 			rv = 1;
 			goto c_read_out;
 		default:
-			bi_errorf("%s: %s", T_select, strerror(errno));
+			bi_errorf("%s: %s", Tselect, strerror(errno));
 			rv = 2;
 			goto c_read_out;
 		}
@@ -2359,7 +2362,7 @@ c_set(const char **wp)
 	const char **owp;
 
 	if (wp[1] == NULL) {
-		static const char *args[] = { T_set, "-", NULL };
+		static const char *args[] = { Tset, "-", NULL };
 		return (c_typeset(args));
 	}
 
@@ -2860,15 +2863,17 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 
 	/* -r */
 	case TO_FILRD:
-		return (test_eaccess(opnd1, R_OK) == 0);
+		/* LINTED use of access */
+		return (access(opnd1, R_OK) == 0);
 
 	/* -w */
 	case TO_FILWR:
-		return (test_eaccess(opnd1, W_OK) == 0);
+		/* LINTED use of access */
+		return (access(opnd1, W_OK) == 0);
 
 	/* -x */
 	case TO_FILEX:
-		return (test_eaccess(opnd1, X_OK) == 0);
+		return (ksh_access(opnd1, X_OK) == 0);
 
 	/* -a */
 	case TO_FILAXST:
@@ -2963,11 +2968,11 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 
 	/* -O */
 	case TO_FILUID:
-		return (stat(opnd1, &b1) == 0 && b1.st_uid == ksheuid);
+		return (stat(opnd1, &b1) == 0 && (uid_t)b1.st_uid == ksheuid);
 
 	/* -G */
 	case TO_FILGID:
-		return (stat(opnd1, &b1) == 0 && b1.st_gid == getegid());
+		return (stat(opnd1, &b1) == 0 && (gid_t)b1.st_gid == getegid());
 
 	/*
 	 * Binary Operators
@@ -3063,26 +3068,6 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 	}
 	(*te->error)(te, 0, "internal error: unknown op");
 	return (1);
-}
-
-/* On most/all unixen, access() says everything is executable for root... */
-static int
-test_eaccess(const char *pathl, int mode)
-{
-	int rv;
-
-	if ((rv = access(pathl, mode)) == 0 && ksheuid == 0 && (mode & X_OK)) {
-		struct stat statb;
-
-		if (stat(pathl, &statb) < 0)
-			rv = -1;
-		else if (S_ISDIR(statb.st_mode))
-			rv = 0;
-		else
-			rv = (statb.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) ?
-			    0 : -1;
-	}
-	return (rv);
 }
 
 int
@@ -3514,7 +3499,7 @@ c_rename(const char **wp)
 	if (wp[0] == NULL	/* first argument */ ||
 	    wp[1] == NULL	/* second argument */ ||
 	    wp[2] != NULL	/* no further args please */)
-		bi_errorf(T_synerr);
+		bi_errorf(Tsynerr);
 	else if ((rv = rename(wp[0], wp[1])) != 0) {
 		rv = errno;
 		bi_errorf("%s: %s", "failed", strerror(rv));
@@ -3537,7 +3522,7 @@ c_realpath(const char **wp)
 
 	/* check for exactly one argument */
 	if (wp[0] == NULL || wp[1] != NULL)
-		bi_errorf(T_synerr);
+		bi_errorf(Tsynerr);
 	else if ((buf = do_realpath(wp[0])) == NULL) {
 		rv = errno;
 		bi_errorf("%s: %s", wp[0], strerror(rv));
@@ -3562,7 +3547,7 @@ c_cat(const char **wp)
 #define MKSH_CAT_BUFSIZ 4096
 
 	if ((buf = malloc_osfunc(MKSH_CAT_BUFSIZ)) == NULL) {
-		bi_errorf(T_oomem, (unsigned long)MKSH_CAT_BUFSIZ);
+		bi_errorf(Toomem, (unsigned long)MKSH_CAT_BUFSIZ);
 		return (1);
 	}
 
@@ -3573,7 +3558,7 @@ c_cat(const char **wp)
 			/* we already operate unbuffered */
 			break;
 		default:
-			bi_errorf(T_synerr);
+			bi_errorf(Tsynerr);
 			return (1);
 		}
 	}
@@ -3595,9 +3580,12 @@ c_cat(const char **wp)
 		while (/* CONSTCOND */ 1) {
 			n = blocking_read(fd, (cp = buf), MKSH_CAT_BUFSIZ);
 			if (n == -1) {
-				if (errno == EINTR)
+				if (errno == EINTR) {
+					/* give the user a chance to ^C out */
+					intrcheck();
 					/* interrupted, try again */
 					continue;
+				}
 				/* an error occured during reading */
 				rv = errno;
 				bi_errorf("%s: %s", fn, strerror(rv));
@@ -3648,9 +3636,9 @@ c_sleep(const char **wp)
 		++wp;
 
 	if (!wp[0] || wp[1])
-		bi_errorf(T_synerr);
+		bi_errorf(Tsynerr);
 	else if (parse_usec(wp[0], &tv))
-		bi_errorf("%s: %s '%s'", T_synerr, strerror(errno), wp[0]);
+		bi_errorf("%s: %s '%s'", Tsynerr, strerror(errno), wp[0]);
 	else {
 #ifndef MKSH_NOPROSPECTOFWORK
 		sigset_t omask;
@@ -3658,14 +3646,14 @@ c_sleep(const char **wp)
 		/* block SIGCHLD from interrupting us, though */
 		sigprocmask(SIG_BLOCK, &sm_sigchld, &omask);
 #endif
-		if (select(0, NULL, NULL, NULL, &tv) == 0 || errno == EINTR)
+		if (select(1, NULL, NULL, NULL, &tv) == 0 || errno == EINTR)
 			/*
 			 * strictly speaking only for SIGALRM, but the
 			 * execution may be interrupted by other signals
 			 */
 			rv = 0;
 		else
-			bi_errorf("%s: %s", T_select, strerror(errno));
+			bi_errorf("%s: %s", Tselect, strerror(errno));
 #ifndef MKSH_NOPROSPECTOFWORK
 		sigprocmask(SIG_SETMASK, &omask, NULL);
 #endif

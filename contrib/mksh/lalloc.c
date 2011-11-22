@@ -20,7 +20,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.17 2011/03/13 10:50:44 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.19 2011/09/07 15:24:16 tg Exp $");
 
 /* build with CPPFLAGS+= -DUSE_REALLOC_MALLOC=0 on ancient systems */
 #if defined(USE_REALLOC_MALLOC) && (USE_REALLOC_MALLOC == 0)
@@ -62,13 +62,12 @@ findptr(ALLOC_ITEM **lpp, char *ptr, Area *ap)
  fail:
 #endif
 #ifdef DEBUG
-			internal_warningf("rogue pointer %lX in ap %lX",
-			    (long)(ptrdiff_t)ptr, (long)(ptrdiff_t)ap);
+			internal_warningf("rogue pointer %zX in ap %zX",
+			    (size_t)ptr, (size_t)ap);
 			/* try to get a coredump */
 			abort();
 #else
-			internal_errorf("rogue pointer %lX",
-			    (long)(ptrdiff_t)ptr);
+			internal_errorf("rogue pointer %zX", (size_t)ptr);
 #endif
 		}
 	return (ap);
@@ -78,8 +77,7 @@ void *
 aresize2(void *ptr, size_t fac1, size_t fac2, Area *ap)
 {
 	if (notoktomul(fac1, fac2))
-		internal_errorf(T_intovfl, (unsigned long)fac1, '*',
-		    (unsigned long)fac2);
+		internal_errorf(Tintovfl, fac1, '*', fac2);
 	return (aresize(ptr, fac1 * fac2, ap));
 }
 
@@ -102,7 +100,7 @@ aresize(void *ptr, size_t numb, Area *ap)
 	    || ALLOC_ISUNALIGNED(lp)
 #endif
 	    )
-		internal_errorf(T_oomem, (unsigned long)numb);
+		internal_errorf(Toomem, (unsigned long)numb);
 	/* this only works because Area is an ALLOC_ITEM */
 	lp->next = ap->next;
 	ap->next = lp;

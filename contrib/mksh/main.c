@@ -1,4 +1,4 @@
-/*	$OpenBSD: main.c,v 1.46 2010/05/19 17:36:08 jasper Exp $	*/
+/*	$OpenBSD: main.c,v 1.47 2011/09/07 11:33:25 otto Exp $	*/
 /*	$OpenBSD: tty.c,v 1.9 2006/03/14 22:08:01 deraadt Exp $	*/
 /*	$OpenBSD: io.c,v 1.22 2006/03/17 16:30:13 millert Exp $	*/
 /*	$OpenBSD: table.c,v 1.13 2009/01/17 22:06:44 millert Exp $	*/
@@ -23,7 +23,7 @@
  * of said person's immediate fault when using the work as intended.
  */
 
-#define	EXTERN
+#define EXTERN
 #include "sh.h"
 
 #if HAVE_LANGINFO_CODESET
@@ -33,7 +33,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.193 2011/06/05 19:58:18 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.195.2.4 2011/11/08 22:07:21 tg Exp $");
 
 extern char **environ;
 
@@ -59,14 +59,12 @@ static const char initsubs[] =
     "${PS2=> } ${PS3=#? } ${PS4=+ } ${SECONDS=0} ${TMOUT=0}";
 
 static const char *initcoms[] = {
-	T_typeset, "-r", initvsn, NULL,
-	T_typeset, "-x", "HOME", "PATH", "RANDOM", "SHELL", NULL,
-	T_typeset, "-i10", "COLUMNS", "KSHEGID", "KSHGID", "KSHUID", "LINES",
-	    "OPTIND", "PGRP", "PPID", "RANDOM", "SECONDS", "TMOUT", "USER_ID",
-	    NULL,
-	T_alias,
+	Ttypeset, "-r", initvsn, NULL,
+	Ttypeset, "-x", "HOME", "PATH", "RANDOM", "SHELL", NULL,
+	Ttypeset, "-i10", "SECONDS", "TMOUT", NULL,
+	Talias,
 	"integer=typeset -i",
-	T_local_typeset,
+	Tlocal_typeset,
 	/* not "alias -t --": hash -r needs to work */
 	"hash=alias -t",
 	"type=whence -v",
@@ -81,15 +79,19 @@ static const char *initcoms[] = {
 	"history=fc -l",
 	"nameref=typeset -n",
 	"nohup=nohup ",
-	T_r_fc_e_,
+	Tr_fc_e_dash,
 	"source=PATH=$PATH:. command .",
 	"login=exec login",
 	NULL,
 	 /* this is what AT&T ksh seems to track, with the addition of emacs */
-	T_alias, "-tU",
+	Talias, "-tU",
 	"cat", "cc", "chmod", "cp", "date", "ed", "emacs", "grep", "ls",
 	"make", "mv", "pr", "rm", "sed", "sh", "vi", "who", NULL,
 	NULL
+};
+
+static const char *restr_com[] = {
+	Ttypeset, "-r", "PATH", "ENV", "SHELL", NULL
 };
 
 static int initio_done;
@@ -103,7 +105,7 @@ rndsetup(void)
 {
 	register uint32_t h;
 	struct {
-		ALLOC_ITEM __alloc_i;
+		ALLOC_ITEM alloc_INT;
 		void *dataptr, *stkptr, *mallocptr;
 		sigjmp_buf jbuf;
 		struct timeval tv;
@@ -328,9 +330,9 @@ main(int argc, const char *argv[])
 		while (*wp != NULL)
 			wp++;
 	}
-	setint(global("COLUMNS"), 0);
-	setint(global("LINES"), 0);
-	setint(global("OPTIND"), 1);
+	setint_n(global("COLUMNS"), 0, 10);
+	setint_n(global("LINES"), 0, 10);
+	setint_n(global("OPTIND"), 1, 10);
 
 	kshuid = getuid();
 	kshgid = getgid();
@@ -343,21 +345,21 @@ main(int argc, const char *argv[])
 	    (!ksheuid && !strchr(str_val(vp), '#')))
 		/* setstr can't fail here */
 		setstr(vp, safe_prompt, KSH_RETURN_ERROR);
-	setint((vp = global("PGRP")), (mksh_uari_t)kshpgrp);
+	setint_n((vp = global("PGRP")), (mksh_uari_t)kshpgrp, 10);
 	vp->flag |= INT_U;
-	setint((vp = global("PPID")), (mksh_uari_t)kshppid);
+	setint_n((vp = global("PPID")), (mksh_uari_t)kshppid, 10);
 	vp->flag |= INT_U;
-	setint((vp = global("USER_ID")), (mksh_uari_t)ksheuid);
+	setint_n((vp = global("USER_ID")), (mksh_uari_t)ksheuid, 10);
 	vp->flag |= INT_U;
-	setint((vp = global("KSHUID")), (mksh_uari_t)kshuid);
+	setint_n((vp = global("KSHUID")), (mksh_uari_t)kshuid, 10);
 	vp->flag |= INT_U;
-	setint((vp = global("KSHEGID")), (mksh_uari_t)kshegid);
+	setint_n((vp = global("KSHEGID")), (mksh_uari_t)kshegid, 10);
 	vp->flag |= INT_U;
-	setint((vp = global("KSHGID")), (mksh_uari_t)kshgid);
+	setint_n((vp = global("KSHGID")), (mksh_uari_t)kshgid, 10);
 	vp->flag |= INT_U;
-	setint((vp = global("RANDOM")), rndsetup());
+	setint_n((vp = global("RANDOM")), rndsetup(), 10);
 	vp->flag |= INT_U;
-	setint((vp_pipest = global("PIPESTATUS")), 0);
+	setint_n((vp_pipest = global("PIPESTATUS")), 0, 10);
 
 	/* Set this before parsing arguments */
 	Flag(FPRIVILEGED) = kshuid != ksheuid || kshgid != kshegid;
@@ -374,6 +376,44 @@ main(int argc, const char *argv[])
 		if (argi < 0)
 			return (1);
 	}
+
+#ifdef DEBUG
+	/* test wraparound of arithmetic types */
+	{
+		volatile long xl;
+		volatile unsigned long xul;
+		volatile int xi;
+		volatile unsigned int xui;
+		volatile mksh_ari_t xa;
+		volatile mksh_uari_t xua, xua2;
+		volatile uint8_t xc;
+
+		xa = 2147483647;
+		xua = 2147483647;
+		++xa;
+		++xua;
+		xua2 = xa;
+		xl = xa;
+		xul = xua;
+		xa = 0;
+		xua = 0;
+		--xa;
+		--xua;
+		xi = xa;
+		xui = xua;
+		xa = -1;
+		xua = xa;
+		++xa;
+		++xua;
+		xc = 0;
+		--xc;
+		if ((xua2 != 2147483648UL) ||
+		    (xl != -2147483648L) || (xul != 2147483648UL) ||
+		    (xi != -1) || (xui != 4294967295U) ||
+		    (xa != 0) || (xua != 0) || (xc != 255))
+			errorf("integer wraparound test failed");
+	}
+#endif
 
 	/* process this later only, default to off (hysterical raisins) */
 	utf_flag = UTFMODE;
@@ -522,13 +562,13 @@ main(int argc, const char *argv[])
 		warningf(false, "can't determine current directory");
 
 	if (Flag(FLOGIN)) {
-		include(KSH_SYSTEM_PROFILE, 0, NULL, 1);
+		include(MKSH_SYSTEM_PROFILE, 0, NULL, 1);
 		if (!Flag(FPRIVILEGED))
 			include(substitute("$HOME/.profile", 0), 0,
 			    NULL, 1);
 	}
 	if (Flag(FPRIVILEGED))
-		include("/etc/suid_profile", 0, NULL, 1);
+		include(MKSH_SUID_PROFILE, 0, NULL, 1);
 	else if (Flag(FTALKING)) {
 		char *env_file;
 
@@ -540,11 +580,6 @@ main(int argc, const char *argv[])
 	}
 
 	if (restricted) {
-		static const char *restr_com[] = {
-			T_typeset, "-r", "PATH",
-			"ENV", "SHELL",
-			NULL
-		};
 		shcomexec(restr_com);
 		/* After typeset command... */
 		Flag(FRESTRICTED) = 1;
@@ -564,6 +599,7 @@ main(int argc, const char *argv[])
 
 	/* doesn't return */
 	shell(s, true);
+	/* NOTREACHED */
 	return (0);
 }
 
@@ -763,14 +799,14 @@ unwind(int i)
 {
 	/* ordering for EXIT vs ERR is a bit odd (this is what AT&T ksh does) */
 	if (i == LEXIT || (Flag(FERREXIT) && (i == LERROR || i == LINTR) &&
-	    sigtraps[SIGEXIT_].trap)) {
+	    sigtraps[ksh_SIGEXIT].trap)) {
 		++trap_nested;
-		runtrap(&sigtraps[SIGEXIT_], trap_nested == 1);
+		runtrap(&sigtraps[ksh_SIGEXIT], trap_nested == 1);
 		--trap_nested;
 		i = LLEAVE;
 	} else if (Flag(FERREXIT) && (i == LERROR || i == LINTR)) {
 		++trap_nested;
-		runtrap(&sigtraps[SIGERR_], trap_nested == 1);
+		runtrap(&sigtraps[ksh_SIGERR], trap_nested == 1);
 		--trap_nested;
 		i = LLEAVE;
 	}
@@ -1398,7 +1434,7 @@ struct temp *
 maketemp(Area *ap, Temp_type type, struct temp **tlist)
 {
 	struct temp *tp;
-	int len;
+	size_t len;
 	int fd;
 	char *pathname;
 	const char *dir;
@@ -1460,7 +1496,7 @@ tgrow(struct table *tp)
 		internal_errorf("hash table size limit reached");
 
 	/* calculate old size, new shift and new size */
-	osize = 1 << (tp->tshift++);
+	osize = (size_t)1 << (tp->tshift++);
 	i = osize << 1;
 
 	ntblp = alloc2(i, sizeof(struct tbl *), tp->areap);
@@ -1514,7 +1550,7 @@ ktscan(struct table *tp, const char *name, uint32_t h, struct tbl ***ppp)
 	size_t j, perturb, mask;
 	struct tbl **pp, *p;
 
-	mask = (1 << (tp->tshift)) - 1;
+	mask = ((size_t)1 << (tp->tshift)) - 1;
 	/* search for hash table slot matching name */
 	j = (perturb = h) & mask;
 	goto find_first_slot;
@@ -1570,7 +1606,7 @@ ktenter(struct table *tp, const char *n, uint32_t h)
 void
 ktwalk(struct tstate *ts, struct table *tp)
 {
-	ts->left = 1 << (tp->tshift);
+	ts->left = (size_t)1 << (tp->tshift);
 	ts->next = tp->tbls;
 }
 
@@ -1604,7 +1640,7 @@ ktsort(struct table *tp)
 	 * since the table is never entirely full, no need to reserve
 	 * additional space for the trailing NULL appended below
 	 */
-	i = 1 << (tp->tshift);
+	i = (size_t)1 << (tp->tshift);
 	p = alloc2(i, sizeof(struct tbl *), ATEMP);
 	sp = tp->tbls;		/* source */
 	dp = p;			/* dest */

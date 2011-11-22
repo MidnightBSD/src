@@ -1,5 +1,5 @@
-.\" $MirOS: src/bin/mksh/mksh.1,v 1.263 2011/06/12 15:34:19 tg Exp $
-.\" $OpenBSD: ksh.1,v 1.140 2011/04/23 10:14:59 sobrado Exp $
+.\" $MirOS: src/bin/mksh/mksh.1,v 1.269.2.6 2011/11/19 22:21:57 tg Exp $
+.\" $OpenBSD: ksh.1,v 1.141 2011/09/03 22:59:08 jmc Exp $
 .\"-
 .\" Copyright © 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
 .\"		2010, 2011
@@ -72,7 +72,7 @@
 .\" with -mandoc, it might implement .Mx itself, but we want to
 .\" use our own definition. And .Dd must come *first*, always.
 .\"
-.Dd $Mdocdate: June 12 2011 $
+.Dd $Mdocdate: November 19 2011 $
 .\"
 .\" Check which macro package we use
 .\"
@@ -176,7 +176,7 @@ Most builtins can be called directly, for example if a link points from its
 name to the shell; not all make sense, have been tested or work at all though.
 .Pp
 The options are as follows:
-.Bl -tag -width Ds
+.Bl -tag -width XcXstring
 .It Fl c Ar string
 .Nm
 will execute the command(s) contained in
@@ -201,9 +201,9 @@ and
 parameters).
 It also processes the
 .Ev ENV
-parameter or
-.Pa $HOME/.mkshrc
-(see below).
+parameter or the
+.Pa mkshrc
+file (see below).
 For non-interactive shells, the
 .Ic trackall
 option is on by default (see the
@@ -215,12 +215,9 @@ If the basename the shell is called with (i.e. argv[0])
 starts with
 .Ql \-
 or if this option is used,
-the shell is assumed to be a login shell and the shell reads and executes
-the contents of
-.Pa /etc/profile
-and
-.Pa $HOME/.profile
-if they exist and are readable.
+the shell is assumed to be a login shell; see
+.Sx Startup files
+below.
 .It Fl p
 Privileged shell.
 A shell is
@@ -231,18 +228,10 @@ effective user ID or group ID (see
 .Xr getuid 2
 and
 .Xr getgid 2 ) .
-A privileged shell does not process
-.Pa $HOME/.profile
-nor the
-.Ev ENV
-parameter or
-.Pa $HOME/.mkshrc
-(see below).
-Instead, the file
-.Pa /etc/suid_profile
-is processed.
 Clearing the privileged option causes the shell to set
 its effective user ID (group ID) to its real user ID (group ID).
+For further implications, see
+.Sx Startup files .
 .It Fl r
 Restricted shell.
 A shell is
@@ -321,31 +310,25 @@ option is used and there is a non-option argument, it is used as the name;
 if commands are being read from a file, the file is used as the name;
 otherwise, the basename the shell was called with (i.e. argv[0]) is used.
 .Pp
-If the
-.Ev ENV
-parameter is set when an interactive shell starts (or, in the case of login
-shells, after any profiles are processed), its value is subjected to
-parameter, command, arithmetic, and tilde
-.Pq Sq \*(TI
-substitution and the resulting file
-(if any) is read and executed.
-If the
-.Ev ENV
-variable is unset or empty, the file
-.Pa $HOME/.mkshrc
-is read and processed like above instead, leaving
-.Ev ENV
-unchanged.
-This processing does not occur if
-.Ev ENV
-is set to a non-existing filename.
-.Pp
 The exit status of the shell is 127 if the command file specified on the
 command line could not be opened, or non-zero if a fatal syntax error
 occurred during the execution of a script.
 In the absence of fatal errors,
 the exit status is that of the last command executed, or zero, if no
 command is executed.
+.Ss Startup files
+For the actual location of these files, see
+.Sx FILES .
+A login shell processes the system profile first.
+A privileged shell then processes the suid profile.
+A non-privileged login shell processes the user profile next.
+A non-privileged interactive shell checks the value of the
+.Ev ENV
+parameter after subjecting it to parameter, command, arithmetic and tilde
+.Pq Sq \*(TI
+substitution; if unset or empty, the user mkshrc profile is processed;
+otherwise, if a file whose name is the substitution result exists,
+it is processed; non-existence is silently ignored.
 .Ss Command syntax
 The shell begins parsing its input by removing any backslash-newline
 combinations, then breaking it into
@@ -627,7 +610,7 @@ $ { { echo foo; echo bar; } }
 This is not valid:
 .Pp
 .Dl $ { echo foo; echo bar }
-.Bl -tag -width Ds
+.Bl -tag -width 4n
 .It Pq Ar list
 Execute
 .Ar list
@@ -682,13 +665,15 @@ and
 e.g.\&
 .Ic case $foo { *) echo bar;; } .
 .Pp
-The list terminators are
-.Ql ;;
-(terminate after the list),
-.Ql ;&\&
-(fall through into the next list) and
-.Ql ;\*(Ba\&
-(evaluate the remaining pattern-list tuples).
+The list terminators are:
+.Bl -tag -width 4n
+.It Ql ;;
+Terminate after the list.
+.It Ql ;&\&
+Fall through into the next list.
+.It Ql ;\*(Ba\&
+Evaluate the remaining pattern-list tuples.
+.El
 .Pp
 The exit status of a
 .Ic case
@@ -870,10 +855,10 @@ keyword is ignored.
 .Op Ar pipeline
 .Xc
 The
-.Ic time
-reserved word is described in the
 .Sx Command execution
-section.
+section describes the
+.Ic time
+reserved word.
 .It \&(( Ar expression No ))
 The arithmetic expression
 .Ar expression
@@ -890,7 +875,7 @@ Similar to the
 and
 .Ic \&[ ... \&]
 commands (described later), with the following exceptions:
-.Bl -bullet -offset indent
+.Bl -bullet
 .It
 Field splitting and file name generation are not performed on arguments.
 .It
@@ -938,10 +923,10 @@ This even works indirectly:
 .Bd -literal -offset indent
 $ bar=foobar; baz=\*(aqf*r\*(aq
 $ [[ $bar = $baz ]]; echo $?
-$ [[ $bar = "$baz" ]]; echo $?
+$ [[ $bar = \&"$baz" ]]; echo $?
 .Ed
 .Pp
-Perhaps surprisingly, the first comparision succeeds,
+Perhaps surprisingly, the first comparison succeeds,
 whereas the second doesn't.
 .El
 .El
@@ -1352,6 +1337,7 @@ The construct
 is also recognised; the old and new values are immediately concatenated.
 The fourth way of setting a parameter is with the
 .Ic export ,
+.Ic global ,
 .Ic readonly ,
 and
 .Ic typeset
@@ -1632,7 +1618,7 @@ Cannot be applied to a vector.
 The internal hash of the expansion of
 .Ar name .
 At the moment, this is OAAT1 (Bob Jenkins' one-at-a-time hash with
-an initialisation value of 0x00000100), but this is not set.
+an initialisation value of 0x00000100), this will change for R41.
 This is the hash the shell uses internally for its associative arrays.
 .El
 .Pp
@@ -1650,7 +1636,7 @@ is set.
 .Pp
 The following special parameters are implicitly set by the shell and cannot be
 set directly using assignments:
-.Bl -tag -width "1 ... 9"
+.Bl -tag -width "1 .. 9"
 .It Ev \&!
 Process ID of the last background process started.
 If no background processes have been started, the parameter is not set.
@@ -1688,7 +1674,7 @@ is also set to the name of the current script or
 the name of the current function, if it was defined with the
 .Ic function
 keyword (i.e. a Korn shell style function).
-.It Ev 1 No ... Ev 9
+.It Ev 1 No .. Ev 9
 The first nine positional parameters that were supplied to the shell, function,
 or script sourced using the
 .Sq \&.
@@ -1696,7 +1682,8 @@ built-in.
 Further positional parameters may be accessed using
 .Pf ${ Ar number Ns } .
 .It Ev *
-All positional parameters (except parameter 0) i.e. $1, $2, $3, ...
+All positional parameters (except 0), i.e. $1, $2, $3, ...
+.br
 If used
 outside of double quotes, parameters are separate words (which are subjected
 to word splitting); if used within double quotes, parameters are separated
@@ -1913,13 +1900,13 @@ The
 distribution comes with a sample
 .Pa dot.mkshrc
 containing a sophisticated example, but you might like the following one
-(note that ${HOSTNAME:=$(hostname \-s)} and the
+(note that ${HOSTNAME:=$(hostname)} and the
 root-vs-user distinguishing clause are (in this example) executed at
 .Ev PS1
 assignment time, while the $USER and $PWD are escaped
 and thus will be evaluated each time a prompt is displayed):
 .Bd -literal
-PS1=\*(aq${USER:=$(id \-un)}\*(aq"@${HOSTNAME:=$(hostname \-s)}:\e$PWD $(
+PS1=\*(aq${USER:=$(id \-un)}\*(aq"@${HOSTNAME:=$(hostname)}:\e$PWD $(
 	if (( USER_ID )); then print \e$; else print \e#; fi) "
 .Ed
 .Pp
@@ -2045,6 +2032,7 @@ In parameter assignments
 in the arguments of
 .Ic alias ,
 .Ic export ,
+.Ic global ,
 .Ic readonly ,
 and
 .Ic typeset ) ,
@@ -2848,7 +2836,7 @@ Additional
 .Nm
 special commands
 .Pp
-.Ic builtin , times , typeset
+.Ic builtin , global , times , typeset
 .Pp
 Very special commands
 .Pq non-POSIX
@@ -3064,7 +3052,9 @@ If a
 is a single dash
 .Pq Sq -
 or absent, read from standard input.
-If any options are given, an external
+Unless compiled with
+.Dv MKSH_NO_EXTERNAL_CAT ,
+if any options are given, an external
 .Xr cat 1
 utility is invoked instead if called from the shell.
 For direct builtin calls, the
@@ -3231,6 +3221,13 @@ defaults to 1.
 .Op Fl Een
 .Op Ar arg ...
 .Xc
+.Em Warning:
+this utility is not portable; use the Korn shell builtin
+.Ic print
+or the much slower POSIX utility
+.Ic printf
+instead.
+.Pp
 Prints its arguments (separated by spaces) followed by a newline, to the
 standard output.
 The newline is suppressed if any of the arguments contain the
@@ -3297,12 +3294,13 @@ Sets the export attribute of the named parameters.
 Exported parameters are passed in the environment to executed commands.
 If values are specified, the named parameters are also assigned.
 .Pp
-If no parameters are specified, the names of all parameters with the export
-attribute are printed one per line, unless the
-.Fl p
-option is used, in which case
+If no parameters are specified, all parameters with the export attribute
+set are printed one per line; either their names, or, if a
+.Ql \-
+with no option letter is specified, name=value pairs, or, with
+.Fl p ,
 .Ic export
-commands defining all exported parameters, including their values, are printed.
+commands defining all exported parameters, including their values.
 .Pp
 .It Ic false
 A command that exits with a non-zero status.
@@ -3365,7 +3363,7 @@ and
 is identical: re-execute the selected command without invoking an editor.
 This command is usually accessed with the predefined
 .Ic alias r=\*(aqfc \-e \-\*(aq
-or by prefixing an interactive mode input line with
+or (deprecated; will be removed RSN) by prefixing an interactive mode input line with
 .Sq \&!
 .Pq wbx extension .
 .Pp
@@ -3623,7 +3621,7 @@ option suppresses the trailing newline.
 .It Ic printf Ar format Op Ar arguments ...
 Formatted output.
 Approximately the same as the utility
-.Xr printf 1 ,
+.Ic printf ,
 except that it uses the same
 .Sx Backslash expansion
 and I/O code as the rest of
@@ -3888,7 +3886,7 @@ syntax, where
 is the option's single letter name (not all options have a single letter name).
 The following table lists both option letters (if they exist) and long names
 along with a description of what the option does:
-.Bl -tag -width 15n
+.Bl -tag -width 3n
 .It Fl A Ar name
 Sets the elements of the array parameter
 .Ar name
@@ -3928,17 +3926,17 @@ or
 which can also be written
 .Ic foo=([0]=a b c)
 because indices are incremented automatically.
-.It Fl a \*(Ba Ic allexport
+.It Fl a \*(Ba Fl o Ic allexport
 All new parameters are created with the export attribute.
-.It Fl b \*(Ba Ic notify
+.It Fl b \*(Ba Fl o Ic notify
 Print job notification messages asynchronously, instead of just before the
 prompt.
 Only used if job control is enabled
 .Pq Fl m .
-.It Fl C \*(Ba Ic noclobber
+.It Fl C \*(Ba Fl o Ic noclobber
 Prevent \*(Gt redirection from overwriting existing files.
 Instead, \*(Gt\*(Ba must be used to force an overwrite.
-.It Fl e \*(Ba Ic errexit
+.It Fl e \*(Ba Fl o Ic errexit
 Exit (after executing the
 .Dv ERR
 trap) as soon as an error occurs or a command fails (i.e. exits with a
@@ -3953,40 +3951,40 @@ explicitly tested by a shell construct such as
 or
 .Ic !\&
 statements.
-.It Fl f \*(Ba Ic noglob
+.It Fl f \*(Ba Fl o Ic noglob
 Do not expand file name patterns.
-.It Fl h \*(Ba Ic trackall
+.It Fl h \*(Ba Fl o Ic trackall
 Create tracked aliases for all executed commands (see
 .Sx Aliases
 above).
 Enabled by default for non-interactive shells.
-.It Fl i \*(Ba Ic interactive
+.It Fl i \*(Ba Fl o Ic interactive
 The shell is an interactive shell.
 This option can only be used when the shell is invoked.
 See above for a description of what this means.
-.It Fl k \*(Ba Ic keyword
+.It Fl k \*(Ba Fl o Ic keyword
 Parameter assignments are recognised anywhere in a command.
-.It Fl l \*(Ba Ic login
+.It Fl l \*(Ba Fl o Ic login
 The shell is a login shell.
 This option can only be used when the shell is invoked.
 See above for a description of what this means.
-.It Fl m \*(Ba Ic monitor
+.It Fl m \*(Ba Fl o Ic monitor
 Enable job control (default for interactive shells).
-.It Fl n \*(Ba Ic noexec
+.It Fl n \*(Ba Fl o Ic noexec
 Do not execute any commands.
 Useful for checking the syntax of scripts
 (ignored if interactive).
-.It Fl p \*(Ba Ic privileged
+.It Fl p \*(Ba Fl o Ic privileged
 The shell is a privileged shell.
 It is set automatically if, when the shell starts,
 the real UID or GID does not match
 the effective UID (EUID) or GID (EGID), respectively.
 See above for a description of what this means.
-.It Fl r \*(Ba Ic restricted
+.It Fl r \*(Ba Fl o Ic restricted
 The shell is a restricted shell.
 This option can only be used when the shell is invoked.
 See above for a description of what this means.
-.It Fl s \*(Ba Ic stdin
+.It Fl s \*(Ba Fl o Ic stdin
 If used when the shell is invoked, commands are read from standard input.
 Set automatically if the shell is invoked with no arguments.
 .Pp
@@ -4000,7 +3998,7 @@ the positional parameters (or to array
 if
 .Fl A
 is used).
-.It Fl U \*(Ba Ic utf8\-mode
+.It Fl U \*(Ba Fl o Ic utf8\-mode
 Enable UTF-8 support in the
 .Sx Emacs editing mode
 and internal string handling functions.
@@ -4023,7 +4021,7 @@ or
 case-insensitively; for direct builtin calls depending on the
 aforementioned environment variables; or for stdin or scripts,
 if the input begins with a UTF-8 Byte Order Mark.
-.It Fl u \*(Ba Ic nounset
+.It Fl u \*(Ba Fl o Ic nounset
 Referencing of an unset parameter, other than
 .Dq $@
 or
@@ -4034,42 +4032,42 @@ is treated as an error, unless one of the
 or
 .Ql =
 modifiers is used.
-.It Fl v \*(Ba Ic verbose
+.It Fl v \*(Ba Fl o Ic verbose
 Write shell input to standard error as it is read.
-.It Fl X \*(Ba Ic markdirs
+.It Fl X \*(Ba Fl o Ic markdirs
 Mark directories with a trailing
 .Ql /
 during file name generation.
-.It Fl x \*(Ba Ic xtrace
+.It Fl x \*(Ba Fl o Ic xtrace
 Print commands and parameter assignments when they are executed, preceded by
 the value of
 .Ev PS4 .
-.It Ic arc4random
+.It Fl o Ic arc4random
 Deprecated, will be removed in
 .Nm
 R41.
 Do not use, emits a warning to stderr.
-.It Ic bgnice
+.It Fl o Ic bgnice
 Background jobs are run with lower priority.
-.It Ic braceexpand
+.It Fl o Ic braceexpand
 Enable brace expansion (a.k.a. alternation).
 This is enabled by default.
 If disabled, tilde expansion after an equals sign is disabled as a side effect.
-.It Ic emacs
+.It Fl o Ic emacs
 Enable BRL emacs-like command-line editing (interactive shells only); see
 .Sx Emacs editing mode .
-.It Ic gmacs
+.It Fl o Ic gmacs
 Enable gmacs-like command-line editing (interactive shells only).
 Currently identical to emacs editing except that transpose\-chars (\*(haT) acts
 slightly differently.
-.It Ic ignoreeof
+.It Fl o Ic ignoreeof
 The shell will not (easily) exit when end-of-file is read;
 .Ic exit
 must be used.
 To avoid infinite loops, the shell will exit if
 .Dv EOF
 is read 13 times in a row.
-.It Ic nohup
+.It Fl o Ic nohup
 Do not kill running jobs with a
 .Dv SIGHUP
 signal when a login shell exits.
@@ -4081,11 +4079,11 @@ which
 doesn't have this option, but does send the
 .Dv SIGHUP
 signal.
-.It Ic nolog
+.It Fl o Ic nolog
 No effect.
 In the original Korn shell, this prevents function definitions from
 being stored in the history file.
-.It Ic physical
+.It Fl o Ic physical
 Causes the
 .Ic cd
 and
@@ -4111,7 +4109,7 @@ See the
 and
 .Ic pwd
 commands above for more details.
-.It Ic posix
+.It Fl o Ic posix
 Enable a somewhat more
 .Px
 ish mode.
@@ -4120,7 +4118,7 @@ As a side effect, setting this flag turns off
 mode, which can be turned back on manually, and
 .Ic sh
 mode.
-.It Ic sh
+.It Fl o Ic sh
 Enable
 .Pa /bin/sh
 .Pq kludge
@@ -4134,18 +4132,18 @@ As a side effect, setting this flag turns off
 mode, which can be turned back on manually, and
 .Ic posix
 mode.
-.It Ic vi
+.It Fl o Ic vi
 Enable
 .Xr vi 1 Ns -like
 command-line editing (interactive shells only).
-.It Ic vi\-esccomplete
+.It Fl o Ic vi\-esccomplete
 In vi command-line editing, do command and file name completion when escape
 (\*(ha[) is entered in command mode.
-.It Ic vi\-tabcomplete
+.It Fl o Ic vi\-tabcomplete
 In vi command-line editing, do command and file name completion when tab (\*(haI)
 is entered in insert mode.
 This is the default.
-.It Ic viraw
+.It Fl o Ic viraw
 No effect.
 In the original Korn shell, unless
 .Ic viraw
@@ -4438,7 +4436,7 @@ instead, or the double-bracket operator
 or, to avoid pattern matching (see
 .Ic \&[[
 above):
-.Dq if \&[[ $foo = "$bar" \&]]
+.Dq if \&[[ $foo = \&"$bar" \&]]
 .Pp
 .It Xo
 .Ic time
@@ -4558,11 +4556,21 @@ traps in functions are not yet implemented.
 A command that exits with a zero value.
 .Pp
 .It Xo
-.Ic typeset
+.Ic global
 .Oo Op Ic +\-alpnrtUux
 .Op Fl L Ns Op Ar n
 .Op Fl R Ns Op Ar n
 .Op Fl Z Ns Op Ar n
+.Op Fl i Ns Op Ar n
+.No \*(Ba Fl f Op Fl tux Oc
+.Oo Ar name
+.Op Ns = Ns Ar value
+.Ar ... Oc
+.Xc
+.It Xo
+.Ic typeset
+.Oo Op Ic +\-alpnrtUux
+.Op Fl LRZ Ns Op Ar n
 .Op Fl i Ns Op Ar n
 .No \*(Ba Fl f Op Fl tux Oc
 .Oo Ar name
@@ -4592,10 +4600,12 @@ Values for parameters may optionally be specified.
 For
 .Ar name Ns \&[*] ,
 the change affects the entire array, and no value may be specified.
+.Pp
 If
 .Ic typeset
-is used inside a function, any newly created parameters are local to the
-function.
+is used inside a function, any parameters specified are localised.
+This is not done by the otherwise identical
+.Ic global .
 .Pp
 When
 .Fl f
@@ -5603,7 +5613,7 @@ and have their usual meaning (normal values are in parentheses): kill (\*(haU),
 erase (\*(ha?), werase (\*(haW), eof (\*(haD), intr (\*(haC), and quit (\*(ha\e).
 In addition to
 the above, the following characters are also treated specially in insert mode:
-.Bl -tag -width 10n
+.Bl -tag -width XJXXXXM
 .It \*(haE
 Command and file name enumeration (see below).
 .It \*(haF
@@ -6095,27 +6105,36 @@ The interrupt and quit terminal characters cause the current line to be
 deleted and a new prompt to be printed.
 .El
 .Sh FILES
-.Bl -tag -width "/etc/suid_profileXX" -compact
+.Bl -tag -width XetcXsuid_profile -compact
 .It Pa \*(TI/.mkshrc
-User's startup script (interactive shells).
-Used only if
-.Ev ENV
-is unset or empty.
-The location can be changed at compile time (for embedded systems).
+User mkshrc profile (non-privileged interactive shells); see
+.Sx Startup files.
+The location can be changed at compile time (for embedded systems);
+AOSP Android builds use
+.Pa /system/etc/mkshrc .
 .It Pa \*(TI/.profile
-User's login profile.
+User profile (non-privileged login shells); see
+.Sx Startup files
+near the top of this manual.
 .It Pa /etc/profile
-System login profile.
+System profile (login shells); see
+.Sx Startup files.
 .It Pa /etc/shells
 Shell database.
 .It Pa /etc/suid_profile
-Privileged shell profile.
+Suid profile (privileged shells); see
+.Sx Startup files.
 .El
+.Pp
+Note: On Android,
+.Pa /system/etc/
+contains the system and suid profile.
 .Sh SEE ALSO
 .Xr awk 1 ,
 .Xr cat 1 ,
 .Xr ed 1 ,
 .Xr getopt 1 ,
+.Xr printf 1 ,
 .Xr sed 1 ,
 .Xr sh 1 ,
 .Xr stty 1 ,
@@ -6212,6 +6231,16 @@ This shell is based upon the Public Domain Korn SHell.
 The developer of mksh recognises the efforts of the pdksh authors,
 who had dedicated their work into Public Domain, our users, and
 all contributors, such as the Debian and OpenBSD projects.
+.\"
+.\" Charles Forsyth, author of the (Public Domain) Bourne Shell clone,
+.\" which mksh is derived from, agreed to the following:
+.\"
+.\" In countries where the Public Domain status of the work may not be
+.\" valid, its primary author hereby grants a copyright licence to the
+.\" general public to deal in the work without restriction and permis-
+.\" sion to sublicence derivates under the terms of any (OSI approved)
+.\" Open Source licence.
+.\"
 See the documentation, CVS, and web site for details.
 .Sh CAVEATS
 .Nm
@@ -6239,7 +6268,7 @@ $ /bin/sleep 666 && echo fubar
 .Ed
 .Pp
 This document attempts to describe
-.Nm mksh\ R40
+.Nm mksh\ R40c
 and up,
 compiled without any options impacting functionality, such as
 .Dv MKSH_SMALL ,

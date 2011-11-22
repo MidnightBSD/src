@@ -1,6 +1,6 @@
 /*	$OpenBSD: edit.c,v 1.34 2010/05/20 01:13:07 fgsch Exp $	*/
 /*	$OpenBSD: edit.h,v 1.9 2011/05/30 17:14:35 martynas Exp $	*/
-/*	$OpenBSD: emacs.c,v 1.43 2011/03/14 21:20:01 okan Exp $	*/
+/*	$OpenBSD: emacs.c,v 1.44 2011/09/05 04:50:33 marco Exp $	*/
 /*	$OpenBSD: vi.c,v 1.26 2009/06/29 22:50:19 martynas Exp $	*/
 
 /*-
@@ -25,7 +25,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.215 2011/06/04 16:44:30 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.222 2011/10/07 19:45:08 tg Exp $");
 
 /*
  * in later versions we might use libtermcap for this, but since external
@@ -58,7 +58,7 @@ static X_chars edchars;
 #define XCF_FULLPATH	BIT(2)	/* command completion: store full path */
 #define XCF_COMMAND_FILE (XCF_COMMAND | XCF_FILE)
 #define XCF_IS_COMMAND	BIT(3)	/* return flag: is command */
-#define XCF_IS_VARSUB	BIT(4)	/* return flag: is $FOO substitution */
+#define XCF_IS_SUBGLOB	BIT(4)	/* return flag: is $FOO or ~foo substitution */
 #define XCF_IS_EXTGLOB	BIT(5)	/* return flag: is foo* expansion */
 
 static char editmode;
@@ -69,10 +69,10 @@ static char holdbuf[LINE];		/* place to hold last edit buffer */
 static int x_getc(void);
 static void x_putcf(int);
 static void x_mode(bool);
-static int x_do_comment(char *, int, int *);
+static int x_do_comment(char *, ssize_t, ssize_t *);
 static void x_print_expansions(int, char *const *, bool);
 static int x_cf_glob(int *, const char *, int, int, int *, int *, char ***);
-static int x_longest_prefix(int, char *const *);
+static size_t x_longest_prefix(int, char *const *);
 static int x_basename(const char *, const char *);
 static void x_free_words(int, char **);
 static int x_escape(const char *, size_t, int (*)(const char *, size_t));
@@ -188,9 +188,9 @@ x_putcf(int c)
  * moved to the start of the line after (un)commenting.
  */
 static int
-x_do_comment(char *buf, int bsize, int *lenp)
+x_do_comment(char *buf, ssize_t bsize, ssize_t *lenp)
 {
-	int i, j, len = *lenp;
+	ssize_t i, j, len = *lenp;
 
 	if (len == 0)
 		/* somewhat arbitrary - it's what AT&T ksh does */
@@ -533,7 +533,7 @@ x_cf_glob(int *flagsp, const char *buf, int buflen, int pos, int *startp,
 
 	if (len >= 0) {
 		char *toglob, *s;
-		bool saw_slash = false, saw_dollar = false, saw_glob = false;
+		bool saw_dollar = false, saw_glob = false;
 
 		/*
 		 * Given a string, copy it and possibly add a '*' to the end.
@@ -564,8 +564,7 @@ x_cf_glob(int *flagsp, const char *buf, int buflen, int pos, int *startp,
 			    (*s == '+' || *s == '@' || *s == '!'))) {
 				/* just expand based on the extglob */
 				saw_glob = true;
-			} else if (*s == '/')
-				saw_slash = true;
+			}
 		}
 		if (saw_glob) {
 			/*
@@ -574,10 +573,11 @@ x_cf_glob(int *flagsp, const char *buf, int buflen, int pos, int *startp,
 			 * a parameter expansion as we have a glob
 			 */
 			*flagsp |= XCF_IS_EXTGLOB;
-		} else if (saw_dollar) {
+		} else if (saw_dollar ||
+		    (*toglob == '~' && !vstrchr(toglob, '/'))) {
 			/* do not append a glob, nor later a space */
-			*flagsp |= XCF_IS_VARSUB;
-		} else if (*toglob != '~' || saw_slash) {
+			*flagsp |= XCF_IS_SUBGLOB;
+		} else {
 			/* append a glob, this is not just a tilde */
 			toglob[len] = '*';
 			toglob[len + 1] = '\0';
@@ -607,10 +607,11 @@ x_cf_glob(int *flagsp, const char *buf, int buflen, int pos, int *startp,
 /*
  * Find longest common prefix
  */
-static int
+static size_t
 x_longest_prefix(int nwords, char * const * words)
 {
-	int i, j, prefix_len;
+	int i;
+	size_t j, prefix_len;
 	char *p;
 
 	if (nwords <= 0)
@@ -694,7 +695,6 @@ glob_path(int flags, const char *pat, XPtrV *wp, const char *lpath)
 	const char *sp = lpath, *p;
 	char *xp, **words;
 	size_t pathlen, patlen, oldsize, newsize, i, j;
-	int staterr;
 	XString xs;
 
 	patlen = strlen(pat);
@@ -734,9 +734,7 @@ glob_path(int flags, const char *pat, XPtrV *wp, const char *lpath)
 		/* Check that each match is executable... */
 		words = (char **)XPptrv(*wp);
 		for (i = j = oldsize; i < newsize; i++) {
-			staterr = 0;
-			if ((search_access(words[i], X_OK, &staterr) >= 0) ||
-			    (staterr == EISDIR)) {
+			if (ksh_access(words[i], X_OK) == 0) {
 				words[j] = words[i];
 				if (!(flags & XCF_FULLPATH))
 					memmove(words[j], words[j] + pathlen,
@@ -2212,7 +2210,7 @@ x_yank(int c MKSH_A_UNUSED)
 static int
 x_meta_yank(int c MKSH_A_UNUSED)
 {
-	int len;
+	size_t len;
 
 	if ((x_last_command != XFUNC_yank && x_last_command != XFUNC_meta_yank) ||
 	    killstack[killtp] == 0) {
@@ -2466,7 +2464,7 @@ x_bind(const char *a1, const char *a2,
 			    strcmp(x_ftab[f].xf_name, a2) == 0)
 				break;
 		if (f == NELEM(x_ftab) || x_ftab[f].xf_flags & XF_NOBIND) {
-			bi_errorf("%s: %s %s", a2, "no such", T_function);
+			bi_errorf("%s: %s %s", a2, "no such", Tfunction);
 			return (1);
 		}
 	}
@@ -2701,9 +2699,12 @@ do_complete(
 		x_adjust();
 		completed = true;
 	}
-	/* add space if single non-dir match and not parameter substitution */
+	/*
+	 * append a space if this is a single non-directory match
+	 * and not a parameter or homedir substitution
+	 */
 	if (nwords == 1 && words[0][nlen - 1] != '/' &&
-	    !(flags & XCF_IS_VARSUB)) {
+	    !(flags & XCF_IS_SUBGLOB)) {
 		x_ins(" ");
 		completed = true;
 	}
@@ -2877,17 +2878,21 @@ x_e_puts(const char *s)
 static int
 x_set_arg(int c)
 {
-	int n = 0;
+	unsigned int n = 0;
 	bool first = true;
 
 	/* strip command prefix */
 	c &= 255;
 	while (c >= 0 && ksh_isdigit(c)) {
 		n = n * 10 + (c - '0');
+		if (n > LINE)
+			/* upper bound for repeat */
+			goto x_set_arg_too_big;
 		c = x_e_getc();
 		first = false;
 	}
 	if (c < 0 || first) {
+ x_set_arg_too_big:
 		x_e_putc2(7);
 		x_arg = 1;
 		x_arg_defaulted = true;
@@ -2904,7 +2909,7 @@ static int
 x_comment(int c MKSH_A_UNUSED)
 {
 	int oldsize = x_size_str(xbuf);
-	int len = xep - xbuf;
+	ssize_t len = xep - xbuf;
 	int ret = x_do_comment(xbuf, xend - xbuf, &len);
 
 	if (ret < 0)
@@ -2926,7 +2931,8 @@ x_version(int c MKSH_A_UNUSED)
 {
 	char *o_xbuf = xbuf, *o_xend = xend;
 	char *o_xbp = xbp, *o_xep = xep, *o_xcp = xcp;
-	int vlen, lim = x_lastcp() - xbp;
+	int lim = x_lastcp() - xbp;
+	size_t vlen;
 	char *v;
 
 	strdupx(v, KSH_VERSION, ATEMP);
@@ -2942,7 +2948,7 @@ x_version(int c MKSH_A_UNUSED)
 	xbp = o_xbp;
 	xep = o_xep;
 	xcp = o_xcp;
-	x_redraw(vlen);
+	x_redraw((int)vlen);
 
 	if (c < 0)
 		return (KSTD);
@@ -3243,10 +3249,10 @@ x_mode(bool onoff)
 
 struct edstate {
 	char *cbuf;
-	int winleft;
-	int cbufsize;
-	int linelen;
-	int cursor;
+	ssize_t winleft;
+	ssize_t cbufsize;
+	ssize_t linelen;
+	ssize_t cursor;
 };
 
 static int vi_hook(int);
@@ -3259,7 +3265,7 @@ static void yank_range(int, int);
 static int bracktype(int);
 static void save_cbuf(void);
 static void restore_cbuf(void);
-static int putbuf(const char *, int, int);
+static int putbuf(const char *, ssize_t, int);
 static void del_range(int, int);
 static int findch(int, int, int, int);
 static int forwword(int);
@@ -3270,7 +3276,7 @@ static int Backword(int);
 static int Endword(int);
 static int grabhist(int, int);
 static int grabsearch(int, int, int, char *);
-static void redraw_line(int);
+static void redraw_line(bool);
 static void refresh(int);
 static int outofwin(void);
 static void rewindow(void);
@@ -3286,58 +3292,58 @@ static void vi_error(void);
 static void vi_macro_reset(void);
 static int x_vi_putbuf(const char *, size_t);
 
-#define C_	0x1		/* a valid command that isn't a M_, E_, U_ */
-#define M_	0x2		/* movement command (h, l, etc.) */
-#define E_	0x4		/* extended command (c, d, y) */
-#define X_	0x8		/* long command (@, f, F, t, T, etc.) */
-#define U_	0x10		/* an UN-undoable command (that isn't a M_) */
-#define B_	0x20		/* bad command (^@) */
-#define Z_	0x40		/* repeat count defaults to 0 (not 1) */
-#define S_	0x80		/* search (/, ?) */
+#define vC	0x01		/* a valid command that isn't a vM, vE, vU */
+#define vM	0x02		/* movement command (h, l, etc.) */
+#define vE	0x04		/* extended command (c, d, y) */
+#define vX	0x08		/* long command (@, f, F, t, T, etc.) */
+#define vU	0x10		/* an UN-undoable command (that isn't a vM) */
+#define vB	0x20		/* bad command (^@) */
+#define vZ	0x40		/* repeat count defaults to 0 (not 1) */
+#define vS	0x80		/* search (/, ?) */
 
-#define is_bad(c)	(classify[(c)&0x7f]&B_)
-#define is_cmd(c)	(classify[(c)&0x7f]&(M_|E_|C_|U_))
-#define is_move(c)	(classify[(c)&0x7f]&M_)
-#define is_extend(c)	(classify[(c)&0x7f]&E_)
-#define is_long(c)	(classify[(c)&0x7f]&X_)
-#define is_undoable(c)	(!(classify[(c)&0x7f]&U_))
-#define is_srch(c)	(classify[(c)&0x7f]&S_)
-#define is_zerocount(c)	(classify[(c)&0x7f]&Z_)
+#define is_bad(c)	(classify[(c)&0x7f]&vB)
+#define is_cmd(c)	(classify[(c)&0x7f]&(vM|vE|vC|vU))
+#define is_move(c)	(classify[(c)&0x7f]&vM)
+#define is_extend(c)	(classify[(c)&0x7f]&vE)
+#define is_long(c)	(classify[(c)&0x7f]&vX)
+#define is_undoable(c)	(!(classify[(c)&0x7f]&vU))
+#define is_srch(c)	(classify[(c)&0x7f]&vS)
+#define is_zerocount(c)	(classify[(c)&0x7f]&vZ)
 
 static const unsigned char classify[128] = {
 /*	 0	1	2	3	4	5	6	7	*/
 /* 0	^@	^A	^B	^C	^D	^E	^F	^G	*/
-	B_,	0,	0,	0,	0,	C_|U_,	C_|Z_,	0,
+	vB,	0,	0,	0,	0,	vC|vU,	vC|vZ,	0,
 /* 1	^H	^I	^J	^K	^L	^M	^N	^O	*/
-	M_,	C_|Z_,	0,	0,	C_|U_,	0,	C_,	0,
+	vM,	vC|vZ,	0,	0,	vC|vU,	0,	vC,	0,
 /* 2	^P	^Q	^R	^S	^T	^U	^V	^W	*/
-	C_,	0,	C_|U_,	0,	0,	0,	C_,	0,
+	vC,	0,	vC|vU,	0,	0,	0,	vC,	0,
 /* 3	^X	^Y	^Z	^[	^\	^]	^^	^_	*/
-	C_,	0,	0,	C_|Z_,	0,	0,	0,	0,
+	vC,	0,	0,	vC|vZ,	0,	0,	0,	0,
 /* 4	<space>	!	"	#	$	%	&	'	*/
-	M_,	0,	0,	C_,	M_,	M_,	0,	0,
+	vM,	0,	0,	vC,	vM,	vM,	0,	0,
 /* 5	(	)	*	+	,	-	.	/	*/
-	0,	0,	C_,	C_,	M_,	C_,	0,	C_|S_,
+	0,	0,	vC,	vC,	vM,	vC,	0,	vC|vS,
 /* 6	0	1	2	3	4	5	6	7	*/
-	M_,	0,	0,	0,	0,	0,	0,	0,
+	vM,	0,	0,	0,	0,	0,	0,	0,
 /* 7	8	9	:	;	<	=	>	?	*/
-	0,	0,	0,	M_,	0,	C_,	0,	C_|S_,
+	0,	0,	0,	vM,	0,	vC,	0,	vC|vS,
 /* 8	@	A	B	C	D	E	F	G	*/
-	C_|X_,	C_,	M_,	C_,	C_,	M_,	M_|X_,	C_|U_|Z_,
+	vC|vX,	vC,	vM,	vC,	vC,	vM,	vM|vX,	vC|vU|vZ,
 /* 9	H	I	J	K	L	M	N	O	*/
-	0,	C_,	0,	0,	0,	0,	C_|U_,	0,
+	0,	vC,	0,	0,	0,	0,	vC|vU,	0,
 /* A	P	Q	R	S	T	U	V	W	*/
-	C_,	0,	C_,	C_,	M_|X_,	C_,	0,	M_,
+	vC,	0,	vC,	vC,	vM|vX,	vC,	0,	vM,
 /* B	X	Y	Z	[	\	]	^	_	*/
-	C_,	C_|U_,	0,	0,	C_|Z_,	0,	M_,	C_|Z_,
+	vC,	vC|vU,	0,	0,	vC|vZ,	0,	vM,	vC|vZ,
 /* C	`	a	b	c	d	e	f	g	*/
-	0,	C_,	M_,	E_,	E_,	M_,	M_|X_,	C_|Z_,
+	0,	vC,	vM,	vE,	vE,	vM,	vM|vX,	vC|vZ,
 /* D	h	i	j	k	l	m	n	o	*/
-	M_,	C_,	C_|U_,	C_|U_,	M_,	0,	C_|U_,	0,
+	vM,	vC,	vC|vU,	vC|vU,	vM,	0,	vC|vU,	0,
 /* E	p	q	r	s	t	u	v	w	*/
-	C_,	0,	X_,	C_,	M_|X_,	C_|U_,	C_|U_|Z_, M_,
+	vC,	0,	vX,	vC,	vM|vX,	vC|vU,	vC|vU|vZ, vM,
 /* F	x	y	z	{	|	}	~	^?	*/
-	C_,	E_|U_,	0,	0,	M_|Z_,	0,	C_,	0
+	vC,	vE|vU,	0,	0,	vM|vZ,	0,	vC,	0
 };
 
 #define MAXVICMD	3
@@ -3399,7 +3405,7 @@ static int state;
 struct macro_state {
 	unsigned char *p;	/* current position in buf */
 	unsigned char *buf;	/* pointer to macro(s) being expanded */
-	int len;		/* how much data in buffer */
+	size_t len;		/* how much data in buffer */
 };
 static struct macro_state macro;
 
@@ -3447,8 +3453,10 @@ x_vi(char *buf, size_t len)
 		wbuf[0] = aresize(wbuf[0], wbuf_len, APERM);
 		wbuf[1] = aresize(wbuf[1], wbuf_len, APERM);
 	}
-	(void)memset(wbuf[0], ' ', wbuf_len);
-	(void)memset(wbuf[1], ' ', wbuf_len);
+	if (wbuf_len) {
+		memset(wbuf[0], ' ', wbuf_len);
+		memset(wbuf[1], ' ', wbuf_len);
+	}
 	winwidth = x_cols - pwidth - 3;
 	win = 0;
 	morec = ' ';
@@ -3956,7 +3964,7 @@ vi_cmd(int argcnt, const char *cmd)
 
 		case Ctrl('l'):
 		case Ctrl('r'):
-			redraw_line(1);
+			redraw_line(true);
 			break;
 
 		case '@':
@@ -4676,7 +4684,7 @@ x_vi_putbuf(const char *s, size_t len)
 }
 
 static int
-putbuf(const char *buf, int len, int repl)
+putbuf(const char *buf, ssize_t len, int repl)
 {
 	if (len == 0)
 		return (0);
@@ -4902,7 +4910,7 @@ grabsearch(int save, int start, int fwd, char *pat)
 		start--;
 	anchored = *pat == '^' ? (++pat, 1) : 0;
 	if ((hist = findhist(start, fwd, pat, anchored)) < 0) {
-		/* if (start != 0 && fwd && match(holdbuf, pat) >= 0) { */
+		/* if (start != 0 && fwd && match(holdbuf, pat) >= 0) {} */
 		/* XXX should strcmp be strncmp? */
 		if (start != 0 && fwd && strcmp(holdbuf, pat) >= 0) {
 			restore_cbuf();
@@ -4922,9 +4930,10 @@ grabsearch(int save, int start, int fwd, char *pat)
 }
 
 static void
-redraw_line(int newl)
+redraw_line(bool newl)
 {
-	(void)memset(wbuf[win], ' ', wbuf_len);
+	if (wbuf_len)
+		memset(wbuf[win], ' ', wbuf_len);
 	if (newl) {
 		x_putc('\r');
 		x_putc('\n');
@@ -5162,7 +5171,8 @@ static int
 complete_word(int cmd, int count)
 {
 	static struct edstate *buf;
-	int rval, nwords, start, end, match_len, flags;
+	int rval, nwords, start, end, flags;
+	size_t match_len;
 	char **words;
 	char *match;
 	bool is_unique;
@@ -5206,7 +5216,7 @@ complete_word(int cmd, int count)
 			x_print_expansions(nwords, words,
 			    tobool(flags & XCF_IS_COMMAND));
 			x_free_words(nwords, words);
-			redraw_line(0);
+			redraw_line(false);
 			return (-1);
 		}
 		/*
@@ -5254,11 +5264,11 @@ complete_word(int cmd, int count)
 		expanded = NONE;
 
 		/*
-		 * append a space if this is not a directory or the
-		 * result of a parameter substitution
+		 * append a space if this is a non-directory match
+		 * and not a parameter or homedir substitution
 		 */
 		if (match_len > 0 && match[match_len - 1] != '/' &&
-		    !(flags & XCF_IS_VARSUB))
+		    !(flags & XCF_IS_SUBGLOB))
 			rval = putbuf(" ", 1, 0);
 	}
 	x_free_words(nwords, words);
@@ -5288,7 +5298,7 @@ print_expansions(struct edstate *est, int cmd MKSH_A_UNUSED)
 	}
 	x_print_expansions(nwords, words, tobool(i & XCF_IS_COMMAND));
 	x_free_words(nwords, words);
-	redraw_line(0);
+	redraw_line(false);
 	return (0);
 }
 

@@ -26,7 +26,7 @@
 #include <sys/file.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.109 2011/04/22 12:21:53 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.111 2011/09/07 15:24:16 tg Exp $");
 
 /*-
  * MirOS: This is the default mapping type, and need not be specified.
@@ -63,11 +63,11 @@ static Source *hist_source;
 /* current history file: name, fd, size */
 static char *hname;
 static int histfd;
-static int hsize;
+static size_t hsize;
 #endif
 
-static const char T_not_in_history[] = "not in history";
-#define T_history (T_not_in_history + 7)
+static const char Tnot_in_history[] = "not in history";
+#define Thistory (Tnot_in_history + 7)
 
 int
 c_fc(const char **wp)
@@ -83,7 +83,7 @@ c_fc(const char **wp)
 	char **hfirst, **hlast, **hp;
 
 	if (!Flag(FTALKING_I)) {
-		bi_errorf("history %ss not available", T_function);
+		bi_errorf("history %ss not available", Tfunction);
 		return (1);
 	}
 
@@ -290,7 +290,7 @@ c_fc(const char **wp)
 		if (stat(tf->name, &statb) < 0)
 			n = 128;
 		else if (statb.st_size > (1024 * 1048576)) {
-			bi_errorf("%s %s too large: %lu", T_history,
+			bi_errorf("%s %s too large: %lu", Thistory,
 			    "file", (unsigned long)statb.st_size);
 			goto errout;
 		} else
@@ -365,9 +365,9 @@ hist_replace(char **hp, const char *pat, const char *rep, bool globr)
 		strdupx(line, *hp, ATEMP);
 	else {
 		char *s, *s1;
-		int pat_len = strlen(pat);
-		int rep_len = strlen(rep);
-		int len;
+		size_t pat_len = strlen(pat);
+		size_t rep_len = strlen(rep);
+		size_t len;
 		XString xs;
 		char *xp;
 		bool any_subst = false;
@@ -414,14 +414,14 @@ hist_get(const char *str, bool approx, bool allow_cur)
 			if (approx)
 				hp = hist_get_oldest();
 			else {
-				bi_errorf("%s: %s", str, T_not_in_history);
+				bi_errorf("%s: %s", str, Tnot_in_history);
 				hp = NULL;
 			}
 		} else if ((ptrdiff_t)hp > (ptrdiff_t)histptr) {
 			if (approx)
 				hp = hist_get_newest(allow_cur);
 			else {
-				bi_errorf("%s: %s", str, T_not_in_history);
+				bi_errorf("%s: %s", str, Tnot_in_history);
 				hp = NULL;
 			}
 		} else if (!allow_cur && hp == histptr) {
@@ -433,7 +433,7 @@ hist_get(const char *str, bool approx, bool allow_cur)
 
 		/* the -1 is to avoid the current fc command */
 		if ((n = findhist(histptr - history - 1, 0, str, anchored)) < 0)
-			bi_errorf("%s: %s", str, T_not_in_history);
+			bi_errorf("%s: %s", str, Tnot_in_history);
 		else
 			hp = &history[n];
 	}
@@ -509,10 +509,10 @@ histnum(int n)
 int
 findhist(int start, int fwd, const char *str, int anchored)
 {
-	char	**hp;
-	int	maxhist = histptr - history;
-	int	incr = fwd ? 1 : -1;
-	int	len = strlen(str);
+	char **hp;
+	int maxhist = histptr - history;
+	int incr = fwd ? 1 : -1;
+	size_t len = strlen(str);
 
 	if (start < 0 || start >= maxhist)
 		start = maxhist;
@@ -700,6 +700,7 @@ hist_init(Source *s)
 #if HAVE_PERSISTENT_HISTORY
 	unsigned char *base;
 	int lines, fd, rv = 0;
+	off_t hfsize;
 #endif
 
 	if (Flag(FTALKING) == 0)
@@ -725,7 +726,10 @@ hist_init(Source *s)
 
 	(void)flock(histfd, LOCK_EX);
 
-	hsize = lseek(histfd, (off_t)0, SEEK_END);
+	hfsize = lseek(histfd, (off_t)0, SEEK_END);
+	hsize = 1024 * 1048576;
+	if (hfsize < (off_t)hsize)
+		hsize = (size_t)hfsize;
 
 	if (hsize == 0) {
 		/* add magic */
@@ -774,7 +778,10 @@ hist_init(Source *s)
 		munmap((caddr_t)base, hsize);
 	}
 	(void)flock(histfd, LOCK_UN);
-	hsize = lseek(histfd, (off_t)0, SEEK_END);
+	hfsize = lseek(histfd, (off_t)0, SEEK_END);
+	hsize = 1024 * 1048576;
+	if (hfsize < (off_t)hsize)
+		hsize = hfsize;
 #endif
 }
 
@@ -970,36 +977,34 @@ histinsert(Source *s, int lno, const char *line)
 static void
 writehistfile(int lno, char *cmd)
 {
-	int	sizenow;
-	unsigned char	*base;
-	unsigned char	*news;
-	int	bytes;
-	unsigned char	hdr[5];
+	off_t sizenow;
+	ssize_t bytes;
+	unsigned char *base, *news, hdr[5];
 
 	(void)flock(histfd, LOCK_EX);
 	sizenow = lseek(histfd, (off_t)0, SEEK_END);
-	if (sizenow != hsize) {
+	if ((sizenow <= (1024 * 1048576)) && ((size_t)sizenow != hsize)) {
 		/*
 		 *	Things have changed
 		 */
-		if (sizenow > hsize) {
+		if ((size_t)sizenow > hsize) {
 			/* someone has added some lines */
-			bytes = sizenow - hsize;
-			base = (void *)mmap(NULL, sizenow, PROT_READ,
+			bytes = (size_t)sizenow - hsize;
+			base = (void *)mmap(NULL, (size_t)sizenow, PROT_READ,
 			    MAP_FILE | MAP_PRIVATE, histfd, (off_t)0);
 			if (base == (unsigned char *)MAP_FAILED)
 				goto bad;
 			news = base + hsize;
 			if (*news != COMMAND) {
-				munmap((caddr_t)base, sizenow);
+				munmap((caddr_t)base, (size_t)sizenow);
 				goto bad;
 			}
 			hist_source->line--;
 			histload(hist_source, news, bytes);
 			hist_source->line++;
 			lno = hist_source->line;
-			munmap((caddr_t)base, sizenow);
-			hsize = sizenow;
+			munmap((caddr_t)base, (size_t)sizenow);
+			hsize = (size_t)sizenow;
 		} else {
 			/* it has shrunk */
 			/* but to what? */
@@ -1020,7 +1025,10 @@ writehistfile(int lno, char *cmd)
 		if ((write(histfd, hdr, 5) != 5) ||
 		    (write(histfd, cmd, bytes) != bytes))
 			goto bad;
-		hsize = lseek(histfd, (off_t)0, SEEK_END);
+		sizenow = lseek(histfd, (off_t)0, SEEK_END);
+		hsize = 1024 * 1048576;
+		if (sizenow < (off_t)hsize)
+			hsize = (size_t)sizenow;
 	}
 	(void)flock(histfd, LOCK_UN);
 	return;
@@ -1069,7 +1077,7 @@ inittraps(void)
 	/* Populate sigtraps based on sys_signame and sys_siglist. */
 	for (i = 0; i <= NSIG; i++) {
 		sigtraps[i].signal = i;
-		if (i == SIGERR_) {
+		if (i == ksh_SIGERR) {
 			sigtraps[i].name = "ERR";
 			sigtraps[i].mess = "Error handler";
 		} else {
@@ -1108,7 +1116,7 @@ inittraps(void)
 		}
 	}
 	/* our name for signal 0 */
-	sigtraps[SIGEXIT_].name = "EXIT";
+	sigtraps[ksh_SIGEXIT].name = "EXIT";
 
 	(void)sigemptyset(&Sigact_ign.sa_mask);
 	Sigact_ign.sa_flags = 0; /* interruptible */
@@ -1186,7 +1194,7 @@ void
 trapsig(int i)
 {
 	Trap *p = &sigtraps[i];
-	int errno_ = errno;
+	int errno_sv = errno;
 
 	trap = p->set = 1;
 	if (p->flags & TF_DFL_INTR)
@@ -1197,7 +1205,7 @@ trapsig(int i)
 	}
 	if (p->shtrap)
 		(*p->shtrap)(i);
-	errno = errno_;
+	errno = errno_sv;
 }
 
 /*
@@ -1311,7 +1319,7 @@ runtrap(Trap *p, bool is_last)
 	if (trapstr[0] == '\0')
 		/* SIG_IGN */
 		goto donetrap;
-	if (i == SIGEXIT_ || i == SIGERR_) {
+	if (i == ksh_SIGEXIT || i == ksh_SIGERR) {
 		/* avoid recursion on these */
 		old_changed = p->flags & TF_CHANGED;
 		p->flags &= ~TF_CHANGED;
@@ -1324,7 +1332,7 @@ runtrap(Trap *p, bool is_last)
 	 * no problem with afree(p->trap) in settrap() while still in use.
 	 */
 	command(trapstr, current_lineno);
-	if (i == SIGEXIT_ || i == SIGERR_) {
+	if (i == ksh_SIGEXIT || i == ksh_SIGERR) {
 		if (p->flags & TF_CHANGED)
 			/* don't clear TF_CHANGED */
 			afree(trapstr, APERM);
@@ -1446,7 +1454,7 @@ setsig(Trap *p, sig_t f, int flags)
 {
 	struct sigaction sigact;
 
-	if (p->signal == SIGEXIT_ || p->signal == SIGERR_)
+	if (p->signal == ksh_SIGEXIT || p->signal == ksh_SIGERR)
 		return (1);
 
 	/*
