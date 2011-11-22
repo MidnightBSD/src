@@ -22,16 +22,15 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.67 2011/06/05 19:58:20 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.71 2011/11/22 18:01:41 tg Exp $");
 
 extern short subshell_nesting_level;
+extern void yyskiputf8bom(void);
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
 	int start_line;		/* line nesting began on */
 };
-
-void yyskiputf8bom(void);
 
 static void yyparse(void);
 static struct op *pipeline(int);
@@ -233,13 +232,27 @@ nested(int type, int smark, int emark)
 	return (block(type, t, NOBLOCK, NOWORDS));
 }
 
+static const char let_cmd[] = {
+	CHAR, 'l', CHAR, 'e', CHAR, 't', EOS
+};
+static const char setA_cmd0[] = {
+	CHAR, 's', CHAR, 'e', CHAR, 't', EOS
+};
+static const char setA_cmd1[] = {
+	CHAR, '-', CHAR, 'A', EOS
+};
+static const char setA_cmd2[] = {
+	CHAR, '-', CHAR, '-', EOS
+};
+
 static struct op *
 get_command(int cf)
 {
 	struct op *t;
-	int c, iopn = 0, syniocf;
+	int c, iopn = 0, syniocf, lno;
 	struct ioword *iop, **iops;
 	XPtrV args, vars;
+	char *tcp;
 	struct nesting_state old_nesting;
 
 	/* NUFILE is small enough to leave this addition unchecked */
@@ -293,67 +306,50 @@ get_command(int cf)
 					XPput(args, yylval.cp);
 				break;
 
-			case '(':
-#ifndef MKSH_SMALL
-				if ((XPsize(args) == 0 || Flag(FKEYWORD)) &&
-				    XPsize(vars) == 1 && is_wdvarassign(yylval.cp))
-					goto is_wdarrassign;
-#endif
-				/*
-				 * Check for "> foo (echo hi)" which AT&T ksh
-				 * allows (not POSIX, but not disallowed)
-				 */
-				afree(t, ATEMP);
-				if (XPsize(args) == 0 && XPsize(vars) == 0) {
+			case '(' /*)*/:
+				if (XPsize(args) == 0 && XPsize(vars) == 1 &&
+				    is_wdvarassign(yylval.cp)) {
+					/* wdarrassign: foo=(bar) */
 					ACCEPT;
-					goto Subshell;
+
+					/* manipulate the vars string */
+					tcp = *(--vars.cur);
+					/* 'varname=' -> 'varname' */
+					tcp[wdscan(tcp, EOS) - tcp - 3] = EOS;
+
+					/* construct new args strings */
+					XPput(args, wdcopy(setA_cmd0, ATEMP));
+					XPput(args, wdcopy(setA_cmd1, ATEMP));
+					XPput(args, tcp);
+					XPput(args, wdcopy(setA_cmd2, ATEMP));
+
+					/* slurp in words till closing paren */
+					while (token(CONTIN) == LWORD)
+						XPput(args, yylval.cp);
+					if (symbol != /*(*/ ')')
+						syntaxerr(NULL);
+				} else {
+					/*
+					 * Check for "> foo (echo hi)"
+					 * which AT&T ksh allows (not
+					 * POSIX, but not disallowed)
+					 */
+					afree(t, ATEMP);
+					if (XPsize(args) == 0 &&
+					    XPsize(vars) == 0) {
+						ACCEPT;
+						goto Subshell;
+					}
+
+					/* must be a function */
+					if (iopn != 0 || XPsize(args) != 1 ||
+					    XPsize(vars) != 0)
+						syntaxerr(NULL);
+					ACCEPT;
+					musthave(/*(*/')', 0);
+					t = function_body(XPptrv(args)[0], false);
 				}
-
-				/* must be a function */
-				if (iopn != 0 || XPsize(args) != 1 ||
-				    XPsize(vars) != 0)
-					syntaxerr(NULL);
-				ACCEPT;
-				musthave(/*(*/')', 0);
-				t = function_body(XPptrv(args)[0], false);
 				goto Leave;
-#ifndef MKSH_SMALL
- is_wdarrassign:
-			{
-				static const char set_cmd0[] = {
-					CHAR, 's', CHAR, 'e',
-					CHAR, 't', EOS
-				};
-				static const char set_cmd1[] = {
-					CHAR, '-', CHAR, 'A', EOS
-				};
-				static const char set_cmd2[] = {
-					CHAR, '-', CHAR, '-', EOS
-				};
-				char *tcp;
-
-				ACCEPT;
-
-				/* manipulate the vars string */
-				tcp = *(--vars.cur);
-				/* 'varname=' -> 'varname' */
-				tcp[wdscan(tcp, EOS) - tcp - 3] = EOS;
-
-				/* construct new args strings */
-				XPput(args, wdcopy(set_cmd0, ATEMP));
-				XPput(args, wdcopy(set_cmd1, ATEMP));
-				XPput(args, tcp);
-				XPput(args, wdcopy(set_cmd2, ATEMP));
-
-				/* slurp in words till closing paren */
-				while (token(CONTIN) == LWORD)
-					XPput(args, yylval.cp);
-				if (symbol != /*(*/ ')')
-					syntaxerr(NULL);
-
-				goto Leave;
-			}
-#endif
 
 			default:
 				goto Leave;
@@ -373,13 +369,7 @@ get_command(int cf)
 		t = nested(TBRACE, '{', '}');
 		break;
 
-	case MDPAREN: {
-		int lno;
-		static const char let_cmd[] = {
-			CHAR, 'l', CHAR, 'e',
-			CHAR, 't', EOS
-		};
-
+	case MDPAREN:
 		/* leave KEYWORD in syniocf (allow if (( 1 )) then ...) */
 		lno = source->line;
 		ACCEPT;
@@ -396,7 +386,6 @@ get_command(int cf)
 		XPput(args, wdcopy(let_cmd, ATEMP));
 		XPput(args, yylval.cp);
 		break;
-	}
 
 	case DBRACKET: /* [[ .. ]] */
 		/* leave KEYWORD in syniocf (allow if [[ -n 1 ]] then ...) */
@@ -421,7 +410,7 @@ get_command(int cf)
 		t = newtp((c == FOR) ? TFOR : TSELECT);
 		musthave(LWORD, ARRAYVAR);
 		if (!is_wdvarname(yylval.cp, true))
-			yyerror("%s: %s\n", c == FOR ? "for" : T_select,
+			yyerror("%s: %s\n", c == FOR ? "for" : Tselect,
 			    "bad identifier");
 		strdupx(t->str, ident, ATEMP);
 		nesting_push(&old_nesting, c);
@@ -620,17 +609,23 @@ casepart(int endtok)
 	musthave(')', 0);
 
 	t->left = c_list(true);
-	/* Note: POSIX requires the ;; */
+
+	/* initialise to default for ;; or omitted */
+	t->u.charflag = ';';
+	/* SUSv4 requires the ;; except in the last casepart */
 	if ((tpeek(CONTIN|KEYWORD|ALIAS)) != endtok)
 		switch (symbol) {
 		default:
 			syntaxerr(NULL);
-		case BREAK:
 		case BRKEV:
+			t->u.charflag = '|';
+			if (0)
+				/* FALLTHROUGH */
 		case BRKFT:
-			t->u.charflag =
-			    (symbol == BRKEV) ? '|' :
-			    (symbol == BRKFT) ? '&' : ';';
+			t->u.charflag = '&';
+			/* FALLTHROUGH */
+		case BREAK:
+			/* initialised above, but we need to eat the token */
 			ACCEPT;
 		}
 	return (t);
@@ -765,13 +760,13 @@ const struct tokeninfo {
 	{ "case",	CASE,	true },
 	{ "esac",	ESAC,	true },
 	{ "for",	FOR,	true },
-	{ T_select,	SELECT,	true },
+	{ Tselect,	SELECT,	true },
 	{ "while",	WHILE,	true },
 	{ "until",	UNTIL,	true },
 	{ "do",		DO,	true },
 	{ "done",	DONE,	true },
 	{ "in",		IN,	true },
-	{ T_function,	FUNCTION, true },
+	{ Tfunction,	FUNCTION, true },
 	{ "time",	TIME,	true },
 	{ "{",		'{',	true },
 	{ "}",		'}',	true },
@@ -832,7 +827,7 @@ syntaxerr(const char *what)
 			goto Again;
 		}
 		/* don't quote the EOF */
-		yyerror("%s: %s %s\n", T_synerr, "unexpected", "EOF");
+		yyerror("%s: %s %s\n", Tsynerr, "unexpected", "EOF");
 		/* NOTREACHED */
 
 	case LWORD:
@@ -859,7 +854,7 @@ syntaxerr(const char *what)
 			s = redir;
 		}
 	}
-	yyerror("%s: '%s' %s\n", T_synerr, s, what);
+	yyerror("%s: '%s' %s\n", Tsynerr, s, what);
 }
 
 static void
@@ -921,10 +916,10 @@ assign_command(char *s)
 {
 	if (!*s)
 		return (0);
-	return ((strcmp(s, T_alias) == 0) ||
+	return ((strcmp(s, Talias) == 0) ||
 	    (strcmp(s, "export") == 0) ||
 	    (strcmp(s, "readonly") == 0) ||
-	    (strcmp(s, T_typeset) == 0));
+	    (strcmp(s, Ttypeset) == 0));
 }
 
 /* Check if we are in the middle of reading an alias */
