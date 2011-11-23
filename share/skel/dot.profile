@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD: src/share/skel/dot.profile,v 1.7 2008/09/27 19:23:32 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.profile,v 1.8 2009/03/29 03:10:41 laffer1 Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
@@ -45,4 +45,4 @@ if [ -x /usr/local/GNUstep/System/Library/Makefiles/GNUstep.sh ]; then
 	. /usr/local/GNUstep/System/Library/Makefiles/GNUstep.sh
 fi
 
-[ -x /usr/games/fortune ] && /usr/games/fortune fortunes
+if [ -x /usr/games/fortune ] ; then  /usr/games/fortune fortunes; fi
