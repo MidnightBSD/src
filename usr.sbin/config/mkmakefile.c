@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993, 19801990
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
 static char sccsid[] = "@(#)mkmakefile.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/config/mkmakefile.c,v 1.91 2006/10/24 07:12:31 imp Exp $";
+  "$FreeBSD: src/usr.sbin/config/mkmakefile.c,v 1.91.2.4 2011/01/02 13:31:10 lstewart Exp $";
 #endif /* not lint */
 
 /*
@@ -98,8 +99,30 @@ new_fent(void)
 	struct file_list *fp;
 
 	fp = (struct file_list *) calloc(1, sizeof *fp);
+	if (fp == NULL)
+		err(EXIT_FAILURE, "calloc");
 	STAILQ_INSERT_TAIL(&ftab, fp, f_next);
 	return (fp);
+}
+
+/*
+ * Open the correct Makefile and return it, or error out.
+ */
+FILE *
+open_makefile_template(void)
+{
+	FILE *ifp;
+	char line[BUFSIZ];
+
+	snprintf(line, sizeof(line), "../../conf/Makefile.%s", machinename);
+	ifp = fopen(line, "r");
+	if (ifp == 0) {
+		snprintf(line, sizeof(line), "Makefile.%s", machinename);
+		ifp = fopen(line, "r");
+	}
+	if (ifp == 0)
+		err(1, "%s", line);
+	return (ifp);
 }
 
 /*
@@ -110,25 +133,20 @@ makefile(void)
 {
 	FILE *ifp, *ofp;
 	char line[BUFSIZ];
-	struct opt *op;
-	int versreq;
+	struct opt *op, *t;
 
 	read_files();
-	snprintf(line, sizeof(line), "../../conf/Makefile.%s", machinename);
-	ifp = fopen(line, "r");
-	if (ifp == 0) {
-		snprintf(line, sizeof(line), "Makefile.%s", machinename);
-		ifp = fopen(line, "r");
-	}
-	if (ifp == 0)
-		err(1, "%s", line);
-
+	ifp = open_makefile_template();
 	ofp = fopen(path("Makefile.new"), "w");
 	if (ofp == 0)
 		err(1, "%s", path("Makefile.new"));
 	fprintf(ofp, "KERN_IDENT=%s\n", ident);
-	SLIST_FOREACH(op, &mkopt, op_next)
-		fprintf(ofp, "%s=%s\n", op->op_name, op->op_value);
+	SLIST_FOREACH_SAFE(op, &mkopt, op_next, t) {
+		fprintf(ofp, "%s=%s", op->op_name, op->op_value);
+		while ((op = SLIST_NEXT(op, op_append)) != NULL)
+			fprintf(ofp, " %s", op->op_value);
+		fprintf(ofp, "\n");
+	}
 	if (debugging)
 		fprintf(ofp, "DEBUG=-g\n");
 	if (profiling)
@@ -150,23 +168,9 @@ makefile(void)
 			do_rules(ofp);
 		else if (eq(line, "%CLEAN\n"))
 			do_clean(ofp);
-		else if (strncmp(line, "%VERSREQ=", sizeof("%VERSREQ=") - 1) == 0) {
-			versreq = atoi(line + sizeof("%VERSREQ=") - 1);
-			if (MAJOR_VERS(versreq) != MAJOR_VERS(CONFIGVERS) ||
-			    versreq > CONFIGVERS) {
-				fprintf(stderr, "ERROR: version of config(8) does not match kernel!\n");
-				fprintf(stderr, "config version = %d, ", CONFIGVERS);
-				fprintf(stderr, "version required = %d\n\n", versreq);
-				fprintf(stderr, "Make sure that /usr/src/usr.sbin/config is in sync\n");
-				fprintf(stderr, "with your /usr/src/sys and install a new config binary\n");
-				fprintf(stderr, "before trying this again.\n\n");
-				fprintf(stderr, "If running the new config fails check your config\n");
-				fprintf(stderr, "file against the GENERIC or LINT config files for\n");
-				fprintf(stderr, "changes in config syntax, or option/device naming\n");
-				fprintf(stderr, "conventions\n\n");
-				exit(1);
-			}
-		} else
+		else if (strncmp(line, "%VERSREQ=", 9) == 0)
+			line[0] = '\0'; /* handled elsewhere */
+		else
 			fprintf(stderr,
 			    "Unknown %% construct in generic makefile: %s",
 			    line);
@@ -338,7 +342,8 @@ next:
 	if (eq(wd, "include")) {
 		next_quoted_word(fp, wd);
 		if (wd == 0) {
-			printf("%s: missing include filename.\n", fname);
+			fprintf(stderr, "%s: missing include filename.\n",
+			    fname);
 			exit(1);
 		}
 		(void) snprintf(ifname, sizeof(ifname), "../../%s", wd);
@@ -350,8 +355,7 @@ next:
 	this = ns(wd);
 	next_word(fp, wd);
 	if (wd == 0) {
-		printf("%s: No type for %s.\n",
-		    fname, this);
+		fprintf(stderr, "%s: No type for %s.\n", fname, this);
 		exit(1);
 	}
 	tp = fl_lookup(this);
@@ -378,8 +382,9 @@ next:
 	} else if (eq(wd, "mandatory")) {
 		mandatory = 1;
 	} else if (!eq(wd, "optional")) {
-		printf("%s: %s must be optional, mandatory or standard\n",
-		       fname, this);
+		fprintf(stderr,
+		    "%s: %s must be optional, mandatory or standard\n",
+		    fname, this);
 		exit(1);
 	}
 nextparam:
@@ -392,7 +397,7 @@ nextparam:
 	}
 	if (eq(wd, "|")) {
 		if (nreqs == 0) {
-			printf("%s: syntax error describing %s\n",
+			fprintf(stderr, "%s: syntax error describing %s\n",
 			    fname, this);
 			exit(1);
 		}
@@ -407,9 +412,9 @@ nextparam:
 	}
 	if (eq(wd, "no-implicit-rule")) {
 		if (compilewith == 0) {
-			printf("%s: alternate rule required when "
-			       "\"no-implicit-rule\" is specified.\n",
-			       fname);
+			fprintf(stderr, "%s: alternate rule required when "
+			    "\"no-implicit-rule\" is specified.\n",
+			    fname);
 		}
 		imp_rule++;
 		goto nextparam;
@@ -421,8 +426,9 @@ nextparam:
 	if (eq(wd, "dependency")) {
 		next_quoted_word(fp, wd);
 		if (wd == 0) {
-			printf("%s: %s missing compile command string.\n",
-			       fname, this);
+			fprintf(stderr,
+			    "%s: %s missing compile command string.\n",
+			    fname, this);
 			exit(1);
 		}
 		depends = ns(wd);
@@ -431,8 +437,8 @@ nextparam:
 	if (eq(wd, "clean")) {
 		next_quoted_word(fp, wd);
 		if (wd == 0) {
-			printf("%s: %s missing clean file list.\n",
-			       fname, this);
+			fprintf(stderr, "%s: %s missing clean file list.\n",
+			    fname, this);
 			exit(1);
 		}
 		clean = ns(wd);
@@ -441,8 +447,9 @@ nextparam:
 	if (eq(wd, "compile-with")) {
 		next_quoted_word(fp, wd);
 		if (wd == 0) {
-			printf("%s: %s missing compile command string.\n",
-			       fname, this);
+			fprintf(stderr,
+			    "%s: %s missing compile command string.\n",
+			    fname, this);
 			exit(1);
 		}
 		compilewith = ns(wd);
@@ -451,8 +458,9 @@ nextparam:
 	if (eq(wd, "warning")) {
 		next_quoted_word(fp, wd);
 		if (wd == 0) {
-			printf("%s: %s missing warning text string.\n",
-				fname, this);
+			fprintf(stderr,
+			    "%s: %s missing warning text string.\n",
+			    fname, this);
 			exit(1);
 		}
 		warning = ns(wd);
@@ -481,13 +489,14 @@ nextparam:
 			goto nextparam;
 		}
 	if (mandatory) {
-		printf("%s: mandatory device \"%s\" not found\n",
+		fprintf(stderr, "%s: mandatory device \"%s\" not found\n",
 		       fname, wd);
 		exit(1);
 	}
 	if (std) {
-		printf("standard entry %s has a device keyword - %s!\n",
-		       this, wd);
+		fprintf(stderr,
+		    "standard entry %s has a device keyword - %s!\n",
+		    this, wd);
 		exit(1);
 	}
 	SLIST_FOREACH(op, &opt, op_next)
@@ -498,13 +507,13 @@ nextparam:
 
 doneparam:
 	if (std == 0 && nreqs == 0) {
-		printf("%s: what is %s optional on?\n",
+		fprintf(stderr, "%s: what is %s optional on?\n",
 		    fname, this);
 		exit(1);
 	}
 
 	if (wd) {
-		printf("%s: syntax error describing %s\n",
+		fprintf(stderr, "%s: syntax error describing %s\n",
 		    fname, this);
 		exit(1);
 	}
@@ -680,10 +689,11 @@ do_rules(FILE *f)
 	char *cp, *np, och;
 	struct file_list *ftp;
 	char *compilewith;
+	char cmd[128];
 
 	STAILQ_FOREACH(ftp, &ftab, f_next) {
 		if (ftp->f_warn)
-			printf("WARNING: %s\n", ftp->f_warn);
+			fprintf(stderr, "WARNING: %s\n", ftp->f_warn);
 		cp = (np = ftp->f_fn) + strlen(ftp->f_fn) - 1;
 		och = *cp;
 		if (ftp->f_flags & NO_IMPLCT_RULE) {
@@ -717,25 +727,25 @@ do_rules(FILE *f)
 		compilewith = ftp->f_compilewith;
 		if (compilewith == 0) {
 			const char *ftype = NULL;
-			static char cmd[128];
 
 			switch (ftp->f_type) {
-
 			case NORMAL:
 				ftype = "NORMAL";
 				break;
-
 			case PROFILING:
 				if (!profiling)
 					continue;
 				ftype = "PROFILE";
 				break;
-
 			default:
-				printf("config: don't know rules for %s\n", np);
+				fprintf(stderr,
+				    "config: don't know rules for %s\n", np);
 				break;
 			}
-			snprintf(cmd, sizeof(cmd), "${%s_%c%s}", ftype,
+			snprintf(cmd, sizeof(cmd), "${%s_%c%s}\n"
+			    ".if defined(NORMAL_CTFCONVERT) && "
+			    "!empty(NORMAL_CTFCONVERT)\n"
+			    "\t${NORMAL_CTFCONVERT}\n.endif", ftype,
 			    toupper(och),
 			    ftp->f_flags & NOWERROR ? "_NOWERROR" : "");
 			compilewith = cmd;

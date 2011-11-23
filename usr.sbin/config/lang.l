@@ -28,11 +28,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)lang.l	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.sbin/config/lang.l,v 1.45 2007/05/12 19:38:18 wkoszek Exp $
+ * $FreeBSD: src/usr.sbin/config/lang.l,v 1.45.2.3 2010/07/15 23:07:02 imp Exp $
+ * $MidnightBSD$
  */
 
 #include <assert.h>
 #include <ctype.h>
+#include <err.h>
 #include <string.h>
 #include "y.tab.h"
 #include "config.h"
@@ -96,6 +98,7 @@ int yyerror(const char *);
 
 %}
 ID	[A-Za-z_][-A-Za-z_0-9]*
+PATH	[./][-/.%^A-Za-z_0-9]+
 %START TOEOL
 %%
 {ID}		{
@@ -155,6 +158,7 @@ ID	[A-Za-z_][-A-Za-z_0-9]*
 ";"		{	return SEMICOLON;		}
 ","		{	return COMMA;			}
 "="		{	BEGIN TOEOL; return EQUALS;	}
+"+="		{	BEGIN TOEOL; return PLUSEQUALS;	}
 <<EOF>>		{
 			int tok;
 
@@ -164,6 +168,11 @@ ID	[A-Za-z_][-A-Za-z_0-9]*
 			if (tok != 0)
 				return tok;
 			/* otherwise continue scanning */
+		}
+{PATH}		{
+			BEGIN 0;
+			yylval.str = strdup(yytext);
+			return PATH;
 		}
 .		{	return yytext[0];		}
 
@@ -213,6 +222,8 @@ cfgfile_add(const char *fname)
 	struct cfgfile *cf;
 
 	cf = calloc(1, sizeof(*cf));
+	if (cf == NULL)
+		err(EXIT_FAILURE, "calloc");
 	assert(cf != NULL);
 	asprintf(&cf->cfg_path, "%s", fname);
 	STAILQ_INSERT_TAIL(&cfgfiles, cf, cfg_next);
@@ -278,7 +289,7 @@ include(const char *fname, int ateof)
  * Terminate the most recent inclusion.
  */
 static int
-endinclude()
+endinclude(void)
 {
 	struct incl *in;
 	int ateof;

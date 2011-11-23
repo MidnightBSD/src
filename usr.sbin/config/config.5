@@ -21,9 +21,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/config/config.5,v 1.10 2006/10/24 00:44:40 imp Exp $
+.\" $FreeBSD: src/usr.sbin/config/config.5,v 1.10.2.1 2009/01/12 02:45:00 thompsa Exp $
+.\" $MidnightBSD$
 .\"
-.Dd December 3, 2005
+.Dd November 23, 2011
 .Dt CONFIG 5
 .Os
 .Sh NAME
@@ -31,7 +32,7 @@
 .Nd kernel configuration file format
 .Sh DESCRIPTION
 A kernel configuration file specifies the configuration of a
-.Fx
+.Mx
 kernel.
 It is processed by
 .Xr config 8
@@ -231,6 +232,7 @@ specifications.
 Each option specification has the form
 .Pp
 .D1 Ar MakeVariableName Ns Op = Ns Ar Value
+.D1 Ar MakeVariableName Ns += Ns Ar Value
 .Pp
 and results in the appropriate
 .Xr make 1
@@ -243,7 +245,8 @@ is assumed to be the empty string.
 .Pp
 Example:
 .Bd -literal -offset indent -compact
-makeoptions MYMAKEOPTION="foobar"
+makeoptions MYMAKEOPTION="foo"
+makeoptions MYMAKEOPTION+="bar"
 makeoptions MYNULLMAKEOPTION
 .Ed
 .\" -------- MAXUSERS --------

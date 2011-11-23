@@ -1,7 +1,7 @@
 /*-
  * This file is in the public domain
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/config/configvers.h,v 1.3 2008/09/30 02:45:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/config/configvers.h,v 1.45 2007/05/13 02:36:41 wkoszek Exp $
  */
 
@@ -48,8 +48,8 @@
  *     %VERSREQ field in the Makefile.$ARCH of all the affected makefiles
  *     (typically all of them).
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/config/configvers.h,v 1.3 2008/09/30 02:45:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/config/configvers.h,v 1.45 2007/05/13 02:36:41 wkoszek Exp $
  */
-#define	CONFIGVERS	600006
+#define	CONFIGVERS	600010
 #define	MAJOR_VERS(x)	((x) / 100000)
