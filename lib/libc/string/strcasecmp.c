@@ -46,6 +46,9 @@ strcasecmp(s1, s2)
 			*us1 = (const u_char *)s1,
 			*us2 = (const u_char *)s2;
 
+	if (s1 == s2)
+		return (0);
+
 	while (tolower(*us1) == tolower(*us2++))
 		if (*us1++ == '\0')
 			return (0);
@@ -61,6 +64,9 @@ strncasecmp(s1, s2, n)
 		const u_char
 				*us1 = (const u_char *)s1,
 				*us2 = (const u_char *)s2;
+
+		if ((s1 == s2) || (n == 0))
+			return (0);
 
 		do {
 			if (tolower(*us1) != tolower(*us2++))

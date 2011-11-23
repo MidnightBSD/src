@@ -41,7 +41,7 @@ strncmp(s1, s2, n)
 	size_t n;
 {
 
-	if (n == 0)
+	if ((n == 0) || (s1 == s2))
 		return (0);
 	do {
 		if (*s1 != *s2++)
