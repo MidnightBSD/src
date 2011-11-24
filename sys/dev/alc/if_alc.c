@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/dev/alc/if_alc.c,v 1.1.2.9 2010/08/30 21:17:11 yongari Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.8 2011/11/24 15:44:25 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.9 2011/11/24 15:57:52 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -2423,14 +2423,12 @@ alc_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			} else
 				ifp->if_hwassist &= ~CSUM_TSO;
 		}
-		/* XXX
 		if ((mask & IFCAP_WOL_MCAST) != 0 &&
 		    (ifp->if_capabilities & IFCAP_WOL_MCAST) != 0)
 			ifp->if_capenable ^= IFCAP_WOL_MCAST;
 		if ((mask & IFCAP_WOL_MAGIC) != 0 &&
 		    (ifp->if_capabilities & IFCAP_WOL_MAGIC) != 0)
 			ifp->if_capenable ^= IFCAP_WOL_MAGIC;
-		*/
 		if ((mask & IFCAP_VLAN_HWTAGGING) != 0 &&
 		    (ifp->if_capabilities & IFCAP_VLAN_HWTAGGING) != 0) {
 			ifp->if_capenable ^= IFCAP_VLAN_HWTAGGING;
