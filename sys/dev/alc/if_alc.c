@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/dev/alc/if_alc.c,v 1.1.2.9 2010/08/30 21:17:11 yongari Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.9 2011/11/24 15:57:52 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.10 2011/11/24 15:59:15 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -2482,12 +2482,10 @@ alc_mac_config(struct alc_softc *sc)
 	}
 	if ((IFM_OPTIONS(mii->mii_media_active) & IFM_FDX) != 0) {
 		reg |= MAC_CFG_FULL_DUPLEX;
-#ifdef notyet
 		if ((IFM_OPTIONS(mii->mii_media_active) & IFM_ETH_TXPAUSE) != 0)
 			reg |= MAC_CFG_TX_FC;
 		if ((IFM_OPTIONS(mii->mii_media_active) & IFM_ETH_RXPAUSE) != 0)
 			reg |= MAC_CFG_RX_FC;
-#endif
 	}
 	CSR_WRITE_4(sc, ALC_MAC_CFG, reg);
 }

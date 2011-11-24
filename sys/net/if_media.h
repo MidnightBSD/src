@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/net/if_media.h,v 1.5 2008/12/03 00:26:54 laffer1 Exp $ */
 /*	$NetBSD: if_media.h,v 1.3 1997/03/26 01:19:27 thorpej Exp $	*/
 /* $FreeBSD: src/sys/net/if_media.h,v 1.40 2007/09/18 20:30:40 sam Exp $ */
 
@@ -37,7 +37,7 @@
  */
 
 #ifndef _NET_IF_MEDIA_H_
-#define _NET_IF_MEDIA_H_
+#define	_NET_IF_MEDIA_H_
 
 /*
  * Prototypes and definitions for BSD/OS-compatible network interface
@@ -145,11 +145,18 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_10G_LR	18		/* 10GBase-LR 1310nm Single-mode */
 #define	IFM_10G_SR	19		/* 10GBase-SR 850nm Multi-mode */
 #define	IFM_10G_CX4	20		/* 10GBase CX4 copper */
-#define IFM_2500_SX	21		/* 2500BaseSX - multi-mode fiber */
+#define	IFM_2500_SX	21		/* 2500BaseSX - multi-mode fiber */
+#define	IFM_10G_TWINAX	22		/* 10GBase Twinax copper */
+#define	IFM_10G_TWINAX_LONG	23	/* 10GBase Twinax Long copper */
+#define	IFM_10G_LRM	24		/* 10GBase-LRM 850nm Multi-mode */
+#define	IFM_UNKNOWN	25		/* media types not defined yet */
+#define	IFM_10G_T	26		/* 10GBase-T - RJ45 */
 
 /* note 31 is the max! */
 
 #define	IFM_ETH_MASTER	0x00000100	/* master mode (1000baseT) */
+#define	IFM_ETH_RXPAUSE	0x00000200	/* receive PAUSE frames */
+#define	IFM_ETH_TXPAUSE	0x00000400	/* transmit PAUSE frames */
 
 /*
  * Token ring
@@ -209,9 +216,10 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_IEEE80211_ADHOC	0x00000100	/* Operate in Adhoc mode */
 #define	IFM_IEEE80211_HOSTAP	0x00000200	/* Operate in Host AP mode */
 #define	IFM_IEEE80211_IBSS	0x00000400	/* Operate in IBSS mode */
-#define	IFM_IEEE80211_IBSSMASTER 0x00000800	/* Operate as an IBSS master */
+#define	IFM_IEEE80211_WDS	0x00000800	/* Operate in WDS mode */
 #define	IFM_IEEE80211_TURBO	0x00001000	/* Operate in turbo mode */
 #define	IFM_IEEE80211_MONITOR	0x00002000	/* Operate in monitor mode */
+#define	IFM_IEEE80211_MBSS	0x00004000	/* Operate in MBSS mode */
 
 /* operating mode for multi-mode devices */
 #define	IFM_IEEE80211_11A	0x00010000	/* 5Ghz, OFDM mode */
@@ -224,20 +232,20 @@ uint64_t	ifmedia_baudrate(int);
 /*
  * ATM
  */
-#define IFM_ATM	0x000000a0
-#define IFM_ATM_UNKNOWN		3
-#define IFM_ATM_UTP_25		4
-#define IFM_ATM_TAXI_100	5
-#define IFM_ATM_TAXI_140	6
-#define IFM_ATM_MM_155		7
-#define IFM_ATM_SM_155		8
-#define IFM_ATM_UTP_155		9
-#define IFM_ATM_MM_622		10
-#define IFM_ATM_SM_622		11
+#define	IFM_ATM	0x000000a0
+#define	IFM_ATM_UNKNOWN		3
+#define	IFM_ATM_UTP_25		4
+#define	IFM_ATM_TAXI_100	5
+#define	IFM_ATM_TAXI_140	6
+#define	IFM_ATM_MM_155		7
+#define	IFM_ATM_SM_155		8
+#define	IFM_ATM_UTP_155		9
+#define	IFM_ATM_MM_622		10
+#define	IFM_ATM_SM_622		11
 #define	IFM_ATM_VIRTUAL		12
-#define IFM_ATM_SDH		0x00000100	/* SDH instead of SONET */
-#define IFM_ATM_NOSCRAMB	0x00000200	/* no scrambling */
-#define IFM_ATM_UNASSIGNED	0x00000400	/* unassigned cells */
+#define	IFM_ATM_SDH		0x00000100	/* SDH instead of SONET */
+#define	IFM_ATM_NOSCRAMB	0x00000200	/* no scrambling */
+#define	IFM_ATM_UNASSIGNED	0x00000400	/* unassigned cells */
 
 /*
  * CARP Common Address Redundancy Protocol
@@ -256,6 +264,7 @@ uint64_t	ifmedia_baudrate(int);
  */
 #define	IFM_FDX		0x00100000	/* Force full duplex */
 #define	IFM_HDX		0x00200000	/* Force half duplex */
+#define	IFM_FLOW	0x00400000	/* enable hardware flow control */
 #define	IFM_FLAG0	0x01000000	/* Driver defined flag */
 #define	IFM_FLAG1	0x02000000	/* Driver defined flag */
 #define	IFM_FLAG2	0x04000000	/* Driver defined flag */
@@ -273,6 +282,9 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_MSHIFT	16		/* Mode shift */
 #define	IFM_GMASK	0x0ff00000	/* Global options */
 
+/* Ethernet flow control mask */
+#define	IFM_ETH_FMASK	(IFM_FLOW | IFM_ETH_RXPAUSE | IFM_ETH_TXPAUSE)
+
 /*
  * Status bits
  */
@@ -283,22 +295,22 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_STATUS_VALID	IFM_AVALID
 
 /* List of "status valid" bits, for ifconfig(8). */
-#define IFM_STATUS_VALID_LIST {						\
-        IFM_AVALID,							\
-        0								\
+#define	IFM_STATUS_VALID_LIST {						\
+	IFM_AVALID,							\
+	0								\
 }
 
 /*
  * Macros to extract various bits of information from the media word.
  */
-#define	IFM_TYPE(x)         ((x) & IFM_NMASK)
-#define	IFM_SUBTYPE(x)      ((x) & IFM_TMASK)
-#define	IFM_TYPE_OPTIONS(x) ((x) & IFM_OMASK)
-#define	IFM_INST(x)         (((x) & IFM_IMASK) >> IFM_ISHIFT)
-#define	IFM_OPTIONS(x)	((x) & (IFM_OMASK|IFM_GMASK))
-#define	IFM_MODE(x)	    ((x) & IFM_MMASK)
+#define	IFM_TYPE(x)		((x) & IFM_NMASK)
+#define	IFM_SUBTYPE(x)		((x) & IFM_TMASK)
+#define	IFM_TYPE_OPTIONS(x)	((x) & IFM_OMASK)
+#define	IFM_INST(x)		(((x) & IFM_IMASK) >> IFM_ISHIFT)
+#define	IFM_OPTIONS(x)		((x) & (IFM_OMASK | IFM_GMASK))
+#define	IFM_MODE(x)		((x) & IFM_MMASK)
 
-#define	IFM_INST_MAX	IFM_INST(IFM_IMASK)
+#define	IFM_INST_MAX		IFM_INST(IFM_IMASK)
 
 /*
  * Macro to create a media word.
@@ -344,17 +356,22 @@ struct ifmedia_description {
 	{ IFM_1000_SX,	"1000baseSX" },					\
 	{ IFM_1000_LX,	"1000baseLX" },					\
 	{ IFM_1000_CX,	"1000baseCX" },					\
-	{ IFM_1000_T,	"1000baseTX" },					\
 	{ IFM_1000_T,	"1000baseT" },					\
 	{ IFM_HPNA_1,	"homePNA" },					\
 	{ IFM_10G_LR,	"10Gbase-LR" },					\
 	{ IFM_10G_SR,	"10Gbase-SR" },					\
 	{ IFM_10G_CX4,	"10Gbase-CX4" },				\
 	{ IFM_2500_SX,	"2500BaseSX" },					\
+	{ IFM_10G_LRM,	"10Gbase-LRM" },				\
+	{ IFM_10G_TWINAX,	"10Gbase-Twinax" },			\
+	{ IFM_10G_TWINAX_LONG,	"10Gbase-Twinax-Long" },		\
+	{ IFM_UNKNOWN,	"Unknown" },					\
+	{ IFM_10G_T,	"10Gbase-T" },					\
 	{ 0, NULL },							\
 }
 
 #define	IFM_SUBTYPE_ETHERNET_ALIASES {					\
+	{ IFM_10_T,	"10baseT" },					\
 	{ IFM_10_T,	"UTP" },					\
 	{ IFM_10_T,	"10UTP" },					\
 	{ IFM_10_2,	"BNC" },					\
@@ -370,13 +387,34 @@ struct ifmedia_description {
 	{ IFM_1000_SX,	"1000SX" },					\
 	{ IFM_1000_LX,	"1000LX" },					\
 	{ IFM_1000_CX,	"1000CX" },					\
+	{ IFM_1000_T,	"1000baseTX" },					\
 	{ IFM_1000_T,	"1000TX" },					\
 	{ IFM_1000_T,	"1000T" },					\
 	{ IFM_2500_SX,	"2500SX" },					\
+									\
+	/*								\
+	 * Shorthands for common media+option combinations as announced	\
+	 * by miibus(4)							\
+	 */								\
+	{ IFM_10_T | IFM_FDX,			"10baseT-FDX" },	\
+	{ IFM_10_T | IFM_FDX | IFM_FLOW,	"10baseT-FDX-flow" },	\
+	{ IFM_100_TX | IFM_FDX,			"100baseTX-FDX" },	\
+	{ IFM_100_TX | IFM_FDX | IFM_FLOW,	"100baseTX-FDX-flow" },	\
+	{ IFM_1000_T | IFM_FDX,			"1000baseT-FDX" },	\
+	{ IFM_1000_T | IFM_FDX | IFM_FLOW,	"1000baseT-FDX-flow" },	\
+	{ IFM_1000_T | IFM_FDX | IFM_FLOW | IFM_ETH_MASTER,		\
+	    "1000baseT-FDX-flow-master" },				\
+	{ IFM_1000_T | IFM_FDX | IFM_ETH_MASTER,			\
+	    "1000baseT-FDX-master" },					\
+	{ IFM_1000_T | IFM_ETH_MASTER,		"1000baseT-master" },	\
+									\
 	{ 0, NULL },							\
 }
 
 #define	IFM_SUBTYPE_ETHERNET_OPTION_DESCRIPTIONS {			\
+	{ IFM_ETH_MASTER,	"master" },				\
+	{ IFM_ETH_RXPAUSE,	"rxpause" },				\
+	{ IFM_ETH_TXPAUSE,	"txpause" },				\
 	{ 0, NULL },							\
 }
 
@@ -496,9 +534,10 @@ struct ifmedia_description {
 	{ IFM_IEEE80211_ADHOC, "adhoc" },				\
 	{ IFM_IEEE80211_HOSTAP, "hostap" },				\
 	{ IFM_IEEE80211_IBSS, "ibss" },					\
-	{ IFM_IEEE80211_IBSSMASTER, "ibss-master" },			\
+	{ IFM_IEEE80211_WDS, "wds" },					\
 	{ IFM_IEEE80211_TURBO, "turbo" },				\
 	{ IFM_IEEE80211_MONITOR, "monitor" },				\
+	{ IFM_IEEE80211_MBSS, "mesh" },					\
 	{ 0, NULL },							\
 }
 
@@ -518,7 +557,7 @@ struct ifmedia_description {
 	{ 0, NULL },							\
 }
 
-# define IFM_SUBTYPE_ATM_DESCRIPTIONS {					\
+#define	IFM_SUBTYPE_ATM_DESCRIPTIONS {					\
 	{ IFM_ATM_UNKNOWN,	"Unknown" },				\
 	{ IFM_ATM_UTP_25,	"UTP/25.6MBit" },			\
 	{ IFM_ATM_TAXI_100,	"Taxi/100MBit" },			\
@@ -532,7 +571,7 @@ struct ifmedia_description {
 	{ 0, NULL },							\
 }
 
-# define IFM_SUBTYPE_ATM_ALIASES {					\
+#define	IFM_SUBTYPE_ATM_ALIASES {					\
 	{ IFM_ATM_UNKNOWN,	"UNKNOWN" },				\
 	{ IFM_ATM_UTP_25,	"UTP-25" },				\
 	{ IFM_ATM_TAXI_100,	"TAXI-100" },				\
@@ -553,7 +592,6 @@ struct ifmedia_description {
 	{ 0, NULL },							\
 }
 
-
 #define	IFM_SUBTYPE_SHARED_DESCRIPTIONS {				\
 	{ IFM_AUTO,	"autoselect" },					\
 	{ IFM_MANUAL,	"manual" },					\
@@ -563,16 +601,33 @@ struct ifmedia_description {
 
 #define	IFM_SUBTYPE_SHARED_ALIASES {					\
 	{ IFM_AUTO,	"auto" },					\
+									\
+	/*								\
+	 * Shorthands for common media+option combinations as announced	\
+	 * by miibus(4)							\
+	 */								\
+	{ IFM_AUTO | IFM_FLOW,	"auto-flow" },				\
+									\
 	{ 0, NULL },							\
 }
 
 #define	IFM_SHARED_OPTION_DESCRIPTIONS {				\
 	{ IFM_FDX,	"full-duplex" },				\
 	{ IFM_HDX,	"half-duplex" },				\
+	{ IFM_FLOW,	"flowcontrol" },				\
 	{ IFM_FLAG0,	"flag0" },					\
 	{ IFM_FLAG1,	"flag1" },					\
 	{ IFM_FLAG2,	"flag2" },					\
 	{ IFM_LOOP,	"hw-loopback" },				\
+	{ 0, NULL },							\
+}
+
+#define	IFM_SHARED_OPTION_ALIASES {					\
+	{ IFM_FDX,	"fdx" },					\
+	{ IFM_HDX,	"hdx" },					\
+	{ IFM_FLOW,	"flow" },					\
+	{ IFM_LOOP,	"loop" },					\
+	{ IFM_LOOP,	"loopback" },					\
 	{ 0, NULL },							\
 }
 
@@ -584,7 +639,7 @@ struct ifmedia_baudrate {
 	uint64_t	ifmb_baudrate;		/* corresponding baudrate */
 };
 
-#define IFM_BAUDRATE_DESCRIPTIONS {					\
+#define	IFM_BAUDRATE_DESCRIPTIONS {					\
 	{ IFM_ETHER | IFM_10_T,		IF_Mbps(10) },			\
 	{ IFM_ETHER | IFM_10_2,		IF_Mbps(10) },			\
 	{ IFM_ETHER | IFM_10_5,		IF_Mbps(10) },			\
@@ -604,6 +659,10 @@ struct ifmedia_baudrate {
 	{ IFM_ETHER | IFM_10G_SR,	IF_Gbps(10ULL) },		\
 	{ IFM_ETHER | IFM_10G_CX4,	IF_Gbps(10ULL) },		\
 	{ IFM_ETHER | IFM_2500_SX,	IF_Mbps(2500ULL) },		\
+	{ IFM_ETHER | IFM_10G_TWINAX,	IF_Gbps(10ULL) },		\
+	{ IFM_ETHER | IFM_10G_TWINAX_LONG,	IF_Gbps(10ULL) },	\
+	{ IFM_ETHER | IFM_10G_LRM,	IF_Gbps(10ULL) },		\
+	{ IFM_ETHER | IFM_10G_T,	IF_Gbps(10ULL) },		\
 									\
 	{ IFM_TOKEN | IFM_TOK_STP4,	IF_Mbps(4) },			\
 	{ IFM_TOKEN | IFM_TOK_STP16,	IF_Mbps(16) },			\
@@ -644,10 +703,10 @@ struct ifmedia_status_description {
 	const char *ifms_string[2];
 };
 
-#define IFM_STATUS_DESC(ifms, bit)					\
+#define	IFM_STATUS_DESC(ifms, bit)					\
 	(ifms)->ifms_string[((ifms)->ifms_bit & (bit)) ? 1 : 0]
 
-#define IFM_STATUS_DESCRIPTIONS {					\
+#define	IFM_STATUS_DESCRIPTIONS {					\
 	{ IFM_ETHER,		IFM_AVALID,	IFM_ACTIVE,		\
 	    { "no carrier", "active" } },				\
 	{ IFM_FDDI,		IFM_AVALID,	IFM_ACTIVE,		\
