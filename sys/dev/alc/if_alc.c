@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/dev/alc/if_alc.c,v 1.1.2.9 2010/08/30 21:17:11 yongari Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.7 2011/11/04 22:25:47 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.8 2011/11/24 15:44:25 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -156,6 +156,8 @@ static void	alc_rxeof(struct alc_softc *, struct rx_rdesc *);
 static int	alc_rxintr(struct alc_softc *, int);
 static void	alc_rxfilter(struct alc_softc *);
 static void	alc_rxvlan(struct alc_softc *);
+static void	alc_setlinkspeed(struct alc_softc *);
+static void	alc_setwol(struct alc_softc *);
 static int	alc_shutdown(device_t);
 static void	alc_start(struct ifnet *);
 static void	alc_start_locked(struct ifnet *);
@@ -364,10 +366,8 @@ alc_mediachange(struct ifnet *ifp)
 	sc = ifp->if_softc;
 	ALC_LOCK(sc);
 	mii = device_get_softc(sc->alc_miibus);
-	if (mii->mii_instance != 0) {
-		LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
-			mii_phy_reset(miisc);
-	}
+	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
+		mii_phy_reset(miisc);
 	error = mii_mediachg(mii);
 	ALC_UNLOCK(sc);
 
@@ -1825,6 +1825,148 @@ alc_shutdown(device_t dev)
 	return (alc_suspend(dev));
 }
 
+/*
+ * Note, this driver resets the link speed to 10/100Mbps by
+ * restarting auto-negotiation in suspend/shutdown phase but we
+ * don't know whether that auto-negotiation would succeed or not
+ * as driver has no control after powering off/suspend operation.
+ * If the renegotiation fail WOL may not work. Running at 1Gbps
+ * will draw more power than 375mA at 3.3V which is specified in
+ * PCI specification and that would result in complete
+ * shutdowning power to ethernet controller.
+ *
+ * TODO
+ * Save current negotiated media speed/duplex/flow-control to
+ * softc and restore the same link again after resuming. PHY
+ * handling such as power down/resetting to 100Mbps may be better
+ * handled in suspend method in phy driver.
+ */
+static void
+alc_setlinkspeed(struct alc_softc *sc)
+{
+	struct mii_data *mii;
+	int aneg, i;
+
+	mii = device_get_softc(sc->alc_miibus);
+	mii_pollstat(mii);
+	aneg = 0;
+	if ((mii->mii_media_status & (IFM_ACTIVE | IFM_AVALID)) ==
+	    (IFM_ACTIVE | IFM_AVALID)) {
+		switch IFM_SUBTYPE(mii->mii_media_active) {
+		case IFM_10_T:
+		case IFM_100_TX:
+			return;
+		case IFM_1000_T:
+			aneg++;
+			break;
+		default:
+			break;
+		}
+	}
+	alc_miibus_writereg(sc->alc_dev, sc->alc_phyaddr, MII_100T2CR, 0);
+	alc_miibus_writereg(sc->alc_dev, sc->alc_phyaddr,
+	    MII_ANAR, ANAR_TX_FD | ANAR_TX | ANAR_10_FD | ANAR_10 | ANAR_CSMA);
+	alc_miibus_writereg(sc->alc_dev, sc->alc_phyaddr,
+	    MII_BMCR, BMCR_RESET | BMCR_AUTOEN | BMCR_STARTNEG);
+	DELAY(1000);
+	if (aneg != 0) {
+		/*
+		 * Poll link state until alc(4) get a 10/100Mbps link.
+		 */
+		for (i = 0; i < MII_ANEGTICKS_GIGE; i++) {
+			mii_pollstat(mii);
+			if ((mii->mii_media_status & (IFM_ACTIVE | IFM_AVALID))
+			    == (IFM_ACTIVE | IFM_AVALID)) {
+				switch (IFM_SUBTYPE(
+				    mii->mii_media_active)) {
+				case IFM_10_T:
+				case IFM_100_TX:
+					alc_mac_config(sc);
+					return;
+				default:
+					break;
+				}
+			}
+			ALC_UNLOCK(sc);
+			pause("alclnk", hz);
+			ALC_LOCK(sc);
+		}
+		if (i == MII_ANEGTICKS_GIGE)
+			device_printf(sc->alc_dev,
+			    "establishing a link failed, WOL may not work!");
+	}
+	/*
+	 * No link, force MAC to have 100Mbps, full-duplex link.
+	 * This is the last resort and may/may not work.
+	 */
+	mii->mii_media_status = IFM_AVALID | IFM_ACTIVE;
+	mii->mii_media_active = IFM_ETHER | IFM_100_TX | IFM_FDX;
+	alc_mac_config(sc);
+}
+
+static void
+alc_setwol(struct alc_softc *sc)
+{
+	struct ifnet *ifp;
+	uint32_t reg, pmcs;
+	uint16_t pmstat;
+
+	ALC_LOCK_ASSERT(sc);
+
+	alc_disable_l0s_l1(sc);
+	ifp = sc->alc_ifp;
+	if ((sc->alc_flags & ALC_FLAG_PM) == 0) {
+		/* Disable WOL. */
+		CSR_WRITE_4(sc, ALC_WOL_CFG, 0);
+		reg = CSR_READ_4(sc, ALC_PCIE_PHYMISC);
+		reg |= PCIE_PHYMISC_FORCE_RCV_DET;
+		CSR_WRITE_4(sc, ALC_PCIE_PHYMISC, reg);
+		/* Force PHY power down. */
+		alc_phy_down(sc);
+		CSR_WRITE_4(sc, ALC_MASTER_CFG,
+		    CSR_READ_4(sc, ALC_MASTER_CFG) | MASTER_CLK_SEL_DIS);
+		return;
+	}
+
+	if ((ifp->if_capenable & IFCAP_WOL) != 0) {
+		if ((sc->alc_flags & ALC_FLAG_FASTETHER) == 0)
+			alc_setlinkspeed(sc);
+		CSR_WRITE_4(sc, ALC_MASTER_CFG,
+		    CSR_READ_4(sc, ALC_MASTER_CFG) & ~MASTER_CLK_SEL_DIS);
+	}
+
+	pmcs = 0;
+	if ((ifp->if_capenable & IFCAP_WOL_MAGIC) != 0)
+		pmcs |= WOL_CFG_MAGIC | WOL_CFG_MAGIC_ENB;
+	CSR_WRITE_4(sc, ALC_WOL_CFG, pmcs);
+	reg = CSR_READ_4(sc, ALC_MAC_CFG);
+	reg &= ~(MAC_CFG_DBG | MAC_CFG_PROMISC | MAC_CFG_ALLMULTI |
+	    MAC_CFG_BCAST);
+	if ((ifp->if_capenable & IFCAP_WOL_MCAST) != 0)
+		reg |= MAC_CFG_ALLMULTI | MAC_CFG_BCAST;
+	if ((ifp->if_capenable & IFCAP_WOL) != 0)
+		reg |= MAC_CFG_RX_ENB;
+	CSR_WRITE_4(sc, ALC_MAC_CFG, reg);
+
+	reg = CSR_READ_4(sc, ALC_PCIE_PHYMISC);
+	reg |= PCIE_PHYMISC_FORCE_RCV_DET;
+	CSR_WRITE_4(sc, ALC_PCIE_PHYMISC, reg);
+	if ((ifp->if_capenable & IFCAP_WOL) == 0) {
+		/* WOL disabled, PHY power down. */
+		alc_phy_down(sc);
+		CSR_WRITE_4(sc, ALC_MASTER_CFG,
+		    CSR_READ_4(sc, ALC_MASTER_CFG) | MASTER_CLK_SEL_DIS);
+	}
+	/* Request PME. */
+	pmstat = pci_read_config(sc->alc_dev,
+	    sc->alc_pmcap + PCIR_POWER_STATUS, 2);
+	pmstat &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
+	if ((ifp->if_capenable & IFCAP_WOL) != 0)
+		pmstat |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
+	pci_write_config(sc->alc_dev,
+	    sc->alc_pmcap + PCIR_POWER_STATUS, pmstat, 2);
+}
+
 static int
 alc_suspend(device_t dev)
 {
@@ -1834,6 +1976,7 @@ alc_suspend(device_t dev)
 
 	ALC_LOCK(sc);
 	alc_stop(sc);
+	alc_setwol(sc);
 	ALC_UNLOCK(sc);
 
 	return (0);
