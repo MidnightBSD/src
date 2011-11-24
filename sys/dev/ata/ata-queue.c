@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ata/ata-queue.c,v 1.9 2010/02/06 22:59:54 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-queue.c,v 1.69.2.2 2009/11/10 22:56:05 mav Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-queue.c,v 1.69.2.3 2011/03/01 18:05:57 jh Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -444,7 +444,8 @@ ata_completed(void *context, int dummy)
 		printf("\n");
 	}
 
-	if ((request->u.atapi.sense.key & ATA_SENSE_KEY_MASK ?
+	if (!request->result &&
+	     (request->u.atapi.sense.key & ATA_SENSE_KEY_MASK ?
 	     request->u.atapi.sense.key & ATA_SENSE_KEY_MASK : 
 	     request->error))
 	    request->result = EIO;
