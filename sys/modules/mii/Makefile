@@ -1,18 +1,25 @@
-# $FreeBSD: src/sys/modules/mii/Makefile,v 1.30 2007/06/11 02:07:08 yongari Exp $
+# $FreeBSD: src/sys/modules/mii/Makefile,v 1.30.2.8 2011/11/06 21:11:22 marius Exp $
 
 .PATH: ${.CURDIR}/../../dev/mii
 
 KMOD=	miibus
-SRCS=	mii.c mii_physubr.c ukphy.c ukphy_subr.c bus_if.h pci_if.h
-SRCS+=	miibus_if.h miidevs.h device_if.h miibus_if.c e1000phy.c exphy.c nsphy.c
-SRCS+=	mlphy.c tlphy.c rlphy.c amphy.c icsphy.c inphy.c tdkphy.c
-SRCS+=	bmtphy.c brgphy.c xmphy.c pnaphy.c lxtphy.c qsphy.c acphy.c nsgphy.c
-SRCS+=	rgephy.c ruephy.c ciphy.c gentbi.c ip1000phy.c
+SRCS=	acphy.c amphy.c atphy.c bmtphy.c brgphy.c bus_if.h
+SRCS+=	ciphy.c device_if.h
+SRCS+=	e1000phy.c exphy.c gentbi.c icsphy.c inphy.c ip1000phy.c jmphy.c lxtphy.c
+SRCS+=	miibus_if.c miibus_if.h mii.c miidevs.h mii_bitbang.c mii_physubr.c
+SRCS+=	mlphy.c nsgphy.c nsphy.c nsphyter.c pci_if.h pnaphy.c qsphy.c
+SRCS+=	rdcphy.c rgephy.c rlphy.c ruephy.c tdkphy.c tlphy.c truephy.c
+SRCS+=	ukphy.c ukphy_subr.c
+SRCS+=	xmphy.c
 
-EXPORT_SYMS=	mii_mediachg	\
-		mii_tick	\
-		mii_pollstat	\
+EXPORT_SYMS=	mii_attach	\
+		mii_bitbang_readreg \
+		mii_bitbang_sync \
+		mii_bitbang_writereg \
+		mii_mediachg	\
 		mii_phy_probe	\
-		mii_phy_reset
+		mii_phy_reset	\
+		mii_pollstat	\
+		mii_tick
 
 .include <bsd.kmod.mk>
