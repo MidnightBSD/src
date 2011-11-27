@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/rlswitch.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/rlswitch.c,v 1.1.2.4 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * driver for RealTek 8305 pseudo PHYs
@@ -117,37 +117,25 @@ rlswitch_attach(device_t dev)
 	sc = device_get_softc(dev);
 	ma = device_get_ivars(dev);
 	sc->mii_dev = device_get_parent(dev);
-	mii = device_get_softc(sc->mii_dev);
-
-	/*
-	 * We handle all pseudo PHY in a single instance, so never allow
-	 * non-zero * instances!
-	 */
-	if (mii->mii_instance != 0) {
-		device_printf(dev, "ignoring this PHY, non-zero instance\n");
-		return (ENXIO);
-	}
-
+	mii = ma->mii_data;
 	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
 
-	sc->mii_inst = mii->mii_instance;
+	sc->mii_flags = miibus_get_flags(dev);
+	sc->mii_inst = mii->mii_instance++;
 	sc->mii_phy = ma->mii_phyno;
 	sc->mii_service = rlswitch_service;
 	sc->mii_pdata = mii;
-	mii->mii_instance++;
 
-	sc->mii_flags |= MIIF_NOISOLATE;
+	/*
+	 * We handle all pseudo PHYs in a single instance.
+	 */
+	sc->mii_flags |= MIIF_NOISOLATE | MIIF_NOMANPAUSE;
 
 #define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
 
-#if 0 /* See above. */
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_NONE, 0, sc->mii_inst),
-	    BMCR_ISO);
-#endif
-
 #if 0
 	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_TX, IFM_LOOP, sc->mii_inst),
-	    BMCR_LOOP|BMCR_S100);
+	    MII_MEDIA_100_TX);
 #endif
 
 	sc->mii_capabilities = BMSR_100TXFDX & ma->mii_capmask;
@@ -402,7 +390,8 @@ rlswitch_status(struct mii_softc *phy)
 	mii->mii_media_status = IFM_AVALID;
 	mii->mii_media_active = IFM_ETHER;
 	mii->mii_media_status |= IFM_ACTIVE;
-	mii->mii_media_active |= IFM_100_TX|IFM_FDX;
+	mii->mii_media_active |=
+	    IFM_100_TX | IFM_FDX | mii_phy_flowstatus(phy);
 }
 
 #ifdef RL_DEBUG

@@ -1,5 +1,5 @@
 /*	$NetBSD: mii.h,v 1.9 2001/05/31 03:07:14 thorpej Exp $	*/
- 
+
 /*-
  * Copyright (c) 1997 Manuel Bouyer.  All rights reserved.
  *
@@ -14,11 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by Manuel Bouyer.
- * 4. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -31,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/mii.h,v 1.5.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: src/sys/dev/mii/mii.h,v 1.5.10.4 2011/09/11 20:25:57 marius Exp $
  */
 
 #ifndef _DEV_MII_MII_H_
@@ -52,7 +47,7 @@
 #define	MII_COMMAND_WRITE	0x01
 #define	MII_COMMAND_ACK		0x02
 
-#define	MII_BMCR	0x00 	/* Basic mode control register (rw) */
+#define	MII_BMCR	0x00	/* Basic mode control register (rw) */
 #define	BMCR_RESET	0x8000	/* reset */
 #define	BMCR_LOOP	0x4000	/* loopback */
 #define	BMCR_SPEED0	0x2000	/* speed selection (LSB) */
@@ -87,20 +82,16 @@
 #define	BMSR_JABBER	0x0002	/* Jabber detected */
 #define	BMSR_EXTCAP	0x0001	/* Extended capability */
 
+#define	BMSR_DEFCAPMASK	0xffffffff
+
 /*
  * Note that the EXTSTAT bit indicates that there is extended status
  * info available in register 15, but 802.3 section 22.2.4.3 also
  * states that that all 1000 Mb/s capable PHYs will set this bit to 1.
  */
-#if 0
-#define	BMSR_MEDIAMASK	(BMSR_100T4|BMSR_100TXFDX|BMSR_100TXHDX|BMSR_10TFDX| \
-			 BMSR_10THDX|BMSR_ANEG)
 
-#else
-/* NetBSD uses: */
 #define	BMSR_MEDIAMASK	(BMSR_100T4|BMSR_100TXFDX|BMSR_100TXHDX| \
 			 BMSR_10TFDX|BMSR_10THDX|BMSR_100T2FDX|BMSR_100T2HDX)
-#endif
 
 /*
  * Convert BMSR media capabilities to ANAR bits for autonegotiation.
@@ -131,6 +122,10 @@
 #define ANAR_10_FD	0x0040	/* local device supports 10bT FD */
 #define ANAR_10		0x0020	/* local device supports 10bT */
 #define	ANAR_CSMA	0x0001	/* protocol selector CSMA/CD */
+#define	ANAR_PAUSE_NONE		(0 << 10)
+#define	ANAR_PAUSE_SYM		(1 << 10)
+#define	ANAR_PAUSE_ASYM		(2 << 10)
+#define	ANAR_PAUSE_TOWARDS	(3 << 10)
 
 #define	ANAR_X_FD	0x0020	/* local device supports 1000BASE-X FD */
 #define	ANAR_X_HD	0x0040	/* local device supports 1000BASE-X HD */
@@ -151,6 +146,11 @@
 #define ANLPAR_10_FD	0x0040	/* link partner supports 10bT FD */
 #define ANLPAR_10	0x0020	/* link partner supports 10bT */
 #define	ANLPAR_CSMA	0x0001	/* protocol selector CSMA/CD */
+#define	ANLPAR_PAUSE_MASK	(3 << 10)
+#define	ANLPAR_PAUSE_NONE	(0 << 10)
+#define	ANLPAR_PAUSE_SYM	(1 << 10)
+#define	ANLPAR_PAUSE_ASYM	(2 << 10)
+#define	ANLPAR_PAUSE_TOWARDS	(3 << 10)
 
 #define	ANLPAR_X_FD	0x0020	/* local device supports 1000BASE-X FD */
 #define	ANLPAR_X_HD	0x0040	/* local device supports 1000BASE-X HD */

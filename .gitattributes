@@ -36145,6 +36145,8 @@ sys/dev/mii/lxtphy.c -text
 sys/dev/mii/lxtphyreg.h -text
 sys/dev/mii/mii.c -text
 sys/dev/mii/mii.h -text
+sys/dev/mii/mii_bitbang.c -text
+sys/dev/mii/mii_bitbang.h -text
 sys/dev/mii/mii_physubr.c -text
 sys/dev/mii/miibus_if.m -text
 sys/dev/mii/miidevs -text
@@ -36159,6 +36161,8 @@ sys/dev/mii/nsphyterreg.h -text
 sys/dev/mii/pnaphy.c -text
 sys/dev/mii/qsphy.c -text
 sys/dev/mii/qsphyreg.h -text
+sys/dev/mii/rdcphy.c -text
+sys/dev/mii/rdcphyreg.h -text
 sys/dev/mii/rgephy.c -text
 sys/dev/mii/rgephyreg.h -text
 sys/dev/mii/rlphy.c -text

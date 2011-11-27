@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/xmphyreg.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: src/sys/dev/mii/xmphyreg.h,v 1.4.10.1 2011/07/25 14:44:00 marius Exp $
  */
 
 #ifndef _DEV_MII_XMPHYREG_H_
@@ -51,7 +51,7 @@
 #define XMPHY_MII_BMSR		0x01
 #define XMPHY_BMSR_EXTSTS	0x0100	/* Extended status present */
 #define XMPHY_BMSR_ACOMP	0x0020	/* Autoneg complete */
-#define XMPHY_BMSR_RFAULT	0x0010	/* Remote fault condition occured */
+#define XMPHY_BMSR_RFAULT	0x0010	/* Remote fault condition occurred */
 #define XMPHY_BMSR_ANEG		0x0008	/* Autoneg capable */
 #define XMPHY_BMSR_LINK		0x0004	/* Link status */
 #define XMPHY_BMSR_EXT		0x0001	/* Extended capability */

@@ -38,20 +38,22 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/nsgphy.c,v 1.24.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/nsgphy.c,v 1.24.2.6 2011/01/05 11:46:18 marius Exp $");
 
 /*
- * Driver for the National Semiconductor DP83891 and DP83861
+ * Driver for the National Semiconductor DP83861, DP83865 and DP83891
  * 10/100/1000 PHYs.
  * Datasheet available at: http://www.national.com/ds/DP/DP83861.pdf
+ * and at: http://www.national.com/ds/DP/DP83865.pdf
  *
- * The DP83891 is the older NatSemi gigE PHY which isn't being sold
- * anymore. The DP83861 is its replacement, which is an 'enhanced'
- * firmware driven component. The major difference between the
- * two is that the 83891 can't generate interrupts, while the
- * 83861 can. (I think it wasn't originally designed to do this, but
- * it can now thanks to firmware updates.) The 83861 also allows
- * access to its internal RAM via indirect register access.
+ * The DP83891 is the older NS GigE PHY which isn't being sold
+ * anymore.  The DP83861 is its replacement, which is an 'enhanced'
+ * firmware driven component.  The major difference between the
+ * two is that the DP83891 can't generate interrupts, while the
+ * 83861 can (probably it wasn't originally designed to do this, but
+ * it can now thanks to firmware updates).  The DP83861 also allows
+ * access to its internal RAM via indirect register access.  The
+ * DP83865 is an ultra low power version of the DP83861 and DP83891.
  */
 
 #include <sys/param.h>
@@ -99,6 +101,7 @@ static void	nsgphy_status(struct mii_softc *);
 
 static const struct mii_phydesc nsgphys[] = {
 	MII_PHY_DESC(NATSEMI, DP83861),
+	MII_PHY_DESC(NATSEMI, DP83865),
 	MII_PHY_DESC(NATSEMI, DP83891),
 	MII_PHY_END
 };
@@ -123,18 +126,29 @@ nsgphy_attach(device_t dev)
 		device_printf(dev, "<rev. %d>\n", MII_REV(ma->mii_id2));
 	device_printf(dev, " ");
 	sc->mii_dev = device_get_parent(dev);
-	mii = device_get_softc(sc->mii_dev);
+	mii = ma->mii_data;
 	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
 
-	sc->mii_inst = mii->mii_instance;
+	sc->mii_flags = miibus_get_flags(dev);
+	sc->mii_inst = mii->mii_instance++;
 	sc->mii_phy = ma->mii_phyno;
 	sc->mii_service = nsgphy_service;
 	sc->mii_pdata = mii;
 
-	mii->mii_instance++;
+	sc->mii_flags |= MIIF_NOMANPAUSE;
 
+	mii_phy_reset(sc);
+
+	/*
+	 * NB: the PHY has the 10BASE-T BMSR bits hard-wired to 0,
+	 * even though it supports 10BASE-T.
+	 */
 	sc->mii_capabilities = (PHY_READ(sc, MII_BMSR) |
-	    (BMSR_10TFDX|BMSR_10THDX)) & ma->mii_capmask;
+	    BMSR_10TFDX | BMSR_10THDX) & ma->mii_capmask;
+	/*
+	 * Note that as documented manual 1000BASE-T modes of DP83865 only
+	 * work together with other National Semiconductor PHYs.
+	 */
 	if (sc->mii_capabilities & BMSR_EXTSTAT)
 		sc->mii_extcapabilities = PHY_READ(sc, MII_EXTSR);
 
@@ -148,29 +162,12 @@ nsgphy_attach(device_t dev)
 static int
 nsgphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
-	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
-	int reg;
 
 	switch (cmd) {
 	case MII_POLLSTAT:
-		/*
-		 * If we're not polling our PHY instance, just return.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-			return (0);
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the media indicates a different PHY instance,
-		 * isolate ourselves.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst) {
-			reg = PHY_READ(sc, MII_BMCR);
-			PHY_WRITE(sc, MII_BMCR, reg | BMCR_ISO);
-			return (0);
-		}
-
 		/*
 		 * If the interface is not up, don't do anything.
 		 */
@@ -181,12 +178,6 @@ nsgphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_TICK:
-		/*
-		 * If we're not currently selected, just return.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-			return (0);
-
 		if (mii_phy_tick(sc) == EJUSTRETURN)
 			return (0);
 		break;
@@ -238,7 +229,7 @@ nsgphy_status(struct mii_softc *sc)
 			return;
 		}
 
-		switch (physup & (PHY_SUP_SPEED1|PHY_SUP_SPEED0)) {
+		switch (physup & (PHY_SUP_SPEED1 | PHY_SUP_SPEED0)) {
 		case PHY_SUP_SPEED1:
 			mii->mii_media_active |= IFM_1000_T;
 			gtsr = PHY_READ(sc, MII_100T2SR);
@@ -257,9 +248,14 @@ nsgphy_status(struct mii_softc *sc)
 		default:
 			mii->mii_media_active |= IFM_NONE;
 			mii->mii_media_status = 0;
+			return;
 		}
+
 		if (physup & PHY_SUP_DUPLEX)
-			mii->mii_media_active |= IFM_FDX;
+			mii->mii_media_active |=
+			    IFM_FDX | mii_phy_flowstatus(sc);
+		else
+			mii->mii_media_active |= IFM_HDX;
 	} else
 		mii->mii_media_active = ife->ifm_media;
 }

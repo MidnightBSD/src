@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/dev/alc/if_alc.c,v 1.1.2.9 2010/08/30 21:17:11 yongari Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.10 2011/11/24 15:59:15 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.11 2011/11/24 16:18:09 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -350,9 +350,9 @@ alc_mediastatus(struct ifnet *ifp, struct ifmediareq *ifmr)
 	mii = device_get_softc(sc->alc_miibus);
 
 	mii_pollstat(mii);
+	ALC_UNLOCK(sc);
 	ifmr->ifm_status = mii->mii_media_status;
 	ifmr->ifm_active = mii->mii_media_active;
-	ALC_UNLOCK(sc);
 }
 
 static int
@@ -690,7 +690,7 @@ alc_aspm(struct alc_softc *sc, int media)
 	pmcfg &= ~PM_CFG_SERDES_PD_EX_L1;
 	pmcfg &= ~(PM_CFG_L1_ENTRY_TIMER_MASK | PM_CFG_LCKDET_TIMER_MASK);
 	pmcfg |= PM_CFG_MAC_ASPM_CHK;
-	pmcfg |= PM_CFG_SERDES_ENB | PM_CFG_RBER_ENB;
+	pmcfg |= (PM_CFG_LCKDET_TIMER_DEFAULT << PM_CFG_LCKDET_TIMER_SHIFT);
 	pmcfg &= ~(PM_CFG_ASPM_L1_ENB | PM_CFG_ASPM_L0S_ENB);
 
 	if ((sc->alc_flags & ALC_FLAG_APS) != 0) {
@@ -823,7 +823,7 @@ alc_attach(device_t dev)
 		    CSR_READ_4(sc, ALC_PCIE_PHYMISC) |
 		    PCIE_PHYMISC_FORCE_RCV_DET);
 		if (sc->alc_ident->deviceid == DEVICEID_ATHEROS_AR8152_B &&
-		    sc->alc_rev == ATHEROS_AR8152_B_V10) {
+		    pci_get_revid(dev) == ATHEROS_AR8152_B_V10) {
 			val = CSR_READ_4(sc, ALC_PCIE_PHYMISC2);
 			val &= ~(PCIE_PHYMISC2_SERDES_CDR_MASK |
 			    PCIE_PHYMISC2_SERDES_TH_MASK);
@@ -976,19 +976,19 @@ alc_attach(device_t dev)
 	IFQ_SET_READY(&ifp->if_snd);
 	ifp->if_capabilities = IFCAP_TXCSUM | IFCAP_TSO4;
 	ifp->if_hwassist = ALC_CSUM_FEATURES | CSUM_TSO;
-	/*
-	if (pci_find_cap(dev, PCIY_PMG, &base) == 0) {
+	if (pci_find_extcap(dev, PCIY_PMG, &base) == 0) {
 		ifp->if_capabilities |= IFCAP_WOL_MAGIC | IFCAP_WOL_MCAST;
 		sc->alc_flags |= ALC_FLAG_PM;
 		sc->alc_pmcap = base;
 	}
-	*/
 	ifp->if_capenable = ifp->if_capabilities;
 
 	/* Set up MII bus. */
-	if ((error = mii_phy_probe(dev, &sc->alc_miibus, alc_mediachange,
-	    alc_mediastatus)) != 0) {
-		device_printf(dev, "no PHY found!\n");
+	error = mii_attach(dev, &sc->alc_miibus, ifp, alc_mediachange,
+	    alc_mediastatus, BMSR_DEFCAPMASK, sc->alc_phyaddr, MII_OFFSET_ANY,
+	    MIIF_DOPAUSE);
+	if (error != 0) {
+		device_printf(dev, "attaching PHYs failed\n");
 		goto fail;
 	}
 

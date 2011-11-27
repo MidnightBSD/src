@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pci/pcivar.h,v 1.80 2007/09/30 11:05:15 marius Exp $
+ * $FreeBSD: src/sys/dev/pci/pcivar.h,v 1.80.2.4 2011/04/15 20:20:11 jhb Exp $
  *
  */
 
@@ -33,13 +33,6 @@
 #include <sys/queue.h>
 
 /* some PCI bus constants */
-
-#define	PCI_DOMAINMAX	65535	/* highest supported domain number */
-#define	PCI_BUSMAX	255	/* highest supported bus number */
-#define	PCI_SLOTMAX	31	/* highest supported slot number */
-#define	PCI_FUNCMAX	7	/* highest supported function number */
-#define	PCI_REGMAX	255	/* highest supported config register addr. */
-
 #define	PCI_MAXMAPS_0	6	/* max. no. of memory/port maps */
 #define	PCI_MAXMAPS_1	2	/* max. no. of maps for PCI to PCI bridge */
 #define	PCI_MAXMAPS_2	1	/* max. no. of maps for CardBus bridge */
@@ -115,6 +108,13 @@ struct pcicfg_msix {
     struct resource *msix_pba_res;	/* Resource containing PBA. */
 };
 
+/* Interesting values for HyperTransport */
+struct pcicfg_ht {
+    uint8_t	ht_msimap;	/* Offset of MSI mapping cap registers. */
+    uint16_t	ht_msictrl;	/* MSI mapping control */
+    uint64_t	ht_msiaddr;	/* MSI mapping base address */
+};
+
 /* config header information common to all header types */
 typedef struct pcicfg {
     struct device *dev;		/* device which owns this */
@@ -156,6 +156,7 @@ typedef struct pcicfg {
     struct pcicfg_vpd vpd;	/* pci vital product data */
     struct pcicfg_msi msi;	/* pci msi */
     struct pcicfg_msix msix;	/* pci msi-x */
+    struct pcicfg_ht ht;	/* HyperTransport */
 } pcicfgregs;
 
 /* additional type 1 device config header information (PCI to PCI bridge) */
@@ -406,9 +407,15 @@ pci_get_powerstate(device_t dev)
 }
 
 static __inline int
+pci_find_cap(device_t dev, int capability, int *capreg)
+{
+    return (PCI_FIND_EXTCAP(device_get_parent(dev), dev, capability, capreg));
+}
+
+static __inline int
 pci_find_extcap(device_t dev, int capability, int *capreg)
 {
-    return PCI_FIND_EXTCAP(device_get_parent(dev), dev, capability, capreg);
+    return (PCI_FIND_EXTCAP(device_get_parent(dev), dev, capability, capreg));
 }
 
 static __inline int
@@ -461,6 +468,11 @@ int	pci_remap_msi_irq(device_t dev, u_int irq);
 int	pci_pending_msix(device_t dev, u_int index);
 
 int	pci_msi_device_blacklisted(device_t dev);
+
+void	pci_ht_map_msi(device_t dev, uint64_t addr);
+
+int	pci_get_max_read_req(device_t dev);
+int	pci_set_max_read_req(device_t dev, int size);
 
 #endif	/* _SYS_BUS_H_ */
 

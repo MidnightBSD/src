@@ -24,8 +24,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/dev/alc/if_alcvar.h,v 1.1 2011/02/07 00:17:46 laffer1 Exp $
- * $FreeBSD: src/sys/dev/alc/if_alcvar.h,v 1.1.2.3 2010/08/30 21:17:11 yongari Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/sys/dev/alc/if_alcvar.h,v 1.1.2.5 2011/02/20 01:10:14 yongari Exp $
  */
 
 #ifndef	_IF_ALCVAR_H
@@ -246,7 +246,6 @@ struct alc_softc {
 	int			alc_buf_size;
 
 	struct task		alc_int_task;
-	struct task		alc_tx_task;
 	struct taskqueue	*alc_tq;
 	struct mtx		alc_mtx;
 };

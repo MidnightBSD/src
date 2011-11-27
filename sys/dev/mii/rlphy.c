@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/rlphy.c,v 1.31.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/rlphy.c,v 1.31.2.6 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * driver for RealTek 8139 internal PHYs
@@ -129,7 +129,7 @@ rlphy_attach(device_t dev)
 	sc = device_get_softc(dev);
 	ma = device_get_ivars(dev);
 	sc->mii_dev = device_get_parent(dev);
-	mii = device_get_softc(sc->mii_dev);
+	mii = ma->mii_data;
 
         /*
          * Check whether we're the RTL8201L PHY and remember so the status
@@ -139,24 +139,18 @@ rlphy_attach(device_t dev)
 	if (mii_phy_dev_probe(dev, rlphys, 0) == 0)
 		rsc->sc_is_RTL8201L++;
 	
-	/*
-	 * The RealTek PHY can never be isolated, so never allow non-zero
-	 * instances!
-	 */
-	if (mii->mii_instance != 0) {
-		device_printf(dev, "ignoring this PHY, non-zero instance\n");
-		return (ENXIO);
-	}
-
 	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
 
-	sc->mii_inst = mii->mii_instance;
+	sc->mii_flags = miibus_get_flags(dev);
+	sc->mii_inst = mii->mii_instance++;
 	sc->mii_phy = ma->mii_phyno;
 	sc->mii_service = rlphy_service;
 	sc->mii_pdata = mii;
-	mii->mii_instance++;
 
-	sc->mii_flags |= MIIF_NOISOLATE;
+	/*
+	 * The RealTek PHY can never be isolated.
+	 */
+	sc->mii_flags |= MIIF_NOISOLATE | MIIF_NOMANPAUSE;
 
 #define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
 
@@ -165,8 +159,7 @@ rlphy_attach(device_t dev)
 
 	mii_phy_reset(sc);
 
-	sc->mii_capabilities =
-	    PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
+	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
 	device_printf(dev, " ");
 	mii_phy_add_media(sc);
 	printf("\n");
@@ -178,13 +171,6 @@ rlphy_attach(device_t dev)
 static int
 rlphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
-	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
-
-	/*
-	 * We can't isolate the RealTek PHY, so it has to be the only one!
-	 */
-	if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-		panic("rlphy_service: can't isolate RealTek PHY");
 
 	switch (cmd) {
 	case MII_POLLSTAT:
@@ -264,15 +250,18 @@ rlphy_status(struct mii_softc *phy)
 			if (anlpar & ANLPAR_TX_FD)
 				mii->mii_media_active |= IFM_100_TX|IFM_FDX;
 			else if (anlpar & ANLPAR_T4)
-				mii->mii_media_active |= IFM_100_T4;
+				mii->mii_media_active |= IFM_100_T4|IFM_HDX;
 			else if (anlpar & ANLPAR_TX)
-				mii->mii_media_active |= IFM_100_TX;
+				mii->mii_media_active |= IFM_100_TX|IFM_HDX;
 			else if (anlpar & ANLPAR_10_FD)
 				mii->mii_media_active |= IFM_10_T|IFM_FDX;
 			else if (anlpar & ANLPAR_10)
-				mii->mii_media_active |= IFM_10_T;
+				mii->mii_media_active |= IFM_10_T|IFM_HDX;
 			else
 				mii->mii_media_active |= IFM_NONE;
+			if ((mii->mii_media_active & IFM_FDX) != 0)
+				mii->mii_media_active |=
+				    mii_phy_flowstatus(phy);
 			return;
 		}
 		/*
@@ -293,10 +282,10 @@ rlphy_status(struct mii_softc *phy)
 		 * To determine the link speed, we have to do one
 		 * of two things:
 		 *
-		 * - If this is a standalone RealTek RTL8201(L) PHY,
-		 *   we can determine the link speed by testing bit 0
-		 *   in the magic, vendor-specific register at offset
-		 *   0x19.
+		 * - If this is a standalone RealTek RTL8201(L) or
+		 *   workalike PHY, we can determine the link speed by
+		 *   testing bit 0 in the magic, vendor-specific register
+		 *   at offset 0x19.
 		 *
 		 * - If this is a RealTek MAC with integrated PHY, we
 		 *   can test the 'SPEED10' bit of the MAC's media status
@@ -314,6 +303,7 @@ rlphy_status(struct mii_softc *phy)
 			else
 				mii->mii_media_active |= IFM_100_TX;
 		}
+		mii->mii_media_active |= IFM_HDX;
 	} else
 		mii->mii_media_active = ife->ifm_media;
 }

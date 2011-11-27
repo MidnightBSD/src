@@ -1,4 +1,4 @@
-$FreeBSD: src/sys/dev/mii/miidevs,v 1.46.2.9.2.1 2008/11/25 02:59:29 kensmith Exp $
+$FreeBSD: src/sys/dev/mii/miidevs,v 1.46.2.29 2011/08/23 14:01:04 marius Exp $
 /*$NetBSD: miidevs,v 1.6 1999/05/14 11:37:30 drochner Exp $*/
 
 /*-
@@ -17,13 +17,6 @@ $FreeBSD: src/sys/dev/mii/miidevs,v 1.46.2.9.2.1 2008/11/25 02:59:29 kensmith Ex
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -65,6 +58,7 @@ oui JMICRON			0x001b8c	JMicron Technologies
 oui LEVEL1			0x00207b	Level 1
 oui NATSEMI			0x080017	National Semiconductor
 oui QUALSEMI			0x006051	Quality Semiconductor
+oui RDC				0x000bb4	RDC Semiconductor
 oui REALTEK			0x000020	RealTek Semicondctor
 oui SEEQ			0x00a07d	Seeq
 oui SIS				0x00e006	Silicon Integrated Systems
@@ -86,6 +80,7 @@ oui xxINTEL			0x00f800	Intel
 oui xxALTIMA			0x000895	Altima Communications
 oui xxBROADCOM			0x000818	Broadcom Corporation
 oui xxBROADCOM_ALT1		0x0050ef	Broadcom Corporation
+oui xxBROADCOM_ALT2		0x00d897	Broadcom Corporation
 oui xxICS			0x00057d	Integrated Circuit Systems
 oui xxSEEQ			0x0005be	Seeq
 oui xxSIS			0x000760	Silicon Integrated Systems
@@ -107,6 +102,7 @@ oui xxREALTEK			0x000732
  */
 
 /* Agere Systems PHYs */
+model AGERE ET1011		0x0001 ET1011 10/100/1000baseT PHY
 model AGERE ET1011C		0x0004 ET1011C 10/100/1000baseT PHY
 
 /* Altima Communications PHYs */
@@ -122,12 +118,15 @@ model xxAMD 79C873		0x0000 Am79C873/DM9101 10/100 media interface
 /* Atheros Communications/Attansic PHYs. */
 model ATHEROS F1		0x0001 Atheros F1 10/100/1000 PHY
 model ATHEROS F2		0x0002 Atheros F2 10/100 PHY
+model ATHEROS F1_7		0x0007 Atheros F1 10/100/1000 PHY
 
 /* Broadcom Corp. PHYs. */
 model BROADCOM 3C905B		0x0012 3c905B 10/100 internal PHY
 model BROADCOM 3C905C		0x0017 3c905C 10/100 internal PHY
 model BROADCOM BCM5201		0x0021 BCM5201 10/100baseTX PHY
+model BROADCOM BCM5214		0x0028 BCM5214 Quad 10/100 PHY
 model BROADCOM BCM5221		0x001e BCM5221 10/100baseTX PHY
+model BROADCOM BCM5222		0x0032 BCM5222 Dual 10/100 PHY
 model BROADCOM BCM4401		0x0036 BCM4401 10/100baseTX PHY
 model xxBROADCOM BCM5400	0x0004 Broadcom 1000baseTX PHY
 model xxBROADCOM BCM5401	0x0005 BCM5401 10/100/1000baseTX PHY
@@ -140,19 +139,31 @@ model xxBROADCOM BCM5703	0x0016 BCM5703 10/100/1000baseTX PHY
 model xxBROADCOM BCM5704	0x0019 BCM5704 10/100/1000baseTX PHY
 model xxBROADCOM BCM5705	0x001a BCM5705 10/100/1000baseTX PHY
 model xxBROADCOM BCM5750	0x0018 BCM5750 10/100/1000baseTX PHY
+model xxBROADCOM BCM54K2	0x002e BCM54K2 10/100/1000baseTX PHY
 model xxBROADCOM BCM5714	0x0034 BCM5714 10/100/1000baseTX PHY
 model xxBROADCOM BCM5780	0x0035 BCM5780 10/100/1000baseTX PHY
 model xxBROADCOM BCM5708C	0x0036 BCM5708C 10/100/1000baseTX PHY
 model xxBROADCOM_ALT1 BCM5755	0x000c BCM5755 10/100/1000baseTX PHY
 model xxBROADCOM_ALT1 BCM5787	0x000e BCM5787 10/100/1000baseTX PHY
 model xxBROADCOM_ALT1 BCM5708S	0x0015 BCM5708S 1000/2500BaseSX PHY
+model xxBROADCOM_ALT1 BCM5709CAX	0x002c BCM5709C(AX) 10/100/1000baseTX PHY
 model xxBROADCOM_ALT1 BCM5722	0x002d BCM5722 10/100/1000baseTX PHY
+model xxBROADCOM_ALT1 BCM5784	0x003a BCM5784 10/100/1000baseTX PHY
+model xxBROADCOM_ALT1 BCM5709C	0x003c BCM5709C 10/100/1000baseTX PHY
+model xxBROADCOM_ALT1 BCM5761	0x003d BCM5761 10/100/1000baseTX PHY
+model xxBROADCOM_ALT1 BCM5709S	0x003f BCM5709S 1000/2500baseSX PHY
+model xxBROADCOM_ALT2 BCM5717C	0x0020 BCM5717C 10/100/1000baseTX PHY
+model xxBROADCOM_ALT2 BCM5719C	0x0022 BCM5719C 10/100/1000baseTX PHY
+model xxBROADCOM_ALT2 BCM57765	0x0024 BCM57765 10/100/1000baseTX PHY
 model BROADCOM2 BCM5906		0x0004 BCM5906 10/100baseTX PHY
 
 /* Cicada Semiconductor PHYs (now owned by Vitesse?) */
 model CICADA CS8201		0x0001 Cicada CS8201 10/100/1000TX PHY
+model CICADA CS8204		0x0004 Cicada CS8204 10/100/1000TX PHY
+model CICADA VSC8211		0x000b Cicada VSC8211 10/100/1000TX PHY
 model CICADA CS8201A		0x0020 Cicada CS8201 10/100/1000TX PHY
 model CICADA CS8201B		0x0021 Cicada CS8201 10/100/1000TX PHY
+model CICADA CS8244		0x002c Cicada CS8244 10/100/1000TX PHY
 model VITESSE VSC8601		0x0002 Vitesse VSC8601 10/100/1000TX PHY
 
 /* Davicom Semiconductor PHYs */
@@ -194,9 +205,13 @@ model NATSEMI DP83815		0x0002 DP83815 10/100 media interface
 model NATSEMI DP83847		0x0003 DP83847 10/100 media interface
 model NATSEMI DP83891		0x0005 DP83891 10/100/1000 media interface
 model NATSEMI DP83861		0x0006 DP83861 10/100/1000 media interface
+model NATSEMI DP83865		0x0007 DP83865 10/100/1000 media interface
 
 /* Quality Semiconductor PHYs */
 model QUALSEMI QS6612		0x0000 QS6612 10/100 media interface
+
+/* RDC Semiconductor PHYs */
+model RDC R6040			0x0003 R6040 10/100 media interface
 
 /* RealTek Semiconductor PHYs */
 model REALTEK RTL8201L		0x0020 RTL8201L 10/100 media interface
@@ -226,13 +241,17 @@ model MARVELL E1011		0x0002 Marvell 88E1011 Gigabit PHY
 model MARVELL E1000_3		0x0003 Marvell 88E1000 Gigabit PHY
 model MARVELL E1000S		0x0004 Marvell 88E1000S Gigabit PHY
 model MARVELL E1000_5		0x0005 Marvell 88E1000 Gigabit PHY
-model MARVELL E1000_6		0x0006 Marvell 88E1000 Gigabit PHY
+model MARVELL E1101		0x0006 Marvell 88E1101 Gigabit PHY
 model MARVELL E3082		0x0008 Marvell 88E3082 10/100 Fast Ethernet PHY
 model MARVELL E1112		0x0009 Marvell 88E1112 Gigabit PHY
 model MARVELL E1149		0x000b Marvell 88E1149 Gigabit PHY
 model MARVELL E1111		0x000c Marvell 88E1111 Gigabit PHY
 model MARVELL E1116		0x0021 Marvell 88E1116 Gigabit PHY
+model MARVELL E1116R		0x0024 Marvell 88E1116R Gigabit PHY
 model MARVELL E1118		0x0022 Marvell 88E1118 Gigabit PHY
+model MARVELL E1149R		0x0025 Marvell 88E1149R Quad Gigabit PHY
+model MARVELL E3016		0x0026 Marvell 88E3016 10/100 Fast Ethernet PHY
+model MARVELL PHYG65G		0x0027 Marvell PHYG65G Gigabit PHY
 model xxMARVELL E1000		0x0005 Marvell 88E1000 Gigabit PHY
 model xxMARVELL E1011		0x0002 Marvell 88E1011 Gigabit PHY
 model xxMARVELL E1000_3		0x0003 Marvell 88E1000 Gigabit PHY

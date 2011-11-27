@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/atphy.c,v 1.1.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/atphy.c,v 1.1.2.11 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * Driver for the Attansic/Atheros F1 10/100/1000 PHY.
@@ -82,10 +82,11 @@ static int	atphy_service(struct mii_softc *, struct mii_data *, int);
 static void	atphy_status(struct mii_softc *);
 static void	atphy_reset(struct mii_softc *);
 static uint16_t	atphy_anar(struct ifmedia_entry *);
-static int	atphy_auto(struct mii_softc *);
+static int	atphy_setmedia(struct mii_softc *, int);
 
 static const struct mii_phydesc atphys[] = {
 	MII_PHY_DESC(ATHEROS, F1),
+	MII_PHY_DESC(ATHEROS, F1_7),
 	MII_PHY_DESC(ATHEROS, F2),
 	MII_PHY_END
 };
@@ -109,16 +110,16 @@ atphy_attach(device_t dev)
 	sc = &asc->mii_sc;
 	ma = device_get_ivars(dev);
 	sc->mii_dev = device_get_parent(dev);
-	mii = device_get_softc(sc->mii_dev);
+	mii = ma->mii_data;
 	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
 
-	sc->mii_inst = mii->mii_instance;
+	sc->mii_flags = miibus_get_flags(dev);
+	sc->mii_inst = mii->mii_instance++;
 	sc->mii_phy = ma->mii_phyno;
 	sc->mii_service = atphy_service;
 	sc->mii_pdata = mii;
-	sc->mii_anegticks = MII_ANEGTICKS_GIGE;
 
-	mii->mii_instance++;
+	sc->mii_flags |= MIIF_NOMANPAUSE;
 
 	asc->mii_oui = MII_OUI(ma->mii_id1, ma->mii_id2);
 	asc->mii_model = MII_MODEL(ma->mii_id2);
@@ -137,7 +138,7 @@ atphy_attach(device_t dev)
 	printf("\n");
 
 	MIIBUS_MEDIAINIT(sc->mii_dev);
-	return(0);
+	return (0);
 }
 
 static int
@@ -148,24 +149,9 @@ atphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 
 	switch (cmd) {
 	case MII_POLLSTAT:
-		/*
-		 * If we're not polling our PHY instance, just return.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-			return (0);
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the media indicates a different PHY instance,
-		 * isolate ourselves.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst) {
-			bmcr = PHY_READ(sc, MII_BMCR);
-			PHY_WRITE(sc, MII_BMCR, bmcr | BMCR_ISO);
-			return (0);
-		}
-
 		/*
 		 * If the interface is not up, don't do anything.
 		 */
@@ -174,7 +160,7 @@ atphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 
 		if (IFM_SUBTYPE(ife->ifm_media) == IFM_AUTO ||
 		    IFM_SUBTYPE(ife->ifm_media) == IFM_1000_T) {
-			atphy_auto(sc);
+			atphy_setmedia(sc, ife->ifm_media);
 			break;
 		}
 
@@ -191,7 +177,7 @@ atphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 			/*
 			 * XXX
 			 * Due to an unknown reason powering down PHY resulted
-			 * in unexpected results such as inaccessbility of
+			 * in unexpected results such as inaccessibility of
 			 * hardware of freshly rebooted system. Disable
 			 * powering down PHY until I got more information for
 			 * Attansic/Atheros PHY hardwares.
@@ -203,10 +189,11 @@ atphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		}
 
 		anar = atphy_anar(ife);
-		if (((ife->ifm_media & IFM_GMASK) & IFM_FDX) != 0) {
+		if ((ife->ifm_media & IFM_FDX) != 0) {
 			bmcr |= BMCR_FDX;
-			/* Enable pause. */
-			anar |= (3 << 10);
+			if ((ife->ifm_media & IFM_FLOW) != 0 ||
+			    (sc->mii_flags & MIIF_FORCEPAUSE) != 0)
+				anar |= ANAR_PAUSE_TOWARDS;
 		}
 
 		if ((sc->mii_extcapabilities & (EXTSR_1000TFDX |
@@ -224,12 +211,6 @@ done:
 
 	case MII_TICK:
 		/*
-		 * If we're not currently selected, just return.
-		 */
-		if (IFM_INST(ife->ifm_media) != sc->mii_inst)
-			return (0);
-
-		/*
 		 * Is the interface even up?
 		 */
 		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
@@ -244,7 +225,7 @@ done:
 		}
 
 		/*
-		 * check for link.
+		 * Check for link.
 		 * Read the status register twice; BMSR_LINK is latch-low.
 		 */
 		bmsr = PHY_READ(sc, MII_BMSR) | PHY_READ(sc, MII_BMSR);
@@ -260,7 +241,7 @@ done:
 			return (0);
 
 		sc->mii_ticks = 0;
-		atphy_auto(sc);
+		atphy_setmedia(sc, ife->ifm_media);
 		break;
 	}
 
@@ -306,7 +287,7 @@ atphy_status(struct mii_softc *sc)
 	case ATPHY_SSR_1000MBS:
 		mii->mii_media_active |= IFM_1000_T;
 		/*
-		 * atphy(4) got a valid link so reset mii_ticks.
+		 * atphy(4) has a valid link so reset mii_ticks.
 		 * Resetting mii_ticks is needed in order to
 		 * detect link loss after auto-negotiation.
 		 */
@@ -326,21 +307,21 @@ atphy_status(struct mii_softc *sc)
 	}
 
 	if ((ssr & ATPHY_SSR_DUPLEX) != 0)
-		mii->mii_media_active |= IFM_FDX;
+		mii->mii_media_active |= IFM_FDX | mii_phy_flowstatus(sc);
 	else
 		mii->mii_media_active |= IFM_HDX;
 		
-	/* XXX Master/Slave, Flow-control */
+	if ((IFM_SUBTYPE(mii->mii_media_active) == IFM_1000_T) &&
+	    (PHY_READ(sc, MII_100T2SR) & GTSR_MS_RES) != 0)
+		mii->mii_media_active |= IFM_ETH_MASTER;
 }
 
 static void
 atphy_reset(struct mii_softc *sc)
 {
-	struct atphy_softc *asc;
+	struct ifmedia_entry *ife = sc->mii_pdata->mii_media.ifm_cur;
 	uint32_t reg;
 	int i;
-
-	asc = (struct atphy_softc *)sc;
 
 	/* Take PHY out of power down mode. */
 	PHY_WRITE(sc, 29, 0x29);
@@ -358,7 +339,7 @@ atphy_reset(struct mii_softc *sc)
 	PHY_WRITE(sc, ATPHY_SCR, reg);
 
 	/* Workaround F1 bug to reset phy. */
-	atphy_auto(sc);
+	atphy_setmedia(sc, ife == NULL ? IFM_AUTO : ife->ifm_media);
 
 	for (i = 0; i < 1000; i++) {
 		DELAY(1);
@@ -389,7 +370,7 @@ atphy_anar(struct ifmedia_entry *ife)
 		return (0);
 	}
 
-	if (((ife->ifm_media & IFM_GMASK) & IFM_FDX) != 0) {
+	if ((ife->ifm_media & IFM_FDX) != 0) {
 		if (IFM_SUBTYPE(ife->ifm_media) == IFM_100_TX)
 			anar |= ANAR_TX_FD;
 		else
@@ -400,15 +381,35 @@ atphy_anar(struct ifmedia_entry *ife)
 }
 
 static int
-atphy_auto(struct mii_softc *sc)
+atphy_setmedia(struct mii_softc *sc, int media)
 {
+	struct atphy_softc *asc;
 	uint16_t anar;
 
-	anar = BMSR_MEDIA_TO_ANAR(sc->mii_capabilities);
-	PHY_WRITE(sc, MII_ANAR, anar | (3 << 10) | ANAR_CSMA);
-	if ((sc->mii_extcapabilities & (EXTSR_1000TFDX | EXTSR_1000THDX)) != 0)
+	anar = BMSR_MEDIA_TO_ANAR(sc->mii_capabilities) | ANAR_CSMA;
+	if ((IFM_SUBTYPE(media) == IFM_AUTO || (media & IFM_FDX) != 0) &&
+	    ((media & IFM_FLOW) != 0 ||
+	    (sc->mii_flags & MIIF_FORCEPAUSE) != 0))
+		anar |= ANAR_PAUSE_TOWARDS;
+	PHY_WRITE(sc, MII_ANAR, anar);
+	if ((sc->mii_extcapabilities &
+	     (EXTSR_1000TFDX | EXTSR_1000THDX)) != 0)
 		PHY_WRITE(sc, MII_100T2CR, GTCR_ADV_1000TFDX |
 		    GTCR_ADV_1000THDX);
+	else {
+		/*
+		 * AR8132 has 10/100 PHY and the PHY uses the same
+		 * model number of F1 gigabit PHY.  The PHY has no
+		 * ability to establish gigabit link so explicitly
+		 * disable 1000baseT configuration for the PHY.
+		 * Otherwise, there is a case that atphy(4) could
+		 * not establish a link against gigabit link partner
+		 * unless the link partner supports down-shifting.
+		 */
+		asc = (struct atphy_softc *)sc;
+		if (asc->mii_model == MII_MODEL_ATHEROS_F1)
+			PHY_WRITE(sc, MII_100T2CR, 0);
+	}
 	PHY_WRITE(sc, MII_BMCR, BMCR_RESET | BMCR_AUTOEN | BMCR_STARTNEG);
 
 	return (EJUSTRETURN);

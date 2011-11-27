@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/ip1000phyreg.h,v 1.1.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: src/sys/dev/mii/ip1000phyreg.h,v 1.1.4.2 2009/03/18 03:36:08 yongari Exp $
  */
 
 #ifndef	_DEV_MII_IP1000PHYREG_H_
@@ -61,6 +61,7 @@
 
 /* Autonegotiation advertisement register */
 #define	IP1000PHY_MII_ANAR		0x04
+#define	IP1000PHY_ANAR_CSMA		0x0001
 #define	IP1000PHY_ANAR_10T		0x0020
 #define	IP1000PHY_ANAR_10T_FDX		0x0040
 #define	IP1000PHY_ANAR_100TX		0x0080

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pci/pci_private.h,v 1.25 2007/09/30 11:05:15 marius Exp $
+ * $FreeBSD: src/sys/dev/pci/pci_private.h,v 1.25.2.1 2009/05/04 20:35:59 jhb Exp $
  *
  */
 
@@ -82,6 +82,10 @@ int		pci_msix_count_method(device_t dev, device_t child);
 struct resource	*pci_alloc_resource(device_t dev, device_t child, 
 		    int type, int *rid, u_long start, u_long end, u_long count,
 		    u_int flags);
+int		pci_release_resource(device_t dev, device_t child, int type,
+		    int rid, struct resource *r);
+int		pci_activate_resource(device_t dev, device_t child, int type,
+		    int rid, struct resource *r);
 void		pci_delete_resource(device_t dev, device_t child, 
 		    int type, int rid);
 struct resource_list *pci_get_resource_list (device_t dev, device_t child);

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/rgephyreg.h,v 1.2.10.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: src/sys/dev/mii/rgephyreg.h,v 1.2.10.3 2011/07/25 14:44:00 marius Exp $
  */
 
 #ifndef _DEV_MII_RGEPHYREG_H_
@@ -66,7 +66,7 @@
 #define RGEPHY_BMSR_EXTSTS	0x0100	/* Extended status present */
 #define RGEPHY_BMSR_PRESUB	0x0040	/* Preamble surpression */
 #define RGEPHY_BMSR_ACOMP	0x0020	/* Autoneg complete */
-#define RGEPHY_BMSR_RFAULT	0x0010	/* Remote fault condition occured */
+#define RGEPHY_BMSR_RFAULT	0x0010	/* Remote fault condition occurred */
 #define RGEPHY_BMSR_ANEG	0x0008	/* Autoneg capable */
 #define RGEPHY_BMSR_LINK	0x0004	/* Link status */
 #define RGEPHY_BMSR_JABBER	0x0002	/* Jabber detected */
