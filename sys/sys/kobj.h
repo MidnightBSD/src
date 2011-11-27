@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/kobj.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000,2003 Doug Rabson
  * All rights reserved.
@@ -94,6 +94,11 @@ struct kobjop_desc {
  * Shorthand for constructing method tables.
  */
 #define KOBJMETHOD(NAME, FUNC) { &NAME##_desc, (kobjop_t) FUNC }
+
+/*
+ *
+ */
+#define KOBJMETHOD_END	{ NULL, NULL }
 
 /*
  * Declare a class (which should be defined in another file.
