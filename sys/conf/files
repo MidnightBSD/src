@@ -940,6 +940,7 @@ dev/mfi/mfi_linux.c		optional mfi compat_linux
 dev/mfi/mfi_cam.c		optional mfip scbus
 dev/mii/acphy.c			optional miibus | acphy
 dev/mii/amphy.c			optional miibus | amphy
+dev/mii/atphy.c			optional miibus | atphy
 dev/mii/bmtphy.c		optional miibus | bmtphy
 dev/mii/brgphy.c		optional miibus | brgphy
 dev/mii/ciphy.c			optional miibus | ciphy
@@ -951,15 +952,21 @@ dev/mii/icsphy.c		optional miibus | icsphy
 # XXX only fxp cards?
 dev/mii/inphy.c			optional miibus | inphy
 dev/mii/ip1000phy.c		optional miibus | ip1000phy
+dev/mii/jmphy.c			optional miibus | jmphy
 dev/mii/lxtphy.c		optional miibus | lxtphy
 dev/mii/mii.c			optional miibus | mii
+dev/mii/mii_bitbang.c		optional miibus | mii_bitbang | bm |	\
+					dc | nge | rl | sis |		\
+					ste | stge | tl | wb | xl
 dev/mii/mii_physubr.c		optional miibus | mii
 dev/mii/miibus_if.m		optional miibus | mii
 dev/mii/mlphy.c			optional miibus | mlphy
 dev/mii/nsgphy.c		optional miibus | nsgphy
 dev/mii/nsphy.c			optional miibus | nsphy
+dev/mii/nsphyter.c		optional miibus | nsphyter
 dev/mii/pnaphy.c		optional miibus | pnaphy
 dev/mii/qsphy.c			optional miibus | qsphy
+dev/mii/rdcphy.c		optional miibus | rdcphy
 dev/mii/rgephy.c		optional miibus | rgephy
 dev/mii/rlphy.c			optional miibus | rlphy
 dev/mii/rlswitch.c		optional rlswitch
@@ -967,6 +974,7 @@ dev/mii/rlswitch.c		optional rlswitch
 dev/mii/ruephy.c		optional miibus | ruephy
 dev/mii/tdkphy.c		optional miibus | tdkphy
 dev/mii/tlphy.c			optional miibus | tlphy
+dev/mii/truephy.c		optional miibus | truephy
 dev/mii/ukphy.c			optional miibus | mii
 dev/mii/ukphy_subr.c		optional miibus | mii
 dev/mii/xmphy.c			optional miibus | xmphy
@@ -1740,6 +1748,7 @@ libkern/iconv_xlat16.c		optional libiconv
 libkern/index.c			standard
 libkern/inet_ntoa.c		standard
 libkern/mcount.c		optional profiling-routine
+libkern/memmove.c		standard
 libkern/qsort.c			standard
 libkern/qsort_r.c		standard
 libkern/random.c		standard
@@ -1843,8 +1852,6 @@ netatalk/ddp_input.c		optional netatalk
 netatalk/ddp_output.c		optional netatalk
 netatalk/ddp_pcb.c		optional netatalk
 netatalk/ddp_usrreq.c		optional netatalk
-#netgraph/atm/atmpif/ng_atmpif.c	optional netgraph_atm_atmpif
-#netgraph/atm/atmpif/ng_atmpif_harp.c optional netgraph_atm_atmpif
 netgraph/atm/ccatm/ng_ccatm.c	optional ngatm_ccatm \
 	compile-with "${NORMAL_C} -I$S/contrib/ngatm"
 netgraph/atm/ng_atm.c		optional ngatm_atm

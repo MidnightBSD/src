@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/initcpu.c,v 1.50.2.5 2010/01/26 20:58:09 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/initcpu.c,v 1.50.2.6 2010/08/27 18:55:48 jhb Exp $");
 
 #include "opt_cpu.h"
 
@@ -177,17 +177,17 @@ initializecpucache()
 	if ((cpu_feature & CPUID_CLFSH) != 0)
 		cpu_clflush_line_size = ((cpu_procinfo >> 8) & 0xff) * 8;
 	/*
-	 * XXXKIB: (temporary) hack to work around traps generated when
-	 * CLFLUSHing APIC registers window.
+	 * XXXKIB: (temporary) hack to work around traps generated
+	 * when CLFLUSHing APIC register window under virtualization
+	 * environments.  These environments tend to disable the
+	 * CPUID_SS feature even though the native CPU supports it.
 	 */
 	TUNABLE_INT_FETCH("hw.clflush_disable", &hw_clflush_disable);
-	if (cpu_vendor_id == CPU_VENDOR_INTEL && !(cpu_feature & CPUID_SS) &&
-	    hw_clflush_disable == -1)
+	if (vm_guest != VM_GUEST_NO && hw_clflush_disable == -1)
 		cpu_feature &= ~CPUID_CLFSH;
 	/*
 	 * Allow to disable CLFLUSH feature manually by
-	 * hw.clflush_disable tunable.  This may help Xen guest on some AMD
-	 * CPUs.
+	 * hw.clflush_disable tunable.
 	 */
 	if (hw_clflush_disable == 1)
 		cpu_feature &= ~CPUID_CLFSH;

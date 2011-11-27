@@ -37853,6 +37853,7 @@ sys/libkern/index.c -text
 sys/libkern/inet_ntoa.c -text
 sys/libkern/lshrdi3.c -text
 sys/libkern/mcount.c -text
+sys/libkern/memmove.c -text
 sys/libkern/memset.c -text
 sys/libkern/moddi3.c -text
 sys/libkern/qdivrem.c -text
