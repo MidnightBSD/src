@@ -43908,6 +43908,9 @@ usr.sbin/vidcontrol/vidcontrol.c -text
 usr.sbin/vipw/Makefile -text
 usr.sbin/vipw/vipw.8 -text
 usr.sbin/vipw/vipw.c -text
+usr.sbin/wake/Makefile -text
+usr.sbin/wake/wake.8 -text
+usr.sbin/wake/wake.c -text
 usr.sbin/watch/Makefile -text
 usr.sbin/watch/watch.8 -text
 usr.sbin/watch/watch.c -text

@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.24 2010/10/21 15:51:00 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.25 2011/10/11 00:18:03 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -185,6 +185,7 @@ SUBDIR=	ac \
 	${_usbdevs} \
 	vidcontrol \
 	vipw \
+	wake \
 	watch \
 	watchdogd \
 	wlandebug \
