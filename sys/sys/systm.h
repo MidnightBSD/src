@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/systm.h,v 1.5 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)systm.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD: src/sys/sys/systm.h,v 1.260.2.1 2007/12/06 14:19:43 kib Exp $
+ * $FreeBSD: src/sys/sys/systm.h,v 1.260.2.9 2011/05/15 08:27:32 avg Exp $
  */
 
 #ifndef _SYS_SYSTM_H_
@@ -61,6 +61,7 @@ extern u_int nselcoll;		/* select collisions since boot */
 extern struct mtx sellock;	/* select lock variable */
 extern struct cv selwait;	/* select conditional variable */
 
+extern u_long pagesizes[];	/* supported page sizes */
 extern long physmem;		/* physical memory */
 extern long realmem;		/* 'real' memory */
 
@@ -70,6 +71,14 @@ extern int boothowto;		/* reboot flags, from console subsystem */
 extern int bootverbose;		/* nonzero to print verbose messages */
 
 extern int maxusers;		/* system tune hint */
+extern int vm_guest;		/* Running as virtual machine guest? */
+
+/*
+ * Detected virtual machine guest types. The intention is to expand
+ * and/or add to the VM_GUEST_VM type if specific VM functionality is
+ * ever implemented (e.g. vendor-specific paravirtualization features).
+ */
+enum VM_GUEST { VM_GUEST_NO = 0, VM_GUEST_VM };
 
 #ifdef	INVARIANTS		/* The option is always available */
 #define	KASSERT(exp,msg) do {						\
@@ -97,6 +106,17 @@ extern int maxusers;		/* system tune hint */
 #endif
 
 /*
+ * Assert that a pointer can be loaded from memory atomically.
+ *
+ * This assertion enforces stronger alignment than necessary.  For example,
+ * on some architectures, atomicity for unaligned loads will depend on
+ * whether or not the load spans multiple cache lines.
+ */
+#define	ASSERT_ATOMIC_LOAD_PTR(var, msg)				\
+	KASSERT(sizeof(var) == sizeof(void *) &&			\
+	    ((uintptr_t)&(var) & (sizeof(void *) - 1)) == 0, msg)
+
+/*
  * XXX the hints declarations are even more misplaced than most declarations
  * in this file, since they are needed in one file (per arch) and only used
  * in two files.
@@ -117,6 +137,7 @@ extern char **kenvp;
  * General function declarations.
  */
 
+struct inpcb;
 struct lock_object;
 struct malloc_type;
 struct mtx;
@@ -191,6 +212,7 @@ void	bcopy(const void *from, void *to, size_t len) __nonnull(1) __nonnull(2);
 void	bzero(void *buf, size_t len) __nonnull(1);
 
 void	*memcpy(void *to, const void *from, size_t len) __nonnull(1) __nonnull(2);
+void	*memmove(void *dest, const void *src, size_t len) __nonnull(1) __nonnull(2);
 
 int	copystr(const void * __restrict kfaddr, void * __restrict kdaddr,
 	    size_t len, size_t * __restrict lencopied)
@@ -218,12 +240,6 @@ u_long	 casuword(volatile u_long *p, u_long oldval, u_long newval);
 
 void	realitexpire(void *);
 
-/*
- * Cyclic clock function type definition used to hook the cyclic 
- * subsystem into the appropriate timer interrupt.
- */
-typedef	void (*cyclic_clock_func_t)(void);
-
 void	hardclock(int usermode, uintfptr_t pc);
 void	hardclock_cpu(int usermode);
 void	softclock(void *);
@@ -237,6 +253,7 @@ void	cpu_stopprofclock(void);
 
 int	cr_cansee(struct ucred *u1, struct ucred *u2);
 int	cr_canseesocket(struct ucred *cred, struct socket *so);
+int	cr_canseeinpcb(struct ucred *cred, struct inpcb *inp);
 
 char	*getenv(const char *name);
 void	freeenv(char *env);
@@ -326,6 +343,8 @@ int uminor(dev_t dev);
 int umajor(dev_t dev);
 const char *devtoname(struct cdev *cdev);
 
+int poll_no_poll(int events);
+
 /* XXX: Should be void nanodelay(u_int nsec); */
 void	DELAY(int usec);
 
@@ -351,44 +370,8 @@ int alloc_unrl(struct unrhdr *uh);
 void free_unr(struct unrhdr *uh, u_int item);
 
 /*
- * This is about as magic as it gets.  fortune(1) has got similar code
- * for reversing bits in a word.  Who thinks up this stuff??
- *
- * Yes, it does appear to be consistently faster than:
- * while (i = ffs(m)) {
- *	m >>= i;
- *	bits++;
- * }
- * and
- * while (lsb = (m & -m)) {	// This is magic too
- * 	m &= ~lsb;		// or: m ^= lsb
- *	bits++;
- * }
- * Both of these latter forms do some very strange things on gcc-3.1 with
- * -mcpu=pentiumpro and/or -march=pentiumpro and/or -O or -O2.
- * There is probably an SSE or MMX popcnt instruction.
- *
- * I wonder if this should be in libkern?
- *
- * XXX Stop the presses!  Another one:
- * static __inline u_int32_t
- * popcnt1(u_int32_t v)
- * {
- *	v -= ((v >> 1) & 0x55555555);
- *	v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
- *	v = (v + (v >> 4)) & 0x0F0F0F0F;
- *	return (v * 0x01010101) >> 24;
- * }
- * The downside is that it has a multiply.  With a pentium3 with
- * -mcpu=pentiumpro and -march=pentiumpro then gcc-3.1 will use
- * an imull, and in that case it is faster.  In most other cases
- * it appears slightly slower.
- *
- * Another variant (also from fortune):
- * #define BITCOUNT(x) (((BX_(x)+(BX_(x)>>4)) & 0x0F0F0F0F) % 255)
- * #define  BX_(x)     ((x) - (((x)>>1)&0x77777777)            \
- *                          - (((x)>>2)&0x33333333)            \
- *                          - (((x)>>3)&0x11111111))
+ * Population count algorithm using SWAR approach
+ * - "SIMD Within A Register".
  */
 static __inline uint32_t
 bitcount32(uint32_t x)
