@@ -24,6 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+# $MidnightBSD$
 # $FreeBSD: src/tools/make_libdeps.sh,v 1.9 2007/10/01 18:11:43 ru Exp $
 
 export PATH=/bin:/usr/bin
@@ -50,6 +51,7 @@ sed -E
     -e's;-lbsdxml!;lib/libexpat;g'
     -e's;-lm!;lib/msun;g'
     -e's;-l(supc\+\+)!;gnu/lib/lib\1;g'
+    -e's;-lssp_nonshared!;gnu/lib/libssp/libssp_nonshared;g'
     -e's;-l(asn1|krb5|roken)!;kerberos5/lib/lib\1;g'
     -e's;-l(crypto|ssh|ssl)!;secure/lib/lib\1;g'
     -e's;-l([^!]+)!;lib/lib\1;g'
