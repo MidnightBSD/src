@@ -31,7 +31,7 @@
 .\"
 .\"	@(#)sleep.1	8.3 (Berkeley) 4/18/94
 .\" $FreeBSD: src/bin/sleep/sleep.1,v 1.22 2005/01/16 16:41:59 ru Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/sleep/sleep.1,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
 .\"
 .Dd April 18, 1994
 .Dt SLEEP 1
@@ -52,6 +52,10 @@ suspends execution for a minimum of
 If the
 .Nm
 command receives a signal, it takes the standard action.
+When the
+.Dv SIGINFO
+signal is received, the estimate of the amount of seconds left to
+sleep is printed on the standard output.
 .Sh IMPLEMENTATION NOTES
 The
 .Dv SIGALRM
@@ -59,14 +63,11 @@ signal is not handled specially by this implementation.
 .Pp
 The
 .Nm
-command will accept and honor a non-integer number of specified seconds
-(with a
-.Ql .\&
-character as a decimal point).
-.Bf Sy
+command allows and honors a non-integer number of seconds to sleep
+in any form acceptable by
+.Xr strtod 3 .
 This is a non-portable extension, and its use will nearly guarantee that
 a shell script will not execute properly on another system.
-.Ef
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
