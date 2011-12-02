@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sync/sync.c,v 1.3 2007/07/26 20:13:02 laffer1 Exp $ */
 /* $FreeBSD: src/bin/sync/sync.c,v 1.16 2005/01/10 08:39:26 imp Exp $ */
 
 /*-
@@ -47,9 +47,8 @@ static char sccsid[] = "@(#)sync.c	8.1 (Berkeley) 5/31/93";
 #include <unistd.h>
 
 int
-main(int argc __unused, char *argv[])
+main(int argc __unused, char *argv[] __unused)
 {
-	setprogname(argv[0]);
 	sync();
 	exit(0);
 	/* NOTREACHED */
