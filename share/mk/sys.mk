@@ -1,8 +1,22 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
 # $FreeBSD: src/share/mk/sys.mk,v 1.86.2.1 2005/11/16 08:12:03 ru Exp $
+# $MidnightBSD$
 
 unix		?=	We run MidnightBSD, not UNIX.
 .MidnightBSD	?=	true
+
+.if !defined(%POSIX)
+#
+# MACHINE_CPUARCH defines a collection of MACHINE_ARCH.  Machines with
+# the same MACHINE_ARCH can run each other's binaries, so it necessarily
+# has word size and endian swizzled in.  However, support files for
+# these machines often are shared amongst all combinations of size
+# and/or endian.  This is called MACHINE_CPU in NetBSD, but that's used
+# for something different in MidnightBSD.
+#
+MACHINE_CPUARCH=${MACHINE_ARCH}
+.endif
+
 
 # If the special target .POSIX appears (without prerequisites or
 # commands) before the first noncomment line in the makefile, make shall
@@ -123,7 +137,7 @@ YFLAGS		?=	-d
 	${FC} ${FFLAGS} ${LDFLAGS} -o ${.TARGET} ${.IMPSRC}
 
 .sh:
-	cp ${.IMPSRC} ${.TARGET}
+	cp -f ${.IMPSRC} ${.TARGET}
 	chmod a+x ${.TARGET}
 
 # DOUBLE SUFFIX RULES
@@ -169,7 +183,7 @@ YFLAGS		?=	-d
 # non-Posix rule set
 
 .sh:
-	cp -p ${.IMPSRC} ${.TARGET}
+	cp -fp ${.IMPSRC} ${.TARGET}
 	chmod a+x ${.TARGET}
 
 .c.ln:
@@ -256,6 +270,11 @@ YFLAGS		?=	-d
 __MAKE_CONF?=/etc/make.conf
 .if exists(${__MAKE_CONF})
 .include "${__MAKE_CONF}"
+.endif
+
+.if defined(__MAKE_SHELL) && !empty(__MAKE_SHELL)
+SHELL=	${__MAKE_SHELL}
+.SHELL: path=${__MAKE_SHELL}
 .endif
 
 # Default executable format
