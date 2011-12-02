@@ -26,17 +26,34 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/install.sh,v 1.7 2004/07/07 09:38:14 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: src/tools/install.sh,v 1.8 2011/02/22 08:07:17 uqs Exp $
 
 # parse install's options and ignore them completely.
+dirmode=""
 while [ $# -gt 0 ]; do
     case $1 in
-    -[bCcMpSs]) shift;;
+    -d) dirmode="YES"; shift;;
+    -[bCcMpSsv]) shift;;
     -[Bfgmo]) shift; shift;;
     -[Bfgmo]*) shift;;
     *) break;
     esac
 done
 
+if [ "$#" -eq 0 ]; then
+	echo "$0: no files/dirs specified" >&2
+	exit 1
+fi
+
+if [ -z "$dirmode" ] && [ "$#" -lt 2 ]; then
+	echo "$0: no target specified" >&2
+	exit 1
+fi
+
 # the remaining arguments are assumed to be files/dirs only.
-exec install -p $*
+if [ -z "$dirmode" ]; then
+	exec install -p "$@"
+else
+	exec install -d "$@"
+fi
