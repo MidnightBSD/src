@@ -40,7 +40,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/arch.c,v 1.67 2008/03/04 15:56:17 imp Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/arch.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
 /*-
  * arch.c --
@@ -1136,7 +1136,7 @@ Arch_MemMTime(GNode *gn)
  *	command (or the linker will know where to find it) and set the
  *	TARGET variable for this node to be the node's name. Otherwise,
  *	we set the TARGET variable to be the full path of the library,
- *	as returned by Dir_FindFile.
+ *	as returned by Path_FindFile.
  *
  *-----------------------------------------------------------------------
  */

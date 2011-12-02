@@ -38,7 +38,7 @@
  *
  *	@(#)dir.h	8.2 (Berkeley) 4/28/95
  * $FreeBSD: src/usr.bin/make/dir.h,v 1.21 2005/03/23 12:56:15 harti Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.bin/make/dir.h,v 1.2 2008/09/29 20:36:53 laffer1 Exp $
  */
 
 #ifndef dir_h_6002e3b8
@@ -57,6 +57,7 @@ TAILQ_HEAD(Path, PathElement);
 void Dir_Init(void);
 void Dir_InitDot(void);
 Boolean Dir_HasWildcards(const char *);
+int Dir_FindHereOrAbove(char *, char *, char *, int);
 int Dir_MTime(struct GNode *);
 void Dir_PrintDirectories(void);
 

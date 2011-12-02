@@ -40,7 +40,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/parse.c,v 1.114 2008/03/12 14:50:58 obrien Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/parse.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
 /*-
  * parse.c --
@@ -700,6 +700,7 @@ static void
 ParseDoDependency(char *line)
 {
 	char	*cp;	/* our current position */
+	char	*lstart = line;	/* original input line */
 	GNode	*gn;	/* a general purpose temporary node */
 	int	op;	/* the operator on the line */
 	char	savec;	/* a place to save a character */
@@ -803,13 +804,15 @@ ParseDoDependency(char *line)
 			 * merges.
 			 */
 			if (strncmp(line, "<<<<<<", 6) == 0 ||
+			    strncmp(line, "||||||", 6) == 0 ||
 			    strncmp(line, "======", 6) == 0 ||
 			    strncmp(line, ">>>>>>", 6) == 0) {
 				Parse_Error(PARSE_FATAL, "Makefile appears to "
 				    "contain unresolved cvs/rcs/??? merge "
 				    "conflicts");
 			} else
-				Parse_Error(PARSE_FATAL, "Need an operator");
+				Parse_Error(PARSE_FATAL, lstart[0] == '.' ?
+				    "Unknown directive" : "Need an operator");
 			return;
 		}
 		*cp = '\0';
@@ -1029,7 +1032,8 @@ ParseDoDependency(char *line)
 			op = OP_DEPENDS;
 		}
 	} else {
-		Parse_Error(PARSE_FATAL, "Missing dependency operator");
+		Parse_Error(PARSE_FATAL, lstart[0] == '.' ?
+		    "Unknown directive" : "Missing dependency operator");
 		return;
 	}
 
@@ -1077,7 +1081,7 @@ ParseDoDependency(char *line)
 			break;
 		  case Posix:
 			is_posix = TRUE;
-			Var_Set("%POSIX", "1003.2", VAR_GLOBAL);
+			Var_SetGlobal("%POSIX", "1003.2");
 			break;
 		  default:
 			break;
@@ -1534,6 +1538,8 @@ Parse_DoVar(char *line, GNode *ctxt)
 		 */
 		Var_Set(line, cp, ctxt);
 	}
+	if (strcmp(line, MAKE_JOB_PREFIX) == 0)
+		Job_SetPrefix();
 }
 
 /*-

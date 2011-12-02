@@ -41,7 +41,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/var.c,v 1.163 2006/07/17 21:05:27 obrien Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/var.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
 /**
  * var.c --
@@ -85,7 +85,6 @@ __MBSDID("$MidnightBSD$");
  * XXX: There's a lot of duplication in these functions.
  */
 
-#include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,7 +97,6 @@ __MBSDID("$MidnightBSD$");
 #include "GNode.h"
 #include "job.h"
 #include "lst.h"
-#include "make.h"
 #include "parse.h"
 #include "str.h"
 #include "targ.h"
@@ -947,12 +945,14 @@ VarFindAny(const char name[], GNode *ctxt)
  *	The name and val arguments are duplicated so they may
  *	safely be freed.
  */
-static void
+static Var *
 VarAdd(const char *name, const char *val, GNode *ctxt)
 {
+	Var *v;
 
-	Lst_AtFront(&ctxt->context, VarCreate(name, val, 0));
+	Lst_AtFront(&ctxt->context, v = VarCreate(name, val, 0));
 	DEBUGF(VAR, ("%s:%s = %s\n", ctxt->name, name, val));
+	return (v);
 }
 
 /**
@@ -1005,28 +1005,20 @@ Var_Set(const char *name, const char *val, GNode *ctxt)
 	n = VarPossiblyExpand(name, ctxt);
 	v = VarFindOnly(n, ctxt);
 	if (v == NULL) {
-		VarAdd(n, val, ctxt);
-		if (ctxt == VAR_CMD) {
-			/*
-			 * Any variables given on the command line
-			 * are automatically exported to the
-			 * environment (as per POSIX standard)
-			 */
-			setenv(n, val, 1);
-		}
+		v = VarAdd(n, val, ctxt);
 	} else {
 		Buf_Clear(v->val);
 		Buf_Append(v->val, val);
-
-		if (ctxt == VAR_CMD || (v->flags & VAR_TO_ENV)) {
-			/*
-			 * Any variables given on the command line
-			 * are automatically exported to the
-			 * environment (as per POSIX standard)
-			 */
-			setenv(n, val, 1);
-		}
 		DEBUGF(VAR, ("%s:%s = %s\n", ctxt->name, n, val));
+	}
+
+	if (ctxt == VAR_CMD || (v->flags & VAR_TO_ENV)) {
+		/*
+		 * Any variables given on the command line
+		 * are automatically exported to the
+		 * environment (as per POSIX standard)
+		 */
+		setenv(n, val, 1);
 	}
 
 	free(n);

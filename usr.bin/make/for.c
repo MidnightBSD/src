@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/for.c,v 1.44 2008/03/24 12:33:28 ru Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/for.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
 /*-
  * for.c --
@@ -51,11 +51,9 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 
 #include "buf.h"
-#include "dir.h"
 #include "for.h"
 #include "globals.h"
 #include "lst.h"
-#include "make.h"
 #include "parse.h"
 #include "str.h"
 #include "util.h"
@@ -255,7 +253,7 @@ For_Run(int lineno)
 
 	LST_FOREACH(ln, &values) {
 		val = Lst_Datum(ln);
-		Var_Set(var, val, VAR_GLOBAL);
+		Var_SetGlobal(var, val);
 
 		DEBUGF(FOR, ("--- %s = %s\n", var, val));
 		str = Buf_Peel(Var_SubstOnly(var, Buf_Data(buf), FALSE));

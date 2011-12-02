@@ -40,7 +40,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/suff.c,v 1.64 2005/05/24 15:58:35 harti Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/suff.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 /*-
  * suff.c --
  *	Functions to maintain suffix lists and find implicit dependents
@@ -514,6 +514,7 @@ Suff_AddTransform(char *line)
 	Suff	*s;	/* source suffix */
 	Suff	*t;	/* target suffix */
 
+	s = t = NULL;	/* silence gcc */
 	gn = SuffTransFind(line);
 	if (gn == NULL) {
 		/*
@@ -785,11 +786,11 @@ Suff_DoPaths(void)
 	}
 
 	ptr = Path_MakeFlags("-I", &inIncludes);
-	Var_Set(".INCLUDES", ptr, VAR_GLOBAL);
+	Var_SetGlobal(".INCLUDES", ptr);
 	free(ptr);
 
 	ptr = Path_MakeFlags("-L", &inLibs);
-	Var_Set(".LIBS", ptr, VAR_GLOBAL);
+	Var_SetGlobal(".LIBS", ptr);
 	free(ptr);
 
 	Path_Clear(&inIncludes);

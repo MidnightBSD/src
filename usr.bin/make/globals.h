@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.bin/make/globals.h,v 1.2 2008/09/29 20:36:53 laffer1 Exp $
  * $FreeBSD: src/usr.bin/make/globals.h,v 1.12 2008/03/12 14:50:58 obrien Exp $
  */
 
@@ -45,9 +45,6 @@
 /*
  * Global Variables
  */
-
-#include <time.h>
-#include <stdint.h>
 
 #include "lst.h"
 #include "util.h"
@@ -71,15 +68,19 @@ extern struct Path parseIncPath;
 extern struct Path sysIncPath;
 
 extern int	jobLimit;	/* -j argument: maximum number of jobs */
+extern int	makeErrors;	/* Number of targets not remade due to errors */
 extern Boolean	jobsRunning;	/* True if jobs are running */
 extern Boolean	compatMake;	/* True if we are make compatible */
 extern Boolean	ignoreErrors;	/* True if should ignore all errors */
 extern Boolean	beSilent;	/* True if should print no commands */
 extern Boolean	beVerbose;	/* True if should print extra cruft */
+extern Boolean	beQuiet;	/* True if want quiet headers with -j */
 extern Boolean	noExecute;	/* True if should execute nothing */
+extern Boolean	printGraphOnly;	/* -p flag */
 extern Boolean	allPrecious;	/* True if every target is precious */
 extern Boolean	is_posix;	/* .POSIX target seen */
 extern Boolean	mfAutoDeps;	/* .MAKEFILEDEPS target seen */
+extern Boolean	remakingMakefiles; /* True if remaking makefiles is in progress */
 
 /* True if should continue on unaffected portions of the graph
  * when have an error in one portion */

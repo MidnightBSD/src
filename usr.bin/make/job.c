@@ -41,7 +41,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/job.c,v 1.130 2008/09/29 16:13:28 ache Exp $ */
-__MBSDID("$MidnightBSD: src/usr.bin/make/job.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/make/job.c,v 1.3 2009/04/15 02:37:53 laffer1 Exp $");
 
 /*-
  * job.c --
@@ -115,6 +115,8 @@ __MBSDID("$MidnightBSD: src/usr.bin/make/job.c,v 1.2 2008/09/29 20:36:53 laffer1
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <paths.h>
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -138,7 +140,7 @@ __MBSDID("$MidnightBSD: src/usr.bin/make/job.c,v 1.2 2008/09/29 20:36:53 laffer1
 #include "util.h"
 #include "var.h"
 
-#define	TMPPAT	"/tmp/makeXXXXXXXXXX"
+#define	TMPPAT	"makeXXXXXXXXXX"
 
 #ifndef USE_KQUEUE
 /*
@@ -237,7 +239,7 @@ typedef struct Job {
 		 */
 		struct {
 			/* Name of file to which shell output was rerouted */
-			char	of_outFile[sizeof(TMPPAT)];
+			char	of_outFile[PATH_MAX];
 
 			/*
 			 * Stream open to the output file. Used to funnel all
@@ -264,7 +266,6 @@ TAILQ_HEAD(JobList, Job);
 /*
  * error handling variables
  */
-static int	errors = 0;	/* number of errors reported */
 static int	aborting = 0;	/* why is the make aborting? */
 #define	ABORT_ERROR	1	/* Because of an error */
 #define	ABORT_INTERRUPT	2	/* Because it was interrupted */
@@ -323,10 +324,11 @@ static GNode	*lastNode;	/* The node for which output was most recently
 static const char *targFmt;	/* Format string to use to head output from a
 				 * job when it's not the most-recent job heard
 				 * from */
+static char *targPrefix = NULL;	/* What we print at the start of targFmt */
 
-#define	TARG_FMT  "--- %s ---\n" /* Default format */
+#define TARG_FMT  "%s %s ---\n"	/* Default format */
 #define	MESSAGE(fp, gn) \
-	 fprintf(fp, targFmt, gn->name);
+	fprintf(fp, targFmt, targPrefix, gn->name);
 
 /*
  * When JobStart attempts to run a job but isn't allowed to
@@ -343,7 +345,7 @@ static int	fifoFd;		/* Fd of our job fifo */
 static char	fifoName[] = "/tmp/make_fifo_XXXXXXXXX";
 static int	fifoMaster;
 
-static sig_atomic_t interrupted;
+static volatile sig_atomic_t interrupted;
 
 
 #if defined(USE_PGRP) && defined(SYSV)
@@ -413,7 +415,11 @@ mkfifotemp(char *template)
 	 */
 	while (ptr >= template && *ptr == 'X') {
 		uint32_t rand_num =
+#if __FreeBSD_version < 800041
 			arc4random() % (sizeof(padchar) - 1);
+#else
+			arc4random_uniform(sizeof(padchar) - 1);
+#endif
 		*ptr-- = padchar[rand_num];
 	}
 	start = ptr + 1;
@@ -482,7 +488,7 @@ catch_child(int sig __unused)
 /**
  */
 void
-Proc_Init()
+Proc_Init(void)
 {
 	/*
 	 * Catch SIGCHLD so that we get kicked out of select() when we
@@ -846,7 +852,7 @@ JobClose(Job *job)
  *
  *	If we got an error and are aborting (aborting == ABORT_ERROR) and
  *	the job list is now empty, we are done for the day.
- *	If we recognized an error (errors !=0), we set the aborting flag
+ *	If we recognized an error (makeErrors !=0), we set the aborting flag
  *	to ABORT_ERROR so no more jobs will be started.
  */
 static void
@@ -1005,17 +1011,6 @@ JobFinish(Job *job, int *status)
 				if (!(job->flags & JOB_CONTINUING)) {
 					DEBUGF(JOB, ("Warning: process %jd was not "
 						     "continuing.\n", (intmax_t) job->pid));
-#ifdef notdef
-					/*
-					 * We don't really want to restart a
-					 * job from scratch just because it
-					 * continued, especially not without
-					 * killing the continuing process!
-					 * That's why this is ifdef'ed out.
-					 * FD - 9/17/90
-					 */
-					JobRestart(job);
-#endif
 				}
 				job->flags &= ~JOB_CONTINUING;
 				TAILQ_INSERT_TAIL(&jobs, job, link);
@@ -1121,7 +1116,7 @@ JobFinish(Job *job, int *status)
 		free(job);
 
 	} else if (*status != 0) {
-		errors += 1;
+		makeErrors++;
 		free(job);
 	}
 
@@ -1130,7 +1125,7 @@ JobFinish(Job *job, int *status)
 	/*
 	 * Set aborting if any error.
 	 */
-	if (errors && !keepgoing && aborting != ABORT_INTERRUPT) {
+	if (makeErrors && !keepgoing && aborting != ABORT_INTERRUPT) {
 		/*
 		 * If we found any errors in this batch of children and the -k
 		 * flag wasn't given, we set the aborting flag so no more jobs
@@ -1143,7 +1138,7 @@ JobFinish(Job *job, int *status)
 		/*
 		 * If we are aborting and the job table is now empty, we finish.
 		 */
-		Finish(errors);
+		Finish(makeErrors);
 	}
 }
 
@@ -1574,7 +1569,8 @@ JobStart(GNode *gn, int flags, Job *previous)
 	Boolean	noExec;		/* Set true if we decide not to run the job */
 	int	tfd;		/* File descriptor for temp file */
 	LstNode	*ln;
-	char	tfile[sizeof(TMPPAT)];
+	char	tfile[PATH_MAX];
+	const char *tdir;
 
 	if (interrupted) {
 		JobPassSig(interrupted);
@@ -1615,6 +1611,9 @@ JobStart(GNode *gn, int flags, Job *previous)
 		cmdsOK = TRUE;
 	}
 
+	if ((tdir = getenv("TMPDIR")) == NULL)
+		tdir = _PATH_TMP;
+
 	/*
 	 * If the -n flag wasn't given, we open up OUR (not the child's)
 	 * temporary file to stuff commands in it. The thing is rd/wr so we
@@ -1630,7 +1629,7 @@ JobStart(GNode *gn, int flags, Job *previous)
 			DieHorribly();
 		}
 
-		strcpy(tfile, TMPPAT);
+		snprintf(tfile, sizeof(tfile), "%s/%s", tdir, TMPPAT);
 		if ((tfd = mkstemp(tfile)) == -1)
 			Punt("Cannot create temp file: %s", strerror(errno));
 		job->cmdFILE = fdopen(tfd, "w+");
@@ -1809,7 +1808,8 @@ JobStart(GNode *gn, int flags, Job *previous)
 		} else {
 			fprintf(stdout, "Remaking `%s'\n", gn->name);
 			fflush(stdout);
-			strcpy(job->outFile, TMPPAT);
+			snprintf(job->outFile, sizeof(job->outFile), "%s/%s",
+			    tdir, TMPPAT);
 			if ((job->outFd = mkstemp(job->outFile)) == -1)
 				Punt("cannot create temp file: %s",
 				    strerror(errno));
@@ -2281,6 +2281,18 @@ Job_Make(GNode *gn)
 	JobStart(gn, 0, NULL);
 }
 
+void
+Job_SetPrefix(void)
+{
+
+	if (targPrefix) {
+		free(targPrefix);
+	} else if (!Var_Exists(MAKE_JOB_PREFIX, VAR_GLOBAL)) {
+		Var_SetGlobal(MAKE_JOB_PREFIX, "---");
+	}
+	targPrefix = Var_Subst("${" MAKE_JOB_PREFIX "}", VAR_GLOBAL, 0)->buf;
+}
+
 /**
  * Job_Init
  *	Initialize the process module, given a maximum number of jobs.
@@ -2344,11 +2356,10 @@ Job_Init(int maxproc)
 	nJobs = 0;
 
 	aborting = 0;
-	errors = 0;
+	makeErrors = 0;
 
 	lastNode = NULL;
-
-	if ((maxJobs == 1 && fifoFd < 0) || beVerbose == 0) {
+	if ((maxJobs == 1 && fifoFd < 0) || !beVerbose || is_posix || beQuiet) {
 		/*
 		 * If only one job can run at a time, there's no need for a
 		 * banner, no is there?
@@ -2536,14 +2547,14 @@ JobInterrupt(int runINTERRUPT, int signo)
  *	attached to the .END target.
  *
  * Results:
- *	Number of errors reported.
+ *	None.
  */
-int
+void
 Job_Finish(void)
 {
 
 	if (postCommands != NULL && !Lst_IsEmpty(&postCommands->commands)) {
-		if (errors) {
+		if (makeErrors) {
 			Error("Errors reported so .END ignored");
 		} else {
 			JobStart(postCommands, JOB_SPECIAL | JOB_IGNDOTS, NULL);
@@ -2560,7 +2571,6 @@ Job_Finish(void)
 		if (fifoMaster)
 			unlink(fifoName);
 	}
-	return (errors);
 }
 
 /**
@@ -3324,7 +3334,6 @@ void
 Compat_Run(Lst *targs)
 {
 	GNode	*gn = NULL;	/* Current root target */
-	int	error_cnt;		/* Number of targets not remade due to errors */
 	LstNode	*ln;
 
 	Compat_InstallSignalHandlers();
@@ -3357,7 +3366,7 @@ Compat_Run(Lst *targs)
 	 *	ABORTED	  gn was not remade because one of its inferiors
 	 *		  could not be made due to errors.
 	 */
-	error_cnt = 0;
+	makeErrors = 0;
 	while (!Lst_IsEmpty(targs)) {
 		gn = Lst_DeQueue(targs);
 		Compat_Make(gn, gn);
@@ -3367,18 +3376,19 @@ Compat_Run(Lst *targs)
 		} else if (gn->made == ABORTED) {
 			printf("`%s' not remade because of errors.\n",
 			    gn->name);
-			error_cnt += 1;
+			makeErrors++;
+		} else if (gn->made == ERROR) {
+			makeErrors++;
 		}
 	}
 
 	/*
 	 * If the user has defined a .END target, run its commands.
 	 */
-	if (error_cnt == 0) {
+	if (makeErrors == 0) {
 		LST_FOREACH(ln, &ENDNode->commands) {
 			if (Compat_RunCommand(Lst_Datum(ln), ENDNode))
 				break;
 		}
 	}
 }
-

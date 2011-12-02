@@ -42,7 +42,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/buf.c,v 1.36 2005/05/13 08:53:00 harti Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/buf.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
 /*
  * buf.c
@@ -59,7 +59,7 @@ __MBSDID("$MidnightBSD$");
  * Returns the number of bytes in the buffer.  Doesn't include the
  * null-terminating byte.
  */
-inline size_t
+size_t
 Buf_Size(const Buffer *buf)
 {
 
@@ -71,7 +71,7 @@ Buf_Size(const Buffer *buf)
  *  
  * @note Adding data to the Buffer object may invalidate the reference.
  */
-inline char *
+char *
 Buf_Data(const Buffer *bp)
 {
 
@@ -99,7 +99,7 @@ BufExpand(Buffer *bp, size_t nb)
 /**
  * Add a single byte to the buffer.
  */
-inline void
+void
 Buf_AddByte(Buffer *bp, Byte byte)
 {
 

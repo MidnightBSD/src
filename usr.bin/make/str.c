@@ -40,14 +40,12 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/str.c,v 1.46 2006/10/09 19:37:26 ru Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/str.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "buf.h"
-#include "globals.h"
 #include "str.h"
 #include "util.h"
 
@@ -153,7 +151,7 @@ brk_string(ArgArray *aa, const char str[], Boolean expand)
 
 	ArgArray_Init(aa);
 
-	aa->buffer = estrdup(str);;
+	aa->buffer = estrdup(str);
 
 	arg = aa->buffer;
 	start = arg;

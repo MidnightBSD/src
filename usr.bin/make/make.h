@@ -37,7 +37,7 @@
  *
  *	@(#)make.h	8.3 (Berkeley) 6/13/95
  * $FreeBSD: src/usr.bin/make/make.h,v 1.35 2007/03/08 09:16:10 fjoe Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.bin/make/make.h,v 1.2 2008/09/29 20:36:53 laffer1 Exp $
  */
 
 #ifndef make_h_a91074b9
@@ -49,6 +49,8 @@
  */
 
 #include "util.h"
+
+#define	MAKE_JOB_PREFIX	".MAKE.JOB.PREFIX"
 
 struct GNode;
 struct Lst;

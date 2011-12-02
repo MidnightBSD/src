@@ -47,7 +47,7 @@ static char copyright[] =
 #endif /* not lint */
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/main.c,v 1.169 2008/07/30 21:18:38 ed Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/main.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
 /*
  * main.c
@@ -64,7 +64,6 @@ __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/queue.h>
 #include <sys/resource.h>
@@ -125,12 +124,15 @@ Lst create = Lst_Initializer(create);
 Boolean		allPrecious;	/* .PRECIOUS given on line by itself */
 Boolean		is_posix;	/* .POSIX target seen */
 Boolean		mfAutoDeps;	/* .MAKEFILEDEPS target seen */
+Boolean		remakingMakefiles; /* True if remaking makefiles is in progress */
 Boolean		beSilent;	/* -s flag */
 Boolean		beVerbose;	/* -v flag */
+Boolean		beQuiet;	/* -Q flag */
 Boolean		compatMake;	/* -B argument */
 int		debug;		/* -d flag */
 Boolean		ignoreErrors;	/* -i flag */
 int		jobLimit;	/* -j argument */
+int		makeErrors;	/* Number of targets not remade due to errors */
 Boolean		jobsRunning;	/* TRUE if the jobs might be running */
 Boolean		keepgoing;	/* -k flag */
 Boolean		noExecute;	/* -n flag */
@@ -366,11 +368,12 @@ MainParseArgs(int argc, char **argv)
 {
 	int c;
 	Boolean	found_dd = FALSE;
+	char found_dir[MAXPATHLEN + 1];	/* for searching for sys.mk */
 
 rearg:
 	optind = 1;	/* since we're called more than once */
 	optreset = 1;
-#define OPTFLAGS "ABC:D:E:I:PSV:Xd:ef:ij:km:npqrstvx:"
+#define OPTFLAGS "ABC:D:d:E:ef:I:ij:km:nPpQqrSstV:vXx:"
 	for (;;) {
 		if ((optind < argc) && strcmp(argv[optind], "--") == 0) {
 			found_dd = TRUE;
@@ -384,37 +387,20 @@ rearg:
 			arch_fatal = FALSE;
 			MFLAGS_append("-A", NULL);
 			break;
-		case 'C':
-			if (chdir(optarg) == -1)
-				err(1, "chdir %s", optarg);
-			break;
-		case 'D':
-			Var_SetGlobal(optarg, "1");
-			MFLAGS_append("-D", optarg);
-			break;
-		case 'I':
-			Parse_AddIncludeDir(optarg);
-			MFLAGS_append("-I", optarg);
-			break;
-		case 'V':
-			Lst_AtEnd(&variables, estrdup(optarg));
-			MFLAGS_append("-V", optarg);
-			break;
-		case 'X':
-			expandVars = FALSE;
-			break;
 		case 'B':
 			compatMake = TRUE;
 			MFLAGS_append("-B", NULL);
 			unsetenv("MAKE_JOBS_FIFO");
 			break;
-		case 'P':
-			usePipes = FALSE;
-			MFLAGS_append("-P", NULL);
+		case 'C':
+			if (chdir(optarg) == -1)
+				err(1, "chdir %s", optarg);
+			if (getcwd(curdir, MAXPATHLEN) == NULL)
+				err(2, NULL);
 			break;
-		case 'S':
-			keepgoing = FALSE;
-			MFLAGS_append("-S", NULL);
+		case 'D':
+			Var_SetGlobal(optarg, "1");
+			MFLAGS_append("-D", optarg);
 			break;
 		case 'd': {
 			char *modules = optarg;
@@ -483,6 +469,10 @@ rearg:
 		case 'f':
 			Lst_AtEnd(&makefiles, estrdup(optarg));
 			break;
+		case 'I':
+			Parse_AddIncludeDir(optarg);
+			MFLAGS_append("-I", optarg);
+			break;
 		case 'i':
 			ignoreErrors = TRUE;
 			MFLAGS_append("-i", NULL);
@@ -505,16 +495,33 @@ rearg:
 			MFLAGS_append("-k", NULL);
 			break;
 		case 'm':
-			Path_AddDir(&sysIncPath, optarg);
+			/* look for magic parent directory search string */
+			if (strncmp(".../", optarg, 4) == 0) {
+				if (!Dir_FindHereOrAbove(curdir, optarg + 4,
+				    found_dir, sizeof(found_dir)))
+					break;		/* nothing doing */
+				Path_AddDir(&sysIncPath, found_dir);
+			} else {
+				Path_AddDir(&sysIncPath, optarg);
+			}
 			MFLAGS_append("-m", optarg);
 			break;
 		case 'n':
 			noExecute = TRUE;
 			MFLAGS_append("-n", NULL);
 			break;
+		case 'P':
+			usePipes = FALSE;
+			MFLAGS_append("-P", NULL);
+			break;
 		case 'p':
 			printGraphOnly = TRUE;
 			debug |= DEBUG_GRAPH1;
+			break;
+		case 'Q':
+			beQuiet = TRUE;
+			beVerbose = FALSE;
+			MFLAGS_append("-Q", NULL);
 			break;
 		case 'q':
 			queryFlag = TRUE;
@@ -525,6 +532,10 @@ rearg:
 			noBuiltins = TRUE;
 			MFLAGS_append("-r", NULL);
 			break;
+		case 'S':
+			keepgoing = FALSE;
+			MFLAGS_append("-S", NULL);
+			break;
 		case 's':
 			beSilent = TRUE;
 			MFLAGS_append("-s", NULL);
@@ -533,9 +544,17 @@ rearg:
 			touchFlag = TRUE;
 			MFLAGS_append("-t", NULL);
 			break;
+		case 'V':
+			Lst_AtEnd(&variables, estrdup(optarg));
+			MFLAGS_append("-V", optarg);
+			break;
 		case 'v':
 			beVerbose = TRUE;
+			beQuiet = FALSE;
 			MFLAGS_append("-v", NULL);
+			break;
+		case 'X':
+			expandVars = FALSE;
 			break;
 		case 'x':
 			if (Main_ParseWarn(optarg, 1) != -1)
@@ -667,11 +686,9 @@ check_make_level(void)
 	int	level = (value == NULL) ? 0 : atoi(value);
 
 	if (level < 0) {
-		errc(2, EAGAIN, "Invalid value for recursion level (%d).",
-		    level);
+		errx(2, "Invalid value for recursion level (%d).", level);
 	} else if (level > MKLVL_MAXVAL) {
-		errc(2, EAGAIN, "Max recursion level (%d) exceeded.",
-		    MKLVL_MAXVAL);
+		errx(2, "Max recursion level (%d) exceeded.", MKLVL_MAXVAL);
 	} else {
 		char new_value[32];
 		sprintf(new_value, "%d", level + 1);
@@ -698,6 +715,7 @@ Main_AddSourceMakefile(const char *name)
 static void
 Remake_Makefiles(void)
 {
+	Lst cleanup;
 	LstNode *ln;
 	int error_cnt = 0;
 	int remade_cnt = 0;
@@ -708,6 +726,7 @@ Remake_Makefiles(void)
 			Fatal("Failed to change directory to %s.", curdir);
 	}
 
+	Lst_Init(&cleanup);
 	LST_FOREACH(ln, &source_makefiles) {
 		LstNode *ln2;
 		struct GNode *gn;
@@ -723,41 +742,6 @@ Remake_Makefiles(void)
 		gn = Targ_FindNode(name, TARG_CREATE);
 		DEBUGF(MAKE, ("Checking %s...", gn->name));
 		Suff_FindDeps(gn);
-
-		/*
-		 * ! dependencies as well as
-		 * dependencies with .FORCE, .EXEC and .PHONY attributes
-		 * are skipped to prevent infinite loops
-		 */
-		if (gn->type & (OP_FORCE | OP_EXEC | OP_PHONY)) {
-			DEBUGF(MAKE, ("skipping (force, exec or phony).\n",
-			    gn->name));
-			continue;
-		}
-
-		/*
-		 * Skip :: targets that have commands and no children
-		 * because such targets are always out-of-date
-		 */
-		if ((gn->type & OP_DOUBLEDEP) &&
-		    !Lst_IsEmpty(&gn->commands) &&
-		    Lst_IsEmpty(&gn->children)) {
-			DEBUGF(MAKE, ("skipping (doubledep, no sources "
-			    "and has commands).\n"));
-			continue;
-		}
-
-		/*
-		 * Skip targets without sources and without commands
-		 */
-		if (Lst_IsEmpty(&gn->commands) &&
-		    Lst_IsEmpty(&gn->children)) {
-			DEBUGF(MAKE,
-			    ("skipping (no sources and no commands).\n"));
-			continue;
-		}
-
-		DEBUGF(MAKE, ("\n"));
 
 		/*
 		 * -t, -q and -n has no effect unless the makefile is
@@ -780,7 +764,9 @@ Remake_Makefiles(void)
 		 * Check and remake the makefile
 		 */
 		mtime = Dir_MTime(gn);
+		remakingMakefiles = TRUE;
 		Compat_Make(gn, gn);
+		remakingMakefiles = FALSE;
 
 		/*
 		 * Restore -t, -q and -n behaviour
@@ -816,21 +802,7 @@ Remake_Makefiles(void)
 			    gn->name);
 			error_cnt++;
 		} else if (gn->made == UPTODATE) {
-			Lst examine;
-
-			Lst_Init(&examine);
-			Lst_EnQueue(&examine, gn);
-			while (!Lst_IsEmpty(&examine)) {
-				LstNode	*eln;
-				GNode *egn = Lst_DeQueue(&examine);
-
-				egn->make = FALSE;
-				LST_FOREACH(eln, &egn->children) {
-					GNode *cgn = Lst_Datum(eln);
-
-					Lst_EnQueue(&examine, cgn);
-				}
-			}
+			Lst_EnQueue(&cleanup, gn);
 		}
 	}
 
@@ -849,6 +821,24 @@ Remake_Makefiles(void)
 		if (execvp(save_argv[0], save_argv) < 0) {
 			Fatal("Can't restart `%s': %s.",
 			    save_argv[0], strerror(errno));
+		}
+	}
+
+	while (!Lst_IsEmpty(&cleanup)) {
+		GNode *gn = Lst_DeQueue(&cleanup);
+
+		gn->unmade = 0;
+		gn->make = FALSE;
+		gn->made = UNMADE;
+		gn->childMade = FALSE;
+		gn->mtime = gn->cmtime = 0;
+		gn->cmtime_gn = NULL;
+
+		LST_FOREACH(ln, &gn->children) {
+			GNode *cgn = Lst_Datum(ln);
+
+			gn->unmade++;
+			Lst_EnQueue(&cleanup, cgn);
 		}
 	}
 
@@ -888,6 +878,7 @@ main(int argc, char **argv)
 	char mdpath[MAXPATHLEN];
 	char obpath[MAXPATHLEN];
 	char cdpath[MAXPATHLEN];
+	char found_dir[MAXPATHLEN + 1];	/* for searching for sys.mk */
 	char *cp = NULL, *start;
 
 	save_argv = argv;
@@ -940,26 +931,6 @@ main(int argc, char **argv)
 #endif
 
 	/*
-	 * Prior to 7.0, FreeBSD/pc98 kernel used to set the
-	 * utsname.machine to "i386", and MACHINE was defined as
-	 * "i386", so it could not be distinguished from FreeBSD/i386.
-	 * Therefore, we had to check machine.ispc98 and adjust the
-	 * MACHINE variable.  NOTE: The code is still here to be able
-	 * to compile new make binary on old FreeBSD/pc98 systems, and
-	 * have the MACHINE variable set properly.
-	 */
-	if ((machine = getenv("MACHINE")) == NULL) {
-		int	ispc98;
-		size_t	len;
-
-		len = sizeof(ispc98);
-		if (!sysctlbyname("machdep.ispc98", &ispc98, &len, NULL, 0)) {
-			if (ispc98)
-				machine = "pc98";
-		}
-	}
-
-	/*
 	 * Get the name of this type of MACHINE from utsname
 	 * so we can share an executable for similar machines.
 	 * (i.e. m68k: amiga hp300, mac68k, sun3, ...)
@@ -967,7 +938,7 @@ main(int argc, char **argv)
 	 * Note that both MACHINE and MACHINE_ARCH are decided at
 	 * run-time.
 	 */
-	if (machine == NULL) {
+	if ((machine = getenv("MACHINE")) == NULL) {
 		static struct utsname utsname;
 
 		if (uname(&utsname) == -1)
@@ -990,8 +961,6 @@ main(int argc, char **argv)
 	if ((machine_cpu = getenv("MACHINE_CPU")) == NULL) {
 		if (!strcmp(machine_arch, "i386"))
 			machine_cpu = "i386";
-		else if (!strcmp(machine_arch, "alpha"))
-			machine_cpu = "ev4";
 		else
 			machine_cpu = "unknown";
 	}
@@ -1029,6 +998,22 @@ main(int argc, char **argv)
 #ifdef MAKE_VERSION
 	Var_SetGlobal("MAKE_VERSION", MAKE_VERSION);
 #endif
+	Var_SetGlobal(".newline", "\n");	/* handy for :@ loops */
+	{
+		char tmp[64];
+
+		snprintf(tmp, sizeof(tmp), "%u", getpid());
+		Var_SetGlobal(".MAKE.PID", tmp);
+		snprintf(tmp, sizeof(tmp), "%u", getppid());
+		Var_SetGlobal(".MAKE.PPID", tmp);
+	}
+	Job_SetPrefix();
+
+	/*
+	 * Find where we are...
+	 */
+	if (getcwd(curdir, MAXPATHLEN) == NULL)
+		err(2, NULL);
 
 	/*
 	 * First snag things out of the MAKEFLAGS environment
@@ -1039,11 +1024,8 @@ main(int argc, char **argv)
 	MainParseArgs(argc, argv);
 
 	/*
-	 * Find where we are...
+	 * Verify that cwd is sane (after -C may have changed it).
 	 */
-	if (getcwd(curdir, MAXPATHLEN) == NULL)
-		err(2, NULL);
-
 	{
 	struct stat sa;
 
@@ -1141,18 +1123,37 @@ main(int argc, char **argv)
 	 * as dir1:...:dirn) to the system include path.
 	 */
 	if (TAILQ_EMPTY(&sysIncPath)) {
-		char syspath[] = PATH_DEFSYSPATH;
+		char defsyspath[] = PATH_DEFSYSPATH;
+		char *syspath = getenv("MAKESYSPATH");
+
+		/*
+		 * If no user-supplied system path was given (thru -m option)
+		 * add the directories from the DEFSYSPATH (more than one may
+		 * be given as dir1:...:dirn) to the system include path.
+		 */
+		if (syspath == NULL || *syspath == '\0')
+			syspath = defsyspath;
+		else
+			syspath = estrdup(syspath);
 
 		for (start = syspath; *start != '\0'; start = cp) {
 			for (cp = start; *cp != '\0' && *cp != ':'; cp++)
 				continue;
-			if (*cp == '\0') {
-				Path_AddDir(&sysIncPath, start);
-			} else {
+			if (*cp == ':') {
 				*cp++ = '\0';
+			}
+			/* look for magic parent directory search string */
+			if (strncmp(".../", start, 4) == 0) {
+				if (Dir_FindHereOrAbove(curdir, start + 4,
+				    found_dir, sizeof(found_dir))) {
+					Path_AddDir(&sysIncPath, found_dir);
+				}
+			} else {
 				Path_AddDir(&sysIncPath, start);
 			}
 		}
+		if (syspath != defsyspath)
+			free(syspath);
 	}
 
 	/*
@@ -1312,9 +1313,11 @@ main(int argc, char **argv)
 	if (DEBUG(GRAPH2))
 		Targ_PrintGraph(2);
 
-	if (queryFlag && outOfDate)
-		return (1);
-	else
-		return (0);
-}
+	if (queryFlag)
+		return (outOfDate);
 
+	if (makeErrors != 0)
+		Finish(makeErrors);
+
+	return (0);
+}

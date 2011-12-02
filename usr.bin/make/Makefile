@@ -1,7 +1,7 @@
 #	@(#)Makefile	5.2 (Berkeley) 12/28/90
-#	$Id: Makefile,v 1.2 2008-09-29 20:36:53 laffer1 Exp $
+#	$Id: Makefile,v 1.3 2011-12-02 04:11:34 laffer1 Exp $
 # $FreeBSD: src/usr.bin/make/Makefile,v 1.66 2008/03/04 22:32:58 obrien Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/make/Makefile,v 1.2 2008/09/29 20:36:53 laffer1 Exp $
 
 PROG=	make
 CFLAGS+=-I${.CURDIR}
@@ -9,8 +9,6 @@ SRCS=	arch.c buf.c cond.c dir.c for.c hash.c hash_tables.c job.c	\
 	lst.c main.c make.c parse.c proc.c shell.c str.c suff.c targ.c	\
 	util.c var.c
 
-NO_WERROR=
-WARNS?=	6
 NO_SHARED?=	YES
 
 CFLAGS+=-DMAKE_VERSION=\"5200408120\"

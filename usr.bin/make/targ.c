@@ -40,7 +40,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/targ.c,v 1.42 2007/04/20 06:33:25 fjoe Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/targ.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
 /*
  * Functions for maintaining the Lst allTargets. Target nodes are
@@ -79,13 +79,11 @@ __MBSDID("$MidnightBSD$");
  */
 
 #include <stdio.h>
-#include <string.h>
 
 #include "dir.h"
 #include "globals.h"
 #include "GNode.h"
 #include "hash.h"
-#include "make.h"
 #include "suff.h"
 #include "targ.h"
 #include "util.h"
