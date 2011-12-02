@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.30 2011/08/13 21:20:12 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.31 2011/10/22 19:19:33 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -609,7 +609,7 @@ ITOOLS=	[ awk cap_mkdb cat chflags chmod chown \
 #
 
 # Non-base distributions produced by the base system
-EXTRA_DISTRIBUTIONS=	games
+EXTRA_DISTRIBUTIONS=	doc games
 .if defined(LIB32TMP) && ${MK_LIB32} != "no"
 EXTRA_DISTRIBUTIONS+=	lib32
 .endif
