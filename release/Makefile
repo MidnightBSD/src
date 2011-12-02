@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/release/Makefile,v 1.29 2011/10/23 16:21:32 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -20,6 +20,8 @@
 
 WORLDDIR?=	${.CURDIR}/..
 PORTSDIR?=	/usr/mports
+DOCDIR?=	/usr/doc
+RELNOTES_LANG?= en_US.ISO8859-1
 
 TARGET?=	${MACHINE}
 .if ${TARGET} == ${MACHINE}
@@ -30,6 +32,9 @@ TARGET_ARCH?=	${TARGET}
 IMAKE=		${MAKE} TARGET_ARCH=${TARGET_ARCH} TARGET=${TARGET}
 DISTDIR=	${.OBJDIR}/dist
 
+.if !exists(${DOCDIR})
+NODOC= true
+.endif
 .if !exists(${PORTSDIR})
 NOPORTS= true
 .endif
@@ -37,6 +42,9 @@ NOPORTS= true
 EXTRA_PACKAGES= 
 .if !defined(NOPORTS)
 EXTRA_PACKAGES+= mports.txz
+.endif
+.if !defined(NODOC)
+EXTRA_PACKAGES+= reldoc
 .endif
 .if !defined(NOSRC)
 EXTRA_PACKAGES+= src.txz
@@ -85,9 +93,13 @@ system: packagesystem
 	cd ${WORLDDIR} && ${IMAKE} installkernel installworld distribution \
 	    DESTDIR=${.OBJDIR}/release WITHOUT_RESCUE=1 WITHOUT_KERNEL_SYMBOLS=1
 # Copy distfiles
-	mkdir ${.OBJDIR}/release/usr/freebsd-dist
+# Copy documentation, if generated
+.if !defined(NODOC)
+	cp ${.OBJDIR}/reldoc/* ${.OBJDIR}/release
+.endif
+	mkdir ${.OBJDIR}/release/usr/midnightbsd-dist
 	cp ${.OBJDIR}/*.txz ${.OBJDIR}/MANIFEST \
-	    ${.OBJDIR}/release/usr/freebsd-dist
+	    ${.OBJDIR}/release/usr/midnightbsd-dist
 # Set up installation environment
 	ln -s /tmp/bsdinstall_etc/resolv.conf ${.OBJDIR}/release/etc/resolv.conf
 	echo sendmail_enable=\"NONE\" > ${.OBJDIR}/release/etc/rc.conf
@@ -106,9 +118,13 @@ bootonly: packagesystem
 	    WITHOUT_NCP=1 WITHOUT_TOOLCHAIN=1 WITHOUT_PROFILE=1 \
 	    WITHOUT_INSTALLIB=1 WITHOUT_RESCUE=1 WITHOUT_DICT=1 \
 	    WITHOUT_KERNEL_SYMBOLS=1
+# Copy documentation, if generated
+.if !defined(NODOC)
+	cp ${.OBJDIR}/reldoc/* ${.OBJDIR}/bootonly
+.endif
 # Copy manifest only (no distfiles) to get checksums
-	mkdir ${.OBJDIR}/bootonly/usr/freebsd-dist
-	cp ${.OBJDIR}/MANIFEST ${.OBJDIR}/bootonly/usr/freebsd-dist
+	mkdir ${.OBJDIR}/bootonly/usr/midnightbsd-dist
+	cp ${.OBJDIR}/MANIFEST ${.OBJDIR}/bootonly/usr/midnightbsd-dist
 # Set up installation environment
 	ln -s /tmp/bsdinstall_etc/resolv.conf ${.OBJDIR}/bootonly/etc/resolv.conf
 	echo sendmail_enable=\"NONE\" > ${.OBJDIR}/bootonly/etc/rc.conf
@@ -116,10 +132,10 @@ bootonly: packagesystem
 	cp ${.CURDIR}/rc.local ${.OBJDIR}/bootonly/etc
 
 release.iso: system
-	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b FreeBSD_Install ${.OBJDIR}/release.iso ${.OBJDIR}/release
+	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b MidnightBSD_Install ${.OBJDIR}/release.iso ${.OBJDIR}/release
 
 bootonly.iso: bootonly
-	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b FreeBSD_Install ${.OBJDIR}/bootonly.iso ${.OBJDIR}/bootonly
+	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b MidnightBSD_Install ${.OBJDIR}/bootonly.iso ${.OBJDIR}/bootonly
 
 memstick: system
 	sh ${.CURDIR}/${TARGET}/make-memstick.sh ${.OBJDIR}/release ${.OBJDIR}/memstick
