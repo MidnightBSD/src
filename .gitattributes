@@ -30492,6 +30492,7 @@ release/Makefile -text
 release/amd64/boot_crunch.conf -text
 release/amd64/make-memstick.sh -text
 release/amd64/mkisoimages.sh -text
+release/generate-release.sh -text
 release/i386/boot_crunch.conf -text
 release/i386/fixit_crunch.conf -text
 release/i386/make-memstick.sh -text
