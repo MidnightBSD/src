@@ -35,7 +35,7 @@
  *
  *	@(#)find.h	8.1 (Berkeley) 6/6/93
  *	$FreeBSD: src/usr.bin/find/find.h,v 1.19 2006/05/14 20:23:01 krion Exp $
- *	$MidnightBSD$
+ *	$MidnightBSD: src/usr.bin/find/find.h,v 1.2 2007/09/11 23:01:20 laffer1 Exp $
  */
 
 #include <regex.h>
@@ -75,6 +75,7 @@ typedef	struct _plandata *creat_f(struct _option *, char ***);
 #define F_EXECPLUS	0x00020000	/* -exec ... {} + */
 #define	F_TIME_B	0x00040000	/* one of -Btime, -Bnewer, -newerB* */
 #define	F_TIME2_B	0x00080000	/* one of -newer?B */
+#define F_LINK		0x00100000	/* lname or ilname */
 
 /* node definition */
 typedef struct _plandata {

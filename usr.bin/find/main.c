@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 5/4/95";
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/find/main.c,v 1.15 2003/06/14 13:00:21 markm Exp $ */
-__MBSDID("$MidnightBSD: src/usr.bin/find/main.c,v 1.2 2007/09/11 23:01:20 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/find/main.c,v 1.3 2011/06/14 02:39:37 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -125,7 +125,6 @@ main(int argc, char *argv[])
 			break;
 		case '?':
 		default:
-			usage();
 			break;
 		}
 
@@ -165,7 +164,8 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
-	(void)fprintf(stderr,
-"usage: find [-H | -L | -P] [-EXdsx] [-f file] [file ...] [expression]\n");
+	(void)fprintf(stderr, "%s\n%s\n",
+"usage: find [-H | -L | -P] [-EXdsx] [-f path] path ... [expression]",
+"       find [-H | -L | -P] [-EXdsx] -f path [path ...] [expression]");
 	exit(1);
 }
