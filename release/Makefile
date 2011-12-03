@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.29 2011/10/23 16:21:32 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.30 2011/12/02 13:15:03 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -97,7 +97,7 @@ system: packagesystem
 .if !defined(NODOC)
 	cp ${.OBJDIR}/reldoc/* ${.OBJDIR}/release
 .endif
-	mkdir ${.OBJDIR}/release/usr/midnightbsd-dist
+	-mkdir ${.OBJDIR}/release/usr/midnightbsd-dist
 	cp ${.OBJDIR}/*.txz ${.OBJDIR}/MANIFEST \
 	    ${.OBJDIR}/release/usr/midnightbsd-dist
 # Set up installation environment
@@ -123,7 +123,7 @@ bootonly: packagesystem
 	cp ${.OBJDIR}/reldoc/* ${.OBJDIR}/bootonly
 .endif
 # Copy manifest only (no distfiles) to get checksums
-	mkdir ${.OBJDIR}/bootonly/usr/midnightbsd-dist
+	-mkdir ${.OBJDIR}/bootonly/usr/midnightbsd-dist
 	cp ${.OBJDIR}/MANIFEST ${.OBJDIR}/bootonly/usr/midnightbsd-dist
 # Set up installation environment
 	ln -s /tmp/bsdinstall_etc/resolv.conf ${.OBJDIR}/bootonly/etc/resolv.conf

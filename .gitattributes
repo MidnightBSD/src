@@ -30505,6 +30505,7 @@ release/picobsd/tinyware/view/README -text
 release/picobsd/tinyware/view/fbsd.png -text svneol=unset#unset
 release/picobsd/tinyware/view/picobsd.vu -text
 release/picobsd/tinyware/view/view.c -text
+release/rc.local -text
 release/scripts/make-manifest.sh -text
 release/scripts/mm-mtree.sh -text
 release/sparc64/boot_crunch.conf -text
