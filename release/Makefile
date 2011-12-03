@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.30 2011/12/02 13:15:03 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.31 2011/12/03 18:48:04 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -101,7 +101,7 @@ system: packagesystem
 	cp ${.OBJDIR}/*.txz ${.OBJDIR}/MANIFEST \
 	    ${.OBJDIR}/release/usr/midnightbsd-dist
 # Set up installation environment
-	ln -s /tmp/bsdinstall_etc/resolv.conf ${.OBJDIR}/release/etc/resolv.conf
+	ln -fs /tmp/bsdinstall_etc/resolv.conf ${.OBJDIR}/release/etc/resolv.conf
 	echo sendmail_enable=\"NONE\" > ${.OBJDIR}/release/etc/rc.conf
 	echo hostid_enable=\"NO\" >> ${.OBJDIR}/release/etc/rc.conf
 	cp ${.CURDIR}/rc.local ${.OBJDIR}/release/etc
@@ -126,7 +126,7 @@ bootonly: packagesystem
 	-mkdir ${.OBJDIR}/bootonly/usr/midnightbsd-dist
 	cp ${.OBJDIR}/MANIFEST ${.OBJDIR}/bootonly/usr/midnightbsd-dist
 # Set up installation environment
-	ln -s /tmp/bsdinstall_etc/resolv.conf ${.OBJDIR}/bootonly/etc/resolv.conf
+	ln -fs /tmp/bsdinstall_etc/resolv.conf ${.OBJDIR}/bootonly/etc/resolv.conf
 	echo sendmail_enable=\"NONE\" > ${.OBJDIR}/bootonly/etc/rc.conf
 	echo hostid_enable=\"NO\" >> ${.OBJDIR}/bootonly/etc/rc.conf
 	cp ${.CURDIR}/rc.local ${.OBJDIR}/bootonly/etc
