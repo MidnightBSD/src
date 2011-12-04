@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ffs_bswap.c,v 1.1.2.1 2009/03/19 00:28:54 sam Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ffs_bswap.c,v 1.6 2011/06/16 23:40:10 mckusick Exp $");
 
 #include <sys/param.h>
 #if defined(_KERNEL)
@@ -41,14 +41,6 @@ __FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ffs_bswap.c,v 1.1.2.1 2009/03/19 00:
 #include <ufs/ufs/dinode.h>
 #include "ffs/ufs_bswap.h"
 #include <ufs/ffs/fs.h>
-/* XXX temporary */
-struct ufsmount;
-struct bufobj;
-struct mount;
-struct vnode;
-typedef int vfs_vget_t(struct mount *mp, ino_t ino, int flags,
-                    struct vnode **vpp);
-#include <ufs/ffs/ffs_extern.h>
 
 #if !defined(_KERNEL)
 #include <stddef.h>
@@ -136,8 +128,6 @@ ffs_dinode1_swap(struct ufs1_dinode *o, struct ufs1_dinode *n)
 
 	n->di_mode = bswap16(o->di_mode);
 	n->di_nlink = bswap16(o->di_nlink);
-	n->di_u.oldids[0] = bswap16(o->di_u.oldids[0]);
-	n->di_u.oldids[1] = bswap16(o->di_u.oldids[1]);
 	n->di_size = bswap64(o->di_size);
 	n->di_atime = bswap32(o->di_atime);
 	n->di_atimensec = bswap32(o->di_atimensec);

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/buf.c,v 1.1.2.2 2011/07/26 14:41:54 marius Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/buf.c,v 1.2 2010/11/07 16:05:04 cognet Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>

@@ -34,13 +34,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/makefs/ffs.h,v 1.1.4.2 2011/07/26 14:41:54 marius Exp $
+ * $FreeBSD: src/usr.sbin/makefs/ffs.h,v 1.2 2011/10/09 16:22:31 nwhitehorn Exp $
  */
 
 #ifndef _FFS_H
 #define _FFS_H
 
+#include <ufs/ufs/dinode.h>
+#include <ufs/ffs/fs.h>
+
 typedef struct {
+	char	label[MAXVOLLEN];	/* volume name/label */
 	int	bsize;		/* block size */
 	int	fsize;		/* fragment size */
 	int	cpg;		/* cylinders per group */

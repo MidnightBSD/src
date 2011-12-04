@@ -66,7 +66,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs.c,v 1.2.2.2 2011/07/26 14:41:54 marius Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs.c,v 1.6 2011/10/09 16:22:31 nwhitehorn Exp $");
 
 #include <sys/param.h>
 
@@ -80,6 +80,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs.c,v 1.2.2.2 2011/07/26 14:41:54 mari
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "makefs.h"
@@ -234,6 +235,9 @@ ffs_parse_opts(const char *option, fsinfo_t *fsopts)
 			warnx("Invalid optimization `%s'", val);
 			goto leave_ffs_parse_opts;
 		}
+		rv = 1;
+	} else if (strcmp(var, "label") == 0) {
+		strlcpy(ffs_opts->label, val, sizeof(ffs_opts->label));
 		rv = 1;
 	} else
 		rv = set_option(ffs_options, var, val);
@@ -775,9 +779,11 @@ ffs_populate_dir(const char *dir, fsnode *root, fsinfo_t *fsopts)
 			continue;		/* skip hard-linked entries */
 		cur->inode->flags |= FI_WRITTEN;
 
-		if (snprintf(path, sizeof(path), "%s/%s", dir, cur->name)
-		    >= sizeof(path))
-			errx(1, "Pathname too long.");
+		if (cur->contents == NULL) {
+			if (snprintf(path, sizeof(path), "%s/%s", dir,
+			    cur->name) >= sizeof(path))
+				errx(1, "Pathname too long.");
+		}
 
 		if (cur->child != NULL)
 			continue;		/* child creates own inode */
@@ -801,7 +807,8 @@ ffs_populate_dir(const char *dir, fsnode *root, fsinfo_t *fsopts)
 		if (membuf != NULL) {
 			ffs_write_file(&din, cur->inode->ino, membuf, fsopts);
 		} else if (S_ISREG(cur->type)) {
-			ffs_write_file(&din, cur->inode->ino, path, fsopts);
+			ffs_write_file(&din, cur->inode->ino,
+			    (cur->contents) ?  cur->contents : path, fsopts);
 		} else {
 			assert (! S_ISDIR(cur->type));
 			ffs_write_inode(&din, cur->inode->ino, fsopts);

@@ -32,21 +32,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ffs_subr.c,v 1.1.2.1 2009/03/19 00:28:54 sam Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/makefs/ffs/ffs_subr.c,v 1.4 2011/06/16 23:40:10 mckusick Exp $");
 
 #include <sys/param.h>
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ffs/fs.h>
-/* XXX temporary */
-struct ufsmount;
-struct bufobj;
-struct mount;
-struct vnode;
-typedef int vfs_vget_t(struct mount *mp, ino_t ino, int flags,
-                    struct vnode **vpp);
-#include <ufs/ffs/ffs_extern.h>
 #include "ffs/ufs_bswap.h"
+
 void    panic __P((const char *, ...))
     __attribute__((__noreturn__,__format__(__printf__,1,2)));
 

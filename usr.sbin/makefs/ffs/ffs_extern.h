@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: src/usr.sbin/makefs/ffs/ffs_extern.h,v 1.1.2.1 2009/03/19 00:28:54 sam Exp $
+ * $FreeBSD: src/usr.sbin/makefs/ffs/ffs_extern.h,v 1.1 2008/12/19 18:47:46 sam Exp $
  */
 
 #include "ffs/buf.h"

@@ -1,4 +1,4 @@
-#	$FreeBSD: src/usr.sbin/makefs/ffs/Makefile.inc,v 1.1.4.2 2011/07/26 14:41:54 marius Exp $
+#	$FreeBSD: src/usr.sbin/makefs/ffs/Makefile.inc,v 1.1 2010/11/07 16:05:04 cognet Exp $
 #
 
 .PATH:	${.CURDIR}/ffs ${.CURDIR}/../../sys/ufs/ffs

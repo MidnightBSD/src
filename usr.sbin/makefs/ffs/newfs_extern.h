@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/makefs/ffs/newfs_extern.h,v 1.1.2.1 2009/03/19 00:28:54 sam Exp $
+ * $FreeBSD: src/usr.sbin/makefs/ffs/newfs_extern.h,v 1.1 2008/12/19 18:47:46 sam Exp $
  */
 
 /* prototypes */
