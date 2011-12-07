@@ -1,9 +1,9 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/grep/nls/Makefile.inc,v 1.1 2011/12/07 13:40:58 laffer1 Exp $
 # $FreeBSD: src/usr.bin/grep/nls/Makefile.inc,v 1.5 2010/09/20 19:42:52 delphij Exp $
 NLSNAME= grep
 
 NLS=	es_ES.ISO8859-1
-NLS+=	gl_ES.ISO8859-1
+#NLS+=	gl_ES.ISO8859-1
 NLS+=	hu_HU.ISO8859-2
 NLS+=	ja_JP.eucJP
 NLS+=	ja_JP.SJIS
