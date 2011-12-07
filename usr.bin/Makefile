@@ -1,12 +1,12 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.35 2011/10/22 14:25:21 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.36 2011/12/07 13:40:58 laffer1 Exp $
 
 .include <bsd.own.mk>
 
 # XXX MISSING:		diction graph learn plot
 #			spline struct xsend
-# XXX Use GNU versions: apropos bc dc diff ld man patch whatis
+# XXX Use GNU versions: apropos diff ld man patch whatis
 # Moved to secure: bdes
 #
 
