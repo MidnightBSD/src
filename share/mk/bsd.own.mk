@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.8 2010/08/14 20:42:19 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.9 2011/10/22 19:17:47 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -380,6 +380,7 @@ MK_${var}:=	yes
 # MK_* options which default to "no".
 #
 .for var in \
+    BSD_GREP \
     BIND_IDN \
     BIND_LARGE_FILE \
     BIND_LIBS \

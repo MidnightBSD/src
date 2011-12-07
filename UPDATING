@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20111207:
+	import bsd grep from FreeBSD/OpenBSD.
+
+	MK_BSD_GREP controls which grep is installed
+	as grep with the other as bsdgrep or gnugrep.
+
 20111122:
 	mksh vR40c imported.
 
@@ -1135,4 +1141,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.145 2011/11/18 00:12:20 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.146 2011/11/23 01:56:42 laffer1 Exp $
