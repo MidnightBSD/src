@@ -25,9 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/part/geom_part.c,v 1.1.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/part/geom_part.c,v 1.1.2.8 2011/06/28 05:04:31 ae Exp $");
 
 #include <sys/stat.h>
+#include <sys/vtoc.h>
 
 #include <assert.h>
 #include <err.h>
@@ -58,15 +59,28 @@ uint32_t PUBSYM(version) = 0;
 static char optional[] = "";
 static char flags[] = "C";
 
-static char bootcode_param[] = "bootcode";
-static char index_param[] = "index";
-static char partcode_param[] = "partcode";
+static const char const bootcode_param[] = "bootcode";
+static const char const index_param[] = "index";
+static const char const partcode_param[] = "partcode";
 
+static struct gclass *find_class(struct gmesh *, const char *);
+static struct ggeom * find_geom(struct gclass *, const char *);
+static const char *find_geomcfg(struct ggeom *, const char *);
+static const char *find_provcfg(struct gprovider *, const char *);
+static struct gprovider *find_provider(struct ggeom *,
+    unsigned long long);
+static const char *fmtsize(int64_t);
 static void gpart_bootcode(struct gctl_req *, unsigned int);
+static void *gpart_bootfile_read(const char *, ssize_t *);
+static void gpart_issue(struct gctl_req *, unsigned int);
 static void gpart_show(struct gctl_req *, unsigned int);
+static void gpart_show_geom(struct ggeom *, const char *);
+static int gpart_show_hasopt(struct gctl_req *, const char *, const char *);
+static void gpart_write_partcode(struct ggeom *, int, void *, ssize_t);
+static void gpart_write_partcode_vtoc8(struct ggeom *, int, void *);
 
 struct g_command PUBSYM(class_commands)[] = {
-	{ "add", 0, NULL, {
+	{ "add", 0, gpart_issue, {
 		{ 'b', "start", NULL, G_TYPE_STRING },
 		{ 's', "size", NULL, G_TYPE_STRING },
 		{ 't', "type", NULL, G_TYPE_STRING },
@@ -84,25 +98,25 @@ struct g_command PUBSYM(class_commands)[] = {
 		G_OPT_SENTINEL },
 	  "geom", NULL
 	},
-	{ "commit", 0, NULL, G_NULL_OPTS, "geom", NULL },
-	{ "create", 0, NULL, {
+	{ "commit", 0, gpart_issue, G_NULL_OPTS, "geom", NULL },
+	{ "create", 0, gpart_issue, {
 		{ 's', "scheme", NULL, G_TYPE_STRING },
 		{ 'n', "entries", optional, G_TYPE_STRING },
 		{ 'f', "flags", flags, G_TYPE_STRING },
 		G_OPT_SENTINEL },
 	  "provider", NULL
 	},
-	{ "delete", 0, NULL, {
+	{ "delete", 0, gpart_issue, {
 		{ 'i', index_param, NULL, G_TYPE_STRING },
 		{ 'f', "flags", flags, G_TYPE_STRING },
 		G_OPT_SENTINEL },
 	  "geom", NULL
 	},
-	{ "destroy", 0, NULL, {
+	{ "destroy", 0, gpart_issue, {
 		{ 'f', "flags", flags, G_TYPE_STRING },
 		G_OPT_SENTINEL },
 	  "geom", NULL },
-	{ "modify", 0, NULL, {
+	{ "modify", 0, gpart_issue, {
 		{ 'i', index_param, NULL, G_TYPE_STRING },
 		{ 'l', "label", optional, G_TYPE_STRING },
 		{ 't', "type", optional, G_TYPE_STRING },
@@ -110,7 +124,7 @@ struct g_command PUBSYM(class_commands)[] = {
 		G_OPT_SENTINEL },
 	  "geom", NULL
 	},
-	{ "set", 0, NULL, {
+	{ "set", 0, gpart_issue, {
 		{ 'a', "attrib", NULL, G_TYPE_STRING },
 		{ 'i', index_param, NULL, G_TYPE_STRING },
 		{ 'f', "flags", flags, G_TYPE_STRING },
@@ -123,14 +137,14 @@ struct g_command PUBSYM(class_commands)[] = {
 		G_OPT_SENTINEL },
 	  NULL, "[-lr] [geom ...]"
 	},
-	{ "undo", 0, NULL, G_NULL_OPTS, "geom", NULL },
-	{ "unset", 0, NULL, {
+	{ "undo", 0, gpart_issue, G_NULL_OPTS, "geom", NULL },
+	{ "unset", 0, gpart_issue, {
 		{ 'a', "attrib", NULL, G_TYPE_STRING },
 		{ 'i', index_param, NULL, G_TYPE_STRING },
 		{ 'f', "flags", flags, G_TYPE_STRING },
 		G_OPT_SENTINEL },
 	  "geom", NULL
-        },
+	},
 	G_CMD_SENTINEL
 };
 
@@ -186,17 +200,23 @@ static struct gprovider *
 find_provider(struct ggeom *gp, unsigned long long minsector)
 {
 	struct gprovider *pp, *bestpp;
-	unsigned long long offset;
+	const char *s;
 	unsigned long long sector, bestsector;
 
 	bestpp = NULL;
 	LIST_FOREACH(pp, &gp->lg_provider, lg_provider) {
-		offset = atoll(find_provcfg(pp, "offset"));
-		sector = offset / pp->lg_sectorsize;
+		s = find_provcfg(pp, "start");
+		if (s == NULL) {
+			s = find_provcfg(pp, "offset");
+			sector = atoll(s) / pp->lg_sectorsize;
+		} else
+			sector = atoll(s);
+
 		if (sector < minsector)
 			continue;
 		if (bestpp != NULL && sector >= bestsector)
 			continue;
+
 		bestpp = pp;
 		bestsector = sector;
 	}
@@ -216,13 +236,20 @@ fmtsize(int64_t rawsz)
 static const char *
 fmtattrib(struct gprovider *pp)
 {
-	static char buf[64];
-	const char *val;
+	static char buf[128];
+	struct gconfig *gc;
+	u_int idx;
 
-	val = find_provcfg(pp, "attrib");
-	if (val == NULL)
-		return ("");
-	snprintf(buf, sizeof(buf), " [%s] ", val);
+	buf[0] = '\0';
+	idx = 0;
+	LIST_FOREACH(gc, &pp->lg_config, lg_config) {
+		if (strcmp(gc->lg_name, "attrib") != 0)
+			continue;
+		idx += snprintf(buf + idx, sizeof(buf) - idx, "%s%s",
+		    (idx == 0) ? " [" : ",", gc->lg_val);
+	}
+	if (idx > 0)
+		snprintf(buf + idx, sizeof(buf) - idx, "] ");
 	return (buf);
 }
 
@@ -232,7 +259,7 @@ gpart_show_geom(struct ggeom *gp, const char *element)
 	struct gprovider *pp;
 	const char *s, *scheme;
 	unsigned long long first, last, sector, end;
-	unsigned long long offset, length, secsz;
+	unsigned long long length, secsz;
 	int idx, wblocks, wname;
 
 	scheme = find_geomcfg(gp, "scheme");
@@ -250,14 +277,24 @@ gpart_show_geom(struct ggeom *gp, const char *element)
 	    scheme, fmtsize(pp->lg_mediasize));
 
 	while ((pp = find_provider(gp, first)) != NULL) {
-		s = find_provcfg(pp, "offset");
-		offset = atoll(s);
-		sector = offset / secsz;
-		s = find_provcfg(pp, "length");
-		length = atoll(s);
+		s = find_provcfg(pp, "start");
+		if (s == NULL) {
+			s = find_provcfg(pp, "offset");
+			sector = atoll(s) / secsz;
+		} else
+			sector = atoll(s);
+
+		s = find_provcfg(pp, "end");
+		if (s == NULL) {
+			s = find_provcfg(pp, "length");
+			length = atoll(s) / secsz;
+			end = sector + length - 1;
+		} else {
+			end = atoll(s);
+			length = end - sector + 1;
+		}
 		s = find_provcfg(pp, "index");
 		idx = atoi(s);
-		end = sector + length / secsz;
 		if (first < sector) {
 			printf("  %*llu  %*llu  %*s  - free -  (%s)\n",
 			    wblocks, first, wblocks, sector - first,
@@ -265,16 +302,17 @@ gpart_show_geom(struct ggeom *gp, const char *element)
 			    fmtsize((sector - first) * secsz));
 		}
 		printf("  %*llu  %*llu  %*d  %s %s (%s)\n",
-		    wblocks, sector, wblocks, end - sector,
+		    wblocks, sector, wblocks, length,
 		    wname, idx, find_provcfg(pp, element),
 		    fmtattrib(pp), fmtsize(pp->lg_mediasize));
-		first = end;
+		first = end + 1;
 	}
 	if (first <= last) {
+		length = last - first + 1;
 		printf("  %*llu  %*llu  %*s  - free -  (%s)\n",
-		    wblocks, first, wblocks, last - first + 1,
+		    wblocks, first, wblocks, length,
 		    wname, "",
-		    fmtsize((last - first + 1) * secsz));
+		    fmtsize(length * secsz));
 	}
 	printf("\n");
 }
@@ -351,7 +389,7 @@ gpart_bootfile_read(const char *bootfile, ssize_t *size)
 		errx(EXIT_FAILURE, "%s: not a regular file", bootfile);
 	if (sb.st_size == 0)
 		errx(EXIT_FAILURE, "%s: empty file", bootfile);
-	if (*size > 0 && sb.st_size >= *size)
+	if (*size > 0 && sb.st_size > *size)
 		errx(EXIT_FAILURE, "%s: file too big (%zu limit)", bootfile,
 		    *size);
 
@@ -371,33 +409,14 @@ gpart_bootfile_read(const char *bootfile, ssize_t *size)
 }
 
 static void
-gpart_write_partcode(struct gctl_req *req, int idx, void *code, ssize_t size)
+gpart_write_partcode(struct ggeom *gp, int idx, void *code, ssize_t size)
 {
 	char dsf[128];
-	struct gmesh mesh;
-	struct gclass *classp;
-	struct ggeom *gp;
 	struct gprovider *pp;
 	const char *s;
 	char *buf;
 	off_t bsize;
-	int error, fd;
-
-	s = gctl_get_ascii(req, "class");
-	if (s == NULL)
-		abort();
-	error = geom_gettree(&mesh);
-	if (error != 0)
-		errc(EXIT_FAILURE, error, "Cannot get GEOM tree");
-	classp = find_class(&mesh, s);
-	if (classp == NULL) {
-		geom_deletetree(&mesh);
-		errx(EXIT_FAILURE, "Class %s not found.", s);
-	}
-	s = gctl_get_ascii(req, "geom");
-	gp = find_geom(classp, s);
-	if (gp == NULL)
-		errx(EXIT_FAILURE, "No such geom: %s.", s);
+	int fd;
 
 	LIST_FOREACH(pp, &gp->lg_provider, lg_provider) {
 		s = find_provcfg(pp, "index");
@@ -434,18 +453,63 @@ gpart_write_partcode(struct gctl_req *req, int idx, void *code, ssize_t size)
 		close(fd);
 	} else
 		errx(EXIT_FAILURE, "invalid partition index");
-
-	geom_deletetree(&mesh);
 }
 
 static void
-gpart_bootcode(struct gctl_req *req, unsigned int fl __unused)
+gpart_write_partcode_vtoc8(struct ggeom *gp, int idx, void *code)
 {
+	char dsf[128];
+	struct gprovider *pp;
+	const char *s;
+	int installed, fd;
+
+	installed = 0;
+	LIST_FOREACH(pp, &gp->lg_provider, lg_provider) {
+		s = find_provcfg(pp, "index");
+		if (s == NULL)
+			continue;
+		if (idx != 0 && atoi(s) != idx)
+			continue;
+		snprintf(dsf, sizeof(dsf), "/dev/%s", pp->lg_name);
+		if (pp->lg_sectorsize != sizeof(struct vtoc8))
+			errx(EXIT_FAILURE, "%s: unexpected sector "
+			    "size (%d)\n", dsf, pp->lg_sectorsize);
+		fd = open(dsf, O_WRONLY);
+		if (fd == -1)
+			err(EXIT_FAILURE, "%s", dsf);
+		if (lseek(fd, VTOC_BOOTSIZE, SEEK_SET) != VTOC_BOOTSIZE)
+			continue;
+		/*
+		 * We ignore the first VTOC_BOOTSIZE bytes of boot code in
+		 * order to avoid overwriting the label.
+		 */
+		if (lseek(fd, sizeof(struct vtoc8), SEEK_SET) !=
+		    sizeof(struct vtoc8))
+			err(EXIT_FAILURE, "%s", dsf);
+		if (write(fd, (caddr_t)code + sizeof(struct vtoc8),
+		    VTOC_BOOTSIZE - sizeof(struct vtoc8)) != VTOC_BOOTSIZE -
+		    sizeof(struct vtoc8))
+			err(EXIT_FAILURE, "%s", dsf);
+		installed++;
+		close(fd);
+		if (idx != 0 && atoi(s) == idx)
+			break;
+	}
+	if (installed == 0)
+		errx(EXIT_FAILURE, "%s: no partitions", gp->lg_name);
+}
+
+static void
+gpart_bootcode(struct gctl_req *req, unsigned int fl)
+{
+	struct gmesh mesh;
+	struct gclass *classp;
+	struct ggeom *gp;
 	const char *s;
 	char *sp;
 	void *bootcode, *partcode;
 	size_t bootsize, partsize;
-	int error, idx;
+	int error, idx, vtoc8;
 
 	if (gctl_has_param(req, bootcode_param)) {
 		s = gctl_get_ascii(req, bootcode_param);
@@ -460,9 +524,31 @@ gpart_bootcode(struct gctl_req *req, unsigned int fl __unused)
 		bootsize = 0;
 	}
 
+	s = gctl_get_ascii(req, "class");
+	if (s == NULL)
+		abort();
+	error = geom_gettree(&mesh);
+	if (error != 0)
+		errc(EXIT_FAILURE, error, "Cannot get GEOM tree");
+	classp = find_class(&mesh, s);
+	if (classp == NULL) {
+		geom_deletetree(&mesh);
+		errx(EXIT_FAILURE, "Class %s not found.", s);
+	}
+	s = gctl_get_ascii(req, "geom");
+	if (s == NULL)
+		abort();
+	gp = find_geom(classp, s);
+	if (gp == NULL)
+		errx(EXIT_FAILURE, "No such geom: %s.", s);
+	s = find_geomcfg(gp, "scheme");
+	vtoc8 = 0;
+	if (strcmp(s, "VTOC8") == 0)
+		vtoc8 = 1;
+
 	if (gctl_has_param(req, partcode_param)) {
 		s = gctl_get_ascii(req, partcode_param);
-		partsize = bootsize * 1024;
+		partsize = vtoc8 != 0 ? VTOC_BOOTSIZE : bootsize * 1024;
 		partcode = gpart_bootfile_read(s, &partsize);
 		error = gctl_delete_param(req, partcode_param);
 		if (error)
@@ -486,17 +572,57 @@ gpart_bootcode(struct gctl_req *req, unsigned int fl __unused)
 		idx = 0;
 
 	if (partcode != NULL) {
-		if (idx == 0)
-			errx(EXIT_FAILURE, "missing -i option");
-		gpart_write_partcode(req, idx, partcode, partsize);
-	} else {
+		if (vtoc8 == 0) {
+			if (idx == 0)
+				errx(EXIT_FAILURE, "missing -i option");
+			gpart_write_partcode(gp, idx, partcode, partsize);
+		} else {
+			if (partsize != VTOC_BOOTSIZE)
+				errx(EXIT_FAILURE, "invalid bootcode");
+			gpart_write_partcode_vtoc8(gp, idx, partcode);
+		}
+	} else
 		if (bootcode == NULL)
 			errx(EXIT_FAILURE, "no -b nor -p");
+
+	if (bootcode != NULL)
+		gpart_issue(req, fl);
+
+	geom_deletetree(&mesh);
+}
+
+static void
+gpart_issue(struct gctl_req *req, unsigned int fl __unused)
+{
+	char buf[4096];
+	char *errmsg;
+	const char *errstr;
+	int error, status;
+
+	bzero(buf, sizeof(buf));
+	gctl_rw_param(req, "output", sizeof(buf), buf);
+	errstr = gctl_issue(req);
+	if (errstr == NULL || errstr[0] == '\0') {
+		if (buf[0] != '\0')
+			printf("%s", buf);
+		status = EXIT_SUCCESS;
+		goto done;
 	}
 
-	if (bootcode != NULL) {
-		s = gctl_issue(req);
-		if (s != NULL)
-			errx(EXIT_FAILURE, "%s", s);
-	}
+	error = strtol(errstr, &errmsg, 0);
+	if (errmsg != errstr) {
+		while (errmsg[0] == ' ')
+			errmsg++;
+		if (errmsg[0] != '\0')
+			warnc(error, "%s", errmsg);
+		else
+			warnc(error, NULL);
+	} else
+		warnx("%s", errmsg);
+
+	status = EXIT_FAILURE;
+
+ done:
+	gctl_free(req);
+	exit(status);
 }
