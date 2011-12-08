@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $FreeBSD: src/sys/sys/vtoc.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/vtoc.h,v 1.1 2011/07/13 01:02:44 laffer1 Exp $
  */
 
 #ifndef _SYS_VTOC_H_
@@ -54,9 +54,10 @@
 #define	VTOC_TAG_FREEBSD_ZFS	0x0904
 
 #define	VTOC_FLAG_UNMNT		0x01	/* unmountable partition */
-#define VTOC_FLAG_RDONLY	0x10    /* partition is read/only */
+#define	VTOC_FLAG_RDONLY	0x10    /* partition is read/only */
 
 #define	VTOC_ASCII_LEN	128
+#define	VTOC_BOOTSIZE	8192		/* 16 sectors */
 #define	VTOC_MAGIC	0xdabe
 #define	VTOC_RAW_PART	2
 #define	VTOC_SANITY	0x600ddeee
