@@ -501,7 +501,7 @@ g_part_gpt_dumpto(struct g_part_table *table, struct g_part_entry *baseentry)
 	struct g_part_gpt_entry *entry;
 
 	entry = (struct g_part_gpt_entry *)baseentry;
-	return ((EQUUID(&entry->ent.ent_type, &gpt_uuid_freebsd_swap) ||
+	return ((EQUUID(&entry->ent.ent_type, &gpt_uuid_midnightbsd_swap) ||
 	    EQUUID(&entry->ent.ent_type, &gpt_uuid_linux_swap)) ? 1 : 0);
 }
 
