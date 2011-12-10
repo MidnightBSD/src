@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/geom/class/nop/gnop.8,v 1.21.2.1 2007/12/18 20:13:43 brueffer Exp $
+.\" $FreeBSD: src/sbin/geom/class/nop/gnop.8,v 1.21.2.2 2009/10/12 12:21:37 brueffer Exp $
 .\"
-.Dd September 8, 2006
+.Dd September 17, 2009
 .Dt GNOP 8
 .Os
 .Sh NAME
@@ -147,9 +147,9 @@ Exit status is 0 on success, and 1 if the command fails.
 .Sh EXAMPLES
 The following example shows how to create a transparent provider for disk
 .Pa /dev/da0
-with 50% failure probability, and how to destroy it.
+with 50% write failure probability, and how to destroy it.
 .Bd -literal -offset indent
-gnop create -v -f 50 da0
+gnop create -v -w 50 da0
 gnop destroy -v da0.nop
 .Ed
 .Pp
