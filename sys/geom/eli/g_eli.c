@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/eli/g_eli.c,v 1.4 2008/12/03 00:25:48 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli.c,v 1.38 2007/06/05 00:00:51 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli.c,v 1.38.2.1 2011/04/12 09:36:38 trociny Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -154,13 +154,13 @@ g_eli_read_done(struct bio *bp)
 	pbp = bp->bio_parent;
 	if (pbp->bio_error == 0)
 		pbp->bio_error = bp->bio_error;
+	g_destroy_bio(bp);
 	/*
 	 * Do we have all sectors already?
 	 */
 	pbp->bio_inbed++;
 	if (pbp->bio_inbed < pbp->bio_children)
 		return;
-	g_destroy_bio(bp);
 	if (pbp->bio_error != 0) {
 		G_ELI_LOGREQ(0, pbp, "%s() failed", __func__);
 		pbp->bio_completed = 0;
@@ -194,6 +194,7 @@ g_eli_write_done(struct bio *bp)
 		if (bp->bio_error != 0)
 			pbp->bio_error = bp->bio_error;
 	}
+	g_destroy_bio(bp);
 	/*
 	 * Do we have all sectors already?
 	 */
@@ -207,7 +208,6 @@ g_eli_write_done(struct bio *bp)
 		    pbp->bio_error);
 		pbp->bio_completed = 0;
 	}
-	g_destroy_bio(bp);
 	/*
 	 * Write is finished, send it up.
 	 */

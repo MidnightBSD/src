@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/journal/g_journal.h,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: src/sys/geom/journal/g_journal.h,v 1.1.2.1 2009/04/06 17:33:35 trasz Exp $
  */
 
 #ifndef	_G_JOURNAL_H_
@@ -163,6 +163,8 @@ struct g_journal_softc {
 
 	struct callout	 sc_callout;
 	struct proc	*sc_worker;
+
+	struct root_hold_token *sc_rootmount;
 };
 #define	sc_dprovider	sc_dconsumer->provider
 #define	sc_jprovider	sc_jconsumer->provider

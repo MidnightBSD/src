@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/mirror/g_mirror.c,v 1.93 2007/06/05 00:00:52 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/mirror/g_mirror.c,v 1.93.2.3 2010/09/19 19:43:05 mav Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -452,9 +451,6 @@ g_mirror_init_disk(struct g_mirror_softc *sc, struct g_provider *pp,
 	disk->d_id = md->md_did;
 	disk->d_state = G_MIRROR_DISK_STATE_NONE;
 	disk->d_priority = md->md_priority;
-	disk->d_delay.sec = 0;
-	disk->d_delay.frac = 0;
-	binuptime(&disk->d_last_used);
 	disk->d_flags = md->md_dflags;
 	if (md->md_provider[0] != '\0')
 		disk->d_flags |= G_MIRROR_DISK_FLAG_HARDCODED;
@@ -848,31 +844,6 @@ g_mirror_unidle(struct g_mirror_softc *sc)
 	}
 }
 
-static __inline int
-bintime_cmp(struct bintime *bt1, struct bintime *bt2)
-{
-
-	if (bt1->sec < bt2->sec)
-		return (-1);
-	else if (bt1->sec > bt2->sec)
-		return (1);
-	if (bt1->frac < bt2->frac)
-		return (-1);
-	else if (bt1->frac > bt2->frac)
-		return (1);
-	return (0);
-}
-
-static void
-g_mirror_update_delay(struct g_mirror_disk *disk, struct bio *bp)
-{
-
-	if (disk->d_softc->sc_balance != G_MIRROR_BALANCE_LOAD)
-		return;
-	binuptime(&disk->d_delay);
-	bintime_sub(&disk->d_delay, &bp->bio_t0);
-}
-
 static void
 g_mirror_done(struct bio *bp)
 {
@@ -882,8 +853,8 @@ g_mirror_done(struct bio *bp)
 	bp->bio_cflags = G_MIRROR_BIO_FLAG_REGULAR;
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_disksort(&sc->sc_queue, bp);
-	wakeup(sc);
 	mtx_unlock(&sc->sc_queue_mtx);
+	wakeup(sc);
 }
 
 static void
@@ -905,8 +876,6 @@ g_mirror_regular_request(struct bio *bp)
 		g_topology_lock();
 		g_mirror_kill_consumer(sc, bp->bio_from);
 		g_topology_unlock();
-	} else {
-		g_mirror_update_delay(disk, bp);
 	}
 
 	pbp->bio_inbed++;
@@ -970,9 +939,9 @@ g_mirror_regular_request(struct bio *bp)
 			pbp->bio_error = 0;
 			mtx_lock(&sc->sc_queue_mtx);
 			bioq_disksort(&sc->sc_queue, pbp);
+			mtx_unlock(&sc->sc_queue_mtx);
 			G_MIRROR_DEBUG(4, "%s: Waking up %p.", __func__, sc);
 			wakeup(sc);
-			mtx_unlock(&sc->sc_queue_mtx);
 		}
 		break;
 	case BIO_DELETE:
@@ -1010,8 +979,8 @@ g_mirror_sync_done(struct bio *bp)
 	bp->bio_cflags = G_MIRROR_BIO_FLAG_SYNC;
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_disksort(&sc->sc_queue, bp);
-	wakeup(sc);
 	mtx_unlock(&sc->sc_queue_mtx);
+	wakeup(sc);
 }
 
 static void
@@ -1123,9 +1092,9 @@ g_mirror_start(struct bio *bp)
 	}
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_disksort(&sc->sc_queue, bp);
+	mtx_unlock(&sc->sc_queue_mtx);
 	G_MIRROR_DEBUG(4, "%s: Waking up %p.", __func__, sc);
 	wakeup(sc);
-	mtx_unlock(&sc->sc_queue_mtx);
 }
 
 /*
@@ -1466,30 +1435,35 @@ g_mirror_request_round_robin(struct g_mirror_softc *sc, struct bio *bp)
 	g_io_request(cbp, cp);
 }
 
+#define TRACK_SIZE  (1 * 1024 * 1024)
+#define LOAD_SCALE	256
+#define ABS(x)		(((x) >= 0) ? (x) : (-(x)))
+
 static void
 g_mirror_request_load(struct g_mirror_softc *sc, struct bio *bp)
 {
 	struct g_mirror_disk *disk, *dp;
 	struct g_consumer *cp;
 	struct bio *cbp;
-	struct bintime curtime;
+	int prio, best;
 
-	binuptime(&curtime);
-	/*
-	 * Find a disk which the smallest load.
-	 */
+	/* Find a disk with the smallest load. */
 	disk = NULL;
+	best = INT_MAX;
 	LIST_FOREACH(dp, &sc->sc_disks, d_next) {
 		if (dp->d_state != G_MIRROR_DISK_STATE_ACTIVE)
 			continue;
-		/* If disk wasn't used for more than 2 sec, use it. */
-		if (curtime.sec - dp->d_last_used.sec >= 2) {
+		prio = dp->load;
+		/* If disk head is precisely in position - highly prefer it. */
+		if (dp->d_last_offset == bp->bio_offset)
+			prio -= 2 * LOAD_SCALE;
+		else
+		/* If disk head is close to position - prefer it. */
+		if (ABS(dp->d_last_offset - bp->bio_offset) < TRACK_SIZE)
+			prio -= 1 * LOAD_SCALE;
+		if (prio <= best) {
 			disk = dp;
-			break;
-		}
-		if (disk == NULL ||
-		    bintime_cmp(&dp->d_delay, &disk->d_delay) < 0) {
-			disk = dp;
+			best = prio;
 		}
 	}
 	KASSERT(disk != NULL, ("NULL disk for %s.", sc->sc_name));
@@ -1506,12 +1480,18 @@ g_mirror_request_load(struct g_mirror_softc *sc, struct bio *bp)
 	cp = disk->d_consumer;
 	cbp->bio_done = g_mirror_done;
 	cbp->bio_to = cp->provider;
-	binuptime(&disk->d_last_used);
 	G_MIRROR_LOGREQ(3, cbp, "Sending request.");
 	KASSERT(cp->acr >= 1 && cp->acw >= 1 && cp->ace >= 1,
 	    ("Consumer %s not opened (r%dw%de%d).", cp->provider->name, cp->acr,
 	    cp->acw, cp->ace));
 	cp->index++;
+	/* Remember last head position */
+	disk->d_last_offset = bp->bio_offset + bp->bio_length;
+	/* Update loads. */
+	LIST_FOREACH(dp, &sc->sc_disks, d_next) {
+		dp->load = (dp->d_consumer->index * LOAD_SCALE +
+		    dp->load * 7) / 8;
+	}
 	g_io_request(cbp, cp);
 }
 

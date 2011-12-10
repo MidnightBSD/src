@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, 2008 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/part/g_part_mbr.c,v 1.2.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/part/g_part_mbr.c,v 1.2.2.5 2009/03/17 19:38:40 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -63,12 +62,12 @@ static int g_part_mbr_add(struct g_part_table *, struct g_part_entry *,
 static int g_part_mbr_bootcode(struct g_part_table *, struct g_part_parms *);
 static int g_part_mbr_create(struct g_part_table *, struct g_part_parms *);
 static int g_part_mbr_destroy(struct g_part_table *, struct g_part_parms *);
-static int g_part_mbr_dumpconf(struct g_part_table *, struct g_part_entry *,
+static void g_part_mbr_dumpconf(struct g_part_table *, struct g_part_entry *,
     struct sbuf *, const char *);
 static int g_part_mbr_dumpto(struct g_part_table *, struct g_part_entry *);
 static int g_part_mbr_modify(struct g_part_table *, struct g_part_entry *,  
     struct g_part_parms *);
-static char *g_part_mbr_name(struct g_part_table *, struct g_part_entry *,
+static const char *g_part_mbr_name(struct g_part_table *, struct g_part_entry *,
     char *, size_t);
 static int g_part_mbr_probe(struct g_part_table *, struct g_consumer *);
 static int g_part_mbr_read(struct g_part_table *, struct g_consumer *);
@@ -214,9 +213,14 @@ static int
 g_part_mbr_bootcode(struct g_part_table *basetable, struct g_part_parms *gpp)
 {
 	struct g_part_mbr_table *table;
+	size_t codesz;
 
+	codesz = DOSPARTOFF;
 	table = (struct g_part_mbr_table *)basetable;
-	bcopy(gpp->gpp_codeptr, table->mbr, DOSPARTOFF);
+	bzero(table->mbr, codesz);
+	codesz = MIN(codesz,  gpp->gpp_codesize);
+	if (codesz > 0)
+		bcopy(gpp->gpp_codeptr, table->mbr, codesz);
 	return (0);
 }
 
@@ -252,7 +256,7 @@ g_part_mbr_destroy(struct g_part_table *basetable, struct g_part_parms *gpp)
 	return (0);
 }
 
-static int
+static void
 g_part_mbr_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry, 
     struct sbuf *sb, const char *indent)
 {
@@ -271,7 +275,6 @@ g_part_mbr_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
 	} else {
 		/* confxml: scheme information */
 	}
-	return (0);
 }
 
 static int
@@ -299,7 +302,7 @@ g_part_mbr_modify(struct g_part_table *basetable,
 	return (0);
 }
 
-static char *
+static const char *
 g_part_mbr_name(struct g_part_table *table, struct g_part_entry *baseentry,
     char *buf, size_t bufsz)
 {
@@ -311,6 +314,7 @@ g_part_mbr_name(struct g_part_table *table, struct g_part_entry *baseentry,
 static int
 g_part_mbr_probe(struct g_part_table *table, struct g_consumer *cp)
 {
+	char psn[8];
 	struct g_provider *pp;
 	u_char *buf, *p;
 	int error, index, res, sum;
@@ -323,6 +327,11 @@ g_part_mbr_probe(struct g_part_table *table, struct g_consumer *cp)
 		return (ENOSPC);
 	if (pp->sectorsize > 4096)
 		return (ENXIO);
+
+	/* We don't nest under an MBR (see EBR instead). */
+	error = g_getattr("PART::scheme", cp, &psn);
+	if (error == 0 && strcmp(psn, g_part_mbr_scheme.name) == 0)
+		return (ELOOP);
 
 	/* Check that there's a MBR. */
 	buf = g_read_data(cp, 0L, pp->sectorsize, &error);

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/label/g_label_msdosfs.c,v 1.4 2008/12/03 00:25:49 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2006 Tobias Reifenberger
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label_msdosfs.c,v 1.6 2006/09/30 08:16:49 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/label/g_label_msdosfs.c,v 1.6.2.1 2009/02/13 19:49:35 lulf Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -187,7 +187,7 @@ g_label_msdosfs_taste(struct g_consumer *cp, char *label, size_t size)
 				    FAT_DES_ATTR_VOLUME_ID) {
 					strlcpy(label, pfat_entry->DIR_Name,
 					    MIN(size,
-					    sizeof(pfat_bsbpb->BS_VolLab) + 1));
+					    sizeof(pfat_entry->DIR_Name) + 1));
 					goto endofchecks;
 				}
 			} while((uint8_t *)(++pfat_entry) <

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/raid3/g_raid3.h,v 1.19 2006/11/01 22:51:49 pjd Exp $
+ * $FreeBSD: src/sys/geom/raid3/g_raid3.h,v 1.19.2.1 2009/12/29 21:41:51 mav Exp $
  */
 
 #ifndef	_G_RAID3_H_
@@ -184,7 +184,9 @@ enum g_raid3_zones {
 
 static __inline enum g_raid3_zones
 g_raid3_zone(size_t nbytes) {
-	if (nbytes > 16384)
+	if (nbytes > 65536)
+		return (G_RAID3_NUM_ZONES);
+	else if (nbytes > 16384)
 		return (G_RAID3_ZONE_64K);
 	else if (nbytes > 4096)
 		return (G_RAID3_ZONE_16K);

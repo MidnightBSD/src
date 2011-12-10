@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/virstor/g_virstor.c,v 1.3 2007/09/24 06:14:27 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/virstor/g_virstor.c,v 1.3.2.1 2009/12/08 21:46:30 delphij Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -226,6 +226,11 @@ virstor_ctl_stop(struct gctl_req *req, struct g_class *cp)
 
 		sprintf(param, "arg%d", i);
 		name = gctl_get_asciiparam(req, param);
+		if (name == NULL) {
+			gctl_error(req, "No 'arg%d' argument", i);
+			g_topology_unlock();
+			return;
+		}
 		sc = virstor_find_geom(cp, name);
 		LOG_MSG(LVL_INFO, "Stopping %s by the userland command",
 		    sc->geom->name);

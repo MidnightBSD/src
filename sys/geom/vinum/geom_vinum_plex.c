@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Lukas Ertl
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_plex.c,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_plex.c,v 1.17.2.1 2009/01/18 21:52:01 lulf Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -667,11 +668,21 @@ gv_plex_normal_request(struct gv_plex *p, struct bio *bp)
 static int
 gv_plex_access(struct g_provider *pp, int dr, int dw, int de)
 {
+	struct gv_plex *p;
 	struct g_geom *gp;
 	struct g_consumer *cp, *cp2;
 	int error;
 
 	gp = pp->geom;
+	p = gp->softc;
+	KASSERT(p != NULL, ("NULL p"));
+
+	if (p->org == GV_PLEX_RAID5) {
+		if (dw > 0 && dr == 0)
+			dr = 1;
+		else if (dw < 0 && dr == 0)
+			dr = -1;
+	}
 
 	LIST_FOREACH(cp, &gp->consumer, consumer) {
 		error = g_access(cp, dr, dw, de);

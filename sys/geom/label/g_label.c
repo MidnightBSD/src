@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/label/g_label.c,v 1.4 2008/12/03 00:25:48 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label.c,v 1.21 2006/08/12 15:30:24 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/label/g_label.c,v 1.21.2.5 2011/05/18 16:28:28 ae Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,7 +78,8 @@ struct g_class g_label_class = {
  * 6. Add your file system to manual page sbin/geom/class/label/glabel.8.
  */
 const struct g_label_desc *g_labels[] = {
-	&g_label_ufs,
+	&g_label_ufs_id,
+	&g_label_ufs_volume,
 	&g_label_iso9660,
 	&g_label_msdosfs,
 	&g_label_ext2fs,
@@ -104,7 +105,7 @@ static void
 g_label_orphan(struct g_consumer *cp)
 {
 
-	G_LABEL_DEBUG(0, "Label %s removed.",
+	G_LABEL_DEBUG(1, "Label %s removed.",
 	    LIST_FIRST(&cp->geom->provider)->name);
 	g_slice_orphan(cp);
 }
@@ -113,7 +114,7 @@ static void
 g_label_spoiled(struct g_consumer *cp)
 {
 
-	G_LABEL_DEBUG(0, "Label %s removed.",
+	G_LABEL_DEBUG(1, "Label %s removed.",
 	    LIST_FIRST(&cp->geom->provider)->name);
 	g_slice_spoiled(cp);
 }
@@ -123,13 +124,13 @@ g_label_is_name_ok(const char *label)
 {
 	const char *s;
 
-	/* Check is the label starts from ../ */
+	/* Check if the label starts from ../ */
 	if (strncmp(label, "../", 3) == 0)
 		return (0);
-	/* Check is the label contains /../ */
+	/* Check if the label contains /../ */
 	if (strstr(label, "/../") != NULL)
 		return (0);
-	/* Check is the label ends at ../ */
+	/* Check if the label ends at ../ */
 	if ((s = strstr(label, "/..")) != NULL && s[3] == '\0')
 		return (0);
 	return (1);
@@ -150,6 +151,8 @@ g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 		G_LABEL_DEBUG(0, "%s contains suspicious label, skipping.",
 		    pp->name);
 		G_LABEL_DEBUG(1, "%s suspicious label is: %s", pp->name, label);
+		if (req != NULL)
+			gctl_error(req, "Label name %s is invalid.", label);
 		return (NULL);
 	}
 	gp = NULL;
@@ -158,6 +161,8 @@ g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	LIST_FOREACH(gp, &mp->geom, geom) {
 		pp2 = LIST_FIRST(&gp->provider);
 		if (pp2 == NULL)
+			continue;
+		if ((pp2->flags & G_PF_ORPHAN) != 0)
 			continue;
 		if (strcmp(pp2->name, name) == 0) {
 			G_LABEL_DEBUG(1, "Label %s(%s) already exists (%s).",
@@ -181,7 +186,7 @@ g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	g_access(cp, -1, 0, 0);
 	g_slice_config(gp, 0, G_SLICE_CONFIG_SET, (off_t)0, mediasize,
 	    pp->sectorsize, name);
-	G_LABEL_DEBUG(0, "Label for provider %s is %s.", pp->name, name);
+	G_LABEL_DEBUG(1, "Label for provider %s is %s.", pp->name, name);
 	return (gp);
 }
 
@@ -202,10 +207,8 @@ g_label_destroy(struct g_geom *gp, boolean_t force)
 			    pp->acr, pp->acw, pp->ace);
 			return (EBUSY);
 		}
-	} else {
-		G_LABEL_DEBUG(0, "Label %s removed.",
-		    LIST_FIRST(&gp->provider)->name);
-	}
+	} else if (pp != NULL)
+		G_LABEL_DEBUG(1, "Label %s removed.", pp->name);
 	g_slice_spoiled(LIST_FIRST(&gp->consumer));
 	return (0);
 }
@@ -341,7 +344,7 @@ g_label_ctl_create(struct gctl_req *req, struct g_class *mp)
 		return;
 	}
 	if (*nargs != 2) {
-		gctl_error(req, "Invalid number of argument.");
+		gctl_error(req, "Invalid number of arguments.");
 		return;
 	}
 	/*

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3.c,v 1.81 2007/06/05 00:00:52 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3.c,v 1.81.2.3 2010/09/19 20:08:45 mav Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -184,15 +184,17 @@ static void *
 g_raid3_alloc(struct g_raid3_softc *sc, size_t size, int flags)
 {
 	void *ptr;
+	enum g_raid3_zones zone;
 
-	if (g_raid3_use_malloc)
+	if (g_raid3_use_malloc ||
+	    (zone = g_raid3_zone(size)) == G_RAID3_NUM_ZONES)
 		ptr = malloc(size, M_RAID3, flags);
 	else {
-		ptr = uma_zalloc_arg(sc->sc_zones[g_raid3_zone(size)].sz_zone,
-		   &sc->sc_zones[g_raid3_zone(size)], flags);
-		sc->sc_zones[g_raid3_zone(size)].sz_requested++;
+		ptr = uma_zalloc_arg(sc->sc_zones[zone].sz_zone,
+		   &sc->sc_zones[zone], flags);
+		sc->sc_zones[zone].sz_requested++;
 		if (ptr == NULL)
-			sc->sc_zones[g_raid3_zone(size)].sz_failed++;
+			sc->sc_zones[zone].sz_failed++;
 	}
 	return (ptr);
 }
@@ -200,12 +202,14 @@ g_raid3_alloc(struct g_raid3_softc *sc, size_t size, int flags)
 static void
 g_raid3_free(struct g_raid3_softc *sc, void *ptr, size_t size)
 {
+	enum g_raid3_zones zone;
 
-	if (g_raid3_use_malloc)
+	if (g_raid3_use_malloc ||
+	    (zone = g_raid3_zone(size)) == G_RAID3_NUM_ZONES)
 		free(ptr, M_RAID3);
 	else {
-		uma_zfree_arg(sc->sc_zones[g_raid3_zone(size)].sz_zone,
-		    ptr, &sc->sc_zones[g_raid3_zone(size)]);
+		uma_zfree_arg(sc->sc_zones[zone].sz_zone,
+		    ptr, &sc->sc_zones[zone]);
 	}
 }
 
@@ -228,31 +232,31 @@ g_raid3_uma_dtor(void *mem, int size, void *arg)
 	sz->sz_inuse--;
 }
 
-#define	g_raid3_xor(src1, src2, dst, size)				\
-	_g_raid3_xor((uint64_t *)(src1), (uint64_t *)(src2),		\
+#define	g_raid3_xor(src, dst, size)					\
+	_g_raid3_xor((uint64_t *)(src),					\
 	    (uint64_t *)(dst), (size_t)size)
 static void
-_g_raid3_xor(uint64_t *src1, uint64_t *src2, uint64_t *dst, size_t size)
+_g_raid3_xor(uint64_t *src, uint64_t *dst, size_t size)
 {
 
 	KASSERT((size % 128) == 0, ("Invalid size: %zu.", size));
 	for (; size > 0; size -= 128) {
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
-		*dst++ = (*src1++) ^ (*src2++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
+		*dst++ ^= (*src++);
 	}
 }
 
@@ -1046,6 +1050,7 @@ g_raid3_scatter(struct bio *pbp)
 	struct g_raid3_disk *disk;
 	struct bio *bp, *cbp, *tmpbp;
 	off_t atom, cadd, padd, left;
+	int first;
 
 	sc = pbp->bio_to->geom->softc;
 	bp = NULL;
@@ -1076,12 +1081,18 @@ g_raid3_scatter(struct bio *pbp)
 		/*
 		 * Calculate parity.
 		 */
-		bzero(bp->bio_data, bp->bio_length);
+		first = 1;
 		G_RAID3_FOREACH_SAFE_BIO(pbp, cbp, tmpbp) {
 			if (cbp == bp)
 				continue;
-			g_raid3_xor(cbp->bio_data, bp->bio_data, bp->bio_data,
-			    bp->bio_length);
+			if (first) {
+				bcopy(cbp->bio_data, bp->bio_data,
+				    bp->bio_length);
+				first = 0;
+			} else {
+				g_raid3_xor(cbp->bio_data, bp->bio_data,
+				    bp->bio_length);
+			}
 			if ((cbp->bio_cflags & G_RAID3_BIO_CFLAG_NODISK) != 0)
 				g_raid3_destroy_bio(sc, cbp);
 		}
@@ -1213,7 +1224,7 @@ g_raid3_gather(struct bio *pbp)
 		G_RAID3_FOREACH_BIO(pbp, cbp) {
 			if ((cbp->bio_cflags & G_RAID3_BIO_CFLAG_PARITY) != 0)
 				continue;
-			g_raid3_xor(cbp->bio_data, xbp->bio_data, xbp->bio_data,
+			g_raid3_xor(cbp->bio_data, xbp->bio_data,
 			    xbp->bio_length);
 		}
 		xbp->bio_cflags &= ~G_RAID3_BIO_CFLAG_PARITY;
@@ -1261,9 +1272,9 @@ g_raid3_done(struct bio *bp)
 	G_RAID3_LOGREQ(3, bp, "Regular request done (error=%d).", bp->bio_error);
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_insert_head(&sc->sc_queue, bp);
+	mtx_unlock(&sc->sc_queue_mtx);
 	wakeup(sc);
 	wakeup(&sc->sc_queue);
-	mtx_unlock(&sc->sc_queue_mtx);
 }
 
 static void
@@ -1369,9 +1380,9 @@ g_raid3_sync_done(struct bio *bp)
 	bp->bio_cflags |= G_RAID3_BIO_CFLAG_SYNC;
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_insert_head(&sc->sc_queue, bp);
+	mtx_unlock(&sc->sc_queue_mtx);
 	wakeup(sc);
 	wakeup(&sc->sc_queue);
-	mtx_unlock(&sc->sc_queue_mtx);
 }
 
 static void
@@ -1449,9 +1460,9 @@ g_raid3_start(struct bio *bp)
 	}
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_insert_tail(&sc->sc_queue, bp);
+	mtx_unlock(&sc->sc_queue_mtx);
 	G_RAID3_DEBUG(4, "%s: Waking up %p.", __func__, sc);
 	wakeup(sc);
-	mtx_unlock(&sc->sc_queue_mtx);
 }
 
 /*
@@ -1636,7 +1647,7 @@ g_raid3_sync_request(struct bio *bp)
 				bcopy(src, dst, atom);
 				src += atom;
 				for (n = 1; n < sc->sc_ndisks - 1; n++) {
-					g_raid3_xor(src, dst, dst, atom);
+					g_raid3_xor(src, dst, atom);
 					src += atom;
 				}
 				dst += atom;

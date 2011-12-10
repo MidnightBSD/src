@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/journal/g_journal.c,v 1.13.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/journal/g_journal.c,v 1.13.2.2 2009/04/06 17:33:35 trasz Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -2108,6 +2108,12 @@ g_journal_worker(void *arg)
 	g_topology_unlock();
 	last_write = time_second;
 
+	if (sc->sc_rootmount != NULL) {
+		GJ_DEBUG(1, "root_mount_rel %p", sc->sc_rootmount);
+		root_mount_rel(sc->sc_rootmount);
+		sc->sc_rootmount = NULL;
+	}
+
 	for (;;) {
 		/* Get first request from the queue. */
 		mtx_lock(&sc->sc_mtx);
@@ -2304,6 +2310,9 @@ g_journal_create(struct g_class *mp, struct g_provider *pp,
 		sc->sc_inactive.jj_queue = NULL;
 		sc->sc_active.jj_queue = NULL;
 
+		sc->sc_rootmount = root_mount_hold("GJOURNAL");
+		GJ_DEBUG(1, "root_mount_hold %p", sc->sc_rootmount);
+
 		callout_init(&sc->sc_callout, CALLOUT_MPSAFE);
 		if (md->md_type != GJ_TYPE_COMPLETE) {
 			/*
@@ -2434,6 +2443,13 @@ g_journal_destroy(struct g_journal_softc *sc)
 	sc->sc_flags |= (GJF_DEVICE_DESTROY | GJF_DEVICE_CLEAN);
 
 	g_topology_unlock();
+
+	if (sc->sc_rootmount != NULL) {
+		GJ_DEBUG(1, "root_mount_rel %p", sc->sc_rootmount);
+		root_mount_rel(sc->sc_rootmount);
+		sc->sc_rootmount = NULL;
+	}
+
 	callout_drain(&sc->sc_callout);
 	mtx_lock(&sc->sc_mtx);
 	wakeup(sc);

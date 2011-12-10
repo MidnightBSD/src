@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/label/g_label.h,v 1.4 2008/12/03 00:25:48 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/label/g_label.h,v 1.7 2006/02/01 12:06:00 pjd Exp $
+ * $FreeBSD: src/sys/geom/label/g_label.h,v 1.7.2.1 2009/04/07 19:18:02 ivoras Exp $
  */
 
 #ifndef	_G_LABEL_H_
@@ -65,7 +65,8 @@ struct g_label_desc {
 };
 
 /* Supported labels. */
-extern const struct g_label_desc g_label_ufs;
+extern const struct g_label_desc g_label_ufs_id;
+extern const struct g_label_desc g_label_ufs_volume;
 extern const struct g_label_desc g_label_iso9660;
 extern const struct g_label_desc g_label_msdosfs;
 extern const struct g_label_desc g_label_ext2fs;

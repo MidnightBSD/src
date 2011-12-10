@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_subr.c,v 1.91.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_subr.c,v 1.91.2.6 2009/05/29 19:37:17 lulf Exp $");
 
 #include "opt_ddb.h"
 
@@ -325,7 +324,7 @@ g_new_geomf(struct g_class *mp, const char *fmt, ...)
 
 	g_topology_assert();
 	G_VALID_CLASS(mp);
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	va_start(ap, fmt);
 	sbuf_vprintf(sb, fmt, ap);
 	va_end(ap);
@@ -532,6 +531,8 @@ g_new_provider_event(void *arg, int flag)
 		return;
 	pp = arg;
 	G_VALID_PROVIDER(pp);
+	KASSERT(!(pp->flags & G_PF_WITHER),
+	    ("g_new_provider_event but withered"));
 	LIST_FOREACH(mp, &g_classes, class) {
 		if (mp->taste == NULL)
 			continue;
@@ -565,7 +566,7 @@ g_new_providerf(struct g_geom *gp, const char *fmt, ...)
 	KASSERT(!(gp->flags & G_GEOM_WITHER),
 	    ("new provider on WITHERing geom(%s) (class %s)",
 	    gp->name, gp->class->name));
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	va_start(ap, fmt);
 	sbuf_vprintf(sb, fmt, ap);
 	va_end(ap);
@@ -621,7 +622,7 @@ g_destroy_provider(struct g_provider *pp)
 	    ("g_destroy_provider but attached"));
 	KASSERT (pp->acr == 0, ("g_destroy_provider with acr"));
 	KASSERT (pp->acw == 0, ("g_destroy_provider with acw"));
-	KASSERT (pp->acw == 0, ("g_destroy_provider with ace"));
+	KASSERT (pp->ace == 0, ("g_destroy_provider with ace"));
 	g_cancel_event(pp);
 	LIST_REMOVE(pp, provider);
 	gp = pp->geom;
@@ -857,14 +858,14 @@ g_handleattr_off_t(struct bio *bp, const char *attribute, off_t val)
 }
 
 int
-g_handleattr_str(struct bio *bp, const char *attribute, char *str)
+g_handleattr_str(struct bio *bp, const char *attribute, const char *str)
 {
 
 	return (g_handleattr(bp, attribute, str, 0));
 }
 
 int
-g_handleattr(struct bio *bp, const char *attribute, void *val, int len)
+g_handleattr(struct bio *bp, const char *attribute, const void *val, int len)
 {
 	int error = 0;
 
@@ -881,12 +882,13 @@ g_handleattr(struct bio *bp, const char *attribute, void *val, int len)
 		}
 	} else if (bp->bio_length == len) {
 		bcopy(val, bp->bio_data, len);
-		bp->bio_completed = len;
 	} else {
 		printf("%s: %s bio_length %jd len %d -> EFAULT\n", __func__,
 		    bp->bio_to->name, (intmax_t)bp->bio_length, len);
 		error = EFAULT;
 	}
+	if (error == 0)
+		bp->bio_completed = bp->bio_length;
 	g_io_deliver(bp, error);
 	return (1);
 }
@@ -1157,8 +1159,11 @@ db_show_geom_provider(int indent, struct g_provider *pp)
 		printf("\n");
 	}
 	if (!LIST_EMPTY(&pp->consumers)) {
-		LIST_FOREACH(cp, &pp->consumers, consumers)
+		LIST_FOREACH(cp, &pp->consumers, consumers) {
 			db_show_geom_consumer(indent + 2, cp);
+			if (db_pager_quit)
+				break;
+		}
 	}
 }
 
@@ -1189,12 +1194,18 @@ db_show_geom_geom(int indent, struct g_geom *gp)
 		printf("\n");
 	}
 	if (!LIST_EMPTY(&gp->provider)) {
-		LIST_FOREACH(pp, &gp->provider, provider)
+		LIST_FOREACH(pp, &gp->provider, provider) {
 			db_show_geom_provider(indent + 2, pp);
+			if (db_pager_quit)
+				break;
+		}
 	}
 	if (!LIST_EMPTY(&gp->consumer)) {
-		LIST_FOREACH(cp, &gp->consumer, consumer)
+		LIST_FOREACH(cp, &gp->consumer, consumer) {
 			db_show_geom_consumer(indent + 2, cp);
+			if (db_pager_quit)
+				break;
+		}
 	}
 }
 
@@ -1204,8 +1215,11 @@ db_show_geom_class(struct g_class *mp)
 	struct g_geom *gp;
 
 	printf("class: %s (%p)\n", mp->name, mp);
-	LIST_FOREACH(gp, &mp->geom, geom)
+	LIST_FOREACH(gp, &mp->geom, geom) {
 		db_show_geom_geom(2, gp);
+		if (db_pager_quit)
+			break;
+	}
 }
 
 /*
@@ -1220,6 +1234,8 @@ DB_SHOW_COMMAND(geom, db_show_geom)
 		LIST_FOREACH(mp, &g_classes, class) {
 			db_show_geom_class(mp);
 			printf("\n");
+			if (db_pager_quit)
+				break;
 		}
 	} else {
 		switch (g_valid_obj((void *)addr)) {

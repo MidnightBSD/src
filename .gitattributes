@@ -37062,8 +37062,6 @@ sys/geom/geom_io.c -text
 sys/geom/geom_kern.c -text
 sys/geom/geom_mbr.c -text
 sys/geom/geom_mbr_enc.c -text
-sys/geom/geom_pc98.c -text
-sys/geom/geom_pc98_enc.c -text
 sys/geom/geom_slice.c -text
 sys/geom/geom_slice.h -text
 sys/geom/geom_subr.c -text
@@ -38045,9 +38043,7 @@ sys/modules/geom/geom_part/geom_part_apm/Makefile -text
 sys/modules/geom/geom_part/geom_part_bsd/Makefile -text
 sys/modules/geom/geom_part/geom_part_gpt/Makefile -text
 sys/modules/geom/geom_part/geom_part_mbr/Makefile -text
-sys/modules/geom/geom_part/geom_part_pc98/Makefile -text
 sys/modules/geom/geom_part/geom_part_vtoc8/Makefile -text
-sys/modules/geom/geom_pc98/Makefile -text
 sys/modules/geom/geom_raid3/Makefile -text
 sys/modules/geom/geom_shsec/Makefile -text
 sys/modules/geom/geom_stripe/Makefile -text

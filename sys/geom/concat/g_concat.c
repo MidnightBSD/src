@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/concat/g_concat.c,v 1.4 2008/12/03 00:25:47 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/concat/g_concat.c,v 1.29 2006/10/31 21:23:50 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/concat/g_concat.c,v 1.29.2.2 2010/10/25 08:23:38 mav Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -213,6 +213,39 @@ g_concat_access(struct g_provider *pp, int dr, int dw, int de)
 }
 
 static void
+g_concat_kernel_dump(struct bio *bp)
+{
+	struct g_concat_softc *sc;
+	struct g_concat_disk *disk;
+	struct bio *cbp;
+	struct g_kerneldump *gkd;
+	u_int i;
+
+	sc = bp->bio_to->geom->softc;
+	gkd = (struct g_kerneldump *)bp->bio_data;
+	for (i = 0; i < sc->sc_ndisks; i++) {
+		if (sc->sc_disks[i].d_start <= gkd->offset &&
+		    sc->sc_disks[i].d_end > gkd->offset)
+			break;
+	}
+	if (i == sc->sc_ndisks)
+		g_io_deliver(bp, EOPNOTSUPP);
+	disk = &sc->sc_disks[i];
+	gkd->offset -= disk->d_start;
+	if (gkd->length > disk->d_end - disk->d_start - gkd->offset)
+		gkd->length = disk->d_end - disk->d_start - gkd->offset;
+	cbp = g_clone_bio(bp);
+	if (cbp == NULL) {
+		g_io_deliver(bp, ENOMEM);
+		return;
+	}
+	cbp->bio_done = g_std_done;
+	g_io_request(cbp, disk->d_consumer);
+	G_CONCAT_DEBUG(1, "Kernel dump will go to %s.",
+	    disk->d_consumer->provider->name);
+}
+
+static void
 g_concat_flush(struct g_concat_softc *sc, struct bio *bp)
 {
 	struct bio_queue_head queue;
@@ -281,7 +314,12 @@ g_concat_start(struct bio *bp)
 		g_concat_flush(sc, bp);
 		return;
 	case BIO_GETATTR:
+		if (strcmp("GEOM::kerneldump", bp->bio_attribute) == 0) {
+			g_concat_kernel_dump(bp);
+			return;
+		}
 		/* To which provider it should be delivered? */
+		/* FALLTHROUGH */
 	default:
 		g_io_deliver(bp, EOPNOTSUPP);
 		return;
@@ -749,7 +787,7 @@ g_concat_ctl_create(struct gctl_req *req, struct g_class *mp)
 	}
 
 	sc = gp->softc;
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	sbuf_printf(sb, "Can't attach disk(s) to %s:", gp->name);
 	for (attached = 0, no = 1; no < *nargs; no++) {
 		snprintf(param, sizeof(param), "arg%u", no);
