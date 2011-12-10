@@ -132,12 +132,6 @@ static struct g_part_scheme g_part_gpt_scheme = {
 G_PART_SCHEME_DECLARE(g_part_gpt);
 
 static struct uuid gpt_uuid_efi = GPT_ENT_TYPE_EFI;
-static struct uuid gpt_uuid_freebsd = GPT_ENT_TYPE_FREEBSD;
-static struct uuid gpt_uuid_freebsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
-static struct uuid gpt_uuid_freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
-static struct uuid gpt_uuid_freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
-static struct uuid gpt_uuid_freebsd_vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
-static struct uuid gpt_uuid_freebsd_zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
 static struct uuid gpt_uuid_midnightbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
 static struct uuid gpt_uuid_midnightbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
 static struct uuid gpt_uuid_midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
