@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/sbuf.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Poul-Henning Kamp and Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -44,7 +44,7 @@ struct sbuf {
 	int		 s_len;		/* current length of string */
 #define	SBUF_FIXEDLEN	0x00000000	/* fixed length buffer (default) */
 #define	SBUF_AUTOEXTEND	0x00000001	/* automatically extend buffer */
-#define	SBUF_USRFLAGMSK 0x0000ffff	/* mask of flags the user may specify */
+#define	SBUF_USRFLAGMSK	0x0000ffff	/* mask of flags the user may specify */
 #define	SBUF_DYNAMIC	0x00010000	/* s_buf must be freed */
 #define	SBUF_FINISHED	0x00020000	/* set by sbuf_finish() */
 #define	SBUF_OVERFLOWED	0x00040000	/* sbuf overflowed */
@@ -57,14 +57,18 @@ __BEGIN_DECLS
  * API functions
  */
 struct sbuf	*sbuf_new(struct sbuf *, char *, int, int);
+#define		 sbuf_new_auto()				\
+	sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND)
 void		 sbuf_clear(struct sbuf *);
 int		 sbuf_setpos(struct sbuf *, int);
 int		 sbuf_bcat(struct sbuf *, const void *, size_t);
 int		 sbuf_bcpy(struct sbuf *, const void *, size_t);
 int		 sbuf_cat(struct sbuf *, const char *);
 int		 sbuf_cpy(struct sbuf *, const char *);
-int		 sbuf_printf(struct sbuf *, const char *, ...) __printflike(2, 3);
-int		 sbuf_vprintf(struct sbuf *, const char *, __va_list) __printflike(2, 0);
+int		 sbuf_printf(struct sbuf *, const char *, ...)
+	__printflike(2, 3);
+int		 sbuf_vprintf(struct sbuf *, const char *, __va_list)
+	__printflike(2, 0);
 int		 sbuf_putc(struct sbuf *, int);
 int		 sbuf_trim(struct sbuf *);
 int		 sbuf_overflowed(struct sbuf *);
