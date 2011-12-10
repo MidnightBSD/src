@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_rl.c,v 1.170.2.10 2009/01/12 04:10:40 yongari Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_rl.c,v 1.170.2.19 2010/11/16 04:40:03 sobomax Exp $");
 
 /*
  * RealTek 8129/8139 PCI NIC driver
@@ -96,6 +97,7 @@ __FBSDID("$FreeBSD: src/sys/pci/if_rl.c,v 1.170.2.10 2009/01/12 04:10:40 yongari
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/socket.h>
+#include <sys/sysctl.h>
 
 #include <net/if.h>
 #include <net/if_arp.h>
@@ -124,16 +126,6 @@ MODULE_DEPEND(rl, miibus, 1, 1, 1);
 /* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
-/*
- * Default to using PIO access for this driver. On SMP systems,
- * there appear to be problems with memory mapped mode: it looks like
- * doing too many memory mapped access back to back in rapid succession
- * can hang the bus. I'm inclined to blame this on crummy design/construction
- * on the part of RealTek. Memory mapped mode does appear to work on
- * uniprocessor systems though.
- */
-#define RL_USEIOSPACE
-
 #include <pci/if_rlreg.h>
 
 /*
@@ -155,7 +147,7 @@ static struct rl_type rl_devs[] = {
 	{ DELTA_VENDORID, DELTA_DEVICEID_8139, RL_8139,
 		"Delta Electronics 8139 10/100BaseTX" },
 	{ ADDTRON_VENDORID, ADDTRON_DEVICEID_8139, RL_8139,
-		"Addtron Technolgy 8139 10/100BaseTX" },
+		"Addtron Technology 8139 10/100BaseTX" },
 	{ DLINK_VENDORID, DLINK_DEVICEID_530TXPLUS, RL_8139,
 		"D-Link DFE-530TX+ 10/100BaseTX" },
 	{ DLINK_VENDORID, DLINK_DEVICEID_690TXD, RL_8139,
@@ -212,7 +204,7 @@ static void rl_read_eeprom(struct rl_softc *, uint8_t *, int, int, int);
 static void rl_reset(struct rl_softc *);
 static int rl_resume(device_t);
 static void rl_rxeof(struct rl_softc *);
-static void rl_setmulti(struct rl_softc *);
+static void rl_rxfilter(struct rl_softc *);
 static int rl_shutdown(device_t);
 static void rl_start(struct ifnet *);
 static void rl_start_locked(struct ifnet *);
@@ -221,14 +213,8 @@ static int rl_suspend(device_t);
 static void rl_tick(void *);
 static void rl_txeof(struct rl_softc *);
 static void rl_watchdog(struct rl_softc *);
-
-#ifdef RL_USEIOSPACE
-#define RL_RES			SYS_RES_IOPORT
-#define RL_RID			RL_PCI_LOIO
-#else
-#define RL_RES			SYS_RES_MEMORY
-#define RL_RID			RL_PCI_LOMEM
-#endif
+static void rl_setwol(struct rl_softc *);
+static void rl_clrwol(struct rl_softc *);
 
 static device_method_t rl_methods[] = {
 	/* Device interface */
@@ -534,10 +520,6 @@ rl_miibus_readreg(device_t dev, int phy, int reg)
 	sc = device_get_softc(dev);
 
 	if (sc->rl_type == RL_8139) {
-		/* Pretend the internal PHY is only at address 0 */
-		if (phy) {
-			return (0);
-		}
 		switch (reg) {
 		case MII_BMCR:
 			rl8139_reg = RL_BMCR;
@@ -592,10 +574,6 @@ rl_miibus_writereg(device_t dev, int phy, int reg, int data)
 	sc = device_get_softc(dev);
 
 	if (sc->rl_type == RL_8139) {
-		/* Pretend the internal PHY is only at address 0 */
-		if (phy) {
-			return (0);
-		}
 		switch (reg) {
 		case MII_BMCR:
 			rl8139_reg = RL_BMCR;
@@ -670,54 +648,51 @@ rl_miibus_statchg(device_t dev)
  * Program the 64-bit multicast hash filter.
  */
 static void
-rl_setmulti(struct rl_softc *sc)
+rl_rxfilter(struct rl_softc *sc)
 {
 	struct ifnet		*ifp = sc->rl_ifp;
 	int			h = 0;
 	uint32_t		hashes[2] = { 0, 0 };
 	struct ifmultiaddr	*ifma;
 	uint32_t		rxfilt;
-	int			mcnt = 0;
 
 	RL_LOCK_ASSERT(sc);
 
 	rxfilt = CSR_READ_4(sc, RL_RXCFG);
-
+	rxfilt &= ~(RL_RXCFG_RX_ALLPHYS | RL_RXCFG_RX_BROAD |
+	    RL_RXCFG_RX_MULTI);
+	/* Always accept frames destined for this host. */
+	rxfilt |= RL_RXCFG_RX_INDIV;
+	/* Set capture broadcast bit to capture broadcast frames. */
+	if (ifp->if_flags & IFF_BROADCAST)
+		rxfilt |= RL_RXCFG_RX_BROAD;
 	if (ifp->if_flags & IFF_ALLMULTI || ifp->if_flags & IFF_PROMISC) {
 		rxfilt |= RL_RXCFG_RX_MULTI;
-		CSR_WRITE_4(sc, RL_RXCFG, rxfilt);
-		CSR_WRITE_4(sc, RL_MAR0, 0xFFFFFFFF);
-		CSR_WRITE_4(sc, RL_MAR4, 0xFFFFFFFF);
-		return;
+		if (ifp->if_flags & IFF_PROMISC)
+			rxfilt |= RL_RXCFG_RX_ALLPHYS;
+		hashes[0] = 0xFFFFFFFF;
+		hashes[1] = 0xFFFFFFFF;
+	} else {
+		/* Now program new ones. */
+		IF_ADDR_LOCK(ifp);
+		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+			if (ifma->ifma_addr->sa_family != AF_LINK)
+				continue;
+			h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
+			    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
+			if (h < 32)
+				hashes[0] |= (1 << h);
+			else
+				hashes[1] |= (1 << (h - 32));
+		}
+		IF_ADDR_UNLOCK(ifp);
+		if (hashes[0] != 0 || hashes[1] != 0)
+			rxfilt |= RL_RXCFG_RX_MULTI;
 	}
 
-	/* first, zot all the existing hash bits */
-	CSR_WRITE_4(sc, RL_MAR0, 0);
-	CSR_WRITE_4(sc, RL_MAR4, 0);
-
-	/* now program new ones */
-	IF_ADDR_LOCK(ifp);
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-		if (h < 32)
-			hashes[0] |= (1 << h);
-		else
-			hashes[1] |= (1 << (h - 32));
-		mcnt++;
-	}
-	IF_ADDR_UNLOCK(ifp);
-
-	if (mcnt)
-		rxfilt |= RL_RXCFG_RX_MULTI;
-	else
-		rxfilt &= ~RL_RXCFG_RX_MULTI;
-
-	CSR_WRITE_4(sc, RL_RXCFG, rxfilt);
 	CSR_WRITE_4(sc, RL_MAR0, hashes[0]);
 	CSR_WRITE_4(sc, RL_MAR4, hashes[1]);
+	CSR_WRITE_4(sc, RL_RXCFG, rxfilt);
 }
 
 static void
@@ -800,13 +775,24 @@ rl_attach(device_t dev)
 	struct ifnet		*ifp;
 	struct rl_softc		*sc;
 	struct rl_type		*t;
-	int			error = 0, i, rid;
-	int			unit;
+	struct sysctl_ctx_list	*ctx;
+	struct sysctl_oid_list	*children;
+	int			error = 0, hwrev, i, phy, pmc, rid;
+	int			prefer_iomap, unit;
 	uint16_t		rl_did = 0;
+	char			tn[32];
 
 	sc = device_get_softc(dev);
 	unit = device_get_unit(dev);
 	sc->rl_dev = dev;
+
+	sc->rl_twister_enable = 0;
+	snprintf(tn, sizeof(tn), "dev.rl.%d.twister_enable", unit);
+	TUNABLE_INT_FETCH(tn, &sc->rl_twister_enable);
+	ctx = device_get_sysctl_ctx(sc->rl_dev);
+	children = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->rl_dev));
+	SYSCTL_ADD_INT(ctx, children, OID_AUTO, "twister_enable", CTLFLAG_RD,
+	   &sc->rl_twister_enable, 0, "");
 
 	mtx_init(&sc->rl_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
@@ -814,10 +800,31 @@ rl_attach(device_t dev)
 
 	pci_enable_busmaster(dev);
 
-	/* Map control/status registers. */
-	rid = RL_RID;
-	sc->rl_res = bus_alloc_resource_any(dev, RL_RES, &rid, RF_ACTIVE);
 
+	/*
+	 * Map control/status registers.
+	 * Default to using PIO access for this driver. On SMP systems,
+	 * there appear to be problems with memory mapped mode: it looks
+	 * like doing too many memory mapped access back to back in rapid
+	 * succession can hang the bus. I'm inclined to blame this on
+	 * crummy design/construction on the part of RealTek. Memory
+	 * mapped mode does appear to work on uniprocessor systems though.
+	 */
+	prefer_iomap = 1;
+	snprintf(tn, sizeof(tn), "dev.rl.%d.prefer_iomap", unit);
+	TUNABLE_INT_FETCH(tn, &prefer_iomap);
+	if (prefer_iomap) {
+		sc->rl_res_id = PCIR_BAR(0);
+		sc->rl_res_type = SYS_RES_IOPORT;
+		sc->rl_res = bus_alloc_resource_any(dev, sc->rl_res_type,
+		    &sc->rl_res_id, RF_ACTIVE);
+	}
+	if (prefer_iomap == 0 || sc->rl_res == NULL) {
+		sc->rl_res_id = PCIR_BAR(1);
+		sc->rl_res_type = SYS_RES_MEMORY;
+		sc->rl_res = bus_alloc_resource_any(dev, sc->rl_res_type,
+		    &sc->rl_res_id, RF_ACTIVE);
+	}
 	if (sc->rl_res == NULL) {
 		device_printf(dev, "couldn't map ports/memory\n");
 		error = ENXIO;
@@ -910,11 +917,16 @@ rl_attach(device_t dev)
 		goto fail;
 	}
 
+#define	RL_PHYAD_INTERNAL	0
+
 	/* Do MII setup */
-	if (mii_phy_probe(dev, &sc->rl_miibus,
-	    rl_ifmedia_upd, rl_ifmedia_sts)) {
-		device_printf(dev, "MII without any phy!\n");
-		error = ENXIO;
+	phy = MII_PHY_ANY;
+	if (sc->rl_type == RL_8139)
+		phy = RL_PHYAD_INTERNAL;
+	error = mii_attach(dev, &sc->rl_miibus, ifp, rl_ifmedia_upd,
+	    rl_ifmedia_sts, BMSR_DEFCAPMASK, phy, MII_OFFSET_ANY, 0);
+	if (error != 0) {
+		device_printf(dev, "attaching PHYs failed\n");
 		goto fail;
 	}
 
@@ -926,12 +938,31 @@ rl_attach(device_t dev)
 	ifp->if_start = rl_start;
 	ifp->if_init = rl_init;
 	ifp->if_capabilities = IFCAP_VLAN_MTU;
+	/* Check WOL for RTL8139B or newer controllers. */
+	if (sc->rl_type == RL_8139 &&
+	    pci_find_extcap(sc->rl_dev, PCIY_PMG, &pmc) == 0) {
+		hwrev = CSR_READ_4(sc, RL_TXCFG) & RL_TXCFG_HWREV;
+		switch (hwrev) {
+		case RL_HWREV_8139B:
+		case RL_HWREV_8130:
+		case RL_HWREV_8139C:
+		case RL_HWREV_8139D:
+		case RL_HWREV_8101:
+		case RL_HWREV_8100:
+			ifp->if_capabilities |= IFCAP_WOL;
+			/* Disable WOL. */
+			rl_clrwol(sc);
+			break;
+		default:
+			break;
+		}
+	}
 	ifp->if_capenable = ifp->if_capabilities;
 #ifdef DEVICE_POLLING
 	ifp->if_capabilities |= IFCAP_POLLING;
 #endif
-	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
-	ifp->if_snd.ifq_drv_maxlen = IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	ifp->if_snd.ifq_drv_maxlen = ifqmaxlen;
 	IFQ_SET_READY(&ifp->if_snd);
 
 	/*
@@ -996,7 +1027,8 @@ rl_detach(device_t dev)
 	if (sc->rl_irq[0])
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->rl_irq[0]);
 	if (sc->rl_res)
-		bus_release_resource(dev, RL_RES, RL_RID, sc->rl_res);
+		bus_release_resource(dev, sc->rl_res_type, sc->rl_res_id,
+		    sc->rl_res);
 
 	if (ifp)
 		if_free(ifp);
@@ -1139,9 +1171,9 @@ rl_dma_free(struct rl_softc *sc)
 				    sc->rl_cdata.rl_tx_dmamap[i]);
 				sc->rl_cdata.rl_tx_dmamap[i] = NULL;
 			}
+		}
 		bus_dma_tag_destroy(sc->rl_cdata.rl_tx_tag);
 		sc->rl_cdata.rl_tx_tag = NULL;
-		}
 	}
 
 	if (sc->rl_parent_tag != NULL) {
@@ -1264,6 +1296,7 @@ rl_rxeof(struct rl_softc *sc)
 		    total_len < ETHER_MIN_LEN ||
 		    total_len > ETHER_MAX_LEN + ETHER_VLAN_ENCAP_LEN) {
 			ifp->if_ierrors++;
+			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			rl_init_locked(sc);
 			return;
 		}
@@ -1321,7 +1354,7 @@ rl_rxeof(struct rl_softc *sc)
 		RL_LOCK(sc);
 	}
 
-	/* No need to sync Rx memory block as we didn't mofify it. */
+	/* No need to sync Rx memory block as we didn't modify it. */
 }
 
 /*
@@ -1373,6 +1406,7 @@ rl_txeof(struct rl_softc *sc)
 				CSR_WRITE_4(sc, RL_TXCFG, RL_TXCFG_CONFIG);
 			oldthresh = sc->rl_txthresh;
 			/* error recovery */
+			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			rl_init_locked(sc);
 			/* restore original threshold */
 			sc->rl_txthresh = oldthresh;
@@ -1387,20 +1421,142 @@ rl_txeof(struct rl_softc *sc)
 }
 
 static void
+rl_twister_update(struct rl_softc *sc)
+{
+	uint16_t linktest;
+	/*
+	 * Table provided by RealTek (Kinston <shangh@realtek.com.tw>) for
+	 * Linux driver.  Values undocumented otherwise.
+	 */
+	static const uint32_t param[4][4] = {
+		{0xcb39de43, 0xcb39ce43, 0xfb38de03, 0xcb38de43},
+		{0xcb39de43, 0xcb39ce43, 0xcb39ce83, 0xcb39ce83},
+		{0xcb39de43, 0xcb39ce43, 0xcb39ce83, 0xcb39ce83},
+		{0xbb39de43, 0xbb39ce43, 0xbb39ce83, 0xbb39ce83}
+	};
+
+	/*
+	 * Tune the so-called twister registers of the RTL8139.  These
+	 * are used to compensate for impedance mismatches.  The
+	 * method for tuning these registers is undocumented and the
+	 * following procedure is collected from public sources.
+	 */
+	switch (sc->rl_twister)
+	{
+	case CHK_LINK:
+		/*
+		 * If we have a sufficient link, then we can proceed in
+		 * the state machine to the next stage.  If not, then
+		 * disable further tuning after writing sane defaults.
+		 */
+		if (CSR_READ_2(sc, RL_CSCFG) & RL_CSCFG_LINK_OK) {
+			CSR_WRITE_2(sc, RL_CSCFG, RL_CSCFG_LINK_DOWN_OFF_CMD);
+			sc->rl_twister = FIND_ROW;
+		} else {
+			CSR_WRITE_2(sc, RL_CSCFG, RL_CSCFG_LINK_DOWN_CMD);
+			CSR_WRITE_4(sc, RL_NWAYTST, RL_NWAYTST_CBL_TEST);
+			CSR_WRITE_4(sc, RL_PARA78, RL_PARA78_DEF);
+			CSR_WRITE_4(sc, RL_PARA7C, RL_PARA7C_DEF);
+			sc->rl_twister = DONE;
+		}
+		break;
+	case FIND_ROW:
+		/*
+		 * Read how long it took to see the echo to find the tuning
+		 * row to use.
+		 */
+		linktest = CSR_READ_2(sc, RL_CSCFG) & RL_CSCFG_STATUS;
+		if (linktest == RL_CSCFG_ROW3)
+			sc->rl_twist_row = 3;
+		else if (linktest == RL_CSCFG_ROW2)
+			sc->rl_twist_row = 2;
+		else if (linktest == RL_CSCFG_ROW1)
+			sc->rl_twist_row = 1;
+		else
+			sc->rl_twist_row = 0;
+		sc->rl_twist_col = 0;
+		sc->rl_twister = SET_PARAM;
+		break;
+	case SET_PARAM:
+		if (sc->rl_twist_col == 0)
+			CSR_WRITE_4(sc, RL_NWAYTST, RL_NWAYTST_RESET);
+		CSR_WRITE_4(sc, RL_PARA7C,
+		    param[sc->rl_twist_row][sc->rl_twist_col]);
+		if (++sc->rl_twist_col == 4) {
+			if (sc->rl_twist_row == 3)
+				sc->rl_twister = RECHK_LONG;
+			else
+				sc->rl_twister = DONE;
+		}
+		break;
+	case RECHK_LONG:
+		/*
+		 * For long cables, we have to double check to make sure we
+		 * don't mistune.
+		 */
+		linktest = CSR_READ_2(sc, RL_CSCFG) & RL_CSCFG_STATUS;
+		if (linktest == RL_CSCFG_ROW3)
+			sc->rl_twister = DONE;
+		else {
+			CSR_WRITE_4(sc, RL_PARA7C, RL_PARA7C_RETUNE);
+			sc->rl_twister = RETUNE;
+		}
+		break;
+	case RETUNE:
+		/* Retune for a shorter cable (try column 2) */
+		CSR_WRITE_4(sc, RL_NWAYTST, RL_NWAYTST_CBL_TEST);
+		CSR_WRITE_4(sc, RL_PARA78, RL_PARA78_DEF);
+		CSR_WRITE_4(sc, RL_PARA7C, RL_PARA7C_DEF);
+		CSR_WRITE_4(sc, RL_NWAYTST, RL_NWAYTST_RESET);
+		sc->rl_twist_row--;
+		sc->rl_twist_col = 0;
+		sc->rl_twister = SET_PARAM;
+		break;
+
+	case DONE:
+		break;
+	}
+	
+}
+
+static void
 rl_tick(void *xsc)
 {
 	struct rl_softc		*sc = xsc;
 	struct mii_data		*mii;
+	int ticks;
 
 	RL_LOCK_ASSERT(sc);
+	/*
+	 * If we're doing the twister cable calibration, then we need to defer
+	 * watchdog timeouts.  This is a no-op in normal operations, but
+	 * can falsely trigger when the cable calibration takes a while and
+	 * there was traffic ready to go when rl was started.
+	 *
+	 * We don't defer mii_tick since that updates the mii status, which
+	 * helps the twister process, at least according to similar patches
+	 * for the Linux driver I found online while doing the fixes.  Worst
+	 * case is a few extra mii reads during calibration.
+	 */
 	mii = device_get_softc(sc->rl_miibus);
 	mii_tick(mii);
 	if ((sc->rl_flags & RL_FLAG_LINK) == 0)
 		rl_miibus_statchg(sc->rl_dev);
+	if (sc->rl_twister_enable) {
+		if (sc->rl_twister == DONE)
+			rl_watchdog(sc);
+		else
+			rl_twister_update(sc);
+		if (sc->rl_twister == DONE)
+			ticks = hz;
+		else
+			ticks = hz / 10;
+	} else {
+		rl_watchdog(sc);
+		ticks = hz;
+	}
 
-	rl_watchdog(sc);
-
-	callout_reset(&sc->rl_stat_callout, hz, rl_tick, sc);
+	callout_reset(&sc->rl_stat_callout, ticks, rl_tick, sc);
 }
 
 #ifdef DEVICE_POLLING
@@ -1441,8 +1597,10 @@ rl_poll_locked(struct ifnet *ifp, enum poll_cmd cmd, int count)
 
 		/* XXX We should check behaviour on receiver stalls. */
 
-		if (status & RL_ISR_SYSTEM_ERR)
+		if (status & RL_ISR_SYSTEM_ERR) {
+			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			rl_init_locked(sc);
+		}
 	}
 }
 #endif /* DEVICE_POLLING */
@@ -1453,6 +1611,7 @@ rl_intr(void *arg)
 	struct rl_softc		*sc = arg;
 	struct ifnet		*ifp = sc->rl_ifp;
 	uint16_t		status;
+	int			count;
 
 	RL_LOCK(sc);
 
@@ -1464,28 +1623,41 @@ rl_intr(void *arg)
 		goto done_locked;
 #endif
 
-	for (;;) {
+	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
+		goto done_locked2;
+	status = CSR_READ_2(sc, RL_ISR);
+	if (status == 0xffff || (status & RL_INTRS) == 0)
+		goto done_locked;
+	/*
+	 * Ours, disable further interrupts.
+	 */
+	CSR_WRITE_2(sc, RL_IMR, 0);
+	for (count = 16; count > 0; count--) {
+		CSR_WRITE_2(sc, RL_ISR, status);
+		if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+			if (status & (RL_ISR_RX_OK | RL_ISR_RX_ERR))
+				rl_rxeof(sc);
+			if (status & (RL_ISR_TX_OK | RL_ISR_TX_ERR))
+				rl_txeof(sc);
+			if (status & RL_ISR_SYSTEM_ERR) {
+				ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+				rl_init_locked(sc);
+				RL_UNLOCK(sc);
+				return;
+			}
+		}
 		status = CSR_READ_2(sc, RL_ISR);
 		/* If the card has gone away, the read returns 0xffff. */
-		if (status == 0xffff)
+		if (status == 0xffff || (status & RL_INTRS) == 0)
 			break;
-		if (status != 0)
-			CSR_WRITE_2(sc, RL_ISR, status);
-		if ((status & RL_INTRS) == 0)
-			break;
-		if (status & RL_ISR_RX_OK)
-			rl_rxeof(sc);
-		if (status & RL_ISR_RX_ERR)
-			rl_rxeof(sc);
-		if ((status & RL_ISR_TX_OK) || (status & RL_ISR_TX_ERR))
-			rl_txeof(sc);
-		if (status & RL_ISR_SYSTEM_ERR)
-			rl_init_locked(sc);
 	}
 
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
 		rl_start_locked(ifp);
 
+done_locked2:
+	if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+		CSR_WRITE_2(sc, RL_IMR, RL_INTRS);
 done_locked:
 	RL_UNLOCK(sc);
 }
@@ -1529,7 +1701,7 @@ rl_encap(struct rl_softc *sc, struct mbuf **m_head)
 
 	if (padlen > 0) {
 		/*
-		 * Make security concious people happy: zero out the
+		 * Make security-conscious people happy: zero out the
 		 * bytes in the pad area, since we don't know what
 		 * this mbuf cluster buffer's previous user might
 		 * have left in it.
@@ -1635,12 +1807,14 @@ rl_init_locked(struct rl_softc *sc)
 {
 	struct ifnet		*ifp = sc->rl_ifp;
 	struct mii_data		*mii;
-	uint32_t		rxcfg = 0;
 	uint32_t		eaddr[2];
 
 	RL_LOCK_ASSERT(sc);
 
 	mii = device_get_softc(sc->rl_miibus);
+
+	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+		return;
 
 	/*
 	 * Cancel pending I/O and free all RX/TX buffers.
@@ -1648,6 +1822,15 @@ rl_init_locked(struct rl_softc *sc)
 	rl_stop(sc);
 
 	rl_reset(sc);
+	if (sc->rl_twister_enable) {
+		/*
+		 * Reset twister register tuning state.  The twister
+		 * registers and their tuning are undocumented, but
+		 * are necessary to cope with bad links.  rl_twister =
+		 * DONE here will disable this entirely.
+		 */
+		sc->rl_twister = CHK_LINK;
+	}
 
 	/*
 	 * Init our MAC address.  Even though the chipset
@@ -1680,30 +1863,8 @@ rl_init_locked(struct rl_softc *sc)
 	CSR_WRITE_4(sc, RL_TXCFG, RL_TXCFG_CONFIG);
 	CSR_WRITE_4(sc, RL_RXCFG, RL_RXCFG_CONFIG);
 
-	/* Set the individual bit to receive frames for this host only. */
-	rxcfg = CSR_READ_4(sc, RL_RXCFG);
-	rxcfg |= RL_RXCFG_RX_INDIV;
-
-	/* If we want promiscuous mode, set the allframes bit. */
-	if (ifp->if_flags & IFF_PROMISC) {
-		rxcfg |= RL_RXCFG_RX_ALLPHYS;
-		CSR_WRITE_4(sc, RL_RXCFG, rxcfg);
-	} else {
-		rxcfg &= ~RL_RXCFG_RX_ALLPHYS;
-		CSR_WRITE_4(sc, RL_RXCFG, rxcfg);
-	}
-
-	/* Set capture broadcast bit to capture broadcast frames. */
-	if (ifp->if_flags & IFF_BROADCAST) {
-		rxcfg |= RL_RXCFG_RX_BROAD;
-		CSR_WRITE_4(sc, RL_RXCFG, rxcfg);
-	} else {
-		rxcfg &= ~RL_RXCFG_RX_BROAD;
-		CSR_WRITE_4(sc, RL_RXCFG, rxcfg);
-	}
-
-	/* Program the multicast filter, if necessary. */
-	rl_setmulti(sc);
+	/* Set RX filter. */
+	rl_rxfilter(sc);
 
 #ifdef DEVICE_POLLING
 	/* Disable interrupts if we are polling. */
@@ -1776,26 +1937,28 @@ rl_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	struct ifreq		*ifr = (struct ifreq *)data;
 	struct mii_data		*mii;
 	struct rl_softc		*sc = ifp->if_softc;
-	int			error = 0;
+	int			error = 0, mask;
 
 	switch (command) {
 	case SIOCSIFFLAGS:
 		RL_LOCK(sc);
 		if (ifp->if_flags & IFF_UP) {
-			rl_init_locked(sc);
-		} else {
-			if (ifp->if_drv_flags & IFF_DRV_RUNNING)
-				rl_stop(sc);
-		}
+			if (ifp->if_drv_flags & IFF_DRV_RUNNING &&
+			    ((ifp->if_flags ^ sc->rl_if_flags) &
+                            (IFF_PROMISC | IFF_ALLMULTI)))
+				rl_rxfilter(sc);
+                        else
+				rl_init_locked(sc);
+                } else if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+			rl_stop(sc);
+		sc->rl_if_flags = ifp->if_flags;
 		RL_UNLOCK(sc);
-		error = 0;
 		break;
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
 		RL_LOCK(sc);
-		rl_setmulti(sc);
+		rl_rxfilter(sc);
 		RL_UNLOCK(sc);
-		error = 0;
 		break;
 	case SIOCGIFMEDIA:
 	case SIOCSIFMEDIA:
@@ -1803,6 +1966,7 @@ rl_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		error = ifmedia_ioctl(ifp, ifr, &mii->mii_media, command);
 		break;
 	case SIOCSIFCAP:
+		mask = ifr->ifr_reqcap ^ ifp->if_capenable;
 #ifdef DEVICE_POLLING
 		if (ifr->ifr_reqcap & IFCAP_POLLING &&
 		    !(ifp->if_capenable & IFCAP_POLLING)) {
@@ -1828,6 +1992,15 @@ rl_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			return (error);
 		}
 #endif /* DEVICE_POLLING */
+		if ((mask & IFCAP_WOL) != 0 &&
+		    (ifp->if_capabilities & IFCAP_WOL) != 0) {
+			if ((mask & IFCAP_WOL_UCAST) != 0)
+				ifp->if_capenable ^= IFCAP_WOL_UCAST;
+			if ((mask & IFCAP_WOL_MCAST) != 0)
+				ifp->if_capenable ^= IFCAP_WOL_MCAST;
+			if ((mask & IFCAP_WOL_MAGIC) != 0)
+				ifp->if_capenable ^= IFCAP_WOL_MAGIC;
+		}
 		break;
 	default:
 		error = ether_ioctl(ifp, command, data);
@@ -1851,6 +2024,7 @@ rl_watchdog(struct rl_softc *sc)
 
 	rl_txeof(sc);
 	rl_rxeof(sc);
+	sc->rl_ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	rl_init_locked(sc);
 }
 
@@ -1916,6 +2090,7 @@ rl_suspend(device_t dev)
 
 	RL_LOCK(sc);
 	rl_stop(sc);
+	rl_setwol(sc);
 	sc->suspended = 1;
 	RL_UNLOCK(sc);
 
@@ -1932,11 +2107,30 @@ rl_resume(device_t dev)
 {
 	struct rl_softc		*sc;
 	struct ifnet		*ifp;
+	int			pmc;
+	uint16_t		pmstat;
 
 	sc = device_get_softc(dev);
 	ifp = sc->rl_ifp;
 
 	RL_LOCK(sc);
+
+	if ((ifp->if_capabilities & IFCAP_WOL) != 0 &&
+	    pci_find_extcap(sc->rl_dev, PCIY_PMG, &pmc) == 0) {
+		/* Disable PME and clear PME status. */
+		pmstat = pci_read_config(sc->rl_dev,
+		    pmc + PCIR_POWER_STATUS, 2);
+		if ((pmstat & PCIM_PSTAT_PMEENABLE) != 0) {
+			pmstat &= ~PCIM_PSTAT_PMEENABLE;
+			pci_write_config(sc->rl_dev,
+			    pmc + PCIR_POWER_STATUS, pmstat, 2);
+		}
+		/*
+		 * Clear WOL matching such that normal Rx filtering
+		 * wouldn't interfere with WOL patterns.
+		 */
+		rl_clrwol(sc);
+	}
 
 	/* reinitialize interface if necessary */
 	if (ifp->if_flags & IFF_UP)
@@ -1962,7 +2156,93 @@ rl_shutdown(device_t dev)
 
 	RL_LOCK(sc);
 	rl_stop(sc);
+	/*
+	 * Mark interface as down since otherwise we will panic if
+	 * interrupt comes in later on, which can happen in some
+	 * cases.
+	 */
+	sc->rl_ifp->if_flags &= ~IFF_UP;
+	rl_setwol(sc);
 	RL_UNLOCK(sc);
 
 	return (0);
+}
+
+static void
+rl_setwol(struct rl_softc *sc)
+{
+	struct ifnet		*ifp;
+	int			pmc;
+	uint16_t		pmstat;
+	uint8_t			v;
+
+	RL_LOCK_ASSERT(sc);
+
+	ifp = sc->rl_ifp;
+	if ((ifp->if_capabilities & IFCAP_WOL) == 0)
+		return;
+	if (pci_find_extcap(sc->rl_dev, PCIY_PMG, &pmc) != 0)
+		return;
+
+	/* Enable config register write. */
+	CSR_WRITE_1(sc, RL_EECMD, RL_EE_MODE);
+
+	/* Enable PME. */
+	v = CSR_READ_1(sc, RL_CFG1);
+	v &= ~RL_CFG1_PME;
+	if ((ifp->if_capenable & IFCAP_WOL) != 0)
+		v |= RL_CFG1_PME;
+	CSR_WRITE_1(sc, RL_CFG1, v);
+
+	v = CSR_READ_1(sc, RL_CFG3);
+	v &= ~(RL_CFG3_WOL_LINK | RL_CFG3_WOL_MAGIC);
+	if ((ifp->if_capenable & IFCAP_WOL_MAGIC) != 0)
+		v |= RL_CFG3_WOL_MAGIC;
+	CSR_WRITE_1(sc, RL_CFG3, v);
+
+	/* Config register write done. */
+	CSR_WRITE_1(sc, RL_EECMD, RL_EEMODE_OFF);
+
+	v = CSR_READ_1(sc, RL_CFG5);
+	v &= ~(RL_CFG5_WOL_BCAST | RL_CFG5_WOL_MCAST | RL_CFG5_WOL_UCAST);
+	v &= ~RL_CFG5_WOL_LANWAKE;
+	if ((ifp->if_capenable & IFCAP_WOL_UCAST) != 0)
+		v |= RL_CFG5_WOL_UCAST;
+	if ((ifp->if_capenable & IFCAP_WOL_MCAST) != 0)
+		v |= RL_CFG5_WOL_MCAST | RL_CFG5_WOL_BCAST;
+	if ((ifp->if_capenable & IFCAP_WOL) != 0)
+		v |= RL_CFG5_WOL_LANWAKE;
+	CSR_WRITE_1(sc, RL_CFG5, v);
+	/* Request PME if WOL is requested. */
+	pmstat = pci_read_config(sc->rl_dev, pmc + PCIR_POWER_STATUS, 2);
+	pmstat &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
+	if ((ifp->if_capenable & IFCAP_WOL) != 0)
+		pmstat |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
+	pci_write_config(sc->rl_dev, pmc + PCIR_POWER_STATUS, pmstat, 2);
+}
+
+static void
+rl_clrwol(struct rl_softc *sc)
+{
+	struct ifnet		*ifp;
+	uint8_t			v;
+
+	ifp = sc->rl_ifp;
+	if ((ifp->if_capabilities & IFCAP_WOL) == 0)
+		return;
+
+	/* Enable config register write. */
+	CSR_WRITE_1(sc, RL_EECMD, RL_EE_MODE);
+
+	v = CSR_READ_1(sc, RL_CFG3);
+	v &= ~(RL_CFG3_WOL_LINK | RL_CFG3_WOL_MAGIC);
+	CSR_WRITE_1(sc, RL_CFG3, v);
+
+	/* Config register write done. */
+	CSR_WRITE_1(sc, RL_EECMD, RL_EEMODE_OFF);
+
+	v = CSR_READ_1(sc, RL_CFG5);
+	v &= ~(RL_CFG5_WOL_BCAST | RL_CFG5_WOL_MCAST | RL_CFG5_WOL_UCAST);
+	v &= ~RL_CFG5_WOL_LANWAKE;
+	CSR_WRITE_1(sc, RL_CFG5, v);
 }
