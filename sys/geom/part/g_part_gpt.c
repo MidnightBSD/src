@@ -532,7 +532,7 @@ g_part_gpt_name(struct g_part_table *table, struct g_part_entry *baseentry,
 	char c;
 
 	entry = (struct g_part_gpt_entry *)baseentry;
-	c = (EQUUID(&entry->ent.ent_type, &gpt_uuid_freebsd)) ? 's' : 'p';
+	c = (EQUUID(&entry->ent.ent_type, &gpt_uuid_midnightbsd)) ? 's' : 'p';
 	snprintf(buf, bufsz, "%c%d", c, baseentry->gpe_index);
 	return (buf);
 }
