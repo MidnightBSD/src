@@ -138,6 +138,12 @@ static struct uuid gpt_uuid_freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
 static struct uuid gpt_uuid_freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
 static struct uuid gpt_uuid_freebsd_vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
 static struct uuid gpt_uuid_freebsd_zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+static struct uuid gpt_uuid_midnightbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
+static struct uuid gpt_uuid_midnightbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
+static struct uuid gpt_uuid_midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
+static struct uuid gpt_uuid_midnightbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
+static struct uuid gpt_uuid_midnightbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
+static struct uuid gpt_uuid_midnightbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 static struct uuid gpt_uuid_linux_swap = GPT_ENT_TYPE_LINUX_SWAP;
 static struct uuid gpt_uuid_mbr = GPT_ENT_TYPE_MBR;
 static struct uuid gpt_uuid_unused = GPT_ENT_TYPE_UNUSED;
@@ -319,34 +325,34 @@ gpt_parse_type(const char *type, struct uuid *uuid)
 		*uuid = gpt_uuid_efi;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD);
 	if (!strcasecmp(type, alias)) {
-		*uuid = gpt_uuid_freebsd;
+		*uuid = gpt_uuid_midnightbsd;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_BOOT);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_BOOT);
 	if (!strcasecmp(type, alias)) {
-		*uuid = gpt_uuid_freebsd_boot;
+		*uuid = gpt_uuid_midnightbsd_boot;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP);
 	if (!strcasecmp(type, alias)) {
-		*uuid = gpt_uuid_freebsd_swap;
+		*uuid = gpt_uuid_midnightbsd_swap;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS);
 	if (!strcasecmp(type, alias)) {
-		*uuid = gpt_uuid_freebsd_ufs;
+		*uuid = gpt_uuid_midnightbsd_ufs;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM);
 	if (!strcasecmp(type, alias)) {
-		*uuid = gpt_uuid_freebsd_vinum;
+		*uuid = gpt_uuid_midnightbsd_vinum;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS);
 	if (!strcasecmp(type, alias)) {
-		*uuid = gpt_uuid_freebsd_zfs;
+		*uuid = gpt_uuid_midnightbsd_zfs;
 		return (0);
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_MBR);
@@ -718,18 +724,18 @@ g_part_gpt_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
 	type = &entry->ent.ent_type;
 	if (EQUUID(type, &gpt_uuid_efi))
 		return (g_part_alias_name(G_PART_ALIAS_EFI));
-	if (EQUUID(type, &gpt_uuid_freebsd))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD));
-	if (EQUUID(type, &gpt_uuid_freebsd_boot))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_BOOT));
-	if (EQUUID(type, &gpt_uuid_freebsd_swap))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP));
-	if (EQUUID(type, &gpt_uuid_freebsd_ufs))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS));
-	if (EQUUID(type, &gpt_uuid_freebsd_vinum))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM));
-	if (EQUUID(type, &gpt_uuid_freebsd_zfs))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS));
+	if (EQUUID(type, &gpt_uuid_midnightbsd))
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD));
+	if (EQUUID(type, &gpt_uuid_midnightbsd_boot))
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_BOOT));
+	if (EQUUID(type, &gpt_uuid_midnightbsd_swap))
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP));
+	if (EQUUID(type, &gpt_uuid_midnightbsd_ufs))
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS));
+	if (EQUUID(type, &gpt_uuid_midnightbsd_vinum))
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM));
+	if (EQUUID(type, &gpt_uuid_midnightbsd_zfs))
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS));
 	if (EQUUID(type, &gpt_uuid_mbr))
 		return (g_part_alias_name(G_PART_ALIAS_MBR));
 	buf[0] = '!';

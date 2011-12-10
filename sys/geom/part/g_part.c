@@ -67,12 +67,12 @@ struct g_part_alias_list {
 	enum g_part_alias alias;
 } g_part_alias_list[G_PART_ALIAS_COUNT] = {
 	{ "efi", G_PART_ALIAS_EFI },
-	{ "freebsd", G_PART_ALIAS_FREEBSD },
-	{ "freebsd-boot", G_PART_ALIAS_FREEBSD_BOOT },
-	{ "freebsd-swap", G_PART_ALIAS_FREEBSD_SWAP },
-	{ "freebsd-ufs", G_PART_ALIAS_FREEBSD_UFS },
-	{ "freebsd-vinum", G_PART_ALIAS_FREEBSD_VINUM },
-	{ "freebsd-zfs", G_PART_ALIAS_FREEBSD_ZFS },
+	{ "midnightbsd", G_PART_ALIAS_MIDNIGHTBSD },
+	{ "midnightbsd-boot", G_PART_ALIAS_MIDNIGHTBSD_BOOT },
+	{ "midnightbsd-swap", G_PART_ALIAS_MIDNIGHTBSD_SWAP },
+	{ "midnightbsd-ufs", G_PART_ALIAS_MIDNIGHTBSD_UFS },
+	{ "midnightbsd-vinum", G_PART_ALIAS_MIDNIGHTBSD_VINUM },
+	{ "midnightbsd-zfs", G_PART_ALIAS_MIDNIGHTBSD_ZFS },
 	{ "mbr", G_PART_ALIAS_MBR }
 };
 

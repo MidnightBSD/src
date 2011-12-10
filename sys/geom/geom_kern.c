@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_kern.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_kern.c,v 1.41 2007/06/05 00:00:51 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_kern.c,v 1.41.2.1 2009/01/11 21:45:23 sam Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -181,7 +181,7 @@ sysctl_kern_geom_conftxt(SYSCTL_HANDLER_ARGS)
 	int error;
 	struct sbuf *sb;
 
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	g_waitfor_event(g_conftxt, sb, M_WAITOK, NULL);
 	error = SYSCTL_OUT(req, sbuf_data(sb), sbuf_len(sb) + 1);
 	sbuf_delete(sb);
@@ -194,7 +194,7 @@ sysctl_kern_geom_confdot(SYSCTL_HANDLER_ARGS)
 	int error;
 	struct sbuf *sb;
 
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	g_waitfor_event(g_confdot, sb, M_WAITOK, NULL);
 	error = SYSCTL_OUT(req, sbuf_data(sb), sbuf_len(sb) + 1);
 	sbuf_delete(sb);
@@ -207,7 +207,7 @@ sysctl_kern_geom_confxml(SYSCTL_HANDLER_ARGS)
 	int error;
 	struct sbuf *sb;
 
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	g_waitfor_event(g_confxml, sb, M_WAITOK, NULL);
 	error = SYSCTL_OUT(req, sbuf_data(sb), sbuf_len(sb) + 1);
 	sbuf_delete(sb);

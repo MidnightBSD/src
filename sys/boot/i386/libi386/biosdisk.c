@@ -317,10 +317,10 @@ bd_print(int verbose)
 }
 
 static uuid_t efi = GPT_ENT_TYPE_EFI;
-static uuid_t freebsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
-static uuid_t freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
-static uuid_t freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
-static uuid_t freebsd_zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+static uuid_t midnightbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
+static uuid_t midnightbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
+static uuid_t midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
+static uuid_t midnightbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 static uuid_t ms_basic_data = GPT_ENT_TYPE_MS_BASIC_DATA;
 
 static void

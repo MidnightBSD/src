@@ -15,7 +15,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/boot/i386/gptboot/gptboot.c,v 1.86.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/boot/i386/gptboot/gptboot.c,v 1.1 2011/10/16 21:11:44 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/gpt.h>
@@ -99,7 +99,7 @@ __MBSDID("$MidnightBSD$");
 
 extern uint32_t _end;
 
-static const uuid_t freebsd_ufs_uuid = GPT_ENT_TYPE_FREEBSD_UFS;
+static const uuid_t midnightbsd_ufs_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 static const char optstr[NOPT] = "DhaCcdgmnpqrsv"; /* Also 'P', 'S' */
 static const unsigned char flags[NOPT] = {
     RBX_DUAL,

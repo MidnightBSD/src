@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_ccd.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp.
  * Copyright (c) 1995 Jason R. Thorpe.
@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_ccd.c,v 1.155 2006/04/13 20:35:31 cracauer Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_ccd.c,v 1.155.2.1 2009/01/11 21:45:23 sam Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -791,7 +791,7 @@ g_ccd_create(struct gctl_req *req, struct g_class *mp)
 	pp->sectorsize = sc->sc_secsize;
 	g_error_provider(pp, 0);
 
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	sbuf_printf(sb, "ccd%d: %d components ", sc->sc_unit, *nprovider);
 	for (i = 0; i < *nprovider; i++) {
 		sbuf_printf(sb, "%s%s",
@@ -841,7 +841,7 @@ g_ccd_list(struct gctl_req *req, struct g_class *mp)
 
 	up = gctl_get_paraml(req, "unit", sizeof (int));
 	unit = *up;
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	LIST_FOREACH(gp, &mp->geom, geom) {
 		cs = gp->softc;
 		if (cs == NULL || (unit >= 0 && unit != cs->sc_unit))

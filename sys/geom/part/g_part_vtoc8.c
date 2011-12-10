@@ -108,22 +108,22 @@ vtoc8_parse_type(const char *type, uint16_t *tag)
 		*tag = (uint16_t)lt;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP);
 	if (!strcasecmp(type, alias)) {
 		*tag = VTOC_TAG_FREEBSD_SWAP;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS);
 	if (!strcasecmp(type, alias)) {
 		*tag = VTOC_TAG_FREEBSD_UFS;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM);
 	if (!strcasecmp(type, alias)) {
 		*tag = VTOC_TAG_FREEBSD_VINUM;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS);
 	if (!strcasecmp(type, alias)) {
 		*tag = VTOC_TAG_FREEBSD_ZFS;
 		return (0);
@@ -467,13 +467,13 @@ g_part_vtoc8_type(struct g_part_table *basetable, struct g_part_entry *entry,
 	table = (struct g_part_vtoc8_table *)basetable;
 	tag = be16dec(&table->vtoc.part[entry->gpe_index - 1].tag);
 	if (tag == VTOC_TAG_FREEBSD_SWAP)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP));
 	if (tag == VTOC_TAG_FREEBSD_UFS)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS));
 	if (tag == VTOC_TAG_FREEBSD_VINUM)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM));
 	if (tag == VTOC_TAG_FREEBSD_ZFS)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS));
 	snprintf(buf, bufsz, "!%d", tag);
 	return (buf);
 }

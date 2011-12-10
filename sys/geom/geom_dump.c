@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_dump.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_dump.c,v 1.32 2005/11/12 20:02:02 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_dump.c,v 1.32.2.1 2010/04/22 14:54:54 jh Exp $");
 
 #include <sys/param.h>
 #include <sys/sbuf.h>
@@ -155,6 +155,28 @@ g_conftxt(void *p, int flag)
 
 
 static void
+g_conf_print_escaped(struct sbuf *sb, const char *fmt, const char *str)
+{
+	struct sbuf *s;
+	const u_char *c;
+
+	s = sbuf_new_auto();
+
+	for (c = str; *c != '\0'; c++) {
+		if (*c == '&' || *c == '<' || *c == '>' ||
+		    *c == '\'' || *c == '"' || *c > 0x7e)
+			sbuf_printf(s, "&#x%X;", *c);
+		else if (*c == '\t' || *c == '\n' || *c == '\r' || *c > 0x1f)
+			sbuf_putc(s, *c);
+		else
+			sbuf_putc(s, '?');
+	}
+	sbuf_finish(s);
+	sbuf_printf(sb, fmt, sbuf_data(s));
+	sbuf_delete(s);
+}
+
+static void
 g_conf_consumer(struct sbuf *sb, struct g_consumer *cp)
 {
 
@@ -182,7 +204,7 @@ g_conf_provider(struct sbuf *sb, struct g_provider *pp)
 	sbuf_printf(sb, "\t  <geom ref=\"%p\"/>\n", pp->geom);
 	sbuf_printf(sb, "\t  <mode>r%dw%de%d</mode>\n",
 	    pp->acr, pp->acw, pp->ace);
-	sbuf_printf(sb, "\t  <name>%s</name>\n", pp->name);
+	g_conf_print_escaped(sb, "\t  <name>%s</name>\n", pp->name);
 	sbuf_printf(sb, "\t  <mediasize>%jd</mediasize>\n",
 	    (intmax_t)pp->mediasize);
 	sbuf_printf(sb, "\t  <sectorsize>%u</sectorsize>\n", pp->sectorsize);
@@ -205,7 +227,7 @@ g_conf_geom(struct sbuf *sb, struct g_geom *gp, struct g_provider *pp, struct g_
 
 	sbuf_printf(sb, "    <geom id=\"%p\">\n", gp);
 	sbuf_printf(sb, "      <class ref=\"%p\"/>\n", gp->class);
-	sbuf_printf(sb, "      <name>%s</name>\n", gp->name);
+	g_conf_print_escaped(sb, "      <name>%s</name>\n", gp->name);
 	sbuf_printf(sb, "      <rank>%d</rank>\n", gp->rank);
 	if (gp->flags & G_GEOM_WITHER)
 		sbuf_printf(sb, "      <wither/>\n");
@@ -234,7 +256,7 @@ g_conf_class(struct sbuf *sb, struct g_class *mp, struct g_geom *gp, struct g_pr
 	struct g_geom *gp2;
 
 	sbuf_printf(sb, "  <class id=\"%p\">\n", mp);
-	sbuf_printf(sb, "    <name>%s</name>\n", mp->name);
+	g_conf_print_escaped(sb, "    <name>%s</name>\n", mp->name);
 	LIST_FOREACH(gp2, &mp->geom, geom) {
 		if (gp != NULL && gp != gp2)
 			continue;

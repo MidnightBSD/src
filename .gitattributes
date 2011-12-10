@@ -37099,7 +37099,6 @@ sys/geom/part/g_part_bsd.c -text
 sys/geom/part/g_part_gpt.c -text
 sys/geom/part/g_part_if.m -text
 sys/geom/part/g_part_mbr.c -text
-sys/geom/part/g_part_pc98.c -text
 sys/geom/part/g_part_vtoc8.c -text
 sys/geom/raid3/g_raid3.c -text
 sys/geom/raid3/g_raid3.h -text

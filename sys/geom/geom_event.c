@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_event.c,v 1.4 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_event.c,v 1.56 2007/09/27 20:18:34 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_event.c,v 1.56.2.1 2011/01/15 09:36:31 jh Exp $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -213,11 +213,12 @@ one_event(void)
 	g_topology_assert();
 	mtx_lock(&g_eventlock);
 	TAILQ_REMOVE(&g_events, ep, events);
-	mtx_unlock(&g_eventlock);
 	if (ep->flag & EV_WAKEUP) {
 		ep->flag |= EV_DONE;
+		mtx_unlock(&g_eventlock);
 		wakeup(ep);
 	} else {
+		mtx_unlock(&g_eventlock);
 		g_free(ep);
 	}
 	g_topology_unlock();
@@ -356,11 +357,14 @@ g_waitfor_event(g_event_t *func, void *arg, int flag, ...)
 	va_end(ap);
 	if (error)
 		return (error);
-	do 
-		tsleep(ep, PRIBIO, "g_waitfor_event", hz);
-	while (!(ep->flag & EV_DONE));
+
+	mtx_lock(&g_eventlock);
+	while (!(ep->flag & EV_DONE))
+		msleep(ep, &g_eventlock, PRIBIO, "g_waitfor_event", hz);
 	if (ep->flag & EV_CANCELED)
 		error = EAGAIN;
+	mtx_unlock(&g_eventlock);
+
 	g_free(ep);
 	return (error);
 }

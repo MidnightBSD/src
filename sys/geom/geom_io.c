@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_io.c,v 1.4 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_io.c,v 1.75 2007/05/05 16:35:22 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_io.c,v 1.75.2.5 2010/09/19 19:57:15 mav Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -298,8 +298,8 @@ g_io_check(struct bio *bp)
 	case BIO_READ:
 	case BIO_WRITE:
 	case BIO_DELETE:
-		/* Zero sectorsize is a probably lack of media */
-		if (pp->sectorsize == 0)
+		/* Zero sectorsize or mediasize is probably a lack of media. */
+		if (pp->sectorsize == 0 || pp->mediasize == 0)
 			return (ENXIO);
 		/* Reject I/O not on sector boundary */
 		if (bp->bio_offset % pp->sectorsize)
@@ -323,6 +323,7 @@ void
 g_io_request(struct bio *bp, struct g_consumer *cp)
 {
 	struct g_provider *pp;
+	int first;
 
 	KASSERT(cp != NULL, ("NULL cp in g_io_request"));
 	KASSERT(bp != NULL, ("NULL bp in g_io_request"));
@@ -374,7 +375,10 @@ g_io_request(struct bio *bp, struct g_consumer *cp)
 	    ("Bio already on queue bp=%p", bp));
 	bp->bio_flags |= BIO_ONQUEUE;
 
-	binuptime(&bp->bio_t0);
+	if (g_collectstats)
+		binuptime(&bp->bio_t0);
+	else
+		getbinuptime(&bp->bio_t0);
 
 	/*
 	 * The statistics collection is lockless, as such, but we
@@ -389,12 +393,14 @@ g_io_request(struct bio *bp, struct g_consumer *cp)
 
 	pp->nstart++;
 	cp->nstart++;
+	first = TAILQ_EMPTY(&g_bio_run_down.bio_queue);
 	TAILQ_INSERT_TAIL(&g_bio_run_down.bio_queue, bp, bio_queue);
 	g_bio_run_down.bio_queue_length++;
 	g_bioq_unlock(&g_bio_run_down);
 
 	/* Pass it on down. */
-	wakeup(&g_wait_down);
+	if (first)
+		wakeup(&g_wait_down);
 }
 
 void
@@ -402,6 +408,7 @@ g_io_deliver(struct bio *bp, int error)
 {
 	struct g_consumer *cp;
 	struct g_provider *pp;
+	int first;
 
 	KASSERT(bp != NULL, ("NULL bp in g_io_deliver"));
 	pp = bp->bio_to;
@@ -455,11 +462,13 @@ g_io_deliver(struct bio *bp, int error)
 	pp->nend++;
 	if (error != ENOMEM) {
 		bp->bio_error = error;
+		first = TAILQ_EMPTY(&g_bio_run_up.bio_queue);
 		TAILQ_INSERT_TAIL(&g_bio_run_up.bio_queue, bp, bio_queue);
 		bp->bio_flags |= BIO_ONQUEUE;
 		g_bio_run_up.bio_queue_length++;
 		g_bioq_unlock(&g_bio_run_up);
-		wakeup(&g_wait_up);
+		if (first)
+			wakeup(&g_wait_up);
 		return;
 	}
 	g_bioq_unlock(&g_bio_run_up);
@@ -486,7 +495,7 @@ g_io_schedule_down(struct thread *tp __unused)
 		if (bp == NULL) {
 			CTR0(KTR_GEOM, "g_down going to sleep");
 			msleep(&g_wait_down, &g_bio_run_down.bio_queue_lock,
-			    PRIBIO | PDROP, "-", hz/10);
+			    PRIBIO | PDROP, "-", 0);
 			continue;
 		}
 		CTR0(KTR_GEOM, "g_down has work to do");
@@ -591,7 +600,7 @@ g_io_schedule_up(struct thread *tp __unused)
 		}
 		CTR0(KTR_GEOM, "g_up going to sleep");
 		msleep(&g_wait_up, &g_bio_run_up.bio_queue_lock,
-		    PRIBIO | PDROP, "-", hz/10);
+		    PRIBIO | PDROP, "-", 0);
 	}
 }
 
@@ -653,9 +662,8 @@ g_delete_data(struct g_consumer *cp, off_t offset, off_t length)
 	struct bio *bp;
 	int error;
 
-	KASSERT(length > 0 && length >= cp->provider->sectorsize &&
-	    length <= MAXPHYS, ("g_delete_data(): invalid length %jd",
-	    (intmax_t)length));
+	KASSERT(length > 0 && length >= cp->provider->sectorsize,
+	    ("g_delete_data(): invalid length %jd", (intmax_t)length));
 
 	bp = g_alloc_bio();
 	bp->bio_cmd = BIO_DELETE;

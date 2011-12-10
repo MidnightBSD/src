@@ -37,12 +37,12 @@
 
 enum g_part_alias {
 	G_PART_ALIAS_EFI,		/* A EFI system partition entry. */
-	G_PART_ALIAS_FREEBSD,		/* A BSD labeled partition entry. */
-	G_PART_ALIAS_FREEBSD_BOOT,	/* A FreeBSD boot partition entry. */
-	G_PART_ALIAS_FREEBSD_SWAP,	/* A swap partition entry. */
-	G_PART_ALIAS_FREEBSD_UFS,	/* A UFS/UFS2 file system entry. */
-	G_PART_ALIAS_FREEBSD_VINUM,	/* A Vinum partition entry. */
-	G_PART_ALIAS_FREEBSD_ZFS,	/* A ZFS file system entry. */
+	G_PART_ALIAS_MIDNIGHTBSD,	/* A BSD labeled partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_BOOT,	/* A MidnightBSD boot partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_SWAP,	/* A swap partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_UFS,	/* A UFS/UFS2 file system entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_VINUM,	/* A Vinum partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_ZFS,	/* A ZFS file system entry. */
 	G_PART_ALIAS_MBR,		/* A MBR (extended) partition entry. */
 	/* Keep the following last */
 	G_PART_ALIAS_COUNT

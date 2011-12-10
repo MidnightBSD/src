@@ -119,7 +119,7 @@ mbr_parse_type(const char *type, u_char *dp_typ)
 		*dp_typ = (u_char)lt;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD);
 	if (!strcasecmp(type, alias)) {
 		*dp_typ = DOSPTYP_386BSD;
 		return (0);
@@ -482,7 +482,7 @@ g_part_mbr_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
 	entry = (struct g_part_mbr_entry *)baseentry;
 	type = entry->ent.dp_typ;
 	if (type == DOSPTYP_386BSD)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD));
 	snprintf(buf, bufsz, "!%d", type);
 	return (buf);
 }

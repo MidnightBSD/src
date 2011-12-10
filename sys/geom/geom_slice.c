@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_slice.c,v 1.4 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_slice.c,v 1.62 2007/05/05 17:52:22 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_slice.c,v 1.62.2.1 2009/01/11 21:45:23 sam Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -386,7 +386,7 @@ g_slice_config(struct g_geom *gp, u_int idx, int how, off_t offset, off_t length
 		pp->mediasize = gsl->length;
 		return (0);
 	}
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	va_start(ap, fmt);
 	sbuf_vprintf(sb, fmt, ap);
 	va_end(ap);

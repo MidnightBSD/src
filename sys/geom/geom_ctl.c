@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_ctl.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_ctl.c,v 1.39 2007/03/30 16:32:08 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_ctl.c,v 1.39.2.1 2009/01/11 21:45:23 sam Exp $");
 
 #include "opt_geom.h"
 
@@ -465,7 +465,7 @@ g_ctl_ioctl_ctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct th
 
 	req = (void *)data;
 	req->nerror = 0;
-	req->serror = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	req->serror = sbuf_new_auto();
 	/* It is an error if we cannot return an error text */
 	if (req->lerror < 2)
 		return (EINVAL);
