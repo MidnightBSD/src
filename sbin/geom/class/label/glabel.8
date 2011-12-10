@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/geom/class/label/glabel.8,v 1.14 2005/08/26 11:39:38 takawata Exp $
+.\" $FreeBSD: src/sbin/geom/class/label/glabel.8,v 1.14.2.1 2009/04/07 19:35:41 ivoras Exp $
 .\"
 .Dd July 2, 2004
 .Dt GLABEL 8
@@ -91,11 +91,17 @@ Currently supported file systems are:
 .Pp
 .Bl -bullet -offset indent -compact
 .It
-UFS1 (directory
+UFS1 volume names (directory
 .Pa /dev/ufs/ ) .
 .It
-UFS2 (directory
+UFS2 volume names (directory
 .Pa /dev/ufs/ ) .
+.It
+UFS1 file system IDs (directory
+.Pa /dev/ufsid/ ) .
+.It
+UFS2 file system IDs (directory
+.Pa /dev/ufsid/ ) .
 .It
 MSDOSFS (FAT12, FAT16, FAT32) (directory
 .Pa /dev/msdosfs/ ) .
