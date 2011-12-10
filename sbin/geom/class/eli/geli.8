@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/geom/class/eli/geli.8,v 1.22 2007/09/01 06:33:01 pjd Exp $
+.\" $FreeBSD: src/sbin/geom/class/eli/geli.8,v 1.22.2.1 2011/06/14 10:50:16 gjb Exp $
 .\"
-.Dd September 16, 2006
+.Dd March 9, 2011
 .Dt GELI 8
 .Os
 .Sh NAME
@@ -543,15 +543,17 @@ Enter passphrase:
 .Ed
 .Pp
 Create an encrypted provider, but use two keys:
-one for your girlfriend and one for
-you (so there will be no tragedy if she forgets her passphrase):
+one for your employee and one for you as company's security officer
+(so there is no tragedy if the employee
+.Qq accidentally
+forgets his passphrase):
 .Bd -literal -offset indent
 # geli init /dev/da2
-Enter new passphrase:	(enter your passphrase)
+Enter new passphrase:	(enter security officer passphrase)
 Reenter new passphrase:
 # geli setkey -n 1 /dev/da2
-Enter passphrase:	(enter your passphrase)
-Enter new passphrase:	(let your girlfriend enter her passphrase ...)
+Enter passphrase:	(enter security officer passphrase)
+Enter new passphrase:	(let your employee enter his passphrase ...)
 Reenter new passphrase:	(... twice)
 .Ed
 .Pp
@@ -643,6 +645,10 @@ changes with the data he owns without notice.
 In other words
 .Nm
 will not protect your data against replay attacks.
+.Pp
+It is recommended to write the whole provider before the first use,
+in order to make sure that all sectors and their corresponding
+checksums are properly initialized into a consistent state.
 .Sh SEE ALSO
 .Xr crypto 4 ,
 .Xr gbde 4 ,
