@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20111212:
+	mksh r40d imported
+
 20111210:
 	re(4) and rl(4) updated to support new chips.
 
@@ -1152,4 +1155,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.147 2011/12/07 13:40:58 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.148 2011/12/10 23:07:55 laffer1 Exp $
