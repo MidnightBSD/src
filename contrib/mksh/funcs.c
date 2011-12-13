@@ -38,7 +38,7 @@
 #endif
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.199 2011/11/19 17:42:24 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.204 2011/12/09 20:40:25 tg Exp $");
 
 #if HAVE_KILLPG
 /*
@@ -616,9 +616,9 @@ c_typeset(const char **wp)
 	struct block *l;
 	struct tbl *vp, **p;
 	uint32_t fset = 0, fclr = 0, flag;
-	int thing = 0, field, base, optc;
+	int thing = 0, field = 0, base = 0, optc;
 	const char *opts;
-	const char *fieldstr, *basestr;
+	const char *fieldstr = NULL, *basestr = NULL;
 	bool localv = false, func = false, pflag = false, istset = true;
 
 	switch (**wp) {
@@ -649,7 +649,6 @@ c_typeset(const char **wp)
 	/* see comment below regarding possible opions */
 	opts = istset ? "L#R#UZ#afi#lnprtux" : "p";
 
-	fieldstr = basestr = NULL;
 	builtin_opt.flags |= GF_PLUSOPT;
 	/*
 	 * AT&T ksh seems to have 0-9 as options which are multiplied
@@ -725,6 +724,8 @@ c_typeset(const char **wp)
 			flag = EXPORT;
 			break;
 		case '?':
+ errout:
+			set_refflag = SRF_NOP;
 			return (1);
 		}
 		if (builtin_opt.info & GI_PLUS) {
@@ -738,12 +739,12 @@ c_typeset(const char **wp)
 		}
 	}
 
-	field = 0;
 	if (fieldstr && !bi_getn(fieldstr, &field))
-		return (1);
-	base = 0;
-	if (basestr && !bi_getn(basestr, &base))
-		return (1);
+		goto errout;
+	if (basestr && (!bi_getn(basestr, &base) || base < 1 || base > 36)) {
+		bi_errorf("%s: %s", "bad integer base", basestr);
+		goto errout;
+	}
 
 	if (!(builtin_opt.info & GI_MINUSMINUS) && wp[builtin_opt.optind] &&
 	    (wp[builtin_opt.optind][0] == '-' ||
@@ -756,8 +757,7 @@ c_typeset(const char **wp)
 	if (func && (((fset|fclr) & ~(TRACE|UCASEV_AL|EXPORT)) ||
 	    set_refflag != SRF_NOP)) {
 		bi_errorf("only -t, -u and -x options may be used with -f");
-		set_refflag = SRF_NOP;
-		return (1);
+		goto errout;
 	}
 	if (wp[builtin_opt.optind]) {
 		/*
@@ -813,8 +813,7 @@ c_typeset(const char **wp)
 				}
 			} else if (!typeset(wp[i], fset, fclr, field, base)) {
 				bi_errorf("%s: %s", wp[i], "not identifier");
-				set_refflag = SRF_NOP;
-				return (1);
+				goto errout;
 			}
 		}
 		set_refflag = SRF_NOP;
@@ -968,6 +967,7 @@ c_typeset(const char **wp)
 			}
 		}
 	}
+	set_refflag = SRF_NOP;
 	return (0);
 }
 
@@ -2697,7 +2697,7 @@ c_mknod(const char **wp)
 #endif
 
 /*-
-   test(1) accepts the following grammar:
+   test(1) roughly accepts the following grammar:
 	oexpr	::= aexpr | aexpr "-o" oexpr ;
 	aexpr	::= nexpr | nexpr "-a" aexpr ;
 	nexpr	::= primary | "!" nexpr ;
@@ -2713,19 +2713,21 @@ c_mknod(const char **wp)
 
 	binary-operator ::= "="|"=="|"!="|"-eq"|"-ne"|"-ge"|"-gt"|"-le"|"-lt"|
 			    "-nt"|"-ot"|"-ef"|
-			    "<"|">"	# rules used for [[ .. ]] expressions
+			    "<"|">"	# rules used for [[ ... ]] expressions
 			    ;
-	operand ::= <any thing>
+	operand ::= <anything>
 */
 
 /* POSIX says > 1 for errors */
-#define T_ERR_EXIT	2
+#define T_ERR_EXIT 2
 
 int
 c_test(const char **wp)
 {
-	int argc, res;
+	int argc, rv, invert = 0;
 	Test_env te;
+	Test_op op;
+	const char *lhs, **swp;
 
 	te.flags = 0;
 	te.isa = ptest_isa;
@@ -2747,63 +2749,88 @@ c_test(const char **wp)
 	te.wp_end = wp + argc;
 
 	/*
-	 * Handle the special cases from POSIX.2, section 4.62.4.
-	 * Implementation of all the rules isn't necessary since
-	 * our parser does the right thing for the omitted steps.
+	 * Attempt to conform to POSIX special cases. This is pretty
+	 * dumb code straight-forward from the 2008 spec, but unless
+	 * the old pdksh code doesn't live from so many assumptions.
+	 * It does, though, inline some calls to '(*te.funcname)()'.
 	 */
-	if (argc <= 5) {
-		const char **owp = wp, **owpend = te.wp_end;
-		int invert = 0;
-		Test_op op;
-		const char *opnd1, *opnd2;
-
-		if (argc >= 2 && ((*te.isa)(&te, TM_OPAREN))) {
-			te.pos.wp = te.wp_end - 1;
-			if ((*te.isa)(&te, TM_CPAREN)) {
-				argc -= 2;
-				te.wp_end--;
-				te.pos.wp = owp + 2;
-			} else {
-				te.pos.wp = owp + 1;
-				te.wp_end = owpend;
-			}
+	switch (argc - 1) {
+	case 0:
+		return (1);
+	case 1:
+ ptest_one:
+		op = TO_STNZE;
+		goto ptest_unary;
+	case 2:
+ ptest_two:
+		if (ptest_isa(&te, TM_NOT)) {
+			++invert;
+			goto ptest_one;
 		}
-
-		while (--argc >= 0) {
-			if ((*te.isa)(&te, TM_END))
-				return (!0);
-			if (argc == 3) {
-				opnd1 = (*te.getopnd)(&te, TO_NONOP, 1);
-				if ((op = (*te.isa)(&te, TM_BINOP))) {
-					opnd2 = (*te.getopnd)(&te, op, 1);
-					res = (*te.eval)(&te, op, opnd1,
-					    opnd2, 1);
-					if (te.flags & TEF_ERROR)
-						return (T_ERR_EXIT);
-					if (invert & 1)
-						res = !res;
-					return (!res);
-				}
-				/* back up to opnd1 */
-				te.pos.wp--;
-			}
-			if (argc == 1) {
-				opnd1 = (*te.getopnd)(&te, TO_NONOP, 1);
-				res = (*te.eval)(&te, TO_STNZE, opnd1,
-				    NULL, 1);
-				if (invert & 1)
-					res = !res;
-				return (!res);
-			}
-			if ((*te.isa)(&te, TM_NOT)) {
-				invert++;
-			} else
-				break;
+		if ((op = ptest_isa(&te, TM_UNOP))) {
+ ptest_unary:
+			rv = test_eval(&te, op, *te.pos.wp++, NULL, true);
+ ptest_out:
+			return ((invert & 1) ? rv : !rv);
 		}
-		te.pos.wp = owp + 1;
-		te.wp_end = owpend;
+		/* let the parser deal with anything else */
+		break;
+	case 3:
+ ptest_three:
+		swp = te.pos.wp;
+		/* use inside knowledge of ptest_getopnd inlined below */
+		lhs = *te.pos.wp++;
+		if ((op = ptest_isa(&te, TM_BINOP))) {
+			/* test lhs op rhs */
+			rv = test_eval(&te, op, lhs, *te.pos.wp++, true);
+			goto ptest_out;
+		}
+		/* back up to lhs */
+		te.pos.wp = swp;
+		if (ptest_isa(&te, TM_NOT)) {
+			++invert;
+			goto ptest_two;
+		}
+		if (ptest_isa(&te, TM_OPAREN)) {
+			swp = te.pos.wp;
+			/* skip operand, without evaluation */
+			te.pos.wp++;
+			/* check for closing parenthesis */
+			op = ptest_isa(&te, TM_CPAREN);
+			/* back up to operand */
+			te.pos.wp = swp;
+			/* if there was a closing paren, handle it */
+			if (op)
+				goto ptest_one;
+			/* backing up is done before calling the parser */
+		}
+		/* let the parser deal with it */
+		break;
+	case 4:
+		if (ptest_isa(&te, TM_NOT)) {
+			++invert;
+			goto ptest_three;
+		}
+		if (ptest_isa(&te, TM_OPAREN)) {
+			swp = te.pos.wp;
+			/* skip two operands, without evaluation */
+			te.pos.wp++;
+			te.pos.wp++;
+			/* check for closing parenthesis */
+			op = ptest_isa(&te, TM_CPAREN);
+			/* back up to first operand */
+			te.pos.wp = swp;
+			/* if there was a closing paren, handle it */
+			if (op)
+				goto ptest_two;
+			/* backing up is done before calling the parser */
+		}
+		/* defer this to the parser */
+		break;
 	}
 
+	/* "The results are unspecified." */
+	te.pos.wp = wp + 1;
 	return (test_parse(&te));
 }
 

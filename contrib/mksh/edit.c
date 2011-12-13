@@ -25,7 +25,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.222 2011/10/07 19:45:08 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.225 2011/12/11 18:07:45 tg Exp $");
 
 /*
  * in later versions we might use libtermcap for this, but since external
@@ -859,6 +859,7 @@ static int xlp_valid;
 
 static char **x_histp;		/* history position */
 static int x_nextcmd;		/* for newline-and-next */
+static char **x_histncp;	/* saved x_histp for " */
 static char *xmp;		/* mark pointer */
 static unsigned char x_last_command;
 static unsigned char (*x_tab)[X_TABSZ];	/* key definition */
@@ -1130,10 +1131,13 @@ x_emacs(char *buf, size_t len)
 	xx_cols = x_cols;
 	x_init_prompt();
 
+	x_histncp = NULL;
 	if (x_nextcmd >= 0) {
 		int off = source->line - x_nextcmd;
-		if (histptr - history >= off)
+		if (histptr - history >= off) {
 			x_load_hist(histptr - off);
+			x_histncp = x_histp;
+		}
 		x_nextcmd = -1;
 	}
 	editmode = 1;
@@ -1773,7 +1777,10 @@ x_load_hist(char **hp)
 static int
 x_nl_next_com(int c MKSH_A_UNUSED)
 {
-	x_nextcmd = source->line - (histptr - x_histp) + 1;
+	if (!x_histncp || (x_histp != x_histncp && x_histp != histptr + 1))
+		/* fresh start of ^O */
+		x_histncp = x_histp;
+	x_nextcmd = source->line - (histptr - x_histncp) + 1;
 	return (x_newline('\n'));
 }
 
@@ -3275,7 +3282,7 @@ static int Forwword(int);
 static int Backword(int);
 static int Endword(int);
 static int grabhist(int, int);
-static int grabsearch(int, int, int, char *);
+static int grabsearch(int, int, int, const char *);
 static void redraw_line(bool);
 static void refresh(int);
 static int outofwin(void);
@@ -4896,7 +4903,7 @@ grabhist(int save, int n)
 }
 
 static int
-grabsearch(int save, int start, int fwd, char *pat)
+grabsearch(int save, int start, int fwd, const char *pat)
 {
 	char *hptr;
 	int hist;
@@ -4910,8 +4917,7 @@ grabsearch(int save, int start, int fwd, char *pat)
 		start--;
 	anchored = *pat == '^' ? (++pat, 1) : 0;
 	if ((hist = findhist(start, fwd, pat, anchored)) < 0) {
-		/* if (start != 0 && fwd && match(holdbuf, pat) >= 0) {} */
-		/* XXX should strcmp be strncmp? */
+		/* (start != 0 && fwd && match(holdbuf, pat) >= 0) */
 		if (start != 0 && fwd && strcmp(holdbuf, pat) >= 0) {
 			restore_cbuf();
 			return (0);

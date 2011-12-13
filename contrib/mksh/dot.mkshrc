@@ -1,5 +1,5 @@
-# $Id: dot.mkshrc,v 1.1.1.13 2011-11-22 23:28:05 laffer1 Exp $
-# $MirOS: src/bin/mksh/dot.mkshrc,v 1.65 2011/08/27 18:06:40 tg Exp $
+# $Id: dot.mkshrc,v 1.1.1.14 2011-12-13 03:09:57 laffer1 Exp $
+# $MirOS: src/bin/mksh/dot.mkshrc,v 1.68 2011/11/25 23:58:04 tg Exp $
 #-
 # Copyright (c) 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011
 #	Thorsten Glaser <tg@mirbsd.org>
@@ -75,10 +75,8 @@ function cd_csh {
 }
 function dirs {
 	local d dwidth
-	local -i isnoglob=0 fl=0 fv=0 fn=0 cpos=0
+	local -i fl=0 fv=0 fn=0 cpos=0
 
-	[[ $(set +o) == *@(-o noglob)@(| *) ]] && isnoglob=1
-	set -o noglob
 	while getopts ":lvn" d; do
 		case $d {
 		(l)	fl=1 ;;
@@ -117,18 +115,15 @@ function dirs {
 		done
 		print
 	fi
-	(( isnoglob )) || set +o noglob
 	return 0
 }
 function popd {
 	local d fa
-	local -i isnoglob=0 n=1
+	local -i n=1
 
-	[[ $(set +o) == *@(-o noglob)@(| *) ]] && isnoglob=1
-	set -o noglob
 	while getopts ":0123456789lvn" d; do
 		case $d {
-		(l|v|n)	fa="$fa -$d" ;;
+		(l|v|n)	fa+=" -$d" ;;
 		(+*)	n=2
 			break ;;
 		(*)	print -u2 'Usage: popd [-lvn] [+<n>].'
@@ -156,18 +151,15 @@ function popd {
 	unset DIRSTACK[n]
 	set -A DIRSTACK -- "${DIRSTACK[@]}"
 	cd_csh "${DIRSTACK[0]}" || return 1
-	(( isnoglob )) || set +o noglob
 	dirs $fa
 }
 function pushd {
 	local d fa
-	local -i isnoglob=0 n=1
+	local -i n=1
 
-	[[ $(set +o) == *@(-o noglob)@(| *) ]] && isnoglob=1
-	set -o noglob
 	while getopts ":0123456789lvn" d; do
 		case $d {
-		(l|v|n)	fa="$fa -$d" ;;
+		(l|v|n)	fa+=" -$d" ;;
 		(+*)	n=2
 			break ;;
 		(*)	print -u2 'Usage: pushd [-lvn] [<dir>|+<n>].'
@@ -201,7 +193,6 @@ function pushd {
 		set -A DIRSTACK -- placeholder "${DIRSTACK[@]}"
 		cd_csh "$1" || return 1
 	fi
-	(( isnoglob )) || set +o noglob
 	dirs $fa
 }
 
@@ -229,7 +220,7 @@ function Lb64decode {
 	set +U
 	local c s="$*" t=
 	[[ -n $s ]] || { s=$(cat;print x); s=${s%x}; }
-	local -i i=0 n=${#s} p=0 v x
+	local -i i=0 j=0 n=${#s} p=0 v x
 	local -i16 o
 
 	while (( i < n )); do
@@ -252,7 +243,10 @@ function Lb64decode {
 			p=0
 			;;
 		}
-		t=$t\\x${o#16#}
+		t+=\\x${o#16#}
+		(( ++j & 4095 )) && continue
+		print -n $t
+		t=
 	done
 	print -n $t
 	(( u )) || set -U
@@ -278,14 +272,14 @@ function Lb64encode {
 		(( v |= j << 8 ))
 		(( j = i < n ? s[i++] : 0 ))
 		(( v |= j ))
-		t=$t${Lb64encode_code[v >> 18]}${Lb64encode_code[v >> 12 & 63]}
+		t+=${Lb64encode_code[v >> 18]}${Lb64encode_code[v >> 12 & 63]}
 		c=${Lb64encode_code[v >> 6 & 63]}
 		if (( i <= n )); then
-			t=$t$c${Lb64encode_code[v & 63]}
+			t+=$c${Lb64encode_code[v & 63]}
 		elif (( i == n + 1 )); then
-			t=$t$c=
+			t+=$c=
 		else
-			t=$t==
+			t+===
 		fi
 		if (( ${#t} == 76 || i >= n )); then
 			print $t

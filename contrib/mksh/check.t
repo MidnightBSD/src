@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.t,v 1.474.2.7 2011/11/22 18:01:42 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.474.2.10 2011/12/11 18:18:20 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
@@ -23,9 +23,12 @@
 #-
 # You may also want to test IFS with the script at
 # http://www.research.att.com/~gsf/public/ifs.sh
+#
+# More testsuites at:
+# http://www.freebsd.org/cgi/cvsweb.cgi/src/tools/regression/bin/test/regress.sh?rev=HEAD
 
 expected-stdout:
-	@(#)MIRBSD KSH R40 2011/11/22
+	@(#)MIRBSD KSH R40 2011/12/11
 description:
 	Check version of shell.
 stdin:
@@ -278,6 +281,25 @@ stdin:
 	echo $((20 / 2 / 2))
 expected-stdout:
 	5
+---
+name: arith-div-byzero
+description:
+	Check division by zero errors out
+stdin:
+	x=$(echo $((1 / 0)))
+	echo =$?:$x.
+expected-stdout:
+	=1:.
+expected-stderr-pattern:
+	/.*divisor/
+---
+name: arith-div-intmin-by-minusone
+description:
+	Check division overflow wraps around silently
+stdin:
+	echo :$((-2147483648 / -1))_$((-2147483648 % -1)).
+expected-stdout:
+	:-2147483648_0.
 ---
 name: arith-assop-assoc-1
 description:
@@ -3597,6 +3619,137 @@ expected-stdout:
 	64
 	64
 ---
+name: integer-base-check-flat-posix
+description:
+	Check behaviour of POSuX bases
+category: !nodeprecated
+stdin:
+	echo :$((10)).$((010)).$((0x10)).
+expected-stdout:
+	:10.8.16.
+---
+name: integer-base-check-flat-right
+description:
+	Check behaviour does not match POSuX, because a not type-safe
+	scripting language has *no* business interpreting "010" as octal
+category: nodeprecated
+stdin:
+	echo :$((10)).$((010)).$((0x10)).
+expected-stdout:
+	:10.10.16.
+---
+name: integer-base-check-numeric-from
+description:
+	Check behaviour for base one to 36, and that 37 errors out
+stdin:
+	echo 1:$((1#1))0.
+	i=1
+	while (( ++i <= 36 )); do
+		eval 'echo '$i':$(('$i'#10)).'
+	done
+	echo 37:$($__progname -c 'echo $((37#10))').$?:
+expected-stdout:
+	1:490.
+	2:2.
+	3:3.
+	4:4.
+	5:5.
+	6:6.
+	7:7.
+	8:8.
+	9:9.
+	10:10.
+	11:11.
+	12:12.
+	13:13.
+	14:14.
+	15:15.
+	16:16.
+	17:17.
+	18:18.
+	19:19.
+	20:20.
+	21:21.
+	22:22.
+	23:23.
+	24:24.
+	25:25.
+	26:26.
+	27:27.
+	28:28.
+	29:29.
+	30:30.
+	31:31.
+	32:32.
+	33:33.
+	34:34.
+	35:35.
+	36:36.
+	37:.0:
+expected-stderr-pattern:
+	/.*bad number '37#10'/
+---
+name: integer-base-check-numeric-to
+description:
+	Check behaviour for base one to 36, and that 37 errors out
+stdin:
+	i=0
+	while (( ++i <= 37 )); do
+		typeset -Uui$i x=0x40
+		eval "typeset -i10 y=$x"
+		print $i:$x.$y.
+	done
+expected-stdout:
+	1:1#@.64.
+	2:2#1000000.64.
+	3:3#2101.64.
+	4:4#1000.64.
+	5:5#224.64.
+	6:6#144.64.
+	7:7#121.64.
+	8:8#100.64.
+	9:9#71.64.
+	10:64.64.
+	11:11#59.64.
+	12:12#54.64.
+	13:13#4C.64.
+	14:14#48.64.
+	15:15#44.64.
+	16:16#40.64.
+	17:17#3D.64.
+	18:18#3A.64.
+	19:19#37.64.
+	20:20#34.64.
+	21:21#31.64.
+	22:22#2K.64.
+	23:23#2I.64.
+	24:24#2G.64.
+	25:25#2E.64.
+	26:26#2C.64.
+	27:27#2A.64.
+	28:28#28.64.
+	29:29#26.64.
+	30:30#24.64.
+	31:31#22.64.
+	32:32#20.64.
+	33:33#1V.64.
+	34:34#1U.64.
+	35:35#1T.64.
+	36:36#1S.64.
+	37:36#1S.64.
+expected-stderr-pattern:
+	/.*bad integer base: 37/
+---
+name: integer-arithmetic-span
+description:
+	Check wraparound and size that is defined in mksh
+stdin:
+	echo s:$((2147483647+1)).$(((2147483647*2)+1)).$(((2147483647*2)+2)).
+	echo u:$((#2147483647+1)).$((#(2147483647*2)+1)).$((#(2147483647*2)+2)).
+expected-stdout:
+	s:-2147483648.-1.0.
+	u:2147483648.4294967295.0.
+---
 name: lineno-stdin
 description:
 	See if $LINENO is updated and can be modified.
@@ -6425,6 +6578,344 @@ expected-stdout:
 	1 barbaz .
 	2 16#a20 .
 ---
+name: arrassign-basic
+description:
+	Check basic whitespace conserving properties of wdarrassign
+stdin:
+	a=($(echo a  b))
+	b=($(echo "a  b"))
+	c=("$(echo "a  b")")
+	d=("$(echo a  b)")
+	a+=($(echo c  d))
+	b+=($(echo "c  d"))
+	c+=("$(echo "c  d")")
+	d+=("$(echo c  d)")
+	echo ".a:${a[0]}.${a[1]}.${a[2]}.${a[3]}:"
+	echo ".b:${b[0]}.${b[1]}.${b[2]}.${b[3]}:"
+	echo ".c:${c[0]}.${c[1]}.${c[2]}.${c[3]}:"
+	echo ".d:${d[0]}.${d[1]}.${d[2]}.${d[3]}:"
+expected-stdout:
+	.a:a.b.c.d:
+	.b:a.b.c.d:
+	.c:a  b.c  d..:
+	.d:a b.c d..:
+---
+name: arrassign-fnc-none
+description:
+	Check locality of array access inside a function
+stdin:
+	function fn {
+		x+=(f)
+		echo ".fn:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	}
+	function rfn {
+		if [[ -n $BASH_VERSION ]]; then
+			y=()
+		else
+			set -A y
+		fi
+		y+=(f)
+		echo ".rfn:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	}
+	x=(m m)
+	y=(m m)
+	echo ".f0:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	fn
+	echo ".f1:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	fn
+	echo ".f2:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	echo ".rf0:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	rfn
+	echo ".rf1:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	rfn
+	echo ".rf2:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+expected-stdout:
+	.f0:m.m..:
+	.fn:m.m.f.:
+	.f1:m.m.f.:
+	.fn:m.m.f.f:
+	.f2:m.m.f.f:
+	.rf0:m.m..:
+	.rfn:f...:
+	.rf1:f...:
+	.rfn:f...:
+	.rf2:f...:
+---
+name: arrassign-fnc-local
+description:
+	Check locality of array access inside a function
+	with the bash/mksh/ksh93 local/typeset keyword
+	(note: ksh93 has no local; typeset works only in FKSH)
+stdin:
+	function fn {
+		typeset x
+		x+=(f)
+		echo ".fn:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	}
+	function rfn {
+		if [[ -n $BASH_VERSION ]]; then
+			y=()
+		else
+			set -A y
+		fi
+		typeset y
+		y+=(f)
+		echo ".rfn:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	}
+	function fnr {
+		typeset z
+		if [[ -n $BASH_VERSION ]]; then
+			z=()
+		else
+			set -A z
+		fi
+		z+=(f)
+		echo ".fnr:${z[0]}.${z[1]}.${z[2]}.${z[3]}:"
+	}
+	x=(m m)
+	y=(m m)
+	z=(m m)
+	echo ".f0:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	fn
+	echo ".f1:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	fn
+	echo ".f2:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	echo ".rf0:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	rfn
+	echo ".rf1:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	rfn
+	echo ".rf2:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	echo ".f0r:${z[0]}.${z[1]}.${z[2]}.${z[3]}:"
+	fnr
+	echo ".f1r:${z[0]}.${z[1]}.${z[2]}.${z[3]}:"
+	fnr
+	echo ".f2r:${z[0]}.${z[1]}.${z[2]}.${z[3]}:"
+expected-stdout:
+	.f0:m.m..:
+	.fn:f...:
+	.f1:m.m..:
+	.fn:f...:
+	.f2:m.m..:
+	.rf0:m.m..:
+	.rfn:f...:
+	.rf1:...:
+	.rfn:f...:
+	.rf2:...:
+	.f0r:m.m..:
+	.fnr:f...:
+	.f1r:m.m..:
+	.fnr:f...:
+	.f2r:m.m..:
+---
+name: arrassign-fnc-global
+description:
+	Check locality of array access inside a function
+	with the mksh-specific global keyword
+stdin:
+	function fn {
+		global x
+		x+=(f)
+		echo ".fn:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	}
+	function rfn {
+		set -A y
+		global y
+		y+=(f)
+		echo ".rfn:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	}
+	function fnr {
+		global z
+		set -A z
+		z+=(f)
+		echo ".fnr:${z[0]}.${z[1]}.${z[2]}.${z[3]}:"
+	}
+	x=(m m)
+	y=(m m)
+	z=(m m)
+	echo ".f0:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	fn
+	echo ".f1:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	fn
+	echo ".f2:${x[0]}.${x[1]}.${x[2]}.${x[3]}:"
+	echo ".rf0:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	rfn
+	echo ".rf1:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	rfn
+	echo ".rf2:${y[0]}.${y[1]}.${y[2]}.${y[3]}:"
+	echo ".f0r:${z[0]}.${z[1]}.${z[2]}.${z[3]}:"
+	fnr
+	echo ".f1r:${z[0]}.${z[1]}.${z[2]}.${z[3]}:"
+	fnr
+	echo ".f2r:${z[0]}.${z[1]}.${z[2]}.${z[3]}:"
+expected-stdout:
+	.f0:m.m..:
+	.fn:m.m.f.:
+	.f1:m.m.f.:
+	.fn:m.m.f.f:
+	.f2:m.m.f.f:
+	.rf0:m.m..:
+	.rfn:f...:
+	.rf1:f...:
+	.rfn:f...:
+	.rf2:f...:
+	.f0r:m.m..:
+	.fnr:f...:
+	.f1r:f...:
+	.fnr:f...:
+	.f2r:f...:
+---
+name: strassign-fnc-none
+description:
+	Check locality of string access inside a function
+stdin:
+	function fn {
+		x+=f
+		echo ".fn:$x:"
+	}
+	function rfn {
+		y=
+		y+=f
+		echo ".rfn:$y:"
+	}
+	x=m
+	y=m
+	echo ".f0:$x:"
+	fn
+	echo ".f1:$x:"
+	fn
+	echo ".f2:$x:"
+	echo ".rf0:$y:"
+	rfn
+	echo ".rf1:$y:"
+	rfn
+	echo ".rf2:$y:"
+expected-stdout:
+	.f0:m:
+	.fn:mf:
+	.f1:mf:
+	.fn:mff:
+	.f2:mff:
+	.rf0:m:
+	.rfn:f:
+	.rf1:f:
+	.rfn:f:
+	.rf2:f:
+---
+name: strassign-fnc-local
+description:
+	Check locality of string access inside a function
+	with the bash/mksh/ksh93 local/typeset keyword
+	(note: ksh93 has no local; typeset works only in FKSH)
+stdin:
+	function fn {
+		typeset x
+		x+=f
+		echo ".fn:$x:"
+	}
+	function rfn {
+		y=
+		typeset y
+		y+=f
+		echo ".rfn:$y:"
+	}
+	function fnr {
+		typeset z
+		z=
+		z+=f
+		echo ".fnr:$z:"
+	}
+	x=m
+	y=m
+	z=m
+	echo ".f0:$x:"
+	fn
+	echo ".f1:$x:"
+	fn
+	echo ".f2:$x:"
+	echo ".rf0:$y:"
+	rfn
+	echo ".rf1:$y:"
+	rfn
+	echo ".rf2:$y:"
+	echo ".f0r:$z:"
+	fnr
+	echo ".f1r:$z:"
+	fnr
+	echo ".f2r:$z:"
+expected-stdout:
+	.f0:m:
+	.fn:f:
+	.f1:m:
+	.fn:f:
+	.f2:m:
+	.rf0:m:
+	.rfn:f:
+	.rf1::
+	.rfn:f:
+	.rf2::
+	.f0r:m:
+	.fnr:f:
+	.f1r:m:
+	.fnr:f:
+	.f2r:m:
+---
+name: strassign-fnc-global
+description:
+	Check locality of string access inside a function
+	with the mksh-specific global keyword
+stdin:
+	function fn {
+		global x
+		x+=f
+		echo ".fn:$x:"
+	}
+	function rfn {
+		y=
+		global y
+		y+=f
+		echo ".rfn:$y:"
+	}
+	function fnr {
+		global z
+		z=
+		z+=f
+		echo ".fnr:$z:"
+	}
+	x=m
+	y=m
+	z=m
+	echo ".f0:$x:"
+	fn
+	echo ".f1:$x:"
+	fn
+	echo ".f2:$x:"
+	echo ".rf0:$y:"
+	rfn
+	echo ".rf1:$y:"
+	rfn
+	echo ".rf2:$y:"
+	echo ".f0r:$z:"
+	fnr
+	echo ".f1r:$z:"
+	fnr
+	echo ".f2r:$z:"
+expected-stdout:
+	.f0:m:
+	.fn:mf:
+	.f1:mf:
+	.fn:mff:
+	.f2:mff:
+	.rf0:m:
+	.rfn:f:
+	.rf1:f:
+	.rfn:f:
+	.rf2:f:
+	.f0r:m:
+	.fnr:f:
+	.f1r:f:
+	.fnr:f:
+	.f2r:f:
+---
 name: varexpand-substr-1
 description:
 	Check if bash-style substring expansion works
@@ -8525,7 +9016,7 @@ expected-stdout:
 name: event-subst-1a
 description:
 	Check that '!' substitution in interactive mode works
-category: !smksh
+category: !smksh,!nodeprecated
 file-setup: file 755 "falsetto"
 	#! /bin/sh
 	echo molto bene
@@ -8554,7 +9045,7 @@ description:
 	even when a space separates it from the search command,
 	which is not what GNU bash provides but required for the
 	other regression tests below to check
-category: !smksh
+category: !smksh,!nodeprecated
 file-setup: file 755 "falsetto"
 	#! /bin/sh
 	echo molto bene
@@ -8581,7 +9072,7 @@ name: event-subst-2
 description:
 	Check that '!' substitution in interactive mode
 	does not break things
-category: !smksh
+category: !smksh,!nodeprecated
 file-setup: file 755 "falsetto"
 	#! /bin/sh
 	echo molto bene
@@ -8643,6 +9134,39 @@ expected-stdout:
 	meow
 	= 0
 	foo
+---
+name: event-subst-0
+description:
+	Check that '!' substitution in interactive mode is ignored
+category: nodeprecated
+need-ctty: yes
+arguments: !-i!
+file-setup: file 755 "falsetto"
+	#! /bin/sh
+	echo molto bene
+	exit 42
+file-setup: file 755 "!false"
+	#! /bin/sh
+	echo si
+stdin:
+	export PATH=.:$PATH
+	falsetto
+	echo yeap
+	!false
+	echo meow
+	! false
+	echo = $?
+	if
+	! false; then echo foo; else echo bar; fi
+expected-stdout:
+	molto bene
+	yeap
+	si
+	meow
+	= 0
+	foo
+expected-stderr-pattern:
+	/.*/
 ---
 name: nounset-1
 description:
@@ -9264,4 +9788,46 @@ expected-stdout:
 	=
 	b
 	x
+---
+name: stateptr-underflow
+description:
+	This check overflows an Xrestpos stored in a short in R40
+category: fastbox
+stdin:
+	function Lb64decode {
+		[[ -o utf8-mode ]]; local u=$?
+		set +U
+		local c s="$*" t=
+		[[ -n $s ]] || { s=$(cat;print x); s=${s%x}; }
+		local -i i=0 n=${#s} p=0 v x
+		local -i16 o
+	
+		while (( i < n )); do
+			c=${s:(i++):1}
+			case $c {
+			(=)	break ;;
+			([A-Z])	(( v = 1#$c - 65 )) ;;
+			([a-z])	(( v = 1#$c - 71 )) ;;
+			([0-9])	(( v = 1#$c + 4 )) ;;
+			(+)	v=62 ;;
+			(/)	v=63 ;;
+			(*)	continue ;;
+			}
+			(( x = (x << 6) | v ))
+			case $((p++)) {
+			(0)	continue ;;
+			(1)	(( o = (x >> 4) & 255 )) ;;
+			(2)	(( o = (x >> 2) & 255 )) ;;
+			(3)	(( o = x & 255 ))
+				p=0
+				;;
+			}
+			t=$t\\x${o#16#}
+		done
+		print -n $t
+		(( u )) || set -U
+	}
+	
+	s=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+	Lb64decode $s >/dev/null
 ---

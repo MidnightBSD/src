@@ -151,9 +151,27 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.484.2.8 2011/11/22 18:01:47 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.484.2.11 2011/12/11 18:18:28 tg Exp $");
 #endif
-#define MKSH_VERSION "R40 2011/11/22"
+#define MKSH_VERSION "R40 2011/12/11"
+
+/* arithmetics types */
+typedef int32_t mksh_ari_t;
+typedef uint32_t mksh_uari_t;
+
+/* boolean type (no <stdbool.h> deliberately) */
+typedef unsigned char mksh_bool;
+#undef bool
+/* false MUST equal 0 */
+#undef false
+#undef true
+/* access macros for boolean type */
+#define bool		mksh_bool
+/* values must have identity mapping between mksh_bool and short */
+#define false		0
+#define true		1
+/* make any-type into bool or short */
+#define tobool(cond)	((cond) ? true : false)
 
 #ifndef MKSH_INCLUDES_ONLY
 
@@ -265,15 +283,6 @@ typedef u_int8_t uint8_t;
 #define DEFFILEMODE	(S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
 #endif
 
-#if !defined(MAP_FAILED)
-/* XXX imake style */
-#  if defined(__linux)
-#define MAP_FAILED	((void *)-1)
-#  elif defined(__bsdi__) || defined(__osf__) || defined(__ultrix)
-#define MAP_FAILED	((caddr_t)-1)
-#  endif
-#endif
-
 #ifndef NSIG
 #if defined(_NSIG)
 #define NSIG		_NSIG
@@ -343,24 +352,6 @@ extern int wcwidth(__WCHAR_TYPE__);
 /* define bit in flag */
 #define BIT(i)		(1 << (i))
 #define NELEM(a)	(sizeof(a) / sizeof((a)[0]))
-
-/* arithmetics types */
-typedef int32_t mksh_ari_t;
-typedef uint32_t mksh_uari_t;
-
-/* boolean type (no <stdbool.h> deliberately) */
-typedef unsigned char mksh_bool;
-#undef bool
-/* false MUST equal 0 */
-#undef false
-#undef true
-/* access macros for boolean type */
-#define bool		mksh_bool
-/* values must have identity mapping between mksh_bool and short */
-#define false		0
-#define true		1
-/* make any-type into bool or short */
-#define tobool(cond)	((cond) ? true : false)
 
 /* these shall be smaller than 100 */
 #ifdef MKSH_CONSERVATIVE_FDS
