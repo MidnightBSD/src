@@ -128,27 +128,27 @@ apm_parse_type(const char *type, char *buf, size_t bufsz)
 		strncpy(buf, type, bufsz);
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD);
 	if (!strcasecmp(type, alias)) {
 		strcpy(buf, APM_ENT_TYPE_FREEBSD);
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP);
 	if (!strcasecmp(type, alias)) {
 		strcpy(buf, APM_ENT_TYPE_FREEBSD_SWAP);
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS);
 	if (!strcasecmp(type, alias)) {
 		strcpy(buf, APM_ENT_TYPE_FREEBSD_UFS);
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM);
 	if (!strcasecmp(type, alias)) {
 		strcpy(buf, APM_ENT_TYPE_FREEBSD_VINUM);
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS);
 	if (!strcasecmp(type, alias)) {
 		strcpy(buf, APM_ENT_TYPE_FREEBSD_ZFS);
 		return (0);
@@ -422,15 +422,15 @@ g_part_apm_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
 	entry = (struct g_part_apm_entry *)baseentry;
 	type = entry->ent.ent_type;
 	if (!strcmp(type, APM_ENT_TYPE_FREEBSD))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD));
 	if (!strcmp(type, APM_ENT_TYPE_FREEBSD_SWAP))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP));
 	if (!strcmp(type, APM_ENT_TYPE_FREEBSD_UFS))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS));
 	if (!strcmp(type, APM_ENT_TYPE_FREEBSD_VINUM))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM));
 	if (!strcmp(type, APM_ENT_TYPE_FREEBSD_ZFS))
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS));
 	buf[0] = '!';
 	len = MIN(sizeof(entry->ent.ent_type), bufsz - 2);
 	bcopy(type, buf + 1, len);
