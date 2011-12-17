@@ -61,6 +61,8 @@ the disk must be labeled to a bigger size using
 If you wish to grow a file system beyond the boundary of
 the slice it resides in, you must re-size the slice using
 .Xr fdisk 8
+or
+.Xr gpart 8
 before running
 .Nm .
 If you are using volumes you must enlarge them by using
@@ -122,6 +124,7 @@ up to 2GB if there is enough space in
 .Xr fdisk 8 ,
 .Xr ffsinfo 8 ,
 .Xr fsck 8 ,
+.Xr gpart 8,
 .Xr newfs 8 ,
 .Xr tunefs 8 ,
 .Xr vinum 8
