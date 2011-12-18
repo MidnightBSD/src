@@ -13,6 +13,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/sys/boot/i386/boot0/boot0.S,v 1.16.6.2 2008/11/30 00:00:35 luigi Exp $
  */
 
@@ -428,7 +429,7 @@ tables:
 		.byte os_dos-.			# Windows
 		.byte os_dos-.			# Windows
 		.byte os_linux-.		# Linux
-		.byte os_freebsd-.		# FreeBSD
+		.byte os_bsd-.			# FreeBSD/MidnightBSD
 		.byte os_bsd-.			# OpenBSD
 		.byte os_bsd-.			# NetBSD
 		.byte os_misc-. 		# Unknown
@@ -439,7 +440,6 @@ tables:
 os_misc:	.ascii "?";    .byte '?'|0x80
 os_dos:		.ascii "DO";   .byte 'S'|0x80
 os_linux:	.ascii "Linu"; .byte 'x'|0x80
-os_freebsd:	.ascii "Free"
 os_bsd:		.ascii "BS";   .byte 'D'|0x80
 
 		.org PRT_OFF-0xe,0x90

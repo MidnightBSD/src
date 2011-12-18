@@ -1,17 +1,18 @@
 # Common defines for all of /sys/boot/i386/
 #
-# $MidnightBSD: src/sys/boot/i386/Makefile.inc,v 1.3 2008/11/13 15:05:53 laffer1 Exp $
+# $MidnightBSD: src/sys/boot/i386/Makefile.inc,v 1.4 2011/10/26 02:00:23 laffer1 Exp $
 # $FreeBSD: src/sys/boot/i386/Makefile.inc,v 1.10 2005/03/15 18:43:36 obrien Exp $
 
 BINDIR?=	/boot
 
 LOADER_ADDRESS?=0x200000
 CFLAGS+=	-ffreestanding -mpreferred-stack-boundary=2 \
-		-mno-mmx -mno-3dnow -mno-sse -mno-sse2 -mno-sse3
+		-mno-mmx -mno-3dnow -mno-sse -mno-sse2 -mno-sse3 -msoft-float
 LDFLAGS+=	-nostdlib
 
 .if ${MACHINE_ARCH} == "amd64"
 CFLAGS+=	-m32 -march=i386
+ACFLAGS+=	-m3
 LDFLAGS+=	-m elf_i386_fbsd
 AFLAGS+=	--32
 .endif

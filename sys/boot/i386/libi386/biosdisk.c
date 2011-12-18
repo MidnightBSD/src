@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2011 Lucas Holt <luke@foolishgames.com>
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
  *
@@ -25,7 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biosdisk.c,v 1.48.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
+/* $FreeBSD: src/sys/boot/i386/libi386/biosdisk.c,v 1.48.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*
  * BIOS disk device handling.
@@ -350,14 +352,14 @@ bd_printgptpart(struct open_disk *od, struct gpt_part *gp, char *prefix,
 	sprintf(line, "%s: EFI%s\n", prefix, stats);
     else if (uuid_equal(&gp->gp_type, &ms_basic_data, NULL))
 	sprintf(line, "%s: FAT/NTFS%s\n", prefix, stats);
-    else if (uuid_equal(&gp->gp_type, &freebsd_boot, NULL))
-	sprintf(line, "%s: FreeBSD boot%s\n", prefix, stats);
-    else if (uuid_equal(&gp->gp_type, &freebsd_ufs, NULL))
-	sprintf(line, "%s: FreeBSD UFS%s\n", prefix, stats);
-    else if (uuid_equal(&gp->gp_type, &freebsd_zfs, NULL))
-	sprintf(line, "%s: FreeBSD ZFS%s\n", prefix, stats);
-    else if (uuid_equal(&gp->gp_type, &freebsd_swap, NULL))
-	sprintf(line, "%s: FreeBSD swap%s\n", prefix, stats);
+    else if (uuid_equal(&gp->gp_type, &midnightbsd_boot, NULL))
+	sprintf(line, "%s: MidnightBSD boot%s\n", prefix, stats);
+    else if (uuid_equal(&gp->gp_type, &midnightbsd_ufs, NULL))
+	sprintf(line, "%s: MidnightBSD UFS%s\n", prefix, stats);
+    else if (uuid_equal(&gp->gp_type, &midnightbsd_zfs, NULL))
+	sprintf(line, "%s: MidnightBSD ZFS%s\n", prefix, stats);
+    else if (uuid_equal(&gp->gp_type, &midnightbsd_swap, NULL))
+	sprintf(line, "%s: MidnightBSD swap%s\n", prefix, stats);
     else
 	sprintf(line, "%s: %08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x%s\n",
 	    gp->gp_type.time_low, gp->gp_type.time_mid,
@@ -996,9 +998,9 @@ bd_best_gptpart(struct open_disk *od)
 	/* Windows. XXX: Also Linux. */
 	if (uuid_equal(&gp->gp_type, &ms_basic_data, NULL))
 	    pref = PREF_DOS;
-	/* FreeBSD */
-	else if (uuid_equal(&gp->gp_type, &freebsd_ufs, NULL) ||
-	    uuid_equal(&gp->gp_type, &freebsd_zfs, NULL))
+	/* MidnightBSD */
+	else if (uuid_equal(&gp->gp_type, &midnightbsd_ufs, NULL) ||
+	    uuid_equal(&gp->gp_type, &midnightbsd_zfs, NULL))
 	    pref = PREF_FBSD;
 	else
 	    pref = PREF_NONE;

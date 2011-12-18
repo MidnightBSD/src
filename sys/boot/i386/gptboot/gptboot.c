@@ -15,7 +15,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/boot/i386/gptboot/gptboot.c,v 1.86.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $ */
-__MBSDID("$MidnightBSD: src/sys/boot/i386/gptboot/gptboot.c,v 1.1 2011/10/16 21:11:44 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/boot/i386/gptboot/gptboot.c,v 1.2 2011/12/10 22:55:34 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/gpt.h>
@@ -282,7 +282,7 @@ main(void)
 
     for (;;) {
 	if (!autoboot || !OPT_CHECK(RBX_QUIET))
-	    printf("\nFreeBSD/i386 boot\n"
+	    printf("\nMidnightBSD/i386 boot\n"
 		   "Default: %u:%s(%up%u)%s\n"
 		   "boot: ",
 		   dsk.drive & DRV_MASK, dev_nm[dsk.type], dsk.unit,
@@ -539,7 +539,7 @@ dskread(void *buf, daddr_t lba, unsigned nblk)
 		    return -1;
 		for (part = 0; part < entries_per_sec; part++) {
 		    ent = (struct gpt_ent *)(sec + part * hdr.hdr_entsz);
-		    if (bcmp(&ent->ent_type, &freebsd_ufs_uuid,
+		    if (bcmp(&ent->ent_type, &midnightbsd_ufs_uuid,
 			sizeof(uuid_t)) == 0) {
 			dsk.part = (slba - hdr.hdr_lba_table) *
 			    entries_per_sec + part + 1;
@@ -563,7 +563,7 @@ dskread(void *buf, daddr_t lba, unsigned nblk)
 		return -1;
 	    part = (dsk.part - 1) % entries_per_sec;
 	    ent = (struct gpt_ent *)(sec + part * hdr.hdr_entsz);
-	    if (bcmp(&ent->ent_type, &freebsd_ufs_uuid, sizeof(uuid_t)) != 0) {
+	    if (bcmp(&ent->ent_type, &midnightbsd_ufs_uuid, sizeof(uuid_t)) != 0) {
 		printf("Specified partition is not UFS\n");
 		return -1;
 	    }

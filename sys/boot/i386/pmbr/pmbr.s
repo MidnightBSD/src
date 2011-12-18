@@ -1,4 +1,5 @@
 #-
+# Copyright (c) 2011 Lucas Holt <luke@foolishgames.com>
 # Copyright (c) 2007 Yahoo!, Inc.
 # All rights reserved.
 # Written by: John Baldwin <jhb@FreeBSD.org>
@@ -27,12 +28,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $MidnightBSD: src/sys/boot/i386/pmbr/pmbr.s,v 1.1 2011/10/16 21:11:09 laffer1 Exp $
 # $FreeBSD: src/sys/boot/i386/pmbr/pmbr.s,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # Partly from: src/sys/boot/i386/mbr/mbr.s 1.7
 
-# A 512 byte PMBR boot manager that looks for a FreeBSD boot GPT partition
+# A 512 byte PMBR boot manager that looks for a MidnightBSD boot GPT partition
 # and boots it.
 
 		.set LOAD,0x7c00		# Load address
@@ -102,14 +103,14 @@ main.2:		movw $GPT_ADDR,%bx
 		cmpl $GPT_SIG_1,GPT_ADDR+GPT_SIG+4
 		jnz err_pt
 #
-# Load a partition table sector from disk and look for a FreeBSD boot
+# Load a partition table sector from disk and look for a MidnightBSD boot
 # partition.
 #
 load_part:	movw $GPT_ADDR+GPT_PART_LBA,%si
 		movw $PART_ADDR,%bx
 		call read
 scan:		movw %bx,%si			# Compare partition UUID
-		movw $boot_uuid,%di		#  with FreeBSD boot UUID 
+		movw $boot_uuid,%di		#  with MidnightBSD boot UUID 
 		movb $0x10,%cl
 		repe cmpsb
 		jnz next_part			# Didn't match, next partition
@@ -204,17 +205,17 @@ msg_noboot: 	.asciz "Missing boot loader"
 
 lba:		.quad 1				# LBA of GPT header 
 
-boot_uuid:	.long 0x83bd6b9d
-		.word 0x7f41
-		.word 0x11dc
-		.byte 0xbe
-		.byte 0x0b
-		.byte 0x00
-		.byte 0x15
-		.byte 0x60
-		.byte 0xb8
-		.byte 0x4f
-		.byte 0x0f
+boot_uuid:	.long 0x85d5e45e
+		.word 0x237c
+		.word 0x11e1
+		.byte 0xb4
+		.byte 0xb3
+		.byte 0xe8
+		.byte 0x9a
+		.byte 0x8f
+		.byte 0x7f
+		.byte 0xc3
+		.byte 0xa7
 
 		.org DISKSIG,0x90
 sig:		.long 0				# OS Disk Signature
