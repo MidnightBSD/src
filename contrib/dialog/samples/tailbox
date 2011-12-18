@@ -1,0 +1,16 @@
+#!/bin/sh
+# $Id: tailbox,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+
+. ./setup-vars
+
+./killall listing
+./listing >listing.out &
+
+$DIALOG --title "TAIL BOX" "$@" \
+        --tailbox listing.out 24 70
+
+retval=$?
+
+. ./report-button
+
+./killall listing

@@ -1,0 +1,19 @@
+#!/bin/sh
+# $Id: programbox2,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+
+. ./setup-vars
+
+. ./setup-tempfile
+
+ls -1 >$tempfile
+(
+while true
+do
+read text
+test -z "$text" && break
+ls -ld "$text"
+sleep 0.1
+done <$tempfile
+) |
+
+$DIALOG --title "PROGRAMBOX" "$@" --programbox "ProgramBox" 20 70
