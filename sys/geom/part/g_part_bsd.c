@@ -115,22 +115,22 @@ bsd_parse_type(const char *type, uint8_t *fstype)
 		*fstype = (u_int)lt;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP);
 	if (!strcasecmp(type, alias)) {
 		*fstype = FS_SWAP;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS);
 	if (!strcasecmp(type, alias)) {
 		*fstype = FS_BSDFFS;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM);
 	if (!strcasecmp(type, alias)) {
 		*fstype = FS_VINUM;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS);
+	alias = g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS);
 	if (!strcasecmp(type, alias)) {
 		*fstype = FS_ZFS;
 		return (0);
@@ -439,13 +439,13 @@ g_part_bsd_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
 	entry = (struct g_part_bsd_entry *)baseentry;
 	type = entry->part.p_fstype;
 	if (type == FS_SWAP)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_SWAP));
 	if (type == FS_BSDFFS)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_UFS));
 	if (type == FS_VINUM)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_VINUM));
 	if (type == FS_ZFS)
-		return (g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS));
+		return (g_part_alias_name(G_PART_ALIAS_MIDNIGHTBSD_ZFS));
 	snprintf(buf, bufsz, "!%d", type);
 	return (buf);
 }
