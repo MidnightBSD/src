@@ -22,6 +22,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $MidnightBSD$
+ * $FreeBSD: src/lib/csu/i386-elf/crt1_c.c,v 1.1.4.2 2010/01/19 20:19:52 kib Exp $
  */
 
 #ifndef lint
@@ -55,35 +58,15 @@ extern int etext;
 char **environ;
 const char *__progname = "";
 
-static __inline fptr
-get_rtld_cleanup(void)
-{
-	fptr retval;
+void _start1(fptr, int, char *[]) __dead2;
 
-#ifdef	__GNUC__
-	__asm__("movl %%edx,%0" : "=rm"(retval));
-#else
-	retval = (fptr)0; /* XXXX Fix this for other compilers */
-#endif
-	return(retval);
-}
-
-/* The entry function. */
+/* The entry function, C part. */
 void
-_start(char *ap, ...)
+_start1(fptr cleanup, int argc, char *argv[])
 {
-	fptr cleanup;
-	int argc;
-	char **argv;
 	char **env;
 	const char *s;
 
-#ifdef __GNUC__
-	__asm__("and $0xfffffff0,%esp");
-#endif
-	cleanup = get_rtld_cleanup();
-	argv = &ap;
-	argc = *(long *)(void *)(argv - 1);
 	env = argv + argc + 1;
 	environ = env;
 	if (argc > 0 && argv[0] != NULL) {
@@ -110,4 +93,4 @@ __asm__("eprol:");
 	exit( main(argc, argv, env) );
 }
 
-__asm__(".ident\t\"$MidnightBSD$\"");
+__asm(".hidden	_start1");

@@ -26726,7 +26726,8 @@ lib/csu/amd64/crti.S -text
 lib/csu/amd64/crtn.S -text
 lib/csu/common/crtbrand.c -text
 lib/csu/i386-elf/Makefile -text
-lib/csu/i386-elf/crt1.c -text
+lib/csu/i386-elf/crt1_c.c -text
+lib/csu/i386-elf/crt1_s.S -text
 lib/csu/i386-elf/crti.S -text
 lib/csu/i386-elf/crtn.S -text
 lib/csu/sparc64/Makefile -text
