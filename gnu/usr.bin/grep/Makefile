@@ -1,4 +1,7 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/grep/Makefile,v 1.30 2004/07/04 10:05:37 tjr Exp $
+
+.include <bsd.own.mk>
 
 GREP_LIBZ=YES
 
