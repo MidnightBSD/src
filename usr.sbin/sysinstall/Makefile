@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.8 2009/05/21 00:08:40 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.9 2009/10/24 05:13:57 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/sysinstall/Makefile,v 1.134.2.1 2005/10/07 15:56:30 nyan Exp $
 
 PROG=	sysinstall
@@ -12,10 +12,10 @@ SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	variable.c wizard.c keymap.h countries.h
 
 CFLAGS+= -DUSE_GZIP=1
-CFLAGS+= -I${.CURDIR}/../../gnu/lib/libdialog -I.
+CFLAGS+= -I${.CURDIR}/../../gnu/lib/libodialog -I.
 
-DPADD=	${LIBDIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK} ${LIBFTPIO}
-LDADD=	-ldialog -lncurses -lutil -ldisk -lftpio
+DPADD=	${LIBODIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK} ${LIBFTPIO}
+LDADD=	-lodialog -lncurses -lutil -ldisk -lftpio
 
 #
 # When distributions have both UP and SMP kernels sysinstall

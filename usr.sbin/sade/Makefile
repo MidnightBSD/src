@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/sade/Makefile,v 1.2 2009/10/24 15:55:41 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/sade/Makefile,v 1.147 2006/08/09 11:25:10 netchild Exp $
 
 PROG=	sade
@@ -11,9 +11,9 @@ SRCS=	command.c config.c devices.c \
 	variable.c wizard.c
 WARNS?=	3
 
-CFLAGS+= -I${.CURDIR}/../../gnu/lib/libdialog -I.
+CFLAGS+= -I${.CURDIR}/../../gnu/lib/libodialog -I.
 
-DPADD=	${LIBDIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK} ${LIBFTPIO}
-LDADD=	-ldialog -lncurses -lutil -ldisk -lftpio
+DPADD=	${LIBODIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK}
+LDADD=	-lodialog -lncurses -lutil -ldisk
 
 .include <bsd.prog.mk>
