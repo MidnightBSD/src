@@ -44191,7 +44191,6 @@ usr.sbin/trpt/Makefile -text
 usr.sbin/trpt/trpt.8 -text
 usr.sbin/trpt/trpt.c -text
 usr.sbin/tzsetup/Makefile -text
-usr.sbin/tzsetup/paths.h -text
 usr.sbin/tzsetup/tzsetup.8 -text
 usr.sbin/tzsetup/tzsetup.c -text
 usr.sbin/ugidfw/Makefile -text
