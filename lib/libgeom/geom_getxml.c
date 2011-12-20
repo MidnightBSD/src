@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libgeom/geom_getxml.c,v 1.2 2007/05/01 10:47:09 wkoszek Exp $
+ * $FreeBSD: src/lib/libgeom/geom_getxml.c,v 1.3.2.1 2009/08/03 08:13:06 kensmith Exp $
  */
 
 #include <sys/types.h>
@@ -39,28 +39,22 @@ char *
 geom_getxml()
 {
 	char *p;
-	size_t l;
-	int i;
+	size_t l = 0;
+	int mib[3];
+	size_t sizep;
 
-	l = 1024 * 1024;	/* Start big, realloc back */
-	p = malloc(l);
-	if (p) {
-		i = sysctlbyname("kern.geom.confxml", p, &l, NULL, 0);
-		if (i == 0) {
-			p = realloc(p, strlen(p) + 1);
-			return (p);
-		}
-		free(p);
-	}
-	l = 0;
-	i = sysctlbyname("kern.geom.confxml", NULL, &l, NULL, 0);
-	if (i != 0)
+	sizep = sizeof(mib) / sizeof(*mib);
+	if (sysctlnametomib("kern.geom.confxml", mib, &sizep) != 0)
 		return (NULL);
-	p = malloc(l + 4096);
-	i = sysctlbyname("kern.geom.confxml", p, &l, NULL, 0);
-	if (i == 0) {
-		p = realloc(p, strlen(p) + 1);
-		return (p);
+	if (sysctl(mib, sizep, NULL, &l, NULL, 0) != 0)
+		return (NULL);
+	l += 4096;
+	p = malloc(l);
+	if (p == NULL)
+		return (NULL);
+	if (sysctl(mib, sizep, p, &l, NULL, 0) != 0) {
+		free(p);
+		return (NULL);
 	}
-	return (NULL);
+	return (reallocf(p, strlen(p) + 1));
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libgeom/geom_util.c,v 1.1 2007/05/06 01:17:46 pjd Exp $");
+__FBSDID("$FreeBSD: src/lib/libgeom/geom_util.c,v 1.3.2.2 2010/10/06 00:13:55 delphij Exp $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -42,29 +42,22 @@ __FBSDID("$FreeBSD: src/lib/libgeom/geom_util.c,v 1.1 2007/05/06 01:17:46 pjd Ex
 
 #include <libgeom.h>
 
+static char	*g_device_path_open(const char *, int *, int);
+
 /*
  * Open the given provider and at least check if this is a block device.
  */
 int
-g_open(const char *name, int write)
+g_open(const char *name, int dowrite)
 {
-	char path[MAXPATHLEN];
+	char *path;
 	int fd;
 
-	if (name[0] == '/')
-		strlcpy(path, name, sizeof(path));
-	else
-		snprintf(path, sizeof(path), "%s%s", _PATH_DEV, name);
-
-	fd = open(path, write ? O_RDWR : O_RDONLY);
+	path = g_device_path_open(name, &fd, dowrite);
+	if (path != NULL)
+		free(path);
 	if (fd == -1)
 		return (-1);
-	/* Let try to get sectorsize, which will prove it is a GEOM provider. */
-	if (g_sectorsize(fd) == -1) {
-		close(fd);
-		errno = EFTYPE;
-		return (-1);
-	}
 	return (fd);
 }
 
@@ -118,6 +111,45 @@ g_sectorsize(int fd)
 	if (g_ioctl_arg(fd, DIOCGSECTORSIZE, &sectorsize) == -1)
 		return (-1);
 	return ((ssize_t)sectorsize);
+}
+
+/*
+ * Return stripe size of the given provider.
+ */
+off_t
+g_stripesize(int fd)
+{
+	off_t stripesize;
+
+	if (g_ioctl_arg(fd, DIOCGSTRIPESIZE, &stripesize) == -1)
+		return (-1);
+	return (stripesize);
+}
+
+/*
+ * Return stripe size of the given provider.
+ */
+off_t
+g_stripeoffset(int fd)
+{
+	off_t stripeoffset;
+
+	if (g_ioctl_arg(fd, DIOCGSTRIPEOFFSET, &stripeoffset) == -1)
+		return (-1);
+	return (stripeoffset);
+}
+
+/*
+ * Return the correct provider name.
+ */
+char *
+g_providername(int fd)
+{
+	char name[MAXPATHLEN];
+
+	if (g_ioctl_arg(fd, DIOCGPROVIDERNAME, name) == -1)
+		return (NULL);
+	return (strdup(name));
 }
 
 /*
@@ -183,7 +215,7 @@ g_get_name(const char *ident, char *name, size_t size)
  * Find provider name by the given ID.
  */
 int
-g_open_by_ident(const char *ident, int write, char *name, size_t size)
+g_open_by_ident(const char *ident, int dowrite, char *name, size_t size)
 {
 	char lident[DISK_IDENT_SIZE];
 	struct gmesh mesh;
@@ -204,7 +236,7 @@ g_open_by_ident(const char *ident, int write, char *name, size_t size)
 	LIST_FOREACH(mp, &mesh.lg_class, lg_class) {
 		LIST_FOREACH(gp, &mp->lg_geom, lg_geom) {
 			LIST_FOREACH(pp, &gp->lg_provider, lg_provider) {
-				fd = g_open(pp->lg_name, write);
+				fd = g_open(pp->lg_name, dowrite);
 				if (fd == -1)
 					continue;
 				if (g_get_ident(fd, lident,
@@ -233,4 +265,78 @@ end:
 		return (-1);
 	}
 	return (fd);
+}
+
+/*
+ * Return the device path device given a partial or full path to its node.
+ * A pointer can be provided, which will be set to an opened file descriptor of
+ * not NULL.
+ */
+static char *
+g_device_path_open(const char *devpath, int *fdp, int dowrite)
+{
+	char *path;
+	int fd;
+
+	/* Make sure that we can fail. */
+	if (fdp != NULL)
+		*fdp = -1;
+	/* Use the device node if we're able to open it. */
+	do {
+		fd = open(devpath, dowrite ? O_RDWR : O_RDONLY);
+		if (fd == -1)
+			break;
+		/*
+		 * Let try to get sectorsize, which will prove it is a GEOM
+		 * provider. 
+		 */
+		if (g_sectorsize(fd) == -1) {
+			close(fd);
+			errno = EFTYPE;
+			return (NULL);
+		}
+		if ((path = strdup(devpath)) == NULL) {
+			close(fd);
+			return (NULL);
+		}
+		if (fdp != NULL)
+			*fdp = fd;
+		else
+			close(fd);
+		return (path);
+	} while (0);
+
+	/* If we're not given an absolute path, assume /dev/ prefix. */
+	if (*devpath != '/') {
+		asprintf(&path, "%s%s", _PATH_DEV, devpath);
+		if (path == NULL)
+			return (NULL);
+		fd = open(path, dowrite ? O_RDWR : O_RDONLY);
+		if (fd == -1) {
+			free(path);
+			return (NULL);
+		}
+		/*
+		 * Let try to get sectorsize, which will prove it is a GEOM
+		 * provider.
+		 */
+		if (g_sectorsize(fd) == -1) {
+			free(path);
+			close(fd);
+			errno = EFTYPE;
+			return (NULL);
+		}
+		if (fdp != NULL)
+			*fdp = fd;
+		else
+			close(fd);
+		return (path);
+	}
+	return (NULL);
+}
+
+char *
+g_device_path(const char *devpath)
+{
+	return (g_device_path_open(devpath, NULL, 0));
 }
