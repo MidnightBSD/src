@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/libc/Versions.def,v 1.4 2011/05/28 19:11:40 laffer1 Exp $
+# $MidnightBSD: src/lib/libc/Versions.def,v 1.5 2011/12/24 02:53:21 laffer1 Exp $
 # $FreeBSD: src/lib/libc/Versions.def,v 1.3 2007/04/29 16:14:17 kan Exp $
 
 # This is our first version; it depends on no other. It is from FreeBSD 7
@@ -25,4 +25,4 @@ MNBSD_1.0 {
 # are listed here.  We use a separate namespace so we can write
 # simple ABI-checking tools.
 FBSDprivate_1.0 {
-} FBSD_1.3;
+} MNBSD_1.0;
