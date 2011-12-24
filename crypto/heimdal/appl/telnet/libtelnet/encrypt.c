@@ -54,7 +54,7 @@
 
 #include <config.h>
 
-RCSID("$Id: encrypt.c,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $");
+RCSID("$Id: encrypt.c,v 1.2 2011-12-24 03:30:20 laffer1 Exp $");
 
 #if	defined(ENCRYPTION)
 
@@ -735,6 +735,9 @@ encrypt_keyid(struct key_info *kp, unsigned char *keyid, int len)
     Encryptions *ep;
     int dir = kp->dir;
     int ret = 0;
+
+    if (len > MAXKEYLEN)
+        len = MAXKEYLEN;
 
     if (!(ep = (*kp->getcrypt)(*kp->modep))) {
 	if (len == 0)
