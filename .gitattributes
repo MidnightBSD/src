@@ -42871,6 +42871,15 @@ usr.sbin/bsdinstall/partedit/partedit.h -text
 usr.sbin/bsdinstall/partedit/partedit_generic.c -text
 usr.sbin/bsdinstall/partedit/partedit_sparc64.c -text
 usr.sbin/bsdinstall/partedit/partedit_x86.c -text
+usr.sbin/bsdinstall/scripts/Makefile -text
+usr.sbin/bsdinstall/scripts/adduser -text
+usr.sbin/bsdinstall/scripts/auto -text
+usr.sbin/bsdinstall/scripts/checksum -text
+usr.sbin/bsdinstall/scripts/config -text
+usr.sbin/bsdinstall/scripts/hostname -text
+usr.sbin/bsdinstall/scripts/jail -text
+usr.sbin/bsdinstall/scripts/keymap -text
+usr.sbin/bsdinstall/scripts/mount -text
 usr.sbin/bsnmpd/Makefile -text
 usr.sbin/bsnmpd/Makefile.inc -text
 usr.sbin/bsnmpd/bsnmpd/Makefile -text
