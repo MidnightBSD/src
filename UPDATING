@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users
 
 20111223:
+	pam: don't allow escape from policy path.  Exploitable in KDE, etc.
+
 	Fix pam_ssh module:
 
 	If the pam_ssh module is enabled, attackers may be able to gain access
@@ -1173,4 +1175,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.151 2011/12/24 02:53:11 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.152 2011/12/24 03:08:57 laffer1 Exp $
