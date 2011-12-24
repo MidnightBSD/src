@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.29 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -420,10 +420,12 @@ void mport_free_vec(void *vec)
   
   while (p != NULL) {
     free(p);
+    p = NULL;
     p++;
   }
   
   free(vec);
+  vec = NULL;
 }
 
 /* mport_decompress_bzip2(char * input, char * output)

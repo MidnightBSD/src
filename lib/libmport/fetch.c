@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.8 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.9 2011/08/25 18:10:19 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -91,7 +91,7 @@ mport_fetch_index(mportInstance *mport)
 	if (mport_fetch_bootstrap_index(mport) == MPORT_OK)
 		return MPORT_OK;
 	 
-	/* XXX mport_free_vec(mirrors); */
+	mport_free_vec(mirrors);
 	RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to fetch index file: %s", mport_err_string());
 }
 
@@ -142,17 +142,20 @@ mport_fetch_bundle(mportInstance *mport, const char *filename)
 
 		if (fetch(mport, url, dest) == MPORT_OK) {
 			free(url);
+			url = NULL;
 			free(dest);
-			//mport_free_vec(mirrors);
+			dest = NULL;
+			mport_free_vec(mirrors);
 			return MPORT_OK;
 		} 
 		
 		free(url);
+		url = NULL;
 		mirrorsPtr++;
 	}
 	
 	free(dest);
-//	mport_free_vec(mirrors);
+	mport_free_vec(mirrors);
 	RETURN_CURRENT_ERROR; 
 }
 
