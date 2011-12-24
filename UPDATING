@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users
 
+20111223:
+	Fix security issue with chroot and ftpd.
+
+	nsdispatch(3) doesn't know it's working in a chroot and some 
+	operations can cause files to get reloaded causing a security
+	hole in things like ftpd.
+
 20111217:
 	libdialog/dialog upgraded to an lgpl version. As it's not
 	backwardly compatable, include the old libdialog as libodialog
@@ -1159,4 +1166,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.149 2011/12/13 03:24:13 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.150 2011/12/18 03:58:06 laffer1 Exp $

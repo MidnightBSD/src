@@ -1,6 +1,6 @@
 #	@(#)Makefile.inc	8.6 (Berkeley) 5/4/95
 # $FreeBSD: src/lib/libc/gen/Makefile.inc,v 1.128 2007/09/28 02:22:56 scf Exp $
-# $MidnightBSD: src/lib/libc/gen/Makefile.inc,v 1.3 2010/01/10 18:29:19 laffer1 Exp $
+# $MidnightBSD: src/lib/libc/gen/Makefile.inc,v 1.4 2010/08/15 04:28:26 laffer1 Exp $
 
 # machine-independent gen sources
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/gen ${.CURDIR}/gen
@@ -21,6 +21,7 @@ SRCS+=  __getosreldate.c __xuname.c \
 	getpeereid.c getprogname.c getpwent.c getttyent.c \
 	getusershell.c getvfsbyname.c glob.c \
 	initgroups.c isatty.c isinf.c isnan.c jrand48.c lcong48.c \
+	libc_dlopen.c \
 	lockf.c lrand48.c mrand48.c nftw.c nice.c \
 	nlist.c nrand48.c opendir.c \
 	pause.c pmadvise.c popen.c posix_spawn.c posixshm.c pselect.c \
