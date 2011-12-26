@@ -27589,6 +27589,7 @@ lib/libc/gen/jrand48.c -text
 lib/libc/gen/lcong48.c -text
 lib/libc/gen/ldexp.3 -text
 lib/libc/gen/ldexp.c -text
+lib/libc/gen/libc_dlopen.c -text
 lib/libc/gen/lockf.3 -text
 lib/libc/gen/lockf.c -text
 lib/libc/gen/lrand48.c -text
