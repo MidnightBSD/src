@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.8 2009/10/31 20:57:27 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.9 2010/01/10 18:34:46 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -47,7 +47,7 @@ LSUBDIRS=	cam/scsi \
 	fs/nwfs fs/portalfs fs/procfs fs/smbfs fs/udf fs/unionfs \
 	geom/cache geom/concat geom/eli geom/gate geom/journal geom/label \
 	geom/mirror geom/multipath geom/nop \
-	geom/raid3 geom/shsec geom/stripe geom/virstor \
+	geom/raid3 geom/raid5 geom/shsec geom/stripe geom/virstor \
 	netgraph/atm netgraph/netflow \
 	security/audit \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
