@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 /* Historic Id: geom_raid5.c,v 1.33.1.12 2007/11/12 20:24:45 aw Exp aw; */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/geom/class/raid5/geom_raid5.c,v 1.1 2011/12/28 00:41:18 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -44,7 +44,7 @@ __MBSDID("$MidnightBSD$");
 #include <core/geom.h>
 #include <misc/subr.h>
 
-#include <g_raid5.h>
+#include <geom/raid5/g_raid5.h>
 
 uint32_t lib_version = G_LIB_VERSION;
 uint32_t version = G_RAID5_VERSION;
