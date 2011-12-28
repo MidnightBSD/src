@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_bsd_enc.c,v 1.2 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_bsd_enc.c,v 1.3 2011/12/10 22:55:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -42,7 +42,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_bsd_enc.c,v 1.6.10.1 2008/03/16 22:51:28 marcel Exp $");
+/* $FreeBSD: src/sys/geom/geom_bsd_enc.c,v 1.6.10.1 2008/03/16 22:51:28 marcel Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/endian.h>

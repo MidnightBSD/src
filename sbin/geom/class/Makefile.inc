@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/sbin/geom/class/Makefile.inc,v 1.7 2005/04/07 15:57:38 pjd Exp $
 
 SHLIBDIR?=${CLASS_DIR}
