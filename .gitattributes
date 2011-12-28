@@ -27515,6 +27515,8 @@ lib/libc/gen/errlst.c -text
 lib/libc/gen/errno.c -text
 lib/libc/gen/exec.3 -text
 lib/libc/gen/exec.c -text
+lib/libc/gen/feature_present.3 -text
+lib/libc/gen/feature_present.c -text
 lib/libc/gen/fmtcheck.3 -text
 lib/libc/gen/fmtcheck.c -text
 lib/libc/gen/fmtmsg.3 -text

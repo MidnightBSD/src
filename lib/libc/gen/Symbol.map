@@ -1,6 +1,6 @@
 /*
  * $FreeBSD: src/lib/libc/gen/Symbol.map,v 1.6 2007/05/31 13:01:33 deischen Exp $
- * $MidnightBSD: src/lib/libc/gen/Symbol.map,v 1.3 2010/01/10 18:29:19 laffer1 Exp $
+ * $MidnightBSD: src/lib/libc/gen/Symbol.map,v 1.4 2011/12/24 02:53:22 laffer1 Exp $
  */
 
 MNBSD_1.0 {
@@ -361,6 +361,10 @@ FBSD_1.0 {
 	waitpid;
 	wordexp;
 	wordfree;
+};
+
+FBSD_1.1 {
+	feature_present;
 };
 
 FBSD_1.3 {
