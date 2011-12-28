@@ -37412,6 +37412,8 @@ sys/geom/part/g_part_vtoc8.c -text
 sys/geom/raid3/g_raid3.c -text
 sys/geom/raid3/g_raid3.h -text
 sys/geom/raid3/g_raid3_ctl.c -text
+sys/geom/raid5/g_raid5.c -text
+sys/geom/raid5/g_raid5.h -text
 sys/geom/shsec/g_shsec.c -text
 sys/geom/shsec/g_shsec.h -text
 sys/geom/stripe/g_stripe.c -text
