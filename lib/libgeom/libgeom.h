@@ -123,6 +123,8 @@ struct gprovider {
 	char			*lg_mode;
 	off_t			lg_mediasize;
 	u_int			lg_sectorsize;
+	off_t			lg_stripeoffset;
+	off_t			lg_stripesize;
 	struct gconf		lg_config;
 };
 
