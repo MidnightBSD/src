@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20111227:
+	import raid5 module for GEOM, graid5(8)
+
+	This is experimental and known to use a lot of kernel
+	memory. 
+
 20111223:
 	telnetd: fix a root exploit from a fixed buffer that was not checked
 
@@ -1177,4 +1183,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.153 2011/12/24 03:21:25 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.154 2011/12/24 03:30:18 laffer1 Exp $
