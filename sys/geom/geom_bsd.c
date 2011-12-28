@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_bsd.c,v 1.5 2011/07/13 01:14:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -464,6 +464,7 @@ g_bsd_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp, struct g_
  * not implemented here.
  */
 
+static struct uuid midnightbsd_slice = GPT_ENT_TYPE_MIDNIGHTBSD;
 static struct uuid freebsd_slice = GPT_ENT_TYPE_FREEBSD;
 
 static struct g_geom *
@@ -523,20 +524,11 @@ g_bsd_taste(struct g_class *mp, struct g_provider *pp, int flags)
 				break;
 		}
 
-		/* Same thing if we are inside a PC98 */
-		error = g_getattr("PC98::type", cp, &i);
-		if (!error) {
-			if (i != 0xc494 && flags == G_TF_NORMAL)
-				break;
-			error = g_getattr("PC98::offset", cp, &ms->mbroffset);
-			if (error)
-				break;
-		}
-
 		/* Same thing if we are inside a GPT */
 		error = g_getattr("GPT::type", cp, &uuid);
 		if (!error) {
 			if (memcmp(&uuid, &freebsd_slice, sizeof(uuid)) != 0 &&
+			    memcmp(&uuid, &midnightbsd_slice, sizeof(uuid)) != 0 &&
 			    flags == G_TF_NORMAL)
 				break;
 		}
