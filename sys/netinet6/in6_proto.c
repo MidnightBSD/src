@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/netinet6/in6_proto.c,v 1.4 2008/12/03 00:27:01 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/netinet6/in6_proto.c,v 1.5 2009/01/11 02:40:53 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/netinet6/in6_proto.c,v 1.46 2007/07/05 16:29:39 delphij Exp $	*/
 /*	$KAME: in6_proto.c,v 1.91 2001/05/27 13:28:35 itojun Exp $	*/
 
@@ -126,6 +126,7 @@
 /*
  * TCP/IP protocol family: IP6, ICMP6, UDP, TCP.
  */
+FEATURE(inet6, "Internet Protocol version 6");
 
 extern	struct domain inet6domain;
 static	struct pr_usrreqs nousrreqs;

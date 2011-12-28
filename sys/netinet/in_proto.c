@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netinet/in_proto.c,v 1.3 2008/12/03 00:26:58 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -91,6 +91,8 @@ static struct pr_usrreqs nousrreqs;
 #ifdef DEV_CARP
 #include <netinet/ip_carp.h>
 #endif
+
+FEATURE(inet, "Internet Protocol version 4");
 
 extern	struct domain inetdomain;
 
