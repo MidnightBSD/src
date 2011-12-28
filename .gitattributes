@@ -42889,6 +42889,7 @@ usr.sbin/bsdinstall/scripts/keymap -text
 usr.sbin/bsdinstall/scripts/mirrorselect -text
 usr.sbin/bsdinstall/scripts/mount -text
 usr.sbin/bsdinstall/scripts/netconfig -text
+usr.sbin/bsdinstall/scripts/netconfig_ipv4 -text
 usr.sbin/bsdinstall/scripts/netconfig_ipv6 -text
 usr.sbin/bsdinstall/scripts/rootpass -text
 usr.sbin/bsdinstall/scripts/services -text
