@@ -1470,6 +1470,7 @@ geom/part/g_part_mbr.c		optional geom_part_mbr
 geom/part/g_part_vtoc8.c	optional geom_part_vtoc8
 geom/raid3/g_raid3.c		optional geom_raid3
 geom/raid3/g_raid3_ctl.c	optional geom_raid3
+geom/raid5/g_raid5.c		optional geom_raid5
 geom/shsec/g_shsec.c		optional geom_shsec
 geom/stripe/g_stripe.c		optional geom_stripe
 geom/uzip/g_uzip.c		optional geom_uzip
