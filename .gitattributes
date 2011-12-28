@@ -42890,8 +42890,10 @@ usr.sbin/bsdinstall/scripts/mirrorselect -text
 usr.sbin/bsdinstall/scripts/mount -text
 usr.sbin/bsdinstall/scripts/netconfig -text
 usr.sbin/bsdinstall/scripts/netconfig_ipv6 -text
+usr.sbin/bsdinstall/scripts/rootpass -text
 usr.sbin/bsdinstall/scripts/services -text
 usr.sbin/bsdinstall/scripts/time -text
+usr.sbin/bsdinstall/scripts/umount -text
 usr.sbin/bsdinstall/scripts/wlanconfig -text
 usr.sbin/bsnmpd/Makefile -text
 usr.sbin/bsnmpd/Makefile.inc -text
