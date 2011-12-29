@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/net/bpf.c,v 1.3 2008/12/03 00:26:54 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -132,7 +132,7 @@ SYSCTL_INT(_net_bpf, OID_AUTO, maxbufsize, CTLFLAG_RW,
 static int bpf_maxinsns = BPF_MAXINSNS;
 SYSCTL_INT(_net_bpf, OID_AUTO, maxinsns, CTLFLAG_RW,
     &bpf_maxinsns, 0, "Maximum bpf program instructions");
-SYSCTL_NODE(_net_bpf, OID_AUTO, stats, CTLFLAG_RW,
+SYSCTL_NODE(_net_bpf, OID_AUTO, stats, CTLFLAG_MPSAFE|CTLFLAG_RW,
     bpf_stats_sysctl, "bpf statistics portal");
 
 static	d_open_t	bpfopen;
