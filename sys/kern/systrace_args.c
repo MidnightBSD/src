@@ -1198,13 +1198,13 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 0;
 		break;
 	}
-	/* __semctl */
+	/* freebsd7___semctl */
 	case 220: {
-		struct __semctl_args *p = params;
+		struct freebsd7___semctl_args *p = params;
 		iarg[0] = p->semid; /* int */
 		iarg[1] = p->semnum; /* int */
 		iarg[2] = p->cmd; /* int */
-		uarg[3] = (intptr_t) p->arg; /* union semun * */
+		uarg[3] = (intptr_t) p->arg; /* union semun_old * */
 		*n_args = 4;
 		break;
 	}
@@ -1226,12 +1226,12 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 3;
 		break;
 	}
-	/* msgctl */
+	/* freebsd7_msgctl */
 	case 224: {
-		struct msgctl_args *p = params;
+		struct freebsd7_msgctl_args *p = params;
 		iarg[0] = p->msqid; /* int */
 		iarg[1] = p->cmd; /* int */
-		uarg[2] = (intptr_t) p->buf; /* struct msqid_ds * */
+		uarg[2] = (intptr_t) p->buf; /* struct msqid_ds_old * */
 		*n_args = 3;
 		break;
 	}
@@ -1273,12 +1273,12 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 3;
 		break;
 	}
-	/* shmctl */
+	/* freebsd7_shmctl */
 	case 229: {
-		struct shmctl_args *p = params;
+		struct freebsd7_shmctl_args *p = params;
 		iarg[0] = p->shmid; /* int */
 		iarg[1] = p->cmd; /* int */
-		uarg[2] = (intptr_t) p->buf; /* struct shmid_ds * */
+		uarg[2] = (intptr_t) p->buf; /* struct shmid_ds_old * */
 		*n_args = 3;
 		break;
 	}
@@ -1999,11 +1999,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 6;
 		break;
 	}
-	/* lkmressys */
-	case 370: {
-		*n_args = 0;
-		break;
-	}
 	/* extattr_set_fd */
 	case 371: {
 		struct extattr_set_fd_args *p = params;
@@ -2040,14 +2035,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		struct __setugid_args *p = params;
 		iarg[0] = p->flag; /* int */
 		*n_args = 1;
-		break;
-	}
-	/* nfsclnt */
-	case 375: {
-		struct nfsclnt_args *p = params;
-		iarg[0] = p->flag; /* int */
-		uarg[1] = (intptr_t) p->argp; /* caddr_t */
-		*n_args = 2;
 		break;
 	}
 	/* eaccess */
@@ -2917,6 +2904,34 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		uarg[3] = p->cpusetsize; /* size_t */
 		uarg[4] = (intptr_t) p->mask; /* const cpuset_t * */
 		*n_args = 5;
+		break;
+	}
+	/* __semctl */
+	case 510: {
+		struct __semctl_args *p = params;
+		iarg[0] = p->semid; /* int */
+		iarg[1] = p->semnum; /* int */
+		iarg[2] = p->cmd; /* int */
+		uarg[3] = (intptr_t) p->arg; /* union semun * */
+		*n_args = 4;
+		break;
+	}
+	/* msgctl */
+	case 511: {
+		struct msgctl_args *p = params;
+		iarg[0] = p->msqid; /* int */
+		iarg[1] = p->cmd; /* int */
+		uarg[2] = (intptr_t) p->buf; /* struct msqid_ds * */
+		*n_args = 3;
+		break;
+	}
+	/* shmctl */
+	case 512: {
+		struct shmctl_args *p = params;
+		iarg[0] = p->shmid; /* int */
+		iarg[1] = p->cmd; /* int */
+		uarg[2] = (intptr_t) p->buf; /* struct shmid_ds * */
+		*n_args = 3;
 		break;
 	}
 	default:

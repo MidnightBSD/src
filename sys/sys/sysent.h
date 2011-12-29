@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/sysent.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1988, 1991 The Regents of the University of California.
  * All rights reserved.
@@ -49,7 +49,7 @@ typedef	void (*systrace_probe_func_t)(u_int32_t, int, struct sysent *, void *);
  * Used by loaded syscalls to convert arguments to a DTrace array
  * of 64-bit arguments.
  */
-typedef	void (*systrace_args_func_t)(void *, u_int64_t *, int *);
+typedef	void (*systrace_args_func_t)(int, void *, u_int64_t *, int *);
 
 extern systrace_probe_func_t	systrace_probe_func;
 
@@ -158,6 +158,12 @@ int    syscall_register(int *offset, struct sysent *new_sysent,
 	    struct sysent *old_sysent);
 int    syscall_deregister(int *offset, struct sysent *old_sysent);
 int    syscall_module_handler(struct module *mod, int what, void *arg);
+
+/* Special purpose system call functions. */
+struct nosys_args;
+
+int	lkmnosys(struct thread *, struct nosys_args *);
+int	lkmressys(struct thread *, struct nosys_args *);
 
 #endif /* _KERNEL */
 

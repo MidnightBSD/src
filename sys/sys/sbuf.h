@@ -1,6 +1,7 @@
-/* $MidnightBSD: src/sys/sys/sbuf.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/sbuf.h,v 1.3 2011/12/10 14:57:28 laffer1 Exp $ */
 /*-
- * Copyright (c) 2000 Poul-Henning Kamp and Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2000-2008 Poul-Henning Kamp
+ * Copyright (c) 2000-2008 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,19 +13,18 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  *
  *      $FreeBSD: src/sys/sys/sbuf.h,v 1.14 2004/07/09 11:35:30 des Exp $
  */
@@ -34,12 +34,16 @@
 
 #include <sys/_types.h>
 
+struct sbuf;
+struct sbuf_drain_data;
+typedef int (sbuf_drain_func)(void *, const char *, int);
+
 /*
  * Structure definition
  */
 struct sbuf {
 	char		*s_buf;		/* storage buffer */
-	void		*s_unused;	/* binary compatibility. */
+	struct sbuf_drain *s_drain;	/* drain function and data */
 	int		 s_size;	/* size of storage buffer */
 	int		 s_len;		/* current length of string */
 #define	SBUF_FIXEDLEN	0x00000000	/* fixed length buffer (default) */
@@ -70,9 +74,10 @@ int		 sbuf_printf(struct sbuf *, const char *, ...)
 int		 sbuf_vprintf(struct sbuf *, const char *, __va_list)
 	__printflike(2, 0);
 int		 sbuf_putc(struct sbuf *, int);
+void		 sbuf_set_drain(struct sbuf *, sbuf_drain_func *, void *);
 int		 sbuf_trim(struct sbuf *);
 int		 sbuf_overflowed(struct sbuf *);
-void		 sbuf_finish(struct sbuf *);
+int		 sbuf_finish(struct sbuf *);
 char		*sbuf_data(struct sbuf *);
 int		 sbuf_len(struct sbuf *);
 int		 sbuf_done(struct sbuf *);
