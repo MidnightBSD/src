@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/sysctl.h,v 1.8 2011/10/19 13:56:07 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/sysctl.h,v 1.9 2011/12/29 02:33:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -649,7 +649,7 @@ extern struct sysctl_oid_list sysctl__children;
 SYSCTL_DECL(_kern);
 SYSCTL_DECL(_kern_features);
 SYSCTL_DECL(_kern_ipc);
-/* SYSCTL_DECL(_kern_proc); */
+/* XXX must be static SYSCTL_DECL(_kern_proc); */
 SYSCTL_DECL(_sysctl);
 SYSCTL_DECL(_vm);
 SYSCTL_DECL(_vm_stats);
