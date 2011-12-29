@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/fs/devfs/devfs_devs.c,v 1.5 2009/12/13 01:09:43 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_devs.c,v 1.6 2011/10/09 22:03:31 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000,2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -104,7 +104,8 @@ sysctl_devname(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-SYSCTL_PROC(_kern, OID_AUTO, devname, CTLTYPE_OPAQUE|CTLFLAG_RW|CTLFLAG_ANYBODY,
+SYSCTL_PROC(_kern, OID_AUTO, devname, 
+	CTLTYPE_OPAQUE|CTLFLAG_RW|CTLFLAG_ANYBODY|CTLFLAG_MPSAFE,
 	NULL, 0, sysctl_devname, "", "devname(3) handler");
 
 SYSCTL_INT(_debug_sizeof, OID_AUTO, cdev, CTLFLAG_RD,

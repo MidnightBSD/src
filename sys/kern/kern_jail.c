@@ -967,7 +967,8 @@ sysctl_jail_list(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-SYSCTL_OID(_security_jail, OID_AUTO, list, CTLTYPE_STRUCT | CTLFLAG_RD,
+SYSCTL_OID(_security_jail, OID_AUTO, list,
+    CTLTYPE_STRUCT | CTLFLAG_RD | CTLFLAG_MPSAFE,
     NULL, 0, sysctl_jail_list, "S", "List of active jails");
 
 static int
@@ -980,5 +981,6 @@ sysctl_jail_jailed(SYSCTL_HANDLER_ARGS)
 
 	return (error);
 }
-SYSCTL_PROC(_security_jail, OID_AUTO, jailed, CTLTYPE_INT | CTLFLAG_RD,
+SYSCTL_PROC(_security_jail, OID_AUTO, jailed, 
+    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
     NULL, 0, sysctl_jail_jailed, "I", "Process in jail?");
