@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/security/mac_bsdextended/mac_bsdextended.c,v 1.3 2008/12/03 00:11:17 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -197,8 +197,8 @@ out:
 	return (error);
 }
 
-SYSCTL_NODE(_security_mac_bsdextended, OID_AUTO, rules, CTLFLAG_RW,
-    sysctl_rule, "BSD extended MAC rules");
+SYSCTL_NODE(_security_mac_bsdextended, OID_AUTO, rules,
+    CTLFLAG_MPSAFE|CTLFLAG_RW, sysctl_rule, "BSD extended MAC rules");
 
 static void
 mac_bsdextended_init(struct mac_policy_conf *mpc)
