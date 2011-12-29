@@ -1291,10 +1291,11 @@ sysctl_kern_proc_sv_name(SYSCTL_HANDLER_ARGS)
 
 static SYSCTL_NODE(_kern, KERN_PROC, proc, CTLFLAG_RD,  0, "Process table");
 
-SYSCTL_PROC(_kern_proc, KERN_PROC_ALL, all, CTLFLAG_RD|CTLTYPE_STRUCT,
-	0, 0, sysctl_kern_proc, "S,proc", "Return entire process table");
+SYSCTL_PROC(_kern_proc, KERN_PROC_ALL, all, CTLFLAG_RD|CTLTYPE_STRUCT|
+	CTLFLAG_MPSAFE, 0, 0, sysctl_kern_proc, "S,proc", 
+	"Return entire process table");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_GID, gid, CTLFLAG_RD,
+static SYSCTL_NODE(_kern_proc, KERN_PROC_GID, gid, CTLFLAG_RD | CTLFLAG_MPSAFE,
 	sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, KERN_PROC_PGRP, pgrp, CTLFLAG_RD | CTLFLAG_MPSAFE,
