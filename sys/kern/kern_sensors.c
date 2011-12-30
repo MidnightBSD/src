@@ -1,4 +1,3 @@
-/*	$FreeBSD: src/sys/kern/kern_sensors.c,v 1.1 2007/10/14 10:45:30 netchild Exp $	*/
 /*	$OpenBSD: kern_sensors.c,v 1.19 2007/06/04 18:42:05 deraadt Exp $	*/
 /*	$OpenBSD: kern_sysctl.c,v 1.154 2007/06/01 17:29:10 beck Exp $	*/
 
@@ -21,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_sensors.c,v 1.1 2007/10/14 10:45:30 netchild Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
