@@ -5,6 +5,7 @@
  * Copyright (c) 2005 David Gwynne <dlg@openbsd.org>
  * Copyright (c) 2006 Constantine A. Murenin <cnst+openbsd@bugmail.mojo.ru>
  * Copyright (c) 2007 Constantine A. Murenin <cnst+GSoC2007@FreeBSD.org>
+ * Copyright (c) 2011 Lucas Holt <luke@midnightbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -20,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.2 2011/12/30 00:32:22 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,6 +36,8 @@ __MBSDID("$MidnightBSD$");
 
 #include <sys/sysctl.h>
 #include <sys/sensors.h>
+
+struct mtx sensordev_lock;
 
 int			sensordev_count = 0;
 SLIST_HEAD(, ksensordev) sensordev_list = SLIST_HEAD_INITIALIZER(sensordev_list);
@@ -67,7 +70,7 @@ sensordev_install(struct ksensordev *sensdev)
 {
 	struct ksensordev *v, *nv;
 
-	mtx_lock(&Giant);
+	mtx_lock(&sensordev_lock);
 	if (sensordev_count == 0) {
 		sensdev->num = 0;
 		SLIST_INSERT_HEAD(&sensordev_list, sensdev, list);
@@ -80,11 +83,11 @@ sensordev_install(struct ksensordev *sensdev)
 		SLIST_INSERT_AFTER(v, sensdev, list);
 	}
 	sensordev_count++;
-	mtx_unlock(&Giant);
 
 #ifndef NOSYSCTL8HACK
 	sensor_sysctl8magic_install(sensdev);
 #endif
+	mtx_unlock(&sensordev_lock);
 }
 
 void
@@ -94,7 +97,7 @@ sensor_attach(struct ksensordev *sensdev, struct ksensor *sens)
 	struct ksensors_head *sh;
 	int i;
 
-	mtx_lock(&Giant);
+	mtx_lock(&sensordev_lock);
 	sh = &sensdev->sensors_list;
 	if (sensdev->sensors_count == 0) {
 		for (i = 0; i < SENSOR_MAX_TYPES; i++)
@@ -120,20 +123,20 @@ sensor_attach(struct ksensordev *sensdev, struct ksensor *sens)
 	if (sensdev->maxnumt[sens->type] == sens->numt)
 		sensdev->maxnumt[sens->type]++;
 	sensdev->sensors_count++;
-	mtx_unlock(&Giant);
+	mtx_unlock(&sensordev_lock);
 }
 
 void
 sensordev_deinstall(struct ksensordev *sensdev)
 {
-	mtx_lock(&Giant);
+	mtx_lock(&sensordev_lock);
 	sensordev_count--;
 	SLIST_REMOVE(&sensordev_list, sensdev, ksensordev, list);
-	mtx_unlock(&Giant);
 
 #ifndef NOSYSCTL8HACK
 	sensor_sysctl8magic_deinstall(sensdev);
 #endif
+	mtx_unlock(&sensordev_lock);
 }
 
 void
@@ -141,7 +144,7 @@ sensor_detach(struct ksensordev *sensdev, struct ksensor *sens)
 {
 	struct ksensors_head *sh;
 
-	mtx_lock(&Giant);
+	mtx_lock(&sensordev_lock);
 	sh = &sensdev->sensors_list;
 	sensdev->sensors_count--;
 	SLIST_REMOVE(sh, sens, ksensor, list);
@@ -150,33 +153,43 @@ sensor_detach(struct ksensordev *sensdev, struct ksensor *sens)
 	 */
 	if (sens->numt == sensdev->maxnumt[sens->type] - 1)
 		sensdev->maxnumt[sens->type]--;
-	mtx_unlock(&Giant);
+	mtx_unlock(&sensordev_lock);
 }
 
 struct ksensordev *
 sensordev_get(int num)
 {
 	struct ksensordev *sd;
+	struct ksensordev *sdret;
 
+	sdret = NULL;
+
+	mtx_lock(&sensordev_lock);
 	SLIST_FOREACH(sd, &sensordev_list, list)
 		if (sd->num == num)
-			return (sd);
+			sdret = sd;
+	mtx_unlock(&sensordev_lock);
 
-	return (NULL);
+	return (sdret);
 }
 
 struct ksensor *
 sensor_find(struct ksensordev *sensdev, enum sensor_type type, int numt)
 {
 	struct ksensor *s;
+	struct ksensor *sret;
 	struct ksensors_head *sh;
 
+	sret = NULL;
+
+	mtx_lock(&sensordev_lock);
 	sh = &sensdev->sensors_list;
 	SLIST_FOREACH(s, sh, list)
 		if (s->type == type && s->numt == numt)
-			return (s);
+			sret = s;
+	mtx_unlock(&sensordev_lock);
 
-	return (NULL);
+	return (sret);
 }
 
 int
@@ -355,10 +368,12 @@ sysctl_handle_sensordev(SYSCTL_HANDLER_ARGS)
 	/* Grab a copy, to clear the kernel pointers */
 	usd = malloc(sizeof(*usd), M_TEMP, M_WAITOK);
 	bzero(usd, sizeof(*usd));
+	mtx_lock(&sensordev_lock);
 	usd->num = ksd->num;
 	strlcpy(usd->xname, ksd->xname, sizeof(usd->xname));
 	memcpy(usd->maxnumt, ksd->maxnumt, sizeof(usd->maxnumt));
 	usd->sensors_count = ksd->sensors_count;
+	mtx_unlock(&sensordev_lock);
 
 	error = SYSCTL_OUT(req, usd, sizeof(struct sensordev));
 
@@ -379,6 +394,7 @@ sysctl_handle_sensor(SYSCTL_HANDLER_ARGS)
 	/* Grab a copy, to clear the kernel pointers */
 	us = malloc(sizeof(*us), M_TEMP, M_WAITOK);
 	bzero(us, sizeof(*us));
+	mtx_lock(&sensordev_lock);
 	memcpy(us->desc, ks->desc, sizeof(ks->desc));
 	us->tv = ks->tv;
 	us->value = ks->value;
@@ -386,6 +402,7 @@ sysctl_handle_sensor(SYSCTL_HANDLER_ARGS)
 	us->status = ks->status;
 	us->numt = ks->numt;
 	us->flags = ks->flags;
+	mtx_unlock(&sensordev_lock);
 
 	error = SYSCTL_OUT(req, us, sizeof(struct sensor));
 

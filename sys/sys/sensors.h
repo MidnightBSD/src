@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/sys/sensors.h,v 1.1 2007/10/14 10:45:30 netchild Exp $	*/
+/* $MidnightBSD$ */
 /*	$OpenBSD: sensors.h,v 1.23 2007/03/22 16:55:31 deraadt Exp $	*/
 
 /*-
@@ -29,6 +29,9 @@
 
 #ifndef _SYS_SENSORS_H_
 #define _SYS_SENSORS_H_
+
+#include <sys/lock.h>
+#include <sys/mutex.h>
 
 /* Sensor types */
 enum sensor_type {
