@@ -100,6 +100,8 @@ typedef struct {
 
 #define	LINUX_CTL_MAXNAME	10
 
+#define LINUX_AT_COUNT		16
+
 struct l___sysctl_args
 {
 	l_int		*name;
