@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.bin/spell/spellprog/spellprog.c,v 1.1 2006/12/31 07:08:37 laffer1 Exp $ */
 /*	$NetBSD: spellprog.c,v 1.6 2006/10/22 16:36:44 christos Exp $	*/
 
 /* derived from OpenBSD: spellprog.c,v 1.4 2003/06/03 02:56:16 millert Exp */
@@ -466,7 +466,8 @@ next:		;
 
 static int
 /*ARGSUSED*/
-nop(char *ep, const char *d, const char *a, size_t lev)
+nop(char *ep __unused, const char *d __unused, 
+    const char *a __unused, size_t lev __unused)
 {
 
 	return 0;
@@ -474,7 +475,7 @@ nop(char *ep, const char *d, const char *a, size_t lev)
 
 static int
 /*ARGSUSED*/
-strip(char *ep, const char *d, const char *a, size_t lev)
+strip(char *ep, const char *d __unused, const char *a, size_t lev)
 {
 
 	return trypref(ep, a, lev) || suffix(ep, lev);
@@ -493,7 +494,7 @@ s(char *ep, const char *d, const char *a, const size_t lev)
 
 static int
 /*ARGSUSED*/
-an(char *ep, const char *d, const char *a, size_t lev)
+an(char *ep, const char *d __unused, const char *a, size_t lev)
 {
 
 	if (!isupper((unsigned char)*word))	/* must be proper name */
@@ -503,7 +504,7 @@ an(char *ep, const char *d, const char *a, size_t lev)
 
 static int
 /*ARGSUSED*/
-ize(char *ep, const char *d, const char *a, size_t lev)
+ize(char *ep, const char *d, const char *a __unused, size_t lev)
 {
 
 	*ep++ = 'e';
@@ -512,7 +513,7 @@ ize(char *ep, const char *d, const char *a, size_t lev)
 
 static int
 /*ARGSUSED*/
-y_to_e(char *ep, const char *d, const char *a, size_t lev)
+y_to_e(char *ep, const char *d, const char *a __unused, size_t lev)
 {
 	char c = *ep;
 
@@ -721,7 +722,7 @@ trypref(char *ep, const char *a, size_t lev)
 			val = 1;
 			break;
 		}
-		if (pp - space >= sizeof(space))
+		if ( pp - space >= (int)sizeof(space))
 			return 0;
 	}
 	deriv.buf[lev + 1] = deriv.buf[lev + 2] = '\0';
@@ -873,11 +874,11 @@ getderiv(size_t lev)
 }
 
 static char *
-estrdup(const char *s)
+estrdup(const char *str)
 {
 	char *d;
 
-	if ((d = strdup(s)) == NULL)
+	if ((d = strdup(str)) == NULL)
 		err(1, "strdup");
 	return (d);
 }
