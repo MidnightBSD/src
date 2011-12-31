@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/compat/freebsd32/freebsd32_ioctl.h,v 1.1 2011/12/31 21:09:15 laffer1 Exp $
  */
 
 #ifndef _COMPAT_FREEBSD32_IOCTL_H_
@@ -64,9 +64,9 @@ struct md_ioctl32 {
 
 #define	CDIOREADTOCENTRYS_32 _IOWR('c', 5, struct ioc_read_toc_entry32)
 #define	CDIOREADTOCHEADER_32 _IOR('c', 4, struct ioc_toc_header32)
-#define	MDIOCATTACH_32	_IOC(IOC_INOUT, 'm', 0, sizeof(struct md_ioctl32) + 4)
-#define	MDIOCDETACH_32	_IOC(IOC_INOUT, 'm', 1, sizeof(struct md_ioctl32) + 4)
-#define	MDIOCQUERY_32	_IOC(IOC_INOUT, 'm', 2, sizeof(struct md_ioctl32) + 4)
-#define	MDIOCLIST_32	_IOC(IOC_INOUT, 'm', 3, sizeof(struct md_ioctl32) + 4)
+#define	MDIOCATTACH_32	_IOC(IOC_INOUT, 'm', 0, (sizeof(struct md_ioctl32) + 4))
+#define	MDIOCDETACH_32	_IOC(IOC_INOUT, 'm', 1, (sizeof(struct md_ioctl32) + 4))
+#define	MDIOCQUERY_32	_IOC(IOC_INOUT, 'm', 2, (sizeof(struct md_ioctl32) + 4))
+#define	MDIOCLIST_32	_IOC(IOC_INOUT, 'm', 3, (sizeof(struct md_ioctl32) + 4))
 
 #endif	/* _COMPAT_FREEBSD32_IOCTL_H_ */
