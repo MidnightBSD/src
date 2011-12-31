@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/elf.h,v 1.19 2006/10/04 21:37:09 jb Exp $
+ * $FreeBSD: src/sys/amd64/include/elf.h,v 1.19.2.3 2010/01/19 19:51:54 kib Exp $
  */
 
 #ifndef _MACHINE_ELF_H_
@@ -81,28 +81,14 @@ __ElfType(Auxinfo);
 #define	AT_BASE		7	/* Interpreter's base address. */
 #define	AT_FLAGS	8	/* Flags (unused for i386). */
 #define	AT_ENTRY	9	/* Where interpreter should transfer control. */
-
-/*
- * The following non-standard values are used for passing information
- * from John Polstra's testbed program to the dynamic linker.  These
- * are expected to go away soon.
- *
- * Unfortunately, these overlap the Linux non-standard values, so they
- * must not be used in the same context.
- */
-#define	AT_BRK		10	/* Starting point for sbrk and brk. */
-#define	AT_DEBUG	11	/* Debugging level. */
-
-/*
- * The following non-standard values are used in Linux ELF binaries.
- */
 #define	AT_NOTELF	10	/* Program is not ELF ?? */
 #define	AT_UID		11	/* Real uid. */
 #define	AT_EUID		12	/* Effective uid. */
 #define	AT_GID		13	/* Real gid. */
 #define	AT_EGID		14	/* Effective gid. */
+#define	AT_EXECPATH	15	/* Path to the executable. */
 
-#define	AT_COUNT	15	/* Count of defined aux entry types. */
+#define	AT_COUNT	16	/* Count of defined aux entry types. */
 
 /*
  * Relocation types.
@@ -119,5 +105,11 @@ __ElfType(Auxinfo);
 #define	ELF_TARG_DATA	ELFDATA2LSB
 #define	ELF_TARG_MACH	EM_X86_64
 #define	ELF_TARG_VER	1
+
+#if __ELF_WORD_SIZE == 32
+#define	ET_DYN_LOAD_ADDR 0x01001000
+#else
+#define	ET_DYN_LOAD_ADDR 0x01021000
+#endif
 
 #endif /* !_MACHINE_ELF_H_ */

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/imgact_elf.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995-1996 Søren Schmidt
  * All rights reserved.
@@ -57,6 +57,16 @@ typedef struct {
 } __ElfN(Auxargs);
 
 typedef struct {
+	Elf_Note	hdr;
+	const char *	vendor;
+	int		flags;
+	boolean_t	(*trans_osrel)(const Elf_Note *, int32_t *);
+#define	BN_CAN_FETCH_OSREL	0x0001	/* Deprecated. */
+#define	BN_TRANSLATE_OSREL	0x0002	/* Use trans_osrel fetch osrel after */
+					/* checking ABI contraint if needed. */
+} Elf_Brandnote;
+
+typedef struct {
 	int brand;
 	int machine;
 	const char *compat_3_brand;	/* pre Binutils 2.10 method (FBSD 3) */
@@ -64,8 +74,11 @@ typedef struct {
 	const char *interp_path;
 	struct sysentvec *sysvec;
 	const char *interp_newpath;
-        int flags;
-#define		BI_CAN_EXEC_DYN	0x0001
+	int flags;
+	Elf_Brandnote *brand_note;
+#define	BI_CAN_EXEC_DYN		0x0001
+#define	BI_BRAND_NOTE		0x0002	/* May have note.ABI-tag section. */
+#define	BI_BRAND_NOTE_MANDATORY	0x0004	/* Must have note.ABI-tag section. */
 } __ElfN(Brandinfo);
 
 __ElfType(Auxargs);
@@ -83,7 +96,8 @@ int	__elfN(coredump)(struct thread *, struct vnode *, off_t);
 void	__elfN(dump_thread)(struct thread *, void *, size_t *);
 
 extern	int __elfN(fallback_brand);
-
+extern Elf_Brandnote __elfN(freebsd_brandnote);
+extern Elf_Brandnote __elfN(midnightbsd_brandnote);
 #endif /* _KERNEL */
 
 #endif /* !_SYS_IMGACT_ELF_H_ */
