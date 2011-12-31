@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/w/pr_time.c,v 1.19 2002/06/07 01:41:54 jmallett Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/w/pr_time.c,v 1.20.2.2 2009/09/13 17:01:34 ume Exp $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)pr_time.c	8.2 (Berkeley) 4/4/94";
@@ -44,6 +44,7 @@ static const char sccsid[] = "@(#)pr_time.c	8.2 (Berkeley) 4/4/94";
 
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
 
 #include "extern.h"
 
@@ -51,13 +52,14 @@ static const char sccsid[] = "@(#)pr_time.c	8.2 (Berkeley) 4/4/94";
  * pr_attime --
  *	Print the time since the user logged in.
  */
-void
+int
 pr_attime(time_t *started, time_t *now)
 {
-	static char buf[256];
+	static wchar_t buf[256];
 	struct tm tp, tm;
 	time_t diff;
-	char fmt[20];
+	wchar_t *fmt;
+	int len, width, offset = 0;
 
 	tp = *localtime(started);
 	tm = *localtime(now);
@@ -65,7 +67,7 @@ pr_attime(time_t *started, time_t *now)
 
 	/* If more than a week, use day-month-year. */
 	if (diff > 86400 * 7)
-		(void)strcpy(fmt, "%d%b%y");
+		fmt = L"%d%b%y";
 
 	/* If not today, use day-hour-am/pm. */
 	else if (tm.tm_mday != tp.tm_mday ||
@@ -73,16 +75,26 @@ pr_attime(time_t *started, time_t *now)
 		 tm.tm_year != tp.tm_year) {
 	/* The line below does not take DST into consideration */
 	/* else if (*now / 86400 != *started / 86400) { */
-		(void)strcpy(fmt, use_ampm ? "%a%I%p" : "%a%H");
+		fmt = use_ampm ? L"%a%I%p" : L"%a%H";
 	}
 
 	/* Default is hh:mm{am,pm}. */
 	else {
-		(void)strcpy(fmt, use_ampm ? "%l:%M%p" : "%k:%M");
+		fmt = use_ampm ? L"%l:%M%p" : L"%k:%M";
 	}
 
-	(void)strftime(buf, sizeof(buf), fmt, &tp);
-	(void)printf("%-7.7s", buf);
+	(void)wcsftime(buf, sizeof(buf), fmt, &tp);
+	len = wcslen(buf);
+	width = wcswidth(buf, len);
+	if (len == width)
+		(void)wprintf(L"%-7.7ls", buf);
+	else if (width < 7)
+		(void)wprintf(L"%ls%.*s", buf, 7 - width, "      ");
+	else {
+		(void)wprintf(L"%ls", buf);
+		offset = width - 7;
+	}
+	return (offset);
 }
 
 /*
