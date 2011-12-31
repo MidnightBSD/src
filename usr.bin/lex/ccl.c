@@ -26,9 +26,9 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* $Header: /home/cvs/src/usr.bin/lex/ccl.c,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ */
+/* $Header: /home/cvs/src/usr.bin/lex/ccl.c,v 1.2 2011-12-31 00:11:10 laffer1 Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/lex/ccl.c,v 1.6 2002/06/30 05:25:03 obrien Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/lex/ccl.c,v 1.7.2.1 2009/08/03 08:13:06 kensmith Exp $");
 
 #include "flexdef.h"
 
@@ -122,7 +122,7 @@ void list_character_set( file, cset )
 FILE *file;
 int cset[];
 	{
-	register int i;
+	int i;
 
 	putc( '[', file );
 
@@ -130,7 +130,7 @@ int cset[];
 		{
 		if ( cset[i] )
 			{
-			register int start_char = i;
+			int start_char = i;
 
 			putc( ' ', file );
 

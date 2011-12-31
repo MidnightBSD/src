@@ -33,8 +33,8 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* $Header: /home/cvs/src/usr.bin/lex/parse.y,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ */
-/* $FreeBSD: src/usr.bin/lex/parse.y,v 1.3 1999/10/27 07:56:46 obrien Exp $ */
+/* $Header: /home/cvs/src/usr.bin/lex/parse.y,v 1.2 2011-12-31 00:11:10 laffer1 Exp $ */
+/* $FreeBSD: src/usr.bin/lex/parse.y,v 1.4.2.1 2009/08/03 08:13:06 kensmith Exp $ */
 
 
 /* Some versions of bison are broken in that they use alloca() but don't
@@ -782,7 +782,7 @@ string		:  string CHAR
 
 void build_eof_action()
 	{
-	register int i;
+	int i;
 	char action_text[MAXLINE];
 
 	for ( i = 1; i <= scon_stk_ptr; ++i )

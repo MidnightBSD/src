@@ -27,8 +27,8 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* $Header: /home/cvs/src/usr.bin/lex/scan.l,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ */
-/* $FreeBSD: src/usr.bin/lex/scan.l,v 1.5 1999/10/27 07:56:46 obrien Exp $ */
+/* $Header: /home/cvs/src/usr.bin/lex/scan.l,v 1.2 2011-12-31 00:11:10 laffer1 Exp $ */
+/* $FreeBSD: src/usr.bin/lex/scan.l,v 1.6.2.1 2009/08/03 08:13:06 kensmith Exp $ */
 
 #include "flexdef.h"
 #include "parse.h"
@@ -434,7 +434,7 @@ LEXOPT		[aceknopr]
 			}
 
 	"{"{NAME}"}"	{
-			register Char *nmdefptr;
+			Char *nmdefptr;
 			Char *ndlookup();
 
 			strcpy( nmstr, yytext + 1 );
