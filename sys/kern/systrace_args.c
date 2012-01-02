@@ -2045,15 +2045,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 2;
 		break;
 	}
-	/* nmount */
-	case 378: {
-		struct nmount_args *p = params;
-		uarg[0] = (intptr_t) p->iovp; /* struct iovec * */
-		uarg[1] = p->iovcnt; /* unsigned int */
-		iarg[2] = p->flags; /* int */
-		*n_args = 3;
-		break;
-	}
 	/* kse_exit */
 	case 379: {
 		*n_args = 0;
