@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.24 2011/10/19 15:17:28 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.25 2011/10/20 15:22:15 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -95,7 +95,6 @@ SUBDIR=	${_3dfx} \
 	geom \
 	${_harp} \
 	hatm \
-	${_hfa} \
 	hifn \
 	hme \
 	${_hptiop} \
@@ -151,6 +150,7 @@ SUBDIR=	${_3dfx} \
 	libiconv \
 	libmbpool \
 	libmchain \
+	${_lindev} \
 	${_linprocfs} \
 	${_linsysfs} \
 	${_linux} \
@@ -390,12 +390,12 @@ _ep=		ep
 _exca=		exca
 _ext2fs=	ext2fs
 _fe=		fe
-#_hfa=		hfa #not mpsafe
 _i2c=		i2c
 _ibcs2=		ibcs2
 _ie=		ie
 _if_ndis=	if_ndis
 _io=		io
+_lindev=	lindev
 _linprocfs=	linprocfs
 _linsysfs=	linsysfs
 _linux=		linux

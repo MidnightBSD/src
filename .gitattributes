@@ -38374,12 +38374,6 @@ sys/modules/geom/geom_vol_ffs/Makefile -text
 sys/modules/geom/geom_zero/Makefile -text
 sys/modules/harp/Makefile -text
 sys/modules/hatm/Makefile -text
-sys/modules/hfa/Makefile -text
-sys/modules/hfa/Makefile.inc -text
-sys/modules/hfa/eisa/Makefile -text
-sys/modules/hfa/hfa/Makefile -text
-sys/modules/hfa/pci/Makefile -text
-sys/modules/hfa/sbus/Makefile -text
 sys/modules/hifn/Makefile -text
 sys/modules/hme/Makefile -text
 sys/modules/hptiop/Makefile -text
