@@ -201,6 +201,8 @@ dev/ipmi/ipmi_pci.c		optional ipmi pci
 dev/it/it.c			optional it isa
 dev/kbd/kbd.c			optional atkbd | sc | ukbd | vt
 dev/le/if_le_isa.c		optional le isa
+dev/lindev/full.c		optional lindev
+dev/lindev/lindev.c		optional lindev
 dev/mem/memutil.c		optional mem
 dev/mse/mse.c			optional mse
 dev/mse/mse_isa.c		optional mse isa

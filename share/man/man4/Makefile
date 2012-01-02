@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.28 2011/10/19 15:21:54 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.29 2011/10/20 04:44:28 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -159,6 +159,7 @@ MAN=	aac.4 \
 	le.4 \
 	led.4 \
 	lge.4 \
+	${_lindev.4} \
 	lm.4 \
 	lmc.4 \
 	lo.4 \
@@ -571,14 +572,17 @@ _if_nxge.4=	if_nxge.4
 _if_wpi.4=	if_wpi.4
 _ipmi.4=	ipmi.4
 _it.4=		it.4
-_nfsmb.4=	nfsmb.4
+_lindev.4=	lindev.4
 _nfe.4=		nfe.4
+_nfsmb.4=	nfsmb.4
 _nve.4=		nve.4
 _nxge.4=	nxge.4
 _rr232x.4=	rr232x.4
-_spkr.4=	spkr.4
 _speaker.4=	speaker.4
+_spkr.4=	spkr.4
 _wpi.4=		wpi.4
+
+MLINKS+=lindev.4 full.4
 .endif
 
 .if exists(${.CURDIR}/man4.${MACHINE_ARCH})
