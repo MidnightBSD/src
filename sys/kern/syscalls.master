@@ -670,7 +670,8 @@
 375	AUE_NULL	UNIMPL	nfsclnt
 376	AUE_EACCESS	STD	{ int eaccess(char *path, int flags); }
 377	AUE_NULL	UNIMPL	afs_syscall
-378	AUE_NMOUNT	UNIMPL	nmount
+378	AUE_NMOUNT	STD	{ int nmount(struct iovec *iovp, \
+				    unsigned int iovcnt, int flags); }
 379	AUE_NULL	STD	{ int kse_exit(void); }
 380	AUE_NULL	STD	{ int kse_wakeup(struct kse_mailbox *mbx); }
 381	AUE_NULL	STD	{ int kse_create(struct kse_mailbox *mbx, \
