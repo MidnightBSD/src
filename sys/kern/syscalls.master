@@ -1,4 +1,4 @@
-; $MidnightBSD: src/sys/kern/syscalls.master,v 1.5 2011/10/15 20:18:30 laffer1 Exp $
+; $MidnightBSD: src/sys/kern/syscalls.master,v 1.6 2011/12/29 02:33:28 laffer1 Exp $
 ;	from: @(#)syscalls.master	8.2 (Berkeley) 1/13/94
 ;
 ; System call name/number master file.
@@ -670,8 +670,7 @@
 375	AUE_NULL	UNIMPL	nfsclnt
 376	AUE_EACCESS	STD	{ int eaccess(char *path, int flags); }
 377	AUE_NULL	UNIMPL	afs_syscall
-378	AUE_NMOUNT	STD	{ int nmount(struct iovec *iovp, \
-				    unsigned int iovcnt, int flags); }
+378	AUE_NMOUNT	UNIMPL	nmount
 379	AUE_NULL	STD	{ int kse_exit(void); }
 380	AUE_NULL	STD	{ int kse_wakeup(struct kse_mailbox *mbx); }
 381	AUE_NULL	STD	{ int kse_create(struct kse_mailbox *mbx, \
