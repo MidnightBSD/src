@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.2 2011/12/30 00:32:22 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.3 2011/12/30 02:02:36 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -332,6 +332,8 @@ sensor_sysctl8magic_install(struct ksensordev *sensdev)
 	struct ksensor *s;
 	struct ksensors_head *sh = &sensdev->sensors_list;
 
+	mtx_assert(&sensordev_lock, MA_OWNED);
+
 	sysctl_ctx_init(cl);
 	ol = SYSCTL_CHILDREN(SYSCTL_ADD_NODE(cl, &SYSCTL_NODE_CHILDREN(_hw,
 	    sensors), sensdev->num, sensdev->xname, CTLFLAG_RD, NULL, ""));
@@ -347,8 +349,11 @@ sensor_sysctl8magic_install(struct ksensordev *sensdev)
 void
 sensor_sysctl8magic_deinstall(struct ksensordev *sensdev)
 {
-	struct sysctl_ctx_list *cl = &sensdev->clist;
+	struct sysctl_ctx_list *cl;
 
+	mtx_assert(&sensordev_lock, MA_OWNED);
+
+	cl = &sensdev->clist;
 	sysctl_ctx_free(cl);
 }
 
