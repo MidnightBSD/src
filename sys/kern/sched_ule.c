@@ -37,7 +37,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/kern/sched_ule.c,v 1.214.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/kern/sched_ule.c,v 1.3 2011/10/15 20:18:30 laffer1 Exp $");
 
 #include "opt_hwpmc_hooks.h"
 #include "opt_sched.h"
@@ -1399,7 +1399,7 @@ sched_initticks(void *dummy)
 	 * prevents excess thrashing on large machines and excess idle on
 	 * smaller machines.
 	 */
-	steal_thresh = min(ffs(mp_ncpus) - 1, 4);
+	steal_thresh = min(ffs(mp_ncpus) - 1, 3);
 	affinity = SCHED_AFFINITY_DEFAULT;
 #endif
 }
