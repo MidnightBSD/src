@@ -25,7 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/cmp/link.c,v 1.1.2.1 2005/09/17 11:33:41 brian Exp $");
+/* $FreeBSD: src/usr.bin/cmp/link.c,v 1.1 2005/08/23 13:13:13 brian Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <err.h>
