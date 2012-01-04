@@ -274,9 +274,6 @@ struct freebsd32_olio_listio_args {
 	char nent_l_[PADL_(int)]; int nent; char nent_r_[PADR_(int)];
 	char sig_l_[PADL_(struct osigevent32 *)]; struct osigevent32 * sig; char sig_r_[PADR_(struct osigevent32 *)];
 };
-struct freebsd32_jail_args {
-	char jail_l_[PADL_(struct jail32 *)]; struct jail32 * jail; char jail_r_[PADR_(struct jail32 *)];
-};
 struct freebsd32_sigtimedwait_args {
 	char set_l_[PADL_(const sigset_t *)]; const sigset_t * set; char set_r_[PADR_(const sigset_t *)];
 	char info_l_[PADL_(siginfo_t *)]; siginfo_t * info; char info_r_[PADR_(siginfo_t *)];
@@ -488,7 +485,6 @@ int	freebsd32_aio_error(struct thread *, struct freebsd32_aio_error_args *);
 int	freebsd32_oaio_read(struct thread *, struct freebsd32_oaio_read_args *);
 int	freebsd32_oaio_write(struct thread *, struct freebsd32_oaio_write_args *);
 int	freebsd32_olio_listio(struct thread *, struct freebsd32_olio_listio_args *);
-int	freebsd32_jail(struct thread *, struct freebsd32_jail_args *);
 int	freebsd32_sigtimedwait(struct thread *, struct freebsd32_sigtimedwait_args *);
 int	freebsd32_sigwaitinfo(struct thread *, struct freebsd32_sigwaitinfo_args *);
 int	freebsd32_aio_waitcomplete(struct thread *, struct freebsd32_aio_waitcomplete_args *);
@@ -733,7 +729,6 @@ int	freebsd6_freebsd32_ftruncate(struct thread *, struct freebsd6_freebsd32_ftru
 #define	FREEBSD32_SYS_AUE_freebsd32_oaio_write	AUE_NULL
 #define	FREEBSD32_SYS_AUE_freebsd32_olio_listio	AUE_NULL
 #define	FREEBSD32_SYS_AUE_freebsd4_freebsd32_sendfile	AUE_SENDFILE
-#define	FREEBSD32_SYS_AUE_freebsd32_jail	AUE_JAIL
 #define	FREEBSD32_SYS_AUE_freebsd4_freebsd32_sigaction	AUE_SIGACTION
 #define	FREEBSD32_SYS_AUE_freebsd4_freebsd32_sigreturn	AUE_SIGRETURN
 #define	FREEBSD32_SYS_AUE_freebsd32_sigtimedwait	AUE_SIGWAIT

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.6 2011/10/19 19:57:40 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.7 2012/01/02 16:26:33 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -2186,66 +2186,6 @@ freebsd32_sysctl(struct thread *td, struct freebsd32_sysctl_args *uap)
 }
 
 int
-freebsd32_jail(struct thread *td, struct freebsd32_jail_args *uap)
-{
-	uint32_t version;
-	int error;
-	struct jail j;
-
-	error = copyin(uap->jail, &version, sizeof(uint32_t));
-	if (error)
-		return (error);
-	switch (version) {
-	case 0:	
-	{
-		/* FreeBSD single IPv4 jails. */
-		struct jail32_v0 j32_v0;
-
-		bzero(&j, sizeof(struct jail));
-		error = copyin(uap->jail, &j32_v0, sizeof(struct jail32_v0));
-		if (error)
-			return (error);
-		CP(j32_v0, j, version);
-		PTRIN_CP(j32_v0, j, path);
-		PTRIN_CP(j32_v0, j, hostname);
-		j.ip4s = j32_v0.ip_number;
-		break;
-	}
-
-	case 1:
-		/*
-		 * Version 1 was used by multi-IPv4 jail implementations
-		 * that never made it into the official kernel.
-		 */
-		return (EINVAL);
-
-	case 2:	/* JAIL_API_VERSION */
-	{
-		/* FreeBSD multi-IPv4/IPv6,noIP jails. */
-		struct jail32 j32;
-
-		error = copyin(uap->jail, &j32, sizeof(struct jail32));
-		if (error)
-			return (error);
-		CP(j32, j, version);
-		PTRIN_CP(j32, j, path);
-		PTRIN_CP(j32, j, hostname);
-		PTRIN_CP(j32, j, jailname);
-		CP(j32, j, ip4s);
-		CP(j32, j, ip6s);
-		PTRIN_CP(j32, j, ip4);
-		PTRIN_CP(j32, j, ip6);
-		break;
-	}
-
-	default:
-		/* Sci-Fi jails are not supported, sorry. */
-		return (EINVAL);
-	}
-	return (kern_jail(td, &j));
-}
-
-int
 freebsd32_sigaction(struct thread *td, struct freebsd32_sigaction_args *uap)
 {
 	struct sigaction32 s32;
@@ -2853,82 +2793,3 @@ freebsd32_xxx(struct thread *td, struct freebsd32_xxx_args *uap)
 }
 #endif
 
-int
-syscall32_register(int *offset, struct sysent *new_sysent,
-    struct sysent *old_sysent)
-{
-	if (*offset == NO_SYSCALL) {
-		int i;
-
-		for (i = 1; i < SYS_MAXSYSCALL; ++i)
-			if (freebsd32_sysent[i].sy_call ==
-			    (sy_call_t *)lkmnosys)
-				break;
-		if (i == SYS_MAXSYSCALL)
-			return (ENFILE);
-		*offset = i;
-	} else if (*offset < 0 || *offset >= SYS_MAXSYSCALL)
-		return (EINVAL);
-	else if (freebsd32_sysent[*offset].sy_call != (sy_call_t *)lkmnosys &&
-	    freebsd32_sysent[*offset].sy_call != (sy_call_t *)lkmressys)
-		return (EEXIST);
-
-	*old_sysent = freebsd32_sysent[*offset];
-	freebsd32_sysent[*offset] = *new_sysent;
-	return 0;
-}
-
-int
-syscall32_deregister(int *offset, struct sysent *old_sysent)
-{
-
-	if (*offset)
-		freebsd32_sysent[*offset] = *old_sysent;
-	return 0;
-}
-
-int
-syscall32_module_handler(struct module *mod, int what, void *arg)
-{
-	struct syscall_module_data *data = (struct syscall_module_data*)arg;
-	modspecific_t ms;
-	int error;
-
-	switch (what) {
-	case MOD_LOAD:
-		error = syscall32_register(data->offset, data->new_sysent,
-		    &data->old_sysent);
-		if (error) {
-			/* Leave a mark so we know to safely unload below. */
-			data->offset = NULL;
-			return error;
-		}
-		ms.intval = *data->offset;
-		MOD_XLOCK;
-		module_setspecific(mod, &ms);
-		MOD_XUNLOCK;
-		if (data->chainevh)
-			error = data->chainevh(mod, what, data->chainarg);
-		return (error);
-	case MOD_UNLOAD:
-		/*
-		 * MOD_LOAD failed, so just return without calling the
-		 * chained handler since we didn't pass along the MOD_LOAD
-		 * event.
-		 */
-		if (data->offset == NULL)
-			return (0);
-		if (data->chainevh) {
-			error = data->chainevh(mod, what, data->chainarg);
-			if (error)
-				return (error);
-		}
-		error = syscall32_deregister(data->offset, &data->old_sysent);
-		return (error);
-	default:
-		error = EOPNOTSUPP;
-		if (data->chainevh)
-			error = data->chainevh(mod, what, data->chainarg);
-		return (error);
-	}
-}
