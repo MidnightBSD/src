@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/mount.h,v 1.4 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -679,6 +679,7 @@ int	vfs_busy(struct mount *, int, struct mtx *, struct thread *);
 int	vfs_export			 /* process mount export info */
 	    (struct mount *, struct export_args *);
 int	vfs_allocate_syncvnode(struct mount *);
+int     vfs_donmount(struct thread *td, int fsflags, struct uio *fsoptions);
 void	vfs_getnewfsid(struct mount *);
 struct cdev *vfs_getrootfsid(struct mount *);
 struct	mount *vfs_getvfs(fsid_t *);      /* return vfs given fsid */
