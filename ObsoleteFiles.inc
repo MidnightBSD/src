@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.25 2011/06/05 05:16:35 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.26 2011/06/12 19:15:26 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,14 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+#20120103:
+OLD_FILES+=usr/sbin/pkg_add
+OLD_FILES+=usr/sbin/pkg_check
+OLD_FILES+=usr/sbin/pkg_create
+OLD_FILES+=usr/sbin/pkg_delete
+OLD_FILES+=usr/sbin/pkg_info
+OLD_FILES+=usr/sbin/pkg_sign
+OLD_FILES+=usr/sbin/pkg_version
 #20110610:
 OLD_FILES+=usr/lib/perl5/5.10.0/i386-midnightbsd-64int/Cwd.pm
 OLD_FILES+=usr/lib/perl5/5.10.0/i386-midnightbsd-64int/Config.pod
