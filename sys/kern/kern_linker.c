@@ -535,7 +535,7 @@ linker_make_file(const char *pathname, linker_class_t lc)
 	KLD_LOCK_ASSERT();
 	filename = linker_basename(pathname);
 
-	KLD_DPF(FILE, ("linker_make_file: new file, filename=%s\n", filename));
+	KLD_DPF(FILE, ("linker_make_file: new file, filename='%s' for pathname='%s'\n", filename, pathname));
 	lf = (linker_file_t)kobj_create((kobj_class_t)lc, M_LINKER, M_WAITOK);
 	if (lf == NULL)
 		return (NULL);
@@ -609,8 +609,11 @@ linker_file_unload(linker_file_t file, int flags)
 	 * link error.
 	 */
 	if (file->flags & LINKER_FILE_LINKED) {
+		file->flags &= ~LINKER_FILE_LINKED;
+		KLD_UNLOCK();
 		linker_file_sysuninit(file);
 		linker_file_unregister_sysctls(file);
+		KLD_LOCK();
 	}
 	TAILQ_REMOVE(&linker_files, file, link);
 
