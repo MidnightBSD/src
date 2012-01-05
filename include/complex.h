@@ -23,17 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/include/complex.h,v 1.6 2004/08/14 18:03:21 stefanf Exp $
  */
 
 #ifndef _COMPLEX_H
 #define	_COMPLEX_H
 
+#include <sys/cdefs.h>
+
 #ifdef __GNUC__
 #if __STDC_VERSION__ < 199901
 #define	_Complex	__complex__
 #endif
-#define	_Complex_I	1.0fi
+#define	_Complex_I	((float _Complex)1.0i)
 #endif
 
 #define	complex		_Complex
