@@ -11,7 +11,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first
 # in NOTES.
 #
-# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.15 2011/09/29 12:58:14 laffer1 Exp $
+# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.16 2011/10/15 20:18:30 laffer1 Exp $
 # $FreeBSD: src/sys/amd64/conf/GENERIC,v 1.439.2.7 2005/10/28 19:21:27 jhb Exp $
 
 cpu		HAMMER
@@ -21,6 +21,13 @@ ident		GENERIC
 #hints		"GENERIC.hints"		# Default places to look for devices.
 
 makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
+
+# DEBUG options.. don't use in production
+options 	KDB                     # Enable kernel debugger support.
+options 	DDB                     # Support DDB.
+options 	INVARIANTS              # Enable calls of extra sanity checking
+options 	INVARIANT_SUPPORT	
+options 	WITNESS                 # Enable checks to detect deadlocks and cycles
 
 options 	SCHED_ULE		# ULE scheduler
 #options 	SCHED_4BSD		# 4BSD scheduler

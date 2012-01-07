@@ -28,8 +28,12 @@ ident		GENERIC
 
 makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
 
-# Platforms supported
-#	At this time all platforms are supported, as-is.
+# DEBUG options.. don't use in production
+options 	KDB                     # Enable kernel debugger support.
+options 	DDB                     # Support DDB.
+options 	INVARIANTS              # Enable calls of extra sanity checking
+options 	INVARIANT_SUPPORT
+options 	WITNESS                 # Enable checks to detect deadlocks and cycles
 
 #options 	SCHED_ULE		# ULE scheduler
 options 	SCHED_4BSD		# 4BSD scheduler

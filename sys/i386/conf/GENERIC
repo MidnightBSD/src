@@ -12,7 +12,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.24 2011/09/29 12:58:14 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.25 2011/10/15 20:18:30 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 cpu		I686_CPU
@@ -22,6 +22,13 @@ ident		GENERIC
 #hints		"GENERIC.hints"		# Default places to look for devices.
 
 makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
+
+# DEBUG options.. don't use in production
+options 	KDB                     # Enable kernel debugger support.
+options 	DDB                     # Support DDB.
+options 	INVARIANTS              # Enable calls of extra sanity checking
+options 	INVARIANT_SUPPORT	
+options 	WITNESS                 # Enable checks to detect deadlocks and cycles
 
 options 	SCHED_ULE		# ULE scheduler
 #options 	SCHED_4BSD		# 4BSD scheduler
