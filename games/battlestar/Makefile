@@ -1,7 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/games/battlestar/Makefile,v 1.5.2.3 2002/08/07 16:31:41 ru Exp $
 # $DragonFly: src/games/battlestar/Makefile,v 1.4 2006/10/08 16:22:35 pavalos Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/games/battlestar/Makefile,v 1.1 2009/04/11 16:46:04 laffer1 Exp $
 
 PROG=	battlestar
 SRCS=	battlestar.c com1.c com2.c com3.c com4.c com5.c com6.c com7.c \
@@ -14,6 +14,7 @@ HIDEGAME=hidegame
 
 beforeinstall:
 .if !exists(${DESTDIR}/var/games/battlestar.log)
+	${INSTALL} -d -g games -m 775 -o ${BINOWN} ${DESTDIR}/var/games
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 664 /dev/null \
 	    ${DESTDIR}/var/games/battlestar.log
 .endif
