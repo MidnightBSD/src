@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/kern/Make.tags.inc,v 1.4 2011/10/15 20:18:30 laffer1 Exp $
 # $FreeBSD: src/sys/kern/Make.tags.inc,v 1.20 2007/07/05 08:55:14 bz Exp $
 #	@(#)Make.tags.inc	8.1 (Berkeley) 6/11/93
 
@@ -17,7 +17,6 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/dev/buslogic/*.[ch] \
 	${SYS}/dev/dpt/*.[ch] \
 	${SYS}/dev/en/*.[ch] \
-	${SYS}/dev/hfa/*.[ch] \
 	${SYS}/dev/iicbus/*.[ch] \
 	${SYS}/dev/isp/*.[ch] \
 	${SYS}/dev/pdq/*.[ch] \
