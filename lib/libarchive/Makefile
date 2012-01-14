@@ -1,9 +1,11 @@
-# $MidnightBSD: src/lib/libarchive/Makefile,v 1.7 2011/02/06 03:07:04 laffer1 Exp $
+# $MidnightBSD$
 .include <bsd.own.mk>
 
+LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
+
 LIB=	archive
-DPADD=	${LIBZ} ${LIBMD}
-LDADD=	-lz -lmd
+DPADD=	${LIBZ}
+LDADD=	-lz
 
 DPADD+= ${LIBBZ2}
 LDADD+= -lbz2
@@ -13,18 +15,25 @@ DPADD+= ${LIBLZMA}
 LDADD+= -llzma
 CFLAGS+= -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1
 
-# FreeBSD SHLIB_MAJOR value is managed as part of the FreeBSD system.
+DPADD+= ${LIBBSDXML}
+LDADD+= -lbsdxml
+
 # It has no real relation to the libarchive version number.
 SHLIB_MAJOR= 4
 
-CFLAGS+=	-DPLATFORM_CONFIG_H=\"config_freebsd.h\"
+CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/config_freebsd.h\"
 CFLAGS+=	-I${.OBJDIR}
 
 .if ${MK_OPENSSL} != "no"
 CFLAGS+=	-DWITH_OPENSSL
 DPADD+=	${LIBCRYPTO}
 LDADD+=	-lcrypto
+.else
+DPADD+=	${LIBMD}
+LDADD+=	-lmd
 .endif
+
+.PATH: ${LIBARCHIVEDIR}/libarchive
 
 # Headers to be installed in /usr/include
 INCS=	archive.h archive_entry.h
@@ -53,6 +62,7 @@ SRCS=	archive_check_magic.c				\
 	archive_read_support_compression_gzip.c		\
 	archive_read_support_compression_none.c		\
 	archive_read_support_compression_program.c	\
+	archive_read_support_compression_rpm.c		\
 	archive_read_support_compression_uu.c		\
 	archive_read_support_compression_xz.c		\
 	archive_read_support_format_all.c		\
@@ -63,6 +73,7 @@ SRCS=	archive_check_magic.c				\
 	archive_read_support_format_mtree.c		\
 	archive_read_support_format_raw.c		\
 	archive_read_support_format_tar.c		\
+	archive_read_support_format_xar.c		\
 	archive_read_support_format_zip.c		\
 	archive_string.c				\
 	archive_string_sprintf.c			\
@@ -265,8 +276,11 @@ MLINKS+=	archive_write_disk.3 archive_write_disk_set_standard_lookup.3
 MLINKS+=	archive_write_disk.3 archive_write_disk_set_user_lookup.3
 MLINKS+=	libarchive.3 archive.3
 
-.PHONY: check test
+.PHONY: check test clean-test
 check test:
-	cd ${.CURDIR}/test && make test
+	cd ${.CURDIR}/test && make obj && make test
+
+clean-test:
+	cd ${.CURDIR}/test && make clean
 
 .include <bsd.lib.mk>
