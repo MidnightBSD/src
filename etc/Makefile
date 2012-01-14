@@ -1,6 +1,6 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.23 2011/03/08 22:19:31 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.24 2011/08/22 02:15:32 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -10,7 +10,7 @@ SUBDIR=	sendmail
 
 BIN1=	amd.map apmd.conf auth.conf \
 	crontab csh.cshrc csh.login csh.logout devd.conf \
-	devfs.conf dhclient.conf disktab fbtab ftpusers gettytab \
+	devfs.conf dhclient.conf dhcp6c.conf disktab fbtab ftpusers gettytab \
 	group hosts hosts.allow hosts.equiv hosts.lpd \
 	inetd.conf libalias.conf login.access login.conf \
 	mac.conf motd netconfig network.subr networks newsyslog.conf \
