@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/bsdinstall/distextract/distextract.c,v 1.1 2011/12/24 06:17:36 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/distextract/distextract.c,v 1.4 2011/03/13 18:26:16 nwhitehorn Exp $
  */
 
@@ -133,7 +133,7 @@ count_files(const char *file)
 	file_count = 0;
 	while (archive_read_next_header(archive, &entry) == ARCHIVE_OK)
 		file_count++;
-	archive_read_free(archive);
+	archive_read_finish(archive);
 
 	return (file_count);
 }
@@ -227,7 +227,7 @@ extract_files(int nfiles, const char **files)
 			return (err);
 		}
 
-		archive_read_free(archive);
+		archive_read_finish(archive);
 	}
 
 	return (0);
