@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sbin/atacontrol/atacontrol.c,v 1.3 2008/11/20 19:34:42 laffer1 Exp $
  * $FreeBSD: src/sbin/atacontrol/atacontrol.c,v 1.43 2007/08/13 18:46:31 jhb Exp $
  */
 
@@ -40,11 +40,11 @@
 #include <sysexits.h>
 
 const char *mode2str(int mode);
-int str2mode(char *str);
-void usage(void);
-int version(int ver);
-void param_print(struct ata_params *parm);
-void cap_print(struct ata_params *parm);
+static int str2mode(char *str);
+static void usage(void);
+static int version(int ver);
+static void param_print(struct ata_params *parm);
+static void cap_print(struct ata_params *parm);
 int ata_cap_print(int fd);
 int info_print(int fd, int channel, int prchan);
 
@@ -58,8 +58,13 @@ mode2str(int mode)
 	case ATA_PIO2: return "PIO2";
 	case ATA_PIO3: return "PIO3";
 	case ATA_PIO4: return "PIO4";
+	case ATA_WDMA0: return "WDMA0";
+	case ATA_WDMA1: return "WDMA1";
 	case ATA_WDMA2: return "WDMA2";
+	case ATA_UDMA0: return "UDMA0";
+	case ATA_UDMA1: return "UDMA1";
 	case ATA_UDMA2: return "UDMA33";
+	case ATA_UDMA3: return "UDMA44";
 	case ATA_UDMA4: return "UDMA66";
 	case ATA_UDMA5: return "UDMA100";
 	case ATA_UDMA6: return "UDMA133";
@@ -73,7 +78,7 @@ mode2str(int mode)
 	}
 }
 
-int
+static int
 str2mode(char *str)
 {
 	if (!strcasecmp(str, "BIOSPIO")) return ATA_PIO;
@@ -82,21 +87,32 @@ str2mode(char *str)
 	if (!strcasecmp(str, "PIO2")) return ATA_PIO2;
 	if (!strcasecmp(str, "PIO3")) return ATA_PIO3;
 	if (!strcasecmp(str, "PIO4")) return ATA_PIO4;
+	if (!strcasecmp(str, "WDMA0")) return ATA_WDMA0;
+	if (!strcasecmp(str, "WDMA1")) return ATA_WDMA1;
 	if (!strcasecmp(str, "WDMA2")) return ATA_WDMA2;
+	if (!strcasecmp(str, "UDMA0")) return ATA_UDMA0;
+	if (!strcasecmp(str, "UDMA1")) return ATA_UDMA1;
 	if (!strcasecmp(str, "UDMA2")) return ATA_UDMA2;
 	if (!strcasecmp(str, "UDMA33")) return ATA_UDMA2;
+	if (!strcasecmp(str, "UDMA3")) return ATA_UDMA3;
+	if (!strcasecmp(str, "UDMA44")) return ATA_UDMA3;
 	if (!strcasecmp(str, "UDMA4")) return ATA_UDMA4;
 	if (!strcasecmp(str, "UDMA66")) return ATA_UDMA4;
 	if (!strcasecmp(str, "UDMA5")) return ATA_UDMA5;
 	if (!strcasecmp(str, "UDMA100")) return ATA_UDMA5;
 	if (!strcasecmp(str, "UDMA6")) return ATA_UDMA6;
 	if (!strcasecmp(str, "UDMA133")) return ATA_UDMA6;
+	if (!strcasecmp(str, "SATA150")) return ATA_SA150;
+	if (!strcasecmp(str, "SATA300")) return ATA_SA300;
+	if (!strcasecmp(str, "USB")) return ATA_USB;
+	if (!strcasecmp(str, "USB1")) return ATA_USB1;
+	if (!strcasecmp(str, "USB2")) return ATA_USB2;
 	if (!strcasecmp(str, "BIOSDMA")) return ATA_DMA;
 	return -1;
 }
 
-void
-usage()
+static void
+usage(void)
 {
 	fprintf(stderr,
 		"usage:  atacontrol <command> args:\n"
@@ -116,7 +132,7 @@ usage()
 	exit(EX_USAGE);
 }
 
-int
+static int
 version(int ver)
 {
 	int bit;
@@ -129,23 +145,23 @@ version(int ver)
 	return 0;
 }
 
-void
+static void
 param_print(struct ata_params *parm)
 {
 	printf("<%.40s/%.8s> ", parm->model, parm->revision);
 	if (parm->satacapabilities && parm->satacapabilities != 0xffff) {
 		if (parm->satacapabilities & ATA_SATA_GEN2)
-			printf("Serial ATA II\n");
+			printf("SATA revision 2.x\n");
 		else if (parm->satacapabilities & ATA_SATA_GEN1)
-			printf("Serial ATA v1.0\n");
+			printf("SATA revision 1.x\n");
 		else
-			printf("Unknown serial ATA version\n");
+			printf("Unknown SATA revision\n");
 	}
 	else
 		printf("ATA/ATAPI revision %d\n", version(parm->version_major));
 }
 
-void
+static void
 cap_print(struct ata_params *parm)
 {
 	u_int32_t lbasize = (u_int32_t)parm->lba_size_1 |
@@ -160,11 +176,11 @@ cap_print(struct ata_params *parm)
 	printf("Protocol              ");
 	if (parm->satacapabilities && parm->satacapabilities != 0xffff) {
 		if (parm->satacapabilities & ATA_SATA_GEN2)
-			printf("Serial ATA II\n");
+			printf("SATA revision 2.x\n");
 		else if (parm->satacapabilities & ATA_SATA_GEN1)
-			printf("Serial ATA v1.0\n");
+			printf("SATA revision 1.x\n");
 		else
-			printf("Unknown serial ATA version\n");
+			printf("Unknown SATA revision\n");
 	}
 	else
 		printf("ATA/ATAPI revision %d\n", version(parm->version_major));
