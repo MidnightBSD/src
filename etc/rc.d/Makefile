@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.20 2010/10/01 12:36:46 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.21 2011/08/22 01:56:30 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
@@ -7,7 +7,7 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	apm apmd archdep atm1 atm2 atm3 auditd auto_linklocal \
 	bgfsck bluetooth bootparams bridge bsnmpd bthidd \
 	ccd cleanvar cleartmp cron \
-	devd devfs dhclient \
+	devd devfs dhclient dhcp6c \
 	dmesg dumpon \
 	encswap \
 	firstboot fsck ftp-proxy ftpd \

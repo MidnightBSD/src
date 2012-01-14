@@ -26275,6 +26275,7 @@ etc/rc.d/cron -text
 etc/rc.d/devd -text
 etc/rc.d/devfs -text
 etc/rc.d/dhclient -text
+etc/rc.d/dhcp6c -text
 etc/rc.d/dmesg -text
 etc/rc.d/dumpon -text
 etc/rc.d/encswap -text
