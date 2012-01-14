@@ -133,7 +133,7 @@ getchns(struct cdev *dev, struct pcm_channel **rdch, struct pcm_channel **wrch,
 		d = dsp_get_info(dev);
 		if (!PCM_REGISTERED(d))
 			return (ENXIO);
-		pcm_lock(d);
+		PCM_LOCK(d);
 		PCM_WAIT(d);
 		PCM_ACQUIRE(d);
 		/*
@@ -173,7 +173,7 @@ getchns(struct cdev *dev, struct pcm_channel **rdch, struct pcm_channel **wrch,
 			pcm_chnrelease(ch);
 		}
 		PCM_RELEASE(d);
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 	}
 
 	*rdch = PCM_RDCH(dev);
@@ -232,9 +232,9 @@ dsp_cdevinfo_alloc(struct cdev *dev,
 		dev->si_drv1 = cdi;
 		return;
 	}
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 	cdi = malloc(sizeof(*cdi), M_DEVBUF, M_WAITOK | M_ZERO);
-	pcm_lock(d);
+	PCM_LOCK(d);
 	cdi->rdch = rdch;
 	cdi->wrch = wrch;
 	cdi->simplex = simplex;
@@ -411,7 +411,7 @@ dsp_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 	PCM_GIANT_ENTER(d);
 
 	/* Lock snddev so nobody else can monkey with it. */
-	pcm_lock(d);
+	PCM_LOCK(d);
 	PCM_WAIT(d);
 
 	/*
@@ -421,7 +421,7 @@ dsp_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 	error = snd_clone_acquire(i_dev);
 	if (!(error == 0 || error == ENODEV)) {
 		DSP_FIXUP_ERROR();
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		PCM_GIANT_EXIT(d);
 		return (error);
 	}
@@ -431,7 +431,7 @@ dsp_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 
 	if (error != 0) {
 		(void)snd_clone_release(i_dev);
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		PCM_GIANT_EXIT(d);
 		return (error);
 	}
@@ -442,7 +442,7 @@ dsp_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 	 * everything.
 	 */
 	PCM_ACQUIRE(d);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	devtype = PCMDEV(i_dev);
 	wdevunit = -1;
@@ -560,7 +560,7 @@ dsp_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 		return ((wrerror != 0) ? wrerror : rderror);
 	}
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 
 	/*
 	 * We're done. Allocate channels information for this cdev.
@@ -573,7 +573,7 @@ dsp_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 	(void)snd_clone_ref(i_dev);
 
 	PCM_RELEASE(d);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	PCM_GIANT_LEAVE(d);
 
@@ -593,7 +593,7 @@ dsp_close(struct cdev *i_dev, int flags, int mode, struct thread *td)
 
 	PCM_GIANT_ENTER(d);
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	PCM_WAIT(d);
 
 	rdch = PCM_RDCH(i_dev);
@@ -601,7 +601,7 @@ dsp_close(struct cdev *i_dev, int flags, int mode, struct thread *td)
 
 	if (rdch || wrch) {
 		PCM_ACQUIRE(d);
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 
 		refs = 0;
 		if (rdch) {
@@ -647,7 +647,7 @@ dsp_close(struct cdev *i_dev, int flags, int mode, struct thread *td)
 			PCM_WRCH(i_dev) = NULL;
 		}
 
-		pcm_lock(d);
+		PCM_LOCK(d);
 		/*
 		 * If there are no more references, release the channels.
 		 */
@@ -666,7 +666,7 @@ dsp_close(struct cdev *i_dev, int flags, int mode, struct thread *td)
 		PCM_RELEASE(d);
 	}
 
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	PCM_GIANT_LEAVE(d);
 
@@ -952,7 +952,7 @@ dsp_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode, struct thread *
 			struct pcmchan_caps *pcaps = NULL, *rcaps = NULL;
 			struct cdev *pdev;
 
-			pcm_lock(d);
+			PCM_LOCK(d);
 			if (rdch) {
 				CHN_LOCK(rdch);
 				rcaps = chn_getcaps(rdch);
@@ -980,7 +980,7 @@ dsp_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode, struct thread *
 				CHN_UNLOCK(wrch);
 			if (rdch)
 				CHN_UNLOCK(rdch);
-			pcm_unlock(d);
+			PCM_UNLOCK(d);
 		}
 		break;
 
@@ -1363,11 +1363,11 @@ dsp_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode, struct thread *
 		break;
 
     	case SNDCTL_DSP_GETCAPS:
-		pcm_lock(d);
+		PCM_LOCK(d);
 		*arg_i = DSP_CAP_REALTIME | DSP_CAP_MMAP | DSP_CAP_TRIGGER;
 		if (rdch && wrch && !(dsp_get_flags(i_dev) & SD_F_SIMPLEX))
 			*arg_i |= DSP_CAP_DUPLEX;
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		break;
 
     	case SOUND_PCM_READ_BITS:
@@ -1454,10 +1454,10 @@ dsp_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode, struct thread *
 		 * switch to full-duplex mode if card is in half-duplex
 		 * mode and is able to work in full-duplex mode
 		 */
-		pcm_lock(d);
+		PCM_LOCK(d);
 		if (rdch && wrch && (dsp_get_flags(i_dev) & SD_F_SIMPLEX))
 			dsp_set_flags(i_dev, dsp_get_flags(i_dev)^SD_F_SIMPLEX);
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		break;
 
 	/*
@@ -2008,15 +2008,15 @@ dsp_clone(void *arg,
 
 	/* XXX Need Giant magic entry ??? */
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	if (snd_clone_disabled(d->clones)) {
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		return;
 	}
 
 	PCM_WAIT(d);
 	PCM_ACQUIRE(d);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	udcmask = snd_u2unit(unit) | snd_d2unit(devtype);
 
@@ -2211,7 +2211,7 @@ dsp_oss_audioinfo(struct cdev *i_dev, oss_audioinfo *ai)
 
 		/* See the note in function docblock */
 		mtx_assert(d->lock, MA_NOTOWNED);
-		pcm_lock(d);
+		PCM_LOCK(d);
 
 		CHN_FOREACH(ch, d, channels.pcm) {
 			mtx_assert(ch->lock, MA_NOTOWNED);
@@ -2361,7 +2361,7 @@ dsp_oss_audioinfo(struct cdev *i_dev, oss_audioinfo *ai)
 			CHN_UNLOCK(ch);
 		}
 
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 
 		if (devname != NULL)
 			return (0);

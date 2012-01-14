@@ -1189,7 +1189,7 @@ mixer_oss_mixerinfo(struct cdev *i_dev, oss_mixerinfo *mi)
 
 		/* See the note in function docblock. */
 		mtx_assert(d->lock, MA_NOTOWNED);
-		pcm_lock(d);
+		PCM_LOCK(d);
 
 		if (d->mixer_dev != NULL && d->mixer_dev->si_drv1 != NULL &&
 		    ((mi->dev == -1 && d->mixer_dev == i_dev) ||
@@ -1272,7 +1272,7 @@ mixer_oss_mixerinfo(struct cdev *i_dev, oss_mixerinfo *mi)
 		} else
 			++nmix;
 
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 
 		if (m != NULL)
 			return (0);

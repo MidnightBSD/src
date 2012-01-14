@@ -1759,9 +1759,9 @@ chn_trigger(struct pcm_channel *c, int go)
 		if (c->trigger != PCMTRIG_START) {
 			c->trigger = go;
 			CHN_UNLOCK(c);
-			pcm_lock(d);
+			PCM_LOCK(d);
 			CHN_INSERT_HEAD(d, c, channels.pcm.busy);
-			pcm_unlock(d);
+			PCM_UNLOCK(d);
 			CHN_LOCK(c);
 		}
 		break;
@@ -1775,9 +1775,9 @@ chn_trigger(struct pcm_channel *c, int go)
 		if (c->trigger == PCMTRIG_START) {
 			c->trigger = go;
 			CHN_UNLOCK(c);
-			pcm_lock(d);
+			PCM_LOCK(d);
 			CHN_REMOVE(d, c, channels.pcm.busy);
-			pcm_unlock(d);
+			PCM_UNLOCK(d);
 			CHN_LOCK(c);
 		}
 		break;

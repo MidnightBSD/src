@@ -523,7 +523,7 @@ sysctl_hw_snd_vchanrate(SYSCTL_HANDLER_ARGS)
 	if (!PCM_REGISTERED(d) || !(d->flags & SD_F_AUTOVCHAN))
 		return (EINVAL);
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	PCM_WAIT(d);
 
 	switch (VCHAN_SYSCTL_DIR(oidp->oid_arg1)) {
@@ -538,18 +538,18 @@ sysctl_hw_snd_vchanrate(SYSCTL_HANDLER_ARGS)
 		vchanrate = &d->rvchanrate;
 		break;
 	default:
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		return (EINVAL);
 		break;
 	}
 
 	if (vchancount < 1) {
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		return (EINVAL);
 	}
 
 	PCM_ACQUIRE(d);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	newspd = 0;
 
@@ -633,7 +633,7 @@ sysctl_hw_snd_vchanformat(SYSCTL_HANDLER_ARGS)
 	if (!PCM_REGISTERED(d) || !(d->flags & SD_F_AUTOVCHAN))
 		return (EINVAL);
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	PCM_WAIT(d);
 
 	switch (VCHAN_SYSCTL_DIR(oidp->oid_arg1)) {
@@ -648,18 +648,18 @@ sysctl_hw_snd_vchanformat(SYSCTL_HANDLER_ARGS)
 		vchanformat = &d->rvchanformat;
 		break;
 	default:
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		return (EINVAL);
 		break;
 	}
 
 	if (vchancount < 1) {
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		return (EINVAL);
 	}
 
 	PCM_ACQUIRE(d);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	CHN_FOREACH(c, d, channels.pcm) {
 		CHN_LOCK(c);
@@ -763,17 +763,17 @@ vchan_create(struct pcm_channel *parent, int num)
 	CHN_UNLOCK(parent);
 
 	/* create a new playback channel */
-	pcm_lock(d);
+	PCM_LOCK(d);
 	ch = pcm_chn_create(d, parent, &vchan_class, direction, num, parent);
 	if (ch == NULL) {
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		CHN_LOCK(parent);
 		return (ENODEV);
 	}
 
 	/* add us to our grandparent's channel list */
 	err = pcm_chn_add(d, ch);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 	if (err) {
 		pcm_chn_destroy(ch);
 		CHN_LOCK(parent);
@@ -924,12 +924,12 @@ vchan_create(struct pcm_channel *parent, int num)
 			CHN_REMOVE(parent, ch, children);
 			parent->flags &= ~CHN_F_HAS_VCHAN;
 			CHN_UNLOCK(parent);
-			pcm_lock(d);
+			PCM_LOCK(d);
 			if (pcm_chn_remove(d, ch) == 0) {
-				pcm_unlock(d);
+				PCM_UNLOCK(d);
 				pcm_chn_destroy(ch);
 			} else
-				pcm_unlock(d);
+				PCM_UNLOCK(d);
 			CHN_LOCK(parent);
 			return (err);
 		}
@@ -971,9 +971,9 @@ vchan_destroy(struct pcm_channel *c)
 	CHN_UNLOCK(parent);
 
 	/* remove us from our grandparent's channel list */
-	pcm_lock(d);
+	PCM_LOCK(d);
 	err = pcm_chn_remove(d, c);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	/* destroy ourselves */
 	if (!err)

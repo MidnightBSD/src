@@ -428,6 +428,13 @@ typedef int32_t intpcm_t;
 			((val) << PCM_FXSHIFT)))
 #endif
 
+#define PCM_LOCKOWNED(d)	mtx_owned((d)->lock)
+#define PCM_LOCK(d)		mtx_lock((d)->lock)
+#define PCM_UNLOCK(d)		mtx_unlock((d)->lock)
+#define PCM_TRYLOCK(d)		mtx_trylock((d)->lock)
+#define PCM_LOCKASSERT(d)	mtx_assert((d)->lock, MA_OWNED)
+#define PCM_UNLOCKASSERT(d)	mtx_assert((d)->lock, MA_NOTOWNED)
+
 #define PCM_CLAMP_U8(val)	PCM_CLAMP_S8(val)
 #define PCM_CLAMP_U16(val)	PCM_CLAMP_S16(val)
 #define PCM_CLAMP_U24(val)	PCM_CLAMP_S24(val)
@@ -602,14 +609,6 @@ struct snddev_info {
 
 void	sound_oss_sysinfo(oss_sysinfo *);
 
-#ifdef	PCM_DEBUG_MTX
-#define	pcm_lock(d) mtx_lock(((struct snddev_info *)(d))->lock)
-#define	pcm_unlock(d) mtx_unlock(((struct snddev_info *)(d))->lock)
-#else
-void pcm_lock(struct snddev_info *d);
-void pcm_unlock(struct snddev_info *d);
-#endif
-
 /*
  * For PCM_CV_[WAIT | ACQUIRE | RELEASE], be sure to surround these
  * with pcm_lock/unlock() sequence, or I'll come to gnaw upon you!
@@ -663,19 +662,19 @@ void pcm_unlock(struct snddev_info *d);
 	if (mtx_owned((x)->lock) != 0)					\
 		panic("%s(%d): [PCM ACQUIRE QUICK] Mutex owned!",	\
 		    __func__, __LINE__);				\
-	pcm_lock(x);							\
+	PCM_LOCK(x);							\
 	PCM_WAIT(x);							\
 	PCM_ACQUIRE(x);							\
-	pcm_unlock(x);							\
+	PCM_UNLOCK(x);							\
 } while(0)
 
 #define PCM_RELEASE_QUICK(x)	do {					\
 	if (mtx_owned((x)->lock) != 0)					\
 		panic("%s(%d): [PCM RELEASE QUICK] Mutex owned!",	\
 		    __func__, __LINE__);				\
-	pcm_lock(x);							\
+	PCM_LOCK(x);							\
 	PCM_RELEASE(x);							\
-	pcm_unlock(x);							\
+	PCM_UNLOCK(x);							\
 } while(0)
 
 #define PCM_BUSYASSERT(x)	do {					\
@@ -751,17 +750,17 @@ void pcm_unlock(struct snddev_info *d);
 /* Quick version, for shorter path. */
 #define PCM_ACQUIRE_QUICK(x)	do {					\
 	mtx_assert((x)->lock, MA_NOTOWNED);				\
-	pcm_lock(x);							\
+	PCM_LOCK(x);							\
 	PCM_WAIT(x);							\
 	PCM_ACQUIRE(x);							\
-	pcm_unlock(x);							\
+	PCM_UNLOCK(x);							\
 } while(0)
 
 #define PCM_RELEASE_QUICK(x)	do {					\
 	mtx_assert((x)->lock, MA_NOTOWNED);				\
-	pcm_lock(x);							\
+	PCM_LOCK(x);							\
 	PCM_RELEASE(x);							\
-	pcm_unlock(x);							\
+	PCM_UNLOCK(x);							\
 } while(0)
 
 #define PCM_BUSYASSERT(x)	KASSERT(x != NULL &&			\

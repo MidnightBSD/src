@@ -156,13 +156,13 @@ snd_setup_intr(device_t dev, struct resource *res, int flags, driver_intr_t hand
 
 #ifndef	PCM_DEBUG_MTX
 void
-pcm_lock(struct snddev_info *d)
+PCM_LOCK(struct snddev_info *d)
 {
 	snd_mtxlock(d->lock);
 }
 
 void
-pcm_unlock(struct snddev_info *d)
+PCM_UNLOCK(struct snddev_info *d)
 {
 	snd_mtxunlock(d->lock);
 }
@@ -570,7 +570,7 @@ pcm_chn_create(struct snddev_info *d, struct pcm_channel *parent, kobj_class_t c
 		return (NULL);
 	}
 
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 	ch = malloc(sizeof(*ch), M_DEVBUF, M_WAITOK | M_ZERO);
 	ch->methods = kobj_create(cls, M_DEVBUF, M_WAITOK | M_ZERO);
 	ch->unit = udc;
@@ -583,7 +583,7 @@ pcm_chn_create(struct snddev_info *d, struct pcm_channel *parent, kobj_class_t c
 	    device_get_nameunit(ch->dev), dirs, devname);
 
 	err = chn_init(ch, devinfo, dir, direction);
-	pcm_lock(d);
+	PCM_LOCK(d);
 	if (err) {
 		device_printf(d->dev, "chn_init(%s) failed: err = %d\n",
 		    ch->name, err);
@@ -734,17 +734,17 @@ pcm_addchan(device_t dev, int dir, kobj_class_t cls, void *devinfo)
 
 	PCM_BUSYASSERT(d);
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	ch = pcm_chn_create(d, NULL, cls, dir, -1, devinfo);
 	if (!ch) {
 		device_printf(d->dev, "pcm_chn_create(%s, %d, %p) failed\n",
 		    cls->name, dir, devinfo);
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		return (ENODEV);
 	}
 
 	err = pcm_chn_add(d, ch);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 	if (err) {
 		device_printf(d->dev, "pcm_chn_add(%s) failed, err=%d\n",
 		    ch->name, err);
@@ -765,9 +765,9 @@ pcm_killchan(device_t dev)
 
 	ch = CHN_FIRST(d, channels.pcm);
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	error = pcm_chn_remove(d, ch);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 	if (error)
 		return (error);
 	return (pcm_chn_destroy(ch));
@@ -793,7 +793,7 @@ pcm_setstatus(device_t dev, char *str)
 
 	strlcpy(d->status, str, SND_STATUSLEN);
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 
 	/* Last stage, enable cloning. */
 	if (d->clones != NULL)
@@ -804,7 +804,7 @@ pcm_setstatus(device_t dev, char *str)
 
 	PCM_RELEASE(d);
 
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	if (snd_unit < 0 || snd_unit_auto != 0)
 		snd_unit = device_get_unit(dev);
@@ -1113,18 +1113,18 @@ pcm_unregister(device_t dev)
 		return (EBUSY);
 	}
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	PCM_WAIT(d);
 
 	if (d->inprog != 0) {
 		device_printf(dev, "unregister: operation in progress\n");
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		sndstat_release(td);
 		return (EBUSY);
 	}
 
 	PCM_ACQUIRE(d);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	CHN_FOREACH(ch, d, channels.pcm) {
 		CHN_LOCK(ch);
@@ -1147,27 +1147,27 @@ pcm_unregister(device_t dev)
 			sndstat_release(td);
 			return (EBUSY);
 		} else {
-			pcm_lock(d);
+			PCM_LOCK(d);
 			(void)snd_clone_disable(d->clones);
-			pcm_unlock(d);
+			PCM_UNLOCK(d);
 		}
 	}
 
 	if (mixer_uninit(dev) == EBUSY) {
 		device_printf(dev, "unregister: mixer busy\n");
-		pcm_lock(d);
+		PCM_LOCK(d);
 		if (d->clones != NULL)
 			(void)snd_clone_enable(d->clones);
 		PCM_RELEASE(d);
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		sndstat_release(td);
 		return (EBUSY);
 	}
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	d->flags |= SD_F_DYING;
 	d->flags &= ~SD_F_REGISTERED;
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	/*
 	 * No lock being held, so this thing can be flushed without
@@ -1197,10 +1197,10 @@ pcm_unregister(device_t dev)
 
 	dsp_cdevinfo_flush(d);
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	PCM_RELEASE(d);
 	cv_destroy(&d->cv);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 	snd_mtxfree(d->lock);
 	sndstat_unregister(dev);
 	sndstat_release(td);
@@ -1337,7 +1337,7 @@ sysctl_hw_snd_vchans(SYSCTL_HANDLER_ARGS)
 	if (!PCM_REGISTERED(d) || !(d->flags & SD_F_AUTOVCHAN))
 		return (EINVAL);
 
-	pcm_lock(d);
+	PCM_LOCK(d);
 	PCM_WAIT(d);
 
 	switch (VCHAN_SYSCTL_DIR(oidp->oid_arg1)) {
@@ -1352,18 +1352,18 @@ sysctl_hw_snd_vchans(SYSCTL_HANDLER_ARGS)
 		cnt = d->reccount;
 		break;
 	default:
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		return (EINVAL);
 		break;
 	}
 
 	if (cnt < 1) {
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 		return (ENODEV);
 	}
 
 	PCM_ACQUIRE(d);
-	pcm_unlock(d);
+	PCM_UNLOCK(d);
 
 	cnt = vchancount;
 	err = sysctl_handle_int(oidp, &cnt, 0, req);
@@ -1437,7 +1437,7 @@ sound_oss_sysinfo(oss_sysinfo *si)
 
 		/* See note in function's docblock */
 		mtx_assert(d->lock, MA_NOTOWNED);
-		pcm_lock(d);
+		PCM_LOCK(d);
 
 		si->numaudios += d->devcount;
 		++ncards;
@@ -1452,7 +1452,7 @@ sound_oss_sysinfo(oss_sysinfo *si)
 			j++;
 		}
 
-		pcm_unlock(d);
+		PCM_UNLOCK(d);
 	}
 
 	si->numsynths = 0;	/* OSSv4 docs:  this field is obsolete */
