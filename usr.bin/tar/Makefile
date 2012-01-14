@@ -1,35 +1,44 @@
 # $MidnightBSD$
+
 .include <bsd.own.mk>
 
+LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
+
 PROG=	bsdtar
-BSDTAR_VERSION_STRING=2.8.3
+BSDTAR_VERSION_STRING=2.8.5
+
+.PATH: ${LIBARCHIVEDIR}/tar
 SRCS=	bsdtar.c	\
 	cmdline.c	\
-	err.c		\
 	getdate.c	\
-	line_reader.c	\
-	matching.c	\
-	pathmatch.c	\
 	read.c		\
 	subst.c		\
 	tree.c		\
 	util.c		\
 	write.c
-DPADD=	${LIBARCHIVE} ${LIBBZ2} ${LIBZ} ${LIBMD} ${LIBLZMA}
-LDADD=	-larchive -lbz2 -lz -lmd -llzma 
+
+.PATH: ${LIBARCHIVEDIR}/libarchive_fe
+SRCS+=	err.c		\
+	line_reader.c	\
+	matching.c	\
+	pathmatch.c
+
+DPADD=	${LIBARCHIVE} ${LIBBZ2} ${LIBZ} ${LIBLZMA} ${LIBBSDXML}
+LDADD=	-larchive -lbz2 -lz -llzma -lbsdxml
 .if ${MK_OPENSSL} != "no"
 DPADD+=	${LIBCRYPTO}
 LDADD+= -lcrypto
+.else
+DPADD+= ${LIBMD}
+LDADD+= -lmd
 .endif
+
 CFLAGS+=	-DBSDTAR_VERSION_STRING=\"${BSDTAR_VERSION_STRING}\"
-CFLAGS+=	-DPLATFORM_CONFIG_H=\"config_midnightbsd.h\"
-CFLAGS+=	-I${.CURDIR} -I${.CURDIR}/../../lib/libarchive
+CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/config_midnightbsd.h\"
+CFLAGS+=	-I${LIBARCHIVEDIR}/tar -I${LIBARCHIVEDIR}/libarchive
+CFLAGS+=	-I${LIBARCHIVEDIR}/libarchive_fe
 SYMLINKS=	bsdtar ${BINDIR}/tar
 MLINKS=	bsdtar.1 tar.1
 DEBUG_FLAGS=-g
-
-.PHONY: check test
-check test: $(PROG) bsdtar.1.gz
-	cd ${.CURDIR}/test && make test
 
 .include <bsd.prog.mk>
