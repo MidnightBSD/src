@@ -1,8 +1,8 @@
-# $MidnightBSD: src/COPYRIGHT,v 1.11 2010/12/31 21:53:50 laffer1 Exp $
+# $MidnightBSD: src/COPYRIGHT,v 1.12 2011/12/31 20:50:43 laffer1 Exp $
 # $FreeBSD: src/COPYRIGHT,v 1.6.2.1 2006/02/08 09:11:57 ru Exp $
 #	@(#)COPYRIGHT	8.2 (Berkeley) 3/21/94
 
-The compilation of software known as MidnightBSD is distrubuted under
+The compilation of software known as MidnightBSD is distributed under
 the following terms:
 
 Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012
