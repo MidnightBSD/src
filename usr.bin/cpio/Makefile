@@ -1,30 +1,36 @@
-# $MidnightBSD: src/usr.bin/cpio/Makefile,v 1.2 2011/02/06 22:29:51 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
+LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
+
 PROG=	bsdcpio
-BSDCPIO_VERSION_STRING=2.8.3
-SRCS=	cpio.c cmdline.c err.c line_reader.c matching.c pathmatch.c
+BSDCPIO_VERSION_STRING=2.8.5
+
+.PATH:	${LIBARCHIVEDIR}/cpio
+SRCS=	cpio.c cmdline.c
+
+.PATH:	${LIBARCHIVEDIR}/libarchive_fe
+SRCS+=	err.c line_reader.c matching.c pathmatch.c
+
 CFLAGS+= -DBSDCPIO_VERSION_STRING=\"${BSDCPIO_VERSION_STRING}\"
-CFLAGS+= -DPLATFORM_CONFIG_H=\"config_midnightbsd.h\"
+CFLAGS+= -DPLATFORM_CONFIG_H=\"${.CURDIR}/config_midnightbsd.h\"
+CFLAGS+= -I${LIBARCHIVEDIR}/cpio -I${LIBARCHIVEDIR}/libarchive_fe
+
 .ifdef RELEASE_CRUNCH
-# sysinstall uses cpio in crunched binaries that are
-# statically linked, cannot use -lcrypto, and are size sensitive.
 CFLAGS+= -DSMALLER
 .endif
-DPADD=	${LIBARCHIVE} ${LIBZ} ${LIBBZ2} ${LIBMD} ${LIBLZMA}
-LDADD=	-larchive -lz -lbz2 -lmd -llzma
+DPADD=	${LIBARCHIVE} ${LIBZ} ${LIBBZ2} ${LIBLZMA} ${LIBBSDXML}
+LDADD=	-larchive -lz -lbz2 -llzma -lbsdxml
 .if ${MK_OPENSSL} != "no"
 DPADD+=	${LIBCRYPTO}
 LDADD+= -lcrypto
+.else
+DPADD+= ${LIBMD}
+LDADD+= -lmd
 .endif
 
 SYMLINKS=bsdcpio ${BINDIR}/cpio
 MLINKS= bsdcpio.1 cpio.1
-
-.PHONY: check test
-
-check test: $(PROG) bsdcpio.1.gz
-	cd ${.CURDIR}/test && make clean test
 
 .include <bsd.prog.mk>
