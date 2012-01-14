@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
 # $FreeBSD: src/sbin/Makefile,v 1.168 2007/07/24 15:35:00 scottl Exp $
-# $MidnightBSD: src/sbin/Makefile,v 1.8 2008/11/11 22:24:03 laffer1 Exp $
+# $MidnightBSD: src/sbin/Makefile,v 1.9 2009/01/04 22:51:36 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -19,6 +19,7 @@ SUBDIR=	adjkerntz \
 	${_devd} \
 	devfs \
 	dhclient \
+	${_dhcp6c} \
 	dmesg \
 	dump \
 	dumpfs \
@@ -108,6 +109,7 @@ _pflogd=	pflogd
 .endif
 
 .if ${MK_INET6} != "no"
+_dhcp6c=	dhcp6c
 _ping6=		ping6
 _rtsol=		rtsol
 .endif

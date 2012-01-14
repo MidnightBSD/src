@@ -31228,6 +31228,7 @@ sbin/dhclient/privsep.h -text
 sbin/dhclient/tables.c -text
 sbin/dhclient/tree.c -text
 sbin/dhclient/tree.h -text
+sbin/dhcp6c/Makefile -text
 sbin/dmesg/Makefile -text
 sbin/dmesg/dmesg.8 -text
 sbin/dmesg/dmesg.c -text
