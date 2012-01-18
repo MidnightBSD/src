@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/timedef/ja_JP.UTF-8.src,v 1.1 2004/03/27 08:14:15 tjr Exp $
+# $FreeBSD: src/share/timedef/ja_JP.UTF-8.src,v 1.1.18.1 2009/09/13 17:05:56 ume Exp $
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
@@ -68,13 +68,11 @@
 #
 # am
 #
-#午前
-AM
+午前
 #
 # pm
 #
-#午後
-PM
+午後
 #
 # date_fmt
 #

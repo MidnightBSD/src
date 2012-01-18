@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/timedef/ja_JP.eucJP.src,v 1.10 2001/03/21 23:24:41 ache Exp $
+# $FreeBSD: src/share/timedef/ja_JP.eucJP.src,v 1.10.26.1 2009/06/16 02:36:49 edwin Exp $
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
@@ -68,13 +68,11 @@
 #
 # am
 #
-#¸áÁ°
-AM
+¸áÁ°
 #
 # pm
 #
-#¸á¸å
-PM
+¸á¸å
 #
 # date_fmt
 #

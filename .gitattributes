@@ -34171,6 +34171,7 @@ share/numericdef/bg_BG.CP1251.src -text
 share/numericdef/ca_ES.ISO8859-1.src -text
 share/numericdef/cs_CZ.ISO8859-2.src -text
 share/numericdef/da_DK.ISO8859-1.src -text
+share/numericdef/de_CH.ISO8859-1.src -text
 share/numericdef/de_DE.ISO8859-1.src -text
 share/numericdef/el_GR.ISO8859-7.src -text
 share/numericdef/en_US.ISO8859-1.src -text
@@ -34484,6 +34485,8 @@ share/timedef/lt_LT.ISO8859-13.src -text
 share/timedef/lt_LT.ISO8859-4.src -text
 share/timedef/lt_LT.UTF-8.src -text
 share/timedef/mn_MN.UTF-8.src -text
+share/timedef/nb_NO.ISO8859-1.src -text
+share/timedef/nb_NO.UTF-8.src -text
 share/timedef/nl_NL.ISO8859-1.src -text
 share/timedef/nn_NO.ISO8859-1.src -text
 share/timedef/nn_NO.UTF-8.src -text
