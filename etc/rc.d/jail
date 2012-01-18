@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/jail,v 1.37.4.1 2008/01/29 00:22:33 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/jail,v 1.5 2007/10/26 14:16:47 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/jail,v 1.6 2009/01/18 01:19:28 laffer1 Exp $
 
 # PROVIDE: jail
 # REQUIRE: LOGIN cleanvar
@@ -317,8 +317,7 @@ jail_start()
 				# Transitional symlink for old binaries
 				if [ ! -L "${_devdir}/log" ]; then
 					__pwd="`pwd`"
-					cd "${_devdir}"
-					ln -sf ../var/run/log log
+					cd "${_devdir}" && ln -sf ../var/run/log log
 					cd "$__pwd"
 				fi
 			fi
