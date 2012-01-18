@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.32 2011/12/03 22:32:21 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.33 2012/01/18 01:24:50 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -16,12 +16,9 @@
 #  NOPORTS:  if set, do not distribute mports tree
 #  NOSRC:    if set, do not distribute source tree
 #  TARGET/TARGET_ARCH: architecture of built release 
-#
 
-WORLDDIR?=	${.CURDIR}/..
+WORLDDIR?=	/usr/src
 PORTSDIR?=	/usr/mports
-DOCDIR?=	/usr/doc
-RELNOTES_LANG?= en_US.ISO8859-1
 
 TARGET?=	${MACHINE}
 .if ${TARGET} == ${MACHINE}
@@ -30,11 +27,8 @@ TARGET_ARCH?=	${MACHINE_ARCH}
 TARGET_ARCH?=	${TARGET}
 .endif
 IMAKE=		${MAKE} TARGET_ARCH=${TARGET_ARCH} TARGET=${TARGET}
-DISTDIR=	${.OBJDIR}/dist
+DISTDIR=	/usr/rel/dist
 
-.if !exists(${DOCDIR})
-NODOC= true
-.endif
 .if !exists(${PORTSDIR})
 NOPORTS= true
 .endif
@@ -42,9 +36,6 @@ NOPORTS= true
 EXTRA_PACKAGES= 
 .if !defined(NOPORTS)
 EXTRA_PACKAGES+= mports.txz
-.endif
-.if !defined(NODOC)
-EXTRA_PACKAGES+= reldoc
 .endif
 .if !defined(NOSRC)
 EXTRA_PACKAGES+= src.txz
@@ -61,7 +52,7 @@ RELEASE_TARGETS+= memstick
 .include <bsd.obj.mk>
 
 base.txz:
-	-mkdir ${DISTDIR}
+	-mkdir -p ${DISTDIR}
 	cd ${WORLDDIR} && ${IMAKE} distributeworld DISTDIR=${DISTDIR}
 # Set up mergemaster root database
 	sh ${.CURDIR}/scripts/mm-mtree.sh -m ${WORLDDIR} -F \
@@ -71,7 +62,7 @@ base.txz:
 	mv ${DISTDIR}/*.txz ${.OBJDIR}
 
 kernel.txz:
-	-mkdir ${DISTDIR}
+	-mkdir -p ${DISTDIR}
 	cd ${WORLDDIR} && ${IMAKE} distributekernel packagekernel DISTDIR=${DISTDIR}
 	mv ${DISTDIR}/kernel.txz ${.OBJDIR}
 
@@ -93,10 +84,6 @@ system: packagesystem
 	cd ${WORLDDIR} && ${IMAKE} installkernel installworld distribution \
 	    DESTDIR=${.OBJDIR}/release WITHOUT_RESCUE=1 WITHOUT_KERNEL_SYMBOLS=1
 # Copy distfiles
-# Copy documentation, if generated
-.if !defined(NODOC)
-	cp ${.OBJDIR}/reldoc/* ${.OBJDIR}/release
-.endif
 	-mkdir ${.OBJDIR}/release/usr/midnightbsd-dist
 	cp ${.OBJDIR}/*.txz ${.OBJDIR}/MANIFEST \
 	    ${.OBJDIR}/release/usr/midnightbsd-dist
@@ -118,10 +105,6 @@ bootonly: packagesystem
 	    WITHOUT_NCP=1 WITHOUT_TOOLCHAIN=1 WITHOUT_PROFILE=1 \
 	    WITHOUT_INSTALLIB=1 WITHOUT_RESCUE=1 WITHOUT_DICT=1 \
 	    WITHOUT_KERNEL_SYMBOLS=1
-# Copy documentation, if generated
-.if !defined(NODOC)
-	cp ${.OBJDIR}/reldoc/* ${.OBJDIR}/bootonly
-.endif
 # Copy manifest only (no distfiles) to get checksums
 	-mkdir ${.OBJDIR}/bootonly/usr/midnightbsd-dist
 	cp ${.OBJDIR}/MANIFEST ${.OBJDIR}/bootonly/usr/midnightbsd-dist
