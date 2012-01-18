@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.33 2012/01/18 01:24:50 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.34 2012/01/18 04:09:29 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -92,6 +92,7 @@ system: packagesystem
 	echo sendmail_enable=\"NONE\" > ${.OBJDIR}/release/etc/rc.conf
 	echo hostid_enable=\"NO\" >> ${.OBJDIR}/release/etc/rc.conf
 	cp ${.CURDIR}/rc.local ${.OBJDIR}/release/etc
+	cp ${.CURDIR}/fstab ${.OBJDIR}/release/etc
 	touch ${.OBJDIR}/${.TARGET}
 
 bootonly: packagesystem
@@ -113,6 +114,7 @@ bootonly: packagesystem
 	echo sendmail_enable=\"NONE\" > ${.OBJDIR}/bootonly/etc/rc.conf
 	echo hostid_enable=\"NO\" >> ${.OBJDIR}/bootonly/etc/rc.conf
 	cp ${.CURDIR}/rc.local ${.OBJDIR}/bootonly/etc
+	cp ${.CURDIR}/fstab ${.OBJDIR}/bootonly/etc
 
 MidnightBSD-release.iso: system
 	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b MidnightBSD_Install ${.OBJDIR}/MidnightBSD-release.iso ${.OBJDIR}/release
