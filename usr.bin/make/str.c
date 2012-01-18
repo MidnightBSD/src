@@ -40,7 +40,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/str.c,v 1.46 2006/10/09 19:37:26 ru Exp $ */
-__MBSDID("$MidnightBSD: src/usr.bin/make/str.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/make/str.c,v 1.3 2011/12/02 04:11:34 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <string.h>
@@ -51,10 +51,10 @@ __MBSDID("$MidnightBSD: src/usr.bin/make/str.c,v 1.2 2008/09/29 20:36:53 laffer1
 
 /**
  * Initialize the argument array object.  The array is initially
- * eight positions, and will be expaned as neccessary.  The first
+ * eight positions, and will be expanded as necessary.  The first
  * position is set to NULL since everything ignores it.  We allocate
  * (size + 1) since we need space for the terminating NULL.  The
- * buffer is set to NULL, since no common buffer is alloated yet.
+ * buffer is set to NULL, since no common buffer is allocated yet.
  */
 void
 ArgArray_Init(ArgArray *aa)

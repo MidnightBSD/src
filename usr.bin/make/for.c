@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/for.c,v 1.44 2008/03/24 12:33:28 ru Exp $ */
-__MBSDID("$MidnightBSD: src/usr.bin/make/for.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/make/for.c,v 1.3 2011/12/02 04:11:34 laffer1 Exp $");
 
 /*-
  * for.c --
@@ -219,7 +219,7 @@ For_Eval(char *line)
 /*-
  *-----------------------------------------------------------------------
  * For_Run --
- *	Run the for loop, immitating the actions of an include file
+ *	Run the for loop, imitating the actions of an include file
  *
  * Results:
  *	None.

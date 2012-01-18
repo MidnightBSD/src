@@ -40,7 +40,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/arch.c,v 1.67 2008/03/04 15:56:17 imp Exp $ */
-__MBSDID("$MidnightBSD: src/usr.bin/make/arch.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/make/arch.c,v 1.3 2011/12/02 04:11:34 laffer1 Exp $");
 
 /*-
  * arch.c --
@@ -180,8 +180,8 @@ Boolean arch_fatal = TRUE;
 
 /**
  * ArchError
- *	An error happend while handling an archive. BSDmake traditionally
- *	ignored these errors. Now this is dependend on the global arch_fatal
+ *	An error happened while handling an archive. BSDmake traditionally
+ *	ignored these errors. Now this is dependent on the global arch_fatal
  *	which, if true, makes these errors fatal and, if false, just emits an
  *	error message.
  */
@@ -530,7 +530,7 @@ ArchArchiveOpen(const char *archive, const char *mode)
 
 /*
  * Read the next header from the archive. The return value will be +1 if
- * the header is read successfully, 0 on EOF and -1 if an error happend.
+ * the header is read successfully, 0 on EOF and -1 if an error happened.
  * On a successful return sname contains the truncated member name and
  * member the full name. hdr contains the member header. For the symbol table
  * names of length 0 are returned. The entry for the file name table is never
@@ -584,8 +584,7 @@ ArchArchiveNext(struct arfile *ar)
 	 * looks like a member - get name by stripping trailing spaces
 	 * and NUL terminating.
 	 */
-	strncpy(ar->sname, ar->hdr.ar_name, AR_NAMSIZ);
-	ar->sname[AR_NAMSIZ] = '\0';
+	strlcpy(ar->sname, ar->hdr.ar_name, AR_NAMSIZ + 1);
 	for (ptr = ar->sname + AR_NAMSIZ; ptr > ar->sname; ptr--)
 		if (ptr[-1] != ' ')
 			break;
@@ -596,8 +595,7 @@ ArchArchiveNext(struct arfile *ar)
 	 * Parse the size. All entries need to have a size. Be careful
 	 * to not allow buffer overruns.
 	 */
-	strncpy(buf, ar->hdr.ar_size, sizeof(ar->hdr.ar_size));
-	buf[sizeof(ar->hdr.ar_size)] = '\0';
+	strlcpy(buf, ar->hdr.ar_size, sizeof(ar->hdr.ar_size) + 1);
 
 	errno = 0;
 	ar->size = strtoumax(buf, &end, 10);
@@ -651,8 +649,7 @@ ArchArchiveNext(struct arfile *ar)
 	 * Now parse the modification date. Be careful to not overrun
 	 * buffers.
 	 */
-	strncpy(buf, ar->hdr.ar_date, sizeof(ar->hdr.ar_date));
-	buf[sizeof(ar->hdr.ar_date)] = '\0';
+	strlcpy(buf, ar->hdr.ar_date, sizeof(ar->hdr.ar_date) + 1);
 
 	errno = 0;
 	ar->time = (int64_t)strtoll(buf, &end, 10);
@@ -834,7 +831,7 @@ ArchFindMember(const char *archive, const char *member, const char *mode)
 		 * (3) the name is longer and the archive doesn't support long
 		 * names.
 		 * Because we don't know whether the archive supports long
-		 * names or not we need to be carefull.
+		 * names or not we need to be careful.
 		 */
 		if (member == NULL) {
 			/* special case - symbol table */
@@ -946,7 +943,7 @@ ArchStatMember(const char *archive, const char *member, Boolean hash)
 		ArchArchiveClose(arf);
 
 		if (t < 0) {
-			/* error happend - throw away everything */
+			/* error happened - throw away everything */
 			Hash_DeleteTable(&ar->members);
 			free(ar->name);
 			free(ar);
@@ -966,8 +963,7 @@ ArchStatMember(const char *archive, const char *member, Boolean hash)
 
 	if (member != NULL && strlen(member) > AR_NAMSIZ) {
 		/* Try truncated name */
-		strncpy(copy, member, AR_NAMSIZ);
-		copy[AR_NAMSIZ] = '\0';
+		strlcpy(copy, member, AR_NAMSIZ + 1);
 
 		if ((he = Hash_FindEntry(&ar->members, copy)) != NULL)
 			return (*(int64_t *)Hash_GetValue(he));
