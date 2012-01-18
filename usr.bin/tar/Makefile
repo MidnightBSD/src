@@ -1,11 +1,11 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/tar/Makefile,v 1.7 2012/01/14 03:35:43 laffer1 Exp $
 
 .include <bsd.own.mk>
 
 LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
 
 PROG=	bsdtar
-BSDTAR_VERSION_STRING=2.8.5
+BSDTAR_VERSION_STRING=3.0.3
 
 .PATH: ${LIBARCHIVEDIR}/tar
 SRCS=	bsdtar.c	\
