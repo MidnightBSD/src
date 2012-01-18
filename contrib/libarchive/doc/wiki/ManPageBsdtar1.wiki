@@ -1,4 +1,4 @@
-#summary BSDTAR 1 manual page
+#summary TAR 1 manual page
 == NAME ==
 *tar*
 - manipulate tape archives
@@ -9,26 +9,26 @@
 `[``<`_file_`>` | `<`_pattern_`>` ...`]`
 <br>
 *tar*
-{*-c*}
+{-c}
 `[`_options_`]`
 `[`_files_ | _directories_`]`
 <br>
 *tar*
-{*-r* | *-u*}
-*-f* _archive-file_
+{-r | -u}
+-f _archive-file_
 `[`_options_`]`
 `[`_files_ | _directories_`]`
 <br>
 *tar*
-{*-t* | *-x*}
+{-t | -x}
 `[`_options_`]`
 `[`_patterns_`]`
 == DESCRIPTION ==
 *tar*
 creates and manipulates streaming archive files.
-This implementation can extract from tar, pax, cpio, zip, jar, ar,
-and ISO 9660 cdrom images and can create tar, pax, cpio, ar,
-and shar archives.
+This implementation can extract from tar, pax, cpio, zip, jar, ar, xar,
+rpm, 7-zip, and ISO 9660 cdrom images and can create tar, pax, cpio, ar, zip,
+7-zip, and shar archives.
 
 The first synopsis form shows a
 "bundled"
@@ -41,39 +41,49 @@ The first option to
 *tar*
 is a mode indicator from the following list:
 <dl>
-<dt>*-c*</dt><dd>
+<dt>-c</dt><dd>
 Create a new archive containing the specified items.
-</dd><dt>*-r*</dt><dd>
+The long option form is
+--create.
+</dd><dt>-r</dt><dd>
 Like
-*-c*,
+-c,
 but new entries are appended to the archive.
 Note that this only works on uncompressed archives stored in regular files.
 The
-*-f*
+-f
 option is required.
-</dd><dt>*-t*</dt><dd>
+The long option form is
+--append.
+</dd><dt>-t</dt><dd>
 List archive contents to stdout.
-</dd><dt>*-u*</dt><dd>
+The long option form is
+--list.
+</dd><dt>-u</dt><dd>
 Like
-*-r*,
+-r,
 but new entries are added only if they have a modification date
 newer than the corresponding entry in the archive.
 Note that this only works on uncompressed archives stored in regular files.
 The
-*-f*
+-f
 option is required.
-</dd><dt>*-x*</dt><dd>
+The long form is
+--update.
+</dd><dt>-x</dt><dd>
 Extract to disk from the archive.
 If a file with the same name appears more than once in the archive,
 each copy will be extracted, with later copies overwriting (replacing)
 earlier copies.
+The long option form is
+--extract.
 </dd></dl>
 
 In
-*-c*,
-*-r*,
+-c,
+-r,
 or
-*-u*
+-u
 mode, each specified file or directory is added to the
 archive in the order specified on the command line.
 By default, the contents of each directory are also archived.
@@ -116,31 +126,36 @@ pax-format archive on stdout.
 In this way,
 *tar*
 can be used to convert archives from one format to another.
-</dd><dt>*-b* _blocksize_</dt><dd>
+</dd><dt>-B, --read-full-blocks</dt><dd>
+Ignored for compatibility with other
+*tar*(1)
+implementations.
+</dd><dt>-b _blocksize_, --block-size _blocksize_</dt><dd>
 Specify the block size, in 512-byte records, for tape drive I/O.
 As a rule, this argument is only needed when reading from or writing
 to tape drives, and usually not even then as the default block size of
 20 records (10240 bytes) is very common.
-</dd><dt>*-C* _directory_</dt><dd>
+</dd><dt>-C _directory_, --cd _directory_, --directory _directory_</dt><dd>
 In c and r mode, this changes the directory before adding
 the following files.
 In x mode, change directories after opening the archive
 but before extracting entries from the archive.
-</dd><dt>*--check-links*</dt><dd>
-(c and r modes only)
-Issue a warning message unless all links to each file are archived.
-</dd><dt>*--chroot*</dt><dd>
+</dd><dt>--chroot</dt><dd>
 (x mode only)
 *chroot*()
 to the current directory after processing any
-*-C*
+-C
 options and before extracting any files.
-</dd><dt>*--exclude* _pattern_</dt><dd>
+</dd><dt>--disable-copyfile</dt><dd>
+Mac OS X specific.
+Disable the use of
+*copyfile*(3).
+</dd><dt>--exclude _pattern_</dt><dd>
 Do not process files or directories that match the
 specified pattern.
 Note that exclusions take precedence over patterns or filenames
 specified on the command line.
-</dd><dt>*--format* _format_</dt><dd>
+</dd><dt>--format _format_</dt><dd>
 (c, r, u mode only)
 Use the specified format for the created archive.
 Supported formats include
@@ -154,36 +169,61 @@ Other formats may also be supported; see
 for more information about currently-supported formats.
 In r and u modes, when extending an existing archive, the format specified
 here must be compatible with the format of the existing archive on disk.
-</dd><dt>*-f* _file_</dt><dd>
+</dd><dt>-f _file_, --file _file_</dt><dd>
 Read the archive from or write the archive to the specified file.
 The filename can be
 _-_
 for standard input or standard output.
-If not specified, the default tape device will be used.
-(On
+The default varies by system;
+on
 FreeBSD,
-the default tape device is
-_/dev/sa0_.)
-</dd><dt>*-H*</dt><dd>
+the default is
+_/dev/sa0_;
+on Linux, the default is
+_/dev/st0_.
+</dd><dt>--gid _id_</dt><dd>
+Use the provided group id number.
+On extract, this overrides the group id in the archive;
+the group name in the archive will be ignored.
+On create, this overrides the group id read from disk;
+if
+--gname
+is not also specified, the group name will be set to
+match the group id.
+</dd><dt>--gname _name_</dt><dd>
+Use the provided group name.
+On extract, this overrides the group name in the archive;
+if the provided group name does not exist on the system,
+the group id
+(from the archive or from the
+--gid
+option)
+will be used instead.
+On create, this sets the group name that will be stored
+in the archive;
+the name will not be verified against the system group database.
+</dd><dt>-H</dt><dd>
 (c and r mode only)
 Symbolic links named on the command line will be followed; the
 target of the link will be archived, not the link itself.
-</dd><dt>*-h*</dt><dd>
+</dd><dt>-h</dt><dd>
 (c and r mode only)
 Synonym for
-*-L*.
-</dd><dt>*-I*</dt><dd>
+-L.
+</dd><dt>-I</dt><dd>
 Synonym for
-*-T*.
-</dd><dt>*--include* _pattern_</dt><dd>
+-T.
+</dd><dt>--help</dt><dd>
+Show usage.
+</dd><dt>--include _pattern_</dt><dd>
 Process only files or directories that match the specified pattern.
 Note that exclusions specified with
-*--exclude*
+--exclude
 take precedence over inclusions.
 If no inclusions are explicitly specified, all entries are processed by
 default.
 The
-*--include*
+--include
 option is especially useful when filtering archives.
 For example, the command
 {{{
@@ -195,7 +235,16 @@ containing only the entries from
 _old.tgz_
 containing the string
 Sq foo.
-</dd><dt>*-j*</dt><dd>
+</dd><dt>-J, --xz</dt><dd>
+(c mode only)
+Compress the resulting archive with
+*xz*(1).
+In extract or list modes, this option is ignored.
+Note that, unlike other
+*tar*
+implementations, this implementation recognizes XZ compression
+automatically when reading archives.
+</dd><dt>-j, --bzip, --bzip2, --bunzip2</dt><dd>
 (c mode only)
 Compress the resulting archive with
 *bzip2*(1).
@@ -204,92 +253,122 @@ Note that, unlike other
 *tar*
 implementations, this implementation recognizes bzip2 compression
 automatically when reading archives.
-</dd><dt>*-k*</dt><dd>
+</dd><dt>-k, --keep-old-files</dt><dd>
 (x mode only)
 Do not overwrite existing files.
 In particular, if a file appears more than once in an archive,
 later copies will not overwrite earlier copies.
-</dd><dt>*--keep-newer-files*</dt><dd>
+</dd><dt>--keep-newer-files</dt><dd>
 (x mode only)
 Do not overwrite existing files that are newer than the
 versions appearing in the archive being extracted.
-</dd><dt>*-L*</dt><dd>
+</dd><dt>-L, --dereference</dt><dd>
 (c and r mode only)
 All symbolic links will be followed.
 Normally, symbolic links are archived as such.
 With this option, the target of the link will be archived instead.
-</dd><dt>*-l*</dt><dd>
-This is a synonym for the
-*--check-links*
-option.
-</dd><dt>*-m*</dt><dd>
+</dd><dt>-l, --check-links</dt><dd>
+(c and r modes only)
+Issue a warning message unless all links to each file are archived.
+</dd><dt>--lzma</dt><dd>
+(c mode only) Compress the resulting archive with the original LZMA algorithm.
+Use of this option is discouraged and new archives should be created with
+--xz
+instead.
+Note that, unlike other
+*tar*
+implementations, this implementation recognizes LZMA compression
+automatically when reading archives.
+</dd><dt>-m, --modification-time</dt><dd>
 (x mode only)
 Do not extract modification time.
 By default, the modification time is set to the time stored in the archive.
-</dd><dt>*-n*</dt><dd>
+</dd><dt>-n, --norecurse, --no-recursion</dt><dd>
 (c, r, u modes only)
 Do not recursively archive the contents of directories.
-</dd><dt>*--newer* _date_</dt><dd>
+</dd><dt>--newer _date_</dt><dd>
 (c, r, u modes only)
 Only include files and directories newer than the specified date.
 This compares ctime entries.
-</dd><dt>*--newer-mtime* _date_</dt><dd>
+</dd><dt>--newer-mtime _date_</dt><dd>
 (c, r, u modes only)
 Like
-*--newer*,
+--newer,
 except it compares mtime entries instead of ctime entries.
-</dd><dt>*--newer-than* _file_</dt><dd>
+</dd><dt>--newer-than _file_</dt><dd>
 (c, r, u modes only)
 Only include files and directories newer than the specified file.
 This compares ctime entries.
-</dd><dt>*--newer-mtime-than* _file_</dt><dd>
+</dd><dt>--newer-mtime-than _file_</dt><dd>
 (c, r, u modes only)
 Like
-*--newer-than*,
+--newer-than,
 except it compares mtime entries instead of ctime entries.
-</dd><dt>*--nodump*</dt><dd>
+</dd><dt>--nodump</dt><dd>
 (c and r modes only)
 Honor the nodump file flag by skipping this file.
-</dd><dt>*--null*</dt><dd>
+</dd><dt>--null</dt><dd>
 (use with
-*-I*,
-*-T*,
+-I
 or
-*-X*)
+-T)
 Filenames or patterns are separated by null characters,
 not by newlines.
 This is often used to read filenames output by the
-*-print0*
+-print0
 option to
 *find*(1).
-</dd><dt>*--numeric-owner*</dt><dd>
+</dd><dt>--no-same-owner</dt><dd>
 (x mode only)
-Ignore symbolic user and group names when restoring archives to disk,
-only numeric uid and gid values will be obeyed.
-</dd><dt>*-O*</dt><dd>
+Do not extract owner and group IDs.
+This is the reverse of
+--same-owner
+and the default behavior if
+*tar*
+is run as non-root.
+</dd><dt>--no-same-permissions</dt><dd>
+(x mode only)
+Do not extract full permissions (SGID, SUID, sticky bit, ACLs,
+extended attributes or extended file flags).
+This is the reverse of
+-p
+and the default behavior if
+*tar*
+is run as non-root.
+</dd><dt>--numeric-owner</dt><dd>
+This is equivalent to
+--uname
+Qq
+--gname
+Qq.
+On extract, it causes user and group names in the archive
+to be ignored in favor of the numeric user and group ids.
+On create, it causes user and group names to not be stored
+in the archive.
+</dd><dt>-O, --to-stdout</dt><dd>
 (x, t modes only)
 In extract (-x) mode, files will be written to standard out rather than
 being extracted to disk.
 In list (-t) mode, the file listing will be written to stderr rather than
 the usual stdout.
-</dd><dt>*-o*</dt><dd>
+</dd><dt>-o</dt><dd>
 (x mode)
 Use the user and group of the user running the program rather
 than those specified in the archive.
 Note that this has no significance unless
-*-p*
+-p
 is specified, and the program is being run by the root user.
 In this case, the file modes and flags from
 the archive will be restored, but ACLs or owner information in
 the archive will be discarded.
-</dd><dt>*-o*</dt><dd>
+</dd><dt>-o</dt><dd>
 (c, r, u mode)
 A synonym for
-*--format* _ustar_
-</dd><dt>*--one-file-system*</dt><dd>
+--format _ustar_
+</dd><dt>--one-file-system</dt><dd>
 (c, r, and u modes)
 Do not cross mount points.
-</dd><dt>*--options* _options_</dt><dd>
+</dd><dt>--options _options_</dt><dd>
 Select optional behaviors for particular modules.
 The argument is a text string containing comma-separated
 keywords and values.
@@ -360,7 +439,7 @@ Supported values are store (uncompressed) and deflate (gzip algorithm).
 </dd></dl>
 If a provided option is not supported by any module, that
 is a fatal error.
-</dd><dt>*-P*</dt><dd>
+</dd><dt>-P, --absolute-paths</dt><dd>
 Preserve pathnames.
 By default, absolute pathnames (those that begin with a /
 character) have the leading slash removed both when creating archives
@@ -371,21 +450,22 @@ will refuse to extract archive entries whose pathnames contain
 _.._
 or whose target directory would be altered by a symlink.
 This option suppresses these behaviors.
-</dd><dt>*-p*</dt><dd>
+</dd><dt>-p, --insecure, --preserve-permissions</dt><dd>
 (x mode only)
 Preserve file permissions.
 Attempt to restore the full permissions, including owner, file modes, file
 flags and ACLs, if available, for each item extracted from the archive.
-By default, newly-created files are owned by the user running
-*tar*,
-the file mode is restored for newly-created regular files, and
-all other types of entries receive default permissions.
-If
+This is the default, if
 *tar*
-is being run by root, the default is to restore the owner unless the
-*-o*
-option is also specified.
-</dd><dt>*-q* (*--fast-read*)</dt><dd>
+is being run by root and can be overridden by also specifying
+--no-same-owner
+and
+--no-same-permissions.
+</dd><dt>--posix</dt><dd>
+(c, r, u mode only)
+Synonym for
+--format _pax_
+</dd><dt>-q, --fast-read</dt><dd>
 (x and t mode only)
 Extract or list only the first archive entry that matches each pattern
 or filename operand.
@@ -394,23 +474,17 @@ By default, the archive is always read to the very end, since
 there can be multiple entries with the same name and, by convention,
 later entries overwrite earlier entries.
 This option is provided as a performance optimization.
-</dd><dt>*-S*</dt><dd>
+</dd><dt>-S</dt><dd>
 (x mode only)
 Extract files as sparse files.
 For every block on disk, check first if it contains only NULL bytes and seek
 over it otherwise.
-This works similiar to the conv=sparse option of dd.
-</dd><dt>*--strip-components* _count_</dt><dd>
-(x mode only)
-Remove the specified number of leading path elements.
-Pathnames with fewer elements will be silently skipped.
-Note that the pathname is edited after checking inclusion/exclusion patterns
-but before security checks.
-</dd><dt>*-s* _pattern_</dt><dd>
+This works similar to the conv=sparse option of dd.
+</dd><dt>-s _pattern_</dt><dd>
 Modify file or archive member names according to
 _pattern_.
 The pattern has the format
-_/old/new/_`[`gps`]`
+_/old/new/_`[`ghHprRsS`]`
 where
 _old_
 is a basic regular expression,
@@ -426,13 +500,36 @@ _new_,
 ~ is substituted with the match, \e1 to \e9 with the content of
 the corresponding captured group.
 The optional trailing g specifies that matching should continue
-after the matched part and stopped on the first unmatched pattern.
+after the matched part and stop on the first unmatched pattern.
 The optional trailing s specifies that the pattern applies to the value
 of symbolic links.
 The optional trailing p specifies that after a successful substitution
 the original path name and the new path name should be printed to
 standard error.
-</dd><dt>*-T* _filename_</dt><dd>
+Optional trailing H, R, or S characters suppress substitutions
+for hardlink targets, regular filenames, or symlink targets,
+respectively.
+Optional trailing h, r, or s characters enable substitutions
+for hardlink targets, regular filenames, or symlink targets,
+respectively.
+The default is
+_hrs_
+which applies substitutions to all names.
+In particular, it is never necessary to specify h, r, or s.
+</dd><dt>--same-owner</dt><dd>
+(x mode only)
+Extract owner and group IDs.
+This is the reverse of
+--no-same-owner
+and the default behavior if
+*tar*
+is run as root.
+</dd><dt>--strip-components _count_</dt><dd>
+Remove the specified number of leading path elements.
+Pathnames with fewer elements will be silently skipped.
+Note that the pathname is edited after checking inclusion/exclusion patterns
+but before security checks.
+</dd><dt>-T _filename_, --files-from _filename_</dt><dd>
 In x or t mode,
 *tar*
 will read the list of names to be extracted from
@@ -446,25 +543,50 @@ The special name
 on a line by itself will cause the current directory to be changed to
 the directory specified on the following line.
 Names are terminated by newlines unless
-*--null*
+--null
 is specified.
 Note that
-*--null*
+--null
 also disables the special handling of lines containing
 "-C".
-</dd><dt>*-U*</dt><dd>
+</dd><dt>--totals</dt><dd>
+(c, r, u mode only)
+After archiving all files, print a summary to stderr.
+</dd><dt>-U, --unlink, --unlink-first</dt><dd>
 (x mode only)
 Unlink files before creating them.
-Without this option,
+This can be a minor performance optimization if most files
+already exist, but can make things slower if most files
+do not already exist.
+This flag also causes
 *tar*
-overwrites existing files, which preserves existing hardlinks.
-With this option, existing hardlinks will be broken, as will any
-symlink that would affect the location of an extracted file.
-</dd><dt>*--use-compress-program* _program_</dt><dd>
+to remove intervening directory symlinks instead of
+reporting an error.
+See the SECURITY section below for more details.
+</dd><dt>--uid _id_</dt><dd>
+Use the provided user id number and ignore the user
+name from the archive.
+On create, if
+--uname
+is not also specified, the user name will be set to
+match the user id.
+</dd><dt>--uname _name_</dt><dd>
+Use the provided user name.
+On extract, this overrides the user name in the archive;
+if the provided user name does not exist on the system,
+it will be ignored and the user id
+(from the archive or from the
+--uid
+option)
+will be used instead.
+On create, this sets the user name that will be stored
+in the archive;
+the name is not verified against the system user database.
+</dd><dt>--use-compress-program _program_</dt><dd>
 Pipe the input (in x or t mode) or the output (in c mode) through
 _program_
 instead of using the builtin compression support.
-</dd><dt>*-v*</dt><dd>
+</dd><dt>-v, --verbose</dt><dd>
 Produce verbose output.
 In create and extract modes,
 *tar*
@@ -475,22 +597,22 @@ In list mode,
 will produce output similar to that of
 *ls*(1).
 Additional
-*-v*
+-v
 options will provide additional detail.
-</dd><dt>*--version*</dt><dd>
+</dd><dt>--version</dt><dd>
 Print version of
 *tar*
 and
 *libarchive*,
 and exit.
-</dd><dt>*-w*</dt><dd>
+</dd><dt>-w, --confirmation, --interactive</dt><dd>
 Ask for confirmation for every action.
-</dd><dt>*-X* _filename_</dt><dd>
+</dd><dt>-X _filename_, --exclude-from _filename_</dt><dd>
 Read a list of exclusion patterns from the specified file.
 See
-*--exclude*
+--exclude
 for more information about the handling of exclusions.
-</dd><dt>*-y*</dt><dd>
+</dd><dt>-y</dt><dd>
 (c mode only)
 Compress the resulting archive with
 *bzip2*(1).
@@ -499,16 +621,7 @@ Note that, unlike other
 *tar*
 implementations, this implementation recognizes bzip2 compression
 automatically when reading archives.
-</dd><dt>*-z*</dt><dd>
-(c mode only)
-Compress the resulting archive with
-*gzip*(1).
-In extract or list modes, this option is ignored.
-Note that, unlike other
-*tar*
-implementations, this implementation recognizes gzip compression
-automatically when reading archives.
-</dd><dt>*-Z*</dt><dd>
+</dd><dt>-Z, --compress, --uncompress</dt><dd>
 (c mode only)
 Compress the resulting archive with
 *compress*(1).
@@ -517,9 +630,16 @@ Note that, unlike other
 *tar*
 implementations, this implementation recognizes compress compression
 automatically when reading archives.
+</dd><dt>-z, --gunzip, --gzip</dt><dd>
+(c mode only)
+Compress the resulting archive with
+*gzip*(1).
+In extract or list modes, this option is ignored.
+Note that, unlike other
+*tar*
+implementations, this implementation recognizes gzip compression
+automatically when reading archives.
 </dd></dl>
-== EXIT STATUS ==
-The *tar* utility exits 0 on success, and >0 if an error occurs.
 == ENVIRONMENT ==
 The following environment variables affect the execution of
 *tar*:
@@ -530,25 +650,21 @@ See
 *environ*(7)
 for more information.
 </dt><dt>*TAPE*
-The default tape device.
+The default device.
 The
-*-f*
+-f
 option overrides this.
+Please see the description of the
+-f
+option above for more details.
 </dt><dt>*TZ*
 The timezone to use when displaying dates.
 See
 *environ*(7)
 for more information.
 </dt></dl>
-== FILES ==
-<dl>
-<dt>*/dev/sa0*
-The default tape device, if not overridden by the
-.IR TAPE
-environment variable or the
-*-f*
-option.
-</dt></dl>
+== EXIT STATUS ==
+The *tar* utility exits 0 on success, and >0 if an error occurs.
 == EXAMPLES ==
 The following creates a new archive
 called
@@ -635,9 +751,9 @@ $ tar -cvf output.tar @input.mtree
 }}}
 
 The
-*--newer*
+--newer
 and
-*--newer-mtime*
+--newer-mtime
 switches accept a variety of common date and time specifications, including
 "12 Mar 2005 7:14:29pm",
 "2005-03-12 19:14",
@@ -646,7 +762,7 @@ and
 "19:14 PST May 1".
 
 The
-*--options*
+--options
 argument can be used to control various details of archive generation
 or reading.
 For example, you can generate mtree output which only contains
@@ -768,12 +884,12 @@ checks each extracted path for symlinks.
 If the final path element is a symlink, it will be removed
 and replaced with the archive entry.
 If
-*-U*
+-U
 is specified, any intermediate symlink will also be unconditionally removed.
 If neither
-*-U*
+-U
 nor
-*-P*
+-P
 is specified,
 *tar*
 will refuse to extract the entry.
@@ -786,16 +902,16 @@ tar -tf filename
 }}}
 before extraction.
 You should use the
-*-k*
+-k
 option to ensure that
 *tar*
 will not overwrite any existing files or the
-*-U*
+-U
 option to remove any pre-existing files.
 You should generally not extract archives while running with super-user
 privileges.
 Note that the
-*-P*
+-P
 option to
 *tar*
 disables the security checks above and allows you to extract
@@ -810,6 +926,7 @@ components, or symlinks to other directories.
 *mt*(1),
 *pax*(1),
 *shar*(1),
+*xz*(1),
 *libarchive*(3),
 *libarchive-formats*(5),
 *tar*(5)
@@ -819,7 +936,7 @@ in
 ISO/IEC 9945-1:1996 (``POSIX.1'')
 but was dropped from
 IEEE Std 1003.1-2001 (``POSIX.1'').
-The options used by this implementation were developed by surveying a
+The options supported by this implementation were developed by surveying a
 number of existing tar implementations as well as the old POSIX specification
 for tar and the current POSIX specification for pax.
 
@@ -845,20 +962,23 @@ FreeBSD 1.0.
 This is a complete re-implementation based on the
 *libarchive*(3)
 library.
+It was first released with
+FreeBSD 5.4
+in May, 2005.
 == BUGS ==
 This program follows
 ISO/IEC 9945-1:1996 (``POSIX.1'')
 for the definition of the
-*-l*
+-l
 option.
 Note that GNU tar prior to version 1.15 treated
-*-l*
+-l
 as a synonym for the
-*--one-file-system*
+--one-file-system
 option.
 
 The
-*-C* _dir_
+-C _dir_
 option may differ from historic implementations.
 
 All archive output is written in correctly-sized blocks, even
@@ -922,7 +1042,7 @@ is always removed.
 A leading
 _/_
 is stripped unless the
-*-P*
+-P
 option is specified.
 
 There needs to be better support for file selection on both create
@@ -936,6 +1056,3 @@ Converting between dissimilar archive formats (such as tar and cpio) using the
 convention can cause hard link information to be lost.
 (This is a consequence of the incompatible ways that different archive
 formats store hardlink information.)
-
-There are alternative long options for many of the short options that
-are deliberately not documented.

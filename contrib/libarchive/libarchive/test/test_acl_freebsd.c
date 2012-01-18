@@ -220,6 +220,11 @@ DEFINE_TEST(test_acl_freebsd)
 		skipping("ACL tests require that ACL support be enabled on the filesystem");
 		return;
 	}
+	if (n != 0 && errno == EINVAL) {
+		close(fd);
+		skipping("This filesystem does not support POSIX.1e ACLs");
+		return;
+	}
 	failure("acl_set_fd(): errno = %d (%s)",
 	    errno, strerror(errno));
 	assertEqualInt(0, n);
@@ -242,7 +247,7 @@ DEFINE_TEST(test_acl_freebsd)
 
 	/* Close the archive. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_write_finish(a));
+	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
 	/* Verify the data on disk. */
 	assertEqualInt(0, stat("test0", &st));

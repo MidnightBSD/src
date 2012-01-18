@@ -1,23 +1,23 @@
-#summary BSDCPIO 1 manual page
+#summary CPIO 1 manual page
 == NAME ==
 *cpio*
 - copy files to and from archives
 == SYNOPSIS ==
 <br>
 *cpio*
-{*-i*}
+{-i}
 `[`_options_`]`
 `[`_pattern_ ...`]`
 `[`_`<`_ archive`]`
 <br>
 *cpio*
-{*-o*}
+{-o}
 `[`_options_`]`
 _`<`_ name-list
 `[`_>_ archive`]`
 <br>
 *cpio*
-{*-p*}
+{-p}
 `[`_options_`]`
 _dest-dir_
 _`<`_ name-list
@@ -32,20 +32,20 @@ The first option to
 *cpio*
 is a mode indicator from the following list:
 <dl>
-<dt>*-i*</dt><dd>
+<dt>-i</dt><dd>
 Input.
-Read an archive from standard input (unless overriden) and extract the
+Read an archive from standard input (unless overridden) and extract the
 contents to disk or (if the
-*-t*
+-t
 option is specified)
 list the contents to standard output.
 If one or more file patterns are specified, only files matching
 one of the patterns will be extracted.
-</dd><dt>*-o*</dt><dd>
+</dd><dt>-o</dt><dd>
 Output.
 Read a list of filenames from standard input and produce a new archive
-on standard output (unless overriden) containing the specified items.
-</dd><dt>*-p*</dt><dd>
+on standard output (unless overridden) containing the specified items.
+</dd><dt>-p</dt><dd>
 Pass-through.
 Read a list of filenames from standard input and copy the files to the
 specified directory.
@@ -55,45 +55,45 @@ specified directory.
 Unless specifically stated otherwise, options are applicable in
 all operating modes.
 <dl>
-<dt>*-0*</dt><dd>
+<dt>-0, --null</dt><dd>
 Read filenames separated by NUL characters instead of newlines.
 This is necessary if any of the filenames being read might contain newlines.
-</dd><dt>*-A*</dt><dd>
+</dd><dt>-A</dt><dd>
 (o mode only)
 Append to the specified archive.
 (Not yet implemented.)
-</dd><dt>*-a*</dt><dd>
+</dd><dt>-a</dt><dd>
 (o and p modes)
 Reset access times on files after they are read.
-</dd><dt>*-B*</dt><dd>
+</dd><dt>-B</dt><dd>
 (o mode only)
 Block output to records of 5120 bytes.
-</dd><dt>*-C* _size_</dt><dd>
+</dd><dt>-C _size_</dt><dd>
 (o mode only)
 Block output to records of
 _size_
 bytes.
-</dd><dt>*-c*</dt><dd>
+</dd><dt>-c</dt><dd>
 (o mode only)
 Use the old POSIX portable character format.
 Equivalent to
-*--format* _odc_.
-</dd><dt>*-d*</dt><dd>
+--format _odc_.
+</dd><dt>-d, --make-directories</dt><dd>
 (i and p modes)
 Create directories as necessary.
-</dd><dt>*-E* _file_</dt><dd>
+</dd><dt>-E _file_</dt><dd>
 (i mode only)
 Read list of file name patterns from
 _file_
 to list and extract.
-</dd><dt>*-F* _file_</dt><dd>
+</dd><dt>-F _file_, --file _file_</dt><dd>
 Read archive from or write archive to
 _file_.
-</dd><dt>*-f* _pattern_</dt><dd>
+</dd><dt>-f _pattern_</dt><dd>
 (i mode only)
 Ignore files that match
 _pattern_.
-</dd><dt>*--format* _format_</dt><dd>
+</dd><dt>-H _format_, --format _format_</dt><dd>
 (o mode only)
 Produce the output archive in the specified format.
 Supported formats include:
@@ -115,101 +115,98 @@ The POSIX.1 tar format.
 The default format is
 _odc_.
 See
-*libarchive_formats*(5)
+*libarchive-formats*(5)
 for more complete information about the
 formats currently supported by the underlying
 *libarchive*(3)
 library.
-</dd><dt>*-H* _format_</dt><dd>
-Synonym for
-*--format*.
-</dd><dt>*-h*, *--help*</dt><dd>
+</dd><dt>-h, --help</dt><dd>
 Print usage information.
-</dd><dt>*-I* _file_</dt><dd>
+</dd><dt>-I _file_</dt><dd>
 Read archive from
 _file_.
-</dd><dt>*-i*</dt><dd>
+</dd><dt>-i, --extract</dt><dd>
 Input mode.
 See above for description.
-</dd><dt>*--insecure*</dt><dd>
+</dd><dt>--insecure</dt><dd>
 (i and p mode only)
 Disable security checks during extraction or copying.
 This allows extraction via symbolic links and path names containing
 Sq ..
 in the name.
-</dd><dt>*-J*</dt><dd>
+</dd><dt>-J, --xz</dt><dd>
 (o mode only)
 Compress the file with xz-compatible compression before writing it.
 In input mode, this option is ignored; xz compression is recognized
 automatically on input.
-</dd><dt>*-j*</dt><dd>
+</dd><dt>-j</dt><dd>
 Synonym for
-*-y*.
-</dd><dt>*-L*</dt><dd>
+-y.
+</dd><dt>-L</dt><dd>
 (o and p modes)
 All symbolic links will be followed.
 Normally, symbolic links are archived and copied as symbolic links.
 With this option, the target of the link will be archived or copied instead.
-</dd><dt>*-l*</dt><dd>
+</dd><dt>-l, --link</dt><dd>
 (p mode only)
 Create links from the target directory to the original files,
 instead of copying.
-</dd><dt>*-lzma*</dt><dd>
+</dd><dt>--lzma</dt><dd>
 (o mode only)
 Compress the file with lzma-compatible compression before writing it.
 In input mode, this option is ignored; lzma compression is recognized
 automatically on input.
-</dd><dt>*-m*</dt><dd>
+</dd><dt>-m, --preserve-modification-time</dt><dd>
 (i and p modes)
 Set file modification time on created files to match
 those in the source.
-</dd><dt>*-n*</dt><dd>
+</dd><dt>-n, --numeric-uid-gid</dt><dd>
 (i mode, only with
-*-t*)
+-t)
 Display numeric uid and gid.
 By default,
 *cpio*
 displays the user and group names when they are provided in the
 archive, or looks up the user and group names in the system
 password database.
-</dd><dt>*-no-preserve-owner*</dt><dd>
+</dd><dt>--no-preserve-owner</dt><dd>
 (i mode only)
 Do not attempt to restore file ownership.
 This is the default when run by non-root users.
-</dd><dt>*-O* _file_</dt><dd>
+</dd><dt>-O _file_</dt><dd>
 Write archive to
 _file_.
-</dd><dt>*-o*</dt><dd>
+</dd><dt>-o, --create</dt><dd>
 Output mode.
 See above for description.
-</dd><dt>*-p*</dt><dd>
+</dd><dt>-p, --pass-through</dt><dd>
 Pass-through mode.
 See above for description.
-</dd><dt>*-preserve-owner*</dt><dd>
+</dd><dt>--preserve-owner</dt><dd>
 (i mode only)
 Restore file ownership.
 This is the default when run by the root user.
-</dd><dt>*--quiet*</dt><dd>
+</dd><dt>--quiet</dt><dd>
 Suppress unnecessary messages.
-</dd><dt>*-R* `[`user`]``[`:`]``[`group`]`</dt><dd>
+</dd><dt>-R `[`user`]``[`:`]``[`group`]`, --owner `[`user`]``[`:`]``[`group`]`</dt><dd>
 Set the owner and/or group on files in the output.
 If group is specified with no user
 (for example,
-*-R* _:wheel_)
+-R _:wheel_)
 then the group will be set but not the user.
 If the user is specified with a trailing colon and no group
 (for example,
-*-R* _root:_)
+-R _root:_)
 then the group will be set to the user's default group.
 If the user is specified with no trailing colon, then
 the user will be set but not the group.
 In
-*-i*
+-i
 and
-*-p*
+-p
 modes, this option can only be used by the super-user.
 (For compatibility, a period can be used in place of the colon.)
-</dd><dt>*-r*</dt><dd>
+</dd><dt>-r</dt><dd>
 (All modes.)
 Rename files interactively.
 For each file, a prompt is written to
@@ -219,37 +216,43 @@ _/dev/tty_.
 If the line read is blank, the file is skipped.
 If the line contains a single period, the file is processed normally.
 Otherwise, the line is taken to be the new name of the file.
-</dd><dt>*-t*</dt><dd>
+</dd><dt>-t, --list</dt><dd>
 (i mode only)
 List the contents of the archive to stdout;
 do not restore the contents to disk.
-</dd><dt>*-u*</dt><dd>
+</dd><dt>-u, --unconditional</dt><dd>
 (i and p modes)
 Unconditionally overwrite existing files.
 Ordinarily, an older file will not overwrite a newer file on disk.
-</dd><dt>*-v*</dt><dd>
+</dd><dt>-V, --dot</dt><dd>
+Print a dot to stderr for each file as it is processed.
+Superseded by
+-v.
+</dd><dt>-v, --verbose</dt><dd>
 Print the name of each file to stderr as it is processed.
 With
-*-t*,
+-t,
 provide a detailed listing of each file.
-</dd><dt>*--version*</dt><dd>
+</dd><dt>--version</dt><dd>
 Print the program version information and exit.
-</dd><dt>*-y*</dt><dd>
+</dd><dt>-y</dt><dd>
 (o mode only)
 Compress the archive with bzip2-compatible compression before writing it.
 In input mode, this option is ignored;
 bzip2 compression is recognized automatically on input.
-</dd><dt>*-Z*</dt><dd>
+</dd><dt>-Z</dt><dd>
 (o mode only)
 Compress the archive with compress-compatible compression before writing it.
 In input mode, this option is ignored;
 compression is recognized automatically on input.
-</dd><dt>*-z*</dt><dd>
+</dd><dt>-z</dt><dd>
 (o mode only)
 Compress the archive with gzip-compatible compression before writing it.
 In input mode, this option is ignored;
 gzip compression is recognized automatically on input.
 </dd></dl>
+== EXIT STATUS ==
+The *cpio* utility exits 0 on success, and >0 if an error occurs.
 == ENVIRONMENT ==
 The following environment variables affect the execution of
 *cpio*:
@@ -265,12 +268,10 @@ See
 *environ*(7)
 for more information.
 </dt></dl>
-== EXIT STATUS ==
-The *cpio* utility exits 0 on success, and >0 if an error occurs.
 == EXAMPLES ==
 The
 *cpio*
-command is traditionally used to copy file heirarchies in conjunction
+command is traditionally used to copy file hierarchies in conjunction
 with the
 *find*(1)
 command.
@@ -309,25 +310,25 @@ The mode options i, o, and p and the options
 a, B, c, d, f, l, m, r, t, u, and v comply with SUSv2.
 
 The old POSIX.1 standard specified that only
-*-i*,
-*-o*,
+-i,
+-o,
 and
-*-p*
+-p
 were interpreted as command-line options.
 Each took a single argument of a list of modifier
 characters.
 For example, the standard syntax allows
-*-imu*
+-imu
 but does not support
-*-miu*
+-miu
 or
-*-i* *-m* *-u*,
+-i -m -u,
 since
 _m_
 and
 _u_
 are only modifiers to
-*-i*,
+-i,
 they are not command-line options in their own right.
 The syntax supported by this implementation is backwards-compatible
 with the standard.

@@ -1,4 +1,4 @@
-#summary archive_util 3 manual page
+#summary ARCHIVE_UTIL 3 manual page
 == NAME ==
 *archive_clear_error*,
 *archive_compression*,
@@ -7,8 +7,12 @@
 *archive_errno*,
 *archive_error_string*,
 *archive_file_count*,
+*archive_filter_code*,
+*archive_filter_count*,
+*archive_filter_name*,
 *archive_format*,
 *archive_format_name*,
+*archive_position*,
 *archive_set_error*
 - libarchive utility functions
 == SYNOPSIS ==
@@ -44,11 +48,27 @@
 <br>
 *int*
 <br>
+*archive_filter_code*(_struct archive `*`_, _int_);
+<br>
+*int*
+<br>
+*archive_filter_count*(_struct archive `*`_, _int_);
+<br>
+*const char `*`*
+<br>
+*archive_filter_name*(_struct archive `*`_, _int_);
+<br>
+*int*
+<br>
 *archive_format*(_struct archive `*`_);
 <br>
 *const char `*`*
 <br>
 *archive_format_name*(_struct archive `*`_);
+<br>
+*int64_t*
+<br>
+*archive_position*(_struct archive `*`_, _int_);
 <br>
 *void*
 <br>
@@ -64,17 +84,21 @@ library.
 Clears any error information left over from a previous call.
 Not generally used in client code.
 </dd><dt>*archive_compression*()</dt><dd>
-Returns a numeric code indicating the current compression.
-This value is set by
-*archive_read_open*().
+Synonym for
+*archive_filter_code(a,*(_0)_).
 </dd><dt>*archive_compression_name*()</dt><dd>
-Returns a text description of the current compression suitable for display.
+Synonym for
+*archive_filter_name(a,*(_0)_).
 </dd><dt>*archive_copy_error*()</dt><dd>
 Copies error information from one archive to another.
 </dd><dt>*archive_errno*()</dt><dd>
 Returns a numeric error code (see
 *errno*(2))
 indicating the reason for the most recent error return.
+Note that this can not be reliably used to detect whether an
+error has occurred.
+It should be used only after another libarchive function
+has returned an error status.
 </dd><dt>*archive_error_string*()</dt><dd>
 Returns a textual error message suitable for display.
 The error message here is usually more specific than that
@@ -85,9 +109,45 @@ to
 </dd><dt>*archive_file_count*()</dt><dd>
 Returns a count of the number of files processed by this archive object.
 The count is incremented by calls to
-*archive_write_header*()
+*archive_write_header*(3)
 or
-*archive_read_next_header*(.)
+*archive_read_next_header*(3).
+</dd><dt>*archive_filter_code*()</dt><dd>
+Returns a numeric code identifying the indicated filter.
+See
+*archive_filter_count*()
+for details of the numbering.
+</dd><dt>*archive_filter_count*()</dt><dd>
+Returns the number of filters in the current pipeline.
+For read archive handles, these filters are added automatically
+by the automatic format detection.
+For write archive handles, these filters are added by calls to the various
+*archive_write_add_filter_XXX*()
+functions.
+Filters in the resulting pipeline are numbered so that filter 0
+is the filter closest to the format handler.
+As a convenience, functions that expect a filter number will
+accept -1 as a synonym for the highest-numbered filter.
+
+For example, when reading a uuencoded gzipped tar archive, there
+are three filters:
+filter 0 is the gunzip filter,
+filter 1 is the uudecode filter,
+and filter 2 is the pseudo-filter that wraps the archive read functions.
+In this case, requesting
+*archive_position(a,*(_-1)_)
+would be a synonym for
+*archive_position(a,*(_2)_)
+which would return the number of bytes currently read from the archive, while
+*archive_position(a,*(_1)_)
+would return the number of bytes after uudecoding, and
+*archive_position(a,*(_0)_)
+would return the number of bytes after decompression.
+</dd><dt>*archive_filter_name*()</dt><dd>
+Returns a textual name identifying the indicated filter.
+See
+*archive_filter_count*()
+for details of the numbering.
 </dd><dt>*archive_format*()</dt><dd>
 Returns a numeric code indicating the format of the current
 archive entry.
@@ -100,6 +160,16 @@ utilize GNU tar extensions and several entries that do not.
 These entries will have different format codes.
 </dd><dt>*archive_format_name*()</dt><dd>
 A textual description of the format of the current entry.
+</dd><dt>*archive_position*()</dt><dd>
+Returns the number of bytes read from or written to the indicated filter.
+In particular,
+*archive_position(a,*(_0)_)
+returns the number of bytes read or written by the format handler, while
+*archive_position(a,*(_-1)_)
+returns the number of bytes read or written to the archive.
+See
+*archive_filter_count*()
+for details of the numbering here.
 </dd><dt>*archive_set_error*()</dt><dd>
 Sets the numeric error code and error description that will be returned
 by

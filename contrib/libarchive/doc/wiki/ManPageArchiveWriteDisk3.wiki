@@ -1,4 +1,4 @@
-#summary archive_write_disk 3 manual page
+#summary ARCHIVE_WRITE_DISK 3 manual page
 == NAME ==
 *archive_write_disk_new*,
 *archive_write_disk_set_options*,
@@ -8,9 +8,11 @@
 *archive_write_disk_set_user_lookup*,
 *archive_write_header*,
 *archive_write_data*,
+*archive_write_data_block*,
 *archive_write_finish_entry*,
 *archive_write_close*,
 *archive_write_finish*
+*archive_write_free*
 - functions for creating objects on disk
 == SYNOPSIS ==
 *#include <archive.h>*
@@ -47,6 +49,10 @@
 <br>
 *archive_write_data*(_struct archive `*`_, _const void `*`_, _size_t_);
 <br>
+*ssize_t*
+<br>
+*archive_write_data_block*(_struct archive `*`_, _const void `*`_, _size_t size_, _int64_t offset_);
+<br>
 *int*
 <br>
 *archive_write_finish_entry*(_struct archive `*`_);
@@ -58,6 +64,10 @@
 *int*
 <br>
 *archive_write_finish*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_write_free*(_struct archive `*`_);
 == DESCRIPTION ==
 These functions provide a complete API for creating objects on
 disk from
@@ -205,6 +215,20 @@ objects.
 </dd><dt>*archive_write_data*()</dt><dd>
 Write data corresponding to the header just written.
 Returns number of bytes written or -1 on error.
+</dd><dt>*archive_write_data_block*()</dt><dd>
+Write data corresponding to the header just written.
+This is like
+*archive_write_data*()
+except that it performs a seek on the file being
+written to the specified offset before writing the data.
+This is useful when restoring sparse files from archive
+formats that support sparse files.
+Returns number of bytes written or -1 on error.
+(Note: This is currently not supported for
+*archive_write*
+handles, only for
+*archive_write_disk*
+handles.)
 </dd><dt>*archive_write_finish_entry*()</dt><dd>
 Close out the entry just written.
 Ordinarily, clients never need to call this, as it
@@ -213,6 +237,9 @@ is called automatically by
 and
 *archive_write_close*()
 as needed.
+However, some file attributes are written to disk only
+after the file is closed, so this can be necessary
+if you need to work with the file on disk right away.
 </dd><dt>*archive_write_close*()</dt><dd>
 Set any attributes that could not be set during the initial restore.
 For example, directory timestamps are not restored initially because
@@ -224,6 +251,9 @@ The
 library maintains a list of all such deferred attributes and
 sets them when this function is invoked.
 </dd><dt>*archive_write_finish*()</dt><dd>
+This is a deprecated synonym for
+*archive_write_free*().
+</dd><dt>*archive_write_free*()</dt><dd>
 Invokes
 *archive_write_close*()
 if it was not invoked manually, then releases all resources.
@@ -247,12 +277,6 @@ for operations that might succeed if retried,
 for unusual conditions that do not prevent further operations, and
 *ARCHIVE_FATAL*
 for serious errors that make remaining operations impossible.
-The
-*archive_errno*()
-and
-*archive_error_string*()
-functions can be used to retrieve an appropriate error code and a
-textual error message.
 
 *archive_write_disk_new*()
 returns a pointer to a newly-allocated
@@ -260,12 +284,18 @@ returns a pointer to a newly-allocated
 object.
 
 *archive_write_data*()
-returns a count of the number of bytes actually written.
-On error, -1 is returned and the
+returns a count of the number of bytes actually written,
+or
+{{{
+-1
+}}}
+on error.
+== ERRORS ==
+Detailed error codes and textual descriptions are available from the
 *archive_errno*()
 and
 *archive_error_string*()
-functions will return appropriate values.
+functions.
 == SEE ALSO ==
 *archive_read*(3),
 *archive_write*(3),
@@ -322,7 +352,7 @@ In particular, the directory
 _aa_
 is created as well as the final object
 _bb_.
-In theory, this can be exploited to create an entire directory heirarchy
+In theory, this can be exploited to create an entire directory hierarchy
 with a single request.
 Of course, this does not work if the
 *ARCHIVE_EXTRACT_NODOTDOT*
@@ -354,5 +384,5 @@ compact implementation when appropriate.
 
 There should be a corresponding
 *archive_read_disk*
-interface that walks a directory heirarchy and returns archive
+interface that walks a directory hierarchy and returns archive
 entry objects.

@@ -5,11 +5,32 @@ default: all
 archive_entry.3.html: ../../libarchive/archive_entry.3
 	groff -mdoc2html ../../libarchive/archive_entry.3 > archive_entry.3.html
 
+archive_entry_acl.3.html: ../../libarchive/archive_entry_acl.3
+	groff -mdoc2html ../../libarchive/archive_entry_acl.3 > archive_entry_acl.3.html
+
+archive_entry_linkify.3.html: ../../libarchive/archive_entry_linkify.3
+	groff -mdoc2html ../../libarchive/archive_entry_linkify.3 > archive_entry_linkify.3.html
+
+archive_entry_paths.3.html: ../../libarchive/archive_entry_paths.3
+	groff -mdoc2html ../../libarchive/archive_entry_paths.3 > archive_entry_paths.3.html
+
+archive_entry_perms.3.html: ../../libarchive/archive_entry_perms.3
+	groff -mdoc2html ../../libarchive/archive_entry_perms.3 > archive_entry_perms.3.html
+
+archive_entry_stat.3.html: ../../libarchive/archive_entry_stat.3
+	groff -mdoc2html ../../libarchive/archive_entry_stat.3 > archive_entry_stat.3.html
+
+archive_entry_time.3.html: ../../libarchive/archive_entry_time.3
+	groff -mdoc2html ../../libarchive/archive_entry_time.3 > archive_entry_time.3.html
+
 archive_read.3.html: ../../libarchive/archive_read.3
 	groff -mdoc2html ../../libarchive/archive_read.3 > archive_read.3.html
 
 archive_read_disk.3.html: ../../libarchive/archive_read_disk.3
 	groff -mdoc2html ../../libarchive/archive_read_disk.3 > archive_read_disk.3.html
+
+archive_read_set_options.3.html: ../../libarchive/archive_read_set_options.3
+	groff -mdoc2html ../../libarchive/archive_read_set_options.3 > archive_read_set_options.3.html
 
 archive_util.3.html: ../../libarchive/archive_util.3
 	groff -mdoc2html ../../libarchive/archive_util.3 > archive_util.3.html
@@ -19,6 +40,9 @@ archive_write.3.html: ../../libarchive/archive_write.3
 
 archive_write_disk.3.html: ../../libarchive/archive_write_disk.3
 	groff -mdoc2html ../../libarchive/archive_write_disk.3 > archive_write_disk.3.html
+
+archive_write_set_options.3.html: ../../libarchive/archive_write_set_options.3
+	groff -mdoc2html ../../libarchive/archive_write_set_options.3 > archive_write_set_options.3.html
 
 cpio.5.html: ../../libarchive/cpio.5
 	groff -mdoc2html ../../libarchive/cpio.5 > cpio.5.html
@@ -43,4 +67,4 @@ bsdtar.1.html: ../../tar/bsdtar.1
 
 bsdcpio.1.html: ../../cpio/bsdcpio.1
 	groff -mdoc2html ../../cpio/bsdcpio.1 > bsdcpio.1.html
-all: archive_entry.3.html archive_read.3.html archive_read_disk.3.html archive_util.3.html archive_write.3.html archive_write_disk.3.html cpio.5.html libarchive-formats.5.html libarchive.3.html libarchive_internals.3.html mtree.5.html tar.5.html bsdtar.1.html bsdcpio.1.html
+all: archive_entry.3.html archive_entry_acl.3.html archive_entry_linkify.3.html archive_entry_paths.3.html archive_entry_perms.3.html archive_entry_stat.3.html archive_entry_time.3.html archive_read.3.html archive_read_disk.3.html archive_read_set_options.3.html archive_util.3.html archive_write.3.html archive_write_disk.3.html archive_write_set_options.3.html cpio.5.html libarchive-formats.5.html libarchive.3.html libarchive_internals.3.html mtree.5.html tar.5.html bsdtar.1.html bsdcpio.1.html
