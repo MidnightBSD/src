@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.35 2012/01/18 14:17:33 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.36 2012/01/18 14:19:20 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -93,6 +93,7 @@ system: packagesystem
 	echo hostid_enable=\"NO\" >> ${.OBJDIR}/release/etc/rc.conf
 	cp ${.CURDIR}/rc.local ${.OBJDIR}/release/etc
 	cp ${.CURDIR}/fstab ${.OBJDIR}/release/etc
+	rm ${.OBJDIR}/bootonly/etc/rc.d/firstboot
 	touch ${.OBJDIR}/${.TARGET}
 
 bootonly: packagesystem
@@ -115,6 +116,7 @@ bootonly: packagesystem
 	echo hostid_enable=\"NO\" >> ${.OBJDIR}/bootonly/etc/rc.conf
 	cp ${.CURDIR}/rc.local ${.OBJDIR}/bootonly/etc
 	cp ${.CURDIR}/fstab ${.OBJDIR}/bootonly/etc
+	rm ${.OBJDIR}/bootonly/etc/rc.d/firstboot
 
 MidnightBSD-release.iso: system
 	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b MidnightBSD_Install ${.OBJDIR}/MidnightBSD-release.iso ${.OBJDIR}/release
