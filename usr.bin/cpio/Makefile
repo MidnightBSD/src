@@ -1,11 +1,11 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/cpio/Makefile,v 1.4 2012/01/14 03:40:17 laffer1 Exp $
 
 .include <bsd.own.mk>
 
 LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
 
 PROG=	bsdcpio
-BSDCPIO_VERSION_STRING=2.8.5
+BSDCPIO_VERSION_STRING=3.0.3
 
 .PATH:	${LIBARCHIVEDIR}/cpio
 SRCS=	cpio.c cmdline.c
