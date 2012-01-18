@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.34 2012/01/18 04:09:29 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.35 2012/01/18 14:17:33 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -140,8 +140,9 @@ release:
 	${MAKE} -C ${.CURDIR} ${.MAKEFLAGS} ${RELEASE_TARGETS}
 
 clean:
-	chflags -R noschg ${.OBJDIR}
+	chflags -R noschg ${.OBJDIR} ${DISTDIR}
 	rm -rf dist ftp
+	rm -rf ${DISTDIR}
 	rm -f packagesystem
 	rm -f *.txz MANIFEST
 	rm -f system
