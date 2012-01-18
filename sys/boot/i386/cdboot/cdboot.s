@@ -27,7 +27,7 @@
 # SUCH DAMAGE.
 #
 
-# $MidnightBSD: src/sys/boot/i386/cdboot/cdboot.s,v 1.3 2006/10/08 06:08:55 laffer1 Exp $
+# $MidnightBSD: src/sys/boot/i386/cdboot/cdboot.s,v 1.4 2007/04/20 15:12:55 laffer1 Exp $
 # $FreeBSD: /repoman/r/ncvs/src/sys/boot/i386/cdboot/cdboot.s,v 1.13.12.1 2006/04/18 13:51:12 sobomax Exp $
 
 #
@@ -175,7 +175,7 @@ lookup_path:	push %si			# Save file name pointer
 lookup_found:					# Found a loader file
 #
 # Load the binary into the buffer.  Due to real mode addressing limitations
-# we have to read it in in 64k chunks.
+# we have to read it in 64k chunks.
 #
 		mov DIR_SIZE(%bx),%eax		# Read file length
 		add $SECTOR_SIZE-1,%eax		# Convert length to sectors
@@ -486,11 +486,11 @@ twiddle:	push %ax			# Save
 		ret
 
 #
-# Enable A20. Put upper limit on amount of time we wait for the
+# Enable A20. Put an upper limit on the amount of time we wait for the
 # keyboard controller to get ready (65K x ISA access time). If
-# we wait more than that amount it's likely that the hardware
-# is legacy-free and simply doesn't have keyboard controller
-# and don't need enabling A20 at all.
+# we wait more than that amount, the hardware is probably
+# legacy-free and simply doesn't have keyboard controller.
+# Thus the A20 line is enabled.
 #
 seta20: 	cli				# Disable interrupts
 		xor %cx,%cx			# Clear
@@ -586,7 +586,7 @@ msg_bootinfo:	.asciz	"Building the boot loader arguments\r\n"
 msg_relocate:	.asciz	"Relocating the loader and the BTX\r\n"
 msg_jump:	.asciz	"Starting the BTX loader\r\n"
 msg_badread:	.ascii  "Read Error: 0x"
-hex_error:	.ascii	"00\r\n"
+hex_error:	.asciz	"00\r\n"
 msg_novd:	.asciz  "Could not find Primary Volume Descriptor\r\n"
 msg_lookup:	.asciz  "Looking up "
 msg_lookup2:	.asciz  "... "
