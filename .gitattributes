@@ -27842,7 +27842,7 @@ lib/libalias/modules/pptp/Makefile -text
 lib/libalias/modules/skinny/Makefile -text
 lib/libalias/modules/smedia/Makefile -text
 lib/libarchive/Makefile -text
-lib/libarchive/config_freebsd.h -text
+lib/libarchive/config.h -text
 lib/libatm/Makefile -text
 lib/libatm/atm_addr.c -text
 lib/libatm/cache_key.c -text

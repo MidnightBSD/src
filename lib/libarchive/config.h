@@ -22,11 +22,9 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
-/* FreeBSD 5.0 and later have ACL and extattr support. */
-#if __FreeBSD__ > 4
 #define	HAVE_ACL_CREATE_ENTRY 1
 #define	HAVE_ACL_GET_LINK_NP 1
 #define	HAVE_ACL_GET_PERM_NP 1
@@ -41,7 +39,8 @@
 #define	HAVE_EXTATTR_SET_FILE 1
 #define	HAVE_SYS_ACL_H 1
 #define	HAVE_SYS_EXTATTR_H 1
-#endif
+
+#define HAVE_SYS_UTSNAME_H 1
 
 #ifdef WITH_OPENSSL
 #define	HAVE_OPENSSL_MD5_H 1
@@ -161,12 +160,6 @@
 #define	HAVE_WMEMCPY 1
 #define	HAVE_ZLIB_H 1
 #define	TIME_WITH_SYS_TIME 1
-
-/* FreeBSD 4 and earlier lack intmax_t/uintmax_t */
-#if __FreeBSD__ < 5
-#define	intmax_t int64_t
-#define	uintmax_t uint64_t
-#endif
 
 /* FreeBSD defines for archive_hash.h */
 #ifdef WITH_OPENSSL
