@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.10 2011/12/07 13:40:58 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.11 2011/12/18 02:09:01 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -31,6 +31,8 @@
 #
 # LIBDATADIR	Base path for misc. utility data files. [/usr/libdata]
 #
+# LIBEXECDIR	Base path for system daemons and utilities. [/usr/libexec]
+#
 # LINTLIBDIR	Base path for lint libraries. [/usr/libdata/lint]
 #
 # SHLIBDIR	Base path for shared libraries. [${LIBDIR}]
@@ -60,6 +62,15 @@
 # SHAREGRP	ASCII text file group. [wheel]
 #
 # SHAREMODE	ASCII text file mode. [${NOBINMODE}]
+#
+#
+# CONFDIR	Base path for configuration files. [/etc]
+#
+# CONFOWN	Configuration file owner. [root]
+#
+# CONFGRP	Configuration file group. [wheel]
+#
+# CONFMODE	Configuration file mode. [644]
 #
 #
 # DOCDIR	Base path for system documentation (e.g. PSD, USD,
@@ -130,6 +141,7 @@ KMODMODE?=	${BINMODE}
 LIBDIR?=	/usr/lib
 LIBCOMPATDIR?=	/usr/lib/compat
 LIBDATADIR?=	/usr/libdata
+LIBEXECDIR?=	/usr/libexec
 LINTLIBDIR?=	/usr/libdata/lint
 SHLIBDIR?=	${LIBDIR}
 LIBOWN?=	${BINOWN}
@@ -142,6 +154,11 @@ SHAREDIR?=	/usr/share
 SHAREOWN?=	root
 SHAREGRP?=	wheel
 SHAREMODE?=	${NOBINMODE}
+
+CONFDIR?=	/etc
+CONFOWN?=	root
+CONFGRP?=	wheel
+CONFMODE?=	644
 
 MANDIR?=	${SHAREDIR}/man/man
 MANOWN?=	${SHAREOWN}
