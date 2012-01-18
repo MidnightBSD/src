@@ -1,16 +1,16 @@
-# $FreeBSD: src/share/monetdef/de_CH.ISO8859-1.src,v 1.1.26.1 2009/06/16 02:35:21 edwin Exp $
+# $FreeBSD: src/share/monetdef/pt_PT.UTF-8.src,v 1.1.2.1 2009/06/17 03:15:23 edwin Exp $
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
 #
 # int_curr_symbol (last character always SPACE)
-CHF 
+EUR 
 # currency_symbol
-Fr.
+€
 # mon_decimal_point
-.
+,
 # mon_thousands_sep
-'
+.
 # mon_grouping, separated by ;
 3;3
 # positive_sign
@@ -22,15 +22,15 @@ Fr.
 # frac_digits
 2
 # p_cs_precedes
-1
+0
 # p_sep_by_space
 1
 # n_cs_precedes
-1
+0
 # n_sep_by_space
 1
 # p_sign_posn
-4
+1
 # n_sign_posn
-4
+1
 # EOF

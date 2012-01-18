@@ -3,7 +3,7 @@
 /*
  * Japanese LOCALE_CTYPE definitions using EUC of JIS character sets
  *
- * $FreeBSD: src/share/mklocale/ja_JP.eucJP.src,v 1.5 2007/05/09 21:34:51 ache Exp $
+ * $FreeBSD: src/share/mklocale/ja_JP.eucJP.src,v 1.5.2.1 2009/06/19 07:42:49 edwin Exp $
  */
 
 ENCODING	"EUC"
@@ -54,7 +54,7 @@ SPECIAL		0xa2f2 - 0xa2f9 0xa2fe
 SWIDTH2		0xa2a1 - 0xa2ae 0xa2ba - 0xa2c1 0xa2ca - 0xa2d0 0xa2dc - 0xa2ea
 SWIDTH2		0xa2f2 - 0xa2f9 0xa2fe
 
-/* ?DIGIT           0xa3b0 - 0xa3b9 */
+PRINT		0xa3b0 - 0xa3b9
 UPPER		0xa3c1 - 0xa3da				/* Romaji */
 LOWER		0xa3e1 - 0xa3fa				/* Romaji */
 SWIDTH2		0xa3b0 - 0xa3b9				/* Zenkaku Digit */

@@ -34073,6 +34073,8 @@ share/monetdef/pl_PL.ISO8859-2.src -text
 share/monetdef/pl_PL.UTF-8.src -text
 share/monetdef/pt_BR.ISO8859-1.src -text
 share/monetdef/pt_PT.ISO8859-1.src -text
+share/monetdef/pt_PT.ISO8859-15.src -text
+share/monetdef/pt_PT.UTF-8.src -text
 share/monetdef/ro_RO.ISO8859-2.src -text
 share/monetdef/ru_RU.CP1251.src -text
 share/monetdef/ru_RU.CP866.src -text
