@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.31 2011/12/03 18:48:04 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.32 2011/12/03 22:32:21 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -131,11 +131,11 @@ bootonly: packagesystem
 	echo hostid_enable=\"NO\" >> ${.OBJDIR}/bootonly/etc/rc.conf
 	cp ${.CURDIR}/rc.local ${.OBJDIR}/bootonly/etc
 
-release.iso: system
-	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b MidnightBSD_Install ${.OBJDIR}/release.iso ${.OBJDIR}/release
+MidnightBSD-release.iso: system
+	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b MidnightBSD_Install ${.OBJDIR}/MidnightBSD-release.iso ${.OBJDIR}/release
 
-bootonly.iso: bootonly
-	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b MidnightBSD_Install ${.OBJDIR}/bootonly.iso ${.OBJDIR}/bootonly
+MidnightBSD-bootonly.iso: bootonly
+	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b MidnightBSD_Install ${.OBJDIR}/MidnightBSD-bootonly.iso ${.OBJDIR}/bootonly
 
 memstick: system
 	sh ${.CURDIR}/${TARGET}/make-memstick.sh ${.OBJDIR}/release ${.OBJDIR}/memstick
@@ -144,7 +144,7 @@ packagesystem: base.txz kernel.txz ${EXTRA_PACKAGES}
 	sh ${.CURDIR}/scripts/make-manifest.sh ${.OBJDIR}/*.txz > ${.OBJDIR}/MANIFEST
 	touch ${.TARGET}
 
-cdrom: release.iso bootonly.iso
+cdrom: MidnightBSD-release.iso MidnightBSD-bootonly.iso
 ftp: packagesystem
 	rm -rf ftp
 	mkdir ftp
@@ -161,7 +161,7 @@ clean:
 	rm -f *.txz MANIFEST
 	rm -f system
 	rm -rf release bootonly
-	rm -f release.iso bootonly.iso memstick
+	rm -f MidnightBSD-release.iso MidnightBSD-bootonly.iso memstick
 
 install:
 	-mkdir ${DESTDIR}
