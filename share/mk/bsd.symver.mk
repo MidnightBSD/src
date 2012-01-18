@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.symver.mk,v 1.1 2008/09/03 02:23:05 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.symver.mk,v 1.4 2007/05/21 09:01:23 ru Exp $
 
 .if !target(__<bsd.symver.mk>__)
@@ -35,6 +35,9 @@ _vgen=  ${path}/${VERSION_GEN}
 .endif
 .endif
 .endfor
+.if empty(_vgen)
+.error ${VERSION_GEN} not found in the search path.
+.endif
 
 # Run the symbol maps through the C preprocessor before passing
 # them to the symbol version generator.

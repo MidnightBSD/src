@@ -1,6 +1,6 @@
 #	from: @(#)bsd.subdir.mk	5.9 (Berkeley) 2/1/91
 # $FreeBSD: src/share/mk/bsd.subdir.mk,v 1.50 2005/05/31 07:14:51 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.subdir.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
 #
 # The include file <bsd.subdir.mk> contains the default targets
 # for building subdirectories.
@@ -25,9 +25,9 @@
 # 		This is a variant of install, which will
 # 		put the stuff into the right "distribution".
 #
-#	afterinstall, all, all-man, beforeinstall, checkdpadd,
-#	clean, cleandepend, cleandir, depend, install, lint, maninstall,
-#	obj, objlink, realinstall, regress, tags
+#	afterinstall, all, all-man, beforeinstall, checkdpadd, clean,
+#	cleandepend, cleandir, cleanilinks, depend, install, lint,
+#	maninstall, manlint, obj, objlink, realinstall, regress, tags
 #
 
 .include <bsd.init.mk>
@@ -66,11 +66,9 @@ ${SUBDIR}: .PHONY
 	fi; \
 	${MAKE} all
 
-
 .for __target in all all-man checkdpadd clean cleandepend cleandir \
-    depend distribute lint maninstall \
-    obj objlink realinstall regress tags \
-    ${SUBDIR_TARGETS}
+    cleanilinks depend distribute lint maninstall manlint obj objlink \
+    realinstall regress tags ${SUBDIR_TARGETS}
 ${__target}: _SUBDIR
 .endfor
 
