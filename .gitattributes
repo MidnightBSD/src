@@ -41568,7 +41568,6 @@ tools/tools/netrate/netreceive/Makefile -text
 tools/tools/netrate/netreceive/netreceive.c -text
 tools/tools/netrate/netsend/Makefile -text
 tools/tools/netrate/netsend/netsend.c -text
-tools/tools/pciid/mk_pci_vendors.pl -text
 tools/tools/pirtool/Makefile -text
 tools/tools/pirtool/pirtable.h -text
 tools/tools/pirtool/pirtool.c -text
