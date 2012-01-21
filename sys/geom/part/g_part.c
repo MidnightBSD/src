@@ -1195,6 +1195,11 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 		parm = 0;
 		switch (ap->name[0]) {
 		case 'a':
+			if (!strcmp(ap->name, "arg0")) {
+				parm = mparms &
+					(G_PART_PARM_GEOM | G_PART_PARM_PROVIDER);
+                        }
+
 			if (!strcmp(ap->name, "attrib"))
 				parm = G_PART_PARM_ATTRIB;
 			break;
