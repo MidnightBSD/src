@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount.8	8.8 (Berkeley) 6/16/94
-.\" $FreeBSD: src/sbin/mount/mount.8,v 1.82.2.5 2009/03/24 01:31:42 obrien Exp $
+.\" $FreeBSD: src/sbin/mount/mount.8,v 1.82.2.7 2010/11/24 00:00:32 mckusick Exp $
 .\"
 .Dd March 11, 2008
 .Dt MOUNT 8
@@ -424,6 +424,7 @@ However, for the following file system types:
 .Cm nfs ,
 .Cm nfs4 ,
 .Cm ntfs ,
+.Cm nwfs ,
 .Cm nullfs ,
 .Cm portalfs ,
 .Cm smbfs ,
@@ -506,6 +507,7 @@ support for a particular file system might be provided either on a static
 .Xr nmount 2 ,
 .Xr acl 3 ,
 .Xr mac 4 ,
+.Xr devfs 5 ,
 .Xr ext2fs 5 ,
 .Xr fstab 5 ,
 .Xr procfs 5 ,
