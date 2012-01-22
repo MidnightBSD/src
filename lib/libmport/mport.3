@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/lib/libmport/mport.3,v 1.1 2012/01/22 17:08:48 laffer1 Exp $
+.\" $MidnightBSD: src/lib/libmport/mport.3,v 1.2 2012/01/22 17:28:16 laffer1 Exp $
 .\"
 .Dd January 22, 2012
 .Dt MPORT 3
@@ -132,6 +132,28 @@
 .Fn mport_pkgmeta_get_downdepends "mportInstance *mport" "mportPackageMeta *pkg" "mportPackageMeta ***pkg_vec_p"
 .Ft int
 .Fn mport_pkgmeta_get_updepends "mportInstance *mport" "mportPackageMeta *pkg" "mportPackageMeta ***pkg_vec_p"
+.Ft mportAssetList *
+.Fn mport_assetlist_new
+.Ft void
+.Fn mport_assetlist_free "mportAssetList *list"
+.Ft int
+.Fn mport_parse_plistfile  "FILE *fp" "mportAssetList *list"
+.Ft char *
+.Fn mport_settings_get  "mportInstance *mport" "const char *name"
+.Ft int
+.Fn mport_settings_set "mportInstance *mport" "const char *name" "const char *val"
+.Ft int
+.Fn mport_update_primative  "mportInstance *mport" "const char *filename"
+.Ft mportCreateExtras *
+.Fn mport_createextras_new 
+.Ft void
+.Fn mport_createextras_free "mportCreateExtras *extra"
+.Ft int
+.Fn mport_verify_hash "const char *filename" "const char *hash"
+.Ft int
+.Fn mport_file_exists "const char *file"
+.Ft int
+.Fn mport_version_cmp "const char *astr" "const char *bstr"
 .Sh DESCRIPTION
 These functions implement a package management library for creating
 and installing packages.
