@@ -54,6 +54,12 @@ usage_show(void)
 static const char *
 friendly(uuid_t *t)
 {
+	static uuid_t m_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
+	static uuid_t m_midnightbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
+	static uuid_t m_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
+	static uuid_t m_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
+	static uuid_t m_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
+	static uuid_t m_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 	static uuid_t boot = GPT_ENT_TYPE_FREEBSD_BOOT;
 	static uuid_t efi_slice = GPT_ENT_TYPE_EFI;
 	static uuid_t mslinux = GPT_ENT_TYPE_MS_BASIC_DATA;
@@ -70,6 +76,20 @@ friendly(uuid_t *t)
 
 	if (show_uuid)
 		goto unfriendly;
+
+	if (uuid_equal(t, &m_boot, NULL))
+		return("MidnightBSD boot");
+	if (uuid_equal(t, &m_swap, NULL))
+		return("MidnightBSD swap");
+	 if (uuid_equal(t, &m_ufs, NULL))
+                return ("MidnightBSD UFS/UFS2");
+        if (uuid_equal(t, &m_vinum, NULL))
+                return ("MidnightBSD vinum");
+        if (uuid_equal(t, &m_zfs, NULL))
+                return ("MidnightBSD ZFS");
+        if (uuid_equal(t, &m_midnightbsd, NULL))
+                return ("MidnightBSD legacy");
+
 
 	if (uuid_equal(t, &efi_slice, NULL))
 		return ("EFI System");

@@ -270,7 +270,7 @@ parse_uuid(const char *s, uuid_t *uuid)
 	switch (*s) {
 	case 'b':
 		if (strcmp(s, "boot") == 0) {
-			uuid_t boot = GPT_ENT_TYPE_FREEBSD_BOOT;
+			uuid_t boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
 			*uuid = boot;
 			return (0);
 		}
@@ -298,14 +298,14 @@ parse_uuid(const char *s, uuid_t *uuid)
 		break;
 	case 's':
 		if (strcmp(s, "swap") == 0) {
-			uuid_t sw = GPT_ENT_TYPE_FREEBSD_SWAP;
+			uuid_t sw = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
 			*uuid = sw;
 			return (0);
 		}
 		break;
 	case 'u':
 		if (strcmp(s, "ufs") == 0) {
-			uuid_t ufs = GPT_ENT_TYPE_FREEBSD_UFS;
+			uuid_t ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 			*uuid = ufs;
 			return (0);
 		}
@@ -319,7 +319,7 @@ parse_uuid(const char *s, uuid_t *uuid)
 		break;
 	case 'z':
 		if (strcmp(s, "zfs") == 0) {
-			uuid_t zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+			uuid_t zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 			*uuid = zfs;
 			return (0);
 		}

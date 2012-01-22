@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: src/sbin/gpt/boot.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmi
 #include "map.h"
 #include "gpt.h"
 
-static uuid_t boot_uuid = GPT_ENT_TYPE_FREEBSD_BOOT;
+static uuid_t boot_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
 static const char *pmbr_path = "/boot/pmbr";
 static const char *gptboot_path = "/boot/gptboot";
 static u_long boot_size;

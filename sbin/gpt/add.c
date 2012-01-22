@@ -209,7 +209,7 @@ cmd_add(int argc, char *argv[])
 
 	/* Create UFS partitions by default. */
 	if (uuid_is_nil(&add_type, NULL)) {
-		uuid_t ufs = GPT_ENT_TYPE_FREEBSD_UFS;
+		uuid_t ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 		add_type = ufs;
 	}
 

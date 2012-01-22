@@ -98,35 +98,35 @@ migrate_disklabel(int fd, off_t start, struct gpt_ent *ent)
 		case FS_UNUSED:
 			continue;
 		case FS_SWAP: {
-			uuid_t swap = GPT_ENT_TYPE_FREEBSD_SWAP;
+			uuid_t swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
 			le_uuid_enc(&ent->ent_type, &swap);
-			utf8_to_utf16("FreeBSD swap partition",
+			utf8_to_utf16("MidnightBSD swap partition",
 			    ent->ent_name, 36);
 			break;
 		}
 		case FS_BSDFFS: {
-			uuid_t ufs = GPT_ENT_TYPE_FREEBSD_UFS;
+			uuid_t ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 			le_uuid_enc(&ent->ent_type, &ufs);
-			utf8_to_utf16("FreeBSD UFS partition",
+			utf8_to_utf16("MidnightBSD UFS partition",
 			    ent->ent_name, 36);
 			break;
 		}
 		case FS_VINUM: {
-			uuid_t vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
+			uuid_t vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
 			le_uuid_enc(&ent->ent_type, &vinum);
-			utf8_to_utf16("FreeBSD vinum partition",
+			utf8_to_utf16("MidnightBSD vinum partition",
 			    ent->ent_name, 36);
 			break;
 		}
 		case FS_ZFS: {
-			uuid_t zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+			uuid_t zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 			le_uuid_enc(&ent->ent_type, &zfs);
-			utf8_to_utf16("FreeBSD ZFS partition",
+			utf8_to_utf16("MidnightBSD ZFS partition",
 			    ent->ent_name, 36);
 			break;
 		}
 		default:
-			warnx("%s: warning: unknown FreeBSD partition (%d)",
+			warnx("%s: warning: unknown MidnightBSD partition (%d)",
 			    device_name, dl->d_partitions[i].p_fstype);
 			continue;
 		}
