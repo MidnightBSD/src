@@ -1,0 +1,134 @@
+.\"-
+.\" Copyright (c) 2012 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" $MidnightBSD$
+.\"
+.Dd January 22, 2012
+.Dt MPORT 3
+.Os
+.Sh NAME
+.Nm mport_clean_database ,
+.Nm mport_clean_oldpackages ,
+.Nm mport_create_primative ,
+.Nm mport_delete_primative ,
+.Nm mport_err_code ,
+.Nm mport_err_string ,
+.Nm mport_index_load ,
+.Nm mport_index_lookup_pkgname ,
+.Nm mport_index_search ,
+.Nm mport_index_entry_free_vec ,
+.Nm mport_index_entry_free ,
+.Nm mport_install ,
+.Nm mport_install_primative ,
+.Nm mport_instance_free ,
+.Nm mport_instance_init ,
+.Nm mport_instance_new ,
+.Nm mport_set_msg_cb ,
+.Nm mport_set_progress_init_cb ,
+.Nm mport_set_progress_step_cb ,
+.Nm mport_set_progress_free_cb ,
+.Nm mport_set_confirm_cb ,
+.Nm mport_merge_primative ,
+.Nm mport_pkgmeta_new ,
+.Nm mport_pkgmeta_free ,
+.Nm mport_pkgmeta_vec_free ,
+.Nm mport_pkgmeta_search_master ,
+.Nm mport_pkgmeta_list ,
+.Nm mport_pkgmeta_get_downdepends ,
+.Nm mport_pkgmeta_get_updepends ,
+.Nm mport_assetlist_new ,
+.Nm mport_assetlist_free ,
+.Nm mport_parse_plistfile ,
+.Nm mport_settings_get ,
+.Nm mport_settings_set ,
+.Nm mport_update_primative ,
+.Nm mport_createextras_new ,
+.Nm mport_createextras_free ,
+.Nm mport_verify_hash ,
+.Nm mport_file_exists ,
+.Nm mport_version_cmp
+.Nd mport package functions
+.Sh LIBRARY
+.Lb libmport
+.Sh SYNOPSIS
+.In mport.h
+.Ft int
+.Fn mport_clean_database "mportInstance *mport"
+.Ft int
+.Fn mport_clean_oldpackages "mportInstance *mport"
+.Ft int
+.Fn mport_create_primative "mportAssetList *assetlist" "mportPackageMeta *pack" "mportCreateExtras *extra"
+.Ft int
+.Fn mport_delete_primative "mportInstance *mport" "mportPackageMeta *pack" "int force"
+.Ft int
+.Fn mport_err_code
+.Ft const char *
+.Fn mport_err_string
+.Ft int
+.Fn mport_index_load "mportInstance *mport"
+.Ft int
+.Fn mport_index_lookup_pkgname "mportInstance *mport" "const char *pkgname" "mportIndexEntry ***entry_vec"
+.Ft int
+.Fn mport_index_search "mportInstance *mport" "mportIndexEntry ***entry_vec" "const char *fmt" "..."
+.Ft void
+.Fn mport_index_entry_free_vec "mportIndexEntry **e"
+.Ft void
+.Fn mport_index_entry_free "mportIndexEntry *e"
+.Ft int
+.Fn mport_install "mportInstance *mport" "const char *pkgname" "const char *prefix"
+.Ft int
+.Fn mport_install_primative "mportInstance *mport" "const char *filename" "const char *prefix"
+.Ft int
+.Fn mport_instance_free "mportInstance *mport"
+.Ft int
+.Fn mport_instance_init "mportInstance *mport" "const char *root"
+.Ft mportInstance *
+.Fn mport_instance_new
+.Ft void
+.Fn mport_set_msg_cb "mportInstance *" "mport_msg_cb cb"
+.Sh DESCRIPTION
+These functions implement a package management library for creating
+and installing packages.
+.Sh SEE ALSO
+.Xr mport 1 ,
+.Xr ports 7
+.Sh HISTORY
+The
+.Nm mport
+library first appeared in
+.Mx 0.3 .
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm mport
+library was mostly written by
+.An Chris Reinhardt Aq ctriv@MidnightBSD.org
+with numerous suggestions and contributions from
+.An Lucas Holt Aq luke@MidnightBSD.org ,
+.Pp
+This manual page was written by
+.An Lucas Holt Aq luke@MidnightBSD.org .
+.Sh BUGS
+Some parts of the library are not yet implemented.

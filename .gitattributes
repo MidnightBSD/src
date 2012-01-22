@@ -30305,6 +30305,7 @@ lib/libmport/install.c -text
 lib/libmport/install_primative.c -text
 lib/libmport/instance.c -text
 lib/libmport/merge_primative.c -text
+lib/libmport/mport.3 -text
 lib/libmport/mport.h -text
 lib/libmport/mport_private.h -text
 lib/libmport/pkgmeta.c -text
