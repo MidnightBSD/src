@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/lib/libmport/mport.3,v 1.1 2012/01/22 17:08:48 laffer1 Exp $
 .\"
 .Dd January 22, 2012
 .Dt MPORT 3
@@ -108,6 +108,30 @@
 .Fn mport_instance_new
 .Ft void
 .Fn mport_set_msg_cb "mportInstance *" "mport_msg_cb cb"
+.Ft void
+.Fn mport_set_progress_init_cb "mportInstance *mport" "mport_progress_init_cb cb"
+.Ft void
+.Fn mport_set_progress_step_cb  "mportInstance *mport" "mport_progress_step_cb cb"
+.Ft void
+.Fn mport_set_progress_free_cb "mportInstance *mport" "mport_progress_free_cb cb"
+.Ft void
+.Fn mport_set_confirm_cb "mportInstance *mport" "mport_confirm_cb cb"
+.Ft int
+.Fn mport_merge_primative "const char **filenames" "const char *outfile"
+.Ft mportPackageMeta *
+.Fn mport_pkgmeta_new
+.Ft void
+.Fn mport_pkgmeta_free "mportPackageMeta *pack"
+.Ft void
+.Fn mport_pkgmeta_vec_free "mportPackageMeta **vec"
+.Ft int
+.Fn mport_pkgmeta_search_master "mportInstance *mport" "mportPackageMeta ***ref" "const char *fmt" "..."
+.Ft int
+.Fn mport_pkgmeta_list "mportInstance *mport" "mportPackageMeta ***ref"
+.Ft int
+.Fn mport_pkgmeta_get_downdepends "mportInstance *mport" "mportPackageMeta *pkg" "mportPackageMeta ***pkg_vec_p"
+.Ft int
+.Fn mport_pkgmeta_get_updepends "mportInstance *mport" "mportPackageMeta *pkg" "mportPackageMeta ***pkg_vec_p"
 .Sh DESCRIPTION
 These functions implement a package management library for creating
 and installing packages.
