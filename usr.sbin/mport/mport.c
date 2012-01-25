@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.34 2011/09/10 05:24:31 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.35 2011/09/10 15:05:34 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -120,6 +120,8 @@ main(int argc, char *argv[]) {
 		resultCode = clean(mport);
 	} else if (!strcmp(argv[1], "deleteall")) {
 		resultCode = deleteAll(mport);
+	} else if (!strcmp(argv[1], "verify")) {
+		resultCode = verify(mport);
 	} else {
 		mport_instance_free(mport);
 		usage();
@@ -143,6 +145,7 @@ usage(void) {
 		"       mport search [query ...]\n"
 		"       mport update [package name]\n"
 		"       mport upgrade\n"
+		"		mport verify\n"
 	);
 	exit(1);
 }
@@ -284,7 +287,6 @@ delete(mportInstance *mport, const char *packageName) {
 
 	asprintf(&buf, "%s%s %s %s", MPORT_TOOLS_PATH, "mport.delete", "-n", packageName);
 	resultCode = system(buf);
- 	//resultCode = execl(buf, "mport.delete", "-n", packageName, (char *)0);	
 	free(buf);
 
 	return resultCode;
@@ -393,6 +395,31 @@ upgrade(mportInstance *mport) {
 	mport_pkgmeta_vec_free(packs);
 	printf("Packages updated: %d\nTotal: %d\n", updated, total);
 	return (0);
+}
+
+int
+verify(mportInstance *mport) {
+	mportPackageMeta **packs;
+	int total;
+	
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return(1);
+	}
+
+	if (packs == NULL) {
+		fprintf(stderr, "No packages installed.\n");
+		return(1);
+	}
+	
+	while (*packs != NULL) {
+		mport_verify_package(mport, *packs); 
+	}
+	
+	mport_pkgmeta_vec_free(packs);
+	printf("Packages verified: %d\n", total);
+	
+	return(0);
 }
 
 int
