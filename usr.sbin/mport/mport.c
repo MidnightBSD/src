@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.36 2012/01/25 03:42:37 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.37 2012/01/25 03:53:42 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,9 +73,8 @@ main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	loadIndex(mport);
-
 	if (!strcmp(argv[1], "install")) {
+		loadIndex(mport);
 		resultCode = install(mport, argv[2]);
 	} else if (!strcmp(argv[1], "delete")) {
 		for (i = 2; i < argc; i++) {
@@ -84,22 +83,26 @@ main(int argc, char *argv[]) {
 				resultCode = tempResultCode;
 		}
 	} else if (!strcmp(argv[1], "update")) {
+		loadIndex(mport);
 		for (i = 2; i < argc; i++) {
 			tempResultCode = update(mport, argv[2]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
         } else if (!strcmp(argv[1], "download")) {
+		loadIndex(mport);
 		for (i = 2; i < argc; i++) {
 			tempResultCode = download(mport, argv[2]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
 	} else if (!strcmp(argv[1], "upgrade")) {
+		loadIndex(mport);
 		resultCode = upgrade(mport);
         } else if (!strcmp(argv[1], "list")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		if (argc > 2 && !strcmp(argv[2], "updates")) {
+			loadIndex(mport);
 			flag = "-u";
 		} else {
 			flag = "-v";
@@ -107,8 +110,10 @@ main(int argc, char *argv[]) {
 		resultCode = execl(buf, "mport.list", flag, (char *)0);
 		free(buf);
 	} else if (!strcmp(argv[1], "info")) {
+		loadIndex(mport);
 		resultCode = info(mport, argv[2]);
 	} else if (!strcmp(argv[1], "search")) {
+		loadIndex(mport);
 		searchQuery = calloc(argc - 1, sizeof(char*));
 		for (i = 2; i < argc; i++) {
 			searchQuery[i-2] = strdup(argv[i]);
