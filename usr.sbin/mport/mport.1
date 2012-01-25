@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.5 2011/05/21 19:16:42 laffer1 Exp $
+.\" $MidnightBSD: src/usr.sbin/mport/mport.1,v 1.6 2011/09/10 15:09:11 laffer1 Exp $
 .\"
 .Dd September 10, 2011
 .Dt MPORT 1
@@ -58,6 +58,8 @@
 .Op Ar name
 .Nm
 .Cm upgrade
+.Nm
+.Cm verify
 .Sh DESCRIPTION
 The
 .Nm
@@ -89,6 +91,9 @@ Search package names and descriptions.  Supports globbing queries such as
 Fetch and update a specific package
 .It Cm upgrade
 Upgrade all currently installed packages with the latest version
+.It Cm verify
+Verify currently installed packages have not had files deleted or modified from the original
+installation.
 .Sh HISTORY
 The
 .Nm
