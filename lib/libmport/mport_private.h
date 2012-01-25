@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.9 2011/05/21 19:35:29 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.10 2011/08/25 18:10:19 laffer1 Exp $
  *
  * Copyright (c) 2011 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -178,7 +178,6 @@ int mport_set_errx(int , const char *, ...);
 
 int mport_fetch_index(mportInstance *);
 int mport_fetch_bootstrap_index(mportInstance *);
-int mport_fetch_bundle(mportInstance *, const char *);
 
 /* a few index things */
 int mport_index_get_mirror_list(mportInstance *, char ***, int *);

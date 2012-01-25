@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.22 2012/01/25 03:42:37 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.23 2012/01/25 03:46:21 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -174,6 +174,9 @@ int mport_verify_package(mportInstance *, mportPackageMeta *);
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);
+
+/* fetch XXX: This should become private */
+int mport_fetch_bundle(mportInstance *, const char *);
 
 /* Errors */
 int mport_err_code(void);
