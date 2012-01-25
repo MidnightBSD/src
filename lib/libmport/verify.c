@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.4 2012/01/25 04:37:46 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.5 2012/01/25 04:39:50 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -65,8 +65,7 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 			RETURN_CURRENT_ERROR;
 	}
 	
-	mport_call_progress_init_cb(mport, "Verifying %s-%s", pack->name, pack->version);
-
+	mport_call_msg_cb(mport, "Verifying %s-%s", pack->name, pack->version);
 	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 	
@@ -100,19 +99,17 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 
 		switch (type) {
 			case ASSET_FILE:
-				(mport->progress_step_cb)(++current, total, file);
-	
 				if (lstat(file, &st) != 0) {
-					mport_call_msg_cb(mport, "\nCan't stat %s: %s", file, strerror(errno));
+					mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
 					break; /* next asset */
 				} 				
 				
 				if (S_ISREG(st.st_mode)) {
 					if (MD5File(file, md5) == NULL) 
-						mport_call_msg_cb(mport, "\nCan't md5 %s: %s", file, strerror(errno));
+						mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
 					
 					if (strcmp(md5, checksum) != 0) 
-						mport_call_msg_cb(mport, "\nChecksum mismatch: %s", file);
+						mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
 				}
 				
 				break;
@@ -124,8 +121,5 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 
 	sqlite3_finalize(stmt);
 	
-	(mport->progress_step_cb)(++current, total, "Complete");
-	(mport->progress_free_cb)();
-
 	return MPORT_OK;
 }
