@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.2 2012/01/25 03:48:03 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.3 2012/01/25 03:59:42 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -66,6 +66,9 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 	}
 	
 	mport_call_progress_init_cb(mport, "Verifying %s-%s", pack->name, pack->version);
+
+	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 	
 	while (1) {
 		ret = sqlite3_step(stmt);
