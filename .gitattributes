@@ -30313,6 +30313,7 @@ lib/libmport/plist.c -text
 lib/libmport/setting.c -text
 lib/libmport/update_primative.c -text
 lib/libmport/util.c -text
+lib/libmport/verify.c -text
 lib/libmport/version_cmp.c -text
 lib/libmsearch/Makefile -text
 lib/libmsearch/db.c -text
