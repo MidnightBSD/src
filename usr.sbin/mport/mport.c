@@ -25,13 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.35 2011/09/10 15:05:34 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.36 2012/01/25 03:42:37 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <err.h>
 #include <mport.h>
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
@@ -51,6 +52,7 @@ static int search(mportInstance *, char **);
 static int clean(mportInstance *);
 static int indexCheck(mportInstance *, mportPackageMeta *);
 static int updateDown(mportInstance *, mportPackageMeta *);
+static int verify(mportInstance *);
 
 int 
 main(int argc, char *argv[]) {
@@ -145,7 +147,7 @@ usage(void) {
 		"       mport search [query ...]\n"
 		"       mport update [package name]\n"
 		"       mport upgrade\n"
-		"		mport verify\n"
+		"       mport verify\n"
 	);
 	exit(1);
 }
@@ -414,6 +416,8 @@ verify(mportInstance *mport) {
 	
 	while (*packs != NULL) {
 		mport_verify_package(mport, *packs); 
+		packs++;
+		total++;
 	}
 	
 	mport_pkgmeta_vec_free(packs);
