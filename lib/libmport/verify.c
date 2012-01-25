@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/delete_primative.c,v 1.10 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.1 2012/01/25 03:43:11 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -41,10 +41,11 @@ __MBSDID("$MidnightBSD: src/lib/libmport/delete_primative.c,v 1.10 2011/07/24 15
 MPORT_PUBLIC_API int
 mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 	sqlite3_stmt *stmt;
+	mportAssetListEntryType type;
 	int current;
 	int total;
 	int ret;
-	const char *data, *checksum, *cwd;
+	const char *data, *checksum;
 	struct stat st;
 	char md5[33];
 	
