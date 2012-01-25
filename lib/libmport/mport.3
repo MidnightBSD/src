@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/lib/libmport/mport.3,v 1.3 2012/01/22 17:36:54 laffer1 Exp $
+.\" $MidnightBSD: src/lib/libmport/mport.3,v 1.4 2012/01/22 17:39:18 laffer1 Exp $
 .\"
 .Dd January 22, 2012
 .Dt MPORT 3
@@ -68,6 +68,7 @@
 .Nm mport_createextras_free ,
 .Nm mport_verify_hash ,
 .Nm mport_file_exists ,
+.Nm mport_verify_package ,
 .Nm mport_version_cmp
 .Nd mport package functions
 .Sh LIBRARY
@@ -152,6 +153,8 @@
 .Fn mport_verify_hash "const char *filename" "const char *hash"
 .Ft int
 .Fn mport_file_exists "const char *file"
+.Ft int
+.Fn mport_verify_package "mportInstance *mport" "mportPackageMeta *pack"
 .Ft int
 .Fn mport_version_cmp "const char *astr" "const char *bstr"
 .Sh DESCRIPTION
