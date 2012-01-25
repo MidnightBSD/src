@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.3 2012/01/25 03:59:42 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.4 2012/01/25 04:37:46 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -103,16 +103,16 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 				(mport->progress_step_cb)(++current, total, file);
 	
 				if (lstat(file, &st) != 0) {
-					mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
+					mport_call_msg_cb(mport, "\nCan't stat %s: %s", file, strerror(errno));
 					break; /* next asset */
 				} 				
 				
 				if (S_ISREG(st.st_mode)) {
 					if (MD5File(file, md5) == NULL) 
-						mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
+						mport_call_msg_cb(mport, "\nCan't md5 %s: %s", file, strerror(errno));
 					
 					if (strcmp(md5, checksum) != 0) 
-						mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
+						mport_call_msg_cb(mport, "\nChecksum mismatch: %s", file);
 				}
 				
 				break;
