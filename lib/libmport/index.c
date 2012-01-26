@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.15 2011/08/25 18:10:19 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.16 2011/10/26 13:22:45 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -136,7 +136,7 @@ index_update_last_checked(mportInstance *mport) {
 	char *utime;
 	int ret;
 
-	asprintf(&utime, "%jd", get_time());
+	asprintf(&utime, "%jd", (intmax_t) get_time());
 	if (utime)
 		ret = mport_setting_set(mport, MPORT_SETTING_INDEX_LAST_CHECKED, utime);
 	else
