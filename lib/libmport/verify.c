@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.5 2012/01/25 04:39:50 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.6 2012/01/25 04:46:51 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -42,28 +42,10 @@ MPORT_PUBLIC_API int
 mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 	sqlite3_stmt *stmt;
 	mportAssetListEntryType type;
-	int current;
-	int total;
 	int ret;
 	const char *data, *checksum;
 	struct stat st;
 	char md5[33];
-	
-	/* get the file count for the progress meter */
-	if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM assets WHERE type=%i AND pkg=%Q", ASSET_FILE, pack->name) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-		
-	switch (sqlite3_step(stmt)) {
-		case SQLITE_ROW:
-			total		= sqlite3_column_int(stmt, 0) + 1;
-			current = 0;
-			sqlite3_finalize(stmt);
-			break;
-		default:
-			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-			sqlite3_finalize(stmt);
-			RETURN_CURRENT_ERROR;
-	}
 	
 	mport_call_msg_cb(mport, "Verifying %s-%s", pack->name, pack->version);
 	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
