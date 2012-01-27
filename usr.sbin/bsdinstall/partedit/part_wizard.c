@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/part_wizard.c,v 1.1 2011/12/24 06:17:36 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/part_wizard.c,v 1.6 2011/10/07 01:40:30 nwhitehorn Exp $
  */
 
@@ -345,12 +345,12 @@ wizard_makeparts(struct gmesh *mesh, const char *disk)
 
 	geom_gettree(&submesh);
 	pp = provider_for_name(&submesh, disk);
-	gpart_create(pp, "midnightbsd-ufs", rootsizestr, "/", NULL, 0);
+	gpart_create(pp, "mnbsd-ufs", rootsizestr, "/", NULL, 0);
 	geom_deletetree(&submesh);
 
 	geom_gettree(&submesh);
 	pp = provider_for_name(&submesh, disk);
-	gpart_create(pp, "midnightbsd-swap", swapsizestr, NULL, NULL, 0);
+	gpart_create(pp, "mnbsd-swap", swapsizestr, NULL, NULL, 0);
 	geom_deletetree(&submesh);
 
 	return (0);

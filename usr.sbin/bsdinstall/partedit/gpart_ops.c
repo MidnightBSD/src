@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.1 2011/12/24 06:17:36 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.2 2012/01/26 04:11:44 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.10 2011/10/23 16:57:10 nwhitehorn Exp $
  */
 
@@ -80,7 +80,7 @@ scheme_supports_labels(const char *scheme)
 static void
 newfs_command(const char *fstype, char *command, int use_default)
 {
-	if (strcmp(fstype, "midnightbsd-ufs") == 0) {
+	if (strcmp(fstype, "mnbsd-ufs") == 0) {
 		int i;
 		DIALOG_LISTITEM items[] = {
 			{"UFS1", "UFS Version 1",
@@ -405,7 +405,7 @@ gpart_edit(struct gprovider *pp)
 
 	DIALOG_FORMITEM items[] = {
 		{0, "Type:", 5, 0, 0, FALSE, "", 11, 0, 12, 15, 0,
-		    FALSE, "Filesystem type (e.g. midnightbsd-ufs, midnightbsd-swap)",
+		    FALSE, "Filesystem type (e.g. mnbsd-ufs, mnbsd-swap)",
 		    FALSE},
 		{0, "Size:", 5, 1, 0, FALSE, "", 11, 1, 12, 0, 0,
 		    FALSE, "Partition size. Append K, M, G for kilobytes, "
@@ -564,14 +564,13 @@ set_default_part_metadata(const char *name, const char *scheme,
 		}
 	}
 
-	if (strcmp(type, "midnightbsd-swap") == 0)
+	if (strcmp(type, "mnbsd-swap") == 0)
 		mountpoint = "none";
-	if (strcmp(type, "midnightbsd-boot") == 0 || 
-		strcmp(type, "midnightbsd-boo") == 0)
+	if (strcmp(type, "mnbsd-boot") == 0)
 		md->bootcode = 1;
 
 	/* VTOC8 needs partcode in UFS partitions */
-	if (strcmp(scheme, "VTOC8") == 0 && strcmp(type, "midnightbsd-ufs") == 0)
+	if (strcmp(scheme, "VTOC8") == 0 && strcmp(type, "mnbsd-ufs") == 0)
 		md->bootcode = 1;
 
 	if (mountpoint == NULL || mountpoint[0] == '\0') {
@@ -598,13 +597,13 @@ set_default_part_metadata(const char *name, const char *scheme,
 		sprintf(md->fstab->fs_spec, "/dev/%s", name);
 		md->fstab->fs_file = strdup(mountpoint);
 		/* Get VFS from text after midnightbsd-, if possible */
-		if (strncmp("midnightbsd-", type, 8) == 0)
+		if (strncmp("mnbsd-", type, 8) == 0)
 			md->fstab->fs_vfstype = strdup(&type[8]);
 		else if (strcmp("fat32", type) == 0 || strcmp("efi", type) == 0)
 			md->fstab->fs_vfstype = strdup("msdosfs");
 		else
 			md->fstab->fs_vfstype = strdup(type); /* Guess */
-		if (strcmp(type, "midnightbsd-swap") == 0) {
+		if (strcmp(type, "mnbsd-swap") == 0) {
 			md->fstab->fs_type = strdup(FSTAB_SW);
 			md->fstab->fs_freq = 0;
 			md->fstab->fs_passno = 0;
@@ -738,8 +737,8 @@ gpart_create(struct gprovider *pp, char *default_type, char *default_size,
 	unsigned i;
 
 	DIALOG_FORMITEM items[] = {
-		{0, "Type:", 5, 0, 0, FALSE, "midnightbsd-ufs", 11, 0, 12, 15, 0,
-		    FALSE, "Filesystem type (e.g. midnightbsd-ufs, midnightbsd-swap)",
+		{0, "Type:", 5, 0, 0, FALSE, "mnbsd-ufs", 11, 0, 12, 15, 0,
+		    FALSE, "Filesystem type (e.g. mnbsd-ufs, mnbsd-swap)",
 		    FALSE},
 		{0, "Size:", 5, 1, 0, FALSE, "", 11, 1, 12, 15, 0,
 		    FALSE, "Partition size. Append K, M, G for kilobytes, "
@@ -878,7 +877,7 @@ addpartform:
 	}
 
 	/* Warn if no mountpoint set */
-	if (strcmp(items[0].text, "midnightbsd-ufs") == 0 &&
+	if (strcmp(items[0].text, "mnbsd-ufs") == 0 &&
 	    items[2].text[0] != '/') {
 		dialog_vars.defaultno = TRUE;
 		choice = dialog_yesno("Warning",
@@ -932,8 +931,7 @@ addpartform:
 		LIST_FOREACH(gc, &pp->lg_config, lg_config)
 			if (strcmp(gc->lg_name, "type") == 0)
 				break;
-		if (gc != NULL && (strcmp(gc->lg_val, "midnightbsd-boot") == 0 ||
-						   strcmp(gc->lg_val, "midnightbsd-boo") == 0))
+		if (gc != NULL && strcmp(gc->lg_val, "mnbsd-boot") == 0)
 			break;
 	}
 
@@ -954,7 +952,7 @@ addpartform:
 			gctl_ro_param(r, "arg0", -1, geom->lg_name);
 			gctl_ro_param(r, "flags", -1, GPART_FLAGS);
 			gctl_ro_param(r, "verb", -1, "add");
-			gctl_ro_param(r, "type", -1, "midnightbsd-boot");
+			gctl_ro_param(r, "type", -1, "mnbsd-boot");
 			snprintf(sizestr, sizeof(sizestr), "%jd",
 			    bootpart_size(scheme) / sector);
 			gctl_ro_param(r, "size", -1, sizestr);
@@ -1014,7 +1012,7 @@ addpartform:
 	gctl_issue(r); /* Error usually expected and non-fatal */
 	gctl_free(r);
 
-	if (strcmp(items[0].text, "midnightbsd-boot") == 0)
+	if (strcmp(items[0].text, "mnbsd-boot") == 0)
 		get_part_metadata(newpartname, 1)->bootcode = 1;
 	else if (strcmp(items[0].text, "midnightbsd") == 0)
 		gpart_partition(newpartname, "BSD");
