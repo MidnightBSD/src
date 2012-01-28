@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.9 2011/08/13 20:19:30 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.10 2011/10/21 15:16:04 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -183,7 +183,7 @@ msearch_index_path(msearch_index *restrict idx, const char *path) {
 			case FTS_DEFAULT:
 				break;
 			case FTS_DC:
-				fprintf(stderr, "Cycle in the file tree detected %s\n", cur->fts_path);
+				/* cycle in the tree.. probably a symlink */
 				/* FALLTHROUGH */
 			default:
 				continue;
