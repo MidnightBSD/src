@@ -42,11 +42,34 @@ INTERFACE g_part;
 
 # Default implementations of methods.
 CODE {
+	static void
+	default_fullname(struct g_part_table *table,
+	    struct g_part_entry *entry, struct sbuf *sb, const char *pfx)
+	{
+		char buf[32];
+
+		sbuf_printf(sb, "%s%s", pfx,
+		    G_PART_NAME(table, entry, buf, sizeof(buf)));
+	}
+
 	static int
 	default_precheck(struct g_part_table *t __unused,
 	    enum g_part_ctl r __unused, struct g_part_parms *p __unused)
 	{
 		return (0);
+	}
+
+	static int
+	default_resize(struct g_part_table *t __unused,
+	    struct g_part_entry *e __unused, struct g_part_parms *p __unused)
+	{
+		return (ENOSYS);
+	}
+
+	static int
+	default_recover(struct g_part_table *t __unused)
+	{
+		return (ENOSYS);
 	}
 };
 
@@ -98,12 +121,27 @@ METHOD int dumpto {
 	struct g_part_entry *entry;
 };
 
+# fullname() - write the name of the given partition entry to the sbuf.
+METHOD void fullname {
+	struct g_part_table *table;
+	struct g_part_entry *entry;
+	struct sbuf *sb;
+	const char *pfx;
+} DEFAULT default_fullname;
+
 # modify() - scheme specific processing for the modify verb.
 METHOD int modify {
 	struct g_part_table *table;
 	struct g_part_entry *entry;
 	struct g_part_parms *gpp;
 };
+
+# resize() - scheme specific processing for the resize verb.
+METHOD int resize {
+	struct g_part_table *table;
+	struct g_part_entry *entry;
+	struct g_part_parms *gpp;
+} DEFAULT default_resize;
 
 # name() - return the name of the given partition entry.
 # Typical names are "p1", "s0" or "c".
@@ -139,6 +177,11 @@ METHOD int read {
 	struct g_part_table *table;
 	struct g_consumer *cp;
 };
+
+# recover() - scheme specific processing for the recover verb.
+METHOD int recover {
+	struct g_part_table *table;
+} DEFAULT default_recover;
 
 # setunset() - set or unset partition entry attributes.
 METHOD int setunset {
