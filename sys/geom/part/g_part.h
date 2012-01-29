@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/part/g_part.h,v 1.3.2.6 2009/03/17 19:38:40 marcel Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _GEOM_PART_H_
@@ -36,14 +36,45 @@
 #define	G_PART_PROBE_PRI_HIGH	0
 
 enum g_part_alias {
+	G_PART_ALIAS_APPLE_BOOT,	/* An Apple boot partition entry. */
+	G_PART_ALIAS_APPLE_HFS,		/* An HFS+ file system entry. */
+	G_PART_ALIAS_APPLE_LABEL,	/* An Apple label partition entry. */
+	G_PART_ALIAS_APPLE_RAID,	/* An Apple RAID partition entry. */
+	G_PART_ALIAS_APPLE_RAID_OFFLINE,/* An Apple RAID (offline) part entry.*/
+	G_PART_ALIAS_APPLE_TV_RECOVERY,	/* An Apple TV recovery part entry. */
+	G_PART_ALIAS_APPLE_UFS,		/* An Apple UFS partition entry. */
 	G_PART_ALIAS_EFI,		/* A EFI system partition entry. */
-	G_PART_ALIAS_MIDNIGHTBSD,	/* A BSD labeled partition entry. */
-	G_PART_ALIAS_MIDNIGHTBSD_BOOT,	/* A MidnightBSD boot partition entry. */
-	G_PART_ALIAS_MIDNIGHTBSD_SWAP,	/* A swap partition entry. */
-	G_PART_ALIAS_MIDNIGHTBSD_UFS,	/* A UFS/UFS2 file system entry. */
-	G_PART_ALIAS_MIDNIGHTBSD_VINUM,	/* A Vinum partition entry. */
-	G_PART_ALIAS_MIDNIGHTBSD_ZFS,	/* A ZFS file system entry. */
+	G_PART_ALIAS_FREEBSD,		/* A FreeBSD labeled partition entry. */
+	G_PART_ALIAS_FREEBSD_BOOT,	/* A FreeBSD boot partition entry. */
+	G_PART_ALIAS_FREEBSD_SWAP,	/* A swap partition entry. */
+	G_PART_ALIAS_FREEBSD_UFS,	/* A UFS/UFS2 file system entry. */
+	G_PART_ALIAS_FREEBSD_VINUM,	/* A Vinum partition entry. */
+	G_PART_ALIAS_FREEBSD_ZFS,	/* A ZFS file system entry. */
 	G_PART_ALIAS_MBR,		/* A MBR (extended) partition entry. */
+	G_PART_ALIAS_LINUX_DATA,	/* A Linux data partition entry. */
+	G_PART_ALIAS_LINUX_LVM,		/* A Linux LVM partition entry. */
+	G_PART_ALIAS_LINUX_RAID,	/* A Linux RAID partition entry. */
+	G_PART_ALIAS_LINUX_SWAP,	/* A Linux swap partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD,       /* A BSD labeled partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_BOOT,  /* A MidnightBSD boot partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_SWAP,  /* A swap partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_UFS,   /* A UFS/UFS2 file system entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_VINUM, /* A Vinum partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_ZFS,   /* A ZFS file system entry. */
+	G_PART_ALIAS_MS_BASIC_DATA,	/* A Microsoft Data part. entry. */
+	G_PART_ALIAS_MS_LDM_DATA,	/* A Microsoft LDM Data part. entry. */
+	G_PART_ALIAS_MS_LDM_METADATA,	/* A Microsoft LDM Metadata entry. */
+	G_PART_ALIAS_MS_RESERVED,	/* A Microsoft Reserved part. entry. */
+	G_PART_ALIAS_MS_NTFS,		/* A Microsoft NTFS partition entry */
+	G_PART_ALIAS_NETBSD_CCD,	/* A NetBSD CCD partition entry. */
+	G_PART_ALIAS_NETBSD_CGD,	/* A NetBSD CGD partition entry. */
+	G_PART_ALIAS_NETBSD_FFS,	/* A NetBSD FFS partition entry. */
+	G_PART_ALIAS_NETBSD_RAID,	/* A NetBSD RAID partition entry. */
+	G_PART_ALIAS_NETBSD_SWAP,	/* A NetBSD swap partition entry. */
+	G_PART_ALIAS_NETBSD_LFS,	/* A NetBSD LFS partition entry. */
+	G_PART_ALIAS_EBR,		/* A EBR partition entry. */
+	G_PART_ALIAS_MS_FAT32,		/* A Microsoft FAT32 partition entry. */
+	G_PART_ALIAS_BIOS_BOOT,		/* A GRUB 2 boot partition entry. */
 	/* Keep the following last */
 	G_PART_ALIAS_COUNT
 };
@@ -110,6 +141,7 @@ struct g_part_table {
 	int		gpt_modified:1;	/* Table changes have been made. */
 	int		gpt_opened:1;	/* Permissions obtained. */
 	int		gpt_fixgeom:1;	/* Geometry is fixed. */
+	int		gpt_corrupt:1;	/* Table is corrupt. */
 };
 
 struct g_part_entry *g_part_new_entry(struct g_part_table *, int, quad_t,
@@ -147,6 +179,7 @@ enum g_part_ctl {
 #define	G_PART_PARM_VERSION	0x0800
 #define	G_PART_PARM_BOOTCODE	0x1000
 #define	G_PART_PARM_ATTRIB	0x2000
+#define	G_PART_PARM_FORCE	0x4000
 
 struct g_part_parms {
 	unsigned int	gpp_parms;
@@ -164,6 +197,7 @@ struct g_part_parms {
 	const void	*gpp_codeptr;
 	unsigned int	gpp_codesize;
 	const char	*gpp_attrib;
+	unsigned int	gpp_force;
 };
 
 void g_part_geometry_heads(off_t, u_int, off_t *, u_int *);
