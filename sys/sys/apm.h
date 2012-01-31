@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $FreeBSD: src/sys/sys/apm.h,v 1.1.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/apm.h,v 1.3 2011/07/13 01:02:44 laffer1 Exp $
  */
 
 #ifndef _SYS_APM_H_
@@ -62,6 +62,8 @@ struct apm_ent {
 #define	APM_ENT_TYPE_FREEBSD_VINUM	"FreeBSD-Vinum"
 #define	APM_ENT_TYPE_FREEBSD_ZFS	"FreeBSD-ZFS"
 
+#define	APM_ENT_TYPE_APPLE_BOOT		"Apple_Bootstrap"
 #define	APM_ENT_TYPE_APPLE_HFS		"Apple_HFS"
+#define	APM_ENT_TYPE_APPLE_UFS		"Apple_UNIX_SVR2"
 
 #endif /* _SYS_APM_H_ */
