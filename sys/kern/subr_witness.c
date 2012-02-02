@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_witness.c,v 1.5 2011-07-10 17:02:04 laffer1 Exp $
- *	and BSDI $Id: subr_witness.c,v 1.5 2011-07-10 17:02:04 laffer1 Exp $
+ *	from BSDI $Id: subr_witness.c,v 1.6 2012-02-02 09:09:15 laffer1 Exp $
+ *	and BSDI $Id: subr_witness.c,v 1.6 2012-02-02 09:09:15 laffer1 Exp $
  */
 
 /*
@@ -436,6 +436,7 @@ static struct witness_order_list_entry order_lists[] = {
 	/*
 	 * leaf locks
 	 */
+	{ "intrcnt", &lock_class_mtx_spin },
 	{ "icu", &lock_class_mtx_spin },
 #if defined(SMP) && defined(__sparc64__)
 	{ "ipi", &lock_class_mtx_spin },
@@ -445,6 +446,7 @@ static struct witness_order_list_entry order_lists[] = {
 	{ "descriptor tables", &lock_class_mtx_spin },
 #endif
 	{ "clk", &lock_class_mtx_spin },
+	{ "cpuset", &lock_class_mtx_spin },
 	{ "mprof lock", &lock_class_mtx_spin },
 	{ "kse lock", &lock_class_mtx_spin },
 	{ "zombie lock", &lock_class_mtx_spin },
@@ -561,7 +563,8 @@ witness_initialize(void *dummy __unused)
 
 	mtx_lock(&Giant);
 }
-SYSINIT(witness_init, SI_SUB_WITNESS, SI_ORDER_FIRST, witness_initialize, NULL)
+SYSINIT(witness_init, SI_SUB_WITNESS, SI_ORDER_FIRST, witness_initialize,
+    NULL);
 
 static int
 sysctl_debug_witness_watch(SYSCTL_HANDLER_ARGS)
@@ -958,7 +961,7 @@ witness_checkorder(struct lock_object *lock, int flags, const char *file,
 	MPASS(!mtx_owned(&w_mtx));
 	mtx_lock_spin(&w_mtx);
 	/*
-	 * If we know that the the lock we are acquiring comes after
+	 * If we know that the lock we are acquiring comes after
 	 * the lock we most recently acquired in the lock order tree,
 	 * then there is no need for any further checks.
 	 */
