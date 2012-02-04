@@ -30633,10 +30633,6 @@ lib/libthread_db/arch/amd64/libc_r_md.c -text
 lib/libthread_db/arch/amd64/libpthread_md.c -text
 lib/libthread_db/arch/i386/libc_r_md.c -text
 lib/libthread_db/arch/i386/libpthread_md.c -text
-lib/libthread_db/arch/ia64/libc_r_md.c -text
-lib/libthread_db/arch/ia64/libpthread_md.c -text
-lib/libthread_db/arch/powerpc/libc_r_md.c -text
-lib/libthread_db/arch/powerpc/libpthread_md.c -text
 lib/libthread_db/arch/sparc64/libc_r_md.c -text
 lib/libthread_db/arch/sparc64/libpthread_md.c -text
 lib/libthread_db/libc_r_db.c -text
