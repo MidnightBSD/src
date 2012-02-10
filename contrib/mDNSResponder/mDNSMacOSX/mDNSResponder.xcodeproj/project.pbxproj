@@ -19,7 +19,6 @@
 				D284BF300ADD81630027CCDF /* PBXTargetDependency */,
 				D284BF260ADD814F0027CCDF /* PBXTargetDependency */,
 				D284BF2A0ADD81530027CCDF /* PBXTargetDependency */,
-				216EF8EC120295AA004917D2 /* PBXTargetDependency */,
 			);
 			name = "Build More";
 			productName = "Build All";
@@ -31,6 +30,7 @@
 				FF045B6A0C7E4AA600448140 /* ShellScript */,
 			);
 			dependencies = (
+				217A4C49138EE14C000A5BA8 /* PBXTargetDependency */,
 				03067D680C83A3830022BE1F /* PBXTargetDependency */,
 				03067D6A0C83A3890022BE1F /* PBXTargetDependency */,
 				03067D6C0C83A3920022BE1F /* PBXTargetDependency */,
@@ -274,10 +274,10 @@
 			fileType = sourcecode.yacc;
 			isEditable = 1;
 			outputFiles = (
-				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).h",
-				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).c",
+				"$(DERIVED_FILE_DIR)/dnsextd_parser.h",
+				"$(DERIVED_FILE_DIR)/dnsextd_parser.c",
 			);
-			script = "echo NOOP yacc ${INPUT_FILE_PATH}";
+			script = "/usr/bin/bison -o ${DERIVED_FILE_DIR}/${INPUT_FILE_BASE}.c -d ${INPUT_FILE_PATH}";
 		};
 		D284BFB80ADD8E510027CCDF /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
@@ -285,7 +285,7 @@
 			fileType = sourcecode.lex;
 			isEditable = 1;
 			outputFiles = (
-				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).c",
+				"$(DERIVED_FILE_DIR)/dnsextd_lexer.c",
 			);
 			script = "/usr/bin/flex -i -o${DERIVED_FILE_DIR}/${INPUT_FILE_BASE}.c ${INPUT_FILE_PATH}";
 		};
@@ -369,7 +369,7 @@
 			remoteGlobalIDString = 2141DD29123FFD2C0086D23E;
 			remoteInfo = libdns_sd_profile_static;
 		};
-		216EF8EB120295AA004917D2 /* PBXContainerItemProxy */ = {
+		217A4C48138EE14C000A5BA8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
 			proxyType = 1;
@@ -1337,9 +1337,9 @@
 			buildConfigurationList = D284BED60ADD80A20027CCDF /* Build configuration list for PBXNativeTarget "dnsextd" */;
 			buildPhases = (
 				D284BEC20ADD80A20027CCDF /* Headers */,
-				4A4EE3A413CB8E82005C624B /* Build yacc file into derived source files */,
 				D284BEC40ADD80A20027CCDF /* Sources */,
 				D284BECE0ADD80A20027CCDF /* Frameworks */,
+				D284BED30ADD80A20027CCDF /* Rez */,
 				D284BED40ADD80A20027CCDF /* CopyFiles */,
 				FFFF8F770C32F0FD00722979 /* CopyFiles */,
 				FF37FAAD0BC581780044A5CF /* ShellScript */,
@@ -1561,6 +1561,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D284BED30ADD80A20027CCDF /* Rez */ = {
+			isa = PBXRezBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D284BEE40ADD80A70027CCDF /* Rez */ = {
 			isa = PBXRezBuildPhase;
 			buildActionMask = 2147483647;
@@ -1629,23 +1636,6 @@
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
 			shellScript = "#if we are building for simulator, change the installation path\nif [ \"${RC_ProjectName%_Sim}\" != \"${RC_ProjectName}\" ] ; then\n\tDSTROOT=${DSTROOT}${SDKROOT}\nfi\nmkdir -p \"$DSTROOT/usr/include/DNSServiceDiscovery\"\ncp $SRCROOT/DNSServiceDiscovery.h $DSTROOT/usr/include/DNSServiceDiscovery\nsed 's/\\(^#define _DNS_SD_LIBDISPATCH \\)0$/\\1 1/' \"$SRCROOT/../mDNSShared/dns_sd.h\" > \"$DSTROOT/usr/include/dns_sd.h\"";
-		};
-		4A4EE3A413CB8E82005C624B /* Build yacc file into derived source files */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/../mDNSShared/dnsextd_parser.y",
-			);
-			name = "Build yacc file into derived source files";
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/dnsextd_parser.c",
-				"$(DERIVED_FILE_DIR)/dnsextd_parser.h",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "/usr/bin/bison -o ${SCRIPT_OUTPUT_FILE_0} -d ${SCRIPT_INPUT_FILE_0}";
 		};
 		D284BE510ADD80740027CCDF /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -1964,10 +1954,10 @@
 			target = 2141DD29123FFD2C0086D23E /* libdns_sd_profile_static */;
 			targetProxy = 215FFB1C124002CC00470DE1 /* PBXContainerItemProxy */;
 		};
-		216EF8EC120295AA004917D2 /* PBXTargetDependency */ = {
+		217A4C49138EE14C000A5BA8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 213FB21712028A7A002B3A08 /* BonjourEvents */;
-			targetProxy = 216EF8EB120295AA004917D2 /* PBXContainerItemProxy */;
+			targetProxy = 217A4C48138EE14C000A5BA8 /* PBXContainerItemProxy */;
 		};
 		4AE4716A0EAFF83800A6C5AD /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2054,7 +2044,7 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = s;
 				PRODUCT_NAME = "Build Some";
 			};
 			name = Development;
@@ -2090,7 +2080,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = s;
 				PRODUCT_NAME = SystemLibrariesStatic;
 			};
 			name = Development;
@@ -2309,7 +2299,7 @@
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"MDNS_DEBUGMSGS=1",
@@ -2431,6 +2421,9 @@
 					"${CONFIGURATION_TEMP_DIR}",
 				);
 				INSTALL_PATH = /usr/sbin;
+				LEX = /usr/bin/flex;
+				LEXFLAGS = "";
+				LEX_CASE_INSENSITIVE_SCANNER = YES;
 				LIBRARY_SEARCH_PATHS = "\"${CONFIGURATION_TEMP_DIR}\"";
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_CFLAGS = (
@@ -2439,8 +2432,11 @@
 				);
 				OTHER_LDFLAGS = "";
 				"OTHER_LDFLAGS[sdk=macosx10.7][arch=*]" = "-Wl,-pie";
+				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = dnsextd;
+				REZ_EXECUTABLE = YES;
 				SECTORDER_FLAGS = "";
+				YACC = "/usr/bin/bison -y";
 			};
 			name = Development;
 		};

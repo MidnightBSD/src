@@ -3104,8 +3104,8 @@ void mDNSCoreReceive(mDNS *const m, void *const msg, const mDNSu8 *const end,
                                 const mDNSAddr *const srcaddr, const mDNSIPPort srcport,
                                 const mDNSAddr *const dstaddr, const mDNSIPPort dstport, const mDNSInterfaceID iid)
 	{ ( void ) m; ( void ) msg; ( void ) end; ( void ) srcaddr; ( void ) srcport; ( void ) dstaddr; ( void ) dstport; ( void ) iid; }
-DNSServer *mDNS_AddDNSServer(mDNS *const m, const domainname *d, const mDNSInterfaceID interface, const mDNSAddr *addr, const mDNSIPPort port, mDNSBool scoped, mDNSu32 timeout)
-	{ ( void ) m; ( void ) d; ( void ) interface; ( void ) addr; ( void ) port; ( void ) scoped; ( void ) timeout; return(NULL); }
+DNSServer *mDNS_AddDNSServer(mDNS *const m, const domainname *d, const mDNSInterfaceID interface, const mDNSAddr *addr, const mDNSIPPort port, mDNSBool scoped, mDNSu32 timeout, mDNSBool cellIntf)
+	{ ( void ) m; ( void ) d; ( void ) interface; ( void ) addr; ( void ) port; ( void ) scoped; ( void ) timeout; (void) cellIntf; return(NULL); }
 void mDNS_AddSearchDomain(const domainname *const domain, mDNSInterfaceID InterfaceID) { (void)domain; (void) InterfaceID;}
 void mDNS_AddDynDNSHostName(mDNS *m, const domainname *fqdn, mDNSRecordCallback *StatusCallback, const void *StatusContext)
 	{ ( void ) m; ( void ) fqdn; ( void ) StatusCallback; ( void ) StatusContext; }

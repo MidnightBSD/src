@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4 -*-
  *
- * Copyright (c) 2002-2004 Apple Computer, Inc. All rights reserved.
+ * Copyright (c) 2002-2011 Apple Computer, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -810,7 +810,6 @@ mDNSexport void NotifyOfElusiveBug(const char *title, const char *msg)	// Both s
 	#if !ForceAlerts
 		{
 		// Determine if we're at Apple (17.*.*.*)
-		extern mDNS mDNSStorage;
 		NetworkInterfaceInfoOSX *i;
 		for (i = mDNSStorage.p->InterfaceList; i; i = i->next)
 			if (i->ifinfo.ip.type == mDNSAddrType_IPv4 && i->ifinfo.ip.ip.v4.b[0] == 17)
@@ -1929,7 +1928,6 @@ mDNSexport mStatus mDNSPlatformTCPConnect(TCPSocket *sock, const mDNSAddr *dst, 
 	// UDP). mDNSInterface_Unicast indicates this case and not a valid interface.
 	if (InterfaceID && InterfaceID != mDNSInterface_Unicast)
 		{
-		extern mDNS mDNSStorage;
 		NetworkInterfaceInfoOSX *info = IfindexToInterfaceInfoOSX(&mDNSStorage, InterfaceID);
 		if (dst->type == mDNSAddrType_IPv4)
 			{
@@ -2350,7 +2348,6 @@ mDNSexport void mDNSPlatformSendRawPacket(const void *const msg, const mDNSu8 *c
 	if (!InterfaceID) { LogMsg("mDNSPlatformSendRawPacket: No InterfaceID specified"); return; }
 	NetworkInterfaceInfoOSX *info;
 
-	extern mDNS mDNSStorage;
 	info = IfindexToInterfaceInfoOSX(&mDNSStorage, InterfaceID);
 	if (info == NULL)
 		{
@@ -3170,7 +3167,7 @@ mDNSlocal mStatus UpdateRRStatus(const mDNS *const m, char *buffer, int bufsz, c
 			for (ptr = m->AuthInfoList; ptr; ptr = ptr->next)
 				if (SameDomainName(&ptr->domain, n))
 					{
-					if (ptr == info && (r->updateError == mStatus_BadSig || r->updateError == mStatus_BadKey))
+					if (ptr == info && r->updateError == mStatus_BadSig)
 						{
 						mDNS_snprintf(buffer, bufsz, "Resource record update failed for %##s", r->resrec.name);
 						return r->updateError;
@@ -5063,6 +5060,7 @@ mDNSlocal void ConfigResolvers(mDNS *const m, dns_config_t *config, mDNSBool sco
 				if (SetupAddr(&saddr, r->nameserver[n])) LogMsg("RegisterSplitDNS: bad IP address");
 				else
 					{
+					mDNSBool cellIntf = mDNSfalse;
 					mDNSBool scopedDNS = mDNSfalse;
 					DNSServer *s;
 #if DNSINFO_VERSION >= 20091104
@@ -5074,6 +5072,9 @@ mDNSlocal void ConfigResolvers(mDNS *const m, dns_config_t *config, mDNSBool sco
 					else
 						scopedDNS = (scope && (r->flags & DNS_RESOLVER_FLAGS_SCOPED)) ? mDNStrue : mDNSfalse;
 #endif
+#if DNSINFO_VERSION >= 20110420
+					cellIntf = r->reach_flags & kSCNetworkReachabilityFlagsIsWWAN;
+#endif
 					// The timeout value is for all the DNS servers in a given resolver, hence we pass
 					// the timeout value only for the first DNSServer. If we don't have a value in the
 					// resolver, then use the core's default value
@@ -5082,7 +5083,7 @@ mDNSlocal void ConfigResolvers(mDNS *const m, dns_config_t *config, mDNSBool sco
 					// it takes the sum of all the timeout values for all DNS servers. By doing this, it
 					// tries all the DNS servers in a specified timeout
 					s = mDNS_AddDNSServer(m, &d, interface, &saddr, r->port ? mDNSOpaque16fromIntVal(r->port) : UnicastDNSPort, scopedDNS,
-						(n == 0 ? (r->timeout ? r->timeout : DEFAULT_UDNS_TIMEOUT) : 0));
+						(n == 0 ? (r->timeout ? r->timeout : DEFAULT_UDNS_TIMEOUT) : 0), cellIntf);
 					if (s)
 						{
 						if (disabled) s->teststate = DNSServer_Disabled;
@@ -5330,7 +5331,7 @@ mDNSexport void mDNSPlatformSetDNSConfig(mDNS *const m, mDNSBool setservers, mDN
 								inet_aton(buf, (struct in_addr *) &addr.ip.v4))
 								{
 								LogInfo("Adding DNS server from dict: %s", buf);
-								mDNS_AddDNSServer(m, mDNSNULL, mDNSInterface_Any, &addr, UnicastDNSPort, mDNSfalse, 0);
+								mDNS_AddDNSServer(m, mDNSNULL, mDNSInterface_Any, &addr, UnicastDNSPort, mDNSfalse, 0, mDNSfalse);
 								}
 							}
 						}
@@ -7568,11 +7569,6 @@ mDNSlocal void SnowLeopardPowerChanged(void *refcon, IOPMConnection connection, 
 			m->SleepLimit = 0;
 			}
 		LogSPS("SnowLeopardPowerChanged: Waking up, Acking Wakeup, SleepLimit %d SleepState %d", m->SleepLimit, m->SleepState);
-		// If the network notifications have already come before we got the wakeup, we ignored them and
-		// in case we get no more, we need to trigger one.
-		mDNS_Lock(m);
-		SetNetworkChanged(m, 2 * mDNSPlatformOneSecond);
-		mDNS_Unlock(m);
 		// CPU Waking. Note: Can get this message repeatedly, as other subsystems power up or down.
 		if (m->SleepState != SleepState_Awake) PowerOn(m);
 		IOPMConnectionAcknowledgeEvent(connection, token);
@@ -7615,8 +7611,6 @@ mDNSlocal void SnowLeopardPowerChanged(void *refcon, IOPMConnection connection, 
 // CFDictionary is not a suitable candidate because it does not support duplicates and even if we use a custom
 // "hash" function to solve this, the others are hard to solve. Hence, we share the hash (AuthHash) implementation
 // of the core layer which does all of the above very efficiently
-
-#define ETCHOSTS_BUFSIZE	1024	// Buffer size to parse a single line in /etc/hosts
 
 mDNSexport void FreeEtcHosts(mDNS *const m, AuthRecord *const rr, mStatus result)
     {
@@ -7759,8 +7753,6 @@ mDNSlocal int EtcHostsParseOneName(int start, int length, char *buffer, char **n
 	*name = NULL;
 	for (i = start; i < length; i++)
 		{
-		if (buffer[i] == '#')
-			return -1;
 		if (buffer[i] != ' ' && buffer[i] != ',' && buffer[i] != '\t')
 			{
 			*name = &buffer[i];
@@ -7939,38 +7931,58 @@ mDNSlocal void mDNSMacOSXParseEtcHostsLine(mDNS *const m, char *buffer, ssize_t 
 
 mDNSlocal void mDNSMacOSXParseEtcHosts(mDNS *const m, int fd, AuthHash *auth)
 	{
-	mDNSBool good;
-	char	buf[ETCHOSTS_BUFSIZE];
-	int len;
-	FILE *fp;
-
 	if (fd == -1) { LogInfo("mDNSMacOSXParseEtcHosts: fd is -1"); return; }
+	
+	LogInfo("mDNSMacOSXParseEtcHosts: Parsing etc hosts");
 
-	fp = fopen("/etc/hosts", "r");
-	if (!fp) { LogInfo("mDNSMacOSXParseEtcHosts: fp is NULL"); return; }
-
-	while (1)
+	// Read through the file
+	char	readBuf[1024]; // support a maximum line of 1024 bytes including newline
+	off_t	offset = 0;
+	int	comment = 0;
+	ssize_t	i = 0;
+	ssize_t	length;
+	ssize_t	linestart;
+	while ((length = pread(fd, &readBuf[i], sizeof(readBuf) - i, offset) + i) >= i)
 		{
-		good = (fgets(buf, ETCHOSTS_BUFSIZE, fp) != NULL);
-		if (!good) break;
-
-		// skip comment and empty lines
-		if (buf[0] == '#' || buf[0] == '\r' || buf[0] == '\n')
-			continue;
-
-		len = strlen(buf);
-		if (!len) break;	// sanity check
-
-		if (buf[len - 1] == '\r' || buf[len - 1] == '\n')
-			buf[len - 1] = '\0';
-
-		// fgets always null terminates and hence even if we have no
-		// newline at the end, it is null terminated. The callee expects
-		// the length to be such that buf[length] to be zero and hence
-		// we pass len - 1.
-		mDNSMacOSXParseEtcHostsLine(m, buf, len - 1, auth);
+		if (length == i)
+			{
+			// end of file
+			if (length != 0) mDNSMacOSXParseEtcHostsLine(m, readBuf, length, auth);
+			break;
+			}
+		
+		// increment our offset by the number of bytes we read
+		offset += length - i;
+		
+		// loop through the buffer looking for end of lines
+		for (linestart = 0; i < length; i++)
+			{
+			if (readBuf[i] == '#' || readBuf[i] == '\r' || readBuf[i] == '\n')
+				{
+				int parseline = i - linestart > 0 && comment == 0;
+				comment = readBuf[i] == '#';
+				if (parseline)
+					{
+					readBuf[i] = 0;
+					mDNSMacOSXParseEtcHostsLine(m, &readBuf[linestart], i - linestart, auth);
+					}
+				linestart = i + 1;
+				}
+			}
+		
+		// prepare to read the next chunk of the file
+		if (linestart == 0)
+			{
+			// single line was larger than our buffer, we're going to ignore it
+			comment = 1; // treat remainder of line as comment
+			i = 0;
+			}
+		else
+			{
+			i = length - linestart;
+			if (i) memmove(readBuf, &readBuf[linestart], i);
+			}
 		}
-	fclose(fp);
 	}
 
 mDNSlocal void mDNSMacOSXUpdateEtcHosts(mDNS *const m);
@@ -8091,7 +8103,7 @@ mDNSlocal int mDNSMacOSXGetEtcHostsFD(mDNS *const m)
 #else
 	(void)m;
 	return fd;
-#endif;
+#endif
 	}
 
 // When /etc/hosts is modified, flush all the cache records as there may be local
@@ -8407,6 +8419,68 @@ mDNSlocal mDNSBool mDNSPlatformInit_CanReceiveUnicast(void)
 	return(err == 0);
 	}
 
+mDNSlocal void CreatePTRRecord(mDNS *const m, const domainname *domain)
+	{
+	AuthRecord *rr;
+	const domainname *pname = (domainname *)"\x9""localhost";
+
+	rr= mallocL("localhosts", sizeof(*rr));
+	if (rr == NULL) return;
+	mDNSPlatformMemZero(rr, sizeof(*rr));
+
+	mDNS_SetupResourceRecord(rr, mDNSNULL, mDNSInterface_LocalOnly, kDNSType_PTR, kHostNameTTL, kDNSRecordTypeKnownUnique, AuthRecordLocalOnly, mDNSNULL, mDNSNULL);
+	AssignDomainName(&rr->namestorage, domain);
+
+	rr->resrec.rdlength = DomainNameLength(pname);
+	rr->resrec.rdata->u.name.c[0] = 0;
+	AssignDomainName(&rr->resrec.rdata->u.name, pname);
+
+	rr->resrec.namehash = DomainNameHashValue(rr->resrec.name);
+	SetNewRData(&rr->resrec, mDNSNULL, 0);	// Sets rr->rdatahash for us
+	mDNS_Register(m, rr);
+	}
+
+// Setup PTR records for 127.0.0.1 and ::1. This helps answering them locally rather than relying
+// on the external DNS server to answer this. Sometimes, the DNS servers don't respond in a timely
+// fashion and applications depending on this e.g., telnetd, times out after 30 seconds creating
+// a bad user experience. For now, we specifically create only localhosts to handle radar://9354225
+//
+// Note: We could have set this up while parsing the entries in /etc/hosts. But this is kept separate
+// intentionally to avoid adding to the complexity of code handling /etc/hosts.
+mDNSlocal void SetupLocalHostRecords(mDNS *const m)
+	{
+	char buffer[MAX_REVERSE_MAPPING_NAME];
+	domainname name;
+	int i;
+	struct in6_addr addr;
+	mDNSu8 *ptr = addr.__u6_addr.__u6_addr8;
+
+	if (inet_pton(AF_INET, "127.0.0.1", &addr) == 1)
+		{
+		mDNS_snprintf(buffer, sizeof(buffer), "%d.%d.%d.%d.in-addr.arpa.",
+			ptr[3], ptr[2], ptr[1], ptr[0]);
+		MakeDomainNameFromDNSNameString(&name, buffer);
+		CreatePTRRecord(m, &name);
+		}
+	else LogMsg("SetupLocalHostRecords: ERROR!! inet_pton AF_INET failed");
+
+	if (inet_pton(AF_INET6, "::1", &addr) == 1)
+		{
+		for (i = 0; i < 16; i++)
+			{
+			static const char hexValues[] = "0123456789ABCDEF";
+			buffer[i * 4    ] = hexValues[ptr[15 - i] & 0x0F];
+			buffer[i * 4 + 1] = '.';
+			buffer[i * 4 + 2] = hexValues[ptr[15 - i] >> 4];
+			buffer[i * 4 + 3] = '.';
+			}
+		mDNS_snprintf(&buffer[64], sizeof(buffer)-64, "ip6.arpa.");
+		MakeDomainNameFromDNSNameString(&name, buffer);
+		CreatePTRRecord(m, &name);
+		}
+	else LogMsg("SetupLocalHostRecords: ERROR!! inet_pton AF_INET6 failed");
+	}
+
 // Construction of Default Browse domain list (i.e. when clients pass NULL) is as follows:
 // 1) query for b._dns-sd._udp.local on LocalOnly interface
 //    (.local manually generated via explicit callback)
@@ -8628,6 +8702,7 @@ mDNSlocal mStatus mDNSPlatformInit_setup(mDNS *const m)
 	if (SSLqueue == mDNSNULL) LogMsg("dispatch_queue_create: SSL queue NULL");
 #endif
 	mDNSMacOSXUpdateEtcHosts(m);
+	SetupLocalHostRecords(m);
 	return(mStatus_NoError);
 	}
 

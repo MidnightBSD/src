@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4 -*-
  *
- * Copyright (c) 2003-2006 Apple Computer, Inc. All rights reserved.
+ * Copyright (c) 2003-2011 Apple Computer, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -282,9 +282,10 @@ mDNSexport DNameListElem *AutoBrowseDomains;		// List created from those local-o
 
 mDNSlocal void FatalError(char *errmsg)
 	{
+	char* ptr = NULL;
 	LogMsg("%s: %s", errmsg, dnssd_strerror(dnssd_errno));
-	*(long*)0 = 0;	// On OS X abort() doesn't generate a crash log, but writing to zero does
-	abort();		// On platforms where writing to zero doesn't generate an exception, abort instead
+	*ptr = 0;	// On OS X abort() doesn't generate a crash log, but writing to zero does
+	abort();    // On platforms where writing to zero doesn't generate an exception, abort instead
 	}
 
 mDNSlocal mDNSu32 dnssd_htonl(mDNSu32 l)
@@ -2334,7 +2335,7 @@ mDNSlocal mStatus handle_resolve_request(request_state *request)
 #endif
 
 	// ask the questions
-	LogOperation("%3d: DNSServiceResolve(%##s) START", request->sd, request->u.resolve.qsrv.qname.c);
+	LogOperation("%3d: DNSServiceResolve(%X %d %##s) START", request->sd, flags, interfaceIndex, request->u.resolve.qsrv.qname.c);
 	err = mDNS_StartQuery(&mDNSStorage, &request->u.resolve.qsrv);
 	if (!err)
 		{
@@ -4707,7 +4708,7 @@ struct CompileTimeAssertionChecks_uds_daemon
 	// Check our structures are reasonable sizes. Including overly-large buffers, or embedding
 	// other overly-large structures instead of having a pointer to them, can inadvertently
 	// cause structure sizes (and therefore memory usage) to balloon unreasonably.
-	char sizecheck_request_state          [(sizeof(request_state)           <= 1784) ? 1 : -1];
+	char sizecheck_request_state          [(sizeof(request_state)           <= 2000) ? 1 : -1];
 	char sizecheck_registered_record_entry[(sizeof(registered_record_entry) <=   60) ? 1 : -1];
 	char sizecheck_service_instance       [(sizeof(service_instance)        <= 6552) ? 1 : -1];
 	char sizecheck_browser_t              [(sizeof(browser_t)               <= 1050) ? 1 : -1];

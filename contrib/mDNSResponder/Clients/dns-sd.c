@@ -170,7 +170,11 @@ cl dns-sd.c -I../mDNSShared -DNOT_HAVE_GETOPT ws2_32.lib ..\mDNSWindows\DLL\Rele
 	#include <arpa/inet.h>		// For inet_addr()
 	#include <net/if.h>			// For if_nametoindex()
 	static const char kFilePathSep = '/';
-	#define SA_LEN(addr) ((addr)->sa_len)
+// #ifndef NOT_HAVE_SA_LEN
+// 	#define SA_LEN(addr) ((addr)->sa_len)
+// #else
+    #define SA_LEN(addr) (((addr)->sa_family == AF_INET6)? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
+// #endif
 #endif
 
 #if (TEST_NEW_CLIENTSTUB && !defined(__APPLE_API_PRIVATE))

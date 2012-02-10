@@ -52,8 +52,11 @@
 #	include <mDNSEmbeddedAPI.h>
 #	include <mDNSWin32.h>
 #	include <PosixCompat.h>
+#	include <Poll.h>
 #	define IFNAMSIZ 256
 static HANDLE gStopEvent = INVALID_HANDLE_VALUE;
+static mDNSBool gRunning;
+static void CALLBACK StopNotification( HANDLE event, void *context ) { gRunning = mDNSfalse; }
 static BOOL WINAPI ConsoleControlHandler( DWORD inControlEvent ) { SetEvent( gStopEvent ); return TRUE; }
 void setlinebuf( FILE * fp ) {}
 #else
@@ -840,9 +843,9 @@ mDNSlocal mStatus mDNSNetMonitor(void)
 	if (status) return(status);
 	gStopEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (gStopEvent == INVALID_HANDLE_VALUE) return mStatus_UnknownErr;
+	mDNSPollRegisterEvent( gStopEvent, StopNotification, NULL );
 	if (!SetConsoleCtrlHandler(ConsoleControlHandler, TRUE)) return mStatus_UnknownErr;
-	while (WaitForSingleObjectEx(gStopEvent, INFINITE, TRUE) == WAIT_IO_COMPLETION)
-		DispatchSocketEvents(&mDNSStorage);
+	gRunning = mDNStrue; while (gRunning) mDNSPoll( INFINITE );
 	if (!SetConsoleCtrlHandler(ConsoleControlHandler, FALSE)) return mStatus_UnknownErr;
 	CloseHandle(gStopEvent);
 #else

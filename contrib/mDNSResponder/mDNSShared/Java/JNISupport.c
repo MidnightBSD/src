@@ -46,8 +46,10 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <iphlpapi.h>
-static char	*	if_indextoname( DWORD ifIndex, char * nameBuff);
-static DWORD	if_nametoindex( const char * nameStr );
+static char	*	win32_if_indextoname( DWORD ifIndex, char * nameBuff);
+static DWORD	win32_if_nametoindex( const char * nameStr );
+#define if_indextoname win32_if_indextoname
+#define if_nametoindex win32_if_nametoindex
 #define IF_NAMESIZE MAX_ADAPTER_NAME_LENGTH
 #else // _WIN32
 #include <sys/socket.h>
@@ -950,7 +952,7 @@ JNIEXPORT jint JNICALL Java_com_apple_dnssd_AppleDNSSD_GetIfIndexForName( JNIEnv
 
 #if defined(_WIN32)
 static char*
-if_indextoname( DWORD ifIndex, char * nameBuff)
+win32_if_indextoname( DWORD ifIndex, char * nameBuff)
 {
 	PIP_ADAPTER_INFO	pAdapterInfo = NULL;
 	PIP_ADAPTER_INFO	pAdapter = NULL;
@@ -1007,7 +1009,7 @@ exit:
 
 
 static DWORD
-if_nametoindex( const char * nameStr )
+win32_if_nametoindex( const char * nameStr )
 {
 	PIP_ADAPTER_INFO	pAdapterInfo = NULL;
 	PIP_ADAPTER_INFO	pAdapter = NULL;

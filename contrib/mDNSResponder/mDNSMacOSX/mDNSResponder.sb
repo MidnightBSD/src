@@ -65,6 +65,7 @@
 					"com.apple.mDNSResponderHelper"
 					"com.apple.SecurityServer"
 					"com.apple.SystemConfiguration.configd"
+					"com.apple.SystemConfiguration.SCNetworkReachability"
 					"com.apple.system.DirectoryService.libinfo_v1"
 					"com.apple.system.DirectoryService.membership_v1"
 					"com.apple.system.notification_center"

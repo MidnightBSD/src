@@ -16,10 +16,13 @@
  */
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <CoreFoundation/CFXPCBridge.h>
 #include <dns_sd.h>
 #include <UserEventAgentInterface.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <asl.h>
+#include <xpc/xpc.h>
 
 
 #pragma mark -
@@ -34,11 +37,9 @@ static const CFStringRef	sServiceDomainKey		= CFSTR("ServiceDomain");
 
 static const CFStringRef	sOnServiceAddKey		= CFSTR("OnServiceAdd");
 static const CFStringRef	sOnServiceRemoveKey		= CFSTR("OnServiceRemove");
-static const CFStringRef    sWhileServiceExistsKey	= CFSTR("WhileServiceExists");
 
 static const CFStringRef	sLaunchdTokenKey		= CFSTR("LaunchdToken");
-
-static const CFStringRef	sPluginTimersKey		= CFSTR("PluginTimers");
+static const CFStringRef	sLaunchdDictKey			= CFSTR("LaunchdDict");
 
 
 /************************************************
@@ -82,24 +83,10 @@ typedef struct {
 	void*								_pluginContext;
 	
 	CFMutableDictionaryRef				_tokenToBrowserMap;		// Maps a token to a browser that can be used to scan the remaining dictionaries.
-	CFMutableDictionaryRef				_browsers;				// A Dictionary of "Browser Dictionarys" where the resposible browser is the key.
-	CFMutableDictionaryRef				_onAddEvents;			// A Dictionary of "Event Dictionarys" that describe events to trigger on a service appearing.
-	CFMutableDictionaryRef				_onRemoveEvents;		// A Dictionary of "Event Dictionarys" that describe events to trigger on a service disappearing.
-	CFMutableDictionaryRef				_whileServiceExist;		// A Dictionary of "Event Dictionarys" that describe events to trigger on a service disappearing.
-
-	
-	CFMutableArrayRef					_timers;
-
+	CFMutableDictionaryRef				_browsers;				// A Dictionary of Browser Dictionaries where the resposible browser is the key.
+	CFMutableDictionaryRef				_onAddEvents;			// A Dictionary of Event Dictionaries that describe events to trigger on a service appearing.
+	CFMutableDictionaryRef				_onRemoveEvents;		// A Dictionary of Event Dictionaries that describe events to trigger on a service disappearing.
 } BonjourUserEventsPlugin;
-
-
-typedef struct {
-	
-	CFIndex	 refCount;
-	BonjourUserEventsPlugin* plugin;
-	CFNumberRef token;
-	
-} TimerContextInfo;
 
 typedef struct {
 	CFIndex refCount;
@@ -132,7 +119,7 @@ static void ManageEventsCallback(
 void AddEventToPlugin(BonjourUserEventsPlugin* plugin, CFNumberRef launchdToken, CFDictionaryRef eventParameters);
 void RemoveEventFromPlugin(BonjourUserEventsPlugin* plugin, CFNumberRef	launchToken);
 
-NetBrowserInfo* CreateBrowserForTypeAndDomain(BonjourUserEventsPlugin* plugin, CFStringRef type, CFStringRef domain);
+NetBrowserInfo* CreateBrowser(BonjourUserEventsPlugin* plugin, CFStringRef type, CFStringRef domain);
 NetBrowserInfo* BrowserForSDRef(BonjourUserEventsPlugin* plugin, DNSServiceRef sdRef);
 void AddEventDictionary(CFDictionaryRef eventDict, CFMutableDictionaryRef allEventsDictionary, NetBrowserInfo* key);
 void RemoveEventFromArray(CFMutableArrayRef array, CFNumberRef launchdToken);
@@ -140,18 +127,9 @@ void RemoveEventFromArray(CFMutableArrayRef array, CFNumberRef launchdToken);
 // Net Service Browser Stuff
 void ServiceBrowserCallback (DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex, DNSServiceErrorType errorCode, const char* serviceName, const char* regtype, const char* replyDomain, void* context);
 void HandleTemporaryEventsForService(BonjourUserEventsPlugin* plugin, NetBrowserInfo* browser, CFStringRef serviceName, CFMutableDictionaryRef eventsDictionary);
-void HandleStateEventsForService(BonjourUserEventsPlugin* plugin, NetBrowserInfo* browser,  CFStringRef serviceName, Boolean didAppear);
-void TemporaryEventTimerCallout ( CFRunLoopTimerRef timer, void *info );
 
 // Convence Stuff
 const char* CStringFromCFString(CFStringRef string);
-
-
-// TimerContextInfo "Object"
-TimerContextInfo* TimerContextInfoCreate(BonjourUserEventsPlugin* plugin, CFNumberRef token);
-const void* TimerContextInfoRetain(const void* info);
-void TimerContextInfoRelease(const void* info);
-CFStringRef TimerContextInfoCopyDescription(const void* info);
 
 // NetBrowserInfo "Object"
 NetBrowserInfo* NetBrowserInfoCreate(CFStringRef serviceType, CFStringRef domain, void* context);
@@ -160,7 +138,6 @@ void NetBrowserInfoRelease(CFAllocatorRef allocator, const void* info);
 Boolean	NetBrowserInfoEqual(const void *value1, const void *value2);
 CFHashCode	NetBrowserInfoHash(const void *value);
 CFStringRef	NetBrowserInfoCopyDescription(const void *value);
-
 
 static const CFDictionaryKeyCallBacks kNetBrowserInfoDictionaryKeyCallbacks = { 
 	0, 
@@ -271,9 +248,6 @@ static BonjourUserEventsPlugin* Alloc(CFUUIDRef factoryID)
 	plugin->_browsers = CFDictionaryCreateMutable(NULL, 0, &kNetBrowserInfoDictionaryKeyCallbacks, &kCFTypeDictionaryValueCallBacks);
 	plugin->_onAddEvents = CFDictionaryCreateMutable(NULL, 0, &kNetBrowserInfoDictionaryKeyCallbacks, &kCFTypeDictionaryValueCallBacks);
 	plugin->_onRemoveEvents = CFDictionaryCreateMutable(NULL, 0, &kNetBrowserInfoDictionaryKeyCallbacks, &kCFTypeDictionaryValueCallBacks);
-	plugin->_whileServiceExist = CFDictionaryCreateMutable(NULL, 0, &kNetBrowserInfoDictionaryKeyCallbacks, &kCFTypeDictionaryValueCallBacks);
-	
-	plugin->_timers = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
 	
 	return plugin;
 }
@@ -306,24 +280,6 @@ static void Dealloc(BonjourUserEventsPlugin* plugin)
 	
 	if (plugin->_onRemoveEvents)
 		CFRelease(plugin->_onRemoveEvents);
-	
-	if (plugin->_whileServiceExist)
-		CFRelease(plugin->_whileServiceExist);
-	
-	if (plugin->_timers)
-	{
-		CFIndex i;
-		CFIndex count = CFArrayGetCount(plugin->_timers);
-		CFRunLoopRef crl = CFRunLoopGetCurrent();
-		
-		for (i = 0; i < count; ++i)
-		{
-			CFRunLoopTimerRef timer = (CFRunLoopTimerRef)CFArrayGetValueAtIndex(plugin->_timers, i);
-			CFRunLoopRemoveTimer(crl, timer, kCFRunLoopCommonModes);
-		}
-		
-		CFRelease(plugin->_timers);
-	}
 	
 	free(plugin);
 }
@@ -360,7 +316,7 @@ static void Install(void *instance)
 	
 	if (!plugin->_pluginContext)
 	{
-		fprintf(stderr, "%s: failed to register for launch events.\n", sPluginIdentifier);
+		fprintf(stderr, "%s:%s failed to register for launch events.\n", sPluginIdentifier, __FUNCTION__);
 		return;
 	}
 	
@@ -375,25 +331,32 @@ static void Install(void *instance)
 static void ManageEventsCallback(UserEventAgentLaunchdAction action, CFNumberRef token, CFTypeRef eventMatchDict, void* vContext)
 {
 	
-	if (!eventMatchDict || CFGetTypeID(eventMatchDict) != CFDictionaryGetTypeID())
+	if (!eventMatchDict)
 	{
-		fprintf(stderr, "%s given non-dictionary for event dictionary\n", sPluginIdentifier);
+		fprintf(stderr, "%s:%s empty dictionary\n", sPluginIdentifier, __FUNCTION__);
+		return;
+	}
+	if (CFGetTypeID(eventMatchDict) != CFDictionaryGetTypeID())
+	{
+		fprintf(stderr, "%s:%s given non-dict for event dictionary, action %d\n", sPluginIdentifier, __FUNCTION__, action);
 		return;
 	}
 	
 	if (action == kUserEventAgentLaunchdAdd)
 	{
 		// Launchd wants us to add a launch event for this token and matching dictionary.
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s calling AddEventToPlugin", sPluginIdentifier, __FUNCTION__);
 		AddEventToPlugin((BonjourUserEventsPlugin*)vContext, token, (CFDictionaryRef)eventMatchDict);
 	}
 	else if (action == kUserEventAgentLaunchdRemove)
 	{
 		// Launchd wants us to remove the event hook we setup for this token / matching dictionary.
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s calling RemoveEventToPlugin", sPluginIdentifier, __FUNCTION__);
 		RemoveEventFromPlugin((BonjourUserEventsPlugin*)vContext, token);
 	}
 	else
 	{
-		fprintf(stderr, "%s got unknown UserEventAction: %d\n", sPluginIdentifier, action);
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s unknown callback event\n", sPluginIdentifier, __FUNCTION__);
 	}
 }
 
@@ -415,32 +378,27 @@ void AddEventToPlugin(BonjourUserEventsPlugin* plugin, CFNumberRef launchdToken,
 	CFStringRef		name = CFDictionaryGetValue(eventParameters, sServiceNameKey);
 	CFBooleanRef	cfOnAdd = CFDictionaryGetValue(eventParameters, sOnServiceAddKey);
 	CFBooleanRef	cfOnRemove = CFDictionaryGetValue(eventParameters, sOnServiceRemoveKey);
-	CFBooleanRef    cfWhileSericeExists = CFDictionaryGetValue(eventParameters, sWhileServiceExistsKey);
 	
 	Boolean			onAdd = false;
 	Boolean			onRemove = false;
-	Boolean			whileExists = false;
 	
-	if (cfOnAdd && CFGetTypeID(cfOnRemove) == CFBooleanGetTypeID() && CFBooleanGetValue(cfOnAdd))
+	if (cfOnAdd && CFGetTypeID(cfOnAdd) == CFBooleanGetTypeID() && CFBooleanGetValue(cfOnAdd))
 		onAdd = true;
 	
 	if (cfOnRemove && CFGetTypeID(cfOnRemove) == CFBooleanGetTypeID() && CFBooleanGetValue(cfOnRemove))
 		onRemove = true;
 	
-	if (cfWhileSericeExists && CFGetTypeID(cfWhileSericeExists) == CFBooleanGetTypeID() && CFBooleanGetValue(cfWhileSericeExists))
-		whileExists = true;
-	
 	// A type is required. If none is specified, BAIL
 	if (!type || CFGetTypeID(type) != CFStringGetTypeID()) 
 	{
-		fprintf(stderr, "%s, a LaunchEvent is missing a service type.\n", sPluginIdentifier);
+		fprintf(stderr, "%s:%s: a LaunchEvent is missing a service type.\n", sPluginIdentifier, __FUNCTION__);
 		return;
 	}
-	
+
 	// If we aren't suppose to launch on services appearing or disappearing, this service does nothing. Ignore.
-	if ((!onAdd && !onRemove && !whileExists) || (onAdd && onRemove && whileExists))
+	if (!onAdd && !onRemove)
 	{
-		fprintf(stderr, "%s, a LaunchEvent is missing both onAdd/onRemove/existance or has both.\n", sPluginIdentifier);
+		fprintf(stderr, "%s:%s a LaunchEvent is missing both onAdd and onRemove events\n", sPluginIdentifier, __FUNCTION__);
 		return;
 	}
 
@@ -449,58 +407,58 @@ void AddEventToPlugin(BonjourUserEventsPlugin* plugin, CFNumberRef launchdToken,
 	{
 		domain = CFSTR("local"); 
 	}
-	else if (CFGetTypeID(domain) != CFStringGetTypeID() ) // If the domain is not a string, fai;
+	else if (CFGetTypeID(domain) != CFStringGetTypeID() ) // If the domain is not a string, fail
 	{
-		fprintf(stderr, "%s, a LaunchEvent has a domain that is not a string.\n", sPluginIdentifier);
+		fprintf(stderr, "%s:%s a LaunchEvent has a domain that is not a string.\n", sPluginIdentifier, __FUNCTION__);
 		return;
 	}
 
-	
-	// If we have a name filter, but it's not a string. This event it broken, bail.
+	// If we have a name filter, but it's not a string. This event is broken, bail.
 	if (name && CFGetTypeID(name) != CFStringGetTypeID())
 	{
-		fprintf(stderr, "%s, a LaunchEvent has a domain that is not a string.\n", sPluginIdentifier);
+		fprintf(stderr, "%s:%s a LaunchEvent has a domain that is not a string.\n", sPluginIdentifier, __FUNCTION__);
 		return;
 	}
-	
+
 	// Get us a browser
-	NetBrowserInfo* browser = CreateBrowserForTypeAndDomain(plugin, type, domain);
+	NetBrowserInfo* browser = CreateBrowser(plugin, type, domain);
 	
 	if (!browser)
 	{
-		fprintf(stderr, "%s, a LaunchEvent has a domain that is not a string.\n", sPluginIdentifier);
+		fprintf(stderr, "%s:%s cannot create browser\n", sPluginIdentifier, __FUNCTION__);
 		return;
 	}
 	
 	// Create Event Dictionary
 	CFMutableDictionaryRef eventDictionary = CFDictionaryCreateMutable(NULL, 4, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 	
-	
+	// We store both the Token and the Dictionary. UserEventAgentSetLaunchEventState needs
+	// the token and UserEventAgentSetFireEvent needs both the token and the dictionary
 	CFDictionarySetValue(eventDictionary, sLaunchdTokenKey, launchdToken);
+	CFDictionarySetValue(eventDictionary, sLaunchdDictKey, eventParameters);
 	
 	if (name)
 		CFDictionarySetValue(eventDictionary, sServiceNameKey, name);
 	
 	// Add to the correct dictionary.
 	if (onAdd)
+	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Adding browser to AddEvents", sPluginIdentifier, __FUNCTION__);
 		AddEventDictionary(eventDictionary, plugin->_onAddEvents, browser);
+	}
 	
 	if (onRemove)
+	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Adding browser to RemoveEvents", sPluginIdentifier, __FUNCTION__);
 		AddEventDictionary(eventDictionary, plugin->_onRemoveEvents, browser);
-	
-	if (whileExists)
-		AddEventDictionary(eventDictionary, plugin->_whileServiceExist, browser);
+	}
 	
 	// Add Token Mapping
 	CFDictionarySetValue(plugin->_tokenToBrowserMap, launchdToken, browser);
 	
 	// Release Memory
 	CFRelease(eventDictionary);
-	NetBrowserInfoRelease(NULL, browser);
-	
 }
-
-
 
 /*****************************************************************************
  * RemoveEventFromPlugin
@@ -517,7 +475,7 @@ void RemoveEventFromPlugin(BonjourUserEventsPlugin* plugin, CFNumberRef	launchdT
 	{
 		long long value = 0;
 		CFNumberGetValue(launchdToken, kCFNumberLongLongType, &value);
-		fprintf(stderr, "%s, Launchd asked us to remove a token we did not register!\nToken:%lld\n", sPluginIdentifier, value);
+		fprintf(stderr, "%s:%s Launchd asked us to remove a token we did not register! ==Token:%lld== \n", sPluginIdentifier, __FUNCTION__, value);
 		return;
 	}
 	
@@ -526,22 +484,30 @@ void RemoveEventFromPlugin(BonjourUserEventsPlugin* plugin, CFNumberRef	launchdT
 	
 	if (onAddEvents)
 	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Calling RemoveEventFromArray for OnAddEvents", sPluginIdentifier, __FUNCTION__);
 		RemoveEventFromArray(onAddEvents, launchdToken);
 				
 		// Is the array now empty, clean up 
 		if (CFArrayGetCount(onAddEvents) == 0)
+		{
+			asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Removing the browser from AddEvents", sPluginIdentifier, __FUNCTION__);
 			CFDictionaryRemoveValue(plugin->_onAddEvents, browser);
+		}
 	}
 
 	if (onRemoveEvents)
 	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Calling RemoveEventFromArray for OnRemoveEvents", sPluginIdentifier, __FUNCTION__);
 		RemoveEventFromArray(onRemoveEvents, launchdToken);
 		
 		// Is the array now empty, clean up 
 		if (CFArrayGetCount(onRemoveEvents) == 0)
+		{
+			asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Removing the browser from RemoveEvents", sPluginIdentifier, __FUNCTION__);
 			CFDictionaryRemoveValue(plugin->_onRemoveEvents, browser);
+		}
 	}
-	
+
 	// Remove ourselves from the token dictionary.
 	CFDictionaryRemoveValue(plugin->_tokenToBrowserMap, launchdToken);
 	
@@ -565,7 +531,14 @@ void RemoveEventFromPlugin(BonjourUserEventsPlugin* plugin, CFNumberRef	launchdT
 	// If no one else is useing our browser, clean up!
 	if (!othersUsingBrowser)
 	{
-		CFDictionaryRemoveValue(plugin->_tokenToBrowserMap, launchdToken); // This triggers release and dealloc of the browser
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Removing browser %p from _browsers", sPluginIdentifier, __FUNCTION__, browser);
+		CFDictionaryRemoveValue(plugin->_browsers, browser); // This triggers release and dealloc of the browser
+	}
+	else
+	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Decrementing browsers %p count", sPluginIdentifier, __FUNCTION__, browser);
+		// Decrement my reference count (it was incremented when it was added to _browsers in CreateBrowser)
+		NetBrowserInfoRelease(NULL, browser);
 	}
 	
 	free(browsers);
@@ -573,12 +546,12 @@ void RemoveEventFromPlugin(BonjourUserEventsPlugin* plugin, CFNumberRef	launchdT
 
 
 /*****************************************************************************
- * CreateBrowserForTypeAndDomain
+ * CreateBrowser
  * - 
  * This method returns a NetBrowserInfo that is looking for a type of 
  * service in a domain. If no browser exists, it will create one and return it.
  *****************************************************************************/
-NetBrowserInfo* CreateBrowserForTypeAndDomain(BonjourUserEventsPlugin* plugin, CFStringRef type, CFStringRef domain)
+NetBrowserInfo* CreateBrowser(BonjourUserEventsPlugin* plugin, CFStringRef type, CFStringRef domain)
 {
 	CFIndex i;
 	CFIndex count = CFDictionaryGetCount(plugin->_browsers);
@@ -589,6 +562,7 @@ NetBrowserInfo* CreateBrowserForTypeAndDomain(BonjourUserEventsPlugin* plugin, C
 	// Fetch the values of the browser dictionary
 	CFDictionaryGetKeysAndValues(plugin->_browsers, (const void**)browsers, (const void**)dicts);
 	
+	
 	// Loop thru the browsers list and see if we can find a matching one.
 	for (i = 0; i < count; ++i)
 	{
@@ -598,9 +572,10 @@ NetBrowserInfo* CreateBrowserForTypeAndDomain(BonjourUserEventsPlugin* plugin, C
 		CFStringRef browserDomain = CFDictionaryGetValue(browserDict, sServiceDomainKey);
 		
 		// If we have a matching browser, break
-		if (CFStringCompare(browserType, type, kCFCompareCaseInsensitive) &&
-			CFStringCompare(browserDomain, domain, kCFCompareCaseInsensitive))
+		if ((CFStringCompare(browserType, type, kCFCompareCaseInsensitive) == kCFCompareEqualTo) &&
+			(CFStringCompare(browserDomain, domain, kCFCompareCaseInsensitive) == kCFCompareEqualTo))
 		{
+			asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: found a duplicate browser\n", sPluginIdentifier, __FUNCTION__);
 			browser = browsers[i];
 			NetBrowserInfoRetain(NULL, browser);
 			break;
@@ -615,7 +590,7 @@ NetBrowserInfo* CreateBrowserForTypeAndDomain(BonjourUserEventsPlugin* plugin, C
 		
 		if (!browser)
 		{			
-			fprintf(stderr, "%s, failed to search for %s.%s", sPluginIdentifier, CStringFromCFString(type) , CStringFromCFString(domain));
+			fprintf(stderr, "%s:%s failed to search for %s.%s", sPluginIdentifier, __FUNCTION__, CStringFromCFString(type) , CStringFromCFString(domain));
 			free(dicts);
 			free(browsers);
 			return NULL;
@@ -629,6 +604,8 @@ NetBrowserInfo* CreateBrowserForTypeAndDomain(BonjourUserEventsPlugin* plugin, C
 		
 		// Add the dictionary to the browsers dictionary.
 		CFDictionarySetValue(plugin->_browsers, browser, browserDict);
+
+		NetBrowserInfoRelease(NULL, browser);
 		
 		// Release Memory
 		CFRelease(browserDict);
@@ -688,9 +665,11 @@ void AddEventDictionary(CFDictionaryRef eventDict, CFMutableDictionaryRef allEve
 	{
 		eventsForBrowser = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
 		CFDictionarySetValue(allEventsDictionary, key, eventsForBrowser); 
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s creating a new array", sPluginIdentifier, __FUNCTION__);
 	}
 	else 
 	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s Incrementing refcount", sPluginIdentifier, __FUNCTION__);
 		CFRetain(eventsForBrowser);
 	}
 
@@ -709,6 +688,7 @@ void RemoveEventFromArray(CFMutableArrayRef array, CFNumberRef launchdToken)
 {
 	CFIndex i;
 	CFIndex count = CFArrayGetCount(array);
+
 	// Loop thru looking for us.
 	for (i = 0; i < count; )
 	{
@@ -717,14 +697,16 @@ void RemoveEventFromArray(CFMutableArrayRef array, CFNumberRef launchdToken)
 		
 		if (CFEqual(token, launchdToken)) // This is the same event?
 		{
+			asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s found token", sPluginIdentifier, __FUNCTION__);
 			CFArrayRemoveValueAtIndex(array, i);	// Remove the event,
-			break; // The token should only exist once, so it make no sense to continue.
+			break; // The token should only exist once, so it makes no sense to continue.
 		}
 		else
 		{
 			++i; // If it's not us, advance.
 		}
-	}	
+	}
+	if (i == count) asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s did not find token", sPluginIdentifier, __FUNCTION__);
 }
 
 #pragma mark -
@@ -754,22 +736,28 @@ void ServiceBrowserCallback (DNSServiceRef				sdRef,
 	NetBrowserInfo* browser = BrowserForSDRef(plugin, sdRef);
 	
 	if (!browser) // Missing browser?
+	{
+		fprintf(stderr, "%s:%s ServiceBrowserCallback: missing browser\n", sPluginIdentifier, __FUNCTION__);
 		return;
+	}
 	
 	if (errorCode != kDNSServiceErr_NoError)
+	{
+		fprintf(stderr, "%s:%s ServiceBrowserCallback: errcode set %d\n", sPluginIdentifier, __FUNCTION__, errorCode);
 		return;
+	}
 	
 	CFStringRef cfServiceName = CFStringCreateWithCString(NULL, serviceName, kCFStringEncodingUTF8);
 	
 	if (flags & kDNSServiceFlagsAdd)
 	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s calling HandleTemporaryEventsForService Add\n", sPluginIdentifier, __FUNCTION__);
 		HandleTemporaryEventsForService(plugin, browser, cfServiceName, plugin->_onAddEvents);
-		HandleStateEventsForService(plugin, browser, cfServiceName, true);
 	}
 	else 
 	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s calling HandleTemporaryEventsForService Remove\n", sPluginIdentifier, __FUNCTION__);
 		HandleTemporaryEventsForService(plugin, browser, cfServiceName, plugin->_onRemoveEvents);
-		HandleStateEventsForService(plugin, browser, cfServiceName, false);
 	}
 
 	CFRelease(cfServiceName);
@@ -799,96 +787,28 @@ void HandleTemporaryEventsForService(BonjourUserEventsPlugin* plugin, NetBrowser
 		CFDictionaryRef eventDict = (CFDictionaryRef)CFArrayGetValueAtIndex(events, i);
 		CFStringRef eventServiceName = (CFStringRef)CFDictionaryGetValue(eventDict, sServiceNameKey);
 		CFNumberRef token = (CFNumberRef) CFDictionaryGetValue(eventDict, sLaunchdTokenKey);
+		CFDictionaryRef dict = (CFDictionaryRef) CFDictionaryGetValue(eventDict, sLaunchdDictKey);
 				
 		// Currently we only filter on service name, that makes this as simple as... 
 		if (!eventServiceName || CFEqual(serviceName, eventServiceName))
 		{
-			// Create Context Info
-			CFRunLoopTimerContext context; 
-			TimerContextInfo* info = TimerContextInfoCreate(plugin, token);
+			uint64_t tokenUint64;
+			// Signal Event: This is edge trigger. When the action has been taken, it will not
+			// be remembered anymore.
 
-			context.version = 0;
-			context.info = info;
-			context.retain = TimerContextInfoRetain;
-			context.release = TimerContextInfoRelease;
-			context.copyDescription = TimerContextInfoCopyDescription;
-			
-			// Create and add one shot timer to flip the event off after a second
-			CFRunLoopTimerRef timer = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent() + 1.0, 0, 0, 0, TemporaryEventTimerCallout, &context);
-			CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopCommonModes);
-			
-			// Signal Event
-			UserEventAgentSetLaunchEventState(plugin->_pluginContext, token, true);
-			
-			// Clean Up
-			TimerContextInfoRelease(info);
-			CFRelease(timer);
-			
+			asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s HandleTemporaryEventsForService signal\n", sPluginIdentifier, __FUNCTION__);
+    		CFNumberGetValue(token, kCFNumberLongLongType, &tokenUint64);
+
+    		xpc_object_t jobRequest = _CFXPCCreateXPCObjectFromCFObject(dict);
+
+			UserEventAgentFireEvent(plugin->_pluginContext, tokenUint64, jobRequest);
+			xpc_release(jobRequest);
 		}
 	}
-	
-}
-
-/*****************************************************************************
- * HandleStateEventsForService
- * - 
- * This method handles the toggling the state of a while exists event to 
- * reflect the network. 
- *****************************************************************************/
-void HandleStateEventsForService(BonjourUserEventsPlugin* plugin, NetBrowserInfo* browser, CFStringRef serviceName, Boolean didAppear)
-{
-	CFArrayRef events = (CFArrayRef)CFDictionaryGetValue(plugin->_whileServiceExist, browser); // Get the _whileServiceExist events that are interested in this browser.
-	CFIndex i;
-	CFIndex count;
-	
-	if (!events)  // Somehow we have a orphan browser...
-		return;
-	
-	count = CFArrayGetCount(events);
-	
-	// Go thru the events and run filters, notifity if they pass.
-	for (i = 0; i < count; ++i)
-	{
-		CFDictionaryRef eventDict = (CFDictionaryRef)CFArrayGetValueAtIndex(events, i);
-		CFStringRef eventServiceName = (CFStringRef)CFDictionaryGetValue(eventDict, sServiceNameKey);
-		CFNumberRef token = (CFNumberRef) CFDictionaryGetValue(eventDict, sLaunchdTokenKey);
-		
-		// Currently we only filter on service name, that makes this as simple as... 
-		if (!eventServiceName || CFEqual(serviceName, eventServiceName))
-			UserEventAgentSetLaunchEventState(plugin->_pluginContext, token, didAppear);
-	}
-}
-
-/*****************************************************************************
- * TemporaryEventTimerCallout
- * - 
- * This method is invoked a second after a watched service appears / disappears
- * to toggle the state of the launch event back to false.
- *****************************************************************************/
-void TemporaryEventTimerCallout ( CFRunLoopTimerRef timer, void *info )
-{
-	TimerContextInfo* contextInfo = (TimerContextInfo*)info;
-
-	UserEventAgentSetLaunchEventState(contextInfo->plugin->_pluginContext, contextInfo->token, false);
-	
-	// Remove from pending timers array.
-	CFIndex i;
-	CFIndex count = CFArrayGetCount(contextInfo->plugin->_timers);
-	
-	for (i = 0; i < count; ++i)
-	{
-		CFRunLoopTimerRef item = (CFRunLoopTimerRef)CFArrayGetValueAtIndex(contextInfo->plugin->_timers, i);
-		
-		if (item == timer)
-			break;
-	}
-	
-	if (i != count)
-		CFArrayRemoveValueAtIndex(contextInfo->plugin->_timers, i);
 }
 
 #pragma mark -
-#pragma mark Convenence
+#pragma mark Convenience
 #pragma mark -
 
 /*****************************************************************************
@@ -913,79 +833,6 @@ const char* CStringFromCFString(CFStringRef string)
 }
 
 #pragma mark -
-#pragma mark TimerContextInfo "Object"
-#pragma mark -
-
-/*****************************************************************************
- * TimerContextInfoCreate
- * - 
- * Convenence for creating TimerContextInfo pseudo-objects
- *****************************************************************************/
-TimerContextInfo* TimerContextInfoCreate(BonjourUserEventsPlugin* plugin, CFNumberRef token)
-{
-	TimerContextInfo* info = malloc(sizeof(TimerContextInfo));
-	
-	info->refCount = 1;
-	info->plugin = plugin;
-	info->token = (CFNumberRef)CFRetain(token);
-	
-	return info;
-}
-
-/*****************************************************************************
- * TimerContextInfoRetain
- * - 
- * Convenence for retaining TimerContextInfo pseudo-objects
- *****************************************************************************/
-const void* TimerContextInfoRetain(const void* info)
-{
-	TimerContextInfo* context = (TimerContextInfo*)info;
-	
-	if (!context)
-		return NULL;
-	
-	++context->refCount;
-	
-	return context;
-}
-
-/*****************************************************************************
- * TimerContextInfoRelease
- * - 
- * Convenence for releasing TimerContextInfo pseudo-objects
- *****************************************************************************/
-void TimerContextInfoRelease(const void* info)
-{
-	TimerContextInfo* context = (TimerContextInfo*)info;
-	
-	if (!context)
-		return;
-	
-	if (context->refCount == 1)
-	{
-		CFRelease(context->token);
-		free(context);
-		return;
-	}
-	else 
-	{
-		--context->refCount;
-	}
-}
-
-/*****************************************************************************
- * TimerContextInfoCopyDescription
- * - 
- * This method actually does nothing, but is just a stub so CF is happy.
- *****************************************************************************/
-CFStringRef TimerContextInfoCopyDescription(const void* info)
-{
-	(void)info;
-	return CFStringCreateWithCString(NULL, "TimerContextInfo: No useful description", kCFStringEncodingUTF8);
-}
-
-
-#pragma mark -
 #pragma mark NetBrowserInfo "Object"
 #pragma mark -
 /*****************************************************************************
@@ -1004,6 +851,7 @@ NetBrowserInfo* NetBrowserInfoCreate(CFStringRef serviceType, CFStringRef domain
 	CFIndex serviceSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(serviceType), kCFStringEncodingUTF8);
 	cServiceType = calloc(serviceSize, 1);
 	success = CFStringGetCString(serviceType, cServiceType, serviceSize, kCFStringEncodingUTF8);
+
 	
 	if (domain)
 	{
@@ -1014,7 +862,7 @@ NetBrowserInfo* NetBrowserInfoCreate(CFStringRef serviceType, CFStringRef domain
 	
 	if (!success)
 	{
-		fprintf(stderr, "LaunchEvent has badly encoded service type or domain.\n");
+		fprintf(stderr, "%s:%s LaunchEvent has badly encoded service type or domain.\n", sPluginIdentifier, __FUNCTION__);
 		free(cServiceType);
 
 		if (cDomain)
@@ -1027,7 +875,7 @@ NetBrowserInfo* NetBrowserInfoCreate(CFStringRef serviceType, CFStringRef domain
 
 	if (err != kDNSServiceErr_NoError)
 	{
-		fprintf(stderr, "Failed to create browser for %s, %s\n", cServiceType, cDomain);
+		fprintf(stderr, "%s:%s Failed to create browser for %s, %s\n", sPluginIdentifier, __FUNCTION__, cServiceType, cDomain);
 		free(cServiceType);
 		
 		if (cDomain)
@@ -1043,6 +891,8 @@ NetBrowserInfo* NetBrowserInfoCreate(CFStringRef serviceType, CFStringRef domain
 	
 	outObj->refCount = 1;
 	outObj->browserRef = browserRef;
+
+	asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: created new object %p", sPluginIdentifier, __FUNCTION__, outObj);
 
 	free(cServiceType);
 								  
@@ -1066,6 +916,7 @@ const void* NetBrowserInfoRetain(CFAllocatorRef allocator, const void* info)
 		return NULL;
 	
 	++obj->refCount;
+	asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Incremented ref count on %p, count %d", sPluginIdentifier, __FUNCTION__, obj->browserRef, (int)obj->refCount);
 	
 	return obj;
 }
@@ -1085,12 +936,14 @@ void NetBrowserInfoRelease(CFAllocatorRef allocator, const void* info)
 	
 	if (obj->refCount == 1)
 	{
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: DNSServiceRefDeallocate %p", sPluginIdentifier, __FUNCTION__, obj->browserRef);
 		DNSServiceRefDeallocate(obj->browserRef);
 		free(obj);
 	}
 	else 
 	{
 		--obj->refCount;
+		asl_log(NULL, NULL, ASL_LEVEL_INFO, "%s:%s: Decremented ref count on %p, count %d", sPluginIdentifier, __FUNCTION__, obj->browserRef, (int)obj->refCount);
 	}
 
 }
@@ -1133,3 +986,4 @@ CFStringRef	NetBrowserInfoCopyDescription(const void *value)
 	(void)value;
 	return CFStringCreateWithCString(NULL, "NetBrowserInfo: No useful description", kCFStringEncodingUTF8);
 }
+

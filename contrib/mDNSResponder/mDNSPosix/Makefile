@@ -100,7 +100,8 @@ endif
 else
 
 ifeq ($(os),linux)
-CFLAGS_OS = -DNOT_HAVE_SA_LEN -DUSES_NETLINK -DHAVE_LINUX -DTARGET_OS_LINUX
+CFLAGS_OS = -DNOT_HAVE_SA_LEN -DUSES_NETLINK -DHAVE_LINUX -DTARGET_OS_LINUX -fno-strict-aliasing
+LD = gcc -shared
 FLEXFLAGS_OS = -l
 JAVACFLAGS_OS += -I$(JDK)/include/linux
 OPTIONALTARG = nss_mdns
@@ -140,7 +141,8 @@ ifeq ($(os),x)
 # We have to define __MAC_OS_X_VERSION_MIN_REQUIRED=__MAC_OS_X_VERSION_10_4 or on Leopard
 # we get build failures: ‘daemon’ is deprecated (declared at /usr/include/stdlib.h:283)
 CFLAGS_OS = -DHAVE_IPV6 -no-cpp-precomp -Werror -Wdeclaration-after-statement \
-	-D__MAC_OS_X_VERSION_MIN_REQUIRED=__MAC_OS_X_VERSION_10_4 #-Wunreachable-code
+	-D__MAC_OS_X_VERSION_MIN_REQUIRED=__MAC_OS_X_VERSION_10_4 \
+	-D__APPLE_USE_RFC_2292 #-Wunreachable-code
 CC = gcc
 LD = $(CC) -dynamiclib
 LINKOPTS = -lSystem

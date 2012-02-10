@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4 -*-
  *
- * Copyright (c) 2002-2006 Apple Computer, Inc. All rights reserved.
+ * Copyright (c) 2002-2011 Apple Computer, Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2928,7 +2928,7 @@ mDNSexport int main(int argc, char **argv)
 		if (sandbox_err) { LogMsg("WARNING: sandbox_init error %s", sandbox_msg); sandbox_free_error(sandbox_msg); }
 		else LogInfo("Now running under Apple Sandbox restrictions");
 		}
-#endif MDNS_NO_SANDBOX
+#endif // MDNS_NO_SANDBOX
 
 	status = mDNSDaemonInitialize();
 	if (status) { LogMsg("Daemon start: mDNSDaemonInitialize failed"); goto exit; }
