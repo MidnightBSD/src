@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20120209:
+	mDNSResponder 333.10 imported
+
 20111227:
 	import raid5 module for GEOM, graid5(8)
 
@@ -1183,4 +1186,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.154 2011/12/24 03:30:18 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.155 2011/12/28 00:46:31 laffer1 Exp $
