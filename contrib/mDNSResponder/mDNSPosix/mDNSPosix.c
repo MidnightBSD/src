@@ -159,8 +159,12 @@ mDNSexport mStatus mDNSPlatformSendUDP(const mDNS *const m, const void *const ms
 	assert(msg != NULL);
 	assert(end != NULL);
 	assert((((char *) end) - ((char *) msg)) > 0);
-	assert(dstPort.NotAnInteger != 0);
 
+	if (dstPort.NotAnInteger == 0) 
+		{
+		LogMsg("mDNSPlatformSendUDP: Invalid argument -dstPort is set to 0");
+		return PosixErrorToStatus(EINVAL);
+		}
 	if (dst->type == mDNSAddrType_IPv4)
 		{
 		struct sockaddr_in *sin = (struct sockaddr_in*)&to;
@@ -502,7 +506,7 @@ mDNSexport int ParseDNSServers(mDNS *m, const char *filePath)
 			mDNSAddr DNSAddr;
 			DNSAddr.type = mDNSAddrType_IPv4;
 			DNSAddr.ip.v4.NotAnInteger = ina.s_addr;
-			mDNS_AddDNSServer(m, NULL, mDNSInterface_Any, &DNSAddr, UnicastDNSPort, mDNSfalse, 0);
+			mDNS_AddDNSServer(m, NULL, mDNSInterface_Any, &DNSAddr, UnicastDNSPort, mDNSfalse, 0, mDNSfalse);
 			numOfServers++;
 			}
 		}  
