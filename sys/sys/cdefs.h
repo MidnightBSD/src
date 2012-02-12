@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/cdefs.h,v 1.6 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,19 +32,11 @@
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
  * $FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $
- * $MidnightBSD: src/sys/sys/cdefs.h,v 1.5 2008/09/16 00:56:46 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/cdefs.h,v 1.6 2008/12/03 00:11:21 laffer1 Exp $
  */
 
 #ifndef	_SYS_CDEFS_H_
 #define	_SYS_CDEFS_H_
-
-#if defined(__cplusplus)
-#define	__BEGIN_DECLS	extern "C" {
-#define	__END_DECLS	}
-#else
-#define	__BEGIN_DECLS
-#define	__END_DECLS
-#endif
 
 /*
  * This code has been put in place to help reduce the addition of
@@ -186,6 +178,24 @@
  * for a given compiler, let the compile fail if it is told to use
  * a feature that we cannot live without.
  */
+
+/*
+ * Non-static C99 inline functions are optional bodies.  They don't
+ * create global symbols if not used, but can be replaced if desirable.
+ * This differs from the behavior of GCC before version 4.3.  The nearest
+ * equivalent for older GCC is `extern inline'.  For newer GCC, use the
+ * gnu_inline attribute additionally to get the old behavior.
+ *
+ * For C99 compilers other than GCC, the C99 behavior is expected.
+ */
+#if defined(__GNUC__) && defined(__GNUC_STDC_INLINE__)
+#define __c99inline     extern __attribute__((__gnu_inline__)) __inline
+#elif defined(__GNUC__)
+#define __c99inline     extern __inline
+#elif defined(__STDC_VERSION__)
+define __c99inline     __inline
+#endif
+
 #ifdef lint
 #define	__dead2
 #define	__pure2
@@ -275,6 +285,33 @@
 #else
 #define	__restrict	restrict
 #endif
+#endif
+
+#if __GNUC_PREREQ__(4, 0)
+#  define __dso_public	__attribute__((__visibility__("default")))
+#  define __dso_hidden	__attribute__((__visibility__("hidden")))
+#  define __BEGIN_PUBLIC	_Pragma("GCC visibility push(default)")
+#  define __END_PUBLIC		_Pragma("GCC visibility pop")
+#  define __BEGIN_HIDDEN	_Pragma("GCC visibility push(hidden)")
+#  define __END_HIDDEN		_Pragma("GCC visibility pop")
+#else
+#  define __dso_public
+#  define __dso_hidden
+#  define __BEGIN_PUBLIC
+#  define __END_PUBLIC
+#  define __BEGIN_HIDDEN
+#  define __END_HIDDEN
+#endif
+
+
+#if defined(__cplusplus)
+#define	__BEGIN_DECLS		__BEGIN_PUBLIC extern "C" {
+#define	__END_DECLS		} __END_PUBLIC
+#define	__static_cast(x,y)	static_cast<x>(y)
+#else
+#define	__BEGIN_DECLS		__BEGIN_PUBLIC
+#define	__END_DECLS		__END_PUBLIC
+#define	__static_cast(x,y)	(x)y
 #endif
 
 /*
@@ -406,7 +443,7 @@
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.5 2008/09/16 00:56:46 laffer1 Exp $");
+ *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.6 2008/12/03 00:11:21 laffer1 Exp $");
  */
 #ifndef	__MBSDID
 #if !defined(lint) && !defined(STRIP_MBSDID)

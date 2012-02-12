@@ -108,6 +108,7 @@ static Obj_Entry *load_object(const char *, const Obj_Entry *);
 static Obj_Entry *obj_from_addr(const void *);
 static void objlist_call_fini(Objlist *);
 static void objlist_call_init(Objlist *);
+static void preinitialize_main_object (void);
 static void objlist_clear(Objlist *);
 static Objlist_Entry *objlist_find(Objlist *, const Obj_Entry *);
 static void objlist_init(Objlist *);
@@ -215,6 +216,13 @@ static func_ptr_type exports[] = {
  */
 char *__progname;
 char **environ;
+
+/*
+ * Globals passed as arguments to .init_array and .preinit_array functions
+ */
+
+int glac;
+char **glav;
 
 /*
  * Globals to control TLS allocation.
@@ -347,6 +355,8 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
     __progname = obj_rtld.path;
     argv0 = argv[0] != NULL ? argv[0] : "(null)";
     environ = env;
+    glac = argc;
+    glav = argv;
 
     trust = !issetugid();
 
@@ -439,6 +449,7 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
     obj_loads++;
     /* Make sure we don't call the main program's init and fini functions. */
     obj_main->init = obj_main->fini = (Elf_Addr)NULL;
+    obj_main->init_array = obj_main->fini_array = (Elf_Addr)NULL;
 
     /* Initialize a fake symbol for resolving undefined weak references. */
     sym_zero.st_info = ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE);
@@ -513,6 +524,7 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
 
     r_debug_state(NULL, &obj_main->linkmap); /* say hello to gdb! */
 
+    preinitialize_main_object();
     objlist_call_init(&initlist);
     lockstate = wlock_acquire(rtld_bind_lock);
     objlist_clear(&initlist);
@@ -772,6 +784,30 @@ digest_dynamic(Obj_Entry *obj, int early)
 
 	case DT_FINI:
 	    obj->fini = (Elf_Addr) (obj->relocbase + dynp->d_un.d_ptr);
+	    break;
+
+	case DT_PREINIT_ARRAY:
+	    obj->preinit_array = (Elf_Addr) (obj->relocbase + dynp->d_un.d_ptr);
+	    break;
+
+	case DT_INIT_ARRAY:
+	    obj->init_array = (Elf_Addr) (obj->relocbase + dynp->d_un.d_ptr);
+	    break;
+
+	case DT_FINI_ARRAY:
+	    obj->fini_array = (Elf_Addr) (obj->relocbase + dynp->d_un.d_ptr);
+	    break;
+
+	case DT_PREINIT_ARRAYSZ:
+	    obj->preinit_array_num = dynp->d_un.d_val / sizeof(Elf_Addr);
+	    break;
+
+	case DT_INIT_ARRAYSZ:
+	    obj->init_array_num = dynp->d_un.d_val / sizeof(Elf_Addr);
+	    break;
+
+	case DT_FINI_ARRAYSZ:
+	    obj->fini_array_num = dynp->d_un.d_val / sizeof(Elf_Addr);
 	    break;
 
 	case DT_DEBUG:
@@ -1232,11 +1268,11 @@ initlist_add_objects(Obj_Entry *obj, Obj_Entry **tail, Objlist *list)
 	initlist_add_neededs(obj->needed, list);
 
     /* Add the object to the init list. */
-    if (obj->init != (Elf_Addr)NULL)
+    if (obj->init != (Elf_Addr)NULL || obj->init_array != (Elf_Addr)NULL)
 	objlist_push_tail(list, obj);
 
     /* Add the object to the global fini list in the reverse order. */
-    if (obj->fini != (Elf_Addr)NULL)
+    if ((obj->fini != (Elf_Addr)NULL || obj->fini_array != (Elf_Addr)NULL))
 	objlist_push_head(&list_fini, obj);
 }
 
@@ -1438,6 +1474,8 @@ objlist_call_fini(Objlist *list)
 {
     Objlist_Entry *elm;
     char *saved_msg;
+    Elf_Addr *fini_addr;
+    int index;
 
     /*
      * Preserve the current error message since a fini function might
@@ -1446,14 +1484,59 @@ objlist_call_fini(Objlist *list)
     saved_msg = errmsg_save();
     STAILQ_FOREACH(elm, list, link) {
 	if (elm->obj->refcount == 0) {
-	    dbg("calling fini function for %s at %p", elm->obj->path,
-	        (void *)elm->obj->fini);
-	    LD_UTRACE(UTRACE_FINI_CALL, elm->obj, (void *)elm->obj->fini, 0, 0,
-		elm->obj->path);
-	    call_initfini_pointer(elm->obj, elm->obj->fini);
+           /*
+            * It is legal to have both DT_FINI and DT_FINI_ARRAY defined.  When this
+            * happens, DT_FINI_ARRAY is processed first, and it is also processed
+            * backwards.  It is possible to encounter DT_FINI_ARRAY elements with
+            * values of 0 or 1, but they need to be ignored.
+            */
+           fini_addr = (Elf_Addr *)elm->obj->fini_array;
+           if (fini_addr != (Elf_Addr)NULL) {
+               for (index = elm->obj->fini_array_num - 1; index >= 0; index--) {
+                   if (fini_addr[index] != 0 && fini_addr[index] != 1) {
+                       dbg("DSO Array: calling fini function for %s at %p",
+                           elm->obj->path, (void *)fini_addr[index]);
+                       LD_UTRACE(UTRACE_FINI_CALL, elm->obj,
+                           (void *)fini_addr[index], 0, 0, elm->obj->path);
+                       call_initfini_pointer(elm->obj, fini_addr[index]);
+                   }
+               }
+           }
+           if (elm->obj->fini != (Elf_Addr)NULL) {
+               dbg("DSO: calling fini function for %s at %p", elm->obj->path,
+                   (void *)elm->obj->fini);
+               LD_UTRACE(UTRACE_FINI_CALL, elm->obj, (void *)elm->obj->fini,
+                   0, 0, elm->obj->path);
+               call_initfini_pointer(elm->obj, elm->obj->fini);
+           }
 	}
     }
     errmsg_restore(saved_msg);
+}
+
+/*
+ * If the main program is defined with a .preinit_array section, call
+ * each function in order.  This must occur before the initialization
+ * of any shared object or the main program.
+ */
+static void
+preinitialize_main_object (void)
+{
+    Elf_Addr *init_addr;
+    int index;
+
+    init_addr = (Elf_Addr *)obj_main->preinit_array;
+    if (init_addr == (Elf_Addr)NULL)
+      return;
+
+    for (index = 0; index < obj_main->preinit_array_num; index++)
+      if (init_addr[index] != 0 && init_addr[index] != 1) {
+          dbg("Calling preinit array function for %s at %p",
+              (void *) obj_main->path, (void *)init_addr[index]);
+          LD_UTRACE(UTRACE_INIT_CALL, obj_main, (void *)init_addr[index],
+              0, 0, obj_main->path);
+          call_array_pointer(init_addr[index], glac, glav, environ);
+      }
 }
 
 /*
@@ -1466,6 +1549,8 @@ objlist_call_init(Objlist *list)
 {
     Objlist_Entry *elm;
     char *saved_msg;
+    Elf_Addr *init_addr;
+    int index;
 
     /*
      * Preserve the current error message since an init function might
@@ -1473,11 +1558,30 @@ objlist_call_init(Objlist *list)
      */
     saved_msg = errmsg_save();
     STAILQ_FOREACH(elm, list, link) {
-	dbg("calling init function for %s at %p", elm->obj->path,
-	    (void *)elm->obj->init);
-	LD_UTRACE(UTRACE_INIT_CALL, elm->obj, (void *)elm->obj->init, 0, 0,
-	    elm->obj->path);
-	call_initfini_pointer(elm->obj, elm->obj->init);
+        /*
+         * It is legal to have both DT_INIT and DT_INIT_ARRAY defined.  When
+         * this happens, DT_INIT is processed first.  It is possible to
+         * encounter DT_INIT_ARRAY elements with values of 0 or 1, but they
+         * need to be ignored.
+         */
+         if (elm->obj->init != (Elf_Addr)NULL) {
+	    dbg("DSO: calling init function for %s at %p", elm->obj->path,
+	        (void *)elm->obj->init);
+	    LD_UTRACE(UTRACE_INIT_CALL, elm->obj, (void *)elm->obj->init,
+	        0, 0, elm->obj->path);
+	    call_initfini_pointer(elm->obj, elm->obj->init);
+	}
+	init_addr = (Elf_Addr *)elm->obj->init_array;
+	if (init_addr != (Elf_Addr)NULL) {
+	    for (index = 0; index < elm->obj->init_array_num; index++)
+		if (init_addr[index] != 0 && init_addr[index] != 1) {
+		    dbg("DSO Array: calling init function for %s at %p",
+			elm->obj->path, (void *)init_addr[index]);
+		    LD_UTRACE(UTRACE_INIT_CALL, elm->obj,
+			(void *)init_addr[index], 0, 0, elm->obj->path);
+		    call_array_pointer(init_addr[index], glac, glav, environ);
+		}
+	}
     }
     errmsg_restore(saved_msg);
 }
@@ -1649,6 +1753,7 @@ rtld_exit(void)
     if (!libmap_disable)
         lm_fini();
 }
+
 
 static void *
 path_enumerate(const char *path, path_enum_proc callback, void *arg)

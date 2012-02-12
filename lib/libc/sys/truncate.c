@@ -48,7 +48,7 @@ truncate(path, length)
 	off_t	length;
 {
 
-	if (__getosreldate() >= 700051)
+	if (__getosreldate() >= 4013)
 		return(__sys_truncate(path, length));
 	else
 		return(__sys_freebsd6_truncate(path, 0, length));

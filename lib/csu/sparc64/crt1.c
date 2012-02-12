@@ -54,6 +54,13 @@ extern void _start(char **, void (*)(void), struct Struct_Obj_Entry *,
     struct ps_strings *);
 extern void __sparc_utrap_setup(void);
 
+extern void (*__preinit_array_start []) (int, char **, char **) __dso_hidden;
+extern void (*__preinit_array_end   []) (int, char **, char **) __dso_hidden;
+extern void (*__init_array_start    []) (int, char **, char **) __dso_hidden;
+extern void (*__init_array_end      []) (int, char **, char **) __dso_hidden;
+extern void (*__fini_array_start    []) (void) __dso_hidden;
+extern void (*__fini_array_end      []) (void) __dso_hidden;
+
 #ifdef GCRT
 extern void _mcleanup(void);
 extern void monstartup(void *, void *);
@@ -86,6 +93,7 @@ _start(char **ap, void (*cleanup)(void), struct Struct_Obj_Entry *obj __unused,
 	char **argv;
 	char **env;
 	const char *s;
+	size_t n, array_size;
 
 	argc = *(long *)(void *)ap;
 	argv = ap + 1;
@@ -108,10 +116,26 @@ _start(char **ap, void (*cleanup)(void), struct Struct_Obj_Entry *obj __unused,
 	atexit(_mcleanup);
 #endif
 	atexit(_fini);
+	array_size = __fini_array_end - __fini_array_start;
+	for (n = 0; n < array_size; n++)
+		atexit(*__fini_array_start [n]);
 #ifdef GCRT
 	monstartup(&eprol, &etext);
 #endif
+	if (&_DYNAMIC == NULL) {
+		/*
+		 * For static executables preinit happens right before init.
+		 * Dynamic executable preinit arrays are handled by rtld
+		 * before any DSOs are initialized.
+		 */
+		array_size = __preinit_array_end - __preinit_array_start;
+		for (n = 0; n < array_size; n++)
+			(*__preinit_array_start [n])(argc, argv, env);
+	}
 	_init();
+	array_size = __init_array_end - __init_array_start;
+	for (n = 0; n < array_size; n++)
+		(*__init_array_start [n])(argc, argv, env);
 	exit( main(argc, argv, env) );
 }
 
@@ -121,4 +145,4 @@ __asm__("eprol:");
 __asm__(".previous");
 #endif
 
-__asm__(".ident\t\"$MidnightBSD$\"");
+__asm__(".ident\t\"$MidnightBSD: src/lib/csu/sparc64/crt1.c,v 1.3 2008/10/30 20:52:19 laffer1 Exp $\"");

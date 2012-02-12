@@ -50,7 +50,7 @@ pread(fd, buf, nbyte, offset)
 	off_t	offset;
 {
 
-	if (__getosreldate() >= 700051)
+	if (__getosreldate() >= 4013)
 		return (__sys_pread(fd, buf, nbyte, offset));
 	else
 		return (__sys_freebsd6_pread(fd, buf, nbyte, 0, offset));

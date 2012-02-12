@@ -49,7 +49,7 @@ lseek(fd, offset, whence)
 	int	whence;
 {
 
-	if (__getosreldate() >= 700051)
+	if (__getosreldate() >= 4013)
 		return(__sys_lseek(fd, offset, whence));
 	else
 		return(__sys_freebsd6_lseek(fd, 0, offset, whence));

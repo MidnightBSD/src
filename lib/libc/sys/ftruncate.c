@@ -48,7 +48,7 @@ ftruncate(fd, length)
 	off_t	length;
 {
 
-	if (__getosreldate() >= 700051)
+	if (__getosreldate() >= 4013)
 		return(__sys_ftruncate(fd, length));
 	else
 		return(__sys_freebsd6_ftruncate(fd, 0, length));

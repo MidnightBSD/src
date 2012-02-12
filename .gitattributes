@@ -29396,6 +29396,8 @@ lib/libc/sys/chroot.2 -text
 lib/libc/sys/clock_gettime.2 -text
 lib/libc/sys/close.2 -text
 lib/libc/sys/connect.2 -text
+lib/libc/sys/cpuset.2 -text
+lib/libc/sys/cpuset_getaffinity.2 -text
 lib/libc/sys/dup.2 -text
 lib/libc/sys/execve.2 -text
 lib/libc/sys/extattr_get_file.2 -text

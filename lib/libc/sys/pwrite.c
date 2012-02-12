@@ -49,7 +49,7 @@ pwrite(fd, buf, nbyte, offset)
 	size_t	nbyte;
 	off_t	offset;
 {
-	if (__getosreldate() >= 700051)
+	if (__getosreldate() >= 4013)
 		return (__sys_pwrite(fd, buf, nbyte, offset));
 	else
 		return (__sys_freebsd6_pwrite(fd, buf, nbyte, 0, offset));
