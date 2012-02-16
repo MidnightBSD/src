@@ -34,7 +34,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	.text
-	.asciz "$Id: sigsetjmp.S,v 1.1.1.3 2008-10-30 20:39:05 laffer1 Exp $"
+	.asciz "$Id: sigsetjmp.S,v 1.2 2012-02-16 18:41:04 laffer1 Exp $"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
 __FBSDID("$FreeBSD: src/lib/libc/amd64/gen/sigsetjmp.S,v 1.29 2007/01/09 00:27:48 imp Exp $");
@@ -62,6 +62,7 @@ ENTRY(sigsetjmp)
 	movq	$1,%rdi			/* SIG_BLOCK       */
 	movq	$0,%rsi			/* (sigset_t*)set  */
 	leaq	72(%rcx),%rdx		/* 9,10 (sigset_t*)oset */
+	/* stack is 16-byte aligned */
 	call	PIC_PLT(CNAME(_sigprocmask))
 	popq	%rdi
 2:	movq	%rdi,%rcx
@@ -89,7 +90,9 @@ ENTRY(__siglongjmp)
 	movq	$3,%rdi			/* SIG_SETMASK     */
 	leaq	72(%rdx),%rsi		/* (sigset_t*)set  */
 	movq	$0,%rdx			/* (sigset_t*)oset */
+	subq    $0x8,%rsp		/* make the stack 16-byte aligned */
 	call	PIC_PLT(CNAME(_sigprocmask))
+	addq    $0x8,%rsp
 	popq	%rsi
 	popq	%rdi			/* jmpbuf */
 2:	movq	%rdi,%rdx
