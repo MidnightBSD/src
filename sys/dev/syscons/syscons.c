@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/syscons.c,v 1.12 2011/07/10 20:36:55 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/syscons/syscons.c,v 1.13 2012/02/16 22:44:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992-1998 Søren Schmidt
  * All rights reserved.
@@ -133,8 +133,8 @@ static	void		none_saver(sc_softc_t *sc, int blank) { }
 static	void		(*current_saver)(sc_softc_t *, int) = none_saver;
 #endif
 
-static SYSCTL_NODE(_hw, OID_AUTO, syscons, CTLFLAG_RD, 0, "syscons");
-static SYSCTL_NODE(_hw_syscons, OID_AUTO, saver, CTLFLAG_RD, 0, "saver");
+SYSCTL_NODE(_hw, OID_AUTO, syscons, CTLFLAG_RD, 0, "syscons");
+SYSCTL_NODE(_hw_syscons, OID_AUTO, saver, CTLFLAG_RD, 0, "saver");
 SYSCTL_INT(_hw_syscons_saver, OID_AUTO, keybonly, CTLFLAG_RW,
     &sc_saver_keyb_only, 0, "screen saver interrupted by input only");
 SYSCTL_INT(_hw_syscons, OID_AUTO, bell, CTLFLAG_RW, &enable_bell, 
