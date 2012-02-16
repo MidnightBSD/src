@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/syscons.c,v 1.11 2008/12/02 22:43:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/syscons/syscons.c,v 1.12 2011/07/10 20:36:55 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992-1998 Søren Schmidt
  * All rights reserved.
@@ -133,8 +133,8 @@ static	void		none_saver(sc_softc_t *sc, int blank) { }
 static	void		(*current_saver)(sc_softc_t *, int) = none_saver;
 #endif
 
-SYSCTL_NODE(_hw, OID_AUTO, syscons, CTLFLAG_RD, 0, "syscons");
-SYSCTL_NODE(_hw_syscons, OID_AUTO, saver, CTLFLAG_RD, 0, "saver");
+static SYSCTL_NODE(_hw, OID_AUTO, syscons, CTLFLAG_RD, 0, "syscons");
+static SYSCTL_NODE(_hw_syscons, OID_AUTO, saver, CTLFLAG_RD, 0, "saver");
 SYSCTL_INT(_hw_syscons_saver, OID_AUTO, keybonly, CTLFLAG_RW,
     &sc_saver_keyb_only, 0, "screen saver interrupted by input only");
 SYSCTL_INT(_hw_syscons, OID_AUTO, bell, CTLFLAG_RW, &enable_bell, 
@@ -182,9 +182,9 @@ static scr_stat *sc_get_stat(struct cdev *devptr);
 static void scterm(int unit, int flags);
 static void scshutdown(void *arg, int howto);
 static u_int scgetc(sc_softc_t *sc, u_int flags);
+static void sc_puts(scr_stat *scp, u_char *buf, int len);
 #define SCGETC_CN	1
 #define SCGETC_NONBLOCK	2
-static int sccngetch(int flags);
 static void sccnupdate(scr_stat *scp);
 static scr_stat *alloc_scp(sc_softc_t *sc, int vty);
 static void init_scp(sc_softc_t *sc, int vty, scr_stat *scp);
@@ -1577,12 +1577,6 @@ sc_cnputc(struct consdev *cd, int c)
 static int
 sc_cngetc(struct consdev *cd)
 {
-    return sccngetch(SCGETC_NONBLOCK);
-}
-
-static int
-sccngetch(int flags)
-{
     static struct fkeytab fkey;
     static int fkeycp;
     scr_stat *scp;
@@ -1623,7 +1617,7 @@ sccngetch(int flags)
     kbd_ioctl(scp->sc->kbd, KDSKBMODE, (caddr_t)&scp->kbd_mode);
 
     kbd_poll(scp->sc->kbd, TRUE);
-    c = scgetc(scp->sc, SCGETC_CN | flags);
+    c = scgetc(scp->sc, SCGETC_CN | SCGETC_NONBLOCK);
     kbd_poll(scp->sc->kbd, FALSE);
 
     scp->kbd_mode = cur_mode;
@@ -2510,7 +2504,7 @@ exchange_scr(sc_softc_t *sc)
     mark_all(scp);
 }
 
-void
+static void
 sc_puts(scr_stat *scp, u_char *buf, int len)
 {
     int need_unlock = 0;
