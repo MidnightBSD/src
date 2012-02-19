@@ -49,11 +49,12 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_log.c,v 1.64 2005/02/27 22:01:09 phk Exp $
 #include <sys/poll.h>
 #include <sys/filedesc.h>
 #include <sys/sysctl.h>
+#include <sys/condvar.h>
+
 
 #define LOG_RDPRI	(PZERO + 1)
 
 #define LOG_ASYNC	0x04
-#define LOG_RDWAIT	0x08
 
 static	d_open_t	logopen;
 static	d_close_t	logclose;
@@ -66,7 +67,6 @@ static	void logtimeout(void *arg);
 
 static struct cdevsw log_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
 	.d_open =	logopen,
 	.d_close =	logclose,
 	.d_read =	logread,
@@ -93,7 +93,8 @@ static struct logsoftc {
 	struct	callout sc_callout;	/* callout to wakeup syslog  */
 } logsoftc;
 
-int		log_open;			/* also used in log() */
+int			log_open;	/* also used in log() */
+static struct cv	log_wakeup;
 struct mtx		msgbuf_lock;
 MTX_SYSINIT(msgbuf_lock, &msgbuf_lock, "msgbuf lock", MTX_DEF);
 
@@ -156,13 +157,11 @@ logread(struct cdev *dev, struct uio *uio, int flag)
 			mtx_unlock(&msgbuf_lock);
 			return (EWOULDBLOCK);
 		}
-		logsoftc.sc_state |= LOG_RDWAIT;
-		if ((error = tsleep(mbp, LOG_RDPRI | PCATCH, "klog", 0))) {
+		if ((error = cv_wait_sig(&log_wakeup, &msgbuf_lock)) != 0) {
 			mtx_unlock(&msgbuf_lock);
 			return (error);
 		}
 	}
-	logsoftc.sc_state &= ~LOG_RDWAIT;
 
 	while (uio->uio_resid > 0) {
 		l = imin(sizeof(buf), uio->uio_resid);
@@ -250,10 +249,7 @@ logtimeout(void *arg)
 	KNOTE_LOCKED(&logsoftc.sc_selp.si_note, 0);
 	if ((logsoftc.sc_state & LOG_ASYNC) && logsoftc.sc_sigio != NULL)
 		pgsigio(&logsoftc.sc_sigio, SIGIO, 0);
-	if (logsoftc.sc_state & LOG_RDWAIT) {
-		wakeup(msgbufp);
-		logsoftc.sc_state &= ~LOG_RDWAIT;
-	}
+	cv_broadcastpri(&log_wakeup, LOG_RDPRI);
 	callout_reset(&logsoftc.sc_callout, hz / log_wakeups_per_second,
 	    logtimeout, NULL);
 }
@@ -308,6 +304,7 @@ static void
 log_drvinit(void *unused)
 {
 
+	cv_init(&log_wakeup, "klog");
 	callout_init_mtx(&logsoftc.sc_callout, &msgbuf_lock, 0);
 	knlist_init_mtx(&logsoftc.sc_selp.si_note, &msgbuf_lock);
 	make_dev(&log_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600, "klog");
