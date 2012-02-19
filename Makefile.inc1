@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.33 2012/02/19 22:47:38 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.34 2012/02/19 22:51:18 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -12,6 +12,7 @@
 #	-DNO_PORTSUPDATE do not update ports in ${MAKE} update
 #	-DNO_DOCUPDATE do not update doc in ${MAKE} update
 #	LOCAL_DIRS="list of dirs" to add additional dirs to the SUBDIR list
+#	LOCAL_TOOL_DIRS="list of dirs" to add additional dirs to the build-tools#	    list
 #	TARGET="machine" to crossbuild world for a different machine type
 
 #
@@ -100,6 +101,7 @@ CLEANDIR=	cleandir
 .endif
 
 BUILDENV_SHELL?=/bin/sh
+LOCAL_TOOL_DIRS?=
 
 CVS?=		cvs
 CVSFLAGS?=	-r . -P -d -I!
@@ -1002,6 +1004,7 @@ build-tools:
     bin/csh \
     bin/sh \
     ${_rescue} \
+    ${LOCAL_TOOL_DIRS} \
     lib/ncurses/ncurses \
     lib/ncurses/ncursesw \
     ${_share} \
