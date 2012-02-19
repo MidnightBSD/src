@@ -22,7 +22,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/contrib/gcc4/config/i386/freebsd.h,v 1.4 2009/05/26 04:29:35 laffer1 Exp $ */
 /* $FreeBSD: src/contrib/gcc/config/i386/freebsd.h,v 1.73 2007/05/19 02:30:20 kan Exp $ */
 
 #undef  CC1_SPEC
@@ -86,11 +86,6 @@ Boston, MA 02110-1301, USA.  */
 #define TARGET_VERSION	fprintf (stderr, " (i386 FreeBSD/ELF)");
 
 #define TARGET_ELF			1
-
-/* This goes away when the math emulator is fixed.  */
-#undef  TARGET_SUBTARGET_DEFAULT
-#define TARGET_SUBTARGET_DEFAULT \
-  (MASK_80387 | MASK_IEEE_FP | MASK_FLOAT_RETURNS | MASK_NO_FANCY_MATH_387)
 
 /* Don't default to pcc-struct-return, we want to retain compatibility with
    older gcc versions AND pcc-struct-return is nonreentrant.
