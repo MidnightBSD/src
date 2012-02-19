@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.31 2011/10/22 19:19:33 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.32 2011/12/02 13:17:21 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -798,6 +798,7 @@ buildkernel:
 	@echo ">>> stage 2.3: build tools"
 	@echo "--------------------------------------------------------------"
 	cd ${KRNLOBJDIR}/${_kernel}; \
+	    PATH=${BPATH}:${PATH} \
 	    MAKESRCPATH=${KERNSRCDIR}/dev/aic7xxx/aicasm \
 	    ${MAKE} SSP_CFLAGS= -DNO_CPU_CFLAGS -DNO_CTF \
 	    -f ${KERNSRCDIR}/dev/aic7xxx/aicasm/Makefile
@@ -805,6 +806,7 @@ buildkernel:
 .if !defined(MODULES_WITH_WORLD) && !defined(NO_MODULES) && exists(${KERNSRCDIR}/modules)
 .for target in obj depend all
 	cd ${KERNSRCDIR}/modules/aic7xxx/aicasm; \
+	    PATH=${BPATH}:${PATH} \
 	    MAKEOBJDIRPREFIX=${KRNLOBJDIR}/${_kernel}/modules \
 	    ${MAKE} SSP_CFLAGS= -DNO_CPU_CFLAGS -DNO_CTF ${target}
 .endfor
