@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.2 2009/05/22 00:51:15 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.66 2007/05/19 04:25:56 kan Exp $
 
 .include "../Makefile.inc"
@@ -14,7 +14,7 @@ GCCLIB=	${.CURDIR}/../../../../contrib/gcclibs
 
 # Machine description.
 MD_FILE=	${GCCDIR}/config/${GCC_CPU}/${GCC_CPU}.md
-GCC_TARGET=	${TARGET_ARCH}-undermydesk-freebsd
+GCC_TARGET=	${TARGET_ARCH}-midnightbsd-freebsd
 
 CFLAGS+=	-DIN_GCC -DHAVE_CONFIG_H
 CFLAGS+=	-DPREFIX=\"${TOOLS_PREFIX}/usr\"
