@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.35 2012/02/19 22:55:13 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.36 2012/02/19 22:59:20 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -264,7 +264,7 @@ LIB32CPUTYPE=	k8
 .else
 LIB32CPUTYPE=	${TARGET_CPUTYPE}
 .endif
-LIB32FLAGS=	-m32 -march=${LIB32CPUTYPE} -mfancy-math-387 -DCOMPAT_32BIT \
+LIB32FLAGS=	-m32 -march=${LIB32CPUTYPE} -DCOMPAT_32BIT \
 		-iprefix ${LIB32TMP}/usr/ \
 		-L${LIB32TMP}/usr/lib32 \
 		-B${LIB32TMP}/usr/lib32
