@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/user.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -89,13 +89,7 @@
 #ifdef __arm__
 #define	KINFO_PROC_SIZE	792
 #endif
-#ifdef __ia64__
-#define	KINFO_PROC_SIZE 1088
-#endif
 #ifdef __i386__
-#define	KINFO_PROC_SIZE	768
-#endif
-#ifdef __powerpc__
 #define	KINFO_PROC_SIZE	768
 #endif
 #ifdef __sparc64__

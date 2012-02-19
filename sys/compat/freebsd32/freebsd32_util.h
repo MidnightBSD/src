@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_util.h,v 1.2 2008/12/03 00:24:35 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998-1999 Andrew Gallatin
  * All rights reserved.
@@ -45,7 +45,7 @@ struct freebsd32_ps_strings {
 	int	ps_nenvstr;	/* the number of environment strings */
 };
 
-#if defined(__amd64__) || defined(__ia64__)
+#if defined(__amd64__)
 #include <compat/ia32/ia32_util.h>
 #endif
 

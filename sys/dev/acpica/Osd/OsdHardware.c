@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/Osd/OsdHardware.c,v 1.3 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -55,10 +55,6 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdHardware.c,v 1.22 2007/05/31 00:52
 
 #ifdef __i386__
 #define ACPI_BUS_SPACE_IO	I386_BUS_SPACE_IO
-#define ACPI_BUS_HANDLE		0
-#endif
-#ifdef __ia64__
-#define ACPI_BUS_SPACE_IO	IA64_BUS_SPACE_IO
 #define ACPI_BUS_HANDLE		0
 #endif
 #ifdef __amd64__

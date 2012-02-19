@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/sysctl.h,v 1.9 2011/12/29 02:33:28 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/sysctl.h,v 1.10 2011/12/29 03:26:55 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -126,7 +126,7 @@ struct ctlname {
 #define REQ_WIRED	2	/* locked and wired */
 
 /* definitions for sysctl_req 'flags' member */
-#if defined(__amd64__) || defined(__ia64__)
+#if defined(__amd64__)
 #define	SCTL_MASK32	1	/* 32 bit emulation */
 #endif
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/kern/subr_param.c,v 1.3 2011/11/27 03:39:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 1980, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_param.c,v 1.73.2.7 2010/08/27 18:55:48 jhb
  */
 
 #ifndef HZ
-#  if defined(__amd64__) || defined(__i386__) || defined(__ia64__) || defined(__sparc64__)
+#  if defined(__amd64__) || defined(__i386__) || defined(__sparc64__)
 #    define	HZ 1000
 #  else
 #    define	HZ 100

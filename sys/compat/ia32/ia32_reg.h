@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/ia32/ia32_reg.h,v 1.2 2008/12/03 00:24:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -90,13 +90,6 @@ struct env87 {
 	int	en_foo;		/* floating operand offset */
 	int	en_fos;		/* floating operand segment selector */
 };
-
-#ifdef __ia64__
-/* Layout of an x87 fpu register (amd64 gets this elsewhere) */
-struct fpacc87 {
-	u_char  fp_bytes[10];
-};
-#endif
 
 /* Floating point context */
 struct save87 {

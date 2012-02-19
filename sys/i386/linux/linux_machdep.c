@@ -681,7 +681,6 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 	/*
 	 * PROT_READ, PROT_WRITE, or PROT_EXEC implies PROT_READ and PROT_EXEC
 	 * on Linux/i386. We do this to ensure maximum compatibility.
-	 * Linux/ia64 does the same in i386 emulation mode.
 	 */
 	bsd_args.prot = prot;
 	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))

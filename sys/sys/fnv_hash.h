@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/fnv_hash.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Fowler / Noll / Vo Hash (FNV Hash)
  * http://www.isthe.com/chongo/tech/comp/fnv/
@@ -59,7 +59,7 @@ static __inline Fnv64_t
 fnv_64_str(const char *str, Fnv64_t hval)
 {
 	const u_int8_t *s = (const u_int8_t *)str;
-	u_register_t c;		 /* 32 bit on i386, 64 bit on alpha,ia64 */
+	u_register_t c;		 /* 32 bit on i386 */
 
 	while ((c = *s++) != 0) {
 		hval *= FNV_64_PRIME;

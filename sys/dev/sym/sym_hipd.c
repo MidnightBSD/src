@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/sym/sym_hipd.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  *  Device driver optimized for the Symbios/LSI 53C896/53C895A/53C1010 
  *  PCI-SCSI controllers.
@@ -130,10 +130,6 @@ typedef	u_int32_t u32;
 
 #if	defined	__i386__ || defined __amd64__
 #define MEMORY_BARRIER()	do { ; } while(0)
-#elif	defined	__powerpc__
-#define MEMORY_BARRIER()	__asm__ volatile("eieio; sync" : : : "memory")
-#elif	defined	__ia64__
-#define MEMORY_BARRIER()	__asm__ volatile("mf.a; mf" : : : "memory")
 #elif	defined	__sparc64__
 #define MEMORY_BARRIER()	__asm__ volatile("membar #Sync" : : : "memory")
 #else

@@ -212,7 +212,7 @@ thread_fini(void *mem, int size)
  * For a newly created process,
  * link up all the structures and its initial threads etc.
  * called from:
- * {arch}/{arch}/machdep.c   ia64_init(), init386() etc.
+ * {arch}/{arch}/machdep.c   init386() etc.
  * proc_dtor() (should go away)
  * proc_init()
  */

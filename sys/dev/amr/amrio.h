@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/amr/amrio.h,v 1.2 2008/12/02 02:24:31 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Michael Smith
  * All rights reserved.
@@ -109,7 +109,7 @@ struct amr_user_ioctl {
 
 #define AMR_IO_COMMAND	_IOWR('A', 0x201, struct amr_user_ioctl)
 
-#if defined(__amd64__) || defined(__ia64__)
+#if defined(__amd64__)
 
 struct amr_user_ioctl32 {
     unsigned char	au_cmd[32];	/* command text from userspace */

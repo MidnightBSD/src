@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/arcmsr/arcmsr.h,v 1.2 2008/12/02 02:24:32 laffer1 Exp $ */
 /*
 ***********************************************************************************************
 **        O.S   : FreeBSD
@@ -478,7 +478,7 @@ struct CommandControlBlock {
 	u_int32_t					cdb_shifted_phyaddr;     /* 504-507 */
 	u_int32_t					reserved1;               /* 508-511*/
 	/*  ======================512+32 bytes============================  */
-#if defined(__x86_64__) || defined(__amd64__) || defined(__ia64__) || defined(__sparc64__) || defined(__powerpc__)
+#if defined(__x86_64__) || defined(__amd64__) || defined(__sparc64__)
 		union ccb *				pccb;                    /* 512-515 516-519 pointer of freebsd scsi command */
 		struct AdapterControlBlock *		acb;                     /* 520-523 524-527 */
 		bus_dmamap_t				dm_segs_dmamap;          /* 528-531 532-535 */

@@ -36768,7 +36768,6 @@ sys/dev/hptrr/osm.h -text
 sys/dev/hwpmc/hwpmc_amd.c -text
 sys/dev/hwpmc/hwpmc_amd.h -text
 sys/dev/hwpmc/hwpmc_arm.c -text
-sys/dev/hwpmc/hwpmc_ia64.c -text
 sys/dev/hwpmc/hwpmc_logging.c -text
 sys/dev/hwpmc/hwpmc_mod.c -text
 sys/dev/hwpmc/hwpmc_pentium.c -text
@@ -37627,7 +37626,6 @@ sys/dev/uart/uart_cpu.h -text
 sys/dev/uart/uart_cpu_alpha.c -text
 sys/dev/uart/uart_cpu_amd64.c -text
 sys/dev/uart/uart_cpu_i386.c -text
-sys/dev/uart/uart_cpu_ia64.c -text
 sys/dev/uart/uart_cpu_pc98.c -text
 sys/dev/uart/uart_cpu_powerpc.c -text
 sys/dev/uart/uart_cpu_sparc64.c -text

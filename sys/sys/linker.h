@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/linker.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997-2000 Doug Rabson
  * All rights reserved.
@@ -181,7 +181,7 @@ void *linker_hwpmc_list_objects(void);
 #define MODINFOMD_ESYM		0x0004		/* end of symbols */
 #define MODINFOMD_DYNAMIC	0x0005		/* _DYNAMIC pointer */
 /* These values are MD on these two platforms */
-#if !defined(__sparc64__) && !defined(__powerpc__)
+#if !defined(__sparc64__)
 #define MODINFOMD_ENVP		0x0006		/* envp[] */
 #define MODINFOMD_HOWTO		0x0007		/* boothowto */
 #define MODINFOMD_KERNEND	0x0008		/* kernend */

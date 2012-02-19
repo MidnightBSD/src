@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/kdb.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/kdb.h,v 1.3 2011/07/10 17:01:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -104,7 +104,6 @@ extern const char * volatile kdb_why;
 #define	KDB_WHY_TRAPSIG		"trapsig"	/* Sun4v/Sparc fault. */
 #define	KDB_WHY_POWERFAIL	"powerfail"	/* Powerfail NMI. */
 #define	KDB_WHY_MAC		"mac"		/* MAC Framework. */
-#define	KDB_WHY_POWERPC		"powerpc"	/* Unhandled powerpc intr. */
 #define	KDB_WHY_UNIONFS		"unionfs"	/* Unionfs bug. */
 
 #endif /* !_SYS_KDB_H_ */

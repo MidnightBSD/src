@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ath/if_ath_pci.c,v 1.4 2011/09/30 01:20:04 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -141,7 +141,6 @@ ath_pci_attach(device_t dev)
 		device_printf(dev, "cannot map register space\n");
 		goto bad;
 	}
-	/* XXX uintptr_t is a bandaid for ia64; to be fixed */
 	sc->sc_st = (HAL_BUS_TAG)(uintptr_t) rman_get_bustag(psc->sc_sr);
 	sc->sc_sh = (HAL_BUS_HANDLE) rman_get_bushandle(psc->sc_sr);
 	/*

@@ -169,7 +169,7 @@ struct snd_mixer;
 
 /*
  * Automatically turn on 64bit arithmetic on suitable archs
- * (amd64 64bit, ia64, etc..) for wider 32bit samples / integer processing.
+ * (amd64 64bit, etc..) for wider 32bit samples / integer processing.
  */
 #if LONG_BIT >= 64
 #undef PCM_USE_64BIT_ARITH
