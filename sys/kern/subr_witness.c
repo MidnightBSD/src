@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_witness.c,v 1.6 2012-02-02 09:09:15 laffer1 Exp $
- *	and BSDI $Id: subr_witness.c,v 1.6 2012-02-02 09:09:15 laffer1 Exp $
+ *	from BSDI $Id: subr_witness.c,v 1.7 2012-02-19 16:58:44 laffer1 Exp $
+ *	and BSDI $Id: subr_witness.c,v 1.7 2012-02-19 16:58:44 laffer1 Exp $
  */
 
 /*
@@ -397,6 +397,11 @@ static struct witness_order_list_entry order_lists[] = {
 	{ "vnode interlock", &lock_class_mtx_sleep },
 	{ NULL, NULL },
 	/*
+	 * Sensors Framework
+	 */
+	{ "sensordev", &lock_class_mtx_sleep },
+	{ NULL, NULL },
+	/*
 	 * spin locks
 	 */
 #ifdef SMP
@@ -451,9 +456,6 @@ static struct witness_order_list_entry order_lists[] = {
 	{ "kse lock", &lock_class_mtx_spin },
 	{ "zombie lock", &lock_class_mtx_spin },
 	{ "ALD Queue", &lock_class_mtx_spin },
-#ifdef __ia64__
-	{ "MCA spin lock", &lock_class_mtx_spin },
-#endif
 #if defined(__i386__) || defined(__amd64__)
 	{ "pcicfg", &lock_class_mtx_spin },
 	{ "NDIS thread lock", &lock_class_mtx_spin },
