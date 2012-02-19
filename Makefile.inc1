@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.36 2012/02/19 22:59:20 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.37 2012/02/19 23:04:03 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -233,7 +233,7 @@ BMAKE=		MAKEOBJDIRPREFIX=${WORLDTMP} \
 		DESTDIR= \
 		BOOTSTRAPPING=${OSRELDATE} \
 		-DWITHOUT_HTML -DWITHOUT_INFO -DNO_LINT -DWITHOUT_MAN \
-		-DWITHOUT_NLS -DNO_PIC -DWITHOUT_PROFILE -DNO_SHARED \
+		-DWITHOUT_NLS -DNO_PIC -DNO_PROFILE -DNO_SHARED \
 		-DNO_CPU_CFLAGS -DNO_WARNS
 
 # build-tools stage
@@ -407,7 +407,7 @@ _libraries:
 	@echo "--------------------------------------------------------------"
 	${_+_}cd ${.CURDIR}; \
 	    ${WMAKE} -DNO_FSCHG -DWITHOUT_HTML -DWITHOUT_INFO -DNO_LINT \
-	    -DWITHOUT_MAN -DWITHOUT_NLS -DWITHOUT_PROFILE libraries
+	    -DWITHOUT_MAN -DWITHOUT_NLS -DNO_PROFILE libraries
 _depend:
 	@echo
 	@echo "--------------------------------------------------------------"
@@ -1180,8 +1180,8 @@ ${_lib}__PL: .PHONY
 		cd ${.CURDIR}/${_lib}; \
 		${MAKE} DIRPRFX=${_lib}/ obj; \
 		${MAKE} DIRPRFX=${_lib}/ depend; \
-		${MAKE} -DWITHOUT_PROFILE -DNO_PIC DIRPRFX=${_lib}/ all; \
-		${MAKE} -DWITHOUT_PROFILE -DNO_PIC DIRPRFX=${_lib}/ install
+		${MAKE} -DNO_PROFILE -DNO_PIC DIRPRFX=${_lib}/ all; \
+		${MAKE} -DNO_PROFILE -DNO_PIC DIRPRFX=${_lib}/ install
 .endif
 .endfor
 
