@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.3 2011/12/30 02:02:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.4 2012/01/04 03:34:07 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,6 +38,7 @@ __MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.3 2011/12/30 02:02:36 la
 #include <sys/sensors.h>
 
 struct mtx sensordev_lock;
+MTX_SYSINIT(sensordev_lock, &sensordev_lock, "sensordev lock", MTX_DEF);
 
 int			sensordev_count = 0;
 SLIST_HEAD(, ksensordev) sensordev_list = SLIST_HEAD_INITIALIZER(sensordev_list);
