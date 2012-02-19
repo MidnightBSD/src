@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.32 2011/12/02 13:17:21 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.33 2012/02/19 22:47:38 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -98,6 +98,8 @@ CLEANDIR=	clean cleandepend
 .else
 CLEANDIR=	cleandir
 .endif
+
+BUILDENV_SHELL?=/bin/sh
 
 CVS?=		cvs
 CVSFLAGS?=	-r . -P -d -I!
@@ -528,7 +530,7 @@ buildenvvars:
 
 buildenv:
 	@echo Entering world for ${TARGET_ARCH}:${TARGET}
-	@cd ${.CURDIR} && env ${WMAKEENV} sh || true
+	@cd ${.CURDIR} && env ${WMAKEENV} ${BUILDENV_SHELL} || true
 
 TOOLCHAIN_TGTS=	${WMAKE_TGTS:N_depend:Neverything:Nbuild32}
 toolchain: ${TOOLCHAIN_TGTS}
