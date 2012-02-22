@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/env/env.c,v 1.4 2009/04/16 01:27:14 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/env/env.c,v 1.5 2009/04/16 01:31:50 laffer1 Exp $ */
 /*-
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -11,10 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,7 +41,7 @@ static char sccsid[] = "@(#)env.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/env/env.c,v 1.16 2005/06/21 19:38:26 gad Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/env/env.c,v 1.21 2010/12/11 08:32:16 joel Exp $");
 
 #include <err.h>
 #include <errno.h>
@@ -112,12 +108,13 @@ main(int argc, char **argv)
 			fprintf(stderr, "#env clearing environ\n");
 	}
 	for (argv += optind; *argv && (p = strchr(*argv, '=')); ++argv) {
-		*p='\0';
-		p++;
 		if (env_verbosity)
-			fprintf(stderr, "#env setenv:\t'%s' = '%s'\n", *argv, p);
-		if (setenv(*argv, p, 1) != 0)
-			warn(NULL);
+			fprintf(stderr, "#env setenv:\t%s\n", *argv);
+		*p = '\0';
+		rtrn = setenv(*argv, p + 1, 1);
+		*p = '=';
+		if (rtrn == -1)
+			err(EXIT_FAILURE, "setenv %s", *argv);
 	}
 	if (*argv) {
 		if (altpath)
