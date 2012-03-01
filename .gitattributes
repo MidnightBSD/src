@@ -43494,6 +43494,14 @@ usr.sbin/config/main.c -text
 usr.sbin/config/mkheaders.c -text
 usr.sbin/config/mkmakefile.c -text
 usr.sbin/config/mkoptions.c -text
+usr.sbin/cpucontrol/Makefile -text
+usr.sbin/cpucontrol/amd.c -text
+usr.sbin/cpucontrol/amd.h -text
+usr.sbin/cpucontrol/cpucontrol.8 -text
+usr.sbin/cpucontrol/cpucontrol.c -text
+usr.sbin/cpucontrol/cpucontrol.h -text
+usr.sbin/cpucontrol/intel.c -text
+usr.sbin/cpucontrol/intel.h -text
 usr.sbin/cron/Makefile -text
 usr.sbin/cron/Makefile.inc -text
 usr.sbin/cron/cron/Makefile -text

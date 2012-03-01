@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.26 2011/11/27 16:54:37 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.27 2012/01/04 02:19:22 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -34,6 +34,7 @@ SUBDIR=	ac \
 	chroot \
 	ckdist \
 	config \
+	${_cpucontrol} \
 	cron \
 	crunch \
 	ctm \
@@ -303,6 +304,7 @@ _apm=		apm
 _apmd=		apmd
 _asf=		asf
 _btxld=		btxld
+_cpucontrol=	cpucontrol
 _kgmon=		kgmon
 _kgzip=		kgzip
 _lptcontrol=	lptcontrol
@@ -334,6 +336,7 @@ _acpi=		acpi
 _asf=		asf
 _boot0cfg=	boot0cfg
 _btxld=		btxld
+_cpucontrol=	cpucontrol
 _kgmon=		kgmon
 _lptcontrol=	lptcontrol
 .if ${MK_NCP} != "no"
