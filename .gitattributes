@@ -33055,6 +33055,7 @@ share/man/man4/cm.4 -text
 share/man/man4/cnw.4 -text
 share/man/man4/coda.4 -text
 share/man/man4/coretemp.4 -text
+share/man/man4/cpuctl.4 -text
 share/man/man4/cpufreq.4 -text
 share/man/man4/crypto.4 -text
 share/man/man4/cue.4 -text
