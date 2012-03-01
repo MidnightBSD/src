@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/cpufunc.h,v 1.148 2005/05/13 00:05:55 nectar Exp $
+ * $FreeBSD: src/sys/amd64/include/cpufunc.h,v 1.148.10.2 2010/01/26 20:58:09 jhb Exp $
  */
 
 /*
@@ -97,6 +97,13 @@ bsrq(u_long mask)
 
 	__asm __volatile("bsrq %1,%0" : "=r" (result) : "rm" (mask));
 	return (result);
+}
+
+static __inline void
+clflush(u_long addr)
+{
+
+	__asm __volatile("clflush %0" : : "m" (*(char *)addr));
 }
 
 static __inline void
@@ -335,6 +342,13 @@ static __inline void
 outw(u_int port, u_short data)
 {
 	__asm __volatile("outw %0,%%dx" : : "a" (data), "d" (port));
+}
+
+static __inline void
+mfence(void)
+{
+
+	__asm__ __volatile("mfence" : : : "memory");
 }
 
 static __inline void
@@ -776,5 +790,10 @@ void	wrmsr(u_int msr, u_int64_t newval);
 #endif	/* __GNUCLIKE_ASM && __CC_SUPPORTS___INLINE */
 
 void	reset_dbregs(void);
+
+#ifdef _KERNEL
+int	rdmsr_safe(u_int msr, uint64_t *val);
+int	wrmsr_safe(u_int msr, uint64_t newval);
+#endif
 
 #endif /* !_MACHINE_CPUFUNC_H_ */

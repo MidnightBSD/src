@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/amd64/support.S,v 1.128 2007/08/22 05:06:14 jkoshy Exp $
+ * $FreeBSD: src/sys/amd64/amd64/support.S,v 1.128.2.3 2010/08/30 18:50:18 delphij Exp $
  */
 
 #include "opt_ddb.h"
@@ -38,6 +38,7 @@
 
 #include "assym.s"
 
+	.data
 	ALIGN_DATA
 	.globl	intrcnt, eintrcnt
 intrcnt:
@@ -716,3 +717,47 @@ NON_GPROF_ENTRY(__bb_init_func)
 	movq	%rax,32(%rdi)
 	movq	%rdi,bbhead
 	NON_GPROF_RET
+
+/*
+ * Support for reading MSRs in the safe manner.
+ */
+ENTRY(rdmsr_safe)
+/* int rdmsr_safe(u_int msr, uint64_t *data) */
+	movq	PCPU(CURPCB),%r8
+	movq	$msr_onfault,PCB_ONFAULT(%r8)
+	movl	%edi,%ecx
+	rdmsr			/* Read MSR pointed by %ecx. Returns
+				   hi byte in edx, lo in %eax */
+	salq	$32,%rdx	/* sign-shift %rdx left */
+	movl	%eax,%eax	/* zero-extend %eax -> %rax */
+	orq	%rdx,%rax
+	movq	%rax,(%rsi)
+	xorq	%rax,%rax
+	movq	%rax,PCB_ONFAULT(%r8)
+	ret
+
+/*
+ * Support for writing MSRs in the safe manner.
+ */
+ENTRY(wrmsr_safe)
+/* int wrmsr_safe(u_int msr, uint64_t data) */
+	movq	PCPU(CURPCB),%r8
+	movq	$msr_onfault,PCB_ONFAULT(%r8)
+	movl	%edi,%ecx
+	movl	%esi,%eax
+	sarq	$32,%rsi
+	movl	%esi,%edx
+	wrmsr			/* Write MSR pointed by %ecx. Accepts
+				   hi byte in edx, lo in %eax. */
+	xorq	%rax,%rax
+	movq	%rax,PCB_ONFAULT(%r8)
+	ret
+
+/*
+ * MSR operations fault handler
+ */
+	ALIGN_TEXT
+msr_onfault:
+	movq	$0,PCB_ONFAULT(%r8)
+	movl	$EFAULT,%eax
+	ret
