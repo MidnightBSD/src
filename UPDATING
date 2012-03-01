@@ -1,4 +1,7 @@
-Updating Information for MidnightBSD users
+Updating Information for MidnightBSD users.
+
+20120229:
+	cpucontrol(8) and cpuctl(4) added from FreeBSD 7-stable.
 
 20120209:
 	mDNSResponder 333.10 imported
@@ -1186,4 +1189,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.155 2011/12/28 00:46:31 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.156 2012/02/10 02:25:38 laffer1 Exp $
