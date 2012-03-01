@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/mutex.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -26,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: mutex.h,v 1.3 2008-12-03 00:11:22 laffer1 Exp $
- * $FreeBSD: src/sys/sys/mutex.h,v 1.101.2.1 2007/11/21 02:21:55 attilio Exp $
+ *	from BSDI $Id: mutex.h,v 1.4 2012-03-01 23:59:31 laffer1 Exp $
+ * $FreeBSD: src/sys/sys/mutex.h,v 1.101.2.2 2010/10/12 15:48:27 jhb Exp $
  */
 
 #ifndef _SYS_MUTEX_H_
@@ -248,8 +248,10 @@ void	_thread_lock_flags(struct thread *, int, const char *, int);
 #define _rel_spin_lock(mp) do {						\
 	if (mtx_recursed((mp)))						\
 		(mp)->mtx_recurse--;					\
-	else								\
+	else {								\
+		lock_profile_release_lock(&(mp)->lock_object);          \
 		(mp)->mtx_lock = MTX_UNOWNED;				\
+	}                                                               \
 	spinlock_exit();						\
 } while (0)
 #endif /* SMP */

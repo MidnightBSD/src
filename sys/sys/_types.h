@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/_types.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/_types.h,v 1.4 2011/10/15 20:18:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_types.h,v 1.23 2006/03/01 06:29:34 davidxu Exp $
+ * $FreeBSD: src/sys/sys/_types.h,v 1.23.2.2 2009/05/20 22:10:34 kmacy Exp $
  */
 
 #ifndef _SYS__TYPES_H_
@@ -48,6 +48,7 @@ typedef	__uint32_t	__ino_t;	/* inode number */
 typedef	long		__key_t;	/* IPC key (for Sys V IPC) */
 typedef	__int32_t	__lwpid_t;	/* Thread ID (a.k.a. LWP) */
 typedef	__uint16_t	__mode_t;	/* permissions */
+typedef	int		__accmode_t;	/* access permissions */
 typedef	int		__nl_item;
 typedef	__uint16_t	__nlink_t;	/* link count */
 typedef	__int64_t	__off_t;	/* file offset */
@@ -64,7 +65,7 @@ typedef	__uint32_t	__uid_t;
 typedef	unsigned int	__useconds_t;	/* microseconds (unsigned) */
 typedef	int		__cpuwhich_t;	/* which parameter for cpuset. */
 typedef	int		__cpulevel_t;	/* level parameter for cpuset. */
-typedef	int		__cpusetid_t;	/* cpuset identifier. */
+typedef int		__cpusetid_t;	/* cpuset identifier. */
 
 /*
  * Unusual type definitions.

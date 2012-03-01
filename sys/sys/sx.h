@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/sx.h,v 1.4 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007 Attilio Rao <attilio@freebsd.org>
  * Copyright (c) 2001 Jason Evans <jasone@freebsd.org>
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: src/sys/sys/sx.h,v 1.37 2007/07/06 13:20:44 attilio Exp $
+ * $FreeBSD: src/sys/sys/sx.h,v 1.37.2.2 2009/10/12 15:56:27 attilio Exp $
  */
 
 #ifndef	_SYS_SX_H_
@@ -35,9 +35,10 @@
 
 #include <sys/_lock.h>
 #include <sys/_sx.h>
-#include <sys/lock_profile.h>
 
 #ifdef	_KERNEL
+#include <sys/pcpu.h>
+#include <sys/lock_profile.h>
 #include <machine/atomic.h>
 #endif
 
@@ -62,13 +63,6 @@
  *
  * When the lock is not locked by any thread, it is encoded as a
  * shared lock with zero waiters.
- *
- * A note about memory barriers.  Exclusive locks need to use the same
- * memory barriers as mutexes: _acq when acquiring an exclusive lock
- * and _rel when releasing an exclusive lock.  On the other side,
- * shared lock needs to use an _acq barrier when acquiring the lock
- * but, since they don't update any locked data, no memory barrier is
- * needed when releasing a shared lock.
  */
 
 #define	SX_LOCK_SHARED			0x01
@@ -201,7 +195,7 @@ __sx_sunlock(struct sx *sx, const char *file, int line)
 	uintptr_t x = sx->sx_lock;
 
 	if (x == (SX_SHARERS_LOCK(1) | SX_LOCK_EXCLUSIVE_WAITERS) ||
-	    !atomic_cmpset_ptr(&sx->sx_lock, x, x - SX_ONE_SHARER))
+	    !atomic_cmpset_rel_ptr(&sx->sx_lock, x, x - SX_ONE_SHARER))
 		_sx_sunlock_hard(sx, file, line);
 }
 
