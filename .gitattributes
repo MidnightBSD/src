@@ -36347,6 +36347,7 @@ sys/dev/cp/cpddk.c -text
 sys/dev/cp/cpddk.h -text
 sys/dev/cp/if_cp.c -text
 sys/dev/cp/ng_cp.h -text
+sys/dev/cpuctl/cpuctl.c -text
 sys/dev/cpufreq/ichss.c -text
 sys/dev/cs/if_cs.c -text
 sys/dev/cs/if_cs_isa.c -text
@@ -38853,6 +38854,7 @@ sys/modules/coda5/Makefile -text
 sys/modules/coff/Makefile -text
 sys/modules/coretemp/Makefile -text
 sys/modules/cp/Makefile -text
+sys/modules/cpuctl/Makefile -text
 sys/modules/cpufreq/Makefile -text
 sys/modules/crypto/Makefile -text
 sys/modules/cryptodev/Makefile -text
@@ -40428,6 +40430,7 @@ sys/sys/cons.h -text
 sys/sys/consio.h -text
 sys/sys/copyright.h -text
 sys/sys/cpu.h -text
+sys/sys/cpuctl.h -text
 sys/sys/cpuset.h -text
 sys/sys/ctype.h -text
 sys/sys/dataacq.h -text

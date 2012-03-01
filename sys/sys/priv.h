@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/priv.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/priv.h,v 1.3 2011/10/15 20:18:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 nCircle Network Security, Inc.
  * All rights reserved.
@@ -188,7 +188,7 @@
 #define	PRIV_SCHED_SETPOLICY	203	/* Can set scheduler policy. */
 #define	PRIV_SCHED_SET		204	/* Can set thread scheduler. */
 #define	PRIV_SCHED_SETPARAM	205	/* Can set thread scheduler params. */
-#define PRIV_SCHED_CPUSET	206	/* Can manipulate cpusets. */
+#define	PRIV_SCHED_CPUSET	206	/* Can manipulate cpusets. */
 
 /*
  * POSIX semaphore privileges.
@@ -279,6 +279,7 @@
 #define	PRIV_VFS_STICKYFILE	341	/* Can set sticky bit on file. */
 #define	PRIV_VFS_SYSFLAGS	342	/* Can modify system flags. */
 #define	PRIV_VFS_UNMOUNT	343	/* Can unmount(). */
+#define	PRIV_VFS_STAT		344	/* Override vnode MAC stat perm. */
 
 /*
  * Virtual memory privileges.
@@ -327,6 +328,7 @@
 #define	PRIV_NET_ADDIFADDR	413	/* Add protocol addr to interface. */
 #define	PRIV_NET_DELIFADDR	414	/* Delete protocol addr on interface. */
 #define	PRIV_NET_LAGG		415	/* Administer lagg interface. */
+#define	PRIV_NET_GIF		416	/* Administer gif interface. */
 
 /*
  * 802.11-related privileges.
@@ -376,6 +378,7 @@
 #define	PRIV_NETINET_ALIFETIME6	502	/* Administer IPv6 address lifetimes. */
 #define	PRIV_NETINET_IPSEC	503	/* Administer IPSEC. */
 #define	PRIV_NETINET_REUSEPORT	504	/* Allow [rapid] port/address reuse. */
+#define	PRIV_NETINET_SETHDROPTS	505	/* Set certain IPv4/6 header options. */
 
 /*
  * IPX/SPX privileges.
@@ -444,9 +447,25 @@
 #define	PRIV_MODULE15		615
 
 /*
+ * DDB(4) privileges.
+ */
+#define	PRIV_DDB_CAPTURE	620	/* Allow reading of DDB capture log. */
+
+/*
+ * Arla/nnpfs privileges.
+ */
+#define	PRIV_NNPFS_DEBUG	630	/* Perforn ARLA_VIOC_NNPFSDEBUG. */
+
+/*
+ * cpuctl(4) privileges.
+ */
+#define PRIV_CPUCTL_WRMSR	640	/* Write model-specific register. */
+#define PRIV_CPUCTL_UPDATE	641	/* Update cpu microcode. */
+
+/*
  * Track end of privilege list.
  */
-#define	_PRIV_HIGHEST		616
+#define	_PRIV_HIGHEST		642
 
 /*
  * Validate that a named privilege is known by the privilege system.  Invalid

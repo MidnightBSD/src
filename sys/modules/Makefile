@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.25 2011/10/20 15:22:15 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.26 2012/01/02 16:40:58 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -58,6 +58,7 @@ SUBDIR=	${_3dfx} \
 	${_coff} \
 	${_coretemp} \
 	${_cp} \
+	${_cpuctl} \
 	${_cpufreq} \
 	${_crypto} \
 	${_cryptodev} \
@@ -379,6 +380,7 @@ _cbb=		cbb
 _ce=		ce
 _coff=		coff
 _cp=		cp
+_cpuctl=	cpuctl
 _cpufreq=	cpufreq
 _cs=		cs
 _digi=		digi
@@ -493,6 +495,7 @@ _cardbus=	cardbus
 _cbb=		cbb
 _ciss=		ciss
 _coretemp=	coretemp
+_cpuctl=	cpuctl
 _cpufreq=	cpufreq
 _digi=		digi
 _drm=		drm
