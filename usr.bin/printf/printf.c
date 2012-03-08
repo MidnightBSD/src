@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -30,8 +26,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/*
+ * Important: This file is used both as a standalone program /usr/bin/printf
+ * and as a builtin for /bin/sh (#define SHELL).
+ */
 
-#if !defined(BUILTIN) && !defined(SHELL)
+#ifndef SHELL
 #ifndef lint
 static char const copyright[] =
 "@(#) Copyright (c) 1989, 1993\n\
@@ -44,77 +44,71 @@ static char const copyright[] =
 static char const sccsid[] = "@(#)printf.c	8.1 (Berkeley) 7/20/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/printf/printf.c,v 1.36 2005/05/21 09:55:07 ru Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
 
 #include <err.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <limits.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <wchar.h>
 
 #ifdef SHELL
 #define main printfcmd
 #include "bltin/bltin.h"
-#include "memalloc.h"
-#else
-#define	warnx1(a, b, c)		warnx(a)
-#define	warnx2(a, b, c)		warnx(a, b)
-#define	warnx3(a, b, c)		warnx(a, b, c)
+#include "error.h"
 #endif
 
-#ifndef BUILTIN
-#include <locale.h>
-#endif
-
-#define PF(f, func) do { \
-	char *b = NULL; \
-	if (havewidth) \
-		if (haveprec) \
+#define PF(f, func) do {						\
+	char *b = NULL;							\
+	if (havewidth)							\
+		if (haveprec)						\
 			(void)asprintf(&b, f, fieldwidth, precision, func); \
-		else \
-			(void)asprintf(&b, f, fieldwidth, func); \
-	else if (haveprec) \
-		(void)asprintf(&b, f, precision, func); \
-	else \
-		(void)asprintf(&b, f, func); \
-	if (b) { \
-		(void)fputs(b, stdout); \
-		free(b); \
-	} \
+		else							\
+			(void)asprintf(&b, f, fieldwidth, func);	\
+	else if (haveprec)						\
+		(void)asprintf(&b, f, precision, func);			\
+	else								\
+		(void)asprintf(&b, f, func);				\
+	if (b) {							\
+		(void)fputs(b, stdout);					\
+		free(b);						\
+	}								\
 } while (0)
 
 static int	 asciicode(void);
-static char	*doformat(char *, int *);
+static char	*printf_doformat(char *, int *);
 static int	 escape(char *, int, size_t *);
 static int	 getchr(void);
 static int	 getfloating(long double *, int);
 static int	 getint(int *);
-static int	 getquads(quad_t *, u_quad_t *, int);
+static int	 getnum(intmax_t *, uintmax_t *, int);
 static const char
 		*getstr(void);
-static char	*mkquad(char *, int);
+static char	*mknum(char *, char);
 static void	 usage(void);
 
 static char **gargv;
 
 int
-#ifdef BUILTIN
-progprintf(int argc, char *argv[])
-#else
 main(int argc, char *argv[])
-#endif
 {
 	size_t len;
 	int ch, chopped, end, rval;
 	char *format, *fmt, *start;
 
-#ifndef BUILTIN
-	(void) setlocale(LC_NUMERIC, "");
+#ifndef SHELL
+	(void) setlocale(LC_ALL, "");
+#endif
+#ifdef SHELL
+	optreset = 1; optind = 1; opterr = 0; /* initialize getopt */
 #endif
 	while ((ch = getopt(argc, argv, "")) != -1)
 		switch (ch) {
@@ -131,6 +125,9 @@ main(int argc, char *argv[])
 		return (1);
 	}
 
+#ifdef SHELL
+	INTOFF;
+#endif
 	/*
 	 * Basic algorithm is to scan the format string for conversion
 	 * specifications -- once one is found, find out if the field
@@ -153,9 +150,13 @@ main(int argc, char *argv[])
 					putchar('%');
 					fmt += 2;
 				} else {
-					fmt = doformat(fmt, &rval);
-					if (fmt == NULL)
+					fmt = printf_doformat(fmt, &rval);
+					if (fmt == NULL) {
+#ifdef SHELL
+						INTON;
+#endif
 						return (1);
+					}
 					end = 0;
 				}
 				start = fmt;
@@ -164,12 +165,19 @@ main(int argc, char *argv[])
 		}
 
 		if (end == 1) {
-			warnx1("missing format character", NULL, NULL);
+			warnx("missing format character");
+#ifdef SHELL
+			INTON;
+#endif
 			return (1);
 		}
 		fwrite(start, 1, fmt - start, stdout);
-		if (chopped || !*gargv)
+		if (chopped || !*gargv) {
+#ifdef SHELL
+			INTON;
+#endif
 			return (rval);
+		}
 		/* Restart at the beginning of the format string. */
 		fmt = format;
 		end = 1;
@@ -179,7 +187,7 @@ main(int argc, char *argv[])
 
 
 static char *
-doformat(char *start, int *rval)
+printf_doformat(char *start, int *rval)
 {
 	static const char skip1[] = "#'-+ 0";
 	static const char skip2[] = "0123456789";
@@ -218,7 +226,7 @@ doformat(char *start, int *rval)
 	} else
 		haveprec = 0;
 	if (!*fmt) {
-		warnx1("missing format character", NULL, NULL);
+		warnx("missing format character");
 		return (NULL);
 	}
 
@@ -236,7 +244,7 @@ doformat(char *start, int *rval)
 		mod_ldbl = 1;
 		fmt++;
 		if (!strchr("aAeEfFgG", *fmt)) {
-			warnx2("bad modifier L for %%%c", *fmt, NULL);
+			warnx("bad modifier L for %%%c", *fmt);
 			return (NULL);
 		}
 	} else {
@@ -252,24 +260,16 @@ doformat(char *start, int *rval)
 		char *p;
 		int getout;
 
-#ifdef SHELL
-		p = savestr(getstr());
-#else
 		p = strdup(getstr());
-#endif
 		if (p == NULL) {
-			warnx2("%s", strerror(ENOMEM), NULL);
+			warnx("%s", strerror(ENOMEM));
 			return (NULL);
 		}
 		getout = escape(p, 0, &len);
 		*(fmt - 1) = 's';
 		PF(start, p);
 		*(fmt - 1) = 'b';
-#ifdef SHELL
-		ckfree(p);
-#else
 		free(p);
-#endif
 		if (getout)
 			return (fmt);
 		break;
@@ -290,14 +290,14 @@ doformat(char *start, int *rval)
 	}
 	case 'd': case 'i': case 'o': case 'u': case 'x': case 'X': {
 		char *f;
-		quad_t val;
-		u_quad_t uval;
+		intmax_t val;
+		uintmax_t uval;
 		int signedconv;
 
 		signedconv = (convch == 'd' || convch == 'i');
-		if ((f = mkquad(start, convch)) == NULL)
+		if ((f = mknum(start, convch)) == NULL)
 			return (NULL);
-		if (getquads(&val, &uval, signedconv))
+		if (getnum(&val, &uval, signedconv))
 			*rval = 1;
 		if (signedconv)
 			PF(f, val);
@@ -320,7 +320,7 @@ doformat(char *start, int *rval)
 		break;
 	}
 	default:
-		warnx2("illegal format character %c", convch, NULL);
+		warnx("illegal format character %c", convch);
 		return (NULL);
 	}
 	*fmt = nextch;
@@ -328,7 +328,7 @@ doformat(char *start, int *rval)
 }
 
 static char *
-mkquad(char *str, int ch)
+mknum(char *str, char ch)
 {
 	static char *copy;
 	static size_t copy_size;
@@ -338,13 +338,9 @@ mkquad(char *str, int ch)
 	len = strlen(str) + 2;
 	if (len > copy_size) {
 		newlen = ((len + 1023) >> 10) << 10;
-#ifdef SHELL
-		if ((newcopy = ckrealloc(copy, newlen)) == NULL)
-#else
 		if ((newcopy = realloc(copy, newlen)) == NULL)
-#endif
 		{
-			warnx2("%s", strerror(ENOMEM), NULL);
+			warnx("%s", strerror(ENOMEM));
 			return (NULL);
 		}
 		copy = newcopy;
@@ -352,7 +348,7 @@ mkquad(char *str, int ch)
 	}
 
 	memmove(copy, str, len - 3);
-	copy[len - 3] = 'q';
+	copy[len - 3] = 'j';
 	copy[len - 2] = ch;
 	copy[len - 1] = '\0';
 	return (copy);
@@ -361,10 +357,10 @@ mkquad(char *str, int ch)
 static int
 escape(char *fmt, int percent, size_t *len)
 {
-	char *save, *store;
-	int value, c;
+	char *save, *store, c;
+	int value;
 
-	for (save = store = fmt; (c = *fmt); ++fmt, ++store) {
+	for (save = store = fmt; ((c = *fmt) != 0); ++fmt, ++store) {
 		if (c != '\\') {
 			*store = c;
 			continue;
@@ -407,7 +403,8 @@ escape(char *fmt, int percent, size_t *len)
 					/* octal constant */
 		case '0': case '1': case '2': case '3':
 		case '4': case '5': case '6': case '7':
-			for (c = *fmt == '0' ? 4 : 3, value = 0;
+			c = (!percent && *fmt == '0') ? 4 : 3;
+			for (value = 0;
 			    c-- && *fmt >= '0' && *fmt <= '7'; ++fmt) {
 				value <<= 3;
 				value += *fmt - '0';
@@ -417,7 +414,7 @@ escape(char *fmt, int percent, size_t *len)
 				*store++ = '%';
 				*store = '%';
 			} else
-				*store = value;
+				*store = (char)value;
 			break;
 		default:
 			*store = *fmt;
@@ -448,15 +445,15 @@ getstr(void)
 static int
 getint(int *ip)
 {
-	quad_t val;
-	u_quad_t uval;
+	intmax_t val;
+	uintmax_t uval;
 	int rval;
 
-	if (getquads(&val, &uval, 1))
+	if (getnum(&val, &uval, 1))
 		return (1);
 	rval = 0;
 	if (val < INT_MIN || val > INT_MAX) {
-		warnx3("%s: %s", *gargv, strerror(ERANGE));
+		warnx("%s: %s", *gargv, strerror(ERANGE));
 		rval = 1;
 	}
 	*ip = (int)val;
@@ -464,38 +461,38 @@ getint(int *ip)
 }
 
 static int
-getquads(quad_t *qp, u_quad_t *uqp, int signedconv)
+getnum(intmax_t *ip, uintmax_t *uip, int signedconv)
 {
 	char *ep;
 	int rval;
 
 	if (!*gargv) {
-		*qp = 0;
+		*ip = 0;
 		return (0);
 	}
 	if (**gargv == '"' || **gargv == '\'') {
 		if (signedconv)
-			*qp = asciicode();
+			*ip = asciicode();
 		else
-			*uqp = asciicode();
+			*uip = asciicode();
 		return (0);
 	}
 	rval = 0;
 	errno = 0;
 	if (signedconv)
-		*qp = strtoq(*gargv, &ep, 0);
+		*ip = strtoimax(*gargv, &ep, 0);
 	else
-		*uqp = strtouq(*gargv, &ep, 0);
+		*uip = strtoumax(*gargv, &ep, 0);
 	if (ep == *gargv) {
-		warnx2("%s: expected numeric value", *gargv, NULL);
+		warnx("%s: expected numeric value", *gargv);
 		rval = 1;
 	}
 	else if (*ep != '\0') {
-		warnx2("%s: not completely converted", *gargv, NULL);
+		warnx("%s: not completely converted", *gargv);
 		rval = 1;
 	}
 	if (errno == ERANGE) {
-		warnx3("%s: %s", *gargv, strerror(ERANGE));
+		warnx("%s: %s", *gargv, strerror(ERANGE));
 		rval = 1;
 	}
 	++gargv;
@@ -523,14 +520,14 @@ getfloating(long double *dp, int mod_ldbl)
 	else
 		*dp = strtod(*gargv, &ep);
 	if (ep == *gargv) {
-		warnx2("%s: expected numeric value", *gargv, NULL);
+		warnx("%s: expected numeric value", *gargv);
 		rval = 1;
 	} else if (*ep != '\0') {
-		warnx2("%s: not completely converted", *gargv, NULL);
+		warnx("%s: not completely converted", *gargv);
 		rval = 1;
 	}
 	if (errno == ERANGE) {
-		warnx3("%s: %s", *gargv, strerror(ERANGE));
+		warnx("%s: %s", *gargv, strerror(ERANGE));
 		rval = 1;
 	}
 	++gargv;
@@ -541,10 +538,23 @@ static int
 asciicode(void)
 {
 	int ch;
+	wchar_t wch;
+	mbstate_t mbs;
 
-	ch = **gargv;
-	if (ch == '\'' || ch == '"')
-		ch = (*gargv)[1];
+	ch = (unsigned char)**gargv;
+	if (ch == '\'' || ch == '"') {
+		memset(&mbs, 0, sizeof(mbs));
+		switch (mbrtowc(&wch, *gargv + 1, MB_LEN_MAX, &mbs)) {
+		case (size_t)-2:
+		case (size_t)-1:
+			wch = (unsigned char)gargv[0][1];
+			break;
+		case 0:
+			wch = 0;
+			break;
+		}
+		ch = wch;
+	}
 	++gargv;
 	return (ch);
 }
