@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/fmtmsg.h,v 1.2 2002/08/05 16:37:05 mike Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _FMTMSG_H_

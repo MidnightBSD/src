@@ -41,6 +41,7 @@
  *	@(#)ar.h	8.2 (Berkeley) 1/21/94
  *
  * $FreeBSD: src/include/ar.h,v 1.2 2006/11/13 04:28:29 jkoshy Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _AR_H_

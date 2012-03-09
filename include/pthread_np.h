@@ -34,6 +34,9 @@
 #ifndef _PTHREAD_NP_H_
 #define _PTHREAD_NP_H_
 
+#include <sys/param.h>
+#include <sys/cpuset.h>
+
 /*
  * Non-POSIX type definitions:
  */

@@ -32,6 +32,7 @@
  *
  *	@(#)a.out.h	8.1 (Berkeley) 6/2/93
  * $FreeBSD: src/include/a.out.h,v 1.4 2004/06/22 17:05:36 obrien Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_AOUT_H_

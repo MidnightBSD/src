@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.9 2010/01/10 18:34:46 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.10 2011/12/28 03:11:20 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -59,11 +59,11 @@ _dev_ieee488=	dev/ieee488
 .endif
 
 .if ${MK_HESIOD} != "no"
-INCS+=		hesiod.h
+INCS+=	hesiod.h
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
-LSUBSUBDIRS=	netgraph/bluetooth/include
+LSUBSUBDIRS+=	netgraph/bluetooth/include
 .endif
 
 # Define SHARED to indicate whether you want symbolic links to the system

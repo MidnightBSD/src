@@ -37,6 +37,7 @@
  *
  *	@(#)assert.h	8.2 (Berkeley) 1/21/94
  * $FreeBSD: src/include/assert.h,v 1.4 2002/03/23 17:24:53 imp Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -60,5 +61,5 @@
 #endif /* NDEBUG */
 
 __BEGIN_DECLS
-void __assert(const char *, const char *, int, const char *);
+void __assert(const char *, const char *, int, const char *) __dead2;
 __END_DECLS

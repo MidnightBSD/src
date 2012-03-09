@@ -32,6 +32,7 @@
  *
  *	@(#)dirent.h	8.2 (Berkeley) 7/28/94
  * $FreeBSD: src/include/dirent.h,v 1.14 2003/12/07 21:10:06 marcel Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _DIRENT_H_
@@ -60,6 +61,7 @@
 #define	DIRBLKSIZ	1024
 
 struct _telldir;		/* see telldir.h */
+struct pthread_mutex;
 
 /* structure describing an open directory. */
 typedef struct _dirdesc {
@@ -71,7 +73,7 @@ typedef struct _dirdesc {
 	long	dd_seek;	/* magic cookie returned by getdirentries */
 	long	dd_rewind;	/* magic cookie for rewinding */
 	int	dd_flags;	/* flags for readdir */
-	void	*dd_lock;	/* hack to avoid including <pthread.h> */
+	struct pthread_mutex	*dd_lock;	/* lock */
 	struct _telldir *dd_td;	/* telldir position recording */
 } DIR;
 

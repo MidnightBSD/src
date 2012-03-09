@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/cpio.h,v 1.1 2002/08/01 07:18:38 mike Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _CPIO_H_

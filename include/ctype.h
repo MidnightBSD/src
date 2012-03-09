@@ -40,6 +40,7 @@
  *
  *	@(#)ctype.h	8.4 (Berkeley) 1/21/94
  *      $FreeBSD: src/include/ctype.h,v 1.28.18.1 2007/10/24 14:29:31 rafan Exp $
+ *	$MidnightBSD$
  */
 
 #ifndef _CTYPE_H_

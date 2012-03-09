@@ -31,6 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/dlfcn.h,v 1.20 2005/12/18 19:43:31 kan Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _DLFCN_H_

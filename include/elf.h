@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/elf.h,v 1.9 2006/10/04 07:25:55 jb Exp $
+ * $MidnightBSD$
  */
 
 /*

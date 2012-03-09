@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/bitstring.h,v 1.3 2003/06/13 19:40:13 phk Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _BITSTRING_H_

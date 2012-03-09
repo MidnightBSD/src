@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/elf-hints.h,v 1.4 2001/05/02 23:56:17 obrien Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_ELF_HINTS_H_
