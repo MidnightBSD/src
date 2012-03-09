@@ -68,7 +68,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/nsdispatch.c,v 1.14 2007/05/17 03:33:23 jon Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/net/nsdispatch.c,v 1.14.2.2 2010/10/30 10:37:11 ume Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -86,6 +86,7 @@ __FBSDID("$FreeBSD: src/lib/libc/net/nsdispatch.c,v 1.14 2007/05/17 03:33:23 jon
 #include <syslog.h>
 #include <unistd.h>
 #include "un-namespace.h"
+#include "libc_private.h"
 #ifdef NS_CACHING
 #include "nscache.h"
 #endif
@@ -368,7 +369,7 @@ nss_configure(void)
 	confmod = statbuf.st_mtime;
 
 #ifdef NS_CACHING
-	handle = libc_dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
+	handle = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
 	if (handle != NULL) {
 		nss_cache_cycle_prevention_func = dlsym(handle,
 			"_nss_cache_cycle_prevention_function");
@@ -481,7 +482,7 @@ nss_load_module(const char *source, nss_module_register_fn reg_fn)
 		if (snprintf(buf, sizeof(buf), "nss_%s.so.%d", mod.name,
 		    NSS_MODULE_INTERFACE_VERSION) >= (int)sizeof(buf))
 			goto fin;
-		mod.handle = libc_dlopen(buf, RTLD_LOCAL|RTLD_LAZY);
+		mod.handle = dlopen(buf, RTLD_LOCAL|RTLD_LAZY);
 		if (mod.handle == NULL) {
 #ifdef _NSS_DEBUG
 			/* This gets pretty annoying since the built-in
@@ -672,11 +673,13 @@ _nsdispatch(void *retval, const ns_dtab disp_tab[], const char *database,
 				va_end(ap);
 			} else {
 				cache_flag = 0;
+				errno = 0;
 				va_start(ap, defaults);
 				result = method(retval, mdata, ap);
 				va_end(ap);
 			}
 #else /* NS_CACHING */
+			errno = 0;
 			va_start(ap, defaults);
 			result = method(retval, mdata, ap);
 			va_end(ap);
