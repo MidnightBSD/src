@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/show.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/show.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)show.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/show.c,v 1.23.10.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/show.c,v 1.23.10.3 2010/10/20 18:25:00 obrien Exp $");
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -275,7 +275,7 @@ indent(int amount, char *pfx, FILE *fp)
 
 FILE *tracefile;
 
-#if DEBUG == 2
+#if DEBUG >= 2
 int debug = 1;
 #else
 int debug = 0;
@@ -308,7 +308,7 @@ sh_trace(const char *fmt, ...)
 
 
 void
-trputs(char *s)
+trputs(const char *s)
 {
 	if (tracefile == NULL)
 		return;

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/shell.h,v 1.3 2008/06/30 00:49:38 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/shell.h,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)shell.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/shell.h,v 1.18.2.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/shell.h,v 1.18.2.2 2010/10/20 18:25:00 obrien Exp $
  */
 
 #ifndef SHELL_H_
@@ -45,7 +45,7 @@
  *	define DEBUG=1 to compile in debugging (set global "debug" to turn on)
  *	define DEBUG=2 to compile in and turn on debugging.
  *
- * When debugging is on, debugging info will be written to $HOME/trace and
+ * When debugging is on, debugging info will be written to ./trace and
  * a quit signal will generate a core dump.
  */
 
@@ -62,7 +62,6 @@ typedef intmax_t arith_t;
 #define	strtoarith_t(nptr, endptr, base)  strtoimax(nptr, endptr, base)
 
 typedef void *pointer;
-#define STATIC  static
 #define MKINIT  /* empty */
 
 #include <sys/cdefs.h>
