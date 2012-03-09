@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/_timespec.h,v 1.2 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,29 +29,20 @@
  *
  *	@(#)time.h	8.5 (Berkeley) 5/4/95
  * from: FreeBSD: src/sys/sys/time.h,v 1.43 2000/03/20 14:09:05 phk Exp
- *	$FreeBSD: src/sys/sys/_timespec.h,v 1.5 2005/01/07 02:29:23 imp Exp $
- */
-
-/*
- * Prerequisite: <sys/_types.h>
- *
- * This file must be kept synchronized with <sys/timespec.h>.
- * It defines a structure which must be a type pun for
- * `struct timespec'; this structure is used in header files where
- * the ABI uses a `struct timespec' but standards prohibit its
- * definition.  (Currently only <sys/stat.h>.)
- *
- * XXX should just declare struct __timespec as necessary.  It's simple,
- * so is easy to keep synchronized, and hopefully not needed in as many
- * places as struct timespec, so we don't need this extra header.
- * Perhaps we don't need timespec.h either.
  */
 
 #ifndef _SYS__TIMESPEC_H_
 #define	_SYS__TIMESPEC_H_
 
-struct __timespec {
-	__time_t tv_sec;	/* seconds */
+#include <sys/_types.h>
+
+#ifndef _TIME_T_DECLARED
+typedef	__time_t	time_t;
+#define	_TIME_T_DECLARED
+#endif
+
+struct timespec {
+	time_t	tv_sec;		/* seconds */
 	long	tv_nsec;	/* and nanoseconds */
 };
 

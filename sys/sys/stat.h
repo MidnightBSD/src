@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/stat.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,6 +40,7 @@
 #define	_SYS_STAT_H_
 
 #include <sys/cdefs.h>
+#include <sys/_timespec.h>
 #include <sys/_types.h>
 
 #ifndef _BLKSIZE_T_DECLARED
@@ -87,11 +88,6 @@ typedef	__off_t		off_t;
 #define	_OFF_T_DECLARED
 #endif
 
-#ifndef _TIME_T_DECLARED
-typedef	__time_t	time_t;
-#define	_TIME_T_DECLARED
-#endif
-
 #ifndef _UID_T_DECLARED
 typedef	__uid_t		uid_t;
 #define	_UID_T_DECLARED
@@ -99,14 +95,9 @@ typedef	__uid_t		uid_t;
 
 #if !defined(_KERNEL) && __BSD_VISIBLE
 /*
- * XXX we need this for struct timespec.  We get miscellaneous namespace
- * pollution with it.
+ * XXX We get miscellaneous namespace pollution with this.
  */
 #include <sys/time.h>
-#endif
-
-#if !__BSD_VISIBLE
-#include <sys/_timespec.h>
 #endif
 
 #if __BSD_VISIBLE
@@ -119,9 +110,9 @@ struct ostat {
 	__uint16_t st_gid;		/* group ID of the file's group */
 	__uint16_t st_rdev;		/* device type */
 	__int32_t st_size;		/* file size, in bytes */
-	struct	timespec st_atimespec;	/* time of last access */
-	struct	timespec st_mtimespec;	/* time of last data modification */
-	struct	timespec st_ctimespec;	/* time of last file status change */
+	struct	timespec st_atim;	/* time of last access */
+	struct	timespec st_mtim;	/* time of last data modification */
+	struct	timespec st_ctim;	/* time of last file status change */
 	__int32_t st_blksize;		/* optimal blocksize for I/O */
 	__int32_t st_blocks;		/* blocks allocated for file */
 	fflags_t  st_flags;		/* user defined flags for file */
@@ -137,28 +128,18 @@ struct stat {
 	uid_t	  st_uid;		/* user ID of the file's owner */
 	gid_t	  st_gid;		/* group ID of the file's group */
 	__dev_t   st_rdev;		/* device type */
-#if __BSD_VISIBLE
-	struct	timespec st_atimespec;	/* time of last access */
-	struct	timespec st_mtimespec;	/* time of last data modification */
-	struct	timespec st_ctimespec;	/* time of last file status change */
-#else
-	time_t	  st_atime;		/* time of last access */
-	long	  __st_atimensec;	/* nsec of last access */
-	time_t	  st_mtime;		/* time of last data modification */
-	long	  __st_mtimensec;	/* nsec of last data modification */
-	time_t	  st_ctime;		/* time of last file status change */
-	long	  __st_ctimensec;	/* nsec of last file status change */
-#endif
+	struct	timespec st_atim;	/* time of last access */
+	struct	timespec st_mtim;	/* time of last data modification */
+	struct	timespec st_ctim;	/* time of last file status change */
 	off_t	  st_size;		/* file size, in bytes */
 	blkcnt_t st_blocks;		/* blocks allocated for file */
 	blksize_t st_blksize;		/* optimal blocksize for I/O */
 	fflags_t  st_flags;		/* user defined flags for file */
 	__uint32_t st_gen;		/* file generation number */
 	__int32_t st_lspare;
-#if __BSD_VISIBLE
-	struct timespec st_birthtimespec; /* time of file creation */
+	struct timespec st_birthtim;	/* time of file creation */
 	/*
-	 * Explicitly pad st_birthtimespec to 16 bytes so that the size of
+	 * Explicitly pad st_birthtim to 16 bytes so that the size of
 	 * struct stat is backwards compatible.  We use bitfields instead
 	 * of an array of chars so that this doesn't require a C99 compiler
 	 * to compile if the size of the padding is 0.  We use 2 bitfields
@@ -167,12 +148,6 @@ struct stat {
 	 */
 	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec));
 	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec));
-#else
-	time_t	  st_birthtime;		/* time of file creation */
-	long	  st_birthtimensec;	/* nsec of file creation */
-	unsigned int :(8 / 2) * (16 - (int)sizeof(struct __timespec));
-	unsigned int :(8 / 2) * (16 - (int)sizeof(struct __timespec));
-#endif
 };
 
 #if __BSD_VISIBLE
@@ -184,15 +159,15 @@ struct nstat {
 	uid_t	  st_uid;		/* user ID of the file's owner */
 	gid_t	  st_gid;		/* group ID of the file's group */
 	__dev_t   st_rdev;		/* device type */
-	struct	timespec st_atimespec;	/* time of last access */
-	struct	timespec st_mtimespec;	/* time of last data modification */
-	struct	timespec st_ctimespec;	/* time of last file status change */
+	struct	timespec st_atim;	/* time of last access */
+	struct	timespec st_mtim;	/* time of last data modification */
+	struct	timespec st_ctim;	/* time of last file status change */
 	off_t	  st_size;		/* file size, in bytes */
 	blkcnt_t st_blocks;		/* blocks allocated for file */
 	blksize_t st_blksize;		/* optimal blocksize for I/O */
 	fflags_t  st_flags;		/* user defined flags for file */
 	__uint32_t st_gen;		/* file generation number */
-	struct timespec st_birthtimespec; /* time of file creation */
+	struct timespec st_birthtim;	/* time of file creation */
 	/*
 	 * See above about the following padding.
 	 */
@@ -201,12 +176,22 @@ struct nstat {
 };
 #endif
 
+#ifndef _KERNEL
+#define	st_atime		st_atim.tv_sec
+#define	st_mtime		st_mtim.tv_sec
+#define	st_ctime		st_ctim.tv_sec
 #if __BSD_VISIBLE
-#define st_atime st_atimespec.tv_sec
-#define st_mtime st_mtimespec.tv_sec
-#define st_ctime st_ctimespec.tv_sec
-#define st_birthtime st_birthtimespec.tv_sec
+#define	st_birthtime		st_birthtim.tv_sec
 #endif
+
+/* For compatibility. */
+#if __BSD_VISIBLE
+#define	st_atimespec		st_atim
+#define	st_mtimespec		st_mtim
+#define	st_ctimespec		st_ctim
+#define	st_birthtimespec	st_birthtim
+#endif
+#endif /* !_KERNEL */
 
 #define	S_ISUID	0004000			/* set user id on execution */
 #define	S_ISGID	0002000			/* set group id on execution */
@@ -321,7 +306,12 @@ int	chflags(const char *, unsigned long);
 int	chmod(const char *, mode_t);
 #if __BSD_VISIBLE
 int	fchflags(int, unsigned long);
+#endif
+#if __POSIX_VISIBLE >= 200112
 int	fchmod(int, mode_t);
+#endif
+#if __POSIX_VISIBLE >= 200809
+int	fchmodat(int, const char *, mode_t, int);
 #endif
 int	fstat(int, struct stat *);
 #if __BSD_VISIBLE
@@ -339,6 +329,14 @@ int	mknod(const char *, mode_t, dev_t);
 #endif
 int	stat(const char * __restrict, struct stat * __restrict);
 mode_t	umask(mode_t);
+#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+int	fstatat(int, const char *, struct stat *, int);
+int	mkdirat(int, const char *, mode_t);
+int	mkfifoat(int, const char *, mode_t);
+#endif
+#if __BSD_VISIBLE || __XSI_VISIBLE >= 700
+int	mknodat(int, const char *, mode_t, dev_t);
+#endif
 __END_DECLS
 #endif /* !_KERNEL */
 

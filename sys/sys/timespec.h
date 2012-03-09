@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/timespec.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,22 +32,11 @@
  *	$FreeBSD: src/sys/sys/timespec.h,v 1.5 2005/10/23 04:22:56 davidxu Exp $
  */
 
-/*
- * Prerequisites: <sys/cdefs.h>, <sys/_types.h>
- */
-
 #ifndef _SYS_TIMESPEC_H_
 #define _SYS_TIMESPEC_H_
 
-#ifndef _TIME_T_DECLARED
-typedef	__time_t	time_t;
-#define	_TIME_T_DECLARED
-#endif
-
-struct timespec {
-	time_t	tv_sec;		/* seconds */
-	long	tv_nsec;	/* and nanoseconds */
-};
+#include <sys/cdefs.h>
+#include <sys/_timespec.h>
 
 #if __BSD_VISIBLE
 #define	TIMEVAL_TO_TIMESPEC(tv, ts)					\

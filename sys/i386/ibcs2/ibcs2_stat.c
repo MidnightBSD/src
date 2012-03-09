@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_stat.c,v 1.26 2005/02/07 22:02:18 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,9 +72,9 @@ bsd_stat2ibcs_stat(st, st4)
 		st4->st_size = (ibcs2_off_t)st->st_size;
 	else
 		st4->st_size = -2;
-	st4->st_atim = (ibcs2_time_t)st->st_atime;
-	st4->st_mtim = (ibcs2_time_t)st->st_mtime;
-	st4->st_ctim = (ibcs2_time_t)st->st_ctime;
+	st4->st_atim = (ibcs2_time_t)st->st_atim.tv_sec;
+	st4->st_mtim = (ibcs2_time_t)st->st_mtim.tv_sec;
+	st4->st_ctim = (ibcs2_time_t)st->st_ctim.tv_sec;
 }
 
 static int

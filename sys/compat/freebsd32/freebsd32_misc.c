@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.8 2012/01/04 02:14:05 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.9 2012/02/19 16:59:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -1979,9 +1979,9 @@ copy_stat( struct stat *in, struct stat32 *out)
 	CP(*in, *out, st_uid);
 	CP(*in, *out, st_gid);
 	CP(*in, *out, st_rdev);
-	TS_CP(*in, *out, st_atimespec);
-	TS_CP(*in, *out, st_mtimespec);
-	TS_CP(*in, *out, st_ctimespec);
+	TS_CP(*in, *out, st_atim);
+	TS_CP(*in, *out, st_mtim);
+	TS_CP(*in, *out, st_ctim);
 	CP(*in, *out, st_size);
 	CP(*in, *out, st_blocks);
 	CP(*in, *out, st_blksize);

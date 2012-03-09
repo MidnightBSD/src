@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/fdescfs/fdesc_vnops.c,v 1.4 2008/12/03 00:25:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -336,21 +336,21 @@ fdesc_getattr(ap)
 			/*
 			 * If no time data is provided, use the current time.
 			 */
-			if (stb.st_atimespec.tv_sec == 0 &&
-			    stb.st_atimespec.tv_nsec == 0)
-				nanotime(&stb.st_atimespec);
+			if (stb.st_atim.tv_sec == 0 &&
+			    stb.st_atim.tv_nsec == 0)
+				nanotime(&stb.st_atim);
 
-			if (stb.st_ctimespec.tv_sec == 0 &&
-			    stb.st_ctimespec.tv_nsec == 0)
-				nanotime(&stb.st_ctimespec);
+			if (stb.st_ctim.tv_sec == 0 &&
+			    stb.st_ctim.tv_nsec == 0)
+				nanotime(&stb.st_ctim);
 
-			if (stb.st_mtimespec.tv_sec == 0 &&
-			    stb.st_mtimespec.tv_nsec == 0)
-				nanotime(&stb.st_mtimespec);
+			if (stb.st_mtim.tv_sec == 0 &&
+			    stb.st_mtim.tv_nsec == 0)
+				nanotime(&stb.st_mtim);
 
-			vap->va_atime = stb.st_atimespec;
-			vap->va_mtime = stb.st_mtimespec;
-			vap->va_ctime = stb.st_ctimespec;
+			vap->va_atime = stb.st_atim;
+			vap->va_mtime = stb.st_mtim;
+			vap->va_ctime = stb.st_ctim;
 			vap->va_uid = stb.st_uid;
 			vap->va_gid = stb.st_gid;
 		}
