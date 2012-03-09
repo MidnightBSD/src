@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/var.h,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/var.h,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)var.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/var.h,v 1.14.10.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/var.h,v 1.14.10.3 2010/10/03 21:56:20 jilles Exp $
  */
 
 /*
@@ -102,14 +102,13 @@ extern struct var vhistsize;
 #define mpathset()	((vmpath.flags & VUNSET) == 0)
 
 void initvar(void);
-void setvar(char *, char *, int);
+void setvar(const char *, const char *, int);
 void setvareq(char *, int);
 struct strlist;
 void listsetvar(struct strlist *);
-char *lookupvar(char *);
-char *bltinlookup(char *, int);
+char *lookupvar(const char *);
+char *bltinlookup(const char *, int);
 char **environment(void);
-void shprocvar(void);
 int showvarscmd(int, char **);
 int exportcmd(int, char **);
 int localcmd(int, char **);
@@ -117,5 +116,5 @@ void mklocal(char *);
 void poplocalvars(void);
 int setvarcmd(int, char **);
 int unsetcmd(int, char **);
-int unsetvar(char *);
-int setvarsafe(char *, char *, int);
+int unsetvar(const char *);
+int setvarsafe(const char *, const char *, int);

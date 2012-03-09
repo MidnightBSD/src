@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/var.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/var.c,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)var.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/var.c,v 1.39.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/var.c,v 1.39.2.6 2010/10/20 18:25:00 obrien Exp $");
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -91,9 +91,9 @@ struct var vps1;
 struct var vps2;
 struct var vps4;
 struct var vvers;
-STATIC struct var voptind;
+static struct var voptind;
 
-STATIC const struct varinit varinit[] = {
+static const struct varinit varinit[] = {
 #ifndef NO_HISTORY
 	{ &vhistsize,	VSTRFIXED|VTEXTFIXED|VUNSET,	"HISTSIZE=",
 	  sethistsize },
@@ -121,11 +121,11 @@ STATIC const struct varinit varinit[] = {
 	  NULL }
 };
 
-STATIC struct var *vartab[VTABSIZE];
+static struct var *vartab[VTABSIZE];
 
-STATIC struct var **hashvar(char *);
-STATIC int varequal(char *, char *);
-STATIC int localevar(char *);
+static struct var **hashvar(const char *);
+static int varequal(const char *, const char *);
+static int localevar(const char *);
 
 /*
  * Initialize the variable symbol tables and import the environment.
@@ -133,9 +133,9 @@ STATIC int localevar(char *);
 
 #ifdef mkinit
 INCLUDE "var.h"
+MKINIT char **environ;
 INIT {
 	char **envp;
-	extern char **environ;
 
 	initvar();
 	for (envp = environ ; *envp ; envp++) {
@@ -191,7 +191,7 @@ initvar(void)
  */
 
 int
-setvarsafe(char *name, char *val, int flags)
+setvarsafe(const char *name, const char *val, int flags)
 {
 	struct jmploc jmploc;
 	struct jmploc *const savehandler = handler;
@@ -213,9 +213,9 @@ setvarsafe(char *name, char *val, int flags)
  */
 
 void
-setvar(char *name, char *val, int flags)
+setvar(const char *name, const char *val, int flags)
 {
-	char *p, *q;
+	const char *p;
 	int len;
 	int namelen;
 	char *nameeq;
@@ -243,25 +243,24 @@ setvar(char *name, char *val, int flags)
 	} else {
 		len += strlen(val);
 	}
-	p = nameeq = ckmalloc(len);
-	q = name;
-	while (--namelen >= 0)
-		*p++ = *q++;
-	*p++ = '=';
-	*p = '\0';
+	nameeq = ckmalloc(len);
+	memcpy(nameeq, name, namelen);
+	nameeq[namelen] = '=';
 	if (val)
-		scopy(val, p);
+		scopy(val, nameeq + namelen + 1);
+	else
+		nameeq[namelen + 1] = '\0';
 	setvareq(nameeq, flags);
 }
 
-STATIC int
-localevar(char *s)
+static int
+localevar(const char *s)
 {
-	static char *lnames[7] = {
+	static const char *lnames[7] = {
 		"ALL", "COLLATE", "CTYPE", "MONETARY",
 		"NUMERIC", "TIME", NULL
 	};
-	char **ss;
+	const char **ss;
 
 	if (*s != 'L')
 		return 0;
@@ -281,7 +280,7 @@ localevar(char *s)
  * pointer into environ where the string should not be manipulated.
  */
 static void
-change_env(char *s, int set)
+change_env(const char *s, int set)
 {
 	char *eqp;
 	char *ss;
@@ -336,8 +335,13 @@ setvareq(char *s, int flags)
 			/*
 			 * We could roll this to a function, to handle it as
 			 * a regular variable function callback, but why bother?
+			 *
+			 * Note: this assumes iflag is not set to 1 initially.
+			 * As part of init(), this is called before arguments
+			 * are looked at.
 			 */
-			if (vp == &vmpath || (vp == &vmail && ! mpathset()))
+			if ((vp == &vmpath || (vp == &vmail && ! mpathset())) &&
+			    iflag == 1)
 				chkmail(1);
 			if ((vp->flags & VEXPORT) && localevar(s)) {
 				change_env(s, 1);
@@ -387,7 +391,7 @@ listsetvar(struct strlist *list)
  */
 
 char *
-lookupvar(char *name)
+lookupvar(const char *name)
 {
 	struct var *v;
 
@@ -410,7 +414,7 @@ lookupvar(char *name)
  */
 
 char *
-bltinlookup(char *name, int doall)
+bltinlookup(const char *name, int doall)
 {
 	struct strlist *sp;
 	struct var *v;
@@ -468,9 +472,9 @@ environment(void)
  * VSTACK set since these are currently allocated on the stack.
  */
 
-#ifdef mkinit
 MKINIT void shprocvar(void);
 
+#ifdef mkinit
 SHELLPROC {
 	shprocvar();
 }
@@ -605,7 +609,6 @@ exportcmd(int argc, char **argv)
 
 	if (values && argc != 0)
 		error("-p requires no arguments");
-	listsetvar(cmdenviron);
 	if (argc != 0) {
 		while ((name = *argv++) != NULL) {
 			if ((p = strchr(name, '=')) != NULL) {
@@ -795,7 +798,7 @@ unsetcmd(int argc __unused, char **argv __unused)
  */
 
 int
-unsetvar(char *s)
+unsetvar(const char *s)
 {
 	struct var **vpp;
 	struct var *vp;
@@ -834,8 +837,8 @@ unsetvar(char *s)
  * Find the appropriate entry in the hash table from the name.
  */
 
-STATIC struct var **
-hashvar(char *p)
+static struct var **
+hashvar(const char *p)
 {
 	unsigned int hashval;
 
@@ -853,8 +856,8 @@ hashvar(char *p)
  * either '=' or '\0'.
  */
 
-STATIC int
-varequal(char *p, char *q)
+static int
+varequal(const char *p, const char *q)
 {
 	while (*p == *q++) {
 		if (*p++ == '=')
