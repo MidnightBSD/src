@@ -30,10 +30,10 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	from: @(#)sh.1	8.6 (Berkeley) 5/4/95
-.\" $FreeBSD: src/bin/sh/sh.1,v 1.102.2.2 2005/12/26 15:43:54 stefanf Exp $
-.\" $MidnightBSD: src/bin/sh/sh.1,v 1.3 2008/06/30 00:40:10 laffer1 Exp $
+.\" $FreeBSD: src/bin/sh/sh.1,v 1.130.2.11 2010/11/09 22:32:11 jilles Exp $
+.\" $MidnightBSD: src/bin/sh/sh.1,v 1.4 2010/01/16 17:38:41 laffer1 Exp $
 .\"
-.Dd January 8, 2010
+.Dd October 31, 2010
 .Dt SH 1
 .Os
 .Sh NAME
@@ -41,9 +41,24 @@
 .Nd command interpreter (shell)
 .Sh SYNOPSIS
 .Nm
-.Op Fl /+abCEefIimnPpsTuVvx
+.Op Fl /+abCEefIimnPpTuVvx
 .Op Fl /+o Ar longname
-.Op Fl c Ar string
+.Oo
+.Ar script
+.Op Ar arg ...
+.Oc
+.Nm
+.Op Fl /+abCEefIimnPpTuVvx
+.Op Fl /+o Ar longname
+.Fl c Ar string
+.Oo
+.Ar name
+.Op Ar arg ...
+.Oc
+.Nm
+.Op Fl /+abCEefIimnPpTuVvx
+.Op Fl /+o Ar longname
+.Fl s
 .Op Ar arg ...
 .Sh DESCRIPTION
 The
@@ -297,7 +312,10 @@ sh -T -c "trap 'exit 1' 2 ; some-blocking-program"
 .Ed
 .It Fl u Li nounset
 Write a message to standard error when attempting
-to expand a variable that is not set, and if the
+to expand a variable, a positional parameter or
+the special parameter
+.Va \&!
+that is not set, and if the
 shell is not interactive, exit immediately.
 .It Fl V Li vi
 Enable the built-in
@@ -412,11 +430,11 @@ character, with the exception of the newline character
 .Pq Ql \en .
 A backslash preceding a newline is treated as a line continuation.
 .El
-.Ss Reserved Words
-Reserved words are words that have special meaning to the
+.Ss Keywords
+Keywords or reserved words are words that have special meaning to the
 shell and are recognized at the beginning of a line and
 after a control operator.
-The following are reserved words:
+The following are keywords:
 .Bl -column "doneXX" "elifXX" "elseXX" "untilXX" "whileX" -offset center
 .It Li \&! Ta { Ta } Ta Ic case Ta Ic do
 .It Ic done Ta Ic elif Ta Ic else Ta Ic esac Ta Ic fi
@@ -426,8 +444,8 @@ The following are reserved words:
 An alias is a name and corresponding value set using the
 .Ic alias
 built-in command.
-Whenever a reserved word may occur (see above),
-and after checking for reserved words, the shell
+Whenever a keyword may occur (see above),
+and after checking for keywords, the shell
 checks the word to see if it matches an alias.
 If it does, it replaces it in the input stream with its value.
 For example, if there is an alias called
@@ -466,7 +484,7 @@ of this man page (refer to the BNF in the
 document).
 Essentially though, a line is read and if
 the first word of the line (or after a control operator)
-is not a reserved word, then the shell has recognized a
+is not a keyword, then the shell has recognized a
 simple command.
 Otherwise, a complex command or some
 other special construct may have been recognized.
@@ -692,7 +710,7 @@ Signal numbers are defined in the header file
 .In sys/signal.h .
 .Ss Complex Commands
 Complex commands are combinations of simple commands
-with control operators or reserved words, together creating a larger complex
+with control operators or keywords, together creating a larger complex
 command.
 More generally, a command is one of the following:
 .Bl -item -offset indent
@@ -733,10 +751,17 @@ both of a command is considered to be assigned by the
 pipeline before any redirection specified by redirection
 operators that are part of the command.
 .Pp
+Note that unlike some other shells,
+.Nm
+executes each process in a pipeline with more than one command
+in a subshell environment and as a child of the
+.Nm
+process.
+.Pp
 If the pipeline is not in the background (discussed later),
 the shell waits for all commands to complete.
 .Pp
-If the reserved word
+If the keyword
 .Ic !\&
 does not precede the pipeline, the
 exit status is the exit status of the last command specified
@@ -770,15 +795,6 @@ to be executed sequentially;
 an
 .Ql &
 causes asynchronous execution of the preceding AND-OR-list.
-.Pp
-Note that unlike some other shells,
-.Nm
-executes each process in the pipeline as a child of the
-.Nm
-process.
-Shell built-in commands are the exception to this rule.
-They are executed in the current shell, although they do not affect its
-environment when used in pipelines.
 .Ss Background Commands (&)
 If a command is terminated by the control operator ampersand
 .Pq Ql & ,
@@ -1108,7 +1124,12 @@ For a
 pipeline, the process ID is that of the last command in the
 pipeline.
 .It Li $0
-(zero) Expands to the name of the shell or shell script.
+(zero) Expands to the name of the shell script if passed on the command line,
+the
+.Ar name
+operand if given (with
+.Fl c )
+or otherwise argument 0 passed to the shell.
 .El
 .Ss Word Expansions
 This clause describes the various expansions that are
@@ -1149,7 +1170,7 @@ Quote Removal.
 The
 .Ql $
 character is used to introduce parameter expansion, command
-substitution, or arithmetic evaluation.
+substitution, or arithmetic expansion.
 .Ss Tilde Expansion (substituting a user's home directory)
 A word beginning with an unquoted tilde character
 .Pq Ql ~
@@ -1228,6 +1249,9 @@ In all cases, the
 final value of
 .Ar parameter
 is substituted.
+Quoting inside
+.Ar word
+does not prevent field splitting or pathname expansion.
 Only variables, not positional
 parameters or special parameters, can be
 assigned in this way.
@@ -1361,10 +1385,41 @@ The
 shell expands all tokens in the
 .Ar expression
 for parameter expansion,
-command substitution, and quote removal.
+command substitution,
+arithmetic expansion
+and quote removal.
 .Pp
-Next, the shell treats this as an arithmetic expression and
-substitutes the value of the expression.
+The allowed expressions are a subset of C expressions,
+summarized below.
+.Bl -tag -width "Variables" -offset indent
+.It Values
+All values are of type
+.Ft intmax_t .
+.It Constants
+Decimal, octal (starting with
+.Li 0 )
+and hexadecimal (starting with 
+.Li 0x )
+integer constants.
+.It Variables
+Shell variables can be read and written
+and contain integer constants.
+.It Unary operators
+.Li "! ~ + -"
+.It Binary operators
+.Li "* / % + - << >> < <= > >= == != & ^ | && ||"
+.It Assignment operators
+.Li "= += -= *= /= %= <<= >>= &= ^= |="
+.It Short-circuit evaluation
+The
+.Li &&
+and
+.Li ||
+operators always evaluate both sides.
+This is a bug.
+.El
+.Pp
+The result of the expression is substituted in decimal.
 .Ss White Space Splitting (Field Splitting)
 After parameter expansion, command substitution, and
 arithmetic expansion the shell scans the results of
@@ -2367,8 +2422,6 @@ will return the argument.
 .Xr echo 1 ,
 .Xr ed 1 ,
 .Xr emacs 1 ,
-.Xr expr 1 ,
-.Xr getopt 1 ,
 .Xr pwd 1 ,
 .Xr test 1 ,
 .Xr vi 1 ,
