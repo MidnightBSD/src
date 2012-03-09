@@ -1,6 +1,5 @@
 %{
-/* $MidnightBSD: src/bin/sh/arith.y,v 1.3 2008/06/30 00:49:38 laffer1 Exp $ */
-
+/* $MidnightBSD: src/bin/sh/arith.y,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)arith.y	8.3 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/arith.y,v 1.22.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/arith.y,v 1.22.2.3 2010/10/03 21:56:20 jilles Exp $");
 
 #include <limits.h>
 #include <stdio.h>
@@ -267,7 +266,7 @@ expr:
 #define YYPARSE_PARAM_TYPE arith_t *
 #define YYPARSE_PARAM result
 
-char *arith_buf, *arith_startbuf;
+const char *arith_buf, *arith_startbuf;
 
 int yylex(void);
 int yyparse(YYPARSE_PARAM_TYPE);
@@ -286,7 +285,7 @@ arith_assign(char *name, arith_t value)
 }
 
 arith_t
-arith(char *s)
+arith(const char *s)
 {
 	arith_t result;
 
@@ -301,7 +300,7 @@ arith(char *s)
 }
 
 static void
-yyerror(char *s)
+yyerror(const char *s)
 {
 
 	yyerrok;
@@ -316,7 +315,7 @@ yyerror(char *s)
 int
 expcmd(int argc, char **argv)
 {
-	char *p;
+	const char *p;
 	char *concat;
 	char **ap;
 	arith_t i;
@@ -356,7 +355,7 @@ main(int argc, char *argv[])
 	printf("%d\n", exp(argv[1]));
 }
 
-error(char *s)
+error(const char *s)
 {
 	fprintf(stderr, "exp: %s\n", s);
 	exit(1);

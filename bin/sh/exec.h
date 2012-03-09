@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/exec.h,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)exec.h	8.3 (Berkeley) 6/8/95
- * $FreeBSD: src/bin/sh/exec.h,v 1.15.10.2 2009/10/11 16:35:12 jilles Exp $
+ * $FreeBSD: src/bin/sh/exec.h,v 1.15.10.4 2010/10/02 20:55:11 jilles Exp $
  */
 
 /* values of cmdtype */
@@ -58,20 +57,20 @@ struct cmdentry {
 };
 
 
-extern char *pathopt;		/* set by padvance */
+extern const char *pathopt;	/* set by padvance */
 extern int exerrno;		/* last exec error */
 
-void shellexec(char **, char **, char *, int);
-char *padvance(char **, char *);
+void shellexec(char **, char **, const char *, int) __dead2;
+char *padvance(const char **, const char *);
 int hashcmd(int, char **);
-void find_command(char *, struct cmdentry *, int, char *);
-int find_builtin(char *, int *);
+void find_command(const char *, struct cmdentry *, int, const char *);
+int find_builtin(const char *, int *);
 void hashcd(void);
 void changepath(const char *);
 void deletefuncs(void);
-void addcmdentry(char *, struct cmdentry *);
-void defun(char *, union node *);
-int unsetfunc(char *);
+void addcmdentry(const char *, struct cmdentry *);
+void defun(const char *, union node *);
+int unsetfunc(const char *);
 int typecmd_impl(int, char **, int);
 int typecmd(int, char **);
 void clearcmdentry(int);

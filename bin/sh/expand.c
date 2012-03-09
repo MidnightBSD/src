@@ -1,7 +1,8 @@
-/* $MidnightBSD: src/bin/sh/expand.c,v 1.4 2008/06/30 00:49:38 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 1997-2005
+ *	Herbert Xu <herbert@gondor.apana.org.au>.  All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
  * Kenneth Almquist.
@@ -37,19 +38,20 @@ static char sccsid[] = "@(#)expand.c	8.5 (Berkeley) 5/15/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/expand.c,v 1.55.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/expand.c,v 1.55.2.10 2010/11/14 19:36:55 jilles Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <errno.h>
 #include <dirent.h>
-#include <unistd.h>
-#include <pwd.h>
-#include <stdlib.h>
+#include <errno.h>
+#include <inttypes.h>
 #include <limits.h>
+#include <pwd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /*
  * Routines to expand arguments to commands.  We have to deal with
@@ -87,32 +89,32 @@ struct ifsregion {
 };
 
 
-STATIC char *expdest;			/* output of current string */
-STATIC struct nodelist *argbackq;	/* list of back quote expressions */
-STATIC struct ifsregion ifsfirst;	/* first struct in list of ifs regions */
-STATIC struct ifsregion *ifslastp;	/* last struct in list */
-STATIC struct arglist exparg;		/* holds expanded arg list */
+static char *expdest;			/* output of current string */
+static struct nodelist *argbackq;	/* list of back quote expressions */
+static struct ifsregion ifsfirst;	/* first struct in list of ifs regions */
+static struct ifsregion *ifslastp;	/* last struct in list */
+static struct arglist exparg;		/* holds expanded arg list */
 
-STATIC void argstr(char *, int);
-STATIC char *exptilde(char *, int);
-STATIC void expbackq(union node *, int, int);
-STATIC int subevalvar(char *, char *, int, int, int, int);
-STATIC char *evalvar(char *, int);
-STATIC int varisset(char *, int);
-STATIC void varvalue(char *, int, int, int);
-STATIC void recordregion(int, int, int);
-STATIC void removerecordregions(int);
-STATIC void ifsbreakup(char *, struct arglist *);
-STATIC void expandmeta(struct strlist *, int);
-STATIC void expmeta(char *, char *);
-STATIC void addfname(char *);
-STATIC struct strlist *expsort(struct strlist *);
-STATIC struct strlist *msort(struct strlist *, int);
-STATIC int pmatch(char *, char *, int);
-STATIC char *cvtnum(int, char *);
-STATIC int collate_range_cmp(int, int);
+static void argstr(char *, int);
+static char *exptilde(char *, int);
+static void expbackq(union node *, int, int);
+static int subevalvar(char *, char *, int, int, int, int);
+static char *evalvar(char *, int);
+static int varisset(char *, int);
+static void varvalue(char *, int, int, int);
+static void recordregion(int, int, int);
+static void removerecordregions(int);
+static void ifsbreakup(char *, struct arglist *);
+static void expandmeta(struct strlist *, int);
+static void expmeta(char *, char *);
+static void addfname(char *);
+static struct strlist *expsort(struct strlist *);
+static struct strlist *msort(struct strlist *, int);
+static int pmatch(const char *, const char *, int);
+static char *cvtnum(int, char *);
+static int collate_range_cmp(int, int);
 
-STATIC int
+static int
 collate_range_cmp(int c1, int c2)
 {
 	static char s1[2], s2[2];
@@ -138,12 +140,18 @@ expandhere(union node *arg, int fd)
 
 
 /*
- * Perform variable substitution and command substitution on an argument,
- * placing the resulting list of arguments in arglist.  If EXP_FULL is true,
- * perform splitting and file name expansion.  When arglist is NULL, perform
- * here document expansion.
+ * Perform expansions on an argument, placing the resulting list of arguments
+ * in arglist.  Parameter expansion, command substitution and arithmetic
+ * expansion are always performed; additional expansions can be requested
+ * via flag (EXP_*).
+ * The result is left in the stack string.
+ * When arglist is NULL, perform here document expansion.  A partial result
+ * may be written to herefd, which is then not included in the stack string.
+ *
+ * Caution: this function uses global state and is not reentrant.
+ * However, a new invocation after an interrupted invocation is safe
+ * and will reset the global state for the new call.
  */
-
 void
 expandarg(union node *arg, struct arglist *arglist, int flag)
 {
@@ -195,12 +203,15 @@ expandarg(union node *arg, struct arglist *arglist, int flag)
 
 
 /*
- * Perform variable and command substitution.  If EXP_FULL is set, output CTLESC
- * characters to allow for further processing.  Otherwise treat
- * $@ like $* since no splitting will be performed.
+ * Perform parameter expansion, command substitution and arithmetic
+ * expansion, and tilde expansion if requested via EXP_TILDE/EXP_VARTILDE.
+ * Processing ends at a CTLENDVAR character as well as '\0'.
+ * This is used to expand word in ${var+word} etc.
+ * If EXP_FULL, EXP_CASE or EXP_REDIR are set, keep and/or generate CTLESC
+ * characters to allow for further processing.
+ * If EXP_FULL is set, also preserve CTLQUOTEMARK characters.
  */
-
-STATIC void
+static void
 argstr(char *p, int flag)
 {
 	char c;
@@ -212,7 +223,7 @@ argstr(char *p, int flag)
 	for (;;) {
 		switch (c = *p++) {
 		case '\0':
-		case CTLENDVAR: /* ??? */
+		case CTLENDVAR:
 			goto breakloop;
 		case CTLQUOTEMARK:
 			/* "$@" syntax adherence hack */
@@ -262,7 +273,11 @@ argstr(char *p, int flag)
 breakloop:;
 }
 
-STATIC char *
+/*
+ * Perform tilde expansion, placing the result in the stack string and
+ * returning the next position in the input string to process.
+ */
+static char *
 exptilde(char *p, int flag)
 {
 	char c, *startp = p;
@@ -310,7 +325,7 @@ lose:
 }
 
 
-STATIC void
+static void
 removerecordregions(int endoff)
 {
 	if (ifslastp == NULL)
@@ -362,12 +377,11 @@ expari(int flag)
 	int quotes = flag & (EXP_FULL | EXP_CASE | EXP_REDIR);
 	int quoted;
 
-
 	/*
 	 * This routine is slightly over-complicated for
 	 * efficiency.  First we make sure there is
 	 * enough space for the result, which may be bigger
-	 * than the expression if we add exponentiation.  Next we
+	 * than the expression.  Next we
 	 * scan backwards looking for the start of arithmetic.  If the
 	 * next previous character is a CTLESC character, then we
 	 * have to rescan starting from the beginning since CTLESC
@@ -406,10 +420,9 @@ expari(int flag)
 
 
 /*
- * Expand stuff in backwards quotes.
+ * Perform command substitution.
  */
-
-STATIC void
+static void
 expbackq(union node *cmd, int quoted, int flag)
 {
 	struct backcmd in;
@@ -479,9 +492,9 @@ expbackq(union node *cmd, int quoted, int flag)
 		exitstatus = waitforjob(in.jp, (int *)NULL);
 	if (quoted == 0)
 		recordregion(startloc, dest - stackblock(), 0);
-	TRACE(("evalbackq: size=%d: \"%.*s\"\n",
-		(dest - stackblock()) - startloc,
-		(dest - stackblock()) - startloc,
+	TRACE(("expbackq: size=%td: \"%.*s\"\n",
+		((dest - stackblock()) - startloc),
+		(int)((dest - stackblock()) - startloc),
 		stackblock() + startloc));
 	expdest = dest;
 	INTON;
@@ -489,7 +502,7 @@ expbackq(union node *cmd, int quoted, int flag)
 
 
 
-STATIC int
+static int
 subevalvar(char *p, char *str, int strloc, int subtype, int startloc,
   int varflags)
 {
@@ -615,7 +628,7 @@ recordleft:
  * input string.
  */
 
-STATIC char *
+static char *
 evalvar(char *p, int flag)
 {
 	int subtype;
@@ -658,7 +671,7 @@ again: /* jump here after setting a variable with ${var=text} */
 	}
 	varlen = 0;
 	startloc = expdest - stackblock();
-	if (!set && uflag) {
+	if (!set && uflag && *var != '@' && *var != '*') {
 		switch (subtype) {
 		case VSNORMAL:
 		case VSTRIMLEFT:
@@ -803,7 +816,7 @@ record:
  * Test whether a specialized variable is set.
  */
 
-STATIC int
+static int
 varisset(char *name, int nulok)
 {
 
@@ -845,13 +858,12 @@ varisset(char *name, int nulok)
  * Add the value of a specialized variable to the stack string.
  */
 
-STATIC void
+static void
 varvalue(char *name, int quoted, int subtype, int flag)
 {
 	int num;
 	char *p;
 	int i;
-	extern int oexitstatus;
 	char sep;
 	char **ap;
 	char const *syntax;
@@ -936,7 +948,7 @@ numvar:
  * string for IFS characters.
  */
 
-STATIC void
+static void
 recordregion(int start, int end, int inquotes)
 {
 	struct ifsregion *ifsp;
@@ -966,8 +978,14 @@ recordregion(int start, int end, int inquotes)
  * Break the argument string into pieces based upon IFS and add the
  * strings to the argument list.  The regions of the string to be
  * searched for IFS characters have been stored by recordregion.
+ * CTLESC characters are preserved but have little effect in this pass
+ * other than escaping CTL* characters.  In particular, they do not escape
+ * IFS characters: that should be done with the ifsregion mechanism.
+ * CTLQUOTEMARK characters are used to preserve empty quoted strings.
+ * This pass treats them as a regular character, making the string non-empty.
+ * Later, they are removed along with the other CTL* characters.
  */
-STATIC void
+static void
 ifsbreakup(char *string, struct arglist *arglist)
 {
 	struct ifsregion *ifsp;
@@ -975,7 +993,7 @@ ifsbreakup(char *string, struct arglist *arglist)
 	char *start;
 	char *p;
 	char *q;
-	char *ifs;
+	const char *ifs;
 	const char *ifsspc;
 	int had_param_ch = 0;
 
@@ -1067,16 +1085,15 @@ ifsbreakup(char *string, struct arglist *arglist)
 }
 
 
+static char expdir[PATH_MAX];
+#define expdir_end (expdir + sizeof(expdir))
 
 /*
- * Expand shell metacharacters.  At this point, the only control characters
- * should be escapes.  The results are stored in the list exparg.
+ * Perform pathname generation and remove control characters.
+ * At this point, the only control characters should be CTLESC and CTLQUOTEMARK.
+ * The results are stored in the list exparg.
  */
-
-STATIC char *expdir;
-
-
-STATIC void
+static void
 expandmeta(struct strlist *str, int flag __unused)
 {
 	char *p;
@@ -1097,14 +1114,7 @@ expandmeta(struct strlist *str, int flag __unused)
 		}
 		savelastp = exparg.lastp;
 		INTOFF;
-		if (expdir == NULL) {
-			int i = strlen(str->text);
-			expdir = ckmalloc(i < 2048 ? 2048 : i); /* XXX */
-		}
-
 		expmeta(expdir, str->text);
-		ckfree(expdir);
-		expdir = NULL;
 		INTON;
 		if (exparg.lastp == savelastp) {
 			/*
@@ -1130,7 +1140,7 @@ nometa:
  * Do metacharacter (i.e. *, ?, [...]) expansion.
  */
 
-STATIC void
+static void
 expmeta(char *enddir, char *name)
 {
 	char *p;
@@ -1143,10 +1153,11 @@ expmeta(char *enddir, char *name)
 	struct dirent *dp;
 	int atend;
 	int matchdot;
+	int esc;
 
 	metaflag = 0;
 	start = name;
-	for (p = name ; ; p++) {
+	for (p = name; esc = 0, *p; p += esc + 1) {
 		if (*p == '*' || *p == '?')
 			metaflag = 1;
 		else if (*p == '[') {
@@ -1171,12 +1182,14 @@ expmeta(char *enddir, char *name)
 			break;
 		else if (*p == CTLQUOTEMARK)
 			continue;
-		else if (*p == CTLESC)
-			p++;
-		if (*p == '/') {
-			if (metaflag)
-				break;
-			start = p + 1;
+		else {
+			if (*p == CTLESC)
+				esc++;
+			if (p[esc] == '/') {
+				if (metaflag)
+					break;
+				start = p + esc + 1;
+			}
 		}
 	}
 	if (metaflag == 0) {	/* we've reached the end of the file name */
@@ -1190,6 +1203,8 @@ expmeta(char *enddir, char *name)
 			*enddir++ = *p;
 			if (*p == '\0')
 				break;
+			if (enddir == expdir_end)
+				return;
 		}
 		if (metaflag == 0 || lstat(expdir, &statb) >= 0)
 			addfname(expdir);
@@ -1204,6 +1219,8 @@ expmeta(char *enddir, char *name)
 			if (*p == CTLESC)
 				p++;
 			*enddir++ = *p++;
+			if (enddir == expdir_end)
+				return;
 		}
 	}
 	if (enddir == expdir) {
@@ -1222,7 +1239,8 @@ expmeta(char *enddir, char *name)
 		atend = 1;
 	} else {
 		atend = 0;
-		*endname++ = '\0';
+		*endname = '\0';
+		endname += esc + 1;
 	}
 	matchdot = 0;
 	p = start;
@@ -1236,21 +1254,23 @@ expmeta(char *enddir, char *name)
 		if (dp->d_name[0] == '.' && ! matchdot)
 			continue;
 		if (patmatch(start, dp->d_name, 0)) {
-			if (atend) {
-				scopy(dp->d_name, enddir);
+			if (enddir + dp->d_namlen + 1 > expdir_end)
+				continue;
+			memcpy(enddir, dp->d_name, dp->d_namlen + 1);
+			if (atend)
 				addfname(expdir);
-			} else {
-				for (p = enddir, q = dp->d_name;
-				     (*p++ = *q++) != '\0';)
+			else {
+				if (enddir + dp->d_namlen + 2 > expdir_end)
 					continue;
-				p[-1] = '/';
-				expmeta(p, endname);
+				enddir[dp->d_namlen] = '/';
+				enddir[dp->d_namlen + 1] = '\0';
+				expmeta(enddir + dp->d_namlen + 1, endname);
 			}
 		}
 	}
 	closedir(dirp);
 	if (! atend)
-		endname[-1] = '/';
+		endname[-esc - 1] = esc ? CTLESC : '/';
 }
 
 
@@ -1258,7 +1278,7 @@ expmeta(char *enddir, char *name)
  * Add a file name to the list.
  */
 
-STATIC void
+static void
 addfname(char *name)
 {
 	char *p;
@@ -1279,7 +1299,7 @@ addfname(char *name)
  * work.
  */
 
-STATIC struct strlist *
+static struct strlist *
 expsort(struct strlist *str)
 {
 	int len;
@@ -1292,7 +1312,7 @@ expsort(struct strlist *str)
 }
 
 
-STATIC struct strlist *
+static struct strlist *
 msort(struct strlist *list, int len)
 {
 	struct strlist *p, *q = NULL;
@@ -1339,7 +1359,7 @@ msort(struct strlist *list, int len)
  */
 
 int
-patmatch(char *pattern, char *string, int squoted)
+patmatch(const char *pattern, const char *string, int squoted)
 {
 #ifdef notdef
 	if (pattern[0] == '!' && pattern[1] == '!')
@@ -1350,10 +1370,10 @@ patmatch(char *pattern, char *string, int squoted)
 }
 
 
-STATIC int
-pmatch(char *pattern, char *string, int squoted)
+static int
+pmatch(const char *pattern, const char *string, int squoted)
 {
-	char *p, *q;
+	const char *p, *q;
 	char c;
 
 	p = pattern;
@@ -1401,7 +1421,7 @@ pmatch(char *pattern, char *string, int squoted)
 			} while (*q++ != '\0');
 			return 0;
 		case '[': {
-			char *endp;
+			const char *endp;
 			int invert, found;
 			char chr;
 
@@ -1472,7 +1492,7 @@ breakloop:
 
 
 /*
- * Remove any CTLESC characters from a string.
+ * Remove any CTLESC and CTLQUOTEMARK characters from a string.
  */
 
 void
@@ -1505,7 +1525,7 @@ rmescapes(char *str)
  */
 
 int
-casematch(union node *pattern, char *val)
+casematch(union node *pattern, const char *val)
 {
 	struct stackmark smark;
 	int result;
@@ -1527,7 +1547,7 @@ casematch(union node *pattern, char *val)
  * Our own itoa().
  */
 
-STATIC char *
+static char *
 cvtnum(int num, char *buf)
 {
 	char temp[32];

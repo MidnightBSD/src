@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/arith.h,v 1.3 2008/06/30 00:49:38 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/arith.h,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995
  *      The Regents of the University of California.  All rights reserved.
@@ -28,15 +28,15 @@
  * SUCH DAMAGE.
  *
  *	@(#)arith.h	1.1 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/arith.h,v 1.9.8.3 2008/04/27 20:43:26 stefanf Exp $
+ * $FreeBSD: src/bin/sh/arith.h,v 1.12.2.2 2010/10/02 20:39:45 jilles Exp $
  */
 
 #include "shell.h"
 
 #define DIGITS(var) (3 + (2 + CHAR_BIT * sizeof((var))) / 3)
 
-extern char *arith_buf, *arith_startbuf;
+extern const char *arith_buf, *arith_startbuf;
 
-arith_t arith(char *);
+arith_t arith(const char *);
 void arith_lex_reset(void);
 int expcmd(int, char **);

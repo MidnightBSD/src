@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/input.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/input.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)input.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/input.h,v 1.10.2.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/input.h,v 1.10.2.2 2010/10/02 20:39:45 jilles Exp $
  */
 
 /* PEOF (the end of file marker) is defined in syntax.h */
@@ -53,7 +53,7 @@ int preadateof(void);
 void pungetc(void);
 void pushstring(char *, int, void *);
 void popstring(void);
-void setinputfile(char *, int);
+void setinputfile(const char *, int);
 void setinputfd(int, int);
 void setinputstring(char *, int);
 void popfile(void);

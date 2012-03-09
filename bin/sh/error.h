@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/error.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)error.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/error.h,v 1.17.30.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/error.h,v 1.17.30.2 2010/10/02 20:55:11 jilles Exp $
  */
 
 /*
@@ -77,10 +76,10 @@ extern volatile sig_atomic_t intpending;
 #define CLEAR_PENDING_INT intpending = 0
 #define int_pending() intpending
 
-void exraise(int);
+void exraise(int) __dead2;
 void onint(void);
-void error(const char *, ...) __printf0like(1, 2);
-void exerror(int, const char *, ...) __printf0like(2, 3);
+void error(const char *, ...) __printf0like(1, 2) __dead2;
+void exerror(int, const char *, ...) __printf0like(2, 3) __dead2;
 
 
 /*

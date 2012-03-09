@@ -30,8 +30,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)nodes.c.pat	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/nodes.c.pat,v 1.15 2004/04/06 20:06:51 markm Exp $
- * $MidnightBSD: src/bin/sh/nodes.c.pat,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
+ * $FreeBSD: src/bin/sh/nodes.c.pat,v 1.15.30.3 2010/10/20 18:25:00 obrien Exp $
+ * $MidnightBSD: src/bin/sh/nodes.c.pat,v 1.3 2010/01/16 17:38:41 laffer1 Exp $
  */
 
 #include <sys/param.h>
@@ -47,19 +47,19 @@
 #include "mystring.h"
 
 
-STATIC int     funcblocksize;	/* size of structures in function */
-STATIC int     funcstringsize;	/* size of strings in node */
-STATIC pointer funcblock;	/* block to allocate function from */
-STATIC char   *funcstring;	/* block to allocate strings from */
+static int     funcblocksize;	/* size of structures in function */
+static int     funcstringsize;	/* size of strings in node */
+static pointer funcblock;	/* block to allocate function from */
+static char   *funcstring;	/* block to allocate strings from */
 
 %SIZES
 
 
-STATIC void calcsize(union node *);
-STATIC void sizenodelist(struct nodelist *);
-STATIC union node *copynode(union node *);
-STATIC struct nodelist *copynodelist(struct nodelist *);
-STATIC char *nodesavestr(char *);
+static void calcsize(union node *);
+static void sizenodelist(struct nodelist *);
+static union node *copynode(union node *);
+static struct nodelist *copynodelist(struct nodelist *);
+static char *nodesavestr(char *);
 
 
 struct funcdef {
@@ -97,7 +97,7 @@ getfuncnode(struct funcdef *fn)
 }
 
 
-STATIC void
+static void
 calcsize(union node *n)
 {
 	%CALCSIZE
@@ -105,7 +105,7 @@ calcsize(union node *n)
 
 
 
-STATIC void
+static void
 sizenodelist(struct nodelist *lp)
 {
 	while (lp) {
@@ -117,7 +117,7 @@ sizenodelist(struct nodelist *lp)
 
 
 
-STATIC union node *
+static union node *
 copynode(union node *n)
 {
 	union node *new;
@@ -127,7 +127,7 @@ copynode(union node *n)
 }
 
 
-STATIC struct nodelist *
+static struct nodelist *
 copynodelist(struct nodelist *lp)
 {
 	struct nodelist *start;
@@ -147,7 +147,7 @@ copynodelist(struct nodelist *lp)
 
 
 
-STATIC char *
+static char *
 nodesavestr(char *s)
 {
 	char *p = s;

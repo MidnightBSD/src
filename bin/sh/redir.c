@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/redir.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/redir.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)redir.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/redir.c,v 1.27.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/redir.c,v 1.27.2.2 2010/10/20 18:25:00 obrien Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -81,10 +81,10 @@ MKINIT struct redirtab *redirlist;
  * background commands, where we want to redirect fd0 to /dev/null only
  * if it hasn't already been redirected.
 */
-STATIC int fd0_redirected = 0;
+static int fd0_redirected = 0;
 
-STATIC void openredirect(union node *, char[10 ]);
-STATIC int openhere(union node *);
+static void openredirect(union node *, char[10 ]);
+static int openhere(union node *);
 
 
 /*
@@ -157,7 +157,7 @@ again:
 }
 
 
-STATIC void
+static void
 openredirect(union node *redir, char memory[10])
 {
 	struct stat sb;
@@ -246,7 +246,7 @@ movefd:
  * the pipe without forking.
  */
 
-STATIC int
+static int
 openhere(union node *redir)
 {
 	int pip[2];

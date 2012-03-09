@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/parser.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,10 +37,11 @@ static char sccsid[] = "@(#)parser.c	8.7 (Berkeley) 5/16/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/parser.c,v 1.63.2.2 2009/12/20 20:51:20 jilles Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/parser.c,v 1.63.2.10 2010/10/20 18:25:00 obrien Exp $");
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include "shell.h"
 #include "parser.h"
@@ -82,41 +83,41 @@ struct heredoc {
 
 
 
-STATIC struct heredoc *heredoclist;	/* list of here documents to read */
-STATIC int parsebackquote;	/* nonzero if we are inside backquotes */
-STATIC int doprompt;		/* if set, prompt the user */
-STATIC int needprompt;		/* true if interactive and at start of line */
-STATIC int lasttoken;		/* last token read */
+static struct heredoc *heredoclist;	/* list of here documents to read */
+static int parsebackquote;	/* nonzero if we are inside backquotes */
+static int doprompt;		/* if set, prompt the user */
+static int needprompt;		/* true if interactive and at start of line */
+static int lasttoken;		/* last token read */
 MKINIT int tokpushback;		/* last token pushed back */
-STATIC char *wordtext;		/* text of last word returned by readtoken */
+static char *wordtext;		/* text of last word returned by readtoken */
 MKINIT int checkkwd;            /* 1 == check for kwds, 2 == also eat newlines */
-STATIC struct nodelist *backquotelist;
-STATIC union node *redirnode;
-STATIC struct heredoc *heredoc;
-STATIC int quoteflag;		/* set if (part of) last token was quoted */
-STATIC int startlinno;		/* line # where last token started */
-STATIC int funclinno;		/* line # where the current function started */
+static struct nodelist *backquotelist;
+static union node *redirnode;
+static struct heredoc *heredoc;
+static int quoteflag;		/* set if (part of) last token was quoted */
+static int startlinno;		/* line # where last token started */
+static int funclinno;		/* line # where the current function started */
 
 /* XXX When 'noaliases' is set to one, no alias expansion takes place. */
 static int noaliases = 0;
 
 
-STATIC union node *list(int);
-STATIC union node *andor(void);
-STATIC union node *pipeline(void);
-STATIC union node *command(void);
-STATIC union node *simplecmd(union node **, union node *);
-STATIC union node *makename(void);
-STATIC void parsefname(void);
-STATIC void parseheredoc(void);
-STATIC int peektoken(void);
-STATIC int readtoken(void);
-STATIC int xxreadtoken(void);
-STATIC int readtoken1(int, char const *, char *, int);
-STATIC int noexpand(char *);
-STATIC void synexpect(int);
-STATIC void synerror(char *);
-STATIC void setprompt(int);
+static union node *list(int);
+static union node *andor(void);
+static union node *pipeline(void);
+static union node *command(void);
+static union node *simplecmd(union node **, union node *);
+static union node *makename(void);
+static void parsefname(void);
+static void parseheredoc(void);
+static int peektoken(void);
+static int readtoken(void);
+static int xxreadtoken(void);
+static int readtoken1(int, char const *, char *, int);
+static int noexpand(char *);
+static void synexpect(int);
+static void synerror(const char *);
+static void setprompt(int);
 
 
 /*
@@ -146,7 +147,7 @@ parsecmd(int interact)
 }
 
 
-STATIC union node *
+static union node *
 list(int nlflag)
 {
 	union node *n1, *n2, *n3;
@@ -216,7 +217,7 @@ list(int nlflag)
 
 
 
-STATIC union node *
+static union node *
 andor(void)
 {
 	union node *n1, *n2, *n3;
@@ -243,7 +244,7 @@ andor(void)
 
 
 
-STATIC union node *
+static union node *
 pipeline(void)
 {
 	union node *n1, *n2, *pipenode;
@@ -285,7 +286,7 @@ pipeline(void)
 
 
 
-STATIC union node *
+static union node *
 command(void)
 {
 	union node *n1, *n2;
@@ -366,7 +367,9 @@ TRACE(("expecting DO got %s %s\n", tokname[got], got == TWORD ? wordtext : ""));
 		n1 = (union node *)stalloc(sizeof (struct nfor));
 		n1->type = NFOR;
 		n1->nfor.var = wordtext;
-		if (readtoken() == TWORD && ! quoteflag && equal(wordtext, "in")) {
+		while (readtoken() == TNL)
+			;
+		if (lasttoken == TWORD && ! quoteflag && equal(wordtext, "in")) {
 			app = &ap;
 			while (readtoken() == TWORD) {
 				n2 = (union node *)stalloc(sizeof (struct narg));
@@ -475,6 +478,7 @@ TRACE(("expecting DO got %s %s\n", tokname[got], got == TWORD ? wordtext : ""));
 		checkkwd = 1;
 		break;
 	/* Handle an empty command like other simple commands.  */
+	case TBACKGND:
 	case TSEMI:
 	case TAND:
 	case TOR:
@@ -525,7 +529,7 @@ checkneg:
 }
 
 
-STATIC union node *
+static union node *
 simplecmd(union node **rpp, union node *redir)
 {
 	union node *args, **app;
@@ -603,7 +607,7 @@ checkneg:
 		return n;
 }
 
-STATIC union node *
+static union node *
 makename(void)
 {
 	union node *n;
@@ -616,7 +620,8 @@ makename(void)
 	return n;
 }
 
-void fixredir(union node *n, const char *text, int err)
+void
+fixredir(union node *n, const char *text, int err)
 {
 	TRACE(("Fix redir %s %d\n", text, err));
 	if (!err)
@@ -636,7 +641,7 @@ void fixredir(union node *n, const char *text, int err)
 }
 
 
-STATIC void
+static void
 parsefname(void)
 {
 	union node *n = redirnode;
@@ -678,7 +683,7 @@ parsefname(void)
  * Input any here documents.
  */
 
-STATIC void
+static void
 parseheredoc(void)
 {
 	struct heredoc *here;
@@ -702,7 +707,7 @@ parseheredoc(void)
 	}
 }
 
-STATIC int
+static int
 peektoken(void)
 {
 	int t;
@@ -712,7 +717,7 @@ peektoken(void)
 	return (t);
 }
 
-STATIC int
+static int
 readtoken(void)
 {
 	int t;
@@ -792,7 +797,7 @@ out:
 
 #define RETURN(token)	return lasttoken = token
 
-STATIC int
+static int
 xxreadtoken(void)
 {
 	int c;
@@ -883,7 +888,7 @@ breakloop:
 #define PARSEBACKQNEW()	{oldstyle = 0; goto parsebackq; parsebackq_newreturn:;}
 #define	PARSEARITH()	{goto parsearith; parsearith_return:;}
 
-STATIC int
+static int
 readtoken1(int firstc, char const *syntax, char *eofmark, int striptabs)
 {
 	int c = firstc;
@@ -1490,7 +1495,7 @@ RESET {
  * or backquotes).
  */
 
-STATIC int
+static int
 noexpand(char *text)
 {
 	char *p;
@@ -1515,9 +1520,9 @@ noexpand(char *text)
  */
 
 int
-goodname(char *name)
+goodname(const char *name)
 {
-	char *p;
+	const char *p;
 
 	p = name;
 	if (! is_name(*p))
@@ -1536,7 +1541,7 @@ goodname(char *name)
  * occur at this point.
  */
 
-STATIC void
+static void
 synexpect(int token)
 {
 	char msg[64];
@@ -1551,8 +1556,8 @@ synexpect(int token)
 }
 
 
-STATIC void
-synerror(char *msg)
+static void
+synerror(const char *msg)
 {
 	if (commandname)
 		outfmt(&errout, "%s: %d: ", commandname, startlinno);
@@ -1560,7 +1565,7 @@ synerror(char *msg)
 	error((char *)NULL);
 }
 
-STATIC void
+static void
 setprompt(int which)
 {
 	whichprompt = which;
@@ -1580,14 +1585,16 @@ getprompt(void *unused __unused)
 {
 	static char ps[PROMPTLEN];
 	char *fmt;
-	int i, j, trim;
+	const char *pwd;
+	int i, trim;
+	static char internal_error[] = "<internal prompt error>";
 
 	/*
 	 * Select prompt format.
 	 */
 	switch (whichprompt) {
 	case 0:
-		fmt = "";
+		fmt = nullstr;
 		break;
 	case 1:
 		fmt = ps1val();
@@ -1596,7 +1603,7 @@ getprompt(void *unused __unused)
 		fmt = ps2val();
 		break;
 	default:
-		return "<internal prompt error>";
+		return internal_error;
 	}
 
 	/*
@@ -1630,17 +1637,15 @@ getprompt(void *unused __unused)
 				 */
 			case 'W':
 			case 'w':
-				ps[i] = '\0';
-				getcwd(&ps[i], PROMPTLEN - i);
-				if (*fmt == 'W') {
-					/* Final path component only. */
-					trim = 1;
-					for (j = i; ps[j] != '\0'; j++)
-					  if (ps[j] == '/')
-						trim = j + 1;
-					memmove(&ps[i], &ps[trim],
-					    j - trim + 1);
-				}
+				pwd = lookupvar("PWD");
+				if (pwd == NULL)
+					pwd = "?";
+				if (*fmt == 'W' &&
+				    *pwd == '/' && pwd[1] != '\0')
+					strlcpy(&ps[i], strrchr(pwd, '/') + 1,
+					    PROMPTLEN - i);
+				else
+					strlcpy(&ps[i], pwd, PROMPTLEN - i);
 				/* Skip to end of path. */
 				while (ps[i + 1] != '\0')
 					i++;

@@ -32,8 +32,8 @@
 # SUCH DAMAGE.
 #
 #	@(#)mkbuiltins	8.2 (Berkeley) 5/4/95
-# $FreeBSD: src/bin/sh/mkbuiltins,v 1.14.2.1 2005/11/06 20:39:48 stefanf Exp $
-# $MidnightBSD: src/bin/sh/mkbuiltins,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
+# $FreeBSD: src/bin/sh/mkbuiltins,v 1.16.10.2 2010/10/03 21:56:20 jilles Exp $
+# $MidnightBSD: src/bin/sh/mkbuiltins,v 1.3 2008/06/30 00:40:10 laffer1 Exp $
 
 temp=`/usr/bin/mktemp -t ka`
 havejobs=0
@@ -89,7 +89,7 @@ tr abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ < $temp |
 	awk '{	printf "#define %s %d\n", $1, NR-1}'
 echo '
 struct builtincmd {
-      char *name;
+      const char *name;
       int code;
       int special;
 };

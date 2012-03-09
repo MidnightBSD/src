@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/eval.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/eval.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,11 +31,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)eval.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/eval.h,v 1.13.2.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/eval.h,v 1.13.2.2 2010/10/03 21:56:20 jilles Exp $
  */
 
 extern char *commandname;	/* currently executing command */
 extern int exitstatus;		/* exit status of last command */
+extern int oexitstatus;		/* saved exit status */
 extern struct strlist *cmdenviron;  /* environment for builtin command */
 
 

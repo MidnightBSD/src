@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/options.c,v 1.4 2008/06/30 00:49:38 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/options.c,v 1.5 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/options.c,v 1.27.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/options.c,v 1.27.2.4 2010/10/20 18:25:00 obrien Exp $");
 
 #include <signal.h>
 #include <unistd.h>
@@ -65,15 +65,15 @@ char *arg0;			/* value of $0 */
 struct shparam shellparam;	/* current positional parameters */
 char **argptr;			/* argument list for builtin commands */
 char *shoptarg;			/* set by nextopt (like getopt) */
-char *optptr;			/* used by nextopt */
+char *nextopt_optptr;		/* used by nextopt */
 
 char *minusc;			/* argument to -c option */
 
 
-STATIC void options(int);
-STATIC void minus_o(char *, int);
-STATIC void setoption(int, int);
-STATIC int getopts(char *, char *, char **, char ***, char **);
+static void options(int);
+static void minus_o(char *, int);
+static void setoption(int, int);
+static int getopts(char *, char *, char **, char ***, char **);
 
 
 /*
@@ -136,7 +136,7 @@ optschanged(void)
  * to the argument list; we advance it past the options.
  */
 
-STATIC void
+static void
 options(int cmdline)
 {
 	char *kp, *p;
@@ -245,7 +245,7 @@ end_options2:
 	}
 }
 
-STATIC void
+static void
 minus_o(char *name, int val)
 {
 	int i;
@@ -282,7 +282,7 @@ minus_o(char *name, int val)
 }
 
 
-STATIC void
+static void
 setoption(int flag, int val)
 {
 	int i;
@@ -449,7 +449,7 @@ getoptscmd(int argc, char **argv)
 		       &shellparam.optptr);
 }
 
-STATIC int
+static int
 getopts(char *optstr, char *optvar, char **optfirst, char ***optnext,
     char **optptr)
 {
@@ -555,12 +555,13 @@ out:
  */
 
 int
-nextopt(char *optstring)
+nextopt(const char *optstring)
 {
-	char *p, *q;
+	char *p;
+	const char *q;
 	char c;
 
-	if ((p = optptr) == NULL || *p == '\0') {
+	if ((p = nextopt_optptr) == NULL || *p == '\0') {
 		p = *argptr;
 		if (p == NULL || *p != '-' || *++p == '\0')
 			return '\0';
@@ -581,6 +582,6 @@ nextopt(char *optstring)
 		shoptarg = p;
 		p = NULL;
 	}
-	optptr = p;
+	nextopt_optptr = p;
 	return c;
 }

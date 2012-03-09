@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/main.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/main.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,13 +31,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)main.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/main.h,v 1.8.30.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/main.h,v 1.8.30.2 2010/10/02 20:39:45 jilles Exp $
  */
 
 extern int rootpid;	/* pid of main shell */
 extern int rootshell;	/* true if we aren't a child of the main shell */
 
-void readcmdfile(char *);
+void readcmdfile(const char *);
 void cmdloop(int);
 int dotcmd(int, char **);
 int exitcmd(int, char **);

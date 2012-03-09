@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/input.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/input.c,v 1.25.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/input.c,v 1.25.2.4 2010/10/20 18:25:00 obrien Exp $");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -94,27 +94,27 @@ struct parsefile {
 
 
 int plinno = 1;			/* input line number */
-MKINIT int parsenleft;		/* copy of parsefile->nleft */
+int parsenleft;			/* copy of parsefile->nleft */
 MKINIT int parselleft;		/* copy of parsefile->lleft */
 char *parsenextc;		/* copy of parsefile->nextc */
 MKINIT struct parsefile basepf;	/* top level input file */
 char basebuf[BUFSIZ];		/* buffer for top level input file */
-STATIC struct parsefile *parsefile = &basepf;	/* current input file */
+static struct parsefile *parsefile = &basepf;	/* current input file */
 int init_editline = 0;		/* editline library initialized? */
 int whichprompt;		/* 1 == PS1, 2 == PS2 */
 
 EditLine *el;			/* cookie for editline package */
 
-STATIC void pushfile(void);
+static void pushfile(void);
 static int preadfd(void);
 
 #ifdef mkinit
 INCLUDE "input.h"
 INCLUDE "error.h"
 
-INIT {
-	extern char basebuf[];
+MKINIT char basebuf[];
 
+INIT {
 	basepf.nextc = basepf.buf = basebuf;
 }
 
@@ -402,7 +402,7 @@ popstring(void)
  */
 
 void
-setinputfile(char *fname, int push)
+setinputfile(const char *fname, int push)
 {
 	int fd;
 	int fd2;
@@ -469,7 +469,7 @@ setinputstring(char *string, int push)
  * adds a new entry to the stack and popfile restores the previous level.
  */
 
-STATIC void
+static void
 pushfile(void)
 {
 	struct parsefile *pf;

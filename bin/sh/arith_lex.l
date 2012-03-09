@@ -1,6 +1,4 @@
 %{
-/* $MidnightBSD: src/bin/sh/arith_lex.l,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
-
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.

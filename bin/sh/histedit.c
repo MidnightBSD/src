@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/histedit.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/histedit.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)histedit.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/histedit.c,v 1.31.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/histedit.c,v 1.31.2.6 2010/10/21 23:45:57 obrien Exp $");
 
 #include <sys/param.h>
 #include <limits.h>
@@ -69,7 +69,7 @@ EditLine *el;	/* editline cookie */
 int displayhist;
 static FILE *el_in, *el_out, *el_err;
 
-STATIC char *fc_replace(const char *, char *, char *);
+static char *fc_replace(const char *, char *, char *);
 
 /*
  * Set history and editing status.  Called whenever the status may
@@ -158,6 +158,7 @@ sethistsize(hs)
 		   (histsize = atoi(hs)) < 0)
 			histsize = 100;
 		history(hist, &he, H_SETSIZE, histsize);
+		history(hist, &he, H_SETUNIQUE, 1);
 	}
 }
 
@@ -165,19 +166,19 @@ int
 histcmd(int argc, char **argv)
 {
 	int ch;
-	char *editor = NULL;
+	const char *editor = NULL;
 	HistEvent he;
 	int lflg = 0, nflg = 0, rflg = 0, sflg = 0;
 	int i, retval;
-	char *firststr, *laststr;
+	const char *firststr, *laststr;
 	int first, last, direction;
-	char *pat = NULL, *repl;
+	char *pat = NULL, *repl = NULL;
 	static int active = 0;
 	struct jmploc jmploc;
 	struct jmploc *savehandler;
 	char editfilestr[PATH_MAX];
 	char *volatile editfile;
-	FILE *efp;
+	FILE *efp = NULL;
 	int oldhistnum;
 
 	if (hist == NULL)
@@ -383,7 +384,7 @@ histcmd(int argc, char **argv)
 	return 0;
 }
 
-STATIC char *
+static char *
 fc_replace(const char *s, char *p, char *r)
 {
 	char *dest;
@@ -399,14 +400,14 @@ fc_replace(const char *s, char *p, char *r)
 		} else
 			STPUTC(*s++, dest);
 	}
-	STACKSTRNUL(dest);
+	STPUTC('\0', dest);
 	dest = grabstackstr(dest);
 
 	return (dest);
 }
 
 int
-not_fcnumber(char *s)
+not_fcnumber(const char *s)
 {
 	if (s == NULL)
 		return (0);
@@ -416,10 +417,10 @@ not_fcnumber(char *s)
 }
 
 int
-str_to_event(char *str, int last)
+str_to_event(const char *str, int last)
 {
 	HistEvent he;
-	char *s = str;
+	const char *s = str;
 	int relative = 0;
 	int i, retval;
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/memalloc.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/memalloc.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)memalloc.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/memalloc.h,v 1.11.2.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/memalloc.h,v 1.11.2.3 2010/10/21 23:45:57 obrien Exp $
  */
 
 #include <string.h>
@@ -52,7 +52,7 @@ extern int herefd;
 pointer ckmalloc(size_t);
 pointer ckrealloc(pointer, int);
 void ckfree(pointer);
-char *savestr(char *);
+char *savestr(const char *);
 pointer stalloc(int);
 void stunalloc(pointer);
 void setstackmark(struct stackmark *);
@@ -68,9 +68,16 @@ void ungrabstackstr(char *, char *);
 #define stackblock() stacknxt
 #define stackblocksize() stacknleft
 #define STARTSTACKSTR(p)	p = stackblock(), sstrnleft = stackblocksize()
-#define STPUTC(c, p)	(--sstrnleft >= 0? (*p++ = (c)) : (p = growstackstr(), *p++ = (c)))
+#define STPUTC(c, p)	(--sstrnleft >= 0? (*p++ = (c)) : (p = growstackstr(), --sstrnleft, *p++ = (c)))
 #define CHECKSTRSPACE(n, p)	{ if (sstrnleft < n) p = makestrspace(); }
 #define USTPUTC(c, p)	(--sstrnleft, *p++ = (c))
+/*
+ * STACKSTRNUL's use is where we want to be able to turn a stack
+ * (non-sentinel, character counting string) into a C string,
+ * and later pretend the NUL is not there.
+ * Note: Because of STACKSTRNUL's semantics, STACKSTRNUL cannot be used
+ * on a stack that will grabstackstr()ed.
+ */
 #define STACKSTRNUL(p)	(sstrnleft == 0? (p = growstackstr(), *p = '\0') : (*p = '\0'))
 #define STUNPUTC(p)	(++sstrnleft, --p)
 #define STTOPC(p)	p[-1]

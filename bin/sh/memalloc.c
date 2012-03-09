@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/memalloc.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/memalloc.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)memalloc.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/memalloc.c,v 1.28.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/memalloc.c,v 1.28.2.4 2010/10/21 23:45:57 obrien Exp $");
 
 #include <sys/param.h>
 #include "shell.h"
@@ -96,7 +96,7 @@ ckfree(pointer p)
  */
 
 char *
-savestr(char *s)
+savestr(const char *s)
 {
 	char *p;
 
@@ -124,8 +124,8 @@ struct stack_block {
 };
 #define SPACE(sp)	((char*)(sp) + ALIGN(sizeof(struct stack_block)))
 
-STATIC struct stack_block *stackp;
-STATIC struct stackmark *markp;
+static struct stack_block *stackp;
+static struct stackmark *markp;
 char *stacknxt;
 int stacknleft;
 int sstrnleft;
@@ -296,6 +296,13 @@ grabstackblock(int len)
  * is space for at least one character.
  */
 
+static char *
+growstrstackblock(int n)
+{
+	growstackblock();
+	sstrnleft = stackblocksize() - n;
+	return stackblock() + n;
+}
 
 char *
 growstackstr(void)
@@ -305,12 +312,10 @@ growstackstr(void)
 	len = stackblocksize();
 	if (herefd >= 0 && len >= 1024) {
 		xwrite(herefd, stackblock(), len);
-		sstrnleft = len - 1;
+		sstrnleft = len;
 		return stackblock();
 	}
-	growstackblock();
-	sstrnleft = stackblocksize() - len - 1;
-	return stackblock() + len;
+	return growstrstackblock(len);
 }
 
 
@@ -324,9 +329,7 @@ makestrspace(void)
 	int len;
 
 	len = stackblocksize() - sstrnleft;
-	growstackblock();
-	sstrnleft = stackblocksize() - len;
-	return stackblock() + len;
+	return growstrstackblock(len);
 }
 
 

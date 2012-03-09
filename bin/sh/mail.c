@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/mail.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/mail.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)mail.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mail.c,v 1.14.10.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/mail.c,v 1.14.10.3 2010/10/20 18:25:00 obrien Exp $");
 
 /*
  * Routines to check for mail.  (Perhaps make part of main.c?)
@@ -58,8 +58,8 @@ __FBSDID("$FreeBSD: src/bin/sh/mail.c,v 1.14.10.1 2009/08/03 08:13:06 kensmith E
 #define MAXMBOXES 10
 
 
-STATIC int nmboxes;			/* number of mailboxes */
-STATIC time_t mailtime[MAXMBOXES];	/* times of mailboxes */
+static int nmboxes;			/* number of mailboxes */
+static time_t mailtime[MAXMBOXES];	/* times of mailboxes */
 
 
 
@@ -73,7 +73,7 @@ void
 chkmail(int silent)
 {
 	int i;
-	char *mpath;
+	const char *mpath;
 	char *p;
 	char *q;
 	struct stackmark smark;

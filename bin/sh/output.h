@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/output.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/output.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)output.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/output.h,v 1.13.30.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/output.h,v 1.13.30.2 2010/10/02 20:39:45 jilles Exp $
  */
 
 #ifndef OUTPUT_INCL
@@ -69,7 +69,7 @@ void out1fmt(const char *, ...) __printflike(1, 2);
 void dprintf(const char *, ...) __printflike(1, 2);
 void fmtstr(char *, int, const char *, ...) __printflike(3, 4);
 void doformat(struct output *, const char *, va_list) __printflike(2, 0);
-int xwrite(int, char *, int);
+int xwrite(int, const char *, int);
 
 #define outc(c, file)	(--(file)->nleft < 0? (emptyoutbuf(file), *(file)->nextc++ = (c)) : (*(file)->nextc++ = (c)))
 #define out1c(c)	outc(c, out1);

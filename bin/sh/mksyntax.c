@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/mksyntax.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/mksyntax.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)mksyntax.c	8.2 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mksyntax.c,v 1.26.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/mksyntax.c,v 1.26.2.2 2010/10/03 21:56:20 jilles Exp $");
 
 /*
  * This program creates syntax.h and syntax.c.
@@ -56,8 +56,8 @@ __FBSDID("$FreeBSD: src/bin/sh/mksyntax.c,v 1.26.2.1 2009/08/03 08:13:06 kensmit
 
 
 struct synclass {
-	char *name;
-	char *comment;
+	const char *name;
+	const char *comment;
 };
 
 /* Syntax classes */
@@ -102,16 +102,16 @@ static char writer[] = "\
 
 static FILE *cfile;
 static FILE *hfile;
-static char *syntax[513];
+static const char *syntax[513];
 static int base;
 static int size;	/* number of values which a char variable can have */
 static int nbits;	/* number of bits in a character */
 static int digit_contig;/* true if digits are contiguous */
 
-static void filltable(char *);
+static void filltable(const char *);
 static void init(void);
-static void add(char *, char *);
-static void print(char *);
+static void add(const char *, const char *);
+static void print(const char *);
 static void output_type_macros(void);
 static void digit_convert(void);
 
@@ -260,7 +260,7 @@ main(int argc __unused, char **argv __unused)
  */
 
 static void
-filltable(char *dftval)
+filltable(const char *dftval)
 {
 	int i;
 
@@ -294,7 +294,7 @@ init(void)
  */
 
 static void
-add(char *p, char *type)
+add(const char *p, const char *type)
 {
 	while (*p)
 		syntax[*p++ + base] = type;
@@ -307,7 +307,7 @@ add(char *p, char *type)
  */
 
 static void
-print(char *name)
+print(const char *name)
 {
 	int i;
 	int col;
@@ -339,7 +339,7 @@ print(char *name)
  * contiguous, we can test for them quickly.
  */
 
-static char *macro[] = {
+static const char *macro[] = {
 	"#define is_digit(c)\t((is_type+SYNBASE)[c] & ISDIGIT)",
 	"#define is_eof(c)\t((c) == PEOF)",
 	"#define is_alpha(c)\t(((c) < CTLESC || (c) > CTLQUOTEMARK) && isalpha((unsigned char) (c)))",
@@ -352,7 +352,7 @@ static char *macro[] = {
 static void
 output_type_macros(void)
 {
-	char **pp;
+	const char **pp;
 
 	if (digit_contig)
 		macro[0] = "#define is_digit(c)\t((unsigned int)((c) - '0') <= 9)";

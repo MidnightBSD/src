@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/eval.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/eval.c,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)eval.c	8.9 (Berkeley) 6/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/eval.c,v 1.64.2.2 2009/10/11 16:35:12 jilles Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/eval.c,v 1.64.2.5 2010/10/20 18:25:00 obrien Exp $");
 
 #include <paths.h>
 #include <signal.h>
@@ -75,11 +75,11 @@ __FBSDID("$FreeBSD: src/bin/sh/eval.c,v 1.64.2.2 2009/10/11 16:35:12 jilles Exp 
 #endif
 
 
-MKINIT int evalskip;		/* set if we are skipping commands */
-STATIC int skipcount;		/* number of levels to skip */
+int evalskip;			/* set if we are skipping commands */
+static int skipcount;		/* number of levels to skip */
 MKINIT int loopnest;		/* current loop nesting level */
 int funcnest;			/* depth of function calls */
-STATIC int builtin_flags;	/* evalcommand flags for builtins */
+static int builtin_flags;	/* evalcommand flags for builtins */
 
 
 char *commandname;
@@ -88,14 +88,14 @@ int exitstatus;			/* exit status of last command */
 int oexitstatus;		/* saved exit status */
 
 
-STATIC void evalloop(union node *, int);
-STATIC void evalfor(union node *, int);
-STATIC void evalcase(union node *, int);
-STATIC void evalsubshell(union node *, int);
-STATIC void expredir(union node *);
-STATIC void evalpipe(union node *);
-STATIC void evalcommand(union node *, int, struct backcmd *);
-STATIC void prehash(union node *);
+static void evalloop(union node *, int);
+static void evalfor(union node *, int);
+static void evalcase(union node *, int);
+static void evalsubshell(union node *, int);
+static void expredir(union node *);
+static void evalpipe(union node *);
+static void evalcommand(union node *, int, struct backcmd *);
+static void prehash(union node *);
 
 
 /*
@@ -286,7 +286,7 @@ out:
 }
 
 
-STATIC void
+static void
 evalloop(union node *n, int flags)
 {
 	int status;
@@ -322,7 +322,7 @@ skipping:	  if (evalskip == SKIPCONT && --skipcount <= 0) {
 
 
 
-STATIC void
+static void
 evalfor(union node *n, int flags)
 {
 	struct arglist arglist;
@@ -362,7 +362,7 @@ out:
 
 
 
-STATIC void
+static void
 evalcase(union node *n, int flags)
 {
 	union node *cp;
@@ -395,7 +395,7 @@ out:
  * Kick off a subshell to evaluate a tree.
  */
 
-STATIC void
+static void
 evalsubshell(union node *n, int flags)
 {
 	struct job *jp;
@@ -408,8 +408,7 @@ evalsubshell(union node *n, int flags)
 			flags &=~ EV_TESTED;
 		redirect(n->nredir.redirect, 0);
 		evaltree(n->nredir.n, flags | EV_EXIT);	/* never returns */
-	}
-	if (! backgnd) {
+	} else if (! backgnd) {
 		INTOFF;
 		exitstatus = waitforjob(jp, (int *)NULL);
 		INTON;
@@ -422,7 +421,7 @@ evalsubshell(union node *n, int flags)
  * Compute the names of the files in a redirection list.
  */
 
-STATIC void
+static void
 expredir(union node *n)
 {
 	union node *redir;
@@ -460,7 +459,7 @@ expredir(union node *n)
  * of all the rest.)
  */
 
-STATIC void
+static void
 evalpipe(union node *n)
 {
 	struct job *jp;
@@ -573,7 +572,7 @@ out:
  * Execute a simple command.
  */
 
-STATIC void
+static void
 evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 {
 	struct stackmark smark;
@@ -853,7 +852,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 			listsetvar(cmdenviron);
 		commandname = argv[0];
 		argptr = argv + 1;
-		optptr = NULL;			/* initialize nextopt */
+		nextopt_optptr = NULL;		/* initialize nextopt */
 		builtin_flags = flags;
 		exitstatus = (*builtinfunc[cmdentry.u.index])(argc, argv);
 		flushall();
@@ -897,7 +896,7 @@ cmddone:
 	goto out;
 
 parent:	/* parent process gets here (if we forked) */
-	if (mode == 0) {	/* argument to fork */
+	if (mode == FORK_FG) {	/* argument to fork */
 		INTOFF;
 		exitstatus = waitforjob(jp, &realstatus);
 		INTON;
@@ -905,7 +904,7 @@ parent:	/* parent process gets here (if we forked) */
 			evalskip = SKIPBREAK;
 			skipcount = loopnest;
 		}
-	} else if (mode == 2) {
+	} else if (mode == FORK_NOJOB) {
 		backcmd->fd = pip[0];
 		close(pip[1]);
 		backcmd->jp = jp;
@@ -928,7 +927,7 @@ out:
  * check that the name will not be subject to expansion.
  */
 
-STATIC void
+static void
 prehash(union node *n)
 {
 	struct cmdentry entry;

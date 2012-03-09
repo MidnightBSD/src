@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/main.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/main.c,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.31.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.31.2.6 2010/10/20 18:25:00 obrien Exp $");
 
 #include <stdio.h>
 #include <signal.h>
@@ -77,8 +77,8 @@ __FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.31.2.1 2009/08/03 08:13:06 kensmith Ex
 int rootpid;
 int rootshell;
 
-STATIC void read_profile(char *);
-STATIC char *find_dot_file(char *);
+static void read_profile(const char *);
+static char *find_dot_file(char *);
 
 /*
  * Main routine.  We initialize things, parse the arguments, execute
@@ -158,6 +158,8 @@ main(int argc, char *argv[])
 		out2str("sh: cannot determine working directory\n");
 	if (getpwd() != NULL)
 		setvar ("PWD", getpwd(), VEXPORT);
+	if (iflag)
+		chkmail(1);
 	if (argv[0] && argv[0][0] == '-') {
 		state = 1;
 		read_profile("/etc/profile");
@@ -248,8 +250,8 @@ cmdloop(int top)
  * Read /etc/profile or .profile.  Return on error.
  */
 
-STATIC void
-read_profile(char *name)
+static void
+read_profile(const char *name)
 {
 	int fd;
 
@@ -270,7 +272,7 @@ read_profile(char *name)
  */
 
 void
-readcmdfile(char *name)
+readcmdfile(const char *name)
 {
 	int fd;
 
@@ -292,12 +294,12 @@ readcmdfile(char *name)
  */
 
 
-STATIC char *
+static char *
 find_dot_file(char *basename)
 {
 	static char localname[FILENAME_MAX+1];
 	char *fullname;
-	char *path = pathval();
+	const char *path = pathval();
 	struct stat statb;
 
 	/* don't try this for absolute or relative paths */
@@ -316,16 +318,12 @@ find_dot_file(char *basename)
 int
 dotcmd(int argc, char **argv)
 {
-	struct strlist *sp;
 	char *fullname;
 
 	if (argc < 2)
 		error("missing filename");
 
 	exitstatus = 0;
-
-	for (sp = cmdenviron; sp ; sp = sp->next)
-		setvareq(savestr(sp->text), VSTRFIXED|VTEXTFIXED);
 
 	fullname = find_dot_file(argv[1]);
 	setinputfile(fullname, 1);
@@ -339,8 +337,6 @@ dotcmd(int argc, char **argv)
 int
 exitcmd(int argc, char **argv)
 {
-	extern int oexitstatus;
-
 	if (stoppedjobs())
 		return 0;
 	if (argc > 1)

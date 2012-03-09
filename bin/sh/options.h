@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/options.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/options.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)options.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/options.h,v 1.13.30.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/options.h,v 1.13.30.3 2010/10/03 21:56:20 jilles Exp $
  */
 
 struct shparam {
@@ -103,7 +103,7 @@ extern char *arg0;		/* $0 */
 extern struct shparam shellparam;  /* $@ */
 extern char **argptr;		/* argument list for builtin commands */
 extern char *shoptarg;		/* set by nextopt */
-extern char *optptr;		/* used by nextopt */
+extern char *nextopt_optptr;	/* used by nextopt */
 
 void procargs(int, char **);
 void optschanged(void);
@@ -112,5 +112,5 @@ void freeparam(struct shparam *);
 int shiftcmd(int, char **);
 int setcmd(int, char **);
 int getoptscmd(int, char **);
-int nextopt(char *);
+int nextopt(const char *);
 void getoptsreset(const char *);

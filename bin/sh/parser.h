@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/parser.h,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/parser.h,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)parser.h	8.3 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/parser.h,v 1.12.2.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/parser.h,v 1.12.2.3 2010/10/03 21:56:20 jilles Exp $
  */
 
 /* control characters in argument strings */
@@ -74,9 +74,10 @@
 extern int tokpushback;
 #define NEOF ((union node *)&tokpushback)
 extern int whichprompt;		/* 1 == PS1, 2 == PS2 */
+extern const char *const parsekwd[];
 
 
 union node *parsecmd(int);
 void fixredir(union node *, const char *, int);
-int goodname(char *);
+int goodname(const char *);
 char *getprompt(void *);

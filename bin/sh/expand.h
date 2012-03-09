@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/expand.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)expand.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/expand.h,v 1.12.30.1 2009/08/03 08:13:06 kensmith Exp $
+ * $FreeBSD: src/bin/sh/expand.h,v 1.12.30.2 2010/10/02 20:39:45 jilles Exp $
  */
 
 struct strlist {
@@ -59,7 +58,7 @@ union node;
 void expandhere(union node *, int);
 void expandarg(union node *, struct arglist *, int);
 void expari(int);
-int patmatch(char *, char *, int);
+int patmatch(const char *, const char *, int);
 void rmescapes(char *);
-int casematch(union node *, char *);
+int casematch(union node *, const char *);
 int wordexpcmd(int, char **);

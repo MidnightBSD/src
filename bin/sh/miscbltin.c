@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/miscbltin.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/miscbltin.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)miscbltin.c	8.4 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/miscbltin.c,v 1.41.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/miscbltin.c,v 1.41.2.3 2010/10/03 21:56:20 jilles Exp $");
 
 /*
  * Miscellaneous builtins.
@@ -94,7 +94,7 @@ readcmd(int argc __unused, char **argv __unused)
 	char c;
 	int rflag;
 	char *prompt;
-	char *ifs;
+	const char *ifs;
 	char *p;
 	int startword;
 	int status;
@@ -175,6 +175,7 @@ readcmd(int argc __unused, char **argv __unused)
 			continue;
 		if (backslash) {
 			backslash = 0;
+			startword = 0;
 			if (c != '\n')
 				STPUTC(c, p);
 			continue;
@@ -255,7 +256,7 @@ readcmd(int argc __unused, char **argv __unused)
 
 
 int
-umaskcmd(int argc __unused, char **argv)
+umaskcmd(int argc __unused, char **argv __unused)
 {
 	char *ap;
 	int mask;

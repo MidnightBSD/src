@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/exec.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/exec.c,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)exec.c	8.4 (Berkeley) 6/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/exec.c,v 1.34.2.2 2009/10/11 16:35:12 jilles Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/exec.c,v 1.34.2.5 2010/10/20 18:25:00 obrien Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -92,15 +92,15 @@ struct tblentry {
 };
 
 
-STATIC struct tblentry *cmdtable[CMDTABLESIZE];
-STATIC int builtinloc = -1;		/* index in path of %builtin, or -1 */
+static struct tblentry *cmdtable[CMDTABLESIZE];
+static int builtinloc = -1;		/* index in path of %builtin, or -1 */
 int exerrno = 0;			/* Last exec error */
 
 
-STATIC void tryexec(char *, char **, char **);
-STATIC void printentry(struct tblentry *, int);
-STATIC struct tblentry *cmdlookup(char *, int);
-STATIC void delete_cmd_entry(void);
+static void tryexec(char *, char **, char **);
+static void printentry(struct tblentry *, int);
+static struct tblentry *cmdlookup(const char *, int);
+static void delete_cmd_entry(void);
 
 
 
@@ -110,7 +110,7 @@ STATIC void delete_cmd_entry(void);
  */
 
 void
-shellexec(char **argv, char **envp, char *path, int index)
+shellexec(char **argv, char **envp, const char *path, int idx)
 {
 	char *cmdname;
 	int e;
@@ -121,7 +121,7 @@ shellexec(char **argv, char **envp, char *path, int index)
 	} else {
 		e = ENOENT;
 		while ((cmdname = padvance(&path, argv[0])) != NULL) {
-			if (--index < 0 && pathopt == NULL) {
+			if (--idx < 0 && pathopt == NULL) {
 				tryexec(cmdname, argv, envp);
 				if (errno != ENOENT && errno != ENOTDIR)
 					e = errno;
@@ -148,7 +148,7 @@ shellexec(char **argv, char **envp, char *path, int index)
 }
 
 
-STATIC void
+static void
 tryexec(char *cmd, char **argv, char **envp)
 {
 	int e;
@@ -176,13 +176,13 @@ tryexec(char *cmd, char **argv, char **envp)
  * NULL.
  */
 
-char *pathopt;
+const char *pathopt;
 
 char *
-padvance(char **path, char *name)
+padvance(const char **path, const char *name)
 {
-	char *p, *q;
-	char *start;
+	const char *p, *start;
+	char *q;
 	int len;
 
 	if (*path == NULL)
@@ -266,20 +266,20 @@ hashcmd(int argc __unused, char **argv __unused)
 }
 
 
-STATIC void
+static void
 printentry(struct tblentry *cmdp, int verbose)
 {
-	int index;
-	char *path;
+	int idx;
+	const char *path;
 	char *name;
 
 	if (cmdp->cmdtype == CMDNORMAL) {
-		index = cmdp->param.index;
+		idx = cmdp->param.index;
 		path = pathval();
 		do {
 			name = padvance(&path, cmdp->cmdname);
 			stunalloc(name);
-		} while (--index >= 0);
+		} while (--idx >= 0);
 		out1str(name);
 	} else if (cmdp->cmdtype == CMDBUILTIN) {
 		out1fmt("builtin %s", cmdp->cmdname);
@@ -311,10 +311,11 @@ printentry(struct tblentry *cmdp, int verbose)
  */
 
 void
-find_command(char *name, struct cmdentry *entry, int printerr, char *path)
+find_command(const char *name, struct cmdentry *entry, int printerr,
+    const char *path)
 {
 	struct tblentry *cmdp;
-	int index;
+	int idx;
 	int prev;
 	char *fullname;
 	struct stat statb;
@@ -354,11 +355,11 @@ find_command(char *name, struct cmdentry *entry, int printerr, char *path)
 	}
 
 	e = ENOENT;
-	index = -1;
+	idx = -1;
 loop:
 	while ((fullname = padvance(&path, name)) != NULL) {
 		stunalloc(fullname);
-		index++;
+		idx++;
 		if (pathopt) {
 			if (prefix("builtin", pathopt)) {
 				if ((i = find_builtin(name, &spec)) < 0)
@@ -377,8 +378,8 @@ loop:
 			}
 		}
 		/* if rehash, don't redo absolute path names */
-		if (fullname[0] == '/' && index <= prev) {
-			if (index < prev)
+		if (fullname[0] == '/' && idx <= prev) {
+			if (idx < prev)
 				goto loop;
 			TRACE(("searchexec \"%s\": no change\n", name));
 			goto success;
@@ -415,7 +416,7 @@ loop:
 		INTOFF;
 		cmdp = cmdlookup(name, 1);
 		cmdp->cmdtype = CMDNORMAL;
-		cmdp->param.index = index;
+		cmdp->param.index = idx;
 		INTON;
 		goto success;
 	}
@@ -446,7 +447,7 @@ success:
  */
 
 int
-find_builtin(char *name, int *special)
+find_builtin(const char *name, int *special)
 {
 	const struct builtincmd *bp;
 
@@ -493,18 +494,18 @@ void
 changepath(const char *newval)
 {
 	const char *old, *new;
-	int index;
+	int idx;
 	int firstchange;
 	int bltin;
 
 	old = pathval();
 	new = newval;
 	firstchange = 9999;	/* assume no change */
-	index = 0;
+	idx = 0;
 	bltin = -1;
 	for (;;) {
 		if (*old != *new) {
-			firstchange = index;
+			firstchange = idx;
 			if ((*old == '\0' && *new == ':')
 			 || (*old == ':' && *new == '\0'))
 				firstchange++;
@@ -513,9 +514,9 @@ changepath(const char *newval)
 		if (*new == '\0')
 			break;
 		if (*new == '%' && bltin < 0 && prefix("builtin", new + 1))
-			bltin = index;
+			bltin = idx;
 		if (*new == ':') {
-			index++;
+			idx++;
 		}
 		new++, old++;
 	}
@@ -604,14 +605,14 @@ deletefuncs(void)
  * entry.
  */
 
-STATIC struct tblentry **lastcmdentry;
+static struct tblentry **lastcmdentry;
 
 
-STATIC struct tblentry *
-cmdlookup(char *name, int add)
+static struct tblentry *
+cmdlookup(const char *name, int add)
 {
 	int hashval;
-	char *p;
+	const char *p;
 	struct tblentry *cmdp;
 	struct tblentry **pp;
 
@@ -644,7 +645,7 @@ cmdlookup(char *name, int add)
  * Delete the command entry returned on the last lookup.
  */
 
-STATIC void
+static void
 delete_cmd_entry(void)
 {
 	struct tblentry *cmdp;
@@ -664,7 +665,7 @@ delete_cmd_entry(void)
  */
 
 void
-addcmdentry(char *name, struct cmdentry *entry)
+addcmdentry(const char *name, struct cmdentry *entry)
 {
 	struct tblentry *cmdp;
 
@@ -684,7 +685,7 @@ addcmdentry(char *name, struct cmdentry *entry)
  */
 
 void
-defun(char *name, union node *func)
+defun(const char *name, union node *func)
 {
 	struct cmdentry entry;
 
@@ -701,7 +702,7 @@ defun(char *name, union node *func)
  */
 
 int
-unsetfunc(char *name)
+unsetfunc(const char *name)
 {
 	struct tblentry *cmdp;
 
@@ -723,15 +724,14 @@ typecmd_impl(int argc, char **argv, int cmd)
 {
 	struct cmdentry entry;
 	struct tblentry *cmdp;
-	char **pp;
+	const char *const *pp;
 	struct alias *ap;
 	int i;
-	int error = 0;
-	extern char *const parsekwd[];
+	int error1 = 0;
 
 	for (i = 1; i < argc; i++) {
 		/* First look at the keywords */
-		for (pp = (char **)parsekwd; *pp; pp++)
+		for (pp = parsekwd; *pp; pp++)
 			if (**pp == *argv[i] && equal(*pp, argv[i]))
 				break;
 
@@ -767,7 +767,8 @@ typecmd_impl(int argc, char **argv, int cmd)
 		switch (entry.cmdtype) {
 		case CMDNORMAL: {
 			if (strchr(argv[i], '/') == NULL) {
-				char *path = pathval(), *name;
+				const char *path = pathval();
+				char *name;
 				int j = entry.u.index;
 				do {
 					name = padvance(&path, argv[i]);
@@ -791,7 +792,7 @@ typecmd_impl(int argc, char **argv, int cmd)
 					if (cmd != TYPECMD_SMALLV)
 						outfmt(out2, "%s: %s\n",
 						    argv[i], strerror(errno));
-					error |= 127;
+					error1 |= 127;
 				}
 			}
 			break;
@@ -816,11 +817,11 @@ typecmd_impl(int argc, char **argv, int cmd)
 		default:
 			if (cmd != TYPECMD_SMALLV)
 				outfmt(out2, "%s: not found\n", argv[i]);
-			error |= 127;
+			error1 |= 127;
 			break;
 		}
 	}
-	return error;
+	return error1;
 }
 
 /*

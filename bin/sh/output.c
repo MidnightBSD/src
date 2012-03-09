@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/output.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/output.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)output.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/output.c,v 1.21.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/output.c,v 1.21.2.3 2010/10/20 18:25:00 obrien Exp $");
 
 /*
  * Shell output routines.  We use our own output routines because:
@@ -168,7 +168,7 @@ outqstr(const char *p, struct output *file)
 		outc('\'', file);
 }
 
-STATIC char out_junk[16];
+static char out_junk[16];
 
 void
 emptyoutbuf(struct output *dest)
@@ -317,7 +317,7 @@ doformat(struct output *dest, const char *f, va_list ap)
  */
 
 int
-xwrite(int fd, char *buf, int nbytes)
+xwrite(int fd, const char *buf, int nbytes)
 {
 	int ntry;
 	int i;

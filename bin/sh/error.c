@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/error.c,v 1.3 2008/06/30 00:49:38 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/error.c,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)error.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/error.c,v 1.26.10.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/error.c,v 1.26.10.3 2010/10/21 01:13:41 obrien Exp $");
 
 /*
  * Errors and exceptions.
@@ -68,7 +68,7 @@ volatile sig_atomic_t intpending;
 char *commandname;
 
 
-static void exverror(int, const char *, va_list) __printf0like(2, 0);
+static void exverror(int, const char *, va_list) __printf0like(2, 0) __dead2;
 
 /*
  * Called to raise an exception.  Since C doesn't include exceptions, we
@@ -99,7 +99,7 @@ exraise(int e)
 void
 onint(void)
 {
-	sigset_t sigset;
+	sigset_t sigs;
 
 	/*
 	 * The !in_dotrap here is safe.  The only way we can arrive here
@@ -112,8 +112,8 @@ onint(void)
 		return;
 	}
 	intpending = 0;
-	sigemptyset(&sigset);
-	sigprocmask(SIG_SETMASK, &sigset, NULL);
+	sigemptyset(&sigs);
+	sigprocmask(SIG_SETMASK, &sigs, NULL);
 
 	/*
 	 * This doesn't seem to be needed, since main() emits a newline.

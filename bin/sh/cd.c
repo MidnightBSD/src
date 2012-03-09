@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/cd.c,v 1.5 2008/06/30 00:49:38 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/cd.c,v 1.6 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)cd.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/cd.c,v 1.36.2.1 2009/08/03 08:13:06 kensmith Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/cd.c,v 1.36.2.5 2010/10/20 18:25:00 obrien Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -65,23 +65,23 @@ __FBSDID("$FreeBSD: src/bin/sh/cd.c,v 1.36.2.1 2009/08/03 08:13:06 kensmith Exp 
 #include "show.h"
 #include "cd.h"
 
-STATIC int cdlogical(char *);
-STATIC int cdphysical(char *);
-STATIC int docd(char *, int, int);
-STATIC char *getcomponent(void);
-STATIC char *findcwd(char *);
-STATIC void updatepwd(char *);
-STATIC char *getpwd2(char *, size_t);
+static int cdlogical(char *);
+static int cdphysical(char *);
+static int docd(char *, int, int);
+static char *getcomponent(void);
+static char *findcwd(char *);
+static void updatepwd(char *);
+static char *getpwd2(void);
 
-STATIC char *curdir = NULL;	/* current working directory */
-STATIC char *prevdir;		/* previous working directory */
-STATIC char *cdcomppath;
+static char *curdir = NULL;	/* current working directory */
+static char *prevdir;		/* previous working directory */
+static char *cdcomppath;
 
 int
 cdcmd(int argc, char **argv)
 {
-	char *dest;
-	char *path;
+	const char *dest;
+	const char *path;
 	char *p;
 	struct stat statb;
 	int ch, phys, print = 0;
@@ -145,7 +145,7 @@ cdcmd(int argc, char **argv)
  * Actually change the directory.  In an interactive shell, print the
  * directory name if "print" is nonzero.
  */
-STATIC int
+static int
 docd(char *dest, int print, int phys)
 {
 
@@ -161,7 +161,7 @@ docd(char *dest, int print, int phys)
 	return 0;
 }
 
-STATIC int
+static int
 cdlogical(char *dest)
 {
 	char *p;
@@ -213,7 +213,7 @@ cdlogical(char *dest)
 	return (0);
 }
 
-STATIC int
+static int
 cdphysical(char *dest)
 {
 	char *p;
@@ -232,7 +232,7 @@ cdphysical(char *dest)
  * Get the next component of the path name pointed to by cdcomppath.
  * This routine overwrites the string pointed to by cdcomppath.
  */
-STATIC char *
+static char *
 getcomponent(void)
 {
 	char *p;
@@ -253,7 +253,7 @@ getcomponent(void)
 }
 
 
-STATIC char *
+static char *
 findcwd(char *dir)
 {
 	char *new;
@@ -264,10 +264,8 @@ findcwd(char *dir)
 	 * any more because we traversed a symbolic link or something
 	 * we couldn't stat().
 	 */
-	if (dir == NULL || curdir == NULL)  {
-		p = stalloc(PATH_MAX);
-		return getpwd2(p, PATH_MAX);
-	}
+	if (dir == NULL || curdir == NULL)
+		return getpwd2();
 	cdcomppath = stalloc(strlen(dir) + 1);
 	scopy(dir, cdcomppath);
 	STARTSTACKSTR(new);
@@ -298,7 +296,7 @@ findcwd(char *dir)
  * cd command.  We also call hashcd to let the routines in exec.c know
  * that the current directory has changed.
  */
-STATIC void
+static void
 updatepwd(char *dir)
 {
 	hashcd();				/* update command hash table */
@@ -314,7 +312,7 @@ updatepwd(char *dir)
 int
 pwdcmd(int argc, char **argv)
 {
-	char buf[PATH_MAX];
+	char *p;
 	int ch, phys;
 
 	optreset = 1; optind = 1; opterr = 0; /* initialize getopt */
@@ -342,9 +340,9 @@ pwdcmd(int argc, char **argv)
 		out1str(curdir);
 		out1c('\n');
 	} else {
-		if (getcwd(buf, sizeof(buf)) == NULL)
+		if ((p = getpwd2()) == NULL)
 			error(".: %s", strerror(errno));
-		out1str(buf);
+		out1str(p);
 		out1c('\n');
 	}
 
@@ -357,36 +355,45 @@ pwdcmd(int argc, char **argv)
 char *
 getpwd(void)
 {
-	char buf[PATH_MAX];
 	char *p;
 
 	if (curdir)
 		return curdir;
 
-	p = getpwd2(buf, sizeof(buf));
+	p = getpwd2();
 	if (p != NULL)
 		curdir = savestr(p);
 
 	return curdir;
 }
 
+#define MAXPWD 256
+
 /*
  * Return the current directory.
  */
-STATIC char *
-getpwd2(char *buf, size_t size)
+static char *
+getpwd2(void)
 {
-	if (getcwd(buf, size) == NULL) {
-		char *pwd = getenv("PWD");
-		struct stat stdot, stpwd;
+	struct stat stdot, stpwd;
+	char *pwd;
+	int i;
 
-		if (pwd && *pwd == '/' && stat(".", &stdot) != -1 &&
-		    stat(pwd, &stpwd) != -1 &&
-		    stdot.st_dev == stpwd.st_dev &&
-		    stdot.st_ino == stpwd.st_ino) {
+	for (i = MAXPWD;; i *= 2) {
+		pwd = stalloc(i);
+		if (getcwd(pwd, i) != NULL)
 			return pwd;
-		}
-		return NULL;
+		stunalloc(pwd);
+		if (errno != ERANGE)
+			break;
 	}
-	return buf;
+
+	pwd = getenv("PWD");
+	if (pwd && *pwd == '/' && stat(".", &stdot) != -1 &&
+	    stat(pwd, &stpwd) != -1 &&
+	    stdot.st_dev == stpwd.st_dev &&
+	    stdot.st_ino == stpwd.st_ino) {
+		return pwd;
+	}
+	return NULL;
 }
