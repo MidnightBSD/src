@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/syslog.c,v 1.39 2007/01/09 00:27:55 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/syslog.c,v 1.39.2.1 2011/04/04 09:38:05 pluknet Exp $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -342,7 +342,7 @@ connectlog(void)
 	if (LogFile == -1) {
 		if ((LogFile = _socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
 			return;
-		(void)_fcntl(LogFile, F_SETFD, 1);
+		(void)_fcntl(LogFile, F_SETFD, FD_CLOEXEC);
 	}
 	if (LogFile != -1 && status == NOCONN) {
 		SyslogAddr.sun_len = sizeof(SyslogAddr);

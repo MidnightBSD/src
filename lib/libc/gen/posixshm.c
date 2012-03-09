@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/posixshm.c,v 1.4 2002/02/01 00:57:29 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/posixshm.c,v 1.4.24.1 2009/06/11 21:37:23 jhb Exp $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -40,11 +40,33 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/posixshm.c,v 1.4 2002/02/01 00:57:29 obrien
 #include <unistd.h>
 #include "un-namespace.h"
 
+static int _shm_in_kernel = -1;
+
+/* Wrappers for POSIX SHM system calls in newer kernels. */
+static __inline int
+_shm_open(const char *path, int flags, mode_t mode)
+{
+
+    return (syscall(482, path, flags, mode));
+}
+
+static __inline int
+_shm_unlink(const char *path)
+{
+
+    return (syscall(483, path));
+}
+
 int
 shm_open(const char *path, int flags, mode_t mode)
 {
 	int fd;
 	struct stat stab;
+
+	if (_shm_in_kernel == -1)
+		_shm_in_kernel = feature_present("posix_shm");
+	if (_shm_in_kernel == 1)
+		return (_shm_open(path, flags, mode));
 
 	if ((flags & O_ACCMODE) == O_WRONLY)
 		return (EINVAL);
@@ -68,5 +90,11 @@ shm_open(const char *path, int flags, mode_t mode)
 int
 shm_unlink(const char *path)
 {
+
+	if (_shm_in_kernel == -1)
+		_shm_in_kernel = feature_present("posix_shm");
+	if (_shm_in_kernel == 1)
+		return (_shm_unlink(path));
+
 	return (unlink(path));
 }

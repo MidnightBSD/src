@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)getcap.c	8.3 (Berkeley) 3/25/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getcap.c,v 1.20 2007/01/09 00:27:53 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/getcap.c,v 1.20.2.2 2009/12/02 03:08:29 wollman Exp $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -189,7 +189,7 @@ getent(char **cap, u_int *len, char **db_array, int fd, const char *name,
 {
 	DB *capdbp;
 	char *r_end, *rp, **db_p;
-	int myfd, eof, foundit, retval, clen;
+	int myfd, eof, foundit, retval;
 	char *record, *cbuf;
 	int tc_not_resolved;
 	char pbuf[_POSIX_PATH_MAX];
@@ -251,14 +251,16 @@ getent(char **cap, u_int *len, char **db_array, int fd, const char *name,
 					return (retval);
 				}
 				/* save the data; close frees it */
-				clen = strlen(record);
-				cbuf = malloc(clen + 1);
-				memcpy(cbuf, record, clen + 1);
+				cbuf = strdup(record);
 				if (capdbp->close(capdbp) < 0) {
 					free(cbuf);
 					return (-2);
 				}
-				*len = clen;
+				if (cbuf == NULL) {
+					errno = ENOMEM;
+					return (-2);
+				}
+				*len = strlen(cbuf);
 				*cap = cbuf;
 				return (retval);
 			} else {
@@ -645,7 +647,7 @@ int
 cgetnext(char **bp, char **db_array)
 {
 	size_t len;
-	int done, hadreaderr, i, savederrno, status;
+	int done, hadreaderr, savederrno, status;
 	char *cp, *line, *rp, *np, buf[BSIZE], nbuf[BSIZE];
 	u_int dummy;
 
@@ -656,7 +658,7 @@ cgetnext(char **bp, char **db_array)
 		(void)cgetclose();
 		return (-1);
 	}
-	for(;;) {
+	for (;;) {
 		if (toprec && !gottoprec) {
 			gottoprec = 1;
 			line = toprec;
@@ -707,7 +709,6 @@ cgetnext(char **bp, char **db_array)
 		/*
 		 * Line points to a name line.
 		 */
-		i = 0;
 		done = 0;
 		np = nbuf;
 		for (;;) {

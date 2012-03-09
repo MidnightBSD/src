@@ -1,6 +1,6 @@
 /*
  * $FreeBSD: src/lib/libc/gen/Symbol.map,v 1.6 2007/05/31 13:01:33 deischen Exp $
- * $MidnightBSD: src/lib/libc/gen/Symbol.map,v 1.4 2011/12/24 02:53:22 laffer1 Exp $
+ * $MidnightBSD: src/lib/libc/gen/Symbol.map,v 1.5 2011/12/28 02:55:16 laffer1 Exp $
  */
 
 MNBSD_1.0 {
@@ -364,6 +364,7 @@ FBSD_1.0 {
 };
 
 FBSD_1.1 {
+	fdopendir;
 	feature_present;
 };
 
@@ -439,6 +440,8 @@ FBSDprivate_1.0 {
 	_spinlock;
 	_spinlock_debug;
 	_spinunlock;
+	_rtld_atfork_pre;
+	_rtld_atfork_post;
 	_rtld_error;		/* for private use */
 	_rtld_thread_init;	/* for private use */
 	_err;

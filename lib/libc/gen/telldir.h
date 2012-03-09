@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/gen/telldir.h,v 1.2 2001/01/24 12:59:24 deischen Exp $
+ * $FreeBSD: src/lib/libc/gen/telldir.h,v 1.2.24.1 2008/05/19 11:43:36 kib Exp $
  */
 
 #ifndef _TELLDIR_H_

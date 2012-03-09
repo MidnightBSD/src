@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getbsize.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getbsize.c,v 1.8 2007/01/09 00:27:53 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/getbsize.c,v 1.8.2.1 2008/08/30 23:08:31 cperciva Exp $");
 
 #include <err.h>
 #include <stdio.h>
@@ -83,6 +83,7 @@ getbsize(headerlenp, blocksizep)
 		default:
 fmterr:			warnx("%s: unknown blocksize", p);
 			n = 512;
+			max = MAXB;
 			mul = 1;
 			break;
 		}

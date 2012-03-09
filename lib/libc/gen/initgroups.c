@@ -31,14 +31,16 @@
 static char sccsid[] = "@(#)initgroups.c	8.1 (Berkeley) 6/4/93";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/initgroups.c,v 1.9 2007/01/09 00:27:54 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/initgroups.c,v 1.9.2.1 2009/07/24 21:42:10 brooks Exp $");
 
 #include <sys/param.h>
 
-#include <stdio.h>
 #include "namespace.h"
 #include <err.h>
 #include "un-namespace.h"
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 int
@@ -46,14 +48,21 @@ initgroups(uname, agroup)
 	const char *uname;
 	gid_t agroup;
 {
-	int ngroups;
+	int ngroups, ret;
+	long ngroups_max;
+	gid_t *groups;
+
 	/*
-	 * Provide space for one group more than NGROUPS to allow
+	 * Provide space for one group more than possible to allow
 	 * setgroups to fail and set errno.
 	 */
-	gid_t groups[NGROUPS + 1];
+	ngroups_max = sysconf(_SC_NGROUPS_MAX) + 2;
+	if ((groups = malloc(sizeof(*groups) * ngroups_max)) == NULL)
+		return (ENOMEM);
 
-	ngroups = NGROUPS + 1;
+	ngroups = (int)ngroups_max;
 	getgrouplist(uname, agroup, groups, &ngroups);
-	return (setgroups(ngroups, groups));
+	ret = setgroups(ngroups, groups);
+	free(groups);
+	return (ret);
 }

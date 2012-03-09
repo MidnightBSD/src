@@ -32,7 +32,7 @@ static char sccsid[] = "@(#)getusershell.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 /*	$NetBSD: getusershell.c,v 1.17 1999/01/25 01:09:34 lukem Exp $	*/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getusershell.c,v 1.10 2007/01/09 00:27:54 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/getusershell.c,v 1.10.2.1 2009/12/02 03:08:29 wollman Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -124,7 +124,7 @@ _local_initshells(rv, cb_data, ap)
 	if ((fp = fopen(_PATH_SHELLS, "r")) == NULL)
 		return NS_UNAVAIL;
 
-	sp = cp = line;
+	cp = line;
 	while (fgets(cp, MAXPATHLEN + 1, fp) != NULL) {
 		while (*cp != '#' && *cp != '/' && *cp != '\0')
 			cp++;

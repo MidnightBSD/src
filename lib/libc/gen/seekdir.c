@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)seekdir.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/seekdir.c,v 1.6 2007/01/09 00:27:55 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/seekdir.c,v 1.6.2.1 2009/06/08 19:52:12 des Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -52,8 +52,8 @@ seekdir(dirp, loc)
 	long loc;
 {
 	if (__isthreaded)
-		_pthread_mutex_lock((pthread_mutex_t *)&dirp->dd_lock);
+		_pthread_mutex_lock(&dirp->dd_lock);
 	_seekdir(dirp, loc);
 	if (__isthreaded)
-		_pthread_mutex_unlock((pthread_mutex_t *)&dirp->dd_lock);
+		_pthread_mutex_unlock(&dirp->dd_lock);
 }
