@@ -31,9 +31,9 @@
 .\"
 .\"     @(#)test.1	8.1 (Berkeley) 5/31/93
 .\" $FreeBSD: src/bin/test/test.1,v 1.23 2005/01/10 08:39:26 imp Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/test/test.1,v 1.2 2007/07/26 20:13:02 laffer1 Exp $
 .\"
-.Dd July 3, 2004
+.Dd September 10, 2010
 .Dt TEST 1
 .Os
 .Sh NAME
@@ -51,7 +51,9 @@ The
 utility evaluates the expression and, if it evaluates
 to true, returns a zero (true) exit status; otherwise
 it returns 1 (false).
-If there is no expression, test also
+If there is no expression,
+.Nm
+also
 returns 1 (false).
 .Pp
 All operators and flags are separate arguments to the
@@ -188,68 +190,68 @@ True if
 .Ar string
 is not the null
 string.
-.It Ar \&s\&1 Cm \&= Ar \&s\&2
+.It Ar s1 Cm = Ar s2
 True if the strings
-.Ar \&s\&1
+.Ar s1
 and
-.Ar \&s\&2
+.Ar s2
 are identical.
-.It Ar \&s\&1 Cm \&!= Ar \&s\&2
+.It Ar s1 Cm != Ar s2
 True if the strings
-.Ar \&s\&1
+.Ar s1
 and
-.Ar \&s\&2
+.Ar s2
 are not identical.
-.It Ar \&s\&1 Cm \&< Ar \&s\&2
+.It Ar s1 Cm < Ar s2
 True if string
-.Ar \&s\&1
+.Ar s1
 comes before
-.Ar \&s\&2
+.Ar s2
 based on the binary value of their characters.
-.It Ar \&s\&1 Cm \&> Ar \&s\&2
+.It Ar s1 Cm > Ar s2
 True if string
-.Ar \&s\&1
+.Ar s1
 comes after
-.Ar \&s\&2
+.Ar s2
 based on the binary value of their characters.
-.It Ar \&n\&1 Fl \&eq Ar \&n\&2
+.It Ar n1 Fl eq Ar n2
 True if the integers
-.Ar \&n\&1
+.Ar n1
 and
-.Ar \&n\&2
+.Ar n2
 are algebraically
 equal.
-.It Ar \&n\&1 Fl \&ne Ar \&n\&2
+.It Ar n1 Fl ne Ar n2
 True if the integers
-.Ar \&n\&1
+.Ar n1
 and
-.Ar \&n\&2
+.Ar n2
 are not
 algebraically equal.
-.It Ar \&n\&1 Fl \&gt Ar \&n\&2
+.It Ar n1 Fl gt Ar n2
 True if the integer
-.Ar \&n\&1
+.Ar n1
 is algebraically
 greater than the integer
-.Ar \&n\&2 .
-.It Ar \&n\&1 Fl \&ge Ar \&n\&2
+.Ar n2 .
+.It Ar n1 Fl ge Ar n2
 True if the integer
-.Ar \&n\&1
+.Ar n1
 is algebraically
 greater than or equal to the integer
-.Ar \&n\&2 .
-.It Ar \&n\&1 Fl \&lt Ar \&n\&2
+.Ar n2 .
+.It Ar n1 Fl lt Ar n2
 True if the integer
-.Ar \&n\&1
+.Ar n1
 is algebraically less
 than the integer
-.Ar \&n\&2 .
-.It Ar \&n\&1 Fl \&le Ar \&n\&2
+.Ar n2 .
+.It Ar n1 Fl le Ar n2
 True if the integer
-.Ar \&n\&1
+.Ar n1
 is algebraically less
 than or equal to the integer
-.Ar \&n\&2 .
+.Ar n2 .
 .El
 .Pp
 If
@@ -281,7 +283,7 @@ True if either
 or
 .Ar expression2
 are true.
-.It Cm \&( Ns Ar expression Ns Cm \&)
+.It Cm \&( Ar expression Cm \&)
 True if expression is true.
 .El
 .Pp
@@ -309,11 +311,19 @@ are evaluated consistently according to the rules specified in the
 standards document.
 All other cases are subject to the ambiguity in the
 command semantics.
-.Sh RETURN VALUES
+.Pp
+In particular, only expressions containing
+.Fl a ,
+.Fl o ,
+.Cm \&(
+or
+.Cm \&)
+can be ambiguous.
+.Sh EXIT STATUS
 The
 .Nm
 utility exits with one of the following values:
-.Bl -tag -width Ds
+.Bl -tag -width indent
 .It 0
 expression evaluated to true.
 .It 1
@@ -333,3 +343,15 @@ The
 utility implements a superset of the
 .St -p1003.2
 specification.
+.Sh BUGS
+Both sides are always evaluated in
+.Fl a
+and
+.Fl o .
+For instance, the writable status of
+.Pa file
+will be tested by the following command even though the former expression
+indicated false, which results in a gratuitous access to the file system:
+.Dl "[ -z abc -a -w file ]"
+To avoid this, write
+.Dl "[ -z abc ] && [ -w file ]"

@@ -491,9 +491,6 @@ bin/sync/Makefile -text
 bin/sync/sync.8 -text
 bin/sync/sync.c -text
 bin/test/Makefile -text
-bin/test/TEST.README -text
-bin/test/TEST.csh -text
-bin/test/TEST.sh -text
 bin/test/test.1 -text
 bin/test/test.c -text
 bin/uuidgen/Makefile -text
