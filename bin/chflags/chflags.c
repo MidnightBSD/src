@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/bin/chflags/chflags.c,v 1.3 2007/07/26 20:12:59 laffer1 Exp $
+ * $MidnightBSD: src/bin/chflags/chflags.c,v 1.4 2008/06/30 01:16:47 laffer1 Exp $
  * $FreeBSD: src/bin/chflags/chflags.c,v 1.23 2005/05/14 23:23:10 dd Exp$
  */
 
@@ -117,7 +117,7 @@ main(int argc, char *argv[])
 			fts_options |= FTS_LOGICAL;
 		}
 	} else
-		fts_options = FTS_LOGICAL;
+		fts_options = hflag ? FTS_PHYSICAL : FTS_LOGICAL;
 
 	/* XXX: Why don't chflags and lchflags have compatible prototypes? */
 	if (hflag)
