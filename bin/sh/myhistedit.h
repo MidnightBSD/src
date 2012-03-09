@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/myhistedit.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/myhistedit.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +40,7 @@ extern int displayhist;
 void histedit(void);
 void sethistsize(const char *);
 int histcmd(int, char **);
-int not_fcnumber(char *);
-int str_to_event(char *, int);
+int not_fcnumber(const char *);
+int str_to_event(const char *, int);
 int bindcmd(int, char **);
 
