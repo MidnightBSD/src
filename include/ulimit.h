@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/ulimit.h,v 1.4 2003/01/08 01:18:13 tjr Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _ULIMIT_H_

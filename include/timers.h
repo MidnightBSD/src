@@ -30,6 +30,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/timers.h,v 1.4 1999/08/27 23:44:52 peter Exp $
+ * $MidnightBSD$
  *
  * Description : Basic timers header.
  *

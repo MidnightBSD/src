@@ -40,6 +40,7 @@
 
 /*
  * $FreeBSD: src/include/timeconv.h,v 1.2 2002/08/21 16:19:55 mike Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _TIMECONV_H_

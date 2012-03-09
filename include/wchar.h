@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/wchar.h,v 1.46 2005/08/13 05:54:33 tjr Exp $
+ * $MidnightBSD$
  */
 
 /*-

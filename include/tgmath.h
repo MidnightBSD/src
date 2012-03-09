@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/tgmath.h,v 1.5 2007/02/02 18:30:23 schweikh Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _TGMATH_H_

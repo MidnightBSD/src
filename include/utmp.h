@@ -37,6 +37,7 @@
  *
  *	@(#)utmp.h	8.2 (Berkeley) 1/21/94
  * $FreeBSD: src/include/utmp.h,v 1.10 2001/10/27 20:40:54 peter Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_UTMP_H_

@@ -31,6 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)sysexits.h	8.1 (Berkeley) 6/2/93
+ * $MidnightBSD$
  */
 
 #ifndef	_SYSEXITS_H_

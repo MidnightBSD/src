@@ -25,6 +25,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/uuid.h,v 1.3 2005/01/03 02:56:15 marcel Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _UUID_H_

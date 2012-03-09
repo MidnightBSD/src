@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/strings.h,v 1.6 2004/07/23 07:13:35 tjr Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _STRINGS_H_

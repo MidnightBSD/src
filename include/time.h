@@ -40,6 +40,7 @@
 
 /*
  * $FreeBSD: src/include/time.h,v 1.34 2006/04/15 03:08:55 jb Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _TIME_H_

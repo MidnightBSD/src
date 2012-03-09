@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/stdbool.h,v 1.7 2005/02/19 13:47:33 marius Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _STDBOOL_H_

@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/wordexp.h,v 1.5 2004/06/30 13:55:08 tjr Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _WORDEXP_H_

@@ -31,6 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/stringlist.h,v 1.3 2003/01/19 01:16:00 obrien Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _STRINGLIST_H

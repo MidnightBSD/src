@@ -32,6 +32,7 @@
  *
  *	@(#)string.h	8.1 (Berkeley) 6/2/93
  * $FreeBSD: src/include/string.h,v 1.21.2.1 2005/08/29 18:46:39 andre Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _STRING_H_

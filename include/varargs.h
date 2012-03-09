@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/varargs.h,v 1.1 2003/09/01 03:28:25 kan Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _VARARGS_H_
