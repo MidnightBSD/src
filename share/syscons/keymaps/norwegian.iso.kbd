@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/syscons/keymaps/norwegian.iso.kbd,v 1.8 2003/07/06 03:09:40 ache Exp $
+# $MidnightBSD$
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

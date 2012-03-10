@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/mklocale/Makefile,v 1.65.2.1 2009/06/17 03:04:30 edwin Exp $
+# $MidnightBSD$
 
 LOCALES=	UTF-8 \
 		am_ET.UTF-8 \
@@ -13,14 +13,15 @@ LOCALES=	UTF-8 \
 		ko_KR.CP949 \
 		ko_KR.eucKR \
 		la_LN.ISO8859-1 \
+		la_LN.ISO8859-13 \
 		la_LN.ISO8859-15 \
 		la_LN.ISO8859-2 \
 		la_LN.ISO8859-4 \
 		la_LN.US-ASCII \
-		lt_LT.ISO8859-13 \
 		ru_RU.CP866 \
 		ru_RU.ISO8859-5 \
 		ru_RU.KOI8-R \
+		tr_TR.ISO8859-9 \
 		uk_UA.KOI8-U \
 		zh_CN.eucCN \
 		zh_CN.GB18030 \
@@ -45,8 +46,8 @@ FILESDIR_${locale}.out= ${LOCALEDIR}/${locale}
 
 CLEANFILES=	${FILES}
 
-ENCODINGS=	CP1251 ISO8859-1 ISO8859-2 ISO8859-4 ISO8859-5 ISO8859-9 \
-		ISO8859-15 US-ASCII UTF-8
+ENCODINGS=      CP1251 ISO8859-1 ISO8859-2 ISO8859-4 ISO8859-5 \
+		ISO8859-13 ISO8859-15 US-ASCII UTF-8
 
 ASCIILINKS=	en_AU en_CA en_GB en_NZ en_US
 US-ASCII_US-ASCII= ${ASCIILINKS:C/^/la_LN:/}
@@ -70,6 +71,9 @@ ISO8859-4_ISO8859-4= ${LATIN4LINKS:C/^/la_LN:/}
 LATIN5LINKS=	sr_YU uk_UA be_BY
 ISO8859-5_ISO8859-5= ${LATIN5LINKS:C/^/ru_RU:/}
 
+LATIN13LINKS=	lt_LT lv_LV
+ISO8859-13_ISO8859-13= ${LATIN13LINKS:C/^/la_LN:/}
+
 CP1251LINKS=    ru_RU be_BY uk_UA
 CP1251_CP1251=	${CP1251LINKS:C/^/bg_BG:/}
 
@@ -78,13 +82,12 @@ UTF8LINKS=	af_ZA be_BY bg_BG ca_AD ca_ES ca_FR ca_IT cs_CZ \
 		en_AU en_CA en_GB en_IE en_NZ en_US es_ES et_EE eu_ES fi_FI \
 		fr_BE \
 		fr_CA fr_CH fr_FR he_IL hr_HR hu_HU hy_AM is_IS it_CH it_IT \
-		ja_JP kk_KZ ko_KR lt_LT mn_MN \
+		ja_JP kk_KZ ko_KR lt_LT lv_LV mn_MN \
 		nb_NO nl_BE nl_NL nn_NO no_NO pl_PL pt_BR pt_PT \
 		ro_RO ru_RU sk_SK sl_SI sr_YU sv_SE tr_TR uk_UA zh_CN zh_HK \
 		zh_TW
 UTF-8_UTF-8=	${UTF8LINKS:C/^/:/}
 
-US-ASCII_ISO8859-9= la_LN:tr_TR
 
 SYMLINKS=
 .for enc1 in ${ENCODINGS}

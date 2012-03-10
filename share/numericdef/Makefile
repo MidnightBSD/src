@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/numericdef/Makefile,v 1.61.2.2 2009/06/17 03:04:30 edwin Exp $
+# $MidnightBSD$
 
 LOCALES=	af_ZA.ISO8859-1 \
 		am_ET.UTF-8 \
@@ -107,7 +107,8 @@ ISO8859-5_CP1251= uk_UA
 ISO8859-7_UTF-8= el_GR
 ISO8859-9_UTF-8= tr_TR
 ISO8859-13_ISO8859-4= lt_LT
-ISO8859-13_UTF-8= lt_LT
+ISO8859-13_ISO8859-13= lt_LT:lv_LV
+ISO8859-13_UTF-8= lt_LT lt_LT:lv_LV
 ISO8859-15_UTF-8= et_EE
 KOI8-R_CP1251=	ru_RU
 KOI8-R_CP866=	ru_RU

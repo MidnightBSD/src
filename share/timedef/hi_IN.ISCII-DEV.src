@@ -1,37 +1,37 @@
-# $FreeBSD: src/share/timedef/hi_IN.ISCII-DEV.src,v 1.1 2001/11/28 07:23:11 ache Exp $
+# $MidnightBSD$
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
 #
 # Short month names -- same as long
 #
-╨фтоэ    
+╨фтоэ
 иИотоэ
-лзоХ╦       
-╓хХоАя                  
-л╖                    
-╨чф        
-╨щяз╖        
-╓╣вХб     
-вшблХйо     
-╓ЁХ╫чйо      
-фтлХйо         
-дшвлХйо       
+лзоХ╦
+╓хХоАя
+л╖
+╨чф
+╨щяз╖
+╓╣вХб
+вшблХйо
+╓ЁХ╫чйо
+фтлХйо
+дшвлХйо
 #
-# Long month names
+# Long month names (as in a date)
 #
-╨фтоэ    
+╨фтоэ
 иИотоэ
-лзоХ╦       
-╓хХоАя                  
-л╖                    
-╨чф        
-╨щяз╖        
-╓╣вХб     
-вшблХйо     
-╓ЁХ╫чйо      
-фтлХйо         
-дшвлХйо       
+лзоХ╦
+╓хХоАя
+л╖
+╨чф
+╨щяз╖
+╓╣вХб
+вшблХйо
+╓ЁХ╫чйо
+фтлХйо
+дшвлХйо
 #
 #
 # Short weekday names
@@ -42,17 +42,17 @@
 йщ
 ╣щ
 ущ
-уф 
+уф
 #
 # Long weekday names
 #
-отштзо 
-вЕлтзо 
-л╒╣ятзо 
-йщетзо 
-╣щощтзо 
-ущЁХотзо 
-уфштзо 
+отштзо
+вЕлтзо
+л╒╣ятзо
+йщетзо
+╣щощтзо
+ущЁХотзо
+уфштзо
 #
 # X_fmt
 #
@@ -78,20 +78,20 @@
 #
 %a %b %e %X %Z %Y
 #
-# Long months names (alternative)
+# Long month names (without case ending)
 #
-╨фтоэ    
+╨фтоэ
 иИотоэ
-лзоХ╦       
-╓хХоАя                  
-л╖                    
-╨чф        
-╨щяз╖        
-╓╣вХб     
-вшблХйо     
-╓ЁХ╫чйо      
-фтлХйо         
-дшвлХйо       
+лзоХ╦
+╓хХоАя
+л╖
+╨чф
+╨щяз╖
+╓╣вХб
+вшблХйо
+╓ЁХ╫чйо
+фтлХйо
+дшвлХйо
 #
 # md_order
 #

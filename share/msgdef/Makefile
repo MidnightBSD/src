@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/msgdef/Makefile,v 1.65.2.1 2009/06/17 03:04:30 edwin Exp $
+# $MidnightBSD$
 
 LOCALES=	af_ZA.ISO8859-1 \
 		am_ET.UTF-8 \
@@ -37,8 +37,11 @@ LOCALES=	af_ZA.ISO8859-1 \
 		ja_JP.UTF-8 \
 		kk_KZ.PT154 \
 		kk_KZ.UTF-8 \
+		ko_KR.UTF-8 \
 		ko_KR.eucKR \
 		lt_LT.ISO8859-13 \
+		lv_LV.ISO8859-13 \
+		lv_LV.UTF-8 \
 		mn_MN.UTF-8 \
 		nl_NL.ISO8859-1 \
 		no_NO.ISO8859-1 \
@@ -99,7 +102,6 @@ ENCODINGS=	Big5 Big5HKSCS CP949 eucKR GB2312 GBK \
 
 Big5_Big5HKSCS=	zh_TW:zh_HK
 eucKR_CP949=	ko_KR
-eucKR_UTF-8=	ko_KR
 GB2312_GBK=	zh_CN
 ISO8859-1_ISO8859-1= ${CA_LINKS} ${DE_LINKS} ${FR_LINKS} ${GB_LINKS} \
 		${IT_LINKS} ${NL_LINKS} ${NO_LINKS} ${PT_LINKS}

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/timedef/pl_PL.UTF-8.src,v 1.2.10.1 2009/06/17 03:08:55 edwin Exp $
+# $MidnightBSD$
 #
 # Short month names
 #
@@ -15,7 +15,7 @@ paź
 lis
 gru
 #
-# Long month names
+# Long month names (as in a date)
 #
 stycznia
 lutego
@@ -32,12 +32,12 @@ grudnia
 #
 # Short weekday names
 #
-ndz
+nie
 pon
 wto
 śro
 czw
-ptk
+pią
 sob
 #
 # Long weekday names
@@ -74,7 +74,7 @@ sobota
 #
 %a %e %b %Y %X %Z
 #
-# Long months names (alternative)
+# Long month names (without case ending)
 #
 styczeń
 luty

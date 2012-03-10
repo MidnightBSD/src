@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/timedef/Makefile,v 1.50.2.3 2009/06/17 03:04:30 edwin Exp $
+# $MidnightBSD$
 
 LOCALES=	am_ET.UTF-8 \
 		be_BY.CP1131 \
@@ -53,6 +53,8 @@ LOCALES=	am_ET.UTF-8 \
 		lt_LT.ISO8859-4 \
 		lt_LT.ISO8859-13 \
 		lt_LT.UTF-8 \
+		lv_LV.ISO8859-13 \
+		lv_LV.UTF-8 \
 		mn_MN.UTF-8 \
 		nb_NO.ISO8859-1 \
 		nb_NO.UTF-8 \

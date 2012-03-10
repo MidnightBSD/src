@@ -1,9 +1,9 @@
 /*
  * Standard LOCALE_CTYPE for the US-ASCII Locale
  *
- * $FreeBSD: src/share/mklocale/la_LN.US-ASCII.src,v 1.2 2001/11/30 05:05:53 ache Exp $
+ * $MidnightBSD$
  */
-ENCODING        "NONE"
+ENCODING        "ASCII"
 VARIABLE        Strict 7bit US-ASCII locale
 
 ALPHA		'A' - 'Z' 'a' - 'z'

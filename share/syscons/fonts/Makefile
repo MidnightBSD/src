@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/syscons/fonts/Makefile,v 1.37 2004/12/21 08:46:55 ru Exp $
+# $MidnightBSD$
 
 FILES=	armscii8-8x8.fnt armscii8-8x14.fnt armscii8-8x16.fnt \
 	cp437-8x8.fnt cp437-8x14.fnt cp437-8x16.fnt \
@@ -26,7 +26,7 @@ FILES=	armscii8-8x8.fnt armscii8-8x14.fnt armscii8-8x16.fnt \
 	koi8-r-8x8.fnt koi8-r-8x14.fnt koi8-r-8x16.fnt \
 	koi8-rb-8x16.fnt koi8-rc-8x16.fnt \
 	koi8-u-8x8.fnt koi8-u-8x14.fnt koi8-u-8x16.fnt \
-	swiss-8x16.fnt swiss-8x8.fnt \
+	swiss-8x16.fnt swiss-8x14.fnt swiss-8x8.fnt \
 	swiss-1251-8x16.fnt swiss-1131-8x16.fnt \
 	INDEX.fonts
 

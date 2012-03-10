@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/timedef/el_GR.ISO8859-7.src,v 1.4 2001/11/20 18:10:08 ache Exp $
+# $MidnightBSD$
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
@@ -18,7 +18,7 @@
 Νοε
 Δεκ
 #
-# Long month names
+# Long month names (as in a date)
 #
 Ιανουαρίου
 Φεβρουαρίου
@@ -77,7 +77,7 @@
 #
 %a %e %b %Y %X %Z
 #
-# Long months names (alternative)
+# Long month names (without case ending)
 #
 Ιανουάριος
 Φεβρουάριος
