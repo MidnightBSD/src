@@ -1,6 +1,6 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
 # $FreeBSD: src/share/mk/sys.mk,v 1.86.2.1 2005/11/16 08:12:03 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/sys.mk,v 1.7 2011/12/02 04:22:54 laffer1 Exp $
 
 unix		?=	We run MidnightBSD, not UNIX.
 .MidnightBSD	?=	true
@@ -50,11 +50,16 @@ CC		?=	c89
 CFLAGS		?=	-O
 .else
 CC		?=	cc
-CFLAGS		?=	-O2 -fno-strict-aliasing -pipe
+CFLAGS		?=	-O2 -pipe
+.if defined(NO_STRICT_ALIASING)
+CFLAGS		+=	-fno-strict-aliasing
 .endif
+.endif
+PO_CFLAGS	?=	${CFLAGS}
 
 CXX		?=	c++
-CXXFLAGS	?=	${CFLAGS:N-std=*:N-Wnested-externs:N-W*-prototypes:N-Wno-pointer-sign}
+CXXFLAGS	?=	${CFLAGS:N-std=*:N-Wnested-externs:N-W*-prototypes:N-Wno-pointer-sign:N-Wold-style-definition}
+PO_CXXFLAGS	?=	${CXXFLAGS}
 
 CPP		?=	cpp
 CPPFLAGS	?=
