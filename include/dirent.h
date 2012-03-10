@@ -28,7 +28,7 @@
  *
  *	@(#)dirent.h	8.2 (Berkeley) 7/28/94
  * $FreeBSD: src/include/dirent.h,v 1.14 2003/12/07 21:10:06 marcel Exp $
- * $MidnightBSD: src/include/dirent.h,v 1.3 2012/03/10 05:15:58 laffer1 Exp $
+ * $MidnightBSD: src/include/dirent.h,v 1.4 2012/03/10 05:36:14 laffer1 Exp $
  */
 
 #ifndef _DIRENT_H_
@@ -91,7 +91,7 @@ typedef	void *	DIR;
 
 __BEGIN_DECLS
 #if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE >= 700
-int	alphasort(const void *, const void *);
+int	 alphasort(const struct dirent **, const struct dirent **);
 #endif
 #if __BSD_VISIBLE
 DIR	*__opendir2(const char *, int);
@@ -105,9 +105,10 @@ struct dirent *
 int	 readdir_r(DIR *, struct dirent *, struct dirent **);
 #endif
 void	 rewinddir(DIR *);
-#if __BSD_VISIBLE
+#if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE >= 700
 int	 scandir(const char *, struct dirent ***,
-	    int (*)(struct dirent *), int (*)(const void *, const void *));
+	    int (*)(const struct dirent *), int (*)(const struct dirent **,
+	    const struct dirent **));
 #endif
 #if __XSI_VISIBLE
 void	 seekdir(DIR *, long);
