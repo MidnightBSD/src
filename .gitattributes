@@ -33991,6 +33991,7 @@ share/misc/usb_hid_usages -text
 share/misc/zipcodes -text
 share/mk/Makefile -text
 share/mk/bsd.README -text
+share/mk/bsd.arch.inc.mk -text
 share/mk/bsd.compat.mk -text
 share/mk/bsd.cpu.mk -text
 share/mk/bsd.dep.mk -text
