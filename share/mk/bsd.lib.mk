@@ -1,6 +1,6 @@
 #	from: @(#)bsd.lib.mk	5.26 (Berkeley) 5/2/91
 # $FreeBSD: src/share/mk/bsd.lib.mk,v 1.168.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.lib.mk,v 1.6 2011/06/05 16:49:54 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.lib.mk,v 1.7 2011/10/23 16:21:32 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -59,13 +59,13 @@ PICFLAG=-fpic
 PO_FLAG=-pg
 
 .c.po:
-	${CC} ${PO_FLAG} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} ${PO_FLAG} ${PO_CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .c.So:
 	${CC} ${PICFLAG} -DPIC ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .cc.po .C.po .cpp.po .cxx.po:
-	${CXX} ${PO_FLAG} ${CPPFLAGS} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CXX} ${PO_FLAG} ${PO_CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .cc.So .C.So .cpp.So .cxx.So:
 	${CXX} ${PICFLAG} -DPIC ${CPPFLAGS} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
@@ -86,14 +86,14 @@ PO_FLAG=-pg
 	${AS} ${AFLAGS} -o ${.TARGET} ${.IMPSRC}
 
 .asm.po:
-	${CC} -x assembler-with-cpp -DPROF ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} -x assembler-with-cpp -DPROF ${PO_CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .asm.So:
 	${CC} -x assembler-with-cpp ${PICFLAG} -DPIC ${CFLAGS} ${ACFLAGS} \
 	    -c ${.IMPSRC} -o ${.TARGET}
 
 .S.po:
-	${CC} -DPROF ${CPPFLAGS} ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
+	${CC} -DPROF ${PO_CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
 
 .S.So:
 	${CC} ${PICFLAG} -DPIC ${CPPFLAGS} ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC} -o ${.TARGET}
