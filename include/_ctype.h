@@ -18,11 +18,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +37,7 @@
  * From @(#)ctype.h	8.4 (Berkeley) 1/21/94
  * From FreeBSD: src/include/ctype.h,v 1.27 2004/06/23 07:11:39 tjr Exp
  * $FreeBSD: src/include/_ctype.h,v 1.30.10.2 2007/10/30 04:45:27 rafan Exp $
- * $MidnightBSD: src/include/_ctype.h,v 1.2 2007/04/13 21:16:04 laffer1 Exp $
+ * $MidnightBSD: src/include/_ctype.h,v 1.3 2008/10/31 20:04:23 laffer1 Exp $
  */
 
 #ifndef __CTYPE_H_
@@ -127,7 +123,7 @@ __sbistype(__ct_rune_t _c, unsigned long _f)
 static __inline int
 __isctype(__ct_rune_t _c, unsigned long _f)
 {
-	return (_c & ~0x7F) ? 0 :
+	return (_c < 0 || _c >= 128) ? 0 :
 	       !!(_DefaultRuneLocale.__runetype[_c] & _f);
 }
 
