@@ -35,7 +35,7 @@
  *
  *	@(#)stdio.h	8.5 (Berkeley) 4/29/95
  * $FreeBSD: src/include/stdio.h,v 1.60 2007/04/07 16:02:30 pjd Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/include/stdio.h,v 1.3 2012/03/09 03:45:16 laffer1 Exp $
  */
 
 #ifndef	_STDIO_H_
@@ -50,6 +50,16 @@ typedef	__off_t		fpos_t;
 #ifndef _SIZE_T_DECLARED
 typedef	__size_t	size_t;
 #define	_SIZE_T_DECLARED
+#endif
+#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+#ifndef _OFF_T_DECLARED
+#define       _OFF_T_DECLARED
+typedef       __off_t         off_t;
+#endif
+#ifndef _SSIZE_T_DECLARED
+#define       _SSIZE_T_DECLARED
+typedef       __ssize_t       ssize_t;
+#endif
 #endif
 
 #if __BSD_VISIBLE || __POSIX_VISIBLE >= 200112 || __XSI_VISIBLE

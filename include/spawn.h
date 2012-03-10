@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/include/spawn.h,v 1.3 2008/06/19 07:30:32 ed Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SPAWN_H_

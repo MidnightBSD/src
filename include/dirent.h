@@ -28,7 +28,7 @@
  *
  *	@(#)dirent.h	8.2 (Berkeley) 7/28/94
  * $FreeBSD: src/include/dirent.h,v 1.14 2003/12/07 21:10:06 marcel Exp $
- * $MidnightBSD: src/include/dirent.h,v 1.2 2012/03/09 03:45:16 laffer1 Exp $
+ * $MidnightBSD: src/include/dirent.h,v 1.3 2012/03/10 05:15:58 laffer1 Exp $
  */
 
 #ifndef _DIRENT_H_
@@ -90,9 +90,11 @@ typedef	void *	DIR;
 #ifndef _KERNEL
 
 __BEGIN_DECLS
+#if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE >= 700
+int	alphasort(const void *, const void *);
+#endif
 #if __BSD_VISIBLE
 DIR	*__opendir2(const char *, int);
-int	 alphasort(const void *, const void *);
 int	 getdents(int, char *, int);
 int	 getdirentries(int, char *, int, long *);
 #endif

@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +28,7 @@
  *
  *	@(#)string.h	8.1 (Berkeley) 6/2/93
  * $FreeBSD: src/include/string.h,v 1.21.2.1 2005/08/29 18:46:39 andre Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/include/string.h,v 1.4 2012/03/09 03:51:10 laffer1 Exp $
  */
 
 #ifndef _STRING_H_
@@ -56,7 +52,7 @@ typedef	__size_t	size_t;
 #endif
 
 __BEGIN_DECLS
-#if __POSIX_VISIBLE >= 200112 || __XSI_VISIBLE
+#if __XSI_VISIBLE >= 600
 void	*memccpy(void * __restrict, const void * __restrict, int, size_t);
 #endif
 void	*memchr(const void *, int, size_t) __pure;
@@ -94,7 +90,7 @@ void	 strmode(int, char *);
 #endif
 char	*strncat(char * __restrict, const char * __restrict, size_t);
 int	 strncmp(const char *, const char *, size_t) __pure;
-#if __BSD_VISIBLE
+#if __POSIX_VISIBLE >= 200809 || __BSD_VISIBLE
 char	*strndup(const char * __restrict, size_t);
 #endif
 char	*strncpy(char * __restrict, const char * __restrict, size_t);
