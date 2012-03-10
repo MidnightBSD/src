@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.16 2011/10/26 18:43:28 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.17 2012/01/05 22:04:07 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -169,6 +169,10 @@
             usd
                 04.csh
                 ..
+                05.dc
+                ..
+                06.bc
+                ..
                 07.mail
                 ..
                 10.exref
@@ -228,13 +232,7 @@
             ..
             iscsi
             ..
-            isdn
-                contrib
-                ..
-                i4brunppp
-                ..
-                v21
-                ..
+            jails
             ..
             kld
                 cdev
@@ -244,6 +242,14 @@
                     ..
                 ..
                 dyn_sysctl
+                ..
+                firmware
+                    fwconsumer
+                    ..
+                    fwimage
+                    ..
+                ..
+                khelp
                 ..
                 syscall
                     module
@@ -382,11 +388,29 @@
             ..
             bg_BG.UTF-8
             ..
+            ca_AD.ISO8859-1
+            ..
             ca_ES.ISO8859-1
+            ..
+            ca_FR.ISO8859-1
+            ..
+            ca_IT.ISO8859-1
+            ..
+            ca_AD.ISO8859-15
             ..
             ca_ES.ISO8859-15
             ..
+            ca_FR.ISO8859-15
+            ..
+            ca_IT.ISO8859-15
+            ..
+            ca_AD.UTF-8
+            ..
             ca_ES.UTF-8
+            ..
+            ca_FR.UTF-8
+            ..
+            ca_IT.UTF-8
             ..
             cs_CZ.ISO8859-2
             ..
@@ -560,6 +584,8 @@
             ..
             la_LN.ISO8859-1
             ..
+            la_LN.ISO8859-13
+            ..
             la_LN.ISO8859-15
             ..
             la_LN.ISO8859-2
@@ -573,6 +599,10 @@
             lt_LT.ISO8859-4
             ..
             lt_LT.UTF-8
+            ..
+            lv_LV.ISO8859-13
+            ..
+            lv_LV.UTF-8
             ..
             mn_MN.UTF-8
             ..
