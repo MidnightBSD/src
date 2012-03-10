@@ -1,6 +1,6 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/share/mk/bsd.prog.mk,v 1.144.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.4 2008/10/14 21:13:54 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.5 2011/06/05 16:49:54 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -23,6 +23,7 @@ NO_WERROR=
 
 .if defined(DEBUG_FLAGS)
 CFLAGS+=${DEBUG_FLAGS}
+CXXFLAGS+=${DEBUG_FLAGS}
 .endif
 
 .if defined(CRUNCH_CFLAGS)
@@ -56,11 +57,15 @@ LDADD+=	-lobjc -lpthread
 
 OBJS+=  ${SRCS:N*.h:R:S/$/.o/g}
 
-${PROG}: ${OBJS}
-.if defined(PROG_CXX)
-	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+.if target(beforelinking)
+${PROG}: ${OBJS} beforelinking
 .else
-	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+${PROG}: ${OBJS}
+.endif
+.if defined(PROG_CXX)
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+.else
+	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .endif
 
 .else	# !defined(SRCS)
@@ -79,11 +84,15 @@ SRCS=	${PROG}.c
 # - it's useful to keep objects around for crunching.
 OBJS=	${PROG}.o
 
-${PROG}: ${OBJS}
-.if defined(PROG_CXX)
-	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+.if target(beforelinking)
+${PROG}: ${OBJS} beforelinking
 .else
-	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+${PROG}: ${OBJS}
+.endif
+.if defined(PROG_CXX)
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+.else
+	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .endif
 .endif
 
