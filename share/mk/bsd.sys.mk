@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.sys.mk,v 1.37 2005/01/16 21:18:16 obrien Exp $
-# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.9 2011/10/22 19:17:47 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.10 2011/10/26 16:23:34 laffer1 Exp $
 #
 # This file contains common settings used for building FreeBSD
 # sources.
@@ -10,26 +10,22 @@
 # for GCC:  http://gcc.gnu.org/onlinedocs/gcc-3.0.4/gcc_3.html#IDX143
 
 # the default is gnu99 for now
-CSTD           ?= gnu99
+CSTD		?= gnu99
 
-NO_WERROR=	yes
-
-.if !defined(NO_WARNS)
-. if defined(CSTD)
-.  if ${CSTD} == "k&r"
+.if ${CSTD} == "k&r"
 CFLAGS		+= -traditional
-.  elif ${CSTD} == "c89" || ${CSTD} == "c90"
+.elif ${CSTD} == "c89" || ${CSTD} == "c90"
 CFLAGS		+= -std=iso9899:1990
-.  elif ${CSTD} == "c94" || ${CSTD} == "c95"
+.elif ${CSTD} == "c94" || ${CSTD} == "c95"
 CFLAGS		+= -std=iso9899:199409
-.  elif ${CSTD} == "c99"
+.elif ${CSTD} == "c99"
 CFLAGS		+= -std=iso9899:1999
-.  else
+.else
 CFLAGS		+= -std=${CSTD}
-.  endif
+.endif
+.if !defined(NO_WARNS)
 # -pedantic is problematic because it also imposes namespace restrictions
 #CFLAGS		+= -pedantic
-. endif
 . if defined(WARNS)
 .  if ${WARNS} >= 1
 CWARNFLAGS	+=	-Wsystem-headers
@@ -46,20 +42,22 @@ CWARNFLAGS	+=	-W -Wno-unused-parameter -Wstrict-prototypes\
 .  endif
 .  if ${WARNS} >= 4
 CWARNFLAGS	+=	-Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch\
-			-Wshadow -Wcast-align -Wunused-parameter
+			-Wshadow -Wunused-parameter
+.   if !defined(NO_WCAST_ALIGN)
+CWARNFLAGS	+=	-Wcast-align
+.   endif
 .  endif
 # BDECFLAGS
 .  if ${WARNS} >= 6
-CWARNFLAGS	+=	-Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls
+CWARNFLAGS	+=	-Wchar-subscripts -Winline -Wnested-externs\
+			-Wredundant-decls -Wold-style-definition
 .  endif
 .  if ${WARNS} >= 2 && ${WARNS} <= 4
 # XXX Delete -Wuninitialized by default for now -- the compiler doesn't
 # XXX always get it right.
 CWARNFLAGS	+=	-Wno-uninitialized
 .  endif
-.  if !defined(WITH_GCC3)
 CWARNFLAGS	+=	-Wno-pointer-sign
-.  endif
 . endif
 
 . if defined(FORMAT_AUDIT)
@@ -73,6 +71,9 @@ CWARNFLAGS	+=	-Wformat=2 -Wno-format-extra-args
 CWARNFLAGS	+=	-Werror
 .   endif
 .  endif
+. endif
+. if defined(NO_WFORMAT)
+CWARNFLAGS	+=	-Wno-format
 . endif
 .endif
 
