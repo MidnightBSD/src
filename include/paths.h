@@ -32,6 +32,7 @@
  *
  *	@(#)paths.h	8.1 (Berkeley) 6/2/93
  * $FreeBSD: src/include/paths.h,v 1.26 2007/06/11 02:21:18 simokawa Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _PATHS_H_
