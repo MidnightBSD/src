@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkse/thread/thr_init.c,v 1.76 2007/10/09 13:42:28 obrien Exp $
+ * $FreeBSD: src/lib/libkse/thread/thr_init.c,v 1.76.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /* Allocate space for global thread variables here: */
@@ -186,8 +186,6 @@ static pthread_func_t jmp_table[][2] = {
 	{DUAL_ENTRY(_pthread_cancel)},	/* PJT_CANCEL */
 	{DUAL_ENTRY(_pthread_cleanup_pop)},	/* PJT_CLEANUP_POP */
 	{DUAL_ENTRY(_pthread_cleanup_push)},	/* PJT_CLEANUP_PUSH */
-	{DUAL_ENTRY(_pthread_condattr_destroy)}, /* PJT_CONDATTR_DESTROY */
-	{DUAL_ENTRY(_pthread_condattr_init)},	/* PJT_CONDATTR_INIT */
 	{DUAL_ENTRY(_pthread_cond_broadcast)},	/* PJT_COND_BROADCAST */
 	{DUAL_ENTRY(_pthread_cond_destroy)},	/* PJT_COND_DESTROY */
 	{DUAL_ENTRY(_pthread_cond_init)},	/* PJT_COND_INIT */
@@ -497,16 +495,16 @@ init_private(void)
 	 * process signal mask and pending signal sets.
 	 */
 	if (_lock_init(&_thread_signal_lock, LCK_ADAPTIVE,
-	    _kse_lock_wait, _kse_lock_wakeup) != 0)
+	    _kse_lock_wait, _kse_lock_wakeup, calloc) != 0)
 		PANIC("Cannot initialize _thread_signal_lock");
 	if (_lock_init(&_mutex_static_lock, LCK_ADAPTIVE,
-	    _thr_lock_wait, _thr_lock_wakeup) != 0)
+	    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0)
 		PANIC("Cannot initialize mutex static init lock");
 	if (_lock_init(&_rwlock_static_lock, LCK_ADAPTIVE,
-	    _thr_lock_wait, _thr_lock_wakeup) != 0)
+	    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0)
 		PANIC("Cannot initialize rwlock static init lock");
 	if (_lock_init(&_keytable_lock, LCK_ADAPTIVE,
-	    _thr_lock_wait, _thr_lock_wakeup) != 0)
+	    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0)
 		PANIC("Cannot initialize thread specific keytable lock");
 	_thr_spinlock_init();
 

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkse/thread/thr_fcntl.c,v 1.22 2007/10/09 13:42:28 obrien Exp $
+ * $FreeBSD: src/lib/libkse/thread/thr_fcntl.c,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include <stdarg.h>
 #include "namespace.h"
@@ -37,6 +37,7 @@
 
 LT10_COMPAT_PRIVATE(__fcntl);
 LT10_COMPAT_DEFAULT(fcntl);
+extern int __fcntl_compat(int fd, int cmd,...);
 
 __weak_reference(__fcntl, fcntl);
 
@@ -68,7 +69,7 @@ __fcntl(int fd, int cmd,...)
 		ret = __sys_fcntl(fd, cmd);
 		break;
 	default:
-		ret = __sys_fcntl(fd, cmd, va_arg(ap, void *));
+		ret = __fcntl_compat(fd, cmd, va_arg(ap, void *));
 	}
 	va_end(ap);
 

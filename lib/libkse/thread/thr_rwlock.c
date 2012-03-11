@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkse/thread/thr_rwlock.c,v 1.16 2007/10/09 13:42:29 obrien Exp $
+ * $FreeBSD: src/lib/libkse/thread/thr_rwlock.c,v 1.16.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <errno.h>

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkse/thread/thr_rtld.c,v 1.7 2007/10/09 13:42:29 obrien Exp $
+ * $FreeBSD: src/lib/libkse/thread/thr_rtld.c,v 1.7.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include <sys/cdefs.h>
 #include <stdlib.h>
@@ -162,7 +162,7 @@ _thr_rtld_lock_create(void)
 
 	if ((l = malloc(sizeof(struct rtld_kse_lock))) != NULL) {
 		_lock_init(&l->lck, LCK_ADAPTIVE, _kse_lock_wait,
-		    _kse_lock_wakeup);
+		    _kse_lock_wakeup, calloc);
 		l->owner = NULL;
 		l->count = 0;
 		l->write = 0;

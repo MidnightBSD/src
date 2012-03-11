@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkse/thread/thr_attr_setinheritsched.c,v 1.9 2007/10/09 13:42:27 obrien Exp $
+ * $FreeBSD: src/lib/libkse/thread/thr_attr_setinheritsched.c,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include <errno.h>
 #include <pthread.h>

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkse/thread/thr_cond.c,v 1.57 2007/10/09 13:42:27 obrien Exp $
+ * $FreeBSD: src/lib/libkse/thread/thr_cond.c,v 1.57.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include <stdlib.h>
 #include <errno.h>
@@ -122,7 +122,7 @@ _pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *cond_attr)
 			    malloc(sizeof(struct pthread_cond))) == NULL) {
 				rval = ENOMEM;
 			} else if (_lock_init(&pcond->c_lock, LCK_ADAPTIVE,
-			    _thr_lock_wait, _thr_lock_wakeup) != 0) {
+			    _thr_lock_wait, _thr_lock_wakeup, calloc) != 0) {
 				free(pcond);
 				rval = ENOMEM;
 			} else {
