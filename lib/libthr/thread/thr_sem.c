@@ -27,7 +27,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_sem.c,v 1.9 2006/11/24 09:57:38 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_sem.c,v 1.9.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "namespace.h"
@@ -196,7 +196,7 @@ _sem_wait(sem_t *sem)
 				return (0);
 		}
 		_thr_cancel_enter(curthread);
-		retval = _thr_umtx_wait((umtx_t *)&(*sem)->count, 0, NULL);
+		retval = _thr_umtx_wait((long *)&(*sem)->count, 0, NULL);
 		_thr_cancel_leave(curthread);
 	} while (retval == 0);
 	errno = retval;
@@ -239,7 +239,7 @@ _sem_timedwait(sem_t * __restrict sem,
 		clock_gettime(CLOCK_REALTIME, &ts);
 		TIMESPEC_SUB(&ts2, abstime, &ts);
 		_thr_cancel_enter(curthread);
-		retval = _thr_umtx_wait((umtx_t *)&(*sem)->count, 0, &ts2);
+		retval = _thr_umtx_wait((long *)&(*sem)->count, 0, &ts2);
 		_thr_cancel_leave(curthread);
 	} while (retval == 0);
 	errno = retval;
@@ -264,7 +264,7 @@ _sem_post(sem_t *sem)
 	do {
 		val = (*sem)->count;
 	} while (!atomic_cmpset_acq_int(&(*sem)->count, val, val + 1));
-	retval = _thr_umtx_wake((umtx_t *)&(*sem)->count, val + 1);
+	retval = _thr_umtx_wake((long *)&(*sem)->count, val + 1);
 	if (retval > 0)
 		retval = 0;
 	return (retval);

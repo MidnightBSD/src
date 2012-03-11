@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_join.c,v 1.23 2006/11/28 11:05:31 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_join.c,v 1.23.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

@@ -1,7 +1,5 @@
 /*-
- * Copyright (C) 2003 Jake Burkholder <jake@freebsd.org>
- * Copyright (C) 2003 David Xu <davidxu@freebsd.org>
- * Copyright (c) 2001,2003 Daniel Eischen <deischen@freebsd.org>
+ * Copyright (C) 2008 David Xu <davidxu@freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,32 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/arch/sparc64/sparc64/pthread_md.c,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: src/lib/libthr/arch/amd64/amd64/_umtx_op_err.S,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
-#include <sys/types.h>
-#include <rtld_tls.h>
+#include <sys/syscall.h>
+#include <machine/asm.h>
 
-#include "pthread_md.h"
+#define	RSYSCALL_ERR(x)	ENTRY(__CONCAT(x, _err));		\
+			mov __CONCAT($SYS_,x),%rax; KERNCALL; ret; 
 
-struct tcb *
-_tcb_ctor(struct pthread *thread, int initial)
-{
-	struct tcb *tcb;
-	void *oldtls;
+#define KERNCALL	movq %rcx, %r10; syscall
 
-	if (initial)
-		oldtls = _tp;
-	else
-		oldtls = NULL;
-	tcb = _rtld_allocate_tls(oldtls, sizeof(struct tcb), 16);
-	if (tcb)
-		tcb->tcb_thread = thread;
-	return (tcb);
-}
-
-void
-_tcb_dtor(struct tcb *tcb)
-{
-	_rtld_free_tls(tcb, sizeof(struct tcb), 16);
-}
+RSYSCALL_ERR(_umtx_op)

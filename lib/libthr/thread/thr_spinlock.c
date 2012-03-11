@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_spinlock.c,v 1.15 2007/01/12 07:26:20 imp Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_spinlock.c,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

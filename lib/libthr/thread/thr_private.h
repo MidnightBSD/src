@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_private.h,v 1.78.2.1 2007/11/14 01:10:12 kris Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_private.h,v 1.78.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _THR_PRIVATE_H
@@ -266,11 +266,8 @@ struct pthread_rwlockattr {
 };
 
 struct pthread_rwlock {
-	pthread_mutex_t	lock;	/* monitor lock */
-	pthread_cond_t	read_signal;
-	pthread_cond_t	write_signal;
-	int		state;	/* 0 = idle  >0 = # of readers  -1 = writer */
-	int		blocked_writers;
+	struct urwlock 	lock;
+	struct pthread	*owner;
 };
 
 /*
@@ -312,7 +309,7 @@ struct pthread {
 	struct umutex		lock;
 
 	/* Internal condition variable cycle number. */
-	umtx_t			cycle;
+	long			cycle;
 
 	/* How many low level locks the thread held. */
 	int			locklevel;
@@ -371,6 +368,12 @@ struct pthread {
 
 	/* Thread temporary signal mask. */
 	sigset_t		sigmask;
+
+	/* Thread is in SIGCANCEL handler. */
+	int                     in_sigcancel_handler;
+
+	/* New thread should unblock SIGCANCEL. */
+	int                     unblock_sigcancel;
 
 	/* Thread state: */
 	enum pthread_state 	state;
@@ -692,6 +695,8 @@ ssize_t __sys_read(int, void *, size_t);
 ssize_t __sys_write(int, const void *, size_t);
 void	__sys_exit(int);
 #endif
+
+int	_umtx_op_err(void *, int op, u_long, void *, void *) __hidden;
 
 static inline int
 _thr_isthreaded(void)

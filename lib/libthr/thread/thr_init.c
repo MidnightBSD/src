@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_init.c,v 1.46.2.1 2007/11/14 01:10:12 kris Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_init.c,v 1.46.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "namespace.h"
@@ -207,8 +207,6 @@ static pthread_func_t jmp_table[][2] = {
 	{DUAL_ENTRY(_pthread_cancel)},	/* PJT_CANCEL */
 	{DUAL_ENTRY(_pthread_cleanup_pop)},	/* PJT_CLEANUP_POP */
 	{DUAL_ENTRY(_pthread_cleanup_push)},	/* PJT_CLEANUP_PUSH */
-	{DUAL_ENTRY(_pthread_condattr_destroy)}, /* PJT_CONDATTR_DESTROY */
-	{DUAL_ENTRY(_pthread_condattr_init)},	/* PJT_CONDATTR_INIT */
 	{DUAL_ENTRY(_pthread_cond_broadcast)},	/* PJT_COND_BROADCAST */
 	{DUAL_ENTRY(_pthread_cond_destroy)},	/* PJT_COND_DESTROY */
 	{DUAL_ENTRY(_pthread_cond_init)},	/* PJT_COND_INIT */

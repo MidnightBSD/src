@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_spec.c,v 1.6.2.1 2007/11/09 21:15:58 marius Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_spec.c,v 1.6.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "namespace.h"
@@ -131,19 +131,9 @@ _thread_cleanupspecific(void)
 				curthread->specific[key].data = NULL;
 				curthread->specific_data_count--;
 			}
-			else if (curthread->specific[key].data != NULL) {
-				/* 
-				 * This can happen if the key is deleted via
-				 * pthread_key_delete without first setting the value
-				 * to NULL in all threads.  POSIX says that the
-				 * destructor is not invoked in this case.
-				 */
-				curthread->specific[key].data = NULL;
-				curthread->specific_data_count--;
-			}
 
 			/*
-			 * If there is a destructor, call it
+			 * If there is a destructore, call it
 			 * with the key table entry unlocked:
 			 */
 			if (destructor != NULL) {

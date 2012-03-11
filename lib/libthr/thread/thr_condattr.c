@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_condattr.c,v 1.3 2007/01/12 07:26:20 imp Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_condattr.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "namespace.h"
@@ -111,7 +111,7 @@ _pthread_condattr_getpshared(const pthread_condattr_t *attr,
 	if (attr == NULL || *attr == NULL)
 		return (EINVAL);
 
-	pshared = PTHREAD_PROCESS_PRIVATE;
+	*pshared = PTHREAD_PROCESS_PRIVATE;
 	return (0);
 }
 

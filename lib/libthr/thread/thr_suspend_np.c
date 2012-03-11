@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_suspend_np.c,v 1.8 2007/01/12 07:26:20 imp Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_suspend_np.c,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "namespace.h"
@@ -121,7 +121,7 @@ static int
 suspend_common(struct pthread *curthread, struct pthread *thread,
 	int waitok)
 {
-	umtx_t tmp;
+	long tmp;
 
 	while (thread->state != PS_DEAD &&
 	      !(thread->flags & THR_FLAGS_SUSPENDED)) {

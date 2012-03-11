@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_create.c,v 1.36 2006/12/15 11:52:01 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_create.c,v 1.36.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "namespace.h"
@@ -118,6 +118,11 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 
 	if (new_thread->attr.flags & PTHREAD_CREATE_DETACHED)
 		new_thread->tlflags |= TLFLAGS_DETACHED;
+
+	if (curthread->in_sigcancel_handler)
+		new_thread->unblock_sigcancel = 1;
+	else
+		new_thread->unblock_sigcancel = 0;
 
 	/* Add the new thread. */
 	new_thread->refcount = 1;
@@ -213,25 +218,39 @@ create_stack(struct pthread_attr *pattr)
 static void
 thread_start(struct pthread *curthread)
 {
-	if (curthread->attr.suspend == THR_CREATE_SUSPENDED) {
-		sigset_t set = curthread->sigmask;
+	sigset_t set;
 
+	if (curthread->attr.suspend == THR_CREATE_SUSPENDED)
+		set = curthread->sigmask;
+
+	/*
+	 * This is used as a serialization point to allow parent
+	 * to report 'new thread' event to debugger or tweak new thread's
+	 * attributes before the new thread does real-world work.
+	 */
+	THR_LOCK(curthread);
+	THR_UNLOCK(curthread);
+
+	if (curthread->unblock_sigcancel) {
+		sigset_t set1;
+
+		SIGEMPTYSET(set1);
+		SIGADDSET(set1, SIGCANCEL);
+		__sys_sigprocmask(SIG_UNBLOCK, &set1, NULL);
+	}
+
+	if (curthread->attr.suspend == THR_CREATE_SUSPENDED) {
+#if 0
+		/* Done in THR_UNLOCK() */
 		_thr_ast(curthread);
+#endif
 
 		/*
 		 * Parent thread have stored signal mask for us,
 		 * we should restore it now.
 		 */
-		sigprocmask(SIG_SETMASK, &set, NULL);
+		__sys_sigprocmask(SIG_SETMASK, &set, NULL);
 	}
-
-	/*
-	 * This is used as a serialization point to allow parent
-	 * to report 'new thread' event to debugger before the thread
-	 * does real work.
-	 */
-	THR_LOCK(curthread);
-	THR_UNLOCK(curthread);
 
 	/* Run the current thread's start routine with argument: */
 	_pthread_exit(curthread->start_routine(curthread->arg));

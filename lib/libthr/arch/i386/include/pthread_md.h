@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/arch/i386/include/pthread_md.h,v 1.8 2006/12/15 11:52:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/arch/i386/include/pthread_md.h,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -102,4 +102,7 @@ _get_curthread(void)
 {
 	return (TCB_GET32(tcb_thread));
 }
+
+#define HAS__UMTX_OP_ERR	1
+
 #endif

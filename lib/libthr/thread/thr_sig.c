@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_sig.c,v 1.23 2006/12/06 00:15:35 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_sig.c,v 1.23.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "namespace.h"
@@ -63,7 +63,9 @@ sigcancel_handler(int sig __unused,
 
 	if (curthread->cancel_defer && curthread->cancel_pending)
 		thr_wake(curthread->tid);
+	curthread->in_sigcancel_handler++;
 	_thr_ast(curthread);
+	curthread->in_sigcancel_handler--;
 }
 
 void
@@ -81,7 +83,7 @@ _thr_ast(struct pthread *curthread)
 void
 _thr_suspend_check(struct pthread *curthread)
 {
-	umtx_t cycle;
+	long cycle;
 	int err;
 
 	err = errno;
@@ -213,8 +215,7 @@ _sigprocmask(int how, const sigset_t *set, sigset_t *oset)
 __weak_reference(_pthread_sigmask, pthread_sigmask);
 
 int
-_pthread_sigmask(int how, const sigset_t * __restrict set,
-		sigset_t * __restrict oset)
+_pthread_sigmask(int how, const sigset_t *set, sigset_t *oset)
 {
 	if (_sigprocmask(how, set, oset))
 		return (errno);

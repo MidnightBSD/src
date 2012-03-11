@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/arch/sparc64/include/pthread_md.h,v 1.2 2006/12/15 11:52:01 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/arch/sparc64/include/pthread_md.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -44,9 +44,9 @@
  * %g7 points to the structure.
  */
 struct tcb {
-	struct tcb              *tcb_self;	/* required by rtld */
-	void                    *tcb_dtv;	/* required by rtld */
-	struct pthread          *tcb_thread;	/* our hook */
+	struct tcb		*tcb_self;	/* required by rtld */
+	void			*tcb_dtv;	/* required by rtld */
+	struct pthread		*tcb_thread;	/* our hook */
 	void			*tcb_spare[1];
 };
 

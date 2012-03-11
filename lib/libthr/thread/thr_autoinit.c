@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_autoinit.c,v 1.2 2003/05/23 09:48:20 mtm Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_autoinit.c,v 1.2.30.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <pthread.h>
