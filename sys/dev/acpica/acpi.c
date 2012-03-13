@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Takanori Watanabe <takawata@jp.freebsd.org>
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi.c,v 1.243.4.1 2008/02/06 03:35:40 iwasaki Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi.c,v 1.243.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -133,7 +133,7 @@ static int	acpi_set_powerstate_method(device_t bus, device_t child,
 static int	acpi_isa_pnp_probe(device_t bus, device_t child,
 		    struct isa_pnp_id *ids);
 static void	acpi_probe_children(device_t bus);
-static int	acpi_probe_order(ACPI_HANDLE handle, int *order);
+static void	acpi_probe_order(ACPI_HANDLE handle, int *order);
 static ACPI_STATUS acpi_probe_child(ACPI_HANDLE handle, UINT32 level,
 		    void *context, void **status);
 static BOOLEAN	acpi_MatchHid(ACPI_HANDLE h, const char *hid);
@@ -1528,25 +1528,28 @@ acpi_probe_children(device_t bus)
 }
 
 /*
- * Determine the probe order for a given device and return non-zero if it
- * should be attached immediately.
+ * Determine the probe order for a given device.
  */
-static int
+static void
 acpi_probe_order(ACPI_HANDLE handle, int *order)
 {
+    ACPI_OBJECT_TYPE type;
 
     /*
      * 1. I/O port and memory system resource holders
      * 2. Embedded controllers (to handle early accesses)
      * 3. PCI Link Devices
+     * 100000. CPUs
      */
+    AcpiGetType(handle, &type);
     if (acpi_MatchHid(handle, "PNP0C01") || acpi_MatchHid(handle, "PNP0C02"))
 	*order = 1;
     else if (acpi_MatchHid(handle, "PNP0C09"))
 	*order = 2;
     else if (acpi_MatchHid(handle, "PNP0C0F"))
 	*order = 3;
-    return (0);
+    else if (type == ACPI_TYPE_PROCESSOR)
+	*order = 100000;
 }
 
 /*
@@ -1592,14 +1595,15 @@ acpi_probe_child(ACPI_HANDLE handle, UINT32 level, void *context, void **status)
 		break;
 
 	    /* 
-	     * Create a placeholder device for this node.  Sort the placeholder
-	     * so that the probe/attach passes will run breadth-first.  Orders
-	     * less than ACPI_DEV_BASE_ORDER are reserved for special objects
-	     * (i.e., system resources).  Larger values are used for all other
-	     * devices.
+	     * Create a placeholder device for this node.  Sort the
+	     * placeholder so that the probe/attach passes will run
+	     * breadth-first.  Orders less than ACPI_DEV_BASE_ORDER
+	     * are reserved for special objects (i.e., system
+	     * resources).  CPU devices have a very high order to
+	     * ensure they are probed after other devices.
 	     */
 	    ACPI_DEBUG_PRINT((ACPI_DB_OBJECTS, "scanning '%s'\n", handle_str));
-	    order = (level + 1) * ACPI_DEV_BASE_ORDER;
+	    order = level * 10 + 100;
 	    acpi_probe_order(handle, &order);
 	    child = BUS_ADD_CHILD(bus, order, NULL, -1);
 	    if (child == NULL)

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_cpu.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003-2005 Nate Lawson (SDG)
  * Copyright (c) 2001 Michael Smith
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_cpu.c,v 1.67.2.1 2007/11/06 20:13:33 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_cpu.c,v 1.67.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -114,6 +114,12 @@ struct acpi_cpu_device {
 #define PCI_REVISION_B_STEP	1
 #define PCI_REVISION_4E		2
 #define PCI_REVISION_4M		3
+#define PIIX4_DEVACTB_REG	0x58
+#define PIIX4_BRLD_EN_IRQ0	(1<<0)
+#define PIIX4_BRLD_EN_IRQ	(1<<1)
+#define PIIX4_BRLD_EN_IRQ8	(1<<5)
+#define PIIX4_STOP_BREAK_MASK	(PIIX4_BRLD_EN_IRQ0 | PIIX4_BRLD_EN_IRQ | PIIX4_BRLD_EN_IRQ8)
+#define PIIX4_PCNTRL_BST_EN	(1<<10)
 
 /* Platform hardware resource information. */
 static uint32_t		 cpu_smi_cmd;	/* Value to write to SMI_CMD. */
@@ -591,7 +597,7 @@ acpi_cpu_generic_cx_probe(struct acpi_cpu_softc *sc)
 	return;
 
     /* Validate and allocate resources for C3 (P_LVL3). */
-    if (AcpiGbl_FADT.C3Latency <= 1000) {
+    if (AcpiGbl_FADT.C3Latency <= 1000 && !(cpu_quirks & CPU_QUIRK_NO_C3)) {
 	gas.Address = sc->cpu_p_blk + 5;
 	acpi_bus_alloc_gas(sc->cpu_dev, &cx_ptr->res_type, &sc->cpu_rid, &gas,
 	    &cx_ptr->p_lvlx, RF_SHAREABLE);
@@ -767,7 +773,7 @@ acpi_cpu_startup(void *arg)
 	 */
 	for (i = 0; i < cpu_ndevices; i++) {
 	    sc = device_get_softc(cpu_devices[i]);
-	    if (cpu_quirks && CPU_QUIRK_NO_C3) {
+	    if (cpu_quirks & CPU_QUIRK_NO_C3) {
 		sc->cpu_cx_count = sc->cpu_non_c3 + 1;
 	    }
 	    if (sc->cpu_cx_count > cpu_cx_count)
@@ -1005,6 +1011,7 @@ static int
 acpi_cpu_quirks(void)
 {
     device_t acpi_dev;
+    uint32_t val;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
@@ -1053,12 +1060,25 @@ acpi_cpu_quirks(void)
 	 * See erratum #18 ("C3 Power State/BMIDE and Type-F DMA
 	 * Livelock") from the January 2002 PIIX4 specification update.
 	 * Applies to all PIIX4 models.
+	 *
+	 * Also, make sure that all interrupts cause a "Stop Break"
+	 * event to exit from C2 state.
 	 */
+	case PCI_REVISION_A_STEP:
+	case PCI_REVISION_B_STEP:
 	case PCI_REVISION_4E:
 	case PCI_REVISION_4M:
 	    cpu_quirks |= CPU_QUIRK_NO_C3;
 	    ACPI_DEBUG_PRINT((ACPI_DB_INFO,
 		"acpi_cpu: working around PIIX4 bug, disabling C3\n"));
+
+	    val = pci_read_config(acpi_dev, PIIX4_DEVACTB_REG, 4);
+	    if ((val & PIIX4_STOP_BREAK_MASK) != PIIX4_STOP_BREAK_MASK) {
+		ACPI_DEBUG_PRINT((ACPI_DB_INFO,
+		    "PIIX4: enabling IRQs to generate Stop Break\n"));
+	    	val |= PIIX4_STOP_BREAK_MASK;
+		pci_write_config(acpi_dev, PIIX4_DEVACTB_REG, val, 4);
+	    }
 	    break;
 	default:
 	    break;

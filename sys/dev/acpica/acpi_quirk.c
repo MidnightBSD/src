@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Nate Lawson (SDG)
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.4 2007/03/22 18:16:40 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.4.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -150,9 +150,9 @@ acpi_table_quirks(int *quirks)
     if (ACPI_FAILURE(AcpiGetTableHeader(ACPI_SIG_FADT, 0, &fadt)))
 	bzero(&fadt, sizeof(fadt));
     if (ACPI_FAILURE(AcpiGetTableHeader(ACPI_SIG_DSDT, 0, &dsdt)))
-	bzero(&fadt, sizeof(dsdt));
+	bzero(&dsdt, sizeof(dsdt));
     if (ACPI_FAILURE(AcpiGetTableHeader(ACPI_SIG_XSDT, 0, &xsdt)))
-	bzero(&fadt, sizeof(xsdt));
+	bzero(&xsdt, sizeof(xsdt));
 
     /* Then, override the quirks with any matched from table signatures. */
     for (entry = acpi_quirks_table; entry->match; entry++) {
