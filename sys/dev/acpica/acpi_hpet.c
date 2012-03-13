@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_hpet.c,v 1.2 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_hpet.c,v 1.12.4.1 2008/01/24 18:52:26 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_hpet.c,v 1.12.2.4 2010/02/28 21:23:50 avg Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -40,6 +40,9 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_hpet.c,v 1.12.4.1 2008/01/24 18:52:2
 #include <contrib/dev/acpica/acpi.h>
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpi_hpet.h>
+
+#define HPET_VENDID_AMD		0x4353
+#define HPET_VENDID_INTEL	0x8086
 
 ACPI_SERIAL_DECL(hpet, "ACPI HPET support");
 
@@ -59,8 +62,6 @@ static u_int hpet_get_timecount(struct timecounter *tc);
 static void acpi_hpet_test(struct acpi_hpet_softc *sc);
 
 static char *hpet_ids[] = { "PNP0103", NULL };
-
-#define DEV_HPET(x)	(acpi_get_magic(x) == (uintptr_t)&acpi_hpet_devclass)
 
 struct timecounter hpet_timecounter = {
 	.tc_get_timecount =	hpet_get_timecount,
@@ -84,7 +85,9 @@ hpet_enable(struct acpi_hpet_softc *sc)
 	uint32_t val;
 
 	val = bus_read_4(sc->mem_res, HPET_CONFIG);
-	bus_write_4(sc->mem_res, HPET_CONFIG, val | HPET_CNF_ENABLE);
+	val &= ~HPET_CNF_LEG_RT;
+	val |= HPET_CNF_ENABLE;
+	bus_write_4(sc->mem_res, HPET_CONFIG, val);
 }
 
 static void
@@ -93,7 +96,8 @@ hpet_disable(struct acpi_hpet_softc *sc)
 	uint32_t val;
 
 	val = bus_read_4(sc->mem_res, HPET_CONFIG);
-	bus_write_4(sc->mem_res, HPET_CONFIG, val & ~HPET_CNF_ENABLE);
+	val &= ~HPET_CNF_ENABLE;
+	bus_write_4(sc->mem_res, HPET_CONFIG, val);
 }
 
 /* Discover the HPET via the ACPI table of the same name. */
@@ -129,8 +133,6 @@ acpi_hpet_identify(driver_t *driver, device_t parent)
 		return;
 	}
 
-	/* Record a magic value so we can detect this device later. */
-	acpi_set_magic(child, (uintptr_t)&acpi_hpet_devclass);
 	bus_set_resource(child, SYS_RES_MEMORY, 0, hpet->Address.Address,
 	    HPET_MEM_WIDTH);
 }
@@ -142,7 +144,7 @@ acpi_hpet_probe(device_t dev)
 
 	if (acpi_disabled("hpet"))
 		return (ENXIO);
-	if (!DEV_HPET(dev) &&
+	if (acpi_get_handle(dev) != NULL &&
 	    (ACPI_ID_PROBE(device_get_parent(dev), dev, hpet_ids) == NULL ||
 	    device_get_unit(dev) != 0))
 		return (ENXIO);
@@ -155,9 +157,10 @@ static int
 acpi_hpet_attach(device_t dev)
 {
 	struct acpi_hpet_softc *sc;
-	int rid;
+	int rid, num_timers;
 	uint32_t val, val2;
 	uintmax_t freq;
+	uint16_t vendor;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t) __func__);
 
@@ -194,10 +197,21 @@ acpi_hpet_attach(device_t dev)
 	freq = (1000000000000000LL + val / 2) / val;
 	if (bootverbose) {
 		val = bus_read_4(sc->mem_res, HPET_CAPABILITIES);
+
+		/*
+		 * ATI/AMD violates IA-PC HPET (High Precision Event Timers)
+		 * Specification and provides an off by one number
+		 * of timers/comparators.
+		 * Additionally, they use unregistered value in VENDOR_ID field.
+		 */
+		num_timers = 1 + ((val & HPET_CAP_NUM_TIM) >> 8);
+		vendor = val >> 16;
+		if (vendor == HPET_VENDID_AMD && num_timers > 0)
+			num_timers--;
 		device_printf(dev,
 		    "vend: 0x%x rev: 0x%x num: %d hz: %jd opts:%s%s\n",
-		    val >> 16, val & HPET_CAP_REV_ID,
-		    (val & HPET_CAP_NUM_TIM) >> 8, freq,
+		    vendor, val & HPET_CAP_REV_ID,
+		    num_timers, freq,
 		    (val & HPET_CAP_LEG_RT) ? " legacy_route" : "",
 		    (val & HPET_CAP_COUNT_SIZE) ? " 64-bit" : "");
 	}
