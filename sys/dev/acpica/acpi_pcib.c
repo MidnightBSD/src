@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_pcib.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -169,13 +169,6 @@ acpi_pcib_attach(device_t dev, ACPI_BUFFER *prt, int busno)
     prt_walk_table(prt, prt_attach_devices, dev);
 
     return_VALUE (bus_generic_attach(dev));
-}
-
-int
-acpi_pcib_resume(device_t dev)
-{
-
-    return (bus_generic_resume(dev));
 }
 
 static void

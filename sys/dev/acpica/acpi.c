@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi.c,v 1.4 2012/03/13 13:14:33 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Takanori Watanabe <takawata@jp.freebsd.org>
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -49,6 +49,9 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi.c,v 1.243.2.4.2.1 2008/11/25 02:59:2
 #include <sys/sbuf.h>
 #include <sys/smp.h>
 
+#if defined(__i386__) || defined(__amd64__)
+#include <machine/pci_cfgreg.h>
+#endif
 #include <machine/resource.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
@@ -98,7 +101,7 @@ static int	acpi_attach(device_t dev);
 static int	acpi_suspend(device_t dev);
 static int	acpi_resume(device_t dev);
 static int	acpi_shutdown(device_t dev);
-static device_t	acpi_add_child(device_t bus, int order, const char *name,
+static device_t	acpi_add_child(device_t bus, u_int order, const char *name,
 			int unit);
 static int	acpi_print_child(device_t bus, device_t child);
 static void	acpi_probe_nomatch(device_t bus, device_t child);
@@ -154,6 +157,9 @@ static int	acpi_child_location_str_method(device_t acdev, device_t child,
 					       char *buf, size_t buflen);
 static int	acpi_child_pnpinfo_str_method(device_t acdev, device_t child,
 					      char *buf, size_t buflen);
+#if defined(__i386__) || defined(__amd64__)
+static void	acpi_enable_pcie(void);
+#endif
 
 static device_method_t acpi_methods[] = {
     /* Device interface */
@@ -456,28 +462,10 @@ acpi_attach(device_t dev)
 	goto out;
     }
 
-    /* Install the default address space handlers. */
-    status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT,
-		ACPI_ADR_SPACE_SYSTEM_MEMORY, ACPI_DEFAULT_HANDLER, NULL, NULL);
-    if (ACPI_FAILURE(status)) {
-	device_printf(dev, "Could not initialise SystemMemory handler: %s\n",
-		      AcpiFormatException(status));
-	goto out;
-    }
-    status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT,
-		ACPI_ADR_SPACE_SYSTEM_IO, ACPI_DEFAULT_HANDLER, NULL, NULL);
-    if (ACPI_FAILURE(status)) {
-	device_printf(dev, "Could not initialise SystemIO handler: %s\n",
-		      AcpiFormatException(status));
-	goto out;
-    }
-    status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT,
-		ACPI_ADR_SPACE_PCI_CONFIG, ACPI_DEFAULT_HANDLER, NULL, NULL);
-    if (ACPI_FAILURE(status)) {
-	device_printf(dev, "could not initialise PciConfig handler: %s\n",
-		      AcpiFormatException(status));
-	goto out;
-    }
+#if defined(__i386__) || defined(__amd64__)
+    /* Handle MCFG table if present. */
+    acpi_enable_pcie();
+#endif
 
     /*
      * Note that some systems (specifically, those with namespace evaluation
@@ -547,7 +535,7 @@ acpi_attach(device_t dev)
 	&sc->acpi_suspend_sx, 0, acpi_sleep_state_sysctl, "A", "");
     SYSCTL_ADD_INT(&sc->acpi_sysctl_ctx, SYSCTL_CHILDREN(sc->acpi_sysctl_tree),
 	OID_AUTO, "sleep_delay", CTLFLAG_RW, &sc->acpi_sleep_delay, 0,
-	"sleep delay");
+	"sleep delay in seconds");
     SYSCTL_ADD_INT(&sc->acpi_sysctl_ctx, SYSCTL_CHILDREN(sc->acpi_sysctl_tree),
 	OID_AUTO, "s4bios", CTLFLAG_RW, &sc->acpi_s4bios, 0, "S4BIOS mode");
     SYSCTL_ADD_INT(&sc->acpi_sysctl_ctx, SYSCTL_CHILDREN(sc->acpi_sysctl_tree),
@@ -734,7 +722,7 @@ acpi_shutdown(device_t dev)
  * Handle a new device being added
  */
 static device_t
-acpi_add_child(device_t bus, int order, const char *name, int unit)
+acpi_add_child(device_t bus, u_int order, const char *name, int unit)
 {
     struct acpi_device	*ad;
     device_t		child;
@@ -1474,6 +1462,36 @@ acpi_isa_pnp_probe(device_t bus, device_t child, struct isa_pnp_id *ids)
     return_VALUE (result);
 }
 
+#if defined(__i386__) || defined(__amd64__)
+/*
+ * Look for a MCFG table.  If it is present, use the settings for
+ * domain (segment) 0 to setup PCI config space access via the memory
+ * map.
+ */
+static void
+acpi_enable_pcie(void)
+{
+	ACPI_TABLE_HEADER *hdr;
+	ACPI_MCFG_ALLOCATION *alloc, *end;
+	ACPI_STATUS status;
+
+	status = AcpiGetTable(ACPI_SIG_MCFG, 1, &hdr);
+	if (ACPI_FAILURE(status))
+		return;
+
+	end = (ACPI_MCFG_ALLOCATION *)((char *)hdr + hdr->Length);
+	alloc = (ACPI_MCFG_ALLOCATION *)((ACPI_TABLE_MCFG *)hdr + 1);
+	while (alloc < end) {
+		if (alloc->PciSegment == 0) {
+			pcie_cfgregopen(alloc->Address, alloc->StartBusNumber,
+			    alloc->EndBusNumber);
+			return;
+		}
+		alloc++;
+	}
+}
+#endif
+
 /*
  * Scan all of the ACPI namespace and attach child devices.
  *
@@ -2126,6 +2144,28 @@ acpi_SetIntrModel(int model)
 }
 
 /*
+ * Walk subtables of a table and call a callback routine for each
+ * subtable.  The caller should provide the first subtable and a
+ * pointer to the end of the table.  This can be used to walk tables
+ * such as MADT and SRAT that use subtable entries.
+ */
+void
+acpi_walk_subtables(void *first, void *end, acpi_subtable_handler *handler,
+    void *arg)
+{
+    ACPI_SUBTABLE_HEADER *entry;
+
+    for (entry = first; (void *)entry < end; ) {
+	/* Avoid an infinite loop if we hit a bogus entry. */
+	if (entry->Length < sizeof(ACPI_SUBTABLE_HEADER))
+	    return;
+
+	handler(entry, arg);
+	entry = ACPI_ADD_PTR(ACPI_SUBTABLE_HEADER, entry, entry->Length);
+    }
+}
+
+/*
  * DEPRECATED.  This interface has serious deficiencies and will be
  * removed.
  *
@@ -2196,7 +2236,7 @@ acpi_ReqSleepState(struct acpi_softc *sc, int state)
 	clone->notify_status = APM_EV_NONE;
 	if ((clone->flags & ACPI_EVF_DEVD) == 0) {
 	    selwakeuppri(&clone->sel_read, PZERO);
-	    KNOTE_UNLOCKED(&clone->sel_read.si_note, 0);
+	    KNOTE_LOCKED(&clone->sel_read.si_note, 0);
 	}
     }
 

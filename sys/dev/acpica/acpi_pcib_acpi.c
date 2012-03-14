@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_pcib_acpi.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pcib_acpi.c,v 1.55 2007/09/30 11:05:14 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pcib_acpi.c,v 1.55.2.2 2011/04/27 21:13:40 jhb Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -64,7 +64,6 @@ struct acpi_hpcib_softc {
 
 static int		acpi_pcib_acpi_probe(device_t bus);
 static int		acpi_pcib_acpi_attach(device_t bus);
-static int		acpi_pcib_acpi_resume(device_t bus);
 static int		acpi_pcib_read_ivar(device_t dev, device_t child,
 			    int which, uintptr_t *result);
 static int		acpi_pcib_write_ivar(device_t dev, device_t child,
@@ -92,7 +91,7 @@ static device_method_t acpi_pcib_acpi_methods[] = {
     DEVMETHOD(device_attach,		acpi_pcib_acpi_attach),
     DEVMETHOD(device_shutdown,		bus_generic_shutdown),
     DEVMETHOD(device_suspend,		bus_generic_suspend),
-    DEVMETHOD(device_resume,		acpi_pcib_acpi_resume),
+    DEVMETHOD(device_resume,		bus_generic_resume),
 
     /* Bus interface */
     DEVMETHOD(bus_print_child,		bus_generic_print_child),
@@ -146,6 +145,7 @@ acpi_pcib_acpi_attach(device_t dev)
 {
     struct acpi_hpcib_softc	*sc;
     ACPI_STATUS			status;
+    static int bus0_seen = 0;
     u_int addr, slot, func, busok;
     uint8_t busno;
 
@@ -154,6 +154,21 @@ acpi_pcib_acpi_attach(device_t dev)
     sc = device_get_softc(dev);
     sc->ap_dev = dev;
     sc->ap_handle = acpi_get_handle(dev);
+
+    /*
+     * Get our segment number by evaluating _SEG
+     * It's OK for this to not exist.
+     */
+    status = acpi_GetInteger(sc->ap_handle, "_SEG", &sc->ap_segment);
+    if (ACPI_FAILURE(status)) {
+	if (status != AE_NOT_FOUND) {
+	    device_printf(dev, "could not evaluate _SEG - %s\n",
+		AcpiFormatException(status));
+	    return_VALUE (ENXIO);
+	}
+	/* If it's not found, assume 0. */
+	sc->ap_segment = 0;
+    }
 
     /*
      * Get our base bus number by evaluating _BBN.
@@ -169,8 +184,10 @@ acpi_pcib_acpi_attach(device_t dev)
      * XXX invoke _REG on this for the PCI config space address space?
      * XXX It seems many BIOS's with multiple Host-PCI bridges do not set
      *     _BBN correctly.  They set _BBN to zero for all bridges.  Thus,
-     *     if _BBN is zero and pcib0 already exists, we try to read our
+     *     if _BBN is zero and PCI bus 0 already exists, we try to read our
      *     bus number from the configuration registers at address _ADR.
+     *     We only do this for domain/segment 0 in the hopes that this is
+     *     only needed for old single-domain machines.
      */
     status = acpi_GetInteger(sc->ap_handle, "_BBN", &sc->ap_bus);
     if (ACPI_FAILURE(status)) {
@@ -185,11 +202,11 @@ acpi_pcib_acpi_attach(device_t dev)
     }
 
     /*
-     * If the bus is zero and pcib0 already exists, read the bus number
-     * via PCI config space.
+     * If this is segment 0, the bus is zero, and PCI bus 0 already
+     * exists, read the bus number via PCI config space.
      */
     busok = 1;
-    if (sc->ap_bus == 0 && devclass_get_device(pcib_devclass, 0) != dev) {
+    if (sc->ap_segment == 0 && sc->ap_bus == 0 && bus0_seen) {
 	busok = 0;
 	status = acpi_GetInteger(sc->ap_handle, "_ADR", &addr);
 	if (ACPI_FAILURE(status)) {
@@ -226,29 +243,11 @@ acpi_pcib_acpi_attach(device_t dev)
 	device_printf(dev, "trying bus number %d\n", sc->ap_bus);
     }
 
-    /*
-     * Get our segment number by evaluating _SEG
-     * It's OK for this to not exist.
-     */
-    status = acpi_GetInteger(sc->ap_handle, "_SEG", &sc->ap_segment);
-    if (ACPI_FAILURE(status)) {
-	if (status != AE_NOT_FOUND) {
-	    device_printf(dev, "could not evaluate _SEG - %s\n",
-		AcpiFormatException(status));
-	    return_VALUE (ENXIO);
-	}
-	/* If it's not found, assume 0. */
-	sc->ap_segment = 0;
-    }
+    /* If this is bus 0 on segment 0, note that it has been seen already. */
+    if (sc->ap_segment == 0 && sc->ap_bus == 0)
+	    bus0_seen = 1;
 
     return (acpi_pcib_attach(dev, &sc->ap_prt, sc->ap_bus));
-}
-
-static int
-acpi_pcib_acpi_resume(device_t dev)
-{
-
-    return (acpi_pcib_resume(dev));
 }
 
 /*

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_resource.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_resource.c,v 1.40 2007/03/22 18:16:40 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_resource.c,v 1.40.2.1 2011/03/04 23:12:14 jkim Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -59,32 +59,35 @@ static ACPI_STATUS
 acpi_lookup_irq_handler(ACPI_RESOURCE *res, void *context)
 {
     struct lookup_irq_request *req;
+    size_t len;
     u_int irqnum, irq;
 
     switch (res->Type) {
     case ACPI_RESOURCE_TYPE_IRQ:
+	irqnum = res->Data.Irq.InterruptCount;
+	irq = res->Data.Irq.Interrupts[0];
+	len = ACPI_RS_SIZE(ACPI_RESOURCE_IRQ);
+	break;
     case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
-	if (res->Type == ACPI_RESOURCE_TYPE_IRQ) {
-	    irqnum = res->Data.Irq.InterruptCount;
-	    irq = res->Data.Irq.Interrupts[0];
-	} else {
-	    irqnum = res->Data.ExtendedIrq.InterruptCount;
-	    irq = res->Data.ExtendedIrq.Interrupts[0];
-	}
-	if (irqnum != 1)
-	    break;
-	req = (struct lookup_irq_request *)context;
-	if (req->counter != req->rid) {
-	    req->counter++;
-	    break;
-	}
-	req->found = 1;
-	KASSERT(irq == rman_get_start(req->res),
-	    ("IRQ resources do not match"));
-	bcopy(res, req->acpi_res, sizeof(ACPI_RESOURCE));
-	return (AE_CTRL_TERMINATE);
+	irqnum = res->Data.ExtendedIrq.InterruptCount;
+	irq = res->Data.ExtendedIrq.Interrupts[0];
+	len = ACPI_RS_SIZE(ACPI_RESOURCE_EXTENDED_IRQ);
+	break;
+    default:
+	return (AE_OK);
     }
-    return (AE_OK);
+    if (irqnum != 1)
+	return (AE_OK);
+    req = (struct lookup_irq_request *)context;
+    if (req->counter != req->rid) {
+	req->counter++;
+	return (AE_OK);
+    }
+    req->found = 1;
+    KASSERT(irq == rman_get_start(req->res),
+	("IRQ resources do not match"));
+    bcopy(res, req->acpi_res, len);
+    return (AE_CTRL_TERMINATE);
 }
 
 ACPI_STATUS

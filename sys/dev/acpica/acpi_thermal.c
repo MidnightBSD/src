@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_thermal.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_thermal.c,v 1.4 2012/03/13 13:14:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_thermal.c,v 1.64.4.1 2008/01/07 21:26:38 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_thermal.c,v 1.64.2.4 2008/02/25 15:32:39 ume Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>

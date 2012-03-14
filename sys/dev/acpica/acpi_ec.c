@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_ec.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003-2007 Nate Lawson
  * Copyright (c) 2000 Michael Smith
@@ -127,9 +127,6 @@ struct acpi_ec_params {
     ACPI_HANDLE	gpe_handle;
     int		uid;
 };
-
-/* Indicate that this device has already been probed via ECDT. */
-#define DEV_ECDT(x)	(acpi_get_magic(x) == (uintptr_t)&acpi_ec_devclass)
 
 /*
  * Driver softc.
@@ -331,7 +328,6 @@ acpi_ec_ecdt_probe(device_t parent)
     params->uid = ecdt->Uid;
     acpi_GetInteger(h, "_GLK", &params->glk);
     acpi_set_private(child, params);
-    acpi_set_magic(child, (uintptr_t)&acpi_ec_devclass);
 
     /* Finish the attach process. */
     if (device_probe_and_attach(child) != 0)
@@ -347,6 +343,7 @@ acpi_ec_probe(device_t dev)
     ACPI_STATUS status;
     device_t	peer;
     char	desc[64];
+    int		ecdt;
     int		ret;
     struct acpi_ec_params *params;
     static char *ec_ids[] = { "PNP0C09", NULL };
@@ -361,14 +358,14 @@ acpi_ec_probe(device_t dev)
      * duplicate probe.
      */
     ret = ENXIO;
-    params = NULL;
+    ecdt = 0;
     buf.Pointer = NULL;
     buf.Length = ACPI_ALLOCATE_BUFFER;
-    if (DEV_ECDT(dev)) {
-	params = acpi_get_private(dev);
+    params = acpi_get_private(dev);
+    if (params != NULL) {
+	ecdt = 1;
 	ret = 0;
-    } else if (!acpi_disabled("ec") &&
-	ACPI_ID_PROBE(device_get_parent(dev), dev, ec_ids)) {
+    } else if (ACPI_ID_PROBE(device_get_parent(dev), dev, ec_ids)) {
 	params = malloc(sizeof(struct acpi_ec_params), M_TEMP,
 			M_WAITOK | M_ZERO);
 	h = acpi_get_handle(dev);
@@ -438,7 +435,7 @@ out:
     if (ret == 0) {
 	snprintf(desc, sizeof(desc), "Embedded Controller: GPE %#x%s%s",
 		 params->gpe_bit, (params->glk) ? ", GLK" : "",
-		 DEV_ECDT(dev) ? ", ECDT" : "");
+		 ecdt ? ", ECDT" : "");
 	device_set_desc_copy(dev, desc);
     }
 
@@ -470,6 +467,7 @@ acpi_ec_attach(device_t dev)
     sc->ec_gpehandle = params->gpe_handle;
     sc->ec_uid = params->uid;
     sc->ec_suspending = FALSE;
+    acpi_set_private(dev, NULL);
     free(params, M_TEMP);
 
     /* Attach bus resources for data and command/status ports. */

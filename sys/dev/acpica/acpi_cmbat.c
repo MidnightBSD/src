@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_cmbat.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Munehiro Matsuda
@@ -278,6 +278,12 @@ acpi_cmbat_get_bst(void *arg)
     if (acpi_PkgInt32(res, 3, &sc->bst.volt) != 0)
 	goto end;
     acpi_cmbat_info_updated(&sc->bst_lastupdated);
+
+    /* Clear out undefined/extended bits that might be set by hardware. */
+    sc->bst.state &= ACPI_BATT_STAT_BST_MASK;
+    if ((sc->bst.state & ACPI_BATT_STAT_INVALID) == ACPI_BATT_STAT_INVALID)
+	ACPI_VPRINT(dev, acpi_device_get_parent_softc(dev),
+	    "battery reports simultaneous charging and discharging\n");
 
     /* XXX If all batteries are critical, perhaps we should suspend. */
     if (sc->bst.state & ACPI_BATT_STAT_CRITICAL) {

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_cpu.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_cpu.c,v 1.4 2012/03/13 13:14:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003-2005 Nate Lawson (SDG)
  * Copyright (c) 2001 Michael Smith
@@ -80,7 +80,6 @@ struct acpi_cpu_softc {
     int			 cpu_features;	/* Child driver supported features. */
     /* Runtime state. */
     int			 cpu_non_c3;	/* Index of lowest non-C3 state. */
-    int			 cpu_short_slp;	/* Count of < 1us sleeps. */
     u_int		 cpu_cx_stats[MAX_CX_STATES];/* Cx usage history. */
     /* Values for sysctl. */
     struct sysctl_ctx_list cpu_sysctl_ctx;
@@ -148,7 +147,7 @@ static int	acpi_cpu_resume(device_t dev);
 static int	acpi_pcpu_get_id(uint32_t idx, uint32_t *acpi_id,
 		    uint32_t *cpu_id);
 static struct resource_list *acpi_cpu_get_rlist(device_t dev, device_t child);
-static device_t	acpi_cpu_add_child(device_t dev, int order, const char *name,
+static device_t	acpi_cpu_add_child(device_t dev, u_int order, const char *name,
 		    int unit);
 static int	acpi_cpu_read_ivar(device_t dev, device_t child, int index,
 		    uintptr_t *result);
@@ -254,7 +253,7 @@ acpi_cpu_probe(device_t dev)
 
     /* Mark this processor as in-use and save our derived id for attach. */
     cpu_softc[cpu_id] = (void *)1;
-    acpi_set_magic(dev, cpu_id);
+    acpi_set_private(dev, (void*)(intptr_t)cpu_id);
     device_set_desc(dev, "ACPI CPU");
 
     return (0);
@@ -285,7 +284,7 @@ acpi_cpu_attach(device_t dev)
     sc = device_get_softc(dev);
     sc->cpu_dev = dev;
     sc->cpu_handle = acpi_get_handle(dev);
-    cpu_id = acpi_get_magic(dev);
+    cpu_id = (int)(intptr_t)acpi_get_private(dev);
     cpu_softc[cpu_id] = sc;
     pcpu_data = pcpu_find(cpu_id);
     pcpu_data->pc_device = dev;
@@ -344,27 +343,10 @@ acpi_cpu_attach(device_t dev)
     }
 
     /*
-     * CPU capabilities are specified as a buffer of 32-bit integers:
-     * revision, count, and one or more capabilities.  The revision of
-     * "1" is not specified anywhere but seems to match Linux.
+     * CPU capabilities are specified in
+     * Intel Processor Vendor-Specific ACPI Interface Specification.
      */
     if (sc->cpu_features) {
-	arglist.Pointer = arg;
-	arglist.Count = 1;
-	arg[0].Type = ACPI_TYPE_BUFFER;
-	arg[0].Buffer.Length = sizeof(cap_set);
-	arg[0].Buffer.Pointer = (uint8_t *)cap_set;
-	cap_set[0] = 1; /* revision */
-	cap_set[1] = 1; /* number of capabilities integers */
-	cap_set[2] = sc->cpu_features;
-	AcpiEvaluateObject(sc->cpu_handle, "_PDC", &arglist, NULL);
-
-	/*
-	 * On some systems we need to evaluate _OSC so that the ASL
-	 * loads the _PSS and/or _PDC methods at runtime.
-	 *
-	 * TODO: evaluate failure of _OSC.
-	 */
 	arglist.Pointer = arg;
 	arglist.Count = 4;
 	arg[0].Type = ACPI_TYPE_BUFFER;
@@ -377,8 +359,24 @@ acpi_cpu_attach(device_t dev)
 	arg[3].Type = ACPI_TYPE_BUFFER;
 	arg[3].Buffer.Length = sizeof(cap_set);	/* Capabilities buffer */
 	arg[3].Buffer.Pointer = (uint8_t *)cap_set;
-	cap_set[0] = 0;
-	AcpiEvaluateObject(sc->cpu_handle, "_OSC", &arglist, NULL);
+	cap_set[0] = 0;				/* status */
+	cap_set[1] = sc->cpu_features;
+	status = AcpiEvaluateObject(sc->cpu_handle, "_OSC", &arglist, NULL);
+	if (ACPI_SUCCESS(status)) {
+	    if (cap_set[0] != 0)
+		device_printf(dev, "_OSC returned status %#x\n", cap_set[0]);
+	}
+	else {
+	    arglist.Pointer = arg;
+	    arglist.Count = 1;
+	    arg[0].Type = ACPI_TYPE_BUFFER;
+	    arg[0].Buffer.Length = sizeof(cap_set);
+	    arg[0].Buffer.Pointer = (uint8_t *)cap_set;
+	    cap_set[0] = 1; /* revision */
+	    cap_set[1] = 1; /* number of capabilities integers */
+	    cap_set[2] = sc->cpu_features;
+	    AcpiEvaluateObject(sc->cpu_handle, "_PDC", &arglist, NULL);
+	}
     }
 
     /* Probe for Cx state support. */
@@ -463,7 +461,7 @@ acpi_cpu_get_rlist(device_t dev, device_t child)
 }
 
 static device_t
-acpi_cpu_add_child(device_t dev, int order, const char *name, int unit)
+acpi_cpu_add_child(device_t dev, u_int order, const char *name, int unit)
 {
     struct acpi_cpu_device *ad;
     device_t child;
@@ -609,10 +607,6 @@ acpi_cpu_generic_cx_probe(struct acpi_cpu_softc *sc)
 	    sc->cpu_cx_count++;
 	}
     }
-
-    /* Update the largest cx_count seen so far */
-    if (sc->cpu_cx_count > cpu_cx_count)
-	cpu_cx_count = sc->cpu_cx_count;
 }
 
 /*
@@ -678,19 +672,11 @@ acpi_cpu_cx_cst(struct acpi_cpu_softc *sc)
 	    sc->cpu_cx_count++;
 	    continue;
 	case ACPI_STATE_C2:
-	    if (cx_ptr->trans_lat > 100) {
-		ACPI_DEBUG_PRINT((ACPI_DB_INFO,
-				 "acpi_cpu%d: C2[%d] not available.\n",
-				 device_get_unit(sc->cpu_dev), i));
-		continue;
-	    }
 	    sc->cpu_non_c3 = i;
 	    break;
 	case ACPI_STATE_C3:
 	default:
-	    if (cx_ptr->trans_lat > 1000 ||
-		(cpu_quirks & CPU_QUIRK_NO_C3) != 0) {
-
+	    if ((cpu_quirks & CPU_QUIRK_NO_C3) != 0) {
 		ACPI_DEBUG_PRINT((ACPI_DB_INFO,
 				 "acpi_cpu%d: C3[%d] not available.\n",
 				 device_get_unit(sc->cpu_dev), i));
@@ -752,6 +738,8 @@ acpi_cpu_startup(void *arg)
 	for (i = 0; i < cpu_ndevices; i++) {
 	    sc = device_get_softc(cpu_devices[i]);
 	    acpi_cpu_generic_cx_probe(sc);
+	    if (sc->cpu_cx_count > cpu_cx_count)
+		    cpu_cx_count = sc->cpu_cx_count;
 	}
 
 	/*
@@ -878,43 +866,13 @@ acpi_cpu_idle()
 	return;
     }
 
-    /*
-     * If we slept 100 us or more, use the lowest Cx state.  Otherwise,
-     * find the lowest state that has a latency less than or equal to
-     * the length of our last sleep.
-     */
-    cx_next_idx = sc->cpu_cx_lowest;
-    if (sc->cpu_prev_sleep < 100) {
-	/*
-	 * If we sleep too short all the time, this system may not implement
-	 * C2/3 correctly (i.e. reads return immediately).  In this case,
-	 * back off and use the next higher level.
-	 * It seems that when you have a dual core cpu (like the Intel Core Duo)
-	 * that both cores will get out of C3 state as soon as one of them
-	 * requires it. This breaks the sleep detection logic as the sleep
-	 * counter is local to each cpu. Disable the sleep logic for now as a
-	 * workaround if there's more than one CPU. The right fix would probably
-	 * be to add quirks for system that don't really support C3 state.
-	 */
-	if (mp_ncpus < 2 && sc->cpu_prev_sleep <= 1) {
-	    sc->cpu_short_slp++;
-	    if (sc->cpu_short_slp == 1000 && sc->cpu_cx_lowest != 0) {
-		if (sc->cpu_non_c3 == sc->cpu_cx_lowest && sc->cpu_non_c3 != 0)
-		    sc->cpu_non_c3--;
-		sc->cpu_cx_lowest--;
-		sc->cpu_short_slp = 0;
-		device_printf(sc->cpu_dev,
-		    "too many short sleeps, backing off to C%d\n",
-		    sc->cpu_cx_lowest + 1);
-	    }
-	} else
-	    sc->cpu_short_slp = 0;
-
-	for (i = sc->cpu_cx_lowest; i >= 0; i--)
-	    if (sc->cpu_cx_states[i].trans_lat <= sc->cpu_prev_sleep) {
-		cx_next_idx = i;
-		break;
-	    }
+    /* Find the lowest state that has small enough latency. */
+    cx_next_idx = 0;
+    for (i = sc->cpu_cx_lowest; i >= 0; i--) {
+	if (sc->cpu_cx_states[i].trans_lat * 3 <= sc->cpu_prev_sleep) {
+	    cx_next_idx = i;
+	    break;
+	}
     }
 
     /*
@@ -939,10 +897,10 @@ acpi_cpu_idle()
     /*
      * Execute HLT (or equivalent) and wait for an interrupt.  We can't
      * calculate the time spent in C1 since the place we wake up is an
-     * ISR.  Assume we slept one quantum and return.
+     * ISR.  Assume we slept half of quantum and return.
      */
     if (cx_next->type == ACPI_STATE_C1) {
-	sc->cpu_prev_sleep = 1000000 / hz;
+	sc->cpu_prev_sleep = (sc->cpu_prev_sleep * 3 + 500000 / hz) / 4;
 	acpi_cpu_c1();
 	return;
     }
@@ -985,9 +943,9 @@ acpi_cpu_idle()
     }
     ACPI_ENABLE_IRQS();
 
-    /* Find the actual time asleep in microseconds, minus overhead. */
+    /* Find the actual time asleep in microseconds. */
     end_time = acpi_TimerDelta(end_time, start_time);
-    sc->cpu_prev_sleep = PM_USEC(end_time) - cx_next->trans_lat;
+    sc->cpu_prev_sleep = (sc->cpu_prev_sleep * 3 + PM_USEC(end_time)) / 4;
 }
 
 /*
@@ -1109,8 +1067,9 @@ acpi_cpu_usage_sysctl(SYSCTL_HANDLER_ARGS)
 	    sbuf_printf(&sb, "%u.%02u%% ", (u_int)(whole / sum),
 		(u_int)(fract / sum));
 	} else
-	    sbuf_printf(&sb, "0%% ");
+	    sbuf_printf(&sb, "0.00%% ");
     }
+    sbuf_printf(&sb, "last %dus", sc->cpu_prev_sleep);
     sbuf_trim(&sb);
     sbuf_finish(&sb);
     sysctl_handle_string(oidp, sbuf_data(&sb), sbuf_len(&sb), req);

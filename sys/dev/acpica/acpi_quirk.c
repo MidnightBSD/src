@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.4 2012/03/13 13:14:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Nate Lawson (SDG)
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.4.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.4.2.1 2008/09/22 15:57:58 jkim Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

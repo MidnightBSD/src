@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_smbat.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Hans Petter Selasky
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_smbat.c,v 1.5 2006/02/21 03:16:58 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_smbat.c,v 1.5.2.3 2011/03/11 17:12:39 avg Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -61,6 +61,23 @@ static int	acpi_smbat_get_bif(device_t dev, struct acpi_bif *bif);
 static int	acpi_smbat_get_bst(device_t dev, struct acpi_bst *bst);
 
 ACPI_SERIAL_DECL(smbat, "ACPI Smart Battery");
+
+SYSCTL_DECL(_debug_acpi);
+SYSCTL_NODE(_debug_acpi, OID_AUTO, batt, CTLFLAG_RD, NULL, "Battery debugging");
+
+/* On some laptops with smart batteries, enabling battery monitoring
+ * software causes keystrokes from atkbd to be lost.  This has also been
+ * reported on Linux, and is apparently due to the keyboard and I2C line
+ * for the battery being routed through the same chip.  Whether that's
+ * accurate or not, adding extra sleeps to the status checking code
+ * causes the problem to go away.
+ *
+ * If you experience that problem, try a value of 10ms and move up
+ * from there.
+ */
+static int      batt_sleep_ms;
+SYSCTL_INT(_debug_acpi_batt, OID_AUTO, batt_sleep_ms, CTLFLAG_RW, &batt_sleep_ms, 0,
+    "Sleep during battery status updates to prevent keystroke loss.");
 
 static device_method_t acpi_smbat_methods[] = {
 	/* device interface */
@@ -177,6 +194,9 @@ acpi_smbus_read_2(struct acpi_smbat_softc *sc, uint8_t addr, uint8_t cmd,
 
 	ACPI_SERIAL_ASSERT(smbat);
 
+	if (batt_sleep_ms)
+	    AcpiOsSleep(batt_sleep_ms);
+
 	val = addr;
 	error = ACPI_EC_WRITE(sc->ec_dev, sc->sb_base_addr + SMBUS_ADDR,
 	    val, 1);
@@ -194,6 +214,9 @@ acpi_smbus_read_2(struct acpi_smbat_softc *sc, uint8_t addr, uint8_t cmd,
 	    val, 1);
 	if (error)
 		goto out;
+
+	if (batt_sleep_ms)
+	    AcpiOsSleep(batt_sleep_ms);
 
 	for (to = SMBUS_TIMEOUT; to != 0; to--) {
 		error = ACPI_EC_READ(sc->ec_dev, sc->sb_base_addr + SMBUS_PRTCL,
@@ -240,6 +263,9 @@ acpi_smbus_read_multi_1(struct acpi_smbat_softc *sc, uint8_t addr, uint8_t cmd,
 
 	ACPI_SERIAL_ASSERT(smbat);
 
+	if (batt_sleep_ms)
+	    AcpiOsSleep(batt_sleep_ms);
+
 	val = addr;
 	error = ACPI_EC_WRITE(sc->ec_dev, sc->sb_base_addr + SMBUS_ADDR,
 	    val, 1);
@@ -257,6 +283,9 @@ acpi_smbus_read_multi_1(struct acpi_smbat_softc *sc, uint8_t addr, uint8_t cmd,
 	    val, 1);
 	if (error)
 		goto out;
+
+	if (batt_sleep_ms)
+	    AcpiOsSleep(batt_sleep_ms);
 
 	for (to = SMBUS_TIMEOUT; to != 0; to--) {
 		error = ACPI_EC_READ(sc->ec_dev, sc->sb_base_addr + SMBUS_PRTCL,
@@ -293,6 +322,9 @@ acpi_smbus_read_multi_1(struct acpi_smbat_softc *sc, uint8_t addr, uint8_t cmd,
 	if (len > val)
 		len = val;
 
+	if (batt_sleep_ms)
+	    AcpiOsSleep(batt_sleep_ms);
+
 	while (len--) {
 		error = ACPI_EC_READ(sc->ec_dev, sc->sb_base_addr + SMBUS_DATA
 		    + len, &val, 1);
@@ -300,6 +332,8 @@ acpi_smbus_read_multi_1(struct acpi_smbat_softc *sc, uint8_t addr, uint8_t cmd,
 			goto out;
 
 		ptr[len] = val;
+		if (batt_sleep_ms)
+		    AcpiOsSleep(batt_sleep_ms);
 	}
 
 out:
@@ -356,6 +390,7 @@ acpi_smbat_get_bst(device_t dev, struct acpi_bst *bst)
 
 	if (val > 0) {
 		sc->bst.rate = val * factor;
+		sc->bst.state &= ~SMBATT_BS_DISCHARGING;
 		sc->bst.state |= ACPI_BATT_STAT_CHARGING;
 	} else if (val < 0)
 		sc->bst.rate = (-val) * factor;

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_pcibvar.h,v 1.2 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -25,20 +25,21 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/acpica/acpi_pcibvar.h,v 1.6 2005/02/28 05:39:34 njl Exp $
+ * $FreeBSD: src/sys/dev/acpica/acpi_pcibvar.h,v 1.6.10.1 2011/04/27 21:13:40 jhb Exp $
  */
 
 #ifndef	_ACPI_PCIBVAR_H_
 #define	_ACPI_PCIBVAR_H_
 
 #ifdef _KERNEL
+
 void	acpi_pci_link_add_reference(device_t dev, int index, device_t pcib,
     int slot, int pin);
 int	acpi_pci_link_route_interrupt(device_t dev, int index);
 int	acpi_pcib_attach(device_t bus, ACPI_BUFFER *prt, int busno);
 int	acpi_pcib_route_interrupt(device_t pcib, device_t dev, int pin,
     ACPI_BUFFER *prtbuf);
-int	acpi_pcib_resume(device_t dev);
+
 #endif /* _KERNEL */
 
 #endif /* !_ACPI_PCIBVAR_H_ */

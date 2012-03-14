@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/pci_cfgreg.h,v 1.13.10.1 2007/12/06 08:25:43 jhb Exp $
+ * $FreeBSD: src/sys/amd64/include/pci_cfgreg.h,v 1.13.10.2 2009/05/04 21:04:29 jhb Exp $
  *
  */
 
@@ -37,6 +37,7 @@
 #define CONF1_ENABLE_MSK1  0x80000001ul
 #define CONF1_ENABLE_RES1  0x80000000ul
 
+int		pcie_cfgregopen(uint64_t base, uint8_t minbus, uint8_t maxbus);
 int		pci_cfgregopen(void);
 u_int32_t	pci_cfgregread(int bus, int slot, int func, int reg, int bytes);
 void		pci_cfgregwrite(int bus, int slot, int func, int reg, u_int32_t data, int bytes);

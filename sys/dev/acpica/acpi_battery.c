@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_battery.c,v 1.4 2008/12/02 02:24:28 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/acpica/acpi_battery.c,v 1.5 2011/07/23 21:24:58 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -102,8 +102,9 @@ acpi_battery_get_info_expire(void)
 int
 acpi_battery_bst_valid(struct acpi_bst *bst)
 {
-    return (bst->state < ACPI_BATT_STAT_MAX && bst->cap != ACPI_BATT_UNKNOWN &&
-	bst->volt != ACPI_BATT_UNKNOWN);
+
+    return (bst->state != ACPI_BATT_STAT_NOT_PRESENT &&
+	bst->cap != ACPI_BATT_UNKNOWN && bst->volt != ACPI_BATT_UNKNOWN);
 }
 
 /* Check _BIF results for validity. */
