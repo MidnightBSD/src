@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/pci/agp_nvidia.c,v 1.3 2008/12/03 00:11:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/agp_nvidia.c,v 1.11.2.1 2007/11/08 20:29:53 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/agp_nvidia.c,v 1.11.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Written using information gleaned from the
@@ -348,7 +348,7 @@ agp_nvidia_flush_tlb (device_t dev, int offset)
 	struct agp_nvidia_softc *sc;
 	u_int32_t wbc_reg, temp;
 	volatile u_int32_t *ag_virtual;
-	int i;
+	int i, pages;
 
 	sc = (struct agp_nvidia_softc *)device_get_softc(dev);
 
@@ -374,9 +374,10 @@ agp_nvidia_flush_tlb (device_t dev, int offset)
 	ag_virtual = (volatile u_int32_t *)sc->gatt->ag_virtual;
 
 	/* Flush TLB entries. */
-	for(i = 0; i < 32 + 1; i++)
+	pages = sc->gatt->ag_entries * sizeof(u_int32_t) / PAGE_SIZE;
+	for(i = 0; i < pages; i++)
 		temp = ag_virtual[i * PAGE_SIZE / sizeof(u_int32_t)];
-	for(i = 0; i < 32 + 1; i++)
+	for(i = 0; i < pages; i++)
 		temp = ag_virtual[i * PAGE_SIZE / sizeof(u_int32_t)];
 
 	return (0);
