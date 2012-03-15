@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cam/scsi/scsi_sg.c,v 1.2 2008/12/03 00:24:27 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007 Scott Long
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sg.c,v 1.9.2.3.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sg.c,v 1.9.2.4 2010/04/24 23:13:05 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -584,7 +583,7 @@ sgioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 	{
 		struct sg_scsi_id id;
 
-		id.host_no = 0; /* XXX */
+		id.host_no = cam_sim_path(xpt_path_sim(periph->path));
 		id.channel = xpt_path_path_id(periph->path);
 		id.scsi_id = xpt_path_target_id(periph->path);
 		id.lun = xpt_path_lun_id(periph->path);

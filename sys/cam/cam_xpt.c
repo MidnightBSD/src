@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/cam_xpt.c,v 1.190.2.20.2.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/cam_xpt.c,v 1.190.2.22 2011/02/24 10:45:41 brucec Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -883,7 +883,7 @@ xpt_schedule_dev_allocq(struct cam_eb *bus, struct cam_ed *dev)
 		}
 		/*
 		 * The priority of a device waiting for CCB resources
-		 * is that of the the highest priority peripheral driver
+		 * is that of the highest priority peripheral driver
 		 * enqueued.
 		 */
 		retval = xpt_schedule_dev(&bus->sim->devq->alloc_queue,
@@ -904,7 +904,7 @@ xpt_schedule_dev_sendq(struct cam_eb *bus, struct cam_ed *dev)
 	if (dev->ccbq.dev_openings > 0) {
 		/*
 		 * The priority of a device waiting for controller
-		 * resources is that of the the highest priority CCB
+		 * resources is that of the highest priority CCB
 		 * enqueued.
 		 */
 		retval =
@@ -3150,6 +3150,10 @@ xpt_action(union ccb *start_ccb)
 	case XPT_NOTIFY_ACK:
 	case XPT_GET_TRAN_SETTINGS:
 	case XPT_RESET_BUS:
+	case XPT_IMMEDIATE_NOTIFY:
+	case XPT_NOTIFY_ACKNOWLEDGE:
+	case XPT_GET_SIM_KNOB:
+	case XPT_SET_SIM_KNOB:
 	{
 		struct cam_sim *sim;
 

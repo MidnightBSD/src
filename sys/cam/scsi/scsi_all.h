@@ -14,7 +14,7 @@
  *
  * Ported to run under 386BSD by Julian Elischer (julian@tfs.com) Sept 1992
  *
- * $FreeBSD: src/sys/cam/scsi/scsi_all.h,v 1.28.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD: src/sys/cam/scsi/scsi_all.h,v 1.28.2.3 2010/04/08 18:38:50 mjacob Exp $
  */
 
 /*
@@ -170,6 +170,8 @@ struct scsi_mode_sense_6
 #define	SMS_PAGE_CODE 			0x3F
 #define SMS_VENDOR_SPECIFIC_PAGE	0x00
 #define SMS_DISCONNECT_RECONNECT_PAGE	0x02
+#define SMS_FORMAT_DEVICE_PAGE		0x03
+#define SMS_GEOMETRY_PAGE		0x04
 #define SMS_CACHE_PAGE			0x08
 #define SMS_PERIPHERAL_DEVICE_PAGE	0x09
 #define SMS_CONTROL_MODE_PAGE		0x0A

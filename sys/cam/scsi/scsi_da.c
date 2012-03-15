@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.224.2.6.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.224.2.7 2011/01/27 20:50:03 remko Exp $");
 
 #include <sys/param.h>
 
@@ -533,6 +533,14 @@ static struct da_quirk_entry da_quirk_table[] =
 		 * PR: 103702
 		 */
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "ChipsBnk", "USB*",
+		 "*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Storcase (Kingston) InfoStation IFS FC2/SATA-R 201A
+		 * PR: 129858
+		 */
+		{T_DIRECT, SIP_MEDIA_FIXED, "IFS", "FC2/SATA-R*",
 		 "*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
 	},
 	{
