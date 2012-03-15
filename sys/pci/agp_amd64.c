@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/pci/agp_amd64.c,v 1.3 2008/12/03 00:11:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004, 2005 Jung-uk Kim <jkim@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/agp_amd64.c,v 1.14.2.1 2007/11/08 20:29:53 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/agp_amd64.c,v 1.14.2.2 2009/01/21 17:07:46 jkim Exp $");
 
 #include "opt_bus.h"
 
@@ -168,14 +168,16 @@ agp_amd64_attach(device_t dev)
 {
 	struct agp_amd64_softc *sc = device_get_softc(dev);
 	struct agp_gatt *gatt;
+	uint32_t devid;
 	int i, n, error;
 
-	for (i = 0, n = 0; i < PCI_SLOTMAX && n < AMD64_MAX_MCTRL; i++)
-		if (pci_cfgregread(0, i, 3, 0, 4) == 0x11031022) {
+	for (i = 0, n = 0; i < PCI_SLOTMAX && n < AMD64_MAX_MCTRL; i++) {
+		devid = pci_cfgregread(0, i, 3, 0, 4);
+		if (devid == 0x11031022 || devid == 0x12031022) {
 			sc->mctrl[n] = i;
 			n++;
 		}
-
+	}
 	if (n == 0)
 		return (ENXIO);
 
