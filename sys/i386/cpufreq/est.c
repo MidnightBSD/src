@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/i386/cpufreq/est.c,v 1.12 2010/03/05 04:45:18 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/i386/cpufreq/est.c,v 1.13 2010/03/05 04:50:31 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Colin Percival
  * Copyright (c) 2005 Nate Lawson
@@ -944,8 +944,11 @@ static int
 est_features(driver_t *driver, u_int *features)
 {
 
-	/* Notify the ACPI CPU that we support direct access to MSRs */
-	*features = ACPI_CAP_PERF_MSRS;
+	/*
+	 * Notify the ACPI CPU that we support direct access to MSRs.
+	 * XXX C1 "I/O then Halt" seems necessary for some broken BIOS.
+	 */
+	*features = ACPI_CAP_PERF_MSRS | ACPI_CAP_C1_IO_HALT;
 	return (0);
 }
 
