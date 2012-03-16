@@ -23,18 +23,22 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/libkern/memset.c,v 1.2.2.1 2008/08/28 17:58:01 obrien Exp $");
+
+#define	LIBKERN_INLINE
+
 #include <sys/types.h>
-__FBSDID("$FreeBSD: src/sys/libkern/memset.c,v 1.2 2007/04/06 00:06:26 kan Exp $");
-
-void *memset(void *, int, size_t);
-
+#include <sys/libkern.h>
 
 void *
 memset(void *b, int c, size_t len)
 {
 	char *bb;
 
-	for (bb = (char *)b; len--; )
-		*bb++ = c;
+	if (c == 0)
+		bzero(b, len);
+	else
+		for (bb = (char *)b; len--; )
+			*bb++ = c;
 	return (b);
 }
