@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/aio.h,v 1.4 2011/10/20 21:11:31 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/aio.h,v 1.5 2011/10/22 14:32:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997 John S. Dyson.  All rights reserved.
  *
@@ -14,7 +14,7 @@
  * bad that happens because of using this software isn't the responsibility
  * of the author.  This software is distributed AS-IS.
  *
- * $FreeBSD: src/sys/sys/aio.h,v 1.32 2006/03/23 08:47:28 davidxu Exp $
+ * $FreeBSD: src/sys/sys/aio.h,v 1.32.2.1 2009/01/21 18:38:12 jhb Exp $
  */
 
 #ifndef _SYS_AIO_H_
@@ -70,7 +70,8 @@ typedef struct aiocb {
 	off_t	aio_offset;		/* File offset for I/O */
 	volatile void *aio_buf;         /* I/O buffer in process space */
 	size_t	aio_nbytes;		/* Number of bytes for I/O */
-	char 	__spare__[sizeof(int) * 2 + sizeof(void *)]; /* osigevent. */
+	int	__spare__[2];
+	void	*__spare2__;
 	int	aio_lio_opcode;		/* LIO opcode */
 	int	aio_reqprio;		/* Request priority -- ignored */
 	struct	__aiocb_private	_aiocb_private;
