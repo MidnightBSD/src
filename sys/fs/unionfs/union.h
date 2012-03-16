@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union.h	8.9 (Berkeley) 12/10/94
- * $FreeBSD: src/sys/fs/unionfs/union.h,v 1.34.2.2 2007/10/22 05:41:54 daichi Exp $
+ * $FreeBSD: src/sys/fs/unionfs/union.h,v 1.34.2.5 2008/12/15 03:56:54 daichi Exp $
  */
 
 #ifdef _KERNEL
@@ -67,7 +67,7 @@ struct unionfs_mount {
 /* unionfs status list */
 struct unionfs_node_status {
 	LIST_ENTRY(unionfs_node_status) uns_list;	/* Status list */
-	lwpid_t		uns_tid;		/* current thread id */
+	pid_t		uns_pid;		/* current process id */
 	int		uns_node_flag;		/* uns flag */
 	int		uns_lower_opencnt;	/* open count of lower */
 	int		uns_upper_opencnt;	/* open count of upper */
@@ -84,7 +84,12 @@ struct unionfs_node {
 	struct vnode   *un_uppervp;		/* upper side vnode */
 	struct vnode   *un_dvp;			/* parent unionfs vnode */
 	struct vnode   *un_vnode;		/* Back pointer */
-	LIST_HEAD(, unionfs_node_status) un_unshead;  /* unionfs status head */
+	LIST_HEAD(, unionfs_node_status) un_unshead;
+						/* unionfs status head */
+	LIST_HEAD(unionfs_node_hashhead, unionfs_node) *un_hashtbl;
+						/* dir vnode hash table */
+	LIST_ENTRY(unionfs_node)   un_hash;	/* hash list entry */
+	u_long		un_hashmask;		/* bit mask */
 	char           *un_path;		/* path */
 	int		un_flag;		/* unionfs node flag */
 };
@@ -105,7 +110,7 @@ int unionfs_uninit(struct vfsconf *vfsp);
 int unionfs_nodeget(struct mount *mp, struct vnode *uppervp, struct vnode *lowervp, struct vnode *dvp, struct vnode **vpp, struct componentname *cnp, struct thread *td);
 void unionfs_noderem(struct vnode *vp, struct thread *td);
 void unionfs_get_node_status(struct unionfs_node *unp, struct thread *td, struct unionfs_node_status **unspp);
-void unionfs_tryrem_node_status(struct unionfs_node *unp, struct thread *td, struct unionfs_node_status *unsp);
+void unionfs_tryrem_node_status(struct unionfs_node *unp, struct unionfs_node_status *unsp);
 
 int unionfs_check_rmdir(struct vnode *vp, struct ucred *cred, struct thread *td);
 int unionfs_copyfile(struct unionfs_node *unp, int docopy, struct ucred *cred, struct thread *td);
@@ -113,6 +118,7 @@ void unionfs_create_uppervattr_core(struct unionfs_mount *ump, struct vattr *lva
 int unionfs_create_uppervattr(struct unionfs_mount *ump, struct vnode *lvp, struct vattr *uva, struct ucred *cred, struct thread *td);
 int unionfs_mkshadowdir(struct unionfs_mount *ump, struct vnode *duvp, struct unionfs_node *unp, struct componentname *cnp, struct thread *td);
 int unionfs_mkwhiteout(struct vnode *dvp, struct componentname *cnp, struct thread *td, char *path);
+int unionfs_relookup(struct vnode *dvp, struct vnode **vpp, struct componentname *cnp, struct componentname *cn, struct thread *td, char *path, int pathlen, u_long nameiop);
 int unionfs_relookup_for_create(struct vnode *dvp, struct componentname *cnp, struct thread *td);
 int unionfs_relookup_for_delete(struct vnode *dvp, struct componentname *cnp, struct thread *td);
 int unionfs_relookup_for_rename(struct vnode *dvp, struct componentname *cnp, struct thread *td);
