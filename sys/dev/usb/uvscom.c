@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uvscom.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: usb/uvscom.c,v 1.1 2002/03/19 15:08:42 augustss Exp $	*/
 /*-
  * Copyright (c) 2001-2003, 2005 Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uvscom.c,v 1.41 2007/07/05 06:28:46 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uvscom.c,v 1.41.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * uvscom: SUNTAC Slipper U VS-10U driver.

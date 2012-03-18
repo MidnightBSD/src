@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_udav.c,v 1.4 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$NetBSD: if_udav.c,v 1.2 2003/09/04 15:17:38 tsutsui Exp $	*/
 /*	$nabe: if_udav.c,v 1.3 2003/08/21 16:57:19 nabe Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/if_udav.c,v 1.33 2007/07/24 14:44:23 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_udav.c,v 1.33.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*-
  * Copyright (c) 2003
  *     Shingo WATANABE <nabe@nabechan.org>.  All rights reserved.
@@ -46,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_udav.c,v 1.33 2007/07/24 14:44:23 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_udav.c,v 1.33.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #if defined(__NetBSD__)

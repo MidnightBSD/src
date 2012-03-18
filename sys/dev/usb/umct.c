@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/umct.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Scott Long
  * All rights reserved.
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/umct.c,v 1.18 2007/06/18 22:27:57 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/umct.c,v 1.18.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Driver for the MCT (Magic Control Technology) USB-RS232 Converter.

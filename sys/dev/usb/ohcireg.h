@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ohcireg.h,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$NetBSD: ohcireg.h,v 1.17 2000/04/01 09:27:35 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/ohcireg.h,v 1.23 2006/05/28 05:27:08 iedowse Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/ohcireg.h,v 1.23.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 
 /*-

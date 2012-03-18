@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uftdi.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: uftdi.c,v 1.13 2002/09/23 05:51:23 simonb Exp $	*/
 
 /*-
@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uftdi.c,v 1.37 2007/06/22 05:53:05 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uftdi.c,v 1.37.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * FTDI FT8U100AX serial adapter driver

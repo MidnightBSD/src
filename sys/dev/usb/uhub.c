@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uhub.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: uhub.c,v 1.68 2004/06/29 06:30:05 mycroft Exp $	*/
 
 /*-
@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uhub.c,v 1.82 2007/06/30 20:18:44 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uhub.c,v 1.82.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * USB spec: http://www.usb.org/developers/docs/usbspec.zip

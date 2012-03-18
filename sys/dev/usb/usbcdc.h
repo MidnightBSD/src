@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/usbcdc.h,v 1.2 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: usbcdc.h,v 1.9 2004/10/23 13:24:24 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usbcdc.h,v 1.12 2005/03/01 06:35:04 sobomax Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/usbcdc.h,v 1.12.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

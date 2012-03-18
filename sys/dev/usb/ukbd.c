@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/ukbd.c,v 1.4 2008/12/02 22:43:15 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/ukbd.c,v 1.5 2008/12/03 23:28:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ukbd.c,v 1.72.2.2 2007/11/12 16:09:45 kan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ukbd.c,v 1.72.2.2.4.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * HID spec: http://www.usb.org/developers/devclass_docs/HID1_11.pdf

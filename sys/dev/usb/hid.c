@@ -1,9 +1,9 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/hid.c,v 1.4 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$NetBSD: hid.c,v 1.17 2001/11/13 06:24:53 lukem Exp $	*/
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/hid.c,v 1.29 2007/06/20 05:10:52 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/hid.c,v 1.29.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -194,8 +194,11 @@ hid_get_item(struct hid_data *s, struct hid_item *h)
 		case 0:			/* Main */
 			switch (bTag) {
 			case 8:		/* Input */
-				if (!(s->kindset & (1 << hid_input)))
+				if (!(s->kindset & (1 << hid_input))) {
+					if (s->nu > 0)
+						s->nu--;
 					continue;
+				}
 				c->kind = hid_input;
 				c->flags = dval;
 			ret:
@@ -224,8 +227,11 @@ hid_get_item(struct hid_data *s, struct hid_item *h)
 					return (1);
 				}
 			case 9:		/* Output */
-				if (!(s->kindset & (1 << hid_output)))
+				if (!(s->kindset & (1 << hid_output))) {
+					if (s->nu > 0)
+						s->nu--;
 					continue;
+				}
 				c->kind = hid_output;
 				c->flags = dval;
 				goto ret;
@@ -238,8 +244,11 @@ hid_get_item(struct hid_data *s, struct hid_item *h)
 				s->nu = 0;
 				return (1);
 			case 11:	/* Feature */
-				if (!(s->kindset & (1 << hid_feature)))
+				if (!(s->kindset & (1 << hid_feature))) {
+					if (s->nu > 0)
+						s->nu--;
 					continue;
+				}
 				c->kind = hid_feature;
 				c->flags = dval;
 				goto ret;
@@ -267,7 +276,7 @@ hid_get_item(struct hid_data *s, struct hid_item *h)
 				c->logical_maximum = dval;
 				break;
 			case 3:
-				c->physical_maximum = dval;
+				c->physical_minimum = dval;
 				break;
 			case 4:
 				c->physical_maximum = dval;

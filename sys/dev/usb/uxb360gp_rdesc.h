@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uxb360gp_rdesc.h,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Ed Schouten <ed@fxq.nl>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/uxb360gp_rdesc.h,v 1.2 2005/12/31 04:38:50 mux Exp $
+ * $FreeBSD: src/sys/dev/usb/uxb360gp_rdesc.h,v 1.2.8.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

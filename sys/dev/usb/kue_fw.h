@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/kue_fw.h,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/kue_fw.h,v 1.4 2006/09/06 23:44:24 imp Exp $
+ * $FreeBSD: src/sys/dev/usb/kue_fw.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

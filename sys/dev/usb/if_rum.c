@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_rum.c,v 1.2 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/dev/usb/if_rum.c,v 1.13 2007/09/17 19:07:24 sam Exp $	*/
 
 /*-
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_rum.c,v 1.13 2007/09/17 19:07:24 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_rum.c,v 1.13.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Ralink Technology RT2501USB/RT2601USB chipset driver
@@ -95,6 +95,8 @@ static const struct usb_devno rum_devs[] = {
 	{ USB_VENDOR_DICKSMITH,         USB_PRODUCT_DICKSMITH_RT2573 },
 	{ USB_VENDOR_DLINK2,		USB_PRODUCT_DLINK2_DWLG122C1 },
 	{ USB_VENDOR_DLINK2,            USB_PRODUCT_DLINK2_WUA1340 },
+	{ USB_VENDOR_DLINK2,            USB_PRODUCT_DLINK2_DWA111 },
+	{ USB_VENDOR_DLINK2,            USB_PRODUCT_DLINK2_DWA110 },
 	{ USB_VENDOR_GIGABYTE,          USB_PRODUCT_GIGABYTE_GNWB01GS },
 	{ USB_VENDOR_GIGABYTE,          USB_PRODUCT_GIGABYTE_GNWI05GS },
 	{ USB_VENDOR_GIGASET,           USB_PRODUCT_GIGASET_RT2573 },
@@ -119,6 +121,7 @@ static const struct usb_devno rum_devs[] = {
 	{ USB_VENDOR_RALINK,            USB_PRODUCT_RALINK_RT2671 },
 	{ USB_VENDOR_SITECOMEU,         USB_PRODUCT_SITECOMEU_WL113R2 },
 	{ USB_VENDOR_SITECOMEU,         USB_PRODUCT_SITECOMEU_WL172 },
+	{ USB_VENDOR_SPARKLAN,		USB_PRODUCT_SPARKLAN_RT2573 },
 	{ USB_VENDOR_SURECOM,           USB_PRODUCT_SURECOM_RT2573 }
 };
 

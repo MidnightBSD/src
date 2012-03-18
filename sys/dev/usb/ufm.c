@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ufm.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001-2007 M. Warner Losh
  * All rights reserved.
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ufm.c,v 1.36 2007/06/21 14:42:33 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ufm.c,v 1.36.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/usb_quirks.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/usb_quirks.c,v 1.4 2011/10/01 01:32:04 laffer1 Exp $ */
 /*	$NetBSD: usb_quirks.c,v 1.50 2004/06/23 02:30:52 mycroft Exp $	*/
 
 /*-
@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb_quirks.c,v 1.63.2.5 2010/08/03 22:06:34 gavin Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb_quirks.c,v 1.63.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

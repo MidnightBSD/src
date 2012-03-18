@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/usb_mem.h,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: usb_mem.h,v 1.18 2002/05/28 17:45:17 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usb_mem.h,v 1.22 2007/06/13 05:45:48 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/usb_mem.h,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

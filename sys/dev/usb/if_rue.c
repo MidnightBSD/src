@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_rue.c,v 1.4 2008/12/02 22:43:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001-2003, Shunsuke Akiyama <akiyama@FreeBSD.org>.
  * Copyright (c) 1997, 1998, 1999, 2000 Bill Paul <wpaul@ee.columbia.edu>.
@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_rue.c,v 1.40 2007/07/09 16:58:07 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_rue.c,v 1.40.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * RealTek RTL8150 USB to fast ethernet controller driver.

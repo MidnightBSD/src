@@ -37739,6 +37739,7 @@ sys/dev/usb/usbdi_util.h -text
 sys/dev/usb/usbdivar.h -text
 sys/dev/usb/usbhid.h -text
 sys/dev/usb/uscanner.c -text
+sys/dev/usb/uslcom.c -text
 sys/dev/usb/uvisor.c -text
 sys/dev/usb/uvscom.c -text
 sys/dev/usb/uxb360gp_rdesc.h -text

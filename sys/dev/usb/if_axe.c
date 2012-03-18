@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_axe.c,v 1.4 2008/12/02 22:43:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000-2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_axe.c,v 1.55 2007/09/25 21:08:33 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_axe.c,v 1.55.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * ASIX Electronics AX88172/AX88178/AX88778 USB 2.0 ethernet driver.

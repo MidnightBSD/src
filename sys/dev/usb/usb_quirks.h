@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/usb_quirks.h,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: usb_quirks.h,v 1.20 2001/04/15 09:38:01 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usb_quirks.h,v 1.25 2007/06/29 21:07:41 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/usb_quirks.h,v 1.25.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_cdcereg.h,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
 /*
  * Copyright (c) 2003-2005 Craig Boston
  * All rights reserved.
@@ -30,7 +30,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/if_cdcereg.h,v 1.8 2007/06/10 07:33:48 imp Exp $
+ * $FreeBSD: src/sys/dev/usb/if_cdcereg.h,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _USB_IF_CDCEREG_H_

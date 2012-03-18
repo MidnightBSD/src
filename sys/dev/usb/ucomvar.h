@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ucomvar.h,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: ucomvar.h,v 1.9 2001/01/23 21:56:17 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/ucomvar.h,v 1.9 2007/06/12 17:30:54 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/ucomvar.h,v 1.9.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2001-2002, Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -160,6 +160,7 @@ struct ucom_softc {
 
 extern devclass_t ucom_devclass;
 
+int ucom_attach_tty(struct ucom_softc *, int, char*, int);
 int ucom_attach(struct ucom_softc *);
 int ucom_detach(struct ucom_softc *);
 void ucom_status_change(struct ucom_softc *);

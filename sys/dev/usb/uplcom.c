@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uplcom.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: uplcom.c,v 1.21 2001/11/13 06:24:56 lukem Exp $	*/
 
 /*-
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uplcom.c,v 1.50 2007/06/20 05:10:53 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uplcom.c,v 1.50.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
@@ -241,6 +241,9 @@ static const struct uplcom_product {
 	{ USB_VENDOR_PROLIFIC2, USB_PRODUCT_PROLIFIC2_WSIM, -1, TYPE_PL2303X},
 	/* PLANEX USB-RS232 URS-03 */
 	{ USB_VENDOR_ATEN, USB_PRODUCT_ATEN_UC232A, -1, TYPE_PL2303 },
+	/* TrendNet TU-S9 */
+	{ USB_VENDOR_PROLIFIC, USB_PRODUCT_PROLIFIC_PL2303,
+	  0x400, TYPE_PL2303X },
 	/* ST Lab USB-SERIAL-4 */
 	{ USB_VENDOR_PROLIFIC, USB_PRODUCT_PROLIFIC_PL2303,
 	  0x300, TYPE_PL2303X },

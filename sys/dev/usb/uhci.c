@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uhci.c,v 1.4 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: uhci.c,v 1.170 2003/02/19 01:35:04 augustss Exp $	*/
 
 /*	Also already incorporated from NetBSD:
@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uhci.c,v 1.175 2007/06/14 16:23:31 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uhci.c,v 1.175.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 
 /*-

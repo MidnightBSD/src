@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/ehci_pci.c,v 1.6 2009/05/17 21:41:15 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/ehci_pci.c,v 1.7 2009/05/17 22:02:58 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ehci_pci.c,v 1.28.2.1 2007/11/26 18:21:42 jfv Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ehci_pci.c,v 1.28.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.

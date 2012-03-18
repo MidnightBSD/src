@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_cue.c,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_cue.c,v 1.72 2007/06/23 06:29:19 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_cue.c,v 1.72.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * CATC USB-EL1210A USB to ethernet driver. Used in the CATC Netmate

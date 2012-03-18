@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_cdce.c,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$NetBSD: if_cdce.c,v 1.4 2004/10/24 12:50:54 augustss Exp $ */
 
 /*
@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_cdce.c,v 1.25 2007/06/30 20:18:44 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_cdce.c,v 1.25.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

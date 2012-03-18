@@ -1,8 +1,9 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ucom.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: ucom.c,v 1.40 2001/11/13 06:24:54 lukem Exp $	*/
 
 /*-
- * Copyright (c) 2001-2003, 2005 Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
+ * Copyright (c) 2001-2003, 2005, 2008
+ *	Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ucom.c,v 1.64 2007/06/25 06:40:20 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ucom.c,v 1.64.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Copyright (c) 1998, 2000 The NetBSD Foundation, Inc.
@@ -114,6 +115,7 @@ SYSCTL_INT(_hw_usb_ucom, OID_AUTO, debug, CTLFLAG_RW,
 #define DPRINTFN(n, x)
 #endif
 
+static int ucom_modevent(module_t, int, void *);
 static void ucom_cleanup(struct ucom_softc *);
 static int ucomparam(struct tty *, struct termios *);
 static void ucomstart(struct tty *);
@@ -136,7 +138,7 @@ devclass_t ucom_devclass;
 
 static moduledata_t ucom_mod = {
 	"ucom",
-	NULL,
+	ucom_modevent,
 	NULL
 };
 
@@ -144,13 +146,25 @@ DECLARE_MODULE(ucom, ucom_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
 MODULE_DEPEND(ucom, usb, 1, 1, 1);
 MODULE_VERSION(ucom, UCOM_MODVER);
 
+static int
+ucom_modevent(module_t mod, int type, void *data)
+{
+	switch (type) {
+	case MOD_LOAD:
+		break;
+	case MOD_UNLOAD:
+		break;
+	default:
+		return (EOPNOTSUPP);
+		break;
+	}
+	return (0);
+}
+
 int
-ucom_attach(struct ucom_softc *sc)
+ucom_attach_tty(struct ucom_softc *sc, int flags, char* fmt, int unit)
 {
 	struct tty *tp;
-	int unit;
-
-	unit = device_get_unit(sc->sc_dev);
 
 	sc->sc_tty = tp = ttyalloc();
 	tp->t_sc = sc;
@@ -163,10 +177,18 @@ ucom_attach(struct ucom_softc *sc)
 	tp->t_modem = ucommodem;
 	tp->t_ioctl = ucomioctl;
 
-	DPRINTF(("ucom_attach: tty_attach tp = %p\n", tp));
+	return ttycreate(tp, flags, fmt, unit);
+}
 
-	ttycreate(tp, TS_CALLOUT, "U%d", unit);
-	DPRINTF(("ucom_attach: ttycreate: ttyU%d\n", unit));
+int
+ucom_attach(struct ucom_softc *sc)
+{
+
+	ucom_attach_tty(sc, TS_CALLOUT,
+	    "U%d", device_get_unit(sc->sc_dev));
+
+	DPRINTF(("ucom_attach: ttycreate: tp = %p, %s\n",
+	    sc->sc_tty, sc->sc_tty->t_dev->si_name));
 
 	return (0);
 }

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/ubsa.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/ubsa.c,v 1.4 2009/01/20 18:50:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002, Alexander Kabaev <kan.FreeBSD.org>.
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ubsa.c,v 1.32 2007/06/22 05:56:05 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ubsa.c,v 1.32.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -225,6 +225,8 @@ static const struct ubsa_product {
 	{ USB_VENDOR_PERACOM, USB_PRODUCT_PERACOM_SERIAL1 },
 	/* Novatel Wireless Merlin cards */
 	{ USB_VENDOR_NOVATEL, USB_PRODUCT_NOVATEL_U740 },
+	/* Novatel Wireless Merlin v740 */
+	{ USB_VENDOR_NOVATEL, USB_PRODUCT_NOVATEL_V740 },
 	/* Option Vodafone MC3G */
 	{ USB_VENDOR_OPTION, USB_PRODUCT_OPTION_VODAFONEMC3G },
 	/* Option GlobeTrotter 3G */
@@ -237,6 +239,10 @@ static const struct ubsa_product {
 	{ USB_VENDOR_HUAWEI, USB_PRODUCT_HUAWEI_MOBILE },
 	/* Huawei E220 USB Modem */
 	{ USB_VENDOR_HUAWEI, USB_PRODUCT_HUAWEI_E220 },
+	/* Sierra Wireless LENOVO UMTS card */
+	{ USB_VENDOR_SIERRA, USB_PRODUCT_SIERRA_MC8755_3 },
+	/* Qualcomm, Inc. ZTE CDMA */
+	{ USB_VENDOR_QUALCOMMINC, USB_PRODUCT_QUALCOMMINC_CDMA_MSM },
 	{ 0, 0 }
 };
 

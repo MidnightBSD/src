@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/sys/dev/usb/usbdivar.h,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/usbdivar.h,v 1.4 2008/12/03 23:28:30 laffer1 Exp $ */
 /*	$NetBSD: usbdivar.h,v 1.70 2002/07/11 21:14:36 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usbdivar.h,v 1.50 2007/06/14 16:23:31 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/usbdivar.h,v 1.50.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

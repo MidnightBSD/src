@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_zydreg.h,v 1.2 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$OpenBSD: if_zydreg.h,v 1.19 2006/11/30 19:28:07 damien Exp $	*/
 /*	$NetBSD: if_zydreg.h,v 1.2 2007/06/16 11:18:45 kiyohara Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/if_zydreg.h,v 1.1.2.2 2007/11/30 15:39:22 ariff Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_zydreg.h,v 1.1.2.2.4.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>

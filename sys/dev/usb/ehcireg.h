@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/sys/dev/usb/ehcireg.h,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/ehcireg.h,v 1.4 2009/05/16 22:28:29 laffer1 Exp $ */
 /*	$NetBSD: ehcireg.h,v 1.18 2004/10/22 10:38:17 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/ehcireg.h,v 1.8 2005/09/18 11:45:39 netchild Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/ehcireg.h,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.

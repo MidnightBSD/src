@@ -1,9 +1,9 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ubser.h,v 1.2 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Bernd Walter <ticso@freebsd.org>
  *
  * $URL: https://devel.bwct.de/svn/projects/ubser/ubser.h $
- * $Date: 2008-12-02 22:43:15 $
+ * $Date: 2012-03-18 16:23:09 $
  * $Author: laffer1 $
  * $Rev: 1127 $
  *
@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/ubser.h,v 1.3 2005/03/17 22:47:18 ticso Exp $
+ * $FreeBSD: src/sys/dev/usb/ubser.h,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef UBSER_H

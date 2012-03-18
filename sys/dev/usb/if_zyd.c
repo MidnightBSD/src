@@ -1,7 +1,7 @@
-/* $MidnightBSD: src/sys/dev/usb/if_zyd.c,v 1.2 2008/12/02 22:43:14 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/if_zyd.c,v 1.3 2011/09/30 13:04:17 laffer1 Exp $ */
 /*	$OpenBSD: if_zyd.c,v 1.52 2007/02/11 00:08:04 jsg Exp $	*/
 /*	$NetBSD: if_zyd.c,v 1.7 2007/06/21 04:04:29 kiyohara Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/if_zyd.c,v 1.4.2.8 2010/11/16 04:40:03 sobomax Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_zyd.c,v 1.4.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>
@@ -308,7 +308,7 @@ zyd_attach(device_t dev)
 	ifp->if_init = zyd_init;
 	ifp->if_ioctl = zyd_ioctl;
 	ifp->if_start = zyd_start;
-	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
 	IFQ_SET_READY(&ifp->if_snd);
 
 	STAILQ_INIT(&sc->sc_rqh);

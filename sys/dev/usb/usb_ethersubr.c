@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/usb_ethersubr.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb_ethersubr.c,v 1.23 2007/01/08 23:21:06 alfred Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb_ethersubr.c,v 1.23.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Callbacks in the USB code operate at splusb() (actually splbio()

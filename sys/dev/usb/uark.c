@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uark.c,v 1.2 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$OpenBSD: uark.c,v 1.1 2006/08/14 08:30:22 jsg Exp $	*/
 
 /*
@@ -16,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: src/sys/dev/usb/uark.c,v 1.7 2007/06/30 02:42:36 imp Exp $
+ * $FreeBSD: src/sys/dev/usb/uark.c,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>

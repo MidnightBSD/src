@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.8 2009/06/06 06:37:20 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.9 2011/10/01 01:29:07 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 MAEKAWA Masahide <bishop@rr.iij4u.or.jp>,
  *		      Nick Hibma <n_hibma@freebsd.org>
@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/usb/umass.c,v 1.160 2007/07/05 05:26:08 imp Exp $
+ *	$FreeBSD: src/sys/dev/usb/umass.c,v 1.160.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  *	$NetBSD: umass.c,v 1.28 2000/04/02 23:46:53 augustss Exp $
  */
 

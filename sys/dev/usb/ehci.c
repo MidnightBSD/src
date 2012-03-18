@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ehci.c,v 1.4 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$NetBSD: ehci.c,v 1.91 2005/02/27 00:27:51 perry Exp $ */
 
 /*-
@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ehci.c,v 1.56 2007/08/12 18:45:24 truckman Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ehci.c,v 1.56.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,6 +69,7 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/ehci.c,v 1.56 2007/08/12 18:45:24 truckman E
 #include <sys/endian.h>
 #include <sys/module.h>
 #include <sys/bus.h>
+#include <sys/lock.h>
 #include <sys/lockmgr.h>
 #if defined(DIAGNOSTIC) && defined(__i386__) && defined(__FreeBSD__)
 #include <machine/cpu.h>
@@ -653,6 +654,24 @@ ehci_pcd_enable(void *v_sc)
 	ehci_pcd_able(sc, 1);
 }
 
+/*
+ * XXX write back xfer data for architectures with a write-back
+ *     data cache; this is a hack because usb is mis-architected
+ *     in blindly mixing bus_dma w/ PIO.
+ */
+static __inline void
+hacksync(usbd_xfer_handle xfer)
+{
+	bus_dma_tag_t tag;
+	struct usb_dma_mapping *dmap;
+
+	if (xfer->length == 0)
+		return;
+	tag = xfer->pipe->device->bus->buffer_dmatag;
+	dmap = &xfer->dmamap;
+	bus_dmamap_sync(tag, dmap->map, BUS_DMASYNC_PREWRITE);
+}
+
 void
 ehci_pcd(ehci_softc_t *sc, usbd_xfer_handle xfer)
 {
@@ -679,6 +698,7 @@ ehci_pcd(ehci_softc_t *sc, usbd_xfer_handle xfer)
 	xfer->actlen = xfer->length;
 	xfer->status = USBD_NORMAL_COMPLETION;
 
+	hacksync(xfer);	/* XXX to compensate for usb_transfer_complete */
 	usb_transfer_complete(xfer);
 }
 
@@ -2072,6 +2092,7 @@ ehci_root_ctrl_start(usbd_xfer_handle xfer)
  ret:
 	xfer->status = err;
 	s = splusb();
+	hacksync(xfer);	/* XXX to compensate for usb_transfer_complete */
 	usb_transfer_complete(xfer);
 	splx(s);
 	return (USBD_IN_PROGRESS);

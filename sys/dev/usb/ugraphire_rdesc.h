@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ugraphire_rdesc.h,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: usb/ugraphire_rdesc.h,v 1.1 2000/12/29 01:47:49 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/ugraphire_rdesc.h,v 1.3 2005/12/31 04:38:50 mux Exp $ */
+/*	$FreeBSD: src/sys/dev/usb/ugraphire_rdesc.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*-
  * Copyright (c) 2000 Nick Hibma <n_hibma@freebsd.org>
  * All rights reserved.

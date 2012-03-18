@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_udavreg.h,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$NetBSD: if_udavreg.h,v 1.2 2003/09/04 15:17:39 tsutsui Exp $	*/
 /*	$nabe: if_udavreg.h,v 1.2 2003/08/21 16:26:40 nabe Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/if_udavreg.h,v 1.7 2006/09/07 00:06:41 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_udavreg.h,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*-
  * Copyright (c) 2003
  *     Shingo WATANABE <nabe@nabechan.org>.  All rights reserved.

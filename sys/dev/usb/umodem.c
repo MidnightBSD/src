@@ -1,9 +1,9 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/umodem.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: umodem.c,v 1.45 2002/09/23 05:51:23 simonb Exp $	*/
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/umodem.c,v 1.71 2007/07/29 18:16:43 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/umodem.c,v 1.71.6.1 2008/11/25 02:59:29 kensmith Exp $");
 /*-
  * Copyright (c) 2003, M. Warner Losh <imp@freebsd.org>.
  * All rights reserved.

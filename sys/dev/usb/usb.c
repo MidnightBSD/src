@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/usb.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: usb.c,v 1.68 2002/02/20 20:30:12 christos Exp $	*/
 
 /* Also already merged from NetBSD:
@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb.c,v 1.120 2007/06/20 05:10:53 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb.c,v 1.120.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

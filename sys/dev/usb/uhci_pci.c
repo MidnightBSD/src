@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/uhci_pci.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uhci_pci.c,v 1.61.2.1 2007/11/26 18:21:42 jfv Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uhci_pci.c,v 1.61.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /* Universal Host Controller Interface
  *
@@ -152,6 +152,21 @@ static const char *uhci_device_esb_3 = "Intel 631XESB/632XESB/3100 USB controlle
 #define PCI_UHCI_DEVICEID_63XXESB_4	0x268b8086
 static const char *uhci_device_esb_4 = "Intel 631XESB/632XESB/3100 USB controller USB-4";
 
+#define PCI_UHCI_DEVICEID_ICH8_A	0x28308086
+static const char *uhci_device_ich8_a = "Intel 82801H (ICH8) USB controller USB-A";
+
+#define PCI_UHCI_DEVICEID_ICH8_B	0x28318086
+static const char *uhci_device_ich8_b = "Intel 82801H (ICH8) USB controller USB-B";
+
+#define PCI_UHCI_DEVICEID_ICH8_C	0x28328086
+static const char *uhci_device_ich8_c = "Intel 82801H (ICH8) USB controller USB-C";
+
+#define PCI_UHCI_DEVICEID_ICH8_D	0x28348086
+static const char *uhci_device_ich8_d = "Intel 82801H (ICH8) USB controller USB-D";
+
+#define PCI_UHCI_DEVICEID_ICH8_E	0x28358086
+static const char *uhci_device_ich8_e = "Intel 82801H (ICH8) USB controller USB-E";
+
 #define PCI_UHCI_DEVICEID_440MX		0x719a8086
 static const char *uhci_device_440mx = "Intel 82443MX USB controller";
 
@@ -251,6 +266,16 @@ uhci_pci_match(device_t self)
 		return (uhci_device_esb_3);
 	} else if (device_id == PCI_UHCI_DEVICEID_63XXESB_4) {
 		return (uhci_device_esb_4);
+	} else if (device_id == PCI_UHCI_DEVICEID_ICH8_A) {
+		return (uhci_device_ich8_a);
+	} else if (device_id == PCI_UHCI_DEVICEID_ICH8_B) {
+		return (uhci_device_ich8_b);
+	} else if (device_id == PCI_UHCI_DEVICEID_ICH8_C) {
+		return (uhci_device_ich8_c);
+	} else if (device_id == PCI_UHCI_DEVICEID_ICH8_D) {
+		return (uhci_device_ich8_d);
+	} else if (device_id == PCI_UHCI_DEVICEID_ICH8_E) {
+		return (uhci_device_ich8_e);
 	} else if (device_id == PCI_UHCI_DEVICEID_440MX) {
 		return (uhci_device_440mx);
 	} else if (device_id == PCI_UHCI_DEVICEID_460GX) {

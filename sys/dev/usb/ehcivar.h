@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ehcivar.h,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$NetBSD: ehcivar.h,v 1.19 2005/04/29 15:04:29 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/ehcivar.h,v 1.17 2007/06/14 16:23:31 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/ehcivar.h,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.

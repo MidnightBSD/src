@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/uscanner.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/uscanner.c,v 1.4 2011/09/30 04:21:18 laffer1 Exp $ */
 /*	$NetBSD: uscanner.c,v 1.30 2002/07/11 21:14:36 augustss Exp$	*/
 
 /* Also already merged from NetBSD:
@@ -6,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uscanner.c,v 1.89.2.3 2010/07/28 16:58:36 gavin Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uscanner.c,v 1.89.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Copyright (c) 2000 The NetBSD Foundation, Inc.

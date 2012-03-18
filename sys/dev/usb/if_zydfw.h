@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/if_zydfw.h,v 1.2 2008/12/02 22:43:14 laffer1 Exp $ */
 /*
  * Copyright (C) 2001, 2002, 2003,2004 ZyDAS Technology Corporation.
  * All rights reserved.
@@ -25,7 +25,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*	$FreeBSD: src/sys/dev/usb/if_zydfw.h,v 1.1.2.1 2007/11/11 00:24:43 sam Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_zydfw.h,v 1.1.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 uint8_t zd1211_firmware[] = {
 	0x08, 0x91, 0xFF, 0xED, 0x09, 0x93, 0x1E, 0xEE,
