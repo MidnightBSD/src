@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_poll.c,v 1.31 2007/08/06 14:26:00 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_poll.c,v 1.31.2.1 2008/07/22 14:27:47 rwatson Exp $");
 
 #include "opt_device_polling.h"
 
@@ -267,7 +267,7 @@ init_device_poll(void)
 	netisr_register(NETISR_POLLMORE, (netisr_t *)netisr_pollmore, NULL,
 	    NETISR_MPSAFE);
 }
-SYSINIT(device_poll, SI_SUB_CLOCKS, SI_ORDER_MIDDLE, init_device_poll, NULL)
+SYSINIT(device_poll, SI_SUB_CLOCKS, SI_ORDER_MIDDLE, init_device_poll, NULL);
 
 
 /*
@@ -593,4 +593,5 @@ static struct kproc_desc idlepoll_kp = {
 	 poll_idle,
 	 &idlepoll
 };
-SYSINIT(idlepoll, SI_SUB_KTHREAD_VM, SI_ORDER_ANY, kproc_start, &idlepoll_kp)
+SYSINIT(idlepoll, SI_SUB_KTHREAD_VM, SI_ORDER_ANY, kproc_start,
+    &idlepoll_kp);
