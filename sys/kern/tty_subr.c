@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: src/sys/kern/tty_subr.c,v 1.43 2005/01/06 23:35:40 imp Exp $
 #include <sys/clist.h>
 
 static void clist_init(void *);
-SYSINIT(clist, SI_SUB_CLIST, SI_ORDER_FIRST, clist_init, NULL)
+SYSINIT(clist, SI_SUB_CLIST, SI_ORDER_FIRST, clist_init, NULL);
 
 static struct cblock *cfreelist = 0;
 int cfreecount = 0;
