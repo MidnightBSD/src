@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)slcompress.c	8.2 (Berkeley) 4/16/94
- * $FreeBSD: src/sys/net/slcompress.c,v 1.19 2004/04/07 20:46:12 imp Exp $
+ * $FreeBSD: src/sys/net/slcompress.c,v 1.19.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

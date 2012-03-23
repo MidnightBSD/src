@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/contrib/pf/net/if_pflog.h,v 1.9 2007/07/03 12:16:07 mlaier Exp $ */
+/* $FreeBSD: src/sys/contrib/pf/net/if_pflog.h,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 /* $OpenBSD: if_pflog.h,v 1.14 2006/10/25 11:27:01 henning Exp $ */
 /*
  * Copyright 2001 Niels Provos <provos@citi.umich.edu>
@@ -32,7 +32,7 @@
 
 #ifdef _KERNEL
 struct pflog_softc {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	struct ifnet		*sc_ifp;	/* the interface pointer */
 #else
 	struct ifnet		sc_if;		/* the interface */
@@ -78,7 +78,7 @@ struct old_pfloghdr {
 
 #ifdef _KERNEL
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 struct pf_rule;
 struct pf_ruleset;
 struct pfi_kif;
@@ -92,12 +92,12 @@ extern pflog_packet_t *pflog_packet_ptr;
 	if (pflog_packet_ptr != NULL)		\
 	pflog_packet_ptr(i,a,b,c,d,e,f,g,h);	\
 } while (0)
-#else /* ! __FreeBSD__ */
+#else /* ! __MidnightBSD__ */
 #if NPFLOG > 0
 #define	PFLOG_PACKET(i,x,a,b,c,d,e,f,g,h) pflog_packet(i,a,b,c,d,e,f,g,h)
 #else
 #define	PFLOG_PACKET(i,x,a,b,c,d,e,f,g,h) ((void)0)
 #endif /* NPFLOG > 0 */
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 #endif /* _KERNEL */
 #endif /* _NET_IF_PFLOG_H_ */

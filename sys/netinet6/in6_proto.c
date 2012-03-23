@@ -1,7 +1,3 @@
-/* $MidnightBSD: src/sys/netinet6/in6_proto.c,v 1.5 2009/01/11 02:40:53 laffer1 Exp $ */
-/*	$FreeBSD: src/sys/netinet6/in6_proto.c,v 1.46 2007/07/05 16:29:39 delphij Exp $	*/
-/*	$KAME: in6_proto.c,v 1.91 2001/05/27 13:28:35 itojun Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: in6_proto.c,v 1.91 2001/05/27 13:28:35 itojun Exp $
  */
 
 /*-
@@ -61,6 +59,9 @@
  *
  *	@(#)in_proto.c	8.1 (Berkeley) 6/10/93
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/in6_proto.c,v 1.46.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -126,7 +127,6 @@
 /*
  * TCP/IP protocol family: IP6, ICMP6, UDP, TCP.
  */
-FEATURE(inet6, "Internet Protocol version 6");
 
 extern	struct domain inet6domain;
 static	struct pr_usrreqs nousrreqs;
@@ -339,7 +339,7 @@ struct ip6protosw inet6sw[] = {
 },
 };
 
-extern int in6_inithead __P((void **, int));
+extern int in6_inithead(void **, int);
 
 struct domain inet6domain = {
 	.dom_family =		AF_INET6,

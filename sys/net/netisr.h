@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,26 +27,22 @@
  * SUCH DAMAGE.
  *
  *	@(#)netisr.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/netisr.h,v 1.33 2005/01/07 01:45:35 imp Exp $
+ * $FreeBSD: src/sys/net/netisr.h,v 1.33.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_NETISR_H_
 #define _NET_NETISR_H_
 
 /*
- * The networking code runs off software interrupts.
+ * The netisr (network interrupt service routine) provides a deferred
+ * execution evironment in which (generally inbound) network processing can
+ * take place.  Protocols register handlers and, optionally, packet queues;
+ * when packets are delivered to the queue, the protocol handler will be
+ * executed directly, or via deferred dispatch depending on the
+ * circumstances.
  *
- * You can switch into the network by doing splnet() and return by splx().
- * The software interrupt level for the network is higher than the software
- * level for the clock (so you can enter the network in routines called
- * at timeout time).
- */
-
-/*
- * Each ``pup-level-1'' input queue has a bit in a ``netisr'' status
- * word which is used to de-multiplex a single software
- * interrupt used for scheduling the network code to calls
- * on the lowest level routine of each protocol.
+ * Historically, this was implemented by the BSD software ISR facility; it is
+ * now implemented via a software ithread (SWI).
  */
 #define	NETISR_POLL	0		/* polling callback, must be first */
 #define	NETISR_IP	2		/* same as AF_INET */
@@ -64,7 +59,6 @@
 #define	NETISR_ATM	29
 #define	NETISR_NETGRAPH	30
 #define	NETISR_POLLMORE	31		/* polling callback, must be last */
-
 
 #ifndef LOCORE
 #ifdef _KERNEL

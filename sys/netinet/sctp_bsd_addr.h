@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -30,13 +29,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.h,v 1.6 2007/05/29 09:29:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.h,v 1.6.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __sctp_bsd_addr_h__
 #define __sctp_bsd_addr_h__
 #include <netinet/sctp_pcb.h>
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void sctp_wakeup_iterator(void);
@@ -45,7 +44,10 @@ void sctp_startup_iterator(void);
 
 #endif
 
+#ifdef INET6
 void sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa);
+
+#endif
 
 #ifdef  SCTP_PACKET_LOGGING
 
@@ -55,6 +57,8 @@ int sctp_copy_out_packet_log(uint8_t * target, int length);
 #endif
 
 void sctp_addr_change(struct ifaddr *ifa, int cmd);
+
+void sctp_add_or_del_interfaces(int (*pred) (struct ifnet *), int add);
 
 #endif
 #endif

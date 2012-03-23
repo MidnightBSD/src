@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: if_trunk.h,v 1.11 2007/01/31 06:20:19 reyk Exp $	*/
 
 /*
@@ -16,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: src/sys/net/if_lagg.h,v 1.10.2.1 2007/10/18 01:28:30 thompsa Exp $
+ * $FreeBSD: src/sys/net/if_lagg.h,v 1.10.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_LAGG_H

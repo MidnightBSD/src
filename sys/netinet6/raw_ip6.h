@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/raw_ip6.h,v 1.2 2005/01/07 02:30:35 imp Exp $	*/
-/*	$KAME: raw_ip6.h,v 1.2 2001/05/27 13:28:35 itojun Exp $	*/
-
 /*-
  * Copyright (C) 2001 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: raw_ip6.h,v 1.2 2001/05/27 13:28:35 itojun Exp $
+ * $FreeBSD: src/sys/netinet6/raw_ip6.h,v 1.2.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET6_RAW_IP6_H_

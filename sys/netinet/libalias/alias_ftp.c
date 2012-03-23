@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_ftp.c,v 1.29.2.1 2008/07/07 18:39:47 mav Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_ftp.c,v 1.29.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
     Alias_ftp.c performs special processing for FTP sessions under
@@ -78,7 +78,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_ftp.c,v 1.29.2.1 2008/07/07 1
 #else
 #include <errno.h>
 #include <sys/types.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #endif

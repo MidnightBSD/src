@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ppp_tty.c - Point-to-Point Protocol (PPP) driver for asynchronous
  * 	       tty devices.
@@ -72,7 +71,7 @@
  * Paul Mackerras (paulus@cs.anu.edu.au).
  */
 
-/* $FreeBSD: src/sys/net/ppp_tty.c,v 1.72 2006/12/05 18:54:21 ume Exp $ */
+/* $FreeBSD: src/sys/net/ppp_tty.c,v 1.72.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #include "opt_ppp.h"		/* XXX for ppp_defs.h */
 

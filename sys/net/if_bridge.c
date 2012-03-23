@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_bridge.c,v 1.31 2005/06/01 19:45:34 jdc Exp $	*/
 
 /*
@@ -48,11 +47,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by Jason L. Wright
- * 4. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -81,7 +75,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net/if_bridge.c,v 1.103.2.3 2007/12/21 05:29:15 thompsa Exp $");
+__FBSDID("$FreeBSD: src/sys/net/if_bridge.c,v 1.103.2.9.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -169,9 +163,13 @@ __FBSDID("$FreeBSD: src/sys/net/if_bridge.c,v 1.103.2.3 2007/12/21 05:29:15 thom
 #endif
 
 /*
- * List of capabilities to mask on the member interface.
+ * List of capabilities to possibly mask on the member interface.
  */
-#define	BRIDGE_IFCAPS_MASK		IFCAP_TXCSUM
+#define	BRIDGE_IFCAPS_MASK		(IFCAP_TOE|IFCAP_TSO|IFCAP_TXCSUM)
+/*
+ * List of capabilities to disable on the member interface.
+ */
+#define	BRIDGE_IFCAPS_STRIP		IFCAP_LRO
 
 /*
  * Bridge interface list entry.
@@ -181,7 +179,10 @@ struct bridge_iflist {
 	struct ifnet		*bif_ifp;	/* member if */
 	struct bstp_port	bif_stp;	/* STP state */
 	uint32_t		bif_flags;	/* member if flags */
-	int			bif_mutecap;	/* member muted caps */
+	int			bif_savedcaps;	/* saved capabilities */
+	uint32_t		bif_addrmax;	/* max # of addresses */
+	uint32_t		bif_addrcnt;	/* cur. # of addresses */
+	uint32_t		bif_addrexceeded;/* # of address violations */
 };
 
 /*
@@ -190,12 +191,13 @@ struct bridge_iflist {
 struct bridge_rtnode {
 	LIST_ENTRY(bridge_rtnode) brt_hash;	/* hash table linkage */
 	LIST_ENTRY(bridge_rtnode) brt_list;	/* list linkage */
-	struct ifnet		*brt_ifp;	/* destination if */
+	struct bridge_iflist	*brt_dst;	/* destination if */
 	unsigned long		brt_expire;	/* expiration time */
 	uint8_t			brt_flags;	/* address flags */
 	uint8_t			brt_addr[ETHER_ADDR_LEN];
 	uint16_t		brt_vlan;	/* vlan id */
 };
+#define	brt_ifp			brt_dst->bif_ifp
 
 /*
  * Software state for each bridge.
@@ -231,7 +233,9 @@ static int	bridge_clone_create(struct if_clone *, int, caddr_t);
 static void	bridge_clone_destroy(struct ifnet *);
 
 static int	bridge_ioctl(struct ifnet *, u_long, caddr_t);
-static void	bridge_mutecaps(struct bridge_iflist *, int);
+static void	bridge_mutecaps(struct bridge_softc *);
+static void	bridge_set_ifcap(struct bridge_softc *, struct bridge_iflist *,
+		    int);
 static void	bridge_ifdetach(void *arg __unused, struct ifnet *);
 static void	bridge_init(void *);
 static void	bridge_dummynet(struct mbuf *, struct ifnet *);
@@ -308,6 +312,7 @@ static int	bridge_ioctl_gma(struct bridge_softc *, void *);
 static int	bridge_ioctl_sma(struct bridge_softc *, void *);
 static int	bridge_ioctl_sifprio(struct bridge_softc *, void *);
 static int	bridge_ioctl_sifcost(struct bridge_softc *, void *);
+static int	bridge_ioctl_sifmaxaddr(struct bridge_softc *, void *);
 static int	bridge_ioctl_addspan(struct bridge_softc *, void *);
 static int	bridge_ioctl_delspan(struct bridge_softc *, void *);
 static int	bridge_ioctl_gbparam(struct bridge_softc *, void *);
@@ -448,6 +453,10 @@ const struct bridge_control bridge_control_table[] = {
 
 	{ bridge_ioctl_stxhc,		sizeof(struct ifbrparam),
 	  BC_F_COPYIN|BC_F_SUSER },
+
+	{ bridge_ioctl_sifmaxaddr,	sizeof(struct ifbreq),
+	  BC_F_COPYIN|BC_F_SUSER },
+
 };
 const int bridge_control_table_size =
     sizeof(bridge_control_table) / sizeof(bridge_control_table[0]);
@@ -773,32 +782,49 @@ bridge_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
  *	Clear or restore unwanted capabilities on the member interface
  */
 static void
-bridge_mutecaps(struct bridge_iflist *bif, int mute)
+bridge_mutecaps(struct bridge_softc *sc)
+{
+	struct bridge_iflist *bif;
+	int enabled, mask;
+
+	/* Initial bitmask of capabilities to test */
+	mask = BRIDGE_IFCAPS_MASK;
+
+	LIST_FOREACH(bif, &sc->sc_iflist, bif_next) {
+		/* Every member must support it or its disabled */
+		mask &= bif->bif_savedcaps;
+	}
+
+	LIST_FOREACH(bif, &sc->sc_iflist, bif_next) {
+		enabled = bif->bif_ifp->if_capenable;
+		enabled &= ~BRIDGE_IFCAPS_STRIP;
+		/* strip off mask bits and enable them again if allowed */
+		enabled &= ~BRIDGE_IFCAPS_MASK;
+		enabled |= mask;
+
+		bridge_set_ifcap(sc, bif, enabled);
+	}
+
+}
+
+static void
+bridge_set_ifcap(struct bridge_softc *sc, struct bridge_iflist *bif, int set)
 {
 	struct ifnet *ifp = bif->bif_ifp;
 	struct ifreq ifr;
 	int error;
 
-	if (ifp->if_ioctl == NULL)
-		return;
-
 	bzero(&ifr, sizeof(ifr));
-	ifr.ifr_reqcap = ifp->if_capenable;
+	ifr.ifr_reqcap = set;
 
-	if (mute) {
-		/* mask off and save capabilities */
-		bif->bif_mutecap = ifr.ifr_reqcap & BRIDGE_IFCAPS_MASK;
-		if (bif->bif_mutecap != 0)
-			ifr.ifr_reqcap &= ~BRIDGE_IFCAPS_MASK;
-	} else
-		/* restore muted capabilities */
-		ifr.ifr_reqcap |= bif->bif_mutecap;
-
-
-	if (bif->bif_mutecap != 0) {
+	if (ifp->if_capenable != set) {
 		IFF_LOCKGIANT(ifp);
 		error = (*ifp->if_ioctl)(ifp, SIOCSIFCAP, (caddr_t)&ifr);
 		IFF_UNLOCKGIANT(ifp);
+		if (error)
+			if_printf(sc->sc_ifp,
+			    "error setting interface capabilities on %s\n",
+			    ifp->if_xname);
 	}
 }
 
@@ -865,7 +891,6 @@ bridge_delete_member(struct bridge_softc *sc, struct bridge_iflist *bif,
 			 * Take the interface out of promiscuous mode.
 			 */
 			(void) ifpromisc(ifs, 0);
-			bridge_mutecaps(bif, 0);
 			break;
 
 		case IFT_GIF:
@@ -877,6 +902,8 @@ bridge_delete_member(struct bridge_softc *sc, struct bridge_iflist *bif,
 #endif
 			break;
 		}
+		/* reneable any interface capabilities */
+		bridge_set_ifcap(sc, bif, bif->bif_savedcaps);
 	}
 
 	if (bif->bif_flags & IFBIF_STP)
@@ -887,7 +914,10 @@ bridge_delete_member(struct bridge_softc *sc, struct bridge_iflist *bif,
 	LIST_REMOVE(bif, bif_next);
 	BRIDGE_XDROP(sc);
 
+	bridge_mutecaps(sc);	/* recalcuate now this interface is removed */
 	bridge_rtdelete(sc, ifs, IFBF_FLUSHALL);
+	KASSERT(bif->bif_addrcnt == 0,
+	    ("%s: %d bridge routes referenced", __func__, bif->bif_addrcnt));
 
 	BRIDGE_UNLOCK(sc);
 	bstp_destroy(&bif->bif_stp);	/* prepare to free */
@@ -923,6 +953,8 @@ bridge_ioctl_add(struct bridge_softc *sc, void *arg)
 	ifs = ifunit(req->ifbr_ifsname);
 	if (ifs == NULL)
 		return (ENOENT);
+	if (ifs->if_ioctl == NULL)	/* must be supported */
+		return (EINVAL);
 
 	/* If it's in the span list, it can't be a member. */
 	LIST_FOREACH(bif, &sc->sc_spanlist, bif_next)
@@ -952,6 +984,7 @@ bridge_ioctl_add(struct bridge_softc *sc, void *arg)
 
 	bif->bif_ifp = ifs;
 	bif->bif_flags = IFBIF_LEARNING | IFBIF_DISCOVER;
+	bif->bif_savedcaps = ifs->if_capenable;
 
 	switch (ifs->if_type) {
 	case IFT_ETHER:
@@ -962,8 +995,6 @@ bridge_ioctl_add(struct bridge_softc *sc, void *arg)
 		error = ifpromisc(ifs, 1);
 		if (error)
 			goto out;
-
-		bridge_mutecaps(bif, 1);
 		break;
 
 	case IFT_GIF:
@@ -983,6 +1014,8 @@ bridge_ioctl_add(struct bridge_softc *sc, void *arg)
 	 */
 	LIST_INSERT_HEAD(&sc->sc_iflist, bif, bif_next);
 
+	/* Set interface capabilities to the intersection set of all members */
+	bridge_mutecaps(sc);
 out:
 	if (error) {
 		if (bif != NULL)
@@ -1026,6 +1059,9 @@ bridge_ioctl_gifflags(struct bridge_softc *sc, void *arg)
 	req->ifbr_proto = bp->bp_protover;
 	req->ifbr_role = bp->bp_role;
 	req->ifbr_stpflags = bp->bp_flags;
+	req->ifbr_addrcnt = bif->bif_addrcnt;
+	req->ifbr_addrmax = bif->bif_addrmax;
+	req->ifbr_addrexceeded = bif->bif_addrexceeded;
 
 	/* Copy STP state options as flags */
 	if (bp->bp_operedge)
@@ -1370,6 +1406,20 @@ bridge_ioctl_sifcost(struct bridge_softc *sc, void *arg)
 		return (ENOENT);
 
 	return (bstp_set_path_cost(&bif->bif_stp, req->ifbr_path_cost));
+}
+
+static int
+bridge_ioctl_sifmaxaddr(struct bridge_softc *sc, void *arg)
+{
+	struct ifbreq *req = arg;
+	struct bridge_iflist *bif;
+
+	bif = bridge_lookup_member(sc, req->ifbr_ifsname);
+	if (bif == NULL)
+		return (ENOENT);
+
+	bif->bif_addrmax = req->ifbr_addrmax;
+	return (0);
 }
 
 static int
@@ -1903,46 +1953,38 @@ bridge_forward(struct bridge_softc *sc, struct bridge_iflist *sbif,
 	struct ifnet *src_if, *dst_if, *ifp;
 	struct ether_header *eh;
 	uint16_t vlan;
+	uint8_t *dst;
+	int error;
 
 	src_if = m->m_pkthdr.rcvif;
 	ifp = sc->sc_ifp;
 
-	sc->sc_ifp->if_ipackets++;
-	sc->sc_ifp->if_ibytes += m->m_pkthdr.len;
+	ifp->if_ipackets++;
+	ifp->if_ibytes += m->m_pkthdr.len;
 	vlan = VLANTAGOF(m);
 
 	if ((sbif->bif_flags & IFBIF_STP) &&
-	    sbif->bif_stp.bp_state == BSTP_IFSTATE_DISCARDING) {
-		BRIDGE_UNLOCK(sc);
-		m_freem(m);
-		return;
-	}
+	    sbif->bif_stp.bp_state == BSTP_IFSTATE_DISCARDING)
+		goto drop;
 
 	eh = mtod(m, struct ether_header *);
+	dst = eh->ether_dhost;
 
-	/*
-	 * If the interface is learning, and the source
-	 * address is valid and not multicast, record
-	 * the address.
-	 */
-	if ((sbif->bif_flags & IFBIF_LEARNING) != 0 &&
-	    ETHER_IS_MULTICAST(eh->ether_shost) == 0 &&
-	    (eh->ether_shost[0] == 0 &&
-	     eh->ether_shost[1] == 0 &&
-	     eh->ether_shost[2] == 0 &&
-	     eh->ether_shost[3] == 0 &&
-	     eh->ether_shost[4] == 0 &&
-	     eh->ether_shost[5] == 0) == 0) {
-		(void) bridge_rtupdate(sc, eh->ether_shost, vlan,
+	/* If the interface is learning, record the address. */
+	if (sbif->bif_flags & IFBIF_LEARNING) {
+		error = bridge_rtupdate(sc, eh->ether_shost, vlan,
 		    sbif, 0, IFBAF_DYNAMIC);
+		/*
+		 * If the interface has addresses limits then deny any source
+		 * that is not in the cache.
+		 */
+		if (error && sbif->bif_addrmax)
+			goto drop;
 	}
 
 	if ((sbif->bif_flags & IFBIF_STP) != 0 &&
-	    sbif->bif_stp.bp_state == BSTP_IFSTATE_LEARNING) {
-		m_freem(m);
-		BRIDGE_UNLOCK(sc);
-		return;
-	}
+	    sbif->bif_stp.bp_state == BSTP_IFSTATE_LEARNING)
+		goto drop;
 
 	/*
 	 * At this point, the port either doesn't participate
@@ -1954,15 +1996,23 @@ bridge_forward(struct bridge_softc *sc, struct bridge_iflist *sbif,
 	 * "this" side of the bridge, drop it.
 	 */
 	if ((m->m_flags & (M_BCAST|M_MCAST)) == 0) {
-		dst_if = bridge_rtlookup(sc, eh->ether_dhost, vlan);
-		if (src_if == dst_if) {
-			BRIDGE_UNLOCK(sc);
-			m_freem(m);
-			return;
-		}
+		dst_if = bridge_rtlookup(sc, dst, vlan);
+		if (src_if == dst_if)
+			goto drop;
 	} else {
+		/*
+		 * Check if its a reserved multicast address, any address
+		 * listed in 802.1D section 7.12.6 may not be forwarded by the
+		 * bridge.
+		 * This is currently 01-80-C2-00-00-00 to 01-80-C2-00-00-0F
+		 */
+		if (dst[0] == 0x01 && dst[1] == 0x80 &&
+		    dst[2] == 0xc2 && dst[3] == 0x00 &&
+		    dst[4] == 0x00 && dst[5] <= 0x0f)
+			goto drop;
+
 		/* ...forward it to all interfaces. */
-		sc->sc_ifp->if_imcasts++;
+		ifp->if_imcasts++;
 		dst_if = NULL;
 	}
 
@@ -2001,32 +2051,21 @@ bridge_forward(struct bridge_softc *sc, struct bridge_iflist *sbif,
 	 * At this point, we're dealing with a unicast frame
 	 * going to a different interface.
 	 */
-	if ((dst_if->if_drv_flags & IFF_DRV_RUNNING) == 0) {
-		BRIDGE_UNLOCK(sc);
-		m_freem(m);
-		return;
-	}
+	if ((dst_if->if_drv_flags & IFF_DRV_RUNNING) == 0)
+		goto drop;
+
 	dbif = bridge_lookup_member_if(sc, dst_if);
-	if (dbif == NULL) {
+	if (dbif == NULL)
 		/* Not a member of the bridge (anymore?) */
-		BRIDGE_UNLOCK(sc);
-		m_freem(m);
-		return;
-	}
+		goto drop;
 
 	/* Private segments can not talk to each other */
-	if (sbif->bif_flags & dbif->bif_flags & IFBIF_PRIVATE) {
-		BRIDGE_UNLOCK(sc);
-		m_freem(m);
-		return;
-	}
+	if (sbif->bif_flags & dbif->bif_flags & IFBIF_PRIVATE)
+		goto drop;
 
 	if ((dbif->bif_flags & IFBIF_STP) &&
-	    dbif->bif_stp.bp_state == BSTP_IFSTATE_DISCARDING) {
-		BRIDGE_UNLOCK(sc);
-		m_freem(m);
-		return;
-	}
+	    dbif->bif_stp.bp_state == BSTP_IFSTATE_DISCARDING)
+		goto drop;
 
 	BRIDGE_UNLOCK(sc);
 
@@ -2035,13 +2074,18 @@ bridge_forward(struct bridge_softc *sc, struct bridge_iflist *sbif,
 	    || PFIL_HOOKED(&inet6_pfil_hook)
 #endif
 	    ) {
-		if (bridge_pfil(&m, sc->sc_ifp, dst_if, PFIL_OUT) != 0)
+		if (bridge_pfil(&m, ifp, dst_if, PFIL_OUT) != 0)
 			return;
 		if (m == NULL)
 			return;
 	}
 
 	bridge_enqueue(sc, dst_if, m);
+	return;
+
+drop:
+	BRIDGE_UNLOCK(sc);
+	m_freem(m);
 }
 
 /*
@@ -2059,6 +2103,7 @@ bridge_input(struct ifnet *ifp, struct mbuf *m)
 	struct ether_header *eh;
 	struct mbuf *mc, *mc2;
 	uint16_t vlan;
+	int error;
 
 	if ((sc->sc_ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
 		return (m);
@@ -2088,50 +2133,6 @@ bridge_input(struct ifnet *ifp, struct mbuf *m)
 	}
 
 	eh = mtod(m, struct ether_header *);
-
-	if (memcmp(eh->ether_dhost, IF_LLADDR(bifp),
-	    ETHER_ADDR_LEN) == 0) {
-		/* Block redundant paths to us */
-		if ((bif->bif_flags & IFBIF_STP) &&
-		    bif->bif_stp.bp_state == BSTP_IFSTATE_DISCARDING) {
-			BRIDGE_UNLOCK(sc);
-			return (m);
-		}
-
-		/*
-		 * Filter on the physical interface.
-		 */
-		if (pfil_local_phys && (PFIL_HOOKED(&inet_pfil_hook)
-#ifdef INET6
-		    || PFIL_HOOKED(&inet6_pfil_hook)
-#endif
-		    )) {
-			if (bridge_pfil(&m, NULL, ifp, PFIL_IN) != 0 ||
-			    m == NULL) {
-				BRIDGE_UNLOCK(sc);
-				return (NULL);
-			}
-		}
-
-		/*
-		 * If the packet is for us, set the packets source as the
-		 * bridge, and return the packet back to ether_input for
-		 * local processing.
-		 */
-
-		/* Note where to send the reply to */
-		if (bif->bif_flags & IFBIF_LEARNING)
-			(void) bridge_rtupdate(sc,
-			    eh->ether_shost, vlan, bif, 0, IFBAF_DYNAMIC);
-
-		/* Mark the packet as arriving on the bridge interface */
-		m->m_pkthdr.rcvif = bifp;
-		ETHER_BPF_MTAP(bifp, m);
-		bifp->if_ipackets++;
-
-		BRIDGE_UNLOCK(sc);
-		return (m);
-	}
 
 	bridge_span(sc, m);
 
@@ -2207,6 +2208,13 @@ bridge_input(struct ifnet *ifp, struct mbuf *m)
 #   define OR_CARP_CHECK_WE_ARE_SRC(iface)
 #endif
 
+#ifdef INET6
+#   define OR_PFIL_HOOKED_INET6 \
+	|| PFIL_HOOKED(&inet6_pfil_hook)
+#else
+#   define OR_PFIL_HOOKED_INET6
+#endif
+
 #define GRAB_OUR_PACKETS(iface) \
 	if ((iface)->if_type == IFT_GIF) \
 		continue; \
@@ -2214,9 +2222,29 @@ bridge_input(struct ifnet *ifp, struct mbuf *m)
 	if (memcmp(IF_LLADDR((iface)), eh->ether_dhost,  ETHER_ADDR_LEN) == 0 \
 	    OR_CARP_CHECK_WE_ARE_DST((iface))				\
 	    ) {								\
-		if (bif->bif_flags & IFBIF_LEARNING)			\
-			(void) bridge_rtupdate(sc, eh->ether_shost,	\
+		if ((iface)->if_type == IFT_BRIDGE) {			\
+			ETHER_BPF_MTAP(iface, m);			\
+			iface->if_ipackets++;				\
+			/* Filter on the physical interface. */		\
+			if (pfil_local_phys &&				\
+			    (PFIL_HOOKED(&inet_pfil_hook)		\
+			     OR_PFIL_HOOKED_INET6)) {			\
+				if (bridge_pfil(&m, NULL, ifp,		\
+				    PFIL_IN) != 0 || m == NULL) {	\
+					BRIDGE_UNLOCK(sc);		\
+					return (NULL);			\
+				}					\
+			}						\
+		}							\
+		if (bif->bif_flags & IFBIF_LEARNING) {			\
+			error = bridge_rtupdate(sc, eh->ether_shost,	\
 			    vlan, bif, 0, IFBAF_DYNAMIC);		\
+			if (error && bif->bif_addrmax) {		\
+				BRIDGE_UNLOCK(sc);			\
+				m_freem(m);				\
+				return (NULL);				\
+			}						\
+		}							\
 		m->m_pkthdr.rcvif = iface;				\
 		BRIDGE_UNLOCK(sc);					\
 		return (m);						\
@@ -2232,8 +2260,11 @@ bridge_input(struct ifnet *ifp, struct mbuf *m)
 	}
 
 	/*
-	 * Unicast.  Make sure it's not for us.
-	 *
+	 * Unicast.  Make sure it's not for the bridge.
+	 */
+	do { GRAB_OUR_PACKETS(bifp) } while (0);
+
+	/*
 	 * Give a chance for ifp at first priority. This will help when	the
 	 * packet comes through the interface like VLAN's with the same MACs
 	 * on several interfaces from the same bridge. This also will save
@@ -2249,6 +2280,7 @@ bridge_input(struct ifnet *ifp, struct mbuf *m)
 
 #undef OR_CARP_CHECK_WE_ARE_DST
 #undef OR_CARP_CHECK_WE_ARE_SRC
+#undef OR_PFIL_HOOKED_INET6
 #undef GRAB_OUR_PACKETS
 
 	/* Perform the bridge forwarding function. */
@@ -2402,10 +2434,15 @@ bridge_rtupdate(struct bridge_softc *sc, const uint8_t *dst, uint16_t vlan,
     struct bridge_iflist *bif, int setflags, uint8_t flags)
 {
 	struct bridge_rtnode *brt;
-	struct ifnet *dst_if = bif->bif_ifp;
 	int error;
 
 	BRIDGE_LOCK_ASSERT(sc);
+
+	/* Check the source address is valid and not multicast. */
+	if (ETHER_IS_MULTICAST(dst) ||
+	    (dst[0] == 0 && dst[1] == 0 && dst[2] == 0 &&
+	     dst[3] == 0 && dst[4] == 0 && dst[5] == 0) != 0)
+		return (EINVAL);
 
 	/* 802.1p frames map to vlan 1 */
 	if (vlan == 0)
@@ -2418,6 +2455,11 @@ bridge_rtupdate(struct bridge_softc *sc, const uint8_t *dst, uint16_t vlan,
 	if ((brt = bridge_rtnode_lookup(sc, dst, vlan)) == NULL) {
 		if (sc->sc_brtcnt >= sc->sc_brtmax) {
 			sc->sc_brtexceeded++;
+			return (ENOSPC);
+		}
+		/* Check per interface address limits (if enabled) */
+		if (bif->bif_addrmax && bif->bif_addrcnt >= bif->bif_addrmax) {
+			bif->bif_addrexceeded++;
 			return (ENOSPC);
 		}
 
@@ -2435,7 +2477,6 @@ bridge_rtupdate(struct bridge_softc *sc, const uint8_t *dst, uint16_t vlan,
 		else
 			brt->brt_flags = IFBAF_DYNAMIC;
 
-		brt->brt_ifp = dst_if;
 		memcpy(brt->brt_addr, dst, ETHER_ADDR_LEN);
 		brt->brt_vlan = vlan;
 
@@ -2443,10 +2484,17 @@ bridge_rtupdate(struct bridge_softc *sc, const uint8_t *dst, uint16_t vlan,
 			uma_zfree(bridge_rtnode_zone, brt);
 			return (error);
 		}
+		brt->brt_dst = bif;
+		bif->bif_addrcnt++;
 	}
 
-	if ((brt->brt_flags & IFBAF_TYPEMASK) == IFBAF_DYNAMIC)
-		brt->brt_ifp = dst_if;
+	if ((brt->brt_flags & IFBAF_TYPEMASK) == IFBAF_DYNAMIC &&
+	    brt->brt_dst != bif) {
+		brt->brt_dst->bif_addrcnt--;
+		brt->brt_dst = bif;
+		brt->brt_dst->bif_addrcnt++;
+	}
+
 	if ((flags & IFBAF_TYPEMASK) == IFBAF_DYNAMIC)
 		brt->brt_expire = time_uptime + sc->sc_brttimeout;
 	if (setflags)
@@ -2640,6 +2688,8 @@ static void
 bridge_rtable_fini(struct bridge_softc *sc)
 {
 
+	KASSERT(sc->sc_brtcnt == 0,
+	    ("%s: %d bridge routes referenced", __func__, sc->sc_brtcnt));
 	free(sc->sc_rthash, M_DEVBUF);
 }
 
@@ -2781,6 +2831,7 @@ bridge_rtnode_destroy(struct bridge_softc *sc, struct bridge_rtnode *brt)
 
 	LIST_REMOVE(brt, brt_list);
 	sc->sc_brtcnt--;
+	brt->brt_dst->bif_addrcnt--;
 	uma_zfree(bridge_rtnode_zone, brt);
 }
 
@@ -2983,7 +3034,7 @@ bridge_pfil(struct mbuf **mp, struct ifnet *bifp, struct ifnet *ifp, int dir)
 			 * packet will return to us via bridge_dummynet().
 			 */
 			args.oif = ifp;
-			ip_dn_io_ptr(*mp, DN_TO_IFB_FWD, &args);
+			ip_dn_io_ptr(mp, DN_TO_IFB_FWD, &args);
 			return (error);
 		}
 

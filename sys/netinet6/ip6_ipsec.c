@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *      The Regents of the University of California.  All rights reserved.
@@ -26,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/netinet6/ip6_ipsec.c,v 1.6 2007/08/05 16:16:15 bz Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/ip6_ipsec.c,v 1.6.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ipsec.h"
 
@@ -69,6 +69,7 @@
 #endif /*IPSEC*/
 
 #include <netinet6/ip6_ipsec.h>
+#include <netinet6/ip6_var.h>
 
 extern	struct protosw inet6sw[];
 
@@ -127,7 +128,7 @@ ip6_ipsec_fwd(struct mbuf *m)
 	KEY_FREESP(&sp);
 	splx(s);
 	if (error) {
-		ipstat.ips_cantforward++;
+		ip6stat.ip6s_cantforward++;
 		return 1;
 	}
 #endif /* IPSEC */
@@ -257,7 +258,7 @@ ip6_ipsec_output(struct mbuf **m, struct inpcb *inp, int *flags, int *error,
 				 * NB: null pointer to avoid free at
 				 *     done: below.
 				 */
-				KEY_FREESP(sp), sp = NULL;
+				KEY_FREESP(sp), *sp = NULL;
 				/* XXX splx(s); */
 				goto done;
 			}
@@ -298,21 +299,16 @@ ip6_ipsec_output(struct mbuf **m, struct inpcb *inp, int *flags, int *error,
 		}
 	}
 done:
-	if (sp != NULL)
-		if (*sp != NULL)
-			KEY_FREESP(sp);
 	return 0;
 do_ipsec:
 	return -1;
 bad:
-	if (sp != NULL)
-		if (*sp != NULL)
-			KEY_FREESP(sp);
 	return 1;
 #endif /* IPSEC */
 	return 0;
 }
 
+#if 0
 /*
  * Compute the MTU for a forwarded packet that gets IPSEC encapsulated.
  * Called from ip_forward().
@@ -328,16 +324,15 @@ ip6_ipsec_mtu(struct mbuf *m)
 	 *	tunnel MTU = if MTU - sizeof(IP) - ESP/AH hdrsiz
 	 * XXX quickhack!!!
 	 */
+#ifdef IPSEC
 	struct secpolicy *sp = NULL;
 	int ipsecerror;
 	int ipsechdr;
 	struct route *ro;
-#ifdef IPSEC
 	sp = ipsec_getpolicybyaddr(m,
 				   IPSEC_DIR_OUTBOUND,
 				   IP_FORWARDING,
 				   &ipsecerror);
-#endif /* IPSEC */
 	if (sp != NULL) {
 		/* count IPsec header size */
 		ipsechdr = ipsec4_hdrsiz(m,
@@ -360,10 +355,10 @@ ip6_ipsec_mtu(struct mbuf *m)
 				mtu -= ipsechdr;
 			}
 		}
-#ifdef IPSEC
 		KEY_FREESP(&sp);
-#endif /* IPSEC */
 	}
+#endif /* IPSEC */
+	/* XXX else case missing. */
 	return mtu;
 }
-
+#endif

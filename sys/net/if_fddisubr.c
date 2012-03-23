@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995, 1996
  *	Matt Thomas <matt@3am-software.com>.  All rights reserved.
@@ -34,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	from: if_ethersubr.c,v 1.5 1994/12/13 22:31:45 wollman Exp
- * $FreeBSD: src/sys/net/if_fddisubr.c,v 1.104 2006/10/22 11:52:15 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_fddisubr.c,v 1.104.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_atalk.h"

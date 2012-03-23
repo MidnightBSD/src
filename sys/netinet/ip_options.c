@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1982, 1986, 1988, 1993
  *      The Regents of the University of California.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_options.c,v 1.6 2007/10/07 20:44:23 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/ip_options.c,v 1.6.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ipstealth.h"
 #include "opt_mac.h"
@@ -234,7 +233,8 @@ dropit:
 			    if ((ia = (INA)ifa_ifwithdstaddr((SA)&ipaddr)) == NULL)
 				ia = (INA)ifa_ifwithnet((SA)&ipaddr);
 			} else
-				ia = ip_rtaddr(ipaddr.sin_addr);
+/* XXX MRT 0 for routing */
+				ia = ip_rtaddr(ipaddr.sin_addr, M_GETFIB(m));
 			if (ia == NULL) {
 				type = ICMP_UNREACH;
 				code = ICMP_UNREACH_SRCFAIL;
@@ -277,7 +277,7 @@ dropit:
 			 * same).
 			 */
 			if ((ia = (INA)ifa_ifwithaddr((SA)&ipaddr)) == NULL &&
-			    (ia = ip_rtaddr(ipaddr.sin_addr)) == NULL) {
+			    (ia = ip_rtaddr(ipaddr.sin_addr, M_GETFIB(m))) == NULL) {
 				type = ICMP_UNREACH;
 				code = ICMP_UNREACH_HOST;
 				goto bad;
@@ -508,9 +508,6 @@ ip_insertoptions(struct mbuf *m, struct mbuf *opt, int *phlen)
 		}
 		M_MOVE_PKTHDR(n, m);
 		n->m_pkthdr.rcvif = NULL;
-#ifdef MAC
-		mac_copy_mbuf(m, n);
-#endif
 		n->m_pkthdr.len += optlen;
 		m->m_len -= sizeof(struct ip);
 		m->m_data += sizeof(struct ip);
@@ -590,7 +587,7 @@ ip_pcbopts(struct inpcb *inp, int optname, struct mbuf *m)
 	struct mbuf **pcbopt;
 	u_char opt;
 
-	INP_LOCK_ASSERT(inp);
+	INP_WLOCK_ASSERT(inp);
 
 	pcbopt = &inp->inp_options;
 
@@ -652,6 +649,7 @@ ip_pcbopts(struct inpcb *inp, int optname, struct mbuf *m)
 			 * in actual IP option, but is stored before the
 			 * options.
 			 */
+			/* XXX-BZ PRIV_NETINET_SETHDROPTS? */
 			if (optlen < IPOPT_MINOFF - 1 + sizeof(struct in_addr))
 				goto bad;
 			m->m_len -= sizeof(struct in_addr);

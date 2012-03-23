@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -32,14 +31,14 @@
 /* $KAME: sctp_output.h,v 1.14 2005/03/06 16:04:18 itojun Exp $	 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.13 2007/10/01 03:22:28 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.13.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __sctp_output_h__
 #define __sctp_output_h__
 
 #include <netinet/sctp_header.h>
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 
 struct mbuf *
@@ -85,7 +84,7 @@ sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *, int
 void
 sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
     struct mbuf *, int, int, struct sctphdr *, struct sctp_init_chunk *,
-    uint32_t, int);
+    uint32_t, uint16_t, int);
 
 struct mbuf *
 sctp_arethere_unrecognized_parameters(struct mbuf *, int, int *,
@@ -111,7 +110,7 @@ void sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
 
 void 
 sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *,
-    uint32_t);
+    uint32_t, uint16_t);
 
 void sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *, int addr_locked);
 
@@ -198,10 +197,13 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 
 void
 sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,
-    struct mbuf *, uint32_t);
+    struct mbuf *, uint32_t, uint16_t);
 
-void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t, uint32_t);
+void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t, uint32_t, uint16_t);
 
+#endif				/* _KERNEL || __Userspace__ */
+
+#if defined(_KERNEL) || defined (__Userspace__)
 int
 sctp_sosend(struct socket *so,
     struct sockaddr *addr,

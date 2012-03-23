@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/mld6.c,v 1.31 2007/07/05 16:29:40 delphij Exp $	*/
-/*	$KAME: mld6.c,v 1.27 2001/04/04 05:17:30 itojun Exp $	*/
-
 /*-
  * Copyright (C) 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: mld6.c,v 1.27 2001/04/04 05:17:30 itojun Exp $
  */
 
 /*-
@@ -65,6 +63,9 @@
  *
  *	@(#)igmp.c	8.1 (Berkeley) 7/19/93
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/mld6.c,v 1.31.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -147,7 +148,7 @@ mld_starttimer(struct in6_multi *in6m)
 
 	/* start or restart the timer */
 	callout_reset(in6m->in6m_timer_ch, in6m->in6m_timer,
-	    (void (*) __P((void *)))mld_timeo, in6m);
+	    (void (*)(void *))mld_timeo, in6m);
 }
 
 static void
@@ -202,7 +203,7 @@ mld_timerresid(struct in6_multi *in6m)
 	}
 
 	/* return the remaining time in milliseconds */
-	return (((u_long)(diff.tv_sec * 1000000 + diff.tv_usec)) / 1000);
+	return (diff.tv_sec * 1000 + diff.tv_usec / 1000);
 }
 
 void
@@ -273,7 +274,7 @@ mld6_input(struct mbuf *m, int off)
 	struct in6_addr mld_addr, all_in6;
 	struct in6_ifaddr *ia;
 	struct ifmultiaddr *ifma;
-	int timer;		/* timer value in the MLD query header */
+	u_long timer;		/* timer value in the MLD query header */
 
 #ifndef PULLDOWN_TEST
 	IP6_EXTHDR_CHECK(m, off, sizeof(*mldh),);
@@ -389,9 +390,9 @@ mld6_input(struct mbuf *m, int off)
 					in6m->in6m_state = MLD_IREPORTEDLAST;
 				}
 				else if (in6m->in6m_timer == IN6M_TIMER_UNDEF ||
-				    mld_timerresid(in6m) > (u_long)timer) {
-					in6m->in6m_timer = arc4random() %
-					    (int)((long)(timer * hz) / 1000);
+				    mld_timerresid(in6m) > timer) {
+					in6m->in6m_timer =
+					   1 + (arc4random() % timer) * hz / 1000;
 					mld_starttimer(in6m);
 				}
 			}

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/vm/vm_glue.c,v 1.4 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_glue.c,v 1.225.4.1 2008/01/19 18:15:07 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_glue.c,v 1.225.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_vm.h"
 #include "opt_kstack_pages.h"
@@ -102,7 +102,7 @@ extern int maxslp;
  * Note: proc0 from proc.h
  */
 static void vm_init_limits(void *);
-SYSINIT(vm_limits, SI_SUB_VM_CONF, SI_ORDER_FIRST, vm_init_limits, &proc0)
+SYSINIT(vm_limits, SI_SUB_VM_CONF, SI_ORDER_FIRST, vm_init_limits, &proc0);
 
 /*
  * THIS MUST BE THE LAST INITIALIZATION ITEM!!!
@@ -110,16 +110,12 @@ SYSINIT(vm_limits, SI_SUB_VM_CONF, SI_ORDER_FIRST, vm_init_limits, &proc0)
  * Note: run scheduling should be divorced from the vm system.
  */
 static void scheduler(void *);
-SYSINIT(scheduler, SI_SUB_RUN_SCHEDULER, SI_ORDER_ANY, scheduler, NULL)
+SYSINIT(scheduler, SI_SUB_RUN_SCHEDULER, SI_ORDER_ANY, scheduler, NULL);
 
 #ifndef NO_SWAPPING
 static int swapout(struct proc *);
 static void swapclear(struct proc *);
 #endif
-
-
-static volatile int proc0_rescan;
-
 
 /*
  * MPSAFE
@@ -687,9 +683,6 @@ scheduler(dummy)
 loop:
 	if (vm_page_count_min()) {
 		VM_WAIT;
-		thread_lock(&thread0);
-		proc0_rescan = 0;
-		thread_unlock(&thread0);
 		goto loop;
 	}
 
@@ -738,13 +731,7 @@ loop:
 	 * Nothing to do, back to sleep.
 	 */
 	if ((p = pp) == NULL) {
-		thread_lock(&thread0);
-		if (!proc0_rescan) {
-			TD_SET_IWAIT(&thread0);
-			mi_switch(SW_VOL, NULL);
-		}
-		proc0_rescan = 0;
-		thread_unlock(&thread0);
+		tsleep(&proc0, PVM, "sched", maxslp * hz / 2);
 		goto loop;
 	}
 	PROC_LOCK(p);
@@ -756,9 +743,6 @@ loop:
 	 */
 	if (p->p_flag & (P_INMEM | P_SWAPPINGOUT | P_SWAPPINGIN)) {
 		PROC_UNLOCK(p);
-		thread_lock(&thread0);
-		proc0_rescan = 0;
-		thread_unlock(&thread0);
 		goto loop;
 	}
 
@@ -768,31 +752,15 @@ loop:
 	 */
 	faultin(p);
 	PROC_UNLOCK(p);
-	thread_lock(&thread0);
-	proc0_rescan = 0;
-	thread_unlock(&thread0);
 	goto loop;
 }
 
-void kick_proc0(void)
+void
+kick_proc0(void)
 {
-	struct thread *td = &thread0;
 
-	/* XXX This will probably cause a LOR in some cases */
-	thread_lock(td);
-	if (TD_AWAITING_INTR(td)) {
-		CTR2(KTR_INTR, "%s: sched_add %d", __func__, 0);
-		TD_CLR_IWAIT(td);
-		sched_add(td, SRQ_INTR);
-	} else {
-		proc0_rescan = 1;
-		CTR2(KTR_INTR, "%s: state %d",
-		    __func__, td->td_state);
-	}
-	thread_unlock(td);
-	
+	wakeup(&proc0);
 }
-
 
 #ifndef NO_SWAPPING
 
@@ -992,7 +960,16 @@ swapclear(p)
 		td->td_flags &= ~TDF_SWAPINREQ;
 		TD_CLR_SWAPPED(td);
 		if (TD_CAN_RUN(td))
-			setrunnable(td);
+			if (setrunnable(td)) {
+#ifdef INVARIANTS
+				/*
+				 * XXX: We just cleared TDI_SWAPPED
+				 * above and set TDF_INMEM, so this
+				 * should never happen.
+				 */
+				panic("not waking up swapper");
+#endif
+			}
 		thread_unlock(td);
 	}
 	p->p_flag &= ~(P_SWAPPINGIN|P_SWAPPINGOUT);

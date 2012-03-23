@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -32,7 +31,7 @@
 /* $KAME: sctp_pcb.h,v 1.21 2005/07/16 01:18:47 suz Exp $	 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.31.2.1 2007/11/06 02:48:03 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.31.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __sctp_pcb_h__
 #define __sctp_pcb_h__
@@ -40,6 +39,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.31.2.1 2007/11/06 02:48:03 rr
 #include <netinet/sctp_os.h>
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
+#include <netinet/sctp_sysctl.h>
 
 LIST_HEAD(sctppcbhead, sctp_inpcb);
 LIST_HEAD(sctpasochead, sctp_tcb);
@@ -140,6 +140,7 @@ struct sctp_tagblock {
 	struct sctp_timewait vtag_block[SCTP_NUMBER_IN_VTAG_BLOCK];
 };
 
+
 struct sctp_epinfo {
 	struct sctpasochead *sctp_asochash;
 	u_long hashasocmark;
@@ -176,7 +177,7 @@ struct sctp_epinfo {
 	struct sctpladdr addr_wq;
 
 	struct sctpiterators iteratorhead;
-
+	int threads_must_exit;
 	/* ep zone info */
 	sctp_zone_t ipi_zone_ep;
 	sctp_zone_t ipi_zone_asoc;
@@ -185,6 +186,7 @@ struct sctp_epinfo {
 	sctp_zone_t ipi_zone_chunk;
 	sctp_zone_t ipi_zone_readq;
 	sctp_zone_t ipi_zone_strmoq;
+	sctp_zone_t ipi_zone_asconf;
 	sctp_zone_t ipi_zone_asconf_ack;
 
 	struct rwlock ipi_ep_mtx;
@@ -235,6 +237,23 @@ struct sctp_epinfo {
 #endif
 	struct sctp_timer addr_wq_timer;
 
+};
+
+
+struct sctp_base_info {
+	/*
+	 * All static structures that anchor the system must be here.
+	 */
+	struct sctp_epinfo sctppcbinfo;
+	struct sctpstat sctpstat;
+	struct sctp_sysctl sctpsysctl;
+	uint8_t first_time;
+	char sctp_pcb_initialized;
+#if defined(SCTP_PACKET_LOGGING)
+	int packet_log_writers;
+	int packet_log_end;
+	uint8_t packet_log_buffer[SCTP_PACKET_LOG_SIZE];
+#endif
 };
 
 /*-
@@ -431,11 +450,19 @@ struct sctp_tcb {
 #include <netinet/sctp_lock_bsd.h>
 
 
-#if defined(_KERNEL)
+/* TODO where to put non-_KERNEL things for __Userspace__? */
+#if defined(_KERNEL) || defined(__Userspace__)
 
-extern struct sctp_epinfo sctppcbinfo;
+/* Attention Julian, this is the extern that
+ * goes with the base info. sctp_pcb.c has
+ * the real definition.
+ */
+extern struct sctp_base_info system_base_info;
 
-int SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b);
+#ifdef INET6
+int SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b);
+
+#endif
 
 void sctp_fill_pcbinfo(struct sctp_pcbinfo *);
 
@@ -553,6 +580,7 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
 
+void sctp_pcb_finish(void);
 
 void sctp_add_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 void sctp_del_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
@@ -570,6 +598,8 @@ int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *, int);
 /* void sctp_drain(void); */
 
 int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
+
+int sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp);
 
 /*-
  * Null in last arg inpcb indicate run on ALL ep's. Specific inp in last arg

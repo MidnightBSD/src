@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Synchronous Frame Relay link level subroutines.
  * ANSI T1.617-compaible link management signaling
@@ -21,7 +20,7 @@
  * works or modified versions.
  *
  * $Cronyx Id: if_spppfr.c,v 1.1.2.10 2004/06/29 09:02:30 rik Exp $
- * $FreeBSD: src/sys/net/if_spppfr.c,v 1.3 2005/06/10 16:49:18 brooks Exp $
+ * $FreeBSD: src/sys/net/if_spppfr.c,v 1.3.20.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>

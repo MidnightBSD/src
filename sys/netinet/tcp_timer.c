@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_timer.c,v 1.99 2007/10/07 20:44:24 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/tcp_timer.c,v 1.99.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet6.h"
 #include "opt_tcpdebug.h"
@@ -167,11 +166,11 @@ tcp_timer_delack(void *xtp)
 		INP_INFO_RUNLOCK(&tcbinfo);
 		return;
 	}
-	INP_LOCK(inp);
+	INP_WLOCK(inp);
 	INP_INFO_RUNLOCK(&tcbinfo);
 	if ((inp->inp_vflag & INP_DROPPED) || callout_pending(&tp->t_timers->tt_delack)
 	    || !callout_active(&tp->t_timers->tt_delack)) {
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 		return;
 	}
 	callout_deactivate(&tp->t_timers->tt_delack);
@@ -179,7 +178,7 @@ tcp_timer_delack(void *xtp)
 	tp->t_flags |= TF_ACKNOW;
 	tcpstat.tcps_delack++;
 	(void) tcp_output(tp);
-	INP_UNLOCK(inp);
+	INP_WUNLOCK(inp);
 }
 
 void
@@ -209,11 +208,11 @@ tcp_timer_2msl(void *xtp)
 		INP_INFO_WUNLOCK(&tcbinfo);
 		return;
 	}
-	INP_LOCK(inp);
+	INP_WLOCK(inp);
 	tcp_free_sackholes(tp);
 	if ((inp->inp_vflag & INP_DROPPED) || callout_pending(&tp->t_timers->tt_2msl) ||
 	    !callout_active(&tp->t_timers->tt_2msl)) {
-		INP_UNLOCK(tp->t_inpcb);
+		INP_WUNLOCK(tp->t_inpcb);
 		INP_INFO_WUNLOCK(&tcbinfo);
 		return;
 	}
@@ -248,7 +247,7 @@ tcp_timer_2msl(void *xtp)
 			  PRU_SLOWTIMO);
 #endif
 	if (tp != NULL)
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 	INP_INFO_WUNLOCK(&tcbinfo);
 }
 
@@ -277,10 +276,10 @@ tcp_timer_keep(void *xtp)
 		INP_INFO_WUNLOCK(&tcbinfo);
 		return;
 	}
-	INP_LOCK(inp);
+	INP_WLOCK(inp);
 	if ((inp->inp_vflag & INP_DROPPED) || callout_pending(&tp->t_timers->tt_keep)
 	    || !callout_active(&tp->t_timers->tt_keep)) {
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 		INP_INFO_WUNLOCK(&tcbinfo);
 		return;
 	}
@@ -314,7 +313,7 @@ tcp_timer_keep(void *xtp)
 			tcp_respond(tp, t_template->tt_ipgen,
 				    &t_template->tt_t, (struct mbuf *)NULL,
 				    tp->rcv_nxt, tp->snd_una - 1, 0);
-			(void) m_free(dtom(t_template));
+			free(t_template, M_TEMP);
 		}
 		callout_reset(&tp->t_timers->tt_keep, tcp_keepintvl, tcp_timer_keep, tp);
 	} else
@@ -325,7 +324,7 @@ tcp_timer_keep(void *xtp)
 		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
 			  PRU_SLOWTIMO);
 #endif
-	INP_UNLOCK(inp);
+	INP_WUNLOCK(inp);
 	INP_INFO_WUNLOCK(&tcbinfo);
 	return;
 
@@ -339,7 +338,7 @@ dropit:
 			  PRU_SLOWTIMO);
 #endif
 	if (tp != NULL)
-		INP_UNLOCK(tp->t_inpcb);
+		INP_WUNLOCK(tp->t_inpcb);
 	INP_INFO_WUNLOCK(&tcbinfo);
 }
 
@@ -367,10 +366,10 @@ tcp_timer_persist(void *xtp)
 		INP_INFO_WUNLOCK(&tcbinfo);
 		return;
 	}
-	INP_LOCK(inp);
+	INP_WLOCK(inp);
 	if ((inp->inp_vflag & INP_DROPPED) || callout_pending(&tp->t_timers->tt_persist)
 	    || !callout_active(&tp->t_timers->tt_persist)) {
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 		INP_INFO_WUNLOCK(&tcbinfo);
 		return;
 	}
@@ -405,7 +404,7 @@ out:
 		tcp_trace(TA_USER, ostate, tp, NULL, NULL, PRU_SLOWTIMO);
 #endif
 	if (tp != NULL)
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 	INP_INFO_WUNLOCK(&tcbinfo);
 }
 
@@ -436,10 +435,10 @@ tcp_timer_rexmt(void * xtp)
 		INP_INFO_WUNLOCK(&tcbinfo);
 		return;
 	}
-	INP_LOCK(inp);
+	INP_WLOCK(inp);
 	if ((inp->inp_vflag & INP_DROPPED) || callout_pending(&tp->t_timers->tt_rexmt)
 	    || !callout_active(&tp->t_timers->tt_rexmt)) {
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 		INP_INFO_WUNLOCK(&tcbinfo);
 		return;
 	}
@@ -561,7 +560,7 @@ out:
 			  PRU_SLOWTIMO);
 #endif
 	if (tp != NULL)
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 	if (headlocked)
 		INP_INFO_WUNLOCK(&tcbinfo);
 }

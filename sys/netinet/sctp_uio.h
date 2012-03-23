@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -31,7 +30,7 @@
 
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.29 2007/09/18 15:16:39 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.29.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __sctp_uio_h__
 #define __sctp_uio_h__
@@ -508,6 +507,7 @@ struct sctp_authkey {
 
 /* SCTP_HMAC_IDENT */
 struct sctp_hmacalgo {
+	uint32_t shmac_number_of_idents;
 	uint16_t shmac_idents[0];
 };
 
@@ -934,8 +934,8 @@ struct sctpstat {
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
 #define SCTP_STAT_DECR(_x) SCTP_STAT_DECR_BY(_x,1)
-#define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&sctpstat._x, _d)
-#define SCTP_STAT_DECR_BY(_x,_d) atomic_subtract_int(&sctpstat._x, _d)
+#define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&SCTP_BASE_STAT(_x), _d)
+#define SCTP_STAT_DECR_BY(_x,_d) atomic_subtract_int(&SCTP_BASE_STAT(_x), _d)
 
 /* The following macros are for handling MIB values, */
 #define SCTP_STAT_INCR_COUNTER32(_x) SCTP_STAT_INCR(_x)
@@ -1037,7 +1037,7 @@ struct sctp_log {
 /*
  * Kernel defined for sctp_send
  */
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
@@ -1065,7 +1065,7 @@ sctp_sorecvmsg(struct socket *so,
 /*
  * API system calls
  */
-#if !(defined(_KERNEL))
+#if !(defined(_KERNEL)) && !(defined(__Userspace__))
 
 __BEGIN_DECLS
 int sctp_peeloff __P((int, sctp_assoc_t));

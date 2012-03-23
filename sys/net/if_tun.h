@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_tun.h,v 1.5 1994/06/29 06:36:27 cgd Exp $	*/
 
 /*-
@@ -14,7 +13,7 @@
  * UCL. This driver is based much more on read/write/select mode of
  * operation though.
  *
- * $FreeBSD: src/sys/net/if_tun.h,v 1.18 2005/01/07 01:45:34 imp Exp $
+ * $FreeBSD: src/sys/net/if_tun.h,v 1.18.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_IF_TUN_H_

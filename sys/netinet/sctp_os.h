@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -29,7 +28,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_os.h,v 1.9 2007/08/24 00:53:52 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_os.h,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $");
 #ifndef __sctp_os_h__
 #define __sctp_os_h__
 

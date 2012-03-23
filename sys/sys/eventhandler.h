@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/eventhandler.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/eventhandler.h,v 1.37.2.1 2007/12/14 13:41:09 rrs Exp $
+ * $FreeBSD: src/sys/sys/eventhandler.h,v 1.37.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef SYS_EVENTHANDLER_H
@@ -113,7 +113,7 @@ struct __hack
 		    priority);						\
 	}								\
 	SYSINIT(name ## _evh_init, SI_SUB_CONFIGURE, SI_ORDER_ANY,	\
-	    name ## _evh_init, arg)					\
+	    name ## _evh_init, arg);					\
 	struct __hack
 
 #define EVENTHANDLER_INVOKE(name, ...)					\
@@ -171,6 +171,13 @@ EVENTHANDLER_DECLARE(vm_lowmem, vm_lowmem_handler_t);
 /* Low vnodes event */
 typedef void (*vfs_lowvnodes_handler_t)(void *, int);
 EVENTHANDLER_DECLARE(vfs_lowvnodes, vfs_lowvnodes_handler_t);
+
+/* VLAN state change events */
+struct ifnet;
+typedef void (*vlan_config_fn)(void *, struct ifnet *, uint16_t);
+typedef void (*vlan_unconfig_fn)(void *, struct ifnet *, uint16_t);
+EVENTHANDLER_DECLARE(vlan_config, vlan_config_fn);
+EVENTHANDLER_DECLARE(vlan_unconfig, vlan_unconfig_fn);
 
 /*
  * Process events

@@ -1,13 +1,9 @@
-# $FreeBSD: src/sys/modules/if_vlan/Makefile,v 1.2.14.1 2006/02/10 00:38:03 yar Exp $
+# $FreeBSD: src/sys/modules/if_vlan/Makefile,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../net
 
 KMOD=	if_vlan
-SRCS=	if_vlan.c opt_inet.h
-
-.if !defined(KERNBUILDDIR)
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-.endif
+SRCS=	if_vlan.c
+SRCS+=	opt_inet.h opt_vlan.h
 
 .include <bsd.kmod.mk>

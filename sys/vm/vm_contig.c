@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/vm/vm_contig.c,v 1.4 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_contig.c,v 1.63 2007/09/25 06:25:06 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_contig.c,v 1.63.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -89,7 +89,7 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_contig.c,v 1.63 2007/09/25 06:25:06 alc Exp $"
 #include <vm/vm_extern.h>
 
 static int
-vm_contig_launder_page(vm_page_t m)
+vm_contig_launder_page(vm_page_t m, vm_page_t *next)
 {
 	vm_object_t object;
 	vm_page_t m_tmp;
@@ -97,9 +97,13 @@ vm_contig_launder_page(vm_page_t m)
 	struct mount *mp;
 	int vfslocked;
 
+	mtx_assert(&vm_page_queue_mtx, MA_OWNED);
 	object = m->object;
-	if (!VM_OBJECT_TRYLOCK(object))
+	if (!VM_OBJECT_TRYLOCK(object) &&
+	    !vm_pageout_fallback_object_lock(m, next)) {
+		VM_OBJECT_UNLOCK(object);
 		return (EAGAIN);
+	}
 	if (vm_page_sleep_if_busy(m, TRUE, "vpctw0")) {
 		VM_OBJECT_UNLOCK(object);
 		vm_page_lock_queues();
@@ -149,8 +153,7 @@ vm_contig_launder(int queue)
 	vm_page_t m, next;
 	int error;
 
-	for (m = TAILQ_FIRST(&vm_page_queues[queue].pl); m != NULL; m = next) {
-		next = TAILQ_NEXT(m, pageq);
+	TAILQ_FOREACH_SAFE(m, &vm_page_queues[queue].pl, pageq, next) {
 
 		/* Skip marker pages */
 		if ((m->flags & PG_MARKER) != 0)
@@ -158,7 +161,7 @@ vm_contig_launder(int queue)
 
 		KASSERT(VM_PAGE_INQUEUE2(m, queue),
 		    ("vm_contig_launder: page %p's queue is not %d", m, queue));
-		error = vm_contig_launder_page(m);
+		error = vm_contig_launder_page(m, &next);
 		if (error == 0)
 			return (TRUE);
 		if (error == EBUSY)
@@ -167,35 +170,38 @@ vm_contig_launder(int queue)
 	return (FALSE);
 }
 
+/*
+ *	Frees the given physically contiguous pages.
+ *
+ *	N.B.: Any pages with PG_ZERO set must, in fact, be zero filled.
+ */
 static void
-vm_page_release_contigl(vm_page_t m, vm_pindex_t count)
+vm_page_release_contig(vm_page_t m, vm_pindex_t count)
 {
+
 	while (count--) {
+		/* Leave PG_ZERO unchanged. */
 		vm_page_free_toq(m);
 		m++;
 	}
 }
 
-static void
-vm_page_release_contig(vm_page_t m, vm_pindex_t count)
-{
-	vm_page_lock_queues();
-	vm_page_release_contigl(m, count);
-	vm_page_unlock_queues();
-}
-
+/*
+ *	Allocates a region from the kernel address map, inserts the
+ *	given physically contiguous pages into the kernel object,
+ *	creates a wired mapping from the region to the pages, and
+ *	returns the region's starting virtual address.  If M_ZERO is
+ *	specified through the given flags, then the pages are zeroed
+ *	before they are mapped.
+ */
 static void *
-contigmalloc2(vm_page_t m, vm_pindex_t npages, int flags)
+contigmapping(vm_page_t m, vm_pindex_t npages, int flags)
 {
 	vm_object_t object = kernel_object;
 	vm_map_t map = kernel_map;
 	vm_offset_t addr, tmp_addr;
 	vm_pindex_t i;
  
-	/*
-	 * Allocate kernel VM, unfree and assign the physical pages to
-	 * it and return kernel VM pointer.
-	 */
 	vm_map_lock(map);
 	if (vm_map_findspace(map, vm_map_min(map), npages << PAGE_SHIFT, &addr)
 	    != KERN_SUCCESS) {
@@ -231,7 +237,7 @@ contigmalloc(
 	unsigned long alignment,
 	unsigned long boundary)
 {
-	void * ret;
+	void *ret;
 	vm_page_t pages;
 	unsigned long npgs;
 	int actl, actmax, inactl, inactmax, tries;
@@ -264,11 +270,12 @@ again:
 		}
 		ret = NULL;
 	} else {
-		ret = contigmalloc2(pages, npgs, flags);
+		ret = contigmapping(pages, npgs, flags);
 		if (ret == NULL)
 			vm_page_release_contig(pages, npgs);
+		else
+			malloc_type_allocated(type, npgs << PAGE_SHIFT);
 	}
-	malloc_type_allocated(type, ret == NULL ? 0 : npgs << PAGE_SHIFT);
 	return (ret);
 }
 

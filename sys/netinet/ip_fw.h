@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Luigi Rizzo, Universita` di Pisa
  *
@@ -23,11 +22,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/ip_fw.h,v 1.110.4.1 2008/01/28 17:44:30 rwatson Exp $
+ * $FreeBSD: src/sys/netinet/ip_fw.h,v 1.110.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _IPFW2_H
 #define _IPFW2_H
+
+/*
+ * The default rule number.  By the design of ip_fw, the default rule
+ * is the last one, so its number can also serve as the highest number
+ * allowed for a rule.  The ip_fw code relies on both meanings of this
+ * constant. 
+ */
+#define	IPFW_DEFAULT_RULE	65535
 
 /*
  * The kernel representation of ipfw rules is made of a list of
@@ -162,6 +169,9 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
 	O_TAG,   		/* arg1=tag number */
 	O_TAGGED,		/* arg1=tag number */
 
+	O_SETFIB,		/* arg1=FIB number */
+	O_FIB,			/* arg1=FIB desired fib number */
+
 	O_LAST_OPCODE		/* not an opcode!		*/
 };
 
@@ -207,7 +217,7 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
  */
 typedef struct	_ipfw_insn {	/* template for instructions */
 	enum ipfw_opcodes	opcode:8;
-	u_int8_t	len;	/* numer of 32-byte words */
+	u_int8_t	len;	/* number of 32-bit words */
 #define	F_NOT		0x80
 #define	F_OR		0x40
 #define	F_LEN_MASK	0x3f
@@ -313,7 +323,7 @@ typedef struct  _ipfw_insn_log {
 
 /*
  * Data structures required by both ipfw(8) and ipfw(4) but not part of the
- * management API are protcted by IPFW_INTERNAL.
+ * management API are protected by IPFW_INTERNAL.
  */
 #ifdef IPFW_INTERNAL
 /* Server pool support (LSNAT). */
@@ -466,6 +476,7 @@ struct ipfw_flow_id {
 	u_int32_t	src_ip;
 	u_int16_t	dst_port;
 	u_int16_t	src_port;
+	u_int8_t	fib;
 	u_int8_t	proto;
 	u_int8_t	flags;	/* protocol-specific flags */
 	uint8_t		addr_type; /* 4 = ipv4, 6 = ipv6, 1=ether ? */
@@ -626,6 +637,38 @@ extern int fw6_enable;
 typedef	int ip_fw_chk_t(struct ip_fw_args *args);
 extern	ip_fw_chk_t	*ip_fw_chk_ptr;
 #define	IPFW_LOADED	(ip_fw_chk_ptr != NULL)
+
+#ifdef IPFW_INTERNAL
+
+#define        IPFW_TABLES_MAX         128
+struct ip_fw_chain {
+       struct ip_fw    *rules;         /* list of rules */
+       struct ip_fw    *reap;          /* list of rules to reap */
+       LIST_HEAD(, cfg_nat) nat;       /* list of nat entries */
+       struct radix_node_head *tables[IPFW_TABLES_MAX];
+       struct rwlock   rwmtx;
+};
+#define        IPFW_LOCK_INIT(_chain) \
+       rw_init(&(_chain)->rwmtx, "IPFW static rules")
+#define        IPFW_LOCK_DESTROY(_chain)       rw_destroy(&(_chain)->rwmtx)
+#define        IPFW_WLOCK_ASSERT(_chain)       rw_assert(&(_chain)->rwmtx, RA_WLOCKED)
+
+#define IPFW_RLOCK(p) rw_rlock(&(p)->rwmtx)
+#define IPFW_RUNLOCK(p) rw_runlock(&(p)->rwmtx)
+#define IPFW_WLOCK(p) rw_wlock(&(p)->rwmtx)
+#define IPFW_WUNLOCK(p) rw_wunlock(&(p)->rwmtx)
+
+#define LOOKUP_NAT(l, i, p) do {                                       \
+               LIST_FOREACH((p), &(l.nat), _next) {                    \
+                       if ((p)->id == (i)) {                           \
+                               break;                                  \
+                       }                                               \
+               }                                                       \
+       } while (0)
+
+typedef int ipfw_nat_t(struct ip_fw_args *, struct cfg_nat *, struct mbuf *);
+typedef int ipfw_nat_cfg_t(struct sockopt *);
+#endif
 
 #endif /* _KERNEL */
 #endif /* _IPFW2_H */

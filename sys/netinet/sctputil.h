@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -33,12 +32,12 @@
 /* $KAME: sctputil.h,v 1.15 2005/03/06 16:04:19 itojun Exp $	 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.29.2.1 2007/11/06 02:48:04 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.29.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 #ifndef __sctputil_h__
 #define __sctputil_h__
 
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 
 #ifdef SCTP_ASOCLOG_OF_TSNS
@@ -179,7 +178,7 @@ sctp_abort_notification(struct sctp_tcb *, int, int
 /* We abort responding to an IP packet for some reason */
 void
 sctp_abort_association(struct sctp_inpcb *, struct sctp_tcb *,
-    struct mbuf *, int, struct sctphdr *, struct mbuf *, uint32_t);
+    struct mbuf *, int, struct sctphdr *, struct mbuf *, uint32_t, uint16_t);
 
 
 /* We choose to abort via user input */
@@ -193,7 +192,7 @@ sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
 
 void 
 sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
-    struct sctp_inpcb *, struct mbuf *, uint32_t);
+    struct sctp_inpcb *, struct mbuf *, uint32_t, uint16_t);
 
 int 
 sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
@@ -204,6 +203,8 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
     int *totaddr, int *num_v4, int *num_v6, int *error, int limit, int *bad_addr);
 
 int sctp_is_there_an_abort_here(struct mbuf *, int, uint32_t *);
+
+#ifdef INET6
 uint32_t sctp_is_same_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
 
 struct sockaddr_in6 *
@@ -223,7 +224,7 @@ struct sockaddr_in6 *
 		} \
 	 } \
 } while (0)
-
+#endif
 
 int sctp_cmpaddr(struct sockaddr *, struct sockaddr *);
 
@@ -313,6 +314,9 @@ do { \
 	} \
 } while (0)
 
+/* new functions to start/stop udp tunneling */
+void sctp_over_udp_stop(void);
+int sctp_over_udp_start(void);
 
 int
 sctp_soreceive(struct socket *so, struct sockaddr **psa,

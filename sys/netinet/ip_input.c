@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_input.c,v 1.332.2.1 2007/12/19 08:10:30 guido Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/ip_input.c,v 1.332.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_bootp.h"
 #include "opt_ipfw.h"
@@ -1199,7 +1198,7 @@ ipproto_unregister(u_char ipproto)
  * return internet address info of interface to be used to get there.
  */
 struct in_ifaddr *
-ip_rtaddr(struct in_addr dst)
+ip_rtaddr(struct in_addr dst, u_int fibnum)
 {
 	struct route sro;
 	struct sockaddr_in *sin;
@@ -1210,7 +1209,7 @@ ip_rtaddr(struct in_addr dst)
 	sin->sin_family = AF_INET;
 	sin->sin_len = sizeof(*sin);
 	sin->sin_addr = dst;
-	rtalloc_ign(&sro, RTF_CLONING);
+	in_rtalloc_ign(&sro, RTF_CLONING, fibnum);
 
 	if (sro.ro_rt == NULL)
 		return (NULL);
@@ -1250,6 +1249,7 @@ ip_forward(struct mbuf *m, int srcrt)
 	struct in_ifaddr *ia = NULL;
 	struct mbuf *mcopy;
 	struct in_addr dest;
+	struct route ro;
 	int error, type = 0, code = 0, mtu = 0;
 
 	if (m->m_flags & (M_BCAST|M_MCAST) || in_canforward(ip->ip_dst) == 0) {
@@ -1269,7 +1269,7 @@ ip_forward(struct mbuf *m, int srcrt)
 	}
 #endif
 
-	ia = ip_rtaddr(ip->ip_dst);
+	ia = ip_rtaddr(ip->ip_dst, M_GETFIB(m));
 	if (!srcrt && ia == NULL) {
 		icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_HOST, 0, 0);
 		return;
@@ -1327,7 +1327,6 @@ ip_forward(struct mbuf *m, int srcrt)
 	dest.s_addr = 0;
 	if (!srcrt && ipsendredirects && ia->ia_ifp == m->m_pkthdr.rcvif) {
 		struct sockaddr_in *sin;
-		struct route ro;
 		struct rtentry *rt;
 
 		bzero(&ro, sizeof(ro));
@@ -1335,7 +1334,7 @@ ip_forward(struct mbuf *m, int srcrt)
 		sin->sin_family = AF_INET;
 		sin->sin_len = sizeof(*sin);
 		sin->sin_addr = ip->ip_dst;
-		rtalloc_ign(&ro, RTF_CLONING);
+		in_rtalloc_ign(&ro, RTF_CLONING, M_GETFIB(m));
 
 		rt = ro.ro_rt;
 
@@ -1359,7 +1358,19 @@ ip_forward(struct mbuf *m, int srcrt)
 			RTFREE(rt);
 	}
 
-	error = ip_output(m, NULL, NULL, IP_FORWARDING, NULL, NULL);
+	/*
+	 * Try to cache the route MTU from ip_output so we can consider it for
+	 * the ICMP_UNREACH_NEEDFRAG "Next-Hop MTU" field described in RFC1191.
+	 */
+	bzero(&ro, sizeof(ro));
+
+	error = ip_output(m, NULL, &ro, IP_FORWARDING, NULL, NULL);
+
+	if (error == EMSGSIZE && ro.ro_rt)
+		mtu = ro.ro_rt->rt_rmx.rmx_mtu;
+	if (ro.ro_rt)
+		RTFREE(ro.ro_rt);
+
 	if (error)
 		ipstat.ips_cantforward++;
 	else {
@@ -1395,14 +1406,23 @@ ip_forward(struct mbuf *m, int srcrt)
 		code = ICMP_UNREACH_NEEDFRAG;
 
 #ifdef IPSEC
-		mtu = ip_ipsec_mtu(m);
+		/* 
+		 * If IPsec is configured for this path,
+		 * override any possibly mtu value set by ip_output.
+		 */ 
+		mtu = ip_ipsec_mtu(m, mtu);
 #endif /* IPSEC */
 		/*
+		 * If the MTU was set before make sure we are below the
+		 * interface MTU.
 		 * If the MTU wasn't set before use the interface mtu or
 		 * fall back to the next smaller mtu step compared to the
 		 * current packet size.
 		 */
-		if (mtu == 0) {
+		if (mtu != 0) {
+			if (ia != NULL)
+				mtu = min(mtu, ia->ia_ifp->if_mtu);
+		} else {
 			if (ia != NULL)
 				mtu = ia->ia_ifp->if_mtu;
 			else

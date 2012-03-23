@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/net/bpf.c,v 1.3 2008/12/03 00:26:54 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@
  *
  *      @(#)bpf.c	8.4 (Berkeley) 1/9/95
  *
- * $FreeBSD: src/sys/net/bpf.c,v 1.181.2.1 2007/10/20 15:09:24 csjp Exp $
+ * $FreeBSD: src/sys/net/bpf.c,v 1.181.2.9.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_bpf.h"
@@ -86,8 +85,6 @@ static MALLOC_DEFINE(M_BPF, "BPF", "BPF data");
 
 #define PRINET  26			/* interruptible */
 
-#define	M_SKIP_BPF	M_SKIP_FIREWALL
-
 /*
  * bpf_iflist is a list of BPF interface structures, each corresponding to a
  * specific DLT.  The same network interface might have several BPF interface
@@ -132,7 +129,7 @@ SYSCTL_INT(_net_bpf, OID_AUTO, maxbufsize, CTLFLAG_RW,
 static int bpf_maxinsns = BPF_MAXINSNS;
 SYSCTL_INT(_net_bpf, OID_AUTO, maxinsns, CTLFLAG_RW,
     &bpf_maxinsns, 0, "Maximum bpf program instructions");
-SYSCTL_NODE(_net_bpf, OID_AUTO, stats, CTLFLAG_MPSAFE|CTLFLAG_RW,
+SYSCTL_NODE(_net_bpf, OID_AUTO, stats, CTLFLAG_RW,
     bpf_stats_sysctl, "bpf statistics portal");
 
 static	d_open_t	bpfopen;
@@ -145,6 +142,7 @@ static	d_kqfilter_t	bpfkqfilter;
 
 static struct cdevsw bpf_cdevsw = {
 	.d_version =	D_VERSION,
+	.d_flags =	D_TRACKCLOSE,
 	.d_open =	bpfopen,
 	.d_close =	bpfclose,
 	.d_read =	bpfread,
@@ -246,14 +244,19 @@ bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
 	if (len - hlen > ifp->if_mtu)
 		return (EMSGSIZE);
 
-	if ((unsigned)len > MCLBYTES)
+	if ((unsigned)len > MJUM16BYTES)
 		return (EIO);
 
-	if (len > MHLEN) {
-		m = m_getcl(M_TRYWAIT, MT_DATA, M_PKTHDR);
-	} else {
+	if (len <= MHLEN)
 		MGETHDR(m, M_TRYWAIT, MT_DATA);
-	}
+	else if (len <= MCLBYTES)
+		m = m_getcl(M_TRYWAIT, MT_DATA, M_PKTHDR);
+	else
+		m = m_getjcl(M_TRYWAIT, MT_DATA, M_PKTHDR,
+#if (MJUMPAGESIZE > MCLBYTES)
+		    len <= MJUMPAGESIZE ? MJUMPAGESIZE :
+#endif
+		    (len <= MJUM9BYTES ? MJUM9BYTES : MJUM16BYTES));
 	if (m == NULL)
 		return (ENOBUFS);
 	m->m_pkthdr.len = m->m_len = len;
@@ -562,6 +565,10 @@ bpfread(struct cdev *dev, struct uio *uio, int ioflag)
 	 * Move data from hold buffer into user space.
 	 * We know the entire buffer is transferred since
 	 * we checked above that the read buffer is bpf_bufsize bytes.
+	 *
+	 * XXXRW: More synchronization needed here: what if a second thread
+	 * issues a read on the same fd at the same time?  Don't want this
+	 * getting invalidated.
 	 */
 	error = uiomove(d->bd_hbuf, d->bd_hlen, uio);
 
@@ -573,7 +580,6 @@ bpfread(struct cdev *dev, struct uio *uio, int ioflag)
 
 	return (error);
 }
-
 
 /*
  * If there are processes sleeping on this descriptor, wake them up.
@@ -645,9 +651,9 @@ bpfwrite(struct cdev *dev, struct uio *uio, int ioflag)
 		mc = m_dup(m, M_DONTWAIT);
 		if (mc != NULL)
 			mc->m_pkthdr.rcvif = ifp;
-		/* XXX Do not return the same packet twice. */
+		/* Set M_PROMISC for outgoing packets to be discarded. */
 		if (d->bd_direction == BPF_D_INOUT)
-			m->m_flags |= M_SKIP_BPF;
+			m->m_flags |= M_PROMISC;
 	} else
 		mc = NULL;
 
@@ -700,8 +706,9 @@ reset_d(struct bpf_d *d)
  *  FIONREAD		Check for read packet available.
  *  SIOCGIFADDR		Get interface address - convenient hook to driver.
  *  BIOCGBLEN		Get buffer len [for read()].
- *  BIOCSETF		Set ethernet read filter.
- *  BIOCSETWF		Set ethernet write filter.
+ *  BIOCSETF		Set read filter.
+ *  BIOCSETFNR		Set read filter without resetting descriptor.
+ *  BIOCSETWF		Set write filter.
  *  BIOCFLUSH		Flush read packet buffer.
  *  BIOCPROMISC		Put interface into promiscuous mode.
  *  BIOCGDLT		Get link layer type.
@@ -824,6 +831,7 @@ bpfioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags,
 	 * Set link layer read filter.
 	 */
 	case BIOCSETF:
+	case BIOCSETFNR:
 	case BIOCSETWF:
 		error = bpf_setf(d, (struct bpf_program *)addr, cmd);
 		break;
@@ -1093,8 +1101,9 @@ bpf_setf(struct bpf_d *d, struct bpf_program *fp, u_long cmd)
 #ifdef BPF_JITTER
 			d->bd_bfilter = NULL;
 #endif
+			if (cmd == BIOCSETF)
+				reset_d(d);
 		}
-		reset_d(d);
 		BPFD_UNLOCK(d);
 		if (old != NULL)
 			free((caddr_t)old, M_BPF);
@@ -1120,8 +1129,9 @@ bpf_setf(struct bpf_d *d, struct bpf_program *fp, u_long cmd)
 #ifdef BPF_JITTER
 			d->bd_bfilter = bpf_jitter(fcode, flen);
 #endif
+			if (cmd == BIOCSETF)
+				reset_d(d);
 		}
-		reset_d(d);
 		BPFD_UNLOCK(d);
 		if (old != NULL)
 			free((caddr_t)old, M_BPF);
@@ -1333,9 +1343,9 @@ bpf_mcopy(const void *src_arg, void *dst_arg, size_t len)
 	}
 }
 
-#define	BPF_CHECK_DIRECTION(d, m) \
-	if (((d)->bd_direction == BPF_D_IN && (m)->m_pkthdr.rcvif == NULL) || \
-	    ((d)->bd_direction == BPF_D_OUT && (m)->m_pkthdr.rcvif != NULL))
+#define	BPF_CHECK_DIRECTION(d, r, i)				\
+	    (((d)->bd_direction == BPF_D_IN && (r) != (i)) ||	\
+	    ((d)->bd_direction == BPF_D_OUT && (r) == (i)))
 
 /*
  * Incoming linkage from device drivers, when packet is in an mbuf chain.
@@ -1348,8 +1358,9 @@ bpf_mtap(struct bpf_if *bp, struct mbuf *m)
 	int gottime;
 	struct timeval tv;
 
-	if (m->m_flags & M_SKIP_BPF) {
-		m->m_flags &= ~M_SKIP_BPF;
+	/* Skip outgoing duplicate packets. */
+	if ((m->m_flags & M_PROMISC) != 0 && m->m_pkthdr.rcvif == NULL) {
+		m->m_flags &= ~M_PROMISC;
 		return;
 	}
 
@@ -1359,7 +1370,7 @@ bpf_mtap(struct bpf_if *bp, struct mbuf *m)
 
 	BPFIF_LOCK(bp);
 	LIST_FOREACH(d, &bp->bif_dlist, bd_next) {
-		BPF_CHECK_DIRECTION(d, m)
+		if (BPF_CHECK_DIRECTION(d, m->m_pkthdr.rcvif, bp->bif_ifp))
 			continue;
 		BPFD_LOCK(d);
 		++d->bd_rcount;
@@ -1402,8 +1413,9 @@ bpf_mtap2(struct bpf_if *bp, void *data, u_int dlen, struct mbuf *m)
 	int gottime;
 	struct timeval tv;
 
-	if (m->m_flags & M_SKIP_BPF) {
-		m->m_flags &= ~M_SKIP_BPF;
+	/* Skip outgoing duplicate packets. */
+	if ((m->m_flags & M_PROMISC) != 0 && m->m_pkthdr.rcvif == NULL) {
+		m->m_flags &= ~M_PROMISC;
 		return;
 	}
 
@@ -1422,7 +1434,7 @@ bpf_mtap2(struct bpf_if *bp, void *data, u_int dlen, struct mbuf *m)
 
 	BPFIF_LOCK(bp);
 	LIST_FOREACH(d, &bp->bif_dlist, bd_next) {
-		BPF_CHECK_DIRECTION(d, m)
+		if (BPF_CHECK_DIRECTION(d, m->m_pkthdr.rcvif, bp->bif_ifp))
 			continue;
 		BPFD_LOCK(d);
 		++d->bd_rcount;
@@ -1823,7 +1835,7 @@ bpf_stats_sysctl(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-SYSINIT(bpfdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE,bpf_drvinit,NULL)
+SYSINIT(bpfdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE,bpf_drvinit,NULL);
 
 #else /* !DEV_BPF && !NETGRAPH_BPF */
 /*

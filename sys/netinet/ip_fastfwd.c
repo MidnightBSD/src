@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Andre Oppermann, Internet Business Solutions AG
  * All rights reserved.
@@ -75,7 +74,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_fastfwd.c,v 1.41 2007/10/07 20:44:23 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/ip_fastfwd.c,v 1.41.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ipfw.h"
 #include "opt_ipstealth.h"
@@ -124,7 +123,7 @@ ip_findroute(struct route *ro, struct in_addr dest, struct mbuf *m)
 	dst->sin_family = AF_INET;
 	dst->sin_len = sizeof(*dst);
 	dst->sin_addr.s_addr = dest.s_addr;
-	rtalloc_ign(ro, RTF_CLONING);
+	in_rtalloc_ign(ro, RTF_CLONING, M_GETFIB(m));
 
 	/*
 	 * Route there and interface still up?

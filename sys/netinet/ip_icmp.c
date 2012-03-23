@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_icmp.c,v 1.118 2007/10/07 20:44:23 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/ip_icmp.c,v 1.118.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ipsec.h"
 #include "opt_mac.h"
@@ -228,6 +227,10 @@ stdreply:	icmpelen = max(8, min(icmp_quotelen, oip->ip_len - oiphlen));
 	m_align(m, ICMP_MINLEN + icmplen);
 	m->m_len = ICMP_MINLEN + icmplen;
 
+	/* XXX MRT  make the outgoing packet use the same FIB
+	 * that was associated with the incoming packet
+	 */
+	M_SETFIB(m, M_GETFIB(n));
 	icp = mtod(m, struct icmp *);
 	icmpstat.icps_outhist[type]++;
 	icp->icmp_type = type;
@@ -296,6 +299,7 @@ icmp_input(struct mbuf *m, int off)
 	int icmplen = ip->ip_len;
 	int i, code;
 	void (*ctlfunc)(int, struct sockaddr *, void *);
+	int fibnum;
 
 	/*
 	 * Locate icmp structure in mbuf, and check
@@ -577,10 +581,12 @@ reflect:
 		}
 #endif
 		icmpsrc.sin_addr = icp->icmp_ip.ip_dst;
-		rtredirect((struct sockaddr *)&icmpsrc,
-		  (struct sockaddr *)&icmpdst,
-		  (struct sockaddr *)0, RTF_GATEWAY | RTF_HOST,
-		  (struct sockaddr *)&icmpgw);
+		for ( fibnum = 0; fibnum < rt_numfibs; fibnum++) {
+			in_rtredirect((struct sockaddr *)&icmpsrc,
+			  (struct sockaddr *)&icmpdst,
+			  (struct sockaddr *)0, RTF_GATEWAY | RTF_HOST,
+			  (struct sockaddr *)&icmpgw, fibnum);
+		}
 		pfctlinput(PRC_REDIRECT_HOST, (struct sockaddr *)&icmpsrc);
 #ifdef IPSEC
 		key_sa_routechange((struct sockaddr *)&icmpsrc);
@@ -623,13 +629,14 @@ icmp_reflect(struct mbuf *m)
 	struct mbuf *opts = 0;
 	int optlen = (ip->ip_hl << 2) - sizeof(struct ip);
 
-	if (!in_canforward(ip->ip_src) &&
-	    ((ntohl(ip->ip_src.s_addr) & IN_CLASSA_NET) !=
-	     (IN_LOOPBACKNET << IN_CLASSA_NSHIFT))) {
+	if (IN_MULTICAST(ntohl(ip->ip_src.s_addr)) ||
+	    IN_EXPERIMENTAL(ntohl(ip->ip_src.s_addr)) ||
+	    IN_ZERONET(ntohl(ip->ip_src.s_addr)) ) {
 		m_freem(m);	/* Bad return address */
 		icmpstat.icps_badaddr++;
 		goto done;	/* Ip_output() will check for broadcast */
 	}
+
 	t = ip->ip_dst;
 	ip->ip_dst = ip->ip_src;
 
@@ -692,7 +699,7 @@ icmp_reflect(struct mbuf *m)
 	 * When we don't have a route back to the packet source, stop here
 	 * and drop the packet.
 	 */
-	ia = ip_rtaddr(ip->ip_dst);
+	ia = ip_rtaddr(ip->ip_dst, M_GETFIB(m));
 	if (ia == NULL) {
 		m_freem(m);
 		icmpstat.icps_noroute++;

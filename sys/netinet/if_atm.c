@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: if_atm.c,v 1.6 1996/10/13 02:03:01 christos Exp $       */
 
 /*-
@@ -33,7 +32,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/if_atm.c,v 1.21 2005/08/26 15:27:18 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/if_atm.c,v 1.21.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * IP <=> ATM address resolution.
@@ -328,7 +327,7 @@ atmresolve(struct rtentry *rt, struct mbuf *m, struct sockaddr *dst,
 	}
 
 	if (rt == NULL) {
-		rt = RTALLOC1(dst, 0);
+		rt = RTALLOC1(dst, 0); /* link level on table 0 XXX MRT */
 		if (rt == NULL)
 			goto bad;	/* failed */
 		RT_REMREF(rt);		/* don't keep LL references */

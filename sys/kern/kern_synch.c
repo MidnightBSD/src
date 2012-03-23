@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_synch.c,v 1.302 2007/10/08 23:40:40 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_synch.c,v 1.302.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ktrace.h"
 
@@ -65,7 +65,8 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_synch.c,v 1.302 2007/10/08 23:40:40 jeff E
 #include <machine/cpu.h>
 
 static void synch_setup(void *dummy);
-SYSINIT(synch_setup, SI_SUB_KICK_SCHEDULER, SI_ORDER_FIRST, synch_setup, NULL)
+SYSINIT(synch_setup, SI_SUB_KICK_SCHEDULER, SI_ORDER_FIRST, synch_setup,
+    NULL);
 
 int	hogticks;
 int	lbolt;
@@ -117,11 +118,8 @@ sleepinit(void)
  * flag the lock is not re-locked before returning.
  */
 int
-_sleep(ident, lock, priority, wmesg, timo)
-	void *ident;
-	struct lock_object *lock;
-	int priority, timo;
-	const char *wmesg;
+_sleep(void *ident, struct lock_object *lock, int priority,
+    const char *wmesg, int timo)
 {
 	struct thread *td;
 	struct proc *p;
@@ -241,11 +239,7 @@ _sleep(ident, lock, priority, wmesg, timo)
 }
 
 int
-msleep_spin(ident, mtx, wmesg, timo)
-	void *ident;
-	struct mtx *mtx;
-	const char *wmesg;
-	int timo;
+msleep_spin(void *ident, struct mtx *mtx, const char *wmesg, int timo)
 {
 	struct thread *td;
 	struct proc *p;
@@ -329,9 +323,7 @@ msleep_spin(ident, mtx, wmesg, timo)
  * implemented using a dummy wait channel.
  */
 int
-pause(wmesg, timo)
-	const char *wmesg;
-	int timo;
+pause(const char *wmesg, int timo)
 {
 
 	KASSERT(timo != 0, ("pause: timeout required"));
@@ -342,12 +334,14 @@ pause(wmesg, timo)
  * Make all threads sleeping on the specified identifier runnable.
  */
 void
-wakeup(ident)
-	register void *ident;
+wakeup(void *ident)
 {
+	int wakeup_swapper;
 
 	sleepq_lock(ident);
-	sleepq_broadcast(ident, SLEEPQ_SLEEP, -1, 0);
+	wakeup_swapper = sleepq_broadcast(ident, SLEEPQ_SLEEP, -1, 0);
+	if (wakeup_swapper)
+		kick_proc0();
 }
 
 /*
@@ -356,13 +350,15 @@ wakeup(ident)
  * swapped out.
  */
 void
-wakeup_one(ident)
-	register void *ident;
+wakeup_one(void *ident)
 {
+	int wakeup_swapper;
 
 	sleepq_lock(ident);
-	sleepq_signal(ident, SLEEPQ_SLEEP, -1, 0);
+	wakeup_swapper = sleepq_signal(ident, SLEEPQ_SLEEP, -1, 0);
 	sleepq_release(ident);
+	if (wakeup_swapper)
+		kick_proc0();
 }
 
 /*
@@ -371,7 +367,7 @@ wakeup_one(ident)
 void
 mi_switch(int flags, struct thread *newtd)
 {
-	uint64_t new_switchtime;
+	uint64_t runtime, new_switchtime;
 	struct thread *td;
 	struct proc *p;
 
@@ -409,7 +405,9 @@ mi_switch(int flags, struct thread *newtd)
 	 * thread was running, and add that to its total so far.
 	 */
 	new_switchtime = cpu_ticks();
-	td->td_runtime += new_switchtime - PCPU_GET(switchtime);
+	runtime = new_switchtime - PCPU_GET(switchtime);
+	td->td_runtime += runtime;
+	td->td_incruntime += runtime;
 	PCPU_SET(switchtime, new_switchtime);
 	td->td_generation++;	/* bump preempt-detect counter */
 	PCPU_INC(cnt.v_swtch);
@@ -456,11 +454,11 @@ mi_switch(int flags, struct thread *newtd)
 }
 
 /*
- * Change process state to be runnable,
- * placing it on the run queue if it is in memory,
- * and awakening the swapper if it isn't in memory.
+ * Change thread state to be runnable, placing it on the run queue if
+ * it is in memory.  If it is swapped out, return true so our caller
+ * will know to awaken the swapper.
  */
-void
+int
 setrunnable(struct thread *td)
 {
 
@@ -470,15 +468,15 @@ setrunnable(struct thread *td)
 	switch (td->td_state) {
 	case TDS_RUNNING:
 	case TDS_RUNQ:
-		return;
+		return (0);
 	case TDS_INHIBITED:
 		/*
 		 * If we are only inhibited because we are swapped out
 		 * then arange to swap in this process. Otherwise just return.
 		 */
 		if (td->td_inhibitors != TDI_SWAPPED)
-			return;
-		/* XXX: intentional fall-through ? */
+			return (0);
+		/* FALLTHROUGH */
 	case TDS_CAN_RUN:
 		break;
 	default:
@@ -488,15 +486,11 @@ setrunnable(struct thread *td)
 	if ((td->td_flags & TDF_INMEM) == 0) {
 		if ((td->td_flags & TDF_SWAPINREQ) == 0) {
 			td->td_flags |= TDF_SWAPINREQ;
-			/*
-			 * due to a LOR between the thread lock and
-			 * the sleepqueue chain locks, use
-			 * lower level scheduling functions.
-			 */
-			kick_proc0();
+			return (1);
 		}
 	} else
 		sched_wakeup(td);
+	return (0);
 }
 
 /*
@@ -536,8 +530,7 @@ lboltcb(void *arg)
 
 /* ARGSUSED */
 static void
-synch_setup(dummy)
-	void *dummy;
+synch_setup(void *dummy)
 {
 	callout_init(&loadav_callout, CALLOUT_MPSAFE);
 	callout_init(&lbolt_callout, CALLOUT_MPSAFE);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -29,7 +28,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.33 2007/09/18 15:16:38 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.33.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
 /*
@@ -40,6 +39,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.33 2007/09/18 15:16:38 rrs
 #include "opt_inet6.h"
 #include "opt_inet.h"
 #include "opt_sctp.h"
+
 #include <sys/param.h>
 #include <sys/ktr.h>
 #include <sys/systm.h>
@@ -61,6 +61,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.33 2007/09/18 15:16:38 rrs
 #include <sys/random.h>
 #include <sys/limits.h>
 #include <sys/queue.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
+#include <sys/vimage.h>
+#endif
 #include <machine/cpu.h>
 
 #include <net/if.h>
@@ -133,7 +136,34 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTP_CTR6 CTR6
 #endif
 
+#define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
+#define SCTP_BASE_STATS system_base_info.sctpstat
+#define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
+#define SCTP_BASE_SYSCTL(__m) system_base_info.sctpsysctl.__m
+#define SCTP_BASE_VAR(__m) system_base_info.__m
 
+/*
+ * Macros to expand out globals defined by various modules
+ * to either a real global or a virtualized instance of one,
+ * depending on whether VIMAGE is defined.
+ */
+/* first define modules that supply us information */
+#define MOD_NET net
+#define MOD_INET inet
+#define MOD_INET6 inet6
+#define MOD_IPSEC ipsec
+
+/* then define the macro(s) that hook into the vimage macros */
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800044 && defined(VIMAGE)
+#if 0
+#define VSYMNAME(__MODULE) vnet_ ## __MODULE
+#define MODULE_GLOBAL(__MODULE, __SYMBOL) VSYM(VSYMNAME(__MODULE), __SYMBOL)
+#else
+#define MODULE_GLOBAL(__MODULE, __SYMBOL) V_ ## __SYMBOL
+#endif
+#else
+#define MODULE_GLOBAL(__MODULE, __SYMBOL) (__SYMBOL)
+#endif
 /*
  *
  */
@@ -144,7 +174,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTPDBG(level, params...)					\
 {									\
     do {								\
-	if (sctp_debug_on & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
 	    printf(params);						\
 	}								\
     } while (0);							\
@@ -152,7 +182,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
     do {								\
-	if (sctp_debug_on & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
 	    sctp_print_address(addr);					\
 	}								\
     } while (0);							\
@@ -160,7 +190,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTPDBG_PKT(level, iph, sh)					\
 {									\
     do {								\
-	    if (sctp_debug_on & level) {				\
+	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {		\
 		    sctp_print_address_pkt(iph, sh);			\
 	    }								\
     } while (0);							\
@@ -173,16 +203,16 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTP_PRINTF(params...)	printf(params)
 
 #ifdef SCTP_LTRACE_CHUNKS
-#define SCTP_LTRACE_CHK(a, b, c, d) if(sctp_logging_level & SCTP_LTRACE_CHUNK_ENABLE) CTR6(KTR_SUBSYS, "SCTP:%d[%d]:%x-%x-%x-%x", SCTP_LOG_CHUNK_PROC, 0, a, b, c, d)
+#define SCTP_LTRACE_CHK(a, b, c, d) if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_CHUNK_ENABLE) CTR6(KTR_SUBSYS, "SCTP:%d[%d]:%x-%x-%x-%x", SCTP_LOG_CHUNK_PROC, 0, a, b, c, d)
 #else
 #define SCTP_LTRACE_CHK(a, b, c, d)
 #endif
 
 #ifdef SCTP_LTRACE_ERRORS
-#define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err) if(sctp_logging_level & SCTP_LTRACE_ERROR_ENABLE) \
+#define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err) if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_ERROR_ENABLE) \
                                                          printf("mbuf:%p inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
 								     m, inp, stcb, net, file, __LINE__, err);
-#define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err) if(sctp_logging_level & SCTP_LTRACE_ERROR_ENABLE) \
+#define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err) if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_ERROR_ENABLE) \
                                                           printf("inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
 								     inp, stcb, net, file, __LINE__, err);
 #else
@@ -203,6 +233,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define	SCTP_INIT_VRF_TABLEID(vrf)
 
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
+#define SCTP_ROUTE_IS_REAL_LOOP(ro) ((ro)->ro_rt && (ro)->ro_rt->rt_ifa && (ro)->ro_rt->rt_ifa->ifa_ifp && (ro)->ro_rt->rt_ifa->ifa_ifp->if_type == IFT_LOOP)
 
 /*
  * Access to IFN's to help with src-addr-selection
@@ -235,6 +266,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
  * zone allocation functions
  */
 #include <vm/uma.h>
+
 /* SCTP_ZONE_INIT: initialize the zone */
 typedef struct uma_zone *sctp_zone_t;
 
@@ -245,6 +277,8 @@ typedef struct uma_zone *sctp_zone_t;
 	uma_zone_set_max(zone, number); \
 }
 
+#define SCTP_ZONE_DESTROY(zone) uma_zdestroy(zone)
+
 /* SCTP_ZONE_GET: allocate element from the zone */
 #define SCTP_ZONE_GET(zone, type) \
 	(type *)uma_zalloc(zone, M_NOWAIT);
@@ -252,6 +286,7 @@ typedef struct uma_zone *sctp_zone_t;
 /* SCTP_ZONE_FREE: free element from the zone */
 #define SCTP_ZONE_FREE(zone, element) \
 	uma_zfree(zone, element);
+
 #define SCTP_HASH_INIT(size, hashmark) hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
 #define SCTP_HASH_FREE(table, hashmark) hashdestroy(table, M_PCB, hashmark)
 
@@ -263,6 +298,7 @@ typedef struct uma_zone *sctp_zone_t;
 #include <sys/callout.h>
 typedef struct callout sctp_os_timer_t;
 
+
 #define SCTP_OS_TIMER_INIT(tmr)	callout_init(tmr, 1)
 #define SCTP_OS_TIMER_START	callout_reset
 #define SCTP_OS_TIMER_STOP	callout_stop
@@ -273,8 +309,6 @@ typedef struct callout sctp_os_timer_t;
 
 #define sctp_get_tick_count() (ticks)
 
-/* The packed define for 64 bit platforms */
-#define SCTP_PACKED __attribute__((packed))
 #define SCTP_UNUSED __attribute__((unused))
 
 /*
@@ -345,6 +379,10 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
+#define SCTP_ENABLE_UDP_CSUM(m) do { \
+					m->m_pkthdr.csum_flags = CSUM_UDP; \
+					m->m_pkthdr.csum_data = offsetof(struct udphdr, uh_sum); \
+				} while (0)
 
 #define SCTP_GET_PKT_VRFID(m, vrf_id)  ((vrf_id = SCTP_DEFAULT_VRFID) != SCTP_DEFAULT_VRFID)
 

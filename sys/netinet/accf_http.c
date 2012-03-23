@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Paycounter, Inc.
  * Author: Alfred Perlstein <alfred@paycounter.com>, <alfred@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/accf_http.c,v 1.17 2007/10/07 20:44:22 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/accf_http.c,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #define ACCEPT_FILTER_MOD
 

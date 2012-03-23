@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_arp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_arp.h,v 1.24 2005/11/11 16:04:48 ru Exp $
+ * $FreeBSD: src/sys/net/if_arp.h,v 1.24.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_IF_ARP_H_

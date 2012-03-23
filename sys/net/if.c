@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.c	8.5 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/net/if.c,v 1.273 2007/07/27 11:59:57 rwatson Exp $
+ * $FreeBSD: src/sys/net/if.c,v 1.273.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_compat.h"
@@ -136,7 +135,6 @@ extern void	nd6_setmtu(struct ifnet *);
 #endif
 
 int	if_index = 0;
-struct	ifindex_entry *ifindex_table = NULL;
 int	ifqmaxlen = IFQ_MAXLEN;
 struct	ifnethead ifnet;	/* depend on static init XXX */
 struct	ifgrouphead ifg_head;
@@ -147,6 +145,11 @@ static	if_com_free_t *if_com_free[256];
 static int	if_indexlim = 8;
 static struct	knlist ifklist;
 
+/*
+ * Table of ifnet/cdev by index.  Locked with ifnet_lock.
+ */
+static struct ifindex_entry *ifindex_table = NULL;
+
 static void	filt_netdetach(struct knote *kn);
 static int	filt_netdev(struct knote *kn, long hint);
 
@@ -156,12 +159,63 @@ static struct filterops netdev_filtops =
 /*
  * System initialization
  */
-SYSINIT(interfaces, SI_SUB_INIT_IF, SI_ORDER_FIRST, if_init, NULL)
-SYSINIT(interface_check, SI_SUB_PROTO_IF, SI_ORDER_FIRST, if_check, NULL)
+SYSINIT(interfaces, SI_SUB_INIT_IF, SI_ORDER_FIRST, if_init, NULL);
+SYSINIT(interface_check, SI_SUB_PROTO_IF, SI_ORDER_FIRST, if_check, NULL);
 
 MALLOC_DEFINE(M_IFNET, "ifnet", "interface internals");
 MALLOC_DEFINE(M_IFADDR, "ifaddr", "interface address");
 MALLOC_DEFINE(M_IFMADDR, "ether_multi", "link-level multicast address");
+
+struct ifnet *
+ifnet_byindex(u_short idx)
+{
+	struct ifnet *ifp;
+
+	IFNET_RLOCK();
+	ifp = ifindex_table[idx].ife_ifnet;
+	IFNET_RUNLOCK();
+	return (ifp);
+}
+
+static void
+ifnet_setbyindex(u_short idx, struct ifnet *ifp)
+{
+
+	IFNET_WLOCK_ASSERT();
+
+	ifindex_table[idx].ife_ifnet = ifp;
+}
+
+struct ifaddr *
+ifaddr_byindex(u_short idx)
+{
+	struct ifaddr *ifa;
+
+	IFNET_RLOCK();
+	ifa = ifnet_byindex(idx)->if_addr;
+	IFNET_RUNLOCK();
+	return (ifa);
+}
+
+struct cdev *
+ifdev_byindex(u_short idx)
+{
+	struct cdev *cdev;
+
+	IFNET_RLOCK();
+	cdev = ifindex_table[idx].ife_dev;
+	IFNET_RUNLOCK();
+	return (cdev);
+}
+
+static void
+ifdev_setbyindex(u_short idx, struct cdev *cdev)
+{
+
+	IFNET_WLOCK();
+	ifindex_table[idx].ife_dev = cdev;
+	IFNET_WUNLOCK();
+}
 
 static d_open_t		netopen;
 static d_close_t	netclose;
@@ -301,8 +355,8 @@ if_init(void *dummy __unused)
 	TAILQ_INIT(&ifg_head);
 	knlist_init(&ifklist, NULL, NULL, NULL, NULL);
 	if_grow();				/* create initial table */
-	ifdev_byindex(0) = make_dev(&net_cdevsw, 0,
-	    UID_ROOT, GID_WHEEL, 0600, "network");
+	ifdev_setbyindex(0, make_dev(&net_cdevsw, 0, UID_ROOT, GID_WHEEL,
+	    0600, "network"));
 	if_clone_init();
 }
 
@@ -379,7 +433,6 @@ if_alloc(u_char type)
 		if_index = ifp->if_index;
 	if (if_index >= if_indexlim)
 		if_grow();
-	ifnet_byindex(ifp->if_index) = ifp;
 
 	ifp->if_type = type;
 
@@ -390,6 +443,9 @@ if_alloc(u_char type)
 			return (NULL);
 		}
 	}
+	IFNET_WLOCK();
+	ifnet_setbyindex(ifp->if_index, ifp);
+	IFNET_WUNLOCK();
 	IF_ADDR_LOCK_INIT(ifp);
 
 	return (ifp);
@@ -423,17 +479,18 @@ if_free_type(struct ifnet *ifp, u_char type)
 		return;
 	}
 
-	IF_ADDR_LOCK_DESTROY(ifp);
-
-	ifnet_byindex(ifp->if_index) = NULL;
+	IFNET_WLOCK();
+	ifnet_setbyindex(ifp->if_index, NULL);
 
 	/* XXX: should be locked with if_findindex() */
 	while (if_index > 0 && ifnet_byindex(if_index) == NULL)
 		if_index--;
+	IFNET_WUNLOCK();
 
 	if (if_com_free[type] != NULL)
 		if_com_free[type](ifp->if_l2com, type);
 
+	IF_ADDR_LOCK_DESTROY(ifp);
 	free(ifp, M_IFNET);
 };
 
@@ -483,10 +540,9 @@ if_attach(struct ifnet *ifp)
 	mac_create_ifnet(ifp);
 #endif
 
-	ifdev_byindex(ifp->if_index) = make_dev(&net_cdevsw,
-	    unit2minor(ifp->if_index),
-	    UID_ROOT, GID_WHEEL, 0600, "%s/%s",
-	    net_cdevsw.d_name, ifp->if_xname);
+	ifdev_setbyindex(ifp->if_index, make_dev(&net_cdevsw,
+	    unit2minor(ifp->if_index), UID_ROOT, GID_WHEEL, 0600, "%s/%s",
+	    net_cdevsw.d_name, ifp->if_xname));
 	make_dev_alias(ifdev_byindex(ifp->if_index), "%s%d",
 	    net_cdevsw.d_name, ifp->if_index);
 
@@ -547,7 +603,11 @@ if_attach(struct ifnet *ifp)
 	rt_ifannouncemsg(ifp, IFAN_ARRIVAL);
 
 	if (ifp->if_watchdog != NULL)
-		if_printf(ifp, "using obsoleted if_watchdog interface\n");
+		if_printf(ifp,
+		    "WARNING: using obsoleted if_watchdog interface\n");
+	if (ifp->if_flags & IFF_NEEDSGIANT)
+		if_printf(ifp,
+		    "WARNING: using obsoleted IFF_NEEDSGIANT flag\n");
 }
 
 static void
@@ -722,7 +782,7 @@ if_detach(struct ifnet *ifp)
 	 */
 	ifp->if_addr = NULL;
 	destroy_dev(ifdev_byindex(ifp->if_index));
-	ifdev_byindex(ifp->if_index) = NULL;
+	ifdev_setbyindex(ifp->if_index, NULL);	
 
 	/* We can now free link ifaddr. */
 	if (!TAILQ_EMPTY(&ifp->if_addrhead)) {
@@ -738,11 +798,14 @@ if_detach(struct ifnet *ifp)
 	 * to this interface...oh well...
 	 */
 	for (i = 1; i <= AF_MAX; i++) {
-		if ((rnh = rt_tables[i]) == NULL)
+	    int j;
+	    for (j = 0; j < rt_numfibs; j++) {
+		if ((rnh = rt_tables[j][i]) == NULL)
 			continue;
 		RADIX_NODE_HEAD_LOCK(rnh);
 		(void) rnh->rnh_walktree(rnh, if_rtdel, ifp);
 		RADIX_NODE_HEAD_UNLOCK(rnh);
+	    }
 	}
 
 	/* Announce that the interface is gone. */
@@ -1008,9 +1071,9 @@ if_rtdel(struct radix_node *rn, void *arg)
 		if ((rt->rt_flags & RTF_UP) == 0)
 			return (0);
 
-		err = rtrequest(RTM_DELETE, rt_key(rt), rt->rt_gateway,
+		err = rtrequest_fib(RTM_DELETE, rt_key(rt), rt->rt_gateway,
 				rt_mask(rt), rt->rt_flags,
-				(struct rtentry **) NULL);
+				(struct rtentry **) NULL, rt->rt_fibnum);
 		if (err) {
 			log(LOG_WARNING, "if_rtdel: error %d\n", err);
 		}
@@ -1109,7 +1172,7 @@ ifa_ifwithdstaddr(struct sockaddr *addr)
 		TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr->sa_family != addr->sa_family)
 				continue;
-			if (ifa->ifa_dstaddr &&
+			if (ifa->ifa_dstaddr != NULL &&
 			    sa_equal(addr, ifa->ifa_dstaddr))
 				goto done;
 		}
@@ -1163,7 +1226,7 @@ next:				continue;
 				 * The trouble is that we don't know the
 				 * netmask for the remote end.
 				 */
-				if (ifa->ifa_dstaddr != 0 &&
+				if (ifa->ifa_dstaddr != NULL &&
 				    sa_equal(addr, ifa->ifa_dstaddr))
 					goto done;
 			} else {

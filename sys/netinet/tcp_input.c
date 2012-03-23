@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/netinet/tcp_input.c,v 1.7 2008/12/03 00:27:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1994, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_input.c,v 1.370 2007/10/07 20:44:23 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/tcp_input.c,v 1.370.2.10.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ipfw.h"		/* for ipfw_fwd	*/
 #include "opt_inet.h"
@@ -454,6 +453,7 @@ findpcb:
 	/*
 	 * If the INPCB does not exist then all data in the incoming
 	 * segment is discarded and an appropriate RST is sent back.
+	 * XXX MRT Send RST using which routing table?
 	 */
 	if (inp == NULL) {
 		/*
@@ -477,7 +477,7 @@ findpcb:
 		rstreason = BANDLIM_RST_CLOSEDPORT;
 		goto dropwithreset;
 	}
-	INP_LOCK(inp);
+	INP_WLOCK(inp);
 
 #ifdef IPSEC
 #ifdef INET6
@@ -534,7 +534,7 @@ findpcb:
 	}
 
 #ifdef MAC
-	INP_LOCK_ASSERT(inp);
+	INP_WLOCK_ASSERT(inp);
 	if (mac_check_inpcb_deliver(inp, m))
 		goto dropunlock;
 #endif
@@ -632,9 +632,9 @@ findpcb:
 			 * Unlock the listen socket, lock the newly
 			 * created socket and update the tp variable.
 			 */
-			INP_UNLOCK(inp);	/* listen socket */
+			INP_WUNLOCK(inp);	/* listen socket */
 			inp = sotoinpcb(so);
-			INP_LOCK(inp);		/* new connection */
+			INP_WLOCK(inp);		/* new connection */
 			tp = intotcpcb(inp);
 			KASSERT(tp->t_state == TCPS_SYN_RECEIVED,
 			    ("%s: ", __func__));
@@ -849,20 +849,28 @@ findpcb:
 
 dropwithreset:
 	INP_INFO_WLOCK_ASSERT(&tcbinfo);
-	tcp_dropwithreset(m, th, tp, tlen, rstreason);
+	INP_INFO_WUNLOCK(&tcbinfo);
+
+	if (inp != NULL) {
+		tcp_dropwithreset(m, th, tp, tlen, rstreason);
+		INP_WUNLOCK(inp);
+	} else
+		tcp_dropwithreset(m, th, NULL, tlen, rstreason);
 	m = NULL;	/* mbuf chain got consumed. */
+	goto drop;
+
 dropunlock:
 	INP_INFO_WLOCK_ASSERT(&tcbinfo);
 	if (inp != NULL)
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 	INP_INFO_WUNLOCK(&tcbinfo);
+
 drop:
 	INP_INFO_UNLOCK_ASSERT(&tcbinfo);
 	if (s != NULL)
 		free(s, M_TCPLOG);
 	if (m != NULL)
 		m_freem(m);
-	return;
 }
 
 static void
@@ -887,7 +895,7 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 	thflags = th->th_flags;
 
 	INP_INFO_WLOCK_ASSERT(&tcbinfo);
-	INP_LOCK_ASSERT(tp->t_inpcb);
+	INP_WLOCK_ASSERT(tp->t_inpcb);
 	KASSERT(tp->t_state > TCPS_LISTEN, ("%s: TCPS_LISTEN",
 	    __func__));
 	KASSERT(tp->t_state != TCPS_TIME_WAIT, ("%s: TCPS_TIME_WAIT",
@@ -1199,7 +1207,7 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 				 */
 				if (newsize)
 					if (!sbreserve_locked(&so->so_rcv,
-					    newsize, so, curthread))
+					    newsize, so, NULL))
 						so->so_rcv.sb_flags &= ~SB_AUTOSIZE;
 				m_adj(m, drop_hdrlen);	/* delayed header drop */
 				sbappendstream_locked(&so->so_rcv, m);
@@ -1287,8 +1295,7 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 				(TF_RCVD_SCALE|TF_REQ_SCALE)) {
 				tp->rcv_scale = tp->request_r_scale;
 			}
-			tp->rcv_adv += imin(tp->rcv_wnd,
-			    TCP_MAXWIN << tp->rcv_scale);
+			tp->rcv_adv += tp->rcv_wnd;
 			tp->snd_una++;		/* SYN is acked */
 			/*
 			 * If there's data, delay ACK; if there's also a FIN
@@ -1332,7 +1339,7 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 
 		KASSERT(headlocked, ("%s: trimthenstep6: head not locked",
 		    __func__));
-		INP_LOCK_ASSERT(tp->t_inpcb);
+		INP_WLOCK_ASSERT(tp->t_inpcb);
 
 		/*
 		 * Advance th->th_seq to correspond to first data byte.
@@ -1940,7 +1947,7 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 process_ACK:
 		KASSERT(headlocked, ("%s: process_ACK: head not locked",
 		    __func__));
-		INP_LOCK_ASSERT(tp->t_inpcb);
+		INP_WLOCK_ASSERT(tp->t_inpcb);
 
 		acked = th->th_ack - tp->snd_una;
 		tcpstat.tcps_rcvackpack++;
@@ -2015,13 +2022,15 @@ process_ACK:
 		 * in flight, open exponentially (maxseg per packet).
 		 * Otherwise open linearly: maxseg per window
 		 * (maxseg^2 / cwnd per packet).
+		 * If cwnd > maxseg^2, fix the cwnd increment at 1 byte
+		 * to avoid capping cwnd (as suggested in RFC2581).
 		 */
 		if ((!tcp_do_newreno && !(tp->t_flags & TF_SACK_PERMIT)) ||
 		    !IN_FASTRECOVERY(tp)) {
 			u_int cw = tp->snd_cwnd;
 			u_int incr = tp->t_maxseg;
 			if (cw > tp->snd_ssthresh)
-				incr = incr * incr / cw;
+				incr = max((incr * incr / cw), 1);
 			tp->snd_cwnd = min(cw+incr, TCP_MAXWIN<<tp->snd_scale);
 		}
 		SOCKBUF_LOCK(&so->so_snd);
@@ -2123,7 +2132,7 @@ process_ACK:
 
 step6:
 	KASSERT(headlocked, ("%s: step6: head not locked", __func__));
-	INP_LOCK_ASSERT(tp->t_inpcb);
+	INP_WLOCK_ASSERT(tp->t_inpcb);
 
 	/*
 	 * Update window information.
@@ -2209,7 +2218,7 @@ step6:
 	}
 dodata:							/* XXX */
 	KASSERT(headlocked, ("%s: dodata: head not locked", __func__));
-	INP_LOCK_ASSERT(tp->t_inpcb);
+	INP_WLOCK_ASSERT(tp->t_inpcb);
 
 	/*
 	 * Process the segment text, merging it into the TCP sequencing queue,
@@ -2352,12 +2361,12 @@ check_delack:
 	KASSERT(headlocked == 0, ("%s: check_delack: head locked",
 	    __func__));
 	INP_INFO_UNLOCK_ASSERT(&tcbinfo);
-	INP_LOCK_ASSERT(tp->t_inpcb);
+	INP_WLOCK_ASSERT(tp->t_inpcb);
 	if (tp->t_flags & TF_DELACK) {
 		tp->t_flags &= ~TF_DELACK;
 		tcp_timer_activate(tp, TT_DELACK, tcp_delacktime);
 	}
-	INP_UNLOCK(tp->t_inpcb);
+	INP_WUNLOCK(tp->t_inpcb);
 	return;
 
 dropafterack:
@@ -2392,19 +2401,19 @@ dropafterack:
 	INP_INFO_WUNLOCK(&tcbinfo);
 	tp->t_flags |= TF_ACKNOW;
 	(void) tcp_output(tp);
-	INP_UNLOCK(tp->t_inpcb);
+	INP_WUNLOCK(tp->t_inpcb);
 	m_freem(m);
 	return;
 
 dropwithreset:
 	KASSERT(headlocked, ("%s: dropwithreset: head not locked", __func__));
+	INP_INFO_WUNLOCK(&tcbinfo);
 
-	tcp_dropwithreset(m, th, tp, tlen, rstreason);
-
-	if (tp != NULL)
-		INP_UNLOCK(tp->t_inpcb);
-	if (headlocked)
-		INP_INFO_WUNLOCK(&tcbinfo);
+	if (tp != NULL) {
+		tcp_dropwithreset(m, th, tp, tlen, rstreason);
+		INP_WUNLOCK(tp->t_inpcb);
+	} else
+		tcp_dropwithreset(m, th, NULL, tlen, rstreason);
 	return;
 
 drop:
@@ -2417,11 +2426,10 @@ drop:
 			  &tcp_savetcp, 0);
 #endif
 	if (tp != NULL)
-		INP_UNLOCK(tp->t_inpcb);
+		INP_WUNLOCK(tp->t_inpcb);
 	if (headlocked)
 		INP_INFO_WUNLOCK(&tcbinfo);
 	m_freem(m);
-	return;
 }
 
 /*
@@ -2437,6 +2445,11 @@ tcp_dropwithreset(struct mbuf *m, struct tcphdr *th, struct tcpcb *tp,
 #ifdef INET6
 	struct ip6_hdr *ip6;
 #endif
+
+	if (tp != NULL) {
+		INP_WLOCK_ASSERT(tp->t_inpcb);
+	}
+
 	/* Don't bother if destination was broadcast/multicast. */
 	if ((th->th_flags & TH_RST) || m->m_flags & (M_BCAST|M_MCAST))
 		goto drop;
@@ -2475,7 +2488,6 @@ tcp_dropwithreset(struct mbuf *m, struct tcphdr *th, struct tcpcb *tp,
 	return;
 drop:
 	m_freem(m);
-	return;
 }
 
 /*
@@ -2586,6 +2598,8 @@ tcp_pulloutofband(struct socket *so, struct tcphdr *th, struct mbuf *m,
 			char *cp = mtod(m, caddr_t) + cnt;
 			struct tcpcb *tp = sototcpcb(so);
 
+			INP_WLOCK_ASSERT(tp->t_inpcb);
+
 			tp->t_iobc = *cp;
 			tp->t_oobflags |= TCPOOB_HAVEDATA;
 			bcopy(cp+1, cp, (unsigned)(m->m_len - cnt - 1));
@@ -2611,7 +2625,7 @@ tcp_xmit_timer(struct tcpcb *tp, int rtt)
 {
 	int delta;
 
-	INP_LOCK_ASSERT(tp->t_inpcb);
+	INP_WLOCK_ASSERT(tp->t_inpcb);
 
 	tcpstat.tcps_rttupdated++;
 	tp->t_rttupdated++;
@@ -2731,6 +2745,8 @@ tcp_mss(struct tcpcb *tp, int offer)
 	const size_t min_protoh = sizeof(struct tcpiphdr);
 #endif
 
+	INP_WLOCK_ASSERT(tp->t_inpcb);
+
 	/* Initialize. */
 #ifdef INET6
 	if (isipv6) {
@@ -2742,7 +2758,6 @@ tcp_mss(struct tcpcb *tp, int offer)
 		maxmtu = tcp_maxmtu(&inp->inp_inc, &mtuflags);
 		tp->t_maxopd = tp->t_maxseg = tcp_mssdflt;
 	}
-	so = inp->inp_socket;
 
 	/*
 	 * No route to sender, stay with default mss and return.
@@ -2755,13 +2770,10 @@ tcp_mss(struct tcpcb *tp, int offer)
 		case 0:
 			/*
 			 * Offer == 0 means that there was no MSS on the SYN
-			 * segment, in this case we use tcp_mssdflt.
+			 * segment, in this case we use tcp_mssdflt as
+			 * already assigned to t_maxopd above.
 			 */
-			offer =
-#ifdef INET6
-				isipv6 ? tcp_v6mssdflt :
-#endif
-				tcp_mssdflt;
+			offer = tp->t_maxopd;
 			break;
 
 		case -1:
@@ -2831,14 +2843,13 @@ tcp_mss(struct tcpcb *tp, int offer)
 	    (origoffer == -1 ||
 	     (tp->t_flags & TF_RCVD_TSTMP) == TF_RCVD_TSTMP))
 		mss -= TCPOLEN_TSTAMP_APPA;
-	tp->t_maxseg = mss;
 
 #if	(MCLBYTES & (MCLBYTES - 1)) == 0
-		if (mss > MCLBYTES)
-			mss &= ~(MCLBYTES-1);
+	if (mss > MCLBYTES)
+		mss &= ~(MCLBYTES-1);
 #else
-		if (mss > MCLBYTES)
-			mss = mss / MCLBYTES * MCLBYTES;
+	if (mss > MCLBYTES)
+		mss = mss / MCLBYTES * MCLBYTES;
 #endif
 	tp->t_maxseg = mss;
 
@@ -2849,6 +2860,7 @@ tcp_mss(struct tcpcb *tp, int offer)
 	 * Make the socket buffers an integral number of mss units;
 	 * if the mss is larger than the socket buffer, decrease the mss.
 	 */
+	so = inp->inp_socket;
 	SOCKBUF_LOCK(&so->so_snd);
 	if ((so->so_snd.sb_hiwat == tcp_sendspace) && metrics.rmx_sendpipe)
 		bufsize = metrics.rmx_sendpipe;
@@ -3002,6 +3014,8 @@ tcp_newreno_partial_ack(struct tcpcb *tp, struct tcphdr *th)
 {
 	tcp_seq onxt = tp->snd_nxt;
 	u_long  ocwnd = tp->snd_cwnd;
+
+	INP_WLOCK_ASSERT(tp->t_inpcb);
 
 	tcp_timer_activate(tp, TT_REXMT, 0);
 	tp->t_rtttime = 0;

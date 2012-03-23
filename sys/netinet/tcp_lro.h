@@ -31,7 +31,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: src/sys/netinet/tcp_lro.h,v 1.1.2.1.6.1 2010/02/10 00:26:20 kensmith Exp $
+$FreeBSD: src/sys/netinet/tcp_lro.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 ***************************************************************************/
 #ifndef _TCP_LRO_H_

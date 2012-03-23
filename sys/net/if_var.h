@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_var.h,v 1.115.2.1 2007/12/07 05:46:08 kmacy Exp $
+ * $FreeBSD: src/sys/net/if_var.h,v 1.115.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_NET_IF_VAR_H_
@@ -637,6 +636,7 @@ extern	struct mtx ifnet_lock;
     mtx_init(&ifnet_lock, "ifnet", NULL, MTX_DEF | MTX_RECURSE)
 #define	IFNET_WLOCK()		mtx_lock(&ifnet_lock)
 #define	IFNET_WUNLOCK()		mtx_unlock(&ifnet_lock)
+#define	IFNET_WLOCK_ASSERT()	mtx_assert(&ifnet_lock, MA_OWNED)
 #define	IFNET_RLOCK()		IFNET_WLOCK()
 #define	IFNET_RUNLOCK()		IFNET_WUNLOCK()
 
@@ -645,17 +645,16 @@ struct ifindex_entry {
 	struct cdev *ife_dev;
 };
 
-#define ifnet_byindex(idx)	ifindex_table[(idx)].ife_ifnet
+struct ifnet	*ifnet_byindex(u_short idx);
 /*
  * Given the index, ifaddr_byindex() returns the one and only
  * link-level ifaddr for the interface. You are not supposed to use
  * it to traverse the list of addresses associated to the interface.
  */
-#define ifaddr_byindex(idx)	ifnet_byindex(idx)->if_addr
-#define ifdev_byindex(idx)	ifindex_table[(idx)].ife_dev
+struct ifaddr	*ifaddr_byindex(u_short idx);
+struct cdev	*ifdev_byindex(u_short idx);
 
 extern	struct ifnethead ifnet;
-extern	struct ifindex_entry *ifindex_table;
 extern	int ifqmaxlen;
 extern	struct ifnet *loif;	/* first loopback interface */
 extern	int if_index;
@@ -690,6 +689,8 @@ struct	ifaddr *ifa_ifwithbroadaddr(struct sockaddr *);
 struct	ifaddr *ifa_ifwithdstaddr(struct sockaddr *);
 struct	ifaddr *ifa_ifwithnet(struct sockaddr *);
 struct	ifaddr *ifa_ifwithroute(int, struct sockaddr *, struct sockaddr *);
+struct	ifaddr *ifa_ifwithroute_fib(int, struct sockaddr *, struct sockaddr *, u_int);
+
 struct	ifaddr *ifaof_ifpforaddr(struct sockaddr *, struct ifnet *);
 
 int	if_simloop(struct ifnet *ifp, struct mbuf *m, int af, int hlen);

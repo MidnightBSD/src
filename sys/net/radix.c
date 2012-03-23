@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/net/radix.c,v 1.3 2008/12/03 00:26:55 laffer1 Exp $ */
 /*-
  * Copyright (c) 1988, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)radix.c	8.5 (Berkeley) 5/19/95
- * $FreeBSD: src/sys/net/radix.c,v 1.38 2006/02/07 20:25:39 qingli Exp $
+ * $FreeBSD: src/sys/net/radix.c,v 1.38.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -565,15 +564,12 @@ rn_lexobetter(m_arg, n_arg)
 	register u_char *mp = m_arg, *np = n_arg, *lim;
 
 	if (LEN(mp) > LEN(np))
-		return 1;
-	if (LEN(mp) < LEN(np))
-		return 0;
-	/*
-	 * Must return the first difference between the masks
-	 * to ensure deterministic sorting.
-	 */
-	lim = mp + LEN(mp);
-	return (memcmp(mp, np, *lim) > 0);
+		return 1;  /* not really, but need to check longer one first */
+	if (LEN(mp) == LEN(np))
+		for (lim = mp + LEN(mp); mp < lim;)
+			if (*mp++ > *np++)
+				return 1;
+	return 0;
 }
 
 static struct radix_mask *

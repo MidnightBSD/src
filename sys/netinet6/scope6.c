@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/scope6.c,v 1.17 2007/07/05 16:23:48 delphij Exp $	*/
-/*	$KAME: scope6.c,v 1.10 2000/07/24 13:29:31 itojun Exp $	*/
-
 /*-
  * Copyright (C) 2000 WIDE Project.
  * All rights reserved.
@@ -29,7 +25,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: scope6.c,v 1.10 2000/07/24 13:29:31 itojun Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/scope6.c,v 1.17.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1999-2000 by Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -32,8 +31,8 @@
  */
 
 /*
- * $FreeBSD: src/sys/net/if_tap.h,v 1.3 2006/09/27 19:57:01 ru Exp $
- * $Id: if_tap.h,v 1.3 2008-12-03 00:26:54 laffer1 Exp $
+ * $FreeBSD: src/sys/net/if_tap.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $Id: if_tap.h,v 1.4 2012-03-23 20:48:39 laffer1 Exp $
  */
 
 #ifndef _NET_IF_TAP_H_

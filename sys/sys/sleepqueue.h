@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/sleepqueue.h,v 1.4 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/sleepqueue.h,v 1.12 2007/03/31 23:23:42 jhb Exp $
+ * $FreeBSD: src/sys/sys/sleepqueue.h,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_SLEEPQUEUE_H_
@@ -91,17 +91,17 @@ struct thread;
 #define	SLEEPQ_INTERRUPTIBLE	0x100		/* Sleep is interruptible. */
 
 void	init_sleepqueues(void);
-void	sleepq_abort(struct thread *td, int intrval);
+int	sleepq_abort(struct thread *td, int intrval);
 void	sleepq_add(void *wchan, struct lock_object *lock, const char *wmesg,
 	    int flags, int queue);
 struct sleepqueue *sleepq_alloc(void);
-void	sleepq_broadcast(void *wchan, int flags, int pri, int queue);
+int	sleepq_broadcast(void *wchan, int flags, int pri, int queue);
 void	sleepq_free(struct sleepqueue *sq);
 void	sleepq_lock(void *wchan);
 struct sleepqueue *sleepq_lookup(void *wchan);
 void	sleepq_release(void *wchan);
 void	sleepq_remove(struct thread *td, void *wchan);
-void	sleepq_signal(void *wchan, int flags, int pri, int queue);
+int	sleepq_signal(void *wchan, int flags, int pri, int queue);
 void	sleepq_set_timeout(void *wchan, int timo);
 int	sleepq_timedwait(void *wchan);
 int	sleepq_timedwait_sig(void *wchan);

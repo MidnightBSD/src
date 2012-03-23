@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_witness.c,v 1.7 2012-02-19 16:58:44 laffer1 Exp $
- *	and BSDI $Id: subr_witness.c,v 1.7 2012-02-19 16:58:44 laffer1 Exp $
+ *	from BSDI $Id: subr_witness.c,v 1.8 2012-03-23 20:48:39 laffer1 Exp $
+ *	and BSDI $Id: subr_witness.c,v 1.8 2012-03-23 20:48:39 laffer1 Exp $
  */
 
 /*
@@ -313,7 +313,7 @@ static struct witness_order_list_entry order_lists[] = {
 	/*
 	 * Multicast - protocol locks before interface locks, after UDP locks.
 	 */
-	{ "udpinp", &lock_class_mtx_sleep },
+	{ "udpinp", &lock_class_rw },
 	{ "in_multi_mtx", &lock_class_mtx_sleep },
 	{ "igmp_mtx", &lock_class_mtx_sleep },
 	{ "if_addr_mtx", &lock_class_mtx_sleep },
@@ -327,15 +327,15 @@ static struct witness_order_list_entry order_lists[] = {
 	/*
 	 * UDP/IP
 	 */
-	{ "udp", &lock_class_mtx_sleep },
-	{ "udpinp", &lock_class_mtx_sleep },
+	{ "udp", &lock_class_rw },
+	{ "udpinp", &lock_class_rw },
 	{ "so_snd", &lock_class_mtx_sleep },
 	{ NULL, NULL },
 	/*
 	 * TCP/IP
 	 */
-	{ "tcp", &lock_class_mtx_sleep },
-	{ "tcpinp", &lock_class_mtx_sleep },
+	{ "tcp", &lock_class_rw },
+	{ "tcpinp", &lock_class_rw },
 	{ "so_snd", &lock_class_mtx_sleep },
 	{ NULL, NULL },
 	/*

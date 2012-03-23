@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ether.h	8.3 (Berkeley) 5/2/95
- * $FreeBSD: src/sys/netinet/if_ether.h,v 1.32 2005/02/22 13:04:03 glebius Exp $
+ * $FreeBSD: src/sys/netinet/if_ether.h,v 1.32.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET_IF_ETHER_H_
@@ -112,6 +111,8 @@ extern u_char	ether_ipmulticast_max[ETHER_ADDR_LEN];
 
 int	arpresolve(struct ifnet *ifp, struct rtentry *rt,
 		struct mbuf *m, struct sockaddr *dst, u_char *desten);
+int	arpresolve2(struct ifnet *ifp, struct rtentry *rt,
+                struct sockaddr *dst, u_char *desten);
 void	arp_ifinit(struct ifnet *, struct ifaddr *);
 void	arp_ifinit2(struct ifnet *, struct ifaddr *, u_char *);
 #endif

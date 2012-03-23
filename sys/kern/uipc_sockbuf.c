@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_sockbuf.c,v 1.171.2.1.2.1 2008/02/02 12:44:13 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_sockbuf.c,v 1.171.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_param.h"
 
@@ -67,7 +68,6 @@ static	u_long sb_efficiency = 8;	/* parameter for sbreserve() */
 
 static void	sbdrop_internal(struct sockbuf *sb, int len);
 static void	sbflush_internal(struct sockbuf *sb);
-static void	sbrelease_internal(struct sockbuf *sb, struct socket *so);
 
 /*
  * Socantsendmore indicates that no more data will be sent on the socket; it
@@ -284,10 +284,11 @@ sbreserve_locked(struct sockbuf *sb, u_long cc, struct socket *so,
 	SOCKBUF_LOCK_ASSERT(sb);
 
 	/*
-	 * td will only be NULL when we're in an interrupt (e.g. in
-	 * tcp_input()).
-	 *
-	 * XXXRW: This comment needs updating, as might the code.
+	 * When a thread is passed, we take into account the thread's socket
+	 * buffer size limit.  The caller will generally pass curthread, but
+	 * in the TCP input path, NULL will be passed to indicate that no
+	 * appropriate thread resource limits are available.  In that case,
+	 * we don't apply a process limit.
 	 */
 	if (cc > sb_max_adj)
 		return (0);
@@ -321,7 +322,7 @@ sbreserve(struct sockbuf *sb, u_long cc, struct socket *so,
 /*
  * Free mbufs held by a socket, and reserved mbuf space.
  */
-static void
+void
 sbrelease_internal(struct sockbuf *sb, struct socket *so)
 {
 

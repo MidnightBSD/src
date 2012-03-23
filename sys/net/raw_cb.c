@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,17 +28,19 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/raw_cb.c,v 1.34 2006/06/02 08:27:15 rwatson Exp $
+ * $FreeBSD: src/sys/net/raw_cb.c,v 1.34.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
 #include <sys/domain.h>
 #include <sys/lock.h>
+#include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
+#include <sys/sysctl.h>
 #include <sys/systm.h>
 
 #include <net/raw_cb.h>
@@ -55,28 +57,34 @@
 struct mtx rawcb_mtx;
 struct rawcb_list_head rawcb_list;
 
-const static u_long	raw_sendspace = RAWSNDQ;
-const static u_long	raw_recvspace = RAWRCVQ;
+SYSCTL_NODE(_net, OID_AUTO, raw, CTLFLAG_RW, 0, "Raw socket infrastructure");
+
+static u_long	raw_sendspace = RAWSNDQ;
+SYSCTL_ULONG(_net_raw, OID_AUTO, sendspace, CTLFLAG_RW, &raw_sendspace, 0,
+    "Default raw socket send space");
+
+static u_long	raw_recvspace = RAWRCVQ;
+SYSCTL_ULONG(_net_raw, OID_AUTO, recvspace, CTLFLAG_RW, &raw_recvspace, 0,
+    "Default raw socket receive space");
 
 /*
- * Allocate a control block and a nominal amount
- * of buffer space for the socket.
+ * Allocate a control block and a nominal amount of buffer space for the
+ * socket.
  */
 int
-raw_attach(so, proto)
-	register struct socket *so;
-	int proto;
+raw_attach(struct socket *so, int proto)
 {
-	register struct rawcb *rp = sotorawcb(so);
+	struct rawcb *rp = sotorawcb(so);
 	int error;
 
 	/*
-	 * It is assumed that raw_attach is called
-	 * after space has been allocated for the
-	 * rawcb.
+	 * It is assumed that raw_attach is called after space has been
+	 * allocated for the rawcb; consumer protocols may simply allocate
+	 * type struct rawcb, or a wrapper data structure that begins with a
+	 * struct rawcb.
 	 */
-	if (rp == 0)
-		return (ENOBUFS);
+	KASSERT(rp != NULL, ("raw_attach: rp == NULL"));
+
 	error = soreserve(so, raw_sendspace, raw_recvspace);
 	if (error)
 		return (error);
@@ -90,12 +98,10 @@ raw_attach(so, proto)
 }
 
 /*
- * Detach the raw connection block and discard
- * socket resources.
+ * Detach the raw connection block and discard socket resources.
  */
 void
-raw_detach(rp)
-	register struct rawcb *rp;
+raw_detach(struct rawcb *rp)
 {
 	struct socket *so = rp->rcb_socket;
 
@@ -105,45 +111,5 @@ raw_detach(rp)
 	mtx_lock(&rawcb_mtx);
 	LIST_REMOVE(rp, list);
 	mtx_unlock(&rawcb_mtx);
-#ifdef notdef
-	if (rp->rcb_laddr)
-		m_freem(dtom(rp->rcb_laddr));
-	rp->rcb_laddr = 0;
-#endif
 	free((caddr_t)(rp), M_PCB);
 }
-
-/*
- * Disconnect raw socket.
- */
-void
-raw_disconnect(rp)
-	struct rawcb *rp;
-{
-
-#ifdef notdef
-	if (rp->rcb_faddr)
-		m_freem(dtom(rp->rcb_faddr));
-	rp->rcb_faddr = 0;
-#endif
-}
-
-#ifdef notdef
-#include <sys/mbuf.h>
-
-int
-raw_bind(so, nam)
-	register struct socket *so;
-	struct mbuf *nam;
-{
-	struct sockaddr *addr = mtod(nam, struct sockaddr *);
-	register struct rawcb *rp;
-
-	if (ifnet == 0)
-		return (EADDRNOTAVAIL);
-	rp = sotorawcb(so);
-	nam = m_copym(nam, 0, M_COPYALL, M_TRYWAIT);
-	rp->rcb_laddr = mtod(nam, struct sockaddr *);
-	return (0);
-}
-#endif

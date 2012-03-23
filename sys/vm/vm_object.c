@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/vm/vm_object.c,v 1.4 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -64,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_object.c,v 1.385.2.1 2007/10/19 05:48:45 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_object.c,v 1.385.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -482,7 +482,10 @@ vm_object_deallocate(vm_object_t object)
 			VM_OBJECT_UNLOCK(object);
 			return;
 		} else if (object->ref_count == 1) {
-			if (object->shadow_count == 0) {
+			if (object->shadow_count == 0 &&
+			    object->handle == NULL &&
+			    (object->type == OBJT_DEFAULT ||
+			     object->type == OBJT_SWAP)) {
 				vm_object_set_flag(object, OBJ_ONEMAPPING);
 			} else if ((object->shadow_count == 1) &&
 			    (object->handle == NULL) &&
@@ -586,6 +589,27 @@ doterm:
 }
 
 /*
+ *	vm_object_destroy removes the object from the global object list
+ *      and frees the space for the object.
+ */
+void
+vm_object_destroy(vm_object_t object)
+{
+
+	/*
+	 * Remove the object from the global object list.
+	 */
+	mtx_lock(&vm_object_list_mtx);
+	TAILQ_REMOVE(&vm_object_list, object, object_list);
+	mtx_unlock(&vm_object_list_mtx);
+
+	/*
+	 * Free the space for the object.
+	 */
+	uma_zfree(obj_zone, object);
+}
+
+/*
  *	vm_object_terminate actually destroys the specified object, freeing
  *	up all previously used resources.
  *
@@ -662,17 +686,7 @@ vm_object_terminate(vm_object_t object)
 	vm_pager_deallocate(object);
 	VM_OBJECT_UNLOCK(object);
 
-	/*
-	 * Remove the object from the global object list.
-	 */
-	mtx_lock(&vm_object_list_mtx);
-	TAILQ_REMOVE(&vm_object_list, object, object_list);
-	mtx_unlock(&vm_object_list_mtx);
-
-	/*
-	 * Free the space for the object.
-	 */
-	uma_zfree(obj_zone, object);
+	vm_object_destroy(object);
 }
 
 /*
@@ -1786,10 +1800,22 @@ vm_object_collapse(vm_object_t object)
 /*
  *	vm_object_page_remove:
  *
- *	Removes all physical pages in the given range from the
- *	object's list of pages.  If the range's end is zero, all
- *	physical pages from the range's start to the end of the object
- *	are deleted.
+ *	For the given object, either frees or invalidates each of the
+ *	specified pages.  In general, a page is freed.  However, if a
+ *	page is wired for any reason other than the existence of a
+ *	managed, wired mapping, then it may be invalidated but not
+ *	removed from the object.  Pages are specified by the given
+ *	range ["start", "end") and Boolean "clean_only".  As a
+ *	special case, if "end" is zero, then the range extends from
+ *	"start" to the end of the object.  If "clean_only" is TRUE,
+ *	then only the non-dirty pages within the specified range are
+ *	affected.
+ *
+ *	In general, this operation should only be performed on objects
+ *	that contain managed pages.  There are two exceptions.  First,
+ *	it may be performed on the kernel and kmem objects.  Second,
+ *	it may be used by msync(..., MS_INVALIDATE) to invalidate
+ *	device-backed pages.
  *
  *	The object must be locked.
  */
@@ -1833,13 +1859,17 @@ again:
 		next = TAILQ_NEXT(p, listq);
 
 		if (p->wire_count != 0) {
-			pmap_remove_all(p);
+			/* Fictitious pages do not have managed mappings. */
+			if ((p->flags & PG_FICTITIOUS) == 0)
+				pmap_remove_all(p);
 			if (!clean_only)
 				p->valid = 0;
 			continue;
 		}
 		if (vm_page_sleep_if_busy(p, TRUE, "vmopar"))
 			goto again;
+		KASSERT((p->flags & PG_FICTITIOUS) == 0,
+		    ("vm_object_page_remove: page %p is fictitious", p));
 		if (clean_only && p->valid) {
 			pmap_remove_write(p);
 			if (p->valid & p->dirty)

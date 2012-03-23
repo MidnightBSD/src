@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989 Stephen Deering.
  * Copyright (c) 1992, 1993
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_mroute.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/ip_mroute.h,v 1.31 2007/02/08 23:05:08 bms Exp $
+ * $FreeBSD: src/sys/netinet/ip_mroute.h,v 1.31.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET_IP_MROUTE_H_
@@ -360,7 +359,7 @@ struct sockopt;
 extern int	(*ip_mrouter_set)(struct socket *, struct sockopt *);
 extern int	(*ip_mrouter_get)(struct socket *, struct sockopt *);
 extern int	(*ip_mrouter_done)(void);
-extern int	(*mrt_ioctl)(int, caddr_t);
+extern int	(*mrt_ioctl)(int, caddr_t, int);
 
 #endif /* _KERNEL */
 

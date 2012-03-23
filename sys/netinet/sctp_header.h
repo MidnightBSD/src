@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -32,7 +31,7 @@
 /* $KAME: sctp_header.h,v 1.14 2005/03/06 16:04:17 itojun Exp $	 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_header.h,v 1.6 2007/08/24 00:53:51 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_header.h,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __sctp_header_h__
 #define __sctp_header_h__
@@ -41,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_header.h,v 1.6 2007/08/24 00:53:51 rrs 
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
+#define SCTP_PACKED __attribute__((packed))
 
 /*
  * Parameter structures
@@ -582,4 +582,5 @@ struct sctp_auth_invalid_hmac {
 #define SCTP_MIN_V4_OVERHEAD (sizeof(struct ip) + \
 			      sizeof(struct sctphdr))
 
+#undef SCTP_PACKED
 #endif				/* !__sctp_header_h__ */

@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_usrreq.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/raw_usrreq.c,v 1.44 2006/11/06 13:42:02 rwatson Exp $
+ * $FreeBSD: src/sys/net/raw_usrreq.c,v 1.44.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -53,29 +53,24 @@ MTX_SYSINIT(rawcb_mtx, &rawcb_mtx, "rawcb", MTX_DEF);
  * Initialize raw connection block q.
  */
 void
-raw_init()
+raw_init(void)
 {
 
 	LIST_INIT(&rawcb_list);
 }
 
-
 /*
- * Raw protocol input routine.  Find the socket
- * associated with the packet(s) and move them over.  If
- * nothing exists for this packet, drop it.
+ * Raw protocol input routine.  Find the socket associated with the packet(s)
+ * and move them over.  If nothing exists for this packet, drop it.
  */
 /*
  * Raw protocol interface.
  */
 void
-raw_input(m0, proto, src, dst)
-	struct mbuf *m0;
-	register struct sockproto *proto;
-	struct sockaddr *src, *dst;
+raw_input(struct mbuf *m0, struct sockproto *proto, struct sockaddr *src)
 {
-	register struct rawcb *rp;
-	register struct mbuf *m = m0;
+	struct rawcb *rp;
+	struct mbuf *m = m0;
 	struct socket *last;
 
 	last = 0;
@@ -86,20 +81,6 @@ raw_input(m0, proto, src, dst)
 		if (rp->rcb_proto.sp_protocol  &&
 		    rp->rcb_proto.sp_protocol != proto->sp_protocol)
 			continue;
-		/*
-		 * We assume the lower level routines have
-		 * placed the address in a canonical format
-		 * suitable for a structure comparison.
-		 *
-		 * Note that if the lengths are not the same
-		 * the comparison will fail at the first byte.
-		 */
-#define	equal(a1, a2) \
-  (bcmp((caddr_t)(a1), (caddr_t)(a2), a1->sa_len) == 0)
-		if (rp->rcb_laddr && !equal(rp->rcb_laddr, dst))
-			continue;
-		if (rp->rcb_faddr && !equal(rp->rcb_faddr, src))
-			continue;
 		if (last) {
 			struct mbuf *n;
 			n = m_copy(m, 0, (int)M_COPYALL);
@@ -108,9 +89,8 @@ raw_input(m0, proto, src, dst)
 				    n, (struct mbuf *)0) == 0)
 					/* should notify about lost packet */
 					m_freem(n);
-				else {
+				else
 					sorwakeup(last);
-				}
 			}
 		}
 		last = rp->rcb_socket;
@@ -119,9 +99,8 @@ raw_input(m0, proto, src, dst)
 		if (sbappendaddr(&last->so_rcv, src,
 		    m, (struct mbuf *)0) == 0)
 			m_freem(m);
-		else {
+		else
 			sorwakeup(last);
-		}
 	} else
 		m_freem(m);
 	mtx_unlock(&rawcb_mtx);
@@ -129,10 +108,7 @@ raw_input(m0, proto, src, dst)
 
 /*ARGSUSED*/
 void
-raw_ctlinput(cmd, arg, dummy)
-	int cmd;
-	struct sockaddr *arg;
-	void *dummy;
+raw_ctlinput(int cmd, struct sockaddr *arg, void *dummy)
 {
 
 	if (cmd < 0 || cmd >= PRC_NCMDS)
@@ -143,20 +119,18 @@ raw_ctlinput(cmd, arg, dummy)
 static void
 raw_uabort(struct socket *so)
 {
-	struct rawcb *rp = sotorawcb(so);
 
-	KASSERT(rp != NULL, ("raw_uabort: rp == NULL"));
-	raw_disconnect(rp);
+	KASSERT(sotorawcb(so) != NULL, ("raw_uabort: rp == NULL"));
+
 	soisdisconnected(so);
 }
 
 static void
 raw_uclose(struct socket *so)
 {
-	struct rawcb *rp = sotorawcb(so);
 
-	KASSERT(rp != NULL, ("raw_uabort: rp == NULL"));
-	raw_disconnect(rp);
+	KASSERT(sotorawcb(so) != NULL, ("raw_uabort: rp == NULL"));
+
 	soisdisconnected(so);
 }
 
@@ -176,21 +150,23 @@ raw_uattach(struct socket *so, int proto, struct thread *td)
 	if (td != NULL) {
 		error = priv_check(td, PRIV_NET_RAW);
 		if (error)
-			return error;
+			return (error);
 	}
-	return raw_attach(so, proto);
+	return (raw_attach(so, proto));
 }
 
 static int
 raw_ubind(struct socket *so, struct sockaddr *nam, struct thread *td)
 {
-	return EINVAL;
+
+	return (EINVAL);
 }
 
 static int
 raw_uconnect(struct socket *so, struct sockaddr *nam, struct thread *td)
 {
-	return EINVAL;
+
+	return (EINVAL);
 }
 
 /* pru_connect2 is EOPNOTSUPP */
@@ -202,21 +178,17 @@ raw_udetach(struct socket *so)
 	struct rawcb *rp = sotorawcb(so);
 
 	KASSERT(rp != NULL, ("raw_udetach: rp == NULL"));
+
 	raw_detach(rp);
 }
 
 static int
 raw_udisconnect(struct socket *so)
 {
-	struct rawcb *rp = sotorawcb(so);
 
-	KASSERT(rp != NULL, ("raw_udisconnect: rp == NULL"));
-	if (rp->rcb_faddr == 0) {
-		return ENOTCONN;
-	}
-	raw_disconnect(rp);
-	soisdisconnected(so);
-	return 0;
+	KASSERT(sotorawcb(so) != NULL, ("raw_udisconnect: rp == NULL"));
+
+	return (ENOTCONN);
 }
 
 /* pru_listen is EOPNOTSUPP */
@@ -224,55 +196,34 @@ raw_udisconnect(struct socket *so)
 static int
 raw_upeeraddr(struct socket *so, struct sockaddr **nam)
 {
-	struct rawcb *rp = sotorawcb(so);
 
-	KASSERT(rp != NULL, ("raw_upeeraddr: rp == NULL"));
-	if (rp->rcb_faddr == 0) {
-		return ENOTCONN;
-	}
-	*nam = sodupsockaddr(rp->rcb_faddr, M_WAITOK);
-	return 0;
+	KASSERT(sotorawcb(so) != NULL, ("raw_upeeraddr: rp == NULL"));
+
+	return (ENOTCONN);
 }
 
 /* pru_rcvd is EOPNOTSUPP */
 /* pru_rcvoob is EOPNOTSUPP */
 
 static int
-raw_usend(struct socket *so, int flags, struct mbuf *m,
-	  struct sockaddr *nam, struct mbuf *control, struct thread *td)
+raw_usend(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
+    struct mbuf *control, struct thread *td)
 {
-	int error;
-	struct rawcb *rp = sotorawcb(so);
 
-	KASSERT(rp != NULL, ("raw_usend: rp == NULL"));
+	KASSERT(sotorawcb(so) != NULL, ("raw_usend: rp == NULL"));
 
-	if (flags & PRUS_OOB) {
-		error = EOPNOTSUPP;
-		goto release;
+	if ((flags & PRUS_OOB) || (control && control->m_len)) {
+		/* XXXRW: Should control also be freed here? */
+		if (m != NULL)
+			m_freem(m);
+		return (EOPNOTSUPP);
 	}
 
-	if (control && control->m_len) {
-		error = EOPNOTSUPP;
-		goto release;
-	}
-	if (nam) {
-		if (rp->rcb_faddr) {
-			error = EISCONN;
-			goto release;
-		}
-		rp->rcb_faddr = nam;
-	} else if (rp->rcb_faddr == 0) {
-		error = ENOTCONN;
-		goto release;
-	}
-	error = (*so->so_proto->pr_output)(m, so);
-	m = NULL;
-	if (nam)
-		rp->rcb_faddr = 0;
-release:
-	if (m != NULL)
-		m_freem(m);
-	return (error);
+	/*
+	 * For historical (bad?) reasons, we effectively ignore the address
+	 * argument to sendto(2).  Perhaps we should return an error instead?
+	 */
+	return ((*so->so_proto->pr_output)(m, so));
 }
 
 /* pru_sense is null */
@@ -282,20 +233,18 @@ raw_ushutdown(struct socket *so)
 {
 
 	KASSERT(sotorawcb(so) != NULL, ("raw_ushutdown: rp == NULL"));
+
 	socantsendmore(so);
-	return 0;
+	return (0);
 }
 
 static int
 raw_usockaddr(struct socket *so, struct sockaddr **nam)
 {
-	struct rawcb *rp = sotorawcb(so);
 
-	KASSERT(rp != NULL, ("raw_usockaddr: rp == NULL"));
-	if (rp->rcb_laddr == 0)
-		return EINVAL;
-	*nam = sodupsockaddr(rp->rcb_laddr, M_WAITOK);
-	return 0;
+	KASSERT(sotorawcb(so) != NULL, ("raw_usockaddr: rp == NULL"));
+
+	return (EINVAL);
 }
 
 struct pr_usrreqs raw_usrreqs = {

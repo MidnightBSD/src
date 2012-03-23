@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/proc.h,v 1.7 2011/03/13 21:43:59 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/proc.h,v 1.8 2011/10/15 20:18:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 1986, 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -572,6 +572,7 @@ struct proc {
 	struct pargs	*p_args;	/* (c) Process arguments. */
 	rlim_t		p_cpulimit;	/* (c) Current CPU limit in seconds. */
 	signed char	p_nice;		/* (c + j) Process "nice" value. */
+	int		p_fibnum;	/* in this routing domain XXX MRT */
 /* End area that is copied on creation. */
 #define	p_endcopy	p_xstat
 
@@ -854,7 +855,7 @@ void	pstats_free(struct pstats *ps);
 int	securelevel_ge(struct ucred *cr, int level);
 int	securelevel_gt(struct ucred *cr, int level);
 void	sessrele(struct session *);
-void	setrunnable(struct thread *);
+int	setrunnable(struct thread *);
 void	setsugid(struct proc *p);
 int	sigonstack(size_t sp);
 void	sleepinit(void);

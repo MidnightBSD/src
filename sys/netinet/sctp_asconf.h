@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -32,12 +31,12 @@
 /* $KAME: sctp_asconf.h,v 1.8 2005/03/06 16:04:16 itojun Exp $	 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.10 2007/09/15 19:07:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 /*
  * function prototypes
@@ -86,6 +85,9 @@ extern void
      sctp_assoc_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
 extern void
      sctp_net_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
+
+extern int
+    sctp_is_addr_pending(struct sctp_tcb *, struct sctp_ifa *);
 
 #endif				/* _KERNEL */
 

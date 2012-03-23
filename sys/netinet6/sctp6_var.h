@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -29,11 +28,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*	$KAME: sctp6_var.h,v 1.7 2004/08/17 04:06:22 itojun Exp $	*/
+
 #ifndef _NETINET6_SCTP6_VAR_H_
 #define _NETINET6_SCTP6_VAR_H_
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.8 2007/09/13 10:36:43 rrs Exp $");
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.8.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+
+/* TODO __Userspace__ IPv6 stuff... */
 #if defined(_KERNEL)
 
 SYSCTL_DECL(_net_inet6_sctp6);

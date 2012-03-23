@@ -2,7 +2,7 @@
  * Copyright (c) 1982, 1986, 1988, 1990, 1993
  *	The Regents of the University of California.
  * Copyright (c) 2004 The FreeBSD Foundation
- * Copyright (c) 2004-2007 Robert N. M. Watson
+ * Copyright (c) 2004-2008 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -95,7 +95,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_socket.c,v 1.302.4.1 2008/02/02 12:44:13 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_socket.c,v 1.302.2.11.2.2 2008/11/25 20:02:47 julian Exp $");
 
 #include "opt_inet.h"
 #include "opt_mac.h"
@@ -122,6 +122,7 @@ __FBSDID("$FreeBSD: src/sys/kern/uipc_socket.c,v 1.302.4.1 2008/02/02 12:44:13 r
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/resourcevar.h>
+#include <net/route.h>
 #include <sys/signalvar.h>
 #include <sys/stat.h>
 #include <sys/sx.h>
@@ -360,6 +361,11 @@ socreate(int dom, struct socket **aso, int type, int proto,
 	TAILQ_INIT(&so->so_comp);
 	so->so_type = type;
 	so->so_cred = crhold(cred);
+	if ((prp->pr_domain->dom_family == PF_INET) ||
+	    (prp->pr_domain->dom_family == PF_ROUTE))
+		so->so_fibnum = td->td_proc->p_fibnum;
+	else
+		so->so_fibnum = 0;
 	so->so_proto = prp;
 #ifdef MAC
 	mac_create_socket(cred, so);
@@ -1279,10 +1285,6 @@ sosend(struct socket *so, struct sockaddr *addr, struct uio *uio,
     struct mbuf *top, struct mbuf *control, int flags, struct thread *td)
 {
 
-	/* XXXRW: Temporary debugging. */
-	KASSERT(so->so_proto->pr_usrreqs->pru_sosend != sosend,
-	    ("sosend: protocol calls sosend"));
-
 	return (so->so_proto->pr_usrreqs->pru_sosend(so, addr, uio, top,
 	    control, flags, td));
 }
@@ -1841,14 +1843,191 @@ release:
 	return (error);
 }
 
+/*
+ * Optimized version of soreceive() for simple datagram cases from userspace.
+ * Unlike in the stream case, we're able to drop a datagram if copyout()
+ * fails, and because we handle datagrams atomically, we don't need to use a
+ * sleep lock to prevent I/O interlacing.
+ */
+int
+soreceive_dgram(struct socket *so, struct sockaddr **psa, struct uio *uio,
+    struct mbuf **mp0, struct mbuf **controlp, int *flagsp)
+{
+	struct mbuf *m, *m2;
+	int flags, len, error, offset;
+	struct protosw *pr = so->so_proto;
+	struct mbuf *nextrecord;
+
+	if (psa != NULL)
+		*psa = NULL;
+	if (controlp != NULL)
+		*controlp = NULL;
+	if (flagsp != NULL)
+		flags = *flagsp &~ MSG_EOR;
+	else
+		flags = 0;
+
+	/*
+	 * For any complicated cases, fall back to the full
+	 * soreceive_generic().
+	 */
+	if (mp0 != NULL || (flags & MSG_PEEK) || (flags & MSG_OOB))
+		return (soreceive_generic(so, psa, uio, mp0, controlp,
+		    flagsp));
+
+	/*
+	 * Enforce restrictions on use.
+	 */
+	KASSERT((pr->pr_flags & PR_WANTRCVD) == 0,
+	    ("soreceive_dgram: wantrcvd"));
+	KASSERT(pr->pr_flags & PR_ATOMIC, ("soreceive_dgram: !atomic"));
+	KASSERT((so->so_rcv.sb_state & SBS_RCVATMARK) == 0,
+	    ("soreceive_dgram: SBS_RCVATMARK"));
+	KASSERT((so->so_proto->pr_flags & PR_CONNREQUIRED) == 0,
+	    ("soreceive_dgram: P_CONNREQUIRED"));
+
+	/*
+	 * Loop blocking while waiting for a datagram.
+	 */
+	SOCKBUF_LOCK(&so->so_rcv);
+	while ((m = so->so_rcv.sb_mb) == NULL) {
+		KASSERT(so->so_rcv.sb_cc == 0,
+		    ("soreceive_dgram: sb_mb NULL but sb_cc %u",
+		    so->so_rcv.sb_cc));
+		if (so->so_error) {
+			error = so->so_error;
+			so->so_error = 0;
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			return (error);
+		}
+		if (so->so_rcv.sb_state & SBS_CANTRCVMORE ||
+		    uio->uio_resid == 0) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			return (0);
+		}
+		if ((so->so_state & SS_NBIO) ||
+		    (flags & (MSG_DONTWAIT|MSG_NBIO))) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			return (EWOULDBLOCK);
+		}
+		SBLASTRECORDCHK(&so->so_rcv);
+		SBLASTMBUFCHK(&so->so_rcv);
+		error = sbwait(&so->so_rcv);
+		if (error) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			return (error);
+		}
+	}
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+
+	if (uio->uio_td)
+		uio->uio_td->td_ru.ru_msgrcv++;
+	SBLASTRECORDCHK(&so->so_rcv);
+	SBLASTMBUFCHK(&so->so_rcv);
+	nextrecord = m->m_nextpkt;
+	if (nextrecord == NULL) {
+		KASSERT(so->so_rcv.sb_lastrecord == m,
+		    ("soreceive_dgram: lastrecord != m"));
+	}
+
+	KASSERT(so->so_rcv.sb_mb->m_nextpkt == nextrecord,
+	    ("soreceive_dgram: m_nextpkt != nextrecord"));
+
+	/*
+	 * Pull 'm' and its chain off the front of the packet queue.
+	 */
+	so->so_rcv.sb_mb = NULL;
+	sockbuf_pushsync(&so->so_rcv, nextrecord);
+
+	/*
+	 * Walk 'm's chain and free that many bytes from the socket buffer.
+	 */
+	for (m2 = m; m2 != NULL; m2 = m2->m_next)
+		sbfree(&so->so_rcv, m2);
+
+	/*
+	 * Do a few last checks before we let go of the lock.
+	 */
+	SBLASTRECORDCHK(&so->so_rcv);
+	SBLASTMBUFCHK(&so->so_rcv);
+	SOCKBUF_UNLOCK(&so->so_rcv);
+
+	if (pr->pr_flags & PR_ADDR) {
+		KASSERT(m->m_type == MT_SONAME,
+		    ("m->m_type == %d", m->m_type));
+		if (psa != NULL)
+			*psa = sodupsockaddr(mtod(m, struct sockaddr *),
+			    M_NOWAIT);
+		m = m_free(m);
+	}
+	if (m == NULL) {
+		/* XXXRW: Can this happen? */
+		return (0);
+	}
+
+	/*
+	 * Packet to copyout() is now in 'm' and it is disconnected from the
+	 * queue.
+	 *
+	 * Process one or more MT_CONTROL mbufs present before any data mbufs
+	 * in the first mbuf chain on the socket buffer.  We call into the
+	 * protocol to perform externalization (or freeing if controlp ==
+	 * NULL).
+	 */
+	if (m->m_type == MT_CONTROL) {
+		struct mbuf *cm = NULL, *cmn;
+		struct mbuf **cme = &cm;
+
+		do {
+			m2 = m->m_next;
+			m->m_next = NULL;
+			*cme = m;
+			cme = &(*cme)->m_next;
+			m = m2;
+		} while (m != NULL && m->m_type == MT_CONTROL);
+		while (cm != NULL) {
+			cmn = cm->m_next;
+			cm->m_next = NULL;
+			if (pr->pr_domain->dom_externalize != NULL) {
+				error = (*pr->pr_domain->dom_externalize)
+				    (cm, controlp);
+			} else if (controlp != NULL)
+				*controlp = cm;
+			else
+				m_freem(cm);
+			if (controlp != NULL) {
+				while (*controlp != NULL)
+					controlp = &(*controlp)->m_next;
+			}
+			cm = cmn;
+		}
+	}
+	KASSERT(m->m_type == MT_DATA, ("soreceive_dgram: !data"));
+
+	offset = 0;
+	while (m != NULL && uio->uio_resid > 0) {
+		len = uio->uio_resid;
+		if (len > m->m_len)
+			len = m->m_len;
+		error = uiomove(mtod(m, char *), (int)len, uio);
+		if (error) {
+			m_freem(m);
+			return (error);
+		}
+		m = m_free(m);
+	}
+	if (m != NULL)
+		flags |= MSG_TRUNC;
+	m_freem(m);
+	if (flagsp != NULL)
+		*flagsp |= flags;
+	return (0);
+}
+
 int
 soreceive(struct socket *so, struct sockaddr **psa, struct uio *uio,
     struct mbuf **mp0, struct mbuf **controlp, int *flagsp)
 {
-
-	/* XXXRW: Temporary debugging. */
-	KASSERT(so->so_proto->pr_usrreqs->pru_soreceive != soreceive,
-	    ("soreceive: protocol calls soreceive"));
 
 	return (so->so_proto->pr_usrreqs->pru_soreceive(so, psa, uio, mp0,
 	    controlp, flagsp));
@@ -1861,7 +2040,9 @@ soshutdown(struct socket *so, int how)
 
 	if (!(how == SHUT_RD || how == SHUT_WR || how == SHUT_RDWR))
 		return (EINVAL);
-
+	if (pr->pr_usrreqs->pru_flush != NULL) {
+	        (*pr->pr_usrreqs->pru_flush)(so, how);
+	}
 	if (how != SHUT_WR)
 		sorflush(so);
 	if (how != SHUT_RD)
@@ -1877,15 +2058,13 @@ sorflush(struct socket *so)
 	struct sockbuf asb;
 
 	/*
-	 * XXXRW: This is quite ugly.  Previously, this code made a copy of
-	 * the socket buffer, then zero'd the original to clear the buffer
-	 * fields.  However, with mutexes in the socket buffer, this causes
-	 * problems.  We only clear the zeroable bits of the original;
-	 * however, we have to initialize and destroy the mutex in the copy
-	 * so that dom_dispose() and sbrelease() can lock t as needed.
-	 */
-
-	/*
+	 * In order to avoid calling dom_dispose with the socket buffer mutex
+	 * held, and in order to generally avoid holding the lock for a long
+	 * time, we make a copy of the socket buffer and clear the original
+	 * (except locks, state).  The new socket buffer copy won't have
+	 * initialized locks so we can only call routines that won't use or
+	 * assert those locks.
+	 *
 	 * Dislodge threads currently blocked in receive and wait to acquire
 	 * a lock against other simultaneous readers before clearing the
 	 * socket buffer.  Don't let our acquire be interrupted by a signal
@@ -1907,11 +2086,13 @@ sorflush(struct socket *so)
 	SOCKBUF_UNLOCK(sb);
 	sbunlock(sb);
 
-	SOCKBUF_LOCK_INIT(&asb, "so_rcv");
+	/*
+	 * Dispose of special rights and flush the socket buffer.  Don't call
+	 * any unsafe routines (that rely on locks being initialized) on asb.
+	 */
 	if (pr->pr_flags & PR_RIGHTS && pr->pr_domain->dom_dispose != NULL)
 		(*pr->pr_domain->dom_dispose)(asb.sb_mb);
-	sbrelease(&asb, so);
-	SOCKBUF_LOCK_DESTROY(&asb);
+	sbrelease_internal(&asb, so);
 }
 
 /*
@@ -2027,6 +2208,23 @@ sosetopt(struct socket *so, struct sockopt *sopt)
 			SOCK_UNLOCK(so);
 			break;
 
+		case SO_SETFIB:
+			error = sooptcopyin(sopt, &optval, sizeof optval,
+					    sizeof optval);
+			if (optval < 1 || optval > rt_numfibs) {
+				error = EINVAL;
+				goto bad;
+			}
+			if ((so->so_proto->pr_domain->dom_family == PF_INET) ||
+			    (so->so_proto->pr_domain->dom_family == PF_ROUTE)) {
+				so->so_fibnum = optval;
+				/* Note: ignore error */
+				if (so->so_proto && so->so_proto->pr_ctloutput)
+					(*so->so_proto->pr_ctloutput)(so, sopt);
+			} else {
+				so->so_fibnum = 0;
+			}
+			break;
 		case SO_SNDBUF:
 		case SO_RCVBUF:
 		case SO_SNDLOWAT:
@@ -2456,10 +2654,6 @@ int
 sopoll(struct socket *so, int events, struct ucred *active_cred,
     struct thread *td)
 {
-
-	/* XXXRW: Temporary debugging. */
-	KASSERT(so->so_proto->pr_usrreqs->pru_sopoll != sopoll,
-	    ("sopoll: protocol calls sopoll"));
 
 	return (so->so_proto->pr_usrreqs->pru_sopoll(so, events, active_cred,
 	    td));
@@ -2954,4 +3148,143 @@ sotoxsocket(struct socket *so, struct xsocket *xso)
 	sbtoxsockbuf(&so->so_snd, &xso->so_snd);
 	sbtoxsockbuf(&so->so_rcv, &xso->so_rcv);
 	xso->so_uid = so->so_cred->cr_uid;
+}
+
+
+/*
+ * Socket accessor functions to provide external consumers with
+ * a safe interface to socket state
+ *
+ */
+
+void
+so_listeners_apply_all(struct socket *so, void (*func)(struct socket *, void *), void *arg)
+{
+	
+	TAILQ_FOREACH(so, &so->so_comp, so_list)
+		func(so, arg);
+}
+
+struct sockbuf *
+so_sockbuf_rcv(struct socket *so)
+{
+
+	return (&so->so_rcv);
+}
+
+struct sockbuf *
+so_sockbuf_snd(struct socket *so)
+{
+
+	return (&so->so_snd);
+}
+
+int
+so_state_get(const struct socket *so)
+{
+
+	return (so->so_state);
+}
+
+void
+so_state_set(struct socket *so, int val)
+{
+
+	so->so_state = val;
+}
+
+int
+so_options_get(const struct socket *so)
+{
+
+	return (so->so_options);
+}
+
+void
+so_options_set(struct socket *so, int val)
+{
+
+	so->so_options = val;
+}
+
+int
+so_error_get(const struct socket *so)
+{
+
+	return (so->so_error);
+}
+
+void
+so_error_set(struct socket *so, int val)
+{
+
+	so->so_error = val;
+}
+
+int
+so_linger_get(const struct socket *so)
+{
+
+	return (so->so_linger);
+}
+
+void
+so_linger_set(struct socket *so, int val)
+{
+
+	so->so_linger = val;
+}
+
+struct protosw *
+so_protosw_get(const struct socket *so)
+{
+
+	return (so->so_proto);
+}
+
+void
+so_protosw_set(struct socket *so, struct protosw *val)
+{
+
+	so->so_proto = val;
+}
+
+void
+so_sorwakeup(struct socket *so)
+{
+
+	sorwakeup(so);
+}
+
+void
+so_sowwakeup(struct socket *so)
+{
+
+	sowwakeup(so);
+}
+
+void
+so_sorwakeup_locked(struct socket *so)
+{
+
+	sorwakeup_locked(so);
+}
+
+void
+so_sowwakeup_locked(struct socket *so)
+{
+
+	sowwakeup_locked(so);
+}
+
+void
+so_lock(struct socket *so)
+{
+	SOCK_LOCK(so);
+}
+
+void
+so_unlock(struct socket *so)
+{
+	SOCK_UNLOCK(so);
 }

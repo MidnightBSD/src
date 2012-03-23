@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias.c,v 1.58.2.2 2009/11/04 13:32:25 brueffer Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias.c,v 1.58.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
     Alias.c provides supervisory control for the functions of the
@@ -1580,7 +1580,6 @@ LibAliasRefreshModules(void)
 			LibAliasLoadModule(buf);
 		}
 	}
-	fclose(fd);
 	return (0);
 }
 

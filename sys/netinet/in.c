@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/in.c,v 1.102 2007/10/07 20:44:22 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/in.c,v 1.102.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_carp.h"
 
@@ -295,7 +294,8 @@ in_control(struct socket *so, u_long cmd, caddr_t data, struct ifnet *ifp,
 	case SIOCSIFNETMASK:
 	case SIOCSIFDSTADDR:
 		if (td != NULL) {
-			error = priv_check(td, PRIV_NET_ADDIFADDR);
+			error = priv_check(td, (cmd == SIOCDIFADDR) ? 
+			    PRIV_NET_DELIFADDR : PRIV_NET_ADDIFADDR);
 			if (error)
 				return (error);
 		}
@@ -734,6 +734,14 @@ in_ifinit(struct ifnet *ifp, struct in_ifaddr *ia, struct sockaddr_in *sin,
 			if (ia->ia_addr.sin_family == AF_INET)
 				LIST_INSERT_HEAD(INADDR_HASH(
 				    ia->ia_addr.sin_addr.s_addr), ia, ia_hash);
+			else 
+				/* 
+				 * If oldaddr family is not AF_INET (e.g. 
+				 * interface has been just created) in_control 
+				 * does not call LIST_REMOVE, and we end up 
+				 * with bogus ia entries in hash
+				 */
+				LIST_REMOVE(ia, ia_hash);
 			return (error);
 		}
 	}

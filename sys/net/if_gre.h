@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_gre.h,v 1.13 2003/11/10 08:51:52 wiz Exp $ */
-/*	 $FreeBSD: src/sys/net/if_gre.h,v 1.13 2005/06/10 16:49:18 brooks Exp $ */
+/*	 $FreeBSD: src/sys/net/if_gre.h,v 1.13.10.2.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -60,6 +59,7 @@ struct gre_softc {
 	LIST_ENTRY(gre_softc) sc_list;
 	int gre_unit;
 	int gre_flags;
+	u_int	gre_fibnum;	/* use this fib for envelopes */
 	struct in_addr g_src;	/* source address of gre packets */
 	struct in_addr g_dst;	/* destination address of gre packets */
 	struct route route;	/* routing entry that determines, where a
@@ -70,6 +70,9 @@ struct gre_softc {
 
 	int called;		/* infinite recursion preventer */
 
+	uint32_t key;		/* key included in outgoing GRE packets */
+				/* zero means none */
+
 	wccp_ver_t wccp_ver;	/* version of the WCCP */
 };
 #define	GRE2IFP(sc)	((sc)->sc_ifp)
@@ -79,6 +82,7 @@ struct gre_h {
 	u_int16_t flags;	/* GRE flags */
 	u_int16_t ptype;	/* protocol type of payload typically
 				   Ether protocol type*/
+	uint32_t options[0];	/* optional options */
 /*
  *  from here on: fields are optional, presence indicated by flags
  *
@@ -111,6 +115,7 @@ struct greip {
 #define gi_dst		gi_i.ip_dst
 #define gi_ptype	gi_g.ptype
 #define gi_flags	gi_g.flags
+#define gi_options	gi_g.options
 
 #define GRE_CP		0x8000  /* Checksum Present */
 #define GRE_RP		0x4000  /* Routing Present */
@@ -175,6 +180,8 @@ struct mobip_h {
 #define GREGADDRD	_IOWR('i', 104, struct ifreq)
 #define GRESPROTO	_IOW('i' , 105, struct ifreq)
 #define GREGPROTO	_IOWR('i', 106, struct ifreq)
+#define GREGKEY		_IOWR('i', 107, struct ifreq)
+#define GRESKEY		_IOW('i', 108, struct ifreq)
 
 #ifdef _KERNEL
 LIST_HEAD(gre_softc_head, gre_softc);

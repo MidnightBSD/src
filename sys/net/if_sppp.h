@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Defines for synchronous PPP/Cisco/Frame Relay link level subroutines.
  */
@@ -18,7 +17,7 @@
  *
  * From: Version 2.0, Fri Oct  6 20:39:21 MSK 1995
  *
- * $FreeBSD: src/sys/net/if_sppp.h,v 1.28 2005/06/10 16:49:18 brooks Exp $
+ * $FreeBSD: src/sys/net/if_sppp.h,v 1.28.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_IF_SPPP_H_

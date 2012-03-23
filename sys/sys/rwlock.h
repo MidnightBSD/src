@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/rwlock.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/rwlock.h,v 1.14 2007/07/20 08:43:42 attilio Exp $
+ * $FreeBSD: src/sys/sys/rwlock.h,v 1.14.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_RWLOCK_H_
@@ -130,8 +130,10 @@ void	rw_destroy(struct rwlock *rw);
 void	rw_sysinit(void *arg);
 int	rw_wowned(struct rwlock *rw);
 void	_rw_wlock(struct rwlock *rw, const char *file, int line);
+int	_rw_try_wlock(struct rwlock *rw, const char *file, int line);
 void	_rw_wunlock(struct rwlock *rw, const char *file, int line);
 void	_rw_rlock(struct rwlock *rw, const char *file, int line);
+int	_rw_try_rlock(struct rwlock *rw, const char *file, int line);
 void	_rw_runlock(struct rwlock *rw, const char *file, int line);
 void	_rw_wlock_hard(struct rwlock *rw, uintptr_t tid, const char *file,
 	    int line);
@@ -145,8 +147,6 @@ void	_rw_assert(struct rwlock *rw, int what, const char *file, int line);
 
 /*
  * Public interface for lock operations.
- *
- * XXX: Missing try locks.
  */
 
 #ifndef LOCK_DEBUG
@@ -163,7 +163,9 @@ void	_rw_assert(struct rwlock *rw, int what, const char *file, int line);
 #endif
 #define	rw_rlock(rw)		_rw_rlock((rw), LOCK_FILE, LOCK_LINE)
 #define	rw_runlock(rw)		_rw_runlock((rw), LOCK_FILE, LOCK_LINE)
+#define	rw_try_rlock(rw)	_rw_try_rlock((rw), LOCK_FILE, LOCK_LINE)
 #define	rw_try_upgrade(rw)	_rw_try_upgrade((rw), LOCK_FILE, LOCK_LINE)
+#define	rw_try_wlock(rw)	_rw_try_wlock((rw), LOCK_FILE, LOCK_LINE)
 #define	rw_downgrade(rw)	_rw_downgrade((rw), LOCK_FILE, LOCK_LINE)
 #define	rw_sleep(chan, rw, pri, wmesg, timo)				\
 	_sleep((chan), &(rw)->lock_object, (pri), (wmesg), (timo))

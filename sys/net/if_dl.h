@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_dl.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_dl.h,v 1.14 2005/01/07 01:45:34 imp Exp $
+ * $FreeBSD: src/sys/net/if_dl.h,v 1.14.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_IF_DL_H_

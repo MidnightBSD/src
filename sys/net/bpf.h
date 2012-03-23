@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
  *      @(#)bpf.h	8.1 (Berkeley) 6/10/93
  *	@(#)bpf.h	1.34 (LBL)     6/16/96
  *
- * $FreeBSD: src/sys/net/bpf.h,v 1.47.2.1 2007/10/21 14:05:27 mlaier Exp $
+ * $FreeBSD: src/sys/net/bpf.h,v 1.47.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_BPF_H_
@@ -117,6 +116,7 @@ struct bpf_version {
 #define	BIOCLOCK	_IO('B', 122)
 #define	BIOCSETWF	_IOW('B',123, struct bpf_program)
 #define	BIOCFEEDBACK	_IOW('B',124, u_int)
+#define	BIOCSETFNR	_IOW('B',130, struct bpf_program)
 
 /* Obsolete */
 #define	BIOCGSEESENT	BIOCGDIRECTION

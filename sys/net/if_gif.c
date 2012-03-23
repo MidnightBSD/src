@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/net/if_gif.c,v 1.66 2006/10/22 11:52:15 rwatson Exp $	*/
+/*	$FreeBSD: src/sys/net/if_gif.c,v 1.66.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: if_gif.c,v 1.87 2001/10/19 08:50:27 itojun Exp $	*/
 
 /*-
@@ -47,6 +46,7 @@
 #include <sys/time.h>
 #include <sys/sysctl.h>
 #include <sys/syslog.h>
+#include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/conf.h>
 #include <machine/cpu.h>
@@ -139,6 +139,14 @@ static int parallel_tunnels = 0;
 SYSCTL_INT(_net_link_gif, OID_AUTO, parallel_tunnels, CTLFLAG_RW,
     &parallel_tunnels, 0, "Allow parallel tunnels?");
 
+/* copy from src/sys/net/if_ethersubr.c */
+static const u_char etherbroadcastaddr[ETHER_ADDR_LEN] =
+			{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+#ifndef ETHER_IS_BROADCAST
+#define ETHER_IS_BROADCAST(addr) \
+	(bcmp(etherbroadcastaddr, (addr), ETHER_ADDR_LEN) == 0)
+#endif
+
 static int
 gif_clone_create(ifc, unit, params)
 	struct if_clone *ifc;
@@ -148,6 +156,7 @@ gif_clone_create(ifc, unit, params)
 	struct gif_softc *sc;
 
 	sc = malloc(sizeof(struct gif_softc), M_GIF, M_WAITOK | M_ZERO);
+	sc->gif_fibnum = curthread->td_proc->p_fibnum;
 	GIF2IFP(sc) = if_alloc(IFT_GIF);
 	if (GIF2IFP(sc) == NULL) {
 		free(sc, M_GIF);
@@ -434,6 +443,7 @@ gif_output(ifp, m, dst, rt)
 	if (ifp->if_bridge)
 		af = AF_LINK;
 
+	M_SETFIB(m, sc->gif_fibnum);
 	/* inner AF-specific encapsulation */
 
 	/* XXX should we check if our outer source is legal? */
@@ -470,6 +480,8 @@ gif_input(m, af, ifp)
 {
 	int isr, n;
 	struct etherip_header *eip;
+	struct ether_header *eh;
+	struct ifnet *oldifp;
 
 	if (ifp == NULL) {
 		/* just in case */
@@ -538,9 +550,27 @@ gif_input(m, af, ifp)
 		m->m_flags &= ~(M_BCAST|M_MCAST);
 		m->m_pkthdr.rcvif = ifp;
 
-		if (ifp->if_bridge)
+		if (ifp->if_bridge) {
+			oldifp = ifp;
+			eh = mtod(m, struct ether_header *);
+			if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
+				if (ETHER_IS_BROADCAST(eh->ether_dhost))
+					m->m_flags |= M_BCAST;
+				else
+					m->m_flags |= M_MCAST;
+				ifp->if_imcasts++;
+			}
 			BRIDGE_INPUT(ifp, m);
-		
+
+			if (m != NULL && ifp != oldifp) {
+				/*
+				 * The bridge gave us back itself or one of the
+				 * members for which the frame is addressed.
+				 */
+				ether_demux(ifp, m);
+				return;
+			}
+		}
 		if (m != NULL)
 			m_freem(m);
 		return;

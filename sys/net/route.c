@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/net/route.c,v 1.3 2008/12/03 00:26:55 laffer1 Exp $ */
 /*-
  * Copyright (c) 1980, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,10 +27,15 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.c	8.3.1.1 (Berkeley) 2/23/95
- * $FreeBSD: src/sys/net/route.c,v 1.120.2.1.2.1 2008/01/09 15:23:36 mux Exp $
+ * $FreeBSD: src/sys/net/route.c,v 1.120.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
+/************************************************************************
+ * Note: In this file a 'fib' is a "forwarding information base"	*
+ * Which is the new name for an in kernel routing (next hop) table.	*
+ ***********************************************************************/
 
 #include "opt_inet.h"
+#include "opt_route.h"
 #include "opt_mrouting.h"
 
 #include <sys/param.h>
@@ -39,6 +43,9 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
+#include <sys/sysctl.h>
+#include <sys/sysproto.h>
+#include <sys/proc.h>
 #include <sys/domain.h>
 #include <sys/kernel.h>
 
@@ -50,14 +57,61 @@
 
 #include <vm/uma.h>
 
+#ifndef ROUTETABLES
+ #define RT_NUMFIBS 1
+ #define RT_MAXFIBS 1
+#else
+ /* while we use 4 bits in the mbuf flags,
+  * we are limited to 16
+  */
+ #define RT_MAXFIBS 16
+ #if ROUTETABLES > RT_MAXFIBS
+  #define RT_NUMFIBS RT_MAXFIBS
+  #error "ROUTETABLES defined too big"
+ #else
+  #if ROUTETABLES == 0
+   #define RT_NUMFIBS 1
+  #else
+   #define RT_NUMFIBS ROUTETABLES
+  #endif
+ #endif
+#endif
+
+u_int rt_numfibs = RT_NUMFIBS;
+SYSCTL_INT(_net, OID_AUTO, fibs, CTLFLAG_RD, &rt_numfibs, 0, "");
+/*
+ * Allow the boot code to allow LESS than RT_MAXFIBS to be used.
+ * We can't do more because storage is statically allocated for now.
+ */
+TUNABLE_INT("net.fibs", &rt_numfibs);
+
+/*
+ * By default add routes to all fibs for new interfaces.
+ * Once this is set to 0 then only allocate routes on interface
+ * changes for the FIB of the caller when adding a new set of addresses
+ * to an interface.  XXX this is a shotgun aproach to a problem that needs
+ * a more fine grained solution.. that will come.
+ */
+u_int rt_add_addr_allfibs = 1;
+SYSCTL_INT(_net, OID_AUTO, add_addr_allfibs, CTLFLAG_RW,
+    &rt_add_addr_allfibs, 0, "");
+TUNABLE_INT("net.add_addr_allfibs", &rt_add_addr_allfibs);
+
 static struct rtstat rtstat;
-struct radix_node_head *rt_tables[AF_MAX+1];
+
+/* by default only the first 'row' of tables will be accessed. */
+/* 
+ * XXXMRT When we fix netstat, and do this differnetly,
+ * we can allocate this dynamically. As long as we are keeping
+ * things backwards compaitble we need to allocate this 
+ * statically.
+ */
+struct radix_node_head *rt_tables[RT_MAXFIBS][AF_MAX+1];
 
 static int	rttrash;		/* routes not in table but not freed */
 
 static void rt_maskedcopy(struct sockaddr *,
 	    struct sockaddr *, struct sockaddr *);
-static void rtable_init(void **);
 
 /* compare two sockaddr structures */
 #define	sa_equal(a1, a2) (bcmp((a1), (a2), (a1)->sa_len) == 0)
@@ -74,25 +128,83 @@ static void rtable_init(void **);
  */
 #define RNTORT(p)	((struct rtentry *)(p))
 
-static void
-rtable_init(void **table)
+static uma_zone_t rtzone;		/* Routing table UMA zone. */
+
+#if 0
+/* default fib for tunnels to use */
+u_int tunnel_fib = 0;
+SYSCTL_INT(_net, OID_AUTO, tunnelfib, CTLFLAG_RD, &tunnel_fib, 0, "");
+#endif
+
+/*
+ * handler for net.my_fibnum
+ */
+static int
+sysctl_my_fibnum(SYSCTL_HANDLER_ARGS)
 {
-	struct domain *dom;
-	for (dom = domains; dom; dom = dom->dom_next)
-		if (dom->dom_rtattach)
-			dom->dom_rtattach(&table[dom->dom_family],
-			    dom->dom_rtoffset);
+        int fibnum;
+        int error;
+ 
+        fibnum = curthread->td_proc->p_fibnum;
+        error = sysctl_handle_int(oidp, &fibnum, 0, req);
+        return (error);
 }
 
-static uma_zone_t rtzone;		/* Routing table UMA zone. */
+SYSCTL_PROC(_net, OID_AUTO, my_fibnum, CTLTYPE_INT|CTLFLAG_RD,
+            NULL, 0, &sysctl_my_fibnum, "I", "default FIB of caller");
 
 static void
 route_init(void)
 {
+	int table;
+	struct domain *dom;
+	int fam;
+
+	/* whack teh tunable ints into  line. */
+	if (rt_numfibs > RT_MAXFIBS)
+		rt_numfibs = RT_MAXFIBS;
+	if (rt_numfibs == 0)
+		rt_numfibs = 1;
 	rtzone = uma_zcreate("rtentry", sizeof(struct rtentry), NULL, NULL,
 	    NULL, NULL, UMA_ALIGN_PTR, 0);
 	rn_init();	/* initialize all zeroes, all ones, mask table */
-	rtable_init((void **)rt_tables);
+
+	for (dom = domains; dom; dom = dom->dom_next) {
+		if (dom->dom_rtattach)  {
+			for  (table = 0; table < rt_numfibs; table++) {
+				if ( (fam = dom->dom_family) == AF_INET ||
+				    table == 0) {
+ 			        	/* for now only AF_INET has > 1 table */
+					/* XXX MRT 
+					 * rtattach will be also called
+					 * from vfs_export.c but the
+					 * offset will be 0
+					 * (only for AF_INET and AF_INET6
+					 * which don't need it anyhow)
+					 */
+					dom->dom_rtattach(
+				    	    (void **)&rt_tables[table][fam],
+				    	    dom->dom_rtoffset);
+				} else {
+					break;
+				}
+			}
+		}
+	}
+}
+
+#ifndef _SYS_SYSPROTO_H_
+struct setfib_args {
+	int     fibnum;
+};
+#endif
+int
+setfib(struct thread *td, struct setfib_args *uap)
+{
+	if (uap->fibnum < 0 || uap->fibnum >= rt_numfibs)
+		return EINVAL;
+	td->td_proc->p_fibnum = uap->fibnum;
+	return (0);
 }
 
 /*
@@ -101,7 +213,13 @@ route_init(void)
 void
 rtalloc(struct route *ro)
 {
-	rtalloc_ign(ro, 0UL);
+	rtalloc_ign_fib(ro, 0UL, 0);
+}
+
+void
+rtalloc_fib(struct route *ro, u_int fibnum)
+{
+	rtalloc_ign_fib(ro, 0UL, fibnum);
 }
 
 void
@@ -115,7 +233,23 @@ rtalloc_ign(struct route *ro, u_long ignore)
 		RTFREE(rt);
 		ro->ro_rt = NULL;
 	}
-	ro->ro_rt = rtalloc1(&ro->ro_dst, 1, ignore);
+	ro->ro_rt = rtalloc1_fib(&ro->ro_dst, 1, ignore, 0);
+	if (ro->ro_rt)
+		RT_UNLOCK(ro->ro_rt);
+}
+
+void
+rtalloc_ign_fib(struct route *ro, u_long ignore, u_int fibnum)
+{
+	struct rtentry *rt;
+
+	if ((rt = ro->ro_rt) != NULL) {
+		if (rt->rt_ifp != NULL && rt->rt_flags & RTF_UP)
+			return;
+		RTFREE(rt);
+		ro->ro_rt = NULL;
+	}
+	ro->ro_rt = rtalloc1_fib(&ro->ro_dst, 1, ignore, fibnum);
 	if (ro->ro_rt)
 		RT_UNLOCK(ro->ro_rt);
 }
@@ -129,7 +263,14 @@ rtalloc_ign(struct route *ro, u_long ignore)
 struct rtentry *
 rtalloc1(struct sockaddr *dst, int report, u_long ignflags)
 {
-	struct radix_node_head *rnh = rt_tables[dst->sa_family];
+	return (rtalloc1_fib(dst, report, ignflags, 0));
+}
+
+struct rtentry *
+rtalloc1_fib(struct sockaddr *dst, int report, u_long ignflags,
+		    u_int fibnum)
+{
+	struct radix_node_head *rnh;
 	struct rtentry *rt;
 	struct radix_node *rn;
 	struct rtentry *newrt;
@@ -137,6 +278,10 @@ rtalloc1(struct sockaddr *dst, int report, u_long ignflags)
 	u_long nflags;
 	int err = 0, msgtype = RTM_MISS;
 
+	KASSERT((fibnum < rt_numfibs), ("rtalloc1_fib: bad fibnum"));
+	if (dst->sa_family != AF_INET)	/* Only INET supports > 1 fib now */
+		fibnum = 0;
+	rnh = rt_tables[fibnum][dst->sa_family];
 	newrt = NULL;
 	/*
 	 * Look up the address in the table for that Address Family
@@ -160,8 +305,8 @@ rtalloc1(struct sockaddr *dst, int report, u_long ignflags)
 			 * If it requires that it be cloned, do so.
 			 * (This implies it wasn't a HOST route.)
 			 */
-			err = rtrequest(RTM_RESOLVE, dst, NULL,
-					      NULL, 0, &newrt);
+			err = rtrequest_fib(RTM_RESOLVE, dst, NULL,
+					      NULL, 0, &newrt, fibnum);
 			if (err) {
 				/*
 				 * If the cloning didn't succeed, maybe
@@ -234,7 +379,7 @@ rtfree(struct rtentry *rt)
 	struct radix_node_head *rnh;
 
 	KASSERT(rt != NULL,("%s: NULL rt", __func__));
-	rnh = rt_tables[rt_key(rt)->sa_family];
+	rnh = rt_tables[rt->rt_fibnum][rt_key(rt)->sa_family];
 	KASSERT(rnh != NULL,("%s: NULL rnh", __func__));
 
 	RT_LOCK_ASSERT(rt);
@@ -320,7 +465,19 @@ rtredirect(struct sockaddr *dst,
 	int flags,
 	struct sockaddr *src)
 {
-	struct rtentry *rt;
+
+	rtredirect_fib(dst, gateway, netmask, flags, src, 0);
+}
+
+void
+rtredirect_fib(struct sockaddr *dst,
+	struct sockaddr *gateway,
+	struct sockaddr *netmask,
+	int flags,
+	struct sockaddr *src,
+	u_int fibnum)
+{
+	struct rtentry *rt, *rt0 = NULL;
 	int error = 0;
 	short *stat = NULL;
 	struct rt_addrinfo info;
@@ -331,7 +488,7 @@ rtredirect(struct sockaddr *dst,
 		error = ENETUNREACH;
 		goto out;
 	}
-	rt = rtalloc1(dst, 0, 0UL);	/* NB: rt is locked */
+	rt = rtalloc1_fib(dst, 0, 0UL, fibnum);	/* NB: rt is locked */
 	/*
 	 * If the redirect isn't from our current router for this dst,
 	 * it's either old or wrong.  If it redirects us to ourselves,
@@ -364,8 +521,9 @@ rtredirect(struct sockaddr *dst,
 			 * Create new route, rather than smashing route to net.
 			 */
 		create:
-			if (rt)
-				rtfree(rt);
+			rt0 = rt;
+			rt = NULL;
+		
 			flags |=  RTF_GATEWAY | RTF_DYNAMIC;
 			bzero((caddr_t)&info, sizeof(info));
 			info.rti_info[RTAX_DST] = dst;
@@ -373,14 +531,19 @@ rtredirect(struct sockaddr *dst,
 			info.rti_info[RTAX_NETMASK] = netmask;
 			info.rti_ifa = ifa;
 			info.rti_flags = flags;
-			rt = NULL;
-			error = rtrequest1(RTM_ADD, &info, &rt);
+			error = rtrequest1_fib(RTM_ADD, &info, &rt, fibnum);
 			if (rt != NULL) {
 				RT_LOCK(rt);
+				EVENTHANDLER_INVOKE(route_redirect_event, rt0, rt, dst);
 				flags = rt->rt_flags;
 			}
+			if (rt0)
+				RTFREE_LOCKED(rt0);
+			
 			stat = &rtstat.rts_dynamic;
 		} else {
+			struct rtentry *gwrt;
+
 			/*
 			 * Smash the current notion of the gateway to
 			 * this destination.  Should check about netmask!!!
@@ -392,6 +555,9 @@ rtredirect(struct sockaddr *dst,
 			 * add the key and gateway (in one malloc'd chunk).
 			 */
 			rt_setgate(rt, rt_key(rt), gateway);
+			gwrt = rtalloc1(gateway, 1, 0);
+			EVENTHANDLER_INVOKE(route_redirect_event, rt, gwrt, dst);
+			RTFREE_LOCKED(gwrt);
 		}
 	} else
 		error = EHOSTUNREACH;
@@ -411,11 +577,17 @@ out:
 	rt_missmsg(RTM_REDIRECT, &info, flags, error);
 }
 
+int
+rtioctl(u_long req, caddr_t data)
+{
+	return (rtioctl_fib(req, data, 0));
+}
+
 /*
  * Routing table ioctl interface.
  */
 int
-rtioctl(u_long req, caddr_t data)
+rtioctl_fib(u_long req, caddr_t data, u_int fibnum)
 {
 
 	/*
@@ -426,7 +598,7 @@ rtioctl(u_long req, caddr_t data)
 	 */
 #ifdef INET
 	/* Multicast goop, grrr... */
-	return mrt_ioctl ? mrt_ioctl(req, data) : EOPNOTSUPP;
+	return mrt_ioctl ? mrt_ioctl(req, data, fibnum) : EOPNOTSUPP;
 #else /* INET */
 	return ENXIO;
 #endif /* INET */
@@ -434,6 +606,13 @@ rtioctl(u_long req, caddr_t data)
 
 struct ifaddr *
 ifa_ifwithroute(int flags, struct sockaddr *dst, struct sockaddr *gateway)
+{
+	return (ifa_ifwithroute_fib(flags, dst, gateway, 0));
+}
+
+struct ifaddr *
+ifa_ifwithroute_fib(int flags, struct sockaddr *dst, struct sockaddr *gateway,
+				u_int fibnum)
 {
 	register struct ifaddr *ifa;
 	int not_found = 0;
@@ -462,7 +641,7 @@ ifa_ifwithroute(int flags, struct sockaddr *dst, struct sockaddr *gateway)
 	if (ifa == NULL)
 		ifa = ifa_ifwithnet(gateway);
 	if (ifa == NULL) {
-		struct rtentry *rt = rtalloc1(gateway, 0, 0UL);
+		struct rtentry *rt = rtalloc1_fib(gateway, 0, 0UL, fibnum);
 		if (rt == NULL)
 			return (NULL);
 		/*
@@ -517,6 +696,18 @@ rtrequest(int req,
 	int flags,
 	struct rtentry **ret_nrt)
 {
+	return (rtrequest_fib(req, dst, gateway, netmask, flags, ret_nrt, 0));
+}
+
+int
+rtrequest_fib(int req,
+	struct sockaddr *dst,
+	struct sockaddr *gateway,
+	struct sockaddr *netmask,
+	int flags,
+	struct rtentry **ret_nrt,
+	u_int fibnum)
+{
 	struct rt_addrinfo info;
 
 	if (dst->sa_len == 0)
@@ -527,7 +718,7 @@ rtrequest(int req,
 	info.rti_info[RTAX_DST] = dst;
 	info.rti_info[RTAX_GATEWAY] = gateway;
 	info.rti_info[RTAX_NETMASK] = netmask;
-	return rtrequest1(req, &info, ret_nrt);
+	return rtrequest1_fib(req, &info, ret_nrt, fibnum);
 }
 
 /*
@@ -543,6 +734,12 @@ rtrequest(int req,
 
 int
 rt_getifa(struct rt_addrinfo *info)
+{
+	return (rt_getifa_fib(info, 0));
+}
+
+int
+rt_getifa_fib(struct rt_addrinfo *info, u_int fibnum)
 {
 	struct ifaddr *ifa;
 	int error = 0;
@@ -565,9 +762,11 @@ rt_getifa(struct rt_addrinfo *info)
 		if (sa != NULL && info->rti_ifp != NULL)
 			info->rti_ifa = ifaof_ifpforaddr(sa, info->rti_ifp);
 		else if (dst != NULL && gateway != NULL)
-			info->rti_ifa = ifa_ifwithroute(flags, dst, gateway);
+			info->rti_ifa = ifa_ifwithroute_fib(flags, dst, gateway,
+							fibnum);
 		else if (sa != NULL)
-			info->rti_ifa = ifa_ifwithroute(flags, sa, sa);
+			info->rti_ifa = ifa_ifwithroute_fib(flags, sa, sa,
+							fibnum);
 	}
 	if ((ifa = info->rti_ifa) != NULL) {
 		if (info->rti_ifp == NULL)
@@ -601,7 +800,7 @@ rtexpunge(struct rtentry *rt)
 	/*
 	 * Find the correct routing tree to use for this Address Family
 	 */
-	rnh = rt_tables[rt_key(rt)->sa_family];
+	rnh = rt_tables[rt->rt_fibnum][rt_key(rt)->sa_family];
 	if (rnh == NULL)
 		return (EAFNOSUPPORT);
 
@@ -668,6 +867,13 @@ bad:
 int
 rtrequest1(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt)
 {
+	return (rtrequest1_fib(req, info, ret_nrt, 0));
+}
+
+int
+rtrequest1_fib(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt,
+				u_int fibnum)
+{
 	int error = 0;
 	register struct rtentry *rt;
 	register struct radix_node *rn;
@@ -676,10 +882,13 @@ rtrequest1(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt)
 	struct sockaddr *ndst;
 #define senderr(x) { error = x ; goto bad; }
 
+	KASSERT((fibnum < rt_numfibs), ("rtrequest1_fib: bad fibnum"));
+	if (dst->sa_family != AF_INET)	/* Only INET supports > 1 fib now */
+		fibnum = 0;
 	/*
 	 * Find the correct routing tree to use for this Address Family
 	 */
-	rnh = rt_tables[dst->sa_family];
+	rnh = rt_tables[fibnum][dst->sa_family];
 	if (rnh == NULL)
 		return (EAFNOSUPPORT);
 	RADIX_NODE_HEAD_LOCK(rnh);
@@ -772,7 +981,7 @@ rtrequest1(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt)
 		    (gateway->sa_family != AF_UNSPEC) && (gateway->sa_family != AF_LINK))
 			senderr(EINVAL);
 
-		if (info->rti_ifa == NULL && (error = rt_getifa(info)))
+		if (info->rti_ifa == NULL && (error = rt_getifa_fib(info, fibnum)))
 			senderr(error);
 		ifa = info->rti_ifa;
 
@@ -782,6 +991,7 @@ rtrequest1(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt)
 			senderr(ENOBUFS);
 		RT_LOCK_INIT(rt);
 		rt->rt_flags = RTF_UP | flags;
+		rt->rt_fibnum = fibnum;
 		/*
 		 * Add the gateway. Possibly re-malloc-ing the storage for it
 		 * also add the rt_gwroute if possible.
@@ -826,7 +1036,7 @@ rtrequest1(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt)
 			 * then we just blow it away and retry the insertion
 			 * of the new one.
 			 */
-			rt2 = rtalloc1(dst, 0, 0);
+			rt2 = rtalloc1_fib(dst, 0, 0, fibnum);
 			if (rt2 && rt2->rt_parent) {
 				rtexpunge(rt2);
 				RT_UNLOCK(rt2);
@@ -942,8 +1152,8 @@ rt_fixdelete(struct radix_node *rn, void *vp)
 
 	if (rt->rt_parent == rt0 &&
 	    !(rt->rt_flags & (RTF_PINNED | RTF_CLONING))) {
-		return rtrequest(RTM_DELETE, rt_key(rt), NULL, rt_mask(rt),
-				 rt->rt_flags, NULL);
+		return rtrequest_fib(RTM_DELETE, rt_key(rt), NULL, rt_mask(rt),
+				 rt->rt_flags, NULL, rt->rt_fibnum);
 	}
 	return 0;
 }
@@ -1007,15 +1217,15 @@ rt_fixchange(struct radix_node *rn, void *vp)
 	 * changed/added under the node's mask.  So, get rid of it.
 	 */
 delete_rt:
-	return rtrequest(RTM_DELETE, rt_key(rt), NULL,
-			 rt_mask(rt), rt->rt_flags, NULL);
+	return rtrequest_fib(RTM_DELETE, rt_key(rt), NULL,
+			 rt_mask(rt), rt->rt_flags, NULL, rt->rt_fibnum);
 }
 
 int
 rt_setgate(struct rtentry *rt, struct sockaddr *dst, struct sockaddr *gate)
 {
 	/* XXX dst may be overwritten, can we move this to below */
-	struct radix_node_head *rnh = rt_tables[dst->sa_family];
+	struct radix_node_head *rnh = rt_tables[rt->rt_fibnum][dst->sa_family];
 	int dlen = SA_SIZE(dst), glen = SA_SIZE(gate);
 
 again:
@@ -1046,7 +1256,7 @@ again:
 		struct rtentry *gwrt;
 
 		RT_UNLOCK(rt);		/* XXX workaround LOR */
-		gwrt = rtalloc1(gate, 1, 0);
+		gwrt = rtalloc1_fib(gate, 1, 0, rt->rt_fibnum);
 		if (gwrt == rt) {
 			RT_REMREF(rt);
 			return (EADDRINUSE); /* failure */
@@ -1151,15 +1361,19 @@ rt_maskedcopy(struct sockaddr *src, struct sockaddr *dst, struct sockaddr *netma
  * Set up a routing table entry, normally
  * for an interface.
  */
-int
-rtinit(struct ifaddr *ifa, int cmd, int flags)
+#define _SOCKADDR_TMPSIZE 128 /* Not too big.. kernel stack size is limited */
+static inline int
+rtinit1(struct ifaddr *ifa, int cmd, int flags, int fibnum)
 {
 	struct sockaddr *dst;
 	struct sockaddr *netmask;
-	struct mbuf *m = NULL;
 	struct rtentry *rt = NULL;
 	struct rt_addrinfo info;
-	int error;
+	int error = 0;
+	int startfib, endfib;
+	char tempbuf[_SOCKADDR_TMPSIZE];
+	int didwork = 0;
+	int a_failure = 0;
 
 	if (flags & RTF_HOST) {
 		dst = ifa->ifa_dstaddr;
@@ -1168,87 +1382,152 @@ rtinit(struct ifaddr *ifa, int cmd, int flags)
 		dst = ifa->ifa_addr;
 		netmask = ifa->ifa_netmask;
 	}
+	if ( dst->sa_family != AF_INET)
+		fibnum = 0;
+	if (fibnum == -1) {
+		if (rt_add_addr_allfibs == 0 && cmd == (int)RTM_ADD) {
+			startfib = endfib = curthread->td_proc->p_fibnum;
+		} else {
+			startfib = 0;
+			endfib = rt_numfibs - 1;
+		}
+	} else {
+		KASSERT((fibnum < rt_numfibs), ("rtinit1: bad fibnum"));
+		startfib = fibnum;
+		endfib = fibnum;
+	}
 	if (dst->sa_len == 0)
 		return(EINVAL);
 
 	/*
-	 * If it's a delete, check that if it exists, it's on the correct
-	 * interface or we might scrub a route to another ifa which would
+	 * If it's a delete, check that if it exists,
+	 * it's on the correct interface or we might scrub
+	 * a route to another ifa which would
 	 * be confusing at best and possibly worse.
 	 */
 	if (cmd == RTM_DELETE) {
-		struct sockaddr *deldst;
-		struct radix_node_head *rnh;
-		struct radix_node *rn;
-
 		/*
 		 * It's a delete, so it should already exist..
 		 * If it's a net, mask off the host bits
 		 * (Assuming we have a mask)
+		 * XXX this is kinda inet specific..
 		 */
 		if (netmask != NULL) {
-			m = m_get(M_DONTWAIT, MT_SONAME);
-			if (m == NULL)
-				return(ENOBUFS);
-			deldst = mtod(m, struct sockaddr *);
-			rt_maskedcopy(dst, deldst, netmask);
-			dst = deldst;
-		}
-		/*
-		 * Look up an rtentry that is in the routing tree and
-		 * contains the correct info.
-		 */
-		if ((rnh = rt_tables[dst->sa_family]) == NULL)
-			goto bad;
-		RADIX_NODE_HEAD_LOCK(rnh);
-		error = ((rn = rnh->rnh_lookup(dst, netmask, rnh)) == NULL ||
-		    (rn->rn_flags & RNF_ROOT) ||
-		    RNTORT(rn)->rt_ifa != ifa ||
-		    !sa_equal((struct sockaddr *)rn->rn_key, dst));
-		RADIX_NODE_HEAD_UNLOCK(rnh);
-		if (error) {
-bad:
-			if (m)
-				(void) m_free(m);
-			return (flags & RTF_HOST ? EHOSTUNREACH : ENETUNREACH);
+			rt_maskedcopy(dst, (struct sockaddr *)tempbuf, netmask);
+			dst = (struct sockaddr *)tempbuf;
 		}
 	}
 	/*
-	 * Do the actual request
+	 * Now go through all the requested tables (fibs) and do the
+	 * requested action. Realistically, this will either be fib 0
+	 * for protocols that don't do multiple tables or all the
+	 * tables for those that do. XXX For this version only AF_INET.
+	 * When that changes code should be refactored to protocol
+	 * independent parts and protocol dependent parts.
 	 */
-	bzero((caddr_t)&info, sizeof(info));
-	info.rti_ifa = ifa;
-	info.rti_flags = flags | ifa->ifa_flags;
-	info.rti_info[RTAX_DST] = dst;
-	info.rti_info[RTAX_GATEWAY] = ifa->ifa_addr;
-	info.rti_info[RTAX_NETMASK] = netmask;
-	error = rtrequest1(cmd, &info, &rt);
-	if (error == 0 && rt != NULL) {
-		/*
-		 * notify any listening routing agents of the change
-		 */
-		RT_LOCK(rt);
-		rt_newaddrmsg(cmd, ifa, error, rt);
+	for ( fibnum = startfib; fibnum <= endfib; fibnum++) {
 		if (cmd == RTM_DELETE) {
+			struct radix_node_head *rnh;
+			struct radix_node *rn;
 			/*
-			 * If we are deleting, and we found an entry, then
-			 * it's been removed from the tree.. now throw it away.
+			 * Look up an rtentry that is in the routing tree and
+			 * contains the correct info.
 			 */
-			RTFREE_LOCKED(rt);
-		} else {
-			if (cmd == RTM_ADD) {
-				/*
-				 * We just wanted to add it.. we don't actually
-				 * need a reference.
-				 */
-				RT_REMREF(rt);
+			if ((rnh = rt_tables[fibnum][dst->sa_family]) == NULL)
+				/* this table doesn't exist but others might */
+				continue;
+			RADIX_NODE_HEAD_LOCK(rnh);
+			rn = rnh->rnh_lookup(dst, netmask, rnh);
+			error = (rn == NULL ||
+			    (rn->rn_flags & RNF_ROOT) ||
+			    RNTORT(rn)->rt_ifa != ifa ||
+			    !sa_equal((struct sockaddr *)rn->rn_key, dst));
+			RADIX_NODE_HEAD_UNLOCK(rnh);
+			if (error) {
+				/* this is only an error if bad on ALL tables */
+				continue;
 			}
-			RT_UNLOCK(rt);
+		}
+		/*
+		 * Do the actual request
+		 */
+		bzero((caddr_t)&info, sizeof(info));
+		info.rti_ifa = ifa;
+		info.rti_flags = flags | ifa->ifa_flags;
+		info.rti_info[RTAX_DST] = dst;
+		info.rti_info[RTAX_GATEWAY] = ifa->ifa_addr;
+		info.rti_info[RTAX_NETMASK] = netmask;
+		error = rtrequest1_fib(cmd, &info, &rt, fibnum);
+		if (error == 0 && rt != NULL) {
+			/*
+			 * notify any listening routing agents of the change
+			 */
+			RT_LOCK(rt);
+			rt_newaddrmsg(cmd, ifa, error, rt);
+			if (cmd == RTM_DELETE) {
+				/*
+				 * If we are deleting, and we found an entry, then
+				 * it's been removed from the tree.. now throw it away.
+				 */
+				RTFREE_LOCKED(rt);
+			} else {
+				if (cmd == RTM_ADD) {
+					/*
+					 * We just wanted to add it.. we don't actually
+					 * need a reference.
+					 */
+					RT_REMREF(rt);
+				}
+				RT_UNLOCK(rt);
+			}
+			didwork = 1;
+		}
+		if (error)
+			a_failure = error;
+	}
+	if (cmd == RTM_DELETE) {
+		if (didwork) {
+			error = 0;
+		} else {
+			/* we only give an error if it wasn't in any table */
+			error = ((flags & RTF_HOST) ?
+			    EHOSTUNREACH : ENETUNREACH);
+		}
+	} else {
+		if (a_failure) {
+			/* return an error if any of them failed */
+			error = a_failure;
 		}
 	}
-	if (m)
-		(void) m_free(m);
 	return (error);
+}
+
+/* special one for inet internal use. may not use. */
+int
+rtinit_fib(struct ifaddr *ifa, int cmd, int flags)
+{
+	return (rtinit1(ifa, cmd, flags, -1));
+}
+
+/*
+ * Set up a routing table entry, normally
+ * for an interface.
+ */
+int
+rtinit(struct ifaddr *ifa, int cmd, int flags)
+{
+	struct sockaddr *dst;
+	int fib = 0;
+
+	if (flags & RTF_HOST) {
+		dst = ifa->ifa_dstaddr;
+	} else {
+		dst = ifa->ifa_addr;
+	}
+
+	if (dst->sa_family == AF_INET)
+		fib = -1;
+	return (rtinit1(ifa, cmd, flags, fib));
 }
 
 /*
@@ -1270,75 +1549,120 @@ bad:
  *	final destination if directly reachable);
  *   *lrt0 points to the cached route to the final destination;
  *   *lrt is not meaningful;
+ *	(*lrt0 has no ref held on it by us so REMREF is not needed.
+ *	Refs only account for major structural references and not usages,
+ * 	which is actually a bit of a problem.)
  *
  * === Operation ===
  * If the route is marked down try to find a new route.  If the route
  * to the gateway is gone, try to setup a new route.  Otherwise,
  * if the route is marked for packets to be rejected, enforce that.
+ * Note that rtalloc returns an rtentry with an extra REF that we may
+ * need to lose.
  *
  * === On return ===
  *   *dst is unchanged;
  *   *lrt0 points to the (possibly new) route to the final destination
- *   *lrt points to the route to the next hop
+ *   *lrt points to the route to the next hop   [LOCKED]
  *
  * Their values are meaningful ONLY if no error is returned.
+ *
+ * To follow this you have to remember that:
+ * RT_REMREF reduces the reference count by 1 but doesn't check it for 0 (!)
+ * RTFREE_LOCKED includes an RT_REMREF (or an rtfree if refs == 1)
+ *    and an RT_UNLOCK
+ * RTFREE does an RT_LOCK and an RTFREE_LOCKED
+ * The gwroute pointer counts as a reference on the rtentry to which it points.
+ * so when we add it we use the ref that rtalloc gives us and when we lose it
+ * we need to remove the reference.
+ * RT_TEMP_UNLOCK does an RT_ADDREF before freeing the lock, and
+ * RT_RELOCK locks it (it can't have gone away due to the ref) and
+ * drops the ref, possibly freeing it and zeroing the pointer if
+ * the ref goes to 0 (unlocking in the process).
  */
 int
 rt_check(struct rtentry **lrt, struct rtentry **lrt0, struct sockaddr *dst)
 {
 	struct rtentry *rt;
 	struct rtentry *rt0;
-	int error;
+	u_int fibnum;
 
 	KASSERT(*lrt0 != NULL, ("rt_check"));
-	rt = rt0 = *lrt0;
+	rt0 = *lrt0;
+	rt = NULL;
+	fibnum = rt0->rt_fibnum;
 
 	/* NB: the locking here is tortuous... */
-	RT_LOCK(rt);
-	if ((rt->rt_flags & RTF_UP) == 0) {
-		RT_UNLOCK(rt);
-		rt = rtalloc1(dst, 1, 0UL);
-		if (rt != NULL) {
-			RT_REMREF(rt);
-			/* XXX what about if change? */
-		} else
-			return (EHOSTUNREACH);
-		rt0 = rt;
+	RT_LOCK(rt0);
+retry:
+	if (rt0 && (rt0->rt_flags & RTF_UP) == 0) {
+		/* Current rt0 is useless, try get a replacement. */
+		RT_UNLOCK(rt0);
+		rt0 = NULL;
 	}
-	/* XXX BSD/OS checks dst->sa_family != AF_NS */
-	if (rt->rt_flags & RTF_GATEWAY) {
-		if (rt->rt_gwroute == NULL)
-			goto lookup;
-		rt = rt->rt_gwroute;
-		RT_LOCK(rt);		/* NB: gwroute */
-		if ((rt->rt_flags & RTF_UP) == 0) {
-			RTFREE_LOCKED(rt);	/* unlock gwroute */
-			rt = rt0;
-			rt0->rt_gwroute = NULL;
-		lookup:
-			RT_UNLOCK(rt0);
-			rt = rtalloc1(rt->rt_gateway, 1, 0UL);
-			if (rt == rt0) {
-				RT_REMREF(rt0);
-				RT_UNLOCK(rt0);
-				return (ENETUNREACH);
-			}
-			RT_LOCK(rt0);
-			if (rt0->rt_gwroute != NULL)
-				RTFREE(rt0->rt_gwroute);
-			rt0->rt_gwroute = rt;
-			if (rt == NULL) {
-				RT_UNLOCK(rt0);
-				return (EHOSTUNREACH);
+	if (rt0 == NULL) {
+		rt0 = rtalloc1_fib(dst, 1, 0UL, fibnum);
+		if (rt0 == NULL) {
+			return (EHOSTUNREACH);
+		}
+		RT_REMREF(rt0); /* don't need the reference. */
+	}
+
+	if (rt0->rt_flags & RTF_GATEWAY) {
+		if ((rt = rt0->rt_gwroute) != NULL) {
+			RT_LOCK(rt);		/* NB: gwroute */
+			if ((rt->rt_flags & RTF_UP) == 0) {
+				/* gw route is dud. ignore/lose it */
+				RTFREE_LOCKED(rt); /* unref (&unlock) gwroute */
+				rt = rt0->rt_gwroute = NULL;
 			}
 		}
+		
+		if (rt == NULL) {  /* NOT AN ELSE CLAUSE */
+			RT_TEMP_UNLOCK(rt0); /* MUST return to undo this */
+			rt = rtalloc1_fib(rt0->rt_gateway, 1, 0UL, fibnum);
+			if ((rt == rt0) || (rt == NULL)) {
+				/* the best we can do is not good enough */
+				if (rt) {
+					RT_REMREF(rt); /* assumes ref > 0 */
+					RT_UNLOCK(rt);
+				}
+				RTFREE(rt0); /* lock, unref, (unlock) */
+				return (ENETUNREACH);
+			}
+			/*
+			 * Relock it and lose the added reference.
+			 * All sorts of things could have happenned while we
+			 * had no lock on it, so check for them.
+			 */
+			RT_RELOCK(rt0);
+			if (rt0 == NULL || ((rt0->rt_flags & RTF_UP) == 0))
+				/* Ru-roh.. what we had is no longer any good */
+				goto retry;
+			/* 
+			 * While we were away, someone replaced the gateway.
+			 * Since a reference count is involved we can't just
+			 * overwrite it.
+			 */
+			if (rt0->rt_gwroute) {
+				if (rt0->rt_gwroute != rt) {
+					RTFREE_LOCKED(rt);
+					goto retry;
+				}
+			} else {
+				rt0->rt_gwroute = rt;
+			}
+		}
+		RT_LOCK_ASSERT(rt);
 		RT_UNLOCK(rt0);
+	} else {
+		/* think of rt as having the lock from now on.. */
+		rt = rt0;
 	}
 	/* XXX why are we inspecting rmx_expire? */
-	error = (rt->rt_flags & RTF_REJECT) &&
-		(rt->rt_rmx.rmx_expire == 0 ||
-			time_uptime < rt->rt_rmx.rmx_expire);
-	if (error) {
+	if ((rt->rt_flags & RTF_REJECT) &&
+	    (rt->rt_rmx.rmx_expire == 0 ||
+	    time_uptime < rt->rt_rmx.rmx_expire)) {
 		RT_UNLOCK(rt);
 		return (rt == rt0 ? EHOSTDOWN : EHOSTUNREACH);
 	}

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -32,10 +31,13 @@
 /* $KAME: sctp_constants.h,v 1.17 2005/03/06 16:04:17 itojun Exp $	 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.32.2.2 2007/11/06 02:48:03 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.32.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __sctp_constants_h__
 #define __sctp_constants_h__
+
+/* IANA assigned port number for SCTP over UDP encapsulation */
+#define SCTP_OVER_UDP_TUNNELING_PORT 9899
 
 /* Number of packets to get before sack sent by default */
 #define SCTP_DEFAULT_SACK_FREQ 2
@@ -191,35 +193,36 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.32.2.2 2007/11/06 02:48
 #define SCTP_MBUF_IALLOC            91
 #define SCTP_MBUF_IFREE             92
 #define SCTP_MBUF_ICOPY             93
-#define SCTP_SORCV_FREECTL          94
-#define SCTP_SORCV_DOESCPY          95
-#define SCTP_SORCV_DOESLCK          96
-#define SCTP_SORCV_DOESADJ          97
-#define SCTP_SORCV_BOTWHILE         98
-#define SCTP_SORCV_PASSBF           99
-#define SCTP_SORCV_ADJD            100
-#define SCTP_UNKNOWN_MAX           101
-#define SCTP_RANDY_STUFF           102
-#define SCTP_RANDY_STUFF1          103
-#define SCTP_STRMOUT_LOG_ASSIGN	   104
-#define SCTP_STRMOUT_LOG_SEND	   105
-#define SCTP_FLIGHT_LOG_DOWN_CA    106
-#define SCTP_FLIGHT_LOG_UP         107
-#define SCTP_FLIGHT_LOG_DOWN_GAP   108
-#define SCTP_FLIGHT_LOG_DOWN_RSND  109
-#define SCTP_FLIGHT_LOG_UP_RSND    110
-#define SCTP_FLIGHT_LOG_DOWN_RSND_TO    111
-#define SCTP_FLIGHT_LOG_DOWN_WP    112
-#define SCTP_FLIGHT_LOG_UP_REVOKE  113
-#define SCTP_FLIGHT_LOG_DOWN_PDRP  114
-#define SCTP_FLIGHT_LOG_DOWN_PMTU  115
-#define SCTP_SACK_LOG_NORMAL	   116
-#define SCTP_SACK_LOG_EXPRESS	   117
-#define SCTP_MAP_TSN_ENTERS        118
-#define SCTP_THRESHOLD_CLEAR       119
-#define SCTP_THRESHOLD_INCR        120
+#define SCTP_MBUF_SPLIT             94
+#define SCTP_SORCV_FREECTL          95
+#define SCTP_SORCV_DOESCPY          96
+#define SCTP_SORCV_DOESLCK          97
+#define SCTP_SORCV_DOESADJ          98
+#define SCTP_SORCV_BOTWHILE         99
+#define SCTP_SORCV_PASSBF          100
+#define SCTP_SORCV_ADJD            101
+#define SCTP_UNKNOWN_MAX           102
+#define SCTP_RANDY_STUFF           103
+#define SCTP_RANDY_STUFF1          104
+#define SCTP_STRMOUT_LOG_ASSIGN	   105
+#define SCTP_STRMOUT_LOG_SEND	   106
+#define SCTP_FLIGHT_LOG_DOWN_CA    107
+#define SCTP_FLIGHT_LOG_UP         108
+#define SCTP_FLIGHT_LOG_DOWN_GAP   109
+#define SCTP_FLIGHT_LOG_DOWN_RSND  110
+#define SCTP_FLIGHT_LOG_UP_RSND    111
+#define SCTP_FLIGHT_LOG_DOWN_RSND_TO    112
+#define SCTP_FLIGHT_LOG_DOWN_WP    113
+#define SCTP_FLIGHT_LOG_UP_REVOKE  114
+#define SCTP_FLIGHT_LOG_DOWN_PDRP  115
+#define SCTP_FLIGHT_LOG_DOWN_PMTU  116
+#define SCTP_SACK_LOG_NORMAL	   117
+#define SCTP_SACK_LOG_EXPRESS	   118
+#define SCTP_MAP_TSN_ENTERS        119
+#define SCTP_THRESHOLD_CLEAR       120
+#define SCTP_THRESHOLD_INCR        121
 
-#define SCTP_LOG_MAX_TYPES 121
+#define SCTP_LOG_MAX_TYPES 122
 /*
  * To turn on various logging, you must first enable 'options KTR' and
  * you might want to bump the entires 'options KTR_ENTRIES=80000'.
@@ -267,6 +270,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.32.2.2 2007/11/06 02:48
 #else
 #define SCTP_DEFAULT_AUTO_ASCONF	1
 #endif
+
+/* default MULTIPLE_ASCONF mode enable(1)/disable(0) value (sysctl) */
+#define SCTP_DEFAULT_MULTIPLE_ASCONFS	0
 
 /* default MOBILITY_BASE mode enable(1)/disable(0) value (sysctl) */
 #if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_BASE)
@@ -376,8 +382,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.32.2.2 2007/11/06 02:48
 						 * hit this value) */
 #define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
-#define SCTP_DATAGRAM_INBOUND		10011
-#define SCTP_READY_TO_TRANSMIT		10012
 #define SCTP_DATAGRAM_MARKED		20010
 #define SCTP_FORWARD_TSN_SKIP		30010
 
@@ -1064,6 +1068,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.32.2.2 2007/11/06 02:48
 
 #define SCTP_GETTIME_TIMEVAL(x)	(getmicrouptime(x))
 #define SCTP_GETPTIME_TIMEVAL(x)	(microuptime(x))
+#endif
 /*#if defined(__FreeBSD__) || defined(__APPLE__)*/
 /*#define SCTP_GETTIME_TIMEVAL(x) { \*/
 /*	(x)->tv_sec = ticks / 1000; \*/
@@ -1074,6 +1079,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.32.2.2 2007/11/06 02:48
 /*#define SCTP_GETTIME_TIMEVAL(x)	(microtime(x))*/
 /*#endif				 __FreeBSD__ */
 
+#if defined(_KERNEL) || defined(__Userspace__)
 #define sctp_sowwakeup(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1112,5 +1118,5 @@ do { \
 	} \
 } while (0)
 
-#endif				/* _KERNEL */
+#endif				/* _KERNEL || __Userspace__ */
 #endif

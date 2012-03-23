@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)rtsock.c	8.7 (Berkeley) 10/12/95
- * $FreeBSD: src/sys/net/rtsock.c,v 1.143 2007/09/08 19:28:45 cognet Exp $
+ * $FreeBSD: src/sys/net/rtsock.c,v 1.143.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include "opt_sctp.h"
 #include <sys/param.h>
@@ -60,7 +59,6 @@ extern void sctp_addr_change(struct ifaddr *ifa, int cmd);
 MALLOC_DEFINE(M_RTABLE, "routetbl", "routing tables");
 
 /* NB: these are not modified */
-static struct	sockaddr route_dst = { 2, PF_ROUTE, };
 static struct	sockaddr route_src = { 2, PF_ROUTE, };
 static struct	sockaddr sa_zero   = { sizeof(sa_zero), AF_INET, };
 
@@ -118,7 +116,7 @@ rts_init(void)
 	mtx_init(&rtsintrq.ifq_mtx, "rts_inq", NULL, MTX_DEF);
 	netisr_register(NETISR_ROUTE, rts_input, &rtsintrq, NETISR_MPSAFE);
 }
-SYSINIT(rtsock, SI_SUB_PROTO_DOMAIN, SI_ORDER_THIRD, rts_init, 0)
+SYSINIT(rtsock, SI_SUB_PROTO_DOMAIN, SI_ORDER_THIRD, rts_init, 0);
 
 static void
 rts_input(struct mbuf *m)
@@ -136,7 +134,7 @@ rts_input(struct mbuf *m)
 	} else
 		route_proto.sp_protocol = 0;
 
-	raw_input(m, &route_proto, &route_src, &route_dst);
+	raw_input(m, &route_proto, &route_src);
 }
 
 /*
@@ -181,6 +179,7 @@ rts_attach(struct socket *so, int proto, struct thread *td)
 	 */
 	s = splnet();
 	so->so_pcb = (caddr_t)rp;
+	so->so_fibnum = td->td_proc->p_fibnum;
 	error = raw_attach(so, proto);
 	rp = sotorawcb(so);
 	if (error) {
@@ -201,7 +200,6 @@ rts_attach(struct socket *so, int proto, struct thread *td)
 		route_cb.ipx_count++;
 		break;
 	}
-	rp->rcb_faddr = &route_src;
 	route_cb.any_count++;
 	RTSOCK_UNLOCK();
 	soisconnected(so);
@@ -386,7 +384,8 @@ route_output(struct mbuf *m, struct socket *so)
 		if (info.rti_info[RTAX_GATEWAY] == NULL)
 			senderr(EINVAL);
 		saved_nrt = NULL;
-		error = rtrequest1(RTM_ADD, &info, &saved_nrt);
+		error = rtrequest1_fib(RTM_ADD, &info, &saved_nrt,
+		    so->so_fibnum);
 		if (error == 0 && saved_nrt) {
 			RT_LOCK(saved_nrt);
 			rt_setmetrics(rtm->rtm_inits,
@@ -400,7 +399,8 @@ route_output(struct mbuf *m, struct socket *so)
 
 	case RTM_DELETE:
 		saved_nrt = NULL;
-		error = rtrequest1(RTM_DELETE, &info, &saved_nrt);
+		error = rtrequest1_fib(RTM_DELETE, &info, &saved_nrt,
+		    so->so_fibnum);
 		if (error == 0) {
 			RT_LOCK(saved_nrt);
 			rt = saved_nrt;
@@ -411,7 +411,7 @@ route_output(struct mbuf *m, struct socket *so)
 	case RTM_GET:
 	case RTM_CHANGE:
 	case RTM_LOCK:
-		rnh = rt_tables[info.rti_info[RTAX_DST]->sa_family];
+		rnh = rt_tables[so->so_fibnum][info.rti_info[RTAX_DST]->sa_family];
 		if (rnh == NULL)
 			senderr(EAFNOSUPPORT);
 		RADIX_NODE_HEAD_LOCK(rnh);
@@ -511,7 +511,8 @@ route_output(struct mbuf *m, struct socket *so)
 			     !sa_equal(info.rti_info[RTAX_IFA],
 				       rt->rt_ifa->ifa_addr))) {
 				RT_UNLOCK(rt);
-				if ((error = rt_getifa(&info)) != 0)
+				if ((error = rt_getifa_fib(&info,
+				    rt->rt_fibnum)) != 0)
 					senderr(error);
 				RT_LOCK(rt);
 			}
@@ -1259,7 +1260,7 @@ sysctl_rtsock(SYSCTL_HANDLER_ARGS)
 		} else				/* dump only one table */
 			i = lim = af;
 		for (error = 0; error == 0 && i <= lim; i++)
-			if ((rnh = rt_tables[i]) != NULL) {
+			if ((rnh = rt_tables[curthread->td_proc->p_fibnum][i]) != NULL) {
 				RADIX_NODE_HEAD_LOCK(rnh); 
 			    	error = rnh->rnh_walktree(rnh,
 				    sysctl_dumpentry, &w);

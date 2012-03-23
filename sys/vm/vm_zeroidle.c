@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/vm/vm_zeroidle.c,v 1.4 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994 John Dyson
  * Copyright (c) 2001 Matt Dillon
@@ -165,4 +165,4 @@ pagezero_start(void __unused *arg)
 	sched_add(td, SRQ_BORING);
 	thread_unlock(td);
 }
-SYSINIT(pagezero, SI_SUB_KTHREAD_VM, SI_ORDER_ANY, pagezero_start, NULL)
+SYSINIT(pagezero, SI_SUB_KTHREAD_VM, SI_ORDER_ANY, pagezero_start, NULL);

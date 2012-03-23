@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/in6_src.c,v 1.46 2007/07/05 16:29:39 delphij Exp $	*/
-/*	$KAME: in6_src.c,v 1.132 2003/08/26 04:42:27 keiichi Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: in6_src.c,v 1.132 2003/08/26 04:42:27 keiichi Exp $
  */
 
 /*-
@@ -61,6 +59,9 @@
  *
  *	@(#)in_pcb.c	8.2 (Berkeley) 1/4/94
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/in6_src.c,v 1.46.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -120,15 +121,15 @@ static int selectroute __P((struct sockaddr_in6 *, struct ip6_pktopts *,
 static int in6_selectif __P((struct sockaddr_in6 *, struct ip6_pktopts *,
 	struct ip6_moptions *, struct route_in6 *ro, struct ifnet **));
 
-static struct in6_addrpolicy *lookup_addrsel_policy __P((struct sockaddr_in6 *));
+static struct in6_addrpolicy *lookup_addrsel_policy(struct sockaddr_in6 *);
 
-static void init_policy_queue __P((void));
-static int add_addrsel_policyent __P((struct in6_addrpolicy *));
-static int delete_addrsel_policyent __P((struct in6_addrpolicy *));
+static void init_policy_queue(void);
+static int add_addrsel_policyent(struct in6_addrpolicy *);
+static int delete_addrsel_policyent(struct in6_addrpolicy *);
 static int walk_addrsel_policy __P((int (*)(struct in6_addrpolicy *, void *),
 				    void *));
-static int dump_addrsel_policyent __P((struct in6_addrpolicy *, void *));
-static struct in6_addrpolicy *match_addrsel_policy __P((struct sockaddr_in6 *));
+static int dump_addrsel_policyent(struct in6_addrpolicy *, void *);
+static struct in6_addrpolicy *match_addrsel_policy(struct sockaddr_in6 *);
 
 /*
  * Return an IPv6 address, which is the most appropriate for a given
@@ -140,14 +141,20 @@ static struct in6_addrpolicy *match_addrsel_policy __P((struct sockaddr_in6 *));
 	if ((r) < sizeof(ip6stat.ip6s_sources_rule) / \
 		sizeof(ip6stat.ip6s_sources_rule[0])) /* check for safety */ \
 		ip6stat.ip6s_sources_rule[(r)]++; \
-	/* printf("in6_selectsrc: replace %s with %s by %d\n", ia_best ? ip6_sprintf(&ia_best->ia_addr.sin6_addr) : "none", ip6_sprintf(&ia->ia_addr.sin6_addr), (r)); */ \
+	/* { \
+	char ip6buf[INET6_ADDRSTRLEN], ip6b[INET6_ADDRSTRLEN]; \
+	printf("in6_selectsrc: replace %s with %s by %d\n", ia_best ? ip6_sprintf(ip6buf, &ia_best->ia_addr.sin6_addr) : "none", ip6_sprintf(ip6b, &ia->ia_addr.sin6_addr), (r)); \
+	} */ \
 	goto replace; \
 } while(0)
 #define NEXT(r) do {\
 	if ((r) < sizeof(ip6stat.ip6s_sources_rule) / \
 		sizeof(ip6stat.ip6s_sources_rule[0])) /* check for safety */ \
 		ip6stat.ip6s_sources_rule[(r)]++; \
-	/* printf("in6_selectsrc: keep %s against %s by %d\n", ia_best ? ip6_sprintf(&ia_best->ia_addr.sin6_addr) : "none", ip6_sprintf(&ia->ia_addr.sin6_addr), (r)); */ \
+	/* { \
+	char ip6buf[INET6_ADDRSTRLEN], ip6b[INET6_ADDRSTRLEN]; \
+	printf("in6_selectsrc: keep %s against %s by %d\n", ia_best ? ip6_sprintf(ip6buf, &ia_best->ia_addr.sin6_addr) : "none", ip6_sprintf(ip6b, &ia->ia_addr.sin6_addr), (r)); \
+	} */ \
 	goto next;		/* XXX: we can't use 'continue' here */ \
 } while(0)
 #define BREAK(r) do { \
@@ -159,8 +166,8 @@ static struct in6_addrpolicy *match_addrsel_policy __P((struct sockaddr_in6 *));
 
 struct in6_addr *
 in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
-    struct ip6_moptions *mopts, struct route_in6 *ro,
-    struct in6_addr *laddr, struct ifnet **ifpp, int *errorp)
+    struct inpcb *inp, struct route_in6 *ro, struct ucred *cred,
+    struct ifnet **ifpp, int *errorp)
 {
 	struct in6_addr dst;
 	struct ifnet *ifp = NULL;
@@ -170,11 +177,19 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 	struct in6_addrpolicy *dst_policy = NULL, *best_policy = NULL;
 	u_int32_t odstzone;
 	int prefer_tempaddr;
+	struct ip6_moptions *mopts;
 
 	dst = dstsock->sin6_addr; /* make a copy for local operation */
 	*errorp = 0;
 	if (ifpp)
 		*ifpp = NULL;
+
+	if (inp != NULL) {
+		INP_LOCK_ASSERT(inp);
+		mopts = inp->in6p_moptions;
+	} else {
+		mopts = NULL;
+	}
 
 	/*
 	 * If the source address is explicitly specified by the caller,
@@ -225,8 +240,9 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 	/*
 	 * Otherwise, if the socket has already bound the source, just use it.
 	 */
-	if (laddr && !IN6_IS_ADDR_UNSPECIFIED(laddr))
-		return (laddr);
+	if (inp != NULL && !IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_laddr)) {
+		return (&inp->in6p_laddr);
+	}
 
 	/*
 	 * If the address is not specified, choose the best one based on
@@ -747,7 +763,7 @@ in6_pcbsetport(struct in6_addr *laddr, struct inpcb *inp, struct ucred *cred)
 	struct inpcbinfo *pcbinfo = inp->inp_pcbinfo;
 
 	INP_INFO_WLOCK_ASSERT(pcbinfo);
-	INP_LOCK_ASSERT(inp);
+	INP_WLOCK_ASSERT(inp);
 
 	/* XXX: this is redundant when called from in6_pcbbind */
 	if ((so->so_options & (SO_REUSEADDR|SO_REUSEPORT)) == 0)
@@ -798,7 +814,7 @@ in6_pcbsetport(struct in6_addr *laddr, struct inpcb *inp, struct ucred *cred)
 				*lastport = first;
 			lport = htons(*lastport);
 		} while (in6_pcblookup_local(pcbinfo, &inp->in6p_laddr,
-					     lport, wild));
+		    lport, wild, cred));
 	} else {
 		/*
 			 * counting up
@@ -818,8 +834,8 @@ in6_pcbsetport(struct in6_addr *laddr, struct inpcb *inp, struct ucred *cred)
 			if (*lastport < first || *lastport > last)
 				*lastport = first;
 			lport = htons(*lastport);
-		} while (in6_pcblookup_local(pcbinfo,
-					     &inp->in6p_laddr, lport, wild));
+		} while (in6_pcblookup_local(pcbinfo, &inp->in6p_laddr,
+		    lport, wild, cred));
 	}
 
 	inp->inp_lport = lport;
@@ -1009,7 +1025,7 @@ delete_addrsel_policyent(struct in6_addrpolicy *key)
 }
 
 static int
-walk_addrsel_policy(int (*callback) __P((struct in6_addrpolicy *, void *)),
+walk_addrsel_policy(int (*callback)(struct in6_addrpolicy *, void *),
     void *w)
 {
 	struct addrsel_policyent *pol;

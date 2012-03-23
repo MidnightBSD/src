@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996 Massachusetts Institute of Technology
  *
@@ -27,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_mib.h,v 1.8 2006/01/04 12:57:09 harti Exp $
+ * $FreeBSD: src/sys/net/if_mib.h,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_IF_MIB_H

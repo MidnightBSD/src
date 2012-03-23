@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_tun.c,v 1.14 1994/06/29 06:36:25 cgd Exp $	*/
 
 /*-
@@ -14,7 +13,7 @@
  * UCL. This driver is based much more on read/write/poll mode of
  * operation though.
  *
- * $FreeBSD: src/sys/net/if_tun.c,v 1.163 2007/02/05 11:15:52 bms Exp $
+ * $FreeBSD: src/sys/net/if_tun.c,v 1.163.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_atalk.h"

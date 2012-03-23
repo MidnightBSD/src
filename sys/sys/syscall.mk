@@ -122,6 +122,7 @@ MIASM =  \
 	shmsys.o \
 	freebsd6_pread.o \
 	freebsd6_pwrite.o \
+	setfib.o \
 	ntp_adjtime.o \
 	setgid.o \
 	setegid.o \

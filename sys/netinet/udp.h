@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)udp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/udp.h,v 1.10 2007/02/20 10:13:11 rwatson Exp $
+ * $FreeBSD: src/sys/netinet/udp.h,v 1.10.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET_UDP_H_

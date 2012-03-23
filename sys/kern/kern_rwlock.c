@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_rwlock.c,v 1.28.4.2 2007/12/01 11:28:37 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_rwlock.c,v 1.28.4.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include "opt_no_adaptive_rwlocks.h"
@@ -192,6 +192,30 @@ _rw_wlock(struct rwlock *rw, const char *file, int line)
 	LOCK_LOG_LOCK("WLOCK", &rw->lock_object, 0, rw->rw_recurse, file, line);
 	WITNESS_LOCK(&rw->lock_object, LOP_EXCLUSIVE, file, line);
 	curthread->td_locks++;
+}
+
+int
+_rw_try_wlock(struct rwlock *rw, const char *file, int line)
+{
+	int rval;
+
+	KASSERT(rw->rw_lock != RW_DESTROYED,
+	    ("rw_try_wlock() of destroyed rwlock @ %s:%d", file, line));
+
+	if (rw_wlocked(rw) && (rw->lock_object.lo_flags & RW_RECURSE) != 0) {
+		rw->rw_recurse++;
+		rval = 1;
+	} else
+		rval = atomic_cmpset_acq_ptr(&rw->rw_lock, RW_UNLOCKED,
+		    (uintptr_t)curthread);
+
+	LOCK_LOG_TRY("WLOCK", &rw->lock_object, 0, rval, file, line);
+	if (rval) {
+		WITNESS_LOCK(&rw->lock_object, LOP_EXCLUSIVE | LOP_TRYLOCK,
+		    file, line);
+		curthread->td_locks++;
+	}
+	return (rval);
 }
 
 void
@@ -379,6 +403,30 @@ _rw_rlock(struct rwlock *rw, const char *file, int line)
 	LOCK_LOG_LOCK("RLOCK", &rw->lock_object, 0, 0, file, line);
 	WITNESS_LOCK(&rw->lock_object, 0, file, line);
 	curthread->td_locks++;
+}
+
+int
+_rw_try_rlock(struct rwlock *rw, const char *file, int line)
+{
+	uintptr_t x;
+
+	for (;;) {
+		x = rw->rw_lock;
+		KASSERT(rw->rw_lock != RW_DESTROYED,
+		    ("rw_try_rlock() of destroyed rwlock @ %s:%d", file, line));
+		if (!(x & RW_LOCK_READ))
+			break;
+		if (atomic_cmpset_acq_ptr(&rw->rw_lock, x, x + RW_ONE_READER)) {
+			LOCK_LOG_TRY("RLOCK", &rw->lock_object, 0, 1, file,
+			    line);
+			WITNESS_LOCK(&rw->lock_object, LOP_TRYLOCK, file, line);
+			curthread->td_locks++;
+			return (1);
+		}
+	}
+
+	LOCK_LOG_TRY("RLOCK", &rw->lock_object, 0, 0, file, line);
+	return (0);
 }
 
 void
@@ -814,7 +862,7 @@ _rw_downgrade(struct rwlock *rw, const char *file, int line)
 	    (v & RW_LOCK_WRITE_WAITERS));
 	if (v & RW_LOCK_READ_WAITERS)
 		turnstile_unpend(ts, TS_EXCLUSIVE_LOCK);
-	else if (ts)
+	else
 		turnstile_disown(ts);
 	turnstile_chain_unlock(&rw->lock_object);
 out:

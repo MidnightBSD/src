@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/vm/vm_page.c,v 1.3 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -98,7 +98,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_page.c,v 1.357.2.3 2007/11/28 22:23:35 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_page.c,v 1.357.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1643,6 +1643,13 @@ vm_page_dontneed(vm_page_t m)
 			--m->act_count;
 		return;
 	}
+
+	/*
+	 * Clear any references to the page.  Otherwise, the page daemon will
+	 * immediately reactivate the page.
+	 */
+	vm_page_flag_clear(m, PG_REFERENCED);
+	pmap_clear_reference(m);
 
 	if (m->dirty == 0 && pmap_is_modified(m))
 		vm_page_dirty(m);

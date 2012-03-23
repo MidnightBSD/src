@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_gre.c,v 1.49 2003/12/11 00:22:29 itojun Exp $ */
-/*	 $FreeBSD: src/sys/net/if_gre.c,v 1.46 2007/06/26 23:01:01 rwatson Exp $ */
+/*	 $FreeBSD: src/sys/net/if_gre.c,v 1.46.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -59,6 +58,7 @@
 #include <sys/module.h>
 #include <sys/mbuf.h>
 #include <sys/priv.h>
+#include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -202,7 +202,9 @@ gre_clone_create(ifc, unit, params)
 	GRE2IFP(sc)->if_flags |= IFF_LINK0;
 	sc->encap = NULL;
 	sc->called = 0;
+	sc->gre_fibnum = curthread->td_proc->p_fibnum;
 	sc->wccp_ver = WCCP_V1;
+	sc->key = 0;
 	if_attach(GRE2IFP(sc));
 	bpfattach(GRE2IFP(sc), DLT_NULL, sizeof(u_int32_t));
 	mtx_lock(&gre_mtx);
@@ -243,11 +245,12 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 	struct gre_softc *sc = ifp->if_softc;
 	struct greip *gh;
 	struct ip *ip;
-	u_short ip_id = 0;
-	uint8_t ip_tos = 0;
+	u_short gre_ip_id = 0;
+	uint8_t gre_ip_tos = 0;
 	u_int16_t etype = 0;
 	struct mobile_h mob_h;
 	u_int32_t af;
+	int extra = 0;
 
 	/*
 	 * gre may cause infinite recursion calls when misconfigured.
@@ -361,13 +364,18 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		switch (dst->sa_family) {
 		case AF_INET:
 			ip = mtod(m, struct ip *);
-			ip_tos = ip->ip_tos;
-			ip_id = ip->ip_id;
-			etype = ETHERTYPE_IP;
+			gre_ip_tos = ip->ip_tos;
+			gre_ip_id = ip->ip_id;
+			if (sc->wccp_ver == WCCP_V2) {
+				extra = sizeof(uint32_t);
+				etype =  WCCP_PROTOCOL_TYPE;
+			} else {
+				etype = ETHERTYPE_IP;
+			}
 			break;
 #ifdef INET6
 		case AF_INET6:
-			ip_id = ip_newid();
+			gre_ip_id = ip_newid();
 			etype = ETHERTYPE_IPV6;
 			break;
 #endif
@@ -382,7 +390,12 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 			error = EAFNOSUPPORT;
 			goto end;
 		}
-		M_PREPEND(m, sizeof(struct greip), M_DONTWAIT);
+			
+		/* Reserve space for GRE header + optional GRE key */
+		int hdrlen = sizeof(struct greip) + extra;
+		if (sc->key)
+			hdrlen += sizeof(uint32_t);
+		M_PREPEND(m, hdrlen, M_DONTWAIT);
 	} else {
 		_IF_DROP(&ifp->if_snd);
 		m_freem(m);
@@ -396,11 +409,22 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		goto end;
 	}
 
+	M_SETFIB(m, sc->gre_fibnum); /* The envelope may use a different FIB */
+
 	gh = mtod(m, struct greip *);
 	if (sc->g_proto == IPPROTO_GRE) {
-		/* we don't have any GRE flags for now */
-		memset((void *)gh, 0, sizeof(struct greip));
+		uint32_t *options = gh->gi_options;
+
+		memset((void *)gh, 0, sizeof(struct greip) + extra);
 		gh->gi_ptype = htons(etype);
+		gh->gi_flags = 0;
+
+		/* Add key option */
+		if (sc->key)
+		{
+			gh->gi_flags |= htons(GRE_KP);
+			*(options++) = htonl(sc->key);
+		}
 	}
 
 	gh->gi_pr = sc->g_proto;
@@ -410,8 +434,8 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		((struct ip*)gh)->ip_v = IPPROTO_IPV4;
 		((struct ip*)gh)->ip_hl = (sizeof(struct ip)) >> 2;
 		((struct ip*)gh)->ip_ttl = GRE_TTL;
-		((struct ip*)gh)->ip_tos = ip_tos;
-		((struct ip*)gh)->ip_id = ip_id;
+		((struct ip*)gh)->ip_tos = gre_ip_tos;
+		((struct ip*)gh)->ip_id = gre_ip_id;
 		gh->gi_len = m->m_pkthdr.len;
 	}
 
@@ -441,10 +465,12 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	int s;
 	struct sockaddr_in si;
 	struct sockaddr *sa = NULL;
-	int error;
+	int error, adj;
 	struct sockaddr_in sp, sm, dp, dm;
+	uint32_t key;
 
 	error = 0;
+	adj = 0;
 
 	s = splnet();
 	switch (cmd) {
@@ -719,6 +745,30 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		si.sin_addr.s_addr = sc->g_dst.s_addr;
 		bcopy(&si, &ifr->ifr_addr, sizeof(ifr->ifr_addr));
 		break;
+	case GRESKEY:
+		error = priv_check(curthread, PRIV_NET_GRE);
+		if (error)
+			break;
+		error = copyin(ifr->ifr_data, &key, sizeof(key));
+		if (error)
+			break;
+		/* adjust MTU for option header */
+		if (key == 0 && sc->key != 0)		/* clear */
+			adj += sizeof(key);
+		else if (key != 0 && sc->key == 0)	/* set */
+			adj -= sizeof(key);
+
+		if (ifp->if_mtu + adj < 576) {
+			error = EINVAL;
+			break;
+		}
+		ifp->if_mtu += adj;
+		sc->key = key;
+		break;
+	case GREGKEY:
+		error = copyout(&sc->key, ifr->ifr_data, sizeof(sc->key));
+		break;
+
 	default:
 		error = EINVAL;
 		break;
@@ -743,7 +793,6 @@ static int
 gre_compute_route(struct gre_softc *sc)
 {
 	struct route *ro;
-	u_int32_t a, b, c;
 
 	ro = &sc->route;
 
@@ -756,16 +805,10 @@ gre_compute_route(struct gre_softc *sc)
 	 * toggle last bit, so our interface is not found, but a less
 	 * specific route. I'd rather like to specify a shorter mask,
 	 * but this is not possible. Should work though. XXX
-	 * there is a simpler way ...
 	 */
 	if ((GRE2IFP(sc)->if_flags & IFF_LINK1) == 0) {
-		a = ntohl(sc->g_dst.s_addr);
-		b = a & 0x01;
-		c = a & 0xfffffffe;
-		b = b ^ 0x01;
-		a = b | c;
-		((struct sockaddr_in *)&ro->ro_dst)->sin_addr.s_addr
-		    = htonl(a);
+		((struct sockaddr_in *)&ro->ro_dst)->sin_addr.s_addr ^=
+		    htonl(0x01);
 	}
 
 #ifdef DIAGNOSTIC
@@ -773,7 +816,7 @@ gre_compute_route(struct gre_softc *sc)
 	    inet_ntoa(((struct sockaddr_in *)&ro->ro_dst)->sin_addr));
 #endif
 
-	rtalloc(ro);
+	rtalloc_fib(ro, sc->gre_fibnum);
 
 	/*
 	 * check if this returned a route at all and this route is no

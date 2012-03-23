@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1999-2000 by Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -32,8 +31,8 @@
  */
 
 /*
- * $FreeBSD: src/sys/net/if_tap.c,v 1.71 2007/03/19 18:17:31 bms Exp $
- * $Id: if_tap.c,v 1.3 2008-12-03 00:26:54 laffer1 Exp $
+ * $FreeBSD: src/sys/net/if_tap.c,v 1.71.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $Id: if_tap.c,v 1.4 2012-03-23 20:48:39 laffer1 Exp $
  */
 
 #include "opt_compat.h"
@@ -405,6 +404,7 @@ tapcreate(struct cdev *dev)
 	struct ifnet		*ifp = NULL;
 	struct tap_softc	*tp = NULL;
 	unsigned short		 macaddr_hi;
+	uint32_t		 macaddr_mid;
 	int			 unit, s;
 	char			*name = NULL;
 	u_char			eaddr[6];
@@ -433,8 +433,9 @@ tapcreate(struct cdev *dev)
 
 	/* generate fake MAC address: 00 bd xx xx xx unit_no */
 	macaddr_hi = htons(0x00bd);
+	macaddr_mid = (uint32_t) ticks;
 	bcopy(&macaddr_hi, eaddr, sizeof(short));
-	bcopy(&ticks, &eaddr[2], sizeof(long));
+	bcopy(&macaddr_mid, &eaddr[2], sizeof(uint32_t));
 	eaddr[5] = (u_char)unit;
 
 	/* fill the rest and attach interface */

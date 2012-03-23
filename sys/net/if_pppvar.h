@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * if_pppvar.h - private structures and declarations for PPP.
  */
@@ -41,7 +40,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/sys/net/if_pppvar.h,v 1.26 2006/12/05 18:54:21 ume Exp $
+ * $FreeBSD: src/sys/net/if_pppvar.h,v 1.26.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

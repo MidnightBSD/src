@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_timewait.c,v 1.287 2007/10/07 20:44:24 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/tcp_timewait.c,v 1.287.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -187,12 +186,12 @@ tcp_twstart(struct tcpcb *tp)
 	struct socket *so;
 
 	INP_INFO_WLOCK_ASSERT(&tcbinfo);	/* tcp_tw_2msl_reset(). */
-	INP_LOCK_ASSERT(inp);
+	INP_WLOCK_ASSERT(inp);
 
 	if (nolocaltimewait && in_localip(inp->inp_faddr)) {
 		tp = tcp_close(tp);
 		if (tp != NULL)
-			INP_UNLOCK(inp);
+			INP_WUNLOCK(inp);
 		return;
 	}
 
@@ -202,7 +201,7 @@ tcp_twstart(struct tcpcb *tp)
 		if (tw == NULL) {
 			tp = tcp_close(tp);
 			if (tp != NULL)
-				INP_UNLOCK(inp);
+				INP_WUNLOCK(inp);
 			return;
 		}
 	}
@@ -268,13 +267,13 @@ tcp_twstart(struct tcpcb *tp)
 		KASSERT(so->so_state & SS_PROTOREF,
 		    ("tcp_twstart: !SS_PROTOREF"));
 		inp->inp_vflag &= ~INP_SOCKREF;
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 		ACCEPT_LOCK();
 		SOCK_LOCK(so);
 		so->so_state &= ~SS_PROTOREF;
 		sofree(so);
 	} else
-		INP_UNLOCK(inp);
+		INP_WUNLOCK(inp);
 }
 
 #if 0
@@ -329,7 +328,7 @@ tcp_twcheck(struct inpcb *inp, struct tcpopt *to, struct tcphdr *th,
 
 	/* tcbinfo lock required for tcp_twclose(), tcp_tw_2msl_reset(). */
 	INP_INFO_WLOCK_ASSERT(&tcbinfo);
-	INP_LOCK_ASSERT(inp);
+	INP_WLOCK_ASSERT(inp);
 
 	/*
 	 * XXXRW: Time wait state for inpcb has been recycled, but inpcb is
@@ -442,11 +441,11 @@ tcp_twcheck(struct inpcb *inp, struct tcpopt *to, struct tcphdr *th,
 		tcp_respond(NULL,
 		    mtod(m, void *), th, m, seq, 0, TH_RST|TH_ACK);
 	}
-	INP_UNLOCK(inp);
+	INP_WUNLOCK(inp);
 	return (0);
 
 drop:
-	INP_UNLOCK(inp);
+	INP_WUNLOCK(inp);
 	m_freem(m);
 	return (0);
 }
@@ -470,7 +469,7 @@ tcp_twclose(struct tcptw *tw, int reuse)
 	KASSERT((inp->inp_vflag & INP_TIMEWAIT), ("tcp_twclose: !timewait"));
 	KASSERT(intotw(inp) == tw, ("tcp_twclose: inp_ppcb != tw"));
 	INP_INFO_WLOCK_ASSERT(&tcbinfo);	/* tcp_tw_2msl_stop(). */
-	INP_LOCK_ASSERT(inp);
+	INP_WLOCK_ASSERT(inp);
 
 	tw->tw_inpcb = NULL;
 	tcp_tw_2msl_stop(tw);
@@ -487,7 +486,7 @@ tcp_twclose(struct tcptw *tw, int reuse)
 		 */
 		if (inp->inp_vflag & INP_SOCKREF) {
 			inp->inp_vflag &= ~INP_SOCKREF;
-			INP_UNLOCK(inp);
+			INP_WUNLOCK(inp);
 			ACCEPT_LOCK();
 			SOCK_LOCK(so);
 			KASSERT(so->so_state & SS_PROTOREF,
@@ -500,7 +499,7 @@ tcp_twclose(struct tcptw *tw, int reuse)
 			 * inpcb need to be left around to be handled by
 			 * tcp_usr_detach() later.
 			 */
-			INP_UNLOCK(inp);
+			INP_WUNLOCK(inp);
 		}
 	} else {
 #ifdef INET6
@@ -533,7 +532,7 @@ tcp_twrespond(struct tcptw *tw, int flags)
 	int isipv6 = inp->inp_inc.inc_isipv6;
 #endif
 
-	INP_LOCK_ASSERT(inp);
+	INP_WLOCK_ASSERT(inp);
 
 	m = m_gethdr(M_DONTWAIT, MT_DATA);
 	if (m == NULL)
@@ -616,7 +615,7 @@ tcp_tw_2msl_reset(struct tcptw *tw, int rearm)
 {
 
 	INP_INFO_WLOCK_ASSERT(&tcbinfo);
-	INP_LOCK_ASSERT(tw->tw_inpcb);
+	INP_WLOCK_ASSERT(tw->tw_inpcb);
 	if (rearm)
 		TAILQ_REMOVE(&twq_2msl, tw, tw_2msl);
 	tw->tw_time = ticks + 2 * tcp_msl;
@@ -641,7 +640,7 @@ tcp_tw_2msl_scan(int reuse)
 		tw = TAILQ_FIRST(&twq_2msl);
 		if (tw == NULL || (!reuse && tw->tw_time > ticks))
 			break;
-		INP_LOCK(tw->tw_inpcb);
+		INP_WLOCK(tw->tw_inpcb);
 		tcp_twclose(tw, reuse);
 		if (reuse)
 			return (tw);

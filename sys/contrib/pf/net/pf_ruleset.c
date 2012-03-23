@@ -35,9 +35,9 @@
  *
  */
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ruleset.c,v 1.2 2007/07/03 12:16:07 mlaier Exp $");
+__FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ruleset.c,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $");
 #endif
 
 #include <sys/param.h>
@@ -64,7 +64,7 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ruleset.c,v 1.2 2007/07/03 12:16:0
 # define DPFPRINTF(format, x...)		\
 	if (pf_status.debug >= PF_DEBUG_NOISY)	\
 		printf(format , ##x)
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #define rs_malloc(x)		malloc(x, M_TEMP, M_NOWAIT)
 #else
 #define rs_malloc(x)		malloc(x, M_TEMP, M_WAITOK)
@@ -94,7 +94,6 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ruleset.c,v 1.2 2007/07/03 12:16:0
 struct pf_anchor_global	 pf_anchors;
 struct pf_anchor	 pf_main_anchor;
 
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 /* XXX: hum? */
 int			 pf_get_ruleset_number(u_int8_t);
@@ -105,15 +104,13 @@ int			 pf_anchor_copyout(const struct pf_ruleset *,
 			    const struct pf_rule *, struct pfioc_rule *);
 void			 pf_anchor_remove(struct pf_rule *);
 #endif
-#endif
 
-/* __inline XXX  fails on sparc */
-static int pf_anchor_compare(struct pf_anchor *, struct pf_anchor *);
+static __inline int pf_anchor_compare(struct pf_anchor *, struct pf_anchor *);
 
 RB_GENERATE(pf_anchor_global, pf_anchor, entry_global, pf_anchor_compare);
 RB_GENERATE(pf_anchor_node, pf_anchor, entry_node, pf_anchor_compare);
 
-static int
+static __inline int
 pf_anchor_compare(struct pf_anchor *a, struct pf_anchor *b)
 {
 	int c = strcmp(a->path, b->path);
@@ -199,7 +196,7 @@ pf_find_or_create_ruleset(const char *path)
 {
 	char			*p, *q, *r;
 	struct pf_ruleset	*ruleset;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)	
+#ifdef __MidnightBSD__
 	struct pf_anchor	*anchor = NULL, *dup, *parent = NULL;
 #else
 	struct pf_anchor	*anchor, *dup, *parent = NULL;

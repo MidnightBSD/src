@@ -35,15 +35,15 @@
  *
  */
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ioctl.c,v 1.28.2.1 2007/11/25 19:26:46 mlaier Exp $");
+__FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ioctl.c,v 1.28.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 #endif
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include "opt_bpf.h"
 #include "opt_pf.h"
 
@@ -81,7 +81,7 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ioctl.c,v 1.28.2.1 2007/11/25 19:2
 #include <sys/kernel.h>
 #include <sys/time.h>
 #include <sys/malloc.h>
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <sys/module.h>
 #include <sys/conf.h>
 #include <sys/proc.h>
@@ -93,11 +93,9 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ioctl.c,v 1.28.2.1 2007/11/25 19:2
 #include <sys/proc.h>
 #include <sys/malloc.h>
 #include <sys/kthread.h>
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 #include <sys/rwlock.h>
 #include <uvm/uvm_extern.h>
-#endif
 #endif
 
 #include <net/if.h>
@@ -111,7 +109,7 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ioctl.c,v 1.28.2.1 2007/11/25 19:2
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <sys/md5.h>
 #else
 #include <dev/rndvar.h>
@@ -134,14 +132,14 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_ioctl.c,v 1.28.2.1 2007/11/25 19:2
 #include <altq/altq.h>
 #endif
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <net/pfil.h>
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 void			 init_zone_var(void);
 void			 cleanup_pf_zone(void);
 int			 pfattach(void);
@@ -156,7 +154,7 @@ struct pf_pool		*pf_get_pool(char *, u_int32_t, u_int8_t, u_int32_t,
 
 void			 pf_mv_pool(struct pf_palist *, struct pf_palist *);
 void			 pf_empty_pool(struct pf_palist *);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 int			 pfioctl(struct cdev *, u_long, caddr_t, int, struct thread *);
 #else
 int			 pfioctl(struct cdev *, u_long, caddr_t, int, struct proc *);
@@ -176,7 +174,7 @@ void			 pf_hash_rule_addr(MD5_CTX *, struct pf_rule_addr *);
 int			 pf_commit_rules(u_int32_t, int, char *);
 
 struct pf_rule		 pf_default_rule;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 struct sx		 pf_consistency_lock;
 SX_SYSINIT(pf_consistency_lock, &pf_consistency_lock, "pf_statetbl_lock");
 #else
@@ -203,7 +201,7 @@ void			 pf_rtlabel_copyout(struct pf_addr_wrap *);
 #define DPFPRINTF(n, x) if (pf_status.debug >= (n)) printf x
 
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 static struct cdev	*pf_dev;
 
 /*
@@ -393,7 +391,7 @@ pfattach(void)
 
 	return (error);
 }
-#else /* !__FreeBSD__ */
+#else /* !__MidnightBSD__ */
 void
 pfattach(int num)
 {
@@ -491,7 +489,7 @@ pfclose(struct cdev *dev, int flags, int fmt, struct proc *p)
 		return (ENXIO);
 	return (0);
 }
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 struct pf_pool *
 pf_get_pool(char *anchor, u_int32_t ticket, u_int8_t rule_action,
@@ -718,7 +716,7 @@ pf_tag_unref(u_int16_t tag)
 int
 pf_rtlabel_add(struct pf_addr_wrap *a)
 {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	/* XXX_IMPORT: later */
 	return (0);
 #else
@@ -732,7 +730,7 @@ pf_rtlabel_add(struct pf_addr_wrap *a)
 void
 pf_rtlabel_remove(struct pf_addr_wrap *a)
 {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	/* XXX_IMPORT: later */
 #else
 	if (a->type == PF_ADDR_RTLABEL)
@@ -743,7 +741,7 @@ pf_rtlabel_remove(struct pf_addr_wrap *a)
 void
 pf_rtlabel_copyout(struct pf_addr_wrap *a)
 {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	/* XXX_IMPORT: later */
 	if (a->type == PF_ADDR_RTLABEL && a->v.rtlabel)
 		strlcpy(a->v.rtlabelname, "?", sizeof(a->v.rtlabelname));
@@ -789,7 +787,12 @@ pf_begin_altq(u_int32_t *ticket)
 	/* Purge the old altq list */
 	while ((altq = TAILQ_FIRST(pf_altqs_inactive)) != NULL) {
 		TAILQ_REMOVE(pf_altqs_inactive, altq, entries);
+#ifdef __MidnightBSD__
+		if (altq->qname[0] == 0 &&
+		    (altq->local_flags & PFALTQ_FLAG_IF_REMOVED) == 0) {
+#else
 		if (altq->qname[0] == 0) {
+#endif
 			/* detach and destroy the discipline */
 			error = altq_remove(altq);
 		} else
@@ -814,7 +817,12 @@ pf_rollback_altq(u_int32_t ticket)
 	/* Purge the old altq list */
 	while ((altq = TAILQ_FIRST(pf_altqs_inactive)) != NULL) {
 		TAILQ_REMOVE(pf_altqs_inactive, altq, entries);
+#ifdef __MidnightBSD__
+		if (altq->qname[0] == 0 &&
+		    (altq->local_flags & PFALTQ_FLAG_IF_REMOVED) == 0) {
+#else
 		if (altq->qname[0] == 0) {
+#endif
 			/* detach and destroy the discipline */
 			error = altq_remove(altq);
 		} else
@@ -844,7 +852,12 @@ pf_commit_altq(u_int32_t ticket)
 
 	/* Attach new disciplines */
 	TAILQ_FOREACH(altq, pf_altqs_active, entries) {
+#ifdef __MidnightBSD__
+		if (altq->qname[0] == 0 &&
+		    (altq->local_flags & PFALTQ_FLAG_IF_REMOVED) == 0) {
+#else
 		if (altq->qname[0] == 0) {
+#endif
 			/* attach the discipline */
 			error = altq_pfattach(altq);
 			if (error == 0 && pf_altq_running)
@@ -859,7 +872,12 @@ pf_commit_altq(u_int32_t ticket)
 	/* Purge the old altq list */
 	while ((altq = TAILQ_FIRST(pf_altqs_inactive)) != NULL) {
 		TAILQ_REMOVE(pf_altqs_inactive, altq, entries);
+#ifdef __MidnightBSD__
+		if (altq->qname[0] == 0 &&
+		    (altq->local_flags & PFALTQ_FLAG_IF_REMOVED) == 0) {
+#else
 		if (altq->qname[0] == 0) {
+#endif
 			/* detach and destroy the discipline */
 			if (pf_altq_running)
 				error = pf_disable_altq(altq);
@@ -897,11 +915,11 @@ pf_enable_altq(struct pf_altq *altq)
 		tb.rate = altq->ifbandwidth;
 		tb.depth = altq->tbrsize;
 		s = splnet();
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		error = tbr_set(&ifp->if_snd, &tb);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		splx(s);
@@ -933,11 +951,11 @@ pf_disable_altq(struct pf_altq *altq)
 		/* clear tokenbucket regulator */
 		tb.rate = 0;
 		s = splnet();
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		error = tbr_set(&ifp->if_snd, &tb);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		splx(s);
@@ -945,6 +963,76 @@ pf_disable_altq(struct pf_altq *altq)
 
 	return (error);
 }
+
+#ifdef __MidnightBSD__
+void
+pf_altq_ifnet_event(struct ifnet *ifp, int remove)
+{
+	struct ifnet		*ifp1;
+	struct pf_altq		*a1, *a2, *a3;
+	u_int32_t		 ticket;
+	int			 error = 0;
+
+	/* Interrupt userland queue modifications */
+	if (altqs_inactive_open)
+		pf_rollback_altq(ticket_altqs_inactive);
+
+	/* Start new altq ruleset */
+	if (pf_begin_altq(&ticket))
+		return;
+
+	/* Copy the current active set */
+	TAILQ_FOREACH(a1, pf_altqs_active, entries) {
+		a2 = pool_get(&pf_altq_pl, PR_NOWAIT);
+		if (a2 == NULL) {
+			error = ENOMEM;
+			break;
+		}
+		bcopy(a1, a2, sizeof(struct pf_altq));
+
+		if (a2->qname[0] != 0) {
+			if ((a2->qid = pf_qname2qid(a2->qname)) == 0) {
+				error = EBUSY;
+				pool_put(&pf_altq_pl, a2);
+				break;
+			}
+			a2->altq_disc = NULL;
+			TAILQ_FOREACH(a3, pf_altqs_inactive, entries) {
+				if (strncmp(a3->ifname, a2->ifname,
+				    IFNAMSIZ) == 0 && a3->qname[0] == 0) {
+					a2->altq_disc = a3->altq_disc;
+					break;
+				}
+			}
+		}
+		/* Deactivate the interface in question */
+		a2->local_flags &= ~PFALTQ_FLAG_IF_REMOVED;
+		if ((ifp1 = ifunit(a2->ifname)) == NULL ||
+		    (remove && ifp1 == ifp)) {
+			a2->local_flags |= PFALTQ_FLAG_IF_REMOVED;
+		} else {
+			PF_UNLOCK();
+			error = altq_add(a2);
+			PF_LOCK();
+
+			if (ticket != ticket_altqs_inactive)
+				error = EBUSY;
+
+			if (error) {
+				pool_put(&pf_altq_pl, a2);
+				break;
+			}
+		}
+
+		TAILQ_INSERT_TAIL(pf_altqs_inactive, a2, entries);
+	}
+
+	if (error != 0)
+		pf_rollback_altq(ticket);
+	else
+		pf_commit_altq(ticket);
+}
+#endif
 #endif /* ALTQ */
 
 int
@@ -1168,7 +1256,7 @@ pf_setup_pfsync_matching(struct pf_ruleset *rs)
 }
 
 int
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 pfioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags, struct thread *td)
 #else
 pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
@@ -1176,15 +1264,13 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 {
 	struct pf_pooladdr	*pa = NULL;
 	struct pf_pool		*pool = NULL;
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 	int			 s;
-#endif
 #endif
 	int			 error = 0;
 
 	/* XXX keep in sync with switch() below */
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	if (securelevel_gt(td->td_ucred, 2))
 #else
 	if (securelevel > 1)
@@ -1224,7 +1310,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		case DIOCGETSRCNODES:
 		case DIOCCLRSRCNODES:
 		case DIOCIGETIFACES:
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		case DIOCGIFSPEED:
 #endif
 		case DIOCSETIFFLAG:
@@ -1266,7 +1352,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		case DIOCOSFPGET:
 		case DIOCGETSRCNODES:
 		case DIOCIGETIFACES:
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		case DIOCGIFSPEED:
 #endif
 			break;
@@ -1294,7 +1380,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		}
 
 	if (flags & FWRITE)
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		sx_xlock(&pf_consistency_lock);
 	else
 		sx_slock(&pf_consistency_lock);
@@ -1304,7 +1390,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		rw_enter_read(&pf_consistency_lock);
 #endif
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	PF_LOCK();
 #else
 	s = splsoftnet();
@@ -1315,7 +1401,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		if (pf_status.running)
 			error = EEXIST;
 		else {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			PF_UNLOCK();
 			error = hook_pf();
 			PF_LOCK();
@@ -1340,7 +1426,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = ENOENT;
 		else {
 			pf_status.running = 0;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			PF_UNLOCK();
 			error = dehook_pf();
 			PF_LOCK();
@@ -1378,7 +1464,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		if (pr->ticket != ruleset->rules[rs_num].inactive.ticket) {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			DPFPRINTF(PF_DEBUG_MISC,
 			    ("ticket: %d != [%d]%d\n", pr->ticket, rs_num,
 			    ruleset->rules[rs_num].inactive.ticket));
@@ -1387,7 +1473,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		if (pr->pool_ticket != ticket_pabuf) {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			DPFPRINTF(PF_DEBUG_MISC,
 			    ("pool_ticket: %d != %d\n", pr->pool_ticket,
 			    ticket_pabuf));
@@ -1401,7 +1487,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		bcopy(&pr->rule, rule, sizeof(struct pf_rule));
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		rule->cuid = td->td_ucred->cr_ruid;
 		rule->cpid = td->td_proc ? td->td_proc->p_pid : 0;
 #else
@@ -1445,8 +1531,8 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			pfi_kif_ref(rule->kif, PFI_KIF_REF_RULE);
 		}
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__) /* ROUTING */
-		if (rule->rtableid > 0)
+#ifdef __MidnightBSD__ /* ROUTING */
+		if (rule->rtableid > 0 && rule->rtableid > rt_numfibs)
 #else
 		if (rule->rtableid > 0 && !rtable_exists(rule->rtableid))
 #endif
@@ -1475,7 +1561,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		if (rule->rt && !rule->direction)
 			error = EINVAL;
 #if NPFLOG > 0
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		if (!rule->log)
 			rule->logif = 0;
 #endif
@@ -1520,7 +1606,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		if (!debug_pfugidhack && (rule->uid.op || rule->gid.op ||
 		    rule->log & PF_LOG_SOCKET_LOOKUP)) {
 			DPFPRINTF(PF_DEBUG_MISC,
@@ -1671,7 +1757,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				break;
 			}
 			bcopy(&pcr->rule, newrule, sizeof(struct pf_rule));
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			newrule->cuid = td->td_ucred->cr_ruid;
 			newrule->cpid = td->td_proc ? td->td_proc->p_pid : 0;
 #else
@@ -1708,8 +1794,8 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				newrule->kif = NULL;
 
 			if (newrule->rtableid > 0 &&
-#if defined(__FreeBSD__) || defined(__MidnightBSD__) /* ROUTING */
-			    1)
+#ifdef __MidnightBSD__ /* ROUTING */
+			    newrule->rtableid > rt_numfibs)
 #else
 			    !rtable_exists(newrule->rtableid))
 #endif
@@ -1739,7 +1825,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 					error = EBUSY;
 			if (newrule->rt && !newrule->direction)
 				error = EINVAL;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #if NPFLOG > 0
 			if (!newrule->log)
 				newrule->logif = 0;
@@ -1788,7 +1874,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				break;
 			}
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			if (!debug_pfugidhack && (newrule->uid.op ||
 			    newrule->gid.op ||
 			    newrule->log & PF_LOG_SOCKET_LOOKUP)) {
@@ -2019,11 +2105,11 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		pstore = malloc(sizeof(*pstore), M_TEMP, M_WAITOK);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 
@@ -2052,7 +2138,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 					pstore->expire -= secs;
 				else
 					pstore->expire = 0;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 				PF_COPYOUT(pstore, p, sizeof(*p), error);
 #else
 				error = copyout(pstore, p, sizeof(*p));
@@ -2215,7 +2301,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 			goto fail;
 		}
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		uma_zone_set_max(pf_pool_limits[pl->index].pp, pl->limit);
 #else
 		if (pool_sethardlimit(pf_pool_limits[pl->index].pp,
@@ -2251,7 +2337,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		break;
 	}
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	case DIOCGIFSPEED: {
 		struct pf_ifspeed	*psp = (struct pf_ifspeed *)addr;
 		struct pf_ifspeed	ps;
@@ -2269,7 +2355,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EINVAL;
 		break;
 	}
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #ifdef ALTQ
 	case DIOCSTARTALTQ: {
@@ -2277,7 +2363,12 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 
 		/* enable all altq interfaces on active list */
 		TAILQ_FOREACH(altq, pf_altqs_active, entries) {
+#ifdef __MidnightBSD__
+			if (altq->qname[0] == 0 && (altq->local_flags &
+			    PFALTQ_FLAG_IF_REMOVED) == 0) {
+#else
 			if (altq->qname[0] == 0) {
+#endif
 				error = pf_enable_altq(altq);
 				if (error != 0)
 					break;
@@ -2294,7 +2385,12 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 
 		/* disable all altq interfaces on active list */
 		TAILQ_FOREACH(altq, pf_altqs_active, entries) {
+#ifdef __MidnightBSD__
+			if (altq->qname[0] == 0 && (altq->local_flags &
+			    PFALTQ_FLAG_IF_REMOVED) == 0) {
+#else
 			if (altq->qname[0] == 0) {
+#endif
 				error = pf_disable_altq(altq);
 				if (error != 0)
 					break;
@@ -2320,6 +2416,9 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 		bcopy(&pa->altq, altq, sizeof(struct pf_altq));
+#ifdef __MidnightBSD__
+		altq->local_flags = 0;
+#endif
 
 		/*
 		 * if this is for a queue, find the discipline and
@@ -2331,6 +2430,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				pool_put(&pf_altq_pl, altq);
 				break;
 			}
+			altq->altq_disc = NULL;
 			TAILQ_FOREACH(a, pf_altqs_inactive, entries) {
 				if (strncmp(a->ifname, altq->ifname,
 				    IFNAMSIZ) == 0 && a->qname[0] == 0) {
@@ -2340,12 +2440,18 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			}
 		}
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
-		PF_UNLOCK();
+#ifdef __MidnightBSD__
+		struct ifnet *ifp;
+
+		if ((ifp = ifunit(altq->ifname)) == NULL) {
+			altq->local_flags |= PFALTQ_FLAG_IF_REMOVED;
+		} else {
+			PF_UNLOCK();
 #endif		
 		error = altq_add(altq);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
-		PF_LOCK();
+#ifdef __MidnightBSD__
+			PF_LOCK();
+		}
 #endif
 		if (error) {
 			pool_put(&pf_altq_pl, altq);
@@ -2417,11 +2523,15 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = EBUSY;
 			break;
 		}
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
+		if ((altq->local_flags & PFALTQ_FLAG_IF_REMOVED) != 0) {
+			error = ENXIO;
+			break;
+		}
 		PF_UNLOCK();
 #endif
 		error = altq_getqstats(altq, pq->buf, &nbytes);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		if (error == 0) {
@@ -2922,18 +3032,18 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = ENODEV;
 			goto fail;
 		}
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		ioe = (struct pfioc_trans_e *)malloc(sizeof(*ioe),
 		    M_TEMP, M_WAITOK);
 		table = (struct pfr_table *)malloc(sizeof(*table),
 		    M_TEMP, M_WAITOK);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		for (i = 0; i < io->size; i++) {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			PF_COPYIN(io->array+i, ioe, sizeof(*ioe), error);
 			if (error) {
 #else
@@ -2980,7 +3090,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				}
 				break;
 			}
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			PF_COPYOUT(ioe, io->array+i, sizeof(io->array[i]),
 			    error);
 			if (error) {
@@ -3008,18 +3118,18 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = ENODEV;
 			goto fail;
 		}
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		ioe = (struct pfioc_trans_e *)malloc(sizeof(*ioe),
 		    M_TEMP, M_WAITOK);
 		table = (struct pfr_table *)malloc(sizeof(*table),
 		    M_TEMP, M_WAITOK);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		for (i = 0; i < io->size; i++) {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			PF_COPYIN(io->array+i, ioe, sizeof(*ioe), error);
 			if (error) {
 #else
@@ -3083,19 +3193,19 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			error = ENODEV;
 			goto fail;
 		}
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		ioe = (struct pfioc_trans_e *)malloc(sizeof(*ioe),
 		    M_TEMP, M_WAITOK);
 		table = (struct pfr_table *)malloc(sizeof(*table),
 		    M_TEMP, M_WAITOK);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 		/* first makes sure everything will succeed */
 		for (i = 0; i < io->size; i++) {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			PF_COPYIN(io->array+i, ioe, sizeof(*ioe), error);
 			if (error) {
 #else
@@ -3157,7 +3267,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		}
 		/* now do the commit - no errors should happen here */
 		for (i = 0; i < io->size; i++) {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			PF_COPYIN(io->array+i, ioe, sizeof(*ioe), error);
 			if (error) {
 #else
@@ -3217,11 +3327,11 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 			break;
 		}
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_UNLOCK();
 #endif
 		pstore = malloc(sizeof(*pstore), M_TEMP, M_WAITOK);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		PF_LOCK();
 #endif
 
@@ -3250,7 +3360,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 				    n->conn_rate.count * diff /
 				    n->conn_rate.seconds;
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 			PF_COPYOUT(pstore, p, sizeof(*p), error);
 #else
 			error = copyout(pstore, p, sizeof(*p));
@@ -3369,7 +3479,7 @@ pfioctl(dev_t dev, u_long cmd, caddr_t addr, int flags, struct proc *p)
 		break;
 	}
 fail:
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	PF_UNLOCK();
 
 	if (flags & FWRITE)
@@ -3387,7 +3497,7 @@ fail:
 	return (error);
 }
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 /*
  * XXX - Check for version missmatch!!!
  */
@@ -3521,7 +3631,7 @@ pf_check_in(void *arg, struct mbuf **m, struct ifnet *ifp, int dir,
 	 * XXX Wed Jul 9 22:03:16 2003 UTC
 	 * OpenBSD has changed its byte ordering convention on ip_len/ip_off
 	 * in network stack. OpenBSD's network stack have converted
-	 * ip_len/ip_off to host byte order first as FreeBSD.
+	 * ip_len/ip_off to host byte order frist as FreeBSD.
 	 * Now this is not true anymore , so we should convert back to network
 	 * byte order. 
 	 */
@@ -3781,4 +3891,4 @@ static moduledata_t pf_mod = {
 
 DECLARE_MODULE(pf, pf_mod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_FIRST);
 MODULE_VERSION(pf, PF_MODVER);
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */

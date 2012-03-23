@@ -74,7 +74,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_pageout.c,v 1.292 2007/09/25 06:25:06 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_pageout.c,v 1.292.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_vm.h"
 #include <sys/param.h>
@@ -124,7 +124,8 @@ static struct kproc_desc page_kp = {
 	vm_pageout,
 	&pageproc
 };
-SYSINIT(pagedaemon, SI_SUB_KTHREAD_PAGE, SI_ORDER_FIRST, kproc_start, &page_kp)
+SYSINIT(pagedaemon, SI_SUB_KTHREAD_PAGE, SI_ORDER_FIRST, kproc_start,
+    &page_kp);
 
 #if !defined(NO_SWAPPING)
 /* the kernel process "vm_daemon"*/
@@ -136,7 +137,7 @@ static struct kproc_desc vm_kp = {
 	vm_daemon,
 	&vmproc
 };
-SYSINIT(vmdaemon, SI_SUB_KTHREAD_VM, SI_ORDER_FIRST, kproc_start, &vm_kp)
+SYSINIT(vmdaemon, SI_SUB_KTHREAD_VM, SI_ORDER_FIRST, kproc_start, &vm_kp);
 #endif
 
 
@@ -207,6 +208,8 @@ SYSCTL_INT(_vm, OID_AUTO, pageout_lock_miss,
 int vm_pageout_page_count = VM_PAGEOUT_PAGE_COUNT;
 
 int vm_page_max_wired;		/* XXX max # of wired pages system-wide */
+SYSCTL_INT(_vm, OID_AUTO, max_wired,
+	CTLFLAG_RW, &vm_page_max_wired, 0, "System-wide limit to wired page count");
 
 #if !defined(NO_SWAPPING)
 static void vm_pageout_map_deactivate_pages(vm_map_t, long);
@@ -229,7 +232,7 @@ static void vm_pageout_page_stats(void);
  * This function depends on both the lock portion of struct vm_object
  * and normal struct vm_page being type stable.
  */
-static boolean_t
+boolean_t
 vm_pageout_fallback_object_lock(vm_page_t m, vm_page_t *next)
 {
 	struct vm_page marker;
@@ -945,8 +948,7 @@ rescan0:
 				vp = object->handle;
 				if (vp->v_type == VREG &&
 				    vn_start_write(vp, &mp, V_NOWAIT) != 0) {
-					KASSERT(mp == NULL,
-					    ("vm_pageout_scan: mp != NULL"));
+					mp = NULL;
 					++pageout_lock_miss;
 					if (object->flags & OBJ_MIGHTBEDIRTY)
 						vnodes_skipped++;
@@ -1282,7 +1284,8 @@ vm_pageout_page_stats()
 	pcount = cnt.v_active_count;
 	fullintervalcount += vm_pageout_stats_interval;
 	if (fullintervalcount < vm_pageout_full_stats_interval) {
-		tpcount = (vm_pageout_stats_max * cnt.v_active_count) / cnt.v_page_count;
+		tpcount = (int64_t)vm_pageout_stats_max * cnt.v_active_count /
+		    cnt.v_page_count;
 		if (pcount > tpcount)
 			pcount = tpcount;
 	} else {

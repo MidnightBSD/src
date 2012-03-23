@@ -33,14 +33,14 @@
  * PURPOSE.
  */
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_bpf.h"
 #include "opt_pf.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/contrib/pf/net/if_pflog.c,v 1.21 2007/07/03 12:16:07 mlaier Exp $");
+__FBSDID("$FreeBSD: src/sys/contrib/pf/net/if_pflog.c,v 1.21.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifdef DEV_BPF
 #define	NBPFILTER	DEV_BPF
@@ -54,17 +54,17 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/if_pflog.c,v 1.21 2007/07/03 12:16:07
 #define	NPFLOG		0
 #endif
 
-#else /* ! __FreeBSD__ */
+#else /* ! __MidnightBSD__ */
 #include "bpfilter.h"
 #include "pflog.h"
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
 #include <sys/proc.h>
 #include <sys/socket.h>
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/malloc.h>
@@ -75,7 +75,7 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/if_pflog.c,v 1.21 2007/07/03 12:16:07
 #endif
 
 #include <net/if.h>
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <net/if_clone.h>
 #endif
 #include <net/if_types.h>
@@ -99,7 +99,7 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/if_pflog.c,v 1.21 2007/07/03 12:16:07
 #include <net/pfvar.h>
 #include <net/if_pflog.h>
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <machine/in_cksum.h>
 #endif
 
@@ -116,7 +116,7 @@ int	pflogoutput(struct ifnet *, struct mbuf *, struct sockaddr *,
 	    	       struct rtentry *);
 int	pflogioctl(struct ifnet *, u_long, caddr_t);
 void	pflogstart(struct ifnet *);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 static int pflog_clone_create(struct if_clone *, int, caddr_t);
 static void pflog_clone_destroy(struct ifnet *);
 #else
@@ -125,7 +125,7 @@ int	pflog_clone_destroy(struct ifnet *);
 #endif
 
 LIST_HEAD(, pflog_softc)	pflogif_list;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 IFC_SIMPLE_DECLARE(pflog, 1);    
 #else
 struct if_clone	pflog_cloner =
@@ -134,10 +134,8 @@ struct if_clone	pflog_cloner =
 
 struct ifnet	*pflogifs[PFLOGIFS_MAX];	/* for fast access */
 
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 extern int ifqmaxlen;
-#endif
 #endif
 
 void
@@ -147,15 +145,13 @@ pflogattach(int npflog)
 	LIST_INIT(&pflogif_list);
 	for (i = 0; i < PFLOGIFS_MAX; i++)
 		pflogifs[i] = NULL;
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 	(void) pflog_clone_create(&pflog_cloner, 0);
-#endif
 #endif
 	if_clone_attach(&pflog_cloner);
 }
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 static int
 pflog_clone_create(struct if_clone *ifc, int unit, caddr_t param)
 #else
@@ -175,7 +171,7 @@ pflog_clone_create(struct if_clone *ifc, int unit)
 	bzero(pflogif, sizeof(*pflogif));
 
 	pflogif->sc_unit = unit;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	ifp = pflogif->sc_ifp = if_alloc(IFT_PFLOG);
 	if (ifp == NULL) {
 		free(pflogif, M_DEVBUF);
@@ -191,22 +187,18 @@ pflog_clone_create(struct if_clone *ifc, int unit)
 	ifp->if_ioctl = pflogioctl;
 	ifp->if_output = pflogoutput;
 	ifp->if_start = pflogstart;
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 	ifp->if_type = IFT_PFLOG;
-#endif
 #endif
 	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	ifp->if_hdrlen = PFLOG_HDRLEN;
 	if_attach(ifp);
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 	if_alloc_sadl(ifp);
 #endif
-#endif
 
 #if NBPFILTER > 0
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	bpfattach(ifp, DLT_PFLOG, PFLOG_HDRLEN);
 #else
 	bpfattach(&pflogif->sc_if.if_bpf, ifp, DLT_PFLOG, PFLOG_HDRLEN);
@@ -214,12 +206,12 @@ pflog_clone_create(struct if_clone *ifc, int unit)
 #endif
 
 	s = splnet();
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	PF_LOCK();
 #endif
 	LIST_INSERT_HEAD(&pflogif_list, pflogif, sc_list);
 	pflogifs[unit] = ifp;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	PF_UNLOCK();
 #endif
 	splx(s);
@@ -227,7 +219,7 @@ pflog_clone_create(struct if_clone *ifc, int unit)
 	return (0);
 }
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 static void
 pflog_clone_destroy(struct ifnet *ifp)
 #else
@@ -239,12 +231,12 @@ pflog_clone_destroy(struct ifnet *ifp)
 	int			 s;
 
 	s = splnet();
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	PF_LOCK();
 #endif
 	pflogifs[pflogif->sc_unit] = NULL;
 	LIST_REMOVE(pflogif, sc_list);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	PF_UNLOCK();
 #endif
 	splx(s);
@@ -253,14 +245,12 @@ pflog_clone_destroy(struct ifnet *ifp)
 	bpfdetach(ifp);
 #endif
 	if_detach(ifp);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	if_free(ifp);
 #endif
 	free(pflogif, M_DEVBUF);
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 	return (0);
-#endif
 #endif
 }
 
@@ -271,14 +261,12 @@ void
 pflogstart(struct ifnet *ifp)
 {
 	struct mbuf *m;
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 	int s;
 #endif
-#endif
 
 	for (;;) {
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		IF_LOCK(&ifp->if_snd);
 		_IF_DROP(&ifp->if_snd);
 		_IF_DEQUEUE(&ifp->if_snd, m);
@@ -314,7 +302,7 @@ pflogioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	case SIOCAIFADDR:
 	case SIOCSIFDSTADDR:
 	case SIOCSIFFLAGS:
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		if (ifp->if_flags & IFF_UP)
 			ifp->if_drv_flags |= IFF_DRV_RUNNING;
 		else
@@ -366,7 +354,7 @@ pflog_packet(struct pfi_kif *kif, struct mbuf *m, sa_family_t af, u_int8_t dir,
 			    sizeof(hdr.ruleset));
 	}
 	if (rm->log & PF_LOG_SOCKET_LOOKUP && !pd->lookup.done)
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 		/* 
 		 * XXX: This should not happen as we force an early lookup
 		 * via debug.pfugidhack
@@ -398,7 +386,7 @@ pflog_packet(struct pfi_kif *kif, struct mbuf *m, sa_family_t af, u_int8_t dir,
 
 	ifn->if_opackets++;
 	ifn->if_obytes += m->m_pkthdr.len;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	BPF_MTAP2(ifn, &hdr, PFLOG_HDRLEN, m);
 #else
 	bpf_mtap_hdr(ifn->if_bpf, (char *)&hdr, PFLOG_HDRLEN, m,
@@ -409,7 +397,7 @@ pflog_packet(struct pfi_kif *kif, struct mbuf *m, sa_family_t af, u_int8_t dir,
 	return (0);
 }
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 static int
 pflog_modevent(module_t mod, int type, void *data)
 {
@@ -443,4 +431,4 @@ static moduledata_t pflog_mod = { "pflog", pflog_modevent, 0 };
 DECLARE_MODULE(pflog, pflog_mod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY);
 MODULE_VERSION(pflog, PFLOG_MODVER);
 MODULE_DEPEND(pflog, pf, PF_MODVER, PF_MODVER, PF_MODVER);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */

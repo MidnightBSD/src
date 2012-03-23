@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: if_bridgevar.h,v 1.4 2003/07/08 07:13:50 itojun Exp $	*/
 
 /*
@@ -68,7 +67,7 @@
  *
  * OpenBSD: if_bridge.h,v 1.14 2001/03/22 03:48:29 jason Exp
  *
- * $FreeBSD: src/sys/net/bridgestp.h,v 1.14 2007/08/04 21:09:04 thompsa Exp $
+ * $FreeBSD: src/sys/net/bridgestp.h,v 1.14.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -172,7 +171,8 @@
 #define	BSTP_PROTO_RSTP		0x02
 #define	BSTP_PROTO_MAX		BSTP_PROTO_RSTP
 
-#define	BSTP_INFO_RECIEVED	1
+#define	BSTP_INFO_RECIEVED	1		/* compat */
+#define	BSTP_INFO_RECEIVED	1
 #define	BSTP_INFO_MINE		2
 #define	BSTP_INFO_AGED		3
 #define	BSTP_INFO_DISABLED	4

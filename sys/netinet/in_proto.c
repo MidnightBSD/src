@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/netinet/in_proto.c,v 1.3 2008/12/03 00:26:58 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/in_proto.c,v 1.87 2007/10/07 20:44:22 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/in_proto.c,v 1.87.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ipx.h"
 #include "opt_mrouting.h"
@@ -91,8 +90,6 @@ static struct pr_usrreqs nousrreqs;
 #ifdef DEV_CARP
 #include <netinet/ip_carp.h>
 #endif
-
-FEATURE(inet, "Internet Protocol version 4");
 
 extern	struct domain inetdomain;
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.h,v 1.5 2007/06/09 13:46:57 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.h,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __SCTP_AUTH_H__
 #define __SCTP_AUTH_H__

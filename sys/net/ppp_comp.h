@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ppp_comp.h - Definitions for doing PPP packet compression.
  */
@@ -27,7 +26,7 @@
  * OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS,
  * OR MODIFICATIONS.
  *
- * $FreeBSD: src/sys/net/ppp_comp.h,v 1.12 2005/01/07 01:45:35 imp Exp $
+ * $FreeBSD: src/sys/net/ppp_comp.h,v 1.12.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_PPP_COMP_H

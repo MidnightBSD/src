@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/ip6_var.h,v 1.39 2007/07/05 16:29:40 delphij Exp $	*/
-/*	$KAME: ip6_var.h,v 1.62 2001/05/03 14:51:48 itojun Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: ip6_var.h,v 1.62 2001/05/03 14:51:48 itojun Exp $
  */
 
 /*-
@@ -60,6 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_var.h	8.1 (Berkeley) 6/10/93
+ * $FreeBSD: src/sys/netinet6/ip6_var.h,v 1.39.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET6_IP6_VAR_H_
@@ -351,6 +350,8 @@ extern int	(*ip6_mforward)(struct ip6_hdr *, struct ifnet *,
 
 int	ip6_process_hopopts __P((struct mbuf *, u_int8_t *, int, u_int32_t *,
 				 u_int32_t *));
+struct mbuf	**ip6_savecontrol_v4(struct inpcb *, struct mbuf *,
+	    struct mbuf **, int *);
 void	ip6_savecontrol __P((struct inpcb *, struct mbuf *, struct mbuf **));
 void	ip6_notify_pmtu __P((struct inpcb *, struct sockaddr_in6 *,
 			     u_int32_t *));
@@ -368,7 +369,7 @@ int	ip6_ctloutput __P((struct socket *, struct sockopt *));
 int	ip6_raw_ctloutput __P((struct socket *, struct sockopt *));
 void	ip6_initpktopts __P((struct ip6_pktopts *));
 int	ip6_setpktopts __P((struct mbuf *, struct ip6_pktopts *,
-	struct ip6_pktopts *, int, int));
+	struct ip6_pktopts *, struct ucred *, int));
 void	ip6_clearpktopts __P((struct ip6_pktopts *, int));
 struct ip6_pktopts *ip6_copypktopts __P((struct ip6_pktopts *, int));
 int	ip6_optlen __P((struct inpcb *));
@@ -391,9 +392,9 @@ int	rip6_usrreq __P((struct socket *,
 int	dest6_input __P((struct mbuf **, int *, int));
 int	none_input __P((struct mbuf **, int *, int));
 
-struct in6_addr *in6_selectsrc __P((struct sockaddr_in6 *,
-	struct ip6_pktopts *, struct ip6_moptions *, struct route_in6 *,
-	struct in6_addr *, struct ifnet **, int *));
+struct in6_addr *in6_selectsrc __P((struct sockaddr_in6 *, struct ip6_pktopts *,
+	struct inpcb *inp, struct route_in6 *, struct ucred *cred,
+	struct ifnet **, int *));
 int in6_selectroute __P((struct sockaddr_in6 *, struct ip6_pktopts *,
 	struct ip6_moptions *, struct route_in6 *, struct ifnet **,
 	struct rtentry **, int));

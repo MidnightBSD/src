@@ -39404,6 +39404,7 @@ sys/net/if_dl.h -text
 sys/net/if_edsc.c -text
 sys/net/if_ef.c -text
 sys/net/if_enc.c -text
+sys/net/if_enc.h -text
 sys/net/if_ethersubr.c -text
 sys/net/if_faith.c -text
 sys/net/if_fddisubr.c -text
@@ -39824,6 +39825,7 @@ sys/netinet/ip_encap.h -text
 sys/netinet/ip_fastfwd.c -text
 sys/netinet/ip_fw.h -text
 sys/netinet/ip_fw2.c -text
+sys/netinet/ip_fw_nat.c -text
 sys/netinet/ip_fw_pfil.c -text
 sys/netinet/ip_gre.c -text
 sys/netinet/ip_gre.h -text
@@ -39906,6 +39908,8 @@ sys/netinet/tcp_hostcache.c -text
 sys/netinet/tcp_input.c -text
 sys/netinet/tcp_lro.c -text
 sys/netinet/tcp_lro.h -text
+sys/netinet/tcp_offload.c -text
+sys/netinet/tcp_offload.h -text
 sys/netinet/tcp_output.c -text
 sys/netinet/tcp_reass.c -text
 sys/netinet/tcp_sack.c -text
@@ -39919,6 +39923,7 @@ sys/netinet/tcp_timewait.c -text
 sys/netinet/tcp_usrreq.c -text
 sys/netinet/tcp_var.h -text
 sys/netinet/tcpip.h -text
+sys/netinet/toedev.h -text
 sys/netinet/udp.h -text
 sys/netinet/udp_usrreq.c -text
 sys/netinet/udp_var.h -text
@@ -40576,9 +40581,12 @@ sys/sys/signalvar.h -text
 sys/sys/sleepqueue.h -text
 sys/sys/smp.h -text
 sys/sys/snoop.h -text
+sys/sys/sockbuf.h -text
 sys/sys/socket.h -text
 sys/sys/socketvar.h -text
 sys/sys/sockio.h -text
+sys/sys/sockopt.h -text
+sys/sys/sockstate.h -text
 sys/sys/soundcard.h -text
 sys/sys/stack.h -text
 sys/sys/stat.h -text

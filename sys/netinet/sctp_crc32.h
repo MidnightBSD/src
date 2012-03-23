@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -32,14 +31,14 @@
 /* $KAME: sctp_crc32.h,v 1.5 2004/08/17 04:06:16 itojun Exp $	 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.h,v 1.3 2007/05/08 17:01:10 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __crc32c_h__
 #define __crc32c_h__
 
 #ifndef SCTP_USE_ADLER32
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 uint32_t update_crc32(uint32_t, unsigned char *, unsigned int);
 
 uint32_t old_update_crc32(uint32_t, unsigned char *, unsigned int);

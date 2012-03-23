@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/nd6_rtr.c,v 1.36 2007/07/05 16:29:40 delphij Exp $	*/
-/*	$KAME: nd6_rtr.c,v 1.111 2001/04/27 01:37:15 jinmei Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,7 +25,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: nd6_rtr.c,v 1.111 2001/04/27 01:37:15 jinmei Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/nd6_rtr.c,v 1.36.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -63,25 +64,25 @@
 
 #define SDL(s)	((struct sockaddr_dl *)s)
 
-static int rtpref __P((struct nd_defrouter *));
-static struct nd_defrouter *defrtrlist_update __P((struct nd_defrouter *));
+static int rtpref(struct nd_defrouter *);
+static struct nd_defrouter *defrtrlist_update(struct nd_defrouter *);
 static int prelist_update __P((struct nd_prefixctl *, struct nd_defrouter *,
     struct mbuf *, int));
-static struct in6_ifaddr *in6_ifadd __P((struct nd_prefixctl *,	int));
+static struct in6_ifaddr *in6_ifadd(struct nd_prefixctl *,	int);
 static struct nd_pfxrouter *pfxrtr_lookup __P((struct nd_prefix *,
 	struct nd_defrouter *));
-static void pfxrtr_add __P((struct nd_prefix *, struct nd_defrouter *));
-static void pfxrtr_del __P((struct nd_pfxrouter *));
+static void pfxrtr_add(struct nd_prefix *, struct nd_defrouter *);
+static void pfxrtr_del(struct nd_pfxrouter *);
 static struct nd_pfxrouter *find_pfxlist_reachable_router
-	__P((struct nd_prefix *));
-static void defrouter_delreq __P((struct nd_defrouter *));
-static void nd6_rtmsg __P((int, struct rtentry *));
+(struct nd_prefix *);
+static void defrouter_delreq(struct nd_defrouter *);
+static void nd6_rtmsg(int, struct rtentry *);
 
-static int in6_init_prefix_ltimes __P((struct nd_prefix *));
+static int in6_init_prefix_ltimes(struct nd_prefix *);
 static void in6_init_address_ltimes __P((struct nd_prefix *,
 	struct in6_addrlifetime *));
 
-static int rt6_deleteroute __P((struct radix_node *, void *));
+static int rt6_deleteroute(struct radix_node *, void *);
 
 extern int nd6_recalc_reachtm_interval;
 
@@ -2018,7 +2019,8 @@ in6_init_address_ltimes(struct nd_prefix *new, struct in6_addrlifetime *lt6)
 void
 rt6_flush(struct in6_addr *gateway, struct ifnet *ifp)
 {
-	struct radix_node_head *rnh = rt_tables[AF_INET6];
+
+	struct radix_node_head *rnh = rt_tables[0][AF_INET6];
 	int s = splnet();
 
 	/* We'll care only link-local addresses */

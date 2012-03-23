@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2002 Luigi Rizzo, Universita` di Pisa
  * Portions Copyright (c) 2000 Akamba Corp.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/ip_dummynet.h,v 1.40 2007/06/17 00:33:34 mjacob Exp $
+ * $FreeBSD: src/sys/netinet/ip_dummynet.h,v 1.40.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _IP_DUMMYNET_H
@@ -344,7 +343,7 @@ SLIST_HEAD(dn_pipe_head, dn_pipe);
 #ifdef _KERNEL
 typedef	int ip_dn_ctl_t(struct sockopt *); /* raw_ip.c */
 typedef	void ip_dn_ruledel_t(void *); /* ip_fw.c */
-typedef	int ip_dn_io_t(struct mbuf *m, int dir, struct ip_fw_args *fwa);
+typedef	int ip_dn_io_t(struct mbuf **m, int dir, struct ip_fw_args *fwa);
 extern	ip_dn_ctl_t *ip_dn_ctl_ptr;
 extern	ip_dn_ruledel_t *ip_dn_ruledel_ptr;
 extern	ip_dn_io_t *ip_dn_io_ptr;

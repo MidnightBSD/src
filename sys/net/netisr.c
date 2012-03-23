@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001,2002,2003 Jonathan Lemon <jlemon@FreeBSD.org>
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/netisr.c,v 1.20 2007/08/06 14:26:00 rwatson Exp $
+ * $FreeBSD: src/sys/net/netisr.c,v 1.20.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_device_polling.h"
@@ -267,4 +266,4 @@ start_netisr(void *dummy)
 	if (swi_add(NULL, "net", swi_net, NULL, SWI_NET, INTR_MPSAFE, &net_ih))
 		panic("start_netisr");
 }
-SYSINIT(start_netisr, SI_SUB_SOFTINTR, SI_ORDER_FIRST, start_netisr, NULL)
+SYSINIT(start_netisr, SI_SUB_SOFTINTR, SI_ORDER_FIRST, start_netisr, NULL);

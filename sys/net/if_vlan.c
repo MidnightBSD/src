@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -27,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_vlan.c,v 1.124.2.1 2007/10/28 16:24:16 thompsa Exp $
+ * $FreeBSD: src/sys/net/if_vlan.c,v 1.124.2.2.2.2 2008/12/21 19:16:30 vanhu Exp $
  */
 
 /*
@@ -1063,6 +1062,8 @@ exists:
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 done:
 	TRUNK_UNLOCK(trunk);
+	if (error == 0)
+		EVENTHANDLER_INVOKE(vlan_config, p, ifv->ifv_tag);
 	VLAN_UNLOCK();
 
 	return (error);
@@ -1085,18 +1086,20 @@ vlan_unconfig_locked(struct ifnet *ifp)
 	struct ifvlantrunk *trunk;
 	struct vlan_mc_entry *mc;
 	struct ifvlan *ifv;
+	struct ifnet  *parent;
 	int error;
 
 	VLAN_LOCK_ASSERT();
 
 	ifv = ifp->if_softc;
 	trunk = ifv->ifv_trunk;
+	parent = NULL;
 
-	if (trunk) {
+	if (trunk != NULL) {
 		struct sockaddr_dl sdl;
-		struct ifnet *p = trunk->parent;
 
 		TRUNK_LOCK(trunk);
+		parent = trunk->parent;
 
 		/*
 		 * Since the interface is being unconfigured, we need to
@@ -1106,14 +1109,14 @@ vlan_unconfig_locked(struct ifnet *ifp)
 		bzero((char *)&sdl, sizeof(sdl));
 		sdl.sdl_len = sizeof(sdl);
 		sdl.sdl_family = AF_LINK;
-		sdl.sdl_index = p->if_index;
+		sdl.sdl_index = parent->if_index;
 		sdl.sdl_type = IFT_ETHER;
 		sdl.sdl_alen = ETHER_ADDR_LEN;
 
 		while ((mc = SLIST_FIRST(&ifv->vlan_mc_listhead)) != NULL) {
 			bcopy((char *)&mc->mc_addr, LLADDR(&sdl),
 			    ETHER_ADDR_LEN);
-			error = if_delmulti(p, (struct sockaddr *)&sdl);
+			error = if_delmulti(parent, (struct sockaddr *)&sdl);
 			if (error)
 				return (error);
 			SLIST_REMOVE_HEAD(&ifv->vlan_mc_listhead, mc_entries);
@@ -1153,6 +1156,14 @@ vlan_unconfig_locked(struct ifnet *ifp)
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_link_state = LINK_STATE_UNKNOWN;
 	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+
+	/*
+	 * Only dispatch an event if vlan was
+	 * attached, otherwise there is nothing
+	 * to cleanup anyway.
+	 */
+	if (parent != NULL)
+		EVENTHANDLER_INVOKE(vlan_unconfig, parent, ifv->ifv_tag);
 
 	return (0);
 }

@@ -12,7 +12,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.25 2011/10/15 20:18:30 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.26 2012/01/07 18:37:57 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 cpu		I686_CPU
@@ -30,8 +30,8 @@ options 	INVARIANTS              # Enable calls of extra sanity checking
 options 	INVARIANT_SUPPORT	
 options 	WITNESS                 # Enable checks to detect deadlocks and cycles
 
-options 	SCHED_ULE		# ULE scheduler
-#options 	SCHED_4BSD		# 4BSD scheduler
+#options 	SCHED_ULE		# ULE scheduler
+options 	SCHED_4BSD		# 4BSD scheduler
 options 	PREEMPTION		# Enable kernel thread preemption
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/pf/net/pfvar.h,v 1.16 2007/07/03 12:58:33 mlaier Exp $	*/
+/*	$FreeBSD: src/sys/contrib/pf/net/pfvar.h,v 1.16.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$OpenBSD: pfvar.h,v 1.244 2007/02/23 21:31:51 deraadt Exp $ */
 
 /*
@@ -38,7 +38,7 @@
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <sys/tree.h>
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <sys/lock.h>
 #include <sys/sx.h>
 #else
@@ -47,7 +47,7 @@
 
 #include <net/radix.h>
 #include <net/route.h>
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <net/if_clone.h>
 #include <net/pf_mtag.h>
 #include <vm/uma.h>
@@ -55,7 +55,7 @@
 #include <netinet/ip_ipsp.h>
 #endif
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <netinet/in.h>
 #endif
 
@@ -63,7 +63,7 @@
 
 struct ip;
 struct ip6_hdr;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 struct inpcb;
 #endif
 
@@ -173,7 +173,7 @@ struct pf_addr_wrap {
 		}			 a;
 		char			 ifname[IFNAMSIZ];
 		char			 tblname[PF_TABLE_NAME_SIZE];
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define	RTLABEL_LEN	32
 #endif
 		char			 rtlabelname[RTLABEL_LEN];
@@ -211,7 +211,7 @@ struct pfi_dynaddr {
  * Address manipulation macros
  */
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #define splsoftnet()	splnet()
 
 #define	HTONL(x)	(x) = htonl((__uint32_t)(x))
@@ -270,7 +270,7 @@ extern void destroy_pf_mutex(void);
 #define PFSYNC_MINVER	1
 #define PFSYNC_PREFVER	PFSYNC_MODVER
 #define PFSYNC_MAXVER	1
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */
 
 #ifdef INET
 #ifndef INET6
@@ -793,7 +793,7 @@ struct pf_state {
 	sa_family_t	 af;
 	u_int8_t	 proto;
 	u_int8_t	 direction;
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	u_int8_t	 local_flags;
 #define	PFSTATE_EXPIRING 0x01
 #else
@@ -1009,10 +1009,8 @@ struct pfi_kif {
 	struct pf_state_tree_lan_ext	 pfik_lan_ext;
 	struct pf_state_tree_ext_gwy	 pfik_ext_gwy;
 	TAILQ_ENTRY(pfi_kif)		 pfik_w_states;
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 	void				*pfik_ah_cookie;
-#endif
 #endif
 	struct ifnet			*pfik_ifp;
 	struct ifg_group		*pfik_group;
@@ -1249,6 +1247,10 @@ struct pf_altq {
 	u_int32_t		 parent_qid;	/* parent queue id */
 	u_int32_t		 bandwidth;	/* queue bandwidth */
 	u_int8_t		 priority;	/* priority */
+#ifdef __MidnightBSD__
+	u_int8_t		 local_flags;	/* dynamic interface */
+#define	PFALTQ_FLAG_IF_REMOVED		0x01
+#endif
 	u_int16_t		 qlimit;	/* queue size limit */
 	u_int16_t		 flags;		/* misc flags */
 	union {
@@ -1260,7 +1262,6 @@ struct pf_altq {
 	u_int32_t		 qid;		/* return value */
 };
 
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 
 #define	PF_TAG_GENERATED		0x01
@@ -1276,7 +1277,6 @@ struct pf_mtag {
 	u_int8_t	 routed;
 	sa_family_t	 af;		/* for ECN */
 };
-#endif
 #endif
 
 struct pf_tag {
@@ -1539,7 +1539,7 @@ struct pfioc_iface {
 #define DIOCSETIFFLAG	_IOWR('D', 89, struct pfioc_iface)
 #define DIOCCLRIFFLAG	_IOWR('D', 90, struct pfioc_iface)
 #define DIOCKILLSRCNODES	_IOWR('D', 91, struct pfioc_src_node_kill)
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 struct pf_ifspeed {
 	char			ifname[IFNAMSIZ];
 	u_int32_t		baudrate;
@@ -1577,7 +1577,10 @@ extern int			 pf_tbladdr_setup(struct pf_ruleset *,
 extern void			 pf_tbladdr_remove(struct pf_addr_wrap *);
 extern void			 pf_tbladdr_copyout(struct pf_addr_wrap *);
 extern void			 pf_calc_skip_steps(struct pf_rulequeue *);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
+#ifdef ALTQ
+extern void			 pf_altq_ifnet_event(struct ifnet *, int);
+#endif
 extern uma_zone_t		 pf_src_tree_pl, pf_rule_pl;
 extern uma_zone_t		 pf_state_pl, pf_altq_pl, pf_pooladdr_pl;
 extern uma_zone_t		 pfr_ktable_pl, pfr_kentry_pl, pfr_kentry_pl2;
@@ -1616,7 +1619,7 @@ void				 pf_rm_rule(struct pf_rulequeue *,
 				    struct pf_rule *);
 
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 int	pf_test(int, struct ifnet *, struct mbuf **, struct ether_header *,
     struct inpcb *);
 #else
@@ -1625,7 +1628,7 @@ int	pf_test(int, struct ifnet *, struct mbuf **, struct ether_header *);
 #endif /* INET */
 
 #ifdef INET6
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 int	pf_test6(int, struct ifnet *, struct mbuf **, struct ether_header *,
     struct inpcb *);
 #else
@@ -1636,7 +1639,7 @@ void	pf_poolmask(struct pf_addr *, struct pf_addr*,
 void	pf_addr_inc(struct pf_addr *, sa_family_t);
 #endif /* INET6 */
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 u_int32_t	pf_new_isn(struct pf_state *);
 #endif
 void   *pf_pull_hdr(struct mbuf *, int, void *, int, u_short *, u_short *,
@@ -1670,7 +1673,7 @@ u_int32_t
 void	pf_purge_expired_fragments(void);
 int	pf_routable(struct pf_addr *addr, sa_family_t af, struct pfi_kif *);
 int	pf_rtlabel_match(struct pf_addr *, sa_family_t, struct pf_addr_wrap *);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 int	pf_socket_lookup(int, struct pf_pdesc *, struct inpcb *);
 #else
 int	pf_socket_lookup(int, struct pf_pdesc *);
@@ -1716,7 +1719,7 @@ extern struct pfi_statehead	 pfi_statehead;
 extern struct pfi_kif		*pfi_all;
 
 void		 pfi_initialize(void);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 void		 pfi_cleanup(void);
 #endif
 struct pfi_kif	*pfi_kif_get(const char *);
@@ -1747,16 +1750,14 @@ int		 pf_tag_packet(struct mbuf *, struct pf_mtag *, int, int);
 u_int32_t	 pf_qname2qid(char *);
 void		 pf_qid2qname(u_int32_t, char *);
 void		 pf_qid_unref(u_int32_t);
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 struct pf_mtag	*pf_find_mtag(struct mbuf *);
 struct pf_mtag	*pf_get_mtag(struct mbuf *);
 #endif
-#endif
 
 extern struct pf_status	pf_status;
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 extern uma_zone_t	pf_frent_pl, pf_frag_pl;
 extern struct sx	pf_consistency_lock;
 #else
@@ -1770,7 +1771,7 @@ struct pf_pool_limit {
 };
 extern struct pf_pool_limit	pf_pool_limits[PF_LIMIT_MAX];
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 struct pf_frent {
 	LIST_ENTRY(pf_frent) fr_next;
 	struct ip *fr_ip;
@@ -1800,7 +1801,7 @@ struct pf_fragment {
 		LIST_HEAD(pf_cacheq, pf_frcache) fru_cache;     /* non-buf */
 	} fr_u;
 };
-#endif /* (__FreeBSD__) */
+#endif /* (__MidnightBSD__) */
 
 #endif /* _KERNEL */
 
@@ -1822,7 +1823,6 @@ struct pf_ruleset	*pf_find_ruleset(const char *);
 struct pf_ruleset	*pf_find_or_create_ruleset(const char *);
 void			 pf_rs_initialize(void);
 
-#ifndef __FreeBSD__
 #ifndef __MidnightBSD__
 /* ?!? */
 #ifdef _KERNEL
@@ -1831,7 +1831,6 @@ int			 pf_anchor_copyout(const struct pf_ruleset *,
 void			 pf_anchor_remove(struct pf_rule *);
 
 #endif /* _KERNEL */
-#endif
 #endif
 
 /* The fingerprint functions can be linked into userland programs (tcpdump) */
@@ -1846,7 +1845,7 @@ struct pf_osfp_enlist *
 	    const struct tcphdr *);
 void	pf_osfp_flush(void);
 int	pf_osfp_get(struct pf_osfp_ioctl *);
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 int	pf_osfp_initialize(void);
 void	pf_osfp_cleanup(void);
 #else

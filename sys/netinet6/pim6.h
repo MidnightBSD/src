@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/pim6.h,v 1.3 2005/01/07 02:30:35 imp Exp $	*/
-/*	$KAME: pim6.h,v 1.3 2000/03/25 07:23:58 sumikawa Exp $	*/
-
 /*-
  * Copyright (C) 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: pim6.h,v 1.3 2000/03/25 07:23:58 sumikawa Exp $
+ * $FreeBSD: src/sys/netinet6/pim6.h,v 1.3.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 /*
  * Protocol Independent Multicast (PIM) definitions

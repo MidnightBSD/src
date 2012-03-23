@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993, 1994, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_var.h	8.4 (Berkeley) 5/24/95
- * $FreeBSD: src/sys/netinet/tcp_var.h,v 1.157.2.1 2007/12/07 05:46:09 kmacy Exp $
+ * $FreeBSD: src/sys/netinet/tcp_var.h,v 1.157.2.5.2.2 2008/12/12 16:37:15 rwatson Exp $
  */
 
 #ifndef _NETINET_TCP_VAR_H_
@@ -102,28 +101,6 @@ struct tcpcb {
 	struct	inpcb *t_inpcb;		/* back pointer to internet pcb */
 	int	t_state;		/* state of this connection */
 	u_int	t_flags;
-#define	TF_ACKNOW	0x000001	/* ack peer immediately */
-#define	TF_DELACK	0x000002	/* ack, but try to delay it */
-#define	TF_NODELAY	0x000004	/* don't delay packets to coalesce */
-#define	TF_NOOPT	0x000008	/* don't use tcp options */
-#define	TF_SENTFIN	0x000010	/* have sent FIN */
-#define	TF_REQ_SCALE	0x000020	/* have/will request window scaling */
-#define	TF_RCVD_SCALE	0x000040	/* other side has requested scaling */
-#define	TF_REQ_TSTMP	0x000080	/* have/will request timestamps */
-#define	TF_RCVD_TSTMP	0x000100	/* a timestamp was received in SYN */
-#define	TF_SACK_PERMIT	0x000200	/* other side said I could SACK */
-#define	TF_NEEDSYN	0x000400	/* send SYN (implicit state) */
-#define	TF_NEEDFIN	0x000800	/* send FIN (implicit state) */
-#define	TF_NOPUSH	0x001000	/* don't push */
-#define	TF_MORETOCOME	0x010000	/* More data to be appended to sock */
-#define	TF_LQ_OVERFLOW	0x020000	/* listen queue overflow */
-#define	TF_LASTIDLE	0x040000	/* connection was previously idle */
-#define	TF_RXWIN0SENT	0x080000	/* sent a receiver win 0 in response */
-#define	TF_FASTRECOVERY	0x100000	/* in NewReno Fast Recovery */
-#define	TF_WASFRECOVERY	0x200000	/* was in NewReno Fast Recovery */
-#define	TF_SIGNATURE	0x400000	/* require MD5 digests (RFC2385) */
-#define	TF_FORCEDATA	0x800000	/* force out a byte */
-#define	TF_TSO		0x1000000	/* TSO enabled on this connection */
 
 	tcp_seq	snd_una;		/* send unacknowledged */
 	tcp_seq	snd_max;		/* highest sequence number sent;
@@ -177,8 +154,6 @@ struct tcpcb {
 /* out-of-band data */
 	char	t_oobflags;		/* have some */
 	char	t_iobc;			/* input character */
-#define	TCPOOB_HAVEDATA	0x01
-#define	TCPOOB_HADDATA	0x02
 /* RFC 1323 variables */
 	u_char	snd_scale;		/* window scaling for send window */
 	u_char	rcv_scale;		/* window scaling for recv window */
@@ -207,12 +182,47 @@ struct tcpcb {
 	int	t_rttlow;		/* smallest observerved RTT */
 	u_int32_t	rfbuf_ts;	/* recv buffer autoscaling timestamp */
 	int	rfbuf_cnt;		/* recv buffer autoscaling byte count */
-	void	*t_pspare[5];		/* toe usrreqs / toepcb * / congestion algo / vimage / 1 general use */ 
+	void	*t_pspare[3];		/* toe usrreqs / toepcb * / congestion algo / vimage / 1 general use */
+	struct toe_usrreqs *t_tu;       /* offload operations vector */
+	void	*t_toe;			/* TOE pcb pointer */
 };
+
+/*
+ * Flags and utility macros for the t_flags field.
+ */
+#define	TF_ACKNOW	0x000001	/* ack peer immediately */
+#define	TF_DELACK	0x000002	/* ack, but try to delay it */
+#define	TF_NODELAY	0x000004	/* don't delay packets to coalesce */
+#define	TF_NOOPT	0x000008	/* don't use tcp options */
+#define	TF_SENTFIN	0x000010	/* have sent FIN */
+#define	TF_REQ_SCALE	0x000020	/* have/will request window scaling */
+#define	TF_RCVD_SCALE	0x000040	/* other side has requested scaling */
+#define	TF_REQ_TSTMP	0x000080	/* have/will request timestamps */
+#define	TF_RCVD_TSTMP	0x000100	/* a timestamp was received in SYN */
+#define	TF_SACK_PERMIT	0x000200	/* other side said I could SACK */
+#define	TF_NEEDSYN	0x000400	/* send SYN (implicit state) */
+#define	TF_NEEDFIN	0x000800	/* send FIN (implicit state) */
+#define	TF_NOPUSH	0x001000	/* don't push */
+#define	TF_MORETOCOME	0x010000	/* More data to be appended to sock */
+#define	TF_LQ_OVERFLOW	0x020000	/* listen queue overflow */
+#define	TF_LASTIDLE	0x040000	/* connection was previously idle */
+#define	TF_RXWIN0SENT	0x080000	/* sent a receiver win 0 in response */
+#define	TF_FASTRECOVERY	0x100000	/* in NewReno Fast Recovery */
+#define	TF_WASFRECOVERY	0x200000	/* was in NewReno Fast Recovery */
+#define	TF_SIGNATURE	0x400000	/* require MD5 digests (RFC2385) */
+#define	TF_FORCEDATA	0x800000	/* force out a byte */
+#define	TF_TSO		0x1000000	/* TSO enabled on this connection */
+#define	TF_TOE		0x2000000	/* this connection is offloaded */
 
 #define IN_FASTRECOVERY(tp)	(tp->t_flags & TF_FASTRECOVERY)
 #define ENTER_FASTRECOVERY(tp)	tp->t_flags |= TF_FASTRECOVERY
 #define EXIT_FASTRECOVERY(tp)	tp->t_flags &= ~TF_FASTRECOVERY
+
+/*
+ * Flags for the t_oobflags field.
+ */
+#define	TCPOOB_HAVEDATA	0x01
+#define	TCPOOB_HADDATA	0x02
 
 #ifdef TCP_SIGNATURE
 /*
@@ -492,6 +502,8 @@ SYSCTL_DECL(_net_inet_tcp);
 SYSCTL_DECL(_net_inet_tcp_sack);
 MALLOC_DECLARE(M_TCPLOG);
 #endif
+
+struct sockopt;
 
 extern	struct inpcbhead tcb;		/* head of queue of active tcpcb's */
 extern	struct inpcbinfo tcbinfo;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * if_ppp.h - Point-to-Point Protocol definitions.
  */
@@ -19,7 +18,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/sys/net/if_ppp.h,v 1.15 2005/01/07 01:45:34 imp Exp $
+ * $FreeBSD: src/sys/net/if_ppp.h,v 1.15.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _IF_PPP_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)if_slvar.h	8.3 (Berkeley) 2/1/94
  *
- * $FreeBSD: src/sys/net/if_slvar.h,v 1.23 2005/06/10 16:49:18 brooks Exp $
+ * $FreeBSD: src/sys/net/if_slvar.h,v 1.23.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_IF_SLVAR_H_

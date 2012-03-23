@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_output.c,v 1.276 2007/10/07 20:44:23 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/ip_output.c,v 1.276.2.5.2.2 2008/11/25 20:02:47 julian Exp $");
 
 #include "opt_ipfw.h"
 #include "opt_ipsec.h"
@@ -44,10 +43,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/ip_output.c,v 1.276 2007/10/07 20:44:23 silb
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/priv.h>
+#include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
+#include <sys/ucred.h>
 
 #include <net/if.h>
 #include <net/netisr.h>
@@ -124,8 +125,10 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 		bzero(ro, sizeof (*ro));
 	}
 
-	if (inp != NULL)
+	if (inp != NULL) {
+		M_SETFIB(m, inp->inp_inc.inc_fibnum);
 		INP_LOCK_ASSERT(inp);
+	}
 
 	if (opt) {
 		len = 0;
@@ -224,7 +227,8 @@ again:
 		 * operation (as it is for ARP).
 		 */
 		if (ro->ro_rt == NULL)
-			rtalloc_ign(ro, 0);
+			in_rtalloc_ign(ro, 0,
+			    inp ? inp->inp_inc.inc_fibnum : M_GETFIB(m));
 		if (ro->ro_rt == NULL) {
 			ipstat.ips_noroute++;
 			error = EHOSTUNREACH;
@@ -806,6 +810,11 @@ ip_ctloutput(struct socket *so, struct sockopt *sopt)
 
 	error = optval = 0;
 	if (sopt->sopt_level != IPPROTO_IP) {
+		if ((sopt->sopt_level == SOL_SOCKET) &&
+		    (sopt->sopt_name == SO_SETFIB)) {
+			inp->inp_inc.inc_fibnum = so->so_fibnum;
+			return (0);
+		}
 		return (EINVAL);
 	}
 
@@ -834,9 +843,9 @@ ip_ctloutput(struct socket *so, struct sockopt *sopt)
 				m_free(m);
 				break;
 			}
-			INP_LOCK(inp);
+			INP_WLOCK(inp);
 			error = ip_pcbopts(inp, sopt->sopt_name, m);
-			INP_UNLOCK(inp);
+			INP_WUNLOCK(inp);
 			return (error);
 		}
 
@@ -873,12 +882,12 @@ ip_ctloutput(struct socket *so, struct sockopt *sopt)
 				break;
 
 #define	OPTSET(bit) do {						\
-	INP_LOCK(inp);							\
+	INP_WLOCK(inp);							\
 	if (optval)							\
 		inp->inp_flags |= bit;					\
 	else								\
 		inp->inp_flags &= ~bit;					\
-	INP_UNLOCK(inp);						\
+	INP_WUNLOCK(inp);						\
 } while (0)
 
 			case IP_RECVOPTS:
@@ -945,7 +954,7 @@ ip_ctloutput(struct socket *so, struct sockopt *sopt)
 			if (error)
 				break;
 
-			INP_LOCK(inp);
+			INP_WLOCK(inp);
 			switch (optval) {
 			case IP_PORTRANGE_DEFAULT:
 				inp->inp_flags &= ~(INP_LOWPORT);
@@ -966,40 +975,23 @@ ip_ctloutput(struct socket *so, struct sockopt *sopt)
 				error = EINVAL;
 				break;
 			}
-			INP_UNLOCK(inp);
+			INP_WUNLOCK(inp);
 			break;
 
 #ifdef IPSEC
 		case IP_IPSEC_POLICY:
 		{
 			caddr_t req;
-			size_t len = 0;
-			int priv;
 			struct mbuf *m;
-			int optname;
 
 			if ((error = soopt_getm(sopt, &m)) != 0) /* XXX */
 				break;
 			if ((error = soopt_mcopyin(sopt, m)) != 0) /* XXX */
 				break;
-			if (sopt->sopt_td != NULL) {
-				/*
-				 * XXXRW: Would be more desirable to do this
-				 * one layer down so that we only exercise
-				 * privilege if it is needed.
-				 */
-				error = priv_check(sopt->sopt_td,
-				    PRIV_NETINET_IPSEC);
-				if (error)
-					priv = 0;
-				else
-					priv = 1;
-			} else
-				priv = 1;
 			req = mtod(m, caddr_t);
-			len = m->m_len;
-			optname = sopt->sopt_name;
-			error = ipsec4_set_policy(inp, optname, req, len, priv);
+			error = ipsec4_set_policy(inp, sopt->sopt_name, req,
+			    m->m_len, (sopt->sopt_td != NULL) ?
+			    sopt->sopt_td->td_ucred : NULL);
 			m_freem(m);
 			break;
 		}
@@ -1150,7 +1142,11 @@ ip_mloopback(struct ifnet *ifp, struct mbuf *m, struct sockaddr_in *dst,
 	register struct ip *ip;
 	struct mbuf *copym;
 
-	copym = m_copy(m, 0, M_COPYALL);
+	/*
+	 * Make a deep copy of the packet because we're going to
+	 * modify the pack in order to generate checksums.
+	 */
+	copym = m_dup(m, M_DONTWAIT);
 	if (copym != NULL && (copym->m_flags & M_EXT || copym->m_len < hlen))
 		copym = m_pullup(copym, hlen);
 	if (copym != NULL) {
@@ -1171,17 +1167,6 @@ ip_mloopback(struct ifnet *ifp, struct mbuf *m, struct sockaddr_in *dst,
 		ip->ip_off = htons(ip->ip_off);
 		ip->ip_sum = 0;
 		ip->ip_sum = in_cksum(copym, hlen);
-		/*
-		 * NB:
-		 * It's not clear whether there are any lingering
-		 * reentrancy problems in other areas which might
-		 * be exposed by using ip_input directly (in
-		 * particular, everything which modifies the packet
-		 * in-place).  Yet another option is using the
-		 * protosw directly to deliver the looped back
-		 * packet.  For the moment, we'll err on the side
-		 * of safety by using if_simloop().
-		 */
 #if 1 /* XXX */
 		if (dst->sin_family != AF_INET) {
 			printf("ip_mloopback: bad address family %d\n",
@@ -1189,12 +1174,6 @@ ip_mloopback(struct ifnet *ifp, struct mbuf *m, struct sockaddr_in *dst,
 			dst->sin_family = AF_INET;
 		}
 #endif
-
-#ifdef notdef
-		copym->m_pkthdr.rcvif = ifp;
-		ip_input(copym);
-#else
 		if_simloop(ifp, copym, dst->sin_family, 0);
-#endif
 	}
 }

@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/raw_cb.h,v 1.19 2005/01/07 01:45:35 imp Exp $
+ * $FreeBSD: src/sys/net/raw_cb.h,v 1.19.10.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_RAW_CB_H_
@@ -37,14 +37,12 @@
 #include <sys/queue.h>
 
 /*
- * Raw protocol interface control block.  Used
- * to tie a socket to the generic raw interface.
+ * Raw protocol interface control block.  Used to tie a socket to the generic
+ * raw interface.
  */
 struct rawcb {
 	LIST_ENTRY(rawcb) list;
 	struct	socket *rcb_socket;	/* back pointer to socket */
-	struct	sockaddr *rcb_faddr;	/* destination address */
-	struct	sockaddr *rcb_laddr;	/* socket's address */
 	struct	sockproto rcb_proto;	/* protocol family, protocol */
 };
 
@@ -60,22 +58,24 @@ struct rawcb {
 extern LIST_HEAD(rawcb_list_head, rawcb) rawcb_list;
 extern struct mtx rawcb_mtx;
 
-/* protosw entries */
+/*
+ * Generic protosw entries for raw socket protocols.
+ */
 pr_ctlinput_t	raw_ctlinput;
 pr_init_t	raw_init;
 
-/* usrreq entries */
+/*
+ * Library routines for raw socket usrreq functions; will always be wrapped
+ * so that protocol-specific functions can be handled.
+ */
 int	 raw_attach(struct socket *, int);
 void	 raw_detach(struct rawcb *);
-void	 raw_disconnect(struct rawcb *);
+void	 raw_input(struct mbuf *, struct sockproto *, struct sockaddr *);
 
-#if 0 /* what the ??? */
-pr_input_t	raw_input;
-#else
-void	 raw_input(struct mbuf *,
-	    struct sockproto *, struct sockaddr *, struct sockaddr *);
-#endif
-
+/*
+ * Generic pr_usrreqs entries for raw socket protocols, usually wrapped so
+ * that protocol-specific functions can be handled.
+ */
 extern	struct pr_usrreqs raw_usrreqs;
 #endif
 

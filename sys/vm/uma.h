@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/vm/uma.h,v 1.3 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002, 2003, 2004, 2005 Jeffrey Roberson <jeff@FreeBSD.org>
  * Copyright (c) 2004, 2005 Bosko Milekic <bmilekic@FreeBSD.org>
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/vm/uma.h,v 1.31 2007/02/11 20:13:52 rwatson Exp $
+ * $FreeBSD: src/sys/vm/uma.h,v 1.31.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 
@@ -489,6 +489,7 @@ void uma_zone_set_freef(uma_zone_t zone, uma_free freef);
  */
 #define UMA_SLAB_BOOT	0x01		/* Slab alloced from boot pages */
 #define UMA_SLAB_KMEM	0x02		/* Slab alloced from kmem_map */
+#define UMA_SLAB_KERNEL	0x04		/* Slab alloced from kernel_map */
 #define UMA_SLAB_PRIV	0x08		/* Slab alloced from priv allocator */
 #define UMA_SLAB_OFFP	0x10		/* Slab is managed separately  */
 #define UMA_SLAB_MALLOC	0x20		/* Slab is a large malloc slab */

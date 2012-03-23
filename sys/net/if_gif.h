@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/net/if_gif.h,v 1.19 2006/01/30 08:39:09 glebius Exp $	*/
+/*	$FreeBSD: src/sys/net/if_gif.h,v 1.19.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: if_gif.h,v 1.17 2000/09/11 11:36:41 sumikawa Exp $	*/
 
 /*-
@@ -68,6 +67,7 @@ struct gif_softc {
 #endif
 	} gifsc_gifscr;
 	int		gif_flags;
+	u_int		gif_fibnum;
 	const struct encaptab *encap_cookie4;
 	const struct encaptab *encap_cookie6;
 	void		*gif_netgraph;	/* ng_gif(4) netgraph node info */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, Larry Lile
  * All rights reserved.
@@ -31,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_iso88025subr.c,v 1.75 2006/10/22 11:52:15 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_iso88025subr.c,v 1.75.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

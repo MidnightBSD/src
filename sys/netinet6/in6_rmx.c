@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/in6_rmx.c,v 1.18 2007/07/05 16:29:39 delphij Exp $	*/
-/*	$KAME: in6_rmx.c,v 1.11 2001/07/26 06:53:16 jinmei Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: in6_rmx.c,v 1.11 2001/07/26 06:53:16 jinmei Exp $
  */
 
 /*-
@@ -74,6 +72,9 @@
  *     indefinitely.  See in6_rtqtimo() below for the exact mechanism.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/in6_rmx.c,v 1.18.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -102,7 +103,7 @@
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
 
-extern int	in6_inithead __P((void **head, int off));
+extern int	in6_inithead(void **head, int off);
 
 #define RTPRF_OURS		RTF_PROTO3	/* set on routes we manage */
 
@@ -448,17 +449,21 @@ in6_rtqdrain(void)
 
 /*
  * Initialize our routing tree.
+ * XXX MRT When off == 0, we are being called from vfs_export.c
+ * so just set up their table and leave. (we know what the correct
+ * value should be so just use that).. FIX AFTER RELENG_7 is MFC'd
+ * see also comments in in_inithead() vfs_export.c and domain.h
  */
 int
 in6_inithead(void **head, int off)
 {
 	struct radix_node_head *rnh;
 
-	if (!rn_inithead(head, off))
-		return 0;
+	if (!rn_inithead(head, offsetof(struct sockaddr_in6, sin6_addr) << 3))
+		return 0;		/* See above */
 
-	if (head != (void **)&rt_tables[AF_INET6]) /* BOGUS! */
-		return 1;	/* only do this for the real routing table */
+	if (off == 0)		/* See above */
+		return 1;	/* only do the rest for the real thing */
 
 	rnh = *head;
 	rnh->rnh_addaddr = in6_addroute;

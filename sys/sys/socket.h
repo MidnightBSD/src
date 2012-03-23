@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/socket.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1985, 1986, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socket.h	8.4 (Berkeley) 2/21/94
- * $FreeBSD: src/sys/sys/socket.h,v 1.95 2007/09/18 09:22:16 alfred Exp $
+ * $FreeBSD: src/sys/sys/socket.h,v 1.95.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_SOCKET_H_
@@ -119,6 +119,8 @@ typedef	__uid_t		uid_t;
 #define	SO_ACCEPTFILTER	0x1000		/* there is an accept filter */
 #define	SO_BINTIME	0x2000		/* timestamp received dgram traffic */
 #endif
+#define	SO_NO_OFFLOAD	0x4000		/* socket cannot be offloaded */
+#define	SO_NO_DDP	0x8000		/* disable direct data placement */
 
 /*
  * Additional options, not kept in so_options.
@@ -137,6 +139,7 @@ typedef	__uid_t		uid_t;
 #define	SO_LISTENQLIMIT	0x1011		/* socket's backlog limit */
 #define	SO_LISTENQLEN	0x1012		/* socket's complete queue length */
 #define	SO_LISTENINCQLEN	0x1013	/* socket's incomplete queue length */
+#define	SO_SETFIB	0x1014		/* use this FIB to route */
 #endif
 
 /*
@@ -592,6 +595,12 @@ struct omsghdr {
 #define	SHUT_WR		1		/* shut down the writing side */
 #define	SHUT_RDWR	2		/* shut down both sides */
 
+/* we cheat and use the SHUT_XX defines for these */
+#define PRU_FLUSH_RD     SHUT_RD
+#define PRU_FLUSH_WR     SHUT_WR
+#define PRU_FLUSH_RDWR   SHUT_RDWR
+
+
 #if __BSD_VISIBLE
 /*
  * sendfile(2) header/trailer struct
@@ -640,5 +649,42 @@ int	socketpair(int, int, int, int *);
 __END_DECLS
 
 #endif /* !_KERNEL */
+
+#ifdef _KERNEL
+struct socket;
+
+struct tcpcb *so_sototcpcb(struct socket *so);
+struct inpcb *so_sotoinpcb(struct socket *so);
+struct sockbuf *so_sockbuf_snd(struct socket *);
+struct sockbuf *so_sockbuf_rcv(struct socket *);
+
+int so_state_get(const struct socket *);
+void so_state_set(struct socket *, int);
+
+int so_options_get(const struct socket *);
+void so_options_set(struct socket *, int);
+
+int so_error_get(const struct socket *);
+void so_error_set(struct socket *, int);
+
+int so_linger_get(const struct socket *);
+void so_linger_set(struct socket *, int);
+
+struct protosw *so_protosw_get(const struct socket *);
+void so_protosw_set(struct socket *, struct protosw *);
+
+void so_sorwakeup_locked(struct socket *so);
+void so_sowwakeup_locked(struct socket *so);
+
+void so_sorwakeup(struct socket *so);
+void so_sowwakeup(struct socket *so);
+
+void so_lock(struct socket *so);
+void so_unlock(struct socket *so);
+
+void so_listeners_apply_all(struct socket *so, void (*func)(struct socket *, void *), void *arg);
+
+#endif
+
 
 #endif /* !_SYS_SOCKET_H_ */

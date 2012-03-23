@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_types.h	8.3 (Berkeley) 4/28/95
- * $FreeBSD: src/sys/net/if_types.h,v 1.23 2007/06/13 14:01:43 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_types.h,v 1.23.6.1 2008/11/25 02:59:29 kensmith Exp $
  * $NetBSD: if_types.h,v 1.16 2000/04/19 06:30:53 itojun Exp $
  */
 

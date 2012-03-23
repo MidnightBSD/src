@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989 Stephen Deering
  * Copyright (c) 1992, 1993
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_mroute.c,v 1.138 2007/10/07 20:44:23 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/ip_mroute.c,v 1.138.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -304,7 +303,7 @@ static int	X_ip_mrouter_done(void);
 static int	X_ip_mrouter_get(struct socket *so, struct sockopt *m);
 static int	X_ip_mrouter_set(struct socket *so, struct sockopt *m);
 static int	X_legal_vif_num(int vif);
-static int	X_mrt_ioctl(int cmd, caddr_t data);
+static int	X_mrt_ioctl(int cmd, caddr_t data, int fibnum);
 
 static int get_sg_cnt(struct sioc_sg_req *);
 static int get_vif_cnt(struct sioc_vif_req *);
@@ -553,7 +552,7 @@ X_ip_mrouter_get(struct socket *so, struct sockopt *sopt)
  * Handle ioctl commands to obtain information from the cache
  */
 static int
-X_mrt_ioctl(int cmd, caddr_t data)
+X_mrt_ioctl(int cmd, caddr_t data, int fibnum)
 {
     int error = 0;
 

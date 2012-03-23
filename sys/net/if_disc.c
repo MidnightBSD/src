@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if_loop.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_disc.c,v 1.54 2007/03/26 09:10:28 yar Exp $
+ * $FreeBSD: src/sys/net/if_disc.c,v 1.54.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

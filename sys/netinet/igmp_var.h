@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-a
  * Copyright (c) 1988 Stephen Deering.
  * Copyright (c) 1992, 1993
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)igmp_var.h	8.1 (Berkeley) 7/19/93
- * $FreeBSD: src/sys/netinet/igmp_var.h,v 1.22 2007/06/12 16:24:53 bms Exp $
+ * $FreeBSD: src/sys/netinet/igmp_var.h,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET_IGMP_VAR_H_

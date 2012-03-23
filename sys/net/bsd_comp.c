@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Because this code is derived from the 4.3BSD compress source:
  *
@@ -38,7 +37,7 @@
 /*
  * This version is for use with mbufs on BSD-derived systems.
  *
- * $FreeBSD: src/sys/net/bsd_comp.c,v 1.24 2006/10/22 11:52:15 rwatson Exp $
+ * $FreeBSD: src/sys/net/bsd_comp.c,v 1.24.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_mac.h"

@@ -1,7 +1,3 @@
-/* $MidnightBSD: src/sys/netinet6/in6.c,v 1.5 2008/12/03 00:27:01 laffer1 Exp $ */
-/*	$FreeBSD: src/sys/netinet6/in6.c,v 1.73 2007/07/05 16:29:39 delphij Exp $	*/
-/*	$KAME: in6.c,v 1.259 2002/01/21 11:37:50 keiichi Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: in6.c,v 1.259 2002/01/21 11:37:50 keiichi Exp $
  */
 
 /*-
@@ -61,6 +59,9 @@
  *
  *	@(#)in.c	8.2 (Berkeley) 11/15/93
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/in6.c,v 1.73.2.4.2.2 2009/06/10 10:31:11 cperciva Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -126,7 +127,7 @@ static int in6_lifaddr_ioctl __P((struct socket *, u_long, caddr_t,
 	struct ifnet *, struct thread *));
 static int in6_ifinit __P((struct ifnet *, struct in6_ifaddr *,
 	struct sockaddr_in6 *, int));
-static void in6_unlink_ifa __P((struct in6_ifaddr *, struct ifnet *));
+static void in6_unlink_ifa(struct in6_ifaddr *, struct ifnet *);
 
 struct in6_multihead in6_multihead;	/* XXX BSS initialization */
 int	(*faithprefix_p)(struct in6_addr *);
@@ -400,13 +401,16 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 
 	switch (cmd) {
 	case SIOCALIFADDR:
-	case SIOCDLIFADDR:
-		/*
-		 * XXXRW: Is this checked at another layer?  What priv to use
-		 * here?
-		 */
 		if (td != NULL) {
-			error = suser(td);
+			error = priv_check(td, PRIV_NET_ADDIFADDR);
+			if (error)
+				return (error);
+		}
+		return in6_lifaddr_ioctl(so, cmd, data, ifp, td);
+
+	case SIOCDLIFADDR:
+		if (td != NULL) {
+			error = priv_check(td, PRIV_NET_DELIFADDR);
 			if (error)
 				return (error);
 		}
@@ -499,12 +503,9 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 		    ifra->ifra_addr.sin6_len != sizeof(struct sockaddr_in6))
 			return (EAFNOSUPPORT);
 
-		/*
-		 * XXXRW: Is this checked at another layer?  What priv to use
-		 * here?
-		 */
 		if (td != NULL) {
-			error = suser(td);
+			error = priv_check(td, (cmd == SIOCDIFADDR_IN6) ? 
+			    PRIV_NET_DELIFADDR : PRIV_NET_ADDIFADDR);
 			if (error)
 				return (error);
 		}
@@ -1753,7 +1754,8 @@ in6_ifinit(struct ifnet *ifp, struct in6_ifaddr *ia,
 			rtp = &rt;
 		}
 
-		error = rtrequest(RTM_ADD, (struct sockaddr *)&ia->ia_dstaddr,
+		error = rtrequest(RTM_ADD,
+		    (struct sockaddr *)&ia->ia_dstaddr,
 		    (struct sockaddr *)&ia->ia_addr,
 		    (struct sockaddr *)&ia->ia_prefixmask,
 		    ia->ia_flags | rtflags, rtp);

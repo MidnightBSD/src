@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 Boris Popov
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_ef.c,v 1.39 2006/01/18 14:24:39 andre Exp $
+ * $FreeBSD: src/sys/net/if_ef.c,v 1.39.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_inet.h"

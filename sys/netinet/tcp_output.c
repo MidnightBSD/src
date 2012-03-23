@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/netinet/tcp_output.c,v 1.9 2011/03/25 04:12:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_output.c,v 1.141.2.3 2007/12/05 10:37:17 bz Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/tcp_output.c,v 1.141.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -82,6 +81,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_output.c,v 1.141.2.3 2007/12/05 10:37:17
 #include <machine/in_cksum.h>
 
 #include <security/mac/mac_framework.h>
+
+#ifdef notyet
+extern struct mbuf *m_copypack();
+#endif
 
 int path_mtu_discovery = 1;
 SYSCTL_INT(_net_inet_tcp, OID_AUTO, path_mtu_discovery, CTLFLAG_RW,
@@ -149,7 +152,7 @@ tcp_output(struct tcpcb *tp)
 	isipv6 = (tp->t_inpcb->inp_vflag & INP_IPV6) != 0;
 #endif
 
-	INP_LOCK_ASSERT(tp->t_inpcb);
+	INP_WLOCK_ASSERT(tp->t_inpcb);
 
 	/*
 	 * Determine length of data that should be transmitted,
@@ -543,21 +546,13 @@ after_sack_rexmit:
 		 * TCP_MAXWIN << tp->rcv_scale.
 		 */
 		long adv = min(recwin, (long)TCP_MAXWIN << tp->rcv_scale) -
-			(long)(tp->rcv_adv - tp->rcv_nxt);
+			(tp->rcv_adv - tp->rcv_nxt);
 
-		/* 
-		 * If the new window size ends up being the same as the old
-		 * size when it is scaled, then don't force a window update.
-		 */
-		if ((tp->rcv_adv - tp->rcv_nxt) >> tp->rcv_scale ==
-		    (adv + tp->rcv_adv - tp->rcv_nxt) >> tp->rcv_scale)
-			goto dontupdate;
 		if (adv >= (long) (2 * tp->t_maxseg))
 			goto send;
 		if (2 * adv >= (long) so->so_rcv.sb_hiwat)
 			goto send;
 	}
-dontupdate:
 
 	/*
 	 * Send if we owe the peer an ACK, RST, SYN, or urgent data.  ACKNOW
@@ -767,6 +762,19 @@ send:
 			tcpstat.tcps_sndpack++;
 			tcpstat.tcps_sndbyte += len;
 		}
+#ifdef notyet
+		if ((m = m_copypack(so->so_snd.sb_mb, off,
+		    (int)len, max_linkhdr + hdrlen)) == 0) {
+			SOCKBUF_UNLOCK(&so->so_snd);
+			error = ENOBUFS;
+			goto out;
+		}
+		/*
+		 * m_copypack left space for our hdr; use it.
+		 */
+		m->m_len += hdrlen;
+		m->m_data -= hdrlen;
+#else
 		MGETHDR(m, M_DONTWAIT, MT_DATA);
 		if (m == NULL) {
 			SOCKBUF_UNLOCK(&so->so_snd);
@@ -806,7 +814,7 @@ send:
 				goto out;
 			}
 		}
-
+#endif
 		/*
 		 * If we're sending everything we've got, set PUSH.
 		 * (This will keep happy those implementations which only
@@ -929,7 +937,7 @@ send:
 	 * to read more data then can be buffered prior to transmitting on
 	 * the connection.
 	 */
-	if (th->th_win == 0)
+	if (recwin == 0)
 		tp->t_flags |= TF_RXWIN0SENT;
 	else
 		tp->t_flags &= ~TF_RXWIN0SENT;

@@ -1,7 +1,3 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netinet6/in6_pcb.h,v 1.19 2007/05/11 10:20:50 rwatson Exp $	*/
-/*	$KAME: in6_pcb.h,v 1.13 2001/02/06 09:16:53 itojun Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -30,6 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ *	$KAME: in6_pcb.h,v 1.13 2001/02/06 09:16:53 itojun Exp $
  */
 
 /*-
@@ -61,6 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_pcb.h	8.1 (Berkeley) 6/10/93
+ * $FreeBSD: src/sys/netinet6/in6_pcb.h,v 1.19.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET6_IN6_PCB_H_
@@ -82,7 +80,8 @@ int	in6_pcbladdr __P((struct inpcb *, struct sockaddr *,
 			  struct in6_addr **));
 struct	inpcb *
 	in6_pcblookup_local __P((struct inpcbinfo *,
-				 struct in6_addr *, u_int, int));
+				 struct in6_addr *, u_short, int,
+				 struct ucred *));
 struct	inpcb *
 	in6_pcblookup_hash __P((struct inpcbinfo *,
 				struct in6_addr *, u_int, struct in6_addr *,

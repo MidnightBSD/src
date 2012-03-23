@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: if_trunk.c,v 1.30 2007/01/31 06:20:19 reyk Exp $	*/
 
 /*
@@ -19,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net/if_lagg.c,v 1.19.2.5 2007/12/21 05:33:48 thompsa Exp $");
+__FBSDID("$FreeBSD: src/sys/net/if_lagg.c,v 1.19.2.8.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -747,8 +746,12 @@ lagg_port2req(struct lagg_port *lp, struct lagg_reqport *rp)
 
 		case LAGG_PROTO_LACP:
 			/* LACP has a different definition of active */
-			if (lacp_port_isactive(lp))
+			if (lacp_isactive(lp))
 				rp->rp_flags |= LAGG_PORT_ACTIVE;
+			if (lacp_iscollecting(lp))
+				rp->rp_flags |= LAGG_PORT_COLLECTING;
+			if (lacp_isdistributing(lp))
+				rp->rp_flags |= LAGG_PORT_DISTRIBUTING;
 			break;
 	}
 
@@ -1120,7 +1123,8 @@ lagg_start(struct ifnet *ifp)
 
 		ETHER_BPF_MTAP(ifp, m);
 
-		if (sc->sc_proto != LAGG_PROTO_NONE)
+		/* We need a Tx algorithm and at least one port */
+		if (sc->sc_proto != LAGG_PROTO_NONE && sc->sc_count)
 			error = (*sc->sc_start)(sc, m);
 		else
 			m_freem(m);
@@ -1578,14 +1582,10 @@ lagg_lb_start(struct lagg_softc *sc, struct mbuf *m)
 	struct lagg_lb *lb = (struct lagg_lb *)sc->sc_psc;
 	struct lagg_port *lp = NULL;
 	uint32_t p = 0;
-	int idx;
 
 	p = lagg_hashmbuf(m, lb->lb_key);
-	if ((idx = p % sc->sc_count) >= LAGG_MAX_PORTS) {
-		m_freem(m);
-		return (EINVAL);
-	}
-	lp = lb->lb_ports[idx];
+	p %= sc->sc_count;
+	lp = lb->lb_ports[p];
 
 	/*
 	 * Check the port's link state. This will return the next active
@@ -1701,16 +1701,16 @@ lagg_lacp_input(struct lagg_softc *sc, struct lagg_port *lp, struct mbuf *m)
 
 	/* Tap off LACP control messages */
 	if (etype == ETHERTYPE_SLOW) {
-		lacp_input(lp, m);
-		return (NULL);
+		m = lacp_input(lp, m);
+		if (m == NULL)
+			return (NULL);
 	}
 
 	/*
 	 * If the port is not collecting or not in the active aggregator then
 	 * free and return.
 	 */
-	if ((lp->lp_flags & LAGG_PORT_COLLECTING) == 0 ||
-	    lacp_port_isactive(lp) == 0) {
+	if (lacp_iscollecting(lp) == 0 || lacp_isactive(lp) == 0) {
 		m_freem(m);
 		return (NULL);
 	}

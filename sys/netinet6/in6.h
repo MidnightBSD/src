@@ -1,7 +1,3 @@
-/* $MidnightBSD: src/sys/netinet6/in6.h,v 1.6 2009/01/11 02:40:53 laffer1 Exp $ */
-/*	$FreeBSD: src/sys/netinet6/in6.h,v 1.51 2007/07/19 09:16:40 bz Exp $	*/
-/*	$KAME: in6.h,v 1.89 2001/05/27 13:28:35 itojun Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,6 +25,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: in6.h,v 1.89 2001/05/27 13:28:35 itojun Exp $
  */
 
 /*-
@@ -60,6 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
+ * $FreeBSD: src/sys/netinet6/in6.h,v 1.51.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef __KAME_NETINET_IN_H_INCLUDED_
@@ -75,7 +74,7 @@
  * has the table of implementation/integration differences.
  */
 #define __KAME__
-#define __KAME_VERSION		"MidnightBSD"
+#define __KAME_VERSION		"FreeBSD"
 
 /*
  * IPv6 port allocation rules should mirror the IPv4 rules and are controlled

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/net/if_stf.c,v 1.60 2007/09/23 17:50:17 csjp Exp $	*/
+/*	$FreeBSD: src/sys/net/if_stf.c,v 1.60.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: if_stf.c,v 1.73 2001/12/03 11:08:30 keiichi Exp $	*/
 
 /*-
@@ -88,7 +87,9 @@
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/protosw.h>
+#include <sys/proc.h>
 #include <sys/queue.h>
+#include <sys/sysctl.h>
 #include <machine/cpu.h>
 
 #include <sys/malloc.h>
@@ -119,6 +120,13 @@
 
 #include <security/mac/mac_framework.h>
 
+SYSCTL_DECL(_net_link);
+SYSCTL_NODE(_net_link, IFT_STF, stf, CTLFLAG_RW, 0, "6to4 Interface");
+
+static int stf_route_cache = 1;
+SYSCTL_INT(_net_link_stf, OID_AUTO, route_cache, CTLFLAG_RW,
+    &stf_route_cache, 0, "Caching of IPv4 routes for 6to4 Output");
+
 #define STFNAME		"stf"
 #define STFUNIT		0
 
@@ -137,14 +145,15 @@ struct stf_softc {
 		struct route_in6 __sc_ro6; /* just for safety */
 	} __sc_ro46;
 #define sc_ro	__sc_ro46.__sc_ro4
+	struct mtx	sc_ro_mtx;
+	u_int	sc_fibnum;
 	const struct encaptab *encap_cookie;
 };
 #define STF2IFP(sc)	((sc)->sc_ifp)
 
 /*
- * XXXRW: Note that mutable fields in the softc are not currently locked:
- * in particular, sc_ro needs to be protected from concurrent entrance
- * of stf_output().
+ * Note that mutable fields in the softc are not currently locked.
+ * We do lock sc_ro in stf_output though.
  */
 static MALLOC_DEFINE(M_STF, STFNAME, "6to4 Tunnel Interface");
 static const int ip_stf_ttl = 40;
@@ -220,6 +229,7 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 		return (ENOSPC);
 	}
 	ifp->if_softc = sc;
+	sc->sc_fibnum = curthread->td_proc->p_fibnum;
 
 	/*
 	 * Set the name manually rather then using if_initname because
@@ -229,6 +239,7 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	ifp->if_dname = ifc->ifc_name;
 	ifp->if_dunit = IF_DUNIT_NONE;
 
+	mtx_init(&(sc)->sc_ro_mtx, "stf ro", NULL, MTX_DEF);
 	sc->encap_cookie = encap_attach_func(AF_INET, IPPROTO_IPV6,
 	    stf_encapcheck, &in_stf_protosw, sc);
 	if (sc->encap_cookie == NULL) {
@@ -255,6 +266,7 @@ stf_clone_destroy(struct if_clone *ifc, struct ifnet *ifp)
 
 	err = encap_detach(sc->encap_cookie);
 	KASSERT(err == 0, ("Unexpected error detaching encap_cookie"));
+	mtx_destroy(&(sc)->sc_ro_mtx);
 	bpfdetach(ifp);
 	if_detach(ifp);
 	if_free(ifp);
@@ -396,6 +408,7 @@ stf_output(ifp, m, dst, rt)
 {
 	struct stf_softc *sc;
 	struct sockaddr_in6 *dst6;
+	struct route *cached_route;
 	struct in_addr in4;
 	caddr_t ptr;
 	struct sockaddr_in *dst4;
@@ -404,9 +417,9 @@ stf_output(ifp, m, dst, rt)
 	struct ip6_hdr *ip6;
 	struct in6_ifaddr *ia6;
 	u_int32_t af;
-#ifdef MAC
 	int error;
 
+#ifdef MAC
 	error = mac_check_ifnet_transmit(ifp, m);
 	if (error) {
 		m_freem(m);
@@ -505,9 +518,15 @@ stf_output(ifp, m, dst, rt)
 	else
 		ip_ecn_ingress(ECN_NOCARE, &ip->ip_tos, &tos);
 
+	if (!stf_route_cache) {
+		cached_route = NULL;
+		goto sendit;
+	}
+
 	/*
-	 * XXXRW: Locking of sc_ro required.
+	 * Do we have a cached route?
 	 */
+	mtx_lock(&(sc)->sc_ro_mtx);
 	dst4 = (struct sockaddr_in *)&sc->sc_ro.ro_dst;
 	if (dst4->sin_family != AF_INET ||
 	    bcmp(&dst4->sin_addr, &ip->ip_dst, sizeof(ip->ip_dst)) != 0) {
@@ -522,16 +541,24 @@ stf_output(ifp, m, dst, rt)
 	}
 
 	if (sc->sc_ro.ro_rt == NULL) {
-		rtalloc(&sc->sc_ro);
+		rtalloc_fib(&sc->sc_ro, sc->sc_fibnum);
 		if (sc->sc_ro.ro_rt == NULL) {
 			m_freem(m);
+			mtx_unlock(&(sc)->sc_ro_mtx);
 			ifp->if_oerrors++;
 			return ENETUNREACH;
 		}
 	}
+	cached_route = &sc->sc_ro;
 
+sendit:
+	M_SETFIB(m, sc->sc_fibnum);
 	ifp->if_opackets++;
-	return ip_output(m, NULL, &sc->sc_ro, 0, NULL, NULL);
+	error = ip_output(m, NULL, cached_route, 0, NULL, NULL);
+
+	if (cached_route != NULL)
+		mtx_unlock(&(sc)->sc_ro_mtx);
+	return error;
 }
 
 static int
@@ -600,7 +627,8 @@ stf_checkaddr4(sc, in, inifp)
 		sin.sin_family = AF_INET;
 		sin.sin_len = sizeof(struct sockaddr_in);
 		sin.sin_addr = *in;
-		rt = rtalloc1((struct sockaddr *)&sin, 0, 0UL);
+		rt = rtalloc1_fib((struct sockaddr *)&sin, 0,
+		    0UL, sc->sc_fibnum);
 		if (!rt || rt->rt_ifp != inifp) {
 #if 0
 			log(LOG_WARNING, "%s: packet from 0x%x dropped "

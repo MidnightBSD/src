@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -27,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_vlan_var.h,v 1.26 2007/02/28 22:05:30 bms Exp $
+ * $FreeBSD: src/sys/net/if_vlan_var.h,v 1.26.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NET_IF_VLAN_VAR_H_

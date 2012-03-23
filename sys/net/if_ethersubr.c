@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ethersubr.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_ethersubr.c,v 1.236.2.1 2007/10/28 16:24:16 thompsa Exp $
+ * $FreeBSD: src/sys/net/if_ethersubr.c,v 1.236.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_atalk.h"
@@ -492,7 +491,7 @@ ether_ipfw_chk(struct mbuf **m0, struct ifnet *dst,
 			 */
 			*m0 = NULL ;
 		}
-		ip_dn_io_ptr(m, dst ? DN_TO_ETH_OUT: DN_TO_ETH_DEMUX, &args);
+		ip_dn_io_ptr(&m, dst ? DN_TO_ETH_OUT: DN_TO_ETH_DEMUX, &args);
 		return 0;
 	}
 	/*
@@ -909,8 +908,6 @@ ether_ifattach(struct ifnet *ifp, const u_int8_t *lla)
 			break; 
 	if (i != ifp->if_addrlen)
 		if_printf(ifp, "Ethernet address: %6D\n", lla, ":");
-	if (ifp->if_flags & IFF_NEEDSGIANT)
-		if_printf(ifp, "if_start running deferred for Giant\n");
 }
 
 /*
@@ -953,11 +950,12 @@ ether_crc32_le(const uint8_t *buf, size_t len)
 	crc = 0xffffffff;	/* initial value */
 
 	for (i = 0; i < len; i++) {
-		for (data = *buf++, bit = 0; bit < 8; bit++, data >>= 1)
+		for (data = *buf++, bit = 0; bit < 8; bit++, data >>= 1) {
 			carry = (crc ^ data) & 1;
 			crc >>= 1;
 			if (carry)
 				crc = (crc ^ ETHER_CRC_POLY_LE);
+		}
 	}
 
 	return (crc);

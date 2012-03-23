@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
@@ -32,22 +31,23 @@
 /* $KAME: sctp_var.h,v 1.24 2005/03/06 16:04:19 itojun Exp $	 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.20.2.1 2007/10/25 12:27:06 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.20.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef _NETINET_SCTP_VAR_H_
 #define _NETINET_SCTP_VAR_H_
 
 #include <netinet/sctp_uio.h>
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 extern struct pr_usrreqs sctp_usrreqs;
 
 
 #define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
 #define sctp_feature_off(inp, feature) (inp->sctp_features &= ~feature)
-#define sctp_is_feature_on(inp, feature) (inp->sctp_features & feature)
+#define sctp_is_feature_on(inp, feature) ((inp->sctp_features & feature) == feature)
 #define sctp_is_feature_off(inp, feature) ((inp->sctp_features & feature) == 0)
+
 
 /* managing mobility_feature in inpcb (by micchie) */
 #define sctp_mobility_feature_on(inp, feature)  (inp->sctp_mobility_features |= feature)
@@ -74,24 +74,24 @@ extern struct pr_usrreqs sctp_usrreqs;
  */
 
 #define sctp_free_a_readq(_stcb, _readq) { \
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, (_readq)); \
+	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_readq), (_readq)); \
 	SCTP_DECR_READQ_COUNT(); \
 }
 
 #define sctp_alloc_a_readq(_stcb, _readq) { \
-	(_readq) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq, struct sctp_queued_to_read); \
+	(_readq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_readq), struct sctp_queued_to_read); \
 	if ((_readq)) { \
  	     SCTP_INCR_READQ_COUNT(); \
 	} \
 }
 
 #define sctp_free_a_strmoq(_stcb, _strmoq) { \
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, (_strmoq)); \
+	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_strmoq), (_strmoq)); \
 	SCTP_DECR_STRMOQ_COUNT(); \
 }
 
 #define sctp_alloc_a_strmoq(_stcb, _strmoq) { \
-	(_strmoq) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending); \
+	(_strmoq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_strmoq), struct sctp_stream_queue_pending); \
 	if ((_strmoq)) { \
 		SCTP_INCR_STRMOQ_COUNT(); \
  	} \
@@ -105,24 +105,24 @@ extern struct pr_usrreqs sctp_usrreqs;
                   sctp_free_remote_addr((_chk)->whoTo); \
                   (_chk)->whoTo = NULL; \
           } \
-          if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
-               (sctppcbinfo.ipi_free_chunks > sctp_system_free_resc_limit)) { \
-	 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
+          if (((_stcb)->asoc.free_chunk_cnt > SCTP_BASE_SYSCTL(sctp_asoc_free_resc_limit)) || \
+               (SCTP_BASE_INFO(ipi_free_chunks) > SCTP_BASE_SYSCTL(sctp_system_free_resc_limit))) { \
+	 	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), (_chk)); \
 	 	SCTP_DECR_CHK_COUNT(); \
 	  } else { \
 	 	TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
 	 	(_stcb)->asoc.free_chunk_cnt++; \
-	 	atomic_add_int(&sctppcbinfo.ipi_free_chunks, 1); \
+	 	atomic_add_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
           } \
         } else { \
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
+		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), (_chk)); \
 		SCTP_DECR_CHK_COUNT(); \
 	} \
 }
 
 #define sctp_alloc_a_chunk(_stcb, _chk) { \
 	if (TAILQ_EMPTY(&(_stcb)->asoc.free_chunks))  { \
-		(_chk) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk, struct sctp_tmit_chunk); \
+		(_chk) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_chunk), struct sctp_tmit_chunk); \
 		if ((_chk)) { \
 			SCTP_INCR_CHK_COUNT(); \
                         (_chk)->whoTo = NULL; \
@@ -130,7 +130,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 	} else { \
 		(_chk) = TAILQ_FIRST(&(_stcb)->asoc.free_chunks); \
 		TAILQ_REMOVE(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
-		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1); \
+		atomic_subtract_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
                 SCTP_STAT_INCR(sctps_cached_chk); \
 		(_stcb)->asoc.free_chunk_cnt--; \
 	} \
@@ -154,7 +154,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 			} \
                         (__net)->src_addr_selected = 0; \
 			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
+			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_net), (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
 		} \
 	} \
@@ -301,13 +301,15 @@ int sctp_disconnect(struct socket *so);
 
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
+void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
 void sctp_input __P((struct mbuf *, int));
+void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint16_t));
 void sctp_drain __P((void));
 void sctp_init __P((void));
 
+void sctp_finish(void);
 
-void sctp_pcbinfo_cleanup(void);
-
+int sctp_flush(struct socket *, int);
 int sctp_shutdown __P((struct socket *));
 void sctp_notify 
 __P((struct sctp_inpcb *, struct ip *ip, struct sctphdr *,

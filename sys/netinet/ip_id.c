@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $OpenBSD: ip_id.c,v 1.2 1999/08/26 13:37:01 provos Exp $ */
 
 /*-
@@ -57,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_id.c,v 1.9 2007/10/07 20:44:23 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/ip_id.c,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_pf.h"
 #include <sys/param.h>

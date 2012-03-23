@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Michael Shalayeff. All rights reserved.
  * Copyright (c) 2003 Ryan McBride. All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_carp.c,v 1.52 2007/10/07 20:44:22 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/ip_carp.c,v 1.52.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_carp.h"
 #include "opt_bpf.h"
@@ -242,9 +241,12 @@ carp_hmac_prepare(struct carp_softc *sc)
 	u_int8_t version = CARP_VERSION, type = CARP_ADVERTISEMENT;
 	u_int8_t vhid = sc->sc_vhid & 0xff;
 	struct ifaddr *ifa;
-	int i;
+	int i, found;
+#ifdef INET
+	struct in_addr last, cur, in;
+#endif
 #ifdef INET6
-	struct in6_addr in6;
+	struct in6_addr last6, cur6, in6;
 #endif
 
 	if (sc->sc_carpdev)
@@ -265,21 +267,44 @@ carp_hmac_prepare(struct carp_softc *sc)
 	SHA1Update(&sc->sc_sha1, (void *)&type, sizeof(type));
 	SHA1Update(&sc->sc_sha1, (void *)&vhid, sizeof(vhid));
 #ifdef INET
-	TAILQ_FOREACH(ifa, &SC2IFP(sc)->if_addrlist, ifa_list) {
-		if (ifa->ifa_addr->sa_family == AF_INET)
-			SHA1Update(&sc->sc_sha1,
-			    (void *)&ifatoia(ifa)->ia_addr.sin_addr.s_addr,
-			    sizeof(struct in_addr));
-	}
+	cur.s_addr = 0;
+	do {
+		found = 0;
+		last = cur;
+		cur.s_addr = 0xffffffff;
+		TAILQ_FOREACH(ifa, &SC2IFP(sc)->if_addrlist, ifa_list) {
+			in.s_addr = ifatoia(ifa)->ia_addr.sin_addr.s_addr;
+			if (ifa->ifa_addr->sa_family == AF_INET &&
+			    ntohl(in.s_addr) > ntohl(last.s_addr) &&
+			    ntohl(in.s_addr) < ntohl(cur.s_addr)) {
+				cur.s_addr = in.s_addr;
+				found++;
+			}
+		}
+		if (found)
+			SHA1Update(&sc->sc_sha1, (void *)&cur, sizeof(cur));
+	} while (found);
 #endif /* INET */
 #ifdef INET6
-	TAILQ_FOREACH(ifa, &SC2IFP(sc)->if_addrlist, ifa_list) {
-		if (ifa->ifa_addr->sa_family == AF_INET6) {
+	memset(&cur6, 0, sizeof(cur6));
+	do {
+		found = 0;
+		last6 = cur6;
+		memset(&cur6, 0xff, sizeof(cur6));
+		TAILQ_FOREACH(ifa, &SC2IFP(sc)->if_addrlist, ifa_list) {
 			in6 = ifatoia6(ifa)->ia_addr.sin6_addr;
-			in6_clearscope(&in6);
-			SHA1Update(&sc->sc_sha1, (void *)&in6, sizeof(in6));
+			if (IN6_IS_SCOPE_EMBED(&in6))
+				in6.s6_addr16[1] = 0;
+			if (ifa->ifa_addr->sa_family == AF_INET6 &&
+			    memcmp(&in6, &last6, sizeof(in6)) > 0 &&
+			    memcmp(&in6, &cur6, sizeof(in6)) < 0) {
+				cur6 = in6;
+				found++;
+			}
 		}
-	}
+		if (found)
+			SHA1Update(&sc->sc_sha1, (void *)&cur6, sizeof(cur6));
+	} while (found);
 #endif /* INET6 */
 
 	/* convert ipad to opad */
@@ -1439,7 +1464,11 @@ carp_set_addr(struct carp_softc *sc, struct sockaddr_in *sin)
 			carp_set_state(sc, INIT);
 		if (sc->sc_naddrs)
 			SC2IFP(sc)->if_flags |= IFF_UP;
+		if (sc->sc_carpdev)
+			CARP_SCLOCK(sc);
 		carp_setrun(sc, 0);
+		if (sc->sc_carpdev)
+			CARP_SCUNLOCK(sc);
 		return (0);
 	}
 
@@ -1600,7 +1629,11 @@ carp_set_addr6(struct carp_softc *sc, struct sockaddr_in6 *sin6)
 			carp_set_state(sc, INIT);
 		if (sc->sc_naddrs6)
 			SC2IFP(sc)->if_flags |= IFF_UP;
+		if (sc->sc_carpdev)
+			CARP_SCLOCK(sc);
 		carp_setrun(sc, 0);
+		if (sc->sc_carpdev)
+			CARP_SCUNLOCK(sc);
 		return (0);
 	}
 
