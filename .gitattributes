@@ -29502,6 +29502,7 @@ lib/libc/sys/semget.2 -text
 lib/libc/sys/semop.2 -text
 lib/libc/sys/send.2 -text
 lib/libc/sys/sendfile.2 -text
+lib/libc/sys/setfib.2 -text
 lib/libc/sys/setgroups.2 -text
 lib/libc/sys/setpgid.2 -text
 lib/libc/sys/setregid.2 -text
