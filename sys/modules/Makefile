@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.27 2012/03/01 04:39:02 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.28 2012/03/24 21:30:06 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -435,7 +435,6 @@ _xe=		xe
 .if ${MK_ZFS} != "no" || defined(ALL_MODULES)
 _zfs=		zfs
 .endif
-.if ${MACHINE} == "i386"
 _aac=		aac
 _acpi=		acpi
 _ahb=		ahb
