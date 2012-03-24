@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.26 2012/01/02 16:40:58 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.27 2012/03/01 04:39:02 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -10,6 +10,7 @@ SUBDIR=	${_3dfx} \
 	accf_http \
 	${_acpi} \
 	ae \
+	age \
 	${_agp} \
 	aha \
 	${_ahb} \
@@ -129,6 +130,7 @@ SUBDIR=	${_3dfx} \
 	ipdivert \
 	${_ipfilter} \
 	ipfw \
+	ipfw_nat \
 	ip_mroute_mod \
 	${_ipmi} \
 	${_ips} \
@@ -144,6 +146,7 @@ SUBDIR=	${_3dfx} \
 	jme  \
 	joy \
 	kbdmux \
+	krpc \
 	kue \
 	le \
 	lge \
@@ -190,6 +193,7 @@ SUBDIR=	${_3dfx} \
 	netgraph \
 	${_nfe} \
 	nfsclient \
+	nfslockd \
 	nfsserver \
 	nge \
 	nmdm \
@@ -297,6 +301,7 @@ SUBDIR=	${_3dfx} \
 	urio \
 	usb \
 	uscanner \
+	uslcom \
 	utopia \
 	uvisor \
 	uvscom \
@@ -333,11 +338,6 @@ _vpo=		vpo
 .if defined(ALL_MODULES)
 _ufs=		ufs
 .endif
-
-# Disabled in 7.0 as netatm is not MPSAFE.
-#if ${MK_ATM} != "no"
-#_harp=		harp
-#.endif
 
 .if ${MK_CRYPT} != "no" || defined(ALL_MODULES)
 .if exists(${.CURDIR}/../opencrypto)
@@ -429,12 +429,13 @@ _sppp=		sppp
 _sr=		sr
 _stg=		stg
 _streams=	streams
-_tmpfs=		tmpfs
+_tmpfs= 	tmpfs
 _wi=		wi
 _xe=		xe
 .if ${MK_ZFS} != "no" || defined(ALL_MODULES)
 _zfs=		zfs
 .endif
+.if ${MACHINE} == "i386"
 _aac=		aac
 _acpi=		acpi
 _ahb=		ahb
@@ -455,7 +456,6 @@ _hptmv=		hptmv
 _hptrr=		hptrr
 _ichwd=		ichwd
 _ida=		ida
-#_idt=		idt # not mpsafe
 _iir=		iir
 _ipmi=		ipmi
 _ips=		ips
@@ -536,7 +536,7 @@ _smbfs=		smbfs
 _sound=		sound
 _speaker=	speaker
 _sppp=		sppp
-_tmpfs=		tmpfs
+_tmpfs= 	tmpfs
 _twa=		twa
 _wi=		wi
 _wpi=		wpi
@@ -551,6 +551,9 @@ _auxio=		auxio
 _em=		em
 _i2c=		i2c
 _sound=		sound
+.if ${MK_ZFS} != "no" || defined(ALL_MODULES)
+_zfs=		zfs
+.endif
 .endif
 
 .if defined(MODULES_OVERRIDE) && !defined(ALL_MODULES)

@@ -38956,7 +38956,6 @@ sys/modules/geom/geom_vinum/Makefile -text
 sys/modules/geom/geom_virstor/Makefile -text
 sys/modules/geom/geom_vol_ffs/Makefile -text
 sys/modules/geom/geom_zero/Makefile -text
-sys/modules/harp/Makefile -text
 sys/modules/hatm/Makefile -text
 sys/modules/hifn/Makefile -text
 sys/modules/hme/Makefile -text
@@ -38987,7 +38986,6 @@ sys/modules/i2c/smbus/Makefile -text
 sys/modules/ibcs2/Makefile -text
 sys/modules/ichwd/Makefile -text
 sys/modules/ida/Makefile -text
-sys/modules/idt/Makefile -text
 sys/modules/ie/Makefile -text
 sys/modules/if_bridge/Makefile -text
 sys/modules/if_disc/Makefile -text
@@ -39012,6 +39010,7 @@ sys/modules/ip_mroute_mod/Makefile -text
 sys/modules/ipdivert/Makefile -text
 sys/modules/ipfilter/Makefile -text
 sys/modules/ipfw/Makefile -text
+sys/modules/ipfw_nat/Makefile -text
 sys/modules/ipmi/Makefile -text
 sys/modules/ips/Makefile -text
 sys/modules/ipw/Makefile -text
@@ -39046,6 +39045,7 @@ sys/modules/ixgb/Makefile -text
 sys/modules/jme/Makefile -text
 sys/modules/joy/Makefile -text
 sys/modules/kbdmux/Makefile -text
+sys/modules/krpc/Makefile -text
 sys/modules/kue/Makefile -text
 sys/modules/le/Makefile -text
 sys/modules/lge/Makefile -text
@@ -39176,6 +39176,7 @@ sys/modules/netgraph/vlan/Makefile -text
 sys/modules/nfe/Makefile -text
 sys/modules/nfs4client/Makefile -text
 sys/modules/nfsclient/Makefile -text
+sys/modules/nfslockd/Makefile -text
 sys/modules/nfsserver/Makefile -text
 sys/modules/nge/Makefile -text
 sys/modules/nmdm/Makefile -text
@@ -39346,6 +39347,7 @@ sys/modules/ural/Makefile -text
 sys/modules/urio/Makefile -text
 sys/modules/usb/Makefile -text
 sys/modules/uscanner/Makefile -text
+sys/modules/uslcom/Makefile -text
 sys/modules/utopia/Makefile -text
 sys/modules/uvisor/Makefile -text
 sys/modules/uvscom/Makefile -text
