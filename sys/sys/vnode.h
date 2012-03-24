@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,23 +27,16 @@
  * SUCH DAMAGE.
  *
  *	@(#)vnode.h	8.7 (Berkeley) 2/4/94
- * $FreeBSD: src/sys/sys/vnode.h,v 1.326 2007/05/31 11:51:52 kib Exp $
+ * $FreeBSD: src/sys/sys/vnode.h,v 1.326.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_VNODE_H_
 #define	_SYS_VNODE_H_
 
-/*
- * XXX - compatability until lockmgr() goes away or all the #includes are
- * updated.
- */
-#include <sys/lockmgr.h>
-
 #include <sys/bufobj.h>
 #include <sys/queue.h>
-#include <sys/_lock.h>
 #include <sys/lock.h>
-#include <sys/_mutex.h>
+#include <sys/lockmgr.h>
 #include <sys/mutex.h>
 #include <sys/selinfo.h>
 #include <sys/uio.h>
@@ -132,6 +124,7 @@ struct vnode {
 		struct socket	*vu_socket;	/* v unix domain net (VSOCK) */
 		struct cdev	*vu_cdev; 	/* v device (VCHR, VBLK) */
 		struct fifoinfo	*vu_fifoinfo;	/* v fifo (VFIFO) */
+		int		vu_yield;	/*   yield count (VMARKER) */
 	} v_un;
 
 	/*
@@ -178,6 +171,7 @@ struct vnode {
 	 */
 	struct vpollinfo *v_pollinfo;		/* G Poll events, p for *v_pi */
 	struct label *v_label;			/* MAC label for vnode */
+	struct lockf *v_lockf;			/* Byte-level lock list */
 };
 
 #endif /* defined(_KERNEL) || defined(_KVM_VNODE) */
@@ -186,6 +180,7 @@ struct vnode {
 #define	v_socket	v_un.vu_socket
 #define	v_rdev		v_un.vu_cdev
 #define	v_fifoinfo	v_un.vu_fifoinfo
+#define	v_yield		v_un.vu_yield
 
 /* XXX: These are temporary to avoid a source sweep at this time */
 #define v_object	v_bufobj.bo_object
@@ -654,6 +649,8 @@ int	vop_stdlock(struct vop_lock1_args *);
 int	vop_stdputpages(struct vop_putpages_args *);
 int	vop_stdunlock(struct vop_unlock_args *);
 int	vop_nopoll(struct vop_poll_args *);
+int	vop_stdadvlock(struct vop_advlock_args *ap);
+int	vop_stdadvlockasync(struct vop_advlockasync_args *ap);
 int	vop_stdpathconf(struct vop_pathconf_args *);
 int	vop_stdpoll(struct vop_poll_args *);
 int	vop_stdvptofh(struct vop_vptofh_args *ap);

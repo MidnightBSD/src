@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_serv.c,v 1.174.2.1 2007/10/26 21:46:31 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_serv.c,v 1.174.2.5.2.2 2008/12/19 04:02:16 kensmith Exp $");
 
 /*
  * nfs version 2 and 3 server calls to vnode ops
@@ -211,6 +211,7 @@ nfsrv3_access(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	if (!v3)
 		panic("nfsrv3_access: v3 proc called on a v2 connection");
+	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
 	tl = nfsm_dissect_nonblock(u_int32_t *, NFSX_UNSIGNED);
@@ -1177,7 +1178,7 @@ nfsrv_write(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	    uiop->uio_td = NULL;
 	    uiop->uio_offset = off;
 	    error = VOP_WRITE(vp, uiop, ioflags, cred);
-	    /* XXXRW: unlocked write. */
+	    /* Unlocked write. */
 	    nfsrvstats.srvvop_writes++;
 	    FREE((caddr_t)iv, M_TEMP);
 	}
@@ -1286,6 +1287,7 @@ nfsrv_writegather(struct nfsrv_descript **ndp, struct nfssvc_sock *slp,
 	i = 0;
 	len = 0;
 #endif
+	vfslocked = 0;
 	*mrq = NULL;
 	if (*ndp) {
 	    nfsd = *ndp;
@@ -1491,7 +1493,7 @@ loop1:
 		    }
 		    if (!error) {
 			error = VOP_WRITE(vp, uiop, ioflags, cred);
-			/* XXXRW: unlocked write. */
+			/* Unlocked write. */
 			nfsrvstats.srvvop_writes++;
 			vn_finished_write(mntp);
 		    }
@@ -2169,7 +2171,7 @@ nfsrv_remove(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nd.ni_cnd.cn_flags = LOCKPARENT | LOCKLEAF | MPSAFE;
 	error = nfs_namei(&nd, fhp, len, slp, nam, &md, &dpos,
 		&dirp, v3,  &dirfor, &dirfor_ret, td, FALSE);
-	vfslocked = NDHASGIANT(&nd);
+	vfslocked = nfsrv_lockedpair_nd(vfslocked, &nd);
 	if (dirp && !v3) {
 		vrele(dirp);
 		dirp = NULL;
@@ -3599,9 +3601,12 @@ again:
 	 * Probe one of the directory entries to see if the filesystem
 	 * supports VGET.
 	 */
-	if (VFS_VGET(vp->v_mount, dp->d_fileno, LK_EXCLUSIVE, &nvp) ==
-	    EOPNOTSUPP) {
-		error = NFSERR_NOTSUPP;
+	error = VFS_VGET(vp->v_mount, dp->d_fileno, LK_EXCLUSIVE, &nvp);
+	if (error) {
+		if (error == EOPNOTSUPP)
+			error = NFSERR_NOTSUPP;
+		else
+			error = NFSERR_SERVERFAULT;
 		vrele(vp);
 		vp = NULL;
 		free((caddr_t)cookies, M_TEMP);
@@ -4130,6 +4135,7 @@ nfsrv_pathconf(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	nfsdbprintf(("%s %d\n", __FILE__, __LINE__));
 	if (!v3)
 		panic("nfsrv_pathconf: v3 proc called on a v2 connection");
+	vfslocked = 0;
 	fhp = &nfh.fh_generic;
 	nfsm_srvmtofh(fhp);
 	error = nfsrv_fhtovp(fhp, 1, &vp, &vfslocked, cred, slp,

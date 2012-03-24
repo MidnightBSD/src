@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/conf/NOTES,v 1.8 2011/07/13 12:56:33 laffer1 Exp $
+# $MidnightBSD: src/sys/conf/NOTES,v 1.9 2011/09/29 12:41:28 laffer1 Exp $
 # $FreeBSD: src/sys/conf/NOTES,v 1.1454 2007/09/26 21:14:17 marius Exp $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
@@ -508,6 +508,8 @@ options 	HWPMC_HOOKS		# Other necessary kernel hooks
 options 	INET			#Internet communications protocols
 options 	INET6			#IPv6 communications protocols
 
+options		ROUTETABLES=2		# max 16. 1 is back compatible.
+
 # In order to enable IPSEC you MUST also add device crypto to 
 # your kernel configuration
 options 	IPSEC			#IP security (requires device crypto)
@@ -841,8 +843,7 @@ device		stf			#6to4 IPv6 over IPv4 encapsulation
 # crafting the ruleset.
 #
 # IPFIREWALL_NAT adds support for in kernel nat in ipfw, and it requires
-# LIBALIAS. To build an ipfw kld with nat support enabled, add 
-# "CFLAGS+= -DIPFIREWALL_NAT" to your make.conf.
+# LIBALIAS.
 #
 # IPSTEALTH enables code to support stealth forwarding (i.e., forwarding
 # packets without touching the TTL).  This can be useful to hide firewalls
@@ -925,6 +926,7 @@ options 	CD9660			#ISO 9660 filesystem
 options 	FDESCFS			#File descriptor filesystem
 options 	MSDOSFS			#MS DOS File System (FAT, FAT32)
 options 	NFSSERVER		#Network File System server
+options		NFSLOCKD		#Network Lock Manager
 options 	NTFS			#NT File System
 options 	NULLFS			#NULL filesystem
 # Broken (depends on NCP):
@@ -2430,6 +2432,8 @@ device		uftdi
 device		uipaq
 # USB support for Prolific PL-2303 serial adapters
 device		uplcom
+# USB support for Silicon Laboratories CP2101/CP2102 based USB serial adapters
+device		uslcom
 # USB Visor and Palm devices
 device		uvisor
 # USB serial support for DDI pocket's PHS

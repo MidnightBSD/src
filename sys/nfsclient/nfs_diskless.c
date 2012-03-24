@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_diskless.c,v 1.17 2006/12/06 02:15:25 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_diskless.c,v 1.17.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_bootp.h"
 
@@ -333,6 +333,6 @@ nfs_rootconf(void)
 		rootdevnames[0] = "nfs:";
 }
 
-SYSINIT(cpu_rootconf, SI_SUB_ROOT_CONF, SI_ORDER_FIRST, nfs_rootconf, NULL)
+SYSINIT(cpu_rootconf, SI_SUB_ROOT_CONF, SI_ORDER_FIRST, nfs_rootconf, NULL);
 #endif
 

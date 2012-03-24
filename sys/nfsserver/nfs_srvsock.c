@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsock.c,v 1.104 2007/08/06 14:26:02 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsock.c,v 1.104.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Socket operations for use by nfs
@@ -652,14 +652,17 @@ nfsrv_getstream(struct nfssvc_sock *slp, int waitflag)
 		NFSD_UNLOCK();
 		rec = malloc(sizeof(struct nfsrv_rec), M_NFSRVDESC,
 	            waitflag == M_DONTWAIT ? M_NOWAIT : M_WAITOK);
-		NFSD_LOCK();
-		if (!rec) {
-		    m_freem(slp->ns_frag);
-		} else {
+		if (rec) {
 		    nfs_realign(&slp->ns_frag, 10 * NFSX_UNSIGNED);
 		    rec->nr_address = NULL;
 		    rec->nr_packet = slp->ns_frag;
+		    NFSD_LOCK();
 		    STAILQ_INSERT_TAIL(&slp->ns_rec, rec, nr_link);
+		} else {
+		    NFSD_LOCK();
+		}
+		if (!rec) {
+		    m_freem(slp->ns_frag);
 		}
 		slp->ns_frag = NULL;
 	    }

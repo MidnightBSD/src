@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_lock.c,v 1.45 2007/04/21 18:11:18 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_lock.c,v 1.45.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -227,6 +227,9 @@ MODULE_VERSION(nfslock, 1);
 /*
  * nfs_advlock --
  *      NFS advisory byte-level locks.
+ *
+ * The vnode shall be (shared) locked on the entry, it is
+ * unconditionally unlocked after.
  */
 int
 nfs_dolock(struct vop_advlock_args *ap)
@@ -243,6 +246,15 @@ nfs_dolock(struct vop_advlock_args *ap)
 
 	vp = ap->a_vp;
 	fl = ap->a_fl;
+
+	ASSERT_VOP_LOCKED(vp, "nfs_dolock");
+
+	bcopy(VFSTONFS(vp->v_mount)->nm_nam, &msg.lm_addr,
+		min(sizeof msg.lm_addr, VFSTONFS(vp->v_mount)->nm_nam->sa_len));
+	msg.lm_fh_len = NFS_ISV3(vp) ? VTONFS(vp)->n_fhsize : NFSX_V2FH;
+	bcopy(VTONFS(vp)->n_fhp, msg.lm_fh, msg.lm_fh_len);
+	msg.lm_nfsv3 = NFS_ISV3(vp);
+	VOP_UNLOCK(vp, 0, td);
 
 	/*
 	 * the NLM protocol doesn't allow the server to return an error
@@ -264,6 +276,8 @@ nfs_dolock(struct vop_advlock_args *ap)
 	 */
 	msg.lm_version = LOCKD_MSG_VERSION;
 	msg.lm_msg_ident.pid = p->p_pid;
+
+	mtx_lock(&Giant);
 	/*
 	 * if there is no nfsowner table yet, allocate one.
 	 */
@@ -279,21 +293,16 @@ nfs_dolock(struct vop_advlock_args *ap)
 	msg.lm_fl = *fl;
 	msg.lm_wait = ap->a_flags & F_WAIT;
 	msg.lm_getlk = ap->a_op == F_GETLK;
-	bcopy(VFSTONFS(vp->v_mount)->nm_nam, &msg.lm_addr,
-		min(sizeof msg.lm_addr, VFSTONFS(vp->v_mount)->nm_nam->sa_len));
-	msg.lm_fh_len = NFS_ISV3(vp) ? VTONFS(vp)->n_fhsize : NFSX_V2FH;
-	bcopy(VTONFS(vp)->n_fhp, msg.lm_fh, msg.lm_fh_len);
-	msg.lm_nfsv3 = NFS_ISV3(vp);
 	cru2x(td->td_ucred, &msg.lm_cred);
 
 	for (;;) {
 		error = nfslock_send(&msg);
 		if (error)
-			return (error);
+			goto out;
 
 		/* Unlocks succeed immediately.  */
 		if (fl->l_type == F_UNLCK)
-			return (error);
+			goto out;
 
 		/*
 		 * Retry after 20 seconds if we haven't gotten a response yet.
@@ -325,6 +334,7 @@ nfs_dolock(struct vop_advlock_args *ap)
 
 		if (msg.lm_getlk && p->p_nlminfo->retcode == 0) {
 			if (p->p_nlminfo->set_getlk_pid) {
+				fl->l_sysid = 0; /* XXX */
 				fl->l_pid = p->p_nlminfo->getlk_pid;
 			} else {
 				fl->l_type = F_UNLCK;
@@ -333,7 +343,8 @@ nfs_dolock(struct vop_advlock_args *ap)
 		error = p->p_nlminfo->retcode;
 		break;
 	}
-
+ out:
+	mtx_unlock(&Giant);
 	return (error);
 }
 

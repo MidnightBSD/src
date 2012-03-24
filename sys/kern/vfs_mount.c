@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_mount.c,v 1.265.2.1.2.1 2008/01/20 02:38:42 rodrigc Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_mount.c,v 1.265.2.11.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -136,7 +136,6 @@ static const char *global_opts[] = {
 	"rw",
 	"nosuid",
 	"noexec",
-	"update",
 	NULL
 };
 
@@ -196,6 +195,8 @@ vfs_deleteopt(struct vfsoptlist *opts, const char *name)
 {
 	struct vfsopt *opt, *temp;
 
+	if (opts == NULL)
+		return;
 	TAILQ_FOREACH_SAFE(opt, opts, link, temp)  {
 		if (strcmp(opt->name, name) == 0)
 			vfs_freeopt(opts, opt);
@@ -448,6 +449,7 @@ mount_init(void *mem, int size, int flags)
 	mp = (struct mount *)mem;
 	mtx_init(&mp->mnt_mtx, "struct mount mtx", NULL, MTX_DEF);
 	lockinit(&mp->mnt_lock, PVFS, "vfslock", 0, 0);
+	lockinit(&mp->mnt_explock, PVFS, "explock", 0, 0);
 	return (0);
 }
 
@@ -457,6 +459,7 @@ mount_fini(void *mem, int size)
 	struct mount *mp;
 
 	mp = (struct mount *)mem;
+	lockdestroy(&mp->mnt_explock);
 	lockdestroy(&mp->mnt_lock);
 	mtx_destroy(&mp->mnt_mtx);
 }
@@ -580,7 +583,7 @@ int
 vfs_donmount(struct thread *td, int fsflags, struct uio *fsoptions)
 {
 	struct vfsoptlist *optlist;
-	struct vfsopt *opt, *noro_opt;
+	struct vfsopt *opt, *noro_opt, *tmp_opt;
 	char *fstype, *fspath, *errmsg;
 	int error, fstypelen, fspathlen, errmsg_len, errmsg_pos;
 	int has_rw, has_noro;
@@ -626,13 +629,21 @@ vfs_donmount(struct thread *td, int fsflags, struct uio *fsoptions)
 	 * logic based on MNT_UPDATE.  This is very important
 	 * when we want to update the root filesystem.
 	 */
-	TAILQ_FOREACH(opt, optlist, link) {
-		if (strcmp(opt->name, "update") == 0)
+	TAILQ_FOREACH_SAFE(opt, optlist, link, tmp_opt) {
+		if (strcmp(opt->name, "update") == 0) {
 			fsflags |= MNT_UPDATE;
+			vfs_freeopt(optlist, opt);
+		}
 		else if (strcmp(opt->name, "async") == 0)
 			fsflags |= MNT_ASYNC;
-		else if (strcmp(opt->name, "force") == 0)
+		else if (strcmp(opt->name, "force") == 0) {
 			fsflags |= MNT_FORCE;
+			vfs_freeopt(optlist, opt);
+		}
+		else if (strcmp(opt->name, "reload") == 0) {
+			fsflags |= MNT_RELOAD;
+			vfs_freeopt(optlist, opt);
+		}
 		else if (strcmp(opt->name, "multilabel") == 0)
 			fsflags |= MNT_MULTILABEL;
 		else if (strcmp(opt->name, "noasync") == 0)
@@ -688,8 +699,6 @@ vfs_donmount(struct thread *td, int fsflags, struct uio *fsoptions)
 			opt->name = strdup("ro", M_MOUNT);
 			fsflags |= MNT_RDONLY;
 		}
-		else if (strcmp(opt->name, "snapshot") == 0)
-			fsflags |= MNT_SNAPSHOT;
 		else if (strcmp(opt->name, "suiddir") == 0)
 			fsflags |= MNT_SUIDDIR;
 		else if (strcmp(opt->name, "sync") == 0)
@@ -1995,6 +2004,12 @@ __mnt_vnode_next(struct vnode **mvp, struct mount *mp)
 	mtx_assert(MNT_MTX(mp), MA_OWNED);
 
 	KASSERT((*mvp)->v_mount == mp, ("marker vnode mount list mismatch"));
+	if ((*mvp)->v_yield++ == 500) {
+		MNT_IUNLOCK(mp);
+		(*mvp)->v_yield = 0;
+		uio_yield();
+		MNT_ILOCK(mp);
+	}
 	vp = TAILQ_NEXT(*mvp, v_nmntvnodes);
 	while (vp != NULL && vp->v_type == VMARKER)
 		vp = TAILQ_NEXT(vp, v_nmntvnodes);

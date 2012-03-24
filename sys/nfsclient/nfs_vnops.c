@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vnops.c,v 1.276.2.1 2007/11/27 12:20:58 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vnops.c,v 1.276.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * vnode op calls for Sun NFS version 2 and 3
@@ -130,6 +130,7 @@ static vop_access_t	nfsspec_access;
 static vop_readlink_t	nfs_readlink;
 static vop_print_t	nfs_print;
 static vop_advlock_t	nfs_advlock;
+static vop_advlockasync_t nfs_advlockasync;
 
 /*
  * Global vfs data structures for nfs
@@ -138,6 +139,7 @@ struct vop_vector nfs_vnodeops = {
 	.vop_default =		&default_vnodeops,
 	.vop_access =		nfs_access,
 	.vop_advlock =		nfs_advlock,
+	.vop_advlockasync =	nfs_advlockasync,
 	.vop_close =		nfs_close,
 	.vop_create =		nfs_create,
 	.vop_fsync =		nfs_fsync,
@@ -197,6 +199,8 @@ struct mtx 	nfs_iod_mtx;
 struct proc	*nfs_iodwant[NFS_MAXASYNCDAEMON];
 struct nfsmount *nfs_iodmount[NFS_MAXASYNCDAEMON];
 int		 nfs_numasync = 0;
+vop_advlock_t	*nfs_advlock_p = nfs_dolock;
+vop_reclaim_t	*nfs_reclaim_p = NULL;
 #define	DIRHDSIZ	(sizeof (struct dirent) - (MAXNAMLEN + 1))
 
 SYSCTL_DECL(_vfs_nfs);
@@ -3042,18 +3046,48 @@ done:
 static int
 nfs_advlock(struct vop_advlock_args *ap)
 {
+	struct vnode *vp = ap->a_vp;
+	u_quad_t size;
+	int error;
+
+	error = vn_lock(vp, LK_SHARED, curthread);
+	if (error)
+		return (error);
+	if ((VFSTONFS(vp->v_mount)->nm_flag & NFSMNT_NOLOCKD) != 0) {
+		size = VTONFS(vp)->n_size;
+		VOP_UNLOCK(vp, 0, curthread);
+		error = lf_advlock(ap, &(vp->v_lockf), size);
+	} else {
+		if (nfs_advlock_p)
+			error = nfs_advlock_p(ap);
+		else
+			error = ENOLCK;
+	}
+
+	return (error);
+}
+
+/*
+ * NFS advisory byte-level locks.
+ */
+static int
+nfs_advlockasync(struct vop_advlockasync_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	u_quad_t size;
 	int error;
 	
-	mtx_lock(&Giant);
-	if ((VFSTONFS(ap->a_vp->v_mount)->nm_flag & NFSMNT_NOLOCKD) != 0) {
-		struct nfsnode *np = VTONFS(ap->a_vp);
-
-		error = lf_advlock(ap, &(np->n_lockf), np->n_size);
-		goto out;
+	error = vn_lock(vp, LK_SHARED, curthread);
+	if (error)
+		return (error);
+	if ((VFSTONFS(vp->v_mount)->nm_flag & NFSMNT_NOLOCKD) != 0) {
+		size = VTONFS(vp)->n_size;
+		VOP_UNLOCK(vp, 0, curthread);
+		error = lf_advlockasync(ap, &(vp->v_lockf), size);
+	} else {
+		VOP_UNLOCK(vp, 0, curthread);
+		error = EOPNOTSUPP;
 	}
-	error = nfs_dolock(ap);
-out:	
-	mtx_unlock(&Giant);
 	return (error);
 }
 

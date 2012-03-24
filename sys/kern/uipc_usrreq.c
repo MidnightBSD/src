@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 1982, 1986, 1989, 1991, 1993
  *	The Regents of the University of California.
- * Copyright (c) 2004-2007 Robert N. M. Watson
+ * Copyright (c) 2004-2008 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,11 +53,10 @@
  *	SEQPACKET, RDM
  *	rethink name space problems
  *	need a proper out-of-band
- *	lock pushdown
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_usrreq.c,v 1.206.4.1 2008/01/23 12:08:12 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_usrreq.c,v 1.206.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include "opt_mac.h"
@@ -225,10 +224,13 @@ static struct rwlock	unp_global_rwlock;
 #define	UNP_PCB_UNLOCK(unp)		mtx_unlock(&(unp)->unp_mtx)
 #define	UNP_PCB_LOCK_ASSERT(unp)	mtx_assert(&(unp)->unp_mtx, MA_OWNED)
 
+static int	uipc_connect2(struct socket *, struct socket *);
+static int	uipc_ctloutput(struct socket *, struct sockopt *);
 static int	unp_connect(struct socket *, struct sockaddr *,
 		    struct thread *);
 static int	unp_connect2(struct socket *so, struct socket *so2, int);
 static void	unp_disconnect(struct unpcb *unp, struct unpcb *unp2);
+static void	unp_dispose(struct mbuf *);
 static void	unp_shutdown(struct unpcb *);
 static void	unp_drop(struct unpcb *, int);
 static void	unp_gc(__unused void *, int);
@@ -236,13 +238,16 @@ static void	unp_scan(struct mbuf *, void (*)(struct file *));
 static void	unp_mark(struct file *);
 static void	unp_discard(struct file *);
 static void	unp_freerights(struct file **, int);
+static void	unp_init(void);
 static int	unp_internalize(struct mbuf **, struct thread *);
+static int	unp_externalize(struct mbuf *, struct mbuf **);
 static struct mbuf	*unp_addsockcred(struct thread *, struct mbuf *);
 
 /*
  * Definitions of protocols supported in the LOCAL domain.
  */
 static struct domain localdomain;
+static struct pr_usrreqs uipc_usrreqs;
 static struct protosw localsw[] = {
 {
 	.pr_type =		SOCK_STREAM,
@@ -523,7 +528,7 @@ uipc_close(struct socket *so)
 	UNP_GLOBAL_WUNLOCK();
 }
 
-int
+static int
 uipc_connect2(struct socket *so1, struct socket *so2)
 {
 	struct unpcb *unp, *unp2;
@@ -542,8 +547,6 @@ uipc_connect2(struct socket *so1, struct socket *so2)
 	UNP_GLOBAL_WUNLOCK();
 	return (error);
 }
-
-/* control is EOPNOTSUPP */
 
 static void
 uipc_detach(struct socket *so)
@@ -578,8 +581,8 @@ uipc_detach(struct socket *so)
 	}
 
 	/*
-	 * We hold the global lock, so it's OK to acquire multiple pcb locks
-	 * at a time.
+	 * We hold the global lock exclusively, so it's OK to acquire
+	 * multiple pcb locks at a time.
 	 */
 	while (!LIST_EMPTY(&unp->unp_refs)) {
 		struct unpcb *ref = LIST_FIRST(&unp->unp_refs);
@@ -588,9 +591,9 @@ uipc_detach(struct socket *so)
 		unp_drop(ref, ECONNRESET);
 		UNP_PCB_UNLOCK(ref);
 	}
+	local_unp_rights = unp_rights;
 	UNP_GLOBAL_WUNLOCK();
 	unp->unp_socket->so_pcb = NULL;
-	local_unp_rights = unp_rights;
 	saved_unp_addr = unp->unp_addr;
 	unp->unp_addr = NULL;
 	unp->unp_refcount--;
@@ -744,8 +747,6 @@ uipc_rcvd(struct socket *so, int flags)
 	return (0);
 }
 
-/* pru_rcvoob is EOPNOTSUPP */
-
 static int
 uipc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
     struct mbuf *control, struct thread *td)
@@ -763,15 +764,12 @@ uipc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 		error = EOPNOTSUPP;
 		goto release;
 	}
-
 	if (control != NULL && (error = unp_internalize(&control, td)))
 		goto release;
-
 	if ((nam != NULL) || (flags & PRUS_EOF))
 		UNP_GLOBAL_WLOCK();
 	else
 		UNP_GLOBAL_RLOCK();
-
 	switch (so->so_type) {
 	case SOCK_DGRAM:
 	{
@@ -789,6 +787,7 @@ uipc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 				break;
 			unp2 = unp->unp_conn;
 		}
+
 		/*
 		 * Because connect() and send() are non-atomic in a sendto()
 		 * with a target address, it's possible that the socket will
@@ -829,12 +828,6 @@ uipc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 	}
 
 	case SOCK_STREAM:
-		/*
-		 * Connect if not connected yet.
-		 *
-		 * Note: A better implementation would complain if not equal
-		 * to the peer's address.
-		 */
 		if ((so->so_state & SS_ISCONNECTED) == 0) {
 			if (nam != NULL) {
 				UNP_GLOBAL_WLOCK_ASSERT();
@@ -852,6 +845,7 @@ uipc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 			error = EPIPE;
 			break;
 		}
+
 		/*
 		 * Because connect() and send() are non-atomic in a sendto()
 		 * with a target address, it's possible that the socket will
@@ -910,7 +904,7 @@ uipc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 	}
 
 	/*
-	 * SEND_EOF is equivalent to a SEND followed by a SHUTDOWN.
+	 * PRUS_EOF is equivalent to pru_send followed by pru_shutdown.
 	 */
 	if (flags & PRUS_EOF) {
 		UNP_PCB_LOCK(unp);
@@ -998,7 +992,7 @@ uipc_sockaddr(struct socket *so, struct sockaddr **nam)
 	return (0);
 }
 
-struct pr_usrreqs uipc_usrreqs = {
+static struct pr_usrreqs uipc_usrreqs = {
 	.pru_abort = 		uipc_abort,
 	.pru_accept =		uipc_accept,
 	.pru_attach =		uipc_attach,
@@ -1017,7 +1011,7 @@ struct pr_usrreqs uipc_usrreqs = {
 	.pru_close =		uipc_close,
 };
 
-int
+static int
 uipc_ctloutput(struct socket *so, struct sockopt *sopt)
 {
 	struct unpcb *unp;
@@ -1049,13 +1043,13 @@ uipc_ctloutput(struct socket *so, struct sockopt *sopt)
 			break;
 
 		case LOCAL_CREDS:
-			/* Unocked read. */
+			/* Unlocked read. */
 			optval = unp->unp_flags & UNP_WANTCRED ? 1 : 0;
 			error = sooptcopyout(sopt, &optval, sizeof(optval));
 			break;
 
 		case LOCAL_CONNWAIT:
-			/* Unocked read. */
+			/* Unlocked read. */
 			optval = unp->unp_flags & UNP_CONNWAIT ? 1 : 0;
 			error = sooptcopyout(sopt, &optval, sizeof(optval));
 			break;
@@ -1261,7 +1255,7 @@ bad2:
 	if (vfslocked)
 		/* 
 		 * Giant has been previously acquired. This means filesystem
-		 * isn't MPSAFE. Do it once again.
+		 * isn't MPSAFE.  Do it once again.
 		 */
 		mtx_lock(&Giant);
 bad:
@@ -1508,7 +1502,6 @@ unp_drop(struct unpcb *unp, int errno)
 	unp2 = unp->unp_conn;
 	if (unp2 == NULL)
 		return;
-
 	UNP_PCB_LOCK(unp2);
 	unp_disconnect(unp, unp2);
 	UNP_PCB_UNLOCK(unp2);
@@ -1521,19 +1514,13 @@ unp_freerights(struct file **rp, int fdcount)
 	struct file *fp;
 
 	for (i = 0; i < fdcount; i++) {
-		/*
-		 * Zero the pointer before calling unp_discard since it may
-		 * end up in unp_gc()..
-		 *
-		 * XXXRW: This is less true than it used to be.
-		 */
 		fp = *rp;
 		*rp++ = NULL;
 		unp_discard(fp);
 	}
 }
 
-int
+static int
 unp_externalize(struct mbuf *control, struct mbuf **controlp)
 {
 	struct thread *td = curthread;		/* XXX */
@@ -1553,16 +1540,13 @@ unp_externalize(struct mbuf *control, struct mbuf **controlp)
 	error = 0;
 	if (controlp != NULL) /* controlp == NULL => free control messages */
 		*controlp = NULL;
-
 	while (cm != NULL) {
 		if (sizeof(*cm) > clen || cm->cmsg_len > clen) {
 			error = EINVAL;
 			break;
 		}
-
 		data = CMSG_DATA(cm);
 		datalen = (caddr_t)cm + cm->cmsg_len - (caddr_t)data;
-
 		if (cm->cmsg_level == SOL_SOCKET
 		    && cm->cmsg_type == SCM_RIGHTS) {
 			newfds = datalen / sizeof(struct file *);
@@ -1581,6 +1565,7 @@ unp_externalize(struct mbuf *control, struct mbuf **controlp)
 				unp_freerights(rp, newfds);
 				goto next;
 			}
+
 			/*
 			 * Now change each pointer to an fd in the global
 			 * table to an integer that is the index to the local
@@ -1607,7 +1592,9 @@ unp_externalize(struct mbuf *control, struct mbuf **controlp)
 				FILE_LOCK(fp);
 				fp->f_msgcount--;
 				FILE_UNLOCK(fp);
+				UNP_GLOBAL_WLOCK();
 				unp_rights--;
+				UNP_GLOBAL_WUNLOCK();
 				*fdp++ = f;
 			}
 			FILEDESC_XUNLOCK(td->td_proc->p_fd);
@@ -1625,7 +1612,6 @@ unp_externalize(struct mbuf *control, struct mbuf **controlp)
 			    CMSG_DATA(mtod(*controlp, struct cmsghdr *)),
 			    datalen);
 		}
-
 		controlp = &(*controlp)->m_next;
 
 next:
@@ -1640,7 +1626,6 @@ next:
 	}
 
 	m_freem(control);
-
 	return (error);
 }
 
@@ -1651,7 +1636,7 @@ unp_zone_change(void *tag)
 	uma_zone_set_max(unp_zone, maxsockets);
 }
 
-void
+static void
 unp_init(void)
 {
 
@@ -1689,14 +1674,12 @@ unp_internalize(struct mbuf **controlp, struct thread *td)
 
 	error = 0;
 	*controlp = NULL;
-
 	while (cm != NULL) {
 		if (sizeof(*cm) > clen || cm->cmsg_level != SOL_SOCKET
 		    || cm->cmsg_len > clen) {
 			error = EINVAL;
 			goto out;
 		}
-
 		data = CMSG_DATA(cm);
 		datalen = (caddr_t)cm + cm->cmsg_len - (caddr_t)data;
 
@@ -1711,7 +1694,6 @@ unp_internalize(struct mbuf **controlp, struct thread *td)
 				error = ENOBUFS;
 				goto out;
 			}
-
 			cmcred = (struct cmsgcred *)
 			    CMSG_DATA(mtod(*controlp, struct cmsghdr *));
 			cmcred->cmcred_pid = p->p_pid;
@@ -1719,7 +1701,7 @@ unp_internalize(struct mbuf **controlp, struct thread *td)
 			cmcred->cmcred_gid = td->td_ucred->cr_rgid;
 			cmcred->cmcred_euid = td->td_ucred->cr_uid;
 			cmcred->cmcred_ngroups = MIN(td->td_ucred->cr_ngroups,
-							CMGROUP_MAX);
+			    CMGROUP_MAX);
 			for (i = 0; i < cmcred->cmcred_ngroups; i++)
 				cmcred->cmcred_groups[i] =
 				    td->td_ucred->cr_groups[i];
@@ -1751,8 +1733,8 @@ unp_internalize(struct mbuf **controlp, struct thread *td)
 			}
 
 			/*
-			 * Now replace the integer FDs with pointers to
-			 * the associated global file table entry..
+			 * Now replace the integer FDs with pointers to the
+			 * associated global file table entry..
 			 */
 			newlen = oldfds * sizeof(struct file *);
 			*controlp = sbcreatecontrol(NULL, newlen,
@@ -1762,7 +1744,6 @@ unp_internalize(struct mbuf **controlp, struct thread *td)
 				error = E2BIG;
 				goto out;
 			}
-
 			fdp = data;
 			rp = (struct file **)
 			    CMSG_DATA(mtod(*controlp, struct cmsghdr *));
@@ -1773,7 +1754,9 @@ unp_internalize(struct mbuf **controlp, struct thread *td)
 				fp->f_count++;
 				fp->f_msgcount++;
 				FILE_UNLOCK(fp);
+				UNP_GLOBAL_WLOCK();
 				unp_rights++;
+				UNP_GLOBAL_WUNLOCK();
 			}
 			FILEDESC_SUNLOCK(fdescp);
 			break;
@@ -1796,7 +1779,6 @@ unp_internalize(struct mbuf **controlp, struct thread *td)
 		}
 
 		controlp = &(*controlp)->m_next;
-
 		if (CMSG_SPACE(datalen) < clen) {
 			clen -= CMSG_SPACE(datalen);
 			cm = (struct cmsghdr *)
@@ -1809,7 +1791,6 @@ unp_internalize(struct mbuf **controlp, struct thread *td)
 
 out:
 	m_freem(control);
-
 	return (error);
 }
 
@@ -1823,7 +1804,6 @@ unp_addsockcred(struct thread *td, struct mbuf *control)
 	int i;
 
 	ngroups = MIN(td->td_ucred->cr_ngroups, CMGROUP_MAX);
-
 	m = sbcreatecontrol(NULL, SOCKCREDSIZE(ngroups), SCM_CREDS, SOL_SOCKET);
 	if (m == NULL)
 		return (control);
@@ -1860,7 +1840,6 @@ unp_addsockcred(struct thread *td, struct mbuf *control)
 
 	/* Prepend it to the head. */
 	m->m_next = control;
-
 	return (m);
 }
 
@@ -1889,6 +1868,7 @@ unp_gc(__unused void *arg, int pending)
 
 	unp_taskcount++;
 	unp_defer = 0;
+
 	/*
 	 * Before going through all this, set all FDs to be NOT deferred and
 	 * NOT externally accessible.
@@ -1914,6 +1894,7 @@ unp_gc(__unused void *arg, int pending)
 				FILE_UNLOCK(fp);
 				continue;
 			}
+
 			/*
 			 * If we already marked it as 'defer' in a
 			 * previous pass, then try to process it this
@@ -1931,6 +1912,7 @@ unp_gc(__unused void *arg, int pending)
 					FILE_UNLOCK(fp);
 					continue;
 				}
+
 				/*
 				 * If all references are from messages in
 				 * transit, then skip it. it's not externally
@@ -1940,12 +1922,14 @@ unp_gc(__unused void *arg, int pending)
 					FILE_UNLOCK(fp);
 					continue;
 				}
+
 				/*
 				 * If it got this far then it must be
 				 * externally accessible.
 				 */
 				fp->f_gcflag |= FMARK;
 			}
+
 			/*
 			 * Either it was deferred, or it is externally
 			 * accessible and not already marked so.  Now check
@@ -1956,6 +1940,7 @@ unp_gc(__unused void *arg, int pending)
 				FILE_UNLOCK(fp);
 				continue;
 			}
+
 			if (so->so_proto->pr_domain != &localdomain ||
 			    (so->so_proto->pr_flags & PR_RIGHTS) == 0) {
 				FILE_UNLOCK(fp);				
@@ -1991,6 +1976,7 @@ unp_gc(__unused void *arg, int pending)
 		}
 	} while (unp_defer);
 	sx_sunlock(&filelist_lock);
+
 	/*
 	 * XXXRW: The following comments need updating for a post-SMPng and
 	 * deferred unp_gc() world, but are still generally accurate.
@@ -2048,6 +2034,7 @@ again:
 	    fp != NULL; fp = nextfp) {
 		nextfp = LIST_NEXT(fp, f_list);
 		FILE_LOCK(fp);
+
 		/*
 		 * If it's not open, skip it
 		 */
@@ -2055,6 +2042,7 @@ again:
 			FILE_UNLOCK(fp);
 			continue;
 		}
+
 		/*
 		 * If all refs are from msgs, and it's not marked accessible
 		 * then it must be referenced from some unreachable cycle of
@@ -2069,6 +2057,7 @@ again:
 		FILE_UNLOCK(fp);
 	}
 	sx_sunlock(&filelist_lock);
+
 	/*
 	 * For each FD on our hit list, do the following two things:
 	 */
@@ -2090,7 +2079,7 @@ again:
 	free(extra_ref, M_TEMP);
 }
 
-void
+static void
 unp_dispose(struct mbuf *m)
 {
 

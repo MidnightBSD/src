@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsm_subs.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfsclient/nfsm_subs.h,v 1.37 2005/11/21 18:39:18 rees Exp $
+ * $FreeBSD: src/sys/nfsclient/nfsm_subs.h,v 1.37.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NFSCLIENT_NFSM_SUBS_H_
@@ -53,6 +53,7 @@ struct vnode;
 /*
  * First define what the actual subs. return
  */
+u_int32_t nfs_xid_gen(void);
 struct mbuf *nfsm_reqhead(struct vnode *vp, u_long procid, int hsiz);
 struct mbuf *nfsm_rpchead(struct ucred *cr, int nmflag, int procid,
 			  int auth_type, int auth_len,

@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_subs.c,v 1.146.2.1 2007/10/12 19:18:46 mohans Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_subs.c,v 1.146.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -92,7 +92,7 @@ u_int32_t	rpc_call, rpc_vers, rpc_reply, rpc_msgdenied, rpc_autherr,
 u_int32_t	nfs_true, nfs_false;
 
 /* And other global data */
-u_int32_t nfs_xid = 0;
+static u_int32_t nfs_xid = 0;
 static enum vtype nv2tov_type[8]= {
 	VNON, VREG, VDIR, VBLK, VCHR, VLNK, VNON,  VNON
 };
@@ -103,7 +103,7 @@ int		nfs_pbuf_freecnt = -1;	/* start out unlimited */
 struct nfs_reqq	nfs_reqq;
 struct mtx nfs_reqq_mtx;
 struct nfs_bufq	nfs_bufq;
-struct mtx nfs_xid_mtx;
+static struct mtx nfs_xid_mtx;
 
 /*
  * and the reverse mapping from generic to Version 2 procedure numbers
@@ -135,6 +135,26 @@ int nfsv2_procid[NFS_NPROCS] = {
 };
 
 LIST_HEAD(nfsnodehashhead, nfsnode);
+
+u_int32_t
+nfs_xid_gen(void)
+{
+	uint32_t xid;
+
+	mtx_lock(&nfs_xid_mtx);
+
+	/* Get a pretty random xid to start with */
+	if (!nfs_xid)
+		nfs_xid = random();
+	/*
+	 * Skip zero xid if it should ever happen.
+	 */
+	if (++nfs_xid == 0)
+		nfs_xid++;
+	xid = nfs_xid;
+	mtx_unlock(&nfs_xid_mtx);
+	return xid;
+}
 
 /*
  * Create the header for an rpc request packet
@@ -189,19 +209,8 @@ nfsm_rpchead(struct ucred *cr, int nmflag, int procid, int auth_type,
 	 */
 	tl = nfsm_build(u_int32_t *, 8 * NFSX_UNSIGNED);
 
-	mtx_lock(&nfs_xid_mtx);
-	/* Get a pretty random xid to start with */
-	if (!nfs_xid)
-		nfs_xid = random();
-	/*
-	 * Skip zero xid if it should ever happen.
-	 */
-	if (++nfs_xid == 0)
-		nfs_xid++;
-
 	*xidpp = tl;
-	*tl++ = txdr_unsigned(nfs_xid);
-	mtx_unlock(&nfs_xid_mtx);
+	*tl++ = txdr_unsigned(nfs_xid_gen());
 	*tl++ = rpc_call;
 	*tl++ = rpc_vers;
 	*tl++ = txdr_unsigned(NFS_PROG);

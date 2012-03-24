@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_subr.c,v 1.707.2.1 2007/12/13 11:58:00 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_subr.c,v 1.707.2.9.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include "opt_mac.h"
@@ -59,6 +59,7 @@ __FBSDID("$FreeBSD: src/sys/kern/vfs_subr.c,v 1.707.2.1 2007/12/13 11:58:00 kib 
 #include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
+#include <sys/lockf.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/namei.h>
@@ -108,7 +109,7 @@ static void	vgonel(struct vnode *);
 static void	vfs_knllock(void *arg);
 static void	vfs_knlunlock(void *arg);
 static int	vfs_knllocked(void *arg);
-
+static void	destroy_vpollinfo(struct vpollinfo *vi);
 
 /*
  * Enable Giant pushdown based on whether or not the vm is mpsafe in this
@@ -321,7 +322,7 @@ vntblinit(void *dummy __unused)
 	syncer_maxdelay = syncer_mask + 1;
 	mtx_init(&sync_mtx, "Syncer mtx", NULL, MTX_DEF);
 }
-SYSINIT(vfs, SI_SUB_VFS, SI_ORDER_FIRST, vntblinit, NULL)
+SYSINIT(vfs, SI_SUB_VFS, SI_ORDER_FIRST, vntblinit, NULL);
 
 
 /*
@@ -360,7 +361,7 @@ vfs_busy(struct mount *mp, int flags, struct mtx *interlkp,
 	}
 	if (interlkp)
 		mtx_unlock(interlkp);
-	lkflags = LK_SHARED | LK_INTERLOCK;
+	lkflags = LK_SHARED | LK_INTERLOCK | LK_NOWAIT;
 	if (lockmgr(&mp->mnt_lock, lkflags, MNT_MTX(mp), td))
 		panic("vfs_busy: unexpected lock failure");
 	return (0);
@@ -780,7 +781,8 @@ static struct kproc_desc vnlru_kp = {
 	vnlru_proc,
 	&vnlruproc
 };
-SYSINIT(vnlru, SI_SUB_KTHREAD_UPDATE, SI_ORDER_FIRST, kproc_start, &vnlru_kp)
+SYSINIT(vnlru, SI_SUB_KTHREAD_UPDATE, SI_ORDER_FIRST, kproc_start,
+    &vnlru_kp);
 
 /*
  * Routines having to do with the management of the vnode table.
@@ -813,11 +815,8 @@ vdestroy(struct vnode *vp)
 #ifdef MAC
 	mac_destroy_vnode(vp);
 #endif
-	if (vp->v_pollinfo != NULL) {
-		knlist_destroy(&vp->v_pollinfo->vpi_selinfo.si_note);
-		mtx_destroy(&vp->v_pollinfo->vpi_lock);
-		uma_zfree(vnodepoll_zone, vp->v_pollinfo);
-	}
+	if (vp->v_pollinfo != NULL)
+		destroy_vpollinfo(vp->v_pollinfo);
 #ifdef INVARIANTS
 	/* XXX Elsewhere we can detect an already freed vnode via NULL v_op. */
 	vp->v_op = NULL;
@@ -1608,7 +1607,7 @@ static struct kproc_desc up_kp = {
 	sched_sync,
 	&updateproc
 };
-SYSINIT(syncer, SI_SUB_KTHREAD_UPDATE, SI_ORDER_FIRST, kproc_start, &up_kp)
+SYSINIT(syncer, SI_SUB_KTHREAD_UPDATE, SI_ORDER_FIRST, kproc_start, &up_kp);
 
 static int
 sync_vnode(struct synclist *slp, struct bufobj **bo, struct thread *td)
@@ -1660,7 +1659,7 @@ restart:
 		vdrop(vp);
 		VFS_UNLOCK_GIANT(vfslocked);
 		mtx_lock(&sync_mtx);
-		return (1);
+		return (*bo == LIST_FIRST(slp));
 	}
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
 	(void) VOP_FSYNC(vp, MNT_LAZY, td);
@@ -2210,7 +2209,7 @@ vput(struct vnode *vp)
 	v_decr_useonly(vp);
 	vp->v_iflag |= VI_OWEINACT;
 	if (VOP_ISLOCKED(vp, NULL) != LK_EXCLUSIVE) {
-		error = VOP_LOCK(vp, LK_EXCLUPGRADE|LK_INTERLOCK|LK_NOWAIT, td);
+		error = VOP_LOCK(vp, LK_UPGRADE|LK_INTERLOCK|LK_NOWAIT, td);
 		VI_LOCK(vp);
 		if (error) {
 			if (vp->v_usecount > 0)
@@ -2536,6 +2535,10 @@ vgonel(struct vnode *vp)
 	VNASSERT(vp->v_object == NULL, vp,
 	    ("vop_reclaim left v_object vp=%p, tag=%s", vp, vp->v_tag));
 	/*
+	 * Clear the advisory locks and wake up waiting threads.
+	 */
+	lf_purgelocks(vp, &(vp->v_lockf));
+	/*
 	 * Delete from old mount point vnode list.
 	 */
 	delmntque(vp);
@@ -2681,7 +2684,7 @@ DB_SHOW_COMMAND(lockedvnods, lockedvnodes)
 	 * state and dereference a nasty pointer.  Not much to be done
 	 * about that.
 	 */
-	printf("Locked vnodes\n");
+	db_printf("Locked vnodes\n");
 	for (mp = TAILQ_FIRST(&mountlist); mp != NULL; mp = nmp) {
 		nmp = TAILQ_NEXT(mp, mnt_list);
 		TAILQ_FOREACH(vp, &mp->mnt_nvnodelist, v_nmntvnodes) {
@@ -3044,6 +3047,14 @@ vbusy(struct vnode *vp)
 	mtx_unlock(&vnode_free_list_mtx);
 }
 
+static void
+destroy_vpollinfo(struct vpollinfo *vi)
+{
+	knlist_destroy(&vi->vpi_selinfo.si_note);
+	mtx_destroy(&vi->vpi_lock);
+	uma_zfree(vnodepoll_zone, vi);
+}
+
 /*
  * Initalize per-vnode helper structure to hold poll-related state.
  */
@@ -3052,15 +3063,20 @@ v_addpollinfo(struct vnode *vp)
 {
 	struct vpollinfo *vi;
 
+	if (vp->v_pollinfo != NULL)
+		return;
 	vi = uma_zalloc(vnodepoll_zone, M_WAITOK);
+	mtx_init(&vi->vpi_lock, "vnode pollinfo", NULL, MTX_DEF);
+	knlist_init(&vi->vpi_selinfo.si_note, vp, vfs_knllock,
+	    vfs_knlunlock, vfs_knllocked);
+	VI_LOCK(vp);
 	if (vp->v_pollinfo != NULL) {
-		uma_zfree(vnodepoll_zone, vi);
+		VI_UNLOCK(vp);
+		destroy_vpollinfo(vi);
 		return;
 	}
 	vp->v_pollinfo = vi;
-	mtx_init(&vp->v_pollinfo->vpi_lock, "vnode pollinfo", NULL, MTX_DEF);
-	knlist_init(&vp->v_pollinfo->vpi_selinfo.si_note, vp, vfs_knllock,
-	    vfs_knlunlock, vfs_knllocked);
+	VI_UNLOCK(vp);
 }
 
 /*
@@ -3075,8 +3091,7 @@ int
 vn_pollrecord(struct vnode *vp, struct thread *td, int events)
 {
 
-	if (vp->v_pollinfo == NULL)
-		v_addpollinfo(vp);
+	v_addpollinfo(vp);
 	mtx_lock(&vp->v_pollinfo->vpi_lock);
 	if (vp->v_pollinfo->vpi_revents & events) {
 		/*
@@ -3911,8 +3926,7 @@ vfs_kqfilter(struct vop_kqfilter_args *ap)
 
 	kn->kn_hook = (caddr_t)vp;
 
-	if (vp->v_pollinfo == NULL)
-		v_addpollinfo(vp);
+	v_addpollinfo(vp);
 	if (vp->v_pollinfo == NULL)
 		return (ENOMEM);
 	knl = &vp->v_pollinfo->vpi_selinfo.si_note;

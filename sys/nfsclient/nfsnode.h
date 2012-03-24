@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsnode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: src/sys/nfsclient/nfsnode.h,v 1.60 2007/03/09 04:02:37 mohans Exp $
+ * $FreeBSD: src/sys/nfsclient/nfsnode.h,v 1.60.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_
@@ -114,7 +114,6 @@ struct nfsnode {
 	nfsfh_t			*n_fhp;		/* NFS File Handle */
 	struct vnode		*n_vnode;	/* associated vnode */
 	struct vnode		*n_dvp;		/* parent vnode */
-	struct lockf		*n_lockf;	/* Locking record of file */
 	int			n_error;	/* Save write error value */
 	union {
 		struct timespec	nf_atim;	/* Special file times */
@@ -188,6 +187,9 @@ extern	struct vop_vector	nfs_vnodeops;
 extern	struct vop_vector	nfs4_vnodeops;
 extern struct buf_ops buf_ops_nfs;
 extern struct buf_ops buf_ops_nfs4;
+
+extern vop_advlock_t *nfs_advlock_p;
+extern vop_reclaim_t *nfs_reclaim_p;
 
 /*
  * Prototypes for NFS vnode operations

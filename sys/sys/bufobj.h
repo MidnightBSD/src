@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/bufobj.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/bufobj.h,v 1.18 2007/01/23 10:01:18 kib Exp $
+ * $FreeBSD: src/sys/sys/bufobj.h,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -56,6 +56,7 @@
 
 struct bufobj;
 struct buf_ops;
+struct thread;
 
 extern struct buf_ops buf_ops_bio;
 

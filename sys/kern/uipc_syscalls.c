@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.259.4.2 2008/02/14 11:45:41 simon Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.259.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_sctp.h"
 #include "opt_compat.h"
@@ -761,7 +761,11 @@ kern_sendit(td, s, mp, flags, control, segflg)
 
 #ifdef MAC
 	SOCK_LOCK(so);
-	error = mac_check_socket_send(td->td_ucred, so);
+	if (mp->msg_name != NULL)
+		error = mac_check_socket_connect(td->td_ucred, so,
+		    mp->msg_name);
+	if (error == 0)
+		error = mac_check_socket_send(td->td_ucred, so);
 	SOCK_UNLOCK(so);
 	if (error)
 		goto bad;
@@ -2172,7 +2176,9 @@ retry_space:
 		}
 
 		/* Quit outer loop on error or when we're done. */
-		if (error || done)
+		if (done) 
+			break;
+		if (error)
 			goto done;
 	}
 
@@ -2180,10 +2186,11 @@ retry_space:
 	 * Send trailers. Wimp out and use writev(2).
 	 */
 	if (trl_uio != NULL) {
+		sbunlock(&so->so_snd);
 		error = kern_writev(td, uap->s, trl_uio);
-		if (error)
-			goto done;
-		sbytes += td->td_retval[0];
+		if (error == 0)
+			sbytes += td->td_retval[0];
+		goto out;
 	}
 
 done:

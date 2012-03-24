@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsmount.h	8.3 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfsclient/nfsmount.h,v 1.32.2.1 2007/10/12 19:18:46 mohans Exp $
+ * $FreeBSD: src/sys/nfsclient/nfsmount.h,v 1.32.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_
@@ -92,6 +92,7 @@ struct	nfsmount {
 	int	nm_tprintf_initial_delay;	/* initial delay */
 	int	nm_tprintf_delay;		/* interval for messages */
 	struct nfs_tcp_mountstate nm_nfstcpstate;
+	char	nm_hostname[MNAMELEN];	 /* server's name */
 
 	/* NFSv4 */
 	uint64_t nm_clientid;

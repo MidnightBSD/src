@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/nfsclient/nfs_vfsops.c,v 1.4 2008/12/02 21:51:48 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vfsops.c,v 1.193.2.1 2007/10/26 21:46:31 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vfsops.c,v 1.193.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 
 #include "opt_bootp.h"
@@ -107,7 +107,7 @@ SYSCTL_INT(_vfs_nfs, NFS_TPRINTF_DELAY,
         downdelayinterval, CTLFLAG_RW, &nfs_tprintf_delay, 0, "");
 
 static void	nfs_decode_args(struct mount *mp, struct nfsmount *nmp,
-		    struct nfs_args *argp);
+		    struct nfs_args *argp, const char *hostname);
 static int	mountnfs(struct nfs_args *, struct mount *,
 		    struct sockaddr *, char *, struct vnode **,
 		    struct ucred *cred);
@@ -478,6 +478,7 @@ nfs_mountroot(struct mount *mp, struct thread *td)
 		sin = mask;
 		sin.sin_family = AF_INET;
 		sin.sin_len = sizeof(sin);
+                /* XXX MRT use table 0 for this sort of thing */
 		error = rtrequest(RTM_ADD, (struct sockaddr *)&sin,
 		    (struct sockaddr *)&nd->mygateway,
 		    (struct sockaddr *)&mask,
@@ -496,6 +497,7 @@ nfs_mountroot(struct mount *mp, struct thread *td)
 		(l >> 24) & 0xff, (l >> 16) & 0xff,
 		(l >>  8) & 0xff, (l >>  0) & 0xff, nd->root_hostnam);
 	printf("NFS ROOT: %s\n", buf);
+	nd->root_args.hostname = buf;
 	if ((error = nfs_mountdiskless(buf, MNT_RDONLY,
 	    &nd->root_saddr, &nd->root_args, td, &vp, mp)) != 0) {
 		return (error);
@@ -540,11 +542,13 @@ nfs_mountdiskless(char *path, int mountflag,
 }
 
 static void
-nfs_decode_args(struct mount *mp, struct nfsmount *nmp, struct nfs_args *argp)
+nfs_decode_args(struct mount *mp, struct nfsmount *nmp, struct nfs_args *argp,
+	const char *hostname)
 {
 	int s;
 	int adjsock;
 	int maxio;
+	char *p;
 
 	s = splnet();
 
@@ -704,6 +708,14 @@ nfs_decode_args(struct mount *mp, struct nfsmount *nmp, struct nfs_args *argp)
 				(void) tsleep((caddr_t)&lbolt, PSOCK, "nfscon", 0);
 			}
 	}
+
+	if (hostname) {
+		strlcpy(nmp->nm_hostname, hostname,
+		    sizeof(nmp->nm_hostname));
+		p = strchr(nmp->nm_hostname, ':');
+		if (p)
+			*p = '\0';
+	}
 }
 
 static const char *nfs_opts[] = { "from", "nfs_args", NULL };
@@ -762,12 +774,7 @@ nfs_mount(struct mount *mp, struct thread *td)
 		    ~(NFSMNT_NFSV3 | NFSMNT_NOLOCKD /*|NFSMNT_XLATECOOKIE*/)) |
 		    (nmp->nm_flag &
 			(NFSMNT_NFSV3 | NFSMNT_NOLOCKD /*|NFSMNT_XLATECOOKIE*/));
-		nfs_decode_args(mp, nmp, &args);
-		goto out;
-	}
-	if (args.fhsize < 0 || args.fhsize > NFSX_V3FHMAX) {
-		vfs_mount_error(mp, "Bad file handle");
-		error = EINVAL;
+		nfs_decode_args(mp, nmp, &args, NULL);
 		goto out;
 	}
 
@@ -905,7 +912,7 @@ mountnfs(struct nfs_args *argp, struct mount *mp, struct sockaddr *nam,
 	nmp->nm_soproto = argp->proto;
 	nmp->nm_rpcops = &nfs_rpcops;
 
-	nfs_decode_args(mp, nmp, argp);
+	nfs_decode_args(mp, nmp, argp, hst);
 
 	/*
 	 * For Connection based sockets (TCP,...) defer the connect until

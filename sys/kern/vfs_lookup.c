@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.102 2007/09/21 10:16:56 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.102.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ktrace.h"
 #include "opt_mac.h"
@@ -86,7 +86,7 @@ nameiinit(void *dummy __unused)
 		panic("nameiinit: getnewvnode");
 	vp_crossmp->v_vnlock->lk_flags &= ~LK_NOSHARE;
 }
-SYSINIT(vfs, SI_SUB_VFS, SI_ORDER_SECOND, nameiinit, NULL)
+SYSINIT(vfs, SI_SUB_VFS, SI_ORDER_SECOND, nameiinit, NULL);
 
 #ifdef LOOKUP_SHARED
 static int lookup_shared = 1;

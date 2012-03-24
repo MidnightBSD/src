@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfs.h	8.4 (Berkeley) 5/1/95
- * $FreeBSD: src/sys/nfsclient/nfs.h,v 1.98.2.1 2007/10/12 19:18:46 mohans Exp $
+ * $FreeBSD: src/sys/nfsclient/nfs.h,v 1.98.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NFSCLIENT_NFS_H_
@@ -94,6 +94,7 @@
 #define	NFSSTA_SNDLOCK		0x01000000  /* Send socket lock */
 #define	NFSSTA_WANTSND		0x02000000  /* Want above */
 #define	NFSSTA_TIMEO		0x10000000  /* Experiencing a timeout */
+#define	NFSSTA_LOCKTIMEO	0x20000000  /* Experiencing a lockd timeout */
 
 
 /*

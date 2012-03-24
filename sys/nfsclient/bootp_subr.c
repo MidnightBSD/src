@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/bootp_subr.c,v 1.70 2007/08/06 14:26:02 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/bootp_subr.c,v 1.70.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_bootp.h"
 
@@ -1138,11 +1138,12 @@ bootpc_adjust_interface(struct bootpc_ifcontext *ifctx,
 	if (ifctx->gotgw != 0 || gctx->gotgw == 0) {
 		clear_sinaddr(&defdst);
 		clear_sinaddr(&defmask);
-		error = rtrequest(RTM_ADD,
+		/* XXX MRT just table 0 */
+		error = rtrequest_fib(RTM_ADD,
 				  (struct sockaddr *) &defdst,
 				  (struct sockaddr *) gw,
 				  (struct sockaddr *) &defmask,
-				  (RTF_UP | RTF_GATEWAY | RTF_STATIC), NULL);
+				  (RTF_UP | RTF_GATEWAY | RTF_STATIC), NULL, 0);
 		if (error != 0) {
 			printf("bootpc_adjust_interface: "
 			       "add net route, error=%d\n", error);

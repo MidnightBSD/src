@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_export.c,v 1.341 2007/02/15 22:08:35 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_export.c,v 1.341.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/dirent.h>
@@ -161,12 +161,25 @@ vfs_hang_addrlist(struct mount *mp, struct netexport *nep,
 		 * Seems silly to initialize every AF when most are not used,
 		 * do so on demand here
 		 */
-		for (dom = domains; dom; dom = dom->dom_next)
+		for (dom = domains; dom; dom = dom->dom_next) {
+			KASSERT(((i == AF_INET) || (i == AF_INET6)), 
+			    ("unexpected protocol in vfs_hang_addrlist"));
 			if (dom->dom_family == i && dom->dom_rtattach) {
-				dom->dom_rtattach((void **) &nep->ne_rtable[i],
-				    dom->dom_rtoffset);
+				/*
+				 * XXX MRT 
+				 * The INET and INET6 domains know the
+				 * offset already. We don't need to send it
+				 * So we just use it as a flag to say that
+				 * we are or are not setting up a real routing
+				 * table. Only IP and IPV6 need have this
+				 * be 0 so all other protocols can stay the 
+				 * same (ABI compatible).
+				 */ 
+				dom->dom_rtattach(
+				    (void **) &nep->ne_rtable[i], 0);
 				break;
 			}
+		}
 		if ((rnh = nep->ne_rtable[i]) == NULL) {
 			error = ENOBUFS;
 			vfs_mount_error(mp, "%s %s %d",
@@ -242,6 +255,7 @@ vfs_export(struct mount *mp, struct export_args *argp)
 
 	nep = mp->mnt_export;
 	error = 0;
+	lockmgr(&mp->mnt_explock, LK_EXCLUSIVE, NULL, curthread);
 	if (argp->ex_flags & MNT_DELEXPORT) {
 		if (nep == NULL) {
 			error = ENOENT;
@@ -281,6 +295,7 @@ vfs_export(struct mount *mp, struct export_args *argp)
 	}
 
 out:
+	lockmgr(&mp->mnt_explock, LK_RELEASE, NULL, curthread);
 	/*
 	 * Once we have executed the vfs_export() command, we do
 	 * not want to keep the "export" option around in the
@@ -430,7 +445,9 @@ vfs_stdcheckexp(struct mount *mp, struct sockaddr *nam, int *extflagsp,
 {
 	struct netcred *np;
 
+	lockmgr(&mp->mnt_explock, LK_SHARED, NULL, curthread);
 	np = vfs_export_lookup(mp, nam);
+	lockmgr(&mp->mnt_explock, LK_RELEASE, NULL, curthread);
 	if (np == NULL)
 		return (EACCES);
 	*extflagsp = np->netc_exflags;

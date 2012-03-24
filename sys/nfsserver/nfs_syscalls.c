@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/nfsserver/nfs_syscalls.c,v 1.3 2008/12/02 21:52:45 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_syscalls.c,v 1.116.2.1 2007/10/12 03:59:18 mohans Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_syscalls.c,v 1.116.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet6.h"
 
@@ -188,7 +188,7 @@ nfssvc_addsock(struct file *fp, struct sockaddr *mynam, struct thread *td)
 	int siz;
 	struct nfssvc_sock *slp;
 	struct socket *so;
-	int error, s;
+	int error;
 
 	so = fp->f_data;
 #if 0
@@ -268,18 +268,13 @@ nfssvc_addsock(struct file *fp, struct sockaddr *mynam, struct thread *td)
 	slp->ns_nam = mynam;
 	fhold(fp);
 	slp->ns_fp = fp;
-	/*
-	 * XXXRW: Socket locking here?
-	 */
-	s = splnet();
+	SOCKBUF_LOCK(&so->so_rcv);
 	so->so_upcallarg = (caddr_t)slp;
 	so->so_upcall = nfsrv_rcv;
-	SOCKBUF_LOCK(&so->so_rcv);
 	so->so_rcv.sb_flags |= SB_UPCALL;
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	slp->ns_flag = (SLP_VALID | SLP_NEEDQ);
 	nfsrv_wakenfsd(slp);
-	splx(s);
 	NFSD_UNLOCK();
 	return (0);
 }
@@ -372,8 +367,6 @@ nfssvc_nfsd(struct thread *td)
 			slp = nfsd->nfsd_slp;
 		}
 		if (error || (slp->ns_flag & SLP_VALID) == 0) {
-			if (slp->ns_flag & SLP_DISCONN)
-				nfsrv_zapsock(slp);
 			if (nd) {
 				if (nd->nd_cr != NULL)
 					crfree(nd->nd_cr);
@@ -600,9 +593,9 @@ nfsrv_zapsock(struct nfssvc_sock *slp)
 		so = slp->ns_so;
 		SOCKBUF_LOCK(&so->so_rcv);
 		so->so_rcv.sb_flags &= ~SB_UPCALL;
-		SOCKBUF_UNLOCK(&so->so_rcv);
 		so->so_upcall = NULL;
 		so->so_upcallarg = NULL;
+		SOCKBUF_UNLOCK(&so->so_rcv);
 		soshutdown(so, SHUT_RDWR);
 		closef(fp, NULL);
 		NFSD_LOCK();

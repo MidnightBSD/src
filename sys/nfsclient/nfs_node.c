@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_node.c,v 1.86 2007/03/13 01:50:26 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_node.c,v 1.86.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -233,6 +233,13 @@ nfs_reclaim(struct vop_reclaim_args *ap)
 
 	if (prtactive && vrefcnt(vp) != 0)
 		vprint("nfs_reclaim: pushing active", vp);
+
+	/*
+	 * If the NLM is running, give it a chance to abort pending
+	 * locks.
+	 */
+	if (nfs_reclaim_p)
+		nfs_reclaim_p(ap);
 
 	/*
 	 * Destroy the vm object and flush associated pages.

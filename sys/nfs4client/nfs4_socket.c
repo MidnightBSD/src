@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/sys/nfs4client/nfs4_socket.c,v 1.4 2005/01/07 01:45:50 imp Exp $ */
-/* $Id: nfs4_socket.c,v 1.2 2008-12-02 21:51:48 laffer1 Exp $ */
+/* $FreeBSD: src/sys/nfs4client/nfs4_socket.c,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $ */
+/* $Id: nfs4_socket.c,v 1.3 2012-03-24 21:41:20 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_socket.c,v 1.4 2005/01/07 01:45:50 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_socket.c,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Socket operations for use by nfs

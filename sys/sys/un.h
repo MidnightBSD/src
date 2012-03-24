@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/un.h,v 1.2 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)un.h	8.3 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/un.h,v 1.29 2005/04/13 00:01:46 mdodd Exp $
+ * $FreeBSD: src/sys/sys/un.h,v 1.29.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_UN_H_
@@ -58,27 +58,13 @@ struct sockaddr_un {
 #define	LOCAL_CREDS		0x002	/* pass credentials to receiver */
 #define	LOCAL_CONNWAIT		0x004	/* connects block until accepted */
 
-#ifdef _KERNEL
-struct mbuf;
-struct socket;
-struct sockopt;
-
-int	uipc_connect2(struct socket *so1, struct socket *so2);
-int	uipc_ctloutput(struct socket *so, struct sockopt *sopt);
-int	uipc_usrreq(struct socket *so, int req, struct mbuf *m,
-		struct mbuf *nam, struct mbuf *control);
-void	unp_dispose(struct mbuf *m);
-int	unp_externalize(struct mbuf *mbuf, struct mbuf **controlp);
-void	unp_init(void);
-extern	struct pr_usrreqs uipc_usrreqs;
-
-#else /* !_KERNEL */
+#ifndef _KERNEL
 
 /* actual length of an initialized sockaddr_un */
 #define SUN_LEN(su) \
 	(sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
 
-#endif /* _KERNEL */
+#endif /* !_KERNEL */
 
 #endif /* __BSD_VISIBLE */
 

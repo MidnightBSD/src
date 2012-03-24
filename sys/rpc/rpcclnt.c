@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/rpc/rpcclnt.c,v 1.20 2007/08/06 14:26:03 rwatson Exp $ */
-/* $Id: rpcclnt.c,v 1.3 2008-12-03 00:11:16 laffer1 Exp $ */
+/* $FreeBSD: src/sys/rpc/rpcclnt.c,v 1.20.6.1 2008/11/25 02:59:29 kensmith Exp $ */
+/* $Id: rpcclnt.c,v 1.4 2012-03-24 21:41:20 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
