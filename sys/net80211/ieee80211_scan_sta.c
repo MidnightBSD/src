@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_scan_sta.c,v 1.4.2.3 2007/11/29 19:05:09 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_scan_sta.c,v 1.4.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * IEEE 802.11 station scanning support.
@@ -196,16 +195,6 @@ sta_flush_table(struct sta_table *st)
 	}
 }
 
-static void
-saveie(uint8_t **iep, const uint8_t *ie)
-{
-
-	if (ie == NULL)
-		*iep = NULL;
-	else
-		ieee80211_saveie(iep, ie);
-}
-
 /*
  * Process a beacon or probe response frame; create an
  * entry in the scan cache or update any previous entry.
@@ -308,12 +297,8 @@ found:
 		    (const struct ieee80211_tim_ie *) sp->tim;
 		ise->se_dtimperiod = tim->tim_period;
 	}
-	saveie(&ise->se_wme_ie, sp->wme);
-	saveie(&ise->se_wpa_ie, sp->wpa);
-	saveie(&ise->se_rsn_ie, sp->rsn);
-	saveie(&ise->se_ath_ie, sp->ath);
-	saveie(&ise->se_htcap_ie, sp->htcap);
-	saveie(&ise->se_htinfo_ie, sp->htinfo);
+	/* NB: no need to setup ie ptrs; they are not (currently) used */
+	(void) ieee80211_ies_init(&ise->se_ies, sp->ies, sp->ies_len);
 
 	/* clear failure count after STA_FAIL_AGE passes */
 	if (se->se_fails && (ticks - se->se_lastfail) > STA_FAILS_AGE*hz) {
@@ -500,6 +485,59 @@ checktable(const struct scanlist *scan, const struct ieee80211_channel *c)
 	return 0;
 }
 
+static void
+sweepchannels(struct ieee80211_scan_state *ss, struct ieee80211com *ic,
+	const struct scanlist table[])
+{
+	struct ieee80211_channel *c;
+	int i;
+
+	/*
+	 * Add the channels from the ic (from HAL) that are not present
+	 * in the staScanTable.
+	 */
+	for (i = 0; i < ic->ic_nchans; i++) {
+		if (ss->ss_last >= IEEE80211_SCAN_MAX)
+			break;
+
+		c = &ic->ic_channels[i];
+		/*
+		 * Ignore dynamic turbo channels; we scan them
+		 * in normal mode (i.e. not boosted).  Likewise
+		 * for HT channels, they get scanned using
+		 * legacy rates.
+		 */
+		if (IEEE80211_IS_CHAN_DTURBO(c) || IEEE80211_IS_CHAN_HT(c))
+			continue;
+
+		/*
+		 * If a desired mode was specified, scan only 
+		 * channels that satisfy that constraint.
+		 */
+		if (ic->ic_des_mode != IEEE80211_MODE_AUTO &&
+		    ic->ic_des_mode != ieee80211_chan2mode(c))
+			continue;
+
+		/*
+		 * Skip channels excluded by user request.
+		 */
+		if (isexcluded(ic, c))
+			continue;
+
+		/*
+		 * Add the channel unless it is listed in the
+		 * fixed scan order tables.  This insures we
+		 * don't sweep back in channels we filtered out
+		 * above.
+		 */
+		if (checktable(table, c))
+			continue;
+
+		/* Add channel to scanning list. */
+		ss->ss_chans[ss->ss_last++] = c;
+	}
+}
+
 /*
  * Start a station-mode scan by populating the channel list.
  */
@@ -510,8 +548,6 @@ sta_start(struct ieee80211_scan_state *ss, struct ieee80211com *ic)
 	struct sta_table *st = ss->ss_priv;
 	const struct scanlist *scan;
 	enum ieee80211_phymode mode;
-	struct ieee80211_channel *c;
-	int i;
 
 	ss->ss_last = 0;
 	/*
@@ -564,46 +600,7 @@ sta_start(struct ieee80211_scan_state *ss, struct ieee80211com *ic)
 	 * Add the channels from the ic (from HAL) that are not present
 	 * in the staScanTable.
 	 */
-	for (i = 0; i < ic->ic_nchans; i++) {
-		if (ss->ss_last >= IEEE80211_SCAN_MAX)
-			break;
-
-		c = &ic->ic_channels[i];
-		/*
-		 * Ignore dynamic turbo channels; we scan them
-		 * in normal mode (i.e. not boosted).  Likewise
-		 * for HT channels, they get scanned using
-		 * legacy rates.
-		 */
-		if (IEEE80211_IS_CHAN_DTURBO(c) || IEEE80211_IS_CHAN_HT(c))
-			continue;
-
-		/*
-		 * If a desired mode was specified, scan only 
-		 * channels that satisfy that constraint.
-		 */
-		if (ic->ic_des_mode != IEEE80211_MODE_AUTO &&
-		    ic->ic_des_mode != ieee80211_chan2mode(c))
-			continue;
-
-		/*
-		 * Skip channels excluded by user request.
-		 */
-		if (isexcluded(ic, c))
-			continue;
-
-		/*
-		 * Add the channel unless it is listed in the
-		 * fixed scan order tables.  This insures we
-		 * don't sweep back in channels we filtered out
-		 * above.
-		 */
-		if (checktable(staScanTable, c))
-			continue;
-
-		/* Add channel to scanning list. */
-		ss->ss_chans[ss->ss_last++] = c;
-	}
+	sweepchannels(ss, ic, staScanTable);
 
 	ss->ss_next = 0;
 	/* XXX tunables */
@@ -1281,6 +1278,13 @@ adhoc_start(struct ieee80211_scan_state *ss, struct ieee80211com *ic)
 		 */
 		add_channels(ic, ss, mode, scan->list, scan->count);
 	}
+
+	/*
+	 * Add the channels from the ic (from HAL) that are not present
+	 * in the staScanTable.
+	 */
+	sweepchannels(ss, ic, adhocScanTable);
+
 	ss->ss_next = 0;
 	/* XXX tunables */
 	ss->ss_mindwell = msecs_to_ticks(200);		/* 200ms */
@@ -1321,6 +1325,8 @@ adhoc_pick_channel(struct ieee80211_scan_state *ss)
 	mtx_lock(&st->st_lock);
 	for (i = 0; i < ss->ss_last; i++) {
 		c = ss->ss_chans[i];
+		if (!checktable(adhocScanTable, c))
+			continue;
 		maxrssi = 0;
 		TAILQ_FOREACH(se, &st->st_entry, se_list) {
 			if (se->base.se_chan != c)

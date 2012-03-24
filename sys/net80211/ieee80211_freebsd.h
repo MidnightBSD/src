@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_freebsd.h,v 1.15.2.1 2007/11/11 17:44:35 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_freebsd.h,v 1.15.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _NET80211_IEEE80211_FREEBSD_H_
 #define _NET80211_IEEE80211_FREEBSD_H_
@@ -198,9 +197,10 @@ struct mbuf *ieee80211_getmgtframe(uint8_t **frm, int headroom, int pktlen);
 #define	M_LINK0		M_PROTO1		/* WEP requested */
 #define	M_PWR_SAV	M_PROTO4		/* bypass PS handling */
 #define	M_MORE_DATA	M_PROTO5		/* more data frames to follow */
-#define	M_FF		0x20000			/* fast frame */
-#define	M_TXCB		0x40000			/* do tx complete callback */
-#define	M_80211_TX	(0x60000|M_PROTO1|M_WME_AC_MASK|M_PROTO4|M_PROTO5)
+#define	M_FF		M_PROTO6		/* fast frame */
+#define	M_TXCB		M_PROTO7		/* do tx complete callback */
+#define	M_80211_TX \
+	(M_LINK0|M_WME_AC_MASK|M_PWR_SAV|M_MORE_DATA|M_FF|M_TXCB)
 
 /* rx path usage */
 #define	M_AMPDU		M_PROTO1		/* A-MPDU processing done */

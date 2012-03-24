@@ -54,7 +54,7 @@
 #define _MFIREG_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfireg.h,v 1.10.4.1 2008/02/04 14:54:21 ambrisko Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mfi/mfireg.h,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * MegaRAID SAS MFI firmware definitions
@@ -89,9 +89,15 @@ __FBSDID("$FreeBSD: src/sys/dev/mfi/mfireg.h,v 1.10.4.1 2008/02/04 14:54:21 ambr
 #define MFI_ODCR0	0xa0 		/* outbound doorbell clear register0  */
 #define MFI_OSP0	0xb0 		/* outbound scratch pad0  */
 #define MFI_1078_EIM	0x80000004 	/* 1078 enable intrrupt mask  */
-#define MFI_RMI		0x2 		/* reply message interrupt  */       
+#define MFI_RMI		0x2 		/* reply message interrupt  */
 #define MFI_1078_RM	0x80000000 	/* reply 1078 message interrupt  */
 #define MFI_ODC		0x4 		/* outbound doorbell change interrupt */
+
+/*
+ * GEN2 specific changes
+ */
+#define MFI_GEN2_EIM	0x00000005	/* GEN2 enable interrupt mask */
+#define MFI_GEN2_RM	0x00000001	/* reply GEN2 message interrupt */
 
 /* Bits for MFI_OSTS */
 #define MFI_OSTS_INTR_VALID	0x00000002
@@ -153,6 +159,7 @@ typedef enum {
 	MFI_DCMD_CFG_READ =		0x04010000,
 	MFI_DCMD_CFG_ADD =		0x04020000,
 	MFI_DCMD_CFG_CLEAR =		0x04030000,
+	MFI_DCMD_CFG_FOREIGN_IMPORT =	0x04060400,
 	MFI_DCMD_CLUSTER =		0x08000000,
 	MFI_DCMD_CLUSTER_RESET_ALL =	0x08010100,
 	MFI_DCMD_CLUSTER_RESET_LD =	0x08010200

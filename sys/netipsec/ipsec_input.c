@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netipsec/ipsec_input.c,v 1.19 2007/09/12 05:54:53 gnn Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/ipsec_input.c,v 1.19.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$OpenBSD: ipsec_input.c,v 1.63 2003/02/20 18:35:43 deraadt Exp $	*/
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -93,6 +92,11 @@
 
 #include <machine/in_cksum.h>
 #include <machine/stdarg.h>
+
+#ifdef DEV_ENC
+#include <net/if_enc.h>
+#endif
+
 
 #define IPSEC_ISTAT(p,x,y,z) ((p) == IPPROTO_ESP ? (x)++ : \
 			    (p) == IPPROTO_AH ? (y)++ : (z)++)
@@ -445,6 +449,9 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 		bcopy(&saidx->dst, &tdbi->dst, saidx->dst.sa.sa_len);
 		tdbi->proto = sproto;
 		tdbi->spi = sav->spi;
+		/* Cache those two for enc(4) in xform_ipip. */
+		tdbi->alg_auth = sav->alg_auth;
+		tdbi->alg_enc = sav->alg_enc;
 
 		m_tag_prepend(m, mtag);
 	} else if (mt != NULL) {
@@ -455,14 +462,17 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 	key_sa_recordxfer(sav, m);		/* record data transfer */
 
 #ifdef DEV_ENC
+	encif->if_ipackets++;
+	encif->if_ibytes += m->m_pkthdr.len;
+
 	/*
 	 * Pass the mbuf to enc0 for bpf and pfil. We will filter the IPIP
 	 * packet later after it has been decapsulated.
 	 */
-	ipsec_bpf(m, sav, AF_INET);
+	ipsec_bpf(m, sav, AF_INET, ENC_IN|ENC_BEFORE);
 
 	if (prot != IPPROTO_IPIP)
-		if ((error = ipsec_filter(&m, PFIL_IN)) != 0)
+		if ((error = ipsec_filter(&m, PFIL_IN, ENC_IN|ENC_BEFORE)) != 0)
 			return (error);
 #endif
 
@@ -704,6 +714,9 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 		bcopy(&saidx->dst, &tdbi->dst, sizeof(union sockaddr_union));
 		tdbi->proto = sproto;
 		tdbi->spi = sav->spi;
+		/* Cache those two for enc(4) in xform_ipip. */
+		tdbi->alg_auth = sav->alg_auth;
+		tdbi->alg_enc = sav->alg_enc;
 
 		m_tag_prepend(m, mtag);
 	} else {
@@ -713,6 +726,19 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 	}
 
 	key_sa_recordxfer(sav, m);
+
+#ifdef DEV_ENC
+	/*
+	 * Pass the mbuf to enc0 for bpf and pfil. We will filter the IPIP
+	 * packet later after it has been decapsulated.
+	 */
+	ipsec_bpf(m, sav, AF_INET6, ENC_IN|ENC_BEFORE);
+
+	/* XXX-BZ does not make sense. */
+	if (prot != IPPROTO_IPIP)
+		if ((error = ipsec_filter(&m, PFIL_IN, ENC_IN|ENC_BEFORE)) != 0)
+			return (error);
+#endif
 
 	/* Retrieve new protocol */
 	m_copydata(m, protoff, sizeof(u_int8_t), (caddr_t) &nxt8);

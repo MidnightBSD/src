@@ -1,5 +1,4 @@
-/* $MidnightBSD: src/sys/netipsec/xform_ipcomp.c,v 1.4 2008/12/03 00:30:03 laffer1 Exp $ */
-/*	$FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/sys/netipsec/xform_ipcomp.c,v 1.11.2.7 2011/04/09 10:58:38 bz Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/xform_ipcomp.c,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /* $OpenBSD: ip_ipcomp.c,v 1.1 2001/07/05 12:08:52 jjbg Exp $ */
 
 /*-
@@ -140,30 +139,9 @@ ipcomp_input(struct mbuf *m, struct secasvar *sav, int skip, int protoff)
 	struct tdb_crypto *tc;
 	struct cryptodesc *crdc;
 	struct cryptop *crp;
-	struct ipcomp *ipcomp;
-	caddr_t addr;
 	int hlen = IPCOMP_HLENGTH;
 
 	IPSEC_SPLASSERT_SOFTNET(__func__);
-
-	/*
-	 * Check that the next header of the IPComp is not IPComp again, before
-	 * doing any real work.  Given it is not possible to do double
-	 * compression it means someone is playing tricks on us.
-	 */
-	if (m->m_len < skip + hlen && (m = m_pullup(m, skip + hlen)) == NULL) {
-		ipcompstat.ipcomps_hdrops++;		/*XXX*/
-		DPRINTF(("%s: m_pullup failed\n", __func__));
-		return (ENOBUFS);
-	}
-	addr = (caddr_t) mtod(m, struct ip *) + skip;
-	ipcomp = (struct ipcomp *)addr;
-	if (ipcomp->comp_nxt == IPPROTO_IPCOMP) {
-		m_freem(m);
-		ipcompstat.ipcomps_pdrops++;	/* XXX have our own stats? */
-		DPRINTF(("%s: recursive compression detected\n", __func__));
-		return (EINVAL);
-	}
 
 	/* Get crypto descriptors */
 	crp = crypto_getreq(1);

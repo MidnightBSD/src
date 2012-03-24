@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netipsec/ipsec.c,v 1.24 2007/07/01 11:38:29 gnn Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/ipsec.c,v 1.24.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: ipsec.c,v 1.103 2001/05/24 07:14:18 sakane Exp $	*/
 
 /*-
@@ -220,7 +219,7 @@ static int ipsec6_setspidx_ipaddr __P((struct mbuf *, struct secpolicyindex *));
 static void ipsec_delpcbpolicy __P((struct inpcbpolicy *));
 static struct secpolicy *ipsec_deepcopy_policy __P((struct secpolicy *src));
 static int ipsec_set_policy __P((struct secpolicy **pcb_sp,
-	int optname, caddr_t request, size_t len, int priv));
+	int optname, caddr_t request, size_t len, struct ucred *cred));
 static int ipsec_get_policy __P((struct secpolicy *pcb_sp, struct mbuf **mp));
 static void vshiftl __P((unsigned char *, int, int));
 static size_t ipsec_hdrsiz __P((struct secpolicy *));
@@ -1006,12 +1005,12 @@ fail:
 
 /* set policy and ipsec request if present. */
 static int
-ipsec_set_policy(pcb_sp, optname, request, len, priv)
+ipsec_set_policy(pcb_sp, optname, request, len, cred)
 	struct secpolicy **pcb_sp;
 	int optname;
 	caddr_t request;
 	size_t len;
-	int priv;
+	struct ucred *cred;
 {
 	struct sadb_x_policy *xpl;
 	struct secpolicy *newsp = NULL;
@@ -1035,8 +1034,11 @@ ipsec_set_policy(pcb_sp, optname, request, len, priv)
 		return EINVAL;
 
 	/* check privileged socket */
-	if (priv == 0 && xpl->sadb_x_policy_type == IPSEC_POLICY_BYPASS)
-		return EACCES;
+	if (cred != NULL && xpl->sadb_x_policy_type == IPSEC_POLICY_BYPASS) {
+		error = priv_check_cred(cred, PRIV_NETINET_IPSEC, 0);
+		if (error)
+			return EACCES;
+	}
 
 	/* allocation new SP entry */
 	if ((newsp = key_msg2sp(xpl, len, &error)) == NULL)
@@ -1078,12 +1080,12 @@ ipsec_get_policy(pcb_sp, mp)
 }
 
 int
-ipsec4_set_policy(inp, optname, request, len, priv)
+ipsec4_set_policy(inp, optname, request, len, cred)
 	struct inpcb *inp;
 	int optname;
 	caddr_t request;
 	size_t len;
-	int priv;
+	struct ucred *cred;
 {
 	struct sadb_x_policy *xpl;
 	struct secpolicy **pcb_sp;
@@ -1109,7 +1111,7 @@ ipsec4_set_policy(inp, optname, request, len, priv)
 		return EINVAL;
 	}
 
-	return ipsec_set_policy(pcb_sp, optname, request, len, priv);
+	return ipsec_set_policy(pcb_sp, optname, request, len, cred);
 }
 
 int
@@ -1171,12 +1173,12 @@ ipsec4_delete_pcbpolicy(inp)
 
 #ifdef INET6
 int
-ipsec6_set_policy(in6p, optname, request, len, priv)
+ipsec6_set_policy(in6p, optname, request, len, cred)
 	struct in6pcb *in6p;
 	int optname;
 	caddr_t request;
 	size_t len;
-	int priv;
+	struct ucred *cred;
 {
 	struct sadb_x_policy *xpl;
 	struct secpolicy **pcb_sp;
@@ -1202,7 +1204,7 @@ ipsec6_set_policy(in6p, optname, request, len, priv)
 		return EINVAL;
 	}
 
-	return ipsec_set_policy(pcb_sp, optname, request, len, priv);
+	return ipsec_set_policy(pcb_sp, optname, request, len, cred);
 }
 
 int
@@ -1936,7 +1938,7 @@ ipsec_attach(void)
 	SECPOLICY_LOCK_INIT(&ip4_def_policy);
 	ip4_def_policy.refcnt = 1;			/* NB: disallow free */
 }
-SYSINIT(ipsec, SI_SUB_PROTO_DOMAIN, SI_ORDER_FIRST, ipsec_attach, NULL)
+SYSINIT(ipsec, SI_SUB_PROTO_DOMAIN, SI_ORDER_FIRST, ipsec_attach, NULL);
 
 
 /* XXX this stuff doesn't belong here... */

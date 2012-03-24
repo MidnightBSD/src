@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fatm/if_fatm.c,v 1.23 2007/02/23 12:18:40 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fatm/if_fatm.c,v 1.23.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -2890,7 +2890,7 @@ fatm_attach(device_t dev)
 	 * restrictions for the controller (and PCI bus) and is never used
 	 * to do anything.
 	 */
-	if (bus_dma_tag_create(NULL, 1, 0,
+	if (bus_dma_tag_create(bus_get_dma_tag(dev), 1, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
 	    NULL, NULL, BUS_SPACE_MAXSIZE_32BIT, MAXDMASEGS,
 	    BUS_SPACE_MAXSIZE_32BIT, 0, NULL, NULL,

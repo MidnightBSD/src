@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_pppoe.h,v 1.24 2006/08/09 09:56:58 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_pppoe.h,v 1.24.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  * $Whistle: ng_pppoe.h,v 1.7 1999/10/16 10:16:43 julian Exp $
  */
 
@@ -52,15 +52,10 @@
 
 #define NGM_PPPOE_COOKIE		1089893072
 
-/* Number of active sessions we can handle */
-#define	PPPOE_NUM_SESSIONS		16 /* for now */
 #define	PPPOE_SERVICE_NAME_SIZE		64 /* for now */
 
 /* Hook names */
 #define NG_PPPOE_HOOK_ETHERNET	"ethernet"
-#define NG_PPPOE_HOOK_PADI	"PADI"    /* default PADI requests come here */
-#define NG_PPPOE_HOOK_S_LEADIN	"service" /* PADO responses from PADI */
-#define NG_PPPOE_HOOK_C_LEADIN	"client"  /* Connect message starts this */
 #define NG_PPPOE_HOOK_DEBUG	"debug"
 
 /* Mode names */

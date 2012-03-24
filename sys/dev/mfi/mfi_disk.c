@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_disk.c,v 1.7 2007/08/13 19:29:17 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_disk.c,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mfi.h"
 

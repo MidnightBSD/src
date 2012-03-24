@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_socket.c,v 1.82.2.1 2007/10/28 17:48:47 mav Exp $
+ * $FreeBSD: src/sys/netgraph/ng_socket.c,v 1.82.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  * $Whistle: ng_socket.c,v 1.28 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -919,7 +919,7 @@ ngs_rcvmsg(node_p node, item_p item, hook_p lasthook)
 	if (sbappendaddr(&so->so_rcv, (struct sockaddr *)&addr, m, NULL) == 0) {
 		TRAP_ERROR;
 		m_freem(m);
-		error = so->so_error = ENOBUFS;
+		return (ENOBUFS);
 	}
 	sorwakeup(so);
 	

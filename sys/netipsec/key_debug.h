@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netipsec/key_debug.h,v 1.2 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/key_debug.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: key_debug.h,v 1.10 2001/08/05 08:37:52 itojun Exp $	*/
 
 /*-

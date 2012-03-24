@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -61,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/ipx_proto.c,v 1.22 2007/01/08 22:14:00 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netipx/ipx_proto.c,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ipx.h"
 
@@ -132,15 +131,25 @@ static struct protosw ipxsw[] = {
 },
 };
 
+extern int ipx_inithead(void **, int);
+
 static struct	domain ipxdomain = {
 	.dom_family =		AF_IPX,
 	.dom_name =		"network systems",
 	.dom_protosw =		ipxsw,
 	.dom_protoswNPROTOSW =	&ipxsw[sizeof(ipxsw)/sizeof(ipxsw[0])],
-	.dom_rtattach =		rn_inithead,
+	.dom_rtattach =		ipx_inithead,
 	.dom_rtoffset =		16,
 	.dom_maxrtkey =		sizeof(struct sockaddr_ipx)
 };
+
+
+/* shim to adapt arguments */
+int
+ipx_inithead(void **head, int offset)
+{
+	return rn_inithead(head, offset);
+}
 
 DOMAIN_SET(ipx);
 SYSCTL_NODE(_net,	PF_IPX,		ipx,	CTLFLAG_RW, 0,

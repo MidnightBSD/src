@@ -54,7 +54,7 @@
 #define _MFIVAR_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfivar.h,v 1.11 2007/08/25 23:58:45 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mfi/mfivar.h,v 1.11.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/lock.h>
 #include <sys/sx.h>
@@ -133,6 +133,7 @@ struct mfi_softc {
 #define MFI_FLAGS_STOP		(1<<3)
 #define MFI_FLAGS_1064R		(1<<4)
 #define MFI_FLAGS_1078		(1<<5)
+#define MFI_FLAGS_GEN2		(1<<6)
 
 	struct mfi_hwcomms		*mfi_comms;
 	TAILQ_HEAD(,mfi_command)	mfi_free;

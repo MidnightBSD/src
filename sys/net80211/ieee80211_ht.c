@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +25,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_ht.c,v 1.4.2.3.2.1 2008/02/05 18:19:12 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_ht.c,v 1.4.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 #endif
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netipsec/ipsec_output.c,v 1.16 2007/07/19 09:57:54 bz Exp $
+ * $FreeBSD: src/sys/netipsec/ipsec_output.c,v 1.16.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -82,6 +81,11 @@
 #include <netipsec/key_debug.h>
 
 #include <machine/in_cksum.h>
+
+#ifdef DEV_ENC
+#include <net/if_enc.h>
+#endif
+
 
 int
 ipsec_process_done(struct mbuf *m, struct ipsecrequest *isr)
@@ -287,17 +291,19 @@ again:
 		goto bad;
 	}
 	sav = isr->sav;
-	if (sav == NULL) {		/* XXX valid return */
+	if (sav == NULL) {
 		IPSEC_ASSERT(ipsec_get_reqlevel(isr) == IPSEC_LEVEL_USE,
 			("no SA found, but required; level %u",
 			ipsec_get_reqlevel(isr)));
 		IPSECREQUEST_UNLOCK(isr);
 		isr = isr->next;
-		if (isr == NULL) {
-			/*XXXstatistic??*/
-			*error = EINVAL;		/*XXX*/
+		/*
+		 * If isr is NULL, we found a 'use' policy w/o SA.
+		 * Return w/o error and w/o isr so we can drop out
+		 * and continue w/o IPsec processing.
+		 */
+		if (isr == NULL)
 			return isr;
-		}
 		IPSECREQUEST_LOCK(isr);
 		goto again;
 	}
@@ -357,14 +363,22 @@ ipsec4_process_packet(
 	IPSECREQUEST_LOCK(isr);		/* insure SA contents don't change */
 
 	isr = ipsec_nextisr(m, isr, AF_INET, &saidx, &error);
-	if (isr == NULL)
-		goto bad;
+	if (isr == NULL) {
+		if (error != 0)
+			goto bad;
+		return EJUSTRETURN;
+	}
 
 	sav = isr->sav;
 
 #ifdef DEV_ENC
+	encif->if_opackets++;
+	encif->if_obytes += m->m_pkthdr.len;
+
+	/* pass the mbuf to enc0 for bpf processing */
+	ipsec_bpf(m, sav, AF_INET, ENC_OUT|ENC_BEFORE);
 	/* pass the mbuf to enc0 for packet filtering */
-	if ((error = ipsec_filter(&m, PFIL_OUT)) != 0)
+	if ((error = ipsec_filter(&m, PFIL_OUT, ENC_OUT|ENC_BEFORE)) != 0)
 		goto bad;
 #endif
 
@@ -467,7 +481,10 @@ ipsec4_process_packet(
 
 #ifdef DEV_ENC
 	/* pass the mbuf to enc0 for bpf processing */
-	ipsec_bpf(m, sav, AF_INET);
+	ipsec_bpf(m, sav, AF_INET, ENC_OUT|ENC_AFTER);
+	/* pass the mbuf to enc0 for packet filtering */
+	if ((error = ipsec_filter(&m, PFIL_OUT, ENC_OUT|ENC_AFTER)) != 0)
+		goto bad;
 #endif
 
 	/*
@@ -577,21 +594,24 @@ ipsec6_output_trans(
 	IPSECREQUEST_LOCK(isr);		/* insure SA contents don't change */
 	isr = ipsec_nextisr(m, isr, AF_INET6, &saidx, &error);
 	if (isr == NULL) {
+		if (error != 0) {
 #ifdef notdef
-		/* XXX should notification be done for all errors ? */
-		/*
-		 * Notify the fact that the packet is discarded
-		 * to ourselves. I believe this is better than
-		 * just silently discarding. (jinmei@kame.net)
-		 * XXX: should we restrict the error to TCP packets?
-		 * XXX: should we directly notify sockets via
-		 *      pfctlinputs?
-		 */
-		icmp6_error(m, ICMP6_DST_UNREACH,
-			    ICMP6_DST_UNREACH_ADMIN, 0);
-		m = NULL;	/* NB: icmp6_error frees mbuf */
+			/* XXX should notification be done for all errors ? */
+			/*
+			 * Notify the fact that the packet is discarded
+			 * to ourselves. I believe this is better than
+			 * just silently discarding. (jinmei@kame.net)
+			 * XXX: should we restrict the error to TCP packets?
+			 * XXX: should we directly notify sockets via
+			 *      pfctlinputs?
+			 */
+			icmp6_error(m, ICMP6_DST_UNREACH,
+				    ICMP6_DST_UNREACH_ADMIN, 0);
+			m = NULL;	/* NB: icmp6_error frees mbuf */
 #endif
-		goto bad;
+			goto bad;
+		}
+		return EJUSTRETURN;
 	}
 
 	error = (*isr->sav->tdb_xform->xf_output)(m, isr, NULL,
@@ -708,8 +728,19 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 
 	IPSECREQUEST_LOCK(isr);		/* insure SA contents don't change */
 	isr = ipsec_nextisr(m, isr, AF_INET6, &saidx, &error);
-	if (isr == NULL)
+	if (isr == NULL) {
+		if (error != 0)
+			goto bad;
+		return EJUSTRETURN; 
+	}
+
+#ifdef DEV_ENC
+	/* pass the mbuf to enc0 for bpf processing */
+	ipsec_bpf(m, isr->sav, AF_INET6, ENC_OUT|ENC_BEFORE);
+	/* pass the mbuf to enc0 for packet filtering */
+	if ((error = ipsec_filter(&m, PFIL_OUT, ENC_OUT|ENC_BEFORE)) != 0)
 		goto bad;
+#endif
 
 	/*
 	 * There may be the case that SA status will be changed when
@@ -779,6 +810,15 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 		goto bad;
 	}
 	ip6 = mtod(m, struct ip6_hdr *);
+
+#ifdef DEV_ENC
+	/* pass the mbuf to enc0 for bpf processing */
+	ipsec_bpf(m, isr->sav, AF_INET6, ENC_OUT|ENC_AFTER);
+	/* pass the mbuf to enc0 for packet filtering */
+	if ((error = ipsec_filter(&m, PFIL_OUT, ENC_OUT|ENC_AFTER)) != 0)
+		goto bad;
+#endif
+
 	error = (*isr->sav->tdb_xform->xf_output)(m, isr, NULL,
 		sizeof (struct ip6_hdr),
 		offsetof(struct ip6_hdr, ip6_nxt));

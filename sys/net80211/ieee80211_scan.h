@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_scan.h,v 1.3 2007/06/30 21:39:21 thompsa Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_scan.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _NET80211_IEEE80211_SCAN_H_
 #define _NET80211_IEEE80211_SCAN_H_
@@ -125,6 +124,8 @@ struct ieee80211_scanparams {
 	uint8_t		erp;
 	uint16_t	bintval;
 	uint8_t		timoff;
+	uint8_t		*ies;		/* all captured ies */
+	size_t		ies_len;	/* length of all captured ies */
 	uint8_t		*tim;
 	uint8_t		*tstamp;
 	uint8_t		*country;
@@ -147,6 +148,7 @@ struct ieee80211_scanparams {
 struct ieee80211_scan_entry {
 	uint8_t		se_macaddr[IEEE80211_ADDR_LEN];
 	uint8_t		se_bssid[IEEE80211_ADDR_LEN];
+	/* XXX can point inside se_ies */
 	uint8_t		se_ssid[2+IEEE80211_NWID_LEN];
 	uint8_t		se_rates[2+IEEE80211_RATE_MAXSIZE];
 	uint8_t		se_xrates[2+IEEE80211_RATE_MAXSIZE];
@@ -165,12 +167,7 @@ struct ieee80211_scan_entry {
 	int8_t		se_rssi;	/* avg'd recv ssi */
 	int8_t		se_noise;	/* noise floor */
 	uint8_t		se_dtimperiod;	/* DTIM period */
-	uint8_t		*se_wpa_ie;	/* captured WPA ie */
-	uint8_t		*se_rsn_ie;	/* captured RSN ie */
-	uint8_t		*se_wme_ie;	/* captured WME ie */
-	uint8_t		*se_htcap_ie;	/* captured HTP cap ie */
-	uint8_t		*se_htinfo_ie;	/* captured HTP info ie */
-	uint8_t		*se_ath_ie;	/* captured Atheros ie */
+	struct ieee80211_ies se_ies;	/* captured ie's */
 	u_int		se_age;		/* age of entry (0 on create) */
 };
 MALLOC_DECLARE(M_80211_SCAN);

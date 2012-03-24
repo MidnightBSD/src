@@ -1,5 +1,4 @@
-/* $MidnightBSD: src/sys/netipsec/key.c,v 1.3 2008/12/03 00:30:02 laffer1 Exp $ */
-/*	$FreeBSD: src/sys/netipsec/key.c,v 1.28 2007/07/01 11:38:29 gnn Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/key.c,v 1.28.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: key.c,v 1.191 2001/06/27 10:46:49 sakane Exp $	*/
 
 /*-
@@ -951,7 +950,7 @@ key_do_allocsa_policy(struct secashead *sah, u_int state)
 		 * suitable candidate and the lifetime of the SA is not
 		 * permanent.
 		 */
-		if (d->lft_c->addtime != 0) {
+		if (d->lft_h->addtime != 0) {
 			struct mbuf *m, *result;
 			u_int8_t satype;
 
@@ -2230,7 +2229,6 @@ key_spdget(so, m, mhp)
 	}
 
 	n = key_setdumpsp(sp, SADB_X_SPDGET, 0, mhp->msg->sadb_msg_pid);
-	KEY_FREESP(&sp);
 	if (n != NULL) {
 		m_freem(m);
 		return key_sendup_mbuf(so, n, KEY_SENDUP_ONE);
@@ -2414,6 +2412,7 @@ key_setdumpsp(sp, type, seq, pid)
 	u_int32_t seq, pid;
 {
 	struct mbuf *result = NULL, *m;
+	struct seclifetime lt;
 
 	m = key_setsadbmsg(type, 0, SADB_SATYPE_UNSPEC, seq, pid, sp->refcnt);
 	if (!m)
@@ -2438,6 +2437,22 @@ key_setdumpsp(sp, type, seq, pid)
 	if (!m)
 		goto fail;
 	m_cat(result, m);
+
+	if(sp->lifetime){
+		lt.addtime=sp->created;
+		lt.usetime= sp->lastused;
+		m = key_setlifetime(&lt, SADB_EXT_LIFETIME_CURRENT);
+		if (!m)
+			goto fail;
+		m_cat(result, m);
+		
+		lt.addtime=sp->lifetime;
+		lt.usetime= sp->validtime;
+		m = key_setlifetime(&lt, SADB_EXT_LIFETIME_HARD);
+		if (!m)
+			goto fail;
+		m_cat(result, m);
+	}
 
 	if ((result->m_flags & M_PKTHDR) == 0)
 		goto fail;
@@ -3139,7 +3154,7 @@ key_setsaval(sav, m, mhp)
 	sav->created = time_second;
 
 	/* make lifetime for CURRENT */
-	sav->lft_c = malloc(sizeof(struct sadb_lifetime), M_IPSEC_MISC, M_NOWAIT);
+	sav->lft_c = malloc(sizeof(struct seclifetime), M_IPSEC_MISC, M_NOWAIT);
 	if (sav->lft_c == NULL) {
 		ipseclog((LOG_DEBUG, "%s: No more memory.\n", __func__));
 		error = ENOBUFS;
@@ -3378,7 +3393,7 @@ key_setdumpsa(sav, type, satype, seq, pid)
 		case SADB_EXT_LIFETIME_SOFT:
 			if (!sav->lft_s)
 				continue;
-			m = key_setlifetime(sav->lft_h, 
+			m = key_setlifetime(sav->lft_s, 
 					    SADB_EXT_LIFETIME_SOFT);
 
 			if (!m)
@@ -6325,7 +6340,12 @@ key_expire(struct secasvar *sav)
 	lt->sadb_lifetime_addtime = sav->lft_c->addtime;
 	lt->sadb_lifetime_usetime = sav->lft_c->usetime;
 	lt = (struct sadb_lifetime *)(mtod(m, caddr_t) + len / 2);
-	bcopy(sav->lft_s, lt, sizeof(*lt));
+	lt->sadb_lifetime_len = PFKEY_UNIT64(sizeof(struct sadb_lifetime));
+	lt->sadb_lifetime_exttype = SADB_EXT_LIFETIME_SOFT;
+	lt->sadb_lifetime_allocations = sav->lft_s->allocations;
+	lt->sadb_lifetime_bytes = sav->lft_s->bytes;
+	lt->sadb_lifetime_addtime = sav->lft_s->addtime;
+	lt->sadb_lifetime_usetime = sav->lft_s->usetime;
 	m_cat(result, m);
 
 	/* set sadb_address for source */
@@ -7119,7 +7139,7 @@ key_init()
 	/* initialize key statistics */
 	keystat.getspi_count = 1;
 
-	printf("Fast IPsec: Initialized Security Association Processing.\n");
+	printf("IPsec: Initialized Security Association Processing.\n");
 
 	return;
 }

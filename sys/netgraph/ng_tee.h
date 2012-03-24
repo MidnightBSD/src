@@ -38,7 +38,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_tee.h,v 1.8 2005/01/07 01:45:39 imp Exp $
+ * $FreeBSD: src/sys/netgraph/ng_tee.h,v 1.8.18.1 2008/11/25 02:59:29 kensmith Exp $
  * $Whistle: ng_tee.h,v 1.2 1999/01/20 00:22:14 archie Exp $
  */
 

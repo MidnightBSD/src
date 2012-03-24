@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi.c,v 1.33.4.1 2008/02/04 14:54:21 ambrisko Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi.c,v 1.33.2.6.2.2 2008/12/17 17:39:36 ambrisko Exp $");
 
 #include "opt_mfi.h"
 
@@ -86,7 +86,7 @@ static int	mfi_wait_command(struct mfi_softc *, struct mfi_command *);
 static int	mfi_get_controller_info(struct mfi_softc *);
 static int	mfi_get_log_state(struct mfi_softc *,
 		    struct mfi_evt_log_state **);
-static int	mfi_get_entry(struct mfi_softc *, int);
+static int	mfi_parse_entries(struct mfi_softc *, int, int);
 static int	mfi_dcmd_command(struct mfi_softc *, struct mfi_command **,
 		    uint32_t, void **, size_t);
 static void	mfi_data_cb(void *, bus_dma_segment_t *, int, int);
@@ -106,6 +106,8 @@ static void	mfi_complete(struct mfi_softc *, struct mfi_command *);
 static int	mfi_abort(struct mfi_softc *, struct mfi_command *);
 static int	mfi_linux_ioctl_int(struct cdev *, u_long, caddr_t, int, d_thread_t *);
 static void	mfi_timeout(void *);
+static int	mfi_user_command(struct mfi_softc *,
+		    struct mfi_ioc_passthru *);
 static void 	mfi_enable_intr_xscale(struct mfi_softc *sc);
 static void 	mfi_enable_intr_ppc(struct mfi_softc *sc);
 static int32_t 	mfi_read_fw_status_xscale(struct mfi_softc *sc);
@@ -125,6 +127,11 @@ static int	mfi_event_class = MFI_EVT_CLASS_INFO;
 TUNABLE_INT("hw.mfi.event_class", &mfi_event_class);
 SYSCTL_INT(_hw_mfi, OID_AUTO, event_class, CTLFLAG_RW, &mfi_event_class,
           0, "event message class");
+
+static int	mfi_max_cmds = 128;
+TUNABLE_INT("hw.mfi.max_cmds", &mfi_max_cmds);
+SYSCTL_INT(_hw_mfi, OID_AUTO, max_cmds, CTLFLAG_RD, &mfi_max_cmds,
+	   0, "Max commands");
 
 /* Management interface */
 static d_open_t		mfi_open;
@@ -156,7 +163,11 @@ static void
 mfi_enable_intr_ppc(struct mfi_softc *sc)
 {
 	MFI_WRITE4(sc, MFI_ODCR0, 0xFFFFFFFF);
-	MFI_WRITE4(sc, MFI_OMSK, ~MFI_1078_EIM);
+	if (sc->mfi_flags & MFI_FLAGS_1078) {
+		MFI_WRITE4(sc, MFI_OMSK, ~MFI_1078_EIM);
+	} else if (sc->mfi_flags & MFI_FLAGS_GEN2) {
+		MFI_WRITE4(sc, MFI_OMSK, ~MFI_GEN2_EIM);
+	}
 }
 
 static int32_t
@@ -164,14 +175,14 @@ mfi_read_fw_status_xscale(struct mfi_softc *sc)
 {
 	return MFI_READ4(sc, MFI_OMSG0);
 }
- 
+
 static int32_t
 mfi_read_fw_status_ppc(struct mfi_softc *sc)
 {
 	return MFI_READ4(sc, MFI_OSP0);
 }
 
-static int 
+static int
 mfi_check_clear_intr_xscale(struct mfi_softc *sc)
 {
 	int32_t status;
@@ -182,28 +193,35 @@ mfi_check_clear_intr_xscale(struct mfi_softc *sc)
 
 	MFI_WRITE4(sc, MFI_OSTS, status);
 	return 0;
- }
+}
 
-static int 
+static int
 mfi_check_clear_intr_ppc(struct mfi_softc *sc)
 {
 	int32_t status;
 
 	status = MFI_READ4(sc, MFI_OSTS);
-	if (!status)
-		return 1; 
+	if (sc->mfi_flags & MFI_FLAGS_1078) {
+		if (!(status & MFI_1078_RM)) {
+			return 1;
+		}
+	} else if (sc->mfi_flags & MFI_FLAGS_GEN2) {
+		if (!(status & MFI_GEN2_RM)) {
+			return 1;
+		}
+	}
 
 	MFI_WRITE4(sc, MFI_ODCR0, status);
 	return 0;
- }
+}
 
-static void 
+static void
 mfi_issue_cmd_xscale(struct mfi_softc *sc,uint32_t bus_add,uint32_t frame_cnt)
 {
 	MFI_WRITE4(sc, MFI_IQP,(bus_add >>3)|frame_cnt);
 }
-  
-static void 
+
+static void
 mfi_issue_cmd_ppc(struct mfi_softc *sc,uint32_t bus_add,uint32_t frame_cnt)
 {
 	MFI_WRITE4(sc, MFI_IQP, (bus_add |frame_cnt <<1)|1 );
@@ -278,7 +296,8 @@ mfi_attach(struct mfi_softc *sc)
 	uint32_t status;
 	int error, commsz, framessz, sensesz;
 	int frames, unit, max_fw_sge;
-    device_printf(sc->mfi_dev, "Megaraid SAS driver Ver 2.00 \n");
+
+	device_printf(sc->mfi_dev, "Megaraid SAS driver Ver 3.00 \n");
 
 	mtx_init(&sc->mfi_io_lock, "MFI I/O lock", NULL, MTX_DEF);
 	sx_init(&sc->mfi_config_lock, "MFI config");
@@ -518,7 +537,7 @@ mfi_attach(struct mfi_softc *sc)
 	bus_generic_attach(sc->mfi_dev);
 
 	/* Start the timeout watchdog */
-	callout_init(&sc->mfi_watchdog_callout, 1);
+	callout_init(&sc->mfi_watchdog_callout, CALLOUT_MPSAFE);
 	callout_reset(&sc->mfi_watchdog_callout, MFI_CMD_TIMEOUT * hz,
 	    mfi_timeout, sc);
 
@@ -535,7 +554,11 @@ mfi_alloc_commands(struct mfi_softc *sc)
 	 * XXX Should we allocate all the commands up front, or allocate on
 	 * demand later like 'aac' does?
 	 */
-	ncmds = sc->mfi_max_fw_cmds;
+	ncmds = MIN(mfi_max_cmds, sc->mfi_max_fw_cmds);
+	if (bootverbose)
+		device_printf(sc->mfi_dev, "Max fw cmds= %d, sizing driver "
+		   "pool to %d\n", sc->mfi_max_fw_cmds, ncmds);
+
 	sc->mfi_commands = malloc(sizeof(struct mfi_command) * ncmds, M_MFIBUF,
 	    M_WAITOK | M_ZERO);
 
@@ -774,16 +797,14 @@ mfi_aen_setup(struct mfi_softc *sc, uint32_t seq_start)
 				free(log_state, M_MFIBUF);
 			return (error);
 		}
+
 		/*
-		 * Don't run them yet since we can't parse them.
-		 * We can indirectly get the contents from
-		 * the AEN mechanism via setting it lower then
-		 * current.  The firmware will iterate through them.
+		 * Walk through any events that fired since the last
+		 * shutdown.
 		 */
-		for (seq = log_state->shutdown_seq_num;
-		     seq <= log_state->newest_seq_num; seq++) {
-			mfi_get_entry(sc, seq);
-		}
+		mfi_parse_entries(sc, log_state->shutdown_seq_num,
+		    log_state->newest_seq_num);
+		seq = log_state->newest_seq_num;
 	} else
 		seq = seq_start;
 	mfi_aen_register(sc, seq, class_locale.word);
@@ -1012,292 +1033,57 @@ out:
 	return;
 }
 
+/*
+ * The timestamp is the number of seconds since 00:00 Jan 1, 2000.  If
+ * the bits in 24-31 are all set, then it is the number of seconds since
+ * boot.
+ */
+static const char *
+format_timestamp(uint32_t timestamp)
+{
+	static char buffer[32];
+
+	if ((timestamp & 0xff000000) == 0xff000000)
+		snprintf(buffer, sizeof(buffer), "boot + %us", timestamp &
+		    0x00ffffff);
+	else
+		snprintf(buffer, sizeof(buffer), "%us", timestamp);
+	return (buffer);
+}
+
+static const char *
+format_class(int8_t class)
+{
+	static char buffer[6];
+
+	switch (class) {
+	case MFI_EVT_CLASS_DEBUG:
+		return ("debug");
+	case MFI_EVT_CLASS_PROGRESS:
+		return ("progress");
+	case MFI_EVT_CLASS_INFO:
+		return ("info");
+	case MFI_EVT_CLASS_WARNING:
+		return ("WARN");
+	case MFI_EVT_CLASS_CRITICAL:
+		return ("CRIT");
+	case MFI_EVT_CLASS_FATAL:
+		return ("FATAL");
+	case MFI_EVT_CLASS_DEAD:
+		return ("DEAD");
+	default:
+		snprintf(buffer, sizeof(buffer), "%d", class);
+		return (buffer);
+	}
+}
+
 static void
 mfi_decode_evt(struct mfi_softc *sc, struct mfi_evt_detail *detail)
 {
-	switch (detail->arg_type) {
-	case MR_EVT_ARGS_NONE:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_CDB_SENSE:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - PD %02d(e%d/s%d) CDB %*D"
-		    "Sense %*D\n: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.cdb_sense.pd.device_id,
-		    detail->args.cdb_sense.pd.enclosure_index,
-		    detail->args.cdb_sense.pd.slot_number,
-		    detail->args.cdb_sense.cdb_len,
-		    detail->args.cdb_sense.cdb,
-		    ":",
-		    detail->args.cdb_sense.sense_len,
-		    detail->args.cdb_sense.sense,
-		    ":",
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_LD:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - VD %02d/%d "
-		    "event: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ld.ld_index,
-		    detail->args.ld.target_id,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_LD_COUNT:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - VD %02d/%d "
-		    "count %lld: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ld_count.ld.ld_index,
-		    detail->args.ld_count.ld.target_id,
-		    (long long)detail->args.ld_count.count,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_LD_LBA:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - VD %02d/%d "
-		    "lba %lld: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ld_lba.ld.ld_index,
-		    detail->args.ld_lba.ld.target_id,
-		    (long long)detail->args.ld_lba.lba,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_LD_OWNER:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - VD %02d/%d "
-		    "owner changed: prior %d, new %d: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ld_owner.ld.ld_index,
-		    detail->args.ld_owner.ld.target_id,
-		    detail->args.ld_owner.pre_owner,
-		    detail->args.ld_owner.new_owner,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_LD_LBA_PD_LBA:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - VD %02d/%d "
-		    "lba %lld, physical drive PD %02d(e%d/s%d) lba %lld: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ld_lba_pd_lba.ld.ld_index,
-		    detail->args.ld_lba_pd_lba.ld.target_id,
-		    (long long)detail->args.ld_lba_pd_lba.ld_lba,
-		    detail->args.ld_lba_pd_lba.pd.device_id,
-		    detail->args.ld_lba_pd_lba.pd.enclosure_index,
-		    detail->args.ld_lba_pd_lba.pd.slot_number,
-		    (long long)detail->args.ld_lba_pd_lba.pd_lba,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_LD_PROG:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - VD %02d/%d "
-		    "progress %d%% in %ds: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ld_prog.ld.ld_index,
-		    detail->args.ld_prog.ld.target_id,
-		    detail->args.ld_prog.prog.progress/655,
-		    detail->args.ld_prog.prog.elapsed_seconds,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_LD_STATE:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - VD %02d/%d "
-		    "state prior %d new %d: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ld_state.ld.ld_index,
-		    detail->args.ld_state.ld.target_id,
-		    detail->args.ld_state.prev_state,
-		    detail->args.ld_state.new_state,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_LD_STRIP:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - VD %02d/%d "
-		    "strip %lld: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ld_strip.ld.ld_index,
-		    detail->args.ld_strip.ld.target_id,
-		    (long long)detail->args.ld_strip.strip,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_PD:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - PD %02d(e%d/s%d) "
-		    "event: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.pd.device_id,
-		    detail->args.pd.enclosure_index,
-		    detail->args.pd.slot_number,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_PD_ERR:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - PD %02d(e%d/s%d) "
-		    "err %d: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.pd_err.pd.device_id,
-		    detail->args.pd_err.pd.enclosure_index,
-		    detail->args.pd_err.pd.slot_number,
-		    detail->args.pd_err.err,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_PD_LBA:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - PD %02d(e%d/s%d) "
-		    "lba %lld: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.pd_lba.pd.device_id,
-		    detail->args.pd_lba.pd.enclosure_index,
-		    detail->args.pd_lba.pd.slot_number,
-		    (long long)detail->args.pd_lba.lba,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_PD_LBA_LD:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - PD %02d(e%d/s%d) "
-		    "lba %lld VD %02d/%d: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.pd_lba_ld.pd.device_id,
-		    detail->args.pd_lba_ld.pd.enclosure_index,
-		    detail->args.pd_lba_ld.pd.slot_number,
-		    (long long)detail->args.pd_lba.lba,
-		    detail->args.pd_lba_ld.ld.ld_index,
-		    detail->args.pd_lba_ld.ld.target_id,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_PD_PROG:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - PD %02d(e%d/s%d) "
-		    "progress %d%% seconds %ds: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.pd_prog.pd.device_id,
-		    detail->args.pd_prog.pd.enclosure_index,
-		    detail->args.pd_prog.pd.slot_number,
-		    detail->args.pd_prog.prog.progress/655,
-		    detail->args.pd_prog.prog.elapsed_seconds,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_PD_STATE:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - PD %02d(e%d/s%d) "
-		    "state prior %d new %d: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.pd_prog.pd.device_id,
-		    detail->args.pd_prog.pd.enclosure_index,
-		    detail->args.pd_prog.pd.slot_number,
-		    detail->args.pd_state.prev_state,
-		    detail->args.pd_state.new_state,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_PCI:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - PCI 0x04%x 0x04%x "
-		    "0x04%x 0x04%x: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.pci.venderId,
-		    detail->args.pci.deviceId,
-		    detail->args.pci.subVenderId,
-		    detail->args.pci.subDeviceId,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_RATE:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - Rebuild rate %d: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.rate,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_TIME:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - Adapter ticks %d "
-		    "elapsed %ds: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.time.rtc,
-		    detail->args.time.elapsedSeconds,
-		    detail->description
-		    );
-		break;
-	case MR_EVT_ARGS_ECC:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - Adapter ECC %x,%x: %s: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->args.ecc.ecar,
-		    detail->args.ecc.elog,
-		    detail->args.ecc.str,
-		    detail->description
-		    );
-		break;
-	default:
-		device_printf(sc->mfi_dev, "%d (%us/0x%04x/%d) - Type %d: %s\n",
-		    detail->seq,
-		    detail->time,
-		    detail->class.members.locale,
-		    detail->class.members.class,
-		    detail->arg_type, detail->description
-		    );
-	}
+
+	device_printf(sc->mfi_dev, "%d (%s/0x%04x/%s) - %s\n", detail->seq,
+	    format_timestamp(detail->time), detail->class.members.locale,
+	    format_class(detail->class.members.class), detail->description);
 }
 
 static int
@@ -1377,9 +1163,7 @@ mfi_aen_complete(struct mfi_command *cm)
 		 * XXX If this function is too expensive or is recursive, then
 		 * events should be put onto a queue and processed later.
 		 */
-		mtx_unlock(&sc->mfi_io_lock);
 		mfi_decode_evt(sc, detail);
-		mtx_lock(&sc->mfi_io_lock);
 		seq = detail->seq + 1;
 		TAILQ_FOREACH_SAFE(mfi_aen_entry, &sc->mfi_aen_pids, aen_link, tmp) {
 			TAILQ_REMOVE(&sc->mfi_aen_pids, mfi_aen_entry,
@@ -1402,66 +1186,91 @@ mfi_aen_complete(struct mfi_command *cm)
 	}
 }
 
-/* Only do one event for now so we can easily iterate through them */
-#define MAX_EVENTS 1
+#define MAX_EVENTS 15
+
 static int
-mfi_get_entry(struct mfi_softc *sc, int seq)
+mfi_parse_entries(struct mfi_softc *sc, int start_seq, int stop_seq)
 {
 	struct mfi_command *cm;
 	struct mfi_dcmd_frame *dcmd;
 	struct mfi_evt_list *el;
-	int error;
-	int i;
-	int size;
+	union mfi_evt class_locale;
+	int error, i, seq, size;
 
-	if ((cm = mfi_dequeue_free(sc)) == NULL) {
-		return (EBUSY);
-	}
+	class_locale.members.reserved = 0;
+	class_locale.members.locale = mfi_event_locale;
+	class_locale.members.class  = mfi_event_class;
 
 	size = sizeof(struct mfi_evt_list) + sizeof(struct mfi_evt_detail)
 		* (MAX_EVENTS - 1);
 	el = malloc(size, M_MFIBUF, M_NOWAIT | M_ZERO);
-	if (el == NULL) {
-		mfi_release_command(cm);
+	if (el == NULL)
 		return (ENOMEM);
-	}
 
-	dcmd = &cm->cm_frame->dcmd;
-	bzero(dcmd->mbox, MFI_MBOX_SIZE);
-	dcmd->header.cmd = MFI_CMD_DCMD;
-	dcmd->header.timeout = 0;
-	dcmd->header.data_len = size;
-	dcmd->opcode = MFI_DCMD_CTRL_EVENT_GET;
-	((uint32_t *)&dcmd->mbox)[0] = seq;
-	((uint32_t *)&dcmd->mbox)[1] = MFI_EVT_LOCALE_ALL;
-	cm->cm_sg = &dcmd->sgl;
-	cm->cm_total_frame_size = MFI_DCMD_FRAME_SIZE;
-	cm->cm_flags = MFI_CMD_DATAIN | MFI_CMD_POLLED;
-	cm->cm_data = el;
-	cm->cm_len = size;
-
-	if ((error = mfi_mapcmd(sc, cm)) != 0) {
-		device_printf(sc->mfi_dev, "Failed to get controller entry\n");
-		sc->mfi_max_io = (sc->mfi_max_sge - 1) * PAGE_SIZE /
-		    MFI_SECTOR_LEN;
-		free(el, M_MFIBUF);
-		mfi_release_command(cm);
-		return (0);
-	}
-
-	bus_dmamap_sync(sc->mfi_buffer_dmat, cm->cm_dmamap,
-	    BUS_DMASYNC_POSTREAD);
-	bus_dmamap_unload(sc->mfi_buffer_dmat, cm->cm_dmamap);
-
-	if (dcmd->header.cmd_status != MFI_STAT_NOT_FOUND) {
-		for (i = 0; i < el->count; i++) {
-			if (seq + i == el->event[i].seq)
-				mfi_decode_evt(sc, &el->event[i]);
+	for (seq = start_seq;;) {
+		if ((cm = mfi_dequeue_free(sc)) == NULL) {
+			free(el, M_MFIBUF);
+			return (EBUSY);
 		}
+
+		dcmd = &cm->cm_frame->dcmd;
+		bzero(dcmd->mbox, MFI_MBOX_SIZE);
+		dcmd->header.cmd = MFI_CMD_DCMD;
+		dcmd->header.timeout = 0;
+		dcmd->header.data_len = size;
+		dcmd->opcode = MFI_DCMD_CTRL_EVENT_GET;
+		((uint32_t *)&dcmd->mbox)[0] = seq;
+		((uint32_t *)&dcmd->mbox)[1] = class_locale.word;
+		cm->cm_sg = &dcmd->sgl;
+		cm->cm_total_frame_size = MFI_DCMD_FRAME_SIZE;
+		cm->cm_flags = MFI_CMD_DATAIN | MFI_CMD_POLLED;
+		cm->cm_data = el;
+		cm->cm_len = size;
+
+		if ((error = mfi_mapcmd(sc, cm)) != 0) {
+			device_printf(sc->mfi_dev,
+			    "Failed to get controller entries\n");
+			mfi_release_command(cm);
+			break;
+		}
+
+		bus_dmamap_sync(sc->mfi_buffer_dmat, cm->cm_dmamap,
+		    BUS_DMASYNC_POSTREAD);
+		bus_dmamap_unload(sc->mfi_buffer_dmat, cm->cm_dmamap);
+
+		if (dcmd->header.cmd_status == MFI_STAT_NOT_FOUND) {
+			mfi_release_command(cm);
+			break;
+		}
+		if (dcmd->header.cmd_status != MFI_STAT_OK) {
+			device_printf(sc->mfi_dev,
+			    "Error %d fetching controller entries\n",
+			    dcmd->header.cmd_status);
+			mfi_release_command(cm);
+			break;
+		}
+		mfi_release_command(cm);
+
+		for (i = 0; i < el->count; i++) {
+			/*
+			 * If this event is newer than 'stop_seq' then
+			 * break out of the loop.  Note that the log
+			 * is a circular buffer so we have to handle
+			 * the case that our stop point is earlier in
+			 * the buffer than our start point.
+			 */
+			if (el->event[i].seq >= stop_seq) {
+				if (start_seq <= stop_seq)
+					break;
+				else if (el->event[i].seq < start_seq)
+					break;
+			}
+			mfi_decode_evt(sc, &el->event[i]);
+		}
+		seq = el->event[el->count - 1].seq + 1;
 	}
 
-	free(cm->cm_data, M_MFIBUF);
-	mfi_release_command(cm);
+	free(el, M_MFIBUF);
 	return (0);
 }
 
@@ -1602,6 +1411,8 @@ mfi_bio_complete(struct mfi_command *cm)
 		device_printf(sc->mfi_dev, "I/O error, status= %d "
 		    "scsi_status= %d\n", hdr->cmd_status, hdr->scsi_status);
 		mfi_print_sense(cm->cm_sc, cm->cm_sense);
+	} else if (cm->cm_error != 0) {
+		bio->bio_flags |= BIO_ERROR;
 	}
 
 	mfi_release_command(cm);
@@ -2018,8 +1829,85 @@ mfi_check_command_post(struct mfi_softc *sc, struct mfi_command *cm)
 	case MFI_DCMD_CFG_ADD:
 		mfi_ldprobe(sc);
 		break;
+	case MFI_DCMD_CFG_FOREIGN_IMPORT:
+		mfi_ldprobe(sc);
+		break;
 	}
 }
+
+static int
+mfi_user_command(struct mfi_softc *sc, struct mfi_ioc_passthru *ioc)
+{
+	struct mfi_command *cm;
+	struct mfi_dcmd_frame *dcmd;
+	void *ioc_buf = NULL;
+	uint32_t context;
+	int error = 0, locked;
+
+
+	if (ioc->buf_size > 0) {
+		ioc_buf = malloc(ioc->buf_size, M_MFIBUF, M_WAITOK);
+		if (ioc_buf == NULL) {
+			return (ENOMEM);
+		}
+		error = copyin(ioc->buf, ioc_buf, ioc->buf_size);
+		if (error) {
+			device_printf(sc->mfi_dev, "failed to copyin\n");
+			free(ioc_buf, M_MFIBUF);
+			return (error);
+		}
+	}
+
+	locked = mfi_config_lock(sc, ioc->ioc_frame.opcode);
+
+	mtx_lock(&sc->mfi_io_lock);
+	while ((cm = mfi_dequeue_free(sc)) == NULL)
+		msleep(mfi_user_command, &sc->mfi_io_lock, 0, "mfiioc", hz);
+
+	/* Save context for later */
+	context = cm->cm_frame->header.context;
+
+	dcmd = &cm->cm_frame->dcmd;
+	bcopy(&ioc->ioc_frame, dcmd, sizeof(struct mfi_dcmd_frame));
+
+	cm->cm_sg = &dcmd->sgl;
+	cm->cm_total_frame_size = MFI_DCMD_FRAME_SIZE;
+	cm->cm_data = ioc_buf;
+	cm->cm_len = ioc->buf_size;
+
+	/* restore context */
+	cm->cm_frame->header.context = context;
+
+	/* Cheat since we don't know if we're writing or reading */
+	cm->cm_flags = MFI_CMD_DATAIN | MFI_CMD_DATAOUT;
+
+	error = mfi_check_command_pre(sc, cm);
+	if (error)
+		goto out;
+
+	error = mfi_wait_command(sc, cm);
+	if (error) {
+		device_printf(sc->mfi_dev, "ioctl failed %d\n", error);
+		goto out;
+	}
+	bcopy(dcmd, &ioc->ioc_frame, sizeof(struct mfi_dcmd_frame));
+	mfi_check_command_post(sc, cm);
+out:
+	mfi_release_command(cm);
+	mtx_unlock(&sc->mfi_io_lock);
+	mfi_config_unlock(sc, locked);
+	if (ioc->buf_size > 0)
+		error = copyout(ioc_buf, ioc->buf, ioc->buf_size);
+	if (ioc_buf)
+		free(ioc_buf, M_MFIBUF);
+	return (error);
+}
+
+#ifdef __amd64__
+#define	PTRIN(p)		((void *)(uintptr_t)(p))
+#else
+#define	PTRIN(p)		(p)
+#endif
 
 static int
 mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
@@ -2027,12 +1915,20 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 	struct mfi_softc *sc;
 	union mfi_statrequest *ms;
 	struct mfi_ioc_packet *ioc;
+#ifdef __amd64__
+	struct mfi_ioc_packet32 *ioc32;
+#endif
 	struct mfi_ioc_aen *aen;
 	struct mfi_command *cm = NULL;
 	uint32_t context;
-	uint8_t *sense_ptr;
+	union mfi_sense_ptr sense_ptr;
 	uint8_t *data = NULL, *temp;
 	int i;
+	struct mfi_ioc_passthru *iop = (struct mfi_ioc_passthru *)arg;
+#ifdef __amd64__
+	struct mfi_ioc_passthru32 *iop32 = (struct mfi_ioc_passthru32 *)arg;
+	struct mfi_ioc_passthru iop_swab;
+#endif
 	int error, locked;
 
 	sc = dev->si_drv1;
@@ -2079,8 +1975,19 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 		break;
 	}
 	case MFI_CMD:
+#ifdef __amd64__
+	case MFI_CMD32:
+#endif
+		{
+		devclass_t devclass;
 		ioc = (struct mfi_ioc_packet *)arg;
+		int adapter;
 
+		adapter = ioc->mfi_adapter_no;
+		if (device_get_unit(sc->mfi_dev) == 0 && adapter != 0) {
+			devclass = devclass_find("mfi");
+			sc = devclass_get_softc(devclass, adapter);
+		}
 		mtx_lock(&sc->mfi_io_lock);
 		if ((cm = mfi_dequeue_free(sc)) == NULL) {
 			mtx_unlock(&sc->mfi_io_lock);
@@ -2096,8 +2003,9 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 		context = cm->cm_frame->header.context;
 
 		bcopy(ioc->mfi_frame.raw, cm->cm_frame,
-		      2 * MFI_DCMD_FRAME_SIZE);  /* this isn't quite right */
-		cm->cm_total_frame_size = (sizeof(union mfi_sgl) * ioc->mfi_sge_count) + ioc->mfi_sgl_off;
+		    2 * MFI_DCMD_FRAME_SIZE);  /* this isn't quite right */
+		cm->cm_total_frame_size = (sizeof(union mfi_sgl)
+		    * ioc->mfi_sge_count) + ioc->mfi_sgl_off;
 		if (ioc->mfi_sge_count) {
 			cm->cm_sg =
 			    (union mfi_sgl *)&cm->cm_frame->bytes[ioc->mfi_sgl_off];
@@ -2111,7 +2019,8 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 		if (cm->cm_flags == 0)
 			cm->cm_flags |= MFI_CMD_DATAIN | MFI_CMD_DATAOUT;
 		cm->cm_len = cm->cm_frame->header.data_len;
-		if (cm->cm_flags & (MFI_CMD_DATAIN | MFI_CMD_DATAOUT)) {
+		if (cm->cm_len &&
+		    (cm->cm_flags & (MFI_CMD_DATAIN | MFI_CMD_DATAOUT))) {
 			cm->cm_data = data = malloc(cm->cm_len, M_MFIBUF,
 			    M_WAITOK | M_ZERO);
 			if (cm->cm_data == NULL) {
@@ -2128,9 +2037,27 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 		temp = data;
 		if (cm->cm_flags & MFI_CMD_DATAOUT) {
 			for (i = 0; i < ioc->mfi_sge_count; i++) {
+#ifdef __amd64__
+				if (cmd == MFI_CMD) {
+					/* Native */
+					error = copyin(ioc->mfi_sgl[i].iov_base,
+					       temp,
+					       ioc->mfi_sgl[i].iov_len);
+				} else {
+					void *temp_convert;
+					/* 32bit */
+					ioc32 = (struct mfi_ioc_packet32 *)ioc;
+					temp_convert =
+					    PTRIN(ioc32->mfi_sgl[i].iov_base);
+					error = copyin(temp_convert,
+					       temp,
+					       ioc32->mfi_sgl[i].iov_len);
+				}
+#else
 				error = copyin(ioc->mfi_sgl[i].iov_base,
 				       temp,
 				       ioc->mfi_sgl[i].iov_len);
+#endif
 				if (error != 0) {
 					device_printf(sc->mfi_dev,
 					    "Copy in failed\n");
@@ -2142,6 +2069,11 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 
 		if (cm->cm_frame->header.cmd == MFI_CMD_DCMD)
 			locked = mfi_config_lock(sc, cm->cm_frame->dcmd.opcode);
+
+		if (cm->cm_frame->header.cmd == MFI_CMD_PD_SCSI_IO) {
+			cm->cm_frame->pass.sense_addr_lo = cm->cm_sense_busaddr;
+			cm->cm_frame->pass.sense_addr_hi = 0;
+		}
 
 		mtx_lock(&sc->mfi_io_lock);
 		error = mfi_check_command_pre(sc, cm);
@@ -2163,9 +2095,27 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 		temp = data;
 		if (cm->cm_flags & MFI_CMD_DATAIN) {
 			for (i = 0; i < ioc->mfi_sge_count; i++) {
+#ifdef __amd64__
+				if (cmd == MFI_CMD) {
+					/* Native */
+					error = copyout(temp,
+						ioc->mfi_sgl[i].iov_base,
+						ioc->mfi_sgl[i].iov_len);
+				} else {
+					void *temp_convert;
+					/* 32bit */
+					ioc32 = (struct mfi_ioc_packet32 *)ioc;
+					temp_convert =
+					    PTRIN(ioc32->mfi_sgl[i].iov_base);
+					error = copyout(temp,
+						temp_convert,
+						ioc32->mfi_sgl[i].iov_len);
+				}
+#else
 				error = copyout(temp,
 					ioc->mfi_sgl[i].iov_base,
 					ioc->mfi_sgl[i].iov_len);
+#endif
 				if (error != 0) {
 					device_printf(sc->mfi_dev,
 					    "Copy out failed\n");
@@ -2176,10 +2126,20 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 		}
 
 		if (ioc->mfi_sense_len) {
-			/* copy out sense */
-			sense_ptr = &((struct mfi_ioc_packet*)arg)
-			    ->mfi_frame.raw[0];
-			error = copyout(cm->cm_sense, sense_ptr,
+			/* get user-space sense ptr then copy out sense */
+			bcopy(&((struct mfi_ioc_packet*)arg)
+			    ->mfi_frame.raw[ioc->mfi_sense_off],
+			    &sense_ptr.sense_ptr_data[0],
+			    sizeof(sense_ptr.sense_ptr_data));
+#ifdef __amd64__
+			if (cmd != MFI_CMD) {
+				/*
+				 * not 64bit native so zero out any address
+				 * over 32bit */
+				sense_ptr.addr.high = 0;
+			}
+#endif
+			error = copyout(cm->cm_sense, sense_ptr.user_space,
 			    ioc->mfi_sense_len);
 			if (error != 0) {
 				device_printf(sc->mfi_dev,
@@ -2200,6 +2160,7 @@ out:
 		}
 
 		break;
+		}
 	case MFI_SET_AEN:
 		aen = (struct mfi_ioc_aen *)arg;
 		error = mfi_aen_register(sc, aen->aen_seq_num,
@@ -2248,6 +2209,21 @@ out:
 			    cmd, arg, flag, td));
 			break;
 		}
+#ifdef __amd64__
+	case MFIIO_PASSTHRU32:
+		iop_swab.ioc_frame	= iop32->ioc_frame;
+		iop_swab.buf_size	= iop32->buf_size;
+		iop_swab.buf		= PTRIN(iop32->buf);
+		iop			= &iop_swab;
+		/* FALLTHROUGH */
+#endif
+	case MFIIO_PASSTHRU:
+		error = mfi_user_command(sc, iop);
+#ifdef __amd64__
+		if (cmd == MFIIO_PASSTHRU32)
+			iop32->ioc_frame = iop_swab.ioc_frame;
+#endif
+		break;
 	default:
 		device_printf(sc->mfi_dev, "IOCTL 0x%lx not handled\n", cmd);
 		error = ENOENT;
@@ -2265,10 +2241,9 @@ mfi_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_threa
 	struct mfi_linux_ioc_aen l_aen;
 	struct mfi_command *cm = NULL;
 	struct mfi_aen *mfi_aen_entry;
-	uint8_t *sense_ptr;
+	union mfi_sense_ptr sense_ptr;
 	uint32_t context;
 	uint8_t *data = NULL, *temp;
-	void *temp_convert;
 	int i;
 	int error, locked;
 
@@ -2300,7 +2275,8 @@ mfi_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_threa
 
 		bcopy(l_ioc.lioc_frame.raw, cm->cm_frame,
 		      2 * MFI_DCMD_FRAME_SIZE);	/* this isn't quite right */
-		cm->cm_total_frame_size = (sizeof(union mfi_sgl) * l_ioc.lioc_sge_count) + l_ioc.lioc_sgl_off;
+		cm->cm_total_frame_size = (sizeof(union mfi_sgl)
+		      * l_ioc.lioc_sge_count) + l_ioc.lioc_sgl_off;
 		if (l_ioc.lioc_sge_count)
 			cm->cm_sg =
 			    (union mfi_sgl *)&cm->cm_frame->bytes[l_ioc.lioc_sgl_off];
@@ -2310,7 +2286,8 @@ mfi_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_threa
 		if (cm->cm_frame->header.flags & MFI_FRAME_DATAOUT)
 			cm->cm_flags |= MFI_CMD_DATAOUT;
 		cm->cm_len = cm->cm_frame->header.data_len;
-		if (cm->cm_flags & (MFI_CMD_DATAIN | MFI_CMD_DATAOUT)) {
+		if (cm->cm_len &&
+		      (cm->cm_flags & (MFI_CMD_DATAIN | MFI_CMD_DATAOUT))) {
 			cm->cm_data = data = malloc(cm->cm_len, M_MFIBUF,
 			    M_WAITOK | M_ZERO);
 			if (cm->cm_data == NULL) {
@@ -2327,9 +2304,7 @@ mfi_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_threa
 		temp = data;
 		if (cm->cm_flags & MFI_CMD_DATAOUT) {
 			for (i = 0; i < l_ioc.lioc_sge_count; i++) {
-				temp_convert =
-				    (void *)(uintptr_t)l_ioc.lioc_sgl[i].iov_base;
-				error = copyin(temp_convert,
+				error = copyin(PTRIN(l_ioc.lioc_sgl[i].iov_base),
 				       temp,
 				       l_ioc.lioc_sgl[i].iov_len);
 				if (error != 0) {
@@ -2343,6 +2318,11 @@ mfi_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_threa
 
 		if (cm->cm_frame->header.cmd == MFI_CMD_DCMD)
 			locked = mfi_config_lock(sc, cm->cm_frame->dcmd.opcode);
+
+		if (cm->cm_frame->header.cmd == MFI_CMD_PD_SCSI_IO) {
+			cm->cm_frame->pass.sense_addr_lo = cm->cm_sense_busaddr;
+			cm->cm_frame->pass.sense_addr_hi = 0;
+		}
 
 		mtx_lock(&sc->mfi_io_lock);
 		error = mfi_check_command_pre(sc, cm);
@@ -2364,10 +2344,8 @@ mfi_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_threa
 		temp = data;
 		if (cm->cm_flags & MFI_CMD_DATAIN) {
 			for (i = 0; i < l_ioc.lioc_sge_count; i++) {
-				temp_convert =
-				    (void *)(uintptr_t)l_ioc.lioc_sgl[i].iov_base;
 				error = copyout(temp,
-					temp_convert,
+					PTRIN(l_ioc.lioc_sgl[i].iov_base),
 					l_ioc.lioc_sgl[i].iov_len);
 				if (error != 0) {
 					device_printf(sc->mfi_dev,
@@ -2379,10 +2357,19 @@ mfi_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_threa
 		}
 
 		if (l_ioc.lioc_sense_len) {
-			/* copy out sense */
-			sense_ptr = &((struct mfi_linux_ioc_packet*)arg)
-			    ->lioc_frame.raw[0];
-			error = copyout(cm->cm_sense, sense_ptr,
+			/* get user-space sense ptr then copy out sense */
+			bcopy(&((struct mfi_linux_ioc_packet*)arg)
+                            ->lioc_frame.raw[l_ioc.lioc_sense_off],
+			    &sense_ptr.sense_ptr_data[0],
+			    sizeof(sense_ptr.sense_ptr_data));
+#ifdef __amd64__
+			/*
+			 * only 32bit Linux support so zero out any
+			 * address over 32bit
+			 */
+			sense_ptr.addr.high = 0;
+#endif
+			error = copyout(cm->cm_sense, sense_ptr.user_space,
 			    l_ioc.lioc_sense_len);
 			if (error != 0) {
 				device_printf(sc->mfi_dev,

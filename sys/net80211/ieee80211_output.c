@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_output.c,v 1.54.2.3 2007/12/07 05:46:08 kmacy Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_output.c,v 1.54.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 
@@ -1677,7 +1676,7 @@ ieee80211_send_mgmt(struct ieee80211com *ic, struct ieee80211_node *ni,
 			frm = ieee80211_add_htcap_vendor(frm, ni);
 			frm = ieee80211_add_htinfo_vendor(frm, ni);
 		}
-		if (ni->ni_ath_ie != NULL)
+		if (ni->ni_ies.ath_ie != NULL)
 			frm = ieee80211_add_ath(frm, ni->ni_ath_flags,
 				ni->ni_ath_defkeyix);
 		m->m_pkthdr.len = m->m_len = frm - mtod(m, uint8_t *);
@@ -1831,14 +1830,15 @@ ieee80211_send_mgmt(struct ieee80211com *ic, struct ieee80211_node *ni,
 		frm = ieee80211_add_rates(frm, &ni->ni_rates);
 		frm = ieee80211_add_xrates(frm, &ni->ni_rates);
 		if ((ic->ic_flags_ext & IEEE80211_FEXT_HT) &&
-		    ni->ni_htcap_ie != NULL &&
-		    ni->ni_htcap_ie[0] == IEEE80211_ELEMID_HTCAP)
+		    ni->ni_ies.htcap_ie != NULL &&
+		    ni->ni_ies.htcap_ie[0] == IEEE80211_ELEMID_HTCAP)
 			frm = ieee80211_add_htcap(frm, ni);
-		if ((ic->ic_flags & IEEE80211_F_WME) && ni->ni_wme_ie != NULL)
+		if ((ic->ic_flags & IEEE80211_F_WME) &&
+		    ni->ni_ies.wme_ie != NULL)
 			frm = ieee80211_add_wme_info(frm, &ic->ic_wme);
 		if ((ic->ic_flags_ext & IEEE80211_FEXT_HT) &&
-		    ni->ni_htcap_ie != NULL &&
-		    ni->ni_htcap_ie[0] == IEEE80211_ELEMID_VENDOR)
+		    ni->ni_ies.htcap_ie != NULL &&
+		    ni->ni_ies.htcap_ie[0] == IEEE80211_ELEMID_VENDOR)
 			frm = ieee80211_add_htcap_vendor(frm, ni);
 		if (IEEE80211_ATH_CAP(ic, ni, IEEE80211_F_ATHEROS))
 			frm = ieee80211_add_ath(frm,
@@ -1907,7 +1907,8 @@ ieee80211_send_mgmt(struct ieee80211com *ic, struct ieee80211_node *ni,
 			frm = ieee80211_add_htcap(frm, ni);
 			frm = ieee80211_add_htinfo(frm, ni);
 		}
-		if ((ic->ic_flags & IEEE80211_F_WME) && ni->ni_wme_ie != NULL)
+		if ((ic->ic_flags & IEEE80211_F_WME) &&
+		    ni->ni_ies.wme_ie != NULL)
 			frm = ieee80211_add_wme_param(frm, &ic->ic_wme);
 		if ((ni->ni_flags & HTFLAGS) == HTFLAGS) {
 			frm = ieee80211_add_htcap_vendor(frm, ni);

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netipsec/ipsec.h,v 1.13 2007/07/01 11:38:29 gnn Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/ipsec.h,v 1.13.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: ipsec.h,v 1.53 2001/11/20 08:32:38 itojun Exp $	*/
 
 /*-
@@ -371,7 +370,7 @@ extern u_int ipsec_get_reqlevel __P((struct ipsecrequest *));
 extern int ipsec_in_reject __P((struct secpolicy *, struct mbuf *));
 
 extern int ipsec4_set_policy __P((struct inpcb *inp, int optname,
-	caddr_t request, size_t len, int priv));
+	caddr_t request, size_t len, struct ucred *cred));
 extern int ipsec4_get_policy __P((struct inpcb *inpcb, caddr_t request,
 	size_t len, struct mbuf **mp));
 extern int ipsec4_delete_pcbpolicy __P((struct inpcb *));
@@ -411,8 +410,15 @@ extern	void m_checkalignment(const char* where, struct mbuf *m0,
 extern	struct mbuf *m_makespace(struct mbuf *m0, int skip, int hlen, int *off);
 extern	caddr_t m_pad(struct mbuf *m, int n);
 extern	int m_striphdr(struct mbuf *m, int skip, int hlen);
-extern	int ipsec_filter(struct mbuf **, int);
-extern	void ipsec_bpf(struct mbuf *, struct secasvar *, int);
+
+#ifdef DEV_ENC
+#define	ENC_BEFORE	0x0001
+#define	ENC_AFTER	0x0002
+#define	ENC_IN		0x0100
+#define	ENC_OUT		0x0200
+extern	int ipsec_filter(struct mbuf **, int, int);
+extern	void ipsec_bpf(struct mbuf *, struct secasvar *, int, int);
+#endif
 #endif /* _KERNEL */
 
 #ifndef _KERNEL

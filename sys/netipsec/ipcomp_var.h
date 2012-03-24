@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netipsec/ipcomp_var.h,v 1.2 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/ipcomp_var.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: ipcomp.h,v 1.8 2000/09/26 07:55:14 itojun Exp $	*/
 
 /*-

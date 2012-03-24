@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netipsec/keysock.c,v 1.18.2.2 2007/11/20 09:35:15 bz Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/keysock.c,v 1.18.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: keysock.c,v 1.25 2001/08/13 20:07:41 itojun Exp $	*/
 
 /*-
@@ -68,7 +67,6 @@ struct key_cb {
 };
 static struct key_cb key_cb;
 
-static struct sockaddr key_dst = { 2, PF_KEY, };
 static struct sockaddr key_src = { 2, PF_KEY, };
 
 static int key_sendup0 __P((struct rawcb *, struct mbuf *, int));
@@ -413,8 +411,6 @@ key_attach(struct socket *so, int proto, struct thread *td)
 	if (kp->kp_raw.rcb_proto.sp_protocol == PF_KEY) /* XXX: AF_KEY */
 		key_cb.key_count++;
 	key_cb.any_count++;
-	kp->kp_raw.rcb_laddr = &key_src;
-	kp->kp_raw.rcb_faddr = &key_dst;
 	soisconnected(so);
 	so->so_options |= SO_USELOOPBACK;
 

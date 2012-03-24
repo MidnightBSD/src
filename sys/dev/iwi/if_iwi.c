@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iwi/if_iwi.c,v 1.57.2.1 2007/12/06 09:50:48 philip Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/iwi/if_iwi.c,v 1.57.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Intel(R) PRO/Wireless 2200BG/2225BG/2915ABG driver
@@ -2939,7 +2939,7 @@ iwi_auth_and_assoc(struct iwi_softc *sc)
 
 	memset(assoc, 0, sizeof *assoc);
 
-	if ((ic->ic_flags & IEEE80211_F_WME) && ni->ni_wme_ie != NULL) {
+	if ((ic->ic_flags & IEEE80211_F_WME) && ni->ni_ies.wme_ie != NULL) {
 		/* NB: don't treat WME setup as failure */
 		if (iwi_wme_setparams(sc) == 0 && iwi_wme_setie(sc) == 0)
 			assoc->policy |= htole16(IWI_POLICY_WME);

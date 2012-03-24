@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_ht.h,v 1.2.2.1 2007/11/11 17:44:35 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_ht.h,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _NET80211_IEEE80211_HT_H_
 #define _NET80211_IEEE80211_HT_H_
@@ -56,6 +55,7 @@ struct ieee80211_tx_ampdu {
 	int		txa_lastrequest;/* time of last ADDBA request */
 	struct ifqueue	txa_q;		/* packet queue */
 	struct callout	txa_timer;
+	void		*txa_private;	/* driver-private storage */
 };
 
 /* return non-zero if AMPDU tx for the TID is running */

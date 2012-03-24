@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211.h,v 1.15.2.3 2007/11/28 06:12:30 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211.h,v 1.15.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _NET80211_IEEE80211_H_
 #define _NET80211_IEEE80211_H_
@@ -764,6 +763,8 @@ struct ieee80211_ath_ie {
 #define	WPA_ASE_NONE		0x00
 #define	WPA_ASE_8021X_UNSPEC	0x01
 #define	WPA_ASE_8021X_PSK	0x02
+
+#define	WPS_OUI_TYPE		0x04
 
 #define	RSN_OUI			0xac0f00
 #define	RSN_VERSION		1		/* current supported version */

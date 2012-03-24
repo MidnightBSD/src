@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/twa/tw_osl_freebsd.c,v 1.9 2007/10/09 17:43:57 scottl Exp $
+ *	$FreeBSD: src/sys/dev/twa/tw_osl_freebsd.c,v 1.9.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -492,7 +492,7 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	if (bus_dma_tag_create(NULL,			/* parent */
 				sc->alignment,		/* alignment */
 				0,			/* boundary */
-				BUS_SPACE_MAXADDR,	/* lowaddr */
+				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
 				TW_CL_MAX_IO_SIZE,	/* maxsize */
@@ -515,7 +515,7 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	if (bus_dma_tag_create(sc->parent_tag,		/* parent */
 				sc->alignment,		/* alignment */
 				0,			/* boundary */
-				BUS_SPACE_MAXADDR,	/* lowaddr */
+				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
 				dma_mem_size,		/* maxsize */
@@ -562,7 +562,7 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	if (bus_dma_tag_create(sc->parent_tag,		/* parent */
 				sc->alignment,		/* alignment */
 				0,			/* boundary */
-				BUS_SPACE_MAXADDR,	/* lowaddr */
+				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
 				TW_CL_MAX_IO_SIZE,	/* maxsize */
@@ -588,7 +588,7 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	if (bus_dma_tag_create(sc->parent_tag,		/* parent */
 				sc->alignment,		/* alignment */
 				0,			/* boundary */
-				BUS_SPACE_MAXADDR,	/* lowaddr */
+				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
 				TW_CL_MAX_IO_SIZE,	/* maxsize */

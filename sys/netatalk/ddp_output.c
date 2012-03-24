@@ -22,7 +22,7 @@
  *	netatalk@itd.umich.edu
  */
 
-/* $FreeBSD: src/sys/netatalk/ddp_output.c,v 1.30 2007/01/12 15:07:51 rwatson Exp $ */
+/* $FreeBSD: src/sys/netatalk/ddp_output.c,v 1.30.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #include "opt_mac.h"
 
@@ -192,6 +192,14 @@ ddp_route(struct mbuf *m, struct route *ro)
 	 * mbuf without ensuring that the mbuf pointer is aligned.  This is
 	 * bad for transition routing, since phase 1 and phase 2 packets end
 	 * up poorly aligned due to the three byte elap header.
+	 *
+	 * XXXRW: kern/4184 suggests that an m_pullup() of (m) should take
+	 * place here to address possible alignment issues.
+	 *
+	 * XXXRW: This appears not to handle M_PKTHDR properly, as it doesn't
+	 * move the existing header from the old packet to the new one.
+	 * Posibly should call M_MOVE_PKTHDR()?  This would also allow
+	 * removing mac_mbuf_copy().
 	 */
 	if (!(aa->aa_flags & AFA_PHASE2)) {
 		MGET(m0, M_DONTWAIT, MT_DATA);

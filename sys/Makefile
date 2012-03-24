@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/Makefile,v 1.7 2008/10/01 16:44:38 laffer1 Exp $
+# $MidnightBSD: src/sys/Makefile,v 1.8 2011/10/23 15:05:16 laffer1 Exp $
 # $FreeBSD: src/sys/Makefile,v 1.33 2005/03/08 00:09:41 grog Exp $
 
 .include <bsd.own.mk>
@@ -10,7 +10,7 @@ SUBDIR=	boot
 
 # Directories to include in cscope name file and TAGS.
 CSCOPEDIRS=	bsm cam cddl compat conf contrib crypto ddb dev fs geom gnu \
-		isa kern libkern modules net net80211 netatalk netatm \
+		isa kern libkern modules net net80211 netatalk \
 		netgraph netinet netinet6 netipsec netipx netnatm netncp \
 		netsmb nfs nfsclient nfs4client rpc pccard pci security sys \
 		ufs vm ${CSCOPE_ARCHDIR}

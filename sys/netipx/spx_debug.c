@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -61,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/spx_debug.c,v 1.19 2007/07/30 11:06:42 des Exp $");
+__FBSDID("$FreeBSD: src/sys/netipx/spx_debug.c,v 1.19.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_tcpdebug.h"

@@ -21,7 +21,7 @@
  *	+1-313-763-0525
  *	netatalk@itd.umich.edu
  *
- * $FreeBSD: src/sys/netatalk/at_proto.c,v 1.13 2007/01/12 13:18:08 rwatson Exp $
+ * $FreeBSD: src/sys/netatalk/at_proto.c,v 1.13.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -57,7 +57,7 @@ static struct domain	atalkdomain = {
 	.dom_name =		"appletalk",
 	.dom_protosw =		atalksw,
 	.dom_protoswNPROTOSW =	&atalksw[sizeof(atalksw)/sizeof(atalksw[0])],
-	.dom_rtattach =		rn_inithead,
+	.dom_rtattach =		at_inithead,
 	.dom_rtoffset =		offsetof(struct sockaddr_at, sat_addr) << 3,
 	.dom_maxrtkey =		sizeof(struct sockaddr_at),
 };

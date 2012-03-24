@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_pptpgre.h,v 1.9 2005/01/07 01:45:39 imp Exp $
+ * $FreeBSD: src/sys/netgraph/ng_pptpgre.h,v 1.9.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  * $Whistle: ng_pptpgre.h,v 1.3 1999/12/08 00:11:36 archie Exp $
  */
 
@@ -51,6 +51,10 @@
 /* Hook names */
 #define NG_PPTPGRE_HOOK_UPPER	"upper"		/* to upper layers */
 #define NG_PPTPGRE_HOOK_LOWER	"lower"		/* to lower layers */
+
+/* Session hooks: prefix plus hex session ID, e.g., "session_3e14" */
+#define NG_PPTPGRE_HOOK_SESSION_P	"session_"
+#define NG_PPTPGRE_HOOK_SESSION_F	"session_%04x"
 
 /* Configuration for a session */
 struct ng_pptpgre_conf {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto_tkip.c,v 1.13 2007/06/11 03:36:54 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto_tkip.c,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * IEEE 802.11i TKIP crypto support.

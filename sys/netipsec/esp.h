@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/sys/netipsec/esp.h,v 1.2 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/esp.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: esp.h,v 1.16 2000/10/18 21:28:00 itojun Exp $	*/
 
 /*-

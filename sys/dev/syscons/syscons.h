@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/syscons.h,v 1.4 2008/12/02 22:43:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/syscons/syscons.h,v 1.5 2012/02/16 22:44:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995-1998 Søren Schmidt
  * All rights reserved.
@@ -538,7 +538,8 @@ typedef struct {
 		(*kbdsw[(kbd)->kb_index]->poll)((kbd), (on))
 
 #define SC_VIDEO_LOCKINIT(sc)						\
-		mtx_init(&(sc)->video_mtx, "syscons video lock", NULL,MTX_SPIN);
+		mtx_init(&(sc)->video_mtx, "syscons video lock", NULL,	\
+		    MTX_SPIN | MTX_RECURSE);
 #define SC_VIDEO_LOCK(sc)						\
 		do {							\
 			if (!cold)					\

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: ieee80211_amrr.c,v 1.1 2006/06/17 19:07:19 damien Exp $	*/
 
 /*-
@@ -19,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_amrr.c,v 1.3 2007/06/11 03:36:54 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_amrr.c,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Naive implementation of the Adaptive Multi Rate Retry algorithm:

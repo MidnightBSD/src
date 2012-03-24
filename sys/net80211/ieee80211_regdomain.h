@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_regdomain.h,v 1.1 2007/06/11 03:36:55 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_regdomain.h,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _NET80211_IEEE80211_REGDOMAIN_H_
 #define _NET80211_IEEE80211_REGDOMAIN_H_

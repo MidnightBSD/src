@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netipsec/ipsec_mbuf.c,v 1.13 2007/07/01 11:38:29 gnn Exp $
+ * $FreeBSD: src/sys/netipsec/ipsec_mbuf.c,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

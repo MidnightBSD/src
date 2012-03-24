@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_scan.c,v 1.3.2.1 2007/10/31 16:53:44 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_scan.c,v 1.3.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * IEEE 802.11 scanning support.

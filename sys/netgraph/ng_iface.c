@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_iface.c,v 1.47 2006/06/02 23:14:40 sam Exp $
+ * $FreeBSD: src/sys/netgraph/ng_iface.c,v 1.47.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  * $Whistle: ng_iface.c,v 1.33 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -573,6 +573,7 @@ ng_iface_newhook(node_p node, hook_p hook, const char *name)
 	if (*hookptr != NULL)
 		return (EISCONN);
 	*hookptr = hook;
+	NG_HOOK_HI_STACK(hook);
 	return (0);
 }
 
