@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
@@ -17,7 +18,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: src/sbin/ipfw/ipfw2.c,v 1.108.4.1 2008/01/28 17:44:30 rwatson Exp $
+ * $FreeBSD: src/sbin/ipfw/ipfw2.c,v 1.108.2.10.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -66,6 +67,7 @@
 #include <alias.h>
 
 int
+		do_value_as_ip,		/* show table value as IP */
 		do_resolv,		/* Would try to resolve all */
 		do_time,		/* Show time stamps */
 		do_quiet,		/* Be quiet in add and flush */
@@ -340,6 +342,9 @@ enum tokens {
 	TOK_IPV4,
 	TOK_UNREACH6,
 	TOK_RESET6,
+
+	TOK_FIB,
+	TOK_SETFIB,
 };
 
 struct _s_x dummynet_params[] = {
@@ -412,6 +417,7 @@ struct _s_x rule_actions[] = {
 	{ "check-state",	TOK_CHECKSTATE },
 	{ "//",			TOK_COMMENT },
 	{ "nat",                TOK_NAT },
+	{ "setfib",		TOK_SETFIB },
 	{ NULL, 0 }	/* terminator */
 };
 
@@ -442,6 +448,7 @@ struct _s_x rule_options[] = {
 	{ "via",		TOK_VIA },
 	{ "fragment",		TOK_FRAG },
 	{ "frag",		TOK_FRAG },
+	{ "fib",		TOK_FIB },
 	{ "ipoptions",		TOK_IPOPTS },
 	{ "ipopts",		TOK_IPOPTS },
 	{ "iplen",		TOK_IPLEN },
@@ -1611,7 +1618,11 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 			break;
 
 		case O_NAT:
- 			printf("nat %u", cmd->arg1);
+ 			PRINT_UINT_ARG("nat ", cmd->arg1);
+ 			break;
+			
+		case O_SETFIB:
+			PRINT_UINT_ARG("setfib ", cmd->arg1);
  			break;
 			
 		default:
@@ -1814,6 +1825,10 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 
 			case O_FRAG:
 				printf(" frag");
+				break;
+
+			case O_FIB:
+				printf(" fib %u", cmd->arg1 );
 				break;
 
 			case O_IN:
@@ -2415,7 +2430,7 @@ sets_handler(int ac, char *av[])
 		rulenum = atoi(av[0]);
 		new_set = atoi(av[2]);
 		if (!isdigit(*(av[0])) || (cmd == 3 && rulenum > RESVD_SET) ||
-			(cmd == 2 && rulenum == 65535) )
+			(cmd == 2 && rulenum == IPFW_DEFAULT_RULE) )
 			errx(EX_DATAERR, "invalid source number %s\n", av[0]);
 		if (!isdigit(*(av[2])) || new_set > RESVD_SET)
 			errx(EX_DATAERR, "invalid dest. set %s\n", av[1]);
@@ -2539,7 +2554,7 @@ list(int ac, char *av[], int show_counters)
 	 * need to scan the list to count them.
 	 */
 	for (nstat = 1, r = data, lim = (char *)data + nbytes;
-		    r->rulenum < 65535 && (char *)r < lim;
+		    r->rulenum < IPFW_DEFAULT_RULE && (char *)r < lim;
 		    ++nstat, r = NEXT(r) )
 		; /* nothing */
 
@@ -2711,7 +2726,7 @@ help(void)
 "RULE-BODY:	check-state [PARAMS] | ACTION [PARAMS] ADDR [OPTION_LIST]\n"
 "ACTION:	check-state | allow | count | deny | unreach{,6} CODE |\n"
 "               skipto N | {divert|tee} PORT | forward ADDR |\n"
-"               pipe N | queue N | nat N\n"
+"               pipe N | queue N | nat N | setfib FIB\n"
 "PARAMS: 	[log [logamount LOGLIMIT]] [altq QUEUE_NAME]\n"
 "ADDR:		[ MAC dst src ether_type ] \n"
 "		[ ip from IPADDR [ PORT ] to IPADDR [ PORTLIST ] ]\n"
@@ -2727,7 +2742,7 @@ help(void)
 "	estab | frag | {gid|uid} N | icmptypes LIST | in | out | ipid LIST |\n"
 "	iplen LIST | ipoptions SPEC | ipprecedence | ipsec | iptos SPEC |\n"
 "	ipttl LIST | ipversion VER | keep-state | layer2 | limit ... |\n"
-"	icmp6types LIST | ext6hdr LIST | flow-id N[,N] |\n"
+"	icmp6types LIST | ext6hdr LIST | flow-id N[,N] | fib FIB |\n"
 "	mac ... | mac-type LIST | proto LIST | {recv|xmit|via} {IF|IPADDR} |\n"
 "	setup | {tcpack|tcpseq|tcpwin} NN | tcpflags SPEC | tcpoptions SPEC |\n"
 "	tcpdatalen LIST | verrevpath | versrcreach | antispoof\n"
@@ -3996,6 +4011,8 @@ config_nat(int ac, char **av)
 			ac--; av++;
 			break;	    
 		case TOK_IF:
+			if (ac == 0) 
+				errx(EX_DATAERR, "missing option");
 			set_addr_dynamic(av[0], n);
 			ac--; av++;
 			break;
@@ -4338,11 +4355,25 @@ end_mask:
 			errx(EX_DATAERR, "weight must be <= 100");
 	}
 	if (p.fs.flags_fs & DN_QSIZE_IS_BYTES) {
-		if (p.fs.qsize > 1024*1024)
-			errx(EX_DATAERR, "queue size must be < 1MB");
+		size_t len;
+		long limit;
+
+		len = sizeof(limit);
+		if (sysctlbyname("net.inet.ip.dummynet.pipe_byte_limit",
+			&limit, &len, NULL, 0) == -1)
+			limit = 1024*1024;
+		if (p.fs.qsize > limit)
+			errx(EX_DATAERR, "queue size must be < %ldB", limit);
 	} else {
-		if (p.fs.qsize > 100)
-			errx(EX_DATAERR, "2 <= queue size <= 100");
+		size_t len;
+		long limit;
+
+		len = sizeof(limit);
+		if (sysctlbyname("net.inet.ip.dummynet.pipe_slot_limit",
+			&limit, &len, NULL, 0) == -1)
+			limit = 100;
+		if (p.fs.qsize > limit)
+			errx(EX_DATAERR, "2 <= queue size <= %ld", limit);
 	}
 	if (p.fs.flags_fs & DN_IS_RED) {
 		size_t len;
@@ -4360,7 +4391,6 @@ end_mask:
 		len = sizeof(int);
 		if (sysctlbyname("net.inet.ip.dummynet.red_lookup_depth",
 			&lookup_depth, &len, NULL, 0) == -1)
-
 		    errx(1, "sysctlbyname(\"%s\")",
 			"net.inet.ip.dummynet.red_lookup_depth");
 		if (lookup_depth == 0)
@@ -4394,7 +4424,7 @@ end_mask:
 		if (p.bandwidth==0) /* this is a WF2Q+ queue */
 			s = 0;
 		else
-			s = ck.hz * avg_pkt_size * 8 / p.bandwidth;
+			s = (double)ck.hz * avg_pkt_size * 8 / p.bandwidth;
 
 		/*
 		 * max idle time (in ticks) before avg queue size becomes 0.
@@ -4407,8 +4437,8 @@ end_mask:
 		if (!p.fs.lookup_step)
 			p.fs.lookup_step = 1;
 		weight = 1 - w_q;
-		for (t = p.fs.lookup_step; t > 0; --t)
-			weight *= weight;
+		for (t = p.fs.lookup_step; t > 1; --t)
+			weight *= 1 - w_q;
 		p.fs.lookup_weight = (int)(weight * (1 << SCALE_RED));
 	}
 	i = do_cmd(IP_DUMMYNET_CONFIGURE, &p, sizeof p);
@@ -4845,6 +4875,11 @@ add(int ac, char *av[])
 		action->opcode = O_COUNT;
 		break;
 
+	case TOK_NAT:
+		action->opcode = O_NAT;
+		action->len = F_INSN_SIZE(ipfw_insn_nat);
+		goto chkarg;
+
 	case TOK_QUEUE:
 		action->opcode = O_QUEUE;
 		goto chkarg;
@@ -4927,13 +4962,20 @@ chkarg:
 		ac++; av--;	/* go back... */
 		break;
 
-	case TOK_NAT:
- 		action->opcode = O_NAT;
- 		action->len = F_INSN_SIZE(ipfw_insn_nat);
- 		NEED1("missing nat number");
+	case TOK_SETFIB:
+	    {
+		int numfibs;
+
+		action->opcode = O_SETFIB;
+ 		NEED1("missing fib number");
  	        action->arg1 = strtoul(*av, NULL, 10);
+		if (sysctlbyname("net.fibs", &numfibs, &i, NULL, 0) == -1)
+			errx(EX_DATAERR, "fibs not suported.\n");
+		if (action->arg1 >= numfibs)  /* Temporary */
+			errx(EX_DATAERR, "fib too large.\n");
  		ac--; av++;
  		break;
+	    }
 		
 	default:
 		errx(EX_DATAERR, "invalid action %s\n", av[-1]);
@@ -5003,7 +5045,8 @@ chkarg:
 			if (have_tag)
 				errx(EX_USAGE, "tag and untag cannot be "
 				    "specified more than once");
-			GET_UINT_ARG(tag, 1, 65534, i, rule_action_params);
+			GET_UINT_ARG(tag, 1, IPFW_DEFAULT_RULE - 1, i,
+			   rule_action_params);
 			have_tag = cmd;
 			fill_cmd(cmd, O_TAG, (i == TOK_TAG) ? 0: F_NOT, tag);
 			ac--; av++;
@@ -5479,8 +5522,8 @@ read_options:
 			if (c->limit_mask == 0)
 				errx(EX_USAGE, "limit: missing limit mask");
 
-			GET_UINT_ARG(c->conn_limit, 1, 65534, TOK_LIMIT,
-			    rule_options);
+			GET_UINT_ARG(c->conn_limit, 1, IPFW_DEFAULT_RULE - 1,
+			    TOK_LIMIT, rule_options);
 
 			ac--; av++;
 			break;
@@ -5607,10 +5650,16 @@ read_options:
 			else {
 				uint16_t tag;
 
-				GET_UINT_ARG(tag, 1, 65534, TOK_TAGGED,
-				    rule_options);
+				GET_UINT_ARG(tag, 1, IPFW_DEFAULT_RULE - 1,
+				    TOK_TAGGED, rule_options);
 				fill_cmd(cmd, O_TAGGED, 0, tag);
 			}
+			ac--; av++;
+			break;
+
+		case TOK_FIB:
+			NEED1("fib requires fib number");
+			fill_cmd(cmd, O_FIB, 0, strtoul(*av, NULL, 0));
 			ac--; av++;
 			break;
 
@@ -5896,22 +5945,20 @@ table_handler(int ac, char *av[])
 		if (do_cmd(IP_FW_TABLE_LIST, tbl, (uintptr_t)&l) < 0)
 			err(EX_OSERR, "getsockopt(IP_FW_TABLE_LIST)");
 		for (a = 0; a < tbl->cnt; a++) {
-			/* Heuristic to print it the right way */
-			/* values < 64k are printed as numbers */
 			unsigned int tval;
 			tval = tbl->ent[a].value;
-			if (tval > 0xffff) {
+			if (do_value_as_ip) {
 			    char tbuf[128];
 			    strncpy(tbuf, inet_ntoa(*(struct in_addr *)
 				&tbl->ent[a].addr), 127);
-			    /* inet_ntoa expects host order */
+			    /* inet_ntoa expects network order */
 			    tval = htonl(tval);
 			    printf("%s/%u %s\n", tbuf, tbl->ent[a].masklen,
 			        inet_ntoa(*(struct in_addr *)&tval));
 			} else {
 			    printf("%s/%u %u\n",
 			        inet_ntoa(*(struct in_addr *)&tbl->ent[a].addr),
-			        tbl->ent[a].masklen, tbl->ent[a].value);
+			        tbl->ent[a].masklen, tval);
 			}
 		}
 	} else
@@ -5923,7 +5970,7 @@ show_nat(int ac, char **av) {
 	struct cfg_nat *n;
 	struct cfg_redir *e;
 	int cmd, i, nbytes, do_cfg, do_rule, frule, lrule, nalloc, size;
-	int nat_cnt, r;
+	int nat_cnt, redir_cnt, r;
 	uint8_t *data, *p;
 	char **lav, *endptr;
 
@@ -5931,6 +5978,8 @@ show_nat(int ac, char **av) {
 	nalloc = 1024;
 	size = 0;
 	data = NULL;
+	frule = 0;
+	lrule = IPFW_DEFAULT_RULE; /* max ipfw rule number */
 	ac--; av++;
 
 	/* Parse parameters. */
@@ -5959,22 +6008,19 @@ show_nat(int ac, char **av) {
 			    (cmd == IP_FW_NAT_GET_LOG) ? "LOG" : "CONFIG");
 	}
 	if (nbytes == 0)
-		exit(0); 
+		exit(0);
 	if (do_cfg) {
 		nat_cnt = *((int *)data);
 		for (i = sizeof(nat_cnt); nat_cnt; nat_cnt--) {
 			n = (struct cfg_nat *)&data[i];
-			if (do_rule) {
-				if (!(frule <= n->id && lrule >= n->id))
-					continue;
-			}
-			print_nat_config(&data[i]);
+			if (frule <= n->id && lrule >= n->id)
+				print_nat_config(&data[i]);
 			i += sizeof(struct cfg_nat);
-			e = (struct cfg_redir *)&data[i];
-			if (e->mode == REDIR_ADDR || e->mode == REDIR_PORT ||
-			    e->mode == REDIR_PROTO)
+			for (redir_cnt = 0; redir_cnt < n->redir_cnt; redir_cnt++) {
+				e = (struct cfg_redir *)&data[i];
 				i += sizeof(struct cfg_redir) + e->spool_cnt * 
 				    sizeof(struct cfg_spool);
+			}
 		}
 	} else {
 		for (i = 0; 1; i += LIBALIAS_BUF_SIZE + sizeof(int)) {
@@ -6094,7 +6140,7 @@ ipfw_main(int oldac, char **oldav)
 	save_av = av;
 
 	optind = optreset = 0;
-	while ((ch = getopt(ac, av, "abcdefhnNqs:STtv")) != -1)
+	while ((ch = getopt(ac, av, "abcdefhinNqs:STtv")) != -1)
 		switch (ch) {
 		case 'a':
 			do_acct = 1;
@@ -6125,6 +6171,10 @@ ipfw_main(int oldac, char **oldav)
 			free_args(save_ac, save_av);
 			help();
 			break;	/* NOTREACHED */
+
+		case 'i':
+			do_value_as_ip = 1;
+			break;
 
 		case 'n':
 			test_only = 1;

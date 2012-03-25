@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: src/sbin/ipfw/ipfw.8,v 1.203.2.1 2007/11/29 18:42:15 maxim Exp $
+.\" $FreeBSD: src/sbin/ipfw/ipfw.8,v 1.203.2.8.2.1 2008/11/25 02:59:29 kensmith Exp $
 .\"
 .Dd August 5, 2007
 .Dt IPFW 8
@@ -218,6 +218,11 @@ Do not ask for confirmation for commands that can cause problems
 if misused,
 .No i.e. Cm flush .
 If there is no tty associated with the process, this is implied.
+.It Fl i
+While listing a table (see the
+.Sx LOOKUP TABLES
+section below for more information on lookup tables), format values
+as IP addresses. By default, values are shown as integers.
 .It Fl n
 Only check syntax of the command strings, without actually passing
 them to the kernel.
@@ -474,6 +479,9 @@ When the packet can be associated with a local socket.
 .It Divert status
 Whether a packet came from a divert socket (e.g.,
 .Xr natd 8 ) .
+.It Fib annotation state
+Whether a packet has been tagged for using a specific FIB (routing table)
+in future forwarding decisions.
 .El
 .Pp
 Note that some of the above information, e.g.\& source MAC or IP addresses and
@@ -780,12 +788,20 @@ The search terminates.
 Discard packets that match this rule, and if the
 packet is a TCP packet, try to send a TCP reset (RST) notice.
 The search terminates.
-.It Cm skipto Ar number
+.It Cm skipto Ar number | tablearg
 Skip all subsequent rules numbered less than
 .Ar number .
 The search continues with the first rule numbered
 .Ar number
 or higher.
+It is possible to use the 
+.Cm tablearg
+keyword with a skipto for a 
+.Em computed
+skipto, but care should be used, as no destination caching
+is possible in this case so the rules are always walked to find it,
+starting from the 
+.Cm skipto .
 .It Cm tee Ar port
 Send a copy of packets matching this rule to the
 .Xr divert 4
@@ -837,6 +853,13 @@ for more information on
 and
 .Cm ngtee
 actions.
+.It Cm setfib Ar fibnum
+The packet is tagged so as to use the FIB (routing table)
+.Ar fibnum
+in any subsequent forwarding decisions. Initially this is
+limited to the values  0 through 15. See 
+.Xr setfib 8 .
+Processing continues at the next rule.
 .El
 .Ss RULE BODY
 The body of a rule contains zero or more patterns (such as
@@ -1139,6 +1162,9 @@ IPSec authentication headers
 .Pq Cm ah ,
 and IPSec encapsulated security payload headers
 .Pq Cm esp .
+.It Cm fib Ar fibnum
+Matches a packet that has been tagged to use
+the given FIB (routing table) number.
 .It Cm flow-id Ar labels
 Matches IPv6 packets containing any of the flow labels given in
 .Ar labels .
@@ -1601,10 +1627,12 @@ The
 feature provides the ability to use a value, looked up in the table, as
 the argument for a rule action, action parameter or rule option.
 This can significantly reduce number of rules in some configurations.
+If two tables are used in a rule, the result of the second (destination)
+is used.
 The
 .Cm tablearg
 argument can be used with the following actions:
-.Cm pipe , queue, divert, tee, netgraph, ngtee, fwd
+.Cm nat, pipe, queue, divert, tee, netgraph, ngtee, fwd, skipto
 action parameters:
 .Cm tag, untag,
 rule options:
@@ -1617,6 +1645,12 @@ that are in the form of IP addresses or hostnames.
 See the
 .Sx EXAMPLES
 Section for example usage of tables and the tablearg keyword.
+.Pp
+When used with the
+.Cm skipto
+action, the user should be aware that the code will walk the ruleset
+up to a rule equal to, or past, the given number, and should therefore try keep the
+ruleset compact between the skipto and the target rules. 
 .Sh SETS OF RULES
 Each rule belongs to one of 32 different
 .Em sets
@@ -1755,6 +1789,16 @@ rules.
 Depending on local policies, a flow can contain packets for a single
 TCP connection, or from/to a given host, or entire subnet, or a
 protocol type, etc.
+.Pp
+There are two modes of dummynet operation: normal and fast.
+Normal mode tries to emulate real link: dummynet scheduler ensures packet will
+not leave pipe faster than it would be on real link with given bandwidth.
+Fast mode allows certain packets to bypass dummynet scheduler (if packet flow
+does not exceed pipe's bandwidth). Thus fast mode requires less cpu cycles
+per packet (in average) but packet latency can be significantly lower comparing
+to real link with same bandwidth. Default is normal mode, fast mode can be
+enabled by setting net.inet.ip.dummynet.io_fast sysctl(8) variable to non-zero
+value.
 .Pp
 Packets belonging to the same flow are then passed to either of two
 different objects, which implement the traffic regulation:
@@ -1933,6 +1977,13 @@ or 20s of queue on a 30Kbit/s pipe.
 Even worse effects can result if you get packets from an
 interface with a much larger MTU, e.g.\& the loopback interface
 with its 16KB packets.
+The
+.Xr sysctl 8
+variables
+.Em net.inet.ip.dummynet.pipe_byte_limit
+and
+.Em net.inet.ip.dummynet.pipe_slot_limit
+control the maximum lengths that can be specified.
 .Pp
 .It Cm red | gred Ar w_q Ns / Ns Ar min_th Ns / Ns Ar max_th Ns / Ns Ar max_p
 Make use of the RED (Random Early Detection) queue management algorithm.
@@ -2120,6 +2171,14 @@ Default size of the hash table used for dynamic pipes/queues.
 This value is used when no
 .Cm buckets
 option is specified when configuring a pipe/queue.
+.It Em net.inet.ip.dummynet.io_fast : No 0
+If set to non-zero value enables "fast" mode of dummynet operation (see above).
+.It Em net.inet.ip.dummynet.io_pkt
+Number of packets passed to by dummynet.
+.It Em net.inet.ip.dummynet.io_pkt_drop
+Number of packets dropped by dummynet.
+.It Em net.inet.ip.dummynet.io_pkt_fast
+Number of packets bypassed dummynet scheduler.
 .It Em net.inet.ip.dummynet.max_chain_len : No 16
 Target value for the maximum number of pipes/queues in a hash bucket.
 The product
@@ -2132,6 +2191,13 @@ will be expired even when
 .It Em net.inet.ip.dummynet.red_max_pkt_size : No 1500
 Parameters used in the computations of the drop probability
 for the RED algorithm.
+.It Va net.inet.ip.dummynet.pipe_byte_limit : No 1048576
+.It Va net.inet.ip.dummynet.pipe_slot_limit : No 100
+The maximum queue size that can be specified in bytes or packets.
+These limits prevent accidental exhaustion of resources such as mbufs.
+If you raise these limits,
+you should make sure the system is configured so that sufficient resources
+are available.
 .It Em net.inet.ip.fw.autoinc_step : No 100
 Delta between rule numbers when auto-generating them.
 The value must be in the range 1..1000.
