@@ -1,7 +1,7 @@
 /*	$OpenBSD: jobs.c,v 1.38 2009/12/12 04:28:44 deraadt Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011, 2012
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.81 2011/08/27 18:06:46 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.84 2012/02/06 17:49:52 tg Exp $");
 
 #if HAVE_KILLPG
 #define mksh_killpg		killpg
@@ -37,13 +37,15 @@ __RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.81 2011/08/27 18:06:46 tg Exp $");
 #define PSIGNALLED	2
 #define PSTOPPED	3
 
-typedef struct proc	Proc;
+typedef struct proc Proc;
 struct proc {
 	Proc *next;		/* next process in pipeline (if any) */
 	pid_t pid;		/* process id */
 	int state;
 	int status;		/* wait status */
-	char command[48];	/* process command string */
+	/* process command string from vistree */
+	char command[64 - (ALLOC_SIZE + sizeof(Proc *) + sizeof(pid_t) +
+	    2 * sizeof(int))];
 };
 
 /* Notify/print flag - j_print() argument */
@@ -1491,6 +1493,8 @@ j_print(Job *j, int how, struct shf *shf)
 				strlcpy(buf, sigtraps[WTERMSIG(p->status)].mess,
 				    sizeof(buf));
 			break;
+		default:
+			buf[0] = '\0';
 		}
 
 		if (how != JP_SHORT) {

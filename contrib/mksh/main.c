@@ -1,10 +1,11 @@
 /*	$OpenBSD: main.c,v 1.47 2011/09/07 11:33:25 otto Exp $	*/
 /*	$OpenBSD: tty.c,v 1.9 2006/03/14 22:08:01 deraadt Exp $	*/
 /*	$OpenBSD: io.c,v 1.22 2006/03/17 16:30:13 millert Exp $	*/
-/*	$OpenBSD: table.c,v 1.13 2009/01/17 22:06:44 millert Exp $	*/
+/*	$OpenBSD: table.c,v 1.15 2012/02/19 07:52:30 otto Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+ *		 2011, 2012
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -33,7 +34,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.195.2.4 2011/11/08 22:07:21 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.195.2.7 2012/03/24 22:11:43 tg Exp $");
 
 extern char **environ;
 
@@ -94,7 +95,7 @@ static const char *restr_com[] = {
 	Ttypeset, "-r", "PATH", "ENV", "SHELL", NULL
 };
 
-static int initio_done;
+static bool initio_done;
 
 /* top-level parsing and execution environment */
 static struct env env;
@@ -109,7 +110,6 @@ rndsetup(void)
 		void *dataptr, *stkptr, *mallocptr;
 		sigjmp_buf jbuf;
 		struct timeval tv;
-		struct timezone tz;
 	} *bufptr;
 	char *cp;
 
@@ -128,8 +128,8 @@ rndsetup(void)
 	bufptr->mallocptr = bufptr;
 	/* glibc pointer guard */
 	sigsetjmp(bufptr->jbuf, 1);
-	/* introduce variation */
-	gettimeofday(&bufptr->tv, &bufptr->tz);
+	/* introduce variation (and yes, second arg MBZ for portability) */
+	gettimeofday(&bufptr->tv, NULL);
 
 	oaat1_init_impl(h);
 	/* variation through pid, ppid, and the works */
@@ -248,6 +248,12 @@ main(int argc, const char *argv[])
 	initkeywords();
 
 	init_histvec();
+
+#ifdef TIOCGWINSZ
+	/* try to initialise tty size before importing environment */
+	tty_init(true, false);
+	change_winsz();
+#endif
 
 #ifdef _PATH_DEFPATH
 	def_path = _PATH_DEFPATH;
@@ -1217,7 +1223,13 @@ can_seek(int fd)
 	    SHF_UNBUF : 0);
 }
 
-struct shf shf_iob[3];
+#ifdef DF
+int shl_dbg_fd;
+#define NSHF_IOB 4
+#else
+#define NSHF_IOB 3
+#endif
+struct shf shf_iob[NSHF_IOB];
 
 void
 initio(void)
@@ -1225,9 +1237,23 @@ initio(void)
 	/* force buffer allocation */
 	shf_fdopen(1, SHF_WR, shl_stdout);
 	shf_fdopen(2, SHF_WR, shl_out);
-	/* force buffer allocation */
 	shf_fdopen(2, SHF_WR, shl_spare);
-	initio_done = 1;
+#ifdef DF
+	if ((shl_dbg_fd = open("/tmp/mksh-dbg.txt",
+	    O_WRONLY | O_APPEND | O_CREAT, 0600)) == -1)
+		errorf("cannot open debug output file");
+	if (shl_dbg_fd < FDBASE) {
+		int nfd;
+
+		nfd = fcntl(shl_dbg_fd, F_DUPFD, FDBASE);
+		close(shl_dbg_fd);
+		if ((shl_dbg_fd = nfd) == -1)
+			errorf("cannot dup debug output file");
+	}
+	shf_fdopen(shl_dbg_fd, SHF_WR, shl_dbg);
+	DF("=== open ===");
+#endif
+	initio_done = true;
 }
 
 /* A dup2() with error checking */
@@ -1660,5 +1686,25 @@ x_sigwinch(int sig MKSH_A_UNUSED)
 	/* this runs inside interrupt context, with errno saved */
 
 	got_winch = 1;
+}
+#endif
+
+#ifdef DF
+void
+DF(const char *fmt, ...)
+{
+	va_list args;
+	struct timeval tv;
+
+	(void)flock(shl_dbg_fd, LOCK_EX);
+	gettimeofday(&tv, NULL);
+	shf_fprintf(shl_dbg, "[%d.%06d:%d] ", (int)tv.tv_sec, (int)tv.tv_usec,
+	    (int)getpid());
+	va_start(args, fmt);
+	shf_vfprintf(shl_dbg, fmt, args);
+	va_end(args);
+	shf_putc('\n', shl_dbg);
+	shf_flush(shl_dbg);
+	(void)flock(shl_dbg_fd, LOCK_UN);
 }
 #endif

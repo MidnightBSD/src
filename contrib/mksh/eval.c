@@ -22,7 +22,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.110 2011/11/26 00:45:20 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.112 2012/03/23 20:07:10 tg Exp $");
 
 /*
  * string expansion
@@ -863,11 +863,19 @@ expand(const char *cp,	/* input word */
 				fdo = 0;
 				saw_eq = 0;
 				tilde_ok = (f & (DOTILDE|DOASNTILDE)) ? 1 : 0;
-				if (c != 0)
-					Xinit(ds, dp, 128, ATEMP);
-			}
-			if (c == 0)
+				if (c == 0)
+					return;
+				Xinit(ds, dp, 128, ATEMP);
+			} else if (c == 0) {
 				return;
+			} else if (type == XSUB && ctype(c, C_IFS) &&
+			    !ctype(c, C_IFSWS) && Xlength(ds, dp) == 0) {
+				char *p;
+
+				*(p = alloc(1, ATEMP)) = '\0';
+				XPput(*wp, p);
+				type = XSUBMID;
+			}
 			if (word != IFS_NWS)
 				word = ctype(c, C_IFSWS) ? IFS_WS : IFS_NWS;
 		} else {
@@ -888,7 +896,7 @@ expand(const char *cp,	/* input word */
 			if (!quote)
 				switch (c) {
 				case '[':
-				case NOT:
+				case '!':
 				case '-':
 				case ']':
 					/*

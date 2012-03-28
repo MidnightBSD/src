@@ -1,7 +1,8 @@
 /*	$OpenBSD: tree.c,v 1.19 2008/08/11 21:50:35 jaredy Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+ *		 2011, 2012
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -22,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.52 2011/10/25 22:36:39 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.52.4.3 2012/03/24 21:22:45 tg Exp $");
 
 #define INDENT	8
 
@@ -133,25 +134,26 @@ ptree(struct op *t, int indent, struct shf *shf)
 #endif
 	case TIF:
 		i = 2;
+		t1 = t;
 		goto process_TIF;
 		do {
-			t = t->right;
+			t1 = t1->right;
 			i = 0;
 			fptreef(shf, indent, "%;");
  process_TIF:
 			/* 5 == strlen("elif ") */
-			fptreef(shf, indent + 5 - i, "elif %T" + i, t->left);
-			t = t->right;
-			if (t->left != NULL) {
+			fptreef(shf, indent + 5 - i, "elif %T" + i, t1->left);
+			t1 = t1->right;
+			if (t1->left != NULL) {
 				fptreef(shf, indent, "%;");
 				fptreef(shf, indent + INDENT, "%s%N%T",
-				    "then", t->left);
+				    "then", t1->left);
 			}
-		} while (t->right && t->right->type == TELIF);
-		if (t->right != NULL) {
+		} while (t1->right && t1->right->type == TELIF);
+		if (t1->right != NULL) {
 			fptreef(shf, indent, "%;");
 			fptreef(shf, indent + INDENT, "%s%N%T",
-			    "else", t->right);
+			    "else", t1->right);
 		}
 		fptreef(shf, indent, "%;fi ");
 		break;
@@ -289,7 +291,7 @@ wdvarput(struct shf *shf, const char *wp, int quotelevel, int opmode)
 		case CHAR:
 			c = *wp++;
 			if ((opmode & WDS_MAGIC) &&
-			    (ISMAGIC(c) || c == '[' || c == NOT ||
+			    (ISMAGIC(c) || c == '[' || c == '!' ||
 			    c == '-' || c == ']' || c == '*' || c == '?'))
 				shf_putc(MAGIC, shf);
 			shf_putc(c, shf);
@@ -711,24 +713,42 @@ fpFUNCTf(struct shf *shf, int i, bool isksh, const char *k, struct op *v)
 void
 vistree(char *dst, size_t sz, struct op *t)
 {
-	int c;
+	unsigned int c;
 	char *cp, *buf;
+	size_t n;
 
-	buf = alloc(sz, ATEMP);
-	snptreef(buf, sz, "%T", t);
+	buf = alloc(sz + 8, ATEMP);
+	snptreef(buf, sz + 8, "%T", t);
 	cp = buf;
-	while ((c = *cp++)) {
-		if (((c & 0x60) == 0) || ((c & 0x7F) == 0x7F)) {
-			/* C0 or C1 control character or DEL */
-			if (!--sz)
-				break;
-			*dst++ = (c & 0x80) ? '$' : '^';
-			c = (c & 0x7F) ^ 0x40;
-		}
-		if (!--sz)
-			break;
-		*dst++ = c;
+ vist_loop:
+	if (UTFMODE && (n = utf_mbtowc(&c, cp)) != (size_t)-1) {
+		if (c == 0 || n >= sz)
+			/* NUL or not enough free space */
+			goto vist_out;
+		/* copy multibyte char */
+		sz -= n;
+		while (n--)
+			*dst++ = *cp++;
+		goto vist_loop;
 	}
+	if (--sz == 0 || (c = (unsigned char)(*cp++)) == 0)
+		/* NUL or not enough free space */
+		goto vist_out;
+	if ((c & 0x60) == 0 || (c & 0x7F) == 0x7F) {
+		/* C0 or C1 control character or DEL */
+		if (--sz == 0)
+			/* not enough free space for two chars */
+			goto vist_out;
+		*dst++ = (c & 0x80) ? '$' : '^';
+		c = (c & 0x7F) ^ 0x40;
+	} else if (UTFMODE && c > 0x7F) {
+		/* better not try to display broken multibyte chars */
+		c = '?';
+	}
+	*dst++ = c;
+	goto vist_loop;
+
+ vist_out:
 	*dst = '\0';
 	afree(buf, ATEMP);
 }
@@ -835,7 +855,7 @@ dumptree(struct shf *shf, struct op *t)
 	int i;
 	const char **w, *name;
 	struct op *t1;
-	static int nesting = 0;
+	static int nesting;
 
 	for (i = 0; i < nesting; ++i)
 		shf_putc('\t', shf);

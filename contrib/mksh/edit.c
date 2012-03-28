@@ -4,7 +4,8 @@
 /*	$OpenBSD: vi.c,v 1.26 2009/06/29 22:50:19 martynas Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+ *		 2011, 2012
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -25,7 +26,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.225 2011/12/11 18:07:45 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.230 2012/03/23 23:25:25 tg Exp $");
 
 /*
  * in later versions we might use libtermcap for this, but since external
@@ -288,28 +289,38 @@ x_print_expansions(int nwords, char * const *words, bool is_command)
 static int
 x_file_glob(int flags MKSH_A_UNUSED, char *toglob, char ***wordsp)
 {
-	char **words;
-	int nwords, i, idx;
+	char ch, **words;
+	int nwords, i = 0, idx = 0;
 	bool escaping;
 	XPtrV w;
 	struct source *s, *sold;
 
 	/* remove all escaping backward slashes */
 	escaping = false;
-	for (i = 0, idx = 0; toglob[i]; i++) {
-		if (toglob[i] == '\\' && !escaping) {
+	while ((ch = toglob[i++])) {
+		if (ch == '\\' && !escaping) {
 			escaping = true;
 			continue;
 		}
-		/* specially escape escaped [ or $ or ` for globbing */
-		if (escaping && (toglob[i] == '[' ||
-		    toglob[i] == '$' || toglob[i] == '`'))
-			toglob[idx++] = QCHAR;
-
-		toglob[idx] = toglob[i];
-		idx++;
-		if (escaping)
+		if (escaping) {
+			/*
+			 * empirically made list of chars to escape
+			 * for globbing; ASCII 0x02 probably too as
+			 * that's what QCHAR is, but...
+			 */
+			switch (ch) {
+			case '$':
+			case '*':
+			case '?':
+			case '[':
+			case '\\':
+			case '`':
+				toglob[idx++] = QCHAR;
+				break;
+			}
 			escaping = false;
+		}
+		toglob[idx++] = ch;
 	}
 	toglob[idx] = '\0';
 
@@ -335,6 +346,15 @@ x_file_glob(int flags MKSH_A_UNUSED, char *toglob, char ***wordsp)
 		;
 	if (nwords == 1) {
 		struct stat statb;
+
+		/* Drop all QCHAR from toglob for strcmp below */
+		i = 0;
+		idx = 0;
+		while ((ch = toglob[i++])) {
+			if (ch != QCHAR)
+				toglob[idx++] = ch;
+		}
+		toglob[idx] = '\0';
 
 		/*
 		 * Check if globbing failed (returned glob pattern),
@@ -624,6 +644,10 @@ x_longest_prefix(int nwords, char * const * words)
 				prefix_len = j;
 				break;
 			}
+	/* false for nwords==1 as 0 = words[0][prefix_len] then */
+	if (UTFMODE && prefix_len && (words[0][prefix_len] & 0xC0) == 0x80)
+		while (prefix_len && (words[0][prefix_len] & 0xC0) != 0xC0)
+			--prefix_len;
 	return (prefix_len);
 }
 
@@ -1798,7 +1822,7 @@ static int
 x_search_hist(int c)
 {
 	int offset = -1;	/* offset of match in xbuf, else -1 */
-	char pat[256 + 1];	/* pattern buffer */
+	char pat[80 + 1];	/* pattern buffer */
 	char *p = pat;
 	unsigned char f;
 
@@ -2698,14 +2722,14 @@ do_complete(
 	}
 	olen = end - start;
 	nlen = x_longest_prefix(nwords, words);
-	/* complete */
-	if (nwords == 1 || nlen > olen) {
-		x_goto(xbuf + start);
-		x_delete(olen, false);
-		x_escape(words[0], nlen, x_do_ins);
-		x_adjust();
+	/* always complete */
+	x_goto(xbuf + start);
+	x_delete(olen, false);
+	x_escape(words[0], nlen, x_do_ins);
+	x_adjust();
+	/* check if we did add something */
+	if (xcp - (xbuf + start) > olen)
 		completed = true;
-	}
 	/*
 	 * append a space if this is a single non-directory match
 	 * and not a parameter or homedir substitution

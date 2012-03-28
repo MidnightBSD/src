@@ -1,7 +1,8 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.484.2.7 2011/12/11 18:18:18 tg Exp $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.484.2.12 2012/03/24 21:22:27 tg Exp $'
 #-
-# Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+# Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+#		2011, 2012
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -147,14 +148,14 @@ ac_testinit() {
 }
 
 # pipe .c | ac_test[n] [!] label [!] checkif[!]0 [setlabelifcheckis[!]0] useroutput
-ac_testn() {
+ac_testnnd() {
 	if test x"$1" = x"!"; then
 		fr=1
 		shift
 	else
 		fr=0
 	fi
-	ac_testinit "$@" || return
+	ac_testinit "$@" || return 1
 	cat >conftest.c
 	vv ']' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN conftest.c $LIBS $ccpr"
 	test $tcfn = no && test -f a.out && tcfn=a.out
@@ -173,6 +174,10 @@ ac_testn() {
 		test $ct = sunpro && vscan='-e ignored -e turned.off'
 	fi
 	test -n "$vscan" && grep $vscan vv.out >/dev/null 2>&1 && fv=$fr
+	return 0
+}
+ac_testn() {
+	ac_testnnd "$@" || return
 	rmf conftest.c conftest.o ${tcfn}* vv.out
 	ac_testdone
 }
@@ -288,7 +293,7 @@ if test -d mksh || test -d mksh.exe; then
 	echo "$me: Error: ./mksh is a directory!" >&2
 	exit 1
 fi
-rmf a.exe* a.out* conftest.c *core lft mksh* no *.bc *.ll *.o \
+rmf a.exe* a.out* conftest.c *core core.* lft mksh* no *.bc *.ll *.o \
     Rebuild.sh signames.inc test.sh x vv.out
 
 curdir=`pwd` srcdir=`dirname "$0"` check_categories=
@@ -404,6 +409,47 @@ if test x"$TARGET_OS" = x"Android"; then
 	TARGET_OS=Linux
 fi
 
+# Evil OS
+if test x"$TARGET_OS" = x"Minix"; then
+	echo >&2 "
+WARNING: additional checks before running Build.sh required!
+You can avoid these by calling Build.sh correctly, see below.
+"
+	cat >conftest.c <<'EOF'
+#include <sys/types.h>
+#ifdef _NETBSD_SOURCE
+ct=Ninix3
+#else
+ct=Minix3
+#endif
+EOF
+	ct=unknown
+	vv ']' "${CC-cc} -E $CFLAGS $CPPFLAGS $NOWARN conftest.c | grep ct= | tr -d \\\\015 >x"
+	sed 's/^/[ /' x
+	eval `cat x`
+	rmf x vv.out
+	case $ct in
+	Minix3|Ninix3)
+		echo >&2 "
+Warning: you set TARGET_OS to $TARGET_OS but that is ambiguous.
+Please set it to either Minix3 or Ninix3, whereas the latter is
+all versions of Minix with even partial NetBSD(R) userland. The
+value determined from your compiler for the current compilation
+(which may be wrong) is: $ct
+"
+		TARGET_OS=$ct
+		;;
+	*)
+		echo >&2 "
+Warning: you set TARGET_OS to $TARGET_OS but that is ambiguous.
+Please set it to either Minix3 or Ninix3, whereas the latter is
+all versions of Minix with even partial NetBSD(R) userland. The
+proper value couldn't be determined, continue at your own risk.
+"
+		;;
+	esac
+fi
+
 # Configuration depending on OS revision, on OSes that need them
 case $TARGET_OS in
 QNX)
@@ -452,7 +498,7 @@ GNU/kFreeBSD)
 	esac
 	;;
 Haiku)
-	add_cppflags -DMKSH_ASSUME_UTF8
+	add_cppflags -DMKSH_ASSUME_UTF8; HAVE_ISSET_MKSH_ASSUME_UTF8=1
 	;;
 HP-UX)
 	;;
@@ -476,7 +522,7 @@ Linux)
 	;;
 MidnightBSD)
 	;;
-Minix)
+Minix3)
 	add_cppflags -DMKSH_UNEMPLOYED
 	add_cppflags -DMKSH_CONSERVATIVE_FDS
 	add_cppflags -DMKSH_NO_LIMITS
@@ -487,12 +533,21 @@ Minix)
 MirBSD)
 	;;
 MSYS_*)
+	add_cppflags -DMKSH_ASSUME_UTF8=0; HAVE_ISSET_MKSH_ASSUME_UTF8=1
 	# almost same as CYGWIN* (from RT|Chatzilla)
 	: ${HAVE_SETLOCALE_CTYPE=0}
 	# broken on this OE (from ir0nh34d)
 	: ${HAVE_STDINT_H=0}
 	;;
 NetBSD)
+	;;
+Ninix3)
+	# similar to Minix3
+	add_cppflags -DMKSH_UNEMPLOYED
+	add_cppflags -DMKSH_CONSERVATIVE_FDS
+	add_cppflags -DMKSH_NO_LIMITS
+	# but no idea what else could be needed
+	oswarn="; it has unknown issues"
 	;;
 OpenBSD)
 	: ${HAVE_SETLOCALE_CTYPE=0}
@@ -510,7 +565,7 @@ Plan9)
 	add_cppflags -D_LIMITS_EXTENSION
 	add_cppflags -D_BSD_EXTENSION
 	add_cppflags -D_SUSV2_SOURCE
-	add_cppflags -DMKSH_ASSUME_UTF8
+	add_cppflags -DMKSH_ASSUME_UTF8; HAVE_ISSET_MKSH_ASSUME_UTF8=1
 	oswarn=' and will currently not work'
 	add_cppflags -DMKSH_UNEMPLOYED
 	;;
@@ -527,6 +582,9 @@ QNX)
 		;;
 	esac
 	: ${HAVE_SETLOCALE_CTYPE=0}
+	;;
+skyos)
+	oswarn="; it has minor issues"
 	;;
 SunOS)
 	add_cppflags -D_BSD_SOURCE
@@ -686,8 +744,9 @@ bcc)
 clang)
 	# does not work with current "ccc" compiler driver
 	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -version"
-	# this works, for now
+	# one of these two works, for now
 	vv '|' "${CLANG-clang} -version"
+	vv '|' "${CLANG-clang} --version"
 	# ensure compiler and linker are in sync unless overridden
 	case $CCC_CC:$CCC_LD in
 	:*)	;;
@@ -968,13 +1027,12 @@ elif test $ct = icc; then
 elif test $ct = sunpro; then
 	phase=u
 	ac_flags 1 v -v
-	ac_flags 1 xc99 -xc99 'for support of ISO C99'
 	ac_flags 1 ipo -xipo 'for cross-module optimisation'
 	phase=x
 elif test $ct = hpcc; then
 	phase=u
-	ac_flags 1 agcc -Agcc 'for support of GCC extensions'
-	ac_flags 1 ac99 -AC99 'for support of ISO C99'
+	# probably not needed
+	#ac_flags 1 agcc -Agcc 'for support of GCC extensions'
 	phase=x
 elif test $ct = dec; then
 	ac_flags 0 verb -verbose
@@ -985,7 +1043,6 @@ elif test $ct = dmc; then
 elif test $ct = bcc; then
 	ac_flags 1 strpool "${ccpc}-d" 'if string pooling can be enabled'
 elif test $ct = mipspro; then
-	ac_flags 1 xc99 -c99 'for support of ISO C99'
 	ac_flags 1 fullwarn -fullwarn 'for remark output support'
 elif test $ct = msc; then
 	ac_flags 1 strpool "${ccpc}/GF" 'if string pooling can be enabled'
@@ -997,8 +1054,6 @@ elif test $ct = msc; then
 	ac_flags 1 wall "${ccpc}/Wall" 'to enable all warnings'
 	ac_flags 1 wp64 "${ccpc}/Wp64" 'to enable 64-bit warnings'
 elif test $ct = xlc; then
-	ac_flags 1 x99 -qlanglvl=extc99
-	test 1 = $HAVE_CAN_X99 || ac_flags 1 c99 -qlanglvl=stdc99
 	ac_flags 1 rodata "-qro -qroconst -qroptr"
 	ac_flags 1 rtcheck -qcheck=all
 	ac_flags 1 rtchkc -qextchk
@@ -1009,18 +1064,15 @@ elif test $ct = tendra; then
 	test 1 = $HAVE_CAN_YSYSTEM && CPPFLAGS="-Ysystem $CPPFLAGS"
 	ac_flags 1 extansi -Xa
 elif test $ct = tcc; then
-	ac_flags 1 boundschk -b
+	: #broken# ac_flags 1 boundschk -b
 elif test $ct = clang; then
 	i=1
 elif test $ct = nwcc; then
 	i=1
-	#broken# ac_flags 1 ssp -stackprotect
+	: #broken# ac_flags 1 ssp -stackprotect
 fi
 # flags common to a subset of compilers (run with -Werror on gcc)
 if test 1 = $i; then
-	ac_flags 1 stdg99 -std=gnu99 'for support of ISO C99 + GCC extensions'
-	test 1 = $HAVE_CAN_STDG99 || \
-	    ac_flags 1 stdc99 -std=c99 'for support of ISO C99'
 	ac_flags 1 wall -Wall
 fi
 
@@ -1116,7 +1168,7 @@ phase=x
 #
 if ac_ifcpp 'ifdef MKSH_SMALL' isset_MKSH_SMALL '' \
     "if a reduced-feature mksh is requested"; then
-	#XXX this sucks; fix it for *all* compilers
+	# removed in R41
 	case $ct in
 	clang|icc|nwcc)
 		ac_flags 1 fnoinline -fno-inline
@@ -1177,51 +1229,6 @@ ac_header stdint.h stdarg.h
 ac_header strings.h sys/types.h string.h
 ac_header ulimit.h sys/types.h
 ac_header values.h
-
-#
-# check whether whatever we use for the final link will succeed
-#
-if test $cm = makefile; then
-	: nothing to check
-else
-	HAVE_LINK_WORKS=x
-	ac_testinit link_works '' 'checking if the final link command may succeed'
-	fv=1
-	cat >conftest.c <<-'EOF'
-		#define EXTERN
-		#define MKSH_INCLUDES_ONLY
-		#include "sh.h"
-		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.484.2.7 2011/12/11 18:18:18 tg Exp $");
-		int main(void) { printf("Hello, World!\n"); return (0); }
-EOF
-	case $cm in
-	llvm)
-		v "$CC $CFLAGS $CPPFLAGS $NOWARN -emit-llvm -c conftest.c" || fv=0
-		rmf mksh.s
-		test $fv = 0 || v "llvm-link -o - conftest.o | opt $optflags | llc -o mksh.s" || fv=0
-		test $fv = 0 || v "$CC $CFLAGS $LDFLAGS -o $tcfn mksh.s $LIBS $ccpr"
-		;;
-	dragonegg)
-		v "$CC $CFLAGS $CPPFLAGS $NOWARN -S -flto conftest.c" || fv=0
-		test $fv = 0 || v "mv conftest.s conftest.ll"
-		test $fv = 0 || v "llvm-as conftest.ll" || fv=0
-		rmf mksh.s
-		test $fv = 0 || v "llvm-link -o - conftest.bc | opt $optflags | llc -o mksh.s" || fv=0
-		test $fv = 0 || v "$CC $CFLAGS $LDFLAGS -o $tcfn mksh.s $LIBS $ccpr"
-		;;
-	combine)
-		v "$CC $CFLAGS $CPPFLAGS $LDFLAGS -fwhole-program --combine $NOWARN -o $tcfn conftest.c $LIBS $ccpr"
-		;;
-	lto|normal)
-		cm=normal
-		v "$CC $CFLAGS $CPPFLAGS $NOWARN -c conftest.c" || fv=0
-		test $fv = 0 || v "$CC $CFLAGS $LDFLAGS -o $tcfn conftest.o $LIBS $ccpr"
-		;;
-	esac
-	test -f $tcfn || fv=0
-	ac_testdone
-	test $fv = 1 || exit 1
-fi
 
 #
 # Environment: definitions
@@ -1308,6 +1315,51 @@ fi
 
 test 1 = $HAVE_SIG_T || add_cppflags -Dsig_t=nosig_t
 ac_cppflags SIG_T
+
+#
+# check whether whatever we use for the final link will succeed
+#
+if test $cm = makefile; then
+	: nothing to check
+else
+	HAVE_LINK_WORKS=x
+	ac_testinit link_works '' 'checking if the final link command may succeed'
+	fv=1
+	cat >conftest.c <<-'EOF'
+		#define EXTERN
+		#define MKSH_INCLUDES_ONLY
+		#include "sh.h"
+		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.484.2.12 2012/03/24 21:22:27 tg Exp $");
+		int main(void) { printf("Hello, World!\n"); return (0); }
+EOF
+	case $cm in
+	llvm)
+		v "$CC $CFLAGS $CPPFLAGS $NOWARN -emit-llvm -c conftest.c" || fv=0
+		rmf mksh.s
+		test $fv = 0 || v "llvm-link -o - conftest.o | opt $optflags | llc -o mksh.s" || fv=0
+		test $fv = 0 || v "$CC $CFLAGS $LDFLAGS -o $tcfn mksh.s $LIBS $ccpr"
+		;;
+	dragonegg)
+		v "$CC $CFLAGS $CPPFLAGS $NOWARN -S -flto conftest.c" || fv=0
+		test $fv = 0 || v "mv conftest.s conftest.ll"
+		test $fv = 0 || v "llvm-as conftest.ll" || fv=0
+		rmf mksh.s
+		test $fv = 0 || v "llvm-link -o - conftest.bc | opt $optflags | llc -o mksh.s" || fv=0
+		test $fv = 0 || v "$CC $CFLAGS $LDFLAGS -o $tcfn mksh.s $LIBS $ccpr"
+		;;
+	combine)
+		v "$CC $CFLAGS $CPPFLAGS $LDFLAGS -fwhole-program --combine $NOWARN -o $tcfn conftest.c $LIBS $ccpr"
+		;;
+	lto|normal)
+		cm=normal
+		v "$CC $CFLAGS $CPPFLAGS $NOWARN -c conftest.c" || fv=0
+		test $fv = 0 || v "$CC $CFLAGS $LDFLAGS -o $tcfn conftest.o $LIBS $ccpr"
+		;;
+	esac
+	test -f $tcfn || fv=0
+	ac_testdone
+	test $fv = 1 || exit 1
+fi
 
 #
 # Environment: signals
@@ -1507,7 +1559,7 @@ ac_testdone
 ac_cppflags
 
 save_CFLAGS=$CFLAGS
-test 1 = $HAVE_CAN_WNOOVERFLOW && CFLAGS="$CFLAGS -Wno-overflow"
+test x1 = x$HAVE_CAN_WNOOVERFLOW && CFLAGS="$CFLAGS -Wno-overflow"
 ac_testn compile_time_asserts_$$ '' 'whether compile-time assertions pass' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
@@ -1554,6 +1606,63 @@ cta(ptr_fits_in_long, sizeof(ptrdiff_t) <= sizeof(long));
 EOF
 CFLAGS=$save_CFLAGS
 eval test 1 = \$HAVE_COMPILE_TIME_ASSERTS_$$ || exit 1
+
+#
+# runtime checks
+# once this is more than one, check if we can do runtime
+# checks (not cross-compiling) first to save on warnings
+#
+$e "${bi}run-time checks follow$ao, please ignore any weird errors"
+
+if ac_testnnd silent_idivwrapv '' '(run-time) whether signed integer division overflows wrap silently' <<-'EOF'
+	#define MKSH_INCLUDES_ONLY
+	#include "sh.h"
+	#ifdef SIGFPE
+	static void fpe_catcher(int) MKSH_A_NORETURN;
+	#endif
+	int main(int ac, char **av) {
+		mksh_ari_t o1, o2, r1, r2;
+
+	#ifdef SIGFPE
+		signal(SIGFPE, fpe_catcher);
+	#endif
+		o1 = ((mksh_ari_t)1 << 31);
+		o2 = -ac;
+		r1 = o1 / o2;
+		r2 = o1 % o2;
+		if (r1 == o1 && r2 == 0) {
+			printf("si");
+			return (0);
+		}
+		printf("no %d %d %d %d %s", o1, o2, r1, r2, av[0]);
+		return (1);
+	}
+	#ifdef SIGFPE
+	static const char fpe_msg[] = "no, got SIGFPE, what were they smoking?";
+	#define fpe_msglen (sizeof(fpe_msg) - 1)
+	static void fpe_catcher(int sig MKSH_A_UNUSED) {
+		_exit(write(1, fpe_msg, fpe_msglen) == fpe_msglen ? 2 : 3);
+	}
+	#endif
+EOF
+then
+	if test $fv = 0; then
+		echo "| hrm, compiling this failed, but we will just failback"
+	else
+		echo "| running test programme; this will fail if cross-compiling"
+		echo "| in which case we will gracefully degrade to the default"
+		./$tcfn >vv.out 2>&1
+		rv=$?
+		echo "| result: `cat vv.out`"
+		fv=0
+		test $rv = 0 && test x"`cat vv.out`" = x"si" && fv=1
+	fi
+	rmf conftest.c conftest.o ${tcfn}* vv.out
+	ac_testdone
+fi
+ac_cppflags
+
+$e "${bi}end of run-time checks$ao"
 
 #
 # Compiler: Praeprocessor (only if needed)
@@ -1643,15 +1752,19 @@ $e $bi$me: Finished configuration testing, now producing output.$ao
 files=
 objs=
 sp=
+case $tcfn in
+a.exe)	mkshexe=mksh.exe ;;
+*)	mkshexe=mksh ;;
+esac
 case $curdir in
-*\ *)	echo "#!./mksh" >test.sh ;;
-*)	echo "#!$curdir/mksh" >test.sh ;;
+*\ *)	echo "#!./$mkshexe" >test.sh ;;
+*)	echo "#!$curdir/$mkshexe" >test.sh ;;
 esac
 cat >>test.sh <<-EOF
 	LC_ALL=C PATH='$PATH'; export LC_ALL PATH
 	test -n "\$KSH_VERSION" || exit 1
 	set -A check_categories -- $check_categories
-	pflag='$curdir/mksh'
+	pflag='$curdir/$mkshexe'
 	sflag='$srcdir/check.t'
 	usee=0 Pflag=0 uset=0 vflag=0 xflag=0
 	while getopts "C:e:fPp:s:t:v" ch; do case \$ch {
@@ -1746,10 +1859,6 @@ dragonegg|llvm)
 *)
 	lobjs=$objs
 	;;
-esac
-case $tcfn in
-a.exe)	mkshexe=mksh.exe ;;
-*)	mkshexe=mksh ;;
 esac
 echo tcfn=$mkshexe >>Rebuild.sh
 echo "$CC $CFLAGS $LDFLAGS -o \$tcfn $lobjs $LIBS $ccpr" >>Rebuild.sh

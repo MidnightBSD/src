@@ -1,6 +1,6 @@
 /*	$OpenBSD: sh.h,v 1.30 2010/01/04 18:07:11 deraadt Exp $	*/
 /*	$OpenBSD: shf.h,v 1.6 2005/12/11 18:53:51 deraadt Exp $	*/
-/*	$OpenBSD: table.h,v 1.7 2005/12/11 20:31:21 otto Exp $	*/
+/*	$OpenBSD: table.h,v 1.8 2012/02/19 07:52:30 otto Exp $	*/
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
 /*	$OpenBSD: expand.h,v 1.6 2005/03/30 17:16:37 deraadt Exp $	*/
 /*	$OpenBSD: lex.h,v 1.11 2006/05/29 18:22:24 otto Exp $	*/
@@ -9,7 +9,8 @@
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
 /*-
- * Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+ * Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+ *	       2011, 2012
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -151,18 +152,28 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.484.2.11 2011/12/11 18:18:28 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.484.2.16 2012/03/24 21:22:43 tg Exp $");
 #endif
-#define MKSH_VERSION "R40 2011/12/11"
+#define MKSH_VERSION "R40 2012/03/20"
 
-/* arithmetics types */
+/* arithmetic types: C implementation */
+#if !HAVE_CAN_INTTYPES
+#if !HAVE_CAN_UCBINTS
+typedef signed int int32_t;
+typedef unsigned int uint32_t;
+#else
+typedef u_int32_t uint32_t;
+#endif
+#endif
+
+/* arithmetic types: shell arithmetics */
 typedef int32_t mksh_ari_t;
 typedef uint32_t mksh_uari_t;
 
 /* boolean type (no <stdbool.h> deliberately) */
 typedef unsigned char mksh_bool;
 #undef bool
-/* false MUST equal 0 */
+/* false MUST equal the same 0 as written by static storage initialisation */
 #undef false
 #undef true
 /* access macros for boolean type */
@@ -172,6 +183,26 @@ typedef unsigned char mksh_bool;
 #define true		1
 /* make any-type into bool or short */
 #define tobool(cond)	((cond) ? true : false)
+
+/* char (octet) type: C implementation */
+#if !HAVE_CAN_INT8TYPE
+#if !HAVE_CAN_UCBINT8
+typedef unsigned char uint8_t;
+#else
+typedef u_int8_t uint8_t;
+#endif
+#endif
+
+/* other standard types */
+
+#if !HAVE_RLIM_T
+typedef long rlim_t;
+#endif
+
+#if !HAVE_SIG_T
+#undef sig_t
+typedef void (*sig_t)(int);
+#endif
 
 #ifndef MKSH_INCLUDES_ONLY
 
@@ -189,32 +220,6 @@ struct rusage {
 	struct timeval ru_utime;
 	struct timeval ru_stime;
 };
-#endif
-
-#if !HAVE_RLIM_T
-typedef long rlim_t;
-#endif
-
-#if !HAVE_SIG_T
-#undef sig_t
-typedef void (*sig_t)(int);
-#endif
-
-#if !HAVE_CAN_INTTYPES
-#if !HAVE_CAN_UCBINTS
-typedef signed int int32_t;
-typedef unsigned int uint32_t;
-#else
-typedef u_int32_t uint32_t;
-#endif
-#endif
-
-#if !HAVE_CAN_INT8TYPE
-#if !HAVE_CAN_UCBINT8
-typedef unsigned char uint8_t;
-#else
-typedef u_int8_t uint8_t;
-#endif
 #endif
 
 /* extra macros */
@@ -369,7 +374,6 @@ extern int wcwidth(__WCHAR_TYPE__);
  */
 #define MAGIC		(7)	/* prefix for *?[!{,} during expand */
 #define ISMAGIC(c)	((unsigned char)(c) == MAGIC)
-#define NOT		'!'	/* might use ^ (ie, [!...] vs [^..]) */
 
 #define LINE		4096	/* input line size */
 
@@ -692,6 +696,9 @@ struct temp {
 #define shl_spare	(&shf_iob[0])	/* for c_read()/c_print() */
 #define shl_stdout	(&shf_iob[1])
 #define shl_out		(&shf_iob[2])
+#ifdef DF
+#define shl_dbg		(&shf_iob[3])	/* for DF() */
+#endif
 EXTERN bool shl_stdout_ok;
 
 /*
@@ -851,7 +858,7 @@ EXTERN char	*current_wd;
 #define MIN_COLS	(2 + MIN_EDIT_SPACE + 3)
 #define MIN_LINS	3
 EXTERN mksh_ari_t x_cols E_INIT(80);	/* tty columns */
-EXTERN mksh_ari_t x_lins E_INIT(-1);	/* tty lines */
+EXTERN mksh_ari_t x_lins E_INIT(24);	/* tty lines */
 
 /* These to avoid bracket matching problems */
 #define OPAREN	'('
@@ -1448,11 +1455,9 @@ EXTERN YYSTYPE yylval;		/* result from yylex */
 EXTERN struct ioword *heres[HERES], **herep;
 EXTERN char ident[IDENT+1];
 
-#define HISTORYSIZE	500	/* size of saved history */
-
-EXTERN char **history;	/* saved commands */
-EXTERN char **histptr;	/* last history item */
-EXTERN int histsize;	/* history size */
+EXTERN char **history;		/* saved commands */
+EXTERN char **histptr;		/* last history item */
+EXTERN mksh_ari_t histsize;	/* history size */
 
 /* user and system time of last j_waitjed job */
 EXTERN struct timeval j_usrtime, j_systime;
@@ -1607,12 +1612,14 @@ void histsave(int *, const char *, bool, bool);
 bool histsync(void);
 #endif
 int c_fc(const char **);
-void sethistsize(int);
+void sethistsize(mksh_ari_t);
 #if HAVE_PERSISTENT_HISTORY
 void sethistfile(const char *);
 #endif
+#if !MKSH_S_NOVI
 char **histpos(void);
 int histnum(int);
+#endif
 int findhist(int, int, const char *, int);
 char **hist_get_newest(bool);
 void inittraps(void);
@@ -1714,6 +1721,10 @@ struct tbl *ktenter(struct table *, const char *, uint32_t);
 void ktwalk(struct tstate *, struct table *);
 struct tbl *ktnext(struct tstate *);
 struct tbl **ktsort(struct table *);
+#ifdef DF
+void DF(const char *, ...)
+    MKSH_A_FORMAT(__printf__, 1, 2);
+#endif
 /* misc.c */
 void setctypes(const char *, int);
 void initctypes(void);
@@ -1798,6 +1809,7 @@ void tfree(struct op *, Area *);
 void dumpchar(struct shf *, int);
 void dumptree(struct shf *, struct op *);
 void dumpwdvar(struct shf *, const char *);
+void dumpioact(struct shf *shf, struct op *t);
 void vistree(char *, size_t, struct op *)
     MKSH_A_BOUNDED(__string__, 1, 2);
 void fpFUNCTf(struct shf *, int, bool, const char *, struct op *);
