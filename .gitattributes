@@ -38939,6 +38939,7 @@ sys/modules/dtrace/dtrace/Makefile -text
 sys/modules/dtrace/dtrace_test/Makefile -text
 sys/modules/dtrace/dtraceall/Makefile -text
 sys/modules/dtrace/dtraceall/dtraceall.c -text
+sys/modules/dtrace/fasttrap/Makefile -text
 sys/modules/dtrace/fbt/Makefile -text
 sys/modules/dtrace/linsystrace/Makefile -text
 sys/modules/dtrace/lockstat/Makefile -text
