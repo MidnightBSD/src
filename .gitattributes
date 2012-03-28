@@ -38944,6 +38944,7 @@ sys/modules/dtrace/linsystrace/Makefile -text
 sys/modules/dtrace/lockstat/Makefile -text
 sys/modules/dtrace/profile/Makefile -text
 sys/modules/dtrace/prototype/Makefile -text
+sys/modules/dtrace/sdt/Makefile -text
 sys/modules/dtrace/systrace/Makefile -text
 sys/modules/dummynet/Makefile -text
 sys/modules/ed/Makefile -text
