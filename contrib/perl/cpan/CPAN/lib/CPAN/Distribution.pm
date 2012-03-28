@@ -8,7 +8,7 @@ use CPAN::InfoObj;
 use File::Path ();
 @CPAN::Distribution::ISA = qw(CPAN::InfoObj);
 use vars qw($VERSION);
-$VERSION = "1.9602";
+$VERSION = "1.9602_01";
 
 # Accessors
 sub cpan_comment {
@@ -584,7 +584,8 @@ EOF
 
 #-> sub CPAN::Distribution::pick_meta_file ;
 sub pick_meta_file {
-    my($self, $yaml) = @_;
+    my($self, $filter) = @_;
+    $filter = '.' unless defined $filter;
 
     my $build_dir;
     unless ($build_dir = $self->{build_dir}) {
@@ -602,7 +603,7 @@ sub pick_meta_file {
     push @choices, 'META.json' if $has_cm;
     push @choices, 'META.yml' if $has_cm || $has_pcm;
 
-    for my $file ( @choices ) {
+    for my $file ( grep { /$filter/ } @choices ) {
         my $path = File::Spec->catdir( $build_dir, $file );
         return $path if -f $path
     }
@@ -2843,8 +2844,7 @@ sub _fulfills_all_version_rqs {
 }
 
 #-> sub CPAN::Distribution::read_meta
-# read any sort of meta files, return CPAN::Meta object if no errors and
-# dynamic_config = 0
+# read any sort of meta files, return CPAN::Meta object if no errors
 sub read_meta {
     my($self) = @_;
     my $meta_file = $self->pick_meta_file
@@ -2861,9 +2861,6 @@ sub read_meta {
         my $eummv = do { local $^W = 0; $1+0; };
         return if $eummv < 6.2501;
     }
-
-    # META/MYMETA is only authoritative if dynamic_config is false
-    return if $meta->dynamic_config;
 
     return $meta;
 }
@@ -2903,7 +2900,7 @@ sub read_yaml {
 #-> sub CPAN::Distribution::configure_requires ;
 sub configure_requires {
     my($self) = @_;
-    return unless my $meta_file = $self->pick_meta_file;
+    return unless my $meta_file = $self->pick_meta_file('^META');
     if (my $meta_obj = $self->read_meta) {
         my $prereqs = $meta_obj->effective_prereqs;
         my $cr = $prereqs->requirements_for(qw/configure requires/);
@@ -2929,7 +2926,9 @@ sub prereq_pm {
                 $self->{modulebuild}||"",
                ) if $CPAN::DEBUG;
     my($req,$breq);
-    if (my $meta_obj = $self->read_meta) {
+    my $meta_obj = $self->read_meta;
+    # META/MYMETA is only authoritative if dynamic_config is false
+    if ($meta_obj && ! $meta_obj->dynamic_config) {
         my $prereqs = $meta_obj->effective_prereqs;
         my $requires = $prereqs->requirements_for(qw/runtime requires/);
         my $build_requires = $prereqs->requirements_for(qw/build requires/);

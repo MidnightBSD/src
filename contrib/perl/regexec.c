@@ -3663,7 +3663,10 @@ S_regmatch(pTHX_ regmatch_info *reginfo, regnode *prog)
 	case NBOUNDU:
 	case NBOUNDA:
 	    /* was last char in word? */
-	    if (utf8_target && FLAGS(scan) != REGEX_ASCII_RESTRICTED_CHARSET) {
+	    if (utf8_target
+		&& FLAGS(scan) != REGEX_ASCII_RESTRICTED_CHARSET
+		&& FLAGS(scan) != REGEX_ASCII_MORE_RESTRICTED_CHARSET)
+	    {
 		if (locinput == PL_bostr)
 		    ln = '\n';
 		else {
@@ -3710,6 +3713,7 @@ S_regmatch(pTHX_ regmatch_info *reginfo, regnode *prog)
 			n = isALNUM(nextchr);
 			break;
 		    case REGEX_ASCII_RESTRICTED_CHARSET:
+		    case REGEX_ASCII_MORE_RESTRICTED_CHARSET:
 			ln = isWORDCHAR_A(ln);
 			n = isWORDCHAR_A(nextchr);
 			break;
@@ -6726,9 +6730,12 @@ S_reginclass(pTHX_ const regexp * const prog, register const regnode * const n, 
 			    STRLEN len;
 			    const char * const s = SvPV_const(sv, len);
 
-			    if (len <= total_foldlen && memEQ(s,
-							       (char*)folded,
-							       len))
+			    if (len <= total_foldlen
+				&& memEQ(s, (char*)folded, len)
+
+				   /* If 0, means matched a partial char. See
+				    * [perl #90536] */
+				&& map_fold_len_back[len])
 			    {
 
 				/* Advance the target string ptr to account for
@@ -6737,7 +6744,6 @@ S_reginclass(pTHX_ const regexp * const prog, register const regnode * const n, 
 				 * length. */
 				if (lenp) {
 				    *lenp = map_fold_len_back[len];
-				    assert(*lenp != 0);	/* Otherwise will loop */
 				}
 				match = TRUE;
 				break;

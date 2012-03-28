@@ -5710,8 +5710,7 @@ STATIC OP*	S_dofindlabel(pTHX_ OP *o, const char *label, OP **opstack, OP **opli
 #define PERL_ARGS_ASSERT_DOFINDLABEL	\
 	assert(o); assert(label); assert(opstack); assert(oplimit)
 
-STATIC OP*	S_doparseform(pTHX_ SV *sv)
-			__attribute__warn_unused_result__
+STATIC MAGIC *	S_doparseform(pTHX_ SV *sv)
 			__attribute__nonnull__(pTHX_1);
 #define PERL_ARGS_ASSERT_DOPARSEFORM	\
 	assert(sv)
@@ -6048,12 +6047,6 @@ PERL_STATIC_INLINE UV	S_invlist_max(pTHX_ HV* const invlist)
 			__attribute__nonnull__(pTHX_1);
 #define PERL_ARGS_ASSERT_INVLIST_MAX	\
 	assert(invlist)
-
-PERL_STATIC_INLINE void	S_invlist_set_array(pTHX_ HV* const invlist, const UV* const array)
-			__attribute__nonnull__(pTHX_1)
-			__attribute__nonnull__(pTHX_2);
-#define PERL_ARGS_ASSERT_INVLIST_SET_ARRAY	\
-	assert(invlist); assert(array)
 
 PERL_STATIC_INLINE void	S_invlist_set_len(pTHX_ HV* const invlist, const UV len)
 			__attribute__nonnull__(pTHX_1);

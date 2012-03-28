@@ -1310,7 +1310,6 @@ EsM	|void	|invlist_extend    |NN HV* const invlist|const UV len
 EsMR	|HV*	|invlist_intersection	|NN HV* const a|NN HV* const b
 EiMR	|UV	|invlist_len	|NN HV* const invlist
 EiMR	|UV	|invlist_max	|NN HV* const invlist
-EiM	|void	|invlist_set_array	|NN HV* const invlist|NN const UV* const array
 EiM	|void	|invlist_set_len	|NN HV* const invlist|const UV len
 EiM	|void	|invlist_set_max	|NN HV* const invlist|const UV max
 EiM	|void	|invlist_trim	|NN HV* const invlist
@@ -1721,7 +1720,7 @@ snR	|char *	|bytes_to_uni	|NN const U8 *start|STRLEN len|NN char *dest
 #if defined(PERL_IN_PP_CTL_C)
 sR	|OP*	|docatch	|NULLOK OP *o
 sR	|OP*	|dofindlabel	|NN OP *o|NN const char *label|NN OP **opstack|NN OP **oplimit
-sR	|OP*	|doparseform	|NN SV *sv
+s	|MAGIC *|doparseform	|NN SV *sv
 snR	|bool	|num_overflow	|NV value|I32 fldsize|I32 frcsize
 sR	|I32	|dopoptoeval	|I32 startingblock
 sR	|I32	|dopoptogiven	|I32 startingblock

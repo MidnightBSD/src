@@ -1012,7 +1012,8 @@ S_hv_delete_common(pTHX_ HV *hv, SV *keysv, const char *key, STRLEN klen,
 		Safefree(key);
 	    return NULL;
 	}
-	if (SvREADONLY(hv) && HeVAL(entry) && SvREADONLY(HeVAL(entry))) {
+	if (SvREADONLY(hv) && HeVAL(entry) && SvREADONLY(HeVAL(entry))
+	 && !SvIsCOW(HeVAL(entry))) {
 	    hv_notallowed(k_flags, key, klen,
 			    "Attempt to delete readonly key '%"SVf"' from"
 			    " a restricted hash");
@@ -1072,8 +1073,12 @@ S_hv_delete_common(pTHX_ HV *hv, SV *keysv, const char *key, STRLEN klen,
 	    *oentry = HeNEXT(entry);
 	    if (SvOOK(hv) && entry == HvAUX(hv)->xhv_eiter /* HvEITER(hv) */)
 		HvLAZYDEL_on(hv);
-	    else
+	    else {
+		if (SvOOK(hv) && HvLAZYDEL(hv) &&
+		    entry == HeNEXT(HvAUX(hv)->xhv_eiter))
+		    HeNEXT(HvAUX(hv)->xhv_eiter) = HeNEXT(entry);
 		hv_free_ent(hv, entry);
+	    }
 	    xhv->xhv_keys--; /* HvTOTALKEYS(hv)-- */
 	    if (xhv->xhv_keys == 0)
 	        HvHASKFLAGS_off(hv);
@@ -1537,7 +1542,8 @@ Perl_hv_clear(pTHX_ HV *hv)
 	    for (; entry; entry = HeNEXT(entry)) {
 		/* not already placeholder */
 		if (HeVAL(entry) != &PL_sv_placeholder) {
-		    if (HeVAL(entry) && SvREADONLY(HeVAL(entry))) {
+		    if (HeVAL(entry) && SvREADONLY(HeVAL(entry))
+		     && !SvIsCOW(HeVAL(entry))) {
 			SV* const keysv = hv_iterkeysv(entry);
 			Perl_croak(aTHX_
 				   "Attempt to delete readonly key '%"SVf"' from a restricted hash",
@@ -1619,8 +1625,12 @@ S_clear_placeholders(pTHX_ HV *hv, U32 items)
 		*oentry = HeNEXT(entry);
 		if (entry == HvEITER_get(hv))
 		    HvLAZYDEL_on(hv);
-		else
+		else {
+		    if (SvOOK(hv) && HvLAZYDEL(hv) &&
+			entry == HeNEXT(HvAUX(hv)->xhv_eiter))
+			HeNEXT(HvAUX(hv)->xhv_eiter) = HeNEXT(entry);
 		    hv_free_ent(hv, entry);
+		}
 
 		if (--items == 0) {
 		    /* Finished.  */

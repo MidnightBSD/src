@@ -19695,6 +19695,8 @@ contrib/perl/pod/perl5136delta.pod -text
 contrib/perl/pod/perl5137delta.pod -text
 contrib/perl/pod/perl5138delta.pod -text
 contrib/perl/pod/perl5139delta.pod -text
+contrib/perl/pod/perl5140delta.pod -text
+contrib/perl/pod/perl5141delta.pod -text
 contrib/perl/pod/perl561delta.pod -text
 contrib/perl/pod/perl56delta.pod -text
 contrib/perl/pod/perl570delta.pod -text

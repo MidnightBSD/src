@@ -34,10 +34,6 @@
 #define PERL_IN_PP_CTL_C
 #include "perl.h"
 
-#ifndef WORD_ALIGN
-#define WORD_ALIGN sizeof(U32)
-#endif
-
 #define DOCATCH(o) ((CATCH_GET == TRUE) ? docatch(o) : (o))
 
 #define dopoptosub(plop)	dopoptosub_at(cxstack, (plop))
@@ -547,20 +543,28 @@ PP(pp_formline)
     bool item_is_utf8 = FALSE;
     bool targ_is_utf8 = FALSE;
     SV * nsv = NULL;
-    OP * parseres = NULL;
     const char *fmt;
+    MAGIC *mg = NULL;
 
-    if (!SvMAGICAL(tmpForm) || !SvCOMPILED(tmpForm)) {
+    if (SvTYPE(tmpForm) >= SVt_PVMG) {
+	/* This might, of course, still return NULL.  */
+	mg = mg_find(tmpForm, PERL_MAGIC_fm);
+    } else {
+	sv_upgrade(tmpForm, SVt_PVMG);
+    }
+
+    if(!mg) {
 	if (SvREADONLY(tmpForm)) {
 	    SvREADONLY_off(tmpForm);
-	    parseres = doparseform(tmpForm);
+	    mg = doparseform(tmpForm);
 	    SvREADONLY_on(tmpForm);
 	}
 	else
-	    parseres = doparseform(tmpForm);
-	if (parseres)
-	    return parseres;
+	    mg = doparseform(tmpForm);
+	assert(mg);
     }
+    fpc = (U32*)mg->mg_ptr;
+
     SvPV_force(PL_formtarget, len);
     if (SvTAINTED(tmpForm))
 	SvTAINTED_on(PL_formtarget);
@@ -569,8 +573,6 @@ PP(pp_formline)
     t = SvGROW(PL_formtarget, len + fudge + 1);  /* XXX SvCUR bad */
     t += len;
     f = SvPV_const(tmpForm, len);
-    /* need to jump to the next word */
-    fpc = (U32*)(f + len + WORD_ALIGN - SvCUR(tmpForm) % WORD_ALIGN);
 
     for (;;) {
 	DEBUG_f( {
@@ -1957,7 +1959,7 @@ PP(pp_caller)
 	AV * const ary = cx->blk_sub.argarray;
 	const int off = AvARRAY(ary) - AvALLOC(ary);
 
-	if (!PL_dbargs)
+	if (!PL_dbargs || AvREAL(PL_dbargs))
 	    Perl_init_dbargs(aTHX);
 
 	if (AvMAX(PL_dbargs) < AvFILLp(ary) + off)
@@ -4917,7 +4919,7 @@ PP(pp_break)
 	RETURNOP(cx->blk_givwhen.leave_op);
 }
 
-STATIC OP *
+static MAGIC *
 S_doparseform(pTHX_ SV *sv)
 {
     STRLEN len;
@@ -4935,6 +4937,7 @@ S_doparseform(pTHX_ SV *sv)
     bool ischop;
     bool unchopnum = FALSE;
     int maxops = 12; /* FF_LINEMARK + FF_END + 10 (\0 without preceding \n) */
+    MAGIC *mg;
 
     PERL_ARGS_ASSERT_DOPARSEFORM;
 
@@ -5120,20 +5123,22 @@ S_doparseform(pTHX_ SV *sv)
 
     assert (fpc <= fops + maxops); /* ensure our buffer estimate was valid */
     arg = fpc - fops;
-    { /* need to jump to the next word */
-        int z;
-	z = WORD_ALIGN - SvCUR(sv) % WORD_ALIGN;
-	SvGROW(sv, SvCUR(sv) + z + arg * sizeof(U32) + 4);
-	s = SvPVX(sv) + SvCUR(sv) + z;
-    }
-    Copy(fops, s, arg, U32);
-    Safefree(fops);
-    sv_magic(sv, NULL, PERL_MAGIC_fm, NULL, 0);
-    SvCOMPILED_on(sv);
+
+    /* If we pass the length in to sv_magicext() it will copy the buffer for us.
+       We don't need that, so by setting the length on return we "donate" the
+       buffer to the magic, avoiding an allocation. We could realloc() the
+       buffer to the exact size used, but that feels like it's not worth it
+       (particularly if the rumours are true and some realloc() implementations
+       don't shrink blocks). However, set the true length used in mg_len so that
+       mg_dup only allocates and copies what's actually needed.  */
+    mg = sv_magicext(sv, NULL, PERL_MAGIC_fm, &PL_vtbl_fm,
+		     (const char *const) fops, 0);
+    mg->mg_len = arg * sizeof(U32);
 
     if (unchopnum && repeat)
-        DIE(aTHX_ "Repeated format line will never terminate (~~ and @#)");
-    return 0;
+        Perl_die(aTHX_ "Repeated format line will never terminate (~~ and @#)");
+
+    return mg;
 }
 
 
@@ -5235,6 +5240,7 @@ S_run_user_filter(pTHX_ int idx, SV *buf_sv, int maxlen)
        I'm going to use a mortal in case the upstream filter croaks.  */
     upstream = ((SvOK(buf_sv) && sv_len(buf_sv)) || SvGMAGICAL(buf_sv))
 	? sv_newmortal() : buf_sv;
+    SvTEMP_off(upstream);
     SvUPGRADE(upstream, SVt_PV);
 	
     if (filter_has_file) {
@@ -5246,11 +5252,14 @@ S_run_user_filter(pTHX_ int idx, SV *buf_sv, int maxlen)
 	int count;
 
 	ENTER_with_name("call_filter_sub");
-	SAVE_DEFSV;
+	save_gp(PL_defgv, 0);
+	GvINTRO_off(PL_defgv);
+	SAVEGENERICSV(GvSV(PL_defgv));
 	SAVETMPS;
 	EXTEND(SP, 2);
 
 	DEFSV_set(upstream);
+	SvREFCNT_inc_simple_void_NN(upstream);
 	PUSHMARK(SP);
 	mPUSHi(0);
 	if (filter_state) {

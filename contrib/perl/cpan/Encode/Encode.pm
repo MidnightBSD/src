@@ -1,10 +1,10 @@
 #
-# $Id: Encode.pm,v 1.1.1.1 2011-05-18 13:33:27 laffer1 Exp $
+# $Id: Encode.pm,v 1.1.1.2 2012-03-28 04:40:27 laffer1 Exp $
 #
 package Encode;
 use strict;
 use warnings;
-our $VERSION = sprintf "%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%02d_01", q$Revision: 1.1.1.2 $ =~ /(\d+)/g;
 sub DEBUG () { 0 }
 use XSLoader ();
 XSLoader::load( __PACKAGE__, $VERSION );
