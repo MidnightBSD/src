@@ -26,7 +26,7 @@
  */
 /*
  | iSCSI
- | $Id: iscsi.c,v 1.1 2008-11-11 21:31:57 laffer1 Exp $
+ | $Id: iscsi.c,v 1.2 2012-03-31 02:57:26 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
@@ -808,3 +808,4 @@ moduledata_t iscsi_mod = {
 };
 
 DECLARE_MODULE(iscsi, iscsi_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
+MODULE_DEPEND(iscsi, cam, 1, 1, 1);

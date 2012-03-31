@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/libkern.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/libkern.h,v 1.4 2012/03/16 03:04:47 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -145,6 +145,10 @@ memcmp(const void *b1, const void *b2, size_t len)
 {
 	return (bcmp(b1, b2, len));
 }
+
+uint32_t
+calculate_crc32c(uint32_t crc32c, const unsigned char *buffer, 
+	unsigned int length);
 
 LIBKERN_INLINE void *memset(void *, int, size_t);
 #ifdef LIBKERN_BODY
