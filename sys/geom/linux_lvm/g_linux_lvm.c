@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/linux_lvm/g_linux_lvm.c,v 1.1 2011/07/13 01:14:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 2008 Andrew Thompson <thompsa@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/linux_lvm/g_linux_lvm.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/linux_lvm/g_linux_lvm.c,v 1.3 2011/02/25 10:24:35 netchild Exp $");
 
 #include <sys/ctype.h>
 #include <sys/param.h>
@@ -42,6 +42,8 @@ __FBSDID("$FreeBSD: src/sys/geom/linux_lvm/g_linux_lvm.c,v 1.1.2.1.2.1 2008/11/2
 #include <sys/endian.h>
 
 #include <geom/linux_lvm/g_linux_lvm.h>
+
+FEATURE(geom_linux_lvm, "GEOM Linux LVM partitioning support");
 
 /* Declare malloc(9) label */
 static MALLOC_DEFINE(M_GLLVM, "gllvm", "GEOM_LINUX_LVM Data");
@@ -827,14 +829,6 @@ llvm_md_decode(const u_char *data, struct g_llvm_metadata *md,
 	return (0);
 }
 
-#define	GRAB_NAME(tok, name, len)					\
-	len = 0;							\
-	while (tok[len] && (isalpha(tok[len]) || isdigit(tok[len])) &&	\
-	    len < G_LLVM_NAMELEN - 1)					\
-		len++;							\
-	bcopy(tok, name, len);						\
-	name[len] = '\0';
-
 #define	GRAB_INT(key, tok1, tok2, v)					\
 	if (tok1 && tok2 && strncmp(tok1, key, sizeof(key)) == 0) {	\
 		v = strtol(tok2, &tok1, 10);				\
@@ -865,6 +859,27 @@ llvm_md_decode(const u_char *data, struct g_llvm_metadata *md,
 			break;						\
 		}
 
+static size_t 
+llvm_grab_name(char *name, const char *tok)
+{
+	size_t len;
+
+	len = 0;
+	if (tok == NULL)
+		return (0);
+	if (tok[0] == '-')
+		return (0);
+	if (strcmp(tok, ".") == 0 || strcmp(tok, "..") == 0)
+		return (0);
+	while (tok[len] && (isalpha(tok[len]) || isdigit(tok[len]) ||
+	    tok[len] == '.' || tok[len] == '_' || tok[len] == '-' ||
+	    tok[len] == '+') && len < G_LLVM_NAMELEN - 1)
+		len++;
+	bcopy(tok, name, len);
+	name[len] = '\0';
+	return (len);
+}
+
 static int
 llvm_textconf_decode(u_char *data, int buflen, struct g_llvm_metadata *md)
 {
@@ -873,7 +888,7 @@ llvm_textconf_decode(u_char *data, int buflen, struct g_llvm_metadata *md)
 	char *tok, *v;
 	char name[G_LLVM_NAMELEN];
 	char uuid[G_LLVM_UUIDLEN];
-	int len;
+	size_t len;
 
 	if (buf == NULL || *buf == '\0')
 		return (EINVAL);
@@ -881,7 +896,7 @@ llvm_textconf_decode(u_char *data, int buflen, struct g_llvm_metadata *md)
 	tok = strsep(&buf, "\n");
 	if (tok == NULL)
 		return (EINVAL);
-	GRAB_NAME(tok, name, len);
+	len = llvm_grab_name(name, tok);
 	if (len == 0)
 		return (EINVAL);
 
@@ -971,7 +986,7 @@ llvm_textconf_decode_pv(char **buf, char *tok, struct g_llvm_vg *vg)
 {
 	struct g_llvm_pv	*pv;
 	char *v;
-	int len;
+	size_t len;
 
 	if (*buf == NULL || **buf == '\0')
 		return (EINVAL);
@@ -984,7 +999,7 @@ llvm_textconf_decode_pv(char **buf, char *tok, struct g_llvm_vg *vg)
 	len = 0;
 	if (tok == NULL)
 		goto bad;
-	GRAB_NAME(tok, pv->pv_name, len);
+	len = llvm_grab_name(pv->pv_name, tok);
 	if (len == 0)
 		goto bad;
 
@@ -1025,7 +1040,7 @@ llvm_textconf_decode_lv(char **buf, char *tok, struct g_llvm_vg *vg)
 	struct g_llvm_lv	*lv;
 	struct g_llvm_segment *sg;
 	char *v;
-	int len;
+	size_t len;
 
 	if (*buf == NULL || **buf == '\0')
 		return (EINVAL);
@@ -1037,10 +1052,9 @@ llvm_textconf_decode_lv(char **buf, char *tok, struct g_llvm_vg *vg)
 	lv->lv_vg = vg;
 	LIST_INIT(&lv->lv_segs);
 
-	len = 0;
 	if (tok == NULL)
 		goto bad;
-	GRAB_NAME(tok, lv->lv_name, len);
+	len = llvm_grab_name(lv->lv_name, tok);
 	if (len == 0)
 		goto bad;
 
@@ -1163,7 +1177,6 @@ bad:
 	free(sg, M_GLLVM);
 	return (-1);
 }
-#undef	GRAB_NAME
 #undef	GRAB_INT
 #undef	GRAB_STR
 #undef	SPLIT

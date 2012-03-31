@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/stripe/g_stripe.c,v 1.3 2008/12/03 00:25:51 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/stripe/g_stripe.c,v 1.4 2011/12/10 14:59:51 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -676,6 +676,8 @@ g_stripe_check_and_run(struct g_stripe_softc *sc)
 	}
 	sc->sc_provider->sectorsize = sectorsize;
 	sc->sc_provider->mediasize = mediasize * sc->sc_ndisks;
+	sc->sc_provider->stripesize = sc->sc_stripesize;
+	sc->sc_provider->stripeoffset = 0;
 	g_error_provider(sc->sc_provider, 0);
 
 	G_STRIPE_DEBUG(0, "Device %s activated.", sc->sc_name);

@@ -35,6 +35,7 @@ __FBSDID("$FreeBSD: src/sys/geom/mirror/g_mirror.c,v 1.93.2.3 2010/09/19 19:43:0
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <sys/eventhandler.h>
@@ -45,11 +46,13 @@ __FBSDID("$FreeBSD: src/sys/geom/mirror/g_mirror.c,v 1.93.2.3 2010/09/19 19:43:0
 #include <sys/sched.h>
 #include <geom/mirror/g_mirror.h>
 
+FEATURE(geom_mirror, "GEOM mirroring support");
 
 static MALLOC_DEFINE(M_MIRROR, "mirror_data", "GEOM_MIRROR Data");
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, mirror, CTLFLAG_RW, 0, "GEOM_MIRROR stuff");
+static SYSCTL_NODE(_kern_geom, OID_AUTO, mirror, CTLFLAG_RW, 0,
+    "GEOM_MIRROR stuff");
 u_int g_mirror_debug = 0;
 TUNABLE_INT("kern.geom.mirror.debug", &g_mirror_debug);
 SYSCTL_UINT(_kern_geom_mirror, OID_AUTO, debug, CTLFLAG_RW, &g_mirror_debug, 0,
@@ -2021,6 +2024,15 @@ g_mirror_launch_provider(struct g_mirror_softc *sc)
 	pp = g_new_providerf(sc->sc_geom, "mirror/%s", sc->sc_name);
 	pp->mediasize = sc->sc_mediasize;
 	pp->sectorsize = sc->sc_sectorsize;
+	pp->stripesize = 0;
+	pp->stripeoffset = 0;
+	LIST_FOREACH(disk, &sc->sc_disks, d_next) {
+		if (disk->d_consumer && disk->d_consumer->provider &&
+		    disk->d_consumer->provider->stripesize > pp->stripesize) {
+			pp->stripesize = disk->d_consumer->provider->stripesize;
+			pp->stripeoffset = disk->d_consumer->provider->stripeoffset;
+		}
+	}
 	sc->sc_provider = pp;
 	g_error_provider(pp, 0);
 	g_topology_unlock();

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_vol_ffs.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002, 2003 Gordon Tetlow
  * All rights reserved.
@@ -31,6 +31,7 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_vol_ffs.c,v 1.16 2005/11/30 22:15:00 sobom
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/bio.h>
@@ -42,6 +43,8 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_vol_ffs.c,v 1.16 2005/11/30 22:15:00 sobom
 
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
+
+FEATURE(geom_vol, "GEOM support for volume names from UFS superblock");
 
 #define VOL_FFS_CLASS_NAME "VOL_FFS"
 
