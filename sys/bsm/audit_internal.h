@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/bsm/audit_internal.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $ */
 /*
- * Copyright (c) 2005 Apple Computer, Inc.
+ * Copyright (c) 2005 Apple Inc.
  * Copyright (c) 2005 SPARTA, Inc.
  * All rights reserved.
  *
@@ -33,7 +33,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_internal.h#18
  * $FreeBSD: src/sys/bsm/audit_internal.h,v 1.8 2007/07/22 12:28:12 rwatson Exp $
- * $MidnightBSD: src/sys/bsm/audit_internal.h,v 1.3 2008/09/03 02:11:52 laffer1 Exp $
+ * $MidnightBSD: src/sys/bsm/audit_internal.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $
  */
 
 #ifndef _AUDIT_INTERNAL_H

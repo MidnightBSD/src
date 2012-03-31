@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $ */
 /*
- * Copyright (c) 2005 Apple Computer, Inc.
+ * Copyright (c) 2005 Apple Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,7 +29,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_kevents.h#34
  * $FreeBSD: src/sys/bsm/audit_kevents.h,v 1.12 2007/07/22 12:28:12 rwatson Exp $
- * $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.3 2008/09/03 02:11:52 laffer1 Exp $
+ * $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $
  */
 
 #ifndef _BSM_AUDIT_KEVENTS_H_
