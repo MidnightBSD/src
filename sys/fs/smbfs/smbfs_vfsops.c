@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_vfsops.c,v 1.41 2006/09/26 04:12:46 tegge Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_vfsops.c,v 1.41.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -45,6 +45,7 @@
 #include <sys/stat.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/sx.h>
 
 
 #include <netsmb/smb.h>
@@ -193,7 +194,7 @@ smbfs_mount(struct mount *mp, struct thread *td)
 	smp->sm_hash = hashinit(desiredvnodes, M_SMBFSHASH, &smp->sm_hashlen);
 	if (smp->sm_hash == NULL)
 		goto bad;
-	lockinit(&smp->sm_hashlock, PVFS, "smbfsh", 0, 0);
+	sx_init(&smp->sm_hashlock, "smbfsh");
 	smp->sm_share = ssp;
 	smp->sm_root = NULL;
 	if (1 != vfs_scanopt(mp->mnt_optnew,
@@ -265,7 +266,7 @@ bad:
         if (smp) {
 		if (smp->sm_hash)
 			free(smp->sm_hash, M_SMBFSHASH);
-		lockdestroy(&smp->sm_hashlock);
+		sx_destroy(&smp->sm_hashlock);
 #ifdef SMBFS_USEZONE
 		zfree(smbfsmount_zone, smp);
 #else
@@ -313,7 +314,7 @@ smbfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 
 	if (smp->sm_hash)
 		free(smp->sm_hash, M_SMBFSHASH);
-	lockdestroy(&smp->sm_hashlock);
+	sx_destroy(&smp->sm_hashlock);
 #ifdef SMBFS_USEZONE
 	zfree(smbfsmount_zone, smp);
 #else

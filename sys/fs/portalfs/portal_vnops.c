@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/portalfs/portal_vnops.c,v 1.3 2008/12/03 00:25:43 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +32,7 @@
  *
  *	@(#)portal_vnops.c	8.14 (Berkeley) 5/21/95
  *
- * $FreeBSD: src/sys/fs/portalfs/portal_vnops.c,v 1.73 2007/03/13 01:50:23 tegge Exp $
+ * $FreeBSD: src/sys/fs/portalfs/portal_vnops.c,v 1.73.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -198,7 +198,7 @@ portal_connect(so, so2)
 		    M_NOWAIT);
 	so2 = so3;
 
-	return (uipc_connect2(so, so2));
+	return (soconnect2(so, so2));
 }
 
 static int
@@ -281,7 +281,6 @@ portal_open(ap)
 	 * will happen if the server dies.  Sleep for 5 second intervals
 	 * and keep polling the reference count.   XXX.
 	 */
-	/* XXXRW: Locking? */
 	SOCK_LOCK(so);
 	while ((so->so_state & SS_ISCONNECTING) && so->so_error == 0) {
 		if (fmp->pm_server->f_count == 1) {

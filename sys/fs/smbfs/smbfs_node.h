@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_node.h,v 1.7 2005/01/06 18:10:41 imp Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_node.h,v 1.7.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _FS_SMBFS_NODE_H_
 #define _FS_SMBFS_NODE_H_
@@ -67,7 +67,6 @@ struct smbnode {
 	u_char *		n_name;
 	struct smbfs_fctx *	n_dirseq;	/* ff context */
 	long			n_dirofs;	/* last ff offset */
-	struct lockf *		n_lockf;	/* Locking records of file */
 	LIST_ENTRY(smbnode)	n_hash;
 };
 

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs.h,v 1.12 2005/01/14 08:52:55 phk Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs.h,v 1.12.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _SMBFS_SMBFS_H_
 #define _SMBFS_SMBFS_H_
@@ -66,6 +66,8 @@ struct smbfs_args {
 
 #ifdef _KERNEL
 
+#include <sys/_sx.h>
+
 #ifdef MALLOC_DECLARE
 MALLOC_DECLARE(M_SMBFSMNT);
 #endif
@@ -91,7 +93,7 @@ struct smbmount {
 /*	struct simplelock	sm_npslock;*/
 	struct smbnode *	sm_npstack[SMBFS_MAXPATHCOMP];
 	int			sm_caseopt;
-	struct lock		sm_hashlock;
+	struct sx		sm_hashlock;
 	LIST_HEAD(smbnode_hashhead, smbnode) *sm_hash;
 	u_long			sm_hashlen;
 	int			sm_didrele;

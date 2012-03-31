@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_subr.c,v 1.11 2006/10/24 11:55:18 phk Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_subr.c,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>

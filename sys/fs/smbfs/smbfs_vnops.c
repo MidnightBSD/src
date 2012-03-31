@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_vnops.c,v 1.65 2007/05/31 11:51:50 kib Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_vnops.c,v 1.65.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1009,22 +1009,25 @@ smbfs_advlock(ap)
 		    default:
 			return EINVAL;
 		}
-		error = lf_advlock(ap, &np->n_lockf, size);
+		error = lf_advlock(ap, &vp->v_lockf, size);
 		if (error)
 			break;
 		lkop = SMB_LOCK_EXCL;
 		error = smbfs_smb_lock(np, lkop, id, start, end, &scred);
 		if (error) {
+			int oldtype = fl->l_type;
+			fl->l_type = F_UNLCK;
 			ap->a_op = F_UNLCK;
-			lf_advlock(ap, &np->n_lockf, size);
+			lf_advlock(ap, &vp->v_lockf, size);
+			fl->l_type = oldtype;
 		}
 		break;
 	    case F_UNLCK:
-		lf_advlock(ap, &np->n_lockf, size);
+		lf_advlock(ap, &vp->v_lockf, size);
 		error = smbfs_smb_lock(np, SMB_LOCK_RELEASE, id, start, end, &scred);
 		break;
 	    case F_GETLK:
-		error = lf_advlock(ap, &np->n_lockf, size);
+		error = lf_advlock(ap, &vp->v_lockf, size);
 		break;
 	    default:
 		return EINVAL;

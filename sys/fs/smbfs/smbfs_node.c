@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_node.c,v 1.34 2007/05/29 11:28:28 rwatson Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_node.c,v 1.34.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,6 +41,7 @@
 #include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/stat.h>
+#include <sys/sx.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/vnode.h>
@@ -59,9 +60,8 @@
 #include <fs/smbfs/smbfs_subr.h>
 
 #define	SMBFS_NOHASH(smp, hval)	(&(smp)->sm_hash[(hval) & (smp)->sm_hashlen])
-#define	smbfs_hash_lock(smp, td)	lockmgr(&smp->sm_hashlock, LK_EXCLUSIVE, NULL, td)
-#define	smbfs_hash_unlock(smp, td)	lockmgr(&smp->sm_hashlock, LK_RELEASE, NULL, td)
-
+#define	smbfs_hash_lock(smp)	sx_xlock(&smp->sm_hashlock)
+#define	smbfs_hash_unlock(smp)	sx_xunlock(&smp->sm_hashlock)
 
 extern struct vop_vector smbfs_vnodeops;	/* XXX -> .h file */
 
@@ -193,7 +193,7 @@ smbfs_node_alloc(struct mount *mp, struct vnode *dvp,
 	}
 	hashval = smbfs_hash(name, nmlen);
 retry:
-	smbfs_hash_lock(smp, td);
+	smbfs_hash_lock(smp);
 loop:
 	nhpp = SMBFS_NOHASH(smp, hashval);
 	LIST_FOREACH(np, nhpp, n_hash) {
@@ -202,7 +202,7 @@ loop:
 		    np->n_nmlen != nmlen || bcmp(name, np->n_name, nmlen) != 0)
 			continue;
 		VI_LOCK(vp);
-		smbfs_hash_unlock(smp, td);
+		smbfs_hash_unlock(smp);
 		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td) != 0)
 			goto retry;
 		/* Force cached attributes to be refreshed if stale. */
@@ -222,7 +222,7 @@ loop:
 		*vpp = vp;
 		return 0;
 	}
-	smbfs_hash_unlock(smp, td);
+	smbfs_hash_unlock(smp);
 	/*
 	 * If we don't have node attributes, then it is an explicit lookup
 	 * for an existing vnode.
@@ -263,7 +263,7 @@ loop:
 	vp->v_vnlock->lk_flags |= LK_CANRECURSE;
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
 
-	smbfs_hash_lock(smp, td);
+	smbfs_hash_lock(smp);
 	LIST_FOREACH(np2, nhpp, n_hash) {
 		if (np2->n_parent != dvp ||
 		    np2->n_nmlen != nmlen || bcmp(name, np2->n_name, nmlen) != 0)
@@ -274,7 +274,7 @@ loop:
 		goto loop;
 	}
 	LIST_INSERT_HEAD(nhpp, np, n_hash);
-	smbfs_hash_unlock(smp, td);
+	smbfs_hash_unlock(smp);
 	*vpp = vp;
 	return 0;
 }
@@ -309,7 +309,6 @@ smbfs_reclaim(ap)
         } */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
-	struct thread *td = ap->a_td;
 	struct vnode *dvp;
 	struct smbnode *np = VTOSMB(vp);
 	struct smbmount *smp = VTOSMBFS(vp);
@@ -318,7 +317,7 @@ smbfs_reclaim(ap)
 
 	KASSERT((np->n_flag & NOPEN) == 0, ("file not closed before reclaim"));
 
-	smbfs_hash_lock(smp, td);
+	smbfs_hash_lock(smp);
 	/*
 	 * Destroy the vm object and flush associated pages.
 	 */
@@ -334,7 +333,7 @@ smbfs_reclaim(ap)
 		smp->sm_root = NULL;
 	}
 	vp->v_data = NULL;
-	smbfs_hash_unlock(smp, td);
+	smbfs_hash_unlock(smp);
 	if (np->n_name)
 		smbfs_name_free(np->n_name);
 	FREE(np, M_SMBNODE);

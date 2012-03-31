@@ -37838,9 +37838,6 @@ sys/fs/coda/cnode.h -text
 sys/fs/coda/coda.h -text
 sys/fs/coda/coda_fbsd.c -text
 sys/fs/coda/coda_io.h -text
-sys/fs/coda/coda_kernel.h -text
-sys/fs/coda/coda_namecache.c -text
-sys/fs/coda/coda_namecache.h -text
 sys/fs/coda/coda_opstats.h -text
 sys/fs/coda/coda_pioctl.h -text
 sys/fs/coda/coda_psdev.c -text
