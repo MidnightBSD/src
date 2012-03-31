@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/os/taskq.c,v 1.2 2008/12/03 00:24:33 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -1017,5 +1017,5 @@ taskq_destroy(taskq_t *tq)
 	kmem_cache_free(taskq_cache, tq);
 }
 
-SYSINIT(sol_taskq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, taskq_init, NULL)
+SYSINIT(sol_taskq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, taskq_init, NULL);
 SYSUNINIT(sol_taskq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, taskq_fini, NULL);
