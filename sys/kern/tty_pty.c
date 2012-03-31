@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_pty.c,v 1.152.2.2.2.2 2008/01/28 12:47:56 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty_pty.c,v 1.152.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Pseudo-teletype Driver
@@ -100,6 +100,9 @@ static struct cdevsw ptc_cdevsw = {
 	.d_flags =	D_TTY | D_NEEDGIANT,
 };
 
+static struct mtx ptyinit_lock;
+MTX_SYSINIT(ptyinit_lock, &ptyinit_lock, "ptyinit", MTX_DEF);
+
 #define BUFSIZ 100		/* Chunk size iomoved to/from user */
 
 struct	ptsc {
@@ -151,8 +154,16 @@ ptyinit(struct cdev *devc, struct thread *td)
 
 	pt->pt_tty = ttyalloc();
 	pt->pt_tty->t_sc = pt;
-	devc->si_drv1 = pt;
-	devc->si_tty = pt->pt_tty;
+	mtx_lock(&ptyinit_lock);
+	if (devc->si_drv1 == NULL) {
+		devc->si_drv1 = pt;
+		devc->si_tty = pt->pt_tty;
+		mtx_unlock(&ptyinit_lock);
+	} else {
+		mtx_unlock(&ptyinit_lock);
+		ttyrel(pt->pt_tty);
+		free(pt, M_PTY);
+	}
 	return (devc);
 }
 
@@ -335,9 +346,17 @@ ptcopen(struct cdev *dev, int flag, int devtype, struct thread *td)
 	 * we need to recreate it.
 	 */
 	if (pt->pt_tty == NULL) {
-		pt->pt_tty = ttyalloc();
-		pt->pt_tty->t_sc = pt;
-		dev->si_tty = pt->pt_tty;
+		tp = ttyalloc();
+		mtx_lock(&ptyinit_lock);
+		if (pt->pt_tty == NULL) {
+			pt->pt_tty = tp;
+			pt->pt_tty->t_sc = pt;
+			dev->si_tty = pt->pt_tty;
+			mtx_unlock(&ptyinit_lock);
+		} else {
+			mtx_unlock(&ptyinit_lock);
+			ttyrel(tp);
+		}
 	}
 	tp = dev->si_tty;
 
@@ -795,4 +814,4 @@ ptc_drvinit(void *unused)
 	EVENTHANDLER_REGISTER(dev_clone, pty_clone, 0, 1000);
 }
 
-SYSINIT(ptcdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE,ptc_drvinit,NULL)
+SYSINIT(ptcdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE,ptc_drvinit,NULL);

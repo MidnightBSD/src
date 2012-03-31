@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/ipmi.h,v 1.2 2006/09/22 22:11:29 jhb Exp $
+ * $FreeBSD: src/sys/sys/ipmi.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef __SYS_IPMI_H__

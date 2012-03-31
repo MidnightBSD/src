@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_turnstile.c,v 1.2 2008-09-27 23:02:14 laffer1 Exp $
- *	and BSDI $Id: subr_turnstile.c,v 1.2 2008-09-27 23:02:14 laffer1 Exp $
+ *	from BSDI $Id: subr_turnstile.c,v 1.3 2012-03-31 17:05:10 laffer1 Exp $
+ *	and BSDI $Id: subr_turnstile.c,v 1.3 2012-03-31 17:05:10 laffer1 Exp $
  */
 
 /*
@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_turnstile.c,v 1.169 2007/06/12 23:27:31 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_turnstile.c,v 1.169.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include "opt_turnstile_profiling.h"
@@ -396,12 +396,13 @@ init_turnstile0(void *dummy)
 {
 
 	turnstile_zone = uma_zcreate("TURNSTILE", sizeof(struct turnstile),
+	    NULL,
 #ifdef INVARIANTS
-	    NULL, turnstile_dtor, turnstile_init, turnstile_fini,
-	    UMA_ALIGN_CACHE, 0);
+	    turnstile_dtor,
 #else
-	    NULL, NULL, turnstile_init, turnstile_fini, UMA_ALIGN_CACHE, 0);
+	    NULL,
 #endif
+	    turnstile_init, turnstile_fini, UMA_ALIGN_CACHE, UMA_ZONE_NOFREE);
 	thread0.td_turnstile = turnstile_alloc();
 }
 SYSINIT(turnstile0, SI_SUB_LOCK, SI_ORDER_ANY, init_turnstile0, NULL);

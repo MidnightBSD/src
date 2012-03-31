@@ -35,8 +35,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_fork.c,v 1.282.2.1.2.1 2008/01/19 18:15:05 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_fork.c,v 1.282.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
+#include "opt_kdtrace.h"
 #include "opt_ktrace.h"
 #include "opt_mac.h"
 
@@ -63,6 +64,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_fork.c,v 1.282.2.1.2.1 2008/01/19 18:15:05
 #include <sys/ktr.h>
 #include <sys/ktrace.h>
 #include <sys/unistd.h>	
+#include <sys/sdt.h>
 #include <sys/sx.h>
 #include <sys/signalvar.h>
 
@@ -75,6 +77,16 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_fork.c,v 1.282.2.1.2.1 2008/01/19 18:15:05
 #include <vm/vm_extern.h>
 #include <vm/uma.h>
 
+#ifdef KDTRACE_HOOKS
+#include <sys/dtrace_bsd.h>
+dtrace_fork_func_t	dtrace_fasttrap_fork;
+#endif
+
+SDT_PROVIDER_DECLARE(proc);
+SDT_PROBE_DEFINE(proc, kernel, , create);
+SDT_PROBE_ARGTYPE(proc, kernel, , create, 0, "struct proc *");
+SDT_PROBE_ARGTYPE(proc, kernel, , create, 1, "struct proc *");
+SDT_PROBE_ARGTYPE(proc, kernel, , create, 2, "int");
 
 #ifndef _SYS_SYSPROTO_H_
 struct fork_args {
@@ -250,6 +262,7 @@ norfproc_fail:
 		return (error);
 	}
 
+	vm2 = NULL;
 	/* Allocate new proc. */
 	newproc = uma_zalloc(proc_zone, M_WAITOK);
 	if (TAILQ_EMPTY(&newproc->p_threads)) {
@@ -276,8 +289,7 @@ norfproc_fail:
 			error = ENOMEM;
 			goto fail1;
 		}
-	} else
-		vm2 = NULL;
+	}
 #ifdef MAC
 	mac_init_proc(newproc);
 #endif
@@ -423,6 +435,7 @@ again:
 
 	bcopy(&p1->p_startcopy, &p2->p_startcopy,
 	    __rangeof(struct proc, p_startcopy, p_endcopy));
+	pargs_hold(p2->p_args);
 	PROC_UNLOCK(p1);
 
 	bzero(&p2->p_startzero,
@@ -502,7 +515,6 @@ again:
 	if (p1->p_flag & P_PROFIL)
 		startprofclock(p2);
 	td2->td_ucred = crhold(p2->p_ucred);
-	pargs_hold(p2->p_args);
 
 	if (flags & RFSIGSHARE) {
 		p2->p_sigacts = sigacts_hold(p1->p_sigacts);
@@ -620,6 +632,15 @@ again:
 		p2->p_pfsflags = p1->p_pfsflags;
 	}
 
+#ifdef KDTRACE_HOOKS
+	/*
+	 * Tell the DTrace fasttrap provider about the new process
+	 * if it has registered an interest.
+	 */
+	if (dtrace_fasttrap_fork)
+		dtrace_fasttrap_fork(p1, p2);
+#endif
+
 	/*
 	 * This begins the section where we must prevent the parent
 	 * from being swapped.
@@ -701,13 +722,13 @@ again:
 	 */
 	PROC_LOCK(p1);
 	_PRELE(p1);
+	PROC_UNLOCK(p1);
 
 	/*
 	 * Tell any interested parties about the new process.
 	 */
-	KNOTE_LOCKED(&p1->p_klist, NOTE_FORK | p2->p_pid);
-
-	PROC_UNLOCK(p1);
+	knote_fork(&p1->p_klist, p2->p_pid);
+	SDT_PROBE(proc, kernel, , create, p2, p1, flags, 0, 0);
 
 	/*
 	 * Preserve synchronization semantics of vfork.  If waiting for
@@ -734,6 +755,8 @@ fail:
 	mac_destroy_proc(newproc);
 #endif
 fail1:
+	if (vm2 != NULL)
+		vmspace_free(vm2);
 	uma_zfree(proc_zone, newproc);
 	pause("fork", hz / 2);
 	return (error);

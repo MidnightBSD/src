@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Kazutaka YOKOTA and Michael Smith
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/vesa.c,v 1.53 2005/12/05 11:58:33 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/vesa.c,v 1.53.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_vga.h"
 #include "opt_vesa.h"

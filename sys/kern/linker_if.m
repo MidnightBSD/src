@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/kern/linker_if.m,v 1.6 2005/01/06 23:35:39 imp Exp $
+# $FreeBSD: src/sys/kern/linker_if.m,v 1.6.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 #include <sys/linker.h>
@@ -64,6 +64,17 @@ METHOD int each_function_name {
 };
 
 #
+# Call the callback with each specified function and it's value
+# defined in the file.
+# Stop and return the error if the callback returns an error.
+#
+METHOD int each_function_nameval {
+	linker_file_t	file;
+	linker_function_nameval_callback_t	callback;
+	void*		opaque;
+};
+
+#
 # Search for a linker set in a file.  Return a pointer to the first
 # entry (which is itself a pointer), and the number of entries.
 # "stop" points to the entry beyond the last valid entry.
@@ -82,6 +93,15 @@ METHOD int lookup_set {
 #
 METHOD void unload {
     linker_file_t	file;
+};
+
+#
+# Load CTF data if necessary and if there is a .SUNW_ctf section
+# in the ELF file, returning info in the linker CTF structure.
+#
+METHOD int ctf_get {
+	linker_file_t	file;
+	linker_ctf_t	*lc;
 };
 
 #

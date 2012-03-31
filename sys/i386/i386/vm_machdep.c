@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986 The Regents of the University of California.
  * Copyright (c) 1989, 1990 William Jolitz
@@ -41,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.283 2007/07/07 16:59:01 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.283.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_isa.h"
 #include "opt_npx.h"
@@ -110,7 +111,7 @@ static u_int	cpu_reset_proxyid;
 static volatile u_int	cpu_reset_proxy_active;
 #endif
 static void	sf_buf_init(void *arg);
-SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL)
+SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL);
 
 LIST_HEAD(sf_head, sf_buf);
 
@@ -156,17 +157,17 @@ cpu_fork(td1, p2, td2, flags)
 		if ((flags & RFMEM) == 0) {
 			/* unshare user LDT */
 			struct mdproc *mdp1 = &p1->p_md;
-			struct proc_ldt *pldt;
+			struct proc_ldt *pldt, *pldt1;
 
 			mtx_lock_spin(&dt_lock);
-			if ((pldt = mdp1->md_ldt) != NULL &&
-			    pldt->ldt_refcnt > 1) {
-				pldt = user_ldt_alloc(mdp1, pldt->ldt_len);
+			if ((pldt1 = mdp1->md_ldt) != NULL &&
+			    pldt1->ldt_refcnt > 1) {
+				pldt = user_ldt_alloc(mdp1, pldt1->ldt_len);
 				if (pldt == NULL)
 					panic("could not copy LDT");
 				mdp1->md_ldt = pldt;
 				set_user_ldt(mdp1);
-				user_ldt_free(td1);
+				user_ldt_deref(pldt1);
 			} else
 				mtx_unlock_spin(&dt_lock);
 		}
@@ -361,13 +362,20 @@ cpu_thread_swapout(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 
 	td->td_pcb = (struct pcb *)(td->td_kstack +
 	    td->td_kstack_pages * PAGE_SIZE) - 1;
 	td->td_frame = (struct trapframe *)((caddr_t)td->td_pcb - 16) - 1;
 	td->td_pcb->pcb_ext = NULL; 
+}
+
+void
+cpu_thread_free(struct thread *td)
+{
+
+	cpu_thread_clean(td);
 }
 
 /*
@@ -633,10 +641,13 @@ cpu_reset_real()
 
 	/*
 	 * Attempt to force a reset via the Reset Control register at
-	 * I/O port 0xcf9.  Bit 2 forces a system reset when it is
-	 * written as 1.  Bit 1 selects the type of reset to attempt:
-	 * 0 selects a "soft" reset, and 1 selects a "hard" reset.  We
-	 * try to do a "soft" reset first, and then a "hard" reset.
+	 * I/O port 0xcf9.  Bit 2 forces a system reset when it
+	 * transitions from 0 to 1.  Bit 1 selects the type of reset
+	 * to attempt: 0 selects a "soft" reset, and 1 selects a
+	 * "hard" reset.  We try a "hard" reset.  The first write sets
+	 * bit 1 to select a "hard" reset and clears bit 2.  The
+	 * second write forces a 0 -> 1 transition in bit 2 to trigger
+	 * a reset.
 	 */
 	outb(0xcf9, 0x2);
 	outb(0xcf9, 0x6);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * $FreeBSD: src/sys/i386/include/speaker.h,v 1.8 2005/11/11 09:57:31 ru Exp $
  */

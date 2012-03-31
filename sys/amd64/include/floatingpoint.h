@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Andrew Moore, Talke Studio
  * All rights reserved.

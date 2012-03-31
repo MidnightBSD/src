@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_iod.c,v 1.17 2006/08/22 03:05:51 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_iod.c,v 1.17.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
  
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -663,12 +663,11 @@ smb_iod_thread(void *arg)
 	while ((iod->iod_flags & SMBIOD_SHUTDOWN) == 0) {
 		smb_iod_main(iod);
 		SMBIODEBUG("going to sleep for %d ticks\n", iod->iod_sleeptimo);
-/*		mtx_unlock(&Giant, MTX_DEF);*/
 		if (iod->iod_flags & SMBIOD_SHUTDOWN)
 			break;
 		tsleep(&iod->iod_flags, PWAIT, "90idle", iod->iod_sleeptimo);
 	}
-/*	mtx_lock(&Giant, MTX_DEF);*/
+	mtx_unlock(&Giant);
 	kthread_exit(0);
 }
 

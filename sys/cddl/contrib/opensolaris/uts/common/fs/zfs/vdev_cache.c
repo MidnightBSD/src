@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/vdev_cache.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -129,7 +129,7 @@ vdev_cache_evict(vdev_cache_t *vc, vdev_cache_entry_t *ve)
 	ASSERT(ve->ve_data != NULL);
 
 	dprintf("evicting %p, off %llx, LRU %llu, age %lu, hits %u, stale %u\n",
-	    vc, ve->ve_offset, ve->ve_lastused, lbolt - ve->ve_lastused,
+	    vc, ve->ve_offset, ve->ve_lastused, LBOLT - ve->ve_lastused,
 	    ve->ve_hits, ve->ve_missed_update);
 
 	avl_remove(&vc->vc_lastused_tree, ve);
@@ -172,7 +172,7 @@ vdev_cache_allocate(zio_t *zio)
 
 	ve = kmem_zalloc(sizeof (vdev_cache_entry_t), KM_SLEEP);
 	ve->ve_offset = offset;
-	ve->ve_lastused = lbolt;
+	ve->ve_lastused = LBOLT;
 	ve->ve_data = zio_buf_alloc(VCBS);
 
 	avl_add(&vc->vc_offset_tree, ve);
@@ -189,9 +189,9 @@ vdev_cache_hit(vdev_cache_t *vc, vdev_cache_entry_t *ve, zio_t *zio)
 	ASSERT(MUTEX_HELD(&vc->vc_lock));
 	ASSERT(ve->ve_fill_io == NULL);
 
-	if (ve->ve_lastused != lbolt) {
+	if (ve->ve_lastused != LBOLT) {
 		avl_remove(&vc->vc_lastused_tree, ve);
-		ve->ve_lastused = lbolt;
+		ve->ve_lastused = LBOLT;
 		avl_add(&vc->vc_lastused_tree, ve);
 	}
 

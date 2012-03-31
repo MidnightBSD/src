@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dmu_zfetch.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -197,7 +197,7 @@ dmu_zfetch_dofetch(zfetch_t *zf, zstream_t *zs)
 			break;
 	}
 	zs->zst_ph_offset = prefetch_tail;
-	zs->zst_last = lbolt;
+	zs->zst_last = LBOLT;
 }
 
 /*
@@ -518,7 +518,7 @@ dmu_zfetch_stream_reclaim(zfetch_t *zf)
 	for (zs = list_head(&zf->zf_stream); zs;
 	    zs = list_next(&zf->zf_stream, zs)) {
 
-		if (((lbolt - zs->zst_last) / hz) > zfetch_min_sec_reap)
+		if (((LBOLT - zs->zst_last) / hz) > zfetch_min_sec_reap)
 			break;
 	}
 
@@ -640,7 +640,7 @@ dmu_zfetch(zfetch_t *zf, uint64_t offset, uint64_t size, int prefetched)
 		newstream->zst_ph_offset = zst.zst_len + zst.zst_offset;
 		newstream->zst_cap = zst.zst_len;
 		newstream->zst_direction = ZFETCH_FORWARD;
-		newstream->zst_last = lbolt;
+		newstream->zst_last = LBOLT;
 
 		mutex_init(&newstream->zst_lock, NULL, MUTEX_DEFAULT, NULL);
 

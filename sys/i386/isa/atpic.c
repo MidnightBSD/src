@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/atpic.c,v 1.28 2007/05/08 21:29:14 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/atpic.c,v 1.28.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_auto_eoi.h"
 #include "opt_isa.h"
@@ -563,7 +564,7 @@ atpic_init(void *dummy __unused)
 		intr_register_source(&ai->at_intsrc);
 	}
 }
-SYSINIT(atpic_init, SI_SUB_INTR, SI_ORDER_SECOND + 1, atpic_init, NULL)
+SYSINIT(atpic_init, SI_SUB_INTR, SI_ORDER_SECOND + 1, atpic_init, NULL);
 
 void
 atpic_handle_intr(u_int vector, struct trapframe *frame)

@@ -24,8 +24,10 @@
  * SUCH DAMAGE.
  */
 
+#include "opt_ddb.h"
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_stack.c,v 1.3 2006/05/28 22:15:28 kris Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_stack.c,v 1.3.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -38,9 +40,13 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_stack.c,v 1.3 2006/05/28 22:15:28 kris Exp
 #include <sys/stack.h>
 #include <sys/systm.h>
 
-MALLOC_DEFINE(M_STACK, "stack", "Stack Traces");
+static MALLOC_DEFINE(M_STACK, "stack", "Stack Traces");
 
-static void stack_symbol(vm_offset_t pc, const char **name, long *offset);
+static void stack_symbol(vm_offset_t pc, char *namebuf, u_int buflen,
+	    long *offset);
+#ifdef DDB
+static void stack_symbol_ddb(vm_offset_t pc, const char **name, long *offset);
+#endif
 
 struct stack *
 stack_create(void)
@@ -86,20 +92,21 @@ stack_zero(struct stack *st)
 void
 stack_print(struct stack *st)
 {
-	const char *name;
+	char namebuf[64];
 	long offset;
 	int i;
 
 	KASSERT(st->depth <= STACK_MAX, ("bogus stack"));
 	for (i = 0; i < st->depth; i++) {
-		stack_symbol(st->pcs[i], &name, &offset);
+		stack_symbol(st->pcs[i], namebuf, sizeof(namebuf), &offset);
 		printf("#%d %p at %s+%#lx\n", i, (void *)st->pcs[i],
-		    name, offset);
+		    namebuf, offset);
 	}
 }
 
+#ifdef DDB
 void
-stack_sbuf_print(struct sbuf *sb, struct stack *st)
+stack_print_ddb(struct stack *st)
 {
 	const char *name;
 	long offset;
@@ -107,7 +114,43 @@ stack_sbuf_print(struct sbuf *sb, struct stack *st)
 
 	KASSERT(st->depth <= STACK_MAX, ("bogus stack"));
 	for (i = 0; i < st->depth; i++) {
-		stack_symbol(st->pcs[i], &name, &offset);
+		stack_symbol_ddb(st->pcs[i], &name, &offset);
+		printf("#%d %p at %s+%#lx\n", i, (void *)st->pcs[i],
+		    name, offset);
+	}
+}
+#endif
+
+/*
+ * Two print routines -- one for use from DDB and DDB-like contexts, the
+ * other for use in the live kernel.
+ */
+void
+stack_sbuf_print(struct sbuf *sb, struct stack *st)
+{
+	char namebuf[64];
+	long offset;
+	int i;
+
+	KASSERT(st->depth <= STACK_MAX, ("bogus stack"));
+	for (i = 0; i < st->depth; i++) {
+		stack_symbol(st->pcs[i], namebuf, sizeof(namebuf), &offset);
+		sbuf_printf(sb, "#%d %p at %s+%#lx\n", i, (void *)st->pcs[i],
+		    namebuf, offset);
+	}
+}
+
+#ifdef DDB
+void
+stack_sbuf_print_ddb(struct sbuf *sb, struct stack *st)
+{
+	const char *name;
+	long offset;
+	int i;
+
+	KASSERT(st->depth <= STACK_MAX, ("bogus stack"));
+	for (i = 0; i < st->depth; i++) {
+		stack_symbol_ddb(st->pcs[i], &name, &offset);
 		sbuf_printf(sb, "#%d %p at %s+%#lx\n", i, (void *)st->pcs[i],
 		    name, offset);
 	}
@@ -141,16 +184,33 @@ stack_ktr(u_int mask, const char *file, int line, struct stack *st, u_int depth,
 		if (depth == 0 || st->depth < depth)
 			depth = st->depth;
 		for (i = 0; i < depth; i++) {
-			stack_symbol(st->pcs[i], &name, &offset);
+			stack_symbol_ddb(st->pcs[i], &name, &offset);
 			ktr_tracepoint(mask, file, line, "#%d %p at %s+%#lx",
 			    i, st->pcs[i], (u_long)name, offset, 0, 0);
 		}
 	}
 }
 #endif
+#endif
 
+/*
+ * Two variants of stack symbol lookup -- one that uses the DDB interfaces
+ * and bypasses linker locking, and the other that doesn't.
+ */
 static void
-stack_symbol(vm_offset_t pc, const char **name, long *offset)
+stack_symbol(vm_offset_t pc, char *namebuf, u_int buflen, long *offset)
+{
+
+	if (linker_search_symbol_name((caddr_t)pc, namebuf, buflen,
+	    offset) != 0) {
+		*offset = 0;
+		strlcpy(namebuf, "??", buflen);
+	}
+}
+
+#ifdef DDB
+static void
+stack_symbol_ddb(vm_offset_t pc, const char **name, long *offset)
 {
 	linker_symval_t symval;
 	c_linker_sym_t sym;
@@ -163,7 +223,8 @@ stack_symbol(vm_offset_t pc, const char **name, long *offset)
 		*name = symval.name;
 		return;
 	}
-out:
+ out:
 	*offset = 0;
-	*name = "Unknown func";
+	*name = "??";
 }
+#endif

@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/firmware.h,v 1.4 2007/02/15 17:21:31 luigi Exp $
+ * $FreeBSD: src/sys/sys/firmware.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _SYS_FIRMWARE_H_
 #define _SYS_FIRMWARE_H_

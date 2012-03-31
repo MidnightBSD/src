@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)domain.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/domain.h,v 1.22 2006/08/07 12:02:43 rwatson Exp $
+ * $FreeBSD: src/sys/sys/domain.h,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_DOMAIN_H_
@@ -58,6 +58,12 @@ struct domain {
 	int	(*dom_rtattach)		/* initialize routing table */
 		(void **, int);
 	int	dom_rtoffset;		/* an arg to rtattach, in bits */
+		/* XXX MRT.
+		 * rtoffset May be 0 if the domain supplies its own rtattach(),
+		 * in which case, a 0 indicates it's being called from 
+		 * vfs_export.c (HACK)  Only for AF_INET{,6} at this time.
+		 * Temporary ABI compat hack.. fix post RELENG_7
+		 */
 	int	dom_maxrtkey;		/* for routing layer */
 	void	*(*dom_ifattach)(struct ifnet *);
 	void	(*dom_ifdetach)(struct ifnet *, void *);

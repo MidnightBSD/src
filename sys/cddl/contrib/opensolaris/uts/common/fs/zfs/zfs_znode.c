@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs_znode.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -133,7 +133,6 @@ zfs_znode_cache_constructor(void *buf, void *cdrarg, int kmflags)
 
 	zp->z_dbuf_held = 0;
 	zp->z_dirlocks = 0;
-	zp->z_lockf = NULL;
 	return (0);
 }
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Kernel interface to machine-dependent clock driver.
  * Garrett Wollman, September 1994.

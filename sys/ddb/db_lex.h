@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -24,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/ddb/db_lex.h,v 1.14 2005/01/06 01:34:41 imp Exp $
+ * $FreeBSD: src/sys/ddb/db_lex.h,v 1.14.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _DDB_DB_LEX_H_
@@ -37,10 +36,12 @@
 /*
  * Lexical analyzer.
  */
-void	db_flush_lex(void);
-int	db_read_line(void);
-int	db_read_token(void);
-void	db_unread_token(int t);
+void	 db_flush_lex(void);
+char	*db_get_line(void);
+void	 db_inject_line(const char *command);
+int	 db_read_line(void);
+int	 db_read_token(void);
+void	 db_unread_token(int t);
 
 extern db_expr_t	db_tok_number;
 #define	TOK_STRING_SIZE		120
@@ -67,5 +68,6 @@ extern char	db_tok_string[TOK_STRING_SIZE];
 #define	tSHIFT_L	18
 #define	tSHIFT_R	19
 #define	tDOTDOT		20
+#define	tSEMI		21
 
 #endif /* !_DDB_DB_LEX_H_ */

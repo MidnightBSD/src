@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/linker.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2000 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/linker.h,v 1.46 2006/06/20 20:59:55 jhb Exp $
+ * $FreeBSD: src/sys/sys/linker.h,v 1.46.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_LINKER_H_
@@ -60,6 +60,8 @@ typedef struct linker_symval {
     size_t		size;
 } linker_symval_t;
 
+typedef int (*linker_function_nameval_callback_t)(linker_file_t, int, linker_symval_t *, void *);
+
 struct common_symbol {
     STAILQ_ENTRY(common_symbol) link;
     char*		name;
@@ -74,6 +76,7 @@ struct linker_file {
 #define LINKER_FILE_LINKED	0x1	/* file has been fully linked */
     TAILQ_ENTRY(linker_file) link;	/* list of all loaded files */
     char*		filename;	/* file which was loaded */
+    char*		pathname;	/* file name with full path */
     int			id;		/* unique id */
     caddr_t		address;	/* load address */
     size_t		size;		/* size of file */
@@ -82,6 +85,18 @@ struct linker_file {
     STAILQ_HEAD(, common_symbol) common; /* list of common symbols */
     TAILQ_HEAD(, module) modules;	/* modules in this file */
     TAILQ_ENTRY(linker_file) loaded;	/* preload dependency support */
+    int			loadcnt;	/* load counter value */
+
+    /*
+     * Function Boundary Tracing (FBT) or Statically Defined Tracing (SDT)
+     * fields.
+     */
+    int			nenabled;	/* number of enabled probes. */
+    int			fbt_nentries;	/* number of fbt entries created. */
+    void		*sdt_probes;
+    int			sdt_nentries;
+    size_t		sdt_nprobes;
+    size_t		sdt_size;
 };
 
 /*
@@ -142,6 +157,12 @@ int linker_file_lookup_set(linker_file_t _file, const char *_name,
 			   void *_start, void *_stop, int *_count);
 
 /*
+ * List all functions in a file.
+ */
+int linker_file_function_listall(linker_file_t, 
+				 linker_function_nameval_callback_t, void *);
+
+/*
  * Functions soley for use by the linker class handlers.
  */
 int linker_add_class(linker_class_t _cls);
@@ -156,6 +177,14 @@ int linker_ddb_lookup(const char *_symstr, c_linker_sym_t *_sym);
 int linker_ddb_search_symbol(caddr_t _value, c_linker_sym_t *_sym,
 			     long *_diffp);
 int linker_ddb_symbol_values(c_linker_sym_t _sym, linker_symval_t *_symval);
+int linker_ddb_search_symbol_name(caddr_t value, char *buf, u_int buflen,
+				  long *offset);
+
+/*
+ * stack(9) helper for situations where kernel locking is required.
+ */
+int linker_search_symbol_name(caddr_t value, char *buf, u_int buflen,
+    long *offset);
 
 
 /* HWPMC helper */
@@ -239,6 +268,20 @@ int	elf_reloc_local(linker_file_t _lf, Elf_Addr base, const void *_rel, int _typ
 const Elf_Sym *elf_get_sym(linker_file_t _lf, Elf_Size _symidx);
 const char *elf_get_symname(linker_file_t _lf, Elf_Size _symidx);
 
+typedef struct linker_ctf {
+	const uint8_t 	*ctftab;	/* Decompressed CTF data. */
+	int 		ctfcnt;		/* Number of CTF data bytes. */
+	const Elf_Sym	*symtab;	/* Ptr to the symbol table. */
+	int		nsym;		/* Number of symbols. */
+	const char	*strtab;	/* Ptr to the string table. */
+	int 		strcnt;		/* Number of string bytes. */
+	uint32_t	**ctfoffp;	/* Ptr to array of obj/fnc offsets. */
+	uint32_t	**typoffp;	/* Ptr to array of type offsets. */
+	long		*typlenp;	/* Ptr to number of type data entries. */
+} linker_ctf_t;
+
+int	linker_ctf_get(linker_file_t, linker_ctf_t *);
+
 int elf_cpu_load_file(linker_file_t);
 int elf_cpu_unload_file(linker_file_t);
 
@@ -246,15 +289,28 @@ int elf_cpu_unload_file(linker_file_t);
 #define ELF_RELOC_REL	1
 #define ELF_RELOC_RELA	2
 
-#endif /* _KERNEL */
-
-struct kld_file_stat {
-    int		version;	/* set to sizeof(linker_file_stat) */
+/*
+ * This is version 1 of the KLD file status structure. It is identified
+ * by its _size_ in the version field.
+ */
+struct kld_file_stat_1 {
+    int		version;	/* set to sizeof(struct kld_file_stat_1) */
     char        name[MAXPATHLEN];
     int		refs;
     int		id;
     caddr_t	address;	/* load address */
     size_t	size;		/* size in bytes */
+};
+#endif /* _KERNEL */
+
+struct kld_file_stat {
+    int		version;	/* set to sizeof(struct kld_file_stat) */
+    char        name[MAXPATHLEN];
+    int		refs;
+    int		id;
+    caddr_t	address;	/* load address */
+    size_t	size;		/* size in bytes */
+    char        pathname[MAXPATHLEN];
 };
 
 struct kld_sym_lookup {

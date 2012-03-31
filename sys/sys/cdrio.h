@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/cdrio.h,v 1.9 2002/10/18 22:03:38 njl Exp $
+ * $FreeBSD: src/sys/sys/cdrio.h,v 1.9.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_SYS_CDRIO_H_

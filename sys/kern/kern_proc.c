@@ -30,10 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.252.2.2.2.1 2008/01/19 18:15:05 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.252.2.12.2.4 2008/12/19 16:11:04 kib Exp $");
 
+#include "opt_compat.h"
+#include "opt_ddb.h"
+#include "opt_kdtrace.h"
 #include "opt_ktrace.h"
 #include "opt_kstack_pages.h"
+#include "opt_stack.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,12 +48,15 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.252.2.2.2.1 2008/01/19 18:15:05
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/refcount.h>
+#include <sys/sbuf.h>
 #include <sys/sysent.h>
 #include <sys/sched.h>
 #include <sys/smp.h>
+#include <sys/stack.h>
 #include <sys/sysctl.h>
 #include <sys/filedesc.h>
 #include <sys/tty.h>
+#include <sys/sdt.h>
 #include <sys/signalvar.h>
 #include <sys/sx.h>
 #include <sys/user.h>
@@ -61,11 +68,45 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.252.2.2.2.1 2008/01/19 18:15:05
 #include <sys/ktrace.h>
 #endif
 
+#ifdef DDB
+#include <ddb/ddb.h>
+#endif
+
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/pmap.h>
 #include <vm/vm_map.h>
+#include <vm/vm_object.h>
 #include <vm/uma.h>
+
+SDT_PROVIDER_DEFINE(proc);
+SDT_PROBE_DEFINE(proc, kernel, ctor, entry);
+SDT_PROBE_ARGTYPE(proc, kernel, ctor, entry, 0, "struct proc *");
+SDT_PROBE_ARGTYPE(proc, kernel, ctor, entry, 1, "int");
+SDT_PROBE_ARGTYPE(proc, kernel, ctor, entry, 2, "void *");
+SDT_PROBE_ARGTYPE(proc, kernel, ctor, entry, 3, "int");
+SDT_PROBE_DEFINE(proc, kernel, ctor, return);
+SDT_PROBE_ARGTYPE(proc, kernel, ctor, return, 0, "struct proc *");
+SDT_PROBE_ARGTYPE(proc, kernel, ctor, return, 1, "int");
+SDT_PROBE_ARGTYPE(proc, kernel, ctor, return, 2, "void *");
+SDT_PROBE_ARGTYPE(proc, kernel, ctor, return, 3, "int");
+SDT_PROBE_DEFINE(proc, kernel, dtor, entry);
+SDT_PROBE_ARGTYPE(proc, kernel, dtor, entry, 0, "struct proc *");
+SDT_PROBE_ARGTYPE(proc, kernel, dtor, entry, 1, "int");
+SDT_PROBE_ARGTYPE(proc, kernel, dtor, entry, 2, "void *");
+SDT_PROBE_ARGTYPE(proc, kernel, dtor, entry, 3, "struct thread *");
+SDT_PROBE_DEFINE(proc, kernel, dtor, return);
+SDT_PROBE_ARGTYPE(proc, kernel, dtor, return, 0, "struct proc *");
+SDT_PROBE_ARGTYPE(proc, kernel, dtor, return, 1, "int");
+SDT_PROBE_ARGTYPE(proc, kernel, dtor, return, 2, "void *");
+SDT_PROBE_DEFINE(proc, kernel, init, entry);
+SDT_PROBE_ARGTYPE(proc, kernel, init, entry, 0, "struct proc *");
+SDT_PROBE_ARGTYPE(proc, kernel, init, entry, 1, "int");
+SDT_PROBE_ARGTYPE(proc, kernel, init, entry, 2, "int");
+SDT_PROBE_DEFINE(proc, kernel, init, return);
+SDT_PROBE_ARGTYPE(proc, kernel, init, return, 0, "struct proc *");
+SDT_PROBE_ARGTYPE(proc, kernel, init, return, 1, "int");
+SDT_PROBE_ARGTYPE(proc, kernel, init, return, 2, "int");
 
 MALLOC_DEFINE(M_PGRP, "pgrp", "process group header");
 MALLOC_DEFINE(M_SESSION, "session", "session header");
@@ -75,13 +116,15 @@ MALLOC_DEFINE(M_SUBPROC, "subproc", "Proc sub-structures");
 static void doenterpgrp(struct proc *, struct pgrp *);
 static void orphanpg(struct pgrp *pg);
 static void fill_kinfo_proc_only(struct proc *p, struct kinfo_proc *kp);
-static void fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp);
+static void fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp,
+    int preferthread);
 static void pgadjustjobc(struct pgrp *pgrp, int entering);
 static void pgdelete(struct pgrp *);
 static int proc_ctor(void *mem, int size, void *arg, int flags);
 static void proc_dtor(void *mem, int size, void *arg);
 static int proc_init(void *mem, int size, int flags);
 static void proc_fini(void *mem, int size);
+static void pargs_free(struct pargs *pa);
 
 /*
  * Other process lists
@@ -132,7 +175,9 @@ proc_ctor(void *mem, int size, void *arg, int flags)
 	struct proc *p;
 
 	p = (struct proc *)mem;
+	SDT_PROBE(proc, kernel, ctor, entry, p, size, arg, flags, 0);
 	EVENTHANDLER_INVOKE(process_ctor, p);
+	SDT_PROBE(proc, kernel, ctor, return, p, size, arg, flags, 0);
 	return (0);
 }
 
@@ -147,7 +192,8 @@ proc_dtor(void *mem, int size, void *arg)
 
 	/* INVARIANTS checks go here */
 	p = (struct proc *)mem;
-        td = FIRST_THREAD_IN_PROC(p);
+	td = FIRST_THREAD_IN_PROC(p);
+	SDT_PROBE(proc, kernel, dtor, entry, p, size, arg, td, 0);
 	if (td != NULL) {
 #ifdef INVARIANTS
 		KASSERT((p->p_numthreads == 1),
@@ -166,6 +212,7 @@ proc_dtor(void *mem, int size, void *arg)
 	EVENTHANDLER_INVOKE(process_dtor, p);
 	if (p->p_ksi != NULL)
 		KASSERT(! KSI_ONQ(p->p_ksi), ("SIGCHLD queue"));
+	SDT_PROBE(proc, kernel, dtor, return, p, size, arg, 0, 0);
 }
 
 /*
@@ -177,6 +224,7 @@ proc_init(void *mem, int size, int flags)
 	struct proc *p;
 
 	p = (struct proc *)mem;
+	SDT_PROBE(proc, kernel, init, entry, p, size, flags, 0, 0);
 	p->p_sched = (struct p_sched *)&p[1];
 	bzero(&p->p_mtx, sizeof(struct mtx));
 	mtx_init(&p->p_mtx, "process lock", NULL, MTX_DEF | MTX_DUPOK);
@@ -184,6 +232,7 @@ proc_init(void *mem, int size, int flags)
 	TAILQ_INIT(&p->p_threads);	     /* all threads in proc */
 	EVENTHANDLER_INVOKE(process_init, p);
 	p->p_stats = pstats_alloc();
+	SDT_PROBE(proc, kernel, init, return, p, size, flags, 0, 0);
 	return (0);
 }
 
@@ -757,11 +806,12 @@ fill_kinfo_proc_only(struct proc *p, struct kinfo_proc *kp)
 }
 
 /*
- * Fill in information that is thread specific.
- * Must be called with p_slock locked.
+ * Fill in information that is thread specific.  Must be called with p_slock
+ * locked.  If 'preferthread' is set, overwrite certain process-related
+ * fields that are maintained for both threads and processes.
  */
 static void
-fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp)
+fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp, int preferthread)
 {
 	struct proc *p;
 
@@ -821,6 +871,9 @@ fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp)
 	kp->ki_pri.pri_class = td->td_pri_class;
 	kp->ki_pri.pri_user = td->td_user_pri;
 
+	if (preferthread)
+		kp->ki_runtime = cputick2usec(td->td_runtime);
+
 	/* We can't get this anymore but ps etc never used it anyway. */
 	kp->ki_rqindex = 0;
 
@@ -840,7 +893,7 @@ fill_kinfo_proc(struct proc *p, struct kinfo_proc *kp)
 	fill_kinfo_proc_only(p, kp);
 	PROC_SLOCK(p);
 	if (FIRST_THREAD_IN_PROC(p) != NULL)
-		fill_kinfo_thread(FIRST_THREAD_IN_PROC(p), kp);
+		fill_kinfo_thread(FIRST_THREAD_IN_PROC(p), kp, 0);
 	PROC_SUNLOCK(p);
 }
 
@@ -910,7 +963,8 @@ sysctl_out_proc(struct proc *p, struct sysctl_req *req, int flags)
 	if (flags & KERN_PROC_NOTHREADS) {
 		PROC_SLOCK(p);
 		if (FIRST_THREAD_IN_PROC(p) != NULL)
-			fill_kinfo_thread(FIRST_THREAD_IN_PROC(p), &kinfo_proc);
+			fill_kinfo_thread(FIRST_THREAD_IN_PROC(p),
+			    &kinfo_proc, 0);
 		PROC_SUNLOCK(p);
 		error = SYSCTL_OUT(req, (caddr_t)&kinfo_proc,
 				   sizeof(kinfo_proc));
@@ -918,7 +972,7 @@ sysctl_out_proc(struct proc *p, struct sysctl_req *req, int flags)
 		PROC_SLOCK(p);
 		if (FIRST_THREAD_IN_PROC(p) != NULL)
 			FOREACH_THREAD_IN_PROC(p, td) {
-				fill_kinfo_thread(td, &kinfo_proc);
+				fill_kinfo_thread(td, &kinfo_proc, 1);
 				error = SYSCTL_OUT(req, (caddr_t)&kinfo_proc,
 						   sizeof(kinfo_proc));
 				if (error)
@@ -1132,7 +1186,7 @@ pargs_alloc(int len)
 	return (pa);
 }
 
-void
+static void
 pargs_free(struct pargs *pa)
 {
 
@@ -1288,75 +1342,537 @@ sysctl_kern_proc_sv_name(SYSCTL_HANDLER_ARGS)
 	return (sysctl_handle_string(oidp, sv_name, 0, req));
 }
 
+#ifdef KINFO_OVMENTRY_SIZE
+CTASSERT(sizeof(struct kinfo_ovmentry) == KINFO_OVMENTRY_SIZE);
+#endif
 
-static SYSCTL_NODE(_kern, KERN_PROC, proc, CTLFLAG_RD,  0, "Process table");
+/* Compatability with early 7-stable */
+static int
+sysctl_kern_proc_ovmmap(SYSCTL_HANDLER_ARGS)
+{
+	vm_map_entry_t entry, tmp_entry;
+	unsigned int last_timestamp;
+	char *fullpath, *freepath;
+	struct kinfo_ovmentry *kve;
+	struct vattr va;
+	struct ucred *cred;
+	int error, *name;
+	struct vnode *vp;
+	struct proc *p;
+	vm_map_t map;
+	struct vmspace *vm;
 
-SYSCTL_PROC(_kern_proc, KERN_PROC_ALL, all, CTLFLAG_RD|CTLTYPE_STRUCT|
-	CTLFLAG_MPSAFE, 0, 0, sysctl_kern_proc, "S,proc", 
-	"Return entire process table");
+	name = (int *)arg1;
+	if ((p = pfind((pid_t)name[0])) == NULL)
+		return (ESRCH);
+	if (p->p_flag & P_WEXIT) {
+		PROC_UNLOCK(p);
+		return (ESRCH);
+	}
+	if ((error = p_candebug(curthread, p))) {
+		PROC_UNLOCK(p);
+		return (error);
+	}
+	_PHOLD(p);
+	PROC_UNLOCK(p);
+	vm = vmspace_acquire_ref(p);
+	if (vm == NULL) {
+		PRELE(p);
+		return (ESRCH);
+	}
+	kve = malloc(sizeof(*kve), M_TEMP, M_WAITOK);
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_GID, gid, CTLFLAG_RD | CTLFLAG_MPSAFE,
+	map = &p->p_vmspace->vm_map;	/* XXXRW: More locking required? */
+	vm_map_lock_read(map);
+	for (entry = map->header.next; entry != &map->header;
+	    entry = entry->next) {
+		vm_object_t obj, tobj, lobj;
+		vm_offset_t addr;
+		int vfslocked;
+
+		if (entry->eflags & MAP_ENTRY_IS_SUB_MAP)
+			continue;
+
+		bzero(kve, sizeof(*kve));
+		kve->kve_structsize = sizeof(*kve);
+
+		kve->kve_private_resident = 0;
+		obj = entry->object.vm_object;
+		if (obj != NULL) {
+			VM_OBJECT_LOCK(obj);
+			if (obj->shadow_count == 1)
+				kve->kve_private_resident =
+				    obj->resident_page_count;
+		}
+		kve->kve_resident = 0;
+		addr = entry->start;
+		while (addr < entry->end) {
+			if (pmap_extract(map->pmap, addr))
+				kve->kve_resident++;
+			addr += PAGE_SIZE;
+		}
+
+		for (lobj = tobj = obj; tobj; tobj = tobj->backing_object) {
+			if (tobj != obj)
+				VM_OBJECT_LOCK(tobj);
+			if (lobj != obj)
+				VM_OBJECT_UNLOCK(lobj);
+			lobj = tobj;
+		}
+
+		kve->kve_start = (void*)entry->start;
+		kve->kve_end = (void*)entry->end;
+		kve->kve_offset = (off_t)entry->offset;
+
+		if (entry->protection & VM_PROT_READ)
+			kve->kve_protection |= KVME_PROT_READ;
+		if (entry->protection & VM_PROT_WRITE)
+			kve->kve_protection |= KVME_PROT_WRITE;
+		if (entry->protection & VM_PROT_EXECUTE)
+			kve->kve_protection |= KVME_PROT_EXEC;
+
+		if (entry->eflags & MAP_ENTRY_COW)
+			kve->kve_flags |= KVME_FLAG_COW;
+		if (entry->eflags & MAP_ENTRY_NEEDS_COPY)
+			kve->kve_flags |= KVME_FLAG_NEEDS_COPY;
+
+		last_timestamp = map->timestamp;
+		vm_map_unlock_read(map);
+
+		kve->kve_fileid = 0;
+		kve->kve_fsid = 0;
+		freepath = NULL;
+		fullpath = "";
+		if (lobj) {
+			vp = NULL;
+			switch (lobj->type) {
+			case OBJT_DEFAULT:
+				kve->kve_type = KVME_TYPE_DEFAULT;
+				break;
+			case OBJT_VNODE:
+				kve->kve_type = KVME_TYPE_VNODE;
+				vp = lobj->handle;
+				vref(vp);
+				break;
+			case OBJT_SWAP:
+				kve->kve_type = KVME_TYPE_SWAP;
+				break;
+			case OBJT_DEVICE:
+				kve->kve_type = KVME_TYPE_DEVICE;
+				break;
+			case OBJT_PHYS:
+				kve->kve_type = KVME_TYPE_PHYS;
+				break;
+			case OBJT_DEAD:
+				kve->kve_type = KVME_TYPE_DEAD;
+				break;
+			default:
+				kve->kve_type = KVME_TYPE_UNKNOWN;
+				break;
+			}
+			if (lobj != obj)
+				VM_OBJECT_UNLOCK(lobj);
+
+			kve->kve_ref_count = obj->ref_count;
+			kve->kve_shadow_count = obj->shadow_count;
+			VM_OBJECT_UNLOCK(obj);
+			if (vp != NULL) {
+				vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+				vn_lock(vp, LK_EXCLUSIVE | LK_RETRY,
+				    curthread);
+				vn_fullpath(curthread, vp, &fullpath,
+				    &freepath);
+				cred = curthread->td_ucred;
+				if (VOP_GETATTR(vp, &va, cred, curthread) == 0) {
+					kve->kve_fileid = va.va_fileid;
+					kve->kve_fsid = va.va_fsid;
+				}
+				vput(vp);
+				VFS_UNLOCK_GIANT(vfslocked);
+			}
+		} else {
+			kve->kve_type = KVME_TYPE_NONE;
+			kve->kve_ref_count = 0;
+			kve->kve_shadow_count = 0;
+		}
+
+		strlcpy(kve->kve_path, fullpath, sizeof(kve->kve_path));
+		if (freepath != NULL)
+			free(freepath, M_TEMP);
+
+		error = SYSCTL_OUT(req, kve, sizeof(*kve));
+		vm_map_lock_read(map);
+		if (error)
+			break;
+		if (last_timestamp + 1 != map->timestamp) {
+			vm_map_lookup_entry(map, addr - 1, &tmp_entry);
+			entry = tmp_entry;
+		}
+	}
+	vm_map_unlock_read(map);
+	vmspace_free(vm);
+	PRELE(p);
+	free(kve, M_TEMP);
+	return (error);
+}
+
+#ifdef KINFO_VMENTRY_SIZE
+CTASSERT(sizeof(struct kinfo_vmentry) == KINFO_VMENTRY_SIZE);
+#endif
+
+static int
+sysctl_kern_proc_vmmap(SYSCTL_HANDLER_ARGS)
+{
+	vm_map_entry_t entry, tmp_entry;
+	unsigned int last_timestamp;
+	char *fullpath, *freepath;
+	struct kinfo_vmentry *kve;
+	struct vattr va;
+	struct ucred *cred;
+	int error, *name;
+	struct vnode *vp;
+	struct proc *p;
+	struct vmspace *vm;
+	vm_map_t map;
+
+	name = (int *)arg1;
+	if ((p = pfind((pid_t)name[0])) == NULL)
+		return (ESRCH);
+	if (p->p_flag & P_WEXIT) {
+		PROC_UNLOCK(p);
+		return (ESRCH);
+	}
+	if ((error = p_candebug(curthread, p))) {
+		PROC_UNLOCK(p);
+		return (error);
+	}
+	_PHOLD(p);
+	PROC_UNLOCK(p);
+	vm = vmspace_acquire_ref(p);
+	if (vm == NULL) {
+		PRELE(p);
+		return (ESRCH);
+	}
+	kve = malloc(sizeof(*kve), M_TEMP, M_WAITOK);
+
+	map = &vm->vm_map;	/* XXXRW: More locking required? */
+	vm_map_lock_read(map);
+	for (entry = map->header.next; entry != &map->header;
+	    entry = entry->next) {
+		vm_object_t obj, tobj, lobj;
+		vm_offset_t addr;
+		int vfslocked;
+
+		if (entry->eflags & MAP_ENTRY_IS_SUB_MAP)
+			continue;
+
+		bzero(kve, sizeof(*kve));
+
+		kve->kve_private_resident = 0;
+		obj = entry->object.vm_object;
+		if (obj != NULL) {
+			VM_OBJECT_LOCK(obj);
+			if (obj->shadow_count == 1)
+				kve->kve_private_resident =
+				    obj->resident_page_count;
+		}
+		kve->kve_resident = 0;
+		addr = entry->start;
+		while (addr < entry->end) {
+			if (pmap_extract(map->pmap, addr))
+				kve->kve_resident++;
+			addr += PAGE_SIZE;
+		}
+
+		for (lobj = tobj = obj; tobj; tobj = tobj->backing_object) {
+			if (tobj != obj)
+				VM_OBJECT_LOCK(tobj);
+			if (lobj != obj)
+				VM_OBJECT_UNLOCK(lobj);
+			lobj = tobj;
+		}
+
+		kve->kve_start = entry->start;
+		kve->kve_end = entry->end;
+		kve->kve_offset = entry->offset;
+
+		if (entry->protection & VM_PROT_READ)
+			kve->kve_protection |= KVME_PROT_READ;
+		if (entry->protection & VM_PROT_WRITE)
+			kve->kve_protection |= KVME_PROT_WRITE;
+		if (entry->protection & VM_PROT_EXECUTE)
+			kve->kve_protection |= KVME_PROT_EXEC;
+
+		if (entry->eflags & MAP_ENTRY_COW)
+			kve->kve_flags |= KVME_FLAG_COW;
+		if (entry->eflags & MAP_ENTRY_NEEDS_COPY)
+			kve->kve_flags |= KVME_FLAG_NEEDS_COPY;
+
+		last_timestamp = map->timestamp;
+		vm_map_unlock_read(map);
+
+		kve->kve_fileid = 0;
+		kve->kve_fsid = 0;
+		freepath = NULL;
+		fullpath = "";
+		if (lobj) {
+			vp = NULL;
+			switch (lobj->type) {
+			case OBJT_DEFAULT:
+				kve->kve_type = KVME_TYPE_DEFAULT;
+				break;
+			case OBJT_VNODE:
+				kve->kve_type = KVME_TYPE_VNODE;
+				vp = lobj->handle;
+				vref(vp);
+				break;
+			case OBJT_SWAP:
+				kve->kve_type = KVME_TYPE_SWAP;
+				break;
+			case OBJT_DEVICE:
+				kve->kve_type = KVME_TYPE_DEVICE;
+				break;
+			case OBJT_PHYS:
+				kve->kve_type = KVME_TYPE_PHYS;
+				break;
+			case OBJT_DEAD:
+				kve->kve_type = KVME_TYPE_DEAD;
+				break;
+			default:
+				kve->kve_type = KVME_TYPE_UNKNOWN;
+				break;
+			}
+			if (lobj != obj)
+				VM_OBJECT_UNLOCK(lobj);
+
+			kve->kve_ref_count = obj->ref_count;
+			kve->kve_shadow_count = obj->shadow_count;
+			VM_OBJECT_UNLOCK(obj);
+			if (vp != NULL) {
+				vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+				vn_lock(vp, LK_EXCLUSIVE | LK_RETRY,
+				    curthread);
+				vn_fullpath(curthread, vp, &fullpath,
+				    &freepath);
+				cred = curthread->td_ucred;
+				if (VOP_GETATTR(vp, &va, cred, curthread) == 0) {
+					kve->kve_fileid = va.va_fileid;
+					kve->kve_fsid = va.va_fsid;
+				}
+				vput(vp);
+				VFS_UNLOCK_GIANT(vfslocked);
+			}
+		} else {
+			kve->kve_type = KVME_TYPE_NONE;
+			kve->kve_ref_count = 0;
+			kve->kve_shadow_count = 0;
+		}
+
+		strlcpy(kve->kve_path, fullpath, sizeof(kve->kve_path));
+		if (freepath != NULL)
+			free(freepath, M_TEMP);
+
+		/* Pack record size down */
+		kve->kve_structsize = offsetof(struct kinfo_vmentry, kve_path) +
+		    strlen(kve->kve_path) + 1;
+		kve->kve_structsize = roundup(kve->kve_structsize,
+		    sizeof(uint64_t));
+		error = SYSCTL_OUT(req, kve, kve->kve_structsize);
+		vm_map_lock_read(map);
+		if (error)
+			break;
+		if (last_timestamp + 1 != map->timestamp) {
+			vm_map_lookup_entry(map, addr - 1, &tmp_entry);
+			entry = tmp_entry;
+		}
+	}
+	vm_map_unlock_read(map);
+	vmspace_free(vm);
+	PRELE(p);
+	free(kve, M_TEMP);
+	return (error);
+}
+
+#if defined(STACK) || defined(DDB)
+static int
+sysctl_kern_proc_kstack(SYSCTL_HANDLER_ARGS)
+{
+	struct kinfo_kstack *kkstp;
+	int error, i, *name, numthreads;
+	lwpid_t *lwpidarray;
+	struct thread *td;
+	struct stack *st;
+	struct sbuf sb;
+	struct proc *p;
+
+	name = (int *)arg1;
+	if ((p = pfind((pid_t)name[0])) == NULL)
+		return (ESRCH);
+	/* XXXRW: Not clear ESRCH is the right error during proc execve(). */
+	if (p->p_flag & P_WEXIT || p->p_flag & P_INEXEC) {
+		PROC_UNLOCK(p);
+		return (ESRCH);
+	}
+	if ((error = p_candebug(curthread, p))) {
+		PROC_UNLOCK(p);
+		return (error);
+	}
+	_PHOLD(p);
+	PROC_UNLOCK(p);
+
+	kkstp = malloc(sizeof(*kkstp), M_TEMP, M_WAITOK);
+	st = stack_create();
+
+	lwpidarray = NULL;
+	numthreads = 0;
+	PROC_SLOCK(p);
+repeat:
+	if (numthreads < p->p_numthreads) {
+		if (lwpidarray != NULL) {
+			free(lwpidarray, M_TEMP);
+			lwpidarray = NULL;
+		}
+		numthreads = p->p_numthreads;
+		PROC_SUNLOCK(p);
+		lwpidarray = malloc(sizeof(*lwpidarray) * numthreads, M_TEMP,
+		    M_WAITOK | M_ZERO);
+		PROC_SLOCK(p);
+		goto repeat;
+	}
+	PROC_SUNLOCK(p);
+	i = 0;
+
+	/*
+	 * XXXRW: During the below loop, execve(2) and countless other sorts
+	 * of changes could have taken place.  Should we check to see if the
+	 * vmspace has been replaced, or the like, in order to prevent
+	 * giving a snapshot that spans, say, execve(2), with some threads
+	 * before and some after?  Among other things, the credentials could
+	 * have changed, in which case the right to extract debug info might
+	 * no longer be assured.
+	 */
+	PROC_LOCK(p);
+	FOREACH_THREAD_IN_PROC(p, td) {
+		KASSERT(i < numthreads,
+		    ("sysctl_kern_proc_kstack: numthreads"));
+		lwpidarray[i] = td->td_tid;
+		i++;
+	}
+	numthreads = i;
+	for (i = 0; i < numthreads; i++) {
+		td = thread_find(p, lwpidarray[i]);
+		if (td == NULL) {
+			continue;
+		}
+		bzero(kkstp, sizeof(*kkstp));
+		(void)sbuf_new(&sb, kkstp->kkst_trace,
+		    sizeof(kkstp->kkst_trace), SBUF_FIXEDLEN);
+		thread_lock(td);
+		kkstp->kkst_tid = td->td_tid;
+		if (TD_IS_SWAPPED(td))
+			kkstp->kkst_state = KKST_STATE_SWAPPED;
+		else if (TD_IS_RUNNING(td))
+			kkstp->kkst_state = KKST_STATE_RUNNING;
+		else {
+			kkstp->kkst_state = KKST_STATE_STACKOK;
+			stack_save_td(st, td);
+		}
+		thread_unlock(td);
+		PROC_UNLOCK(p);
+		stack_sbuf_print(&sb, st);
+		sbuf_finish(&sb);
+		sbuf_delete(&sb);
+		error = SYSCTL_OUT(req, kkstp, sizeof(*kkstp));
+		PROC_LOCK(p);
+		if (error)
+			break;
+	}
+	_PRELE(p);
+	PROC_UNLOCK(p);
+	if (lwpidarray != NULL)
+		free(lwpidarray, M_TEMP);
+	stack_destroy(st);
+	free(kkstp, M_TEMP);
+	return (error);
+}
+#endif
+
+SYSCTL_NODE(_kern, KERN_PROC, proc, CTLFLAG_RD,  0, "Process table");
+
+SYSCTL_PROC(_kern_proc, KERN_PROC_ALL, all, CTLFLAG_RD|CTLTYPE_STRUCT,
+	0, 0, sysctl_kern_proc, "S,proc", "Return entire process table");
+
+static SYSCTL_NODE(_kern_proc, KERN_PROC_GID, gid, CTLFLAG_RD,
 	sysctl_kern_proc, "Process table");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_PGRP, pgrp, CTLFLAG_RD | CTLFLAG_MPSAFE,
+static SYSCTL_NODE(_kern_proc, KERN_PROC_PGRP, pgrp, CTLFLAG_RD, 
 	sysctl_kern_proc, "Process table");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_RGID, rgid, CTLFLAG_RD | CTLFLAG_MPSAFE,
+static SYSCTL_NODE(_kern_proc, KERN_PROC_RGID, rgid, CTLFLAG_RD,
 	sysctl_kern_proc, "Process table");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_SESSION, sid, CTLFLAG_RD |
-	CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
-
-static SYSCTL_NODE(_kern_proc, KERN_PROC_TTY, tty, CTLFLAG_RD | CTLFLAG_MPSAFE, 
+static SYSCTL_NODE(_kern_proc, KERN_PROC_SESSION, sid, CTLFLAG_RD,
 	sysctl_kern_proc, "Process table");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_UID, uid, CTLFLAG_RD | CTLFLAG_MPSAFE, 
+static SYSCTL_NODE(_kern_proc, KERN_PROC_TTY, tty, CTLFLAG_RD, 
 	sysctl_kern_proc, "Process table");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_RUID, ruid, CTLFLAG_RD | CTLFLAG_MPSAFE,
+static SYSCTL_NODE(_kern_proc, KERN_PROC_UID, uid, CTLFLAG_RD, 
 	sysctl_kern_proc, "Process table");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_PID, pid, CTLFLAG_RD | CTLFLAG_MPSAFE,
+static SYSCTL_NODE(_kern_proc, KERN_PROC_RUID, ruid, CTLFLAG_RD, 
 	sysctl_kern_proc, "Process table");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_PROC, proc, CTLFLAG_RD | CTLFLAG_MPSAFE,
+static SYSCTL_NODE(_kern_proc, KERN_PROC_PID, pid, CTLFLAG_RD, 
+	sysctl_kern_proc, "Process table");
+
+static SYSCTL_NODE(_kern_proc, KERN_PROC_PROC, proc, CTLFLAG_RD,
 	sysctl_kern_proc, "Return process table, no threads");
 
 static SYSCTL_NODE(_kern_proc, KERN_PROC_ARGS, args,
-	CTLFLAG_RW | CTLFLAG_ANYBODY | CTLFLAG_MPSAFE,
+	CTLFLAG_RW | CTLFLAG_ANYBODY,
 	sysctl_kern_proc_args, "Process argument list");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_PATHNAME, pathname, CTLFLAG_RD |
-	CTLFLAG_MPSAFE, sysctl_kern_proc_pathname, "Process executable path");
+static SYSCTL_NODE(_kern_proc, KERN_PROC_PATHNAME, pathname, CTLFLAG_RD,
+	sysctl_kern_proc_pathname, "Process executable path");
 
-static SYSCTL_NODE(_kern_proc, KERN_PROC_SV_NAME, sv_name, CTLFLAG_RD |
-	CTLFLAG_MPSAFE, sysctl_kern_proc_sv_name,
-	"Process syscall vector name (ABI type)");
+static SYSCTL_NODE(_kern_proc, KERN_PROC_SV_NAME, sv_name, CTLFLAG_RD,
+	sysctl_kern_proc_sv_name, "Process syscall vector name (ABI type)");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_GID | KERN_PROC_INC_THREAD), gid_td,
-	CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
+	CTLFLAG_RD, sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_PGRP | KERN_PROC_INC_THREAD), pgrp_td,
-	CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
+	CTLFLAG_RD, sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_RGID | KERN_PROC_INC_THREAD), rgid_td,
-	CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
+	CTLFLAG_RD, sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_SESSION | KERN_PROC_INC_THREAD),
-	sid_td, CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
+	sid_td, CTLFLAG_RD, sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_TTY | KERN_PROC_INC_THREAD), tty_td,
-	CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
+	CTLFLAG_RD, sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_UID | KERN_PROC_INC_THREAD), uid_td,
-	CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
+	CTLFLAG_RD, sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_RUID | KERN_PROC_INC_THREAD), ruid_td,
-	CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
+	CTLFLAG_RD, sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_PID | KERN_PROC_INC_THREAD), pid_td,
-	CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc, "Process table");
+	CTLFLAG_RD, sysctl_kern_proc, "Process table");
 
 static SYSCTL_NODE(_kern_proc, (KERN_PROC_PROC | KERN_PROC_INC_THREAD), proc_td,
-	CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_kern_proc,
-	"Return process table, no threads");
+	CTLFLAG_RD, sysctl_kern_proc, "Return process table, no threads");
+
+static SYSCTL_NODE(_kern_proc, KERN_PROC_OVMMAP, ovmmap, CTLFLAG_RD,
+	sysctl_kern_proc_ovmmap, "Old Process vm map entries");
+
+static SYSCTL_NODE(_kern_proc, KERN_PROC_VMMAP, vmmap, CTLFLAG_RD,
+	sysctl_kern_proc_vmmap, "Process vm map entries");
+
+#if defined(STACK) || defined(DDB)
+static SYSCTL_NODE(_kern_proc, KERN_PROC_KSTACK, kstack, CTLFLAG_RD,
+	sysctl_kern_proc_kstack, "Process kernel stacks");
+#endif

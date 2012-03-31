@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/sys_machdep.c,v 1.112 2007/07/08 18:17:42 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/sys_machdep.c,v 1.112.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_kstack_pages.h"
 #include "opt_mac.h"
@@ -406,7 +407,8 @@ user_ldt_alloc(struct mdproc *mdp, int len)
 		len * sizeof(union descriptor));
 	if (new_ldt->ldt_base == NULL) {
 		FREE(new_ldt, M_SUBPROC);
-		return NULL;
+		mtx_lock_spin(&dt_lock);
+		return (NULL);
 	}
 	new_ldt->ldt_refcnt = 1;
 	new_ldt->ldt_active = 0;
@@ -437,8 +439,10 @@ user_ldt_free(struct thread *td)
 	struct proc_ldt *pldt;
 
 	mtx_assert(&dt_lock, MA_OWNED);
-	if ((pldt = mdp->md_ldt) == NULL)
+	if ((pldt = mdp->md_ldt) == NULL) {
+		mtx_unlock_spin(&dt_lock);
 		return;
+	}
 
 	if (td == PCPU_GET(curthread)) {
 		lldt(_default_ldt);
@@ -446,6 +450,14 @@ user_ldt_free(struct thread *td)
 	}
 
 	mdp->md_ldt = NULL;
+	user_ldt_deref(pldt);
+}
+
+void
+user_ldt_deref(struct proc_ldt *pldt)
+{
+
+	mtx_assert(&dt_lock, MA_OWNED);
 	if (--pldt->ldt_refcnt == 0) {
 		mtx_unlock_spin(&dt_lock);
 		kmem_free(kernel_map, (vm_offset_t)pldt->ldt_base,
@@ -501,9 +513,6 @@ i386_get_ldt(td, uap)
 	return(error);
 }
 
-static int ldt_warnings;
-#define NUM_LDT_WARNINGS 10
-
 int
 i386_set_ldt(td, uap, descs)
 	struct thread *td;
@@ -550,12 +559,6 @@ i386_set_ldt(td, uap, descs)
 	}
 
 	if (!(uap->start == LDT_AUTO_ALLOC && uap->num == 1)) {
-		/* complain a for a while if using old methods */
-		if (ldt_warnings++ < NUM_LDT_WARNINGS) {
-			printf("Warning: pid %d used static ldt allocation.\n",
-			    td->td_proc->p_pid);
-			printf("See the i386_set_ldt man page for more info\n");
-		}
 		/* verify range of descriptors to modify */
 		largest_ld = uap->start + uap->num;
 		if (uap->start >= MAX_LD ||

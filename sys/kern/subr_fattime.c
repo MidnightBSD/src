@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/kern/subr_fattime.c,v 1.2 2006/10/24 10:27:23 phk Exp $
+ * $FreeBSD: src/sys/kern/subr_fattime.c,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  * Convert MS-DOS FAT format timestamps to and from unix timespecs
  *

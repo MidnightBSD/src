@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_output.c,v 1.37 2006/10/10 06:36:01 bde Exp $");
+__FBSDID("$FreeBSD: src/sys/ddb/db_output.c,v 1.37.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -91,11 +90,13 @@ db_force_whitespace()
 	    if (next_tab <= db_output_position) {
 		while (last_print < next_tab) { /* DON'T send a tab!!! */
 			cnputc(' ');
+			db_capture_writech(' ');
 			last_print++;
 		}
 	    }
 	    else {
 		cnputc(' ');
+		db_capture_writech(' ');
 		last_print++;
 	    }
 	}
@@ -138,12 +139,14 @@ db_putchar(c, arg)
 	     */
 	    db_force_whitespace();
 	    cnputc(c);
+	    db_capture_writech(c);
 	    db_output_position++;
 	    db_last_non_space = db_output_position;
 	}
 	else if (c == '\n') {
 	    /* Newline */
 	    cnputc(c);
+	    db_capture_writech(c);
 	    db_output_position = 0;
 	    db_last_non_space = 0;
 	    db_check_interrupt();
@@ -156,6 +159,7 @@ db_putchar(c, arg)
 	else if (c == '\r') {
 	    /* Return */
 	    cnputc(c);
+	    db_capture_writech(c);
 	    db_output_position = 0;
 	    db_last_non_space = 0;
 	    db_check_interrupt();
@@ -171,6 +175,7 @@ db_putchar(c, arg)
 	else if (c == '\007') {
 	    /* bell */
 	    cnputc(c);
+	    /* No need to beep in a log: db_capture_writech(c); */
 	}
 	/* other characters are assumed non-printing */
 }
@@ -207,6 +212,7 @@ db_pager(void)
 {
 	int c, done;
 
+	db_capture_enterpager();
 	db_printf("--More--\r");
 	done = 0;
 	while (!done) {
@@ -250,6 +256,7 @@ db_pager(void)
 	db_force_whitespace();
 	db_printf("\r");
 	db_newlines = 0;
+	db_capture_exitpager();
 }
 
 /*

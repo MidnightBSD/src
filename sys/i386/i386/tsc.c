@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2003 Poul-Henning Kamp
  * All rights reserved.

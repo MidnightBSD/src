@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -24,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/ddb/db_access.h,v 1.11 2005/01/06 01:34:41 imp Exp $
+ * $FreeBSD: src/sys/ddb/db_access.h,v 1.11.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _DDB_DB_ACCESS_H_

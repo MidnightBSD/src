@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Ioctl interface to Cronyx serial drivers.
  *

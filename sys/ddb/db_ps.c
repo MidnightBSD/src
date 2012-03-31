@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_ps.c,v 1.66 2007/09/17 05:27:19 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/ddb/db_ps.c,v 1.66.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/cons.h>
@@ -47,6 +46,15 @@ __FBSDID("$FreeBSD: src/sys/ddb/db_ps.c,v 1.66 2007/09/17 05:27:19 jeff Exp $");
 
 static void	dumpthread(volatile struct proc *p, volatile struct thread *td,
 		    int all);
+/*
+ * At least one non-optional show-command must be implemented using
+ * DB_SHOW_ALL_COMMAND() so that db_show_all_cmd_set gets created.
+ * Here is one.
+ */
+DB_SHOW_ALL_COMMAND(procs, db_procs_cmd)
+{
+	db_ps(addr, have_addr, count, modif);
+}
 
 /*
  * Layout:

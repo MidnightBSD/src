@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zil.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -1554,7 +1554,7 @@ zil_replay(objset_t *os, void *arg, uint64_t *txgp,
 	txg_wait_synced(zilog->zl_dmu_pool, 0);
 
 	zilog->zl_stop_replay = 0;
-	zilog->zl_replay_time = lbolt;
+	zilog->zl_replay_time = LBOLT;
 	ASSERT(zilog->zl_replay_blks == 0);
 	(void) zil_parse(zilog, zil_incr_blks, zil_replay_log_record, &zr,
 	    zh->zh_claim_txg);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/opensolaris/sys/mutex.h,v 1.3 2007/05/26 21:37:14 pjd Exp $
+ * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/mutex.h,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _OPENSOLARIS_SYS_MUTEX_H_
@@ -53,11 +54,18 @@ typedef struct sx	kmutex_t;
 #endif
 
 #define	mutex_init(lock, desc, type, arg)	do {			\
+	const char *_name;						\
 	ASSERT((type) == MUTEX_DEFAULT);				\
 	KASSERT(((lock)->lock_object.lo_flags & LO_ALLMASK) !=		\
 	    LO_EXPECTED, ("lock %s already initialized", #lock));	\
 	bzero((lock), sizeof(struct sx));				\
-	sx_init_flags((lock), "zfs:" #lock, MUTEX_FLAGS);		\
+	for (_name = #lock; *_name != '\0'; _name++) {			\
+		if (*_name >= 'a' && *_name <= 'z')			\
+			break;						\
+	}								\
+	if (*_name == '\0')						\
+		_name = #lock;						\
+	sx_init_flags((lock), _name, MUTEX_FLAGS);			\
 } while (0)
 #define	mutex_destroy(lock)	sx_destroy(lock)
 #define	mutex_enter(lock)	sx_xlock(lock)

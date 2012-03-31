@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_tty.c,v 1.60 2007/07/03 17:46:37 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty_tty.c,v 1.60.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -93,4 +93,4 @@ ctty_drvinit(void *unused)
 	ctty = make_dev(&ctty_cdevsw, 0, 0, 0, 0666, "ctty");
 }
 
-SYSINIT(cttydev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE,ctty_drvinit,NULL)
+SYSINIT(cttydev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE,ctty_drvinit,NULL);

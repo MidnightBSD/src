@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/sys/asm_linkage.h,v 1.2 2008/12/03 00:24:33 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -25,8 +25,8 @@
  * Use is subject to license terms.
  */
 
-#ifndef _IA32_SYS_ASM_LINKAGE_H
-#define	_IA32_SYS_ASM_LINKAGE_H
+#ifndef _SYS_ASM_LINKAGE_H
+#define	_SYS_ASM_LINKAGE_H
 
 #ifdef	__cplusplus
 extern "C" {
@@ -41,6 +41,17 @@ extern "C" {
 #if defined(__i386__) || defined(__amd64__)
 
 #define	ASM_ENTRY_ALIGN	16
+
+#elif defined(__sparc64__)
+
+/* GCC uses 32-byte function alignment for UltraSPARC CPUs. */
+#define	ASM_ENTRY_ALIGN	32
+
+#else
+
+#error Unsupported architecture.
+
+#endif
 
 /*
  * ENTRY provides the standard procedure entry code and an easy way to
@@ -67,40 +78,6 @@ x:
  */
 #define	SET_SIZE(x) \
 	.size	x, [.-x]
-
-#elif defined(__sparc64__)
-
-/*
- * ENTRY provides the standard procedure entry code and an easy way to
- * insert the calls to mcount for profiling. ENTRY_NP is identical, but
- * never calls mcount.
- */
-#define	ENTRY(x) \
-	.section	".text"; \
-	.align	4; \
-	.global	x; \
-	.type	x, @function; \
-x:
-
-/*
- * ALTENTRY provides for additional entry points.
- */
-#define	ALTENTRY(x) \
-	.global	x; \
-	.type	x, @function; \
-x:
-
-/*
- * SET_SIZE trails a function and set the size for the ELF symbol table.
- */
-#define	SET_SIZE(x) \
-	.size	x, (.-x)
-
-#else
-
-#error Unsupported architecture.
-
-#endif
 
 #endif /* _ASM */
 

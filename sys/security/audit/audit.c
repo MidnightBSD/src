@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-/*
- * Copyright (c) 1999-2005 Apple Computer, Inc.
+/*-
+ * Copyright (c) 1999-2005 Apple Inc.
  * Copyright (c) 2006-2007 Robert N. M. Watson
  * All rights reserved.
  *
@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -27,9 +27,10 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/security/audit/audit.c,v 1.33.2.1 2007/11/02 09:53:32 rwatson Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/security/audit/audit.c,v 1.33.2.10.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -263,12 +264,15 @@ audit_init(void)
 	audit_worker_init();
 }
 
-SYSINIT(audit_init, SI_SUB_AUDIT, SI_ORDER_FIRST, audit_init, NULL)
+SYSINIT(audit_init, SI_SUB_AUDIT, SI_ORDER_FIRST, audit_init, NULL);
 
 /*
  * Drain the audit queue and close the log at shutdown.  Note that this can
  * be called both from the system shutdown path and also from audit
  * configuration syscalls, so 'arg' and 'howto' are ignored.
+ *
+ * XXXRW: In FreeBSD 7.x and 8.x, this fails to wait for the record queue to
+ * drain before returning, which could lead to lost records on shutdown.
  */
 void
 audit_shutdown(void *arg, int howto)
@@ -362,12 +366,12 @@ audit_commit(struct kaudit_record *ar, int error, int retval)
 		 * change it to the proper type of event based on the flags
 		 * and the error value.
 		 */
-		ar->k_ar.ar_event = flags_and_error_to_openevent(
+		ar->k_ar.ar_event = audit_flags_and_error_to_openevent(
 		    ar->k_ar.ar_arg_fflags, error);
 		break;
 
 	case AUE_SYSCTL:
-		ar->k_ar.ar_event = ctlname_to_sysctlevent(
+		ar->k_ar.ar_event = audit_ctlname_to_sysctlevent(
 		    ar->k_ar.ar_arg_ctlname, ar->k_ar.ar_valid_arg);
 		break;
 
@@ -552,6 +556,7 @@ audit_cred_kproc0(struct ucred *cred)
 {
 
 	cred->cr_audit.ai_auid = AU_DEFAUDITID;
+	cred->cr_audit.ai_termid.at_type = AU_IPv4;
 }
 
 void
@@ -559,6 +564,7 @@ audit_cred_proc1(struct ucred *cred)
 {
 
 	cred->cr_audit.ai_auid = AU_DEFAUDITID;
+	cred->cr_audit.ai_termid.at_type = AU_IPv4;
 }
 
 void
@@ -573,4 +579,55 @@ audit_thread_free(struct thread *td)
 {
 
 	KASSERT(td->td_ar == NULL, ("audit_thread_free: td_ar != NULL"));
+}
+
+void
+audit_proc_coredump(struct thread *td, char *path, int errcode)
+{
+	struct kaudit_record *ar;
+	struct au_mask *aumask;
+	au_class_t class;
+	int ret, sorf;
+	char **pathp;
+	au_id_t auid;
+
+	ret = 0;
+
+	/*
+	 * Make sure we are using the correct preselection mask.
+	 */
+	auid = td->td_ucred->cr_audit.ai_auid;
+	if (auid == AU_DEFAUDITID)
+		aumask = &audit_nae_mask;
+	else
+		aumask = &td->td_ucred->cr_audit.ai_mask;
+	/*
+	 * It's possible for coredump(9) generation to fail.  Make sure that
+	 * we handle this case correctly for preselection.
+	 */
+	if (errcode != 0)
+		sorf = AU_PRS_FAILURE;
+	else
+		sorf = AU_PRS_SUCCESS;
+	class = au_event_class(AUE_CORE);
+	if (au_preselect(AUE_CORE, class, aumask, sorf) == 0 &&
+	    audit_pipe_preselect(auid, AUE_CORE, class, sorf, 0) == 0)
+		return;
+	/*
+	 * If we are interested in seeing this audit record, allocate it.
+	 * Where possible coredump records should contain a pathname and arg32
+	 * (signal) tokens.
+	 */
+	ar = audit_new(AUE_CORE, td);
+	if (path != NULL) {
+		pathp = &ar->k_ar.ar_arg_upath1;
+		*pathp = malloc(MAXPATHLEN, M_AUDITPATH, M_WAITOK);
+		audit_canon_path(td, path, *pathp);
+		ARG_SET_VALID(ar, ARG_UPATH1);
+	}
+	ar->k_ar.ar_arg_signum = td->td_proc->p_sig;
+	ARG_SET_VALID(ar, ARG_SIGNUM);
+	if (errcode != 0)
+		ret = 1;
+	audit_commit(ar, errcode, ret);
 }

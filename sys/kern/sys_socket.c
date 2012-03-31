@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sys_socket.c,v 1.73 2007/08/06 14:26:00 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/sys_socket.c,v 1.73.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 
@@ -190,7 +190,7 @@ soo_ioctl(struct file *fp, u_long cmd, void *data, struct ucred *active_cred,
 		if (IOCGROUP(cmd) == 'i')
 			error = ifioctl(so, cmd, data, td);
 		else if (IOCGROUP(cmd) == 'r')
-			error = rtioctl(cmd, data);
+			error = rtioctl_fib(cmd, data, so->so_fibnum);
 		else
 			error = ((*so->so_proto->pr_usrreqs->pru_control)
 			    (so, cmd, data, 0, td));
@@ -237,17 +237,16 @@ soo_stat(struct file *fp, struct stat *ub, struct ucred *active_cred,
 	/*
 	 * If SBS_CANTRCVMORE is set, but there's still data left in the
 	 * receive buffer, the socket is still readable.
-	 *
-	 * XXXRW: perhaps should lock socket buffer so st_size result is
-	 * consistent.
 	 */
-	/* Unlocked read. */
+	SOCKBUF_LOCK(&so->so_rcv);
 	if ((so->so_rcv.sb_state & SBS_CANTRCVMORE) == 0 ||
 	    so->so_rcv.sb_cc != 0)
 		ub->st_mode |= S_IRUSR | S_IRGRP | S_IROTH;
+	ub->st_size = so->so_rcv.sb_cc - so->so_rcv.sb_ctl;
+	SOCKBUF_UNLOCK(&so->so_rcv);
+	/* Unlocked read. */
 	if ((so->so_snd.sb_state & SBS_CANTSENDMORE) == 0)
 		ub->st_mode |= S_IWUSR | S_IWGRP | S_IWOTH;
-	ub->st_size = so->so_rcv.sb_cc - so->so_rcv.sb_ctl;
 	ub->st_uid = so->so_cred->cr_uid;
 	ub->st_gid = so->so_cred->cr_gid;
 	return (*so->so_proto->pr_usrreqs->pru_sense)(so, ub);

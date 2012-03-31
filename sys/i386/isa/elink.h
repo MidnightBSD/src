@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Charles Hannum.  All rights reserved.
  *
@@ -26,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/isa/elink.h,v 1.9 2005/01/06 22:18:16 imp Exp $
+ * $FreeBSD: src/sys/i386/isa/elink.h,v 1.9.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifdef PC98

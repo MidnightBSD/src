@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/kenv.h,v 1.1 2002/04/17 13:06:36 mux Exp $
+ * $FreeBSD: src/sys/sys/kenv.h,v 1.1.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_KENV_H_

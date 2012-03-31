@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/alq.h,v 1.6 2005/04/16 12:12:26 rwatson Exp $
+ * $FreeBSD: src/sys/sys/alq.h,v 1.6.18.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 #ifndef _SYS_ALQ_H_

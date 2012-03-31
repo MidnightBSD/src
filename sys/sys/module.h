@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/module.h,v 1.22 2006/04/17 19:44:44 jhb Exp $
+ * $FreeBSD: src/sys/sys/module.h,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_MODULE_H_
@@ -117,7 +117,7 @@ struct mod_metadata {
 
 #define	DECLARE_MODULE(name, data, sub, order)				\
 	MODULE_METADATA(_md_##name, MDT_MODULE, &data, #name);		\
-	SYSINIT(name##module, sub, order, module_register_init, &data)	\
+	SYSINIT(name##module, sub, order, module_register_init, &data);	\
 	struct __hack
 
 #define	MODULE_VERSION(module, version)					\

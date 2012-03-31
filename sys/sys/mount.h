@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/mount.h,v 1.4 2008/12/03 00:11:22 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/mount.h,v 1.5 2012/01/04 01:49:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mount.h	8.21 (Berkeley) 5/20/95
- * $FreeBSD: src/sys/sys/mount.h,v 1.228 2007/09/12 16:31:32 kib Exp $
+ * $FreeBSD: src/sys/sys/mount.h,v 1.228.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_MOUNT_H_
@@ -37,8 +37,8 @@
 #include <sys/ucred.h>
 #include <sys/queue.h>
 #ifdef _KERNEL
+#include <sys/lock.h>
 #include <sys/lockmgr.h>
-#include <sys/_lock.h>
 #include <sys/_mutex.h>
 #endif
 
@@ -178,6 +178,7 @@ struct mount {
 	int		mnt_secondary_accwrites;/* (i) secondary wr. starts */
 #define	mnt_endzero	mnt_gjprovider
 	char		*mnt_gjprovider;	/* gjournal provider name */
+	struct lock	mnt_explock;		/* vfs_export walkers lock */
 };
 
 struct vnode *__mnt_vnode_next(struct vnode **mvp, struct mount *mp);
@@ -679,7 +680,7 @@ int	vfs_busy(struct mount *, int, struct mtx *, struct thread *);
 int	vfs_export			 /* process mount export info */
 	    (struct mount *, struct export_args *);
 int	vfs_allocate_syncvnode(struct mount *);
-int     vfs_donmount(struct thread *td, int fsflags, struct uio *fsoptions);
+int	vfs_donmount(struct thread *td, int fsflags, struct uio *fsoptions);
 void	vfs_getnewfsid(struct mount *);
 struct cdev *vfs_getrootfsid(struct mount *);
 struct	mount *vfs_getvfs(fsid_t *);      /* return vfs given fsid */

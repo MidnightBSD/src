@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mitsuru IWASAKI
  * All rights reserved.
@@ -29,7 +30,7 @@
 /******************************************************************************
  *
  * Name: acpica_machdep.h - arch-specific defines, etc.
- *       $Revision: 1.1.1.3 $
+ *       $Revision: 1.2 $
  *
  *****************************************************************************/
 

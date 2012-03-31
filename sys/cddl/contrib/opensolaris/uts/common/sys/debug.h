@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/sys/debug.h,v 1.2 2008/12/03 00:24:33 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -50,7 +50,7 @@ extern "C" {
 #if defined(__STDC__)
 extern int assfail(const char *, const char *, int);
 #define	VERIFY(EX) ((void)((EX) || assfail(#EX, __FILE__, __LINE__)))
-#if DEBUG
+#ifdef DEBUG
 #define	ASSERT(EX) VERIFY(EX)
 #else
 #define	ASSERT(x)  ((void)0)
@@ -58,7 +58,7 @@ extern int assfail(const char *, const char *, int);
 #else	/* defined(__STDC__) */
 extern int assfail();
 #define	VERIFY(EX) ((void)((EX) || assfail("EX", __FILE__, __LINE__)))
-#if DEBUG
+#ifdef DEBUG
 #define	ASSERT(EX) VERIFY(EX)
 #else
 #define	ASSERT(x)  ((void)0)
@@ -98,7 +98,7 @@ _NOTE(CONSTCOND) } while (0)
 #define	VERIFY3S(x, y, z)	VERIFY3_IMPL(x, y, z, int64_t)
 #define	VERIFY3U(x, y, z)	VERIFY3_IMPL(x, y, z, uint64_t)
 #define	VERIFY3P(x, y, z)	VERIFY3_IMPL(x, y, z, uintptr_t)
-#if DEBUG
+#ifdef DEBUG
 #define	ASSERT3S(x, y, z)	VERIFY3S(x, y, z)
 #define	ASSERT3U(x, y, z)	VERIFY3U(x, y, z)
 #define	ASSERT3P(x, y, z)	VERIFY3P(x, y, z)

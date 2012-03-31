@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_lock.c,v 1.110 2007/05/18 15:04:59 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_lock.c,v 1.110.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include "opt_global.h"
@@ -644,7 +644,7 @@ lockmgr_printinfo(lkp)
 	if (lkp->lk_waitcount > 0)
 		printf(" with %d pending", lkp->lk_waitcount);
 #ifdef DEBUG_LOCKS
-	stack_print(&lkp->lk_stack);
+	stack_print_ddb(&lkp->lk_stack);
 #endif
 }
 

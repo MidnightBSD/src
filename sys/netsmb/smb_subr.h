@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netsmb/smb_subr.h,v 1.13 2006/11/06 13:42:06 rwatson Exp $
+ * $FreeBSD: src/sys/netsmb/smb_subr.h,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _NETSMB_SMB_SUBR_H_
 #define _NETSMB_SMB_SUBR_H_

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/types.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/types.h,v 1.4 2011/10/15 20:18:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -144,6 +144,7 @@ typedef	__clockid_t	clockid_t;
 #define	_CLOCKID_T_DECLARED
 #endif
 
+typedef	__cpumask_t	cpumask_t;
 typedef	__critical_t	critical_t;	/* Critical section value */
 typedef	__int64_t	daddr_t;	/* disk address */
 
@@ -279,7 +280,6 @@ typedef	__vm_size_t	vm_size_t;
 
 #ifdef _KERNEL
 typedef	int		boolean_t;
-typedef	__cpumask_t	cpumask_t;
 typedef	struct device	*device_t;
 typedef	__intfptr_t	intfptr_t;
 
@@ -300,36 +300,6 @@ typedef	struct vm_page	*vm_page_t;
 #define offsetof(type, field) __offsetof(type, field)
 
 #endif /* !_KERNEL */
-
-/*
- * Solaris compatibility definitions.
- */
-#ifdef _SOLARIS_C_SOURCE
-typedef u_int		uint_t;
-typedef u_char		uchar_t;
-typedef u_short		ushort_t;
-typedef u_long		ulong_t;
-
-typedef	long long	longlong_t;  
-typedef unsigned long long	u_longlong_t;
-
-typedef off_t		off64_t;
-
-typedef id_t		taskid_t;
-typedef id_t		projid_t;
-typedef id_t		poolid_t;
-typedef id_t		zoneid_t;
-typedef id_t		ctid_t;
-
-#ifndef _KERNEL
-#if defined(__XOPEN_OR_POSIX)
-typedef enum { _B_FALSE, _B_TRUE } boolean_t;
-#else
-typedef enum { B_FALSE, B_TRUE } boolean_t;
-#endif /* defined(__XOPEN_OR_POSIX) */
-#endif
-
-#endif /* _SOLARIS_C_SOURCE */
 
 /*
  * The following are all things that really shouldn't exist in this header,

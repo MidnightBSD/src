@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/opensolaris/kern/opensolaris_kmem.c,v 1.2 2007/04/10 02:35:56 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_kmem.c,v 1.4.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -94,6 +94,10 @@ void
 zfs_kmem_free(void *buf, size_t size __unused)
 {
 #ifdef KMEM_DEBUG
+	if (buf == NULL) {
+		printf("%s: attempt to free NULL\n",__func__);
+		return;
+	}
 	struct kmem_item *i;
 
 	buf = (u_char *)buf - sizeof(struct kmem_item);
@@ -109,18 +113,18 @@ zfs_kmem_free(void *buf, size_t size __unused)
 	free(buf, M_SOLARIS);
 }
 
-u_long
+uint64_t
 kmem_size(void)
 {
 
-	return ((u_long)vm_kmem_size);
+	return ((uint64_t)vm_kmem_size);
 }
 
-u_long
+uint64_t
 kmem_used(void)
 {
 
-	return ((u_long)kmem_map->size);
+	return ((uint64_t)kmem_map->size);
 }
 
 static int
@@ -201,7 +205,6 @@ kmem_cache_free(kmem_cache_t *cache, void *buf)
 }
 
 #ifdef _KERNEL
-extern void zone_drain(uma_zone_t zone);
 void
 kmem_cache_reap_now(kmem_cache_t *cache)
 {
@@ -238,7 +241,8 @@ calloc(size_t n, size_t s)
 }
 
 #ifdef KMEM_DEBUG
-static void
+void kmem_show(void *);
+void
 kmem_show(void *dummy __unused)
 {
 	struct kmem_item *i;
@@ -250,12 +254,10 @@ kmem_show(void *dummy __unused)
 		printf("KMEM_DEBUG: Leaked elements:\n\n");
 		LIST_FOREACH(i, &kmem_items, next) {
 			printf("address=%p\n", i);
-			stack_print(&i->stack);
-			printf("\n");
 		}
 	}
 	mtx_unlock(&kmem_items_mtx);
 }
 
-SYSUNINIT(sol_kmem, SI_SUB_DRIVERS, SI_ORDER_FIRST, kmem_show, NULL);
+SYSUNINIT(sol_kmem, SI_SUB_CPU, SI_ORDER_FIRST, kmem_show, NULL);
 #endif	/* KMEM_DEBUG */

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netncp/ncp_conn.h,v 1.12 2005/01/07 01:45:48 imp Exp $
+ * $FreeBSD: src/sys/netncp/ncp_conn.h,v 1.12.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _NETNCP_NCP_CONN_H_
 #define _NETNCP_NCP_CONN_H_
@@ -133,6 +133,7 @@ struct ncp_conn_stat {
 #ifdef _KERNEL
 
 #ifndef LK_SHARED
+#include <sys/lock.h>
 #include <sys/lockmgr.h>
 #endif
 

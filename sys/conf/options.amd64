@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options.amd64,v 1.29 2007/07/04 00:18:38 bz Exp $
+# $FreeBSD: src/sys/conf/options.amd64,v 1.29.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 # Options specific to AMD64 platform kernels
 
 AUTO_EOI_1		opt_auto_eoi.h
@@ -64,6 +64,7 @@ DEV_ATPIC		opt_atpic.h
 
 # Debugging
 STOP_NMI		opt_cpu.h
+KDTRACE_FRAME		opt_kdtrace.h
 
 # BPF just-in-time compiler
 BPF_JITTER		opt_bpf.h

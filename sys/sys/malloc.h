@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)malloc.h	8.5 (Berkeley) 5/3/95
- * $FreeBSD: src/sys/sys/malloc.h,v 1.83 2005/12/30 11:45:07 pjd Exp $
+ * $FreeBSD: src/sys/sys/malloc.h,v 1.83.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_MALLOC_H_
@@ -81,7 +81,16 @@ struct malloc_type_stats {
 	uint64_t	_mts_reserved3;	/* Reserved field. */
 };
 
+/*
+ * Index definitions for the mti_probes[] array.
+ */
+#define DTMALLOC_PROBE_MALLOC		0
+#define DTMALLOC_PROBE_FREE		1
+#define DTMALLOC_PROBE_MAX		2
+
 struct malloc_type_internal {
+	uint32_t	mti_probes[DTMALLOC_PROBE_MAX];
+					/* DTrace probe ID array. */
 	struct malloc_type_stats	mti_stats[MAXCPU];
 };
 
@@ -174,7 +183,11 @@ MALLOC_DECLARE(M_IOV);
 
 extern struct mtx malloc_mtx;
 
-/* XXX struct malloc_type is unused for contig*(). */
+/*
+ * Function type used when iterating over the list of malloc types.
+ */
+typedef void malloc_type_list_func_t(struct malloc_type *, void *);
+
 void	contigfree(void *addr, unsigned long size, struct malloc_type *type);
 void	*contigmalloc(unsigned long size, struct malloc_type *type, int flags,
 	    vm_paddr_t low, vm_paddr_t high, unsigned long alignment,
@@ -185,6 +198,7 @@ void	malloc_init(void *);
 int	malloc_last_fail(void);
 void	malloc_type_allocated(struct malloc_type *type, unsigned long size);
 void	malloc_type_freed(struct malloc_type *type, unsigned long size);
+void	malloc_type_list(malloc_type_list_func_t *, void *);
 void	malloc_uninit(void *);
 void	*realloc(void *addr, unsigned long size, struct malloc_type *type,
 	    int flags);

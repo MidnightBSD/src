@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_main.c,v 1.5 2006/11/06 11:10:57 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/ddb/db_main.c,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -37,6 +36,7 @@ __FBSDID("$FreeBSD: src/sys/ddb/db_main.c,v 1.5 2006/11/06 11:10:57 kib Exp $");
 #include <sys/pcpu.h>
 #include <sys/proc.h>
 #include <sys/reboot.h>
+#include <sys/sysctl.h>
 
 #include <machine/kdb.h>
 #include <machine/pcb.h>
@@ -45,6 +45,8 @@ __FBSDID("$FreeBSD: src/sys/ddb/db_main.c,v 1.5 2006/11/06 11:10:57 kib Exp $");
 #include <ddb/ddb.h>
 #include <ddb/db_command.h>
 #include <ddb/db_sym.h>
+
+SYSCTL_NODE(_debug, OID_AUTO, ddb, CTLFLAG_RW, 0, "DDB settings");
 
 static dbbe_init_f db_init;
 static dbbe_trap_f db_trap;
@@ -192,6 +194,7 @@ db_trap(int type, int code)
 	jmp_buf jb;
 	void *prev_jb;
 	boolean_t bkpt, watchpt;
+	const char *why;
 
 	/*
 	 * Don't handle the trap if the console is unavailable (i.e. it
@@ -220,6 +223,8 @@ db_trap(int type, int code)
 				db_printf("Stopped at\t");
 			db_print_loc_and_inst(db_dot);
 		}
+		why = kdb_why;
+		db_script_kdbenter(why != KDB_WHY_UNSET ? why : "unknown");
 		db_command_loop();
 		(void)kdb_jmpbuf(prev_jb);
 	}

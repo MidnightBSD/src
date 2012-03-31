@@ -18,6 +18,8 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
+ *
+ * $FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_string.c,v 1.3.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 /*
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.

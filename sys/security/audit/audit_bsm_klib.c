@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*
- * Copyright (c) 1999-2005 Apple Computer, Inc.
+ * Copyright (c) 1999-2005 Apple Inc.
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
  *
@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -27,9 +27,10 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/security/audit/audit_bsm_klib.c,v 1.7.2.1 2007/11/02 09:53:32 rwatson Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/security/audit/audit_bsm_klib.c,v 1.7.2.8.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -53,7 +54,7 @@
  * Hash table functions for the audit event number to event class mask
  * mapping.
  */
-#define EVCLASSMAP_HASH_TABLE_SIZE 251
+#define	EVCLASSMAP_HASH_TABLE_SIZE	251
 struct evclass_elem {
 	au_event_t event;
 	au_class_t class;
@@ -181,7 +182,7 @@ au_preselect(au_event_t event, au_class_t class, au_mask_t *mask_p, int sorf)
  * Convert sysctl names and present arguments to events.
  */
 au_event_t
-ctlname_to_sysctlevent(int name[], uint64_t valid_arg)
+audit_ctlname_to_sysctlevent(int name[], uint64_t valid_arg)
 {
 
 	/* can't parse it - so return the worst case */
@@ -230,7 +231,7 @@ ctlname_to_sysctlevent(int name[], uint64_t valid_arg)
 	case KERN_IOV_MAX:
 	case KERN_MAXID:
 		return ((valid_arg & ARG_VALUE) ?
-			AUE_SYSCTL : AUE_SYSCTL_NONADMIN);
+		    AUE_SYSCTL : AUE_SYSCTL_NONADMIN);
 
 	default:
 		return (AUE_SYSCTL);
@@ -243,7 +244,7 @@ ctlname_to_sysctlevent(int name[], uint64_t valid_arg)
  * auditing purposes.
  */
 au_event_t
-flags_and_error_to_openevent(int oflags, int error)
+audit_flags_and_error_to_openevent(int oflags, int error)
 {
 	au_event_t aevent;
 
@@ -339,7 +340,7 @@ flags_and_error_to_openevent(int oflags, int error)
  * Convert a MSGCTL command to a specific event.
  */
 int
-msgctl_to_event(int cmd)
+audit_msgctl_to_event(int cmd)
 {
 
 	switch (cmd) {
@@ -362,7 +363,7 @@ msgctl_to_event(int cmd)
  * Convert a SEMCTL command to a specific event.
  */
 int
-semctl_to_event(int cmd)
+audit_semctl_to_event(int cmd)
 {
 
 	switch (cmd) {
@@ -397,7 +398,7 @@ semctl_to_event(int cmd)
 		return (AUE_SEMCTL_STAT);
 
 	default:
-		/* We will audit a bad command */
+		/* We will audit a bad command. */
 		return (AUE_SEMCTL);
 	}
 }
@@ -481,7 +482,7 @@ auditon_command_event(int cmd)
  * MAXPATHLEN * 2 would be passed in.
  */
 void
-canon_path(struct thread *td, char *path, char *cpath)
+audit_canon_path(struct thread *td, char *path, char *cpath)
 {
 	char *bufp;
 	char *retbuf, *freebuf;
@@ -490,7 +491,7 @@ canon_path(struct thread *td, char *path, char *cpath)
 	int cisr, error, vfslocked;
 
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL,
-	    "canon_path() at %s:%d", __FILE__, __LINE__);
+	    "audit_canon_path() at %s:%d", __FILE__, __LINE__);
 
 	fdp = td->td_proc->p_fd;
 	bufp = path;

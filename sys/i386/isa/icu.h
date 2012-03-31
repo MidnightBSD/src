@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)icu.h	5.6 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/i386/isa/icu.h,v 1.35 2006/12/17 05:07:01 kmacy Exp $
+ * $FreeBSD: src/sys/i386/isa/icu.h,v 1.35.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

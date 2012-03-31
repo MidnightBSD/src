@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_bus_dma.h,v 1.1 2006/09/03 00:26:17 jmg Exp $
+ * $FreeBSD: src/sys/sys/_bus_dma.h,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

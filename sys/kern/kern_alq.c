@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_alq.c,v 1.19 2007/06/01 14:33:11 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_alq.c,v 1.19.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 
@@ -327,8 +327,8 @@ static struct kproc_desc ald_kp = {
         &ald_proc
 };
 
-SYSINIT(aldthread, SI_SUB_KTHREAD_IDLE, SI_ORDER_ANY, kproc_start, &ald_kp)
-SYSINIT(ald, SI_SUB_LOCK, SI_ORDER_ANY, ald_startup, NULL)
+SYSINIT(aldthread, SI_SUB_KTHREAD_IDLE, SI_ORDER_ANY, kproc_start, &ald_kp);
+SYSINIT(ald, SI_SUB_LOCK, SI_ORDER_ANY, ald_startup, NULL);
 
 
 /* User visible queue functions */

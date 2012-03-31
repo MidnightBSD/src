@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/opensolaris/sys/cmn_err.h,v 1.1 2007/04/06 01:09:06 pjd Exp $
+ * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/cmn_err.h,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _OPENSOLARIS_SYS_CMN_ERR_H_
@@ -44,44 +45,8 @@ extern "C" {
 #define	CE_PANIC	3	/* panic		*/
 #define	CE_IGNORE	4	/* print nothing	*/
 
-static __inline void
-vcmn_err(int ce, const char *fmt, va_list adx)
-{
-	char buf[256];
-
-	switch (ce) {
-	case CE_CONT:
-		snprintf(buf, sizeof(buf), "ZFS(cont): %s\n", fmt);
-		break;
-	case CE_NOTE:
-		snprintf(buf, sizeof(buf), "ZFS: NOTICE: %s\n", fmt);
-		break;
-	case CE_WARN:
-		snprintf(buf, sizeof(buf), "ZFS: WARNING: %s\n", fmt);
-		break;
-	case CE_PANIC:
-		snprintf(buf, sizeof(buf), "ZFS(panic): %s\n", fmt);
-		break;
-	case CE_IGNORE:
-		break;
-	default:
-		panic("unknown severity level");
-	}
-	if (ce != CE_IGNORE)
-		vprintf(buf, adx);
-	if (ce == CE_PANIC)
-		panic("ZFS");
-}
-
-static __inline void
-cmn_err(int ce, const char *fmt, ...)
-{
-	va_list adx;
-
-	va_start(adx, fmt);
-	vcmn_err(ce, fmt, adx);
-	va_end(adx);
-}
+void cmn_err(int, const char *, ...);
+void vcmn_err(int, const char *, va_list);
 
 #ifdef	__cplusplus
 }

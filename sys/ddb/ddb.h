@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993, Garrett A. Wollman.
  * Copyright (c) 1993, University of Vermont and State Agricultural College.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ddb/ddb.h,v 1.43 2006/07/12 21:22:43 jhb Exp $
+ * $FreeBSD: src/sys/ddb/ddb.h,v 1.43.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -38,10 +37,34 @@
 #ifndef _DDB_DDB_H_
 #define	_DDB_DDB_H_
 
+#ifdef SYSCTL_DECL
+SYSCTL_DECL(_debug_ddb);
+#endif
+
 #include <machine/db_machdep.h>		/* type definitions */
 
 #ifndef DB_MAXARGS
 #define	DB_MAXARGS	10
+#endif
+
+#ifndef DB_MAXLINE
+#define	DB_MAXLINE	120
+#endif
+
+#ifndef DB_MAXSCRIPTS
+#define	DB_MAXSCRIPTS	8
+#endif
+
+#ifndef DB_MAXSCRIPTNAME
+#define	DB_MAXSCRIPTNAME	32
+#endif
+
+#ifndef DB_MAXSCRIPTLEN
+#define	DB_MAXSCRIPTLEN	128
+#endif
+
+#ifndef DB_MAXSCRIPTRECURSION
+#define	DB_MAXSCRIPTRECURSION	3
 #endif
 
 #ifndef DB_CALL
@@ -57,6 +80,8 @@ typedef void db_cmdfcn_t(db_expr_t addr, boolean_t have_addr, db_expr_t count,
 	DB_FUNC(cmd_name, func_name, db_cmd_set, 0, NULL)
 #define DB_SHOW_COMMAND(cmd_name, func_name) \
 	DB_FUNC(cmd_name, func_name, db_show_cmd_set, 0, NULL)
+#define DB_SHOW_ALL_COMMAND(cmd_name, func_name) \
+	DB_FUNC(cmd_name, func_name, db_show_all_cmd_set, 0, NULL)
 
 #define	DB_SET(cmd_name, func_name, set, flag, more)		\
 static const struct command __CONCAT(cmd_name,_cmd) = {		\
@@ -127,6 +152,7 @@ int		db_value_of_name(const char *name, db_expr_t *valuep);
 int		db_write_bytes(vm_offset_t addr, size_t size, char *data);
 
 db_cmdfcn_t	db_breakpoint_cmd;
+db_cmdfcn_t	db_capture_cmd;
 db_cmdfcn_t	db_continue_cmd;
 db_cmdfcn_t	db_delete_cmd;
 db_cmdfcn_t	db_deletehwatch_cmd;
@@ -134,16 +160,21 @@ db_cmdfcn_t	db_deletewatch_cmd;
 db_cmdfcn_t	db_examine_cmd;
 db_cmdfcn_t	db_hwatchpoint_cmd;
 db_cmdfcn_t	db_listbreak_cmd;
+db_cmdfcn_t	db_scripts_cmd;
 db_cmdfcn_t	db_print_cmd;
 db_cmdfcn_t	db_ps;
+db_cmdfcn_t	db_run_cmd;
+db_cmdfcn_t	db_script_cmd;
 db_cmdfcn_t	db_search_cmd;
 db_cmdfcn_t	db_set_cmd;
 db_cmdfcn_t	db_set_thread;
 db_cmdfcn_t	db_show_regs;
 db_cmdfcn_t	db_show_threads;
 db_cmdfcn_t	db_single_step_cmd;
+db_cmdfcn_t	db_textdump_cmd;
 db_cmdfcn_t	db_trace_until_call_cmd;
 db_cmdfcn_t	db_trace_until_matching_cmd;
+db_cmdfcn_t	db_unscript_cmd;
 db_cmdfcn_t	db_watchpoint_cmd;
 db_cmdfcn_t	db_write_cmd;
 
@@ -168,5 +199,42 @@ struct command {
 #define	CS_SET_DOT	0x100	/* set dot after command */
 	struct command_table *more; /* another level of command */
 };
+
+/*
+ * Interface between DDB and the DDB output capture facility.
+ */
+struct dumperinfo;
+void	db_capture_dump(struct dumperinfo *di);
+void	db_capture_enterpager(void);
+void	db_capture_exitpager(void);
+void	db_capture_write(char *buffer, u_int buflen);
+void	db_capture_writech(char ch);
+
+/*
+ * Interface between DDB  and the script facility.
+ */
+void	db_script_kdbenter(const char *eventname);	/* KDB enter event. */
+
+/*
+ * Interface between DDB and the textdump facility.
+ *
+ * Text dump blocks are of a fixed size; textdump_block_buffer is a
+ * statically allocated buffer that code interacting with textdumps can use
+ * to prepare and hold a pending block in when calling writenextblock().
+ */
+#define	TEXTDUMP_BLOCKSIZE	512
+extern char	textdump_block_buffer[TEXTDUMP_BLOCKSIZE];
+
+void	textdump_mkustar(char *block_buffer, const char *filename,
+	    u_int size);
+void	textdump_restoreoff(off_t offset);
+void	textdump_saveoff(off_t *offsetp);
+int	textdump_writenextblock(struct dumperinfo *di, char *buffer);
+
+/*
+ * Interface between the kernel and textdumps.
+ */
+extern int	textdump_pending;	/* Call textdump_dumpsys() instead. */
+void	textdump_dumpsys(struct dumperinfo *di);
 
 #endif /* !_DDB_DDB_H_ */

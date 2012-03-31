@@ -38,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ipc.h	8.4 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/ipc.h,v 1.25 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/ipc.h,v 1.25.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

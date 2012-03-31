@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/elcr.c,v 1.2 2005/01/18 20:24:47 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/elcr.c,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * The ELCR is a register that controls the trigger mode and polarity of

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/taskqueue.h,v 1.16 2006/01/14 01:55:24 scottl Exp $
+ * $FreeBSD: src/sys/sys/taskqueue.h,v 1.16.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_TASKQUEUE_H_
@@ -59,6 +59,8 @@ void	taskqueue_drain(struct taskqueue *queue, struct task *task);
 struct taskqueue *taskqueue_find(const char *name);
 void	taskqueue_free(struct taskqueue *queue);
 void	taskqueue_run(struct taskqueue *queue);
+void	taskqueue_block(struct taskqueue *queue);
+void	taskqueue_unblock(struct taskqueue *queue);
 
 /*
  * Functions for dedicated thread taskqueues
@@ -98,7 +100,7 @@ taskqueue_define_##name(void *arg)					\
 }									\
 									\
 SYSINIT(taskqueue_##name, SI_SUB_CONFIGURE, SI_ORDER_SECOND,		\
-	taskqueue_define_##name, NULL)					\
+	taskqueue_define_##name, NULL);					\
 									\
 struct __hack
 #define TASKQUEUE_DEFINE_THREAD(name)					\
@@ -123,7 +125,7 @@ taskqueue_define_##name(void *arg)					\
 }									\
 									\
 SYSINIT(taskqueue_##name, SI_SUB_CONFIGURE, SI_ORDER_SECOND,		\
-	taskqueue_define_##name, NULL)					\
+	taskqueue_define_##name, NULL);					\
 									\
 struct __hack
 #define TASKQUEUE_FAST_DEFINE_THREAD(name)				\

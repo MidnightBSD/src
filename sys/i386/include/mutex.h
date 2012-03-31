@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: mutex.h,v 1.1.1.3 2008-11-07 16:49:01 laffer1 Exp $
+ *	from BSDI $Id: mutex.h,v 1.2 2012-03-31 17:05:09 laffer1 Exp $
  * $FreeBSD: src/sys/i386/include/mutex.h,v 1.37 2006/05/19 18:53:50 sobomax Exp $
  */
 

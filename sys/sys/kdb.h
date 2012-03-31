@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/kdb.h,v 1.3 2011/07/10 17:01:01 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/kdb.h,v 1.4 2012/02/19 16:59:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/kdb.h,v 1.5 2005/04/20 20:52:46 ps Exp $
+ * $FreeBSD: src/sys/sys/kdb.h,v 1.5.10.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_KDB_H_
@@ -105,5 +105,6 @@ extern const char * volatile kdb_why;
 #define	KDB_WHY_POWERFAIL	"powerfail"	/* Powerfail NMI. */
 #define	KDB_WHY_MAC		"mac"		/* MAC Framework. */
 #define	KDB_WHY_UNIONFS		"unionfs"	/* Unionfs bug. */
+#define	KDB_WHY_DTRACE		"dtrace"	/* DTrace action entered debugger. */
 
 #endif /* !_SYS_KDB_H_ */

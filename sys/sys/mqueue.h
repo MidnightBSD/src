@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/mqueue.h,v 1.2 2005/11/30 05:12:02 davidxu Exp $
+ * $FreeBSD: src/sys/sys/mqueue.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_MQUEUE_H_

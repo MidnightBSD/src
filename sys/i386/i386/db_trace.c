@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -25,19 +26,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/db_trace.c,v 1.79 2007/02/19 10:57:47 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/db_trace.c,v 1.79.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kdb.h>
 #include <sys/proc.h>
-#include <sys/stack.h>
 #include <sys/sysent.h>
 
 #include <machine/cpu.h>
 #include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/reg.h>
+#include <machine/stack.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -166,24 +167,13 @@ db_ss(struct db_variable *vp, db_expr_t *valuep, int op)
 	return (1);
 }
 
-/*
- * Stack trace.
- */
-#define	INKERNEL(va)	(((vm_offset_t)(va)) >= USRSTACK && \
-	    ((vm_offset_t)(va)) < VM_MAX_KERNEL_ADDRESS)
-
-struct i386_frame {
-	struct i386_frame	*f_frame;
-	int			f_retaddr;
-	int			f_arg0;
-};
-
 #define NORMAL		0
 #define	TRAP		1
 #define	INTERRUPT	2
 #define	SYSCALL		3
 #define	DOUBLE_FAULT	4
 #define	TRAP_INTERRUPT	5
+#define	TRAP_TIMERINT	6
 
 static void db_nextframe(struct i386_frame **, db_addr_t *, struct thread *);
 static int db_numargs(struct i386_frame *);
@@ -319,8 +309,9 @@ db_nextframe(struct i386_frame **fp, db_addr_t *ip, struct thread *td)
 		else if (strcmp(name, "dblfault_handler") == 0)
 			frame_type = DOUBLE_FAULT;
 		/* XXX: These are interrupts with trap frames. */
-		else if (strcmp(name, "Xtimerint") == 0 ||
-		    strcmp(name, "Xcpustop") == 0 ||
+		else if (strcmp(name, "Xtimerint") == 0)
+			frame_type = TRAP_TIMERINT;
+		else if (strcmp(name, "Xcpustop") == 0 ||
 		    strcmp(name, "Xrendezvous") == 0 ||
 		    strcmp(name, "Xipi_intr_bitmap_handler") == 0 ||
 		    strcmp(name, "Xlazypmap") == 0)
@@ -361,6 +352,8 @@ db_nextframe(struct i386_frame **fp, db_addr_t *ip, struct thread *td)
 	 */
 	if (frame_type == INTERRUPT)
 		tf = (struct trapframe *)((int)*fp + 16);
+	else if (frame_type == TRAP_INTERRUPT)
+		tf = (struct trapframe *)((int)*fp + 8);
 	else
 		tf = (struct trapframe *)((int)*fp + 12);
 
@@ -376,6 +369,7 @@ db_nextframe(struct i386_frame **fp, db_addr_t *ip, struct thread *td)
 			db_printf("--- syscall");
 			decode_syscall(tf->tf_eax, td);
 			break;
+		case TRAP_TIMERINT:
 		case TRAP_INTERRUPT:
 		case INTERRUPT:
 			db_printf("--- interrupt");
@@ -535,32 +529,6 @@ db_trace_thread(struct thread *thr, int count)
 	ctx = kdb_thr_ctx(thr);
 	return (db_backtrace(thr, NULL, (struct i386_frame *)ctx->pcb_ebp,
 		    ctx->pcb_eip, count));
-}
-
-void
-stack_save(struct stack *st)
-{
-	struct i386_frame *frame;
-	vm_offset_t callpc;
-	register_t ebp;
-
-	stack_zero(st);
-	__asm __volatile("movl %%ebp,%0" : "=r" (ebp));
-	frame = (struct i386_frame *)ebp;
-	while (1) {
-		if (!INKERNEL(frame))
-			break;
-		callpc = frame->f_retaddr;
-		if (!INKERNEL(callpc))
-			break;
-		if (stack_put(st, callpc) == -1)
-			break;
-		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >=
-		    (vm_offset_t)ebp + KSTACK_PAGES * PAGE_SIZE)
-			break;
-		frame = frame->f_frame;
-	}
 }
 
 int

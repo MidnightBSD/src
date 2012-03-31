@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) KATO Takenori, 1997, 1998.
  * 

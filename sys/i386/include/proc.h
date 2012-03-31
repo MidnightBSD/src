@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)proc.h	7.1 (Berkeley) 5/15/91
- * $FreeBSD: src/sys/i386/include/proc.h,v 1.26 2007/05/20 22:03:57 jeff Exp $
+ * $FreeBSD: src/sys/i386/include/proc.h,v 1.26.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -59,9 +60,19 @@ struct mdproc {
 
 #ifdef	_KERNEL
 
+/* Get the current kernel thread stack usage. */
+#define GET_STACK_USAGE(total, used) do {				\
+	struct thread	*td = curthread;				\
+	(total) = td->td_kstack_pages * PAGE_SIZE;			\
+	(used) = (char *)td->td_kstack +				\
+	    td->td_kstack_pages * PAGE_SIZE -				\
+	    (char *)&td;						\
+} while (0)
+
 void 	set_user_ldt(struct mdproc *);
 struct 	proc_ldt *user_ldt_alloc(struct mdproc *, int);
 void 	user_ldt_free(struct thread *);
+void	user_ldt_deref(struct proc_ldt *pldt);
 
 extern struct mtx dt_lock;
 

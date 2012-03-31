@@ -71,7 +71,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty.c,v 1.273.4.1 2008/01/12 00:20:06 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty.c,v 1.273.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 #include "opt_tty.h"
@@ -2608,8 +2608,6 @@ ttyinfo(struct tty *tp)
 		state = "suspended";
 	else if (TD_AWAITING_INTR(td))
 		state = "intrwait";
-	else if (pick->p_state == PRS_ZOMBIE)
-		state = "zombie";
 	else
 		state = "unknown";
 	pctcpu = (sched_pctcpu(td) * 10000 + FSCALE / 2) >> FSHIFT;
@@ -2904,8 +2902,8 @@ ttyalloc()
 	mtx_lock(&tty_list_mutex);
 	TAILQ_INSERT_TAIL(&tty_list, tp, t_list);
 	mtx_unlock(&tty_list_mutex);
-	knlist_init_mtx(&tp->t_rsel.si_note, &tp->t_mtx);
-	knlist_init_mtx(&tp->t_wsel.si_note, &tp->t_mtx);
+	knlist_init(&tp->t_rsel.si_note, &tp->t_mtx, NULL, NULL, NULL);
+	knlist_init(&tp->t_wsel.si_note, &tp->t_mtx, NULL, NULL, NULL);
 	return (tp);
 }
 

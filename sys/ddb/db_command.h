@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -24,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/ddb/db_command.h,v 1.13 2005/01/06 01:34:41 imp Exp $
+ * $FreeBSD: src/sys/ddb/db_command.h,v 1.13.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _DDB_DB_COMMAND_H_
@@ -39,6 +38,7 @@
  */
 
 void	db_command_loop(void);
+void	db_command_script(const char *command);
 
 extern db_addr_t	db_dot;		/* current location */
 extern db_addr_t	db_last_addr;	/* last explicit address typed */

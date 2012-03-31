@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/arc.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -1149,7 +1149,7 @@ arc_evict(arc_state_t *state, int64_t bytes, boolean_t recycle,
 		/* prefetch buffers have a minimum lifespan */
 		if (HDR_IO_IN_PROGRESS(ab) ||
 		    (ab->b_flags & (ARC_PREFETCH|ARC_INDIRECT) &&
-		    lbolt - ab->b_arc_access < arc_min_prefetch_lifespan)) {
+		    LBOLT - ab->b_arc_access < arc_min_prefetch_lifespan)) {
 			skipped++;
 			continue;
 		}
@@ -1526,7 +1526,7 @@ arc_reclaim_thread(void *dummy __unused)
 			}
 
 			/* reset the growth delay for every reclaim */
-			growtime = lbolt + (arc_grow_retry * hz);
+			growtime = LBOLT + (arc_grow_retry * hz);
 			ASSERT(growtime > 0);
 
 			if (zfs_needfree && last_reclaim == ARC_RECLAIM_CONS) {
@@ -1539,7 +1539,7 @@ arc_reclaim_thread(void *dummy __unused)
 				last_reclaim = ARC_RECLAIM_AGGR;
 			}
 			arc_kmem_reap_now(last_reclaim);
-		} else if ((growtime > 0) && ((growtime - lbolt) <= 0)) {
+		} else if ((growtime > 0) && ((growtime - LBOLT) <= 0)) {
 			arc_no_grow = FALSE;
 		}
 
@@ -1758,7 +1758,7 @@ arc_access(arc_buf_hdr_t *buf, kmutex_t *hash_lock)
 		 */
 
 		ASSERT(buf->b_arc_access == 0);
-		buf->b_arc_access = lbolt;
+		buf->b_arc_access = LBOLT;
 		DTRACE_PROBE1(new_state__mru, arc_buf_hdr_t *, buf);
 		arc_change_state(arc_mru, buf, hash_lock);
 
@@ -1782,7 +1782,7 @@ arc_access(arc_buf_hdr_t *buf, kmutex_t *hash_lock)
 				buf->b_flags &= ~ARC_PREFETCH;
 				ARCSTAT_BUMP(arcstat_mru_hits);
 			}
-			buf->b_arc_access = lbolt;
+			buf->b_arc_access = LBOLT;
 			return;
 		}
 
@@ -1791,13 +1791,13 @@ arc_access(arc_buf_hdr_t *buf, kmutex_t *hash_lock)
 		 * but it is still in the cache. Move it to the MFU
 		 * state.
 		 */
-		if (lbolt > buf->b_arc_access + ARC_MINTIME) {
+		if (LBOLT > buf->b_arc_access + ARC_MINTIME) {
 			/*
 			 * More than 125ms have passed since we
 			 * instantiated this buffer.  Move it to the
 			 * most frequently used state.
 			 */
-			buf->b_arc_access = lbolt;
+			buf->b_arc_access = LBOLT;
 			DTRACE_PROBE1(new_state__mfu, arc_buf_hdr_t *, buf);
 			arc_change_state(arc_mfu, buf, hash_lock);
 		}
@@ -1820,7 +1820,7 @@ arc_access(arc_buf_hdr_t *buf, kmutex_t *hash_lock)
 			DTRACE_PROBE1(new_state__mfu, arc_buf_hdr_t *, buf);
 		}
 
-		buf->b_arc_access = lbolt;
+		buf->b_arc_access = LBOLT;
 		arc_change_state(new_state, buf, hash_lock);
 
 		ARCSTAT_BUMP(arcstat_mru_ghost_hits);
@@ -1843,7 +1843,7 @@ arc_access(arc_buf_hdr_t *buf, kmutex_t *hash_lock)
 			mutex_exit(&arc_mfu->arcs_mtx);
 		}
 		ARCSTAT_BUMP(arcstat_mfu_hits);
-		buf->b_arc_access = lbolt;
+		buf->b_arc_access = LBOLT;
 	} else if (buf->b_state == arc_mfu_ghost) {
 		arc_state_t	*new_state = arc_mfu;
 		/*
@@ -1861,7 +1861,7 @@ arc_access(arc_buf_hdr_t *buf, kmutex_t *hash_lock)
 			new_state = arc_mru;
 		}
 
-		buf->b_arc_access = lbolt;
+		buf->b_arc_access = LBOLT;
 		DTRACE_PROBE1(new_state__mfu, arc_buf_hdr_t *, buf);
 		arc_change_state(new_state, buf, hash_lock);
 

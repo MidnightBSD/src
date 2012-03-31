@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000  Nick Sayer
  * All rights reserved.
@@ -50,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/spic.c,v 1.17 2006/05/16 14:32:16 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/spic.c,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

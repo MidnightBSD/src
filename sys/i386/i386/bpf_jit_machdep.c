@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 - 2003 NetGroup, Politecnico di Torino (Italy)
  * Copyright (c) 2005 Jung-uk Kim <jkim@FreeBSD.org>

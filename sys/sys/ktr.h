@@ -26,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: ktr.h,v 1.3 2008-12-03 00:11:22 laffer1 Exp $
- * $FreeBSD: src/sys/sys/ktr.h,v 1.37 2006/01/25 14:57:23 jhb Exp $
+ *	from BSDI $Id: ktr.h,v 1.4 2012-03-31 17:05:10 laffer1 Exp $
+ * $FreeBSD: src/sys/sys/ktr.h,v 1.37.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

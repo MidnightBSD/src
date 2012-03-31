@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_examine.c,v 1.33.2.1 2007/11/08 20:25:47 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/ddb/db_examine.c,v 1.33.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -166,6 +165,12 @@ db_examine(addr, fmt, count)
 				    else
 					db_printf("\\%03o", (int)value);
 				}
+				break;
+			    case 'S':	/* symbol */
+				value = db_get_value(addr, sizeof(void *),
+				    FALSE);
+				addr += sizeof(void *);
+				db_printsym(value, DB_STGY_ANY);
 				break;
 			    case 'i':	/* instruction */
 				addr = db_disasm(addr, FALSE);

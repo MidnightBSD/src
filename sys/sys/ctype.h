@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/ctype.h,v 1.4 2004/04/07 04:19:49 imp Exp $
+ * $FreeBSD: src/sys/sys/ctype.h,v 1.4.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_CTYPE_H_

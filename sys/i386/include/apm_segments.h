@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * LP (Laptop Package)
  *

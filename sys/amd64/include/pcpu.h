@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) Peter Wemm <peter@netplex.com.au>
  * All rights reserved.

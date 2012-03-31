@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/lock_profile.h,v 1.15 2007/09/14 01:12:39 attilio Exp $
+ * $FreeBSD: src/sys/sys/lock_profile.h,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 

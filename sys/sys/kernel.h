@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/kernel.h,v 1.4 2011/02/06 21:43:53 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/kernel.h,v 1.5 2011/10/23 16:17:29 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995 Terrence R. Lambert
  * All rights reserved.
@@ -40,7 +40,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kernel.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/kernel.h,v 1.136 2007/07/27 11:59:57 rwatson Exp $
+ * $FreeBSD: src/sys/sys/kernel.h,v 1.136.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_KERNEL_H_
@@ -69,9 +69,7 @@ extern int stathz;			/* statistics clock's frequency */
 extern int profhz;			/* profiling clock's frequency */
 extern int profprocs;			/* number of process's profiling */
 extern int ticks;
-#ifndef _SOLARIS_C_SOURCE
 extern int lbolt;			/* once a second sleep address */
-#endif
 
 #endif /* _KERNEL */
 
@@ -117,13 +115,17 @@ enum sysinit_sub_id {
 	SI_SUB_KLD		= 0x2000000,	/* KLD and module setup */
 	SI_SUB_CPU		= 0x2100000,	/* CPU resource(s)*/
 	SI_SUB_RANDOM		= 0x2120000,	/* random number generator */
+	SI_SUB_KDTRACE		= 0x2140000,	/* Kernel dtrace hooks */
 	SI_SUB_MAC		= 0x2180000,	/* TrustedBSD MAC subsystem */
 	SI_SUB_MAC_POLICY	= 0x21C0000,	/* TrustedBSD MAC policies */
 	SI_SUB_MAC_LATE		= 0x21D0000,	/* TrustedBSD MAC subsystem */
 	SI_SUB_INTRINSIC	= 0x2200000,	/* proc 0*/
 	SI_SUB_VM_CONF		= 0x2300000,	/* config VM, set limits*/
+	SI_SUB_DDB_SERVICES	= 0x2380000,	/* capture, scripting, etc. */
 	SI_SUB_RUN_QUEUE	= 0x2400000,	/* set up run queue*/
 	SI_SUB_KTRACE		= 0x2480000,	/* ktrace */
+	SI_SUB_OPENSOLARIS	= 0x2490000,	/* OpenSolaris compatibility */
+	SI_SUB_CYCLIC		= 0x24A0000,	/* Cyclic timers */
 	SI_SUB_AUDIT		= 0x24C0000,	/* audit */
 	SI_SUB_CREATE_INIT	= 0x2500000,	/* create init process*/
 	SI_SUB_SCHED_IDLE	= 0x2600000,	/* required idle procs */
@@ -134,6 +136,9 @@ enum sysinit_sub_id {
 	SI_SUB_DEVFS		= 0x2F00000,	/* devfs ready for devices */
 	SI_SUB_INIT_IF		= 0x3000000,	/* prep for net interfaces */
 	SI_SUB_NETGRAPH		= 0x3010000,	/* Let Netgraph initialize */
+	SI_SUB_DTRACE		= 0x3020000,	/* DTrace subsystem */
+	SI_SUB_DTRACE_PROVIDER	= 0x3048000,	/* DTrace providers */
+	SI_SUB_DTRACE_ANON	= 0x308C000,	/* DTrace anon enabling */
 	SI_SUB_DRIVERS		= 0x3100000,	/* Let Drivers initialize */
 	SI_SUB_CONFIGURE	= 0x3800000,	/* Configure devices */
 	SI_SUB_VFS		= 0x4000000,	/* virtual filesystem*/

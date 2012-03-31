@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/clock.c,v 1.239.2.1 2007/10/29 22:26:35 peter Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/clock.c,v 1.239.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Routines to handle clock hardware.
@@ -291,6 +292,7 @@ DELAY(int n)
 		start = rdtsc();
 		end = start + (tsc_freq * n) / 1000000;
 		do {
+			cpu_spinwait();
 			now = rdtsc();
 		} while (now < end || (now > start && end < start));
 		sched_unpin();

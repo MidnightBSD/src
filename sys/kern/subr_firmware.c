@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_firmware.c,v 1.9 2007/02/15 17:21:31 luigi Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_firmware.c,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

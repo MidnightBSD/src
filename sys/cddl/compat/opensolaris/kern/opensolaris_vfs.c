@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/opensolaris/kern/opensolaris_vfs.c,v 1.6 2007/06/04 11:31:45 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_vfs.c,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -101,7 +101,7 @@ vfs_clearmntopt(vfs_t *vfsp, const char *name)
 int
 vfs_optionisset(const vfs_t *vfsp, const char *opt, char **argp)
 {
-	struct vfsoptlist *opts = vfsp->mnt_opt;
+	struct vfsoptlist *opts = vfsp->mnt_optnew;
 	int error;
 
 	if (opts == NULL)
@@ -164,6 +164,7 @@ domount(kthread_t *td, vnode_t *vp, const char *fstype, char *fspath,
 {
 	struct mount *mp;
 	struct vfsconf *vfsp;
+	struct ucred *newcr, *oldcr;
 	int error;
 
 	/*
@@ -203,7 +204,9 @@ domount(kthread_t *td, vnode_t *vp, const char *fstype, char *fspath,
 
 	/*
 	 * Set the mount level flags.
+	 * crdup() can sleep, so do it before acquiring a mutex.
 	 */
+	newcr = crdup(kcred);
 	MNT_ILOCK(mp);
 	if (fsflags & MNT_RDONLY)
 		mp->mnt_flag |= MNT_RDONLY;
@@ -213,10 +216,11 @@ domount(kthread_t *td, vnode_t *vp, const char *fstype, char *fspath,
 	 * Unprivileged user can trigger mounting a snapshot, but we don't want
 	 * him to unmount it, so we switch to privileged credentials.
 	 */
-	crfree(mp->mnt_cred);
-	mp->mnt_cred = crdup(kcred);
+	oldcr = mp->mnt_cred;
+	mp->mnt_cred = newcr;
 	mp->mnt_stat.f_owner = mp->mnt_cred->cr_uid;
 	MNT_IUNLOCK(mp);
+	crfree(oldcr);
 	/*
 	 * Mount the filesystem.
 	 * XXX The final recipients of VFS_MOUNT just overwrite the ndp they

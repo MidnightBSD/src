@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs_vnops.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -347,6 +347,10 @@ again:
 			VM_OBJECT_LOCK(obj);
 			vm_page_wakeup(m);
 		} else {
+			if (__predict_false(obj->cache != NULL)) {
+				vm_page_cache_free(obj, OFF_TO_IDX(start),
+				    OFF_TO_IDX(start) + 1);
+			}
 			dirbytes += bytes;
 		}
 		len -= bytes;
@@ -3530,24 +3534,6 @@ zfs_freebsd_pathconf(ap)
 	return (error);
 }
 
-/*
- * Advisory record locking support
- */
-static int
-zfs_freebsd_advlock(ap)
-	struct vop_advlock_args /* {
-		struct vnode *a_vp;
-		caddr_t  a_id;
-		int  a_op;
-		struct flock *a_fl;
-		int  a_flags;
-	} */ *ap;
-{
-	znode_t	*zp = VTOZ(ap->a_vp);
-
-	return (lf_advlock(ap, &(zp->z_lockf), zp->z_phys->zp_size));
-}
-
 struct vop_vector zfs_vnodeops;
 struct vop_vector zfs_fifoops;
 
@@ -3580,7 +3566,6 @@ struct vop_vector zfs_vnodeops = {
 	.vop_write =	zfs_freebsd_write,
 	.vop_remove =	zfs_freebsd_remove,
 	.vop_rename =	zfs_freebsd_rename,
-	.vop_advlock =	zfs_freebsd_advlock,
 	.vop_pathconf =	zfs_freebsd_pathconf,
 	.vop_bmap =	VOP_EOPNOTSUPP,
 	.vop_fid =	zfs_freebsd_fid,

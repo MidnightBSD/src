@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_login.c,v 1.6 2005/01/07 01:45:48 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netncp/ncp_login.c,v 1.6.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

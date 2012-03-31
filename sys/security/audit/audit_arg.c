@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/sys/security/audit/audit_arg.c,v 1.2 2008/12/03 00:11:16 laffer1 Exp $ */
-/*
- * Copyright (c) 1999-2005 Apple Computer, Inc.
+/* $MidnightBSD$ */
+/*-
+ * Copyright (c) 1999-2005 Apple Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -704,7 +704,7 @@ audit_arg_upath(struct thread *td, char *upath, u_int64_t flag)
 	if (*pathp == NULL)
 		*pathp = malloc(MAXPATHLEN, M_AUDITPATH, M_WAITOK);
 
-	canon_path(td, upath, *pathp);
+	audit_canon_path(td, upath, *pathp);
 
 	ARG_SET_VALID(ar, flag);
 }

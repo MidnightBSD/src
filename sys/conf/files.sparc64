@@ -73,7 +73,6 @@ sparc64/pci/apb.c		optional	pci
 sparc64/pci/ofw_pcib.c		optional	pci
 sparc64/pci/ofw_pcib_subr.c	optional	pci
 sparc64/pci/ofw_pcibus.c	optional	pci
-sparc64/pci/ofw_pci_if.m	optional	pci
 sparc64/pci/psycho.c		optional	pci
 sparc64/sbus/dma_sbus.c		optional	sbus
 sparc64/sbus/sbus.c		optional	sbus
@@ -115,6 +114,7 @@ sparc64/sparc64/rtc.c		optional	rtc ebus | rtc isa
 sparc64/sparc64/rwindow.c	standard
 sparc64/sparc64/sc_machdep.c	optional	sc
 sparc64/sparc64/spitfire.c	standard
+sparc64/sparc64/stack_machdep.c	optional	ddb | stack
 sparc64/sparc64/support.S	standard
 sparc64/sparc64/sys_machdep.c	standard
 sparc64/sparc64/swtch.S		standard

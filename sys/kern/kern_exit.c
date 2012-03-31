@@ -35,9 +35,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_exit.c,v 1.304 2007/06/13 20:01:42 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_exit.c,v 1.304.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
+#include "opt_kdtrace.h"
 #include "opt_ktrace.h"
 #include "opt_mac.h"
 
@@ -65,6 +66,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_exit.c,v 1.304 2007/06/13 20:01:42 jhb Exp
 #include <sys/ptrace.h>
 #include <sys/acct.h>		/* for acct_process() function prototype */
 #include <sys/filedesc.h>
+#include <sys/sdt.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
 #ifdef KTRACE
@@ -81,6 +83,15 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_exit.c,v 1.304 2007/06/13 20:01:42 jhb Exp
 #include <vm/vm_map.h>
 #include <vm/vm_page.h>
 #include <vm/uma.h>
+
+#ifdef KDTRACE_HOOKS
+#include <sys/dtrace_bsd.h>
+dtrace_execexit_func_t	dtrace_fasttrap_exit;
+#endif
+
+SDT_PROVIDER_DECLARE(proc);
+SDT_PROBE_DEFINE(proc, kernel, , exit);
+SDT_PROBE_ARGTYPE(proc, kernel, , exit, 0, "int");
 
 /* Required to be non-static for SysVR4 emulator */
 MALLOC_DEFINE(M_ZOMBIE, "zombie", "zombie proc status");
@@ -449,11 +460,29 @@ retry:
 	PROC_LOCK(p);
 	p->p_xstat = rv;
 	p->p_xthread = td;
+
+#ifdef KDTRACE_HOOKS
+	/*
+	 * Tell the DTrace fasttrap provider about the exit if it
+	 * has declared an interest.
+	 */
+	if (dtrace_fasttrap_exit)
+		dtrace_fasttrap_exit(p);
+#endif
+
 	/*
 	 * Notify interested parties of our demise.
 	 */
 	KNOTE_LOCKED(&p->p_klist, NOTE_EXIT);
 
+#ifdef KDTRACE_HOOKS
+	int reason = CLD_EXITED;
+	if (WCOREDUMP(rv))
+		reason = CLD_DUMPED;
+	else if (WIFSIGNALED(rv))
+		reason = CLD_KILLED;
+	SDT_PROBE(proc, kernel, , exit, reason, 0, 0, 0, 0);
+#endif
 	/*
 	 * Just delete all entries in the p_klist. At this point we won't
 	 * report any more events, and there are nasty race conditions that
@@ -578,11 +607,13 @@ abort2(struct thread *td, struct abort2_args *uap)
 	/* Prevent from DoSes from user-space. */
 	if (uap->nargs < 0 || uap->nargs > 16)
 		goto out;
-	if (uap->args == NULL)
-		goto out;
-	error = copyin(uap->args, uargs, uap->nargs * sizeof(void *));
-	if (error != 0)
-		goto out;
+	if (uap->nargs > 0) {
+		if (uap->args == NULL)
+			goto out;
+		error = copyin(uap->args, uargs, uap->nargs * sizeof(void *));
+		if (error != 0)
+			goto out;
+	}
 	/*
 	 * Limit size of 'reason' string to 128. Will fit even when
 	 * maximal number of arguments was chosen to be logged.
@@ -594,7 +625,7 @@ abort2(struct thread *td, struct abort2_args *uap)
 	} else {
 		sbuf_printf(sb, "(null)");
 	}
-	if (uap->nargs) {
+	if (uap->nargs > 0) {
 		sbuf_printf(sb, "(");
 		for (i = 0;i < uap->nargs; i++)
 			sbuf_printf(sb, "%s%p", i == 0 ? "" : ", ", uargs[i]);
@@ -672,7 +703,7 @@ kern_wait(struct thread *td, pid_t pid, int *status, int options,
 		pid = -q->p_pgid;
 		PROC_UNLOCK(q);
 	}
-	if (options &~ (WUNTRACED|WNOHANG|WCONTINUED|WLINUXCLONE))
+	if (options &~ (WUNTRACED|WNOHANG|WCONTINUED|WNOWAIT|WLINUXCLONE))
 		return (EINVAL);
 loop:
 	if (q->p_flag & P_STATCHILD) {
@@ -719,15 +750,27 @@ loop:
 			td->td_retval[0] = p->p_pid;
 			if (status)
 				*status = p->p_xstat;	/* convert to int */
+			if (options & WNOWAIT) {
+
+				/*
+				 *  Only poll, returning the status.
+				 *  Caller does not wish to release the proc
+				 *  struct just yet.
+				 */
+				PROC_UNLOCK(p);
+				sx_xunlock(&proctree_lock);
+				return (0);
+			}
+
 			PROC_LOCK(q);
 			sigqueue_take(p->p_ksi);
 			PROC_UNLOCK(q);
+			PROC_UNLOCK(p);
 
 			/*
 			 * If we got the child via a ptrace 'attach',
 			 * we need to give it back to the old parent.
 			 */
-			PROC_UNLOCK(p);
 			if (p->p_oppid && (t = pfind(p->p_oppid)) != NULL) {
 				PROC_LOCK(p);
 				p->p_oppid = 0;

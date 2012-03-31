@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/svr4/svr4_machdep.c,v 1.38 2005/10/19 14:59:54 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/svr4/svr4_machdep.c,v 1.38.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -497,13 +498,13 @@ svr4_sendsig(catcher, ksi, mask)
 	     svr4_szsigcode);
 	tf->tf_cs = GSEL(GUSERLDT_SEL, SEL_UPL);
 
-	tf->tf_eflags &= ~(PSL_T|PSL_VM|PSL_AC);
+	tf->tf_eflags &= ~(PSL_T|PSL_VM|PSL_AC|PSL_D);
 	tf->tf_esp = (int)fp;
 	tf->tf_ss = GSEL(GUSERLDT_SEL, SEL_UPL);
 #else
 	tf->tf_esp = (int)fp;
 	tf->tf_eip = (int)(((char *)PS_STRINGS) - *(p->p_sysent->sv_szsigcode));
-	tf->tf_eflags &= ~PSL_T;
+	tf->tf_eflags &= ~(PSL_T | PSL_D);
 	tf->tf_cs = _ucodesel;
 	tf->tf_ds = _udatasel;
 	tf->tf_es = _udatasel;

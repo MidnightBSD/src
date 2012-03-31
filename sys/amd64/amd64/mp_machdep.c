@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, by Steve Passe
  * Copyright (c) 2003, by Peter Wemm

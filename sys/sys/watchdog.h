@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/watchdog.h,v 1.4 2006/12/15 21:44:49 n_hibma Exp $
+ * $FreeBSD: src/sys/sys/watchdog.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _SYS_WATCHDOG_H
 #define	_SYS_WATCHDOG_H

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)isa.h	5.7 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/i386/isa/isa.h,v 1.30 2005/05/14 10:14:56 nyan Exp $
+ * $FreeBSD: src/sys/i386/isa/isa.h,v 1.30.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifdef PC98

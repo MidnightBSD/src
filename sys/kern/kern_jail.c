@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_jail.c,v 1.70 2007/04/13 23:54:22 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_jail.c,v 1.70.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 
@@ -208,6 +208,8 @@ e_dropprref:
 	}
 	sx_sunlock(&allprison_lock);
 e_dropvnref:
+	if (pr->pr_slots != NULL)
+		FREE(pr->pr_slots, M_PRISON);
 	vfslocked = VFS_LOCK_GIANT(pr->pr_root->v_mount);
 	vrele(pr->pr_root);
 	VFS_UNLOCK_GIANT(vfslocked);
@@ -338,6 +340,8 @@ prison_complete(void *context, int pending)
 		psrv->ps_destroy(psrv, pr);
 	}
 	sx_sunlock(&allprison_lock);
+	if (pr->pr_slots != NULL)
+		FREE(pr->pr_slots, M_PRISON);
 
 	vfslocked = VFS_LOCK_GIANT(pr->pr_root->v_mount);
 	vrele(pr->pr_root);
@@ -716,6 +720,12 @@ prison_priv_check(struct ucred *cred, int priv)
 		 */
 	case PRIV_NETINET_RESERVEDPORT:
 	case PRIV_NETINET_REUSEPORT:
+		return (0);
+
+		/*
+		 * Allow jailed root to set certian IPv4/6 (option) headers.
+		 */
+	case PRIV_NETINET_SETHDROPTS:
 		return (0);
 
 		/*

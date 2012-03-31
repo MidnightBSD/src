@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netsmb/smb_conn.h,v 1.11 2005/01/07 01:45:49 imp Exp $
+ * $FreeBSD: src/sys/netsmb/smb_conn.h,v 1.11.10.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -165,6 +165,7 @@ struct smb_share_info {
 
 #ifdef _KERNEL
 
+#include <sys/lock.h>
 #include <sys/lockmgr.h>
 #include <netsmb/smb_subr.h>
 
@@ -253,7 +254,6 @@ struct smb_vc {
 	uid_t		vc_uid;		/* user id of connection */
 	gid_t		vc_grp;		/* group of connection */
 	mode_t		vc_mode;	/* access mode */
-	struct tnode *	vc_tnode;	/* backing object */
 	u_short		vc_smbuid;	/* unique vc id assigned by server */
 
 	u_char		vc_hflags;	/* or'ed with flags in the smb header */

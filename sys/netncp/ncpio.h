@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netncp/ncpio.h,v 1.1 2003/02/28 04:31:29 tjr Exp $
+ * $FreeBSD: src/sys/netncp/ncpio.h,v 1.1.30.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETNCP_NCPIO_H_

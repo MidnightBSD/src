@@ -1,4 +1,4 @@
-; $MidnightBSD: src/sys/kern/syscalls.master,v 1.8 2012/01/02 17:47:22 laffer1 Exp $
+; $MidnightBSD: src/sys/kern/syscalls.master,v 1.9 2012/03/23 20:48:39 laffer1 Exp $
 ;	from: @(#)syscalls.master	8.2 (Berkeley) 1/13/94
 ;
 ; System call name/number master file.
@@ -308,7 +308,8 @@
 151	AUE_NULL	UNIMPL	sem_lock (BSD/OS 2.x)
 152	AUE_NULL	UNIMPL	sem_wakeup (BSD/OS 2.x)
 153	AUE_NULL	UNIMPL	asyncdaemon (BSD/OS 2.x)
-154	AUE_NULL	UNIMPL	nosys
+; 154 is initialised by the NLM code, if present.
+154	AUE_NULL	NOSTD	{ int nlm_syscall(int debug_level, int grace_period, int addr_count, char **addrs); }
 ; 155 is initialized by the NFS code, if present.
 155	AUE_NFS_SVC	NOSTD	{ int nfssvc(int flag, caddr_t argp); }
 156	AUE_GETDIRENTRIES	COMPAT	{ int getdirentries(int fd, char *buf, \

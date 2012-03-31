@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_conn.c,v 1.30 2007/05/27 17:14:33 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netncp/ncp_conn.c,v 1.30.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -303,6 +303,7 @@ ncp_conn_free(struct ncp_conn *ncp)
 	 * if signal is raised - how I do react ?
 	 */
 	lockmgr(&ncp->nc_lock, LK_DRAIN, 0, td);
+	lockmgr(&ncp->nc_lock, LK_RELEASE, 0, td);
 	lockdestroy(&ncp->nc_lock);
 	while (ncp->nc_lwant) {
 		printf("lwant = %d\n", ncp->nc_lwant);

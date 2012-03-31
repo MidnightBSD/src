@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/elf_common.h,v 1.22 2007/04/03 01:47:07 kan Exp $
+ * $FreeBSD: src/sys/sys/elf_common.h,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_ELF_COMMON_H_
@@ -432,6 +432,9 @@ typedef struct {
 #define STV_INTERNAL	0x1	/* Special meaning in relocatable objects. */
 #define STV_HIDDEN	0x2	/* Not visible. */
 #define STV_PROTECTED	0x3	/* Visible but not preemptible. */
+#define STV_EXPORTED	0x4
+#define STV_SINGLETON	0x5
+#define STV_ELIMINATE	0x6
 
 /* Special symbol table indexes. */
 #define STN_UNDEF	0	/* Undefined symbol index. */

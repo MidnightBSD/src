@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/security/audit/audit_trigger.c,v 1.5 2007/06/13 21:17:23 rwatson Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/security/audit/audit_trigger.c,v 1.5.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -114,7 +115,7 @@ audit_read(struct cdev *dev, struct uio *uio, int ioflag)
 	}
 	mtx_unlock(&audit_trigger_mtx);
 	if (!error) {
-		error = uiomove(ti, sizeof *ti, uio);
+		error = uiomove(&ti->trigger, sizeof(ti->trigger), uio);
 		free(ti, M_AUDITTRIGGER);
 	}
 	return (error);
@@ -129,7 +130,7 @@ audit_write(struct cdev *dev, struct uio *uio, int ioflag)
 }
 
 int
-send_trigger(unsigned int trigger)
+audit_send_trigger(unsigned int trigger)
 {
 	struct trigger_info *ti;
 
@@ -150,11 +151,11 @@ send_trigger(unsigned int trigger)
 
 static struct cdevsw audit_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_open = 	audit_open,
-	.d_close = 	audit_close,
-	.d_read = 	audit_read,
-	.d_write = 	audit_write,
-	.d_name = 	"audit"
+	.d_open =	audit_open,
+	.d_close =	audit_close,
+	.d_read =	audit_read,
+	.d_write =	audit_write,
+	.d_name =	"audit"
 };
 
 void

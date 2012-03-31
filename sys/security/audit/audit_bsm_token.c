@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-/*
- * Copyright (c) 2004 Apple Computer, Inc.
+/*-
+ * Copyright (c) 2004 Apple Inc.
  * Copyright (c) 2005 SPARTA, Inc.
  * All rights reserved.
  *
@@ -15,7 +15,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,9 +30,10 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/security/audit/audit_bsm_token.c,v 1.14 2007/06/27 17:01:14 csjp Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/security/audit/audit_bsm_token.c,v 1.14.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/endian.h>
@@ -158,7 +159,7 @@ au_to_attr32(struct vnode_au_info *vni)
 	ADD_U_INT32(dptr, vni->vn_fsid);
 
 	/*
-	 * Some systems use 32-bit file ID's, other's use 64-bit file IDs.
+	 * Some systems use 32-bit file ID's, others use 64-bit file IDs.
 	 * Attempt to handle both, and let the compiler sort it out.  If we
 	 * could pick this out at compile-time, it would be better, so as to
 	 * avoid the else case below.
@@ -262,7 +263,7 @@ au_to_data(char unit_print, char unit_type, char unit_count, char *p)
 		break;
 
 	default:
- 		return (NULL);
+		return (NULL);
 	}
 
 	totdata = datasize * unit_count;
@@ -918,7 +919,7 @@ au_to_sock_inet32(struct sockaddr_in *so)
 	 *
 	 * XXXRW: Should a name space conversion be taking place on the value
 	 * of sin_family?
- 	 */
+	 */
 	family = so->sin_family;
 	ADD_U_INT16(dptr, family);
 	ADD_MEM(dptr, &so->sin_port, sizeof(uint16_t));
@@ -940,8 +941,8 @@ au_to_sock_inet128(struct sockaddr_in6 *so)
 	ADD_U_CHAR(dptr, AUT_SOCKINET128);
 	/*
 	 * In Darwin, sin6_family is one octet, but BSM defines the token
- 	 * to store two. So we copy in a 0 first.
- 	 */
+	 * to store two. So we copy in a 0 first.
+	 */
 	ADD_U_CHAR(dptr, 0);
 	ADD_U_CHAR(dptr, so->sin6_family);
 

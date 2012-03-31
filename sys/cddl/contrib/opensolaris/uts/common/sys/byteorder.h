@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/sys/byteorder.h,v 1.2 2008/12/03 00:24:33 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -59,7 +59,7 @@ extern "C" {
  * macros for conversion between host and (internet) network byte order
  */
 
-#if defined(_BIG_ENDIAN) && !defined(ntohl) && !defined(__lint)
+#if BYTE_ORDER == _BIG_ENDIAN && !defined(ntohl) && !defined(__lint)
 /* big-endian */
 #define	ntohl(x)	(x)
 #define	ntohs(x)	(x)
@@ -109,7 +109,7 @@ extern	in_port_t ntohs(in_port_t);
 /*
  * Macros to convert from a specific byte order to/from native byte order
  */
-#ifdef _BIG_ENDIAN
+#if BYTE_ORDER == _BIG_ENDIAN
 #define	BE_8(x)		BMASK_8(x)
 #define	BE_16(x)	BMASK_16(x)
 #define	BE_32(x)	BMASK_32(x)

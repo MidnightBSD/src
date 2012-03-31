@@ -35,10 +35,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_autoconf.c,v 1.23 2006/07/19 18:53:56 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_autoconf.c,v 1.23.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+
+#include "opt_ddb.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/linker.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
@@ -58,29 +61,65 @@ MTX_SYSINIT(intr_config_hook, &intr_config_hook_lock, "intr config", MTX_DEF);
 /* ARGSUSED */
 static void run_interrupt_driven_config_hooks(void *dummy);
 
+/*
+ * If we wait too long for an interrupt-driven config hook to return, print
+ * a diagnostic.
+ */
+#define	WARNING_INTERVAL_SECS	60
+static void
+run_interrupt_driven_config_hooks_warning(int warned)
+{
+	struct intr_config_hook *hook_entry;
+	char namebuf[64];
+	long offset;
+
+	if (warned < 6) {
+		printf("run_interrupt_driven_hooks: still waiting after %d "
+		    "seconds for", warned * WARNING_INTERVAL_SECS);
+		TAILQ_FOREACH(hook_entry, &intr_config_hook_list, ich_links) {
+			if (linker_search_symbol_name(
+			    (caddr_t)hook_entry->ich_func, namebuf,
+			    sizeof(namebuf), &offset) == 0)
+				printf(" %s", namebuf);
+			else
+				printf(" %p", hook_entry->ich_func);
+		}
+		printf("\n");
+	}
+	KASSERT(warned < 6,
+	    ("run_interrupt_driven_config_hooks: waited too long"));
+}
+
 static void
 run_interrupt_driven_config_hooks(dummy)
 	void *dummy;
 {
 	struct intr_config_hook *hook_entry, *next_entry;
+	int warned;
 
 	mtx_lock(&intr_config_hook_lock);
 	TAILQ_FOREACH_SAFE(hook_entry, &intr_config_hook_list, ich_links,
 	    next_entry) {
-		next_entry = TAILQ_NEXT(hook_entry, ich_links);
 		mtx_unlock(&intr_config_hook_lock);
 		(*hook_entry->ich_func)(hook_entry->ich_arg);
 		mtx_lock(&intr_config_hook_lock);
 	}
 
+	warned = 0;
 	while (!TAILQ_EMPTY(&intr_config_hook_list)) {
-		msleep(&intr_config_hook_list, &intr_config_hook_lock, PCONFIG,
-		    "conifhk", 0);
+		if (msleep(&intr_config_hook_list, &intr_config_hook_lock,
+		    PCONFIG, "conifhk", WARNING_INTERVAL_SECS * hz) ==
+		    EWOULDBLOCK) {
+			mtx_unlock(&intr_config_hook_lock);
+			warned++;
+			run_interrupt_driven_config_hooks_warning(warned);
+			mtx_lock(&intr_config_hook_lock);
+		}
 	}
 	mtx_unlock(&intr_config_hook_lock);
 }
 SYSINIT(intr_config_hooks, SI_SUB_INT_CONFIG_HOOKS, SI_ORDER_FIRST,
-	run_interrupt_driven_config_hooks, NULL)
+	run_interrupt_driven_config_hooks, NULL);
 
 /*
  * Register a hook that will be called after "cold"
@@ -131,3 +170,27 @@ config_intrhook_disestablish(hook)
 	wakeup(&intr_config_hook_list);
 	mtx_unlock(&intr_config_hook_lock);
 }
+
+#ifdef DDB
+#include <ddb/ddb.h>
+
+DB_SHOW_COMMAND(conifhk, db_show_conifhk)
+{
+	struct intr_config_hook *hook_entry;
+	char namebuf[64];
+	long offset;
+
+	TAILQ_FOREACH(hook_entry, &intr_config_hook_list, ich_links) {
+		if (linker_ddb_search_symbol_name(
+		    (caddr_t)hook_entry->ich_func, namebuf, sizeof(namebuf),
+		    &offset) == 0) {
+			db_printf("hook: %p at %s+%#lx arg: %p\n",
+			    hook_entry->ich_func, namebuf, offset,
+			    hook_entry->ich_arg);
+		} else {
+			db_printf("hook: %p at ??+?? arg %p\n",
+			    hook_entry->ich_func, hook_entry->ich_arg);
+		}
+	}
+}
+#endif /* DDB */

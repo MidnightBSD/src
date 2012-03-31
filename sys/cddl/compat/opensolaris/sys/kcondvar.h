@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/opensolaris/sys/kcondvar.h,v 1.1 2007/04/06 01:09:06 pjd Exp $
+ * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/kcondvar.h,v 1.3.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _OPENSOLARIS_SYS_CONDVAR_H_
@@ -45,8 +46,15 @@ typedef enum {
 } kcv_type_t;
 
 #define	zfs_cv_init(cv, name, type, arg)	do {			\
+	const char *_name;						\
 	ASSERT((type) == CV_DEFAULT);					\
-	cv_init((cv), "zfs:" #cv);					\
+	for (_name = #cv; *_name != '\0'; _name++) {			\
+		if (*_name >= 'a' && *_name <= 'z')			\
+			break;						\
+	}								\
+	if (*_name == '\0')						\
+		_name = #cv;						\
+	cv_init((cv), _name);						\
 } while (0)
 #define	cv_init(cv, name, type, arg)	zfs_cv_init((cv), (name), (type), (arg))
 

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_timeval.h,v 1.3 2006/05/12 05:04:46 jhb Exp $
+ * $FreeBSD: src/sys/sys/_timeval.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS__TIMEVAL_H_

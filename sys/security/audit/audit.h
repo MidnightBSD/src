@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
-/*
- * Copyright (c) 1999-2005 Apple Computer, Inc.
+/*-
+ * Copyright (c) 1999-2005 Apple Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -27,7 +27,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/audit/audit.h,v 1.14 2007/06/27 17:01:14 csjp Exp $
+ * $FreeBSD: src/sys/security/audit/audit.h,v 1.14.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
  */
 
 #ifndef _SECURITY_AUDIT_KERNEL_H_
-#define	_SEUCRITY_AUDIT_KERNEL_H_
+#define	_SECURITY_AUDIT_KERNEL_H_
 
 #ifndef _KERNEL
 #error "no user-serviceable parts inside"
@@ -178,6 +178,7 @@ void	 audit_cred_destroy(struct ucred *cred);
 void	 audit_cred_init(struct ucred *cred);
 void	 audit_cred_kproc0(struct ucred *cred);
 void	 audit_cred_proc1(struct ucred *cred);
+void	 audit_proc_coredump(struct thread *td, char *path, int errcode);
 void	 audit_thread_alloc(struct thread *td);
 void	 audit_thread_free(struct thread *td);
 
@@ -186,7 +187,7 @@ void	 audit_thread_free(struct thread *td);
  * audit_enabled flag before performing the actual call.
  */
 #define	AUDIT_ARG(op, args...)	do {					\
-	if (audit_enabled)						\
+	if (td->td_ar != NULL)						\
 		audit_arg_ ## op (args);				\
 } while (0)
 
@@ -202,7 +203,7 @@ void	 audit_thread_free(struct thread *td);
  * possible that an audit record was begun before auditing was turned off.
  */
 #define	AUDIT_SYSCALL_EXIT(error, td)	do {				\
-	if (audit_enabled | (td->td_ar != NULL))			\
+	if (audit_enabled || (td->td_ar != NULL))			\
 		audit_syscall_exit(error, td);				\
 } while (0)
 

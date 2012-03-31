@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/security/audit/audit_pipe.c,v 1.11.2.2 2007/11/04 16:44:48 csjp Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/security/audit/audit_pipe.c,v 1.11.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -496,7 +497,6 @@ audit_pipe_submit_user(void *record, u_int record_len)
 	mtx_unlock(&audit_pipe_mtx);
 	cv_broadcastpri(&audit_pipe_cv, PSOCK);
 }
-
 
 /*
  * Pop the next record off of an audit pipe.

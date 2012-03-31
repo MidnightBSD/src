@@ -21,7 +21,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/mouse.h,v 1.25 2006/12/18 18:48:28 keramida Exp $
+ * $FreeBSD: src/sys/sys/mouse.h,v 1.25.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_MOUSE_H_

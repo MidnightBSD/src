@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ioccom.h	8.2 (Berkeley) 3/28/94
- * $FreeBSD: src/sys/sys/ioccom.h,v 1.16 2006/09/27 19:57:02 ru Exp $
+ * $FreeBSD: src/sys/sys/ioccom.h,v 1.16.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_SYS_IOCCOM_H_
@@ -51,8 +51,8 @@
 #define	IOC_INOUT	(IOC_IN|IOC_OUT)
 #define	IOC_DIRMASK	(IOC_VOID|IOC_OUT|IOC_IN)
 
-#define	_IOC(inout,group,num,len) \
-	((unsigned long)(inout | ((len & IOCPARM_MASK) << 16) | ((group) << 8) | (num)))
+#define	_IOC(inout,group,num,len)	((unsigned long) \
+	((inout) | (((len) & IOCPARM_MASK) << 16) | ((group) << 8) | (num)))
 #define	_IO(g,n)	_IOC(IOC_VOID,	(g), (n), 0)
 #define	_IOWINT(g,n)	_IOC(IOC_VOID,	(g), (n), sizeof(int))
 #define	_IOR(g,n,t)	_IOC(IOC_OUT,	(g), (n), sizeof(t))

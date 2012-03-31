@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: kern_mutex.c,v 1.2 2008-09-27 23:02:14 laffer1 Exp $
- *	and BSDI $Id: kern_mutex.c,v 1.2 2008-09-27 23:02:14 laffer1 Exp $
+ *	from BSDI $Id: kern_mutex.c,v 1.3 2012-03-31 17:05:10 laffer1 Exp $
+ *	and BSDI $Id: kern_mutex.c,v 1.3 2012-03-31 17:05:10 laffer1 Exp $
  */
 
 /*
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mutex.c,v 1.198.2.1 2007/12/01 11:28:37 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_mutex.c,v 1.198.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_adaptive_mutexes.h"
 #include "opt_ddb.h"
@@ -213,13 +213,17 @@ _mtx_unlock_flags(struct mtx *m, int opts, const char *file, int line)
 void
 _mtx_lock_spin_flags(struct mtx *m, int opts, const char *file, int line)
 {
-	
+
 	MPASS(curthread != NULL);
 	KASSERT(m->mtx_lock != MTX_DESTROYED,
 	    ("mtx_lock_spin() of destroyed mutex @ %s:%d", file, line));
 	KASSERT(LOCK_CLASS(&m->lock_object) == &lock_class_mtx_spin,
 	    ("mtx_lock_spin() of sleep mutex %s @ %s:%d",
 	    m->lock_object.lo_name, file, line));
+	if (mtx_owned(m))
+		KASSERT((m->lock_object.lo_flags & LO_RECURSABLE) != 0,
+	    ("mtx_lock_spin: recursed on non-recursive mutex %s @ %s:%d\n",
+		    m->lock_object.lo_name, file, line));
 	WITNESS_CHECKORDER(&m->lock_object, opts | LOP_NEWORDER | LOP_EXCLUSIVE,
 	    file, line);
 	_get_spin_lock(m, curthread, opts, file, line);
@@ -497,7 +501,6 @@ _thread_lock_flags(struct thread *td, int opts, const char *file, int line)
 	int i, contested;
 	uint64_t waittime;
 
-	
 	contested = i = 0;
 	waittime = 0;
 	tid = (uintptr_t)curthread;
@@ -505,6 +508,15 @@ _thread_lock_flags(struct thread *td, int opts, const char *file, int line)
 retry:
 		spinlock_enter();
 		m = td->td_lock;
+		KASSERT(m->mtx_lock != MTX_DESTROYED,
+		    ("thread_lock() of destroyed mutex @ %s:%d", file, line));
+		KASSERT(LOCK_CLASS(&m->lock_object) == &lock_class_mtx_spin,
+		    ("thread_lock() of sleep mutex %s @ %s:%d",
+		    m->lock_object.lo_name, file, line));
+		if (mtx_owned(m))
+			KASSERT((m->lock_object.lo_flags & LO_RECURSABLE) != 0,
+	    ("thread_lock: recursed on non-recursive mutex %s @ %s:%d\n",
+			    m->lock_object.lo_name, file, line));
 		WITNESS_CHECKORDER(&m->lock_object,
 		    opts | LOP_NEWORDER | LOP_EXCLUSIVE, file, line);
 		while (!_obtain_lock(m, tid)) {
@@ -535,6 +547,8 @@ retry:
 	}
 	lock_profile_obtain_lock_success(&m->lock_object, contested,	
 	    waittime, (file), (line));
+	LOCK_LOG_LOCK("LOCK", &m->lock_object, opts, m->mtx_recurse, file,
+	    line);
 	WITNESS_LOCK(&m->lock_object, opts | LOP_EXCLUSIVE, file, line);
 }
 

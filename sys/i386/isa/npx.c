@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 William Jolitz.
  * Copyright (c) 1991 The Regents of the University of California.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/npx.c,v 1.172 2007/06/05 00:00:52 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/npx.c,v 1.172.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_cpu.h"
 #include "opt_isa.h"

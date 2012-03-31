@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/nmi.c,v 1.79 2004/04/07 20:46:06 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/nmi.c,v 1.79.26.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mca.h"
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/spa_misc.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -1104,7 +1104,7 @@ spa_init(int mode)
 
 	spa_mode = mode;
 
-	refcount_init();
+	refcount_sysinit();
 	unique_init();
 	zio_init();
 	dmu_init();

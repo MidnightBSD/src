@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_sig.c,v 1.349.2.1.2.1 2008/01/19 18:15:05 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_sig.c,v 1.349.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 #include "opt_ktrace.h"
@@ -60,6 +60,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_sig.c,v 1.349.2.1.2.1 2008/01/19 18:15:05 
 #include <sys/posix4.h>
 #include <sys/pioctl.h>
 #include <sys/resourcevar.h>
+#include <sys/sbuf.h>
 #include <sys/sleepqueue.h>
 #include <sys/smp.h>
 #include <sys/stat.h>
@@ -662,7 +663,6 @@ kern_sigaction(td, sig, act, oact, flags)
 	ps = p->p_sigacts;
 	mtx_lock(&ps->ps_mtx);
 	if (oact) {
-		oact->sa_handler = ps->ps_sigact[_SIG_IDX(sig)];
 		oact->sa_mask = ps->ps_catchmask[_SIG_IDX(sig)];
 		oact->sa_flags = 0;
 		if (SIGISMEMBER(ps->ps_sigonstack, sig))
@@ -673,8 +673,12 @@ kern_sigaction(td, sig, act, oact, flags)
 			oact->sa_flags |= SA_RESETHAND;
 		if (SIGISMEMBER(ps->ps_signodefer, sig))
 			oact->sa_flags |= SA_NODEFER;
-		if (SIGISMEMBER(ps->ps_siginfo, sig))
+		if (SIGISMEMBER(ps->ps_siginfo, sig)) {
 			oact->sa_flags |= SA_SIGINFO;
+			oact->sa_sigaction =
+			    (__siginfohandler_t *)ps->ps_sigact[_SIG_IDX(sig)];
+		} else
+			oact->sa_handler = ps->ps_sigact[_SIG_IDX(sig)];
 		if (sig == SIGCHLD && ps->ps_flag & PS_NOCLDSTOP)
 			oact->sa_flags |= SA_NOCLDSTOP;
 		if (sig == SIGCHLD && ps->ps_flag & PS_NOCLDWAIT)
@@ -758,9 +762,7 @@ kern_sigaction(td, sig, act, oact, flags)
 			}
 #endif
 			/* never to be seen again */
-			PROC_SLOCK(p);
 			sigqueue_delete_proc(p, sig);
-			PROC_SUNLOCK(p);
 			if (sig != SIGCONT)
 				/* easier in psignal */
 				SIGADDSET(ps->ps_sigignore, sig);
@@ -956,9 +958,7 @@ execsigs(struct proc *p)
 		if (sigprop(sig) & SA_IGNORE) {
 			if (sig != SIGCONT)
 				SIGADDSET(ps->ps_sigignore, sig);
-			PROC_SLOCK(p);
 			sigqueue_delete_proc(p, sig);
-			PROC_SUNLOCK(p);
 		}
 		ps->ps_sigact[_SIG_IDX(sig)] = SIG_DFL;
 	}
@@ -2047,6 +2047,7 @@ do_tdsignal(struct proc *p, struct thread *td, int sig, ksiginfo_t *ksi)
 	struct sigacts *ps;
 	int intrval;
 	int ret = 0;
+	int wakeup_swapper;
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 
@@ -2134,9 +2135,7 @@ do_tdsignal(struct proc *p, struct thread *td, int sig, ksiginfo_t *ksi)
 				ksiginfo_tryfree(ksi);
 			return (ret);
 		}
-		PROC_SLOCK(p);
 		sigqueue_delete_proc(p, SIGCONT);
-		PROC_SUNLOCK(p);
 		if (p->p_flag & P_CONTINUED) {
 			p->p_flag &= ~P_CONTINUED;
 			PROC_LOCK(p->p_pptr);
@@ -2274,11 +2273,14 @@ do_tdsignal(struct proc *p, struct thread *td, int sig, ksiginfo_t *ksi)
 		 * the PROCESS runnable, leave it stopped.
 		 * It may run a bit until it hits a thread_suspend_check().
 		 */
+		wakeup_swapper = 0;
 		thread_lock(td);
 		if (TD_ON_SLEEPQ(td) && (td->td_flags & TDF_SINTR))
-			sleepq_abort(td, intrval);
+			wakeup_swapper = sleepq_abort(td, intrval);
 		thread_unlock(td);
 		PROC_SUNLOCK(p);
+		if (wakeup_swapper)
+			kick_proc0();
 		goto out;
 		/*
 		 * Mutexes are short lived. Threads waiting on them will
@@ -2355,7 +2357,9 @@ tdsigwakeup(struct thread *td, int sig, sig_t action, int intrval)
 {
 	struct proc *p = td->td_proc;
 	register int prop;
+	int wakeup_swapper;
 
+	wakeup_swapper = 0;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 	PROC_SLOCK_ASSERT(p, MA_OWNED);
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
@@ -2402,7 +2406,7 @@ tdsigwakeup(struct thread *td, int sig, sig_t action, int intrval)
 		if (td->td_priority > PUSER)
 			sched_prio(td, PUSER);
 
-		sleepq_abort(td, intrval);
+		wakeup_swapper = sleepq_abort(td, intrval);
 	} else {
 		/*
 		 * Other states do nothing with the signal immediately,
@@ -2414,6 +2418,8 @@ tdsigwakeup(struct thread *td, int sig, sig_t action, int intrval)
 			forward_signal(td);
 #endif
 	}
+	if (wakeup_swapper)
+		kick_proc0();
 }
 
 static void
@@ -2970,65 +2976,59 @@ SYSCTL_STRING(_kern, OID_AUTO, corefile, CTLFLAG_RW, corefilename,
  * by using "/dev/null", or all core files can be stored in "/cores/%U/%N-%P".
  * This is controlled by the sysctl variable kern.corefile (see above).
  */
-
 static char *
 expand_name(name, uid, pid)
 	const char *name;
 	uid_t uid;
 	pid_t pid;
 {
-	const char *format, *appendstr;
+	struct sbuf sb;
+	const char *format;
 	char *temp;
-	char buf[11];		/* Buffer for pid/uid -- max 4B */
-	size_t i, l, n;
+	size_t i;
 
 	format = corefilename;
 	temp = malloc(MAXPATHLEN, M_TEMP, M_NOWAIT | M_ZERO);
 	if (temp == NULL)
 		return (NULL);
-	for (i = 0, n = 0; n < MAXPATHLEN && format[i]; i++) {
+	(void)sbuf_new(&sb, temp, MAXPATHLEN, SBUF_FIXEDLEN);
+	for (i = 0; format[i]; i++) {
 		switch (format[i]) {
 		case '%':	/* Format character */
 			i++;
 			switch (format[i]) {
 			case '%':
-				appendstr = "%";
+				sbuf_putc(&sb, '%');
 				break;
 			case 'N':	/* process name */
-				appendstr = name;
+				sbuf_printf(&sb, "%s", name);
 				break;
 			case 'P':	/* process id */
-				sprintf(buf, "%u", pid);
-				appendstr = buf;
+				sbuf_printf(&sb, "%u", pid);
 				break;
 			case 'U':	/* user id */
-				sprintf(buf, "%u", uid);
-				appendstr = buf;
+				sbuf_printf(&sb, "%u", uid);
 				break;
 			default:
-				appendstr = "";
 			  	log(LOG_ERR,
-				    "Unknown format character %c in `%s'\n",
-				    format[i], format);
+				    "Unknown format character %c in "
+				    "corename `%s'\n", format[i], format);
 			}
-			l = strlen(appendstr);
-			if ((n + l) >= MAXPATHLEN)
-				goto toolong;
-			memcpy(temp + n, appendstr, l);
-			n += l;
 			break;
 		default:
-			temp[n++] = format[i];
+			sbuf_putc(&sb, format[i]);
 		}
 	}
-	if (format[i] != '\0')
-		goto toolong;
+	if (sbuf_overflowed(&sb)) {
+		sbuf_delete(&sb);
+		log(LOG_ERR, "pid %ld (%s), uid (%lu): corename is too "
+		    "long\n", (long)pid, name, (u_long)uid);
+		free(temp, M_TEMP);
+		return (NULL);
+	}
+	sbuf_finish(&sb);
+	sbuf_delete(&sb);
 	return (temp);
-toolong:
-	log(LOG_ERR, "pid %ld (%s), uid (%lu): corename is too long\n",
-	    (long)pid, name, (u_long)uid);
-	free(temp, M_TEMP);
-	return (NULL);
 }
 
 /*
@@ -3058,8 +3058,20 @@ coredump(struct thread *td)
 	MPASS((p->p_flag & P_HADTHREADS) == 0 || p->p_singlethread == td);
 	_STOPEVENT(p, S_CORE, 0);
 
+	name = expand_name(p->p_comm, td->td_ucred->cr_uid, p->p_pid);
+	if (name == NULL) {
+		PROC_UNLOCK(p);
+#ifdef AUDIT
+		audit_proc_coredump(td, NULL, EINVAL);
+#endif
+		return (EINVAL);
+	}
 	if (((sugid_coredump == 0) && p->p_flag & P_SUGID) || do_coredump == 0) {
 		PROC_UNLOCK(p);
+#ifdef AUDIT
+		audit_proc_coredump(td, name, EFAULT);
+#endif
+		free(name, M_TEMP);
 		return (EFAULT);
 	}
 	
@@ -3073,19 +3085,25 @@ coredump(struct thread *td)
 	 */
 	limit = (off_t)lim_cur(p, RLIMIT_CORE);
 	PROC_UNLOCK(p);
-	if (limit == 0)
+	if (limit == 0) {
+#ifdef AUDIT
+		audit_proc_coredump(td, name, EFBIG);
+#endif
+		free(name, M_TEMP);
 		return (EFBIG);
+	}
 
 restart:
-	name = expand_name(p->p_comm, td->td_ucred->cr_uid, p->p_pid);
-	if (name == NULL)
-		return (EINVAL);
 	NDINIT(&nd, LOOKUP, NOFOLLOW | MPSAFE, UIO_SYSSPACE, name, td);
 	flags = O_CREAT | FWRITE | O_NOFOLLOW;
 	error = vn_open(&nd, &flags, S_IRUSR | S_IWUSR, NULL);
-	free(name, M_TEMP);
-	if (error)
+	if (error) {
+#ifdef AUDIT
+		audit_proc_coredump(td, name, error);
+#endif
+		free(name, M_TEMP);
 		return (error);
+	}
 	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	vp = nd.ni_vp;
@@ -3143,6 +3161,10 @@ close:
 	if (error == 0)
 		error = error1;
 out:
+#ifdef AUDIT
+	audit_proc_coredump(td, name, error);
+#endif
+	free(name, M_TEMP);
 	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }

@@ -26,7 +26,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_switch.c,v 1.137 2007/10/08 23:37:28 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_switch.c,v 1.137.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_sched.h"
 
@@ -288,7 +288,7 @@ printf_caddr_t(void *data)
 static char preempt_warning[] =
     "WARNING: Kernel preemption is disabled, expect reduced performance.\n";
 SYSINIT(preempt_warning, SI_SUB_COPYRIGHT, SI_ORDER_ANY, printf_caddr_t,
-    preempt_warning)
+    preempt_warning);
 #endif
 #endif
 
@@ -490,7 +490,7 @@ runq_choose(struct runq *rq)
 			ts2 = ts = TAILQ_FIRST(rqh);
 
 			while (count-- && ts2) {
-				if (ts->ts_thread->td_lastcpu == cpu) {
+				if (ts2->ts_thread->td_lastcpu == cpu) {
 					ts = ts2;
 					break;
 				}

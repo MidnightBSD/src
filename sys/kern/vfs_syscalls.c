@@ -38,6 +38,7 @@
 __FBSDID("$FreeBSD: src/sys/kern/vfs_syscalls.c,v 1.443 2007/09/10 00:00:16 rwatson Exp $");
 
 #include "opt_compat.h"
+#include "opt_ktrace.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>
@@ -67,6 +68,9 @@ __FBSDID("$FreeBSD: src/sys/kern/vfs_syscalls.c,v 1.443 2007/09/10 00:00:16 rwat
 #include <sys/jail.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
+#ifdef KTRACE
+#include <sys/ktrace.h>
+#endif
 
 #include <machine/stdarg.h>
 
@@ -2118,6 +2122,10 @@ kern_stat(struct thread *td, char *path, enum uio_seg pathseg, struct stat *sbp)
 	if (error)
 		return (error);
 	*sbp = sb;
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrstat(&sb);
+#endif
 	return (0);
 }
 
@@ -2169,6 +2177,10 @@ kern_lstat(struct thread *td, char *path, enum uio_seg pathseg, struct stat *sbp
 	if (error)
 		return (error);
 	*sbp = sb;
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrstat(&sb);
+#endif
 	return (0);
 }
 

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/digiio.h,v 1.5 2006/09/27 19:57:02 ru Exp $
+ * $FreeBSD: src/sys/sys/digiio.h,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

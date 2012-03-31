@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_prof.c,v 1.79 2007/06/05 00:00:54 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_prof.c,v 1.79.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_prof.c,v 1.79 2007/06/05 00:00:54 jeff Exp
 static MALLOC_DEFINE(M_GPROF, "gprof", "kernel profiling buffer");
 
 static void kmstartup(void *);
-SYSINIT(kmem, SI_SUB_KPROF, SI_ORDER_FIRST, kmstartup, NULL)
+SYSINIT(kmem, SI_SUB_KPROF, SI_ORDER_FIRST, kmstartup, NULL);
 
 struct gmonparam _gmonparam = { GMON_PROF_OFF };
 
@@ -574,7 +574,7 @@ tcov_init(void *foo __unused)
 	}
 }
 
-SYSINIT(tcov_init, SI_SUB_KPROF, SI_ORDER_SECOND, tcov_init, NULL)
+SYSINIT(tcov_init, SI_SUB_KPROF, SI_ORDER_SECOND, tcov_init, NULL);
 
 /*
  * GCC contains magic to recognize calls to for instance execve() and
