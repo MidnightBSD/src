@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * ibcs2_errno.c
  * Copyright (c) 1995 Scott Bartram
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_errno.c,v 1.6 2005/01/06 23:22:04 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_errno.c,v 1.6.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/errno.h>
 #include <i386/ibcs2/ibcs2_errno.h>

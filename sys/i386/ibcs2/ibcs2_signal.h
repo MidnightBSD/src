@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ibcs2_signal.h,v 1.7 1995/08/14 02:26:01 mycroft Exp $	*/
 
 /*-
@@ -29,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/ibcs2/ibcs2_signal.h,v 1.8 2005/01/06 23:22:04 imp Exp $
+ * $FreeBSD: src/sys/i386/ibcs2/ibcs2_signal.h,v 1.8.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_IBCS2_SIGNAL_H

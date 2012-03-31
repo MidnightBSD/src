@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Scott Bartram
  * All rights reserved.
@@ -27,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/ibcs2/ibcs2_utime.h,v 1.3 2005/01/06 23:22:04 imp Exp $
+ * $FreeBSD: src/sys/i386/ibcs2/ibcs2_utime.h,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_IBCS2_UTIME_H

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Christos Zoulas
  * Copyright (c) 1995 Frank van der Linden
@@ -29,7 +30,7 @@
  * from: svr4_util.h,v 1.5 1994/11/18 02:54:31 christos Exp
  * from: linux_util.h,v 1.2 1995/03/05 23:23:50 fvdl Exp
  *
- * $FreeBSD: src/sys/i386/ibcs2/ibcs2_util.h,v 1.20 2006/07/10 17:59:26 jhb Exp $
+ * $FreeBSD: src/sys/i386/ibcs2/ibcs2_util.h,v 1.20.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

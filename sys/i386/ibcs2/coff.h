@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Sean Eric Fagan
  * Copyright (c) 1994 Søren Schmidt
@@ -26,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/ibcs2/coff.h,v 1.5 1999/08/28 00:43:57 peter Exp $
+ * $FreeBSD: src/sys/i386/ibcs2/coff.h,v 1.5.52.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _COFF_H
