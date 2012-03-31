@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.28 2012/03/24 21:30:06 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.29 2012/03/24 21:40:52 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -68,13 +68,16 @@ SUBDIR=	${_3dfx} \
 	cue \
 	cxgb \
 	${_cx} \
+	${_cyclic} \
 	dc \
 	dcons \
 	dcons_crom \
 	de \
 	${_digi} \
+	${_dpms} \
 	${_dpt} \
 	${_drm} \
+	${_dtrace} \
 	dummynet \
 	${_ed} \
 	${_eeemon} \
@@ -206,6 +209,7 @@ SUBDIR=	${_3dfx} \
 	${_nvram} \
 	${_nwfs} \
 	${_oltr} \
+	${_opensolaris} \
 	${_padlock} \
 	patm \
 	${_pccard} \
@@ -383,8 +387,15 @@ _cp=		cp
 _cpuctl=	cpuctl
 _cpufreq=	cpufreq
 _cs=		cs
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_cyclic=	cyclic
+.endif
 _digi=		digi
+_dpms=		dpms
 _drm=		drm
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_dtrace=	dtrace
+.endif
 _ed=		ed
 _elink=		elink
 _em=		em
@@ -412,6 +423,9 @@ _nsp=		nsp
 _nwfs=		nwfs
 .endif
 _oltr=		oltr
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_opensolaris=	opensolaris
+.endif
 _pccard=	pccard
 _pcfclock=	pcfclock
 _pecoff=	pecoff
@@ -433,7 +447,7 @@ _tmpfs= 	tmpfs
 _wi=		wi
 _xe=		xe
 .if ${MK_ZFS} != "no" || defined(ALL_MODULES)
-_zfs=		zfs
+#_zfs=		zfs
 .endif
 _aac=		aac
 _acpi=		acpi
@@ -496,8 +510,14 @@ _ciss=		ciss
 _coretemp=	coretemp
 _cpuctl=	cpuctl
 _cpufreq=	cpufreq
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_cyclic=	cyclic
+.endif
 _digi=		digi
 _drm=		drm
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_dtrace=	dtrace
+.endif
 _ed=		ed
 _eeemon=	eeemon
 _em=		em
@@ -528,6 +548,9 @@ _nfe=		nfe
 _nve=		nve
 _nvram=		nvram
 _nxge=		nxge
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_opensolaris=	opensolaris
+.endif
 _pccard=	pccard
 _safe=		safe
 _scsi_low=	scsi_low
@@ -541,7 +564,7 @@ _wi=		wi
 _wpi=		wpi
 _wpifw=		wpifw
 .if ${MK_ZFS} != "no" || defined(ALL_MODULES)
-_zfs=		zfs
+#_zfs=		zfs
 .endif
 .endif
 

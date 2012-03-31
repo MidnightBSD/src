@@ -38906,6 +38906,7 @@ sys/modules/ctau/Makefile -text
 sys/modules/cue/Makefile -text
 sys/modules/cx/Makefile -text
 sys/modules/cxgb/Makefile -text
+sys/modules/cyclic/Makefile -text
 sys/modules/dc/Makefile -text
 sys/modules/dcons/Makefile -text
 sys/modules/dcons_crom/Makefile -text
@@ -38920,6 +38921,7 @@ sys/modules/digi/digi_EPCX_PCI/Makefile -text
 sys/modules/digi/digi_Xe/Makefile -text
 sys/modules/digi/digi_Xem/Makefile -text
 sys/modules/digi/digi_Xr/Makefile -text
+sys/modules/dpms/Makefile -text
 sys/modules/dpt/Makefile -text
 sys/modules/drm/Makefile -text
 sys/modules/drm/Makefile.inc -text
@@ -39243,6 +39245,7 @@ sys/modules/nwfs/Makefile -text
 sys/modules/nxge/Makefile -text
 sys/modules/oldcard/Makefile -text
 sys/modules/oltr/Makefile -text
+sys/modules/opensolaris/Makefile -text
 sys/modules/owi/Makefile -text
 sys/modules/padlock/Makefile -text
 sys/modules/patm/Makefile -text
