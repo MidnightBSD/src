@@ -6,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/lsvfs/lsvfs.c,v 1.17 2002/08/11 02:07:43 mux Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/lsvfs/lsvfs.c,v 1.18.2.1 2007/11/15 15:18:44 se Exp $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -70,7 +70,7 @@ fmt_flags(int flags)
    * NB: if you add new flags, don't forget to add them here vvvvvv too.
    */
   static char buf[sizeof
-    "static, network, read-only, synthetic, loopback, unicode"];
+    "static, network, read-only, synthetic, loopback, unicode, jail"];
   int comma = 0;
 
   buf[0] = '\0';
@@ -103,6 +103,11 @@ fmt_flags(int flags)
   if(flags & VFCF_UNICODE) {
     if(comma++) strcat(buf, ", ");
     strcat(buf, "unicode");
+  }
+
+  if(flags & VFCF_JAIL) {
+    if(comma++) strcat(buf, ", ");
+    strcat(buf, "jail");
   }
 
   return buf;
