@@ -1,6 +1,6 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/share/mk/bsd.prog.mk,v 1.144.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.6 2012/03/10 00:39:42 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.7 2012/03/10 00:58:37 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -24,6 +24,9 @@ NO_WERROR=
 .if defined(DEBUG_FLAGS)
 CFLAGS+=${DEBUG_FLAGS}
 CXXFLAGS+=${DEBUG_FLAGS}
+.if !defined(NO_CTF) && (${DEBUG_FLAGS:M-g} != "")
+CTFFLAGS+= -g
+.endif
 .endif
 
 .if defined(CRUNCH_CFLAGS)
@@ -65,7 +68,10 @@ ${PROG}: ${OBJS}
 .if defined(PROG_CXX)
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .else
-	${CC} ${CPPFLAS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+.endif
+.if defined(CTFMERGE)
+	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
 .endif
 
 .else	# !defined(SRCS)
@@ -93,6 +99,9 @@ ${PROG}: ${OBJS}
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .else
 	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
+.endif
+.if defined(CTFMERGE)
+	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
 .endif
 .endif
 
