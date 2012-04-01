@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/zfs/Makefile,v 1.6.2.5 2010/01/06 08:18:49 netchild Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/modules/zfs/Makefile,v 1.6.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 KMOD=	zfs
 
@@ -12,23 +13,20 @@ SRCS+=	acl_common.c
 SRCS+=	avl.c
 .PATH:	${SUNW}/common/nvpair
 SRCS+=	nvpair.c
-.PATH:	${.CURDIR}/../../cddl/contrib/opensolaris/common/unicode
-SRCS+=	u8_textprep.c
 
 .PATH:	${.CURDIR}/../../cddl/compat/opensolaris/kern
 SRCS+=	opensolaris_kmem.c
 SRCS+=	opensolaris_kobj.c
 SRCS+=	opensolaris_kstat.c
-SRCS+=	opensolaris_lookup.c
+SRCS+=	opensolaris_misc.c
 SRCS+=	opensolaris_policy.c
 SRCS+=	opensolaris_string.c
-SRCS+=	opensolaris_taskq.c
 SRCS+=	opensolaris_vfs.c
 SRCS+=	opensolaris_zone.c
 
-.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "ia64" || ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "sparc64"
 .PATH:	${SUNW}/common/atomic/${MACHINE_ARCH}
-SRCS+=	opensolaris_atomic.S
+SRCS+=	atomic.S
 .else
 .PATH:	${.CURDIR}/../../cddl/compat/opensolaris/kern
 SRCS+=	opensolaris_atomic.c
@@ -36,21 +34,21 @@ SRCS+=	opensolaris_atomic.c
 
 .PATH:	${SUNW}/uts/common/fs
 SRCS+=	gfs.c
-SRCS+=	vnode.c
 
 .PATH:	${SUNW}/uts/common/os
 SRCS+=	callb.c
 SRCS+=	list.c
 SRCS+=	nvpair_alloc_system.c
+SRCS+=	taskq.c
 
 .PATH:	${SUNW}/uts/common/rpc
-SRCS+=	opensolaris_xdr.c
-SRCS+=	opensolaris_xdr_array.c
-SRCS+=	opensolaris_xdr_mem.c
+SRCS+=	xdr.c
+SRCS+=	xdr_array.c
+SRCS+=	xdr_mem.c
 
 .PATH:	${SUNW}/uts/common/zmod
 SRCS+=	adler32.c
-SRCS+=	opensolaris_crc32.c
+SRCS+=	crc32.c
 SRCS+=	deflate.c
 SRCS+=	inffast.c
 SRCS+=	inflate.c
@@ -85,7 +83,6 @@ CFLAGS+=-DBUILDING_ZFS
 
 #CFLAGS+=-DDEBUG=1
 #DEBUG_FLAGS=-g
-
 .include <bsd.kmod.mk>
 
 CWARNFLAGS+=-Wno-unknown-pragmas
@@ -101,3 +98,4 @@ CWARNFLAGS+=-Wno-unused
 CWARNFLAGS+=-Wno-inline
 CWARNFLAGS+=-Wno-switch
 CWARNFLAGS+=-Wno-pointer-arith
+CWARNFLAGS+=-Wno-address
