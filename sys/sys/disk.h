@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/disk.h,v 1.4 2010/02/06 23:00:15 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/disk.h,v 1.5 2012/04/01 04:02:32 laffer1 Exp $ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -98,8 +98,35 @@ void disk_err(struct bio *bp, const char *what, int blkdone, int nl);
 	 * - ident is an ASCII string (is printable),
 	 * - ident is optional and applications can't relay on its presence.
 	 */
-#define DIOCGPROVIDERALIAS _IOR('d', 139, char[MAXPATHLEN])
-	/*-
+
+#define	DIOCGPROVIDERNAME _IOR('d', 138, char[MAXPATHLEN])
+	/*
+	 * Store the provider name, given a device path, in a buffer. The buffer
+	 * must be at least MAXPATHLEN bytes long.
+	 */
+
+#define	DIOCGSTRIPESIZE	_IOR('d', 139, off_t)	/* Get stripe size in bytes */
+	/*
+	 * Get the size of the device's optimal access block in bytes.
+	 * This should be a multiple of the sector size.
+	 */
+
+#define	DIOCGSTRIPEOFFSET _IOR('d', 140, off_t)	/* Get stripe offset in bytes */
+	/*
+	 * Get the offset of the first device's optimal access block in bytes.
+	 * This should be a multiple of the sector size.
+	 */
+
+#define	DIOCGPHYSPATH _IOR('d', 141, char[MAXPATHLEN])
+	/*
+	 * Get a string defining the physical path for a given provider.
+	 * This has similar rules to ident, but is intended to uniquely
+	 * identify the physical location of the device, not the current
+	 * occupant of that location.
+	 */
+
+#define DIOCGPROVIDERALIAS _IOR('d', 142, char[MAXPATHLEN])
+	/*- XXX this should be phased out
 	 * Store the provider alias, if present, in a buffer. The buffer must
 	 * be at least MAXPATHLEN bytes long.
 	 */
