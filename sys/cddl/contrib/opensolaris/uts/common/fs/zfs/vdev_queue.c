@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/vdev_queue.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -44,7 +44,7 @@
 int zfs_vdev_max_pending = 35;
 int zfs_vdev_min_pending = 4;
 
-/* deadline = pri + (lbolt >> time_shift) */
+/* deadline = pri + (LBOLT >> time_shift) */
 int zfs_vdev_time_shift = 6;
 
 /* exponential I/O issue ramp-up rate */
