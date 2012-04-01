@@ -1091,6 +1091,7 @@ cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/inline/tst.InlineWritableAss
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/io/tst.fds.c -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/io/tst.fds.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/io/tst.fds.d.out -text
+cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/java_api/manifest/test.jar-manifest -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/java_api/src/TestAbort.java -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/java_api/src/TestBean.java -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/java_api/src/TestClose.java -text
