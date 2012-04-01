@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/disk.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/disk.h,v 1.4 2010/02/06 23:00:15 laffer1 Exp $ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -26,41 +26,41 @@ void disk_err(struct bio *bp, const char *what, int blkdone, int nl);
 
 #endif
 
-#define DIOCGSECTORSIZE	_IOR('d', 128, u_int)
-	/*-
-	 * Get the sectorsize of the device in bytes.  The sectorsize is the
-	 * smallest unit of data which can be transfered from this device.
-	 * Usually this is a power of two but it may not be. (ie: CDROM audio)
+#define	DIOCGSECTORSIZE	_IOR('d', 128, u_int)
+	/*
+	 * Get the sector size of the device in bytes.  The sector size is the
+	 * smallest unit of data which can be transferred from this device.
+	 * Usually this is a power of 2 but it might not be (i.e. CDROM audio).
 	 */
 
-#define DIOCGMEDIASIZE	_IOR('d', 129, off_t)	/* Get media size in bytes */
-	/*-
+#define	DIOCGMEDIASIZE	_IOR('d', 129, off_t)	/* Get media size in bytes */
+	/*
 	 * Get the size of the entire device in bytes.  This should be a
-	 * multiple of the sectorsize.
+	 * multiple of the sector size.
 	 */
 
-#define DIOCGFWSECTORS	_IOR('d', 130, u_int)	/* Get firmware sectorcount */
-	/*-
-	 * Get the firmwares notion of number of sectors per track.  This
+#define	DIOCGFWSECTORS	_IOR('d', 130, u_int)	/* Get firmware's sectorcount */
+	/*
+	 * Get the firmware's notion of number of sectors per track.  This
 	 * value is mostly used for compatibility with various ill designed
 	 * disk label formats.  Don't use it unless you have to.
 	 */
 
-#define DIOCGFWHEADS	_IOR('d', 131, u_int)	/* Get firmware headcount */
-	/*-
+#define	DIOCGFWHEADS	_IOR('d', 131, u_int)	/* Get firmware's headcount */
+	/*
 	 * Get the firmwares notion of number of heads per cylinder.  This
 	 * value is mostly used for compatibility with various ill designed
 	 * disk label formats.  Don't use it unless you have to.
 	 */
 
-#define DIOCSKERNELDUMP _IOW('d', 133, u_int)	/* Set/Clear kernel dumps */
-	/*-
+#define	DIOCSKERNELDUMP _IOW('d', 133, u_int)	/* Set/Clear kernel dumps */
+	/*
 	 * Enable/Disable (the argument is boolean) the device for kernel
 	 * core dumps.
 	 */
 	
-#define DIOCGFRONTSTUFF _IOR('d', 134, off_t)
-	/*-
+#define	DIOCGFRONTSTUFF _IOR('d', 134, off_t)
+	/*
 	 * Many disk formats have some amount of space reserved at the
 	 * start of the disk to hold bootblocks, various disklabels and
 	 * similar stuff.  This ioctl returns the number of such bytes
@@ -68,12 +68,12 @@ void disk_err(struct bio *bp, const char *what, int blkdone, int nl);
 	 */
 
 #define	DIOCGFLUSH _IO('d', 135)		/* Flush write cache */
-	/*-
+	/*
 	 * Flush write cache of the device.
 	 */
 
 #define	DIOCGDELETE _IOW('d', 136, off_t[2])	/* Delete data */
-	/*-
+	/*
 	 * Mark data on the device as unused.
 	 */
 
@@ -103,4 +103,5 @@ void disk_err(struct bio *bp, const char *what, int blkdone, int nl);
 	 * Store the provider alias, if present, in a buffer. The buffer must
 	 * be at least MAXPATHLEN bytes long.
 	 */
+
 #endif /* _SYS_DISK_H_ */
