@@ -26,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libgeom/libgeom.3,v 1.8.2.2 2011/06/18 05:13:48 jh Exp $
+.\" $FreeBSD: src/lib/libgeom/libgeom.3,v 1.15 2010/12/04 08:44:56 jh Exp $
 .\"
 .Dd December 4, 2010
 .Dt LIBGEOM 3
@@ -50,11 +50,15 @@
 .Nm g_close ,
 .Nm g_mediasize ,
 .Nm g_sectorsize ,
+.Nm g_stripeoffset ,
+.Nm g_stripesize ,
 .Nm g_flush ,
 .Nm g_delete ,
+.Nm g_device_path ,
 .Nm g_get_ident ,
 .Nm g_get_name ,
-.Nm g_open_by_ident
+.Nm g_open_by_ident ,
+.Nm g_providername
 .Nd userland API library for kernel GEOM subsystem
 .Sh LIBRARY
 .Lb libgeom
@@ -92,23 +96,31 @@
 .Fn gctl_dump "struct gctl_req *req" "FILE *f"
 .Ss "Utility Functions"
 .Ft int
-.Fn g_open "const char *name" "int write"
+.Fn g_open "const char *name" "int dowrite"
 .Ft int
 .Fn g_close "int fd"
 .Ft off_t
 .Fn g_mediasize "int fd"
 .Ft ssize_t
 .Fn g_sectorsize "int fd"
+.Ft ssize_t
+.Fn g_stripeoffset "int fd"
+.Ft ssize_t
+.Fn g_stripesize "int fd"
 .Ft int
 .Fn g_flush "int fd"
 .Ft int
 .Fn g_delete "int fd" "off_t offset" "off_t length"
+.Ft "char *"
+.Fn g_device_path "const char *devpath"
 .Ft int
 .Fn g_get_ident "int fd" "char *ident" "size_t size"
 .Ft int
 .Fn g_get_name "const char *ident" "char *name" "size_t size"
 .Ft int
-.Fn g_open_by_ident "const char *ident" "int write" "char *name" "size_t size"
+.Fn g_open_by_ident "const char *ident" "int dowrite" "char *name" "size_t size"
+.Ft "char *"
+.Fn g_providername "int fd"
 .Sh DESCRIPTION
 The
 .Nm geom
@@ -271,7 +283,7 @@ The
 function opens the given provider and returns file descriptor number, which can
 be used with other functions.
 The
-.Fa write
+.Fa dowrite
 argument indicates if operations that modify the provider (like
 .Fn g_flush
 or
@@ -291,6 +303,14 @@ The
 function returns sector size of the given provider.
 .Pp
 The
+.Fn g_stripeoffset
+function returns stripe offset of the given provider.
+.Pp
+The
+.Fn g_stripesize
+function returns stripe size of the given provider.
+.Pp
+The
 .Fn g_flush
 function sends
 .Dv BIO_FLUSH
@@ -299,6 +319,13 @@ request to flush write cache of the provider.
 The
 .Fn g_delete
 function tells the provider that the given data range is no longer used.
+.Pp
+The
+.Fn g_device_path
+function returns the full path to a provider given a partial or full path to the
+device node.
+If the device can not be found or is not a valid geom provider, NULL is
+returned.
 .Pp
 The
 .Fn g_get_ident
@@ -326,7 +353,17 @@ argument is not
 .Dv NULL ,
 the function will store provider's name there.
 .Pp
-All functions return value greater than or equal to
+The
+.Fn g_providername
+function returns the provider name of an open file descriptor.
+If the file descriptor does not point to a valid geom provider, NULL is
+returned.
+.Pp
+All functions except
+.Fn g_providername
+and
+.Fn g_device_path
+return a value greater than or equal to
 .Va 0
 on success or
 .Va -1
@@ -353,4 +390,4 @@ library appeared in
 .Sh AUTHORS
 .An Poul-Henning Kamp Aq phk@FreeBSD.org
 .An Lukas Ertl Aq le@FreeBSD.org
-.An Pawel Jakub Dawidek pjd@FreeBSD.org
+.An Pawel Jakub Dawidek Aq pjd@FreeBSD.org

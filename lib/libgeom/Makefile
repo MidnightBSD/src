@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libgeom/Makefile,v 1.12.2.1 2009/08/03 08:13:06 kensmith Exp $
+# $FreeBSD: src/lib/libgeom/Makefile,v 1.12 2009/05/19 12:10:48 trasz Exp $
 
 LIB=	geom
 SHLIBDIR?= /lib
@@ -35,12 +35,14 @@ MLINKS+= \
 	libgeom.3 gctl_dump.3 \
 	libgeom.3 g_close.3 \
 	libgeom.3 g_delete.3 \
+	libgeom.3 g_device_path.3 \
 	libgeom.3 g_flush.3 \
 	libgeom.3 g_get_ident.3 \
 	libgeom.3 g_get_name.3 \
 	libgeom.3 g_mediasize.3 \
 	libgeom.3 g_open.3 \
 	libgeom.3 g_open_by_ident.3 \
+	libgeom.3 g_providername.3 \
 	libgeom.3 g_sectorsize.3
 
 .include <bsd.lib.mk>
