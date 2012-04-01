@@ -1,6 +1,6 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
 # $FreeBSD: src/share/mk/sys.mk,v 1.86.2.1 2005/11/16 08:12:03 ru Exp $
-# $MidnightBSD: src/share/mk/sys.mk,v 1.7 2011/12/02 04:22:54 laffer1 Exp $
+# $MidnightBSD: src/share/mk/sys.mk,v 1.8 2012/03/10 01:11:47 laffer1 Exp $
 
 unix		?=	We run MidnightBSD, not UNIX.
 .MidnightBSD	?=	true
@@ -55,6 +55,16 @@ CFLAGS		?=	-O2 -pipe
 CFLAGS		+=	-fno-strict-aliasing
 .endif
 .endif
+
+# Turn CTF conversion off by default for now. This default could be
+# changed later if DTrace becomes popular.
+.if !defined(WITH_CTF)
+NO_CTF		=	1
+.endif
+
+# C Type Format data is required for DTrace
+CTFFLAGS	?=	-L VERSION
+
 PO_CFLAGS	?=	${CFLAGS}
 
 CXX		?=	c++
@@ -137,33 +147,49 @@ YFLAGS		?=	-d
 # SINGLE SUFFIX RULES
 .c:
 	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .f:
 	${FC} ${FFLAGS} ${LDFLAGS} -o ${.TARGET} ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .sh:
 	cp -f ${.IMPSRC} ${.TARGET}
 	chmod a+x ${.TARGET}
 
-# DOUBLE SUFFIX RULES
-
 .c.o:
 	${CC} ${CPPFLAGS} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .f.o:
 	${FC} ${FFLAGS} -c ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .y.o:
 	${YACC} ${YFLAGS} ${.IMPSRC}
 	${CC} ${CPPFLAGS} ${CFLAGS} -c y.tab.c
 	rm -f y.tab.c
 	mv y.tab.o ${.TARGET}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .l.o:
 	${LEX} ${LFLAGS} ${.IMPSRC}
 	${CC} ${CPPFLAGS} ${CFLAGS} -c lex.yy.c
 	rm -f lex.yy.c
 	mv lex.yy.o ${.TARGET}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .y.c:
 	${YACC} ${YFLAGS} ${.IMPSRC}
@@ -201,9 +227,15 @@ YFLAGS		?=	-d
 
 .c:
 	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .c.o:
 	${CC} ${CPPFLAGS} ${CFLAGS} -c ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .cc .cpp .cxx .C:
 	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
@@ -213,6 +245,9 @@ YFLAGS		?=	-d
 
 .m.o:
 	${OBJC} ${OBJCFLAGS} -c ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .p.o:
 	${PC} ${PFLAGS} -c ${.IMPSRC}
@@ -226,23 +261,38 @@ YFLAGS		?=	-d
 
 .S.o:
 	${CC} ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .asm.o:
 	${CC} -x assembler-with-cpp ${CFLAGS} ${ACFLAGS} -c ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .s.o:
 	${AS} ${AFLAGS} -o ${.TARGET} ${.IMPSRC}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 # XXX not -j safe
 .y.o:
 	${YACC} ${YFLAGS} ${.IMPSRC}
 	${CC} ${CFLAGS} -c y.tab.c -o ${.TARGET}
 	rm -f y.tab.c
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .l.o:
 	${LEX} -t ${LFLAGS} ${.IMPSRC} > ${.PREFIX}.tmp.c
 	${CC} ${CFLAGS} -c ${.PREFIX}.tmp.c -o ${.TARGET}
 	rm -f ${.PREFIX}.tmp.c
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 # XXX not -j safe
 .y.c:
@@ -254,22 +304,34 @@ YFLAGS		?=	-d
 
 .s.out .c.out .o.out:
 	${CC} ${CFLAGS} ${LDFLAGS} ${.IMPSRC} ${LDLIBS} -o ${.TARGET}
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .f.out .F.out .r.out .e.out:
 	${FC} ${EFLAGS} ${RFLAGS} ${FFLAGS} ${LDFLAGS} ${.IMPSRC} \
 	    ${LDLIBS} -o ${.TARGET}
 	rm -f ${.PREFIX}.o
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 # XXX not -j safe
 .y.out:
 	${YACC} ${YFLAGS} ${.IMPSRC}
 	${CC} ${CFLAGS} ${LDFLAGS} y.tab.c ${LDLIBS} -ly -o ${.TARGET}
 	rm -f y.tab.c
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 .l.out:
 	${LEX} -t ${LFLAGS} ${.IMPSRC} > ${.PREFIX}.tmp.c
 	${CC} ${CFLAGS} ${LDFLAGS} ${.PREFIX}.tmp.c ${LDLIBS} -ll -o ${.TARGET}
 	rm -f ${.PREFIX}.tmp.c
+.if defined(CTFCONVERT)
+	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.endif
 
 # MidnightBSD build pollution.  Hide it in the non-POSIX part of the ifdef.
 __MAKE_CONF?=/etc/make.conf

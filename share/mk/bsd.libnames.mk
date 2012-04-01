@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.12 2011/08/07 06:21:05 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.13 2011/12/18 03:47:29 laffer1 Exp $
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -34,6 +34,7 @@ LIBCOM_ERR?=	${DESTDIR}${LIBDIR}/libcom_err.a
 LIBCOMPAT?=	${DESTDIR}${LIBDIR}/libcompat.a
 LIBCRYPT?=	${DESTDIR}${LIBDIR}/libcrypt.a
 LIBCRYPTO?=	${DESTDIR}${LIBDIR}/libcrypto.a
+LIBCTF?=	${DESTDIR}${LIBDIR}/libctf.a
 LIBCURSES?=	${DESTDIR}${LIBDIR}/libcurses.a
 LIBDEVINFO?=	${DESTDIR}${LIBDIR}/libdevinfo.a
 LIBDEVSTAT?=	${DESTDIR}${LIBDIR}/libdevstat.a
@@ -42,7 +43,10 @@ LIBDISK?=	${DESTDIR}${LIBDIR}/libdisk.a
 LIBDISPATCH?=	${DESTDIR}${LIBDIR}/libdispatch.a
 LIBDNS?=	${DESTDIR}${LIBDIR}/libdns.a
 LIBDNS_SD?=	${DESTDIR}${LIBDIR}/libdns_sd.a
+LIBDTRACE?=	${DESTDIR}${LIBDIR}/libdtrace.a
+LIBDWARF?=	${DESTDIR}${LIBDIR}/libdwarf.a
 LIBEDIT?=	${DESTDIR}${LIBDIR}/libedit.a
+LIBELF?=	${DESTDIR}${LIBDIR}/libelf.a
 LIBFETCH?=	${DESTDIR}${LIBDIR}/libfetch.a
 LIBFL?=		"don't use LIBFL, use LIBL"
 LIBFORM?=	${DESTDIR}${LIBDIR}/libform.a
@@ -121,9 +125,11 @@ MINUSLPAM+=	-lssh -lcrypto -lcrypt
 .endif
 .if ${MK_NIS} != "no"
 LIBPAM+=	${LIBYPCLNT}
+
 MINUSLPAM+=	-lypclnt
 .endif
 .endif
+LIBPROC?=	${DESTDIR}${LIBDIR}/libproc.a
 LIBPANEL?=	${DESTDIR}${LIBDIR}/libpanel.a
 LIBPCAP?=	${DESTDIR}${LIBDIR}/libpcap.a
 LIBPMC?=	${DESTDIR}${LIBDIR}/libpmc.a
