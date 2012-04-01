@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libgeom/Makefile,v 1.12 2009/05/19 12:10:48 trasz Exp $
 
 LIB=	geom
