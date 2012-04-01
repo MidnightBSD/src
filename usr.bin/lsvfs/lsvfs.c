@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * lsvfs - list loaded VFSes
  * Garrett A. Wollman, September 1994
