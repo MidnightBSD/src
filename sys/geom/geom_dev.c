@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_dev.c,v 1.5 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_dev.c,v 1.6 2011/12/10 22:55:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -326,7 +326,23 @@ g_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread
 	case DIOCGIDENT:
 		error = g_io_getattr("GEOM::ident", cp, &i, data);
 		break;
-
+	case DIOCGPROVIDERNAME:
+		/* XXX */
+		if (cp->provider == NULL)
+			return (ENOENT);
+		strlcpy(data, cp->provider->name, i);
+		break;
+	case DIOCGSTRIPESIZE:
+		*(off_t *)data = cp->provider->stripesize;
+		break;
+	case DIOCGSTRIPEOFFSET:
+		*(off_t *)data = cp->provider->stripeoffset;
+		break;
+	case DIOCGPHYSPATH:
+		error = g_io_getattr("GEOM::physpath", cp, &i, data);
+		if (error == 0 && *(char *)data == '\0')
+			error = ENOENT;
+		break;
 	default:
 		if (cp->provider->geom->ioctl != NULL) {
 			error = cp->provider->geom->ioctl(cp->provider, cmd, data, fflag, td);
