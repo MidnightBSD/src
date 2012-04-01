@@ -33,7 +33,7 @@
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
  * $FreeBSD: src/sys/sys/param.h,v 1.244.2.8 2006/01/18 13:24:24 andre Exp $
- * $MidnightBSD: src/sys/sys/param.h,v 1.46 2012/02/12 21:16:00 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/param.h,v 1.47 2012/03/23 20:48:40 laffer1 Exp $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -308,21 +308,5 @@ __END_DECLS
  
 #define ctodb(db)			/* calculates pages to devblks */ \
 	((db) << (PAGE_SHIFT - DEV_BSHIFT))
-
-/*
- * Solaris compatibility definitions.
- */
-#ifdef _SOLARIS_C_SOURCE
-#define	PAGESIZE	PAGE_SIZE
-
-/*
- * The OpenSolaris version is set according to the version last imported
- * from http://dlc.sun.com/osol/on/downloads/current/. In FreeBSD header
- * files it can be used to determine the level of compatibility that the
- * FreeBSD headers provide to OpenSolaris code. Perhaps one day there
- * will be a really, really Single Unix Specification.
- */
-#define __OpenSolaris_version 20060731
-#endif
 
 #endif	/* _SYS_PARAM_H_ */

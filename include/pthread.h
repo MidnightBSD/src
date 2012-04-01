@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/pthread.h,v 1.40.2.1 2007/11/14 01:10:11 kris Exp $
+ * $FreeBSD: src/include/pthread.h,v 1.40.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _PTHREAD_H_
 #define _PTHREAD_H_
@@ -98,7 +98,7 @@
  * Static initialization values. 
  */
 #define PTHREAD_MUTEX_INITIALIZER	NULL
-#define PTHREAD_ADAPTIVE_MUTEX_INITIALIZER_NP	((pthread_mutex_t)1)
+#define PTHREAD_ADAPTIVE_MUTEX_INITIALIZER_NP	NULL
 #define PTHREAD_COND_INITIALIZER	NULL
 #define PTHREAD_RWLOCK_INITIALIZER	NULL
 
@@ -225,8 +225,7 @@ int		pthread_rwlockattr_setpshared(pthread_rwlockattr_t *, int);
 int		pthread_rwlockattr_destroy(pthread_rwlockattr_t *);
 pthread_t	pthread_self(void);
 int		pthread_setspecific(pthread_key_t, const void *);
-int		pthread_sigmask(int, const __sigset_t * __restrict,
-				 __sigset_t * __restrict);
+int		pthread_sigmask(int, const __sigset_t *, __sigset_t *);
 
 int		pthread_spin_init(pthread_spinlock_t *, int);
 int		pthread_spin_destroy(pthread_spinlock_t *);

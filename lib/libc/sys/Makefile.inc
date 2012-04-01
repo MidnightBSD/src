@@ -1,6 +1,6 @@
 #	@(#)Makefile.inc	8.3 (Berkeley) 10/24/94
 # $FreeBSD: src/lib/libc/sys/Makefile.inc,v 1.127 2007/09/15 14:33:55 imp Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libc/sys/Makefile.inc,v 1.6 2012/03/23 20:57:08 laffer1 Exp $
 
 # sys sources
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/sys ${.CURDIR}/sys
@@ -21,7 +21,8 @@
 # Sources common to both syscall interfaces:
 SRCS+=	stack_protector.c  __error.c
 .if !defined(WITHOUT_SYSCALL_COMPAT)
-SRCS+=	ftruncate.c lseek.c mmap.c pread.c pwrite.c truncate.c
+SRCS+=	fcntl.c ftruncate.c lseek.c mmap.c pread.c pwrite.c truncate.c
+PSEUDO+= _fcntl.o
 .endif
 
 # Add machine dependent asm sources:
@@ -83,9 +84,8 @@ MAN+=	_exit.2 abort2.2 accept.2 access.2 acct.2  adjtime.2 \
 	nfssvc.2 open.2 pathconf.2 pipe.2 poll.2 profil.2 ptrace.2 quotactl.2 \
 	read.2 readlink.2 reboot.2 recv.2 rename.2 revoke.2 rfork.2 rmdir.2 \
 	rtprio.2 select.2 semctl.2 semget.2 semop.2 send.2 sendfile.2 \
-	setfib.2 \
-	setgroups.2 setpgid.2 setregid.2 setresuid.2 setreuid.2 setsid.2 \
-	setuid.2 shmat.2 shmctl.2 shmget.2 shutdown.2 \
+	setfib.2 setgroups.2 setpgid.2 setregid.2 setresuid.2 setreuid.2 \
+	setsid.2 setuid.2 shmat.2 shmctl.2 shmget.2 shutdown.2 \
 	sigaction.2 sigaltstack.2 sigpending.2 sigprocmask.2 sigqueue.2 \
 	sigreturn.2 sigstack.2 sigsuspend.2 sigwait.2 sigwaitinfo.2 \
 	socket.2 socketpair.2 stat.2 statfs.2 \
@@ -138,6 +138,7 @@ MLINKS+=getuid.2 geteuid.2
 MLINKS+=intro.2 errno.2
 MLINKS+=jail.2 jail_attach.2
 MLINKS+=kqueue.2 kevent.2
+MLINKS+=kldunload.2 kldunloadf.2
 MLINKS+=kse.2 kse_create.2 kse.2 kse_exit.2 kse.2 kse_release.2 \
 	kse.2 kse_switchin.2 kse.2 kse_thr_interrupt.2 kse.2 kse_wakeup.2
 MLINKS+=madvise.2 posix_madvise.2

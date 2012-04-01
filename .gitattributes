@@ -29401,6 +29401,7 @@ lib/libc/sys/dup.2 -text
 lib/libc/sys/execve.2 -text
 lib/libc/sys/extattr_get_file.2 -text
 lib/libc/sys/fcntl.2 -text
+lib/libc/sys/fcntl.c -text
 lib/libc/sys/fhopen.2 -text
 lib/libc/sys/flock.2 -text
 lib/libc/sys/fork.2 -text

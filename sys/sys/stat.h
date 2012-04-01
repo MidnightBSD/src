@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/stat.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/stat.h,v 1.4 2012/03/09 00:20:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -289,14 +289,6 @@ struct nstat {
 #endif
 
 #endif /* __BSD_VISIBLE */
-
-/*
- * Solaris compatibility definitions.
- */
-#ifdef _SOLARIS_C_SOURCE
-#define	stat64	stat
-#define	fstat64	fstat
-#endif
 
 #ifndef _KERNEL
 __BEGIN_DECLS
