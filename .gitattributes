@@ -41814,6 +41814,7 @@ sys/sparc64/include/sf_buf.h -text
 sys/sparc64/include/sigframe.h -text
 sys/sparc64/include/signal.h -text
 sys/sparc64/include/smp.h -text
+sys/sparc64/include/stack.h -text
 sys/sparc64/include/stdarg.h -text
 sys/sparc64/include/sysarch.h -text
 sys/sparc64/include/tick.h -text
@@ -41889,6 +41890,7 @@ sys/sparc64/sparc64/rtc.c -text
 sys/sparc64/sparc64/rwindow.c -text
 sys/sparc64/sparc64/sc_machdep.c -text
 sys/sparc64/sparc64/spitfire.c -text
+sys/sparc64/sparc64/stack_machdep.c -text
 sys/sparc64/sparc64/support.S -text
 sys/sparc64/sparc64/swtch.S -text
 sys/sparc64/sparc64/sys_machdep.c -text
