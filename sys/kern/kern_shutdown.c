@@ -37,6 +37,7 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.182.4.1 2008/01/30 21:21:50 ru Exp $");
 
+#include "opt_ddb.h"
 #include "opt_kdb.h"
 #include "opt_mac.h"
 #include "opt_panic.h"
@@ -63,6 +64,8 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.182.4.1 2008/01/30 21:21:50
 #include <sys/smp.h>		/* smp_active */
 #include <sys/sysctl.h>
 #include <sys/sysproto.h>
+
+#include <ddb/ddb.h>
 
 #include <machine/cpu.h>
 #include <machine/pcb.h>
@@ -147,7 +150,7 @@ shutdown_conf(void *unused)
 	    SHUTDOWN_PRI_LAST + 200);
 }
 
-SYSINIT(shutdown_conf, SI_SUB_INTRINSIC, SI_ORDER_ANY, shutdown_conf, NULL)
+SYSINIT(shutdown_conf, SI_SUB_INTRINSIC, SI_ORDER_ANY, shutdown_conf, NULL);
 
 /*
  * The system call that results in a reboot.
@@ -240,7 +243,13 @@ doadump(void)
 	savectx(&dumppcb);
 	dumptid = curthread->td_tid;
 	dumping++;
-	dumpsys(&dumper);
+#ifdef DDB
+	if (textdump_pending)
+		textdump_dumpsys(&dumper);
+	else
+#endif
+		dumpsys(&dumper);
+	dumping--;
 }
 
 static int
@@ -502,6 +511,7 @@ panic(const char *fmt, ...)
 	va_list ap;
 	static char buf[256];
 
+	critical_enter();
 #ifdef SMP
 	/*
 	 * We don't want multiple CPU's to panic at the same time, so we
@@ -560,6 +570,7 @@ panic(const char *fmt, ...)
 	/* thread_unlock(td); */
 	if (!sync_on_panic)
 		bootopt |= RB_NOSYNC;
+	critical_exit();
 	boot(bootopt);
 }
 

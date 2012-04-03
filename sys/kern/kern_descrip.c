@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_descrip.c,v 1.313.2.10.2.2 2008/12/06 20:3
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
+#include "opt_ktrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,6 +73,9 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_descrip.c,v 1.313.2.10.2.2 2008/12/06 20:3
 #include <sys/unistd.h>
 #include <sys/user.h>
 #include <sys/vnode.h>
+#ifdef KTRACE
+#include <sys/ktrace.h>
+#endif
 
 #include <security/audit/audit.h>
 

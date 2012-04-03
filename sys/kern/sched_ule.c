@@ -37,9 +37,10 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/kern/sched_ule.c,v 1.214.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $ */
-__MBSDID("$MidnightBSD: src/sys/kern/sched_ule.c,v 1.5 2012/02/19 18:31:09 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/kern/sched_ule.c,v 1.6 2012/03/13 01:37:28 laffer1 Exp $");
 
 #include "opt_hwpmc_hooks.h"
+#include "opt_kdtrace.h"
 #include "opt_sched.h"
 
 #include <sys/param.h>

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/gfs.c,v 1.2 2008/12/03 00:24:30 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/gfs.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -201,8 +201,7 @@ gfs_readdir_emit_int(gfs_readdir_state_t *st, uio_t *uiop, offset_t next,
 	st->grd_dirent->d_reclen = (ushort_t)reclen;
 	st->grd_dirent->d_namlen = namlen;
 
-/*	if (uiomove((caddr_t)st->grd_dirent, reclen, UIO_READ, uiop)) */
-	if (uiomove((caddr_t)st->grd_dirent, (int)reclen, uiop))
+	if (uiomove((caddr_t)st->grd_dirent, reclen, UIO_READ, uiop))
 		return (EFAULT);
 
 	uiop->uio_loffset = next;

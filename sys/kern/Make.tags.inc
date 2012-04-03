@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/kern/Make.tags.inc,v 1.5 2012/01/11 03:33:38 laffer1 Exp $
+# $MidnightBSD: src/sys/kern/Make.tags.inc,v 1.6 2012/03/26 12:10:20 laffer1 Exp $
 # $FreeBSD: src/sys/kern/Make.tags.inc,v 1.20 2007/07/05 08:55:14 bz Exp $
 #	@(#)Make.tags.inc	8.1 (Berkeley) 6/11/93
 
@@ -58,7 +58,6 @@ COMMDIR1= ${SYS}/conf \
 	${SYS}/kern \
 	${SYS}/net \
 	${SYS}/netatalk \
-	${SYS}/netatm \
 	${SYS}/netinet \
 	${SYS}/netinet6 \
 	${SYS}/netipsec \

@@ -28,6 +28,7 @@
 __FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.308.2.1.2.1 2008/01/19 18:15:05 kib Exp $");
 
 #include "opt_hwpmc_hooks.h"
+#include "opt_kdtrace.h"
 #include "opt_ktrace.h"
 #include "opt_mac.h"
 
@@ -53,6 +54,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.308.2.1.2.1 2008/01/19 18:15:05
 #include <sys/pioctl.h>
 #include <sys/namei.h>
 #include <sys/resourcevar.h>
+#include <sys/sdt.h>
 #include <sys/sf_buf.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysent.h>
@@ -82,6 +84,19 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.308.2.1.2.1 2008/01/19 18:15:05
 #include <security/audit/audit.h>
 #include <security/mac/mac_framework.h>
 
+#ifdef KDTRACE_HOOKS
+#include <sys/dtrace_bsd.h>
+dtrace_execexit_func_t	dtrace_fasttrap_exec;
+#endif
+
+SDT_PROVIDER_DECLARE(proc);
+SDT_PROBE_DEFINE(proc, kernel, , exec);
+SDT_PROBE_ARGTYPE(proc, kernel, , exec, 0, "char *");
+SDT_PROBE_DEFINE(proc, kernel, , exec_failure);
+SDT_PROBE_ARGTYPE(proc, kernel, , exec_failure, 0, "int");
+SDT_PROBE_DEFINE(proc, kernel, , exec_success);
+SDT_PROBE_ARGTYPE(proc, kernel, , exec_success, 0, "char *");
+
 MALLOC_DEFINE(M_PARGS, "proc-args", "Process arguments");
 
 static int sysctl_kern_ps_strings(SYSCTL_HANDLER_ARGS);
@@ -105,6 +120,11 @@ SYSCTL_PROC(_kern, OID_AUTO, stackprot, CTLTYPE_INT|CTLFLAG_RD,
 u_long ps_arg_cache_limit = PAGE_SIZE / 16;
 SYSCTL_ULONG(_kern, OID_AUTO, ps_arg_cache_limit, CTLFLAG_RW, 
     &ps_arg_cache_limit, 0, "");
+
+static int map_at_zero = 1;
+TUNABLE_INT("security.bsd.map_at_zero", &map_at_zero);
+SYSCTL_INT(_security_bsd, OID_AUTO, map_at_zero, CTLFLAG_RW, &map_at_zero, 0,
+    "Permit processes to map an object at virtual address 0.");
 
 static int
 sysctl_kern_ps_strings(SYSCTL_HANDLER_ARGS)
@@ -330,6 +350,7 @@ do_execve(td, args, mac_p)
 	imgp->entry_addr = 0;
 	imgp->vmspace_destroyed = 0;
 	imgp->interpreted = 0;
+	imgp->opened = 0;
 	imgp->interpreter_name = args->buf + PATH_MAX + ARG_MAX;
 	imgp->auxargs = NULL;
 	imgp->vp = NULL;
@@ -346,6 +367,8 @@ do_execve(td, args, mac_p)
 #endif
 
 	imgp->image_header = NULL;
+
+	SDT_PROBE(proc, kernel, , exec, args->fname, 0, 0, 0, 0 );
 
 	/*
 	 * Translate the file name. namei() returns a vnode pointer
@@ -442,6 +465,10 @@ interpret:
 		interplabel = mac_vnode_label_alloc();
 		mac_copy_vnode_label(ndp->ni_vp->v_label, interplabel);
 #endif
+		if (imgp->opened) {
+			VOP_CLOSE(ndp->ni_vp, FREAD, td->td_ucred, td);
+			imgp->opened = 0;
+		}
 		vput(ndp->ni_vp);
 		vm_object_deallocate(imgp->object);
 		imgp->object = NULL;
@@ -453,6 +480,11 @@ interpret:
 		goto interpret;
 	}
 
+	/*
+	 * NB: We unlock the vnode here because it is believed that none
+	 * of the sv_copyout_strings/sv_fixup operations require the vnode.
+	 */
+	VOP_UNLOCK(imgp->vp, 0, td);
 	/*
 	 * Copy out strings (args and env) and initialize stack base
 	 */
@@ -490,7 +522,6 @@ interpret:
 	}
 
 	/* close files on exec */
-	VOP_UNLOCK(imgp->vp, 0, td);
 	fdcloseexec(td);
 	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY, td);
 
@@ -653,6 +684,15 @@ interpret:
 	textvp = p->p_textvp;
 	p->p_textvp = ndp->ni_vp;
 
+#ifdef KDTRACE_HOOKS
+	/*
+	 * Tell the DTrace fasttrap provider about the exec if it
+	 * has declared an interest.
+	 */
+	if (dtrace_fasttrap_exec)
+		dtrace_fasttrap_exec(p);
+#endif
+
 	/*
 	 * Notify others that we exec'd, and clear the P_INEXEC flag
 	 * as we're now a bona fide freshly-execed process.
@@ -724,6 +764,9 @@ done1:
 	else
 		crfree(newcred);
 	VOP_UNLOCK(imgp->vp, 0, td);
+
+	SDT_PROBE(proc, kernel, , exec_success, args->fname, 0, 0, 0, 0);
+
 	/*
 	 * Handle deferred decrement of ref counts.
 	 */
@@ -765,6 +808,8 @@ exec_fail_dealloc:
 
 	if (imgp->vp != NULL) {
 		NDFREE(ndp, NDF_ONLY_PNBUF);
+		if (imgp->opened)
+			VOP_CLOSE(imgp->vp, FREAD, td->td_ucred, td);
 		vput(imgp->vp);
 	}
 
@@ -785,6 +830,8 @@ exec_fail:
 	PROC_LOCK(p);
 	p->p_flag &= ~P_INEXEC;
 	PROC_UNLOCK(p);
+
+	SDT_PROBE(proc, kernel, , exec_failure, error, 0, 0, 0, 0);
 
 done2:
 #ifdef MAC
@@ -893,7 +940,7 @@ exec_new_vmspace(imgp, sv)
 	int error;
 	struct proc *p = imgp->proc;
 	struct vmspace *vmspace = p->p_vmspace;
-	vm_offset_t stack_addr;
+	vm_offset_t sv_minuser, stack_addr;
 	vm_map_t map;
 	u_long ssiz;
 
@@ -909,13 +956,17 @@ exec_new_vmspace(imgp, sv)
 	 * not disrupted
 	 */
 	map = &vmspace->vm_map;
-	if (vmspace->vm_refcnt == 1 && vm_map_min(map) == sv->sv_minuser &&
+	if (map_at_zero)
+		sv_minuser = sv->sv_minuser;
+	else
+		sv_minuser = MAX(sv->sv_minuser, PAGE_SIZE);
+	if (vmspace->vm_refcnt == 1 && vm_map_min(map) == sv_minuser &&
 	    vm_map_max(map) == sv->sv_maxuser) {
 		shmexit(vmspace);
 		pmap_remove_pages(vmspace_pmap(vmspace));
 		vm_map_remove(map, vm_map_min(map), vm_map_max(map));
 	} else {
-		error = vmspace_exec(p, sv->sv_minuser, sv->sv_maxuser);
+		error = vmspace_exec(p, sv_minuser, sv->sv_maxuser);
 		if (error)
 			return (error);
 		vmspace = p->p_vmspace;
@@ -1228,6 +1279,8 @@ exec_check_permissions(imgp)
 	 * general case).
 	 */
 	error = VOP_OPEN(vp, FREAD, td->td_ucred, td, NULL);
+	if (error == 0)
+		imgp->opened = 1;
 	return (error);
 }
 

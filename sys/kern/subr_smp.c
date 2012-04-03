@@ -1,6 +1,6 @@
 /*-
- * Copyright (c) 2001
- *	John Baldwin <jhb@FreeBSD.org>.  All rights reserved.
+ * Copyright (c) 2001, John Baldwin <jhb@FreeBSD.org>.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,21 +10,21 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY JOHN BALDWIN AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL JOHN BALDWIN OR THE VOICES IN HIS HEAD
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 /*
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_smp.c,v 1.201 2007/09/11 22:54:09 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_smp.c,v 1.201.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,6 +74,9 @@ u_int mp_maxid;
 
 SYSCTL_NODE(_kern, OID_AUTO, smp, CTLFLAG_RD, NULL, "Kernel SMP");
 
+SYSCTL_INT(_kern_smp, OID_AUTO, maxid, CTLFLAG_RD, &mp_maxid, 0,
+    "Max CPU ID.");
+
 SYSCTL_INT(_kern_smp, OID_AUTO, maxcpus, CTLFLAG_RD, &mp_maxcpus, 0,
     "Max number of CPUs that the system was compiled for.");
 
@@ -104,10 +107,11 @@ SYSCTL_INT(_kern_smp, OID_AUTO, forward_roundrobin_enabled, CTLFLAG_RW,
 	   "Forwarding of roundrobin to all other CPUs");
 
 /* Variables needed for SMP rendezvous. */
-static void (*smp_rv_setup_func)(void *arg);
-static void (*smp_rv_action_func)(void *arg);
-static void (*smp_rv_teardown_func)(void *arg);
-static void *smp_rv_func_arg;
+static volatile int smp_rv_ncpus;
+static void (*volatile smp_rv_setup_func)(void *arg);
+static void (*volatile smp_rv_action_func)(void *arg);
+static void (*volatile smp_rv_teardown_func)(void *arg);
+static void * volatile smp_rv_func_arg;
 static volatile int smp_rv_waiters[3];
 
 /* 
@@ -126,7 +130,7 @@ mp_setmaxid(void *dummy)
 {
 	cpu_mp_setmaxid();
 }
-SYSINIT(cpu_mp_setmaxid, SI_SUB_TUNABLES, SI_ORDER_FIRST, mp_setmaxid, NULL)
+SYSINIT(cpu_mp_setmaxid, SI_SUB_TUNABLES, SI_ORDER_FIRST, mp_setmaxid, NULL);
 
 /*
  * Call the MD SMP initialization code.
@@ -148,7 +152,7 @@ mp_start(void *dummy)
 	    mp_ncpus);
 	cpu_mp_announce();
 }
-SYSINIT(cpu_mp, SI_SUB_CPU, SI_ORDER_THIRD, mp_start, NULL)
+SYSINIT(cpu_mp, SI_SUB_CPU, SI_ORDER_THIRD, mp_start, NULL);
 
 void
 forward_signal(struct thread *td)
@@ -298,41 +302,51 @@ restart_cpus(cpumask_t map)
 void
 smp_rendezvous_action(void)
 {
+	void* local_func_arg = smp_rv_func_arg;
+	void (*local_setup_func)(void*)   = smp_rv_setup_func;
+	void (*local_action_func)(void*)   = smp_rv_action_func;
+	void (*local_teardown_func)(void*) = smp_rv_teardown_func;
 
 	/* Ensure we have up-to-date values. */
 	atomic_add_acq_int(&smp_rv_waiters[0], 1);
-	while (smp_rv_waiters[0] < mp_ncpus)
+	while (smp_rv_waiters[0] < smp_rv_ncpus)
 		cpu_spinwait();
 
 	/* setup function */
-	if (smp_rv_setup_func != NULL)
-		smp_rv_setup_func(smp_rv_func_arg);
+	if (local_setup_func != smp_no_rendevous_barrier) {
+		if (smp_rv_setup_func != NULL)
+			smp_rv_setup_func(smp_rv_func_arg);
 
-	/* spin on entry rendezvous */
-	atomic_add_int(&smp_rv_waiters[1], 1);
-	while (smp_rv_waiters[1] < mp_ncpus)
-		cpu_spinwait();
+		/* spin on entry rendezvous */
+		atomic_add_int(&smp_rv_waiters[1], 1);
+		while (smp_rv_waiters[1] < smp_rv_ncpus)
+                	cpu_spinwait();
+	}
 
 	/* action function */
-	if (smp_rv_action_func != NULL)
-		smp_rv_action_func(smp_rv_func_arg);
+	if (local_action_func != NULL)
+		local_action_func(local_func_arg);
 
 	/* spin on exit rendezvous */
 	atomic_add_int(&smp_rv_waiters[2], 1);
-	while (smp_rv_waiters[2] < mp_ncpus)
+	if (local_teardown_func == smp_no_rendevous_barrier)
+                return;
+	while (smp_rv_waiters[2] < smp_rv_ncpus)
 		cpu_spinwait();
 
 	/* teardown function */
-	if (smp_rv_teardown_func != NULL)
-		smp_rv_teardown_func(smp_rv_func_arg);
+	if (local_teardown_func != NULL)
+		local_teardown_func(local_func_arg);
 }
 
 void
-smp_rendezvous(void (* setup_func)(void *), 
-	       void (* action_func)(void *),
-	       void (* teardown_func)(void *),
-	       void *arg)
+smp_rendezvous_cpus(cpumask_t map,
+	void (* setup_func)(void *), 
+	void (* action_func)(void *),
+	void (* teardown_func)(void *),
+	void *arg)
 {
+	int i, ncpus = 0;
 
 	if (!smp_started) {
 		if (setup_func != NULL)
@@ -343,11 +357,16 @@ smp_rendezvous(void (* setup_func)(void *),
 			teardown_func(arg);
 		return;
 	}
-		
+
+	for (i = 0; i < mp_maxid; i++)
+		if (((1 << i) & map) != 0 && !CPU_ABSENT(i))
+			ncpus++;
+
 	/* obtain rendezvous lock */
 	mtx_lock_spin(&smp_ipi_mtx);
 
 	/* set static function pointers */
+	smp_rv_ncpus = ncpus;
 	smp_rv_setup_func = setup_func;
 	smp_rv_action_func = action_func;
 	smp_rv_teardown_func = teardown_func;
@@ -357,13 +376,27 @@ smp_rendezvous(void (* setup_func)(void *),
 	atomic_store_rel_int(&smp_rv_waiters[0], 0);
 
 	/* signal other processors, which will enter the IPI with interrupts off */
-	ipi_all_but_self(IPI_RENDEZVOUS);
+	ipi_selected(map & ~(1 << curcpu), IPI_RENDEZVOUS);
 
-	/* call executor function */
-	smp_rendezvous_action();
+	/* Check if the current CPU is in the map */
+	if ((map & (1 << curcpu)) != 0)
+		smp_rendezvous_action();
+
+	if (teardown_func == smp_no_rendevous_barrier)
+		while (atomic_load_acq_int(&smp_rv_waiters[2]) < ncpus)
+			cpu_spinwait();
 
 	/* release lock */
 	mtx_unlock_spin(&smp_ipi_mtx);
+}
+
+void
+smp_rendezvous(void (* setup_func)(void *), 
+	       void (* action_func)(void *),
+	       void (* teardown_func)(void *),
+	       void *arg)
+{
+	smp_rendezvous_cpus(all_cpus, setup_func, action_func, teardown_func, arg);
 }
 #else /* !SMP */
 
@@ -380,12 +413,27 @@ mp_setvariables_for_up(void *dummy)
 	KASSERT(PCPU_GET(cpuid) == 0, ("UP must have a CPU ID of zero"));
 }
 SYSINIT(cpu_mp_setvariables, SI_SUB_TUNABLES, SI_ORDER_FIRST,
-    mp_setvariables_for_up, NULL)
+    mp_setvariables_for_up, NULL);
 
 void
-smp_rendezvous(void (* setup_func)(void *), 
-	       void (* action_func)(void *),
-	       void (* teardown_func)(void *),
+smp_rendezvous_cpus(cpumask_t map,
+	void (*setup_func)(void *), 
+	void (*action_func)(void *),
+	void (*teardown_func)(void *),
+	void *arg)
+{
+	if (setup_func != NULL)
+		setup_func(arg);
+	if (action_func != NULL)
+		action_func(arg);
+	if (teardown_func != NULL)
+		teardown_func(arg);
+}
+
+void
+smp_rendezvous(void (*setup_func)(void *), 
+	       void (*action_func)(void *),
+	       void (*teardown_func)(void *),
 	       void *arg)
 {
 
@@ -397,3 +445,11 @@ smp_rendezvous(void (* setup_func)(void *),
 		teardown_func(arg);
 }
 #endif /* SMP */
+
+void
+smp_no_rendevous_barrier(void *dummy)
+{
+#ifdef SMP
+	KASSERT((!smp_started),("smp_no_rendevous called and smp is started"));
+#endif
+}

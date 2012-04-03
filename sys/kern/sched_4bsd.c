@@ -34,9 +34,10 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/kern/sched_4bsd.c,v 1.106.2.8.2.1 2008/11/25 02:59:29 kensmith Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/kern/sched_4bsd.c,v 1.4 2011/10/15 20:18:30 laffer1 Exp $");
 
 #include "opt_hwpmc_hooks.h"
+#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>

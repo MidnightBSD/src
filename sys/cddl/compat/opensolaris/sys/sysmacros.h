@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/compat/opensolaris/sys/sysmacros.h,v 1.6 2012/03/31 17:05:08 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -93,10 +93,6 @@ extern "C" {
 	(((type)(x) ^ (type)(y)) > (type)(align) - 1)
 #define	P2SAMEHIGHBIT_TYPED(x, y, type) \
 	(((type)(x) ^ (type)(y)) < ((type)(x) & (type)(y)))
-
-#ifdef _KERNEL
-#define	memmove(dst, src, size)	bcopy((src), (dst), (size))
-#endif
 
 /*
  * Find highest one bit set.

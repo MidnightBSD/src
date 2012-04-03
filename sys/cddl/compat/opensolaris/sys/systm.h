@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/compat/opensolaris/sys/systm.h,v 1.5 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -30,10 +30,10 @@
 #ifndef _OPENSOLARIS_SYS_SYSTM_H_
 #define	_OPENSOLARIS_SYS_SYSTM_H_
 
+#ifdef _KERNEL
 #include <sys/param.h>
 #include_next <sys/systm.h>
 
-#ifdef _KERNEL
 #include <sys/string.h>
 
 #define	PAGESIZE	PAGE_SIZE
