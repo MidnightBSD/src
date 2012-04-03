@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/asmacros.h,v 1.19 2004/06/06 21:26:48 phk Exp $
+ * $FreeBSD: src/sys/sparc64/include/asmacros.h,v 1.19.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_ASMACROS_H_

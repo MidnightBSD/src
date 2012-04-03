@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/ofw_mem.h,v 1.3 2003/06/07 18:29:29 jake Exp $
+ * $FreeBSD: src/sys/sparc64/include/ofw_mem.h,v 1.3.28.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_OFW_MEM_H_

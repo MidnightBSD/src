@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -55,7 +56,7 @@
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
  *	from: FreeBSD: src/sys/alpha/include/in_cksum.h,v 1.5 2000/05/06
  *
- * $FreeBSD: src/sys/sparc64/include/in_cksum.h,v 1.3 2006/01/12 11:40:39 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/in_cksum.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_
@@ -63,7 +64,7 @@
 
 #include <sys/cdefs.h>
 
-#define in_cksum(m, len)	in_cksum_skip(m, len, 0)
+#define	in_cksum(m, len)	in_cksum_skip(m, len, 0)
 
 static __inline void
 in_cksum_update(struct ip *ip)
@@ -85,7 +86,7 @@ in_addword(u_short sum, u_short b)
 	    "addcc %0, %1, %0\n"
 	    "srl %0, 16, %0\n"
 	    "addc %0, 0, %0\n"
-	    : "=&r" (__ret), "=&r" (__tmp) : "r" (sum), "r" (b));
+	    : "=&r" (__ret), "=&r" (__tmp) : "r" (sum), "r" (b) : "cc");
 	return (__ret);
 }
 
@@ -93,7 +94,7 @@ static __inline u_short
 in_pseudo(u_int sum, u_int b, u_int c)
 {
 	u_long __tmp;
-		    
+
 	__asm(
 	    "addcc %0, %3, %0\n"
 	    "addccc %0, %4, %0\n"
@@ -102,7 +103,7 @@ in_pseudo(u_int sum, u_int b, u_int c)
 	    "addcc %0, %1, %0\n"
 	    "srl %0, 16, %0\n"
 	    "addc %0, 0, %0\n"
-	    : "=r" (sum), "=&r" (__tmp) : "0" (sum), "r" (b), "r" (c));
+	    : "=r" (sum), "=&r" (__tmp) : "0" (sum), "r" (b), "r" (c) : "cc");
 	return (sum);
 }
 
@@ -112,7 +113,7 @@ in_cksum_hdr(struct ip *ip)
 	u_long __ret, __tmp1, __tmp2, __tmp3, __tmp4;
 
 	/*
-	 * Use 32 bit memory accesses and additions - addition with carry only
+	 * Use 32-bit memory accesses and additions - addition with carry only
 	 * works for 32 bits, and fixing up alignment issues for 64 is probably
 	 * more trouble than it's worth.
 	 * This may read outside of the ip header, but does not cross a page
@@ -121,8 +122,8 @@ in_cksum_hdr(struct ip *ip)
 	 * a generic implementation for both in_cksum_skip and in_cksum_hdr
 	 * should not be too much more expensive.
 	 */
-#define __LD_ADD(addr, tmp, sum, offs, mod) \
-    "lduw [" #addr " + " #offs "], " #tmp "\n" \
+#define	__LD_ADD(addr, tmp, sum, offs, mod)				\
+    "lduw [" #addr " + " #offs "], " #tmp "\n"				\
     "add" # mod " " #sum ", " #tmp ", " #sum "\n"
 
 	__asm(
@@ -159,7 +160,7 @@ in_cksum_hdr(struct ip *ip)
 	    "sll %0, 16, %0\n"
 	    "srl %0, 16, %0\n"
 	    : "=&r" (__ret), "=r" (__tmp1), "=&r" (__tmp2), "=&r" (__tmp3),
-		"=&r" (__tmp4) : "1" (ip));
+	    "=&r" (__tmp4) : "1" (ip) : "cc");
 #undef __LD_ADD
 	return (__ret);
 }

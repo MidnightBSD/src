@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 Matthew R. Green
  * Copyright (c) 2001, 2003 Thomas Moestl <tmm@FreeBSD.org>
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/isa/ofw_isa.c,v 1.11 2005/12/03 19:52:20 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/isa/ofw_isa.c,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Helper functions which can be used in both ISA and EBus code.

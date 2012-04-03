@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 by Thomas Moestl <tmm@FreeBSD.org>
  * All rights reserved.
@@ -22,7 +23,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/pci/ofw_pcib_subr.h,v 1.3 2004/08/12 17:41:32 marius Exp $
+ * $FreeBSD: src/sys/sparc64/pci/ofw_pcib_subr.h,v 1.3.18.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_PCI_OFW_PCI_SUBR_H
@@ -42,6 +43,5 @@ struct ofw_pcib_gen_softc {
 void ofw_pcib_gen_setup(device_t);
 pcib_route_interrupt_t ofw_pcib_gen_route_interrupt;
 ofw_bus_get_node_t ofw_pcib_gen_get_node;
-ofw_pci_adjust_busrange_t ofw_pcib_gen_adjust_busrange;
 
 #endif /* !_SPARC64_PCI_OFW_PCI_SUBR_H */

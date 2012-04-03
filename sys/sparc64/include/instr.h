@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 David S. Miller, davem@nadzieja.rutgers.edu
  * Copyright (c) 1995 Paul Kranenburg
@@ -31,7 +32,7 @@
  *
  *	from: NetBSD: db_disasm.c,v 1.9 2000/08/16 11:29:42 pk Exp
  *
- * $FreeBSD: src/sys/sparc64/include/instr.h,v 1.7 2005/01/07 02:29:22 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/instr.h,v 1.7.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_INSTR_H_

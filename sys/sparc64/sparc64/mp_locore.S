@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_locore.S,v 1.8 2007/01/19 11:15:33 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_locore.S,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <machine/asi.h>
 #include <machine/asmacros.h>
@@ -104,7 +104,7 @@ ENTRY(mp_startup)
 	UPA_GET_MID(%o0)
 
 #if KTR_COMPILE & KTR_SMP
-	CATR(KTR_SMP, "mp_start: cpu %d entered kernel"
+	CATR(KTR_SMP, "mp_start: CPU %d entered kernel"
 	    , %g1, %g2, %g3, 7, 8, 9)
 	stx	%o0, [%g1 + KTR_PARM1]
 9:
@@ -129,7 +129,7 @@ ENTRY(mp_startup)
 	 nop
 
 #if KTR_COMPILE & KTR_SMP
-	CATR(KTR_SMP, "_mp_start: cpu %d got start signal"
+	CATR(KTR_SMP, "_mp_start: CPU %d got start signal"
 	    , %g1, %g2, %g3, 7, 8, 9)
 	stx	%o0, [%g1 + KTR_PARM1]
 9:
@@ -139,7 +139,7 @@ ENTRY(mp_startup)
 	clr	%l2
 
 	/*
-	 * Map the per-cpu pages.
+	 * Map the per-CPU pages.
 	 */
 3:	sllx	%l2, TTE_SHIFT, %l3
 	add	%l1, %l3, %l3
@@ -160,8 +160,8 @@ ENTRY(mp_startup)
 	 nop
 
 	/*
-	 * Get onto our per-cpu panic stack, which precedes the struct pcpu
-	 * in the per-cpu page.
+	 * Get onto our per-CPU panic stack, which precedes the struct pcpu
+	 * in the per-CPU page.
 	 */
 	ldx	[%l0 + CSA_PCPU], %l1
 	set	PCPU_PAGES * PAGE_SIZE - PC_SIZEOF, %l2

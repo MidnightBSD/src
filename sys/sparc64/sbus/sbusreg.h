@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-1999 Eduardo Horvath
  *
@@ -21,7 +22,7 @@
  *
  *	from: NetBSD: sbusreg.h,v 1.7 1999/06/07 05:28:03 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/sbus/sbusreg.h,v 1.4 2007/09/06 19:16:30 marius Exp $
+ * $FreeBSD: src/sys/sparc64/sbus/sbusreg.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_SBUS_SBUSREG_H_

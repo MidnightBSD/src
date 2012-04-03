@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -26,5 +27,5 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/reloc.h,v 1.3 2007/01/12 07:18:16 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/reloc.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
  */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/sparc64/include/endian.h,v 1.16.10.2 2010/10/17 13:41:09 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/endian.h,v 1.16.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_ENDIAN_H_
@@ -69,20 +70,18 @@
 #define	__is_constant(x)	0
 #endif
 
-#define	__bswap16_const(x)	((((__uint16_t)(x) >> 8) & 0xff) |	\
-	(((__uint16_t)(x) << 8) & 0xff00))
-#define	__bswap32_const(x)	((((__uint32_t)(x) >> 24) & 0xff) |	\
-	(((__uint32_t)(x) >> 8) & 0xff00) |				\
-	(((__uint32_t)(x)<< 8) & 0xff0000) |				\
-	(((__uint32_t)(x) << 24) & 0xff000000))
-#define	__bswap64_const(x)	((((__uint64_t)(x) >> 56) & 0xff) |	\
-	(((__uint64_t)(x) >> 40) & 0xff00) |				\
-	(((__uint64_t)(x) >> 24) & 0xff0000) |				\
-	(((__uint64_t)(x) >> 8) & 0xff000000) |				\
-	(((__uint64_t)(x) << 8) & ((__uint64_t)0xff << 32)) |		\
-	(((__uint64_t)(x) << 24) & ((__uint64_t)0xff << 40)) |		\
-	(((__uint64_t)(x) << 40) & ((__uint64_t)0xff << 48)) |		\
-	(((__uint64_t)(x) << 56) & ((__uint64_t)0xff << 56)))
+#define	__bswap16_const(x)	((((x) >> 8) & 0xff) |			\
+	(((x) << 8) & 0xff00))
+#define	__bswap32_const(x)	((((x) >> 24) & 0xff) |			\
+	(((x) >> 8) & 0xff00) | (((x) << 8) & 0xff0000) |		\
+	(((x) << 24) & 0xff000000))
+#define	__bswap64_const(x)	((((x) >> 56) & 0xff) |			\
+	(((x) >> 40) & 0xff00) | (((x) >> 24) & 0xff0000) |		\
+	(((x) >> 8) & 0xff000000) |					\
+	(((x) << 8) & ((__uint64_t)0xff << 32)) |			\
+	(((x) << 24) & ((__uint64_t)0xff << 40)) |			\
+	(((x) << 40) & ((__uint64_t)0xff << 48)) |			\
+	(((x) << 56) & ((__uint64_t)0xff << 56)))
 
 static __inline __uint16_t
 __bswap16_var(__uint16_t _x)

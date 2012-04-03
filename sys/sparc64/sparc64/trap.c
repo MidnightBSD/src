@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, Jake Burkholder
  * Copyright (C) 1994, David Greenman
@@ -35,12 +36,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *      from: @(#)trap.c        7.4 (Berkeley) 5/13/91
- * 	from: FreeBSD: src/sys/i386/i386/trap.c,v 1.197 2001/07/19
+ *	from: @(#)trap.c        7.4 (Berkeley) 5/13/91
+ *	from: FreeBSD: src/sys/i386/i386/trap.c,v 1.197 2001/07/19
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/trap.c,v 1.88 2007/06/04 21:38:48 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/trap.c,v 1.88.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include "opt_ktr.h"
@@ -237,7 +238,7 @@ trap(struct trapframe *tf)
 	register_t addr;
 	ksiginfo_t ksi;
 
-	td = PCPU_GET(curthread);
+	td = curthread;
 
 	CTR4(KTR_TRAP, "trap: %p type=%s (%s) pil=%#lx", td,
 	    trap_msg[tf->tf_type & ~T_KERNEL],
@@ -300,7 +301,7 @@ trap(struct trapframe *tf)
 
 		userret(td, tf);
 		mtx_assert(&Giant, MA_NOTOWNED);
- 	} else {
+	} else {
 		KASSERT((tf->tf_type & T_KERNEL) != 0,
 		    ("trap: kernel trap isn't"));
 
@@ -349,7 +350,7 @@ trap(struct trapframe *tf)
 					break;
 				}
 			}
-			error = 1;	
+			error = 1;
 			break;
 		case T_DATA_ERROR:
 			/*
@@ -388,6 +389,7 @@ trap_pfault(struct thread *td, struct trapframe *tf)
 	struct proc *p;
 	vm_offset_t va;
 	vm_prot_t prot;
+	vm_map_entry_t entry;
 	u_long ctx;
 	int flags;
 	int type;
@@ -408,7 +410,7 @@ trap_pfault(struct thread *td, struct trapframe *tf)
 	va = TLB_TAR_VA(tf->tf_tar);
 
 	CTR4(KTR_TRAP, "trap_pfault: td=%p pm_ctx=%#lx va=%#lx ctx=%#lx",
-	    td, p->p_vmspace->vm_pmap.pm_context[PCPU_GET(cpuid)], va, ctx);
+	    td, p->p_vmspace->vm_pmap.pm_context[curcpu], va, ctx);
 
 	if (type == T_DATA_PROTECTION) {
 		prot = VM_PROT_WRITE;
@@ -424,7 +426,7 @@ trap_pfault(struct thread *td, struct trapframe *tf)
 	if (ctx != TLB_CTX_KERNEL) {
 		if ((tf->tf_tstate & TSTATE_PRIV) != 0 &&
 		    (tf->tf_tpc >= (u_long)fs_nofault_intr_begin &&
-		     tf->tf_tpc <= (u_long)fs_nofault_intr_end)) {
+		    tf->tf_tpc <= (u_long)fs_nofault_intr_end)) {
 			tf->tf_tpc = (u_long)fs_fault;
 			tf->tf_tnpc = tf->tf_tpc + 4;
 			return (0);
@@ -461,9 +463,22 @@ trap_pfault(struct thread *td, struct trapframe *tf)
 		KASSERT(tf->tf_tstate & TSTATE_PRIV,
 		    ("trap_pfault: fault on nucleus context from user mode"));
 
+		if (tf->tf_tpc >= (u_long)copy_nofault_begin &&
+		    tf->tf_tpc <= (u_long)copy_nofault_end) {
+			vm_map_lock_read(kernel_map);
+			if (vm_map_lookup_entry(kernel_map, va, &entry) &&
+			    (entry->eflags & MAP_ENTRY_NOFAULT) != 0) {
+				tf->tf_tpc = (u_long)copy_fault;
+				tf->tf_tnpc = tf->tf_tpc + 4;
+				vm_map_unlock_read(kernel_map);
+				return (0);
+			}
+			vm_map_unlock_read(kernel_map);
+		}
+
 		/*
-		 * Don't have to worry about process locking or stacks in the
-		 * kernel.
+		 * We don't have to worry about process locking or stacks in
+		 * the kernel.
 		 */
 		rv = vm_fault(kernel_map, va, prot, VM_FAULT_NORMAL);
 	}
@@ -512,7 +527,7 @@ syscall(struct trapframe *tf)
 	int narg;
 	int error;
 
-	td = PCPU_GET(curthread);
+	td = curthread;
 	KASSERT(td != NULL, ("trap: curthread NULL"));
 	KASSERT(td->td_proc != NULL, ("trap: curproc NULL"));
 
@@ -548,34 +563,31 @@ syscall(struct trapframe *tf)
 		 */
 #if 0
 		(*p->p_sysent->sv_prepsyscall)(tf, args, &code, &params);
-#endif	
-	} else 	if (code == SYS_syscall || code == SYS___syscall) {
+#endif
+	} else if (code == SYS_syscall || code == SYS___syscall) {
 		code = tf->tf_out[reg++];
 		regcnt--;
 	}
 
- 	if (p->p_sysent->sv_mask)
- 		code &= p->p_sysent->sv_mask;
+	if (p->p_sysent->sv_mask)
+		code &= p->p_sysent->sv_mask;
 
- 	if (code >= p->p_sysent->sv_size)
- 		callp = &p->p_sysent->sv_table[0];
-  	else
- 		callp = &p->p_sysent->sv_table[code];
+	if (code >= p->p_sysent->sv_size)
+		callp = &p->p_sysent->sv_table[0];
+	else
+		callp = &p->p_sysent->sv_table[code];
 
 	narg = callp->sy_narg;
 
-	if (narg <= regcnt) {
-		argp = &tf->tf_out[reg];
-		error = 0;
-	} else {
-		KASSERT(narg <= sizeof(args) / sizeof(args[0]),
-		    ("Too many syscall arguments!"));
-		argp = args;
-		bcopy(&tf->tf_out[reg], args, sizeof(args[0]) * regcnt);
+	KASSERT(narg <= sizeof(args) / sizeof(args[0]),
+	    ("Too many syscall arguments!"));
+	error = 0;
+	argp = args;
+	bcopy(&tf->tf_out[reg], args, sizeof(args[0]) * regcnt);
+	if (narg > regcnt)
 		error = copyin((void *)(tf->tf_out[6] + SPOFF +
 		    offsetof(struct frame, fr_pad[6])),
 		    &args[regcnt], (narg - regcnt) * sizeof(args[0]));
-	}
 
 	CTR5(KTR_SYSC, "syscall: td=%p %s(%#lx, %#lx, %#lx)", td,
 	    syscallnames[code], argp[0], argp[1], argp[2]);
@@ -603,7 +615,7 @@ syscall(struct trapframe *tf)
 		    error, syscallnames[code], td->td_retval[0],
 		    td->td_retval[1]);
 	}
-	
+
 	/*
 	 * MP SAFE (we may or may not have the MP lock at this point)
 	 */
@@ -627,11 +639,11 @@ syscall(struct trapframe *tf)
 		break;
 
 	default:
- 		if (p->p_sysent->sv_errsize) {
- 			if (error >= p->p_sysent->sv_errsize)
-  				error = -1;	/* XXX */
-   			else
-  				error = p->p_sysent->sv_errtbl[error];
+		if (p->p_sysent->sv_errsize) {
+			if (error >= p->p_sysent->sv_errsize)
+				error = -1;	/* XXX */
+			else
+				error = p->p_sysent->sv_errtbl[error];
 		}
 		tf->tf_out[0] = error;
 		tf->tf_tstate |= TSTATE_XCC_C;

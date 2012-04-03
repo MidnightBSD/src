@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 Eduardo E. Horvath
  * Copyright (c) 1999 Matthew R. Green
@@ -28,7 +29,7 @@
  *
  *	from: NetBSD: psychoreg.h,v 1.8 2001/09/10 16:17:06 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/include/ofw_nexus.h,v 1.7 2007/03/07 21:13:51 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/ofw_nexus.h,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_OFW_NEXUS_H_

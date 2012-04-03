@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2002 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
@@ -34,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/_stdint.h,v 1.2 2004/05/18 16:04:57 stefanf Exp $
+ * $FreeBSD: src/sys/sparc64/include/_stdint.h,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE__STDINT_H_

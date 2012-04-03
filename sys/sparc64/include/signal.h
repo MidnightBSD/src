@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1986, 1989, 1991, 1993
  *      The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  *
  *      @(#)signal.h    8.1 (Berkeley) 6/11/93
  * 	from: FreeBSD: src/sys/i386/include/signal.h,v 1.13 2000/11/09
- * $FreeBSD: src/sys/sparc64/include/signal.h,v 1.13 2005/08/20 16:44:41 stefanf Exp $
+ * $FreeBSD: src/sys/sparc64/include/signal.h,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_SIGNAL_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -26,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from BSDI: pmap.c,v 1.28.2.15 2000/04/27 03:10:31 cp Exp
- * $FreeBSD: src/sys/sparc64/sparc64/tsb.c,v 1.39 2007/06/03 19:39:38 alc Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/tsb.c,v 1.39.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_ddb.h"

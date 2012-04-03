@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/trap.h,v 1.12 2006/01/16 01:35:24 kris Exp $
+ * $FreeBSD: src/sys/sparc64/include/trap.h,v 1.12.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_TRAP_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Jason L. Wright (jason@thought.net)
  * Copyright (c) 2006 Marius Strobl <marius@FreeBSD.org>
@@ -26,7 +27,7 @@
  *
  *	from: OpenBSD: clkbrdreg.h,v 1.2 2004/10/01 15:36:30 jason Exp
  *
- * $FreeBSD: src/sys/sparc64/fhc/clkbrdreg.h,v 1.2 2006/03/28 19:46:48 marius Exp $
+ * $FreeBSD: src/sys/sparc64/fhc/clkbrdreg.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_FHC_CLKBRDREG_H_

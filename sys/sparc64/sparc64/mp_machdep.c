@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -29,6 +30,7 @@
  */
 /*-
  * Copyright (c) 2002 Jake Burkholder.
+ * Copyright (c) 2007 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_machdep.c,v 1.36 2007/06/16 23:26:00 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_machdep.c,v 1.36.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -91,6 +93,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_machdep.c,v 1.36 2007/06/16 23:26
 #include <machine/ver.h>
 
 static ih_func_t cpu_ipi_ast;
+static ih_func_t cpu_ipi_preempt;
 static ih_func_t cpu_ipi_stop;
 
 /*
@@ -114,7 +117,7 @@ static int isjbus;
 static volatile u_int shutdown_cpus;
 
 static void cpu_mp_unleash(void *v);
-static void spitfire_ipi_send(u_int, u_long, u_long, u_long);
+static void spitfire_ipi_send(u_int mid, u_long d0, u_long d1, u_long d2);
 static void sun4u_startcpu(phandle_t cpu, void *func, u_long arg);
 static void sun4u_stopself(void);
 
@@ -169,7 +172,7 @@ cpu_mp_setmaxid(void)
 {
 	char buf[128];
 	phandle_t child;
-	int cpus;
+	u_int cpus;
 
 	all_cpus = 1 << curcpu;
 	mp_ncpus = 1;
@@ -240,9 +243,9 @@ cpu_mp_start(void)
 	register_t s;
 	vm_offset_t va;
 	phandle_t child;
-	u_int clock;
 	u_int mid;
-	int cpuid;
+	u_int clock;
+	u_int cpuid;
 
 	mtx_init(&ipi_mtx, "ipi", NULL, MTX_SPIN);
 
@@ -250,6 +253,7 @@ cpu_mp_start(void)
 	intr_setup(PIL_RENDEZVOUS, (ih_func_t *)smp_rendezvous_action,
 	    -1, NULL, NULL);
 	intr_setup(PIL_STOP, cpu_ipi_stop, -1, NULL, NULL);
+	intr_setup(PIL_PREEMPT, cpu_ipi_preempt, -1, NULL, NULL);
 
 	cpuid_to_mid[curcpu] = PCPU_GET(mid);
 
@@ -292,6 +296,7 @@ cpu_mp_start(void)
 		pc->pc_node = child;
 
 		all_cpus |= 1 << cpuid;
+		intr_add_cpu(cpuid);
 	}
 	KASSERT(!isjbus || mp_ncpus <= IDR_JALAPENO_MAX_BN_PAIRS,
 	    ("%s: can only IPI a maximum of %d JBus-CPUs",
@@ -314,8 +319,8 @@ cpu_mp_unleash(void *v)
 	register_t s;
 	vm_offset_t va;
 	vm_paddr_t pa;
-	u_int ctx_min;
 	u_int ctx_inc;
+	u_int ctx_min;
 	int i;
 
 	ctx_min = TLB_CTX_USER_MIN;
@@ -364,6 +369,11 @@ cpu_mp_bootstrap(struct pcpu *pc)
 
 	csa = &cpu_start_args;
 	pmap_map_tsb();
+	/*
+	 * Flush all non-locked TLB entries possibly left over by the
+	 * firmware.
+	 */
+	tlb_flush_nonlocked();
 	cpu_setregs(pc);
 	tick_start();
 
@@ -378,7 +388,7 @@ cpu_mp_bootstrap(struct pcpu *pc)
 	while (csa->csa_count != 0)
 		;
 
-	/* ok, now enter the scheduler */
+	/* Ok, now enter the scheduler. */
 	sched_throw(NULL);
 }
 
@@ -425,6 +435,20 @@ cpu_ipi_stop(struct trapframe *tf)
 	atomic_clear_rel_int(&started_cpus, PCPU_GET(cpumask));
 	atomic_clear_rel_int(&stopped_cpus, PCPU_GET(cpumask));
 	CTR2(KTR_SMP, "%s: restarted %d", __func__, curcpu);
+}
+
+static void
+cpu_ipi_preempt(struct trapframe *tf)
+{
+	struct thread *td;
+
+	td = curthread;
+	thread_lock(td);
+	if (td->td_critnest > 1)
+		td->td_owepreempt = 1;
+	else
+		mi_switch(SW_INVOL | SW_PREEMPT, NULL);
+	thread_unlock(td);
 }
 
 static void

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/exec.h,v 1.3 2001/08/09 02:09:34 obrien Exp $
+ * $FreeBSD: src/sys/sparc64/include/exec.h,v 1.3.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_EXEC_H_

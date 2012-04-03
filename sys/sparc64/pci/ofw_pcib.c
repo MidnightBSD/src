@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994,1995 Stefan Esser, Wolfgang StanglMeier
  * Copyright (c) 2000 Michael Smith <msmith@freebsd.org>
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/pci/ofw_pcib.c,v 1.8 2007/06/18 21:46:07 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/pci/ofw_pcib.c,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ofw_pci.h"
 
@@ -86,9 +87,6 @@ static device_method_t ofw_pcib_methods[] = {
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_get_node,	ofw_pcib_gen_get_node),
-
-	/* ofw_pci interface */
-	DEVMETHOD(ofw_pci_adjust_busrange,	ofw_pcib_gen_adjust_busrange),
 
 	{ 0, 0 }
 };

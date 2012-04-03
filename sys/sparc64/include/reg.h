@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +32,7 @@
  *
  *	from: @(#)reg.h	5.5 (Berkeley) 1/18/91
  *	from: FreeBSD: src/sys/i386/include/reg.h,v 1.23 2000/09/21
- * $FreeBSD: src/sys/sparc64/include/reg.h,v 1.14 2004/04/07 05:00:00 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/reg.h,v 1.14.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_REG_H_

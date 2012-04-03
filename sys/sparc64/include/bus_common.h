@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  *	form: @(#)sbusreg.h	8.1 (Berkeley) 6/11/93
  *	from: NetBSD: iommureg.h,v 1.6 2001/07/20 00:07:13 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/include/bus_common.h,v 1.7 2007/09/06 19:16:29 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/bus_common.h,v 1.7.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_BUS_COMMON_H_
@@ -56,13 +57,16 @@
 #define	INTSLOT(x)		(((x) >> 3) & 0x7)
 #define	INTPRI(x)		((x) & 0x7)
 #define	INTINO(x)		((x) & INTMAP_INO_MASK)
-#define	INTMAP_ENABLE(mr, mid) \
-	(((mr) & ~INTMAP_TID_MASK) | ((mid) << INTMAP_TID_SHIFT) | INTMAP_V)
-#define	INTMAP_VEC(ign, inr) \
-	(((ign) << INTMAP_IGN_SHIFT) | (inr))
+#define	INTMAP_ENABLE(mr, mid)						\
+	(INTMAP_TID((mr), (mid)) | INTMAP_V)
+#define	INTMAP_TID(mr, mid)						\
+	(((mr) & ~INTMAP_TID_MASK) | ((mid) << INTMAP_TID_SHIFT))
+#define	INTMAP_VEC(ign, inr)						\
+	((((ign) << INTMAP_IGN_SHIFT) & INTMAP_IGN_MASK) |		\
+	((inr) & INTMAP_INR_MASK))
 
 /* counter-timer support. */
-void sparc64_counter_init(bus_space_tag_t tag, bus_space_handle_t handle,
-    bus_addr_t offset);
+void sparc64_counter_init(const char *name, bus_space_tag_t tag,
+    bus_space_handle_t handle, bus_addr_t offset);
 
 #endif	/* !_MACHINE_BUS_COMMON_H_ */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: dma_sbus.c,v 1.12 2005/03/03 01:41:45 miod Exp $	*/
 /*	$NetBSD: dma_sbus.c,v 1.5 2000/07/09 20:57:42 pk Exp $ */
 
@@ -63,14 +64,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sbus/dma_sbus.c,v 1.5 2007/01/20 14:06:01 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sbus/dma_sbus.c,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
-#include <sys/resource.h>
 #include <sys/rman.h>
 
 #include <dev/ofw/ofw_bus.h>
@@ -150,6 +150,8 @@ static driver_t dma_driver = {
 };
 
 DRIVER_MODULE(dma, sbus, dma_driver, dma_devclass, 0, 0);
+MODULE_DEPEND(dma, sbus, 1, 1, 1);
+MODULE_VERSION(dma, 1);
 
 static int
 dma_probe(device_t dev)
@@ -176,7 +178,7 @@ dma_attach(device_t dev)
 	char *cabletype;
 	uint32_t csr;
 	phandle_t child, node;
-	int error, burst, children;
+	int error, i;
 
 	dsc = device_get_softc(dev);
 	lsc = &dsc->sc_lsi64854;
@@ -186,15 +188,13 @@ dma_attach(device_t dev)
 	dsc->sc_ign = sbus_get_ign(dev);
 	dsc->sc_slot = sbus_get_slot(dev);
 
-	lsc->sc_rid = 0;
-	lsc->sc_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &lsc->sc_rid,
+	i = 0;
+	lsc->sc_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &i,
 	    RF_ACTIVE);
 	if (lsc->sc_res == NULL) {
 		device_printf(dev, "cannot allocate resources\n");
 		return (ENXIO);
 	}
-	lsc->sc_regt = rman_get_bustag(lsc->sc_res);
-	lsc->sc_regh = rman_get_bushandle(lsc->sc_res);
 
 	if (strcmp(name, "espdma") == 0 || strcmp(name, "dma") == 0)
 		lsc->sc_channel = L64854_CHANNEL_SCSI;
@@ -244,23 +244,17 @@ dma_attach(device_t dev)
 		goto fail_lres;
 	}
 
-	burst = sbus_get_burstsz(dev);
-	lsc->sc_burst = (burst & SBUS_BURST_32) ? 32 :
-	    (burst & SBUS_BURST_16) ? 16 : 0;
+	i = sbus_get_burstsz(dev);
+	lsc->sc_burst = (i & SBUS_BURST_32) ? 32 :
+	    (i & SBUS_BURST_16) ? 16 : 0;
 	lsc->sc_dev = dev;
 
-	error = lsi64854_attach(lsc);
-	if (error != 0) {
-		device_printf(dev, "lsi64854_attach failed\n");
-		goto fail_lpdma;
-	}
-
 	/* Attach children. */
-	children = 0;
+	i = 0;
 	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
 		if ((ddi = dma_setup_dinfo(dev, dsc, child)) == NULL)
 			continue;
-		if (children != 0) {
+		if (i != 0) {
 			device_printf(dev,
 			    "<%s>: only one child per DMA channel supported\n",
 			    ddi->ddi_obdinfo.obd_name);
@@ -274,14 +268,13 @@ dma_attach(device_t dev)
 			continue;
 		}
 		device_set_ivars(cdev, ddi);
-		children++;
+		i++;
 	}
 	return (bus_generic_attach(dev));
 
- fail_lpdma:
-	bus_dma_tag_destroy(lsc->sc_parent_dmat);
  fail_lres:
-	bus_release_resource(dev, SYS_RES_MEMORY, lsc->sc_rid, lsc->sc_res);
+	bus_release_resource(dev, SYS_RES_MEMORY, rman_get_rid(lsc->sc_res),
+	    lsc->sc_res);
 	return (error);
 }
 

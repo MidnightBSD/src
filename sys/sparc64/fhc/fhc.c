@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * Copyright (c) 2005 Marius Strobl <marius@FreeBSD.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/fhc/fhc.c,v 1.18 2007/09/06 19:16:29 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/fhc/fhc.c,v 1.18.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,7 +75,8 @@ static ofw_bus_get_devinfo_t fhc_get_devinfo;
 
 static void fhc_intr_enable(void *);
 static void fhc_intr_disable(void *);
-static void fhc_intr_eoi(void *);
+static void fhc_intr_assign(void *);
+static void fhc_intr_clear(void *);
 static void fhc_led_func(void *, int);
 static int fhc_print_res(struct fhc_devinfo *);
 
@@ -119,11 +121,14 @@ static devclass_t fhc_devclass;
 
 DRIVER_MODULE(fhc, central, fhc_driver, fhc_devclass, 0, 0);
 DRIVER_MODULE(fhc, nexus, fhc_driver, fhc_devclass, 0, 0);
+MODULE_DEPEND(fhc, central, 1, 1, 1);
+MODULE_VERSION(fhc, 1);
 
 static const struct intr_controller fhc_ic = {
 	fhc_intr_enable,
 	fhc_intr_disable,
-	fhc_intr_eoi
+	fhc_intr_assign,
+	fhc_intr_clear
 };
 
 struct fhc_icarg {
@@ -318,7 +323,7 @@ fhc_attach(device_t dev)
 		if (sc->sc_memres[i] != NULL)
 			bus_release_resource(dev, SYS_RES_MEMORY,
 			    rman_get_rid(sc->sc_memres[i]), sc->sc_memres[i]);
- 	return (error);
+	return (error);
 }
 
 static int
@@ -366,7 +371,18 @@ fhc_intr_disable(void *arg)
 }
 
 static void
-fhc_intr_eoi(void *arg)
+fhc_intr_assign(void *arg)
+{
+	struct intr_vector *iv = arg;
+	struct fhc_icarg *fica = iv->iv_icarg;
+
+	bus_write_4(fica->fica_memres, FHC_IMAP, INTMAP_TID(
+	    bus_read_4(fica->fica_memres, FHC_IMAP), iv->iv_mid));
+	(void)bus_read_4(fica->fica_memres, FHC_IMAP);
+}
+
+static void
+fhc_intr_clear(void *arg)
 {
 	struct intr_vector *iv = arg;
 	struct fhc_icarg *fica = iv->iv_icarg;
@@ -386,12 +402,12 @@ fhc_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
 	/*
 	 * Make sure the vector is fully specified and we registered
 	 * our interrupt controller for it.
- 	 */
+	 */
 	vec = rman_get_start(r);
 	if (INTIGN(vec) != sc->sc_ign || intr_vectors[vec].iv_ic != &fhc_ic) {
 		device_printf(bus, "invalid interrupt vector 0x%lx\n", vec);
- 		return (EINVAL);
- 	}
+		return (EINVAL);
+	}
 	return (bus_generic_setup_intr(bus, child, r, flags, filt, func,
 	    arg, cookiep));
 }

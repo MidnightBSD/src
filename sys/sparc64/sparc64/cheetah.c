@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -22,20 +23,18 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/sparc64/sparc64/cheetah.c,v 1.5 2003/11/11 06:41:54 jake Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/cheetah.c,v 1.5.20.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_pmap.h"
 
 #include <sys/param.h>
-#include <sys/linker_set.h>
-#include <sys/proc.h>
+#include <sys/systm.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/smp.h>
-#include <sys/sysctl.h>
-#include <sys/systm.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -51,6 +50,7 @@
 void
 cheetah_cache_enable(void)
 {
+
 }
 
 /*
@@ -59,6 +59,7 @@ cheetah_cache_enable(void)
 void
 cheetah_cache_flush(void)
 {
+
 }
 
 /*
@@ -70,8 +71,7 @@ cheetah_dcache_page_inval(vm_paddr_t spa)
 	vm_paddr_t pa;
 	void *cookie;
 
-	KASSERT((spa & PAGE_MASK) == 0,
-	    ("dcache_page_inval: pa not page aligned"));
+	KASSERT((spa & PAGE_MASK) == 0, ("%s: pa not page aligned", __func__));
 	cookie = ipi_dcache_page_inval(tl_ipi_cheetah_dcache_page_inval, spa);
 	for (pa = spa; pa < spa + PAGE_SIZE; pa += cache.dc_linesize)
 		stxa_sync(pa, ASI_DCACHE_INVALIDATE, 0);
@@ -85,10 +85,25 @@ cheetah_dcache_page_inval(vm_paddr_t spa)
 void
 cheetah_icache_page_inval(vm_paddr_t pa)
 {
+
 }
 
+/*
+ * Flush all non-locked mappings from the TLB.
+ */
+void
+cheetah_tlb_flush_nonlocked(void)
+{
+
+	panic("cheetah_tlb_flush_nonlocked");
+}
+
+/*
+ * Flush all user mappings from the TLB.
+ */
 void
 cheetah_tlb_flush_user(void)
 {
+
 	panic("cheetah_tlb_flush_user");
 }

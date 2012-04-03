@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/upa.c,v 1.9 2007/09/06 19:16:30 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/upa.c,v 1.9.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -108,6 +109,7 @@ static ofw_bus_get_devinfo_t upa_get_devinfo;
 
 static void upa_intr_enable(void *);
 static void upa_intr_disable(void *);
+static void upa_intr_assign(void *);
 static struct upa_devinfo *upa_setup_dinfo(device_t, struct upa_softc *,
     phandle_t, uint32_t);
 static void upa_destroy_dinfo(struct upa_devinfo *);
@@ -154,6 +156,7 @@ DRIVER_MODULE(upa, nexus, upa_driver, upa_devclass, 0, 0);
 static const struct intr_controller upa_ic = {
 	upa_intr_enable,
 	upa_intr_disable,
+	upa_intr_assign,
 	/* The interrupts are pulse type and thus automatically cleared. */
 	NULL
 };
@@ -466,6 +469,17 @@ upa_intr_disable(void *arg)
 	struct upa_icarg *uica = iv->iv_icarg;
 
 	UPA_WRITE(uica->uica_sc, uica->uica_imr, 0x0, iv->iv_vec);
+	(void)UPA_READ(uica->uica_sc, uica->uica_imr, 0x0);
+}
+
+static void
+upa_intr_assign(void *arg)
+{
+	struct intr_vector *iv = arg;
+	struct upa_icarg *uica = iv->iv_icarg;
+
+	UPA_WRITE(uica->uica_sc, uica->uica_imr, 0x0, INTMAP_TID(
+	    UPA_READ(uica->uica_sc, uica->uica_imr, 0x0), iv->iv_mid));
 	(void)UPA_READ(uica->uica_sc, uica->uica_imr, 0x0);
 }
 

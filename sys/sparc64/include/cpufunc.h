@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/cpufunc.h,v 1.21 2005/07/27 20:01:45 jhb Exp $
+ * $FreeBSD: src/sys/sparc64/include/cpufunc.h,v 1.21.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_CPUFUNC_H_
@@ -35,7 +36,7 @@
 struct thread;
 
 /*
- * membar operand macros for use in other macros when # is a special
+ * Membar operand macros for use in other macros when # is a special
  * character.  Keep these in sync with what the hardware expects.
  */
 #define	C_Lookaside	(0)
@@ -88,8 +89,8 @@ struct thread;
 	__asm __volatile("mov %0, %" __XSTRING(reg) : : "r" (val));	\
 } while (0)
 
-/* Generate ld*a/st*a functions for non-constant ASI's. */
-#define LDNC_GEN(tp, o)							\
+/* Generate ld*a/st*a functions for non-constant ASIs. */
+#define	LDNC_GEN(tp, o)							\
 	static __inline tp						\
 	o ## _nc(caddr_t va, int asi)					\
 	{								\
@@ -116,7 +117,7 @@ LDNC_GEN(u_long, ldxa);
 #define	lduwa(va, asi)	LD_GENERIC(va, asi, lduwa, u_int)
 #define	ldxa(va, asi)	LD_GENERIC(va, asi, ldxa, u_long)
 
-#define STNC_GEN(tp, o)							\
+#define	STNC_GEN(tp, o)							\
 	static __inline void						\
 	o ## _nc(caddr_t va, int asi, tp val)				\
 	{								\
@@ -175,16 +176,18 @@ int fasword32(u_long asi, void *addr, uint32_t *val);
 
 /*
  * Macro intended to be used instead of wr(asr23, val, xor) for writing to
- * the TICK_CMPR register in order to avoid a bug in BlackBird CPUs that
+ * the TICK_COMPARE register in order to avoid a bug in BlackBird CPUs that
  * can cause these writes to fail under certain condidtions which in turn
- * causes the hardclock to stop. The workaround is to perform the write
- * at the beginning of an I-Cache line directly followed by a dummy read.
+ * causes the hardclock to stop.  The workaround is to read the TICK_COMPARE
+ * register back immediately after writing to it with these two instructions
+ * aligned to a quadword boundary in order to ensure that I$ misses won't
+ * split them up.
  */
 #define	wrtickcmpr(val, xor) ({						\
 	__asm __volatile(						\
 	"	ba,pt	%%xcc, 1f ;		"			\
 	"	 nop	 ;			"			\
-	"	.align	64 ;			"			\
+	"	.align	128 ;			"			\
 	"1:	wr	%0, %1, %%asr23 ;	"			\
 	"	rd	%%asr23, %%g0 ;		"			\
 	: : "r" (val), "rI" (xor));					\
@@ -193,13 +196,14 @@ int fasword32(u_long asi, void *addr, uint32_t *val);
 static __inline void
 breakpoint(void)
 {
+
 	__asm __volatile("ta %%xcc, 1" : :);
 }
 
 static __inline register_t
 intr_disable(void)
 {
-	u_long s;
+	register_t s;
 
 	s = rdpr(pstate);
 	wrpr(pstate, s & ~PSTATE_IE, 0);
@@ -209,11 +213,11 @@ intr_disable(void)
 
 /*
  * In some places, it is required that the store is directly followed by a
- * membar #Sync. Don't trust the compiler to not insert instructions in
- * between. We also need to disable interrupts completely.
+ * membar #Sync.  Don't trust the compiler to not insert instructions in
+ * between.  We also need to disable interrupts completely.
  */
 #define	stxa_sync(va, asi, val) do {					\
-	u_long s;							\
+	register_t s;							\
 	s = intr_disable();						\
 	__asm __volatile("stxa %0, [%1] %2; membar #Sync"		\
 	    : : "r" (val), "r" (va), "n" (asi));			\
@@ -226,7 +230,7 @@ void ascopyto(caddr_t src, u_long dasi, vm_offset_t dst, size_t len);
 void aszero(u_long asi, vm_offset_t dst, size_t len);
 
 /*
- * Ultrasparc II doesn't implement popc in hardware.  Suck.
+ * Ultrasparc II doesn't implement popc in hardware.
  */
 #if 0
 #define	HAVE_INLINE_FFS

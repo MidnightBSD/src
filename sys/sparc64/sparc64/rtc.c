@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/rtc.c,v 1.7 2007/07/23 09:42:32 dwmalone Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/rtc.c,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * The `rtc' device is a MC146818 compatible clock found on the ISA

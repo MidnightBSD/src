@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -49,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/eeprom.c,v 1.13 2007/07/23 09:42:32 dwmalone Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/eeprom.c,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * clock (eeprom) attaches at EBus, FireHose or SBus

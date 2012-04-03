@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -99,7 +100,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sbus/sbus.c,v 1.46 2007/09/06 19:16:30 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sbus/sbus.c,v 1.46.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * SBus support.
@@ -196,7 +197,8 @@ static struct sbus_devinfo * sbus_setup_dinfo(device_t, struct sbus_softc *,
 static void sbus_destroy_dinfo(struct sbus_devinfo *);
 static void sbus_intr_enable(void *);
 static void sbus_intr_disable(void *);
-static void sbus_intr_eoi(void *);
+static void sbus_intr_assign(void *);
+static void sbus_intr_clear(void *);
 static int sbus_find_intrmap(struct sbus_softc *, u_int, bus_addr_t *,
     bus_addr_t *);
 static bus_space_tag_t sbus_alloc_bustag(struct sbus_softc *);
@@ -246,6 +248,7 @@ static driver_t sbus_driver = {
 static devclass_t sbus_devclass;
 
 DRIVER_MODULE(sbus, nexus, sbus_driver, sbus_devclass, 0, 0);
+MODULE_VERSION(sbus, 1);
 
 #define	OFW_SBUS_TYPE	"sbus"
 #define	OFW_SBUS_NAME	"sbus"
@@ -253,7 +256,8 @@ DRIVER_MODULE(sbus, nexus, sbus_driver, sbus_devclass, 0, 0);
 static const struct intr_controller sbus_ic = {
 	sbus_intr_enable,
 	sbus_intr_disable,
-	sbus_intr_eoi
+	sbus_intr_assign,
+	sbus_intr_clear
 };
 
 struct sbus_icarg {
@@ -307,7 +311,6 @@ sbus_attach(device_t dev)
 	device_t cdev;
 	bus_addr_t intrclr, intrmap, phys;
 	bus_size_t size;
-	char *name;
 	u_long vec;
 	phandle_t child, node;
 	int clock, i, intr, rid;
@@ -399,18 +402,12 @@ sbus_attach(device_t dev)
 	sc->sc_is.is_sb[0] = SBR_STRBUF;
 	sc->sc_is.is_sb[1] = 0;
 
-	/* give us a nice name.. */
-	name = (char *)malloc(32, M_DEVBUF, M_NOWAIT);
-	if (name == NULL)
-		panic("%s: cannot malloc iommu name", __func__);
-	snprintf(name, 32, "%s dvma", device_get_name(dev));
-
 	/*
 	 * Note: the SBus IOMMU ignores the high bits of an address, so a NULL
 	 * DMA pointer will be translated by the first page of the IOTSB.
 	 * To detect bugs we'll allocate and ignore the first entry.
 	 */
-	iommu_init(name, &sc->sc_is, 3, -1, 1);
+	iommu_init(device_get_nameunit(dev), &sc->sc_is, 3, -1, 1);
 
 	/* Create the DMA tag. */
 	if (bus_dma_tag_create(bus_get_dma_tag(dev), 8, 0,
@@ -471,7 +468,8 @@ sbus_attach(device_t dev)
 		panic("%s: failed to set up power fail interrupt", __func__);
 
 	/* Initialize the counter-timer. */
-	sparc64_counter_init(rman_get_bustag(sc->sc_sysio_res),
+	sparc64_counter_init(device_get_nameunit(dev),
+	    rman_get_bustag(sc->sc_sysio_res),
 	    rman_get_bushandle(sc->sc_sysio_res), SBR_TC0);
 
 	/*
@@ -667,6 +665,7 @@ sbus_intr_enable(void *arg)
 	SYSIO_WRITE8(sica->sica_sc, sica->sica_map,
 	    INTMAP_ENABLE(iv->iv_vec, iv->iv_mid));
 }
+
 static void
 sbus_intr_disable(void *arg)
 {
@@ -677,7 +676,17 @@ sbus_intr_disable(void *arg)
 }
 
 static void
-sbus_intr_eoi(void *arg)
+sbus_intr_assign(void *arg)
+{
+	struct intr_vector *iv = arg;
+	struct sbus_icarg *sica = iv->iv_icarg;
+
+	SYSIO_WRITE8(sica->sica_sc, sica->sica_map, INTMAP_TID(
+	    SYSIO_READ8(sica->sica_sc, sica->sica_map), iv->iv_mid));
+}
+
+static void
+sbus_intr_clear(void *arg)
 {
 	struct intr_vector *iv = arg;
 	struct sbus_icarg *sica = iv->iv_icarg;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/sparc64/sys_machdep.c,v 1.14 2005/01/19 18:24:07 jhb Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/sys_machdep.c,v 1.14.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>

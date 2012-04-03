@@ -1,7 +1,8 @@
+/* $MidnightBSD$ */
 /*-
  * Written by J.T. Conklin, Apr 6, 1995
  * Public domain.
- * $FreeBSD: src/sys/sparc64/include/ieeefp.h,v 1.4 2005/01/07 02:29:22 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/ieeefp.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_IEEEFP_H_

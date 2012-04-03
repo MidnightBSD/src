@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -22,20 +23,19 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/sparc64/sparc64/spitfire.c,v 1.5 2003/11/11 06:41:54 jake Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/spitfire.c,v 1.5.20.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_pmap.h"
 
 #include <sys/param.h>
-#include <sys/linker_set.h>
-#include <sys/proc.h>
+#include <sys/systm.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
-#include <sys/systm.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -90,8 +90,7 @@ spitfire_dcache_page_inval(vm_paddr_t pa)
 	u_long addr;
 	u_long tag;
 
-	KASSERT((pa & PAGE_MASK) == 0,
-	    ("dcache_page_inval: pa not page aligned"));
+	KASSERT((pa & PAGE_MASK) == 0, ("%s: pa not page aligned", __func__));
 	PMAP_STATS_INC(spitfire_dcache_npage_inval);
 	target = pa >> (PAGE_SHIFT - DC_TAG_SHIFT);
 	cookie = ipi_dcache_page_inval(tl_ipi_spitfire_dcache_page_inval, pa);
@@ -119,8 +118,7 @@ spitfire_icache_page_inval(vm_paddr_t pa)
 	void *cookie;
 	u_long addr;
 
-	KASSERT((pa & PAGE_MASK) == 0,
-	    ("icache_page_inval: pa not page aligned"));
+	KASSERT((pa & PAGE_MASK) == 0, ("%s: pa not page aligned", __func__));
 	PMAP_STATS_INC(spitfire_icache_npage_inval);
 	target = pa >> (PAGE_SHIFT - IC_TAG_SHIFT);
 	cookie = ipi_icache_page_inval(tl_ipi_spitfire_icache_page_inval, pa);
@@ -139,7 +137,27 @@ spitfire_icache_page_inval(vm_paddr_t pa)
 }
 
 /*
- * Flush all user mappings from the tlb.
+ * Flush all non-locked mappings from the TLB.
+ */
+void
+spitfire_tlb_flush_nonlocked(void)
+{
+	int i;
+
+	for (i = 0; i < SPITFIRE_TLB_ENTRIES; i++) {
+		if ((ldxa(TLB_DAR_SLOT(i), ASI_DTLB_DATA_ACCESS_REG) &
+		    TD_L) == 0)
+			stxa_sync(TLB_DAR_SLOT(i),
+			    ASI_DTLB_DATA_ACCESS_REG, 0);
+		if ((ldxa(TLB_DAR_SLOT(i), ASI_ITLB_DATA_ACCESS_REG) &
+		    TD_L) == 0)
+			stxa_sync(TLB_DAR_SLOT(i),
+			    ASI_ITLB_DATA_ACCESS_REG, 0);
+	}
+}
+
+/*
+ * Flush all user mappings from the TLB.
  */
 void
 spitfire_tlb_flush_user(void)
@@ -153,11 +171,13 @@ spitfire_tlb_flush_user(void)
 		tag = ldxa(TLB_DAR_SLOT(i), ASI_DTLB_TAG_READ_REG);
 		if ((data & TD_V) != 0 && (data & TD_L) == 0 &&
 		    TLB_TAR_CTX(tag) != TLB_CTX_KERNEL)
-			stxa_sync(TLB_DAR_SLOT(i), ASI_DTLB_DATA_ACCESS_REG, 0);
+			stxa_sync(TLB_DAR_SLOT(i),
+			    ASI_DTLB_DATA_ACCESS_REG, 0);
 		data = ldxa(TLB_DAR_SLOT(i), ASI_ITLB_DATA_ACCESS_REG);
 		tag = ldxa(TLB_DAR_SLOT(i), ASI_ITLB_TAG_READ_REG);
 		if ((data & TD_V) != 0 && (data & TD_L) == 0 &&
 		    TLB_TAR_CTX(tag) != TLB_CTX_KERNEL)
-			stxa_sync(TLB_DAR_SLOT(i), ASI_ITLB_DATA_ACCESS_REG, 0);
+			stxa_sync(TLB_DAR_SLOT(i),
+			    ASI_ITLB_DATA_ACCESS_REG, 0);
 	}
 }

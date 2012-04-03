@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Luoqi Chen <luoqi@freebsd.org>
  * All rights reserved.
@@ -24,13 +25,11 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/globaldata.h,v 1.27 2001/04/27
- * $FreeBSD: src/sys/sparc64/include/pcpu.h,v 1.22 2007/06/04 21:38:47 attilio Exp $
+ * $FreeBSD: src/sys/sparc64/include/pcpu.h,v 1.22.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_PCPU_H_
 #define	_MACHINE_PCPU_H_
-
-#ifdef _KERNEL
 
 #include <machine/asmacros.h>
 #include <machine/frame.h>
@@ -49,15 +48,17 @@ struct pmap;
 	struct	intr_request *pc_irhead;				\
 	struct	intr_request **pc_irtail;				\
 	struct	intr_request *pc_irfree;				\
-	struct 	pmap *pc_pmap;						\
+	struct	pmap *pc_pmap;						\
 	vm_offset_t pc_addr;						\
 	u_long	pc_tickref;						\
 	u_long	pc_tickadj;						\
-	u_int 	pc_mid;							\
+	u_int	pc_mid;							\
 	u_int	pc_node;						\
 	u_int	pc_tlb_ctx;						\
 	u_int	pc_tlb_ctx_max;						\
 	u_int	pc_tlb_ctx_min
+
+#ifdef _KERNEL
 
 struct pcb;
 struct pcpu;

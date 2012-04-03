@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -37,7 +38,7 @@
  *
  *	from: @(#)vmparam.h     5.9 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/vmparam.h,v 1.33 2000/03/30
- * $FreeBSD: src/sys/sparc64/include/vmparam.h,v 1.18 2007/09/25 06:25:06 alc Exp $
+ * $FreeBSD: src/sys/sparc64/include/vmparam.h,v 1.18.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 

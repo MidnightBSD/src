@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 Matthew R. Green
  * All rights reserved.
@@ -27,7 +28,7 @@
  *
  *	from: NetBSD: psychovar.h,v 1.6 2001/07/20 00:07:13 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/pci/psychovar.h,v 1.16.2.1 2007/12/04 21:40:47 marius Exp $
+ * $FreeBSD: src/sys/sparc64/pci/psychovar.h,v 1.16.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_PCI_PSYCHOVAR_H_
@@ -71,11 +72,10 @@ struct psycho_softc {
 
 	bus_space_handle_t		sc_pci_bh[PSYCHO_NRANGE];
 
-	u_int				sc_pci_secbus;
-	u_int				sc_pci_subbus;
-
 	struct rman			sc_pci_mem_rman;
 	struct rman			sc_pci_io_rman;
+
+	uint8_t				sc_pci_secbus;
 
 	uint8_t				sc_pci_hpbcfg[16];
 

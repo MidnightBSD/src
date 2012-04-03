@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -24,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)limits.h	8.3 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/sparc64/include/_limits.h,v 1.14 2005/08/20 16:44:41 stefanf Exp $
+ * $FreeBSD: src/sys/sparc64/include/_limits.h,v 1.14.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE__LIMITS_H_

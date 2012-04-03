@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1986, 1990 The Regents of the University of California.
@@ -38,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.18 2007/05/20 13:06:45 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Memory special file
@@ -47,7 +48,6 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.18 2007/05/20 13:06:45 mar
  * might cause illegal aliases to be created for the locked kernel page(s), so
  * it is not implemented.
  */
-#include "opt_global.h"
 
 #include <sys/param.h>
 #include <sys/conf.h>

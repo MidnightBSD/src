@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, 1998 Justin T. Gibbs.
  * Copyright (c) 2002 by Thomas Moestl <tmm@FreeBSD.org>.
@@ -25,7 +26,7 @@
  *
  *	from: FreeBSD: src/sys/i386/i386/busdma_machdep.c,v 1.25 2002/01/05
  *
- * $FreeBSD: src/sys/sparc64/include/bus_private.h,v 1.8 2007/03/07 21:13:50 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/bus_private.h,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_BUS_PRIVATE_H_

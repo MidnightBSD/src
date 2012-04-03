@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2001 by Thomas Moestl <tmm@FreeBSD.org>.  All rights reserved.
  *
@@ -21,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/lsu.h,v 1.2 2002/07/16 16:24:03 tmm Exp $
+ * $FreeBSD: src/sys/sparc64/include/lsu.h,v 1.2.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_LSU_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/sf_buf.h,v 1.1 2003/11/16 06:11:26 alc Exp $
+ * $FreeBSD: src/sys/sparc64/include/sf_buf.h,v 1.1.28.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_SF_BUF_H_

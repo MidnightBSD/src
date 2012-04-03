@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 by Thomas Moestl <tmm@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/pci/ofw_pcib_subr.c,v 1.8 2007/06/18 21:49:42 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/pci/ofw_pcib_subr.c,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ofw_pci.h"
 
@@ -52,33 +53,13 @@ void
 ofw_pcib_gen_setup(device_t bridge)
 {
 	struct ofw_pcib_gen_softc *sc;
-#ifndef SUN4V
-	int secbus;
 
-#endif
 	sc = device_get_softc(bridge);
 	sc->ops_pcib_sc.dev = bridge;
 	sc->ops_node = ofw_bus_get_node(bridge);
 	KASSERT(sc->ops_node != 0,
 	    ("ofw_pcib_gen_setup: no ofw pci parent bus!"));
 
-	/*
-	 * Setup the secondary bus number register, if supported, by
-	 * allocating a new unique bus number for it; the firmware
-	 * preset does not always seem to be correct in that case.
-	 */
-#ifndef SUN4V
-	secbus = OFW_PCI_ALLOC_BUSNO(bridge);
-	if (secbus != -1) {
-		pci_write_config(bridge, PCIR_PRIBUS_1, pci_get_bus(bridge), 1);
-		pci_write_config(bridge, PCIR_SECBUS_1, secbus, 1);
-		pci_write_config(bridge, PCIR_SUBBUS_1, secbus, 1);
-		sc->ops_pcib_sc.subbus = sc->ops_pcib_sc.secbus = secbus;
-		/* Notify parent bridges. */
-		OFW_PCI_ADJUST_BUSRANGE(device_get_parent(bridge), secbus);
-	}
-
-#endif
 	ofw_bus_setup_iinfo(sc->ops_node, &sc->ops_iinfo,
 	    sizeof(ofw_pci_intr_t));
 }
@@ -125,23 +106,4 @@ ofw_pcib_gen_get_node(device_t bridge, device_t dev)
 
 	sc = device_get_softc(bridge);
 	return (sc->ops_node);
-}
-
-void
-ofw_pcib_gen_adjust_busrange(device_t bridge, u_int subbus)
-{
-	struct ofw_pcib_gen_softc *sc;
-
-	sc = device_get_softc(bridge);
-	if (subbus > sc->ops_pcib_sc.subbus) {
-#ifdef OFW_PCI_DEBUG
-		device_printf(bridge,
-		    "adjusting subordinate bus number from %d to %d\n",
-		    sc->ops_pcib_sc.subbus, subbus);
-#endif
-		pci_write_config(bridge, PCIR_SUBBUS_1, subbus, 1);
-		sc->ops_pcib_sc.subbus = subbus;
-		/* Notify parent bridges. */
-		OFW_PCI_ADJUST_BUSRANGE(device_get_parent(bridge), subbus);
-	}
 }

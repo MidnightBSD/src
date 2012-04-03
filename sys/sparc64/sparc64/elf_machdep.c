@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * Copyright (c) 2000 Eduardo Horvath.
@@ -39,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/elf_machdep.c,v 1.23.2.1 2007/10/21 21:09:55 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/elf_machdep.c,v 1.23.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

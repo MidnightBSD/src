@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -22,9 +23,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/sparc64/sparc64/tlb.c,v 1.8 2003/08/22 07:38:08 imp Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/tlb.c,v 1.8.20.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_pmap.h"
 
@@ -49,6 +51,7 @@ PMAP_STATS_VAR(tlb_ncontext_demap);
 PMAP_STATS_VAR(tlb_npage_demap);
 PMAP_STATS_VAR(tlb_nrange_demap);
 
+tlb_flush_nonlocked_t *tlb_flush_nonlocked;
 tlb_flush_user_t *tlb_flush_user;
 
 /*
@@ -62,7 +65,7 @@ void
 tlb_context_demap(struct pmap *pm)
 {
 	void *cookie;
-	u_long s;
+	register_t s;
 
 	/*
 	 * It is important that we are not interrupted or preempted while
@@ -78,7 +81,7 @@ tlb_context_demap(struct pmap *pm)
 	PMAP_STATS_INC(tlb_ncontext_demap);
 	cookie = ipi_tlb_context_demap(pm);
 	if (pm->pm_active & PCPU_GET(cpumask)) {
-		KASSERT(pm->pm_context[PCPU_GET(cpuid)] != -1,
+		KASSERT(pm->pm_context[curcpu] != -1,
 		    ("tlb_context_demap: inactive pmap?"));
 		s = intr_disable();
 		stxa(TLB_DEMAP_PRIMARY | TLB_DEMAP_CONTEXT, ASI_DMMU_DEMAP, 0);
@@ -94,18 +97,18 @@ tlb_page_demap(struct pmap *pm, vm_offset_t va)
 {
 	u_long flags;
 	void *cookie;
-	u_long s;
+	register_t s;
 
 	PMAP_STATS_INC(tlb_npage_demap);
 	cookie = ipi_tlb_page_demap(pm, va);
 	if (pm->pm_active & PCPU_GET(cpumask)) {
-		KASSERT(pm->pm_context[PCPU_GET(cpuid)] != -1,
+		KASSERT(pm->pm_context[curcpu] != -1,
 		    ("tlb_page_demap: inactive pmap?"));
 		if (pm == kernel_pmap)
 			flags = TLB_DEMAP_NUCLEUS | TLB_DEMAP_PAGE;
 		else
 			flags = TLB_DEMAP_PRIMARY | TLB_DEMAP_PAGE;
-	
+
 		s = intr_disable();
 		stxa(TLB_DEMAP_VA(va) | flags, ASI_DMMU_DEMAP, 0);
 		stxa(TLB_DEMAP_VA(va) | flags, ASI_IMMU_DEMAP, 0);
@@ -121,18 +124,18 @@ tlb_range_demap(struct pmap *pm, vm_offset_t start, vm_offset_t end)
 	vm_offset_t va;
 	void *cookie;
 	u_long flags;
-	u_long s;
+	register_t s;
 
 	PMAP_STATS_INC(tlb_nrange_demap);
 	cookie = ipi_tlb_range_demap(pm, start, end);
 	if (pm->pm_active & PCPU_GET(cpumask)) {
-		KASSERT(pm->pm_context[PCPU_GET(cpuid)] != -1,
+		KASSERT(pm->pm_context[curcpu] != -1,
 		    ("tlb_range_demap: inactive pmap?"));
 		if (pm == kernel_pmap)
 			flags = TLB_DEMAP_NUCLEUS | TLB_DEMAP_PAGE;
 		else
 			flags = TLB_DEMAP_PRIMARY | TLB_DEMAP_PAGE;
-	
+
 		s = intr_disable();
 		for (va = start; va < end; va += PAGE_SIZE) {
 			stxa(TLB_DEMAP_VA(va) | flags, ASI_DMMU_DEMAP, 0);

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 Matthew R. Green
  * Copyright (c) 2001, 2003 by Thomas Moestl <tmm@FreeBSD.org>
@@ -28,21 +29,19 @@
  *
  *	from: NetBSD: psychoreg.h,v 1.8 2001/09/10 16:17:06 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/pci/ofw_pci.h,v 1.11 2007/06/18 21:49:42 marius Exp $
+ * $FreeBSD: src/sys/sparc64/pci/ofw_pci.h,v 1.11.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_PCI_OFW_PCI_H_
-#define _SPARC64_PCI_OFW_PCI_H_
+#define	_SPARC64_PCI_OFW_PCI_H_
 
 #include <machine/ofw_bus.h>
 
 typedef uint32_t ofw_pci_intr_t;
 
-#include "ofw_pci_if.h"
-
 /* PCI range child spaces. XXX: are these MI? */
 #define	OFW_PCI_CS_CONFIG	0x00
-#define	OFW_PCI_CS_IO	0x01
+#define	OFW_PCI_CS_IO		0x01
 #define	OFW_PCI_CS_MEM32	0x02
 #define	OFW_PCI_CS_MEM64	0x03
 
@@ -63,5 +62,8 @@ struct ofw_pci_ranges {
 #define	OFW_PCI_RANGE_SIZE(r) \
 	(((uint64_t)(r)->size_hi << 32) | (uint64_t)(r)->size_lo)
 #define	OFW_PCI_RANGE_CS(r)	(((r)->cspace >> 24) & 0x03)
+
+/* default values */
+#define	OFW_PCI_LATENCY	64
 
 #endif /* ! _SPARC64_PCI_OFW_PCI_H_ */

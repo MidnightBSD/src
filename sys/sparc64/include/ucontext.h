@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/alpha/include/ucontext.h,v 1.3 1999/10/08
- * $FreeBSD: src/sys/sparc64/include/ucontext.h,v 1.8 2003/01/10 00:04:56 jake Exp $
+ * $FreeBSD: src/sys/sparc64/include/ucontext.h,v 1.8.30.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_UCONTEXT_H_

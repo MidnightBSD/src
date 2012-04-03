@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Jason L. Wright (jason@thought.net)
  * Copyright (c) 2005 Marius Strobl <marius@FreeBSD.org>
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/fhc/clkbrd.c,v 1.3 2006/03/28 19:46:48 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/fhc/clkbrd.c,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

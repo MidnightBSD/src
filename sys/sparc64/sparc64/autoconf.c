@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -22,12 +23,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/sparc64/sparc64/autoconf.c,v 1.14 2006/11/18 07:10:51 kmacy Exp $
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/autoconf.c,v 1.14.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+
 #include "opt_isa.h"
-#include "opt_global.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,8 +72,14 @@ configure(void *dummy)
 #endif
 	root_bus_configure();
 #ifdef DEV_ISA
+	/*
+	 * We bypass isa_probe_children(9) here in order to avoid
+	 * invasive probes done by identify-routines of ISA drivers,
+	 * which in turn can trigger master/target aborts, and the
+	 * addition of ISA hints, which might erroneously exist.
+	 */
 	if (isa_bus_device != NULL)
-		isa_probe_children(isa_bus_device);
+		(void)bus_generic_attach(isa_bus_device);
 #endif
 }
 

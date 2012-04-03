@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/smp.h,v 1.22 2007/06/16 23:26:00 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/smp.h,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_SMP_H_
@@ -51,6 +52,7 @@
 
 #define	IPI_AST		PIL_AST
 #define	IPI_RENDEZVOUS	PIL_RENDEZVOUS
+#define	IPI_PREEMPT	PIL_PREEMPT
 #define	IPI_STOP	PIL_STOP
 
 #define	IPI_RETRIES	5000

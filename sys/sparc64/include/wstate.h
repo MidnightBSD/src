@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -26,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: BSDI: wstate.h,v 1.4 1997/09/18 13:05:51 torek Exp
- * $FreeBSD: src/sys/sparc64/include/wstate.h,v 1.4 2002/02/25 18:37:17 jake Exp $
+ * $FreeBSD: src/sys/sparc64/include/wstate.h,v 1.4.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_WSTATE_H_

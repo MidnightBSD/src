@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: lsi64854reg.h,v 1.5 2001/03/29 02:58:39 petrov Exp $ */
 
 /*-
@@ -36,7 +37,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*	$FreeBSD: src/sys/sparc64/sbus/lsi64854reg.h,v 1.3 2005/04/17 17:41:32 marius Exp $ */
+/*	$FreeBSD: src/sys/sparc64/sbus/lsi64854reg.h,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*
  * LSI 64854 DMA engine. Contains three independent channels

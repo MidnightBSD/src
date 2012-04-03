@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986 The Regents of the University of California.
  * Copyright (c) 1989, 1990 William Jolitz
@@ -40,7 +41,7 @@
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
  * 	from: FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.167 2001/07/12
- * $FreeBSD: src/sys/sparc64/sparc64/vm_machdep.c,v 1.76 2007/09/15 18:47:01 alc Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/vm_machdep.c,v 1.76.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_pmap.h"
@@ -91,7 +92,7 @@
 #endif
 
 static void	sf_buf_init(void *arg);
-SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL)
+SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL);
 
 /*
  * Expanded sf_freelist head. Really an SLIST_HEAD() in disguise, with the
@@ -132,7 +133,7 @@ cpu_thread_clean(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 	struct pcb *pcb;
 
@@ -143,6 +144,11 @@ cpu_thread_setup(struct thread *td)
 	td->td_pcb = pcb;
 }
 
+void
+cpu_thread_free(struct thread *td)
+{
+}
+ 
 void
 cpu_thread_swapin(struct thread *td)
 {

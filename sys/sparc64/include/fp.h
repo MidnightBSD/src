@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2001 by Thomas Moestl <tmm@FreeBSD.org>.  All rights reserved.
  *
@@ -21,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/fp.h,v 1.9 2003/04/01 04:02:44 jake Exp $
+ * $FreeBSD: src/sys/sparc64/include/fp.h,v 1.9.30.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_FP_H_

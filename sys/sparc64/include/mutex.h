@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/mutex.h,v 1.5 2001/12/18 00:27:18 jhb Exp $
+ * $FreeBSD: src/sys/sparc64/include/mutex.h,v 1.5.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_MUTEX_H_

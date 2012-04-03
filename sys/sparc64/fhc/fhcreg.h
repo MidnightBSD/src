@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -50,7 +51,7 @@
  *
  *	from: OpenBSD: fhcreg.h,v 1.3 2004/09/28 16:26:03 jason Exp
  *
- * $FreeBSD: src/sys/sparc64/fhc/fhcreg.h,v 1.3 2005/03/19 00:48:34 marius Exp $
+ * $FreeBSD: src/sys/sparc64/fhc/fhcreg.h,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_FHC_FHCREG_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Matthew R. Green
  * All rights reserved.
@@ -27,11 +28,11 @@
  *
  *	from: NetBSD: iommuvar.h,v 1.9 2001/07/20 00:07:13 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/include/iommuvar.h,v 1.16 2007/08/05 11:56:43 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/iommuvar.h,v 1.16.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_IOMMUVAR_H_
-#define _MACHINE_IOMMUVAR_H_
+#define	_MACHINE_IOMMUVAR_H_
 
 #define	IO_PAGE_SIZE		PAGE_SIZE_8K
 #define	IO_PAGE_MASK		PAGE_MASK_8K
@@ -62,10 +63,10 @@ struct iommu_state {
 	struct rman		is_dvma_rman;	/* DVMA space rman */
 	struct iommu_maplruq_head is_maplruq;	/* (i) LRU queue */
 	vm_paddr_t		is_ptsb;	/* (r) TSB physical address */
-	u_int64_t		*is_tsb;	/* (*i) TSB virtual address */
+	uint64_t		*is_tsb;	/* (*i) TSB virtual address */
 	int			is_tsbsize;	/* (r) 0 = 8K, ... */
-	u_int64_t		is_pmaxaddr;	/* (r) max. physical address */
-	u_int64_t		is_dvmabase;	/* (r) */
+	uint64_t		is_pmaxaddr;	/* (r) max. physical address */
+	uint64_t		is_dvmabase;	/* (r) */
 	int64_t			is_cr;		/* (r) Control reg value */
 
 	vm_paddr_t		is_flushpa[2];	/* (r) */
@@ -99,9 +100,10 @@ struct iommu_state {
 };
 
 /* interfaces for PCI/SBus code */
-void iommu_init(char *, struct iommu_state *, int, u_int32_t, int);
-void iommu_reset(struct iommu_state *);
-void iommu_decode_fault(struct iommu_state *, vm_offset_t);
+void iommu_init(const char *name, struct iommu_state *is, int tsbsize,
+    uint32_t iovabase, int resvpg);
+void iommu_reset(struct iommu_state *is);
+void iommu_decode_fault(struct iommu_state *is, vm_offset_t phys);
 
 extern struct bus_dma_methods iommu_dma_methods;
 

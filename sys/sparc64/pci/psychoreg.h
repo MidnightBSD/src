@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 Eduardo E. Horvath
  * Copyright (c) 1999 Matthew R. Green
@@ -28,7 +29,7 @@
  *
  *	from: NetBSD: psychoreg.h,v 1.8 2001/09/10 16:17:06 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/pci/psychoreg.h,v 1.14 2007/09/06 19:16:30 marius Exp $
+ * $FreeBSD: src/sys/sparc64/pci/psychoreg.h,v 1.14.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_PCI_PSYCHOREG_H_

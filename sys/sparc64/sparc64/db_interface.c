@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/sparc64/db_interface.c,v 1.11 2006/10/10 07:26:53 bde Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/db_interface.c,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h> 

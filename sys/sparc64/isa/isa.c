@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Doug Rabson
  * Copyright (c) 2001 Thomas Moestl <tmm@FreeBSD.org>
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/isa/isa.c,v 1.19 2007/02/23 12:19:05 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/isa/isa.c,v 1.19.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,7 +65,6 @@ device_t isa_bus_device;
 static phandle_t isab_node;
 static struct isa_ranges *isab_ranges;
 static int isab_nrange;
-static ofw_pci_intr_t isa_ino[8];
 static struct ofw_bus_iinfo isa_iinfo;
 
 /*
@@ -82,23 +82,6 @@ static struct ofw_bus_iinfo isa_iinfo;
 
 static void	isa_setup_children(device_t, phandle_t);
 
-intrmask_t
-isa_irq_pending(void)
-{
-	intrmask_t pending;
-	int i;
-
-	/* XXX: Is this correct? */
-	for (i = 7, pending = 0; i >= 0; i--) {
-		pending <<= 1;
-		if (isa_ino[i] != PCI_INVALID_IRQ) {
-			pending |= (OFW_PCI_INTR_PENDING(isa_bus_device,
-			    isa_ino[i]) == 0) ? 0 : 1;
-		}
-	}
-	return (pending);
-}
-
 void
 isa_init(device_t dev)
 {
@@ -114,17 +97,6 @@ isa_init(device_t dev)
 		panic("isa_init: cannot get bridge range property");
 
 	ofw_bus_setup_iinfo(isab_node, &isa_iinfo, sizeof(ofw_isa_intr_t));
-
-	/*
-	 * This is really a bad kludge; however, it is needed to provide
-	 * isa_irq_pending(), which is unfortunately still used by some
-	 * drivers.
-	 * XXX:	The only driver still using isa_irq_pending() is sio(4)
-	 *	which we don't use on sparc64. Should we just drop support
-	 *	for isa_irq_pending()?
-	 */
-	for (i = 0; i < 8; i++)
-		isa_ino[i] = PCI_INVALID_IRQ;
 
 	isa_setup_children(dev, isab_node);
 
@@ -204,7 +176,7 @@ isa_setup_children(device_t dev, phandle_t parent)
 			if (strcmp(ofw_isa_pnp_map[i].name, name) == 0)
 				break;
 		if (ofw_isa_pnp_map[i].name == NULL) {
-			printf("isa_setup_children: no PnP map entry for node "
+			device_printf(dev, "no PnP map entry for node "
 			    "0x%lx: %s\n", (unsigned long)node, name);
 			free(name, M_OFWPROP);
 			continue;
@@ -269,10 +241,12 @@ isa_setup_children(device_t dev, phandle_t parent)
 				panic("isa_setup_children: intr too large");
 			rintr = ofw_isa_route_intr(device_get_parent(dev), node,
 			    &isa_iinfo, intrs[i]);
-			if (rintr == PCI_INVALID_IRQ)
-				panic("isa_setup_children: could not map ISA "
-				    "interrupt %d", intrs[i]);
-			isa_ino[intrs[i]] = rintr;
+			if (rintr == PCI_INVALID_IRQ) {
+				device_printf(dev, "could not map ISA "
+				    "interrupt %d for node 0x%lx: %s\n",
+				    intrs[i], (unsigned long)node, name);
+				continue;
+			}
 			bus_set_resource(cdev, SYS_RES_IRQ, i, rintr, 1);
 		}
 		if (intrs != NULL)
@@ -298,7 +272,7 @@ isa_setup_children(device_t dev, phandle_t parent)
 
 struct resource *
 isa_alloc_resource(device_t bus, device_t child, int type, int *rid,
-		   u_long start, u_long end, u_long count, u_int flags)
+    u_long start, u_long end, u_long count, u_int flags)
 {
 	/*
 	 * Consider adding a resource definition.
@@ -379,16 +353,15 @@ isa_alloc_resource(device_t bus, device_t child, int type, int *rid,
 
 int
 isa_release_resource(device_t bus, device_t child, int type, int rid,
-		     struct resource *res)
+    struct resource *res)
 {
 
 	return (bus_generic_rl_release_resource(bus, child, type, rid, res));
 }
 
 int
-isa_setup_intr(device_t dev, device_t child,
-	       struct resource *irq, int flags, driver_filter_t *filter, 
-	       driver_intr_t *intr, void *arg, void **cookiep)	       
+isa_setup_intr(device_t dev, device_t child, struct resource *irq, int flags,
+    driver_filter_t *filter, driver_intr_t *intr, void *arg, void **cookiep)
 {
 
 	/*
@@ -397,14 +370,14 @@ isa_setup_intr(device_t dev, device_t child,
 	 * The interrupt had been routed before it was added to the
 	 * resource list of the child.
 	 */
-	return (BUS_SETUP_INTR(device_get_parent(dev), child, irq, flags,
-	    filter, intr, arg, cookiep));
+	return (bus_generic_setup_intr(dev, child, irq, flags, filter, intr,
+	    arg, cookiep));
 }
 
 int
-isa_teardown_intr(device_t dev, device_t child,
-		  struct resource *irq, void *cookie)
+isa_teardown_intr(device_t dev, device_t child, struct resource *irq,
+    void *cookie)
 {
 
-	return (BUS_TEARDOWN_INTR(device_get_parent(dev), child, irq, cookie));
+	return (bus_generic_teardown_intr(dev, child, irq, cookie));
 }

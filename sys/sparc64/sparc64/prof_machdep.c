@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Bruce D. Evans.
  * Copyright (c) 2002 by Thomas Moestl <tmm@FreeBSD.org>.
@@ -25,9 +26,10 @@
  * SUCH DAMAGE.
  *
  *	from: src/sys/i386/isa/prof_machdep.c,v 1.16 2000/07/04 11:25:19
- *
- * $FreeBSD: src/sys/sparc64/sparc64/prof_machdep.c,v 1.2 2006/05/16 14:32:17 phk Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/prof_machdep.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifdef GUPROF
 
@@ -44,15 +46,15 @@ int	cputime_bias;
 /*
  * Return the time elapsed since the last call.  The units are machine-
  * dependent.
- * XXX: this is not SMP-safe. It should use per-CPU variables; %tick can be
+ * XXX: this is not SMP-safe.  It should use per-CPU variables; %tick can be
  * used though.
  */
 int
 cputime(void)
 {
 	u_long count;
-	int delta;
 	static u_long prev_count;
+	int delta;
 
 	count = rd(tick);
 	delta = (int)(count - prev_count);
@@ -76,6 +78,7 @@ startguprof(struct gmonparam *gp)
 void
 stopguprof(struct gmonparam *gp)
 {
+
 	/* Nothing to do. */
 }
 

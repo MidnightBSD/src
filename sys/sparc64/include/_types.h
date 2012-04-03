@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 1990, 1993
@@ -29,7 +30,7 @@
  *
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
- * $FreeBSD: src/sys/sparc64/include/_types.h,v 1.8 2005/03/02 21:33:28 joerg Exp $
+ * $FreeBSD: src/sys/sparc64/include/_types.h,v 1.8.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE__TYPES_H_

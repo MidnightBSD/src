@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996
  *	The President and Fellows of Harvard College. All rights reserved.
@@ -67,9 +68,10 @@
  *
  *	from: @(#)cache.c	8.2 (Berkeley) 10/30/93
  *	from: NetBSD: cache.c,v 1.5 2000/12/06 01:47:50 mrg Exp
- *
- * $FreeBSD: src/sys/sparc64/sparc64/cache.c,v 1.20 2005/01/07 02:29:23 imp Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/cache.c,v 1.20.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -127,12 +129,14 @@ cache_init(phandle_t node)
 		cache_flush = cheetah_cache_flush;
 		dcache_page_inval = cheetah_dcache_page_inval;
 		icache_page_inval = cheetah_icache_page_inval;
+		tlb_flush_nonlocked = cheetah_tlb_flush_nonlocked;
 		tlb_flush_user = cheetah_tlb_flush_user;
 	} else {
 		cache_enable = spitfire_cache_enable;
 		cache_flush = spitfire_cache_flush;
 		dcache_page_inval = spitfire_dcache_page_inval;
 		icache_page_inval = spitfire_icache_page_inval;
+		tlb_flush_nonlocked = spitfire_tlb_flush_nonlocked;
 		tlb_flush_user = spitfire_tlb_flush_user;
 	}
 }

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 Matthew R. Green
  * Copyright (c) 2001 Thomas Moestl <tmm@FreeBSD.org>
@@ -28,7 +29,7 @@
  *
  *	from: NetBSD: ebus.c,v 1.26 2001/09/10 16:27:53 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/isa/ofw_isa.h,v 1.5 2005/01/07 02:29:22 imp Exp $
+ * $FreeBSD: src/sys/sparc64/isa/ofw_isa.h,v 1.5.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_ISA_OFW_ISA_H_

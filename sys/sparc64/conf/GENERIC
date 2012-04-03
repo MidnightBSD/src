@@ -145,7 +145,6 @@ device		mc146818	# Motorola MC146818 and compatible clocks
 # Serial (COM) ports
 device 		scc		# Serial communication controllers.
 device		uart		# Multi-uart driver
-device		scc		# Serial communications controllers.
 device		puc		# Multi-channel uarts
 
 # Parallel port
@@ -204,6 +203,7 @@ device		ath_rate_sample	# SampleRate tx rate control for ath
 device		loop		# Network loopback
 device		random		# Entropy device
 device		ether		# Ethernet support
+device		vlan		# 802.1Q VLAN support
 device		sl		# Kernel SLIP
 device		ppp		# Kernel PPP
 device		tun		# Packet tunnel.

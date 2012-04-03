@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -26,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: BSDI: asi.h,v 1.3 1997/08/08 14:31:42 torek
- * $FreeBSD: src/sys/sparc64/include/asi.h,v 1.12 2006/10/09 05:59:04 kmacy Exp $
+ * $FreeBSD: src/sys/sparc64/include/asi.h,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_ASI_H_
@@ -143,7 +144,7 @@
 
 #define	ASI_DMMU_TSB_8KB_PTR_REG		0x59
 #define	ASI_DMMU_TSB_64KB_PTR_REG		0x5a
-#define	ASI_DMMU_TSB_DIRECT_PTR_REG 		0x5b
+#define	ASI_DMMU_TSB_DIRECT_PTR_REG		0x5b
 #define	ASI_DTLB_DATA_IN_REG			0x5c
 /* US-III Cu: also ASI_DTLB_CAM_ADDRESS_REG */
 #define	ASI_DTLB_DATA_ACCESS_REG		0x5d

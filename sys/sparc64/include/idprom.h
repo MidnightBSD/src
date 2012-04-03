@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Adam Glass
  * All rights reserved.
@@ -30,7 +31,7 @@
  *
  *	from: NetBSD: idprom.h,v 1.2 1998/09/05 23:57:26 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/include/idprom.h,v 1.2 2005/01/07 02:29:22 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/idprom.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_IDPROM_H_

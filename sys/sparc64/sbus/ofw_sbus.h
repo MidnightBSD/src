@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -35,7 +36,7 @@
  *
  *	from: NetBSD: sbusvar.h,v 1.12 2001/09/24 23:49:34 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/sbus/ofw_sbus.h,v 1.1 2002/02/13 16:11:36 tmm Exp $
+ * $FreeBSD: src/sys/sparc64/sbus/ofw_sbus.h,v 1.1.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SPARC64_SBUS_OFW_SBUS_H_

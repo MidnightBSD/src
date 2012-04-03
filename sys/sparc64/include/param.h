@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/sparc64/include/param.h,v 1.22 2006/12/18 07:28:59 kmacy Exp $
+ * $FreeBSD: src/sys/sparc64/include/param.h,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
