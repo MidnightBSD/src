@@ -2179,6 +2179,7 @@ cddl/usr.bin/Makefile.inc -text
 cddl/usr.bin/ctfconvert/Makefile -text
 cddl/usr.bin/ctfdump/Makefile -text
 cddl/usr.bin/ctfmerge/Makefile -text
+cddl/usr.bin/sgsmsg/Makefile -text
 cddl/usr.bin/ztest/Makefile -text
 cddl/usr.sbin/Makefile -text
 cddl/usr.sbin/Makefile.inc -text
