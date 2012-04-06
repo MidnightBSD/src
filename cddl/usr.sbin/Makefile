@@ -1,9 +1,10 @@
-# $MidnightBSD$
+# $MidnightBSD: src/cddl/usr.sbin/Makefile,v 1.2 2008/11/11 19:37:23 laffer1 Exp $
 # $FreeBSD: src/cddl/usr.sbin/Makefile,v 1.7 2007/10/09 23:31:09 obrien Exp $
 
 .include <bsd.own.mk>
 
-SUBDIR=	${_zdb}
+SUBDIR=	dtrace \
+	${_zdb}
 
 .if ${MK_ZFS} != "no"
 .if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"

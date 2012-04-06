@@ -1,8 +1,11 @@
-# $MidnightBSD$
+# $MidnightBSD: src/cddl/lib/Makefile,v 1.2 2008/10/15 19:10:19 laffer1 Exp $
 
 .include <bsd.own.mk>
 
-SUBDIR=	libavl \
+SUBDIR=	drti \
+	libavl \
+	libctf \
+	libdtrace \
 	libnvpair \
 	libumem \
 	libuutil \

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/cddl/usr.bin/ztest/Makefile,v 1.2 2008/11/11 19:35:41 laffer1 Exp $
 # $FreeBSD: src/cddl/usr.bin/ztest/Makefile,v 1.4 2007/10/01 18:17:23 ru Exp $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/ztest
@@ -11,7 +11,7 @@ CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/include
 CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/lib/libumem
 CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${.CURDIR}/../../../sys/cddl//contrib/opensolaris/uts/common/sys
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common
 CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/head
 CFLAGS+= -I${.CURDIR}/../../lib/libumem
