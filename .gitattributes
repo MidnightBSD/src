@@ -36566,6 +36566,7 @@ sys/cddl/contrib/opensolaris/common/acl/acl_common.c -text
 sys/cddl/contrib/opensolaris/common/acl/acl_common.h -text
 sys/cddl/contrib/opensolaris/common/atomic/amd64/atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/i386/atomic.S -text
+sys/cddl/contrib/opensolaris/common/atomic/sparc64/atomic.S -text
 sys/cddl/contrib/opensolaris/common/avl/avl.c -text
 sys/cddl/contrib/opensolaris/common/nvpair/nvpair.c -text
 sys/cddl/contrib/opensolaris/common/nvpair/nvpair_alloc_fixed.c -text
