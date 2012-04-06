@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/spa.h,v 1.2 2008/12/03 00:24:32 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -296,7 +296,7 @@ typedef struct blkptr {
  * Note: the byteorder is either 0 or -1, both of which are palindromes.
  * This simplifies the endianness handling a bit.
  */
-#ifdef _BIG_ENDIAN
+#if BYTE_ORDER == _BIG_ENDIAN
 #define	ZFS_HOST_BYTEORDER	(0ULL)
 #else
 #define	ZFS_HOST_BYTEORDER	(-1ULL)

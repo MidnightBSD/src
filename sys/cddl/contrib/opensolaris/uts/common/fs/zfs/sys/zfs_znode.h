@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zfs_znode.h,v 1.2 2008/12/03 00:24:32 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -163,7 +163,6 @@ typedef struct znode {
 	uint32_t	z_sync_cnt;	/* synchronous open count */
 	kmutex_t	z_acl_lock;	/* acl data lock */
 	list_node_t	z_link_node;	/* all znodes in fs link */
-	struct lockf	*z_lockf;	/* Head of byte-level lock list. */
 	/*
 	 * These are dmu managed fields.
 	 */

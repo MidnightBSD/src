@@ -36765,6 +36765,8 @@ sys/cddl/contrib/opensolaris/uts/common/zmod/zmod.c -text
 sys/cddl/contrib/opensolaris/uts/common/zmod/zmod_subr.c -text
 sys/cddl/contrib/opensolaris/uts/common/zmod/zutil.c -text
 sys/cddl/contrib/opensolaris/uts/common/zmod/zutil.h -text
+sys/cddl/contrib/opensolaris/uts/intel/sys/fasttrap_isa.h -text
+sys/cddl/contrib/opensolaris/uts/sparc/sys/fasttrap_isa.h -text
 sys/cddl/dev/cyclic/amd64/cyclic_machdep.c -text
 sys/cddl/dev/cyclic/cyclic.c -text
 sys/cddl/dev/cyclic/cyclic_test.c -text
