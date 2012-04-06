@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/common/avl/avl.c,v 1.2 2008/12/03 00:24:29 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -93,6 +93,7 @@
 
 #include <sys/types.h>
 #include <sys/param.h>
+#include <sys/stdint.h>
 #include <sys/debug.h>
 #include <sys/avl.h>
 

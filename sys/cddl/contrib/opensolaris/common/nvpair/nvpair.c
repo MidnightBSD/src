@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/common/nvpair/nvpair.c,v 1.2 2008/12/03 00:24:30 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -1919,7 +1919,7 @@ nvlist_common(nvlist_t *nvl, char *buf, size_t *buflen, int encoding,
 	int err = 0;
 	nvstream_t nvs;
 	int nvl_endian;
-#ifdef	_LITTLE_ENDIAN
+#if BYTE_ORDER == _LITTLE_ENDIAN
 	int host_endian = 1;
 #else
 	int host_endian = 0;
