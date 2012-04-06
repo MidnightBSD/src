@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs_ioctl.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs_ioctl.c,v 1.3 2012/04/06 12:37:53 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -1798,7 +1798,7 @@ zfs_modevent(module_t mod, int type, void *unused __unused)
 	case MOD_LOAD:
 		zfs_root_token = root_mount_hold("ZFS");
 		printf("WARNING: ZFS is considered to be an experimental "
-		    "feature in FreeBSD.\n");
+		    "feature in MidnightBSD.\n");
 		TASK_INIT(&zfs_start_task, 0, zfs_start, NULL);
 		taskqueue_enqueue(taskqueue_thread, &zfs_start_task);
 		error = 0;
