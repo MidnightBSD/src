@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs_ioctl.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -1825,3 +1825,4 @@ static moduledata_t zfs_mod = {
 	0
 };
 DECLARE_MODULE(zfsctrl, zfs_mod, SI_SUB_VFS, SI_ORDER_ANY);
+MODULE_DEPEND(zfsctrl, opensolaris, 1, 1, 1);
