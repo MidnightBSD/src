@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libkiconv/Makefile,v 1.4 2007/05/21 02:49:04 deischen Exp $
 
 LIB=		kiconv
