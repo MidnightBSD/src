@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libypclnt/Makefile,v 1.16 2007/05/21 02:49:08 deischen Exp $
 
 LIB=	ypclnt

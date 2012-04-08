@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/lib/libexpat/expat_config.h,v 1.2 2007/04/24 06:29:27 phk Exp $ */
 
 #include <machine/endian.h>
