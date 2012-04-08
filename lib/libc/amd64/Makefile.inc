@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libc/amd64/Makefile.inc,v 1.5 2006/03/16 14:22:19 ru Exp $
+# $FreeBSD: src/lib/libc/amd64/Makefile.inc,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # Machine dependent definitions for the amd64 architecture.
 #

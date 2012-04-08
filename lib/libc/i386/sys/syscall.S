@@ -34,7 +34,7 @@
 	.asciz "@(#)syscall.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/sys/syscall.S,v 1.9 2007/01/09 00:27:59 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/i386/sys/syscall.S,v 1.9.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "SYS.h"
 
@@ -50,3 +50,4 @@ ENTRY(syscall)
 1:
 	PIC_PROLOGUE
 	jmp	PIC_PLT(HIDENAME(cerror))
+END(syscall)

@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libc/sparc64/gen/Makefile.inc,v 1.12 2005/03/15 15:53:39 das Exp $
+# $FreeBSD: src/lib/libc/sparc64/gen/Makefile.inc,v 1.12.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 SRCS+=	_ctx_start.S _setjmp.S fabs.S fixunsdfsi.S flt_rounds.c fpgetmask.c \
 	fpgetround.c fpgetsticky.c fpsetmask.c fpsetround.c \

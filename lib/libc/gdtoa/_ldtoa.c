@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gdtoa/_ldtoa.c,v 1.2 2004/01/18 07:53:49 das Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gdtoa/_ldtoa.c,v 1.2.18.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <float.h>
 #include <inttypes.h>
@@ -79,9 +79,7 @@ __ldtoa(long double *ld, int mode, int ndigits, int *decpt, int *sign,
 		break;
 	case FP_SUBNORMAL:
 		kind = STRTOG_Denormal;
-#ifdef	LDBL_IMPLICIT_NBIT
 		be++;
-#endif
 		break;
 	case FP_INFINITE:
 		kind = STRTOG_Infinite;

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/sparc64/_fpmath.h,v 1.5 2005/03/07 04:55:22 das Exp $
+ * $FreeBSD: src/lib/libc/sparc64/_fpmath.h,v 1.5.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 union IEEEl2bits {

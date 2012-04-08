@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/amd64/sys/getcontext.S,v 1.2 2003/09/04 00:31:45 peter Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/amd64/sys/getcontext.S,v 1.2.20.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <SYS.h>
 
@@ -52,3 +52,4 @@ ENTRY(__sys_getcontext)
 #else
 	jmp	HIDENAME(cerror)
 #endif
+END(__sys_getcontext)

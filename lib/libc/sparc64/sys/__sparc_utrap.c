@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/sparc64/sys/__sparc_utrap.c,v 1.6 2004/01/19 16:14:58 nectar Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/sparc64/sys/__sparc_utrap.c,v 1.6.26.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 

@@ -34,10 +34,10 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	.text
-	.asciz "$Id: sigsetjmp.S,v 1.1.1.3 2008-10-30 20:39:06 laffer1 Exp $"
+	.asciz "$Id: sigsetjmp.S,v 1.2 2012-04-08 14:47:52 laffer1 Exp $"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/gen/sigsetjmp.S,v 1.25 2007/01/09 00:27:58 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/i386/gen/sigsetjmp.S,v 1.25.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "SYS.h"
 
@@ -78,10 +78,11 @@ ENTRY(sigsetjmp)
 	fnstcw	24(%ecx)
 	xorl	%eax,%eax
 	ret
+END(sigsetjmp)
 
 	.weak CNAME(siglongjmp);
-	.set CNAME(siglongjmp),CNAME(__siglongjmp);
-ENTRY(__siglongjmp);
+	.set CNAME(siglongjmp),CNAME(__siglongjmp)
+ENTRY(__siglongjmp)
 	movl	4(%esp),%edx
 	cmpl	$0,44(%edx)
 	jz	2f
@@ -108,3 +109,4 @@ ENTRY(__siglongjmp);
 	incl	%eax
 1:	movl	%ecx,0(%esp)
 	ret
+END(__siglongjmp)

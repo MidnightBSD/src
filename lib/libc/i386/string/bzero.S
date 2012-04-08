@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/string/bzero.S,v 1.9 2002/06/02 20:05:36 schweikh Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/i386/string/bzero.S,v 1.9.24.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * bzero (void *b, size_t len)
@@ -79,3 +79,4 @@ L1:	rep
 	popl	%ebx
 	popl	%edi
 	ret
+END(bzero)

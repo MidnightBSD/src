@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/string/memset.S,v 1.8 2002/03/23 02:44:19 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/i386/string/memset.S,v 1.8.24.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * memset(void *b, int c, size_t len)
@@ -87,3 +87,4 @@ L1:	rep
 	popl	%ebx
 	popl	%edi
 	ret
+END(memset)

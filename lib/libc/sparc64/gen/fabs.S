@@ -24,7 +24,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/sparc64/gen/fabs.S,v 1.2 2004/02/10 20:45:28 cperciva Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/sparc64/gen/fabs.S,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * double fabs(double);

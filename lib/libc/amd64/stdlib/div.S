@@ -6,7 +6,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/amd64/stdlib/div.S,v 1.1 2007/04/04 01:19:54 jkim Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/amd64/stdlib/div.S,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 ENTRY(div)
 	movl	%edi,%eax
@@ -15,3 +15,4 @@ ENTRY(div)
 	salq	$32,%rdx
 	orq	%rdx,%rax
 	ret
+END(div)

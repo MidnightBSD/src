@@ -30,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/sparc64/gen/sigsetjmp.S,v 1.5 2003/01/05 22:10:06 tmm Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/sparc64/gen/sigsetjmp.S,v 1.5.30.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "assym.s"
 

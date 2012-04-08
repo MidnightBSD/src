@@ -34,7 +34,7 @@
 	.asciz "@(#)_setjmp.s	5.1 (Berkeley) 4/23/90"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/amd64/gen/_setjmp.S,v 1.19 2007/01/09 00:27:48 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/amd64/gen/_setjmp.S,v 1.19.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * C library -- _setjmp, _longjmp
@@ -60,6 +60,7 @@ ENTRY(_setjmp)
 	fnstcw	64(%rax)		/* 8; fpu cw */
 	xorq	%rax,%rax
 	ret
+END(_setjmp)
 
 	.weak	CNAME(_longjmp)
 	.set	CNAME(_longjmp),CNAME(___longjmp)
@@ -81,3 +82,4 @@ ENTRY(___longjmp)
 	incq	%rax
 1:	movq	%rcx,0(%rsp)
 	ret
+END(___longjmp)

@@ -1,5 +1,5 @@
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/amd64/string/bcmp.S,v 1.2 2005/04/10 18:12:06 alc Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/amd64/string/bcmp.S,v 1.2.12.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #if 0
 	RCSID("$NetBSD: bcmp.S,v 1.1 2001/06/19 00:25:04 fvdl Exp $")
@@ -22,3 +22,4 @@ L1:
 	setne	%al
 	movsbl	%al,%eax
 	ret
+END(bcmp)

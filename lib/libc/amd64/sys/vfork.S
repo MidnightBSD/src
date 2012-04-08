@@ -34,7 +34,7 @@
 	.asciz "@(#)Ovfork.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/amd64/sys/vfork.S,v 1.23 2007/01/09 00:27:49 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/amd64/sys/vfork.S,v 1.23.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "SYS.h"
 
@@ -56,3 +56,4 @@ ENTRY(__sys_vfork)
 #else
 	jmp	HIDENAME(cerror)
 #endif
+END(__sys_vfork)

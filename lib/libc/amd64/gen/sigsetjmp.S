@@ -34,7 +34,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	.text
-	.asciz "$Id: sigsetjmp.S,v 1.2 2012-02-16 18:41:04 laffer1 Exp $"
+	.asciz "$Id: sigsetjmp.S,v 1.3 2012-04-08 14:47:52 laffer1 Exp $"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
 __FBSDID("$FreeBSD: src/lib/libc/amd64/gen/sigsetjmp.S,v 1.29 2007/01/09 00:27:48 imp Exp $");
@@ -78,6 +78,7 @@ ENTRY(sigsetjmp)
 	fnstcw	64(%rcx)		/* 8; fpu cw */
 	xorq	%rax,%rax
 	ret
+END(sigsetjmp)
 
 	.weak CNAME(siglongjmp)
 	.set CNAME(siglongjmp),CNAME(__siglongjmp)
@@ -112,3 +113,4 @@ ENTRY(__siglongjmp)
 	incq	%rax
 1:	movq	%rcx,0(%rsp)
 	ret
+END(__siglongjmp)

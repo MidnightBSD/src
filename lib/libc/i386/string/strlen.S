@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/string/strlen.S,v 1.9 2002/06/02 20:05:38 schweikh Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/i386/string/strlen.S,v 1.9.24.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * strlen (s)
@@ -51,3 +51,4 @@ ENTRY(strlen)
 	leal	-1(%ecx),%eax		/* and subtracting one */
 	popl	%edi
 	ret
+END(strlen)

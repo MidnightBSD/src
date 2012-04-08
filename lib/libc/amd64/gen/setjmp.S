@@ -70,6 +70,7 @@ ENTRY(setjmp)
 	fnstcw	64(%rcx)		/* 8; fpu cw */
 	xorq	%rax,%rax
 	ret
+END(setjmp)
 
 	.weak CNAME(longjmp)
 	.set CNAME(longjmp),CNAME(__longjmp)
@@ -102,3 +103,4 @@ ENTRY(__longjmp)
 	incq	%rax
 1:	movq	%rcx,0(%rsp)
 	ret
+END(__longjmp)

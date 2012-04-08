@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/string/wmemchr.S,v 1.2 2003/03/12 06:46:16 tjr Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/i386/string/wmemchr.S,v 1.2.22.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * wchar_t *
@@ -103,3 +103,4 @@ no:	xorl	%eax,%eax
 	popl	%ebx
 	popl	%edi
 	ret
+END(wmemchr)

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/amd64/gen/signalcontext.c,v 1.5 2004/07/28 13:08:24 davidxu Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/amd64/gen/signalcontext.c,v 1.5.26.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/ucontext.h>

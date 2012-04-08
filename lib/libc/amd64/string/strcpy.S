@@ -4,7 +4,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/amd64/string/strcpy.S,v 1.2 2005/04/23 18:45:36 alc Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/amd64/string/strcpy.S,v 1.2.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #if 0
 	RCSID("$NetBSD: strcpy.S,v 1.3 2004/07/19 20:04:41 drochner Exp $")
@@ -109,3 +109,4 @@ ENTRY(strcpy)
 
 .Ldone:
 	ret
+END(strcpy)

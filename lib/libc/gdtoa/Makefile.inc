@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libc/gdtoa/Makefile.inc,v 1.9 2006/03/13 01:14:56 deischen Exp $
+# $FreeBSD: src/lib/libc/gdtoa/Makefile.inc,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 # netlib gdtoa sources
 .PATH: ${.CURDIR}/gdtoa
