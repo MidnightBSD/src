@@ -32081,6 +32081,12 @@ lib/libpmc/pmc.h -text
 lib/libpmc/pmclog.3 -text
 lib/libpmc/pmclog.c -text
 lib/libpmc/pmclog.h -text
+lib/libproc/Makefile -text
+lib/libproc/_libproc.h -text
+lib/libproc/libproc.h -text
+lib/libproc/proc_create.c -text
+lib/libproc/proc_sym.c -text
+lib/libproc/proc_util.c -text
 lib/libradius/Makefile -text
 lib/libradius/libradius.3 -text
 lib/libradius/radius.conf.5 -text
