@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libmilter/Makefile,v 1.7 2007/04/09 01:45:30 gshapiro Exp $
 
 .include <bsd.own.mk>
@@ -8,6 +9,7 @@ SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 CFLAGS+=-I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+=-DNOT_SENDMAIL -Dsm_snprintf=snprintf
 CFLAGS+=-D_THREAD_SAFE
+CFLAGS+=-DSM_CONF_POLL
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DNETINET6
