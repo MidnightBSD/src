@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: ipsec_get_policylen.c,v 1.5 2000/05/07 05:25:03 itojun Exp $	*/
 
 /*

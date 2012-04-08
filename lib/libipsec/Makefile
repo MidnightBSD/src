@@ -26,6 +26,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/lib/libipsec/Makefile,v 1.21 2007/07/01 12:08:05 gnn Exp $
+# $MidnightBSD$
 
 SHLIBDIR?= /lib
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: test-policy.c,v 1.16 2003/08/26 03:24:08 itojun Exp $	*/
 
 /*

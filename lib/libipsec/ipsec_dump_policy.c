@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: ipsec_dump_policy.c,v 1.13 2002/06/27 14:35:11 itojun Exp $	*/
 
 /*

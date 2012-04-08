@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: ipsec_strerror.c,v 1.7 2000/07/30 00:45:12 itojun Exp $	*/
 
 /*

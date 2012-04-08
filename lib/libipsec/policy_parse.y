@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: policy_parse.y,v 1.14 2003/06/27 03:39:20 itojun Exp $	*/
 
 /*
