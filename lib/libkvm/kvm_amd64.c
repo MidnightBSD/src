@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm_amd64.c,v 1.22 2007/06/15 11:35:11 simokawa Exp $");
+__FBSDID("$FreeBSD: src/lib/libkvm/kvm_amd64.c,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0

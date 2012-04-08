@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kvm_private.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: src/lib/libkvm/kvm_private.h,v 1.12 2007/06/15 11:35:11 simokawa Exp $
+ * $FreeBSD: src/lib/libkvm/kvm_private.h,v 1.12.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 struct __kvm {

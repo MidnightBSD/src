@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm_i386.c,v 1.21 2007/06/15 11:35:11 simokawa Exp $");
+__FBSDID("$FreeBSD: src/lib/libkvm/kvm_i386.c,v 1.21.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -51,6 +52,7 @@ static char sccsid[] = "@(#)kvm_hp300.c	8.1 (Berkeley) 6/4/93";
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <nlist.h>
 #include <kvm.h>

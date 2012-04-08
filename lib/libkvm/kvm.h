@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kvm.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/lib/libkvm/kvm.h,v 1.17 2007/01/08 17:35:36 imp Exp $
+ * $FreeBSD: src/lib/libkvm/kvm.h,v 1.17.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _KVM_H_
@@ -70,10 +71,13 @@ struct kvm_swap {
 __BEGIN_DECLS
 int	  kvm_close(kvm_t *);
 char	**kvm_getargv(kvm_t *, const struct kinfo_proc *, int);
+int	  kvm_getcptime(kvm_t *, long *);
 char	**kvm_getenvv(kvm_t *, const struct kinfo_proc *, int);
 char	 *kvm_geterr(kvm_t *);
 char	 *kvm_getfiles(kvm_t *, int, int, int *);
 int	  kvm_getloadavg(kvm_t *, double [], int);
+int	  kvm_getmaxcpu(kvm_t *);
+void	 *kvm_getpcpu(kvm_t *, int);
 struct kinfo_proc *
 	  kvm_getprocs(kvm_t *, int, int, int *);
 int	  kvm_getswapinfo(kvm_t *, struct kvm_swap *, int, int);

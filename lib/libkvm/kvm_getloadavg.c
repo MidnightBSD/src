@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm_getloadavg.c,v 1.10 2007/01/08 17:35:36 imp Exp $");
+__FBSDID("$FreeBSD: src/lib/libkvm/kvm_getloadavg.c,v 1.10.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0

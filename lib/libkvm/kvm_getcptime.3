@@ -1,5 +1,6 @@
-.\" Copyright (c) 1992, 1993
-.\"	The Regents of the University of California.  All rights reserved.
+.\" Copyright (c) 2008 Yahoo!, Inc.
+.\" All rights reserved.
+.\" Written by: John Baldwin <jhb@FreeBSD.org>
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -9,14 +10,14 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the author nor the names of any co-contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
-.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 .\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 .\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
 .\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 .\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
 .\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -25,38 +26,52 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"     @(#)kvm_getloadavg.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libkvm/kvm_getloadavg.3,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $FreeBSD: src/lib/libkvm/kvm_getcptime.3,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 .\"
-.Dd June 4, 1993
-.Dt KVM_GETLOADAVG 3
+.Dd August 19, 2008
+.Dt KVM_GETCPTIME 3
 .Os
 .Sh NAME
-.Nm kvm_getloadavg
-.Nd get load average of the system
+.Nm kvm_getcptime
+.Nd fetch global CPU time statistics
 .Sh LIBRARY
 .Lb libkvm
 .Sh SYNOPSIS
+.In sys/param.h
+.In sys/resource.h
+.In sys/sysctl.h
 .In kvm.h
 .Ft int
-.Fn kvm_getloadavg "kvm_t *kd" "double loadavg[]" "int nelem"
+.Fn kvm_getcptime "kvm_t *kd" "long *cp_time"
 .Sh DESCRIPTION
 The
-.Fn kvm_getloadavg
-function returns the number of processes in the system run queue
-of the kernel indicated by
-.Fa kd ,
-averaged over various periods of time.
-Up to
-.Fa nelem
-samples are retrieved and assigned to successive elements of
-.Fa loadavg Ns Bq .
-The system imposes a maximum of 3 samples, representing averages
-over the last 1, 5, and 15 minutes, respectively.
-.Sh DIAGNOSTICS
-If the load average was unobtainable, \-1 is returned; otherwise,
-the number of samples actually retrieved is returned.
+.Fn kvm_getcptime
+function stores the global CPU time statistics from the kernel
+.Fa kd
+in the array of counters pointed to by
+.Fa cp_time .
+Note that
+.Fa cp_time
+should point to an array of
+.Dv CPUSTATES
+long integers.
+The format of the counters is identical to that output by the
+.Va kern.cp_time
+sysctl.
+.Sh CACHING
+This function caches the nlist values for various kernel variables which it
+reuses in successive calls.
+You may call the function with
+.Fa kd
+set to
+.Dv NULL
+to clear this cache.
+.Sh RETURN VALUES
+The
+.Nm kvm_getcptime
+function returns 0 on success and -1 on failure.
+If an error occurs,
+then an error message may be retrieved via
+.Xr kvm_geterr 3 .
 .Sh SEE ALSO
-.Xr uptime 1 ,
-.Xr getloadavg 3 ,
 .Xr kvm 3

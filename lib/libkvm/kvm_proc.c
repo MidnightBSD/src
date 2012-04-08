@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +39,7 @@ static char sccsid[] = "@(#)kvm_proc.c	8.3 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm_proc.c,v 1.94 2007/09/21 04:11:34 jeff Exp $");
+__FBSDID("$FreeBSD: src/lib/libkvm/kvm_proc.c,v 1.94.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Proc traversal interface for kvm.  ps and w are (probably) the exclusive

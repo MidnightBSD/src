@@ -31850,11 +31850,14 @@ lib/libkvm/kvm.3 -text
 lib/libkvm/kvm.c -text
 lib/libkvm/kvm.h -text
 lib/libkvm/kvm_amd64.c -text
+lib/libkvm/kvm_cptime.c -text
 lib/libkvm/kvm_file.c -text
+lib/libkvm/kvm_getcptime.3 -text
 lib/libkvm/kvm_geterr.3 -text
 lib/libkvm/kvm_getfiles.3 -text
 lib/libkvm/kvm_getloadavg.3 -text
 lib/libkvm/kvm_getloadavg.c -text
+lib/libkvm/kvm_getpcpu.3 -text
 lib/libkvm/kvm_getprocs.3 -text
 lib/libkvm/kvm_getswapinfo.3 -text
 lib/libkvm/kvm_getswapinfo.c -text
@@ -31863,6 +31866,7 @@ lib/libkvm/kvm_minidump_amd64.c -text
 lib/libkvm/kvm_minidump_i386.c -text
 lib/libkvm/kvm_nlist.3 -text
 lib/libkvm/kvm_open.3 -text
+lib/libkvm/kvm_pcpu.c -text
 lib/libkvm/kvm_private.h -text
 lib/libkvm/kvm_proc.c -text
 lib/libkvm/kvm_read.3 -text

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1999, Matthew Dillon.  All Rights Reserved.
  * Copyright (c) 2001, Thomas Moestl.  All Rights Reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm_getswapinfo.c,v 1.27 2007/02/07 17:43:10 jhb Exp $");
+__FBSDID("$FreeBSD: src/lib/libkvm/kvm_getswapinfo.c,v 1.27.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
