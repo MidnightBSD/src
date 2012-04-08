@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * bluetooth.h
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bluetooth.h,v 1.1.1.2 2006-02-25 02:34:50 laffer1 Exp $
- * $FreeBSD: src/lib/libbluetooth/bluetooth.h,v 1.2 2005/03/17 21:39:44 emax Exp $
+ * $Id: bluetooth.h,v 1.2 2012-04-08 14:24:04 laffer1 Exp $
+ * $FreeBSD: src/lib/libbluetooth/bluetooth.h,v 1.2.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _BLUETOOTH_H_
@@ -71,6 +72,36 @@ void              bt_endprotoent      (void);
 
 char const *      bt_ntoa             (bdaddr_t const *ba, char *str);
 int               bt_aton             (char const *str, bdaddr_t *ba);
+
+/*
+ * bdaddr utility functions (from NetBSD)
+ */
+
+static __inline int
+bdaddr_same(const bdaddr_t *a, const bdaddr_t *b)
+{
+	return (a->b[0] == b->b[0] && a->b[1] == b->b[1] &&
+		a->b[2] == b->b[2] && a->b[3] == b->b[3] &&
+		a->b[4] == b->b[4] && a->b[5] == b->b[5]);
+}
+
+static __inline int
+bdaddr_any(const bdaddr_t *a)
+{
+	return (a->b[0] == 0 && a->b[1] == 0 && a->b[2] == 0 &&
+		a->b[3] == 0 && a->b[4] == 0 && a->b[5] == 0);
+}
+
+static __inline void
+bdaddr_copy(bdaddr_t *d, const bdaddr_t *s)
+{
+	d->b[0] = s->b[0];
+	d->b[1] = s->b[1];
+	d->b[2] = s->b[2];
+	d->b[3] = s->b[3];
+	d->b[4] = s->b[4];
+	d->b[5] = s->b[5];
+}
 
 __END_DECLS
 

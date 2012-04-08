@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Taken from the original FreeBSD user SCSI library.
  */
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libcam/scsi_cmdparse.c,v 1.7 2002/09/16 07:18:27 mike Exp $");
+__FBSDID("$FreeBSD: src/lib/libcam/scsi_cmdparse.c,v 1.7.32.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 

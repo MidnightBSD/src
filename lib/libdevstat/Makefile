@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libdevstat/Makefile,v 1.16 2007/05/21 02:49:03 deischen Exp $
 
 LIB=	devstat

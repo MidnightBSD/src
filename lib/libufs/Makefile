@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libufs/Makefile,v 1.14 2006/10/31 21:21:48 pjd Exp $
 
 LIB=	ufs

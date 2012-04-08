@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * internal.h

@@ -1,4 +1,5 @@
-# $FreeBSD: src/lib/libcam/Makefile,v 1.12 2004/02/05 22:44:22 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: src/lib/libcam/Makefile,v 1.12.26.1 2008/11/25 02:59:29 kensmith Exp $
 
 LIB=		cam
 SHLIBDIR?=	/lib

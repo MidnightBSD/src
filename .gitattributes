@@ -29477,14 +29477,6 @@ lib/libalias/modules/skinny/Makefile -text
 lib/libalias/modules/smedia/Makefile -text
 lib/libarchive/Makefile -text
 lib/libarchive/config.h -text
-lib/libatm/Makefile -text
-lib/libatm/atm_addr.c -text
-lib/libatm/cache_key.c -text
-lib/libatm/ioctl_subr.c -text
-lib/libatm/ip_addr.c -text
-lib/libatm/ip_checksum.c -text
-lib/libatm/libatm.h -text
-lib/libatm/timer.c -text
 lib/libautofs/Makefile -text
 lib/libautofs/libautofs.3 -text
 lib/libautofs/libautofs.c -text

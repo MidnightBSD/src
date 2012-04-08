@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003 Juli Mallett.  All rights reserved.
  *

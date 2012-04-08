@@ -1,5 +1,6 @@
-# $Id: Makefile,v 1.1.1.3 2008-10-30 20:39:05 laffer1 Exp $
-# $FreeBSD: src/lib/libbluetooth/Makefile,v 1.3 2007/05/21 02:49:02 deischen Exp $
+# $Id: Makefile,v 1.2 2012-04-08 14:24:04 laffer1 Exp $
+# $FreeBSD: src/lib/libbluetooth/Makefile,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
 
 LIB=		bluetooth
 MAN=		bluetooth.3
@@ -26,5 +27,9 @@ MLINKS+=	bluetooth.3 bt_endprotoent.3
 
 MLINKS+=	bluetooth.3 bt_ntoa.3
 MLINKS+=	bluetooth.3 bt_aton.3
+
+MLINKS+=	bluetooth.3 bdaddr_same.3
+MLINKS+=	bluetooth.3 bdaddr_any.3
+MLINKS+=	bluetooth.3 bdaddr_copy.3
 
 .include <bsd.lib.mk>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997, 1998, 1999, 2002 Kenneth D. Merry.
  * All rights reserved.
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libcam/camlib.c,v 1.16 2006/11/02 00:54:32 mjacob Exp $");
+__FBSDID("$FreeBSD: src/lib/libcam/camlib.c,v 1.16.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -346,6 +347,9 @@ cam_open_btl(path_id_t path_id, target_id_t target_id, lun_id_t target_lun,
 
 	bzero(&ccb, sizeof(union ccb));
 	ccb.ccb_h.func_code = XPT_DEV_MATCH;
+	ccb.ccb_h.path_id = CAM_XPT_PATH_ID;
+	ccb.ccb_h.target_id = CAM_TARGET_WILDCARD;
+	ccb.ccb_h.target_lun = CAM_LUN_WILDCARD;
 
 	/* Setup the result buffer */
 	bufsize = sizeof(struct dev_match_result);

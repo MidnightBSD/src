@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  *  Routines in this file based on the work of Volker Lendecke,
  *  Adapted for ncplib by Boris Popov
