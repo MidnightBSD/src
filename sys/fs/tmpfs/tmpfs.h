@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/tmpfs/tmpfs.h,v 1.2 2008/12/03 00:25:45 laffer1 Exp $ */
 /*	$NetBSD: tmpfs.h,v 1.26 2007/02/22 06:37:00 thorpej Exp $	*/
 
 /*
@@ -496,11 +496,8 @@ int	tmpfs_truncate(struct vnode *, off_t);
 static __inline size_t
 tmpfs_mem_info(void)
 {
-	size_t size;
 
-	size = swap_pager_avail + cnt.v_free_count + cnt.v_inactive_count;
-	size -= size > cnt.v_wire_count ? cnt.v_wire_count : size;
-	return size;
+	return (swap_pager_avail + cnt.v_free_count + cnt.v_cache_count);
 }
 
 /* Returns the maximum size allowed for a tmpfs file system.  This macro
