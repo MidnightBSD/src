@@ -1,7 +1,7 @@
 /* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_vnops.c,v 1.39 2007/07/23 15:41:01 jmmv Exp $	*/
 
-/*
+/*-
  * Copyright (c) 2005, 2006 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -17,13 +17,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -42,7 +35,7 @@
  * tmpfs vnode interface.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/tmpfs/tmpfs_vnops.c,v 1.11.2.1 2007/11/26 06:46:44 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/fs/tmpfs/tmpfs_vnops.c,v 1.11.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -1428,22 +1421,6 @@ tmpfs_pathconf(struct vop_pathconf_args *v)
 	return error;
 }
 
-/* --------------------------------------------------------------------- */
-
-static int
-tmpfs_advlock(struct vop_advlock_args *v)
-{
-	struct vnode *vp = v->a_vp;
-
-	struct tmpfs_node *node;
-
-	node = VP_TO_TMPFS_NODE(vp);
-
-	return lf_advlock(v, &node->tn_lockf, node->tn_size);
-}
-
-/* --------------------------------------------------------------------- */
-
 static int
 tmpfs_vptofh(struct vop_vptofh_args *ap)
 {
@@ -1491,7 +1468,6 @@ struct vop_vector tmpfs_vnodeop_entries = {
 	.vop_reclaim =			tmpfs_reclaim,
 	.vop_print =			tmpfs_print,
 	.vop_pathconf =			tmpfs_pathconf,
-	.vop_advlock =			tmpfs_advlock,
 	.vop_vptofh =			tmpfs_vptofh,
 	.vop_bmap =			VOP_EOPNOTSUPP,
 };

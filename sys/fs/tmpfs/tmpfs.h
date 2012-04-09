@@ -1,7 +1,7 @@
-/* $MidnightBSD: src/sys/fs/tmpfs/tmpfs.h,v 1.2 2008/12/03 00:25:45 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/fs/tmpfs/tmpfs.h,v 1.3 2012/04/09 16:38:24 laffer1 Exp $ */
 /*	$NetBSD: tmpfs.h,v 1.26 2007/02/22 06:37:00 thorpej Exp $	*/
 
-/*
+/*-
  * Copyright (c) 2005, 2006 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -17,13 +17,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -37,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/tmpfs/tmpfs.h,v 1.11.2.1 2007/11/26 06:46:44 delphij Exp $
+ * $FreeBSD: src/sys/fs/tmpfs/tmpfs.h,v 1.11.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _FS_TMPFS_TMPFS_H_
@@ -219,9 +212,6 @@ struct tmpfs_node {
 	struct timespec		tn_ctime;
 	struct timespec		tn_birthtime;
 	unsigned long		tn_gen;
-
-	/* Head of byte-level lock list (used by tmpfs_advlock). */
-	struct lockf *		tn_lockf;
 
 	/* As there is a single vnode for each active file within the
 	 * system, care has to be taken to avoid allocating more than one
