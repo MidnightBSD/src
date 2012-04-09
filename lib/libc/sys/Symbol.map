@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD: src/lib/libc/sys/Symbol.map,v 1.5 2012/03/25 12:43:12 laffer1 Exp $
+ * $MidnightBSD: src/lib/libc/sys/Symbol.map,v 1.6 2012/04/01 01:42:33 laffer1 Exp $
  * $FreeBSD: src/lib/libc/sys/Symbol.map,v 1.9.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
@@ -256,6 +256,7 @@ FBSD_1.0 {
 	setcontext;
 	setegid;
 	seteuid;
+	setfib;
 	setgid;
 	setgroups;
 	setitimer;
