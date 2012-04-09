@@ -29,6 +29,8 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/makewhatis/makewhatis.c,v 1.10.2.1 2007/10/18 12:55:27 edwin Exp $");
 
+#define _XOPEN_SOURCE 700
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -38,6 +40,7 @@ __FBSDID("$FreeBSD: src/usr.bin/makewhatis/makewhatis.c,v 1.10.2.1 2007/10/18 12
 #include <ctype.h>
 #include <dirent.h>
 #include <err.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -878,9 +881,9 @@ process_section(char *section_dir)
  * Returns whether the directory entry is a man page section.
  */
 static int
-select_sections(struct dirent *entry)
+select_sections(const struct dirent *entry)
 {
-	char *p = &entry->d_name[3];
+	const char *p = &entry->d_name[3];
 
 	if (strncmp(entry->d_name, "man", 3) != 0)
 		return 0;
@@ -1002,7 +1005,7 @@ main(int argc, char **argv)
 				char *sep = strchr(locale, '_');
 				if (sep != NULL && isupper(sep[1]) &&
 				    isupper(sep[2])) {
-					asprintf(&lang_locale, "%.*s%s", sep - locale, locale, &sep[3]);
+					asprintf(&lang_locale, "%.*s%s", (int)(ptrdiff_t)(sep - locale), locale, &sep[3]);
 				}
 			}
 			break;
