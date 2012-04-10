@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/libelf_xlate.c,v 1.2 2006/12/24 09:45:10 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/lib/libelf/libelf_xlate.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <assert.h>
 #include <libelf.h>
@@ -68,8 +69,7 @@ _libelf_xlate(Elf_Data *dst, const Elf_Data *src, unsigned int encoding,
 		return (NULL);
 	}
 
-	if  (src->d_buf == NULL || dst->d_buf == NULL ||
-	    src->d_size == 0) {
+	if  (src->d_buf == NULL || dst->d_buf == NULL) {
 		LIBELF_SET_ERROR(DATA, 0);
 		return (NULL);
 	}
@@ -79,8 +79,8 @@ _libelf_xlate(Elf_Data *dst, const Elf_Data *src, unsigned int encoding,
 		return (NULL);
 	}
 
-	if ((fsz = (elfclass == ELFCLASS32 ? elf32_fsize : elf64_fsize)(src->d_type,
-		 (size_t) 1, src->d_version)) == 0)
+	if ((fsz = (elfclass == ELFCLASS32 ? elf32_fsize : elf64_fsize)
+	    (src->d_type, (size_t) 1, src->d_version)) == 0)
 		return (NULL);
 
 	msz = _libelf_msize(src->d_type, elfclass, src->d_version);
@@ -133,8 +133,8 @@ _libelf_xlate(Elf_Data *dst, const Elf_Data *src, unsigned int encoding,
 	dst->d_type = src->d_type;
 	dst->d_size = dsz;
 
-	if (db == sb && encoding == LIBELF_PRIVATE(byteorder) &&
-	    fsz == msz)
+	if (src->d_size == 0 ||
+	    (db == sb && encoding == LIBELF_PRIVATE(byteorder) && fsz == msz))
 		return (dst);	/* nothing more to do */
 
 	(_libelf_get_translator(src->d_type, direction, elfclass))(dst->d_buf,

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/libelf_extended.c,v 1.1 2006/12/25 02:22:22 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/lib/libelf/libelf_extended.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <assert.h>
 #include <libelf.h>

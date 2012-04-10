@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/elf_shnum.c,v 1.2 2006/12/25 02:22:22 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/lib/libelf/elf_shnum.c,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <ar.h>
 #include <libelf.h>

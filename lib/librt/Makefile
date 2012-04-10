@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/librt/Makefile,v 1.5 2007/05/13 14:12:39 deischen Exp $
 
 LIB=rt

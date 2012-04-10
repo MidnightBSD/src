@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * search.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: search.c,v 1.1.1.3 2008-10-30 20:39:09 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/search.c,v 1.7.10.1 2007/11/21 17:36:14 emax Exp $
+ * $Id: search.c,v 1.2 2012-04-10 19:40:33 laffer1 Exp $
+ * $FreeBSD: src/lib/libsdp/search.c,v 1.7.10.1.4.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/uio.h>

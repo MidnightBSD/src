@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libelf/libelf.h,v 1.1 2006/11/11 17:16:33 jkoshy Exp $
+ * $FreeBSD: src/lib/libelf/libelf.h,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_LIBELF_H_

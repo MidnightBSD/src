@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/libelf_align.c,v 1.2 2006/12/18 05:36:23 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/lib/libelf/libelf_align.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 
@@ -122,7 +123,7 @@ static struct align falign[ELF_T_NUM] = {
 #endif
 	[ELF_T_MOVEP] 	= UNSUPPORTED(),
 #if	__FreeBSD_version >= 700025
-	[ELF_T_NOTE]	= FALIGN(4,4),
+	[ELF_T_NOTE]	= FALIGN(1,1),
 #endif
 	[ELF_T_OFF]	= FALIGN(4,8),
 	[ELF_T_PHDR]	= FALIGN(4,8),

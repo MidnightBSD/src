@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/lib/libkvm/kvm_minidump_i386.c,v 1.2 2012/04/08 14:32:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 Peter Wemm
  *
@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: src/lib/libkvm/kvm_minidump_i386.c,v 1.2.8.1 2008/11/25 02:5
 #include <sys/mman.h>
 #include <sys/fnv_hash.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <unistd.h>
 #include <nlist.h>
 #include <kvm.h>

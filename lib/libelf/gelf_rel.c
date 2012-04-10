@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/gelf_rel.c,v 1.1 2006/11/11 17:16:33 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/lib/libelf/gelf_rel.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/limits.h>
 
@@ -78,7 +79,9 @@ gelf_getrel(Elf_Data *d, int ndx, GElf_Rel *dst)
 		rel32 = (Elf32_Rel *) d->d_buf + ndx;
 
 		dst->r_offset = (Elf64_Addr) rel32->r_offset;
-		dst->r_info   = (Elf64_Xword) rel32->r_info;
+		dst->r_info   = ELF64_R_INFO(
+		    (Elf64_Xword) ELF32_R_SYM(rel32->r_info),
+		    ELF32_R_TYPE(rel32->r_info));
 
 	} else {
 
@@ -133,7 +136,14 @@ gelf_update_rel(Elf_Data *d, int ndx, GElf_Rel *dr)
 		rel32 = (Elf32_Rel *) d->d_buf + ndx;
 
 		LIBELF_COPY_U32(rel32, dr, r_offset);
-		LIBELF_COPY_U32(rel32, dr, r_info);
+
+		if (ELF64_R_SYM(dr->r_info) > ELF32_R_SYM(~0UL) ||
+		    ELF64_R_TYPE(dr->r_info) > ELF32_R_TYPE(~0U)) {
+			LIBELF_SET_ERROR(RANGE, 0);
+			return (0);
+		}
+		rel32->r_info = ELF32_R_INFO(ELF64_R_SYM(dr->r_info),
+		    ELF64_R_TYPE(dr->r_info));
 	} else {
 		rel64 = (Elf64_Rel *) d->d_buf + ndx;
 

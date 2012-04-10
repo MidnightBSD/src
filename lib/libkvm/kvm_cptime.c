@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/lib/libkvm/kvm_cptime.c,v 1.1 2012/04/08 14:32:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -32,6 +32,7 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/lib/libkvm/kvm_cptime.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
+#include <machine/pcpu.h>
 #include <sys/param.h>
 #include <sys/pcpu.h>
 #include <sys/resource.h>

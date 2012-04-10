@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * sdp.h
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sdp.h,v 1.1.1.3 2008-10-30 20:39:09 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/sdp.h,v 1.7 2006/08/26 23:16:35 markus Exp $
+ * $Id: sdp.h,v 1.2 2012-04-10 19:40:33 laffer1 Exp $
+ * $FreeBSD: src/lib/libsdp/sdp.h,v 1.7.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SDP_H_
@@ -646,6 +647,40 @@ struct sdp_sp_profile
 };
 typedef struct sdp_sp_profile	sdp_sp_profile_t;
 typedef struct sdp_sp_profile *	sdp_sp_profile_p;
+
+struct sdp_nap_profile
+{
+	uint8_t		reserved;
+	uint8_t		load_factor;
+	uint16_t	psm;			/* HBO */
+	uint16_t	security_description;	/* HBO */
+	uint16_t	net_access_type;	/* HBO */
+	uint32_t	max_net_access_rate;	/* HBO */
+};
+typedef struct sdp_nap_profile		sdp_nap_profile_t;
+typedef struct sdp_nap_profile *	sdp_nap_profile_p;
+
+struct sdp_gn_profile
+{	
+	uint8_t		reserved;
+	uint8_t		load_factor;
+	uint16_t	psm;			/* HBO */
+	uint16_t	security_description;	/* HBO */
+	uint16_t	reserved2;
+};
+typedef struct sdp_gn_profile		sdp_gn_profile_t;
+typedef struct sdp_gn_profile *		sdp_gn_profile_p;
+
+struct sdp_panu_profile
+{
+	uint8_t		reserved;
+	uint8_t		load_factor;
+	uint16_t	psm;			/* HBO */
+	uint16_t	security_description;	/* HBO */
+	uint16_t	reserved2;
+};
+typedef struct sdp_panu_profile		sdp_panu_profile_t;
+typedef struct sdp_panu_profile *	sdp_panu_profile_p;
 
 int32_t	sdp_register_service	(void *xss, uint16_t uuid,
 				 bdaddr_p const bdaddr, uint8_t const *data,

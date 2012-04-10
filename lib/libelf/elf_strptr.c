@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/elf_strptr.c,v 1.1 2006/11/11 17:16:33 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/lib/libelf/elf_strptr.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 
@@ -55,7 +56,7 @@ elf_strptr(Elf *e, size_t scndx, size_t offset)
 	    gelf_getshdr(s, &shdr) == NULL)
 		return (NULL);
 
-	if (shdr.sh_type != SHT_STRTAB ||
+	if (/*shdr.sh_type != SHT_STRTAB || */
 	    offset >= shdr.sh_size) {
 		LIBELF_SET_ERROR(ARGUMENT, 0);
 		return (NULL);

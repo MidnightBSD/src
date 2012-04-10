@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libmp/Makefile,v 1.12 2007/05/21 02:49:05 deischen Exp $
 
 LIB=		mp

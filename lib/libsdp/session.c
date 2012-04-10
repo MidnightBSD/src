@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * session.c
  *
@@ -25,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: session.c,v 1.1.1.2 2006-02-25 02:35:07 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/session.c,v 1.3 2004/01/09 22:44:28 emax Exp $
+ * $Id: session.c,v 1.2 2012-04-10 19:40:33 laffer1 Exp $
+ * $FreeBSD: src/lib/libsdp/session.c,v 1.3.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <bluetooth.h>
