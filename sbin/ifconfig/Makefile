@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/sbin/ifconfig/Makefile,v 1.33 2007/04/17 00:35:09 thompsa Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/sbin/ifconfig/Makefile,v 1.3 2011/02/06 21:26:31 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -25,6 +25,7 @@ SRCS+=	ifmac.c			# MAC support
 SRCS+=	ifmedia.c		# SIOC[GS]IFMEDIA support
 SRCS+=	ifvlan.c		# SIOC[GS]ETVLAN support
 SRCS+=	ifieee80211.c		# SIOC[GS]IEEE80211 support
+SRCS+=	ifgre.c			# GRE keys etc
 
 SRCS+=	ifcarp.c		# SIOC[GS]VH support
 SRCS+=	ifgroup.c		# ...

@@ -27,7 +27,7 @@
 .\"
 .\"     From: @(#)ifconfig.8	8.3 (Berkeley) 1/5/94
 .\" $FreeBSD: src/sbin/ifconfig/ifconfig.8,v 1.142.2.1 2007/11/11 17:45:56 sam Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/sbin/ifconfig/ifconfig.8,v 1.4 2011/02/06 18:49:24 laffer1 Exp $
 .\"
 .Dd February 6, 2011
 .Dt IFCONFIG 8
@@ -780,6 +780,8 @@ To disable 802.11h use
 .It Cm deftxkey Ar index
 Set the default key to use for transmission.
 Typically this is only set when using WEP encryption.
+Note that you must set a default transmit key
+for the system to know which key to use in encrypting outbound traffic.
 The
 .Cm weptxkey
 is an alias for this request; it is provided for backwards compatibility.
@@ -1168,6 +1170,8 @@ Possible elements are:
 (station supports WME),
 .Cm WPA
 (station supports WPA),
+.Cm WPS
+(station supports WPS),
 .Cm RSN
 (station supports 802.11i/RSN),
 .Cm HT
@@ -1264,6 +1268,10 @@ Some adaptors support more than four keys.
 If that is the case, then the first four keys
 (1-4) will be the standard temporary keys and any others will be adaptor
 specific keys such as permanent keys stored in NVRAM.
+.Pp
+Note that you must set a default transmit key with
+.Cm deftxkey
+for the system to know which key to use in encrypting outbound traffic.
 .It Cm wme
 Enable Wireless Multimedia Extensions (WME) support, if available,
 for the specified interface.
@@ -1639,6 +1647,11 @@ The default is calculated from the link speed.
 To change a previously selected path cost back to automatic, set the
 cost to 0.
 The minimum is 1 and the maximum is 200000000.
+.It Cm ifmaxaddr Ar interface Ar size
+Set the maximum number of hosts allowed from an interface, packets with unknown
+source addresses are dropped until an existing host cache entry expires or is
+removed.
+Set to 0 to disable.
 .El
 .Pp
 The following parameters are specific to lagg interfaces:
@@ -1678,6 +1691,16 @@ interfaces previously configured with
 Another name for the
 .Fl tunnel
 parameter.
+.El
+.Pp
+The following parameters are specific to GRE tunnel interfaces,
+.Xr gre 4 :
+.Bl -tag -width indent
+.It Cm grekey Ar key
+Configure the GRE key to be used for outgoing packets.
+Note that
+.Xr gre 4 will always accept GRE packets with invalid or absent keys.
+This command will result in a four byte MTU reduction on the interface.
 .El
 .Pp
 The following parameters are specific to

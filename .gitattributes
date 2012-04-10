@@ -33334,6 +33334,7 @@ sbin/ifconfig/ifclone.c -text
 sbin/ifconfig/ifconfig.8 -text
 sbin/ifconfig/ifconfig.c -text
 sbin/ifconfig/ifconfig.h -text
+sbin/ifconfig/ifgre.c -text
 sbin/ifconfig/ifgroup.c -text
 sbin/ifconfig/ifieee80211.c -text
 sbin/ifconfig/iflagg.c -text

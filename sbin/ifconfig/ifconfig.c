@@ -43,7 +43,7 @@ static const char rcsid[] =
 #endif
 #endif /* not lint */
 
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/ifconfig/ifconfig.c,v 1.5 2011/02/06 21:26:31 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -97,7 +97,8 @@ int	noload;
 int	supmedia = 0;
 int	printkeys = 0;		/* Print keying material for interfaces. */
 
-static	int ifconfig(int argc, char *const *argv, const struct afswtch *afp);
+static	int ifconfig(int argc, char *const *argv, int iscreate,
+		const struct afswtch *afp);
 static	void status(const struct afswtch *afp, const struct sockaddr_dl *sdl,
 		struct ifaddrs *ifa);
 static	void tunnel_status(int s);
@@ -251,7 +252,7 @@ main(int argc, char *argv[])
 				if (iflen >= sizeof(name))
 					errx(1, "%s: cloning name too long",
 					    ifname);
-				ifconfig(argc, argv, NULL);
+				ifconfig(argc, argv, 1, NULL);
 				exit(0);
 			}
 			errx(1, "interface %s does not exist", ifname);
@@ -309,7 +310,7 @@ main(int argc, char *argv[])
 		}
 
 		if (argc > 0)
-			ifconfig(argc, argv, afp);
+			ifconfig(argc, argv, 0, afp);
 		else
 			status(afp, sdl, ifa);
 	}
@@ -437,17 +438,19 @@ static const struct cmd setifdstaddr_cmd =
 	DEF_CMD("ifdstaddr", 0, setifdstaddr);
 
 static int
-ifconfig(int argc, char *const *argv, const struct afswtch *afp)
+ifconfig(int argc, char *const *argv, int iscreate, const struct afswtch *afp)
 {
+	const struct afswtch *nafp;
 	struct callback *cb;
 	int s;
 
+	strncpy(ifr.ifr_name, name, sizeof ifr.ifr_name);
+top:
 	if (afp == NULL)
 		afp = af_getbyname("inet");
 	ifr.ifr_addr.sa_family =
 		afp->af_af == AF_LINK || afp->af_af == AF_UNSPEC ?
 		AF_INET : afp->af_af;
-	strncpy(ifr.ifr_name, name, sizeof ifr.ifr_name);
 
 	if ((s = socket(ifr.ifr_addr.sa_family, SOCK_DGRAM, 0)) < 0)
 		err(1, "socket(family %u,SOCK_DGRAM", ifr.ifr_addr.sa_family);
@@ -464,6 +467,33 @@ ifconfig(int argc, char *const *argv, const struct afswtch *afp)
 			p = (setaddr ? &setifdstaddr_cmd : &setifaddr_cmd);
 		}
 		if (p->c_u.c_func || p->c_u.c_func2) {
+			if (iscreate && !p->c_iscloneop) { 
+				/*
+				 * Push the clone create callback so the new
+				 * device is created and can be used for any
+				 * remaining arguments.
+				 */
+				cb = callbacks;
+				if (cb == NULL)
+					errx(1, "internal error, no callback");
+				callbacks = cb->cb_next;
+				cb->cb_func(s, cb->cb_arg);
+				iscreate = 0;
+				/*
+				 * Handle any address family spec that
+				 * immediately follows and potentially
+				 * recreate the socket.
+				 */
+				nafp = af_getbyname(*argv);
+				if (nafp != NULL) {
+					argc--, argv++;
+					if (nafp != afp) {
+						close(s);
+						afp = nafp;
+						goto top;
+					}
+				}
+			}
 			if (p->c_parameter == NEXTARG) {
 				if (argv[1] == NULL)
 					errx(1, "'%s' requires argument",
