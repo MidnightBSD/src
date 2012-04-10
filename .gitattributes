@@ -13419,6 +13419,7 @@ contrib/libffi/README -text
 contrib/libffi/TODO -text
 contrib/libffi/acinclude.m4 -text
 contrib/libffi/aclocal.m4 -text
+contrib/libffi/build-ios.sh -text
 contrib/libffi/compile -text
 contrib/libffi/config.guess -text
 contrib/libffi/config.sub -text
@@ -13443,6 +13444,14 @@ contrib/libffi/ltcf-cxx.sh -text
 contrib/libffi/ltcf-gcj.sh -text
 contrib/libffi/ltconfig -text
 contrib/libffi/ltmain.sh -text
+contrib/libffi/m4/ax_cc_maxopt.m4 -text
+contrib/libffi/m4/ax_cflags_warn_all.m4 -text
+contrib/libffi/m4/ax_check_compiler_flags.m4 -text
+contrib/libffi/m4/ax_compiler_vendor.m4 -text
+contrib/libffi/m4/ax_configure_args.m4 -text
+contrib/libffi/m4/ax_enable_builddir.m4 -text
+contrib/libffi/m4/ax_gcc_archflag.m4 -text
+contrib/libffi/m4/ax_gcc_x86_cpuid.m4 -text
 contrib/libffi/m4/libtool.m4 -text
 contrib/libffi/m4/ltoptions.m4 -text
 contrib/libffi/m4/ltsugar.m4 -text
@@ -13456,12 +13465,15 @@ contrib/libffi/man/ffi_prep_cif.3 -text
 contrib/libffi/mdate-sh -text
 contrib/libffi/missing -text
 contrib/libffi/mkinstalldirs -text
+contrib/libffi/msvcc.sh -text
 contrib/libffi/src/alpha/ffi.c -text
 contrib/libffi/src/alpha/ffitarget.h -text
 contrib/libffi/src/alpha/osf.S -text
 contrib/libffi/src/arm/ffi.c -text
 contrib/libffi/src/arm/ffitarget.h -text
+contrib/libffi/src/arm/gentramp.sh -text
 contrib/libffi/src/arm/sysv.S -text
+contrib/libffi/src/arm/trampoline.S -text
 contrib/libffi/src/avr32/ffi.c -text
 contrib/libffi/src/avr32/ffitarget.h -text
 contrib/libffi/src/avr32/sysv.S -text
@@ -13489,6 +13501,8 @@ contrib/libffi/src/mips/ffi.c -text
 contrib/libffi/src/mips/ffitarget.h -text
 contrib/libffi/src/mips/n32.S -text
 contrib/libffi/src/mips/o32.S -text
+contrib/libffi/src/moxie/eabi.S -text
+contrib/libffi/src/moxie/ffi.c -text
 contrib/libffi/src/pa/ffi.c -text
 contrib/libffi/src/pa/ffitarget.h -text
 contrib/libffi/src/pa/hpux32.S -text
@@ -13535,6 +13549,7 @@ contrib/libffi/testsuite/Makefile.am -text
 contrib/libffi/testsuite/Makefile.in -text
 contrib/libffi/testsuite/config/default.exp -text
 contrib/libffi/testsuite/lib/libffi-dg.exp -text
+contrib/libffi/testsuite/lib/libffi.exp -text
 contrib/libffi/testsuite/lib/target-libpath.exp -text
 contrib/libffi/testsuite/lib/wrapper.exp -text
 contrib/libffi/testsuite/libffi.call/call.exp -text
