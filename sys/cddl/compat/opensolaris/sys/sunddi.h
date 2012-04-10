@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/compat/opensolaris/sys/sunddi.h,v 1.5 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -30,8 +30,10 @@
 #ifndef _OPENSOLARIS_SYS_SUNDDI_H_
 #define	_OPENSOLARIS_SYS_SUNDDI_H_
 
+#define	ddi_driver_major(zfs_dip)		(0)
 #define	ddi_copyin(from, to, size, flag)	(bcopy((from), (to), (size)), 0)
 #define	ddi_copyout(from, to, size, flag)	(bcopy((from), (to), (size)), 0)
+int ddi_strtol(const char *str, char **nptr, int base, long *result);
 int ddi_strtoul(const char *str, char **nptr, int base, unsigned long *result);
 
 #endif	/* _OPENSOLARIS_SYS_SUNDDI_H_ */

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris.c,v 1.1 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright 2007 John Birrell <jb@FreeBSD.org>
  *
@@ -35,6 +35,7 @@
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/misc.h>
 
 cpu_core_t	cpu_core[MAXCPU];
 kmutex_t	cpu_lock;

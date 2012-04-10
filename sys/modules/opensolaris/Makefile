@@ -1,10 +1,11 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/modules/opensolaris/Makefile,v 1.1 2012/03/31 16:59:45 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../cddl/compat/opensolaris/kern
 
 KMOD=		opensolaris
 SRCS=		opensolaris.c		\
 		opensolaris_cmn_err.c	\
+		opensolaris_misc.c	\
 		opensolaris_kmem.c
 
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"

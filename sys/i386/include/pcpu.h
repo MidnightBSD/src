@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/pcpu.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) Peter Wemm
  * All rights reserved.
@@ -34,8 +34,6 @@
 #error "sys/cdefs.h is a prerequisite for this file"
 #endif
 
-#ifdef _KERNEL
-
 #include <machine/segments.h>
 #include <machine/tss.h>
 
@@ -57,6 +55,9 @@
 	u_int   pc_acpi_id;		/* ACPI CPU id */		\
 	u_int	pc_apic_id;						\
 	int	pc_private_tss		/* Flag indicating private tss */
+
+
+#ifdef _KERNEL
 
 #ifdef lint
 

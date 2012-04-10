@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/include/pcpu.h,v 1.4 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) Peter Wemm <peter@netplex.com.au>
  * All rights reserved.
@@ -34,8 +34,6 @@
 #error "sys/cdefs.h is a prerequisite for this file"
 #endif
 
-#ifdef _KERNEL
-
 /*
  * The SMP parts are setup in pmap.c and locore.s for the BSP, and
  * mp_machdep.c sets up the data for the AP's to "see" when they awake.
@@ -51,7 +49,9 @@
 	register_t pc_scratch_rsp;	/* User %rsp in syscall */	\
 	u_int	pc_apic_id;						\
 	u_int   pc_acpi_id;		/* ACPI CPU id */		\
-	struct user_segment_descriptor *pc_gs32p
+	struct user_segment_descriptor	*pc_gs32p
+
+#ifdef _KERNEL
 
 #ifdef lint
 

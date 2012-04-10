@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/modules/zfs/Makefile,v 1.5 2012/04/01 06:00:59 laffer1 Exp $
 # $FreeBSD: src/sys/modules/zfs/Makefile,v 1.6.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 KMOD=	zfs
@@ -98,4 +98,3 @@ CWARNFLAGS+=-Wno-unused
 CWARNFLAGS+=-Wno-inline
 CWARNFLAGS+=-Wno-switch
 CWARNFLAGS+=-Wno-pointer-arith
-CWARNFLAGS+=-Wno-address

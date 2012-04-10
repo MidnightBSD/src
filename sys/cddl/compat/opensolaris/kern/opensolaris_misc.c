@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_misc.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,32 +26,46 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_misc.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_misc.c,v 1.3.2.2 2009/05/20 23:34:59 kmacy Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/libkern.h>
+#include <sys/limits.h>
 #include <sys/misc.h>
 #include <sys/sunddi.h>
 
 char hw_serial[11] = "0";
 
 struct opensolaris_utsname utsname = {
-	.nodename = hostname
+	.nodename = "unset"
 };
+
+int
+ddi_strtol(const char *str, char **nptr, int base, long *result)
+{
+
+	*result = strtol(str, nptr, base);
+	if (*result == 0)
+		return (EINVAL);
+	else if (*result == LONG_MIN || *result == LONG_MAX)
+		return (ERANGE);
+	return (0);
+}
 
 int
 ddi_strtoul(const char *str, char **nptr, int base, unsigned long *result)
 {
-	char *end;
 
 	if (str == hw_serial) {
 		*result = hostid;
 		return (0);
 	}
 
-	*result = strtoul(str, &end, base);
+	*result = strtoul(str, nptr, base);
 	if (*result == 0)
 		return (EINVAL);
+	else if (*result == ULONG_MAX)
+		return (ERANGE);
 	return (0);
 }

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/cdefs.h,v 1.6 2008/12/03 00:11:21 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/sys/cdefs.h,v 1.7 2012/02/12 21:14:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +32,7 @@
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
  * $FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $
- * $MidnightBSD: src/sys/sys/cdefs.h,v 1.6 2008/12/03 00:11:21 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/cdefs.h,v 1.7 2012/02/12 21:14:24 laffer1 Exp $
  */
 
 #ifndef	_SYS_CDEFS_H_
@@ -241,8 +241,10 @@ define __c99inline     __inline
 #endif
 
 #if __GNUC_PREREQ__(2, 96)
+#define	__malloc_like	__attribute__((__malloc__))
 #define	__pure		__attribute__((__pure__))
 #else
+#define	__malloc_like
 #define	__pure
 #endif
 
@@ -252,10 +254,10 @@ define __c99inline     __inline
 #define	__always_inline
 #endif
 
-#if __GNUC_PREREQ__(4, 2) /* actually 4.1.3 */
-#define	__gnu89_inline	__attribute__((__gnu_inline__)) __inline
+#if __GNUC_PREREQ__(3, 1)
+#define	__noinline	__attribute__ ((__noinline__))
 #else
-#define	__gnu89_inline
+#define	__noinline
 #endif
 
 #if __GNUC_PREREQ__(3, 3)
@@ -273,6 +275,17 @@ define __c99inline     __inline
 #define	__LONG_LONG_SUPPORTED
 #endif
 
+/* C++11 exposes a load of C99 stuff */
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#define	__LONG_LONG_SUPPORTED
+#ifndef	__STDC_LIMIT_MACROS
+#define	__STDC_LIMIT_MACROS
+#endif
+#ifndef	__STDC_CONSTANT_MACROS
+#define	__STDC_CONSTANT_MACROS
+#endif
+#endif
+
 /*
  * GCC 2.95 provides `__restrict' as an extension to C90 to support the
  * C99-specific `restrict' type qualifier.  We happen to use `__restrict' as
@@ -280,7 +293,7 @@ define __c99inline     __inline
  * software that is unaware of C99 keywords.
  */
 #if !(__GNUC__ == 2 && __GNUC_MINOR__ == 95)
-#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901 || defined(lint)
 #define	__restrict
 #else
 #define	__restrict	restrict
@@ -350,6 +363,14 @@ define __c99inline     __inline
 #define __predict_false(exp)    (exp)
 #endif
 
+#if __GNUC_PREREQ__(4, 2)
+#define	__hidden	__attribute__((__visibility__("hidden")))
+#define	__exported	__attribute__((__visibility__("default")))
+#else
+#define	__hidden
+#define	__exported
+#endif
+
 /*
  * We define this here since <stddef.h>, <sys/queue.h>, and <sys/types.h>
  * require it.
@@ -388,7 +409,8 @@ define __c99inline     __inline
 #endif
 
 /* Compiler-dependent macros that rely on FreeBSD-specific extensions. */
-#if __FreeBSD_cc_version >= 300001 && defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 300001 && \
+    defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #define	__printf0like(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__printf0__, fmtarg, firstvararg)))
 #else
@@ -427,6 +449,9 @@ define __c99inline     __inline
 #endif	/* __STDC__ */
 #endif	/* __GNUC__ || __INTEL_COMPILER */
 
+#define	__GLOBL1(sym)	__asm__(".globl " #sym)
+#define	__GLOBL(sym)	__GLOBL1(sym)
+
 #if defined(__GNUC__) || defined(__INTEL_COMPILER)
 #define	__IDSTRING(name,string)	__asm__(".ident\t\"" string "\"")
 #else
@@ -443,7 +468,7 @@ define __c99inline     __inline
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.6 2008/12/03 00:11:21 laffer1 Exp $");
+ *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.7 2012/02/12 21:14:24 laffer1 Exp $");
  */
 #ifndef	__MBSDID
 #if !defined(lint) && !defined(STRIP_MBSDID)
@@ -516,6 +541,7 @@ define __c99inline     __inline
  *  _POSIX_C_SOURCE == 199506		1003.1c-1995, 1003.1i-1995,
  *					and the omnibus ISO/IEC 9945-1: 1996
  *  _POSIX_C_SOURCE == 200112		1003.1-2001
+ *  _POSIX_C_SOURCE == 200809		1003.1-2008
  *
  * In addition, the X/Open Portability Guide, which is now the Single UNIX
  * Specification, defines a feature-test macro which indicates the version of
@@ -538,7 +564,11 @@ define __c99inline     __inline
 
 /* Deal with various X/Open Portability Guides and Single UNIX Spec. */
 #ifdef _XOPEN_SOURCE
-#if _XOPEN_SOURCE - 0 >= 600
+#if _XOPEN_SOURCE - 0 >= 700
+#define	__XSI_VISIBLE		700
+#undef _POSIX_C_SOURCE
+#define	_POSIX_C_SOURCE		200809
+#elif _XOPEN_SOURCE - 0 >= 600
 #define	__XSI_VISIBLE		600
 #undef _POSIX_C_SOURCE
 #define	_POSIX_C_SOURCE		200112
@@ -557,7 +587,10 @@ define __c99inline     __inline
 #define	_POSIX_C_SOURCE		198808
 #endif
 #ifdef _POSIX_C_SOURCE
-#if _POSIX_C_SOURCE >= 200112
+#if _POSIX_C_SOURCE >= 200809
+#define	__POSIX_VISIBLE		200809
+#define	__ISO_C_VISIBLE		1999
+#elif _POSIX_C_SOURCE >= 200112
 #define	__POSIX_VISIBLE		200112
 #define	__ISO_C_VISIBLE		1999
 #elif _POSIX_C_SOURCE >= 199506
@@ -600,8 +633,8 @@ define __c99inline     __inline
 #define	__BSD_VISIBLE		0
 #define	__ISO_C_VISIBLE		1999
 #else				/* Default environment: show everything. */
-#define	__POSIX_VISIBLE		200112
-#define	__XSI_VISIBLE		600
+#define	__POSIX_VISIBLE		200809
+#define	__XSI_VISIBLE		700
 #define	__BSD_VISIBLE		1
 #define	__ISO_C_VISIBLE		1999
 #endif

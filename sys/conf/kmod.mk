@@ -1,6 +1,6 @@
 #	From: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/sys/conf/kmod.mk,v 1.219 2007/07/11 01:20:37 marcel Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/sys/conf/kmod.mk,v 1.3 2011/10/23 16:17:29 laffer1 Exp $
 #
 # The include file <bsd.kmod.mk> handles building and installing loadable
 # kernel modules.
@@ -74,7 +74,7 @@ OBJCOPY?=	objcopy
 
 .SUFFIXES: .out .o .c .cc .cxx .C .y .l .s .S
 
-# amd64 and mips use direct linking for kmod, all others use shared binaries
+# amd64 uses direct linking for kmod, all others use shared binaries
 .if ${MACHINE_ARCH} != amd64
 __KLD_SHARED=yes
 .else
@@ -418,6 +418,9 @@ acpi_quirks.h: @/tools/acpi_quirks2h.awk @/dev/acpica/acpi_quirks
 .if !empty(SRCS:Massym.s)
 CLEANFILES+=	assym.s genassym.o
 assym.s: genassym.o
+.if defined(KERNBUILDDIR)
+genassym.o: opt_global.h
+.endif
 .if !exists(@)
 assym.s: @
 .else
@@ -434,6 +437,10 @@ genassym.o: @ machine ${SRCS:Mopt_*.h}
 
 lint: ${SRCS}
 	${LINT} ${LINTKERNFLAGS} ${CFLAGS:M-[DILU]*} ${.ALLSRC:M*.c}
+
+.if defined(KERNBUILDDIR)
+${OBJS}: opt_global.h
+.endif
 
 .include <bsd.dep.mk>
 
