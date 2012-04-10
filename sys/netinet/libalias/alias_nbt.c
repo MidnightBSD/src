@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_nbt.c,v 1.20.6.1 2008/11/25 0
 #include <errno.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <strings.h>
 #endif
 
 #include <netinet/in_systm.h>

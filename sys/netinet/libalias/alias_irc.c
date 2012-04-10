@@ -58,6 +58,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_irc.c,v 1.23.2.2.2.1 2008/11/
 #else
 #include <errno.h>
 #include <sys/types.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

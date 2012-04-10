@@ -78,6 +78,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_ftp.c,v 1.29.2.1.2.1 2008/11/
 #else
 #include <errno.h>
 #include <sys/types.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #endif
