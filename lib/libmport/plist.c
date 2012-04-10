@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.12 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include <sys/cdefs.h>
 #include <stdio.h>
@@ -45,7 +45,7 @@ static mportAssetListEntryType parse_command(const char*);
 /* Do everything needed to set up a new plist.  Always use this to create a plist,
  * don't go off and do it yourself.
  */
-MPORT_PUBLIC_API mportAssetList* mport_assetlist_new() 
+MPORT_PUBLIC_API mportAssetList* mport_assetlist_new(void) 
 {
   mportAssetList *list = (mportAssetList*)calloc(1, sizeof(mportAssetList));
   assert(list != NULL);

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.29 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.30 2011/12/24 05:55:12 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -46,7 +46,7 @@ __MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.29 2011/07/24 15:59:08 laffe
 
 
 /* these two aren't really utilities, but there's no better place to put them */
-MPORT_PUBLIC_API mportCreateExtras* mport_createextras_new()
+MPORT_PUBLIC_API mportCreateExtras* mport_createextras_new(void)
 {
   return (mportCreateExtras*)calloc(1, sizeof(mportCreateExtras));
 }

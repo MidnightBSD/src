@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/default_cbs.c,v 1.6 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include <stdio.h>
 #include <termios.h>
@@ -126,7 +126,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   free(bar);
 }
 
-void mport_default_progress_free_cb() 
+void mport_default_progress_free_cb(void) 
 {
   (void)printf("\n");
   (void)fflush(stdout);

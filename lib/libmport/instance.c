@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/instance.c,v 1.7 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,7 +37,7 @@ __MBSDID("$MidnightBSD$");
 #include "mport_private.h"
 
 /* allocate mem for a mportInstance */
-MPORT_PUBLIC_API mportInstance * mport_instance_new() 
+MPORT_PUBLIC_API mportInstance * mport_instance_new(void) 
 {
   return (mportInstance *)calloc(1, sizeof(mportInstance)); 
 }

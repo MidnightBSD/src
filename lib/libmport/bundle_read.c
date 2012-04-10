@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/bundle_read.c,v 1.6 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -40,9 +40,8 @@ __MBSDID("$MidnightBSD$");
  * allocate a new read bundle struct.  Returns null if no memory could
  * be had.
  */
-mportBundleRead * mport_bundle_read_new()
-{
-  return (mportBundleRead *)calloc(1, sizeof(mportBundleRead));
+mportBundleRead * mport_bundle_read_new(void) {
+	return (mportBundleRead *)calloc(1, sizeof(mportBundleRead));
 }
 
 

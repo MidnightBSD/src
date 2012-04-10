@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/bundle_write.c,v 1.11 2011/07/24 15:59:08 laffer1 Exp $");
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
  * from write.c in bsdtar by Tim Kientzle. Copyright (c) 2003-2007 Tim Kientzle.
@@ -76,7 +76,7 @@ static void free_linktable(struct links_table *);
  * allocate a new write bundle struct.  Returns null if no
  * memory could be had 
  */
-mportBundleWrite* mport_bundle_write_new() 
+mportBundleWrite* mport_bundle_write_new(void) 
 {
   return (mportBundleWrite *)calloc(1, sizeof(mportBundleWrite));
 }

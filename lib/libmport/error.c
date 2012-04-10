@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/error.c,v 1.11 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -45,7 +45,7 @@ static char default_error_msg[] = "An error occured.";
  *
  * Return the current numeric error code. 
  */
-MPORT_PUBLIC_API int mport_err_code() 
+MPORT_PUBLIC_API int mport_err_code(void) 
 {
   return mport_err;
 }
@@ -54,7 +54,7 @@ MPORT_PUBLIC_API int mport_err_code()
  *
  * Return the current error string (if any).  Do not free this memory, it is static. 
  */
-MPORT_PUBLIC_API const char * mport_err_string()
+MPORT_PUBLIC_API const char * mport_err_string(void)
 {
   return err_msg;
 }

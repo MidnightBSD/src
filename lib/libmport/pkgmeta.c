@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.8 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +40,7 @@ static int populate_vec_from_stmt(mportPackageMeta ***, int, sqlite3 *, sqlite3_
 
 
 /* Package meta-data creation and destruction */
-MPORT_PUBLIC_API mportPackageMeta* mport_pkgmeta_new() 
+MPORT_PUBLIC_API mportPackageMeta* mport_pkgmeta_new(void) 
 {
   /* we use calloc so any pointers that aren't set are NULL.
      (calloc zero's out the memory region. */
