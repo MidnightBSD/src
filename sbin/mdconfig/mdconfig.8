@@ -39,9 +39,10 @@
 .\"     @(#)vnconfig.8	8.1 (Berkeley) 6/5/93
 .\" from: src/usr.sbin/vnconfig/vnconfig.8,v 1.19 2000/12/27 15:30:29
 .\"
-.\" $FreeBSD: src/sbin/mdconfig/mdconfig.8,v 1.37.2.1 2007/12/02 08:47:28 remko Exp $
+.\" $FreeBSD: src/sbin/mdconfig/mdconfig.8,v 1.37.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $MidnightBSD$
 .\"
-.Dd November 28, 2007
+.Dd July 5, 2008
 .Dt MDCONFIG 8
 .Os
 .Sh NAME
@@ -65,6 +66,7 @@
 .Nm
 .Fl l
 .Op Fl n
+.Op Fl v
 .Op Fl u Ar unit
 .Sh DESCRIPTION
 The
@@ -119,6 +121,9 @@ List configured devices.
 If given with
 .Fl u ,
 display details about that particular device.
+If
+.Fl v
+option specified, show all details.
 .It Fl n
 When printing md device names, print only the unit number without the
 md prefix.
