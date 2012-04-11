@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/root/dot.cshrc,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
+# $MidnightBSD: src/etc/root/dot.cshrc,v 1.3 2008/03/22 05:55:21 laffer1 Exp $
 # $FreeBSD: src/etc/root/dot.cshrc,v 1.29 2004/04/01 19:28:00 krion Exp $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
@@ -23,10 +23,14 @@ setenv	BLOCKSIZE	K
 
 if ($?prompt) then
 	# An interactive shell -- set some stuff up
-	set prompt = "`/bin/hostname -s`# "
+	if ($uid == 0) then
+		set user = root
+	endif
+	set prompt = "%n@%m:%/ %#"
 	set filec
-	set history = 100
-	set savehist = 100
+	set history = 1000
+	set savehist = (1000 merge)
+	set autolist = ambiguous
 	set mail = (/var/mail/$USER)
 	if ( $?tcsh ) then
 		bindkey "^W" backward-delete-word
