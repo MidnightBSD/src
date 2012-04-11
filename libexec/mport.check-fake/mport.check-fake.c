@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.6 2011/03/06 18:28:26 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.7 2011/05/20 13:18:50 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -287,7 +287,7 @@ string_replace(const char *str, const char *old, const char *new)
 }
 			
 static void
-usage() 
+usage(void) 
 {
 	errx(EX_USAGE, "Usage: mport.check-fake [-s skip] <-f plistfile> <-d destdir> <-p prefix>");
 }
