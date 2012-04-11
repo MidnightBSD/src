@@ -1,12 +1,13 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/4/94
-# $FreeBSD: src/libexec/ftpd/Makefile,v 1.55 2004/12/21 12:49:23 ru Exp $
+# $FreeBSD: src/libexec/ftpd/Makefile,v 1.57.6.1 2008/11/25 02:59:29 kensmith Exp $
+
+.include <bsd.own.mk>
 
 PROG=	ftpd
 MAN=	ftpd.8 ftpchroot.5
 SRCS=	ftpd.c ftpcmd.y logwtmp.c popen.c
 
 CFLAGS+=-DSETPROCTITLE -DLOGIN_CAP -DVIRTUAL_HOSTING
-CFLAGS+=-DINET6
 CFLAGS+=-I${.CURDIR}
 YFLAGS=
 WARNS?=	2
@@ -26,7 +27,11 @@ CFLAGS+=-Dmain=ls_main -I${.CURDIR}/${LSDIR}
 DPADD+=	${LIBM}
 LDADD+=	-lm
 
-.if !defined(NO_PAM)
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=-DINET6
+.endif
+
+.if ${MK_PAM_SUPPORT} != "no"
 CFLAGS+=-DUSE_PAM
 DPADD+= ${LIBPAM}
 LDADD+= ${MINUSLPAM}
