@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/libexec/revnetgroup/Makefile,v 1.6 2001/03/26 14:22:06 ru Exp $
 
 PROG=	revnetgroup

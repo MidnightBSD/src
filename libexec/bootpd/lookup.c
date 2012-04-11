@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * lookup.c - Lookup IP address, HW address, netmask
  *

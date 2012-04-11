@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.7 2011/09/25 21:00:04 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.8 2011/09/25 21:03:48 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -82,7 +82,7 @@ main(int argc, char *argv[])
 }
 
 static 
-void usage() 
+void usage(void) 
 {
 
 	fprintf(stderr, "Usage: mport.install [-p prefix] pkgfile1 pkgfile2 ...\n");

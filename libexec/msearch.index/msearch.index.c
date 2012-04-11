@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.9 2011/08/07 15:39:40 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/msearch.index/msearch.index.c,v 1.10 2011/08/13 17:14:26 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,7 +125,7 @@ main(int argc, char *argv[]) {
 }
 
 static void
-usage() {
+usage(void) {
 	fprintf(stderr, "msearch.index [-r] [-p path | -f files ...]\n");
 	exit(1); 
 }

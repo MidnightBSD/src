@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * by Manuel Bouyer (bouyer@ensta.fr)
  * 

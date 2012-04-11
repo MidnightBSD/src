@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.7 2011/03/11 20:31:25 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.8 2011/03/15 01:59:16 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.7 2011/03/11 20:31:25 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.8 2011/03/15 01:59:16 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -157,7 +157,7 @@ static void check_for_required_args(const mportPackageMeta *pkg, const mportCrea
 }
     
 
-static void usage() 
+static void usage(void) 
 {
   fprintf(stderr, "\nmport.create <arguments>\n");
   fprintf(stderr, "Arguments:\n");

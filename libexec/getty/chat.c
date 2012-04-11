@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997
  *	David L Nugent <davidn@blaze.net.au>.

@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.update/mport.update.c,v 1.1 2009/06/05 00:09:32 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.update/mport.update.c,v 1.2 2010/03/10 05:44:13 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.update/mport.update.c,v 1.1 2009/06/05 00:09:32 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.update/mport.update.c,v 1.2 2010/03/10 05:44:13 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -73,11 +73,10 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-
-    
-
-static void usage() 
+static void
+usage(void) 
 {
-  fprintf(stderr, "Usage: mport.update pkgfile1 pkgfile2 ...\n");
-  exit(2);
+
+	fprintf(stderr, "Usage: mport.update pkgfile1 pkgfile2 ...\n");
+	exit(2);
 }

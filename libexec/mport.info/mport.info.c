@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.info/mport.info.c,v 1.2 2010/09/12 17:28:34 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.info/mport.info.c,v 1.3 2011/03/06 19:58:25 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -107,7 +107,7 @@ main(int argc, char *argv[])
 
 
 static void 
-usage() 
+usage(void) 
 {
   fprintf(stderr, "Usage: mport.info [-q | -v] <origin>\n");
   exit(2);

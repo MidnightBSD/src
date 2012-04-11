@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.merge/mport.merge.c,v 1.2 2009/06/05 00:08:07 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.merge/mport.merge.c,v 1.3 2011/10/23 00:23:38 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.merge/mport.merge.c,v 1.2 2009/06/05 00:08:07 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.merge/mport.merge.c,v 1.3 2011/10/23 00:23:38 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -91,8 +91,9 @@ int main(int argc, char *argv[])
 }
 
 
-static void usage() 
+static void
+usage(void) 
 {
-  fprintf(stderr, "Usage: mport.merge -o <outputfilename> <pkgfile1> <pkgfile2> ...\n");
-  exit(2);
+	fprintf(stderr, "Usage: mport.merge -o <outputfilename> <pkgfile1> <pkgfile2> ...\n");
+	exit(2);
 }

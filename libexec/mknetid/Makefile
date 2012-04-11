@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/libexec/mknetid/Makefile,v 1.7 2001/08/21 15:39:15 ru Exp $
 
 PROG=	mknetid

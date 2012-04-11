@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * trylook.c - test program for lookup.c
  *

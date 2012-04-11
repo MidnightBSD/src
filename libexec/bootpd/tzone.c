@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * tzone.c - get the timezone
  *

@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.query/mport.query.c,v 1.4 2010/03/10 05:43:30 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.query/mport.query.c,v 1.5 2011/06/14 02:22:33 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.query/mport.query.c,v 1.4 2010/03/10 05:43:30 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.query/mport.query.c,v 1.5 2011/06/14 02:22:33 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -104,14 +104,16 @@ int main(int argc, char *argv[])
 }
 
 
-static void usage() 
+static void
+usage(void) 
 {
-  fprintf(stderr, "Usage: mport.query [-q] <query statement>\n");
-  exit(2);
+	fprintf(stderr, "Usage: mport.query [-q] <query statement>\n");
+	exit(2);
 }
 
 
-static char * build_where(int argc, char **argv)
+static char *
+build_where(int argc, char **argv)
 {
   char *arg, *column, *clause = NULL;
   char *where = (char *)malloc(sizeof(char) * (MAX_WHERE_LEN));

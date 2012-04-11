@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * trygetif.c - test program for getif.c
  *

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.11 2011/06/14 02:29:03 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.12 2011/11/05 19:28:29 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -169,7 +169,7 @@ str_remove( const char *str, const char ch )
 
 
 static void 
-usage() 
+usage(void) 
 {
 	
 	fprintf(stderr, "Usage: mport.list [-q | -v | -u]\n");

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * getif.c : get an interface structure
  *

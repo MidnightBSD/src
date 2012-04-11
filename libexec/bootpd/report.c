@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/libexec/bootpd/report.c,v 1.5 2002/05/28 18:31:41 alfred Exp $ */
 
 /*

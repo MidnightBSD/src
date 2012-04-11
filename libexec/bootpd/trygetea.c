@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * trygetea.c - test program for getether.c
  *

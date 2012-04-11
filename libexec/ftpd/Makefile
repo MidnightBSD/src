@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/4/94
 # $FreeBSD: src/libexec/ftpd/Makefile,v 1.57.6.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 

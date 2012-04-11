@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * dumptab.c - handles dumping the database
  *

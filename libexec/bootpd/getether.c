@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * getether.c : get the ethernet address of an interface
  *

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.fetch/mport.fetch.c,v 1.1 2011/03/06 03:57:02 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.fetch/mport.fetch.c,v 1.2 2011/06/14 02:32:01 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -104,7 +104,7 @@ main(int argc, char *argv[])
 
 
 static void 
-usage() 
+usage(void) 
 {
   fprintf(stderr, "Usage: mport.fetch <package name>\n");
   exit(2);

@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.6 2010/03/10 05:41:07 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.7 2011/06/14 02:26:38 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.6 2010/03/10 05:41:07 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.7 2011/06/14 02:26:38 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -109,7 +109,8 @@ int main(int argc, char *argv[])
 }
 
 
-static void usage() 
+static void
+usage(void) 
 {
   fprintf(stderr, "Usage: mport.delete [-f] -n pkgname\n");
   fprintf(stderr, "Usage: mport.delete [-f] -o origin\n");
