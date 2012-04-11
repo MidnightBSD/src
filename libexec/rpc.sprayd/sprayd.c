@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 Christos Zoulas
  * All rights reserved.

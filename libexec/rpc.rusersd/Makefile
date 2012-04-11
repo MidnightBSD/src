@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/libexec/rpc.rusersd/Makefile,v 1.8 2001/03/26 14:22:07 ru Exp $
 
 PROG =	rpc.rusersd

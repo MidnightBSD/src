@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/libexec/ypxfr/Makefile,v 1.11 2002/02/04 02:33:51 kris Exp $
 
 PROG=	ypxfr

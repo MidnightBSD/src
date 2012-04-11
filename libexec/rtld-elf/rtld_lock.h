@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Alexander Kabaev.
  * All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Paul Kranenburg
  * All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Generic "support" routines to replace those obtained from libiberty for ld.
  *

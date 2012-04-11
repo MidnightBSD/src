@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1996
  *	Peter Wemm.  All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mdreloc.c,v 1.5 2001/04/25 12:24:51 kleink Exp $	*/
 
 /*-

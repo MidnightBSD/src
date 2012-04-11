@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1996, 1997, 1998, 1999, 2000 John D. Polstra.
  * Copyright 2003 Alexander Kabaev <kan@FreeBSD.ORG>.
