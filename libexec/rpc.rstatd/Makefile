@@ -1,10 +1,11 @@
-# $FreeBSD: src/libexec/rpc.rstatd/Makefile,v 1.8 2004/02/04 10:20:43 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: src/libexec/rpc.rstatd/Makefile,v 1.8.18.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 PROG =	rpc.rstatd
 SRCS =	rstatd.c rstat_proc.c
 MAN =	rpc.rstatd.8
 
-DPADD=	${LIBRPCSVC} ${LIBUTIL} ${LIBDEVSTAT} ${LIBKVM}
-LDADD=	-lrpcsvc -lutil -ldevstat -lkvm
+DPADD=	${LIBRPCSVC} ${LIBUTIL} ${LIBDEVSTAT}
+LDADD=	-lrpcsvc -lutil -ldevstat
 
 .include <bsd.prog.mk>

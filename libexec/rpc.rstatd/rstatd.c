@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993, John Brezak
  * All rights reserved.
@@ -33,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/rpc.rstatd/rstatd.c,v 1.11 2005/02/14 17:42:58 stefanf Exp $";
+  "$FreeBSD: src/libexec/rpc.rstatd/rstatd.c,v 1.11.18.1 2008/11/25 02:59:29 kensmith Exp $";
 #endif /* not lint */
 
 #include <stdlib.h>
