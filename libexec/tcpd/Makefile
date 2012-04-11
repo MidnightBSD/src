@@ -1,5 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/libexec/tcpd/Makefile,v 1.2 2012/04/11 00:58:36 laffer1 Exp $
 # $FreeBSD: src/libexec/tcpd/Makefile,v 1.4.2.1 2005/11/16 08:01:07 ru Exp $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../contrib/tcp_wrappers
 
