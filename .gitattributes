@@ -33120,6 +33120,12 @@ sbin/comcontrol/comcontrol.c -text
 sbin/conscontrol/Makefile -text
 sbin/conscontrol/conscontrol.8 -text
 sbin/conscontrol/conscontrol.c -text
+sbin/ddb/Makefile -text
+sbin/ddb/ddb.8 -text
+sbin/ddb/ddb.c -text
+sbin/ddb/ddb.h -text
+sbin/ddb/ddb_capture.c -text
+sbin/ddb/ddb_script.c -text
 sbin/devd/Makefile -text
 sbin/devd/devd.8 -text
 sbin/devd/devd.cc -text
