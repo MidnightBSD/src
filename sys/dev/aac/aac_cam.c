@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_cam.c,v 1.2 2008/12/02 02:11:26 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac_cam.c,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Adaptec, Inc.
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.28.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.28.2.10 2011/10/29 23:51:23 marius Exp $");
 
 /*
  * CAM front-end for communicating with non-DASD devices
@@ -212,7 +212,7 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 {
 	struct	aac_cam *camsc;
 	struct	aac_softc *sc;
-	struct	aac_srb32 *srb;
+	struct	aac_srb *srb;
 	struct	aac_fib *fib;
 	struct	aac_command *cm;
 
@@ -261,8 +261,11 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->hba_inquiry = PI_WIDE_16;
 		cpi->target_sprt = 0;
 
-		/* Resetting via the passthrough causes problems. */
-		cpi->hba_misc = PIM_NOBUSRESET;
+		/*
+		 * Resetting via the passthrough or parallel bus scan
+		 * causes problems.
+		 */
+		cpi->hba_misc = PIM_NOBUSRESET | PIM_SEQSCAN;
 		cpi->hba_eng_cnt = 0;
 		cpi->max_target = camsc->inf->TargetsPerBus;
 		cpi->max_lun = 8;	/* Per the controller spec */
@@ -273,10 +276,10 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
-                cpi->transport = XPORT_SPI;
-                cpi->transport_version = 2;
-                cpi->protocol = PROTO_SCSI;
-                cpi->protocol_version = SCSI_REV_2;
+		cpi->transport = XPORT_SPI;
+		cpi->transport_version = 2;
+		cpi->protocol = PROTO_SCSI;
+		cpi->protocol_version = SCSI_REV_2;
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		return;
@@ -352,7 +355,7 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 	}
 
 	fib = cm->cm_fib;
-	srb = (struct aac_srb32 *)&fib->data[0];
+	srb = (struct aac_srb *)&fib->data[0];
 	cm->cm_datalen = 0;
 
 	switch (ccb->ccb_h.flags & CAM_DIR_MASK) {
@@ -393,7 +396,7 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 			    srb->cdb_len);
 
 		/* Set command */
-		fib->Header.Command = (sc->flags & AAC_FLAGS_SG_64BIT) ? 
+		fib->Header.Command = (sc->flags & AAC_FLAGS_SG_64BIT) ?
 			ScsiPortCommandU64 : ScsiPortCommand;
 
 		/* Map the s/g list. XXX 32bit addresses only! */
@@ -403,10 +406,10 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 				if (ccb->ccb_h.flags & CAM_DATA_PHYS) {
 					/* Send a 32bit command */
 					fib->Header.Command = ScsiPortCommand;
-					srb->sg_map32.SgCount = 1;
-					srb->sg_map32.SgEntry[0].SgAddress =
+					srb->sg_map.SgCount = 1;
+					srb->sg_map.SgEntry[0].SgAddress =
 					    (uint32_t)(uintptr_t)csio->data_ptr;
-					srb->sg_map32.SgEntry[0].SgByteCount =
+					srb->sg_map.SgEntry[0].SgByteCount =
 					    csio->dxfer_len;
 				} else {
 					/*
@@ -415,15 +418,15 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 					 */
 					cm->cm_data = (void *)csio->data_ptr;
 					cm->cm_datalen = csio->dxfer_len;
-					cm->cm_sgtable = &srb->sg_map32;
+					cm->cm_sgtable = &srb->sg_map;
 				}
 			} else {
 				/* XXX Need to handle multiple s/g elements */
 				panic("aac_cam: multiple s/g elements");
 			}
 		} else {
-			srb->sg_map32.SgCount = 0;
-			srb->sg_map32.SgEntry[0].SgByteCount = 0;
+			srb->sg_map.SgCount = 0;
+			srb->sg_map.SgEntry[0].SgByteCount = 0;
 			srb->data_len = 0;
 		}
 
@@ -451,7 +454,6 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 	cm->cm_complete = aac_cam_complete;
 	cm->cm_private = ccb;
 	cm->cm_timestamp = time_uptime;
-	cm->cm_queue = AAC_ADAP_NORM_CMD_QUEUE;
 
 	fib->Header.XferState =
 	    AAC_FIBSTATE_HOSTOWNED	|
@@ -460,7 +462,7 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 	    AAC_FIBSTATE_REXPECTED	|
 	    AAC_FIBSTATE_NORM;
 	fib->Header.Size = sizeof(struct aac_fib_header) +
-	    sizeof(struct aac_srb32);
+	    sizeof(struct aac_srb);
 
 	aac_enqueue_ready(cm);
 	aac_startio(cm->cm_sc);
@@ -483,6 +485,7 @@ aac_cam_complete(struct aac_command *cm)
 	union	ccb *ccb;
 	struct 	aac_srb_response *srbr;
 	struct	aac_softc *sc;
+	int	sense_returned;
 
 	sc = cm->cm_sc;
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
@@ -507,16 +510,17 @@ aac_cam_complete(struct aac_command *cm)
 
 			/* Take care of autosense */
 			if (srbr->sense_len) {
-				int sense_len, scsi_sense_len;
-
-				scsi_sense_len = sizeof(struct scsi_sense_data);
-				bzero(&ccb->csio.sense_data, scsi_sense_len);
-				sense_len = (srbr->sense_len > 
-				    scsi_sense_len) ? scsi_sense_len :
-				    srbr->sense_len;
+				sense_returned = srbr->sense_len;
+				if (sense_returned < ccb->csio.sense_len)
+					ccb->csio.sense_resid =
+					   ccb->csio.sense_len -
+					   sense_returned;
+					else
+					    ccb->csio.sense_resid = 0;
+				bzero(&ccb->csio.sense_data,
+				    sizeof(struct scsi_sense_data));
 				bcopy(&srbr->sense[0], &ccb->csio.sense_data,
-				    srbr->sense_len);
-				ccb->csio.sense_len = sense_len;
+				    min(ccb->csio.sense_len, sense_returned));
 				ccb->ccb_h.status |= CAM_AUTOSNS_VALID;
 				// scsi_sense_print(&ccb->csio);
 			}
@@ -538,7 +542,8 @@ aac_cam_complete(struct aac_command *cm)
 				    (device == T_PROCESSOR) ||
 				    (sc->flags & AAC_FLAGS_CAM_PASSONLY))
 					ccb->csio.data_ptr[0] =
-					    ((device & 0xe0) | T_NODEVICE);
+					    ((ccb->csio.data_ptr[0] & 0xe0) |
+					    T_NODEVICE);
 				} else if (ccb->ccb_h.status == CAM_SEL_TIMEOUT &&
 					ccb->ccb_h.target_lun != 0) {
 					/* fix for INQUIRYs on Lun>0 */

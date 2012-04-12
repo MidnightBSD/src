@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_disk.c,v 1.2 2008/12/02 02:11:27 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac_disk.c,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_disk.c,v 1.43.10.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aac/aac_disk.c,v 1.43.10.5 2011/10/29 23:44:30 marius Exp $");
 
 #include "opt_aac.h"
 
@@ -37,7 +37,6 @@ __FBSDID("$FreeBSD: src/sys/dev/aac/aac_disk.c,v 1.43.10.3.2.1 2008/11/25 02:59:
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
-#include <sys/sysctl.h>
 
 #include <sys/bus.h>
 #include <sys/conf.h>
@@ -84,22 +83,12 @@ static driver_t aac_disk_driver = {
 	sizeof(struct aac_disk)
 };
 
-#define AAC_MAXIO	65536
-
 DRIVER_MODULE(aacd, aac, aac_disk_driver, aac_disk_devclass, 0, 0);
-
-/* sysctl tunables */
-static unsigned int aac_iosize_max = AAC_MAXIO;	/* due to limits of the card */
-TUNABLE_INT("hw.aac.iosize_max", &aac_iosize_max);
-
-SYSCTL_DECL(_hw_aac);
-SYSCTL_UINT(_hw_aac, OID_AUTO, iosize_max, CTLFLAG_RDTUN, &aac_iosize_max, 0,
-	    "Max I/O size per transfer to an array");
 
 /*
  * Handle open from generic layer.
  *
- * This is called by the diskslice code on first open in order to get the 
+ * This is called by the diskslice code on first open in order to get the
  * basic device geometry paramters.
  */
 static int
@@ -237,7 +226,7 @@ aac_dump_map_sg64(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 /*
  * Dump memory out to an array
  *
- * Send out one command at a time with up to AAC_MAXIO of data.
+ * Send out one command at a time with up to maxio of data.
  */
 static int
 aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size_t length)
@@ -245,7 +234,7 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 	struct aac_disk *ad;
 	struct aac_softc *sc;
 	struct aac_fib *fib;
-	size_t len;
+	size_t len, maxio;
 	int size;
 	static bus_dmamap_t dump_datamap;
 	static int first = 0;
@@ -273,7 +262,8 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 	fib = &sc->aac_common->ac_sync_fib;
 
 	while (length > 0) {
-		len = (length > AAC_MAXIO) ? AAC_MAXIO : length;
+		maxio = sc->aac_max_sectors << 9;
+		len = (length > maxio) ? maxio : length;
 		if ((sc->flags & AAC_FLAGS_SG_64BIT) == 0) {
 			struct aac_blockwrite *bw;
 			bw = (struct aac_blockwrite *)&fib->data[0];
@@ -409,7 +399,7 @@ aac_disk_attach(device_t dev)
 	sc->ad_disk = disk_alloc();
 	sc->ad_disk->d_drv1 = sc;
 	sc->ad_disk->d_name = "aacd";
-	sc->ad_disk->d_maxsize = aac_iosize_max;
+	sc->ad_disk->d_maxsize = sc->ad_controller->aac_max_sectors << 9;
 	sc->ad_disk->d_open = aac_disk_open;
 	sc->ad_disk->d_close = aac_disk_close;
 	sc->ad_disk->d_strategy = aac_disk_strategy;
