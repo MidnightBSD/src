@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/raid3/g_raid3.c,v 1.5 2011/12/10 15:46:16 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3.c,v 1.81.2.3 2010/09/19 20:08:45 
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <sys/eventhandler.h>
@@ -46,11 +47,13 @@ __FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3.c,v 1.81.2.3 2010/09/19 20:08:45 
 #include <sys/sched.h>
 #include <geom/raid3/g_raid3.h>
 
+FEATURE(geom_raid3, "GEOM RAID-3 functionality");
 
 static MALLOC_DEFINE(M_RAID3, "raid3_data", "GEOM_RAID3 Data");
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, raid3, CTLFLAG_RW, 0, "GEOM_RAID3 stuff");
+static SYSCTL_NODE(_kern_geom, OID_AUTO, raid3, CTLFLAG_RW, 0,
+    "GEOM_RAID3 stuff");
 u_int g_raid3_debug = 0;
 TUNABLE_INT("kern.geom.raid3.debug", &g_raid3_debug);
 SYSCTL_UINT(_kern_geom_raid3, OID_AUTO, debug, CTLFLAG_RW, &g_raid3_debug, 0,
@@ -90,7 +93,7 @@ TUNABLE_INT("kern.geom.raid3.n4k", &g_raid3_n4k);
 SYSCTL_UINT(_kern_geom_raid3, OID_AUTO, n4k, CTLFLAG_RD, &g_raid3_n4k, 0,
     "Maximum number of 4kB allocations");
 
-SYSCTL_NODE(_kern_geom_raid3, OID_AUTO, stat, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern_geom_raid3, OID_AUTO, stat, CTLFLAG_RW, 0,
     "GEOM_RAID3 statistics");
 static u_int g_raid3_parity_mismatch = 0;
 SYSCTL_UINT(_kern_geom_raid3_stat, OID_AUTO, parity_mismatch, CTLFLAG_RD,
@@ -2325,6 +2328,8 @@ static void
 g_raid3_launch_provider(struct g_raid3_softc *sc)
 {
 	struct g_provider *pp;
+	struct g_raid3_disk *disk;
+	int n;
 
 	sx_assert(&sc->sc_lock, SX_LOCKED);
 
@@ -2332,6 +2337,18 @@ g_raid3_launch_provider(struct g_raid3_softc *sc)
 	pp = g_new_providerf(sc->sc_geom, "raid3/%s", sc->sc_name);
 	pp->mediasize = sc->sc_mediasize;
 	pp->sectorsize = sc->sc_sectorsize;
+	pp->stripesize = 0;
+	pp->stripeoffset = 0;
+	for (n = 0; n < sc->sc_ndisks; n++) {
+		disk = &sc->sc_disks[n];
+		if (disk->d_consumer && disk->d_consumer->provider &&
+		    disk->d_consumer->provider->stripesize > pp->stripesize) {
+			pp->stripesize = disk->d_consumer->provider->stripesize;
+			pp->stripeoffset = disk->d_consumer->provider->stripeoffset;
+		}
+	}
+	pp->stripesize *= sc->sc_ndisks - 1;
+	pp->stripeoffset *= sc->sc_ndisks - 1;
 	sc->sc_provider = pp;
 	g_error_provider(pp, 0);
 	g_topology_unlock();
@@ -2899,6 +2916,10 @@ g_raid3_read_metadata(struct g_consumer *cp, struct g_raid3_metadata *md)
 		G_RAID3_DEBUG(1, "MD5 metadata hash mismatch for provider %s.",
 		    cp->provider->name);
 		return (error);
+	}
+	if (md->md_sectorsize > MAXPHYS) {
+		G_RAID3_DEBUG(0, "The blocksize is too big.");
+		return (EINVAL);
 	}
 
 	return (0);
