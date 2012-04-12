@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/mptable.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * Copyright (c) 1996, by Steve Passe
@@ -382,7 +382,7 @@ mptable_register(void *dummy __unused)
 	apic_register_enumerator(&mptable_enumerator);
 }
 SYSINIT(mptable_register, SI_SUB_TUNABLES - 1, SI_ORDER_FIRST,
-    mptable_register, NULL)
+    mptable_register, NULL);
 
 /*
  * Call the handler routine for each entry in the MP config table.
