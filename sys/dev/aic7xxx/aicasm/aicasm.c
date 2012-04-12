@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm.c,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aicasm.c,v 1.2 2012-04-12 01:28:43 laffer1 Exp $
  *
  * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm.c,v 1.38 2005/01/06 01:42:27 imp Exp $
  */
@@ -641,6 +641,8 @@ output_listing(char *ifilename)
 		}
 		instrptr++;
 	}
+	free(func_values);
+
 	/* Dump the remainder of the file */
 	while(fgets(buf, sizeof(buf), ifile) != NULL)
 		fprintf(listfile, "             %s", buf);
