@@ -44,9 +44,7 @@ __FBSDID("$FreeBSD: src/sbin/mount/vfslist.c,v 1.6 2004/04/09 19:58:31 markm Exp
 static int	  skipvfs;
 
 int
-checkvfsname(vfsname, vfslist)
-	const char *vfsname;
-	const char **vfslist;
+checkvfsname(const char *vfsname, const char **vfslist)
 {
 
 	if (vfslist == NULL)
@@ -60,8 +58,7 @@ checkvfsname(vfsname, vfslist)
 }
 
 const char **
-makevfslist(fslist)
-	char *fslist;
+makevfslist(char *fslist)
 {
 	const char **av;
 	int i;
