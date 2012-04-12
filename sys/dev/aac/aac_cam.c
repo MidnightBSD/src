@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aac/aac_cam.c,v 1.2 2008/12/02 02:11:26 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Adaptec, Inc.
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.28.2.2 2007/12/10 20:18:19 emaste Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.28.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * CAM front-end for communicating with non-DASD devices
@@ -128,7 +128,7 @@ aac_cam_event(struct aac_softc *sc, struct aac_event *event, void *arg)
 static int
 aac_cam_probe(device_t dev)
 {
-	debug_called(2);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	return (0);
 }
@@ -138,7 +138,7 @@ aac_cam_detach(device_t dev)
 {
 	struct aac_softc *sc;
 	struct aac_cam *camsc;
-	debug_called(2);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	camsc = (struct aac_cam *)device_get_softc(dev);
 	sc = camsc->inf->aac_sc;
@@ -167,7 +167,7 @@ aac_cam_attach(device_t dev)
 	struct aac_cam *camsc;
 	struct aac_sim *inf;
 
-	debug_called(1);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	camsc = (struct aac_cam *)device_get_softc(dev);
 	inf = (struct aac_sim *)device_get_ivars(dev);
@@ -216,10 +216,9 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 	struct	aac_fib *fib;
 	struct	aac_command *cm;
 
-	debug_called(2);
-
 	camsc = (struct aac_cam *)cam_sim_softc(sim);
 	sc = camsc->inf->aac_sc;
+	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	/* Synchronous ops, and ops that don't require communication with the
 	 * controller */
@@ -485,9 +484,8 @@ aac_cam_complete(struct aac_command *cm)
 	struct 	aac_srb_response *srbr;
 	struct	aac_softc *sc;
 
-	debug_called(2);
-
 	sc = cm->cm_sc;
+	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 	ccb = cm->cm_private;
 	srbr = (struct aac_srb_response *)&cm->cm_fib->data[0];
 

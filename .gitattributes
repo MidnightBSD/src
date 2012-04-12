@@ -37649,7 +37649,6 @@ sys/ddb/db_write_cmd.c -text
 sys/ddb/ddb.h -text
 sys/dev/aac/aac.c -text
 sys/dev/aac/aac_cam.c -text
-sys/dev/aac/aac_compat.h -text
 sys/dev/aac/aac_debug.c -text
 sys/dev/aac/aac_disk.c -text
 sys/dev/aac/aac_linux.c -text

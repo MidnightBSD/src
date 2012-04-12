@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aac/aac_pci.c,v 1.2 2008/12/02 02:11:27 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_pci.c,v 1.62.2.3 2007/12/10 20:18:19 emaste Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aac/aac_pci.c,v 1.62.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * PCI bus interface and resource allocation.
@@ -246,7 +246,15 @@ struct aac_ident
 	{0x9005, 0x0285, 0x9005, 0x02d0, AAC_HWIF_I960RX, 0,
 	 "Adaptec RAID 52445"},
 	{0x9005, 0x0285, 0x9005, 0x02d1, AAC_HWIF_I960RX, 0,
-        "Adaptec RAID 5405"},
+	 "Adaptec RAID 5405"},
+	{0x9005, 0x0285, 0x9005, 0x02d4, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 2045"},
+	{0x9005, 0x0285, 0x9005, 0x02d5, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 2405"},
+	{0x9005, 0x0285, 0x9005, 0x02d6, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 2445"},
+	{0x9005, 0x0285, 0x9005, 0x02d7, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 2805"},
 	{0x9005, 0x0286, 0x1014, 0x9580, AAC_HWIF_RKT, 0,
 	 "IBM ServeRAID-8k"},
 	{0x9005, 0x0285, 0x1014, 0x034d, AAC_HWIF_I960RX, 0,
@@ -316,7 +324,7 @@ aac_pci_probe(device_t dev)
 {
 	struct aac_ident *id;
 
-	debug_called(1);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	if ((id = aac_find_ident(dev)) != NULL) {
 		device_set_desc(dev, id->desc);
@@ -336,7 +344,7 @@ aac_pci_attach(device_t dev)
 	int error;
 	u_int32_t command;
 
-	debug_called(1);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	/*
 	 * Initialise softc.
@@ -411,19 +419,19 @@ aac_pci_attach(device_t dev)
 	sc->aac_hwif = id->hwif;
 	switch(sc->aac_hwif) {
 	case AAC_HWIF_I960RX:
-		debug(2, "set hardware up for i960Rx");
+		fwprintf(sc, HBA_FLAGS_DBG_INIT_B, "set hardware up for i960Rx");
 		sc->aac_if = aac_rx_interface;
 		break;
 	case AAC_HWIF_STRONGARM:
-		debug(2, "set hardware up for StrongARM");
+		fwprintf(sc, HBA_FLAGS_DBG_INIT_B, "set hardware up for StrongARM");
 		sc->aac_if = aac_sa_interface;
 		break;
 	case AAC_HWIF_FALCON:
-		debug(2, "set hardware up for Falcon/PPC");
+		fwprintf(sc, HBA_FLAGS_DBG_INIT_B, "set hardware up for Falcon/PPC");
 		sc->aac_if = aac_fa_interface;
 		break;
 	case AAC_HWIF_RKT:
-		debug(2, "set hardware up for Rocket/MIPS");
+		fwprintf(sc, HBA_FLAGS_DBG_INIT_B, "set hardware up for Rocket/MIPS");
 		sc->aac_if = aac_rkt_interface;
 		break;
 	default:

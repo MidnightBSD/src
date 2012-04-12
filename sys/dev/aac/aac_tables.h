@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aac/aac_tables.h,v 1.2 2008/12/02 02:11:27 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/aac/aac_tables.h,v 1.6 2005/10/08 15:55:09 scottl Exp $
+ *	$FreeBSD: src/sys/dev/aac/aac_tables.h,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

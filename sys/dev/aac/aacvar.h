@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aac/aacvar.h,v 1.2 2008/12/02 02:11:27 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/aac/aacvar.h,v 1.48.2.1 2007/12/10 20:18:19 emaste Exp $
+ *	$FreeBSD: src/sys/dev/aac/aacvar.h,v 1.48.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/bio.h>
@@ -134,7 +134,7 @@ struct aac_disk
 	int				ad_cylinders;
 	int				ad_heads;
 	int				ad_sectors;
-	u_int32_t			ad_size;
+	u_int64_t			ad_size;
 	int				unit;
 };
 
@@ -393,6 +393,7 @@ struct aac_softc
 #define AAC_FLAGS_NEW_COMM	(1 << 11)	/* New comm. interface supported */
 #define AAC_FLAGS_RAW_IO	(1 << 12)	/* Raw I/O interface */
 #define AAC_FLAGS_ARRAY_64BIT	(1 << 13)	/* 64-bit array size */
+#define	AAC_FLAGS_LBA_64BIT	(1 << 14)	/* 64-bit LBA support */
 
 	u_int32_t		supported_options;
 	u_int32_t		scsi_method_id;
@@ -445,21 +446,18 @@ extern int		aac_sync_fib(struct aac_softc *sc, u_int32_t command,
 extern void		aac_add_event(struct aac_softc *sc, struct aac_event
 				      *event);
 
-/*
- * Debugging levels:
- *  0 - quiet, only emit warnings
- *  1 - noisy, emit major function points and things done
- *  2 - extremely noisy, emit trace items in loops, etc.
- */
 #ifdef AAC_DEBUG
-# define debug(level, fmt, args...)					\
-	do {								\
-	if (level <=AAC_DEBUG) printf("%s: " fmt "\n", __func__ , ##args); \
-	} while (0)
-# define debug_called(level)						\
-	do {								\
-	if (level <= AAC_DEBUG) printf("%s: called\n", __func__);	\
-	} while (0)
+extern int	aac_debug_enable;
+# define fwprintf(sc, flags, fmt, args...)				\
+do {									\
+	if (!aac_debug_enable)						\
+		break;							\
+	if (sc != NULL)							\
+		device_printf(((struct aac_softc *)sc)->aac_dev,	\
+		    "%s: " fmt "\n", __func__, ##args);			\
+	else								\
+		printf("%s: " fmt "\n", __func__, ##args);		\
+} while(0)
 
 extern void	aac_print_queues(struct aac_softc *sc);
 extern void	aac_panic(struct aac_softc *sc, char *reason);
@@ -471,8 +469,7 @@ extern void	aac_print_aif(struct aac_softc *sc,
 #define AAC_PRINT_FIB(sc, fib)	aac_print_fib(sc, fib, __func__)
 
 #else
-# define debug(level, fmt, args...)
-# define debug_called(level)
+# define fwprintf(sc, flags, fmt, args...)
 
 # define aac_print_queues(sc)
 # define aac_panic(sc, reason)

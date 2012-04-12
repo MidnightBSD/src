@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aac/aacreg.h,v 1.2 2008/12/02 02:11:27 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000-2001 Scott Long
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/aac/aacreg.h,v 1.23.2.1 2007/12/10 20:18:19 emaste Exp $
+ *	$FreeBSD: src/sys/dev/aac/aacreg.h,v 1.23.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -1141,6 +1141,7 @@ struct aac_mntobj {
 		u_int32_t	pad[8];
 	} ObjExtension;
 	u_int32_t			AlterEgoId;
+	u_int32_t			CapacityHigh;
 } __packed;
 
 struct aac_mntinfo {
