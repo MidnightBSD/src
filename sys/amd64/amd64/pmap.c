@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/amd64/amd64/pmap.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/amd64/amd64/pmap.c,v 1.4 2012/04/12 03:12:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -154,8 +154,12 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/pmap.c,v 1.590.2.3.2.1 2008/01/19 18:15:
 #define PMAP_DIAGNOSTIC
 #endif
 
-#if !defined(PMAP_DIAGNOSTIC)
-#define PMAP_INLINE	__gnu89_inline
+#if !defined(DIAGNOSTIC)
+#ifdef __GNUC_GNU_INLINE__
+#define PMAP_INLINE     __attribute__((__gnu_inline__)) inline
+#else
+#define PMAP_INLINE     extern inline
+#endif
 #else
 #define PMAP_INLINE
 #endif
