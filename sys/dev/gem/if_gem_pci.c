@@ -1,6 +1,7 @@
 /* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
+ * Copyright (c) 2007 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
  *
  *
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/gem/if_gem_pci.c,v 1.23 2007/09/26 21:14:17 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/gem/if_gem_pci.c,v 1.23.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * PCI bindings for Apple GMAC, Sun ERI and Sun GEM Ethernet controllers
@@ -40,6 +41,7 @@ __FBSDID("$FreeBSD: src/sys/dev/gem/if_gem_pci.c,v 1.23 2007/09/26 21:14:17 mari
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/resource.h>
@@ -64,11 +66,11 @@ __FBSDID("$FreeBSD: src/sys/dev/gem/if_gem_pci.c,v 1.23 2007/09/26 21:14:17 mari
 
 #include "miibus_if.h"
 
-static int	gem_pci_probe(device_t);
-static int	gem_pci_attach(device_t);
-static int	gem_pci_detach(device_t);
-static int	gem_pci_suspend(device_t);
-static int	gem_pci_resume(device_t);
+static int	gem_pci_attach(device_t dev);
+static int	gem_pci_detach(device_t dev);
+static int	gem_pci_probe(device_t dev);
+static int	gem_pci_resume(device_t dev);
+static int	gem_pci_suspend(device_t dev);
 
 static device_method_t gem_pci_methods[] = {
 	/* Device interface */
@@ -119,8 +121,7 @@ static const struct gem_pci_dev {
 };
 
 static int
-gem_pci_probe(dev)
-	device_t dev;
+gem_pci_probe(device_t dev)
 {
 	int i;
 
@@ -135,14 +136,13 @@ gem_pci_probe(dev)
 }
 
 static struct resource_spec gem_pci_res_spec[] = {
-	{ SYS_RES_MEMORY, PCIR_BAR(0), RF_ACTIVE },
-	{ SYS_RES_IRQ, 0, RF_SHAREABLE | RF_ACTIVE },
+	{ SYS_RES_IRQ, 0, RF_SHAREABLE | RF_ACTIVE },	/* GEM_RES_INTR */
+	{ SYS_RES_MEMORY, PCIR_BAR(0), RF_ACTIVE },	/* GEM_RES_BANK1 */
 	{ -1, 0 }
 };
 
 static int
-gem_pci_attach(dev)
-	device_t dev;
+gem_pci_attach(device_t dev)
 {
 	struct gem_softc *sc;
 	int i;
@@ -167,13 +167,13 @@ gem_pci_attach(dev)
 
 	/*
 	 * Some Sun GEMs/ERIs do have their intpin register bogusly set to 0,
-	 * although it should be 1. correct that.
+	 * although it should be 1.  Correct that.
 	 */
 	if (pci_get_intpin(dev) == 0)
 		pci_set_intpin(dev, 1);
 
 	sc->sc_dev = dev;
-	sc->sc_flags |= GEM_PCI;	/* XXX */
+	sc->sc_flags |= GEM_PCI;
 
 	if (bus_alloc_resources(dev, gem_pci_res_spec, sc->sc_res)) {
 		device_printf(dev, "failed to allocate resources\n");
@@ -182,6 +182,24 @@ gem_pci_attach(dev)
 	}
 
 	GEM_LOCK_INIT(sc, device_get_nameunit(dev));
+
+	/*
+	 * Derive GEM_RES_BANK2 from GEM_RES_BANK1.  This seemed cleaner
+	 * with the old way of using copies of the bus tag and handle in
+	 * the softc along with bus_space_*()...
+	 */
+	sc->sc_res[GEM_RES_BANK2] = malloc(sizeof(*sc->sc_res[GEM_RES_BANK2]),
+	    M_DEVBUF, M_NOWAIT | M_ZERO);
+	if (sc->sc_res[GEM_RES_BANK2] == NULL) {
+		device_printf(dev, "failed to allocate bank2 resource\n");
+		goto fail;
+	}
+	rman_set_bustag(sc->sc_res[GEM_RES_BANK2],
+	    rman_get_bustag(sc->sc_res[GEM_RES_BANK1]));
+	bus_space_subregion(rman_get_bustag(sc->sc_res[GEM_RES_BANK1]),
+	    rman_get_bushandle(sc->sc_res[GEM_RES_BANK1]),
+	    GEM_PCI_BANK2_OFFSET, GEM_PCI_BANK2_SIZE,
+	    &sc->sc_res[GEM_RES_BANK2]->r_bushandle);
 
 #if defined(__powerpc__) || defined(__sparc64__)
 	OF_getetheraddr(dev, sc->sc_enaddr);
@@ -218,15 +236,17 @@ gem_pci_attach(dev)
 #define	PCI_VPD_LEN			0x02
 #define	PCI_VPD_DATA			0x03
 
-#define	GEM_ROM_READ_N(n, sc, offs)					\
-	bus_read_ ## n ((sc)->sc_res[0], GEM_PCI_ROM_OFFSET + (offs))
-#define	GEM_ROM_READ_1(sc, offs)	GEM_ROM_READ_N(1, (sc), (offs))
-#define	GEM_ROM_READ_2(sc, offs)	GEM_ROM_READ_N(2, (sc), (offs))
-#define	GEM_ROM_READ_4(sc, offs)	GEM_ROM_READ_N(4, (sc), (offs))
+#define	GEM_ROM_READ_1(sc, offs)					\
+    GEM_BANK1_READ_1((sc), GEM_PCI_ROM_OFFSET + (offs))
+#define	GEM_ROM_READ_2(sc, offs)					\
+    GEM_BANK1_READ_2((sc), GEM_PCI_ROM_OFFSET + (offs))
+#define	GEM_ROM_READ_4(sc, offs)					\
+    GEM_BANK1_READ_4((sc), GEM_PCI_ROM_OFFSET + (offs))
 
 	/* Read PCI Expansion ROM header. */
 	if (GEM_ROM_READ_2(sc, PCI_ROMHDR_SIG) != PCI_ROMHDR_SIG_MAGIC ||
-	    (i = GEM_ROM_READ_2(sc, PCI_ROMHDR_PTR_DATA)) < PCI_ROMHDR_SIZE) {
+	    (i = GEM_ROM_READ_2(sc, PCI_ROMHDR_PTR_DATA)) <
+	    PCI_ROMHDR_SIZE) {
 		device_printf(dev, "unexpected PCI Expansion ROM header\n");
 		goto fail;
 	}
@@ -235,7 +255,8 @@ gem_pci_attach(dev)
 	if (GEM_ROM_READ_4(sc, i + PCI_ROM_SIG) != PCI_ROM_SIG_MAGIC ||
 	    GEM_ROM_READ_2(sc, i + PCI_ROM_VENDOR) != pci_get_vendor(dev) ||
 	    GEM_ROM_READ_2(sc, i + PCI_ROM_DEVICE) != pci_get_device(dev) ||
-	    (j = GEM_ROM_READ_2(sc, i + PCI_ROM_PTR_VPD)) < i + PCI_ROM_SIZE) {
+	    (j = GEM_ROM_READ_2(sc, i + PCI_ROM_PTR_VPD)) <
+	    i + PCI_ROM_SIZE) {
 		device_printf(dev, "unexpected PCI Expansion ROM data\n");
 		goto fail;
 	}
@@ -243,15 +264,16 @@ gem_pci_attach(dev)
 	/*
 	 * Read PCI VPD.
 	 * SUNW,pci-gem cards have a single large resource VPD-R tag
-	 * containing one NA. The VPD used is not in PCI 2.2 standard
-	 * format however. The length in the resource header is in big
+	 * containing one NA.  The VPD used is not in PCI 2.2 standard
+	 * format however.  The length in the resource header is in big
 	 * endian and the end tag is non-standard (0x79) and followed
-	 * by an all-zero "checksum" byte. Sun calls this a "Fresh
+	 * by an all-zero "checksum" byte.  Sun calls this a "Fresh
 	 * Choice Ethernet" VPD...
 	 */
-	if (PCI_VPDRES_ISLARGE(GEM_ROM_READ_1(sc, j + PCI_VPDRES_BYTE0)) == 0 ||
-	    PCI_VPDRES_LARGE_NAME(GEM_ROM_READ_1(sc, j + PCI_VPDRES_BYTE0)) !=
-	    PCI_VPDRES_TYPE_VPD ||
+	if (PCI_VPDRES_ISLARGE(GEM_ROM_READ_1(sc,
+	    j + PCI_VPDRES_BYTE0)) == 0 ||
+	    PCI_VPDRES_LARGE_NAME(GEM_ROM_READ_1(sc,
+	    j + PCI_VPDRES_BYTE0)) != PCI_VPDRES_TYPE_VPD ||
 	    (GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_LEN_LSB) << 8 |
 	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_LEN_MSB)) !=
 	    PCI_VPD_SIZE + ETHER_ADDR_LEN ||
@@ -266,62 +288,62 @@ gem_pci_attach(dev)
 		device_printf(dev, "unexpected PCI VPD\n");
 		goto fail;
 	}
-	bus_read_region_1(sc->sc_res[0], GEM_PCI_ROM_OFFSET + j +
-	    PCI_VPDRES_LARGE_DATA + PCI_VPD_DATA, sc->sc_enaddr,
-	    ETHER_ADDR_LEN);
+	bus_read_region_1(sc->sc_res[GEM_RES_BANK1],
+	    GEM_PCI_ROM_OFFSET + j + PCI_VPDRES_LARGE_DATA + PCI_VPD_DATA,
+	    sc->sc_enaddr, ETHER_ADDR_LEN);
 #endif
 
-	/*
-	 * call the main configure
-	 */
 	if (gem_attach(sc) != 0) {
-		device_printf(dev, "could not be configured\n");
+		device_printf(dev, "could not be attached\n");
 		goto fail;
 	}
 
-	if (bus_setup_intr(dev, sc->sc_res[1], INTR_TYPE_NET | INTR_MPSAFE,
-	    NULL, gem_intr, sc, &sc->sc_ih) != 0) {
+	if (bus_setup_intr(dev, sc->sc_res[GEM_RES_INTR], INTR_TYPE_NET |
+	    INTR_MPSAFE, NULL, gem_intr, sc, &sc->sc_ih) != 0) {
 		device_printf(dev, "failed to set up interrupt\n");
 		gem_detach(sc);
 		goto fail;
 	}
 	return (0);
 
-fail:
+ fail:
+	if (sc->sc_res[GEM_RES_BANK2] != NULL)
+		free(sc->sc_res[GEM_RES_BANK2], M_DEVBUF);
 	GEM_LOCK_DESTROY(sc);
 	bus_release_resources(dev, gem_pci_res_spec, sc->sc_res);
 	return (ENXIO);
 }
 
 static int
-gem_pci_detach(dev)
-	device_t dev;
+gem_pci_detach(device_t dev)
 {
-	struct gem_softc *sc = device_get_softc(dev);
+	struct gem_softc *sc;
 
-	bus_teardown_intr(dev, sc->sc_res[1], sc->sc_ih);
+	sc = device_get_softc(dev);
+	bus_teardown_intr(dev, sc->sc_res[GEM_RES_INTR], sc->sc_ih);
 	gem_detach(sc);
+	free(sc->sc_res[GEM_RES_BANK2], M_DEVBUF);
 	GEM_LOCK_DESTROY(sc);
 	bus_release_resources(dev, gem_pci_res_spec, sc->sc_res);
 	return (0);
 }
 
 static int
-gem_pci_suspend(dev)
-	device_t dev;
+gem_pci_suspend(device_t dev)
 {
-	struct gem_softc *sc = device_get_softc(dev);
+	struct gem_softc *sc;
 
+	sc = device_get_softc(dev);
 	gem_suspend(sc);
 	return (0);
 }
 
 static int
-gem_pci_resume(dev)
-	device_t dev;
+gem_pci_resume(device_t dev)
 {
-	struct gem_softc *sc = device_get_softc(dev);
+	struct gem_softc *sc;
 
+	sc = device_get_softc(dev);
 	gem_resume(sc);
 	return (0);
 }

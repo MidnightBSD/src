@@ -25,9 +25,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from: NetBSD: gemreg.h,v 1.8 2005/12/11 12:21:26 christos Exp
+ *	from: NetBSD: gemreg.h,v 1.9 2006/11/24 13:01:07 martin Exp
  *
- * $FreeBSD: src/sys/dev/gem/if_gemreg.h,v 1.5 2007/09/26 21:14:17 marius Exp $
+ * $FreeBSD: src/sys/dev/gem/if_gemreg.h,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_IF_GEMREG_H
@@ -35,25 +35,42 @@
 
 /* Register definitions for Sun GEM gigabit ethernet */
 
+/*
+ * First bank: this registers live at the start of the PCI
+ * mapping, and at the start of the second bank of the SBus
+ * version.
+ */
 #define	GEM_SEB_STATE		0x0000	/* SEB state reg, R/O */
 #define	GEM_CONFIG		0x0004	/* config reg */
 #define	GEM_STATUS		0x000c	/* status reg */
-/* Note: Reading the status reg clears bits 0-6 */
+/* Note: Reading the status reg clears bits 0-6. */
 #define	GEM_INTMASK		0x0010
 #define	GEM_INTACK		0x0014	/* Interrupt acknowledge, W/O */
 #define	GEM_STATUS_ALIAS	0x001c
+
+/*
+ * Second bank: this registers live at offset 0x1000 of the PCI
+ * mapping, and at the start of the first bank of the SBus
+ * version.
+ */
+#define	GEM_PCI_BANK2_OFFSET	0x1000
+#define	GEM_PCI_BANK2_SIZE	0x14
 /* This is the same as the GEM_STATUS reg but reading it does not clear bits. */
-#define	GEM_ERROR_STATUS	0x1000	/* PCI error status R/C */
-#define	GEM_ERROR_MASK		0x1004
-#define	GEM_BIF_CONFIG		0x1008	/* BIF config reg */
-#define	GEM_BIF_DIAG		0x100c
-#define	GEM_RESET		0x1010	/* Software reset register */
+#define	GEM_ERROR_STATUS	0x0000	/* PCI error status R/C */
+#define	GEM_ERROR_MASK		0x0004
+#define	GEM_SBUS_CONFIG		0x0004
+#define	GEM_BIF_CONFIG		0x0008	/* BIF config reg */
+#define	GEM_BIF_DIAG		0x000c
+#define	GEM_RESET		0x0010	/* Software reset register */
 
 
 /* Bits in GEM_SEB register */
 #define	GEM_SEB_ARB		0x000000002	/* Arbitration status */
 #define	GEM_SEB_RXWON		0x000000004
 
+/* Bits in GEM_SBUS_CONFIG register */
+#define	GEM_SBUS_CFG_BMODE64	0x00000008
+#define	GEM_SBUS_CFG_PARITY	0x00000200
 
 /* Bits in GEM_CONFIG register */
 #define	GEM_CONFIG_BURST_64	0x000000000	/* maximum burst size 64KB */
@@ -75,7 +92,7 @@
 
 
 /*
- * Interrupt bits, for both the GEM_STATUS and GEM_INTMASK regs.
+ * Interrupt bits, for both the GEM_STATUS and GEM_INTMASK regs
  * Bits 0-6 auto-clear when read.
  */
 #define	GEM_INTR_TX_INTME	0x000000001	/* Frame w/INTME bit set sent */
@@ -120,6 +137,7 @@
 #define	GEM_RESET_RSTOUT	0x000000004	/* Force PCI RSTOUT# */
 
 
+/* The rest of the registers live in the first bank again. */
 /* GEM TX DMA registers */
 #define	GEM_TX_KICK		0x2000		/* Write last valid desc + 1 */
 #define	GEM_TX_CONFIG		0x2004
@@ -146,7 +164,7 @@
 #define	GEM_TX_DEBUG		0x3028
 
 
-/* GEM_TX_CONFIG register bits. */
+/* GEM_TX_CONFIG register bits */
 #define	GEM_TX_CONFIG_TXDMA_EN	0x00000001	/* TX DMA enable */
 #define	GEM_TX_CONFIG_TXRING_SZ	0x0000001e	/* TX ring size */
 #define	GEM_TX_CONFIG_TXFIFO_TH	0x001ffc00	/* TX fifo threshold */
@@ -195,7 +213,7 @@
 #define	GEM_RX_FIFO_SIZE	0x4120
 
 
-/* GEM_RX_CONFIG register bits. */
+/* GEM_RX_CONFIG register bits */
 #define	GEM_RX_CONFIG_RXDMA_EN	0x00000001	/* RX DMA enable */
 #define	GEM_RX_CONFIG_RXRING_SZ	0x0000001e	/* RX ring size */
 #define	GEM_RX_CONFIG_BATCH_DIS	0x00000020	/* desc batching disable */
@@ -362,7 +380,7 @@
 #define	GEM_MAC_TX_ENABLE	0x00000001	/* TX enable */
 #define	GEM_MAC_TX_IGN_CARRIER	0x00000002	/* Ignore carrier sense */
 #define	GEM_MAC_TX_IGN_COLLIS	0x00000004	/* ignore collisions */
-#define	GEM_MAC_TX_ENA_IPG0	0x00000008	/* extend Rx-to-TX IPG */
+#define	GEM_MAC_TX_ENA_IPG0	0x00000008	/* extend RX-to-TX IPG */
 #define	GEM_MAC_TX_NGU		0x00000010	/* Never give up */
 #define	GEM_MAC_TX_NGU_LIMIT	0x00000020	/* Never give up limit */
 #define	GEM_MAC_TX_NO_BACKOFF	0x00000040
@@ -405,7 +423,7 @@
 
 
 /* GEM MIF registers */
-/* Bit bang registers use low bit only */
+/* Bit bang registers use low bit only. */
 #define	GEM_MIF_BB_CLOCK	0x6200		/* bit bang clock */
 #define	GEM_MIF_BB_DATA		0x6204		/* bit bang data */
 #define	GEM_MIF_BB_OUTPUT_ENAB	0x6208
@@ -440,7 +458,7 @@
 #define	GEM_MIF_CONFIG_MDI0	0x00000100	/* MDIO_0 Data/MDIO_0 atached */
 #define	GEM_MIF_CONFIG_MDI1	0x00000200	/* MDIO_1 Data/MDIO_1 atached */
 #define	GEM_MIF_CONFIG_PHY_ADR	0x00007c00	/* poll PHY address */
-/* MDI0 is onboard transceiver MDI1 is external, PHYAD for both is 0 */
+/* MDI0 is the onboard transceiver, MDI1 is external, PHYAD for both is 0. */
 #define	GEM_MIF_CONFIG_BITS	"\177\020b\0PHYSEL\0b\1POLL\0b\2BBENA\0" \
 				"b\x8MDIO0\0b\x9MDIO1\0\0"
 
@@ -456,7 +474,7 @@
  */
 
 
-/* The GEM PCS/Serial link registers. */
+/* GEM PCS/Serial link registers */
 /* DO NOT TOUCH THESE REGISTERS ON ERI -- IT HARD HANGS. */
 #define	GEM_MII_CONTROL		0x9000
 #define	GEM_MII_STATUS		0x9004
@@ -584,7 +602,7 @@
 #define	GEM_PHYAD_EXTERNAL	0
 
 /*
- * GEM descriptor table structures.
+ * GEM descriptor table structures
  */
 struct gem_desc {
 	uint64_t	gd_flags;
