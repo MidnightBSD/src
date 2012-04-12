@@ -27,11 +27,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/amd64/exception.S,v 1.129.2.1 2007/11/21 16:38:54 jhb Exp $
+ * $FreeBSD: src/sys/amd64/amd64/exception.S,v 1.129.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_atpic.h"
 #include "opt_compat.h"
+#include "opt_kdtrace.h"
 
 #include <machine/asmacros.h>
 #include <machine/psl.h>
@@ -39,6 +40,21 @@
 
 #include "assym.s"
 
+#ifdef KDTRACE_HOOKS
+	.bss
+	.globl	dtrace_invop_jump_addr
+	.align	8
+	.type	dtrace_invop_jump_addr, @object
+        .size	dtrace_invop_jump_addr, 8
+dtrace_invop_jump_addr:
+	.zero	8
+	.globl	dtrace_invop_calltrap_addr
+	.align	8
+	.type	dtrace_invop_calltrap_addr, @object
+        .size	dtrace_invop_calltrap_addr, 8
+dtrace_invop_calltrap_addr:
+	.zero	8
+#endif
 	.text
 
 /*****************************************************************************/
@@ -162,6 +178,30 @@ alltraps_pushregs_no_rdi:
 	movq	%r14,TF_R14(%rsp)
 	movq	%r15,TF_R15(%rsp)
 	FAKE_MCOUNT(TF_RIP(%rsp))
+#ifdef KDTRACE_HOOKS
+	/*
+	 * DTrace Function Boundary Trace (fbt) and Statically Defined
+	 * Trace (sdt) probes are triggered by int3 (0xcc) which causes
+	 * the #BP (T_BPTFLT) breakpoint interrupt. For all other trap
+	 * types, just handle them in the usual way.
+	 */
+	cmpq	$T_BPTFLT,TF_TRAPNO(%rsp)
+	jne	calltrap
+
+	/* Check if there is no DTrace hook registered. */
+	cmpq	$0,dtrace_invop_jump_addr
+	je	calltrap
+
+	/*
+	 * Set our jump address for the jump back in the event that
+	 * the breakpoint wasn't caused by DTrace at all.
+	 */
+	movq	$calltrap, dtrace_invop_calltrap_addr(%rip)
+
+	/* Jump to the code hooked in by DTrace. */
+	movq	dtrace_invop_jump_addr, %rax
+	jmpq	*dtrace_invop_jump_addr
+#endif
 	.globl	calltrap
 	.type	calltrap,@function
 calltrap:
