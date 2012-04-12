@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/db_trace.c,v 1.4 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_trace.c,v 1.80.2.1 2007/11/21 16:38:54 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_trace.c,v 1.80.2.2.2.2 2008/12/12 13:21:31 kib Exp $");
+
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,6 +41,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/db_trace.c,v 1.80.2.1 2007/11/21 16:38:5
 #include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/reg.h>
+#include <machine/stack.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -177,18 +180,6 @@ db_ss(struct db_variable *vp, db_expr_t *valuep, int op)
 		kdb_frame->tf_ss = *valuep;
 	return (1);
 }
-
-/*
- * Stack trace.
- */
-#define	INKERNEL(va) (((va) >= DMAP_MIN_ADDRESS && (va) < DMAP_MAX_ADDRESS) \
-	    || ((va) >= KERNBASE && (va) < VM_MAX_KERNEL_ADDRESS))
-
-struct amd64_frame {
-	struct amd64_frame	*f_frame;
-	long			f_retaddr;
-	long			f_arg0;
-};
 
 #define NORMAL		0
 #define	TRAP		1
@@ -330,6 +321,10 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 			frame_type = INTERRUPT;
 		else if (strcmp(name, "Xfast_syscall") == 0)
 			frame_type = SYSCALL;
+#ifdef COMPAT_IA32
+		else if (strcmp(name, "Xint0x80_syscall") == 0)
+			frame_type = SYSCALL;
+#endif
 		/* XXX: These are interrupts with trap frames. */
 		else if (strcmp(name, "Xtimerint") == 0 ||
 		    strcmp(name, "Xcpustop") == 0 ||
@@ -504,32 +499,6 @@ db_trace_thread(struct thread *thr, int count)
 	ctx = kdb_thr_ctx(thr);
 	return (db_backtrace(thr, NULL, (struct amd64_frame *)ctx->pcb_rbp,
 		    ctx->pcb_rip, count));
-}
-
-void
-stack_save(struct stack *st)
-{
-	struct amd64_frame *frame;
-	vm_offset_t callpc;
-	register_t rbp;
-
-	stack_zero(st);
-	__asm __volatile("movq %%rbp,%0" : "=r" (rbp));
-	frame = (struct amd64_frame *)rbp;
-	while (1) {
-		if (!INKERNEL((long)frame))
-			break;
-		callpc = frame->f_retaddr;
-		if (!INKERNEL(callpc))
-			break;
-		if (stack_put(st, callpc) == -1)
-			break;
-		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >=
-		    (vm_offset_t)rbp + KSTACK_PAGES * PAGE_SIZE)
-			break;
-		frame = frame->f_frame;
-	}
 }
 
 int

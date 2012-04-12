@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/db_disasm.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_disasm.c,v 1.31 2006/11/13 21:14:54 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_disasm.c,v 1.31.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Instruction disassembler.
@@ -165,15 +165,37 @@ static const char * const db_Grp9[] = {
 	""
 };
 
+static const char * const db_Grp15[] = {
+	"fxsave",
+	"fxrstor",
+	"ldmxcsr",
+	"stmxcsr",
+	"",
+	"",
+	"",
+	"clflush"
+};
+
+static const char * const db_Grp15b[] = {
+	"",
+	"",
+	"",
+	"",
+	"",
+	"lfence",
+	"mfence",
+	"sfence"
+};
+
 static const struct inst db_inst_0f0x[] = {
 /*00*/	{ "",	   TRUE,  NONE,  op1(Ew),     db_Grp6 },
 /*01*/	{ "",	   TRUE,  NONE,  op1(Ew),     db_Grp7 },
 /*02*/	{ "lar",   TRUE,  LONG,  op2(E,R),    0 },
 /*03*/	{ "lsl",   TRUE,  LONG,  op2(E,R),    0 },
 /*04*/	{ "",      FALSE, NONE,  0,	      0 },
-/*05*/	{ "",      FALSE, NONE,  0,	      0 },
+/*05*/	{ "syscall",FALSE,NONE,  0,	      0 },
 /*06*/	{ "clts",  FALSE, NONE,  0,	      0 },
-/*07*/	{ "",      FALSE, NONE,  0,	      0 },
+/*07*/	{ "sysret",FALSE, NONE,  0,	      0 },
 
 /*08*/	{ "invd",  FALSE, NONE,  0,	      0 },
 /*09*/	{ "wbinvd",FALSE, NONE,  0,	      0 },
@@ -210,10 +232,10 @@ static const struct inst db_inst_0f3x[] = {
 /*31*/	{ "rdtsc", FALSE, NONE,  0,	      0 },
 /*32*/	{ "rdmsr", FALSE, NONE,  0,	      0 },
 /*33*/	{ "rdpmc", FALSE, NONE,  0,	      0 },
-/*34*/	{ "",	   FALSE, NONE,  0,	      0 },
-/*35*/	{ "",	   FALSE, NONE,  0,	      0 },
+/*34*/	{ "sysenter",FALSE,NONE,  0,	      0 },
+/*35*/	{ "sysexit",FALSE,NONE,  0,	      0 },
 /*36*/	{ "",	   FALSE, NONE,  0,	      0 },
-/*37*/	{ "",	   FALSE, NONE,  0,	      0 },
+/*37*/	{ "getsec",FALSE, NONE,  0,	      0 },
 
 /*38*/	{ "",	   FALSE, NONE,  0,	      0 },
 /*39*/	{ "",	   FALSE, NONE,  0,	      0 },
@@ -301,8 +323,8 @@ static const struct inst db_inst_0fax[] = {
 /*ab*/	{ "bts",   TRUE,  LONG,  op2(R,E),    0 },
 /*ac*/	{ "shrd",  TRUE,  LONG,  op3(Ib,R,E), 0 },
 /*ad*/	{ "shrd",  TRUE,  LONG,  op3(CL,R,E), 0 },
-/*a6*/	{ "",      FALSE, NONE,  0,	      0 },
-/*a7*/	{ "imul",  TRUE,  LONG,  op2(E,R),    0 },
+/*ae*/	{ "",      TRUE,  LONG,  op1(E),      db_Grp15 },
+/*af*/	{ "imul",  TRUE,  LONG,  op2(E,R),    0 },
 };
 
 static const struct inst db_inst_0fbx[] = {
@@ -1124,6 +1146,7 @@ db_disasm(loc, altfmt)
 	boolean_t	first;
 	int	displ;
 	int	prefix;
+	int	rep;
 	int	imm;
 	int	imm2;
 	long	imm64;
@@ -1138,6 +1161,7 @@ db_disasm(loc, altfmt)
 	/*
 	 * Get prefixes
 	 */
+	rep = FALSE;
 	prefix = TRUE;
 	do {
 	    switch (inst) {
@@ -1172,7 +1196,7 @@ db_disasm(loc, altfmt)
 		    db_printf("repne ");
 		    break;
 		case 0xf3:
-		    db_printf("repe ");	/* XXX repe VS rep */
+		    rep = TRUE;
 		    break;
 		default:
 		    prefix = FALSE;
@@ -1184,6 +1208,14 @@ db_disasm(loc, altfmt)
 	    }
 	    if (prefix) {
 		get_value_inc(inst, loc, 1, FALSE);
+	    }
+	    if (rep == TRUE) {
+		if (inst == 0x90) {
+		    db_printf("pause\n");
+		    return (loc);
+		}
+		db_printf("repe ");	/* XXX repe VS rep */
+		rep = FALSE;
 	    }
 	} while (prefix);
 
@@ -1217,7 +1249,8 @@ db_disasm(loc, altfmt)
 
 	if (ip->i_extra == db_Grp1 || ip->i_extra == db_Grp2 ||
 	    ip->i_extra == db_Grp6 || ip->i_extra == db_Grp7 ||
-	    ip->i_extra == db_Grp8 || ip->i_extra == db_Grp9) {
+	    ip->i_extra == db_Grp8 || ip->i_extra == db_Grp9 ||
+	    ip->i_extra == db_Grp15) {
 	    i_name = ((const char * const *)ip->i_extra)[f_reg(rex, regmodrm)];
 	}
 	else if (ip->i_extra == db_Grp3) {
@@ -1232,6 +1265,32 @@ db_disasm(loc, altfmt)
 	    i_name = ip->i_name;
 	    i_mode = ip->i_mode;
 	    i_size = ip->i_size;
+	}
+
+	/* Special cases that don't fit well in the tables. */
+	if (ip->i_extra == db_Grp7 && f_mod(rex, regmodrm) == 3) {
+		switch (regmodrm) {
+		case 0xc8:
+			i_name = "monitor";
+			i_size = NONE;
+			i_mode = 0;			
+			break;
+		case 0xc9:
+			i_name = "mwait";
+			i_size = NONE;
+			i_mode = 0;
+			break;
+		case 0xf8:
+			i_name = "swapgs";
+			i_size = NONE;
+			i_mode = 0;
+			break;
+		}
+	}
+	if (ip->i_extra == db_Grp15 && f_mod(rex, regmodrm) == 3) {
+		i_name = db_Grp15b[f_reg(rex, regmodrm)];
+		i_size = NONE;
+		i_mode = 0;
 	}
 
 	if (i_size == SDEP) {
