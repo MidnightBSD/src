@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/mp_machdep.c,v 1.4 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1996, by Steve Passe
  * Copyright (c) 2003, by Peter Wemm
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/mp_machdep.c,v 1.287.2.2 2007/11/28 23:24:06 cperciva Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/mp_machdep.c,v 1.287.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_cpu.h"
 #include "opt_kstack_pages.h"
@@ -447,7 +447,8 @@ init_secondary(void)
 {
 	struct pcpu *pc;
 	u_int64_t msr, cr0;
-	int cpu, gsel_tss;
+	int cpu, gsel_tss, x;
+	struct region_descriptor ap_gdt;
 
 	/* Set by the startup code for us to use */
 	cpu = bootAP;
@@ -458,11 +459,17 @@ init_secondary(void)
 	common_tss[cpu].tss_iobase = sizeof(struct amd64tss);
 	common_tss[cpu].tss_ist1 = (long)&doublefault_stack[PAGE_SIZE];
 
+	/* Prepare private GDT */
 	gdt_segs[GPROC0_SEL].ssd_base = (long) &common_tss[cpu];
 	ssdtosyssd(&gdt_segs[GPROC0_SEL],
-	   (struct system_segment_descriptor *)&gdt[GPROC0_SEL]);
-
-	lgdt(&r_gdt);			/* does magic intra-segment return */
+	   (struct system_segment_descriptor *)&gdt[NGDT * cpu + GPROC0_SEL]);
+	for (x = 0; x < NGDT; x++) {
+		if (x != GPROC0_SEL && x != (GPROC0_SEL + 1))
+			ssdtosd(&gdt_segs[x], &gdt[NGDT * cpu + x]);
+	}
+	ap_gdt.rd_limit = NGDT * sizeof(gdt[0]) - 1;
+	ap_gdt.rd_base =  (long) &gdt[NGDT * cpu];
+	lgdt(&ap_gdt);			/* does magic intra-segment return */
 
 	/* Get per-cpu data */
 	pc = &__pcpu[cpu];
@@ -474,6 +481,7 @@ init_secondary(void)
 	pc->pc_curthread = 0;
 	pc->pc_tssp = &common_tss[cpu];
 	pc->pc_rsp0 = 0;
+	pc->pc_gs32p = &gdt[NGDT * cpu + GUGS32_SEL];
 
 	wrmsr(MSR_FSBASE, 0);		/* User value */
 	wrmsr(MSR_GSBASE, (u_int64_t)pc);

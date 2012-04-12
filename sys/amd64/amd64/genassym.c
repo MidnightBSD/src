@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/genassym.c,v 1.4 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1990 The Regents of the University of California.
  * All rights reserved.
@@ -81,6 +81,9 @@ ASSYM(TD_FLAGS, offsetof(struct thread, td_flags));
 ASSYM(TD_PCB, offsetof(struct thread, td_pcb));
 ASSYM(TD_PROC, offsetof(struct thread, td_proc));
 ASSYM(TD_TID, offsetof(struct thread, td_tid));
+
+ASSYM(P_FLAG, offsetof(struct proc, p_flag));
+ASSYM(P_KTHREAD, P_KTHREAD);
 
 ASSYM(TDF_ASTPENDING, TDF_ASTPENDING);
 ASSYM(TDF_NEEDRESCHED, TDF_NEEDRESCHED);
