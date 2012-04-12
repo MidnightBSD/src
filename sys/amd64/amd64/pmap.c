@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/pmap.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -1543,10 +1543,12 @@ pmap_growkernel(vm_offset_t addr)
 		if (pde == NULL) {
 			/* We need a new PDP entry */
 			nkpg = vm_page_alloc(NULL, nkpt,
-			    VM_ALLOC_NOOBJ | VM_ALLOC_SYSTEM | VM_ALLOC_WIRED);
+			    VM_ALLOC_INTERRUPT | VM_ALLOC_NOOBJ |
+			    VM_ALLOC_WIRED | VM_ALLOC_ZERO);
 			if (!nkpg)
 				panic("pmap_growkernel: no memory to grow kernel");
-			pmap_zero_page(nkpg);
+			if ((nkpg->flags & PG_ZERO) == 0)
+				pmap_zero_page(nkpg);
 			paddr = VM_PAGE_TO_PHYS(nkpg);
 			newpdp = (pdp_entry_t)
 				(paddr | PG_V | PG_RW | PG_A | PG_M);
@@ -1566,13 +1568,15 @@ pmap_growkernel(vm_offset_t addr)
 		 * This index is bogus, but out of the way
 		 */
 		nkpg = vm_page_alloc(NULL, nkpt,
-		    VM_ALLOC_NOOBJ | VM_ALLOC_SYSTEM | VM_ALLOC_WIRED);
+		    VM_ALLOC_INTERRUPT | VM_ALLOC_NOOBJ | VM_ALLOC_WIRED |
+		    VM_ALLOC_ZERO);
 		if (!nkpg)
 			panic("pmap_growkernel: no memory to grow kernel");
 
 		nkpt++;
 
-		pmap_zero_page(nkpg);
+		if ((nkpg->flags & PG_ZERO) == 0)
+			pmap_zero_page(nkpg);
 		paddr = VM_PAGE_TO_PHYS(nkpg);
 		newpdir = (pd_entry_t) (paddr | PG_V | PG_RW | PG_A | PG_M);
 		*pmap_pde(kernel_pmap, kernel_vm_end) = newpdir;
@@ -1734,6 +1738,7 @@ free_pv_entry(pmap_t pmap, pv_entry_t pv)
 	TAILQ_REMOVE(&pmap->pm_pvchunk, pc, pc_list);
 	m = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t)pc));
 	dump_drop_page(m->phys_addr);
+	vm_page_unwire(m, 0);
 	vm_page_free(m);
 }
 
@@ -1747,6 +1752,7 @@ get_pv_entry(pmap_t pmap, int try)
 	static const struct timeval printinterval = { 60, 0 };
 	static struct timeval lastprint;
 	static vm_pindex_t colour;
+	struct vpgqueues *pq;
 	int bit, field;
 	pv_entry_t pv;
 	struct pv_chunk *pc;
@@ -1761,6 +1767,8 @@ get_pv_entry(pmap_t pmap, int try)
 			printf("Approaching the limit on PV entries, consider "
 			    "increasing either the vm.pmap.shpgperproc or the "
 			    "vm.pmap.pv_entry_max sysctl.\n");
+	pq = NULL;
+retry:
 	pc = TAILQ_FIRST(&pmap->pm_pvchunk);
 	if (pc != NULL) {
 		for (field = 0; field < _NPCM; field++) {
@@ -1783,7 +1791,9 @@ get_pv_entry(pmap_t pmap, int try)
 		}
 	}
 	/* No free items, allocate another chunk */
-	m = vm_page_alloc(NULL, colour, VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ);
+	m = vm_page_alloc(NULL, colour, (pq == &vm_page_queues[PQ_ACTIVE] ?
+	    VM_ALLOC_SYSTEM : VM_ALLOC_NORMAL) | VM_ALLOC_NOOBJ |
+	    VM_ALLOC_WIRED);
 	if (m == NULL) {
 		if (try) {
 			pv_entry_count--;
@@ -1795,18 +1805,16 @@ get_pv_entry(pmap_t pmap, int try)
 		 * pages.  After that, if a pv chunk entry is still needed,
 		 * destroy mappings to active pages.
 		 */
-		PV_STAT(pmap_collect_inactive++);
-		pmap_collect(pmap, &vm_page_queues[PQ_INACTIVE]);
-		m = vm_page_alloc(NULL, colour,
-		    VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ);
-		if (m == NULL) {
+		if (pq == NULL) {
+			PV_STAT(pmap_collect_inactive++);
+			pq = &vm_page_queues[PQ_INACTIVE];
+		} else if (pq == &vm_page_queues[PQ_INACTIVE]) {
 			PV_STAT(pmap_collect_active++);
-			pmap_collect(pmap, &vm_page_queues[PQ_ACTIVE]);
-			m = vm_page_alloc(NULL, colour,
-			    VM_ALLOC_SYSTEM | VM_ALLOC_NOOBJ);
-			if (m == NULL)
-				panic("get_pv_entry: increase vm.pmap.shpgperproc");
-		}
+			pq = &vm_page_queues[PQ_ACTIVE];
+		} else
+			panic("get_pv_entry: increase vm.pmap.shpgperproc");
+		pmap_collect(pmap, pq);
+		goto retry;
 	}
 	PV_STAT(pc_chunk_count++);
 	PV_STAT(pc_chunk_allocs++);
@@ -1982,12 +1990,16 @@ pmap_remove(pmap_t pmap, vm_offset_t sva, vm_offset_t eva)
 		pml4e = pmap_pml4e(pmap, sva);
 		if ((*pml4e & PG_V) == 0) {
 			va_next = (sva + NBPML4) & ~PML4MASK;
+			if (va_next < sva)
+				va_next = eva;
 			continue;
 		}
 
 		pdpe = pmap_pml4e_to_pdpe(pml4e, sva);
 		if ((*pdpe & PG_V) == 0) {
 			va_next = (sva + NBPDP) & ~PDPMASK;
+			if (va_next < sva)
+				va_next = eva;
 			continue;
 		}
 
@@ -1995,6 +2007,8 @@ pmap_remove(pmap_t pmap, vm_offset_t sva, vm_offset_t eva)
 		 * Calculate index for next page table.
 		 */
 		va_next = (sva + NBPDR) & ~PDRMASK;
+		if (va_next < sva)
+			va_next = eva;
 
 		pde = pmap_pdpe_to_pde(pdpe, sva);
 		ptpaddr = *pde;
@@ -2146,16 +2160,22 @@ pmap_protect(pmap_t pmap, vm_offset_t sva, vm_offset_t eva, vm_prot_t prot)
 		pml4e = pmap_pml4e(pmap, sva);
 		if ((*pml4e & PG_V) == 0) {
 			va_next = (sva + NBPML4) & ~PML4MASK;
+			if (va_next < sva)
+				va_next = eva;
 			continue;
 		}
 
 		pdpe = pmap_pml4e_to_pdpe(pml4e, sva);
 		if ((*pdpe & PG_V) == 0) {
 			va_next = (sva + NBPDP) & ~PDPMASK;
+			if (va_next < sva)
+				va_next = eva;
 			continue;
 		}
 
 		va_next = (sva + NBPDR) & ~PDRMASK;
+		if (va_next < sva)
+			va_next = eva;
 
 		pde = pmap_pdpe_to_pde(pdpe, sva);
 		ptpaddr = *pde;
@@ -2753,16 +2773,22 @@ pmap_copy(pmap_t dst_pmap, pmap_t src_pmap, vm_offset_t dst_addr, vm_size_t len,
 		pml4e = pmap_pml4e(src_pmap, addr);
 		if ((*pml4e & PG_V) == 0) {
 			va_next = (addr + NBPML4) & ~PML4MASK;
+			if (va_next < addr)
+				va_next = end_addr;
 			continue;
 		}
 
 		pdpe = pmap_pml4e_to_pdpe(pml4e, addr);
 		if ((*pdpe & PG_V) == 0) {
 			va_next = (addr + NBPDP) & ~PDPMASK;
+			if (va_next < addr)
+				va_next = end_addr;
 			continue;
 		}
 
 		va_next = (addr + NBPDR) & ~PDRMASK;
+		if (va_next < addr)
+			va_next = end_addr;
 
 		pde = pmap_pdpe_to_pde(pdpe, addr);
 		srcptepaddr = *pde;
@@ -3020,6 +3046,7 @@ pmap_remove_pages(pmap_t pmap)
 			TAILQ_REMOVE(&pmap->pm_pvchunk, pc, pc_list);
 			m = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t)pc));
 			dump_drop_page(m->phys_addr);
+			vm_page_unwire(m, 0);
 			vm_page_free(m);
 		}
 	}
