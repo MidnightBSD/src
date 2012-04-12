@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD: src/lib/libc/sys/Symbol.map,v 1.7 2012/04/09 22:11:25 laffer1 Exp $
+ * $MidnightBSD: src/lib/libc/sys/Symbol.map,v 1.8 2012/04/10 19:40:33 laffer1 Exp $
  * $FreeBSD: src/lib/libc/sys/Symbol.map,v 1.9.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
@@ -514,6 +514,7 @@ FBSDprivate_1.0 {
 	__sys_fchown;
 	_fcntl;
 	__sys_fcntl;
+	__fcntl_compat;
 	_fhopen;
 	__sys_fhopen;
 	_fhstat;
