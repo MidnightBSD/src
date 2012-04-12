@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/include/proc.h,v 1.2 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)proc.h	7.1 (Berkeley) 5/15/91
- * $FreeBSD: src/sys/amd64/include/proc.h,v 1.24 2005/04/04 21:53:52 jhb Exp $
+ * $FreeBSD: src/sys/amd64/include/proc.h,v 1.24.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -44,5 +44,18 @@ struct mdthread {
 
 struct mdproc {
 };
+
+#ifdef	_KERNEL
+
+/* Get the current kernel thread stack usage. */
+#define GET_STACK_USAGE(total, used) do {				\
+	struct thread	*td = curthread;				\
+	(total) = td->td_kstack_pages * PAGE_SIZE;			\
+	(used) = (char *)td->td_kstack +				\
+	    td->td_kstack_pages * PAGE_SIZE -				\
+	    (char *)&td;						\
+} while (0)
+
+#endif  /* _KERNEL */
 
 #endif /* !_MACHINE_PROC_H_ */
