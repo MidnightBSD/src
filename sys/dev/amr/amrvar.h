@@ -54,7 +54,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD: src/sys/dev/amr/amrvar.h,v 1.33 2006/05/03 16:45:15 ambrisko Exp $
+ *      $FreeBSD: src/sys/dev/amr/amrvar.h,v 1.33.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <geom/geom_disk.h>
@@ -101,12 +101,21 @@ struct amr_logdrive
 
 #define AMR_CMD_CLUSTERSIZE	(16 * 1024)
 
+typedef STAILQ_HEAD(, amr_command)	ac_qhead_t;
+typedef STAILQ_ENTRY(amr_command)	ac_link_t;
+
+union amr_ccb {
+    struct amr_passthrough	ccb_pthru;
+    struct amr_ext_passthrough	ccb_epthru;
+    uint8_t			bytes[128];
+};
+
 /*
  * Per-command control structure.
  */
 struct amr_command
 {
-    TAILQ_ENTRY(amr_command)	ac_link;
+    ac_link_t			ac_link;
 
     struct amr_softc		*ac_sc;
     u_int8_t			ac_slot;
@@ -122,14 +131,14 @@ struct amr_command
     int				ac_flags;
 #define AMR_CMD_DATAIN		(1<<0)
 #define AMR_CMD_DATAOUT		(1<<1)
-#define AMR_CMD_CCB_DATAIN	(1<<2)
-#define AMR_CMD_CCB_DATAOUT	(1<<3)
+#define AMR_CMD_CCB		(1<<2)
 #define AMR_CMD_PRIORITY	(1<<4)
 #define AMR_CMD_MAPPED		(1<<5)
 #define AMR_CMD_SLEEP		(1<<6)
 #define AMR_CMD_BUSY		(1<<7)
 #define AMR_CMD_SG64		(1<<8)
 #define AC_IS_SG64(ac)		((ac)->ac_flags & AMR_CMD_SG64)
+    u_int			ac_retries;
 
     struct bio			*ac_bio;
     void			(* ac_complete)(struct amr_command *ac);
@@ -140,11 +149,13 @@ struct amr_command
     bus_dmamap_t		ac_dmamap;
     bus_dmamap_t		ac_dma64map;
 
-    void			*ac_ccb_data;
-    size_t			ac_ccb_length;
-    bus_dmamap_t		ac_ccb_dmamap;
-    bus_dmamap_t		ac_ccb_dma64map;
+    bus_dma_tag_t		ac_tag;
+    bus_dmamap_t		ac_datamap;
+    int				ac_nsegments;
+    uint32_t			ac_mb_physaddr;
 
+    union amr_ccb		*ac_ccb;
+    uint32_t			ac_ccb_busaddr;
 };
 
 struct amr_command_cluster
@@ -186,6 +197,11 @@ struct amr_softc
     bus_dma_tag_t		amr_sg_dmat;		/* s/g buffer DMA tag */
     bus_dmamap_t		amr_sg_dmamap;		/* map for s/g buffers */
 
+    union amr_ccb		*amr_ccb;
+    uint32_t			amr_ccb_busaddr;
+    bus_dma_tag_t		amr_ccb_dmat;
+    bus_dmamap_t		amr_ccb_dmamap;
+
     /* controller limits and features */
     int				amr_nextslot;		/* Next slot to use for newly allocated commands */
     int				amr_maxio;		/* maximum number of I/O transactions */
@@ -208,11 +224,10 @@ struct amr_softc
 
     /* per-controller queues */
     struct bio_queue_head 	amr_bioq;		/* pending I/O with no commands */
-    TAILQ_HEAD(,amr_command)	amr_ready;		/* commands ready to be submitted */
+    ac_qhead_t			amr_ready;		/* commands ready to be submitted */
     struct amr_command		*amr_busycmd[AMR_MAXCMD];
     int				amr_busyslots;
-    TAILQ_HEAD(,amr_command)	amr_completed;
-    TAILQ_HEAD(,amr_command)	amr_freecmds;
+    ac_qhead_t			amr_freecmds;
     TAILQ_HEAD(,amr_command_cluster)	amr_cmd_clusters;
 
     /* CAM attachments for passthrough */
@@ -309,17 +324,24 @@ amr_dequeue_bio(struct amr_softc *sc)
 }
 
 static __inline void
+amr_init_qhead(ac_qhead_t *head)
+{
+
+	STAILQ_INIT(head);
+}
+
+static __inline void
 amr_enqueue_ready(struct amr_command *ac)
 {
 
-    TAILQ_INSERT_TAIL(&ac->ac_sc->amr_ready, ac, ac_link);
+    STAILQ_INSERT_TAIL(&ac->ac_sc->amr_ready, ac, ac_link);
 }
 
 static __inline void
 amr_requeue_ready(struct amr_command *ac)
 {
 
-    TAILQ_INSERT_HEAD(&ac->ac_sc->amr_ready, ac, ac_link);
+    STAILQ_INSERT_HEAD(&ac->ac_sc->amr_ready, ac, ac_link);
 }
 
 static __inline struct amr_command *
@@ -327,25 +349,25 @@ amr_dequeue_ready(struct amr_softc *sc)
 {
     struct amr_command	*ac;
 
-    if ((ac = TAILQ_FIRST(&sc->amr_ready)) != NULL)
-	TAILQ_REMOVE(&sc->amr_ready, ac, ac_link);
+    if ((ac = STAILQ_FIRST(&sc->amr_ready)) != NULL)
+	STAILQ_REMOVE_HEAD(&sc->amr_ready, ac_link);
     return(ac);
 }
 
 static __inline void
-amr_enqueue_completed(struct amr_command *ac)
+amr_enqueue_completed(struct amr_command *ac, ac_qhead_t *head)
 {
 
-    TAILQ_INSERT_TAIL(&ac->ac_sc->amr_completed, ac, ac_link);
+    STAILQ_INSERT_TAIL(head, ac, ac_link);
 }
 
 static __inline struct amr_command *
-amr_dequeue_completed(struct amr_softc *sc)
+amr_dequeue_completed(struct amr_softc *sc, ac_qhead_t *head)
 {
     struct amr_command	*ac;
 
-    if ((ac = TAILQ_FIRST(&sc->amr_completed)) != NULL)
-	TAILQ_REMOVE(&sc->amr_completed, ac, ac_link);
+    if ((ac = STAILQ_FIRST(head)) != NULL)
+	STAILQ_REMOVE_HEAD(head, ac_link);
     return(ac);
 }
 
@@ -353,7 +375,7 @@ static __inline void
 amr_enqueue_free(struct amr_command *ac)
 {
 
-    TAILQ_INSERT_TAIL(&ac->ac_sc->amr_freecmds, ac, ac_link);
+    STAILQ_INSERT_HEAD(&ac->ac_sc->amr_freecmds, ac, ac_link);
 }
 
 static __inline struct amr_command *
@@ -361,7 +383,7 @@ amr_dequeue_free(struct amr_softc *sc)
 {
     struct amr_command	*ac;
 
-    if ((ac = TAILQ_FIRST(&sc->amr_freecmds)) != NULL)
-	TAILQ_REMOVE(&sc->amr_freecmds, ac, ac_link);
+    if ((ac = STAILQ_FIRST(&sc->amr_freecmds)) != NULL)
+	STAILQ_REMOVE_HEAD(&sc->amr_freecmds, ac_link);
     return(ac);
 }

@@ -54,7 +54,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD: src/sys/dev/amr/amrreg.h,v 1.10 2006/01/13 23:50:21 jkim Exp $
+ *      $FreeBSD: src/sys/dev/amr/amrreg.h,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /********************************************************************************
@@ -132,6 +132,14 @@
 #define AMR_CONFIG_ENQ3_SOLICITED_NOTIFY	0x01
 #define AMR_CONFIG_ENQ3_SOLICITED_FULL		0x02
 #define AMR_CONFIG_ENQ3_UNSOLICITED		0x03
+
+/*
+ * Command for random deletion of logical drives
+ */
+#define FC_DEL_LOGDRV		0xA4
+#define OP_SUP_DEL_LOGDRV	0x2A
+#define OP_GET_LDID_MAP		0x18
+#define OP_DEL_LOGDRV		0x1C
 
 /*
  * Command for random deletion of logical drives

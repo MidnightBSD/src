@@ -54,7 +54,7 @@
  * SUCH DAMAGE.
  *
  *
- *	$FreeBSD: src/sys/dev/amr/amr_tables.h,v 1.3 2002/10/30 22:00:11 emoore Exp $
+ *	$FreeBSD: src/sys/dev/amr/amr_tables.h,v 1.3.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

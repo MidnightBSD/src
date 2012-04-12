@@ -37786,7 +37786,6 @@ sys/dev/amdsbwd/amdsbwd.c -text
 sys/dev/amdtemp/amdtemp.c -text
 sys/dev/amr/amr.c -text
 sys/dev/amr/amr_cam.c -text
-sys/dev/amr/amr_compat.h -text
 sys/dev/amr/amr_disk.c -text
 sys/dev/amr/amr_linux.c -text
 sys/dev/amr/amr_pci.c -text
