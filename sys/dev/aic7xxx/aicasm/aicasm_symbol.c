@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_symbol.c,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aicasm_symbol.c,v 1.2 2012-04-12 01:39:29 laffer1 Exp $
  *
  * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm_symbol.c,v 1.24 2005/01/06 01:42:27 imp Exp $
  */
@@ -49,6 +49,7 @@
 #else
 #include <db.h>
 #endif
+#include <ctype.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <regex.h>
