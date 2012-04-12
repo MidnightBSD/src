@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986 The Regents of the University of California.
  * Copyright (c) 1989, 1990 William Jolitz
@@ -241,12 +241,17 @@ cpu_thread_swapout(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 
 	td->td_pcb = (struct pcb *)(td->td_kstack +
 	    td->td_kstack_pages * PAGE_SIZE) - 1;
 	td->td_frame = (struct trapframe *)td->td_pcb - 1;
+}
+
+void
+cpu_thread_free(struct thread *td)
+{
 }
 
 /*
@@ -473,10 +478,13 @@ cpu_reset_real()
 
 	/*
 	 * Attempt to force a reset via the Reset Control register at
-	 * I/O port 0xcf9.  Bit 2 forces a system reset when it is
-	 * written as 1.  Bit 1 selects the type of reset to attempt:
-	 * 0 selects a "soft" reset, and 1 selects a "hard" reset.  We
-	 * try to do a "soft" reset first, and then a "hard" reset.
+	 * I/O port 0xcf9.  Bit 2 forces a system reset when it
+	 * transitions from 0 to 1.  Bit 1 selects the type of reset
+	 * to attempt: 0 selects a "soft" reset, and 1 selects a
+	 * "hard" reset.  We try a "hard" reset.  The first write sets
+	 * bit 1 to select a "hard" reset and clears bit 2.  The
+	 * second write forces a 0 -> 1 transition in bit 2 to trigger
+	 * a reset.
 	 */
 	outb(0xcf9, 0x2);
 	outb(0xcf9, 0x6);
