@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/amd64/amd64/tsc.c,v 1.5 2012/03/31 17:05:08 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/amd64/amd64/tsc.c,v 1.6 2012/04/12 03:45:47 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998-2003 Poul-Henning Kamp
  * All rights reserved.
@@ -235,3 +235,18 @@ tsc_get_timecount(struct timecounter *tc)
 {
 	return (rdtsc());
 }
+
+#ifdef KDTRACE_HOOKS
+/*
+ * DTrace needs a high resolution time function which can
+ * be called from a probe context and guaranteed not to have
+ * instrumented with probes itself.
+ *
+ * Returns nanoseconds since boot.
+ */
+uint64_t
+dtrace_gethrtime()
+{
+	return (rdtsc() * (uint64_t) 1000000000 / tsc_freq);
+}
+#endif
