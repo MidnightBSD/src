@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/local_apic.c,v 1.5 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * Copyright (c) 1996, by Steve Passe
@@ -36,7 +36,7 @@
 __FBSDID("$FreeBSD: src/sys/amd64/amd64/local_apic.c,v 1.42.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_hwpmc_hooks.h"
-
+#include "opt_kdtrace.h"
 #include "opt_ddb.h"
 
 #include <sys/param.h>
