@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.init/mport.init.c,v 1.2 2009/06/05 00:08:06 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.init/mport.init.c,v 1.3 2012/04/11 00:15:09 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.init/mport.init.c,v 1.2 2009/06/05 00:08:06 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.init/mport.init.c,v 1.3 2012/04/11 00:15:09 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <err.h>
@@ -35,7 +35,7 @@ __MBSDID("$MidnightBSD: src/libexec/mport.init/mport.init.c,v 1.2 2009/06/05 00:
 #include <mport.h>
 
 int
-main(int argc, char *argv[])
+main(int argc __unused, char *argv[] __unused)
 {
 	mportInstance *mport;
 
