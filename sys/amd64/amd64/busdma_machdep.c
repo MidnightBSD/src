@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.4 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998 Justin T. Gibbs.
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.83 2007/06/17 04:21:58 mjacob Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.83.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -581,7 +581,6 @@ _bus_dmamap_load_buffer(bus_dma_tag_t dmat,
 	bus_addr_t curaddr, lastaddr, baddr, bmask;
 	vm_offset_t vaddr;
 	bus_addr_t paddr;
-	int needbounce = 0;
 	int seg;
 
 	if (map == NULL)
@@ -605,10 +604,8 @@ _bus_dmamap_load_buffer(bus_dma_tag_t dmat,
 
 		while (vaddr < vendaddr) {
 			paddr = pmap_kextract(vaddr);
-			if (run_filter(dmat, paddr) != 0) {
-				needbounce = 1;
+			if (run_filter(dmat, paddr) != 0)
 				map->pagesneeded++;
-			}
 			vaddr += PAGE_SIZE;
 		}
 		CTR1(KTR_BUSDMA, "pagesneeded= %d\n", map->pagesneeded);
@@ -680,7 +677,7 @@ _bus_dmamap_load_buffer(bus_dma_tag_t dmat,
 			segs[seg].ds_len = sgsize;
 			first = 0;
 		} else {
-			if (needbounce == 0 && curaddr == lastaddr &&
+			if (curaddr == lastaddr &&
 			    (segs[seg].ds_len + sgsize) <= dmat->maxsegsz &&
 			    (dmat->boundary == 0 ||
 			     (segs[seg].ds_addr & bmask) == (curaddr & bmask)))
