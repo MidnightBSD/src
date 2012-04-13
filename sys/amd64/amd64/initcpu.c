@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/amd64/amd64/initcpu.c,v 1.8 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) KATO Takenori, 1997, 1998.
  * 
@@ -168,12 +168,14 @@ initializecpu(void)
                         * to not be properly updated, almost always
                         * resulting in a seg-fault soon after.
                         */
+/* XXX causing crashes
 			msr = rdmsr(0xc0011029);
 			if ((msr & 1) == 0) {
 				printf("Errata 721 workaround installed\n");
 				msr |= 1;
 				wrmsr(0xc0011029, msr);
 			}
+*/
 			break;
 		}
 	}
