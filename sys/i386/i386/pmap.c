@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/i386/pmap.c,v 1.4 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -76,7 +76,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/pmap.c,v 1.594.2.4.2.1 2008/01/19 18:15:03 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/pmap.c,v 1.594.2.11.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  *	Manages physical address maps.
@@ -163,10 +163,14 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/pmap.c,v 1.594.2.4.2.1 2008/01/19 18:15:03
 #define PMAP_DIAGNOSTIC
 #endif
 
-#if !defined(PMAP_DIAGNOSTIC)
-#define PMAP_INLINE	__gnu89_inline
+#if !defined(DIAGNOSTIC)
+#ifdef __GNUC_GNU_INLINE__
+#define	PMAP_INLINE	__attribute__((__gnu_inline__)) inline
 #else
-#define PMAP_INLINE
+#define	PMAP_INLINE	extern inline
+#endif
+#else
+#define	PMAP_INLINE
 #endif
 
 #define PV_STATS
@@ -243,9 +247,6 @@ struct msgbuf *msgbufp = 0;
  */
 static caddr_t crashdumpmap;
 
-#ifdef SMP
-extern pt_entry_t *SMPpt;
-#endif
 static pt_entry_t *PMAP1 = 0, *PMAP2;
 static pt_entry_t *PADDR1 = 0, *PADDR2;
 #ifdef SMP
@@ -294,6 +295,13 @@ static void *pmap_pdpt_allocf(uma_zone_t zone, int bytes, u_int8_t *flags, int w
 
 CTASSERT(1 << PDESHIFT == sizeof(pd_entry_t));
 CTASSERT(1 << PTESHIFT == sizeof(pt_entry_t));
+
+/*
+ * If you get an error here, then you set KVA_PAGES wrong! See the
+ * description of KVA_PAGES in sys/i386/include/pmap.h. It must be
+ * multiple of 4 for a normal kernel, or a multiple of 8 for a PAE.
+ */
+CTASSERT(KERNBASE % (1 << 24) == 0);
 
 /*
  * Move the kernel virtual free pointer to the next
@@ -532,7 +540,9 @@ static MALLOC_DEFINE(M_PMAPPDPT, "pmap", "pmap pdpt");
 static void *
 pmap_pdpt_allocf(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 {
-	*flags = UMA_SLAB_PRIV;
+
+	/* Inform UMA that this allocator uses kernel_map/object. */
+	*flags = UMA_SLAB_KERNEL;
 	return (contigmalloc(PAGE_SIZE, M_PMAPPDPT, 0, 0x0ULL, 0xffffffffULL,
 	    1, 0));
 }
@@ -1306,11 +1316,7 @@ pmap_pinit(pmap_t pmap)
 	LIST_INSERT_HEAD(&allpmaps, pmap, pm_list);
 	mtx_unlock_spin(&allpmaps_lock);
 	/* Wire in kernel global address entries. */
-	/* XXX copies current process, does not fill in MPPTDI */
 	bcopy(PTD + KPTDI, pmap->pm_pdir + KPTDI, nkpt * sizeof(pd_entry_t));
-#ifdef SMP
-	pmap->pm_pdir[MPPTDI] = PTD[MPPTDI];
-#endif
 
 	/* install self-referential address mapping entry(s) */
 	for (i = 0; i < NPGPTD; i++) {
@@ -1553,9 +1559,6 @@ pmap_release(pmap_t pmap)
 
 	bzero(pmap->pm_pdir + PTDPTDI, (nkpt + NPGPTD) *
 	    sizeof(*pmap->pm_pdir));
-#ifdef SMP
-	pmap->pm_pdir[MPPTDI] = 0;
-#endif
 
 	pmap_qremove((vm_offset_t)pmap->pm_pdir, NPGPTD);
 
@@ -1634,13 +1637,15 @@ pmap_growkernel(vm_offset_t addr)
 		 * This index is bogus, but out of the way
 		 */
 		nkpg = vm_page_alloc(NULL, nkpt,
-		    VM_ALLOC_NOOBJ | VM_ALLOC_SYSTEM | VM_ALLOC_WIRED);
+		    VM_ALLOC_INTERRUPT | VM_ALLOC_NOOBJ | VM_ALLOC_WIRED |
+		    VM_ALLOC_ZERO);
 		if (!nkpg)
 			panic("pmap_growkernel: no memory to grow kernel");
 
 		nkpt++;
 
-		pmap_zero_page(nkpg);
+		if ((nkpg->flags & PG_ZERO) == 0)
+			pmap_zero_page(nkpg);
 		ptppaddr = VM_PAGE_TO_PHYS(nkpg);
 		newpdir = (pd_entry_t) (ptppaddr | PG_V | PG_RW | PG_A | PG_M);
 		pdir_pde(PTD, kernel_vm_end) = newpdir;
@@ -1824,6 +1829,7 @@ get_pv_entry(pmap_t pmap, int try)
 	static const struct timeval printinterval = { 60, 0 };
 	static struct timeval lastprint;
 	static vm_pindex_t colour;
+	struct vpgqueues *pq;
 	int bit, field;
 	pv_entry_t pv;
 	struct pv_chunk *pc;
@@ -1838,6 +1844,8 @@ get_pv_entry(pmap_t pmap, int try)
 			printf("Approaching the limit on PV entries, consider "
 			    "increasing either the vm.pmap.shpgperproc or the "
 			    "vm.pmap.pv_entry_max tunable.\n");
+	pq = NULL;
+retry:
 	pc = TAILQ_FIRST(&pmap->pm_pvchunk);
 	if (pc != NULL) {
 		for (field = 0; field < _NPCM; field++) {
@@ -1861,21 +1869,17 @@ get_pv_entry(pmap_t pmap, int try)
 			return (pv);
 		}
 	}
-	pc = (struct pv_chunk *)pmap_ptelist_alloc(&pv_vafree);
-	m = vm_page_alloc(NULL, colour, VM_ALLOC_NORMAL |
-	    VM_ALLOC_NOOBJ | VM_ALLOC_WIRED);
-	if (m == NULL || pc == NULL) {
+	/*
+	 * Access to the ptelist "pv_vafree" is synchronized by the page
+	 * queues lock.  If "pv_vafree" is currently non-empty, it will
+	 * remain non-empty until pmap_ptelist_alloc() completes.
+	 */
+	if (pv_vafree == 0 || (m = vm_page_alloc(NULL, colour, (pq ==
+	    &vm_page_queues[PQ_ACTIVE] ? VM_ALLOC_SYSTEM : VM_ALLOC_NORMAL) |
+	    VM_ALLOC_NOOBJ | VM_ALLOC_WIRED)) == NULL) {
 		if (try) {
 			pv_entry_count--;
 			PV_STAT(pc_chunk_tryfail++);
-			if (m) {
-				vm_page_lock_queues();
-				vm_page_unwire(m, 0);
-				vm_page_free(m);
-				vm_page_unlock_queues();
-			}
-			if (pc)
-				pmap_ptelist_free(&pv_vafree, (vm_offset_t)pc);
 			return (NULL);
 		}
 		/*
@@ -1883,30 +1887,21 @@ get_pv_entry(pmap_t pmap, int try)
 		 * inactive pages.  After that, if a pv chunk entry
 		 * is still needed, destroy mappings to active pages.
 		 */
-		PV_STAT(pmap_collect_inactive++);
-		pmap_collect(pmap, &vm_page_queues[PQ_INACTIVE]);
-		if (m == NULL)
-			m = vm_page_alloc(NULL, colour, VM_ALLOC_NORMAL |
-			    VM_ALLOC_NOOBJ | VM_ALLOC_WIRED);
-		if (pc == NULL)
-			pc = (struct pv_chunk *)pmap_ptelist_alloc(&pv_vafree);
-		if (m == NULL || pc == NULL) {
+		if (pq == NULL) {
+			PV_STAT(pmap_collect_inactive++);
+			pq = &vm_page_queues[PQ_INACTIVE];
+		} else if (pq == &vm_page_queues[PQ_INACTIVE]) {
 			PV_STAT(pmap_collect_active++);
-			pmap_collect(pmap, &vm_page_queues[PQ_ACTIVE]);
-			if (m == NULL)
-				m = vm_page_alloc(NULL, colour,
-				    VM_ALLOC_SYSTEM | VM_ALLOC_NOOBJ |
-				    VM_ALLOC_WIRED);
-			if (pc == NULL)
-				pc = (struct pv_chunk *)
-				    pmap_ptelist_alloc(&pv_vafree);
-			if (m == NULL || pc == NULL)
-				panic("get_pv_entry: increase vm.pmap.shpgperproc");
-		}
+			pq = &vm_page_queues[PQ_ACTIVE];
+		} else
+			panic("get_pv_entry: increase vm.pmap.shpgperproc");
+		pmap_collect(pmap, pq);
+		goto retry;
 	}
 	PV_STAT(pc_chunk_count++);
 	PV_STAT(pc_chunk_allocs++);
 	colour++;
+	pc = (struct pv_chunk *)pmap_ptelist_alloc(&pv_vafree);
 	pmap_qenter((vm_offset_t)pc, &m, 1);
 	pc->pc_pmap = pmap;
 	pc->pc_map[0] = pc_freemask[0] & ~1ul;	/* preallocated bit 0 */
@@ -2072,6 +2067,8 @@ pmap_remove(pmap_t pmap, vm_offset_t sva, vm_offset_t eva)
 		 * Calculate index for next page table.
 		 */
 		pdnxt = (sva + NBPDR) & ~PDRMASK;
+		if (pdnxt < sva)
+			pdnxt = eva;
 		if (pmap->pm_stats.resident_count == 0)
 			break;
 
@@ -2228,6 +2225,8 @@ pmap_protect(pmap_t pmap, vm_offset_t sva, vm_offset_t eva, vm_prot_t prot)
 		unsigned pdirindex;
 
 		pdnxt = (sva + NBPDR) & ~PDRMASK;
+		if (pdnxt < sva)
+			pdnxt = eva;
 
 		pdirindex = sva >> PDRSHIFT;
 		ptpaddr = pmap->pm_pdir[pdirindex];
@@ -2829,6 +2828,8 @@ pmap_copy(pmap_t dst_pmap, pmap_t src_pmap, vm_offset_t dst_addr, vm_size_t len,
 			panic("pmap_copy: invalid to pmap_copy page tables");
 
 		pdnxt = (addr + NBPDR) & ~PDRMASK;
+		if (pdnxt < addr)
+			pdnxt = end_addr;
 		ptepindex = addr >> PDRSHIFT;
 
 		srcptepaddr = src_pmap->pm_pdir[ptepindex];
