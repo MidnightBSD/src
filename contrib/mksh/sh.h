@@ -434,16 +434,6 @@ char *ucstrstr(char *, const char *);
 #define mkssert(e)	((void)0)
 #endif
 
-#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 406)
-#error Must run Build.sh to compile this.
-int
-im_sorry_dave(void)
-{
-	/* I’m sorry, Dave. I’m afraid I can’t do that. */
-	return (thiswillneverbedefinedIhope());
-}
-#endif
-
 /* use this ipv strchr(s, 0) but no side effects in s! */
 #define strnul(s)	((s) + strlen(s))
 
