@@ -1,7 +1,7 @@
 #
 # PAE -- Generic kernel configuration file for MidnightBSD/i386 PAE
 #
-# $MidnightBSD: src/sys/i386/conf/PAE,v 1.4 2007/01/13 15:04:47 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/PAE,v 1.5 2008/12/07 03:35:12 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/PAE,v 1.16.2.2 2005/11/08 22:28:37 scottl Exp $
 
 include GENERIC
@@ -91,24 +91,5 @@ nodevice	ath_rate_sample	# SampleRate tx rate control for ath
 nodevice	awi
 nodevice	ral
 nodevice	wi
-
-nodevice	uhci
-nodevice	ohci
-nodevice	ehci
-nodevice	usb
-nodevice	ugen
-nodevice	uhid
-nodevice	ukbd
-nodevice	ulpt
-nodevice	umass
-nodevice	ums
 nodevice	ural
-nodevice	urio
 nodevice	rum
-nodevice	uscanner
-nodevice	aue
-nodevice	axe
-nodevice	cdce
-nodevice	cue
-nodevice	kue
-nodevice	rue
