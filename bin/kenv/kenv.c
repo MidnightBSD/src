@@ -25,7 +25,7 @@
 /* $FreeBSD: src/bin/kenv/kenv.c,v 1.7.2.1 2005/09/20 13:26:21 rwatson Exp $ */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/kenv/kenv.c,v 1.2 2006/07/19 13:45:35 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -119,7 +119,7 @@ main(int argc, char **argv)
 }
 
 static int
-kdumpenv()
+kdumpenv(void)
 {
 	char *buf, *cp;
 	int buflen, envlen;
