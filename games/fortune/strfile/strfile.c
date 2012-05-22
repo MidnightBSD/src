@@ -47,7 +47,7 @@ static const char sccsid[] = "@(#)strfile.c   8.1 (Berkeley) 5/31/93";
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/games/fortune/strfile/strfile.c,v 1.28 2005/02/17 18:06:37 ru Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/games/fortune/strfile/strfile.c,v 1.2 2007/07/17 10:10:13 laffer1 Exp $");
 
 # include	<sys/param.h>
 # include	<sys/endian.h>
@@ -442,7 +442,7 @@ const void	*s1, *s2;
  *	not to randomize across delimiter boundaries.  All
  *	randomization is done within each block.
  */
-void randomize()
+void randomize(void)
 {
 	uint32_t cnt, i;
 	off_t	tmp;
