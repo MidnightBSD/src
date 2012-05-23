@@ -47,7 +47,7 @@ static const char sccsid[] = "@(#)strfile.c   8.1 (Berkeley) 5/31/93";
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/games/fortune/strfile/strfile.c,v 1.28 2005/02/17 18:06:37 ru Exp $");
-__MBSDID("$MidnightBSD: src/games/fortune/strfile/strfile.c,v 1.3 2012/05/22 01:36:03 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/games/fortune/strfile/strfile.c,v 1.4 2012/05/23 01:46:08 laffer1 Exp $");
 
 # include	<sys/param.h>
 # include	<sys/endian.h>
@@ -265,9 +265,7 @@ int main(int ac, char *av[])
 /*
  *	This routine evaluates arguments from the command line
  */
-void getargs(argc, argv)
-int	argc;
-char	**argv;
+void getargs(int argc, char *argv[])
 {
 	int	ch;
 
@@ -319,7 +317,7 @@ char	**argv;
 	}
 }
 
-void usage()
+void usage(void)
 {
 	(void) fprintf(stderr,
 	    "strfile [-Ciorsx] [-c char] source_file [output_file]\n");
@@ -330,9 +328,7 @@ void usage()
  * add_offset:
  *	Add an offset to the list, or write it out, as appropriate.
  */
-void add_offset(fp, off)
-FILE	*fp;
-off_t	off;
+void add_offset(FILE *fp, off_t off)
 {
 	off_t beoff;
 
@@ -350,7 +346,7 @@ off_t	off;
  * do_order:
  *	Order the strings alphabetically (possibly ignoring case).
  */
-void do_order()
+void do_order(void)
 {
 	uint32_t i;
 	off_t	*lp;
@@ -369,8 +365,7 @@ void do_order()
 	Tbl.str_flags |= STR_ORDERED;
 }
 
-static int stable_collate_range_cmp(c1, c2)
-	int c1, c2;
+static int stable_collate_range_cmp(int c1, int c2)
 {
 	static char s1[2], s2[2];
 	int ret;
