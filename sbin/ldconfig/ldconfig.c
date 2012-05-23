@@ -630,7 +630,7 @@ readhints()
 }
 
 static void
-listhints()
+listhints(void)
 {
 	struct shlib_list	*shp;
 	int			i;
