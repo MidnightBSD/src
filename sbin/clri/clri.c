@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)clri.c	8.2 (Berkeley) 9/23/93";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sbin/clri/clri.c,v 1.15 2005/05/29 16:07:10 charnier Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/clri/clri.c,v 1.2 2008/11/20 19:55:57 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -82,6 +82,7 @@ main(int argc, char *argv[])
 	off_t offset;
 	int i, fd, inonum;
 	char *fs, sblock[SBLOCKSIZE];
+	void *v = ibuf;
 
 	if (argc < 3)
 		usage();
@@ -129,7 +130,7 @@ main(int argc, char *argv[])
 
 		if (sbp->fs_magic == FS_UFS2_MAGIC) {
 			/* get the inode within the block. */
-			dp2 = &(((struct ufs2_dinode *)ibuf)
+			dp2 = &(((struct ufs2_dinode *)v)
 			    [ino_to_fsbo(sbp, inonum)]);
 
 			/* clear the inode, and bump the generation count. */
@@ -138,7 +139,7 @@ main(int argc, char *argv[])
 			dp2->di_gen = generation;
 		} else {
 			/* get the inode within the block. */
-			dp1 = &(((struct ufs1_dinode *)ibuf)
+			dp1 = &(((struct ufs1_dinode *)v)
 			    [ino_to_fsbo(sbp, inonum)]);
 
 			/* clear the inode, and bump the generation count. */
