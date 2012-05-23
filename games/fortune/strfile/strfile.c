@@ -47,7 +47,7 @@ static const char sccsid[] = "@(#)strfile.c   8.1 (Berkeley) 5/31/93";
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/games/fortune/strfile/strfile.c,v 1.28 2005/02/17 18:06:37 ru Exp $");
-__MBSDID("$MidnightBSD: src/games/fortune/strfile/strfile.c,v 1.2 2007/07/17 10:10:13 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/games/fortune/strfile/strfile.c,v 1.3 2012/05/22 01:36:03 laffer1 Exp $");
 
 # include	<sys/param.h>
 # include	<sys/endian.h>
@@ -386,8 +386,7 @@ static int stable_collate_range_cmp(c1, c2)
  * cmp_str:
  *	Compare two strings in the file
  */
-int cmp_str(s1, s2)
-const void	*s1, *s2;
+int cmp_str(const void *s1, const void *s2)
 {
 	const STR	*p1, *p2;
 	int	c1, c2;
