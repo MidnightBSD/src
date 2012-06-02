@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/rtld-aout/support.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
 /*
  * Generic "support" routines to replace those obtained from libiberty for ld.
  *
@@ -39,8 +39,7 @@
 #include "support.h"
 
 char *
-concat(s1, s2, s3)
-	const char *s1, *s2, *s3;
+concat(const char *s1, const char *s2, const char *s3)
 {
 	int len = 1;
 	char *s;
@@ -62,8 +61,7 @@ concat(s1, s2, s3)
 }
 
 void *
-xmalloc(n)
-	size_t n;
+xmalloc(size_t n)
 {
 	char *p = malloc(n);
 
@@ -74,9 +72,7 @@ xmalloc(n)
 }
 
 void *
-xrealloc(p, n)
-	void *p;
-	size_t n;
+xrealloc(void *p, size_t n)
 {
 	p = realloc(p, n);
 
