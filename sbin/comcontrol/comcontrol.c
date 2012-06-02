@@ -28,7 +28,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sbin/comcontrol/comcontrol.c,v 1.14 2003/08/08 19:51:01 johan Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/comcontrol/comcontrol.c,v 1.2 2008/11/20 19:55:57 laffer1 Exp $");
 
 #include <ctype.h>
 #include <err.h>
@@ -44,7 +44,7 @@ __MBSDID("$MidnightBSD$");
 static void usage(void);
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr,
 	"usage: comcontrol <filename> [dtrwait <n>] [drainwait <n>]\n");
