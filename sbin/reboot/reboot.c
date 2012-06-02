@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)reboot.c	8.1 (Berkeley) 6/5/93";
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sbin/reboot/reboot.c,v 1.24.2.1 2006/08/25 12:55:50 bms Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/reboot/reboot.c,v 1.3 2006/12/28 01:21:38 laffer1 Exp $");
 
 #include <sys/reboot.h>
 #include <sys/types.h>
@@ -218,7 +218,7 @@ restart:
 }
 
 static void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr, "usage: %s [-%slnpq] [-k kernel]\n",
 	    getprogname(), dohalt ? "" : "d");
@@ -226,7 +226,7 @@ usage()
 }
 
 static u_int
-get_pageins()
+get_pageins(void)
 {
 	u_int pageins;
 	size_t len;
