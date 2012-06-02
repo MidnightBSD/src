@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/rtld-aout/shlib.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
+/* $MidnightBSD: src/libexec/rtld-aout/shlib.c,v 1.3 2012/05/25 01:35:54 laffer1 Exp $ */
 /*
  * Copyright (c) 1993 Paul Kranenburg
  * All rights reserved.
@@ -253,7 +253,7 @@ find_lib_file(const char *name)
  */
 
 char *
-search_lib_dir(char *dir, char *name, int majorp, int minorp, int do_dot_a)
+search_lib_dir(char *dir, char *name, int *majorp, int *minorp, int do_dot_a)
 {
 	size_t		namelen;
 	DIR		*dd;
