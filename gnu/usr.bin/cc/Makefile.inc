@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.2 2009/05/22 00:51:15 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.3 2012/02/19 23:03:03 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.66 2007/05/19 04:25:56 kan Exp $
 
 .include "../Makefile.inc"
@@ -9,6 +9,8 @@ __CC_MAKEFILE_INC__= ${MFILE}
 
 GCCDIR=	${.CURDIR}/../../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../../contrib/gcclibs
+
+CSTD=	gnu89
 
 .include "Makefile.tgt"
 
