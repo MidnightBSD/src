@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/spppcontrol/spppcontrol.c,v 1.13 2003/05/03 18:41:59 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -88,7 +88,7 @@ main(int argc, char **argv)
 	argc--;
 	argv++;
 
-	spr.cmd = (int)SPPPIOGDEFS;
+	spr.cmd = (uintptr_t) SPPPIOGDEFS;
 	ifr.ifr_data = (caddr_t)&spr;
 
 	if (ioctl(s, SIOCGIFGENERIC, &ifr) == -1)
@@ -186,7 +186,7 @@ main(int argc, char **argv)
 		argc--;
 	}
 
-	spr.cmd = (int)SPPPIOSDEFS;
+	spr.cmd = (uintptr_t)SPPPIOSDEFS;
 
 	if (ioctl(s, SIOCSIFGENERIC, &ifr) == -1)
 		err(EX_OSERR, "SIOCSIFGENERIC(SPPPIOSDEFS)");
