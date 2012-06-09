@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_sunlabel.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_sunlabel.c,v 1.46 2005/11/30 22:15:00 sobo
 #include <sys/param.h>
 #include <sys/endian.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/conf.h>
 #include <sys/bio.h>
@@ -47,10 +48,13 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_sunlabel.c,v 1.46 2005/11/30 22:15:00 sobo
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/md5.h>
+#include <sys/sbuf.h>
 #include <sys/sun_disklabel.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
 #include <machine/endian.h>
+
+FEATURE(geom_sunlabel, "GEOM Sun/Solaris partitioning support");
 
 #define SUNLABEL_CLASS_NAME "SUN"
 

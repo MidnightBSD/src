@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_bsd.c,v 1.5 2011/07/13 01:14:00 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_bsd.c,v 1.6 2011/12/28 00:14:43 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.78.2.1.4.1 2008/11/25 02:59:29 k
 #include <sys/param.h>
 #include <sys/endian.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/fcntl.h>
 #include <sys/conf.h>
@@ -57,9 +58,13 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.78.2.1.4.1 2008/11/25 02:59:29 k
 #include <sys/errno.h>
 #include <sys/disklabel.h>
 #include <sys/gpt.h>
+#include <sys/proc.h>
+#include <sys/sbuf.h>
 #include <sys/uuid.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
+
+FEATURE(geom_bsd, "GEOM BSD disklabels support");
 
 #define	BSD_CLASS_NAME "BSD"
 
@@ -137,7 +142,8 @@ g_bsd_modify(struct g_geom *gp, u_char *label)
 	}
 	
 	if (rawoffset != 0 && (off_t)rawoffset != ms->mbroffset)
-		printf("WARNING: Expected rawoffset %jd, found %jd\n",
+		printf("WARNING: %s expected rawoffset %jd, found %jd\n",
+		    gp->name,
 		    (intmax_t)ms->mbroffset/dl.d_secsize,
 		    (intmax_t)rawoffset/dl.d_secsize);
 

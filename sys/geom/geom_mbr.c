@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_mbr.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_mbr.c,v 1.68 2005/11/30 22:15:00 sobomax E
 #include <sys/errno.h>
 #include <sys/endian.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/fcntl.h>
 #include <sys/malloc.h>
@@ -45,11 +46,14 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_mbr.c,v 1.68 2005/11/30 22:15:00 sobomax E
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/md5.h>
+#include <sys/proc.h>
 
 #include <sys/diskmbr.h>
 #include <sys/sbuf.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
+
+FEATURE(geom_mbr, "GEOM DOS/MBR partitioning support");
 
 #define MBR_CLASS_NAME "MBR"
 #define MBREXT_CLASS_NAME "MBREXT"
