@@ -25,7 +25,7 @@ Seventh Edition (V7)    |
                   \/                     |
                  3BSD                    |
                   |                      |
-               4.0BSD               2.7.9BSD
+               4.0BSD                2.79BSD
                   |                      |
                4.1BSD --------------> 2.8BSD
                   |                      |
@@ -151,7 +151,7 @@ FreeBSD 4.0  |      |  |  |  | NetBSD 1.4.2    |             |
  |   FreeBSD 4.5 |    |      |    |            |             |
  |      |         \   |      |    |            |           BSD/OS 4.3
  |   FreeBSD 4.6   \  |      |    |        OpenBSD 3.1       |
- |      |           \ |      | NetBSD 1.5.3    |       	     |
+ |      |           \ |      | NetBSD 1.5.3    |             |
  |   FreeBSD 4.6.2 Mac OS X  |                 |             |
  |      |            10.2    |                 |             |
  |   FreeBSD 4.7      |      |                 |             |
@@ -224,11 +224,13 @@ FreeBSD 5.2           |      |                 |                       |
  |                    |      |                 |                       |            |
  *--FreeBSD           |      |                 |                DragonFly 1.12.0    |
  |    7.0             |      |                 |                       |            |
+ |                    |      |                 |                       |          MidnightBSD 0.2.1    
  |     |              |      |             OpenBSD 4.3                 |            |
  |     V              |      |                 |                       |            |
  |                    |      |                 |                       |            |
  |                    |      |                 |                DragonFly 2.0       |
  |                    |      |                 |                       |            |
+ |                    |      |                 |                       |          MidnightBSD 0.3
  |                    |      |                 |                       |            |
 FreeBSD 8 -current    |  NetBSD -current  OpenBSD -current             |         MidnightBSD -current
  |                    |      |                 |                       |            |
@@ -255,11 +257,11 @@ was the announcement in Usenet or if it was available as tape.
 [KSJ] Michael J. Karels, Carl F. Smith, and William F. Jolitz.
 	Changes in the Kernel in 2.9BSD. Second Berkeley Software
 	Distribution UNIX Version 2.9, July, 1983.
-[MBD] MidnightBSD Project, The.
 [NBD] NetBSD Project, The.
 [OBD] OpenBSD Project, The.
 [QCU] Salus, Peter H. A quarter century of UNIX.
 [SMS] Steven M. Schultz. 2.11BSD, UNIX for the PDP-11.
+[TUHS] The Unix Historical Society.  http://minnie.tuhs.org/Unix_History/.
 [USE] Usenet announcement.
 [WRS] Wind River Systems, Inc.
 [dmr] Dennis Ritchie, via E-Mail
@@ -297,15 +299,15 @@ Tenth   Edition         1989-10-xx [QCU]
 				PDP-11, Pascal, ex(1)
 				30 free copies of 1BSD sent out
 				35 tapes sold for 50 USD [QCU]
-2BSD                    mid 1978 [QCU]
+2BSD                    mid 1978 [QCU] 1979-05-10 [TUHS]
 				75 2BSD tapes shipped
-2.7.9BSD		?? [SMS]
+2.79BSD			1980-04-xx [TUHS]
 2.8BSD			1981-07-xx [KSJ]
 
 2.8.1BSD		1982-01-xx [QCU]
 				set of performance improvements
 2.9BSD			1983-07-xx [KSJ]
-2.9.1BSD                1983-11-xx
+2.9.1BSD                1983-11-xx [TUHS]
 2.9BSD-Seismo		1985-08-xx [SMS]
 2.10BSD			1987-04-xx [KKK]
 2.10.1BSD		1989-01-xx [SMS]
@@ -313,7 +315,7 @@ Tenth   Edition         1989-10-xx [QCU]
 2.11BSD rev #430	1999-12-13 [SMS]
 
 32V			1978-1[01]-xx [QCU]
-3BSD                    late 1979 [QCU]
+3BSD                    late 1979 [QCU] March 1980 [TUHS]
 				virtual memory, page replacement,
                         	demand paging
 4.0BSD                  1980-10-xx
@@ -494,7 +496,32 @@ NetBSD 4.0		2007-12-19 [NBD]
 FreeBSD 6.3		2008-01-18 [FBD]
 DragonFly 1.12.0	2008-02-26 [DFB]
 FreeBSD 7.0		2008-02-27 [FBD]
+OpenBSD 4.3		2008-05-01 [OBD]
 DragonFly 2.0.0		2008-07-21 [DFB]
+MidnightBSD 0.2.1	2008-08-30 [MBD]
+OpenBSD 4.4		2008-11-01 [OBD]
+FreeBSD 6.4		2008-11-28 [FBD]
+FreeBSD 7.1		2009-01-04 [FBD]
+DragonFly 2.2.0		2009-02-17 [DFB]
+NetBSD 5.0		2009-04-29 [NBD]
+OpenBSD 4.5		2009-05-01 [OBD]
+FreeBSD 7.2		2009-05-04 [FBD]
+Mac OS X 10.6		2009-06-08 [APL]
+DragonFly 2.4.0		2009-09-16 [DFB]
+OpenBSD 4.6		2009-10-18 [OBD]
+FreeBSD 8.0		2009-11-26 [FBD]
+FreeBSD 7.3		2010-03-23 [FBD]
+DragonFly 2.6.0		2010-03-28 [DFB]
+OpenBSD 4.7		2010-05-19 [OBD]
+FreeBSD 8.1		2010-07-24 [FBD]
+DragonFly 2.8.2		2010-10-30 [DFB]
+OpenBSD 4.8		2010-11-01 [OBD]
+NetBSD 5.1		2010-11-19 [NBD]
+MidnightBSD 0.3		2011-01-28 [MBD]
+FreeBSD 7.4		2011-02-24 [FBD]
+FreeBSD 8.2		2011-02-24 [FBD]
+DragonFly 2.10.1	2011-04-26 [DFB]
+OpenBSD 4.9		2011-05-01 [OBD]
 
 Bibliography
 ------------------------
@@ -523,11 +550,11 @@ Australian Computer Society, Hobart, August 1993.
 Peter H. Salus. Unix at 25. Byte Magazine, October 1994.
 URL: http://www.byte.com/art/9410/sec8/art3.htm
 
-Andreas Klemm, Lars Köller. If you're going to San Francisco ...
+Andreas Klemm, Lars KÃ¶ller. If you're going to San Francisco ...
 Die freien BSD-Varianten von Unix. c't April 1997, page 368ff.
 
 BSD Release Announcements collection.
-URL: http://www.de.FreeBSD.org/de/ftp/releases/
+URL: http://www.FreeBSD.org/releases/
 
 BSD Hypertext Man Pages
 URL: http://www.FreeBSD.org/cgi/man.cgi
