@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdata.c,v 1.1.1.3 2011-10-26 11:58:39 laffer1 Exp $ */
+/* $Id: rdata.c,v 1.2 2012-06-12 14:40:09 laffer1 Exp $ */
 
 /*! \file */
 
@@ -341,8 +341,8 @@ dns_rdata_compare(const dns_rdata_t *rdata1, const dns_rdata_t *rdata2) {
 
 	REQUIRE(rdata1 != NULL);
 	REQUIRE(rdata2 != NULL);
-	REQUIRE(rdata1->data != NULL);
-	REQUIRE(rdata2->data != NULL);
+	REQUIRE(rdata1->length == 0 || rdata1->data != NULL);
+	REQUIRE(rdata2->length == 0 || rdata2->data != NULL);
 	REQUIRE(DNS_RDATA_VALIDFLAGS(rdata1));
 	REQUIRE(DNS_RDATA_VALIDFLAGS(rdata2));
 
