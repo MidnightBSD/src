@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/amd64/amd64/trap.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/amd64/amd64/trap.c,v 1.4 2012/04/12 12:14:03 laffer1 Exp $ */
 /*-
  * Copyright (C) 1994, David Greenman
  * Copyright (c) 1990, 1993
@@ -960,6 +960,23 @@ syscall(struct trapframe *frame)
 	/*
 	 * Traced syscall.
 	 */
+
+	/*
+	 * If the user-supplied value of %rip is not a canonical
+	 * address, then some CPUs will trigger a ring 0 #GP during
+	 * the sysret instruction.  However, the fault handler would
+	 * execute with the user's %gs and %rsp in ring 0 which would
+	 * not be safe.  Instead, preemptively kill the thread with a
+	 * SIGBUS.
+	 */
+	if (td->td_frame->tf_rip >= VM_MAXUSER_ADDRESS) {
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGBUS;
+		ksi.ksi_code = BUS_OBJERR;
+		ksi.ksi_trapno = T_PROTFLT;
+		ksi.ksi_addr = (void *)td->td_frame->tf_rip;
+		trapsignal(td, &ksi);
+	}
 	if (orig_tf_rflags & PSL_T) {
 		frame->tf_rflags &= ~PSL_T;
 		ksiginfo_init_trap(&ksi);
@@ -972,6 +989,7 @@ syscall(struct trapframe *frame)
 	/*
 	 * Check for misbehavior.
 	 */
+
 	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
 	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
 	KASSERT(td->td_critnest == 0,
