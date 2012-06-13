@@ -1,6 +1,6 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/share/mk/bsd.prog.mk,v 1.144.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.7 2012/03/10 00:58:37 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.8 2012/04/01 16:06:28 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -19,6 +19,11 @@ CFLAGS+=${COPTS}
 .if ${MK_ASSERT_DEBUG} == "no"
 CFLAGS+= -DNDEBUG
 NO_WERROR=
+.endif
+
+# Enable CTF conversion on request.
+.if defined(WITH_CTF)
+.undef NO_CTF
 .endif
 
 .if defined(DEBUG_FLAGS)
