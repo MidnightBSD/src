@@ -39,7 +39,8 @@ static char sccsid[] = "@(#)shutdown.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/shutdown/shutdown.c,v 1.28 2005/01/25 08:40:51 delphij Exp $");
+/* $FreeBSD: src/sbin/shutdown/shutdown.c,v 1.28 2005/01/25 08:40:51 delphij Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -92,15 +93,15 @@ static int dohalt, dopower, doreboot, killflg, mbuflen, oflag;
 static char mbuf[BUFSIZ];
 static const char *nosync, *whom;
 
-void badtime(void);
-void die_you_gravy_sucking_pig_dog(void);
-void finish(int);
-void getoffset(char *);
-void loop(void);
-void nolog(void);
-void timeout(int);
-void timewarn(int);
-void usage(const char *);
+static void badtime(void);
+static void perform_shutdown(void);
+static void finish(int);
+static void getoffset(char *);
+static void loop(void);
+static void nolog(void);
+static void timeout(int);
+static void timewarn(int);
+static void usage(const char *);
 
 extern const char **environ;
 
@@ -115,8 +116,31 @@ main(int argc, char **argv)
 	if (geteuid())
 		errx(1, "NOT super-user");
 #endif
+
 	nosync = NULL;
 	readstdin = 0;
+
+	/*
+	 * Test for the special case where the utility is called as
+	 * "poweroff", for which it runs 'shutdown -p now'.
+	 */
+	if ((p = rindex(argv[0], '/')) == NULL)
+		p = argv[0];
+	else
+		++p;
+	if (strcmp(p, "poweroff") == 0) {
+		if (getopt(argc, argv, "") != -1)
+			usage((char *)NULL);
+		argc -= optind;
+		argv += optind;
+		if (argc != 0)
+			usage((char *)NULL);
+		dopower = 1;
+		offset = 0;
+		(void)time(&shuttime);
+		goto poweroff;
+	}
+
 	while ((ch = getopt(argc, argv, "-hknopr")) != -1)
 		switch (ch) {
 		case '-':
@@ -161,6 +185,7 @@ main(int argc, char **argv)
 
 	getoffset(*argv++);
 
+poweroff:
 	if (*argv) {
 		for (p = mbuf, len = sizeof(mbuf); *argv; ++argv) {
 			arglen = strlen(*argv);
@@ -219,8 +244,8 @@ main(int argc, char **argv)
 	return(0);
 }
 
-void
-loop()
+static void
+loop(void)
 {
 	struct interval *tp;
 	u_int sltime;
@@ -258,7 +283,7 @@ loop()
 		if (!tp->timeleft)
 			break;
 	}
-	die_you_gravy_sucking_pig_dog();
+	perform_shutdown();
 }
 
 static jmp_buf alarmbuf;
@@ -268,7 +293,7 @@ static const char *restricted_environ[] = {
 	NULL
 };
 
-void
+static void
 timewarn(int timeleft)
 {
 	static int first;
@@ -318,14 +343,14 @@ timewarn(int timeleft)
 	}
 }
 
-void
+static void
 timeout(int signo __unused)
 {
 	longjmp(alarmbuf, 1);
 }
 
-void
-die_you_gravy_sucking_pig_dog()
+static void
+perform_shutdown(void)
 {
 	char *empty_environ[] = { NULL };
 
@@ -385,7 +410,7 @@ die_you_gravy_sucking_pig_dog()
 
 #define	ATOI2(p)	(p[0] - '0') * 10 + (p[1] - '0'); p += 2;
 
-void
+static void
 getoffset(char *timearg)
 {
 	struct tm *lt;
@@ -468,8 +493,8 @@ getoffset(char *timearg)
 }
 
 #define	NOMSG	"\n\nNO LOGINS: System going down at "
-void
-nolog()
+static void
+nolog(void)
 {
 	int logfd;
 	char *ct;
@@ -490,7 +515,7 @@ nolog()
 	}
 }
 
-void
+static void
 finish(int signo __unused)
 {
 	if (!killflg)
@@ -498,19 +523,19 @@ finish(int signo __unused)
 	exit(0);
 }
 
-void
-badtime()
+static void
+badtime(void)
 {
 	errx(1, "bad time format");
 }
 
-void
+static void
 usage(const char *cp)
 {
 	if (cp != NULL)
 		warnx("%s", cp);
 	(void)fprintf(stderr,
-	    "usage: shutdown [-] [-h | -p | -r | -k] [-o [-n]]"
-	    " time [warning-message ...]\n");
+	    "usage: shutdown [-] [-h | -p | -r | -k] [-o [-n]] time [warning-message ...]\n"
+	    "       poweroff\n");
 	exit(1);
 }
