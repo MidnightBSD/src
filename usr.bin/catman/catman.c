@@ -57,7 +57,6 @@ __FBSDID("$FreeBSD: src/usr.bin/catman/catman.c,v 1.14 2005/12/05 14:22:12 ru Ex
 #define TEST_FILE	0x04
 #define TEST_READABLE	0x08
 #define TEST_WRITABLE	0x10
-#define TEST_EXECUTABLE	0x20
 
 static int verbose;		/* -v flag: be verbose with warnings */
 static int pretend;		/* -n, -p flags: print out what would be done
@@ -93,8 +92,6 @@ static const char *locale_device[] = {
 enum Ziptype {NONE, BZIP, GZIP};
 
 static uid_t uid;
-static gid_t gids[NGROUPS_MAX];
-static int ngids;
 static int starting_dir;
 static char tmp_file[MAXPATHLEN];
 struct stat test_st;
@@ -320,23 +317,10 @@ test_path(char *name, time_t *mod_time)
 		result |= TEST_DIR;
 	else if (S_ISREG(test_st.st_mode))
 		result |= TEST_FILE;
-	if (test_st.st_uid == uid) {
-		test_st.st_mode >>= 6;
-	} else {
-		int i;
-		for (i = 0; i < ngids; i++) {
-			if (test_st.st_gid == gids[i]) {
-				test_st.st_mode >>= 3;
-				break;
-			}
-		}
-	}
-	if (test_st.st_mode & S_IROTH)
+	if (access(name, R_OK))
 		result |= TEST_READABLE;
-	if (test_st.st_mode & S_IWOTH)
+	if (access(name, W_OK))
 		result |= TEST_WRITABLE;
-	if (test_st.st_mode & S_IXOTH)
-		result |= TEST_EXECUTABLE;
 	return result;
 }
 
@@ -448,7 +432,7 @@ process_page(char *mandir, char *src, char *cat, enum Ziptype zipped)
 	}
 	snprintf(tmp_file, sizeof tmp_file, "%s.tmp", cat);
 	snprintf(cmd, sizeof cmd,
-	    "%scat %s | tbl | nroff -T%s -man | col | %s > %s.tmp",
+	    "%scat %s | tbl | nroff -c -T%s -man | %s > %s.tmp",
 	    zipped == BZIP ? BZ2CAT_CMD : zipped == GZIP ? GZCAT_CMD : "",
 	    src, nroff_device,
 	    zipped == BZIP ? BZ2_CMD : zipped == GZIP ? GZ_CMD : "cat",
@@ -607,7 +591,13 @@ process_section(char *mandir, char *section)
 static int
 select_sections(struct dirent *entry)
 {
-	return directory_type(entry->d_name) == MAN_SECTION_DIR;
+	char *name;
+	int ret;
+
+	name = strdup(entry->d_name);
+	ret = directory_type(name) == MAN_SECTION_DIR;
+	free(name);
+	return (ret);
 }
 
 /*
@@ -789,7 +779,6 @@ main(int argc, char **argv)
 			/* NOTREACHED */
 		}
 	}
-	ngids = getgroups(NGROUPS_MAX, gids);
 	if ((starting_dir = open(".", 0)) < 0) {
 		err(1, ".");
 	}
