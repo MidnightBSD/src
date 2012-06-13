@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.7 2011/10/22 19:17:47 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.8 2012/06/13 02:05:35 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.cpu.mk,v 1.62.2.1 2007/10/19 17:08:38 cognet Exp $
 
 # Set default CPU compile flags and baseline CPUTYPE for each arch.  The
@@ -13,7 +13,7 @@ MACHINE_CPU = i486
 MACHINE_CPU = amd64 sse2 sse mmx
 . elif ${MACHINE_CPUARCH} == "sparc64"
 MACHINE_CPU = ultrasparc
-. elif ${MACHINE_ARCH} == "arm"
+. elif ${MACHINE_CPUARCH} == "arm"
 MACHINE_CPU = arm
 . endif
 .else
@@ -150,9 +150,9 @@ MACHINE_CPU = i486 i386
 MACHINE_CPU = i386
 .  endif
 . elif ${MACHINE_CPUARCH} == "amd64"
-.  if ${CPUTYPE} == "opteron-sse3" || ${CPUTYPE} == "athlon64-sse3" || ${CPUTYP E} == "k8-sse3"
+.  if ${CPUTYPE} == "opteron-sse3" || ${CPUTYPE} == "athlon64-sse3" || ${CPUTYPE} == "k8-sse3"
 MACHINE_CPU = k8 3dnow sse3
-.  elif ${CPUTYPE} == "opteron" || ${CPUTYPE} == "athlon64" || ${CPUTYPE} == "k 8"
+.  elif ${CPUTYPE} == "opteron" || ${CPUTYPE} == "athlon64" || ${CPUTYPE} == "k8"
 MACHINE_CPU = k8 3dnow
 .  elif ${CPUTYPE} == "core2"
 MACHINE_CPU = ssse3 sse3
