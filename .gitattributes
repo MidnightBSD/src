@@ -35635,8 +35635,10 @@ share/mk/bsd.README -text
 share/mk/bsd.arch.inc.mk -text
 share/mk/bsd.compat.mk -text
 share/mk/bsd.cpu.mk -text
+share/mk/bsd.crunchgen.mk -text
 share/mk/bsd.dep.mk -text
 share/mk/bsd.doc.mk -text
+share/mk/bsd.dtrace.mk -text
 share/mk/bsd.endian.mk -text
 share/mk/bsd.files.mk -text
 share/mk/bsd.incs.mk -text

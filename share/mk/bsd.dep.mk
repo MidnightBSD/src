@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.dep.mk,v 1.48 2005/01/06 11:12:43 krion Exp $
-# $MidnightBSD: src/share/mk/bsd.dep.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.dep.mk,v 1.3 2010/08/21 01:48:10 laffer1 Exp $
 #
 # The include file <bsd.dep.mk> handles Makefile dependencies.
 #
@@ -59,14 +59,14 @@ DEPENDFILE?=	.depend
 # Keep `tags' here, before SRCS are mangled below for `depend'.
 .if !target(tags) && defined(SRCS) && !defined(NO_TAGS)
 tags: ${SRCS}
-.if ${CTAGS:T} == "ctags"
-	@${CTAGS} ${CTAGSFLAGS} -f /dev/stdout \
-	    ${.ALLSRC:N*.h} | sed "s;${.CURDIR}/;;" > ${.TARGET}
-.elif ${CTAGS:T} == "gtags"
+.if ${CTAGS:T} == "gtags"
 	@cd ${.CURDIR} && ${CTAGS} ${GTAGSFLAGS} ${.OBJDIR}
 .if defined(HTML)
 	@cd ${.CURDIR} && htags ${HTAGSFLAGS} -d ${.OBJDIR} ${.OBJDIR}
 .endif
+.else
+	@${CTAGS} ${CTAGSFLAGS} -f /dev/stdout \
+	    ${.ALLSRC:N*.h} | sed "s;${.CURDIR}/;;" > ${.TARGET}
 .endif
 .endif
 
@@ -126,9 +126,8 @@ depend: beforedepend ${DEPENDFILE} afterdepend
 
 # Different types of sources are compiled with slightly different flags.
 # Split up the sources, and filter out headers and non-applicable flags.
-MKDEP_CFLAGS=	${CFLAGS:M-nostdinc*} ${CFLAGS:M-[BID]*}
-MKDEP_CXXFLAGS=	${CXXFLAGS:M-nostdinc*} ${CXXFLAGS:M-[BID]*}
-MKDEP_OBJCFLAGS=${OBJCFLAGS:M-nostdinc*} ${OBJCFLAGS:M-[BID]*} ${OBJCFLAGS:M-Wno-import*}
+MKDEP_CFLAGS=	${CFLAGS:M-nostdinc*} ${CFLAGS:M-[BIDU]*}
+MKDEP_CXXFLAGS=	${CXXFLAGS:M-nostdinc*} ${CXXFLAGS:M-[BIDU]*}
 
 DPSRCS+= ${SRCS}
 ${DEPENDFILE}: ${DPSRCS}
@@ -170,13 +169,13 @@ afterdepend:
 .if !target(cleandepend)
 cleandepend:
 .if defined(SRCS)
-.if ${CTAGS:T} == "ctags"
-	rm -f ${DEPENDFILE} tags
-.elif ${CTAGS:T} == "gtags"
+.if ${CTAGS:T} == "gtags"
 	rm -f ${DEPENDFILE} GPATH GRTAGS GSYMS GTAGS
 .if defined(HTML)
 	rm -rf HTML
 .endif
+.else
+	rm -f ${DEPENDFILE} tags
 .endif
 .endif
 .endif

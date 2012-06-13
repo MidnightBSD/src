@@ -1,6 +1,6 @@
 #	from: @(#)bsd.doc.mk	5.3 (Berkeley) 1/2/91
 # $FreeBSD: src/share/mk/bsd.doc.mk,v 1.59 2004/12/21 09:33:42 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.doc.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
 #
 # The include file <bsd.doc.mk> handles installing BSD troff documents.
 #
@@ -55,10 +55,10 @@ INDXBIB?=	indxbib
 PIC?=		pic
 REFER?=		refer
 .for _dev in ${PRINTERDEVICE:Mascii}
-ROFF.ascii?=	groff -Tascii ${TRFLAGS} -mtty-char ${MACROS} -o${PAGES}
+ROFF.ascii?=	groff -Tascii -P-c ${TRFLAGS} -mtty-char ${MACROS} ${PAGES:C/^/-o/1}
 .endfor
 .for _dev in ${PRINTERDEVICE:Nascii}
-ROFF.${_dev}?=	groff -T${_dev} ${TRFLAGS} ${MACROS} -o${PAGES}
+ROFF.${_dev}?=	groff -T${_dev} ${TRFLAGS} ${MACROS} ${PAGES:C/^/-o/1}
 .endfor
 SOELIM?=	soelim
 TBL?=		tbl
@@ -94,8 +94,6 @@ DFILE.${_dev}=	${DOC}.${_dev}
 DFILE.${_dev}=	${DOC}.${_dev}${DCOMPRESS_EXT}
 .endif
 .endfor
-
-PAGES?=		1-
 
 UNROFF?=	unroff
 HTML_SPLIT?=	yes
