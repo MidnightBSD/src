@@ -1,6 +1,7 @@
+# $MidnightBSD$
 # $FreeBSD: src/sys/modules/linux/Makefile,v 1.72 2007/05/23 15:45:52 kib Exp $
 
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64"
 SFX= 32
 CFLAGS+=-DCOMPAT_IA32 -DCOMPAT_LINUX32
 .endif
@@ -21,7 +22,7 @@ SRCS+=  opt_kstack_pages.h opt_nfs.h opt_apic.h opt_compat.h
 
 OBJS=	linux${SFX}_locore.o linux${SFX}_support.o
 
-.if ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "i386"
 SRCS+=	linux_ptrace.c imgact_linux.c opt_cpu.h
 .endif
 
