@@ -28,9 +28,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: src/usr.sbin/traceroute6/traceroute6.8,v 1.16 2006/01/10 16:03:37 pav Exp $
 .\"
-.Dd May 17, 1998
+.Dd August 24, 2009
 .Dt TRACEROUTE6 8
 .Os
 .\"
@@ -41,7 +40,7 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl dIlnrv
+.Op Fl adIlnNrvU
 .Ek
 .Bk -words
 .Op Fl f Ar firsthop
@@ -65,6 +64,9 @@
 .Op Fl w Ar waittime
 .Ek
 .Bk -words
+.Op Fl A Ar as_server
+.Ek
+.Bk -words
 .Ar target
 .Op Ar datalen
 .Ek
@@ -85,6 +87,10 @@ after the destination host name.
 .Pp
 Other options are:
 .Bl -tag -width Ds
+.It Fl a
+Turn on AS# lookups for each hop encountered.
+.It Fl A Ar as_server
+Turn on AS# lookups and use the given server instead of the default.
 .It Fl d
 Debug mode.
 .It Fl f Ar firsthop
@@ -109,6 +115,9 @@ Specify maximum hoplimit, up to 255.
 The default is 30 hops.
 .It Fl n
 Do not resolve numeric address to hostname.
+.It Fl N
+Use a packet with no upper layer header for the probes,
+instead of UDP datagrams.
 .It Fl p Ar port
 Set UDP port number to
 .Ar port .
@@ -129,6 +138,9 @@ that has no route through it
 .It Fl s Ar src
 .Ar Src
 specifies the source IPv6 address to be used.
+.It Fl U
+Use UDP datagrams for the probes.
+This is the default.
 .It Fl v
 Be verbose.
 .It Fl w Ar waittime
@@ -157,7 +169,7 @@ This was more interesting in the IPv4 case,
 where some IP stack bugs could be identified by this behaviour.
 .El
 .\"
-.Sh RETURN VALUES
+.Sh EXIT STATUS
 The
 .Nm
 utility will exit with 0 on success, and non-zero on errors.

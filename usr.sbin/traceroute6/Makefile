@@ -13,14 +13,21 @@
 # A PARTICULAR PURPOSE.
 #
 # $FreeBSD: src/usr.sbin/traceroute6/Makefile,v 1.11 2007/07/05 08:56:46 bz Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/traceroute6/Makefile,v 1.2 2008/11/19 23:40:41 laffer1 Exp $
+
+TRACEROUTE_DISTDIR?= ${.CURDIR}/../../contrib/traceroute
+.PATH: ${TRACEROUTE_DISTDIR}
 
 PROG=	traceroute6
 MAN=	traceroute6.8
+SRCS=	as.c traceroute6.c
 BINOWN=	root
 BINMODE= 4555
 
 CFLAGS+= -DIPSEC -DUSE_RFC2292BIS -DHAVE_POLL
+CFLAGS+= -I${.CURDIR} -I${TRACEROUTE_DISTDIR} -I.
+
+WARNS?=	3
 
 DPADD=	${LIBIPSEC}
 LDADD=	-lipsec
