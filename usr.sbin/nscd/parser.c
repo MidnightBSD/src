@@ -26,11 +26,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/nscd/parser.c,v 1.2 2007/09/27 12:30:11 bushman Exp $");
+__FBSDID("$FreeBSD$");
+
+#include <sys/time.h>
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
 #include "config.h"
 #include "debug.h"
 #include "log.h"

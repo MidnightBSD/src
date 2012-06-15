@@ -26,14 +26,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/nscd/nscd.c,v 1.4 2007/09/27 12:30:11 bushman Exp $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/event.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/param.h>
 #include <sys/un.h>
+
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -77,7 +78,6 @@ static void destroy_cache_(cache);
 static void destroy_runtime_env(struct runtime_env *);
 static cache init_cache_(struct configuration *);
 static struct runtime_env *init_runtime_env(struct configuration *);
-static void print_version_info(void);
 static void processing_loop(cache, struct runtime_env *,
 	struct configuration *);
 static void process_socket_event(struct kevent *, struct runtime_env *,
@@ -88,14 +88,6 @@ static void *processing_thread(void *);
 static void usage(void);
 
 void get_time_func(struct timeval *);
-
-static void
-print_version_info(void)
-{
-	TRACE_IN(print_version_info);
-	printf("nscd v0.2 (20 Oct 2005)\nwas developed during SoC 2005\n");
-	TRACE_OUT(print_version_info);
-}
 
 static void
 usage(void)
@@ -131,14 +123,14 @@ init_cache_(struct configuration *config)
 		res = register_cache_entry(retval, (struct cache_entry_params *)
 			&config_entry->positive_cache_params);
 		config_entry->positive_cache_entry = find_cache_entry(retval,
-			config_entry->positive_cache_params.entry_name);
+			config_entry->positive_cache_params.cep.entry_name);
 		assert(config_entry->positive_cache_entry !=
 			INVALID_CACHE_ENTRY);
 
 		res = register_cache_entry(retval, (struct cache_entry_params *)
 			&config_entry->negative_cache_params);
 		config_entry->negative_cache_entry = find_cache_entry(retval,
-			config_entry->negative_cache_params.entry_name);
+			config_entry->negative_cache_params.cep.entry_name);
 		assert(config_entry->negative_cache_entry !=
 			INVALID_CACHE_ENTRY);
 	}
@@ -172,9 +164,8 @@ init_runtime_env(struct configuration *config)
 	struct runtime_env *retval;
 
 	TRACE_IN(init_runtime_env);
-	retval = (struct runtime_env *)malloc(sizeof(struct runtime_env));
+	retval = calloc(1, sizeof(*retval));
 	assert(retval != NULL);
-	memset(retval, 0, sizeof(struct runtime_env));
 
 	retval->sockfd = socket(PF_LOCAL, SOCK_STREAM, 0);
 
@@ -183,7 +174,7 @@ init_runtime_env(struct configuration *config)
 
 	memset(&serv_addr, 0, sizeof(struct sockaddr_un));
 	serv_addr.sun_family = PF_LOCAL;
-	strncpy(serv_addr.sun_path, config->socket_path,
+	strlcpy(serv_addr.sun_path, config->socket_path,
 		sizeof(serv_addr.sun_path));
 	serv_addr_len = sizeof(serv_addr.sun_family) +
 		strlen(serv_addr.sun_path) + 1;
@@ -325,9 +316,9 @@ process_socket_event(struct kevent *event_data, struct runtime_env *env,
 	 * operations. It also does the actual socket IO operations.
 	 */
 	if (((qstate->use_alternate_io == 0) &&
-		(qstate->kevent_watermark <= event_data->data)) ||
+		(qstate->kevent_watermark <= (size_t)event_data->data)) ||
 		((qstate->use_alternate_io != 0) &&
-		(qstate->io_buffer_watermark <= event_data->data))) {
+		(qstate->io_buffer_watermark <= (size_t)event_data->data))) {
 		if (qstate->use_alternate_io != 0) {
 			switch (qstate->io_buffer_filter) {
 			case EVFILT_READ:
@@ -417,10 +408,9 @@ process_socket_event(struct kevent *event_data, struct runtime_env *env,
 			if (qstate->io_buffer != NULL)
 				free(qstate->io_buffer);
 
-			qstate->io_buffer = (char *)malloc(
+			qstate->io_buffer = calloc(1,
 				qstate->kevent_watermark);
 			assert(qstate->io_buffer != NULL);
-			memset(qstate->io_buffer, 0, qstate->kevent_watermark);
 
 			qstate->io_buffer_p = qstate->io_buffer;
 			qstate->io_buffer_size = qstate->kevent_watermark;
@@ -510,7 +500,7 @@ processing_loop(cache the_cache, struct runtime_env *env,
 			struct kevent *event_data;
 			event_data = &eventlist[0];
 
-			if (event_data->ident == env->sockfd) {
+			if ((int)event_data->ident == env->sockfd) {
 				for (i = 0; i < event_data->data; ++i)
 				    accept_connection(event_data, env, config);
 
@@ -584,17 +574,17 @@ get_time_func(struct timeval *time)
 }
 
 /*
- * The idea of _nss_cache_cycle_prevention_function is that nsdispatch will
- * search for this symbol in the executable. This symbol is the attribute of
- * the caching daemon. So, if it exists, nsdispatch won't try to connect to
- * the caching daemon and will just ignore the 'cache' source in the
- * nsswitch.conf. This method helps to avoid cycles and organize
- * self-performing requests.
+ * The idea of _nss_cache_cycle_prevention_function is that nsdispatch
+ * will search for this symbol in the executable. This symbol is the
+ * attribute of the caching daemon. So, if it exists, nsdispatch won't try
+ * to connect to the caching daemon and will just ignore the 'cache'
+ * source in the nsswitch.conf. This method helps to avoid cycles and
+ * organize self-performing requests.
+ *
+ * (not actually a function; it used to be, but it doesn't make any
+ * difference, as long as it has external linkage)
  */
-void
-_nss_cache_cycle_prevention_function(void)
-{
-}
+void *_nss_cache_cycle_prevention_function;
 
 int
 main(int argc, char *argv[])
@@ -621,9 +611,6 @@ main(int argc, char *argv[])
 
 	/* by default all debug messages are omitted */
 	TRACE_OFF();
-
-	/* startup output */
-	print_version_info();
 
 	/* parsing command line arguments */
 	trace_mode_enabled = 0;
@@ -841,13 +828,11 @@ main(int argc, char *argv[])
 	}
 
 	if (s_configuration->threads_num > 1) {
-		threads = (pthread_t *)malloc(sizeof(pthread_t) *
+		threads = calloc(1, sizeof(*threads) *
 			s_configuration->threads_num);
-		memset(threads, 0, sizeof(pthread_t) *
-	    		s_configuration->threads_num);
 		for (i = 0; i < s_configuration->threads_num; ++i) {
-			thread_args = (struct processing_thread_args *)malloc(
-				sizeof(struct processing_thread_args));
+			thread_args = malloc(
+				sizeof(*thread_args));
 			thread_args->the_cache = s_cache;
 			thread_args->the_runtime_env = s_runtime_env;
 			thread_args->the_configuration = s_configuration;

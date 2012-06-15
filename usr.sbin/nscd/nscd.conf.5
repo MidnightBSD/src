@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/nscd/nscd.conf.5,v 1.6 2007/09/27 12:30:11 bushman Exp $
+.\" $FreeBSD$
 .\"
 .Dd April 30, 2006
 .Dt NSCD.CONF 5
@@ -53,7 +53,7 @@ and a
 .Ar value .
 Usual cachenames are
 .Dq Li passwd ,
-.Dq Li groups ,
+.Dq Li group ,
 .Dq Li hosts ,
 .Dq Li services ,
 .Dq Li protocols
@@ -106,7 +106,7 @@ The default policy is fifo.
 This is the internal hash table size.
 The value should be a prime number for optimum performance.
 You should only change this value when the number of cached elements is
-significantly (in 5-10 times) greater then the default hash table size (255).
+significantly (5-10 times) greater than the default hash table size (257).
 .It Va keep-hot-count Oo Ar cachename Oc Op Ar value
 The size limit of the cache with the given
 .Ar cachename .
@@ -125,7 +125,7 @@ will act similarly to the NSCD.
 .Sy NOTE :
 this feature is currently experimental \[em] it supports only
 .Dq Li passwd ,
-.Dq Li groups
+.Dq Li group
 and
 .Dq Li services
 cachenames.
@@ -142,7 +142,7 @@ symbol at the beginning of the line for comments.
 .Xr nscd 8
 .Sh AUTHORS
 .An Michael Bushkov
-.Aq bushman@freebsd.org
+.Aq bushman@FreeBSD.org
 .Sh BUGS
 Please send bug reports and suggestions to
-.Aq bushman@freebsd.org .
+.Aq bushman@FreeBSD.org .

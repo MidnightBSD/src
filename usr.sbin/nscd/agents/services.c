@@ -26,21 +26,22 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/nscd/agents/services.c,v 1.3 2007/09/27 12:30:10 bushman Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/types.h>
+
 #include <assert.h>
-#include <nsswitch.h>
 #include <netdb.h>
-#include <string.h>
+#include <nsswitch.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "../debug.h"
 #include "services.h"
 
 static int services_marshal_func(struct servent *, char *, size_t *);
 static int services_lookup_func(const char *, size_t, char **, size_t *);
-static void *services_mp_init_func();
+static void *services_mp_init_func(void);
 static int services_mp_lookup_func(char **, size_t *, void *);
 static void services_mp_destroy_func(void *);
 
@@ -145,9 +146,8 @@ services_lookup_func(const char *key, size_t key_size, char **buffer,
 	switch (lookup_type) {
 	case nss_lt_name:
 		size = key_size - sizeof(enum nss_lookup_type);
-		name = (char *)malloc(size + 1);
+		name = calloc(1, size + 1);
 		assert(name != NULL);
-		memset(name, 0, size + 1);
 		memcpy(name, key + sizeof(enum nss_lookup_type), size);
 
 		size2 = strlen(name) + 1;
@@ -169,9 +169,8 @@ services_lookup_func(const char *key, size_t key_size, char **buffer,
 
 		size = key_size - sizeof(enum nss_lookup_type) - sizeof(int);
 		if (size > 0) {
-			proto = (char *)malloc(size + 1);
+			proto = calloc(1, size + 1);
 			assert(proto != NULL);
-			memset(proto, size + 1, 0);
 			memcpy(proto, key + sizeof(enum nss_lookup_type) +
 				sizeof(int), size);
 		}
@@ -197,7 +196,7 @@ services_lookup_func(const char *key, size_t key_size, char **buffer,
 
 	if (result != NULL) {
 		services_marshal_func(result, NULL, buffer_size);
-		*buffer = (char *)malloc(*buffer_size);
+		*buffer = malloc(*buffer_size);
 		assert(*buffer != NULL);
 		services_marshal_func(result, *buffer, buffer_size);
 	}
@@ -207,7 +206,7 @@ services_lookup_func(const char *key, size_t key_size, char **buffer,
 }
 
 static void *
-services_mp_init_func()
+services_mp_init_func(void)
 {
 	TRACE_IN(services_mp_init_func);
 	setservent(0);
@@ -225,7 +224,7 @@ services_mp_lookup_func(char **buffer, size_t *buffer_size, void *mdata)
 	result = getservent();
 	if (result != NULL) {
 		services_marshal_func(result, NULL, buffer_size);
-		*buffer = (char *)malloc(*buffer_size);
+		*buffer = malloc(*buffer_size);
 		assert(*buffer != NULL);
 		services_marshal_func(result, *buffer, buffer_size);
 	}
@@ -242,14 +241,13 @@ services_mp_destroy_func(void *mdata)
 }
 
 struct agent *
-init_services_agent()
+init_services_agent(void)
 {
 	struct common_agent	*retval;
 	TRACE_IN(init_services_agent);
 
-	retval = (struct common_agent *)malloc(sizeof(struct common_agent));
+	retval = calloc(1, sizeof(*retval));
 	assert(retval != NULL);
-	memset(retval, 0, sizeof(struct common_agent));
 
 	retval->parent.name = strdup("services");
 	assert(retval->parent.name != NULL);
@@ -262,15 +260,14 @@ init_services_agent()
 }
 
 struct agent *
-init_services_mp_agent()
+init_services_mp_agent(void)
 {
 	struct multipart_agent	*retval;
 
 	TRACE_IN(init_services_mp_agent);
-	retval = (struct multipart_agent *)malloc(
-		sizeof(struct multipart_agent));
+	retval = calloc(1,
+		sizeof(*retval));
 	assert(retval != NULL);
-	memset(retval, 0, sizeof(struct multipart_agent));
 
 	retval->parent.name = strdup("services");
 	retval->parent.type = MULTIPART_AGENT;

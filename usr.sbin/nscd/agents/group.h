@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/nscd/agents/group.h,v 1.2 2007/09/27 12:30:10 bushman Exp $
+ * $FreeBSD$
  */
 
 #include "../agent.h"
 
-extern struct agent *init_group_agent();
-extern struct agent *init_group_mp_agent();
+struct agent *init_group_agent(void);
+struct agent *init_group_mp_agent(void);

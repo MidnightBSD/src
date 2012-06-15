@@ -23,15 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/nscd/query.h,v 1.3 2007/09/27 12:30:11 bushman Exp $
+ * $FreeBSD$
  */
 
 #ifndef __NSCD_QUERY_H__
 #define __NSCD_QUERY_H__
 
-#include <sys/types.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include "cachelib.h"
 #include "config.h"
 #include "protocol.h"
@@ -43,8 +40,7 @@ struct configuration_entry;
 typedef	int (*query_process_func)(struct query_state *);
 typedef void (*query_destroy_func)(struct query_state *);
 typedef ssize_t (*query_read_func)(struct query_state *, void *, size_t);
-typedef ssize_t (*query_write_func)(struct query_state *, const void *,
-	size_t);
+typedef ssize_t (*query_write_func)(struct query_state *, const void *, size_t);
 
 /*
  * The query state structure contains the information to process all types of
@@ -94,17 +90,15 @@ struct query_state {
 	int	use_alternate_io;
 };
 
-extern int check_query_eids(struct query_state *);
+int check_query_eids(struct query_state *);
 
-extern ssize_t query_io_buffer_read(struct query_state *, void *, size_t);
-extern ssize_t query_io_buffer_write(struct query_state *, const void *,
-	size_t);
+ssize_t query_io_buffer_read(struct query_state *, void *, size_t);
+ssize_t query_io_buffer_write(struct query_state *, const void *, size_t);
 
-extern ssize_t query_socket_read(struct query_state *, void *, size_t);
-extern ssize_t query_socket_write(struct query_state *, const void *,
-	size_t);
+ssize_t query_socket_read(struct query_state *, void *, size_t);
+ssize_t query_socket_write(struct query_state *, const void *, size_t);
 
-extern struct query_state *init_query_state(int, size_t, uid_t, gid_t);
-extern void destroy_query_state(struct query_state *);
+struct query_state *init_query_state(int, size_t, uid_t, gid_t);
+void destroy_query_state(struct query_state *);
 
 #endif

@@ -23,14 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/nscd/mp_ws_query.h,v 1.3 2007/09/27 12:30:11 bushman Exp $
+ * $FreeBSD$
  */
 
 #ifndef __NSCD_MP_WS_QUERY_H__
 #define __NSCD_MP_WS_QUERY_H__
 
-extern int on_mp_write_session_request_read1(struct query_state *);
-extern cache_entry register_new_mp_cache_entry(struct query_state *,
-	const char *);
+int on_mp_write_session_request_read1(struct query_state *);
+cache_entry register_new_mp_cache_entry(struct query_state *, const char *);
 
 #endif

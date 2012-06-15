@@ -26,7 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/nscd/singletons.c,v 1.2 2007/09/27 12:30:11 bushman Exp $");
+__FBSDID("$FreeBSD$");
+
+#include <sys/time.h>
 
 #include "singletons.h"
 
