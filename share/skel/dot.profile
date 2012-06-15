@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD: src/share/skel/dot.profile,v 1.8 2009/03/29 03:10:41 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.profile,v 1.9 2011/11/23 12:46:37 laffer1 Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
@@ -15,9 +15,9 @@ umask 22
 # set a few alias
 alias h="fc -l"
 alias j="jobs -l"
-alias la="ls -a"
+alias la="ls -aF"
 alias lf="ls -FA"
-alias ll="ls -lA"
+alias ll="ls -lAF"
 
 # Setting TERM is normally done through /etc/ttys.  Do only override
 # if you're sure that you'll never log in via telnet or xterm or a
