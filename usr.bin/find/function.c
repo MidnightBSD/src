@@ -42,7 +42,7 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/find/function.c,v 1.58 2006/05/27 18:27:41 krion Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/find/function.c,v 1.2 2007/09/11 23:01:20 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -761,7 +761,7 @@ done:	*argvp = argv + 1;
 
 /* Finish any pending -exec ... {} + functions. */
 void
-finish_execplus()
+finish_execplus(void)
 {
 	PLAN *p;
 
