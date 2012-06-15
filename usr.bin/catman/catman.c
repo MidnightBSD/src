@@ -112,6 +112,8 @@ struct hash_entry {
 static struct hash_entry *visited[HASHTABLE_ALLOC];
 static struct hash_entry *links[HASHTABLE_ALLOC];
 
+int select_sections(struct dirent *entry);
+
 /*
  * Inserts a string into a hashtable keyed by inode & device number.
  */
@@ -588,7 +590,7 @@ process_section(char *mandir, char *section)
 	free(cat_section);
 }
 
-static int
+int
 select_sections(struct dirent *entry)
 {
 	char *name;
