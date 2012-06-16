@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.bin/netstat/Makefile,v 1.39 2007/07/01 12:08:07 gnn Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/netstat/Makefile,v 1.7 2008/11/14 14:47:41 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -9,6 +9,7 @@ SRCS=	if.c inet.c main.c mbuf.c mcast.c mroute.c route.c \
 	unix.c atalk.c netgraph.c mroute6.c ipsec.c bpf.c pfkey.c sctp.c
 
 WARNS?=	3
+CFLAGS+=-fno-strict-aliasing
 
 CFLAGS+=-DIPSEC
 CFLAGS+=-DSCTP
