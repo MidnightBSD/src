@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/spell/spellprog/spellprog.c,v 1.1 2006/12/31 07:08:37 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/spell/spellprog/spellprog.c,v 1.2 2011/12/31 00:19:43 laffer1 Exp $ */
 /*	$NetBSD: spellprog.c,v 1.6 2006/10/22 16:36:44 christos Exp $	*/
 
 /* derived from OpenBSD: spellprog.c,v 1.4 2003/06/03 02:56:16 millert Exp */
@@ -357,7 +357,7 @@ main(int argc, char **argv)
 		wlists[i].fd = open(argv[i], O_RDONLY, 0);
 		if (wlists[i].fd == -1 || fstat(wlists[i].fd, &sb) != 0)
 			err(1, "%s", argv[i]);
-		if (sb.st_size > SIZE_T_MAX)
+		if ((size_t)sb.st_size > SIZE_T_MAX)
 			errx(1, "%s: %s", argv[i], strerror(EFBIG));
 		wlists[i].front = mmap(NULL, (size_t)sb.st_size, PROT_READ,
 		    MAP_PRIVATE, wlists[i].fd, (off_t)0);
