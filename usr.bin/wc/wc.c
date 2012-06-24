@@ -261,7 +261,7 @@ word:	gotsp = 1;
 }
 
 static void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr, "usage: wc [-clmw] [file ...]\n");
 	exit(1);
