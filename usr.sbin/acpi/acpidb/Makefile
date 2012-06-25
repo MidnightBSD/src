@@ -58,6 +58,7 @@ SRCS+=	utalloc.c utcache.c utcopy.c utdebug.c utdelete.c	\
 MAN=	acpidb.8
 WARNS?=	2
 
+CFLAGS+=-fno-strict-aliasing
 CFLAGS+= -DACPI_EXEC_APP
 
 .include <bsd.prog.mk>
