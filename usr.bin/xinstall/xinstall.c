@@ -771,7 +771,7 @@ install_dir(char *path)
  *	print a usage message and die
  */
 void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr,
 "usage: install [-bCcpSsv] [-B suffix] [-f flags] [-g group] [-m mode]\n"
