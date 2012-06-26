@@ -42,7 +42,7 @@ static char const sccsid[] = "@(#)from: arp.c	8.2 (Berkeley) 1/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/arp/arp.c,v 1.65 2007/03/06 09:32:40 kevlo Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/arp/arp.c,v 1.65.2.6 2010/06/17 20:38:18 mlaier Exp $");
 
 /*
  * arp - display, set, and delete arp table entries
@@ -120,7 +120,7 @@ main(int argc, char *argv[])
 	int aflag = 0;	/* do it for all entries */
 
 	while ((ch = getopt(argc, argv, "andfsSi:")) != -1)
-		switch((char)ch) {
+		switch(ch) {
 		case 'a':
 			aflag = 1;
 			break;
@@ -321,8 +321,7 @@ set(int argc, char **argv)
 			struct timeval tv;
 			gettimeofday(&tv, 0);
 			expire_time = tv.tv_sec + 20 * 60;
-		}
-		else if (strncmp(argv[0], "pub", 3) == 0) {
+		} else if (strncmp(argv[0], "pub", 3) == 0) {
 			flags |= RTF_ANNOUNCE;
 			doing_proxy = 1;
 			if (argc && strncmp(argv[1], "only", 3) == 0) {
@@ -330,6 +329,16 @@ set(int argc, char **argv)
 				dst->sin_other = SIN_PROXY;
 				argc--; argv++;
 			}
+		} else if (strncmp(argv[0], "blackhole", 9) == 0) {
+			if (flags & RTF_REJECT) {
+				printf("Choose one of blackhole or reject, not both.\n");
+			}
+			flags |= RTF_BLACKHOLE;
+		} else if (strncmp(argv[0], "reject", 6) == 0) {
+			if (flags & RTF_BLACKHOLE) {
+				printf("Choose one of blackhole or reject, not both.\n");
+			}
+			flags |= RTF_REJECT;
 		} else if (strncmp(argv[0], "trail", 5) == 0) {
 			/* XXX deprecated and undocumented feature */
 			printf("%s: Sending trailers is no longer supported\n",
@@ -463,7 +472,7 @@ search(u_long addr, action_fn *action)
 {
 	int mib[6];
 	size_t needed;
-	char *lim, *buf, *newbuf, *next;
+	char *lim, *buf, *next;
 	struct rt_msghdr *rtm;
 	struct sockaddr_inarp *sin2;
 	struct sockaddr_dl *sdl;
@@ -482,13 +491,9 @@ search(u_long addr, action_fn *action)
 		return 0;
 	buf = NULL;
 	for (;;) {
-		newbuf = realloc(buf, needed);
-		if (newbuf == NULL) {
-			if (buf != NULL)
-				free(buf);
+		buf = reallocf(buf, needed);
+		if (buf == NULL)
 			errx(1, "could not reallocate memory");
-		}
-		buf = newbuf;
 		st = sysctl(mib, 6, buf, &needed, NULL, 0);
 		if (st == 0 || errno != ENOMEM)
 			break;
@@ -518,6 +523,9 @@ search(u_long addr, action_fn *action)
 /*
  * Display an arp entry
  */
+static char lifname[IF_NAMESIZE];
+static int64_t lifindex = -1;
+
 static void
 print_entry(struct sockaddr_dl *sdl,
 	struct sockaddr_inarp *addr, struct rt_msghdr *rtm)
@@ -525,7 +533,6 @@ print_entry(struct sockaddr_dl *sdl,
 	const char *host;
 	struct hostent *hp;
 	struct iso88025_sockaddr_dl_data *trld;
-	char ifname[IF_NAMESIZE];
 	int seg;
 
 	if (nflag == 0)
@@ -554,8 +561,12 @@ print_entry(struct sockaddr_dl *sdl,
 		}
 	} else
 		printf("(incomplete)");
-	if (if_indextoname(sdl->sdl_index, ifname) != NULL)
-		printf(" on %s", ifname);
+	if (sdl->sdl_index != lifindex &&
+	    if_indextoname(sdl->sdl_index, lifname) != NULL) {
+        	lifindex = sdl->sdl_index;
+		printf(" on %s", lifname);
+        } else if (sdl->sdl_index == lifindex)
+		printf(" on %s", lifname);
 	if (rtm->rtm_rmx.rmx_expire == 0)
 		printf(" permanent");
 	if (addr->sin_other & SIN_PROXY)
@@ -627,8 +638,8 @@ usage(void)
 		"       arp [-n] [-i interface] -a",
 		"       arp -d hostname [pub]",
 		"       arp -d [-i interface] -a",
-		"       arp -s hostname ether_addr [temp] [pub [only]]",
-		"       arp -S hostname ether_addr [temp] [pub [only]]",
+		"       arp -s hostname ether_addr [temp] [reject | blackhole] [pub [only]]",
+		"       arp -S hostname ether_addr [temp] [reject | blackhole] [pub [only]]",
 		"       arp -f filename");
 	exit(1);
 }
@@ -639,7 +650,7 @@ rtmsg(int cmd, struct sockaddr_inarp *dst, struct sockaddr_dl *sdl)
 	static int seq;
 	int rlen;
 	int l;
-	struct sockaddr_in so_mask;
+	struct sockaddr_in so_mask, *som = &so_mask;
 	static int s = -1;
 	static pid_t pid;
 
@@ -693,13 +704,17 @@ rtmsg(int cmd, struct sockaddr_inarp *dst, struct sockaddr_dl *sdl)
 	case RTM_GET:
 		rtm->rtm_addrs |= RTA_DST;
 	}
-#define NEXTADDR(w, s) \
-	if ((s) != NULL && rtm->rtm_addrs & (w)) { \
-		bcopy((s), cp, sizeof(*(s))); cp += SA_SIZE(s);}
+#define NEXTADDR(w, s)					   \
+	do {						   \
+		if ((s) != NULL && rtm->rtm_addrs & (w)) { \
+			bcopy((s), cp, sizeof(*(s)));	   \
+			cp += SA_SIZE(s);		   \
+		}					   \
+	} while (0)
 
 	NEXTADDR(RTA_DST, dst);
 	NEXTADDR(RTA_GATEWAY, sdl);
-	NEXTADDR(RTA_NETMASK, &so_mask);
+	NEXTADDR(RTA_NETMASK, som);
 
 	rtm->rtm_msglen = cp - (char *)&m_rtmsg;
 doit:
