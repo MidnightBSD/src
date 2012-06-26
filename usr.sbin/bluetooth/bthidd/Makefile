@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+# $Id: Makefile,v 1.3 2012-06-26 02:16:55 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/bluetooth/bthidd/Makefile,v 1.7 2007/10/01 18:15:10 ru Exp $
 
 PROG=		bthidd
@@ -8,7 +8,6 @@ SRCS=		bthidd.c client.c hid.c kbd.c lexer.l parser.y server.c \
 		session.c
 
 CFLAGS+=	-I${.CURDIR}
-WARNS?=		6
 DEBUG_FLAGS=	-g
 
 DPADD=          ${LIBBLUETOOTH} ${LIBUSBHID}
