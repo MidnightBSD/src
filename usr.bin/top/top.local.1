@@ -1,4 +1,4 @@
-.\" $FreeBSD: src/usr.bin/top/top.local.1,v 1.3 2003/07/17 23:56:39 julian Exp $ 
+.\" $FreeBSD: src/usr.bin/top/top.local.1,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $ 
 .SH "FreeBSD NOTES"
 
 .SH DISPLAY OF THREADS
@@ -28,7 +28,8 @@ number of pages inactive
 number of pages wired down, including cached file data pages
 .TP
 .B Cache:
-number of pages used for VM-level disk caching
+number of clean pages caching data that are available for
+immediate reallocation
 .TP
 .B Buf:
 number of pages used for BIO-level disk caching
