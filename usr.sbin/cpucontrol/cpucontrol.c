@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.sbin/cpucontrol/cpucontrol.c,v 1.1 2012/03/01 04:45:09 laffer1 Exp $");
 
 #include <assert.h>
 #include <stdio.h>
@@ -102,7 +102,7 @@ static int	do_update(const char *dev);
 static void	datadir_add(const char *path);
 
 static void __dead2
-usage()
+usage(void)
 {
 	const char *name;
 
