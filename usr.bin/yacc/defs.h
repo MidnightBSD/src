@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -34,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)defs.h	5.6 (Berkeley) 5/24/93
- * $FreeBSD: src/usr.bin/yacc/defs.h,v 1.12 2002/06/11 11:27:20 robert Exp $
+ * $MidnightBSD$
  */
 
 #include <assert.h>
@@ -133,12 +129,8 @@
 
 /*  storage allocation macros  */
 
-#define CALLOC(k,n)	(calloc((unsigned)(k),(unsigned)(n)))
-#define	FREE(x)		(free((char*)(x)))
-#define MALLOC(n)	(malloc((unsigned)(n)))
 #define	NEW(t)		((t*)allocate(sizeof(t)))
-#define	NEW2(n,t)	((t*)allocate((unsigned)((n)*sizeof(t))))
-#define REALLOC(p,n)	(realloc((char*)(p),(unsigned)(n)))
+#define	NEW2(n,t)	((t*)allocate((n)*sizeof(t)))
 
 
 /*  the structure of a symbol table entry  */
@@ -220,7 +212,6 @@ extern char tflag;
 extern char vflag;
 extern const char *symbol_prefix;
 
-extern char *myname;
 extern char *cptr;
 extern char *line;
 extern int lineno;
@@ -305,30 +296,30 @@ extern short final_state;
 
 /* global functions */
 
-char *allocate(unsigned);
+void *allocate(size_t);
 void closure(short *, int);
 void create_symbol_table(void);
 void default_action_warning(void);
-void dollar_error(int, char *, char *);
+void dollar_error(int, char *, char *) __dead2;
 void dollar_warning(int, int);
-void done(int);
-void fatal(const char *msg);
+void done(int) __dead2;
+void fatal(const char *msg) __dead2;
 void finalize_closure(void);
 void free_parser(void);
 void free_symbols(void);
 void free_symbol_table(void);
-void illegal_character(char *);
-void illegal_tag(int, char *, char *);
+void illegal_character(char *) __dead2;
+void illegal_tag(int, char *, char *) __dead2;
 void lalr(void);
 bucket *lookup(char *);
 void lr0(void);
 bucket *make_bucket(const char *);
 void make_parser(void);
-void no_grammar(void);
-void no_space(void);
-void open_error(const char *);
+void no_grammar(void) __dead2;
+void no_space(void) __dead2;
+void open_error(const char *) __dead2;
 void output(void);
-void over_unionized(char *);
+void over_unionized(char *) __dead2;
 void prec_redeclared(void);
 void reader(void);
 void reflexive_transitive_closure(unsigned *, int);
@@ -337,21 +328,21 @@ void restarted_warning(void);
 void retyped_warning(char *);
 void revalued_warning(char *);
 void set_first_derives(void);
-void syntax_error(int, char *, char *);
-void terminal_lhs(int);
-void terminal_start(char *);
-void tokenized_start(char *);
-void undefined_goal(char *);
+void syntax_error(int, char *, char *) __dead2;
+void terminal_lhs(int) __dead2;
+void terminal_start(char *) __dead2;
+void tokenized_start(char *) __dead2;
+void undefined_goal(char *) __dead2;
 void undefined_symbol_warning(char *);
-void unexpected_EOF(void);
-void unknown_rhs(int);
-void unterminated_action(int, char *, char *);
-void unterminated_comment(int, char *, char *);
-void unterminated_string(int, char *, char *);
-void unterminated_text(int, char *, char *);
-void unterminated_union(int, char *, char *);
-void untyped_lhs(void);
-void untyped_rhs(int, char *);
-void used_reserved(char *);
+void unexpected_EOF(void) __dead2;
+void unknown_rhs(int) __dead2;
+void unterminated_action(int, char *, char *) __dead2;
+void unterminated_comment(int, char *, char *) __dead2;
+void unterminated_string(int, char *, char *) __dead2;
+void unterminated_text(int, char *, char *) __dead2;
+void unterminated_union(int, char *, char *) __dead2;
+void untyped_lhs(void) __dead2;
+void untyped_rhs(int, char *) __dead2;
+void used_reserved(char *) __dead2;
 void verbose(void);
 void write_section(const char **);

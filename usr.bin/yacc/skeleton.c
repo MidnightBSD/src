@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -41,7 +37,7 @@ static char sccsid[] = "@(#)skeleton.c	5.8 (Berkeley) 4/29/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/yacc/skeleton.c,v 1.37 2003/02/12 18:03:55 davidc Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "defs.h"
 
@@ -66,7 +62,7 @@ const char *banner[] =
     "__unused",
     "#endif",
     "static char const ",
-    "yyrcsid[] = \"$FreeBSD: src/usr.bin/yacc/skeleton.c,v 1.37 2003/02/12 18:03:55 davidc Exp $\";",
+    "yyrcsid[] = \"$MidnightBSD$\";",
     "#endif",
     "#define YYBYACC 1",
     "#define YYMAJOR 1",
@@ -140,7 +136,11 @@ const char *header[] =
 const char *body[] =
 {
     "/* allocate initial stack or double stack size, up to YYMAXDEPTH */",
+    "#if defined(__cplusplus) || __STDC__",
+    "static int yygrowstack(void)",
+    "#else",
     "static int yygrowstack()",
+    "#endif",
     "{",
     "    int newsize, i;",
     "    short *newss;",
@@ -336,7 +336,6 @@ const char *body[] =
     "        yyval = yyvsp[1-yym];",
     "    else",
     "        memset(&yyval, 0, sizeof yyval);",
-    "    yyval = yyvsp[1-yym];",
     "    switch (yyn)",
     "    {",
     0
@@ -406,8 +405,7 @@ const char *trailer[] =
 
 
 void
-write_section(section)
-const char *section[];
+write_section(const char *section[])
 {
     int c;
     int i;
