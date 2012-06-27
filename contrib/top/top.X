@@ -1,6 +1,6 @@
 .\" NOTE:  changes to the manual page for "top" should be made in the
 .\"        file "top.X" and NOT in the file "top.1".
-.\" $FreeBSD: src/contrib/top/top.X,v 1.20 2007/05/04 15:42:58 rafan Exp $
+.\" $FreeBSD: src/contrib/top/top.X,v 1.20.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 .nr N %topn%
 .nr D %delay%
 .TH TOP 1 Local
@@ -10,7 +10,7 @@ top \- display and update information about the top cpu processes
 .SH SYNOPSIS
 .B top
 [
-.B \-abCHIijnqStuv
+.B \-abCHIijnPqStuv
 ] [
 .BI \-d count
 ] [
@@ -118,6 +118,9 @@ Display either 'cpu' or 'io' statistics.  Default is 'cpu'.
 .B \-n
 Use \*(lqnon-interactive\*(rq mode.  This is identical to \*(lqbatch\*(rq
 mode.
+.TP
+.B \-P
+Display per-cpu CPU usage statistics.
 .TP
 .B \-q
 Renice

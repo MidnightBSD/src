@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: src/contrib/top/username.c,v 1.3 2002/06/09 19:29:55 mike Exp $
+ * $FreeBSD: src/contrib/top/username.c,v 1.3.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -32,6 +32,8 @@
 
 #include <sys/types.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <pwd.h>
 #include <utmp.h>
 
@@ -51,11 +53,13 @@ struct hash_el {
 */
 #define    hashit(i)	(abs(i) % Table_size)
 
+int get_user(int uid);
+
 /* K&R requires that statically declared tables be initialized to zero. */
 /* We depend on that for hash_table and YOUR compiler had BETTER do it! */
 struct hash_el hash_table[Table_size];
 
-init_hash()
+void init_hash(void)
 
 {
     /*
@@ -140,10 +144,7 @@ int wecare;		/* 1 = enter it always, 0 = nice to have */
  * and cache any entries we pass over while looking.
  */
 
-int get_user(uid)
-
-register int uid;
-
+int get_user(int uid)
 {
     struct passwd *pwd;
 

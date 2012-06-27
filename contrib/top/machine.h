@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/contrib/top/machine.h,v 1.9 2007/05/04 15:42:58 rafan Exp $
+ * $FreeBSD: src/contrib/top/machine.h,v 1.9.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -20,6 +20,7 @@ struct statics
 #ifdef ORDER
     char **order_names;
 #endif
+    int ncpus;
 };
 
 /*
@@ -43,6 +44,7 @@ struct system_info
     int    *memory;
     int    *swap;
     struct timeval boottime;
+    int    ncpus;
 };
 
 /* cpu_states is an array of percentages * 10.  For example, 

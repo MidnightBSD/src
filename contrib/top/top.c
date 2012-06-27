@@ -13,7 +13,7 @@ char *copyright =
  *  Copyright (c) 1994, 1995, William LeFebvre, Argonne National Laboratory
  *  Copyright (c) 1996, William LeFebvre, Group sys Consulting
  *
- * $FreeBSD: src/contrib/top/top.c,v 1.23 2007/05/04 15:42:58 rafan Exp $
+ * $FreeBSD: src/contrib/top/top.c,v 1.23.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -66,6 +66,7 @@ extern char *optarg;
 extern int overstrike;
 
 static int fmt_flags = 0;
+int pcpu_stats = No;
 
 /* signal handling routines */
 sigret_t leave();
@@ -282,7 +283,7 @@ char *argv[];
 	    optind = 1;
 	}
 
-	while ((i = getopt(ac, av, "CSIHabijnquvs:d:U:m:o:t")) != EOF)
+	while ((i = getopt(ac, av, "CSIHPabijnquvs:d:U:m:o:t")) != EOF)
 	{
 	    switch(i)
 	    {
@@ -407,10 +408,14 @@ char *argv[];
 		ps.jail = !ps.jail;
 		break;
 
+	      case 'P':
+		pcpu_stats = Yes;
+		break;
+
 	      default:
 		fprintf(stderr,
 "Top version %s\n"
-"Usage: %s [-abCHIijnqStuv] [-d count] [-m io | cpu] [-o field] [-s time]\n"
+"Usage: %s [-abCHIijnPqStuv] [-d count] [-m io | cpu] [-o field] [-s time]\n"
 "       [-U username] [number]\n",
 			version_string(), myname);
 		exit(1);
@@ -450,7 +455,7 @@ char *argv[];
     }
 
     /* initialize the kernel memory interface */
-    if (machine_init(&statics) == -1)
+    if (machine_init(&statics, do_unames) == -1)
     {
 	exit(1);
     }
