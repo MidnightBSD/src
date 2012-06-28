@@ -4,6 +4,8 @@ PROG=	kldxref
 MAN=	kldxref.8
 SRCS=	kldxref.c ef.c ef_obj.c
 
+CFLAGS+=-fno-strict-aliasing
+
 WARNS?=	2
 
 .if exists(ef_${MACHINE_ARCH}.c)
