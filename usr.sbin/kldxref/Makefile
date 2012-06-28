@@ -8,8 +8,8 @@ CFLAGS+=-fno-strict-aliasing
 
 WARNS?=	2
 
-.if exists(ef_${MACHINE_ARCH}.c)
-SRCS+=	ef_${MACHINE_ARCH}.c
+.if exists(ef_${MACHINE_CPUARCH}.c)
+SRCS+=	ef_${MACHINE_CPUARCH}.c
 .else
 SRCS+=	ef_nop.c
 .endif
