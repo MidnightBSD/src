@@ -756,7 +756,7 @@ setbindhost(struct addrinfo **ai, const char *bindhost, struct addrinfo hints)
 }
 
 void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr, "usage: nfsd %s\n", USAGE);
 	exit(1);
@@ -782,7 +782,7 @@ reapchild(__unused int signo)
 }
 
 void
-unregistration()
+unregistration(void)
 {
 	if ((!rpcb_unset(RPCPROG_NFS, 2, NULL)) ||
 	    (!rpcb_unset(RPCPROG_NFS, 3, NULL)))
@@ -790,7 +790,7 @@ unregistration()
 }
 
 void
-killchildren()
+killchildren(void)
 {
 	int i;
 
