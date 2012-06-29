@@ -37,7 +37,7 @@ static const char copyright[] =
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.sbin/sa/main.c,v 1.18 2007/05/22 06:51:38 dds Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.sbin/sa/main.c,v 1.2 2008/11/25 01:16:24 laffer1 Exp $");
 
 /*
  * sa:	system accounting
@@ -301,7 +301,7 @@ main(int argc, char **argv)
 }
 
 static void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr,
 		"usage: sa [-abcdDfijkKlmnqrstu] [-P file] [-U file] [-v cutoff] [file ...]\n");
