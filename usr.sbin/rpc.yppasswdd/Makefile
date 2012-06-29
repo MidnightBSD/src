@@ -14,8 +14,8 @@ SRCS=	util.c yp_access.c yp_dblookup.c yp_dbwrite.c \
 GENSRCS=yp.h yp_clnt.c yppasswd.h yppasswd_private.h yppasswd_private_svc.c \
 	yppasswd_private_xdr.c yppasswd_svc.c
 
-WARNS?=	 4
-CFLAGS+=-fno-strict-aliasing
+WARNS?=	 5
+CFLAGS+= -fno-strict-aliasing
 CFLAGS+= -I${.CURDIR}/../../usr.sbin/vipw \
 	 -I${.CURDIR}/../../usr.sbin/ypserv \
 	 -I${.CURDIR}/../../libexec/ypxfr \
@@ -25,7 +25,7 @@ LDADD=	-lrpcsvc -lcrypt -lutil
 
 CLEANFILES= ${GENSRCS}
 
-RPCGEN=	rpcgen -I -C
+RPCGEN=	RPCGEN_CPP=${CPP:Q} rpcgen -I -C
 
 # We need to remove the 'static' keyword from _rpcsvcstate so that
 # yppasswdd_main.c can see it.
