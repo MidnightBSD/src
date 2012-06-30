@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/lib/csu/Makefile,v 1.5 2009/05/22 00:27:10 laffer1 Exp $
+# $MidnightBSD: src/gnu/lib/csu/Makefile,v 1.6 2011/10/22 19:02:28 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/csu/Makefile,v 1.24 2004/09/10 06:48:04 ru Exp $
 
 .include <bsd.own.mk>
@@ -25,7 +25,7 @@ CFLAGS+=	-I${GCCLIB}/include -I${GCCDIR}/config -I${GCCDIR} -I. \
 CRTS_CFLAGS=	-DCRTSTUFFS_O -DSHARED ${PICFLAG}
 MKDEP=		-DCRT_BEGIN
 
-.if ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_CPUARCH} == "sparc64"
 TGTOBJS=	crtfastmath.o
 SRCS+=		crtfastmath.c
 .endif
