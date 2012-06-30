@@ -41,6 +41,7 @@
  * (default interface is wlan.0).
  */
 #include <sys/types.h>
+#include <sys/sysctl.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -123,17 +124,6 @@ getflag(const char *name, int len)
 		if (strncasecmp(flags[i].name, name, len) == 0)
 			return flags[i].bit;
 	return 0;
-}
-
-static const char *
-getflagname(u_int flag)
-{
-	int i;
-
-	for (i = 0; i < N(flags); i++)
-		if (flags[i].bit == flag)
-			return flags[i].name;
-	return "???";
 }
 
 static void
