@@ -27,7 +27,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.sbin/sa/db.c,v 1.1 2007/05/22 06:51:38 dds Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.sbin/sa/db.c,v 1.1 2008/11/25 01:16:24 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/acct.h>
@@ -68,7 +68,7 @@ db_copy_in(DB **mdb, const char *dbname, const char *uname, BTREEINFO *bti,
 	if (iflag)
 		return (0);
 
-	if ((ddb = dbopen(dbname, O_RDONLY, 0, DB_BTREE, NULL)) == NULL) {
+	if ((ddb = dbopen(dbname, O_RDONLY, 0, DB_BTREE, bti)) == NULL) {
 		if (errno == ENOENT)
 			return (0);
 		warn("retrieving %s summary", uname);
@@ -80,7 +80,7 @@ db_copy_in(DB **mdb, const char *dbname, const char *uname, BTREEINFO *bti,
 
 	/* Obtain/set version. */
 	version = 1;
-	key.data = &VERSION_KEY;
+	key.data = (void*)&VERSION_KEY;
 	key.size = sizeof(VERSION_KEY);
 
 	rv = DB_GET(ddb, &key, &data, 0);
@@ -90,7 +90,7 @@ db_copy_in(DB **mdb, const char *dbname, const char *uname, BTREEINFO *bti,
 		goto closeout;
 	} else if (rv == 0) {	/* It's there; verify version. */
 		if (data.size != sizeof(version)) {
-			warnx("invalid version size %d in %s",
+			warnx("invalid version size %zd in %s",
 			    data.size, uname);
 			error = -1;
 			goto closeout;
@@ -176,7 +176,7 @@ db_copy_out(DB *mdb, const char *dbname, const char *uname, BTREEINFO *bti)
 
 out:
 	/* Add a version record. */
-	key.data = &VERSION_KEY;
+	key.data = (void*)&VERSION_KEY;
 	key.size = sizeof(VERSION_KEY);
 	version = 2;
 	data.data = &version;
