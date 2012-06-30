@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)gprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/gprof/gprof.c,v 1.24 2004/07/11 17:37:33 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <limits.h>
@@ -165,7 +165,7 @@ main(argc, argv)
 	 *	get information from the executable file.
 	 */
     if ((Kflag && kernel_getnfile(a_outname, &defaultEs) == -1) ||
-      (elf_getnfile(a_outname, &defaultEs) == -1 &&
+      (!Kflag && elf_getnfile(a_outname, &defaultEs) == -1 &&
       aout_getnfile(a_outname, &defaultEs) == -1))
 	errx(1, "%s: bad format", a_outname);
 	/*
