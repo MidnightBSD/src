@@ -30,7 +30,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.sbin/sa/pdb.c,v 1.14 2007/05/22 06:51:38 dds Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.sbin/sa/pdb.c,v 1.2 2008/11/25 01:16:24 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/acct.h>
@@ -95,14 +95,14 @@ v1_to_v2(DBT *key __unused, DBT *data)
 
 /* Copy pdb_file to in-memory pacct_db. */
 int
-pacct_init()
+pacct_init(void)
 {
 	return (db_copy_in(&pacct_db, pdb_file, "process accounting",
 	    NULL, v1_to_v2));
 }
 
 void
-pacct_destroy()
+pacct_destroy(void)
 {
 	db_destroy(pacct_db, "process accounting");
 }
@@ -151,14 +151,14 @@ pacct_add(const struct cmdinfo *ci)
 
 /* Copy in-memory pacct_db to pdb_file. */
 int
-pacct_update()
+pacct_update(void)
 {
 	return (db_copy_out(pacct_db, pdb_file, "process accounting",
 	    NULL));
 }
 
 void
-pacct_print()
+pacct_print(void)
 {
 	BTREEINFO bti;
 	DBT key, data, ndata;

@@ -30,7 +30,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.sbin/sa/usrdb.c,v 1.16 2007/05/22 06:51:38 dds Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.sbin/sa/usrdb.c,v 1.2 2008/11/25 01:16:24 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -98,7 +98,7 @@ v1_to_v2(DBT *key, DBT *data)
 
 /* Copy usrdb_file to in-memory usracct_db. */
 int
-usracct_init()
+usracct_init(void)
 {
 	BTREEINFO bti;
 
@@ -110,7 +110,7 @@ usracct_init()
 }
 
 void
-usracct_destroy()
+usracct_destroy(void)
 {
 	db_destroy(usracct_db, "user accounting");
 }
@@ -167,7 +167,7 @@ usracct_add(const struct cmdinfo *ci)
 
 /* Copy in-memory usracct_db to usrdb_file. */
 int
-usracct_update()
+usracct_update(void)
 {
 	BTREEINFO bti;
 
@@ -179,7 +179,7 @@ usracct_update()
 }
 
 void
-usracct_print()
+usracct_print(void)
 {
 	DBT key, data;
 	struct userinfo uistore, *ui = &uistore;
