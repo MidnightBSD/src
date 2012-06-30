@@ -38299,6 +38299,8 @@ sys/dev/e1000/e1000_mac.c -text
 sys/dev/e1000/e1000_mac.h -text
 sys/dev/e1000/e1000_manage.c -text
 sys/dev/e1000/e1000_manage.h -text
+sys/dev/e1000/e1000_mbx.c -text
+sys/dev/e1000/e1000_mbx.h -text
 sys/dev/e1000/e1000_nvm.c -text
 sys/dev/e1000/e1000_nvm.h -text
 sys/dev/e1000/e1000_osdep.c -text
@@ -38306,10 +38308,14 @@ sys/dev/e1000/e1000_osdep.h -text
 sys/dev/e1000/e1000_phy.c -text
 sys/dev/e1000/e1000_phy.h -text
 sys/dev/e1000/e1000_regs.h -text
+sys/dev/e1000/e1000_vf.c -text
+sys/dev/e1000/e1000_vf.h -text
 sys/dev/e1000/if_em.c -text
 sys/dev/e1000/if_em.h -text
 sys/dev/e1000/if_igb.c -text
 sys/dev/e1000/if_igb.h -text
+sys/dev/e1000/if_lem.c -text
+sys/dev/e1000/if_lem.h -text
 sys/dev/ed/ax88x90reg.h -text
 sys/dev/ed/dl100xxreg.h -text
 sys/dev/ed/if_ed.c -text

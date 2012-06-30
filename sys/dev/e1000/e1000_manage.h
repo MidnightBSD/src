@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: src/sys/dev/e1000/e1000_manage.h,v 1.1.2.1.6.1 2010/02/10 00:26:20 kensmith Exp $*/
+/*$FreeBSD: src/sys/dev/e1000/e1000_manage.h,v 1.1.2.1 2008/08/11 18:33:10 jfv Exp $*/
 
 #ifndef _E1000_MANAGE_H_
 #define _E1000_MANAGE_H_
