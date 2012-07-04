@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.7.2.1 2007/11/21 16:43:46 jhb Exp $");
+__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.7.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -36,6 +37,7 @@ __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.7.2.1 2007/11/21 16:43:4
 #include <kvm.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <defs.h>
 #include <frame-unwind.h>
@@ -59,10 +61,8 @@ kgdb_lookup(const char *sym)
 
 	nl[0].n_name = (char *)(uintptr_t)sym;
 	nl[1].n_name = NULL;
-	if (kvm_nlist(kvm, nl) != 0) {
-		warnx("kvm_nlist(%s): %s", sym, kvm_geterr(kvm));
+	if (kvm_nlist(kvm, nl) != 0)
 		return (0);
-	}
 	return (nl[0].n_value);
 }
 
@@ -79,15 +79,25 @@ kgdb_thr_init(void)
 	struct thread td;
 	struct kthr *kt;
 	uintptr_t addr, paddr;
+	
+	while (first != NULL) {
+		kt = first;
+		first = kt->next;
+		free(kt);
+	}
 
 	addr = kgdb_lookup("_allproc");
-	if (addr == 0)
+	if (addr == 0) {
+		warnx("kvm_nlist(_allproc): %s", kvm_geterr(kvm));
 		return (NULL);
+	}
 	kvm_read(kvm, addr, &paddr, sizeof(paddr));
 
 	dumppcb = kgdb_lookup("_dumppcb");
-	if (dumppcb == 0)
+	if (dumppcb == 0) {
+		warnx("kvm_nlist(_dumppcb): %s", kvm_geterr(kvm));
 		return (NULL);
+	}
 
 	addr = kgdb_lookup("_dumptid");
 	if (addr != 0)
@@ -204,17 +214,20 @@ kgdb_thr_select(struct kthr *kt)
 char *
 kgdb_thr_extra_thread_info(int tid)
 {
+	char comm[MAXCOMLEN + 1];
 	struct kthr *kt;
 	struct proc *p;
-	static char comm[MAXCOMLEN + 1];
+	static char buf[64];
 
 	kt = kgdb_thr_lookup_tid(tid);
 	if (kt == NULL)
-		return (NULL);
+		return (NULL);	
+	snprintf(buf, sizeof(buf), "PID=%d", kt->pid);
 	p = (struct proc *)kt->paddr;
 	if (kvm_read(kvm, (uintptr_t)&p->p_comm[0], &comm, sizeof(comm)) !=
 	    sizeof(comm))
-		return (NULL);
-
-	return (comm);
+		return (buf);
+	strlcat(buf, ": ", sizeof(buf));
+	strlcat(buf, comm, sizeof(buf));
+	return (buf);
 }

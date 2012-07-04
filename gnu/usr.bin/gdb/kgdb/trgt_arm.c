@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_arm.c,v 1.3 2006/10/16 20:07:23 jhb Exp $");
+__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_arm.c,v 1.3.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #ifndef CROSS_DEBUGGER
@@ -55,7 +56,7 @@ kgdb_trgt_fetch_registers(int regno __unused)
 	struct pcb pcb;
 	int i, reg;
 
-	kt = kgdb_thr_lookup_tid(ptid_get_tid(inferior_ptid));
+	kt = kgdb_thr_lookup_tid(ptid_get_pid(inferior_ptid));
 	if (kt == NULL)
 		return;
 	if (kvm_read(kvm, kt->pcb, &pcb, sizeof(pcb)) != sizeof(pcb)) {
@@ -87,6 +88,11 @@ void
 kgdb_trgt_store_registers(int regno __unused)
 {
 	fprintf_unfiltered(gdb_stderr, "XXX: %s\n", __func__);
+}
+
+void
+kgdb_trgt_new_objfile(struct objfile *objfile)
+{
 }
 
 #ifndef CROSS_DEBUGGER

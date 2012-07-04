@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/gnu/usr.bin/gdb/kgdb/kgdb.h,v 1.5.2.1 2007/11/21 16:43:46 jhb Exp $
+ * $FreeBSD: src/gnu/usr.bin/gdb/kgdb/kgdb.h,v 1.5.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _KGDB_H_
@@ -46,9 +47,14 @@ struct kthr {
 
 extern struct kthr *curkthr;
 
-void kgdb_target(void);
+void initialize_kld_target(void);
+void initialize_kgdb_target(void);
+void kgdb_dmesg(void);
+void kgdb_trgt_new_objfile(struct objfile *);
 void kgdb_trgt_fetch_registers(int);
 void kgdb_trgt_store_registers(int);
+void kld_init(void);
+void kld_new_objfile(struct objfile *);
 
 frame_unwind_sniffer_ftype kgdb_trgt_trapframe_sniffer;
 
@@ -63,5 +69,9 @@ struct kthr *kgdb_thr_select(struct kthr *);
 char        *kgdb_thr_extra_thread_info(int);
 
 uintptr_t kgdb_lookup(const char *sym);
+CORE_ADDR kgdb_parse_1(const char *, int);
+
+#define	kgdb_parse(exp)		kgdb_parse_1((exp), 0)
+#define	kgdb_parse_quiet(exp)	kgdb_parse_1((exp), 1)
 
 #endif /* _KGDB_H_ */
