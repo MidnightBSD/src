@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.36 2011/12/07 13:40:58 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.37 2011/12/07 13:52:58 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -90,6 +90,7 @@ SUBDIR=	alias \
 	${_hesinfo} \
 	hexdump \
 	${_host} \
+	${_iconv} \
 	id \
 	indent \
 	ipcrm \
@@ -129,6 +130,9 @@ SUBDIR=	alias \
 	makewhatis \
 	mesg \
 	minigzip \
+ 	ministat \
+ 	${_mkcsmapper} \
+ 	${_mkesdb} \
 	mkdep \
 	mkfifo \
 	mklocale \
@@ -283,6 +287,12 @@ _newkey=	newkey
 _hesinfo=	hesinfo
 .endif
 
+.if ${MK_ICONV} != "no"
+_iconv=		iconv
+_mkcsmapper=	mkcsmapper
+_mkesdb=	mkesdb
+.endif
+
 .if ${MK_NETCAT} != "no"
 _nc=		nc
 .endif
@@ -331,5 +341,9 @@ _ncplogin=	ncplogin
 .endif
 _smbutil=	smbutil
 .endif
+
+.include <bsd.arch.inc.mk>
+
+SUBDIR:=	${SUBDIR:O}
 
 .include <bsd.subdir.mk>
