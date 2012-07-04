@@ -1,6 +1,6 @@
 # ex:ts=8
 # $FreeBSD: src/gnu/usr.bin/binutils/gdb/Makefile,v 1.82 2004/12/21 09:59:40 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/binutils/gdb/Makefile,v 1.2 2009/11/26 15:18:03 laffer1 Exp $
 
 .include "../Makefile.inc0"
 
@@ -52,7 +52,7 @@ SRCS=	init.c ${XSRCS} nm.h tm.h xm.h gdbversion.c xregex.h
 .include "${.CURDIR}/Makefile.${TARGET_ARCH}"
 
 WARNS?=	0
-.if ${TARGET_ARCH} != ${MACHINE_ARCH}
+.if ${TARGET_ARCH} != ${MACHINE_CPUARCH}
 CFLAGS+=	-DCROSS_COMPILE=1
 .endif
 CFLAGS+=	-DDEFAULT_BFD_ARCH=bfd_${GDB_CPU}_arch
@@ -138,8 +138,8 @@ GDB_VERSION=	"5.2.1 (FreeBSD)"
 gdbversion.c: Makefile
 	@echo '#include "version.h"'				> ${.TARGET}
 	@echo 'const char version[] = ${GDB_VERSION};'		>>${.TARGET}
-	@echo 'const char host_name[] = "${MACHINE_ARCH}-undermydesk-freebsd";'			>>${.TARGET}
-	@echo 'const char target_name[] = "${TARGET_ARCH}-undermydesk-freebsd";'		>>${.TARGET}
+	@echo 'const char host_name[] = "${MACHINE_CPUARCH}-undermydesk-midnightbsd";'			>>${.TARGET}
+	@echo 'const char target_name[] = "${TARGET_ARCH}-undermydesk-midnightbsd";'		>>${.TARGET}
 
 xregex.h:
 	@echo '#include <gnu/regex.h>' >${.TARGET}
