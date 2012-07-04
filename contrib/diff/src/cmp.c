@@ -1,6 +1,6 @@
 /* cmp - compare two files byte by byte
 
-   Copyright (C) 1990-1996, 1998, 2001-2002, 2004, 2006-2007, 2009-2010 Free
+   Copyright (C) 1990-1996, 1998, 2001-2002, 2004, 2006-2007, 2009-2011 Free
    Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -158,15 +158,15 @@ check_stdout (void)
 }
 
 static char const * const option_help_msgid[] = {
-  N_("-b  --print-bytes  Print differing bytes."),
-  N_("-i SKIP  --ignore-initial=SKIP  Skip the first SKIP bytes of input."),
-  N_("-i SKIP1:SKIP2  --ignore-initial=SKIP1:SKIP2"),
-  N_("  Skip the first SKIP1 bytes of FILE1 and the first SKIP2 bytes of FILE2."),
-  N_("-l  --verbose  Output byte numbers and values of all differing bytes."),
-  N_("-n LIMIT  --bytes=LIMIT  Compare at most LIMIT bytes."),
-  N_("-s  --quiet  --silent  Output nothing; yield exit status only."),
-  N_("-v  --version  Output version info."),
-  N_("--help  Output this help."),
+  N_("-b, --print-bytes          print differing bytes"),
+  N_("-i, --ignore-initial=SKIP         skip first SKIP bytes of both inputs"),
+  N_("-i, --ignore-initial=SKIP1:SKIP2  skip first SKIP1 bytes of FILE1 and\n"
+     "                                      first SKIP2 bytes of FILE2"),
+  N_("-l, --verbose              output byte numbers and differing byte values"),
+  N_("-n, --bytes=LIMIT          compare at most LIMIT bytes"),
+  N_("-s, --quiet, --silent      suppress all normal output"),
+  N_("    --help                 display this help and exit"),
+  N_("-v, --version              output version information and exit"),
   0
 };
 
@@ -177,11 +177,17 @@ usage (void)
 
   printf (_("Usage: %s [OPTION]... FILE1 [FILE2 [SKIP1 [SKIP2]]]\n"),
 	  program_name);
-  printf ("%s\n\n", _("Compare two files byte by byte."));
+  printf ("%s\n", _("Compare two files byte by byte."));
+  printf ("\n%s\n\n",
+_("The optional SKIP1 and SKIP2 specify the number of bytes to skip\n"
+  "at the beginning of each file (zero by default)."));
+
+  fputs (_("\
+Mandatory arguments to long options are mandatory for short options too.\n\
+"), stdout);
   for (p = option_help_msgid;  *p;  p++)
     printf ("  %s\n", _(*p));
-  printf ("\n%s\n%s\n\n%s\n%s\n",
-	  _("SKIP1 and SKIP2 are the number of bytes to skip in each file."),
+  printf ("\n%s\n\n%s\n%s\n",
 	  _("SKIP values may be followed by the following multiplicative suffixes:\n\
 kB 1000, K 1024, MB 1,000,000, M 1,048,576,\n\
 GB 1,000,000,000, G 1,073,741,824, and so on for T, P, E, Z, Y."),
@@ -242,7 +248,7 @@ main (int argc, char **argv)
 	break;
 
       case 'v':
-	version_etc (stdout, PROGRAM_NAME, PACKAGE_NAME, PACKAGE_VERSION,
+	version_etc (stdout, PROGRAM_NAME, PACKAGE_NAME, Version,
 		     AUTHORS, (char *) NULL);
 	check_stdout ();
 	return EXIT_SUCCESS;

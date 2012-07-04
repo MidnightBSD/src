@@ -1,7 +1,6 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
-/* Copyright (C) 1992, 1995-2002, 2005-2010 Free Software Foundation, Inc.
+/* Copyright (C) 1992, 1995-2002, 2005-2011 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    This program is free software: you can redistribute it and/or modify
@@ -100,6 +99,13 @@ weak_alias (__unsetenv, unsetenv)
 #else /* HAVE_UNSETENV */
 
 # undef unsetenv
+# if !HAVE_DECL_UNSETENV
+#  if VOID_UNSETENV
+extern void unsetenv (const char *);
+#  else
+extern int unsetenv (const char *);
+#  endif
+# endif
 
 /* Call the underlying unsetenv, in case there is hidden bookkeeping
    that needs updating beyond just modifying environ.  */

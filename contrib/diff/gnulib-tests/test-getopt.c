@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Test of command line argument processing.
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,7 +24,7 @@
    ftell link warning if we are not using the gnulib ftell module.  */
 #define _GL_NO_LARGE_FILES
 
-#if GNULIB_GETOPT_GNU
+#if GNULIB_TEST_GETOPT_GNU
 # include <getopt.h>
 
 # ifndef __getopt_argv_const
@@ -61,7 +60,7 @@ SIGNATURE_CHECK (getopt, int, (int, char * const[], char const *));
 static FILE *myerr;
 
 #include "test-getopt.h"
-#if GNULIB_GETOPT_GNU
+#if GNULIB_TEST_GETOPT_GNU
 # include "test-getopt_long.h"
 #endif
 
@@ -83,14 +82,14 @@ main (void)
   setenv ("POSIXLY_CORRECT", "1", 1);
   test_getopt ();
 
-#if GNULIB_GETOPT_GNU
+#if GNULIB_TEST_GETOPT_GNU
   test_getopt_long_posix ();
 #endif
 
   unsetenv ("POSIXLY_CORRECT");
   test_getopt ();
 
-#if GNULIB_GETOPT_GNU
+#if GNULIB_TEST_GETOPT_GNU
   test_getopt_long ();
   test_getopt_long_only ();
 #endif

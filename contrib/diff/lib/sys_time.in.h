@@ -1,9 +1,8 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Provide a more complete sys/time.h.
 
-   Copyright (C) 2007-2010 Free Software Foundation, Inc.
+   Copyright (C) 2007-2011 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,8 +23,9 @@
 #if __GNUC__ >= 3
 @PRAGMA_SYSTEM_HEADER@
 #endif
+@PRAGMA_COLUMNS@
 
-#if defined _GL_SYS_TIME_H
+#if defined _@GUARD_PREFIX@_SYS_TIME_H
 
 /* Simply delegate to the system's header, without adding anything.  */
 # if @HAVE_SYS_TIME_H@
@@ -34,7 +34,7 @@
 
 #else
 
-# define _GL_SYS_TIME_H
+# define _@GUARD_PREFIX@_SYS_TIME_H
 
 # if @HAVE_SYS_TIME_H@
 #  @INCLUDE_NEXT@ @NEXT_SYS_TIME_H@
@@ -42,39 +42,62 @@
 #  include <time.h>
 # endif
 
+/* The definitions of _GL_FUNCDECL_RPL etc. are copied here.  */
+
 /* The definition of _GL_ARG_NONNULL is copied here.  */
 
 /* The definition of _GL_WARN_ON_USE is copied here.  */
 
-#ifdef __cplusplus
+# ifdef __cplusplus
 extern "C" {
-#endif
+# endif
 
 # if ! @HAVE_STRUCT_TIMEVAL@
+
+#  if !GNULIB_defined_struct_timeval
 struct timeval
 {
   time_t tv_sec;
   long int tv_usec;
 };
+#   define GNULIB_defined_struct_timeval 1
+#  endif
+
+# endif
+
+# ifdef __cplusplus
+}
 # endif
 
 # if @GNULIB_GETTIMEOFDAY@
 #  if @REPLACE_GETTIMEOFDAY@
-#   undef gettimeofday
-#   define gettimeofday rpl_gettimeofday
-extern int gettimeofday (struct timeval *restrict, void *restrict)
-     _GL_ARG_NONNULL ((1));
+#   if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#    undef gettimeofday
+#    define gettimeofday rpl_gettimeofday
+#   endif
+_GL_FUNCDECL_RPL (gettimeofday, int,
+                  (struct timeval *restrict, void *restrict)
+                  _GL_ARG_NONNULL ((1)));
+_GL_CXXALIAS_RPL (gettimeofday, int,
+                  (struct timeval *restrict, void *restrict));
+#  else
+#   if !@HAVE_GETTIMEOFDAY@
+_GL_FUNCDECL_SYS (gettimeofday, int,
+                  (struct timeval *restrict, void *restrict)
+                  _GL_ARG_NONNULL ((1)));
+#   endif
+/* Need to cast, because on glibc systems, by default, the second argument is
+                                                  struct timezone *.  */
+_GL_CXXALIAS_SYS_CAST (gettimeofday, int,
+                       (struct timeval *restrict, void *restrict));
 #  endif
+_GL_CXXALIASWARN (gettimeofday);
 # elif defined GNULIB_POSIXCHECK
 #  undef gettimeofday
 #  if HAVE_RAW_DECL_GETTIMEOFDAY
 _GL_WARN_ON_USE (gettimeofday, "gettimeofday is unportable - "
-		 "use gnulib module gettimeofday for portability");
+                 "use gnulib module gettimeofday for portability");
 #  endif
 # endif
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _GL_SYS_TIME_H */
+#endif /* _@GUARD_PREFIX@_SYS_TIME_H */

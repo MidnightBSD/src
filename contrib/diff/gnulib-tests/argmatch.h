@@ -1,10 +1,9 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* argmatch.h -- definitions and prototypes for argmatch.c
 
-   Copyright (C) 1990, 1998, 1999, 2001, 2002, 2004, 2005, 2009, 2010 Free
-   Software Foundation, Inc.
+   Copyright (C) 1990, 1998-1999, 2001-2002, 2004-2005, 2009-2011 Free Software
+   Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -76,8 +75,8 @@ void argmatch_valid (char const *const *arglist,
 
 
 
-/* Same as argmatch, but upon failure, reports a explanation on the
-   failure, and exits using the function EXIT_FN. */
+/* Same as argmatch, but upon failure, report an explanation of the
+   failure, and exit using the function EXIT_FN. */
 
 ptrdiff_t __xargmatch_internal (char const *context,
                                 char const *arg, char const *const *arglist,

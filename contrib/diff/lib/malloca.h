@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Safe automatic memory allocation.
-   Copyright (C) 2003-2007, 2009-2010 Free Software Foundation, Inc.
+   Copyright (C) 2003-2007, 2009-2011 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software; you can redistribute it and/or modify

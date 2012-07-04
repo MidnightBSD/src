@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Test of exact or abbreviated match search.
-   Copyright (C) 1990, 1998-1999, 2001-2010 Free Software Foundation, Inc.
+   Copyright (C) 1990, 1998-1999, 2001-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -32,7 +31,10 @@
 /* Some packages define ARGMATCH_DIE and ARGMATCH_DIE_DECL in <config.h>, and
    thus must link with a definition of that function.  Provide it here.  */
 #ifdef ARGMATCH_DIE_DECL
+
+_Noreturn ARGMATCH_DIE_DECL;
 ARGMATCH_DIE_DECL { exit (1); }
+
 #endif
 
 enum backup_type

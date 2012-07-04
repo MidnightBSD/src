@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Test of safe automatic memory allocation.
-   Copyright (C) 2005, 2007, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2007, 2009-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,7 +29,7 @@ do_allocation (int n)
 {
   void *ptr = malloca (n);
   freea (ptr);
-  ptr = safe_alloca (n);
+  safe_alloca (n);
 }
 
 void (*func) (int) = do_allocation;
@@ -39,6 +38,9 @@ int
 main ()
 {
   int i;
+
+  /* This slows down malloc a lot.  */
+  unsetenv ("MALLOC_PERTURB_");
 
   /* Repeat a lot of times, to make sure there's no memory leak.  */
   for (i = 0; i < 50000; i++)

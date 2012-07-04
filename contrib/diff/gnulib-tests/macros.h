@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Common macros used by gnulib tests.
-   Copyright (C) 2006-2010 Free Software Foundation, Inc.
+   Copyright (C) 2006-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -65,3 +64,7 @@
    *not* work for function parameters of array type, because they are actually
    parameters of pointer type.  */
 #define SIZEOF(array) (sizeof (array) / sizeof (array[0]))
+
+/* STREQ (str1, str2)
+   Return true if two strings compare equal.  */
+#define STREQ(a, b) (strcmp (a, b) == 0)

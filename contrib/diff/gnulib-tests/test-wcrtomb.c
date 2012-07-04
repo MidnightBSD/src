@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Test of conversion of wide character to multibyte character.
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -106,6 +105,14 @@ main (int argc, char *argv[])
           ASSERT (buf[0] == (char) c);
           break;
         }
+  }
+
+  /* Test special calling convention, passing a NULL pointer.  */
+  {
+    ret = wcrtomb (NULL, '\0', NULL);
+    ASSERT (ret == 1);
+    ret = wcrtomb (NULL, btowc ('x'), NULL);
+    ASSERT (ret == 1);
   }
 
   if (argc > 1)

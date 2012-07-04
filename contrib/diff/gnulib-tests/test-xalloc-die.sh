@@ -1,6 +1,6 @@
 #!/bin/sh
 # Test suite for xalloc_die.
-# Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+# Copyright (C) 2009-2011 Free Software Foundation, Inc.
 # This file is part of the GNUlib Library.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 . "${srcdir=.}/init.sh"; path_prepend_ .
 
-test-xalloc-die${EXEEXT} 2> err > out
+test-xalloc-die${EXEEXT} > out 2> err
 case $? in
   1) ;;
   *) Exit 1;;

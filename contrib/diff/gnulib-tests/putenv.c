@@ -1,7 +1,6 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
-/* Copyright (C) 1991, 1994, 1997-1998, 2000, 2003-2010 Free Software
+/* Copyright (C) 1991, 1994, 1997-1998, 2000, 2003-2011 Free Software
    Foundation, Inc.
 
    NOTE: The canonical source of this file is maintained with the GNU C

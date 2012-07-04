@@ -1,6 +1,6 @@
 /* Context-format output routines for GNU DIFF.
 
-   Copyright (C) 1988-1989, 1991-1995, 1998, 2001-2002, 2004, 2006, 2009-2010
+   Copyright (C) 1988-1989, 1991-1995, 1998, 2001-2002, 2004, 2006, 2009-2011
    Free Software Foundation, Inc.
 
    This file is part of GNU DIFF.
@@ -19,7 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "diff.h"
-#include <inttostr.h>
+#include "c-ctype.h"
 #include <stat-time.h>
 #include <strftime.h>
 
@@ -145,13 +145,15 @@ print_context_number_range (struct file_data const *file, lin a, lin b)
 static void
 print_context_function (FILE *out, char const *function)
 {
-  int i;
+  int i, j;
   putc (' ', out);
-  for (i = 0; i < 40 && function[i] != '\n'; i++)
+  for (i = 0; c_isspace ((unsigned char) function[i]) && function[i] != '\n'; i++)
     continue;
-  while (0 < i && isspace ((unsigned char) function[i - 1]))
-    i--;
-  fwrite (function, sizeof (char), i, out);
+  for (j = i; j < i + 40 && function[j] != '\n'; j++)
+    continue;
+  while (i < j && c_isspace ((unsigned char) function[j - 1]))
+    j--;
+  fwrite (function + i, sizeof (char), j - i, out);
 }
 
 /* Print a portion of an edit script in context format.

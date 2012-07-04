@@ -1,7 +1,7 @@
 /* Analyze file differences for GNU DIFF.
 
    Copyright (C) 1988-1989, 1992-1995, 1998, 2001-2002, 2004, 2006-2007,
-   2009-2010 Free Software Foundation, Inc.
+   2009-2011 Free Software Foundation, Inc.
 
    This file is part of GNU DIFF.
 
@@ -454,9 +454,14 @@ briefly_report (int changes, struct file_data const filevec[])
     {
       char const *label0 = file_label[0] ? file_label[0] : filevec[0].name;
       char const *label1 = file_label[1] ? file_label[1] : filevec[1].name;
-      message ("Files %s and %s differ\n", label0, label1);
-      if (! brief)
-	changes = 2;
+
+      if (brief)
+	message ("Files %s and %s differ\n", label0, label1);
+      else
+	{
+	  message ("Binary files %s and %s differ\n", label0, label1);
+	  changes = 2;
+	}
     }
 
   return changes;

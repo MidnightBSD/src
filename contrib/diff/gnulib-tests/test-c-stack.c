@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Test of c-stack module.
-   Copyright (C) 2002, 2004, 2006, 2008-2010 Free Software Foundation, Inc.
+   Copyright (C) 2002, 2004, 2006, 2008-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -64,7 +63,7 @@ main (int argc, char **argv)
 #endif
 
   program_name = argv[0];
-  if (c_stack_action (0) == 0)
+  if (c_stack_action (NULL) == 0)
     {
       if (1 < argc)
         {

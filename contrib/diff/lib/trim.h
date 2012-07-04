@@ -1,5 +1,5 @@
 /* Removes leading and/or trailing whitespaces
-   Copyright (C) 2006, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2009-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,4 +30,4 @@
 /* Removes leading whitespaces. */
 #define trim_leading(s) trim2(s, TRIM_LEADING)
 
-char *trim2(const char *, int);
+char *trim2 (const char *, int);

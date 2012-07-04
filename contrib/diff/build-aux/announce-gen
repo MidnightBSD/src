@@ -3,13 +3,13 @@ eval '(exit $?0)' && eval 'exec perl -wS "$0" ${1+"$@"}'
     if 0;
 # Generate a release announcement message.
 
-my $VERSION = '2009-11-20 13:36'; # UTC
+my $VERSION = '2011-05-17 20:25'; # UTC
 # The definition above must lie within the first 8 lines in order
 # for the Emacs time-stamp write hook (at end) to update it.
 # If you change this file with Emacs, please let the write hook
 # do its job.  Otherwise, update this string manually.
 
-# Copyright (C) 2002-2010 Free Software Foundation, Inc.
+# Copyright (C) 2002-2011 Free Software Foundation, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -75,6 +75,8 @@ The following are optional:
                                 required if gnulib is in TOOL_LIST.
    --no-print-checksums         do not emit MD5 or SHA1 checksums
    --archive-suffix=SUF         add SUF to the list of archive suffixes
+   --mail-headers=HEADERS       a space-separated list of mail headers, e.g.,
+                                To: x\@example.com Cc: y-announce\@example.com,...
 
    --help             display this help and exit
    --version          output version information and exit
@@ -104,7 +106,7 @@ sub sizes (@)
       my $t = `$cmd`;
       # FIXME-someday: give a better diagnostic, a la $PROCESS_STATUS
       $@
-	and (warn "$ME: command failed: `$cmd'\n"), $fail = 1;
+        and (warn "$ME: command failed: `$cmd'\n"), $fail = 1;
       chomp $t;
       $t =~ s/^([\d.]+[MkK]).*/${1}B/;
       $res{$f} = $t;
@@ -126,12 +128,12 @@ sub print_locations ($\@\%@)
   foreach my $url (@{$url})
     {
       for my $file (@file)
-	{
-	  print "  $url/$file";
-	  print "   (", $$size{$file}, ")"
-	    if exists $$size{$file};
-	  print "\n";
-	}
+        {
+          print "  $url/$file";
+          print "   (", $$size{$file}, ")"
+            if exists $$size{$file};
+          print "\n";
+        }
     }
   print "\n";
 }
@@ -152,17 +154,17 @@ sub print_checksums (@)
   foreach my $meth (qw (md5 sha1))
     {
       foreach my $f (@file)
-	{
-	  open IN, '<', $f
-	    or die "$ME: $f: cannot open for reading: $!\n";
-	  binmode IN;
-	  my $dig =
-	    ($meth eq 'md5'
-	     ? Digest::MD5->new->addfile(*IN)->hexdigest
-	     : Digest::SHA1->new->addfile(*IN)->hexdigest);
-	  close IN;
-	  print "$dig  $f\n";
-	}
+        {
+          open IN, '<', $f
+            or die "$ME: $f: cannot open for reading: $!\n";
+          binmode IN;
+          my $dig =
+            ($meth eq 'md5'
+             ? Digest::MD5->new->addfile(*IN)->hexdigest
+             : Digest::SHA1->new->addfile(*IN)->hexdigest);
+          close IN;
+          print "$dig  $f\n";
+        }
     }
   print "\n";
 }
@@ -178,7 +180,10 @@ sub print_news_deltas ($$$)
 {
   my ($news_file, $prev_version, $curr_version) = @_;
 
-  print "\n$news_file\n\n";
+  my $news_name = $news_file;
+  $news_name =~ s|^\./||;
+
+  print "\n$news_name\n\n";
 
   # Print all lines from $news_file, starting with the first one
   # that mentions $curr_version up to but not including
@@ -187,34 +192,39 @@ sub print_news_deltas ($$$)
 
   my $re_prefix = qr/(?:\* )?(?:Noteworthy c|Major c|C)(?i:hanges)/;
 
+  my $found_news;
   open NEWS, '<', $news_file
     or die "$ME: $news_file: cannot open for reading: $!\n";
   while (defined (my $line = <NEWS>))
     {
       if ( ! $in_items)
-	{
-	  # Match lines like these:
-	  # * Major changes in release 5.0.1:
-	  # * Noteworthy changes in release 6.6 (2006-11-22) [stable]
-	  $line =~ /^$re_prefix.*(?:[^\d.]|$)\Q$curr_version\E(?:[^\d.]|$)/o
-	    or next;
-	  $in_items = 1;
-	  print $line;
-	}
+        {
+          # Match lines like these:
+          # * Major changes in release 5.0.1:
+          # * Noteworthy changes in release 6.6 (2006-11-22) [stable]
+          $line =~ /^$re_prefix.*(?:[^\d.]|$)\Q$curr_version\E(?:[^\d.]|$)/o
+            or next;
+          $in_items = 1;
+          print $line;
+        }
       else
-	{
-	  # This regexp must not match version numbers in NEWS items.
-	  # For example, they might well say `introduced in 4.5.5',
-	  # and we don't want that to match.
-	  $line =~ /^$re_prefix.*(?:[^\d.]|$)\Q$prev_version\E(?:[^\d.]|$)/o
-	    and last;
-	  print $line;
-	}
+        {
+          # This regexp must not match version numbers in NEWS items.
+          # For example, they might well say `introduced in 4.5.5',
+          # and we don't want that to match.
+          $line =~ /^$re_prefix.*(?:[^\d.]|$)\Q$prev_version\E(?:[^\d.]|$)/o
+            and last;
+          print $line;
+          $line =~ /\S/
+            and $found_news = 1;
+        }
     }
   close NEWS;
 
   $in_items
     or die "$ME: $news_file: no matching lines for `$curr_version'\n";
+  $found_news
+    or die "$ME: $news_file: no news item found for `$curr_version'\n";
 }
 
 sub print_changelog_deltas ($$)
@@ -227,8 +237,8 @@ sub print_changelog_deltas ($$)
   use File::Find;
   my @changelog;
   find ({wanted => sub {$_ eq 'ChangeLog' && -d 'CVS'
-			  and push @changelog, $File::Find::name}},
-	'.');
+                          and push @changelog, $File::Find::name}},
+        '.');
 
   # If there are no ChangeLog files, we're done.
   @changelog
@@ -253,7 +263,7 @@ sub print_changelog_deltas ($$)
       my $dot_slash = $d eq '.' ? $d : "./$d";
       my $target = "$dot_slash/ChangeLog";
       delete $changelog{$target}
-	and push @reordered, $target;
+        and push @reordered, $target;
     }
 
   # Append any remaining ChangeLog files.
@@ -280,20 +290,20 @@ sub print_changelog_deltas ($$)
   while (defined (my $line = <DIFF>))
     {
       if ($line =~ /^\+\+\+ /)
-	{
-	  my $separator = "*"x70 ."\n";
-	  $line =~ s///;
-	  $line =~ s/\s.*//;
-	  $prev_printed_line_empty
-	    or print "\n";
-	  print $separator, $line, $separator;
-	}
+        {
+          my $separator = "*"x70 ."\n";
+          $line =~ s///;
+          $line =~ s/\s.*//;
+          $prev_printed_line_empty
+            or print "\n";
+          print $separator, $line, $separator;
+        }
       elsif ($line =~ /^\+/)
-	{
-	  $line =~ s///;
-	  print $line;
-	  $prev_printed_line_empty = ($line =~ /^$/);
-	}
+        {
+          $line =~ s///;
+          print $line;
+          $prev_printed_line_empty = ($line =~ /^$/);
+        }
     }
   close DIFF;
 
@@ -314,25 +324,25 @@ sub get_tool_versions ($$)
   foreach my $t (@$tool_list)
     {
       if ($t eq 'gnulib')
-	{
-	  push @tool_version_pair, ucfirst $t . ' ' . $gnulib_version;
-	  next;
-	}
+        {
+          push @tool_version_pair, ucfirst $t . ' ' . $gnulib_version;
+          next;
+        }
       # Assume that the last "word" on the first line of
       # `tool --version` output is the version string.
       my ($first_line, undef) = split ("\n", `$t --version`);
       if ($first_line =~ /.* (\d[\w.-]+)$/)
-	{
-	  $t = ucfirst $t;
-	  push @tool_version_pair, "$t $1";
-	}
+        {
+          $t = ucfirst $t;
+          push @tool_version_pair, "$t $1";
+        }
       else
-	{
-	  defined $first_line
-	    and $first_line = '';
-	  warn "$ME: $t: unexpected --version output\n:$first_line";
-	  $fail = 1;
-	}
+        {
+          defined $first_line
+            and $first_line = '';
+          warn "$ME: $t: unexpected --version output\n:$first_line";
+          $fail = 1;
+        }
     }
 
   $fail
@@ -346,6 +356,7 @@ sub get_tool_versions ($$)
   # issue "1,2" instead of "1.2", what confuses our regexps.
   $ENV{LC_ALL} = "C";
 
+  my $mail_headers;
   my $release_type;
   my $package_name;
   my $prev_version;
@@ -359,6 +370,7 @@ sub get_tool_versions ($$)
 
   GetOptions
     (
+     'mail-headers=s'     => \$mail_headers,
      'release-type=s'     => \$release_type,
      'package-name=s'     => \$package_name,
      'previous-version=s' => \$prev_version,
@@ -394,8 +406,8 @@ sub get_tool_versions ($$)
 
   grep (/^gnulib$/, @tool_list) ^ defined $gnulib_version
     and (warn "$ME: when specifying gnulib as a tool, you must also specify\n"
-	. "--gnulib-version=V, where V is the result of running git describe\n"
-	. "in the gnulib source directory.\n"), $fail = 1;
+        . "--gnulib-version=V, where V is the result of running git describe\n"
+        . "in the gnulib source directory.\n"), $fail = 1;
 
   exists $valid_release_types{$release_type}
     or (warn "$ME: `$release_type': invalid release type\n"), $fail = 1;
@@ -422,11 +434,18 @@ sub get_tool_versions ($$)
   %size
     or exit 1;
 
+  my $headers = '';
+  if (defined $mail_headers)
+    {
+      ($headers = $mail_headers) =~ s/\s+(\S+:)/\n$1/g;
+      $headers .= "\n";
+    }
+
   # The markup is escaped as <\# so that when this script is sent by
   # mail (or part of a diff), Gnus is not triggered.
   print <<EOF;
 
-Subject: $my_distdir released [$release_type]
+${headers}Subject: $my_distdir released [$release_type]
 
 <\#secure method=pgpmime mode=sign>
 
@@ -437,11 +456,11 @@ EOF
   print_locations ("compressed sources", @url_dir_list, %size, @tarballs);
   -f $xd
     and print_locations ("xdelta diffs (useful? if so, "
-			 . "please tell bug-gnulib\@gnu.org)",
-			 @url_dir_list, %size, $xd);
+                         . "please tell bug-gnulib\@gnu.org)",
+                         @url_dir_list, %size, $xd);
   my @sig_files = map { "$_.sig" } @tarballs;
   print_locations ("GPG detached signatures[*]", @url_dir_list, %size,
-		   @sig_files);
+                   @sig_files);
   if ($url_dir_list[0] =~ "gnu\.org")
     {
       print "To reduce load on the main server, use a mirror listed at:\n";

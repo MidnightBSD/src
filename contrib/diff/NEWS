@@ -1,5 +1,54 @@
 GNU diffutils NEWS                                    -*- outline -*-
 
+* Noteworthy changes in release 3.2 (2011-09-02) [stable]
+
+** Changes in behavior
+
+  --ignore-file-name-case now applies at the top level too.
+  For example, "diff dir inIt" might compare "dir/Init" to "inIt".
+
+** New features
+
+  diff and sdiff have a new option --ignore-trailing-space (-Z).
+
+** Packaging
+
+  The texinfo documentation no longer specifies "front-cover" or "back-cover"
+  texts, so that it may now be included in Debian's "main" section.
+
+
+* Noteworthy changes in release 3.1 (2011-08-10) [stable]
+
+** Bug fixes
+
+  diff no longer reports spurious differences merely because two entries
+  in the same directory have names that compare equal in the current
+  locale, or compare equal because --ignore-file-name-case was given.
+
+* Noteworthy changes in release 3.0 (2010-05-03) [stable]
+
+** Bug fixes
+
+  diff once again prints the required "\ No newline at end of file" line
+  when at least one input lacks a newline-at-EOF and the final hunk plus
+  context-length aligns exactly with the end of the newline-lacking file.
+  [bug introduced between 2.8.7 and 2.9]
+
+** Changes in behavior
+
+  In context-style diffs, diff prints a portion of a preceding "function"
+  line for each hunk, with --show-function-line=RE (-F) or
+  --show-c-function (-p).  Now, it trims leading blanks from such lines
+  before extracting a prefix.  This is useful especially when a function
+  line is so far indented that the name itself would be truncated or not
+  included in the limited-width substring that diff appends.
+
+  diff once again reports a difference with the diagnostic
+  "Binary files A and B differ" when at least one of the files
+  appears to be binary.  From 2.8.4 through diffutils-2.9, it printed
+  "Files A and B differ".
+
+
 * Noteworthy changes in release 2.9 (2010-02-11) [stable]
 
 ** New features
@@ -257,7 +306,7 @@ User-visible changes in version 2.0:
 
 
 
-Copyright (C) 1993-1994, 1998, 2001-2002, 2004, 2006, 2009-2010 Free Software
+Copyright (C) 1993-1994, 1998, 2001-2002, 2004, 2006, 2009-2011 Free Software
 Foundation, Inc.
 
 This file is part of GNU Diffutils.

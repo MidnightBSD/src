@@ -1,4 +1,4 @@
-/* Copyright (C) 2006-2010 Free Software Foundation, Inc.
+/* Copyright (C) 2006-2011 Free Software Foundation, Inc.
    Written by Paul Eggert, Bruno Haible, Derek Price.
    This file is part of gnulib.
 
@@ -20,15 +20,17 @@
  * <http://www.opengroup.org/susv3xbd/inttypes.h.html>
  */
 
+#if __GNUC__ >= 3
+@PRAGMA_SYSTEM_HEADER@
+#endif
+@PRAGMA_COLUMNS@
+
 /* Include the original <inttypes.h> if it exists, and if this file
    has not been included yet or if this file includes gnulib stdint.h
    which in turn includes this file.
    The include_next requires a split double-inclusion guard.  */
 #if ! defined INTTYPES_H || defined _GL_JUST_INCLUDE_SYSTEM_INTTYPES_H
 # if @HAVE_INTTYPES_H@
-#  if __GNUC__ >= 3
-@PRAGMA_SYSTEM_HEADER@
-#  endif
 #  @INCLUDE_NEXT@ @NEXT_INTTYPES_H@
 # endif
 #endif
@@ -1058,7 +1060,10 @@ _GL_WARN_ON_USE (imaxabs, "imaxabs is unportable - "
 
 #if @GNULIB_IMAXDIV@
 # if !@HAVE_DECL_IMAXDIV@
+#  if !GNULIB_defined_imaxdiv_t
 typedef struct { intmax_t quot; intmax_t rem; } imaxdiv_t;
+#   define GNULIB_defined_imaxdiv_t 1
+#  endif
 extern imaxdiv_t imaxdiv (intmax_t, intmax_t);
 # endif
 #elif defined GNULIB_POSIXCHECK
@@ -1071,6 +1076,7 @@ _GL_WARN_ON_USE (imaxdiv, "imaxdiv is unportable - "
 
 #if @GNULIB_STRTOIMAX@
 # if !@HAVE_DECL_STRTOIMAX@
+#  undef strtoimax
 extern intmax_t strtoimax (const char *, char **, int) _GL_ARG_NONNULL ((1));
 # endif
 #elif defined GNULIB_POSIXCHECK
@@ -1083,6 +1089,7 @@ _GL_WARN_ON_USE (strtoimax, "strtoimax is unportable - "
 
 #if @GNULIB_STRTOUMAX@
 # if !@HAVE_DECL_STRTOUMAX@
+#  undef strtoumax
 extern uintmax_t strtoumax (const char *, char **, int) _GL_ARG_NONNULL ((1));
 # endif
 #elif defined GNULIB_POSIXCHECK

@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Test of usleep() function.
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -31,7 +30,7 @@ SIGNATURE_CHECK (usleep, int, (useconds_t));
 #include "macros.h"
 
 int
-main(void)
+main (void)
 {
   time_t start = time (NULL);
   ASSERT (usleep (1000000) == 0);

@@ -1,5 +1,5 @@
 /* POSIX compatible signal blocking.
-   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2008-2011 Free Software Foundation, Inc.
    Written by Eric Blake <ebb9@byu.net>, 2008.
 
    This program is free software: you can redistribute it and/or modify
@@ -142,10 +142,10 @@ sigaction (int sig, const struct sigaction *restrict act,
       return -1;
     }
 
-  #ifdef SIGABRT_COMPAT
+#ifdef SIGABRT_COMPAT
   if (sig == SIGABRT_COMPAT)
     sig = SIGABRT;
-  #endif
+#endif
 
   /* POSIX requires sigaction() to be async-signal-safe.  In other
      words, if an asynchronous signal can occur while we are anywhere

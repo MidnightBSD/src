@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Tests of stat.
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,7 +35,6 @@ SIGNATURE_CHECK (stat, int, (char const *, struct stat *));
 #include <stdio.h>
 #include <unistd.h>
 
-#include "pathmax.h"
 #include "same-inode.h"
 #include "macros.h"
 

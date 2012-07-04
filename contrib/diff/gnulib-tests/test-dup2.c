@@ -1,8 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro: */
 /* DO NOT EDIT! GENERATED AUTOMATICALLY! */
-#line 1
 /* Test duplicating file descriptors.
-   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2009-2011 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -31,7 +30,7 @@ SIGNATURE_CHECK (dup2, int, (int, int));
 
 #include "binary-io.h"
 
-#if GNULIB_CLOEXEC
+#if GNULIB_TEST_CLOEXEC
 # include "cloexec.h"
 #endif
 
@@ -60,7 +59,7 @@ is_open (int fd)
 #endif
 }
 
-#if GNULIB_CLOEXEC
+#if GNULIB_TEST_CLOEXEC
 /* Return non-zero if FD is open and inheritable across exec/spawn.  */
 static int
 is_inheritable (int fd)
@@ -82,7 +81,7 @@ is_inheritable (int fd)
   return 0 <= i && (i & FD_CLOEXEC) == 0;
 # endif
 }
-#endif /* GNULIB_CLOEXEC */
+#endif /* GNULIB_TEST_CLOEXEC */
 
 #if !O_BINARY
 # define setmode(f,m) zero ()
@@ -164,7 +163,7 @@ main (void)
   ASSERT (read (fd, buffer, 1) == 1);
   ASSERT (*buffer == '2');
 
-#if GNULIB_CLOEXEC
+#if GNULIB_TEST_CLOEXEC
   /* Any new fd created by dup2 must not be cloexec.  */
   ASSERT (close (fd + 2) == 0);
   ASSERT (dup_cloexec (fd) == fd + 1);
@@ -172,7 +171,12 @@ main (void)
   ASSERT (dup2 (fd + 1, fd + 1) == fd + 1);
   ASSERT (!is_inheritable (fd + 1));
   ASSERT (dup2 (fd + 1, fd + 2) == fd + 2);
+  ASSERT (!is_inheritable (fd + 1));
   ASSERT (is_inheritable (fd + 2));
+  errno = 0;
+  ASSERT (dup2 (fd + 1, -1) == -1);
+  ASSERT (errno == EBADF);
+  ASSERT (!is_inheritable (fd + 1));
 #endif
 
   /* On systems that distinguish between text and binary mode, dup2
