@@ -29203,8 +29203,6 @@ gnu/usr.bin/dialog/TESTS/textbox -text
 gnu/usr.bin/dialog/TESTS/treebox -text
 gnu/usr.bin/dialog/TESTS/yesno -text
 gnu/usr.bin/diff/Makefile -text
-gnu/usr.bin/diff/context.c.diff -text
-gnu/usr.bin/diff/diff.c.diff -text
 gnu/usr.bin/diff/doc/Makefile -text
 gnu/usr.bin/diff3/Makefile -text
 gnu/usr.bin/diff3/diff3.c.diff -text
