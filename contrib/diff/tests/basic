@@ -1,0 +1,44 @@
+#!/bin/sh
+# small examples
+
+test "$VERBOSE" = yes && set -x
+: ${srcdir=.}
+. "$srcdir/init.sh"
+
+fail=0
+
+cat <<EOF > exp- || fail=1
+1c1
+< a
+---
+> b
+EOF
+
+cat <<EOF > exp--u || fail=1
+--- a
++++ b
+@@ -1 +1 @@
+-a
++b
+EOF
+
+cat <<EOF > exp--c || fail=1
+*** a
+--- b
+***************
+*** 1 ****
+! a
+--- 1 ----
+! b
+EOF
+
+echo a > a
+echo b > b
+for opt in '' -u -c; do
+  diff $opt a b > out 2> err; test $? = 1 || fail=1
+  # Remove date and time.
+  sed -e 's/^\([-+*][-+*][-+*] [^	]*\)	.*/\1/' out > k; mv k out
+  compare out exp-$(echo $opt|tr ' ' _) || fail=1
+done
+
+Exit $fail

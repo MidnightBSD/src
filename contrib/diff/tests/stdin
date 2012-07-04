@@ -1,0 +1,26 @@
+#!/bin/sh
+# Ensure that "-" means "standard input".
+
+test "$VERBOSE" = yes && set -x
+: ${srcdir=.}
+. "$srcdir/init.sh"
+
+fail=0
+
+cat <<EOF > exp || fail=1
+--- -
++++ b
+@@ -1 +1 @@
+-a
++b
+EOF
+
+echo a > a
+echo b > b
+
+diff -u - b < a > out 2> err; test $? = 1 || fail=1
+# Remove date and time.
+sed -e 's/^\([-+*][-+*][-+*] [^	]*\)	.*/\1/' out > k; mv k out
+compare out exp || fail=1
+
+Exit $fail

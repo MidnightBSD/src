@@ -1,22 +1,23 @@
 Thanks to all the following for their contributions to GNU diffutils:
 
-Thomas Bushnell  <tb@becket.net>
-Wayne Davison  <wayned@users.sourceforge.net>
+Thomas Bushnell, BSG  <tb@becket.net>
+Wayne Davison  <wayne@opencoder.net>
 Ulrich Drepper  <drepper@redhat.com>
-Paul Eggert  <eggert@twinsun.com>
-Jay Fenlason <hack@gnu.org>
-John Gilmore  <gnu@cygnus.com>
+Paul Eggert  <eggert@cs.ucla.edu>
+Jay Fenlason  <fenlason@redhat.com>
+John Gilmore  <gnu@toad.com>
 Torbjorn Granlund  <tege@swox.com>
 Mike Haertel  <mike@ichips.intel.com>
-Bruno Haible  <haible@ilog.fr>
+Bruno Haible  <haible@clisp.org>
 Chris Hanson <cph@gnu.org>
 Jim Kingdon  <kingdon@panix.com>
 Tom Lord  <lord@gnu.org>
 David J. MacKenzie  <djm@gnu.org>
-Roland McGrath  <roland@gnu.org>
-Jim Meyering  <meyering@lucent.com>
-Eugene W. Myers  <gene@cs.arizona.edu>
+Roland McGrath  <roland@redhat.com>
+Jim Meyering  <jim@meyering.net>
+Gene Myers  <gene@eecs.berkeley.edu>
 Randy Smith  <randy@gnu.org>
 Richard Stallman  <rms@gnu.org>
-Leonard H. Tower Jr.  <tower@ai.mit.edu>
-Eli Zaretskii  <eliz@is.elta.co.il>
+Leonard H. Tower Jr.  <tower@art.net>
+Larry Wall  <larry@wall.org>
+Eli Zaretskii  <eliz@gnu.org>

@@ -1,22 +1,20 @@
 /* cmp - compare two files byte by byte
 
-   Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 2001,
-   2002, 2004 Free Software Foundation, Inc.
+   Copyright (C) 1990-1996, 1998, 2001-2002, 2004, 2006-2007, 2009-2010 Free
+   Software Foundation, Inc.
 
-   This program is free software; you can redistribute it and/or modify
+   This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-   See the GNU General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; see the file COPYING.
-   If not, write to the Free Software Foundation,
-   59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "system.h"
 #include "paths.h"
@@ -26,17 +24,24 @@
 #include <c-stack.h>
 #include <cmpbuf.h>
 #include <error.h>
-#include <exit.h>
 #include <exitfail.h>
 #include <file-type.h>
 #include <getopt.h>
 #include <hard-locale.h>
 #include <inttostr.h>
-#include <setmode.h>
+#include <progname.h>
 #include <unlocked-io.h>
 #include <version-etc.h>
 #include <xalloc.h>
+#include <xfreopen.h>
 #include <xstrtol.h>
+
+/* The official name of this program (e.g., no `g' prefix).  */
+#define PROGRAM_NAME "cmp"
+
+#define AUTHORS \
+  proper_name_utf8 ("Torbjorn Granlund", "Torbj\303\266rn Granlund"), \
+  proper_name ("David MacKenzie")
 
 #if defined LC_MESSAGES && ENABLE_NLS
 # define hard_locale_LC_MESSAGES hard_locale (LC_MESSAGES)
@@ -49,9 +54,6 @@ static off_t file_position (int);
 static size_t block_compare (word const *, word const *);
 static size_t block_compare_and_count (word const *, word const *, off_t *);
 static void sprintc (char *, unsigned char);
-
-/* Name under which this program was invoked.  */
-char *program_name;
 
 /* Filenames of the compared files.  */
 static char const *file[2];
@@ -79,6 +81,7 @@ static enum comparison_type
   {
     type_first_diff,	/* Print the first difference.  */
     type_all_diffs,	/* Print all differences.  */
+    type_no_stdout,	/* Do not output to stdout; only stderr.  */
     type_status		/* Exit status only.  */
   } comparison_type;
 
@@ -126,15 +129,14 @@ static void
 specify_ignore_initial (int f, char **argptr, char delimiter)
 {
   uintmax_t val;
-  off_t o;
   char const *arg = *argptr;
   strtol_error e = xstrtoumax (arg, argptr, 0, &val, valid_suffixes);
   if (! (e == LONGINT_OK
 	 || (e == LONGINT_INVALID_SUFFIX_CHAR && **argptr == delimiter))
-      || (o = val) < 0 || o != val || val == UINTMAX_MAX)
+      || TYPE_MAXIMUM (off_t) < val)
     try_help ("invalid --ignore-initial value `%s'", arg);
-  if (ignore_initial[f] < o)
-    ignore_initial[f] = o;
+  if (ignore_initial[f] < val)
+    ignore_initial[f] = val;
 }
 
 /* Specify the output format.  */
@@ -178,14 +180,14 @@ usage (void)
   printf ("%s\n\n", _("Compare two files byte by byte."));
   for (p = option_help_msgid;  *p;  p++)
     printf ("  %s\n", _(*p));
-  printf ("\n%s\n%s\n\n%s\n%s\n\n%s\n",
+  printf ("\n%s\n%s\n\n%s\n%s\n",
 	  _("SKIP1 and SKIP2 are the number of bytes to skip in each file."),
 	  _("SKIP values may be followed by the following multiplicative suffixes:\n\
 kB 1000, K 1024, MB 1,000,000, M 1,048,576,\n\
 GB 1,000,000,000, G 1,073,741,824, and so on for T, P, E, Z, Y."),
 	  _("If a FILE is `-' or missing, read standard input."),
-	  _("Exit status is 0 if inputs are the same, 1 if different, 2 if trouble."),
-	  _("Report bugs to <bug-gnu-utils@gnu.org>."));
+	  _("Exit status is 0 if inputs are the same, 1 if different, 2 if trouble."));
+  emit_bug_reporting_address ();
 }
 
 int
@@ -196,7 +198,7 @@ main (int argc, char **argv)
 
   exit_failure = EXIT_TROUBLE;
   initialize_main (&argc, &argv);
-  program_name = argv[0];
+  set_program_name (argv[0]);
   setlocale (LC_ALL, "");
   bindtextdomain (PACKAGE, LOCALEDIR);
   textdomain (PACKAGE);
@@ -240,11 +242,8 @@ main (int argc, char **argv)
 	break;
 
       case 'v':
-	/* TRANSLATORS: Please translate the second "o" in "Torbjorn
-	   Granlund" to an o-with-umlaut (U+00F6, LATIN SMALL LETTER O
-	   WITH DIAERESIS) if possible.  */
-	version_etc (stdout, "cmp", PACKAGE_NAME, PACKAGE_VERSION,
-		     _("Torbjorn Granlund"), "David MacKenzie", (char *) 0);
+	version_etc (stdout, PROGRAM_NAME, PACKAGE_NAME, PACKAGE_VERSION,
+		     AUTHORS, (char *) NULL);
 	check_stdout ();
 	return EXIT_SUCCESS;
 
@@ -276,7 +275,7 @@ main (int argc, char **argv)
     {
       /* If file[1] is "-", treat it first; this avoids a misdiagnostic if
 	 stdin is closed and opening file[0] yields file descriptor 0.  */
-      int f1 = f ^ (strcmp (file[1], "-") == 0);
+      int f1 = f ^ (STREQ (file[1], "-"));
 
       /* Two files with the same name and offset are identical.
 	 But wait until we open the file once, for proper diagnostics.  */
@@ -284,9 +283,15 @@ main (int argc, char **argv)
 	  && file_name_cmp (file[0], file[1]) == 0)
 	return EXIT_SUCCESS;
 
-      file_desc[f1] = (strcmp (file[f1], "-") == 0
-		       ? STDIN_FILENO
-		       : open (file[f1], O_RDONLY, 0));
+      if (STREQ (file[f1], "-"))
+	{
+	  file_desc[f1] = STDIN_FILENO;
+	  if (O_BINARY && ! isatty (STDIN_FILENO))
+	    xfreopen (NULL, "rb", stdin);
+	}
+      else
+	file_desc[f1] = open (file[f1], O_RDONLY | O_BINARY, 0);
+
       if (file_desc[f1] < 0 || fstat (file_desc[f1], stat_buf + f1) != 0)
 	{
 	  if (file_desc[f1] < 0 && comparison_type == type_status)
@@ -294,8 +299,6 @@ main (int argc, char **argv)
 	  else
 	    error (EXIT_TROUBLE, errno, "%s", file[f1]);
 	}
-
-      set_binary_mode (file_desc[f1], true);
     }
 
   /* If the files are links to the same inode and have the same file position,
@@ -306,7 +309,8 @@ main (int argc, char **argv)
       && file_position (0) == file_position (1))
     return EXIT_SUCCESS;
 
-  /* If output is redirected to the null device, we may assume `-s'.  */
+  /* If output is redirected to the null device, we can avoid some of
+     the work.  */
 
   if (comparison_type != type_status)
     {
@@ -315,7 +319,7 @@ main (int argc, char **argv)
       if (fstat (STDOUT_FILENO, &outstat) == 0
 	  && stat (NULL_DEVICE, &nullstat) == 0
 	  && 0 < same_file (&outstat, &nullstat))
-	comparison_type = type_status;
+	comparison_type = type_no_stdout;
     }
 
   /* If only a return code is needed,
@@ -354,7 +358,7 @@ main (int argc, char **argv)
   for (f = 0; f < 2; f++)
     if (close (file_desc[f]) != 0)
       error (EXIT_TROUBLE, errno, "%s", file[f]);
-  if (exit_status != 0  &&  comparison_type != type_status)
+  if (exit_status != EXIT_SUCCESS && comparison_type < type_no_stdout)
     check_stdout ();
   exit (exit_status);
   return exit_status;
@@ -378,9 +382,9 @@ cmp (void)
   word *buffer1 = buffer[1];
   char *buf0 = (char *) buffer0;
   char *buf1 = (char *) buffer1;
-  int ret = EXIT_SUCCESS;
+  int differing = 0;
   int f;
-  int offset_width;
+  int offset_width IF_LINT (= 0);
 
   if (comparison_type == type_all_diffs)
     {
@@ -532,14 +536,18 @@ cmp (void)
 		  first_diff++;
 		}
 	      while (first_diff < smaller);
-	      ret = EXIT_FAILURE;
+	      differing = -1;
+	      break;
+
+	    case type_no_stdout:
+	      differing = 1;
 	      break;
 	    }
 	}
 
       if (read0 != read1)
 	{
-	  if (comparison_type != type_status)
+	  if (differing <= 0 && comparison_type != type_status)
 	    {
 	      /* See POSIX 1003.1-2001 for this format.  */
 	      fprintf (stderr, _("cmp: EOF on %s\n"), file[read1 < read0]);
@@ -548,9 +556,9 @@ cmp (void)
 	  return EXIT_FAILURE;
 	}
     }
-  while (read0 == buf_size);
+  while (differing <= 0 && read0 == buf_size);
 
-  return ret;
+  return differing == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /* Compare two blocks of memory P0 and P1 until they differ,

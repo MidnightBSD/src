@@ -1,5 +1,4 @@
 \input texinfo @c -*-texinfo-*-
-@comment $Id: diff.texi,v 1.1.1.1 2008-08-25 01:59:52 laffer1 Exp $
 @comment %**start of header
 @setfilename diff.info
 @include version.texi
@@ -15,21 +14,21 @@ and documents the @acronym{GNU} @command{diff}, @command{diff3},
 differences between files and the @acronym{GNU} @command{patch} command for
 using their output to update files.
 
-Copyright @copyright{} 1992, 1993, 1994, 1998, 2001, 2002, 2004 Free
+Copyright @copyright{} 1992-1994, 1998, 2001-2002, 2004, 2006, 2009-2010 Free
 Software Foundation, Inc.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.3 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, with the Front-Cover texts being ``A GNU Manual,''
 and with the Back-Cover Texts as in (a) below.  A copy of the
 license is included in the section entitled ``GNU Free Documentation
 License.''
 
-(a) The FSF's Back-Cover Text is: ``You have freedom to copy and modify
-this GNU Manual, like GNU software.  Copies published by the Free
-Software Foundation raise funds for GNU development.''
+(a) The FSF's Back-Cover Text is: ``You have the freedom to
+copy and modify this GNU manual.  Buying copies from the FSF
+supports it in developing GNU and promoting software freedom.''
 @end quotation
 @end copying
 
@@ -309,7 +308,7 @@ Here lyeth muche rychnesse in lytell space. -- John Heywood   $
 The @option{-w} or @option{--ignore-all-space} option is stronger still.
 It ignores differences even if one line has white space where
 the other line has none.  @dfn{White space} characters include
-tab, newline, vertical tab, form feed, carriage return, and space;
+tab, vertical tab, form feed, carriage return, and space;
 some locales may define additional characters to be white space.
 With this option, @command{diff} considers the
 following two lines to be equivalent, where @samp{$} denotes the line
@@ -319,6 +318,12 @@ end and @samp{^M} denotes a carriage return:
 Here lyeth  muche  rychnesse in lytell space.--  John Heywood$
   He relyeth much erychnes  seinly tells pace.  --John Heywood   ^M$
 @end example
+
+For many other programs newline is also a white space character, but
+@command{diff} is a line-oriented program and a newline character
+always ends a line.  Hence the @option{-w} or
+@option{--ignore-all-space} option does not ignore newline-related
+changes; it ignores only other white space changes.
 
 @node Blank Lines
 @section Suppressing Differences Whose Lines Are All Blank
@@ -635,7 +640,7 @@ hunks have run together, because their contents overlap.
 --- 1,6 ----
   The Nameless is the origin of Heaven and Earth;
 ! The named is the mother of all things.
-! 
+! @-
   Therefore let there always be non-being,
     so we may see their subtlety,
   And let there always be being,
@@ -670,7 +675,7 @@ most one context line is reported here.
 --- 1,4 ----
   The Nameless is the origin of Heaven and Earth;
 ! The named is the mother of all things.
-! 
+! @-
   Therefore let there always be non-being,
 ***************
 *** 11 ****
@@ -1087,7 +1092,7 @@ files.
 < The Named is the mother of all things.
 ---
 > The named is the mother of all things.
-> 
+> @-
 11a11,13
 > They both may be called deep and profound.
 > Deeper and more profound,
@@ -1847,8 +1852,9 @@ specified patterns.
 These adjustments can be applied to any output format.
 
 @menu
-* Tabs::       Preserving the alignment of tab stops.
-* Pagination:: Page numbering and time-stamping @command{diff} output.
+* Tabs::            Preserving the alignment of tab stops.
+* Trailing Blanks:: Suppressing blanks before empty output lines.
+* Pagination::      Page numbering and time-stamping @command{diff} output.
 @end menu
 
 @node Tabs
@@ -1882,6 +1888,29 @@ of the screen or the paper.  It also does not work with the unified
 output format, which does not have a space character after the change
 type indicator character.  Select this method with the @option{-T} or
 @option{--initial-tab} option.
+
+@node Trailing Blanks
+@section Omitting trailing blanks
+@cindex trailing blanks
+When outputting lines in normal or context format, or outputting an
+unchanged line in unified format, @command{diff} normally outputs a
+blank just before each line.  If the line is empty, the output of
+@command{diff} therefore contains trailing blanks even though the
+input does not contain them.  For example, when outputting an
+unchanged empty line in context format, @command{diff} normally
+outputs a line with two leading spaces.
+
+Some text editors and email agents routinely delete trailing blanks,
+so it can be a problem to deal with diff output files that contain
+them.  You can avoid this problem with the
+@option{--suppress-blank-empty} option.  It causes @command{diff} to
+omit trailing blanks at the end of output lines in normal, context,
+and unified format, unless the trailing blanks were already present in
+the input.  This changes the output format slightly, so that output
+lines are guaranteed to never end in a blank unless an input line ends
+in a blank.  This format is less likely to be munged by text editors
+or by transmission via email.  It is accepted by @acronym{GNU}
+@command{patch} as well.
 
 @node Pagination
 @section Paginating @command{diff} Output
@@ -2026,7 +2055,7 @@ files.
 2:2,3c
 3:4,5c
   The named is the mother of all things.
-  
+  @-
 ====3
 1:8c
 2:7c
@@ -2040,7 +2069,7 @@ files.
   Deeper and more profound,
   The door of all subtleties!
 3:13,14c
-  
+  @-
     -- The Way of Lao-Tzu, tr. Wing-tsit Chan
 @end example
 
@@ -2072,7 +2101,7 @@ file and contains no lines from that file.
 @item @var{file}:@var{r}c
 This hunk contains the lines in the range @var{r} of file @var{file}.
 The range @var{r} is a comma-separated pair of line numbers, or just one
-number if the range is a singleton.  To edit this file to yield the
+number if there is only one line.  To edit this file to yield the
 other files, one must change the specified lines to be the lines taken
 from the other files.  For example, @samp{2:11,13c} means that the hunk
 contains lines 11 through 13 from the second file.
@@ -2465,18 +2494,22 @@ Like @samp{eb}, except precede each version with a header that
 shows what file and lines the version came from.
 
 @item el
+@itemx e1
 Edit a copy of the left version, then copy the result to the output.
 
 @item er
+@itemx e2
 Edit a copy of the right version, then copy the result to the output.
 
 @item l
+@itemx 1
 Copy the left version to the output.
 
 @item q
 Quit.
 
 @item r
+@itemx 2
 Copy the right version to the output.
 
 @item s
@@ -3518,6 +3551,7 @@ second.
 @itemx --verbose
 Output the (decimal) byte numbers and (octal) values of all differing bytes,
 instead of the default standard output.
+Also, output the @acronym{EOF} message if one file is shorter than the other.
 
 @item -n @var{count}
 @itemx --bytes=@var{count}
@@ -3708,11 +3742,10 @@ context, or three if @var{lines} is not given.  @xref{Context Format}.
 For proper operation, @command{patch} typically needs at least two lines of
 context.
 
-On older systems, @command{diff} supports an obsolete option
-@option{-@var{lines}} that has effect when combined with @option{-c}
-or @option{-p}.  @acronym{POSIX} 1003.1-2001 (@pxref{Standards
-conformance}) does not allow this; use @option{-C @var{lines}}
-instead.
+For compatibility @command{diff} also supports an obsolete option
+syntax @option{-@var{lines}} that has effect when combined with
+@option{-c}, @option{-p}, or @option{-u}.  New scripts should use
+@option{-C @var{lines}} or @option{-U @var{lines}} instead.
 
 @item --changed-group-format=@var{format}
 Use @var{format} to output a line group containing differing lines from
@@ -3866,6 +3899,11 @@ normal.  @xref{Tabs}.
 @item --tabsize=@var{columns}
 Assume that tab stops are set every @var{columns} (default 8) print
 columns.  @xref{Tabs}.
+
+@item --suppress-blank-empty
+Suppress any blanks before newlines when printing the representation
+of an empty line, when outputting normal, context, or unified format.
+@xref{Trailing Blanks}.
 
 @item --to-file=@var{file}
 Compare each operand to @var{file}; @var{file} may be a directory.
@@ -4627,11 +4665,6 @@ find in the directory @uref{ftp://alpha.gnu.org/gnu/diffutils/}.
 
 @node Copying This Manual
 @appendix Copying This Manual
-
-@menu
-* GNU Free Documentation License::  License for copying this manual.
-@end menu
-
 @include fdl.texi
 
 @node Translations
