@@ -44908,11 +44908,6 @@ tools/tools/mid/mid-build -text
 tools/tools/mid/mid-index -text
 tools/tools/mid/mid-master -text
 tools/tools/mid/mid-master-index -text
-tools/tools/ministat/Makefile -text
-tools/tools/ministat/README -text
-tools/tools/ministat/chameleon -text
-tools/tools/ministat/iguana -text
-tools/tools/ministat/ministat.c -text
 tools/tools/mtxstat/mtxratio.sh -text
 tools/tools/mtxstat/mtxstat.pl -text
 tools/tools/nanobsd/Files/root/change_password -text
