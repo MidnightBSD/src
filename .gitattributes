@@ -28969,6 +28969,7 @@ games/wump/wump.6 -text
 games/wump/wump.c -text
 games/wump/wump.info -text
 gnu/COPYING -text
+gnu/COPYING.GPL3 -text
 gnu/COPYING.LIB -text
 gnu/Makefile -text
 gnu/Makefile.inc -text
