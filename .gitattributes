@@ -7519,7 +7519,6 @@ contrib/diff/lib/error.c -text
 contrib/diff/lib/error.h -text
 contrib/diff/lib/exclude.c -text
 contrib/diff/lib/exclude.h -text
-contrib/diff/lib/exit.h -text
 contrib/diff/lib/exitfail.c -text
 contrib/diff/lib/exitfail.h -text
 contrib/diff/lib/fcntl.c -text
@@ -7529,7 +7528,6 @@ contrib/diff/lib/file-type.h -text
 contrib/diff/lib/fnmatch.in.h -text
 contrib/diff/lib/freopen-safer.c -text
 contrib/diff/lib/freopen.c -text
-contrib/diff/lib/getopt.h -text
 contrib/diff/lib/getopt.in.h -text
 contrib/diff/lib/gettext.h -text
 contrib/diff/lib/gettime.c -text
@@ -7579,8 +7577,6 @@ contrib/diff/lib/mktime-internal.h -text
 contrib/diff/lib/mktime.c -text
 contrib/diff/lib/nl_langinfo.c -text
 contrib/diff/lib/open.c -text
-contrib/diff/lib/posixver.c -text
-contrib/diff/lib/posixver.h -text
 contrib/diff/lib/prepargs.c -text
 contrib/diff/lib/prepargs.h -text
 contrib/diff/lib/progname.c -text
@@ -7591,15 +7587,12 @@ contrib/diff/lib/quote.c -text
 contrib/diff/lib/quote.h -text
 contrib/diff/lib/quotearg.c -text
 contrib/diff/lib/quotearg.h -text
-contrib/diff/lib/quotesys.c -text
-contrib/diff/lib/quotesys.h -text
 contrib/diff/lib/ref-add.sin -text
 contrib/diff/lib/ref-del.sin -text
 contrib/diff/lib/regcomp.c -text
 contrib/diff/lib/regex_internal.c -text
 contrib/diff/lib/regex_internal.h -text
 contrib/diff/lib/regexec.c -text
-contrib/diff/lib/setmode.h -text
 contrib/diff/lib/sh-quote.c -text
 contrib/diff/lib/sh-quote.h -text
 contrib/diff/lib/sig-handler.h -text
@@ -7619,7 +7612,6 @@ contrib/diff/lib/stdio-write.c -text
 contrib/diff/lib/stdio.in.h -text
 contrib/diff/lib/stdlib.in.h -text
 contrib/diff/lib/str-kmp.h -text
-contrib/diff/lib/strcase.h -text
 contrib/diff/lib/streq.h -text
 contrib/diff/lib/strerror.c -text
 contrib/diff/lib/strftime.c -text
