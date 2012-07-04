@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.39 2012/02/19 23:19:26 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.40 2012/03/10 04:16:12 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -472,11 +472,6 @@ build32:
 .endfor
 
 distribute32 install32:
-.if make(distribute32)
-	mkdir -p ${DISTDIR}/${DISTRIBUTION}/usr/lib32	# XXX add to mtree
-.else
-	mkdir -p ${DESTDIR}/usr/lib32			# XXX add to mtree
-.endif
 	cd ${.CURDIR}/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
 .if ${MK_CDDL} != "no"
 	cd ${.CURDIR}/cddl/lib; ${LIB32IMAKE} ${.TARGET:S/32$//}
@@ -1010,7 +1005,9 @@ build-tools:
     ${_aicasm} \
     usr.bin/awk \
     lib/libmagic \
-    usr.sbin/sysinstall
+    usr.sbin/sysinstall \
+    usr.bin/mkesdb_static \
+    usr.bin/mkcsmapper_static
 	${_+_}@${ECHODIR} "===> ${_tool} (obj,build-tools)"; \
 		cd ${.CURDIR}/${_tool}; \
 		${MAKE} DIRPRFX=${_tool}/ obj; \
