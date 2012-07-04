@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000,2001 Michael Smith
  * Copyright (c) 2000 BSDi

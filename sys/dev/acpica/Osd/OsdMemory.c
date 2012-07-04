@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdMemory.c,v 1.15 2007/03/22 18:16:41 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdMemory.c,v 1.15.2.1 2010/07/20 19:43:25 jkim Exp $");
 
 #include <contrib/dev/acpica/acpi.h>
 
@@ -109,29 +109,23 @@ AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT32 *Value, UINT32 Width)
 {
     void	*LogicalAddress;
 
-    LogicalAddress = AcpiOsMapMemory(Address, Width / 8);
+    LogicalAddress = pmap_mapdev(Address, Width / 8);
     if (LogicalAddress == NULL)
 	return (AE_NOT_EXIST);
 
     switch (Width) {
     case 8:
-	*(u_int8_t *)Value = (*(volatile u_int8_t *)LogicalAddress);
+	*Value = *(volatile uint8_t *)LogicalAddress;
 	break;
     case 16:
-	*(u_int16_t *)Value = (*(volatile u_int16_t *)LogicalAddress);
+	*Value = *(volatile uint16_t *)LogicalAddress;
 	break;
     case 32:
-	*(u_int32_t *)Value = (*(volatile u_int32_t *)LogicalAddress);
-	break;
-    case 64:
-	*(u_int64_t *)Value = (*(volatile u_int64_t *)LogicalAddress);
-	break;
-    default:
-	/* debug trap goes here */
+	*Value = *(volatile uint32_t *)LogicalAddress;
 	break;
     }
 
-    AcpiOsUnmapMemory(LogicalAddress, Width / 8);
+    pmap_unmapdev((vm_offset_t)LogicalAddress, Width / 8);
 
     return (AE_OK);
 }
@@ -141,29 +135,23 @@ AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT32 Value, UINT32 Width)
 {
     void	*LogicalAddress;
 
-    LogicalAddress = AcpiOsMapMemory(Address, Width / 8);
+    LogicalAddress = pmap_mapdev(Address, Width / 8);
     if (LogicalAddress == NULL)
 	return (AE_NOT_EXIST);
 
     switch (Width) {
     case 8:
-	(*(volatile u_int8_t *)LogicalAddress) = Value & 0xff;
+	*(volatile uint8_t *)LogicalAddress = Value;
 	break;
     case 16:
-	(*(volatile u_int16_t *)LogicalAddress) = Value & 0xffff;
+	*(volatile uint16_t *)LogicalAddress = Value;
 	break;
     case 32:
-	(*(volatile u_int32_t *)LogicalAddress) = Value & 0xffffffff;
-	break;
-    case 64:
-	(*(volatile u_int64_t *)LogicalAddress) = Value;
-	break;
-    default:
-	/* debug trap goes here */
+	*(volatile uint32_t *)LogicalAddress = Value;
 	break;
     }
 
-    AcpiOsUnmapMemory(LogicalAddress, Width / 8);
+    pmap_unmapdev((vm_offset_t)LogicalAddress, Width / 8);
 
     return (AE_OK);
 }

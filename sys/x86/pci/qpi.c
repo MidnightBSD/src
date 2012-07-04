@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/x86/pci/qpi.c,v 1.3.4.2 2010/11/04 17:07:13 jhb Exp 
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/rman.h>
 #include <sys/systm.h>
 
 #include <machine/cputypes.h>
