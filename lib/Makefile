@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.15 2012/04/08 14:05:30 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.16 2012/04/09 22:16:44 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -29,7 +29,8 @@
 # libsqlite3 must be built before libmport.
 # Otherwise, the SUBDIR list should be in alphabetical order.
 
-SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf libkvm msun libmd \
+SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf ${_libiconv_modules} \
+	libkvm msun libmd \
 	ncurses libnetgraph libradius librpcsvc libsbuf libtacplus libutil \
 	${_libypclnt} libalias libbz2 liblzma libarchive ${_libatm} \
 	libbegemot ${_libbluetooth} libbsnmp \
@@ -67,6 +68,10 @@ _libsdp=	libsdp
 
 .if ${MK_GSSAPI} != "no"
 _libgssapi=	libgssapi
+.endif
+
+.if ${MK_ICONV} != "no"
+_libiconv_modules=	libiconv_modules
 .endif
 
 .if ${MK_IPX} != "no"
