@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/gdb/gdbserver/Makefile,v 1.5 2006/04/06 22:24:01 jmg Exp $
 
 # Not elf specific so don't install in /usr/libexec/elf

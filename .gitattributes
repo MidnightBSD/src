@@ -28915,9 +28915,6 @@ gnu/usr.bin/diff3/Makefile -text
 gnu/usr.bin/diff3/diff3.c.diff -text
 gnu/usr.bin/gdb/Makefile -text
 gnu/usr.bin/gdb/Makefile.inc -text
-gnu/usr.bin/gdb/arch/alpha/Makefile -text
-gnu/usr.bin/gdb/arch/alpha/config.h -text
-gnu/usr.bin/gdb/arch/alpha/init.c -text
 gnu/usr.bin/gdb/arch/amd64/Makefile -text
 gnu/usr.bin/gdb/arch/amd64/config.h -text
 gnu/usr.bin/gdb/arch/amd64/init.c -text
@@ -28932,12 +28929,6 @@ gnu/usr.bin/gdb/arch/arm/xm-fbsd.h -text
 gnu/usr.bin/gdb/arch/i386/Makefile -text
 gnu/usr.bin/gdb/arch/i386/config.h -text
 gnu/usr.bin/gdb/arch/i386/init.c -text
-gnu/usr.bin/gdb/arch/ia64/Makefile -text
-gnu/usr.bin/gdb/arch/ia64/config.h -text
-gnu/usr.bin/gdb/arch/ia64/init.c -text
-gnu/usr.bin/gdb/arch/powerpc/Makefile -text
-gnu/usr.bin/gdb/arch/powerpc/config.h -text
-gnu/usr.bin/gdb/arch/powerpc/init.c -text
 gnu/usr.bin/gdb/arch/sparc64/Makefile -text
 gnu/usr.bin/gdb/arch/sparc64/config.h -text
 gnu/usr.bin/gdb/arch/sparc64/init.c -text

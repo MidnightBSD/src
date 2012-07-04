@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* *INDENT-OFF* */ /* THIS FILE IS GENERATED */
 
 /* This file was created with the aid of ``regdat.sh'' and ``../../../../contrib/gdb/gdb/regformats/reg-i386.dat''.  */

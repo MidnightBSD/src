@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* GNU/Linux/i386 specific low level interface, for the remote server for GDB.
    Copyright 1995, 1996, 1998, 1999, 2000, 2001, 2002
    Free Software Foundation, Inc.

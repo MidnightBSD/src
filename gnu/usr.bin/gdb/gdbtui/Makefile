@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/gdb/gdbtui/Makefile,v 1.6 2005/02/14 12:10:14 obrien Exp $
 
 PROG=	gdbtui${GDB_SUFFIX}

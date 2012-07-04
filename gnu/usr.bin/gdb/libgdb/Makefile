@@ -1,6 +1,7 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/gdb/libgdb/Makefile,v 1.11 2006/04/10 09:00:19 ru Exp $
 
-TARGET_ARCH?= ${MACHINE_ARCH}
+TARGET_ARCH?= ${MACHINE_CPUARCH}
 
 LIB=	gdb
 INTERNALLIB=
@@ -53,7 +54,7 @@ xregcomp xre_exec xregexec xre_search xre_compile_fastmap xregerror xre_comp xre
 CFLAGS+= -D${stupid_gnu}=${stupid_gnu:S/^x//}
 .endfor
 
-.if ${TARGET_ARCH} == ${MACHINE_ARCH}
+.if ${TARGET_ARCH} == ${MACHINE_CPUARCH}
 _fork_child= fork-child.c
 _infptrace= infptrace.c
 _inftarg= inftarg.c
@@ -70,9 +71,9 @@ CLEANFILES= frame-unwind-kluge.c.orig
 version.c:
 	echo '#include "version.h"' >  ${.TARGET}
 	echo 'const char version[] = ${VERSION};' >> ${.TARGET}
-	echo 'const char host_name[] = "${MACHINE_ARCH}-${VENDOR}-freebsd";' \
+	echo 'const char host_name[] = "${MACHINE_CPUARCH}-${VENDOR}-midnightbsd";' \
 	    >> ${.TARGET}
-	echo 'const char target_name[] = "${TARGET_ARCH}-${VENDOR}-freebsd";' \
+	echo 'const char target_name[] = "${TARGET_ARCH}-${VENDOR}-midnightbsd";' \
 	    >> ${.TARGET}
 
 .include <bsd.lib.mk>

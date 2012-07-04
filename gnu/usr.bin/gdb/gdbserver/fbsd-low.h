@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Internal interfaces for the GNU/Linux specific target code for gdbserver.
    Copyright 2002, 2004 Free Software Foundation, Inc.
 
