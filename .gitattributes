@@ -7319,7 +7319,6 @@ contrib/dialog/ui_getc.c -text
 contrib/dialog/util.c -text
 contrib/dialog/version.c -text
 contrib/dialog/yesno.c -text
-contrib/diff/.tarball-version -text
 contrib/diff/ABOUT-NLS -text
 contrib/diff/AUTHORS -text
 contrib/diff/COPYING -text
@@ -7334,7 +7333,6 @@ contrib/diff/README-release -text
 contrib/diff/THANKS -text
 contrib/diff/TODO -text
 contrib/diff/build-aux/announce-gen -text
-contrib/diff/build-aux/arg-nonnull.h -text
 contrib/diff/build-aux/compile -text
 contrib/diff/build-aux/config.guess -text
 contrib/diff/build-aux/config.rpath -text
@@ -7359,12 +7357,9 @@ contrib/diff/build-aux/texinfo.tex -text
 contrib/diff/build-aux/update-copyright -text
 contrib/diff/build-aux/useless-if-before-free -text
 contrib/diff/build-aux/vc-list-files -text
-contrib/diff/build-aux/warn-on-use.h -text
 contrib/diff/cfg.mk -text
 contrib/diff/config.h -text
 contrib/diff/dist-check.mk -text
-contrib/diff/doc/diff.info -text
-contrib/diff/doc/diff.texi -text
 contrib/diff/doc/diffutils.info -text
 contrib/diff/doc/diffutils.texi -text
 contrib/diff/doc/fdl.texi -text
@@ -7379,17 +7374,13 @@ contrib/diff/gnulib-tests/float.c -text
 contrib/diff/gnulib-tests/float.in.h -text
 contrib/diff/gnulib-tests/fpucw.h -text
 contrib/diff/gnulib-tests/getcwd-lgpl.c -text
-contrib/diff/gnulib-tests/getdtablesize.c -text
 contrib/diff/gnulib-tests/getpagesize.c -text
 contrib/diff/gnulib-tests/gnulib.mk -text
 contrib/diff/gnulib-tests/hash-pjw.c -text
 contrib/diff/gnulib-tests/hash-pjw.h -text
 contrib/diff/gnulib-tests/init.sh -text
 contrib/diff/gnulib-tests/locale.in.h -text
-contrib/diff/gnulib-tests/locale/fr/LC_MESSAGES/test-quotearg.mo -text svneol=unset#unset
-contrib/diff/gnulib-tests/locale/fr/LC_MESSAGES/test-quotearg.po -text
 contrib/diff/gnulib-tests/macros.h -text
-contrib/diff/gnulib-tests/pathmax.h -text
 contrib/diff/gnulib-tests/printf-args.c -text
 contrib/diff/gnulib-tests/printf-args.h -text
 contrib/diff/gnulib-tests/printf-parse.c -text
@@ -7489,9 +7480,7 @@ contrib/diff/gnulib-tests/test-nl_langinfo.sh -text
 contrib/diff/gnulib-tests/test-open.c -text
 contrib/diff/gnulib-tests/test-open.h -text
 contrib/diff/gnulib-tests/test-quotearg-simple.c -text
-contrib/diff/gnulib-tests/test-quotearg.c -text
 contrib/diff/gnulib-tests/test-quotearg.h -text
-contrib/diff/gnulib-tests/test-quotearg.sh -text
 contrib/diff/gnulib-tests/test-setenv.c -text
 contrib/diff/gnulib-tests/test-setlocale1.c -text
 contrib/diff/gnulib-tests/test-setlocale1.sh -text
@@ -7545,7 +7534,6 @@ contrib/diff/gnulib-tests/test-wcrtomb-w32.c -text
 contrib/diff/gnulib-tests/test-wcrtomb.c -text
 contrib/diff/gnulib-tests/test-wcrtomb.sh -text
 contrib/diff/gnulib-tests/test-wctype-h.c -text
-contrib/diff/gnulib-tests/test-wctype.c -text
 contrib/diff/gnulib-tests/test-wcwidth.c -text
 contrib/diff/gnulib-tests/test-xalloc-die.c -text
 contrib/diff/gnulib-tests/test-xalloc-die.sh -text
@@ -7644,7 +7632,6 @@ contrib/diff/lib/malloca.valgrind -text
 contrib/diff/lib/mbchar.c -text
 contrib/diff/lib/mbchar.h -text
 contrib/diff/lib/mbiter.h -text
-contrib/diff/lib/mbrlen.c -text
 contrib/diff/lib/mbrtowc.c -text
 contrib/diff/lib/mbscasecmp.c -text
 contrib/diff/lib/mbsinit.c -text
@@ -7693,7 +7680,6 @@ contrib/diff/lib/stddef.in.h -text
 contrib/diff/lib/stdint.in.h -text
 contrib/diff/lib/stdio--.h -text
 contrib/diff/lib/stdio-safer.h -text
-contrib/diff/lib/stdio-write.c -text
 contrib/diff/lib/stdio.in.h -text
 contrib/diff/lib/stdlib.in.h -text
 contrib/diff/lib/str-kmp.h -text
@@ -7719,7 +7705,6 @@ contrib/diff/lib/sys_time.in.h -text
 contrib/diff/lib/sys_wait.in.h -text
 contrib/diff/lib/tempname.h -text
 contrib/diff/lib/time.in.h -text
-contrib/diff/lib/timegm.c -text
 contrib/diff/lib/timespec.h -text
 contrib/diff/lib/trim.c -text
 contrib/diff/lib/trim.h -text
@@ -7729,9 +7714,7 @@ contrib/diff/lib/unistr.in.h -text
 contrib/diff/lib/unistr/u8-mbtoucr.c -text
 contrib/diff/lib/unistr/u8-uctomb-aux.c -text
 contrib/diff/lib/unistr/u8-uctomb.c -text
-contrib/diff/lib/unitypes.h -text
 contrib/diff/lib/unitypes.in.h -text
-contrib/diff/lib/uniwidth.h -text
 contrib/diff/lib/uniwidth.in.h -text
 contrib/diff/lib/uniwidth/cjk.h -text
 contrib/diff/lib/uniwidth/width.c -text
