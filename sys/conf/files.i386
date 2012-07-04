@@ -132,6 +132,7 @@ crypto/via/padlock_cipher.c	optional padlock
 crypto/via/padlock_hash.c	optional padlock
 dev/advansys/adv_isa.c		optional adv isa
 dev/aic/aic_isa.c		optional aic isa
+dev/amdsbwd/amdsbwd.c		optional amdsbwd
 dev/amdtemp/amdtemp.c		optional amdtemp
 dev/arcmsr/arcmsr.c		optional arcmsr pci
 dev/ar/if_ar.c			optional ar
@@ -152,6 +153,7 @@ dev/cm/if_cm_isa.c		optional cm isa
 dev/coretemp/coretemp.c		optional coretemp
 dev/cp/cpddk.c			optional cp
 dev/cp/if_cp.c			optional cp
+dev/cpuctl/cpuctl.c		optional cpuctl
 dev/ctau/ctau.c			optional ctau
 dev/ctau/ctddk.c		optional ctau
 dev/ctau/if_ct.c		optional ctau

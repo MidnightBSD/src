@@ -134,6 +134,7 @@ crypto/via/padlock.c		optional	padlock
 crypto/via/padlock_cipher.c	optional	padlock
 crypto/via/padlock_hash.c	optional	padlock
 dev/acpica/acpi_if.m		standard
+dev/amdsbwd/amdsbwd.c		optional	amdsbwd
 dev/amdtemp/amdtemp.c		optional	amdtemp
 dev/arcmsr/arcmsr.c		optional	arcmsr pci
 dev/atkbdc/atkbd.c		optional	atkbd atkbdc
@@ -143,6 +144,7 @@ dev/atkbdc/atkbdc_isa.c		optional	atkbdc isa
 dev/atkbdc/atkbdc_subr.c	optional	atkbdc
 dev/atkbdc/psm.c		optional	psm atkbdc
 dev/coretemp/coretemp.c		optional	coretemp
+dev/cpuctl/cpuctl.c		optional	cpuctl
 # There are no systems with isa slots, so all ed isa entries should go..
 dev/ed/if_ed_3c503.c		optional	ed isa ed_3c503
 dev/ed/if_ed_isa.c		optional	ed isa
@@ -267,7 +269,7 @@ i386/bios/smbios.c		optional	smbios
 i386/bios/vpd.c			optional	vpd
 i386/cpufreq/powernow.c		optional	cpufreq
 i386/cpufreq/est.c		optional	cpufreq
-i386/cpufreq/hwpstate.c		optional        cpufreq
+i386/cpufreq/hwpstate.c		optional	cpufreq
 i386/cpufreq/p4tcc.c		optional	cpufreq
 #
 libkern/memset.c		standard
