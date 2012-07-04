@@ -28945,6 +28945,7 @@ gnu/usr.bin/gdb/gdbtui/Makefile -text
 gnu/usr.bin/gdb/kgdb/Makefile -text
 gnu/usr.bin/gdb/kgdb/kgdb.1 -text
 gnu/usr.bin/gdb/kgdb/kgdb.h -text
+gnu/usr.bin/gdb/kgdb/kld.c -text
 gnu/usr.bin/gdb/kgdb/kthr.c -text
 gnu/usr.bin/gdb/kgdb/main.c -text
 gnu/usr.bin/gdb/kgdb/trgt.c -text
