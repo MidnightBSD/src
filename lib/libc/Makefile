@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 2/3/94
 # $FreeBSD: src/lib/libc/Makefile,v 1.73 2007/10/01 18:15:10 ru Exp $
-# $MidnightBSD: src/lib/libc/Makefile,v 1.5 2008/10/30 20:59:09 laffer1 Exp $
+# $MidnightBSD: src/lib/libc/Makefile,v 1.6 2009/04/11 00:59:57 laffer1 Exp $
 
 SHLIBDIR?= /lib
 
@@ -42,6 +42,9 @@ NOASM=
 .include "${.CURDIR}/gdtoa/Makefile.inc"
 .include "${.CURDIR}/gen/Makefile.inc"
 .include "${.CURDIR}/gmon/Makefile.inc"
+.if ${MK_ICONV} != "no"
+.include "${.CURDIR}/iconv/Makefile.inc"
+.endif
 .include "${.CURDIR}/inet/Makefile.inc"
 .include "${.CURDIR}/isc/Makefile.inc"
 .include "${.CURDIR}/locale/Makefile.inc"
