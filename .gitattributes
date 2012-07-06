@@ -29755,6 +29755,7 @@ include/stringlist.h -text
 include/strings.h -text
 include/sysexits.h -text
 include/tar.h -text
+include/termios.h -text
 include/tgmath.h -text
 include/time.h -text
 include/timeconv.h -text
