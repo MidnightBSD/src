@@ -7739,6 +7739,7 @@ contrib/diff/lib/xstrndup.c -text
 contrib/diff/lib/xstrndup.h -text
 contrib/diff/lib/xstrtol-error.c -text
 contrib/diff/lib/xstrtol.h -text
+contrib/diff/lib/xstrtoumax.c -text
 contrib/diff/maint.mk -text
 contrib/diff/man/cmp.1 -text
 contrib/diff/man/cmp.x -text
