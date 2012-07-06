@@ -27,8 +27,7 @@
 #include "uniwidth.h"
 
 int
-wcwidth (wchar_t wc)
-#undef wcwidth
+special_wcwidth (wchar_t wc)
 {
   /* In UTF-8 locales, use a Unicode aware width function.  */
   const char *encoding = locale_charset ();
