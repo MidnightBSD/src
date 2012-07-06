@@ -138,7 +138,7 @@ print_half_line (char const *const *line, size_t indent, size_t out_bound)
 
 	    if (0 < bytes && bytes < (size_t) -2)
 	      {
-		int width = wcwidth (wc);
+		int width = special_wcwidth (wc);
 		if (0 < width)
 		  in_position += width;
 		if (in_position <= out_bound)
