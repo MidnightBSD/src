@@ -29641,6 +29641,7 @@ include/gssapi/Makefile -text
 include/gssapi/gssapi.h -text
 include/hesiod.h -text
 include/histedit.h -text
+include/iconv.h -text
 include/ieeefp.h -text
 include/ifaddrs.h -text
 include/inttypes.h -text
