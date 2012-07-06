@@ -7574,6 +7574,7 @@ contrib/diff/lib/cmpbuf.h -text
 contrib/diff/lib/config.charset -text
 contrib/diff/lib/diffseq.h -text
 contrib/diff/lib/dirname-lgpl.c -text
+contrib/diff/lib/dirname.c -text
 contrib/diff/lib/dirname.h -text
 contrib/diff/lib/dosname.h -text
 contrib/diff/lib/dup2.c -text
