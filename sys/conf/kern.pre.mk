@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/conf/kern.pre.mk,v 1.5 2011/10/23 16:17:29 laffer1 Exp $
+# $MidnightBSD: src/sys/conf/kern.pre.mk,v 1.6 2012/04/01 05:53:04 laffer1 Exp $
 # $FreeBSD: src/sys/conf/kern.pre.mk,v 1.92 2007/08/08 19:12:06 marcel Exp $
 
 # Part of a unified Makefile for building kernels.  This part contains all
@@ -72,7 +72,7 @@ INCLUDES+= -I$S/dev/twa
 INCLUDES+= -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs
 
 # ...  and OpenSolaris
-INCLUDES+= -I$S/contrib/opensolaris/compat
+INCLUDES+= -I$S/cddl/compat/opensolaris
 
 # ... and the same for cxgb
 INCLUDES+= -I$S/dev/cxgb
