@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD: src/share/skel/dot.profile,v 1.9 2011/11/23 12:46:37 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.profile,v 1.10 2012/06/15 03:46:47 laffer1 Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
@@ -43,6 +43,12 @@ if [ -x /usr/local/GNUstep/System/Makefiles/GNUstep.sh ]; then
 fi
 if [ -x /usr/local/GNUstep/System/Library/Makefiles/GNUstep.sh ]; then
 	. /usr/local/GNUstep/System/Library/Makefiles/GNUstep.sh
+fi
+
+SSHAGENT=/usr/bin/ssh-agent
+if [ -z "$SSH_AUTH_SOCK" -a -x "$SSHAGENT" ]; then
+  eval `$SSHAGENT`
+  trap "kill $SSH_AGENT_PID" 0
 fi
 
 if [ -x /usr/games/fortune ] ; then  /usr/games/fortune fortunes; fi
