@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.12 2012/01/18 01:54:13 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.13 2012/07/04 18:37:20 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -338,6 +338,7 @@ WITH_IDEA=
     GPIB \
     GROFF \
     HTML \
+    ICONV \
     INET6 \
     INFO \
     INSTALLLIB \
@@ -404,7 +405,6 @@ MK_${var}:=	yes
     BIND_SIGCHASE \
     BIND_XML \
     HESIOD \
-    ICONV \
     IDEA
 .if defined(WITH_${var}) && defined(WITHOUT_${var})
 .error WITH_${var} and WITHOUT_${var} can't both be set.
