@@ -1,4 +1,4 @@
-# $MidnightBSD: src/bin/csh/Makefile,v 1.3 2006/12/31 09:09:40 laffer1 Exp $
+# $MidnightBSD: src/bin/csh/Makefile,v 1.4 2012/07/08 15:53:49 laffer1 Exp $
 # $FreeBSD: src/bin/csh/Makefile,v 1.36.2.1 2006/02/26 06:17:59 ume Exp $
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 #
@@ -91,11 +91,7 @@ NLSLINKS_uk_UA.KOI8-U = uk_UA.ISO8859-5 uk_UA.UTF-8
 .else
 # Above links can be installed from ports/shells/tcsh_nls
 
-GENHDRS+= iconv.h
 SRCS+=	iconv_stub.c
-
-iconv.h: ${.CURDIR}/iconv_stub.h
-	cp ${.CURDIR}/iconv_stub.h ${.TARGET}
 .endif
 .endif
 

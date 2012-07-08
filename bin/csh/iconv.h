@@ -23,8 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/bin/csh/iconv.h,v 1.1.2.1 2006/02/26 06:17:59 ume Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/bin/csh/iconv_stub.h,v 1.1 2012/07/08 15:53:49 laffer1 Exp $
+ * $FreeBSD: src/bin/csh/iconv_stub.h,v 1.1 2011/02/26 18:54:54 ume Exp $
  */
 
 #ifndef _ICONV_H_
