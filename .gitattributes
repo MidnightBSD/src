@@ -23838,12 +23838,12 @@ contrib/tcpdump/util.c -text
 contrib/tcpdump/vfprintf.c -text
 contrib/tcsh/Copyright -text
 contrib/tcsh/FAQ -text
-contrib/tcsh/FREEBSD-Xlist -text
-contrib/tcsh/FREEBSD-upgrade -text
 contrib/tcsh/Fixes -text
 contrib/tcsh/Imakefile -text
 contrib/tcsh/MAKEDIFFS -text
 contrib/tcsh/MAKESHAR -text
+contrib/tcsh/MIDNIGHTBSD-Xlist -text
+contrib/tcsh/MIDNIGHTBSD-upgrade -text
 contrib/tcsh/Makefile.ADMIN -text
 contrib/tcsh/Makefile.in -text
 contrib/tcsh/Makefile.std -text

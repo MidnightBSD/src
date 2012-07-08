@@ -1,0 +1,13 @@
+$MidnightBSD$
+
+Christos Zoulas `tcsh'
+	originals can be found at: ftp://ftp.astron.com/pub/tcsh/
+
+The stripped down version was created using MIDNIGHTBSD-Xlist during extraction:
+
+	tar -X MIDNIGHTBSD-Xlist -xzvf tcsh-6.18.01.tar.gz
+
+Imported by:
+
+	cvs import -m "Import of tcsh-6.18.01" \
+		src/contrib/tcsh ZOULAS tcsh_6_18_01
