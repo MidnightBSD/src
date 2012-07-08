@@ -1,11 +1,11 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.ver,v 1.1 2009/05/22 00:52:07 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/Makefile.ver,v 1.1 2007/05/19 04:25:56 kan Exp $
 
 BASEVER!=	cat ${GCCDIR}/BASE-VER
 DATESTAMP!=	cat ${GCCDIR}/DATESTAMP
 DEVPHASE!=	cat ${GCCDIR}/DEV-PHASE
 
-version.o:	version.c
+version.o: version.c ${GCCDIR}/BASE-VER ${GCCDIR}/DATESTAMP ${GCCDIR}/DEV-PHASE
 	${CC} ${CFLAGS} -DBASEVER=\"${BASEVER}\" \
 		-DDATESTAMP=\"\ ${DATESTAMP}\" \
 		-DDEVPHASE=\"\ ${DEVPHASE}\" -c ${.IMPSRC}
