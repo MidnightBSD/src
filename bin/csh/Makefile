@@ -1,4 +1,4 @@
-# $MidnightBSD: src/bin/csh/Makefile,v 1.4 2012/07/08 15:53:49 laffer1 Exp $
+# $MidnightBSD: src/bin/csh/Makefile,v 1.5 2012/07/08 16:02:29 laffer1 Exp $
 # $FreeBSD: src/bin/csh/Makefile,v 1.36.2.1 2006/02/26 06:17:59 ume Exp $
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 #
@@ -77,6 +77,8 @@ NLSLINKS_es_ES.ISO8859-1= es_ES.ISO8859-15
 CFLAGS+= -DNO_NLS_CATALOGS
 .else
 CFLAGS+= -DHAVE_ICONV
+DPADD+=  ${LIBICONV}
+LDADD+=  -liconv
 .if ${MK_ICONV} != "no"
 NLSLINKS_de_DE.ISO8859-1 += de_AT.UTF-8 de_CH.UTF-8 de_DE.UTF-8
 NLSLINKS_el_GR.ISO8859-7 = el_GR.UTF-8
