@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.nls.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.nls.h,v 1.1.1.4 2012-07-08 16:12:19 laffer1 Exp $ */
 /*
  * tc.nls.h: NLS support
  *
@@ -33,8 +33,6 @@
  */
 #ifndef _h_tc_nls
 #define _h_tc_nls
-
-#include "sh.h"
 
 #ifdef WIDE_STRINGS
 extern int NLSWidth(Char);

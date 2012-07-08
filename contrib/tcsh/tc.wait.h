@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.wait.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.wait.h,v 1.1.1.4 2012-07-08 16:12:19 laffer1 Exp $ */
 /*
  * tc.wait.h: <sys/wait.h> for machines that don't have it or have it and
  *	      is incorrect.
@@ -39,7 +39,7 @@
  * We try to use the system's wait.h when we can...
  */
 
-#if SYSVREL > 0 && !defined(linux) && !defined(__GNU__) && !defined(__GLIBC__)
+#if SYSVREL > 0 && !defined(__linux__) && !defined(__GNU__) && !defined(__GLIBC__)
 # ifdef hpux
 #  ifndef __hpux
 #   define NEEDwait

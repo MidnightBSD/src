@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.decls.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.decls.h,v 1.1.1.5 2012-07-08 16:12:18 laffer1 Exp $ */
 /*
  * tc.decls.h: Function declarations from all the tcsh modules
  */
@@ -259,9 +259,9 @@ extern	void		  sched_run	(void);
  * tc.str.c:
  */
 #ifdef WIDE_STRINGS
-extern	size_t		  one_mbtowc	(wchar_t *, const char *, size_t);
-extern	size_t		  one_wctomb	(char *, wchar_t);
-extern  int		  rt_mbtowc	(wchar_t *, const char *, size_t);
+extern	size_t		  one_mbtowc	(Char *, const char *, size_t);
+extern	size_t		  one_wctomb	(char *, Char);
+extern  int		  rt_mbtowc	(Char *, const char *, size_t);
 #else
 #define one_mbtowc(PWC, S, N) \
 	((void)(N), *(PWC) = (unsigned char)*(S), (size_t)1)

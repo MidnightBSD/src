@@ -23925,6 +23925,8 @@ contrib/tcsh/nls/C/set7 -text
 contrib/tcsh/nls/C/set8 -text
 contrib/tcsh/nls/C/set9 -text
 contrib/tcsh/nls/Makefile -text
+contrib/tcsh/nls/Makefile.in -text
+contrib/tcsh/nls/catgen -text
 contrib/tcsh/nls/et/charset -text
 contrib/tcsh/nls/et/set1 -text
 contrib/tcsh/nls/et/set10 -text
@@ -24316,6 +24318,7 @@ contrib/tcsh/tests/aliases.at -text
 contrib/tcsh/tests/arguments.at -text
 contrib/tcsh/tests/commands.at -text
 contrib/tcsh/tests/expr.at -text
+contrib/tcsh/tests/history.at -text
 contrib/tcsh/tests/lexical.at -text
 contrib/tcsh/tests/mb-eucjp.at -text
 contrib/tcsh/tests/mb-utf8.at -text

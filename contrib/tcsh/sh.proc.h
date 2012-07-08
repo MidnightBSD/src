@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.proc.h,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/sh.proc.h,v 1.1.1.5 2012-07-08 16:12:19 laffer1 Exp $ */
 /*
  * sh.proc.h: Process data structures and variables
  */
@@ -51,6 +51,7 @@ struct process {
     unsigned long p_flags;	/* various job status flags */
     unsigned char p_reason;	/* reason for entering this state */
     int     p_index;		/* shorthand job index */
+    pid_t   p_parentid;		/* parent pid */
     pid_t   p_procid;
     pid_t   p_jobid;		/* pid of job leader */
     /* if a job is stopped/background p_jobid gives its pgrp */
@@ -102,6 +103,7 @@ struct process {
 #define	PNEEDNOTE	(1<<15)	/* notify as soon as practical */
 #define PBACKQ		(1<<16)	/* Process is `` evaluation */
 #define PHUP		(1<<17)	/* Process is marked for SIGHUP on exit */
+#define PBRACE		(1<<18)	/* Process is {} evaluation */
 
 /* defines for arguments to pprint */
 #define	NUMBER		01

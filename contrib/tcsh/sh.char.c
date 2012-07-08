@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.char.c,v 1.1.1.4 2011-02-02 22:33:56 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/sh.char.c,v 1.1.1.5 2012-07-08 16:12:19 laffer1 Exp $ */
 /*
  * sh.char.c: Character classification tables
  */
@@ -32,7 +32,7 @@
  */
 #include "sh.h"
 
-RCSID("$tcsh: sh.char.c,v 3.20 2007/03/07 16:31:37 christos Exp $")
+RCSID("$tcsh: sh.char.c,v 3.21 2010/02/09 20:32:34 christos Exp $")
 
 #include "sh.char.h"
 
@@ -233,8 +233,8 @@ unsigned short _cmap[256] = {
 
 /*	252 udiaeresis	253 yacute	254 thorn	255 ydiaeresis	*/
 	_LET|_DOW,	_LET|_DOW,	_LET|_DOW,	_LET|_DOW,
-};
 #endif /* SHORT_STRINGS */
+};
 
 #if defined(KANJI) && defined(SHORT_STRINGS) && defined(DSPMBYTE)
 /* original table */
