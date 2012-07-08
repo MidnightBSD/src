@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20120708:
+	tcsh 6.18.01 imported.
+
+	NetBSD's iconv imported.
+
+	libc gains strnlen(3), memrchr(3), stpncpy(3).
+
 20120612:
 	BIND security update related to CVE-2012-1667.
 
@@ -1203,4 +1210,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.160 2012/04/07 15:16:24 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.161 2012/06/12 14:41:14 laffer1 Exp $
