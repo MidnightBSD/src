@@ -1,6 +1,6 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/libc/string/Makefile.inc,v 1.37 2006/03/13 01:15:00 deischen Exp $
-# $MidnightBSD: src/lib/libc/string/Makefile.inc,v 1.2 2007/01/04 06:22:04 laffer1 Exp $
+# $MidnightBSD: src/lib/libc/string/Makefile.inc,v 1.3 2008/10/30 21:19:19 laffer1 Exp $
 
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/string ${.CURDIR}/string
 
@@ -8,11 +8,12 @@ CFLAGS+= -I${.CURDIR}/locale
 
 # machine-independent string sources
 MISRCS+=bcmp.c bcopy.c bzero.c ffs.c ffsl.c fls.c flsl.c index.c memccpy.c \
-	memchr.c memcmp.c \
-	memcpy.c memmem.c memmove.c memset.c rindex.c stpcpy.c strcasecmp.c \
+	memchr.c memrchr.c memcmp.c \
+	memcpy.c memmem.c memmove.c memset.c rindex.c \
+	stpcpy.c stpncpy.c strcasecmp.c \
 	strcat.c strchr.c strcmp.c strcoll.c strcpy.c strcspn.c strdup.c \
 	strerror.c strlcat.c strlcpy.c strlen.c strmode.c strncat.c strncmp.c \
-	strncpy.c strndup.c strcasestr.c strnstr.c \
+	strncpy.c strndup.c strnlen.c strcasestr.c strnstr.c \
 	strpbrk.c strrchr.c strsep.c strsignal.c strspn.c strstr.c strtok.c \
 	strxfrm.c swab.c wcscat.c wcschr.c wcscmp.c wcscoll.c wcscpy.c \
 	wcscspn.c wcsdup.c \
@@ -39,14 +40,17 @@ MAN+=	bcmp.3 bcopy.3 bstring.3 bzero.3 ffs.3 index.3 memccpy.3 memchr.3 \
 MLINKS+=ffs.3 ffsl.3
 MLINKS+=ffs.3 fls.3
 MLINKS+=ffs.3 flsl.3
+MLINKS+=memchr.3 memrchr.3
 MLINKS+=index.3 rindex.3
 MLINKS+=strcasecmp.3 strncasecmp.3
 MLINKS+=strcat.3 strncat.3
 MLINKS+=strchr.3 strrchr.3
 MLINKS+=strcmp.3 strncmp.3
-MLINKS+=strcpy.3 stpcpy.3
-MLINKS+=strcpy.3 strncpy.3
+MLINKS+=strcpy.3 stpcpy.3 \
+	strcpy.3 stpncpy.3 \
+	strcpy.3 strncpy.3
 MLINKS+=strdup.3 strndup.3
+MLINKS+=strlen.3 strnlen.3
 MLINKS+=strerror.3 perror.3 strerror.3 sys_errlist.3 strerror.3 sys_nerr.3
 MLINKS+=strerror.3 strerror_r.3
 MLINKS+=strlcpy.3 strlcat.3

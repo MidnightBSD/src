@@ -31353,10 +31353,12 @@ lib/libc/string/memmem.3 -text
 lib/libc/string/memmem.c -text
 lib/libc/string/memmove.3 -text
 lib/libc/string/memmove.c -text
+lib/libc/string/memrchr.c -text
 lib/libc/string/memset.3 -text
 lib/libc/string/memset.c -text
 lib/libc/string/rindex.c -text
 lib/libc/string/stpcpy.c -text
+lib/libc/string/stpncpy.c -text
 lib/libc/string/strcasecmp.3 -text
 lib/libc/string/strcasecmp.c -text
 lib/libc/string/strcasestr.c -text
@@ -31388,6 +31390,7 @@ lib/libc/string/strncat.c -text
 lib/libc/string/strncmp.c -text
 lib/libc/string/strncpy.c -text
 lib/libc/string/strndup.c -text
+lib/libc/string/strnlen.c -text
 lib/libc/string/strnstr.c -text
 lib/libc/string/strpbrk.3 -text
 lib/libc/string/strpbrk.c -text
