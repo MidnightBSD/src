@@ -1,4 +1,4 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/pch.h,v 1.7 2002/04/28 01:33:45 gad Exp $
+/* $FreeBSD: src/gnu/usr.bin/patch/pch.h,v 1.8 2009/05/08 02:18:46 sepotvin Exp $
  *
  * $Log: not supported by cvs2svn $
  * Revision 2.0.1.1  87/01/30  22:47:16  lwall
@@ -32,5 +32,5 @@ LINENUM	 pch_context(void);
 LINENUM	 pch_hunk_beg(void);
 char	 pch_char(LINENUM _line);
 char	*pfetch(LINENUM _line);
-char	*pgets(char *_bf, int _sz, FILE *_fp);
+size_t	 pgets(bool _do_indent);
 void	 do_ed_script(void);

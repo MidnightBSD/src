@@ -1,4 +1,4 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/inp.c,v 1.12 2002/05/21 00:44:18 gad Exp $
+/* $FreeBSD: src/gnu/usr.bin/patch/inp.c,v 1.13 2009/05/08 02:18:46 sepotvin Exp $
  *
  * $Log: not supported by cvs2svn $
  * Revision 2.0.1.1  88/06/03  15:06:13  lwall
@@ -79,7 +79,7 @@ plan_a(char *filename)
 	int ifd, statfailed;
 	Reg1 char *s;
 	Reg2 LINENUM iline;
-	char lbuf[MAXLINELEN];
+	char lbuf[INITLINELEN];
 	int output_elsewhere = strcmp(filename, outname);
 	extern int check_patch;
 
@@ -284,7 +284,7 @@ plan_b(char *filename)
 		pfatal2("can't open file %s", filename);
 	if ((tifd = creat(TMPINNAME, 0666)) < 0)
 		pfatal2("can't open file %s", TMPINNAME);
-	while (fgets(buf, sizeof buf, ifp) != Nullch) {
+	while (fgets(buf, buf_size, ifp) != Nullch) {
 		if (revision != Nullch && !found_revision && rev_in_string(buf))
 			found_revision = TRUE;
 		if ((i = strlen(buf)) > maxlen)

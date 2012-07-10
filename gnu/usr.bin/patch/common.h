@@ -1,4 +1,4 @@
-/* $FreeBSD: src/gnu/usr.bin/patch/common.h,v 1.9 2002/10/13 01:18:33 kris Exp $
+/* $FreeBSD: src/gnu/usr.bin/patch/common.h,v 1.11 2009/09/16 19:53:29 sepotvin Exp $
  *
  * $Log: not supported by cvs2svn $
  * Revision 2.0.1.2  88/06/22  20:44:53  lwall
@@ -34,6 +34,7 @@
 #define Strcpy (void)strcpy
 #define Strcat (void)strcat
 #define Strlcpy (void)strlcpy
+#define Strncpy (void)strncpy
 #define Strlcat (void)strlcat
 
 /* NeXT declares malloc and realloc incompatibly from us in some of
@@ -63,7 +64,7 @@
 
 #define MAXHUNKSIZE 200000		/* is this enough lines? */
 #define INITHUNKMAX 125			/* initial dynamic allocation size */
-#define MAXLINELEN 4096
+#define INITLINELEN 4096
 #define BUFFERSIZE 4096
 
 #define SCCSPREFIX "s."
@@ -105,7 +106,8 @@ EXT int optind_last;			/* for restarting plan_b */
 EXT struct stat filestat;		/* file statistics area */
 EXT int filemode INIT(0644);
 
-EXT char buf[MAXLINELEN];		/* general purpose buffer */
+EXT char *buf;				/* general purpose buffer */
+EXT size_t buf_size;			/* size of the general purpose buffer */
 EXT FILE *ofp INIT(Nullfp);		/* output file pointer */
 EXT FILE *rejfp INIT(Nullfp);		/* reject file pointer */
 
