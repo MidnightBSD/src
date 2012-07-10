@@ -1,10 +1,10 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/sort/Makefile,v 1.2 2011/02/06 00:52:01 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/sort/Makefile,v 1.12 2004/08/12 06:02:28 tjr Exp $
 
 SORTDIR= ${.CURDIR}/../../../contrib/gnu-sort
 .PATH: ${SORTDIR}/lib ${SORTDIR}/src ${SORTDIR}/man
 
-PROG=	sort
+PROG=	gnusort
 SRCS=   sort.c \
 	__fpending.c \
 	argmatch.c \
@@ -43,6 +43,7 @@ SRCS=   sort.c \
 	xstrtoul.c \
 	xstrtoumax.c
 
+MAN1+=	sort.1
 CFLAGS+=-I${.CURDIR} -I${SORTDIR}/lib -DHAVE_CONFIG_H \
 	-DHAVE_LANGINFO_H=1 -DHAVE_NL_LANGINFO=1 \
 	-std=c99
