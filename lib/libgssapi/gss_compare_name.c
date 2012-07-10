@@ -27,6 +27,7 @@
  */
 
 #include <gssapi/gssapi.h>
+#include <string.h>
 
 #include "mech_switch.h"
 #include "name.h"

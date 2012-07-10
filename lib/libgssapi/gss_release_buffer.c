@@ -26,6 +26,7 @@
  *	$FreeBSD: src/lib/libgssapi/gss_release_buffer.c,v 1.1 2005/12/29 14:40:20 dfr Exp $
  */
 
+#include <stdlib.h>
 #include <gssapi/gssapi.h>
 
 OM_uint32

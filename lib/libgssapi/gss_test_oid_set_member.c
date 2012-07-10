@@ -26,6 +26,7 @@
  *	$FreeBSD: src/lib/libgssapi/gss_test_oid_set_member.c,v 1.1 2005/12/29 14:40:20 dfr Exp $
  */
 
+#include <string.h>
 #include <gssapi/gssapi.h>
 
 static int
