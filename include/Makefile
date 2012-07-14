@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.12 2012/07/01 15:46:31 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.13 2012/07/06 01:32:14 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -22,7 +22,7 @@ INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	res_update.h resolv.h runetype.h search.h setjmp.h sgtty.h \
 	signal.h spawn.h stab.h \
 	stdbool.h stddef.h stdio.h stdlib.h string.h stringlist.h \
-	strings.h sysexits.h tar.h termios.h tgmath.h \
+	strings.h sysexits.h tar.h tgmath.h \
 	time.h timeconv.h timers.h ttyent.h \
 	ulimit.h unistd.h utime.h utmp.h uuid.h varargs.h vis.h \
 	wchar.h wctype.h wordexp.h
@@ -32,7 +32,7 @@ MHDRS=	float.h floatingpoint.h stdarg.h
 PHDRS=	sched.h semaphore.h _semaphore.h
 
 LHDRS=	aio.h errno.h fcntl.h linker_set.h poll.h stdint.h syslog.h \
-	ucontext.h
+	termios.h ucontext.h
 
 LDIRS=	bsm cam geom net net80211 netatalk netgraph netinet netinet6 \
 	netipsec netipx netnatm ${_netncp} netsmb \
@@ -40,8 +40,8 @@ LDIRS=	bsm cam geom net net80211 netatalk netgraph netinet netinet6 \
 	pccard sys vm
 
 LSUBDIRS=	cam/scsi \
-	dev/acpica dev/an dev/bktr dev/ciss dev/firewire dev/hwpmc \
-	dev/ic dev/iicbus ${_dev_ieee488} dev/io dev/lmc dev/mfi dev/ofw \
+	dev/acpica dev/an dev/bktr dev/firewire dev/hwpmc \
+	dev/ic dev/iicbus ${_dev_ieee488} dev/lmc dev/ofw \
 	dev/pbio dev/ppbus dev/smbus \
 	dev/speaker dev/usb dev/utopia dev/vkbd dev/wi \
 	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/ntfs fs/nullfs \
@@ -54,8 +54,6 @@ LSUBDIRS=	cam/scsi \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
 	security/mac_mls security/mac_partition \
 	ufs/ffs ufs/ufs
-
-LSUBSUBDIRS=	dev/mpt/mpilib
 
 .if ${MK_GPIB} != "no"
 _dev_ieee488=	dev/ieee488
@@ -114,9 +112,9 @@ INCSLINKS+=	sys/$i ${INCLUDEDIR}/$i
 .if ${MACHINE} != ${MACHINE_CPUARCH}
 _MARCHS=	${MACHINE_CPUARCH}
 .endif
-.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
-_MARCHS+=	x86
-.endif
+#.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+#_MARCHS+=	x86
+#.endif
 
 .include <bsd.prog.mk>
 
