@@ -171,11 +171,11 @@
 /* #undef GDB_XM_FILE */
 
 /* targetfile */
-#define GDB_TM_FILE config/sparc/tm-fbsd.h
+#define GDB_TM_FILE config/powerpc/tm-ppc-eabi.h
 
 /* nativefile */
 #ifndef CROSS_DEBUGGER
-#define GDB_NM_FILE config/sparc/nm-fbsd.h
+#define GDB_NM_FILE config/ia64/nm-fbsd.h
 #endif
 
 /* Define to 1 so <sys/proc.h> gets a definition of anon_hdl.  Works
@@ -443,10 +443,10 @@
 #define DEBUGDIR "/usr/local/lib/debug"
 
 /* Define to BFD's default architecture.  */
-#define DEFAULT_BFD_ARCH bfd_sparc_arch
+#define DEFAULT_BFD_ARCH bfd_rs6000_arch
 
 /* Define to BFD's default target vector.  */
-#define DEFAULT_BFD_VEC bfd_elf64_sparc_vec
+#define DEFAULT_BFD_VEC bfd_elf64_powerpc_vec
 
 /* Define to 1 if your system has the _etext variable.  */
 #define HAVE__ETEXT 1

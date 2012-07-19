@@ -5,22 +5,21 @@
 #include "defs.h"      /* For initialize_file_ftype.  */
 #include "call-cmds.h" /* For initialize_all_files.  */
 extern initialize_file_ftype _initialize_gdbtypes;
-extern initialize_file_ftype _initialize_amd64fbsd_tdep;
-extern initialize_file_ftype _initialize_i386_tdep;
-extern initialize_file_ftype _initialize_i386bsd_tdep;
-extern initialize_file_ftype _initialize_i386fbsd_tdep;
+extern initialize_file_ftype _initialize_rs6000_tdep;
+extern initialize_file_ftype _initialize_ppcfbsd_tdep;
 extern initialize_file_ftype _initialize_corelow;
 extern initialize_file_ftype _initialize_solib;
 extern initialize_file_ftype _initialize_svr4_solib;
 extern initialize_file_ftype _initialize_ser_hardwire;
 extern initialize_file_ftype _initialize_ser_pipe;
 extern initialize_file_ftype _initialize_ser_tcp;
+extern initialize_file_ftype _initialize_fbsd_proc;
+extern initialize_file_ftype _initialize_gcore;
 extern initialize_file_ftype _initialize_kernel_u_addr;
 extern initialize_file_ftype _initialize_infptrace;
 extern initialize_file_ftype _initialize_inftarg;
-extern initialize_file_ftype _initialize_amd64fbsd_nat;
-extern initialize_file_ftype _initialize_gcore;
-extern initialize_file_ftype _initialize_fbsd_proc;
+extern initialize_file_ftype _initialize_ppcfbsd_nat;
+extern initialize_file_ftype _initialize_thread_db;
 extern initialize_file_ftype _initialize_remote;
 extern initialize_file_ftype _initialize_dcache;
 extern initialize_file_ftype _initialize_sr_support;
@@ -107,7 +106,6 @@ extern initialize_file_ftype _initialize_mi_cmds;
 extern initialize_file_ftype _initialize_mi_cmd_env;
 extern initialize_file_ftype _initialize_mi_interp;
 extern initialize_file_ftype _initialize_mi_main;
-extern initialize_file_ftype _initialize_thread_db;
 extern initialize_file_ftype _initialize_tui_hooks;
 extern initialize_file_ftype _initialize_tui_interp;
 extern initialize_file_ftype _initialize_tui_layout;
@@ -119,10 +117,8 @@ void
 initialize_all_files (void)
 {
   _initialize_gdbtypes ();
-  _initialize_amd64fbsd_tdep ();
-  _initialize_i386_tdep ();
-  _initialize_i386bsd_tdep ();
-  _initialize_i386fbsd_tdep ();
+  _initialize_rs6000_tdep ();
+  _initialize_ppcfbsd_tdep ();
   _initialize_corelow ();
   _initialize_solib ();
   _initialize_svr4_solib ();
@@ -130,12 +126,12 @@ initialize_all_files (void)
   _initialize_ser_pipe ();
   _initialize_ser_tcp ();
 #ifndef CROSS_DEBUGGER
+  _initialize_fbsd_proc ();
+  _initialize_gcore ();
   _initialize_kernel_u_addr ();
   _initialize_infptrace ();
   _initialize_inftarg ();
-  _initialize_amd64fbsd_nat ();
-  _initialize_gcore ();
-  _initialize_fbsd_proc ();
+  _initialize_ppcfbsd_nat ();
   _initialize_thread_db ();
 #endif
   _initialize_remote ();

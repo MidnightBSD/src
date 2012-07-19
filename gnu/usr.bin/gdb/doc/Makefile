@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/gdb/doc/Makefile,v 1.13 2004/10/18 10:13:24 ache Exp $
+# $FreeBSD$
 
 INFO=	gdb gdbint stabs
 INFOSECTION= "Software development"
@@ -20,11 +20,11 @@ GDBvn.texi: version.in
 	echo "@set GDBVN `sed q ${.ALLSRC}`" > ${.TARGET}
 
 inc-hist.texinfo: hsuser.texi inc-hist.diff
-	cp ${.ALLSRC:M*.texi} ${.TARGET}
+	cp -f ${.ALLSRC:M*.texi} ${.TARGET}
 	patch < ${.ALLSRC:M*.diff}
 
 rluser.texinfo: rluser.texi
-	cp ${.ALLSRC:M*.texi} ${.TARGET}
+	cp -f ${.ALLSRC:M*.texi} ${.TARGET}
 
 CLEANFILES= gdb-cfg.texi GDBvn.texi inc-hist.texinfo inc-hist.texinfo.orig \
 	rluser.texinfo

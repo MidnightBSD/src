@@ -1,6 +1,7 @@
-# $FreeBSD: src/gnu/usr.bin/gdb/arch/sparc64/Makefile,v 1.3 2004/12/05 06:59:01 marcel Exp $
+# $FreeBSD$
 
 .if !defined(GDB_CROSS_DEBUGGER)
+LIBSRCS+= fbsd-threads.c
 LIBSRCS+= solib.c solib-legacy.c solib-svr4.c
 LIBSRCS+= sparc-nat.c sparc64-nat.c sparc64fbsd-nat.c
 .endif
