@@ -29525,6 +29525,9 @@ gnu/usr.bin/gdb/arch/i386/init.c -text
 gnu/usr.bin/gdb/arch/mips/Makefile -text
 gnu/usr.bin/gdb/arch/mips/config.h -text
 gnu/usr.bin/gdb/arch/mips/init.c -text
+gnu/usr.bin/gdb/arch/powerpc/Makefile -text
+gnu/usr.bin/gdb/arch/powerpc/config.h -text
+gnu/usr.bin/gdb/arch/powerpc/init.c -text
 gnu/usr.bin/gdb/arch/powerpc64/Makefile -text
 gnu/usr.bin/gdb/arch/powerpc64/config.h -text
 gnu/usr.bin/gdb/arch/powerpc64/init.c -text
@@ -29558,6 +29561,7 @@ gnu/usr.bin/gdb/kgdb/trgt_amd64.c -text
 gnu/usr.bin/gdb/kgdb/trgt_arm.c -text
 gnu/usr.bin/gdb/kgdb/trgt_i386.c -text
 gnu/usr.bin/gdb/kgdb/trgt_mips.c -text
+gnu/usr.bin/gdb/kgdb/trgt_powerpc.c -text
 gnu/usr.bin/gdb/kgdb/trgt_powerpc64.c -text
 gnu/usr.bin/gdb/kgdb/trgt_sparc64.c -text
 gnu/usr.bin/gdb/libgdb/Makefile -text

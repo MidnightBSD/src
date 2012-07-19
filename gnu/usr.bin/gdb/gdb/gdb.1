@@ -1,7 +1,7 @@
 .\" Copyright (c) 1991 Free Software Foundation
 .\" See section COPYING for conditions for redistribution
 .\" $FreeBSD: src/gnu/usr.bin/gdb/gdb/gdb.1,v 1.9 2005/02/15 07:13:51 marcel Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/gnu/usr.bin/gdb/gdb/gdb.1,v 1.2 2012/07/04 13:48:07 laffer1 Exp $
 .\"
 .TH gdb 1 "4nov1991" "GNU Tools" "GNU Tools"
 .SH NAME
@@ -324,11 +324,11 @@ to output the full file name and line number in a standard,
 recognizable fashion each time a stack frame is displayed (which
 includes each time the program stops).  This recognizable format looks
 like two `\|\c
-.B \032\c
+.B \e032\c
 \&\|' characters, followed by the file name, line number
 and character position separated by colons, and a newline.  The
 Emacs-to-GDB interface program uses the two `\|\c
-.B \032\c
+.B \e032\c
 \&\|' characters as
 a signal to display the source code for the frame.
 

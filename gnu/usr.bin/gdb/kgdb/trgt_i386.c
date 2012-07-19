@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/gnu/usr.bin/gdb/kgdb/trgt_i386.c,v 1.2 2012/07/04 13:37:32 laffer1 Exp $ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -138,7 +138,7 @@ kgdb_trgt_fetch_tss(void)
 	if (kt == NULL || kt->cpu == NOCPU)
 		return (0);
 
-	addr = kgdb_lookup("_gdt");
+	addr = kgdb_lookup("gdt");
 	if (addr == 0)
 		return (0);
 	addr += (kt->cpu * NGDT + GPROC0_SEL) * sizeof(sd);
@@ -161,11 +161,9 @@ kgdb_trgt_fetch_tss(void)
 	 * change it to be relative to cpu0prvpage instead.
 	 */ 
 	if (trunc_page(tss) == 0xffc00000) {
-		addr = kgdb_lookup("_cpu0prvpage");
-		if (addr == 0) {
-			warnx("kvm_nlist(_cpu0prvpage): %s", kvm_geterr(kvm));
+		addr = kgdb_lookup("cpu0prvpage");
+		if (addr == 0)
 			return (0);
-		}
 		if (kvm_read(kvm, addr, &cpu0prvpage, sizeof(cpu0prvpage)) !=
 		    sizeof(cpu0prvpage)) {
 			warnx("kvm_read: %s", kvm_geterr(kvm));

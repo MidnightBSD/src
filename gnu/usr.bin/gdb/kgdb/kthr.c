@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.2 2012/07/04 13:37:32 laffer1 Exp $ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -29,6 +29,7 @@
 __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.7.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
+#include <sys/cpuset.h>
 #include <sys/proc.h>
 #include <sys/types.h>
 #include <sys/signal.h>
@@ -38,6 +39,7 @@ __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.7.2.4.2.1 2008/11/25 02:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <defs.h>
 #include <frame-unwind.h>
@@ -45,25 +47,25 @@ __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.7.2.4.2.1 2008/11/25 02:
 #include "kgdb.h"
 #include <machine/pcb.h>
 
-static uintptr_t dumppcb;
+static CORE_ADDR dumppcb;
 static int dumptid;
 
-static uintptr_t stoppcbs;
-static __cpumask_t stopped_cpus;
+static CORE_ADDR stoppcbs;
+static cpuset_t stopped_cpus;
 
 static struct kthr *first;
 struct kthr *curkthr;
 
-uintptr_t
+CORE_ADDR
 kgdb_lookup(const char *sym)
 {
-	struct nlist nl[2];
+	CORE_ADDR addr;
+	char *name;
 
-	nl[0].n_name = (char *)(uintptr_t)sym;
-	nl[1].n_name = NULL;
-	if (kvm_nlist(kvm, nl) != 0)
-		return (0);
-	return (nl[0].n_value);
+	asprintf(&name, "&%s", sym);
+	addr = kgdb_parse(name);
+	free(name);
+	return (addr);
 }
 
 struct kthr *
@@ -72,38 +74,13 @@ kgdb_thr_first(void)
 	return (first);
 }
 
-struct kthr *
-kgdb_thr_init(void)
+static void
+kgdb_thr_add_procs(uintptr_t paddr)
 {
 	struct proc p;
 	struct thread td;
 	struct kthr *kt;
-	uintptr_t addr, paddr;
-	
-	while (first != NULL) {
-		kt = first;
-		first = kt->next;
-		free(kt);
-	}
-
-	addr = kgdb_lookup("_allproc");
-	if (addr == 0) {
-		warnx("kvm_nlist(_allproc): %s", kvm_geterr(kvm));
-		return (NULL);
-	}
-	kvm_read(kvm, addr, &paddr, sizeof(paddr));
-
-	dumppcb = kgdb_lookup("_dumppcb");
-	if (dumppcb == 0) {
-		warnx("kvm_nlist(_dumppcb): %s", kvm_geterr(kvm));
-		return (NULL);
-	}
-
-	addr = kgdb_lookup("_dumptid");
-	if (addr != 0)
-		kvm_read(kvm, addr, &dumptid, sizeof(dumptid));
-	else
-		dumptid = -1;
+	CORE_ADDR addr;
 
 	addr =  kgdb_lookup("_stopped_cpus");
 	if (addr != 0)
@@ -130,9 +107,10 @@ kgdb_thr_init(void)
 			kt->kaddr = addr;
 			if (td.td_tid == dumptid)
 				kt->pcb = dumppcb;
-			else if (td.td_state == TDS_RUNNING && ((1 << td.td_oncpu) & stopped_cpus)
-				&& stoppcbs != 0)
-				kt->pcb = (uintptr_t) stoppcbs + sizeof(struct pcb) * td.td_oncpu;
+			else if (td.td_state == TDS_RUNNING && stoppcbs != 0 &&
+			    CPU_ISSET(td.td_oncpu, &stopped_cpus))
+				kt->pcb = (uintptr_t)stoppcbs +
+				    sizeof(struct pcb) * td.td_oncpu;
 			else
 				kt->pcb = (uintptr_t)td.td_pcb;
 			kt->kstack = td.td_kstack;
@@ -144,6 +122,52 @@ kgdb_thr_init(void)
 			addr = (uintptr_t)TAILQ_NEXT(&td, td_plist);
 		}
 		paddr = (uintptr_t)LIST_NEXT(&p, p_list);
+	}
+}
+
+struct kthr *
+kgdb_thr_init(void)
+{
+	long cpusetsize;
+	struct kthr *kt;
+	CORE_ADDR addr;
+	uintptr_t paddr;
+	
+	while (first != NULL) {
+		kt = first;
+		first = kt->next;
+		free(kt);
+	}
+
+	addr = kgdb_lookup("allproc");
+	if (addr == 0)
+		return (NULL);
+	kvm_read(kvm, addr, &paddr, sizeof(paddr));
+
+	dumppcb = kgdb_lookup("dumppcb");
+	if (dumppcb == 0)
+		return (NULL);
+
+	addr = kgdb_lookup("dumptid");
+	if (addr != 0)
+		kvm_read(kvm, addr, &dumptid, sizeof(dumptid));
+	else
+		dumptid = -1;
+
+	addr = kgdb_lookup("stopped_cpus");
+	CPU_ZERO(&stopped_cpus);
+	cpusetsize = sysconf(_SC_CPUSET_SIZE);
+	if (cpusetsize != -1 && (u_long)cpusetsize <= sizeof(cpuset_t) &&
+	    addr != 0)
+		kvm_read(kvm, addr, &stopped_cpus, cpusetsize);
+
+	stoppcbs = kgdb_lookup("stoppcbs");
+
+	kgdb_thr_add_procs(paddr);
+	addr = kgdb_lookup("zombproc");
+	if (addr != 0) {
+		kvm_read(kvm, addr, &paddr, sizeof(paddr));
+		kgdb_thr_add_procs(paddr);
 	}
 	curkthr = kgdb_thr_lookup_tid(dumptid);
 	if (curkthr == NULL)
@@ -215,8 +239,10 @@ char *
 kgdb_thr_extra_thread_info(int tid)
 {
 	char comm[MAXCOMLEN + 1];
+	char td_name[MAXCOMLEN + 1];
 	struct kthr *kt;
 	struct proc *p;
+	struct thread *t;
 	static char buf[64];
 
 	kt = kgdb_thr_lookup_tid(tid);
@@ -229,5 +255,12 @@ kgdb_thr_extra_thread_info(int tid)
 		return (buf);
 	strlcat(buf, ": ", sizeof(buf));
 	strlcat(buf, comm, sizeof(buf));
+	t = (struct thread *)kt->kaddr;
+	if (kvm_read(kvm, (uintptr_t)&t->td_name[0], &td_name,
+	    sizeof(td_name)) == sizeof(td_name) &&
+	    strcmp(comm, td_name) != 0) {
+		strlcat(buf, "/", sizeof(buf));
+		strlcat(buf, td_name, sizeof(buf));
+	}
 	return (buf);
 }

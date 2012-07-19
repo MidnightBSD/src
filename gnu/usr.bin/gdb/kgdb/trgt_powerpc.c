@@ -1,6 +1,5 @@
-/* $MidnightBSD: src/gnu/usr.bin/gdb/kgdb/trgt_amd64.c,v 1.2 2012/07/04 13:37:32 laffer1 Exp $ */
-/*
- * Copyright (c) 2004 Marcel Moolenaar
+/*-
+ * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -13,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
  * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
  * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_amd64.c,v 1.8.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <machine/pcb.h>
@@ -41,7 +40,7 @@ __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_amd64.c,v 1.8.2.2.2.1 2008/11/
 #include <inferior.h>
 #include <regcache.h>
 #include <frame-unwind.h>
-#include <amd64-tdep.h>
+#include <ppc-tdep.h>
 
 #include "kgdb.h"
 
@@ -50,6 +49,10 @@ kgdb_trgt_fetch_registers(int regno __unused)
 {
 	struct kthr *kt;
 	struct pcb pcb;
+	struct gdbarch_tdep *tdep;
+	int i;
+
+	tdep = gdbarch_tdep (current_gdbarch);
 
 	kt = kgdb_thr_lookup_tid(ptid_get_pid(inferior_ptid));
 	if (kt == NULL)
@@ -59,15 +62,19 @@ kgdb_trgt_fetch_registers(int regno __unused)
 		memset(&pcb, 0, sizeof(pcb));
 	}
 
-	supply_register(AMD64_RBX_REGNUM, (char *)&pcb.pcb_rbx);
-	supply_register(AMD64_RBP_REGNUM, (char *)&pcb.pcb_rbp);
-	supply_register(AMD64_RSP_REGNUM, (char *)&pcb.pcb_rsp);
-	supply_register(AMD64_R8_REGNUM + 4, (char *)&pcb.pcb_r12);
-	supply_register(AMD64_R8_REGNUM + 5, (char *)&pcb.pcb_r13);
-	supply_register(AMD64_R8_REGNUM + 6, (char *)&pcb.pcb_r14);
-	supply_register(AMD64_R15_REGNUM, (char *)&pcb.pcb_r15);
-	supply_register(AMD64_RIP_REGNUM, (char *)&pcb.pcb_rip);
-	amd64_supply_fxsave(current_regcache, -1, (struct fpusave *)(&pcb + 1));
+	/*
+	 * r14-r31 are saved in the pcb
+	 */
+	for (i = 14; i <= 31; i++) {
+		supply_register(tdep->ppc_gp0_regnum + i,
+		    (char *)&pcb.pcb_context[i]);
+	}
+
+	/* r1 is saved in the sp field */
+	supply_register(tdep->ppc_gp0_regnum + 1, (char *)&pcb.pcb_sp);
+
+	supply_register(tdep->ppc_lr_regnum, (char *)&pcb.pcb_lr);
+	supply_register(tdep->ppc_cr_regnum, (char *)&pcb.pcb_cr);
 }
 
 void
@@ -84,29 +91,6 @@ kgdb_trgt_new_objfile(struct objfile *objfile)
 struct kgdb_frame_cache {
 	CORE_ADDR	pc;
 	CORE_ADDR	sp;
-};
-
-static int kgdb_trgt_frame_offset[20] = {
-	offsetof(struct trapframe, tf_rax),
-	offsetof(struct trapframe, tf_rbx),
-	offsetof(struct trapframe, tf_rcx),
-	offsetof(struct trapframe, tf_rdx),
-	offsetof(struct trapframe, tf_rsi),
-	offsetof(struct trapframe, tf_rdi),
-	offsetof(struct trapframe, tf_rbp),
-	offsetof(struct trapframe, tf_rsp),
-	offsetof(struct trapframe, tf_r8),
-	offsetof(struct trapframe, tf_r9),
-	offsetof(struct trapframe, tf_r10),
-	offsetof(struct trapframe, tf_r11),
-	offsetof(struct trapframe, tf_r12),
-	offsetof(struct trapframe, tf_r13),
-	offsetof(struct trapframe, tf_r14),
-	offsetof(struct trapframe, tf_r15),
-	offsetof(struct trapframe, tf_rip),
-	offsetof(struct trapframe, tf_rflags),
-	offsetof(struct trapframe, tf_cs),
-	offsetof(struct trapframe, tf_ss)
 };
 
 static struct kgdb_frame_cache *
@@ -143,9 +127,11 @@ kgdb_trgt_trapframe_prev_register(struct frame_info *next_frame,
     CORE_ADDR *addrp, int *realnump, void *valuep)
 {
 	char dummy_valuep[MAX_REGISTER_SIZE];
+	struct gdbarch_tdep *tdep;
 	struct kgdb_frame_cache *cache;
 	int ofs, regsz;
 
+	tdep = gdbarch_tdep(current_gdbarch);
 	regsz = register_size(current_gdbarch, regnum);
 
 	if (valuep == NULL)
@@ -156,13 +142,25 @@ kgdb_trgt_trapframe_prev_register(struct frame_info *next_frame,
 	*lvalp = not_lval;
 	*realnump = -1;
 
-	ofs = (regnum >= AMD64_RAX_REGNUM && regnum <= AMD64_EFLAGS_REGNUM + 2)
-	    ? kgdb_trgt_frame_offset[regnum] : -1;
-	if (ofs == -1)
+	if (regnum >= tdep->ppc_gp0_regnum &&
+	    regnum <= tdep->ppc_gplast_regnum)
+		ofs = offsetof(struct trapframe,
+		    fixreg[regnum - tdep->ppc_gp0_regnum]);
+	else if (regnum == tdep->ppc_lr_regnum)
+		ofs = offsetof(struct trapframe, lr);
+	else if (regnum == tdep->ppc_cr_regnum)
+		ofs = offsetof(struct trapframe, cr);
+	else if (regnum == tdep->ppc_xer_regnum)
+		ofs = offsetof(struct trapframe, xer);
+	else if (regnum == tdep->ppc_ctr_regnum)
+		ofs = offsetof(struct trapframe, ctr);
+	else if (regnum == PC_REGNUM)
+		ofs = offsetof(struct trapframe, srr0);
+	else
 		return;
 
 	cache = kgdb_trgt_frame_cache(next_frame, this_cache);
-	*addrp = cache->sp + ofs;
+	*addrp = cache->sp + 8 + ofs;
 	*lvalp = lval_memory;
 	target_read_memory(*addrp, valuep, regsz);
 }
@@ -184,10 +182,9 @@ kgdb_trgt_trapframe_sniffer(struct frame_info *next_frame)
 	find_pc_partial_function(pc, &pname, NULL, NULL);
 	if (pname == NULL)
 		return (NULL);
-	if (strcmp(pname, "calltrap") == 0 ||
-	    strcmp(pname, "nmi_calltrap") == 0 ||
-	    (pname[0] == 'X' && pname[1] != '_'))
+	if (strcmp(pname, "asttrapexit") == 0 ||
+	    strcmp(pname, "trapexit") == 0)
 		return (&kgdb_trgt_trapframe_unwind);
-	/* printf("%s: %lx =%s\n", __func__, pc, pname); */
+	/* printf("%s: %llx =%s\n", __func__, pc, pname); */
 	return (NULL);
 }

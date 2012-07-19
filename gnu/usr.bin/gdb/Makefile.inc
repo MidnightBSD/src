@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/gdb/Makefile.inc,v 1.13 2004/12/21 08:47:00 ru Exp $
+# $MidnightBSD$
 
 VERSION= "6.1.1 [MidnightBSD]"
 VENDOR= midnightbsd
@@ -31,17 +31,17 @@ GDB_CROSS_DEBUGGER=
 CFLAGS+= -DHAVE_CONFIG_H -DRL_NO_COMPAT -DMI_OUT=1 -DTUI=1
 CFLAGS+= -I.
 CFLAGS+= -I${TARGET_SUBDIR}
-CFLAGS+= -I${BMAKE_BU}/libbfd -I${BMAKE_BU}/libbfd/${TARGET_ARCH}
+CFLAGS+= -I${BMAKE_BU}/libbfd -I${BMAKE_BU}/libbfd/${TARGET_CPUARCH}
 CFLAGS+= -I${CNTRB_GDB}/gdb
 CFLAGS+= -I${CNTRB_GDB}/gdb/config
-CFLAGS+= -I${CNTRB_GDB}/include
 CFLAGS+= -I${CNTRB_BU}/include
+CFLAGS+= -I${CNTRB_GDB}/include
 CFLAGS+= -I${CNTRB_BU}/bfd
 
 GENSRCS+= nm.h tm.h
 
 .if defined(GDB_CROSS_DEBUGGER)
-CFLAGS+= -DCROSS_DEBUGGER
+CFLAGS+= -DCROSS_DEBUGGER -I${BMAKE_ROOT}/../..
 GDB_SUFFIX= -${TARGET_ARCH}
 NO_MAN=
 .endif
