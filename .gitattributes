@@ -29482,11 +29482,11 @@ gnu/usr.bin/cc/cc1plus/Makefile -text
 gnu/usr.bin/cc/cc_int/Makefile -text
 gnu/usr.bin/cc/cc_tools/Makefile -text
 gnu/usr.bin/cc/cc_tools/Makefile.dep -text
+gnu/usr.bin/cc/cc_tools/arm.md.diff -text
 gnu/usr.bin/cc/cc_tools/auto-host.h -text
 gnu/usr.bin/cc/cc_tools/elfos-undef.h -text
 gnu/usr.bin/cc/cc_tools/freebsd-native.h -text
 gnu/usr.bin/cc/cc_tools/freebsd.opt -text
-gnu/usr.bin/cc/cc_tools/freebsd64-fix.h -text
 gnu/usr.bin/cc/cc_tools/i386-freebsd.opt -text
 gnu/usr.bin/cc/cc_tools/size-host.h -text
 gnu/usr.bin/cc/collect2/Makefile -text

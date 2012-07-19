@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.5 2010/02/06 04:14:08 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.6 2010/02/06 05:12:46 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.88 2007/05/28 00:25:07 kan Exp $
 
 .include <bsd.own.mk>
@@ -23,32 +23,46 @@ LIBIBERTY=	libiberty.a
 # The list of headers to go into tm.h
 #
 TARGET_INC+=	options.h
-.if ${TARGET_ARCH} == "amd64"
+.if ${TARGET_CPUARCH} == "amd64"
 TARGET_INC+=	i386/biarch64.h
 .endif
+.if ${TARGET_CPUARCH} != "arm"
 TARGET_INC+=	${GCC_CPU}/${GCC_CPU}.h
-.if ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "amd64"
+.endif
+.if ${TARGET_CPUARCH} == "i386" || ${TARGET_CPUARCH} == "amd64"
 TARGET_INC+=	${GCC_CPU}/unix.h
 TARGET_INC+=	${GCC_CPU}/att.h
 .endif
 TARGET_INC+=	dbxelf.h
+TARGET_INC+=	elfos-undef.h
 TARGET_INC+=	elfos.h
 TARGET_INC+=	freebsd-native.h
 TARGET_INC+=	freebsd-spec.h
 TARGET_INC+=	freebsd.h
-.if ${TARGET_ARCH} != "i386" && ${TARGET_ARCH} != "amd64"
-.if exists(${GCCDIR}/config/${GCC_CPU}/sysv4.h)
+.if ${TARGET_CPUARCH} != "i386" && ${TARGET_CPUARCH} != "amd64"
+. if exists(${GCCDIR}/config/${GCC_CPU}/sysv4.h)
 TARGET_INC+=	${GCC_CPU}/sysv4.h
+. endif
 .endif
-.endif
-.if ${TARGET_ARCH} == "amd64"
+.if ${TARGET_CPUARCH} == "amd64"
 TARGET_INC+=	${GCC_CPU}/x86-64.h
+.endif
+.if ${TARGET_CPUARCH} == "arm" || ${TARGET_CPUARCH} == "mips"
+TARGET_INC+=	${GCC_CPU}/elf.h
+.endif
+.if ${TARGET_CPUARCH} == "arm"
+TARGET_INC+=	${GCC_CPU}/aout.h
+.endif
+.if ${TARGET_ARCH} == "powerpc64"
+TARGET_INC+=	${GCC_CPU}/biarch64.h
+TARGET_INC+=    ${GCC_CPU}/default64.h
+.endif
 TARGET_INC+=	${GCC_CPU}/freebsd.h
+.if ${TARGET_CPUARCH} == "amd64"
 TARGET_INC+=	${GCC_CPU}/freebsd64.h
-TARGET_INC+=	freebsd64-fix.h
-#TARGET_INC+=	${GCC_CPU}/freebsd.h
-.else
-TARGET_INC+=	${GCC_CPU}/freebsd.h
+.endif
+.if ${TARGET_CPUARCH} == "arm"
+TARGET_INC+=	${GCC_CPU}/arm.h
 .endif
 TARGET_INC+=	defaults.h
 
@@ -207,15 +221,15 @@ GENSRCS+=	tconfig.h
 CLEANFILES+=	cs-tconfig.h
 # Options
 optionlist: ${OPT_FILES}
-	awk -f ${GCCDIR}/opt-gather.awk ${.ALLSRC} > ${.TARGET}
+	LC_ALL=C awk -f ${GCCDIR}/opt-gather.awk ${.ALLSRC} > ${.TARGET}
 
 options.h:	optionlist
-	awk -f ${GCCDIR}/opt-functions.awk \
+	LC_ALL=C awk -f ${GCCDIR}/opt-functions.awk \
 	    -f ${GCCDIR}/opth-gen.awk \
 		< ${.ALLSRC} > ${.TARGET}
 
 options.c:	optionlist
-	awk -f ${GCCDIR}/opt-functions.awk \
+	LC_ALL=C awk -f ${GCCDIR}/opt-functions.awk \
 	    -f ${GCCDIR}/optc-gen.awk \
 		-v header_name="config.h system.h coretypes.h tm.h" \
 		< ${.ALLSRC} > ${.TARGET}
@@ -290,12 +304,22 @@ GENSRCS+=	gcov-iov.h
 
 # Multilib config file
 multilib.h:
+.if ${TARGET_ARCH} == "powerpc64" || ${TARGET_ARCH} == "amd64"
+	echo 'static const char *const multilib_raw[] = { \
+	    ". !m64 !m32;", \
+	    "64:../lib m64 !m32;", \
+	    "32:../lib32 !m64 m32;", NULL };'			> ${.TARGET}
+	echo 'static const char *multilib_options = "m64/m32";'	>> ${.TARGET}
+	echo 'static const char *const multilib_matches_raw[] = { \
+	    "m64 m64;", "m32 m32;", NULL };'			>> ${.TARGET}
+.else
 	echo 'static const char *const multilib_raw[] = { \
 	    ". ;", NULL };'					> ${.TARGET}
+	echo 'static const char *multilib_options = "";'	>> ${.TARGET}
 	echo 'static const char *const multilib_matches_raw[] = { \
 	    NULL };'						>> ${.TARGET}
+.endif
 	echo 'static const char *multilib_extra = "";'		>> ${.TARGET}
-	echo 'static const char *multilib_options = "";'	>> ${.TARGET}
 	echo 'static const char *const multilib_exclusions_raw[] = { \
 	    NULL };'						>> ${.TARGET}
 
@@ -315,7 +339,6 @@ GENSRCS+=	configargs.h
 # Language spec files
 specs.h:
 	echo '#include "cp/lang-specs.h"'			> ${.TARGET}
-	echo '#include "objc/lang-specs.h"'			>> ${.TARGET}
 
 GENSRCS+=	specs.h
 

@@ -7,17 +7,17 @@
 #define FREEBSD_NATIVE 1
 
 /* Fake out gcc/config/freebsd<version>.h.  */
-#define	FBSD_MAJOR	7
-#define	FBSD_CC_VER	700003		/* form like __FreeBSD_version */
+#define	FBSD_MAJOR	9
+#define	FBSD_CC_VER	900001		/* form like __FreeBSD_version */
 
 #undef SYSTEM_INCLUDE_DIR		/* We don't need one for now. */
 #undef TOOL_INCLUDE_DIR			/* We don't need one for now. */
 #undef LOCAL_INCLUDE_DIR		/* We don't wish to support one. */
 
 /* Look for the include files in the system-defined places.  */
-#define GPLUSPLUS_INCLUDE_DIR		PREFIX"/include/c++/4.2"
-#define	GPLUSPLUS_BACKWARD_INCLUDE_DIR	PREFIX"/include/c++/4.2/backward"
-#define GCC_INCLUDE_DIR			PREFIX"/include"
+#define GPLUSPLUS_INCLUDE_DIR		PREFIX"/include/c++/"GCCVER
+#define	GPLUSPLUS_BACKWARD_INCLUDE_DIR	PREFIX"/include/c++/"GCCVER"/backward"
+#define GCC_INCLUDE_DIR			PREFIX"/include/gcc/"GCCVER
 #ifdef CROSS_COMPILE
 #define CROSS_INCLUDE_DIR		PREFIX"/include"
 #else
