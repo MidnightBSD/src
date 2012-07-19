@@ -9989,6 +9989,7 @@ contrib/gcclibs/libssp/vsprintf-chk.c -text
 contrib/gdb/COPYING -text
 contrib/gdb/COPYING.LIB -text
 contrib/gdb/FREEBSD-Xlist -text
+contrib/gdb/FREEBSD-diffs -text
 contrib/gdb/FREEBSD-upgrade -text
 contrib/gdb/README -text
 contrib/gdb/config-ml.in -text
@@ -10201,11 +10202,13 @@ contrib/gdb/gdb/config/mips/mipsv4.mt -text
 contrib/gdb/gdb/config/mips/nbsd.mh -text
 contrib/gdb/gdb/config/mips/nbsd.mt -text
 contrib/gdb/gdb/config/mips/news-mips.mh -text
+contrib/gdb/gdb/config/mips/nm-fbsd.h -text
 contrib/gdb/gdb/config/mips/nm-mips.h -text
 contrib/gdb/gdb/config/mips/nm-nbsd.h -text
 contrib/gdb/gdb/config/mips/nm-news-mips.h -text
 contrib/gdb/gdb/config/mips/nm-riscos.h -text
 contrib/gdb/gdb/config/mips/riscos.mh -text
+contrib/gdb/gdb/config/mips/tm-fbsd.h -text
 contrib/gdb/gdb/config/mips/tm-mips.h -text
 contrib/gdb/gdb/config/mips/tm-mipsv4.h -text
 contrib/gdb/gdb/config/mips/tm-nbsd.h -text
@@ -10528,6 +10531,9 @@ contrib/gdb/gdb/minsyms.c -text
 contrib/gdb/gdb/mips-nat.c -text
 contrib/gdb/gdb/mips-tdep.c -text
 contrib/gdb/gdb/mips-tdep.h -text
+contrib/gdb/gdb/mipsfbsd-nat.c -text
+contrib/gdb/gdb/mipsfbsd-tdep.c -text
+contrib/gdb/gdb/mipsfbsd-tdep.h -text
 contrib/gdb/gdb/mipsnbsd-nat.c -text
 contrib/gdb/gdb/mipsnbsd-tdep.c -text
 contrib/gdb/gdb/mipsnbsd-tdep.h -text
