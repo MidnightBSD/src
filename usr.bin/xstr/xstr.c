@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/xstr/xstr.c,v 1.10 2005/05/21 10:14:11 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char copyright[] =
@@ -100,6 +96,7 @@ int
 main(int argc, char *argv[])
 {
 	int c;
+	int fdesc;
 
 	while ((c = getopt(argc, argv, "-cv")) != -1)
 		switch (c) {
@@ -122,8 +119,16 @@ main(int argc, char *argv[])
 		signal(SIGINT, onintr);
 	if (cflg || (argc == 0 && !readstd))
 		inithash();
-	else
-		strings = mktemp(strdup(_PATH_TMP));
+	else {
+		strings = strdup(_PATH_TMP);
+		if (strings == NULL)
+			err(1, "strdup() failed");
+		fdesc = mkstemp(strings);
+		if (fdesc == -1)
+			err(1, "Unable to create temporary file");
+		close(fdesc);
+	}
+
 	while (readstd || argc > 0) {
 		if (freopen("x.c", "w", stdout) == NULL)
 			err(1, "x.c");
