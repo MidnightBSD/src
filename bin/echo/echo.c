@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)echo.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/echo/echo.c,v 1.2 2006/07/07 15:51:44 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/echo/echo.c,v 1.3 2006/08/04 17:10:41 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -56,7 +56,7 @@ __MBSDID("$MidnightBSD: src/bin/echo/echo.c,v 1.2 2006/07/07 15:51:44 laffer1 Ex
  * Report an error and exit.
  * Use it instead of err(3) to avoid linking-in stdio.
  */
-static void
+static __dead2 void
 errexit(const char *prog, const char *reason)
 {
 	char *errstr = strerror(errno);
