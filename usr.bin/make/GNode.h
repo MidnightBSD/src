@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.bin/make/GNode.h,v 1.2 2008/09/29 20:36:53 laffer1 Exp $
+ * $MidnightBSD: src/usr.bin/make/GNode.h,v 1.3 2012/01/18 01:49:21 laffer1 Exp $
  * $FreeBSD: src/usr.bin/make/GNode.h,v 1.5 2007/04/20 06:33:25 fjoe Exp $
  */
 
@@ -140,7 +140,7 @@ typedef struct GNode {
 		UPTODATE,	/* Was already up-to-date */
 
 		/*
-		 * An error occurred while it was being
+		 * An error occured while it was being
 		 * made (used only in compat mode)
 		 */
 		ERROR,

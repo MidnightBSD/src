@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.bin/make/globals.h,v 1.2 2008/09/29 20:36:53 laffer1 Exp $
+ * $MidnightBSD: src/usr.bin/make/globals.h,v 1.3 2011/12/02 04:11:34 laffer1 Exp $
  * $FreeBSD: src/usr.bin/make/globals.h,v 1.12 2008/03/12 14:50:58 obrien Exp $
  */
 
@@ -76,7 +76,6 @@ extern Boolean	beSilent;	/* True if should print no commands */
 extern Boolean	beVerbose;	/* True if should print extra cruft */
 extern Boolean	beQuiet;	/* True if want quiet headers with -j */
 extern Boolean	noExecute;	/* True if should execute nothing */
-extern Boolean	printGraphOnly;	/* -p flag */
 extern Boolean	allPrecious;	/* True if every target is precious */
 extern Boolean	is_posix;	/* .POSIX target seen */
 extern Boolean	mfAutoDeps;	/* .MAKEFILEDEPS target seen */
