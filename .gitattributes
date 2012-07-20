@@ -45941,8 +45941,6 @@ usr.bin/mail/version.c -text
 usr.bin/make/GNode.h -text
 usr.bin/make/Makefile -text
 usr.bin/make/Makefile.dist -text
-usr.bin/make/PSD.doc/stubs -text
-usr.bin/make/PSD.doc/tutorial.ms -text
 usr.bin/make/arch.c -text
 usr.bin/make/arch.h -text
 usr.bin/make/buf.c -text
