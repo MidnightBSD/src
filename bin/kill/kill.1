@@ -31,7 +31,7 @@
 .\"
 .\"	@(#)kill.1	8.2 (Berkeley) 4/28/95
 .\" $FreeBSD: src/bin/kill/kill.1,v 1.20 2005/01/16 16:41:57 ru Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/kill/kill.1,v 1.2 2006/07/19 13:47:05 laffer1 Exp $
 .\"
 .Dd April 28, 1995
 .Dt KILL 1
@@ -42,31 +42,27 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl s Ar signal_name
-.Ar pid
-\&...
+.Ar pid ...
 .Nm
 .Fl l
 .Op Ar exit_status
 .Nm
 .Fl Ar signal_name
-.Ar pid
-\&...
+.Ar pid ...
 .Nm
 .Fl Ar signal_number
-.Ar pid
-\&...
+.Ar pid ...
 .Sh DESCRIPTION
 The
 .Nm
 utility sends a signal to the processes specified by the
 .Ar pid
-operand(s).
+operands.
 .Pp
 Only the super-user may send signals to other users' processes.
 .Pp
 The options are as follows:
-.Pp
-.Bl -tag -width Ds
+.Bl -tag -width indent
 .It Fl s Ar signal_name
 A symbolic signal name specifying the signal to be sent instead of the
 default
@@ -85,15 +81,16 @@ of the default
 .Dv TERM .
 .El
 .Pp
-The following pids have special meanings:
-.Bl -tag -width Ds -compact
+The following PIDs have special meanings:
+.Bl -tag -width indent
 .It -1
 If superuser, broadcast the signal to all processes; otherwise broadcast
 to all processes belonging to the user.
 .El
 .Pp
 Some of the more commonly used signals:
-.Bl -tag -width Ds -compact
+.Pp
+.Bl -tag -width indent -compact
 .It 1
 HUP (hang up)
 .It 2
@@ -120,17 +117,17 @@ manual page.
 .Ex -std
 .Sh EXAMPLES
 Terminate
-the processes with pids 142 and 157:
+the processes with PIDs 142 and 157:
 .Pp
 .Dl "kill 142 157"
 .Pp
 Send the hangup signal
 .Pq Dv SIGHUP
-to the process with pid 507:
+to the process with PID 507:
 .Pp
 .Dl "kill -s HUP 507"
 .Pp
-Terminate the process group with pgid 117:
+Terminate the process group with PGID 117:
 .Pp
 .Dl "kill -- -117"
 .Sh SEE ALSO
@@ -138,12 +135,13 @@ Terminate the process group with pgid 117:
 .Xr csh 1 ,
 .Xr killall 1 ,
 .Xr ps 1 ,
+.Xr sh 1 ,
 .Xr kill 2 ,
 .Xr sigaction 2
 .Sh STANDARDS
 The
 .Nm
-function is expected to be
+utility is expected to be
 .St -p1003.2
 compatible.
 .Sh HISTORY
