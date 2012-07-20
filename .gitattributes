@@ -45237,6 +45237,15 @@ usr.bin/alias/generic.sh -text
 usr.bin/apply/Makefile -text
 usr.bin/apply/apply.1 -text
 usr.bin/apply/apply.c -text
+usr.bin/ar/Makefile -text
+usr.bin/ar/acplex.l -text
+usr.bin/ar/acpyacc.y -text
+usr.bin/ar/ar.1 -text
+usr.bin/ar/ar.c -text
+usr.bin/ar/ar.h -text
+usr.bin/ar/read.c -text
+usr.bin/ar/util.c -text
+usr.bin/ar/write.c -text
 usr.bin/asa/Makefile -text
 usr.bin/asa/asa.1 -text
 usr.bin/asa/asa.c -text
