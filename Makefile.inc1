@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.40 2012/03/10 04:16:12 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.41 2012/07/04 18:35:44 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -938,19 +938,19 @@ _strfile=	games/fortune/strfile
 
 .if ${MK_CXX} != "no"
 _gperf=		gnu/usr.bin/gperf
-.if ${BOOTSTRAPPING} < 700004
+.if ${BOOTSTRAPPING} < 4015
 _groff=		gnu/usr.bin/groff
 .else
 _groff=		gnu/usr.bin/groff/tmac
 .endif
 .endif
 
-.if ${BOOTSTRAPPING} < 700018
+.if ${BOOTSTRAPPING} < 4015
 _gensnmptree=	usr.sbin/bsnmpd/gensnmptree
 .endif
 
 .if ${MK_RESCUE} != "no" && \
-    ${BOOTSTRAPPING} < 700026
+    ${BOOTSTRAPPING} < 4015
 _crunchgen=	usr.sbin/crunch/crunchgen
 .endif
 
