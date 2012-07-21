@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/geom/geom_eli/Makefile,v 1.4 2006/06/05 21:42:25 pjd Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../geom/eli
 
@@ -8,9 +8,9 @@ SRCS+=	g_eli_crypto.c
 SRCS+=	g_eli_ctl.c
 SRCS+=	g_eli_integrity.c
 SRCS+=	g_eli_key.c
+SRCS+=	g_eli_key_cache.c
 SRCS+=	g_eli_privacy.c
 SRCS+=	pkcs5v2.c
 SRCS+=	vnode_if.h
-WARNS?=	2
 
 .include <bsd.kmod.mk>

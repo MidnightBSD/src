@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/modules/geom/Makefile,v 1.4 2011/12/28 00:41:18 laffer1 Exp $
 # $FreeBSD: src/sys/modules/geom/Makefile,v 1.19.4.1 2008/01/24 20:28:27 lulf Exp $
 
 SUBDIR=	geom_bde \
@@ -14,11 +14,14 @@ SUBDIR=	geom_bde \
 	geom_linux_lvm \
 	geom_mbr \
 	geom_mirror \
+	geom_mountver \
 	geom_multipath \
 	geom_nop \
 	geom_part \
+	geom_raid \
 	geom_raid3 \
 	geom_raid5 \
+	geom_sched \
 	geom_shsec \
 	geom_stripe \
 	geom_sunlabel \

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000-2001, Boris Popov
+ * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -31,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/iconv.c,v 1.12.2.1 2009/02/12 14:37:58 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,8 +32,12 @@ __FBSDID("$FreeBSD: src/sys/libkern/iconv.c,v 1.12.2.1 2009/02/12 14:37:58 jhb E
 #include <sys/iconv.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
+<<<<<<< iconv.c
 #include <sys/lock.h>
 #include <sys/sx.h>
+=======
+#include <sys/sx.h>
+>>>>>>> 1.1.1.3
 #include <sys/syslog.h>
 
 #include "iconv_converter_if.h"
@@ -308,6 +305,18 @@ iconv_convchr_case(void *handle, const char **inbuf,
 	return ICONV_CONVERTER_CONV(handle, inbuf, inbytesleft, outbuf, outbytesleft, 1, casetype);
 }
 
+int
+towlower(int c, void *handle)
+{
+	return ICONV_CONVERTER_TOLOWER(handle, c);
+}
+
+int
+towupper(int c, void *handle)
+{
+	return ICONV_CONVERTER_TOUPPER(handle, c);
+}
+
 /*
  * Give a list of loaded converters. Each name terminated with 0.
  * An empty string terminates the list.
@@ -371,6 +380,18 @@ iconv_sysctl_cslist(SYSCTL_HANDLER_ARGS)
 
 SYSCTL_PROC(_kern_iconv, OID_AUTO, cslist, CTLFLAG_RD | CTLTYPE_OPAQUE,
 	    NULL, 0, iconv_sysctl_cslist, "S,xlat", "registered charset pairs");
+
+int
+iconv_add(const char *converter, const char *to, const char *from)
+{
+	struct iconv_converter_class *dcp;
+	struct iconv_cspair *csp;
+
+	if (iconv_lookupconv(converter, &dcp) != 0)
+		return EINVAL;
+
+	return iconv_register_cspair(to, from, dcp, NULL, &csp);
+}
 
 /*
  * Add new charset pair
@@ -440,6 +461,12 @@ int
 iconv_converter_donestub(struct iconv_converter_class *dp)
 {
 	return 0;
+}
+
+int
+iconv_converter_tolowerstub(int c, void *handle)
+{
+	return (c);
 }
 
 int

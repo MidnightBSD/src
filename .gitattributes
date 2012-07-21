@@ -48459,7 +48459,6 @@ sys/libkern/ffsl.c -text
 sys/libkern/fls.c -text
 sys/libkern/flsl.c -text
 sys/libkern/fnmatch.c -text
-sys/libkern/gets.c -text
 sys/libkern/iconv.c -text
 sys/libkern/iconv_converter_if.m -text
 sys/libkern/iconv_ucs.c -text
@@ -48522,7 +48521,6 @@ sys/modules/accf_http/Makefile -text
 sys/modules/acpi/Makefile -text
 sys/modules/acpi/Makefile.inc -text
 sys/modules/acpi/acpi/Makefile -text
-sys/modules/acpi/acpi_aiboost/Makefile -text
 sys/modules/acpi/acpi_asus/Makefile -text
 sys/modules/acpi/acpi_dock/Makefile -text
 sys/modules/acpi/acpi_fujitsu/Makefile -text
@@ -48763,7 +48761,6 @@ sys/modules/fxp/Makefile -text
 sys/modules/gem/Makefile -text
 sys/modules/geom/Makefile -text
 sys/modules/geom/Makefile.inc -text
-sys/modules/geom/geom_apple/Makefile -text
 sys/modules/geom/geom_bde/Makefile -text
 sys/modules/geom/geom_bsd/Makefile -text
 sys/modules/geom/geom_cache/Makefile -text
@@ -48772,7 +48769,6 @@ sys/modules/geom/geom_concat/Makefile -text
 sys/modules/geom/geom_eli/Makefile -text
 sys/modules/geom/geom_fox/Makefile -text
 sys/modules/geom/geom_gate/Makefile -text
-sys/modules/geom/geom_gpt/Makefile -text
 sys/modules/geom/geom_journal/Makefile -text
 sys/modules/geom/geom_label/Makefile -text
 sys/modules/geom/geom_linux_lvm/Makefile -text
@@ -48788,6 +48784,7 @@ sys/modules/geom/geom_part/geom_part_ebr/Makefile -text
 sys/modules/geom/geom_part/geom_part_gpt/Makefile -text
 sys/modules/geom/geom_part/geom_part_ldm/Makefile -text
 sys/modules/geom/geom_part/geom_part_mbr/Makefile -text
+sys/modules/geom/geom_part/geom_part_pc98/Makefile -text
 sys/modules/geom/geom_part/geom_part_vtoc8/Makefile -text
 sys/modules/geom/geom_raid/Makefile -text
 sys/modules/geom/geom_raid3/Makefile -text
@@ -48810,6 +48807,7 @@ sys/modules/glxsb/Makefile -text
 sys/modules/hatm/Makefile -text
 sys/modules/hifn/Makefile -text
 sys/modules/hme/Makefile -text
+sys/modules/hpfs/Makefile -text
 sys/modules/hpt27xx/Makefile -text
 sys/modules/hptiop/Makefile -text
 sys/modules/hptmv/Makefile -text
@@ -49004,7 +49002,6 @@ sys/modules/netgraph/atm/Makefile -text
 sys/modules/netgraph/atm/Makefile.inc -text
 sys/modules/netgraph/atm/atm/Makefile -text
 sys/modules/netgraph/atm/atmbase/Makefile -text
-sys/modules/netgraph/atm/atmpif/Makefile -text
 sys/modules/netgraph/atm/ccatm/Makefile -text
 sys/modules/netgraph/atm/sscfu/Makefile -text
 sys/modules/netgraph/atm/sscop/Makefile -text
@@ -49060,8 +49057,6 @@ sys/modules/netgraph/socket/Makefile -text
 sys/modules/netgraph/source/Makefile -text
 sys/modules/netgraph/split/Makefile -text
 sys/modules/netgraph/sppp/Makefile -text
-sys/modules/netgraph/sync_ar/Makefile -text
-sys/modules/netgraph/sync_sr/Makefile -text
 sys/modules/netgraph/tag/Makefile -text
 sys/modules/netgraph/tcpmss/Makefile -text
 sys/modules/netgraph/tee/Makefile -text
@@ -49140,7 +49135,6 @@ sys/modules/rl/Makefile -text
 sys/modules/rndtest/Makefile -text
 sys/modules/rp/Makefile -text
 sys/modules/rue/Makefile -text
-sys/modules/rum/Makefile -text
 sys/modules/runfw/Makefile -text
 sys/modules/s3/Makefile -text
 sys/modules/safe/Makefile -text
@@ -49251,7 +49245,6 @@ sys/modules/twe/Makefile -text
 sys/modules/tws/Makefile -text
 sys/modules/tx/Makefile -text
 sys/modules/txp/Makefile -text
-sys/modules/uark/Makefile -text
 sys/modules/uart/Makefile -text
 sys/modules/ubsa/Makefile -text
 sys/modules/ubsec/Makefile -text
@@ -49264,7 +49257,6 @@ sys/modules/udbp/Makefile -text
 sys/modules/udf/Makefile -text
 sys/modules/udf_iconv/Makefile -text
 sys/modules/ufm/Makefile -text
-sys/modules/ufoma/Makefile -text
 sys/modules/ufs/Makefile -text
 sys/modules/uftdi/Makefile -text
 sys/modules/ugen/Makefile -text
@@ -49363,8 +49355,6 @@ sys/modules/wlan_acl/Makefile -text
 sys/modules/wlan_amrr/Makefile -text
 sys/modules/wlan_ccmp/Makefile -text
 sys/modules/wlan_rssadapt/Makefile -text
-sys/modules/wlan_scan_ap/Makefile -text
-sys/modules/wlan_scan_sta/Makefile -text
 sys/modules/wlan_tkip/Makefile -text
 sys/modules/wlan_wep/Makefile -text
 sys/modules/wlan_xauth/Makefile -text
@@ -49376,7 +49366,6 @@ sys/modules/xfs/Makefile -text
 sys/modules/xl/Makefile -text
 sys/modules/zfs/Makefile -text
 sys/modules/zlib/Makefile -text
-sys/modules/zyd/Makefile -text
 sys/net/bpf.c -text
 sys/net/bpf.h -text
 sys/net/bpf_buffer.c -text
