@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/boot/i386/libi386/biosdisk.c,v 1.4 2011/12/18 19:09:49 laffer1 Exp $");
 /* $FreeBSD: src/sys/boot/i386/libi386/biosdisk.c,v 1.48.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*
@@ -51,12 +51,12 @@ __MBSDID("$MidnightBSD$");
 
 #include <bootstrap.h>
 #include <btxv86.h>
+#include <edd.h>
 #include "libi386.h"
 
 #define BIOS_NUMDRIVES		0x475
 #define BIOSDISK_SECSIZE	512
 #define BUFSIZE			(1 * BIOSDISK_SECSIZE)
-#define	MAXBDDEV		MAXDEV
 
 #define DT_ATAPI		0x10		/* disk type for ATAPI floppies */
 #define WDMAJOR			0		/* major numbers for devices we frontend for */
@@ -70,12 +70,14 @@ __MBSDID("$MidnightBSD$");
 # define DEBUG(fmt, args...)
 #endif
 
+#ifdef LOADER_GPT_SUPPORT
 struct gpt_part {
     int		gp_index;
     uuid_t	gp_type;
     uint64_t	gp_start;
     uint64_t	gp_end;
 };
+#endif
 
 struct open_disk {
     int			od_dkunit;		/* disk unit number */
@@ -83,7 +85,7 @@ struct open_disk {
     int			od_cyl;			/* BIOS geometry */
     int			od_hds;
     int			od_sec;
-    int			od_boff;		/* block offset from beginning of BIOS disk */
+    daddr_t			od_boff;		/* block offset from beginning of BIOS disk */
     int			od_flags;
 #define BD_MODEINT13		0x0000
 #define BD_MODEEDD1		0x0001
@@ -92,25 +94,31 @@ struct open_disk {
 #define BD_FLOPPY		0x0004
 #define BD_LABELOK		0x0008
 #define BD_PARTTABOK		0x0010
+#ifdef LOADER_GPT_SUPPORT
 #define	BD_GPTOK		0x0020
+#endif
     union {
 	struct {
 	    struct disklabel		mbr_disklabel;
 	    int				mbr_nslices;	/* slice count */
 	    struct dos_partition	mbr_slicetab[NEXTDOSPART];
 	} _mbr;
+#ifdef LOADER_GPT_SUPPORT
 	struct {
 	    int				gpt_nparts;		
 	    struct gpt_part		*gpt_partitions;
 	} _gpt;
+#endif
     } _data;
 };
 
 #define	od_disklabel		_data._mbr.mbr_disklabel
 #define	od_nslices		_data._mbr.mbr_nslices
 #define	od_slicetab		_data._mbr.mbr_slicetab
+#ifdef LOADER_GPT_SUPPORT
 #define	od_nparts		_data._gpt.gpt_nparts
 #define	od_partitions		_data._gpt.gpt_partitions
+#endif
 
 /*
  * List of BIOS devices, translation from disk unit number to
@@ -132,8 +140,10 @@ static int	bd_write(struct open_disk *od, daddr_t dblk, int blks,
 
 static int	bd_int13probe(struct bdinfo *bd);
 
+#ifdef LOADER_GPT_SUPPORT
 static void	bd_printgptpart(struct open_disk *od, struct gpt_part *gp,
 		    char *prefix, int verbose);
+#endif
 static void	bd_printslice(struct open_disk *od, struct dos_partition *dp,
 		    char *prefix, int verbose);
 static void	bd_printbsdslice(struct open_disk *od, daddr_t offset,
@@ -165,8 +175,10 @@ static void	bd_closedisk(struct open_disk *od);
 static int	bd_open_mbr(struct open_disk *od, struct i386_devdesc *dev);
 static int	bd_bestslice(struct open_disk *od);
 static void	bd_checkextended(struct open_disk *od, int slicenum);
+#ifdef LOADER_GPT_SUPPORT
 static int	bd_open_gpt(struct open_disk *od, struct i386_devdesc *dev);
 static struct gpt_part *bd_best_gptpart(struct open_disk *od);
+#endif
 
 /*
  * Translate between BIOS device numbers and our private unit numbers.
@@ -204,10 +216,12 @@ bd_init(void)
     /* sequence 0, 0x80 */
     for (base = 0; base <= 0x80; base += 0x80) {
 	for (unit = base; (nbdinfo < MAXBDDEV); unit++) {
+#ifndef VIRTUALBOX
 	    /* check the BIOS equipment list for number of fixed disks */
 	    if((base == 0x80) &&
 	       (nfd >= *(unsigned char *)PTOV(BIOS_NUMDRIVES)))
-	        break;
+		break;
+#endif
 
 	    bdinfo[nbdinfo].bd_unit = unit;
 	    bdinfo[nbdinfo].bd_flags = (unit < 0x80) ? BD_FLOPPY : 0;
@@ -238,7 +252,7 @@ bd_int13probe(struct bdinfo *bd)
     v86.edx = bd->bd_unit;
     v86int();
     
-    if (!(v86.efl & 0x1) &&				/* carry clear */
+    if (!(V86_CY(v86.efl)) &&				/* carry clear */
 	((v86.edx & 0xff) > ((unsigned)bd->bd_unit & 0x7f))) {	/* unit # OK */
 	if ((v86.ecx & 0x3f) == 0) {			/* absurd sector size */
 		DEBUG("Invalid geometry for unit %d", bd->bd_unit);
@@ -252,11 +266,11 @@ bd_int13probe(struct bdinfo *bd)
 	v86.edx = bd->bd_unit;
 	v86.ebx = 0x55aa;
 	v86int();
-	if (!(v86.efl & 0x1) &&				/* carry clear */
+	if (!(V86_CY(v86.efl)) &&			/* carry clear */
 	    ((v86.ebx & 0xffff) == 0xaa55) &&		/* signature */
-	    (v86.ecx & 0x1)) {				/* packets mode ok */
+	    (v86.ecx & EDD_INTERFACE_FIXED_DISK)) {	/* packets mode ok */
 	    bd->bd_flags |= BD_MODEEDD1;
-	    if((v86.eax & 0xff00) >= 0x3000)
+	    if ((v86.eax & 0xff00) >= 0x3000)
 	        bd->bd_flags |= BD_MODEEDD3;
 	}
 	return(1);
@@ -288,6 +302,7 @@ bd_print(int verbose)
 	
 	if (!bd_opendisk(&od, &dev)) {
 
+#ifdef LOADER_GPT_SUPPORT
 	    /* Do we have a GPT table? */
 	    if (od->od_flags & BD_GPTOK) {
 		for (j = 0; j < od->od_nparts; j++) {
@@ -295,7 +310,8 @@ bd_print(int verbose)
 			od->od_partitions[j].gp_index);
 		    bd_printgptpart(od, &od->od_partitions[j], line, verbose);
 		}
-
+	    } else
+#endif
 	    /* Do we have a partition table? */
 	    } else if (od->od_flags & BD_PARTTABOK) {
 		dptr = &od->od_slicetab[0];
@@ -318,6 +334,30 @@ bd_print(int verbose)
     }
 }
 
+/* Given a size in 512 byte sectors, convert it to a human-readable number. */
+static char *
+display_size(uint64_t size)
+{
+    static char buf[80];
+    char unit;
+
+    size /= 2;
+    unit = 'K';
+    if (size >= 10485760000LL) {
+	size /= 1073741824;
+	unit = 'T';
+    } else if (size >= 10240000) {
+	size /= 1048576;
+	unit = 'G';
+    } else if (size >= 10000) {
+	size /= 1024;
+	unit = 'M';
+    }
+    sprintf(buf, "%.6ld%cB", (long)size, unit);
+    return (buf);
+}
+
+#ifdef LOADER_GPT_SUPPORT
 static uuid_t efi = GPT_ENT_TYPE_EFI;
 static uuid_t midnightbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
 static uuid_t midnightbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
@@ -331,37 +371,27 @@ bd_printgptpart(struct open_disk *od, struct gpt_part *gp, char *prefix,
 {
     char stats[80];
     char line[96];
-    uint64_t size;
-    char unit;
 
-    if (verbose) {
-	size = (gp->gp_end + 1 - gp->gp_start) / 2048;
-	unit = 'M';
-	if (size >= 10240000) {
-	    size /= 1048576;
-	    unit = 'T';
-	} else if (size >= 10000) {
-	    size /= 1024;
-	    unit = 'G';
-	}
-	sprintf(stats, " %.6ld%cB", (long)size, unit);
-    } else
+    if (verbose)
+	sprintf(stats, " %s", display_size(gp->gp_end + 1 - gp->gp_start));
+    else
 	stats[0] = '\0';
 
     if (uuid_equal(&gp->gp_type, &efi, NULL))
-	sprintf(line, "%s: EFI%s\n", prefix, stats);
+	sprintf(line, "%s: EFI         %s\n", prefix, stats);
     else if (uuid_equal(&gp->gp_type, &ms_basic_data, NULL))
-	sprintf(line, "%s: FAT/NTFS%s\n", prefix, stats);
+	sprintf(line, "%s: FAT/NTFS    %s\n", prefix, stats);
     else if (uuid_equal(&gp->gp_type, &midnightbsd_boot, NULL))
 	sprintf(line, "%s: MidnightBSD boot%s\n", prefix, stats);
     else if (uuid_equal(&gp->gp_type, &midnightbsd_ufs, NULL))
-	sprintf(line, "%s: MidnightBSD UFS%s\n", prefix, stats);
+	sprintf(line, "%s: MidnightBSD UFS %s\n", prefix, stats);
     else if (uuid_equal(&gp->gp_type, &midnightbsd_zfs, NULL))
-	sprintf(line, "%s: MidnightBSD ZFS%s\n", prefix, stats);
+	sprintf(line, "%s: MidnightBSD ZFS %s\n", prefix, stats);
     else if (uuid_equal(&gp->gp_type, &midnightbsd_swap, NULL))
 	sprintf(line, "%s: MidnightBSD swap%s\n", prefix, stats);
     else
 	sprintf(line, "%s: %08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x%s\n",
+	    prefix,
 	    gp->gp_type.time_low, gp->gp_type.time_mid,
 	    gp->gp_type.time_hi_and_version,
 	    gp->gp_type.clock_seq_hi_and_reserved, gp->gp_type.clock_seq_low,
@@ -370,6 +400,7 @@ bd_printgptpart(struct open_disk *od, struct gpt_part *gp, char *prefix,
 	    stats);
     pager_output(line);
 }
+#endif
 
 /*
  * Print information about slices on a disk.  For the size calculations we
@@ -379,70 +410,50 @@ static void
 bd_printslice(struct open_disk *od, struct dos_partition *dp, char *prefix,
 	int verbose)
 {
+	char stats[80];
 	char line[80];
+
+	if (verbose)
+		sprintf(stats, " %s (%d - %d)", display_size(dp->dp_size),
+		    dp->dp_start, dp->dp_start + dp->dp_size);
+	else
+		stats[0] = '\0';
 
 	switch (dp->dp_typ) {
 	case DOSPTYP_386BSD:
 		bd_printbsdslice(od, (daddr_t)dp->dp_start, prefix, verbose);
 		return;
 	case DOSPTYP_LINSWP:
-		if (verbose)
-			sprintf(line, "%s: Linux swap %.6dMB (%d - %d)\n",
-			    prefix, dp->dp_size / 2048,
-			    dp->dp_start, dp->dp_start + dp->dp_size);
-		else
-			sprintf(line, "%s: Linux swap\n", prefix);
+		sprintf(line, "%s: Linux swap%s\n", prefix, stats);
 		break;
 	case DOSPTYP_LINUX:
 		/*
 		 * XXX
 		 * read the superblock to confirm this is an ext2fs partition?
 		 */
-		if (verbose)
-			sprintf(line, "%s: ext2fs  %.6dMB (%d - %d)\n", prefix,
-			    dp->dp_size / 2048, dp->dp_start,
-			    dp->dp_start + dp->dp_size);
-		else
-			sprintf(line, "%s: ext2fs\n", prefix);
+		sprintf(line, "%s: ext2fs%s\n", prefix, stats);
 		break;
 	case 0x00:				/* unused partition */
 	case DOSPTYP_EXT:
 		return;
 	case 0x01:
-		if (verbose)
-			sprintf(line, "%s: FAT-12  %.6dMB (%d - %d)\n", prefix,
-			    dp->dp_size / 2048, dp->dp_start,
-			    dp->dp_start + dp->dp_size);
-		else
-			sprintf(line, "%s: FAT-12\n", prefix);
+		sprintf(line, "%s: FAT-12%s\n", prefix, stats);
 		break;
 	case 0x04:
 	case 0x06:
 	case 0x0e:
-		if (verbose)
-			sprintf(line, "%s: FAT-16  %.6dMB (%d - %d)\n", prefix,
-			    dp->dp_size / 2048, dp->dp_start,
-			    dp->dp_start + dp->dp_size);
-		else
-			sprintf(line, "%s: FAT-16\n", prefix);
+		sprintf(line, "%s: FAT-16%s\n", prefix, stats);
+		break;
+	case 0x07:
+		sprintf(line, "%s: NTFS/HPFS%s\n", prefix, stats);
 		break;
 	case 0x0b:
 	case 0x0c:
-		if (verbose)
-			sprintf(line, "%s: FAT-32  %.6dMB (%d - %d)\n", prefix,
-			    dp->dp_size / 2048, dp->dp_start,
-			    dp->dp_start + dp->dp_size);
-		else
-			sprintf(line, "%s: FAT-32\n", prefix);
+		sprintf(line, "%s: FAT-32%s\n", prefix, stats);
 		break;
 	default:
-		if (verbose)
-			sprintf(line, "%s: Unknown fs: 0x%x  %.6dMB (%d - %d)\n",
-			    prefix, dp->dp_typ, dp->dp_size / 2048,
-			    dp->dp_start, dp->dp_start + dp->dp_size);
-		else
-			sprintf(line, "%s: Unknown fs: 0x%x\n", prefix,
-			    dp->dp_typ);
+		sprintf(line, "%s: Unknown fs: 0x%x %s\n", prefix, dp->dp_typ,
+		    stats);
 	}
 	pager_output(line);
 }
@@ -486,11 +497,11 @@ bd_printbsdslice(struct open_disk *od, daddr_t offset, char *prefix,
 
 	    /* Only print out statistics in verbose mode */
 	    if (verbose)
-	        sprintf(line, "  %s%c: %s  %.6dMB (%d - %d)\n", prefix, 'a' + i,
-		    (lp->d_partitions[i].p_fstype == FS_SWAP) ? "swap" : 
+	        sprintf(line, "  %s%c: %s %s (%d - %d)\n", prefix, 'a' + i,
+		    (lp->d_partitions[i].p_fstype == FS_SWAP) ? "swap " : 
 		    (lp->d_partitions[i].p_fstype == FS_VINUM) ? "vinum" :
-		    "FFS",
-		    lp->d_partitions[i].p_size / 2048,
+		    "FFS  ",
+		    display_size(lp->d_partitions[i].p_size),
 		    lp->d_partitions[i].p_offset,
 		    lp->d_partitions[i].p_offset + lp->d_partitions[i].p_size);
 	    else
@@ -553,7 +564,7 @@ bd_opendisk(struct open_disk **odp, struct i386_devdesc *dev)
 	return (ENOMEM);
     }
 
-    /* Look up BIOS unit number, intialise open_disk structure */
+    /* Look up BIOS unit number, initalise open_disk structure */
     od->od_dkunit = dev->d_unit;
     od->od_unit = bdinfo[od->od_dkunit].bd_unit;
     od->od_flags = bdinfo[od->od_dkunit].bd_flags;
@@ -571,8 +582,10 @@ bd_opendisk(struct open_disk **odp, struct i386_devdesc *dev)
     }
 
     /* Determine disk layout. */
+#ifdef LOADER_GPT_SUPPORT
     error = bd_open_gpt(od, dev);
     if (error)
+#endif
 	error = bd_open_mbr(od, dev);
     
  out:
@@ -836,6 +849,7 @@ bd_bestslice(struct open_disk *od)
 	return (prefslice);
 }
 
+#ifdef LOADER_GPT_SUPPORT
 static int
 bd_open_gpt(struct open_disk *od, struct i386_devdesc *dev)
 {
@@ -870,7 +884,7 @@ bd_open_gpt(struct open_disk *od, struct i386_devdesc *dev)
     for (i = 0; i < NDOSPART; i++) {
 	if (dp[i].dp_typ == 0xee)
 	    part++;
-	else if (dp[i].dp_typ != 0x00)
+	else if ((part != 1) && (dp[i].dp_typ != 0x00))
 	    return (EINVAL);
     }
     if (part != 1)
@@ -979,8 +993,11 @@ bd_open_gpt(struct open_disk *od, struct i386_devdesc *dev)
     od->od_boff = gp->gp_start;
 
 out:
-    if (error)
-	free(od->od_partitions);
+    if (error) {
+	if (od->od_nparts > 0)
+	    free(od->od_partitions);
+	od->od_flags &= ~BD_GPTOK;
+    }
     return (error);
 }
 
@@ -1011,6 +1028,7 @@ bd_best_gptpart(struct open_disk *od)
     }
     return (prefpart);
 }
+#endif
 
 static int 
 bd_close(struct open_file *f)
@@ -1030,8 +1048,10 @@ bd_closedisk(struct open_disk *od)
     if (od->od_flags & BD_FLOPPY)
 	delay(3000000);
 #endif
-    if (od->od_flags & BD_GPTOK)
+#ifdef LOADER_GPT_SUPPORT
+    if (od->od_flags & BD_GPTOK && od->od_nparts > 0)
 	free(od->od_partitions);
+#endif
     free(od);
 }
 
@@ -1068,7 +1088,7 @@ bd_realstrategy(void *devdata, int rw, daddr_t dblk, size_t size, char *buf, siz
 
     switch(rw){
     case F_READ:
-	DEBUG("read %d from %d to %p", blks, dblk, buf);
+	DEBUG("read %d from %lld to %p", blks, dblk, buf);
 
 	if (blks && bd_read(od, dblk, blks, buf)) {
 	    DEBUG("read error");
@@ -1111,22 +1131,14 @@ bd_realstrategy(void *devdata, int rw, daddr_t dblk, size_t size, char *buf, siz
 /* Max number of sectors to bounce-buffer if the request crosses a 64k boundary */
 #define FLOPPY_BOUNCEBUF	18
 
-struct edd_packet {
-    uint16_t	len;
-    uint16_t	count;
-    uint16_t	offset;
-    uint16_t	seg;
-    uint64_t	lba;
-};
-
 static int
 bd_edd_io(struct open_disk *od, daddr_t dblk, int blks, caddr_t dest, int write)
 {
     static struct edd_packet packet;
 
-    packet.len = 0x10;
+    packet.len = sizeof(struct edd_packet);
     packet.count = blks;
-    packet.offset = VTOPOFF(dest);
+    packet.off = VTOPOFF(dest);
     packet.seg = VTOPSEG(dest);
     packet.lba = dblk;
     v86.ctl = V86_FLAGS;
@@ -1140,7 +1152,7 @@ bd_edd_io(struct open_disk *od, daddr_t dblk, int blks, caddr_t dest, int write)
     v86.ds = VTOPSEG(&packet);
     v86.esi = VTOPOFF(&packet);
     v86int();
-    return (v86.efl & 0x1);
+    return (V86_CY(v86.efl));
 }
 
 static int
@@ -1173,7 +1185,7 @@ bd_chs_io(struct open_disk *od, daddr_t dblk, int blks, caddr_t dest, int write)
     v86.es = VTOPSEG(dest);
     v86.ebx = VTOPOFF(dest);
     v86int();
-    return (v86.efl & 0x1);
+    return (V86_CY(v86.efl));
 }
 
 static int
@@ -1258,11 +1270,11 @@ bd_io(struct open_disk *od, daddr_t dblk, int blks, caddr_t dest, int write)
 	}
 
 	if (write)
-	    DEBUG("%d sectors from %lld to %p (0x%x) %s", x, dblk, p, VTOP(p),
-		result ? "failed" : "ok");
+	    DEBUG("Write %d sector(s) from %p (0x%x) to %lld %s", x,
+		p, VTOP(p), dblk, result ? "failed" : "ok");
 	else
-	    DEBUG("%d sectors from %p (0x%x) to %lld %s", x, p, VTOP(p), dblk,
-		result ? "failed" : "ok");
+	    DEBUG("Read %d sector(s) from %lld to %p (0x%x) %s", x,
+		dblk, p, VTOP(p), result ? "failed" : "ok");
 	if (result) {
 	    return(-1);
 	}
@@ -1301,7 +1313,7 @@ bd_getgeom(struct open_disk *od)
     v86.edx = od->od_unit;
     v86int();
 
-    if ((v86.efl & 0x1) ||				/* carry set */
+    if ((V86_CY(v86.efl)) ||				/* carry set */
 	((v86.edx & 0xff) <= (unsigned)(od->od_unit & 0x7f)))	/* unit # bad */
 	return(1);
     
@@ -1338,7 +1350,7 @@ bd_getbigeom(int bunit)
     v86.eax = 0x800;
     v86.edx = 0x80 + bunit;
     v86int();
-    if (v86.efl & 0x1)
+    if (V86_CY(v86.efl))
 	return 0x4f010f;
     return ((v86.ecx & 0xc0) << 18) | ((v86.ecx & 0xff00) << 8) |
 	   (v86.edx & 0xff00) | (v86.ecx & 0x3f);

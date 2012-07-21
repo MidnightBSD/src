@@ -282,7 +282,7 @@ pxe_open(struct open_file *f, ...)
 		bootp(pxe_sock, BOOTP_PXE);
 		if (rootip.s_addr == 0)
 			rootip.s_addr = bootplayer.sip;
-		if (!rootpath[1])
+		if (!rootpath[0])
 			strcpy(rootpath, PXENFSROOTPATH);
 
 		for (i = 0; rootpath[i] != '\0' && i < FNAME_SIZE; i++)
@@ -335,8 +335,10 @@ pxe_close(struct open_file *f)
     if (pxe_opens > 0)
 	return(0);
 
+#ifdef LOADER_NFS_SUPPORT
     /* get an NFS filehandle for our root filesystem */
     pxe_setnfshandle(rootpath);
+#endif
 
     if (pxe_sock >= 0) {
 
@@ -403,10 +405,12 @@ pxe_perror(int err)
 	return;
 }
 
+#ifdef LOADER_NFS_SUPPORT
 /*
  * Reach inside the libstand NFS code and dig out an NFS handle
  * for the root filesystem.
  */
+#ifdef OLD_NFSV2
 struct nfs_iodesc {
 	struct	iodesc	*iodesc;
 	off_t	off;
@@ -454,6 +458,65 @@ pxe_setnfshandle(char *rootpath)
 	sprintf(cp, "X");
 	setenv("boot.nfsroot.nfshandle", buf, 1);
 }
+#else	/* !OLD_NFSV2 */
+
+#define	NFS_V3MAXFHSIZE		64
+
+struct nfs_iodesc {
+	struct iodesc *iodesc;
+	off_t off;
+	uint32_t fhsize;
+	u_char fh[NFS_V3MAXFHSIZE];
+	/* structure truncated */
+};
+extern struct nfs_iodesc nfs_root_node;
+extern int rpc_port;
+
+static void
+pxe_rpcmountcall()
+{
+	struct iodesc *d;
+	int error;
+
+	if (!(d = socktodesc(pxe_sock)))
+		return;
+        d->myport = htons(--rpc_port);
+        d->destip = rootip;
+	if ((error = nfs_getrootfh(d, rootpath, &nfs_root_node.fhsize,
+	    nfs_root_node.fh)) != 0) {
+		printf("NFS MOUNT RPC error: %d\n", error);
+		nfs_root_node.fhsize = 0;
+	}
+	nfs_root_node.iodesc = d;
+}
+
+static void
+pxe_setnfshandle(char *rootpath)
+{
+	int i;
+	u_char *fh;
+	char buf[2 * NFS_V3MAXFHSIZE + 3], *cp;
+
+	/*
+	 * If NFS files were never opened, we need to do mount call
+	 * ourselves. Use nfs_root_node.iodesc as flag indicating
+	 * previous NFS usage.
+	 */
+	if (nfs_root_node.iodesc == NULL)
+		pxe_rpcmountcall();
+
+	fh = &nfs_root_node.fh[0];
+	buf[0] = 'X';
+	cp = &buf[1];
+	for (i = 0; i < nfs_root_node.fhsize; i++, cp += 2)
+		sprintf(cp, "%02x", fh[i]);
+	sprintf(cp, "X");
+	setenv("boot.nfsroot.nfshandle", buf, 1);
+	sprintf(buf, "%d", nfs_root_node.fhsize);
+	setenv("boot.nfsroot.nfshandlelen", buf, 1);
+}
+#endif	/* OLD_NFSV2 */
+#endif /* LOADER_NFS_SUPPORT */
 
 void
 pxenv_call(int func)
