@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/boot/i386/boot2/boot2.c,v 1.3 2011/12/18 19:09:49 laffer1 Exp $");
 /* $FreeBSD: src/sys/boot/i386/boot2/boot2.c,v 1.83.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #include <sys/param.h>
@@ -76,7 +76,8 @@ __MBSDID("$MidnightBSD$");
 			OPT_SET(RBX_GDB ) | OPT_SET(RBX_MUTE) | \
 			OPT_SET(RBX_PAUSE) | OPT_SET(RBX_DUAL))
 
-#define PATH_CONFIG	"/boot.config"
+#define PATH_DOTCONFIG	"/boot.config"
+#define PATH_CONFIG	"/boot/config"
 #define PATH_BOOT3	"/boot/loader"
 #define PATH_KERNEL	"/boot/kernel/kernel"
 
@@ -85,8 +86,6 @@ __MBSDID("$MidnightBSD$");
 #define NDEV		3
 #define MEM_BASE	0x12
 #define MEM_EXT 	0x15
-#define V86_CY(x)	((x) & PSL_C)
-#define V86_ZR(x)	((x) & PSL_Z)
 
 #define DRV_HARD	0x80
 #define DRV_MASK	0x7f
@@ -126,13 +125,13 @@ static struct dsk {
     unsigned drive;
     unsigned type;
     unsigned unit;
-    unsigned slice;
-    unsigned part;
+    uint8_t slice;
+    uint8_t part;
     unsigned start;
     int init;
 } dsk;
-static char cmd[512], cmddup[512];
-static char kname[1024];
+static char cmd[512], cmddup[512], knamebuf[1024];
+static const char *kname;
 static uint32_t opts;
 static int comspeed = SIOSPD;
 static struct bootinfo bootinfo;
@@ -145,12 +144,11 @@ static int xfsread(ino_t, void *, size_t);
 static int dskread(void *, unsigned, unsigned);
 static void printf(const char *,...);
 static void putchar(int);
-static uint32_t memsize(void);
 static int drvread(void *, unsigned, unsigned);
 static int keyhit(unsigned);
 static int xputc(int);
 static int xgetc(int);
-static int getc(int);
+static inline int getc(int);
 
 static void memcpy(void *, const void *, int);
 static void
@@ -181,15 +179,6 @@ xfsread(ino_t inode, void *buf, size_t nbyte)
 	return -1;
     }
     return 0;
-}
-
-static inline uint32_t
-memsize(void)
-{
-    v86.addr = MEM_EXT;
-    v86.eax = 0x8800;
-    v86int();
-    return v86.eax;
 }
 
 static inline void
@@ -234,8 +223,9 @@ putc(int c)
 int
 main(void)
 {
-    int autoboot;
+    uint8_t autoboot;
     ino_t ino;
+    size_t nbyte;
 
     dmadat = (void *)(roundup2(__base + (int32_t)&_end, 0x10000) - __base);
     v86.ctl = V86_FLAGS;
@@ -246,16 +236,16 @@ main(void)
     dsk.slice = *(uint8_t *)PTOV(ARGS + 1) + 1;
     bootinfo.bi_version = BOOTINFO_VERSION;
     bootinfo.bi_size = sizeof(bootinfo);
-    bootinfo.bi_basemem = 0;	/* XXX will be filled by loader or kernel */
-    bootinfo.bi_extmem = memsize();
-    bootinfo.bi_memsizes_valid++;
 
     /* Process configuration file */
 
     autoboot = 1;
 
-    if ((ino = lookup(PATH_CONFIG)))
-	fsread(ino, cmd, sizeof(cmd));
+    if ((ino = lookup(PATH_CONFIG)) ||
+        (ino = lookup(PATH_DOTCONFIG))) {
+	nbyte = fsread(ino, cmd, sizeof(cmd) - 1);
+	cmd[nbyte] = '\0';
+    }
 
     if (*cmd) {
 	memcpy(cmddup, cmd, sizeof(cmd));
@@ -272,11 +262,11 @@ main(void)
      * or in case of failure, try to load a kernel directly instead.
      */
 
-    if (autoboot && !*kname) {
-	memcpy(kname, PATH_BOOT3, sizeof(PATH_BOOT3));
-	if (!keyhit(3*SECOND)) {
+    if (!kname) {
+	kname = PATH_BOOT3;
+	if (autoboot && !keyhit(3*SECOND)) {
 	    load();
-	    memcpy(kname, PATH_KERNEL, sizeof(PATH_KERNEL));
+	    kname = PATH_KERNEL;
 	}
     }
 
@@ -284,14 +274,14 @@ main(void)
 
     for (;;) {
 	if (!autoboot || !OPT_CHECK(RBX_QUIET))
-	    printf("\nMidnightBSD/i386 boot\n"
+	    printf("\nMidnightBSD/x86 boot\n"
 		   "Default: %u:%s(%u,%c)%s\n"
 		   "boot: ",
 		   dsk.drive & DRV_MASK, dev_nm[dsk.type], dsk.unit,
 		   'a' + dsk.part, kname);
 	if (ioctrl & IO_SERIAL)
 	    sio_flush();
-	if (!autoboot || keyhit(5*SECOND))
+	if (!autoboot || keyhit(3*SECOND))
 	    getstr();
 	else if (!autoboot || !OPT_CHECK(RBX_QUIET))
 	    putchar('\n');
@@ -320,8 +310,8 @@ load(void)
     static Elf32_Shdr es[2];
     caddr_t p;
     ino_t ino;
-    uint32_t addr, x;
-    int fmt, i, j;
+    uint32_t addr;
+    int i, j;
 
     if (!(ino = lookup(kname))) {
 	if (!ls)
@@ -330,15 +320,8 @@ load(void)
     }
     if (xfsread(ino, &hdr, sizeof(hdr)))
 	return;
-    if (N_GETMAGIC(hdr.ex) == ZMAGIC)
-	fmt = 0;
-    else if (IS_ELF(hdr.eh))
-	fmt = 1;
-    else {
-	printf("Invalid %s\n", "format");
-	return;
-    }
-    if (fmt == 0) {
+
+    if (N_GETMAGIC(hdr.ex) == ZMAGIC) {
 	addr = hdr.ex.a_entry & 0xffffff;
 	p = PTOV(addr);
 	fs_off = PAGE_SIZE;
@@ -347,24 +330,7 @@ load(void)
 	p += roundup2(hdr.ex.a_text, PAGE_SIZE);
 	if (xfsread(ino, p, hdr.ex.a_data))
 	    return;
-	p += hdr.ex.a_data + roundup2(hdr.ex.a_bss, PAGE_SIZE);
-	bootinfo.bi_symtab = VTOP(p);
-	memcpy(p, &hdr.ex.a_syms, sizeof(hdr.ex.a_syms));
-	p += sizeof(hdr.ex.a_syms);
-	if (hdr.ex.a_syms) {
-	    if (xfsread(ino, p, hdr.ex.a_syms))
-		return;
-	    p += hdr.ex.a_syms;
-	    if (xfsread(ino, p, sizeof(int)))
-		return;
-	    x = *(uint32_t *)p;
-	    p += sizeof(int);
-	    x -= sizeof(int);
-	    if (xfsread(ino, p, x))
-		return;
-	    p += x;
-	}
-    } else {
+    } else if (IS_ELF(hdr.eh)) {
 	fs_off = hdr.eh.e_phoff;
 	for (j = i = 0; i < hdr.eh.e_phnum && j < 2; i++) {
 	    if (xfsread(ino, ep + j, sizeof(ep[0])))
@@ -386,7 +352,7 @@ load(void)
 	    if (xfsread(ino, &es, sizeof(es)))
 		return;
 	    for (i = 0; i < 2; i++) {
-		memcpy(p, &es[i].sh_size, sizeof(es[i].sh_size));
+		*(Elf32_Word *)p = es[i].sh_size;
 		p += sizeof(es[i].sh_size);
 		fs_off = es[i].sh_offset;
 		if (xfsread(ino, p, es[i].sh_size))
@@ -395,8 +361,12 @@ load(void)
 	    }
 	}
 	addr = hdr.eh.e_entry & 0xffffff;
+	bootinfo.bi_esymtab = VTOP(p);
+    } else {
+	printf("Invalid %s\n", "format");
+	return;
     }
-    bootinfo.bi_esymtab = VTOP(p);
+
     bootinfo.bi_kernelname = VTOP(kname);
     bootinfo.bi_bios_dev = dsk.drive;
     __exec((caddr_t)addr, RB_BOOTINFO | (opts & RBX_MASK),
@@ -492,9 +462,10 @@ parse()
 		dsk_meta = 0;
 	    }
 	    if ((i = ep - arg)) {
-		if ((size_t)i >= sizeof(kname))
+		if ((size_t)i >= sizeof(knamebuf))
 		    return -1;
-		memcpy(kname, arg, i + 1);
+		memcpy(knamebuf, arg, i + 1);
+		kname = knamebuf;
 	    }
 	}
 	arg = p;
@@ -508,7 +479,8 @@ dskread(void *buf, unsigned lba, unsigned nblk)
     struct dos_partition *dp;
     struct disklabel *d;
     char *sec;
-    unsigned sl, i;
+    unsigned i;
+    uint8_t sl;
 
     if (!dsk_meta) {
 	sec = dmadat->secbuf;
@@ -568,7 +540,7 @@ static void
 printf(const char *fmt,...)
 {
     va_list ap;
-    char buf[10];
+    static char buf[10];
     char *s;
     unsigned u;
     int c;
@@ -647,7 +619,7 @@ keyhit(unsigned ticks)
 	t1 = *(uint32_t *)PTOV(0x46c);
 	if (!t0)
 	    t0 = t1;
-	if (t1 < t0 || t1 >= t0 + ticks)
+	if ((uint32_t)(t1 - t0) >= ticks)
 	    return 0;
     }
 }
@@ -663,6 +635,15 @@ xputc(int c)
 }
 
 static int
+getc(int fn)
+{
+    v86.addr = 0x16;
+    v86.eax = fn << 8;
+    v86int();
+    return fn == 0 ? v86.eax & 0xff : !V86_ZR(v86.efl);
+}
+
+static int
 xgetc(int fn)
 {
     if (OPT_CHECK(RBX_NOINTR))
@@ -675,13 +656,4 @@ xgetc(int fn)
 	if (fn)
 	    return 0;
     }
-}
-
-static int
-getc(int fn)
-{
-    v86.addr = 0x16;
-    v86.eax = fn << 8;
-    v86int();
-    return fn == 0 ? v86.eax & 0xff : !V86_ZR(v86.efl);
 }

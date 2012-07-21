@@ -1,5 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/boot/i386/boot2/Makefile,v 1.7 2011/12/18 19:09:49 laffer1 Exp $
 # $FreeBSD: src/sys/boot/i386/boot2/Makefile,v 1.60 2007/05/19 05:07:47 kan Exp $
+
+.include <bsd.own.mk>
 
 FILES=		boot boot1 boot2
 
@@ -27,7 +29,8 @@ CFLAGS=	-Os \
 	-fno-unit-at-a-time \
 	-mno-align-long-strings \
 	-mrtd \
-	-mno-mmx -mno-3dnow -mno-sse -mno-sse2 -mno-sse3 \
+	-mregparm=3 \
+	-DUSE_XREAD \
 	-D${BOOT2_UFS} \
 	-DFLAGS=${BOOT_BOOT1_FLAGS} \
 	-DSIOPRT=${BOOT_COMCONSOLE_PORT} \
@@ -38,7 +41,8 @@ CFLAGS=	-Os \
 	-Wall -Waggregate-return -Wbad-function-cast -Wcast-align \
 	-Wmissing-declarations -Wmissing-prototypes -Wnested-externs \
 	-Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings \
-	-Winline --param max-inline-insns-single=100
+	-Winline --param max-inline-insns-single=100 \
+	${CLANG_OPT_SMALL}
 
 LDFLAGS=-static -N --gc-sections
 
@@ -80,6 +84,7 @@ boot2.out: ${BTXCRT} boot2.o sio.o
 	${LD} ${LDFLAGS} -Ttext ${ORG2} -o ${.TARGET} ${.ALLSRC}
 
 boot2.o: boot2.s
+	${CC} ${ACFLAGS} -c boot2.s
 
 SRCS=	boot2.c boot2.h
 
@@ -95,7 +100,7 @@ boot2.h: boot1.out
 	    ORG1=`printf "%d" ${ORG1}` \
 	    REL1=`printf "%d" ${REL1}` > ${.TARGET}
 
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64"
 beforedepend boot2.s: machine
 CLEANFILES+=	machine
 machine:
@@ -103,3 +108,7 @@ machine:
 .endif
 
 .include <bsd.prog.mk>
+
+# XXX: clang integrated-as doesn't grok .codeNN directives yet
+CFLAGS.boot1.S=		${CLANG_NO_IAS}
+CFLAGS+=		${CFLAGS.${.IMPSRC:T}}
