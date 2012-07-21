@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.13 2012/07/04 18:37:20 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.14 2012/07/07 15:49:21 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -299,14 +299,15 @@ WITH_HESIOD=
 WITH_IDEA=
 .endif
 
-#
-# MK_* options which default to "yes".
-#
-.for var in \
+__DEFAULT_YES_OPTIONS = \
+    ACCT \
     ACPI \
+    AMD \
     APACHE \
+    APM \
     ASH \
     ASSERT_DEBUG \
+    AT \
     ATM \
     AUDIT \
     AUTHPF \
@@ -317,45 +318,65 @@ WITH_IDEA=
     BIND_MTREE \
     BIND_NAMED \
     BIND_UTILS \
+    BINUTILS \
     BLUETOOTH \
     BOOT \
+    BSD_CPIO \
+    BSNMP \
+    SOURCELESS \
+    SOURCELESS_HOST \
+    SOURCELESS_UCODE \
     BZIP2 \
     CALENDAR \
     CDDL \
     CPP \
     CRYPT \
+    CTM \
     CVS \
     CXX \
     DICT \
     DYNAMICROOT \
     EXAMPLES \
+    FLOPPY \
     FORTH \
     FP_LIBC \
     GAMES \
+    GCC \
     GCOV \
     GDB \
     GNU \
     GPIB \
+    GPIO \
     GROFF \
     HTML \
     ICONV \
+    INET \
     INET6 \
     INFO \
     INSTALLLIB \
     IPFILTER \
+    IPFW \
     IPX \
+    JAIL \
     KERBEROS \
+    KERNEL_SYMBOLS \
     KVM \
+    LEGACY_CONSOLE \
     LIB32 \
     LIBPTHREAD \
     LIBKSE \
     LIBTHR \
     LOCALES \
+    LOCATE \
     LPR \
+    MAIL \
     MAILWRAPPER \
+    MAKE \
     MAN \
     NCP \
+    NDIS \
     NETCAT \
+    NETGRAPH \
     NIS \
     NLS \
     NLS_CATALOGS \
@@ -366,21 +387,70 @@ WITH_IDEA=
     PAM \
     PF \
     PROFILE \
+    QUOTAS \
     RCMDS \
     RCS \
     RESCUE \
+    ROUTED \
     SENDMAIL \
     SETUID_LOGIN \
     SHAREDOCS \
     SSP \
+    SYSINSTALL \
     SYMVER \
     SYSCONS \
     TCSH \
+    TELNET \
+    TEXTPROC \
     TOOLCHAIN \
     USB \
+    UTMPX \
+    WIRELESS \
     WPA_SUPPLICANT_EAPOL \
     ZFS \
     ZONEINFO
+
+__DEFAULT_NO_OPTIONS = \
+    BSD_GREP \
+    BIND_IDN \
+    BIND_LARGE_FILE \
+    BIND_LIBS \
+    BIND_SIGCHASE \
+    BIND_XML \
+    CLANG_EXTRAS \
+    CLANG_IS_CC \
+    HESIOD \
+    IDEA \
+    LIBCPLUSPLUS \
+    OFED \
+    SHARED_TOOLCHAIN
+
+#
+# Default behaviour of some options depends on the architecture.  Unfortunately
+# this means that we have to test TARGET_ARCH (the buildworld case) as well
+# as MACHINE_ARCH (the non-buildworld case).  Normally TARGET_ARCH is not
+# used at all in bsd.*.mk, but we have to make an exception here if we want
+# to allow defaults for some things like clang and fdt to vary by target
+# architecture.
+#
+.if defined(TARGET_ARCH)
+__T=${TARGET_ARCH}
+.else
+__T=${MACHINE_ARCH}
+.endif
+# Clang is only for x86 right now, by default.
+.if ${__T} == "amd64" || ${__T} == "i386"
+__DEFAULT_YES_OPTIONS+=CLANG
+.else
+__DEFAULT_NO_OPTIONS+=CLANG
+.endif
+__DEFAULT_NO_OPTIONS+=FDT
+.undef __T
+
+#
+# MK_* options which default to "yes".
+#
+.for var in ${__DEFAULT_YES_OPTIONS}
 .if defined(WITH_${var}) && defined(WITHOUT_${var})
 .error WITH_${var} and WITHOUT_${var} can't both be set.
 .endif
@@ -393,19 +463,12 @@ MK_${var}:=	no
 MK_${var}:=	yes
 .endif
 .endfor
+.undef __DEFAULT_YES_OPTIONS
 
 #
 # MK_* options which default to "no".
 #
-.for var in \
-    BSD_GREP \
-    BIND_IDN \
-    BIND_LARGE_FILE \
-    BIND_LIBS \
-    BIND_SIGCHASE \
-    BIND_XML \
-    HESIOD \
-    IDEA
+.for var in ${__DEFAULT_NO_OPTIONS}
 .if defined(WITH_${var}) && defined(WITHOUT_${var})
 .error WITH_${var} and WITHOUT_${var} can't both be set.
 .endif
@@ -418,17 +481,17 @@ MK_${var}:=	yes
 MK_${var}:=	no
 .endif
 .endfor
+.undef __DEFAULT_NO_OPTIONS
 
 #
 # Force some options off if their dependencies are off.
 # Order is somewhat important.
 #
 .if ${MK_LIBPTHREAD} == "no"
-MK_LIBKSE:=	no
 MK_LIBTHR:=	no
 .endif
 
-.if ${MK_LIBKSE} == "no" && ${MK_LIBTHR} == "no"
+.if ${MK_LIBTHR} == "no"
 MK_BIND:=	no
 .endif
 
@@ -446,8 +509,17 @@ MK_BIND_UTILS:=	no
 MK_BIND_ETC:=	no
 .endif
 
+.if ${MK_SOURCELESS} == "no"
+MK_SOURCELESS_HOST:=	no
+MK_SOURCELESS_UCODE:= no
+.endif
+
 .if ${MK_CDDL} == "no"
 MK_ZFS:=	no
+.endif
+
+.if ${MK_CLANG} == "no"
+MK_CLANG_EXTRAS:= no
 .endif
 
 .if ${MK_CRYPT} == "no"
@@ -456,8 +528,23 @@ MK_OPENSSH:=	no
 MK_KERBEROS:=	no
 .endif
 
+.if ${MK_CXX} == "no"
+MK_CLANG:=	no
+MK_GROFF:=	no
+.endif
+
 .if ${MK_IPX} == "no"
 MK_NCP:=	no
+.endif
+
+.if ${MK_MAIL} == "no"
+MK_MAILWRAPPER:= no
+MK_SENDMAIL:=	no
+.endif
+
+.if ${MK_NETGRAPH} == "no"
+MK_ATM:=	no
+MK_BLUETOOTH:=	no
 .endif
 
 .if ${MK_OPENSSL} == "no"
@@ -469,9 +556,24 @@ MK_KERBEROS:=	no
 MK_AUTHPF:=	no
 .endif
 
+.if ${MK_TEXTPROC} == "no"
+MK_GROFF:=	no
+.endif
+
 .if ${MK_TOOLCHAIN} == "no"
+MK_BINUTILS:=	no
+MK_CLANG:=	no
+MK_GCC:=	no
 MK_GDB:=	no
 .endif
+
+.if ${MK_CLANG} == "no"
+MK_CLANG_IS_CC:= no
+.endif
+
+MK_LIBCPLUSPLUS?= no
+
+MK_LIBCPLUSPLUS?= no
 
 #
 # Set defaults for the MK_*_SUPPORT variables.
@@ -484,11 +586,14 @@ MK_GDB:=	no
 .for var in \
     BZIP2 \
     GNU \
+    INET \
     INET6 \
     IPX \
     KERBEROS \
     KVM \
-    PAM
+    NETGRAPH \
+    PAM \
+    WIRELESS
 .if defined(WITH_${var}_SUPPORT) && defined(WITHOUT_${var}_SUPPORT)
 .error WITH_${var}_SUPPORT and WITHOUT_${var}_SUPPORT can't both be set.
 .endif
@@ -506,7 +611,8 @@ MK_${var}_SUPPORT:= yes
 # MK_* options whose default value depends on another option.
 #
 .for vv in \
-    GSSAPI/KERBEROS
+    GSSAPI/KERBEROS \
+    MAN_UTILS/MAN
 .if defined(WITH_${vv:H}) && defined(WITHOUT_${vv:H})
 .error WITH_${vv:H} and WITHOUT_${vv:H} can't both be set.
 .endif
