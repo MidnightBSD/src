@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic7770.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
+ * $Id: aic7770.c,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
  */
 
 #ifdef __linux__
@@ -46,7 +46,7 @@
 #include "aic7xxx_93cx6.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic7770.c,v 1.19 2007/04/17 06:26:24 scottl Exp $");
+__FBSDID("$FreeBSD$");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aic7xxx_93cx6.h>

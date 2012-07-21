@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/random/harvest.c,v 1.25 2004/10/18 19:29:13 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kthread.h>
@@ -120,7 +120,7 @@ read_random_phony(void *buf, int count)
 	return (count);
 }
 
-/* Helper routine to enable kthread_exit() to work while the module is
+/* Helper routine to enable kproc_exit() to work while the module is
  * being (or has been) unloaded.
  * This routine is in this file because it is always linked into the kernel,
  * and will thus never be unloaded. This is critical for unloadable modules
@@ -130,6 +130,6 @@ void
 random_set_wakeup_exit(void *control)
 {
 	wakeup(control);
-	kthread_exit(0);
+	kproc_exit(0);
 	/* NOTREACHED */
 }

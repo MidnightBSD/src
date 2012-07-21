@@ -37,16 +37,12 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_symbol.h,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aicasm_symbol.h,v 1.1.1.3 2012-07-21 15:16:50 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm_symbol.h,v 1.17 2005/01/06 01:42:27 imp Exp $
+ * $FreeBSD$
  */
 
-#ifdef __linux__
-#include "../queue.h"
-#else
 #include <sys/queue.h>
-#endif
 
 typedef enum {
 	UNINITIALIZED,
@@ -190,7 +186,7 @@ void	symtable_open(void);
 void	symtable_close(void);
 
 symbol_t *
-	symtable_get(char *name);
+	symtable_get(const char *name);
 
 symbol_node_t *
 	symlist_search(symlist_t *symlist, char *symname);

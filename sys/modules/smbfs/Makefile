@@ -1,7 +1,7 @@
-# $FreeBSD: src/sys/modules/smbfs/Makefile,v 1.9.2.1 2006/02/10 00:38:06 yar Exp $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../crypto/des \
-	${.CURDIR}/../../crypto/des/arch/${MACHINE_ARCH} \
+	${.CURDIR}/../../crypto/des/arch/${MACHINE_CPUARCH} \
 	${.CURDIR}/../../kern \
 	${.CURDIR}/../../libkern \
 	${.CURDIR}/../../netsmb \
@@ -11,7 +11,7 @@ KMOD=	smbfs
 
 SRCS=	vnode_if.h \
 	opt_inet.h opt_ipx.h \
-	opt_netsmb.h opt_vmpage.h \
+	opt_netsmb.h \
 	iconv_converter_if.h \
 	md4c.c \
 	smb_conn.c smb_dev.c smb_trantcp.c smb_smb.c smb_subr.c smb_rq.c \
@@ -19,15 +19,12 @@ SRCS=	vnode_if.h \
 	smbfs_vfsops.c smbfs_node.c smbfs_io.c smbfs_vnops.c \
 	smbfs_subr.c smbfs_smb.c
 
-NETSMBCRYPTO=
-
-.if defined(NETSMBCRYPTO)
+# NETSMBCRYPTO
 SRCS+=	des_ecb.c des_setkey.c
-.if ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "i386"
 SRCS+=	des_enc.S
 .else
 SRCS+=	des_enc.c
-.endif
 .endif
 
 # Build with IPX support (1|0)
@@ -51,12 +48,6 @@ opt_inet.h:
 .if ${SMB_IPX} > 0
 opt_ipx.h:
 	echo "#define IPX 1" > ${.TARGET}
-.endif
-
-# XXX netsmb should be a separate module
-.if defined(NETSMBCRYPTO)
-opt_netsmb.h:
-	echo "#define NETSMBCRYPTO 1" > ${.TARGET}
 .endif
 .endif
 

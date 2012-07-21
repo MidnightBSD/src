@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_devstat.c,v 1.51 2005/05/03 10:58:05 jeff Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -49,12 +49,13 @@ static long devstat_generation = 1;
 static int devstat_version = DEVSTAT_VERSION;
 static int devstat_current_devnumber;
 static struct mtx devstat_mutex;
+MTX_SYSINIT(devstat_mutex, &devstat_mutex, "devstat", MTX_DEF);
 
-static struct devstatlist device_statq;
+static struct devstatlist device_statq = STAILQ_HEAD_INITIALIZER(device_statq);
 static struct devstat *devstat_alloc(void);
 static void devstat_free(struct devstat *);
 static void devstat_add_entry(struct devstat *ds, const void *dev_name, 
-		       int unit_number, u_int32_t block_size,
+		       int unit_number, uint32_t block_size,
 		       devstat_support_flags flags,
 		       devstat_type_flags device_type,
 		       devstat_priority priority);
@@ -64,19 +65,13 @@ static void devstat_add_entry(struct devstat *ds, const void *dev_name,
  */
 struct devstat *
 devstat_new_entry(const void *dev_name,
-		  int unit_number, u_int32_t block_size,
+		  int unit_number, uint32_t block_size,
 		  devstat_support_flags flags,
 		  devstat_type_flags device_type,
 		  devstat_priority priority)
 {
 	struct devstat *ds;
-	static int once;
 
-	if (!once) {
-		STAILQ_INIT(&device_statq);
-		mtx_init(&devstat_mutex, "devstat", NULL, MTX_DEF);
-		once = 1;
-	}
 	mtx_assert(&devstat_mutex, MA_NOTOWNED);
 
 	ds = devstat_alloc();
@@ -99,7 +94,7 @@ devstat_new_entry(const void *dev_name,
  */
 static void
 devstat_add_entry(struct devstat *ds, const void *dev_name, 
-		  int unit_number, u_int32_t block_size,
+		  int unit_number, uint32_t block_size,
 		  devstat_support_flags flags,
 		  devstat_type_flags device_type,
 		  devstat_priority priority)
@@ -275,7 +270,7 @@ devstat_start_transaction_bio(struct devstat *ds, struct bio *bp)
  * atomic instructions using appropriate memory barriers.
  */
 void
-devstat_end_transaction(struct devstat *ds, u_int32_t bytes, 
+devstat_end_transaction(struct devstat *ds, uint32_t bytes, 
 			devstat_tag_type tag_type, devstat_trans_flags flags,
 			struct bintime *now, struct bintime *then)
 {
@@ -407,10 +402,10 @@ sysctl_devstat(SYSCTL_HANDLER_ARGS)
  * Sysctl entries for devstat.  The first one is a node that all the rest
  * hang off of. 
  */
-SYSCTL_NODE(_kern, OID_AUTO, devstat, CTLFLAG_RD, 0, "Device Statistics");
+SYSCTL_NODE(_kern, OID_AUTO, devstat, CTLFLAG_RD, NULL, "Device Statistics");
 
 SYSCTL_PROC(_kern_devstat, OID_AUTO, all, CTLFLAG_RD|CTLTYPE_OPAQUE,
-    0, 0, sysctl_devstat, "S,devstat", "All devices in the devstat list");
+    NULL, 0, sysctl_devstat, "S,devstat", "All devices in the devstat list");
 /*
  * Export the number of devices in the system so that userland utilities
  * can determine how much memory to allocate to hold all the devices.
@@ -449,7 +444,8 @@ static TAILQ_HEAD(, statspage)	pagelist = TAILQ_HEAD_INITIALIZER(pagelist);
 static MALLOC_DEFINE(M_DEVSTAT, "devstat", "Device statistics");
 
 static int
-devstat_mmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int nprot)
+devstat_mmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int nprot, vm_memattr_t *memattr)
 {
 	struct statspage *spp;
 
@@ -469,16 +465,18 @@ static struct devstat *
 devstat_alloc(void)
 {
 	struct devstat *dsp;
-	struct statspage *spp;
+	struct statspage *spp, *spp2;
 	u_int u;
 	static int once;
 
 	mtx_assert(&devstat_mutex, MA_NOTOWNED);
 	if (!once) {
-		make_dev(&devstat_cdevsw, 0,
-		    UID_ROOT, GID_WHEEL, 0400, DEVSTAT_DEVICE_NAME);
+		make_dev_credf(MAKEDEV_ETERNAL | MAKEDEV_CHECKNAME,
+		    &devstat_cdevsw, 0, NULL, UID_ROOT, GID_WHEEL, 0400,
+		    DEVSTAT_DEVICE_NAME);
 		once = 1;
 	}
+	spp2 = NULL;
 	mtx_lock(&devstat_mutex);
 	for (;;) {
 		TAILQ_FOREACH(spp, &pagelist, list) {
@@ -487,24 +485,30 @@ devstat_alloc(void)
 		}
 		if (spp != NULL)
 			break;
-		/*
-		 * We had no free slot in any of our pages, drop the mutex
-		 * and get another page.  In theory we could have more than
-		 * one process doing this at the same time and consequently
-		 * we may allocate more pages than we will need.  That is
-		 * Just Too Bad[tm], we can live with that.
-		 */
 		mtx_unlock(&devstat_mutex);
-		spp = malloc(sizeof *spp, M_DEVSTAT, M_ZERO | M_WAITOK);
-		spp->stat = malloc(PAGE_SIZE, M_DEVSTAT, M_ZERO | M_WAITOK);
-		spp->nfree = statsperpage;
-		mtx_lock(&devstat_mutex);
+		spp2 = malloc(sizeof *spp, M_DEVSTAT, M_ZERO | M_WAITOK);
+		spp2->stat = malloc(PAGE_SIZE, M_DEVSTAT, M_ZERO | M_WAITOK);
+		spp2->nfree = statsperpage;
+
 		/*
-		 * It would make more sense to add the new page at the head
-		 * but the order on the list determine the sequence of the
-		 * mapping so we can't do that.
+		 * If free statspages were added while the lock was released
+		 * just reuse them.
 		 */
-		TAILQ_INSERT_TAIL(&pagelist, spp, list);
+		mtx_lock(&devstat_mutex);
+		TAILQ_FOREACH(spp, &pagelist, list)
+			if (spp->nfree > 0)
+				break;
+		if (spp == NULL) {
+			spp = spp2;
+
+			/*
+			 * It would make more sense to add the new page at the
+			 * head but the order on the list determine the
+			 * sequence of the mapping so we can't do that.
+			 */
+			TAILQ_INSERT_TAIL(&pagelist, spp, list);
+		} else
+			break;
 	}
 	dsp = spp->stat;
 	for (u = 0; u < statsperpage; u++) {
@@ -515,6 +519,10 @@ devstat_alloc(void)
 	spp->nfree--;
 	dsp->allocated = 1;
 	mtx_unlock(&devstat_mutex);
+	if (spp2 != NULL && spp2 != spp) {
+		free(spp2->stat, M_DEVSTAT);
+		free(spp2, M_DEVSTAT);
+	}
 	return (dsp);
 }
 
@@ -534,4 +542,4 @@ devstat_free(struct devstat *dsp)
 }
 
 SYSCTL_INT(_debug_sizeof, OID_AUTO, devstat, CTLFLAG_RD,
-    0, sizeof(struct devstat), "sizeof(struct devstat)");
+    NULL, sizeof(struct devstat), "sizeof(struct devstat)");

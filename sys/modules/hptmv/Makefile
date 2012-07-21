@@ -2,7 +2,7 @@
 # Makefile for RR182x FreeBSD driver
 # Copyright (c)  2004-2005 HighPoint Technologies, Inc. All rights reserved
 #
-# $FreeBSD: src/sys/modules/hptmv/Makefile,v 1.3.2.1 2005/10/06 18:47:58 delphij Exp $
+# $FreeBSD$
 
 HPTMV= ${.CURDIR}/../../dev/hptmv
 .PATH: ${HPTMV}
@@ -13,7 +13,7 @@ SRCS+= bus_if.h device_if.h pci_if.h
 SRCS+= mv.c entry.c ioctl.c hptproc.c gui_lib.c
 OBJS+= hptmvraid.o
 
-.if $(MACHINE_ARCH) == "amd64"
+.if $(MACHINE_CPUARCH) == "amd64"
 HPTMV_RAID_O = amd64-elf.raid.o.uu
 .else
 HPTMV_RAID_O = i386-elf.raid.o.uu
@@ -48,5 +48,5 @@ DEBUGOPT += -DFOR_DEMO
 .endif
 
 CFLAGS = ${DEBUGOPT}
-	
+
 .include <bsd.kmod.mk>

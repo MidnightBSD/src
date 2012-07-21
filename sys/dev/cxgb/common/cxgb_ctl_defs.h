@@ -6,7 +6,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the LICENSE file included in this
  * release for licensing terms and conditions.
  *
- * $FreeBSD: src/sys/dev/cxgb/common/cxgb_ctl_defs.h,v 1.3 2007/09/09 01:28:03 kmacy Exp $
+ * $FreeBSD$
  */
 
 #ifndef _CXGB3_OFFLOAD_CTL_DEFS_H
@@ -60,14 +60,12 @@ struct mtutab {
 	const unsigned short *mtus; /* the MTU table values */
 };
 
-struct net_device;
-
 /*
- * Structure used to request the adapter net_device owning a given MAC address.
+ * Structure used to request the ifnet that owns a given MAC address.
  */
 struct iff_mac {
-	struct net_device *dev;          /* the net_device */
-	const unsigned char *mac_addr;   /* MAC address to lookup */
+	struct ifnet *dev;
+	const unsigned char *mac_addr;
 	u16 vlan_tag;
 };
 
@@ -85,7 +83,7 @@ struct ddp_params {
 
 struct adap_ports {
 	unsigned int nports;     /* number of ports on this adapter */
-	struct net_device *lldevs[2];
+	struct ifnet *lldevs[MAX_NPORTS];
 };
 
 /*
@@ -125,8 +123,8 @@ struct rdma_info {
 	unsigned int rqt_top;	 /* RQT last entry address */
 	unsigned int udbell_len; /* user doorbell region length */
 	unsigned long udbell_physbase;  /* user doorbell physical start addr */
-	void volatile *kdb_addr;  /* kernel doorbell register address */
-	struct pci_dev *pdev;    /* associated PCI device */
+	void *kdb_addr;  /* kernel doorbell register address */
+	struct device *pdev;    /* associated PCI device */
 };
 
 /*

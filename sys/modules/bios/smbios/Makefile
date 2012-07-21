@@ -1,7 +1,7 @@
-# $FreeBSD: src/sys/modules/bios/smbios/Makefile,v 1.1 2003/03/29 15:20:44 mdodd Exp $
+# $FreeBSD$
 #
 
-.PATH:  ${.CURDIR}/../../../i386/bios
+.PATH:  ${.CURDIR}/../../../x86/bios
 
 KMOD=	smbios
 SRCS=	smbios.c \

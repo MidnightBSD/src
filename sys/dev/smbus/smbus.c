@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/smbus/smbus.c,v 1.23 2006/09/11 22:20:37 jhb Exp $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
@@ -55,11 +55,10 @@ static device_method_t smbus_methods[] = {
         DEVMETHOD(device_attach,        smbus_attach),
         DEVMETHOD(device_detach,        smbus_detach),
 
-        /* bus interface */
+	/* bus interface */
 	DEVMETHOD(bus_add_child,	bus_generic_add_child),
-        DEVMETHOD(bus_print_child,	bus_generic_print_child),
 
-        { 0, 0 }
+	DEVMETHOD_END
 };
 
 driver_t smbus_driver = {
@@ -111,7 +110,7 @@ smbus_detach(device_t dev)
 }
 
 void
-smbus_generic_intr(device_t dev, u_char devaddr, char low, char high)
+smbus_generic_intr(device_t dev, u_char devaddr, char low, char high, int err)
 {
 }
 

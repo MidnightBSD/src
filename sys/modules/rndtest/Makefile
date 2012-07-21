@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/rndtest/Makefile,v 1.1 2003/03/11 19:26:16 sam Exp $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../dev/rndtest
 KMOD	= rndtest

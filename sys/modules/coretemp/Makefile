@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/coretemp/Makefile,v 1.1 2007/08/15 19:26:02 des Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/coretemp
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/utopia/Makefile,v 1.2 2005/02/25 09:49:29 harti Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/utopia
 

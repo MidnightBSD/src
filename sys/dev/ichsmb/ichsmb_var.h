@@ -35,7 +35,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/dev/ichsmb/ichsmb_var.h,v 1.4 2005/06/10 16:12:43 takawata Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_ICHSMB_ICHSMB_VAR_H
@@ -51,8 +51,6 @@ struct ichsmb_softc {
 	device_t		smb;		/* smb device */
 	struct resource		*io_res;        /* i/o port resource */
 	int			io_rid;         /* i/o port bus id */
-	bus_space_tag_t		io_bst;		/* bus space tag */
-	bus_space_handle_t	io_bsh;		/* bus space handle */
 	struct resource		*irq_res;       /* interrupt resource */
 	int			irq_rid;        /* interrupt bus id */
 	void			*irq_handle;    /* handle for interrupt code */

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/syscons/blank/Makefile,v 1.14 2002/01/11 15:48:58 ru Exp $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/syscons/blank
 

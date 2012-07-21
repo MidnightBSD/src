@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/ispfw/asm_1080.h,v 1.4 2006/07/09 17:50:17 mjacob Exp $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000 Qlogic, Inc.
  * All rights reserved.

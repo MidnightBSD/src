@@ -28,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ahd_pci.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
+ * $Id: ahd_pci.c,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/ahd_pci.c,v 1.20 2006/09/03 00:27:40 jmg Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/aic7xxx/aic79xx_osm.h>
 
@@ -56,7 +56,6 @@ static driver_t ahd_pci_driver = {
 static devclass_t ahd_devclass;
 
 DRIVER_MODULE(ahd, pci, ahd_pci_driver, ahd_devclass, 0, 0);
-DRIVER_MODULE(ahd, cardbus, ahd_pci_driver, ahd_devclass, 0, 0);
 MODULE_DEPEND(ahd_pci, ahd, 1, 1, 1);
 MODULE_VERSION(ahd_pci, 1);
 
@@ -108,7 +107,6 @@ ahd_pci_attach(device_t dev)
                 ahd->flags |= AHD_39BIT_ADDRESSING;
 
 	/* Allocate a dmatag for our SCB DMA maps */
-	/* XXX Should be a child of the PCI bus dma tag */
 	error = aic_dma_tag_create(ahd, /*parent*/bus_get_dma_tag(dev),
 				   /*alignment*/1, /*boundary*/0,
 				   (ahd->flags & AHD_39BIT_ADDRESSING)
@@ -135,6 +133,7 @@ ahd_pci_attach(device_t dev)
 		return (error);
 	}
 
+	ahd_sysctl(ahd);
 	ahd_attach(ahd);
 	return (0);
 }
@@ -199,6 +198,7 @@ ahd_pci_map_registers(struct ahd_softc *ahd)
 				bus_release_resource(ahd->dev_softc, regs_type,
 						     regs_id, regs);
 				regs = NULL;
+				AHD_CORRECTABLE_ERROR(ahd);
 			} else {
 				command &= ~PCIM_CMD_PORTEN;
 				aic_pci_write_config(ahd->dev_softc,
@@ -215,6 +215,7 @@ ahd_pci_map_registers(struct ahd_softc *ahd)
 		if (regs == NULL) {
 			device_printf(ahd->dev_softc,
 				      "can't allocate register resources\n");
+			AHD_UNCORRECTABLE_ERROR(ahd);
 			return (ENOMEM);
 		}
 		ahd->tags[0] = rman_get_bustag(regs);
@@ -227,6 +228,7 @@ ahd_pci_map_registers(struct ahd_softc *ahd)
 		if (regs2 == NULL) {
 			device_printf(ahd->dev_softc,
 				      "can't allocate register resources\n");
+			AHD_UNCORRECTABLE_ERROR(ahd);
 			return (ENOMEM);
 		}
 		ahd->tags[1] = rman_get_bustag(regs2);

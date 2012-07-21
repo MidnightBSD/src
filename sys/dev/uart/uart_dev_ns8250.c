@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_dev_ns8250.c,v 1.27 2007/04/03 01:21:10 marcel Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,14 +50,16 @@ __FBSDID("$FreeBSD: src/sys/dev/uart/uart_dev_ns8250.c,v 1.27 2007/04/03 01:21:1
 static void
 ns8250_clrint(struct uart_bas *bas)
 {
-	uint8_t iir;
+	uint8_t iir, lsr;
 
 	iir = uart_getreg(bas, REG_IIR);
 	while ((iir & IIR_NOPEND) == 0) {
 		iir &= IIR_IMASK;
-		if (iir == IIR_RLS)
-			(void)uart_getreg(bas, REG_LSR);
-		else if (iir == IIR_RXRDY || iir == IIR_RXTOUT)
+		if (iir == IIR_RLS) {
+			lsr = uart_getreg(bas, REG_LSR);
+			if (lsr & (LSR_BI|LSR_FE|LSR_PE))
+				(void)uart_getreg(bas, REG_DATA);
+		} else if (iir == IIR_RXRDY || iir == IIR_RXTOUT)
 			(void)uart_getreg(bas, REG_DATA);
 		else if (iir == IIR_MLSC)
 			(void)uart_getreg(bas, REG_MSR);
@@ -240,8 +242,14 @@ ns8250_probe(struct uart_bas *bas)
 	val = uart_getreg(bas, REG_IIR);
 	if (val & 0x30)
 		return (ENXIO);
+	/*
+	 * Bit 6 of the MCR (= 0x40) appears to be 1 for the Sun1699
+	 * chip, but otherwise doesn't seem to have a function. In
+	 * other words, uart(4) works regardless. Ignore that bit so
+	 * the probe succeeds.
+	 */
 	val = uart_getreg(bas, REG_MCR);
-	if (val & 0xe0)
+	if (val & 0xa0)
 		return (ENXIO);
 
 	return (0);
@@ -258,7 +266,12 @@ ns8250_init(struct uart_bas *bas, int baudrate, int databits, int stopbits,
 	ns8250_param(bas, baudrate, databits, stopbits, parity);
 
 	/* Disable all interrupt sources. */
-	ier = uart_getreg(bas, REG_IER) & 0xf0;
+	/*
+	 * We use 0xe0 instead of 0xf0 as the mask because the XScale PXA
+	 * UARTs split the receive time-out interrupt bit out separately as
+	 * 0x10.  This gets handled by ier_mask and ier_rxbits below.
+	 */
+	ier = uart_getreg(bas, REG_IER) & 0xe0;
 	uart_setreg(bas, REG_IER, ier);
 	uart_barrier(bas);
 
@@ -332,6 +345,9 @@ struct ns8250_softc {
 	uint8_t		fcr;
 	uint8_t		ier;
 	uint8_t		mcr;
+	
+	uint8_t		ier_mask;
+	uint8_t		ier_rxbits;
 };
 
 static int ns8250_bus_attach(struct uart_softc *);
@@ -382,11 +398,37 @@ ns8250_bus_attach(struct uart_softc *sc)
 {
 	struct ns8250_softc *ns8250 = (struct ns8250_softc*)sc;
 	struct uart_bas *bas;
+	unsigned int ivar;
 
 	bas = &sc->sc_bas;
 
 	ns8250->mcr = uart_getreg(bas, REG_MCR);
-	ns8250->fcr = FCR_ENABLE | FCR_RX_MEDH;
+	ns8250->fcr = FCR_ENABLE;
+	if (!resource_int_value("uart", device_get_unit(sc->sc_dev), "flags",
+	    &ivar)) {
+		if (UART_FLAGS_FCR_RX_LOW(ivar)) 
+			ns8250->fcr |= FCR_RX_LOW;
+		else if (UART_FLAGS_FCR_RX_MEDL(ivar)) 
+			ns8250->fcr |= FCR_RX_MEDL;
+		else if (UART_FLAGS_FCR_RX_HIGH(ivar)) 
+			ns8250->fcr |= FCR_RX_HIGH;
+		else
+			ns8250->fcr |= FCR_RX_MEDH;
+	} else 
+		ns8250->fcr |= FCR_RX_MEDH;
+	
+	/* Get IER mask */
+	ivar = 0xf0;
+	resource_int_value("uart", device_get_unit(sc->sc_dev), "ier_mask",
+	    &ivar);
+	ns8250->ier_mask = (uint8_t)(ivar & 0xff);
+	
+	/* Get IER RX interrupt bits */
+	ivar = IER_EMSC | IER_ERLS | IER_ERXRDY;
+	resource_int_value("uart", device_get_unit(sc->sc_dev), "ier_rxbits",
+	    &ivar);
+	ns8250->ier_rxbits = (uint8_t)(ivar & 0xff);
+	
 	uart_setreg(bas, REG_FCR, ns8250->fcr);
 	uart_barrier(bas);
 	ns8250_bus_flush(sc, UART_FLUSH_RECEIVER|UART_FLUSH_TRANSMITTER);
@@ -398,21 +440,24 @@ ns8250_bus_attach(struct uart_softc *sc)
 	ns8250_bus_getsig(sc);
 
 	ns8250_clrint(bas);
-	ns8250->ier = uart_getreg(bas, REG_IER) & 0xf0;
-	ns8250->ier |= IER_EMSC | IER_ERLS | IER_ERXRDY;
+	ns8250->ier = uart_getreg(bas, REG_IER) & ns8250->ier_mask;
+	ns8250->ier |= ns8250->ier_rxbits;
 	uart_setreg(bas, REG_IER, ns8250->ier);
 	uart_barrier(bas);
+	
 	return (0);
 }
 
 static int
 ns8250_bus_detach(struct uart_softc *sc)
 {
+	struct ns8250_softc *ns8250;
 	struct uart_bas *bas;
 	u_char ier;
 
+	ns8250 = (struct ns8250_softc *)sc;
 	bas = &sc->sc_bas;
-	ier = uart_getreg(bas, REG_IER) & 0xf0;
+	ier = uart_getreg(bas, REG_IER) & ns8250->ier_mask;
 	uart_setreg(bas, REG_IER, ier);
 	uart_barrier(bas);
 	ns8250_clrint(bas);
@@ -550,7 +595,6 @@ ns8250_bus_ipend(struct uart_softc *sc)
 	ipend = 0;
 	if (iir & IIR_RXRDY) {
 		lsr = uart_getreg(bas, REG_LSR);
-		uart_unlock(sc->sc_hwmtx);
 		if (lsr & LSR_OE)
 			ipend |= SER_INT_OVERRUN;
 		if (lsr & LSR_BI)
@@ -558,13 +602,15 @@ ns8250_bus_ipend(struct uart_softc *sc)
 		if (lsr & LSR_RXRDY)
 			ipend |= SER_INT_RXREADY;
 	} else {
-		uart_unlock(sc->sc_hwmtx);
 		if (iir & IIR_TXRDY)
 			ipend |= SER_INT_TXIDLE;
 		else
 			ipend |= SER_INT_SIGCHG;
 	}
-	return ((sc->sc_leaving) ? 0 : ipend);
+	if (ipend == 0)
+		ns8250_clrint(bas);
+	uart_unlock(sc->sc_hwmtx);
+	return (ipend);
 }
 
 static int
@@ -584,10 +630,12 @@ ns8250_bus_param(struct uart_softc *sc, int baudrate, int databits,
 static int
 ns8250_bus_probe(struct uart_softc *sc)
 {
+	struct ns8250_softc *ns8250;
 	struct uart_bas *bas;
 	int count, delay, error, limit;
 	uint8_t lsr, mcr, ier;
 
+	ns8250 = (struct ns8250_softc *)sc;
 	bas = &sc->sc_bas;
 
 	error = ns8250_probe(bas);
@@ -651,7 +699,7 @@ ns8250_bus_probe(struct uart_softc *sc)
 	/*
 	 * We should have a sufficiently clean "pipe" to determine the
 	 * size of the FIFOs. We send as much characters as is reasonable
-	 * and wait for the the overflow bit in the LSR register to be
+	 * and wait for the overflow bit in the LSR register to be
 	 * asserted, counting the characters as we send them. Based on
 	 * that count we know the FIFO size.
 	 */
@@ -670,7 +718,7 @@ ns8250_bus_probe(struct uart_softc *sc)
 		    --limit)
 			DELAY(delay);
 		if (limit == 0) {
-			ier = uart_getreg(bas, REG_IER) & 0xf0;
+			ier = uart_getreg(bas, REG_IER) & ns8250->ier_mask;
 			uart_setreg(bas, REG_IER, ier);
 			uart_setreg(bas, REG_MCR, mcr);
 			uart_setreg(bas, REG_FCR, 0);

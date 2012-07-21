@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ipmi/ipmi_acpi.c,v 1.1 2006/09/22 22:11:29 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,7 +36,8 @@ __FBSDID("$FreeBSD: src/sys/dev/ipmi/ipmi_acpi.c,v 1.1 2006/09/22 22:11:29 jhb E
 #include <sys/rman.h>
 #include <sys/selinfo.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 /* Hooks for the ACPI CA debugging infrastructure */
@@ -104,7 +105,7 @@ ipmi_acpi_attach(device_t dev)
 	case SSIF_MODE:
 		if (ACPI_FAILURE(acpi_GetInteger(devh, "_ADR", &flags)))
 			return (ENXIO);
-		info.address = flags >> 1;
+		info.address = flags;
 		device_printf(dev, "SSIF interface not supported on ACPI\n");
 		return (0);
 	default:

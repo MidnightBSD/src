@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mca/mca_bus.c,v 1.13 2003/08/24 17:54:09 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * References:
@@ -68,10 +68,7 @@ struct mca_device {
 
 /* Not supposed to use this function! */
 void
-mca_pos_set (dev, reg, data)
-	device_t	dev;
-	u_int8_t	reg;
-	u_int8_t	data;
+mca_pos_set (device_t dev, u_int8_t reg, u_int8_t data)
 {
 	struct mca_device *	m_dev = device_get_ivars(dev);
 	u_int8_t		slot = mca_get_slot(dev);
@@ -98,9 +95,7 @@ mca_pos_set (dev, reg, data)
 }
 
 u_int8_t
-mca_pos_get (dev, reg)
-	device_t	dev;
-	u_int8_t	reg;
+mca_pos_get (device_t dev, u_int8_t reg)
 {
 	u_int8_t	slot = mca_get_slot(dev);
 	u_int8_t	data = 0;
@@ -158,9 +153,7 @@ mca_pos_get (dev, reg)
 }
 
 const char *
-mca_match_id (id, mca_devs)
-	u_int16_t		id;
-	struct mca_ident *	mca_devs;
+mca_match_id (u_int16_t id, struct mca_ident *mca_devs)
 {
 	struct mca_ident *	m = mca_devs;
 	while(m->name != NULL) {
@@ -172,9 +165,7 @@ mca_match_id (id, mca_devs)
 }
 
 u_int8_t
-mca_pos_read (dev, reg)
-	device_t		dev;
-	u_int8_t		reg;
+mca_pos_read (device_t dev, u_int8_t reg)
 {
 	struct mca_device *	m_dev = device_get_ivars(dev);
 
@@ -441,7 +432,7 @@ mca_probe_nomatch (device_t dev, device_t child)
 }
 
 static int
-mca_read_ivar (device_t dev, device_t child, int which, u_long * result)
+mca_read_ivar (device_t dev, device_t child, int which, uintptr_t * result)
 {
 	struct mca_device *		m_dev = device_get_ivars(child);
 
@@ -516,7 +507,6 @@ static device_method_t mca_methods[] = {
 	DEVMETHOD(bus_probe_nomatch,	mca_probe_nomatch),
 	DEVMETHOD(bus_read_ivar,	mca_read_ivar),
 	DEVMETHOD(bus_write_ivar,	bus_generic_write_ivar),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),     
 
@@ -529,7 +519,7 @@ static device_method_t mca_methods[] = {
 	DEVMETHOD(bus_activate_resource,bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t mca_driver = {       

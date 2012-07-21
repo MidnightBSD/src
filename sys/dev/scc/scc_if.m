@@ -23,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/dev/scc/scc_if.m,v 1.2 2007/03/28 18:05:17 marcel Exp $
+# $FreeBSD$
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -66,7 +66,7 @@ METHOD int enabled {
 } DEFAULT default_enabled;
 
 # iclear()
-METHOD void iclear {
+METHOD int iclear {
 	struct scc_softc *this;
 	struct scc_chan *chan;
 };

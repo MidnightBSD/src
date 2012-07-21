@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/geom/geom_concat/Makefile,v 1.1 2004/02/19 15:43:58 pjd Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../geom/concat
 

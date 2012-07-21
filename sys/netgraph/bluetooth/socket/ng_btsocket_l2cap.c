@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_l2cap.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap.c,v 1.24.2.1 2007/11/05 17:48:23 emax Exp $
+ * $Id: ng_btsocket_l2cap.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -50,6 +50,9 @@
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
+
+#include <net/vnet.h>
+
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
 #include <netgraph/bluetooth/include/ng_bluetooth.h>
@@ -103,43 +106,49 @@ static struct mtx				ng_btsocket_l2cap_sockets_mtx;
 static LIST_HEAD(, ng_btsocket_l2cap_rtentry)	ng_btsocket_l2cap_rt;
 static struct mtx				ng_btsocket_l2cap_rt_mtx;
 static struct task				ng_btsocket_l2cap_rt_task;
+static struct timeval				ng_btsocket_l2cap_lasttime;
+static int					ng_btsocket_l2cap_curpps;
 
 /* Sysctl tree */
 SYSCTL_DECL(_net_bluetooth_l2cap_sockets);
 SYSCTL_NODE(_net_bluetooth_l2cap_sockets, OID_AUTO, seq, CTLFLAG_RW,
 	0, "Bluetooth SEQPACKET L2CAP sockets family");
-SYSCTL_INT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, debug_level,
+SYSCTL_UINT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, debug_level,
 	CTLFLAG_RW,
 	&ng_btsocket_l2cap_debug_level, NG_BTSOCKET_WARN_LEVEL,
 	"Bluetooth SEQPACKET L2CAP sockets debug level");
-SYSCTL_INT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, queue_len, 
+SYSCTL_UINT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, queue_len,
 	CTLFLAG_RD,
 	&ng_btsocket_l2cap_queue.len, 0,
 	"Bluetooth SEQPACKET L2CAP sockets input queue length");
-SYSCTL_INT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, queue_maxlen, 
+SYSCTL_UINT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, queue_maxlen,
 	CTLFLAG_RD,
 	&ng_btsocket_l2cap_queue.maxlen, 0,
 	"Bluetooth SEQPACKET L2CAP sockets input queue max. length");
-SYSCTL_INT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, queue_drops, 
+SYSCTL_UINT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, queue_drops,
 	CTLFLAG_RD,
 	&ng_btsocket_l2cap_queue.drops, 0,
 	"Bluetooth SEQPACKET L2CAP sockets input queue drops");
 
 /* Debug */
 #define NG_BTSOCKET_L2CAP_INFO \
-	if (ng_btsocket_l2cap_debug_level >= NG_BTSOCKET_INFO_LEVEL) \
+	if (ng_btsocket_l2cap_debug_level >= NG_BTSOCKET_INFO_LEVEL && \
+	    ppsratecheck(&ng_btsocket_l2cap_lasttime, &ng_btsocket_l2cap_curpps, 1)) \
 		printf
 
 #define NG_BTSOCKET_L2CAP_WARN \
-	if (ng_btsocket_l2cap_debug_level >= NG_BTSOCKET_WARN_LEVEL) \
+	if (ng_btsocket_l2cap_debug_level >= NG_BTSOCKET_WARN_LEVEL && \
+	    ppsratecheck(&ng_btsocket_l2cap_lasttime, &ng_btsocket_l2cap_curpps, 1)) \
 		printf
 
 #define NG_BTSOCKET_L2CAP_ERR \
-	if (ng_btsocket_l2cap_debug_level >= NG_BTSOCKET_ERR_LEVEL) \
+	if (ng_btsocket_l2cap_debug_level >= NG_BTSOCKET_ERR_LEVEL && \
+	    ppsratecheck(&ng_btsocket_l2cap_lasttime, &ng_btsocket_l2cap_curpps, 1)) \
 		printf
 
 #define NG_BTSOCKET_L2CAP_ALERT \
-	if (ng_btsocket_l2cap_debug_level >= NG_BTSOCKET_ALERT_LEVEL) \
+	if (ng_btsocket_l2cap_debug_level >= NG_BTSOCKET_ALERT_LEVEL && \
+	    ppsratecheck(&ng_btsocket_l2cap_lasttime, &ng_btsocket_l2cap_curpps, 1)) \
 		printf
 
 /* 
@@ -586,8 +595,11 @@ ng_btsocket_l2cap_process_l2ca_con_ind(struct ng_mesg *msg,
 		 * space then create new socket and set proper source address.
 		 */
 
-		if (pcb->so->so_qlen <= pcb->so->so_qlimit)
+		if (pcb->so->so_qlen <= pcb->so->so_qlimit) {
+			CURVNET_SET(pcb->so->so_vnet);
 			so1 = sonewconn(pcb->so, 0);
+			CURVNET_RESTORE();
+		}
 
 		if (so1 == NULL) {
 			result = NG_L2CAP_NO_RESOURCES;
@@ -1557,7 +1569,7 @@ ng_btsocket_l2cap_default_msg_input(struct ng_mesg *msg, hook_p hook)
 
 		rt = (ng_btsocket_l2cap_rtentry_t *) NG_HOOK_PRIVATE(hook);
 		if (rt == NULL) {
-			MALLOC(rt, ng_btsocket_l2cap_rtentry_p, sizeof(*rt),
+			rt = malloc(sizeof(*rt),
 				M_NETGRAPH_BTSOCKET_L2CAP, M_NOWAIT|M_ZERO);
 			if (rt == NULL) {
 				mtx_unlock(&ng_btsocket_l2cap_rt_mtx);
@@ -1782,7 +1794,7 @@ ng_btsocket_l2cap_rtclean(void *context, int pending)
 			NG_HOOK_UNREF(rt->hook); /* Remove extra reference */
 
 			bzero(rt, sizeof(*rt));
-			FREE(rt, M_NETGRAPH_BTSOCKET_L2CAP);
+			free(rt, M_NETGRAPH_BTSOCKET_L2CAP);
 		}
 
 		rt = rt_next;
@@ -1924,7 +1936,7 @@ ng_btsocket_l2cap_attach(struct socket *so, int proto, struct thread *td)
 	}
 
 	/* Allocate the PCB */
-        MALLOC(pcb, ng_btsocket_l2cap_pcb_p, sizeof(*pcb),
+        pcb = malloc(sizeof(*pcb),
 		M_NETGRAPH_BTSOCKET_L2CAP, M_NOWAIT | M_ZERO);
         if (pcb == NULL)
                 return (ENOMEM);
@@ -2304,7 +2316,7 @@ ng_btsocket_l2cap_detach(struct socket *so)
 
 	mtx_destroy(&pcb->pcb_mtx);
 	bzero(pcb, sizeof(*pcb));
-	FREE(pcb, M_NETGRAPH_BTSOCKET_L2CAP);
+	free(pcb, M_NETGRAPH_BTSOCKET_L2CAP);
 
 	soisdisconnected(so);
 	so->so_pcb = NULL;

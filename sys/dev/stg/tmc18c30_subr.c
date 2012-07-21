@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30_subr.c,v 1.6 2006/07/14 04:35:59 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -162,7 +162,7 @@ stg_attach(device_t dev)
 	return(STGIOSZ);
 }
 
-void
+int
 stg_detach (device_t dev)
 {
 	struct stg_softc *sc = device_get_softc(dev);
@@ -173,7 +173,7 @@ stg_detach (device_t dev)
 	scsi_low_dettach(&sc->sc_sclow);
 	splx(s);
 	stg_release_resource(dev);
-	return;
+	return (0);
 }
 
 void

@@ -1,14 +1,13 @@
-# $FreeBSD: src/sys/modules/wpifw/Makefile,v 1.1.2.1 2007/12/08 12:44:57 benjsc Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../contrib/dev/wpi
 
 KMOD=	wpifw
-FIRMWS=	iwlwifi-3945-2.14.4.fw:wpifw:2144
-FIRMWARE_LICENSE= intel_wpi
+FIRMWS=	iwlwifi-3945-15.32.2.9.fw:wpifw:153229
 
-CLEANFILES=	iwlwifi-3945-2.14.4.fw
+CLEANFILES=	iwlwifi-3945-15.32.2.9.fw
 
-iwlwifi-3945-2.14.4.fw: ${.CURDIR}/../../contrib/dev/wpi/iwlwifi-3945-2.14.4.fw.uu
-	uudecode -p ${.CURDIR}/../../contrib/dev/wpi/iwlwifi-3945-2.14.4.fw.uu > ${.TARGET}
+iwlwifi-3945-15.32.2.9.fw: ${.CURDIR}/../../contrib/dev/wpi/iwlwifi-3945-15.32.2.9.fw.uu
+	uudecode -p ${.CURDIR}/../../contrib/dev/wpi/iwlwifi-3945-15.32.2.9.fw.uu > ${.TARGET}
 
 .include <bsd.kmod.mk>

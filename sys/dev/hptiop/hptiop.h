@@ -27,13 +27,13 @@
 #define _HPTIOP_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hptiop/hptiop.h,v 1.1.4.1 2008/02/06 03:44:11 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 #define DBG 0
 
 #ifdef DBG
-int hpt_dbg_level = 0;
-#define KdPrint(x)  do { if (hpt_dbg_level) printf x; } while (0)
+int hpt_iop_dbg_level = 0;
+#define KdPrint(x)  do { if (hpt_iop_dbg_level) printf x; } while (0)
 #define HPT_ASSERT(x) assert(x)
 #else
 #define KdPrint(x)
@@ -260,7 +260,7 @@ struct hpt_iop_ioctl_param {
 	unsigned long    lpOutBuffer;           /* output data buffer */
 	u_int32_t        nOutBufferSize;        /* size of output data buffer */
 	unsigned long    lpBytesReturned;       /* count of HPT_U8s returned */
-};
+} __packed;
 
 #define HPT_IOCTL_FLAG_OPEN 1
 #define HPT_CTL_CODE_BSD_TO_IOP(x) ((x)-0xff00)

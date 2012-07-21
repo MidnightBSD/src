@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/puc/puc_pci.c,v 1.16.2.1 2007/10/18 09:03:40 des Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -132,9 +132,11 @@ static device_method_t puc_pci_methods[] = {
     DEVMETHOD(bus_read_ivar,		puc_bus_read_ivar),
     DEVMETHOD(bus_setup_intr,		puc_bus_setup_intr),
     DEVMETHOD(bus_teardown_intr,	puc_bus_teardown_intr),
-    DEVMETHOD(bus_print_child,		bus_generic_print_child),
-    DEVMETHOD(bus_driver_added,		bus_generic_driver_added),
-    { 0, 0 }
+    DEVMETHOD(bus_print_child,		puc_bus_print_child),
+    DEVMETHOD(bus_child_pnpinfo_str,	puc_bus_child_pnpinfo_str),
+    DEVMETHOD(bus_child_location_str,	puc_bus_child_location_str),
+
+    DEVMETHOD_END
 };
 
 static driver_t puc_pci_driver = {
@@ -144,4 +146,3 @@ static driver_t puc_pci_driver = {
 };
 
 DRIVER_MODULE(puc, pci, puc_pci_driver, puc_devclass, 0, 0);
-DRIVER_MODULE(puc, cardbus, puc_pci_driver, puc_devclass, 0, 0);

@@ -13,13 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -35,7 +28,7 @@
  *
  *	from: NetBSD: hmevar.h,v 1.5 2000/06/25 01:10:04 eeh Exp
  *
- * $FreeBSD: src/sys/dev/hme/if_hmevar.h,v 1.10 2006/12/06 02:07:20 marius Exp $
+ * $FreeBSD$
  */
 
 #include <sys/callout.h>
@@ -49,11 +42,12 @@
  * for them. TX queue elements (the number of which is fixed by HME_NTXQ) hold
  * the software state for a transmit job; each has a dmamap allocated for it.
  * There may be multiple descriptors allocated to a single queue element.
- * HME_NTXQ is completely arbitrary.
+ * HME_NTXQ and HME_NTXSEGS are completely arbitrary.
  */
-#define HME_NRXDESC	128
-#define HME_NTXDESC	128
-#define	HME_NTXQ	(HME_NTXDESC / 2)
+#define	HME_NRXDESC	128
+#define	HME_NTXDESC	256
+#define	HME_NTXQ	64
+#define	HME_NTXSEGS	16
 
 /* Maximum size of a mapped RX buffer. */
 #define	HME_BUFSZ	1600
@@ -80,9 +74,6 @@ struct hme_txdesc {
 
 STAILQ_HEAD(hme_txdq, hme_txdesc);
 
-/* Value for htx_flags */
-#define	HTXF_MAPPED	1
-
 struct hme_ring {
 	/* Ring Descriptors */
 	caddr_t		rb_membase;	/* Packet buffer: CPU address */
@@ -100,7 +91,6 @@ struct hme_ring {
 	/* Descriptors */
 	struct hme_rxdesc	rb_rxdesc[HME_NRXDESC];
 	struct hme_txdesc	rb_txdesc[HME_NTXQ];
-	bus_dma_segment_t	rb_txsegs[HME_NTXQ];
 
 	struct	hme_txdq	rb_txfreeq;
 	struct	hme_txdq	rb_txbusyq;
@@ -114,7 +104,7 @@ struct hme_softc {
 	device_t	sc_dev;
 	device_t	sc_miibus;
 	struct mii_data	*sc_mii;	/* MII media control */
-	u_char		sc_enaddr[6];
+	u_char		sc_enaddr[ETHER_ADDR_LEN];
 	struct callout	sc_tick_ch;	/* tick callout */
 	int		sc_wdog_timer;	/* watchdog timer */
 
@@ -137,13 +127,16 @@ struct hme_softc {
 	int		sc_burst;	/* DVMA burst size in effect */
 	int		sc_phys[2];	/* MII instance -> PHY map */
 
-	int		sc_pci;		/* XXXXX -- PCI buses are LE. */
+	u_int		sc_flags;
+#define	HME_LINK	(1 << 0)	/* link is up */
+#define	HME_PCI		(1 << 1)	/* PCI busses are little-endian */
+
+	int		sc_ifflags;
 	int		sc_csum_features;
 
 	/* Ring descriptor */
 	struct hme_ring	sc_rb;
 
-	int		sc_debug;
 	struct mtx	sc_lock;
 };
 

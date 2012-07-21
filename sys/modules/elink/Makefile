@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/elink/Makefile,v 1.1 2003/03/29 13:42:20 mdodd Exp $
+# $FreeBSD$
 #
 
 .PATH:	${.CURDIR}/../../i386/isa

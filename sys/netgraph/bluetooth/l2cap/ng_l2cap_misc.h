@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_l2cap_misc.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/l2cap/ng_l2cap_misc.h,v 1.6 2005/08/21 19:15:14 pjd Exp $
+ * $Id: ng_l2cap_misc.h,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_L2CAP_MISC_H_
@@ -76,7 +76,7 @@ do { \
 	KASSERT(!callout_pending(&(cmd)->timo), ("Pending callout!")); \
 	NG_FREE_M((cmd)->aux); \
 	bzero((cmd), sizeof(*(cmd))); \
-	FREE((cmd), M_NETGRAPH_L2CAP); \
+	free((cmd), M_NETGRAPH_L2CAP); \
 } while (0)
 
 ng_l2cap_cmd_p ng_l2cap_new_cmd      (ng_l2cap_con_p, ng_l2cap_chan_p,

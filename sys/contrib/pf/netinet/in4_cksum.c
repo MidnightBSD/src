@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/pf/netinet/in4_cksum.c,v 1.4 2004/08/05 20:41:38 mlaier Exp $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: in4_cksum.c,v 1.7 2003/06/02 23:28:13 millert Exp $	*/
 /*	$KAME: in4_cksum.c,v 1.10 2001/11/30 10:06:15 itojun Exp $	*/
 /*	$NetBSD: in_cksum.c,v 1.13 1996/10/13 02:03:03 christos Exp $	*/
@@ -75,7 +75,7 @@
 #include <machine/in_cksum.h>
 
 #define ADDCARRY(x)  (x > 65535 ? x -= 65535 : x)
-#define REDUCE {l_util.l = sum; sum = l_util.s[0] + l_util.s[1]; ADDCARRY(sum);}
+#define REDUCE {l_util.l = sum; sum = l_util.s[0] + l_util.s[1]; (void)ADDCARRY(sum);}
 
 int in4_cksum(struct mbuf *, u_int8_t, int, int);
 

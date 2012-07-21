@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/atm/ng_atm.c,v 1.15 2005/08/10 06:25:40 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,6 +53,7 @@ __FBSDID("$FreeBSD: src/sys/netgraph/atm/ng_atm.c,v 1.15 2005/08/10 06:25:40 obr
 #include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_atm.h>
+#include <net/vnet.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
@@ -1378,6 +1379,7 @@ ng_atm_constructor(node_p nodep)
 static int
 ng_atm_mod_event(module_t mod, int event, void *data)
 {
+	VNET_ITERATOR_DECL(vnet_iter);
 	struct ifnet *ifp;
 	int error = 0;
 
@@ -1401,10 +1403,16 @@ ng_atm_mod_event(module_t mod, int event, void *data)
 		ng_atm_event_p = ng_atm_event;
 
 		/* Create nodes for existing ATM interfaces */
-		TAILQ_FOREACH(ifp, &ifnet, if_link) {
-			if (ifp->if_type == IFT_ATM)
-				ng_atm_attach(ifp);
+		VNET_LIST_RLOCK();
+		VNET_FOREACH(vnet_iter) {
+			CURVNET_SET_QUIET(vnet_iter);
+			TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+				if (ifp->if_type == IFT_ATM)
+					ng_atm_attach(ifp);
+			}
+			CURVNET_RESTORE();
 		}
+		VNET_LIST_RUNLOCK();
 		IFNET_RUNLOCK();
 		break;
 
@@ -1418,10 +1426,16 @@ ng_atm_mod_event(module_t mod, int event, void *data)
 		ng_atm_input_orphan_p = NULL;
 		ng_atm_event_p = NULL;
 
-		TAILQ_FOREACH(ifp, &ifnet, if_link) {
-			if (ifp->if_type == IFT_ATM)
-				ng_atm_detach(ifp);
+		VNET_LIST_RLOCK();
+		VNET_FOREACH(vnet_iter) {
+			CURVNET_SET_QUIET(vnet_iter);
+			TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+				if (ifp->if_type == IFT_ATM)
+					ng_atm_detach(ifp);
+			}
+			CURVNET_RESTORE();
 		}
+		VNET_LIST_RUNLOCK();
 		IFNET_RUNLOCK();
 		break;
 

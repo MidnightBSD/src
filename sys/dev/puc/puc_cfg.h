@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/puc/puc_cfg.h,v 1.1 2006/04/28 21:21:52 marcel Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_PUC_CFG_H_
@@ -79,7 +79,7 @@ struct puc_cfg {
 	int8_t		ports;
 	int8_t		rid;		/* Rid of first port */
 	int8_t		d_rid;		/* Delta rid of next ports */
-	int8_t		d_ofs;		/* Delta offset of next ports */
+	int16_t		d_ofs;		/* Delta offset of next ports */
 	puc_config_f 	*config_function;
 };
 

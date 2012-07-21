@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_hci.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_hci.h,v 1.7 2006/05/17 00:13:06 emax Exp $
+ * $Id: ng_hci.h,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 /*

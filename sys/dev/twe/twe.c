@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/twe/twe.c,v 1.25.14.1 2008/02/14 20:52:03 brueffer Exp $
+ *	$FreeBSD$
  */
 
 /*
@@ -201,7 +201,7 @@ twe_add_unit(struct twe_softc *sc, int unit)
     int				table, error = 0;
     u_int16_t			dsize;
     TWE_Param			*drives = NULL, *param = NULL;
-    TWE_Unit_Descriptor		*ud;
+    TWE_Array_Descriptor	*ud;
 
     if (unit < 0 || unit > TWE_MAX_UNITS)
 	return (EINVAL);
@@ -244,8 +244,9 @@ twe_add_unit(struct twe_softc *sc, int unit)
 	error = EIO;
 	goto out;
     }
-    ud = (TWE_Unit_Descriptor *)param->data;
+    ud = (TWE_Array_Descriptor *)param->data;
     dr->td_type = ud->configuration;
+    dr->td_stripe = ud->stripe_size;
 
     /* build synthetic geometry as per controller internal rules */
     if (dr->td_size > 0x200000) {
@@ -487,7 +488,7 @@ twe_dump_blocks(struct twe_softc *sc, int unit,	u_int32_t lba, void *data, int n
  * Handle controller-specific control operations.
  */
 int
-twe_ioctl(struct twe_softc *sc, int ioctlcmd, void *addr)
+twe_ioctl(struct twe_softc *sc, u_long ioctlcmd, void *addr)
 {
     struct twe_usercommand	*tu = (struct twe_usercommand *)addr;
     struct twe_paramcommand	*tp = (struct twe_paramcommand *)addr;

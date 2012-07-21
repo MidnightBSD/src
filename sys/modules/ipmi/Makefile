@@ -1,4 +1,6 @@
-# $FreeBSD: src/sys/modules/ipmi/Makefile,v 1.2 2006/09/22 22:11:29 jhb Exp $
+# $FreeBSD$
+
+SUBDIR+= ipmi_linux
 
 .PATH: ${.CURDIR}/../../dev/ipmi
 

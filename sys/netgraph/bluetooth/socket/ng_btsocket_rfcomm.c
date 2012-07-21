@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_rfcomm.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_rfcomm.c,v 1.26.2.1 2007/11/07 17:37:18 emax Exp $
+ * $Id: ng_btsocket_rfcomm.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -52,6 +52,9 @@
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
 #include <sys/uio.h>
+
+#include <net/vnet.h>
+
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
 #include <netgraph/bluetooth/include/ng_bluetooth.h>
@@ -71,25 +74,29 @@ MALLOC_DEFINE(M_NETGRAPH_BTSOCKET_RFCOMM, "netgraph_btsocks_rfcomm",
 
 /* Debug */
 #define NG_BTSOCKET_RFCOMM_INFO \
-	if (ng_btsocket_rfcomm_debug_level >= NG_BTSOCKET_INFO_LEVEL) \
+	if (ng_btsocket_rfcomm_debug_level >= NG_BTSOCKET_INFO_LEVEL && \
+	    ppsratecheck(&ng_btsocket_rfcomm_lasttime, &ng_btsocket_rfcomm_curpps, 1)) \
 		printf
 
 #define NG_BTSOCKET_RFCOMM_WARN \
-	if (ng_btsocket_rfcomm_debug_level >= NG_BTSOCKET_WARN_LEVEL) \
+	if (ng_btsocket_rfcomm_debug_level >= NG_BTSOCKET_WARN_LEVEL && \
+	    ppsratecheck(&ng_btsocket_rfcomm_lasttime, &ng_btsocket_rfcomm_curpps, 1)) \
 		printf
 
 #define NG_BTSOCKET_RFCOMM_ERR \
-	if (ng_btsocket_rfcomm_debug_level >= NG_BTSOCKET_ERR_LEVEL) \
+	if (ng_btsocket_rfcomm_debug_level >= NG_BTSOCKET_ERR_LEVEL && \
+	    ppsratecheck(&ng_btsocket_rfcomm_lasttime, &ng_btsocket_rfcomm_curpps, 1)) \
 		printf
 
 #define NG_BTSOCKET_RFCOMM_ALERT \
-	if (ng_btsocket_rfcomm_debug_level >= NG_BTSOCKET_ALERT_LEVEL) \
+	if (ng_btsocket_rfcomm_debug_level >= NG_BTSOCKET_ALERT_LEVEL && \
+	    ppsratecheck(&ng_btsocket_rfcomm_lasttime, &ng_btsocket_rfcomm_curpps, 1)) \
 		printf
 
 #define	ALOT	0x7fff
 
 /* Local prototypes */
-static void ng_btsocket_rfcomm_upcall
+static int ng_btsocket_rfcomm_upcall
 	(struct socket *so, void *arg, int waitflag);
 static void ng_btsocket_rfcomm_sessions_task
 	(void *ctx, int pending);
@@ -191,16 +198,18 @@ static LIST_HEAD(, ng_btsocket_rfcomm_session)	ng_btsocket_rfcomm_sessions;
 static struct mtx				ng_btsocket_rfcomm_sessions_mtx;
 static LIST_HEAD(, ng_btsocket_rfcomm_pcb)	ng_btsocket_rfcomm_sockets;
 static struct mtx				ng_btsocket_rfcomm_sockets_mtx;
+static struct timeval				ng_btsocket_rfcomm_lasttime;
+static int					ng_btsocket_rfcomm_curpps;
 
 /* Sysctl tree */
 SYSCTL_DECL(_net_bluetooth_rfcomm_sockets);
 SYSCTL_NODE(_net_bluetooth_rfcomm_sockets, OID_AUTO, stream, CTLFLAG_RW,
 	0, "Bluetooth STREAM RFCOMM sockets family");
-SYSCTL_INT(_net_bluetooth_rfcomm_sockets_stream, OID_AUTO, debug_level,
+SYSCTL_UINT(_net_bluetooth_rfcomm_sockets_stream, OID_AUTO, debug_level,
 	CTLFLAG_RW,
 	&ng_btsocket_rfcomm_debug_level, NG_BTSOCKET_INFO_LEVEL,
 	"Bluetooth STREAM RFCOMM sockets debug level");
-SYSCTL_INT(_net_bluetooth_rfcomm_sockets_stream, OID_AUTO, timeout,
+SYSCTL_UINT(_net_bluetooth_rfcomm_sockets_stream, OID_AUTO, timeout,
 	CTLFLAG_RW,
 	&ng_btsocket_rfcomm_timo, 60,
 	"Bluetooth STREAM RFCOMM sockets timeout");
@@ -399,7 +408,7 @@ ng_btsocket_rfcomm_attach(struct socket *so, int proto, struct thread *td)
 	}
 
 	/* Allocate the PCB */
-        MALLOC(pcb, ng_btsocket_rfcomm_pcb_p, sizeof(*pcb),
+        pcb = malloc(sizeof(*pcb),
 		M_NETGRAPH_BTSOCKET_RFCOMM, M_NOWAIT | M_ZERO);
         if (pcb == NULL)
                 return (ENOMEM);
@@ -512,13 +521,9 @@ ng_btsocket_rfcomm_connect(struct socket *so, struct sockaddr *nam,
 		return (EDESTADDRREQ);
 
 	/*
-	 * XXX FIXME - This is FUBAR. socreate() will call soalloc(1), i.e.
-	 * soalloc() is allowed to sleep in MALLOC. This creates "could sleep"
-	 * WITNESS warnings. To work around this problem we will create L2CAP
-	 * socket first and then check if we actually need it. Note that we 
-	 * will not check for errors in socreate() because if we failed to 
-	 * create L2CAP socket at this point we still might have already open
-	 * session.
+	 * Note that we will not check for errors in socreate() because
+	 * if we failed to create L2CAP socket at this point we still
+	 * might have already open session.
 	 */
 
 	error = socreate(PF_BLUETOOTH, &l2so, SOCK_SEQPACKET,
@@ -555,7 +560,7 @@ ng_btsocket_rfcomm_connect(struct socket *so, struct sockaddr *nam,
 		soclose(l2so); /* we don't need new L2CAP socket */
 
 	/*
-	 * Check if we already have the same DLCI the the same session
+	 * Check if we already have the same DLCI the same session
 	 */
 
 	mtx_lock(&s->session_mtx);
@@ -745,7 +750,7 @@ ng_btsocket_rfcomm_detach(struct socket *so)
 
 	mtx_destroy(&pcb->pcb_mtx);
 	bzero(pcb, sizeof(*pcb));
-	FREE(pcb, M_NETGRAPH_BTSOCKET_RFCOMM);
+	free(pcb, M_NETGRAPH_BTSOCKET_RFCOMM);
 
 	soisdisconnected(so);
 	so->so_pcb = NULL;
@@ -851,13 +856,9 @@ ng_btsocket_rfcomm_listen(struct socket *so, int backlog, struct thread *td)
 	mtx_unlock(&pcb->pcb_mtx);
 
 	/*
-	 * XXX FIXME - This is FUBAR. socreate() will call soalloc(1), i.e.
-	 * soalloc() is allowed to sleep in MALLOC. This creates "could sleep"
-	 * WITNESS warnings. To work around this problem we will create L2CAP
-	 * socket first and then check if we actually need it. Note that we 
-	 * will not check for errors in socreate() because if we failed to 
-	 * create L2CAP socket at this point we still might have already open
-	 * session.
+	 * Note that we will not check for errors in socreate() because
+	 * if we failed to create L2CAP socket at this point we still
+	 * might have already open session.
 	 */
 
 	socreate_error = socreate(PF_BLUETOOTH, &l2so, SOCK_SEQPACKET,
@@ -1009,7 +1010,7 @@ ng_btsocket_rfcomm_sockaddr(struct socket *so, struct sockaddr **nam)
  * Upcall function for L2CAP sockets. Enqueue RFCOMM task.
  */
 
-static void
+static int
 ng_btsocket_rfcomm_upcall(struct socket *so, void *arg, int waitflag)
 {
 	int	error;
@@ -1020,6 +1021,7 @@ ng_btsocket_rfcomm_upcall(struct socket *so, void *arg, int waitflag)
 	if ((error = ng_btsocket_rfcomm_task_wakeup()) != 0)
 		NG_BTSOCKET_RFCOMM_ALERT(
 "%s: Could not enqueue RFCOMM task, error=%d\n", __func__, error);
+	return (SU_OK);
 } /* ng_btsocket_rfcomm_upcall */
 
 /*
@@ -1049,13 +1051,11 @@ ng_btsocket_rfcomm_sessions_task(void *ctx, int pending)
 				panic("%s: DLC list is not empty\n", __func__);
 
 			/* Close L2CAP socket */
-			s->l2so->so_upcallarg = NULL;
-			s->l2so->so_upcall = NULL;
 			SOCKBUF_LOCK(&s->l2so->so_rcv);
-			s->l2so->so_rcv.sb_flags &= ~SB_UPCALL;
+			soupcall_clear(s->l2so, SO_RCV);
 			SOCKBUF_UNLOCK(&s->l2so->so_rcv);
 			SOCKBUF_LOCK(&s->l2so->so_snd);
-			s->l2so->so_snd.sb_flags &= ~SB_UPCALL;
+			soupcall_clear(s->l2so, SO_SND);
 			SOCKBUF_UNLOCK(&s->l2so->so_snd);
 			soclose(s->l2so);
 
@@ -1063,7 +1063,7 @@ ng_btsocket_rfcomm_sessions_task(void *ctx, int pending)
 
 			mtx_destroy(&s->session_mtx);
 			bzero(s, sizeof(*s));
-			FREE(s, M_NETGRAPH_BTSOCKET_RFCOMM);
+			free(s, M_NETGRAPH_BTSOCKET_RFCOMM);
 		} else
 			mtx_unlock(&s->session_mtx);
 
@@ -1166,8 +1166,11 @@ ng_btsocket_rfcomm_connect_ind(ng_btsocket_rfcomm_session_p s, int channel)
 
 	mtx_lock(&pcb->pcb_mtx);
 
-	if (pcb->so->so_qlen <= pcb->so->so_qlimit)
+	if (pcb->so->so_qlen <= pcb->so->so_qlimit) {
+		CURVNET_SET(pcb->so->so_vnet);
 		so1 = sonewconn(pcb->so, 0);
+		CURVNET_RESTORE();
+	}
 
 	mtx_unlock(&pcb->pcb_mtx);
 
@@ -1264,7 +1267,7 @@ ng_btsocket_rfcomm_session_create(ng_btsocket_rfcomm_session_p *sp,
 	mtx_assert(&ng_btsocket_rfcomm_sessions_mtx, MA_OWNED);
 
 	/* Allocate the RFCOMM session */
-        MALLOC(s, ng_btsocket_rfcomm_session_p, sizeof(*s),
+        s = malloc(sizeof(*s),
 		M_NETGRAPH_BTSOCKET_RFCOMM, M_NOWAIT | M_ZERO);
         if (s == NULL)
                 return (ENOMEM);
@@ -1288,13 +1291,11 @@ ng_btsocket_rfcomm_session_create(ng_btsocket_rfcomm_session_p *sp,
 	LIST_INIT(&s->dlcs);
 
 	/* Prepare L2CAP socket */
-	l2so->so_upcallarg = NULL;
-	l2so->so_upcall = ng_btsocket_rfcomm_upcall;
 	SOCKBUF_LOCK(&l2so->so_rcv);
-	l2so->so_rcv.sb_flags |= SB_UPCALL;
+	soupcall_set(l2so, SO_RCV, ng_btsocket_rfcomm_upcall, NULL);
 	SOCKBUF_UNLOCK(&l2so->so_rcv);
 	SOCKBUF_LOCK(&l2so->so_snd);
-	l2so->so_snd.sb_flags |= SB_UPCALL;
+	soupcall_set(l2so, SO_SND, ng_btsocket_rfcomm_upcall, NULL);
 	SOCKBUF_UNLOCK(&l2so->so_snd);
 	l2so->so_state |= SS_NBIO;
 	s->l2so = l2so;
@@ -1372,19 +1373,17 @@ bad:
 	mtx_unlock(&s->session_mtx);
 
 	/* Return L2CAP socket back to its original state */
-	l2so->so_upcallarg = NULL;
-	l2so->so_upcall = NULL;
 	SOCKBUF_LOCK(&l2so->so_rcv);
-	l2so->so_rcv.sb_flags &= ~SB_UPCALL;
+	soupcall_clear(s->l2so, SO_RCV);
 	SOCKBUF_UNLOCK(&l2so->so_rcv);
 	SOCKBUF_LOCK(&l2so->so_snd);
-	l2so->so_snd.sb_flags &= ~SB_UPCALL;
+	soupcall_clear(s->l2so, SO_SND);
 	SOCKBUF_UNLOCK(&l2so->so_snd);
 	l2so->so_state &= ~SS_NBIO;
 
 	mtx_destroy(&s->session_mtx);
 	bzero(s, sizeof(*s));
-	FREE(s, M_NETGRAPH_BTSOCKET_RFCOMM);
+	free(s, M_NETGRAPH_BTSOCKET_RFCOMM);
 
 	return (error);
 } /* ng_btsocket_rfcomm_session_create */

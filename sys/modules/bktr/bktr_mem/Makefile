@@ -1,6 +1,4 @@
-# $FreeBSD: src/sys/modules/bktr/bktr_mem/Makefile,v 1.3 2002/01/11 01:15:58 msmith Exp $
-
-MAINTAINER=	roger@freebsd.org
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../dev/bktr
 

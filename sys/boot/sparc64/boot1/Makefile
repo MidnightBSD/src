@@ -1,23 +1,24 @@
-# $FreeBSD: src/sys/boot/sparc64/boot1/Makefile,v 1.11 2004/12/21 08:47:18 ru Exp $
+# $FreeBSD$
 
 PROG=	boot1.elf
 INTERNALPROG=
 NO_MAN=
-FILES=	boot1
+FILES?=	boot1
 SRCS=	_start.s boot1.c
+CLEANFILES=${FILES} boot1.aout
 
 BOOTBLOCKBASE= 0x4000
 
-CFLAGS=	-mcmodel=medlow -Os -I${.CURDIR}/../../common
-LDFLAGS=-N -Ttext ${BOOTBLOCKBASE}
+CFLAGS+=-mcmodel=medlow -Os -I${.CURDIR}/../../common
+LDFLAGS=-Ttext ${BOOTBLOCKBASE} -Wl,-N
 
 # Construct boot1. sunlabel expects it to contain zeroed-out space for the
 # label, and to be of the correct size.
-boot1: boot1.aout
+${FILES}: boot1.aout
+	@set -- `ls -l boot1.aout`; x=$$((7680-$$5)); \
+	    echo "$$x bytes available"; test $$x -ge 0
 	dd if=/dev/zero of=${.TARGET} bs=512 count=16
 	dd if=boot1.aout of=${.TARGET} bs=512 oseek=1 conv=notrunc
-
-CLEANFILES= boot1.aout
 
 boot1.aout: boot1.elf
 	elf2aout -o ${.TARGET} ${.ALLSRC}

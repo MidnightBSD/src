@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_ebus.c,v 1.12 2006/04/02 21:58:09 marcel Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -77,7 +77,7 @@ uart_ebus_probe(device_t dev)
 	if (!strcmp(nm, "lom-console") || !strcmp(nm, "su") ||
 	    !strcmp(nm, "su_pnp") || !strcmp(cmpt, "rsc-console") ||
 	    !strcmp(cmpt, "rsc-control") || !strcmp(cmpt, "su") ||
-	    !strcmp(cmpt, "su16550")) {
+	    !strcmp(cmpt, "su16550") || !strcmp(cmpt, "su16552")) {
 		/*
 		 * On AXi and AXmp boards the NS16550 (used to connect
 		 * keyboard/mouse) share their IRQ lines with the i8042.

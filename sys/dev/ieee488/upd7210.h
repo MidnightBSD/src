@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp <phk@FreeBSD.org>
+ * Copyright (c) 2010 Joerg Wunsch <joerg@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ieee488/upd7210.h,v 1.6 2005/09/24 20:44:55 phk Exp $
+ * $FreeBSD$
  *
  * Locating an actual µPD7210 data book has proven quite impossible for me.
  * There are a fair number of newer chips which are supersets of the µPD7210
@@ -48,9 +49,11 @@ typedef int upd7210_irq_t(struct upd7210 *, int);
 
 struct upd7210 {
 	struct resource		*reg_res[8];
+	struct resource		*irq_clear_res;
 	u_int			reg_offset[8];
 	int			dmachan;
 	int			unit;
+	int			use_fifo;
 
 	/* private stuff */
 	struct mtx		mutex;

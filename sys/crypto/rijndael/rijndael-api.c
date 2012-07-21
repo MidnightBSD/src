@@ -27,10 +27,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/crypto/rijndael/rijndael-api.c,v 1.1 2003/11/12 04:22:37 ume Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
+#ifdef _KERNEL
 #include <sys/systm.h>
+#endif
 
 #include <crypto/rijndael/rijndael.h>
 

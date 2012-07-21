@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/twe/twe_freebsd.c,v 1.44 2007/02/23 12:18:56 piso Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * FreeBSD-specific code.
@@ -79,10 +80,9 @@ static struct cdevsw twe_cdevsw = {
  * Accept an open operation on the control device.
  */
 static int
-twe_open(struct cdev *dev, int flags, int fmt, d_thread_t *td)
+twe_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
-    int			unit = minor(dev);
-    struct twe_softc	*sc = devclass_get_softc(twe_devclass, unit);
+    struct twe_softc		*sc = (struct twe_softc *)dev->si_drv1;
 
     sc->twe_state |= TWE_STATE_OPEN;
     return(0);
@@ -92,10 +92,9 @@ twe_open(struct cdev *dev, int flags, int fmt, d_thread_t *td)
  * Accept the last close on the control device.
  */
 static int
-twe_close(struct cdev *dev, int flags, int fmt, d_thread_t *td)
+twe_close(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
-    int			unit = minor(dev);
-    struct twe_softc	*sc = devclass_get_softc(twe_devclass, unit);
+    struct twe_softc		*sc = (struct twe_softc *)dev->si_drv1;
 
     sc->twe_state &= ~TWE_STATE_OPEN;
     return (0);
@@ -105,7 +104,7 @@ twe_close(struct cdev *dev, int flags, int fmt, d_thread_t *td)
  * Handle controller-specific control operations.
  */
 static int
-twe_ioctl_wrapper(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, d_thread_t *td)
+twe_ioctl_wrapper(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, struct thread *td)
 {
     struct twe_softc		*sc = (struct twe_softc *)dev->si_drv1;
     
@@ -137,9 +136,7 @@ static device_method_t twe_methods[] = {
     DEVMETHOD(device_suspend,	twe_suspend),
     DEVMETHOD(device_resume,	twe_resume),
 
-    DEVMETHOD(bus_print_child,	bus_generic_print_child),
-    DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-    { 0, 0 }
+    DEVMETHOD_END
 };
 
 static driver_t twe_pci_driver = {
@@ -228,7 +225,7 @@ twe_attach(device_t dev)
     /*
      * Allocate the parent bus DMA tag appropriate for PCI.
      */
-    if (bus_dma_tag_create(NULL, 				/* parent */
+    if (bus_dma_tag_create(bus_get_dma_tag(dev),		/* PCI parent */
 			   1, 0, 				/* alignment, boundary */
 			   BUS_SPACE_MAXADDR_32BIT, 		/* lowaddr */
 			   BUS_SPACE_MAXADDR, 			/* highaddr */
@@ -820,6 +817,13 @@ twed_attach(device_t dev)
     sc->twed_disk->d_maxsize = (TWE_MAX_SGL_LENGTH - 1) * PAGE_SIZE;
     sc->twed_disk->d_sectorsize = TWE_BLOCK_SIZE;
     sc->twed_disk->d_mediasize = TWE_BLOCK_SIZE * (off_t)sc->twed_drive->td_size;
+    if (sc->twed_drive->td_type == TWE_UD_CONFIG_RAID0 ||
+	sc->twed_drive->td_type == TWE_UD_CONFIG_RAID5 ||
+	sc->twed_drive->td_type == TWE_UD_CONFIG_RAID10) {
+	    sc->twed_disk->d_stripesize =
+		TWE_BLOCK_SIZE << sc->twed_drive->td_stripe;
+	    sc->twed_disk->d_stripeoffset = 0;
+    }
     sc->twed_disk->d_fwsectors = sc->twed_drive->td_sectors;
     sc->twed_disk->d_fwheads = sc->twed_drive->td_heads;
     sc->twed_disk->d_unit = sc->twed_drive->td_sys_unit;

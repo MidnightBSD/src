@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/firewire/fwip/Makefile,v 1.1.8.1 2006/02/10 00:38:00 yar Exp $
+# $FreeBSD$
 
 # Makefile for the fwip(4) module (IP over IEEE1394)
 
@@ -6,7 +6,7 @@
 
 KMOD    = if_fwip
 SRCS    = bus_if.h device_if.h \
-          opt_inet.h opt_inet6.h opt_mac.h \
+          opt_inet.h opt_inet6.h opt_ofed.h \
           if_fwip.c if_fwipvar.h \
           firewire.h firewirereg.h \
           if_fwsubr.c

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_scc.c,v 1.1 2006/03/30 18:33:22 marcel Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,6 +95,9 @@ uart_scc_probe(device_t dev)
 	if (md != SCC_MODE_ASYNC)
 		return (ENXIO);
 	switch (cl) {
+	case SCC_CLASS_QUICC:
+		sc->sc_class = &uart_quicc_class;
+		break;
 	case SCC_CLASS_SAB82532:
 		sc->sc_class = &uart_sab82532_class;
 		break;

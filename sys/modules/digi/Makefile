@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/digi/Makefile,v 1.1 2001/05/02 01:08:06 brian Exp $
+# $FreeBSD$
 
 SUBDIR=	digi
 SUBDIR+=digi_CX

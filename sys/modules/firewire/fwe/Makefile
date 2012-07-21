@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/firewire/fwe/Makefile,v 1.3 2003/04/17 03:38:03 simokawa Exp $
+# $FreeBSD$
 
 # Makefile for the fwe(4) module (Ethernet over IEEE1394)
 
@@ -12,4 +12,3 @@ SRCS	= bus_if.h device_if.h \
 #CFLAGS += -DDEVICE_POLLING
 
 .include <bsd.kmod.mk>
-

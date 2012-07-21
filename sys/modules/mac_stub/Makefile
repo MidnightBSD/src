@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/mac_stub/Makefile,v 1.4 2003/11/11 21:23:54 rwatson Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../security/mac_stub
 

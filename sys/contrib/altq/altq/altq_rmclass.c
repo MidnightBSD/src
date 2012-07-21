@@ -1,5 +1,5 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_rmclass.c,v 1.2 2004/06/12 00:57:20 mlaier Exp $	*/
-/*	$KAME: altq_rmclass.c,v 1.18 2003/11/06 06:32:53 kjc Exp $	*/
+/*	$FreeBSD$	*/
+/*	$KAME: altq_rmclass.c,v 1.19 2005/04/13 03:44:25 suz Exp $	*/
 
 /*
  * Copyright (c) 1991-1997 Regents of the University of California.
@@ -41,11 +41,9 @@
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
-#if (__FreeBSD__ != 2)
 #include "opt_inet.h"
 #ifdef __FreeBSD__
 #include "opt_inet6.h"
-#endif
 #endif
 #endif /* __FreeBSD__ || __NetBSD__ */
 #ifdef ALTQ_CBQ	/* cbq is enabled by ALTQ_CBQ option in opt_altq.h */
@@ -220,16 +218,16 @@ rmc_newclass(int pri, struct rm_ifdat *ifd, u_int nsecPerByte,
 	}
 #endif
 
-	MALLOC(cl, struct rm_class *, sizeof(struct rm_class),
+	cl = malloc(sizeof(struct rm_class),
 	       M_DEVBUF, M_WAITOK);
 	if (cl == NULL)
 		return (NULL);
 	bzero(cl, sizeof(struct rm_class));
 	CALLOUT_INIT(&cl->callout_);
-	MALLOC(cl->q_, class_queue_t *, sizeof(class_queue_t),
+	cl->q_ = malloc(sizeof(class_queue_t),
 	       M_DEVBUF, M_WAITOK);
 	if (cl->q_ == NULL) {
-		FREE(cl, M_DEVBUF);
+		free(cl, M_DEVBUF);
 		return (NULL);
 	}
 	bzero(cl->q_, sizeof(class_queue_t));
@@ -658,8 +656,8 @@ rmc_delete_class(struct rm_ifdat *ifd, struct rm_class *cl)
 			red_destroy(cl->red_);
 #endif
 	}
-	FREE(cl->q_, M_DEVBUF);
-	FREE(cl, M_DEVBUF);
+	free(cl->q_, M_DEVBUF);
+	free(cl, M_DEVBUF);
 }
 
 

@@ -25,11 +25,11 @@
  *  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  *  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: pbio.c,v 1.1.1.2 2006-02-25 02:37:03 laffer1 Exp $
+ * $Id: pbio.c,v 1.1.1.3 2012-07-21 15:17:02 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pbio/pbio.c,v 1.9 2005/05/29 04:42:24 nyan Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,7 +43,6 @@ __FBSDID("$FreeBSD: src/sys/dev/pbio/pbio.c,v 1.9 2005/05/29 04:42:24 nyan Exp $
 #include <sys/module.h>
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <machine/clock.h>	/* DELAY() */
 #include <sys/rman.h>
 #include <dev/pbio/pbioio.h>		/* pbio IOCTL definitions */
 #include <sys/uio.h>
@@ -80,8 +79,8 @@ static char *port_names[] = {"a", "b", "ch", "cl"};
 
 #define	PBIO_PNAME(n)		(port_names[(n)])
 
-#define	UNIT(dev)		(minor(dev) >> 2)
-#define	PORT(dev)		(minor(dev) & 0x3)
+#define	UNIT(dev)		(dev2unit(dev) >> 2)
+#define	PORT(dev)		(dev2unit(dev) & 0x3)
 
 #define	PBIOPRI	((PZERO + 5) | PCATCH)
 

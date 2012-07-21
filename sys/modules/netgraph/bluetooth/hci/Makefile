@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:37:24 laffer1 Exp $
-# $FreeBSD: src/sys/modules/netgraph/bluetooth/hci/Makefile,v 1.5 2004/01/13 11:28:49 ru Exp $
+# $Id: Makefile,v 1.1.1.3 2012-07-21 15:16:45 laffer1 Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../../netgraph/bluetooth/hci
 

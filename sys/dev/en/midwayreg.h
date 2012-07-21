@@ -6,7 +6,7 @@
  * this file contains the description of the ENI ATM midway chip
  * data structures.   see midway.c for more details.
  *
- * $FreeBSD: src/sys/dev/en/midwayreg.h,v 1.5 2003/04/25 16:14:03 harti Exp $
+ * $FreeBSD$
  */
 
 #define MID_SZTOB(X) 	((X) * 256 * 4) /* size to bytes */

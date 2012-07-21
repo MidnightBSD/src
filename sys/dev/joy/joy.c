@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/joy/joy.c,v 1.54 2005/11/09 20:26:00 jylefort Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,14 +54,10 @@ __FBSDID("$FreeBSD: src/sys/dev/joy/joy.c,v 1.54 2005/11/09 20:26:00 jylefort Ex
  * wait until the corresponding bit returns to 0.
  */
 
-#define joypart(d) (minor(d)&1)
-#define UNIT(d) ((minor(d)>>1)&3)
+#define joypart(d) (dev2unit(d)&1)
 #ifndef JOY_TIMEOUT
 #define JOY_TIMEOUT   2000 /* 2 milliseconds */
 #endif
-
-#define JOY_SOFTC(unit) (struct joy_softc *) \
-        devclass_get_softc(joy_devclass,(unit))
 
 static	d_open_t	joyopen;
 static	d_close_t	joyclose;
@@ -111,6 +107,7 @@ joy_attach(device_t dev)
 	joy->port = rman_get_bushandle(joy->res);
 	joy->timeout[0] = joy->timeout[1] = 0;
 	joy->d = make_dev(&joy_cdevsw, unit, 0, 0, 0600, "joy%d", unit);
+	joy->d->si_drv1 = joy;
 	return (0);
 }
 
@@ -131,7 +128,7 @@ static int
 joyopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	int i = joypart (dev);
-	struct joy_softc *joy = JOY_SOFTC(UNIT(dev));
+	struct joy_softc *joy = dev->si_drv1;
 
 	if (joy->timeout[i])
 		return (EBUSY);
@@ -144,7 +141,7 @@ static int
 joyclose(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	int i = joypart (dev);
-	struct joy_softc *joy = JOY_SOFTC(UNIT(dev));
+	struct joy_softc *joy = dev->si_drv1;
 
 	joy->timeout[i] = 0;
 	return (0);
@@ -153,7 +150,7 @@ joyclose(struct cdev *dev, int flags, int fmt, struct thread *td)
 static int
 joyread(struct cdev *dev, struct uio *uio, int flag)
 {
-	struct joy_softc *joy = JOY_SOFTC(UNIT(dev));
+	struct joy_softc *joy = dev->si_drv1;
 	bus_space_handle_t port = joy->port;
 	bus_space_tag_t bt = joy->bt;
 	struct timespec t, start, end;
@@ -217,7 +214,7 @@ joyread(struct cdev *dev, struct uio *uio, int flag)
 static int
 joyioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 {
-	struct joy_softc *joy = JOY_SOFTC(UNIT(dev));
+	struct joy_softc *joy = dev->si_drv1;
 	int i = joypart (dev);
 	int x;
 

@@ -1,5 +1,5 @@
 /*-
- * $FreeBSD: src/sys/dev/ie/if_ievar.h,v 1.3 2005/06/10 16:49:10 brooks Exp $
+ * $FreeBSD$
  */
 
 enum ie_hardware {
@@ -22,7 +22,6 @@ struct ie_softc {
 	void	 (*ie_chan_attn) (struct ie_softc *);
 	enum	 ie_hardware hard_type;
 	int	 hard_vers;
-	int	 unit;
 	u_char	 enaddr[6];
 
 	device_t		dev;
@@ -68,9 +67,15 @@ struct ie_softc {
 	int	 mcast_count;
 
 	u_short	 irq_encoded;	/* encoded interrupt on IEE16 */
+
+	struct mtx	lock;
 };
 #define PORT(sc)	sc->port
 #define MEM(sc)		sc->iomem
+
+#define	IE_LOCK(sc)		mtx_lock(&(sc)->lock)
+#define	IE_UNLOCK(sc)		mtx_unlock(&(sc)->lock)
+#define	IE_ASSERT_LOCKED(sc)	mtx_assert(&(sc)->lock, MA_OWNED)
 
 void            ie_intr			(void *);
 int		ie_alloc_resources	(device_t);
@@ -86,6 +91,7 @@ void		sl_chan_attn		(struct ie_softc *);
 
 void		ee16_reset_586		(struct ie_softc *);
 void		ee16_chan_attn		(struct ie_softc *);
+void		ee16_shutdown		(struct ie_softc *);
 
 void		sl_read_ether		(struct ie_softc *, unsigned char *);
 int		check_ie_present	(struct ie_softc *);

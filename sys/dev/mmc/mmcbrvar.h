@@ -49,13 +49,14 @@
  * or the SD Card Association to disclose or distribute any technical
  * information, know-how or other confidential information to any third party.
  *
- * "$FreeBSD: src/sys/dev/mmc/mmcbrvar.h,v 1.2 2007/05/26 05:23:36 imp Exp $"
+ * "$FreeBSD$"
  */
 
 #ifndef DEV_MMC_MMCBRVAR_H
 #define DEV_MMC_MMCBRVAR_H
 
 #include <dev/mmc/bridge.h>
+#include <dev/mmc/mmcreg.h>
 #include "mmcbr_if.h"
 
 enum mmcbr_device_ivars {
@@ -70,7 +71,9 @@ enum mmcbr_device_ivars {
     MMCBR_IVAR_OCR,
     MMCBR_IVAR_POWER_MODE,
     MMCBR_IVAR_VDD,
-//    MMCBR_IVAR_,
+    MMCBR_IVAR_CAPS,
+    MMCBR_IVAR_TIMING,
+    MMCBR_IVAR_MAX_DATA
 };
 
 /*
@@ -90,11 +93,20 @@ MMCBR_ACCESSOR(mode, MODE, int)
 MMCBR_ACCESSOR(ocr, OCR, int)
 MMCBR_ACCESSOR(power_mode, POWER_MODE, int)
 MMCBR_ACCESSOR(vdd, VDD, int)
+MMCBR_ACCESSOR(caps, CAPS, int)
+MMCBR_ACCESSOR(timing, TIMING, int)
+MMCBR_ACCESSOR(max_data, MAX_DATA, int)
 
 static int __inline
 mmcbr_update_ios(device_t dev)
 {
 	return (MMCBR_UPDATE_IOS(device_get_parent(dev), dev));
+}
+
+static int __inline
+mmcbr_get_ro(device_t dev)
+{
+	return (MMCBR_GET_RO(device_get_parent(dev), dev));
 }
 
 #endif /* DEV_MMC_MMCBRVAR_H */

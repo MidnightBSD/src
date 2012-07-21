@@ -4,7 +4,7 @@
 ** Parser extensions for Ficl
 ** Authors: Larry Hastings & John Sadler (john_sadler@alum.mit.edu)
 ** Created: April 2001
-** $Id: prefix.c,v 1.1.1.2 2006-02-25 02:35:59 laffer1 Exp $
+** $Id: prefix.c,v 1.1.1.3 2012-07-21 15:17:33 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/prefix.c,v 1.3 2002/08/31 01:04:53 scottl Exp $ */
+/* $FreeBSD$ */
 
 #include <string.h>
 #include <ctype.h>

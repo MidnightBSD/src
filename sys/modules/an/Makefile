@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/an/Makefile,v 1.7.8.1 2006/02/10 00:37:58 yar Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/an
 
@@ -9,7 +9,7 @@ SRCS+=	pccarddevs.h
 
 .if !defined(KERNBUILDDIR)
 opt_inet.h:
-	echo "#define INET 1" > opt_inet.h
+	echo "#define INET 1" > ${.TARGET}
 .endif
 
 .include <bsd.kmod.mk>

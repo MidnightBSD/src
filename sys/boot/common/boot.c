@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/boot.c,v 1.31 2005/05/19 23:03:01 sobomax Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Loading modules, booting the system
@@ -162,6 +162,9 @@ autoboot(int timeout, char *prompt)
     int		c, yes;
     char	*argv[2], *cp, *ep;
     char	*kernelname;
+#ifdef BOOT_PROMPT_123
+    const char	*seq = "123", *p = seq;
+#endif
 
     autoboot_tried = 1;
 
@@ -192,14 +195,29 @@ autoboot(int timeout, char *prompt)
 
         yes = 0;
 
+#ifdef BOOT_PROMPT_123
+        printf("%s\n", (prompt == NULL) ? "Hit [Enter] to boot immediately, or "
+	    "1 2 3 sequence for command prompt." : prompt);
+#else
         printf("%s\n", (prompt == NULL) ? "Hit [Enter] to boot immediately, or any other key for command prompt." : prompt);
+#endif
 
         for (;;) {
 	    if (ischar()) {
 	        c = getchar();
+#ifdef BOOT_PROMPT_123
+		if ((c == '\r') || (c == '\n')) {
+			yes = 1;
+			break;
+		} else if (c != *p++)
+			p = seq;
+		if (*p == 0)
+			break;
+#else
 	        if ((c == '\r') || (c == '\n'))
 		    yes = 1;
 	        break;
+#endif
 	    }
 	    ntime = time(NULL);
 	    if (ntime >= when) {
@@ -287,18 +305,18 @@ getbootfile(int try)
 int
 getrootmount(char *rootdev)
 {
-    char	lbuf[128], *cp, *ep, *dev, *fstyp;
+    char	lbuf[128], *cp, *ep, *dev, *fstyp, *options;
     int		fd, error;
 
     if (getenv("vfs.root.mountfrom") != NULL)
 	return(0);
 
+    error = 1;
     sprintf(lbuf, "%s/etc/fstab", rootdev);
     if ((fd = open(lbuf, O_RDONLY)) < 0)
-	return(1);
+	goto notfound;
 
     /* loop reading lines from /etc/fstab    What was that about sscanf again? */
-    error = 1;
     while (fgetstr(lbuf, sizeof(lbuf), fd) >= 0) {
 	if ((lbuf[0] == 0) || (lbuf[0] == '#'))
 	    continue;
@@ -331,15 +349,48 @@ getrootmount(char *rootdev)
 	*cp = 0;
 	fstyp = strdup(ep);
 
-	/* build the final result and save it */
+	/* skip whitespace up to mount options */
+	cp += 1;
+	while ((*cp != 0) && isspace(*cp))
+		cp++;
+	if (*cp == 0)           /* misformatted */
+		continue;
+	/* skip text to end of mount options and delimit */
+	ep = cp;
+	while ((*cp != 0) && !isspace(*cp))
+		cp++;
+	*cp = 0;
+	options = strdup(ep);
+	/* Build the <fstype>:<device> and save it in vfs.root.mountfrom */
 	sprintf(lbuf, "%s:%s", fstyp, dev);
 	free(dev);
 	free(fstyp);
 	setenv("vfs.root.mountfrom", lbuf, 0);
+
+	/* Don't override vfs.root.mountfrom.options if it is already set */
+	if (getenv("vfs.root.mountfrom.options") == NULL) {
+		/* save mount options */
+		setenv("vfs.root.mountfrom.options", options, 0);
+	}
+	free(options);
 	error = 0;
 	break;
     }
     close(fd);
+
+notfound:
+    if (error) {
+	const char *currdev;
+
+	currdev = getenv("currdev");
+	if (currdev != NULL && strncmp("zfs:", currdev, 4) == 0) {
+	    cp = strdup(currdev);
+	    cp[strlen(cp) - 1] = '\0';
+	    setenv("vfs.root.mountfrom", cp, 0);
+	    error = 0;
+	}
+    }
+
     return(error);
 }
 

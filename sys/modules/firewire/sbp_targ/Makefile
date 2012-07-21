@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/firewire/sbp_targ/Makefile,v 1.2 2004/02/13 10:11:00 ru Exp $
+# $FreeBSD$
 
 # Makefile for the SBP-II Target mode
 
@@ -12,4 +12,3 @@ SRCS	= bus_if.h device_if.h \
 	  iec13213.h
 
 .include <bsd.kmod.mk>
-

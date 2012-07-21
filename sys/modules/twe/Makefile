@@ -1,6 +1,11 @@
-# $FreeBSD: src/sys/modules/twe/Makefile,v 1.6 2001/01/06 14:00:31 obrien Exp $
+# $FreeBSD$
 
-#
+KMOD=	twe
+.PATH: ${.CURDIR}/../../dev/${KMOD}
+SRCS=	bus_if.h device_if.h pci_if.h twe.c twe_freebsd.c
+
+#CFLAGS+=-DTWE_DEBUG=0
+
 # The 3ware controller offers a choice of options related to handling of
 # mirror consistency in shutdown situations.
 #
@@ -18,16 +23,8 @@
 #
 CFLAGS+=-DTWE_SHUTDOWN_NOTIFICATION
 
-#
 # The module can be built to override a compiled-in driver
 #
 #CFLAGS+=-DTWE_OVERRIDE
-
-.PATH: ${.CURDIR}/../../dev/twe
-
-KMOD=	twe
-SRCS=	bus_if.h device_if.h pci_if.h twe.c twe_freebsd.c
-
-#CFLAGS+=-DTWE_DEBUG=0
 
 .include <bsd.kmod.mk>

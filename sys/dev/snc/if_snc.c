@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/snc/if_snc.c,v 1.7 2005/01/06 01:43:15 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  *	National Semiconductor  DP8393X SONIC Driver
@@ -159,6 +159,10 @@ snc_release_resources(dev)
 				     sc->irq_rid, sc->irq);
 		sc->irq = 0;
 	}
+	if (sc->sc_ifp) {
+		if_free(sc->sc_ifp);
+		sc->sc_ifp = 0;
+	}
 }
 
 /****************************************************************
@@ -189,6 +193,7 @@ snc_attach(dev)
 {
 	struct snc_softc *sc = device_get_softc(dev);
 	u_int8_t myea[ETHER_ADDR_LEN];
+	int error;
 
 	if (snc_nec16_register_irq(sc, rman_get_start(sc->irq)) == 0 || 
 	    snc_nec16_register_mem(sc, rman_get_start(sc->iomem)) == 0) {
@@ -220,7 +225,25 @@ snc_attach(dev)
 		return(ENOENT);
 	}
 
-	sncconfig(sc, NULL, 0, 0, myea);
+	mtx_init(&sc->sc_lock, device_get_nameunit(dev), MTX_NETWORK_LOCK,
+	    MTX_DEF);
+	callout_init_mtx(&sc->sc_timer, &sc->sc_lock, 0);
+	error = sncconfig(sc, NULL, 0, 0, myea);
+	if (error) {
+		snc_release_resources(dev);
+		mtx_destroy(&sc->sc_lock);
+		return (error);
+	}
+
+	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE,
+			       NULL, sncintr, sc, &sc->irq_handle);
+	if (error) {
+		printf("snc_isa_attach: bus_setup_intr() failed\n");
+		ether_ifdetach(sc->sc_ifp);		
+		snc_release_resources(dev);
+		mtx_destroy(&sc->sc_lock);
+		return (error);
+	}
 
 	return 0;
 }
@@ -229,9 +252,15 @@ snc_attach(dev)
   Shutdown routine
  ****************************************************************/
 
-void
+int
 snc_shutdown(dev)
 	device_t dev;
 {
-	sncshutdown(device_get_softc(dev));
+	struct snc_softc *sc = device_get_softc(dev);
+
+	SNC_LOCK(sc);
+	sncshutdown(sc);
+	SNC_UNLOCK(sc);
+
+	return (0);
 }

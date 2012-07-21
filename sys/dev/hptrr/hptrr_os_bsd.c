@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptrr/hptrr_os_bsd.c,v 1.1.2.1.2.3 2008/02/20 04:35:24 kensmith Exp $
+ * $FreeBSD$
  */
 #include <dev/hptrr/hptrr_config.h>
-/* $Id: hptrr_os_bsd.c,v 1.1.1.1 2008-11-26 18:58:59 laffer1 Exp $
+/* $Id: hptrr_os_bsd.c,v 1.1.1.2 2012-07-21 15:16:50 laffer1 Exp $
  *
  * HighPoint RAID Driver for FreeBSD
  * Copyright (C) 2005 HighPoint Technologies, Inc. All Rights Reserved.
@@ -132,7 +132,7 @@ void freelist_reserve(struct freelist *list, void *osext, HPT_UINT size, HPT_UIN
     list->dma = 0;
     list->size = size;
     list->head = 0;
-#ifdef DBG
+#if DBG
     list->reserved_count =
 #endif
     list->count = count;
@@ -172,7 +172,7 @@ void freelist_reserve_dma(struct freelist *list, void *osext, HPT_UINT size, HPT
     list->alignment = alignment;
     list->size = size;
     list->head = 0;
-#ifdef DBG
+#if DBG
     list->reserved_count =
 #endif
     list->count = count;
@@ -289,7 +289,7 @@ int  os_printk(char *fmt, ...)
     return printf("%s: %s\n", driver_name, buf);
 }
 
-#ifdef DBG
+#if DBG
 void os_check_stack(const char *location, int size){}
 
 void __os_dbgbreak(const char *file, int line)
@@ -298,5 +298,5 @@ void __os_dbgbreak(const char *file, int line)
     while (1);
 }
 
-int hpt_dbg_level = 1;
+int hptrr_dbg_level = 1;
 #endif

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/linsysfs/Makefile,v 1.2 2006/08/15 13:01:36 netchild Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../compat/linsysfs
 
@@ -8,7 +8,7 @@ SRCS=	vnode_if.h \
 	linsysfs.c \
 	opt_compat.h
 
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64"
 CFLAGS+=-DCOMPAT_LINUX32
 .endif
 

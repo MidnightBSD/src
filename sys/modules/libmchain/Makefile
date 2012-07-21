@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/libmchain/Makefile,v 1.3 2002/12/14 00:01:51 tjr Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../kern
 
@@ -11,6 +11,7 @@ EXPORT_SYMS=	mb_init		\
 		mb_detach	\
 		mb_fixhdr	\
 		mb_reserve	\
+		mb_put_padbyte	\
 		mb_put_uint8	\
 		mb_put_uint16be	\
 		mb_put_uint16le	\

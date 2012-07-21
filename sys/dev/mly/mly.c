@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/mly/mly.c,v 1.45 2007/06/17 05:55:51 scottl Exp $
+ *	$FreeBSD$
  */
 
 #include <sys/param.h>
@@ -101,7 +101,6 @@ static void	mly_unmap_command(struct mly_command *mc);
 static int	mly_cam_attach(struct mly_softc *sc);
 static void	mly_cam_detach(struct mly_softc *sc);
 static void	mly_cam_rescan_btl(struct mly_softc *sc, int bus, int target);
-static void	mly_cam_rescan_callback(struct cam_periph *periph, union ccb *ccb);
 static void	mly_cam_action(struct cam_sim *sim, union ccb *ccb);
 static int	mly_cam_action_io(struct cam_sim *sim, struct ccb_scsiio *csio);
 static void	mly_cam_poll(struct cam_sim *sim);
@@ -117,9 +116,9 @@ static void	mly_printstate(struct mly_softc *sc);
 static void	mly_print_command(struct mly_command *mc);
 static void	mly_print_packet(struct mly_command *mc);
 static void	mly_panic(struct mly_softc *sc, char *reason);
+static int	mly_timeout(struct mly_softc *sc);
 #endif
 void		mly_print_controller(int controller);
-static int	mly_timeout(struct mly_softc *sc);
 
 
 static d_open_t		mly_user_open;
@@ -310,7 +309,7 @@ mly_attach(device_t dev)
     /*
      * Create the control device.
      */
-    sc->mly_dev_t = make_dev(&mly_cdevsw, device_get_unit(sc->mly_dev), UID_ROOT, GID_OPERATOR,
+    sc->mly_dev_t = make_dev(&mly_cdevsw, 0, UID_ROOT, GID_OPERATOR,
 			     S_IRUSR | S_IWUSR, "mly%d", device_get_unit(sc->mly_dev));
     sc->mly_dev_t->si_drv1 = sc;
 
@@ -393,7 +392,7 @@ mly_pci_attach(struct mly_softc *sc)
      * 
      * Note that all of these controllers are 64-bit capable.
      */
-    if (bus_dma_tag_create(NULL, 			/* parent */
+    if (bus_dma_tag_create(bus_get_dma_tag(sc->mly_dev),/* PCI parent */
 			   1, 0, 			/* alignment, boundary */
 			   BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			   BUS_SPACE_MAXADDR, 		/* highaddr */
@@ -1295,9 +1294,11 @@ mly_complete_event(struct mly_command *mc)
 static void
 mly_process_event(struct mly_softc *sc, struct mly_event *me)
 {
-    struct scsi_sense_data	*ssd = (struct scsi_sense_data *)&me->sense[0];
-    char			*fp, *tp;
-    int				bus, target, event, class, action;
+    struct scsi_sense_data_fixed *ssd;
+    char			 *fp, *tp;
+    int				 bus, target, event, class, action;
+
+    ssd = (struct scsi_sense_data_fixed *)&me->sense[0];
 
     /* 
      * Errors can be reported using vendor-unique sense data.  In this case, the
@@ -2017,29 +2018,18 @@ mly_cam_rescan_btl(struct mly_softc *sc, int bus, int target)
 
     debug_called(1);
 
-    if ((ccb = malloc(sizeof(union ccb), M_TEMP, M_WAITOK | M_ZERO)) == NULL) {
+    if ((ccb = xpt_alloc_ccb()) == NULL) {
 	mly_printf(sc, "rescan failed (can't allocate CCB)\n");
 	return;
     }
-    
-    if (xpt_create_path(&sc->mly_cam_path, xpt_periph, 
-			cam_sim_path(sc->mly_cam_sim[bus]), target, 0) != CAM_REQ_CMP) {
+    if (xpt_create_path(&ccb->ccb_h.path, xpt_periph, 
+	    cam_sim_path(sc->mly_cam_sim[bus]), target, 0) != CAM_REQ_CMP) {
 	mly_printf(sc, "rescan failed (can't create path)\n");
-	free(ccb, M_TEMP);
+	xpt_free_ccb(ccb);
 	return;
     }
-    xpt_setup_ccb(&ccb->ccb_h, sc->mly_cam_path, 5/*priority (low)*/);
-    ccb->ccb_h.func_code = XPT_SCAN_LUN;
-    ccb->ccb_h.cbfcnp = mly_cam_rescan_callback;
-    ccb->crcn.flags = CAM_FLAG_NONE;
     debug(1, "rescan target %d:%d", bus, target);
-    xpt_action(ccb);
-}
-
-static void
-mly_cam_rescan_callback(struct cam_periph *periph, union ccb *ccb)
-{
-    free(ccb, M_TEMP);
+    xpt_rescan(ccb);
 }
 
 /********************************************************************************
@@ -2528,7 +2518,7 @@ mly_describe_controller(struct mly_softc *sc)
 		   mly_describe_code(mly_table_memorytype, mi->memory_type),
 		   mi->memory_parity ? "+parity": "",mi->memory_ecc ? "+ECC": "",
 		   mi->cache_size);
-	mly_printf(sc, "CPU: %s @ %dMHZ\n", 
+	mly_printf(sc, "CPU: %s @ %dMHz\n", 
 		   mly_describe_code(mly_table_cputype, mi->cpu[0].type), mi->cpu[0].speed);
 	if (mi->l2cache_size != 0)
 	    mly_printf(sc, "%dKB L2 cache\n", mi->l2cache_size);
@@ -2834,8 +2824,7 @@ mly_print_controller(int controller)
 static int
 mly_user_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
-    int			unit = minor(dev);
-    struct mly_softc	*sc = devclass_get_softc(devclass_find("mly"), unit);
+    struct mly_softc	*sc = dev->si_drv1;
 
     sc->mly_state |= MLY_STATE_OPEN;
     return(0);
@@ -2847,8 +2836,7 @@ mly_user_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 static int
 mly_user_close(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
-    int			unit = minor(dev);
-    struct mly_softc	*sc = devclass_get_softc(devclass_find("mly"), unit);
+    struct mly_softc	*sc = dev->si_drv1;
 
     sc->mly_state &= ~MLY_STATE_OPEN;
     return (0);
@@ -2983,6 +2971,7 @@ mly_user_health(struct mly_softc *sc, struct mly_user_health *uh)
     return(error);
 }
 
+#ifdef MLY_DEBUG
 static int
 mly_timeout(struct mly_softc *sc)
 {
@@ -3002,3 +2991,4 @@ mly_timeout(struct mly_softc *sc)
 
 	return (0);
 }
+#endif

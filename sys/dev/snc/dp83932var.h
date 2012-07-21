@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/snc/dp83932var.h,v 1.6 2005/12/06 11:19:37 ru Exp $	*/
+/*	$FreeBSD$	*/
 /*	$NecBSD: dp83932var.h,v 1.3 1999/01/24 01:39:51 kmatsuda Exp $	*/
 /*	$NetBSD: if_snvar.h,v 1.12 1998/05/01 03:42:47 scottr Exp $	*/
 
@@ -22,31 +22,6 @@
  * Ethernet Controller and National Semiconductor NS46C46 as
  * (64 * 16 bits) Microwire Serial EEPROM.
  */
-
-/* borrow from arch/mac68k/dev/if_mcvar.h for debug. */
-#ifdef DDB
-#define	integrate
-#define hide
-#else
-#define	integrate	static __inline
-#define hide		static
-#endif
-
-/* NetBSD Emulation */
-#ifdef __NetBSD__
-#define	splhardnet	splnet
-#endif
-#ifdef __FreeBSD__
-#define	splhardnet	splimp
-#ifndef NBPG
-#define NBPG PAGE_SIZE
-#endif
-#ifndef PGOFSET
-#define PGOFSET PAGE_MASK
-#endif
-typedef unsigned long ulong;
-#define delay(x) DELAY(x)
-#endif
 
 /*
  * Vendor types
@@ -225,11 +200,14 @@ typedef struct snc_softc {
 
 	void	*sc_sh;		/* shutdownhook cookie */
 	int	gone;
-
-#if defined(NRND) && NRND > 0
-	rndsource_element_t	rnd_source;
-#endif
+	struct mtx	sc_lock;
+	struct callout	sc_timer;
+	int		sc_tx_timeout;
 } snc_softc_t;
+
+#define	SNC_LOCK(sc)		mtx_lock(&(sc)->sc_lock)
+#define	SNC_UNLOCK(sc)		mtx_unlock(&(sc)->sc_lock)
+#define	SNC_ASSERT_LOCKED(sc)	mtx_assert(&(sc)->sc_lock, MA_OWNED)
 
 /*
  * Accessing SONIC data structures and registers as 32 bit values
@@ -303,6 +281,6 @@ typedef struct snc_softc {
 #define	CDA_ENABLE	64	/* mask enabling CAM entries */
 #define	CDA_SIZE(sc)	((4*16 + 1) * ((sc->bitmode) ? 4 : 2))
 
-void	sncconfig(struct snc_softc *, int *, int, int, u_int8_t *);
+int	sncconfig(struct snc_softc *, int *, int, int, u_int8_t *);
 void	sncintr(void *);
 void	sncshutdown(void *);

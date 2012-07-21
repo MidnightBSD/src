@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep.c,v 1.148 2006/12/01 20:29:55 mlaier Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  *	Modified from the FreeBSD 1.1.5.1 version by:
@@ -62,6 +62,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ep/if_ep.c,v 1.148 2006/12/01 20:29:55 mlaier Ex
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/kernel.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -91,10 +92,12 @@ static int ep_media2if_media[] =
 static void epinit(void *);
 static int epioctl(struct ifnet *, u_long, caddr_t);
 static void epstart(struct ifnet *);
-static void epwatchdog(struct ifnet *);
 
+static void ep_intr_locked(struct ep_softc *);
 static void epstart_locked(struct ifnet *);
 static void epinit_locked(struct ep_softc *);
+static void eptick(void *);
+static void epwatchdog(struct ep_softc *);
 
 /* if_media functions */
 static int ep_ifmedia_upd(struct ifnet *);
@@ -302,12 +305,12 @@ ep_attach(struct ep_softc *sc)
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_start = epstart;
 	ifp->if_ioctl = epioctl;
-	ifp->if_watchdog = epwatchdog;
 	ifp->if_init = epinit;
-	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
-	ifp->if_snd.ifq_drv_maxlen = IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	ifp->if_snd.ifq_drv_maxlen = ifqmaxlen;
 	IFQ_SET_READY(&ifp->if_snd);
 
+	callout_init_mtx(&sc->watchdog_timer, &sc->sc_mtx, 0);
 	if (!sc->epb.mii_trans) {
 		ifmedia_init(&sc->ifmedia, 0, ep_ifmedia_upd, ep_ifmedia_sts);
 
@@ -361,6 +364,7 @@ ep_detach(device_t dev)
 	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	EP_UNLOCK(sc);
 	ether_ifdetach(ifp);
+	callout_drain(&sc->watchdog_timer);
 	ep_free(dev);
 
 	if_free(ifp);
@@ -435,6 +439,8 @@ epinit_locked(struct ep_softc *sc)
 	if (!sc->epb.mii_trans)
 		ep_ifmedia_upd(ifp);
 
+	if (sc->stat & F_HAS_TX_PLL)
+		CSR_WRITE_2(sc, EP_COMMAND, TX_PLL_ENABLE);
 	CSR_WRITE_2(sc, EP_COMMAND, RX_ENABLE);
 	CSR_WRITE_2(sc, EP_COMMAND, TX_ENABLE);
 
@@ -455,6 +461,7 @@ epinit_locked(struct ep_softc *sc)
 
 	GO_WINDOW(sc, 1);
 	epstart_locked(ifp);
+	callout_reset(&sc->watchdog_timer, hz, eptick, sc);
 }
 
 static void
@@ -473,7 +480,7 @@ epstart_locked(struct ifnet *ifp)
 	struct ep_softc *sc;
 	u_int len;
 	struct mbuf *m, *m0;
-	int pad;
+	int pad, started;
 
 	sc = ifp->if_softc;
 	if (sc->gone)
@@ -482,11 +489,15 @@ epstart_locked(struct ifnet *ifp)
 	EP_BUSY_WAIT(sc);
 	if (ifp->if_drv_flags & IFF_DRV_OACTIVE)
 		return;
+	started = 0;
 startagain:
 	/* Sneak a peek at the next packet */
 	IFQ_DRV_DEQUEUE(&ifp->if_snd, m0);
 	if (m0 == NULL)
 		return;
+	if (!started && (sc->stat & F_HAS_TX_PLL))
+		CSR_WRITE_2(sc, EP_COMMAND, TX_PLL_ENABLE);
+	started++;
 	for (len = 0, m = m0; m != NULL; m = m->m_next)
 		len += m->m_len;
 
@@ -550,7 +561,7 @@ startagain:
 
 	BPF_MTAP(ifp, m0);
 
-	ifp->if_timer = 2;
+	sc->tx_timer = 2;
 	ifp->if_opackets++;
 	m_freem(m0);
 
@@ -577,20 +588,26 @@ void
 ep_intr(void *arg)
 {
 	struct ep_softc *sc;
-	int status;
-	struct ifnet *ifp;
 
 	sc = (struct ep_softc *) arg;
 	EP_LOCK(sc);
+	ep_intr_locked(sc);
+	EP_UNLOCK(sc);
+}
+
+static void
+ep_intr_locked(struct ep_softc *sc)
+{
+	int status;
+	struct ifnet *ifp;
+
 	/* XXX 4.x splbio'd here to reduce interruptability */
 
 	/*
 	 * quick fix: Try to detect an interrupt when the card goes away.
 	 */
-	if (sc->gone || CSR_READ_2(sc, EP_STATUS) == 0xffff) {
-		EP_UNLOCK(sc);
+	if (sc->gone || CSR_READ_2(sc, EP_STATUS) == 0xffff)
 		return;
-	}
 	ifp = sc->ifp;
 
 	CSR_WRITE_2(sc, EP_COMMAND, SET_INTR_MASK);	/* disable all Ints */
@@ -606,14 +623,14 @@ rescan:
 			epread(sc);
 		if (status & S_TX_AVAIL) {
 			/* we need ACK */
-			ifp->if_timer = 0;
+			sc->tx_timer = 0;
 			ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 			GO_WINDOW(sc, 1);
 			CSR_READ_2(sc, EP_W1_FREE_TX);
 			epstart_locked(ifp);
 		}
 		if (status & S_CARD_FAILURE) {
-			ifp->if_timer = 0;
+			sc->tx_timer = 0;
 #ifdef EP_LOCAL_STATS
 			device_printf(sc->dev, "\n\tStatus: %x\n", status);
 			GO_WINDOW(sc, 4);
@@ -636,11 +653,10 @@ rescan:
 
 #endif
 			epinit_locked(sc);
-			EP_UNLOCK(sc);
 			return;
 		}
 		if (status & S_TX_COMPLETE) {
-			ifp->if_timer = 0;
+			sc->tx_timer = 0;
 			/*
 			 * We need ACK. We do it at the end.
 			 *
@@ -659,14 +675,13 @@ rescan:
 #ifdef EP_LOCAL_STATS
 						sc->tx_underrun++;
 #endif
-					} else {
-						if (status & TXS_JABBER);
-						else
-							++ifp->if_collisions;
-							/* TXS_MAX_COLLISION
-							 * we shouldn't get
-							 * here
-							 */
+					}
+					if (status & TXS_MAX_COLLISION) {
+						/*
+						 * TXS_MAX_COLLISION we
+						 * shouldn't get here
+						 */
+						++ifp->if_collisions;
 					}
 					++ifp->if_oerrors;
 					CSR_WRITE_2(sc, EP_COMMAND, TX_ENABLE);
@@ -695,7 +710,6 @@ rescan:
 
 	/* re-enable Ints */
 	CSR_WRITE_2(sc, EP_COMMAND, SET_INTR_MASK | S_5_INTS);
-	EP_UNLOCK(sc);
 }
 
 static void
@@ -801,7 +815,7 @@ read_again:
 #endif
 		EP_FRST(sc, F_RX_FIRST);
 		status = CSR_READ_2(sc, EP_W1_RX_STATUS);
-		if (!status & ERR_RX_INCOMPLETE) {
+		if (!(status & ERR_RX_INCOMPLETE)) {
 			/*
 			 * We see if by now, the packet has completly
 			 * arrived
@@ -895,8 +909,25 @@ static void
 ep_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
 {
 	struct ep_softc *sc = ifp->if_softc;
+	uint16_t ms;
 
-	ifmr->ifm_active = sc->ifmedia.ifm_media;
+	switch (IFM_SUBTYPE(sc->ifmedia.ifm_media)) {
+	case IFM_10_T:
+		GO_WINDOW(sc, 4);
+		ms = CSR_READ_2(sc, EP_W4_MEDIA_TYPE);
+		GO_WINDOW(sc, 0);
+		ifmr->ifm_status = IFM_AVALID;
+		if (ms & MT_LB) {
+			ifmr->ifm_status |= IFM_ACTIVE;
+			ifmr->ifm_active = IFM_ETHER | IFM_10_T;
+		} else {
+			ifmr->ifm_active = IFM_ETHER | IFM_NONE;
+		}
+		break;
+	default:
+		ifmr->ifm_active = sc->ifmedia.ifm_media;
+		break;
+	}
 }
 
 static int
@@ -911,7 +942,6 @@ epioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		EP_LOCK(sc);
 		if (((ifp->if_flags & IFF_UP) == 0) &&
 		    (ifp->if_drv_flags & IFF_DRV_RUNNING)) {
-			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			epstop(sc);
 		} else
 			/* reinitialize card on any parameter change */
@@ -944,15 +974,27 @@ epioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 }
 
 static void
-epwatchdog(struct ifnet *ifp)
+eptick(void *arg)
 {
-	struct ep_softc *sc = ifp->if_softc;
+	struct ep_softc *sc;
 
+	sc = arg;
+	if (sc->tx_timer != 0 && --sc->tx_timer == 0)
+		epwatchdog(sc);
+	callout_reset(&sc->watchdog_timer, hz, eptick, sc);
+}
+
+static void
+epwatchdog(struct ep_softc *sc)
+{
+	struct ifnet *ifp;
+
+	ifp = sc->ifp;
 	if (sc->gone)
 		return;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-	epstart(ifp);
-	ep_intr(ifp->if_softc);
+	epstart_locked(ifp);
+	ep_intr_locked(sc);
 }
 
 static void
@@ -975,4 +1017,7 @@ epstop(struct ep_softc *sc)
 	CSR_WRITE_2(sc, EP_COMMAND, SET_RD_0_MASK);
 	CSR_WRITE_2(sc, EP_COMMAND, SET_INTR_MASK);
 	CSR_WRITE_2(sc, EP_COMMAND, SET_RX_FILTER);
+
+	sc->ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
+	callout_stop(&sc->watchdog_timer);
 }

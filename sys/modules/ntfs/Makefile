@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ntfs/Makefile,v 1.11 2003/09/26 20:26:25 fjoe Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../fs/ntfs
 

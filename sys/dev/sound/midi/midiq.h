@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/midi/midiq.h,v 1.3 2007/02/25 13:51:51 netchild Exp $
+ * $FreeBSD$
  */
 
 #ifndef MIDIQ_H

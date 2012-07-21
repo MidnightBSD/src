@@ -1,14 +1,8 @@
-# $FreeBSD: src/sys/modules/ahb/Makefile,v 1.1.8.1 2006/02/10 00:37:58 yar Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/ahb
 
 KMOD=	ahb
-SRCS=	ahb.c opt_cam.h device_if.h bus_if.h \
-	eisa_if.h opt_scsi.h
-
-.if !defined(KERNBUILDDIR)
-opt_scsi.h:
-	echo "#define SCSI_DELAY 15000" > opt_scsi.h
-.endif
+SRCS=	ahb.c opt_cam.h device_if.h bus_if.h eisa_if.h
 
 .include <bsd.kmod.mk>

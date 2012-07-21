@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_cpu_i386.c,v 1.12 2007/04/02 22:00:22 marcel Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,8 +36,8 @@ __FBSDID("$FreeBSD: src/sys/dev/uart/uart_cpu_i386.c,v 1.12 2007/04/02 22:00:22 
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
 
-bus_space_tag_t uart_bus_space_io = I386_BUS_SPACE_IO;
-bus_space_tag_t uart_bus_space_mem = I386_BUS_SPACE_MEM;
+bus_space_tag_t uart_bus_space_io = X86_BUS_SPACE_IO;
+bus_space_tag_t uart_bus_space_mem = X86_BUS_SPACE_MEM;
 
 int
 uart_cpu_eqres(struct uart_bas *b1, struct uart_bas *b2)

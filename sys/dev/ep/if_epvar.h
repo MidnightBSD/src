@@ -19,7 +19,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ep/if_epvar.h,v 1.20 2005/07/19 22:26:44 imp Exp $
+ * $FreeBSD$
  */
 
 struct ep_board {
@@ -45,6 +45,9 @@ struct ep_softc {
 	bus_space_tag_t bst;
 	void *ep_intrhand;
 
+	struct callout watchdog_timer;
+	int tx_timer;
+
 	u_short ep_connectors;	/* Connectors on this card. */
 	u_char ep_connector;	/* Configured connector. */
 
@@ -57,6 +60,7 @@ struct ep_softc {
 #define F_ENADDR_SKIP		0x002
 #define	F_PROMISC		0x008
 #define	F_ACCESS_32_BITS	0x100
+#define	F_HAS_TX_PLL		0x200
 
 	int gone;		/* adapter is not present (for PCCARD) */
 	struct ep_board epb;

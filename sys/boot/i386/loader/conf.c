@@ -25,11 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/loader/conf.c,v 1.26 2007/05/29 14:35:57 simokawa Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <bootstrap.h>
 #include "libi386/libi386.h"
+#if defined(LOADER_ZFS_SUPPORT)
+#include "../zfs/libzfs.h"
+#endif
 
 /*
  * We could use linker sets for some or all of these, but
@@ -60,6 +63,9 @@ struct devsw *devsw[] = {
 #if defined(LOADER_FIREWIRE_SUPPORT)
     &fwohci,
 #endif
+#if defined(LOADER_ZFS_SUPPORT)
+    &zfs_dev,
+#endif
     NULL
 };
 
@@ -69,6 +75,9 @@ struct fs_ops *file_system[] = {
     &dosfs_fsops,
     &cd9660_fsops,
     &splitfs_fsops,
+#if defined(LOADER_ZFS_SUPPORT)
+    &zfs_fsops,
+#endif
 #ifdef LOADER_GZIP_SUPPORT
     &gzipfs_fsops,
 #endif
@@ -114,6 +123,7 @@ extern struct console comconsole;
 extern struct console dconsole;
 #endif
 extern struct console nullconsole;
+extern struct console spinconsole;
 
 struct console *consoles[] = {
     &vidconsole,
@@ -122,6 +132,7 @@ struct console *consoles[] = {
     &dconsole,
 #endif
     &nullconsole,
+    &spinconsole,
     NULL
 };
 

@@ -38,9 +38,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_scan.l,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aicasm_scan.l,v 1.1.1.3 2012-07-21 15:16:50 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm_scan.l,v 1.23 2005/01/06 01:42:27 imp Exp $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -51,11 +51,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sysexits.h>
-#ifdef __linux__
-#include "../queue.h"
-#else
 #include <sys/queue.h>
-#endif
 
 #include "aicasm.h"
 #include "aicasm_symbol.h"
@@ -67,8 +63,16 @@ static char string_buf[MAX_STR_CONST];
 static char *string_buf_ptr;
 static int  parren_count;
 static int  quote_count;
-static char buf[255];
+static char msgbuf[255];
+
+extern int yylex(void);
+extern int mmlex(void);
+extern int mmparse(void);
+extern void mm_switch_to_buffer(YY_BUFFER_STATE);
+extern void mm_delete_buffer(YY_BUFFER_STATE);
 %}
+
+%option noinput
 
 PATH		([/]*[-A-Za-z0-9_.])+
 WORD		[A-Za-z_][-A-Za-z_0-9]*
@@ -315,10 +319,10 @@ else			{ return T_ELSE; }
 				return ')';
 			}
 <MACROARGLIST>.		{
-				snprintf(buf, sizeof(buf), "Invalid character "
+				snprintf(msgbuf, sizeof(msgbuf), "Invalid character "
 					 "'%c' in macro argument list",
 					 yytext[0]);
-				stop(buf, EX_DATAERR);
+				stop(msgbuf, EX_DATAERR);
 			}
 <MACROCALLARGS>{SPACE}  ;
 <MACROCALLARGS>\(	{
@@ -375,7 +379,7 @@ else			{ return T_ELSE; }
 				char c;
 
 				yptr = yytext;
-				while (c = *yptr++) {
+				while ((c = *yptr++)) {
 					/*
 					 * Strip carriage returns.
 					 */
@@ -430,9 +434,9 @@ else			{ return T_ELSE; }
 				}
 			}
 .			{ 
-				snprintf(buf, sizeof(buf), "Invalid character "
+				snprintf(msgbuf, sizeof(msgbuf), "Invalid character "
 					 "'%c'", yytext[0]);
-				stop(buf, EX_DATAERR);
+				stop(msgbuf, EX_DATAERR);
 			}
 %%
 
@@ -510,6 +514,7 @@ expand_macro(struct symbol *macro_symbol)
 	const char *body_head;
 	const char *body_pos;
 	const char *next_match;
+	regmatch_t match = { .rm_so = 0, .rm_eo = 0 };
 
 	/*
 	 * Due to the nature of unput, we must work
@@ -519,8 +524,6 @@ expand_macro(struct symbol *macro_symbol)
 	body_head = macro_symbol->info.macroinfo->body;
 	body_pos = body_head + strlen(body_head);
 	while (body_pos > body_head) {
-		regmatch_t match;
-
 		next_match = body_head;
 		match_marg = NULL;
 		next_substitution(macro_symbol, body_pos, &next_match,
@@ -585,7 +588,7 @@ next_substitution(struct symbol *mac_symbol, const char *body_pos,
 }
 
 int
-yywrap()
+yywrap(void)
 {
 	include_t *include;
 

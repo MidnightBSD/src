@@ -1,5 +1,5 @@
 /*	$NetBSD: i82365reg.h,v 1.3 1998/12/20 17:53:28 nathanw Exp $	*/
-/* $FreeBSD: src/sys/dev/exca/excareg.h,v 1.6 2006/08/12 08:53:54 imp Exp $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2002 M Warner Losh.  All rights reserved.
@@ -355,7 +355,7 @@
 /* #define	EXCA_RESERVED			0x3E */
 /* #define	EXCA_RESERVED			0x3F */
 
-/* cardbus extensions - memory window page registers */
+/* CardBus extensions - memory window page registers */
 
 #define	EXCA_MEMREG_WIN_SHIFT			24
 #define	EXCA_SYSMEM_ADDR0_WIN			0x40

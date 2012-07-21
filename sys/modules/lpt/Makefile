@@ -1,5 +1,5 @@
 
-# $FreeBSD: src/sys/modules/lpt/Makefile,v 1.2 2002/01/11 15:48:50 ru Exp $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../dev/ppbus
 KMOD=	lpt

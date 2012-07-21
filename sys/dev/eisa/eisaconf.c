@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/eisa/eisaconf.c,v 1.73 2005/08/01 07:09:15 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_eisa.h"
 
@@ -315,7 +315,7 @@ eisa_find_ioaddr(struct eisa_device *e_dev, int rid)
 }
 
 static int
-eisa_read_ivar(device_t dev, device_t child, int which, u_long *result)
+eisa_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 {
 	struct eisa_device *e_dev = device_get_ivars(child);
 	struct irq_node *irq;
@@ -557,7 +557,6 @@ static device_method_t eisa_methods[] = {
 	DEVMETHOD(bus_probe_nomatch,	eisa_probe_nomatch),
 	DEVMETHOD(bus_read_ivar,	eisa_read_ivar),
 	DEVMETHOD(bus_write_ivar,	eisa_write_ivar),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
 	DEVMETHOD(bus_alloc_resource,	eisa_alloc_resource),
 	DEVMETHOD(bus_release_resource,	eisa_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
@@ -570,7 +569,7 @@ static device_method_t eisa_methods[] = {
 	DEVMETHOD(eisa_add_iospace,	eisa_add_iospace_m),
 	DEVMETHOD(eisa_add_mspace,	eisa_add_mspace_m),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t eisa_driver = {

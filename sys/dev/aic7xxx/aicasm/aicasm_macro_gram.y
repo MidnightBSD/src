@@ -38,9 +38,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_macro_gram.y,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
+ * $Id: aicasm_macro_gram.y,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y,v 1.4 2006/12/29 13:08:46 yar Exp $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -51,12 +51,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
-
-#ifdef __linux__
-#include "../queue.h"
-#else
 #include <sys/queue.h>
-#endif
 
 #include "aicasm.h"
 #include "aicasm_symbol.h"
@@ -65,6 +60,9 @@
 static symbol_t *macro_symbol;
 
 static void add_macro_arg(const char *argtext, int position);
+
+extern int mmlex(void);
+extern int mmparse(void);
 
 %}
 
@@ -157,7 +155,7 @@ add_macro_arg(const char *argtext, int argnum)
 	}
 }
 
-void
+static void
 mmerror(const char *string)
 {
 	stop(string, EX_DATAERR);

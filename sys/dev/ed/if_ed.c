@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed.c,v 1.271 2007/03/21 03:38:35 nyan Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Device driver for National Semiconductor DS8390/WD83C690 based ethernet
@@ -77,7 +77,8 @@ static int	ed_ioctl(struct ifnet *, u_long, caddr_t);
 static void	ed_start(struct ifnet *);
 static void	ed_start_locked(struct ifnet *);
 static void	ed_reset(struct ifnet *);
-static void	ed_watchdog(struct ifnet *);
+static void	ed_tick(void *);
+static void	ed_watchdog(struct ed_softc *);
 
 static void	ed_ds_getmcaf(struct ed_softc *, uint32_t *);
 
@@ -164,7 +165,6 @@ ed_alloc_port(device_t dev, int rid, int size)
 	res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
 	    0ul, ~0ul, size, RF_ACTIVE);
 	if (res) {
-		sc->port_rid = rid;
 		sc->port_res = res;
 		sc->port_used = size;
 		sc->port_bst = rman_get_bustag(res);
@@ -186,7 +186,6 @@ ed_alloc_memory(device_t dev, int rid, int size)
 	res = bus_alloc_resource(dev, SYS_RES_MEMORY, &rid,
 	    0ul, ~0ul, size, RF_ACTIVE);
 	if (res) {
-		sc->mem_rid = rid;
 		sc->mem_res = res;
 		sc->mem_used = size;
 		sc->mem_bst = rman_get_bustag(res);
@@ -207,7 +206,6 @@ ed_alloc_irq(device_t dev, int rid, int flags)
 
 	res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE | flags);
 	if (res) {
-		sc->irq_rid = rid;
 		sc->irq_res = res;
 		return (0);
 	}
@@ -222,21 +220,18 @@ ed_release_resources(device_t dev)
 {
 	struct ed_softc *sc = device_get_softc(dev);
 
-	if (sc->port_res) {
-		bus_release_resource(dev, SYS_RES_IOPORT,
-		    sc->port_rid, sc->port_res);
-		sc->port_res = 0;
-	}
-	if (sc->mem_res) {
-		bus_release_resource(dev, SYS_RES_MEMORY,
-		    sc->mem_rid, sc->mem_res);
-		sc->mem_res = 0;
-	}
-	if (sc->irq_res) {
-		bus_release_resource(dev, SYS_RES_IRQ,
-		    sc->irq_rid, sc->irq_res);
-		sc->irq_res = 0;
-	}
+	if (sc->port_res)
+		bus_free_resource(dev, SYS_RES_IOPORT, sc->port_res);
+	if (sc->port_res2)
+		bus_free_resource(dev, SYS_RES_IOPORT, sc->port_res2);
+	if (sc->mem_res)
+		bus_free_resource(dev, SYS_RES_MEMORY, sc->mem_res);
+	if (sc->irq_res)
+		bus_free_resource(dev, SYS_RES_IRQ, sc->irq_res);
+	sc->port_res = 0;
+	sc->port_res2 = 0;
+	sc->mem_res = 0;
+	sc->irq_res = 0;
 	if (sc->ifp)
 		if_free(sc->ifp);
 }
@@ -287,10 +282,9 @@ ed_attach(device_t dev)
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_start = ed_start;
 	ifp->if_ioctl = ed_ioctl;
-	ifp->if_watchdog = ed_watchdog;
 	ifp->if_init = ed_init;
-	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
-	ifp->if_snd.ifq_drv_maxlen = IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	ifp->if_snd.ifq_drv_maxlen = ifqmaxlen;
 	IFQ_SET_READY(&ifp->if_snd);
 	ifp->if_linkmib = &sc->mibdata;
 	ifp->if_linkmiblen = sizeof sc->mibdata;
@@ -329,19 +323,19 @@ ed_attach(device_t dev)
 	sc->rx_mem = (sc->rec_page_stop - sc->rec_page_start) * ED_PAGE_SIZE;
 	SYSCTL_ADD_STRING(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    0, "type", CTLTYPE_STRING | CTLFLAG_RD, sc->type_str, 0,
+	    0, "type", CTLFLAG_RD, sc->type_str, 0,
 	    "Type of chip in card");
 	SYSCTL_ADD_UINT(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    1, "TxMem", CTLTYPE_STRING | CTLFLAG_RD, &sc->tx_mem, 0,
+	    1, "TxMem", CTLFLAG_RD, &sc->tx_mem, 0,
 	    "Memory set aside for transmitting packets");
 	SYSCTL_ADD_UINT(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    2, "RxMem", CTLTYPE_STRING | CTLFLAG_RD, &sc->rx_mem, 0,
+	    2, "RxMem", CTLFLAG_RD, &sc->rx_mem, 0,
 	    "Memory  set aside for receiving packets");
-	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
+	SYSCTL_ADD_UINT(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    3, "Mem", CTLTYPE_STRING | CTLFLAG_RD, &sc->mem_size, 0,
+	    3, "Mem", CTLFLAG_RD, &sc->mem_size, 0,
 	    "Total Card Memory");
 	if (bootverbose) {
 		if (sc->type_str && (*sc->type_str != 0))
@@ -379,17 +373,24 @@ ed_detach(device_t dev)
 	struct ed_softc *sc = device_get_softc(dev);
 	struct ifnet *ifp = sc->ifp;
 
-	ED_ASSERT_UNLOCKED(sc);
-	ED_LOCK(sc);
-	if (bus_child_present(dev))
-		ed_stop(sc);
-	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-	ED_UNLOCK(sc);
-	callout_drain(&sc->tick_ch);
-	ether_ifdetach(ifp);
-	bus_teardown_intr(dev, sc->irq_res, sc->irq_handle);
+	if (mtx_initialized(ED_MUTEX(sc)))
+		ED_ASSERT_UNLOCKED(sc);
+	if (ifp) {
+		ED_LOCK(sc);
+		if (bus_child_present(dev))
+			ed_stop(sc);
+		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+		ED_UNLOCK(sc);
+		ether_ifdetach(ifp);
+		callout_drain(&sc->tick_ch);
+	}
+	if (sc->irq_res != NULL && sc->irq_handle)
+		bus_teardown_intr(dev, sc->irq_res, sc->irq_handle);
 	ed_release_resources(dev);
-	ED_LOCK_DESTROY(sc);
+	if (sc->miibus)
+		device_delete_child(dev, sc->miibus);
+	if (mtx_initialized(ED_MUTEX(sc)))
+		ED_LOCK_DESTROY(sc);
 	bus_generic_detach(dev);
 	return (0);
 }
@@ -424,10 +425,19 @@ ed_stop_hw(struct ed_softc *sc)
 	 * Wait for interface to enter stopped state, but limit # of checks to
 	 * 'n' (about 5ms). It shouldn't even take 5us on modern DS8390's, but
 	 * just in case it's an old one.
+	 *
+	 * The AX88x90 chips don't seem to implement this behavor.  The
+	 * datasheets say it is only turned on when the chip enters a RESET
+	 * state and is silent about behavior for the stopped state we just
+	 * entered.
 	 */
-	if (sc->chip_type != ED_CHIP_TYPE_AX88190)
-		while (((ed_nic_inb(sc, ED_P0_ISR) & ED_ISR_RST) == 0) && --n)
-			continue;
+	if (sc->chip_type == ED_CHIP_TYPE_AX88190 ||
+	    sc->chip_type == ED_CHIP_TYPE_AX88790)
+		return;
+	while (((ed_nic_inb(sc, ED_P0_ISR) & ED_ISR_RST) == 0) && --n)
+		continue;
+	if (n <= 0)
+		device_printf(sc->dev, "ed_stop_hw RST never set\n");
 }
 
 /*
@@ -437,9 +447,26 @@ void
 ed_stop(struct ed_softc *sc)
 {
 	ED_ASSERT_LOCKED(sc);
-	if (sc->sc_tick)
-		callout_stop(&sc->tick_ch);
+	callout_stop(&sc->tick_ch);
 	ed_stop_hw(sc);
+}
+
+/*
+ * Periodic timer used to drive the watchdog and attachment-specific
+ * tick handler.
+ */
+static void
+ed_tick(void *arg)
+{
+	struct ed_softc *sc;
+
+	sc = arg;
+	ED_ASSERT_LOCKED(sc);
+	if (sc->sc_tick)
+		sc->sc_tick(sc);
+	if (sc->tx_timer != 0 && --sc->tx_timer == 0)
+		ed_watchdog(sc);
+	callout_reset(&sc->tick_ch, hz, ed_tick, sc);
 }
 
 /*
@@ -447,16 +474,15 @@ ed_stop(struct ed_softc *sc)
  *	generate an interrupt after a transmit has been started on it.
  */
 static void
-ed_watchdog(struct ifnet *ifp)
+ed_watchdog(struct ed_softc *sc)
 {
-	struct ed_softc *sc = ifp->if_softc;
+	struct ifnet *ifp;
 
+	ifp = sc->ifp;
 	log(LOG_ERR, "%s: device timeout\n", ifp->if_xname);
 	ifp->if_oerrors++;
 
-	ED_LOCK(sc);
 	ed_reset(ifp);
-	ED_UNLOCK(sc);
 }
 
 /*
@@ -489,7 +515,7 @@ ed_init_locked(struct ed_softc *sc)
 
 	/* reset transmitter flags */
 	sc->xmit_busy = 0;
-	ifp->if_timer = 0;
+	sc->tx_timer = 0;
 
 	sc->txb_inuse = 0;
 	sc->txb_new = 0;
@@ -602,8 +628,7 @@ ed_init_locked(struct ed_softc *sc)
 	 */
 	ed_start_locked(ifp);
 
-	if (sc->sc_tick)
-		callout_reset(&sc->tick_ch, hz, sc->sc_tick, sc);
+	callout_reset(&sc->tick_ch, hz, ed_tick, sc);
 }
 
 /*
@@ -612,7 +637,6 @@ ed_init_locked(struct ed_softc *sc)
 static __inline void
 ed_xmit(struct ed_softc *sc)
 {
-	struct ifnet *ifp = sc->ifp;
 	unsigned short len;
 
 	len = sc->txb_len[sc->txb_next_tx];
@@ -650,7 +674,7 @@ ed_xmit(struct ed_softc *sc)
 	/*
 	 * Set a timer just in case we never hear from the board again
 	 */
-	ifp->if_timer = 2;
+	sc->tx_timer = 2;
 }
 
 /*
@@ -804,14 +828,15 @@ ed_rint(struct ed_softc *sc)
 			/*
 			 * Length is a wild value. There's a good chance that
 			 * this was caused by the NIC being old and buggy.
-			 * The bug is that the length low byte is duplicated in
-			 * the high byte. Try to recalculate the length based on
-			 * the pointer to the next packet.
+			 * The bug is that the length low byte is duplicated
+			 * in the high byte. Try to recalculate the length
+			 * based on the pointer to the next packet.  Also,
+			 * need ot preserve offset into page.
+			 *
+			 * NOTE: sc->next_packet is pointing at the current
+			 * packet.
 			 */
-			/*
-			 * NOTE: sc->next_packet is pointing at the current packet.
-			 */
-			len &= ED_PAGE_SIZE - 1;	/* preserve offset into page */
+			len &= ED_PAGE_SIZE - 1;
 			if (packet_hdr.next_packet >= sc->next_packet)
 				len += (packet_hdr.next_packet -
 				    sc->next_packet) * ED_PAGE_SIZE;
@@ -832,14 +857,14 @@ ed_rint(struct ed_softc *sc)
 		}
 
 		/*
-		 * Be fairly liberal about what we allow as a "reasonable" length
-		 * so that a [crufty] packet will make it to BPF (and can thus
-		 * be analyzed). Note that all that is really important is that
-		 * we have a length that will fit into one mbuf cluster or less;
-		 * the upper layer protocols can then figure out the length from
-		 * their own length field(s).
-		 * But make sure that we have at least a full ethernet header
-		 * or we would be unable to call ether_input() later.
+		 * Be fairly liberal about what we allow as a "reasonable"
+		 * length so that a [crufty] packet will make it to BPF (and
+		 * can thus be analyzed). Note that all that is really
+		 * important is that we have a length that will fit into one
+		 * mbuf cluster or less; the upper layer protocols can then
+		 * figure out the length from their own length field(s).  But
+		 * make sure that we have at least a full ethernet header or
+		 * we would be unable to call ether_input() later.
 		 */
 		if ((len >= sizeof(struct ed_ring) + ETHER_HDR_LEN) &&
 		    (len <= MCLBYTES) &&
@@ -912,10 +937,10 @@ edintr(void *arg)
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STA);
 
 	/*
-	 * loop until there are no more new interrupts.  When the card
-	 * goes away, the hardware will read back 0xff.  Looking at
-	 * the interrupts, it would appear that 0xff is impossible,
-	 * or at least extremely unlikely.
+	 * loop until there are no more new interrupts.  When the card goes
+	 * away, the hardware will read back 0xff.  Looking at the interrupts,
+	 * it would appear that 0xff is impossible, or at least extremely
+	 * unlikely.
 	 */
 	while ((isr = ed_nic_inb(sc, ED_P0_ISR)) != 0 && isr != 0xff) {
 
@@ -926,12 +951,14 @@ edintr(void *arg)
 		 */
 		ed_nic_outb(sc, ED_P0_ISR, isr);
 
-		/* 
-		 * XXX workaround for AX88190
+		/*
+		 * The AX88190 and AX88190A has problems acking an interrupt
+		 * and having them clear.  This interferes with top-level loop
+		 * here.  Wait for all the bits to clear.
+		 *
 		 * We limit this to 5000 iterations.  At 1us per inb/outb,
-		 * this translates to about 15ms, which should be plenty
-		 * of time, and also gives protection in the card eject
-		 * case.
+		 * this translates to about 15ms, which should be plenty of
+		 * time, and also gives protection in the card eject case.
 		 */
 		if (sc->chip_type == ED_CHIP_TYPE_AX88190) {
 			count = 5000;		/* 15ms */
@@ -1010,7 +1037,7 @@ edintr(void *arg)
 			/*
 			 * clear watchdog timer
 			 */
-			ifp->if_timer = 0;
+			sc->tx_timer = 0;
 
 			/*
 			 * Add in total number of collisions on last
@@ -1150,14 +1177,6 @@ ed_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	struct ed_softc *sc = ifp->if_softc;
 	struct ifreq *ifr = (struct ifreq *)data;
 	int     error = 0;
-
-	/*
-	 * XXX really needed?
-	 */
-	if (sc == NULL) {
-		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-		return (ENXIO);
-	}
 
 	switch (command) {
 	case SIOCSIFFLAGS:
@@ -1307,7 +1326,7 @@ ed_shmem_readmem16(struct ed_softc *sc, bus_size_t src, uint8_t *dst,
     uint16_t amount)
 {
 	bus_space_read_region_2(sc->mem_bst, sc->mem_bsh, src, (uint16_t *)dst,
-	    amount + 1 / 2);
+	    (amount + 1) / 2);
 }
 
 /*
@@ -1457,9 +1476,12 @@ ed_pio_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 		}
 	} else {
 		/* NE2000s are a pain */
-		unsigned char *data;
+		uint8_t *data;
 		int len, wantbyte;
-		unsigned char savebyte[2];
+		union {
+			uint16_t w;
+			uint8_t b[2];
+		} saveword;
 
 		wantbyte = 0;
 
@@ -1469,9 +1491,9 @@ ed_pio_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 				data = mtod(m, caddr_t);
 				/* finish the last word */
 				if (wantbyte) {
-					savebyte[1] = *data;
+					saveword.b[1] = *data;
 					ed_asic_outw(sc, ED_NOVELL_DATA,
-						     *(u_short *)savebyte);
+					    saveword.w);
 					data++;
 					len--;
 					wantbyte = 0;
@@ -1485,7 +1507,7 @@ ed_pio_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 				}
 				/* save last byte, if necessary */
 				if (len == 1) {
-					savebyte[0] = *data;
+					saveword.b[0] = *data;
 					wantbyte = 1;
 				}
 			}
@@ -1493,7 +1515,7 @@ ed_pio_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 		}
 		/* spit last byte */
 		if (wantbyte)
-			ed_asic_outw(sc, ED_NOVELL_DATA, *(u_short *)savebyte);
+			ed_asic_outw(sc, ED_NOVELL_DATA, saveword.w);
 	}
 
 	/*
@@ -1526,7 +1548,8 @@ ed_setrcr(struct ed_softc *sc)
 	ED_ASSERT_LOCKED(sc);
 
 	/* Bit 6 in AX88190 RCR register must be set. */
-	if (sc->chip_type == ED_CHIP_TYPE_AX88190)
+	if (sc->chip_type == ED_CHIP_TYPE_AX88190 ||
+	    sc->chip_type == ED_CHIP_TYPE_AX88790)
 		reg1 = ED_RCR_INTT;
 	else
 		reg1 = 0x00;
@@ -1608,7 +1631,7 @@ ed_ds_getmcaf(struct ed_softc *sc, uint32_t *mcaf)
 	mcaf[0] = 0;
 	mcaf[1] = 0;
 
-	IF_ADDR_LOCK(sc->ifp);
+	if_maddr_rlock(sc->ifp);
 	TAILQ_FOREACH(ifma, &sc->ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -1616,7 +1639,7 @@ ed_ds_getmcaf(struct ed_softc *sc, uint32_t *mcaf)
 		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
 		af[index >> 3] |= 1 << (index & 7);
 	}
-	IF_ADDR_UNLOCK(sc->ifp);
+	if_maddr_runlock(sc->ifp);
 }
 
 int
@@ -1686,12 +1709,19 @@ ed_shmem_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 			break;
 		}
 	}
-	for (len = 0; m != 0; m = m->m_next) {
-		if (sc->isa16bit)
-			bus_space_write_region_2(sc->mem_bst,
-			    sc->mem_bsh, dst,
-			    mtod(m, uint16_t *), (m->m_len + 1)/ 2);
-		else
+	for (len = 0; m != NULL; m = m->m_next) {
+		if (m->m_len == 0)
+			continue;
+		if (sc->isa16bit) {
+			if (m->m_len > 1)
+				bus_space_write_region_2(sc->mem_bst,
+				    sc->mem_bsh, dst,
+				    mtod(m, uint16_t *), m->m_len / 2);
+			if ((m->m_len & 1) != 0)
+				bus_space_write_1(sc->mem_bst, sc->mem_bsh,
+				    dst + m->m_len - 1,
+				    *(mtod(m, uint8_t *) + m->m_len - 1));
+		} else
 			bus_space_write_region_1(sc->mem_bst,
 			    sc->mem_bsh, dst,
 			    mtod(m, uint8_t *), m->m_len);
@@ -1720,4 +1750,39 @@ ed_shmem_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 		}
 	}
 	return (len);
+}
+
+/*
+ * Generic ifmedia support.  By default, the DP8390-based cards don't know
+ * what their network attachment really is, or even if it is valid (except
+ * upon successful transmission of a packet).  To play nicer with dhclient, as
+ * well as to fit in with a framework where some cards can provde more
+ * detailed information, make sure that we use this as a fallback.
+ */
+static int
+ed_gen_ifmedia_ioctl(struct ed_softc *sc, struct ifreq *ifr, u_long command)
+{
+	return (ifmedia_ioctl(sc->ifp, ifr, &sc->ifmedia, command));
+}
+
+static int
+ed_gen_ifmedia_upd(struct ifnet *ifp)
+{
+	return 0;
+}
+
+static void
+ed_gen_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
+{
+	ifmr->ifm_active = IFM_ETHER | IFM_AUTO;
+	ifmr->ifm_status = IFM_AVALID | IFM_ACTIVE;
+}
+
+void
+ed_gen_ifmedia_init(struct ed_softc *sc)
+{
+	sc->sc_media_ioctl = &ed_gen_ifmedia_ioctl;
+	ifmedia_init(&sc->ifmedia, 0, ed_gen_ifmedia_upd, ed_gen_ifmedia_sts);
+	ifmedia_add(&sc->ifmedia, IFM_ETHER | IFM_AUTO, 0, 0);
+	ifmedia_set(&sc->ifmedia, IFM_ETHER | IFM_AUTO);
 }

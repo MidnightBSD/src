@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/uart/uart.h,v 1.6 2007/04/02 22:00:22 marcel Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_UART_H_
@@ -65,14 +65,24 @@ struct uart_bas {
 struct uart_class;
 
 extern struct uart_class uart_ns8250_class __attribute__((weak));
+extern struct uart_class uart_quicc_class __attribute__((weak));
 extern struct uart_class uart_sab82532_class __attribute__((weak));
+extern struct uart_class uart_sbbc_class __attribute__((weak));
 extern struct uart_class uart_z8530_class __attribute__((weak));
+
+#ifdef PC98
+struct uart_class *uart_pc98_getdev(u_long port);
+#endif
 
 /*
  * Device flags.
  */
 #define	UART_FLAGS_CONSOLE(f)		((f) & 0x10)
 #define	UART_FLAGS_DBGPORT(f)		((f) & 0x80)
+#define	UART_FLAGS_FCR_RX_LOW(f)	((f) & 0x100)
+#define	UART_FLAGS_FCR_RX_MEDL(f)	((f) & 0x200)
+#define	UART_FLAGS_FCR_RX_MEDH(f)	((f) & 0x400)
+#define	UART_FLAGS_FCR_RX_HIGH(f)	((f) & 0x800)
 
 /*
  * Data parity values (magical numbers related to ns8250).

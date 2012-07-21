@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fdc/fdc_pccard.c,v 1.13 2005/06/24 14:36:52 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -36,8 +36,6 @@ __FBSDID("$FreeBSD: src/sys/dev/fdc/fdc_pccard.c,v 1.13 2005/06/24 14:36:52 imp 
 #include <sys/mutex.h>
 #include <sys/rman.h>
 #include <sys/systm.h>
-#include <machine/bus.h>
-
 #include <machine/bus.h>
 
 #include <dev/fdc/fdcvar.h>
@@ -85,10 +83,8 @@ fdc_pccard_alloc_resources(device_t dev, struct fdc_data *fdc)
 static int
 fdc_pccard_probe(device_t dev)
 {
-	const struct pccard_product *pp;
-
-	if ((pp = pccard_product_lookup(dev, fdc_pccard_products,
-	    sizeof(fdc_pccard_products[0]), NULL)) != NULL) {
+	if (pccard_product_lookup(dev, fdc_pccard_products,
+	    sizeof(fdc_pccard_products[0]), NULL) != NULL) {
 		device_set_desc(dev, "PC Card Floppy");
 		return (0);
 	}

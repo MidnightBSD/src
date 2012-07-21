@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_attach.c,v 1.14 2007/02/23 12:18:48 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -197,11 +197,9 @@ patm_attach(device_t dev)
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_SIMPLEX;
-	ifp->if_watchdog = NULL;
 	ifp->if_init = patm_init;
 	ifp->if_ioctl = patm_ioctl;
 	ifp->if_start = patm_start;
-	ifp->if_watchdog = NULL;
 
 	/* do this early so we can destroy unconditionally */
 	mtx_init(&sc->mtx, device_get_nameunit(dev),
@@ -256,13 +254,13 @@ patm_attach(device_t dev)
 		goto fail;
 
 	if (SYSCTL_ADD_PROC(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
-	    OID_AUTO, "istats", CTLFLAG_RD, sc, 0, patm_sysctl_istats,
-	    "S", "internal statistics") == NULL)
+	    OID_AUTO, "istats", CTLTYPE_OPAQUE | CTLFLAG_RD, sc, 0,
+	    patm_sysctl_istats, "S", "internal statistics") == NULL)
 		goto fail;
 
 	if (SYSCTL_ADD_PROC(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
-	    OID_AUTO, "eeprom", CTLFLAG_RD, sc, 0, patm_sysctl_eeprom,
-	    "S", "EEPROM contents") == NULL)
+	    OID_AUTO, "eeprom", CTLTYPE_OPAQUE | CTLFLAG_RD, sc, 0,
+	    patm_sysctl_eeprom, "S", "EEPROM contents") == NULL)
 		goto fail;
 
 	if (SYSCTL_ADD_UINT(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
@@ -286,13 +284,13 @@ patm_attach(device_t dev)
 	patm_env_getuint(sc, &sc->debug, "debug");
 
 	if (SYSCTL_ADD_PROC(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
-	    OID_AUTO, "regs", CTLFLAG_RD, sc, 0, patm_sysctl_regs,
-	    "S", "registers") == NULL)
+	    OID_AUTO, "regs", CTLTYPE_OPAQUE | CTLFLAG_RD, sc, 0,
+	    patm_sysctl_regs, "S", "registers") == NULL)
 		goto fail;
 
 	if (SYSCTL_ADD_PROC(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
-	    OID_AUTO, "tsq", CTLFLAG_RD, sc, 0, patm_sysctl_tsq,
-	    "S", "TSQ") == NULL)
+	    OID_AUTO, "tsq", CTLTYPE_OPAQUE | CTLFLAG_RD, sc, 0,
+	    patm_sysctl_tsq, "S", "TSQ") == NULL)
 		goto fail;
 #endif
 
@@ -406,7 +404,7 @@ patm_attach(device_t dev)
 	 * Don't use BUS_DMA_ALLOCNOW, because we never need bouncing with
 	 * bus_dmamem_alloc()
 	 */
-	error = bus_dma_tag_create(NULL, PAGE_SIZE, 0,
+	error = bus_dma_tag_create(bus_get_dma_tag(dev), PAGE_SIZE, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
 	    NULL, NULL, sizeof(struct patm_scd), 1,
 	    sizeof(struct patm_scd), 0, NULL, NULL, &sc->scd_tag);
@@ -776,7 +774,8 @@ patm_sq_init(struct patm_softc *sc)
 	 * Don't use BUS_DMA_ALLOCNOW, because we never need bouncing with
 	 * bus_dmamem_alloc()
 	 */
-	error = bus_dma_tag_create(NULL, PATM_SQ_ALIGNMENT, 0,
+	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev),
+	    PATM_SQ_ALIGNMENT, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
 	    NULL, NULL, sc->sq_size, 1, sc->sq_size,
 	    0, NULL, NULL, &sc->sq_tag);
@@ -829,7 +828,7 @@ patm_rbuf_init(struct patm_softc *sc)
 	 * Don't use BUS_DMA_ALLOCNOW, because we never need bouncing with
 	 * bus_dmamem_alloc()
 	 */
-	if ((error = bus_dma_tag_create(NULL, PAGE_SIZE, 0,
+	if ((error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), PAGE_SIZE, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
 	    SMBUF_PAGE_SIZE, 1, SMBUF_PAGE_SIZE, 0,
 	    NULL, NULL, &sc->sbuf_tag)) != 0) {
@@ -857,7 +856,7 @@ patm_rbuf_init(struct patm_softc *sc)
 	 * maps using one tag. Rather use BUS_DMA_NOWAIT when loading the map
 	 * to prevent EINPROGRESS.
 	 */
-	if ((error = bus_dma_tag_create(NULL, 4, 0,
+	if ((error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), 4, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
 	    MCLBYTES, 1, MCLBYTES, 0, 
 	    NULL, NULL, &sc->lbuf_tag)) != 0) {
@@ -902,7 +901,7 @@ patm_txmap_init(struct patm_softc *sc)
 	struct patm_txmap *map;
 
 	/* get transmission tag */
-	error = bus_dma_tag_create(NULL, 1, 0,
+	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), 1, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
 	    NULL, NULL, 65536, IDT_SCQ_SIZE - 1, 65536,
 	    0, NULL, NULL, &sc->tx_tag);

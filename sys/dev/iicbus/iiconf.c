@@ -25,12 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iicbus/iiconf.c,v 1.17 2007/03/23 23:03:54 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/bus.h>
 
 #include <dev/iicbus/iiconf.h>
@@ -57,13 +59,14 @@ iicbus_poll(struct iicbus_softc *sc, int how)
 {
 	int error;
 
+	IICBUS_ASSERT_LOCKED(sc);
 	switch (how) {
-	case (IIC_WAIT | IIC_INTR):
-		error = tsleep(sc, IICPRI|PCATCH, "iicreq", 0);
+	case IIC_WAIT | IIC_INTR:
+		error = mtx_sleep(sc, &sc->lock, IICPRI|PCATCH, "iicreq", 0);
 		break;
 
-	case (IIC_WAIT | IIC_NOINTR):
-		error = tsleep(sc, IICPRI, "iicreq", 0);
+	case IIC_WAIT | IIC_NOINTR:
+		error = mtx_sleep(sc, &sc->lock, IICPRI, "iicreq", 0);
 		break;
 
 	default:
@@ -85,9 +88,10 @@ int
 iicbus_request_bus(device_t bus, device_t dev, int how)
 {
 	struct iicbus_softc *sc = (struct iicbus_softc *)device_get_softc(bus);
-	int s, error = 0;
+	int error = 0;
 
 	/* first, ask the underlying layers if the request is ok */
+	IICBUS_LOCK(sc);
 	do {
 		error = IICBUS_CALLBACK(device_get_parent(bus),
 						IIC_REQUEST_BUS, (caddr_t)&how);
@@ -96,15 +100,13 @@ iicbus_request_bus(device_t bus, device_t dev, int how)
 	} while (error == EWOULDBLOCK);
 
 	while (!error) {
-		s = splhigh();	
 		if (sc->owner && sc->owner != dev) {
-			splx(s);
 
 			error = iicbus_poll(sc, how);
 		} else {
 			sc->owner = dev;
 
-			splx(s);
+			IICBUS_UNLOCK(sc);
 			return (0);
 		}
 
@@ -113,6 +115,7 @@ iicbus_request_bus(device_t bus, device_t dev, int how)
 			IICBUS_CALLBACK(device_get_parent(bus), IIC_RELEASE_BUS,
 					(caddr_t)&how);
 	}
+	IICBUS_UNLOCK(sc);
 
 	return (error);
 }
@@ -126,7 +129,7 @@ int
 iicbus_release_bus(device_t bus, device_t dev)
 {
 	struct iicbus_softc *sc = (struct iicbus_softc *)device_get_softc(bus);
-	int s, error;
+	int error;
 
 	/* first, ask the underlying layers if the release is ok */
 	error = IICBUS_CALLBACK(device_get_parent(bus), IIC_RELEASE_BUS, NULL);
@@ -134,17 +137,18 @@ iicbus_release_bus(device_t bus, device_t dev)
 	if (error)
 		return (error);
 
-	s = splhigh();
+	IICBUS_LOCK(sc);
+
 	if (sc->owner != dev) {
-		splx(s);
+		IICBUS_UNLOCK(sc);
 		return (EACCES);
 	}
 
-	sc->owner = 0;
-	splx(s);
+	sc->owner = NULL;
 
 	/* wakeup waiting processes */
 	wakeup(sc);
+	IICBUS_UNLOCK(sc);
 
 	return (0);
 }
@@ -334,7 +338,7 @@ iicbus_block_read(device_t bus, u_char slave, char *buf, int len, int *read)
 }
 
 /*
- * iicbus_trasnfer()
+ * iicbus_transfer()
  *
  * Do an aribtrary number of transfers on the iicbus.  We pass these
  * raw requests to the bridge driver.  If the bridge driver supports
@@ -359,21 +363,48 @@ iicbus_transfer(device_t bus, struct iic_msg *msgs, uint32_t nmsgs)
 int
 iicbus_transfer_gen(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)
 {
-	int i, error, lenread, lenwrote, nkid;
+	int i, error, lenread, lenwrote, nkid, rpstart, addr;
 	device_t *children, bus;
 
-	device_get_children(dev, &children, &nkid);
-	if (nkid != 1)
-		return EIO;
+	if ((error = device_get_children(dev, &children, &nkid)) != 0)
+		return (error);
+	if (nkid != 1) {
+		free(children, M_TEMP);
+		return (EIO);
+	}
 	bus = children[0];
+	rpstart = 0;
 	free(children, M_TEMP);
 	for (i = 0, error = 0; i < nmsgs && error == 0; i++) {
+		addr = msgs[i].slave;
 		if (msgs[i].flags & IIC_M_RD)
-			error = iicbus_block_read(bus, msgs[i].slave,
-			    msgs[i].buf, msgs[i].len, &lenread);
+			addr |= LSB;
 		else
-			error = iicbus_block_write(bus, msgs[i].slave,
-			    msgs[i].buf, msgs[i].len, &lenwrote);
+			addr &= ~LSB;
+
+		if (!(msgs[i].flags & IIC_M_NOSTART)) {
+			if (rpstart)
+				error = iicbus_repeated_start(bus, addr, 0);
+			else
+				error = iicbus_start(bus, addr, 0);
+		}
+
+		if (error)
+			break;
+
+		if (msgs[i].flags & IIC_M_RD)
+			error = iicbus_read(bus, msgs[i].buf, msgs[i].len,
+			    &lenread, IIC_LAST_READ, 0);
+		else
+			error = iicbus_write(bus, msgs[i].buf, msgs[i].len,
+			    &lenwrote, 0);
+
+		if (!(msgs[i].flags & IIC_M_NOSTOP)) {
+			rpstart = 0;
+			iicbus_stop(bus);
+		} else {
+			rpstart = 1;	/* Next message gets repeated start */
+		}
 	}
 	return (error);
 }

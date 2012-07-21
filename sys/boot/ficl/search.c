@@ -4,7 +4,7 @@
 ** ANS Forth SEARCH and SEARCH-EXT word-set written in C
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 6 June 2000
-** $Id: search.c,v 1.1.1.2 2006-02-25 02:35:59 laffer1 Exp $
+** $Id: search.c,v 1.1.1.3 2012-07-21 15:17:33 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/search.c,v 1.2 2002/04/09 17:45:11 dcs Exp $ */
+/* $FreeBSD$ */
 
 #include <string.h>
 #include "ficl.h"

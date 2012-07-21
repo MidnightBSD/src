@@ -13,13 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -37,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hme/if_hme_sbus.c,v 1.18 2007/02/23 12:18:42 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * SBus front-end device driver for the HME ethernet device.
@@ -78,17 +71,11 @@ __FBSDID("$FreeBSD: src/sys/dev/hme/if_hme_sbus.c,v 1.18 2007/02/23 12:18:42 pis
 struct hme_sbus_softc {
 	struct	hme_softc	hsc_hme;	/* HME device */
 	struct	resource	*hsc_seb_res;
-	int			hsc_seb_rid;
 	struct	resource	*hsc_etx_res;
-	int			hsc_etx_rid;
 	struct	resource	*hsc_erx_res;
-	int			hsc_erx_rid;
 	struct	resource	*hsc_mac_res;
-	int			hsc_mac_rid;
 	struct	resource	*hsc_mif_res;
-	int			hsc_mif_rid;
 	struct	resource	*hsc_ires;
-	int			hsc_irid;
 	void			*hsc_ih;
 };
 
@@ -108,16 +95,12 @@ static device_method_t hme_sbus_methods[] = {
 	/* Can just use the suspend method here. */
 	DEVMETHOD(device_shutdown,	hme_sbus_suspend),
 
-	/* bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-
 	/* MII interface */
 	DEVMETHOD(miibus_readreg,	hme_mii_readreg),
 	DEVMETHOD(miibus_writereg,	hme_mii_writereg),
 	DEVMETHOD(miibus_statchg,	hme_mii_statchg),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t hme_sbus_driver = {
@@ -127,6 +110,7 @@ static driver_t hme_sbus_driver = {
 };
 
 DRIVER_MODULE(hme, sbus, hme_sbus_driver, hme_devclass, 0, 0);
+MODULE_DEPEND(hme, sbus, 1, 1, 1);
 MODULE_DEPEND(hme, ether, 1, 1, 1);
 
 static int
@@ -146,12 +130,14 @@ hme_sbus_probe(device_t dev)
 static int
 hme_sbus_attach(device_t dev)
 {
-	struct hme_sbus_softc *hsc = device_get_softc(dev);
-	struct hme_softc *sc = &hsc->hsc_hme;
-	u_int32_t burst;
+	struct hme_sbus_softc *hsc;
+	struct hme_softc *sc;
 	u_long start, count;
-	int error = 0;
+	uint32_t burst;
+	int i, error = 0;
 
+	hsc = device_get_softc(dev);
+	sc = &hsc->hsc_hme;
 	mtx_init(&sc->sc_lock, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
 	/*
@@ -164,9 +150,9 @@ hme_sbus_attach(device_t dev)
 	 *	bank 4: HME MIF registers
 	 *
 	 */
-	hsc->hsc_seb_rid = 0;
+	i = 0;
 	hsc->hsc_seb_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-	    &hsc->hsc_seb_rid, RF_ACTIVE);
+	    &i, RF_ACTIVE);
 	if (hsc->hsc_seb_res == NULL) {
 		device_printf(dev, "cannot map SEB registers\n");
 		error = ENXIO;
@@ -175,9 +161,9 @@ hme_sbus_attach(device_t dev)
 	sc->sc_sebt = rman_get_bustag(hsc->hsc_seb_res);
 	sc->sc_sebh = rman_get_bushandle(hsc->hsc_seb_res);
 
-	hsc->hsc_etx_rid = 1;
+	i = 1;
 	hsc->hsc_etx_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-	    &hsc->hsc_etx_rid, RF_ACTIVE);
+	    &i, RF_ACTIVE);
 	if (hsc->hsc_etx_res == NULL) {
 		device_printf(dev, "cannot map ETX registers\n");
 		error = ENXIO;
@@ -186,9 +172,9 @@ hme_sbus_attach(device_t dev)
 	sc->sc_etxt = rman_get_bustag(hsc->hsc_etx_res);
 	sc->sc_etxh = rman_get_bushandle(hsc->hsc_etx_res);
 
-	hsc->hsc_erx_rid = 2;
+	i = 2;
 	hsc->hsc_erx_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-	    &hsc->hsc_erx_rid, RF_ACTIVE);
+	    &i, RF_ACTIVE);
 	if (hsc->hsc_erx_res == NULL) {
 		device_printf(dev, "cannot map ERX registers\n");
 		error = ENXIO;
@@ -197,9 +183,9 @@ hme_sbus_attach(device_t dev)
 	sc->sc_erxt = rman_get_bustag(hsc->hsc_erx_res);
 	sc->sc_erxh = rman_get_bushandle(hsc->hsc_erx_res);
 
-	hsc->hsc_mac_rid = 3;
+	i = 3;
 	hsc->hsc_mac_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-	    &hsc->hsc_mac_rid, RF_ACTIVE);
+	    &i, RF_ACTIVE);
 	if (hsc->hsc_mac_res == NULL) {
 		device_printf(dev, "cannot map MAC registers\n");
 		error = ENXIO;
@@ -212,11 +198,11 @@ hme_sbus_attach(device_t dev)
 	 * At least on some HMEs, the MIF registers seem to be inside the MAC
 	 * range, so try to kludge around it.
 	 */
-	hsc->hsc_mif_rid = 4;
+	i = 4;
 	hsc->hsc_mif_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-	    &hsc->hsc_mif_rid, RF_ACTIVE);
+	    &i, RF_ACTIVE);
 	if (hsc->hsc_mif_res == NULL) {
-		if (bus_get_resource(dev, SYS_RES_MEMORY, hsc->hsc_mif_rid,
+		if (bus_get_resource(dev, SYS_RES_MEMORY, i,
 		    &start, &count) != 0) {
 			device_printf(dev, "cannot get MIF registers\n");
 			error = ENXIO;
@@ -238,9 +224,9 @@ hme_sbus_attach(device_t dev)
 		sc->sc_mifh = rman_get_bushandle(hsc->hsc_mif_res);
 	}
 
-	hsc->hsc_irid = 0;
-	hsc->hsc_ires = bus_alloc_resource_any(dev, SYS_RES_IRQ, 
-	    &hsc->hsc_irid, RF_SHAREABLE | RF_ACTIVE);
+	i = 0;
+	hsc->hsc_ires = bus_alloc_resource_any(dev, SYS_RES_IRQ,
+	    &i, RF_SHAREABLE | RF_ACTIVE);
 	if (hsc->hsc_ires == NULL) {
 		device_printf(dev, "could not allocate interrupt\n");
 		error = ENXIO;
@@ -260,8 +246,8 @@ hme_sbus_attach(device_t dev)
 	else
 		 sc->sc_burst = 0;
 
-	sc->sc_pci = 0;	/* XXX: should all be done in bus_dma. */
 	sc->sc_dev = dev;
+	sc->sc_flags = 0;
 
 	if ((error = hme_config(sc)) != 0) {
 		device_printf(dev, "could not be configured\n");
@@ -277,24 +263,25 @@ hme_sbus_attach(device_t dev)
 	return (0);
 
 fail_ires:
-	bus_release_resource(dev, SYS_RES_IRQ, hsc->hsc_irid, hsc->hsc_ires);
+	bus_release_resource(dev, SYS_RES_IRQ,
+	    rman_get_rid(hsc->hsc_ires), hsc->hsc_ires);
 fail_mif_res:
 	if (hsc->hsc_mif_res != NULL) {
-		bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_mif_rid,
-		    hsc->hsc_mif_res);
+		bus_release_resource(dev, SYS_RES_MEMORY,
+		    rman_get_rid(hsc->hsc_mif_res), hsc->hsc_mif_res);
 	}
 fail_mac_res:
-	bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_mac_rid,
-	    hsc->hsc_mac_res);
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    rman_get_rid(hsc->hsc_mac_res), hsc->hsc_mac_res);
 fail_erx_res:
-	bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_erx_rid,
-	    hsc->hsc_erx_res);
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    rman_get_rid(hsc->hsc_erx_res), hsc->hsc_erx_res);
 fail_etx_res:
-	bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_etx_rid,
-	    hsc->hsc_etx_res);
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    rman_get_rid(hsc->hsc_etx_res), hsc->hsc_etx_res);
 fail_seb_res:
-	bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_seb_rid,
-	    hsc->hsc_seb_res);
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    rman_get_rid(hsc->hsc_seb_res), hsc->hsc_seb_res);
 fail_mtx_res:
 	mtx_destroy(&sc->sc_lock);
 	return (error);
@@ -303,24 +290,27 @@ fail_mtx_res:
 static int
 hme_sbus_detach(device_t dev)
 {
-	struct hme_sbus_softc *hsc = device_get_softc(dev);
-	struct hme_softc *sc = &hsc->hsc_hme;
+	struct hme_sbus_softc *hsc;
+	struct hme_softc *sc;
 
+	hsc = device_get_softc(dev);
+	sc = &hsc->hsc_hme;
 	bus_teardown_intr(dev, hsc->hsc_ires, hsc->hsc_ih);
 	hme_detach(sc);
-	bus_release_resource(dev, SYS_RES_IRQ, hsc->hsc_irid, hsc->hsc_ires);
+	bus_release_resource(dev, SYS_RES_IRQ,
+	    rman_get_rid(hsc->hsc_ires), hsc->hsc_ires);
 	if (hsc->hsc_mif_res != NULL) {
-		bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_mif_rid,
-		    hsc->hsc_mif_res);
+		bus_release_resource(dev, SYS_RES_MEMORY,
+		    rman_get_rid(hsc->hsc_mif_res), hsc->hsc_mif_res);
 	}
-	bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_mac_rid,
-	    hsc->hsc_mac_res);
-	bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_erx_rid,
-	    hsc->hsc_erx_res);
-	bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_etx_rid,
-	    hsc->hsc_etx_res);
-	bus_release_resource(dev, SYS_RES_MEMORY, hsc->hsc_seb_rid,
-	    hsc->hsc_seb_res);
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    rman_get_rid(hsc->hsc_mac_res), hsc->hsc_mac_res);
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    rman_get_rid(hsc->hsc_erx_res), hsc->hsc_erx_res);
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    rman_get_rid(hsc->hsc_etx_res), hsc->hsc_etx_res);
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    rman_get_rid(hsc->hsc_seb_res), hsc->hsc_seb_res);
 	mtx_destroy(&sc->sc_lock);
 	return (0);
 }
@@ -328,19 +318,19 @@ hme_sbus_detach(device_t dev)
 static int
 hme_sbus_suspend(device_t dev)
 {
-	struct hme_sbus_softc *hsc = device_get_softc(dev);
-	struct hme_softc *sc = &hsc->hsc_hme;
+	struct hme_sbus_softc *hsc;
 
-	hme_suspend(sc);
+	hsc = device_get_softc(dev);
+	hme_suspend(&hsc->hsc_hme);
 	return (0);
 }
 
 static int
 hme_sbus_resume(device_t dev)
 {
-	struct hme_sbus_softc *hsc = device_get_softc(dev);
-	struct hme_softc *sc = &hsc->hsc_hme;
+	struct hme_sbus_softc *hsc;
 
-	hme_resume(sc);
+	hsc = device_get_softc(dev);
+	hme_resume(&hsc->hsc_hme);
 	return (0);
 }

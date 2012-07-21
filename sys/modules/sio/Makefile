@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sio/Makefile,v 1.8.2.1 2006/02/10 00:38:06 yar Exp $
+# $FreeBSD$
 
 .if ${MACHINE} == "pc98"
 .PATH: ${.CURDIR}/../../pc98/cbus
@@ -6,8 +6,8 @@
 .PATH: ${.CURDIR}/../../dev/sio
 
 KMOD=	sio
-SRCS=	bus_if.h card_if.h device_if.h isa_if.h pci_if.h \
-	opt_comconsole.h opt_compat.h opt_gdb.h opt_kdb.h opt_sio.h \
+SRCS=	bus_if.h card_if.h device_if.h isa_if.h pci_if.h serdev_if.h \
+	opt_compat.h opt_gdb.h opt_kdb.h opt_sio.h \
 	sio.c sio_pccard.c sio_pci.c sio_puc.c pccarddevs.h
 .if ${MACHINE} == "pc98"
 SRCS+=	sio_cbus.c

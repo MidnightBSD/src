@@ -1,9 +1,9 @@
-# $FreeBSD: src/sys/modules/if_stf/Makefile,v 1.3.14.1 2006/02/10 00:38:02 yar Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../net
 
 KMOD=	if_stf
-SRCS=	if_stf.c opt_inet.h opt_inet6.h opt_mac.h
+SRCS=	if_stf.c opt_inet.h opt_inet6.h
 
 .if !defined(KERNBUILDDIR)
 opt_inet.h:

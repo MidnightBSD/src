@@ -22,10 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/iicbus/iicsmb.c,v 1.14 2006/09/11 20:52:41 jhb Exp $
- *
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * I2C to SMB bridge
@@ -46,12 +46,13 @@
  */
 
 #include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/systm.h>
-#include <sys/module.h>
 #include <sys/bus.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/module.h>
+#include <sys/mutex.h>
+#include <sys/systm.h>
 #include <sys/uio.h>
-
 
 #include <dev/iicbus/iiconf.h>
 #include <dev/iicbus/iicbus.h>
@@ -74,6 +75,7 @@ struct iicsmb_softc {
 	char low;			/* low byte received first */
 	char high;			/* high byte */
 
+	struct mtx lock;
 	device_t smbus;
 };
 
@@ -82,7 +84,7 @@ static int iicsmb_attach(device_t);
 static int iicsmb_detach(device_t);
 static void iicsmb_identify(driver_t *driver, device_t parent);
 
-static void iicsmb_intr(device_t dev, int event, char *buf);
+static int iicsmb_intr(device_t dev, int event, char *buf);
 static int iicsmb_callback(device_t dev, int index, void *data);
 static int iicsmb_quick(device_t dev, u_char slave, int how);
 static int iicsmb_sendb(device_t dev, u_char slave, char byte);
@@ -104,10 +106,6 @@ static device_method_t iicsmb_methods[] = {
 	DEVMETHOD(device_attach,	iicsmb_attach),
 	DEVMETHOD(device_detach,	iicsmb_detach),
 
-	/* bus interface */
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-
 	/* iicbus interface */
 	DEVMETHOD(iicbus_intr,		iicsmb_intr),
 
@@ -123,8 +121,8 @@ static device_method_t iicsmb_methods[] = {
 	DEVMETHOD(smbus_pcall,		iicsmb_pcall),
 	DEVMETHOD(smbus_bwrite,		iicsmb_bwrite),
 	DEVMETHOD(smbus_bread,		iicsmb_bread),
-	
-	{ 0, 0 }
+
+	DEVMETHOD_END
 };
 
 static driver_t iicsmb_driver = {
@@ -138,20 +136,24 @@ static driver_t iicsmb_driver = {
 static void
 iicsmb_identify(driver_t *driver, device_t parent)
 {
-	BUS_ADD_CHILD(parent, 0, "iicsmb", -1);
+
+	if (device_find_child(parent, "iicsmb", -1) == NULL)
+		BUS_ADD_CHILD(parent, 0, "iicsmb", -1);
 }
 
 static int
 iicsmb_probe(device_t dev)
 {
 	device_set_desc(dev, "SMBus over I2C bridge");
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int
 iicsmb_attach(device_t dev)
 {
 	struct iicsmb_softc *sc = (struct iicsmb_softc *)device_get_softc(dev);
+
+	mtx_init(&sc->lock, "iicsmb", NULL, MTX_DEF);
 
 	sc->smbus = device_add_child(dev, "smbus", -1);
 
@@ -170,6 +172,7 @@ iicsmb_detach(device_t dev)
 	if (sc->smbus) {
 		device_delete_child(dev, sc->smbus);
 	}
+	mtx_destroy(&sc->lock);
 
 	return (0);
 }
@@ -179,11 +182,12 @@ iicsmb_detach(device_t dev)
  *
  * iicbus interrupt handler
  */
-static void
+static int
 iicsmb_intr(device_t dev, int event, char *buf)
 {
 	struct iicsmb_softc *sc = (struct iicsmb_softc *)device_get_softc(dev);
 
+	mtx_lock(&sc->lock);
 	switch (event) {
 	case INTR_GENERAL:
 	case INTR_START:
@@ -242,8 +246,9 @@ end:
 	default:
 		panic("%s: unknown event (%d)!", __func__, event);
 	}
+	mtx_unlock(&sc->lock);
 
-	return;
+	return (0);
 }
 
 static int
@@ -294,7 +299,7 @@ iicsmb_quick(device_t dev, u_char slave, int how)
 
 	if (!error)
 		error = iicbus_stop(parent);
-
+		
 	return (error);
 }
 

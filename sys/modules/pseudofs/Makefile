@@ -1,10 +1,9 @@
-# $FreeBSD: src/sys/modules/pseudofs/Makefile,v 1.4 2005/03/14 16:04:27 des Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../fs/pseudofs
 
 KMOD=	pseudofs
-SRCS=	opt_mac.h \
-	opt_pseudofs.h \
+SRCS=	opt_pseudofs.h \
 	vnode_if.h \
 	pseudofs.c \
 	pseudofs_fileno.c \

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/interp_forth.c,v 1.23 2003/08/25 23:30:41 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>		/* to pick up __FreeBSD_version */
 #include <string.h>

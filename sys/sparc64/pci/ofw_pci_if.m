@@ -1,5 +1,6 @@
 #-
 # Copyright (c) 2001, 2003 by Thomas Moestl <tmm@FreeBSD.org>
+# Copyright (c) 2011 Marius Strobl <marius@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,67 +23,26 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/sparc64/pci/ofw_pci_if.m,v 1.8 2007/06/18 21:49:42 marius Exp $
+# $FreeBSD$
 
 #include <sys/bus.h>
-
-#include <dev/ofw/openfirm.h>
-
-#include <sparc64/pci/ofw_pci.h>
 
 INTERFACE ofw_pci;
 
 CODE {
-	static ofw_pci_intr_pending_t ofw_pci_default_intr_pending;
-	static ofw_pci_alloc_busno_t ofw_pci_default_alloc_busno;
-	static ofw_pci_adjust_busrange_t ofw_pci_default_adjust_busrange;
-
-	static int
-	ofw_pci_default_intr_pending(device_t dev, ofw_pci_intr_t intr)
-	{
-
-		if (device_get_parent(dev) != NULL)
-			return (OFW_PCI_INTR_PENDING(device_get_parent(dev),
-			    intr));
-		return (0);
-	}
-
-	static int
-	ofw_pci_default_alloc_busno(device_t dev)
-	{
-
-		if (device_get_parent(dev) != NULL)
-			return (OFW_PCI_ALLOC_BUSNO(device_get_parent(dev)));
-		return (-1);
-	}
+	static ofw_pci_setup_device_t ofw_pci_default_setup_device;
 
 	static void
-	ofw_pci_default_adjust_busrange(device_t dev, u_int busno)
+	ofw_pci_default_setup_device(device_t dev, device_t child)
 	{
 
 		if (device_get_parent(dev) != NULL)
-			return (OFW_PCI_ADJUST_BUSRANGE(device_get_parent(dev),
-			    busno));
+			OFW_PCI_SETUP_DEVICE(device_get_parent(dev), child);
 	}
 };
 
-# Return whether an interrupt request is pending for the INO intr.
-METHOD int intr_pending {
+# Setup a device further upward in the tree.
+METHOD void setup_device {
 	device_t dev;
-	ofw_pci_intr_t intr;
-} DEFAULT ofw_pci_default_intr_pending;
-
-# Allocate a bus number for reenumerating a PCI bus. A return value of -1
-# means that reenumeration is generally not supported, otherwise all PCI
-# busses must be reenumerated using bus numbers obtained via this method.
-METHOD int alloc_busno {
-	device_t dev;
-} DEFAULT ofw_pci_default_alloc_busno;
-
-# Make sure that all PCI bridges up in the hierarchy contain this bus in
-# their subordinate bus range. This is required when reenumerating the PCI
-# buses.
-METHOD void adjust_busrange {
-	device_t dev;
-	u_int subbus;
-} DEFAULT ofw_pci_default_adjust_busrange;
+	device_t child;
+} DEFAULT ofw_pci_default_setup_device;

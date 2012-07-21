@@ -1,15 +1,19 @@
-# $FreeBSD: src/sys/modules/ip_mroute_mod/Makefile,v 1.12.8.1 2006/02/10 00:38:03 yar Exp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../netinet
+.include <bsd.own.mk>
+
+.PATH: ${.CURDIR}/../../netinet ${.CURDIR}/../../netinet6
 
 KMOD=	ip_mroute
-SRCS=	ip_mroute.c opt_mac.h opt_mrouting.h
 
-CFLAGS+= -DMROUTE_KLD
+SRCS=	ip_mroute.c
+SRCS+=	opt_inet.h opt_mrouting.h
 
 .if !defined(KERNBUILDDIR)
+opt_inet.h:
+	echo "#define INET 1" > ${.TARGET}
 opt_mrouting.h:
-	echo "#define	MROUTING 1" > ${.TARGET}
+	echo "#define MROUTING 1" > ${.TARGET}
 .endif
 
 .include <bsd.kmod.mk>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptmv/hptproc.c,v 1.7 2005/12/04 02:12:41 ru Exp $
+ * $FreeBSD$
  */
 /*
  * hptproc.c  sysctl support
@@ -51,8 +51,8 @@ int hpt_rescan_all(void);
 static char hptproc_buffer[256];
 extern char DRIVER_VERSION[];
 
-#define FORMAL_HANDLER_ARGS struct sysctl_oid *oidp, void *arg1, int arg2, \
-	struct sysctl_req *req
+#define FORMAL_HANDLER_ARGS struct sysctl_oid *oidp, void *arg1,	\
+	intptr_t arg2, struct sysctl_req *req
 #define REAL_HANDLER_ARGS oidp, arg1, arg2, req
 typedef struct sysctl_req HPT_GET_INFO;
 
@@ -278,7 +278,8 @@ hpt_set_info(int length)
 		}
 #ifdef SUPPORT_IOCTL	
 		piop = (PHPT_IOCTL_PARAM)buffer;
-		if (piop->Magic == HPT_IOCTL_MAGIC) 	{
+		if (piop->Magic == HPT_IOCTL_MAGIC || 
+			piop->Magic == HPT_IOCTL_MAGIC32) 	{
 			KdPrintE(("ioctl=%d in=%p len=%d out=%p len=%d\n", 
 				piop->dwIoControlCode,
         			piop->lpInBuffer,
@@ -450,14 +451,14 @@ hpt_copy_array_info(HPT_GET_INFO *pinfo, int nld, PVDevice pArray)
 			
 			if (pTmpArray->u.array.rf_rebuilding) {
 #ifdef DEBUG
-				sprintf(buf, "Rebuilding %dMB", (pTmpArray->u.array.RebuildSectors>>11));
+				sprintf(buf, "Rebuilding %lldMB", (pTmpArray->u.array.RebuildSectors>>11));
 #else 
-				sprintf(buf, "Rebuilding %d%%", (pTmpArray->u.array.RebuildSectors>>11)*100/((pTmpArray->VDeviceCapacity/(pTmpArray->u.array.bArnMember-1))>>11));
+				sprintf(buf, "Rebuilding %d%%", (UINT)((pTmpArray->u.array.RebuildSectors>>11)*100/((pTmpArray->VDeviceCapacity/(pTmpArray->u.array.bArnMember-1))>>11)));
 #endif
 				sStatus = buf;
 			}
 			else if (pTmpArray->u.array.rf_verifying) {
-				sprintf(buf, "Verifying %d%%", (pTmpArray->u.array.RebuildSectors>>11)*100/((pTmpArray->VDeviceCapacity/(pTmpArray->u.array.bArnMember-1))>>11));
+				sprintf(buf, "Verifying %d%%", (UINT)((pTmpArray->u.array.RebuildSectors>>11)*100/((pTmpArray->VDeviceCapacity/(pTmpArray->u.array.bArnMember-1))>>11)));
 				sStatus = buf;
 			}
 			else if (pTmpArray->u.array.rf_need_rebuild)
@@ -472,7 +473,7 @@ hpt_copy_array_info(HPT_GET_INFO *pinfo, int nld, PVDevice pArray)
 	}
 out:	
 	if (!sStatus) sStatus = "Normal";
-	hpt_copy_info(pinfo, "%2d  %11s  %-20s  %5dMB  %-16s", nld, sType, pArray->u.array.ArrayName, pArray->VDeviceCapacity>>11, sStatus);
+	hpt_copy_info(pinfo, "%2d  %11s  %-20s  %5lldMB  %-16s", nld, sType, pArray->u.array.ArrayName, pArray->VDeviceCapacity>>11, sStatus);
 }
 #endif
 

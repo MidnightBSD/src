@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_var.h,v 1.2 2005/02/21 17:11:09 mlaier Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: altq_var.h,v 1.16 2003/10/03 05:05:15 kjc Exp $	*/
 
 /*
@@ -141,11 +141,7 @@ extern u_int64_t read_machclk(void);
  * misc stuff for compatibility
  */
 /* ioctl cmd type */
-#if defined(__FreeBSD__) && (__FreeBSD__ < 3)
-typedef int ioctlcmd_t;
-#else
 typedef u_long ioctlcmd_t;
-#endif
 
 /*
  * queue macros:

@@ -25,7 +25,7 @@
  *
  * Written by: yen_cw@myson.com.tw  available at: http://www.myson.com.tw/
  *
- * $FreeBSD: src/sys/dev/my/if_myreg.h,v 1.6 2006/09/15 15:16:12 glebius Exp $
+ * $FreeBSD$
  *
  * Myson MTD80x register definitions.
  *
@@ -371,8 +371,10 @@ struct my_softc {
         struct my_chain_data    my_cdata;
 	device_t		my_miibus;
 /* Add by Surfer 2001/12/2 */
-	struct mtx		my_mtx;	
-
+	struct mtx		my_mtx;
+	struct callout		my_autoneg_timer;
+	struct callout		my_watchdog;
+	int			my_timer;
 };
 
 /* Add by Surfer 2001/12/2 */

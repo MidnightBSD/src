@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/unionfs/Makefile,v 1.12 2002/01/11 15:49:01 ru Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../fs/unionfs
 

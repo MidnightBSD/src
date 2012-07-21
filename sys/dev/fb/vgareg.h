@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/fb/vgareg.h,v 1.8 2005/02/28 21:06:14 iedowse Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_FB_VGAREG_H_
@@ -61,7 +61,7 @@
 #define GDCREG		(IO_VGA + 0x0F)		/* graph data controller data */
 
 #define VGA_DRIVER_NAME		"vga"
-#define VGA_UNIT(dev)		minor(dev)
+#define VGA_UNIT(dev)		dev2unit(dev)
 #define VGA_MKMINOR(unit)	(unit)
 
 #ifdef _KERNEL
@@ -70,6 +70,7 @@ struct video_adapter;
 typedef struct vga_softc {
 	struct video_adapter	*adp;
 	void			*state_buf;
+	void			*pal_buf;
 #ifdef FB_INSTALL_CDEV
 	genfb_softc_t		gensc;
 #endif
@@ -87,8 +88,8 @@ int		vga_read(struct cdev *dev, vga_softc_t *sc, struct uio *uio, int flag);
 int		vga_write(struct cdev *dev, vga_softc_t *sc, struct uio *uio, int flag);
 int		vga_ioctl(struct cdev *dev, vga_softc_t *sc, u_long cmd, caddr_t arg,
 			  int flag, struct thread *td);
-int		vga_mmap(struct cdev *dev, vga_softc_t *sc, vm_offset_t offset,
-			 vm_offset_t *paddr, int prot);
+int		vga_mmap(struct cdev *dev, vga_softc_t *sc, vm_ooffset_t offset,
+			 vm_offset_t *paddr, int prot, vm_memattr_t *memattr);
 #endif
 
 extern int	(*vga_sub_configure)(int flags);

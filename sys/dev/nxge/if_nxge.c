@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/nxge/if_nxge.c,v 1.3.2.1 2007/11/02 00:52:32 rwatson Exp $
+ * $FreeBSD$
  */
 
 #include <dev/nxge/if_nxge.h>
@@ -1190,7 +1190,7 @@ xge_interface_setup(device_t dev)
 	ifnetp->if_start    = xge_send;
 
 	/* TODO: Check and assign optimal value */
-	ifnetp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	ifnetp->if_snd.ifq_maxlen = ifqmaxlen;
 
 	ifnetp->if_capabilities = IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU |
 	    IFCAP_HWCSUM;
@@ -1272,7 +1272,7 @@ xge_callback_event(xge_queue_item_t *item)
 	lldev  = xge_hal_device_private(hldev);
 	ifnetp = lldev->ifnetp;
 
-	switch(item->event_type) {
+	switch((int)item->event_type) {
 	    case XGE_LL_EVENT_TRY_XMIT_AGAIN:
 	        if(lldev->initialized) {
 	            if(xge_hal_channel_dtr_count(lldev->fifo_channel[0]) > 0) {
@@ -2238,7 +2238,7 @@ xge_setmulti(xge_lldev_t *lldev)
 	}
 
 	/* Updating address list */
-	IF_ADDR_LOCK(ifnetp);
+	if_maddr_rlock(ifnetp);
 	index = 0;
 	TAILQ_FOREACH(ifma, &ifnetp->if_multiaddrs, ifma_link) {
 	    if(ifma->ifma_addr->sa_family != AF_LINK) {
@@ -2247,7 +2247,7 @@ xge_setmulti(xge_lldev_t *lldev)
 	    lladdr = LLADDR((struct sockaddr_dl *)ifma->ifma_addr);
 	    index += 1;
 	}
-	IF_ADDR_UNLOCK(ifnetp);
+	if_maddr_runlock(ifnetp);
 
 	if((!lldev->all_multicast) && (index)) {
 	    lldev->macaddr_count = (index + 1);
@@ -2263,7 +2263,7 @@ xge_setmulti(xge_lldev_t *lldev)
 	}
 
 	/* Add new addresses */
-	IF_ADDR_LOCK(ifnetp);
+	if_maddr_rlock(ifnetp);
 	index = 0;
 	TAILQ_FOREACH(ifma, &ifnetp->if_multiaddrs, ifma_link) {
 	    if(ifma->ifma_addr->sa_family != AF_LINK) {
@@ -2273,7 +2273,7 @@ xge_setmulti(xge_lldev_t *lldev)
 	    xge_hal_device_macaddr_set(hldev, (offset + index), lladdr);
 	    index += 1;
 	}
-	IF_ADDR_UNLOCK(ifnetp);
+	if_maddr_runlock(ifnetp);
 
 _exit:
 	return;
@@ -2943,10 +2943,8 @@ xge_flush_txds(xge_hal_channel_h channelh)
 	xge_lldev_t *lldev = xge_hal_channel_userdata(channelh);
 	xge_hal_dtr_h tx_dtr;
 	xge_tx_priv_t *tx_priv;
-	struct ifnet *ifnetp = lldev->ifnetp;
 	u8 t_code;
 
-	ifnetp->if_timer = 0;
 	while(xge_hal_fifo_dtr_next_completed(channelh, &tx_dtr, &t_code)
 	    == XGE_HAL_OK) {
 	    XGE_DRV_STATS(tx_desc_compl);
@@ -3006,7 +3004,7 @@ xge_send_locked(struct ifnet *ifnetp, int qindex)
 
 	/* If device is not initialized, return */
 	if((!lldev->initialized) || (!(ifnetp->if_drv_flags & IFF_DRV_RUNNING)))
-	    goto _exit;
+	    return;
 
 	XGE_DRV_STATS(tx_calls);
 
@@ -3016,7 +3014,10 @@ xge_send_locked(struct ifnet *ifnetp, int qindex)
 	 */
 	for(;;) {
 	    IF_DEQUEUE(&ifnetp->if_snd, m_head);
-	    if(m_head == NULL) break;
+	    if (m_head == NULL) {
+		ifnetp->if_drv_flags &= ~(IFF_DRV_OACTIVE);
+		return;
+	    }
 
 	    for(m_buf = m_head; m_buf != NULL; m_buf = m_buf->m_next) {
 	        if(m_buf->m_len) count += 1;
@@ -3033,7 +3034,7 @@ xge_send_locked(struct ifnet *ifnetp, int qindex)
 	    if(status != XGE_HAL_OK) {
 	        XGE_DRV_STATS(tx_no_txd);
 	        xge_flush_txds(channelh);
-	        goto _exit1;
+		break;
 	    }
 
 	    vlan_tag =
@@ -3054,7 +3055,7 @@ xge_send_locked(struct ifnet *ifnetp, int qindex)
 	        ll_tx_priv->dma_map, m_head, segs, &nsegs, BUS_DMA_NOWAIT)) {
 	        xge_trace(XGE_TRACE, "DMA map load failed");
 	        XGE_DRV_STATS(tx_map_fail);
-	        goto _exit1;
+		break;
 	    }
 
 	    if(lldev->driver_stats.tx_max_frags < nsegs)
@@ -3093,9 +3094,7 @@ xge_send_locked(struct ifnet *ifnetp, int qindex)
 	     * listener so that we can use tools like tcpdump */
 	    ETHER_BPF_MTAP(ifnetp, m_head);
 	}
-	ifnetp->if_drv_flags &= ~(IFF_DRV_OACTIVE);
-	goto _exit;
-_exit1:
+
 	/* Prepend the packet back to queue */
 	IF_PREPEND(&ifnetp->if_snd, m_head);
 	ifnetp->if_drv_flags |= IFF_DRV_OACTIVE;
@@ -3103,9 +3102,6 @@ _exit1:
 	xge_queue_produce_context(xge_hal_device_queue(lldev->devh),
 	    XGE_LL_EVENT_TRY_XMIT_AGAIN, lldev->devh);
 	XGE_DRV_STATS(tx_again);
-
-_exit:
-	ifnetp->if_timer = 15;
 }
 
 /**
@@ -3268,8 +3264,6 @@ xge_tx_compl(xge_hal_channel_h channelh,
 	mtx_lock(&lldev->mtx_tx[qindex]);
 
 	XGE_DRV_STATS(tx_completions);
-
-	ifnetp->if_timer = 0;
 
 	/*
 	 * For each completed descriptor: Get private structure, free buffer,

@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fe/if_fe_cbus.c,v 1.13 2005/06/11 16:30:43 brooks Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,7 +33,6 @@ __FBSDID("$FreeBSD: src/sys/dev/fe/if_fe_cbus.c,v 1.13 2005/06/11 16:30:43 brook
 #include <sys/bus.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
-#include <machine/resource.h>
 
 #include <net/ethernet.h>
 #include <net/if.h>
@@ -269,8 +268,6 @@ fe98_alloc_port(device_t dev, int type)
 	sc->type = type;
 	sc->port_used = size;
 	sc->port_res = res;
-	sc->iot = rman_get_bustag(res);
-	sc->ioh = rman_get_bushandle(res);
 	return (0);
 }
 

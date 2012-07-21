@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hwpmc/hwpmc_ppro.h,v 1.1 2005/06/09 19:45:07 jkoshy Exp $
+ * $FreeBSD$
  */
 
 /* Machine dependent interfaces */
@@ -33,7 +33,7 @@
 
 /* Intel PPro, Celeron, P-II, P-III, Pentium-M PMCS */
 
-#define	P6_NPMCS	3		/* 1 TSC + 2 PMCs */
+#define	P6_NPMCS	2		/* 2 PMCs */
 
 #define	P6_EVSEL_CMASK_MASK		0xFF000000
 #define	P6_EVSEL_TO_CMASK(C)		(((C) & 0xFF) << 24)
@@ -77,7 +77,8 @@ struct pmc_md_ppro_pmc {
  * Prototypes
  */
 
-int	pmc_initialize_p6(struct pmc_mdep *);		/* Pentium Pro PMCs */
+int	pmc_p6_initialize(struct pmc_mdep *_md, int _ncpus);
+void	pmc_p6_finalize(struct pmc_mdep *_md);
 
 #endif /* _KERNEL */
 #endif /* _DEV_HWPMC_PPRO_H_ */

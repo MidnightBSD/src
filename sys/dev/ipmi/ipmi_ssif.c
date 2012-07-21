@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ipmi/ipmi_ssif.c,v 1.2 2007/02/27 17:23:28 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -348,14 +348,14 @@ ssif_loop(void *arg)
 		IPMI_LOCK(sc);
 	}
 	IPMI_UNLOCK(sc);
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 static int
 ssif_startup(struct ipmi_softc *sc)
 {
 
-	return (kthread_create(ssif_loop, sc, &sc->ipmi_kthread, 0, 0,
+	return (kproc_create(ssif_loop, sc, &sc->ipmi_kthread, 0, 0,
 	    "%s: ssif", device_get_nameunit(sc->ipmi_dev)));
 }
 

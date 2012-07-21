@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.	
  *
- * $FreeBSD: src/sys/dev/trm/trm.h,v 1.5 2005/01/06 01:43:25 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef trm_H
@@ -94,7 +94,8 @@ typedef  struct  _SGentry {
 #define TRM_MAX_CMD_PER_LUN    	32
 #define TRM_MAX_SRB_CNT	       	256
 #define TRM_MAX_START_JOB       256
-#define TRM_NSEG	        (btoc(MAXPHYS) + 1)
+#define TRM_MAXPHYS		(128 * 1024)
+#define TRM_NSEG	        (btoc(TRM_MAXPHYS) + 1)
 #define TRM_MAXTRANSFER_SIZE    0xFFFFFF /* restricted by 24 bit counter */
 #define PAGELEN 	       	4096
 

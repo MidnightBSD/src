@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/nxge/xgehal/xgehal-ring-fp.c,v 1.1.2.1 2007/11/02 00:52:33 rwatson Exp $
+ * $FreeBSD$
  */
 
 #ifdef XGE_DEBUG_FP
@@ -801,7 +801,7 @@ xge_hal_ring_dtr_free(xge_hal_channel_h channelh, xge_hal_dtr_h dtrh)
  * xge_hal_ring_is_next_dtr_completed - Check if the next dtr is completed
  * @channelh: Channel handle.
  *
- * Checks if the the _next_ completed descriptor is in host memory
+ * Checks if the _next_ completed descriptor is in host memory
  *
  * Returns: XGE_HAL_OK - success.
  * XGE_HAL_INF_NO_MORE_COMPLETED_DESCRIPTORS - No completed descriptors

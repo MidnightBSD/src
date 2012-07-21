@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/rp/rpreg.h,v 1.8 2006/11/20 12:59:27 marius Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -360,6 +360,10 @@ struct CONTROLLER_str
 	int		NumAiop;
 	int		AiopID[AIOP_CTL_SIZE];
 	int		AiopNumChan[AIOP_CTL_SIZE];
+
+        struct mtx	hwmtx;     /* Spinlock protecting hardware. */
+	int		hwmtx_init;
+	int		free;
 
 	/* Device and resource management */
 	device_t		dev;		/* device */
@@ -1005,6 +1009,18 @@ void sDisInterrupts(CHANNEL_T *ChP,Word_t Flags);
 int rp_attachcommon(CONTROLLER_T *ctlp, int num_aiops, int num_ports);
 void rp_releaseresource(CONTROLLER_t *ctlp);
 void rp_untimeout(void);
+static __inline void
+rp_lock(CONTROLLER_T *CtlP)
+{
+        if (CtlP->hwmtx_init != 0)
+                mtx_lock_spin(&CtlP->hwmtx);
+}
+static __inline void
+rp_unlock(CONTROLLER_T *CtlP)
+{
+        if (CtlP->hwmtx_init != 0)
+                mtx_unlock_spin(&CtlP->hwmtx);
+}
 
 #ifndef ROCKET_C
 extern Byte_t R[RDATASIZE];

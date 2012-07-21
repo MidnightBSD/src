@@ -9,7 +9,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY SASCHA SCHUMANN ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/pcfclock.c,v 1.20 2005/01/06 01:43:06 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pcfclock.h"
 
@@ -52,15 +52,9 @@ __FBSDID("$FreeBSD: src/sys/dev/ppbus/pcfclock.c,v 1.20 2005/01/06 01:43:06 imp 
 #define PCFCLOCK_NAME "pcfclock"
 
 struct pcfclock_data {
-	int	count;
+	device_t dev;
+	struct cdev *cdev;
 };
-
-#define DEVTOSOFTC(dev) \
-	((struct pcfclock_data *)device_get_softc(dev))
-#define UNITOSOFTC(unit) \
-	((struct pcfclock_data *)devclass_get_softc(pcfclock_devclass, (unit)))
-#define UNITODEVICE(unit) \
-	(devclass_get_device(pcfclock_devclass, (unit)))
 
 static devclass_t pcfclock_devclass;
 
@@ -70,7 +64,6 @@ static	d_read_t		pcfclock_read;
 
 static struct cdevsw pcfclock_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
 	.d_open =	pcfclock_open,
 	.d_close =	pcfclock_close,
 	.d_read =	pcfclock_read,
@@ -110,7 +103,7 @@ static struct cdevsw pcfclock_cdevsw = {
 	NR(buf,  2) <= 59)
 
 #define PCFCLOCK_BATTERY_STATUS_LOW(buf) (buf[8] & 4)
-	 
+
 #define PCFCLOCK_CMD_TIME 0		/* send current time */
 #define PCFCLOCK_CMD_COPY 7 	/* copy received signal to PC */
 
@@ -120,7 +113,7 @@ pcfclock_identify(driver_t *driver, device_t parent)
 
 	device_t dev;
 
-	dev = device_find_child(parent, PCFCLOCK_NAME, 0);
+	dev = device_find_child(parent, PCFCLOCK_NAME, -1);
 	if (!dev)
 		BUS_ADD_CHILD(parent, 0, PCFCLOCK_NAME, -1);
 }
@@ -128,60 +121,61 @@ pcfclock_identify(driver_t *driver, device_t parent)
 static int
 pcfclock_probe(device_t dev)
 {
-	struct pcfclock_data *sc;
 
 	device_set_desc(dev, "PCF-1.0");
-
-	sc = DEVTOSOFTC(dev);
-	
 	return (0);
 }
 
 static int
 pcfclock_attach(device_t dev)
 {
+	struct pcfclock_data *sc = device_get_softc(dev);
 	int unit;
-	
+
 	unit = device_get_unit(dev);
 
-	make_dev(&pcfclock_cdevsw, unit,
+	sc->dev = dev;
+	sc->cdev = make_dev(&pcfclock_cdevsw, unit,
 			UID_ROOT, GID_WHEEL, 0400, PCFCLOCK_NAME "%d", unit);
+	if (sc->cdev == NULL) {
+		device_printf(dev, "Failed to create character device\n");
+		return (ENXIO);
+	}
+	sc->cdev->si_drv1 = sc;
 
 	return (0);
 }
 
-static int 
+static int
 pcfclock_open(struct cdev *dev, int flag, int fms, struct thread *td)
 {
-	u_int unit = minor(dev);
-	struct pcfclock_data *sc = UNITOSOFTC(unit);
-	device_t pcfclockdev = UNITODEVICE(unit);
-	device_t ppbus = device_get_parent(pcfclockdev);
+	struct pcfclock_data *sc = dev->si_drv1;
+	device_t pcfclockdev;
+	device_t ppbus;
 	int res;
-	
+
 	if (!sc)
 		return (ENXIO);
+	pcfclockdev = sc->dev;
+	ppbus = device_get_parent(pcfclockdev);
 
-	if ((res = ppb_request_bus(ppbus, pcfclockdev,
-		(flag & O_NONBLOCK) ? PPB_DONTWAIT : PPB_WAIT)))
-		return (res);
-
-	sc->count++;
-	
-	return (0);
+	ppb_lock(ppbus);
+	res = ppb_request_bus(ppbus, pcfclockdev,
+	    (flag & O_NONBLOCK) ? PPB_DONTWAIT : PPB_WAIT);
+	ppb_unlock(ppbus);
+	return (res);
 }
 
 static int
 pcfclock_close(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
-	u_int unit = minor(dev);
-	struct pcfclock_data *sc = UNITOSOFTC(unit);
-	device_t pcfclockdev = UNITODEVICE(unit);
+	struct pcfclock_data *sc = dev->si_drv1;
+	device_t pcfclockdev = sc->dev;
 	device_t ppbus = device_get_parent(pcfclockdev);
 
-	sc->count--;
-	if (sc->count == 0)
-		ppb_release_bus(ppbus, pcfclockdev);
+	ppb_lock(ppbus);
+	ppb_release_bus(ppbus, pcfclockdev);
+	ppb_unlock(ppbus);
 
 	return (0);
 }
@@ -189,12 +183,12 @@ pcfclock_close(struct cdev *dev, int flags, int fmt, struct thread *td)
 static void
 pcfclock_write_cmd(struct cdev *dev, unsigned char command)
 {
-	u_int unit = minor(dev);
-	device_t ppidev = UNITODEVICE(unit);
-        device_t ppbus = device_get_parent(ppidev);
+	struct pcfclock_data *sc = dev->si_drv1;
+	device_t pcfclockdev = sc->dev;
+	device_t ppbus = device_get_parent(pcfclockdev);
 	unsigned char ctr = 14;
 	char i;
-	
+
 	for (i = 0; i <= 7; i++) {
 		ppb_wdtr(ppbus, i);
 		AUTOFEED_CLOCK(i & 1 ? AFC_HI : AFC_LO);
@@ -207,9 +201,9 @@ pcfclock_write_cmd(struct cdev *dev, unsigned char command)
 }
 
 static void
-pcfclock_display_data(struct cdev *dev, char buf[18]) 
+pcfclock_display_data(struct cdev *dev, char buf[18])
 {
-	u_int unit = minor(dev);
+	struct pcfclock_data *sc = dev->si_drv1;
 #ifdef PCFCLOCK_VERBOSE
 	int year;
 
@@ -217,44 +211,42 @@ pcfclock_display_data(struct cdev *dev, char buf[18])
 	if (year < 70)
 		year += 100;
 
-	printf(PCFCLOCK_NAME "%d: %02d.%02d.%4d %02d:%02d:%02d, "
+	device_printf(sc->dev, "%02d.%02d.%4d %02d:%02d:%02d, "
 			"battery status: %s\n",
-			unit,
 			NR(buf, 10), NR(buf, 12), 1900 + year,
 			NR(buf, 6), NR(buf, 4), NR(buf, 2),
 			PCFCLOCK_BATTERY_STATUS_LOW(buf) ? "LOW" : "ok");
 #else
 	if (PCFCLOCK_BATTERY_STATUS_LOW(buf))
-		printf(PCFCLOCK_NAME "%d: BATTERY STATUS LOW ON\n",
-				unit);
+		device_printf(sc->dev, "BATTERY STATUS LOW ON\n");
 #endif
 }
 
-static int 
+static int
 pcfclock_read_data(struct cdev *dev, char *buf, ssize_t bits)
 {
-	u_int unit = minor(dev);
-	device_t ppidev = UNITODEVICE(unit);
-        device_t ppbus = device_get_parent(ppidev);
+	struct pcfclock_data *sc = dev->si_drv1;
+	device_t pcfclockdev = sc->dev;
+	device_t ppbus = device_get_parent(pcfclockdev);
 	int i;
 	char waitfor;
 	int offset;
 
 	/* one byte per four bits */
 	bzero(buf, ((bits + 3) >> 2) + 1);
-	
+
 	waitfor = 100;
 	for (i = 0; i <= bits; i++) {
 		/* wait for clock, maximum (waitfor*100) usec */
-		while(!CLOCK_OK && --waitfor > 0)
+		while (!CLOCK_OK && --waitfor > 0)
 			DELAY(100);
 
 		/* timed out? */
-		if (!waitfor) 
+		if (!waitfor)
 			return (EIO);
-		
+
 		waitfor = 100; /* reload */
-		
+
 		/* give it some time */
 		DELAY(500);
 
@@ -269,12 +261,12 @@ pcfclock_read_data(struct cdev *dev, char *buf, ssize_t bits)
 	return (0);
 }
 
-static int 
-pcfclock_read_dev(struct cdev *dev, char *buf, int maxretries) 
+static int
+pcfclock_read_dev(struct cdev *dev, char *buf, int maxretries)
 {
-	u_int unit = minor(dev);
-	device_t ppidev = UNITODEVICE(unit);
-        device_t ppbus = device_get_parent(ppidev);
+	struct pcfclock_data *sc = dev->si_drv1;
+	device_t pcfclockdev = sc->dev;
+	device_t ppbus = device_get_parent(pcfclockdev);
 	int error = 0;
 
 	ppb_set_mode(ppbus, PPB_COMPATIBLE);
@@ -283,7 +275,7 @@ pcfclock_read_dev(struct cdev *dev, char *buf, int maxretries)
 		pcfclock_write_cmd(dev, PCFCLOCK_CMD_TIME);
 		if (pcfclock_read_data(dev, buf, 68))
 			continue;
-			
+
 		if (!PCFCLOCK_CORRECT_SYNC(buf))
 			continue;
 
@@ -295,30 +287,34 @@ pcfclock_read_dev(struct cdev *dev, char *buf, int maxretries)
 
 	if (!maxretries)
 		error = EIO;
-	
+
 	return (error);
 }
 
 static int
 pcfclock_read(struct cdev *dev, struct uio *uio, int ioflag)
 {
-	u_int unit = minor(dev);
+	struct pcfclock_data *sc = dev->si_drv1;
+	device_t ppbus;
 	char buf[18];
 	int error = 0;
 
 	if (uio->uio_resid < 18)
 		return (ERANGE);
 
+	ppbus = device_get_parent(sc->dev);
+	ppb_lock(ppbus);
 	error = pcfclock_read_dev(dev, buf, PCFCLOCK_MAX_RETRIES);
-	
+	ppb_unlock(ppbus);
+
 	if (error) {
-		printf(PCFCLOCK_NAME "%d: no PCF found\n", unit);
+		device_printf(sc->dev, "no PCF found\n");
 	} else {
 		pcfclock_display_data(dev, buf);
-		
+
 		uiomove(buf, 18, uio);
 	}
-	
+
 	return (error);
 }
 

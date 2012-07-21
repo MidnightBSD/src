@@ -22,17 +22,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/hptrr/hptrr_osm_bsd.c,v 1.1.2.1.2.2 2008/02/20 04:35:24 kensmith Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
 #include <dev/hptrr/hptrr_config.h>
-/* $Id: hptrr_osm_bsd.c,v 1.1.1.1 2008-11-26 18:58:59 laffer1 Exp $
+/* $Id: hptrr_osm_bsd.c,v 1.1.1.2 2012-07-21 15:16:51 laffer1 Exp $
  *
  * HighPoint RAID Driver for FreeBSD
  * Copyright (C) 2005 HighPoint Technologies, Inc. All Rights Reserved.
  */
 #include <dev/hptrr/os_bsd.h>
 #include <dev/hptrr/hptintf.h>
+
+static int attach_generic = 0;
+TUNABLE_INT("hw.hptrr.attach_generic", &attach_generic);
 
 static int hpt_probe(device_t dev)
 {
@@ -41,6 +46,9 @@ static int hpt_probe(device_t dev)
 	int i;
 	PHBA hba;
 
+	/* Some of supported chips are used not only by HPT. */
+	if (pci_get_vendor(dev) != 0x1103 && !attach_generic)
+		return (ENXIO);
 	for (him = him_list; him; him = him->next) {
 		for (i=0; him->get_supported_device_id(i, &pci_id); i++) {
 			if ((pci_get_vendor(dev) == pci_id.vid) &&
@@ -205,7 +213,7 @@ static void hpt_free_mem(PVBUS_EXT vbus_ext)
 	BUS_ADDRESS bus;
 
 	for (f=vbus_ext->freelist_head; f; f=f->next) {
-#ifdef DBG
+#if DBG
 		if (f->count!=f->reserved_count) {
 			KdPrint(("memory leak for freelist %s (%d/%d)", f->tag, f->count, f->reserved_count));
 		}
@@ -222,7 +230,7 @@ static void hpt_free_mem(PVBUS_EXT vbus_ext)
 
 	for (f=vbus_ext->freelist_dma_head; f; f=f->next) {
 		int order, size;
-#ifdef DBG
+#if DBG
 		if (f->count!=f->reserved_count) {
 			KdPrint(("memory leak for dma freelist %s (%d/%d)", f->tag, f->count, f->reserved_count));
 		}
@@ -262,7 +270,7 @@ static void hpt_flush_done(PCOMMAND pCmd)
 {
 	PVDEV vd = pCmd->target;
 
-	if (mIsArray(vd->Class->type) && vd->u.array.transform && vd!=vd->u.array.transform->target) {
+	if (mIsArray(vd->type) && vd->u.array.transform && vd!=vd->u.array.transform->target) {
 		vd = vd->u.array.transform->target;
 		HPT_ASSERT(vd);
 		pCmd->target = vd;
@@ -288,7 +296,7 @@ static int hpt_flush_vdev(PVBUS_EXT vbus_ext, PVDEV vd)
 
 	hpt_lock_vbus(vbus_ext);
 
-	if (mIsArray(vd->Class->type) && vd->u.array.transform)
+	if (mIsArray(vd->type) && vd->u.array.transform)
 		count = MAX(vd->u.array.transform->source->cmds_per_request,
 					vd->u.array.transform->target->cmds_per_request);
 	else
@@ -789,10 +797,14 @@ static void hpt_action(struct cam_sim *sim, union ccb *ccb)
 		break;
 
 	case XPT_CALC_GEOMETRY:
+#if __FreeBSD_version >= 500000
+		cam_calc_geometry(&ccb->ccg, 1);
+#else
 		ccb->ccg.heads = 255;
 		ccb->ccg.secs_per_track = 63;
 		ccb->ccg.cylinders = ccb->ccg.volume_size / (ccb->ccg.heads * ccb->ccg.secs_per_track);
 		ccb->ccb_h.status = CAM_REQ_CMP;
+#endif
 		break;
 
 	case XPT_PATH_INQ:
@@ -814,6 +826,10 @@ static void hpt_action(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "HPT   ", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		cpi->transport = XPORT_SPI;
+		cpi->transport_version = 2;
+		cpi->protocol = PROTO_SCSI;
+		cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		break;
 	}
@@ -979,7 +995,6 @@ static void hpt_stop_tasks(PVBUS_EXT vbus_ext)
 static	d_open_t	hpt_open;
 static	d_close_t	hpt_close;
 static	d_ioctl_t	hpt_ioctl;
-static	void		hpt_bus_scan_cb(struct cam_periph *periph, union ccb *ccb);
 static  int 		hpt_rescan_bus(void);
 
 static struct cdevsw hpt_cdevsw = {
@@ -1014,9 +1029,6 @@ static void hpt_final_init(void *dummy)
 	PVBUS vbus;
 	PHBA hba;
 
-#ifdef SUPPORT_ALL
-/*	ldm_fix_him() */
-#endif
 	/* Clear the config hook */
 	config_intrhook_disestablish(&hpt_ich);
 
@@ -1031,7 +1043,8 @@ static void hpt_final_init(void *dummy)
 	}
 
 	if (!i) {
-		os_printk("no controller detected.");
+		if (bootverbose)
+			os_printk("no controller detected.");
 		return;
 	}
 
@@ -1171,7 +1184,7 @@ static void hpt_final_init(void *dummy)
 	}	
 
 	make_dev(&hpt_cdevsw, DRIVER_MINOR, UID_ROOT, GID_OPERATOR,
-	    S_IRUSR | S_IWUSR, driver_name);
+	    S_IRUSR | S_IWUSR, "%s", driver_name);
 }
 
 #if defined(KLD_MODULE) && (__FreeBSD_version >= 503000)
@@ -1218,7 +1231,8 @@ static void override_kernel_driver(void)
 
 static void hpt_init(void *dummy)
 {
-	os_printk("%s %s", driver_name_long, driver_ver);
+	if (bootverbose)
+		os_printk("%s %s", driver_name_long, driver_ver);
 
 	override_kernel_driver();
 	init_config();
@@ -1242,7 +1256,7 @@ static device_method_t driver_methods[] = {
 	DEVMETHOD(device_attach,	hpt_attach),
 	DEVMETHOD(device_detach,	hpt_detach),
 	DEVMETHOD(device_shutdown,	hpt_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t hpt_pci_driver = {
@@ -1372,7 +1386,6 @@ invalid:
 
 static int	hpt_rescan_bus(void)
 {
-	struct cam_path		*path;
 	union ccb			*ccb;
 	PVBUS 				vbus;
 	PVBUS_EXT			vbus_ext;	
@@ -1382,17 +1395,15 @@ static int	hpt_rescan_bus(void)
 #endif
 
 	ldm_for_each_vbus(vbus, vbus_ext) {
-		if (xpt_create_path(&path, xpt_periph, cam_sim_path(vbus_ext->sim),
-			CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD) != CAM_REQ_CMP)	
-			return(EIO);
-		if ((ccb = malloc(sizeof(union ccb), M_TEMP, M_WAITOK)) == NULL)
+		if ((ccb = xpt_alloc_ccb()) == NULL)
 			return(ENOMEM);
-		bzero(ccb, sizeof(union ccb));
-		xpt_setup_ccb(&ccb->ccb_h, path, 5);
-		ccb->ccb_h.func_code = XPT_SCAN_BUS;
-		ccb->ccb_h.cbfcnp = hpt_bus_scan_cb;
-		ccb->crcn.flags = CAM_FLAG_NONE;
-		xpt_action(ccb);
+		if (xpt_create_path(&ccb->ccb_h.path, xpt_periph,
+		    cam_sim_path(vbus_ext->sim),
+		    CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
+			xpt_free_ccb(ccb);
+			return(EIO);
+		}
+		xpt_rescan(ccb);
 	}
 	
 #if (__FreeBSD_version >= 500000)
@@ -1400,16 +1411,4 @@ static int	hpt_rescan_bus(void)
 #endif
 
 	return(0);	
-}
-
-static	void	hpt_bus_scan_cb(struct cam_periph *periph, union ccb *ccb)
-{
-	if (ccb->ccb_h.status != CAM_REQ_CMP)
-		KdPrint(("cam_scan_callback: failure status = %x",ccb->ccb_h.status));
-	else
-		KdPrint(("Scan bus successfully!"));
-
-	xpt_free_path(ccb->ccb_h.path);
-	free(ccb, M_TEMP);
-	return;
 }

@@ -15,7 +15,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: cxddk.h,v 1.1.2.1 2003/11/12 17:13:41 rik Exp $
- * $FreeBSD: src/sys/dev/cx/cxddk.h,v 1.2 2005/01/06 01:42:34 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef port_t
@@ -337,6 +337,7 @@ typedef struct _cx_chan_t {
 
 	void *sys;
 	int debug;
+	int debug_shadow;
 	void *attach [2];
 	char *received_data;
 	int received_len;

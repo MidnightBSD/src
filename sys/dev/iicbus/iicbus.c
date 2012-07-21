@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iicbus/iicbus.c,v 1.24 2007/03/23 23:08:28 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Autoconfiguration and support routines for the Philips serial I2C bus
@@ -34,8 +34,10 @@ __FBSDID("$FreeBSD: src/sys/dev/iicbus/iicbus.c,v 1.24 2007/03/23 23:08:28 imp E
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/bus.h> 
 
 #include <dev/iicbus/iiconf.h>
@@ -51,7 +53,9 @@ iicbus_probe(device_t dev)
 {
 
 	device_set_desc(dev, "Philips I2C bus");
-	return (0);
+
+	/* Allow other subclasses to override this driver. */
+	return (BUS_PROBE_GENERIC);
 }
 
 #if SCAN_IICBUS
@@ -90,6 +94,7 @@ iicbus_attach(device_t dev)
 	struct iicbus_softc *sc = IICBUS_SOFTC(dev);
 
 	sc->dev = dev;
+	mtx_init(&sc->lock, "iicbus", NULL, MTX_DEF);
 	iicbus_reset(dev, IIC_FASTEST, 0, NULL);
 
 	/* device probing is meaningless since the bus is supposed to be
@@ -108,13 +113,8 @@ iicbus_attach(device_t dev)
 	}
 	printf("\n");
 #endif
-	/* Always attach the iicsmb children */
-	BUS_ADD_CHILD(dev, 0, "iicsmb", -1);
-	/* attach any known device */
-	BUS_ADD_CHILD(dev, 0, "iic", -1);
-	/* Attach the wired devices via hints */
+	bus_generic_probe(dev);
 	bus_enumerate_hinted_children(dev);
-	/* Now probe and attach them */
 	bus_generic_attach(dev);
         return (0);
 }
@@ -122,9 +122,11 @@ iicbus_attach(device_t dev)
 static int
 iicbus_detach(device_t dev)
 {
+	struct iicbus_softc *sc = IICBUS_SOFTC(dev);
 
 	iicbus_reset(dev, IIC_FASTEST, 0, NULL);
 	bus_generic_detach(dev);
+	mtx_destroy(&sc->lock);
 	return (0);
 }
   
@@ -171,7 +173,7 @@ iicbus_child_pnpinfo_str(device_t bus, device_t child, char *buf,
 }
 
 static int
-iicbus_read_ivar(device_t bus, device_t child, int which, u_char *result)
+iicbus_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 {
 	struct iicbus_ivar *devi = IICBUS_IVAR(child);
 
@@ -179,14 +181,14 @@ iicbus_read_ivar(device_t bus, device_t child, int which, u_char *result)
 	default:
 		return (EINVAL);
 	case IICBUS_IVAR_ADDR:
-		*(uint32_t *)result = devi->addr;
+		*result = devi->addr;
 		break;
 	}
 	return (0);
 }
 
 static device_t
-iicbus_add_child(device_t dev, int order, const char *name, int unit)
+iicbus_add_child(device_t dev, u_int order, const char *name, int unit)
 {
 	device_t child;
 	struct iicbus_ivar *devi;
@@ -243,7 +245,6 @@ static device_method_t iicbus_methods[] = {
 
         /* bus interface */
         DEVMETHOD(bus_add_child,	iicbus_add_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
         DEVMETHOD(bus_print_child,      iicbus_print_child),
 	DEVMETHOD(bus_probe_nomatch,	iicbus_probe_nomatch),
 	DEVMETHOD(bus_read_ivar,	iicbus_read_ivar),
@@ -254,7 +255,7 @@ static device_method_t iicbus_methods[] = {
 	/* iicbus interface */
 	DEVMETHOD(iicbus_transfer,	iicbus_transfer),
 
-        { 0, 0 }
+	DEVMETHOD_END
 };
 
 driver_t iicbus_driver = {
@@ -265,6 +266,6 @@ driver_t iicbus_driver = {
 
 devclass_t iicbus_devclass;
 
-DRIVER_MODULE(iicbus, envctrl, iicbus_driver, iicbus_devclass, 0, 0);
-DRIVER_MODULE(iicbus, iicbb, iicbus_driver, iicbus_devclass, 0, 0);
 MODULE_VERSION(iicbus, IICBUS_MODVER);
+DRIVER_MODULE(iicbus, iichb, iicbus_driver, iicbus_devclass, 0, 0);
+

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/splash/pcx/Makefile,v 1.7 2004/08/06 20:37:08 des Exp $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/fb
 

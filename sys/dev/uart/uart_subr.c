@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_subr.c,v 1.6 2007/04/02 22:00:22 marcel Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -172,8 +172,8 @@ out:
 
 /*
  * Parse a device specification. The specification is a list of attributes
- * seperated by commas. Each attribute is a tag-value pair with the tag and
- * value seperated by a colon. Supported tags are:
+ * separated by commas. Each attribute is a tag-value pair with the tag and
+ * value separated by a colon. Supported tags are:
  *
  *	br = Baudrate
  *	ch = Channel

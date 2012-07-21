@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_eisa.c,v 1.24 2007/06/17 05:55:49 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_eisa.h"
 

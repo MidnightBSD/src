@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/strtouq.c,v 1.6 2004/04/07 20:46:10 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,7 +56,6 @@ strtouq(const char *nptr, char **endptr, int base)
 	/*
 	 * See strtoq for comments as to the logic used.
 	 */
-	s = nptr;
 	do {
 		c = *s++;
 	} while (isspace(c));

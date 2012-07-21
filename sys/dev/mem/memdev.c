@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mem/memdev.c,v 1.3 2004/08/04 18:30:31 markm Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -34,6 +34,7 @@ __FBSDID("$FreeBSD: src/sys/dev/mem/memdev.c,v 1.3 2004/08/04 18:30:31 markm Exp
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/memrange.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
@@ -80,7 +81,7 @@ mem_modevent(module_t mod __unused, int type, void *data __unused)
 	case MOD_LOAD:
 		if (bootverbose)
 			printf("mem: <memory>\n");
-		dev_mem_md_init(); /* Machine dependant bit */
+		mem_range_init();
 		memdev = make_dev(&mem_cdevsw, CDEV_MINOR_MEM,
 			UID_ROOT, GID_KMEM, 0640, "mem");
 		kmemdev = make_dev(&mem_cdevsw, CDEV_MINOR_KMEM,
@@ -88,6 +89,7 @@ mem_modevent(module_t mod __unused, int type, void *data __unused)
 		break;
 
 	case MOD_UNLOAD:
+		mem_range_destroy();
 		destroy_dev(memdev);
 		destroy_dev(kmemdev);
 		break;

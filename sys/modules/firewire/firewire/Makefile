@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/firewire/firewire/Makefile,v 1.7 2003/04/17 03:38:02 simokawa Exp $
+# $FreeBSD$
 
 # Makefile for the IEEE1394 OHCI chipset
 
@@ -12,4 +12,3 @@ SRCS	= bus_if.h device_if.h pci_if.h \
 	  fwcrom.c fwdev.c fwmem.c fwmem.h fwdma.c fwdma.h
 
 .include <bsd.kmod.mk>
-

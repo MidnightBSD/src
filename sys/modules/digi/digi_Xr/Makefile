@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/digi/digi_Xr/Makefile,v 1.1 2001/05/02 01:08:09 brian Exp $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/digi
 KMOD=	digi_Xr

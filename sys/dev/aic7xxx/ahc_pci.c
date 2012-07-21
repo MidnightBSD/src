@@ -28,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ahc_pci.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
+ * $Id: ahc_pci.c,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/ahc_pci.c,v 1.65 2006/09/03 00:27:40 jmg Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 
@@ -54,7 +54,6 @@ static driver_t ahc_pci_driver = {
 };
 
 DRIVER_MODULE(ahc_pci, pci, ahc_pci_driver, ahc_devclass, 0, 0);
-DRIVER_MODULE(ahc_pci, cardbus, ahc_pci_driver, ahc_devclass, 0, 0);
 MODULE_DEPEND(ahc_pci, ahc, 1, 1, 1);
 MODULE_VERSION(ahc_pci, 1);
 
@@ -106,7 +105,6 @@ ahc_pci_attach(device_t dev)
                 ahc->flags |= AHC_39BIT_ADDRESSING;
 
 	/* Allocate a dmatag for our SCB DMA maps */
-	/* XXX Should be a child of the PCI bus dma tag */
 	error = aic_dma_tag_create(ahc, /*parent*/bus_get_dma_tag(dev),
 				   /*alignment*/1, /*boundary*/0,
 				   (ahc->flags & AHC_39BIT_ADDRESSING)

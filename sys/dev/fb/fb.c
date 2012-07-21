@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fb/fb.c,v 1.33 2005/12/04 10:06:03 ru Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_fb.h"
 
@@ -315,8 +315,7 @@ static device_method_t fb_methods[] = {
 	DEVMETHOD(device_probe,		fbprobe),
 	DEVMETHOD(device_attach,	fbattach),
 
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t fb_driver = {
@@ -350,7 +349,7 @@ fbattach(device_t dev)
 
 #endif
 
-#define FB_UNIT(dev)	minor(dev)
+#define FB_UNIT(dev)	dev2unit(dev)
 #define FB_MKMINOR(unit) (u)
 
 #if 0 /* experimental */
@@ -484,7 +483,7 @@ int genfbread(genfb_softc_t *sc, video_adapter_t *adp, struct uio *uio,
 		len = imin(len, adp->va_window_size - offset);
 		if (len <= 0)
 			break;
-		(*vidsw[adp->va_index]->set_win_org)(adp, uio->uio_offset);
+		vidd_set_win_org(adp, uio->uio_offset);
 		error = uiomove((caddr_t)(adp->va_window + offset), len, uio);
 		if (error)
 			break;
@@ -505,16 +504,16 @@ int genfbioctl(genfb_softc_t *sc, video_adapter_t *adp, u_long cmd,
 
 	if (adp == NULL)	/* XXX */
 		return ENXIO;
-	error = (*vidsw[adp->va_index]->ioctl)(adp, cmd, arg);
+	error = vidd_ioctl(adp, cmd, arg);
 	if (error == ENOIOCTL)
 		error = ENODEV;
 	return error;
 }
 
-int genfbmmap(genfb_softc_t *sc, video_adapter_t *adp, vm_offset_t offset,
-	      vm_offset_t *paddr, int prot)
+int genfbmmap(genfb_softc_t *sc, video_adapter_t *adp, vm_ooffset_t offset,
+	      vm_offset_t *paddr, int prot, vm_memattr_t *memattr)
 {
-	return (*vidsw[adp->va_index]->mmap)(adp, offset, paddr, prot);
+	return vidd_mmap(adp, offset, paddr, prot, memattr);
 }
 
 #endif /* FB_INSTALL_CDEV */
@@ -653,7 +652,7 @@ fb_commonioctl(video_adapter_t *adp, u_long cmd, caddr_t arg)
 		((video_adapter_info_t *)arg)->va_mem_base = adp->va_mem_base;
 		((video_adapter_info_t *)arg)->va_mem_size = adp->va_mem_size;
 		((video_adapter_info_t *)arg)->va_window
-#ifdef __i386__
+#if defined(__amd64__) || defined(__i386__)
 			= vtophys(adp->va_window);
 #else
 			= adp->va_window;
@@ -665,8 +664,8 @@ fb_commonioctl(video_adapter_t *adp, u_long cmd, caddr_t arg)
 		((video_adapter_info_t *)arg)->va_window_orig
 			= adp->va_window_orig;
 		((video_adapter_info_t *)arg)->va_unused0
-#ifdef __i386__
-			= (adp->va_buffer) ? vtophys(adp->va_buffer) : 0;
+#if defined(__amd64__) || defined(__i386__)
+			= adp->va_buffer != 0 ? vtophys(adp->va_buffer) : 0;
 #else
 			= adp->va_buffer;
 #endif
@@ -686,16 +685,15 @@ fb_commonioctl(video_adapter_t *adp, u_long cmd, caddr_t arg)
 		break;
 
 	case FBIO_MODEINFO:	/* get mode information */
-		error = (*vidsw[adp->va_index]->get_info)(adp, 
-				((video_info_t *)arg)->vi_mode,
-				(video_info_t *)arg); 
+		error = vidd_get_info(adp,
+		    ((video_info_t *)arg)->vi_mode,
+		    (video_info_t *)arg);
 		if (error)
 			error = ENODEV;
 		break;
 
 	case FBIO_FINDMODE:	/* find a matching video mode */
-		error = (*vidsw[adp->va_index]->query_mode)(adp, 
-				(video_info_t *)arg); 
+		error = vidd_query_mode(adp, (video_info_t *)arg);
 		break;
 
 	case FBIO_GETMODE:	/* get video mode */
@@ -703,7 +701,7 @@ fb_commonioctl(video_adapter_t *adp, u_long cmd, caddr_t arg)
 		break;
 
 	case FBIO_SETMODE:	/* set video mode */
-		error = (*vidsw[adp->va_index]->set_mode)(adp, *(int *)arg);
+		error = vidd_set_mode(adp, *(int *)arg);
 		if (error)
 			error = ENODEV;	/* EINVAL? */
 		break;
@@ -722,7 +720,7 @@ fb_commonioctl(video_adapter_t *adp, u_long cmd, caddr_t arg)
 		break;
 
 	case FBIO_BLANK:	/* blank display */
-		error = (*vidsw[adp->va_index]->blank_display)(adp, *(int *)arg);
+		error = vidd_blank_display(adp, *(int *)arg);
 		break;
 
 	case FBIO_GETPALETTE:	/* get color palette */

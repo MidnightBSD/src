@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/streams/streams.c,v 1.56 2007/08/06 14:26:00 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -90,11 +90,14 @@ static struct cdev *dt_ptm, *dt_arp, *dt_icmp, *dt_ip, *dt_tcp, *dt_udp,
 static struct fileops svr4_netops = {
 	.fo_read = soo_read,
 	.fo_write = soo_write,
+	.fo_truncate = soo_truncate,
 	.fo_ioctl = soo_ioctl,
 	.fo_poll = soo_poll,
 	.fo_kqfilter = soo_kqfilter,
 	.fo_stat = soo_stat,
-	.fo_close =  svr4_soo_close
+	.fo_close =  svr4_soo_close,
+	.fo_chmod = invfo_chmod,
+	.fo_chown = invfo_chown,
 };
  
 static struct cdevsw streams_cdevsw = {
@@ -107,7 +110,7 @@ struct streams_softc {
 	struct isa_device *dev;
 } ;
 
-#define UNIT(dev) minor(dev)	/* assume one minor number per unit */
+#define UNIT(dev) dev2unit(dev)	/* assume one minor number per unit */
 
 typedef	struct streams_softc *sc_p;
 
@@ -193,7 +196,7 @@ streamsopen(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	if (td->td_dupfd >= 0)
 	  return ENODEV;
 
-	switch (minor(dev)) {
+	switch (dev2unit(dev)) {
 	case dev_udp:
 	  family = AF_INET;
 	  type = SOCK_DGRAM;
@@ -240,7 +243,7 @@ streamsopen(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	}
 
 	fdp = td->td_proc->p_fd;
-	if ((error = falloc(td, &fp, &fd)) != 0)
+	if ((error = falloc(td, &fp, &fd, 0)) != 0)
 	  return error;
 	/* An extra reference on `fp' has been held for us by falloc(). */
 
@@ -251,12 +254,7 @@ streamsopen(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	   return error;
 	}
 
-	FILE_LOCK(fp);
-	fp->f_data = so;
-	fp->f_flag = FREAD|FWRITE;
-	fp->f_ops = &svr4_netops;
-	fp->f_type = DTYPE_SOCKET;
-	FILE_UNLOCK(fp);
+	finit(fp, FREAD | FWRITE, DTYPE_SOCKET, so, &svr4_netops);
 
 	/*
 	 * Allocate a stream structure and attach it to this socket.
@@ -292,6 +290,8 @@ svr4_ptm_alloc(td)
 	 * 
 	 * Cycle through the names. If sys_open() returns ENOENT (or
 	 * ENXIO), short circuit the cycle and exit.
+	 *
+	 * XXX: Maybe this can now be implemented by posix_openpt()?
 	 */
 	static char ptyname[] = "/dev/ptyXX";
 	static char ttyletters[] = "pqrstuwxyzPQRST";

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/puc/puc.c,v 1.50 2007/06/06 22:17:01 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -129,62 +129,78 @@ puc_intr(void *arg)
 {
 	struct puc_port *port;
 	struct puc_softc *sc = arg;
-	u_long dev, devs;
-	int i, idx, ipend, isrc;
+	u_long ds, dev, devs;
+	int i, idx, ipend, isrc, nints;
 	uint8_t ilr;
 
-	devs = sc->sc_serdevs;
-	if (sc->sc_ilr == PUC_ILR_DIGI) {
-		idx = 0;
-		while (devs & (0xfful << idx)) {
-			ilr = ~bus_read_1(sc->sc_port[idx].p_rres, 7);
-			devs &= ~0ul ^ ((u_long)ilr << idx);
-			idx += 8;
-		}
-	} else if (sc->sc_ilr == PUC_ILR_QUATECH) {
+	nints = 0;
+	while (1) {
 		/*
-		 * Don't trust the value if it's the same as the option
-		 * register. It may mean that the ILR is not active and
-		 * we're reading the option register instead. This may
-		 * lead to false positives on 8-port boards.
+		 * Obtain the set of devices with pending interrupts.
 		 */
-		ilr = bus_read_1(sc->sc_port[0].p_rres, 7);
-		if (ilr != (sc->sc_cfg_data & 0xff))
-			devs &= (u_long)ilr;
-	}
-
-	ipend = 0;
-	idx = 0, dev = 1UL;
-	while (devs != 0UL) {
-		while ((devs & dev) == 0UL)
-			idx++, dev <<= 1;
-		devs &= ~dev;
-		port = &sc->sc_port[idx];
-		port->p_ipend = SERDEV_IPEND(port->p_dev);
-		ipend |= port->p_ipend;
-	}
-
-	i = 0, isrc = SER_INT_OVERRUN;
-	while (ipend) {
-		while (i < PUC_ISRCCNT && !(ipend & isrc))
-			i++, isrc <<= 1;
-		KASSERT(i < PUC_ISRCCNT, ("%s", __func__));
-		ipend &= ~isrc;
-		idx = 0, dev = 1UL;
 		devs = sc->sc_serdevs;
-		while (devs != 0UL) {
-			while ((devs & dev) == 0UL)
-				idx++, dev <<= 1;
-			devs &= ~dev;
-			port = &sc->sc_port[idx];
-			if (!(port->p_ipend & isrc))
-				continue;
-			if (port->p_ihsrc[i] != NULL)
-				(*port->p_ihsrc[i])(port->p_iharg);
+		if (sc->sc_ilr == PUC_ILR_DIGI) {
+			idx = 0;
+			while (devs & (0xfful << idx)) {
+				ilr = ~bus_read_1(sc->sc_port[idx].p_rres, 7);
+				devs &= ~0ul ^ ((u_long)ilr << idx);
+				idx += 8;
+			}
+		} else if (sc->sc_ilr == PUC_ILR_QUATECH) {
+			/*
+			 * Don't trust the value if it's the same as the option
+			 * register. It may mean that the ILR is not active and
+			 * we're reading the option register instead. This may
+			 * lead to false positives on 8-port boards.
+			 */
+			ilr = bus_read_1(sc->sc_port[0].p_rres, 7);
+			if (ilr != (sc->sc_cfg_data & 0xff))
+				devs &= (u_long)ilr;
 		}
-		return (FILTER_HANDLED);
+		if (devs == 0UL)
+			break;
+
+		/*
+		 * Obtain the set of interrupt sources from those devices
+		 * that have pending interrupts.
+		 */
+		ipend = 0;
+		idx = 0, dev = 1UL;
+		ds = devs;
+		while (ds != 0UL) {
+			while ((ds & dev) == 0UL)
+				idx++, dev <<= 1;
+			ds &= ~dev;
+			port = &sc->sc_port[idx];
+			port->p_ipend = SERDEV_IPEND(port->p_dev);
+			ipend |= port->p_ipend;
+		}
+		if (ipend == 0)
+			break;
+
+		i = 0, isrc = SER_INT_OVERRUN;
+		while (ipend) {
+			while (i < PUC_ISRCCNT && !(ipend & isrc))
+				i++, isrc <<= 1;
+			KASSERT(i < PUC_ISRCCNT, ("%s", __func__));
+			ipend &= ~isrc;
+			idx = 0, dev = 1UL;
+			ds = devs;
+			while (ds != 0UL) {
+				while ((ds & dev) == 0UL)
+					idx++, dev <<= 1;
+				ds &= ~dev;
+				port = &sc->sc_port[idx];
+				if (!(port->p_ipend & isrc))
+					continue;
+				if (port->p_ihsrc[i] != NULL)
+					(*port->p_ihsrc[i])(port->p_iharg);
+				nints++;
+			}
+		}
 	}
-	return (FILTER_STRAY);
+
+	return ((nints > 0) ? FILTER_HANDLED : FILTER_STRAY);
 }
 
 int
@@ -708,5 +724,43 @@ puc_bus_read_ivar(device_t dev, device_t child, int index, uintptr_t *result)
 	default:
 		return (ENOENT);
 	}
+	return (0);
+}
+
+int
+puc_bus_print_child(device_t dev, device_t child)
+{
+	struct puc_port *port;
+	int retval;
+
+	port = device_get_ivars(child);
+	retval = 0;
+
+	retval += bus_print_child_header(dev, child);
+	retval += printf(" at port %d", port->p_nr);
+	retval += bus_print_child_footer(dev, child);
+
+	return (retval);
+}
+
+int
+puc_bus_child_location_str(device_t dev, device_t child, char *buf,
+    size_t buflen)
+{
+	struct puc_port *port;
+
+	port = device_get_ivars(child);
+	snprintf(buf, buflen, "port=%d", port->p_nr);
+	return (0);
+}
+
+int
+puc_bus_child_pnpinfo_str(device_t dev, device_t child, char *buf,
+    size_t buflen)
+{
+	struct puc_port *port;
+
+	port = device_get_ivars(child);
+	snprintf(buf, buflen, "type=%d", port->p_type);
 	return (0);
 }

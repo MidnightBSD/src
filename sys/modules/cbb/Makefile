@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/cbb/Makefile,v 1.10 2004/08/16 15:24:03 imp Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/pccbb
 

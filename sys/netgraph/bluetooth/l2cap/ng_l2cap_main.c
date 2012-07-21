@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_l2cap_main.c,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/l2cap/ng_l2cap_main.c,v 1.5 2005/01/07 01:45:43 imp Exp $
+ * $Id: ng_l2cap_main.c,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -113,10 +113,7 @@ ng_l2cap_constructor(node_p node)
 	ng_l2cap_p	l2cap = NULL;
 
 	/* Create new L2CAP node */
-	MALLOC(l2cap, ng_l2cap_p, sizeof(*l2cap),
-		M_NETGRAPH_L2CAP, M_NOWAIT|M_ZERO);
-	if (l2cap == NULL)
-		return (ENOMEM);
+	l2cap = malloc(sizeof(*l2cap), M_NETGRAPH_L2CAP, M_WAITOK | M_ZERO);
 
 	l2cap->node = node;
 	l2cap->debug = NG_L2CAP_WARN_LEVEL;
@@ -148,7 +145,7 @@ ng_l2cap_shutdown(node_p node)
 	ng_l2cap_cleanup(l2cap);
 
 	bzero(l2cap, sizeof(*l2cap));
-	FREE(l2cap, M_NETGRAPH_L2CAP);
+	free(l2cap, M_NETGRAPH_L2CAP);
 
 	return (0);
 } /* ng_l2cap_shutdown */

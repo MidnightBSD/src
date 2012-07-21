@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/atm/uni/ng_uni.c,v 1.6 2005/10/31 15:41:26 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -223,8 +223,7 @@ ng_uni_constructor(node_p node)
 {
 	struct priv *priv;
 
-	if ((priv = malloc(sizeof(*priv), M_NG_UNI, M_NOWAIT | M_ZERO)) == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NG_UNI, M_WAITOK | M_ZERO);
 
 	if ((priv->uni = uni_create(node, &uni_funcs)) == NULL) {
 		free(priv, M_NG_UNI);
@@ -743,7 +742,7 @@ uni_verbose(struct uni *uni, void *varg, u_int fac, const char *fmt, ...)
 	va_list ap;
 
 	static char *facnames[] = {
-#define UNI_DEBUG_DEFINE(D) [UNI_FAC_##D] #D,
+#define UNI_DEBUG_DEFINE(D) [UNI_FAC_##D] = #D,
 		UNI_DEBUG_FACILITIES
 #undef UNI_DEBUG_DEFINE
 	};
@@ -771,18 +770,18 @@ struct unimem_debug {
 LIST_HEAD(unimem_debug_list, unimem_debug);
 
 static struct unimem_debug_list nguni_freemem[UNIMEM_TYPES] = {
-    LIST_HEAD_INITIALIZER(unimem_debug),
-    LIST_HEAD_INITIALIZER(unimem_debug),
-    LIST_HEAD_INITIALIZER(unimem_debug),
-    LIST_HEAD_INITIALIZER(unimem_debug),
-    LIST_HEAD_INITIALIZER(unimem_debug),
+    LIST_HEAD_INITIALIZER(nguni_freemem[0]),
+    LIST_HEAD_INITIALIZER(nguni_freemem[1]),
+    LIST_HEAD_INITIALIZER(nguni_freemem[2]),
+    LIST_HEAD_INITIALIZER(nguni_freemem[3]),
+    LIST_HEAD_INITIALIZER(nguni_freemem[4]),
 };
 static struct unimem_debug_list nguni_usedmem[UNIMEM_TYPES] = {
-    LIST_HEAD_INITIALIZER(unimem_debug),
-    LIST_HEAD_INITIALIZER(unimem_debug),
-    LIST_HEAD_INITIALIZER(unimem_debug),
-    LIST_HEAD_INITIALIZER(unimem_debug),
-    LIST_HEAD_INITIALIZER(unimem_debug),
+    LIST_HEAD_INITIALIZER(nguni_usedmem[0]),
+    LIST_HEAD_INITIALIZER(nguni_usedmem[1]),
+    LIST_HEAD_INITIALIZER(nguni_usedmem[2]),
+    LIST_HEAD_INITIALIZER(nguni_usedmem[3]),
+    LIST_HEAD_INITIALIZER(nguni_usedmem[4]),
 };
 
 static struct mtx nguni_unilist_mtx;

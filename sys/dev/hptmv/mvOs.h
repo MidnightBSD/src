@@ -23,12 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptmv/mvOs.h,v 1.5 2005/12/04 02:12:41 ru Exp $
+ * $FreeBSD$
  */
 #ifndef __INCmvOsBsdh
 #define __INCmvOsBsdh
 
-#ifdef DBG
+#ifdef DEBUG
 #define MV_DEBUG_LOG
 #endif
 
@@ -58,10 +58,10 @@ typedef void *PVOID, *LPVOID;
 typedef void *ADDRESS;
 
 typedef int  LONG;
-typedef unsigned int ULONG, *PULONG, LBA_T;
+typedef unsigned int ULONG, *PULONG;
 typedef unsigned int DWORD, *LPDWORD, *PDWORD;
 typedef unsigned long ULONG_PTR, UINT_PTR, BUS_ADDR;
-typedef unsigned long long HPT_U64;
+typedef unsigned long long HPT_U64, LBA_T;
 
 typedef enum mvBoolean{MV_FALSE, MV_TRUE} MV_BOOLEAN;
 

@@ -30,7 +30,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
  * NO EVENT SHALL THE AUTHORS BE LIABLE.
  *
- * $FreeBSD: src/sys/dev/si/si.h,v 1.20 2005/01/06 01:43:13 imp Exp $
+ * $FreeBSD$
  */
 
 #include <sys/callout.h>
@@ -286,10 +286,8 @@ struct si_port {
 	int		sp_state;
 	int		sp_delta_overflows;
 	struct callout_handle lstart_ch;/* For canceling our timeout */
-#ifdef	SI_DEBUG
 	int		sp_debug;	/* debug mask */
 	char		sp_name[5];
-#endif
 };
 
 /* sp_state */
@@ -302,7 +300,7 @@ struct si_port {
 /*			0x0040	-- 	 				*/
 /*			0x0080	-- 	 				*/
 #define SS_LSTART	0x0100	/* lstart timeout pending		*/
-#define SS_INLSTART	0x0200	/* running an lstart induced t_oproc	*/
+/*			0x0200	--					*/
 /*			0x0400	--					*/
 /*			0x0800	--					*/
 
@@ -387,7 +385,6 @@ struct si_pstat {
 /* Various stats and monitoring hooks per tty device */
 #define	TCSI_PORT	_IOWR('S', 125, struct si_pstat) /* get si_port */
 #define	TCSI_CCB	_IOWR('S', 126, struct si_pstat) /* get si_ccb */
-#define	TCSI_TTY	_IOWR('S', 127, struct si_pstat) /* get tty struct */
 
 #define	IOCTL_MAX	127
 

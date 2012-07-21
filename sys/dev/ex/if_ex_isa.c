@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ex/if_ex_isa.c,v 1.12 2007/02/23 12:18:40 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -126,7 +126,6 @@ ex_isa_identify(driver_t *driver, device_t parent)
 	int		tmp;
 	const char *	desc;
 	struct ex_softc sc;
-	struct resource *res;
 	int		rid;
 
 	if (bootverbose)
@@ -134,16 +133,15 @@ ex_isa_identify(driver_t *driver, device_t parent)
 
 	for (ioport = 0x200; ioport < 0x3a0; ioport += 0x10) {
 		rid = 0;
-		res = bus_alloc_resource(parent, SYS_RES_IOPORT, &rid,
+		sc.ioport = bus_alloc_resource(parent, SYS_RES_IOPORT, &rid,
 		    ioport, ioport, 0x10, RF_ACTIVE);
-		if (res == NULL)
+		if (sc.ioport == NULL)
 			continue;
-		sc.bst = rman_get_bustag(res);
-		sc.bsh = rman_get_bushandle(res);
 
 		/* No board found at address */
 		if (!ex_look_for_card(&sc)) {
-			bus_release_resource(parent, SYS_RES_IOPORT, rid, res);
+			bus_release_resource(parent, SYS_RES_IOPORT, rid,
+			    sc.ioport);
 			continue;
 		}
 
@@ -157,7 +155,8 @@ ex_isa_identify(driver_t *driver, device_t parent)
 			DELAY(500);
 			if (bootverbose)
 				printf("ex: card at 0x%03lx in PnP mode!\n", (unsigned long)ioport);
-			bus_release_resource(parent, SYS_RES_IOPORT, rid, res);
+			bus_release_resource(parent, SYS_RES_IOPORT, rid,
+			    sc.ioport);
 			continue;
 		}
 
@@ -179,7 +178,7 @@ ex_isa_identify(driver_t *driver, device_t parent)
 			desc = "Intel Pro/10";
 		}
 
-		bus_release_resource(parent, SYS_RES_IOPORT, rid, res);
+		bus_release_resource(parent, SYS_RES_IOPORT, rid, sc.ioport);
 		child = BUS_ADD_CHILD(parent, ISA_ORDER_SPECULATIVE, "ex", -1);
 		device_set_desc_copy(child, desc);
 		device_set_driver(child, driver);
@@ -248,12 +247,11 @@ ex_isa_probe(device_t dev)
 
 	tmp = ex_eeprom_read(sc, EE_W1) & EE_W1_INT_SEL;
 	irq = bus_get_resource_start(dev, SYS_RES_IRQ, 0);
-
 	if (irq > 0) {
 		/* This will happen if board is in PnP mode. */
 		if (ee2irq[tmp] != irq) {
-			printf("ex: WARNING: board's EEPROM is configured"
-				" for IRQ %d, using %d\n",
+			device_printf(dev,
+			    "WARNING: IRQ mismatch: EEPROM %d, using %d\n",
 				ee2irq[tmp], irq);
 		}
 	} else {
@@ -268,7 +266,7 @@ ex_isa_probe(device_t dev)
 
 bad:;
 	ex_release_resources(dev);
-	return(error);
+	return (error);
 }
 
 static int
@@ -281,6 +279,7 @@ ex_isa_attach(device_t dev)
 	sc->dev = dev;
 	sc->ioport_rid = 0;
 	sc->irq_rid = 0;
+	sc->flags |= HAS_INT_NO_REG;
 
 	if ((error = ex_alloc_resources(dev)) != 0) {
 		device_printf(dev, "ex_alloc_resources() failed!\n");
@@ -310,13 +309,6 @@ ex_isa_attach(device_t dev)
 
 	if ((error = ex_attach(dev)) != 0) {
 		device_printf(dev, "ex_attach() failed!\n");
-		goto bad;
-	}
-
-	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
-				NULL, ex_intr, (void *)sc, &sc->ih);
-	if (error) {
-		device_printf(dev, "bus_setup_intr() failed!\n");
 		goto bad;
 	}
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/procfs/Makefile,v 1.28.14.1 2005/08/20 08:05:01 yar Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../fs/procfs
 
@@ -13,6 +13,7 @@ SRCS+=		procfs_ioctl.c
 SRCS+=		procfs_map.c
 SRCS+=		procfs_mem.c
 SRCS+=		procfs_note.c
+SRCS+=		procfs_osrel.c
 SRCS+=		procfs_regs.c
 SRCS+=		procfs_rlimit.c
 SRCS+=		procfs_status.c
@@ -32,8 +33,9 @@ opt_compat.h:
 	echo "#define COMPAT_43 1" > ${.TARGET}
 	echo "#define COMPAT_FREEBSD4 1" >> ${.TARGET}
 	echo "#define COMPAT_FREEBSD5 1" >> ${.TARGET}
-.if ${MACHINE_ARCH} == "amd64"
-	echo "#define COMPAT_IA32 1" >> ${.TARGET}
+	echo "#define COMPAT_FREEBSD6 1" >> ${.TARGET}
+.if ${MACHINE_CPUARCH} == "amd64"
+	echo "#define COMPAT_FREEBSD32 1" >> ${.TARGET}
 	echo "#define COMPAT_LINUX32 1" >> ${.TARGET}
 .endif
 .endif

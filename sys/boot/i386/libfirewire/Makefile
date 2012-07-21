@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/i386/libfirewire/Makefile,v 1.1 2007/05/29 14:35:57 simokawa Exp $
+# $FreeBSD$
 
 LIB=		firewire
 INTERNALLIB=
@@ -16,7 +16,7 @@ CFLAGS+=	-I${.CURDIR}/../libi386
 
 CFLAGS+=	-Wformat -Wall
 
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64"
 CLEANFILES+=    machine
 machine:
 	ln -sf ${.CURDIR}/../../../i386/include machine
@@ -24,7 +24,7 @@ machine:
 
 .include <bsd.lib.mk>
 
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64"
 beforedepend ${OBJS}: machine
 .endif
 

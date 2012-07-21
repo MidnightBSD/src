@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/i2c/controllers/amdpm/Makefile,v 1.1 2002/03/23 15:48:41 nsouch Exp $
+# $FreeBSD$
 
 .PATH:		${.CURDIR}/../../../../pci
 KMOD		= amdpm

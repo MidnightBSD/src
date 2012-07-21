@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/bios/smapi/Makefile,v 1.2 2005/01/26 16:24:55 imp Exp $
+# $FreeBSD$
 #
 
 .PATH:  ${.CURDIR}/../../../i386/bios
@@ -9,3 +9,7 @@ SRCS=	smapi.c smapi_bios.S \
 WERROR=
 
 .include <bsd.kmod.mk>
+
+# XXX: clang integrated-as doesn't grok 16-bit assembly yet
+CFLAGS.smapi_bios.S=	${CLANG_NO_IAS}
+CFLAGS+=		${CFLAGS.${.IMPSRC:T}}

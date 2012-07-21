@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_rfcomm.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_btsocket_rfcomm.h,v 1.8 2006/07/21 17:11:13 rwatson Exp $
+ * $Id: ng_btsocket_rfcomm.h,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_BTSOCKET_RFCOMM_H_
@@ -85,8 +85,8 @@
 
 /* RPN parameters - data bits */
 #define RFCOMM_RPN_DATA_5		0x0
-#define RFCOMM_RPN_DATA_6		0x1
-#define RFCOMM_RPN_DATA_7		0x2
+#define RFCOMM_RPN_DATA_6		0x2
+#define RFCOMM_RPN_DATA_7		0x1
 #define RFCOMM_RPN_DATA_8		0x3
 
 /* RPN parameters - stop bit */

@@ -1,9 +1,9 @@
-# $FreeBSD: src/sys/modules/wb/Makefile,v 1.12 2001/01/06 14:00:41 obrien Exp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../pci
+.PATH: ${.CURDIR}/../../dev/wb
 
 KMOD=	if_wb
-SRCS=	if_wb.c opt_bdg.h device_if.h
+SRCS=	if_wb.c device_if.h
 SRCS+=	bus_if.h miibus_if.h pci_if.h
 
 .include <bsd.kmod.mk>

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/snc/if_sncreg.h,v 1.2 2005/01/06 01:43:15 imp Exp $	*/
+/*	$FreeBSD$	*/
 /*	$NecBSD: if_snreg.h,v 1.3 1999/01/24 01:39:52 kmatsuda Exp $	*/
 /*	$NetBSD$	*/
   
@@ -57,7 +57,7 @@
 #define	SNEC_NREGS	6
 
 /* bank memory size */
-#define	SNEC_NMEMS	(NBPG * 2)
+#define	SNEC_NMEMS	(PAGE_SIZE * 2)
 /* how many bank */
 #define	SNEC_NBANK	0x10
 /* internal buffer size */

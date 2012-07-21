@@ -1,6 +1,20 @@
-# $FreeBSD: src/sys/modules/netgraph/ipfw/Makefile,v 1.1 2005/02/05 12:09:38 glebius Exp $
+# $FreeBSD$
+
+.include <bsd.own.mk>
 
 KMOD=	ng_ipfw
-SRCS= 	ng_ipfw.c
+SRCS= 	ng_ipfw.c opt_inet.h opt_inet6.h
+
+.if !defined(KERNBUILDDIR)
+
+.if ${MK_INET_SUPPORT} != "no"
+opt_inet.h:
+	echo "#define INET 1" > ${.TARGET}
+.endif
+.if ${MK_INET6_SUPPORT} != "no"
+opt_inet6.h:
+	echo "#define INET6 1" > ${.TARGET}
+.endif
+.endif
 
 .include <bsd.kmod.mk>

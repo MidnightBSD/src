@@ -1,6 +1,6 @@
 /*******************************************************************************
 
-Copyright (c) 2006-2007, Myricom Inc.
+Copyright (c) 2006-2009, Myricom Inc.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: src/sys/dev/mxge/if_mxge_var.h,v 1.16 2007/09/13 21:29:02 gallatin Exp $
+$FreeBSD$
 
 ***************************************************************************/
 
@@ -38,6 +38,45 @@ $FreeBSD: src/sys/dev/mxge/if_mxge_var.h,v 1.16 2007/09/13 21:29:02 gallatin Exp
 #define MXGE_FW_OFFSET 1024*1024
 #define MXGE_EEPROM_STRINGS_SIZE 256
 #define MXGE_MAX_SEND_DESC 128
+
+#if ((__FreeBSD_version > 800000 && __FreeBSD_version < 800005) \
+     || __FreeBSD_version < 700111)
+#define MXGE_VIRT_JUMBOS 1
+#else
+#define MXGE_VIRT_JUMBOS 0
+#endif
+
+#if (__FreeBSD_version > 800082)
+#define IFNET_BUF_RING 1
+#endif
+
+#ifndef VLAN_CAPABILITIES
+#define VLAN_CAPABILITIES(ifp)
+#define mxge_vlans_active(sc) (sc)->ifp->if_nvlans
+#else
+#define mxge_vlans_active(sc) (sc)->ifp->if_vlantrunk
+#endif
+
+#ifndef VLAN_TAG_VALUE
+#define MXGE_NEW_VLAN_API
+#endif
+
+#ifndef IFCAP_LRO
+#define IFCAP_LRO 0
+#endif
+
+#ifndef IFCAP_TSO
+#define IFCAP_TSO 0
+#endif
+ 
+#ifndef IFCAP_TSO4
+#define IFCAP_TSO4 0
+#endif
+
+#ifndef CSUM_TSO
+#define CSUM_TSO 0
+#endif
+
 
 typedef struct {
 	void *addr;
@@ -85,11 +124,18 @@ typedef struct
 	int cl_size;
 	int alloc_fail;
 	int mask;			/* number of rx slots -1 */
-} mxge_rx_buf_t;
+	int mlen;
+} mxge_rx_ring_t;
 
 typedef struct
 {
+	struct mtx mtx;
+#ifdef IFNET_BUF_RING
+	struct buf_ring *br;
+#endif
 	volatile mcp_kreq_ether_send_t *lanai;	/* lanai ptr for sendq	*/
+	volatile uint32_t *send_go;		/* doorbell for sendq */
+	volatile uint32_t *send_stop;		/* doorbell for sendq */
 	mcp_kreq_ether_send_t *req_list;	/* host shadow of sendq */
 	char *req_bytes;
 	bus_dma_segment_t *seg_list;
@@ -99,14 +145,18 @@ typedef struct
 	int mask;			/* number of transmit slots -1 */
 	int done;			/* transmits completed	*/
 	int pkt_done;			/* packets completed */
-	int boundary;			/* boundary transmits cannot cross*/
 	int max_desc;			/* max descriptors per xmit */
+	int queue_active;		/* fw currently polling this queue*/
+	int activate;
+	int deactivate;
 	int stall;			/* #times hw queue exhausted */
 	int wake;			/* #times irq re-enabled xmit */
 	int watchdog_req;		/* cache of req */
 	int watchdog_done;		/* cache of done */
 	int watchdog_rx_pause;		/* cache of pause rq recvd */
-} mxge_tx_buf_t;
+	int defrag;
+	char mtx_name[16];
+} mxge_tx_ring_t;
 
 struct lro_entry;
 struct lro_entry
@@ -133,32 +183,49 @@ struct lro_entry
 };
 SLIST_HEAD(lro_head, lro_entry);
 
-typedef struct {
-	struct ifnet* ifp;
-	struct mtx tx_mtx;
-	int csum_flag;			/* rx_csums? 		*/
-	mxge_tx_buf_t tx;		/* transmit ring 	*/
-	mxge_rx_buf_t rx_small;
-	mxge_rx_buf_t rx_big;
+struct mxge_softc;
+typedef struct mxge_softc mxge_softc_t;
+
+struct mxge_slice_state {
+	mxge_softc_t *sc;
+	mxge_tx_ring_t tx;		/* transmit ring 	*/
+	mxge_rx_ring_t rx_small;
+	mxge_rx_ring_t rx_big;
 	mxge_rx_done_t rx_done;
 	mcp_irq_data_t *fw_stats;
-	bus_dma_tag_t	parent_dmat;
-	volatile uint8_t *sram;
+	volatile uint32_t *irq_claim;
+	u_long ipackets;
+	u_long opackets;
+	u_long obytes;
+	u_long omcasts;
+	u_long oerrors;
+	int if_drv_flags;
 	struct lro_head lro_active;
 	struct lro_head lro_free;
 	int lro_queued;
 	int lro_flushed;
 	int lro_bad_csum;
+	mxge_dma_t fw_stats_dma;
+	struct sysctl_oid *sysctl_tree;
+	struct sysctl_ctx_list sysctl_ctx;
+	char scratch[256];
+};
+
+struct mxge_softc {
+	struct ifnet* ifp;
+	struct mxge_slice_state *ss;
+	int csum_flag;			/* rx_csums? 		*/
+	int tx_boundary;		/* boundary transmits cannot cross*/
 	int lro_cnt;
+	bus_dma_tag_t	parent_dmat;
+	volatile uint8_t *sram;
 	int sram_size;
 	volatile uint32_t *irq_deassert;
-	volatile uint32_t *irq_claim;
 	mcp_cmd_response_t *cmd;
 	mxge_dma_t cmd_dma;
 	mxge_dma_t zeropad_dma;
-	mxge_dma_t fw_stats_dma;
 	struct pci_dev *pdev;
-	int msi_enabled;
+	int legacy_irq;
 	int link_state;
 	unsigned int rdma_tags_available;
 	int intr_coal_delay;
@@ -170,11 +237,15 @@ typedef struct {
 	int stop_queue;
 	int down_cnt;
 	int watchdog_resets;
-	int tx_defragged;
+	int watchdog_countdown;
 	int pause;
 	struct resource *mem_res;
 	struct resource *irq_res;
+	struct resource **msix_irq_res;
+	struct resource *msix_table_res;
+	struct resource *msix_pba_res;
 	void *ih; 
+	void **msix_ih;
 	char *fw_name;
 	char eeprom_strings[MXGE_EEPROM_STRINGS_SIZE];
 	char fw_version[128];
@@ -190,25 +261,45 @@ typedef struct {
 	int fw_multicast_support;
 	int link_width;
 	int max_mtu;
+	int throttle;
 	int tx_defrag;
 	int media_flags;
 	int need_media_probe;
+	int num_slices;
+	int rx_ring_size;
+	int dying;
+	int connector;
+	int current_media;
 	mxge_dma_t dmabench_dma;
 	struct callout co_hdl;
+	struct taskqueue *tq;
+	struct task watchdog_task;
+	struct sysctl_oid *slice_sysctl_tree;
+	struct sysctl_ctx_list slice_sysctl_ctx;
 	char *mac_addr_string;
 	uint8_t	mac_addr[6];		/* eeprom mac address */
+	uint16_t pectl;			/* save PCIe CTL state */
 	char product_code_string[64];
 	char serial_number_string[64];
-	char scratch[256];
-	char tx_mtx_name[16];
 	char cmd_mtx_name[16];
 	char driver_mtx_name[16];
-} mxge_softc_t;
+};
 
 #define MXGE_PCI_VENDOR_MYRICOM 	0x14c1
 #define MXGE_PCI_DEVICE_Z8E 	0x0008
 #define MXGE_PCI_DEVICE_Z8E_9 	0x0009
+#define MXGE_PCI_REV_Z8E	0
+#define MXGE_PCI_REV_Z8ES	1
 #define MXGE_XFP_COMPLIANCE_BYTE	131
+#define MXGE_SFP_COMPLIANCE_BYTE	  3
+#define MXGE_MIN_THROTTLE	416
+#define MXGE_MAX_THROTTLE	4096
+
+/* Types of connectors on NICs supported by this driver */
+#define MXGE_CX4 0
+#define MXGE_XFP 1
+#define MXGE_SFP 2
+#define MXGE_QRF 3
 
 #define MXGE_HIGHPART_TO_U32(X) \
 (sizeof (X) == 8) ? ((uint32_t)((uint64_t)(X) >> 32)) : (0)
@@ -224,18 +315,22 @@ struct mxge_media_type
 /* implement our own memory barriers, since bus_space_barrier
    cannot handle write-combining regions */
 
+#if __FreeBSD_version < 800053
+
 #if defined (__GNUC__)
   #if #cpu(i386) || defined __i386 || defined i386 || defined __i386__ || #cpu(x86_64) || defined __x86_64__
-    #define mb()  __asm__ __volatile__ ("sfence;": : :"memory")
+    #define wmb()  __asm__ __volatile__ ("sfence;": : :"memory")
   #elif #cpu(sparc64) || defined sparc64 || defined __sparcv9 
-    #define mb()  __asm__ __volatile__ ("membar #MemIssue": : :"memory")
+    #define wmb()  __asm__ __volatile__ ("membar #MemIssue": : :"memory")
   #elif #cpu(sparc) || defined sparc || defined __sparc__
-    #define mb()  __asm__ __volatile__ ("stbar;": : :"memory")
+    #define wmb()  __asm__ __volatile__ ("stbar;": : :"memory")
   #else
-    #define mb() 	/* XXX just to make this compile */
+    #define wmb() 	/* XXX just to make this compile */
   #endif
 #else
   #error "unknown compiler"
+#endif
+
 #endif
 
 static inline void
@@ -255,8 +350,9 @@ mxge_pio_copy(volatile void *to_v, void *from_v, size_t size)
 
 }
 
-void mxge_lro_flush(mxge_softc_t *mgp, struct lro_entry *lro);
-int mxge_lro_rx(mxge_softc_t *mgp, struct mbuf *m_head, uint32_t csum);
+void mxge_lro_flush(struct mxge_slice_state *ss, struct lro_entry *lro);
+int mxge_lro_rx(struct mxge_slice_state *ss, struct mbuf *m_head,
+		uint32_t csum);
 		
 
 

@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: src/sys/dev/cxgb/common/cxgb_firmware_exports.h,v 1.2 2007/05/28 22:57:26 kmacy Exp $
+$FreeBSD$
 
 ***************************************************************************/
 #ifndef _FIRMWARE_EXPORTS_H_
@@ -74,6 +74,8 @@ $FreeBSD: src/sys/dev/cxgb/common/cxgb_firmware_exports.h,v 1.2 2007/05/28 22:57
 
 #define FW_WROPCODE_MNGT			0x1D
 #define FW_MNGTOPCODE_PKTSCHED_SET		0x00
+#define FW_MNGTOPCODE_WRC_SET			0x01
+#define FW_MNGTOPCODE_TUNNEL_CR_FLUSH		0x02
 
 /* Maximum size of a WR sent from the host, limited by the SGE. 
  *

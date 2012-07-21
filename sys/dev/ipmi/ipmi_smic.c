@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ipmi/ipmi_smic.c,v 1.4 2006/10/05 15:38:59 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -372,14 +372,14 @@ smic_loop(void *arg)
 		ipmi_complete_request(sc, req);
 	}
 	IPMI_UNLOCK(sc);
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 static int
 smic_startup(struct ipmi_softc *sc)
 {
 
-	return (kthread_create(smic_loop, sc, &sc->ipmi_kthread, 0, 0,
+	return (kproc_create(smic_loop, sc, &sc->ipmi_kthread, 0, 0,
 	    "%s: smic", device_get_nameunit(sc->ipmi_dev)));
 }
 

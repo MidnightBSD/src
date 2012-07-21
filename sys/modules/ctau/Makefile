@@ -1,5 +1,5 @@
 # Cronyx Id: sys.modules.ct.Makefile,v 1.1.2.2 2003/12/08 15:39:01 rik Exp $
-# $FreeBSD: src/sys/modules/ctau/Makefile,v 1.3.2.1 2006/02/10 00:37:59 yar Exp $
+# $FreeBSD$
 .PATH:  ${.CURDIR}/../../dev/ctau
 KMOD=   if_ct
 SRCS=   if_ct.c ctddk.c ctau.c opt_netgraph.h opt_ng_cronyx.h \
@@ -15,12 +15,12 @@ CFLAGS+= ${PROTOS}
 
 .if ${NETGRAPH} != 0
 opt_netgraph.h:
-	echo "#define NETGRAPH $(NETGRAPH)" > opt_netgraph.h
+	echo "#define NETGRAPH $(NETGRAPH)" > ${.TARGET}
 .endif
 
 .if ${NG_CRONYX} != 0
 opt_ng_cronyx.h:
-	echo "#define NETGRAPH_CRONYX 1" > opt_ng_cronyx.h
+	echo "#define NETGRAPH_CRONYX 1" > ${.TARGET}
 .endif
 .endif
 

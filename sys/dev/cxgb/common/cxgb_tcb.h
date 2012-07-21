@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: src/sys/dev/cxgb/common/cxgb_tcb.h,v 1.2 2007/05/28 22:57:26 kmacy Exp $
+$FreeBSD$
 
 ***************************************************************************/
 
@@ -668,7 +668,10 @@ $FreeBSD: src/sys/dev/cxgb/common/cxgb_tcb.h,v 1.2 2007/05/28 22:57:26 kmacy Exp
 #define S_TF_DDP_BUF1_FLUSH    28
 #define V_TF_DDP_BUF1_FLUSH(x) ((x) << S_TF_DDP_BUF1_FLUSH)
 
-#define S_TF_DDP_PSH_NO_INVALIDATE    29
-#define V_TF_DDP_PSH_NO_INVALIDATE(x) ((x) << S_TF_DDP_PSH_NO_INVALIDATE)
+#define S_TF_DDP_PSH_NO_INVALIDATE0    29
+#define V_TF_DDP_PSH_NO_INVALIDATE0(x) ((x) << S_TF_DDP_PSH_NO_INVALIDATE0)
+
+#define S_TF_DDP_PSH_NO_INVALIDATE1    30
+#define V_TF_DDP_PSH_NO_INVALIDATE1(x) ((x) << S_TF_DDP_PSH_NO_INVALIDATE1)
 
 #endif /* _TCB_DEFS_H */

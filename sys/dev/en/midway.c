@@ -32,7 +32,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/en/midway.c,v 1.73 2007/05/29 11:28:27 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  *
@@ -141,9 +141,11 @@ enum {
 #include <net/if_media.h>
 #include <net/if_atm.h>
 
-#if defined(INET) || defined(INET6)
+#if defined(NATM) || defined(INET) || defined(INET6)
 #include <netinet/in.h>
+#if defined(INET) || defined(INET6)
 #include <netinet/if_atm.h>
+#endif
 #endif
 
 #ifdef NATM
@@ -835,27 +837,15 @@ copy_mbuf(struct mbuf *m)
 {
 	struct mbuf *new;
 
-	MGET(new, M_TRYWAIT, MT_DATA);
-	if (new == NULL)
-		return (NULL);
+	MGET(new, M_WAIT, MT_DATA);
 
 	if (m->m_flags & M_PKTHDR) {
 		M_MOVE_PKTHDR(new, m);
-		if (m->m_len > MHLEN) {
-			MCLGET(new, M_TRYWAIT);
-			if ((m->m_flags & M_EXT) == 0) {
-				m_free(new);
-				return (NULL);
-			}
-		}
+		if (m->m_len > MHLEN)
+			MCLGET(new, M_WAIT);
 	} else {
-		if (m->m_len > MLEN) {
-			MCLGET(new, M_TRYWAIT);
-			if ((m->m_flags & M_EXT) == 0) {
-				m_free(new);
-				return (NULL);
-			}
-		}
+		if (m->m_len > MLEN)
+			MCLGET(new, M_WAIT);
 	}
 
 	bcopy(m->m_data, new->m_data, m->m_len);
@@ -1536,7 +1526,9 @@ static int
 en_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
 	struct en_softc *sc = (struct en_softc *)ifp->if_softc;
+#if defined(INET) || defined(INET6)
 	struct ifaddr *ifa = (struct ifaddr *)data;
+#endif
 	struct ifreq *ifr = (struct ifreq *)data;
 	struct atmio_vcctable *vtab;
 	int error = 0;
@@ -2722,7 +2714,7 @@ en_dmaprobe(struct en_softc *sc)
 	 * Allocate some DMA-able memory.
 	 * We need 3 times the max burst size aligned to the max burst size.
 	 */
-	err = bus_dma_tag_create(NULL, MIDDMA_MAXBURST, 0,
+	err = bus_dma_tag_create(bus_get_dma_tag(sc->dev), MIDDMA_MAXBURST, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
 	    3 * MIDDMA_MAXBURST, 1, 3 * MIDDMA_MAXBURST, 0,
 	    NULL, NULL, &tag);
@@ -2916,8 +2908,8 @@ en_attach(struct en_softc *sc)
 		goto fail;
 
 	if (SYSCTL_ADD_PROC(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
-	    OID_AUTO, "istats", CTLFLAG_RD, sc, 0, en_sysctl_istats,
-	    "S", "internal statistics") == NULL)
+	    OID_AUTO, "istats", CTLTYPE_OPAQUE | CTLFLAG_RD, sc, 0,
+	    en_sysctl_istats, "S", "internal statistics") == NULL)
 		goto fail;
 
 #ifdef EN_DEBUG
@@ -2932,12 +2924,10 @@ en_attach(struct en_softc *sc)
 	    &en_utopia_methods);
 	utopia_init_media(&sc->utopia);
 
-	MGET(sc->padbuf, M_TRYWAIT, MT_DATA);
-	if (sc->padbuf == NULL)
-		goto fail;
+	MGET(sc->padbuf, M_WAIT, MT_DATA);
 	bzero(sc->padbuf->m_data, MLEN);
 
-	if (bus_dma_tag_create(NULL, 1, 0,
+	if (bus_dma_tag_create(bus_get_dma_tag(sc->dev), 1, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
 	    EN_TXSZ * 1024, EN_MAX_DMASEG, EN_TXSZ * 1024, 0,
 	    NULL, NULL, &sc->txtag))

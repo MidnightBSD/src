@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis_pccard.c,v 1.14 2007/04/06 11:21:01 pjd Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/ctype.h>
 #include <sys/param.h>
@@ -50,6 +50,9 @@ __FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis_pccard.c,v 1.14 2007/04/06 11:21
 #include <machine/resource.h>
 #include <sys/bus.h>
 #include <sys/rman.h>
+
+#include <dev/usb/usb.h>
+#include <dev/usb/usbdi.h>
 
 #include <net80211/ieee80211_var.h>
 
@@ -195,9 +198,8 @@ ndis_attach_pccard(dev)
 	resource_list_init(&sc->ndis_rl);
 
 	sc->ndis_io_rid = 0;
-	sc->ndis_res_io = bus_alloc_resource(dev,
-	    SYS_RES_IOPORT, &sc->ndis_io_rid,
-	    0, ~0, 1, RF_ACTIVE);
+	sc->ndis_res_io = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
+	    &sc->ndis_io_rid, RF_ACTIVE);
 	if (sc->ndis_res_io == NULL) {
 		device_printf(dev,
 		    "couldn't map iospace\n");
@@ -205,13 +207,12 @@ ndis_attach_pccard(dev)
 		goto fail;
 	}
 	sc->ndis_rescnt++;
-	resource_list_add(&sc->ndis_rl, SYS_RES_IOPORT, rid,
+	resource_list_add(&sc->ndis_rl, SYS_RES_IOPORT, sc->ndis_io_rid,
 	    rman_get_start(sc->ndis_res_io), rman_get_end(sc->ndis_res_io),
 	    rman_get_size(sc->ndis_res_io));
 
 	rid = 0;
-	sc->ndis_irq = bus_alloc_resource(dev,
-	    SYS_RES_IRQ, &rid, 0, ~0, 1,
+	sc->ndis_irq = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
 	    RF_SHAREABLE | RF_ACTIVE);
 	if (sc->ndis_irq == NULL) {
 		device_printf(dev,

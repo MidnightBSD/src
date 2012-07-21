@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iicbus/iicbb.c,v 1.19 2007/03/23 23:03:54 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Generic I2C bit-banging code
@@ -72,7 +72,7 @@ static int iicbb_probe(device_t);
 static int iicbb_callback(device_t, int, caddr_t);
 static int iicbb_start(device_t, u_char, int);
 static int iicbb_stop(device_t);
-static int iicbb_write(device_t, char *, int, int *, int);
+static int iicbb_write(device_t, const char *, int, int *, int);
 static int iicbb_read(device_t, char *, int, int *, int, int);
 static int iicbb_reset(device_t, u_char, u_char, u_char *);
 
@@ -372,7 +372,7 @@ iicbb_stop(device_t dev)
 }
 
 static int
-iicbb_write(device_t dev, char * buf, int len, int *sent, int timeout)
+iicbb_write(device_t dev, const char *buf, int len, int *sent, int timeout)
 {
 	int bytes, error = 0;
 
@@ -413,16 +413,7 @@ iicbb_read(device_t dev, char * buf, int len, int *read, int last, int delay)
 	return (0);
 }
 
-/* 
- * XXX This is lame.  We need to have a base iicbb_bridge class that all these
- * XXX derive from.
- */
-DRIVER_MODULE(iicbb, bktr, iicbb_driver, iicbb_devclass, 0, 0);
-DRIVER_MODULE(iicbb, ixpiic, iicbb_driver, iicbb_devclass, 0, 0);
-DRIVER_MODULE(iicbb, lpbb, iicbb_driver, iicbb_devclass, 0, 0);
-DRIVER_MODULE(iicbb, viapm, iicbb_driver, iicbb_devclass, 0, 0);
-DRIVER_MODULE(iicbb, cxm_iic, iicbb_driver, iicbb_devclass, 0, 0);
-DRIVER_MODULE(iicbb, at91_bbiic, iicbb_driver, iicbb_devclass, 0, 0);
+DRIVER_MODULE(iicbus, iicbb, iicbus_driver, iicbus_devclass, 0, 0);
 
 MODULE_DEPEND(iicbb, iicbus, IICBUS_MINVER, IICBUS_PREFVER, IICBUS_MAXVER);
 MODULE_VERSION(iicbb, IICBB_MODVER);

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/i386/boot0/Makefile,v 1.32 2005/04/25 17:41:35 ru Exp $
+# $FreeBSD$
 
 PROG?=	boot0
 STRIP=
@@ -6,10 +6,30 @@ BINMODE=${NOBINMODE}
 NO_MAN=
 SRCS=	${PROG}.S
 
-# The default set of flags compiled into boot0.  This enables update (writing
-# the modified boot0 back to disk after running so that the selection made is
-# saved), packet mode (detect and use the BIOS EDD extensions if we try to
-# boot past the 1024 cylinder liimt), and booting from all valid slices.
+# Additional options that you can specify with make OPTS="..."
+# (these only apply to boot0.S)
+#
+#	-DVOLUME_SERIAL	support volume serial number (NT, XP, Vista)
+#	-DSIO		do I/O using COM1:
+#	-DPXE		fallback to INT18/PXE with F6
+#	-DCHECK_DRIVE	enable checking drive number
+#	-DONLY_F_KEYS	accept only Fx keys in console
+#	-DTEST		print drive number on entry
+#
+OPTS ?= -DVOLUME_SERIAL -DPXE
+CFLAGS += ${OPTS}
+
+# Flags used in the boot0.S code:
+#   0x0f	all valid partitions enabled.
+#   0x80	'packet', use BIOS EDD (LBA) extensions instead of CHS
+#		to read from disk. boot0.S does not check that the extensions
+#		are supported, but all modern BIOSes should have them.
+#   0x40	'noupdate', disable writing boot0 back to disk so that
+#		the current selection is not preserved across reboots.
+#   0x20	'setdrv', override the drive number supplied by the bios
+#		with the one in the boot sector.
+
+# Default boot flags:
 BOOT_BOOT0_FLAGS?=	0x8f
 
 # The number of timer ticks to wait for a keypress before assuming the default
@@ -54,6 +74,11 @@ CFLAGS+=-DFLAGS=${BOOT_BOOT0_FLAGS} \
 	-DTICKS=${BOOT_BOOT0_TICKS} \
 	-DCOMSPEED=${BOOT_BOOT0_COMCONSOLE_SPEED}
 
-LDFLAGS=-N -e start -Ttext ${BOOT_BOOT0_ORG} -Wl,-S,--oformat,binary
+LDFLAGS=-e start -Ttext ${BOOT_BOOT0_ORG} -Wl,-N,-S,--oformat,binary
 
 .include <bsd.prog.mk>
+
+# XXX: clang integrated-as doesn't grok .codeNN directives yet
+CFLAGS.boot0.S=		${CLANG_NO_IAS}
+CFLAGS.boot0ext.S=	${CLANG_NO_IAS}
+CFLAGS+=		${CFLAGS.${.IMPSRC:T}}

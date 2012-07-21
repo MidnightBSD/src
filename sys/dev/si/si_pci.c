@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/si/si_pci.c,v 1.9 2007/02/23 19:33:07 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -103,6 +103,29 @@ si_pci_attach(device_t dev)
 	if (error) {
 		device_printf(dev, "could not activate interrupt\n");
 		goto fail;
+	}
+
+	if (pci_get_devid(dev) == 0x200011cb) {
+		int rid;
+		struct resource *plx_res;
+		uint32_t *addr;
+		uint32_t oldvalue;
+
+		/* Perform a PLX control register fixup */
+		rid = PCIR_BAR(0);
+		plx_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
+		    RF_ACTIVE);
+		if (plx_res == NULL) {
+			device_printf(dev, "couldn't map plx registers\n");
+		} else {
+			addr = rman_get_virtual(plx_res);
+			oldvalue = addr[0x50 / 4];
+			if (oldvalue != 0x18260000) {
+				device_printf(dev, "PLX register 0x50: 0x%08x changed to 0x%08x\n", oldvalue, 0x18260000);
+				addr[0x50 / 4] = 0x18260000;
+			}
+			bus_release_resource(dev, SYS_RES_MEMORY, rid, plx_res);
+		}
 	}
 
 	error = siattach(dev);

@@ -32,7 +32,7 @@
  * The x86_64 callback routines were written and graciously submitted
  * by Ville-Pertti Keinonen <will@exomi.com>.
  *
- * $FreeBSD: src/sys/compat/ndis/winx64_wrap.S,v 1.4 2005/04/16 04:47:15 wpaul Exp $
+ * $FreeBSD$
  */
 
 #include <machine/asmacros.h>
@@ -125,26 +125,26 @@ x86_64_wrap_end:
  */
 
 ENTRY(x86_64_call1)
-	subq	$8,%rsp
+	subq	$40,%rsp
 	mov	%rsi,%rcx
 	call	*%rdi
-	addq	$8,%rsp
+	addq	$40,%rsp
 	ret
 
 ENTRY(x86_64_call2)
-	subq	$24,%rsp
+	subq	$40,%rsp
 	mov	%rsi,%rcx
 	/* %rdx is already correct */
 	call	*%rdi
-	addq	$24,%rsp
+	addq	$40,%rsp
 	ret
 
 ENTRY(x86_64_call3)
-	subq	$24,%rsp
+	subq	$40,%rsp
 	mov	%rcx,%r8
 	mov	%rsi,%rcx
 	call	*%rdi
-	addq	$24,%rsp
+	addq	$40,%rsp
 	ret
 
 ENTRY(x86_64_call4)
@@ -157,13 +157,13 @@ ENTRY(x86_64_call4)
 	ret
 
 ENTRY(x86_64_call5)
-	subq	$40,%rsp
+	subq	$48,%rsp
 	mov	%r9,32(%rsp)
 	mov	%r8,%r9
 	mov	%rcx,%r8
 	mov	%rsi,%rcx
 	call	*%rdi
-	addq	$40,%rsp
+	addq	$48,%rsp
 	ret
 
 ENTRY(x86_64_call6)

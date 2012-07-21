@@ -26,6 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $FreeBSD$
  */
 
 /*
@@ -38,9 +39,6 @@
  *		Ron McDaniels;	SCSI Software Interrupts
  *		FreeBSD.ORG;	Great O/S to work on and for.
  */
-
-
-#ident "$FreeBSD: src/sys/dev/dpt/dpt.h,v 1.18 2007/06/17 05:55:49 scottl Exp $"
 
 #ifndef _DPT_H
 #define _DPT_H
@@ -144,7 +142,7 @@ typedef void *physaddr;
  */
 #define DPT_NO_CACHE		       	0
 #define DPT_CACHE_WRITETHROUGH		1
-#define DPT_CACHE_WRITEBACK			-2
+#define DPT_CACHE_WRITEBACK		2
 
 #define min(a,b) ((a<b)?(a):(b))
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hwpmc/hwpmc_piv.h,v 1.1 2005/06/09 19:45:07 jkoshy Exp $
+ * $FreeBSD$
  */
 
 /* Machine dependent interfaces */
@@ -33,7 +33,7 @@
 
 /* Intel P4 PMCs */
 
-#define	P4_NPMCS		19	/* 1 TSC + 18 PMCS */
+#define	P4_NPMCS		18
 #define	P4_NESCR		45
 #define	P4_INVALID_PMC_INDEX	-1
 #define	P4_MAX_ESCR_PER_EVENT	2
@@ -118,7 +118,8 @@ struct pmc_md_p4_pmc {
  * Prototypes
  */
 
-int	pmc_initialize_p4(struct pmc_mdep *);		/* Pentium IV PMCs */
+int	pmc_p4_initialize(struct pmc_mdep *_md, int _ncpus);
+void	pmc_p4_finalize(struct pmc_mdep *md);
 
 #endif /* _KERNEL */
-#endif /* _MACHINE_PMC_MDEP_H */
+#endif /* _DEV_HWPMC_PIV_H_ */

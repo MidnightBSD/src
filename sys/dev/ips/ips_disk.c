@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ips/ips_disk.c,v 1.10 2005/11/29 09:39:41 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
@@ -192,10 +192,10 @@ ipsd_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset,
 
 	dp = arg;
 	dsc = dp->d_drv1;
-	sc = dsc->sc;
 
 	if (dsc == NULL)
 		return (EINVAL);
+	sc = dsc->sc;
 
 	if (ips_get_free_cmd(sc, &command, 0) != 0) {
 		printf("ipsd: failed to get cmd for dump\n");

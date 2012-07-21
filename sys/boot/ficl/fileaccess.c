@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/boot/ficl/fileaccess.c,v 1.1 2002/04/09 17:45:11 dcs Exp $ */
+/* $FreeBSD$ */
 
 #include <errno.h>
 #include <stdlib.h>

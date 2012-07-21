@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/atm/sscfu/ng_sscfu.c,v 1.4 2005/01/07 01:45:41 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -538,8 +538,7 @@ ng_sscfu_constructor(node_p node)
 {
 	struct priv *priv;
 
-	if ((priv = malloc(sizeof(*priv), M_NG_SSCFU, M_NOWAIT|M_ZERO)) == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NG_SSCFU, M_WAITOK | M_ZERO);
 
 	if ((priv->sscf = sscfu_create(node, &sscfu_funcs)) == NULL) {
 		free(priv, M_NG_SSCFU);

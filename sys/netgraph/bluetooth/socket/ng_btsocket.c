@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket.c,v 1.13 2006/07/21 17:11:13 rwatson Exp $
+ * $Id: ng_btsocket.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -45,6 +45,7 @@
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
+
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
 #include <netgraph/bluetooth/include/ng_bluetooth.h>
@@ -54,9 +55,10 @@
 #include <netgraph/bluetooth/include/ng_btsocket_hci_raw.h>
 #include <netgraph/bluetooth/include/ng_btsocket_l2cap.h>
 #include <netgraph/bluetooth/include/ng_btsocket_rfcomm.h>
+#include <netgraph/bluetooth/include/ng_btsocket_sco.h>
 
 static int			ng_btsocket_modevent (module_t, int, void *);
-extern struct domain		ng_btsocket_domain;
+static struct domain		ng_btsocket_domain;
 
 /*
  * Bluetooth raw HCI sockets
@@ -138,6 +140,27 @@ static struct pr_usrreqs	ng_btsocket_rfcomm_usrreqs = {
 	.pru_close =		ng_btsocket_rfcomm_close,
 };
 
+/*
+ * Bluetooth SEQPACKET SCO sockets
+ */
+
+static struct pr_usrreqs	ng_btsocket_sco_usrreqs = {
+	.pru_abort =		ng_btsocket_sco_abort,
+	.pru_accept =		ng_btsocket_sco_accept,
+	.pru_attach =		ng_btsocket_sco_attach,
+	.pru_bind =		ng_btsocket_sco_bind,
+	.pru_connect =		ng_btsocket_sco_connect,
+	.pru_control =		ng_btsocket_sco_control,
+	.pru_detach =		ng_btsocket_sco_detach,
+	.pru_disconnect =	ng_btsocket_sco_disconnect,
+	.pru_listen =		ng_btsocket_sco_listen,
+	.pru_peeraddr =		ng_btsocket_sco_peeraddr,
+	.pru_send =		ng_btsocket_sco_send,
+	.pru_shutdown =		NULL,
+	.pru_sockaddr =		ng_btsocket_sco_sockaddr,
+	.pru_close =		ng_btsocket_sco_close,
+};
+
 /* 
  * Definitions of protocols supported in the BLUETOOTH domain 
  */
@@ -177,7 +200,16 @@ static struct protosw		ng_btsocket_protosw[] = {
 	.pr_ctloutput =		ng_btsocket_rfcomm_ctloutput,
 	.pr_init =		ng_btsocket_rfcomm_init,
 	.pr_usrreqs =		&ng_btsocket_rfcomm_usrreqs,
-}
+},
+{
+	.pr_type =		SOCK_SEQPACKET,
+	.pr_domain =		&ng_btsocket_domain,
+	.pr_protocol =		BLUETOOTH_PROTO_SCO,
+	.pr_flags =		PR_ATOMIC|PR_CONNREQUIRED,
+	.pr_ctloutput =		ng_btsocket_sco_ctloutput,
+	.pr_init =		ng_btsocket_sco_init,
+	.pr_usrreqs =		&ng_btsocket_sco_usrreqs,
+},
 };
 #define ng_btsocket_protosw_size \
 	(sizeof(ng_btsocket_protosw)/sizeof(ng_btsocket_protosw[0]))
@@ -188,7 +220,7 @@ static struct protosw		ng_btsocket_protosw[] = {
  * BLUETOOTH domain
  */
 
-struct domain			ng_btsocket_domain = {
+static struct domain ng_btsocket_domain = {
 	.dom_family =		AF_BLUETOOTH,
 	.dom_name =		"bluetooth",
 	.dom_protosw =		ng_btsocket_protosw,
@@ -205,6 +237,8 @@ SYSCTL_NODE(_net_bluetooth_l2cap, OID_AUTO, sockets, CTLFLAG_RW,
 	0, "Bluetooth L2CAP sockets family");
 SYSCTL_NODE(_net_bluetooth_rfcomm, OID_AUTO, sockets, CTLFLAG_RW,
 	0, "Bluetooth RFCOMM sockets family");
+SYSCTL_NODE(_net_bluetooth_sco, OID_AUTO, sockets, CTLFLAG_RW,
+	0, "Bluetooth SCO sockets family");
 
 /* 
  * Module 
@@ -236,7 +270,6 @@ ng_btsocket_modevent(module_t mod, int event, void *data)
         
 	switch (event) {
 	case MOD_LOAD:
-		net_add_domain(&ng_btsocket_domain);
 		break;
 
 	case MOD_UNLOAD:
@@ -252,3 +285,4 @@ ng_btsocket_modevent(module_t mod, int event, void *data)
 	return (error);
 } /* ng_btsocket_modevent */
 
+DOMAIN_SET(ng_btsocket_);

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/safe/safe.c,v 1.18.2.1 2007/11/08 07:14:37 sam Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * SafeNet SafeXcel-1141 hardware crypto accelerator
@@ -84,7 +84,7 @@ static	int safe_attach(device_t);
 static	int safe_detach(device_t);
 static	int safe_suspend(device_t);
 static	int safe_resume(device_t);
-static	void safe_shutdown(device_t);
+static	int safe_shutdown(device_t);
 
 static	int safe_newsession(device_t, u_int32_t *, struct cryptoini *);
 static	int safe_freesession(device_t, u_int64_t);
@@ -99,16 +99,12 @@ static device_method_t safe_methods[] = {
 	DEVMETHOD(device_resume,	safe_resume),
 	DEVMETHOD(device_shutdown,	safe_shutdown),
 
-	/* bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-
 	/* crypto device methods */
 	DEVMETHOD(cryptodev_newsession,	safe_newsession),
 	DEVMETHOD(cryptodev_freesession,safe_freesession),
 	DEVMETHOD(cryptodev_process,	safe_process),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 static driver_t safe_driver = {
 	"safe",
@@ -291,7 +287,7 @@ safe_attach(device_t dev)
 	/*
 	 * Setup DMA descriptor area.
 	 */
-	if (bus_dma_tag_create(NULL,			/* parent */
+	if (bus_dma_tag_create(bus_get_dma_tag(dev),	/* parent */
 			       1,			/* alignment */
 			       SAFE_DMA_BOUNDARY,	/* boundary */
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
@@ -306,7 +302,7 @@ safe_attach(device_t dev)
 		device_printf(dev, "cannot allocate DMA tag\n");
 		goto bad4;
 	}
-	if (bus_dma_tag_create(NULL,			/* parent */
+	if (bus_dma_tag_create(bus_get_dma_tag(dev),	/* parent */
 			       1,			/* alignment */
 			       SAFE_MAX_DSIZE,		/* boundary */
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
@@ -503,12 +499,13 @@ safe_detach(device_t dev)
  * Stop all chip i/o so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 safe_shutdown(device_t dev)
 {
 #ifdef notyet
 	safe_stop(device_get_softc(dev));
 #endif
+	return (0);
 }
 
 /*
@@ -1579,9 +1576,12 @@ safe_callback(struct safe_softc *sc, struct safe_ringentry *re)
 				 * SHA-1 ICV's are byte-swapped; fix 'em up
 				 * before copy them to their destination.
 				 */
-				bswap32(re->re_sastate.sa_saved_indigest[0]);
-				bswap32(re->re_sastate.sa_saved_indigest[1]);
-				bswap32(re->re_sastate.sa_saved_indigest[2]);
+				re->re_sastate.sa_saved_indigest[0] =
+				    bswap32(re->re_sastate.sa_saved_indigest[0]);
+				re->re_sastate.sa_saved_indigest[1] =
+				    bswap32(re->re_sastate.sa_saved_indigest[1]);
+				re->re_sastate.sa_saved_indigest[2] =
+				    bswap32(re->re_sastate.sa_saved_indigest[2]);
 			}
 			crypto_copyback(crp->crp_flags, crp->crp_buf,
 			    crd->crd_inject,
@@ -1802,7 +1802,7 @@ safe_dma_malloc(
 {
 	int r;
 
-	r = bus_dma_tag_create(NULL,			/* parent */
+	r = bus_dma_tag_create(bus_get_dma_tag(sc->sc_dev),	/* parent */
 			       sizeof(u_int32_t), 0,	/* alignment, bounds */
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
@@ -1901,7 +1901,7 @@ safe_init_board(struct safe_softc *sc)
 {
 	u_int32_t v, dwords;
 
-	v = READ_REG(sc, SAFE_PE_DMACFG);;
+	v = READ_REG(sc, SAFE_PE_DMACFG);
 	v &=~ SAFE_PE_DMACFG_PEMODE;
 	v |= SAFE_PE_DMACFG_FSENA		/* failsafe enable */
 	  |  SAFE_PE_DMACFG_GPRPCI		/* gather ring on PCI */

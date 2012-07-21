@@ -31,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_rtl80x9.c,v 1.3 2005/10/22 05:14:18 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ed.h"
 
@@ -193,7 +193,7 @@ ed_rtl_get_media(struct ifnet *ifp, struct ifmediareq *imr)
 			(ed_nic_inb(sc, ED_P0_CR) & (ED_CR_STA | ED_CR_STP)));
 
 		switch (ed_nic_inb(sc, ED_RTL80X9_CONFIG0)
-				& (ED_CHIP_TYPE_RTL8029 ? ED_RTL80X9_CF0_BNC
+				& (sc->chip_type == ED_CHIP_TYPE_RTL8029 ? ED_RTL80X9_CF0_BNC
 				: (ED_RTL80X9_CF0_AUI | ED_RTL80X9_CF0_BNC))) {
 		case ED_RTL80X9_CF0_BNC:
 			imr->ifm_active |= IFM_10_2;

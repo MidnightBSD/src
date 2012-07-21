@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hwpmc/hwpmc_amd.h,v 1.1 2005/06/09 19:45:07 jkoshy Exp $
+ * $FreeBSD$
  */
 
 /* Machine dependent interfaces */
@@ -44,7 +44,7 @@
 #define	AMD_PMC_PERFCTR_3	0xC0010007
 
 
-#define	AMD_NPMCS		5 /* 1 TSC + 4 PMCs */
+#define	AMD_NPMCS		4
 
 #define	AMD_PMC_COUNTERMASK	0xFF000000
 #define	AMD_PMC_TO_COUNTER(x)	(((x) << 24) & AMD_PMC_COUNTERMASK)
@@ -92,12 +92,6 @@ struct pmc_md_amd_op_pmcallocate {
 struct pmc_md_amd_pmc {
 	uint32_t	pm_amd_evsel;
 };
-
-/*
- * Prototypes
- */
-
-struct pmc_mdep *pmc_amd_initialize(void);		/* AMD K7/K8 PMCs */
 
 #endif /* _KERNEL */
 #endif /* _DEV_HWPMC_AMD_H_ */

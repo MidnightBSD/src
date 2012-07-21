@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ex/if_ex.c,v 1.62 2006/02/04 08:16:41 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Intel EtherExpress Pro/10, Pro/10+ Ethernet driver
@@ -98,9 +98,11 @@ u_char plus_ee2irqmap[] =
 
 /* Network Interface Functions */
 static void	ex_init(void *);
+static void	ex_init_locked(struct ex_softc *);
 static void	ex_start(struct ifnet *);
+static void	ex_start_locked(struct ifnet *);
 static int	ex_ioctl(struct ifnet *, u_long, caddr_t);
-static void	ex_watchdog(struct ifnet *);
+static void	ex_watchdog(void *);
 
 /* ifmedia Functions	*/
 static int	ex_ifmedia_upd(struct ifnet *);
@@ -158,8 +160,6 @@ ex_alloc_resources(device_t dev)
 		error = ENOMEM;
 		goto bad;
 	}
-	sc->bst = rman_get_bustag(sc->ioport);
-	sc->bsh = rman_get_bushandle(sc->ioport);
 
 	sc->irq = bus_alloc_resource_any(dev, SYS_RES_IRQ, &sc->irq_rid,
 					RF_ACTIVE);
@@ -208,6 +208,7 @@ ex_attach(device_t dev)
 	struct ex_softc *	sc = device_get_softc(dev);
 	struct ifnet *		ifp;
 	struct ifmedia *	ifm;
+	int			error;
 	uint16_t		temp;
 
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
@@ -232,15 +233,16 @@ ex_attach(device_t dev)
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_mtu = ETHERMTU;
-	ifp->if_flags = IFF_SIMPLEX | IFF_BROADCAST | IFF_MULTICAST |
-	    IFF_NEEDSGIANT;
+	ifp->if_flags = IFF_SIMPLEX | IFF_BROADCAST | IFF_MULTICAST;
 	ifp->if_start = ex_start;
 	ifp->if_ioctl = ex_ioctl;
-	ifp->if_watchdog = ex_watchdog;
 	ifp->if_init = ex_init;
-	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
 
 	ifmedia_init(&sc->ifmedia, 0, ex_ifmedia_upd, ex_ifmedia_sts);
+	mtx_init(&sc->lock, device_get_nameunit(dev), MTX_NETWORK_LOCK,
+	    MTX_DEF);
+	callout_init_mtx(&sc->timer, &sc->lock, 0);
 
 	temp = ex_eeprom_read(sc, EE_W5);
 	if (temp & EE_W5_PORT_TPE)
@@ -255,13 +257,22 @@ ex_attach(device_t dev)
 	ifmedia_set(&sc->ifmedia, ex_get_media(sc));
 
 	ifm = &sc->ifmedia;
-	ifm->ifm_media = ifm->ifm_cur->ifm_media;
+	ifm->ifm_media = ifm->ifm_cur->ifm_media;	
 	ex_ifmedia_upd(ifp);
 
 	/*
 	 * Attach the interface.
 	 */
 	ether_ifattach(ifp, sc->enaddr);
+
+	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE,
+				NULL, ex_intr, (void *)sc, &sc->ih);
+	if (error) {
+		device_printf(dev, "bus_setup_intr() failed!\n");
+		ether_ifdetach(ifp);
+		mtx_destroy(&sc->lock);
+		return (error);
+	}
 
 	return(0);
 }
@@ -275,12 +286,15 @@ ex_detach(device_t dev)
 	sc = device_get_softc(dev);
 	ifp = sc->ifp;
 
+	EX_LOCK(sc);
         ex_stop(sc);
+	EX_UNLOCK(sc);
 
-        ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	ether_ifdetach(ifp);
+	callout_drain(&sc->timer);
 
 	ex_release_resources(dev);
+	mtx_destroy(&sc->lock);
 
 	return (0);
 }
@@ -289,39 +303,52 @@ static void
 ex_init(void *xsc)
 {
 	struct ex_softc *	sc = (struct ex_softc *) xsc;
+
+	EX_LOCK(sc);
+	ex_init_locked(sc);
+	EX_UNLOCK(sc);
+}
+
+static void
+ex_init_locked(struct ex_softc *sc)
+{
 	struct ifnet *		ifp = sc->ifp;
-	int			s;
 	int			i;
 	unsigned short		temp_reg;
 
 	DODEBUG(Start_End, printf("%s: ex_init: start\n", ifp->if_xname););
 
-	s = splimp();
-	ifp->if_timer = 0;
+	sc->tx_timeout = 0;
 
 	/*
 	 * Load the ethernet address into the card.
 	 */
 	CSR_WRITE_1(sc, CMD_REG, Bank2_Sel);
 	temp_reg = CSR_READ_1(sc, EEPROM_REG);
-	if (temp_reg & Trnoff_Enable) {
+	if (temp_reg & Trnoff_Enable)
 		CSR_WRITE_1(sc, EEPROM_REG, temp_reg & ~Trnoff_Enable);
-	}
-	for (i = 0; i < ETHER_ADDR_LEN; i++) {
+	for (i = 0; i < ETHER_ADDR_LEN; i++)
 		CSR_WRITE_1(sc, I_ADDR_REG0 + i, IF_LLADDR(sc->ifp)[i]);
-	}
+
 	/*
 	 * - Setup transmit chaining and discard bad received frames.
 	 * - Match broadcast.
 	 * - Clear test mode.
 	 * - Set receiving mode.
-	 * - Set IRQ number.
 	 */
 	CSR_WRITE_1(sc, REG1, CSR_READ_1(sc, REG1) | Tx_Chn_Int_Md | Tx_Chn_ErStp | Disc_Bad_Fr);
 	CSR_WRITE_1(sc, REG2, CSR_READ_1(sc, REG2) | No_SA_Ins | RX_CRC_InMem);
 	CSR_WRITE_1(sc, REG3, CSR_READ_1(sc, REG3) & 0x3f /* XXX constants. */ );
+	/*
+	 * - Set IRQ number, if this part has it.  ISA devices have this,
+	 * while PC Card devices don't seem to.  Either way, we have to
+	 * switch to Bank1 as the rest of this code relies on that.
+	 */
 	CSR_WRITE_1(sc, CMD_REG, Bank1_Sel);
-	CSR_WRITE_1(sc, INT_NO_REG, (CSR_READ_1(sc, INT_NO_REG) & 0xf8) | sc->irq2ee[sc->irq_no]);
+	if (sc->flags & HAS_INT_NO_REG)
+		CSR_WRITE_1(sc, INT_NO_REG,
+		    (CSR_READ_1(sc, INT_NO_REG) & 0xf8) |
+		    sc->irq2ee[sc->irq_no]);
 
 	/*
 	 * Divide the available memory in the card into rcv and xmt buffers.
@@ -359,6 +386,7 @@ ex_init(void *xsc)
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 	DODEBUG(Status, printf("OIDLE init\n"););
+	callout_reset(&sc->timer, hz, ex_watchdog, sc);
 	
 	ex_setmulti(sc);
 	
@@ -369,25 +397,31 @@ ex_init(void *xsc)
 	DELAY(2);
 	CSR_WRITE_1(sc, CMD_REG, Rcv_Enable_CMD);
 
-	ex_start(ifp);
-	splx(s);
+	ex_start_locked(ifp);
 
 	DODEBUG(Start_End, printf("%s: ex_init: finish\n", ifp->if_xname););
 }
-
 
 static void
 ex_start(struct ifnet *ifp)
 {
 	struct ex_softc *	sc = ifp->if_softc;
-	int			i, s, len, data_len, avail, dest, next;
+
+	EX_LOCK(sc);
+	ex_start_locked(ifp);
+	EX_UNLOCK(sc);
+}
+
+static void
+ex_start_locked(struct ifnet *ifp)
+{
+	struct ex_softc *	sc = ifp->if_softc;
+	int			i, len, data_len, avail, dest, next;
 	unsigned char		tmp16[2];
 	struct mbuf *		opkt;
 	struct mbuf *		m;
 
 	DODEBUG(Start_End, printf("ex_start%d: start\n", unit););
-
-	s = splimp();
 
 	/*
 	 * Main loop: send outgoing packets to network card until there are no
@@ -536,7 +570,7 @@ ex_start(struct ifnet *ifp)
      	 
 			BPF_MTAP(ifp, opkt);
 
-			ifp->if_timer = 2;
+			sc->tx_timeout = 2;
 			ifp->if_opackets++;
 			m_freem(opkt);
 		} else {
@@ -544,8 +578,6 @@ ex_start(struct ifnet *ifp)
 			DODEBUG(Status, printf("OACTIVE start\n"););
 		}
 	}
-
-	splx(s);
 
 	DODEBUG(Start_End, printf("ex_start%d: finish\n", unit););
 }
@@ -556,6 +588,7 @@ ex_stop(struct ex_softc *sc)
 	
 	DODEBUG(Start_End, printf("ex_stop%d: start\n", unit););
 
+	EX_ASSERT_LOCKED(sc);
 	/*
 	 * Disable card operation:
 	 * - Disable the interrupt line.
@@ -573,6 +606,9 @@ ex_stop(struct ex_softc *sc)
 	CSR_WRITE_1(sc, STATUS_REG, All_Int);
 	CSR_WRITE_1(sc, CMD_REG, Reset_CMD);
 	DELAY(200);
+	sc->ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
+	sc->tx_timeout = 0;
+	callout_stop(&sc->timer);
 
 	DODEBUG(Start_End, printf("ex_stop%d: finish\n", unit););
 
@@ -589,6 +625,7 @@ ex_intr(void *arg)
 
 	DODEBUG(Start_End, printf("ex_intr%d: start\n", unit););
 
+	EX_LOCK(sc);
 	send_pkts = 0;
 	while (loops-- > 0 &&
 	    (int_status = CSR_READ_1(sc, STATUS_REG)) & (Tx_Int | Rx_Int)) {
@@ -612,7 +649,8 @@ ex_intr(void *arg)
 	 * be sent, attempt to send more packets to the network card.
 	 */
 	if (send_pkts && (ifp->if_snd.ifq_head != NULL))
-		ex_start(ifp);
+		ex_start_locked(ifp);
+	EX_UNLOCK(sc);
 
 	DODEBUG(Start_End, printf("ex_intr%d: finish\n", unit););
 
@@ -634,12 +672,12 @@ ex_tx_intr(struct ex_softc *sc)
 	 * - Update statistics.
 	 */
 
-	ifp->if_timer = 0;
+	sc->tx_timeout = 0;
 
 	while (sc->tx_head != sc->tx_tail) {
 		CSR_WRITE_2(sc, HOST_ADDR_REG, sc->tx_head);
 
-		if (! CSR_READ_2(sc, IO_PORT_REG) & Done_bit)
+		if (!(CSR_READ_2(sc, IO_PORT_REG) & Done_bit))
 			break;
 
 		tx_status = CSR_READ_2(sc, IO_PORT_REG);
@@ -751,7 +789,9 @@ ex_rx_intr(struct ex_softc *sc)
 		} /* QQQ */
 	}
 #endif
+				EX_UNLOCK(sc);
 				(*ifp->if_input)(ifp, ipkt);
+				EX_LOCK(sc);
 				ifp->if_ipackets++;
 			}
 		} else {
@@ -777,12 +817,9 @@ ex_ioctl(register struct ifnet *ifp, u_long cmd, caddr_t data)
 {
 	struct ex_softc *	sc = ifp->if_softc;
 	struct ifreq *		ifr = (struct ifreq *)data;
-	int			s;
 	int			error = 0;
 
 	DODEBUG(Start_End, printf("%s: ex_ioctl: start ", ifp->if_xname););
-
-	s = splimp();
 
 	switch(cmd) {
 		case SIOCSIFADDR:
@@ -793,14 +830,14 @@ ex_ioctl(register struct ifnet *ifp, u_long cmd, caddr_t data)
 
 		case SIOCSIFFLAGS:
 			DODEBUG(Start_End, printf("SIOCSIFFLAGS"););
+			EX_LOCK(sc);
 			if ((ifp->if_flags & IFF_UP) == 0 &&
 			    (ifp->if_drv_flags & IFF_DRV_RUNNING)) {
-
-				ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 				ex_stop(sc);
 			} else {
-      				ex_init(sc);
+      				ex_init_locked(sc);
 			}
+			EX_UNLOCK(sc);
 			break;
 		case SIOCADDMULTI:
 		case SIOCDELMULTI:
@@ -815,8 +852,6 @@ ex_ioctl(register struct ifnet *ifp, u_long cmd, caddr_t data)
 			DODEBUG(Start_End, printf("unknown"););
 			error = EINVAL;
 	}
-
-	splx(s);
 
 	DODEBUG(Start_End, printf("\n%s: ex_ioctl: finish\n", ifp->if_xname););
 
@@ -835,13 +870,13 @@ ex_setmulti(struct ex_softc *sc)
 	ifp = sc->ifp;
 
 	count = 0;
-	IF_ADDR_LOCK(ifp);
+	if_maddr_rlock(ifp);
 	TAILQ_FOREACH(maddr, &ifp->if_multiaddrs, ifma_link) {
 		if (maddr->ifma_addr->sa_family != AF_LINK)
 			continue;
 		count++;
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 
 	if ((ifp->if_flags & IFF_PROMISC) || (ifp->if_flags & IFF_ALLMULTI)
 			|| count > 63) {
@@ -869,7 +904,7 @@ ex_setmulti(struct ex_softc *sc)
 		CSR_WRITE_2(sc, IO_PORT_REG, 0);
 		CSR_WRITE_2(sc, IO_PORT_REG, (count + 1) * 6);
 
-		IF_ADDR_LOCK(ifp);
+		if_maddr_rlock(ifp);
 		TAILQ_FOREACH(maddr, &ifp->if_multiaddrs, ifma_link) {
 			if (maddr->ifma_addr->sa_family != AF_LINK)
 				continue;
@@ -880,7 +915,7 @@ ex_setmulti(struct ex_softc *sc)
 			CSR_WRITE_2(sc, IO_PORT_REG, *addr++);
 			CSR_WRITE_2(sc, IO_PORT_REG, *addr++);
 		}
-		IF_ADDR_UNLOCK(ifp);
+		if_maddr_runlock(ifp);
 
 		/* Program our MAC address as well */
 		/* XXX: Is this necessary?  The Linux driver does this
@@ -923,16 +958,12 @@ ex_setmulti(struct ex_softc *sc)
 static void
 ex_reset(struct ex_softc *sc)
 {
-	int s;
 
 	DODEBUG(Start_End, printf("ex_reset%d: start\n", unit););
-  
-	s = splimp();
 
+	EX_ASSERT_LOCKED(sc);
 	ex_stop(sc);
-	ex_init(sc);
-
-	splx(s);
+	ex_init_locked(sc);
 
 	DODEBUG(Start_End, printf("ex_reset%d: finish\n", unit););
 
@@ -940,23 +971,26 @@ ex_reset(struct ex_softc *sc)
 }
 
 static void
-ex_watchdog(struct ifnet *ifp)
+ex_watchdog(void *arg)
 {
-	struct ex_softc *	sc = ifp->if_softc;
+	struct ex_softc *	sc = arg;
+	struct ifnet *ifp = sc->ifp;
 
-	DODEBUG(Start_End, printf("%s: ex_watchdog: start\n", ifp->if_xname););
+	if (sc->tx_timeout && --sc->tx_timeout == 0) {
+		DODEBUG(Start_End, if_printf(ifp, "ex_watchdog: start\n"););
 
-	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 
-	DODEBUG(Status, printf("OIDLE watchdog\n"););
+		DODEBUG(Status, printf("OIDLE watchdog\n"););
 
-	ifp->if_oerrors++;
-	ex_reset(sc);
-	ex_start(ifp);
+		ifp->if_oerrors++;
+		ex_reset(sc);
+		ex_start_locked(ifp);
 
-	DODEBUG(Start_End, printf("%s: ex_watchdog: finish\n", ifp->if_xname););
+		DODEBUG(Start_End, if_printf(ifp, "ex_watchdog: finish\n"););
+	}
 
-	return;
+	callout_reset(&sc->timer, hz, ex_watchdog, sc);
 }
 
 static int
@@ -1001,8 +1035,10 @@ ex_ifmedia_sts(ifp, ifmr)
 {
 	struct ex_softc *       sc = ifp->if_softc;
 
+	EX_LOCK(sc);
 	ifmr->ifm_active = ex_get_media(sc);
 	ifmr->ifm_status = IFM_AVALID | IFM_ACTIVE;
+	EX_UNLOCK(sc);
 
 	return;
 }

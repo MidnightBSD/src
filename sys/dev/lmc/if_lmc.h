@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/sys/dev/lmc/if_lmc.h,v 1.5 2006/11/06 13:41:54 rwatson Exp $
+ * $FreeBSD$
  *
  * Copyright (c) 2002-2004 David Boggs. (boggs@boggs.palo-alto.ca.us)
  * All rights reserved.
@@ -1140,7 +1140,6 @@ struct softc
 #endif
 
 #if NETGRAPH
-  struct callout ng_callout;	/* ng_watchdog needs this                  */
   node_p	ng_node;	/* pointer to our node struct              */
   hook_p	ng_hook;	/* non-zero means NETGRAPH owns device     */
 # if (__FreeBSD_version >= 503000)
@@ -1153,6 +1152,7 @@ struct softc
 #endif
 
 #ifdef __FreeBSD__
+  struct callout callout;	/* watchdog needs this                  */
   struct device	*dev;		/* base device pointer                     */
   bus_space_tag_t csr_tag;	/* bus_space needs this                    */
   bus_space_handle_t csr_handle;/* bus_space_needs this                    */
@@ -1535,7 +1535,7 @@ static int  t1_ioctl(softc_t *, struct ioctl *);
         defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__))
 static void netisr_dispatch(int, struct mbuf *);
 # endif
-static void raw_input(struct ifnet *, struct mbuf *);
+static void lmc_raw_input(struct ifnet *, struct mbuf *);
 #endif /* IFNET */
 
 #if BSD
@@ -1571,7 +1571,7 @@ static void core_interrupt(void *, int);
 static void user_interrupt(softc_t *, int);
 #if BSD
 # if (defined(__FreeBSD__) && defined(DEVICE_POLLING))
-static void fbsd_poll(struct ifnet *, enum poll_cmd, int);
+static int fbsd_poll(struct ifnet *, enum poll_cmd, int);
 # endif
 static intr_return_t bsd_interrupt(void *);
 #endif /* BSD */
@@ -1591,19 +1591,18 @@ static int core_ioctl(softc_t *, u_long, caddr_t);
 static void core_watchdog(softc_t *);
 
 #if IFNET
-static int raw_ioctl(struct ifnet *, u_long, caddr_t);
-static int ifnet_ioctl(struct ifnet *, u_long, caddr_t);
-static void ifnet_start(struct ifnet *);
-static int raw_output(struct ifnet *, struct mbuf *,
- struct sockaddr *, struct rtentry *);
-static void ifnet_watchdog(struct ifnet *);
+static int lmc_raw_ioctl(struct ifnet *, u_long, caddr_t);
+static int lmc_ifnet_ioctl(struct ifnet *, u_long, caddr_t);
+static void lmc_ifnet_start(struct ifnet *);
+static int lmc_raw_output(struct ifnet *, struct mbuf *,
+ struct sockaddr *, struct route *);
 # ifdef __OpenBSD__
 static int ifmedia_change(struct ifnet *);
 static void ifmedia_status(struct ifnet *, struct ifmediareq *);
 # endif /* __OpenBSD__ */
 static void setup_ifnet(struct ifnet *);
-static int ifnet_attach(softc_t *);
-static void ifnet_detach(softc_t *);
+static int lmc_ifnet_attach(softc_t *);
+static void lmc_ifnet_detach(softc_t *);
 #endif /* IFNET */
 
 #if NETGRAPH
@@ -1642,7 +1641,7 @@ static void detach_card(softc_t *);
 #ifdef __FreeBSD__
 static int fbsd_probe(device_t);
 static int fbsd_detach(device_t);
-static void fbsd_shutdown(device_t);
+static int fbsd_shutdown(device_t);
 static int fbsd_attach(device_t);
 #endif /* __FreeBSD__ */
 

@@ -38,9 +38,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_gram.y,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
+ * $Id: aicasm_gram.y,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm_gram.y,v 1.25 2006/12/29 13:08:46 yar Exp $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -51,12 +51,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
-
-#ifdef __linux__
-#include "../queue.h"
-#else
 #include <sys/queue.h>
-#endif
 
 #include "aicasm.h"
 #include "aicasm_symbol.h"
@@ -88,7 +83,7 @@ static int in_critical_section;
 static u_int enum_increment;
 static u_int enum_next_value;
 
-static void process_field(int field_type, symbol_t *sym, int mask);
+static void process_field(unsigned int field_type, symbol_t *sym, int mask);
 static void initialize_symbol(symbol_t *symbol);
 static void add_macro_arg(const char *argtext, int position);
 static void add_macro_body(const char *bodytext);
@@ -106,6 +101,9 @@ static void make_expression(expression_t *immed, int value);
 static void add_conditional(symbol_t *symbol);
 static void add_version(const char *verstring);
 static int  is_download_const(expression_t *immed);
+
+extern int yylex (void);
+extern int yyparse (void);
 
 #define SRAM_SYMNAME "SRAM_BASE"
 #define SCB_SYMNAME "SCB_BASE"
@@ -867,7 +865,7 @@ reg_symbol:
 			stop("register offset must be a constant", EX_DATAERR);
 			/* NOTREACHED */
 		}
-		if (($3->info.cinfo->value + 1) > $1->info.rinfo->size) {
+		if (($3->info.cinfo->value + 1) > (unsigned)$1->info.rinfo->size) {
 			stop("Accessing offset beyond range of register",
 			     EX_DATAERR);
 			/* NOTREACHED */
@@ -878,7 +876,7 @@ reg_symbol:
 |	T_SYMBOL '[' T_NUMBER ']'
 	{
 		process_register(&$1);
-		if (($3 + 1) > $1->info.rinfo->size) {
+		if (($3 + 1) > (unsigned)$1->info.rinfo->size) {
 			stop("Accessing offset beyond range of register",
 			     EX_DATAERR);
 			/* NOTREACHED */
@@ -1379,7 +1377,7 @@ code:
 %%
 
 static void
-process_field(int field_type, symbol_t *sym, int value)
+process_field(unsigned int field_type, symbol_t *sym, int value)
 {
 	/*
 	 * Add the current register to its
@@ -1531,10 +1529,9 @@ initialize_symbol(symbol_t *symbol)
 }
 
 static void
-add_macro_arg(const char *argtext, int argnum)
+add_macro_arg(const char *argtext, int argnum __unused)
 {
 	struct macro_arg *marg;
-	int i;
 	int retval;
 		
 
@@ -1553,7 +1550,7 @@ add_macro_arg(const char *argtext, int argnum)
 	retval = snprintf(regex_pattern, sizeof(regex_pattern),
 			  "[^-/A-Za-z0-9_](%s)([^-/A-Za-z0-9_]|$)",
 			  argtext);
-	if (retval >= sizeof(regex_pattern)) {
+	if (retval >= (int)sizeof(regex_pattern)) {
 		stop("Regex text buffer too small for arg",
 		     EX_SOFTWARE);
 		/* NOTREACHED */
@@ -1819,9 +1816,15 @@ type_check(symbol_t *symbol, expression_t *expression, int opcode)
 {
 	symbol_node_t *node;
 	int and_op;
+	uint8_t invalid_bits;
 
 	and_op = FALSE;
-	if (opcode == AIC_OP_AND || opcode == AIC_OP_JNZ || AIC_OP_JZ)
+	if (opcode == AIC_OP_AND
+	 || opcode == AIC_OP_BMOV
+	 || opcode == AIC_OP_JE
+	 || opcode == AIC_OP_JNE
+	 || opcode == AIC_OP_JNZ
+	 || opcode == AIC_OP_JZ)
 		and_op = TRUE;
 
 	/*
@@ -1829,12 +1832,11 @@ type_check(symbol_t *symbol, expression_t *expression, int opcode)
 	 * that hasn't been defined.  If this is an and operation,
 	 * this is a mask, so "undefined" bits are okay.
 	 */
-	if (and_op == FALSE
-	 && (expression->value & ~symbol->info.rinfo->valid_bitmask) != 0) {
+	invalid_bits = expression->value & ~symbol->info.rinfo->valid_bitmask;
+	if (and_op == FALSE && invalid_bits != 0) {
 		snprintf(errbuf, sizeof(errbuf),
 			 "Invalid bit(s) 0x%x in immediate written to %s",
-			 expression->value & ~symbol->info.rinfo->valid_bitmask,
-			 symbol->name);
+			 invalid_bits, symbol->name);
 		stop(errbuf, EX_DATAERR);
 		/* NOTREACHED */
 	}
@@ -1911,24 +1913,24 @@ add_conditional(symbol_t *symbol)
 static void
 add_version(const char *verstring)
 {
-	const char prefix[] = " * ";
+	const char verprefix[] = " * ";
 	int newlen;
 	int oldlen;
 
-	newlen = strlen(verstring) + strlen(prefix);
+	newlen = strlen(verstring) + strlen(verprefix);
 	oldlen = 0;
 	if (versions != NULL)
 		oldlen = strlen(versions);
 	versions = realloc(versions, newlen + oldlen + 2);
 	if (versions == NULL)
 		stop("Can't allocate version string", EX_SOFTWARE);
-	strcpy(&versions[oldlen], prefix);
-	strcpy(&versions[oldlen + strlen(prefix)], verstring);
+	strcpy(&versions[oldlen], verprefix);
+	strcpy(&versions[oldlen + strlen(verprefix)], verstring);
 	versions[newlen + oldlen] = '\n';
 	versions[newlen + oldlen + 1] = '\0';
 }
 
-void
+static void
 yyerror(const char *string)
 {
 	stop(string, EX_DATAERR);

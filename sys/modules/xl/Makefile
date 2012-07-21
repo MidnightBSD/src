@@ -1,9 +1,8 @@
-# $FreeBSD: src/sys/modules/xl/Makefile,v 1.13 2001/01/06 14:00:42 obrien Exp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../pci
+.PATH: ${.CURDIR}/../../dev/xl
 
 KMOD=	if_xl
-SRCS=	if_xl.c opt_bdg.h device_if.h bus_if.h pci_if.h
-SRCS+=	miibus_if.h
+SRCS=	bus_if.h device_if.h if_xl.c miibus_if.h miidevs.h pci_if.h xlphy.c
 
 .include <bsd.kmod.mk>

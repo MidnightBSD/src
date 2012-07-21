@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptrr/list.h,v 1.1.2.1.2.1 2008/02/06 04:37:58 scottl Exp $
+ * $FreeBSD$
  */
 #include <dev/hptrr/hptrr_config.h>
 /*
- * $Id: list.h,v 1.1.1.1 2008-11-26 18:58:59 laffer1 Exp $
+ * $Id: list.h,v 1.1.1.2 2012-07-21 15:16:51 laffer1 Exp $
  * Copyright (C) 2004-2005 HighPoint Technologies, Inc. All rights reserved.
  */
 #ifndef _HPT_LIST_H_

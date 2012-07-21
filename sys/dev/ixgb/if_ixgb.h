@@ -30,7 +30,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
-/*$FreeBSD: src/sys/dev/ixgb/if_ixgb.h,v 1.9 2006/05/16 14:36:27 phk Exp $*/
+/*$FreeBSD$*/
 
 #ifndef _IXGB_H_DEFINED_
 #define _IXGB_H_DEFINED_
@@ -284,7 +284,7 @@ struct adapter {
 	struct ifmedia  media;
 	struct callout 	timer;
 	int             io_rid;
-	u_int8_t        unit;
+	int		tx_timer;
 	struct mtx	mtx;
 
 	/* Info about the board itself */
@@ -344,6 +344,8 @@ struct adapter {
 	struct sysctl_ctx_list sysctl_ctx;
 	struct sysctl_oid *sysctl_tree;
 
+	/* Multicast array memory */
+	u_int8_t	*mta;
 	/* Misc stats maintained by the driver */
 	unsigned long   dropped_pkts;
 	unsigned long   mbuf_alloc_failed;

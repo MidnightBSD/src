@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bt3c.h,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_bt3c.h,v 1.4 2005/01/07 01:45:43 imp Exp $
+ * $Id: ng_bt3c.h,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *

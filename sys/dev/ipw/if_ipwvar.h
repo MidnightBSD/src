@@ -1,4 +1,4 @@
-/*      $FreeBSD: src/sys/dev/ipw/if_ipwvar.h,v 1.6.2.1 2007/10/18 01:32:58 thompsa Exp $	*/
+/*      $FreeBSD$	*/
 
 /*-
  * Copyright (c) 2004-2006
@@ -57,13 +57,15 @@ struct ipw_rx_radiotap_header {
 	uint8_t		wr_flags;
 	uint16_t	wr_chan_freq;
 	uint16_t	wr_chan_flags;
-	uint8_t		wr_antsignal;
+	int8_t		wr_antsignal;
+	int8_t		wr_antnoise;
 };
 
 #define IPW_RX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
 	 (1 << IEEE80211_RADIOTAP_CHANNEL) |				\
-	 (1 << IEEE80211_RADIOTAP_DB_ANTSIGNAL))
+	 (1 << IEEE80211_RADIOTAP_DB_ANTSIGNAL) |			\
+	 (1 << IEEE80211_RADIOTAP_DB_ANTNOISE))
 
 struct ipw_tx_radiotap_header {
 	struct ieee80211_radiotap_header wt_ihdr;
@@ -76,30 +78,32 @@ struct ipw_tx_radiotap_header {
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
 	 (1 << IEEE80211_RADIOTAP_CHANNEL))
 
+struct ipw_vap {
+	struct ieee80211vap	vap;
+
+	int			(*newstate)(struct ieee80211vap *,
+				    enum ieee80211_state, int);
+};
+#define	IPW_VAP(vap)	((struct ipw_vap *)(vap))
+
 struct ipw_softc {
 	struct ifnet			*sc_ifp;
-	struct ieee80211com		sc_ic;
-	int				(*sc_newstate)(struct ieee80211com *,
-					    enum ieee80211_state, int);
 	device_t			sc_dev;
 
 	struct mtx			sc_mtx;
 	struct task			sc_init_task;
-	struct task			sc_scan_task;
-	struct task			sc_chan_task;
-	struct task			sc_assoc_task;
-	struct task			sc_disassoc_task;
 	struct callout			sc_wdtimer;	/* watchdog timer */
 
 	uint32_t			flags;
-#define IPW_FLAG_FW_INITED		(1 << 0)
-#define IPW_FLAG_INIT_LOCKED		(1 << 1)
-#define IPW_FLAG_HAS_RADIO_SWITCH	(1 << 2)
-#define	IPW_FLAG_HACK			(1 << 3)
-#define	IPW_FLAG_SCANNING		(1 << 4)
-#define	IPW_FLAG_ENABLED		(1 << 5)
-#define	IPW_FLAG_BUSY			(1 << 6)
-#define	IPW_FLAG_ASSOCIATED		(1 << 7)
+#define IPW_FLAG_FW_INITED		0x0001
+#define IPW_FLAG_INIT_LOCKED		0x0002
+#define IPW_FLAG_HAS_RADIO_SWITCH	0x0004
+#define	IPW_FLAG_HACK			0x0008
+#define	IPW_FLAG_SCANNING		0x0010
+#define	IPW_FLAG_ENABLED		0x0020
+#define	IPW_FLAG_BUSY			0x0040
+#define	IPW_FLAG_ASSOCIATING		0x0080
+#define	IPW_FLAG_ASSOCIATED		0x0100
 
 	int				irq_rid;
 	int				mem_rid;
@@ -113,6 +117,7 @@ struct ipw_softc {
 	int				sc_tx_timer;
 	int				sc_scan_timer;
 
+	bus_dma_tag_t			parent_dmat;
 	bus_dma_tag_t			tbd_dmat;
 	bus_dma_tag_t			rbd_dmat;
 	bus_dma_tag_t			status_dmat;
@@ -152,36 +157,14 @@ struct ipw_softc {
 	uint32_t			rxcur;
 	int				txfree;
 
-	int				dwelltime;
-
-	struct bpf_if			*sc_drvbpf;
-
-	union {
-		struct ipw_rx_radiotap_header th;
-		uint8_t	pad[64];
-	} sc_rxtapu;
-#define sc_rxtap	sc_rxtapu.th
-	int				sc_rxtap_len;
-
-	union {
-		struct ipw_tx_radiotap_header th;
-		uint8_t	pad[64];
-	} sc_txtapu;
-#define sc_txtap	sc_txtapu.th
-	int				sc_txtap_len;
+	struct ipw_rx_radiotap_header	sc_rxtap;
+	struct ipw_tx_radiotap_header	sc_txtap;
 };
 
 /*
  * NB.: This models the only instance of async locking in ipw_init_locked
  *	and must be kept in sync.
  */
-#define	IPW_LOCK_DECL	int	__waslocked = 0
-#define IPW_LOCK(sc)	do {				\
-	if (!(__waslocked = mtx_owned(&(sc)->sc_mtx)))	\
-		mtx_lock(&sc->sc_mtx);			\
-} while (0)
-#define IPW_UNLOCK(sc)	do {				\
-	if (!__waslocked)				\
-		mtx_unlock(&sc->sc_mtx);		\
-} while (0)
+#define IPW_LOCK(sc)		mtx_lock(&sc->sc_mtx);
+#define IPW_UNLOCK(sc)		mtx_unlock(&sc->sc_mtx);
 #define IPW_LOCK_ASSERT(sc)	mtx_assert(&(sc)->sc_mtx, MA_OWNED)

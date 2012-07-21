@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sym/Makefile,v 1.3 2001/01/06 14:00:24 obrien Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/sym
 

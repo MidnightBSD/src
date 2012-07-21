@@ -31,7 +31,7 @@
  * IDT manual.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/patm/genrtab/genrtab.c,v 1.2 2005/01/06 01:43:02 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -445,7 +445,7 @@ main(int argc, char *argv[])
 	printf(" */\n");
 	printf("\n");
 	printf("#include <sys/cdefs.h>\n");
-	printf("__FBSDID(\"$FreeBSD: src/sys/dev/patm/genrtab/genrtab.c,v 1.2 2005/01/06 01:43:02 imp Exp $\");\n");
+	printf("__FBSDID(\"$FreeBSD$\");\n");
 	printf("\n");
 	printf("#include <sys/types.h>\n");
 	printf("\n");

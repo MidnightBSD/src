@@ -1,4 +1,6 @@
-# $FreeBSD: src/sys/modules/ipfilter/Makefile,v 1.18.2.1 2006/02/10 00:38:03 yar Exp $ 
+# $FreeBSD$ 
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../contrib/ipfilter/netinet
 
@@ -12,7 +14,7 @@ SRCS+=	opt_bpf.h opt_inet6.h
 opt_bpf.h:
 	echo "#define DEV_BPF 1" > ${.TARGET}
 
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 opt_inet6.h:
 	echo "#define INET6 1" > ${.TARGET}
 .endif
@@ -24,3 +26,8 @@ CFLAGS+= -DIPFILTER=1 -DIPFILTER_LKM -DIPFILTER_LOG -DIPFILTER_LOOKUP
 #
 
 .include <bsd.kmod.mk>
+
+CWARNFLAGS.fil.c=		${NO_WSELF_ASSIGN}
+CWARNFLAGS.ip_proxy.c=		${NO_WSELF_ASSIGN}
+CWARNFLAGS.ip_lookup.c=		${NO_WSELF_ASSIGN}
+CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

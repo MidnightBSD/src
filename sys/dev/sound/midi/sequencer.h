@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/midi/sequencer.h,v 1.9 2007/02/25 13:51:52 netchild Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -57,7 +57,7 @@ extern int seq_debug;
 		if (seq_debug >= y) {	\
 			(x);		\
 		}			\
-	} while(0)
+	} while (0)
 
 SYSCTL_DECL(_hw_midi);
 

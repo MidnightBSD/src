@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/geom/geom_bde/Makefile,v 1.2 2006/06/09 17:36:50 pjd Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../geom/bde
 .PATH: ${.CURDIR}/../../../crypto/rijndael

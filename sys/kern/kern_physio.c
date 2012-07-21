@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_physio.c,v 1.68 2005/01/06 23:35:39 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,10 +57,13 @@ physio(struct cdev *dev, struct uio *uio, int ioflag)
 	for (i = 0; i < uio->uio_iovcnt; i++) {
 		while (uio->uio_iov[i].iov_len) {
 			bp->b_flags = 0;
-			if (uio->uio_rw == UIO_READ)
+			if (uio->uio_rw == UIO_READ) {
 				bp->b_iocmd = BIO_READ;
-			else 
+				curthread->td_ru.ru_inblock++;
+			} else {
 				bp->b_iocmd = BIO_WRITE;
+				curthread->td_ru.ru_oublock++;
+			}
 			bp->b_iodone = bdone;
 			bp->b_data = uio->uio_iov[i].iov_base;
 			bp->b_bcount = uio->uio_iov[i].iov_len;

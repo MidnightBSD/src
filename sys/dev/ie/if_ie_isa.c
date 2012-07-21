@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ie/if_ie_isa.c,v 1.7 2007/02/23 12:18:43 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,6 +78,7 @@ static int		ie_3C507_port_check	(u_int32_t);
 static void		ie_isa_ee16_identify	(driver_t *, device_t);
 static int		ie_isa_ee16_probe	(device_t);
 static int		ie_isa_ee16_attach	(device_t);
+static int		ie_isa_ee16_shutdown	(device_t);
 static int		ie_ee16_port_check	(u_int32_t port);
 static u_int16_t	ie_ee16_hw_read_eeprom	(u_int32_t port, int loc);
 
@@ -266,13 +267,6 @@ ie_isa_3C507_attach (device_t dev)
 	error = ie_attach(dev);
 	if (error) {
 		device_printf(dev, "ie_attach() failed.\n");
-		goto bad;
-	}
-
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-				NULL, ie_intr, sc, &sc->irq_ih);
-	if (error) {
-		device_printf(dev, "Unable to register interrupt handler\n"); 
 		goto bad;
 	}
 
@@ -560,18 +554,24 @@ ie_isa_ee16_attach (device_t dev)
 		goto bad;
 	}
 
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-				NULL, ie_intr, sc, &sc->irq_ih);
-	if (error) {
-		device_printf(dev, "Unable to register interrupt handler\n"); 
-		goto bad;
-	}
-
 	return (0);
 bad:
 	ie_release_resources(dev);
 
 	return (error);
+}
+
+static int
+ie_isa_ee16_shutdown(device_t dev)
+{
+	struct ie_softc *	sc;
+
+	sc = device_get_softc(dev);
+	IE_LOCK(sc);
+	ee16_shutdown(sc);
+	IE_UNLOCK(sc);
+
+	return (0);
 }
 
 /*
@@ -772,13 +772,6 @@ ie_isa_sl_attach (device_t dev)
 		goto bad;
 	}
 
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-				NULL, ie_intr, sc, &sc->irq_ih);
-	if (error) {
-		device_printf(dev, "Unable to register interrupt handler\n"); 
-		goto bad;
-	}
-
 	return (0);
 bad:
 	ie_release_resources(dev);
@@ -823,11 +816,13 @@ static device_method_t ie_isa_3C507_methods[] = {
 	DEVMETHOD(device_detach,	ie_detach),
 	{ 0, 0 }
 };
+
 static driver_t ie_isa_3C507_driver = {
 	"ie",
 	ie_isa_3C507_methods,
 	sizeof(struct ie_softc), 
 };
+
 DRIVER_MODULE(ie_3C507, isa, ie_isa_3C507_driver, ie_devclass, ie_modevent, 0);
 MODULE_DEPEND(ie_3C507, elink, 1, 1, 1);
 
@@ -835,15 +830,18 @@ static device_method_t ie_isa_ee16_methods[] = {
 	DEVMETHOD(device_identify,	ie_isa_ee16_identify),
 	DEVMETHOD(device_probe,		ie_isa_ee16_probe),
 	DEVMETHOD(device_attach,	ie_isa_ee16_attach),
+	DEVMETHOD(device_shutdown,	ie_isa_ee16_shutdown),
 	DEVMETHOD(device_detach,	ie_detach),
 	{ 0, 0 }
 };
+
 static driver_t ie_isa_ee16_driver = {
 	"ie",
 	ie_isa_ee16_methods,
 	sizeof(struct ie_softc), 
 };
-DRIVER_MODULE(ie_EE16, isa, ie_isa_ee16_driver, ie_devclass, ie_modevent, 0);
+
+DRIVER_MODULE(ie, isa, ie_isa_ee16_driver, ie_devclass, ie_modevent, 0);
 
 static device_method_t ie_isa_sl_methods[] = {
 	DEVMETHOD(device_probe,		ie_isa_sl_probe),
@@ -851,11 +849,13 @@ static device_method_t ie_isa_sl_methods[] = {
 	DEVMETHOD(device_detach,	ie_detach),
 	{ 0, 0 }
 };
+
 static driver_t ie_isa_sl_driver = {
 	"ie",
 	ie_isa_sl_methods,
 	sizeof(struct ie_softc), 
 };
+
 DRIVER_MODULE(ie_SL, isa, ie_isa_sl_driver, ie_devclass, ie_modevent, 0);
 
 static int

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/geom/geom_mbr/Makefile,v 1.2 2003/07/05 08:11:43 jmg Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../geom
 

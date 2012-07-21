@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/if_faith/Makefile,v 1.2.14.1 2006/02/10 00:38:01 yar Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../net
 

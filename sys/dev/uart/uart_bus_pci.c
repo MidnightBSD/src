@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_pci.c,v 1.11 2007/05/17 04:07:19 marcel Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -83,6 +83,7 @@ static struct pci_id pci_ns8250_ids[] = {
 { 0x103c, 0x1290, 0xffff, 0, "HP Auxiliary Diva Serial Port", 0x18 },
 { 0x11c1, 0x0480, 0xffff, 0, "Agere Systems Venus Modem (V90, 56KFlex)", 0x14 },
 { 0x115d, 0x0103, 0xffff, 0, "Xircom Cardbus Ethernet + 56k Modem", 0x10 },
+{ 0x1282, 0x6585, 0xffff, 0, "Davicom 56PDV PCI Modem", 0x10 },
 { 0x12b9, 0x1008, 0xffff, 0, "3Com 56K FaxModem Model 5610", 0x10 },
 { 0x131f, 0x1000, 0xffff, 0, "Siig CyberSerial (1-port) 16550", 0x18 },
 { 0x131f, 0x1001, 0xffff, 0, "Siig CyberSerial (1-port) 16650", 0x18 },
@@ -96,6 +97,7 @@ static struct pci_id pci_ns8250_ids[] = {
 	0x18 },
 { 0x1407, 0x0110, 0xffff, 0, "Lava Computer mfg DSerial-PCI Port A", 0x10 },
 { 0x1407, 0x0111, 0xffff, 0, "Lava Computer mfg DSerial-PCI Port B", 0x10 },
+{ 0x1407, 0x0510, 0xffff, 0, "Lava SP Serial 550 PCI", 0x10 },
 { 0x1409, 0x7168, 0x1409, 0x4025, "Timedia Technology Serial Port", 0x10,
 	8 * DEFAULT_RCLK },
 { 0x1409, 0x7168, 0x1409, 0x4027, "Timedia Technology Serial Port", 0x10,
@@ -108,7 +110,23 @@ static struct pci_id pci_ns8250_ids[] = {
 	8 * DEFAULT_RCLK },
 { 0x1415, 0x950b, 0xffff, 0, "Oxford Semiconductor OXCB950 Cardbus 16950 UART",
 	0x10, 16384000 },
+{ 0x14e4, 0x4344, 0xffff, 0, "Sony Ericsson GC89 PC Card", 0x10},
 { 0x151f, 0x0000, 0xffff, 0, "TOPIC Semiconductor TP560 56k modem", 0x10 },
+{ 0x8086, 0x1c3d, 0xffff, 0, "Intel AMT - KT Controller", 0x10 },
+{ 0x8086, 0x2e17, 0xffff, 0, "4 Series Chipset Serial KT Controller", 0x10 },
+{ 0x8086, 0x3b67, 0xffff, 0, "5 Series/3400 Series Chipset KT Controller",
+	0x10 },
+{ 0x8086, 0x8811, 0xffff, 0, "Intel EG20T Serial Port 0", 0x10 },
+{ 0x8086, 0x8812, 0xffff, 0, "Intel EG20T Serial Port 1", 0x10 },
+{ 0x8086, 0x8813, 0xffff, 0, "Intel EG20T Serial Port 2", 0x10 },
+{ 0x8086, 0x8814, 0xffff, 0, "Intel EG20T Serial Port 3", 0x10 },
+{ 0x9710, 0x9820, 0x1000, 1, "NetMos NM9820 Serial Port", 0x10 },
+{ 0x9710, 0x9835, 0x1000, 1, "NetMos NM9835 Serial Port", 0x10 },
+{ 0x9710, 0x9865, 0xa000, 0x1000, "NetMos NM9865 Serial Port", 0x10 },
+{ 0x9710, 0x9900, 0xa000, 0x1000,
+	"MosChip MCS9900 PCIe to Peripheral Controller", 0x10 },
+{ 0x9710, 0x9901, 0xa000, 0x1000,
+	"MosChip MCS9901 PCIe to Peripheral Controller", 0x10 },
 { 0xdeaf, 0x9051, 0xffff, 0, "Middle Digital PC Weasel Serial Port", 0x10 },
 { 0xffff, 0, 0xffff, 0, NULL, 0, 0}
 };
@@ -158,4 +176,3 @@ uart_pci_probe(device_t dev)
 }
 
 DRIVER_MODULE(uart, pci, uart_pci_driver, uart_devclass, 0, 0);
-DRIVER_MODULE(uart, cardbus, uart_pci_driver, uart_devclass, 0, 0);

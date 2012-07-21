@@ -38,9 +38,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_macro_scan.l,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aicasm_macro_scan.l,v 1.1.1.3 2012-07-21 15:16:50 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm_macro_scan.l,v 1.6 2005/01/06 01:42:27 imp Exp $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -51,11 +51,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sysexits.h>
-#ifdef __linux__
-#include "../queue.h"
-#else
 #include <sys/queue.h>
-#endif
 
 #include "aicasm.h"
 #include "aicasm_symbol.h"
@@ -65,8 +61,12 @@
 static char string_buf[MAX_STR_CONST];
 static char *string_buf_ptr;
 static int  parren_count;
-static char buf[255];
+static char msgbuf[255];
+
+extern int mmlex(void);
 %}
+
+%option noinput
 
 WORD		[A-Za-z_][-A-Za-z_0-9]*
 SPACE		[ \t]+
@@ -143,14 +143,15 @@ MCARG		[^(), \t]+
 				return T_SYMBOL;
 			}
 .			{ 
-				snprintf(buf, sizeof(buf), "Invalid character "
+				snprintf(msgbuf, sizeof(msgbuf), "Invalid character "
 					 "'%c'", mmtext[0]);
-				stop(buf, EX_DATAERR);
+				stop(msgbuf, EX_DATAERR);
 			}
 %%
 
 int
-mmwrap()
+mmwrap(void)
 {
 	stop("EOF encountered in macro call", EX_DATAERR);
+	return (1);
 }

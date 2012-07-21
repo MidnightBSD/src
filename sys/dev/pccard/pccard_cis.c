@@ -1,5 +1,5 @@
 /* $NetBSD: pcmcia_cis.c,v 1.17 2000/02/10 09:01:52 chopps Exp $ */
-/* $FreeBSD: src/sys/dev/pccard/pccard_cis.c,v 1.40 2007/02/27 17:23:28 jhb Exp $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.
@@ -151,7 +151,7 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 	tuple.memh = rman_get_bushandle(res);
 	tuple.ptr = 0;
 
-	DPRINTF(("cis mem map 0x%x (resource: 0x%lx)\n",
+	DPRINTF(("cis mem map %#x (resource: %#lx)\n",
 	    (unsigned int) tuple.memh, rman_get_start(res)));
 
 	tuple.mult = 2;
@@ -230,7 +230,7 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 				longlink_common = (tuple.code ==
 				    CISTPL_LONGLINK_C) ? 1 : 0;
 				longlink_addr = pccard_tuple_read_4(&tuple, 0);
-				DPRINTF(("CISTPL_LONGLINK_%s %lx\n",
+				DPRINTF(("CISTPL_LONGLINK_%s %#lx\n",
 				    longlink_common ? "C" : "A",
 				    longlink_addr));
 				break;
@@ -264,8 +264,8 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 
 					addr = tuple.ptr + offset;
 
-					DPRINTF(("CISTPL_CHECKSUM addr=%lx "
-					    "len=%lx cksum=%x",
+					DPRINTF(("CISTPL_CHECKSUM addr=%#lx "
+					    "len=%#lx cksum=%#x",
 					    addr, length, cksum));
 
 					/*
@@ -286,7 +286,7 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 						    tuple.memh,
 						    addr + tuple.mult * i);
 					if (cksum != (sum & 0xff)) {
-						DPRINTF((" failed sum=%x\n",
+						DPRINTF((" failed sum=%#x\n",
 						    sum));
 						device_printf(dev, 
 						    "CIS checksum failed\n");
@@ -361,7 +361,7 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 						mfc[i].addr =
 						    pccard_tuple_read_4(&tuple,
 						    1 + 5 * i + 1);
-						DPRINTF((" %s:%lx",
+						DPRINTF((" %s:%#lx",
 						    mfc[i].common ? "common" :
 						    "attr", mfc[i].addr));
 					}
@@ -386,11 +386,11 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 			{
 				int i;
 
-				DPRINTF((" %02x %02x", tuple.code,
+				DPRINTF((" %#02x %#02x", tuple.code,
 				    tuple.length));
 
 				for (i = 0; i < tuple.length; i++) {
-					DPRINTF((" %02x",
+					DPRINTF((" %#02x",
 					    pccard_tuple_read_1(&tuple, i)));
 					if ((i % 16) == 13)
 						DPRINTF(("\n"));
@@ -416,7 +416,7 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 				CARD_SET_RES_FLAGS(bus, dev, SYS_RES_MEMORY,
 				    rid, longlink_common ?
 				    PCCARD_A_MEM_COM : PCCARD_A_MEM_ATTR);
-				DPRINTF(("cis mem map %x\n",
+				DPRINTF(("cis mem map %#x\n",
 				    (unsigned int) tuple.memh));
 				tuple.mult = longlink_common ? 1 : 2;
 				tuple.ptr = longlink_addr;
@@ -427,7 +427,7 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 				CARD_SET_RES_FLAGS(bus, dev, SYS_RES_MEMORY,
 				    rid, mfc[mfc_index].common ?
 				    PCCARD_A_MEM_COM : PCCARD_A_MEM_ATTR);
-				DPRINTF(("cis mem map %x\n",
+				DPRINTF(("cis mem map %#x\n",
 				    (unsigned int) tuple.memh));
 				/* set parse state, and point at the next one */
 				tuple.mult = mfc[mfc_index].common ? 1 : 2;
@@ -441,7 +441,7 @@ pccard_scan_cis(device_t bus, device_t dev, pccard_scan_t fct, void *arg)
 			tuple.code = pccard_cis_read_1(&tuple, tuple.ptr);
 			if (tuple.code != CISTPL_LINKTARGET) {
 				DPRINTF(("CISTPL_LINKTARGET expected, "
-				    "code %02x observed\n", tuple.code));
+				    "code %#02x observed\n", tuple.code));
 				continue;
 			}
 			tuple.length = pccard_cis_read_1(&tuple, tuple.ptr + 1);
@@ -504,7 +504,7 @@ pccard_print_cis(device_t dev)
 	}
 	printf("\n");
 
-	device_printf(dev, "Manufacturer code 0x%x, product 0x%x\n",
+	device_printf(dev, "Manufacturer code %#x, product %#x\n",
 	    card->manufacturer, card->product);
 
 	STAILQ_FOREACH(pf, &card->pf_head, pf_list) {
@@ -552,7 +552,7 @@ pccard_print_cis(device_t dev)
 			break;
 		}
 
-		printf(", ccr addr %x mask %x\n", pf->ccr_base, pf->ccr_mask);
+		printf(", ccr addr %#x mask %#x\n", pf->ccr_base, pf->ccr_mask);
 
 		STAILQ_FOREACH(cfe, &pf->cfe_head, cfe_list) {
 			device_printf(dev, "function %d, config table entry "
@@ -570,15 +570,15 @@ pccard_print_cis(device_t dev)
 				break;
 			}
 
-			printf("; irq mask %x", cfe->irqmask);
+			printf("; irq mask %#x", cfe->irqmask);
 
 			if (cfe->num_iospace) {
-				printf("; iomask %lx, iospace", cfe->iomask);
+				printf("; iomask %#lx, iospace", cfe->iomask);
 
 				for (i = 0; i < cfe->num_iospace; i++) {
-					printf(" %lx", cfe->iospace[i].start);
+					printf(" %#lx", cfe->iospace[i].start);
 					if (cfe->iospace[i].length)
-						printf("-%lx",
+						printf("-%#lx",
 						    cfe->iospace[i].start +
 						    cfe->iospace[i].length - 1);
 				}
@@ -587,14 +587,14 @@ pccard_print_cis(device_t dev)
 				printf("; memspace");
 
 				for (i = 0; i < cfe->num_memspace; i++) {
-					printf(" %lx",
+					printf(" %#lx",
 					    cfe->memspace[i].cardaddr);
 					if (cfe->memspace[i].length)
-						printf("-%lx",
+						printf("-%#lx",
 						    cfe->memspace[i].cardaddr +
 						    cfe->memspace[i].length - 1);
 					if (cfe->memspace[i].hostaddr)
-						printf("@%lx",
+						printf("@%#lx",
 						    cfe->memspace[i].hostaddr);
 				}
 			}
@@ -898,7 +898,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 		break;
 	case CISTPL_CFTABLE_ENTRY:
 		{
-			int idx, i, j;
+			int idx, i;
 			u_int reg, reg2;
 			u_int intface, def, num;
 			u_int power, timing, iospace, irq, memspace, misc;
@@ -906,8 +906,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 
 			idx = 0;
 
-			reg = pccard_tuple_read_1(tuple, idx);
-			idx++;
+			reg = pccard_tuple_read_1(tuple, idx++);
 			intface = reg & PCCARD_TPCE_INDX_INTFACE;
 			def = reg & PCCARD_TPCE_INDX_DEFAULT;
 			num = reg & PCCARD_TPCE_INDX_NUM_MASK;
@@ -983,8 +982,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 			}
 
 			if (intface) {
-				reg = pccard_tuple_read_1(tuple, idx);
-				idx++;
+				reg = pccard_tuple_read_1(tuple, idx++);
 				cfe->flags &= ~(PCCARD_CFE_MWAIT_REQUIRED
 				    | PCCARD_CFE_RDYBSY_ACTIVE
 				    | PCCARD_CFE_WP_ACTIVE
@@ -999,8 +997,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 					cfe->flags |= PCCARD_CFE_BVD_ACTIVE;
 				cfe->iftype = reg & PCCARD_TPCE_IF_IFTYPE;
 			}
-			reg = pccard_tuple_read_1(tuple, idx);
-			idx++;
+			reg = pccard_tuple_read_1(tuple, idx++);
 
 			power = reg & PCCARD_TPCE_FS_POWER_MASK;
 			timing = reg & PCCARD_TPCE_FS_TIMING;
@@ -1013,30 +1010,26 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 				/* skip over power, don't save */
 				/* for each parameter selection byte */
 				for (i = 0; i < power; i++) {
-					reg = pccard_tuple_read_1(tuple, idx);
-					idx++;
-					/* for each bit */
-					for (j = 0; j < 7; j++) {
-						/* if the bit is set */
-						if ((reg >> j) & 0x01) {
-							/* skip over bytes */
-							do {
-								reg2 = pccard_tuple_read_1(tuple, idx);
-								idx++;
-								/*
-								 * until
-								 * non-extensi
-								 * on byte
-								 */
-							} while (reg2 & 0x80);
-						}
+					reg = pccard_tuple_read_1(tuple, idx++);
+					for (; reg; reg >>= 1)
+					{
+						/* set bit -> read */
+						if ((reg & 1) == 0)
+							continue;
+						/* skip over bytes */
+						do {
+							reg2 = pccard_tuple_read_1(tuple, idx++);
+							/*
+							 * until non-extension
+							 * byte
+							 */
+						} while (reg2 & 0x80);
 					}
 				}
 			}
 			if (timing) {
 				/* skip over timing, don't save */
-				reg = pccard_tuple_read_1(tuple, idx);
-				idx++;
+				reg = pccard_tuple_read_1(tuple, idx++);
 
 				if ((reg & PCCARD_TPCE_TD_RESERVED_MASK) !=
 				    PCCARD_TPCE_TD_RESERVED_MASK)
@@ -1054,8 +1047,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 					goto abort_cfe;
 				}
 
-				reg = pccard_tuple_read_1(tuple, idx);
-				idx++;
+				reg = pccard_tuple_read_1(tuple, idx++);
 				cfe->flags &=
 				    ~(PCCARD_CFE_IO8 | PCCARD_CFE_IO16);
 				if (reg & PCCARD_TPCE_IO_BUSWIDTH_8BIT)
@@ -1066,9 +1058,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 				    reg & PCCARD_TPCE_IO_IOADDRLINES_MASK;
 
 				if (reg & PCCARD_TPCE_IO_HASRANGE) {
-					reg = pccard_tuple_read_1(tuple, idx);
-					idx++;
-
+					reg = pccard_tuple_read_1(tuple, idx++);
 					cfe->num_iospace = 1 + (reg &
 					    PCCARD_TPCE_IO_RANGE_COUNT);
 
@@ -1085,8 +1075,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 						switch (reg & PCCARD_TPCE_IO_RANGE_ADDRSIZE_MASK) {
 						case PCCARD_TPCE_IO_RANGE_ADDRSIZE_ONE:
 							cfe->iospace[i].start =
-								pccard_tuple_read_1(tuple, idx);
-							idx++;
+								pccard_tuple_read_1(tuple, idx++);
 							break;
 						case PCCARD_TPCE_IO_RANGE_ADDRSIZE_TWO:
 							cfe->iospace[i].start =
@@ -1103,8 +1092,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 							PCCARD_TPCE_IO_RANGE_LENGTHSIZE_MASK) {
 						case PCCARD_TPCE_IO_RANGE_LENGTHSIZE_ONE:
 							cfe->iospace[i].length =
-								pccard_tuple_read_1(tuple, idx);
-							idx++;
+								pccard_tuple_read_1(tuple, idx++);
 							break;
 						case PCCARD_TPCE_IO_RANGE_LENGTHSIZE_TWO:
 							cfe->iospace[i].length =
@@ -1132,8 +1120,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 					goto abort_cfe;
 				}
 
-				reg = pccard_tuple_read_1(tuple, idx);
-				idx++;
+				reg = pccard_tuple_read_1(tuple, idx++);
 				cfe->flags &= ~(PCCARD_CFE_IRQSHARE
 				    | PCCARD_CFE_IRQPULSE
 				    | PCCARD_CFE_IRQLEVEL);
@@ -1157,6 +1144,8 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 					cfe->irqmask =
 					    (1 << (reg & PCCARD_TPCE_IR_IRQ));
 				}
+			} else {
+				cfe->irqmask = 0xffff;
 			}
 			if (memspace) {
 				if (tuple->length <= idx) {
@@ -1186,12 +1175,9 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 					int cardaddrsize;
 					int hostaddrsize;
 
-					reg = pccard_tuple_read_1(tuple, idx);
-					idx++;
-
+					reg = pccard_tuple_read_1(tuple, idx++);
 					cfe->num_memspace = (reg &
 					    PCCARD_TPCE_MS_COUNT) + 1;
-
 					if (cfe->num_memspace >
 					    (sizeof(cfe->memspace) /
 					     sizeof(cfe->memspace[0]))) {
@@ -1212,8 +1198,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 
 					if (lengthsize == 0) {
 						DPRINTF(("cfe memspace "
-						    "lengthsize == 0"));
-						state->card->error++;
+						    "lengthsize == 0\n"));
 					}
 					for (i = 0; i < cfe->num_memspace; i++) {
 						if (lengthsize) {
@@ -1225,9 +1210,8 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 							cfe->memspace[i].length = 0;
 						}
 						if (cfe->memspace[i].length == 0) {
-							DPRINTF(("cfe->memspace[%d].length == 0",
+							DPRINTF(("cfe->memspace[%d].length == 0\n",
 								 i));
-							state->card->error++;
 						}
 						if (cardaddrsize) {
 							cfe->memspace[i].cardaddr =
@@ -1255,8 +1239,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 					goto abort_cfe;
 				}
 
-				reg = pccard_tuple_read_1(tuple, idx);
-				idx++;
+				reg = pccard_tuple_read_1(tuple, idx++);
 				cfe->flags &= ~(PCCARD_CFE_POWERDOWN
 				    | PCCARD_CFE_READONLY
 				    | PCCARD_CFE_AUDIO);
@@ -1269,8 +1252,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 				cfe->maxtwins = reg & PCCARD_TPCE_MI_MAXTWINS;
 
 				while (reg & PCCARD_TPCE_MI_EXT) {
-					reg = pccard_tuple_read_1(tuple, idx);
-					idx++;
+					reg = pccard_tuple_read_1(tuple, idx++);
 				}
 			}
 			/* skip all the subtuples */
@@ -1280,7 +1262,7 @@ pccard_parse_cis_tuple(const struct pccard_tuple *tuple, void *arg)
 		DPRINTF(("CISTPL_CFTABLE_ENTRY\n"));
 		break;
 	default:
-		DPRINTF(("unhandled CISTPL %x\n", tuple->code));
+		DPRINTF(("unhandled CISTPL %#x\n", tuple->code));
 		break;
 	}
 
@@ -1299,6 +1281,8 @@ decode_funce(const struct pccard_tuple *tuple, struct pccard_function *pf)
 		if (type == PCCARD_TPLFE_TYPE_DISK_DEVICE_INTERFACE) {
 			pf->pf_funce_disk_interface
 				= pccard_tuple_read_1(tuple, 1);
+			pf->pf_funce_disk_power
+				= pccard_tuple_read_1(tuple, 2);
 		}
 		break;
 	case PCCARD_FUNCTION_NETWORK:

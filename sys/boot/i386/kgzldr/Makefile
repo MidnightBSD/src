@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/i386/kgzldr/Makefile,v 1.22 2004/12/21 09:59:44 ru Exp $
+# $FreeBSD$
 
 PROG=	kgzldr.o
 STRIP=

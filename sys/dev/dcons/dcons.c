@@ -31,8 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dcons.c,v 1.1.1.3 2008-11-26 15:45:16 laffer1 Exp $
- * $FreeBSD: src/sys/dev/dcons/dcons.c,v 1.21 2007/05/25 05:00:39 simokawa Exp $
+ * $Id: dcons.c,v 1.1.1.4 2012-07-21 15:16:54 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

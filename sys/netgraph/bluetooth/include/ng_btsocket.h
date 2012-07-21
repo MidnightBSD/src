@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_btsocket.h,v 1.8 2006/05/17 00:13:06 emax Exp $
+ * $Id: ng_btsocket.h,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_BTSOCKET_H_
@@ -41,6 +41,7 @@
 #define BLUETOOTH_PROTO_HCI	134	/* HCI protocol number */
 #define BLUETOOTH_PROTO_L2CAP	135	/* L2CAP protocol number */
 #define BLUETOOTH_PROTO_RFCOMM	136	/* RFCOMM protocol number */
+#define BLUETOOTH_PROTO_SCO	137	/* SCO protocol number */
 
 /*
  * Bluetooth version of struct sockaddr for raw HCI sockets
@@ -200,6 +201,23 @@ struct ng_btsocket_hci_raw_node_list_names {
 
 /*
  * XXX FIXME: probably does not belong here
+ * Bluetooth version of struct sockaddr for SCO sockets (SEQPACKET)
+ */
+
+struct sockaddr_sco {
+	u_char		sco_len;	/* total length */
+	u_char		sco_family;	/* address family */
+	bdaddr_t	sco_bdaddr;	/* address */
+};
+
+/* SCO socket options */
+#define SOL_SCO		0x0209		/* socket options level */
+
+#define SO_SCO_MTU	1		/* get sockets mtu */
+#define SO_SCO_CONNINFO	2		/* get HCI connection handle */
+
+/*
+ * XXX FIXME: probably does not belong here
  * Bluetooth version of struct sockaddr for L2CAP sockets (RAW and SEQPACKET)
  */
 
@@ -328,6 +346,7 @@ struct ng_btsocket_rfcomm_fc_info {
 #define	NG_BTSOCKET_HCI_RAW_NODE_TYPE	"btsock_hci_raw"
 #define	NG_BTSOCKET_L2CAP_RAW_NODE_TYPE	"btsock_l2c_raw"
 #define	NG_BTSOCKET_L2CAP_NODE_TYPE	"btsock_l2c"
+#define	NG_BTSOCKET_SCO_NODE_TYPE	"btsock_sco"
 
 /*
  * Debug levels 

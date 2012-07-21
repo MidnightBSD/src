@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pst/pst-pci.c,v 1.8 2005/03/05 18:10:49 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,7 +95,7 @@ iop_pci_attach(device_t dev)
     sc->ibase = rman_get_virtual(sc->r_mem);
     sc->reg = (struct i2o_registers *)sc->ibase;
     sc->dev = dev;
-    mtx_init(&sc->mtx, "pst lock", MTX_DEF, 0);
+    mtx_init(&sc->mtx, "pst lock", NULL, MTX_DEF);
 
     if (!iop_init(sc))
 	return 0;

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/snc/dp83932.c,v 1.23 2005/12/06 11:19:37 ru Exp $	*/
+/*	$FreeBSD$	*/
 /*	$NecBSD: dp83932.c,v 1.5 1999/07/29 05:08:44 kmatsuda Exp $	*/
 /*	$NetBSD: if_snc.c,v 1.18 1998/04/25 21:27:40 scottr Exp $	*/
 
@@ -63,6 +63,7 @@
 #include "opt_inet.h"
 
 #include <sys/param.h>
+#include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/sockio.h>
 #include <sys/mbuf.h>
@@ -70,9 +71,6 @@
 #include <sys/socket.h>
 #include <sys/syslog.h>
 #include <sys/errno.h>
-#if defined(NRND) && NRND > 0
-#include <sys/rnd.h>
-#endif
 
 #include <net/ethernet.h>
 #include <net/if.h>
@@ -88,43 +86,37 @@
 #include <dev/snc/dp83932reg.h>
 #include <dev/snc/dp83932var.h>
 
-hide void	sncwatchdog(struct ifnet *);
-hide void	sncinit(void *);
-hide int	sncstop(struct snc_softc *sc);
-hide int	sncioctl(struct ifnet *ifp, u_long cmd, caddr_t data);
-hide void	sncstart(struct ifnet *ifp);
-hide void	sncreset(struct snc_softc *sc);
+static void	sncwatchdog(void *);
+static void	sncinit(void *);
+static void	sncinit_locked(struct snc_softc *);
+static int	sncstop(struct snc_softc *sc);
+static int	sncioctl(struct ifnet *ifp, u_long cmd, caddr_t data);
+static void	sncstart(struct ifnet *ifp);
+static void	sncstart_locked(struct ifnet *ifp);
+static void	sncreset(struct snc_softc *sc);
 
-hide void	caminitialise(struct snc_softc *);
-hide void	camentry(struct snc_softc *, int, u_char *ea);
-hide void	camprogram(struct snc_softc *);
-hide void	initialise_tda(struct snc_softc *);
-hide void	initialise_rda(struct snc_softc *);
-hide void	initialise_rra(struct snc_softc *);
+static void	caminitialise(struct snc_softc *);
+static void	camentry(struct snc_softc *, int, u_char *ea);
+static void	camprogram(struct snc_softc *);
+static void	initialise_tda(struct snc_softc *);
+static void	initialise_rda(struct snc_softc *);
+static void	initialise_rra(struct snc_softc *);
 #ifdef SNCDEBUG
-hide void	camdump(struct snc_softc *sc);
+static void	camdump(struct snc_softc *sc);
 #endif
 
-hide void	sonictxint(struct snc_softc *);
-hide void	sonicrxint(struct snc_softc *);
+static void	sonictxint(struct snc_softc *);
+static void	sonicrxint(struct snc_softc *);
 
-hide u_int	sonicput(struct snc_softc *sc, struct mbuf *m0, int mtd_next);
-hide int	sonic_read(struct snc_softc *, u_int32_t, int);
-hide struct mbuf *sonic_get(struct snc_softc *, u_int32_t, int);
+static u_int	sonicput(struct snc_softc *sc, struct mbuf *m0, int mtd_next);
+static int	sonic_read(struct snc_softc *, u_int32_t, int);
+static struct mbuf *sonic_get(struct snc_softc *, u_int32_t, int);
 
 int	snc_enable(struct snc_softc *);
 void	snc_disable(struct snc_softc *);
 
 int	snc_mediachange(struct ifnet *);
 void	snc_mediastatus(struct ifnet *, struct ifmediareq *);
-
-#ifdef NetBSD
-#if NetBSD <= 199714
-struct cfdriver snc_cd = {
-	NULL, "snc", DV_IFNET
-};
-#endif
-#endif
 
 #undef assert
 #undef _assert
@@ -149,7 +141,7 @@ struct cfdriver snc_cd = {
 int sncdebug = 0;
 
 
-void
+int
 sncconfig(sc, media, nmedia, defmedia, myea)
 	struct snc_softc *sc;
 	int *media, nmedia, defmedia;
@@ -165,9 +157,10 @@ sncconfig(sc, media, nmedia, defmedia, myea)
 #endif
 
 	ifp = sc->sc_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL)
-		panic("%s: can not if_alloc()\n",
-		    device_get_nameunit(sc->sc_dev));
+	if (ifp == NULL) {
+		device_printf(sc->sc_dev, "can not if_alloc()\n");
+		return (ENOMEM);
+	}
 
 #ifdef SNCDEBUG
 	device_printf(sc->sc_dev,
@@ -181,12 +174,10 @@ sncconfig(sc, media, nmedia, defmedia, myea)
 	    device_get_unit(sc->sc_dev));
 	ifp->if_ioctl = sncioctl;
 	ifp->if_start = sncstart;
-	ifp->if_flags =
-	    IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_NEEDSGIANT;
-	ifp->if_watchdog = sncwatchdog;
+	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
         ifp->if_init = sncinit;
         ifp->if_mtu = ETHERMTU;
-        ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
 
 	/* Initialize media goo. */
 	ifmedia_init(&sc->sc_media, 0, snc_mediachange,
@@ -201,19 +192,17 @@ sncconfig(sc, media, nmedia, defmedia, myea)
 	}
 
 	ether_ifattach(ifp, myea);
-
-#if defined(NRND) && NRND > 0
-	rnd_attach_source(&sc->rnd_source, device_get_nameunit(sc->sc_dev),
-	    RND_TYPE_NET, 0);
-#endif
+	return (0);
 }
 
 void
 sncshutdown(arg)
 	void *arg;
 {
+	struct snc_softc *sc = arg;
 
-	sncstop((struct snc_softc *)arg);
+	SNC_ASSERT_LOCKED(sc);
+	sncstop(sc);
 }
 
 /*
@@ -224,10 +213,15 @@ snc_mediachange(ifp)
 	struct ifnet *ifp;
 {
 	struct snc_softc *sc = ifp->if_softc;
+	int error;
 
+	SNC_LOCK(sc);
 	if (sc->sc_mediachange)
-		return ((*sc->sc_mediachange)(sc));
-	return (EINVAL);
+		error = (*sc->sc_mediachange)(sc);
+	else
+		error = EINVAL;
+	SNC_UNLOCK(sc);
+	return (error);
 }
 
 /*
@@ -240,18 +234,21 @@ snc_mediastatus(ifp, ifmr)
 {
 	struct snc_softc *sc = ifp->if_softc;
 
+	SNC_LOCK(sc);
 	if (sc->sc_enabled == 0) {
 		ifmr->ifm_active = IFM_ETHER | IFM_NONE;
 		ifmr->ifm_status = 0;
+		SNC_UNLOCK(sc);
 		return;
 	}
 
 	if (sc->sc_mediastatus)
 		(*sc->sc_mediastatus)(sc, ifmr);
+	SNC_UNLOCK(sc);
 }
 
 
-hide int
+static int
 sncioctl(ifp, cmd, data)
 	struct ifnet *ifp;
 	u_long cmd;
@@ -259,12 +256,12 @@ sncioctl(ifp, cmd, data)
 {
 	struct ifreq *ifr;
 	struct snc_softc *sc = ifp->if_softc;
-	int	s = splhardnet(), err = 0;
-	int	temp;
+	int	err = 0;
 
 	switch (cmd) {
 
 	case SIOCSIFFLAGS:
+		SNC_LOCK(sc);
 		if ((ifp->if_flags & IFF_UP) == 0 &&
 		    (ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
 			/*
@@ -272,7 +269,6 @@ sncioctl(ifp, cmd, data)
 			 * then stop it.
 			 */
 			sncstop(sc);
-			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			snc_disable(sc);
 		} else if ((ifp->if_flags & IFF_UP) != 0 &&
 		    (ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) {
@@ -282,28 +278,28 @@ sncioctl(ifp, cmd, data)
 			 */
 			if ((err = snc_enable(sc)) != 0)
 				break;
-			sncinit(sc);
+			sncinit_locked(sc);
 		} else if (sc->sc_enabled) {
 			/*
 			 * reset the interface to pick up any other changes
 			 * in flags
 			 */
-			temp = ifp->if_flags & IFF_UP;
 			sncreset(sc);
-			ifp->if_flags |= temp;
-			sncstart(ifp);
+			sncstart_locked(ifp);
 		}
+		SNC_UNLOCK(sc);
 		break;
 
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
+		SNC_LOCK(sc);
 		if (sc->sc_enabled == 0) {
 			err = EIO;
+			SNC_UNLOCK(sc);
 			break;
 		}
-		temp = ifp->if_flags & IFF_UP;
 		sncreset(sc);
-		ifp->if_flags |= temp;
+		SNC_UNLOCK(sc);
 		err = 0;
 		break;
 	case SIOCGIFMEDIA:
@@ -315,15 +311,25 @@ sncioctl(ifp, cmd, data)
 		err = ether_ioctl(ifp, cmd, data);
 		break;
 	}
-	splx(s);
 	return (err);
 }
 
 /*
  * Encapsulate a packet of type family for the local net.
  */
-hide void
+static void
 sncstart(ifp)
+	struct ifnet *ifp;
+{
+	struct snc_softc	*sc = ifp->if_softc;
+
+	SNC_LOCK(sc);
+	sncstart_locked(ifp);
+	SNC_UNLOCK(sc);
+}
+
+static void
+sncstart_locked(ifp)
 	struct ifnet *ifp;
 {
 	struct snc_softc	*sc = ifp->if_softc;
@@ -384,27 +390,33 @@ outloop:
  * reset and restart the SONIC.  Called in case of fatal
  * hardware/software errors.
  */
-hide void
+static void
 sncreset(sc)
 	struct snc_softc *sc;
 {
 	sncstop(sc);
-	sncinit(sc);
+	sncinit_locked(sc);
 }
 
-hide void
+static void
 sncinit(xsc)
 	void *xsc;
 {
 	struct snc_softc *sc = xsc;
+
+	SNC_LOCK(sc);
+	sncinit_locked(sc);
+	SNC_UNLOCK(sc);
+}
+
+static void
+sncinit_locked(struct snc_softc *sc)
+{
 	u_long	s_rcr;
-	int	s;
 
 	if (sc->sc_ifp->if_drv_flags & IFF_DRV_RUNNING)
 		/* already running */
 		return;
-
-	s = splhardnet();
 
 	NIC_PUT(sc, SNCR_CR, CR_RST);	/* DCR only accessable in reset mode! */
 
@@ -454,8 +466,8 @@ sncinit(xsc)
 	/* flag interface as "running" */
 	sc->sc_ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	sc->sc_ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+	callout_reset(&sc->sc_timer, hz, sncwatchdog, sc);
 
-	splx(s);
 	return;
 }
 
@@ -464,12 +476,13 @@ sncinit(xsc)
  * Called on final close of device, or if sncinit() fails
  * part way through.
  */
-hide int
+static int
 sncstop(sc)
 	struct snc_softc *sc;
 {
 	struct mtd *mtd;
-	int	s = splhardnet();
+
+	SNC_ASSERT_LOCKED(sc);
 
 	/* stick chip in reset */
 	NIC_PUT(sc, SNCR_CR, CR_RST);
@@ -485,11 +498,10 @@ sncstop(sc)
 		if (++sc->mtd_hw == NTDA) sc->mtd_hw = 0;
 	}
 
-	sc->sc_ifp->if_timer = 0;
-	sc->sc_ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-	sc->sc_ifp->if_flags &= ~IFF_UP;
+	callout_stop(&sc->sc_timer);
+	sc->sc_tx_timeout = 0;
+	sc->sc_ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
 
-	splx(s);
 	return (0);
 }
 
@@ -498,33 +510,33 @@ sncstop(sc)
  * In all cases we just reset the chip, and any retransmission
  * will be handled by higher level protocol timeouts.
  */
-hide void
-sncwatchdog(ifp)
-	struct ifnet *ifp;
+static void
+sncwatchdog(void *arg)
 {
-	struct snc_softc *sc = ifp->if_softc;
+	struct snc_softc *sc = arg;
 	struct mtd *mtd;
-	int	temp;
 
-	if (sc->mtd_hw != sc->mtd_free) {
-		/* something still pending for transmit */
-		mtd = &sc->mtda[sc->mtd_hw];
-		if (SRO(sc, mtd->mtd_vtxp, TXP_STATUS) == 0)
-			log(LOG_ERR, "%s: Tx - timeout\n",
-			    device_get_nameunit(sc->sc_dev));
-		else
-			log(LOG_ERR, "%s: Tx - lost interrupt\n",
-			    device_get_nameunit(sc->sc_dev));
-		temp = ifp->if_flags & IFF_UP;
-		sncreset(sc);
-		ifp->if_flags |= temp;
+	SNC_ASSERT_LOCKED(sc);
+	if (sc->sc_tx_timeout && --sc->sc_tx_timeout == 0) {
+		if (sc->mtd_hw != sc->mtd_free) {
+			/* something still pending for transmit */
+			mtd = &sc->mtda[sc->mtd_hw];
+			if (SRO(sc, mtd->mtd_vtxp, TXP_STATUS) == 0)
+				log(LOG_ERR, "%s: Tx - timeout\n",
+				    device_get_nameunit(sc->sc_dev));
+			else
+				log(LOG_ERR, "%s: Tx - lost interrupt\n",
+				    device_get_nameunit(sc->sc_dev));
+			sncreset(sc);
+		}
 	}
+	callout_reset(&sc->sc_timer, hz, sncwatchdog, sc);
 }
 
 /*
- * stuff packet into sonic (at splnet)
+ * stuff packet into sonic
  */
-hide u_int
+static u_int
 sonicput(sc, m0, mtd_next)
 	struct snc_softc *sc;
 	struct mbuf *m0;
@@ -603,7 +615,9 @@ sonicput(sc, m0, mtd_next)
 	wbflush();
 	NIC_PUT(sc, SNCR_CR, CR_TXP);
 	wbflush();
-	sc->sc_ifp->if_timer = 5;	/* 5 seconds to watch for failing to transmit */
+
+	/* 5 seconds to watch for failing to transmit */
+	sc->sc_tx_timeout = 5;
 
 	return (totlen);
 }
@@ -615,7 +629,7 @@ sonicput(sc, m0, mtd_next)
 /*
  * CAM support
  */
-hide void
+static void
 caminitialise(sc)
 	struct snc_softc *sc;
 {
@@ -639,7 +653,7 @@ caminitialise(sc)
 #endif
 }
 
-hide void
+static void
 camentry(sc, entry, ea)
 	int entry;
 	u_char *ea;
@@ -656,7 +670,7 @@ camentry(sc, entry, ea)
 	    (SRO(sc, v_cda, CDA_ENABLE) | (1 << entry)));
 }
 
-hide void
+static void
 camprogram(sc)
 	struct snc_softc *sc;
 {
@@ -677,7 +691,7 @@ camprogram(sc)
 	ifp->if_flags &= ~IFF_ALLMULTI;
 
 	/* Loop through multicast addresses */
-	IF_ADDR_LOCK(ifp);
+	if_maddr_rlock(ifp);
         TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
                 if (ifma->ifma_addr->sa_family != AF_LINK)
                         continue;
@@ -691,7 +705,7 @@ camprogram(sc)
 			 LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
 		mcount++;
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 
 	NIC_PUT(sc, SNCR_CDP, LOWER(sc->v_cda));
 	NIC_PUT(sc, SNCR_CDC, MAXCAM);
@@ -718,7 +732,7 @@ camprogram(sc)
 }
 
 #ifdef SNCDEBUG
-hide void
+static void
 camdump(sc)
 	struct snc_softc *sc;
 {
@@ -744,7 +758,7 @@ camdump(sc)
 }
 #endif
 
-hide void
+static void
 initialise_tda(sc)
 	struct snc_softc *sc;
 {
@@ -766,7 +780,7 @@ initialise_tda(sc)
 	NIC_PUT(sc, SNCR_CTDA, LOWER(sc->mtda[0].mtd_vtxp));
 }
 
-hide void
+static void
 initialise_rda(sc)
 	struct snc_softc *sc;
 {
@@ -795,7 +809,7 @@ initialise_rda(sc)
 	wbflush();
 }
 
-hide void
+static void
 initialise_rra(sc)
 	struct snc_softc *sc;
 {
@@ -820,8 +834,8 @@ initialise_rra(sc)
 		v = SONIC_GETDMA(sc->rbuf[i]);
 		SWO(sc, sc->v_rra[i], RXRSRC_PTRHI, UPPER(v));
 		SWO(sc, sc->v_rra[i], RXRSRC_PTRLO, LOWER(v));
-		SWO(sc, sc->v_rra[i], RXRSRC_WCHI, UPPER(NBPG/2));
-		SWO(sc, sc->v_rra[i], RXRSRC_WCLO, LOWER(NBPG/2));
+		SWO(sc, sc->v_rra[i], RXRSRC_WCHI, UPPER(PAGE_SIZE/2));
+		SWO(sc, sc->v_rra[i], RXRSRC_WCLO, LOWER(PAGE_SIZE/2));
 	}
 	sc->sc_rramark = NRBA;
 	NIC_PUT(sc, SNCR_RWP, LOWER(sc->v_rra[sc->sc_rramark]));
@@ -838,6 +852,7 @@ sncintr(arg)
 	if (sc->sc_enabled == 0)
 		return;
 
+	SNC_LOCK(sc);
 	while ((isr = (NIC_GET(sc, SNCR_ISR) & ISR_ALL)) != 0) {
 		/* scrub the interrupts that we are going to service */
 		NIC_PUT(sc, SNCR_ISR, isr);
@@ -888,20 +903,16 @@ sncintr(arg)
 				sc->sc_mptally++;
 #endif
 		}
-		sncstart(sc->sc_ifp);
-
-#if defined(NRND) && NRND > 0
-		if (isr)
-			rnd_add_uint32(&sc->rnd_source, isr);
-#endif
+		sncstart_locked(sc->sc_ifp);
 	}
+	SNC_UNLOCK(sc);
 	return;
 }
 
 /*
  * Transmit interrupt routine
  */
-hide void
+static void
 sonictxint(sc)
 	struct snc_softc *sc;
 {
@@ -941,6 +952,7 @@ sonictxint(sc)
 		}
 #endif /* SNCDEBUG */
 
+		sc->sc_tx_timeout = 0;
 		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 
 		if (mtd->mtd_mbuf != 0) {
@@ -978,7 +990,7 @@ sonictxint(sc)
 /*
  * Receive interrupt routine
  */
-hide void
+static void
 sonicrxint(sc)
 	struct snc_softc *sc;
 {
@@ -1002,9 +1014,9 @@ sonicrxint(sc)
 		 */
 		len = SRO(sc, rda, RXPKT_BYTEC) - FCSSIZE;
 		if (status & RCR_PRX) {
-			/* XXX: Does PGOFSET require? */
+			/* XXX: Does PAGE_MASK require? */
 			u_int32_t pkt =
-			    sc->rbuf[orra & RBAMASK] + (rxpkt_ptr & PGOFSET);
+			    sc->rbuf[orra & RBAMASK] + (rxpkt_ptr & PAGE_MASK);
 			if (sonic_read(sc, pkt, len))
 				sc->sc_ifp->if_ipackets++;
 			else
@@ -1072,7 +1084,7 @@ sonicrxint(sc)
  * sonic_read -- pull packet off interface and forward to
  * appropriate protocol handler
  */
-hide int
+static int
 sonic_read(sc, pkt, len)
 	struct snc_softc *sc;
 	u_int32_t pkt;
@@ -1109,7 +1121,9 @@ sonic_read(sc, pkt, len)
 #endif /* SNCDEBUG */
 
 	/* Pass the packet up. */
+	SNC_UNLOCK(sc);
 	(*ifp->if_input)(ifp, m);
+	SNC_LOCK(sc);
 	return (1);
 }
 
@@ -1117,7 +1131,7 @@ sonic_read(sc, pkt, len)
 /*
  * munge the received packet into an mbuf chain
  */
-hide struct mbuf *
+static struct mbuf *
 sonic_get(sc, pkt, datalen)
 	struct snc_softc *sc;
 	u_int32_t pkt;

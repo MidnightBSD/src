@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/lmc/Makefile,v 1.3 2005/10/05 10:07:27 glebius Exp $
+# $FreeBSD$
 
 KMOD  = if_lmc
 .PATH: ${.CURDIR}/../../dev/lmc

@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iicbus/ad7418.c,v 1.1 2006/11/19 23:39:54 sam Exp $");
+__FBSDID("$FreeBSD$");
 /*
  * Analog Devices AD7418 chip sitting on the I2C bus.
  */
@@ -32,11 +32,11 @@ __FBSDID("$FreeBSD: src/sys/dev/iicbus/ad7418.c,v 1.1 2006/11/19 23:39:54 sam Ex
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/module.h>
-#include <sys/mutex.h>
 #include <sys/bus.h>
 #include <sys/resource.h>
 #include <sys/rman.h>
 #include <sys/sysctl.h>
+#include <sys/sx.h>
 
 #include <machine/bus.h>
 #include <machine/cpu.h>
@@ -66,7 +66,7 @@ __FBSDID("$FreeBSD: src/sys/dev/iicbus/ad7418.c,v 1.1 2006/11/19 23:39:54 sam Ex
 
 struct ad7418_softc {
 	device_t	sc_dev;
-	struct mtx	sc_mtx;
+	struct sx	sc_lock;
 	int		sc_curchan;	/* current channel */
 	int		sc_curtemp;
 	int		sc_curvolt;
@@ -82,7 +82,7 @@ ad7418_probe(device_t dev)
 {
 	/* XXX really probe? */
 	device_set_desc(dev, "Analog Devices AD7418 ADC");
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int
@@ -91,8 +91,10 @@ ad7418_sysctl_temp(SYSCTL_HANDLER_ARGS)
 	struct ad7418_softc *sc = arg1;
 	int temp;
 
+	sx_xlock(&sc->sc_lock);
 	ad7418_update(sc);
 	temp = (sc->sc_curtemp / 64) * 25;
+	sx_xunlock(&sc->sc_lock);
 	return sysctl_handle_int(oidp, &temp, 0, req);
 }
 
@@ -102,8 +104,10 @@ ad7418_sysctl_voltage(SYSCTL_HANDLER_ARGS)
 	struct ad7418_softc *sc = arg1;
 	int volt;
 
+	sx_xlock(&sc->sc_lock);
 	ad7418_update(sc);
 	volt = (sc->sc_curvolt >> 6) * 564 / 10;
+	sx_xunlock(&sc->sc_lock);
 	return sysctl_handle_int(oidp, &volt, 0, req);
 }
 
@@ -116,7 +120,7 @@ ad7418_attach(device_t dev)
 	int conf;
 
 	sc->sc_dev = dev;
-	mtx_init(&sc->sc_mtx, "ad7418", "ad7418", MTX_DEF);
+	sx_init(&sc->sc_lock, "ad7418");
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 		"temp", CTLTYPE_INT | CTLFLAG_RD, sc, 0,
@@ -170,13 +174,10 @@ ad7418_set_channel(struct ad7418_softc *sc, int chan)
 	/*
 	 * NB: Linux driver delays here but chip data sheet
 	 *     says nothing and things appear to work fine w/o
-	 *     a delay on channel change.  If this is enabled
-	 *     be sure to account for losing the mutex below
-	 *     in ad7418_update.
+	 *     a delay on channel change.
 	 */
-	mtx_assert(&sc->sc_mtx, MA_OWNED);
 	/* let channel change settle, 1 tick should be 'nuf (need ~1ms) */
-	msleep(sc, &sc->sc_mtx, 0, "ad7418", 1);
+	tsleep(sc, 0, "ad7418", hz/1000);
 #endif
 }
 
@@ -199,7 +200,7 @@ ad7418_update(struct ad7418_softc *sc)
 {
 	int v;
 
-	mtx_lock(&sc->sc_mtx);
+	sx_assert(&sc->sc_lock, SA_XLOCKED);
 	/* NB: no point in updating any faster than the chip */
 	if (ticks - sc->sc_lastupdate > hz) {
 		ad7418_set_channel(sc, AD7418_CHAN_TEMP);
@@ -212,7 +213,6 @@ ad7418_update(struct ad7418_softc *sc)
 			sc->sc_curvolt = v;
 		sc->sc_lastupdate = ticks;
 	}
-	mtx_unlock(&sc->sc_mtx);
 }
 
 static device_method_t ad7418_methods[] = {

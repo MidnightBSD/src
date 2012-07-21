@@ -1,27 +1,67 @@
-# $FreeBSD: src/sys/modules/usb/Makefile,v 1.18 2005/06/04 10:58:39 schweikh Exp $
+#
+# $FreeBSD$
+#
+# Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
 
-S=	${.CURDIR}/../..
+.include <bsd.own.mk>
 
-.PATH: $S/dev/usb $S/pci
+# Modules that include binary-only blobs of microcode should be selectable by
+# MK_SOURCELESS_UCODE option (see below).
 
-KMOD=	usb
-SRCS=	bus_if.h device_if.h usb_if.h usb_if.c \
-	opt_usb.h \
-	hid.c hid.h usbhid.h \
-	uhub.c \
-	usb.c usb.h \
-	usb_mem.c usb_mem.h \
-	usb_port.h \
-	usb_quirks.c usb_quirks.h \
-	usb_subr.c \
-	usbdevs.h usbdevs_data.h \
-	usbdi.c usbdi.h usbdivar.h \
-	usbdi_util.c usbdi_util.h \
-	usb_ethersubr.c usbdevs.h
+SUBDIR = usb
+SUBDIR += ehci musb ohci uhci xhci uss820dci ${_at91dci} ${_atmegadci} ${_avr32dci}
+SUBDIR += ${_rum} run ${_uath} upgt usie ural ${_zyd} ${_urtw}
+SUBDIR += atp uhid ukbd ums udbp ufm uep
+SUBDIR += ucom u3g uark ubsa ubser uchcom ucycom ufoma uftdi ugensa uipaq ulpt \
+	  umct umcs umodem umoscom uplcom uslcom uvisor uvscom
+SUBDIR += uether aue axe cdce cue ${_kue} mos rue udav uhso ipheth
+SUBDIR += usfs umass urio
+SUBDIR += quirk template
 
-SRCS+=	uhci_pci.c uhci.c uhcireg.h uhcivar.h
-SRCS+=	ohci_pci.c ohci.c ohcireg.h ohcivar.h
-SRCS+=	ehci_pci.c ehci.c ehcireg.h ehcivar.h
-SRCS+=	opt_bus.h pci_if.h
+.if ${MK_SOURCELESS_UCODE} != "no"
+_rum=		rum
+_uath=		uath
+_zyd=		zyd
+_kue=		kue
+.endif
 
-.include <bsd.kmod.mk>
+.if ${MACHINE_CPUARCH} == "amd64"
+_urtw=		urtw
+.endif
+
+.if ${MACHINE_CPUARCH} == "arm"
+_at91dci=	at91dci
+_atmegadci=	atmegadci
+.endif
+
+.if ${MACHINE_CPUARCH} == "i386"
+_urtw=		urtw
+.endif
+
+.if ${MACHINE_CPUARCH} == "avr32"
+_avr32dci=	avr32dci
+.endif
+
+.include <bsd.subdir.mk>

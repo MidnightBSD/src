@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/scc/scc_bus.h,v 1.1 2006/03/30 18:33:22 marcel Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_SCC_BUS_H_
@@ -42,6 +42,7 @@
 /* Hardware class -- the SCC type. */
 #define	SCC_CLASS_SAB82532	0
 #define	SCC_CLASS_Z8530		1
+#define	SCC_CLASS_QUICC		2
 
 /* The possible modes supported by the SCC. */
 #define	SCC_MODE_ASYNC		0x01

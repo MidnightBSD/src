@@ -1,5 +1,5 @@
-# $FreeBSD: src/sys/boot/sparc64/Makefile,v 1.2 2002/03/28 01:41:23 obrien Exp $
+# $FreeBSD$
 
-SUBDIR=	boot1 loader
+SUBDIR=	boot1 loader zfsboot zfsloader
 
 .include <bsd.subdir.mk>

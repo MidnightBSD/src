@@ -15,13 +15,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -42,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/stge/if_stge.c,v 1.9 2007/05/01 03:40:57 yongari Exp $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -74,6 +67,7 @@ __FBSDID("$FreeBSD: src/sys/dev/stge/if_stge.c,v 1.9 2007/05/01 03:40:57 yongari
 #include <sys/rman.h>
 
 #include <dev/mii/mii.h>
+#include <dev/mii/mii_bitbang.h>
 #include <dev/mii/miivar.h>
 
 #include <dev/pci/pcireg.h>
@@ -93,11 +87,11 @@ MODULE_DEPEND(stge, miibus, 1, 1, 1);
 /*
  * Devices supported by this driver.
  */
-static struct stge_product {
+static const struct stge_product {
 	uint16_t	stge_vendorid;
 	uint16_t	stge_deviceid;
 	const char	*stge_name;
-} stge_products[] = {
+} const stge_products[] = {
 	{ VENDOR_SUNDANCETI,	DEVICEID_SUNDANCETI_ST1023,
 	  "Sundance ST-1023 Gigabit Ethernet" },
 
@@ -130,7 +124,7 @@ static struct stge_product {
 static int	stge_probe(device_t);
 static int	stge_attach(device_t);
 static int	stge_detach(device_t);
-static void	stge_shutdown(device_t);
+static int	stge_shutdown(device_t);
 static int	stge_suspend(device_t);
 static int	stge_resume(device_t);
 
@@ -160,17 +154,13 @@ static void	stge_link_task(void *, int);
 static void	stge_intr(void *);
 static __inline int stge_tx_error(struct stge_softc *);
 static void	stge_txeof(struct stge_softc *);
-static void	stge_rxeof(struct stge_softc *);
+static int	stge_rxeof(struct stge_softc *);
 static __inline void stge_discard_rxbuf(struct stge_softc *, int);
 static int	stge_newbuf(struct stge_softc *, int);
 #ifndef __NO_STRICT_ALIGNMENT
 static __inline struct mbuf *stge_fixup_rx(struct stge_softc *, struct mbuf *);
 #endif
 
-static void	stge_mii_sync(struct stge_softc *);
-static void	stge_mii_send(struct stge_softc *, uint32_t, int);
-static int	stge_mii_readreg(struct stge_softc *, struct stge_mii_frame *);
-static int	stge_mii_writereg(struct stge_softc *, struct stge_mii_frame *);
 static int	stge_miibus_readreg(device_t, int, int);
 static int	stge_miibus_writereg(device_t, int, int, int);
 static void	stge_miibus_statchg(device_t);
@@ -184,12 +174,31 @@ static void	stge_dma_wait(struct stge_softc *);
 static void	stge_init_tx_ring(struct stge_softc *);
 static int	stge_init_rx_ring(struct stge_softc *);
 #ifdef DEVICE_POLLING
-static void	stge_poll(struct ifnet *, enum poll_cmd, int);
+static int	stge_poll(struct ifnet *, enum poll_cmd, int);
 #endif
 
+static void	stge_setwol(struct stge_softc *);
 static int	sysctl_int_range(SYSCTL_HANDLER_ARGS, int, int);
 static int	sysctl_hw_stge_rxint_nframe(SYSCTL_HANDLER_ARGS);
 static int	sysctl_hw_stge_rxint_dmawait(SYSCTL_HANDLER_ARGS);
+
+/*
+ * MII bit-bang glue
+ */
+static uint32_t stge_mii_bitbang_read(device_t);
+static void	stge_mii_bitbang_write(device_t, uint32_t);
+
+static const struct mii_bitbang_ops stge_mii_bitbang_ops = {
+	stge_mii_bitbang_read,
+	stge_mii_bitbang_write,
+	{
+		PC_MgmtData,		/* MII_BIT_MDO */
+		PC_MgmtData,		/* MII_BIT_MDI */
+		PC_MgmtClk,		/* MII_BIT_MDC */
+		PC_MgmtDir,		/* MII_BIT_DIR_HOST_PHY */
+		0,			/* MII_BIT_DIR_PHY_HOST */
+	}
+};
 
 static device_method_t stge_methods[] = {
 	/* Device interface */
@@ -205,8 +214,7 @@ static device_method_t stge_methods[] = {
 	DEVMETHOD(miibus_writereg,	stge_miibus_writereg),
 	DEVMETHOD(miibus_statchg,	stge_miibus_statchg),
 
-	{ 0, 0 }
-
+	DEVMETHOD_END
 };
 
 static driver_t stge_driver = {
@@ -232,176 +240,40 @@ static struct resource_spec stge_res_spec_mem[] = {
 	{ -1,			0,		0 }
 };
 
-#define	MII_SET(x)	\
-	CSR_WRITE_1(sc, STGE_PhyCtrl, CSR_READ_1(sc, STGE_PhyCtrl) | (x))
-#define	MII_CLR(x)	\
-	CSR_WRITE_1(sc, STGE_PhyCtrl, CSR_READ_1(sc, STGE_PhyCtrl) & ~(x))
+/*
+ * stge_mii_bitbang_read: [mii bit-bang interface function]
+ *
+ *	Read the MII serial port for the MII bit-bang module.
+ */
+static uint32_t
+stge_mii_bitbang_read(device_t dev)
+{
+	struct stge_softc *sc;
+	uint32_t val;
+
+	sc = device_get_softc(dev);
+
+	val = CSR_READ_1(sc, STGE_PhyCtrl);
+	CSR_BARRIER(sc, STGE_PhyCtrl, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
+	return (val);
+}
 
 /*
- * Sync the PHYs by setting data bit and strobing the clock 32 times.
+ * stge_mii_bitbang_write: [mii big-bang interface function]
+ *
+ *	Write the MII serial port for the MII bit-bang module.
  */
 static void
-stge_mii_sync(struct stge_softc	*sc)
+stge_mii_bitbang_write(device_t dev, uint32_t val)
 {
-	int i;
+	struct stge_softc *sc;
 
-	MII_SET(PC_MgmtDir | PC_MgmtData);
+	sc = device_get_softc(dev);
 
-	for (i = 0; i < 32; i++) {
-		MII_SET(PC_MgmtClk);
-		DELAY(1);
-		MII_CLR(PC_MgmtClk);
-		DELAY(1);
-	}
-}
-
-/*
- * Clock a series of bits through the MII.
- */
-static void
-stge_mii_send(struct stge_softc *sc, uint32_t bits, int cnt)
-{
-	int i;
-
-	MII_CLR(PC_MgmtClk);
-
-	for (i = (0x1 << (cnt - 1)); i; i >>= 1) {
-		if (bits & i)
-			MII_SET(PC_MgmtData);
-                else
-			MII_CLR(PC_MgmtData);
-		DELAY(1);
-		MII_CLR(PC_MgmtClk);
-		DELAY(1);
-		MII_SET(PC_MgmtClk);
-	}
-}
-
-/*
- * Read an PHY register through the MII.
- */
-static int
-stge_mii_readreg(struct stge_softc *sc, struct stge_mii_frame *frame)
-{
-	int i, ack;
-
-	/*
-	 * Set up frame for RX.
-	 */
-	frame->mii_stdelim = STGE_MII_STARTDELIM;
-	frame->mii_opcode = STGE_MII_READOP;
-	frame->mii_turnaround = 0;
-	frame->mii_data = 0;
-
-	CSR_WRITE_1(sc, STGE_PhyCtrl, 0 | sc->sc_PhyCtrl);
-	/*
- 	 * Turn on data xmit.
-	 */
-	MII_SET(PC_MgmtDir);
-
-	stge_mii_sync(sc);
-
-	/*
-	 * Send command/address info.
-	 */
-	stge_mii_send(sc, frame->mii_stdelim, 2);
-	stge_mii_send(sc, frame->mii_opcode, 2);
-	stge_mii_send(sc, frame->mii_phyaddr, 5);
-	stge_mii_send(sc, frame->mii_regaddr, 5);
-
-	/* Turn off xmit. */
-	MII_CLR(PC_MgmtDir);
-
-	/* Idle bit */
-	MII_CLR((PC_MgmtClk | PC_MgmtData));
-	DELAY(1);
-	MII_SET(PC_MgmtClk);
-	DELAY(1);
-
-	/* Check for ack */
-	MII_CLR(PC_MgmtClk);
-	DELAY(1);
-	ack = CSR_READ_1(sc, STGE_PhyCtrl) & PC_MgmtData;
-	MII_SET(PC_MgmtClk);
-	DELAY(1);
-
-	/*
-	 * Now try reading data bits. If the ack failed, we still
-	 * need to clock through 16 cycles to keep the PHY(s) in sync.
-	 */
-	if (ack) {
-		for(i = 0; i < 16; i++) {
-			MII_CLR(PC_MgmtClk);
-			DELAY(1);
-			MII_SET(PC_MgmtClk);
-			DELAY(1);
-		}
-		goto fail;
-	}
-
-	for (i = 0x8000; i; i >>= 1) {
-		MII_CLR(PC_MgmtClk);
-		DELAY(1);
-		if (!ack) {
-			if (CSR_READ_1(sc, STGE_PhyCtrl) & PC_MgmtData)
-				frame->mii_data |= i;
-			DELAY(1);
-		}
-		MII_SET(PC_MgmtClk);
-		DELAY(1);
-	}
-
-fail:
-	MII_CLR(PC_MgmtClk);
-	DELAY(1);
-	MII_SET(PC_MgmtClk);
-	DELAY(1);
-
-	if (ack)
-		return(1);
-	return(0);
-}
-
-/*
- * Write to a PHY register through the MII.
- */
-static int
-stge_mii_writereg(struct stge_softc *sc, struct stge_mii_frame *frame)
-{
-
-	/*
-	 * Set up frame for TX.
-	 */
-	frame->mii_stdelim = STGE_MII_STARTDELIM;
-	frame->mii_opcode = STGE_MII_WRITEOP;
-	frame->mii_turnaround = STGE_MII_TURNAROUND;
-
-	/*
- 	 * Turn on data output.
-	 */
-	MII_SET(PC_MgmtDir);
-
-	stge_mii_sync(sc);
-
-	stge_mii_send(sc, frame->mii_stdelim, 2);
-	stge_mii_send(sc, frame->mii_opcode, 2);
-	stge_mii_send(sc, frame->mii_phyaddr, 5);
-	stge_mii_send(sc, frame->mii_regaddr, 5);
-	stge_mii_send(sc, frame->mii_turnaround, 2);
-	stge_mii_send(sc, frame->mii_data, 16);
-
-	/* Idle bit. */
-	MII_SET(PC_MgmtClk);
-	DELAY(1);
-	MII_CLR(PC_MgmtClk);
-	DELAY(1);
-
-	/*
-	 * Turn off xmit.
-	 */
-	MII_CLR(PC_MgmtDir);
-
-	return(0);
+	CSR_WRITE_1(sc, STGE_PhyCtrl, val);
+	CSR_BARRIER(sc, STGE_PhyCtrl, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 }
 
 /*
@@ -413,8 +285,7 @@ static int
 stge_miibus_readreg(device_t dev, int phy, int reg)
 {
 	struct stge_softc *sc;
-	struct stge_mii_frame frame;
-	int error;
+	int error, val;
 
 	sc = device_get_softc(dev);
 
@@ -425,21 +296,11 @@ stge_miibus_readreg(device_t dev, int phy, int reg)
 		STGE_MII_UNLOCK(sc);
 		return (error);
 	}
-	bzero(&frame, sizeof(frame));
-	frame.mii_phyaddr = phy;
-	frame.mii_regaddr = reg;
 
 	STGE_MII_LOCK(sc);
-	error = stge_mii_readreg(sc, &frame);
+	val = mii_bitbang_readreg(dev, &stge_mii_bitbang_ops, phy, reg);
 	STGE_MII_UNLOCK(sc);
-
-	if (error != 0) {
-		/* Don't show errors for PHY probe request */
-		if (reg != 1)
-			device_printf(sc->sc_dev, "phy read fail\n");
-		return (0);
-	}
-	return (frame.mii_data);
+	return (val);
 }
 
 /*
@@ -451,22 +312,12 @@ static int
 stge_miibus_writereg(device_t dev, int phy, int reg, int val)
 {
 	struct stge_softc *sc;
-	struct stge_mii_frame frame;
-	int error;
 
 	sc = device_get_softc(dev);
 
-	bzero(&frame, sizeof(frame));
-	frame.mii_phyaddr = phy;
-	frame.mii_regaddr = reg;
-	frame.mii_data = val;
-
 	STGE_MII_LOCK(sc);
-	error = stge_mii_writereg(sc, &frame);
+	mii_bitbang_writereg(dev, &stge_mii_bitbang_ops, phy, reg, val);
 	STGE_MII_UNLOCK(sc);
-
-	if (error != 0)
-		device_printf(sc->sc_dev, "phy write fail\n");
 	return (0);
 }
 
@@ -557,7 +408,7 @@ stge_read_eeprom(struct stge_softc *sc, int offset, uint16_t *data)
 static int
 stge_probe(device_t dev)
 {
-	struct stge_product *sp;
+	const struct stge_product *sp;
 	int i;
 	uint16_t vendor, devid;
 
@@ -582,7 +433,7 @@ stge_attach(device_t dev)
 	struct stge_softc *sc;
 	struct ifnet *ifp;
 	uint8_t enaddr[ETHER_ADDR_LEN];
-	int error, i;
+	int error, flags, i;
 	uint16_t cmd;
 	uint32_t val;
 
@@ -721,8 +572,6 @@ stge_attach(device_t dev)
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = stge_ioctl;
 	ifp->if_start = stge_start;
-	ifp->if_timer = 0;
-	ifp->if_watchdog = NULL;
 	ifp->if_init = stge_init;
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_snd.ifq_drv_maxlen = STGE_TX_RING_CNT - 1;
@@ -736,6 +585,7 @@ stge_attach(device_t dev)
 		ifp->if_hwassist = 0;
 		ifp->if_capabilities = 0;
 	}
+	ifp->if_capabilities |= IFCAP_WOL_MAGIC;
 	ifp->if_capenable = ifp->if_capabilities;
 
 	/*
@@ -745,9 +595,14 @@ stge_attach(device_t dev)
 	    (PC_PhyDuplexPolarity | PC_PhyLnkPolarity);
 
 	/* Set up MII bus. */
-	if ((error = mii_phy_probe(sc->sc_dev, &sc->sc_miibus, stge_mediachange,
-	    stge_mediastatus)) != 0) {
-		device_printf(sc->sc_dev, "no PHY found!\n");
+	flags = MIIF_DOPAUSE;
+	if (sc->sc_rev >= 0x40 && sc->sc_rev <= 0x4e)
+		flags |= MIIF_MACPRIV0;
+	error = mii_attach(sc->sc_dev, &sc->sc_miibus, ifp, stge_mediachange,
+	    stge_mediastatus, BMSR_DEFCAPMASK, MII_PHY_ANY, MII_OFFSET_ANY,
+	    flags);
+	if (error != 0) {
+		device_printf(sc->sc_dev, "attaching PHYs failed\n");
 		goto fail;
 	}
 
@@ -962,8 +817,8 @@ stge_dma_alloc(struct stge_softc *sc)
 
 	/* allocate DMA'able memory and load the DMA map for Tx ring. */
 	error = bus_dmamem_alloc(sc->sc_cdata.stge_tx_ring_tag,
-	    (void **)&sc->sc_rdata.stge_tx_ring, BUS_DMA_NOWAIT | BUS_DMA_ZERO,
-	    &sc->sc_cdata.stge_tx_ring_map);
+	    (void **)&sc->sc_rdata.stge_tx_ring, BUS_DMA_NOWAIT |
+	    BUS_DMA_COHERENT | BUS_DMA_ZERO, &sc->sc_cdata.stge_tx_ring_map);
 	if (error != 0) {
 		device_printf(sc->sc_dev,
 		    "failed to allocate DMA'able memory for Tx ring\n");
@@ -983,8 +838,8 @@ stge_dma_alloc(struct stge_softc *sc)
 
 	/* allocate DMA'able memory and load the DMA map for Rx ring. */
 	error = bus_dmamem_alloc(sc->sc_cdata.stge_rx_ring_tag,
-	    (void **)&sc->sc_rdata.stge_rx_ring, BUS_DMA_NOWAIT | BUS_DMA_ZERO,
-	    &sc->sc_cdata.stge_rx_ring_map);
+	    (void **)&sc->sc_rdata.stge_rx_ring, BUS_DMA_NOWAIT |
+	    BUS_DMA_COHERENT | BUS_DMA_ZERO, &sc->sc_cdata.stge_rx_ring_map);
 	if (error != 0) {
 		device_printf(sc->sc_dev,
 		    "failed to allocate DMA'able memory for Rx ring\n");
@@ -1118,16 +973,36 @@ stge_dma_free(struct stge_softc *sc)
  *
  *	Make sure the interface is stopped at reboot time.
  */
-static void
+static int
 stge_shutdown(device_t dev)
 {
-	struct stge_softc *sc;
 
-	sc = device_get_softc(dev);
+	return (stge_suspend(dev));
+}
 
-	STGE_LOCK(sc);
-	stge_stop(sc);
-	STGE_UNLOCK(sc);
+static void
+stge_setwol(struct stge_softc *sc)
+{
+	struct ifnet *ifp;
+	uint8_t v;
+
+	STGE_LOCK_ASSERT(sc);
+
+	ifp = sc->sc_ifp;
+	v = CSR_READ_1(sc, STGE_WakeEvent);
+	/* Disable all WOL bits. */
+	v &= ~(WE_WakePktEnable | WE_MagicPktEnable | WE_LinkEventEnable |
+	    WE_WakeOnLanEnable);
+	if ((ifp->if_capenable & IFCAP_WOL_MAGIC) != 0)
+		v |= WE_MagicPktEnable | WE_WakeOnLanEnable;
+	CSR_WRITE_1(sc, STGE_WakeEvent, v);
+	/* Reset Tx and prevent transmission. */
+	CSR_WRITE_4(sc, STGE_AsicCtrl,
+	    CSR_READ_4(sc, STGE_AsicCtrl) | AC_TxReset);
+	/*
+	 * TC9021 automatically reset link speed to 100Mbps when it's put
+	 * into sleep so there is no need to try to resetting link speed.
+	 */
 }
 
 static int
@@ -1140,6 +1015,7 @@ stge_suspend(device_t dev)
 	STGE_LOCK(sc);
 	stge_stop(sc);
 	sc->sc_suspended = 1;
+	stge_setwol(sc);
 	STGE_UNLOCK(sc);
 
 	return (0);
@@ -1150,10 +1026,19 @@ stge_resume(device_t dev)
 {
 	struct stge_softc *sc;
 	struct ifnet *ifp;
+	uint8_t v;
 
 	sc = device_get_softc(dev);
 
 	STGE_LOCK(sc);
+	/*
+	 * Clear WOL bits, so special frames wouldn't interfere
+	 * normal Rx operation anymore.
+	 */
+	v = CSR_READ_1(sc, STGE_WakeEvent);
+	v &= ~(WE_WakePktEnable | WE_MagicPktEnable | WE_LinkEventEnable |
+	    WE_WakeOnLanEnable);
+	CSR_WRITE_1(sc, STGE_WakeEvent, v);
 	ifp = sc->sc_ifp;
 	if (ifp->if_flags & IFF_UP)
 		stge_init_locked(sc);
@@ -1197,7 +1082,7 @@ stge_encap(struct stge_softc *sc, struct mbuf **m_head)
 	error =  bus_dmamap_load_mbuf_sg(sc->sc_cdata.stge_tx_tag,
 	    txd->tx_dmamap, *m_head, txsegs, &nsegs, 0);
 	if (error == EFBIG) {
-		m = m_defrag(*m_head, M_DONTWAIT);
+		m = m_collapse(*m_head, M_DONTWAIT, STGE_MAXTXSEGS);
 		if (m == NULL) {
 			m_freem(*m_head);
 			*m_head = NULL;
@@ -1354,6 +1239,7 @@ stge_watchdog(struct stge_softc *sc)
 	ifp = sc->sc_ifp;
 	if_printf(sc->sc_ifp, "device timeout\n");
 	ifp->if_oerrors++;
+	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	stge_init_locked(sc);
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
 		stge_start_locked(ifp);
@@ -1382,7 +1268,10 @@ stge_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		else if (ifp->if_mtu != ifr->ifr_mtu) {
 			ifp->if_mtu = ifr->ifr_mtu;
 			STGE_LOCK(sc);
-			stge_init_locked(sc);
+			if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
+				ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+				stge_init_locked(sc);
+			}
 			STGE_UNLOCK(sc);
 		}
 		break;
@@ -1448,6 +1337,11 @@ stge_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			else
 				ifp->if_hwassist = 0;
 		}
+		if ((mask & IFCAP_WOL) != 0 &&
+		    (ifp->if_capabilities & IFCAP_WOL) != 0) {
+			if ((mask & IFCAP_WOL_MAGIC) != 0)
+				ifp->if_capenable ^= IFCAP_WOL_MAGIC;
+		}
 		if ((mask & IFCAP_VLAN_HWTAGGING) != 0) {
 			ifp->if_capenable ^= IFCAP_VLAN_HWTAGGING;
 			if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
@@ -1487,9 +1381,9 @@ stge_link_task(void *arg, int pending)
 	sc->sc_MACCtrl = 0;
 	if (((mii->mii_media_active & IFM_GMASK) & IFM_FDX) != 0)
 		sc->sc_MACCtrl |= MC_DuplexSelect;
-	if (((mii->mii_media_active & IFM_GMASK) & IFM_FLAG0) != 0)
+	if (((mii->mii_media_active & IFM_GMASK) & IFM_ETH_RXPAUSE) != 0)
 		sc->sc_MACCtrl |= MC_RxFlowControlEnable;
-	if (((mii->mii_media_active & IFM_GMASK) & IFM_FLAG1) != 0)
+	if (((mii->mii_media_active & IFM_GMASK) & IFM_ETH_TXPAUSE) != 0)
 		sc->sc_MACCtrl |= MC_TxFlowControlEnable;
 	/*
 	 * Update STGE_MACCtrl register depending on link status.
@@ -1611,8 +1505,10 @@ stge_intr(void *arg)
 	}
 
 force_init:
-	if (reinit != 0)
+	if (reinit != 0) {
+		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 		stge_init_locked(sc);
+	}
 
 	/* Re-enable interrupts. */
 	CSR_WRITE_2(sc, STGE_IntEnable, sc->sc_IntEnable);
@@ -1735,7 +1631,7 @@ stge_fixup_rx(struct stge_softc *sc, struct mbuf *m)
  *
  *	Helper; handle receive interrupts.
  */
-static void
+static int
 stge_rxeof(struct stge_softc *sc)
 {
 	struct ifnet *ifp;
@@ -1743,10 +1639,11 @@ stge_rxeof(struct stge_softc *sc)
 	struct mbuf *mp, *m;
 	uint64_t status64;
 	uint32_t status;
-	int cons, prog;
+	int cons, prog, rx_npkts;
 
 	STGE_LOCK_ASSERT(sc);
 
+	rx_npkts = 0;
 	ifp = sc->sc_ifp;
 
 	bus_dmamap_sync(sc->sc_cdata.stge_rx_ring_tag,
@@ -1864,6 +1761,7 @@ stge_rxeof(struct stge_softc *sc)
 			/* Pass it on. */
 			(*ifp->if_input)(ifp, m);
 			STGE_LOCK(sc);
+			rx_npkts++;
 
 			STGE_RXCHAIN_RESET(sc);
 		}
@@ -1876,24 +1774,27 @@ stge_rxeof(struct stge_softc *sc)
 		    sc->sc_cdata.stge_rx_ring_map,
 		    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 	}
+	return (rx_npkts);
 }
 
 #ifdef DEVICE_POLLING
-static void
+static int
 stge_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 {
 	struct stge_softc *sc;
 	uint16_t status;
+	int rx_npkts;
 
+	rx_npkts = 0;
 	sc = ifp->if_softc;
 	STGE_LOCK(sc);
 	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) {
 		STGE_UNLOCK(sc);
-		return;
+		return (rx_npkts);
 	}
 
 	sc->sc_cdata.stge_rxcycles = count;
-	stge_rxeof(sc);
+	rx_npkts = stge_rxeof(sc);
 	stge_txeof(sc);
 
 	if (cmd == POLL_AND_CHECK_STATUS) {
@@ -1903,11 +1804,14 @@ stge_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 			if ((status & IS_HostError) != 0) {
 				device_printf(sc->sc_dev,
 				    "Host interface error, resetting...\n");
+				ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 				stge_init_locked(sc);
 			}
 			if ((status & IS_TxComplete) != 0) {
-				if (stge_tx_error(sc) != 0)
+				if (stge_tx_error(sc) != 0) {
+					ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 					stge_init_locked(sc);
+				}
 			}
 		}
 
@@ -1917,6 +1821,7 @@ stge_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 		stge_start_locked(ifp);
 
 	STGE_UNLOCK(sc);
+	return (rx_npkts);
 }
 #endif	/* DEVICE_POLLING */
 
@@ -2087,12 +1992,19 @@ stge_init_locked(struct stge_softc *sc)
 	STGE_LOCK_ASSERT(sc);
 
 	ifp = sc->sc_ifp;
+	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+		return;
 	mii = device_get_softc(sc->sc_miibus);
 
 	/*
 	 * Cancel any pending I/O.
 	 */
 	stge_stop(sc);
+
+	/*
+	 * Reset the chip to a known state.
+	 */
+	stge_reset(sc, STGE_RESET_FULL);
 
 	/* Init descriptors. */
 	error = stge_init_rx_ring(sc);
@@ -2305,11 +2217,6 @@ stge_stop(struct stge_softc *sc)
 	 */
 	callout_stop(&sc->sc_tick_ch);
 	sc->sc_watchdog_timer = 0;
-
-	/*
-	 * Reset the chip to a known state.
-	 */
-	stge_reset(sc, STGE_RESET_FULL);
 
 	/*
 	 * Disable interrupts.
@@ -2640,7 +2547,7 @@ stge_set_multi(struct stge_softc *sc)
 	bzero(mchash, sizeof(mchash));
 
 	count = 0;
-	IF_ADDR_LOCK(sc->sc_ifp);
+	if_maddr_rlock(sc->sc_ifp);
 	TAILQ_FOREACH(ifma, &sc->sc_ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -2654,7 +2561,7 @@ stge_set_multi(struct stge_softc *sc)
 		mchash[crc >> 5] |= 1 << (crc & 0x1f);
 		count++;
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 
 	mode &= ~(RM_ReceiveMulticast | RM_ReceiveAllFrames);
 	if (count > 0)

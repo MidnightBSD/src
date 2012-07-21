@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/syscons/snake/Makefile,v 1.16 2002/11/06 13:47:00 nyan Exp $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/syscons/snake
 

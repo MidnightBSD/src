@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/amd/Makefile,v 1.1 2002/12/13 22:59:18 scottl Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/amd
 

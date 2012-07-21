@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_hci_main.c,v 1.1.1.2 2006-02-25 02:37:33 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/hci/ng_hci_main.c,v 1.6 2005/01/07 01:45:43 imp Exp $
+ * $Id: ng_hci_main.c,v 1.1.1.3 2012-07-21 15:17:19 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -109,10 +109,7 @@ ng_hci_constructor(node_p node)
 {
 	ng_hci_unit_p	unit = NULL;
 
-	MALLOC(unit, ng_hci_unit_p, sizeof(*unit), M_NETGRAPH_HCI,
-		M_NOWAIT | M_ZERO);
-	if (unit == NULL)
-		return (ENOMEM);
+	unit = malloc(sizeof(*unit), M_NETGRAPH_HCI, M_WAITOK | M_ZERO);
 
 	unit->node = node;
 	unit->debug = NG_HCI_WARN_LEVEL;
@@ -170,7 +167,7 @@ ng_hci_shutdown(node_p node)
 	NG_BT_MBUFQ_DESTROY(&unit->cmdq);
 
 	bzero(unit, sizeof(*unit));
-	FREE(unit, M_NETGRAPH_HCI);
+	free(unit, M_NETGRAPH_HCI);
 
 	return (0);
 } /* ng_hci_shutdown */
@@ -728,7 +725,7 @@ ng_hci_drv_rcvdata(hook_p hook, item_p item)
 
 		if ((unit->state & NG_HCI_UNIT_READY) != NG_HCI_UNIT_READY ||
 		    unit->sco == NULL || NG_HOOK_NOT_VALID(unit->sco)) {
-			NG_HCI_WARN(
+			NG_HCI_INFO(
 "%s: %s - could not forward HCI SCO data packet, state=%#x, hook=%p\n",
 				__func__, NG_NODE_NAME(unit->node), 
 				unit->state, unit->sco);

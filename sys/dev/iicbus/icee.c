@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iicbus/icee.c,v 1.2 2007/04/17 05:48:35 imp Exp $");
+__FBSDID("$FreeBSD$");
 /*
  * Generic IIC eeprom support, modeled after the AT24C family of products.
  */
@@ -33,8 +33,8 @@ __FBSDID("$FreeBSD: src/sys/dev/iicbus/icee.c,v 1.2 2007/04/17 05:48:35 imp Exp 
 #include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
-#include <sys/mutex.h>
 #include <sys/resource.h>
+#include <sys/sx.h>
 #include <sys/uio.h>
 #include <machine/bus.h>
 #include <dev/iicbus/iiconf.h>
@@ -48,24 +48,21 @@ __FBSDID("$FreeBSD: src/sys/dev/iicbus/icee.c,v 1.2 2007/04/17 05:48:35 imp Exp 
 
 struct icee_softc {
 	device_t	sc_dev;		/* Myself */
-	struct mtx	sc_mtx;		/* basically a perimeter lock */
+	struct sx	sc_lock;	/* basically a perimeter lock */
 	struct cdev	*cdev;		/* user interface */
 	int		addr;
-	int		flags;
-#define	OPENED	1
 	int		size;		/* How big am I? */
 	int		type;		/* What type 8 or 16 bit? */
 	int		rd_sz;		/* What's the read page size */
 	int		wr_sz;		/* What's the write page size */
 };
 
-#define ICEE_LOCK(_sc)		mtx_lock(&(_sc)->sc_mtx)
-#define	ICEE_UNLOCK(_sc)	mtx_unlock(&(_sc)->sc_mtx)
-#define ICEE_LOCK_INIT(_sc) \
-	mtx_init(&_sc->sc_mtx, device_get_nameunit(_sc->sc_dev), "icee", MTX_DEF)
-#define ICEE_LOCK_DESTROY(_sc)	mtx_destroy(&_sc->sc_mtx);
-#define ICEE_ASSERT_LOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_OWNED);
-#define ICEE_ASSERT_UNLOCKED(_sc) mtx_assert(&_sc->sc_mtx, MA_NOTOWNED);
+#define ICEE_LOCK(_sc)		sx_xlock(&(_sc)->sc_lock)
+#define	ICEE_UNLOCK(_sc)	sx_xunlock(&(_sc)->sc_lock)
+#define ICEE_LOCK_INIT(_sc)	sx_init(&_sc->sc_lock, "icee")
+#define ICEE_LOCK_DESTROY(_sc)	sx_destroy(&_sc->sc_lock);
+#define ICEE_ASSERT_LOCKED(_sc)	sx_assert(&_sc->sc_lock, SA_XLOCKED);
+#define ICEE_ASSERT_UNLOCKED(_sc) sx_assert(&_sc->sc_lock, SA_UNLOCKED);
 #define CDEV2SOFTC(dev)		((dev)->si_drv1)
 
 /* cdev routines */
@@ -77,6 +74,7 @@ static d_write_t icee_write;
 static struct cdevsw icee_cdevsw =
 {
 	.d_version = D_VERSION,
+	.d_flags = D_TRACKCLOSE,
 	.d_open = icee_open,
 	.d_close = icee_close,
 	.d_read = icee_read,
@@ -88,7 +86,7 @@ icee_probe(device_t dev)
 {
 	/* XXX really probe? -- not until we know the size... */
 	device_set_desc(dev, "I2C EEPROM");
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int
@@ -99,7 +97,7 @@ icee_attach(device_t dev)
 	int dunit, err;
 
 	sc->sc_dev = dev;
-	iicbus_get_addr(dev, &sc->addr);
+	sc->addr = iicbus_get_addr(dev);
 	err = 0;
 	dname = device_get_name(dev);
 	dunit = device_get_unit(dev);
@@ -127,26 +125,14 @@ out:;
 static int 
 icee_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 {
-	struct icee_softc *sc;
 
-	sc = CDEV2SOFTC(dev);
-	ICEE_LOCK(sc);
-	if (!(sc->flags & OPENED)) {
-		sc->flags |= OPENED;
-	}
-	ICEE_UNLOCK(sc);
     	return (0);
 }
 
 static int
 icee_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
 {
-	struct icee_softc *sc;
 
-	sc = CDEV2SOFTC(dev);
-	ICEE_LOCK(sc);
-	sc->flags &= ~OPENED;
-	ICEE_UNLOCK(sc);
 	return (0);
 }
 

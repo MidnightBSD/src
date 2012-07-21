@@ -31,8 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dcons.h,v 1.1.1.3 2008-11-26 15:45:16 laffer1 Exp $
- * $FreeBSD: src/sys/dev/dcons/dcons.h,v 1.6 2007/06/08 04:33:25 simokawa Exp $
+ * $Id: dcons.h,v 1.1.1.4 2012-07-21 15:16:54 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #if defined(_KERNEL) || defined(_BOOT)
@@ -98,7 +98,7 @@ struct dcons_softc {
         int brk_state;
 #define DC_GDB  1
         int flags;
-	void *dev;
+	void *tty;
 };
 
 int	dcons_checkc(struct dcons_softc *);

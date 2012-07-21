@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptrr/os_bsd.h,v 1.1.2.1.2.2 2008/02/20 04:35:24 kensmith Exp $
+ * $FreeBSD$
  */
 #include <dev/hptrr/hptrr_config.h>
-/* $Id: os_bsd.h,v 1.1.1.1 2008-11-26 18:58:59 laffer1 Exp $
+/* $Id: os_bsd.h,v 1.1.1.2 2012-07-21 15:16:51 laffer1 Exp $
  *
  * HighPoint RAID Driver for FreeBSD
  * Copyright (C) 2005 HighPoint Technologies, Inc. All Rights Reserved.
@@ -34,6 +34,10 @@
 
 #ifndef _OS_BSD_H
 #define _OS_BSD_H
+
+#ifndef DBG
+#define  DBG	0
+#endif
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -87,7 +91,6 @@
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/cam_debug.h>
-#include <cam/cam_xpt_periph.h>
 #include <cam/cam_periph.h>
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>

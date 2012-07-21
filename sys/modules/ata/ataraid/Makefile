@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ata/ataraid/Makefile,v 1.1 2005/03/30 12:03:40 sos Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../dev/ata
 

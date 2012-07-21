@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ipwfw/ipw_bss/Makefile,v 1.1 2007/03/02 11:42:55 flz Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../contrib/dev/ipw
 

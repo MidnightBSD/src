@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hptiop/hptiop.c,v 1.2.4.1 2008/02/06 03:44:11 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -79,7 +79,6 @@ __FBSDID("$FreeBSD: src/sys/dev/hptiop/hptiop.c,v 1.2.4.1 2008/02/06 03:44:11 sc
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/cam_debug.h>
-#include <cam/cam_xpt_periph.h>
 #include <cam/cam_periph.h>
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
@@ -105,7 +104,6 @@ static int  hptiop_do_ioctl_itl(struct hpt_iop_hba *hba,
 				struct hpt_iop_ioctl_param *pParams);
 static int  hptiop_do_ioctl_mv(struct hpt_iop_hba *hba,
 				struct hpt_iop_ioctl_param *pParams);
-static void hptiop_bus_scan_cb(struct cam_periph *periph, union ccb *ccb);
 static int  hptiop_rescan_bus(struct hpt_iop_hba *hba);
 static int hptiop_alloc_pci_res_itl(struct hpt_iop_hba *hba);
 static int hptiop_alloc_pci_res_mv(struct hpt_iop_hba *hba);
@@ -178,7 +176,7 @@ static struct cdevsw hptiop_cdevsw = {
 #define hba_from_dev(dev) ((struct hpt_iop_hba *)(dev)->si_drv1)
 #else
 #define hba_from_dev(dev) \
-	((struct hpt_iop_hba *)devclass_get_softc(hptiop_devclass, minor(dev)))
+	((struct hpt_iop_hba *)devclass_get_softc(hptiop_devclass, dev2unit(dev)))
 #endif
 
 #define BUS_SPACE_WRT4_ITL(offset, value) bus_space_write_4(hba->bar0t,\
@@ -426,6 +424,13 @@ srb_complete:
 			ccb->ccb_h.status = CAM_BUSY;
 			break;
 		case IOP_RESULT_CHECK_CONDITION:
+			memset(&ccb->csio.sense_data, 0,
+			    sizeof(ccb->csio.sense_data));
+			if (dxfer < ccb->csio.sense_len)
+				ccb->csio.sense_resid = ccb->csio.sense_len -
+				    dxfer;
+			else
+				ccb->csio.sense_resid = 0;
 			if (srb->srb_flag & HPT_SRB_FLAG_HIGH_MEM_ACESS) {/*iop*/
 				bus_space_read_region_1(hba->bar0t, hba->bar0h,
 					index + offsetof(struct hpt_iop_request_scsi_command,
@@ -575,6 +580,13 @@ static void hptiop_request_callback_mv(struct hpt_iop_hba * hba,
 			ccb->ccb_h.status = CAM_BUSY;
 			break;
 		case IOP_RESULT_CHECK_CONDITION:
+			memset(&ccb->csio.sense_data, 0,
+			    sizeof(ccb->csio.sense_data));
+			if (req->dataxfer_length < ccb->csio.sense_len)
+				ccb->csio.sense_resid = ccb->csio.sense_len -
+				    req->dataxfer_length;
+			else
+				ccb->csio.sense_resid = 0;
 			memcpy(&ccb->csio.sense_data, &req->sg_list, 
 				MIN(req->dataxfer_length, sizeof(ccb->csio.sense_data)));
 			ccb->ccb_h.status = CAM_SCSI_STATUS_ERROR;
@@ -1035,26 +1047,17 @@ invalid:
 
 static int  hptiop_rescan_bus(struct hpt_iop_hba * hba)
 {
-	struct cam_path     *path;
 	union ccb           *ccb;
-	if (xpt_create_path(&path, xpt_periph, cam_sim_path(hba->sim),
-		CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD) != CAM_REQ_CMP)
-		return(EIO);
-	if ((ccb = malloc(sizeof(union ccb), M_TEMP, M_WAITOK)) == NULL)
-		return(ENOMEM);
-	bzero(ccb, sizeof(union ccb));
-	xpt_setup_ccb(&ccb->ccb_h, path, 5);
-	ccb->ccb_h.func_code = XPT_SCAN_BUS;
-	ccb->ccb_h.cbfcnp = hptiop_bus_scan_cb;
-	ccb->crcn.flags = CAM_FLAG_NONE;
-	xpt_action(ccb);
-	return(0);
-}
 
-static void hptiop_bus_scan_cb(struct cam_periph *periph, union ccb *ccb)
-{
-	xpt_free_path(ccb->ccb_h.path);
-	free(ccb, M_TEMP);
+	if ((ccb = xpt_alloc_ccb()) == NULL)
+		return(ENOMEM);
+	if (xpt_create_path(&ccb->ccb_h.path, xpt_periph, cam_sim_path(hba->sim),
+		CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
+		xpt_free_ccb(ccb);
+		return(EIO);
+	}
+	xpt_rescan(ccb);
+	return(0);
 }
 
 static  bus_dmamap_callback_t   hptiop_map_srb;
@@ -1265,6 +1268,7 @@ static driver_t hptiop_pci_driver = {
 };
 
 DRIVER_MODULE(hptiop, pci, hptiop_pci_driver, hptiop_devclass, 0, 0);
+MODULE_DEPEND(hptiop, cam, 1, 1, 1);
 
 static int hptiop_probe(device_t dev)
 {
@@ -1280,6 +1284,8 @@ static int hptiop_probe(device_t dev)
 	id = pci_get_device(dev);
 
 	switch (id) {
+		case 0x4322:
+		case 0x4321:
 		case 0x4320:
 			sas = 1;
 		case 0x3220:
@@ -1353,7 +1359,7 @@ static int hptiop_attach(device_t dev)
 	mtx_init(&hba->lock, "hptioplock", NULL, MTX_DEF);
 #endif
 
-	if (bus_dma_tag_create(NULL,/* parent */
+	if (bus_dma_tag_create(bus_get_dma_tag(dev),/* PCI parent */
 			1,  /* alignment */
 			0, /* boundary */
 			BUS_SPACE_MAXADDR,  /* lowaddr */
@@ -1538,8 +1544,6 @@ static int hptiop_attach(device_t dev)
 #if __FreeBSD_version < 503000
 	hba->ioctl_dev->si_drv1 = hba;
 #endif
-
-	hptiop_rescan_bus(hba);
 
 	return 0;
 
@@ -1810,11 +1814,15 @@ scsi_done:
 		break;
 
 	case XPT_CALC_GEOMETRY:
+#if __FreeBSD_version >= 500000
+		cam_calc_geometry(&ccb->ccg, 1);
+#else
 		ccb->ccg.heads = 255;
 		ccb->ccg.secs_per_track = 63;
 		ccb->ccg.cylinders = ccb->ccg.volume_size /
 				(ccb->ccg.heads * ccb->ccg.secs_per_track);
 		ccb->ccb_h.status = CAM_REQ_CMP;
+#endif
 		break;
 
 	case XPT_PATH_INQ:
@@ -1836,6 +1844,10 @@ scsi_done:
 		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "HPT   ", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		cpi->transport = XPORT_SPI;
+		cpi->transport_version = 2;
+		cpi->protocol = PROTO_SCSI;
+		cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		break;
 	}

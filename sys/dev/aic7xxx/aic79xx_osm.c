@@ -29,11 +29,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic79xx_osm.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
+ * $Id: aic79xx_osm.c,v 1.1.1.4 2012-07-21 15:16:50 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic79xx_osm.c,v 1.29.4.1 2008/02/19 17:08:34 gibbs Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/aic7xxx/aic79xx_osm.h>
 #include <dev/aic7xxx/aic79xx_inline.h>
@@ -77,6 +77,67 @@ static int	ahd_create_path(struct ahd_softc *ahd,
 				char channel, u_int target, u_int lun,
 				struct cam_path **path);
 
+static const char *ahd_sysctl_node_elements[] = {
+	"root",
+	"summary",
+	"debug"
+};
+
+#ifndef NO_SYSCTL_DESCR
+static const char *ahd_sysctl_node_descriptions[] = {
+	"root error collection for aic79xx controllers",
+	"summary collection for aic79xx controllers",
+	"debug collection for aic79xx controllers"
+};
+#endif
+
+static const char *ahd_sysctl_errors_elements[] = {
+	"Cerrors",
+	"Uerrors",
+	"Ferrors"
+};
+
+#ifndef NO_SYSCTL_DESCR
+static const char *ahd_sysctl_errors_descriptions[] = {
+	"Correctable errors",
+	"Uncorrectable errors",
+	"Fatal errors"
+};
+#endif
+
+static int
+ahd_set_debugcounters(SYSCTL_HANDLER_ARGS)
+{
+	struct ahd_softc *sc;
+	int error, tmpv;
+
+	tmpv = 0;
+	sc = arg1;
+	error = sysctl_handle_int(oidp, &tmpv, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	if (tmpv < 0 || tmpv >= AHD_ERRORS_NUMBER)
+		return (EINVAL);
+	sc->summerr[arg2] = tmpv;
+	return (0);
+}
+
+static int
+ahd_clear_allcounters(SYSCTL_HANDLER_ARGS)
+{
+	struct ahd_softc *sc;
+	int error, tmpv;
+
+	tmpv = 0;
+	sc = arg1;
+	error = sysctl_handle_int(oidp, &tmpv, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	if (tmpv != 0)
+		bzero(sc->summerr, sizeof(sc->summerr));
+	return (0);
+}
+
 static int
 ahd_create_path(struct ahd_softc *ahd, char channel, u_int target,
 	        u_int lun, struct cam_path **path)
@@ -86,6 +147,48 @@ ahd_create_path(struct ahd_softc *ahd, char channel, u_int target,
 	path_id = cam_sim_path(ahd->platform_data->sim);
 	return (xpt_create_path(path, /*periph*/NULL,
 				path_id, target, lun));
+}
+
+void
+ahd_sysctl(struct ahd_softc *ahd)
+{
+	u_int i;
+
+	for (i = 0; i < AHD_SYSCTL_NUMBER; i++)
+		sysctl_ctx_init(&ahd->sysctl_ctx[i]);
+
+	ahd->sysctl_tree[AHD_SYSCTL_ROOT] =
+	    SYSCTL_ADD_NODE(&ahd->sysctl_ctx[AHD_SYSCTL_ROOT],
+			    SYSCTL_STATIC_CHILDREN(_hw), OID_AUTO,
+			    device_get_nameunit(ahd->dev_softc), CTLFLAG_RD, 0,
+			    ahd_sysctl_node_descriptions[AHD_SYSCTL_ROOT]);
+	    SYSCTL_ADD_PROC(&ahd->sysctl_ctx[AHD_SYSCTL_ROOT],
+			    SYSCTL_CHILDREN(ahd->sysctl_tree[AHD_SYSCTL_ROOT]),
+			    OID_AUTO, "clear", CTLTYPE_UINT | CTLFLAG_RW, ahd,
+			    0, ahd_clear_allcounters, "IU",
+			    "Clear all counters");
+
+	for (i = AHD_SYSCTL_SUMMARY; i < AHD_SYSCTL_NUMBER; i++)
+		ahd->sysctl_tree[i] =
+		    SYSCTL_ADD_NODE(&ahd->sysctl_ctx[i],
+				    SYSCTL_CHILDREN(ahd->sysctl_tree[AHD_SYSCTL_ROOT]),
+				    OID_AUTO, ahd_sysctl_node_elements[i],
+				    CTLFLAG_RD, 0,
+				    ahd_sysctl_node_descriptions[i]);
+
+	for (i = AHD_ERRORS_CORRECTABLE; i < AHD_ERRORS_NUMBER; i++) {
+		SYSCTL_ADD_UINT(&ahd->sysctl_ctx[AHD_SYSCTL_SUMMARY],
+				SYSCTL_CHILDREN(ahd->sysctl_tree[AHD_SYSCTL_SUMMARY]),
+				OID_AUTO, ahd_sysctl_errors_elements[i],
+				CTLFLAG_RD, &ahd->summerr[i], i,
+				ahd_sysctl_errors_descriptions[i]);
+		SYSCTL_ADD_PROC(&ahd->sysctl_ctx[AHD_SYSCTL_DEBUG],
+				SYSCTL_CHILDREN(ahd->sysctl_tree[AHD_SYSCTL_DEBUG]),
+				OID_AUTO, ahd_sysctl_errors_elements[i],
+				CTLFLAG_RW | CTLTYPE_UINT, ahd, i,
+				ahd_set_debugcounters, "IU",
+				ahd_sysctl_errors_descriptions[i]);
+	}
 }
 
 int
@@ -498,8 +601,8 @@ ahd_action(struct cam_sim *sim, union ccb *ccb)
 		break;
 	}
 #ifdef AHD_TARGET_MODE
-	case XPT_NOTIFY_ACK:
-	case XPT_IMMED_NOTIFY:
+	case XPT_NOTIFY_ACKNOWLEDGE:
+	case XPT_IMMEDIATE_NOTIFY:
 	{
 		struct	   ahd_tmode_tstate *tstate;
 		struct	   ahd_tmode_lstate *lstate;
@@ -1086,7 +1189,7 @@ ahd_abort_ccb(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 	switch (abort_ccb->ccb_h.func_code) {
 #ifdef AHD_TARGET_MODE
 	case XPT_ACCEPT_TARGET_IO:
-	case XPT_IMMED_NOTIFY:
+	case XPT_IMMEDIATE_NOTIFY:
 	case XPT_CONT_TARGET_IO:
 	{
 		struct ahd_tmode_tstate *tstate;
@@ -1104,7 +1207,7 @@ ahd_abort_ccb(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 
 		if (abort_ccb->ccb_h.func_code == XPT_ACCEPT_TARGET_IO)
 			list = &lstate->accept_tios;
-		else if (abort_ccb->ccb_h.func_code == XPT_IMMED_NOTIFY)
+		else if (abort_ccb->ccb_h.func_code == XPT_IMMEDIATE_NOTIFY)
 			list = &lstate->immed_notifies;
 		else
 			list = NULL;
@@ -1423,7 +1526,7 @@ DB_COMMAND(ahd_in, ahd_ddb_in)
 	}
 }
 
-DB_FUNC(ahd_out, ahd_ddb_out, db_cmd_set, CS_MORE, NULL)
+DB_FUNC(ahd_out, ahd_ddb_out, db_cmd_table, CS_MORE, NULL)
 {
 	db_expr_t old_value;
 	db_expr_t new_value;

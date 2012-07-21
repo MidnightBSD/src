@@ -1,9 +1,9 @@
-# $FreeBSD: src/sys/modules/pcn/Makefile,v 1.2 2001/01/06 14:00:10 obrien Exp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../pci
+.PATH: ${.CURDIR}/../../dev/pcn
 
 KMOD=	if_pcn
-SRCS=	if_pcn.c opt_bdg.h device_if.h bus_if.h pci_if.h
+SRCS=	if_pcn.c device_if.h bus_if.h pci_if.h
 SRCS+=	miibus_if.h
 
 .include <bsd.kmod.mk>

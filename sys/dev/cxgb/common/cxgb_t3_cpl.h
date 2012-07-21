@@ -1,6 +1,6 @@
 /**************************************************************************
 
-Copyright (c) 2007, Chelsio Inc.
+Copyright (c) 2007-2009 Chelsio Inc.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: src/sys/dev/cxgb/common/cxgb_t3_cpl.h,v 1.4 2007/07/17 06:50:34 kmacy Exp $
+$FreeBSD$
 
 ***************************************************************************/
 #ifndef T3_CPL_H
@@ -103,6 +103,7 @@ enum CPL_opcode {
 	CPL_RDMA_TERMINATE    = 0xA2,
 	CPL_TRACE_PKT         = 0xA3,
 	CPL_RDMA_EC_STATUS    = 0xA5,
+	CPL_SGE_EC_CR_RETURN  = 0xA6,
 
 	NUM_CPL_CMDS    /* must be last and previous entries must be sorted */
 };
@@ -148,7 +149,8 @@ enum {
 
 enum {
 	CPL_PASS_OPEN_ACCEPT,
-	CPL_PASS_OPEN_REJECT
+	CPL_PASS_OPEN_REJECT,
+	CPL_PASS_OPEN_ACCEPT_TNL
 };
 
 enum {
@@ -171,10 +173,11 @@ enum {                     /* TCP congestion control algorithms */
 	CONG_ALG_HIGHSPEED
 };
 
-enum {			   /* RSS hash type */
+enum {                     /* RSS hash type */
 	RSS_HASH_NONE = 0,
-	RSS_HASH_2_TUPLE = 1 << 0,
-	RSS_HASH_4_TUPLE = 1 << 1
+	RSS_HASH_2_TUPLE = 1,
+	RSS_HASH_4_TUPLE = 2,
+	RSS_HASH_TCPV6 = 3
 };
 
 union opcode_tid {
@@ -186,13 +189,6 @@ union opcode_tid {
 #define V_OPCODE(x) ((x) << S_OPCODE)
 #define G_OPCODE(x) (((x) >> S_OPCODE) & 0xFF)
 #define G_TID(x)    ((x) & 0xFFFFFF)
-
-#define S_HASHTYPE 22
-#define M_HASHTYPE 0x3
-#define G_HASHTYPE(x) (((x) >> S_HASHTYPE) & M_HASHTYPE) 
-
-#define S_QNUM 0
-#define G_QNUM(x) (((x) >> S_QNUM) & 0xFFFF)
 
 /* tid is assumed to be 24-bits */
 #define MK_OPCODE_TID(opcode, tid) (V_OPCODE(opcode) | (tid))
@@ -231,11 +227,30 @@ struct rss_header {
 	__be32 rss_hash_val;
 };
 
+#define S_HASHTYPE 22
+#define M_HASHTYPE 0x3
+#define G_HASHTYPE(x) (((x) >> S_HASHTYPE) & M_HASHTYPE)
+
+#define S_QNUM 0
+#define M_QNUM 0xFFFF
+#define G_QNUM(x) (((x) >> S_QNUM) & M_QNUM)
+
 #ifndef CHELSIO_FW
 struct work_request_hdr {
-	__be32 wr_hi;
-	__be32 wr_lo;
+	union {
+		struct {
+			__be32 wr_hi;
+			__be32 wr_lo;
+		} ilp32;
+		struct {
+			__be64 wr_hilo;
+		} lp64;
+	} u;
 };
+
+#define	wrh_hi		u.ilp32.wr_hi
+#define	wrh_lo		u.ilp32.wr_lo
+#define	wrh_hilo	u.lp64.wr_hilo
 
 /* wr_hi fields */
 #define S_WR_SGE_CREDITS    0
@@ -253,19 +268,29 @@ struct work_request_hdr {
 #define V_WR_BCNTLFLT(x) ((x) << S_WR_BCNTLFLT)
 #define G_WR_BCNTLFLT(x) (((x) >> S_WR_BCNTLFLT) & M_WR_BCNTLFLT)
 
-/* Applicable to BYPASS WRs only: the uP will added a CPL_BARRIER before
+/*
+ * Applicable to BYPASS WRs only: the uP will add a CPL_BARRIER before
  * and after the BYPASS WR if the ATOMIC bit is set.
  */
 #define S_WR_ATOMIC	16
 #define V_WR_ATOMIC(x)	((x) << S_WR_ATOMIC)
 #define F_WR_ATOMIC	V_WR_ATOMIC(1U)
 
-/* Applicable to BYPASS WRs only: the uP will flush buffered non abort
+/*
+ * Applicable to BYPASS WRs only: the uP will flush buffered non abort
  * related WRs.
  */
 #define S_WR_FLUSH	17
 #define V_WR_FLUSH(x)	((x) << S_WR_FLUSH)
 #define F_WR_FLUSH	V_WR_FLUSH(1U)
+
+#define S_WR_CHN	18
+#define V_WR_CHN(x)	((x) << S_WR_CHN)
+#define F_WR_CHN	V_WR_CHN(1U)
+
+#define S_WR_CHN_VLD	19
+#define V_WR_CHN_VLD(x)	((x) << S_WR_CHN_VLD)
+#define F_WR_CHN_VLD	V_WR_CHN_VLD(1U)
 
 #define S_WR_DATATYPE    20
 #define V_WR_DATATYPE(x) ((x) << S_WR_DATATYPE)
@@ -306,6 +331,7 @@ struct work_request_hdr {
 #define S_WR_GEN    31
 #define V_WR_GEN(x) ((x) << S_WR_GEN)
 #define F_WR_GEN    V_WR_GEN(1U)
+#define G_WR_GEN(x) ((x) >> S_WR_GEN)
 
 # define WR_HDR struct work_request_hdr wr
 # define RSS_HDR
@@ -802,8 +828,7 @@ struct cpl_peer_close {
 };
 
 struct tx_data_wr {
-	__be32 wr_hi;
-	__be32 wr_lo;
+	WR_HDR;
 	__be32 len;
 	__be32 flags;
 	__be32 sndseq;
@@ -905,6 +930,14 @@ struct cpl_wr_ack {
 	__be32 snd_una;
 };
 
+struct cpl_sge_ec_cr_return {
+	RSS_HDR
+	union opcode_tid ot;
+	__be16 sge_ec_id;
+	__u8 cr;
+	__u8 rsvd;
+};
+
 struct cpl_rdma_ec_status {
 	RSS_HDR
 	union opcode_tid ot;
@@ -913,8 +946,7 @@ struct cpl_rdma_ec_status {
 };
 
 struct mngt_pktsched_wr {
-	__be32 wr_hi;
-	__be32 wr_lo;
+	WR_HDR;
 	__u8  mngt_opcode;
 	__u8  rsvd[7];
 	__u8  sched;
@@ -957,9 +989,11 @@ struct cpl_rx_data {
 	__u8  dack_mode:2;
 	__u8  psh:1;
 	__u8  heartbeat:1;
-	__u8  :4;
+	__u8  ddp_off:1;
+	__u8  :3;
 #else
-	__u8  :4;
+	__u8  :3;
+	__u8  ddp_off:1;
 	__u8  heartbeat:1;
 	__u8  psh:1;
 	__u8  dack_mode:2;
@@ -1096,6 +1130,11 @@ struct cpl_rx_data_ddp {
 #define V_DDP_OFFSET(x) ((x) << S_DDP_OFFSET)
 #define G_DDP_OFFSET(x) (((x) >> S_DDP_OFFSET) & M_DDP_OFFSET)
 
+#define S_DDP_DACK_MODE    22
+#define M_DDP_DACK_MODE    0x3
+#define V_DDP_DACK_MODE(x) ((x) << S_DDP_DACK_MODE)
+#define G_DDP_DACK_MODE(x) (((x) >> S_DDP_DACK_MODE) & M_DDP_DACK_MODE)
+
 #define S_DDP_URG    24
 #define V_DDP_URG(x) ((x) << S_DDP_URG)
 #define F_DDP_URG    V_DDP_URG(1U)
@@ -1122,6 +1161,17 @@ struct cpl_tx_pkt {
 	__be32 len;
 };
 
+struct cpl_tx_pkt_coalesce {
+	__be32 cntrl;
+	__be32 len;
+	__be64 addr;
+};
+
+struct tx_pkt_coalesce_wr {
+	WR_HDR;
+	struct cpl_tx_pkt_coalesce cpl[0];
+};
+
 struct cpl_tx_pkt_lso {
 	WR_HDR;
 	__be32 cntrl;
@@ -1130,6 +1180,18 @@ struct cpl_tx_pkt_lso {
 	__be32 rsvd;
 	__be32 lso_info;
 };
+
+struct cpl_tx_pkt_batch_entry {
+	__be32 cntrl;
+	__be32 len;
+	__be64 addr;
+};
+
+struct cpl_tx_pkt_batch {
+	WR_HDR;
+	struct cpl_tx_pkt_batch_entry pkt_entry[7];
+};
+
 
 /* cpl_tx_pkt*.cntrl fields */
 #define S_TXPKT_VLAN    0
@@ -1246,7 +1308,8 @@ struct cpl_l2t_write_req {
 	WR_HDR;
 	union opcode_tid ot;
 	__be32 params;
-	__u8  rsvd[2];
+	__u8  rsvd;
+	__u8  port_idx;
 	__u8  dst_mac[6];
 };
 
