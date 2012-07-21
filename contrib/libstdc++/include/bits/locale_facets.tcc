@@ -1,6 +1,7 @@
 // Locale support -*- C++ -*-
 
-// Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006
+// Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
+// 2006, 2007, 2008
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -116,6 +117,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
         __throw_bad_cast();
       return static_cast<const _Facet&>(*__facets[__i]);
     }
+
 
   // Routine to access a cache for the facet.  If the cache didn't
   // exist before, it gets constructed on the fly.
@@ -885,7 +887,11 @@ _GLIBCXX_BEGIN_LDBL_NAMESPACE
       const fmtflags __fmt = __io.flags();
       __io.flags(__fmt & ~ios_base::basefield | ios_base::hex);
 
-      unsigned long __ul;
+      typedef __gnu_cxx::__conditional_type<(sizeof(void*)
+					     <= sizeof(unsigned long)),
+	unsigned long, unsigned long long>::__type _UIntPtrType;
+
+      _UIntPtrType __ul;
       __beg = _M_extract_int(__beg, __end, __io, __err, __ul);
 
       // Reset from hex formatted input.
@@ -1015,13 +1021,13 @@ _GLIBCXX_BEGIN_LDBL_NAMESPACE
 	if (__builtin_expect(__dec, true))
 	  {
 	    // Decimal.
-	    if (__v > 0)
+	    if (__v >= 0)
 	      {
 		if (__flags & ios_base::showpos
 		    && numeric_limits<_ValueT>::is_signed)
 		  *--__cs = __lit[__num_base::_S_oplus], ++__len;
 	      }
-	    else if (__v)
+	    else
 	      *--__cs = __lit[__num_base::_S_ominus], ++__len;
 	  }
 	else if (__flags & ios_base::showbase && __v)
@@ -1307,8 +1313,12 @@ _GLIBCXX_BEGIN_LDBL_NAMESPACE
 					 | ios_base::internal);
       __io.flags(__flags & __fmt | (ios_base::hex | ios_base::showbase));
 
+      typedef __gnu_cxx::__conditional_type<(sizeof(const void*)
+					     <= sizeof(unsigned long)),
+	unsigned long, unsigned long long>::__type _UIntPtrType;
+
       __s = _M_insert_int(__s, __io, __fill,
-			  reinterpret_cast<unsigned long>(__v));
+			  reinterpret_cast<_UIntPtrType>(__v));
       __io.flags(__flags);
       return __s;
     }

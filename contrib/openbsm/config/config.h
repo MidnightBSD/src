@@ -1,12 +1,14 @@
 /* config/config.h.  Generated from config.h.in by configure.  */
 /* config/config.h.in.  Generated from configure.ac by autoheader.  */
-/* $FreeBSD: src/contrib/openbsm/config/config.h,v 1.6.2.1 2007/11/04 12:49:59 rwatson Exp $ */
 
 /* Define to 1 if you have the `alarm' function. */
 #define HAVE_ALARM 1
 
 /* Define if audit system calls present */
-#define HAVE_AUDIT_SYSCALLS 
+#define HAVE_AUDIT_SYSCALLS /**/
+
+/* Define if be32enc is present */
+#define HAVE_BE32ENC /**/
 
 /* Define to 1 if you have the `bzero' function. */
 #define HAVE_BZERO 1
@@ -30,7 +32,7 @@
 #define HAVE_FTRUNCATE 1
 
 /* Define if queue.h includes LIST_FIRST */
-#define HAVE_FULL_QUEUE_H 
+#define HAVE_FULL_QUEUE_H /**/
 
 /* Define to 1 if you have the `gettimeofday' function. */
 #define HAVE_GETTIMEOFDAY 1
@@ -40,6 +42,12 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
+
+/* Define if ipc_perm._key instead of key */
+/* #undef HAVE_IPC_PERM__KEY */
+
+/* Define if ipc_perm._seq instead of seq */
+/* #undef HAVE_IPC_PERM__SEQ */
 
 /* Define if ipc_perm.__key instead of key */
 /* #undef HAVE_IPC_PERM___KEY */
@@ -62,6 +70,9 @@
 
 /* Define to 1 if you have the `memset' function. */
 #define HAVE_MEMSET 1
+
+/* Define to 1 if you have the `pthread_mutex_lock' function. */
+#define HAVE_PTHREAD_MUTEX_LOCK 1
 
 /* Define to 1 if `stat' has the bug that it succeeds when given the
    zero-length file name argument. */
@@ -90,6 +101,9 @@
 
 /* Define to 1 if you have the `strlcat' function. */
 #define HAVE_STRLCAT 1
+
+/* Define to 1 if you have the `strlcpy' function. */
+#define HAVE_STRLCPY 1
 
 /* Define to 1 if you have the `strrchr' function. */
 #define HAVE_STRRCHR 1
@@ -138,7 +152,7 @@
 
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */
-/* #undef LSTAT_FOLLOWS_SLASHED_SYMLINK */
+#define LSTAT_FOLLOWS_SLASHED_SYMLINK 1
 
 /* Name of package */
 #define PACKAGE "OpenBSM"
@@ -150,13 +164,13 @@
 #define PACKAGE_NAME "OpenBSM"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "OpenBSM 1.0"
+#define PACKAGE_STRING "OpenBSM 1.1p2"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "openbsm"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.0"
+#define PACKAGE_VERSION "1.1p2"
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void
@@ -170,8 +184,17 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 /* #undef TM_IN_SYS_TIME */
 
+/* Define if uses Mach IPC for Triggers messages */
+/* #undef USE_MACH_IPC */
+
+/* Define to use native include files */
+#define USE_NATIVE_INCLUDES /**/
+
 /* Version number of package */
-#define VERSION "1.0"
+#define VERSION "1.1p2"
+
+/* Use extended API on platforms that require it */
+#define _GNU_SOURCE /**/
 
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */
