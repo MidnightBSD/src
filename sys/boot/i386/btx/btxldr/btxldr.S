@@ -12,9 +12,14 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/boot/i386/btx/btxldr/btxldr.S,v 1.2 2011/10/16 21:11:08 laffer1 Exp $
  * $FreeBSD: src/sys/boot/i386/btx/btxldr/btxldr.S,v 1.17 2004/05/14 20:29:30 ru Exp $
  */
+
+#include <bootargs.h>
+
+#define	RBX_MUTE	0x10	/* -m */
+#define	OPT_SET(opt)	(1 << (opt))
 
 /*
  * Prototype BTX loader program, written in a couple of hours.  The
@@ -65,6 +70,8 @@
  * BTX program loader for ELF clients.
  */
 start:		cld				# String ops inc
+		testl $OPT_SET(RBX_MUTE), 4(%esp) # Check first argument
+		setnz muted			#  for RBX_MUTE, set flag
 		movl $m_logo,%esi		# Identify
 		call putstr			#  ourselves
 		movzwl BDA_MEM,%eax		# Get base memory
@@ -85,7 +92,7 @@ start:		cld				# String ops inc
 		call hexout			#  stack
 		call putstr			#  pointer
 		movl $m_args,%esi		# Format string
-		leal 0x4(%esp,1),%ebx		# First argument
+		leal 0x4(%esp),%ebx		# First argument
 		movl $0x6,%ecx			# Count
 start.1:	movl (%ebx),%eax		# Get argument and
 		addl $0x4,%ebx			#  bump pointer
@@ -93,24 +100,28 @@ start.1:	movl (%ebx),%eax		# Get argument and
 		loop start.1			# Till done
 		call putstr			# End message
 #endif
-		movl $0x48,%ecx 		# Allocate space
-		subl %ecx,%ebp			#  for bootinfo
-		movl 0x18(%esp,1),%esi		# Source: bootinfo
+		movl BA_BOOTINFO+4(%esp),%esi	# Source: bootinfo
 		cmpl $0x0, %esi			# If the bootinfo pointer
 		je start_null_bi		#  is null, don't copy it
+		movl BI_SIZE(%esi),%ecx 	# Allocate space
+		subl %ecx,%ebp			#  for bootinfo
 		movl %ebp,%edi			# Destination
 		rep				# Copy
 		movsb				#  it
-		movl %ebp,0x18(%esp,1)		# Update pointer
+		movl %ebp,BA_BOOTINFO+4(%esp)	# Update pointer
+		movl %edi,%ebp			# Restore base pointer
 #ifdef BTXLDR_VERBOSE
 		movl $m_rel_bi,%esi		# Display
 		movl %ebp,%eax			#  bootinfo
 		call hexout			#  relocation
 		call putstr			#  message
 #endif
-start_null_bi:	movl $0x18,%ecx 		# Allocate space
-		subl %ecx,%ebp			#  for arguments
-		leal 0x4(%esp,1),%esi		# Source
+start_null_bi:	movl $BOOTARGS_SIZE,%ecx 	# Fixed size of arguments
+		testl $KARGS_FLAGS_EXTARG, BA_BOOTFLAGS+4(%esp) # Check for extra data
+		jz start_fixed			# Skip if the flag is not set
+		addl BOOTARGS_SIZE+4(%esp),%ecx	# Add size of variable args
+start_fixed:	subl $ARGOFF,%ebp		# Place args at fixed offset
+		leal 0x4(%esp),%esi		# Source
 		movl %ebp,%edi			# Destination
 		rep				# Copy
 		movsb				#  them
@@ -289,7 +300,9 @@ putstr: 	lodsb				# Load char
 /*
  * Output character AL to the console.
  */
-putchr: 	pusha				# Save
+putchr:		testb $1,muted			# Check muted
+		jnz putchr.5			#  do a nop
+		pusha				# Save
 		xorl %ecx,%ecx			# Zero for loops
 		movb $SCR_MAT,%ah		# Mode/attribute
 		movl $BDA_POS,%ebx		# BDA pointer
@@ -326,7 +339,7 @@ putchr.3:	cmpb $SCR_ROW,%dh		# Beyond screen?
 		movb $SCR_ROW-1,%dh		# Bottom line
 putchr.4:	movw %dx,(%ebx) 		# Update position
 		popa				# Restore
-		ret				# To caller
+putchr.5:	ret				# To caller
 /*
  * Convert EAX, AX, or AL to hex, saving the result to [EDI].
  */
@@ -391,6 +404,12 @@ m_segs: 	.asciz "text segment: offset="
 		.asciz " memsz=\0\n"
 m_done: 	.asciz "Loading complete\n"
 #endif
+
+/*
+ * Flags
+ */
+muted:		.byte 0x0
+
 /*
  * Uninitialized data area.
  */

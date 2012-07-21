@@ -13,7 +13,7 @@
  * purpose.
  */
 
-/* $MidnightBSD$
+/* $MidnightBSD: src/sys/boot/i386/btx/lib/btxv86.h,v 1.2 2011/10/16 21:11:08 laffer1 Exp $
  * $FreeBSD: src/sys/boot/i386/btx/lib/btxv86.h,v 1.5.52.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
@@ -21,6 +21,7 @@
 #define _BTXV86_H_
 
 #include <sys/types.h>
+#include <machine/psl.h>
 
 #define V86_ADDR   0x10000	/* Segment:offset address */
 #define V86_CALLF  0x20000	/* Emulate far call */
@@ -56,6 +57,9 @@ extern u_int32_t	__args;
 #define	VTOP(va)	((vm_offset_t)(va) + __base)
 #define	VTOPSEG(va)	(u_int16_t)(VTOP((caddr_t)va) >> 4)
 #define	VTOPOFF(va)	(u_int16_t)(VTOP((caddr_t)va) & 0xf)
+
+#define	V86_CY(x)	((x) & PSL_C)
+#define	V86_ZR(x)	((x) & PSL_Z)
 
 void __exit(int) __attribute__((__noreturn__));
 void __exec(caddr_t, ...);
