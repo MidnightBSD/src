@@ -49173,7 +49173,6 @@ sys/modules/sound/driver/ad1816/Makefile -text
 sys/modules/sound/driver/ai2s/Makefile -text
 sys/modules/sound/driver/als4000/Makefile -text
 sys/modules/sound/driver/atiixp/Makefile -text
-sys/modules/sound/driver/au88x0/Makefile -text
 sys/modules/sound/driver/audiocs/Makefile -text
 sys/modules/sound/driver/cmi/Makefile -text
 sys/modules/sound/driver/cs4281/Makefile -text
