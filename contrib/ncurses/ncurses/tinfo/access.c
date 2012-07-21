@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2003,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2006,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -32,12 +32,13 @@
 
 #include <curses.priv.h>
 
+#include <ctype.h>
 #include <sys/stat.h>
 
 #include <tic.h>
 #include <nc_alloc.h>
 
-MODULE_ID("$Id: access.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: access.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 #define LOWERCASE(c) ((isalpha(UChar(c)) && isupper(UChar(c))) ? tolower(UChar(c)) : (c))
 
@@ -45,14 +46,13 @@ NCURSES_EXPORT(char *)
 _nc_rootname(char *path)
 {
     char *result = _nc_basename(path);
-#if !defined(MIXEDCASE_FILENAMES) || defined(PROG_EXT)
+#if !MIXEDCASE_FILENAMES || defined(PROG_EXT)
     static char *temp;
     char *s;
 
     temp = strdup(result);
     result = temp;
-#if !defined(MIXEDCASE_FILENAMES)
-    int n;
+#if !MIXEDCASE_FILENAMES
     for (s = result; *s != '\0'; ++s) {
 	*s = LOWERCASE(*s);
     }

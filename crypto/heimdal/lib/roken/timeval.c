@@ -37,7 +37,7 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: timeval.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: timeval.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #include "roken.h"
@@ -46,7 +46,7 @@ RCSID("$Id: timeval.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
  * Make `t1' consistent.
  */
 
-void
+void ROKEN_LIB_FUNCTION
 timevalfix(struct timeval *t1)
 {
     if (t1->tv_usec < 0) {
@@ -63,7 +63,7 @@ timevalfix(struct timeval *t1)
  * t1 += t2
  */
 
-void
+void ROKEN_LIB_FUNCTION
 timevaladd(struct timeval *t1, const struct timeval *t2)
 {
     t1->tv_sec  += t2->tv_sec;
@@ -75,7 +75,7 @@ timevaladd(struct timeval *t1, const struct timeval *t2)
  * t1 -= t2
  */
 
-void
+void ROKEN_LIB_FUNCTION
 timevalsub(struct timeval *t1, const struct timeval *t2)
 {
     t1->tv_sec  -= t2->tv_sec;

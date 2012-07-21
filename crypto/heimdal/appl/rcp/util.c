@@ -37,13 +37,13 @@
 static char sccsid[] = "@(#)util.c	8.2 (Berkeley) 4/2/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/crypto/heimdal/appl/rcp/util.c,v 1.1.1.2 2002/02/19 15:46:05 nectar Exp $";
+  "$FreeBSD$";
 #endif /* not lint */
 #endif
 
 #include "rcp_locl.h"
 
-RCSID("$Id: util.c,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $");
+RCSID("$Id: util.c,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $");
 
 char *
 colon(cp)
@@ -81,9 +81,9 @@ okname(cp0)
 	char *cp0;
 {
 	int c;
-	char *cp;
+	unsigned char *cp;
 
-	cp = cp0;
+	cp = (unsigned char *)cp0;
 	do {
 		c = *cp;
 		if (c & 0200)
@@ -112,7 +112,8 @@ susystem(s, userid)
 		return (127);
 
 	case 0:
-		(void)setuid(userid);
+		if (setuid(userid) < 0)
+			_exit(127);
 		execl(_PATH_BSHELL, "sh", "-c", s, NULL);
 		_exit(127);
 	}

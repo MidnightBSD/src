@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/nat_setgroupmap.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2003 by Darren Reed.
@@ -6,7 +6,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  */
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: nat_setgroupmap.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: nat_setgroupmap.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
 #endif
 
 #include "ipf.h"

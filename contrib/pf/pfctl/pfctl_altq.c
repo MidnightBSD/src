@@ -1,4 +1,4 @@
-/*	$OpenBSD: pfctl_altq.c,v 1.91 2006/11/28 00:08:50 henning Exp $	*/
+/*	$OpenBSD: pfctl_altq.c,v 1.93 2007/10/15 02:16:35 deraadt Exp $	*/
 
 /*
  * Copyright (c) 2002
@@ -19,9 +19,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/pf/pfctl/pfctl_altq.c,v 1.9 2007/07/03 12:30:02 mlaier Exp $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/param.h>
+#include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
@@ -78,7 +78,7 @@ static int		 gsc_add_seg(struct gen_sc *, double, double, double,
 static double		 sc_x2y(struct service_curve *, double);
 
 #ifdef __FreeBSD__
-u_int32_t	 getifspeed(int, char *);
+u_int32_t	getifspeed(int, char *);
 #else
 u_int32_t	 getifspeed(char *);
 #endif
@@ -145,13 +145,18 @@ qname_to_qid(const char *qname)
 }
 
 void
-print_altq(const struct pf_altq *a, unsigned level, struct node_queue_bw *bw,
-	struct node_queue_opt *qopts)
+print_altq(const struct pf_altq *a, unsigned int level,
+    struct node_queue_bw *bw, struct node_queue_opt *qopts)
 {
 	if (a->qname[0] != 0) {
 		print_queue(a, level, bw, 1, qopts);
 		return;
 	}
+
+#ifdef __FreeBSD__
+	if (a->local_flags & PFALTQ_FLAG_IF_REMOVED)
+		printf("INACTIVE ");
+#endif
 
 	printf("altq on %s ", a->ifname);
 
@@ -182,11 +187,16 @@ print_altq(const struct pf_altq *a, unsigned level, struct node_queue_bw *bw,
 }
 
 void
-print_queue(const struct pf_altq *a, unsigned level, struct node_queue_bw *bw,
-    int print_interface, struct node_queue_opt *qopts)
+print_queue(const struct pf_altq *a, unsigned int level,
+    struct node_queue_bw *bw, int print_interface,
+    struct node_queue_opt *qopts)
 {
-	unsigned	i;
+	unsigned int	i;
 
+#ifdef __FreeBSD__
+	if (a->local_flags & PFALTQ_FLAG_IF_REMOVED)
+		printf("INACTIVE ");
+#endif
 	printf("queue ");
 	for (i = 0; i < level; ++i)
 		printf(" ");
@@ -885,9 +895,6 @@ print_hfsc_opts(const struct pf_altq *a, const struct node_queue_opt *qopts)
 /*
  * admission control using generalized service curve
  */
-#ifndef INFINITY
-#define	INFINITY	HUGE_VAL  /* positive infinity defined in <math.h> */
-#endif
 
 /* add a new service curve to a generalized service curve */
 static void
@@ -1124,8 +1131,6 @@ getifspeed(char *ifname)
 	ifr.ifr_data = (caddr_t)&ifrdat;
 	if (ioctl(s, SIOCGIFDATA, (caddr_t)&ifr) == -1)
 		err(1, "SIOCGIFDATA");
-	if (shutdown(s, SHUT_RDWR) == -1)
-		err(1, "shutdown");
 	if (close(s))
 		err(1, "close");
 	return ((u_int32_t)ifrdat.ifi_baudrate);
@@ -1145,9 +1150,11 @@ getifmtu(char *ifname)
 	    sizeof(ifr.ifr_name))
 		errx(1, "getifmtu: strlcpy");
 	if (ioctl(s, SIOCGIFMTU, (caddr_t)&ifr) == -1)
+#ifdef __FreeBSD__
+		ifr.ifr_mtu = 1500;
+#else
 		err(1, "SIOCGIFMTU");
-	if (shutdown(s, SHUT_RDWR) == -1)
-		err(1, "shutdown");
+#endif
 	if (close(s))
 		err(1, "close");
 	if (ifr.ifr_mtu > 0)

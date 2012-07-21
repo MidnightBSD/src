@@ -33,15 +33,15 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: strndup.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: strndup.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 #include <stdlib.h>
 #include <string.h>
 
-#include <roken.h>
+#include "roken.h"
 
 #ifndef HAVE_STRNDUP
-char *
+char * ROKEN_LIB_FUNCTION
 strndup(const char *old, size_t sz)
 {
     size_t len = strnlen (old, sz);

@@ -32,7 +32,7 @@
  */
 
 #include "test_locl.h"
-RCSID("$Id: uu_client.c,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $");
+RCSID("$Id: uu_client.c,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $");
 
 krb5_context context;
 
@@ -50,6 +50,7 @@ proto (int sock, const char *hostname, const char *service)
     krb5_data data;
     krb5_data packet;
     krb5_creds mcred, cred;
+    krb5_ticket *ticket;
 
     addrlen = sizeof(local);
     if (getsockname (sock, (struct sockaddr *)&local, &addrlen) < 0
@@ -88,6 +89,8 @@ proto (int sock, const char *hostname, const char *service)
     if (status)
 	krb5_err(context, 1, status, "krb5_auth_con_setaddr");
 
+    krb5_cc_clear_mcred(&mcred);
+
     status = krb5_cc_get_principal(context, ccache, &client);
     if(status)
 	krb5_err(context, 1, status, "krb5_cc_get_principal");
@@ -98,6 +101,7 @@ proto (int sock, const char *hostname, const char *service)
 				 NULL);
     if(status)
 	krb5_err(context, 1, status, "krb5_make_principal");
+    mcred.client = client;
     
     status = krb5_cc_retrieve_cred(context, ccache, 0, &mcred, &cred);
     if(status)
@@ -126,11 +130,25 @@ proto (int sock, const char *hostname, const char *service)
 	krb5_err(context, 1, status, "krb5_auth_con_setuserkey");
     
     status = krb5_recvauth(context, &auth_context, &sock, 
-			   VERSION, client, 0, NULL, NULL);
+			   VERSION, client, 0, NULL, &ticket);
 
     if (status)
 	krb5_err(context, 1, status, "krb5_recvauth");
     
+    if (ticket->ticket.authorization_data) {
+	AuthorizationData *authz;
+	int i;
+
+	printf("Authorization data:\n");
+
+	authz = ticket->ticket.authorization_data;
+	for (i = 0; i < authz->len; i++) {
+	    printf("\ttype %d, length %lu\n",
+		   authz->val[i].ad_type,
+		   (unsigned long)authz->val[i].ad_data.length);
+	}
+    }
+
     data.data   = "hej";
     data.length = 3;
 

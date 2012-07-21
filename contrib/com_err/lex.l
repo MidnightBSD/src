@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $FreeBSD: src/contrib/com_err/lex.l,v 1.3 2004/04/03 21:17:01 nectar Exp $ */
+/* $FreeBSD$ */
 
 /*
  * This is to handle the definition of this symbol in some AIX
@@ -46,7 +46,7 @@
 #include "lex.h"
 
 #if 0
-RCSID("$Id: lex.l,v 1.1.1.2 2006-02-25 02:32:30 laffer1 Exp $");
+RCSID("$Id: lex.l,v 1.1.1.3 2012-07-21 15:02:52 laffer1 Exp $");
 #endif
 
 static unsigned lineno = 1;
@@ -92,7 +92,7 @@ getstring(void)
     int i = 0;
     int c;
     int quote = 0;
-    while((c = input()) != EOF){
+    while(i < sizeof(x) - 1 && (c = input()) != EOF){
 	if(quote) {
 	    x[i++] = c;
 	    quote = 0;
@@ -113,6 +113,8 @@ getstring(void)
     }
     x[i] = '\0';
     yylval.string = strdup(x);
+    if (yylval.string == NULL)
+        err(1, "malloc");
     return STRING;
 }
 

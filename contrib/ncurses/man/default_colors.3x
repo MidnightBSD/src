@@ -28,7 +28,7 @@
 .\"
 .\" Author: Thomas E. Dickey 1997,1999,2000,2005
 .\"
-.\" $Id: default_colors.3x,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+.\" $Id: default_colors.3x,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $
 .TH default_colors 3X ""
 .SH NAME
 \fBuse_default_colors\fR,
@@ -104,9 +104,8 @@ the \fIorig_pair\fP or \fIorig_colors\fP capability.
 If the \fIinitialize_pair\fP capability is found, this causes an
 error as well.
 .SH NOTES
-Associated with this extension, the \fBinit_pair\fR(3X) function accepts
-negative arguments to specify default foreground or background
-colors.
+Associated with this extension, the \fBinit_pair\fR function accepts
+negative arguments to specify default foreground or background colors.
 .PP
 The \fIuse_default_colors()\fP function was added to support \fIded\fP.
 This is a full-screen application which uses curses to manage only part

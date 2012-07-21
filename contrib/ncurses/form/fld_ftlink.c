@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2003,2004 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2004,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -32,7 +32,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_ftlink.c,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $")
+MODULE_ID("$Id: fld_ftlink.c,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform  
@@ -56,10 +56,11 @@ link_fieldtype(FIELDTYPE *type1, FIELDTYPE *type2)
   T((T_CALLED("link_fieldtype(%p,%p)"), type1, type2));
   if (type1 && type2)
     {
-      nftyp = (FIELDTYPE *)malloc(sizeof(FIELDTYPE));
+      nftyp = typeMalloc(FIELDTYPE, 1);
 
       if (nftyp)
 	{
+	  T((T_CREATE("fieldtype %p"), nftyp));
 	  *nftyp = *_nc_Default_FieldType;
 	  nftyp->status |= _LINKED_TYPE;
 	  if ((type1->status & _HAS_ARGS) || (type2->status & _HAS_ARGS))

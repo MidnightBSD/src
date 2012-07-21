@@ -31,7 +31,7 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: ftpd_locl.h,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $ */
+/* $Id: ftpd_locl.h,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $ */
 
 #ifndef __ftpd_locl_h__
 #define __ftpd_locl_h__
@@ -166,7 +166,7 @@ extern int LIBPREFIX(fclose)      (FILE *);
 
 int fclose(FILE *stream);
 
-int yyparse();
+int yyparse(void);
 
 #ifndef LOG_FTP
 #define LOG_FTP LOG_DAEMON

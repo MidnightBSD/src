@@ -33,17 +33,18 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: issuid.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: issuid.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #include "roken.h"
 
-int
+int ROKEN_LIB_FUNCTION
 issuid(void)
 {
 #if defined(HAVE_ISSETUGID)
     return issetugid();
-#endif
+#else /* !HAVE_ISSETUGID */
+
 #if defined(HAVE_GETUID) && defined(HAVE_GETEUID)
     if(getuid() != geteuid())
 	return 1;
@@ -52,5 +53,7 @@ issuid(void)
     if(getgid() != getegid())
 	return 2;
 #endif
+
     return 0;
+#endif /* HAVE_ISSETUGID */
 }

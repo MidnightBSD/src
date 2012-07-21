@@ -34,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/fad-getad.c,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/fad-getad.c,v 1.1.1.4 2012-07-21 15:03:26 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -61,12 +61,21 @@ static const char rcsid[] _U_ =
 #endif
 
 #ifdef AF_PACKET
+# ifdef HAVE_NETPACKET_PACKET_H
+/* Solaris 11 and later, Linux distributions with newer glibc */
+#  include <netpacket/packet.h>
+# else /* HAVE_NETPACKET_PACKET_H */
+/* LynxOS, Linux distributions with older glibc */
 # ifdef __Lynx__
-#  include <netpacket/if_packet.h>	/* LynxOS */
-# else
-#  include <linux/if_packet.h>		/* Linux */
-# endif
-#endif
+/* LynxOS */
+#  include <netpacket/if_packet.h>
+# else /* __Lynx__ */
+/* Linux */
+#  include <linux/types.h>
+#  include <linux/if_packet.h>
+# endif /* __Lynx__ */
+# endif /* HAVE_NETPACKET_PACKET_H */
+#endif /* AF_PACKET */
 
 /*
  * This is fun.

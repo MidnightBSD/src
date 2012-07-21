@@ -33,14 +33,14 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: strcollect.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: strcollect.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <roken.h>
+#include "roken.h"
 
 enum { initial = 10, increment = 5 };
 
@@ -69,7 +69,7 @@ sub (char **argv, int i, int argc, va_list *ap)
  * terminated by NULL.
  */
 
-char **
+char ** ROKEN_LIB_FUNCTION
 vstrcollect(va_list *ap)
 {
     return sub (NULL, 0, 0, ap);
@@ -79,7 +79,7 @@ vstrcollect(va_list *ap)
  *
  */
 
-char **
+char ** ROKEN_LIB_FUNCTION
 strcollect(char *first, ...)
 {
     va_list ap;

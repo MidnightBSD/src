@@ -1,0 +1,3 @@
+# $Id: pki-mapping,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+foo@TEST.H5L.SE:CN=pkinit,C=SE
+foo@TEST.H5L.SE:CN=bar,DC=test,DC=h5l,DC=se

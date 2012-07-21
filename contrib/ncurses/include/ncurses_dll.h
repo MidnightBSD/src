@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2004,2005 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2006,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -25,7 +25,7 @@
  * sale, use or other dealings in this Software without prior written       *
  * authorization.                                                           *
  ****************************************************************************/
-/* $Id: ncurses_dll.h,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $ */
+/* $Id: ncurses_dll.h,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $ */
 
 #ifndef NCURSES_DLL_H_incl
 #define NCURSES_DLL_H_incl 1
@@ -75,5 +75,12 @@
 #if !defined(NCURSES_EXPORT_VAR)
 #  define NCURSES_EXPORT_VAR(type) NCURSES_IMPEXP type
 #endif
+
+/*
+ * For reentrant code, we map the various global variables into SCREEN by
+ * using functions to access them.
+ */
+#define NCURSES_PUBLIC_VAR(name) _nc_##name
+#define NCURSES_WRAPPED_VAR(type,name) extern type NCURSES_PUBLIC_VAR(name)(void)
 
 #endif /* NCURSES_DLL_H_incl */

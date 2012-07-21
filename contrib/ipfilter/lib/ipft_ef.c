@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/ipft_ef.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000-2006 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: ipft_ef.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
+ * $Id: ipft_ef.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
  */
 
 /*
@@ -33,7 +33,7 @@ etherfind -n -t
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipft_ef.c	1.6 2/4/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ipft_ef.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ipft_ef.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
 #endif
 
 static	int	etherf_open __P((char *));

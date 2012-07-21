@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/fad-win32.c,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/fad-win32.c,v 1.1.1.4 2012-07-21 15:03:26 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -300,6 +300,15 @@ pcap_findalldevs(pcap_if_t **alldevsp, char *errbuf)
 		}
 		name += strlen(name) + 1;
 		desc += strlen(desc) + 1;
+	}
+
+	if (ret != -1) {
+		/*
+		 * We haven't had any errors yet; do any platform-specific
+		 * operations to add devices.
+		 */
+		if (pcap_platform_finddevs(&devlist, errbuf) < 0)
+			ret = -1;
 	}
 	
 	if (ret == -1) {

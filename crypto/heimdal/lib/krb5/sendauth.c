@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997 - 2001 Kungliga Tekniska Högskolan
+ * Copyright (c) 1997 - 2006 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -33,7 +33,7 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: sendauth.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: sendauth.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 /*
  * The format seems to be:
@@ -62,7 +62,7 @@ RCSID("$Id: sendauth.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
  * }
  */
 
-krb5_error_code
+krb5_error_code KRB5_LIB_FUNCTION
 krb5_sendauth(krb5_context context,
 	      krb5_auth_context *auth_context,
 	      krb5_pointer p_fd,
@@ -78,7 +78,7 @@ krb5_sendauth(krb5_context context,
 	      krb5_creds **out_creds)
 {
     krb5_error_code ret;
-    u_int32_t len, net_len;
+    uint32_t len, net_len;
     const char *version = KRB5_SENDAUTH_VERSION;
     u_char repl;
     krb5_data ap_req, error_data;
@@ -223,11 +223,11 @@ krb5_sendauth(krb5_context context,
 
 	ret = krb5_rd_rep (context, *auth_context, &ap_rep,
 			   rep_result ? rep_result : &ignore);
+	krb5_data_free (&ap_rep);
 	if (ret)
 	    return ret;
 	if (rep_result == NULL)
 	    krb5_free_ap_rep_enc_part (context, ignore);
-	krb5_data_free (&ap_rep);
     }
     return 0;
 }

@@ -48,7 +48,7 @@ License Agreement applies to this software.
 
 	        There is some really, really ugly code in here.
 
-$FreeBSD: src/contrib/opie/opieftpd.c,v 1.5 2002/03/21 23:42:52 markm Exp $
+$FreeBSD$
 */
 /*
  * Copyright (c) 1985, 1988, 1990 Regents of the University of California.

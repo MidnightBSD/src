@@ -1,3 +1,4 @@
+/* $FreeBSD$ */
 /* Readline.h -- the names of functions callable from within readline. */
 
 /* Copyright (C) 1987-2005 Free Software Foundation, Inc.
@@ -445,7 +446,7 @@ extern char *rl_filename_completion_function PARAMS((const char *, int));
 
 extern int rl_completion_mode PARAMS((rl_command_func_t *));
 
-#if 0
+#if !defined(RL_NO_COMPAT)
 /* Backwards compatibility (compat.c).  These will go away sometime. */
 extern void free_undo_list PARAMS((void));
 extern int maybe_save_line PARAMS((void));
@@ -845,6 +846,13 @@ struct readline_state {
 
 extern int rl_save_state PARAMS((struct readline_state *));
 extern int rl_restore_state PARAMS((struct readline_state *));
+
+#if !defined(RL_NO_COMPAT)
+#if !defined (savestring)
+#define savestring rl_savestring
+extern char *savestring __P((char *));  /* XXX backwards compatibility */
+#endif
+#endif
 
 #ifdef __cplusplus
 }

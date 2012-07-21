@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2004,2005 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2005,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -41,7 +41,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_instr.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: lib_instr.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 NCURSES_EXPORT(int)
 winnstr(WINDOW *win, char *str, int n)
@@ -81,7 +81,7 @@ winnstr(WINDOW *win, char *str, int n)
 			n3 = wcstombs(0, wch, 0);
 			if (isEILSEQ(n3) || (n3 == 0)) {
 			    ;
-			} else if ((int) (n3 + i) >= n) {
+			} else if ((int) (n3 + i) > n) {
 			    done = TRUE;
 			} else if ((tmp = typeCalloc(char, n3 + 10)) == 0) {
 			    done = TRUE;
@@ -102,9 +102,7 @@ winnstr(WINDOW *win, char *str, int n)
 	    str[i++] = (char) CharOf(win->_line[row].text[col]);
 #endif
 	    if (++col > win->_maxx) {
-		col = 0;
-		if (++row > win->_maxy)
-		    break;
+		break;
 	    }
 	}
     }

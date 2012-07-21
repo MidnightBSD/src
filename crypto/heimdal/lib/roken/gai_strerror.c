@@ -33,14 +33,14 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: gai_strerror.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: gai_strerror.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #include "roken.h"
 
 static struct gai_error {
     int code;
-    char *str;
+    const char *str;
 } errors[] = {
 {EAI_NOERROR,		"no error"},
 #ifdef EAI_ADDRFAMILY
@@ -65,7 +65,7 @@ static struct gai_error {
  *
  */
 
-char *
+const char * ROKEN_LIB_FUNCTION
 gai_strerror(int ecode)
 {
     struct gai_error *g;

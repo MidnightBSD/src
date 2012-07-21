@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997-2002 Kungliga Tekniska Högskolan
+ * Copyright (c) 1997-2004 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -33,7 +33,11 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: constants.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
+RCSID("$Id: constants.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
-const char *krb5_config_file = SYSCONFDIR "/krb5.conf:/etc/krb5.conf";
+const char *krb5_config_file = 
+#ifdef __APPLE__
+"/Library/Preferences/edu.mit.Kerberos:"
+#endif
+SYSCONFDIR "/krb5.conf:/etc/krb5.conf";
 const char *krb5_defkeyname = KEYTAB_DEFAULT;

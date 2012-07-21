@@ -31,8 +31,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 #include "krb5_locl.h"
+#include <err.h>
 
-RCSID("$Id: parse-name-test.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: parse-name-test.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 enum { MAX_COMPONENTS = 3 };
 
@@ -62,7 +63,7 @@ static struct testcase {
     {"a/b/c", "a/b/c@", "", 3, {"a", "b", "c"}, FALSE},
     {NULL, NULL, "", 0, { NULL }, FALSE}};
 
-int
+int KRB5_LIB_FUNCTION
 main(int argc, char **argv)
 {
     struct testcase *t;
@@ -188,5 +189,6 @@ main(int argc, char **argv)
 	}
 	krb5_free_principal (context, princ);
     }
+    krb5_free_context(context);
     return val;
 }

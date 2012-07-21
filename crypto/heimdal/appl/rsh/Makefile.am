@@ -1,8 +1,8 @@
-# $Id: Makefile.am,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $
+# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $
 
 include $(top_srcdir)/Makefile.am.common
 
-INCLUDES += $(INCLUDE_krb4) -I$(srcdir)/../login
+AM_CPPFLAGS += $(INCLUDE_krb4) -I$(srcdir)/../login
 
 bin_PROGRAMS = rsh
 
@@ -12,14 +12,18 @@ libexec_PROGRAMS = rshd
 
 rsh_SOURCES  = rsh.c common.c rsh_locl.h
 
-rshd_SOURCES = rshd.c common.c login_access.c rsh_locl.h
+rshd_SOURCES = rshd.c common.c login_access.c limits_conf.c rsh_locl.h
 
 login_access.c:
 	$(LN_S) $(srcdir)/../login/login_access.c .
 
+limits_conf.c:
+	$(LN_S) $(srcdir)/../login/limits_conf.c .
+
 LDADD = $(LIB_kafs) \
 	$(LIB_krb5) \
 	$(LIB_krb4) \
-	$(LIB_des) \
-	$(LIB_roken) \
-	$(LIB_kdfs)
+	$(LIB_hcrypto) \
+	$(LIB_roken)
+
+EXTRA_DIST = $(man_MANS)

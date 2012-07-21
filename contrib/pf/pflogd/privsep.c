@@ -18,11 +18,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/pf/pflogd/privsep.c,v 1.4 2007/07/03 12:30:02 mlaier Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 
 #include <net/if.h>
 #include <net/bpf.h>
@@ -31,20 +32,13 @@ __FBSDID("$FreeBSD: src/contrib/pf/pflogd/privsep.c,v 1.4 2007/07/03 12:30:02 ml
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#ifndef __FreeBSD__
 #include <pcap.h>
 #include <pcap-int.h>
-#endif
 #include <pwd.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef __FreeBSD__
-/* XXX: pcap pollutes namespace with strlcpy if not present previously */
-#include <pcap.h>
-#include <pcap-int.h>
-#endif
 #include <syslog.h>
 #include <unistd.h>
 #include "pflogd.h"

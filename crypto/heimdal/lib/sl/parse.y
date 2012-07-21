@@ -33,7 +33,7 @@
  */
 
 #include "make_cmds.h"
-RCSID("$Id: parse.y,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: parse.y,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 static void yyerror (char *s);
 
@@ -138,6 +138,8 @@ struct string_list*
 append_string(struct string_list *list, char *str)
 {
     struct string_list *sl = malloc(sizeof(*sl));
+    if (sl == NULL)
+	return sl;
     sl->string = str;
     sl->next = NULL;
     if(list) {

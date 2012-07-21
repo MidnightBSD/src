@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 2000-2003,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 2000-2006,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -35,7 +35,7 @@
 #include <ctype.h>
 #include <termcap.h>
 
-MODULE_ID("$Id: lib_tgoto.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: lib_tgoto.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 #if !PURE_TERMINFO
 static bool
@@ -128,7 +128,7 @@ tgoto_internal(const char *string, int x, int y)
 			*value = 0200;	/* tputs will treat this as \0 */
 		    }
 		}
-		result[used++] = *value++;
+		result[used++] = (char) *value++;
 		break;
 	    case '%':
 		result[used++] = *string;

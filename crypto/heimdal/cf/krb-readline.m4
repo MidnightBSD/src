@@ -1,4 +1,4 @@
-dnl $Id: krb-readline.m4,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $
+dnl $Id: krb-readline.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
 dnl
 dnl Tests for readline functions
 dnl
@@ -9,11 +9,11 @@ AC_DEFUN([KRB_READLINE],[
 AC_FIND_FUNC_NO_LIBS(el_init, edit, [], [], [$LIB_tgetent])
 if test "$ac_cv_func_el_init" = yes ; then
 	AC_CACHE_CHECK(for four argument el_init, ac_cv_func_el_init_four,[
-		AC_TRY_COMPILE([#include <stdio.h>
-			#include <histedit.h>],
-			[el_init("", NULL, NULL, NULL);],
-			ac_cv_func_el_init_four=yes,
-			ac_cv_func_el_init_four=no)])
+		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdio.h>
+			#include <histedit.h>]],
+			[[el_init("", NULL, NULL, NULL);]])],
+			[ac_cv_func_el_init_four=yes],
+			[ac_cv_func_el_init_four=no])])
 	if test "$ac_cv_func_el_init_four" = yes; then
 		AC_DEFINE(HAVE_FOUR_VALUED_EL_INIT, 1, [Define if el_init takes four arguments.])
 	fi

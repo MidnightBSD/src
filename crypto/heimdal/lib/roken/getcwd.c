@@ -33,7 +33,7 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: getcwd.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: getcwd.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #ifdef HAVE_UNISTD_H
@@ -45,7 +45,7 @@ RCSID("$Id: getcwd.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
 
 #include "roken.h"
 
-char*
+char* ROKEN_LIB_FUNCTION
 getcwd(char *path, size_t size)
 {
     char xxx[MaxPathLen];

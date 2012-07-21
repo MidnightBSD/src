@@ -1,24 +1,39 @@
-# $Id: Makefile.am,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $
+# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $
 
 include $(top_srcdir)/Makefile.am.common
 
 YFLAGS = -d
 
 lib_LTLIBRARIES = libcom_err.la
-libcom_err_la_LDFLAGS = -version-info 2:1:1
+libcom_err_la_LDFLAGS = -version-info 2:3:1
+
+if versionscript
+libcom_err_la_LDFLAGS += $(LDFLAGS_VERSION_SCRIPT)$(srcdir)/version-script.map
+endif
 
 bin_PROGRAMS = compile_et
 
 include_HEADERS = com_err.h com_right.h
 
-compile_et_SOURCES = compile_et.c compile_et.h parse.y lex.l
+compile_et_SOURCES = compile_et.c compile_et.h parse.y lex.l lex.h
 
-libcom_err_la_SOURCES = error.c com_err.c roken_rename.h
+libcom_err_la_CPPFLAGS = $(ROKEN_RENAME)
+dist_libcom_err_la_SOURCES = error.c com_err.c roken_rename.h
 
-CLEANFILES = lex.c parse.c parse.h
+if do_roken_rename
+nodist_libcom_err_la_SOURCES = snprintf.c strlcpy.c
+endif
 
 $(compile_et_OBJECTS): parse.h parse.c ## XXX broken automake 1.4s
 
 compile_et_LDADD = \
+	libcom_err.la \
 	$(LIB_roken) \
 	$(LEXLIB)
+
+snprintf.c:
+	$(LN_S) $(srcdir)/../roken/snprintf.c .
+strlcpy.c:
+	$(LN_S) $(srcdir)/../roken/strlcpy.c .
+
+EXTRA_DIST = version-script.map

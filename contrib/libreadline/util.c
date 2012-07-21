@@ -1,3 +1,4 @@
+/* $FreeBSD$ */
 /* util.c -- readline utility functions */
 
 /* Copyright (C) 1987-2005 Free Software Foundation, Inc.

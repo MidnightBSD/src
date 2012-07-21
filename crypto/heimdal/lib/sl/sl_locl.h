@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: sl_locl.h,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $ */
+/* $Id: sl_locl.h,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $ */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #include <roken.h>
 

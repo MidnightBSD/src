@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/bpf_filter.c,v 1.6 2007/06/04 02:54:31 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997
@@ -42,7 +42,7 @@
 
 #if !(defined(lint) || defined(KERNEL) || defined(_KERNEL))
 static const char rcsid[] =
-    "@(#) $Header: /home/cvs/src/contrib/ipfilter/bpf_filter.c,v 1.1.1.3 2008-11-22 14:33:09 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/ipfilter/bpf_filter.c,v 1.1.1.4 2012-07-21 15:01:08 laffer1 Exp $ (LBL)";
 #endif
 
 #include <sys/param.h>

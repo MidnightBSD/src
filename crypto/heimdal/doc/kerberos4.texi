@@ -1,11 +1,11 @@
-@c $Id: kerberos4.texi,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
+@c $Id: kerberos4.texi,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
 
 @node Kerberos 4 issues, Windows 2000 compatability, Things in search for a better place, Top
 @comment  node-name,  next,  previous,  up
 @chapter Kerberos 4 issues
 
-If compiled with version 4 support, the KDC can serve requests from a
-Kerberos 4 client. There are a few things you must do for this to work.
+The KDC has built-in version 4 support. It is not enabled by default,
+see setup how to set it up.
 
 The KDC will also have kaserver emulation and be able to handle
 AFS-clients that use @code{klog}.

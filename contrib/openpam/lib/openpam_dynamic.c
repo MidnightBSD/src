@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2002-2003 Networks Associates Technology, Inc.
+ * Copyright (c) 2004-2008 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * This software was developed for the FreeBSD Project by ThinkSec AS and
@@ -31,8 +32,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $P4: //depot/projects/openpam/lib/openpam_dynamic.c#14 $
+ * $Id: openpam_dynamic.c,v 1.1.1.2 2012-07-21 14:57:34 laffer1 Exp $
  */
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <dlfcn.h>
 #include <stdio.h>
@@ -56,6 +61,7 @@
 pam_module_t *
 openpam_dynamic(const char *path)
 {
+	const pam_module_t *dlmodule;
 	pam_module_t *module;
 	const char *prefix;
 	char *vpath;
@@ -63,8 +69,6 @@ openpam_dynamic(const char *path)
 	int i;
 
 	dlh = NULL;
-	if ((module = calloc(1, sizeof *module)) == NULL)
-		goto buf_err;
 
 	/* Prepend the standard prefix if not an absolute pathname. */
 	if (path[0] != '/')
@@ -74,32 +78,37 @@ openpam_dynamic(const char *path)
 
 	/* try versioned module first, then unversioned module */
 	if (asprintf(&vpath, "%s%s.%d", prefix, path, LIB_MAJ) < 0)
-		goto buf_err;
+		goto err;
 	if ((dlh = dlopen(vpath, RTLD_NOW)) == NULL) {
 		openpam_log(PAM_LOG_DEBUG, "%s: %s", vpath, dlerror());
 		*strrchr(vpath, '.') = '\0';
 		if ((dlh = dlopen(vpath, RTLD_NOW)) == NULL) {
 			openpam_log(PAM_LOG_DEBUG, "%s: %s", vpath, dlerror());
-			FREE(module);
+			FREE(vpath);
 			return (NULL);
 		}
 	}
 	FREE(vpath);
+	if ((module = calloc(1, sizeof *module)) == NULL)
+		goto buf_err;
 	if ((module->path = strdup(path)) == NULL)
 		goto buf_err;
 	module->dlh = dlh;
+	dlmodule = dlsym(dlh, "_pam_module");
 	for (i = 0; i < PAM_NUM_PRIMITIVES; ++i) {
-		module->func[i] = (pam_func_t)dlsym(dlh, _pam_sm_func_name[i]);
+		module->func[i] = dlmodule ? dlmodule->func[i] :
+		    (pam_func_t)dlsym(dlh, _pam_sm_func_name[i]);
 		if (module->func[i] == NULL)
 			openpam_log(PAM_LOG_DEBUG, "%s: %s(): %s",
 			    path, _pam_sm_func_name[i], dlerror());
 	}
 	return (module);
- buf_err:
-	openpam_log(PAM_LOG_ERROR, "%m");
+buf_err:
 	if (dlh != NULL)
 		dlclose(dlh);
 	FREE(module);
+err:
+	openpam_log(PAM_LOG_ERROR, "%m");
 	return (NULL);
 }
 

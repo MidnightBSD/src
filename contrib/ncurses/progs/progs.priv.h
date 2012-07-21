@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -30,7 +30,7 @@
  *  Author: Thomas E. Dickey                    1997-on                     *
  ****************************************************************************/
 /*
- * $Id: progs.priv.h,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+ * $Id: progs.priv.h,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $
  *
  *	progs.priv.h
  *
@@ -90,6 +90,7 @@
 # endif
 #endif
 
+#include <assert.h>
 #include <errno.h>
 
 #if DECL_ERRNO
@@ -110,7 +111,16 @@ extern int optind;
 #include <term_entry.h>
 #include <tic.h>
 #include <nc_tparm.h>
+
 #include <nc_alloc.h>
+#if HAVE_NC_FREEALL
+#undef ExitProgram
+#ifdef USE_LIBTINFO
+#define ExitProgram(code) _nc_free_tinfo(code)
+#else
+#define ExitProgram(code) _nc_free_tic(code)
+#endif
+#endif
 
 /* usually in <unistd.h> */
 #ifndef STDOUT_FILENO

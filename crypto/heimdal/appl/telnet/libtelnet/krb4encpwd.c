@@ -33,7 +33,7 @@
 
 #include <config.h>
 
-RCSID("$Id: krb4encpwd.c,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $");
+RCSID("$Id: krb4encpwd.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 #ifdef	KRB4_ENCPWD
 /*
@@ -354,7 +354,7 @@ krb4encpwd_printsub(data, cnt, buf, buflen)
 {
 	int i;
 
-	buf[buflen-1] = '\0';		/* make sure its NULL terminated */
+	buf[buflen-1] = '\0';		/* make sure it's NULL terminated */
 	buflen -= 1;
 
 	switch(data[3]) {

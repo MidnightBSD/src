@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2000,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -28,7 +28,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: memmove.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
+MODULE_ID("$Id: memmove.c,v 1.1.1.3 2012-07-21 14:51:30 laffer1 Exp $")
 
 /****************************************************************************
  *  Author: Thomas E. Dickey <dickey@clark.net> 1998                        *
@@ -51,7 +51,7 @@ _nc_memmove(void *s1, const void *s2, size_t n)
 	    }
 	    for (j = 0; j < n; j++)
 		bfr[j] = SRC[j];
-	    SRC = bfr;
+	    s2 = bfr;
 	}
 	while (n-- != 0)
 	    DST[n] = SRC[n];

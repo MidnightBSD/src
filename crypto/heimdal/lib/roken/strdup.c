@@ -33,13 +33,13 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: strdup.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: strdup.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 #include <stdlib.h>
 #include <string.h>
 
 #ifndef HAVE_STRDUP
-char *
+char * ROKEN_LIB_FUNCTION
 strdup(const char *old)
 {
 	char *t = malloc(strlen(old)+1);

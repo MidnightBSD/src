@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998 - 2004 Kungliga Tekniska Högskolan
+ * Copyright (c) 1998 - 2006 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -33,7 +33,7 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: print_version.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: print_version.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 #endif
 #include "roken.h"
 
@@ -50,6 +50,6 @@ print_version(const char *progname)
     if(*package_list == '\0')
 	package_list = "no version information";
     fprintf(stderr, "%s (%s)\n", progname, package_list);
-    fprintf(stderr, "Copyright 1999-2004 Kungliga Tekniska Högskolan\n");
+    fprintf(stderr, "Copyright 1995-2008 Kungliga Tekniska Högskolan\n");
     fprintf(stderr, "Send bug-reports to %s\n", PACKAGE_BUGREPORT);
 }

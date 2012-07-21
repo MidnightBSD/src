@@ -33,7 +33,7 @@
 
 #include "kadm5_locl.h"
 
-RCSID("$Id: randkey_c.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
+RCSID("$Id: randkey_c.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 
 kadm5_ret_t
 kadm5_c_randkey_principal(void *server_handle, 
@@ -53,8 +53,10 @@ kadm5_c_randkey_principal(void *server_handle,
 	return ret;
 
     sp = krb5_storage_from_mem(buf, sizeof(buf));
-    if (sp == NULL)
+    if (sp == NULL) {
+	krb5_clear_error_string(context->context);
 	return ENOMEM;
+    }
     krb5_store_int32(sp, kadm_randkey);
     krb5_store_principal(sp, princ);
     ret = _kadm5_client_send(context, sp);
@@ -66,9 +68,11 @@ kadm5_c_randkey_principal(void *server_handle,
 	return ret;
     sp = krb5_storage_from_data(&reply);
     if (sp == NULL) {
+	krb5_clear_error_string(context->context);
 	krb5_data_free (&reply);
 	return ENOMEM;
     }
+    krb5_clear_error_string(context->context);
     krb5_ret_int32(sp, &tmp);
     ret = tmp;
     if(ret == 0){

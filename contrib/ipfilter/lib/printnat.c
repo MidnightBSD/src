@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/printnat.c,v 1.4.2.1 2007/10/31 05:00:35 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2002-2005 by Darren Reed.
@@ -13,7 +13,7 @@
 
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: printnat.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: printnat.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
 #endif
 
 /*
@@ -217,6 +217,8 @@ int opts;
 			putchar(' ');
 			printproto(pr, np->in_p, np);
 		}
+		if (np->in_flags & IPN_SEQUENTIAL)
+			printf(" sequential");
 		printf("\n");
 		if (opts & OPT_DEBUG) {
 			struct in_addr nip;

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/printstate.c,v 1.5.2.1 2007/10/31 05:00:35 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2002-2005 by Darren Reed.

@@ -33,7 +33,7 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: set_default_realm.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: set_default_realm.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 
 /*
  * Convert the simple string `s' into a NULL-terminated and freshly allocated 
@@ -65,7 +65,7 @@ string_to_list (krb5_context context, const char *s, krb5_realm **list)
  * Otherwise, the realm(s) are figured out from configuration or DNS.  
  */
 
-krb5_error_code
+krb5_error_code KRB5_LIB_FUNCTION
 krb5_set_default_realm(krb5_context context,
 		       const char *realm)
 {

@@ -1,8 +1,8 @@
-# $Id: Makefile.am,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
+# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $
 
 include $(top_srcdir)/Makefile.am.common
 
-INCLUDES += $(INCLUDE_des)
+AM_CPPFLAGS += $(INCLUDE_hcrypto)
 
 man_MANS = kpasswd.1 kpasswdd.8
 
@@ -26,6 +26,8 @@ kpasswdd_LDADD = \
 	$(DBLIB)
 
 LDADD = $(top_builddir)/lib/krb5/libkrb5.la \
-	$(LIB_des) \
+	$(LIB_hcrypto) \
 	$(top_builddir)/lib/asn1/libasn1.la \
 	$(LIB_roken)
+
+EXTRA_DIST = $(man_MANS)

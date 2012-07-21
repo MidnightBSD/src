@@ -21,16 +21,21 @@
  * Name to id translation routines used by the scanner.
  * These functions are not time critical.
  *
- * $FreeBSD: src/contrib/libpcap/nametoaddr.c,v 1.12.10.1 2007/10/19 03:03:56 mlaier Exp $
+ * $FreeBSD$
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/nametoaddr.c,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/nametoaddr.c,v 1.1.1.4 2012-07-21 15:03:27 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#ifdef DECNETLIB
+#include <sys/types.h>
+#include <netdnet/dnetdb.h>
 #endif
 
 #ifdef WIN32
@@ -45,13 +50,6 @@ static const char rcsid[] _U_ =
 
 #include <netinet/in.h>
 #endif /* WIN32 */
-
-/*
- * XXX - why was this included even on UNIX?
- */
-#ifdef __MINGW32__
-#include "IP6_misc.h"
-#endif
 
 #ifndef WIN32
 #ifdef HAVE_ETHER_HOSTTON
@@ -82,7 +80,7 @@ struct rtentry;		/* declarations in <net/if.h> */
 #include "pcap-int.h"
 
 #include "gencode.h"
-#include <pcap-namedb.h>
+#include <pcap/namedb.h>
 
 #ifdef HAVE_OS_PROTO_H
 #include "os-proto.h"
@@ -409,7 +407,15 @@ __pcap_atodn(const char *s, bpf_u_int32 *addr)
 }
 
 /*
- * Convert 's' which has the form "xx:xx:xx:xx:xx:xx" into a new
+ * Convert 's', which can have the one of the forms:
+ *
+ *	"xx:xx:xx:xx:xx:xx"
+ *	"xx.xx.xx.xx.xx.xx"
+ *	"xx-xx-xx-xx-xx-xx"
+ *	"xxxx.xxxx.xxxx"
+ *	"xxxxxxxxxxxx"
+ *
+ * (or various mixes of ':', '.', and '-') into a new
  * ethernet address.  Assumes 's' is well formed.
  */
 u_char *
@@ -421,7 +427,7 @@ pcap_ether_aton(const char *s)
 	e = ep = (u_char *)malloc(6);
 
 	while (*s) {
-		if (*s == ':')
+		if (*s == ':' || *s == '.' || *s == '-')
 			s += 1;
 		d = xdtoi(*s++);
 		if (isxdigit((unsigned char)*s)) {

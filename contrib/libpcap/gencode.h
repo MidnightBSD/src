@@ -18,8 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/libpcap/gencode.h,v 1.9.2.1 2007/10/19 03:03:56 mlaier Exp $
- * @(#) $Header: /home/cvs/src/contrib/libpcap/gencode.h,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/gencode.h,v 1.1.1.4 2012-07-21 15:03:26 laffer1 Exp $ (LBL)
  */
 
 /*
@@ -127,12 +126,20 @@
 
 #define Q_RADIO		40
 
+#define Q_CARP		41
+
 /* Directional qualifiers. */
 
 #define Q_SRC		1
 #define Q_DST		2
 #define Q_OR		3
 #define Q_AND		4
+#define Q_ADDR1		5
+#define Q_ADDR2		6
+#define Q_ADDR3		7
+#define Q_ADDR4		8
+#define Q_RA		9
+#define Q_TA		10
 
 #define Q_DEFAULT	0
 #define Q_UNDEF		255
@@ -312,6 +319,9 @@ struct block *gen_pf_ruleset(char *);
 struct block *gen_pf_reason(int);
 struct block *gen_pf_action(int);
 struct block *gen_pf_dir(int);
+
+struct block *gen_p80211_type(int, int);
+struct block *gen_p80211_fcdir(int);
 
 void bpf_optimize(struct block **);
 void bpf_error(const char *, ...)

@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipt.h,v 1.4 2006/08/16 12:23:01 guido Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2001 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: ipt.h,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
+ * $Id: ipt.h,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
  */
 
 #ifndef	__IPT_H__

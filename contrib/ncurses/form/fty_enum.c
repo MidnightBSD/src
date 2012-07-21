@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2004,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2006,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -34,7 +34,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fty_enum.c,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $")
+MODULE_ID("$Id: fty_enum.c,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $")
 
 typedef struct
   {
@@ -56,7 +56,7 @@ enumARG;
 static void *
 Make_Enum_Type(va_list *ap)
 {
-  enumARG *argp = (enumARG *)malloc(sizeof(enumARG));
+  enumARG *argp = typeMalloc(enumARG, 1);
 
   if (argp)
     {
@@ -64,6 +64,7 @@ Make_Enum_Type(va_list *ap)
       char **kp = (char **)0;
       int ccase, cunique;
 
+      T((T_CREATE("enumARG %p"), argp));
       argp->kwds = va_arg(*ap, char **);
       ccase = va_arg(*ap, int);
       cunique = va_arg(*ap, int);
@@ -96,10 +97,13 @@ Copy_Enum_Type(const void *argp)
     {
       const enumARG *ap = (const enumARG *)argp;
 
-      result = (enumARG *)malloc(sizeof(enumARG));
+      result = typeMalloc(enumARG, 1);
 
       if (result)
-	*result = *ap;
+	{
+	  T((T_CREATE("enumARG %p"), result));
+	  *result = *ap;
+	}
     }
   return (void *)result;
 }

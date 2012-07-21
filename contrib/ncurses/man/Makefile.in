@@ -1,6 +1,6 @@
-# $Id: Makefile.in,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+# $Id: Makefile.in,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $
 ##############################################################################
-# Copyright (c) 1998-2003,2005 Free Software Foundation, Inc.                #
+# Copyright (c) 1998-2006,2007 Free Software Foundation, Inc.                #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
 # copy of this software and associated documentation files (the "Software"), #
@@ -52,7 +52,7 @@ depend :
 tags :
 
 $(DESTDIR)$(mandir) :
-	sh $(srcdir)/../mkinstalldirs $@
+	sh $(srcdir)/../mkdirs.sh $@
 
 EDITARGS = $(DESTDIR)$(mandir) $(srcdir) terminfo.5 $(srcdir)/*.[0-9]*
 
@@ -77,4 +77,4 @@ clean:	mostlyclean
 	sh $(srcdir)/make_sed.sh @MANPAGE_RENAMES@ >../edit_man.sed
 
 distclean realclean: clean
-	rm -f Makefile ../edit_man.*
+	rm -f Makefile ../edit_man.* ../man_alias.*

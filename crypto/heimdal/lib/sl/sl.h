@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1995 - 2000 Kungliga Tekniska Högskolan
+ * Copyright (c) 1995 - 2004 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden).
  * All rights reserved.
  * 
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: sl.h,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $ */
+/* $Id: sl.h,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $ */
 
 #ifndef _SL_H
 #define _SL_H
@@ -49,12 +49,21 @@ struct sl_cmd {
 
 typedef struct sl_cmd SL_cmd;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void sl_help (SL_cmd *, int argc, char **argv);
 int  sl_loop (SL_cmd *, const char *prompt);
 int  sl_command_loop (SL_cmd *cmds, const char *prompt, void **data);
 int  sl_command (SL_cmd *cmds, int argc, char **argv);
 int sl_make_argv(char*, int*, char***);
 void sl_apropos (SL_cmd *cmd, const char *topic);
+SL_cmd *sl_match (SL_cmd *cmds, char *cmd, int exactp);
+void sl_slc_help (SL_cmd *cmds, int argc, char **argv);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _SL_H */

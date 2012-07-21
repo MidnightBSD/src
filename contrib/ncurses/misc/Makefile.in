@@ -1,6 +1,6 @@
-# $Id: Makefile.in,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+# $Id: Makefile.in,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $
 ##############################################################################
-# Copyright (c) 1998-2004,2006 Free Software Foundation, Inc.                #
+# Copyright (c) 1998-2006,2007 Free Software Foundation, Inc.                #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
 # copy of this software and associated documentation files (the "Software"), #
@@ -76,7 +76,7 @@ depend :
 
 sources :
 
-install : install.data install.scripts
+install : install.data install.libs
 
 install.data :	terminfo.tmp \
 		$(DESTDIR)$(libdir) \
@@ -103,7 +103,7 @@ install.data :	terminfo.tmp \
 
 NCURSES_CONFIG	= ncurses@DFT_ARG_SUFFIX@@cf_cv_abi_version@-config
 
-install.scripts :	ncurses-config
+install.libs : $(DESTDIR)$(bindir) ncurses-config
 	$(INSTALL_PROG) ncurses-config $(DESTDIR)$(bindir)/$(NCURSES_CONFIG)
 
 terminfo.tmp : run_tic.sed $(source)
@@ -115,19 +115,20 @@ run_tic.sed :
 	ticdir=${ticdir} \
 	$(SHELL) $(srcdir)/gen_edit.sh >$@
 
+$(DESTDIR)$(bindir) \
 $(DESTDIR)$(libdir) \
 $(DESTDIR)$(datadir) \
 $(DESTDIR)$(tabsetdir) :
-	$(SHELL) $(top_srcdir)/mkinstalldirs $@
+	$(SHELL) $(top_srcdir)/mkdirs.sh $@
 
-uninstall : uninstall.data uninstall.scripts
+uninstall : uninstall.data uninstall.libs
 
 uninstall.data :
 	-test -d $(DESTDIR)$(tabsetdir) && rm -rf $(DESTDIR)$(tabsetdir)
 	-test -d $(DESTDIR)$(ticdir) && rm -rf $(DESTDIR)$(ticdir)
 	-test -f $(DESTDIR)$(ticfile) && rm -f $(DESTDIR)$(ticfile)
 
-uninstall.scripts :
+uninstall.libs :
 	-rm -f $(DESTDIR)$(bindir)/$(NCURSES_CONFIG)
 
 tags :

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1995 - 2001 Kungliga Tekniska Högskolan 
+ * Copyright (c) 1995-2004 Kungliga Tekniska Högskolan 
  * (Royal Institute of Technology, Stockholm, Sweden).  
  * All rights reserved.
  * 
@@ -33,7 +33,7 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: setprogname.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: setprogname.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #include "roken.h"
@@ -43,25 +43,19 @@ extern const char *__progname;
 #endif
 
 #ifndef HAVE_SETPROGNAME
-void
+void ROKEN_LIB_FUNCTION
 setprogname(const char *argv0)
 {
 #ifndef HAVE___PROGNAME
-    char *p;
+    const char *p;
     if(argv0 == NULL)
 	return;
     p = strrchr(argv0, '/');
     if(p == NULL)
-	p = (char *)argv0;
+	p = argv0;
     else
 	p++;
     __progname = p;
 #endif
 }
 #endif /* HAVE_SETPROGNAME */
-
-void
-set_progname(char *argv0)
-{
-    setprogname ((const char *)argv0);
-}

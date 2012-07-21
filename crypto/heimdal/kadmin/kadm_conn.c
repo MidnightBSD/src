@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000 - 2001 Kungliga Tekniska Högskolan
+ * Copyright (c) 2000 - 2004 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -36,7 +36,7 @@
 #include <sys/wait.h>
 #endif
 
-RCSID("$Id: kadm_conn.c,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $");
+RCSID("$Id: kadm_conn.c,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $");
 
 struct kadm_port {
     char *port;
@@ -62,16 +62,10 @@ add_kadm_port(krb5_context context, const char *service, unsigned int port)
     kadm_ports = p;
 }
 
-extern int do_kerberos4;
-
 static void
 add_standard_ports (krb5_context context)
 {
     add_kadm_port(context, "kerberos-adm", 749);
-#ifdef KRB4
-    if(do_kerberos4)
-	add_kadm_port(context, "kerberos-master", 751);
-#endif
 }
 
 /*
@@ -261,17 +255,15 @@ start_server(krb5_context context)
 	}
 	socks = tmp;
 	for(ap = ai; ap; ap = ap->ai_next) {
-	    int one = 1;
 	    int s = socket(ap->ai_family, ap->ai_socktype, ap->ai_protocol);
 	    if(s < 0) {
 		krb5_warn(context, errno, "socket");
 		continue;
 	    }
-#if defined(SO_REUSEADDR) && defined(HAVE_SETSOCKOPT)
-	    if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void *)&one,
-			  sizeof(one)) < 0)
-		krb5_warn(context, errno, "setsockopt");
-#endif
+
+	    socket_set_reuseaddr(s, 1);
+	    socket_set_ipv6only(s, 1);
+
 	    if (bind (s, ap->ai_addr, ap->ai_addrlen) < 0) {
 		krb5_warn(context, errno, "bind");
 		close(s);

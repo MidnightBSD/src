@@ -32,7 +32,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: define_key.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: define_key.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 NCURSES_EXPORT(int)
 define_key(const char *str, int keycode)
@@ -43,16 +43,21 @@ define_key(const char *str, int keycode)
     if (SP == 0) {
 	code = ERR;
     } else if (keycode > 0) {
+	unsigned ukey = (unsigned) keycode;
+
 	if (str != 0) {
 	    define_key(str, 0);
 	} else if (has_key(keycode)) {
-	    while (_nc_remove_key(&(SP->_keytry), (unsigned) keycode))
+	    while (_nc_remove_key(&(SP->_keytry), ukey))
 		code = OK;
 	}
 	if (str != 0) {
 	    if (key_defined(str) == 0) {
-		(void) _nc_add_to_try(&(SP->_keytry), str, (unsigned) keycode);
-		code = OK;
+		if (_nc_add_to_try(&(SP->_keytry), str, ukey) == OK) {
+		    code = OK;
+		} else {
+		    code = ERR;
+		}
 	    } else {
 		code = ERR;
 	    }

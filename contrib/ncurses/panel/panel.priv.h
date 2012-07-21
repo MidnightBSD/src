@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2001,2005 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2005,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -26,7 +26,7 @@
  * authorization.                                                           *
  ****************************************************************************/
 
-/* $Id: panel.priv.h,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $ */
+/* $Id: panel.priv.h,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $ */
 
 #ifndef NCURSES_PANEL_PRIV_H
 #define NCURSES_PANEL_PRIV_H 1
@@ -38,14 +38,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-#if HAVE_LIBDMALLOC
-#  include <dmalloc.h>    /* Gray Watson's library */
-#endif
-
-#if HAVE_LIBDBMALLOC
-#  include <dbmalloc.h>   /* Conor Cahill's library */
-#endif
 
 #include "curses.priv.h"
 #include "panel.h"

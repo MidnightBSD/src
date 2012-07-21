@@ -25,7 +25,7 @@
 
 #include "login_locl.h"
 
-RCSID("$Id: login_access.c,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $");
+RCSID("$Id: login_access.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
  /* Delimiters for fields and for lists of users, ttys or hosts. */
 

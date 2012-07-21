@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/sockraw.c,v 1.2 2005/04/25 18:20:11 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * (C)opyright 2000 Darren Reed.

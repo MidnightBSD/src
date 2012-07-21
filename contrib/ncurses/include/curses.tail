@@ -1,8 +1,9 @@
+/* $Id: curses.tail,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $ */
 /*
+ * vile:cmode:
  * This file is part of ncurses, designed to be appended after curses.h.in
  * (see that file for the relevant copyright).
  */
-/* $Id: curses.tail,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $ */
 
 /* mouse interface */
 
@@ -78,12 +79,12 @@
 #define	ALL_MOUSE_EVENTS	(REPORT_MOUSE_POSITION - 1)
 
 /* macros to extract single event-bits from masks */
-#define	BUTTON_RELEASE(e, x)		((e) & (001 << (6 * ((x) - 1))))
-#define	BUTTON_PRESS(e, x)		((e) & (002 << (6 * ((x) - 1))))
-#define	BUTTON_CLICK(e, x)		((e) & (004 << (6 * ((x) - 1))))
-#define	BUTTON_DOUBLE_CLICK(e, x)	((e) & (010 << (6 * ((x) - 1))))
-#define	BUTTON_TRIPLE_CLICK(e, x)	((e) & (020 << (6 * ((x) - 1))))
-#define	BUTTON_RESERVED_EVENT(e, x)	((e) & (040 << (6 * ((x) - 1))))
+#define	BUTTON_RELEASE(e, x)		((e) & NCURSES_MOUSE_MASK(x, 001))
+#define	BUTTON_PRESS(e, x)		((e) & NCURSES_MOUSE_MASK(x, 002))
+#define	BUTTON_CLICK(e, x)		((e) & NCURSES_MOUSE_MASK(x, 004))
+#define	BUTTON_DOUBLE_CLICK(e, x)	((e) & NCURSES_MOUSE_MASK(x, 010))
+#define	BUTTON_TRIPLE_CLICK(e, x)	((e) & NCURSES_MOUSE_MASK(x, 020))
+#define	BUTTON_RESERVED_EVENT(e, x)	((e) & NCURSES_MOUSE_MASK(x, 040))
 
 typedef struct
 {

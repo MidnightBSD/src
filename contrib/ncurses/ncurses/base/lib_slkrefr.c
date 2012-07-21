@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2006,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -40,7 +40,27 @@
 #include <curses.priv.h>
 #include <term.h>		/* num_labels, label_*, plab_norm */
 
-MODULE_ID("$Id: lib_slkrefr.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: lib_slkrefr.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
+
+/*
+ * Paint the info line for the PC style SLK emulation.
+ */
+static void
+slk_paint_info(WINDOW *win)
+{
+    SCREEN *sp = _nc_screen_of(win);
+
+    if (win && sp && (sp->slk_format == 4)) {
+	int i;
+
+	mvwhline(win, 0, 0, 0, getmaxx(win));
+	wmove(win, 0, 0);
+
+	for (i = 0; i < sp->_slk->maxlab; i++) {
+	    mvwprintw(win, 0, sp->_slk->ent[i].ent_x, "F%d", i + 1);
+	}
+    }
+}
 
 /*
  * Write the soft labels to the soft-key window.
@@ -60,8 +80,10 @@ slk_intern_refresh(SLK * slk)
 			putp(TPARM_2(plab_norm, i + 1, slk->ent[i].form_text));
 		    }
 		} else {
+		    if (fmt == 4)
+			slk_paint_info(slk->win);
 		    wmove(slk->win, SLK_LINES(fmt) - 1, slk->ent[i].ent_x);
-		    if (SP && SP->_slk) {
+		    if (SP->_slk) {
 			wattrset(slk->win, AttrOf(SP->_slk->attr));
 		    }
 		    waddstr(slk->win, slk->ent[i].form_text);

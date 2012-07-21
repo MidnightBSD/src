@@ -33,7 +33,7 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: memmove.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: memmove.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 /* 
@@ -44,7 +44,8 @@ RCSID("$Id: memmove.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
 #include <sys/types.h>
 #endif
 
-void* memmove(void *s1, const void *s2, size_t n)
+void* ROKEN_LIB_FUNCTION
+memmove(void *s1, const void *s2, size_t n)
 {
   char *s=(char*)s2, *d=(char*)s1;
 

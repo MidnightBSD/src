@@ -1,4 +1,4 @@
-dnl $Id: check-xau.m4,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $
+dnl $Id: check-xau.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
 dnl
 dnl check for Xau{Read,Write}Auth and XauFileName
 dnl
@@ -16,12 +16,12 @@ LDFLAGS="$LDFLAGS $X_LIBS"
 ## could be done by checking for XauReadAuth in -lXau first, but this
 ## breaks in IRIX 6.5
 
-AC_FIND_FUNC_NO_LIBS(XauWriteAuth, X11 Xau)
+AC_FIND_FUNC_NO_LIBS(XauWriteAuth, X11 Xau,[#include <X11/Xauth.h>],[0,0])
 ac_xxx="$LIBS"
 LIBS="$LIB_XauWriteAuth $LIBS"
-AC_FIND_FUNC_NO_LIBS(XauReadAuth, X11 Xau)
+AC_FIND_FUNC_NO_LIBS(XauReadAuth, X11 Xau,[#include <X11/Xauth.h>],[0])
 LIBS="$LIB_XauReadAauth $LIBS"
-AC_FIND_FUNC_NO_LIBS(XauFileName, X11 Xau)
+AC_FIND_FUNC_NO_LIBS(XauFileName, X11 Xau,[#include <X11/Xauth.h>])
 LIBS="$ac_xxx"
 
 ## set LIB_XauReadAuth to union of these tests, since this is what the

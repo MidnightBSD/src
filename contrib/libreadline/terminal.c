@@ -1,3 +1,4 @@
+/* $FreeBSD$ */
 /* terminal.c -- controlling the terminal with termcap. */
 
 /* Copyright (C) 1996-2006 Free Software Foundation, Inc.

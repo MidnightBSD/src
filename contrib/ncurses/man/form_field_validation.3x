@@ -26,7 +26,7 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: form_field_validation.3x,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+.\" $Id: form_field_validation.3x,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $
 .TH form_field_validation 3X ""
 .SH NAME
 \fBform_field_validation\fR - data type validation for fields
@@ -99,7 +99,7 @@ For details of the precision handling see \fBprintf's\fR man-page.
 TYPE_REGEXP
 Regular expression data.  Requires a regular expression \fB(char *)\fR third argument;
 the data is valid if the regular expression matches it.  Regular expressions
-are in the format of \fBregcomp\fR(3X) and \fBregexec\fR(3X). Please notice
+are in the format of \fBregcomp\fR and \fBregexec\fR. Please notice
 that the regular expression must match the whole field. If you have for
 example an eight character wide field, a regular expression "^[0-9]*$" always
 means that you have to fill all eight positions with digits. If you want to

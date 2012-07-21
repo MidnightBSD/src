@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/iplang/iplang_l.l,v 1.3 2005/12/30 11:52:22 guido Exp $	*/
+/*	$FreeBSD$	*/
 
 %{
 /*
@@ -6,7 +6,7 @@
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: iplang_l.l,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
+ * $Id: iplang_l.l,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
  */
 #include <stdio.h>
 #include <string.h>

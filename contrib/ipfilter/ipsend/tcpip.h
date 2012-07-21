@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/tcpip.h,v 1.3 2005/12/30 11:52:23 guido Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (c) 1982, 1986, 1993
@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcpip.h	8.1 (Berkeley) 6/10/93
- * $Id: tcpip.h,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
+ * $Id: tcpip.h,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
  */
 
 #ifndef _NETINET_TCPIP_H_

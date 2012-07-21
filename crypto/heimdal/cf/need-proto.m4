@@ -1,4 +1,4 @@
-dnl $Id: need-proto.m4,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $
+dnl $Id: need-proto.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
 dnl
 dnl
 dnl Check if we need the prototype for a function
@@ -9,13 +9,11 @@ dnl AC_NEED_PROTO(includes, function)
 AC_DEFUN([AC_NEED_PROTO], [
 if test "$ac_cv_func_$2+set" != set -o "$ac_cv_func_$2" = yes; then
 AC_CACHE_CHECK([if $2 needs a prototype], ac_cv_func_$2_noproto,
-AC_TRY_COMPILE([$1],
-[struct foo { int foo; } xx;
-extern int $2 (struct foo*);
-$2(&xx);
-],
-eval "ac_cv_func_$2_noproto=yes",
-eval "ac_cv_func_$2_noproto=no"))
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[$1
+struct foo { int foo; } xx;
+extern int $2 (struct foo*);]],[[$2(&xx)]])],
+[eval "ac_cv_func_$2_noproto=yes"],
+[eval "ac_cv_func_$2_noproto=no"]))
 if test "$ac_cv_func_$2_noproto" = yes; then
 	AC_DEFINE(AS_TR_CPP(NEED_[]$2[]_PROTO), 1,
 		[define if the system is missing a prototype for $2()])

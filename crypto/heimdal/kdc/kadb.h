@@ -31,7 +31,7 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: kadb.h,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $ */
+/* $Id: kadb.h,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $ */
 
 #ifndef __kadb_h__
 #define __kadb_h__

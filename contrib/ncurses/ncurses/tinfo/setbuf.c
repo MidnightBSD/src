@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2000,2003 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2003,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -40,7 +40,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: setbuf.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: setbuf.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 /*
  * If the output file descriptor is connected to a tty (the typical case) it
@@ -102,7 +102,7 @@ _nc_set_buffer(FILE *ofp, bool buffered)
 {
     /* optional optimization hack -- do before any output to ofp */
 #if HAVE_SETVBUF || HAVE_SETBUFFER
-    if (SP->_buffered != (int)buffered) {
+    if (SP->_buffered != buffered) {
 	unsigned buf_len;
 	char *buf_ptr;
 

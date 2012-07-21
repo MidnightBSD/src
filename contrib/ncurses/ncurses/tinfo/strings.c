@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 2000,2003 Free Software Foundation, Inc.                   *
+ * Copyright (c) 2000-2003,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,7 +36,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: strings.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: strings.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 /****************************************************************************
  * Useful string functions (especially for mvcur)
@@ -52,7 +52,7 @@ _nc_strstr(const char *haystack, const char *needle)
 
     while ((len1 != 0) && (len1-- >= len2)) {
 	if (!strncmp(haystack, needle, len2)) {
-	    result = haystack;
+	    result = (char *) haystack;
 	    break;
 	}
 	haystack++;

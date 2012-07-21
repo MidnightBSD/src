@@ -33,10 +33,10 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: inet_ntop.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: inet_ntop.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
-#include <roken.h>
+#include "roken.h"
 
 /*
  *
@@ -116,7 +116,7 @@ inet_ntop_v6 (const void *src, char *dst, size_t size)
 }
 #endif /* HAVE_IPV6 */
 
-const char *
+const char * ROKEN_LIB_FUNCTION
 inet_ntop(int af, const void *src, char *dst, size_t size)
 {
     switch (af) {

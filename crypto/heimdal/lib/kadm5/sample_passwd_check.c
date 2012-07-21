@@ -30,11 +30,13 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
-/* $Id: sample_passwd_check.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $ */
+/* $Id: sample_passwd_check.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $ */
 
 #include <string.h>
 #include <stdlib.h>
 #include <krb5.h>
+
+const char* check_length(krb5_context, krb5_principal, krb5_data *);
 
 /* specify the api-version this library conforms to */
 

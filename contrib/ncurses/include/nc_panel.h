@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2000,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -27,13 +27,13 @@
  ****************************************************************************/
 
 /****************************************************************************
- *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
- *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
+ *  Author: Juergen Pfeifer                        1997                     *
+ *     and: Thomas E. Dickey                                                *
  ****************************************************************************/
 
 
 /*
- * $Id: nc_panel.h,v 1.1.1.2 2006-02-25 02:33:39 laffer1 Exp $
+ * $Id: nc_panel.h,v 1.1.1.3 2012-07-21 14:51:29 laffer1 Exp $
  *
  *	nc_panel.h
  *
@@ -54,6 +54,9 @@ struct panelhook {
   struct panel*   top_panel;
   struct panel*   bottom_panel;
   struct panel*   stdscr_pseudo_panel;
+#if NO_LEAKS
+  int (*destroy)(struct panel *);
+#endif
 };
 
 /* Retrieve the panelhook of the current screen */

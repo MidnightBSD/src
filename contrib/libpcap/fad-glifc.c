@@ -34,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/fad-glifc.c,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/fad-glifc.c,v 1.1.1.3 2012-07-21 15:03:26 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -75,9 +75,9 @@ struct rtentry;		/* declarations in <net/if.h> */
  * The list, as returned through "alldevsp", may be null if no interfaces
  * were up and could be opened.
  *
- * This is the implementation used on platforms that have SIOCLGIFCONF
+ * This is the implementation used on platforms that have SIOCGLIFCONF
  * but don't have "getifaddrs()".  (Solaris 8 and later; we use
- * SIOCLGIFCONF rather than SIOCGIFCONF in order to get IPv6 addresses.)
+ * SIOCGLIFCONF rather than SIOCGIFCONF in order to get IPv6 addresses.)
  */
 int
 pcap_findalldevs(pcap_if_t **alldevsp, char *errbuf)

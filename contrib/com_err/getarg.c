@@ -35,11 +35,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  *
- * $FreeBSD: src/contrib/com_err/getarg.c,v 1.2 2003/01/08 17:05:52 peter Exp $
+ * $FreeBSD$
  */
 
 #if 0
-RCSID("$Id: getarg.c,v 1.1.1.2 2006-02-25 02:32:30 laffer1 Exp $");
+RCSID("$Id: getarg.c,v 1.1.1.3 2012-07-21 15:02:52 laffer1 Exp $");
 #endif
 
 #include <sys/ttycom.h>

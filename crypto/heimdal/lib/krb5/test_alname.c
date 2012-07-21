@@ -34,10 +34,10 @@
 #include <getarg.h>
 #include <err.h>
 
-RCSID("$Id: test_alname.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: test_alname.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 static void
-test_alname(krb5_context context, krb5_realm realm,
+test_alname(krb5_context context, krb5_const_realm realm,
 	    const char *user, const char *inst, 
 	    const char *localuser, int ok)
 {
@@ -102,12 +102,12 @@ main(int argc, char **argv)
     krb5_context context;
     krb5_error_code ret;
     krb5_realm realm;
-    int optind = 0;
+    int optidx = 0;
     char *user;
 
     setprogname(argv[0]);
 
-    if(getarg(args, sizeof(args) / sizeof(args[0]), argc, argv, &optind))
+    if(getarg(args, sizeof(args) / sizeof(args[0]), argc, argv, &optidx))
 	usage(1);
     
     if (help_flag)
@@ -118,8 +118,8 @@ main(int argc, char **argv)
 	exit(0);
     }
 
-    argc -= optind;
-    argv += optind;
+    argc -= optidx;
+    argv += optidx;
 
     if (argc != 1)
 	errx(1, "first argument should be a local user that in root .k5login");

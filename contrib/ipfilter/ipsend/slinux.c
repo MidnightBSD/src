@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/slinux.c,v 1.3 2005/12/30 11:52:23 guido Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * (C)opyright 1992-1998 Darren Reed. (from tcplog)
@@ -30,7 +30,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)slinux.c	1.2 8/25/95";
-static const char rcsid[] = "@(#)$Id: slinux.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: slinux.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
 #endif
 
 #define	CHUNKSIZE	8192

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -29,6 +29,7 @@
 /****************************************************************************
  *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
+ *     and: Thomas E. Dickey                        1996-on                 *
  ****************************************************************************/
 
 /*
@@ -38,14 +39,17 @@
  */
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_slkinit.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
+MODULE_ID("$Id: lib_slkinit.c,v 1.1.1.3 2012-07-21 14:51:30 laffer1 Exp $")
 
 NCURSES_EXPORT(int)
 slk_init(int format)
 {
+    int code = ERR;
+
     T((T_CALLED("slk_init(%d)"), format));
-    if (format < 0 || format > 3)
-	returnCode(ERR);
-    _nc_slk_format = 1 + format;
-    returnCode(OK);
+    if (format >= 0 && format <= 3 && !_nc_globals.slk_format) {
+	_nc_globals.slk_format = 1 + format;
+	code = _nc_ripoffline(-SLK_LINES(_nc_globals.slk_format), _nc_slk_initialize);
+    }
+    returnCode(code);
 }

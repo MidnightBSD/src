@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 2001-2003,2005 Free Software Foundation, Inc.              *
+ * Copyright (c) 2001-2005,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -35,23 +35,21 @@
 
 #include <curses.priv.h>
 
-#if USE_WIDEC_SUPPORT
-
-MODULE_ID("$Id: lib_wunctrl.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: lib_wunctrl.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 NCURSES_EXPORT(wchar_t *)
 wunctrl(cchar_t *wc)
 {
-    static wchar_t str[5], *sp;
+    static wchar_t str[CCHARW_MAX + 1], *sp;
 
     if (Charable(*wc)) {
 	const char *p = unctrl((unsigned) _nc_to_char((wint_t) CharOf(*wc)));
 
-	for (sp = str; *p;)
-	    *sp++ = _nc_to_widechar(*p++);
+	for (sp = str; *p; ++p) {
+	    *sp++ = _nc_to_widechar(*p);
+	}
+	*sp = 0;
 	return str;
     } else
 	return wc->chars;
 }
-
-#endif

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2000,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -29,9 +29,10 @@
 /****************************************************************************
  *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
+ *     and: Thomas E. Dickey                        1996-on                 *
  ****************************************************************************/
 
-/* $Id: capdefaults.c,v 1.1.1.2 2006-02-25 02:33:39 laffer1 Exp $ */
+/* $Id: capdefaults.c,v 1.1.1.3 2012-07-21 14:51:29 laffer1 Exp $ */
 
     /*
      * Compute obsolete capabilities.  The reason this is an include file is
@@ -44,9 +45,10 @@
      */
 {
     char *sp;
-    int capval;
+    short capval;
 
-#define EXTRACT_DELAY(str)	(sp = strchr(str, '*'), sp ? atoi(sp+1) : 0)
+#define EXTRACT_DELAY(str) \
+    	(short) (sp = strchr(str, '*'), sp ? atoi(sp+1) : 0)
 
     /* current (4.4BSD) capabilities marked obsolete */
     if (VALID_STRING(carriage_return)
@@ -73,8 +75,8 @@
 	magic_cookie_glitch_ul = magic_cookie_glitch;
 
     /* totally obsolete capabilities */
-    linefeed_is_newline = VALID_STRING(newline)
-	&& (strcmp("\n", newline) == 0);
+    linefeed_is_newline = (char) (VALID_STRING(newline)
+				  && (strcmp("\n", newline) == 0));
     if (VALID_STRING(cursor_left)
 	&& (capval = EXTRACT_DELAY(cursor_left)))
 	backspace_delay = capval;

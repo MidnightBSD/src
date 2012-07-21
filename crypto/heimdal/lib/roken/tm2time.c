@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1995, 1996, 1997 Kungliga Tekniska Högskolan
+ * Copyright (c) 1995, 1996, 1997, 2004 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden).
  * All rights reserved.
  * 
@@ -33,7 +33,7 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: tm2time.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: tm2time.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #ifdef TIME_WITH_SYS_TIME
@@ -46,16 +46,16 @@ RCSID("$Id: tm2time.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
 #endif
 #include "roken.h"
 
-time_t
+time_t ROKEN_LIB_FUNCTION
 tm2time (struct tm tm, int local)
 {
-     time_t t;
+    time_t t;
 
-     tm.tm_isdst = -1;
+    tm.tm_isdst = local ? -1 : 0;
 
-     t = mktime (&tm);
+    t = mktime (&tm);
 
-     if (!local)
-       t += t - mktime (gmtime (&t));
-     return t;
+    if (!local)
+	t += t - mktime (gmtime (&t));
+    return t;
 }

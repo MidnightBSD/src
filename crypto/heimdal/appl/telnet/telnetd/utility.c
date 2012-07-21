@@ -34,7 +34,7 @@
 #define PRINTOPTIONS
 #include "telnetd.h"
 
-RCSID("$Id: utility.c,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $");
+RCSID("$Id: utility.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 /*
  * utility functions performing io related tasks
@@ -323,13 +323,15 @@ netflush(void)
  *    len - How many bytes to write
  */
 void
-writenet(unsigned char *ptr, int len)
+writenet(const void *ptr, size_t len)
 {
     /* flush buffer if no room for new data) */
     while ((&netobuf[BUFSIZ] - nfrontp) < len) {
 	/* if this fails, don't worry, buffer is a little big */
 	netflush();
     }
+    if ((&netobuf[BUFSIZ] - nfrontp) < len)
+	abort();
 
     memmove(nfrontp, ptr, len);
     nfrontp += len;
@@ -431,11 +433,7 @@ putchr(int cc)
     *putlocation++ = cc;
 }
 
-/*
- * This is split on two lines so that SCCS will not see the M
- * between two % signs and expand it...
- */
-static char fmtstr[] = { "%l:%M" "%P on %A, %d %B %Y" };
+static char fmtstr[] = { "%l:%M%P on %A, %d %B %Y" };
 
 void putf(char *cp, char *where)
 {
@@ -470,12 +468,7 @@ void putf(char *cp, char *where)
 	switch (*++cp) {
 
 	case 't':
-#ifdef	STREAMSPTY
-	    /* names are like /dev/pts/2 -- we want pts/2 */
 	    slash = strchr(line+1, '/');
-#else
-	    slash = strrchr(line, '/');
-#endif
 	    if (slash == (char *) 0)
 		putstr(line);
 	    else

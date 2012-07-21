@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2006,2007 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,9 +36,10 @@
  * clear.c --  clears the terminal's screen
  */
 
+#define USE_LIBTINFO
 #include <progs.priv.h>
 
-MODULE_ID("$Id: clear.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: clear.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 static int
 putch(int c)

@@ -1,8 +1,8 @@
-# $Id: Makefile.am,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $
+# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $
 
 include $(top_srcdir)/Makefile.am.common
 
-INCLUDES += $(INCLUDE_krb4)
+AM_CPPFLAGS += $(INCLUDE_krb4)
 
 bin_PROGRAMS = afslog pagsh
 
@@ -10,11 +10,13 @@ afslog_SOURCES = afslog.c
 
 pagsh_SOURCES  = pagsh.c
 
-man_MANS = afslog.1
+man_MANS = afslog.1 pagsh.1
 
 LDADD = $(LIB_kafs) \
 	$(LIB_krb4) \
 	$(top_builddir)/lib/krb5/libkrb5.la \
 	$(top_builddir)/lib/asn1/libasn1.la \
-	$(LIB_des) \
+	$(LIB_hcrypto) \
 	$(LIB_roken)
+
+EXTRA_DIST = $(man_MANS)

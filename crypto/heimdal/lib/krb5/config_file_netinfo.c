@@ -32,7 +32,7 @@
  */
 
 #include "krb5_locl.h"
-RCSID("$Id: config_file_netinfo.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
+RCSID("$Id: config_file_netinfo.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 /*
  * Netinfo implementation from Luke Howard <lukeh@xedoc.com.au>
@@ -130,7 +130,7 @@ ni_idlist2binding(void *ni, ni_idlist *idlist, krb5_config_section **ret)
     return NI_OK;
 }
 
-krb5_error_code
+krb5_error_code KRB5_LIB_FUNCTION
 krb5_config_parse_file (krb5_context context,
 			const char *fname,
 			krb5_config_section **res)

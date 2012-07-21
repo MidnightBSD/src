@@ -33,7 +33,7 @@
  *	@(#)externs.h	8.3 (Berkeley) 5/30/95
  */
 
-/* $Id: externs.h,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $ */
+/* $Id: externs.h,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $ */
 
 #ifndef	BSD
 # define BSD 43
@@ -181,6 +181,10 @@ extern jmp_buf
     peerdied,
     toplevel;		/* For error conditions. */
 
+int Scheduler(int);
+extern int scheduler_lockout_tty;
+
+
 /* authenc.c */
 
 #if	defined(AUTHENTICATION) || defined(ENCRYPTION)
@@ -236,7 +240,6 @@ void command(int top, char *tbuf, int cnt);
 /* main.c */
 
 void tninit(void);
-void usage(void);
 void set_forward_options(void);
 
 /* network.c */

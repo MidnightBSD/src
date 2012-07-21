@@ -33,16 +33,16 @@
 
 #include <krb5_locl.h>
 
-RCSID("$Id: generate_seq_number.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: generate_seq_number.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
-krb5_error_code
+krb5_error_code KRB5_LIB_FUNCTION
 krb5_generate_seq_number(krb5_context context,
 			 const krb5_keyblock *key,
-			 u_int32_t *seqno)
+			 uint32_t *seqno)
 {
     krb5_error_code ret;
     krb5_keyblock *subkey;
-    u_int32_t q;
+    uint32_t q;
     u_char *p;
     int i;
 

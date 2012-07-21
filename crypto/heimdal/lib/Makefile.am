@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
+# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -11,6 +11,12 @@ endif
 if DCE
 dir_dce = kdfs
 endif
+if COM_ERR
+dir_com_err = com_err
+endif
+if !HAVE_OPENSSL
+dir_hcrypto = hcrypto
+endif
 
-SUBDIRS = @DIR_roken@ vers editline @DIR_com_err@ sl asn1 @DIR_des@ krb5 \
-	kafs hdb kadm5 gssapi auth $(dir_45) $(dir_otp) $(dir_dce)
+SUBDIRS = roken vers editline $(dir_com_err) sl asn1 $(dir_hcrypto) hx509 \
+	krb5 ntlm kafs gssapi hdb kadm5 auth $(dir_45) $(dir_otp) $(dir_dce)

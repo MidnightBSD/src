@@ -36,7 +36,7 @@
 
 #include "telnetd.h"
 
-RCSID("$Id: global.c,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $");
+RCSID("$Id: global.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 /*
  * Telnet server variable declarations
@@ -54,7 +54,7 @@ int	require_otp;
 
 slcfun	slctab[NSLC + 1];	/* slc mapping table */
 
-char	*terminaltype;
+char	terminaltype[41];
 
 /*
  * I/O data buffers, pointers, and counters.

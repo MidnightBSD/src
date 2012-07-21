@@ -1,5 +1,17 @@
-# $P4: //depot/projects/openpam/Makefile.am#3 $
+# $Id: Makefile.am,v 1.1.1.2 2012-07-21 14:57:34 laffer1 Exp $
 
-SUBDIRS = lib bin modules doc include
+SUBDIRS = lib bin modules include
 
-EXTRA_DIST = CREDITS HISTORY INSTALL LICENSE MANIFEST README RELNOTES
+if WITH_DOC
+SUBDIRS += doc
+endif
+
+EXTRA_DIST = \
+	CREDITS \
+	HISTORY \
+	INSTALL \
+	LICENSE \
+	README \
+	RELNOTES \
+	autogen.sh \
+	misc/gendoc.pl

@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/optname.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000-2001 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: optname.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $
+ * $Id: optname.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
  */
 
 #include "ipf.h"

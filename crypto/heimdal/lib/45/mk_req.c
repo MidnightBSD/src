@@ -35,14 +35,14 @@
 
 #include "45_locl.h"
 
-RCSID("$Id: mk_req.c,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $");
+RCSID("$Id: mk_req.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 
 static int lifetime = 255;
 
 static void
 build_request(KTEXT req,
 	      const char *name, const char *inst, const char *realm, 
-	      u_int32_t checksum)
+	      uint32_t checksum)
 {
     struct timeval tv;
     krb5_storage *sp;

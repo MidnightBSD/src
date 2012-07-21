@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1999-2003,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1999-2006,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -43,7 +43,7 @@
 #include <tic.h>
 #include <term_entry.h>
 
-MODULE_ID("$Id: alloc_ttype.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: alloc_ttype.c,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $")
 
 #if NCURSES_XNAMES
 /*
@@ -365,6 +365,17 @@ adjust_cancels(TERMTYPE *to, TERMTYPE *from)
 		} else {
 		    j++;
 		}
+	    } else if ((k = _nc_find_ext_name(from, to->ext_Names[j],
+					      STRING)) >= 0) {
+		if (_nc_del_ext_name(to, name, NUMBER)
+		    || _nc_del_ext_name(to, name, BOOLEAN)) {
+		    k = _nc_ins_ext_name(to, name, STRING);
+		    to->Strings[k] = CANCELLED_STRING;
+		} else {
+		    j++;
+		}
+	    } else {
+		j++;
 	    }
 	} else {
 	    j++;

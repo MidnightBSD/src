@@ -33,10 +33,11 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: make-print-version.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: make-print-version.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 #endif
 
 #include <stdio.h>
+#include <string.h>
 
 #ifdef KRB5
 extern const char *heimdal_version;
@@ -52,6 +53,10 @@ main(int argc, char **argv)
     FILE *f;
     if(argc != 2)
 	return 1;
+    if (strcmp(argv[1], "--version") == 0) {
+	printf("some version");
+	return 0;
+    }
     f = fopen(argv[1], "w");
     if(f == NULL)
 	return 1;

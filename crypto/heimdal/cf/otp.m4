@@ -1,11 +1,11 @@
-dnl $Id: otp.m4,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $
+dnl $Id: otp.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
 dnl
 dnl check requirements for OTP library
 dnl
 AC_DEFUN([rk_OTP],[
 AC_REQUIRE([rk_DB])dnl
 AC_ARG_ENABLE(otp,
-	AC_HELP_STRING([--disable-otp],[if you don't want OTP support]))
+	AS_HELP_STRING([--disable-otp],[if you don't want OTP support]))
 if test "$enable_otp" = yes -a "$db_type" = unknown; then
 	AC_MSG_ERROR([OTP requires a NDBM/DB compatible library])
 fi

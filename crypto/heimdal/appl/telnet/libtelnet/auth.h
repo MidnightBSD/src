@@ -53,7 +53,7 @@
  * or implied warranty.
  */
 
-/* $Id: auth.h,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $ */
+/* $Id: auth.h,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $ */
 
 #ifndef	__AUTH__
 #define	__AUTH__

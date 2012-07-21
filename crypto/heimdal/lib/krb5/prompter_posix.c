@@ -33,9 +33,9 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: prompter_posix.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: prompter_posix.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
-int
+int KRB5_LIB_FUNCTION
 krb5_prompter_posix (krb5_context context,
 		     void *data,
 		     const char *name,
@@ -49,9 +49,11 @@ krb5_prompter_posix (krb5_context context,
 	fprintf (stderr, "%s\n", name);
     if (banner)
 	fprintf (stderr, "%s\n", banner);
+    if (name || banner)
+	fflush(stderr);
     for (i = 0; i < num_prompts; ++i) {
 	if (prompts[i].hidden) {
-	    if(des_read_pw_string(prompts[i].reply->data,
+	    if(UI_UTIL_read_pw_string(prompts[i].reply->data,
 				  prompts[i].reply->length,
 				  prompts[i].prompt,
 				  0))

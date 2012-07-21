@@ -33,19 +33,19 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: ewrite.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: ewrite.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #include <unistd.h>
 #include <err.h>
 
-#include <roken.h>
+#include "roken.h"
 
 /*
  * Like write but never fails (and never returns partial data).
  */
 
-ssize_t
+ssize_t ROKEN_LIB_FUNCTION
 ewrite (int fd, const void *buf, size_t nbytes)
 {
     ssize_t ret;

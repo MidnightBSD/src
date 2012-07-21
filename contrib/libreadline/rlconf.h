@@ -1,3 +1,4 @@
+/* $FreeBSD$ */
 /* rlconf.h -- readline configuration definitions */
 
 /* Copyright (C) 1994 Free Software Foundation, Inc.

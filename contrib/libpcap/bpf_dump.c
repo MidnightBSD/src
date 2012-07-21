@@ -20,7 +20,7 @@
  */
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/bpf_dump.c,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/bpf_dump.c,v 1.1.1.3 2012-07-21 15:03:26 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -33,7 +33,7 @@ static const char rcsid[] _U_ =
 void
 bpf_dump(struct bpf_program *p, int option)
 {
-	struct bpf_insn *insn;
+	const struct bpf_insn *insn;
 	int i;
 	int n = p->bf_len;
 

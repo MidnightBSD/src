@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2002 Kungliga Tekniska Högskolan
+ * Copyright (c) 1998-2002, 2005 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden).
  * All rights reserved.
  * 
@@ -37,7 +37,7 @@
 #include "ftp_locl.h"
 #endif
 
-RCSID("$Id: security.c,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $");
+RCSID("$Id: security.c,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $");
 
 static enum protection_level command_prot;
 static enum protection_level data_prot;
@@ -189,16 +189,16 @@ sec_get_data(int fd, struct buffer *buf, int level)
 }
 
 static size_t
-buffer_read(struct buffer *buf, void *data, size_t len)
+buffer_read(struct buffer *buf, void *dataptr, size_t len)
 {
     len = min(len, buf->size - buf->index);
-    memcpy(data, (char*)buf->data + buf->index, len);
+    memcpy(dataptr, (char*)buf->data + buf->index, len);
     buf->index += len;
     return len;
 }
 
 static size_t
-buffer_write(struct buffer *buf, void *data, size_t len)
+buffer_write(struct buffer *buf, void *dataptr, size_t len)
 {
     if(buf->index + len > buf->size) {
 	void *tmp;
@@ -211,29 +211,29 @@ buffer_write(struct buffer *buf, void *data, size_t len)
 	buf->data = tmp;
 	buf->size = buf->index + len;
     }
-    memcpy((char*)buf->data + buf->index, data, len);
+    memcpy((char*)buf->data + buf->index, dataptr, len);
     buf->index += len;
     return len;
 }
 
 int
-sec_read(int fd, void *data, int length)
+sec_read(int fd, void *dataptr, int length)
 {
     size_t len;
     int rx = 0;
 
     if(sec_complete == 0 || data_prot == 0)
-	return read(fd, data, length);
+	return read(fd, dataptr, length);
 
     if(in_buffer.eof_flag){
 	in_buffer.eof_flag = 0;
 	return 0;
     }
     
-    len = buffer_read(&in_buffer, data, length);
+    len = buffer_read(&in_buffer, dataptr, length);
     length -= len;
     rx += len;
-    data = (char*)data + len;
+    dataptr = (char*)dataptr + len;
     
     while(length){
 	int ret;
@@ -246,10 +246,10 @@ sec_read(int fd, void *data, int length)
 		in_buffer.eof_flag = 1;
 	    return rx;
 	}
-	len = buffer_read(&in_buffer, data, length);
+	len = buffer_read(&in_buffer, dataptr, length);
 	length -= len;
 	rx += len;
-	data = (char*)data + len;
+	dataptr = (char*)dataptr + len;
     }
     return rx;
 }
@@ -282,21 +282,21 @@ sec_fflush(FILE *F)
 }
 
 int
-sec_write(int fd, char *data, int length)
+sec_write(int fd, char *dataptr, int length)
 {
     int len = buffer_size;
     int tx = 0;
       
     if(data_prot == prot_clear)
-	return write(fd, data, length);
+	return write(fd, dataptr, length);
 
     len -= (*mech->overhead)(app_data, data_prot, len);
     while(length){
 	if(length < len)
 	    len = length;
-	sec_send(fd, data, len);
+	sec_send(fd, dataptr, len);
 	length -= len;
-	data += len;
+	dataptr += len;
 	tx += len;
     }
     return tx;
@@ -310,8 +310,11 @@ sec_vfprintf2(FILE *f, const char *fmt, va_list ap)
     if(data_prot == prot_clear)
 	return vfprintf(f, fmt, ap);
     else {
-	vasprintf(&buf, fmt, ap);
-	ret = buffer_write(&out_buffer, buf, strlen(buf));
+	int len;
+	len = vasprintf(&buf, fmt, ap);
+	if (len == -1)
+	    return len;
+	ret = buffer_write(&out_buffer, buf, len);
 	free(buf);
 	return ret;
     }
@@ -348,7 +351,7 @@ sec_read_msg(char *s, int level)
 {
     int len;
     char *buf;
-    int code;
+    int return_code;
     
     buf = malloc(strlen(s));
     len = base64_decode(s + 4, buf); /* XXX */
@@ -360,14 +363,14 @@ sec_read_msg(char *s, int level)
     buf[len] = '\0';
 
     if(buf[3] == '-')
-	code = 0;
+	return_code = 0;
     else
-	sscanf(buf, "%d", &code);
+	sscanf(buf, "%d", &return_code);
     if(buf[len-1] == '\n')
 	buf[len-1] = '\0';
     strcpy(s, buf);
     free(buf);
-    return code;
+    return return_code;
 }
 
 int
@@ -379,7 +382,10 @@ sec_vfprintf(FILE *f, const char *fmt, va_list ap)
     if(!sec_complete)
 	return vfprintf(f, fmt, ap);
     
-    vasprintf(&buf, fmt, ap);
+    if (vasprintf(&buf, fmt, ap) == -1) {
+	printf("Failed to allocate command.\n");
+	return -1;
+    }
     len = (*mech->encode)(app_data, buf, strlen(buf), command_prot, &enc);
     free(buf);
     if(len < 0) {
@@ -425,6 +431,8 @@ sec_fprintf(FILE *f, const char *fmt, ...)
 /* end common stuff */
 
 #ifdef FTP_SERVER
+
+int ccc_passed;
 
 void
 auth(char *auth_name)
@@ -529,9 +537,10 @@ prot(char *pl)
 void ccc(void)
 {
     if(sec_complete){
-	if(mech->ccc && (*mech->ccc)(app_data) == 0)
+	if(mech->ccc && (*mech->ccc)(app_data) == 0) {
 	    command_prot = data_prot = prot_clear;
-	else
+	    ccc_passed = 1;
+	} else
 	    reply(534, "You must be joking.");
     }else
 	reply(503, "Incomplete security data exchange.");
@@ -540,13 +549,13 @@ void ccc(void)
 void mec(char *msg, enum protection_level level)
 {
     void *buf;
-    size_t len;
+    size_t len, buf_size;
     if(!sec_complete) {
 	reply(503, "Incomplete security data exchange.");
 	return;
     }
-    buf = malloc(strlen(msg) + 2); /* XXX go figure out where that 2
-				      comes from :-) */
+    buf_size = strlen(msg) + 2;
+    buf = malloc(buf_size);
     len = base64_decode(msg, buf);
     command_prot = level;
     if(len == (size_t)-1) {
@@ -560,17 +569,25 @@ void mec(char *msg, enum protection_level level)
     }
     ((char*)buf)[len] = '\0';
     if(strstr((char*)buf, "\r\n") == NULL)
-	strcat((char*)buf, "\r\n");
+	strlcat((char*)buf, "\r\n", buf_size);
     new_ftp_command(buf);
 }
 
 /* ------------------------------------------------------------ */
 
 int
-sec_userok(char *user)
+sec_userok(char *userstr)
 {
     if(sec_complete)
-	return (*mech->userok)(app_data, user);
+	return (*mech->userok)(app_data, userstr);
+    return 0;
+}
+
+int
+sec_session(char *user)
+{
+    if(sec_complete && mech->session)
+	return (*mech->session)(app_data, user);
     return 0;
 }
 
@@ -660,7 +677,15 @@ sec_prot_internal(int level)
 enum protection_level
 set_command_prot(enum protection_level level)
 {
+    int ret;
     enum protection_level old = command_prot;
+    if(level != command_prot && level == prot_clear) {
+	ret = command("CCC");
+	if(ret != COMPLETE) {
+	    printf("Failed to clear command channel.\n");
+	    return -1;
+	}
+    }
     command_prot = level;
     return old;
 }
@@ -670,8 +695,13 @@ sec_prot(int argc, char **argv)
 {
     int level = -1;
 
-    if(argc < 2 || argc > 3)
+    if(argc > 3)
 	goto usage;
+
+    if(argc == 1) {
+	sec_status();
+	return;
+    }
     if(!sec_complete) {
 	printf("No security data exchange has taken place.\n");
 	code = -1;
@@ -694,14 +724,57 @@ sec_prot(int argc, char **argv)
 	    code = -1;
 	    return;
 	}
-    } else if(strncasecmp(argv[1], "command", strlen(argv[1])) == 0)
-	set_command_prot(level);
-    else
+    } else if(strncasecmp(argv[1], "command", strlen(argv[1])) == 0) {
+	if(set_command_prot(level) < 0) {
+	    code = -1;
+	    return;
+	}
+    } else
 	goto usage;
     code = 0;
     return;
  usage:
     printf("usage: %s [command|data] [clear|safe|confidential|private]\n",
+	   argv[0]);
+    code = -1;
+}
+
+void
+sec_prot_command(int argc, char **argv)
+{
+    int level;
+
+    if(argc > 2)
+	goto usage;
+
+    if(!sec_complete) {
+	printf("No security data exchange has taken place.\n");
+	code = -1;
+	return;
+    }
+
+    if(argc == 1) {
+	sec_status();
+    } else {
+	level = name_to_level(argv[1]);
+	if(level == -1)
+	    goto usage;
+    
+	if((*mech->check_prot)(app_data, level)) {
+	    printf("%s does not implement %s protection.\n", 
+		   mech->name, level_to_name(level));
+	    code = -1;
+	    return;
+	}
+	if(set_command_prot(level) < 0) {
+	    code = -1;
+	    return;
+	}
+    }
+    code = 0;
+    return;
+ usage:
+    printf("usage: %s [clear|safe|confidential|private]\n",
 	   argv[0]);
     code = -1;
 }
@@ -741,7 +814,7 @@ sec_login(char *host)
 
 	tmp = realloc(app_data, (*m)->size);
 	if (tmp == NULL) {
-	    warnx ("realloc %u failed", (*m)->size);
+	    warnx ("realloc %lu failed", (unsigned long)(*m)->size);
 	    return -1;
 	}
 	app_data = tmp;
@@ -777,7 +850,12 @@ sec_login(char *host)
 	}
 	mech = *m;
 	sec_complete = 1;
-	command_prot = prot_safe;
+	if(doencrypt) {
+	    command_prot = prot_private;
+	    request_data_prot = prot_private; 
+	} else {
+	    command_prot = prot_safe;
+	}
 	break;
     }
     

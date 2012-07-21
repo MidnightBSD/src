@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/tools/ipsyncs.c,v 1.5 2007/06/04 02:54:34 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2001-2006 by Darren Reed.
@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ipsyncs.c,v 1.1.1.2 2008-11-22 14:33:11 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ipsyncs.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $";
 #endif
 #include <sys/types.h>
 #include <sys/time.h>

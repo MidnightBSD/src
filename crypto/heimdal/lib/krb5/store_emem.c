@@ -34,7 +34,7 @@
 #include "krb5_locl.h"
 #include "store-int.h"
 
-RCSID("$Id: store_emem.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: store_emem.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
 
 typedef struct emem_storage{
     unsigned char *base;
@@ -112,16 +112,27 @@ emem_free(krb5_storage *sp)
     free(s->base);
 }
 
-krb5_storage *
+krb5_storage * KRB5_LIB_FUNCTION
 krb5_storage_emem(void)
 {
     krb5_storage *sp = malloc(sizeof(krb5_storage));
+    if (sp == NULL)
+	return NULL;
     emem_storage *s = malloc(sizeof(*s));
+    if (s == NULL) {
+	free(sp);
+	return NULL;
+    }
     sp->data = s;
     sp->flags = 0;
     sp->eof_code = HEIM_ERR_EOF;
     s->size = 1024;
     s->base = malloc(s->size);
+    if (s->base == NULL) {
+	free(sp);
+	free(s);
+	return NULL;
+    }
     s->len = 0;
     s->ptr = s->base;
     sp->fetch = emem_fetch;

@@ -33,9 +33,12 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#ifdef TEST_STRPFTIME
+#include "strpftime-test.h"
+#endif
 #include "roken.h"
 
-RCSID("$Id: strpftime-test.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
+RCSID("$Id: strpftime-test.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 
 enum { MAXSIZE = 26 };
 
@@ -246,8 +249,8 @@ main(int argc, char **argv)
 
 	    len = strftime (buf, sizeof(buf), tests[i].vals[j].format, tm);
 	    if (len != strlen (buf)) {
-		printf ("length of strftime(\"%s\") = %d (\"%s\")\n",
-			tests[i].vals[j].format, len,
+		printf ("length of strftime(\"%s\") = %lu (\"%s\")\n",
+			tests[i].vals[j].format, (unsigned long)len,
 			buf);
 		++ret;
 		continue;
@@ -278,6 +281,15 @@ main(int argc, char **argv)
 		++ret;
 	    }
 	}
+    }
+    {
+	struct tm tm;
+	memset(&tm, 0, sizeof(tm));
+	strptime ("200505", "%Y%m", &tm);
+	if (tm.tm_year != 105)
+	    ++ret;
+	if (tm.tm_mon != 4)
+	    ++ret;
     }
     if (ret) {
 	printf ("%d errors\n", ret);

@@ -33,7 +33,7 @@
 
 #include "kadm5_locl.h"
 
-RCSID("$Id: get_princs_s.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
+RCSID("$Id: get_princs_s.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 
 struct foreach_data {
     const char *exp;
@@ -55,12 +55,12 @@ add_princ(struct foreach_data *d, char *princ)
 }
 
 static krb5_error_code
-foreach(krb5_context context, HDB *db, hdb_entry *ent, void *data)
+foreach(krb5_context context, HDB *db, hdb_entry_ex *ent, void *data)
 {
     struct foreach_data *d = data;
     char *princ;
     krb5_error_code ret;
-    ret = krb5_unparse_name(context, ent->principal, &princ);
+    ret = krb5_unparse_name(context, ent->entry.principal, &princ);
     if(ret)
 	return ret;
     if(d->exp){
@@ -78,29 +78,29 @@ foreach(krb5_context context, HDB *db, hdb_entry *ent, void *data)
 
 kadm5_ret_t
 kadm5_s_get_principals(void *server_handle, 
-		       const char *exp,
+		       const char *expression,
 		       char ***princs, 
 		       int *count)
 {
     struct foreach_data d;
     kadm5_server_context *context = server_handle;
     kadm5_ret_t ret;
-    ret = context->db->open(context->context, context->db, O_RDWR, 0);
+    ret = context->db->hdb_open(context->context, context->db, O_RDWR, 0);
     if(ret) {
 	krb5_warn(context->context, ret, "opening database");
 	return ret;
     }
-    d.exp = exp;
+    d.exp = expression;
     {
 	krb5_realm r;
 	krb5_get_default_realm(context->context, &r);
-	asprintf(&d.exp2, "%s@%s", exp, r);
+	asprintf(&d.exp2, "%s@%s", expression, r);
 	free(r);
     }
     d.princs = NULL;
     d.count = 0;
     ret = hdb_foreach(context->context, context->db, 0, foreach, &d);
-    context->db->close(context->context, context->db);
+    context->db->hdb_close(context->context, context->db);
     if(ret == 0)
 	ret = add_princ(&d, NULL);
     if(ret == 0){

@@ -1,12 +1,18 @@
-# $FreeBSD: src/kerberos5/libexec/hprop/Makefile,v 1.15 2004/02/05 18:51:50 ru Exp $
+# $FreeBSD$
 
 PROG=	hprop
 MAN=	hprop.8
 SRCS=	hprop.c mit_dump.c v4_dump.c
-CFLAGS+=-I${KRB5DIR}/lib/roken -I${KRB5DIR}/lib/krb5 -I${KRB5DIR}/lib/asn1
-DPADD=	${LIBHDB} ${LIBKRB5} ${LIBROKEN} ${LIBVERS} \
+CFLAGS+=-I${KRB5DIR}/lib/roken
+CFLAGS+=-I${KRB5DIR}/lib/krb5
+CFLAGS+=-I${KRB5DIR}/lib/asn1
+CFLAGS+=-I${KRB5DIR}/lib/hx509
+CFLAGS+=-I${KRB5DIR}/lib/ntlm
+CFLAGS+=-I${KRB5DIR}/kdc
+CFLAGS+=-I${.OBJDIR}/../../lib/libkrb5
+DPADD=	${LIBHDB} ${LIBKRB5} ${LIBHX509} ${LIBROKEN} ${LIBVERS} \
 	${LIBASN1} ${LIBCRYPTO} ${LIBCRYPT} ${LIBCOM_ERR} ${LDAPDPADD}
-LDADD=	-lhdb -lkrb5 -lroken ${LIBVERS} \
+LDADD=	-lhdb -lkrb5 -lhx509 -lroken ${LIBVERS} \
 	-lasn1 -lcrypto -lcrypt -lcom_err ${LDAPLDADD}
 LDFLAGS=${LDAPLDFLAGS}
 

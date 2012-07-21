@@ -31,7 +31,7 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: nt_gss_common.h,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $ */
+/* $Id: nt_gss_common.h,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $ */
 
 void nt_write_token (int sock, gss_buffer_t buf);
 void nt_read_token (int sock, gss_buffer_t buf);

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2004,2005 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2007,2008 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -27,9 +27,9 @@
  ****************************************************************************/
 
 /****************************************************************************
- *  Author: Thomas E. Dickey <dickey@clark.net> 1996,1997                   *
+ *  Author: Thomas E. Dickey                    1996-on                     *
  ****************************************************************************/
-/* $Id: nc_alloc.h,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $ */
+/* $Id: nc_alloc.h,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $ */
 
 #ifndef NC_ALLOC_included
 #define NC_ALLOC_included 1
@@ -39,6 +39,8 @@ extern "C" {
 #endif
 
 #if HAVE_LIBDMALLOC
+#include <string.h>
+#undef strndup		/* workaround for #define in GLIBC 2.7 */
 #include <dmalloc.h>    /* Gray Watson's library */
 #else
 #undef  HAVE_LIBDMALLOC
@@ -67,8 +69,11 @@ extern "C" {
 #define HAVE_NC_FREEALL 1
 struct termtype;
 extern NCURSES_EXPORT(void) _nc_free_and_exit(int) GCC_NORETURN;
+extern NCURSES_EXPORT(void) _nc_free_tinfo(int) GCC_NORETURN;
+extern NCURSES_EXPORT(void) _nc_free_tic(int) GCC_NORETURN;
 extern NCURSES_EXPORT(void) _nc_free_tparm(void);
 extern NCURSES_EXPORT(void) _nc_leaks_dump_entry(void);
+extern NCURSES_EXPORT(void) _nc_leaks_tic(void);
 #define ExitProgram(code) _nc_free_and_exit(code)
 #endif
 
@@ -86,6 +91,9 @@ extern NCURSES_EXPORT(void *) _nc_doalloc(void *, size_t);
 #define strdup _nc_strdup
 extern NCURSES_EXPORT(char *) _nc_strdup(const char *);
 #endif
+
+/* entries.c */
+extern NCURSES_EXPORT(void) _nc_leaks_tinfo(void);
 
 #define typeMalloc(type,elts) (type *)malloc((elts)*sizeof(type))
 #define typeCalloc(type,elts) (type *)calloc((elts),sizeof(type))

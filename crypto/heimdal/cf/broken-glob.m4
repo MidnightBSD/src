@@ -1,13 +1,13 @@
-dnl $Id: broken-glob.m4,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $
+dnl $Id: broken-glob.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
 dnl
 dnl check for glob(3)
 dnl
 AC_DEFUN([AC_BROKEN_GLOB],[
 AC_CACHE_CHECK(for working glob, ac_cv_func_glob_working,
 ac_cv_func_glob_working=yes
-AC_TRY_LINK([
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <stdio.h>
-#include <glob.h>],[
+#include <glob.h>]],[[
 glob(NULL, GLOB_BRACE|GLOB_NOCHECK|GLOB_QUOTE|GLOB_TILDE|
 #ifdef GLOB_MAXPATH
 GLOB_MAXPATH
@@ -16,7 +16,7 @@ GLOB_LIMIT
 #endif
 ,
 NULL, NULL);
-],:,ac_cv_func_glob_working=no,:))
+]])],[:],[ac_cv_func_glob_working=no]))
 
 if test "$ac_cv_func_glob_working" = yes; then
 	AC_DEFINE(HAVE_GLOB, 1, [define if you have a glob() that groks 

@@ -1,6 +1,6 @@
-# $Id: manlinks.sed,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+# $Id: manlinks.sed,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $
 ##############################################################################
-# Copyright (c) 2000-2002,2003 Free Software Foundation, Inc.                #
+# Copyright (c) 2000-2003,2008 Free Software Foundation, Inc.                #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
 # copy of this software and associated documentation files (the "Software"), #
@@ -35,6 +35,7 @@
 /\.\\"/d
 /^\.br/d
 /^\.sp/d
+/typedef/d
 s/^\.IX//
 s/\\f.//g
 s/[:,]/ /g

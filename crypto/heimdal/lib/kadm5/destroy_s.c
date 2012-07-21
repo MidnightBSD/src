@@ -33,7 +33,7 @@
 
 #include "kadm5_locl.h"
 
-RCSID("$Id: destroy_s.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
+RCSID("$Id: destroy_s.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 
 /*
  * dealloc a `kadm5_config_params'
@@ -70,7 +70,7 @@ kadm5_s_destroy(void *server_handle)
     kadm5_server_context *context = server_handle;
     krb5_context kcontext = context->context;
 
-    ret = context->db->destroy(kcontext, context->db);
+    ret = context->db->hdb_destroy(kcontext, context->db);
     destroy_kadm5_log_context (&context->log_context);
     destroy_config (&context->config);
     krb5_free_principal (kcontext, context->caller);

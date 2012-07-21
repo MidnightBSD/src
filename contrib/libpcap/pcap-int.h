@@ -30,27 +30,52 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/contrib/libpcap/pcap-int.h,v 1.12.2.1 2007/10/19 03:03:56 mlaier Exp $
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-int.h,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-int.h,v 1.1.1.4 2012-07-21 15:03:26 laffer1 Exp $ (LBL)
  */
 
 #ifndef pcap_int_h
-#define pcap_int_h
+#define	pcap_int_h
+
+#include <pcap/pcap.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <pcap.h>
+#ifdef HAVE_LIBDLPI
+#include <libdlpi.h>
+#endif
 
 #ifdef WIN32
 #include <Packet32.h>
+extern CRITICAL_SECTION g_PcapCompileCriticalSection;
 #endif /* WIN32 */
 
 #ifdef MSDOS
 #include <fcntl.h>
 #include <io.h>
 #endif
+
+#ifdef HAVE_SNF_API
+#include <snf.h>
+#endif
+
+#if (defined(_MSC_VER) && (_MSC_VER <= 1200)) /* we are compiling with Visual Studio 6, that doesn't support the LL suffix*/
+
+/*
+ * Swap byte ordering of unsigned long long timestamp on a big endian
+ * machine.
+ */
+#define SWAPLL(ull)  ((ull & 0xff00000000000000) >> 56) | \
+                      ((ull & 0x00ff000000000000) >> 40) | \
+                      ((ull & 0x0000ff0000000000) >> 24) | \
+                      ((ull & 0x000000ff00000000) >> 8)  | \
+                      ((ull & 0x00000000ff000000) << 8)  | \
+                      ((ull & 0x0000000000ff0000) << 24) | \
+                      ((ull & 0x000000000000ff00) << 40) | \
+                      ((ull & 0x00000000000000ff) << 56)
+
+#else /* A recent Visual studio compiler or not VC */
 
 /*
  * Swap byte ordering of unsigned long long timestamp on a big endian
@@ -65,6 +90,8 @@ extern "C" {
                       ((ull & 0x000000000000ff00LL) << 40) | \
                       ((ull & 0x00000000000000ffLL) << 56)
 
+#endif /* _MSC_VER */
+
 /*
  * Savefile
  */
@@ -74,16 +101,26 @@ typedef enum {
 	MAYBE_SWAPPED
 } swapped_type_t;
 
+/*
+ * Used when reading a savefile.
+ */
 struct pcap_sf {
 	FILE *rfile;
+	int (*next_packet_op)(pcap_t *, struct pcap_pkthdr *, u_char **);
 	int swapped;
-	int hdrsize;
+	size_t hdrsize;
 	swapped_type_t lengths_swapped;
 	int version_major;
 	int version_minor;
-	u_char *base;
+	bpf_u_int32 ifcount;	/* number of interfaces seen in this capture */
+	u_int tsresol;		/* time stamp resolution */
+	u_int tsscale;		/* scaling factor for resolution -> microseconds */
+	u_int64_t tsoffset;	/* time stamp offset */
 };
 
+/*
+ * Used when doing a live capture.
+ */
 struct pcap_md {
 	struct pcap_stat stat;
 	/*XXX*/
@@ -94,22 +131,30 @@ struct pcap_md {
 	long	TotMissed;	/* missed by i/f during this run */
 	long	OrigMissed;	/* missed by i/f before this run */
 	char	*device;	/* device name */
+	int	timeout;	/* timeout for buffering */
+	int	must_do_on_close; /* stuff we must do when we close */
+	struct pcap *next;	/* list of open pcaps that need stuff cleared on close */
 #ifdef linux
 	int	sock_packet;	/* using Linux 2.0 compatible interface */
-	int	timeout;	/* timeout specified to pcap_open_live */
-	int	clear_promisc;	/* must clear promiscuous mode when we close */
 	int	cooked;		/* using SOCK_DGRAM rather than SOCK_RAW */
 	int	ifindex;	/* interface index of device we're bound to */
 	int	lo_ifindex;	/* interface index of the loopback device */
-	struct pcap *next;	/* list of open promiscuous sock_packet pcaps */
 	u_int	packets_read;	/* count of packets read with recvfrom() */
-#endif
+	bpf_u_int32 oldmode;	/* mode to restore when turning monitor mode off */
+	char	*mondevice;	/* mac80211 monitor device we created */
+	u_char	*mmapbuf;	/* memory-mapped region pointer */
+	size_t	mmapbuflen;	/* size of region */
+	u_int	tp_version;	/* version of tpacket_hdr for mmaped ring */
+	u_int	tp_hdrlen;	/* hdrlen of tpacket_hdr for mmaped ring */
+	u_char	*oneshot_buffer; /* buffer for copy of packet */
+	long	proc_dropped; /* packets reported dropped by /proc/net/dev */
+#endif /* linux */
 
 #ifdef HAVE_DAG_API
 #ifdef HAVE_DAG_STREAMS_API
 	u_char	*dag_mem_bottom;	/* DAG card current memory bottom pointer */
 	u_char	*dag_mem_top;	/* DAG card current memory top pointer */
-#else
+#else /* HAVE_DAG_STREAMS_API */
 	void	*dag_mem_base;	/* DAG card memory base address */
 	u_int	dag_mem_bottom;	/* DAG card current memory bottom offset */
 	u_int	dag_mem_top;	/* DAG card current memory top offset */
@@ -121,6 +166,50 @@ struct pcap_md {
 				 * Same as in linux above, introduce
 				 * generally? */
 #endif /* HAVE_DAG_API */
+#ifdef HAVE_SNF_API
+	snf_handle_t snf_handle; /* opaque device handle */
+	snf_ring_t   snf_ring;   /* opaque device ring handle */
+        int          snf_timeout;
+        int          snf_boardnum;
+#endif /*HAVE_SNF_API*/
+
+#ifdef HAVE_ZEROCOPY_BPF
+       /*
+        * Zero-copy read buffer -- for zero-copy BPF.  'buffer' above will
+        * alternative between these two actual mmap'd buffers as required.
+        * As there is a header on the front size of the mmap'd buffer, only
+        * some of the buffer is exposed to libpcap as a whole via bufsize;
+        * zbufsize is the true size.  zbuffer tracks the current zbuf
+        * assocated with buffer so that it can be used to decide which the
+        * next buffer to read will be.
+        */
+       u_char *zbuf1, *zbuf2, *zbuffer;
+       u_int zbufsize;
+       u_int zerocopy;
+       u_int interrupted;
+       struct timespec firstsel;
+       /*
+        * If there's currently a buffer being actively processed, then it is
+        * referenced here; 'buffer' is also pointed at it, but offset by the
+        * size of the header.
+        */
+       struct bpf_zbuf_header *bzh;
+#endif /* HAVE_ZEROCOPY_BPF */
+};
+
+/*
+ * Stuff to do when we close.
+ */
+#define MUST_CLEAR_PROMISC	0x00000001	/* clear promiscuous mode */
+#define MUST_CLEAR_RFMON	0x00000002	/* clear rfmon (monitor) mode */
+#define MUST_DELETE_MONIF	0x00000004	/* delete monitor-mode interface */
+
+struct pcap_opt {
+	int	buffer_size;
+	char	*source;
+	int	promisc;
+	int	rfmon;
+	int	tstamp_type;
 };
 
 /*
@@ -136,21 +225,44 @@ struct pcap_md {
 #define       PCAP_FDDIPAD 3
 #endif
 
+typedef int	(*activate_op_t)(pcap_t *);
+typedef int	(*can_set_rfmon_op_t)(pcap_t *);
+typedef int	(*read_op_t)(pcap_t *, int cnt, pcap_handler, u_char *);
+typedef int	(*inject_op_t)(pcap_t *, const void *, size_t);
+typedef int	(*setfilter_op_t)(pcap_t *, struct bpf_program *);
+typedef int	(*setdirection_op_t)(pcap_t *, pcap_direction_t);
+typedef int	(*set_datalink_op_t)(pcap_t *, int);
+typedef int	(*getnonblock_op_t)(pcap_t *, char *);
+typedef int	(*setnonblock_op_t)(pcap_t *, int, char *);
+typedef int	(*stats_op_t)(pcap_t *, struct pcap_stat *);
+#ifdef WIN32
+typedef int	(*setbuff_op_t)(pcap_t *, int);
+typedef int	(*setmode_op_t)(pcap_t *, int);
+typedef int	(*setmintocopy_op_t)(pcap_t *, int);
+#endif
+typedef void	(*cleanup_op_t)(pcap_t *);
+
 struct pcap {
 #ifdef WIN32
 	ADAPTER *adapter;
 	LPPACKET Packet;
-	int timeout;
 	int nonblock;
 #else
 	int fd;
 	int selectable_fd;
 	int send_fd;
 #endif /* WIN32 */
+
+#ifdef HAVE_LIBDLPI
+	dlpi_handle_t dlpi_hd;
+#endif
 	int snapshot;
-	int linktype;
+	int linktype;		/* Network linktype */
+	int linktype_ext;       /* Extended information stored in the linktype field of a file */
 	int tzoff;		/* timezone offset */
 	int offset;		/* offset for proper alignment */
+	int activated;		/* true if the capture is really started */
+	int oldstyle;		/* if we're opening with pcap_open_live() */
 
 	int break_loop;		/* flag set to force break from packet-reading loop */
 
@@ -159,12 +271,12 @@ struct pcap {
 #endif
 
 #ifdef MSDOS
-        int inter_packet_wait;   /* offline: wait between packets */
         void (*wait_proc)(void); /*          call proc while waiting */
 #endif
 
 	struct pcap_sf sf;
 	struct pcap_md md;
+	struct pcap_opt opt;
 
 	/*
 	 * Read buffer.
@@ -185,15 +297,32 @@ struct pcap {
 	/*
 	 * Methods.
 	 */
-	int	(*read_op)(pcap_t *, int cnt, pcap_handler, u_char *);
-	int	(*inject_op)(pcap_t *, const void *, size_t);
-	int	(*setfilter_op)(pcap_t *, struct bpf_program *);
-	int	(*setdirection_op)(pcap_t *, pcap_direction_t);
-	int	(*set_datalink_op)(pcap_t *, int);
-	int	(*getnonblock_op)(pcap_t *, char *);
-	int	(*setnonblock_op)(pcap_t *, int, char *);
-	int	(*stats_op)(pcap_t *, struct pcap_stat *);
-	void	(*close_op)(pcap_t *);
+	activate_op_t activate_op;
+	can_set_rfmon_op_t can_set_rfmon_op;
+	read_op_t read_op;
+	inject_op_t inject_op;
+	setfilter_op_t setfilter_op;
+	setdirection_op_t setdirection_op;
+	set_datalink_op_t set_datalink_op;
+	getnonblock_op_t getnonblock_op;
+	setnonblock_op_t setnonblock_op;
+	stats_op_t stats_op;
+
+	/*
+	 * Routine to use as callback for pcap_next()/pcap_next_ex().
+	 */
+	pcap_handler oneshot_callback;
+
+#ifdef WIN32
+	/*
+	 * These are, at least currently, specific to the Win32 NPF
+	 * driver.
+	 */
+	setbuff_op_t setbuff_op;
+	setmode_op_t setmode_op;
+	setmintocopy_op_t setmintocopy_op;
+#endif
+	cleanup_op_t cleanup_op;
 
 	/*
 	 * Placeholder for filter code if bpf not in kernel.
@@ -203,6 +332,8 @@ struct pcap {
 	char errbuf[PCAP_ERRBUF_SIZE + 1];
 	int dlt_count;
 	u_int *dlt_list;
+	int tstamp_type_count;
+	u_int *tstamp_type_list;
 
 	struct pcap_pkthdr pcap_header;	/* This is needed for the pcap_next_ex() to work */
 };
@@ -232,8 +363,8 @@ struct pcap_timeval {
  *
  *	introduce a new structure for the new format;
  *
- *	send mail to "tcpdump-workers@tcpdump.org", requesting a new
- *	magic number for your new capture file format, and, when
+ *	send mail to "tcpdump-workers@lists.tcpdump.org", requesting
+ *	a new magic number for your new capture file format, and, when
  *	you get the new magic number, put it in "savefile.c";
  *
  *	use that magic number for save files with the changed record
@@ -243,9 +374,12 @@ struct pcap_timeval {
  *	the old record header as well as files with the new record header
  *	(using the magic number to determine the header format).
  *
- * Then supply the changes to "patches@tcpdump.org", so that future
- * versions of libpcap and programs that use it (such as tcpdump) will
- * be able to read your new capture file format.
+ * Then supply the changes as a patch at
+ *
+ *	http://sourceforge.net/projects/libpcap/
+ *
+ * so that future versions of libpcap and programs that use it (such as
+ * tcpdump) will be able to read your new capture file format.
  */
 
 struct pcap_sf_pkthdr {
@@ -273,6 +407,16 @@ struct pcap_sf_patched_pkthdr {
     unsigned char pkt_type;
 };
 
+/*
+ * User data structure for the one-shot callback used for pcap_next()
+ * and pcap_next_ex().
+ */
+struct oneshot_userdata {
+	struct pcap_pkthdr *hdr;
+	const u_char **pkt;
+	pcap_t *pd;
+};
+
 int	yylex(void);
 
 #ifndef min
@@ -292,6 +436,16 @@ int	pcap_read(pcap_t *, int cnt, pcap_handler, u_char *);
 
 #include <stdarg.h>
 
+#if !defined(HAVE_SNPRINTF)
+#define snprintf pcap_snprintf
+extern int snprintf (char *, size_t, const char *, ...);
+#endif
+
+#if !defined(HAVE_VSNPRINTF)
+#define vsnprintf pcap_vsnprintf
+extern int vsnprintf (char *, size_t, const char *, va_list ap);
+#endif
+
 /*
  * Routines that most pcap implementations can use for non-blocking mode.
  */
@@ -300,7 +454,13 @@ int	pcap_getnonblock_fd(pcap_t *, char *);
 int	pcap_setnonblock_fd(pcap_t *p, int, char *);
 #endif
 
-void	pcap_close_common(pcap_t *);
+pcap_t	*pcap_create_common(const char *, char *);
+int	pcap_do_addexit(pcap_t *);
+void	pcap_add_to_pcaps_to_close(pcap_t *);
+void	pcap_remove_from_pcaps_to_close(pcap_t *);
+void	pcap_cleanup_live_common(pcap_t *);
+int	pcap_not_initialized(pcap_t *);
+int	pcap_check_activated(pcap_t *);
 
 /*
  * Internal interfaces for "pcap_findalldevs()".

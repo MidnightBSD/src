@@ -31,8 +31,8 @@
  * SUCH DAMAGE. 
  */
 
-/* $FreeBSD: src/contrib/com_err/com_err.h,v 1.3 2004/04/03 21:17:01 nectar Exp $ */
-/* $Id: com_err.h,v 1.1.1.2 2006-02-25 02:32:30 laffer1 Exp $ */
+/* $FreeBSD$ */
+/* $Id: com_err.h,v 1.1.1.3 2012-07-21 15:02:52 laffer1 Exp $ */
 
 /* MIT compatible com_err library */
 
@@ -43,11 +43,12 @@
 #include <stdarg.h>
 
 #include <com_right.h>
+#include <stdarg.h>
 
 typedef void (*errf) __P((const char *, long, const char *, va_list));
 
-const char * error_message __P((long));
-int init_error_table __P((const char**, long, int));
+const char * error_message (long);
+int init_error_table (const char**, long, int);
 
 void com_err_va __P((const char *, long, const char *, va_list))
     __printflike(3, 0);
@@ -55,11 +56,11 @@ void com_err_va __P((const char *, long, const char *, va_list))
 void com_err __P((const char *, long, const char *, ...))
     __printflike(3, 4);
 
-errf set_com_err_hook __P((errf));
-errf reset_com_err_hook __P((void));
+errf set_com_err_hook (errf);
+errf reset_com_err_hook (void);
 
-const char *error_table_name  __P((int num));
+const char *error_table_name  (int num);
 
-void add_to_error_table __P((struct et_list *new_table));
+void add_to_error_table (struct et_list *new_table);
 
 #endif /* __COM_ERR_H__ */

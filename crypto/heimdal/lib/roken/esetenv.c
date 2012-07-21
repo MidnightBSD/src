@@ -33,16 +33,16 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-RCSID("$Id: esetenv.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
+RCSID("$Id: esetenv.c,v 1.1.1.3 2012-07-21 15:09:07 laffer1 Exp $");
 #endif
 
 #include "roken.h"
 
 #include <err.h>
 
-void
+void ROKEN_LIB_FUNCTION
 esetenv(const char *var, const char *val, int rewrite)
 {
-    if (setenv ((char *)var, (char *)val, rewrite))
+    if (setenv (rk_UNCONST(var), rk_UNCONST(val), rewrite))
 	errx (1, "failed setting environment variable %s", var);
 }

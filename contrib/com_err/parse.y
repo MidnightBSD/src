@@ -31,12 +31,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $FreeBSD: src/contrib/com_err/parse.y,v 1.3 2004/04/03 21:17:01 nectar Exp $ */
+/* $FreeBSD$ */
 
 #include "compile_et.h"
 #include "lex.h"
 #if 0
-RCSID("$Id: parse.y,v 1.1.1.2 2006-02-25 02:32:30 laffer1 Exp $");
+RCSID("$Id: parse.y,v 1.1.1.3 2012-07-21 15:02:52 laffer1 Exp $");
 #endif
 
 void yyerror (char *s);
@@ -79,16 +79,14 @@ id		: ID STRING
 
 et		: ET STRING
 		{
-		    base = name2number($2);
-		    strncpy(name, $2, sizeof(name));
-		    name[sizeof(name) - 1] = '\0';
+		    base_id = name2number($2);
+		    strlcpy(name, $2, sizeof(name));
 		    free($2);
 		}
 		| ET STRING STRING
 		{
-		    base = name2number($2);
-		    strncpy(name, $3, sizeof(name));
-		    name[sizeof(name) - 1] = '\0';
+		    base_id = name2number($2);
+		    strlcpy(name, $3, sizeof(name));
 		    free($2);
 		    free($3);
 		}
@@ -104,24 +102,32 @@ statement	: INDEX NUMBER
 		}
 		| PREFIX STRING
 		{
-		    prefix = realloc(prefix, strlen($2) + 2);
-		    strcpy(prefix, $2);
-		    strcat(prefix, "_");
+		    free(prefix);
+		    asprintf (&prefix, "%s_", $2);
+		    if (prefix == NULL)
+			errx(1, "malloc");
 		    free($2);
 		}
 		| PREFIX
 		{
 		    prefix = realloc(prefix, 1);
+		    if (prefix == NULL)
+			errx(1, "malloc");
 		    *prefix = '\0';
 		}
 		| EC STRING ',' STRING
 		{
 		    struct error_code *ec = malloc(sizeof(*ec));
+		    
+		    if (ec == NULL)
+			errx(1, "malloc");
 
 		    ec->next = NULL;
 		    ec->number = number;
 		    if(prefix && *prefix != '\0') {
 			asprintf (&ec->name, "%s%s", prefix, $2);
+			if (ec->name == NULL)
+			    errx(1, "malloc");
 			free($2);
 		    } else
 			ec->name = $2;
@@ -141,7 +147,7 @@ static long
 name2number(const char *str)
 {
     const char *p;
-    long base = 0;
+    long num = 0;
     const char *x = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	"abcdefghijklmnopqrstuvwxyz0123456789_";
     if(strlen(str) > 4) {
@@ -154,12 +160,12 @@ name2number(const char *str)
 	    yyerror("invalid character in table name");
 	    return 0;
 	}
-	base = (base << 6) + (q - x) + 1;
+	num = (num << 6) + (q - x) + 1;
     }
-    base <<= 8;
-    if(base > 0x7fffffff)
-	base = -(0xffffffff - base + 1);
-    return base;
+    num <<= 8;
+    if(num > 0x7fffffff)
+	num = -(0xffffffff - num + 1);
+    return num;
 }
 
 void

@@ -28,7 +28,7 @@ License Agreement applies to this software.
         Created at NRL for OPIE 2.2 from opiesubr.c. Fixed pointer
              assignment that should have been a comparison.
 
-$FreeBSD: src/contrib/opie/libopie/insecure.c,v 1.3 2002/03/21 23:42:52 markm Exp $
+$FreeBSD$
 
 */
 #include "opie_cfg.h"
@@ -39,11 +39,12 @@ $FreeBSD: src/contrib/opie/libopie/insecure.c,v 1.3 2002/03/21 23:42:52 markm Ex
 #include <sys/param.h>
 #include <unistd.h>
 
-#include <utmp.h>
 #if DOUTMPX
 #include <utmpx.h>
 #define utmp utmpx
 #define endutent endutxent
+#else
+#include <utmp.h>
 #endif	/* DOUTMPX */
 
 #if HAVE_SYS_UTSNAME_H
