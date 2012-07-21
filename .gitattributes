@@ -49576,14 +49576,10 @@ sys/netatalk/ddp_var.h -text
 sys/netatalk/endian.h -text
 sys/netatalk/phase2.h -text
 sys/netgraph/NOTES -text
-sys/netgraph/atm/atmpif/ng_atmpif.c -text
-sys/netgraph/atm/atmpif/ng_atmpif_harp.c -text
-sys/netgraph/atm/atmpif/ng_atmpif_var.h -text
 sys/netgraph/atm/ccatm/ng_ccatm.c -text
 sys/netgraph/atm/ccatm/ng_ccatm_cust.h -text
 sys/netgraph/atm/ng_atm.c -text
 sys/netgraph/atm/ng_atm.h -text
-sys/netgraph/atm/ng_atmpif.h -text
 sys/netgraph/atm/ng_ccatm.h -text
 sys/netgraph/atm/ng_sscfu.h -text
 sys/netgraph/atm/ng_sscop.h -text
