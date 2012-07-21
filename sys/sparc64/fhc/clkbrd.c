@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sparc64/fhc/clkbrd.c,v 1.2 2012/04/03 23:42:44 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Jason L. Wright (jason@thought.net)
  * Copyright (c) 2005 Marius Strobl <marius@FreeBSD.org>
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/fhc/clkbrd.c,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

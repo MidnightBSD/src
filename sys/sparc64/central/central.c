@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sparc64/central/central.c,v 1.2 2012/04/03 23:42:43 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -61,6 +61,7 @@ static device_attach_t central_attach;
 static bus_print_child_t central_print_child;
 static bus_probe_nomatch_t central_probe_nomatch;
 static bus_alloc_resource_t central_alloc_resource;
+static bus_adjust_resource_t central_adjust_resource;
 static bus_get_resource_list_t central_get_resource_list;
 static ofw_bus_get_devinfo_t central_get_devinfo;
 
@@ -77,14 +78,16 @@ static device_method_t central_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_print_child,	central_print_child),
 	DEVMETHOD(bus_probe_nomatch,	central_probe_nomatch),
-	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
-	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 	DEVMETHOD(bus_alloc_resource,	central_alloc_resource),
-	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
-	DEVMETHOD(bus_get_resource_list, central_get_resource_list),
+	DEVMETHOD(bus_adjust_resource,	central_adjust_resource),
+	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
+	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
+	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
+	DEVMETHOD(bus_get_resource_list, central_get_resource_list),
+	DEVMETHOD(bus_child_pnpinfo_str, ofw_bus_gen_child_pnpinfo_str),
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_get_devinfo,	central_get_devinfo),
@@ -94,7 +97,7 @@ static device_method_t central_methods[] = {
 	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
 	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
 
-	{ NULL, NULL }
+	DEVMETHOD_END
 };
 
 static driver_t central_driver = {
@@ -105,7 +108,9 @@ static driver_t central_driver = {
 
 static devclass_t central_devclass;
 
-DRIVER_MODULE(central, nexus, central_driver, central_devclass, 0, 0);
+EARLY_DRIVER_MODULE(central, nexus, central_driver, central_devclass, 0, 0,
+    BUS_PASS_BUS);
+MODULE_DEPEND(fhc, nexus, 1, 1, 1);
 MODULE_VERSION(central, 1);
 
 static int
@@ -175,6 +180,15 @@ central_attach(device_t dev)
 	}
 
 	return (bus_generic_attach(dev));
+}
+
+static int
+central_adjust_resource(device_t bus __unused, device_t child __unused,
+    int type __unused, struct resource *r __unused, u_long start __unused,
+    u_long end __unused)
+{
+
+	return (ENXIO);
 }
 
 static int
