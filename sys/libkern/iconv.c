@@ -32,12 +32,7 @@
 #include <sys/iconv.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
-<<<<<<< iconv.c
-#include <sys/lock.h>
 #include <sys/sx.h>
-=======
-#include <sys/sx.h>
->>>>>>> 1.1.1.3
 #include <sys/syslog.h>
 
 #include "iconv_converter_if.h"
