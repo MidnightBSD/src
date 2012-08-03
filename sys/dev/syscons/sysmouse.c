@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/sysmouse.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/syscons/sysmouse.c,v 1.3 2009/08/30 06:02:33 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -27,15 +27,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/sysmouse.c,v 1.29 2006/11/06 13:41:56 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_syscons.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/conf.h>
 #include <sys/priv.h>
+#include <sys/serial.h>
 #include <sys/tty.h>
+#include <sys/ttydefaults.h>
 #include <sys/kernel.h>
 #include <sys/consio.h>
 #include <sys/mouse.h>
@@ -44,108 +45,23 @@ __FBSDID("$FreeBSD: src/sys/dev/syscons/sysmouse.c,v 1.29 2006/11/06 13:41:56 rw
 
 #ifndef SC_NO_SYSMOUSE
 
-#define SC_MOUSE 	128		/* minor number */
-
-static d_open_t		smopen;
-static d_close_t	smclose;
-static d_ioctl_t	smioctl;
-
-static struct cdevsw sm_cdevsw = {
-	.d_version =	D_VERSION,
-	.d_open =	smopen,
-	.d_close =	smclose,
-	.d_ioctl =	smioctl,
-	.d_name =	"sysmouse",
-	.d_flags =	D_TTY | D_NEEDGIANT,
-};
-
 /* local variables */
 static struct tty	*sysmouse_tty;
 static int		mouse_level;	/* sysmouse protocol level */
 static mousestatus_t	mouse_status;
 
-static void		smstart(struct tty *tp);
-static int		smparam(struct tty *tp, struct termios *t);
-
-static int
-smopen(struct cdev *dev, int flag, int mode, struct thread *td)
-{
-	struct tty *tp;
-
-	DPRINTF(5, ("smopen: dev:%s, vty:%d\n",
-		devtoname(dev), SC_VTY(dev)));
-
-#if 0
-	if (SC_VTY(dev) != SC_MOUSE)
-		return ENXIO;
-#endif
-
-	tp = dev->si_tty;
-	if (!(tp->t_state & TS_ISOPEN)) {
-		ttyinitmode(tp, 0, 0);
-		smparam(tp, &tp->t_termios);
-		ttyld_modem(tp, 1);
-	} else if (tp->t_state & TS_XCLUDE &&
-	    priv_check(td, PRIV_TTY_EXCLUSIVE)) {
-		return EBUSY;
-	}
-
-	return ttyld_open(tp, dev);
-}
-
-static int
-smclose(struct cdev *dev, int flag, int mode, struct thread *td)
-{
-	struct tty *tp;
-	int s;
-
-	tp = dev->si_tty;
-	s = spltty();
-	mouse_level = 0;
-	ttyld_close(tp, flag);
-	tty_close(tp);
-	splx(s);
-
-	return 0;
-}
-
 static void
-smstart(struct tty *tp)
+smdev_close(struct tty *tp)
 {
-	struct clist *rbp;
-	u_char buf[PCBURST];
-	int s;
-
-	s = spltty();
-	if (!(tp->t_state & (TS_TIMEOUT | TS_BUSY | TS_TTSTOP))) {
-		tp->t_state |= TS_BUSY;
-		rbp = &tp->t_outq;
-		while (rbp->c_cc)
-			q_to_b(rbp, buf, PCBURST);
-		tp->t_state &= ~TS_BUSY;
-		ttwwakeup(tp);
-	}
-	splx(s);
+	mouse_level = 0;
 }
 
 static int
-smparam(struct tty *tp, struct termios *t)
+smdev_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 {
-	tp->t_ispeed = t->c_ispeed;
-	tp->t_ospeed = t->c_ospeed;
-	tp->t_cflag = t->c_cflag;
-	return 0;
-}
-
-static int
-smioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
-{
-	struct tty *tp;
 	mousehw_t *hw;
 	mousemode_t *mode;
-	int s;
 
-	tp = dev->si_tty;
 	switch (cmd) {
 
 	case MOUSE_GETHWINFO:	/* get device information */
@@ -204,14 +120,12 @@ smioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 		return 0;
 
 	case MOUSE_GETSTATUS:	/* get accumulated mouse events */
-		s = spltty();
 		*(mousestatus_t *)data = mouse_status;
 		mouse_status.flags = 0;
 		mouse_status.obutton = mouse_status.button;
 		mouse_status.dx = 0;
 		mouse_status.dy = 0;
 		mouse_status.dz = 0;
-		splx(s);
 		return 0;
 
 #ifdef notyet
@@ -225,25 +139,35 @@ smioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 		return ENODEV;
 	}
 
-	return(ttyioctl(dev, cmd, data, flag, td));
+	return (ENOIOCTL);
 }
+
+static int
+smdev_param(struct tty *tp, struct termios *t)
+{
+
+	/*
+	 * Set the output baud rate to zero. The mouse device supports
+	 * no output, so we don't want to waste buffers.
+	 */
+	t->c_ispeed = TTYDEF_SPEED;
+	t->c_ospeed = B0;
+
+	return (0);
+}
+
+static struct ttydevsw smdev_ttydevsw = {
+	.tsw_flags	= TF_NOPREFIX,
+	.tsw_close	= smdev_close,
+	.tsw_ioctl	= smdev_ioctl,
+	.tsw_param	= smdev_param,
+};
 
 static void
 sm_attach_mouse(void *unused)
 {
-	struct cdev *dev;
-	struct tty *tp;
-
-	dev = make_dev(&sm_cdevsw, SC_MOUSE, UID_ROOT, GID_WHEEL, 0600,
-		       "sysmouse");
-	dev->si_tty = tp = ttyalloc();
-	tp->t_oproc = smstart;
-	tp->t_param = smparam;
-	tp->t_stop = nottystop;
-	tp->t_dev = dev;
-
-	sysmouse_tty = tp;
-	/* sysmouse doesn't have scr_stat */
+	sysmouse_tty = tty_alloc(&smdev_ttydevsw, NULL);
+	tty_makedev(sysmouse_tty, NULL, "sysmouse");
 }
 
 SYSINIT(sysmouse, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sm_attach_mouse, NULL);
@@ -264,7 +188,9 @@ sysmouse_event(mouse_info_t *info)
 	};
 	u_char buf[8];
 	int x, y, z;
-	int i;
+	int i, flags = 0;
+
+	tty_lock(sysmouse_tty);
 
 	switch (info->operation) {
 	case MOUSE_ACTION:
@@ -283,7 +209,7 @@ sysmouse_event(mouse_info_t *info)
 			mouse_status.button &= ~info->u.event.id;
 		break;
 	default:
-		return 0;
+		goto done;
 	}
 
 	mouse_status.dx += x;
@@ -291,11 +217,9 @@ sysmouse_event(mouse_info_t *info)
 	mouse_status.dz += z;
 	mouse_status.flags |= ((x || y || z) ? MOUSE_POSCHANGED : 0)
 			      | (mouse_status.obutton ^ mouse_status.button);
-	if (mouse_status.flags == 0)
-		return 0;
-
-	if ((sysmouse_tty == NULL) || !(sysmouse_tty->t_state & TS_ISOPEN))
-		return mouse_status.flags;
+	flags = mouse_status.flags;
+	if (flags == 0 || !tty_opened(sysmouse_tty))
+		goto done;
 
 	/* the first five bytes are compatible with MouseSystems' */
 	buf[0] = MOUSE_MSC_SYNC
@@ -307,7 +231,7 @@ sysmouse_event(mouse_info_t *info)
 	buf[2] = y >> 1;
 	buf[4] = y - buf[2];
 	for (i = 0; i < MOUSE_MSC_PACKETSIZE; ++i)
-		ttyld_rint(sysmouse_tty, buf[i]);
+		ttydisc_rint(sysmouse_tty, buf[i], 0);
 	if (mouse_level >= 1) {
 		/* extended part */
         	z = imax(imin(z, 127), -128);
@@ -316,10 +240,12 @@ sysmouse_event(mouse_info_t *info)
         	/* buttons 4-10 */
         	buf[7] = (~mouse_status.button >> 3) & 0x7f;
         	for (i = MOUSE_MSC_PACKETSIZE; i < MOUSE_SYS_PACKETSIZE; ++i)
-			ttyld_rint(sysmouse_tty, buf[i]);
+			ttydisc_rint(sysmouse_tty, buf[i], 0);
 	}
+	ttydisc_rint_done(sysmouse_tty);
 
-	return mouse_status.flags;
+done:	tty_unlock(sysmouse_tty);
+	return (flags);
 }
 
 #endif /* !SC_NO_SYSMOUSE */

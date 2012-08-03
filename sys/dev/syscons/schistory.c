@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/schistory.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * Copyright (c) 1992-1998 Søren Schmidt
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/schistory.c,v 1.20 2005/12/04 02:12:42 ru Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_syscons.h"
 
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: src/sys/dev/syscons/schistory.c,v 1.20 2005/12/04 02:12:42 r
 
 /*
  * XXX Placeholder.
- * This calculations should be dynamically scaled by number of seperate sc
+ * This calculations should be dynamically scaled by number of separate sc
  * devices.  A base value of 'extra_history_size' should be defined for
  * each syscons unit, and added and subtracted from the dynamic
  * 'extra_history_size' as units are added and removed.  This way, each time
@@ -87,7 +87,7 @@ int
 sc_alloc_history_buffer(scr_stat *scp, int lines, int prev_ysize, int wait)
 {
 	/*
-	 * syscons unconditionally allocates buffers upto 
+	 * syscons unconditionally allocates buffers up to 
 	 * SC_HISTORY_SIZE lines or scp->ysize lines, whichever 
 	 * is larger. A value greater than that is allowed, 
 	 * subject to extra_history_size.
@@ -117,7 +117,7 @@ sc_alloc_history_buffer(scr_stat *scp, int lines, int prev_ysize, int wait)
 			delta = cur_lines - min_lines;
 	}
 
-	/* lines upto min_lines are always allowed. */
+	/* lines up to min_lines are always allowed. */
 	min_lines = imax(SC_HISTORY_SIZE, scp->ysize);
 	if (lines > min_lines) {
 		if (lines - min_lines > extra_history_size + delta) {
@@ -292,8 +292,7 @@ sc_hist_down_line(scr_stat *scp)
 }
 
 int
-sc_hist_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
-	      struct thread *td)
+sc_hist_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 {
 	scr_stat *scp;
 	int error;
@@ -301,7 +300,7 @@ sc_hist_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
 	switch (cmd) {
 
 	case CONS_HISTORY:  	/* set history size */
-		scp = SC_STAT(tp->t_dev);
+		scp = SC_STAT(tp);
 		if (*(int *)data <= 0)
 			return EINVAL;
 		if (scp->status & BUFFER_SAVED)
@@ -316,7 +315,7 @@ sc_hist_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
 		return error;
 
 	case CONS_CLRHIST:
-		scp = SC_STAT(tp->t_dev);
+		scp = SC_STAT(tp);
 		sc_vtb_clear(scp->history, scp->sc->scr_map[0x20],
 		    SC_NORM_ATTR << 8);
 		return 0;

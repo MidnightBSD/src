@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/apm/apm_saver.c,v 1.2 2008/12/02 22:43:12 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Nick Sayer (who stole shamelessly from blank_saver)
  * All rights reserved.
@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/apm/apm_saver.c,v 1.11 2006/05/25 23:06:38 imp Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

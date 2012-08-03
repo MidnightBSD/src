@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/fade/fade_saver.c,v 1.2 2008/12/02 22:43:12 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995-1998 Søren Schmidt
  * All rights reserved.
@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/fade/fade_saver.c,v 1.19 2003/05/31 20:29:34 phk Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -52,7 +52,7 @@ fade_saver(video_adapter_t *adp, int blank)
 	if (blank) {
 		if (ISPALAVAIL(adp->va_flags)) {
 			if (count <= 0)
-				save_palette(adp, palette);
+				vidd_save_palette(adp, palette);
 			if (count < 256) {
 				pal[0] = pal[1] = pal[2] = 0;
 				for (i = 3; i < 256*3; i++) {
@@ -61,20 +61,18 @@ fade_saver(video_adapter_t *adp, int blank)
 					else
 						pal[i] = 60;
 				}
-				load_palette(adp, pal);
+				vidd_load_palette(adp, pal);
 				count++;
 			}
 		} else {
-	    		(*vidsw[adp->va_index]->blank_display)(adp,
-							       V_DISPLAY_BLANK);
+	    		vidd_blank_display(adp, V_DISPLAY_BLANK);
 		}
 	} else {
 		if (ISPALAVAIL(adp->va_flags)) {
-			load_palette(adp, palette);
+			vidd_load_palette(adp, palette);
 			count = 0;
 		} else {
-	    		(*vidsw[adp->va_index]->blank_display)(adp,
-							       V_DISPLAY_ON);
+	    		vidd_blank_display(adp, V_DISPLAY_ON);
 		}
 	}
 	return 0;
@@ -83,8 +81,8 @@ fade_saver(video_adapter_t *adp, int blank)
 static int
 fade_init(video_adapter_t *adp)
 {
-	if (!ISPALAVAIL(adp->va_flags)
-	    && (*vidsw[adp->va_index]->blank_display)(adp, V_DISPLAY_ON) != 0)
+	if (!ISPALAVAIL(adp->va_flags) &&
+	    vidd_blank_display(adp, V_DISPLAY_ON) != 0)
 		return ENODEV;
 	return 0;
 }

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/scvgarndr.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/scvgarndr.c,v 1.21 2006/05/12 05:04:43 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_syscons.h"
 #include "opt_vga.h"
@@ -172,29 +172,42 @@ static u_short mouse_or_mask[16] = {
 #endif
 
 #ifdef SC_PIXEL_MODE
-#define	VIDEO_MEMORY_POS(scp, pos, x) 					\
-	scp->sc->adp->va_window +					\
-	x * scp->xoff +							\
-	scp->yoff * scp->font_size * scp->sc->adp->va_line_width +	\
-	x * (pos % scp->xsize) +					\
-	scp->font_size * scp->sc->adp->va_line_width * (pos / scp->xsize)
+#define	GET_PIXEL(scp, pos, x, w)					\
+({									\
+	(scp)->sc->adp->va_window +					\
+	    (x) * (scp)->xoff +						\
+	    (scp)->yoff * (scp)->font_size * (w) +			\
+	    (x) * ((pos) % (scp)->xsize) +				\
+	    (scp)->font_size * (w) * ((pos) / (scp)->xsize);		\
+})
 
-#define	vga_drawpxl(pos, color)						\
-	switch (scp->sc->adp->va_info.vi_depth) {			\
-		case 32:						\
-		case 24:						\
-			writel(pos, vga_palette32[color]);		\
-			break;						\
-		case 16:						\
-			if (scp->sc->adp->va_info.vi_pixel_fsizes[1] == 5)\
-				writew(pos, vga_palette15[color]);	\
-			else						\
-				writew(pos, vga_palette16[color]);	\
-			break;						\
-		case 15:						\
-			writew(pos, vga_palette15[color]);		\
-			break;						\
-		}
+#define	DRAW_PIXEL(scp, pos, color) do {				\
+	switch ((scp)->sc->adp->va_info.vi_depth) {			\
+	case 32:							\
+		writel((pos), vga_palette32[color]);			\
+		break;							\
+	case 24:							\
+		if (((pos) & 1) == 0) {					\
+			writew((pos), vga_palette32[color]);		\
+			writeb((pos) + 2, vga_palette32[color] >> 16);	\
+		} else {						\
+			writeb((pos), vga_palette32[color]);		\
+			writew((pos) + 1, vga_palette32[color] >> 8);	\
+		}							\
+		break;							\
+	case 16:							\
+		if ((scp)->sc->adp->va_info.vi_pixel_fsizes[1] == 5)	\
+			writew((pos), vga_palette15[color]);		\
+		else							\
+			writew((pos), vga_palette16[color]);		\
+		break;							\
+	case 15:							\
+		writew((pos), vga_palette15[color]);			\
+		break;							\
+	case 8:								\
+		writeb((pos), (uint8_t)(color));			\
+	}								\
+} while (0)
 	
 static uint32_t vga_palette32[16] = {
 	0x000000, 0x0000ad, 0x00ad00, 0x00adad,
@@ -216,6 +229,7 @@ static uint16_t vga_palette15[16] = {
 #ifndef SC_NO_CUTPASTE
 static uint32_t mouse_buf32[256];
 static uint16_t mouse_buf16[256];
+static uint8_t  mouse_buf8[256];
 #endif
 #endif
 
@@ -235,7 +249,7 @@ vga_txtclear(scr_stat *scp, int c, int attr)
 static void
 vga_txtborder(scr_stat *scp, int color)
 {
-	(*vidsw[scp->sc->adapter]->set_border)(scp->sc->adp, color);
+	vidd_set_border(scp->sc->adp, color);
 }
 
 static void
@@ -271,9 +285,8 @@ vga_txtcursor_shape(scr_stat *scp, int base, int height, int blink)
 	scp->curs_attr.base = base;
 	scp->curs_attr.height = height;
 #endif
-	(*vidsw[scp->sc->adapter]->set_hw_cursor_shape)(scp->sc->adp,
-							base, height,
-							scp->font_size, blink);
+	vidd_set_hw_cursor_shape(scp->sc->adp, base, height,
+	    scp->font_size, blink);
 }
 
 static void
@@ -313,8 +326,7 @@ draw_txtcharcursor(scr_stat *scp, int at, u_short c, u_short a, int flip)
 			font[i] ^= 0xff;
 		}
 		/* XXX */
-		(*vidsw[sc->adapter]->load_font)(sc->adp, 0, h, 8, font,
-						 sc->cursor_char, 1);
+		vidd_load_font(sc->adp, 0, h, 8, font, sc->cursor_char, 1);
 		sc_vtb_putc(&scp->scr, at, sc->cursor_char, a);
 	} else
 #endif /* SC_NO_FONT_LOADING */
@@ -349,13 +361,11 @@ vga_txtcursor(scr_stat *scp, int at, int blink, int on, int flip)
 		scp->status |= VR_CURSOR_BLINK;
 		if (on) {
 			scp->status |= VR_CURSOR_ON;
-			(*vidsw[adp->va_index]->set_hw_cursor)(adp,
-							       at%scp->xsize,
-							       at/scp->xsize); 
+			vidd_set_hw_cursor(adp, at%scp->xsize,
+			    at/scp->xsize);
 		} else {
 			if (scp->status & VR_CURSOR_ON)
-				(*vidsw[adp->va_index]->set_hw_cursor)(adp,
-								       -1, -1);
+				vidd_set_hw_cursor(adp, -1, -1);
 			scp->status &= ~VR_CURSOR_ON;
 		}
 	} else {
@@ -439,8 +449,7 @@ draw_txtmouse(scr_stat *scp, int x, int y)
 	while (!(inb(crtc_addr + 6) & 0x08)) /* idle */ ;
 #endif
 	c = scp->sc->mouse_char;
-	(*vidsw[scp->sc->adapter]->load_font)(scp->sc->adp, 0, 32, 8, font_buf,
-					      c, 4); 
+	vidd_load_font(scp->sc->adp, 0, 32, 8, font_buf, c, 4); 
 
 	sc_vtb_putc(&scp->scr, pos, c, sc_vtb_geta(&scp->scr, pos));
 	/* FIXME: may be out of range! */
@@ -504,7 +513,9 @@ vga_rndrinit(scr_stat *scp)
 		scp->rndr->draw_cursor = vga_pxlcursor_planar;
 		scp->rndr->blink_cursor = vga_pxlblink_planar;
 		scp->rndr->draw_mouse = vga_pxlmouse_planar;
-	} else if (scp->sc->adp->va_info.vi_mem_model == V_INFO_MM_DIRECT) {
+	} else
+	if (scp->sc->adp->va_info.vi_mem_model == V_INFO_MM_DIRECT ||
+	    scp->sc->adp->va_info.vi_mem_model == V_INFO_MM_PACKED) {
 		scp->rndr->clear = vga_pxlclear_direct;
 		scp->rndr->draw_border = vga_pxlborder_direct;
 		scp->rndr->draw = vga_vgadraw_direct;
@@ -582,7 +593,7 @@ vga_pxlborder_direct(scr_stat *scp, int color)
 		e = s + line_width * scp->yoff * scp->font_size;
 
 		for (f = s; f < e; f += pixel_size)
-			vga_drawpxl(f, color);
+			DRAW_PIXEL(scp, f, color);
 	}
 
 	y = (scp->yoff + scp->ysize) * scp->font_size;
@@ -592,7 +603,7 @@ vga_pxlborder_direct(scr_stat *scp, int color)
 		e = s + line_width * (scp->ypixel - y);
 
 		for (f = s; f < e; f += pixel_size)
-			vga_drawpxl(f, color);
+			DRAW_PIXEL(scp, f, color);
 	}
 
 	y = scp->yoff * scp->font_size;
@@ -604,7 +615,7 @@ vga_pxlborder_direct(scr_stat *scp, int color)
 			e = s + scp->xoff * 8 * pixel_size;
 
 			for (f = s; f < e; f += pixel_size)
-				vga_drawpxl(f, color);
+				DRAW_PIXEL(scp, f, color);
 		}
 
 		if (x > 0) {
@@ -614,7 +625,7 @@ vga_pxlborder_direct(scr_stat *scp, int color)
 			e = s + x * 8 * pixel_size;
 
 			for (f = s; f < e; f += pixel_size)
-				vga_drawpxl(f, color);
+				DRAW_PIXEL(scp, f, color);
 		}
 	}
 }
@@ -628,7 +639,7 @@ vga_pxlborder_planar(scr_stat *scp, int color)
 	int y;
 	int i;
 
-	(*vidsw[scp->sc->adapter]->set_border)(scp->sc->adp, color);
+	vidd_set_border(scp->sc->adp, color);
 
 	outw(GDCIDX, 0x0005);		/* read mode 0, write mode 0 */
 	outw(GDCIDX, 0x0003);		/* data rotate/function select */
@@ -670,7 +681,7 @@ vga_egadraw(scr_stat *scp, int from, int count, int flip)
 
 	line_width = scp->sc->adp->va_line_width;
 
-	d = VIDEO_MEMORY_POS(scp, from, 1);
+	d = GET_PIXEL(scp, from, 1, line_width);
 
 	outw(GDCIDX, 0x0005);		/* read mode 0, write mode 0 */
 	outw(GDCIDX, 0x0003);		/* data rotate/function select */
@@ -706,8 +717,7 @@ vga_egadraw(scr_stat *scp, int from, int count, int flip)
 		}
 		++d;
 		if ((i % scp->xsize) == scp->xsize - 1)
-			d += scp->xoff*2 
-				 + (scp->font_size - 1)*line_width;
+			d += scp->font_size * line_width - scp->xsize;
 	}
 	outw(GDCIDX, 0x0000);		/* set/reset */
 	outw(GDCIDX, 0x0001);		/* set/reset enable */
@@ -717,7 +727,7 @@ vga_egadraw(scr_stat *scp, int from, int count, int flip)
 static void
 vga_vgadraw_direct(scr_stat *scp, int from, int count, int flip)
 {
-	vm_offset_t d = 0;
+	vm_offset_t d;
 	vm_offset_t e;
 	u_char *f;
 	u_short col1, col2, color;
@@ -728,7 +738,7 @@ vga_vgadraw_direct(scr_stat *scp, int from, int count, int flip)
 	line_width = scp->sc->adp->va_line_width;
 	pixel_size = scp->sc->adp->va_info.vi_pixel_size;
 
-	d = VIDEO_MEMORY_POS(scp, from, 8 * pixel_size);
+	d = GET_PIXEL(scp, from, 8 * pixel_size, line_width);
 
 	if (from + count > scp->xsize * scp->ysize)
 		count = scp->xsize * scp->ysize - from;
@@ -750,7 +760,7 @@ vga_vgadraw_direct(scr_stat *scp, int from, int count, int flip)
 		for (j = 0; j < scp->font_size; ++j, ++f) {
 			for (k = 0; k < 8; ++k) {
 				color = *f & (1 << (7 - k)) ? col1 : col2;
-				vga_drawpxl(e + pixel_size * k, color);
+				DRAW_PIXEL(scp, e + pixel_size * k, color);
 			}
 
 			e += line_width;
@@ -759,8 +769,8 @@ vga_vgadraw_direct(scr_stat *scp, int from, int count, int flip)
 		d += 8 * pixel_size;
 
 		if ((i % scp->xsize) == scp->xsize - 1)
-			d += scp->xoff * 16 * pixel_size +
-			     (scp->font_size - 1) * line_width;
+			d += scp->font_size * line_width -
+			    scp->xsize * 8 * pixel_size;
 	}
 }
 
@@ -777,9 +787,9 @@ vga_vgadraw_planar(scr_stat *scp, int from, int count, int flip)
 	int a;
 	u_char c;
 
-	d = VIDEO_MEMORY_POS(scp, from, 1);
-
 	line_width = scp->sc->adp->va_line_width;
+
+	d = GET_PIXEL(scp, from, 1, line_width);
 
 	outw(GDCIDX, 0x0305);		/* read mode 0, write mode 3 */
 	outw(GDCIDX, 0x0003);		/* data rotate/function select */
@@ -816,8 +826,7 @@ vga_vgadraw_planar(scr_stat *scp, int from, int count, int flip)
 		}
 		++d;
 		if ((i % scp->xsize) == scp->xsize - 1)
-			d += scp->xoff*2 
-				 + (scp->font_size - 1)*line_width;
+			d += scp->font_size * line_width - scp->xsize;
 	}
 	outw(GDCIDX, 0x0005);		/* read mode 0, write mode 0 */
 	outw(GDCIDX, 0x0000);		/* set/reset */
@@ -839,7 +848,7 @@ vga_pxlcursor_shape(scr_stat *scp, int base, int height, int blink)
 static void 
 draw_pxlcursor_direct(scr_stat *scp, int at, int on, int flip)
 {
-	vm_offset_t d = 0;
+	vm_offset_t d;
 	u_char *f;
 	int line_width, pixel_size;
 	int height;
@@ -850,7 +859,7 @@ draw_pxlcursor_direct(scr_stat *scp, int at, int on, int flip)
 	line_width = scp->sc->adp->va_line_width;
 	pixel_size = scp->sc->adp->va_info.vi_pixel_size;
 
-	d = VIDEO_MEMORY_POS(scp, at, 8 * pixel_size) +
+	d = GET_PIXEL(scp, at, 8 * pixel_size, line_width) +
 	    (scp->font_size - scp->curs_attr.base - 1) * line_width;
 
 	a = sc_vtb_geta(&scp->vtb, at);
@@ -871,7 +880,7 @@ draw_pxlcursor_direct(scr_stat *scp, int at, int on, int flip)
 	for (i = 0; i < height; ++i, --f) {
 		for (j = 0; j < 8; ++j) {
 			color = *f & (1 << (7 - j)) ? col1 : col2;
-			vga_drawpxl(d + pixel_size * j, color);
+			DRAW_PIXEL(scp, d + pixel_size * j, color);
 		}
 
 		d -= line_width;
@@ -892,7 +901,7 @@ draw_pxlcursor_planar(scr_stat *scp, int at, int on, int flip)
 
 	line_width = scp->sc->adp->va_line_width;
 
-	d = VIDEO_MEMORY_POS(scp, at, 1) +
+	d = GET_PIXEL(scp, at, 1, line_width) +
 	    (scp->font_size - scp->curs_attr.base - 1) * line_width;
 
 	outw(GDCIDX, 0x0005);		/* read mode 0, write mode 0 */
@@ -1154,6 +1163,7 @@ vga_pxlmouse_direct(scr_stat *scp, int x, int y, int on)
 	int i, j;
 	uint32_t *u32;
 	uint16_t *u16;
+	uint8_t  *u8;
 	int bpp;
 
 	if (!on)
@@ -1184,6 +1194,10 @@ vga_pxlmouse_direct(scr_stat *scp, int x, int y, int on)
 			case 15:
 				u16 = (uint16_t*)(p + j * pixel_size);
 				writew(u16, mouse_buf16[i * 16 + j]);
+				break;
+			case 8:
+				u8 = (uint8_t*)(p + j * pixel_size);
+				writeb(u8, mouse_buf8[i * 16 + j]);
 				break;
 			}
 		}
@@ -1220,6 +1234,14 @@ vga_pxlmouse_direct(scr_stat *scp, int x, int y, int on)
 				else if (mouse_and_mask[i] & (1 << (15 - j)))
 					writew(u16, 0);
 				break;
+			case 8:
+				u8 = (uint8_t*)(p + j * pixel_size);
+				mouse_buf8[i * 16 + j] = *u8;
+				if (mouse_or_mask[i] & (1 << (15 - j)))
+					writeb(u8, 15);
+				else if (mouse_and_mask[i] & (1 << (15 - j)))
+					writeb(u8, 0);
+				break;
 			}
 		}
 
@@ -1251,7 +1273,7 @@ vga_pxlmouse_planar(scr_stat *scp, int x, int y, int on)
 static void
 vga_grborder(scr_stat *scp, int color)
 {
-	(*vidsw[scp->sc->adapter]->set_border)(scp->sc->adp, color);
+	vidd_set_border(scp->sc->adp, color);
 }
 
 #endif

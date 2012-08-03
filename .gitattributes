@@ -46822,11 +46822,8 @@ sys/dev/syscons/rain/rain_saver.c -text
 sys/dev/syscons/scgfbrndr.c -text
 sys/dev/syscons/schistory.c -text
 sys/dev/syscons/scmouse.c -text
-sys/dev/syscons/scterm-dumb.c -text
-sys/dev/syscons/scterm-sc.c -text
 sys/dev/syscons/scterm-teken.c -text
 sys/dev/syscons/scterm.c -text
-sys/dev/syscons/sctermvar.h -text
 sys/dev/syscons/scvesactl.c -text
 sys/dev/syscons/scvgarndr.c -text
 sys/dev/syscons/scvidctl.c -text

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/star/star_saver.c,v 1.2 2008/12/02 22:43:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995-1998 Søren Schmidt
  * All rights reserved.
@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/star/star_saver.c,v 1.26 2005/05/15 09:07:04 nyan Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -86,7 +86,7 @@ star_saver(video_adapter_t *adp, int blank)
 			/* clear the screen and set the border color */
 			sc_vtb_clear(&scp->scr, sc->scr_map[0x20],
 				     (FG_LIGHTGREY | BG_BLACK) << 8);
-			(*vidsw[adp->va_index]->set_hw_cursor)(adp, -1, -1);
+			vidd_set_hw_cursor(adp, -1, -1);
 			sc_set_border(scp, 0);
 			blanked = TRUE;
 			for(i=0; i<NUM_STARS; i++) {

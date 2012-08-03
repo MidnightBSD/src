@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/fire/fire_saver.c,v 1.2 2008/12/02 22:43:13 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Brad Forschinger
  * All rights reserved.
@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/fire/fire_saver.c,v 1.11 2007/02/21 12:27:12 philip Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -56,7 +56,7 @@
 #define SET_ORIGIN(adp, o) do {				\
 	int oo = o;					\
 	if (oo != last_origin)				\
-	    set_origin(adp, last_origin = oo);		\
+	    vidd_set_win_org(adp, last_origin = oo);	\
 	} while (0)
 
 static u_char		*buf;
@@ -119,14 +119,14 @@ fire_saver(video_adapter_t *adp, int blank)
 		/* switch to graphics mode */
       		if (blanked <= 0) {
 			pl = splhigh();
-			set_video_mode(adp, scrmode);
-			load_palette(adp, fire_pal);
+			vidd_set_mode(adp, scrmode);
+			vidd_load_palette(adp, fire_pal);
 			blanked++;
 			vid = (u_char *)adp->va_window;
 			banksize = adp->va_window_size;
 			bpsl = adp->va_line_width;
 			splx(pl);
-			(*vidsw[adp->va_index]->clear)(adp);
+			vidd_clear(adp);
 		}
 		fire_update(adp);
 	} else {
@@ -142,11 +142,11 @@ fire_init(video_adapter_t *adp)
 	video_info_t info;
 	int i, red, green, blue;
 
-	if (!get_mode_info(adp, M_VGA_CG320, &info)) {
+	if (!vidd_get_info(adp, M_VGA_CG320, &info)) {
 		scrmode = M_VGA_CG320;
-	} else if (!get_mode_info(adp, M_PC98_PEGC640x480, &info)) {
+	} else if (!vidd_get_info(adp, M_PC98_PEGC640x480, &info)) {
 		scrmode = M_PC98_PEGC640x480;
-	} else if (!get_mode_info(adp, M_PC98_PEGC640x400, &info)) {
+	} else if (!vidd_get_info(adp, M_PC98_PEGC640x400, &info)) {
 		scrmode = M_PC98_PEGC640x400;
 	} else {
 		log(LOG_NOTICE,

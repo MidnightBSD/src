@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/blank/blank_saver.c,v 1.2 2008/12/02 22:43:12 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995-1998 Søren Schmidt
  * All rights reserved.
@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/blank/blank_saver.c,v 1.17 1999/08/28 00:47:45 peter Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -43,16 +43,14 @@
 static int
 blank_saver(video_adapter_t *adp, int blank)
 {
-	(*vidsw[adp->va_index]->blank_display)(adp,
-					       (blank) ? V_DISPLAY_BLANK
-						       : V_DISPLAY_ON);
+	vidd_blank_display(adp, (blank) ? V_DISPLAY_BLANK : V_DISPLAY_ON);
 	return 0;
 }
 
 static int
 blank_init(video_adapter_t *adp)
 {
-	if ((*vidsw[adp->va_index]->blank_display)(adp, V_DISPLAY_ON) == 0)
+	if (vidd_blank_display(adp, V_DISPLAY_ON) == 0)
 		return 0;
 	return ENODEV;
 }

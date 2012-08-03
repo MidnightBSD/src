@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/dragon/dragon_saver.c,v 1.2 2008/12/02 22:43:12 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Chiharu Shibata
  * All rights reserved.
@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/dragon/dragon_saver.c,v 1.2 2003/07/21 13:04:54 nyan Exp $
+ * $FreeBSD$
  */
 
 #include	<sys/param.h>
@@ -136,13 +136,13 @@ dragon_update(video_adapter_t *adp)
 	int	tmp;
 
 	if (curve > CURVE) {
-		(*vidsw[adp->va_index]->clear)(adp);
+		vidd_clear(adp);
 
 		/* set palette of each curves */
 		for (tmp = 0; tmp < 3*CURVE; ++tmp) {
 			dragon_pal[3+tmp] = (u_char)random(); 
 		}
-		load_palette(adp, dragon_pal);
+		vidd_load_palette(adp, dragon_pal);
 
 		mul = ((random() & 7) + 1) * (SCRW / 320);
 		org_x = random() % SCRW; org_y = random() % SCRH;
@@ -208,7 +208,7 @@ dragon_saver(video_adapter_t *adp, int blank)
 		/* switch to graphics mode */
 		if (blanked <= 0) {
 			pl = splhigh();
-			set_video_mode(adp, VIDEO_MODE);
+			vidd_set_mode(adp, VIDEO_MODE);
 			vid = (u_char *)adp->va_window;
 			curve = CURVE + 1;
 			++blanked;
@@ -230,7 +230,7 @@ dragon_init(video_adapter_t *adp)
 	video_info_t info;
 
 	/* check that the console is capable of running in 320x200x256 */
-	if (get_mode_info(adp, VIDEO_MODE, &info)) {
+	if (vidd_get_info(adp, VIDEO_MODE, &info)) {
 		log(LOG_NOTICE,
 		    "%s: the console does not support " VIDEO_MODE_NAME "\n",
 		    SAVER_NAME);

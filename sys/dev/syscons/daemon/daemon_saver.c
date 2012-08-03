@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/daemon/daemon_saver.c,v 1.2 2008/12/02 22:43:12 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997 Sandro Sigala, Brescia, Italy.
  * Copyright (c) 1997 Chris Shenton
@@ -26,13 +26,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/daemon/daemon_saver.c,v 1.23 2005/05/15 08:59:00 nyan Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/consio.h>
@@ -226,7 +227,7 @@ daemon_saver(video_adapter_t *adp, int blank)
 			/* clear the screen and set the border color */
 			sc_vtb_clear(&scp->scr, sc->scr_map[0x20],
 				     ATTR(FG_LIGHTGREY | BG_BLACK));
-			(*vidsw[adp->va_index]->set_hw_cursor)(adp, -1, -1);
+			vidd_set_hw_cursor(adp, -1, -1);
 			sc_set_border(scp, 0);
 			xlen = ylen = tlen = 0;
 		}
@@ -351,10 +352,25 @@ daemon_saver(video_adapter_t *adp, int blank)
 static int
 daemon_init(video_adapter_t *adp)
 {
-	messagelen = strlen(hostname) + 3 + strlen(ostype) + 1 + 
-	    strlen(osrelease);
-	message = malloc(messagelen + 1, M_DEVBUF, M_WAITOK);
-	sprintf(message, "%s - %s %s", hostname, ostype, osrelease);
+	size_t hostlen;
+
+	mtx_lock(&prison0.pr_mtx);
+	for (;;) {
+		hostlen = strlen(prison0.pr_hostname);
+		mtx_unlock(&prison0.pr_mtx);
+	
+		messagelen = hostlen + 3 + strlen(ostype) + 1 +
+		    strlen(osrelease);
+		message = malloc(messagelen + 1, M_DEVBUF, M_WAITOK);
+		mtx_lock(&prison0.pr_mtx);
+		if (hostlen < strlen(prison0.pr_hostname)) {
+			free(message, M_DEVBUF);
+			continue;
+		}
+		break;
+	}
+	sprintf(message, "%s - %s %s", prison0.pr_hostname, ostype, osrelease);
+	mtx_unlock(&prison0.pr_mtx);
 	blanked = 0;
 	switch (adp->va_mode) {
 	case M_PC98_80x25:

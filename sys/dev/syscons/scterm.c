@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/scterm.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/scterm.c,v 1.6 2003/08/24 18:17:24 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_syscons.h"
 
@@ -37,7 +37,6 @@ __FBSDID("$FreeBSD: src/sys/dev/syscons/scterm.c,v 1.6 2003/08/24 18:17:24 obrie
 #include <sys/consio.h>
 
 #include <dev/syscons/syscons.h>
-#include <dev/syscons/sctermvar.h>
 
 SET_DECLARE(scterm_set, sc_term_sw_t);
 

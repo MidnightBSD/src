@@ -24,7 +24,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/twa/tw_osl_externs.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -79,11 +78,9 @@ extern TW_VOID	tw_osli_cam_detach(struct twa_softc *sc);
 /* Request CAM for a bus scan. */
 extern TW_INT32	tw_osli_request_bus_scan(struct twa_softc *sc);
 
-/* Unfreeze ccb flow from CAM. */
-extern TW_VOID	tw_osli_allow_new_requests(struct twa_softc *sc, TW_VOID *ccb);
-
 /* Freeze ccb flow from CAM. */
-extern TW_VOID	tw_osli_disallow_new_requests(struct twa_softc *sc);
+extern TW_VOID	tw_osli_disallow_new_requests(struct twa_softc *sc,
+	struct tw_cl_req_handle *req_handle);
 
 /* OSL's completion routine for SCSI I/O's. */
 extern TW_VOID	tw_osl_complete_io(struct tw_cl_req_handle *req_handle);

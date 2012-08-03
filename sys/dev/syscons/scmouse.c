@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/scmouse.c,v 1.4 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/scmouse.c,v 1.42 2007/05/25 13:13:12 delphij Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_syscons.h"
 
@@ -117,6 +117,48 @@ sc_alloc_cut_buffer(scr_stat *scp, int wait)
     }
 }
 #endif /* SC_NO_CUTPASTE */
+
+static void
+sc_mouse_input_button(scr_stat *scp, int button)
+{
+	char mouseb[6] = "\x1B[M";
+
+	mouseb[3] = ' ' + button;
+	mouseb[4] = '!' + scp->mouse_pos % scp->xsize;
+	mouseb[5] = '!' + scp->mouse_pos / scp->xsize;
+	sc_respond(scp, mouseb, sizeof mouseb, 1);
+}
+
+static void
+sc_mouse_input(scr_stat *scp, mouse_info_t *mouse)
+{
+
+	switch (mouse->operation) {
+	case MOUSE_BUTTON_EVENT:
+		if (mouse->u.event.value > 0) {
+			/* Mouse button pressed. */
+			if (mouse->u.event.id & MOUSE_BUTTON1DOWN)
+				sc_mouse_input_button(scp, 0);
+			if (mouse->u.event.id & MOUSE_BUTTON2DOWN)
+				sc_mouse_input_button(scp, 1);
+			if (mouse->u.event.id & MOUSE_BUTTON3DOWN)
+				sc_mouse_input_button(scp, 2);
+		} else {
+			/* Mouse button released. */
+			sc_mouse_input_button(scp, 3);
+		}
+		break;
+	case MOUSE_MOTION_EVENT:
+		if (mouse->u.data.z < 0) {
+			/* Scroll up. */
+			sc_mouse_input_button(scp, 64);
+		} else if (mouse->u.data.z > 0) {
+			/* Scroll down. */
+			sc_mouse_input_button(scp, 65);
+		}
+		break;
+	}
+}
 
 /* move mouse */
 void
@@ -606,8 +648,7 @@ sc_mouse_paste(scr_stat *scp)
 #endif /* SC_NO_CUTPASTE */
 
 int
-sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
-	       struct thread *td)
+sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 {
     mouse_info_t *mouse;
     mouse_info_t buf;
@@ -617,7 +658,7 @@ sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
     int s;
     int f;
 
-    scp = SC_STAT(tp->t_dev);
+    scp = SC_STAT(tp);
 
     switch (cmd) {
 
@@ -757,6 +798,11 @@ sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
 
 	    cur_scp->status &= ~MOUSE_HIDDEN;
 
+	    if (cur_scp->mouse_level > 0) {
+	    	sc_mouse_input(scp, mouse);
+		break;
+	    }
+
 	    if (cur_scp->mouse_signal && cur_scp->mouse_proc) {
     		/* has controlling process died? */
 		if (cur_scp->mouse_proc != (p1 = pfind(cur_scp->mouse_pid))) {
@@ -766,7 +812,7 @@ sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
 			if (p1)
 			    PROC_UNLOCK(p1);
 		} else {
-		    psignal(cur_scp->mouse_proc, cur_scp->mouse_signal);
+		    kern_psignal(cur_scp->mouse_proc, cur_scp->mouse_signal);
 		    PROC_UNLOCK(cur_scp->mouse_proc);
 		    break;
 		}
@@ -813,6 +859,11 @@ sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
 
 	    cur_scp->status &= ~MOUSE_HIDDEN;
 
+	    if (cur_scp->mouse_level > 0) {
+	    	sc_mouse_input(scp, mouse);
+		break;
+	    }
+
 	    if (cur_scp->mouse_signal && cur_scp->mouse_proc) {
 		if (cur_scp->mouse_proc != (p1 = pfind(cur_scp->mouse_pid))){
 		    	cur_scp->mouse_signal = 0;
@@ -821,7 +872,7 @@ sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, int flag,
 			if (p1)
 			    PROC_UNLOCK(p1);
 		} else {
-		    psignal(cur_scp->mouse_proc, cur_scp->mouse_signal);
+		    kern_psignal(cur_scp->mouse_proc, cur_scp->mouse_signal);
 		    PROC_UNLOCK(cur_scp->mouse_proc);
 		    break;
 		}
