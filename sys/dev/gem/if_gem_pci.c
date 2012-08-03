@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/gem/if_gem_pci.c,v 1.3 2012/04/12 01:50:10 laffer1 Exp $ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2007 Marius Strobl <marius@FreeBSD.org>
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/gem/if_gem_pci.c,v 1.23.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * PCI bindings for Apple GMAC, Sun ERI and Sun GEM Ethernet controllers
@@ -53,6 +52,7 @@ __FBSDID("$FreeBSD: src/sys/dev/gem/if_gem_pci.c,v 1.23.2.2.2.1 2008/11/25 02:59
 
 #include <machine/bus.h>
 #if defined(__powerpc__) || defined(__sparc64__)
+#include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/openfirm.h>
 #include <machine/ofw_machdep.h>
 #endif
@@ -82,16 +82,12 @@ static device_method_t gem_pci_methods[] = {
 	/* Use the suspend handler here, it is all that is required. */
 	DEVMETHOD(device_shutdown,	gem_pci_suspend),
 
-	/* bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-
 	/* MII interface */
 	DEVMETHOD(miibus_readreg,	gem_mii_readreg),
 	DEVMETHOD(miibus_writereg,	gem_mii_writereg),
 	DEVMETHOD(miibus_statchg,	gem_mii_statchg),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t gem_pci_driver = {
@@ -108,7 +104,7 @@ static const struct gem_pci_dev {
 	uint32_t	gpd_devid;
 	int		gpd_variant;
 	const char	*gpd_desc;
-} gem_pci_devlist[] = {
+} const gem_pci_devlist[] = {
 	{ 0x1101108e, GEM_SUN_ERI,	"Sun ERI 10/100 Ethernet" },
 	{ 0x2bad108e, GEM_SUN_GEM,	"Sun GEM Gigabit Ethernet" },
 	{ 0x0021106b, GEM_APPLE_GMAC,	"Apple UniNorth GMAC Ethernet" },
@@ -141,12 +137,17 @@ static struct resource_spec gem_pci_res_spec[] = {
 	{ -1, 0 }
 };
 
+#define	GEM_SHARED_PINS		"shared-pins"
+#define	GEM_SHARED_PINS_SERDES	"serdes"
+
 static int
 gem_pci_attach(device_t dev)
 {
 	struct gem_softc *sc;
 	int i;
-#if !(defined(__powerpc__) || defined(__sparc64__))
+#if defined(__powerpc__) || defined(__sparc64__)
+	char buf[sizeof(GEM_SHARED_PINS)];
+#else
 	int j;
 #endif
 
@@ -171,6 +172,10 @@ gem_pci_attach(device_t dev)
 	 */
 	if (pci_get_intpin(dev) == 0)
 		pci_set_intpin(dev, 1);
+
+	/* Set the PCI latency timer for Sun ERIs. */
+	if (sc->sc_variant == GEM_SUN_ERI)
+		pci_write_config(dev, PCIR_LATTIMER, GEM_ERI_LATENCY_TIMER, 1);
 
 	sc->sc_dev = dev;
 	sc->sc_flags |= GEM_PCI;
@@ -201,13 +206,24 @@ gem_pci_attach(device_t dev)
 	    GEM_PCI_BANK2_OFFSET, GEM_PCI_BANK2_SIZE,
 	    &sc->sc_res[GEM_RES_BANK2]->r_bushandle);
 
+	/* Determine whether we're running at 66MHz. */
+	if ((GEM_BANK2_READ_4(sc, GEM_PCI_BIF_CONFIG) &
+	   GEM_PCI_BIF_CNF_M66EN) != 0)
+		sc->sc_flags |= GEM_PCI66;
+
 #if defined(__powerpc__) || defined(__sparc64__)
 	OF_getetheraddr(dev, sc->sc_enaddr);
+	if (OF_getprop(ofw_bus_get_node(dev), GEM_SHARED_PINS, buf,
+	    sizeof(buf)) > 0) {
+		buf[sizeof(buf) - 1] = '\0';
+		if (strcmp(buf, GEM_SHARED_PINS_SERDES) == 0)
+			sc->sc_flags |= GEM_SERDES;
+	}
 #else
 	/*
 	 * Dig out VPD (vital product data) and read NA (network address).
-	 * The VPD of GEM resides in the PCI Expansion ROM (PCI FCode) and
-	 * can't be accessed via the PCI capability pointer.
+	 * The VPD resides in the PCI Expansion ROM (PCI FCode) and can't
+	 * be accessed via the PCI capability pointer.
 	 * ``Writing FCode 3.x Programs'' (newer ones, dated 1997 and later)
 	 * chapter 2 describes the data structure.
 	 */
@@ -226,22 +242,21 @@ gem_pci_attach(device_t dev)
 #define	PCI_VPDRES_BYTE0		0x00
 #define	PCI_VPDRES_ISLARGE(x)		((x) & 0x80)
 #define	PCI_VPDRES_LARGE_NAME(x)	((x) & 0x7f)
-#define	PCI_VPDRES_TYPE_VPD		0x10		/* large */
 #define	PCI_VPDRES_LARGE_LEN_LSB	0x01
 #define	PCI_VPDRES_LARGE_LEN_MSB	0x02
-#define	PCI_VPDRES_LARGE_DATA		0x03
-#define	PCI_VPD_SIZE			0x03
+#define	PCI_VPDRES_LARGE_SIZE		0x03
+#define	PCI_VPDRES_TYPE_VPD		0x10		/* large */
 #define	PCI_VPD_KEY0			0x00
 #define	PCI_VPD_KEY1			0x01
 #define	PCI_VPD_LEN			0x02
-#define	PCI_VPD_DATA			0x03
+#define	PCI_VPD_SIZE			0x03
 
 #define	GEM_ROM_READ_1(sc, offs)					\
-    GEM_BANK1_READ_1((sc), GEM_PCI_ROM_OFFSET + (offs))
+	GEM_BANK1_READ_1((sc), GEM_PCI_ROM_OFFSET + (offs))
 #define	GEM_ROM_READ_2(sc, offs)					\
-    GEM_BANK1_READ_2((sc), GEM_PCI_ROM_OFFSET + (offs))
+	GEM_BANK1_READ_2((sc), GEM_PCI_ROM_OFFSET + (offs))
 #define	GEM_ROM_READ_4(sc, offs)					\
-    GEM_BANK1_READ_4((sc), GEM_PCI_ROM_OFFSET + (offs))
+	GEM_BANK1_READ_4((sc), GEM_PCI_ROM_OFFSET + (offs))
 
 	/* Read PCI Expansion ROM header. */
 	if (GEM_ROM_READ_2(sc, PCI_ROMHDR_SIG) != PCI_ROMHDR_SIG_MAGIC ||
@@ -274,24 +289,34 @@ gem_pci_attach(device_t dev)
 	    j + PCI_VPDRES_BYTE0)) == 0 ||
 	    PCI_VPDRES_LARGE_NAME(GEM_ROM_READ_1(sc,
 	    j + PCI_VPDRES_BYTE0)) != PCI_VPDRES_TYPE_VPD ||
-	    (GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_LEN_LSB) << 8 |
+	    ((GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_LEN_LSB) << 8) |
 	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_LEN_MSB)) !=
 	    PCI_VPD_SIZE + ETHER_ADDR_LEN ||
-	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_DATA + PCI_VPD_KEY0) !=
+	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_SIZE + PCI_VPD_KEY0) !=
 	    0x4e /* N */ ||
-	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_DATA + PCI_VPD_KEY1) !=
+	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_SIZE + PCI_VPD_KEY1) !=
 	    0x41 /* A */ ||
-	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_DATA + PCI_VPD_LEN) !=
+	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_SIZE + PCI_VPD_LEN) !=
 	    ETHER_ADDR_LEN ||
-	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_DATA + PCI_VPD_DATA +
+	    GEM_ROM_READ_1(sc, j + PCI_VPDRES_LARGE_SIZE + PCI_VPD_SIZE +
 	    ETHER_ADDR_LEN) != 0x79) {
 		device_printf(dev, "unexpected PCI VPD\n");
 		goto fail;
 	}
 	bus_read_region_1(sc->sc_res[GEM_RES_BANK1],
-	    GEM_PCI_ROM_OFFSET + j + PCI_VPDRES_LARGE_DATA + PCI_VPD_DATA,
+	    GEM_PCI_ROM_OFFSET + j + PCI_VPDRES_LARGE_SIZE + PCI_VPD_SIZE,
 	    sc->sc_enaddr, ETHER_ADDR_LEN);
 #endif
+	/*
+	 * The Xserve G5 has a fake GMAC with an all-zero MAC address.
+	 * Check for this, and don't attach in this case.
+	 */
+
+	for (i = 0; i < ETHER_ADDR_LEN && sc->sc_enaddr[i] == 0; i++) {}
+	if (i == ETHER_ADDR_LEN) {
+		device_printf(dev, "invalid MAC address\n");
+		goto fail;
+	}
 
 	if (gem_attach(sc) != 0) {
 		device_printf(dev, "could not be attached\n");
@@ -331,19 +356,15 @@ gem_pci_detach(device_t dev)
 static int
 gem_pci_suspend(device_t dev)
 {
-	struct gem_softc *sc;
 
-	sc = device_get_softc(dev);
-	gem_suspend(sc);
+	gem_suspend(device_get_softc(dev));
 	return (0);
 }
 
 static int
 gem_pci_resume(device_t dev)
 {
-	struct gem_softc *sc;
 
-	sc = device_get_softc(dev);
-	gem_resume(sc);
+	gem_resume(device_get_softc(dev));
 	return (0);
 }
