@@ -48086,7 +48086,6 @@ sys/i386/include/npx.h -text
 sys/i386/include/param.h -text
 sys/i386/include/pc/bios.h -text
 sys/i386/include/pc/display.h -text
-sys/i386/include/pc/vesa.h -text
 sys/i386/include/pcaudioio.h -text
 sys/i386/include/pcb.h -text
 sys/i386/include/pcb_ext.h -text

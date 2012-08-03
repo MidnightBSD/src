@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/i386/include/pc/bios.h,v 1.2 2011/10/16 05:17:39 laffer1 Exp $
  * $FreeBSD: src/sys/i386/include/pc/bios.h,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
@@ -281,6 +281,10 @@ struct PIR_table
 #define	SMAP_TYPE_ACPI_RECLAIM	3
 #define	SMAP_TYPE_ACPI_NVS	4
 #define	SMAP_TYPE_ACPI_ERROR	5
+
+#define	SMAP_XATTR_ENABLED	0x00000001
+#define	SMAP_XATTR_NON_VOLATILE	0x00000002
+#define	SMAP_XATTR_MASK		(SMAP_XATTR_ENABLED | SMAP_XATTR_NON_VOLATILE)
 
 struct bios_smap {
     u_int64_t	base;
