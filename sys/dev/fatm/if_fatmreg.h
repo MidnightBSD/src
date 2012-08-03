@@ -26,7 +26,6 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: src/sys/dev/fatm/if_fatmreg.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
  *
  * Fore PCA200E hardware definitions.
  */

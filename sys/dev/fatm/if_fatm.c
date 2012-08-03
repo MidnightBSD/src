@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fatm/if_fatm.c,v 1.23.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -391,16 +390,14 @@ fatm_check_heartbeat(struct fatm_softc *sc)
  * Ensure that the heart is still beating.
  */
 static void
-fatm_watchdog(struct ifnet *ifp)
+fatm_watchdog(void *arg)
 {
-	struct fatm_softc *sc = ifp->if_softc;
+	struct fatm_softc *sc;
 
-	FATM_LOCK(sc);
-	if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
-		fatm_check_heartbeat(sc);
-		ifp->if_timer = 5;
-	}
-	FATM_UNLOCK(sc);
+	sc = arg;
+	FATM_CHECKLOCK(sc);
+	fatm_check_heartbeat(sc);
+	callout_reset(&sc->watchdog_timer, hz * 5, fatm_watchdog, sc);
 }
 
 /*
@@ -474,7 +471,7 @@ fatm_stop(struct fatm_softc *sc)
 	(void)fatm_reset(sc);
 
 	/* stop watchdog */
-	sc->ifp->if_timer = 0;
+	callout_stop(&sc->watchdog_timer);
 
 	if (sc->ifp->if_drv_flags & IFF_DRV_RUNNING) {
 		sc->ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
@@ -860,7 +857,7 @@ fatm_getprom(struct fatm_softc *sc)
 	NEXT_QUEUE_ENTRY(sc->cmdqueue.head, FATM_CMD_QLEN);
 
 	q->error = 0;
-	q->cb = NULL;;
+	q->cb = NULL;
 	H_SETSTAT(q->q.statp, FATM_STAT_PENDING);
 	H_SYNCSTAT_PREWRITE(sc, q->q.statp);
 
@@ -1341,7 +1338,7 @@ fatm_init_locked(struct fatm_softc *sc)
 	/*
 	 * Start the watchdog timer
 	 */
-	sc->ifp->if_timer = 5;
+	callout_reset(&sc->watchdog_timer, hz * 5, fatm_watchdog, sc);
 
 	/* start SUNI */
 	utopia_start(&sc->utopia);
@@ -1776,21 +1773,11 @@ copy_mbuf(struct mbuf *m)
 
 	if (m->m_flags & M_PKTHDR) {
 		M_MOVE_PKTHDR(new, m);
-		if (m->m_len > MHLEN) {
-			MCLGET(new, M_TRYWAIT);
-			if ((m->m_flags & M_EXT) == 0) {
-				m_free(new);
-				return (NULL);
-			}
-		}
+		if (m->m_len > MHLEN)
+			MCLGET(new, M_WAIT);
 	} else {
-		if (m->m_len > MLEN) {
-			MCLGET(new, M_TRYWAIT);
-			if ((m->m_flags & M_EXT) == 0) {
-				m_free(new);
-				return (NULL);
-			}
-		}
+		if (m->m_len > MLEN)
+			MCLGET(new, M_WAIT);
 	}
 
 	bcopy(m->m_data, new->m_data, m->m_len);
@@ -2553,6 +2540,7 @@ fatm_detach(device_t dev)
 		FATM_UNLOCK(sc);
 		atm_ifdetach(sc->ifp);		/* XXX race */
 	}
+	callout_drain(&sc->watchdog_timer);
 
 	if (sc->ih != NULL)
 		bus_teardown_intr(dev, sc->irqres, sc->ih);
@@ -2794,6 +2782,7 @@ fatm_attach(device_t dev)
 	cv_init(&sc->cv_regs, "fatm_regs");
 
 	sysctl_ctx_init(&sc->sysctl_ctx);
+	callout_init_mtx(&sc->watchdog_timer, &sc->mtx, 0);
 
 	/*
 	 * Make the sysctl tree
@@ -2804,13 +2793,13 @@ fatm_attach(device_t dev)
 		goto fail;
 
 	if (SYSCTL_ADD_PROC(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
-	    OID_AUTO, "istats", CTLFLAG_RD, sc, 0, fatm_sysctl_istats,
-	    "LU", "internal statistics") == NULL)
+	    OID_AUTO, "istats", CTLTYPE_ULONG | CTLFLAG_RD, sc, 0,
+	    fatm_sysctl_istats, "LU", "internal statistics") == NULL)
 		goto fail;
 
 	if (SYSCTL_ADD_PROC(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
-	    OID_AUTO, "stats", CTLFLAG_RD, sc, 0, fatm_sysctl_stats,
-	    "LU", "card statistics") == NULL)
+	    OID_AUTO, "stats", CTLTYPE_ULONG | CTLFLAG_RD, sc, 0,
+	    fatm_sysctl_stats, "LU", "card statistics") == NULL)
 		goto fail;
 
 	if (SYSCTL_ADD_INT(&sc->sysctl_ctx, SYSCTL_CHILDREN(sc->sysctl_tree),
@@ -2834,7 +2823,6 @@ fatm_attach(device_t dev)
 	ifp->if_flags = IFF_SIMPLEX;
 	ifp->if_ioctl = fatm_ioctl;
 	ifp->if_start = fatm_start;
-	ifp->if_watchdog = fatm_watchdog;
 	ifp->if_init = fatm_init;
 	ifp->if_linkmib = &IFP2IFATM(sc->ifp)->mib;
 	ifp->if_linkmiblen = sizeof(IFP2IFATM(sc->ifp)->mib);
