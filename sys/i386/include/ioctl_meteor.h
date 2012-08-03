@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/ioctl_meteor.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 David O'Brien
  * All rights reserved.
@@ -24,7 +24,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/ioctl_meteor.h,v 1.16 2005/03/02 21:33:26 joerg Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_IOCTL_METEOR_H_

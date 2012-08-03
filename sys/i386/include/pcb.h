@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/pcb.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)pcb.h	5.10 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/i386/include/pcb.h,v 1.56 2005/12/29 13:23:48 davidxu Exp $
+ * $FreeBSD$
  */
 
 #ifndef _I386_PCB_H_
@@ -46,7 +46,10 @@
 #include <machine/npx.h>
 
 struct pcb {
+	int	pcb_cr0;
+	int	pcb_cr2;
 	int	pcb_cr3;
+	int	pcb_cr4;
 	int	pcb_edi;
 	int	pcb_esi;
 	int	pcb_ebp;
@@ -61,28 +64,42 @@ struct pcb {
 	int     pcb_dr6;
 	int     pcb_dr7;
 
-	union	savefpu	pcb_save;
+	union	savefpu	pcb_user_save;
+	uint16_t pcb_initial_npxcw;
 	u_int	pcb_flags;
 #define	FP_SOFTFP	0x01	/* process using software fltng pnt emulator */
 #define	PCB_DBREGS	0x02	/* process using debug registers */
-#define	PCB_NPXTRAP	0x04	/* npx trap pending */
 #define	PCB_NPXINITDONE	0x08	/* fpu state is initialized */
 #define	PCB_VM86CALL	0x10	/* in vm86 call */
+#define	PCB_NPXUSERINITDONE 0x20 /* user fpu state is initialized */
+#define	PCB_KERNNPX	0x40	/* kernel uses npx */
 
 	caddr_t	pcb_onfault;	/* copyin/out fault recovery */
+	int	pcb_ds;
+	int	pcb_es;
+	int	pcb_fs;
 	int	pcb_gs;
+	int	pcb_ss;
 	struct segment_descriptor pcb_fsd;
 	struct segment_descriptor pcb_gsd;
 	struct	pcb_ext	*pcb_ext;	/* optional pcb extension */
 	int	pcb_psl;	/* process status long */
 	u_long	pcb_vm86[2];	/* vm86bios scratch space */
+	union	savefpu *pcb_save;
+
+	struct region_descriptor pcb_gdt;
+	struct region_descriptor pcb_idt;
+	uint16_t	pcb_ldt;
+	uint16_t	pcb_tr;
 };
 
 #ifdef _KERNEL
 struct trapframe;
 
 void	makectx(struct trapframe *, struct pcb *);
-void	savectx(struct pcb *);
+void	savectx(struct pcb *) __returns_twice;
+int	suspendctx(struct pcb *) __returns_twice;
+void	resumectx(struct pcb *);
 #endif
 
 #endif /* _I386_PCB_H_ */

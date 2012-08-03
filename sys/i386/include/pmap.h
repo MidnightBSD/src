@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/pmap.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -39,7 +39,7 @@
  *
  *	from: hp300: @(#)pmap.h	7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h	7.4 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/i386/include/pmap.h,v 1.128 2007/04/12 17:00:56 alc Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -82,6 +82,17 @@
 #define	PG_PROT		(PG_RW|PG_U)	/* all protection bits . */
 #define PG_N		(PG_NC_PWT|PG_NC_PCD)	/* Non-cacheable */
 
+/* Page level cache control fields used to determine the PAT type */
+#define PG_PDE_CACHE	(PG_PDE_PAT | PG_NC_PWT | PG_NC_PCD)
+#define PG_PTE_CACHE	(PG_PTE_PAT | PG_NC_PWT | PG_NC_PCD)
+
+/*
+ * Promotion to a 2 or 4MB (PDE) page mapping requires that the corresponding
+ * 4KB (PTE) page mappings have identical settings for the following fields:
+ */
+#define PG_PTE_PROMOTE	(PG_MANAGED | PG_W | PG_G | PG_PTE_PAT | \
+	    PG_M | PG_A | PG_NC_PCD | PG_NC_PWT | PG_U | PG_RW | PG_V)
+
 /*
  * Page Protection Exception bits
  */
@@ -96,6 +107,8 @@
  * Size of Kernel address space.  This is the number of page table pages
  * (4MB each) to use for the kernel.  256 pages == 1 Gigabyte.
  * This **MUST** be a multiple of 4 (eg: 252, 256, 260, etc).
+ * For PAE, the page table page unit size is 2MB.  This means that 512 pages
+ * is 1 Gigabyte.  Double everything.  It must be a multiple of 8 for PAE.
  */
 #ifndef KVA_PAGES
 #ifdef PAE
@@ -122,11 +135,7 @@
 #endif
 
 #ifndef NKPDE
-#ifdef SMP
-#define NKPDE	(KVA_PAGES - 1) /* number of page tables/pde's */
-#else
 #define NKPDE	(KVA_PAGES)	/* number of page tables/pde's */
-#endif
 #endif
 
 /*
@@ -134,15 +143,8 @@
  *
  * XXX This works for now, but I am not real happy with it, I'll fix it
  * right after I fix locore.s and the magic 28K hole
- *
- * SMP_PRIVPAGES: The per-cpu address space is 0xff80000 -> 0xffbfffff
  */
-#ifdef SMP
-#define MPPTDI		(NPDEPTD-1)	/* per cpu ptd entry */
-#define	KPTDI		(MPPTDI-NKPDE)	/* start of kernel virtual pde's */
-#else
-#define	KPTDI		(NPDEPTD-NKPDE)/* start of kernel virtual pde's */
-#endif	/* SMP */
+#define	KPTDI		(NPDEPTD-NKPDE)	/* start of kernel virtual pde's */
 #define	PTDPTDI		(KPTDI-NPGPTD)	/* ptd entry that points to ptd! */
 
 /*
@@ -154,6 +156,7 @@
 #ifndef LOCORE
 
 #include <sys/queue.h>
+#include <sys/_cpuset.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 
@@ -177,8 +180,7 @@ typedef uint32_t pt_entry_t;
 #endif
 
 /*
- * Address of current and alternate address space page table maps
- * and directories.
+ * Address of current address space page table maps and directories.
  */
 #ifdef _KERNEL
 extern pt_entry_t PTmap[];
@@ -189,23 +191,111 @@ extern pd_entry_t PTDpde[];
 extern pdpt_entry_t *IdlePDPT;
 #endif
 extern pd_entry_t *IdlePTD;	/* physical address of "Idle" state directory */
-#endif
 
-#ifdef _KERNEL
 /*
- * virtual address to page table entry and
- * to physical address.
- * Note: these work recursively, thus vtopte of a pte will give
- * the corresponding pde that in turn maps it.
+ * Translate a virtual address to the kernel virtual address of its page table
+ * entry (PTE).  This can be used recursively.  If the address of a PTE as
+ * previously returned by this macro is itself given as the argument, then the
+ * address of the page directory entry (PDE) that maps the PTE will be
+ * returned.
+ *
+ * This macro may be used before pmap_bootstrap() is called.
  */
 #define	vtopte(va)	(PTmap + i386_btop(va))
-#define	vtophys(va)	pmap_kextract((vm_offset_t)(va))
 
 /*
- *	Routine:	pmap_kextract
- *	Function:
- *		Extract the physical page address associated
- *		kernel virtual address.
+ * Translate a virtual address to its physical address.
+ *
+ * This macro may be used before pmap_bootstrap() is called.
+ */
+#define	vtophys(va)	pmap_kextract((vm_offset_t)(va))
+
+#if defined(XEN)
+#include <sys/param.h>
+#include <machine/xen/xen-os.h>
+#include <machine/xen/xenvar.h>
+#include <machine/xen/xenpmap.h>
+
+extern pt_entry_t pg_nx;
+
+#define PG_KERNEL  (PG_V | PG_A | PG_RW | PG_M)
+
+#define MACH_TO_VM_PAGE(ma) PHYS_TO_VM_PAGE(xpmap_mtop((ma)))
+#define VM_PAGE_TO_MACH(m) xpmap_ptom(VM_PAGE_TO_PHYS((m)))
+
+#define VTOM(va) xpmap_ptom(VTOP(va))
+
+static __inline vm_paddr_t
+pmap_kextract_ma(vm_offset_t va)
+{
+        vm_paddr_t ma;
+        if ((ma = PTD[va >> PDRSHIFT]) & PG_PS) {
+                ma = (ma & ~(NBPDR - 1)) | (va & (NBPDR - 1));
+        } else {
+                ma = (*vtopte(va) & PG_FRAME) | (va & PAGE_MASK);
+        }
+        return ma;
+}
+
+static __inline vm_paddr_t
+pmap_kextract(vm_offset_t va)
+{
+        return xpmap_mtop(pmap_kextract_ma(va));
+}
+#define vtomach(va)     pmap_kextract_ma(((vm_offset_t) (va)))
+
+vm_paddr_t pmap_extract_ma(struct pmap *pmap, vm_offset_t va);
+
+void    pmap_kenter_ma(vm_offset_t va, vm_paddr_t pa);
+void    pmap_map_readonly(struct pmap *pmap, vm_offset_t va, int len);
+void    pmap_map_readwrite(struct pmap *pmap, vm_offset_t va, int len);
+
+static __inline pt_entry_t
+pte_load_store(pt_entry_t *ptep, pt_entry_t v)
+{
+	pt_entry_t r;
+
+	r = *ptep;
+	PT_SET_VA(ptep, v, TRUE);
+	return (r);
+}
+
+static __inline pt_entry_t
+pte_load_store_ma(pt_entry_t *ptep, pt_entry_t v)
+{
+	pt_entry_t r;
+
+	r = *ptep;
+	PT_SET_VA_MA(ptep, v, TRUE);
+	return (r);
+}
+
+#define	pte_load_clear(ptep)	pte_load_store((ptep), (pt_entry_t)0ULL)
+
+#define	pte_store(ptep, pte)	pte_load_store((ptep), (pt_entry_t)pte)
+#define	pte_store_ma(ptep, pte)	pte_load_store_ma((ptep), (pt_entry_t)pte)
+#define	pde_store_ma(ptep, pte)	pte_load_store_ma((ptep), (pt_entry_t)pte)
+
+#elif !defined(XEN)
+
+/*
+ * KPTmap is a linear mapping of the kernel page table.  It differs from the
+ * recursive mapping in two ways: (1) it only provides access to kernel page
+ * table pages, and not user page table pages, and (2) it provides access to
+ * a kernel page table page after the corresponding virtual addresses have
+ * been promoted to a 2/4MB page mapping.
+ *
+ * KPTmap is first initialized by locore to support just NPKT page table
+ * pages.  Later, it is reinitialized by pmap_bootstrap() to allow for
+ * expansion of the kernel page table.
+ */
+extern pt_entry_t *KPTmap;
+
+/*
+ * Extract from the kernel page table the physical address that is mapped by
+ * the given virtual address "va".
+ *
+ * This function may be used before pmap_bootstrap() is called.
  */
 static __inline vm_paddr_t
 pmap_kextract(vm_offset_t va)
@@ -215,13 +305,28 @@ pmap_kextract(vm_offset_t va)
 	if ((pa = PTD[va >> PDRSHIFT]) & PG_PS) {
 		pa = (pa & PG_PS_FRAME) | (va & PDRMASK);
 	} else {
-		pa = *vtopte(va);
+		/*
+		 * Beware of a concurrent promotion that changes the PDE at
+		 * this point!  For example, vtopte() must not be used to
+		 * access the PTE because it would use the new PDE.  It is,
+		 * however, safe to use the old PDE because the page table
+		 * page is preserved by the promotion.
+		 */
+		pa = KPTmap[i386_btop(va)];
 		pa = (pa & PG_FRAME) | (va & PAGE_MASK);
 	}
-	return pa;
+	return (pa);
 }
+#endif
 
-#ifdef PAE
+#if !defined(XEN)
+#define PT_UPDATES_FLUSH()
+#endif
+
+#if defined(PAE) && !defined(XEN)
+
+#define	pde_cmpset(pdep, old, new) \
+				atomic_cmpset_64((pdep), (old), (new))
 
 static __inline pt_entry_t
 pte_load(pt_entry_t *ptep)
@@ -277,7 +382,10 @@ atomic_cmpset_64(volatile uint64_t *dst, uint64_t exp, uint64_t src)
 
 extern pt_entry_t pg_nx;
 
-#else /* PAE */
+#elif !defined(PAE) && !defined (XEN)
+
+#define	pde_cmpset(pdep, old, new) \
+				atomic_cmpset_int((pdep), (old), (new))
 
 static __inline pt_entry_t
 pte_load(pt_entry_t *ptep)
@@ -291,15 +399,8 @@ pte_load(pt_entry_t *ptep)
 static __inline pt_entry_t
 pte_load_store(pt_entry_t *ptep, pt_entry_t pte)
 {
-	pt_entry_t r;
-
-	__asm __volatile(
-	    "xchgl %0,%1"
-	    : "=m" (*ptep),
-	      "=r" (r)
-	    : "1" (pte),
-	      "m" (*ptep));
-	return (r);
+	__asm volatile("xchgl %0, %1" : "+m" (*ptep), "+r" (pte));
+	return (pte);
 }
 
 #define	pte_load_clear(pte)	atomic_readandclear_int(pte)
@@ -326,21 +427,22 @@ struct	pv_entry;
 struct	pv_chunk;
 
 struct md_page {
-	int pv_list_count;
 	TAILQ_HEAD(,pv_entry)	pv_list;
+	int			pat_mode;
 };
 
 struct pmap {
 	struct mtx		pm_mtx;
 	pd_entry_t		*pm_pdir;	/* KVA of page directory */
 	TAILQ_HEAD(,pv_chunk)	pm_pvchunk;	/* list of mappings in pmap */
-	u_int			pm_active;	/* active on cpus */
+	cpuset_t		pm_active;	/* active on cpus */
 	struct pmap_statistics	pm_stats;	/* pmap statistics */
 	LIST_ENTRY(pmap) 	pm_list;	/* List of all pmaps */
 #ifdef PAE
 	pdpt_entry_t		*pm_pdpt;	/* KVA of page director pointer
 						   table */
 #endif
+	vm_page_t		pm_root;	/* spare page table pages */
 };
 
 typedef struct pmap	*pmap_t;
@@ -380,19 +482,11 @@ struct pv_chunk {
 	pmap_t			pc_pmap;
 	TAILQ_ENTRY(pv_chunk)	pc_list;
 	uint32_t		pc_map[_NPCM];	/* bitmap; 1 = free */
-	uint32_t		pc_spare[2];
+	TAILQ_ENTRY(pv_chunk)	pc_lru;
 	struct pv_entry		pc_pventry[_NPCPV];
 };
 
 #ifdef	_KERNEL
-
-#define NPPROVMTRR		8
-#define PPRO_VMTRRphysBase0	0x200
-#define PPRO_VMTRRphysMask0	0x201
-struct ppro_vmtrr {
-	u_int64_t base, mask;
-};
-extern struct ppro_vmtrr PPro_vmtrr[NPPROVMTRR];
 
 extern caddr_t	CADDR1;
 extern pt_entry_t *CMAP1;
@@ -404,26 +498,34 @@ extern char *ptvmmap;		/* poor name! */
 extern vm_offset_t virtual_avail;
 extern vm_offset_t virtual_end;
 
-#define	pmap_page_is_mapped(m)	(!TAILQ_EMPTY(&(m)->md.pv_list))
+#define	pmap_page_get_memattr(m)	((vm_memattr_t)(m)->md.pat_mode)
 #define	pmap_unmapbios(va, sz)	pmap_unmapdev((va), (sz))
 
+/*
+ * Only the following functions or macros may be used before pmap_bootstrap()
+ * is called: pmap_kenter(), pmap_kextract(), pmap_kremove(), vtophys(), and
+ * vtopte().
+ */
 void	pmap_bootstrap(vm_paddr_t);
+int	pmap_cache_bits(int mode, boolean_t is_pde);
 int	pmap_change_attr(vm_offset_t, vm_size_t, int);
 void	pmap_init_pat(void);
 void	pmap_kenter(vm_offset_t va, vm_paddr_t pa);
-void	pmap_kenter_attr(vm_offset_t va, vm_paddr_t pa, int mode);
 void	*pmap_kenter_temporary(vm_paddr_t pa, int i);
 void	pmap_kremove(vm_offset_t);
 void	*pmap_mapbios(vm_paddr_t, vm_size_t);
 void	*pmap_mapdev(vm_paddr_t, vm_size_t);
 void	*pmap_mapdev_attr(vm_paddr_t, vm_size_t, int);
+boolean_t pmap_page_is_mapped(vm_page_t m);
+void	pmap_page_set_memattr(vm_page_t m, vm_memattr_t ma);
 void	pmap_unmapdev(vm_offset_t, vm_size_t);
 pt_entry_t *pmap_pte(pmap_t, vm_offset_t) __pure2;
-void	pmap_set_pg(void);
 void	pmap_invalidate_page(pmap_t, vm_offset_t);
 void	pmap_invalidate_range(pmap_t, vm_offset_t, vm_offset_t);
 void	pmap_invalidate_all(pmap_t);
 void	pmap_invalidate_cache(void);
+void	pmap_invalidate_cache_pages(vm_page_t *pages, int count);
+void	pmap_invalidate_cache_range(vm_offset_t sva, vm_offset_t eva);
 
 #endif /* _KERNEL */
 

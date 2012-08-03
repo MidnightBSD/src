@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/ptrace.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ptrace.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/i386/include/ptrace.h,v 1.14 2005/05/31 09:43:04 dfr Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PTRACE_H_
@@ -38,5 +38,7 @@
 
 #define PT_GETXMMREGS	(PT_FIRSTMACH + 0)
 #define PT_SETXMMREGS	(PT_FIRSTMACH + 1)
+#define PT_GETXSTATE	(PT_FIRSTMACH + 2)
+#define PT_SETXSTATE	(PT_FIRSTMACH + 3)
 
 #endif

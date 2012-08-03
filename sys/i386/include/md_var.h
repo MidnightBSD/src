@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/md_var.h,v 1.6 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995 Bruce D. Evans.
  * All rights reserved.
@@ -27,7 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/md_var.h,v 1.76.2.3 2010/01/26 20:58:09 jhb Exp $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -36,11 +35,6 @@
 /*
  * Miscellaneous machine-dependent declarations.
  */
-
-extern	void	(*bcopy_vector)(const void *from, void *to, size_t len);
-extern	void	(*bzero_vector)(void *buf, size_t len);
-extern	int	(*copyin_vector)(const void *udaddr, void *kaddr, size_t len);
-extern	int	(*copyout_vector)(const void *kaddr, void *udaddr, size_t len);
 
 extern	long	Maxmem;
 extern	u_int	basemem;	/* PA of original top of base memory */
@@ -74,6 +68,7 @@ extern	int	szosigcode;
 #endif
 extern	uint32_t *vm_page_dump;
 extern	int	vm_page_dump_size;
+extern	int	workaround_erratum383;
 
 typedef void alias_for_inthand_t(u_int cs, u_int ef, u_int esp, u_int ss);
 struct	thread;
@@ -96,13 +91,9 @@ void	doreti_popl_fs(void) __asm(__STRING(doreti_popl_fs));
 void	doreti_popl_fs_fault(void) __asm(__STRING(doreti_popl_fs_fault));
 void	dump_add_page(vm_paddr_t);
 void	dump_drop_page(vm_paddr_t);
+void	initializecpu(void);
 void	enable_sse(void);
 void	fillw(int /*u_short*/ pat, void *base, size_t cnt);
-void	i486_bzero(void *buf, size_t len);
-void	i586_bcopy(const void *from, void *to, size_t len);
-void	i586_bzero(void *buf, size_t len);
-int	i586_copyin(const void *udaddr, void *kaddr, size_t len);
-int	i586_copyout(const void *kaddr, void *udaddr, size_t len);
 void	i686_pagezero(void *addr);
 void	sse2_pagezero(void *addr);
 void	init_AMD_Elan_sc520(void);

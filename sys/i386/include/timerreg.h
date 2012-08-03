@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/timerreg.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (C) 2005 TAKAHASHI Yoshihiro. All rights reserved.
  *
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/timerreg.h,v 1.2 2005/05/28 13:40:26 nyan Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -49,17 +49,6 @@
 #define	TIMER_CNTR1	(IO_TIMER1 + TIMER_REG_CNTR1)
 #define	TIMER_CNTR2	(IO_TIMER1 + TIMER_REG_CNTR2)
 #define	TIMER_MODE	(IO_TIMER1 + TIMER_REG_MODE)
-
-#define	timer_spkr_acquire() \
-	acquire_timer2(TIMER_SEL2 | TIMER_SQWAVE | TIMER_16BIT)
-#define	timer_spkr_release() \
-	release_timer2()
-
-#define	spkr_set_pitch(pitch) \
-	do { \
-		outb(TIMER_CNTR2, (pitch) & 0xff); \
-		outb(TIMER_CNTR2, (pitch) >> 8); \
-	} while(0)
 
 #endif /* _KERNEL */
 

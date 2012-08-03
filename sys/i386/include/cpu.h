@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/cpu.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cpu.h	5.4 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/i386/include/cpu.h,v 1.76 2006/05/11 17:29:24 phk Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -43,12 +43,6 @@
 #include <machine/psl.h>
 #include <machine/frame.h>
 #include <machine/segments.h>
-
-/*
- * definitions of cpu-dependent requirements
- * referenced in generic code
- */
-#undef	COPY_SIGCODE		/* don't copy sigcode above user stack in exec */
 
 #define	cpu_exec(p)	/* nothing */
 #define	cpu_swapin(p)	/* nothing */
@@ -63,7 +57,6 @@
 #ifdef _KERNEL
 extern char	btext[];
 extern char	etext[];
-extern u_int	tsc_present;
 
 void	cpu_halt(void);
 void	cpu_reset(void);
@@ -74,18 +67,11 @@ void	swi_vm(void *);
  * Return contents of in-cpu fast counter as a sort of "bogo-time"
  * for random-harvesting purposes.
  */
-static __inline u_int64_t
+static __inline uint64_t
 get_cyclecount(void)
 {
-#if defined(I486_CPU) || defined(KLD_MODULE)
-	struct bintime bt;
 
-	if (!tsc_present) {
-		binuptime(&bt);
-		return (bt.frac ^ bt.sec);
-	}
-#endif
-	return (rdtsc());
+	return (cpu_ticks());
 }
 
 #endif

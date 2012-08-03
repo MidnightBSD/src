@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/cserial.h,v 1.4 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Ioctl interface to Cronyx serial drivers.
  *
@@ -19,7 +19,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: cserial.h,v 1.4.2.2 2005/11/09 13:01:35 rik Exp $
- * $FreeBSD: src/sys/i386/include/cserial.h,v 1.3 2006/01/30 13:34:57 rik Exp $
+ * $FreeBSD$
  */
 
 /*

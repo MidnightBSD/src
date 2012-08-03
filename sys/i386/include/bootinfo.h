@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/bootinfo.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (C) 1994 by Rodney W. Grimes, Milwaukie, Oregon  97222
  * All rights reserved.
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/bootinfo.h,v 1.15.22.1 2007/11/01 18:19:19 jhb Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_BOOTINFO_H_
@@ -66,6 +66,13 @@ struct bootinfo {
 	u_int32_t	bi_kernend;		/* end of kernel space */
 	u_int32_t	bi_envp;		/* environment */
 	u_int32_t	bi_modulep;		/* preloaded modules */
+	uint32_t	bi_memdesc_version;	/* EFI memory desc version */
+	uint64_t	bi_memdesc_size;	/* sizeof EFI memory desc */
+	uint64_t	bi_memmap;		/* pa of EFI memory map */
+	uint64_t	bi_memmap_size;		/* size of EFI memory map */
+	uint64_t	bi_hcdp;		/* DIG64 HCDP table */
+	uint64_t	bi_fpswa;		/* FPSWA interface */
+	uint64_t	bi_systab;		/* pa of EFI system table */
 };
 
 #ifdef _KERNEL

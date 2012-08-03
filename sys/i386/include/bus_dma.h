@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/bus_dma.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Scott Long
  * All rights reserved.
@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/i386/include/bus_dma.h,v 1.28 2005/03/14 16:46:27 scottl Exp $ */
+/* $FreeBSD$ */
 
 #ifndef _I386_BUS_DMA_H_
 #define _I386_BUS_DMA_H_

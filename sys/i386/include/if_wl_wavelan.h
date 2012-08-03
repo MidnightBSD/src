@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/i386/include/if_wl_wavelan.h,v 1.7 2005/01/06 22:18:15 imp Exp $ */
+/* $MidnightBSD: src/sys/i386/include/if_wl_wavelan.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

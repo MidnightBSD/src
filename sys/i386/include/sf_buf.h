@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/sf_buf.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003, 2005 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -24,12 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/sf_buf.h,v 1.4 2005/02/13 06:23:13 alc Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SF_BUF_H_
 #define _MACHINE_SF_BUF_H_
 
+#include <sys/_cpuset.h>
 #include <sys/queue.h>
 
 struct vm_page;
@@ -41,7 +42,7 @@ struct sf_buf {
 	vm_offset_t	kva;		/* va of mapping */
 	int		ref_count;	/* usage of this mapping */
 #ifdef SMP
-	cpumask_t	cpumask;	/* cpus on which mapping is valid */
+	cpuset_t	cpumask;	/* cpus on which mapping is valid */
 #endif
 };
 
@@ -58,5 +59,7 @@ sf_buf_page(struct sf_buf *sf)
 
 	return (sf->m);
 }
+
+boolean_t sf_buf_invalidate_cache(vm_page_t m);
 
 #endif /* !_MACHINE_SF_BUF_H_ */

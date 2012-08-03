@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/varargs.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 1990, 1993
@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)varargs.h	8.2 (Berkeley) 3/22/94
- * $FreeBSD: src/sys/i386/include/varargs.h,v 1.14 2005/03/02 21:33:26 joerg Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_VARARGS_H_

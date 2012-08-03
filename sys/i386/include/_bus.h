@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/_bus.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 M. Warner Losh.
  * All rights reserved.
@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/_bus.h,v 1.1 2005/04/18 21:45:33 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef I386_INCLUDE__BUS_H

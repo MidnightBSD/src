@@ -48040,7 +48040,6 @@ sys/i386/include/_limits.h -text
 sys/i386/include/_stdint.h -text
 sys/i386/include/_types.h -text
 sys/i386/include/acpica_machdep.h -text
-sys/i386/include/apicreg.h -text
 sys/i386/include/apicvar.h -text
 sys/i386/include/apm_bios.h -text
 sys/i386/include/apm_segments.h -text
@@ -48079,8 +48078,6 @@ sys/i386/include/memdev.h -text
 sys/i386/include/metadata.h -text
 sys/i386/include/minidump.h -text
 sys/i386/include/mp_watchdog.h -text
-sys/i386/include/mptable.h -text
-sys/i386/include/mutex.h -text
 sys/i386/include/nexusvar.h -text
 sys/i386/include/npx.h -text
 sys/i386/include/param.h -text
@@ -48091,7 +48088,6 @@ sys/i386/include/pcb.h -text
 sys/i386/include/pcb_ext.h -text
 sys/i386/include/pci_cfgreg.h -text
 sys/i386/include/pcpu.h -text
-sys/i386/include/pecoff_machdep.h -text
 sys/i386/include/perfmon.h -text
 sys/i386/include/pmap.h -text
 sys/i386/include/pmc_mdep.h -text

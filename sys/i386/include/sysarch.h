@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/sysarch.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/sysarch.h,v 1.23 2005/04/13 22:57:17 peter Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -48,6 +48,7 @@
 #define I386_SET_FSBASE	8
 #define I386_GET_GSBASE	9
 #define I386_SET_GSBASE	10
+#define	I386_GET_XFPUSTATE 11
 
 /* These four only exist when running an i386 binary on amd64 */
 #define	_AMD64_GET_FSBASE	128
@@ -70,6 +71,11 @@ struct i386_ioperm_args {
 struct i386_vm86_args {
 	int	sub_op;			/* sub-operation to perform */
 	char	*sub_args;		/* args */
+};
+
+struct i386_get_xfpustate {
+	void *addr;
+	int len;
 };
 
 #ifndef _KERNEL

@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/speaker.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*
- * $FreeBSD: src/sys/i386/include/speaker.h,v 1.8 2005/11/11 09:57:31 ru Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SPEAKER_H_

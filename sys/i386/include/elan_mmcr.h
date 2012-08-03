@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/elan_mmcr.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 John Birrell
  * All rights reserved.
@@ -33,7 +33,7 @@
  * bytes. Ignore fields with the 'pad' prefix - they are only present for
  * alignment purposes.
  *
- * $FreeBSD: src/sys/i386/include/elan_mmcr.h,v 1.2 2005/01/06 22:05:28 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ELAN_MMCR_H_

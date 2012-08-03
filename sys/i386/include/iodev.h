@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/iodev.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Mark R V Murray
  * All rights reserved.
@@ -24,11 +24,24 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/iodev.h,v 1.1 2004/08/01 11:40:53 markm Exp $
+ * $FreeBSD$
  */
+#ifndef _MACHINE_IODEV_H_
+#define	_MACHINE_IODEV_H_
 
-#define CDEV_MAJOR	2
-#define CDEV_MINOR_IO	14
+#ifdef _KERNEL
+#include <machine/cpufunc.h>
 
-d_open_t	ioopen;
-d_close_t	ioclose;
+#define	iodev_read_1	inb
+#define	iodev_read_2	inw
+#define	iodev_read_4	inl
+#define	iodev_write_1	outb
+#define	iodev_write_2	outw
+#define	iodev_write_4	outl
+
+int	 iodev_open(struct thread *td);
+int	 iodev_close(struct thread *td);
+int	 iodev_ioctl(u_long cmd, caddr_t data);
+
+#endif /* _KERNEL */
+#endif /* _MACHINE_IODEV_H_ */

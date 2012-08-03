@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/cpufunc.h,v 1.3 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/cpufunc.h,v 1.145.2.3 2010/01/26 20:58:09 jhb Exp $
  */
 
 /*
@@ -43,15 +42,26 @@
 #error this file needs sys/cdefs.h as a prerequisite
 #endif
 
+#ifdef XEN
+extern void xen_cli(void);
+extern void xen_sti(void);
+extern u_int xen_rcr2(void);
+extern void xen_load_cr3(u_int data);
+extern void xen_tlb_flush(void);
+extern void xen_invlpg(u_int addr);
+extern void write_eflags(u_int eflags);
+extern u_int read_eflags(void);
+#endif
+
 struct region_descriptor;
 
-#define readb(va)	(*(volatile u_int8_t *) (va))
-#define readw(va)	(*(volatile u_int16_t *) (va))
-#define readl(va)	(*(volatile u_int32_t *) (va))
+#define readb(va)	(*(volatile uint8_t *) (va))
+#define readw(va)	(*(volatile uint16_t *) (va))
+#define readl(va)	(*(volatile uint32_t *) (va))
 
-#define writeb(va, d)	(*(volatile u_int8_t *) (va) = (d))
-#define writew(va, d)	(*(volatile u_int16_t *) (va) = (d))
-#define writel(va, d)	(*(volatile u_int32_t *) (va) = (d))
+#define writeb(va, d)	(*(volatile uint8_t *) (va) = (d))
+#define writew(va, d)	(*(volatile uint16_t *) (va) = (d))
+#define writel(va, d)	(*(volatile uint32_t *) (va) = (d))
 
 #if defined(__GNUCLIKE_ASM) && defined(__CC_SUPPORTS___INLINE)
 
@@ -66,7 +76,7 @@ bsfl(u_int mask)
 {
 	u_int	result;
 
-	__asm __volatile("bsfl %1,%0" : "=r" (result) : "rm" (mask));
+	__asm("bsfl %1,%0" : "=r" (result) : "rm" (mask) : "cc");
 	return (result);
 }
 
@@ -75,7 +85,7 @@ bsrl(u_int mask)
 {
 	u_int	result;
 
-	__asm __volatile("bsrl %1,%0" : "=r" (result) : "rm" (mask));
+	__asm("bsrl %1,%0" : "=r" (result) : "rm" (mask) : "cc");
 	return (result);
 }
 
@@ -89,7 +99,11 @@ clflush(u_long addr)
 static __inline void
 disable_intr(void)
 {
+#ifdef XEN
+	xen_cli();
+#else	
 	__asm __volatile("cli" : : : "memory");
+#endif
 }
 
 static __inline void
@@ -111,7 +125,33 @@ cpuid_count(u_int ax, u_int cx, u_int *p)
 static __inline void
 enable_intr(void)
 {
+#ifdef XEN
+	xen_sti();
+#else
 	__asm __volatile("sti");
+#endif
+}
+
+static __inline void
+cpu_monitor(const void *addr, u_long extensions, u_int hints)
+{
+
+	__asm __volatile("monitor"
+	    : : "a" (addr), "c" (extensions), "d" (hints));
+}
+
+static __inline void
+cpu_mwait(u_long extensions, u_int hints)
+{
+
+	__asm __volatile("mwait" : : "a" (hints), "c" (extensions));
+}
+
+static __inline void
+mfence(void)
+{
+
+	__asm __volatile("mfence" : : : "memory");
 }
 
 static __inline void
@@ -153,70 +193,12 @@ halt(void)
 	__asm __volatile("hlt");
 }
 
-#if !defined(__GNUCLIKE_BUILTIN_CONSTANT_P) || __GNUCLIKE_ASM < 3
-
-#define	inb(port)		inbv(port)
-#define	outb(port, data)	outbv(port, data)
-
-#else /* __GNUCLIKE_BUILTIN_CONSTANT_P && __GNUCLIKE_ASM >= 3 */
-
-/*
- * The following complications are to get around gcc not having a
- * constraint letter for the range 0..255.  We still put "d" in the
- * constraint because "i" isn't a valid constraint when the port
- * isn't constant.  This only matters for -O0 because otherwise
- * the non-working version gets optimized away.
- * 
- * Use an expression-statement instead of a conditional expression
- * because gcc-2.6.0 would promote the operands of the conditional
- * and produce poor code for "if ((inb(var) & const1) == const2)".
- *
- * The unnecessary test `(port) < 0x10000' is to generate a warning if
- * the `port' has type u_short or smaller.  Such types are pessimal.
- * This actually only works for signed types.  The range check is
- * careful to avoid generating warnings.
- */
-#define	inb(port) __extension__ ({					\
-	u_char	_data;							\
-	if (__builtin_constant_p(port) && ((port) & 0xffff) < 0x100	\
-	    && (port) < 0x10000)					\
-		_data = inbc(port);					\
-	else								\
-		_data = inbv(port);					\
-	_data; })
-
-#define	outb(port, data) (						\
-	__builtin_constant_p(port) && ((port) & 0xffff) < 0x100		\
-	&& (port) < 0x10000						\
-	? outbc(port, data) : outbv(port, data))
-
 static __inline u_char
-inbc(u_int port)
+inb(u_int port)
 {
 	u_char	data;
 
-	__asm __volatile("inb %1,%0" : "=a" (data) : "id" ((u_short)(port)));
-	return (data);
-}
-
-static __inline void
-outbc(u_int port, u_char data)
-{
-	__asm __volatile("outb %0,%1" : : "a" (data), "id" ((u_short)(port)));
-}
-
-#endif /* __GNUCLIKE_BUILTIN_CONSTANT_P  && __GNUCLIKE_ASM >= 3*/
-
-static __inline u_char
-inbv(u_int port)
-{
-	u_char	data;
-	/*
-	 * We use %%dx and not %1 here because i/o is done at %dx and not at
-	 * %edx, while gcc generates inferior code (movw instead of movl)
-	 * if we tell it to load (u_short) port.
-	 */
-	__asm __volatile("inb %%dx,%0" : "=a" (data) : "d" (port));
+	__asm __volatile("inb %w1, %0" : "=a" (data) : "Nd" (port));
 	return (data);
 }
 
@@ -225,33 +207,33 @@ inl(u_int port)
 {
 	u_int	data;
 
-	__asm __volatile("inl %%dx,%0" : "=a" (data) : "d" (port));
+	__asm __volatile("inl %w1, %0" : "=a" (data) : "Nd" (port));
 	return (data);
 }
 
 static __inline void
-insb(u_int port, void *addr, size_t cnt)
+insb(u_int port, void *addr, size_t count)
 {
 	__asm __volatile("cld; rep; insb"
-			 : "+D" (addr), "+c" (cnt)
+			 : "+D" (addr), "+c" (count)
 			 : "d" (port)
 			 : "memory");
 }
 
 static __inline void
-insw(u_int port, void *addr, size_t cnt)
+insw(u_int port, void *addr, size_t count)
 {
 	__asm __volatile("cld; rep; insw"
-			 : "+D" (addr), "+c" (cnt)
+			 : "+D" (addr), "+c" (count)
 			 : "d" (port)
 			 : "memory");
 }
 
 static __inline void
-insl(u_int port, void *addr, size_t cnt)
+insl(u_int port, void *addr, size_t count)
 {
 	__asm __volatile("cld; rep; insl"
-			 : "+D" (addr), "+c" (cnt)
+			 : "+D" (addr), "+c" (count)
 			 : "d" (port)
 			 : "memory");
 }
@@ -267,63 +249,50 @@ inw(u_int port)
 {
 	u_short	data;
 
-	__asm __volatile("inw %%dx,%0" : "=a" (data) : "d" (port));
+	__asm __volatile("inw %w1, %0" : "=a" (data) : "Nd" (port));
 	return (data);
 }
 
 static __inline void
-outbv(u_int port, u_char data)
+outb(u_int port, u_char data)
 {
-	u_char	al;
-	/*
-	 * Use an unnecessary assignment to help gcc's register allocator.
-	 * This make a large difference for gcc-1.40 and a tiny difference
-	 * for gcc-2.6.0.  For gcc-1.40, al had to be ``asm("ax")'' for
-	 * best results.  gcc-2.6.0 can't handle this.
-	 */
-	al = data;
-	__asm __volatile("outb %0,%%dx" : : "a" (al), "d" (port));
+	__asm __volatile("outb %0, %w1" : : "a" (data), "Nd" (port));
 }
 
 static __inline void
 outl(u_int port, u_int data)
 {
-	/*
-	 * outl() and outw() aren't used much so we haven't looked at
-	 * possible micro-optimizations such as the unnecessary
-	 * assignment for them.
-	 */
-	__asm __volatile("outl %0,%%dx" : : "a" (data), "d" (port));
+	__asm __volatile("outl %0, %w1" : : "a" (data), "Nd" (port));
 }
 
 static __inline void
-outsb(u_int port, const void *addr, size_t cnt)
+outsb(u_int port, const void *addr, size_t count)
 {
 	__asm __volatile("cld; rep; outsb"
-			 : "+S" (addr), "+c" (cnt)
+			 : "+S" (addr), "+c" (count)
 			 : "d" (port));
 }
 
 static __inline void
-outsw(u_int port, const void *addr, size_t cnt)
+outsw(u_int port, const void *addr, size_t count)
 {
 	__asm __volatile("cld; rep; outsw"
-			 : "+S" (addr), "+c" (cnt)
+			 : "+S" (addr), "+c" (count)
 			 : "d" (port));
 }
 
 static __inline void
-outsl(u_int port, const void *addr, size_t cnt)
+outsl(u_int port, const void *addr, size_t count)
 {
 	__asm __volatile("cld; rep; outsl"
-			 : "+S" (addr), "+c" (cnt)
+			 : "+S" (addr), "+c" (count)
 			 : "d" (port));
 }
 
 static __inline void
 outw(u_int port, u_short data)
 {
-	__asm __volatile("outw %0,%%dx" : : "a" (data), "d" (port));
+	__asm __volatile("outw %0, %w1" : : "a" (data), "Nd" (port));
 }
 
 static __inline void
@@ -333,7 +302,11 @@ ia32_pause(void)
 }
 
 static __inline u_int
+#ifdef XEN
+_read_eflags(void)
+#else	
 read_eflags(void)
+#endif
 {
 	u_int	ef;
 
@@ -368,6 +341,15 @@ rdtsc(void)
 	return (rv);
 }
 
+static __inline uint32_t
+rdtsc32(void)
+{
+	uint32_t rv;
+
+	__asm __volatile("rdtsc" : "=a" (rv) : : "edx");
+	return (rv);
+}
+
 static __inline void
 wbinvd(void)
 {
@@ -375,7 +357,11 @@ wbinvd(void)
 }
 
 static __inline void
+#ifdef XEN
+_write_eflags(u_int ef)
+#else
 write_eflags(u_int ef)
+#endif
 {
 	__asm __volatile("pushl %0; popfl" : : "r" (ef));
 }
@@ -407,6 +393,9 @@ rcr2(void)
 {
 	u_int	data;
 
+#ifdef XEN
+	return (xen_rcr2());
+#endif
 	__asm __volatile("movl %%cr2,%0" : "=r" (data));
 	return (data);
 }
@@ -414,8 +403,11 @@ rcr2(void)
 static __inline void
 load_cr3(u_int data)
 {
-
+#ifdef XEN
+	xen_load_cr3(data);
+#else
 	__asm __volatile("movl %0,%%cr3" : : "r" (data) : "memory");
+#endif
 }
 
 static __inline u_int
@@ -448,8 +440,11 @@ rcr4(void)
 static __inline void
 invltlb(void)
 {
-
+#ifdef XEN
+	xen_tlb_flush();
+#else	
 	load_cr3(rcr3());
+#endif
 }
 
 /*
@@ -460,14 +455,18 @@ static __inline void
 invlpg(u_int addr)
 {
 
+#ifdef XEN
+	xen_invlpg(addr);
+#else
 	__asm __volatile("invlpg %0" : : "m" (*(char *)addr) : "memory");
+#endif
 }
 
-static __inline u_int
+static __inline u_short
 rfs(void)
 {
-	u_int sel;
-	__asm __volatile("movl %%fs,%0" : "=rm" (sel));
+	u_short sel;
+	__asm __volatile("movw %%fs,%0" : "=rm" (sel));
 	return (sel);
 }
 
@@ -479,11 +478,11 @@ rgdt(void)
 	return (gdtr);
 }
 
-static __inline u_int
+static __inline u_short
 rgs(void)
 {
-	u_int sel;
-	__asm __volatile("movl %%gs,%0" : "=rm" (sel));
+	u_short sel;
+	__asm __volatile("movw %%gs,%0" : "=rm" (sel));
 	return (sel);
 }
 
@@ -503,11 +502,11 @@ rldt(void)
 	return (ldtr);
 }
 
-static __inline u_int
+static __inline u_short
 rss(void)
 {
-	u_int sel;
-	__asm __volatile("movl %%ss,%0" : "=rm" (sel));
+	u_short sel;
+	__asm __volatile("movw %%ss,%0" : "=rm" (sel));
 	return (sel);
 }
 
@@ -520,15 +519,15 @@ rtr(void)
 }
 
 static __inline void
-load_fs(u_int sel)
+load_fs(u_short sel)
 {
-	__asm __volatile("movl %0,%%fs" : : "rm" (sel));
+	__asm __volatile("movw %0,%%fs" : : "rm" (sel));
 }
 
 static __inline void
-load_gs(u_int sel)
+load_gs(u_short sel)
 {
-	__asm __volatile("movl %0,%%gs" : : "rm" (sel));
+	__asm __volatile("movw %0,%%gs" : : "rm" (sel));
 }
 
 static __inline void
@@ -703,9 +702,9 @@ void	halt(void);
 void	ia32_pause(void);
 u_char	inb(u_int port);
 u_int	inl(u_int port);
-void	insb(u_int port, void *addr, size_t cnt);
-void	insl(u_int port, void *addr, size_t cnt);
-void	insw(u_int port, void *addr, size_t cnt);
+void	insb(u_int port, void *addr, size_t count);
+void	insl(u_int port, void *addr, size_t count);
+void	insw(u_int port, void *addr, size_t count);
 register_t	intr_disable(void);
 void	intr_restore(register_t ef);
 void	invd(void);
@@ -725,14 +724,14 @@ void	load_dr4(u_int dr4);
 void	load_dr5(u_int dr5);
 void	load_dr6(u_int dr6);
 void	load_dr7(u_int dr7);
-void	load_fs(u_int sel);
-void	load_gs(u_int sel);
+void	load_fs(u_short sel);
+void	load_gs(u_short sel);
 void	ltr(u_short sel);
 void	outb(u_int port, u_char data);
 void	outl(u_int port, u_int data);
-void	outsb(u_int port, const void *addr, size_t cnt);
-void	outsl(u_int port, const void *addr, size_t cnt);
-void	outsw(u_int port, const void *addr, size_t cnt);
+void	outsb(u_int port, const void *addr, size_t count);
+void	outsl(u_int port, const void *addr, size_t count);
+void	outsw(u_int port, const void *addr, size_t count);
 void	outw(u_int port, u_short data);
 u_int	rcr0(void);
 u_int	rcr2(void);

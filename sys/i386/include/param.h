@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/param.h,v 1.3 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,8 +31,13 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/i386/include/param.h,v 1.81 2006/01/09 06:05:56 imp Exp $
+ * $FreeBSD$
  */
+
+#include <machine/_align.h>
+
+#ifndef _I386_INCLUDE_PARAM_H_
+#define	_I386_INCLUDE_PARAM_H_
 
 /*
  * Machine dependent constants for Intel 386.
@@ -50,13 +55,10 @@
 #define _ALIGN(p)	(((unsigned)(p) + _ALIGNBYTES) & ~_ALIGNBYTES)
 #endif
 
-#ifndef _NO_NAMESPACE_POLLUTION
 
 #define __HAVE_ACPI
+#define	__HAVE_PIR
 #define __PCI_REROUTE_INTERRUPT
-
-#ifndef _MACHINE_PARAM_H_
-#define	_MACHINE_PARAM_H_
 
 #ifndef MACHINE
 #define MACHINE		"i386"
@@ -67,13 +69,29 @@
 #define MID_MACHINE	MID_I386
 
 #if defined(SMP) || defined(KLD_MODULE)
+#ifndef MAXCPU
 #define MAXCPU		32
+#endif
 #else
 #define MAXCPU		1
-#endif /* SMP */
+#endif /* SMP || KLD_MODULE */
 
 #define ALIGNBYTES	_ALIGNBYTES
 #define ALIGN(p)	_ALIGN(p)
+/*
+ * ALIGNED_POINTER is a boolean macro that checks whether an address
+ * is valid to fetch data elements of type t from on this architecture.
+ * This does not reflect the optimal alignment, just the possibility
+ * (within reasonable limits). 
+ */
+#define	ALIGNED_POINTER(p, t)	1
+
+/*
+ * CACHE_LINE_SIZE is the compile-time maximum cache line size for an
+ * architecture.  It should be used with appropriate caution.
+ */
+#define	CACHE_LINE_SHIFT	7
+#define	CACHE_LINE_SIZE		(1 << CACHE_LINE_SHIFT)
 
 #define PAGE_SHIFT	12		/* LOG2(PAGE_SIZE) */
 #define PAGE_SIZE	(1<<PAGE_SHIFT)	/* bytes/page */
@@ -83,9 +101,11 @@
 #ifdef PAE
 #define NPGPTD		4
 #define PDRSHIFT	21		/* LOG2(NBPDR) */
+#define NPGPTD_SHIFT	9
 #else
 #define NPGPTD		1
 #define PDRSHIFT	22		/* LOG2(NBPDR) */
+#define NPGPTD_SHIFT	10
 #endif
 
 #define NBPTD		(NPGPTD<<PAGE_SHIFT)
@@ -93,6 +113,8 @@
 #define NPDEPG		(PAGE_SIZE/(sizeof (pd_entry_t)))
 #define NBPDR		(1<<PDRSHIFT)	/* bytes/page dir */
 #define PDRMASK		(NBPDR-1)
+
+#define	MAXPAGESIZES	2	/* maximum number of supported page sizes */
 
 #define IOPAGES	2		/* pages of i/o permission bitmap */
 
@@ -134,5 +156,4 @@
 
 #define	pgtok(x)		((x) * (PAGE_SIZE / 1024))
 
-#endif /* !_MACHINE_PARAM_H_ */
-#endif /* !_NO_NAMESPACE_POLLUTION */
+#endif /* !_I386_INCLUDE_PARAM_H_ */

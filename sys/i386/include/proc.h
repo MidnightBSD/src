@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/proc.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -28,7 +28,6 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)proc.h	7.1 (Berkeley) 5/15/91
- * $FreeBSD: src/sys/i386/include/proc.h,v 1.26.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -52,11 +51,14 @@ struct proc_ldt {
 struct mdthread {
 	int	md_spinlock_count;	/* (k) */
 	register_t md_saved_flags;	/* (k) */
+	register_t md_spurflt_addr;	/* (k) Spurious page fault address. */
 };
 
 struct mdproc {
 	struct proc_ldt *md_ldt;	/* (t) per-process ldt */
 };
+
+#define	KINFO_PROC_SIZE 768
 
 #ifdef	_KERNEL
 
@@ -76,6 +78,12 @@ void	user_ldt_deref(struct proc_ldt *pldt);
 
 extern struct mtx dt_lock;
 
+struct syscall_args {
+	u_int code;
+	struct sysent *callp;
+	register_t args[8];
+	int narg;
+};
 #endif	/* _KERNEL */
 
 #endif /* !_MACHINE_PROC_H_ */

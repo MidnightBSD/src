@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/in_cksum.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -30,7 +30,7 @@
  *	from tahoe:	in_cksum.c	1.2	86/01/05
  *	from:		@(#)in_cksum.c	1.3 (Berkeley) 1/19/91
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
- * $FreeBSD: src/sys/i386/include/in_cksum.h,v 1.17.10.1 2007/10/26 07:15:04 bz Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_
@@ -55,12 +55,13 @@
  * therefore always exactly five 32-bit words.
  */
 #if defined(__GNUCLIKE_ASM) && !defined(__INTEL_COMPILER)
+#if defined(IPVERSION) && (IPVERSION == 4)
 static __inline u_int
 in_cksum_hdr(const struct ip *ip)
 {
-	register u_int sum = 0;
+	u_int sum = 0;
 
-	__asm __volatile (
+	__asm(
 		"addl %1, %0\n"
 		"adcl %2, %0\n"
 		"adcl %3, %0\n"
@@ -73,6 +74,7 @@ in_cksum_hdr(const struct ip *ip)
 		  "g" (((const u_int32_t *)ip)[2]),
 		  "g" (((const u_int32_t *)ip)[3]),
 		  "g" (((const u_int32_t *)ip)[4])
+		: "cc"
 	);
 	sum = (sum & 0xffff) + (sum >> 16);
 	if (sum > 0xffff)
@@ -88,16 +90,17 @@ in_cksum_update(struct ip *ip)
 	__tmpsum = (int)ntohs(ip->ip_sum) + 256;
 	ip->ip_sum = htons(__tmpsum + (__tmpsum >> 16));
 }
+#endif
 
 static __inline u_short
 in_addword(u_short sum, u_short b)
 {
-	/* __volatile is necessary because the condition codes are used. */
-	__asm __volatile (
+	__asm(
 		"addw %1, %0\n"
 		"adcw $0, %0"
 		: "+r" (sum)
-		: "r" (b)
+		: "g" (b)
+		: "cc"
 	);
 	return (sum);
 }
@@ -105,14 +108,14 @@ in_addword(u_short sum, u_short b)
 static __inline u_short
 in_pseudo(u_int sum, u_int b, u_int c)
 {
-	/* __volatile is necessary because the condition codes are used. */
-	__asm __volatile (
+	__asm(
 		"addl %1, %0\n"
 		"adcl %2, %0\n"
 		"adcl $0, %0"
 		: "+r" (sum)
 		: "g" (b),
 		  "g" (c)
+		: "cc"
 	);
 	sum = (sum & 0xffff) + (sum >> 16);
 	if (sum > 0xffff)
@@ -121,6 +124,7 @@ in_pseudo(u_int sum, u_int b, u_int c)
 }
 
 #else
+#if defined(IPVERSION) && (IPVERSION == 4)
 #define	in_cksum_update(ip) \
 	do { \
 		int __tmpsum; \
@@ -129,10 +133,13 @@ in_pseudo(u_int sum, u_int b, u_int c)
 	} while(0)
 
 #endif
+#endif
 
 #ifdef _KERNEL
 #if !defined(__GNUCLIKE_ASM) || defined(__INTEL_COMPILER)
+#if defined(IPVERSION) && (IPVERSION == 4)
 u_int in_cksum_hdr(const struct ip *ip);
+#endif
 u_short in_addword(u_short sum, u_short b);
 u_short in_pseudo(u_int sum, u_int b, u_int c);
 #endif

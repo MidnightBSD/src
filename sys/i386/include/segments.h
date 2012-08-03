@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/segments.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz
  * Copyright (c) 1990 The Regents of the University of California.
@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)segments.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/i386/include/segments.h,v 1.38 2005/04/13 22:57:17 peter Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SEGMENTS_H_
@@ -48,7 +48,11 @@
  */
 
 #define	ISPL(s)	((s)&3)		/* what is the priority level of a selector */
+#ifdef XEN
+#define	SEL_KPL	1		/* kernel priority level */
+#else
 #define	SEL_KPL	0		/* kernel priority level */
+#endif
 #define	SEL_UPL	3		/* user priority level */
 #define	ISLDT(s)	((s)&SEL_LDT)	/* is it local or global */
 #define	SEL_LDT	4		/* local descriptor table */
@@ -71,6 +75,13 @@ struct	segment_descriptor	{
 	unsigned sd_gran:1 ;		/* limit granularity (byte/page units)*/
 	unsigned sd_hibase:8 ;		/* segment base address  (msb) */
 } ;
+
+#define	USD_GETBASE(sd)		(((sd)->sd_lobase) | (sd)->sd_hibase << 24) 
+#define	USD_SETBASE(sd, b)	(sd)->sd_lobase = (b);  \
+				(sd)->sd_hibase = ((b) >> 24);
+#define	USD_GETLIMIT(sd)	(((sd)->sd_lolimit) | (sd)->sd_hilimit << 16)
+#define	USD_SETLIMIT(sd, l)	(sd)->sd_lolimit = (l); \
+				(sd)->sd_hilimit = ((l) >> 16);
 
 /*
  * Gate descriptors (e.g. indirect descriptors)
@@ -197,6 +208,7 @@ struct region_descriptor {
 #define	IDT_XF		19	/* #XF: SIMD Floating-Point Exception */
 #define	IDT_IO_INTS	NRSVIDT	/* Base of IDT entries for I/O interrupts. */
 #define	IDT_SYSCALL	0x80	/* System Call Interrupt Vector */
+#define	IDT_DTRACE_RET	0x92	/* DTrace pid provider Interrupt Vector */
 
 /*
  * Entries in the Global Descriptor Table (GDT)
@@ -223,7 +235,11 @@ struct region_descriptor {
 #define	GBIOSARGS_SEL	17	/* BIOS interface (Arguments) */
 #define	GNDIS_SEL	18	/* For the NDIS layer */
 
+#ifdef XEN
+#define	NGDT 		9
+#else
 #define	NGDT 		19
+#endif
 
 /*
  * Entries in the Local Descriptor Table (LDT)
@@ -241,10 +257,16 @@ struct region_descriptor {
 
 #ifdef _KERNEL
 extern int	_default_ldt;
+#ifdef XEN
+extern struct proc_ldt default_proc_ldt;
+extern union descriptor *gdt;
+extern union descriptor *ldt;
+#else
 extern union descriptor gdt[];
+extern union descriptor ldt[NLDT];
+#endif
 extern struct soft_segment_descriptor gdt_segs[];
 extern struct gate_descriptor *idt;
-extern union descriptor ldt[NLDT];
 extern struct region_descriptor r_gdt, r_idt;
 
 void	lgdt(struct region_descriptor *rdp);

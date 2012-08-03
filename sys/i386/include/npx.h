@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/npx.h,v 1.3 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +31,6 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)npx.h	5.3 (Berkeley) 1/18/91
- * $FreeBSD: src/sys/i386/include/npx.h,v 1.29 2005/05/12 12:47:40 nyan Exp $
  */
 
 /*
@@ -102,6 +101,11 @@ struct  xmmacc {
 	u_char	xmm_bytes[16];
 };
 
+/* Contents of the upper 16 bytes of each AVX extended accumulator */
+struct  ymmacc {
+	uint8_t  ymm_bytes[16];
+};
+
 struct  savexmm {
 	struct	envxmm	sv_env;
 	struct {
@@ -116,6 +120,28 @@ union	savefpu {
 	struct	save87	sv_87;
 	struct	savexmm	sv_xmm;
 };
+
+struct xstate_hdr {
+	uint64_t xstate_bv;
+	uint8_t xstate_rsrv0[16];
+	uint8_t	xstate_rsrv[40];
+};
+
+struct savexmm_xstate {
+	struct xstate_hdr sx_hd;
+	struct ymmacc	sx_ymm[16];
+};
+
+struct savexmm_ymm {
+	struct	envxmm	sv_env;
+	struct {
+		struct fpacc87	fp_acc;
+		int8_t		fp_pad[6];      /* padding */
+	} sv_fp[8];
+	struct xmmacc	sv_xmm[16];
+	uint8_t sv_pad[96];
+	struct savexmm_xstate sv_xstate;
+} __aligned(64);
 
 /*
  * The hardware default control word for i387's and later coprocessors is
@@ -139,23 +165,32 @@ union	savefpu {
 
 #ifdef _KERNEL
 
-#define	IO_NPX		0x0F0		/* Numeric Coprocessor */
-#define	IO_NPXSIZE	16		/* 80387/80487 NPX registers */
-
-#define	IRQ_NPX		13
-
-/* full reset on some systems, NOP on others */
-#define npx_full_reset() outb(IO_NPX + 1, 0)
+#define	PCB_USER_FPU(pcb) (((pcb)->pcb_flags & PCB_KERNNPX) == 0)
 
 int	npxdna(void);
 void	npxdrop(void);
 void	npxexit(struct thread *td);
 int	npxformat(void);
-int	npxgetregs(struct thread *td, union savefpu *addr);
-void	npxinit(u_short control);
+int	npxgetregs(struct thread *td);
+void	npxinit(void);
 void	npxsave(union savefpu *addr);
 void	npxsetregs(struct thread *td, union savefpu *addr);
 int	npxtrap(void);
+void	npxuserinited(struct thread *);
+struct fpu_kern_ctx *fpu_kern_alloc_ctx(u_int flags);
+void	fpu_kern_free_ctx(struct fpu_kern_ctx *ctx);
+int	fpu_kern_enter(struct thread *td, struct fpu_kern_ctx *ctx,
+	    u_int flags);
+int	fpu_kern_leave(struct thread *td, struct fpu_kern_ctx *ctx);
+int	fpu_kern_thread(u_int flags);
+int	is_fpu_kern_thread(u_int flags);
+
+/*
+ * Flags for fpu_kern_enter() and fpu_kern_thread().
+ */
+#define	FPU_KERN_NORMAL	0x0000
+#define	FPU_KERN_NOWAIT	0x0001
+
 #endif
 
 #endif /* !_MACHINE_NPX_H_ */

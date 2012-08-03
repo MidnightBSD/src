@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/i386/include/resource.h,v 1.4 2005/01/06 22:18:15 imp Exp $ */
+/* $MidnightBSD: src/sys/i386/include/resource.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *

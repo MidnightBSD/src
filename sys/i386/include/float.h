@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/i386/include/float.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989 Regents of the University of California.
  * All rights reserved.
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)float.h	7.1 (Berkeley) 5/8/90
- * $FreeBSD: src/sys/i386/include/float.h,v 1.15 2005/01/06 22:18:15 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_FLOAT_H_

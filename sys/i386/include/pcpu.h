@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/i386/include/pcpu.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/i386/include/pcpu.h,v 1.3 2012/04/10 19:39:40 laffer1 Exp $ */
 /*-
  * Copyright (c) Peter Wemm
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/pcpu.h,v 1.50 2007/06/04 21:38:46 attilio Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PCPU_H_
@@ -44,7 +44,54 @@
  * to each CPU's data can be set up for things like "check curproc on all
  * other processors"
  */
+
+#if defined(XEN) || defined(XENHVM)
+#ifndef NR_VIRQS
+#define	NR_VIRQS	24
+#endif
+#ifndef NR_IPIS
+#define	NR_IPIS		2
+#endif
+#endif
+
+#if defined(XEN)
+
+/* These are peridically updated in shared_info, and then copied here. */
+struct shadow_time_info {
+	uint64_t tsc_timestamp;     /* TSC at last update of time vals.  */
+	uint64_t system_timestamp;  /* Time, in nanosecs, since boot.    */
+	uint32_t tsc_to_nsec_mul;
+	uint32_t tsc_to_usec_mul;
+	int tsc_shift;
+	uint32_t version;
+};
+
+#define	PCPU_XEN_FIELDS							\
+	;								\
+	u_int	pc_cr3;		/* track cr3 for R1/R3*/		\
+	vm_paddr_t *pc_pdir_shadow;					\
+	uint64_t pc_processed_system_time;				\
+	struct shadow_time_info pc_shadow_time;				\
+	int	pc_resched_irq;						\
+	int	pc_callfunc_irq;					\
+	int	pc_virq_to_irq[NR_VIRQS];				\
+	int	pc_ipi_to_irq[NR_IPIS]	
+
+#elif defined(XENHVM)
+
+#define	PCPU_XEN_FIELDS							\
+	;								\
+	unsigned int pc_last_processed_l1i;				\
+	unsigned int pc_last_processed_l2i
+
+#else /* !XEN && !XENHVM */
+
+#define PCPU_XEN_FIELDS
+
+#endif
+
 #define	PCPU_MD_FIELDS							\
+	char	pc_monitorbuf[128] __aligned(128); /* cache line */	\
 	struct	pcpu *pc_prvspace;	/* Self-reference */		\
 	struct	pmap *pc_curpmap;					\
 	struct	i386tss pc_common_tss;					\
@@ -54,7 +101,11 @@
 	int	pc_currentldt;						\
 	u_int   pc_acpi_id;		/* ACPI CPU id */		\
 	u_int	pc_apic_id;						\
-	int	pc_private_tss		/* Flag indicating private tss */
+	int	pc_private_tss;		/* Flag indicating private tss*/\
+	u_int	pc_cmci_mask		/* MCx banks for CMCI */	\
+	PCPU_XEN_FIELDS
+
+#ifdef _KERNEL
 
 
 #ifdef _KERNEL
@@ -64,7 +115,7 @@
 extern struct pcpu *pcpup;
 
 #define	PCPU_GET(member)	(pcpup->pc_ ## member)
-#define	PCPU_ADD(member, val)	(pcpu->pc_ ## member += (val))
+#define	PCPU_ADD(member, val)	(pcpup->pc_ ## member += (val))
 #define	PCPU_INC(member)	PCPU_ADD(member, 1)
 #define	PCPU_PTR(member)	(&pcpup->pc_ ## member)
 #define	PCPU_SET(member, val)	(pcpup->pc_ ## member = (val))
@@ -103,7 +154,7 @@ extern struct pcpu *pcpup;
 #define	__PCPU_GET(name) __extension__ ({				\
 	__pcpu_type(name) __res;					\
 	struct __s {							\
-		u_char	__b[MIN(sizeof(__pcpu_type(name)), 4)];		\
+		u_char	__b[MIN(sizeof(__res), 4)];			\
 	} __s;								\
 									\
 	if (sizeof(__res) == 1 || sizeof(__res) == 2 ||			\
@@ -125,7 +176,7 @@ extern struct pcpu *pcpup;
 #define	__PCPU_ADD(name, val) do {					\
 	__pcpu_type(name) __val;					\
 	struct __s {							\
-		u_char	__b[MIN(sizeof(__pcpu_type(name)), 4)];		\
+		u_char	__b[MIN(sizeof(__val), 4)];			\
 	} __s;								\
 									\
 	__val = (val);							\
@@ -165,10 +216,10 @@ extern struct pcpu *pcpup;
 /*
  * Sets the value of the per-cpu variable name to value val.
  */
-#define	__PCPU_SET(name, val) {						\
+#define	__PCPU_SET(name, val) do {					\
 	__pcpu_type(name) __val;					\
 	struct __s {							\
-		u_char	__b[MIN(sizeof(__pcpu_type(name)), 4)];		\
+		u_char	__b[MIN(sizeof(__val), 4)];			\
 	} __s;								\
 									\
 	__val = (val);							\
@@ -181,7 +232,7 @@ extern struct pcpu *pcpup;
 	} else {							\
 		*__PCPU_PTR(name) = __val;				\
 	}								\
-}
+} while (0)
 
 #define	PCPU_GET(member)	__PCPU_GET(pc_ ## member)
 #define	PCPU_ADD(member, val)	__PCPU_ADD(pc_ ## member, val)
@@ -189,12 +240,12 @@ extern struct pcpu *pcpup;
 #define	PCPU_PTR(member)	__PCPU_PTR(pc_ ## member)
 #define	PCPU_SET(member, val)	__PCPU_SET(pc_ ## member, val)
 
-static __inline struct thread *
+static __inline __pure2 struct thread *
 __curthread(void)
 {
 	struct thread *td;
 
-	__asm __volatile("movl %%fs:0,%0" : "=r" (td));
+	__asm("movl %%fs:0,%0" : "=r" (td));
 	return (td);
 }
 #define	curthread		(__curthread())
