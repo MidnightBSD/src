@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/amr/amrio.h,v 1.2 2008/12/02 02:24:31 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/amr/amrio.h,v 1.3 2012/02/19 16:59:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Michael Smith
  * All rights reserved.
@@ -53,7 +53,7 @@
  * SUCH DAMAGE.
  *
  *
- *	$FreeBSD: src/sys/dev/amr/amrio.h,v 1.7 2005/12/14 03:26:49 scottl Exp $
+ *	$FreeBSD$
  */
 
 /*

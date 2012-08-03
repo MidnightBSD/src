@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/amr/amr_pci.c,v 1.3 2012/04/12 01:23:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -56,7 +56,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/amr/amr_pci.c,v 1.38.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,9 +106,7 @@ static device_method_t amr_methods[] = {
     DEVMETHOD(device_suspend,	amr_pci_suspend),
     DEVMETHOD(device_resume,	amr_pci_resume),
 
-    DEVMETHOD(bus_print_child,	bus_generic_print_child),
-    DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-    { 0, 0 }
+    DEVMETHOD_END
 };
 
 static driver_t amr_pci_driver = {
@@ -278,7 +275,7 @@ amr_pci_attach(device_t dev)
     /*
      * Allocate the parent bus DMA tag appropriate for PCI.
      */
-    if (bus_dma_tag_create(NULL, 			/* parent */
+    if (bus_dma_tag_create(bus_get_dma_tag(dev),	/* PCI parent */
 			   1, 0, 			/* alignment,boundary */
 			   AMR_IS_SG64(sc) ?
 			   BUS_SPACE_MAXADDR :

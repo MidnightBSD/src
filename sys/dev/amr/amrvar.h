@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/amr/amrvar.h,v 1.3 2012/04/12 01:23:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -54,7 +54,6 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD: src/sys/dev/amr/amrvar.h,v 1.33.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <geom/geom_disk.h>
@@ -67,8 +66,8 @@
 # define debug(level, fmt, args...)	do {if (level <= AMR_DEBUG) printf("%s: " fmt "\n", __func__ , ##args);} while(0)
 # define debug_called(level)		do {if (level <= AMR_DEBUG) printf("%s: called\n", __func__);} while(0)
 #else
-# define debug(level, fmt, args...)
-# define debug_called(level)
+# define debug(level, fmt, args...)	do {} while (0)
+# define debug_called(level)		do {} while (0)
 #endif
 #define xdebug(fmt, args...)	printf("%s: " fmt "\n", __func__ , ##args)
 
@@ -254,6 +253,8 @@ struct amr_softc
     int 			support_ext_cdb;	/* greater than 10 byte cdb support */
 
     /* misc glue */
+    device_t			amr_pass;
+    int				(*amr_cam_command)(struct amr_softc *sc, struct amr_command **acp);
     struct intr_config_hook	amr_ich;		/* wait-for-interrupts probe hook */
     struct callout_handle	amr_timeout;		/* periodic status check */
     int				amr_allow_vol_config;
@@ -276,13 +277,6 @@ extern void		amr_startio(struct amr_softc *sc);
  */
 extern struct amr_command	*amr_alloccmd(struct amr_softc *sc);
 extern void			amr_releasecmd(struct amr_command *ac);
-
-/*
- * CAM interface
- */
-extern int		amr_cam_attach(struct amr_softc *sc);
-extern void		amr_cam_detach(struct amr_softc *sc);
-extern int		amr_cam_command(struct amr_softc *sc, struct amr_command **acp);
 
 /*
  * MegaRAID logical disk driver

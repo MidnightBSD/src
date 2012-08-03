@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/bktr/bktr_i2c.h,v 1.2 2008/12/02 02:24:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/bktr/bktr_i2c.h,v 1.5 2006/09/18 20:17:42 jhb Exp $
+ * $FreeBSD$
  *
  */
 #ifndef _BT848_I2C_H

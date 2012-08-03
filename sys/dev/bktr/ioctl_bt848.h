@@ -1,8 +1,8 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/bktr/ioctl_bt848.h,v 1.2 2008/12/02 02:24:36 laffer1 Exp $ */
 /*
  * extensions to ioctl_meteor.h for the bt848 cards
  *
- * $FreeBSD: src/sys/dev/bktr/ioctl_bt848.h,v 1.30 2003/12/20 17:12:25 obrien Exp $
+ * $FreeBSD$
  */
 
 #ifndef  _DEV_BKTR_IOCTL_BT848_H_
@@ -90,9 +90,9 @@
  * EEProm stuff
  */
 struct eeProm {
-	short	offset;
-	short	count;
-	u_char	bytes[ 256 ];
+	short		offset;
+	short		count;
+	unsigned char	bytes[ 256 ];
 };
 
 
@@ -148,7 +148,7 @@ struct eeProm {
  * b23-b16:  i2c addr (write)
  * b31-b24:  1 = write, 0 = read 
  */
-#define BT848_I2CWR     _IOWR('x', 57, u_long)    /* i2c read-write */
+#define BT848_I2CWR     _IOWR('x', 57, unsigned long)    /* i2c read-write */
 
 struct bktr_msp_control {
 	unsigned char function;
@@ -193,10 +193,10 @@ typedef enum { METEOR_PIXTYPE_RGB, METEOR_PIXTYPE_YUV,
 
 
 struct meteor_pixfmt {
-	u_int          index;         /* Index in supported pixfmt list     */
+	unsigned int   index;         /* Index in supported pixfmt list     */
 	METEOR_PIXTYPE type;          /* What's the board gonna feed us     */
-	u_int          Bpp;           /* Bytes per pixel                    */
-	u_long         masks[3];      /* R,G,B or Y,U,V masks, respectively */
+	unsigned int   Bpp;           /* Bytes per pixel                    */
+	unsigned long  masks[3];      /* R,G,B or Y,U,V masks, respectively */
 	unsigned       swap_bytes :1; /* Bytes  swapped within shorts       */
 	unsigned       swap_shorts:1; /* Shorts swapped within longs        */
 };

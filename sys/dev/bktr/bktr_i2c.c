@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/bktr/bktr_i2c.c,v 1.2 2008/12/02 02:24:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_i2c.c,v 1.29 2006/12/31 19:42:47 jmg Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * I2C support for the bti2c chipset.
@@ -129,18 +129,22 @@ int bti2c_smb_callback(device_t dev, int index, void *data)
 	switch (index) {
 	case SMB_REQUEST_BUS:
 		/* XXX test & set */
+		mtx_lock(&Giant);
 		if (!sc->bus_owned) {
 			sc->bus_owned = 1;
 		} else
 			error = EWOULDBLOCK;
+		mtx_unlock(&Giant);
 		break;
 
 	case SMB_RELEASE_BUS:
 		/* XXX test & set */
+		mtx_lock(&Giant);
 		if (sc->bus_owned) {
 			sc->bus_owned = 0;
 		} else
 			error = EINVAL;
+		mtx_unlock(&Giant);
 		break;
 
 	default:
@@ -162,18 +166,22 @@ int bti2c_iic_callback(device_t dev, int index, caddr_t *data)
 	switch (index) {
 	case IIC_REQUEST_BUS:
 		/* XXX test & set */
+		mtx_lock(&Giant);
 		if (!sc->bus_owned) {
 			sc->bus_owned = 1;
 		} else
 			error = EWOULDBLOCK;
+		mtx_unlock(&Giant);
 		break;
 
 	case IIC_RELEASE_BUS:
 		/* XXX test & set */
+		mtx_lock(&Giant);
 		if (sc->bus_owned) {
 			sc->bus_owned = 0;
 		} else
 			error = EINVAL;
+		mtx_unlock(&Giant);
 		break;
 
 	default:
@@ -185,8 +193,10 @@ int bti2c_iic_callback(device_t dev, int index, caddr_t *data)
 
 int bti2c_iic_reset(device_t dev, u_char speed, u_char addr, u_char * oldaddr)
 {
+	mtx_lock(&Giant);
 	if (oldaddr)
 		*oldaddr = 0;			/* XXX */
+	mtx_unlock(&Giant);
 
 	return (IIC_ENOADDR);
 }
@@ -196,12 +206,14 @@ void bti2c_iic_setsda(device_t dev, int val)
 	struct bktr_softc *sc  = (struct bktr_softc *)device_get_softc(dev);
 	int clock;
 
+	mtx_lock(&Giant);
 	clock = INL(sc, BKTR_I2C_DATA_CTL) & 0x2;
 
 	if (val)
 		OUTL(sc, BKTR_I2C_DATA_CTL, clock | 1);
 	else
 		OUTL(sc, BKTR_I2C_DATA_CTL, clock);
+	mtx_unlock(&Giant);
 
 	return;
 }
@@ -211,12 +223,14 @@ void bti2c_iic_setscl(device_t dev, int val)
 	struct bktr_softc *sc  = (struct bktr_softc *)device_get_softc(dev);
 	int data;
 
+	mtx_lock(&Giant);
 	data = INL(sc, BKTR_I2C_DATA_CTL) & 0x1;
 
 	if (val)
 		OUTL(sc, BKTR_I2C_DATA_CTL, 0x2 | data);
 	else
 		OUTL(sc, BKTR_I2C_DATA_CTL, data);
+	mtx_unlock(&Giant);
 
 	return;
 }
@@ -225,8 +239,12 @@ int
 bti2c_iic_getsda(device_t dev)
 {
 	struct bktr_softc *sc  = (struct bktr_softc *)device_get_softc(dev);
+	int retval;
 
-	return (INL(sc,BKTR_I2C_DATA_CTL) & 0x1);
+	mtx_lock(&Giant);
+	retval = INL(sc,BKTR_I2C_DATA_CTL) & 0x1;
+	mtx_unlock(&Giant);
+	return (retval);
 }
 
 int
@@ -239,6 +257,8 @@ static int
 bti2c_write(struct bktr_softc *sc, u_long data)
 {
 	u_long		x;
+
+	mtx_lock(&Giant);
 
 	/* clear status bits */
 	OUTL(sc, BKTR_INT_STAT, (BT848_INT_RACK | BT848_INT_I2CDONE));
@@ -258,9 +278,11 @@ bti2c_write(struct bktr_softc *sc, u_long data)
 	if ( !x || !( INL(sc, BKTR_INT_STAT) & BT848_INT_RACK) ) {
 		BTI2C_DEBUG(printf("%c%c", (!x)?'+':'-',
 			(!( INL(sc, BKTR_INT_STAT) & BT848_INT_RACK))?'+':'-'));
+		mtx_unlock(&Giant);
 		return (SMB_ENOACK);
 	}
 	BTI2C_DEBUG(printf("+"));
+	mtx_unlock(&Giant);
 
 	/* return OK */
 	return( 0 );
@@ -306,10 +328,11 @@ bti2c_smb_readb(device_t dev, u_char slave, char cmd, char *byte)
 	struct bktr_softc *sc  = (struct bktr_softc *)device_get_softc(dev);
 	u_long		x;
 
+	mtx_lock(&Giant);
 	/* clear status bits */
 	OUTL(sc,BKTR_INT_STAT, (BT848_INT_RACK | BT848_INT_I2CDONE));
 
-	OUTL(sc,BKTR_I2C_DATA_CTL, ((slave & 0xff) << 24) | (u_char)cmd);;
+	OUTL(sc,BKTR_I2C_DATA_CTL, ((slave & 0xff) << 24) | (u_char)cmd);
 
 	BTI2C_DEBUG(printf("r%lx/", (u_long)(((slave & 0xff) << 24) | (u_char)cmd)));
 
@@ -323,15 +346,18 @@ bti2c_smb_readb(device_t dev, u_char slave, char cmd, char *byte)
 	if ( !x || !(INL(sc,BKTR_INT_STAT) & BT848_INT_RACK) ) {
 		BTI2C_DEBUG(printf("r%c%c", (!x)?'+':'-',
 			(!( INL(sc,BKTR_INT_STAT) & BT848_INT_RACK))?'+':'-'));
+		mtx_unlock(&Giant);
 		return (SMB_ENOACK);
 	}
 
 	*byte = (char)((INL(sc,BKTR_I2C_DATA_CTL) >> 8) & 0xff);
 	BTI2C_DEBUG(printf("r%x+", *byte));
+	mtx_unlock(&Giant);
 
 	return (0);
 }
 
+DRIVER_MODULE(iicbb, bktr, iicbb_driver, iicbb_devclass, 0, 0);
 DRIVER_MODULE(smbus, bktr, smbus_driver, smbus_devclass, 0, 0);
 
 #endif /* defined(BKTR_USE_FREEBSD_SMBUS) */

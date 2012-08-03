@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/amr/amr.c,v 1.3 2012/04/12 01:23:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -57,7 +57,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/amr/amr.c,v 1.80.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Driver for the AMI MegaRaid family of controllers.
@@ -88,13 +87,6 @@ __FBSDID("$FreeBSD: src/sys/dev/amr/amr.c,v 1.80.2.6.2.1 2008/11/25 02:59:29 ken
 #include <dev/amr/amrvar.h>
 #define AMR_DEFINE_TABLES
 #include <dev/amr/amr_tables.h>
-
-/*
- * The CAM interface appears to be completely broken.  Disable it.
- */
-#ifndef AMR_ENABLE_CAM
-#define AMR_ENABLE_CAM 1
-#endif
 
 SYSCTL_NODE(_hw, OID_AUTO, amr, CTLFLAG_RD, 0, "AMR driver parameters");
 
@@ -181,7 +173,9 @@ static void	amr_printcommand(struct amr_command *ac);
 
 static void	amr_init_sysctl(struct amr_softc *sc);
 static int	amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr,
-		    int32_t flag, d_thread_t *td);
+		    int32_t flag, struct thread *td);
+
+MALLOC_DEFINE(M_AMR, "amr", "AMR memory");
 
 MALLOC_DEFINE(M_AMR, "amr", "AMR memory");
 
@@ -203,6 +197,7 @@ MALLOC_DEFINE(M_AMR, "amr", "AMR memory");
 int
 amr_attach(struct amr_softc *sc)
 {
+    device_t child;
 
     debug_called(1);
 
@@ -228,11 +223,11 @@ amr_attach(struct amr_softc *sc)
 	sc->amr_submit_command = amr_std_submit_command;
 	sc->amr_get_work       = amr_std_get_work;
 	sc->amr_poll_command   = amr_std_poll_command;
-	amr_std_attach_mailbox(sc);;
+	amr_std_attach_mailbox(sc);
     }
 
 #ifdef AMR_BOARD_INIT
-    if ((AMR_IS_QUARTZ(sc) ? amr_quartz_init(sc) : amr_std_init(sc))))
+    if ((AMR_IS_QUARTZ(sc) ? amr_quartz_init(sc) : amr_std_init(sc)))
 	return(ENXIO);
 #endif
 
@@ -260,14 +255,16 @@ amr_attach(struct amr_softc *sc)
      */
     amr_init_sysctl(sc);
 
-#if AMR_ENABLE_CAM != 0
     /*
      * Attach our 'real' SCSI channels to CAM.
      */
-    if (amr_cam_attach(sc))
-	return(ENXIO);
-    debug(2, "CAM attach done");
-#endif
+    child = device_add_child(sc->amr_dev, "amrp", -1);
+    sc->amr_pass = child;
+    if (child != NULL) {
+	device_set_softc(child, sc);
+	device_set_desc(child, "SCSI Passthrough Bus");
+	bus_generic_attach(sc->amr_dev);
+    }
 
     /*
      * Create the control device.
@@ -392,10 +389,9 @@ amr_free(struct amr_softc *sc)
 {
     struct amr_command_cluster	*acc;
 
-#if AMR_ENABLE_CAM != 0
     /* detach from CAM */
-    amr_cam_detach(sc); 
-#endif
+    if (sc->amr_pass != NULL)
+	device_delete_child(sc->amr_dev, sc->amr_pass);
 
     /* cancel status timeout */
     untimeout(amr_periodic, sc, sc->amr_timeout);
@@ -437,9 +433,9 @@ amr_submit_bio(struct amr_softc *sc, struct bio *bio)
  * Accept an open operation on the control device.
  */
 static int
-amr_open(struct cdev *dev, int flags, int fmt, d_thread_t *td)
+amr_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
-    int			unit = minor(dev);
+    int			unit = dev2unit(dev);
     struct amr_softc	*sc = devclass_get_softc(devclass_find("amr"), unit);
 
     debug_called(1);
@@ -493,9 +489,9 @@ amr_prepare_ld_delete(struct amr_softc *sc)
  * Accept the last close on the control device.
  */
 static int
-amr_close(struct cdev *dev, int flags, int fmt, d_thread_t *td)
+amr_close(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
-    int			unit = minor(dev);
+    int			unit = dev2unit(dev);
     struct amr_softc	*sc = devclass_get_softc(devclass_find("amr"), unit);
 
     debug_called(1);
@@ -541,9 +537,34 @@ shutdown_out:
     amr_startup(sc);
 }
 
+/*
+ * Bug-for-bug compatibility with Linux!
+ * Some apps will send commands with inlen and outlen set to 0,
+ * even though they expect data to be transfered to them from the
+ * card.  Linux accidentally allows this by allocating a 4KB
+ * buffer for the transfer anyways, but it then throws it away
+ * without copying it back to the app.
+ * 
+ * The amr(4) firmware relies on this feature.  In fact, it assumes
+ * the buffer is always a power of 2 up to a max of 64k.  There is
+ * also at least one case where it assumes a buffer less than 16k is
+ * greater than 16k.  Force a minimum buffer size of 32k and round
+ * sizes between 32k and 64k up to 64k as a workaround.
+ */
+static unsigned long
+amr_ioctl_buffer_length(unsigned long len)
+{
+
+    if (len <= 32 * 1024)
+	return (32 * 1024);
+    if (len <= 64 * 1024)
+	return (64 * 1024);
+    return (len);
+}
+
 int
 amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
-    d_thread_t *td)
+    struct thread *td)
 {
     struct amr_softc		*sc = (struct amr_softc *)dev->si_drv1;
     struct amr_command		*ac;
@@ -670,16 +691,7 @@ amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
 	    error = ENOIOCTL;
 	    break;
 	} else {
-	    /*
-	     * Bug-for-bug compatibility with Linux!
-	     * Some apps will send commands with inlen and outlen set to 0,
-	     * even though they expect data to be transfered to them from the
-	     * card.  Linux accidentally allows this by allocating a 4KB
-	     * buffer for the transfer anyways, but it then throws it away
-	     * without copying it back to the app.
-	     */
-	    if (!len)
-		len = 4096;
+	    len = amr_ioctl_buffer_length(imax(ali.inlen, ali.outlen));
 
 	    dp = malloc(len, M_AMR, M_WAITOK | M_ZERO);
 
@@ -709,7 +721,7 @@ amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
 	    status = ac->ac_status;
 	    error = copyout(&status, &((struct amr_mailbox *)&((struct amr_linux_ioctl *)addr)->mbox[0])->mb_status, sizeof(status));
 	    if (ali.outlen) {
-		error = copyout(dp, (void *)(uintptr_t)mb->mb_physaddr, len);
+		error = copyout(dp, (void *)(uintptr_t)mb->mb_physaddr, ali.outlen);
 		if (error)
 		    break;
 	    }
@@ -742,7 +754,7 @@ amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
 }
 
 static int
-amr_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, d_thread_t *td)
+amr_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, struct thread *td)
 {
     struct amr_softc		*sc = (struct amr_softc *)dev->si_drv1;
     union {
@@ -756,7 +768,7 @@ amr_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, d_thread_t *
     struct amr_command		*ac;
     struct amr_mailbox_ioctl	*mbi;
     void			*dp, *au_buffer;
-    unsigned long		au_length;
+    unsigned long		au_length, real_length;
     unsigned char		*au_cmd;
     int				*au_statusp, au_direction;
     int				error;
@@ -848,8 +860,9 @@ amr_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, d_thread_t *
     }
 
     /* handle inbound data buffer */
+    real_length = amr_ioctl_buffer_length(au_length);
     if (au_length != 0 && au_cmd[0] != 0x06) {
-	if ((dp = malloc(au_length, M_AMR, M_WAITOK|M_ZERO)) == NULL) {
+	if ((dp = malloc(real_length, M_AMR, M_WAITOK|M_ZERO)) == NULL) {
 	    error = ENOMEM;
 	    goto out;
 	}
@@ -908,7 +921,7 @@ amr_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, d_thread_t *
 
     /* build the command */
     ac->ac_data = dp;
-    ac->ac_length = au_length;
+    ac->ac_length = real_length;
     ac->ac_flags |= AMR_CMD_DATAIN|AMR_CMD_DATAOUT;
 
     /* run the command */
@@ -1241,11 +1254,9 @@ amr_startio(struct amr_softc *sc)
 	if (ac == NULL)
 	    (void)amr_bio_command(sc, &ac);
 
-#if AMR_ENABLE_CAM != 0
 	/* if that failed, build a command from a ccb */
-	if (ac == NULL)
-	    (void)amr_cam_command(sc, &ac);
-#endif
+	if ((ac == NULL) && (sc->amr_cam_command != NULL))
+	    sc->amr_cam_command(sc, &ac);
 
 	/* if we don't have anything to do, give up */
 	if (ac == NULL)

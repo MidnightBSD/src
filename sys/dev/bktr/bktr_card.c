@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/bktr/bktr_card.c,v 1.2 2008/12/02 02:24:36 laffer1 Exp $ */
 /*-
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_card.c,v 1.36 2005/12/04 10:06:03 ru Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -571,7 +571,7 @@ static int locate_eeprom_address( bktr_ptr_t bktr) {
  *
  * However some makes of card (eg Hauppauge) come with a configuration eeprom
  * which tells us the make of the card. Most eeproms also tell us the
- * tuner type and other features of the the cards.
+ * tuner type and other features of the cards.
  *
  * The current probe code works as follows
  * A) If the card uses a Bt878/879:

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/amr/amr_linux.c,v 1.5 2012/04/12 01:23:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Paul Saab
  * All rights reserved.
@@ -27,10 +27,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/amr/amr_linux.c,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
@@ -70,12 +70,12 @@ DEV_MODULE(amr_linux, amr_linux_modevent, NULL);
 MODULE_DEPEND(amr, linux, 1, 1, 1);
 
 static int
-amr_linux_ioctl(d_thread_t *p, struct linux_ioctl_args *args)
+amr_linux_ioctl(struct thread *p, struct linux_ioctl_args *args)
 {
 	struct file *fp;
 	int error;
 
-	if ((error = fget(p, args->fd, &fp)) != 0)
+	if ((error = fget(p, args->fd, CAP_IOCTL, &fp)) != 0)
 		return (error);
 	error = fo_ioctl(fp, args->cmd, (caddr_t)args->arg, p->td_ucred, p);
 	fdrop(fp, p);
