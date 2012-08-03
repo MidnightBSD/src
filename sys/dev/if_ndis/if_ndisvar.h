@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/if_ndis/if_ndisvar.h,v 1.27 2007/07/12 02:54:05 thompsa Exp $
+ * $FreeBSD$
  */
 
 #define NDIS_DEFAULT_NODENAME	"MidnightBSD NDIS node"
@@ -55,6 +55,12 @@ struct ndis_pci_type {
 struct ndis_pccard_type {
 	const char		*ndis_vid;
 	const char		*ndis_did;
+	char			*ndis_name;
+};
+
+struct ndis_usb_type {
+	uint16_t		ndis_vid;
+	uint16_t		ndis_did;
 	char			*ndis_name;
 };
 
@@ -89,6 +95,7 @@ TAILQ_HEAD(nch, ndis_cfglist);
 #define NDIS_INC(x)		\
 	(x)->ndis_txidx = ((x)->ndis_txidx + 1) % (x)->ndis_maxpkts
 
+
 #define NDIS_EVENTS 4
 #define NDIS_EVTINC(x)	(x) = ((x) + 1) % NDIS_EVENTS
 
@@ -98,8 +105,53 @@ struct ndis_evt {
 	char			*ne_buf;
 };
 
+struct ndis_vap {
+	struct ieee80211vap	vap;
+
+	int			(*newstate)(struct ieee80211vap *,
+				    enum ieee80211_state, int);
+};
+#define	NDIS_VAP(vap)	((struct ndis_vap *)(vap))
+
+#define	NDISUSB_CONFIG_NO			0
+#define	NDISUSB_IFACE_INDEX			0
+/* XXX at USB2 there's no USBD_NO_TIMEOUT macro anymore  */
+#define	NDISUSB_NO_TIMEOUT			0
+#define	NDISUSB_INTR_TIMEOUT			1000
+#define	NDISUSB_TX_TIMEOUT			10000
+struct ndisusb_xfer;
+struct ndisusb_ep {
+	struct usb_xfer	*ne_xfer[1];
+	list_entry		ne_active;
+	list_entry		ne_pending;
+	kspin_lock		ne_lock;
+	uint8_t			ne_dirin;
+};
+struct ndisusb_xfer {
+	struct ndisusb_ep	*nx_ep;
+	void			*nx_priv;
+	uint8_t			*nx_urbbuf;
+	uint32_t		nx_urbactlen;
+	uint32_t		nx_urblen;
+	uint8_t			nx_shortxfer;
+	list_entry		nx_next;
+};
+struct ndisusb_xferdone {
+	struct ndisusb_xfer	*nd_xfer;
+	usb_error_t		nd_status;
+	list_entry		nd_donelist;
+};
+
+struct ndisusb_task {
+	unsigned		nt_type;
+#define	NDISUSB_TASK_TSTART	0
+#define	NDISUSB_TASK_IRPCANCEL	1
+#define	NDISUSB_TASK_VENDOR	2
+	void			*nt_ctx;
+	list_entry		nt_tasklist;
+};
+
 struct ndis_softc {
-	struct ieee80211com	ic;		/* interface info */
 	struct ifnet		*ifp;
 	struct ifmedia		ifmedia;	/* media info */
 	u_long			ndis_hwassist;
@@ -121,14 +173,15 @@ struct ndis_softc {
 	struct resource		*ndis_res_cm;	/* common mem (pccard) */
 	struct resource_list	ndis_rl;
 	int			ndis_rescnt;
-	kspin_lock		ndis_spinlock;
+	struct mtx		ndis_mtx;
 	uint8_t			ndis_irql;
 	device_t		ndis_dev;
 	int			ndis_unit;
 	ndis_miniport_block	*ndis_block;
 	ndis_miniport_characteristics	*ndis_chars;
 	interface_type		ndis_type;
-	struct callout_handle	ndis_stat_ch;
+	struct callout		ndis_scan_callout;
+	struct callout		ndis_stat_callout;
 	int			ndis_maxpkts;
 	ndis_oid		*ndis_oids;
 	int			ndis_oidcnt;
@@ -167,40 +220,34 @@ struct ndis_softc {
 	struct ifqueue		ndis_rxqueue;
 	kspin_lock		ndis_rxlock;
 
-	struct taskqueue	*ndis_tq;		/* private task queue */
-	struct task		ndis_scantask;
 	int			(*ndis_newstate)(struct ieee80211com *,
 				    enum ieee80211_state, int);
+	int			ndis_tx_timer;
+	int			ndis_hang_timer;
+
+	struct usb_device	*ndisusb_dev;
+	struct mtx		ndisusb_mtx;
+	struct ndisusb_ep	ndisusb_dread_ep;
+	struct ndisusb_ep	ndisusb_dwrite_ep;
+#define	NDISUSB_GET_ENDPT(addr) \
+	((UE_GET_DIR(addr) >> 7) | (UE_GET_ADDR(addr) << 1))
+#define	NDISUSB_ENDPT_MAX	((UE_ADDR + 1) * 2)
+	struct ndisusb_ep	ndisusb_ep[NDISUSB_ENDPT_MAX];
+	io_workitem		*ndisusb_xferdoneitem;
+	list_entry		ndisusb_xferdonelist;
+	kspin_lock		ndisusb_xferdonelock;
+	io_workitem		*ndisusb_taskitem;
+	list_entry		ndisusb_tasklist;
+	kspin_lock		ndisusb_tasklock;
+	int			ndisusb_status;
+#define NDISUSB_STATUS_DETACH	0x1
+#define	NDISUSB_STATUS_SETUP_EP	0x2
 };
 
-#define NDIS_LOCK(_sc)		KeAcquireSpinLock(&(_sc)->ndis_spinlock, \
-				    &(_sc)->ndis_irql);
-#define NDIS_UNLOCK(_sc)	KeReleaseSpinLock(&(_sc)->ndis_spinlock, \
-				    (_sc)->ndis_irql);
+#define	NDIS_LOCK(_sc)		mtx_lock(&(_sc)->ndis_mtx)
+#define	NDIS_UNLOCK(_sc)	mtx_unlock(&(_sc)->ndis_mtx)
+#define	NDIS_LOCK_ASSERT(_sc, t)	mtx_assert(&(_sc)->ndis_mtx, t)
+#define	NDISUSB_LOCK(_sc)	mtx_lock(&(_sc)->ndisusb_mtx)
+#define	NDISUSB_UNLOCK(_sc)	mtx_unlock(&(_sc)->ndisusb_mtx)
+#define	NDISUSB_LOCK_ASSERT(_sc, t)	mtx_assert(&(_sc)->ndisusb_mtx, t)
 
-/*
- * Backwards compatibility defines.
- */
-
-#ifndef IF_ADDR_LOCK
-#define IF_ADDR_LOCK(x)
-#define IF_ADDR_UNLOCK(x)
-#endif
-
-#ifndef IFF_DRV_OACTIVE
-#define IFF_DRV_OACTIVE IFF_OACTIVE
-#define IFF_DRV_RUNNING IFF_RUNNING
-#define if_drv_flags if_flags
-#endif
-
-#ifndef ic_def_txkey
-#define ic_def_txkey ic_wep_txkey
-#define wk_keylen wk_len
-#endif
-
-#ifndef SIOCGDRVSPEC
-#define SIOCSDRVSPEC	_IOW('i', 123, struct ifreq)	/* set driver-specific
-								parameters */
-#define SIOCGDRVSPEC	_IOWR('i', 123, struct ifreq)	/* get driver-specific
-								parameters */
-#endif
