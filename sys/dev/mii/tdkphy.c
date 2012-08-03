@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.22.2.6 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * Driver for the TDK 78Q2120 MII
@@ -38,7 +37,7 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.22.2.6 2011/09/11 20:25:57 mari
  */
 
 /*
- * The TDK 78Q2120 is found on some Xircom X3201 based cardbus cards,
+ * The TDK 78Q2120 is found on some Xircom X3201 based CardBus cards,
  * also spotted on some 3C575 cards.  It's just like any other normal
  * phy, except it does auto negotiation in a different way.
  */
@@ -71,7 +70,7 @@ static device_method_t tdkphy_methods[] = {
 	DEVMETHOD(device_attach,	tdkphy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t tdkphy_devclass;
@@ -88,8 +87,14 @@ static int tdkphy_service(struct mii_softc *, struct mii_data *, int);
 static void tdkphy_status(struct mii_softc *);
 
 static const struct mii_phydesc tdkphys[] = {
-	MII_PHY_DESC(TDK, 78Q2120),
+	MII_PHY_DESC(xxTSC, 78Q2120),
 	MII_PHY_END
+};
+
+static const struct mii_phy_funcs tdkphy_funcs = {
+	tdkphy_service,
+	tdkphy_status,
+	mii_phy_reset
 };
 
 static int
@@ -102,39 +107,8 @@ tdkphy_probe(device_t dev)
 static int
 tdkphy_attach(device_t dev)
 {
-	struct mii_softc *sc;
-	struct mii_attach_args *ma;
-	struct mii_data *mii;
-	sc = device_get_softc(dev);
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = ma->mii_data;
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
 
-	if (bootverbose)
-		device_printf(dev, "OUI 0x%06x, model 0x%04x, rev. %d\n",
-		    MII_OUI(ma->mii_id1, ma->mii_id2),
-		    MII_MODEL(ma->mii_id2), MII_REV(ma->mii_id2));
-
-	sc->mii_flags = miibus_get_flags(dev);
-	sc->mii_inst = mii->mii_instance++;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = tdkphy_service;
-	sc->mii_pdata = mii;
-
-	/*
-	 * Apparently, we can't do loopback on this PHY.
-	 */
-	sc->mii_flags |= MIIF_NOLOOP | MIIF_NOMANPAUSE;
-
-	mii_phy_reset(sc);
-
-	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
-	device_printf(dev, " ");
-	mii_phy_add_media(sc);
-	printf("\n");
-
-	MIIBUS_MEDIAINIT(sc->mii_dev);
+	mii_phy_dev_attach(dev, MIIF_NOMANPAUSE, &tdkphy_funcs, 1);
 	return (0);
 }
 
@@ -163,7 +137,7 @@ tdkphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 	}
 
 	/* Update the media status. */
-	tdkphy_status(sc);
+	PHY_STATUS(sc);
 	if (sc->mii_pdata->mii_media_active & IFM_FDX)
 		PHY_WRITE(sc, MII_BMCR, PHY_READ(sc, MII_BMCR) | BMCR_FDX);
 	else

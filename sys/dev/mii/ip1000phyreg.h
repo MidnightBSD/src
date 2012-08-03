@@ -24,7 +24,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/ip1000phyreg.h,v 1.1.4.2 2009/03/18 03:36:08 yongari Exp $
  */
 
 #ifndef	_DEV_MII_IP1000PHYREG_H_

@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/e1000phy.c,v 1.18.2.25 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * driver for the Marvell 88E1000 series external 1000/100/10-BT PHY.
@@ -65,25 +64,20 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/e1000phy.c,v 1.18.2.25 2011/09/11 20:25:57 m
 static int	e1000phy_probe(device_t);
 static int	e1000phy_attach(device_t);
 
-struct e1000phy_softc {
-	struct mii_softc mii_sc;
-	int mii_model;
-};
-
 static device_method_t e1000phy_methods[] = {
 	/* device interface */
 	DEVMETHOD(device_probe,		e1000phy_probe),
 	DEVMETHOD(device_attach,	e1000phy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t e1000phy_devclass;
 static driver_t e1000phy_driver = {
 	"e1000phy",
 	e1000phy_methods,
-	sizeof(struct e1000phy_softc)
+	sizeof(struct mii_softc)
 };
 
 DRIVER_MODULE(e1000phy, miibus, e1000phy_driver, e1000phy_devclass, 0, 0);
@@ -97,25 +91,31 @@ static const struct mii_phydesc e1000phys[] = {
 	MII_PHY_DESC(MARVELL, E1000),
 	MII_PHY_DESC(MARVELL, E1011),
 	MII_PHY_DESC(MARVELL, E1000_3),
-	MII_PHY_DESC(MARVELL, E1000S),
 	MII_PHY_DESC(MARVELL, E1000_5),
-	MII_PHY_DESC(MARVELL, E1101),
-	MII_PHY_DESC(MARVELL, E3082),
-	MII_PHY_DESC(MARVELL, E1112),
-	MII_PHY_DESC(MARVELL, E1149),
 	MII_PHY_DESC(MARVELL, E1111),
-	MII_PHY_DESC(MARVELL, E1116),
-	MII_PHY_DESC(MARVELL, E1116R),
-	MII_PHY_DESC(MARVELL, E1118),
-	MII_PHY_DESC(MARVELL, E1149R),
-	MII_PHY_DESC(MARVELL, E3016),
-	MII_PHY_DESC(MARVELL, PHYG65G),
 	MII_PHY_DESC(xxMARVELL, E1000),
 	MII_PHY_DESC(xxMARVELL, E1011),
 	MII_PHY_DESC(xxMARVELL, E1000_3),
+	MII_PHY_DESC(xxMARVELL, E1000S),
 	MII_PHY_DESC(xxMARVELL, E1000_5),
+	MII_PHY_DESC(xxMARVELL, E1101),
+	MII_PHY_DESC(xxMARVELL, E3082),
+	MII_PHY_DESC(xxMARVELL, E1112),
+	MII_PHY_DESC(xxMARVELL, E1149),
 	MII_PHY_DESC(xxMARVELL, E1111),
+	MII_PHY_DESC(xxMARVELL, E1116),
+	MII_PHY_DESC(xxMARVELL, E1116R),
+	MII_PHY_DESC(xxMARVELL, E1118),
+	MII_PHY_DESC(xxMARVELL, E1149R),
+	MII_PHY_DESC(xxMARVELL, E3016),
+	MII_PHY_DESC(xxMARVELL, PHYG65G),
 	MII_PHY_END
+};
+
+static const struct mii_phy_funcs e1000phy_funcs = {
+	e1000phy_service,
+	e1000phy_status,
+	e1000phy_reset
 };
 
 static int
@@ -128,41 +128,26 @@ e1000phy_probe(device_t	dev)
 static int
 e1000phy_attach(device_t dev)
 {
-	struct e1000phy_softc *esc;
 	struct mii_softc *sc;
-	struct mii_attach_args *ma;
-	struct mii_data *mii;
 	struct ifnet *ifp;
 
-	esc = device_get_softc(dev);
-	sc = &esc->mii_sc;
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = ma->mii_data;
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
+	sc = device_get_softc(dev);
 
-	sc->mii_flags = miibus_get_flags(dev);
-	sc->mii_inst = mii->mii_instance++;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = e1000phy_service;
-	sc->mii_pdata = mii;
+	mii_phy_dev_attach(dev, MIIF_NOMANPAUSE, &e1000phy_funcs, 0);
 
-	sc->mii_flags |= MIIF_NOMANPAUSE;
-
-	esc->mii_model = MII_MODEL(ma->mii_id2);
 	ifp = sc->mii_pdata->mii_ifp;
 	if (strcmp(ifp->if_dname, "msk") == 0 &&
 	    (sc->mii_flags & MIIF_MACPRIV0) != 0)
 		sc->mii_flags |= MIIF_PHYPRIV0;
 
-	switch (esc->mii_model) {
-	case MII_MODEL_MARVELL_E1011:
-	case MII_MODEL_MARVELL_E1112:
+	switch (sc->mii_mpd_model) {
+	case MII_MODEL_xxMARVELL_E1011:
+	case MII_MODEL_xxMARVELL_E1112:
 		if (PHY_READ(sc, E1000_ESSR) & E1000_ESSR_FIBER_LINK)
 			sc->mii_flags |= MIIF_HAVEFIBER;
 		break;
-	case MII_MODEL_MARVELL_E1149:
-	case MII_MODEL_MARVELL_E1149R:
+	case MII_MODEL_xxMARVELL_E1149:
+	case MII_MODEL_xxMARVELL_E1149R:
 		/*
 		 * Some 88E1149 PHY's page select is initialized to
 		 * point to other bank instead of copper/fiber bank
@@ -178,9 +163,9 @@ e1000phy_attach(device_t dev)
 		break;
 	}
 
-	e1000phy_reset(sc);
+	PHY_RESET(sc);
 
-	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
+	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & sc->mii_capmask;
 	if (sc->mii_capabilities & BMSR_EXTSTAT)
 		sc->mii_extcapabilities = PHY_READ(sc, MII_EXTSR);
 	device_printf(dev, " ");
@@ -194,15 +179,13 @@ e1000phy_attach(device_t dev)
 static void
 e1000phy_reset(struct mii_softc *sc)
 {
-	struct e1000phy_softc *esc;
 	uint16_t reg, page;
 
-	esc = (struct e1000phy_softc *)sc;
 	reg = PHY_READ(sc, E1000_SCR);
 	if ((sc->mii_flags & MIIF_HAVEFIBER) != 0) {
 		reg &= ~E1000_SCR_AUTO_X_MODE;
 		PHY_WRITE(sc, E1000_SCR, reg);
-		if (esc->mii_model == MII_MODEL_MARVELL_E1112) {
+		if (sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1112) {
 			/* Select 1000BASE-X only mode. */
 			page = PHY_READ(sc, E1000_EADR);
 			PHY_WRITE(sc, E1000_EADR, 2);
@@ -210,7 +193,7 @@ e1000phy_reset(struct mii_softc *sc)
 			reg &= ~E1000_SCR_MODE_MASK;
 			reg |= E1000_SCR_MODE_1000BX;
 			PHY_WRITE(sc, E1000_SCR, reg);
-			if ((sc->mii_flags & MIIF_MACPRIV0) != 0) {
+			if ((sc->mii_flags & MIIF_PHYPRIV0) != 0) {
 				/* Set SIGDET polarity low for SFP module. */
 				PHY_WRITE(sc, E1000_EADR, 1);
 				reg = PHY_READ(sc, E1000_SCR);
@@ -220,26 +203,26 @@ e1000phy_reset(struct mii_softc *sc)
 			PHY_WRITE(sc, E1000_EADR, page);
 		}
 	} else {
-		switch (esc->mii_model) {
-		case MII_MODEL_MARVELL_E1111:
-		case MII_MODEL_MARVELL_E1112:
-		case MII_MODEL_MARVELL_E1116:
-		case MII_MODEL_MARVELL_E1118:
-		case MII_MODEL_MARVELL_E1149:
-		case MII_MODEL_MARVELL_E1149R:
-		case MII_MODEL_MARVELL_PHYG65G:
+		switch (sc->mii_mpd_model) {
+		case MII_MODEL_xxMARVELL_E1111:
+		case MII_MODEL_xxMARVELL_E1112:
+		case MII_MODEL_xxMARVELL_E1116:
+		case MII_MODEL_xxMARVELL_E1118:
+		case MII_MODEL_xxMARVELL_E1149:
+		case MII_MODEL_xxMARVELL_E1149R:
+		case MII_MODEL_xxMARVELL_PHYG65G:
 			/* Disable energy detect mode. */
 			reg &= ~E1000_SCR_EN_DETECT_MASK;
 			reg |= E1000_SCR_AUTO_X_MODE;
-			if (esc->mii_model == MII_MODEL_MARVELL_E1116)
+			if (sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1116)
 				reg &= ~E1000_SCR_POWER_DOWN;
 			reg |= E1000_SCR_ASSERT_CRS_ON_TX;
 			break;
-		case MII_MODEL_MARVELL_E3082:
+		case MII_MODEL_xxMARVELL_E3082:
 			reg |= (E1000_SCR_AUTO_X_MODE >> 1);
 			reg |= E1000_SCR_ASSERT_CRS_ON_TX;
 			break;
-		case MII_MODEL_MARVELL_E3016:
+		case MII_MODEL_xxMARVELL_E3016:
 			reg |= E1000_SCR_AUTO_MDIX;
 			reg &= ~(E1000_SCR_EN_DETECT |
 			    E1000_SCR_SCRAMBLER_DISABLE);
@@ -252,15 +235,15 @@ e1000phy_reset(struct mii_softc *sc)
 			reg |= E1000_SCR_ASSERT_CRS_ON_TX;
 			break;
 		}
-		if (esc->mii_model != MII_MODEL_MARVELL_E3016) {
+		if (sc->mii_mpd_model != MII_MODEL_xxMARVELL_E3016) {
 			/* Auto correction for reversed cable polarity. */
 			reg &= ~E1000_SCR_POLARITY_REVERSAL;
 		}
 		PHY_WRITE(sc, E1000_SCR, reg);
 
-		if (esc->mii_model == MII_MODEL_MARVELL_E1116 ||
-		    esc->mii_model == MII_MODEL_MARVELL_E1149 ||
-		    esc->mii_model == MII_MODEL_MARVELL_E1149R) {
+		if (sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1116 ||
+		    sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1149 ||
+		    sc->mii_mpd_model == MII_MODEL_xxMARVELL_E1149R) {
 			PHY_WRITE(sc, E1000_EADR, 2);
 			reg = PHY_READ(sc, E1000_SCR);
 			reg |= E1000_SCR_RGMII_POWER_UP;
@@ -269,12 +252,12 @@ e1000phy_reset(struct mii_softc *sc)
 		}
 	}
 
-	switch (esc->mii_model) {
-	case MII_MODEL_MARVELL_E3082:
-	case MII_MODEL_MARVELL_E1112:
-	case MII_MODEL_MARVELL_E1118:
+	switch (sc->mii_mpd_model) {
+	case MII_MODEL_xxMARVELL_E3082:
+	case MII_MODEL_xxMARVELL_E1112:
+	case MII_MODEL_xxMARVELL_E1118:
 		break;
-	case MII_MODEL_MARVELL_E1116:
+	case MII_MODEL_xxMARVELL_E1116:
 		page = PHY_READ(sc, E1000_EADR);
 		/* Select page 3, LED control register. */
 		PHY_WRITE(sc, E1000_EADR, 3);
@@ -288,7 +271,7 @@ e1000phy_reset(struct mii_softc *sc)
 		    E1000_BLINK_RATE(E1000_BLINK_84MS));
 		PHY_WRITE(sc, E1000_EADR, page);
 		break;
-	case MII_MODEL_MARVELL_E3016:
+	case MII_MODEL_xxMARVELL_E3016:
 		/* LED2 -> ACT, LED1 -> LINK, LED0 -> SPEED. */
 		PHY_WRITE(sc, 0x16, 0x0B << 8 | 0x05 << 4 | 0x04);
 		/* Integrated register calibration workaround. */
@@ -373,8 +356,7 @@ e1000phy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 
 		if (IFM_SUBTYPE(ife->ifm_media) == IFM_1000_T) {
 			gig |= E1000_1GCR_MS_ENABLE;
-			if ((ife->ifm_media & IFM_ETH_MASTER) != 0 ||
-			    (mii->mii_ifp->if_flags & IFF_LINK0) != 0)	
+			if ((ife->ifm_media & IFM_ETH_MASTER) != 0)	
 				gig |= E1000_1GCR_MS_VALUE;
 		} else if ((sc->mii_extcapabilities &
 		    (EXTSR_1000TFDX | EXTSR_1000THDX)) != 0)
@@ -416,13 +398,13 @@ done:
 			break;
 
 		sc->mii_ticks = 0;
-		e1000phy_reset(sc);
+		PHY_RESET(sc);
 		e1000phy_mii_phy_auto(sc, ife->ifm_media);
 		break;
 	}
 
 	/* Update the media status. */
-	e1000phy_status(sc);
+	PHY_STATUS(sc);
 
 	/* Callback if something changed. */
 	mii_phy_update(sc, cmd);

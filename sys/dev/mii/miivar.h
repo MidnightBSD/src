@@ -29,7 +29,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/miivar.h,v 1.21.2.5 2011/09/11 20:25:57 marius Exp $
  */
 
 #ifndef _DEV_MII_MIIVAR_H_
@@ -83,10 +82,13 @@ struct mii_data {
 typedef struct mii_data mii_data_t;
 
 /*
- * This call is used by the MII layer to call into the PHY driver
- * to perform a `service request'.
+ * Functions provided by the PHY to perform various functions.
  */
-typedef	int (*mii_downcall_t)(struct mii_softc *, struct mii_data *, int);
+struct mii_phy_funcs {
+	int (*pf_service)(struct mii_softc *, struct mii_data *, int);
+	void (*pf_status)(struct mii_softc *);
+	void (*pf_reset)(struct mii_softc *);
+};
 
 /*
  * Requests that can be made to the downcall.
@@ -105,10 +107,17 @@ struct mii_softc {
 
 	LIST_ENTRY(mii_softc) mii_list;	/* entry on parent's PHY list */
 
+	uint32_t mii_mpd_oui;		/* the PHY's OUI (MII_OUI())*/
+	uint32_t mii_mpd_model;		/* the PHY's model (MII_MODEL())*/
+	uint32_t mii_mpd_rev;		/* the PHY's revision (MII_REV())*/
+	u_int mii_capmask;		/* capability mask for BMSR */
 	u_int mii_phy;			/* our MII address */
+	u_int mii_offset;		/* first PHY, second PHY, etc. */
 	u_int mii_inst;			/* instance for ifmedia */
 
-	mii_downcall_t mii_service;	/* our downcall */
+	/* Our PHY functions. */
+	const struct mii_phy_funcs *mii_funcs;
+
 	struct mii_data *mii_pdata;	/* pointer to parent's mii_data */
 
 	u_int mii_flags;		/* misc. flags; see below */
@@ -124,7 +133,9 @@ typedef struct mii_softc mii_softc_t;
 /* mii_flags */
 #define	MIIF_INITDONE	0x00000001	/* has been initialized (mii_data) */
 #define	MIIF_NOISOLATE	0x00000002	/* do not isolate the PHY */
+#if 0
 #define	MIIF_NOLOOP	0x00000004	/* no loopback capability */
+#endif
 #define	MIIF_DOINGAUTO	0x00000008	/* doing autonegotiation (mii_softc) */
 #define	MIIF_AUTOTSLEEP	0x00000010	/* use tsleep(), not callout() */
 #define	MIIF_HAVEFIBER	0x00000020	/* from parent: has fiber interface */
@@ -151,7 +162,7 @@ typedef struct mii_softc mii_softc_t;
 /*
  * Special `locators' passed to mii_attach().  If one of these is not
  * an `any' value, we look for *that* PHY and configure it.  If both
- * are not `any', that is an error, and mii_attach() will panic.
+ * are not `any', that is an error, and mii_attach() will fail.
  */
 #define	MII_OFFSET_ANY		-1
 #define	MII_PHY_ANY		-1
@@ -210,6 +221,15 @@ struct mii_media {
 #define PHY_WRITE(p, r, v) \
 	MIIBUS_WRITEREG((p)->mii_dev, (p)->mii_phy, (r), (v))
 
+#define	PHY_SERVICE(p, d, o) \
+	(*(p)->mii_funcs->pf_service)((p), (d), (o))
+
+#define	PHY_STATUS(p) \
+	(*(p)->mii_funcs->pf_status)(p)
+
+#define	PHY_RESET(p) \
+	(*(p)->mii_funcs->pf_reset)(p)
+
 enum miibus_device_ivars {
 	MIIBUS_IVAR_FLAGS
 };
@@ -225,19 +245,12 @@ MIIBUS_ACCESSOR(flags,		FLAGS,		u_int)
 extern devclass_t	miibus_devclass;
 extern driver_t		miibus_driver;
 
-int	miibus_probe(device_t);
-int	miibus_attach(device_t);
-int	miibus_detach(device_t);
-
 int	mii_attach(device_t, device_t *, struct ifnet *, ifm_change_cb_t,
 	    ifm_stat_cb_t, int, int, int, int);
-int	mii_anar(int);
 void	mii_down(struct mii_data *);
 int	mii_mediachg(struct mii_data *);
 void	mii_tick(struct mii_data *);
 void	mii_pollstat(struct mii_data *);
-int	mii_phy_probe(device_t, device_t *, ifm_change_cb_t, ifm_stat_cb_t);
-void	mii_add_media(struct mii_softc *);
 void	mii_phy_add_media(struct mii_softc *);
 
 int	mii_phy_auto(struct mii_softc *);
@@ -254,8 +267,16 @@ const struct mii_phydesc * mii_phy_match(const struct mii_attach_args *ma,
 const struct mii_phydesc * mii_phy_match_gen(const struct mii_attach_args *ma,
     const struct mii_phydesc *mpd, size_t endlen);
 int mii_phy_dev_probe(device_t dev, const struct mii_phydesc *mpd, int mrv);
+void mii_phy_dev_attach(device_t dev, u_int flags,
+    const struct mii_phy_funcs *mpf, int add_media);
 
 void	ukphy_status(struct mii_softc *);
+
+u_int	mii_oui(u_int, u_int);
+#define	MII_OUI(id1, id2)	mii_oui(id1, id2)
+#define	MII_MODEL(id2)		(((id2) & IDR2_MODEL) >> 4)
+#define	MII_REV(id2)		((id2) & IDR2_REV)
+
 #endif /* _KERNEL */
 
 #endif /* _DEV_MII_MIIVAR_H_ */

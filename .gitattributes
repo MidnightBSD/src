@@ -46057,12 +46057,9 @@ sys/dev/mii/ciphy.c -text
 sys/dev/mii/ciphyreg.h -text
 sys/dev/mii/e1000phy.c -text
 sys/dev/mii/e1000phyreg.h -text
-sys/dev/mii/exphy.c -text
 sys/dev/mii/gentbi.c -text
 sys/dev/mii/icsphy.c -text
 sys/dev/mii/icsphyreg.h -text
-sys/dev/mii/inphy.c -text
-sys/dev/mii/inphyreg.h -text
 sys/dev/mii/ip1000phy.c -text
 sys/dev/mii/ip1000phyreg.h -text
 sys/dev/mii/jmphy.c -text
@@ -46093,8 +46090,6 @@ sys/dev/mii/rgephy.c -text
 sys/dev/mii/rgephyreg.h -text
 sys/dev/mii/rlphy.c -text
 sys/dev/mii/rlswitch.c -text
-sys/dev/mii/ruephy.c -text
-sys/dev/mii/ruephyreg.h -text
 sys/dev/mii/smcphy.c -text
 sys/dev/mii/tdkphy.c -text
 sys/dev/mii/tdkphyreg.h -text

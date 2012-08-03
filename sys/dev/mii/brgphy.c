@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/brgphy.c,v 1.70.2.27 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * Driver for the Broadcom BCM54xx/57xx 1000baseTX PHY.
@@ -68,9 +67,6 @@ static int brgphy_attach(device_t);
 
 struct brgphy_softc {
 	struct mii_softc mii_sc;
-	int mii_oui;
-	int mii_model;
-	int mii_rev;
 	int serdes_flags;	/* Keeps track of the serdes type used */
 #define BRGPHY_5706S		0x0001
 #define BRGPHY_5708S		0x0002
@@ -85,7 +81,7 @@ static device_method_t brgphy_methods[] = {
 	DEVMETHOD(device_attach,	brgphy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t brgphy_devclass;
@@ -117,35 +113,47 @@ static void	brgphy_ethernet_wirespeed(struct mii_softc *);
 static void	brgphy_jumbo_settings(struct mii_softc *, u_long);
 
 static const struct mii_phydesc brgphys[] = {
-	MII_PHY_DESC(xxBROADCOM, BCM5400),
-	MII_PHY_DESC(xxBROADCOM, BCM5401),
-	MII_PHY_DESC(xxBROADCOM, BCM5411),
-	MII_PHY_DESC(xxBROADCOM, BCM54K2),
-	MII_PHY_DESC(xxBROADCOM, BCM5701),
-	MII_PHY_DESC(xxBROADCOM, BCM5703),
-	MII_PHY_DESC(xxBROADCOM, BCM5704),
-	MII_PHY_DESC(xxBROADCOM, BCM5705),
-	MII_PHY_DESC(xxBROADCOM, BCM5706),
-	MII_PHY_DESC(xxBROADCOM, BCM5714),
-	MII_PHY_DESC(xxBROADCOM, BCM5750),
-	MII_PHY_DESC(xxBROADCOM, BCM5752),
-	MII_PHY_DESC(xxBROADCOM, BCM5754),
-	MII_PHY_DESC(xxBROADCOM, BCM5780),
-	MII_PHY_DESC(xxBROADCOM, BCM5708C),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5755),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5787),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5708S),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5709CAX),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5722),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5784),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5709C),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5761),
-	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5709S),
-	MII_PHY_DESC(xxBROADCOM_ALT2, BCM5717C),
-	MII_PHY_DESC(xxBROADCOM_ALT2, BCM5719C),
-	MII_PHY_DESC(xxBROADCOM_ALT2, BCM57765),
-	MII_PHY_DESC(BROADCOM2, BCM5906),
+	MII_PHY_DESC(BROADCOM, BCM5400),
+	MII_PHY_DESC(BROADCOM, BCM5401),
+	MII_PHY_DESC(BROADCOM, BCM5411),
+	MII_PHY_DESC(BROADCOM, BCM54K2),
+	MII_PHY_DESC(BROADCOM, BCM5701),
+	MII_PHY_DESC(BROADCOM, BCM5703),
+	MII_PHY_DESC(BROADCOM, BCM5704),
+	MII_PHY_DESC(BROADCOM, BCM5705),
+	MII_PHY_DESC(BROADCOM, BCM5706),
+	MII_PHY_DESC(BROADCOM, BCM5714),
+	MII_PHY_DESC(BROADCOM, BCM5421),
+	MII_PHY_DESC(BROADCOM, BCM5750),
+	MII_PHY_DESC(BROADCOM, BCM5752),
+	MII_PHY_DESC(BROADCOM, BCM5780),
+	MII_PHY_DESC(BROADCOM, BCM5708C),
+	MII_PHY_DESC(BROADCOM2, BCM5482),
+	MII_PHY_DESC(BROADCOM2, BCM5708S),
+	MII_PHY_DESC(BROADCOM2, BCM5709C),
+	MII_PHY_DESC(BROADCOM2, BCM5709S),
+	MII_PHY_DESC(BROADCOM2, BCM5709CAX),
+	MII_PHY_DESC(BROADCOM2, BCM5722),
+	MII_PHY_DESC(BROADCOM2, BCM5755),
+	MII_PHY_DESC(BROADCOM2, BCM5754),
+	MII_PHY_DESC(BROADCOM2, BCM5761),
+	MII_PHY_DESC(BROADCOM2, BCM5784),
+#ifdef notyet	/* better handled by ukphy(4) until WARs are implemented */
+	MII_PHY_DESC(BROADCOM2, BCM5785),
+#endif
+	MII_PHY_DESC(BROADCOM3, BCM5717C),
+	MII_PHY_DESC(BROADCOM3, BCM5719C),
+	MII_PHY_DESC(BROADCOM3, BCM5720C),
+	MII_PHY_DESC(BROADCOM3, BCM57765),
+	MII_PHY_DESC(BROADCOM3, BCM57780),
+	MII_PHY_DESC(xxBROADCOM_ALT1, BCM5906),
 	MII_PHY_END
+};
+
+static const struct mii_phy_funcs brgphy_funcs = {
+	brgphy_service,
+	brgphy_status,
+	brgphy_reset
 };
 
 #define HS21_PRODUCT_ID	"IBM eServer BladeCenter HS21"
@@ -186,46 +194,22 @@ brgphy_attach(device_t dev)
 	struct bge_softc *bge_sc = NULL;
 	struct bce_softc *bce_sc = NULL;
 	struct mii_softc *sc;
-	struct mii_attach_args *ma;
-	struct mii_data *mii;
 	struct ifnet *ifp;
 
 	bsc = device_get_softc(dev);
 	sc = &bsc->mii_sc;
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = ma->mii_data;
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
 
-	/* Initialize mii_softc structure */
-	sc->mii_flags = miibus_get_flags(dev);
-	sc->mii_inst = mii->mii_instance++;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = brgphy_service;
-	sc->mii_pdata = mii;
+	mii_phy_dev_attach(dev, MIIF_NOISOLATE | MIIF_NOMANPAUSE,
+	    &brgphy_funcs, 0);
 
-	/*
-	 * At least some variants wedge when isolating, at least some also
-	 * don't support loopback.
-	 */
-	sc->mii_flags |= MIIF_NOISOLATE | MIIF_NOLOOP | MIIF_NOMANPAUSE;
-
-	/* Initialize brgphy_softc structure */
-	bsc->mii_oui = MII_OUI(ma->mii_id1, ma->mii_id2);
-	bsc->mii_model = MII_MODEL(ma->mii_id2);
-	bsc->mii_rev = MII_REV(ma->mii_id2);
 	bsc->serdes_flags = 0;
 
-	if (bootverbose)
-		device_printf(dev, "OUI 0x%06x, model 0x%04x, rev. %d\n",
-		    bsc->mii_oui, bsc->mii_model, bsc->mii_rev);
-
 	/* Handle any special cases based on the PHY ID */
-	switch (bsc->mii_oui) {
-	case MII_OUI_xxBROADCOM:
-		switch (bsc->mii_model) {
-		case MII_MODEL_xxBROADCOM_BCM5706:
-		case MII_MODEL_xxBROADCOM_BCM5714:
+	switch (sc->mii_mpd_oui) {
+	case MII_OUI_BROADCOM:
+		switch (sc->mii_mpd_model) {
+		case MII_MODEL_BROADCOM_BCM5706:
+		case MII_MODEL_BROADCOM_BCM5714:
 			/*
 			 * The 5464 PHY used in the 5706 supports both copper
 			 * and fiber interfaces over GMII.  Need to check the
@@ -241,14 +225,15 @@ brgphy_attach(device_t dev)
 				sc->mii_flags |= MIIF_HAVEFIBER;
 			}
 			break;
-		} break;
-	case MII_OUI_xxBROADCOM_ALT1:
-		switch (bsc->mii_model) {
-		case MII_MODEL_xxBROADCOM_ALT1_BCM5708S:
+		}
+		break;
+	case MII_OUI_BROADCOM2:
+		switch (sc->mii_mpd_model) {
+		case MII_MODEL_BROADCOM2_BCM5708S:
 			bsc->serdes_flags |= BRGPHY_5708S;
 			sc->mii_flags |= MIIF_HAVEFIBER;
 			break;
-		case MII_MODEL_xxBROADCOM_ALT1_BCM5709S:
+		case MII_MODEL_BROADCOM2_BCM5709S:
 			bsc->serdes_flags |= BRGPHY_5709S;
 			sc->mii_flags |= MIIF_HAVEFIBER;
 			break;
@@ -265,15 +250,15 @@ brgphy_attach(device_t dev)
 		bce_sc = ifp->if_softc;
 	}
 
-	brgphy_reset(sc);
+	PHY_RESET(sc);
 
 	/* Read the PHY's capabilities. */
-	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
+	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & sc->mii_capmask;
 	if (sc->mii_capabilities & BMSR_EXTSTAT)
 		sc->mii_extcapabilities = PHY_READ(sc, MII_EXTSR);
 	device_printf(dev, " ");
 
-#define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
+#define	ADD(m, c)	ifmedia_add(&sc->mii_pdata->mii_media, (m), (c), NULL)
 
 	/* Add the supported media types */
 	if ((sc->mii_flags & MIIF_HAVEFIBER) == 0) {
@@ -314,7 +299,6 @@ brgphy_attach(device_t dev)
 static int
 brgphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
-	struct brgphy_softc *bsc = (struct brgphy_softc *)sc;
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int val;
 
@@ -327,7 +311,7 @@ brgphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 			break;
 
 		/* Todo: Why is this here?  Is it really needed? */
-		brgphy_reset(sc);	/* XXX hardware bug work-around */
+		PHY_RESET(sc);	/* XXX hardware bug work-around */
 
 		switch (IFM_SUBTYPE(ife->ifm_media)) {
 		case IFM_AUTO:
@@ -382,7 +366,7 @@ brgphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 	}
 
 	/* Update the media status. */
-	brgphy_status(sc);
+	PHY_STATUS(sc);
 
 	/*
 	 * Callback if something changed. Note that we need to poke
@@ -391,20 +375,20 @@ brgphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 	if (sc->mii_media_active != mii->mii_media_active ||
 	    sc->mii_media_status != mii->mii_media_status ||
 	    cmd == MII_MEDIACHG) {
-		switch (bsc->mii_oui) {
-		case MII_OUI_xxBROADCOM:
-			switch (bsc->mii_model) {
-			case MII_MODEL_xxBROADCOM_BCM5400:
+		switch (sc->mii_mpd_oui) {
+		case MII_OUI_BROADCOM:
+			switch (sc->mii_mpd_model) {
+			case MII_MODEL_BROADCOM_BCM5400:
 				bcm5401_load_dspcode(sc);
 				break;
-			case MII_MODEL_xxBROADCOM_BCM5401:
-				if (bsc->mii_rev == 1 || bsc->mii_rev == 3)
+			case MII_MODEL_BROADCOM_BCM5401:
+				if (sc->mii_mpd_rev == 1 || sc->mii_mpd_rev == 3)
 					bcm5401_load_dspcode(sc);
 				break;
-			case MII_MODEL_xxBROADCOM_BCM5411:
+			case MII_MODEL_BROADCOM_BCM5411:
 				bcm5411_load_dspcode(sc);
 				break;
-			case MII_MODEL_xxBROADCOM_BCM54K2:
+			case MII_MODEL_BROADCOM_BCM54K2:
 				bcm54k2_load_dspcode(sc);
 				break;
 			}
@@ -463,8 +447,7 @@ brgphy_setmedia(struct mii_softc *sc, int media)
 
 	if (IFM_SUBTYPE(media) == IFM_1000_T) {
 		gig |= BRGPHY_1000CTL_MSE;
-		if ((media & IFM_ETH_MASTER) != 0 ||
-		    (sc->mii_pdata->mii_ifp->if_flags & IFF_LINK0) != 0)
+		if ((media & IFM_ETH_MASTER) != 0)
 			gig |= BRGPHY_1000CTL_MSC;
 	}
 	PHY_WRITE(sc, BRGPHY_MII_1000CTL, gig);
@@ -614,10 +597,9 @@ brgphy_status(struct mii_softc *sc)
 static void
 brgphy_mii_phy_auto(struct mii_softc *sc, int media)
 {
-	struct brgphy_softc *bsc = (struct brgphy_softc *)sc;
 	int anar, ktcr = 0;
 
-	brgphy_reset(sc);
+	PHY_RESET(sc);
 
 	if ((sc->mii_flags & MIIF_HAVEFIBER) == 0) {
 		anar = BMSR_MEDIA_TO_ANAR(sc->mii_capabilities) | ANAR_CSMA;
@@ -634,7 +616,7 @@ brgphy_mii_phy_auto(struct mii_softc *sc, int media)
 	}
 
 	ktcr = BRGPHY_1000CTL_AFD | BRGPHY_1000CTL_AHD;
-	if (bsc->mii_model == MII_MODEL_xxBROADCOM_BCM5701)
+	if (sc->mii_mpd_model == MII_MODEL_BROADCOM_BCM5701)
 		ktcr |= BRGPHY_1000CTL_MSE | BRGPHY_1000CTL_MSC;
 	PHY_WRITE(sc, BRGPHY_MII_1000CTL, ktcr);
 	ktcr = PHY_READ(sc, BRGPHY_MII_1000CTL);
@@ -864,12 +846,11 @@ brgphy_ethernet_wirespeed(struct mii_softc *sc)
 static void
 brgphy_jumbo_settings(struct mii_softc *sc, u_long mtu)
 {
-	struct brgphy_softc *bsc = (struct brgphy_softc *)sc;
 	uint32_t	val;
 
 	/* Set or clear jumbo frame settings in the PHY. */
 	if (mtu > ETHER_MAX_LEN) {
-		if (bsc->mii_model == MII_MODEL_xxBROADCOM_BCM5401) {
+		if (sc->mii_mpd_model == MII_MODEL_BROADCOM_BCM5401) {
 			/* BCM5401 PHY cannot read-modify-write. */
 			PHY_WRITE(sc, BRGPHY_MII_AUXCTL, 0x4c20);
 		} else {
@@ -897,7 +878,6 @@ brgphy_jumbo_settings(struct mii_softc *sc, u_long mtu)
 static void
 brgphy_reset(struct mii_softc *sc)
 {
-	struct brgphy_softc *bsc = (struct brgphy_softc *)sc;
 	struct bge_softc *bge_sc = NULL;
 	struct bce_softc *bce_sc = NULL;
 	struct ifnet *ifp;
@@ -919,20 +899,20 @@ brgphy_reset(struct mii_softc *sc)
 	}
 
 	/* Handle any PHY specific procedures following the reset. */
-	switch (bsc->mii_oui) {
-	case MII_OUI_xxBROADCOM:
-		switch (bsc->mii_model) {
-		case MII_MODEL_xxBROADCOM_BCM5400:
+	switch (sc->mii_mpd_oui) {
+	case MII_OUI_BROADCOM:
+		switch (sc->mii_mpd_model) {
+		case MII_MODEL_BROADCOM_BCM5400:
 			bcm5401_load_dspcode(sc);
 			break;
-		case MII_MODEL_xxBROADCOM_BCM5401:
-			if (bsc->mii_rev == 1 || bsc->mii_rev == 3)
+		case MII_MODEL_BROADCOM_BCM5401:
+			if (sc->mii_mpd_rev == 1 || sc->mii_mpd_rev == 3)
 				bcm5401_load_dspcode(sc);
 			break;
-		case MII_MODEL_xxBROADCOM_BCM5411:
+		case MII_MODEL_BROADCOM_BCM5411:
 			bcm5411_load_dspcode(sc);
 			break;
-		case MII_MODEL_xxBROADCOM_BCM54K2:
+		case MII_MODEL_BROADCOM_BCM54K2:
 			bcm54k2_load_dspcode(sc);
 			break;
 		}
@@ -963,7 +943,8 @@ brgphy_reset(struct mii_softc *sc)
 		if (bge_sc->bge_phy_flags & BGE_PHY_JITTER_BUG)
 			brgphy_fixup_jitter_bug(sc);
 
-		brgphy_jumbo_settings(sc, ifp->if_mtu);
+		if (bge_sc->bge_flags & BGE_FLAG_JUMBO)
+			brgphy_jumbo_settings(sc, ifp->if_mtu);
 
 		if ((bge_sc->bge_phy_flags & BGE_PHY_NO_WIRESPEED) == 0)
 			brgphy_ethernet_wirespeed(sc);

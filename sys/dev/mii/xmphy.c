@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/xmphy.c,v 1.21.2.6 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * driver for the XaQti XMAC II's internal PHY. This is sort of
@@ -66,7 +65,7 @@ static device_method_t xmphy_methods[] = {
 	DEVMETHOD(device_attach,	xmphy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t xmphy_devclass;
@@ -84,9 +83,15 @@ static void	xmphy_status(struct mii_softc *);
 static int	xmphy_mii_phy_auto(struct mii_softc *);
 
 static const struct mii_phydesc xmphys[] = {
-	{ MII_OUI_xxXAQTI, MII_MODEL_XAQTI_XMACII, MII_STR_XAQTI_XMACII },
-	MII_PHY_DESC(JATO, BASEX),
+	MII_PHY_DESC(xxJATO, BASEX),
+	MII_PHY_DESC(xxXAQTI, XMACII),
 	MII_PHY_END
+};
+
+static const struct mii_phy_funcs xmphy_funcs = {
+	xmphy_service,
+	xmphy_status,
+	mii_phy_reset
 };
 
 static int
@@ -100,28 +105,17 @@ static int
 xmphy_attach(device_t dev)
 {
 	struct mii_softc *sc;
-	struct mii_attach_args *ma;
-	struct mii_data *mii;
 	const char *sep = "";
 
 	sc = device_get_softc(dev);
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = ma->mii_data;
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
 
-	sc->mii_flags = miibus_get_flags(dev);
-	sc->mii_inst = mii->mii_instance++;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = xmphy_service;
-	sc->mii_pdata = mii;
-
-	sc->mii_flags |= MIIF_NOISOLATE | MIIF_NOMANPAUSE;
+	mii_phy_dev_attach(dev, MIIF_NOISOLATE | MIIF_NOMANPAUSE,
+	    &xmphy_funcs, 0);
 	sc->mii_anegticks = MII_ANEGTICKS;
 
-	mii_phy_reset(sc);
+	PHY_RESET(sc);
 
-#define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
+#define	ADD(m, c)	ifmedia_add(&sc->mii_pdata->mii_media, (m), (c), NULL)
 #define PRINT(s)	printf("%s%s", sep, s); sep = ", "
 
 	device_printf(dev, " ");
@@ -171,7 +165,7 @@ xmphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 			(void)xmphy_mii_phy_auto(sc);
 			break;
 		case IFM_1000_SX:
-			mii_phy_reset(sc);
+			PHY_RESET(sc);
 			if ((ife->ifm_media & IFM_FDX) != 0) {
 				PHY_WRITE(sc, XMPHY_MII_ANAR, XMPHY_ANAR_FDX);
 				PHY_WRITE(sc, XMPHY_MII_BMCR, XMPHY_BMCR_FDX);
@@ -213,7 +207,7 @@ xmphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 
 		sc->mii_ticks = 0;
 
-		mii_phy_reset(sc);
+		PHY_RESET(sc);
 		xmphy_mii_phy_auto(sc);
 		return (0);
 	}

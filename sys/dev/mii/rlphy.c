@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/rlphy.c,v 1.31.2.6 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * driver for RealTek 8139 internal PHYs
@@ -57,11 +56,6 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/rlphy.c,v 1.31.2.6 2011/09/11 20:25:57 mariu
 
 #include "miibus_if.h"
 
-struct rlphy_softc {
-	struct mii_softc sc_mii;	/* generic PHY */
-	int sc_is_RTL8201L;		/* is an external RTL8201L PHY */
-};
-
 static int rlphy_probe(device_t);
 static int rlphy_attach(device_t);
 
@@ -71,7 +65,7 @@ static device_method_t rlphy_methods[] = {
 	DEVMETHOD(device_attach,	rlphy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t rlphy_devclass;
@@ -79,7 +73,7 @@ static devclass_t rlphy_devclass;
 static driver_t rlphy_driver = {
 	"rlphy",
 	rlphy_methods,
-	sizeof(struct rlphy_softc)
+	sizeof(struct mii_softc)
 };
 
 DRIVER_MODULE(rlphy, miibus, rlphy_driver, rlphy_devclass, 0, 0);
@@ -97,9 +91,16 @@ static const struct mii_phydesc rlintphys[] = {
 };
 
 static const struct mii_phydesc rlphys[] = {
-	MII_PHY_DESC(REALTEK, RTL8201L),
-	MII_PHY_DESC(ICPLUS, IP101),
+	MII_PHY_DESC(yyREALTEK, RTL8201L),
+	MII_PHY_DESC(REALTEK, RTL8201E),
+	MII_PHY_DESC(xxICPLUS, IP101),
 	MII_PHY_END
+};
+
+static const struct mii_phy_funcs rlphy_funcs = {
+	rlphy_service,
+	rlphy_status,
+	mii_phy_reset
 };
 
 static int
@@ -121,50 +122,12 @@ rlphy_probe(device_t dev)
 static int
 rlphy_attach(device_t dev)
 {
-	struct mii_softc	*sc;
-	struct mii_attach_args	*ma;
-	struct mii_data		*mii;
-	struct rlphy_softc 	*rsc;
-
-	sc = device_get_softc(dev);
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = ma->mii_data;
-
-        /*
-         * Check whether we're the RTL8201L PHY and remember so the status
-         * routine can query the proper register for speed detection.
-         */
-	rsc = (struct rlphy_softc *)sc;
-	if (mii_phy_dev_probe(dev, rlphys, 0) == 0)
-		rsc->sc_is_RTL8201L++;
-	
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
-
-	sc->mii_flags = miibus_get_flags(dev);
-	sc->mii_inst = mii->mii_instance++;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = rlphy_service;
-	sc->mii_pdata = mii;
 
 	/*
 	 * The RealTek PHY can never be isolated.
 	 */
-	sc->mii_flags |= MIIF_NOISOLATE | MIIF_NOMANPAUSE;
-
-#define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
-
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_TX, IFM_LOOP, sc->mii_inst),
-	    MII_MEDIA_100_TX);
-
-	mii_phy_reset(sc);
-
-	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
-	device_printf(dev, " ");
-	mii_phy_add_media(sc);
-	printf("\n");
-#undef ADD
-	MIIBUS_MEDIAINIT(sc->mii_dev);
+	mii_phy_dev_attach(dev, MIIF_NOISOLATE | MIIF_NOMANPAUSE,
+	    &rlphy_funcs, 1);
 	return (0);
 }
 
@@ -201,7 +164,7 @@ rlphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 	}
 
 	/* Update the media status. */
-	rlphy_status(sc);
+	PHY_STATUS(sc);
 
 	/* Callback if something changed. */
 	mii_phy_update(sc, cmd);
@@ -211,7 +174,6 @@ rlphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 static void
 rlphy_status(struct mii_softc *phy)
 {
-	struct rlphy_softc *rsc =(struct rlphy_softc *)phy;
 	struct mii_data *mii = phy->mii_pdata;
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int bmsr, bmcr, anlpar;
@@ -291,7 +253,7 @@ rlphy_status(struct mii_softc *phy)
 		 *   can test the 'SPEED10' bit of the MAC's media status
 		 *   register.
 		 */
-		if (rsc->sc_is_RTL8201L) {
+		if (!(phy->mii_mpd_model == 0 && phy->mii_mpd_rev == 0)) {
 			if (PHY_READ(phy, 0x0019) & 0x01)
 				mii->mii_media_active |= IFM_100_TX;
 			else

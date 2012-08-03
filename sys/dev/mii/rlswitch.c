@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/rlswitch.c,v 1.1.2.4 2011/09/11 20:25:57 marius Exp $");
 
 /*
  * driver for RealTek 8305 pseudo PHYs
@@ -70,7 +69,7 @@ static device_method_t rlswitch_methods[] = {
 	DEVMETHOD(device_attach,	rlswitch_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t rlswitch_devclass;
@@ -91,8 +90,14 @@ static void	rlswitch_phydump(device_t dev);
 #endif
 
 static const struct mii_phydesc rlswitches[] = {
-	MII_PHY_DESC(xxREALTEK, RTL8305SC),
+	MII_PHY_DESC(REALTEK, RTL8305SC),
 	MII_PHY_END
+};
+
+static const struct mii_phy_funcs rlswitch_funcs = {
+	rlswitch_service,
+	rlswitch_status,
+	mii_phy_reset
 };
 
 static int
@@ -111,38 +116,19 @@ static int
 rlswitch_attach(device_t dev)
 {
 	struct mii_softc	*sc;
-	struct mii_attach_args	*ma;
-	struct mii_data		*mii;
 
 	sc = device_get_softc(dev);
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = ma->mii_data;
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
-
-	sc->mii_flags = miibus_get_flags(dev);
-	sc->mii_inst = mii->mii_instance++;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = rlswitch_service;
-	sc->mii_pdata = mii;
 
 	/*
 	 * We handle all pseudo PHYs in a single instance.
 	 */
-	sc->mii_flags |= MIIF_NOISOLATE | MIIF_NOMANPAUSE;
+	mii_phy_dev_attach(dev, MIIF_NOISOLATE | MIIF_NOMANPAUSE,
+	    &rlswitch_funcs, 0);
 
-#define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
-
-#if 0
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_TX, IFM_LOOP, sc->mii_inst),
-	    MII_MEDIA_100_TX);
-#endif
-
-	sc->mii_capabilities = BMSR_100TXFDX & ma->mii_capmask;
+	sc->mii_capabilities = BMSR_100TXFDX & sc->mii_capmask;
 	device_printf(dev, " ");
 	mii_phy_add_media(sc);
 	printf("\n");
-#undef ADD
 #ifdef RL_DEBUG
 	rlswitch_phydump(dev);
 #endif
@@ -375,7 +361,7 @@ rlswitch_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 	}
 
 	/* Update the media status. */
-	rlswitch_status(sc);
+	PHY_STATUS(sc);
 
 	/* Callback if something changed. */
 	// mii_phy_update(sc, cmd);
