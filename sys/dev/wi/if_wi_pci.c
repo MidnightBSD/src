@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wi/if_wi_pci.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/wi/if_wi_pci.c,v 1.27 2006/05/16 14:36:33 phk Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -191,10 +191,10 @@ wi_pci_attach(device_t dev)
 		sc->wi_bmemhandle = rman_get_bushandle(sc->mem);
 
 		/*
-		 * From Linux driver:
 		 * Write COR to enable PC card
 		 * This is a subset of the protocol that the pccard bus code
-		 * would do.
+		 * would do.  In theory, we should parse the CIS to find the
+		 * COR offset.  In practice, the COR_OFFSET is always 0x3e0.
 		 */
 		CSM_WRITE_1(sc, WI_COR_OFFSET, WI_COR_VALUE); 
 		reg = CSM_READ_1(sc, WI_COR_OFFSET);
@@ -209,10 +209,10 @@ wi_pci_attach(device_t dev)
 		if (error)
 			return (error);
 
-		CSR_WRITE_2(sc, WI_HFA384X_PCICOR_OFF, 0x0080);
+		CSR_WRITE_2(sc, WI_PCICOR_OFF, WI_PCICOR_RESET);
 		DELAY(250000);
 
-		CSR_WRITE_2(sc, WI_HFA384X_PCICOR_OFF, 0x0000);
+		CSR_WRITE_2(sc, WI_PCICOR_OFF, 0x0000);
 		DELAY(500000);
 
 		timeout=2000000;
@@ -221,7 +221,7 @@ wi_pci_attach(device_t dev)
 			DELAY(10);
 
 		if (timeout == 0) {
-			device_printf(dev, "couldn't reset prism2.5 core.\n");
+			device_printf(dev, "couldn't reset prism pci core.\n");
 			wi_free(dev);
 			return(ENXIO);
 		}
@@ -247,10 +247,8 @@ static int
 wi_pci_suspend(device_t dev)
 {
 	struct wi_softc	*sc = device_get_softc(dev);
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ifnet *ifp = ic->ic_ifp;
 
-	wi_stop(ifp, 1);
+	wi_stop(sc, 1);
 	
 	return (0);
 }
@@ -259,8 +257,7 @@ static int
 wi_pci_resume(device_t dev)
 {
 	struct wi_softc	*sc = device_get_softc(dev);
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ifnet *ifp = ic->ic_ifp;
+	struct ifnet *ifp = sc->sc_ifp;
 
 	if (sc->wi_bus_type != WI_BUS_PCI_NATIVE)
 		return (0);

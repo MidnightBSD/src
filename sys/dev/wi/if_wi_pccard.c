@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wi/if_wi_pccard.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -40,9 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/wi/if_wi_pccard.c,v 1.59 2005/10/14 15:06:16 imp Exp $");
-
-#include "opt_wi.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -72,9 +70,6 @@ __FBSDID("$FreeBSD: src/sys/dev/wi/if_wi_pccard.c,v 1.59 2005/10/14 15:06:16 imp
 #include <dev/wi/if_wavelan_ieee.h>
 #include <dev/wi/if_wireg.h>
 #include <dev/wi/if_wivar.h>
-#ifdef WI_SYMBOL_FIRMWARE
-#include <dev/wi/spectrum24t_cf.h>
-#endif
 
 #include "card_if.h"
 #include "pccarddevs.h"
@@ -127,6 +122,7 @@ static const struct pccard_product wi_pccard_products[] = {
 	PCMCIA_CARD(DLINK, DWL650H),
 	PCMCIA_CARD(ELSA, XI300_IEEE),
 	PCMCIA_CARD(ELSA, XI325_IEEE),
+	PCMCIA_CARD(ELSA, APDL325_IEEE),
 	PCMCIA_CARD(ELSA, XI330_IEEE),
 	PCMCIA_CARD(ELSA, XI800_IEEE),
 	PCMCIA_CARD(ELSA, WIFI_FLASH),
@@ -151,9 +147,9 @@ static const struct pccard_product wi_pccard_products[] = {
 	PCMCIA_CARD(PROXIM, RANGELANDS_8430),
 	PCMCIA_CARD(SAMSUNG, SWL_2000N),
 	PCMCIA_CARD(SIEMENS, SS1021),
+	PCMCIA_CARD(SIEMENS, SS1021A),
 	PCMCIA_CARD(SIMPLETECH, SPECTRUM24_ALT),
 	PCMCIA_CARD(SOCKET, LP_WLAN_CF),
-	PCMCIA_CARD(SYMBOL, LA4100),
 	PCMCIA_CARD(TDK, LAK_CD011WL),
 	{ NULL }
 };
@@ -168,64 +164,39 @@ wi_pccard_probe(device_t dev)
 	/* Make sure we're a network driver */
 	error = pccard_get_function(dev, &fcn);
 	if (error != 0)
-		return (error);
+		return error;
 	if (fcn != PCCARD_FUNCTION_NETWORK)
-		return (ENXIO);
+		return ENXIO;
 
-	if ((pp = pccard_product_lookup(dev, wi_pccard_products,
-	    sizeof(wi_pccard_products[0]), NULL)) != NULL) {
+	pp = pccard_product_lookup(dev, wi_pccard_products,
+	    sizeof(wi_pccard_products[0]), NULL);
+	if (pp != NULL) {
 		if (pp->pp_name != NULL)
 			device_set_desc(dev, pp->pp_name);
-		return (0);
+		return 0;
 	}
-	return (ENXIO);
+	return ENXIO;
 }
-
 
 static int
 wi_pccard_attach(device_t dev)
 {
 	struct wi_softc	*sc;
-	int		error;
-	uint32_t	vendor, product;
+	int error;
 
 	sc = device_get_softc(dev);
 	sc->wi_gone = 0;
 	sc->wi_bus_type = WI_BUS_PCCARD;
 
 	error = wi_alloc(dev, 0);
-	if (error)
-		return (error);
+	if (error == 0) {
+		/* Make sure interrupts are disabled. */
+		CSR_WRITE_2(sc, WI_INT_EN, 0);
+		CSR_WRITE_2(sc, WI_EVENT_ACK, 0xFFFF);
 
-	/* Make sure interrupts are disabled. */
-	CSR_WRITE_2(sc, WI_INT_EN, 0);
-	CSR_WRITE_2(sc, WI_EVENT_ACK, 0xFFFF);
-
-	/*
-	 * The cute little Symbol LA4100-series CF cards need to have
-	 * code downloaded to them.
-	 */
-	pccard_get_vendor(dev, &vendor);
-	pccard_get_product(dev, &product);
-	if (vendor == PCMCIA_VENDOR_SYMBOL &&
-	    product == PCMCIA_PRODUCT_SYMBOL_LA4100) {
-#ifdef WI_SYMBOL_FIRMWARE
-		if (wi_symbol_load_firm(device_get_softc(dev),
-		    spectrum24t_primsym, sizeof(spectrum24t_primsym),
-		    spectrum24t_secsym, sizeof(spectrum24t_secsym))) {
-			device_printf(dev, "couldn't load firmware\n");
-			return (ENXIO);
-		}
-#else
-		device_printf(dev, 
-		    "Symbol LA4100 needs 'option WI_SYMBOL_FIRMWARE'\n");
-		wi_free(dev);
-		return (ENXIO);
-#endif
+		error = wi_attach(dev);
+		if (error != 0)
+			wi_free(dev);
 	}
-	pccard_get_ether(dev, sc->sc_hintmacaddr);
-	error = wi_attach(dev);
-	if (error != 0)
-		wi_free(dev);
-	return (error);
+	return error;
 }

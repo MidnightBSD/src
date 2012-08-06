@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/utopia/utopia_priv.h,v 1.2 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005
  *	Hartmut Brandt.
@@ -27,7 +27,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: src/sys/dev/utopia/utopia_priv.h,v 1.1 2005/02/24 16:56:36 harti Exp $
+ * $FreeBSD$
  *
  * Private include file for the interface between chip files and
  * the utopia main stuff.

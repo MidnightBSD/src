@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ce/ceddk.h,v 1.3 2008/12/02 02:24:37 laffer1 Exp $ */
 /*
  * Middle-level code for Cronyx Tau32-PCI adapters.
  *
@@ -14,7 +14,7 @@
  * works or modified versions.
  *
  * $Cronyx: ceddk.h,v 1.2.6.1 2005/11/09 13:01:39 rik Exp $
- * $FreeBSD: src/sys/dev/ce/ceddk.h,v 1.1 2006/01/27 09:02:09 rik Exp $
+ * $FreeBSD$
  */
 
 #define TAU32_UserContext_Add	void	*sys;
@@ -73,6 +73,7 @@ typedef struct _ce_chan_t {
 	TAU32_UserRequest *rx_queue;
 	TAU32_UserRequest *tx_queue;
 	unsigned char debug;
+	unsigned char debug_shadow;
 	void (*transmit) (struct _ce_chan_t*, void*, int);
 	void (*receive) (struct _ce_chan_t*, unsigned char*, int);
 	void (*error) (struct _ce_chan_t*, int);

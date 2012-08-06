@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/null/null.c,v 1.2 2008/12/02 02:42:58 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Mark R. V. Murray & Jeroen C. van Gelderen
  * Copyright (c) 2001-2004 Mark R. V. Murray
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/null/null.c,v 1.32 2006/11/06 13:41:54 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -40,7 +40,10 @@ __FBSDID("$FreeBSD: src/sys/dev/null/null.c,v 1.32 2006/11/06 13:41:54 rwatson E
 #include <sys/priv.h>
 #include <sys/disk.h>
 #include <sys/bus.h>
+#include <sys/filio.h>
+
 #include <machine/bus.h>
+#include <machine/vmparam.h>
 
 /* For use with destroy_dev(9). */
 static struct cdev *null_dev;
@@ -48,10 +51,8 @@ static struct cdev *zero_dev;
 
 static d_write_t null_write;
 static d_ioctl_t null_ioctl;
+static d_ioctl_t zero_ioctl;
 static d_read_t zero_read;
-
-#define NULL_MINOR	2
-#define ZERO_MINOR	12
 
 static struct cdevsw null_cdevsw = {
 	.d_version =	D_VERSION,
@@ -65,11 +66,10 @@ static struct cdevsw zero_cdevsw = {
 	.d_version =	D_VERSION,
 	.d_read =	zero_read,
 	.d_write =	null_write,
+	.d_ioctl =	zero_ioctl,
 	.d_name =	"zero",
 	.d_flags =	D_MMAP_ANON,
 };
-
-static void *zbuf;
 
 /* ARGSUSED */
 static int
@@ -86,23 +86,65 @@ null_ioctl(struct cdev *dev __unused, u_long cmd, caddr_t data __unused,
     int flags __unused, struct thread *td)
 {
 	int error;
+	error = 0;
 
-	if (cmd != DIOCSKERNELDUMP)
-		return (ENOIOCTL);
-	error = priv_check(td, PRIV_SETDUMPER);
-	if (error)
-		return (error);
-	return (set_dumper(NULL));
+	switch (cmd) {
+	case DIOCSKERNELDUMP:
+		error = priv_check(td, PRIV_SETDUMPER);
+		if (error == 0)
+			error = set_dumper(NULL);
+		break;
+	case FIONBIO:
+		break;
+	case FIOASYNC:
+		if (*(int *)data != 0)
+			error = EINVAL;
+		break;
+	default:
+		error = ENOIOCTL;
+	}
+	return (error);
 }
+
+/* ARGSUSED */
+static int
+zero_ioctl(struct cdev *dev __unused, u_long cmd, caddr_t data __unused,
+	   int flags __unused, struct thread *td)
+{
+	int error;
+	error = 0;
+
+	switch (cmd) {
+	case FIONBIO:
+		break;
+	case FIOASYNC:
+		if (*(int *)data != 0)
+			error = EINVAL;
+		break;
+	default:
+		error = ENOIOCTL;
+	}
+	return (error);
+}
+
 
 /* ARGSUSED */
 static int
 zero_read(struct cdev *dev __unused, struct uio *uio, int flags __unused)
 {
+	void *zbuf;
+	ssize_t len;
 	int error = 0;
 
-	while (uio->uio_resid > 0 && error == 0)
-		error = uiomove(zbuf, MIN(uio->uio_resid, PAGE_SIZE), uio);
+	KASSERT(uio->uio_rw == UIO_READ,
+	    ("Can't be in %s for write", __func__));
+	zbuf = __DECONST(void *, zero_region);
+	while (uio->uio_resid > 0 && error == 0) {
+		len = uio->uio_resid;
+		if (len > ZERO_REGION_SIZE)
+			len = ZERO_REGION_SIZE;
+		error = uiomove(zbuf, len, uio);
+	}
 
 	return (error);
 }
@@ -115,17 +157,15 @@ null_modevent(module_t mod __unused, int type, void *data __unused)
 	case MOD_LOAD:
 		if (bootverbose)
 			printf("null: <null device, zero device>\n");
-		zbuf = (void *)malloc(PAGE_SIZE, M_TEMP, M_WAITOK | M_ZERO);
-		null_dev = make_dev(&null_cdevsw, NULL_MINOR, UID_ROOT,
-			GID_WHEEL, 0666, "null");
-		zero_dev = make_dev(&zero_cdevsw, ZERO_MINOR, UID_ROOT,
-			GID_WHEEL, 0666, "zero");
+		null_dev = make_dev_credf(MAKEDEV_ETERNAL_KLD, &null_cdevsw, 0,
+		    NULL, UID_ROOT, GID_WHEEL, 0666, "null");
+		zero_dev = make_dev_credf(MAKEDEV_ETERNAL_KLD, &zero_cdevsw, 0,
+		    NULL, UID_ROOT, GID_WHEEL, 0666, "zero");
 		break;
 
 	case MOD_UNLOAD:
 		destroy_dev(null_dev);
 		destroy_dev(zero_dev);
-		free(zbuf, M_TEMP);
 		break;
 
 	case MOD_SHUTDOWN:

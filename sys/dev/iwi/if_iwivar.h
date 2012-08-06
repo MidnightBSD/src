@@ -1,5 +1,3 @@
-/*	$FreeBSD: src/sys/dev/iwi/if_iwivar.h,v 1.16.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
-
 /*-
  * Copyright (c) 2004, 2005
  *      Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.
@@ -33,7 +31,8 @@ struct iwi_rx_radiotap_header {
 	uint8_t		wr_rate;
 	uint16_t	wr_chan_freq;
 	uint16_t	wr_chan_flags;
-	uint8_t		wr_antsignal;
+	int8_t		wr_antsignal;
+	int8_t		wr_antnoise;
 	uint8_t		wr_antenna;
 };
 
@@ -41,7 +40,8 @@ struct iwi_rx_radiotap_header {
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
 	 (1 << IEEE80211_RADIOTAP_RATE) |				\
 	 (1 << IEEE80211_RADIOTAP_CHANNEL) |				\
-	 (1 << IEEE80211_RADIOTAP_DB_ANTSIGNAL) |			\
+	 (1 << IEEE80211_RADIOTAP_DBM_ANTSIGNAL) |			\
+	 (1 << IEEE80211_RADIOTAP_DBM_ANTNOISE) |			\
 	 (1 << IEEE80211_RADIOTAP_ANTENNA))
 
 struct iwi_tx_radiotap_header {
@@ -114,24 +114,22 @@ struct iwi_fw {
 	const char		*name;		/* associated image name */
 };
 
+struct iwi_vap {
+	struct ieee80211vap	iwi_vap;
+
+	int			(*iwi_newstate)(struct ieee80211vap *,
+				    enum ieee80211_state, int);
+};
+#define	IWI_VAP(vap)	((struct iwi_vap *)(vap))
+
 struct iwi_softc {
 	struct ifnet		*sc_ifp;
-	struct ieee80211com	sc_ic;
-	int			(*sc_newstate)(struct ieee80211com *,
-				    enum ieee80211_state, int);
 	void			(*sc_node_free)(struct ieee80211_node *);
 	device_t		sc_dev;
 
 	struct mtx		sc_mtx;
-	struct mtx		sc_cmdlock;
-	char			sc_cmdname[12];	/* e.g. "iwi0_cmd" */
 	uint8_t			sc_mcast[IEEE80211_ADDR_LEN];
 	struct unrhdr		*sc_unr;
-	struct taskqueue	*sc_tq;		/* private task queue */
-	struct taskqueue	*sc_tq2;	/* reset task queue */
-#if __FreeBSD_version < 700000
-	struct proc		*sc_tqproc;
-#endif
 
 	uint32_t		flags;
 #define IWI_FLAG_FW_INITED	(1 << 0)
@@ -190,9 +188,10 @@ struct iwi_softc {
 
 	struct task		sc_radiontask;	/* radio on processing */
 	struct task		sc_radiofftask;	/* radio off processing */
-	struct task		sc_scanaborttask;	/* cancel active scan */
 	struct task		sc_restarttask;	/* restart adapter processing */
-	struct task		sc_opstask;	/* scan / auth processing */
+	struct task		sc_disassoctask;
+	struct task		sc_wmetask;	/* set wme parameters */
+	struct task		sc_monitortask;
 
 	unsigned int		sc_softled : 1,	/* enable LED gpio status */
 				sc_ledstate: 1,	/* LED on/off state */
@@ -208,56 +207,30 @@ struct iwi_softc {
 	u_int16_t		sc_ledoff;	/* off time for current blink */
 	struct callout		sc_ledtimer;	/* led off timer */
 	struct callout		sc_wdtimer;	/* watchdog timer */
+	struct callout		sc_rftimer;	/* rfkill timer */
 
 	int			sc_tx_timer;
-	int			sc_rfkill_timer;/* poll for rfkill change */
 	int			sc_state_timer;	/* firmware state timer */
 	int			sc_busy_timer;	/* firmware cmd timer */
 
-#define IWI_SCAN_START		(1 << 0)
-#define IWI_SET_CHANNEL	        (1 << 1)
-#define	IWI_SCAN_END		(1 << 2)
-#define	IWI_ASSOC		(1 << 3)
-#define	IWI_DISASSOC		(1 << 4)
-#define	IWI_SCAN_CURCHAN	(1 << 5)
-#define	IWI_SCAN_ALLCHAN	(1 << 6)
-#define	IWI_SET_WME		(1 << 7)
-#define	IWI_CMD_MAXOPS		10
-	int                     sc_cmd[IWI_CMD_MAXOPS];
-	int                     sc_cmd_cur;    /* current queued scan task */
-	int                     sc_cmd_next;   /* last queued scan task */
-	unsigned long		sc_maxdwell;	/* max dwell time for curchan */
-	struct bpf_if		*sc_drvbpf;
-
-	union {
-		struct iwi_rx_radiotap_header th;
-		uint8_t	pad[64];
-	}			sc_rxtapu;
-#define sc_rxtap	sc_rxtapu.th
-	int			sc_rxtap_len;
-
-	union {
-		struct iwi_tx_radiotap_header th;
-		uint8_t	pad[64];
-	}			sc_txtapu;
-#define sc_txtap	sc_txtapu.th
-	int			sc_txtap_len;
+	struct iwi_rx_radiotap_header sc_rxtap;
+	struct iwi_tx_radiotap_header sc_txtap;
 };
 
 #define	IWI_STATE_BEGIN(_sc, _state)	do {			\
 	KASSERT(_sc->fw_state == IWI_FW_IDLE,			\
-	    ("iwi firmware not idle"));				\
+	    ("iwi firmware not idle, state %s", iwi_fw_states[_sc->fw_state]));\
 	_sc->fw_state = _state;					\
 	_sc->sc_state_timer = 5;				\
-	DPRINTF(("enter FW state %d\n",	_state));		\
+	DPRINTF(("enter %s state\n", iwi_fw_states[_state]));	\
 } while (0)
 
 #define	IWI_STATE_END(_sc, _state)	do {			\
 	if (_sc->fw_state == _state)				\
-		DPRINTF(("exit FW state %d\n", _state));	\
+		DPRINTF(("exit %s state\n", iwi_fw_states[_state])); \
 	 else							\
-		DPRINTF(("expected FW state %d, got %d\n",	\
-			    _state, _sc->fw_state));		\
+		DPRINTF(("expected %s state, got %s\n",	\
+		    iwi_fw_states[_state], iwi_fw_states[_sc->fw_state])); \
 	_sc->fw_state = IWI_FW_IDLE;				\
 	wakeup(_sc);						\
 	_sc->sc_state_timer = 0;				\
@@ -280,11 +253,3 @@ struct iwi_softc {
 	if (!__waslocked)			\
 		mtx_unlock(&(sc)->sc_mtx);	\
 } while (0)
-#define	IWI_CMD_LOCK_INIT(sc) do { \
-	snprintf((sc)->sc_cmdname, sizeof((sc)->sc_cmdname), "%s_cmd", \
-		device_get_nameunit((sc)->sc_dev)); \
-	mtx_init(&(sc)->sc_cmdlock, (sc)->sc_cmdname, NULL, MTX_DEF); \
-} while (0)
-#define	IWI_CMD_LOCK_DESTROY(sc)	mtx_destroy(&(sc)->sc_cmdlock)
-#define	IWI_CMD_LOCK(sc)		mtx_lock(&(sc)->sc_cmdlock)
-#define	IWI_CMD_UNLOCK(sc)		mtx_unlock(&(sc)->sc_cmdlock)

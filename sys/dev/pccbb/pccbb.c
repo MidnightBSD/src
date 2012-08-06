@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/pccbb/pccbb.c,v 1.2 2008/12/02 02:47:53 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002-2004 M. Warner Losh.
  * Copyright (c) 2000-2001 Jonathan Chen.
@@ -76,7 +76,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb.c,v 1.165 2007/09/30 11:05:15 marius Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -153,13 +153,13 @@ SYSCTL_ULONG(_hw_cbb, OID_AUTO, start_32_io, CTLFLAG_RW,
 
 int cbb_debug = 0;
 TUNABLE_INT("hw.cbb.debug", &cbb_debug);
-SYSCTL_ULONG(_hw_cbb, OID_AUTO, debug, CTLFLAG_RW, &cbb_debug, 0,
+SYSCTL_INT(_hw_cbb, OID_AUTO, debug, CTLFLAG_RW, &cbb_debug, 0,
     "Verbose cardbus bridge debugging");
 
 static void	cbb_insert(struct cbb_softc *sc);
 static void	cbb_removal(struct cbb_softc *sc);
 static uint32_t	cbb_detect_voltage(device_t brdev);
-static void	cbb_cardbus_reset(device_t brdev);
+static void	cbb_cardbus_reset_power(device_t brdev, device_t child, int on);
 static int	cbb_cardbus_io_open(device_t brdev, int win, uint32_t start,
 		    uint32_t end);
 static int	cbb_cardbus_mem_open(device_t brdev, int win,
@@ -176,7 +176,7 @@ static int	cbb_cardbus_release_resource(device_t brdev, device_t child,
 		    int type, int rid, struct resource *res);
 static int	cbb_cardbus_power_enable_socket(device_t brdev,
 		    device_t child);
-static void	cbb_cardbus_power_disable_socket(device_t brdev,
+static int	cbb_cardbus_power_disable_socket(device_t brdev,
 		    device_t child);
 static int	cbb_func_filt(void *arg);
 static void	cbb_func_intr(void *arg);
@@ -333,11 +333,11 @@ cbb_detach(device_t brdev)
 	cbb_set(sc, CBB_SOCKET_EVENT, 0xffffffff);
 
 	/*
-	 * Wait for the thread to die.  kthread_exit will do a wakeup
+	 * Wait for the thread to die.  kproc_exit will do a wakeup
 	 * on the event thread's struct thread * so that we know it is
 	 * safe to proceed.  IF the thread is running, set the please
 	 * die flag and wait for it to comply.  Since the wakeup on
-	 * the event thread happens only in kthread_exit, we don't
+	 * the event thread happens only in kproc_exit, we don't
 	 * need to loop here.
 	 */
 	bus_teardown_intr(brdev, sc->irq_res, sc->intrhand);
@@ -345,7 +345,7 @@ cbb_detach(device_t brdev)
 	sc->flags |= CBB_KTHREAD_DONE;
 	while (sc->flags & CBB_KTHREAD_RUNNING) {
 		DEVPRINTF((sc->dev, "Waiting for thread to die\n"));
-		cv_broadcast(&sc->cv);
+		wakeup(&sc->intrhand);
 		msleep(sc->event_thread, &sc->mtx, PWAIT, "cbbun", 0);
 	}
 	mtx_unlock(&sc->mtx);
@@ -354,8 +354,6 @@ cbb_detach(device_t brdev)
 	bus_release_resource(brdev, SYS_RES_MEMORY, CBBR_SOCKBASE,
 	    sc->base_res);
 	mtx_destroy(&sc->mtx);
-	cv_destroy(&sc->cv);
-	cv_destroy(&sc->powercv);
 	return (0);
 }
 
@@ -436,11 +434,8 @@ cbb_driver_added(device_t brdev, driver_t *driver)
 	}
 	free(devlist, M_TEMP);
 
-	if (wake > 0) {
-		mtx_lock(&sc->mtx);
-		cv_signal(&sc->cv);
-		mtx_unlock(&sc->mtx);
-	}
+	if (wake > 0)
+		wakeup(&sc->intrhand);
 }
 
 void
@@ -506,6 +501,15 @@ cbb_event_thread(void *arg)
 		mtx_unlock(&Giant);
 
 		/*
+		 * First time through we need to tell mountroot that we're
+		 * done.
+		 */
+		if (sc->sc_root_token) {
+			root_mount_rel(sc->sc_root_token);
+			sc->sc_root_token = NULL;
+		}
+
+		/*
 		 * Wait until it has been 250ms since the last time we
 		 * get an interrupt.  We handle the rest of the interrupt
 		 * at the top of the loop.  Although we clear the bit in the
@@ -520,17 +524,17 @@ cbb_event_thread(void *arg)
 		 * a chance to run.
 		 */
 		mtx_lock(&sc->mtx);
-		cbb_setb(sc, CBB_SOCKET_MASK, CBB_SOCKET_MASK_CD);
-		cv_wait(&sc->cv, &sc->mtx);
+		cbb_setb(sc, CBB_SOCKET_MASK, CBB_SOCKET_MASK_CD | CBB_SOCKET_MASK_CSTS);
+		msleep(&sc->intrhand, &sc->mtx, 0, "-", 0);
 		err = 0;
 		while (err != EWOULDBLOCK &&
 		    (sc->flags & CBB_KTHREAD_DONE) == 0)
-			err = cv_timedwait(&sc->cv, &sc->mtx, hz / 4);
+			err = msleep(&sc->intrhand, &sc->mtx, 0, "-", hz / 5);
 	}
 	DEVPRINTF((sc->dev, "Thread terminating\n"));
 	sc->flags &= ~CBB_KTHREAD_RUNNING;
 	mtx_unlock(&sc->mtx);
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /************************************************************************/
@@ -771,15 +775,17 @@ cbb_power(device_t brdev, int volts)
 		reg = cbb_o2micro_power_hack(sc);
 
 	/*
-	 * We have to mask the card change detect interrupt while
-	 * we're messing with the power.  It is allowed to bounce
-	 * while we're messing with power as things settle down.  In
-	 * addition, we mask off the card's function interrupt by
-	 * routing it via the ISA bus.  This bit generally only
-	 * affects 16-bit cards.  Some bridges allow one to set
-	 * another bit to have it also affect 32-bit cards.  Since
-	 * 32-bit cards are required to be better behaved, we don't
-	 * bother to get into those bridge specific features.
+	 * We have to mask the card change detect interrupt while we're
+	 * messing with the power.  It is allowed to bounce while we're
+	 * messing with power as things settle down.  In addition, we mask off
+	 * the card's function interrupt by routing it via the ISA bus.  This
+	 * bit generally only affects 16-bit cards.  Some bridges allow one to
+	 * set another bit to have it also affect 32-bit cards.  Since 32-bit
+	 * cards are required to be better behaved, we don't bother to get
+	 * into those bridge specific features.
+	 *
+	 * XXX I wonder if we need to enable the READY bit interrupt in the
+	 * EXCA CSC register for 16-bit cards, and disable the CD bit?
 	 */
 	mask = cbb_get(sc, CBB_SOCKET_MASK);
 	mask |= CBB_SOCKET_MASK_POWER;
@@ -792,28 +798,39 @@ cbb_power(device_t brdev, int volts)
 		mtx_lock(&sc->mtx);
 		cnt = sc->powerintr;
 		/*
-		 * We have a shortish timeout of 500ms here.  Some
-		 * bridges do not generate a POWER_CYCLE event for
-		 * 16-bit cards.  In those cases, we have to cope the
-		 * best we can, and having only a short delay is
-		 * better than the alternatives.
+		 * We have a shortish timeout of 500ms here.  Some bridges do
+		 * not generate a POWER_CYCLE event for 16-bit cards.  In
+		 * those cases, we have to cope the best we can, and having
+		 * only a short delay is better than the alternatives.  Others
+		 * raise the power cycle a smidge before it is really ready.
+		 * We deal with those below.
 		 */
 		sane = 10;
 		while (!(cbb_get(sc, CBB_SOCKET_STATE) & CBB_STATE_POWER_CYCLE) &&
 		    cnt == sc->powerintr && sane-- > 0)
-			cv_timedwait(&sc->powercv, &sc->mtx, hz / 20);
+			msleep(&sc->powerintr, &sc->mtx, 0, "-", hz / 20);
 		mtx_unlock(&sc->mtx);
+
 		/*
-		 * The TOPIC95B requires a little bit extra time to get
-		 * its act together, so delay for an additional 100ms.  Also
-		 * as documented below, it doesn't seem to set the POWER_CYCLE
+		 * Relax for 100ms.  Some bridges appear to assert this signal
+		 * right away, but before the card has stabilized.  Other
+		 * cards need need more time to cope up reliabily.
+		 * Experiments with troublesome setups show this to be a
+		 * "cheap" way to enhance reliabilty.  We need not do this for
+		 * "off" since we don't touch the card after we turn it off.
+		 */
+		pause("cbbPwr", min(hz / 10, 1));
+
+		/*
+		 * The TOPIC95B requires a little bit extra time to get its
+		 * act together, so delay for an additional 100ms.  Also as
+		 * documented below, it doesn't seem to set the POWER_CYCLE
 		 * bit, so don't whine if it never came on.
 		 */
-		if (sc->chipset == CB_TOPIC95) {
+		if (sc->chipset == CB_TOPIC95)
 			pause("cbb95B", hz / 10);
-		} else if (sane <= 0) {
+		else if (sane <= 0)
 			device_printf(sc->dev, "power timeout, doom?\n");
-		}
 	}
 
 	/*
@@ -838,7 +855,18 @@ cbb_power(device_t brdev, int volts)
 	}
 	if (status & CBB_STATE_BAD_VCC_REQ) {
 		device_printf(sc->dev, "Bad Vcc requested\n");	
-		/* XXX Do we want to do something to mitigate things here? */
+		/*
+		 * Turn off the power, and try again.  Retrigger other
+		 * active interrupts via force register.  From NetBSD
+		 * PR 36652, coded by me to description there.
+		 */
+		sock_ctrl &= ~CBB_SOCKET_CTRL_VCCMASK;
+		sock_ctrl &= ~CBB_SOCKET_CTRL_VPPMASK;
+		cbb_set(sc, CBB_SOCKET_CONTROL, sock_ctrl);
+		status &= ~CBB_STATE_BAD_VCC_REQ;
+		status &= ~CBB_STATE_DATA_LOST;
+		status |= CBB_FORCE_CV_TEST;
+		cbb_set(sc, CBB_SOCKET_FORCE, status);
 		goto done;
 	}
 	if (sc->chipset == CB_TOPIC97) {
@@ -928,26 +956,51 @@ cbb_do_power(device_t brdev)
 /************************************************************************/
 
 static void
-cbb_cardbus_reset(device_t brdev)
+cbb_cardbus_reset_power(device_t brdev, device_t child, int on)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
-	int delay;
+	uint32_t b;
+	int delay, count;
 
 	/*
-	 * 20ms is necessary for most bridges.  For some reason, the Ricoh
-	 * RF5C47x bridges need 400ms.
+	 * Asserting reset for 20ms is necessary for most bridges.  For some
+	 * reason, the Ricoh RF5C47x bridges need it asserted for 400ms.  The
+	 * root cause of this is unknown, and NetBSD does the same thing.
 	 */
 	delay = sc->chipset == CB_RF5C47X ? 400 : 20;
-
 	PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL, |CBBM_BRIDGECTRL_RESET, 2);
-
 	pause("cbbP3", hz * delay / 1000);
 
-	/* If a card exists, unreset it! */
-	if (CBB_CARD_PRESENT(cbb_get(sc, CBB_SOCKET_STATE))) {
+	/*
+	 * If a card exists and we're turning it on, take it out of reset.
+	 * After clearing reset, wait up to 1.1s for the first configuration
+	 * register (vendor/product) configuration register of device 0.0 to
+	 * become != 0xffffffff.  The PCMCIA PC Card Host System Specification
+	 * says that when powering up the card, the PCI Spec v2.1 must be
+	 * followed.  In PCI spec v2.2 Table 4-6, Trhfa (Reset High to first
+	 * Config Access) is at most 2^25 clocks, or just over 1s.  Section
+	 * 2.2.1 states any card not ready to participate in bus transactions
+	 * must tristate its outputs.  Therefore, any access to its
+	 * configuration registers must be ignored.  In that state, the config
+	 * reg will read 0xffffffff.  Section 6.2.1 states a vendor id of
+	 * 0xffff is invalid, so this can never match a real card.  Print a
+	 * warning if it never returns a real id.  The PCMCIA PC Card
+	 * Electrical Spec Section 5.2.7.1 implies only device 0 is present on
+	 * a cardbus bus, so that's the only register we check here.
+	 */
+	if (on && CBB_CARD_PRESENT(cbb_get(sc, CBB_SOCKET_STATE))) {
+		/*
+		 */
 		PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL,
 		    &~CBBM_BRIDGECTRL_RESET, 2);
-		pause("cbbP4", hz * delay / 1000);
+		b = pcib_get_bus(child);
+		count = 1100 / 20;
+		do {
+			pause("cbbP4", hz * 2 / 100);
+		} while (PCIB_READ_CONFIG(brdev, b, 0, 0, PCIR_DEVVENDOR, 4) ==
+		    0xfffffffful && --count >= 0);
+		if (count < 0)
+			device_printf(brdev, "Warning: Bus reset timeout\n");
 	}
 }
 
@@ -963,15 +1016,16 @@ cbb_cardbus_power_enable_socket(device_t brdev, device_t child)
 	err = cbb_do_power(brdev);
 	if (err)
 		return (err);
-	cbb_cardbus_reset(brdev);
+	cbb_cardbus_reset_power(brdev, child, 1);
 	return (0);
 }
 
-static void
+static int
 cbb_cardbus_power_disable_socket(device_t brdev, device_t child)
 {
 	cbb_power(brdev, CARD_OFF);
-	cbb_cardbus_reset(brdev);
+	cbb_cardbus_reset_power(brdev, child, 0);
+	return (0);
 }
 
 /************************************************************************/
@@ -1010,8 +1064,8 @@ cbb_cardbus_mem_open(device_t brdev, int win, uint32_t start, uint32_t end)
 		return (EINVAL);
 	}
 
-	basereg = win*8 + CBBR_MEMBASE0;
-	limitreg = win*8 + CBBR_MEMLIMIT0;
+	basereg = win * 8 + CBBR_MEMBASE0;
+	limitreg = win * 8 + CBBR_MEMLIMIT0;
 
 	pci_write_config(brdev, basereg, start, 4);
 	pci_write_config(brdev, limitreg, end, 4);
@@ -1231,7 +1285,7 @@ cbb_pcic_power_enable_socket(device_t brdev, device_t child)
 	return (0);
 }
 
-static void
+static int
 cbb_pcic_power_disable_socket(device_t brdev, device_t child)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
@@ -1251,6 +1305,7 @@ cbb_pcic_power_disable_socket(device_t brdev, device_t child)
 
 	/* enable CSC interrupts */
 	exca_putb(&sc->exca[0], EXCA_INTR, EXCA_INTR_ENABLE);
+	return (0);
 }
 
 /************************************************************************/
@@ -1264,18 +1319,16 @@ cbb_power_enable_socket(device_t brdev, device_t child)
 
 	if (sc->flags & CBB_16BIT_CARD)
 		return (cbb_pcic_power_enable_socket(brdev, child));
-	else
-		return (cbb_cardbus_power_enable_socket(brdev, child));
+	return (cbb_cardbus_power_enable_socket(brdev, child));
 }
 
-void
+int
 cbb_power_disable_socket(device_t brdev, device_t child)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
 	if (sc->flags & CBB_16BIT_CARD)
-		cbb_pcic_power_disable_socket(brdev, child);
-	else
-		cbb_cardbus_power_disable_socket(brdev, child);
+		return (cbb_pcic_power_disable_socket(brdev, child));
+	return (cbb_cardbus_power_disable_socket(brdev, child));
 }
 
 static int
@@ -1373,7 +1426,7 @@ cbb_pcic_release_resource(device_t brdev, device_t child, int type,
 
 int
 cbb_pcic_set_res_flags(device_t brdev, device_t child, int type, int rid,
-    uint32_t flags)
+    u_long flags)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
 	struct resource *res;
@@ -1540,9 +1593,7 @@ cbb_resume(device_t self)
 	cbb_setb(sc, CBB_SOCKET_MASK, CBB_SOCKET_MASK_CD);
 
 	/* Signal the thread to wakeup. */
-	mtx_lock(&sc->mtx);
-	cv_signal(&sc->cv);
-	mtx_unlock(&sc->mtx);
+	wakeup(&sc->intrhand);
 
 	error = bus_generic_resume(self);
 
@@ -1550,9 +1601,9 @@ cbb_resume(device_t self)
 }
 
 int
-cbb_child_present(device_t self)
+cbb_child_present(device_t parent, device_t child)
 {
-	struct cbb_softc *sc = (struct cbb_softc *)device_get_softc(self);
+	struct cbb_softc *sc = (struct cbb_softc *)device_get_softc(parent);
 	uint32_t sockstate;
 
 	sockstate = cbb_get(sc, CBB_SOCKET_STATE);

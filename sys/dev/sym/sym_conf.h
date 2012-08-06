@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/sym/sym_conf.h,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  *  Device driver optimized for the Symbios/LSI 53C896/53C895A/53C1010 
  *  PCI-SCSI controllers.
@@ -56,7 +56,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/sym/sym_conf.h,v 1.9 2005/01/06 01:43:24 imp Exp $ */
+/* $FreeBSD$ */
 
 #ifndef SYM_CONF_H
 #define SYM_CONF_H
@@ -84,11 +84,19 @@
 #define SYM_CONF_MAX_TAG_ORDER	(6)
 
 /*
- *  Max number of scatter/gather entries for en IO.
- *  Each entry costs 8 bytes in the internal CCB data structure.
- *  For now 65 should suffice given the BSD O/Ses capabilities.
+ *  DMA boundary
+ *  We need to ensure 16 MB boundaries not to be crossed during DMA of
+ *  each segment, due to some chips being flawed.
  */
-#define SYM_CONF_MAX_SG		(33)
+#define SYM_CONF_DMA_BOUNDARY	(1UL << 24)
+
+/*
+ *  Max number of scatter/gather entries for an I/O.
+ *  Each entry costs 8 bytes in the internal CCB data structure.
+ *  We use at most 33 segments but also no more than required for handling
+ *  MAXPHYS.
+ */
+#define	SYM_CONF_MAX_SG		(MIN(33, (MAXPHYS / PAGE_SIZE) + 1))
 
 /*
  *  Max number of targets.

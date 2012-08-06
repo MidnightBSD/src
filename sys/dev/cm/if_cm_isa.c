@@ -1,8 +1,8 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/cm/if_cm_isa.c,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
 /*	$NetBSD: if_bah_zbus.c,v 1.6 2000/01/23 21:06:12 aymeric Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cm/if_cm_isa.c,v 1.10 2007/02/23 12:18:35 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.
@@ -19,13 +19,6 @@ __FBSDID("$FreeBSD: src/sys/dev/cm/if_cm_isa.c,v 1.10 2007/02/23 12:18:35 piso E
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED

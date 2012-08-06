@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.57 2007/07/27 11:59:56 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -83,24 +83,9 @@ __FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.57 2007/07/27 11:59:56 rwatson Ex
 
 #define CX_LOCK_NAME	"cxX"
 
-static	int	cx_mpsafenet = 1;
-TUNABLE_INT("debug.cx.mpsafenet", &cx_mpsafenet);
-SYSCTL_NODE(_debug, OID_AUTO, cx, CTLFLAG_RD, 0, "Cronyx Sigma Adapters");
-SYSCTL_INT(_debug_cx, OID_AUTO, mpsafenet, CTLFLAG_RD, &cx_mpsafenet, 0,
-	"Enable/disable MPSAFE network support for Cronyx Sigma Adapters");
-
-#define CX_LOCK(_bd)		do { \
-				    if (cx_mpsafenet) \
-					mtx_lock (&(_bd)->cx_mtx); \
-				} while (0)
-#define CX_UNLOCK(_bd)		do { \
-				    if (cx_mpsafenet) \
-					mtx_unlock (&(_bd)->cx_mtx); \
-				} while (0)
-#define CX_LOCK_ASSERT(_bd)	do { \
-				    if (cx_mpsafenet) \
-					mtx_assert (&(_bd)->cx_mtx, MA_OWNED); \
-				} while (0)
+#define CX_LOCK(_bd)		mtx_lock (&(_bd)->cx_mtx)
+#define CX_UNLOCK(_bd)		mtx_unlock (&(_bd)->cx_mtx)
+#define CX_LOCK_ASSERT(_bd)	mtx_assert (&(_bd)->cx_mtx, MA_OWNED)
 
 typedef struct _async_q {
 	int beg;
@@ -152,18 +137,18 @@ typedef struct _drv_t {
 	int cd;
 	int running;
 #ifdef NETGRAPH
-	char	nodename [NG_NODELEN+1];
+	char	nodename [NG_NODESIZ];
 	hook_p	hook;
 	hook_p	debug_hook;
 	node_p	node;
 	struct	ifqueue lo_queue;
 	struct	ifqueue hi_queue;
-	short	timeout;
-	struct	callout timeout_handle;
 #else
 	struct	ifqueue queue;
 	struct	ifnet *ifp;
 #endif
+	short	timeout;
+	struct	callout timeout_handle;
 	struct	cdev *devt;
 	async_q	aqueue;
 #define CX_READ 1
@@ -212,6 +197,7 @@ static void cx_softintr (void *);
 static void *cx_fast_ih;
 static void cx_down (drv_t *d);
 static void cx_watchdog (drv_t *d);
+static void cx_watchdog_timer (void *arg);
 static void cx_carrier (void *arg);
 
 #ifdef NETGRAPH
@@ -220,7 +206,6 @@ extern struct ng_type typestruct;
 static void cx_ifstart (struct ifnet *ifp);
 static void cx_tlf (struct sppp *sp);
 static void cx_tls (struct sppp *sp);
-static void cx_ifwatchdog (struct ifnet *ifp);
 static int cx_sioctl (struct ifnet *ifp, u_long cmd, caddr_t data);
 static void cx_initialize (void *softc);
 #endif
@@ -239,7 +224,7 @@ static struct cdevsw cx_cdevsw = {
 	.d_close    = cx_close,
 	.d_ioctl    = cx_ioctl,
 	.d_name     = "cx",
-	.d_flags    = D_TTY | D_NEEDGIANT,
+	.d_flags    = D_TTY,
 };
 
 static int MY_SOFT_INTR;
@@ -358,7 +343,7 @@ static void cx_led_off (void *arg)
 }
 
 /*
- * Activate interupt handler from DDK.
+ * Activate interrupt handler from DDK.
  */
 static void cx_intr (void *arg)
 {
@@ -776,10 +761,10 @@ static int cx_attach (device_t dev)
  		return ENXIO;
 	}
 	b->sys = bd;
-	callout_init (&led_timo[b->num], cx_mpsafenet ? CALLOUT_MPSAFE : 0);
+	callout_init (&led_timo[b->num], CALLOUT_MPSAFE);
 	s = splhigh ();
 	if (bus_setup_intr (dev, bd->irq_res,
-			   INTR_TYPE_NET|(cx_mpsafenet?INTR_MPSAFE:0),
+			   INTR_TYPE_NET|INTR_MPSAFE,
 			   NULL, cx_intr, bd, &bd->intrhand)) {
 		printf ("cx%d: Can't setup irq %ld\n", unit, irq);
 		bd->board = 0;
@@ -826,6 +811,7 @@ static int cx_attach (device_t dev)
 		case T_UNIV_RS232:
 		case T_UNIV_RS449:
 		case T_UNIV_V35:
+		callout_init (&d->timeout_handle, CALLOUT_MPSAFE);
 #ifdef NETGRAPH
 		if (ng_make_node_common (&typestruct, &d->node) != 0) {
 			printf ("%s: cannot make common node\n", d->name);
@@ -845,12 +831,10 @@ static int cx_attach (device_t dev)
 			cx_bus_dma_mem_free (&d->dmamem);
 			continue;
 		}
-		d->lo_queue.ifq_maxlen = IFQ_MAXLEN;
-		d->hi_queue.ifq_maxlen = IFQ_MAXLEN;
+		d->lo_queue.ifq_maxlen = ifqmaxlen;
+		d->hi_queue.ifq_maxlen = ifqmaxlen;
 		mtx_init (&d->lo_queue.ifq_mtx, "cx_queue_lo", NULL, MTX_DEF);
 		mtx_init (&d->hi_queue.ifq_mtx, "cx_queue_hi", NULL, MTX_DEF);
-		callout_init (&d->timeout_handle,
-			     cx_mpsafenet ? CALLOUT_MPSAFE : 0);
 #else /*NETGRAPH*/
 		d->ifp = if_alloc(IFT_PPP);
 		if (d->ifp == NULL) {
@@ -865,11 +849,8 @@ static int cx_attach (device_t dev)
 		if_initname (d->ifp, "cx", b->num * NCHAN + c->num);
 		d->ifp->if_mtu		= PP_MTU;
 		d->ifp->if_flags	= IFF_POINTOPOINT | IFF_MULTICAST;
-		if (!cx_mpsafenet)
-			d->ifp->if_flags |= IFF_NEEDSGIANT;
 		d->ifp->if_ioctl	= cx_sioctl;
 		d->ifp->if_start	= cx_ifstart;
-		d->ifp->if_watchdog	= cx_ifwatchdog;
 		d->ifp->if_init		= cx_initialize;
 		d->queue.ifq_maxlen	= 2;
 		mtx_init (&d->queue.ifq_mtx, "cx_queue", NULL, MTX_DEF);
@@ -901,8 +882,7 @@ static int cx_attach (device_t dev)
 		ttycreate(d->tty, TS_CALLOUT, "x%r%r", b->num, c->num);
 		d->devt = make_dev (&cx_cdevsw, b->num*NCHAN + c->num + 64, UID_ROOT, GID_WHEEL, 0600, "cx%d", b->num*NCHAN + c->num);
 		d->devt->si_drv1 = d;
-		callout_init (&d->dcd_timeout_handle,
-			     cx_mpsafenet ? CALLOUT_MPSAFE : 0);
+		callout_init (&d->dcd_timeout_handle, CALLOUT_MPSAFE);
 	}
 	splx (s);
 
@@ -978,6 +958,7 @@ static int cx_detach (device_t dev)
 			d->tty = NULL;
 		}
 
+		callout_stop (&d->timeout_handle);
 #ifdef NETGRAPH
 		if (d->node) {
 			ng_rmnode_self (d->node);
@@ -1011,6 +992,7 @@ static int cx_detach (device_t dev)
 			continue;
 
 		callout_drain (&d->dcd_timeout_handle);
+		callout_drain (&d->timeout_handle);
 	}
 	splx (s);
 	
@@ -1043,13 +1025,6 @@ static void cx_ifstart (struct ifnet *ifp)
 	CX_LOCK (bd);
 	cx_start (d);
 	CX_UNLOCK (bd);
-}
-
-static void cx_ifwatchdog (struct ifnet *ifp)
-{
-	drv_t *d = ifp->if_softc;
-
-	cx_watchdog (d);
 }
 
 static void cx_tlf (struct sppp *sp)
@@ -1102,10 +1077,14 @@ static int cx_sioctl (struct ifnet *ifp, u_long cmd, caddr_t data)
 	if (error)
 		return error;
 
+	s = splhigh ();
+	CX_LOCK (bd);
 	if (! (ifp->if_flags & IFF_DEBUG))
 		d->chan->debug = 0;
-	else if (! d->chan->debug)
-		d->chan->debug = 1;
+	else
+		d->chan->debug = d->chan->debug_shadow;
+	CX_UNLOCK (bd);
+	splx (s);
 
 	switch (cmd) {
 	default:	   CX_DEBUG2 (d, ("ioctl 0x%lx\n", cmd)); return 0;
@@ -1144,6 +1123,7 @@ static void cx_down (drv_t *d)
 	cx_set_dtr (d->chan, 0);
 	cx_set_rts (d->chan, 0);
 	d->running = 0;
+	callout_stop (&d->timeout_handle);
 	splx (s);
 }
 
@@ -1206,11 +1186,7 @@ static void cx_send (drv_t *d)
 		m_freem (m);
 
 		/* Set up transmit timeout, 10 seconds. */
-#ifdef NETGRAPH
 		d->timeout = 10;
-#else
-		d->ifp->if_timer = 10;
-#endif
 	}
 #ifndef NETGRAPH
 	d->ifp->if_drv_flags |= IFF_DRV_OACTIVE;
@@ -1230,6 +1206,7 @@ static void cx_start (drv_t *d)
 		if (! d->chan->rts)
 			cx_set_rts (d->chan, 1);
 		cx_send (d);
+		callout_reset (&d->timeout_handle, hz, cx_watchdog_timer, d);
 	}
 	splx (s);
 }
@@ -1241,10 +1218,7 @@ static void cx_start (drv_t *d)
  */
 static void cx_watchdog (drv_t *d)
 {
-	bdrv_t *bd = d->board->sys;
 	
-	int s = splhigh ();
-	CX_LOCK (bd);
 	CX_DEBUG (d, ("device timeout\n"));
 	if (d->running) {
 		cx_setup_chan (d->chan);
@@ -1253,8 +1227,20 @@ static void cx_watchdog (drv_t *d)
 		cx_set_rts (d->chan, 1);
 		cx_start (d);
 	}
+}
+
+static void cx_watchdog_timer (void *arg)
+{
+	drv_t *d = arg;
+	bdrv_t *bd = d->board->sys;
+
+	CX_LOCK (bd);
+	if (d->timeout == 1)
+		cx_watchdog (d);
+	if (d->timeout)
+		d->timeout--;
+	callout_reset (&d->timeout_handle, hz, cx_watchdog_timer, d);
 	CX_UNLOCK (bd);
-	splx (s);
 }
 
 /*
@@ -1277,12 +1263,10 @@ static void cx_transmit (cx_chan_t *c, void *attachment, int len)
 		}
 		return;
 	}
-#ifdef NETGRAPH
 	d->timeout = 0;
-#else
+#ifndef NETGRAPH
 	++d->ifp->if_opackets;
 	d->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-	d->ifp->if_timer = 0;
 #endif
 	cx_start (d);
 }
@@ -1436,14 +1420,12 @@ static void cx_error (cx_chan_t *c, int data)
 	case CX_UNDERRUN:
 		CX_DEBUG (d, ("underrun error\n"));
 		if (c->mode != M_ASYNC) {
-#ifdef NETGRAPH
 			d->timeout = 0;
-#else
+#ifndef NETGRAPH
 			++d->ifp->if_oerrors;
 			d->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-			d->ifp->if_timer = 0;
-			cx_start (d);
 #endif
+			cx_start (d);
 		}
 		break;
 	case CX_BREAK:
@@ -1745,6 +1727,8 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 			cx_enable_receive (c, 0);
 			cx_enable_transmit (c, 0);
 		} else if (c->mode == M_ASYNC && *(int*)data == SERIAL_HDLC) {
+			if (d->ifp->if_flags & IFF_DEBUG)
+				c->debug = c->debug_shadow;
 			cx_set_mode (c, M_HDLC);
 			cx_enable_receive (c, 1);
 			cx_enable_transmit (c, 1);
@@ -1913,15 +1897,24 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 			return error;
 		s = splhigh ();
 		CX_LOCK (bd);
+#ifndef	NETGRAPH
+		if (c->mode == M_ASYNC) {
+			c->debug = *(int*)data;
+		} else {
+			/*
+			 * The debug_shadow is always greater than zero for
+			 * logic simplicity.  For switching debug off the
+			 * IFF_DEBUG is responsible (for !M_ASYNC mode).
+			 */
+			c->debug_shadow = (*(int*)data) ? (*(int*)data) : 1;
+			if (d->ifp->if_flags & IFF_DEBUG)
+				c->debug = c->debug_shadow;
+		}
+#else
 		c->debug = *(int*)data;
+#endif
 		CX_UNLOCK (bd);
 		splx (s);
-#ifndef	NETGRAPH
-		if (d->chan->debug)
-			d->ifp->if_flags |= IFF_DEBUG;
-		else
-			d->ifp->if_flags &= (~IFF_DEBUG);
-#endif
 		return 0;
 	}
 
@@ -2403,7 +2396,7 @@ static int ng_cx_rcvmsg (node_p node, item_p item, hook_p lasthook)
 			l += print_chan (s + l, d->chan);
 			l += print_stats (s + l, d->chan, 1);
 			l += print_modems (s + l, d->chan, 1);
-			strncpy ((resp)->header.cmdstr, "status", NG_CMDSTRLEN);
+			strncpy ((resp)->header.cmdstr, "status", NG_CMDSTRSIZ);
 			}
 			break;
 		}
@@ -2481,22 +2474,11 @@ static int ng_cx_rmnode (node_p node)
 	return 0;
 }
 
-static void ng_cx_watchdog (void *arg)
-{
-	drv_t *d = arg;
-
-	if (d->timeout == 1)
-		cx_watchdog (d);
-	if (d->timeout)
-		d->timeout--;
-	callout_reset (&d->timeout_handle, hz, ng_cx_watchdog, d);
-}
-
 static int ng_cx_connect (hook_p hook)
 {
 	drv_t *d = NG_NODE_PRIVATE (NG_HOOK_NODE (hook));
 
-	callout_reset (&d->timeout_handle, hz, ng_cx_watchdog, d);
+	callout_reset (&d->timeout_handle, hz, cx_watchdog_timer, d);
 	return 0;
 }
 
@@ -2523,9 +2505,6 @@ static int cx_modevent (module_t mod, int type, void *unused)
 {
 	static int load_count = 0;
 
-	if (cx_mpsafenet)
-		cx_cdevsw.d_flags &= ~D_NEEDGIANT;
-
 	switch (type) {
 	case MOD_LOAD:
 #ifdef NETGRAPH
@@ -2534,11 +2513,11 @@ static int cx_modevent (module_t mod, int type, void *unused)
 #endif
 		++load_count;
 
-		callout_init (&timeout_handle, cx_mpsafenet?CALLOUT_MPSAFE:0);
+		callout_init (&timeout_handle, CALLOUT_MPSAFE);
 		callout_reset (&timeout_handle, hz*5, cx_timeout, 0);
 		/* Software interrupt. */
 		swi_add(&tty_intr_event, "cx", cx_softintr, NULL, SWI_TTY,
-		    (cx_mpsafenet?INTR_MPSAFE:0), &cx_fast_ih);
+		    INTR_MPSAFE, &cx_fast_ih);
 		break;
 	case MOD_UNLOAD:
 		if (load_count == 1) {

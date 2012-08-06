@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ctau/hdc64570.h,v 1.2 2008/12/02 02:24:40 laffer1 Exp $ */
 /*-
  * Hitachi HD64570 serial communications adaptor registers.
  *
@@ -13,7 +13,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: hdc64570.h,v 1.1.2.2 2003/11/12 17:31:21 rik Exp $
- * $FreeBSD: src/sys/dev/ctau/hdc64570.h,v 1.2 2005/01/06 01:42:33 imp Exp $
+ * $FreeBSD$
  */
 
 /*

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/fb/fbreg.h,v 1.21 2007/01/18 13:08:08 marius Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_FB_FBREG_H_
@@ -34,16 +34,7 @@
 #define V_MAX_ADAPTERS		8		/* XXX */
 
 /* some macros */
-#ifdef __i386__
-#define bcopy_io(s, d, c)	generic_bcopy((void *)(s), (void *)(d), (c))
-#define bcopy_toio(s, d, c)	generic_bcopy((void *)(s), (void *)(d), (c))
-#define bcopy_fromio(s, d, c)	generic_bcopy((void *)(s), (void *)(d), (c))
-#define bzero_io(d, c)		generic_bzero((void *)(d), (c))
-#define fill_io(p, d, c)	fill((p), (void *)(d), (c))
-#define fillw_io(p, d, c)	fillw((p), (void *)(d), (c))
-void generic_bcopy(const void *s, void *d, size_t c);
-void generic_bzero(void *d, size_t c);
-#elif defined(__amd64__)
+#if defined(__amd64__) || defined(__i386__)
 #define bcopy_io(s, d, c)	bcopy((void *)(s), (void *)(d), (c))
 #define bcopy_toio(s, d, c)	bcopy((void *)(s), (void *)(d), (c))
 #define bcopy_fromio(s, d, c)	bcopy((void *)(s), (void *)(d), (c))
@@ -95,8 +86,8 @@ typedef int vi_blank_display_t(video_adapter_t *adp, int mode);
 #define V_DISPLAY_STAND_BY	2
 #define V_DISPLAY_SUSPEND	3
 */
-typedef int vi_mmap_t(video_adapter_t *adp, vm_offset_t offset,
-		      vm_paddr_t *paddr, int prot);
+typedef int vi_mmap_t(video_adapter_t *adp, vm_ooffset_t offset,
+		      vm_paddr_t *paddr, int prot, vm_memattr_t *memattr);
 typedef int vi_ioctl_t(video_adapter_t *adp, u_long cmd, caddr_t data);
 typedef int vi_clear_t(video_adapter_t *adp);
 typedef int vi_fill_rect_t(video_adapter_t *adp, int val, int x, int y,
@@ -153,20 +144,75 @@ typedef struct video_switch {
     vi_putm_t		*putm;
 } video_switch_t;
 
-#define save_palette(adp, pal)				\
-	(*vidsw[(adp)->va_index]->save_palette)((adp), (pal))
-#define load_palette(adp, pal)				\
-	(*vidsw[(adp)->va_index]->load_palette)((adp), (pal))
-#define get_mode_info(adp, mode, buf)			\
-	(*vidsw[(adp)->va_index]->get_info)((adp), (mode), (buf))
-#define set_video_mode(adp, mode)			\
+#define vidd_probe(unit, adpp, arg, flags)				\
+	(*vidsw[(adp)->va_index]->probe)((unit), (adpp), (arg), (flags))
+#define vidd_init(unit, adp, flags)					\
+	(*vidsw[(adp)->va_index]->init)((unit), (adp), (flags))
+#define vidd_get_info(adp, mode, info)					\
+	(*vidsw[(adp)->va_index]->get_info)((adp), (mode), (info))
+#define vidd_query_mode(adp, mode)					\
+	(*vidsw[(adp)->va_index]->query_mode)((adp), (mode))
+#define vidd_set_mode(adp, mode)					\
 	(*vidsw[(adp)->va_index]->set_mode)((adp), (mode))
-#define set_border(adp, border)				\
+#define vidd_save_font(adp, page, size, width, data, c, count)		\
+	(*vidsw[(adp)->va_index]->save_font)((adp), (page), (size),	\
+	    (width), (data), (c), (count))
+#define vidd_load_font(adp, page, size, width, data, c, count)		\
+	(*vidsw[(adp)->va_index]->load_font)((adp), (page), (size),	\
+	    (width), (data), (c), (count))
+#define vidd_show_font(adp, page)					\
+	(*vidsw[(adp)->va_index]->show_font)((adp), (page))
+#define vidd_save_palette(adp, pallete)					\
+	(*vidsw[(adp)->va_index]->save_palette)((adp), (pallete))
+#define vidd_load_palette(adp, pallete)					\
+	(*vidsw[(adp)->va_index]->load_palette)((adp), (pallete))
+#define vidd_set_border(adp, border)					\
 	(*vidsw[(adp)->va_index]->set_border)((adp), (border))
-#define set_origin(adp, o)				\
-	(*vidsw[(adp)->va_index]->set_win_org)(adp, o)
-
-/* XXX - add more macros */
+#define vidd_save_state(adp, p, size)					\
+	(*vidsw[(adp)->va_index]->save_state)((adp), (p), (size))
+#define vidd_load_state(adp, p)						\
+	(*vidsw[(adp)->va_index]->load_state)((adp), (p))
+#define vidd_set_win_org(adp, offset)					\
+	(*vidsw[(adp)->va_index]->set_win_org)((adp), (offset))
+#define vidd_read_hw_cursor(adp, col, row)				\
+	(*vidsw[(adp)->va_index]->read_hw_cursor)((adp), (col), (row))
+#define vidd_set_hw_cursor(adp, col, row)				\
+	(*vidsw[(adp)->va_index]->set_hw_cursor)((adp), (col), (row))
+#define vidd_set_hw_cursor_shape(adp, base, height, celsize, blink)	\
+	(*vidsw[(adp)->va_index]->set_hw_cursor_shape)((adp), (base),	\
+	    (height), (celsize), (blink))
+#define vidd_blank_display(adp, mode)					\
+	(*vidsw[(adp)->va_index]->blank_display)((adp), (mode))
+#define vidd_mmap(adp, offset, paddr, prot, memattr)			\
+	(*vidsw[(adp)->va_index]->mmap)((adp), (offset), (paddr),	\
+	    (prot), (memattr))
+#define vidd_ioctl(adp, cmd, data)					\
+	(*vidsw[(adp)->va_index]->ioctl)((adp), (cmd), (data))
+#define vidd_clear(adp)							\
+	(*vidsw[(adp)->va_index]->clear)((adp))
+#define vidd_fill_rect(adp, val, x, y, cx, cy)				\
+	(*vidsw[(adp)->va_index]->fill_rect)((adp), (val), (x), (y),	\
+	    (cx), (cy))
+#define vidd_bitblt(adp, ...)						\
+	(*vidsw[(adp)->va_index]->bitblt)(adp, __VA_ARGS__)
+#define vidd_diag(adp, level)						\
+	(*vidsw[(adp)->va_index]->diag)((adp), (level))
+#define vidd_save_cursor_palette(adp, palette)				\
+	(*vidsw[(adp)->va_index]->save_cursor_palette)((adp), (palette))
+#define vidd_load_cursor_palette(adp, palette)				\
+	(*vidsw[(adp)->va_index]->load_cursor_palette)((adp), (palette))
+#define vidd_copy(adp, src, dst, n)					\
+	(*vidsw[(adp)->va_index]->copy)((adp), (src), (dst), (n))
+#define vidd_putp(adp, offset, p, a, size, bpp, bit_ltor1, byte_ltor2)	\
+	(*vidsw[(adp)->va_index]->putp)((adp), (offset), (p), (a), 	\
+	    (size), (bpp), (bit_ltor1), (bit_ltor2))
+#define vidd_putc(adp, offset, c, a)					\
+	(*vidsw[(adp)->va_index]->putc)((adp), (offset), (c), (a))
+#define vidd_puts(adp, offset, s, len)					\
+	(*vidsw[(adp)->va_index]->puts)((adp), (offset), (s), (len))
+#define vidd_putm(adp, x, y, pixel_image, pixel_mask, size, width)	\
+	(*vidsw[(adp)->va_index]->putm)((adp), (x), (y), (pixel_image),	\
+	    (pixel_mask), (size), (width))
 
 /* video driver */
 typedef struct video_driver {
@@ -227,7 +273,8 @@ int		genfbwrite(genfb_softc_t *sc, video_adapter_t *adp,
 int		genfbioctl(genfb_softc_t *sc, video_adapter_t *adp,
 			   u_long cmd, caddr_t arg, int flag, struct thread *td);
 int		genfbmmap(genfb_softc_t *sc, video_adapter_t *adp,
-			  vm_offset_t offset, vm_offset_t *paddr, int prot);
+			  vm_ooffset_t offset, vm_offset_t *paddr,
+			  int prot, vm_memattr_t *memattr);
 
 #endif /* FB_INSTALL_CDEV */
 

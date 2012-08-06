@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/xfs_itable.c,v 1.2 2008/12/03 00:25:54 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2002,2005 Silicon Graphics, Inc.
  * All Rights Reserved.
@@ -778,7 +778,7 @@ xfs_inumbers(
 				xfs_buf_relse(agbp);
 				agbp = NULL;
 				/*
-				 * Move up the the last inode in the current
+				 * Move up the last inode in the current
 				 * chunk.  The lookup_ge will always get
 				 * us the first inode in the next chunk.
 				 */

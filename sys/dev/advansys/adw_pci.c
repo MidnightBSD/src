@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/advansys/adw_pci.c,v 1.2 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Device probe and attach routines for the following
  * Advanced Systems Inc. SCSI controllers:
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/adw_pci.c,v 1.25 2006/12/11 18:28:29 mjacob Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -259,9 +259,8 @@ adw_pci_attach(device_t dev)
 	pci_write_config(dev, PCIR_COMMAND, command, /*bytes*/1);
 
 	/* Allocate a dmatag for our transfer DMA maps */
-	/* XXX Should be a child of the PCI bus dma tag */
 	error = bus_dma_tag_create(
-			/* parent	*/ NULL,
+			/* parent	*/ bus_get_dma_tag(dev),
 			/* alignment	*/ 1,
 			/* boundary	*/ 0,
 			/* lowaddr	*/ ADW_PCI_MAX_DMA_ADDR,

@@ -1,11 +1,11 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/reiserfs/reiserfs_inode.c,v 1.2 2008/12/03 00:25:53 laffer1 Exp $ */
 /*-
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <dumbbell@FreeBSD.org>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_inode.c,v 1.3 2007/03/13 01:50:25 tegge Exp $
+ * $FreeBSD$
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -115,8 +115,6 @@ reiserfs_inactive(struct vop_inactive_args *ap)
 
 	reiserfs_log(LOG_DEBUG, "deactivating inode used %d times\n",
 	    vp->v_usecount);
-	if (prtactive && vrefcnt(vp) != 0)
-		vprint("ReiserFS/reclaim: pushing active", vp);
 
 #if 0
 	/* Ignore inodes related to stale file handles. */
@@ -148,8 +146,6 @@ reiserfs_reclaim(struct vop_reclaim_args *ap)
 
 	reiserfs_log(LOG_DEBUG, "reclaiming inode used %d times\n",
 	    vp->v_usecount);
-	if (prtactive && vrefcnt(vp) != 0)
-		vprint("ReiserFS/reclaim: pushing active", vp);
 	ip = VTOI(vp);
 
 	/* XXX Update this node (write to the disk) */
@@ -158,7 +154,7 @@ reiserfs_reclaim(struct vop_reclaim_args *ap)
 	vfs_hash_remove(vp);
 
 	reiserfs_log(LOG_DEBUG, "free private data\n");
-	FREE(vp->v_data, M_REISERFSNODE);
+	free(vp->v_data, M_REISERFSNODE);
 	vp->v_data = NULL;
 	vnode_destroy_vobject(vp);
 
@@ -765,7 +761,7 @@ reiserfs_iget(
 	dev = rmp->rm_dev;
 
 	/*
-	 * If this MALLOC() is performed after the getnewvnode() it might
+	 * If this malloc() is performed after the getnewvnode() it might
 	 * block, leaving a vnode with a NULL v_data to be found by
 	 * reiserfs_sync() if a sync happens to fire right then, which
 	 * will cause a panic because reiserfs_sync() blindly dereferences
@@ -805,7 +801,7 @@ reiserfs_iget(
 		vp->v_vflag |= VV_ROOT;
 
 #if 0
-	if (VOP_LOCK(vp, LK_EXCLUSIVE, td) != 0)
+	if (VOP_LOCK(vp, LK_EXCLUSIVE) != 0)
 		panic("reiserfs/iget: unexpected lock failure");
 
 	/*
@@ -813,10 +809,10 @@ reiserfs_iget(
 	 * must not release nor downgrade the lock (despite flags argument
 	 * says) till it is fully initialized.
 	 */
-	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, (struct mtx *)0, td);
+	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, (struct mtx *)0);
 #endif
 
-	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL, td);
+	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL);
 	error = insmntque(vp, mp);
 	if (error != 0) {
 		free(ip, M_REISERFSNODE);

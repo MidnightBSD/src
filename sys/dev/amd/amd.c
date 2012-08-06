@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/amd/amd.c,v 1.2 2008/12/02 02:24:31 laffer1 Exp $ */
 /*-
  *********************************************************************
  *	FILE NAME  : amd.c
@@ -31,7 +31,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************
- * $FreeBSD: src/sys/dev/amd/amd.c,v 1.36 2007/06/17 05:55:47 scottl Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -1658,7 +1658,7 @@ amdhandlemsgreject(struct amd_softc *amd)
 				    tinfo_sync_period[pDCB->SyncPeriod - 4];
 				pDCB->tinfo.goal.offset = pDCB->SyncOffset;
 				pDCB->tinfo.current.period =
-				    tinfo_sync_period[pDCB->SyncPeriod - 4];;
+				    tinfo_sync_period[pDCB->SyncPeriod - 4];
 				pDCB->tinfo.current.offset = pDCB->SyncOffset;
 
 				/*

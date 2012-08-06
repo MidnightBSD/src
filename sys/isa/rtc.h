@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/isa/rtc.h,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)rtc.h	7.1 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/isa/rtc.h,v 1.13 2004/04/07 20:46:09 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _I386_ISA_RTC_H_
@@ -111,4 +111,13 @@
 #define RTC_EXTHI	0x18	/* low byte of extended mem size */
 
 #define	RTC_CENTURY	0x32	/* current century */
+
+#ifdef _KERNEL
+extern  struct mtx clock_lock;
+extern	int atrtcclock_disable;
+int	rtcin(int reg);
+void	atrtc_restore(void);
+void	writertc(int reg, u_char val);
+#endif
+
 #endif /* _I386_ISA_RTC_H_ */

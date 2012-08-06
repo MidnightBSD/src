@@ -25,11 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_core.c,v 1.22 2007/04/02 22:00:22 marcel Exp $");
-
-#ifndef KLD_MODULE
-#include "opt_comconsole.h"
-#endif
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,8 +41,6 @@ __FBSDID("$FreeBSD: src/sys/dev/uart/uart_core.c,v 1.22 2007/04/02 22:00:22 marc
 #include <sys/reboot.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
-#include <sys/termios.h>
-#include <sys/tty.h>
 #include <machine/resource.h>
 #include <machine/stdarg.h>
 
@@ -92,7 +86,7 @@ uart_getrange(struct uart_class *uc)
  * Schedule a soft interrupt. We do this on the 0 to !0 transition
  * of the TTY pending interrupt status.
  */
-static void
+void
 uart_sched_softih(struct uart_softc *sc, uint32_t ipend)
 {
 	uint32_t new, old;
@@ -120,10 +114,10 @@ uart_intr_break(void *arg)
 {
 	struct uart_softc *sc = arg;
 
-#if defined(KDB) && defined(BREAK_TO_DEBUGGER)
+#if defined(KDB)
 	if (sc->sc_sysdev != NULL && sc->sc_sysdev->type == UART_DEV_CONSOLE) {
-		kdb_enter_why(KDB_WHY_BREAK, "Line break on console");
-		return (0);
+		if (kdb_break())
+			return (0);
 	}
 #endif
 	if (sc->sc_opened)
@@ -172,11 +166,10 @@ uart_intr_rxready(void *arg)
 
 	rxp = sc->sc_rxput;
 	UART_RECEIVE(sc);
-#if defined(KDB) && defined(ALT_BREAK_TO_DEBUGGER)
+#if defined(KDB)
 	if (sc->sc_sysdev != NULL && sc->sc_sysdev->type == UART_DEV_CONSOLE) {
 		while (rxp != sc->sc_rxput) {
-			if (kdb_alt_break(sc->sc_rxbuf[rxp++], &sc->sc_altbrk))
-				kdb_enter_why(KDB_WHY_BREAK, "Break sequence on console");
+			kdb_alt_break(sc->sc_rxbuf[rxp++], &sc->sc_altbrk);
 			if (rxp == sc->sc_rxbufsz)
 				rxp = 0;
 		}
@@ -451,7 +444,7 @@ uart_bus_attach(device_t dev)
 		sc->sc_polled = 1;
 	}
 
-	sc->sc_rxbufsz = IBUFSIZ;
+	sc->sc_rxbufsz = 384;
 	sc->sc_rxbuf = malloc(sc->sc_rxbufsz * sizeof(*sc->sc_rxbuf),
 	    M_UART, M_WAITOK);
 	sc->sc_txbuf = malloc(sc->sc_txfifosz * sizeof(*sc->sc_txbuf),

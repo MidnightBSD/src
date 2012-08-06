@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/utopia/utopia.c,v 1.2 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/utopia/utopia.c,v 1.11.10.1 2007/12/06 09:53:42 philip Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -623,7 +623,7 @@ utopia_daemon(void *arg __unused)
 	}
 	wakeup_one(&utopia_list);
 	UTP_RUNLOCK_LIST();
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /*
@@ -639,7 +639,7 @@ utopia_mod_init(module_t mod, int what, void *arg)
 
 	  case MOD_LOAD:
 		mtx_init(&utopia_list_mtx, "utopia list mutex", NULL, MTX_DEF);
-		err = kthread_create(utopia_daemon, NULL, &utopia_kproc,
+		err = kproc_create(utopia_daemon, NULL, &utopia_kproc,
 		    RFHIGHPID, 0, "utopia");
 		if (err != 0) {
 			printf("cannot created utopia thread %d\n", err);

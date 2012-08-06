@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_tty.c,v 1.29 2006/07/27 00:07:10 marcel Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,7 +39,6 @@ __FBSDID("$FreeBSD: src/sys/dev/uart/uart_tty.c,v 1.29 2006/07/27 00:07:10 marce
 #include <sys/reboot.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
-#include <sys/termios.h>
 #include <sys/tty.h>
 #include <machine/resource.h>
 #include <machine/stdarg.h>
@@ -55,6 +54,8 @@ static cn_init_t uart_cninit;
 static cn_term_t uart_cnterm;
 static cn_getc_t uart_cngetc;
 static cn_putc_t uart_cnputc;
+static cn_grab_t uart_cngrab;
+static cn_ungrab_t uart_cnungrab;
 
 CONSOLE_DRIVER(uart);
 
@@ -109,6 +110,16 @@ uart_cnterm(struct consdev *cp)
 }
 
 static void
+uart_cngrab(struct consdev *cp)
+{
+}
+
+static void
+uart_cnungrab(struct consdev *cp)
+{
+}
+
+static void
 uart_cnputc(struct consdev *cp, int c)
 {
 
@@ -123,11 +134,11 @@ uart_cngetc(struct consdev *cp)
 }
 
 static int
-uart_tty_open(struct tty *tp, struct cdev *dev)
+uart_tty_open(struct tty *tp)
 {
 	struct uart_softc *sc;
 
-	sc = tp->t_sc;
+	sc = tty_softc(tp);
 
 	if (sc == NULL || sc->sc_leaving)
 		return (ENXIO);
@@ -141,7 +152,7 @@ uart_tty_close(struct tty *tp)
 {
 	struct uart_softc *sc;
 
-	sc = tp->t_sc;
+	sc = tty_softc(tp);
 	if (sc == NULL || sc->sc_leaving || !sc->sc_opened) 
 		return;
 
@@ -158,45 +169,64 @@ uart_tty_close(struct tty *tp)
 }
 
 static void
-uart_tty_oproc(struct tty *tp)
+uart_tty_outwakeup(struct tty *tp)
 {
 	struct uart_softc *sc;
 
-	sc = tp->t_sc;
+	sc = tty_softc(tp);
 	if (sc == NULL || sc->sc_leaving)
 		return;
 
+	if (sc->sc_txbusy)
+		return;
+
 	/*
-	 * Handle input flow control. Note that if we have hardware support,
-	 * we don't do anything here. We continue to receive until our buffer
-	 * is full. At that time we cannot empty the UART itself and it will
-	 * de-assert RTS for us. In that situation we're completely stuffed.
-	 * Without hardware support, we need to toggle RTS ourselves.
+	 * Respect RTS/CTS (output) flow control if enabled and not already
+	 * handled by hardware.
 	 */
-	if ((tp->t_cflag & CRTS_IFLOW) && !sc->sc_hwiflow) {
-		if ((tp->t_state & TS_TBLOCK) &&
-		    (sc->sc_hwsig & SER_RTS))
-			UART_SETSIG(sc, SER_DRTS);
-		else if (!(tp->t_state & TS_TBLOCK) &&
-		    !(sc->sc_hwsig & SER_RTS))
+	if ((tp->t_termios.c_cflag & CCTS_OFLOW) && !sc->sc_hwoflow &&
+	    !(sc->sc_hwsig & SER_CTS))
+		return;
+
+	sc->sc_txdatasz = ttydisc_getc(tp, sc->sc_txbuf, sc->sc_txfifosz);
+	if (sc->sc_txdatasz != 0)
+		UART_TRANSMIT(sc);
+}
+
+static void
+uart_tty_inwakeup(struct tty *tp)
+{
+	struct uart_softc *sc;
+
+	sc = tty_softc(tp);
+	if (sc == NULL || sc->sc_leaving)
+		return;
+
+	if (sc->sc_isquelch) {
+		if ((tp->t_termios.c_cflag & CRTS_IFLOW) && !sc->sc_hwiflow)
 			UART_SETSIG(sc, SER_DRTS|SER_RTS);
+		sc->sc_isquelch = 0;
+		uart_sched_softih(sc, SER_INT_RXREADY);
 	}
+}
 
-	if (tp->t_state & TS_TTSTOP)
-		return;
+static int
+uart_tty_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
+{
+	struct uart_softc *sc;
 
-	if ((tp->t_state & TS_BUSY) || sc->sc_txbusy)
-		return;
+	sc = tty_softc(tp);
 
-	if (tp->t_outq.c_cc == 0) {
-		ttwwakeup(tp);
-		return;
+	switch (cmd) {
+	case TIOCSBRK:
+		UART_IOCTL(sc, UART_IOCTL_BREAK, 1);
+		return (0);
+	case TIOCCBRK:
+		UART_IOCTL(sc, UART_IOCTL_BREAK, 0);
+		return (0);
+	default:
+		return pps_ioctl(cmd, data, &sc->sc_pps);
 	}
-
-	sc->sc_txdatasz = q_to_b(&tp->t_outq, sc->sc_txbuf, sc->sc_txfifosz);
-	tp->t_state |= TS_BUSY;
-	UART_TRANSMIT(sc);
-	ttwwakeup(tp);
 }
 
 static int
@@ -205,7 +235,7 @@ uart_tty_param(struct tty *tp, struct termios *t)
 	struct uart_softc *sc;
 	int databits, parity, stopbits;
 
-	sc = tp->t_sc;
+	sc = tty_softc(tp);
 	if (sc == NULL || sc->sc_leaving)
 		return (ENODEV);
 	if (t->c_ispeed != t->c_ospeed && t->c_ospeed != 0)
@@ -237,7 +267,7 @@ uart_tty_param(struct tty *tp, struct termios *t)
 	UART_SETSIG(sc, SER_DDTR | SER_DTR);
 	/* Set input flow control state. */
 	if (!sc->sc_hwiflow) {
-		if ((t->c_cflag & CRTS_IFLOW) && (tp->t_state & TS_TBLOCK))
+		if ((t->c_cflag & CRTS_IFLOW) && sc->sc_isquelch)
 			UART_SETSIG(sc, SER_DRTS);
 		else
 			UART_SETSIG(sc, SER_DRTS | SER_RTS);
@@ -246,7 +276,7 @@ uart_tty_param(struct tty *tp, struct termios *t)
 	/* Set output flow control state. */
 	if (sc->sc_hwoflow)
 		UART_IOCTL(sc, UART_IOCTL_OFLOW, (t->c_cflag & CCTS_OFLOW));
-	ttsetwater(tp);
+
 	return (0);
 }
 
@@ -255,40 +285,10 @@ uart_tty_modem(struct tty *tp, int biton, int bitoff)
 {
 	struct uart_softc *sc;
 
-	sc = tp->t_sc;
+	sc = tty_softc(tp);
 	if (biton != 0 || bitoff != 0)
 		UART_SETSIG(sc, SER_DELTA(bitoff|biton) | biton);
 	return (sc->sc_hwsig);
-}
-
-static void
-uart_tty_break(struct tty *tp, int state)
-{
-	struct uart_softc *sc;
-
-	sc = tp->t_sc;
-	UART_IOCTL(sc, UART_IOCTL_BREAK, state);
-}
-
-static void
-uart_tty_stop(struct tty *tp, int rw)
-{
-	struct uart_softc *sc;
-
-	sc = tp->t_sc;
-	if (sc == NULL || sc->sc_leaving)
-		return;
-	if (rw & FWRITE) {
-		if (sc->sc_txbusy) {
-			sc->sc_txbusy = 0;
-			UART_FLUSH(sc, UART_FLUSH_TRANSMITTER);
-		}
-		tp->t_state &= ~TS_BUSY;
-	}
-	if (rw & FREAD) {
-		UART_FLUSH(sc, UART_FLUSH_RECEIVER);
-		sc->sc_rxget = sc->sc_rxput = 0;
-	}
 }
 
 void
@@ -296,7 +296,7 @@ uart_tty_intr(void *arg)
 {
 	struct uart_softc *sc = arg;
 	struct tty *tp;
-	int c, pend, sig, xc;
+	int c, err = 0, pend, sig, xc;
 
 	if (sc->sc_leaving)
 		return;
@@ -306,45 +306,68 @@ uart_tty_intr(void *arg)
 		return;
 
 	tp = sc->sc_u.u_tty.tp;
+	tty_lock(tp);
 
 	if (pend & SER_INT_RXREADY) {
-		while (!uart_rx_empty(sc) && !(tp->t_state & TS_TBLOCK)) {
-			xc = uart_rx_get(sc);
+		while (!uart_rx_empty(sc) && !sc->sc_isquelch) {
+			xc = uart_rx_peek(sc);
 			c = xc & 0xff;
 			if (xc & UART_STAT_FRAMERR)
-				c |= TTY_FE;
+				err |= TRE_FRAMING;
 			if (xc & UART_STAT_OVERRUN)
-				c |= TTY_OE;
+				err |= TRE_OVERRUN;
 			if (xc & UART_STAT_PARERR)
-				c |= TTY_PE;
-			ttyld_rint(tp, c);
+				err |= TRE_PARITY;
+			if (ttydisc_rint(tp, c, err) != 0) {
+				sc->sc_isquelch = 1;
+				if ((tp->t_termios.c_cflag & CRTS_IFLOW) &&
+				    !sc->sc_hwiflow)
+					UART_SETSIG(sc, SER_DRTS);
+			} else
+				uart_rx_next(sc);
 		}
 	}
 
-	if (pend & SER_INT_BREAK) {
-		if (tp != NULL && !(tp->t_iflag & IGNBRK))
-			ttyld_rint(tp, 0);
-	}
+	if (pend & SER_INT_BREAK)
+		ttydisc_rint(tp, 0, TRE_BREAK);
 
 	if (pend & SER_INT_SIGCHG) {
 		sig = pend & SER_INT_SIGMASK;
 		if (sig & SER_DDCD)
-			ttyld_modem(tp, sig & SER_DCD);
-		if ((sig & SER_DCTS) && (tp->t_cflag & CCTS_OFLOW) &&
-		    !sc->sc_hwoflow) {
-			if (sig & SER_CTS) {
-				tp->t_state &= ~TS_TTSTOP;
-				ttyld_start(tp);
-			} else
-				tp->t_state |= TS_TTSTOP;
-		}
+			ttydisc_modem(tp, sig & SER_DCD);
+		if (sig & SER_DCTS)
+			uart_tty_outwakeup(tp);
 	}
 
-	if (pend & SER_INT_TXIDLE) {
-		tp->t_state &= ~TS_BUSY;
-		ttyld_start(tp);
-	}
+	if (pend & SER_INT_TXIDLE)
+		uart_tty_outwakeup(tp);
+	ttydisc_rint_done(tp);
+	tty_unlock(tp);
 }
+
+static void
+uart_tty_free(void *arg)
+{
+
+	/*
+	 * XXX: uart(4) could reuse the device unit number before it is
+	 * being freed by the TTY layer. We should use this hook to free
+	 * the device unit number, but unfortunately newbus does not
+	 * seem to support such a construct.
+	 */
+}
+
+static struct ttydevsw uart_tty_class = {
+	.tsw_flags	= TF_INITLOCK|TF_CALLOUT,
+	.tsw_open	= uart_tty_open,
+	.tsw_close	= uart_tty_close,
+	.tsw_outwakeup	= uart_tty_outwakeup,
+	.tsw_inwakeup	= uart_tty_inwakeup,
+	.tsw_ioctl	= uart_tty_ioctl,
+	.tsw_param	= uart_tty_param,
+	.tsw_modem	= uart_tty_modem,
+	.tsw_free	= uart_tty_free,
+};
 
 int
 uart_tty_attach(struct uart_softc *sc)
@@ -352,45 +375,34 @@ uart_tty_attach(struct uart_softc *sc)
 	struct tty *tp;
 	int unit;
 
-	tp = ttyalloc();
-	sc->sc_u.u_tty.tp = tp;
-	tp->t_sc = sc;
+	sc->sc_u.u_tty.tp = tp = tty_alloc(&uart_tty_class, sc);
 
 	unit = device_get_unit(sc->sc_dev);
-
-	tp->t_oproc = uart_tty_oproc;
-	tp->t_param = uart_tty_param;
-	tp->t_stop = uart_tty_stop;
-	tp->t_modem = uart_tty_modem;
-	tp->t_break = uart_tty_break;
-	tp->t_open = uart_tty_open;
-	tp->t_close = uart_tty_close;
-
-	tp->t_pps = &sc->sc_pps;
 
 	if (sc->sc_sysdev != NULL && sc->sc_sysdev->type == UART_DEV_CONSOLE) {
 		sprintf(((struct consdev *)sc->sc_sysdev->cookie)->cn_name,
 		    "ttyu%r", unit);
-		ttyconsolemode(tp, 0);
+		tty_init_console(tp, 0);
 	}
 
 	swi_add(&tty_intr_event, uart_driver_name, uart_tty_intr, sc, SWI_TTY,
 	    INTR_TYPE_TTY, &sc->sc_softih);
 
-	ttycreate(tp, TS_CALLOUT, "u%r", unit);
+	tty_makedev(tp, NULL, "u%r", unit);
 
 	return (0);
 }
 
-int uart_tty_detach(struct uart_softc *sc)
+int
+uart_tty_detach(struct uart_softc *sc)
 {
 	struct tty *tp;
 
 	tp = sc->sc_u.u_tty.tp;
-	tp->t_pps = NULL;
-	ttygone(tp);
+
+	tty_lock(tp);
 	swi_remove(sc->sc_softih);
-	ttyfree(tp);
+	tty_rel_gone(tp);
 
 	return (0);
 }

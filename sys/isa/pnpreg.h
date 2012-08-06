@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/isa/pnpreg.h,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
 /*-
  * Copyright (c) 1996, Sujal M. Patel
  * All rights reserved.
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/isa/pnpreg.h,v 1.6 2005/01/06 22:18:23 imp Exp $
+ *	$FreeBSD$
  *      from: pnp.h,v 1.7 1998/09/13 22:15:44 eivind Exp
  */
 

@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/cm/smc90cx6var.h,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
 /*	$NetBSD: smc90cx6var.h,v 1.5 2000/03/23 07:01:32 thorpej Exp $	*/
-/*	$FreeBSD: src/sys/dev/cm/smc90cx6var.h,v 1.5 2006/06/11 22:25:01 fjoe Exp $ */
+/*	$FreeBSD$ */
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.
@@ -17,13 +17,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -78,6 +71,8 @@ struct cm_softc {
 	u_long	sc_reconcount_excessive; /* for the above */
 #define ARC_EXCESSIVE_RECONS 20
 #define ARC_EXCESSIVE_RECONS_REWARN 400
+	struct callout sc_watchdog_timer;
+	int	sc_timer;
 	u_char	sc_intmask;
 	u_char	sc_rx_act;		/* 2..3 */
 	u_char	sc_tx_act;		/* 0..1 */

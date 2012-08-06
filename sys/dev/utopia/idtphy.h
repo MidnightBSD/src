@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/utopia/idtphy.h,v 1.2 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +27,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: src/sys/dev/utopia/idtphy.h,v 1.3 2005/01/06 01:43:31 imp Exp $
+ * $FreeBSD$
  *
  * Register definitions for the following chips:
  *	IDT 77105

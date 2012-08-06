@@ -1,8 +1,8 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ct/bshw_machdep.c,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
 /*	$NecBSD: bshw_machdep.c,v 1.8.12.6 2001/06/29 06:28:05 honda Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ct/bshw_machdep.c,v 1.8 2006/05/16 14:36:24 phk Exp $");
+__FBSDID("$FreeBSD$");
 /*	$NetBSD$	*/
 
 /*-

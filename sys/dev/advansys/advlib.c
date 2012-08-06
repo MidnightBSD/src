@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/advansys/advlib.c,v 1.2 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Low level routines for the Advanced Systems Inc. SCSI controllers chips
  *
@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/advlib.c,v 1.26 2006/11/02 00:54:33 mjacob Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

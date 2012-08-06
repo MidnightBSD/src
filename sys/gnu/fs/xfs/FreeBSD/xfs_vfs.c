@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_vfs.c,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2005 Silicon Graphics, Inc.
  * All Rights Reserved.
@@ -242,7 +242,7 @@ vfs_allocate(struct mount *mp)
 	bhv_head_init(VFS_BHVHEAD(vfsp), "vfs");
 
 	xmp->m_mp = mp;
-	mp->mnt_data = (qaddr_t)xmp;
+	mp->mnt_data = xmp;
 	vfsp->vfs_mp = mp;
 
 	return vfsp;

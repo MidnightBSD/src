@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/buslogic/btreg.h,v 1.2 2008/12/02 02:24:37 laffer1 Exp $ */
 /*-
  * Generic register and struct definitions for the BusLogic
  * MultiMaster SCSI host adapters.  Product specific probe and
@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/buslogic/btreg.h,v 1.16 2005/01/06 01:42:31 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _BTREG_H_

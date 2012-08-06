@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/sym/sym_defs.h,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  *  Device driver optimized for the Symbios/LSI 53C896/53C895A/53C1010 
  *  PCI-SCSI controllers.
@@ -56,7 +56,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/sym/sym_defs.h,v 1.11 2005/01/06 01:43:24 imp Exp $ */
+/* $FreeBSD$ */
 
 #ifndef SYM_DEFS_H
 #define SYM_DEFS_H
@@ -91,7 +91,7 @@
 struct sym_pci_chip {
 	u_short	device_id;
 	unsigned short	revision_id;
-	char	*name;
+	const char *name;
 	u_char	burst_max;	/* log-base-2 of max burst */
 	u_char	offset_max;
 	u_char	nr_divisor;

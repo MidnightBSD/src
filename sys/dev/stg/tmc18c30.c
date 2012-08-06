@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30.c,v 1.15 2006/05/16 14:36:32 phk Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -189,9 +189,7 @@ struct scsi_low_funcs stgfuncs = {
  * hwfuncs
  ****************************************************/
 static __inline void 
-stghw_bcr_write_1(sc, bcv)
-	struct stg_softc *sc;
-	u_int8_t bcv;
+stghw_bcr_write_1(struct stg_softc *sc, u_int8_t bcv)
 {
 
 	bus_space_write_1(sc->sc_iot, sc->sc_ioh, tmc_bctl, bcv);
@@ -720,10 +718,7 @@ stg_pio_write(sc, ti, thold)
 }
 
 static int
-stg_negate_signal(sc, mask, s)
-	struct stg_softc *sc;
-	u_int8_t mask;
-	u_char *s;
+stg_negate_signal(struct stg_softc *sc, u_int8_t mask, u_char *s)
 {
 	struct scsi_low_softc *slp = &sc->sc_sclow;
 	bus_space_tag_t bst = sc->sc_iot;
@@ -747,9 +742,7 @@ stg_negate_signal(sc, mask, s)
 }
 
 static int
-stg_expect_signal(sc, phase, mask)
-	struct stg_softc *sc;
-	u_int8_t phase, mask;
+stg_expect_signal(struct stg_softc *sc, u_int8_t phase, u_int8_t mask)
 {
 	struct scsi_low_softc *slp = &sc->sc_sclow;
 	bus_space_tag_t bst = sc->sc_iot;

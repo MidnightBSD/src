@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/buslogic/bt.c,v 1.2 2008/12/02 02:24:37 laffer1 Exp $ */
 /*-
  * Generic driver for the BusLogic MultiMaster SCSI host adapters
  * Product specific probe and attach routines can be found in:
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/buslogic/bt.c,v 1.50 2007/06/17 05:55:49 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
  /*
   * Special thanks to Leonard N. Zubkoff for writing such a complete and
@@ -976,7 +976,7 @@ bt_find_probe_range(int ioport, int *port_index, int *max_port_index)
 int
 bt_iop_from_bio(isa_compat_io_t bio_index)
 {
-	if (bio_index >= 0 && bio_index < BT_NUM_ISAPORTS)
+	if (bio_index < BT_NUM_ISAPORTS)
 		return (bt_board_ports[bio_index]);
 	return (-1);
 }

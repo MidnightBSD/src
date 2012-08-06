@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ciss/cissio.h,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/ciss/cissio.h,v 1.5 2005/05/18 05:31:34 ps Exp $
+ *	$FreeBSD$
  */
 
 /*
@@ -195,6 +195,24 @@ typedef struct {
 } __packed IOCTL_Command_struct32;
 #endif
 
+/************************************************************************
+ * Command queue statistics
+ */
+
+#define CISSQ_FREE	0
+#define CISSQ_NOTIFY	1
+#define CISSQ_COUNT	2
+
+struct ciss_qstat {
+    uint32_t		q_length;
+    uint32_t		q_max;
+};
+
+union ciss_statrequest {
+    uint32_t		cs_item;
+    struct ciss_qstat	cs_qstat;
+};
+
 /*
  * Note that we'd normally pass the struct in directly, but
  * this code is trying to be compatible with other drivers.
@@ -213,5 +231,6 @@ typedef struct {
 #ifdef __amd64
 #define CCISS_PASSTHRU32	_IOWR ('C', 210, IOCTL_Command_struct32)
 #endif
+#define CCISS_GETQSTATS		_IOWR ('C', 211, union ciss_statrequest)
 
 #pragma pack()

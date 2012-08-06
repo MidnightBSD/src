@@ -1,8 +1,8 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/advansys/advmcode.h,v 1.2 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Exported interface to downloadable microcode for AdvanSys SCSI Adapters
  *
- * $FreeBSD: src/sys/dev/advansys/advmcode.h,v 1.8 2005/01/06 01:42:24 imp Exp $
+ * $FreeBSD$
  *
  * Obtained from:
  *

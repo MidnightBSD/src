@@ -1,11 +1,11 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/reiserfs/reiserfs_fs_i.h,v 1.2 2008/12/03 00:25:53 laffer1 Exp $ */
 /*-
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_fs_i.h,v 1.1 2005/06/18 17:06:09 dumbbell Exp $
+ * $FreeBSD$
  */
 
 #ifndef _GNU_REISERFS_REISERFS_FS_I_H

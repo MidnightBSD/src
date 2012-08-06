@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_compat.h,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
 #ifndef __XFS_COMPAT_H__
 #define	__XFS_COMPAT_H__
 
@@ -128,10 +128,6 @@ typedef dev_t			os_dev_t;
 
 #ifndef copy_from_user
 #define	copy_from_user(dst, src, len)	copyin((src), (dst), (len))
-#endif
-
-#ifndef memmove
-#define	memmove(dst, src, len)		bcopy((src), (dst), (len))
 #endif
 
 #ifndef barrier

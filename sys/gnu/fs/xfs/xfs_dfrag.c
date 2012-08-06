@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/xfs_dfrag.c,v 1.2 2008/12/03 00:25:54 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2006 Silicon Graphics, Inc.
  * All Rights Reserved.
@@ -47,6 +47,7 @@
 #include "xfs_mac.h"
 #include "xfs_rw.h"
 
+#include <sys/capability.h>
 #include <sys/file.h>
 
 /*
@@ -80,7 +81,8 @@ xfs_swapext(
 	}
 
 	/* Pull information for the target fd */
-	if (fgetvp(td, (int)sxp->sx_fdtarget, &bvp) != 0) {
+	if (fgetvp(td, (int)sxp->sx_fdtarget, CAP_READ | CAP_WRITE, &bvp)
+	    != 0) {
 		error = XFS_ERROR(EINVAL);
 		goto error0;
 	}
@@ -92,7 +94,7 @@ xfs_swapext(
 		goto error0;
 	}
 
-	if (fgetvp(td, (int)sxp->sx_fdtmp, &btvp) != 0) {
+	if (fgetvp(td, (int)sxp->sx_fdtmp, CAP_READ | CAP_WRITE, &btvp) != 0) {
 		error = XFS_ERROR(EINVAL);
 		goto error0;
 	}
@@ -182,11 +184,11 @@ xfs_swap_extents(
 	locked = 1;
 
 	/* Check permissions */
-	error = xfs_iaccess(ip, S_IWUSR, NULL);
+	error = xfs_iaccess(ip, VWRITE, NULL);
 	if (error)
 		goto error0;
 
-	error = xfs_iaccess(tip, S_IWUSR, NULL);
+	error = xfs_iaccess(tip, VWRITE, NULL);
 	if (error)
 		goto error0;
 

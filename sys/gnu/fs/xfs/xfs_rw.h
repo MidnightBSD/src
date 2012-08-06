@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/xfs_rw.h,v 1.2 2008/12/03 00:25:54 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2003,2005 Silicon Graphics, Inc.
  * All Rights Reserved.
@@ -91,7 +91,7 @@ extern void xfs_ioerror_alert(char *func, struct xfs_mount *mp,
 extern int xfs_rwlock(bhv_desc_t *bdp, vrwlock_t write_lock);
 extern void xfs_rwunlock(bhv_desc_t *bdp, vrwlock_t write_lock);
 extern int xfs_setattr(bhv_desc_t *bdp, xfs_vattr_t *vap, int flags, cred_t *credp);
-extern int xfs_change_file_space(bhv_desc_t *bdp, int cmd, xfs_flock64_t *bf,
+extern int xfs_change_file_space(bhv_desc_t *bdp, u_long cmd, xfs_flock64_t *bf,
 				 xfs_off_t offset, cred_t *credp, int flags);
 extern int xfs_set_dmattrs(bhv_desc_t *bdp, u_int evmask, u_int16_t state,
 			   cred_t *credp);

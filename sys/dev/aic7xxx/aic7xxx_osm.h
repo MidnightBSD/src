@@ -29,10 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic7xxx_osm.h,v 1.4 2009-03-15 14:24:21 laffer1 Exp $
+ * $Id: aic7xxx_osm.h,v 1.5 2012-08-06 01:19:11 laffer1 Exp $
  *
- * $MidnightBSD$
- * $FreeBSD: src/sys/dev/aic7xxx/aic7xxx_osm.h,v 1.33 2007/04/17 06:26:25 scottl Exp $
+ * $MidnightBSD: src/sys/dev/aic7xxx/aic7xxx_osm.h,v 1.4 2009/03/15 14:24:21 laffer1 Exp $
  */
 
 #ifndef _AIC7XXX_FREEBSD_H_
@@ -105,15 +104,16 @@ extern devclass_t ahc_devclass;
  * The number of dma segments supported.  The sequencer can handle any number
  * of physically contiguous S/G entrys.  To reduce the driver's memory
  * consumption, we limit the number supported to be sufficient to handle
- * the largest mapping supported by the kernel, MAXPHYS.  Assuming the
- * transfer is as fragmented as possible and unaligned, this turns out to
+ * the largest mapping supported by the legacy kernel MAXPHYS setting of
+ * 128K.  This can be increased once some testing is done.  Assuming the
  * be the number of paged sized transfers in MAXPHYS plus an extra element
  * to handle any unaligned residual.  The sequencer fetches SG elements
  * in cacheline sized chucks, so make the number per-transaction an even
  * multiple of 16 which should align us on even the largest of cacheline
  * boundaries. 
  */
-#define AHC_NSEG (roundup(btoc(MAXPHYS) + 1, 16))
+#define AHC_MAXPHYS (128 * 1024)
+#define AHC_NSEG (roundup(btoc(AHC_MAXPHYS) + 1, 16))
 
 /* This driver supports target mode */
 #define AHC_TARGET_MODE 1

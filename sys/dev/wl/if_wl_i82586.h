@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wl/if_wl_i82586.h,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990,1989 Carnegie Mellon University
@@ -24,7 +24,7 @@
  * any improvements or extensions that they make and grant Carnegie Mellon
  * the rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/dev/wl/if_wl_i82586.h,v 1.1 2005/05/09 04:47:57 nyan Exp $
+ * $FreeBSD$
  */
 /*
   Copyright 1988, 1989 by Olivetti Advanced Technology Center, Inc.,

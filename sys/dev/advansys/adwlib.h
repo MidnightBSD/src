@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/advansys/adwlib.h,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * Definitions for low level routines and data structures
  * for the Advanced Systems Inc. SCSI controllers chips.
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/advansys/adwlib.h,v 1.9 2005/02/14 01:10:50 obrien Exp $
+ * $FreeBSD$
  */
 /*-
  * Ported from:

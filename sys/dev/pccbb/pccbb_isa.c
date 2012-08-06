@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/pccbb/pccbb_isa.c,v 1.2 2008/12/02 02:47:53 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002-2004 M. Warner Losh.
  * All rights reserved.
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb_isa.c,v 1.7 2006/06/03 21:10:50 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -212,7 +212,6 @@ static device_method_t cbb_methods[] = {
 	DEVMETHOD(device_resume,		cbb_resume),
 
 	/* bus methods */
-	DEVMETHOD(bus_print_child,		bus_generic_print_child),
 	DEVMETHOD(bus_read_ivar,		cbb_read_ivar),
 	DEVMETHOD(bus_write_ivar,		cbb_write_ivar),
 	DEVMETHOD(bus_alloc_resource,		cbb_alloc_resource),
@@ -233,7 +232,7 @@ static device_method_t cbb_methods[] = {
 	DEVMETHOD(power_enable_socket,		cbb_power_enable_socket),
 	DEVMETHOD(power_disable_socket,		cbb_power_disable_socket),
 
-	{0,0}
+	DEVMETHOD_END
 };
 
 static driver_t cbb_isa_driver = {

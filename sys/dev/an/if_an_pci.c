@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/an/if_an_pci.c,v 1.2 2008/12/02 02:24:31 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/an/if_an_pci.c,v 1.28 2007/02/23 12:18:31 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is a PCI shim for the Aironet PC4500/4800 wireless network
@@ -104,6 +104,7 @@ struct an_type {
 
 static struct an_type an_devs[] = {
 	{ AIRONET_VENDORID, AIRONET_DEVICEID_35x, "Cisco Aironet 350 Series" },
+	{ AIRONET_VENDORID, AIRONET_DEVICEID_MPI350, "Cisco Aironet MPI350" },
 	{ AIRONET_VENDORID, AIRONET_DEVICEID_4500, "Aironet PCI4500" },
 	{ AIRONET_VENDORID, AIRONET_DEVICEID_4800, "Aironet PCI4800" },
 	{ AIRONET_VENDORID, AIRONET_DEVICEID_4xxx, "Aironet PCI4500/PCI4800" },
@@ -119,22 +120,19 @@ static int
 an_probe_pci(device_t dev)
 {
 	struct an_type		*t;
+	struct an_softc *sc = device_get_softc(dev);
 
+	bzero(sc, sizeof(struct an_softc));
 	t = an_devs;
 
 	while (t->an_name != NULL) {
 		if (pci_get_vendor(dev) == t->an_vid &&
 		    pci_get_device(dev) == t->an_did) {
 			device_set_desc(dev, t->an_name);
+			an_pci_probe(dev);
 			return(BUS_PROBE_DEFAULT);
 		}
 		t++;
-	}
-
-	if (pci_get_vendor(dev) == AIRONET_VENDORID &&
-	    pci_get_device(dev) == AIRONET_DEVICEID_MPI350) {
-		device_set_desc(dev, "Cisco Aironet MPI350");
-		return(BUS_PROBE_DEFAULT);
 	}
 
 	return(ENXIO);
@@ -146,12 +144,10 @@ an_attach_pci(dev)
 {
 	u_int32_t		command;
 	struct an_softc		*sc;
-	int 			unit, flags, error = 0;
+	int 			flags, error = 0;
 
 	sc = device_get_softc(dev);
-	unit = device_get_unit(dev);
 	flags = device_get_flags(dev);
-	bzero(sc, sizeof(struct an_softc));
 
 	if (pci_get_vendor(dev) == AIRONET_VENDORID &&
 	    pci_get_device(dev) == AIRONET_DEVICEID_MPI350) {
@@ -167,7 +163,7 @@ an_attach_pci(dev)
 		command = pci_read_config(dev, PCIR_COMMAND, 4);
 
 		if (!(command & PCIM_CMD_PORTEN)) {
-			printf("an%d: failed to enable I/O ports!\n", unit);
+			device_printf(dev, "failed to enable I/O ports!\n");
 			error = ENXIO;
 			goto fail;
 		}
@@ -176,12 +172,9 @@ an_attach_pci(dev)
 	error = an_alloc_port(dev, sc->port_rid, 1);
 
 	if (error) {
-		printf("an%d: couldn't map ports\n", unit);
+		device_printf(dev, "couldn't map ports\n");
 		goto fail;
 	}
-
-	sc->an_btag = rman_get_bustag(sc->port_res);
-	sc->an_bhandle = rman_get_bushandle(sc->port_res);
 
 	/* Allocate memory for MPI350 */
 	if (sc->mpi350) {
@@ -189,25 +182,21 @@ an_attach_pci(dev)
 		sc->mem_rid = PCIR_BAR(1);
 		error = an_alloc_memory(dev, sc->mem_rid, 1);
 		if (error) {
-			printf("an%d: couldn't map memory\n", unit);
+			device_printf(dev, "couldn't map memory\n");
 			goto fail;
 		}
-		sc->an_mem_btag = rman_get_bustag(sc->mem_res);
-		sc->an_mem_bhandle = rman_get_bushandle(sc->mem_res);
 
 		/* Allocate aux. memory */
 		sc->mem_aux_rid = PCIR_BAR(2);
 		error = an_alloc_aux_memory(dev, sc->mem_aux_rid, 
 		    AN_AUX_MEM_SIZE);
 		if (error) {
-			printf("an%d: couldn't map aux memory\n", unit);
+			device_printf(dev, "couldn't map aux memory\n");
 			goto fail;
 		}
-		sc->an_mem_aux_btag = rman_get_bustag(sc->mem_aux_res);
-		sc->an_mem_aux_bhandle = rman_get_bushandle(sc->mem_aux_res);
 
 		/* Allocate DMA region */
-		error = bus_dma_tag_create(NULL,	/* parent */
+		error = bus_dma_tag_create(bus_get_dma_tag(dev),/* parent */
 			       1, 0,			/* alignment, bounds */
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
@@ -220,7 +209,7 @@ an_attach_pci(dev)
 			       NULL,			/* lockarg */
 			       &sc->an_dtag);
 		if (error) {
-			printf("an%d: couldn't get DMA region\n", unit);
+			device_printf(dev, "couldn't get DMA region\n");
 			goto fail;
 		}
 	}
@@ -228,12 +217,14 @@ an_attach_pci(dev)
 	/* Allocate interrupt */
 	error = an_alloc_irq(dev, 0, RF_SHAREABLE);
 	if (error) {
+		device_printf(dev, "couldn't get interrupt\n");
 		goto fail;
-        }
+	}
 
 	sc->an_dev = dev;
-	error = an_attach(sc, device_get_unit(dev), flags);
+	error = an_attach(sc, flags);
 	if (error) {
+		device_printf(dev, "couldn't attach\n");
 		goto fail;
 	}
 
@@ -242,6 +233,8 @@ an_attach_pci(dev)
 	 */
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
 	    NULL, an_intr, sc, &sc->irq_handle);
+	if (error)
+		device_printf(dev, "couldn't setup interrupt\n");
 
 fail:
 	if (error)
@@ -266,20 +259,20 @@ an_resume_pci(device_t dev)
 }
 
 static device_method_t an_pci_methods[] = {
-        /* Device interface */
-        DEVMETHOD(device_probe,         an_probe_pci),
-        DEVMETHOD(device_attach,        an_attach_pci),
+	/* Device interface */
+	DEVMETHOD(device_probe,		an_probe_pci),
+	DEVMETHOD(device_attach,	an_attach_pci),
 	DEVMETHOD(device_detach,	an_detach),
 	DEVMETHOD(device_shutdown,	an_shutdown),
 	DEVMETHOD(device_suspend,	an_suspend_pci),
 	DEVMETHOD(device_resume,	an_resume_pci),
-        { 0, 0 }
+	{ 0, 0 }
 };
 
 static driver_t an_pci_driver = {
-        "an",
-        an_pci_methods,
-        sizeof(struct an_softc),
+	"an",
+	an_pci_methods,
+	sizeof(struct an_softc),
 };
 
 static devclass_t an_devclass;

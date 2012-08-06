@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/tx/if_txreg.h,v 1.2 2009/11/28 22:44:33 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997 Semen Ustimenko
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/tx/if_txreg.h,v 1.14 2003/09/02 17:30:39 jhb Exp $
+ * $FreeBSD$
  */
 
 #define	EPIC_MAX_MTU		1600	/* This is experiment-derived value */

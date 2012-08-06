@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wl/if_wl.h,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -19,7 +19,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/wl/if_wl.h,v 1.7 2005/01/06 01:43:34 imp Exp $
+ * $FreeBSD$
  */
 /* Definitions for WaveLAN driver */
 

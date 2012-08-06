@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ctau/ctau.c,v 1.2 2008/12/02 02:24:40 laffer1 Exp $ */
 /*-
  * Low-level subroutines for Cronyx-Tau adapter.
  *
@@ -18,7 +18,7 @@
  * Cronyx Id: ctau.c,v 1.1.2.4 2003/12/11 17:33:43 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ctau/ctau.c,v 1.3 2005/01/06 01:42:33 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/cx/machdep.h>
 #include <dev/ctau/ctddk.h>
@@ -1735,7 +1735,7 @@ ct_board_opt_t ct_board_opt_dflt = {
 	0,			/* board control register 2 */
 	{			/* DMA priority control register */
 		PCR_PRIO_ROTATE,
-		0,		/* all channels share the the bus hold */
+		0,		/* all channels share the bus hold */
 		0,		/* hold the bus until all transfers done */
 	},
 	CFG_A,			/* E1/G.703 config: two independent channels */

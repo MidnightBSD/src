@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ce/ng_ce.h,v 1.3 2008/12/02 02:24:37 laffer1 Exp $ */
 /*
  * Defines for Cronyx Tau32-PCI adapter driver.
  *
@@ -14,7 +14,7 @@
  * works or modified versions.
  *
  * $Cronyx: ng_ce.h,v 1.2 2005/04/23 20:11:57 rik Exp $
- * $FreeBSD: src/sys/dev/ce/ng_ce.h,v 1.1 2006/01/27 09:02:09 rik Exp $
+ * $FreeBSD$
  */
 
 #ifdef NETGRAPH

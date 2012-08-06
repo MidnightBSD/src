@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/utopia/utopia.h,v 1.2 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +27,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: src/sys/dev/utopia/utopia.h,v 1.5 2005/02/24 16:56:36 harti Exp $
+ * $FreeBSD$
  */
 #ifndef _DEV_UTOPIA_UTOPIA_H
 #define	_DEV_UTOPIA_UTOPIA_H

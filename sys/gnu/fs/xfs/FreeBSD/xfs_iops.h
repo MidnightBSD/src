@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_iops.h,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2002 Silicon Graphics, Inc.  All Rights Reserved.
  *
@@ -57,6 +57,6 @@ typedef struct xattr_namespace {
 extern struct xattr_namespace *xfs_namespaces;
 
 extern int xfs_ioctl(struct bhv_desc *, struct inode *, struct file *,
-		    int, unsigned int, void *);
+		    int, u_long, void *);
 
 #endif /* __XFS_IOPS_H__ */

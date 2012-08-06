@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ubsec/ubsec.c,v 1.2 2008/12/02 22:46:25 laffer1 Exp $ */
 /*	$OpenBSD: ubsec.c,v 1.115 2002/09/24 18:33:26 jason Exp $	*/
 
 /*-
@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ubsec/ubsec.c,v 1.49 2007/03/21 03:42:50 sam Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * uBsec 5[56]01, 58xx hardware crypto accelerator
@@ -108,7 +108,7 @@ static	int ubsec_attach(device_t);
 static	int ubsec_detach(device_t);
 static	int ubsec_suspend(device_t);
 static	int ubsec_resume(device_t);
-static	void ubsec_shutdown(device_t);
+static	int ubsec_shutdown(device_t);
 
 static	int ubsec_newsession(device_t, u_int32_t *, struct cryptoini *);
 static	int ubsec_freesession(device_t, u_int64_t);
@@ -124,17 +124,13 @@ static device_method_t ubsec_methods[] = {
 	DEVMETHOD(device_resume,	ubsec_resume),
 	DEVMETHOD(device_shutdown,	ubsec_shutdown),
 
-	/* bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-
 	/* crypto device methods */
 	DEVMETHOD(cryptodev_newsession,	ubsec_newsession),
 	DEVMETHOD(cryptodev_freesession,ubsec_freesession),
 	DEVMETHOD(cryptodev_process,	ubsec_process),
 	DEVMETHOD(cryptodev_kprocess,	ubsec_kprocess),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 static driver_t ubsec_driver = {
 	"ubsec",
@@ -221,7 +217,8 @@ ubsec_probe(device_t dev)
 	     pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5820 ||
 	     pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5821 ||
 	     pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5822 ||
-	     pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5823
+	     pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5823 ||
+	     pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5825
 	     ))
 		return (BUS_PROBE_DEFAULT);
 	return (ENXIO);
@@ -241,6 +238,7 @@ ubsec_partname(struct ubsec_softc *sc)
 		case PCI_PRODUCT_BROADCOM_5821:	return "Broadcom 5821";
 		case PCI_PRODUCT_BROADCOM_5822:	return "Broadcom 5822";
 		case PCI_PRODUCT_BROADCOM_5823:	return "Broadcom 5823";
+		case PCI_PRODUCT_BROADCOM_5825:	return "Broadcom 5825";
 		}
 		return "Broadcom unknown-part";
 	case PCI_VENDOR_BLUESTEEL:
@@ -302,7 +300,8 @@ ubsec_attach(device_t dev)
 	if ((pci_get_vendor(dev) == PCI_VENDOR_BROADCOM &&
 	     (pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5821 ||
 	      pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5822 ||
-	      pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5823)) ||
+	      pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5823 ||
+	      pci_get_device(dev) == PCI_PRODUCT_BROADCOM_5825)) ||
 	    (pci_get_vendor(dev) == PCI_VENDOR_SUN &&
 	     (pci_get_device(dev) == PCI_PRODUCT_SUN_SCA1K ||
 	      pci_get_device(dev) == PCI_PRODUCT_SUN_5821))) {
@@ -370,7 +369,7 @@ ubsec_attach(device_t dev)
 	/*
 	 * Setup DMA descriptor area.
 	 */
-	if (bus_dma_tag_create(NULL,			/* parent */
+	if (bus_dma_tag_create(bus_get_dma_tag(dev),	/* parent */
 			       1, 0,			/* alignment, bounds */
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
@@ -556,12 +555,13 @@ ubsec_detach(device_t dev)
  * Stop all chip i/o so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 ubsec_shutdown(device_t dev)
 {
 #ifdef notyet
 	ubsec_stop(device_get_softc(dev));
 #endif
+	return (0);
 }
 
 /*
@@ -1855,7 +1855,7 @@ ubsec_dma_malloc(
 	int r;
 
 	/* XXX could specify sc_dmat as parent but that just adds overhead */
-	r = bus_dma_tag_create(NULL,			/* parent */
+	r = bus_dma_tag_create(bus_get_dma_tag(sc->sc_dev),	/* parent */
 			       1, 0,			/* alignment, bounds */
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
@@ -1883,8 +1883,8 @@ ubsec_dma_malloc(
 			     BUS_DMA_NOWAIT, &dma->dma_map);
 	if (r != 0) {
 		device_printf(sc->sc_dev, "ubsec_dma_malloc: "
-			"bus_dmammem_alloc failed; size %zu, error %u\n",
-			size, r);
+			"bus_dmammem_alloc failed; size %ju, error %u\n",
+			(intmax_t)size, r);
 		goto fail_2;
 	}
 

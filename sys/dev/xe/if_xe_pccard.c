@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/xe/if_xe_pccard.c,v 1.2 2008/12/02 22:43:18 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Takeshi Shibagaki
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/xe/if_xe_pccard.c,v 1.32 2005/09/19 03:10:21 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 /* xe pccard interface driver */
 
@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: src/sys/dev/xe/if_xe_pccard.c,v 1.32 2005/09/19 03:10:21 imp
 #include <net/if_arp.h>
 #include <net/if_media.h>
 #include <net/if_mib.h>
-
 
 #include <dev/xe/if_xereg.h>
 #include <dev/xe/if_xevar.h>
@@ -69,38 +68,37 @@ __FBSDID("$FreeBSD: src/sys/dev/xe/if_xe_pccard.c,v 1.32 2005/09/19 03:10:21 imp
 
 extern int xe_debug;
 
-#define DEVPRINTF(level, arg) if (xe_debug >= (level)) device_printf arg
-#define DPRINTF(level, arg) if (xe_debug >= (level)) printf arg
+#define	DEVPRINTF(level, arg)	if (xe_debug >= (level)) device_printf arg
+#define	DPRINTF(level, arg)	if (xe_debug >= (level)) printf arg
 #else
-#define DEVPRINTF(level, arg)
-#define DPRINTF(level, arg)
+#define	DEVPRINTF(level, arg)
+#define	DPRINTF(level, arg)
 #endif
 
 
-#define XE_CARD_TYPE_FLAGS_NO 0x0
-#define XE_CARD_TYPE_FLAGS_CE2 0x1
-#define XE_CARD_TYPE_FLAGS_MOHAWK 0x2
-#define XE_CARD_TYPE_FLAGS_DINGO 0x4
-#define XE_PROD_ETHER_MASK 0x0100
-#define XE_PROD_MODEM_MASK 0x1000
+#define	XE_CARD_TYPE_FLAGS_NO		0x0
+#define	XE_CARD_TYPE_FLAGS_CE2		0x1
+#define	XE_CARD_TYPE_FLAGS_MOHAWK	0x2
+#define	XE_CARD_TYPE_FLAGS_DINGO	0x4
+#define	XE_PROD_ETHER_MASK		0x0100
+#define	XE_PROD_MODEM_MASK		0x1000
 
-#define XE_BOGUS_MAC_OFFSET 0x90
+#define	XE_BOGUS_MAC_OFFSET		0x90
 
 /* MAC vendor prefix used by most Xircom cards is 00:80:c7 */
-#define XE_MAC_ADDR_0 0x00
-#define XE_MAC_ADDR_1 0x80
-#define XE_MAC_ADDR_2 0xc7
+#define	XE_MAC_ADDR_0			0x00
+#define	XE_MAC_ADDR_1			0x80
+#define	XE_MAC_ADDR_2			0xc7
 
 /* Some (all?) REM56 cards have vendor prefix 00:10:a4 */
-#define XE_REM56_MAC_ADDR_0 0x00
-#define XE_REM56_MAC_ADDR_1 0x10
-#define XE_REM56_MAC_ADDR_2 0xa4
-
+#define	XE_REM56_MAC_ADDR_0		0x00
+#define	XE_REM56_MAC_ADDR_1		0x10
+#define	XE_REM56_MAC_ADDR_2		0xa4
 
 struct xe_pccard_product {
 	struct pccard_product product;
-	uint16_t prodext;
-	uint16_t flags;
+	uint16_t	prodext;
+	uint16_t	flags;
 };
 
 static const struct xe_pccard_product xe_pccard_products[] = {
@@ -128,7 +126,6 @@ static const struct xe_pccard_product xe_pccard_products[] = {
 	{ { NULL }, 0, 0 }	
 };
 
-
 /*
  * Fixing for CEM2, CEM3 and CEM56/REM56 cards.  These need some magic to
  * enable the Ethernet function, which isn't mentioned anywhere in the CIS.
@@ -137,7 +134,7 @@ static const struct xe_pccard_product xe_pccard_products[] = {
 static int
 xe_cemfix(device_t dev)
 {
-	struct xe_softc *sc = (struct xe_softc *) device_get_softc(dev);
+	struct xe_softc *sc = device_get_softc(dev);
 	int ioport;
 
 	DEVPRINTF(2, (dev, "cemfix\n"));
@@ -166,7 +163,8 @@ xe_cemfix(device_t dev)
 }
 
 static int
-xe_pccard_product_match(device_t dev, const struct pccard_product* ent, int vpfmatch)
+xe_pccard_product_match(device_t dev, const struct pccard_product* ent,
+    int vpfmatch)
 {
 	const struct xe_pccard_product* xpp;
 	uint16_t prodext;
@@ -186,7 +184,7 @@ xe_pccard_product_match(device_t dev, const struct pccard_product* ent, int vpfm
 static const struct xe_pccard_product *
 xe_pccard_get_product(device_t dev)
 {
-	return ((const struct xe_pccard_product *) pccard_product_lookup(dev,
+	return ((const struct xe_pccard_product *)pccard_product_lookup(dev,
 	    (const struct pccard_product *)xe_pccard_products,
 	    sizeof(xe_pccard_products[0]), xe_pccard_product_match));
 }
@@ -239,7 +237,7 @@ xe_bad_mac(uint8_t *enaddr)
 static int
 xe_pccard_attach(device_t dev)
 {
-	struct xe_softc *scp = (struct xe_softc *) device_get_softc(dev);
+	struct xe_softc *scp = device_get_softc(dev);
 	uint32_t vendor,product;
 	uint16_t prodext;
 	const char* vendor_str = NULL;
@@ -309,6 +307,7 @@ xe_pccard_attach(device_t dev)
 	}
 	if ((err = xe_attach(dev))) {
 		device_printf(dev, "xe_attach() failed! (%d)\n", err);
+		xe_deactivate(dev);
 		return (err);
 	}
 	return (0);
@@ -327,10 +326,14 @@ xe_pccard_detach(device_t dev)
 
 	DEVPRINTF(2, (dev, "pccard_detach\n"));
 
-	sc->ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+	XE_LOCK(sc);
+	xe_stop(sc);
+	XE_UNLOCK(sc);
+	callout_drain(&sc->media_timer);
+	callout_drain(&sc->wdog_timer);
 	ether_ifdetach(sc->ifp);
 	xe_deactivate(dev);
-	if_free(sc->ifp);
+	mtx_destroy(&sc->lock);
 	return (0);
 }
 

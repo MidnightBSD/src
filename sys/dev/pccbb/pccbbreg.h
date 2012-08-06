@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/pccbb/pccbbreg.h,v 1.2 2008/12/02 02:47:53 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000,2001 Jonathan Chen.
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pccbb/pccbbreg.h,v 1.20 2006/08/12 09:06:55 imp Exp $
+ * $FreeBSD$
  */
 
 /*

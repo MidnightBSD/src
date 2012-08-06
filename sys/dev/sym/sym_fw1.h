@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/sym/sym_fw1.h,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  *  Device driver optimized for the Symbios/LSI 53C896/53C895A/53C1010 
  *  PCI-SCSI controllers.
@@ -56,7 +56,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/sym/sym_fw1.h,v 1.8 2006/08/04 07:56:34 yar Exp $ */
+/* $FreeBSD$ */
 
 /*
  *  Scripts for SYMBIOS-Processor
@@ -220,7 +220,7 @@ struct SYM_FWB_SCR {
 	u32 snoopend		[  2];
 };
 
-static struct SYM_FWA_SCR SYM_FWA_SCR = {
+static const struct SYM_FWA_SCR SYM_FWA_SCR = {
 /*--------------------------< START >----------------------------*/ {
 	/*
 	 *  Switch the LED on.
@@ -263,7 +263,7 @@ static struct SYM_FWA_SCR SYM_FWA_SCR = {
 	 *  The below GETJOB_BEGIN to GETJOB_END section of SCRIPTS 
 	 *  is a critical path. If it is partially executed, it then 
 	 *  may happen that the job address is not yet in the DSA 
-	 *  and the the next queue position points to the next JOB.
+	 *  and the next queue position points to the next JOB.
 	 */
 }/*-------------------------< GETJOB_BEGIN >---------------------*/,{
 	/*
@@ -1028,7 +1028,7 @@ static struct SYM_FWA_SCR SYM_FWA_SCR = {
 	 *  It shall be a tagged command.
 	 *  Read SIMPLE+TAG.
 	 *  The C code will deal with errors.
-	 *  Agressive optimization, is'nt it? :)
+	 *  Aggressive optimization, isn't it? :)
 	 */
 	SCR_MOVE_ABS (2) ^ SCR_MSG_IN,
 		HADDR_1 (msgin),
@@ -1052,7 +1052,7 @@ static struct SYM_FWA_SCR SYM_FWA_SCR = {
 		RADDR_1 (dsa),
 	/*
 	 *  The SIDL still contains the TAG value.
-	 *  Agressive optimization, isn't it? :):)
+	 *  Aggressive optimization, isn't it? :):)
 	 */
 	SCR_REG_SFBR (sidl, SCR_SHL, 0),
 		0,
@@ -1343,7 +1343,7 @@ static struct SYM_FWA_SCR SYM_FWA_SCR = {
 }/*--------------------------<>----------------------------------*/
 };
 
-static struct SYM_FWB_SCR SYM_FWB_SCR = {
+static const struct SYM_FWB_SCR SYM_FWB_SCR = {
 /*-------------------------< NO_DATA >--------------------------*/ {
 	SCR_JUMP,
 		PADDR_B (data_ovrun),
@@ -1353,7 +1353,7 @@ static struct SYM_FWB_SCR SYM_FWB_SCR = {
 	 *  some target to reset or some disconnected 
 	 *  job to abort. Since error recovery is a serious 
 	 *  busyness, we will really reset the SCSI BUS, if 
-	 *  case of a SCSI interrupt occuring in this path.
+	 *  case of a SCSI interrupt occurring in this path.
 	 */
 
 	/*
@@ -1462,7 +1462,7 @@ static struct SYM_FWB_SCR SYM_FWB_SCR = {
 		PADDR_B (msg_weird_seen),
 	/*
 	 *  We donnot handle extended messages from SCRIPTS.
-	 *  Read the amount of data correponding to the 
+	 *  Read the amount of data corresponding to the 
 	 *  message length and call the C code.
 	 */
 	SCR_COPY (1),

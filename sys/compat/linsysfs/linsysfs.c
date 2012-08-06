@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/linsysfs/linsysfs.c,v 1.2 2008/12/03 00:24:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linsysfs/linsysfs.c,v 1.4 2007/03/12 12:16:52 des Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -183,8 +183,8 @@ linsysfs_run_bus(device_t dev, struct pfs_node *dir, struct pfs_node *scsi, char
 					sprintf(host, "host%d", host_number++);
 					strcat(new_path, "/");
 					strcat(new_path, host);
-					sub_dir = pfs_create_dir(dir,
-					    host, NULL, NULL, NULL, 0);
+					pfs_create_dir(dir, host,
+					    NULL, NULL, NULL, 0);
 					scsi_host = malloc(sizeof(
 					    struct scsi_host_queue),
 					    M_DEVBUF, M_NOWAIT);
@@ -281,5 +281,5 @@ linsysfs_uninit(PFS_INIT_ARGS)
 	return (0);
 }
 
-PSEUDOFS(linsysfs, 1);
+PSEUDOFS(linsysfs, 1, 0);
 MODULE_DEPEND(linsysfs, linux, 1, 1, 1);

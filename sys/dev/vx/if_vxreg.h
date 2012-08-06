@@ -19,7 +19,6 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/vx/if_vxreg.h,v 1.13.24.1 2010/02/10 00:26:20 kensmith Exp $
  */
 
 /*
@@ -112,7 +111,7 @@
 
 /**************************************************************************
  * These are the registers for the 3Com 3c509 and their bit patterns when *
- * applicable.  They have been taken out the the "EtherLink III Parallel  *
+ * applicable.  They have been taken out the "EtherLink III Parallel  *
  * Tasking EISA and ISA Technical Reference" "Beta Draft 10/30/92" manual *
  * from 3com.								  *
  **************************************************************************/

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.h,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001 Alexander Kabaev
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.h,v 1.1 2005/12/12 01:04:32 rodrigc Exp $
+ * $FreeBSD$
  */
 #ifndef	_XFS_XFS_H_
 #define	_XFS_XFS_H_

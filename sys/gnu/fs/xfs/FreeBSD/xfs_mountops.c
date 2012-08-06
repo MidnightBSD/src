@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.c,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
 /*
  * Copyright (c) 2001,2006 Alexander Kabaev, Russell Cattelan Digital Elves Inc.
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.c,v 1.10 2007/08/20 15:33:22 cognet Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -181,8 +181,7 @@ _xfs_param_copyin(struct mount *mp, struct thread *td)
 }
 
 static int
-_xfs_mount(struct mount		*mp,
-	   struct thread	*td)
+_xfs_mount(struct mount		*mp)
 {
 	struct xfsmount		*xmp;
 	struct xfs_vnode	*rootvp;
@@ -190,8 +189,10 @@ _xfs_mount(struct mount		*mp,
 	struct vnode		*rvp, *devvp;
 	struct cdev		*ddev;
 	struct g_consumer	*cp;
+	struct thread		*td;
 	int			error;
 	
+	td = curthread;
 	ddev = NULL;
 	cp = NULL;
 
@@ -200,6 +201,8 @@ _xfs_mount(struct mount		*mp,
 
 	if (mp->mnt_flag & MNT_UPDATE)
 		return (0);
+	if ((mp->mnt_flag & MNT_RDONLY) == 0)
+		return (EPERM);
 
         xmp = xfsmount_allocate(mp);
         if (xmp == NULL)
@@ -228,7 +231,7 @@ _xfs_mount(struct mount		*mp,
         mp->mnt_stat.f_fsid.val[0] = dev2udev(ddev);
         mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
 
-        if ((error = VFS_STATFS(mp, &mp->mnt_stat, td)) != 0)
+        if ((error = VFS_STATFS(mp, &mp->mnt_stat)) != 0)
 		goto fail_unmount;
 
 	rvp = rootvp->v_vnode;
@@ -245,7 +248,7 @@ _xfs_mount(struct mount		*mp,
 		if (cp != NULL) {
 			DROP_GIANT();
 			g_topology_lock();
-			g_vfs_close(cp, td);
+			g_vfs_close(cp);
 			g_topology_unlock();
 			PICKUP_GIANT();
 		}
@@ -262,10 +265,9 @@ _xfs_mount(struct mount		*mp,
  * Free reference to null layer
  */
 static int
-_xfs_unmount(mp, mntflags, td)
+_xfs_unmount(mp, mntflags)
 	struct mount *mp;
 	int mntflags;
-	struct thread *td;
 {
 	struct vnode *devvp;
 	struct g_consumer *cp;
@@ -277,12 +279,12 @@ _xfs_unmount(mp, mntflags, td)
 	if (devvp != NULL)
 		cp = devvp->v_bufobj.bo_private;
 
-	XVFS_UNMOUNT(MNTTOVFS(mp), 0, td->td_ucred, error);
+	XVFS_UNMOUNT(MNTTOVFS(mp), 0, curthread->td_ucred, error);
 	if (error == 0) {
 		if (cp != NULL) {
 			DROP_GIANT();
 			g_topology_lock();
-			g_vfs_close(cp, td);
+			g_vfs_close(cp);
 			g_topology_unlock();
 			PICKUP_GIANT();
 		}
@@ -291,11 +293,10 @@ _xfs_unmount(mp, mntflags, td)
 }
 
 static int
-_xfs_root(mp, flags, vpp, td)
+_xfs_root(mp, flags, vpp)
 	struct mount *mp;
 	int flags;
 	struct vnode **vpp;
-	struct thread *td;
 {
 	xfs_vnode_t *vp;
 	int error;
@@ -303,28 +304,26 @@ _xfs_root(mp, flags, vpp, td)
         XVFS_ROOT(MNTTOVFS(mp), &vp, error);
 	if (error == 0) {
 		*vpp = vp->v_vnode;
-		VOP_LOCK(*vpp, flags, curthread);
+		VOP_LOCK(*vpp, flags);
 	}
 	return (error);
 }
 
 static int
-_xfs_quotactl(mp, cmd, uid, arg, td)
+_xfs_quotactl(mp, cmd, uid, arg)
 	struct mount *mp;
 	int cmd;
 	uid_t uid;
 	void *arg;
-	struct thread *td;
 {
 	printf("xfs_quotactl\n");
 	return EOPNOTSUPP;
 }
 
 static int
-_xfs_statfs(mp, sbp, td)
+_xfs_statfs(mp, sbp)
 	struct mount *mp;
 	struct statfs *sbp;
-	struct thread *td;
 {
 	int error;
 
@@ -339,10 +338,9 @@ _xfs_statfs(mp, sbp, td)
 }
 
 static int
-_xfs_sync(mp, waitfor, td)
+_xfs_sync(mp, waitfor)
 	struct mount *mp;
 	int waitfor;
-	struct thread *td;
 {
 	int error;
 	int flags = SYNC_FSDATA|SYNC_ATTR|SYNC_REFCACHE;
@@ -351,7 +349,7 @@ _xfs_sync(mp, waitfor, td)
 		flags |= SYNC_WAIT;
 	else if (waitfor == MNT_LAZY)
 		flags |= SYNC_BDFLUSH;
-        XVFS_SYNC(MNTTOVFS(mp), flags, td->td_ucred, error);
+        XVFS_SYNC(MNTTOVFS(mp), flags, curthread->td_ucred, error);
 	return (error);
 }
 
@@ -373,9 +371,10 @@ _xfs_vget(mp, ino, flags, vpp)
 }
 
 static int
-_xfs_fhtovp(mp, fidp, vpp)
+_xfs_fhtovp(mp, fidp, flags, vpp)
 	struct mount *mp;
 	struct fid *fidp;
+	int flags;
 	struct vnode **vpp;
 {
 	printf("xfs_fhtovp\n");
@@ -385,8 +384,7 @@ _xfs_fhtovp(mp, fidp, vpp)
 static int
 _xfs_extattrctl(struct mount *mp, int cm,
                 struct vnode *filename_v,
-                int attrnamespace, const char *attrname,
-                struct thread *td)
+                int attrnamespace, const char *attrname)
 {
 	printf("xfs_extattrctl\n");
 	return ENOSYS;
@@ -482,9 +480,10 @@ xfs_geom_bufwrite(struct buf *bp)
 }
 
 static int
-xfs_geom_bufsync(struct bufobj *bo, int waitfor, struct thread *td)
+xfs_geom_bufsync(struct bufobj *bo, int waitfor)
 {
-	return bufsync(bo,waitfor,td);
+
+	return (bufsync(bo, waitfor));
 }
 
 static void

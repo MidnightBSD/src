@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wl/if_wl.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -174,7 +174,7 @@ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/wl/if_wl.c,v 1.76 2007/03/21 03:38:36 nyan Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * NOTE:
@@ -560,10 +560,8 @@ wlattach(device_t device)
     ifp->if_init = wlinit;
     ifp->if_start = wlstart;
     ifp->if_ioctl = wlioctl;
-    ifp->if_timer = 0;   /* paranoia */
-    ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+    ifp->if_snd.ifq_maxlen = ifqmaxlen;
     /* no entries
-       ifp->if_watchdog
        ifp->if_done
        ifp->if_reset
        */
@@ -2117,7 +2115,7 @@ wlconfig(struct wl_softc *sc)
     outw(PIOP1(base), 0);				/* ac_status */
     outw(PIOP1(base), AC_MCSETUP|AC_CW_EL);		/* ac_command */
     outw(PIOR1(base), OFFSET_CU + 8);
-    IF_ADDR_LOCK(sc->ifp);
+    if_maddr_rlock(sc->ifp);
     TAILQ_FOREACH(ifma, &sc->ifp->if_multiaddrs, ifma_link) {
 	if (ifma->ifma_addr->sa_family != AF_LINK)
 	    continue;
@@ -2128,7 +2126,7 @@ wlconfig(struct wl_softc *sc)
         outw(PIOP1(base), addrp[4] + (addrp[5] << 8));
         ++cnt;
     }
-    IF_ADDR_UNLOCK(sc->ifp);
+    if_maddr_runlock(sc->ifp);
     outw(PIOR1(base), OFFSET_CU + 6);		/* mc-cnt */
     outw(PIOP1(base), cnt * WAVELAN_ADDR_SIZE);
     if (wlcmd(sc, "config()-mcaddress") == 0)

@@ -1,11 +1,11 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/asr/i2odpt.h,v 1.2 2008/12/02 02:24:33 laffer1 Exp $ */
 /*-
  *****************************************************************
  * Copyright (c) 1996-2000 Distributed Processing Technology Corporation
  * Copyright (c) 2000 Adaptec Corporation.
  * All rights reserved.
  *
- * $FreeBSD: src/sys/dev/asr/i2odpt.h,v 1.6 2005/01/06 01:42:29 imp Exp $
+ * $FreeBSD$
  *
  ****************************************************************/
 

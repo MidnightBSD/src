@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ahb/ahb.c,v 1.4 2008/12/02 02:24:30 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/ahb/ahb.c,v 1.5 2009/01/18 19:29:04 laffer1 Exp $ */
 /*-
  * CAM SCSI device driver for the Adaptec 174X SCSI Host adapter
  *
@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ahb/ahb.c,v 1.43 2007/06/17 15:21:09 scottl Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -292,8 +292,7 @@ ahbattach(device_t dev)
 	 * need to perform during normal operation.
 	 */
 	/* DMA tag for mapping buffers into device visible space. */
-	/* XXX Should be a child of the EISA bus dma tag */
-	if (bus_dma_tag_create(	/* parent	*/ NULL,
+	if (bus_dma_tag_create(	/* parent	*/ bus_get_dma_tag(dev),
 				/* alignment	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ BUS_SPACE_MAXADDR_32BIT,
@@ -312,7 +311,7 @@ ahbattach(device_t dev)
 	ahb->init_level++;
 
 	/* DMA tag for our ccb structures and ha inquiry data */
-	if (bus_dma_tag_create(	/* parent	*/ NULL,
+	if (bus_dma_tag_create(	/* parent	*/ bus_get_dma_tag(dev),
 				/* alignment	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ BUS_SPACE_MAXADDR_32BIT,

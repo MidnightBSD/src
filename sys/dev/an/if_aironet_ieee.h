@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/an/if_aironet_ieee.h,v 1.2 2008/12/02 02:24:31 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/an/if_aironet_ieee.h,v 1.15 2005/01/06 01:42:28 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _IF_AIRONET_IEEE_H

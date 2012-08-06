@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aha/aha_mca.c,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aha/aha_mca.c,v 1.16 2007/02/23 15:55:37 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -163,7 +163,7 @@ aha_mca_attach (device_t dev)
 	isa_dmacascade(rman_get_start(sc->drq));
 
 	error = bus_dma_tag_create(
-				/* parent	*/ NULL,
+				/* parent	*/ bus_get_dma_tag(dev),
 				/* alignemnt	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ BUS_SPACE_MAXADDR_24BIT,

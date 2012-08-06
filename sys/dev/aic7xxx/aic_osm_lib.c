@@ -29,12 +29,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $Id: aic_osm_lib.c,v 1.4 2009-03-15 14:24:21 laffer1 Exp $
+ * $MidnightBSD: src/sys/dev/aic7xxx/aic_osm_lib.c,v 1.4 2009/03/15 14:24:21 laffer1 Exp $
+ * $Id: aic_osm_lib.c,v 1.5 2012-08-06 01:19:11 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/sys/dev/aic7xxx/aic_osm_lib.c,v 1.6 2007/07/31 20:11:03 scottl Exp $ */
 
 static void	aic_recovery_thread(void *arg);
 
@@ -126,7 +125,7 @@ aic_recovery_thread(void *arg)
 	aic->platform_data->recovery_thread = NULL;
 	wakeup(aic->platform_data);
 	aic_unlock(aic);
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 void

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aha/aha_isa.c,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*
  * Product specific probe and attach routines for:
  *      Adaptec 154x.
@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aha/aha_isa.c,v 1.39 2007/02/23 12:18:30 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -232,7 +232,7 @@ aha_isa_attach(device_t dev)
 	filter_arg = NULL;
 	lowaddr = BUS_SPACE_MAXADDR_24BIT;
 
-	if (bus_dma_tag_create(	/* parent	*/ NULL,
+	if (bus_dma_tag_create(	/* parent	*/ bus_get_dma_tag(dev),
 				/* alignemnt	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ lowaddr,

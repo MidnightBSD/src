@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/buslogic/bt_isa.c,v 1.2 2008/12/02 02:24:37 laffer1 Exp $ */
 /*-
  * Product specific probe and attach routines for:
  *      Buslogic BT-54X and BT-445 cards
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/buslogic/bt_isa.c,v 1.26 2006/12/11 18:28:30 mjacob Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

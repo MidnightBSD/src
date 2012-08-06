@@ -30,10 +30,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic_osm_lib.h,v 1.4 2009-03-15 14:24:21 laffer1 Exp $
+ * $Id: aic_osm_lib.h,v 1.5 2012-08-06 01:19:11 laffer1 Exp $
  *
- * $MidnightBSD$
- * $FreeBSD: src/sys/dev/aic7xxx/aic_osm_lib.h,v 1.6 2007/04/17 06:26:25 scottl Exp $
+ * $MidnightBSD: src/sys/dev/aic7xxx/aic_osm_lib.h,v 1.4 2009/03/15 14:24:21 laffer1 Exp $
  */
 
 /******************************** OS Includes *********************************/
@@ -109,7 +108,7 @@ aic_wakeup_recovery_thread(struct aic_softc *aic)
 
 /****************************** Kernel Threads ********************************/
 #define	aic_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
-	kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
+	kproc_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
 
 /******************************* Bus Space/DMA ********************************/
 

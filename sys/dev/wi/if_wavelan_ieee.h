@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wi/if_wavelan_ieee.h,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/wi/if_wavelan_ieee.h,v 1.21 2007/07/11 21:25:48 thompsa Exp $
+ * $FreeBSD$
  */
 
 #ifndef _IF_WAVELAN_IEEE_H
@@ -242,10 +242,13 @@ struct wi_counters {
 #define WI_RID_CNFAUTHMODE	0xFC2A
 #define WI_RID_ROAMING_MODE	0xFC2D
 #define WI_RID_OWN_BEACON_INT	0xFC33 /* beacon xmit time for BSS creation */
+#define	WI_RID_ENH_SECURITY	0xFC43 /* enhanced security (AP mode) */
 #define WI_RID_CNF_DBM_ADJUST	0xFC46
 #define WI_RID_DBM_ADJUST	0xFC46 /* RSSI - WI_RID_DBM_ADJUST ~ dBm */
+#define	WI_RID_WPA_DATA		0xFC48 /* WPA IE */
 #define WI_RID_BASIC_RATE	0xFCB3
 #define WI_RID_SUPPORT_RATE	0xFCB4
+#define	WI_RID_WPA_HANDLING	0xFCBB /* WPA handling procedures */
 
 /*
  * Network parameters, dynamic configuration entities

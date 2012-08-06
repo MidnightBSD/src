@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aha/ahareg.h,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * Generic register and struct definitions for the Adaptech 1540, 1542,
  * 1640, 1642 SCSI host adapters. Product specific probe and attach
@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/aha/ahareg.h,v 1.20 2006/11/09 02:19:30 kevlo Exp $
+ * $FreeBSD$
  */
 
 #ifndef _AHAREG_H_

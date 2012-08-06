@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/cs/if_csvar.h,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 M. Warner Losh <imp@village.org> 
  * All rights reserved.
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/cs/if_csvar.h,v 1.9 2006/09/15 15:16:10 glebius Exp $
+ * $FreeBSD$
  */
 
 #ifndef _IF_CSVAR_H
@@ -51,18 +51,13 @@ struct cs_softc {
 	struct ifmedia media;		/* Media information */
 
 	int     port_rid;		/* resource id for port range */
-	int     port_used;		/* nonzero if ports used */
 	struct resource* port_res;	/* resource for port range */
-	int     mem_rid;  		/* resource id for memory range */
-	int     mem_used;  		/* nonzero if memory used */
-	struct resource* mem_res;	/* resource for memory range */
 	int     irq_rid;		/* resource id for irq */
 	struct resource* irq_res;	/* resource for irq */
 	void*   irq_handle;		/* handle for irq handler */
 
 	int	flags;
 #define	CS_NO_IRQ	0x1
-	int 	nic_addr; 		/* Base IO address of card */
 	int	send_cmd;
 	int	line_ctl;		/* */
 	int	send_underrun;
@@ -70,15 +65,20 @@ struct cs_softc {
 
 	unsigned char *buffer;
 	int buf_len;
+	struct mtx lock;
+	struct callout timer;
+	int	tx_timeout;
 };
 
+#define	CS_LOCK(sc)		mtx_lock(&(sc)->lock)
+#define	CS_UNLOCK(sc)		mtx_unlock(&(sc)->lock)
+#define	CS_ASSERT_LOCKED(sc)	mtx_assert(&(sc)->lock, MA_OWNED)
+
 int	cs_alloc_port(device_t dev, int rid, int size);
-int	cs_alloc_memory(device_t dev, int rid, int size);
-int	cs_alloc_irq(device_t dev, int rid, int flags);
+int	cs_alloc_irq(device_t dev, int rid);
 int	cs_attach(device_t dev);
 int	cs_cs89x0_probe(device_t dev);
 int	cs_detach(device_t dev);
 void	cs_release_resources(device_t dev);
-driver_intr_t	csintr;
 
 #endif /* _IF_CSVAR_H */

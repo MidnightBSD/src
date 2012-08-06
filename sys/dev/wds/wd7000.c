@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/wds/wd7000.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/wds/wd7000.c,v 1.3 2009/01/18 19:29:05 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994 Ludd, University of Lule}, Sweden.
  * Copyright (c) 2000 Sergey A. Babkin
@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/wds/wd7000.c,v 1.14 2007/06/17 05:55:53 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 /* All bugs are subject to removal without further notice */
 
@@ -550,7 +550,7 @@ wds_attach(device_t dev)
 		goto bad;
 
 	/* now create the memory buffer */
-	error = bus_dma_tag_create(NULL, /*alignment*/4,
+	error = bus_dma_tag_create(bus_get_dma_tag(dev), /*alignment*/4,
 				   /*boundary*/0,
 				   /*lowaddr*/BUS_SPACE_MAXADDR_24BIT,
 				   /*highaddr*/ BUS_SPACE_MAXADDR,

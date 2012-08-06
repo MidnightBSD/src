@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/ipw/if_ipw.c,v 1.30.2.2 2007/12/06 09:52:28 philip Exp $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2004-2006
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ipw/if_ipw.c,v 1.30.2.2 2007/12/06 09:52:28 philip Exp $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * Intel(R) PRO/Wireless 2100 MiniPCI driver
@@ -107,11 +107,15 @@ static const struct ipw_ident ipw_ident_table[] = {
 	{ 0, 0, NULL }
 };
 
+static struct ieee80211vap *ipw_vap_create(struct ieee80211com *,
+		    const char [IFNAMSIZ], int, enum ieee80211_opmode, int,
+		    const uint8_t [IEEE80211_ADDR_LEN],
+		    const uint8_t [IEEE80211_ADDR_LEN]);
+static void	ipw_vap_delete(struct ieee80211vap *);
 static int	ipw_dma_alloc(struct ipw_softc *);
 static void	ipw_release(struct ipw_softc *);
-static int	ipw_media_change(struct ifnet *);
 static void	ipw_media_status(struct ifnet *, struct ifmediareq *);
-static int	ipw_newstate(struct ieee80211com *, enum ieee80211_state, int);
+static int	ipw_newstate(struct ieee80211vap *, enum ieee80211_state, int);
 static uint16_t	ipw_read_prom_word(struct ipw_softc *, uint8_t);
 static void	ipw_rx_cmd_intr(struct ipw_softc *, struct ipw_soft_buf *);
 static void	ipw_rx_newstate_intr(struct ipw_softc *, struct ipw_soft_buf *);
@@ -126,6 +130,8 @@ static const char * ipw_cmdname(int);
 static int	ipw_cmd(struct ipw_softc *, uint32_t, void *, uint32_t);
 static int	ipw_tx_start(struct ifnet *, struct mbuf *,
 		    struct ieee80211_node *);
+static int	ipw_raw_xmit(struct ieee80211_node *, struct mbuf *,
+		    const struct ieee80211_bpf_params *);
 static void	ipw_start(struct ifnet *);
 static void	ipw_start_locked(struct ifnet *);
 static void	ipw_watchdog(void *);
@@ -137,13 +143,11 @@ static int	ipw_reset(struct ipw_softc *);
 static int	ipw_load_ucode(struct ipw_softc *, const char *, int);
 static int	ipw_load_firmware(struct ipw_softc *, const char *, int);
 static int	ipw_config(struct ipw_softc *);
-static void	ipw_assoc_task(void *, int);
-static int	ipw_auth_and_assoc(struct ipw_softc *);
-static void	ipw_disassoc_task(void *, int);
-static int	ipw_disassociate(struct ipw_softc *);
+static void	ipw_assoc(struct ieee80211com *, struct ieee80211vap *);
+static void	ipw_disassoc(struct ieee80211com *, struct ieee80211vap *);
 static void	ipw_init_task(void *, int);
 static void	ipw_init(void *);
-static void	ipw_init_locked(struct ipw_softc *, int);
+static void	ipw_init_locked(struct ipw_softc *);
 static void	ipw_stop(void *);
 static void	ipw_stop_locked(struct ipw_softc *);
 static int	ipw_sysctl_stats(SYSCTL_HANDLER_ARGS);
@@ -158,13 +162,13 @@ static void	ipw_read_mem_1(struct ipw_softc *, bus_size_t, uint8_t *,
 #endif
 static void	ipw_write_mem_1(struct ipw_softc *, bus_size_t,
 		    const uint8_t *, bus_size_t);
-static void	ipw_scan_task(void *, int);
 static int	ipw_scan(struct ipw_softc *);
 static void	ipw_scan_start(struct ieee80211com *);
 static void	ipw_scan_end(struct ieee80211com *);
 static void	ipw_set_channel(struct ieee80211com *);
-static void	ipw_scan_curchan(struct ieee80211com *, unsigned long maxdwell);
-static void	ipw_scan_mindwell(struct ieee80211com *);
+static void	ipw_scan_curchan(struct ieee80211_scan_state *,
+		    unsigned long maxdwell);
+static void	ipw_scan_mindwell(struct ieee80211_scan_state *);
 
 static int ipw_probe(device_t);
 static int ipw_attach(device_t);
@@ -194,7 +198,8 @@ static driver_t ipw_driver = {
 static devclass_t ipw_devclass;
 
 DRIVER_MODULE(ipw, pci, ipw_driver, ipw_devclass, 0, 0);
-DRIVER_MODULE(ipw, cardbus, ipw_driver, ipw_devclass, 0, 0);
+
+MODULE_VERSION(ipw, 1);
 
 static int
 ipw_probe(device_t dev)
@@ -219,10 +224,11 @@ ipw_attach(device_t dev)
 {
 	struct ipw_softc *sc = device_get_softc(dev);
 	struct ifnet *ifp;
-	struct ieee80211com *ic = &sc->sc_ic;
+	struct ieee80211com *ic;
 	struct ieee80211_channel *c;
 	uint16_t val;
 	int error, i;
+	uint8_t macaddr[IEEE80211_ADDR_LEN];
 
 	sc->sc_dev = dev;
 
@@ -230,9 +236,6 @@ ipw_attach(device_t dev)
 	    MTX_DEF | MTX_RECURSE);
 
 	TASK_INIT(&sc->sc_init_task, 0, ipw_init_task, sc);
-	TASK_INIT(&sc->sc_scan_task, 0, ipw_scan_task, sc);
-	TASK_INIT(&sc->sc_assoc_task, 0, ipw_assoc_task, sc);
-	TASK_INIT(&sc->sc_disassoc_task, 0, ipw_disassoc_task, sc);
 	callout_init_mtx(&sc->sc_wdtimer, &sc->sc_mtx, 0);
 
 	if (pci_get_powerstate(dev) != PCI_POWERSTATE_D0) {
@@ -262,24 +265,25 @@ ipw_attach(device_t dev)
 	    RF_ACTIVE | RF_SHAREABLE);
 	if (sc->irq == NULL) {
 		device_printf(dev, "could not allocate interrupt resource\n");
-		goto fail;
+		goto fail1;
 	}
 
 	if (ipw_reset(sc) != 0) {
 		device_printf(dev, "could not reset adapter\n");
-		goto fail;
+		goto fail2;
 	}
 
 	if (ipw_dma_alloc(sc) != 0) {
 		device_printf(dev, "could not allocate DMA resources\n");
-		goto fail;
+		goto fail2;
 	}
 
-	ifp = sc->sc_ifp = if_alloc(IFT_ETHER);
+	ifp = sc->sc_ifp = if_alloc(IFT_IEEE80211);
 	if (ifp == NULL) {
 		device_printf(dev, "can not if_alloc()\n");
-		goto fail;
+		goto fail3;
 	}
+	ic = ifp->if_l2com;
 
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
@@ -287,17 +291,18 @@ ipw_attach(device_t dev)
 	ifp->if_init = ipw_init;
 	ifp->if_ioctl = ipw_ioctl;
 	ifp->if_start = ipw_start;
-	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
-	ifp->if_snd.ifq_drv_maxlen = IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	ifp->if_snd.ifq_drv_maxlen = ifqmaxlen;
 	IFQ_SET_READY(&ifp->if_snd);
 
 	ic->ic_ifp = ifp;
-	ic->ic_phytype = IEEE80211_T_DS;
 	ic->ic_opmode = IEEE80211_M_STA;
-	ic->ic_state = IEEE80211_S_INIT;
+	ic->ic_phytype = IEEE80211_T_DS;
 
 	/* set device capabilities */
-	ic->ic_caps = IEEE80211_C_IBSS		/* IBSS mode supported */
+	ic->ic_caps =
+		  IEEE80211_C_STA		/* station mode supported */
+		| IEEE80211_C_IBSS		/* IBSS mode supported */
 		| IEEE80211_C_MONITOR		/* monitor mode supported */
 		| IEEE80211_C_PMGT		/* power save supported */
 		| IEEE80211_C_SHPREAMBLE	/* short preamble supported */
@@ -306,14 +311,14 @@ ipw_attach(device_t dev)
 
 	/* read MAC address from EEPROM */
 	val = ipw_read_prom_word(sc, IPW_EEPROM_MAC + 0);
-	ic->ic_myaddr[0] = val >> 8;
-	ic->ic_myaddr[1] = val & 0xff;
+	macaddr[0] = val >> 8;
+	macaddr[1] = val & 0xff;
 	val = ipw_read_prom_word(sc, IPW_EEPROM_MAC + 1);
-	ic->ic_myaddr[2] = val >> 8;
-	ic->ic_myaddr[3] = val & 0xff;
+	macaddr[2] = val >> 8;
+	macaddr[3] = val & 0xff;
 	val = ipw_read_prom_word(sc, IPW_EEPROM_MAC + 2);
-	ic->ic_myaddr[4] = val >> 8;
-	ic->ic_myaddr[5] = val & 0xff;
+	macaddr[4] = val >> 8;
+	macaddr[5] = val & 0xff;
 
 	/* set supported .11b channels (read from EEPROM) */
 	if ((val = ipw_read_prom_word(sc, IPW_EEPROM_CHANNEL_LIST)) == 0)
@@ -332,35 +337,26 @@ ipw_attach(device_t dev)
 	if (!(ipw_read_prom_word(sc, IPW_EEPROM_RADIO) & 8))
 		sc->flags |= IPW_FLAG_HAS_RADIO_SWITCH;
 
-	ieee80211_ifattach(ic);
-	/* override state transition machine */
-	sc->sc_newstate = ic->ic_newstate;
-	ic->ic_newstate = ipw_newstate;
-	ieee80211_media_init(ic, ipw_media_change, ipw_media_status);
-
+	ieee80211_ifattach(ic, macaddr);
 	ic->ic_scan_start = ipw_scan_start;
 	ic->ic_scan_end = ipw_scan_end;
 	ic->ic_set_channel = ipw_set_channel;
 	ic->ic_scan_curchan = ipw_scan_curchan;
 	ic->ic_scan_mindwell = ipw_scan_mindwell;
+	ic->ic_raw_xmit = ipw_raw_xmit;
 
-	bpfattach2(ifp, DLT_IEEE802_11_RADIO,
-	    sizeof (struct ieee80211_frame) + sizeof (sc->sc_txtap),
-	    &sc->sc_drvbpf);
+	ic->ic_vap_create = ipw_vap_create;
+	ic->ic_vap_delete = ipw_vap_delete;
 
-	sc->sc_rxtap_len = sizeof sc->sc_rxtap;
-	sc->sc_rxtap.wr_ihdr.it_len = htole16(sc->sc_rxtap_len);
-	sc->sc_rxtap.wr_ihdr.it_present = htole32(IPW_RX_RADIOTAP_PRESENT);
-
-	sc->sc_txtap_len = sizeof sc->sc_txtap;
-	sc->sc_txtap.wt_ihdr.it_len = htole16(sc->sc_txtap_len);
-	sc->sc_txtap.wt_ihdr.it_present = htole32(IPW_TX_RADIOTAP_PRESENT);
+	ieee80211_radiotap_attach(ic,
+	    &sc->sc_txtap.wt_ihdr, sizeof(sc->sc_txtap),
+		IPW_TX_RADIOTAP_PRESENT,
+	    &sc->sc_rxtap.wr_ihdr, sizeof(sc->sc_rxtap),
+		IPW_RX_RADIOTAP_PRESENT);
 
 	/*
 	 * Add a few sysctl knobs.
 	 */
-	sc->dwelltime = 100;
-
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO, "radio",
 	    CTLTYPE_INT | CTLFLAG_RD, sc, 0, ipw_sysctl_radio, "I",
@@ -371,11 +367,6 @@ ipw_attach(device_t dev)
 	    CTLTYPE_OPAQUE | CTLFLAG_RD, sc, 0, ipw_sysctl_stats, "S",
 	    "statistics");
 
-	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
-	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO, "dwell",
-	    CTLFLAG_RW, &sc->dwelltime, 0,
-	    "channel dwell time (ms) for AP/station scanning");
-
 	/*
 	 * Hook our interrupt after all initialization is complete.
 	 */
@@ -383,15 +374,23 @@ ipw_attach(device_t dev)
 	    NULL, ipw_intr, sc, &sc->sc_ih);
 	if (error != 0) {
 		device_printf(dev, "could not set up interrupt\n");
-		goto fail;
+		goto fail4;
 	}
 
 	if (bootverbose)
 		ieee80211_announce(ic);
 
 	return 0;
-
-fail:	ipw_detach(dev);
+fail4:
+	if_free(ifp);
+fail3:
+	ipw_release(sc);
+fail2:
+	bus_release_resource(dev, SYS_RES_IRQ, sc->irq_rid, sc->irq);
+fail1:
+	bus_release_resource(dev, SYS_RES_MEMORY, sc->mem_rid, sc->mem);
+fail:
+	mtx_destroy(&sc->sc_mtx);
 	return ENXIO;
 }
 
@@ -399,33 +398,24 @@ static int
 ipw_detach(device_t dev)
 {
 	struct ipw_softc *sc = device_get_softc(dev);
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ifnet *ifp = ic->ic_ifp;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
 
+	ieee80211_draintask(ic, &sc->sc_init_task);
 	ipw_stop(sc);
-	callout_drain(&sc->sc_wdtimer);
-	taskqueue_drain(taskqueue_fast, &sc->sc_init_task);
-	taskqueue_drain(taskqueue_fast, &sc->sc_scan_task);
-	taskqueue_drain(taskqueue_fast, &sc->sc_assoc_task);
-	taskqueue_drain(taskqueue_fast, &sc->sc_disassoc_task);
 
-	if (ifp != NULL) {
-		bpfdetach(ifp);
-		ieee80211_ifdetach(ic);
-	}
+	ieee80211_ifdetach(ic);
+
+	callout_drain(&sc->sc_wdtimer);
 
 	ipw_release(sc);
 
-	if (sc->irq != NULL) {
-		bus_teardown_intr(dev, sc->irq, sc->sc_ih);
-		bus_release_resource(dev, SYS_RES_IRQ, sc->irq_rid, sc->irq);
-	}
+	bus_teardown_intr(dev, sc->irq, sc->sc_ih);
+	bus_release_resource(dev, SYS_RES_IRQ, sc->irq_rid, sc->irq);
 
-	if (sc->mem != NULL)
-		bus_release_resource(dev, SYS_RES_MEMORY, sc->mem_rid, sc->mem);
+	bus_release_resource(dev, SYS_RES_MEMORY, sc->mem_rid, sc->mem);
 
-	if (ifp != NULL)
-		if_free(ifp);
+	if_free(ifp);
 
 	if (sc->sc_firmware != NULL) {
 		firmware_put(sc->sc_firmware, FIRMWARE_UNLOAD);
@@ -435,6 +425,97 @@ ipw_detach(device_t dev)
 	mtx_destroy(&sc->sc_mtx);
 
 	return 0;
+}
+
+static struct ieee80211vap *
+ipw_vap_create(struct ieee80211com *ic, const char name[IFNAMSIZ], int unit,
+    enum ieee80211_opmode opmode, int flags,
+    const uint8_t bssid[IEEE80211_ADDR_LEN],
+    const uint8_t mac[IEEE80211_ADDR_LEN])
+{
+	struct ifnet *ifp = ic->ic_ifp;
+	struct ipw_softc *sc = ifp->if_softc;
+	struct ipw_vap *ivp;
+	struct ieee80211vap *vap;
+	const struct firmware *fp;
+	const struct ipw_firmware_hdr *hdr;
+	const char *imagename;
+
+	if (!TAILQ_EMPTY(&ic->ic_vaps))		/* only one at a time */
+		return NULL;
+
+	switch (opmode) {
+	case IEEE80211_M_STA:
+		imagename = "ipw_bss";
+		break;
+	case IEEE80211_M_IBSS:
+		imagename = "ipw_ibss";
+		break;
+	case IEEE80211_M_MONITOR:
+		imagename = "ipw_monitor";
+		break;
+	default:
+		return NULL;
+	}
+
+	/*
+	 * Load firmware image using the firmware(9) subsystem.  Doing
+	 * this unlocked is ok since we're single-threaded by the
+	 * 802.11 layer.
+	 */
+	if (sc->sc_firmware == NULL ||
+	    strcmp(sc->sc_firmware->name, imagename) != 0) {
+		if (sc->sc_firmware != NULL)
+			firmware_put(sc->sc_firmware, FIRMWARE_UNLOAD);
+		sc->sc_firmware = firmware_get(imagename);
+	}
+	if (sc->sc_firmware == NULL) {
+		device_printf(sc->sc_dev,
+		    "could not load firmware image '%s'\n", imagename);
+		return NULL;
+	}
+	fp = sc->sc_firmware;
+	if (fp->datasize < sizeof *hdr) {
+		device_printf(sc->sc_dev,
+		    "firmware image too short %zu\n", fp->datasize);
+		firmware_put(sc->sc_firmware, FIRMWARE_UNLOAD);
+		sc->sc_firmware = NULL;
+		return NULL;
+	}
+	hdr = (const struct ipw_firmware_hdr *)fp->data;
+	if (fp->datasize < sizeof *hdr + le32toh(hdr->mainsz) +
+	    le32toh(hdr->ucodesz)) {
+		device_printf(sc->sc_dev,
+		    "firmware image too short %zu\n", fp->datasize);
+		firmware_put(sc->sc_firmware, FIRMWARE_UNLOAD);
+		sc->sc_firmware = NULL;
+		return NULL;
+	}
+
+	ivp = (struct ipw_vap *) malloc(sizeof(struct ipw_vap),
+	    M_80211_VAP, M_NOWAIT | M_ZERO);
+	if (ivp == NULL)
+		return NULL;
+	vap = &ivp->vap;
+
+	ieee80211_vap_setup(ic, vap, name, unit, opmode, flags, bssid, mac);
+	/* override with driver methods */
+	ivp->newstate = vap->iv_newstate;
+	vap->iv_newstate = ipw_newstate;
+
+	/* complete setup */
+	ieee80211_vap_attach(vap, ieee80211_media_change, ipw_media_status);
+	ic->ic_opmode = opmode;
+	return vap;
+}
+
+static void
+ipw_vap_delete(struct ieee80211vap *vap)
+{
+	struct ipw_vap *ivp = IPW_VAP(vap);
+
+	ieee80211_vap_detach(vap);
+	free(ivp, M_80211_VAP);
 }
 
 static int
@@ -447,9 +528,21 @@ ipw_dma_alloc(struct ipw_softc *sc)
 	int error, i;
 
 	/*
+	 * Allocate parent DMA tag for subsequent allocations.
+	 */
+	error = bus_dma_tag_create(bus_get_dma_tag(sc->sc_dev), 1, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
+	    BUS_SPACE_MAXSIZE_32BIT, BUS_SPACE_UNRESTRICTED,
+	    BUS_SPACE_MAXSIZE_32BIT, 0, NULL, NULL, &sc->parent_dmat);
+	if (error != 0) {
+		device_printf(sc->sc_dev, "could not create parent DMA tag\n");
+		goto fail;
+	}
+
+	/*
 	 * Allocate and map tx ring.
 	 */
-	error = bus_dma_tag_create(NULL, 4, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(sc->parent_dmat, 4, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL, IPW_TBD_SZ, 1, IPW_TBD_SZ, 0, NULL,
 	    NULL, &sc->tbd_dmat);
 	if (error != 0) {
@@ -475,7 +568,7 @@ ipw_dma_alloc(struct ipw_softc *sc)
 	/*
 	 * Allocate and map rx ring.
 	 */
-	error = bus_dma_tag_create(NULL, 4, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(sc->parent_dmat, 4, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL, IPW_RBD_SZ, 1, IPW_RBD_SZ, 0, NULL,
 	    NULL, &sc->rbd_dmat);
 	if (error != 0) {
@@ -501,7 +594,7 @@ ipw_dma_alloc(struct ipw_softc *sc)
 	/*
 	 * Allocate and map status ring.
 	 */
-	error = bus_dma_tag_create(NULL, 4, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(sc->parent_dmat, 4, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL, IPW_STATUS_SZ, 1, IPW_STATUS_SZ, 0,
 	    NULL, NULL, &sc->status_dmat);
 	if (error != 0) {
@@ -530,7 +623,7 @@ ipw_dma_alloc(struct ipw_softc *sc)
 	/*
 	 * Allocate command DMA map.
 	 */
-	error = bus_dma_tag_create(NULL, 1, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(sc->parent_dmat, 1, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL, sizeof (struct ipw_cmd), 1,
 	    sizeof (struct ipw_cmd), 0, NULL, NULL, &sc->cmd_dmat);
 	if (error != 0) {
@@ -548,7 +641,7 @@ ipw_dma_alloc(struct ipw_softc *sc)
 	/*
 	 * Allocate headers DMA maps.
 	 */
-	error = bus_dma_tag_create(NULL, 1, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(sc->parent_dmat, 1, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL, sizeof (struct ipw_hdr), 1,
 	    sizeof (struct ipw_hdr), 0, NULL, NULL, &sc->hdr_dmat);
 	if (error != 0) {
@@ -571,7 +664,7 @@ ipw_dma_alloc(struct ipw_softc *sc)
 	/*
 	 * Allocate tx buffers DMA maps.
 	 */
-	error = bus_dma_tag_create(NULL, 1, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(sc->parent_dmat, 1, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL, MCLBYTES, IPW_MAX_NSEG, MCLBYTES, 0,
 	    NULL, NULL, &sc->txbuf_dmat);
 	if (error != 0) {
@@ -603,7 +696,7 @@ ipw_dma_alloc(struct ipw_softc *sc)
 	/*
 	 * Pre-allocate rx buffers and DMA maps.
 	 */
-	error = bus_dma_tag_create(NULL, 1, 0, BUS_SPACE_MAXADDR_32BIT,
+	error = bus_dma_tag_create(sc->parent_dmat, 1, 0, BUS_SPACE_MAXADDR_32BIT,
 	    BUS_SPACE_MAXADDR, NULL, NULL, MCLBYTES, 1, MCLBYTES, 0, NULL,
 	    NULL, &sc->rxbuf_dmat);
 	if (error != 0) {
@@ -659,6 +752,10 @@ ipw_release(struct ipw_softc *sc)
 {
 	struct ipw_soft_buf *sbuf;
 	int i;
+
+	if (sc->parent_dmat != NULL) {
+		bus_dma_tag_destroy(sc->parent_dmat);
+	}
 
 	if (sc->tbd_dmat != NULL) {
 		if (sc->stbd_list != NULL) {
@@ -738,9 +835,9 @@ static int
 ipw_suspend(device_t dev)
 {
 	struct ipw_softc *sc = device_get_softc(dev);
+	struct ieee80211com *ic = sc->sc_ifp->if_l2com;
 
-	ipw_stop(sc);
-
+	ieee80211_suspend_all(ic);
 	return 0;
 }
 
@@ -748,42 +845,12 @@ static int
 ipw_resume(device_t dev)
 {
 	struct ipw_softc *sc = device_get_softc(dev);
-	struct ifnet *ifp = sc->sc_ic.ic_ifp;
-	IPW_LOCK_DECL;
-
-	IPW_LOCK(sc);
+	struct ieee80211com *ic = sc->sc_ifp->if_l2com;
 
 	pci_write_config(dev, 0x41, 0, 1);
 
-	if (ifp->if_flags & IFF_UP) {
-		ipw_init_locked(sc, 0);
-		if (ifp->if_drv_flags & IFF_DRV_RUNNING)
-			ipw_start_locked(ifp);
-	}
-
-	IPW_UNLOCK(sc);
-
+	ieee80211_resume_all(ic);
 	return 0;
-}
-
-static int
-ipw_media_change(struct ifnet *ifp)
-{
-	struct ipw_softc *sc = ifp->if_softc;
-	int error;
-	IPW_LOCK_DECL;
-
-	IPW_LOCK(sc);
-	error = ieee80211_media_change(ifp);
-	if (error == ENETRESET) {
-		if ((ifp->if_flags & IFF_UP) &&
-		    (ifp->if_drv_flags & IFF_DRV_RUNNING))
-			ipw_init_locked(sc, 0);
-		error = 0;
-	}
-	IPW_UNLOCK(sc);
-
-	return (error);
 }
 
 static int
@@ -805,48 +872,31 @@ ipw_cvtrate(int ipwrate)
 static void
 ipw_media_status(struct ifnet *ifp, struct ifmediareq *imr)
 {
-	struct ipw_softc *sc = ifp->if_softc;
-	struct ieee80211com *ic = &sc->sc_ic;
-	int rate;
-
-	imr->ifm_status = IFM_AVALID;
-	imr->ifm_active = IFM_IEEE80211;
-	if (ic->ic_state == IEEE80211_S_RUN)
-		imr->ifm_status |= IFM_ACTIVE;
+	struct ieee80211vap *vap = ifp->if_softc;
+	struct ieee80211com *ic = vap->iv_ic;
+	struct ipw_softc *sc = ic->ic_ifp->if_softc;
 
 	/* read current transmission rate from adapter */
-	rate = ipw_cvtrate(ipw_read_table1(sc, IPW_INFO_CURRENT_TX_RATE) & 0xf);
-	imr->ifm_active |= ieee80211_rate2media(ic, rate, IEEE80211_MODE_11B);
-
-	switch (ic->ic_opmode) {
-	case IEEE80211_M_STA:
-		break;
-
-	case IEEE80211_M_IBSS:
-		imr->ifm_active |= IFM_IEEE80211_IBSS;
-		break;
-
-	case IEEE80211_M_MONITOR:
-		imr->ifm_active |= IFM_IEEE80211_MONITOR;
-		break;
-
-	case IEEE80211_M_AHDEMO:
-	case IEEE80211_M_HOSTAP:
-	case IEEE80211_M_WDS:
-		/* should not get there */
-		break;
-	}
+	vap->iv_bss->ni_txrate = ipw_cvtrate(
+	    ipw_read_table1(sc, IPW_INFO_CURRENT_TX_RATE) & 0xf);
+	ieee80211_media_status(ifp, imr);
 }
 
 static int
-ipw_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
+ipw_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 {
+	struct ipw_vap *ivp = IPW_VAP(vap);
+	struct ieee80211com *ic = vap->iv_ic;
 	struct ifnet *ifp = ic->ic_ifp;
 	struct ipw_softc *sc = ifp->if_softc;
+	enum ieee80211_state ostate;
 
 	DPRINTF(("%s: %s -> %s flags 0x%x\n", __func__,
-		ieee80211_state_name[ic->ic_state],
+		ieee80211_state_name[vap->iv_state],
 		ieee80211_state_name[nstate], sc->flags));
+
+	ostate = vap->iv_state;
+	IEEE80211_UNLOCK(ic);
 
 	switch (nstate) {
 	case IEEE80211_S_RUN:
@@ -854,41 +904,46 @@ ipw_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 			/*
 			 * XXX when joining an ibss network we are called
 			 * with a SCAN -> RUN transition on scan complete.
-			 * Use that to call ipw_auth_and_assoc.  On completing
-			 * the join we are then called again with an
-			 * AUTH -> RUN transition and we want to do nothing.
-			 * This is all totally bogus and needs to be redone.
+			 * Use that to call ipw_assoc.  On completing the
+			 * join we are then called again with an AUTH -> RUN
+			 * transition and we want to do nothing.  This is
+			 * all totally bogus and needs to be redone.
 			 */
-			if (ic->ic_state == IEEE80211_S_SCAN)
-				taskqueue_enqueue_fast(taskqueue_fast,
-				    &sc->sc_assoc_task);
+			if (ostate == IEEE80211_S_SCAN)
+				ipw_assoc(ic, vap);
 		}
 		break;
 
 	case IEEE80211_S_INIT:
 		if (sc->flags & IPW_FLAG_ASSOCIATED)
-			taskqueue_enqueue_fast(taskqueue_fast,
-			    &sc->sc_disassoc_task);
+			ipw_disassoc(ic, vap);
 		break;
 
 	case IEEE80211_S_AUTH:
-		taskqueue_enqueue_fast(taskqueue_fast, &sc->sc_assoc_task);
+		/*
+		 * Move to ASSOC state after the ipw_assoc() call.  Firmware
+		 * takes care of authentication, after the call we'll receive
+		 * only an assoc response which would otherwise be discared
+		 * if we are still in AUTH state.
+		 */
+		nstate = IEEE80211_S_ASSOC;
+		ipw_assoc(ic, vap);
 		break;
 
 	case IEEE80211_S_ASSOC:
 		/*
-		 * If we are not transitioning from AUTH the resend the
+		 * If we are not transitioning from AUTH then resend the
 		 * association request.
 		 */
-		if (ic->ic_state != IEEE80211_S_AUTH)
-			taskqueue_enqueue_fast(taskqueue_fast,
-			    &sc->sc_assoc_task);
+		if (ostate != IEEE80211_S_AUTH)
+			ipw_assoc(ic, vap);
 		break;
 
 	default:
 		break;
 	}
-	return (*sc->sc_newstate)(ic, nstate, arg);
+	IEEE80211_LOCK(ic);
+	return ivp->newstate(vap, nstate, arg);
 }
 
 /*
@@ -967,8 +1022,10 @@ ipw_rx_cmd_intr(struct ipw_softc *sc, struct ipw_soft_buf *sbuf)
 static void
 ipw_rx_newstate_intr(struct ipw_softc *sc, struct ipw_soft_buf *sbuf)
 {
-#define	IEEESTATE(ic)	ieee80211_state_name[ic->ic_state]
-	struct ieee80211com *ic = &sc->sc_ic;
+#define	IEEESTATE(vap)	ieee80211_state_name[vap->iv_state]
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
+	struct ieee80211vap *vap = TAILQ_FIRST(&ic->ic_vaps);
 	uint32_t state;
 
 	bus_dmamap_sync(sc->rxbuf_dmat, sbuf->map, BUS_DMASYNC_POSTREAD);
@@ -978,27 +1035,32 @@ ipw_rx_newstate_intr(struct ipw_softc *sc, struct ipw_soft_buf *sbuf)
 	switch (state) {
 	case IPW_STATE_ASSOCIATED:
 		DPRINTFN(2, ("Association succeeded (%s flags 0x%x)\n",
-			IEEESTATE(ic), sc->flags));
-		sc->flags |= IPW_FLAG_ASSOCIATED;
+			IEEESTATE(vap), sc->flags));
 		/* XXX suppress state change in case the fw auto-associates */
-		if (ic->ic_state != IEEE80211_S_ASSOC) {
-			DPRINTF(("Unexpected association (state %u)\n",
-				ic->ic_state));
-		} else
-			ieee80211_new_state(ic, IEEE80211_S_RUN, -1);
+		if ((sc->flags & IPW_FLAG_ASSOCIATING) == 0) {
+			DPRINTF(("Unexpected association (%s, flags 0x%x)\n",
+				IEEESTATE(vap), sc->flags));
+			break;
+		}
+		sc->flags &= ~IPW_FLAG_ASSOCIATING;
+		sc->flags |= IPW_FLAG_ASSOCIATED;
 		break;
 
 	case IPW_STATE_SCANNING:
 		DPRINTFN(3, ("Scanning (%s flags 0x%x)\n",
-			IEEESTATE(ic), sc->flags));
+			IEEESTATE(vap), sc->flags));
 		/*
 		 * NB: Check driver state for association on assoc
 		 * loss as the firmware will immediately start to
 		 * scan and we would treat it as a beacon miss if
 		 * we checked the 802.11 layer state.
 		 */
-		if (sc->flags & IPW_FLAG_ASSOCIATED)
+		if (sc->flags & IPW_FLAG_ASSOCIATED) {
+			IPW_UNLOCK(sc);
+			/* XXX probably need to issue disassoc to fw */
 			ieee80211_beacon_miss(ic);
+			IPW_LOCK(sc);
+		}
 		break;
 
 	case IPW_STATE_SCAN_COMPLETE:
@@ -1009,14 +1071,16 @@ ipw_rx_newstate_intr(struct ipw_softc *sc, struct ipw_soft_buf *sbuf)
 		 * around this by marking the HACK flag and skipping
 		 * the first scan complete event.
 		*/
+		DPRINTFN(3, ("Scan complete (%s flags 0x%x)\n",
+			    IEEESTATE(vap), sc->flags));
 		if (sc->flags & IPW_FLAG_HACK) {
 			sc->flags &= ~IPW_FLAG_HACK;
 			break;
 		}
-		DPRINTFN(3, ("Scan complete (%s flags 0x%x)\n",
-			    IEEESTATE(ic), sc->flags));
 		if (sc->flags & IPW_FLAG_SCANNING) {
-			ieee80211_scan_done(ic);
+			IPW_UNLOCK(sc);
+			ieee80211_scan_done(vap);
+			IPW_LOCK(sc);
 			sc->flags &= ~IPW_FLAG_SCANNING;
 			sc->sc_scan_timer = 0;
 		}
@@ -1024,27 +1088,33 @@ ipw_rx_newstate_intr(struct ipw_softc *sc, struct ipw_soft_buf *sbuf)
 
 	case IPW_STATE_ASSOCIATION_LOST:
 		DPRINTFN(2, ("Association lost (%s flags 0x%x)\n",
-			IEEESTATE(ic), sc->flags));
-		sc->flags &= ~IPW_FLAG_ASSOCIATED;
-		if (ic->ic_state == IEEE80211_S_RUN)
-			ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+			IEEESTATE(vap), sc->flags));
+		sc->flags &= ~(IPW_FLAG_ASSOCIATING | IPW_FLAG_ASSOCIATED);
+		if (vap->iv_state == IEEE80211_S_RUN) {
+			IPW_UNLOCK(sc);
+			ieee80211_new_state(vap, IEEE80211_S_SCAN, -1);
+			IPW_LOCK(sc);
+		}
 		break;
 
 	case IPW_STATE_DISABLED:
+		/* XXX? is this right? */
+		sc->flags &= ~(IPW_FLAG_HACK | IPW_FLAG_SCANNING |
+		    IPW_FLAG_ASSOCIATING | IPW_FLAG_ASSOCIATED);
 		DPRINTFN(2, ("Firmware disabled (%s flags 0x%x)\n",
-			IEEESTATE(ic), sc->flags));
+			IEEESTATE(vap), sc->flags));
 		break;
 
 	case IPW_STATE_RADIO_DISABLED:
-		DPRINTFN(2, ("Radio off (%s flags 0x%x)\n",
-			IEEESTATE(ic), sc->flags));
-		ic->ic_ifp->if_flags &= ~IFF_UP;
+		device_printf(sc->sc_dev, "radio turned off\n");
+		ieee80211_notify_radio(ic, 0);
 		ipw_stop_locked(sc);
+		/* XXX start polling thread to detect radio on */
 		break;
 
 	default:
 		DPRINTFN(2, ("%s: unhandled state %u %s flags 0x%x\n",
-			__func__, state, IEEESTATE(ic), sc->flags));
+			__func__, state, IEEESTATE(vap), sc->flags));
 		break;
 	}
 #undef IEEESTATE
@@ -1056,13 +1126,11 @@ ipw_rx_newstate_intr(struct ipw_softc *sc, struct ipw_soft_buf *sbuf)
 static void
 ipw_setcurchan(struct ipw_softc *sc, struct ieee80211_channel *chan)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
 
 	ic->ic_curchan = chan;
-	sc->sc_rxtap.wr_chan_freq = sc->sc_txtap.wt_chan_freq =
-		htole16(ic->ic_curchan->ic_freq);
-	sc->sc_rxtap.wr_chan_flags = sc->sc_txtap.wt_chan_flags =
-		htole16(ic->ic_curchan->ic_flags);
+	ieee80211_radiotap_chan_change(ic);
 }
 
 /*
@@ -1072,7 +1140,8 @@ ipw_setcurchan(struct ipw_softc *sc, struct ieee80211_channel *chan)
 static void
 ipw_fix_channel(struct ipw_softc *sc, struct mbuf *m)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
 	struct ieee80211_channel *c;
 	struct ieee80211_frame *wh;
 	uint8_t subtype;
@@ -1089,6 +1158,7 @@ ipw_fix_channel(struct ipw_softc *sc, struct mbuf *m)
 	    subtype != IEEE80211_FC0_SUBTYPE_PROBE_RESP)
 		return;
 
+	/* XXX use ieee80211_parse_beacon */
 	frm = (uint8_t *)(wh + 1);
 	efrm = mtod(m, uint8_t *) + m->m_len;
 
@@ -1116,14 +1186,13 @@ static void
 ipw_rx_data_intr(struct ipw_softc *sc, struct ipw_status *status,
     struct ipw_soft_bd *sbd, struct ipw_soft_buf *sbuf)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ifnet *ifp = ic->ic_ifp;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
 	struct mbuf *mnew, *m;
-	struct ieee80211_frame *wh;
 	struct ieee80211_node *ni;
 	bus_addr_t physaddr;
 	int error;
-	IPW_LOCK_DECL;
+	int8_t rssi, nf;
 
 	DPRINTFN(5, ("received frame len=%u, rssi=%u\n", le32toh(status->len),
 	    status->rssi));
@@ -1177,29 +1246,26 @@ ipw_rx_data_intr(struct ipw_softc *sc, struct ipw_status *status,
 	m->m_pkthdr.rcvif = ifp;
 	m->m_pkthdr.len = m->m_len = le32toh(status->len);
 
-	if (bpf_peers_present(sc->sc_drvbpf)) {
+	rssi = status->rssi + IPW_RSSI_TO_DBM;
+	nf = -95;
+	if (ieee80211_radiotap_active(ic)) {
 		struct ipw_rx_radiotap_header *tap = &sc->sc_rxtap;
 
 		tap->wr_flags = 0;
-		tap->wr_antsignal = status->rssi + IPW_RSSI_TO_DBM;
-		tap->wr_chan_freq = htole16(ic->ic_curchan->ic_freq);
-		tap->wr_chan_flags = htole16(ic->ic_curchan->ic_flags);
-
-		bpf_mtap2(sc->sc_drvbpf, tap, sc->sc_rxtap_len, m);
+		tap->wr_antsignal = rssi;
+		tap->wr_antnoise = nf;
 	}
 
 	if (sc->flags & IPW_FLAG_SCANNING)
 		ipw_fix_channel(sc, m);
 
-	wh = mtod(m, struct ieee80211_frame *);
 	IPW_UNLOCK(sc);
-	ni = ieee80211_find_rxnode(ic, (struct ieee80211_frame_min *)wh);
-
-	/* send the frame to the 802.11 layer */
-	ieee80211_input(ic, m, ni, status->rssi, -95/*XXX*/, 0);
-
-	/* node is no longer needed */
-	ieee80211_free_node(ni);
+	ni = ieee80211_find_rxnode(ic, mtod(m, struct ieee80211_frame_min *));
+	if (ni != NULL) {
+		(void) ieee80211_input(ni, m, rssi - nf, nf);
+		ieee80211_free_node(ni);
+	} else
+		(void) ieee80211_input_all(ic, m, rssi - nf, nf);
 	IPW_LOCK(sc);
 
 	bus_dmamap_sync(sc->rbd_dmat, sc->rbd_map, BUS_DMASYNC_PREWRITE);
@@ -1208,7 +1274,6 @@ ipw_rx_data_intr(struct ipw_softc *sc, struct ipw_status *status,
 static void
 ipw_rx_intr(struct ipw_softc *sc)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
 	struct ipw_status *status;
 	struct ipw_soft_bd *sbd;
 	struct ipw_soft_buf *sbuf;
@@ -1243,11 +1308,7 @@ ipw_rx_intr(struct ipw_softc *sc)
 		case IPW_STATUS_CODE_NOTIFICATION:
 			DPRINTFN(2, ("notification status, len %u flags 0x%x\n",
 			    le32toh(status->len), status->flags));
-			if (ic->ic_state == IEEE80211_S_AUTH) {
-				/* XXX assume auth notification */
-				ieee80211_node_authorize(ic->ic_bss);
-				ieee80211_new_state(ic, IEEE80211_S_ASSOC, -1);
-			}
+			/* XXX maybe drive state machine AUTH->ASSOC? */
 			break;
 
 		default:
@@ -1311,7 +1372,7 @@ ipw_release_sbd(struct ipw_softc *sc, struct ipw_soft_bd *sbd)
 static void
 ipw_tx_intr(struct ipw_softc *sc)
 {
-	struct ifnet *ifp = sc->sc_ic.ic_ifp;
+	struct ifnet *ifp = sc->sc_ifp;
 	struct ipw_soft_bd *sbd;
 	uint32_t r, i;
 
@@ -1338,18 +1399,32 @@ ipw_tx_intr(struct ipw_softc *sc)
 }
 
 static void
+ipw_fatal_error_intr(struct ipw_softc *sc)
+{
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
+	struct ieee80211vap *vap = TAILQ_FIRST(&ic->ic_vaps);
+
+	device_printf(sc->sc_dev, "firmware error\n");
+	if (vap != NULL) {
+		IPW_UNLOCK(sc);
+		ieee80211_cancel_scan(vap);
+		IPW_LOCK(sc);
+	}
+	ieee80211_runtask(ic, &sc->sc_init_task);
+}
+
+static void
 ipw_intr(void *arg)
 {
 	struct ipw_softc *sc = arg;
 	uint32_t r;
-	IPW_LOCK_DECL;
 
 	IPW_LOCK(sc);
 
-	if ((r = CSR_READ_4(sc, IPW_CSR_INTR)) == 0 || r == 0xffffffff) {
-		IPW_UNLOCK(sc);
-		return;
-	}
+	r = CSR_READ_4(sc, IPW_CSR_INTR);
+	if (r == 0 || r == 0xffffffff)
+		goto done;
 
 	/* disable interrupts */
 	CSR_WRITE_4(sc, IPW_CSR_INTR_MASK, 0);
@@ -1358,9 +1433,8 @@ ipw_intr(void *arg)
 	CSR_WRITE_4(sc, IPW_CSR_INTR, r);
 
 	if (r & (IPW_INTR_FATAL_ERROR | IPW_INTR_PARITY_ERROR)) {
-		device_printf(sc->sc_dev, "firmware error\n");
-		taskqueue_enqueue_fast(taskqueue_fast, &sc->sc_init_task);
-		r = 0;	/* don't process more interrupts */
+		ipw_fatal_error_intr(sc);
+		goto done;
 	}
 
 	if (r & IPW_INTR_FW_INIT_DONE)
@@ -1374,7 +1448,7 @@ ipw_intr(void *arg)
 
 	/* re-enable interrupts */
 	CSR_WRITE_4(sc, IPW_CSR_INTR_MASK, IPW_INTR_MASK);
-
+done:
 	IPW_UNLOCK(sc);
 }
 
@@ -1447,6 +1521,8 @@ ipw_cmd(struct ipw_softc *sc, uint32_t type, void *data, uint32_t len)
 	bus_addr_t physaddr;
 	int error;
 
+	IPW_LOCK_ASSERT(sc);
+
 	if (sc->flags & IPW_FLAG_BUSY) {
 		device_printf(sc->sc_dev, "%s: %s not sent, busy\n",
 			__func__, ipw_cmdname(type));
@@ -1514,7 +1590,8 @@ static int
 ipw_tx_start(struct ifnet *ifp, struct mbuf *m0, struct ieee80211_node *ni)
 {
 	struct ipw_softc *sc = ifp->if_softc;
-	struct ieee80211com *ic = &sc->sc_ic;
+	struct ieee80211com *ic = ifp->if_l2com;
+	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211_frame *wh;
 	struct ipw_soft_bd *sbd;
 	struct ipw_soft_hdr *shdr;
@@ -1528,24 +1605,21 @@ ipw_tx_start(struct ifnet *ifp, struct mbuf *m0, struct ieee80211_node *ni)
 	wh = mtod(m0, struct ieee80211_frame *);
 
 	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
-		k = ieee80211_crypto_encap(ic, ni, m0);
+		k = ieee80211_crypto_encap(ni, m0);
 		if (k == NULL) {
 			m_freem(m0);
 			return ENOBUFS;
 		}
-
 		/* packet header may have moved, reset our local pointer */
 		wh = mtod(m0, struct ieee80211_frame *);
 	}
 
-	if (bpf_peers_present(sc->sc_drvbpf)) {
+	if (ieee80211_radiotap_active_vap(vap)) {
 		struct ipw_tx_radiotap_header *tap = &sc->sc_txtap;
 
 		tap->wt_flags = 0;
-		tap->wt_chan_freq = htole16(ic->ic_curchan->ic_freq);
-		tap->wt_chan_flags = htole16(ic->ic_curchan->ic_flags);
 
-		bpf_mtap2(sc->sc_drvbpf, tap, sc->sc_txtap_len, m0);
+		ieee80211_radiotap_tx(vap, m0);
 	}
 
 	shdr = SLIST_FIRST(&sc->free_shdr);
@@ -1660,11 +1734,20 @@ ipw_tx_start(struct ifnet *ifp, struct mbuf *m0, struct ieee80211_node *ni)
 	return 0;
 }
 
+static int
+ipw_raw_xmit(struct ieee80211_node *ni, struct mbuf *m,
+	const struct ieee80211_bpf_params *params)
+{
+	/* no support; just discard */
+	m_freem(m);
+	ieee80211_free_node(ni);
+	return 0;
+}
+
 static void
 ipw_start(struct ifnet *ifp)
 {
 	struct ipw_softc *sc = ifp->if_softc;
-	IPW_LOCK_DECL;
 
 	IPW_LOCK(sc);
 	ipw_start_locked(ifp);
@@ -1675,54 +1758,26 @@ static void
 ipw_start_locked(struct ifnet *ifp)
 {
 	struct ipw_softc *sc = ifp->if_softc;
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct mbuf *m0;
-	struct ether_header *eh;
 	struct ieee80211_node *ni;
+	struct mbuf *m;
 
 	IPW_LOCK_ASSERT(sc);
 
-	if (ic->ic_state != IEEE80211_S_RUN)
-		return;
-
 	for (;;) {
-		IFQ_DRV_DEQUEUE(&ifp->if_snd, m0);
-		if (m0 == NULL)
+		IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
+		if (m == NULL)
 			break;
-
 		if (sc->txfree < 1 + IPW_MAX_NSEG) {
-			IFQ_DRV_PREPEND(&ifp->if_snd, m0);
+			IFQ_DRV_PREPEND(&ifp->if_snd, m);
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 			break;
 		}
-
-		if (m0->m_len < sizeof (struct ether_header) &&
-		    (m0 = m_pullup(m0, sizeof (struct ether_header))) == NULL)
-			continue;
-
-		eh = mtod(m0, struct ether_header *);
-		ni = ieee80211_find_txnode(ic, eh->ether_dhost);
-		if (ni == NULL) {
-			m_freem(m0);
-			continue;
-		}
-		BPF_MTAP(ifp, m0);
-
-		m0 = ieee80211_encap(ic, m0, ni);
-		if (m0 == NULL) {
-			ieee80211_free_node(ni);
-			continue;
-		}
-
-		if (bpf_peers_present(ic->ic_rawbpf))
-			bpf_mtap(ic->ic_rawbpf, m0);
-
-		if (ipw_tx_start(ifp, m0, ni) != 0) {
+		ni = (struct ieee80211_node *) m->m_pkthdr.rcvif;
+		if (ipw_tx_start(ifp, m, ni) != 0) {
 			ieee80211_free_node(ni);
 			ifp->if_oerrors++;
 			break;
 		}
-
 		/* start watchdog timer */
 		sc->sc_tx_timer = 5;
 	}
@@ -1732,8 +1787,8 @@ static void
 ipw_watchdog(void *arg)
 {
 	struct ipw_softc *sc = arg;
-	struct ieee80211com *ic = &sc->sc_ic;
 	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
 
 	IPW_LOCK_ASSERT(sc);
 
@@ -1741,8 +1796,7 @@ ipw_watchdog(void *arg)
 		if (--sc->sc_tx_timer == 0) {
 			if_printf(ifp, "device timeout\n");
 			ifp->if_oerrors++;
-			taskqueue_enqueue_fast(taskqueue_fast,
-			    &sc->sc_init_task);
+			taskqueue_enqueue(taskqueue_swi, &sc->sc_init_task);
 		}
 	}
 	if (sc->sc_scan_timer > 0) {
@@ -1750,7 +1804,9 @@ ipw_watchdog(void *arg)
 			DPRINTFN(3, ("Scan timeout\n"));
 			/* End the scan */
 			if (sc->flags & IPW_FLAG_SCANNING) {
-				ieee80211_scan_done(ic);
+				IPW_UNLOCK(sc);
+				ieee80211_scan_done(TAILQ_FIRST(&ic->ic_vaps));
+				IPW_LOCK(sc);
 				sc->flags &= ~IPW_FLAG_SCANNING;
 			}
 		}
@@ -1763,37 +1819,36 @@ static int
 ipw_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
 	struct ipw_softc *sc = ifp->if_softc;
-	struct ieee80211com *ic = &sc->sc_ic;
-	int error = 0;
-	IPW_LOCK_DECL;
-
-	IPW_LOCK(sc);
+	struct ieee80211com *ic = ifp->if_l2com;
+	struct ifreq *ifr = (struct ifreq *) data;
+	int error = 0, startall = 0;
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:
+		IPW_LOCK(sc);
 		if (ifp->if_flags & IFF_UP) {
-			if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
-				ipw_init_locked(sc, 0);
+			if (!(ifp->if_drv_flags & IFF_DRV_RUNNING)) {
+				ipw_init_locked(sc);
+				startall = 1;
+			}
 		} else {
 			if (ifp->if_drv_flags & IFF_DRV_RUNNING)
 				ipw_stop_locked(sc);
 		}
+		IPW_UNLOCK(sc);
+		if (startall)
+			ieee80211_start_all(ic);
 		break;
-
+	case SIOCGIFMEDIA:
+		error = ifmedia_ioctl(ifp, ifr, &ic->ic_media, cmd);
+		break;
+	case SIOCGIFADDR:
+		error = ether_ioctl(ifp, cmd, data);
+		break;
 	default:
-		error = ieee80211_ioctl(ic, cmd, data);
+		error = EINVAL;
+		break;
 	}
-
-	if (error == ENETRESET) {
-		if ((ifp->if_flags & IFF_UP) &&
-		    (ifp->if_drv_flags & IFF_DRV_RUNNING) &&
-		    (ic->ic_roaming != IEEE80211_ROAMING_MANUAL))
-			ipw_init_locked(sc, 0);
-		error = 0;
-	}
-
-	IPW_UNLOCK(sc);
-
 	return error;
 }
 
@@ -2010,13 +2065,15 @@ ipw_load_firmware(struct ipw_softc *sc, const char *fw, int size)
 static int
 ipw_setwepkeys(struct ipw_softc *sc)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
+	struct ieee80211vap *vap = TAILQ_FIRST(&ic->ic_vaps);
 	struct ipw_wep_key wepkey;
 	struct ieee80211_key *wk;
 	int error, i;
 
 	for (i = 0; i < IEEE80211_WEP_NKID; i++) {
-		wk = &ic->ic_crypto.cs_nw_keys[i];
+		wk = &vap->iv_nw_keys[i];
 
 		if (wk->wk_cipher == NULL ||
 		    wk->wk_cipher->ic_cipher != IEEE80211_CIPHER_WEP)
@@ -2103,20 +2160,6 @@ ipw_setscanopts(struct ipw_softc *sc, uint32_t chanmask, uint32_t flags)
 	return ipw_cmd(sc, IPW_CMD_SET_SCAN_OPTIONS, &opts, sizeof(opts));
 }
 
-/*
- * Handler for sc_scan_task.  This is a simple wrapper around ipw_scan().
- */
-static void
-ipw_scan_task(void *context, int pending)
-{
-	struct ipw_softc *sc = context;
-	IPW_LOCK_DECL;
-
-	IPW_LOCK(sc);
-	ipw_scan(sc);
-	IPW_UNLOCK(sc);
-}
-
 static int
 ipw_scan(struct ipw_softc *sc)
 {
@@ -2166,7 +2209,8 @@ done:
 static int
 ipw_setchannel(struct ipw_softc *sc, struct ieee80211_channel *chan)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
 	uint32_t data;
 	int error;
 
@@ -2178,212 +2222,20 @@ ipw_setchannel(struct ipw_softc *sc, struct ieee80211_channel *chan)
 	return error;
 }
 
-static int
-ipw_config(struct ipw_softc *sc)
+static void
+ipw_assoc(struct ieee80211com *ic, struct ieee80211vap *vap)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ifnet *ifp = ic->ic_ifp;
+	struct ifnet *ifp = vap->iv_ic->ic_ifp;
+	struct ipw_softc *sc = ifp->if_softc;
+	struct ieee80211_node *ni = vap->iv_bss;
 	struct ipw_security security;
-	struct ipw_configuration config;
 	uint32_t data;
 	int error;
-
-	error = ipw_disable(sc);
-	if (error != 0)
-		return error;
-
-	switch (ic->ic_opmode) {
-	case IEEE80211_M_STA:
-	case IEEE80211_M_HOSTAP:
-	case IEEE80211_M_WDS:		/* XXX */
-		data = htole32(IPW_MODE_BSS);
-		break;
-	case IEEE80211_M_IBSS:
-	case IEEE80211_M_AHDEMO:
-		data = htole32(IPW_MODE_IBSS);
-		break;
-	case IEEE80211_M_MONITOR:
-		data = htole32(IPW_MODE_MONITOR);
-		break;
-	}
-	DPRINTF(("Setting mode to %u\n", le32toh(data)));
-	error = ipw_cmd(sc, IPW_CMD_SET_MODE, &data, sizeof data);
-	if (error != 0)
-		return error;
-
-	if (ic->ic_opmode == IEEE80211_M_IBSS ||
-	    ic->ic_opmode == IEEE80211_M_MONITOR) {
-		error = ipw_setchannel(sc, ic->ic_curchan);
-		if (error != 0)
-			return error;
-	}
-
-	if (ic->ic_opmode == IEEE80211_M_MONITOR)
-		return ipw_enable(sc);
-
-	IEEE80211_ADDR_COPY(ic->ic_myaddr, IF_LLADDR(ifp));
-	DPRINTF(("Setting MAC address to %6D\n", ic->ic_myaddr, ":"));
-	error = ipw_cmd(sc, IPW_CMD_SET_MAC_ADDRESS, ic->ic_myaddr,
-	    IEEE80211_ADDR_LEN);
-	if (error != 0)
-		return error;
-
-	config.flags = htole32(IPW_CFG_BSS_MASK | IPW_CFG_IBSS_MASK |
-	    IPW_CFG_PREAMBLE_AUTO | IPW_CFG_802_1x_ENABLE);
-	if (ic->ic_opmode == IEEE80211_M_IBSS)
-		config.flags |= htole32(IPW_CFG_IBSS_AUTO_START);
-	if (ifp->if_flags & IFF_PROMISC)
-		config.flags |= htole32(IPW_CFG_PROMISCUOUS);
-	config.bss_chan = htole32(0x3fff); /* channels 1-14 */
-	config.ibss_chan = htole32(0x7ff); /* channels 1-11 */
-	DPRINTF(("Setting configuration to 0x%x\n", le32toh(config.flags)));
-	error = ipw_cmd(sc, IPW_CMD_SET_CONFIGURATION, &config, sizeof config);
-	if (error != 0)
-		return error;
-
-	data = htole32(0x3); /* 1, 2 */
-	DPRINTF(("Setting basic tx rates to 0x%x\n", le32toh(data)));
-	error = ipw_cmd(sc, IPW_CMD_SET_BASIC_TX_RATES, &data, sizeof data);
-	if (error != 0)
-		return error;
-
-	/* NB: use the same rate set */
-	DPRINTF(("Setting msdu tx rates to 0x%x\n", le32toh(data)));
-	error = ipw_cmd(sc, IPW_CMD_SET_MSDU_TX_RATES, &data, sizeof data);
-	if (error != 0)
-		return error;
-
-	data = htole32(0xf); /* 1, 2, 5.5, 11 */
-	DPRINTF(("Setting tx rates to 0x%x\n", le32toh(data)));
-	error = ipw_cmd(sc, IPW_CMD_SET_TX_RATES, &data, sizeof data);
-	if (error != 0)
-		return error;
-
-	data = htole32(IPW_POWER_MODE_CAM);
-	DPRINTF(("Setting power mode to %u\n", le32toh(data)));
-	error = ipw_cmd(sc, IPW_CMD_SET_POWER_MODE, &data, sizeof data);
-	if (error != 0)
-		return error;
-
-	if (ic->ic_opmode == IEEE80211_M_IBSS) {
-		data = htole32(32); /* default value */
-		DPRINTF(("Setting tx power index to %u\n", le32toh(data)));
-		error = ipw_cmd(sc, IPW_CMD_SET_TX_POWER_INDEX, &data,
-		    sizeof data);
-		if (error != 0)
-			return error;
-	}
-
-	data = htole32(ic->ic_rtsthreshold);
-	DPRINTF(("Setting RTS threshold to %u\n", le32toh(data)));
-	error = ipw_cmd(sc, IPW_CMD_SET_RTS_THRESHOLD, &data, sizeof data);
-	if (error != 0)
-		return error;
-
-	data = htole32(ic->ic_fragthreshold);
-	DPRINTF(("Setting frag threshold to %u\n", le32toh(data)));
-	error = ipw_cmd(sc, IPW_CMD_SET_FRAG_THRESHOLD, &data, sizeof data);
-	if (error != 0)
-		return error;
-
-	error = ipw_setssid(sc, ic->ic_des_ssid[0].ssid, ic->ic_des_ssid[0].len);
-	if (error != 0)
-		return error;
-
-	error = ipw_setbssid(sc, NULL);
-	if (error != 0)
-		return error;
-
-	if (ic->ic_flags & IEEE80211_F_DESBSSID) {
-		DPRINTF(("Setting desired BSSID to %6D\n", ic->ic_des_bssid,
-		    ":"));
-		error = ipw_cmd(sc, IPW_CMD_SET_DESIRED_BSSID,
-		    ic->ic_des_bssid, IEEE80211_ADDR_LEN);
-		if (error != 0)
-			return error;
-	}
-
-	memset(&security, 0, sizeof security);
-	security.authmode = (ic->ic_bss->ni_authmode == IEEE80211_AUTH_SHARED) ?
-	    IPW_AUTH_SHARED : IPW_AUTH_OPEN;
-	security.ciphers = htole32(IPW_CIPHER_NONE);
-	DPRINTF(("Setting authmode to %u\n", security.authmode));
-	error = ipw_cmd(sc, IPW_CMD_SET_SECURITY_INFO, &security,
-	    sizeof security);
-	if (error != 0)
-		return error;
-
-	if (ic->ic_flags & IEEE80211_F_PRIVACY) {
-		error = ipw_setwepkeys(sc);
-		if (error != 0)
-			return error;
-
-		if (ic->ic_crypto.cs_def_txkey != IEEE80211_KEYIX_NONE) {
-			data = htole32(ic->ic_crypto.cs_def_txkey);
-			DPRINTF(("Setting wep tx key index to %u\n",
-				le32toh(data)));
-			error = ipw_cmd(sc, IPW_CMD_SET_WEP_KEY_INDEX, &data,
-			    sizeof data);
-			if (error != 0)
-				return error;
-		}
-	}
-
-	data = htole32((ic->ic_flags & IEEE80211_F_PRIVACY) ? IPW_WEPON : 0);
-	DPRINTF(("Setting wep flags to 0x%x\n", le32toh(data)));
-	error = ipw_cmd(sc, IPW_CMD_SET_WEP_FLAGS, &data, sizeof data);
-	if (error != 0)
-		return error;
-
-	if (ic->ic_opt_ie != NULL) {
-		error = ipw_setwpaie(sc, ic->ic_opt_ie, ic->ic_opt_ie_len);
-		if (error != 0)
-			return error;
-	}
-
-	if (ic->ic_opmode == IEEE80211_M_IBSS) {
-		data = htole32(ic->ic_bintval);
-		DPRINTF(("Setting beacon interval to %u\n", le32toh(data)));
-		error = ipw_cmd(sc, IPW_CMD_SET_BEACON_INTERVAL, &data,
-		    sizeof data);
-		if (error != 0)
-			return error;
-	}
-
-	error = ipw_setscanopts(sc, 0x3fff, 0);
-	if (error != 0)
-		return error;
-
-	return (ipw_enable(sc));
-}
-
-/*
- * Handler for sc_assoc_task.  This is a simple wrapper around
- * ipw_auth_and_assoc().
- */
-static void
-ipw_assoc_task(void *context, int pending)
-{
-	struct ipw_softc *sc = context;
-	IPW_LOCK_DECL;
 
 	IPW_LOCK(sc);
-	ipw_auth_and_assoc(sc);
-	IPW_UNLOCK(sc);
-}
-
-static int
-ipw_auth_and_assoc(struct ipw_softc *sc)
-{
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ieee80211_node *ni = ic->ic_bss;
-	struct ipw_security security;
-	uint32_t data;
-	int error;
-
 	error = ipw_disable(sc);
 	if (error != 0)
-		return (error);
+		goto done;
 
 	memset(&security, 0, sizeof security);
 	security.authmode = (ni->ni_authmode == IEEE80211_AUTH_SHARED) ?
@@ -2393,93 +2245,98 @@ ipw_auth_and_assoc(struct ipw_softc *sc)
 	error = ipw_cmd(sc, IPW_CMD_SET_SECURITY_INFO, &security,
 	    sizeof security);
 	if (error != 0)
-		return (error);
+		goto done;
 
-	if (ic->ic_flags & IEEE80211_F_PRIVACY) {
+	data = htole32(vap->iv_rtsthreshold);
+	DPRINTF(("Setting RTS threshold to %u\n", le32toh(data)));
+	error = ipw_cmd(sc, IPW_CMD_SET_RTS_THRESHOLD, &data, sizeof data);
+	if (error != 0)
+		goto done;
+
+	data = htole32(vap->iv_fragthreshold);
+	DPRINTF(("Setting frag threshold to %u\n", le32toh(data)));
+	error = ipw_cmd(sc, IPW_CMD_SET_FRAG_THRESHOLD, &data, sizeof data);
+	if (error != 0)
+		goto done;
+
+	if (vap->iv_flags & IEEE80211_F_PRIVACY) {
 		error = ipw_setwepkeys(sc);
 		if (error != 0)
-			return error;
+			goto done;
 
-		if (ic->ic_crypto.cs_def_txkey != IEEE80211_KEYIX_NONE) {
-			data = htole32(ic->ic_crypto.cs_def_txkey);
+		if (vap->iv_def_txkey != IEEE80211_KEYIX_NONE) {
+			data = htole32(vap->iv_def_txkey);
 			DPRINTF(("Setting wep tx key index to %u\n",
 				le32toh(data)));
 			error = ipw_cmd(sc, IPW_CMD_SET_WEP_KEY_INDEX, &data,
 			    sizeof data);
 			if (error != 0)
-				return error;
+				goto done;
 		}
 	}
 
-	data = htole32((ic->ic_flags & IEEE80211_F_PRIVACY) ? IPW_WEPON : 0);
+	data = htole32((vap->iv_flags & IEEE80211_F_PRIVACY) ? IPW_WEPON : 0);
 	DPRINTF(("Setting wep flags to 0x%x\n", le32toh(data)));
 	error = ipw_cmd(sc, IPW_CMD_SET_WEP_FLAGS, &data, sizeof data);
 	if (error != 0)
-		return error;
+		goto done;
 
 	error = ipw_setssid(sc, ni->ni_essid, ni->ni_esslen);
 	if (error != 0)
-		return (error);
+		goto done;
 
 	error = ipw_setbssid(sc, ni->ni_bssid);
 	if (error != 0)
-		return (error);
+		goto done;
 
-	if (ic->ic_opt_ie != NULL) {
-		error = ipw_setwpaie(sc, ic->ic_opt_ie, ic->ic_opt_ie_len);
+	if (vap->iv_appie_wpa != NULL) {
+		struct ieee80211_appie *ie = vap->iv_appie_wpa;
+		error = ipw_setwpaie(sc, ie->ie_data, ie->ie_len);
 		if (error != 0)
-			return error;
+			goto done;
 	}
 	if (ic->ic_opmode == IEEE80211_M_IBSS) {
 		error = ipw_setchannel(sc, ni->ni_chan);
 		if (error != 0)
-			return (error);
+			goto done;
 	}
 
 	/* lock scan to ap's channel and enable associate */
 	error = ipw_setscanopts(sc,
-			1<<(ieee80211_chan2ieee(ic, ni->ni_chan)-1), 0);
+	    1<<(ieee80211_chan2ieee(ic, ni->ni_chan)-1), 0);
+	if (error != 0)
+		goto done;
 
-	return ipw_enable(sc);		/* finally, enable adapter */
-}
-
-/*
- * Handler for sc_disassoc_task.  This is a simple wrapper around
- * ipw_disassociate().
- */
-static void
-ipw_disassoc_task(void *context, int pending)
-{
-	struct ipw_softc *sc = context;
-	IPW_LOCK_DECL;
-
-	IPW_LOCK(sc);
-	ipw_disassociate(sc);
+	error = ipw_enable(sc);		/* finally, enable adapter */
+	if (error == 0)
+		sc->flags |= IPW_FLAG_ASSOCIATING;
+done:
 	IPW_UNLOCK(sc);
 }
 
-static int
-ipw_disassociate(struct ipw_softc *sc)
+static void
+ipw_disassoc(struct ieee80211com *ic, struct ieee80211vap *vap)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ieee80211_node *ni = ic->ic_bss;
+	struct ifnet *ifp = vap->iv_ic->ic_ifp;
+	struct ieee80211_node *ni = vap->iv_bss;
+	struct ipw_softc *sc = ifp->if_softc;
 
+	IPW_LOCK(sc);
 	DPRINTF(("Disassociate from %6D\n", ni->ni_bssid, ":"));
-
 	/*
 	 * NB: don't try to do this if ipw_stop_master has
 	 *     shutdown the firmware and disabled interrupts.
 	 */
-	if (!(sc->flags & IPW_FLAG_FW_INITED))
-		return (0);
-
-	sc->flags &= ~IPW_FLAG_ASSOCIATED;
-	/*
-	 * NB: firmware currently ignores bssid parameter, but
-	 *     supply it in case this changes (follow linux driver).
-	 */
-	return ipw_cmd(sc, IPW_CMD_DISASSOCIATE,
-		ni->ni_bssid, IEEE80211_ADDR_LEN);
+	if (sc->flags & IPW_FLAG_FW_INITED) {
+		sc->flags &= ~IPW_FLAG_ASSOCIATED;
+		/*
+		 * NB: firmware currently ignores bssid parameter, but
+		 *     supply it in case this changes (follow linux driver).
+		 */
+		(void) ipw_cmd(sc, IPW_CMD_DISASSOCIATE,
+			ni->ni_bssid, IEEE80211_ADDR_LEN);
+	}
+	IPW_UNLOCK(sc);
 }
 
 /*
@@ -2496,27 +2353,31 @@ static void
 ipw_init(void *priv)
 {
 	struct ipw_softc *sc = priv;
-	IPW_LOCK_DECL;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
 
 	IPW_LOCK(sc);
-	ipw_init_locked(sc, 0);
+	ipw_init_locked(sc);
 	IPW_UNLOCK(sc);
+
+	if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+		ieee80211_start_all(ic);		/* start all vap's */
 }
 
 static void
-ipw_init_locked(struct ipw_softc *sc, int force)
+ipw_init_locked(struct ipw_softc *sc)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ifnet *ifp = ic->ic_ifp;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
+	struct ieee80211vap *vap = TAILQ_FIRST(&ic->ic_vaps);
 	const struct firmware *fp;
 	const struct ipw_firmware_hdr *hdr;
-	const char *imagename, *fw;
-	IPW_LOCK_DECL;
+	const char *fw;
 
 	IPW_LOCK_ASSERT(sc);
 
 	DPRINTF(("%s: state %s flags 0x%x\n", __func__,
-		ieee80211_state_name[ic->ic_state], sc->flags));
+		ieee80211_state_name[vap->iv_state], sc->flags));
 
 	/*
 	 * Avoid re-entrant calls.  We need to release the mutex in ipw_init()
@@ -2531,63 +2392,22 @@ ipw_init_locked(struct ipw_softc *sc, int force)
 
 	if (ipw_reset(sc) != 0) {
 		device_printf(sc->sc_dev, "could not reset adapter\n");
-		goto fail1;
-	}
-
-	switch (ic->ic_opmode) {
-	case IEEE80211_M_STA:
-		imagename = "ipw_bss";
-		break;
-	case IEEE80211_M_IBSS:
-		imagename = "ipw_ibss";
-		break;
-	case IEEE80211_M_MONITOR:
-		imagename = "ipw_monitor";
-		break;
-	default:
-		imagename = NULL;	/* should not get there */
-	}
-
-	/*
-	 * Load firmware image using the firmware(9) subsystem.  We need to
-	 * release the driver's lock first.
-	 */
-	if (sc->sc_firmware == NULL || strcmp(sc->sc_firmware->name,
-	    imagename) != 0) {
-		IPW_UNLOCK(sc);
-		if (sc->sc_firmware != NULL)
-			firmware_put(sc->sc_firmware, FIRMWARE_UNLOAD);
-		sc->sc_firmware = firmware_get(imagename);
-		IPW_LOCK(sc);
+		goto fail;
 	}
 
 	if (sc->sc_firmware == NULL) {
-		device_printf(sc->sc_dev,
-		    "could not load firmware image '%s'\n", imagename);
-		goto fail1;
+		device_printf(sc->sc_dev, "no firmware\n");
+		goto fail;
 	}
-
+	/* NB: consistency already checked on load */
 	fp = sc->sc_firmware;
-	if (fp->datasize < sizeof *hdr) {
-		device_printf(sc->sc_dev,
-		    "firmware image too short %zu\n", fp->datasize);
-		goto fail2;
-	}
-
 	hdr = (const struct ipw_firmware_hdr *)fp->data;
 
-	if (fp->datasize < sizeof *hdr + le32toh(hdr->mainsz) +
-	    le32toh(hdr->ucodesz)) {
-		device_printf(sc->sc_dev,
-		    "firmware image too short %zu\n", fp->datasize);
-		goto fail2;
-	}
-
-	DPRINTF(("Loading firmware image '%s'\n", imagename));
+	DPRINTF(("Loading firmware image '%s'\n", fp->name));
 	fw = (const char *)fp->data + sizeof *hdr + le32toh(hdr->mainsz);
 	if (ipw_load_ucode(sc, fw, le32toh(hdr->ucodesz)) != 0) {
 		device_printf(sc->sc_dev, "could not load microcode\n");
-		goto fail2;
+		goto fail;
 	}
 
 	ipw_stop_master(sc);
@@ -2615,7 +2435,7 @@ ipw_init_locked(struct ipw_softc *sc, int force)
 	fw = (const char *)fp->data + sizeof *hdr;
 	if (ipw_load_firmware(sc, fw, le32toh(hdr->mainsz)) != 0) {
 		device_printf(sc->sc_dev, "could not load firmware\n");
-		goto fail2;
+		goto fail;
 	}
 
 	sc->flags |= IPW_FLAG_FW_INITED;
@@ -2628,20 +2448,8 @@ ipw_init_locked(struct ipw_softc *sc, int force)
 
 	if (ipw_config(sc) != 0) {
 		device_printf(sc->sc_dev, "device configuration failed\n");
-		goto fail1;
+		goto fail;
 	}
-
-	if (ic->ic_opmode != IEEE80211_M_MONITOR) {
-		/*
-		 * NB: When restarting the adapter clock the state
-		 * machine regardless of the roaming mode; otherwise
-		 * we need to notify user apps so they can manually
-		 * get us going again.
-		 */
-		if (ic->ic_roaming != IEEE80211_ROAMING_MANUAL || force)
-			ieee80211_new_state(ic, IEEE80211_S_SCAN, 0);
-	} else
-		ieee80211_new_state(ic, IEEE80211_S_RUN, -1);
 
 	callout_reset(&sc->sc_wdtimer, hz, ipw_watchdog, sc);
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
@@ -2650,18 +2458,109 @@ ipw_init_locked(struct ipw_softc *sc, int force)
 	sc->flags &=~ IPW_FLAG_INIT_LOCKED;
 	return;
 
-fail2:	firmware_put(fp, FIRMWARE_UNLOAD);
-	sc->sc_firmware = NULL;
-fail1:	ifp->if_flags &= ~IFF_UP;
+fail:
 	ipw_stop_locked(sc);
 	sc->flags &=~ IPW_FLAG_INIT_LOCKED;
+}
+
+static int
+ipw_config(struct ipw_softc *sc)
+{
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
+	struct ipw_configuration config;
+	uint32_t data;
+	int error;
+
+	error = ipw_disable(sc);
+	if (error != 0)
+		return error;
+
+	switch (ic->ic_opmode) {
+	case IEEE80211_M_STA:
+	case IEEE80211_M_HOSTAP:
+	case IEEE80211_M_WDS:		/* XXX */
+		data = htole32(IPW_MODE_BSS);
+		break;
+	case IEEE80211_M_IBSS:
+	case IEEE80211_M_AHDEMO:
+		data = htole32(IPW_MODE_IBSS);
+		break;
+	case IEEE80211_M_MONITOR:
+		data = htole32(IPW_MODE_MONITOR);
+		break;
+	default:
+		device_printf(sc->sc_dev, "unknown opmode %d\n", ic->ic_opmode);
+		return EINVAL;
+	}
+	DPRINTF(("Setting mode to %u\n", le32toh(data)));
+	error = ipw_cmd(sc, IPW_CMD_SET_MODE, &data, sizeof data);
+	if (error != 0)
+		return error;
+
+	if (ic->ic_opmode == IEEE80211_M_IBSS ||
+	    ic->ic_opmode == IEEE80211_M_MONITOR) {
+		error = ipw_setchannel(sc, ic->ic_curchan);
+		if (error != 0)
+			return error;
+	}
+
+	if (ic->ic_opmode == IEEE80211_M_MONITOR)
+		return ipw_enable(sc);
+
+	config.flags = htole32(IPW_CFG_BSS_MASK | IPW_CFG_IBSS_MASK |
+	    IPW_CFG_PREAMBLE_AUTO | IPW_CFG_802_1x_ENABLE);
+	if (ic->ic_opmode == IEEE80211_M_IBSS)
+		config.flags |= htole32(IPW_CFG_IBSS_AUTO_START);
+	if (ifp->if_flags & IFF_PROMISC)
+		config.flags |= htole32(IPW_CFG_PROMISCUOUS);
+	config.bss_chan = htole32(0x3fff); /* channels 1-14 */
+	config.ibss_chan = htole32(0x7ff); /* channels 1-11 */
+	DPRINTF(("Setting configuration to 0x%x\n", le32toh(config.flags)));
+	error = ipw_cmd(sc, IPW_CMD_SET_CONFIGURATION, &config, sizeof config);
+	if (error != 0)
+		return error;
+
+	data = htole32(0xf); /* 1, 2, 5.5, 11 */
+	DPRINTF(("Setting basic tx rates to 0x%x\n", le32toh(data)));
+	error = ipw_cmd(sc, IPW_CMD_SET_BASIC_TX_RATES, &data, sizeof data);
+	if (error != 0)
+		return error;
+
+	/* Use the same rate set */
+	DPRINTF(("Setting msdu tx rates to 0x%x\n", le32toh(data)));
+	error = ipw_cmd(sc, IPW_CMD_SET_MSDU_TX_RATES, &data, sizeof data);
+	if (error != 0)
+		return error;
+
+	/* Use the same rate set */
+	DPRINTF(("Setting tx rates to 0x%x\n", le32toh(data)));
+	error = ipw_cmd(sc, IPW_CMD_SET_TX_RATES, &data, sizeof data);
+	if (error != 0)
+		return error;
+
+	data = htole32(IPW_POWER_MODE_CAM);
+	DPRINTF(("Setting power mode to %u\n", le32toh(data)));
+	error = ipw_cmd(sc, IPW_CMD_SET_POWER_MODE, &data, sizeof data);
+	if (error != 0)
+		return error;
+
+	if (ic->ic_opmode == IEEE80211_M_IBSS) {
+		data = htole32(32); /* default value */
+		DPRINTF(("Setting tx power index to %u\n", le32toh(data)));
+		error = ipw_cmd(sc, IPW_CMD_SET_TX_POWER_INDEX, &data,
+		    sizeof data);
+		if (error != 0)
+			return error;
+	}
+
+	return 0;
 }
 
 static void
 ipw_stop(void *priv)
 {
 	struct ipw_softc *sc = priv;
-	IPW_LOCK_DECL;
 
 	IPW_LOCK(sc);
 	ipw_stop_locked(sc);
@@ -2671,13 +2570,10 @@ ipw_stop(void *priv)
 static void
 ipw_stop_locked(struct ipw_softc *sc)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ifnet *ifp = ic->ic_ifp;
+	struct ifnet *ifp = sc->sc_ifp;
 	int i;
 
 	IPW_LOCK_ASSERT(sc);
-
-	ieee80211_new_state(ic, IEEE80211_S_INIT, -1);
 
 	callout_stop(&sc->sc_wdtimer);
 	ipw_stop_master(sc);
@@ -2791,11 +2687,9 @@ ipw_scan_start(struct ieee80211com *ic)
 {
 	struct ifnet *ifp = ic->ic_ifp;
 	struct ipw_softc *sc = ifp->if_softc;
-	IPW_LOCK_DECL;
 
 	IPW_LOCK(sc);
-	if (!(sc->flags & IPW_FLAG_SCANNING))
-		taskqueue_enqueue_fast(taskqueue_fast, &sc->sc_scan_task);
+	ipw_scan(sc);
 	IPW_UNLOCK(sc);
 }
 
@@ -2804,7 +2698,6 @@ ipw_set_channel(struct ieee80211com *ic)
 {
 	struct ifnet *ifp = ic->ic_ifp;
 	struct ipw_softc *sc = ifp->if_softc;
-	IPW_LOCK_DECL;
 
 	IPW_LOCK(sc);
 	if (ic->ic_opmode == IEEE80211_M_MONITOR) {
@@ -2816,13 +2709,13 @@ ipw_set_channel(struct ieee80211com *ic)
 }
 
 static void
-ipw_scan_curchan(struct ieee80211com *ic, unsigned long maxdwell)
+ipw_scan_curchan(struct ieee80211_scan_state *ss, unsigned long maxdwell)
 {
 	/* NB: all channels are scanned at once */
 }
 
 static void
-ipw_scan_mindwell(struct ieee80211com *ic)
+ipw_scan_mindwell(struct ieee80211_scan_state *ss)
 {
 	/* NB: don't try to abort scan; wait for firmware to finish */
 }
@@ -2832,7 +2725,6 @@ ipw_scan_end(struct ieee80211com *ic)
 {
 	struct ifnet *ifp = ic->ic_ifp;
 	struct ipw_softc *sc = ifp->if_softc;
-	IPW_LOCK_DECL;
 
 	IPW_LOCK(sc);
 	sc->flags &= ~IPW_FLAG_SCANNING;

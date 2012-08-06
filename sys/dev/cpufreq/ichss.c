@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/cpufreq/ichss.c,v 1.3 2010/03/05 03:48:39 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/cpufreq/ichss.c,v 1.4 2010/03/05 03:52:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Nate Lawson (SDG)
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/sys/dev/cpufreq/ichss.c,v 1.10.2.1 2008/06/27 03:49:22 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

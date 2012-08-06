@@ -30,10 +30,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic79xx_osm.h,v 1.4 2009-03-15 14:24:21 laffer1 Exp $
+ * $Id: aic79xx_osm.h,v 1.5 2012-08-06 01:19:11 laffer1 Exp $
  *
- * $MidnightBSD$
- * $FreeBSD: src/sys/dev/aic7xxx/aic79xx_osm.h,v 1.21 2007/04/17 06:26:24 scottl Exp $
+ * $MidnightBSD: src/sys/dev/aic7xxx/aic79xx_osm.h,v 1.4 2009/03/15 14:24:21 laffer1 Exp $
  */
 
 #ifndef _AIC79XX_FREEBSD_H_
@@ -50,6 +49,7 @@
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/queue.h>
+#include <sys/sysctl.h>
 
 #define AIC_PCI_CONFIG 1
 #include <machine/bus.h>
@@ -96,7 +96,8 @@
  * The number of dma segments supported.  The sequencer can handle any number
  * of physically contiguous S/G entrys.  To reduce the driver's memory
  * consumption, we limit the number supported to be sufficient to handle
- * the largest mapping supported by the kernel, MAXPHYS.  Assuming the
+ * the largest mapping supported by the legacy kernel MAXPHYS setting of
+ * 128K.  This can be increased once some testing is done.  Assuming the
  * transfer is as fragmented as possible and unaligned, this turns out to
  * be the number of paged sized transfers in MAXPHYS plus an extra element
  * to handle any unaligned residual.  The sequencer fetches SG elements
@@ -104,7 +105,8 @@
  * multiple of 16 which should align us on even the largest of cacheline
  * boundaries. 
  */
-#define AHD_NSEG (roundup(btoc(MAXPHYS) + 1, 16))
+#define AHD_MAXPHYS (128 * 1024)
+#define AHD_NSEG (roundup(btoc(AHD_MAXPHYS) + 1, 16))
 
 /* This driver supports target mode */
 #ifdef NOT_YET
@@ -251,6 +253,7 @@ void	  ahd_platform_free(struct ahd_softc *ahd);
 int	  ahd_map_int(struct ahd_softc *ahd);
 int	  ahd_attach(struct ahd_softc *);
 int	  ahd_softc_comp(struct ahd_softc *lahd, struct ahd_softc *rahd);
+void	  ahd_sysctl(struct ahd_softc *ahd);
 int	  ahd_detach(device_t);
 #define	ahd_platform_init(arg)
 

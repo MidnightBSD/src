@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/isa/pnp.c,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
 /*
  * Copyright (c) 1996, Sujal M. Patel
  * All rights reserved.
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isa/pnp.c,v 1.21 2005/09/28 15:01:58 marius Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -210,7 +210,7 @@ pnp_get_resource_info(u_char *buffer, int len)
 		for (j = 0; j < 100; j++) {
 			if ((inb((pnp_rd_port << 2) | 0x3)) & 0x1)
 				break;
-			DELAY(1);
+			DELAY(10);
 		}
 		if (j == 100) {
 			printf("PnP device failed to report resource data\n");
@@ -481,7 +481,7 @@ pnp_create_devices(device_t parent, pnp_id *p, int csn,
 		}
 		resinfo = resp;
 		resp += PNP_SRES_LEN(tag);
-		scanning -= PNP_SRES_LEN(tag);;
+		scanning -= PNP_SRES_LEN(tag);
 			
 		switch (PNP_SRES_NUM(tag)) {
 		case PNP_TAG_LOGICAL_DEVICE:
@@ -523,6 +523,8 @@ pnp_create_devices(device_t parent, pnp_id *p, int csn,
 			csnldn->ldn = ldn;
 			ISA_SET_CONFIG_CALLBACK(parent, dev, pnp_set_config,
 			    csnldn);
+			isa_set_pnp_csn(dev, csn);
+			isa_set_pnp_ldn(dev, ldn);
 			ldn++;
 			startres = resp;
 			break;
@@ -742,10 +744,10 @@ pnp_isolation_protocol(device_t parent)
 					printf("A Normal-ISA-PnP card (%s).\n",
 					    pnp_eisaformat(id.vendor_id));
 			}
+#endif
 			if (bootverbose)
 				printf("Reading PnP configuration for %s.\n",
 				    pnp_eisaformat(id.vendor_id));
-#endif
 			error = pnp_read_resources(&resources, &space, &len);
 			if (error)
 				break;

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/xfs_dir_leaf.c,v 1.2 2008/12/03 00:25:54 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2003,2005 Silicon Graphics, Inc.
  * All Rights Reserved.
@@ -2154,7 +2154,7 @@ xfs_dir_leaf_getdents_int(
 }
 
 /*
- * Format a dirent64 structure and copy it out the the user's buffer.
+ * Format a dirent64 structure and copy it out the user's buffer.
  */
 int
 xfs_dir_put_dirent64_direct(xfs_dir_put_args_t *pa)
@@ -2186,7 +2186,7 @@ xfs_dir_put_dirent64_direct(xfs_dir_put_args_t *pa)
 }
 
 /*
- * Format a dirent64 structure and copy it out the the user's buffer.
+ * Format a dirent64 structure and copy it out the user's buffer.
  */
 int
 xfs_dir_put_dirent64_uio(xfs_dir_put_args_t *pa)

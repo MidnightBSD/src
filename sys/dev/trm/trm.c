@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/trm/trm.c,v 1.33 2007/06/17 05:55:52 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  *	HISTORY:					
@@ -745,15 +745,6 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 			xpt_done(pccb);
 			break;
 		/*
-		 * (Re)Scan the SCSI Bus 
-	 	 * Rescan the given bus, or bus/target/lun
- 		 */
-		case XPT_SCAN_BUS:		    
-			TRM_DPRINTF(" XPT_SCAN_BUS \n");
-	    		pccb->ccb_h.status = CAM_REQ_INVALID;
-			xpt_done(pccb);
-			break;
-		/*
 		 * Get EDT entries matching the given pattern 
  		 */
 		case XPT_DEV_MATCH:	    	
@@ -816,15 +807,6 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 	    		pccb->ccb_h.status = CAM_REQ_INVALID;
 			xpt_done(pccb);
 			break;
-		/*
-		 * Scan Logical Unit 
-		 */
-		case XPT_SCAN_LUN:		   
-			TRM_DPRINTF(" XPT_SCAN_LUN \n");
-			pccb->ccb_h.status = CAM_REQ_INVALID;
-			xpt_done(pccb);
-			break;
-
 		/*
 		 * Get/Set transfer rate/width/disconnection/tag queueing 
 		 * settings 
@@ -2768,7 +2750,7 @@ trm_DoingSRB_Done(PACB pACB)
 			xpt_done(pccb);
 			psrb  = psrb2;
 		}
-		pdcb->GoingSRBCnt = 0;;
+		pdcb->GoingSRBCnt = 0;
 		pdcb->pGoingSRB = NULL;
 		pdcb = pdcb->pNextDCB;
 	}
@@ -3431,6 +3413,22 @@ trm_init(u_int16_t unit, device_t dev)
 	pACB->tag = rman_get_bustag(pACB->iores);
 	pACB->bsh = rman_get_bushandle(pACB->iores);
 	if (bus_dma_tag_create(
+	/*parent_dmat*/	bus_get_dma_tag(dev),
+	/*alignment*/	1,
+	/*boundary*/	0,
+	/*lowaddr*/	BUS_SPACE_MAXADDR,
+	/*highaddr*/	BUS_SPACE_MAXADDR,
+	/*filter*/	NULL, 
+	/*filterarg*/	NULL,
+	/*maxsize*/	BUS_SPACE_MAXSIZE_32BIT,
+	/*nsegments*/	BUS_SPACE_UNRESTRICTED,
+	/*maxsegsz*/	BUS_SPACE_MAXSIZE_32BIT,
+	/*flags*/	0,
+	/*lockfunc*/	NULL,
+	/*lockarg*/	NULL,
+	/* dmat */	&pACB->parent_dmat) != 0) 
+		goto bad;
+	if (bus_dma_tag_create(
 	/*parent_dmat*/	pACB->parent_dmat,
 	/*alignment*/	1,
 	/*boundary*/	0,
@@ -3474,7 +3472,9 @@ trm_init(u_int16_t unit, device_t dev)
 	    TRM_MAX_SRB_CNT * sizeof(TRM_SRB), trm_mapSRB, pACB, 
 	    /* flags */0);
 	/* Create, allocate, and map DMA buffers for autosense data */
-	if (bus_dma_tag_create(/*parent_dmat*/NULL, /*alignment*/1,
+	if (bus_dma_tag_create(
+	    /*parent_dmat*/pACB->parent_dmat,
+	    /*alignment*/1,
 	    /*boundary*/0,
 	    /*lowaddr*/BUS_SPACE_MAXADDR_32BIT,
 	    /*highaddr*/BUS_SPACE_MAXADDR,
@@ -3511,7 +3511,7 @@ trm_init(u_int16_t unit, device_t dev)
 	}
 	bzero(pACB->pFreeSRB, TRM_MAX_SRB_CNT * sizeof(TRM_SRB));
 	if (bus_dma_tag_create(                    
-		    /*parent_dmat*/NULL, 
+		    /*parent_dmat*/pACB->parent_dmat,
 		    /*alignment*/  1,
 		    /*boundary*/   0,
 		    /*lowaddr*/    BUS_SPACE_MAXADDR,
@@ -3562,6 +3562,8 @@ bad:
 		bus_dma_tag_destroy(pACB->srb_dmat);
 	if (pACB->buffer_dmat)
 		bus_dma_tag_destroy(pACB->buffer_dmat);
+	if (pACB->parent_dmat)
+		bus_dma_tag_destroy(pACB->parent_dmat);
 	return (NULL);
 }
 

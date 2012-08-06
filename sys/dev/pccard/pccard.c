@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pccard/pccard.c,v 1.119 2007/06/16 23:33:57 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,7 +88,7 @@ static int	pccard_ccr_read(struct pccard_function *pf, int ccr);
 static void	pccard_ccr_write(struct pccard_function *pf, int ccr, int val);
 static int	pccard_attach_card(device_t dev);
 static int	pccard_detach_card(device_t dev);
-static void	pccard_function_init(struct pccard_function *pf);
+static void	pccard_function_init(struct pccard_function *pf, int entry);
 static void	pccard_function_free(struct pccard_function *pf);
 static int	pccard_function_enable(struct pccard_function *pf);
 static void	pccard_function_disable(struct pccard_function *pf);
@@ -105,12 +105,14 @@ static int	pccard_get_resource(device_t dev, device_t child, int type,
 static void	pccard_delete_resource(device_t dev, device_t child, int type,
 		    int rid);
 static int	pccard_set_res_flags(device_t dev, device_t child, int type,
-		    int rid, uint32_t flags);
+		    int rid, u_long flags);
 static int	pccard_set_memory_offset(device_t dev, device_t child, int rid,
 		    uint32_t offset, uint32_t *deltap);
+static int	pccard_probe_and_attach_child(device_t dev, device_t child,
+		    struct pccard_function *pf);
 static void	pccard_probe_nomatch(device_t cbdev, device_t child);
 static int	pccard_read_ivar(device_t bus, device_t child, int which,
-		    u_char *result);
+		    uintptr_t *result);
 static void	pccard_driver_added(device_t dev, driver_t *driver);
 static struct resource *pccard_alloc_resource(device_t dev,
 		    device_t child, int type, int *rid, u_long start,
@@ -171,7 +173,7 @@ pccard_set_default_descr(device_t dev)
 		if (pccard_get_product(dev, &prod))
 			return (0);
 		str = malloc(100, M_DEVBUF, M_WAITOK);
-		snprintf(str, 100, "vendor=0x%x product=0x%x", vendor, prod);
+		snprintf(str, 100, "vendor=%#x product=%#x", vendor, prod);
 		device_set_desc_copy(dev, str);
 		free(str, M_DEVBUF);
 	}
@@ -237,23 +239,6 @@ pccard_attach_card(device_t dev)
 	STAILQ_FOREACH(pf, &sc->card.pf_head, pf_list) {
 		if (STAILQ_EMPTY(&pf->cfe_head))
 			continue;
-		/*
-		 * In NetBSD, the drivers are responsible for activating
-		 * each function of a card.  I think that in FreeBSD we
-		 * want to activate them enough for the usual bus_*_resource
-		 * routines will do the right thing.  This many mean a
-		 * departure from the current NetBSD model.
-		 *
-		 * This seems to work well in practice for most cards.
-		 * However, there are two cases that are problematic.
-		 * If a driver wishes to pick and chose which config
-		 * entry to use, then this method falls down.  These
-		 * are usually older cards.  In addition, there are
-		 * some cards that have multiple hardware units on the
-		 * cards, but presents only one CIS chain.  These cards
-		 * are combination cards, but only one of these units
-		 * can be on at a time.
-		 */
 		ivar = malloc(sizeof(struct pccard_ivar), M_DEVBUF,
 		    M_WAITOK | M_ZERO);
 		resource_list_init(&ivar->resources);
@@ -261,35 +246,79 @@ pccard_attach_card(device_t dev)
 		device_set_ivars(child, ivar);
 		ivar->pf = pf;
 		pf->dev = child;
-		/*
-		 * XXX We might want to move the next three lines into
-		 * XXX the pccard interface layer.  For the moment, this
-		 * XXX is OK, but some drivers want to pick the config
-		 * XXX entry to use as well as some address tweaks (mostly
-		 * XXX due to bugs in decode logic that makes some
-		 * XXX addresses illegal or broken).
-		 */
-		pccard_function_init(pf);
-		if (sc->sc_enabled_count == 0)
-			POWER_ENABLE_SOCKET(device_get_parent(dev), dev);
-		if (pccard_function_enable(pf) == 0 &&
-		    pccard_set_default_descr(child) == 0 &&
-		    device_probe_and_attach(child) == 0) {
-			DEVPRINTF((sc->dev, "function %d CCR at %d "
-			    "offset %x mask %x: "
-			    "%x %x %x %x, %x %x %x %x, %x\n",
-			    pf->number, pf->pf_ccr_window, pf->pf_ccr_offset,
-			    pf->ccr_mask, pccard_ccr_read(pf, 0x00),
-			pccard_ccr_read(pf, 0x02), pccard_ccr_read(pf, 0x04),
-			pccard_ccr_read(pf, 0x06), pccard_ccr_read(pf, 0x0A),
-			pccard_ccr_read(pf, 0x0C), pccard_ccr_read(pf, 0x0E),
-			pccard_ccr_read(pf, 0x10), pccard_ccr_read(pf, 0x12)));
-		} else {
-			if (pf->cfe != NULL)
-				pccard_function_disable(pf);
-		}
+		pccard_probe_and_attach_child(dev, child, pf);
 	}
 	return (0);
+}
+
+static int
+pccard_probe_and_attach_child(device_t dev, device_t child,
+    struct pccard_function *pf)
+{
+	struct pccard_softc *sc = PCCARD_SOFTC(dev);
+	int error;
+
+	/*
+	 * In NetBSD, the drivers are responsible for activating each
+	 * function of a card and selecting the config to use.  In
+	 * FreeBSD, all that's done automatically in the typical lazy
+	 * way we do device resoruce allocation (except we pick the
+	 * cfe up front).  This is the biggest depature from the
+	 * inherited NetBSD model, apart from the FreeBSD resource code.
+	 *
+	 * This seems to work well in practice for most cards.
+	 * However, there are two cases that are problematic.  If a
+	 * driver wishes to pick and chose which config entry to use,
+	 * then this method falls down.  These are usually older
+	 * cards.  In addition, there are some cards that have
+	 * multiple hardware units on the cards, but presents only one
+	 * CIS chain.  These cards are combination cards, but only one
+	 * of these units can be on at a time.
+	 *
+	 * To overcome this limitation, while preserving the basic
+	 * model, the probe routine can select a cfe and try to
+	 * activate it.  If that succeeds, then we'll keep track of
+	 * and let that information persist until we attach the card.
+	 * Probe routines that do this MUST return 0, and cannot
+	 * participate in the bidding process for a device.  This
+	 * seems harsh until you realize that if a probe routine knows
+	 * enough to override the cfe we pick, then chances are very
+	 * very good that it is the only driver that could hope to
+	 * cope with the card.  Bidding is for generic drivers, and
+	 * while some of them may also match, none of them will do
+	 * configuration override.
+	 */
+	error = device_probe(child);
+	if (error != 0)
+		goto out;
+	pccard_function_init(pf, -1);
+	if (sc->sc_enabled_count == 0)
+		POWER_ENABLE_SOCKET(device_get_parent(dev), dev);
+	if (pccard_function_enable(pf) == 0 &&
+	    pccard_set_default_descr(child) == 0 &&
+	    device_attach(child) == 0) {
+		DEVPRINTF((sc->dev, "function %d CCR at %d offset %#x "
+		    "mask %#x: %#x %#x %#x %#x, %#x %#x %#x %#x, %#x\n",
+		    pf->number, pf->pf_ccr_window, pf->pf_ccr_offset,
+		    pf->ccr_mask, pccard_ccr_read(pf, 0x00),
+		    pccard_ccr_read(pf, 0x02), pccard_ccr_read(pf, 0x04),
+		    pccard_ccr_read(pf, 0x06), pccard_ccr_read(pf, 0x0A),
+		    pccard_ccr_read(pf, 0x0C), pccard_ccr_read(pf, 0x0E),
+		    pccard_ccr_read(pf, 0x10), pccard_ccr_read(pf, 0x12)));
+		return (0);
+	}
+	error = ENXIO;
+out:;
+	/*
+	 * Probe may fail AND also try to select a cfe, if so, free
+	 * it.  This is how we do cfe override.  Or the attach fails.
+	 * Either way, we have to clean up.
+	 */
+	if (pf->cfe != NULL)
+		pccard_function_disable(pf);
+	pf->cfe = NULL;
+	pccard_function_free(pf);
+	return error;
 }
 
 static int
@@ -407,6 +436,25 @@ pccard_do_product_lookup(device_t bus, device_t dev,
 	return (NULL);
 }
 
+/**
+ * @brief pccard_select_cfe
+ *
+ * Select a cfe entry to use.  Should be called from the pccard's probe
+ * routine after it knows for sure that it wants this card.
+ *
+ * XXX I think we need to make this symbol be static, ala the kobj stuff
+ * we do for everything else.  This is a quick hack.
+ */
+int
+pccard_select_cfe(device_t dev, int entry)
+{
+	struct pccard_ivar *devi = PCCARD_IVAR(dev);
+	struct pccard_function *pf = devi->pf;
+	
+	pccard_function_init(pf, entry);
+	return (pf->cfe ? 0 : ENOMEM);
+}
+
 /*
  * Initialize a PCCARD function.  May be called as long as the function is
  * disabled.
@@ -418,7 +466,7 @@ pccard_do_product_lookup(device_t bus, device_t dev,
  * does this, so they need to be fixed too.
  */
 static void
-pccard_function_init(struct pccard_function *pf)
+pccard_function_init(struct pccard_function *pf, int entry)
 {
 	struct pccard_config_entry *cfe;
 	struct pccard_ivar *devi = PCCARD_IVAR(pf->dev);
@@ -433,10 +481,23 @@ pccard_function_init(struct pccard_function *pf)
 		printf("pccard_function_init: function is enabled");
 		return;
 	}
+
+	/*
+	 * Driver probe routine requested a specific entry already
+	 * that succeeded.
+	 */
+	if (pf->cfe != NULL)
+		return;
+
+	/*
+	 * walk the list of configuration entries until we find one that
+	 * we can allocate all the resources to.
+	 */
 	bus = device_get_parent(pf->dev);
-	/* Remember which configuration entry we are using. */
 	STAILQ_FOREACH(cfe, &pf->cfe_head, cfe_list) {
 		if (cfe->iftype != PCCARD_IFTYPE_IO)
+			continue;
+		if (entry != -1 && cfe->number != entry)
 			continue;
 		spaces = 0;
 		for (i = 0; i < cfe->num_iospace; i++) {
@@ -445,7 +506,7 @@ pccard_function_init(struct pccard_function *pf)
 				end = start + cfe->iospace[i].length - 1;
 			else
 				end = ~0UL;
-			DEVPRINTF((bus, "I/O rid %d start %lx end %lx\n",
+			DEVPRINTF((bus, "I/O rid %d start %#lx end %#lx\n",
 			    i, start, end));
 			rid = i;
 			len = cfe->iospace[i].length;
@@ -467,7 +528,7 @@ pccard_function_init(struct pccard_function *pf)
 				end = start + cfe->memspace[i].length - 1;
 			else
 				end = ~0UL;
-			DEVPRINTF((bus, "Memory rid %d start %lx end %lx\n",
+			DEVPRINTF((bus, "Memory rid %d start %#lx end %#lx\n",
 			    i, start, end));
 			rid = i;
 			len = cfe->memspace[i].length;
@@ -523,7 +584,7 @@ pccard_function_free(struct pccard_function *pf)
 	struct resource_list_entry *rle;
 
 	if (pf->pf_flags & PFF_ENABLED) {
-		printf("pccard_function_init: function is enabled");
+		printf("pccard_function_free: function is enabled");
 		return;
 	}
 
@@ -533,7 +594,7 @@ pccard_function_free(struct pccard_function *pf)
 				device_printf(pf->sc->dev,
 				    "function_free: Resource still owned by "
 				    "child, oops. "
-				    "(type=%d, rid=%d, addr=%lx)\n",
+				    "(type=%d, rid=%d, addr=%#lx)\n",
 				    rle->type, rle->rid,
 				    rman_get_start(rle->res));
 			BUS_RELEASE_RESOURCE(device_get_parent(pf->sc->dev),
@@ -593,18 +654,9 @@ pccard_function_enable(struct pccard_function *pf)
 		return (ENOMEM);
 	}
 
-	/*
-	 * Increase the reference count on the socket, enabling power, if
-	 * necessary.
-	 */
-	pf->sc->sc_enabled_count++;
-
-	if (pf->pf_flags & PFF_ENABLED) {
-		/*
-		 * Don't do anything if we're already enabled.
-		 */
+	if (pf->pf_flags & PFF_ENABLED)
 		return (0);
-	}
+	pf->sc->sc_enabled_count++;
 
 	/*
 	 * it's possible for different functions' CCRs to be in the same
@@ -637,7 +689,7 @@ pccard_function_enable(struct pccard_function *pf)
 		    &pf->ccr_rid, 0, ~0, PCCARD_MEM_PAGE_SIZE, RF_ACTIVE);
 		if (!pf->ccr_res)
 			goto bad;
-		DEVPRINTF((dev, "ccr_res == %lx-%lx, base=%x\n",
+		DEVPRINTF((dev, "ccr_res == %#lx-%#lx, base=%#x\n",
 		    rman_get_start(pf->ccr_res), rman_get_end(pf->ccr_res),
 		    pf->ccr_base));
 		CARD_SET_RES_FLAGS(device_get_parent(dev), dev, SYS_RES_MEMORY,
@@ -674,8 +726,8 @@ pccard_function_enable(struct pccard_function *pf)
 	if (pccard_debug) {
 		STAILQ_FOREACH(tmp, &pf->sc->card.pf_head, pf_list) {
 			device_printf(tmp->sc->dev,
-			    "function %d CCR at %d offset %x: "
-			    "%x %x %x %x, %x %x %x %x, %x\n",
+			    "function %d CCR at %d offset %#x: "
+			    "%#x %#x %#x %#x, %#x %#x %#x %#x, %#x\n",
 			    tmp->number, tmp->pf_ccr_window,
 			    tmp->pf_ccr_offset,
 			    pccard_ccr_read(tmp, 0x00),
@@ -714,13 +766,8 @@ pccard_function_disable(struct pccard_function *pf)
 	if (pf->cfe == NULL)
 		panic("pccard_function_disable: function not initialized");
 
-	if ((pf->pf_flags & PFF_ENABLED) == 0) {
-		/*
-		 * Don't do anything if we're already disabled.
-		 */
+	if ((pf->pf_flags & PFF_ENABLED) == 0)
 		return;
-	}
-
 	if (pf->intr_handler != NULL) {
 		struct pccard_ivar *devi = PCCARD_IVAR(pf->dev);
 		struct resource_list_entry *rle =
@@ -925,7 +972,7 @@ pccard_delete_resource(device_t dev, device_t child, int type, int rid)
 
 static int
 pccard_set_res_flags(device_t dev, device_t child, int type, int rid,
-    uint32_t flags)
+    u_long flags)
 {
 	return (CARD_SET_RES_FLAGS(device_get_parent(dev), child, type,
 	    rid, flags));
@@ -1008,7 +1055,7 @@ pccard_child_pnpinfo_str(device_t bus, device_t child, char *buf,
 }
 
 static int
-pccard_read_ivar(device_t bus, device_t child, int which, u_char *result)
+pccard_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 {
 	struct pccard_ivar *devi = PCCARD_IVAR(child);
 	struct pccard_function *pf = devi->pf;
@@ -1019,6 +1066,10 @@ pccard_read_ivar(device_t bus, device_t child, int which, u_char *result)
 	switch (which) {
 	default:
 		return (EINVAL);
+	case PCCARD_IVAR_FUNCE_DISK:
+		*(uint16_t *)result = pf->pf_funce_disk_interface |
+		    (pf->pf_funce_disk_power << 8);
+		break;
 	case PCCARD_IVAR_ETHADDR:
 		bcopy(pf->pf_funce_lan_nid, result, ETHER_ADDR_LEN);
 		break;
@@ -1066,20 +1117,7 @@ pccard_driver_added(device_t dev, driver_t *driver)
 		child = pf->dev;
 		if (device_get_state(child) != DS_NOTPRESENT)
 			continue;
-		if (pccard_function_enable(pf) == 0 &&
-		    device_probe_and_attach(child) == 0) {
-			DEVPRINTF((sc->dev, "function %d CCR at %d "
-			    "offset %x: %x %x %x %x, %x %x %x %x, %x\n",
-			    pf->number, pf->pf_ccr_window, pf->pf_ccr_offset,
-			    pccard_ccr_read(pf, 0x00),
-			pccard_ccr_read(pf, 0x02), pccard_ccr_read(pf, 0x04),
-			pccard_ccr_read(pf, 0x06), pccard_ccr_read(pf, 0x0A),
-			pccard_ccr_read(pf, 0x0C), pccard_ccr_read(pf, 0x0E),
-			pccard_ccr_read(pf, 0x10), pccard_ccr_read(pf, 0x12)));
-		} else {
-			if (pf->cfe != NULL)
-				pccard_function_disable(pf);
-		}
+		pccard_probe_and_attach_child(dev, child, pf);
 	}
 	return;
 }
@@ -1151,7 +1189,7 @@ pccard_release_resource(device_t dev, device_t child, int type, int rid,
 
 	if (!rle) {
 		device_printf(dev, "Allocated resource not found, "
-		    "%d %x %lx %lx\n",
+		    "%d %#x %#lx %#lx\n",
 		    type, rid, rman_get_start(r), rman_get_size(r));
 		return ENOENT;
 	}
@@ -1369,8 +1407,8 @@ pccard_ccr_read_impl(device_t brdev, device_t child, uint32_t offset,
 	struct pccard_ivar *devi = PCCARD_IVAR(child);
 
 	*val = pccard_ccr_read(devi->pf, offset);
-	device_printf(child, "ccr_read of %#x (%#x) is %#x\n", offset,
-	  devi->pf->pf_ccr_offset, *val);
+	DEVPRINTF((child, "ccr_read of %#x (%#x) is %#x\n", offset,
+	  devi->pf->pf_ccr_offset, *val));
 	return 0;
 }
 
@@ -1385,8 +1423,8 @@ pccard_ccr_write_impl(device_t brdev, device_t child, uint32_t offset,
 	 * Can't use pccard_ccr_write since client drivers may access
 	 * registers not contained in the 'mask' if they are non-standard.
 	 */
-	device_printf(child, "ccr_write of %#x to %#x (%#x)\n", val, offset,
-	  devi->pf->pf_ccr_offset);
+	DEVPRINTF((child, "ccr_write of %#x to %#x (%#x)\n", val, offset,
+	  devi->pf->pf_ccr_offset));
 	bus_space_write_1(pf->pf_ccrt, pf->pf_ccrh, pf->pf_ccr_offset + offset,
 	    val);
 	return 0;

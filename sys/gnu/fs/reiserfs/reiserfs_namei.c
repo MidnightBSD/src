@@ -1,11 +1,11 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/reiserfs/reiserfs_namei.c,v 1.2 2008/12/03 00:25:53 laffer1 Exp $ */
 /*-
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_namei.c,v 1.4 2007/06/10 04:54:42 mjacob Exp $
+ * $FreeBSD$
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -80,10 +80,10 @@ reiserfs_lookup(struct vop_cachedlookup_args *ap)
 		pdp = vdp;
 		if (flags & ISDOTDOT) {
 			saved_ino = (struct cpu_key *)&(de.de_dir_id);
-			VOP_UNLOCK(pdp, 0, td);
+			VOP_UNLOCK(pdp, 0);
 			error = reiserfs_iget(vdp->v_mount,
 			    saved_ino, &vp, td);
-			vn_lock(pdp, LK_EXCLUSIVE | LK_RETRY, td);
+			vn_lock(pdp, LK_EXCLUSIVE | LK_RETRY);
 			if (error != 0)
 				return (error);
 			*vpp = vp;

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/advansys/advansys.h,v 1.2 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Generic driver definitions and exported functions for the Advanced
  * Systems Inc. SCSI controllers
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  * All rights reserved.
  *
- * $FreeBSD: src/sys/dev/advansys/advansys.h,v 1.4 2005/01/06 01:42:24 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _ADVANSYS_H_

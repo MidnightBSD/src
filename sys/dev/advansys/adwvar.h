@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/advansys/adwvar.h,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * Generic driver definitions and exported functions for the Advanced
  * Systems Inc. Second Generation SCSI controllers
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  * All rights reserved.
  *
- * $FreeBSD: src/sys/dev/advansys/adwvar.h,v 1.5 2005/01/06 01:42:24 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _ADWVAR_H_

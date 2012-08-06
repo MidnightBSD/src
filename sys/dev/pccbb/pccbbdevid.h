@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/pccbb/pccbbdevid.h,v 1.2 2008/12/02 02:47:53 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001-2004 M. Warner Losh. All rights reserved.
  *
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pccbb/pccbbdevid.h,v 1.22 2005/11/08 15:42:12 imp Exp $
+ * $FreeBSD$
  */
 
 /* Vendor/Device IDs */

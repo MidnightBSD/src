@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/isa/isahint.c,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isa/isahint.c,v 1.18 2006/07/08 16:50:10 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,10 +34,11 @@ __FBSDID("$FreeBSD: src/sys/isa/isahint.c,v 1.18 2006/07/08 16:50:10 imp Exp $")
 #include <sys/bus.h>
 #include <sys/module.h>
 #include <isa/isavar.h>
+#include <isa/isa_common.h>
 #include <machine/resource.h>
 
-static void
-isahint_add_device(device_t parent, const char *name, int unit)
+void
+isa_hinted_child(device_t parent, const char *name, int unit)
 {
 	device_t	child;
 	int		sensitive, start, count;
@@ -83,43 +84,98 @@ isahint_add_device(device_t parent, const char *name, int unit)
 	isa_set_configattr(child, (isa_get_configattr(child)|ISACFGATTR_HINTS));
 }
 
-static void
-isahint_identify(driver_t *driver, device_t parent)
+static int
+isa_match_resource_hint(device_t dev, int type, long value)
 {
-	int i;
-	static char buf[] = "isaXXX";
-	const char *dname;
-	int dunit;
+	struct isa_device* idev = DEVTOISA(dev);
+	struct resource_list *rl = &idev->id_resources;
+	struct resource_list_entry *rle;
 
-	/*
-	 * Add all devices configured to be attached to parent.
-	 */
-	sprintf(buf, "isa%d", device_get_unit(parent));
-	i = 0;
-	while (resource_find_match(&i, &dname, &dunit, "at", buf) == 0)
-		isahint_add_device(parent, dname, dunit);
-
-	/*
-	 * and isa?
-	 */
-	i = 0;
-	while (resource_find_match(&i, &dname, &dunit, "at", "isa") == 0)
-		isahint_add_device(parent, dname, dunit);
+	STAILQ_FOREACH(rle, rl, link) {
+		if (rle->type != type)
+			continue;
+		if (rle->start <= value && rle->end >= value)
+			return (1);
+	}
+	return (0);
 }
 
-static device_method_t isahint_methods[] = {
-	/* Device interface */
-	DEVMETHOD(device_identify,	isahint_identify),
+void
+isa_hint_device_unit(device_t bus, device_t child, const char *name, int *unitp)
+{
+	const char *s;
+	long value;
+	int line, matches, unit;
 
-	{ 0, 0 }
-};
+	line = 0;
+	for (;;) {
+		if (resource_find_dev(&line, name, &unit, "at", NULL) != 0)
+			break;
 
-static driver_t isahint_driver = {
-	"hint",
-	isahint_methods,
-	1,			/* no softc */
-};
+		/* Must have an "at" for isa. */
+		resource_string_value(name, unit, "at", &s);
+		if (!(strcmp(s, device_get_nameunit(bus)) == 0 ||
+		    strcmp(s, device_get_name(bus)) == 0))
+			continue;
 
-static devclass_t hint_devclass;
+		/*
+		 * Check for matching resources.  We must have at
+		 * least one match.  Since I/O and memory resources
+		 * cannot be shared, if we get a match on either of
+		 * those, ignore any mismatches in IRQs or DRQs.
+		 *
+		 * XXX: We may want to revisit this to be more lenient
+		 * and wire as long as it gets one match.
+		 */
+		matches = 0;
+		if (resource_long_value(name, unit, "port", &value) == 0) {
+			/*
+			 * Floppy drive controllers are notorious for
+			 * having a wide variety of resources not all
+			 * of which include the first port that is
+			 * specified by the hint (typically 0x3f0)
+			 * (see the comment above
+			 * fdc_isa_alloc_resources() in fdc_isa.c).
+			 * However, they do all seem to include port +
+			 * 2 (e.g. 0x3f2) so for a floppy device, look
+			 * for 'value + 2' in the port resources
+			 * instead of the hint value.
+			 */
+			if (strcmp(name, "fdc") == 0)
+				value += 2;
+			if (isa_match_resource_hint(child, SYS_RES_IOPORT,
+			    value))
+				matches++;
+			else
+				continue;
+		}
+		if (resource_long_value(name, unit, "maddr", &value) == 0) {
+			if (isa_match_resource_hint(child, SYS_RES_MEMORY,
+			    value))
+				matches++;
+			else
+				continue;
+		}
+		if (matches > 0)
+			goto matched;
+		if (resource_long_value(name, unit, "irq", &value) == 0) {
+			if (isa_match_resource_hint(child, SYS_RES_IRQ, value))
+				matches++;
+			else
+				continue;
+		}
+		if (resource_long_value(name, unit, "drq", &value) == 0) {
+			if (isa_match_resource_hint(child, SYS_RES_DRQ, value))
+				matches++;
+			else
+				continue;
+		}
 
-DRIVER_MODULE(isahint, isa, isahint_driver, hint_devclass, 0, 0);
+	matched:
+		if (matches > 0) {
+			/* We have a winner! */
+			*unitp = unit;
+			break;
+		}
+	}
+}

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/advansys/advlib.h,v 1.2 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Definitions for low level routines and data structures
  * for the Advanced Systems Inc. SCSI controllers chips.
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/advansys/advlib.h,v 1.13 2007/06/17 05:55:46 scottl Exp $
+ * $FreeBSD$
  */
 /*-
  * Ported from:
@@ -58,6 +58,8 @@ typedef u_int8_t target_bit_vector;
 #define ADV_SCSI_ID_BITS	3
 #define ADV_MAX_TID		7
 #define ADV_MAX_LUN		7
+
+#define ADV_MAXPHYS		(128 * 1024)
 
 /* Enumeration of board types */
 typedef enum {

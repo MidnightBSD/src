@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/support/debug.h,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
 /*
  * Copyright (c) 2000 Silicon Graphics, Inc.  All Rights Reserved.
  * 
@@ -76,6 +76,5 @@ extern int get_thread_id(void);
 #endif
 
 #define ASSERT_ALWAYS(EX)  ((EX)?((void)0):assfail(#EX, __FILE__, __LINE__))
-#define	debug_stop_all_cpus(param)	/* param is "cpumask_t *" */
 
 #endif  /* __XFS_SUPPORT_DEBUG_H__ */

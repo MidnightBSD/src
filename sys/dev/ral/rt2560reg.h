@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/ral/rt2560reg.h,v 1.2 2007/06/11 03:36:52 sam Exp $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -208,6 +208,8 @@ struct rt2560_tx_desc {
 #define RT2560_TX_CIPHER_TKIP		(3 << 29)
 #define RT2560_TX_CIPHER_AES		(4 << 29)
 
+#define RT2560_TX_RETRYCNT(v)	(((v) >> 5) & 0x7)
+
 	uint32_t	physaddr;
 	uint16_t	wme;
 #define RT2560_LOGCWMAX(x)	(((x) & 0xf) << 12)
@@ -333,8 +335,8 @@ struct rt2560_rx_desc {
 	{ RT2560_TXCSR1,      0x07614562 },	\
 	{ RT2560_ARSP_PLCP_0, 0x8c8d8b8a },	\
 	{ RT2560_ACKPCTCSR,   0x7038140a },	\
-	{ RT2560_ARTCSR1,     0x1d21252d },	\
-	{ RT2560_ARTCSR2,     0x1919191d },	\
+	{ RT2560_ARTCSR1,     0x21212929 },	\
+	{ RT2560_ARTCSR2,     0x1d1d1d1d },	\
 	{ RT2560_RXCSR0,      0xffffffff },	\
 	{ RT2560_RXCSR3,      0xb3aab3af },	\
 	{ RT2560_PCICSR,      0x000003b8 },	\

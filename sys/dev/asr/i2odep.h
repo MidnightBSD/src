@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/asr/i2odep.h,v 1.2 2008/12/02 02:24:33 laffer1 Exp $ */
 /*-
  ****************************************************************************
  *
@@ -47,7 +47,7 @@
  * become a "Registered Developer" of the I2O SIG. This can be done by calling
  * 415-750-8352 in the US, or via http://www.i2osig.org.
  *
- * $FreeBSD: src/sys/dev/asr/i2odep.h,v 1.9 2006/02/04 08:01:49 scottl Exp $
+ * $FreeBSD$
  *
  **************************************************************************/
 

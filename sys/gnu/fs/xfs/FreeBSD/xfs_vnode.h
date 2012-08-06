@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_vnode.h,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2003 Silicon Graphics, Inc.  All Rights Reserved.
  *
@@ -183,7 +183,7 @@ typedef int	(*xfs_vop_open_t)(bhv_desc_t *, struct cred *);
 typedef ssize_t (*xfs_vop_read_t)(bhv_desc_t *, uio_t *, int, struct cred *);
 typedef ssize_t (*xfs_vop_write_t)(bhv_desc_t *, uio_t *, int, struct cred *);
 typedef int	(*xfs_vop_ioctl_t)(bhv_desc_t *, struct inode *, struct file *,
-				int, unsigned int, void *);
+				int, u_long, void *);
 typedef int	(*xfs_vop_getattr_t)(bhv_desc_t *, struct xfs_vattr *, int,
 				struct cred *);
 typedef int	(*xfs_vop_setattr_t)(bhv_desc_t *, struct xfs_vattr *, int,
@@ -293,8 +293,8 @@ typedef struct xfs_vnodeops {
 	rv = _VOP_(vop_getattr, vp)((vp)->v_fbhv, vap, f, cr)
 #define	XVOP_SETATTR(vp, vap, f, cr, rv)				\
 	rv = _VOP_(vop_setattr, vp)((vp)->v_fbhv, vap, f, cr)
-#define	XVOP_ACCESS(vp, mode, cr, rv)					\
-	rv = _VOP_(vop_access, vp)((vp)->v_fbhv, mode, cr)
+#define	XVOP_ACCESS(vp, accmode, cr, rv)					\
+	rv = _VOP_(vop_access, vp)((vp)->v_fbhv, accmode, cr)
 #define	XVOP_LOOKUP(vp,d,vpp,f,rdir,cr,rv)				\
 	rv = _VOP_(vop_lookup, vp)((vp)->v_fbhv,d,vpp,f,rdir,cr)
 #define XVOP_CREATE(dvp,d,vap,vpp,cr,rv)					\
@@ -490,7 +490,7 @@ typedef struct xfs_vattr {
  * Check whether mandatory file locking is enabled.
  */
 #define MANDLOCK(vp, mode)	\
-	((vp)->v_vnode->v_type == VREG && ((mode) & (VSGID|(VEXEC>>3))) == VSGID)
+	((vp)->v_vnode->v_type == VREG && ((mode) & (S_ISGID|(VEXEC>>3))) == S_ISGID)
 
 extern void		vn_init(void);
 extern int		vn_wait(struct xfs_vnode *);

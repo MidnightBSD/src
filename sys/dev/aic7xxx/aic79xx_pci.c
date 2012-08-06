@@ -38,7 +38,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic79xx_pci.c,v 1.2 2012-04-12 01:27:52 laffer1 Exp $
+ * $Id: aic79xx_pci.c,v 1.3 2012-08-06 01:19:11 laffer1 Exp $
  */
 
 #ifdef __linux__
@@ -46,7 +46,7 @@
 #include "aic79xx_inline.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic79xx_pci.c,v 1.26 2007/04/17 06:26:24 scottl Exp $");
+__FBSDID("$FreeBSD$");
 #include <dev/aic7xxx/aic79xx_osm.h>
 #include <dev/aic7xxx/aic79xx_inline.h>
 #endif
@@ -353,7 +353,7 @@ ahd_pci_config(struct ahd_softc *ahd, struct ahd_pci_identity *entry)
 	 * Find the PCI-X cap pointer.  If we don't find it,
 	 * pcix_ptr will be 0.
 	 */
-	pci_find_extcap(ahd->dev_softc, PCIY_PCIX, &ahd->pcix_ptr);
+	pci_find_cap(ahd->dev_softc, PCIY_PCIX, &ahd->pcix_ptr);
 	devconfig = aic_pci_read_config(ahd->dev_softc, DEVCONFIG, /*bytes*/4);
 	if ((devconfig & PCIXINITPAT) == PCIXINIT_PCI33_66) {
 		ahd->chip |= AHD_PCI;

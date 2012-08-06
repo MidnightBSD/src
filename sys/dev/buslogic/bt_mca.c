@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/buslogic/bt_mca.c,v 1.2 2008/12/02 02:24:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/buslogic/bt_mca.c,v 1.11 2006/12/11 18:28:30 mjacob Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Written using the bt_isa/bt_pci code as a reference.

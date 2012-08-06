@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/an/if_an_pccard.c,v 1.2 2008/12/02 02:24:31 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/an/if_an_pccard.c,v 1.31 2007/02/23 12:18:31 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -142,11 +142,9 @@ an_pccard_attach(device_t dev)
 
 	an_alloc_irq(dev, sc->irq_rid, 0);
 
-	sc->an_bhandle = rman_get_bushandle(sc->port_res);
-	sc->an_btag = rman_get_bustag(sc->port_res);
 	sc->an_dev = dev;
 
-	error = an_attach(sc, device_get_unit(dev), flags);
+	error = an_attach(sc, flags);
 	if (error)
 		goto fail;
 	

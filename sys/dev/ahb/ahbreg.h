@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ahb/ahbreg.h,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * Hardware structure definitions for the Adaptec 174X CAM SCSI device driver.
  *
@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ahb/ahbreg.h,v 1.6 2007/06/17 05:55:46 scottl Exp $
+ * $FreeBSD$
  */
 
 /* Resource Constatns */

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/sym/sym_fw.h,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  *  Device driver optimized for the Symbios/LSI 53C896/53C895A/53C1010 
  *  PCI-SCSI controllers.
@@ -56,7 +56,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/sym/sym_fw.h,v 1.5 2005/01/06 01:43:24 imp Exp $ */
+/* $FreeBSD$ */
 
 #ifndef	SYM_FW_H
 #define	SYM_FW_H
@@ -136,17 +136,17 @@ struct sym_hcb;
  *  Generic structure that defines a firmware.
  */ 
 struct sym_fw {
-	char	*name;		/* Name we want to print out	*/
-	u32	*a_base;	/* Pointer to script A template	*/
+	const char	*name;	/* Name we want to print out	*/
+	const u32	*a_base;/* Pointer to script A template	*/
 	int	a_size;		/* Size of script A		*/
-	struct	sym_fwa_ofs
+	const struct	sym_fwa_ofs
 		*a_ofs;		/* Useful offsets in script A	*/
-	u32	*b_base;	/* Pointer to script B template	*/
+	const u32	*b_base;/* Pointer to script B template	*/
 	int	b_size;		/* Size of script B		*/
-	struct	sym_fwb_ofs
+	const struct	sym_fwb_ofs
 		*b_ofs;		/* Useful offsets in script B	*/
 	/* Setup and patch methods for this firmware */
-	void	(*setup)(struct sym_hcb *, struct sym_fw *);
+	void	(*setup)(struct sym_hcb *, const struct sym_fw *);
 	void	(*patch)(struct sym_hcb *);
 };
 
@@ -156,8 +156,8 @@ struct sym_fw {
 #define SYM_FW_ENTRY(fw, name)					\
 {								\
 	name,							\
-	(u32 *) &fw##a_scr, sizeof(fw##a_scr), &fw##a_ofs,	\
-	(u32 *) &fw##b_scr, sizeof(fw##b_scr), &fw##b_ofs,	\
+	(const u32 *) &fw##a_scr, sizeof(fw##a_scr), &fw##a_ofs,\
+	(const u32 *) &fw##b_scr, sizeof(fw##b_scr), &fw##b_ofs,\
 	fw##_setup, fw##_patch					\
 }
 

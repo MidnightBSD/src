@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/cs/if_cs.c,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997,1998 Maxim Bolotin and Oleg Sharoiko.
  * All rights reserved.
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cs/if_cs.c,v 1.45 2006/09/15 15:16:10 glebius Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  *
@@ -74,11 +74,13 @@ __FBSDID("$FreeBSD: src/sys/dev/cs/if_cs.c,v 1.45 2006/09/15 15:16:10 glebius Ex
 #endif
 
 static void	cs_init(void *);
+static void	cs_init_locked(struct cs_softc *);
 static int	cs_ioctl(struct ifnet *, u_long, caddr_t);
 static void	cs_start(struct ifnet *);
+static void	cs_start_locked(struct ifnet *);
 static void	cs_stop(struct cs_softc *);
 static void	cs_reset(struct cs_softc *);
-static void	cs_watchdog(struct ifnet *);
+static void	cs_watchdog(void *);
 
 static int	cs_mediachange(struct ifnet *);
 static void	cs_mediastatus(struct ifnet *, struct ifmediareq *);
@@ -93,22 +95,16 @@ static int	get_eeprom_data(struct cs_softc *sc, int, int, uint16_t *);
 static int	get_eeprom_cksum(int, int, uint16_t *);
 static int	wait_eeprom_ready( struct cs_softc *);
 static void	control_dc_dc( struct cs_softc *, int );
-static int	send_test_pkt( struct cs_softc * );
 static int	enable_tp(struct cs_softc *);
 static int	enable_aui(struct cs_softc *);
 static int	enable_bnc(struct cs_softc *);
 static int      cs_duplex_auto(struct cs_softc *);
 
 devclass_t cs_devclass;
+driver_intr_t	csintr;
 
 /* sysctl vars */
 SYSCTL_NODE(_hw, OID_AUTO, cs, CTLFLAG_RD, 0, "cs device parameters");
-
-int	cs_debug = 0;
-TUNABLE_INT("hw.cs.debug", &cs_debug);
-SYSCTL_INT(_hw_cs, OID_AUTO, debug, CTLFLAG_RW,
-    &cs_debug, 0,
-  "cs debug");
 
 int	cs_ignore_cksum_failure = 0;
 TUNABLE_INT("hw.cs.ignore_checksum_failure", &cs_ignore_cksum_failure);
@@ -120,15 +116,24 @@ static int	cs_recv_delay = 570;
 TUNABLE_INT("hw.cs.recv_delay", &cs_recv_delay);
 SYSCTL_INT(_hw_cs, OID_AUTO, recv_delay, CTLFLAG_RW, &cs_recv_delay, 570, "");
 
+static int cs8900_eeint2irq[16] = {
+	 10,  11,  12,   5, 255, 255, 255, 255,
+	255, 255, 255, 255, 255, 255, 255, 255 
+};
+
+static int cs8900_irq2eeint[16] = {
+	255, 255, 255, 255, 255,   3, 255, 255,
+	255,   0,   1,   2, 255, 255, 255, 255
+};
+
 static int
 get_eeprom_data(struct cs_softc *sc, int off, int len, uint16_t *buffer)
 {
 	int i;
 
 #ifdef CS_DEBUG
-	printf(CS_NAME":EEPROM data from %x for %x:\n", off, len);
+	device_printf(sc->dev, "EEPROM data from %x for %x:\n", off, len);
 #endif
-
 	for (i=0; i < len; i++) {
 		if (wait_eeprom_ready(sc) < 0)
 			return (-1);
@@ -139,8 +144,7 @@ get_eeprom_data(struct cs_softc *sc, int off, int len, uint16_t *buffer)
 		buffer[i] = cs_readreg(sc, PP_EEData);
 
 #ifdef CS_DEBUG
-		printf("%02x %02x ",(unsigned char)buffer[i],
-		    (unsigned char)buffer[i] >> 8);
+		printf("%04x ",buffer[i]);
 #endif
 	}
 
@@ -159,20 +163,34 @@ get_eeprom_cksum(int off, int len, uint16_t *buffer)
 	for (i = 0; i < len; i++)
 		cksum += buffer[i];
 	cksum &= 0xffff;
-	if (cksum==0)
+	if (cksum == 0 || cs_ignore_cksum_failure)
 		return (0);
-	if (cs_ignore_cksum_failure) {
-		printf(CS_NAME": checksum mismatch, ignoring\n");
-		return (0);
-	}
 	return (-1);
 }
 
 static int
 wait_eeprom_ready(struct cs_softc *sc)
 {
-	DELAY(30000);	/* XXX should we do some checks here ? */
-	return (0);
+	int i;
+
+	/*
+	 * From the CS8900A datasheet, section 3.5.2:
+	 * "Before issuing any command to the EEPROM, the host must wait
+	 * for the SIBUSY bit (Register 16, SelfST, bit 8) to clear.  After
+	 * each command has been issued, the host must wait again for SIBUSY
+	 * to clear."
+	 *
+	 * Before we issue the command, we should be !busy, so that will
+	 * be fast.  The datasheet suggests that clock out from the part
+	 * per word will be on the order of 25us, which is consistant with
+	 * the 1MHz serial clock and 16bits...  We should never hit 100,
+	 * let alone 15,000 here.  The original code did an unconditional
+	 * 30ms DELAY here.  Bad Kharma.  cs_readreg takes ~2us.
+	 */
+	for (i = 0; i < 15000; i++)	/* 30ms max */
+		if (!(cs_readreg(sc, PP_SelfST) & SI_BUSY))
+			return (0);
+	return (1);
 }
 
 static void
@@ -185,8 +203,7 @@ control_dc_dc(struct cs_softc *sc, int on_not_off)
 	else
 		self_control &= ~HCB1;
 	cs_writereg(sc, PP_SelfCTL, self_control);
-
-	DELAY(500000);
+	DELAY(500000);	/* Bad! */
 }
 
 
@@ -198,7 +215,7 @@ cs_duplex_auto(struct cs_softc *sc)
 	cs_writereg(sc, PP_AutoNegCTL,
 	    RE_NEG_NOW | ALLOW_FDX | AUTO_NEG_ENABLE);
 	for (i=0; cs_readreg(sc, PP_AutoNegST) & AUTO_NEG_BUSY; i++) {
-		if (i > 40000) {
+		if (i > 4000) {
 			device_printf(sc->dev,
 			    "full/half duplex auto negotiation timeout\n");
 			error = ETIMEDOUT;
@@ -206,7 +223,6 @@ cs_duplex_auto(struct cs_softc *sc)
 		}
 		DELAY(1000);
 	}
-	DELAY(1000000);
 	return (error);
 }
 
@@ -216,91 +232,26 @@ enable_tp(struct cs_softc *sc)
 
 	cs_writereg(sc, PP_LineCTL, sc->line_ctl & ~AUI_ONLY);
 	control_dc_dc(sc, 0);
-	DELAY( 150000 );
-
-	if ((cs_readreg(sc, PP_LineST) & LINK_OK)==0) {
-		device_printf(sc->dev, "failed to enable TP\n");
-		return (EINVAL);
-	}
-
 	return (0);
 }
 
-/*
- * XXX This was rewritten from Linux driver without any tests.
- */
-static int
-send_test_pkt(struct cs_softc *sc)
-{
-	char test_packet[] = { 0,0,0,0,0,0, 0,0,0,0,0,0,
-				0, 46,  /* A 46 in network order */
-				0, 0,   /* DSAP=0 & SSAP=0 fields */
-				0xf3, 0 /* Control (Test Req + P bit set) */ };
-	int i;
-	u_char ether_address_backup[ETHER_ADDR_LEN];
-
-	for (i = 0; i < ETHER_ADDR_LEN; i++)
-		ether_address_backup[i] = sc->enaddr[i];
-
-	cs_writereg(sc, PP_LineCTL, cs_readreg(sc, PP_LineCTL) | SERIAL_TX_ON);
-	bcopy(test_packet, sc->enaddr, ETHER_ADDR_LEN);
-	bcopy(test_packet+ETHER_ADDR_LEN, 
-	    sc->enaddr, ETHER_ADDR_LEN);
-	cs_outw(sc, TX_CMD_PORT, sc->send_cmd);
-	cs_outw(sc, TX_LEN_PORT, sizeof(test_packet));
-
-	/* Wait for chip to allocate memory */
-	DELAY(50000);
-	if (!(cs_readreg(sc, PP_BusST) & READY_FOR_TX_NOW)) {
-		for (i = 0; i < ETHER_ADDR_LEN; i++)
-			sc->enaddr[i] = ether_address_backup[i];
-		return (0);
-	}
-
-	outsw(sc->nic_addr + TX_FRAME_PORT, test_packet, sizeof(test_packet));
-
-	DELAY(30000);
-
-	for (i = 0; i < ETHER_ADDR_LEN; i++)
-		sc->enaddr[i] = ether_address_backup[i];
-	if ((cs_readreg(sc, PP_TxEvent) & TX_SEND_OK_BITS) == TX_OK)
-		return (1);
-	return (0);
-}
-
-/*
- * XXX This was rewritten from Linux driver without any tests.
- */
 static int
 enable_aui(struct cs_softc *sc)
 {
 
-	control_dc_dc(sc, 0);
 	cs_writereg(sc, PP_LineCTL,
 	    (sc->line_ctl & ~AUTO_AUI_10BASET) | AUI_ONLY);
-
-	if (!send_test_pkt(sc)) {
-		device_printf(sc->dev, "failed to enable AUI\n");
-		return (EINVAL);
-	}
+	control_dc_dc(sc, 0);
 	return (0);
 }
 
-/*
- * XXX This was rewritten from Linux driver without any tests.
- */
 static int
 enable_bnc(struct cs_softc *sc)
 {
 
-	control_dc_dc(sc, 1);
 	cs_writereg(sc, PP_LineCTL,
 	    (sc->line_ctl & ~AUTO_AUI_10BASET) | AUI_ONLY);
-
-	if (!send_test_pkt(sc)) {
-		device_printf(sc->dev, "failed to enable BNC\n");
-		return (EINVAL);
-	}
+	control_dc_dc(sc, 1);
 	return (0);
 }
 
@@ -317,11 +268,10 @@ cs_cs89x0_probe(device_t dev)
 	uint16_t eeprom_buff[CHKSUM_LEN];
 	int chip_type, pp_isaint, pp_isadma;
 
+	sc->dev = dev;
 	error = cs_alloc_port(dev, 0, CS_89x0_IO_PORTS);
 	if (error)
 		return (error);
-
-	sc->nic_addr = rman_get_start(sc->port_res);
 
 	if ((cs_inw(sc, ADD_PORT) & ADD_MASK) != ADD_SIG) {
 		/* Chip not detected. Let's try to reset it */
@@ -349,7 +299,7 @@ cs_cs89x0_probe(device_t dev)
 
 	sc->chip_type = chip_type;
 
-	if(chip_type==CS8900) {
+	if (chip_type == CS8900) {
 		pp_isaint = PP_CS8900_ISAINT;
 		pp_isadma = PP_CS8900_ISADMA;
 		sc->send_cmd = TX_CS8900_AFTER_ALL;
@@ -367,7 +317,7 @@ cs_cs89x0_probe(device_t dev)
 	sc->isa_config   = 0;
 
 	/*
-	 * If no interrupt specified (or "?"), use what the board tells us.
+	 * If no interrupt specified, use what the board tells us.
 	 */
 	error = bus_get_resource(dev, SYS_RES_IRQ, 0, &irq, &junk);
 
@@ -376,100 +326,62 @@ cs_cs89x0_probe(device_t dev)
 	 */
 	if((cs_readreg(sc, PP_SelfST) & EEPROM_PRESENT) == 0) {
 		device_printf(dev, "No EEPROM, assuming defaults.\n");
+	} else if (get_eeprom_data(sc,START_EEPROM_DATA,CHKSUM_LEN, eeprom_buff)<0) {
+		device_printf(dev, "EEPROM read failed, assuming defaults.\n");
+	} else if (get_eeprom_cksum(START_EEPROM_DATA,CHKSUM_LEN, eeprom_buff)<0) {
+		device_printf(dev, "EEPROM cheksum bad, assuming defaults.\n");
 	} else {
-		if (get_eeprom_data(sc,START_EEPROM_DATA,CHKSUM_LEN, eeprom_buff)<0) {
-			device_printf(dev, "EEPROM read failed, "
-				"assuming defaults.\n");
-		} else {
-			if (get_eeprom_cksum(START_EEPROM_DATA,CHKSUM_LEN, eeprom_buff)<0) {
-				device_printf(dev, "EEPROM cheksum bad, "
-					"assuming defaults.\n");
-			} else {
-				sc->auto_neg_cnf =
-				    eeprom_buff[AUTO_NEG_CNF_OFFSET/2];
-				sc->adapter_cnf =
-				    eeprom_buff[ADAPTER_CNF_OFFSET/2];
-				sc->isa_config =
-				    eeprom_buff[ISA_CNF_OFFSET/2];
-    
-				for (i=0; i<ETHER_ADDR_LEN/2; i++) {
-					sc->enaddr[i*2]=
-					    eeprom_buff[i];
-					sc->enaddr[i*2+1]=
-					    eeprom_buff[i] >> 8;
-				}
-
-				/*
-				 * If no interrupt specified,
-				 * use what the board tells us.
-				 */
-				if (error) {
-					irq = sc->isa_config & INT_NO_MASK;
-					error = 0;
-					if (chip_type==CS8900) {
-						switch(irq) {
-						case 0:
-							irq=10;
-							break;
-						case 1:
-							irq=11;
-							break;
-						case 2:
-							irq=12;
-							break;
-						case 3:
-							irq=5;
-							break;
-						 default:
-							device_printf(dev, "invalid irq in EEPROM.\n");
-							error=EINVAL;
-						}
-					} else {
-						if (irq>CS8920_NO_INTS) {
-							device_printf(dev, "invalid irq in EEPROM.\n");
-							error=EINVAL;
-						}
-					}
-					if (!error)
-						bus_set_resource(dev, SYS_RES_IRQ, 0,
-								irq, 1);
-				}
-			}
+		sc->auto_neg_cnf = eeprom_buff[AUTO_NEG_CNF_OFFSET];
+		sc->adapter_cnf = eeprom_buff[ADAPTER_CNF_OFFSET];
+		sc->isa_config = eeprom_buff[ISA_CNF_OFFSET];
+		for (i=0; i<ETHER_ADDR_LEN/2; i++) {
+			sc->enaddr[i*2] = eeprom_buff[i];
+			sc->enaddr[i*2+1] = eeprom_buff[i] >> 8;
 		}
-	}
-
-	if (!error) {
-		if (chip_type == CS8900) {
-			switch(irq) {
-				case  5:
-					irq = 3;
-					break;
-				case 10:
-					irq = 0;
-					break;
-				case 11:
-					irq = 1;
-					break;
-				case 12:
-					irq = 2;
-					break;
-				default:
-					error=EINVAL;
+		/*
+		 * If no interrupt specified, use what the
+		 * board tells us.
+		 */
+		if (error) {
+			irq = sc->isa_config & INT_NO_MASK;
+			error = 0;
+			if (chip_type == CS8900) {
+				irq = cs8900_eeint2irq[irq];
+			} else {
+				if (irq > CS8920_NO_INTS)
+					irq = 255;
 			}
-		} else {
-			if (irq > CS8920_NO_INTS) {
+			if (irq == 255) {
+				device_printf(dev, "invalid irq in EEPROM.\n");
 				error = EINVAL;
 			}
+			if (!error)
+				bus_set_resource(dev, SYS_RES_IRQ, 0,
+				    irq, 1);
 		}
 	}
 
-	if (!error) {
-		if (!(sc->flags & CS_NO_IRQ))
-			cs_writereg(sc, pp_isaint, irq);
-	} else {
-	       	device_printf(dev, "Unknown or invalid irq\n");
-		return (ENXIO);
+	if (!error && !(sc->flags & CS_NO_IRQ)) {
+		if (chip_type == CS8900) {
+			if (irq < 16)
+				irq = cs8900_irq2eeint[irq];
+			else
+				irq = 255;
+		} else {
+			if (irq > CS8920_NO_INTS)
+				irq = 255;
+		}
+		if (irq == 255)
+			error = EINVAL;
 	}
+
+	if (error) {
+	       	device_printf(dev, "Unknown or invalid irq\n");
+		return (error);
+	}
+
+	if (!(sc->flags & CS_NO_IRQ))
+		cs_writereg(sc, pp_isaint, irq);
 
 	/*
 	 * Temporary disabled
@@ -484,8 +396,8 @@ cs_cs89x0_probe(device_t dev)
 
 	if (bootverbose)
 		 device_printf(dev, "CS89%c0%s rev %c media%s%s%s\n",
-			chip_type==CS8900 ? '0' : '2',
-			chip_type==CS8920M ? "M" : "",
+			chip_type == CS8900 ? '0' : '2',
+			chip_type == CS8920M ? "M" : "",
 			chip_revision,
 			(sc->adapter_cnf & A_CNF_10B_T) ? " TP"  : "",
 			(sc->adapter_cnf & A_CNF_AUI)   ? " AUI" : "",
@@ -503,7 +415,8 @@ cs_cs89x0_probe(device_t dev)
 /*
  * Allocate a port resource with the given resource id.
  */
-int cs_alloc_port(device_t dev, int rid, int size)
+int
+cs_alloc_port(device_t dev, int rid, int size)
 {
 	struct cs_softc *sc = device_get_softc(dev);
 	struct resource *res;
@@ -514,38 +427,19 @@ int cs_alloc_port(device_t dev, int rid, int size)
 		return (ENOENT);
 	sc->port_rid = rid;
 	sc->port_res = res;
-	sc->port_used = size;
-	return (0);
-}
-
-/*
- * Allocate a memory resource with the given resource id.
- */
-int cs_alloc_memory(device_t dev, int rid, int size)
-{
-	struct cs_softc *sc = device_get_softc(dev);
-	struct resource *res;
-
-	res = bus_alloc_resource(dev, SYS_RES_MEMORY, &rid,
-	    0ul, ~0ul, size, RF_ACTIVE);
-	if (res == NULL)
-		return (ENOENT);
-	sc->mem_rid = rid;
-	sc->mem_res = res;
-	sc->mem_used = size;
 	return (0);
 }
 
 /*
  * Allocate an irq resource with the given resource id.
  */
-int cs_alloc_irq(device_t dev, int rid, int flags)
+int
+cs_alloc_irq(device_t dev, int rid)
 {
 	struct cs_softc *sc = device_get_softc(dev);
 	struct resource *res;
 
-	res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
-	    (RF_ACTIVE | flags));
+	res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE);
 	if (res == NULL)
 		return (ENOENT);
 	sc->irq_rid = rid;
@@ -556,7 +450,8 @@ int cs_alloc_irq(device_t dev, int rid, int flags)
 /*
  * Release all resources
  */
-void cs_release_resources(device_t dev)
+void
+cs_release_resources(device_t dev)
 {
 	struct cs_softc *sc = device_get_softc(dev);
 
@@ -564,11 +459,6 @@ void cs_release_resources(device_t dev)
 		bus_release_resource(dev, SYS_RES_IOPORT,
 		    sc->port_rid, sc->port_res);
 		sc->port_res = 0;
-	}
-	if (sc->mem_res) {
-		bus_release_resource(dev, SYS_RES_MEMORY,
-		    sc->mem_rid, sc->mem_res);
-		sc->mem_res = 0;
 	}
 	if (sc->irq_res) {
 		bus_release_resource(dev, SYS_RES_IRQ,
@@ -583,8 +473,8 @@ void cs_release_resources(device_t dev)
 int
 cs_attach(device_t dev)
 {
-	int media=0;
-	struct cs_softc *sc = device_get_softc(dev);;
+	int error, media=0;
+	struct cs_softc *sc = device_get_softc(dev);
 	struct ifnet *ifp;
 
 	sc->dev = dev;
@@ -592,28 +482,26 @@ cs_attach(device_t dev)
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
 		device_printf(dev, "can not if_alloc()\n");
-		return (0);
+		cs_release_resources(dev);
+		return (ENOMEM);
 	}
 
-	cs_stop( sc );
+	mtx_init(&sc->lock, device_get_nameunit(dev), MTX_NETWORK_LOCK,
+	    MTX_DEF);
+	callout_init_mtx(&sc->timer, &sc->lock, 0);
+
+	CS_LOCK(sc);
+	cs_stop(sc);
+	CS_UNLOCK(sc);
 
 	ifp->if_softc=sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_start=cs_start;
 	ifp->if_ioctl=cs_ioctl;
-	ifp->if_watchdog=cs_watchdog;
 	ifp->if_init=cs_init;
-	ifp->if_snd.ifq_maxlen= IFQ_MAXLEN;
-	/*
-	 *  MIB DATA
-	 */
-	/*
-	ifp->if_linkmib=&sc->mibdata;
-	ifp->if_linkmiblen=sizeof sc->mibdata;
-	*/
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
 
-	ifp->if_flags=(IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST |
-	    IFF_NEEDSGIANT);
+	ifp->if_flags=(IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST);
 
 	/*
 	 * this code still in progress (DMA support)
@@ -634,7 +522,10 @@ cs_attach(device_t dev)
 	sc->buffer=malloc(ETHER_MAX_LEN-ETHER_CRC_LEN,M_DEVBUF,M_NOWAIT);
 	if (sc->buffer == NULL) {
 		device_printf(sc->dev, "Couldn't allocate memory for NIC\n");
-		return(0);
+		if_free(ifp);
+		mtx_destroy(&sc->lock);
+		cs_release_resources(dev);
+		return(ENOMEM);
 	}
 
 	/*
@@ -685,6 +576,17 @@ cs_attach(device_t dev)
 
 	ether_ifattach(ifp, sc->enaddr);
 
+  	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET | INTR_MPSAFE,
+	    NULL, csintr, sc, &sc->irq_handle);
+	if (error) {
+		ether_ifdetach(ifp);
+		free(sc->buffer, M_DEVBUF);
+		if_free(ifp);
+		mtx_destroy(&sc->lock);
+		cs_release_resources(dev);
+		return (error);
+	}
+
 	return (0);
 }
 
@@ -697,11 +599,16 @@ cs_detach(device_t dev)
 	sc = device_get_softc(dev);
 	ifp = sc->ifp;
 
+	CS_LOCK(sc);
 	cs_stop(sc);
-	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+	CS_UNLOCK(sc);
+	callout_drain(&sc->timer);
 	ether_ifdetach(ifp);
+	bus_teardown_intr(dev, sc->irq_res, sc->irq_handle);
 	cs_release_resources(dev);
+	free(sc->buffer, M_DEVBUF);
 	if_free(ifp);
+	mtx_destroy(&sc->lock);
 	return (0);
 }
 
@@ -712,17 +619,24 @@ static void
 cs_init(void *xsc)
 {
 	struct cs_softc *sc=(struct cs_softc *)xsc;
+
+	CS_LOCK(sc);
+	cs_init_locked(sc);
+	CS_UNLOCK(sc);
+}
+
+static void
+cs_init_locked(struct cs_softc *sc)
+{
 	struct ifnet *ifp = sc->ifp;
-	int i, s, rx_cfg;
+	int i, rx_cfg;
 
 	/*
-	 * reset whatchdog timer
+	 * reset watchdog timer
 	 */
-	ifp->if_timer=0;
+	sc->tx_timeout = 0;
 	sc->buf_len = 0;
 	
-	s=splimp();
-
 	/*
 	 * Hardware initialization of cs
 	 */
@@ -774,13 +688,12 @@ cs_init(void *xsc)
 	 */
 	sc->ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	sc->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+	callout_reset(&sc->timer, hz, cs_watchdog, sc);
 
 	/*
 	 * Start sending process
 	 */
-	cs_start(ifp);
-
-	(void) splx(s);
+	cs_start_locked(ifp);
 }
 
 /*
@@ -790,7 +703,7 @@ static int
 cs_get_packet(struct cs_softc *sc)
 {
 	struct ifnet *ifp = sc->ifp;
-	int iobase = sc->nic_addr, status, length;
+	int status, length;
 	struct ether_header *eh;
 	struct mbuf *m;
 
@@ -832,7 +745,8 @@ cs_get_packet(struct cs_softc *sc)
 	m->m_len = length;
 
 	/* Get the data */
-	insw(iobase + RX_FRAME_PORT, m->m_data, (length+1)>>1);
+	bus_read_multi_2(sc->port_res, RX_FRAME_PORT, mtod(m, uint16_t *),
+	    (length + 1) >> 1);
 
 	eh = mtod(m, struct ether_header *);
 
@@ -870,6 +784,7 @@ csintr(void *arg)
 	device_printf(sc->dev, "Interrupt.\n");
 #endif
 
+	CS_LOCK(sc);
 	while ((status=cs_inw(sc, ISQ_PORT))) {
 
 #ifdef CS_DEBUG
@@ -887,18 +802,18 @@ csintr(void *arg)
 			else
 				ifp->if_oerrors++;
 			ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-			ifp->if_timer = 0;
+			sc->tx_timeout = 0;
 			break;
 
 		case ISQ_BUFFER_EVENT:
 			if (status & READY_FOR_TX) {
 				ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-				ifp->if_timer = 0;
+				sc->tx_timeout = 0;
 			}
 
 			if (status & TX_UNDERRUN) {
 				ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-				ifp->if_timer = 0;
+				sc->tx_timeout = 0;
 				ifp->if_oerrors++;
 			}
 			break;
@@ -914,8 +829,9 @@ csintr(void *arg)
 	}
 
 	if (!(ifp->if_drv_flags & IFF_DRV_OACTIVE)) {
-		cs_start(ifp);
+		cs_start_locked(ifp);
 	}
+	CS_UNLOCK(sc);
 }
 
 /*
@@ -936,7 +852,7 @@ cs_write_mbufs( struct cs_softc *sc, struct mbuf *m )
 		 * Ignore empty parts
 		 */
 		if (!len)
-		continue;
+			continue;
 
 		/*
 		 * Find actual data address
@@ -953,18 +869,27 @@ cs_write_mbufs( struct cs_softc *sc, struct mbuf *m )
 static void
 cs_xmit_buf( struct cs_softc *sc )
 {
-	outsw(sc->nic_addr+TX_FRAME_PORT, sc->buffer, (sc->buf_len+1)>>1);
+	bus_write_multi_2(sc->port_res, TX_FRAME_PORT, (uint16_t *)sc->buffer,
+	    (sc->buf_len + 1) >> 1);
 	sc->buf_len = 0;
 }
 
 static void
 cs_start(struct ifnet *ifp)
 {
-	int s, length;
-	struct mbuf *m, *mp;
 	struct cs_softc *sc = ifp->if_softc;
 
-	s = splimp();
+	CS_LOCK(sc);
+	cs_start_locked(ifp);
+	CS_UNLOCK(sc);
+}
+
+static void
+cs_start_locked(struct ifnet *ifp)
+{
+	int length;
+	struct mbuf *m, *mp;
+	struct cs_softc *sc = ifp->if_softc;
 
 	for (;;) {
 		if (sc->buf_len)
@@ -973,7 +898,6 @@ cs_start(struct ifnet *ifp)
 			IF_DEQUEUE( &ifp->if_snd, m );
 
 			if (m==NULL) {
-				(void) splx(s);
 				return;
 			}
 
@@ -1005,8 +929,7 @@ cs_start(struct ifnet *ifp)
 		 * and return.
 		 */
 		if (!(cs_readreg(sc, PP_BusST) & READY_FOR_TX_NOW)) {
-			ifp->if_timer = sc->buf_len;
-			(void) splx(s);
+			sc->tx_timeout = sc->buf_len;
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 			return;
 		}
@@ -1018,9 +941,8 @@ cs_start(struct ifnet *ifp)
 		 * from board again. (I don't know about correct
 		 * value for this timeout)
 		 */
-		ifp->if_timer = length;
+		sc->tx_timeout = length;
 
-		(void) splx(s);
 		ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 		return;
 	}
@@ -1032,17 +954,16 @@ cs_start(struct ifnet *ifp)
 static void
 cs_stop(struct cs_softc *sc)
 {
-	int s = splimp();
 
+	CS_ASSERT_LOCKED(sc);
 	cs_writereg(sc, PP_RxCFG, 0);
 	cs_writereg(sc, PP_TxCFG, 0);
 	cs_writereg(sc, PP_BufCFG, 0);
 	cs_writereg(sc, PP_BusCTL, 0);
 
 	sc->ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
-	sc->ifp->if_timer = 0;
-
-	(void) splx(s);
+	sc->tx_timeout = 0;
+	callout_stop(&sc->timer);
 }
 
 /*
@@ -1051,8 +972,10 @@ cs_stop(struct cs_softc *sc)
 static void
 cs_reset(struct cs_softc *sc)
 {
+
+	CS_ASSERT_LOCKED(sc);
 	cs_stop(sc);
-	cs_init(sc);
+	cs_init_locked(sc);
 }
 
 static uint16_t
@@ -1100,7 +1023,7 @@ cs_setmode(struct cs_softc *sc)
 			 * Set up the filter to only accept multicast
 			 * frames we're interested in.
 			 */
-			IF_ADDR_LOCK(ifp);
+			if_maddr_rlock(ifp);
 			TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 				struct sockaddr_dl *dl =
 				    (struct sockaddr_dl *)ifma->ifma_addr;
@@ -1110,7 +1033,7 @@ cs_setmode(struct cs_softc *sc)
 				mask = (u_int16_t) (1 << (index & 0xf));
 				af[port] |= mask;
 			}
-			IF_ADDR_UNLOCK(ifp);
+			if_maddr_runlock(ifp);
 		}
 
 		cs_writereg(sc, PP_LAF + 0, af[0]);
@@ -1138,13 +1061,11 @@ cs_ioctl(register struct ifnet *ifp, u_long command, caddr_t data)
 {
 	struct cs_softc *sc=ifp->if_softc;
 	struct ifreq *ifr = (struct ifreq *)data;
-	int s,error=0;
+	int error=0;
 
 #ifdef CS_DEBUG
 	if_printf(ifp, "%s command=%lx\n", __func__, command);
 #endif
-
-	s=splimp();
 
 	switch (command) {
 	case SIOCSIFFLAGS:
@@ -1152,15 +1073,16 @@ cs_ioctl(register struct ifnet *ifp, u_long command, caddr_t data)
 		 * Switch interface state between "running" and
 		 * "stopped", reflecting the UP flag.
 		 */
+		CS_LOCK(sc);
 		if (sc->ifp->if_flags & IFF_UP) {
 			if ((sc->ifp->if_drv_flags & IFF_DRV_RUNNING)==0) {
-				cs_init(sc);
+				cs_init_locked(sc);
 			}
 		} else {
 			if ((sc->ifp->if_drv_flags & IFF_DRV_RUNNING)!=0) {
 				cs_stop(sc);
 			}
-		}
+		}		
 		/*
 		 * Promiscuous and/or multicast flags may have changed,
 		 * so reprogram the multicast filter and/or receive mode.
@@ -1168,6 +1090,7 @@ cs_ioctl(register struct ifnet *ifp, u_long command, caddr_t data)
 		 * See note about multicasts in cs_setmode
 		 */
 		cs_setmode(sc);
+		CS_UNLOCK(sc);
 		break;
 
 	case SIOCADDMULTI:
@@ -1178,7 +1101,9 @@ cs_ioctl(register struct ifnet *ifp, u_long command, caddr_t data)
 	     *
 	     * See note about multicasts in cs_setmode
 	     */
+	    CS_LOCK(sc);
 	    cs_setmode(sc);
+	    CS_UNLOCK(sc);
 	    error = 0;
 	    break;
 
@@ -1192,7 +1117,6 @@ cs_ioctl(register struct ifnet *ifp, u_long command, caddr_t data)
 		break;
 	}
 
-	(void) splx(s);
 	return (error);
 }
 
@@ -1201,18 +1125,23 @@ cs_ioctl(register struct ifnet *ifp, u_long command, caddr_t data)
  * generate an interrupt after a transmit has been started on it.
  */
 static void
-cs_watchdog(struct ifnet *ifp)
+cs_watchdog(void *arg)
 {
-	struct cs_softc *sc = ifp->if_softc;
+	struct cs_softc *sc = arg;
+	struct ifnet *ifp = sc->ifp;
 
-	ifp->if_oerrors++;
-	log(LOG_ERR, "%s: device timeout\n", ifp->if_xname);
+	CS_ASSERT_LOCKED(sc);
+	if (sc->tx_timeout && --sc->tx_timeout == 0) {
+		ifp->if_oerrors++;
+		log(LOG_ERR, "%s: device timeout\n", ifp->if_xname);
 
-	/* Reset the interface */
-	if (ifp->if_flags & IFF_UP)
-		cs_reset(sc);
-	else
-		cs_stop(sc);
+		/* Reset the interface */
+		if (ifp->if_flags & IFF_UP)
+			cs_reset(sc);
+		else
+			cs_stop(sc);
+	}
+	callout_reset(&sc->timer, hz, cs_watchdog, sc);
 }
 
 static int
@@ -1220,11 +1149,15 @@ cs_mediachange(struct ifnet *ifp)
 {
 	struct cs_softc *sc = ifp->if_softc;
 	struct ifmedia *ifm = &sc->media;
+	int error;
 
 	if (IFM_TYPE(ifm->ifm_media) != IFM_ETHER)
 		return (EINVAL);
 
-	return (cs_mediaset(sc, ifm->ifm_media));
+	CS_LOCK(sc);
+	error = cs_mediaset(sc, ifm->ifm_media);
+	CS_UNLOCK(sc);
+	return (error);
 }
 
 static void
@@ -1233,6 +1166,7 @@ cs_mediastatus(struct ifnet *ifp, struct ifmediareq *ifmr)
 	int line_status;
 	struct cs_softc *sc = ifp->if_softc;
 
+	CS_LOCK(sc);
 	ifmr->ifm_active = IFM_ETHER;
 	line_status = cs_readreg(sc, PP_LineST);
 	if (line_status & TENBASET_ON) {
@@ -1257,12 +1191,13 @@ cs_mediastatus(struct ifnet *ifp, struct ifmediareq *ifmr)
 				ifmr->ifm_active |= IFM_10_5;
 		}
 	}
+	CS_UNLOCK(sc);
 }
 
 static int
 cs_mediaset(struct cs_softc *sc, int media)
 {
-	int error;
+	int error = 0;
 
 	/* Stop the receiver & transmitter */
 	cs_writereg(sc, PP_LineCTL, cs_readreg(sc, PP_LineCTL) &
@@ -1275,14 +1210,15 @@ cs_mediaset(struct cs_softc *sc, int media)
 	switch (IFM_SUBTYPE(media)) {
 	default:
 	case IFM_AUTO:
-		if ((error=enable_tp(sc))==0)
-			error = cs_duplex_auto(sc);
-		else if ((error=enable_bnc(sc)) != 0)
-			error = enable_aui(sc);
+		/*
+		 * This chip makes it a little hard to support this, so treat
+		 * it as IFM_10_T, auto duplex.
+		 */
+		enable_tp(sc);
+		cs_duplex_auto(sc);
 		break;
 	case IFM_10_T:
-		if ((error=enable_tp(sc)) != 0)
-			break;
+		enable_tp(sc);
 		if (media & IFM_FDX)
 			cs_duplex_full(sc);
 		else if (media & IFM_HDX)
@@ -1291,10 +1227,10 @@ cs_mediaset(struct cs_softc *sc, int media)
 			error = cs_duplex_auto(sc);
 		break;
 	case IFM_10_2:
-		error = enable_bnc(sc);
+		enable_bnc(sc);
 		break;
 	case IFM_10_5:
-		error = enable_aui(sc);
+		enable_aui(sc);
 		break;
 	}
 

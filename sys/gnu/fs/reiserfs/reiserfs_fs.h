@@ -1,11 +1,11 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/reiserfs/reiserfs_fs.h,v 1.2 2008/12/03 00:25:53 laffer1 Exp $ */
 /*-
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_fs.h,v 1.5 2006/11/06 13:41:58 rwatson Exp $
+ * $FreeBSD$
  */
 
 #ifndef _GNU_REISERFS_REISERFS_FS_H
@@ -729,15 +729,16 @@ struct stat_data_v1 {
  * We want common flags to have the same values as in ext2,
  * so chattr(1) will work without problems
  */
-#include <gnu/fs/ext2fs/ext2_fs.h>
-#define	REISERFS_IMMUTABLE_FL	EXT2_IMMUTABLE_FL
-#define	REISERFS_APPEND_FL	EXT2_APPEND_FL
-#define	REISERFS_SYNC_FL	EXT2_SYNC_FL
-#define	REISERFS_NOATIME_FL	EXT2_NOATIME_FL
-#define	REISERFS_NODUMP_FL	EXT2_NODUMP_FL
-#define	REISERFS_SECRM_FL	EXT2_SECRM_FL
-#define	REISERFS_UNRM_FL	EXT2_UNRM_FL
-#define	REISERFS_COMPR_FL	EXT2_COMPR_FL
+#include <fs/ext2fs/ext2fs.h>
+#include <fs/ext2fs/ext2_dinode.h>
+#define	REISERFS_IMMUTABLE_FL	EXT2_IMMUTABLE
+#define	REISERFS_APPEND_FL	EXT2_APPEND
+#define	REISERFS_SYNC_FL	EXT2_SYNC
+#define	REISERFS_NOATIME_FL	EXT2_NOATIME
+#define	REISERFS_NODUMP_FL	EXT2_NODUMP
+#define	REISERFS_SECRM_FL	EXT2_SECRM
+#define	REISERFS_UNRM_FL	EXT2_UNRM
+#define	REISERFS_COMPR_FL	EXT2_COMPR
 #define	REISERFS_NOTAIL_FL	EXT2_NOTAIL_FL
 
 /*
@@ -1217,7 +1218,7 @@ const struct key	*get_lkey(const struct path *p_s_chk_path,
 			    const struct reiserfs_sb_info *p_s_sbi);
 const struct key	*get_rkey(const struct path *p_s_chk_path,
 			    const struct reiserfs_sb_info *p_s_sbi);
-inline int	bin_search(const void * p_v_key, const void * p_v_base,
+int	bin_search(const void * p_v_key, const void * p_v_base,
 		    int p_n_num, int p_n_width, int * p_n_pos);
 
 void	pathrelse(struct path *p_s_search_path);

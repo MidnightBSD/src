@@ -19,7 +19,6 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/vx/if_vxvar.h,v 1.6.12.1 2010/02/10 00:26:20 kensmith Exp $
  *
  October 2, 1994
 
@@ -51,8 +50,10 @@ struct vx_softc {
 	int vx_tx_succ_ok;		/* # packets sent in sequence	 */
 					/* w/o underrun			 */
 	struct callout vx_callout;	/* Callout for timeouts		 */
+	struct callout vx_watchdog;
 	struct mtx vx_mtx;
 	int vx_buffill_pending;
+	int vx_timer;
 };
 
 #define CSR_WRITE_4(sc, reg, val)	\

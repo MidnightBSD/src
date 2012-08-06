@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/isa/isa_common.h,v 1.2 2008/12/03 00:25:56 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/isa/isa_common.h,v 1.15 2007/02/23 12:19:01 piso Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -57,6 +57,10 @@ struct isa_device {
 	isa_config_cb		*id_config_cb; /* callback function */
 	void			*id_config_arg;	/* callback argument */
 	int			id_config_attr;	/* pnp config attributes */
+	int			id_pnpbios_handle; /* pnp handle, if any */
+	int			id_pnp_csn; /* pnp Card Number */
+	int			id_pnp_ldn; /* pnp Logical device on card */
+	int			id_order;
 };
 
 #define DEVTOISA(dev)	((struct isa_device *) device_get_ivars(dev))
@@ -69,12 +73,6 @@ extern struct resource *isa_alloc_resource(device_t bus, device_t child,
     int type, int *rid, u_long start, u_long end, u_long count, u_int flags);
 extern int isa_release_resource(device_t bus, device_t child,
     int type, int rid, struct resource *r);
-
-extern int isa_setup_intr(device_t bus, device_t child, struct resource *r,
-    int flags, driver_filter_t *filter, void (*ihand)(void *), void *arg, 
-    void **cookiep);
-extern int isa_teardown_intr(device_t bus, device_t child, struct resource *r,
-    void *cookie);
 
 extern driver_t isa_driver;
 extern devclass_t isa_devclass;

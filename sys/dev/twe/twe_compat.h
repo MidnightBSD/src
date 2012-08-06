@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/twe/twe_compat.h,v 1.2 2009/11/28 22:44:33 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2003 Paul Saab
@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/twe/twe_compat.h,v 1.14 2005/05/29 04:42:26 nyan Exp $
+ * $FreeBSD$
  */
 /*
  * Portability and compatibility interfaces.

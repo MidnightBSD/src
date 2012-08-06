@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/asr/osd_unix.h,v 1.2 2008/12/02 02:24:33 laffer1 Exp $ */
 /*-
  * Copyright (c) 1996-1999 Distributed Processing Technology Corporation
  * All rights reserved.
@@ -19,7 +19,7 @@
  * arising in any way out of the use of this driver software, even if advised
  * of the possibility of such damage.
  *
- * $FreeBSD: src/sys/dev/asr/osd_unix.h,v 1.9 2005/01/06 01:42:29 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef		__OSD_UNIX_H

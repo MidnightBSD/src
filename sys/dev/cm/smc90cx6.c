@@ -1,8 +1,8 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/cm/smc90cx6.c,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
 /*	$NetBSD: smc90cx6.c,v 1.38 2001/07/07 15:57:53 thorpej Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cm/smc90cx6.c,v 1.18 2007/03/21 03:38:35 nyan Exp $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.
@@ -19,13 +19,6 @@ __FBSDID("$FreeBSD: src/sys/dev/cm/smc90cx6.c,v 1.18 2007/03/21 03:38:35 nyan Ex
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -125,7 +118,7 @@ static void cm_reset_locked(struct cm_softc *);
 void	cm_start(struct ifnet *);
 void	cm_start_locked(struct ifnet *);
 int	cm_ioctl(struct ifnet *, unsigned long, caddr_t);
-void	cm_watchdog(struct ifnet *);
+void	cm_watchdog(void *);
 void	cm_srint_locked(void *vsc);
 static	void cm_tint_locked(struct cm_softc *, int);
 void	cm_reconwatch_locked(void *);
@@ -195,11 +188,9 @@ cm_attach(dev)
 	ifp->if_output = arc_output;
 	ifp->if_start = cm_start;
 	ifp->if_ioctl = cm_ioctl;
-	ifp->if_watchdog  = cm_watchdog;
 	ifp->if_init = cm_init;
 	/* XXX IFQ_SET_READY(&ifp->if_snd); */
-	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
-	ifp->if_timer = 0;
+	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX;
 
 	arc_ifattach(ifp, linkaddress);
@@ -211,6 +202,7 @@ cm_attach(dev)
 #endif
 
 	callout_init_mtx(&sc->sc_recon_ch, &sc->sc_mtx, 0);
+	callout_init_mtx(&sc->sc_watchdog_timer, &sc->sc_mtx, 0);
 
 	if_printf(ifp, "link addr 0x%02x (%d)\n", linkaddress, linkaddress);
 	return 0;
@@ -316,6 +308,7 @@ cm_reset_locked(sc)
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 
+	callout_reset(&sc->sc_watchdog_timer, hz, cm_watchdog, sc);
 	cm_start_locked(ifp);
 }
 
@@ -333,7 +326,8 @@ cm_stop_locked(sc)
 	GETREG(CMRESET);
 
 	/* Stop watchdog timer */
-	sc->sc_ifp->if_timer = 0;
+	callout_stop(&sc->sc_watchdog_timer);
+	sc->sc_timer = 0;
 }
 
 void
@@ -465,7 +459,7 @@ cm_start_locked(ifp)
 		PUTREG(CMCMD, CM_TX(buffer));
 		PUTREG(CMSTAT, sc->sc_intmask);
 
-		ifp->if_timer = ARCTIMEOUT;
+		sc->sc_timer = ARCTIMEOUT;
 	}
 	m_freem(m);
 
@@ -593,7 +587,7 @@ cleanup:
 		sc->sc_rx_act = buffer;
 		sc->sc_intmask |= CM_RI;
 
-		/* this also clears the RI flag interupt: */
+		/* this also clears the RI flag interrupt: */
 		PUTREG(CMCMD, CM_RXBC(buffer));
 		PUTREG(CMSTAT, sc->sc_intmask);
 
@@ -628,7 +622,7 @@ cm_tint_locked(sc, isr)
 	if (isr & CM_TMA || sc->sc_broadcast[buffer])
 		ifp->if_opackets++;
 #ifdef CMRETRANSMIT
-	else if (ifp->if_flags & IFF_LINK2 && ifp->if_timer > 0
+	else if (ifp->if_flags & IFF_LINK2 && sc->sc_timer > 0
 	    && --sc->sc_retransmits[buffer] > 0) {
 		/* retransmit same buffer */
 		PUTREG(CMCMD, CM_TX(buffer));
@@ -658,7 +652,7 @@ cm_tint_locked(sc, isr)
 		 */
 		PUTREG(CMCMD, CM_TX(buffer));
 		/* init watchdog timer */
-		ifp->if_timer = ARCTIMEOUT;
+		sc->sc_timer = ARCTIMEOUT;
 
 #if defined(CM_DEBUG) && (CM_DEBUG > 1)
 		if_printf(ifp,
@@ -670,7 +664,7 @@ cm_tint_locked(sc, isr)
 		sc->sc_intmask &= ~CM_TA;
 		PUTREG(CMSTAT, sc->sc_intmask);
 		/* ... and watchdog timer */
-		ifp->if_timer = 0;
+		sc->sc_timer = 0;
 
 #ifdef CM_DEBUG
 		if_printf(ifp, "tint: no more buffers to send, status 0x%02x\n",
@@ -780,7 +774,7 @@ cmintr(arg)
 				 * configured sender)
 				 */
 				log(LOG_WARNING,
-				    "%s: spurious RX interupt or sender 0 "
+				    "%s: spurious RX interrupt or sender 0 "
 				    " (ignored)\n", ifp->if_xname);
 				/*
 				 * restart receiver on same buffer.
@@ -798,7 +792,7 @@ cmintr(arg)
 					/*
 					 * Start receiver on other receive
 					 * buffer. This also clears the RI
-					 * interupt flag.
+					 * interrupt flag.
 					 */
 					PUTREG(CMCMD, CM_RXBC(buffer));
 					/* in RX intr, so mask is ok for RX */
@@ -862,14 +856,10 @@ cm_ioctl(ifp, command, data)
 	caddr_t data;
 {
 	struct cm_softc *sc;
-	struct ifaddr *ifa;
-	struct ifreq *ifr;
 	int error;
 
 	error = 0;
 	sc = ifp->if_softc;
-	ifa = (struct ifaddr *)data;
-	ifr = (struct ifreq *)data;
 
 #if defined(CM_DEBUG) && (CM_DEBUG > 2)
 	if_printf(ifp, "ioctl() called, cmd = 0x%lx\n", command);
@@ -925,12 +915,13 @@ cm_ioctl(ifp, command, data)
  * retransmission is implemented).
  */
 void
-cm_watchdog(ifp)
-	struct ifnet *ifp;
+cm_watchdog(void *arg)
 {
-	struct cm_softc *sc = ifp->if_softc;
+	struct cm_softc *sc;
 
-	CM_LOCK(sc);
+	sc = arg;
+	callout_reset(&sc->sc_watchdog_timer, hz, cm_watchdog, sc);
+	if (sc->sc_timer == 0 || --sc->sc_timer > 0)
+		return;
 	PUTREG(CMCMD, CM_TXDIS);
-	CM_UNLOCK(sc);
 }

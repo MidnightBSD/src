@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_freebsd_iget.c,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2003 Silicon Graphics, Inc.  All Rights Reserved.
  * Copyright (c) 2006 Russell Cattelan Digital Elves, Inc. All Rights Reserved.
@@ -390,8 +390,8 @@ xfs_vn_allocate(xfs_mount_t *mp, xfs_inode_t *ip, struct xfs_vnode **vpp)
 		return (error);
 	}
 
-	vp->v_vnlock->lk_flags |= LK_CANRECURSE;
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
+	VN_LOCK_AREC(vp);
 	error = insmntque(vp, XVFSTOMNT(XFS_MTOVFS(mp)));
 	if (error != 0) {
 		kmem_free(vdata, sizeof(*vdata));

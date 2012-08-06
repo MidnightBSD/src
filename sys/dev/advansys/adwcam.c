@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/advansys/adwcam.c,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
- * CAM SCSI interface for the the Advanced Systems Inc.
+ * CAM SCSI interface for the Advanced Systems Inc.
  * Second Generation SCSI controllers.
  *
  * Product specific probe and attach routines can be found in:
@@ -45,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/adwcam.c,v 1.28 2007/06/17 05:55:46 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

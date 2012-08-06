@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/cp/cpddk.c,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
 /*-
  * Low-level subroutines for Cronyx Tau-PCI adapter.
  *
@@ -19,7 +19,7 @@
  * $Cronyx: cpddk.c,v 1.13.4.37 2004/12/11 16:14:39 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cp/cpddk.c,v 1.6 2005/12/17 07:09:17 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/cx/machdep.h>
 

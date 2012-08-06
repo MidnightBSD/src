@@ -1,11 +1,11 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/reiserfs/reiserfs_vnops.c,v 1.2 2008/12/03 00:25:53 laffer1 Exp $ */
 /*-
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_vnops.c,v 1.2 2007/02/15 22:08:34 pjd Exp $
+ * $FreeBSD$
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -58,14 +58,14 @@ reiserfs_access(struct vop_access_args *ap)
 	int error;
 	struct vnode *vp = ap->a_vp;
 	struct reiserfs_node *ip = VTOI(vp);
-	mode_t mode = ap->a_mode;
+	accmode_t accmode = ap->a_accmode;
 
 	/*
 	 * Disallow write attempts on read-only file systems; unless the file
 	 * is a socket, fifo, or a block or character device resident on the
 	 * file system.
 	 */
-	if (mode & VWRITE) {
+	if (accmode & VWRITE) {
 		switch (vp->v_type) {
 		case VDIR:
 		case VLNK:
@@ -82,13 +82,13 @@ reiserfs_access(struct vop_access_args *ap)
 	}
 
 	/* If immutable bit set, nobody gets to write it. */
-	if ((mode & VWRITE) && (ip->i_flags & (IMMUTABLE | SF_SNAPSHOT))) {
+	if ((accmode & VWRITE) && (ip->i_flags & (IMMUTABLE | SF_SNAPSHOT))) {
 		reiserfs_log(LOG_DEBUG, "no write access (immutable)\n");
 		return (EPERM);
 	}
 
 	error = vaccess(vp->v_type, ip->i_mode, ip->i_uid, ip->i_gid,
-	    ap->a_mode, ap->a_cred, NULL);
+	    ap->a_accmode, ap->a_cred, NULL);
 	return (error);
 }
 
@@ -351,8 +351,13 @@ reiserfs_strategy(struct vop_strategy_args /* {
 		bp->b_ioflags |= BIO_ERROR;
 	}
 
+	if (error) {
+		bp->b_ioflags |= BIO_ERROR;
+		bp->b_error = error;
+	}
+
 	bufdone(bp);
-	return (error);
+	return (0);
 }
 
 /*
