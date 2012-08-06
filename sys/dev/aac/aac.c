@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac.c,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac.c,v 1.120.2.24 2011/10/29 23:44:30 marius Exp $");
 
 /*
  * Driver for the Adaptec 'FSA' family of PCI/SCSI RAID adapters.
@@ -190,9 +189,9 @@ static char	*aac_describe_code(struct aac_code_lookup *table,
 
 /* Management Interface */
 static d_open_t		aac_open;
-static d_close_t	aac_close;
 static d_ioctl_t	aac_ioctl;
 static d_poll_t		aac_poll;
+static void		aac_cdevpriv_dtor(void *arg);
 static int		aac_ioctl_sendfib(struct aac_softc *sc, caddr_t ufib);
 static int		aac_ioctl_send_raw_srb(struct aac_softc *sc, caddr_t arg);
 static void		aac_handle_aif(struct aac_softc *sc,
@@ -215,7 +214,6 @@ static struct cdevsw aac_cdevsw = {
 	.d_version =	D_VERSION,
 	.d_flags =	D_NEEDGIANT,
 	.d_open =	aac_open,
-	.d_close =	aac_close,
 	.d_ioctl =	aac_ioctl,
 	.d_poll =	aac_poll,
 	.d_name =	"aac",
@@ -315,7 +313,7 @@ aac_attach(struct aac_softc *sc)
 	sc->aac_dev_t->si_drv1 = sc;
 
 	/* Create the AIF thread */
-	if (kthread_create((void(*)(void *))aac_command_thread, sc,
+	if (kproc_create((void(*)(void *))aac_command_thread, sc,
 		   &sc->aifthread, 0, 0, "aac%daif", unit))
 		panic("Could not create AIF thread");
 
@@ -356,7 +354,7 @@ aac_daemon(void *arg)
 	*(uint32_t *)fib->data = tv.tv_sec;
 	aac_sync_fib(sc, SendHostTime, 0, fib, sizeof(uint32_t));
 	aac_release_sync_fib(sc);
-	callout_reset(&sc->aac_daemontime, 30 * 60 * hz, aac_daemon, sc);
+	callout_schedule(&sc->aac_daemontime, 30 * 60 * hz);
 }
 
 void
@@ -393,7 +391,7 @@ aac_get_container_info(struct aac_softc *sc, struct aac_fib *fib, int cid)
 
 	if (aac_sync_fib(sc, ContainerCommand, 0, fib,
 			 sizeof(struct aac_mntinfo))) {
-		printf("Error probing container %d\n", cid);
+		device_printf(sc->aac_dev, "Error probing container %d\n", cid);
 		return (NULL);
 	}
 
@@ -661,8 +659,17 @@ aac_detach(device_t dev)
 	sc = device_get_softc(dev);
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
-	if (sc->aac_state & AAC_STATE_OPEN)
-		return(EBUSY);
+	callout_drain(&sc->aac_daemontime);
+
+	mtx_lock(&sc->aac_io_lock);
+	while (sc->aifflags & AAC_AIFFLAGS_RUNNING) {
+		sc->aifflags |= AAC_AIFFLAGS_EXIT;
+		wakeup(sc->aifthread);
+		msleep(sc->aac_dev, &sc->aac_io_lock, PUSER, "aacdch", 0);
+	}
+	mtx_unlock(&sc->aac_io_lock);
+	KASSERT((sc->aifflags & AAC_AIFFLAGS_RUNNING) == 0,
+	    ("%s: invalid detach state", __func__));
 
 	callout_drain(&sc->aac_daemontime);
 
@@ -683,15 +690,6 @@ aac_detach(device_t dev)
 			return (error);
 		free(sim, M_AACBUF);
 	}
-
-	if (sc->aifflags & AAC_AIFFLAGS_RUNNING) {
-		sc->aifflags |= AAC_AIFFLAGS_EXIT;
-		wakeup(sc->aifthread);
-		tsleep(sc->aac_dev, PUSER | PCATCH, "aacdch", 30 * hz);
-	}
-
-	if (sc->aifflags & AAC_AIFFLAGS_RUNNING)
-		panic("Cannot shutdown AIF thread");
 
 	if ((error = aac_shutdown(dev)))
 		return(error);
@@ -887,8 +885,11 @@ aac_new_intr(void *arg)
 	mtx_unlock(&sc->aac_io_lock);
 }
 
+/*
+ * Interrupt filter for !NEW_COMM interface.
+ */
 int
-aac_fast_intr(void *arg)
+aac_filter(void *arg)
 {
 	struct aac_softc *sc;
 	u_int16_t reason;
@@ -1022,7 +1023,7 @@ aac_command_thread(struct aac_softc *sc)
 		/*
 		 * First see if any FIBs need to be allocated.  This needs
 		 * to be called without the driver lock because contigmalloc
-		 * will grab Giant, and would result in an LOR.
+		 * can sleep.
 		 */
 		if ((sc->aifflags & AAC_AIFFLAGS_ALLOCFIBS) != 0) {
 			mtx_unlock(&sc->aac_io_lock);
@@ -1095,7 +1096,7 @@ aac_command_thread(struct aac_softc *sc)
 	mtx_unlock(&sc->aac_io_lock);
 	wakeup(sc->aac_dev);
 
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /*
@@ -1127,6 +1128,11 @@ aac_complete(void *context, int pending)
 			AAC_PRINT_FIB(sc, fib);
 			break;
 		}
+		if ((cm->cm_flags & AAC_CMD_TIMEDOUT) != 0)
+			device_printf(sc->aac_dev,
+			    "COMMAND %p COMPLETED AFTER %d SECONDS\n",
+			    cm, (int)(time_uptime-cm->cm_timestamp));
+
 		aac_remove_busy(cm);
 
  		aac_unmap_command(cm);
@@ -1369,7 +1375,9 @@ aac_alloc_command(struct aac_softc *sc, struct aac_command **cmp)
 
 	if ((cm = aac_dequeue_free(sc)) == NULL) {
 		if (sc->total_fibs < sc->aac_max_fibs) {
+			mtx_lock(&sc->aac_io_lock);
 			sc->aifflags |= AAC_AIFFLAGS_ALLOCFIBS;
+			mtx_unlock(&sc->aac_io_lock);
 			wakeup(sc->aifthread);
 		}
 		return (EBUSY);
@@ -1874,7 +1882,7 @@ aac_init(struct aac_softc *sc)
 
 	ip->InitFlags = 0;
 	if (sc->flags & AAC_FLAGS_NEW_COMM) {
-		ip->InitFlags = INITFLAGS_NEW_COMM_SUPPORTED;
+		ip->InitFlags |= AAC_INITFLAGS_NEW_COMM_SUPPORTED;
 		device_printf(sc->aac_dev, "New comm. interface enabled\n");
 	}
 
@@ -2005,18 +2013,11 @@ aac_setup_intr(struct aac_softc *sc)
 		}
 	} else {
 		if (bus_setup_intr(sc->aac_dev, sc->aac_irq,
-				   INTR_TYPE_BIO, aac_fast_intr, NULL,
+				   INTR_TYPE_BIO, aac_filter, NULL,
 				   sc, &sc->aac_intr)) {
 			device_printf(sc->aac_dev,
-				      "can't set up FAST interrupt\n");
-			if (bus_setup_intr(sc->aac_dev, sc->aac_irq,
-					   INTR_MPSAFE|INTR_TYPE_BIO,
-					   NULL, (driver_intr_t *)aac_fast_intr,
-					   sc, &sc->aac_intr)) {
-				device_printf(sc->aac_dev,
-					     "can't set up MPSAFE interrupt\n");
-				return (EINVAL);
-			}
+				      "can't set up interrupt filter\n");
+			return (EINVAL);
 		}
 	}
 	return (0);
@@ -2349,7 +2350,7 @@ aac_timeout(struct aac_softc *sc)
 	deadline = time_uptime - AAC_CMD_TIMEOUT;
 	TAILQ_FOREACH(cm, &sc->aac_busy, cm_link) {
 		if ((cm->cm_timestamp  < deadline)
-			/* && !(cm->cm_flags & AAC_CMD_TIMEDOUT) */) {
+		    && !(cm->cm_flags & AAC_CMD_TIMEDOUT)) {
 			cm->cm_flags |= AAC_CMD_TIMEDOUT;
 			device_printf(sc->aac_dev,
 			    "COMMAND %p (TYPE %d) TIMEOUT AFTER %d SECONDS\n",
@@ -2794,35 +2795,20 @@ aac_describe_code(struct aac_code_lookup *table, u_int32_t code)
  */
 
 static int
-aac_open(struct cdev *dev, int flags, int fmt, d_thread_t *td)
+aac_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	struct aac_softc *sc;
 
 	sc = dev->si_drv1;
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
-	sc->aac_open_cnt++;
-	sc->aac_state |= AAC_STATE_OPEN;
+	device_busy(sc->aac_dev);
+	devfs_set_cdevpriv(sc, aac_cdevpriv_dtor);
 
 	return 0;
 }
 
 static int
-aac_close(struct cdev *dev, int flags, int fmt, d_thread_t *td)
-{
-	struct aac_softc *sc;
-
-	sc = dev->si_drv1;
-	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
-	sc->aac_open_cnt--;
-	/* Mark this unit as no longer open  */
-	if (sc->aac_open_cnt == 0)
-		sc->aac_state &= ~AAC_STATE_OPEN;
-
-	return 0;
-}
-
-static int
-aac_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
+aac_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 {
 	union aac_statrequest *as;
 	struct aac_softc *sc;
@@ -2927,7 +2913,7 @@ aac_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, d_thread_t *td)
 }
 
 static int
-aac_poll(struct cdev *dev, int poll_events, d_thread_t *td)
+aac_poll(struct cdev *dev, int poll_events, struct thread *td)
 {
 	struct aac_softc *sc;
 	struct aac_fib_context *ctx;
@@ -3167,6 +3153,8 @@ aac_ioctl_send_raw_srb(struct aac_softc *sc, caddr_t arg)
 				goto out;
 		}
 	}
+	return(error);
+}
 
 	fib->Header.Size = sizeof(struct aac_fib_header) +
 	    sizeof(struct aac_srb);
@@ -3204,6 +3192,21 @@ out:
 }
 
 /*
+ * cdevpriv interface private destructor.
+ */
+static void
+aac_cdevpriv_dtor(void *arg)
+{
+	struct aac_softc *sc;
+
+	sc = arg;
+	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
+	mtx_lock(&Giant);
+	device_unbusy(sc->aac_dev);
+	mtx_unlock(&Giant);
+}
+
+/*
  * Handle an AIF sent to us by the controller; queue it for later reference.
  * If the queue fills up, then drop the older entries.
  */
@@ -3216,6 +3219,7 @@ aac_handle_aif(struct aac_softc *sc, struct aac_fib *fib)
 	struct aac_mntinforesp *mir;
 	int next, current, found;
 	int count = 0, added = 0, i = 0;
+	uint32_t channel;
 
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
@@ -3322,6 +3326,27 @@ aac_handle_aif(struct aac_softc *sc, struct aac_fib *fib)
 				mtx_lock(&sc->aac_io_lock);
 			}
 
+			break;
+
+		case AifEnEnclosureManagement:
+			switch (aif->data.EN.data.EEE.eventType) {
+			case AIF_EM_DRIVE_INSERTION:
+			case AIF_EM_DRIVE_REMOVAL:
+				channel = aif->data.EN.data.EEE.unitID;
+				if (sc->cam_rescan_cb != NULL)
+					sc->cam_rescan_cb(sc,
+					    (channel >> 24) & 0xF,
+					    (channel & 0xFFFF));
+				break;
+			}
+			break;
+
+		case AifEnAddJBOD:
+		case AifEnDeleteJBOD:
+			channel = aif->data.EN.data.ECE.container;
+			if (sc->cam_rescan_cb != NULL)
+				sc->cam_rescan_cb(sc, (channel >> 24) & 0xF,
+				    AAC_CAM_TARGET_WILDCARD);
 			break;
 
 		default:
@@ -3587,7 +3612,7 @@ aac_supported_features(struct aac_softc *sc, caddr_t uptr)
 	 * associated with the feature in the data field or perform whatever
 	 * action needed indicates in the data field.
 	 */
-	 if (f.feat.fValue == 0) {
+	if (f.feat.fValue == 0) {
 		f.feat.fBits.largeLBA =
 		    (sc->flags & AAC_FLAGS_LBA_64BIT) ? 1 : 0;
 		/* TODO: In the future, add other features state here as well */

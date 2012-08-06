@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aacreg.h,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aacreg.h,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000-2001 Scott Long
@@ -27,7 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/aac/aacreg.h,v 1.23.2.6 2011/10/29 23:44:30 marius Exp $
  */
 
 /*
@@ -307,7 +306,9 @@ struct aac_adapter_init {
 	u_int32_t	HostElapsedSeconds;
 	/* ADAPTER_INIT_STRUCT_REVISION_4 begins here */
 	u_int32_t	InitFlags;			/* flags for supported features */
-#define INITFLAGS_NEW_COMM_SUPPORTED	1
+#define	AAC_INITFLAGS_NEW_COMM_SUPPORTED	1
+#define	AAC_INITFLAGS_DRIVER_USES_UTC_TIME	0x10
+#define	AAC_INITFLAGS_DRIVER_SUPPORTS_PM	0x20
 	u_int32_t	MaxIoCommands;		/* max outstanding commands */
 	u_int32_t	MaxIoSize;			/* largest I/O command */
 	u_int32_t	MaxFibSize;			/* largest FIB to adapter */
@@ -886,6 +887,17 @@ typedef enum {
 	AifEnBatteryNeedsRecond,	/* The battery needs reconditioning */
 	AifEnClusterEvent,		/* Some cluster event */
 	AifEnDiskSetEvent,		/* A disk set event occured. */
+	AifEnContainerScsiEvent,	/* a container event with no. and scsi id */
+	AifEnPicBatteryEvent,	/* An event gen. by pic_battery.c for an ABM */
+	AifEnExpEvent,		/* Exp. Event Type to replace CTPopUp messages */
+	AifEnRAID6RebuildDone,	/* RAID6 rebuild finished */
+	AifEnSensorOverHeat,	/* Heat Sensor indicate overheat */
+	AifEnSensorCoolDown,	/* Heat Sensor ind. cooled down after overheat */
+	AifFeatureKeysModified,	/* notif. of updated feature keys */
+	AifApplicationExpirationEvent,	/* notif. on app. expiration status */
+	AifEnBackgroundConsistencyCheck,/* BCC notif. for NEC - DDTS 94700 */
+	AifEnAddJBOD,		/* A new JBOD type drive was created (30) */
+	AifEnDeleteJBOD,	/* A JBOD type drive was deleted (31) */
 	AifDriverNotifyStart=199,	/* Notifies for host driver go here */
 	/* Host driver notifications start here */
 	AifDenMorphComplete, 		/* A morph operation completed */
@@ -922,6 +934,11 @@ struct aac_AifEnsEnclosureEvent {
 					 * slot id, tempsensor id.  */
 	u_int32_t	eventType;	/* event type */
 } __packed;
+
+typedef enum {
+	AIF_EM_DRIVE_INSERTION=31,
+	AIF_EM_DRIVE_REMOVAL
+} aac_AifEMEventType;
 
 struct aac_AifEnsBatteryEvent {
 	AAC_NVBATT_TRANSITION	transition_type;	/* eg from low to ok */
@@ -1082,6 +1099,7 @@ typedef enum {
 	ST_DQUOT = 69,
 	ST_STALE = 70,
 	ST_REMOTE = 71,
+	ST_NOT_READY = 72,
 	ST_BADHANDLE = 10001,
 	ST_NOT_SYNC = 10002,
 	ST_BAD_COOKIE = 10003,
@@ -1092,7 +1110,8 @@ typedef enum {
 	ST_JUKEBOX = 10008,
 	ST_NOTMOUNTED = 10009,
 	ST_MAINTMODE = 10010,
-	ST_STALEACL = 10011
+	ST_STALEACL = 10011,
+	ST_BUS_RESET = 20001
 } AAC_FSAStatus;
 
 /*

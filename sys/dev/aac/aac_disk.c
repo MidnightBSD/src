@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_disk.c,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac_disk.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_disk.c,v 1.43.10.5 2011/10/29 23:44:30 marius Exp $");
 
 #include "opt_aac.h"
 
@@ -107,8 +106,9 @@ aac_disk_open(struct disk *dp)
 
 	/* check that the controller is up and running */
 	if (sc->ad_controller->aac_state & AAC_STATE_SUSPEND) {
-		printf("Controller Suspended controller state = 0x%x\n",
-		       sc->ad_controller->aac_state);
+		device_printf(sc->ad_controller->aac_dev,
+		    "Controller Suspended controller state = 0x%x\n",
+		    sc->ad_controller->aac_state);
 		return(ENXIO);
 	}
 
@@ -253,7 +253,8 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 	if (!first) {
 		first = 1;
 		if (bus_dmamap_create(sc->aac_buffer_dmat, 0, &dump_datamap)) {
-			printf("bus_dmamap_create failed\n");
+			device_printf(sc->aac_dev,
+			    "bus_dmamap_create failed\n");
 			return (ENOMEM);
 		}
 	}
@@ -306,8 +307,9 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 		size += fib->Header.Size;
 
 		if (aac_sync_fib(sc, command, 0, fib, size)) {
-			printf("Error dumping block 0x%jx\n",
-			       (uintmax_t)physical);
+			device_printf(sc->aac_dev,
+			     "Error dumping block 0x%jx\n",
+			     (uintmax_t)physical);
 			return (EIO);
 		}
 

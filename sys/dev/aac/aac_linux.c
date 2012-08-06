@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_linux.c,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac_linux.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Scott Long
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_linux.c,v 1.4 2006/12/20 17:10:53 delphij Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Linux ioctl handler for the aac device driver
@@ -34,6 +34,7 @@ __FBSDID("$FreeBSD: src/sys/dev/aac/aac_linux.c,v 1.4 2006/12/20 17:10:53 delphi
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
@@ -79,7 +80,7 @@ aac_linux_ioctl(struct thread *td, struct linux_ioctl_args *args)
 	u_long cmd;
 	int error;
 
-	if ((error = fget(td, args->fd, &fp)) != 0)
+	if ((error = fget(td, args->fd, CAP_IOCTL, &fp)) != 0)
 		return (error);
 	cmd = args->cmd;
 

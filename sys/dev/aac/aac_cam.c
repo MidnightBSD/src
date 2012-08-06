@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_cam.c,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac_cam.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Adaptec, Inc.
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.28.2.10 2011/10/29 23:51:23 marius Exp $");
 
 /*
  * CAM front-end for communicating with non-DASD devices
@@ -38,12 +37,15 @@ __FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.28.2.10 2011/10/29 23:51:23 ma
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
 #include <cam/cam_debug.h>
+#include <cam/cam_periph.h>
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/scsi/scsi_all.h>
@@ -77,6 +79,9 @@ static int aac_cam_detach(device_t dev);
 static void aac_cam_action(struct cam_sim *, union ccb *);
 static void aac_cam_poll(struct cam_sim *);
 static void aac_cam_complete(struct aac_command *);
+static void aac_cam_rescan(struct aac_softc *sc, uint32_t channel,
+    uint32_t target_id);
+
 static u_int32_t aac_cam_reset_bus(struct cam_sim *, union ccb *);
 static u_int32_t aac_cam_abort_ccb(struct cam_sim *, union ccb *);
 static u_int32_t aac_cam_term_io(struct cam_sim *, union ccb *);
@@ -100,6 +105,43 @@ DRIVER_MODULE(aacp, aac, aac_pass_driver, aac_pass_devclass, 0, 0);
 MODULE_DEPEND(aacp, cam, 1, 1, 1);
 
 MALLOC_DEFINE(M_AACCAM, "aaccam", "AAC CAM info");
+
+static void
+aac_cam_rescan(struct aac_softc *sc, uint32_t channel, uint32_t target_id)
+{
+	union ccb *ccb;
+	struct aac_sim *sim;
+	struct aac_cam *camsc;
+
+	if (target_id == AAC_CAM_TARGET_WILDCARD)
+		target_id = CAM_TARGET_WILDCARD;
+
+	TAILQ_FOREACH(sim, &sc->aac_sim_tqh, sim_link) {
+		camsc = sim->aac_cam;
+		if (camsc == NULL || camsc->inf == NULL ||
+		    camsc->inf->BusNumber != channel)
+			continue;
+
+		ccb = xpt_alloc_ccb_nowait();
+		if (ccb == NULL) {
+			device_printf(sc->aac_dev,
+			    "Cannot allocate ccb for bus rescan.\n");
+			return;
+		}
+
+		if (xpt_create_path(&ccb->ccb_h.path, xpt_periph,
+		    cam_sim_path(camsc->sim),
+		    target_id, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
+			xpt_free_ccb(ccb);
+			device_printf(sc->aac_dev,
+			    "Cannot create path for bus rescan.\n");
+			return;
+		}
+		xpt_rescan(ccb);
+		break;
+	}
+}
+
 
 static void
 aac_cam_event(struct aac_softc *sc, struct aac_event *event, void *arg)
@@ -142,6 +184,7 @@ aac_cam_detach(device_t dev)
 
 	camsc = (struct aac_cam *)device_get_softc(dev);
 	sc = camsc->inf->aac_sc;
+	camsc->inf->aac_cam = NULL;
 
 	mtx_lock(&sc->aac_io_lock);
 
@@ -149,6 +192,8 @@ aac_cam_detach(device_t dev)
 	xpt_free_path(camsc->path);
 	xpt_bus_deregister(cam_sim_path(camsc->sim));
 	cam_sim_free(camsc->sim, /*free_devq*/TRUE);
+
+	sc->cam_rescan_cb = NULL;
 
 	mtx_unlock(&sc->aac_io_lock);
 
@@ -172,6 +217,7 @@ aac_cam_attach(device_t dev)
 	camsc = (struct aac_cam *)device_get_softc(dev);
 	inf = (struct aac_sim *)device_get_ivars(dev);
 	camsc->inf = inf;
+	camsc->inf->aac_cam = camsc;
 
 	devq = cam_simq_alloc(inf->TargetsPerBus);
 	if (devq == NULL)
@@ -199,6 +245,7 @@ aac_cam_attach(device_t dev)
 		mtx_unlock(&inf->aac_sc->aac_io_lock);
 		return (EIO);
 	}
+	inf->aac_sc->cam_rescan_cb = aac_cam_rescan;
 	mtx_unlock(&inf->aac_sc->aac_io_lock);
 
 	camsc->sim = sim;
@@ -573,7 +620,7 @@ aac_cam_reset_bus(struct cam_sim *sim, union ccb *ccb)
 	sc = camsc->inf->aac_sc;
 
 	if (sc == NULL) {
-		printf("Null sc?\n");
+		printf("aac: Null sc?\n");
 		return (CAM_REQ_ABORTED);
 	}
 

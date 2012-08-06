@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_debug.c,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac_debug.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_debug.c,v 1.22.2.4 2011/10/29 23:44:30 marius Exp $");
 
 /*
  * Debugging support.

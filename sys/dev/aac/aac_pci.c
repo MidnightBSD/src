@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_pci.c,v 1.3 2012/04/12 01:16:11 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac_pci.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_pci.c,v 1.62.2.9 2011/10/29 23:44:30 marius Exp $");
 
 /*
  * PCI bus interface and resource allocation.
@@ -69,9 +68,7 @@ static device_method_t aac_methods[] = {
 	DEVMETHOD(device_suspend,	aac_suspend),
 	DEVMETHOD(device_resume,	aac_resume),
 
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t aac_pci_driver = {
@@ -178,7 +175,7 @@ struct aac_ident
 	{0x9005, 0x0285, 0x1014, 0x0312, AAC_HWIF_I960RX, 0,
 	 "IBM ServeRAID 8i"},
 	{0x9005, 0x0285, 0x9005, 0x0298, AAC_HWIF_I960RX, 0,
-	 "Adaptec SAS RAID 4000SAS"},
+	 "Adaptec RAID 4000"},
 	{0x9005, 0x0285, 0x9005, 0x0299, AAC_HWIF_I960RX, 0,
 	 "Adaptec SAS RAID 4800SAS"},
 	{0x9005, 0x0285, 0x9005, 0x029a, AAC_HWIF_I960RX, 0,
@@ -405,7 +402,7 @@ aac_pci_attach(device_t dev)
 	 *
 	 * Note that some of these controllers are 64-bit capable.
 	 */
-	if (bus_dma_tag_create(NULL, 			/* parent */
+	if (bus_dma_tag_create(bus_get_dma_tag(sc->aac_dev), /* parent */
 			       PAGE_SIZE, 0,		/* algnmnt, boundary */
 			       BUS_SPACE_MAXADDR,	/* lowaddr */
 			       BUS_SPACE_MAXADDR, 	/* highaddr */
