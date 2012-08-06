@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.18 2012/03/10 03:29:52 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.19 2012/07/04 16:05:41 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -98,6 +98,10 @@
                 intel_iwi
                 ..
                 intel_wpi
+                ..
+            ..
+            llvm
+                clang
                 ..
             ..
             ncurses
@@ -212,6 +216,8 @@
             ..
             bootforth
             ..
+            csh
+            ..
             cvs
                 contrib
                 ..
@@ -230,9 +236,13 @@
             ..
             find_interface
             ..
+            hast
+            ..
             hostapd
             ..
             ibcs2
+            ..
+            indent
             ..
             ipfilter
             ..
@@ -280,6 +290,8 @@
             ..
             nwclient
             ..
+            pc-sysinstall
+            ..
             perfmon
             ..
             pf
@@ -289,8 +301,6 @@
             ppi
             ..
             ppp
-            ..
-            pppd
             ..
             printing
             ..
@@ -308,15 +318,9 @@
                 srcs
                 ..
             ..
-            slattach
-            ..
-            sliplogin
-            ..
             smbfs
                 print
                 ..
-            ..
-            startslip
             ..
             sunrpc
                 dir
@@ -328,8 +332,6 @@
             ..
             tcsh
             ..
-            wpa_supplicant
-            ..
         ..
         games
             atc
@@ -337,36 +339,6 @@
             fortune
             ..
             larn
-            ..
-        ..
-        groff_font
-            devX100
-            ..
-            devX100-12
-            ..
-            devX75
-            ..
-            devX75-12
-            ..
-            devascii
-            ..
-            devcp1047
-            ..
-            devdvi
-            ..
-            devhtml
-            ..
-            devkoi8-r
-            ..
-            devlatin1
-            ..
-            devlbp
-            ..
-            devlj4
-            ..
-            devps
-            ..
-            devutf8
             ..
         ..
         info
@@ -442,8 +414,6 @@
 		UTF
 		..
 	    ..
-        ..
-        isdn
         ..
         locale
             UTF-8
@@ -1136,6 +1106,8 @@
             ..
             la_LN.ISO8859-1
             ..
+            la_LN.ISO8859-13
+            ..
             la_LN.ISO8859-15
             ..
             la_LN.ISO8859-2
@@ -1149,6 +1121,10 @@
             lt_LT.ISO8859-4
             ..
             lt_LT.UTF-8
+            ..
+            lv_LV.ISO8859-13
+            ..
+            lv_LV.UTF-8
             ..
             mn_MN.UTF-8
             ..
@@ -1267,6 +1243,20 @@
                 ..
             ..
         ..
+        pc-sysinstall
+            backend
+            ..
+            backend-partmanager
+            ..
+            backend-query
+            ..
+            conf
+                license
+                ..
+            ..
+            doc
+            ..
+        ..
         security
         ..
         sendmail
@@ -1290,12 +1280,6 @@
             ..
         ..
         tabset
-        ..
-        tmac
-            mdoc
-            ..
-            mm
-            ..
         ..
         vi
             catalog

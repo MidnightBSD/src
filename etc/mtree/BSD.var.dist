@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.var.dist,v 1.8 2011/03/06 04:01:30 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.var.dist,v 1.9 2011/08/07 15:44:51 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.var.dist,v 1.71.2.1 2005/08/15 20:24:07 cperciva Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -22,6 +22,8 @@
     ..
 /set gname=wheel
     backups
+    ..
+    cache
     ..
     crash
     ..
@@ -70,6 +72,8 @@
         named           uname=bind gname=bind
         ..
         ppp             gname=network mode=0770
+        ..
+        wpa_supplicant
         ..
     ..
     rwho            gname=daemon mode=0775

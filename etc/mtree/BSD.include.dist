@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.include.dist,v 1.8 2010/08/14 20:39:49 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.include.dist,v 1.9 2011/12/28 03:09:04 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.include.dist,v 1.100.2.2 2005/11/16 10:50:10 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -77,9 +77,19 @@
             tr1
             ..
         ..
+        v1
+            ext
+            ..
+        ..
     ..
     cam
+        ata
+        ..
         scsi
+        ..
+    ..
+    clang
+        3.1
         ..
     ..
     crypto
@@ -91,6 +101,10 @@
         ..
         bktr
         ..
+        ciss
+        ..
+        filemon
+        ..
         firewire
         ..
         hwpmc
@@ -101,7 +115,15 @@
         ..
         iicbus
         ..
+        io
+        ..
         lmc
+        ..
+        mfi
+        ..
+        mpt
+            mpilib
+            ..
         ..
         ofw
         ..
@@ -124,6 +146,10 @@
     ..
     dispatch
     ..
+    edit
+        readline
+        ..
+    ..
     fs
         devfs
         ..
@@ -132,6 +158,8 @@
         fifofs
         ..
         msdosfs
+        ..
+        nfs
         ..
         ntfs
         ..
@@ -150,6 +178,10 @@
         unionfs
         ..
     ..
+    gcc
+        4.2
+        ..
+    ..
     geom
         cache
         ..
@@ -165,11 +197,13 @@
         ..
         mirror
         ..
+        mountver
+        ..
         multipath
         ..
         nop
         ..
-        raid3
+        raid
         ..
         raid5
         ..
@@ -188,7 +222,15 @@
     ..
     gssapi
     ..
-    i4b
+    infiniband
+        complib 
+        ..
+        iba
+        ..
+        opensm
+        ..
+        vendor
+        ..
     ..
     isofs
         cd9660
@@ -254,9 +296,11 @@
     ..
     openssl
     ..
-    pccard
+    pcap
     ..
     protocols
+    ..
+    rdma
     ..
     readline
     ..
@@ -289,5 +333,7 @@
         ..
     ..
     vm
+    ..
+    xlocale
     ..
 ..
