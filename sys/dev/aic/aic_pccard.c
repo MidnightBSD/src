@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aic/aic_pccard.c,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Luoqi Chen.
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic/aic_pccard.c,v 1.20 2007/06/17 05:55:46 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aic/aic6360reg.h,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994 Charles Hannum.
  * Copyright (c) 1994 Jarle Greipsland.
@@ -30,7 +30,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/aic/aic6360reg.h,v 1.4 2005/01/06 01:42:25 imp Exp $
+ * $FreeBSD$
  */
 
 #define SCSISEQ		0x00	/* SCSI sequence control */

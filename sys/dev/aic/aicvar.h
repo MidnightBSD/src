@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aic/aicvar.h,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Luoqi Chen.
  * All rights reserved.
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/aic/aicvar.h,v 1.9 2007/06/17 05:55:46 scottl Exp $
+ * $FreeBSD$
  */
 
 struct aic_transinfo {
