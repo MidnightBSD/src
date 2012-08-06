@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: resolver.c,v 1.1.1.5 2011-10-26 11:58:39 laffer1 Exp $ */
+/* $Id: resolver.c,v 1.2 2012-08-06 23:26:42 laffer1 Exp $ */
 
 /*! \file */
 
@@ -7991,6 +7991,7 @@ dns_resolver_addbadcache(dns_resolver_t *resolver, dns_name_t *name,
 			goto cleanup;
 		bad->type = type;
 		bad->hashval = hashval;
+		bad->expire = *expire;
 		isc_buffer_init(&buffer, bad + 1, name->length);
 		dns_name_init(&bad->name, NULL);
 		dns_name_copy(name, &bad->name, &buffer);
@@ -8002,8 +8003,8 @@ dns_resolver_addbadcache(dns_resolver_t *resolver, dns_name_t *name,
 		if (resolver->badcount < resolver->badhash * 2 &&
 		    resolver->badhash > DNS_BADCACHE_SIZE)
 			resizehash(resolver, &now, ISC_FALSE);
-	}
-	bad->expire = *expire;
+	} else
+		bad->expire = *expire;
  cleanup:
 	UNLOCK(&resolver->lock);
 }
