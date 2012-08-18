@@ -1,7 +1,8 @@
-# $MidnightBSD: src/lib/ncurses/Makefile.inc,v 1.2 2008/10/02 17:05:37 laffer1 Exp $
+# $MidnightBSD: src/lib/ncurses/Makefile.inc,v 1.3 2012/08/18 20:18:27 laffer1 Exp $
 # $FreeBSD: src/lib/ncurses/Makefile.inc,v 1.2 2007/03/09 09:54:07 rafan Exp $
 
 # This is to include src/lib/Makefile.inc
 
 WARNS?=	3
+
 .include "../Makefile.inc"

@@ -31,7 +31,7 @@
  *  Author: Thomas E. Dickey <dickey@clark.net> 1997                        *
  ****************************************************************************/
 /*
- * $Id: ncurses_cfg.h,v 1.2 2008-10-05 18:18:57 laffer1 Exp $
+ * $Id: ncurses_cfg.h,v 1.3 2012-08-18 20:27:20 laffer1 Exp $
  *
  * This is a template-file used to generate the "ncurses_cfg.h" file.
  *
@@ -44,7 +44,7 @@
  *	ftp://invisible-island.net/autoconf/
  */
 
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/lib/ncurses/ncurses/ncurses_cfg.h,v 1.2 2008/10/05 18:18:57 laffer1 Exp $ */
 
 #ifndef NC_CONFIG_H
 #define NC_CONFIG_H
@@ -53,10 +53,8 @@
 #include <stdlib.h>
 #endif
 #define BSD_TPUTS 1
-#define CC_HAS_INLINE_FUNCS 1
 #define CC_HAS_PROTOS 1
 #define CPP_HAS_STATIC_CAST 1
-#define CPP_HAS_VSCAN_FUNC 1
 #define ETIP_NEEDS_MATH_H 1
 #define GCC_NORETURN __attribute__((noreturn))
 #define GCC_PRINTF 1
@@ -78,6 +76,7 @@
 #define HAVE_GETTTYNAM 1
 #define HAVE_HAS_KEY 1
 #define HAVE_INTTYPES_H 1
+#define HAVE_IOSTREAM 1
 #define HAVE_ISASCII 1
 #define HAVE_ISSETUGID 1
 #define HAVE_LANGINFO_CODESET 1
@@ -139,15 +138,16 @@
 #define HAVE_VSNPRINTF 1
 #define HAVE_VSSCANF 1
 #define HAVE_WCTYPE_H 1
-#define HAVE_WORKING_POLL 1
 #define HAVE_WRESIZE 1
+#define IOSTREAM_NAMESPACE 1
 #define MIXEDCASE_FILENAMES 1
 #define NCURSES_EXT_FUNCS 1
 #define NCURSES_NO_PADDING 1
 #define NCURSES_PATHSEP ':'
-#define NCURSES_VERSION_STRING "5.6.20061217"
+#define NCURSES_VERSION_STRING "5.7.20081102"
 #define NDEBUG 1
 #define RETSIGTYPE void
+#define SIG_ATOMIC_T volatile sig_atomic_t
 #define SIZEOF_SIGNED_CHAR 1
 #define STDC_HEADERS 1
 #define SYSTEM_NAME "FreeBSD"
@@ -160,20 +160,23 @@
 #define USE_HASHMAP 1
 #define USE_LINKS 1
 #define USE_SIGWINCH 1
-#define USE_STDIO_VSCAN 1
 #define USE_SYSMOUSE 1
 #define USE_TERMCAP 1
 #ifdef ENABLE_WIDEC
 #define USE_WIDEC_SUPPORT 1
-#define HAVE_PUTWC 1
 #define HAVE_BTOWC 1
-#define HAVE_WCTOB 1
-#define HAVE_MBTOWC 1
-#define HAVE_WCTOMB 1
 #define HAVE_MBLEN 1
 #define HAVE_MBRLEN 1
 #define HAVE_MBRTOWC 1
-#define NEED_WCHAR_H 1 
+#define HAVE_MBSRTOWCS 1
+#define HAVE_MBSTOWCS 1
+#define HAVE_MBTOWC 1
+#define HAVE_PUTWC 1
+#define HAVE_WCSRTOMBS 1
+#define HAVE_WCSTOMBS 1
+#define HAVE_WCTOB 1
+#define HAVE_WCTOMB 1
+#define NEED_WCHAR_H 1
 #endif
 
 #include <ncurses_def.h>

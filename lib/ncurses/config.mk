@@ -1,4 +1,5 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/ncurses/config.mk,v 1.3 2008/10/05 18:18:56 laffer1 Exp $
+
 # This Makefile is shared by libncurses, libform, libmenu, libpanel.
 
 NCURSES_DIR=	${.CURDIR}/../../../contrib/ncurses

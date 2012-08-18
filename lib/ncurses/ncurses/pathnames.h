@@ -28,8 +28,8 @@
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/4/93
  * $FreeBSD: src/lib/ncurses/ncurses/pathnames.h,v 1.3 2007/01/20 07:43:46 rafan Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/ncurses/ncurses/pathnames.h,v 1.2 2008/10/05 18:18:57 laffer1 Exp $
  */
 
-#define	_PATH_DEF	".termcap /usr/share/misc/termcap"
+#define	_PATH_DEF	".termcap /usr/share/misc/termcap /etc/termcap.small"
 #define	_PATH_DEF_SEC	"/usr/share/misc/termcap"
