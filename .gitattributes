@@ -37947,6 +37947,15 @@ lib/libugidfw/bsde_rule_to_string.3 -text
 lib/libugidfw/libugidfw.3 -text
 lib/libugidfw/ugidfw.c -text
 lib/libugidfw/ugidfw.h -text
+lib/libulog/Makefile -text
+lib/libulog/Symbol.map -text
+lib/libulog/ulog.h -text
+lib/libulog/ulog_login.3 -text
+lib/libulog/ulog_login.c -text
+lib/libulog/ulog_login_pseudo.c -text
+lib/libulog/utempter.c -text
+lib/libulog/utempter.h -text
+lib/libulog/utempter_add_record.3 -text
 lib/libusb/Makefile -text
 lib/libusb/libusb.3 -text
 lib/libusb/libusb.h -text
