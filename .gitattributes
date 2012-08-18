@@ -34965,6 +34965,7 @@ lib/libalias/modules/skinny/Makefile -text
 lib/libalias/modules/smedia/Makefile -text
 lib/libarchive/Makefile -text
 lib/libarchive/config.h -text
+lib/libauditd/Makefile -text
 lib/libautofs/Makefile -text
 lib/libautofs/libautofs.3 -text
 lib/libautofs/libautofs.c -text
@@ -37840,6 +37841,9 @@ lib/libstand/zalloc_defs.h -text
 lib/libstand/zalloc_malloc.c -text
 lib/libstand/zalloc_mem.h -text
 lib/libstand/zalloc_protos.h -text
+lib/libstdbuf/Makefile -text
+lib/libstdbuf/libstdbuf.3 -text
+lib/libstdbuf/stdbuf.c -text
 lib/libtacplus/Makefile -text
 lib/libtacplus/libtacplus.3 -text
 lib/libtacplus/taclib.c -text
