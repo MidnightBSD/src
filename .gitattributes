@@ -37322,6 +37322,11 @@ lib/libipx/Makefile -text
 lib/libipx/ipx.3 -text
 lib/libipx/ipx_addr.c -text
 lib/libipx/ipx_ntoa.c -text
+lib/libjail/Makefile -text
+lib/libjail/jail.3 -text
+lib/libjail/jail.c -text
+lib/libjail/jail.h -text
+lib/libjail/jail_getid.c -text
 lib/libkiconv/Makefile -text
 lib/libkiconv/kiconv.3 -text
 lib/libkiconv/quirks.c -text
