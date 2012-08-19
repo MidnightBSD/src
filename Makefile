@@ -1,6 +1,5 @@
 #
-# $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile,v 1.11 2011/10/22 19:19:33 laffer1 Exp $
+# $MidnightBSD: src/Makefile,v 1.12 2011/10/27 00:26:45 laffer1 Exp $
 #
 # The user-driven targets are:
 #
@@ -99,7 +98,8 @@ TGTS=	all all-man buildenv buildenvvars buildkernel buildworld \
 	obj objlink regress rerelease showconfig tags toolchain update \
 	_worldtmp _legacy _bootstrap-tools _cleanobj _obj \
 	_build-tools _cross-tools _includes _libraries _depend \
-	build32 distribute32 install32
+	build32 builddtb distribute32 install32 xdev xdev-build xdev-install \
+
 TGTS+=	${SUBDIR_TARGETS}
 
 BITGTS=	files includes
