@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.15 2012/07/21 01:24:08 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.16 2012/08/19 03:37:47 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -269,7 +269,6 @@ WITHOUT_${var}=
     OPENSSL \
     PAM \
     PF \
-    PMC \
     RCMDS \
     RCS \
     RESCUE \
@@ -384,6 +383,8 @@ __DEFAULT_YES_OPTIONS = \
     OPENSSL \
     PAM \
     PF \
+    PMC \
+    PPP \
     PROFILE \
     QUOTAS \
     RCMDS \

@@ -1,6 +1,6 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/share/mk/bsd.prog.mk,v 1.144.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.8 2012/04/01 16:06:28 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.9 2012/06/13 01:46:00 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -29,6 +29,7 @@ NO_WERROR=
 .if defined(DEBUG_FLAGS)
 CFLAGS+=${DEBUG_FLAGS}
 CXXFLAGS+=${DEBUG_FLAGS}
+
 .if !defined(NO_CTF) && (${DEBUG_FLAGS:M-g} != "")
 CTFFLAGS+= -g
 .endif
@@ -75,9 +76,9 @@ ${PROG}: ${OBJS}
 .else
 	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .endif
-.if defined(CTFMERGE)
-	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
-.endif
+	@[ -z "${CTFMERGE}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS} && \
+		${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS})
 
 .else	# !defined(SRCS)
 
@@ -105,9 +106,9 @@ ${PROG}: ${OBJS}
 .else
 	${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${OBJS} ${LDADD}
 .endif
-.if defined(CTFMERGE)
-	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
-.endif
+	@[ -z "${CTFMERGE}" -o -n "${NO_CTF}" ] || \
+		(${ECHO} ${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS} && \
+		${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS})
 .endif
 
 .endif
