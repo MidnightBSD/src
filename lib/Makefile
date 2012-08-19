@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.16 2012/04/09 22:16:44 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.17 2012/07/04 16:16:24 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -9,8 +9,9 @@
 #
 # csu must be built before all shared libaries for ELF.
 # libc must be built before all other shared libraries.
-# libcom_err must be built before libkrb5 and libpam.
-# libcrypt must be built before libkrb5 and libpam.
+# libbsm must be built before ibauditd.
+# libcom_err must be built before libpam.
+# libcrypt must be built before libpam.
 # libkvm must be built before libdevstat.
 # msun must be built before libg++ and libstdc++.
 # libmd must be built before libatm, libopie, libradius, and libtacplus.
@@ -23,35 +24,115 @@
 # libtacplus must be built before libpam.
 # libutil must be built before libpam.
 # libypclnt must be built before libpam.
-# libkse must be built before libsqlite3.
-# libbz2 must be built before libarchive.
-# liblzma must be built before libarchive.
-# libsqlite3 must be built before libmport.
+# libgssapi must be built before librpcsec_gss
+#
 # Otherwise, the SUBDIR list should be in alphabetical order.
+#
+# Except it appears bind needs to be compiled last
 
-SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf ${_libiconv_modules} \
-	libkvm msun libmd \
-	ncurses libnetgraph libradius librpcsvc libsbuf libtacplus libutil \
-	${_libypclnt} libalias libbz2 liblzma libarchive ${_libatm} \
-	libbegemot ${_libbluetooth} libbsnmp \
-	libcalendar libcam libcompat libdevinfo libdevstat libdisk \
-	libdwarf libedit libexpat libfetch ${_libffi} libftpio \
-	libgeom ${_libgpib} ${_libgssapi} libipsec \
-	libipx libkiconv libmagic libmemstat ${_libmilter} ${_libmp} \
-	${_libncp} ${_libngatm} libopie libpam libpcap \
-	libpmc libproc ${_libkse} librt ${_libsdp} ${_libsm} \
-	${_libsmb} ${_libsmdb} \
-	${_libsmutil} libstand libtelnet ${_libthr} libthread_db libufs \
-	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz \
-	libsqlite3 libmport libmsearch ${_bind}
+SUBDIR_ORDERED=	${_csu} \
+	libc \
+	libbsm \
+	libauditd \
+	libcom_err \
+	libcompiler_rt \
+	libcrypt \
+	libelf \
+	${_libiconv_modules} \
+	libkvm \
+	msun \
+	libmd \
+	ncurses \
+	${_libnetgraph} \
+	libradius \
+	librpcsvc \
+	libsbuf \
+	libtacplus \
+	libutil \
+	${_libypclnt} \
+	${_libcxxrt} \
+	${_libcplusplus}
+
+SUBDIR=	${SUBDIR_ORDERED} \
+	libalias \
+	libarchive \
+	${_libatm} \
+	libbegemot \
+	libblocksruntime \
+	${_libbluetooth} \
+	${_libbsnmp} \
+	libbz2 \
+	libcalendar \
+	libcam \
+	libcompat \
+	libdevinfo \
+	libdevstat \
+	libdisk \
+	libdwarf \
+	libedit \
+	${_libefi} \
+	libexpat \
+	libfetch \
+	libftpio \
+	libgeom \
+	${_libgpib} \
+	${_libgssapi} \
+	${_librpcsec_gss} \
+	libipsec \
+	${_libipx} \
+	libjail \
+	libkiconv \
+	liblzma \
+	libmagic \
+	libmemstat \
+	${_libmilter} \
+	${_libmp} \
+	${_libncp} \
+	${_libngatm} \
+	libopie \
+	libpam \
+	libpcap \
+	${_libpmc} \
+	${_libproc} \
+	libprocstat \
+	librt \
+	${_librtld_db} \
+	${_libsdp} \
+	${_libsm} \
+	${_libsmb} \
+	${_libsmdb} \
+	${_libsmutil} \
+	libstand \
+	libstdbuf \
+	${_libtelnet} \
+	${_libthr} \
+	libthread_db \
+	libufs \
+	libugidfw \
+	libulog \
+	${_libusbhid} \
+	${_libusb} \
+	${_libvgl} \
+	libwrap \
+	liby \
+	libz \
+	libsqlite3 \
+	libmport \
+	libmsearch \
+	${_bind} \
+	${_clang}
 
 .if exists(${.CURDIR}/csu/${MACHINE_ARCH}-elf)
 _csu=csu/${MACHINE_ARCH}-elf
-.elif exists(${.CURDIR}/csu/${MACHINE_ARCH}/Makefile)
+.elif exists(${.CURDIR}/csu/${MACHINE_ARCH})
 _csu=csu/${MACHINE_ARCH}
+.elif exists(${.CURDIR}/csu/${MACHINE_CPUARCH}/Makefile)
+_csu=csu/${MACHINE_CPUARCH}
 .else
 _csu=csu
 .endif
+
+# NB: keep these sorted by MK_* knobs
 
 .if ${MK_ATM} != "no"
 _libngatm=	libngatm
@@ -66,8 +147,21 @@ _libbluetooth=	libbluetooth
 _libsdp=	libsdp
 .endif
 
+.if ${MK_BSNMP} != "no"
+_libbsnmp=	libbsnmp
+.endif
+
+.if ${MK_CLANG} != "no" && !defined(COMPAT_32BIT)
+_clang=		clang
+.endif
+
+.if ${MK_GPIB} != "no"
+_libgpib=	libgpib
+.endif
+
 .if ${MK_GSSAPI} != "no"
 _libgssapi=	libgssapi
+_librpcsec_gss=	librpcsec_gss
 .endif
 
 .if ${MK_ICONV} != "no"
@@ -78,13 +172,49 @@ _libiconv_modules=	libiconv_modules
 _libipx=	libipx
 .endif
 
-.if ${MACHINE_ARCH} == "i386"
+.if ${MK_LIBTHR} != "no"
+_libthr=	libthr
+.endif
+
+.if ${MK_NETGRAPH} != "no"
+_libnetgraph=	libnetgraph
+.endif
+
+.if ${MK_NIS} != "no"
+_libypclnt=	libypclnt
+.endif
+
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 .if ${MK_NCP} != "no"
 _libncp=	libncp
 .endif
-_libffi=	libffi
 _libsmb=	libsmb
 _libvgl=	libvgl
+_libproc=	libproc
+_librtld_db=	librtld_db
+.endif
+
+.if ${MACHINE_CPUARCH} == "amd64"
+.if ${MK_NCP} != "no"
+_libncp=	libncp
+.endif
+.endif
+
+.if ${MACHINE_CPUARCH} == "sparc64"
+_libsmb=	libsmb
+.endif
+
+.if ${MK_OPENSSL} != "no"
+_libmp=		libmp
+.endif
+
+.if ${MK_LIBCPLUSPLUS} != "no"
+_libcxxrt=	libcxxrt
+_libcplusplus=	libc++
+.endif
+
+.if ${MK_PMC} != "no"
+_libpmc=	libpmc
 .endif
 
 .if ${MK_SENDMAIL} != "no"
@@ -94,35 +224,13 @@ _libsmdb=	libsmdb
 _libsmutil=	libsmutil
 .endif
 
-.if ${MK_OPENSSL} != "no"
-_libmp=		libmp
-.endif
-
-.if ${MACHINE_ARCH} == "amd64"
-.if ${MK_NCP} != "no"
-_libncp=	libncp
-.endif
-_libsmb=	libsmb
-.endif
-
-.if ${MK_LIBKSE} != "no"
-_libkse=	libkse
-.endif
-
-.if ${MK_LIBTHR} != "no"
-_libthr=	libthr
+.if ${MK_TELNET} != "no"
+_libtelnet=	libtelnet
 .endif
 
 .if ${MK_USB} != "no"
 _libusbhid=	libusbhid
-.endif
-
-.if ${MK_NIS} != "no"
-_libypclnt=	libypclnt
-.endif
-
-.if ${MK_GPIB} != "no"
-_libgpib=	libgpib
+_libusb=	libusb
 .endif
 
 .include <bsd.subdir.mk>

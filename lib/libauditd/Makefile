@@ -1,6 +1,4 @@
-#
-# $FreeBSD$
-#
+# $MidnightBSD$
 
 OPENBSMDIR=		${.CURDIR}/../../contrib/openbsm
 LIBAUDITDDIR=		${OPENBSMDIR}/libauditd

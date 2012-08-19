@@ -90,7 +90,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_attr.c,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -99,9 +99,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread_np.h>
+#include <sys/sysctl.h>
 #include "un-namespace.h"
 
 #include "thr_private.h"
+
+static size_t	_get_kern_cpuset_size(void);
 
 __weak_reference(_pthread_attr_destroy, pthread_attr_destroy);
 
@@ -115,6 +118,8 @@ _pthread_attr_destroy(pthread_attr_t *attr)
 		/* Invalid argument: */
 		ret = EINVAL;
 	else {
+		if ((*attr)->cpuset != NULL)
+			free((*attr)->cpuset);
 		/* Free the memory allocated to the attribute object: */
 		free(*attr);
 
@@ -131,25 +136,38 @@ _pthread_attr_destroy(pthread_attr_t *attr)
 __weak_reference(_pthread_attr_get_np, pthread_attr_get_np);
 
 int
-_pthread_attr_get_np(pthread_t pid, pthread_attr_t *dst)
+_pthread_attr_get_np(pthread_t pthread, pthread_attr_t *dstattr)
 {
 	struct pthread *curthread;
-	struct pthread_attr attr;
+	struct pthread_attr attr, *dst;
 	int	ret;
+	size_t	kern_size;
 
-	if (pid == NULL || dst == NULL || *dst == NULL)
+	if (pthread == NULL || dstattr == NULL || (dst = *dstattr) == NULL)
 		return (EINVAL);
-
+	kern_size = _get_kern_cpuset_size();
+	if (dst->cpuset == NULL) {
+		dst->cpuset = calloc(1, kern_size);
+		dst->cpusetsize = kern_size;
+	}
 	curthread = _get_curthread();
-	if ((ret = _thr_ref_add(curthread, pid, /*include dead*/0)) != 0)
+	if ((ret = _thr_find_thread(curthread, pthread, /*include dead*/0)) != 0)
 		return (ret);
-	attr = pid->attr;
-	if (pid->tlflags & TLFLAGS_DETACHED)
+	attr = pthread->attr;
+	if (pthread->flags & THR_FLAGS_DETACHED)
 		attr.flags |= PTHREAD_DETACHED;
-	_thr_ref_delete(curthread, pid);
-	memcpy(*dst, &attr, sizeof(struct pthread_attr));
-
-	return (0);
+	ret = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, TID(pthread),
+		dst->cpusetsize, dst->cpuset);
+	if (ret == -1)
+		ret = errno;
+	THR_THREAD_UNLOCK(curthread, pthread);
+	if (ret == 0) {
+		memcpy(&dst->pthread_attr_start_copy, 
+			&attr.pthread_attr_start_copy, 
+			offsetof(struct pthread_attr, pthread_attr_end_copy) -
+			offsetof(struct pthread_attr, pthread_attr_start_copy));
+	}
+	return (ret);
 }
 
 __weak_reference(_pthread_attr_getdetachstate, pthread_attr_getdetachstate);
@@ -542,4 +560,91 @@ _pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
 		ret = 0;
 	}
 	return(ret);
+}
+
+static size_t
+_get_kern_cpuset_size(void)
+{
+	static int kern_cpuset_size = 0;
+
+	if (kern_cpuset_size == 0) {
+		size_t len;
+
+		len = sizeof(kern_cpuset_size);
+		if (sysctlbyname("kern.sched.cpusetsize", &kern_cpuset_size,
+		    &len, NULL, 0))
+			PANIC("failed to get sysctl kern.sched.cpusetsize");
+	}
+
+	return (kern_cpuset_size);
+}
+
+__weak_reference(_pthread_attr_setaffinity_np, pthread_attr_setaffinity_np);
+int
+_pthread_attr_setaffinity_np(pthread_attr_t *pattr, size_t cpusetsize,
+	const cpuset_t *cpusetp)
+{
+	pthread_attr_t attr;
+	int ret;
+
+	if (pattr == NULL || (attr = (*pattr)) == NULL)
+		ret = EINVAL;
+	else {
+		if (cpusetsize == 0 || cpusetp == NULL) {
+			if (attr->cpuset != NULL) {
+				free(attr->cpuset);
+				attr->cpuset = NULL;
+				attr->cpusetsize = 0;
+			}
+			return (0);
+		}
+		size_t kern_size = _get_kern_cpuset_size();
+		/* Kernel rejects small set, we check it here too. */ 
+		if (cpusetsize < kern_size)
+			return (ERANGE);
+		if (cpusetsize > kern_size) {
+			/* Kernel checks invalid bits, we check it here too. */
+			size_t i;
+			for (i = kern_size; i < cpusetsize; ++i) {
+				if (((char *)cpusetp)[i])
+					return (EINVAL);
+			}
+		}
+		if (attr->cpuset == NULL) {
+			attr->cpuset = calloc(1, kern_size);
+			if (attr->cpuset == NULL)
+				return (errno);
+			attr->cpusetsize = kern_size;
+		}
+		memcpy(attr->cpuset, cpusetp, kern_size);
+		ret = 0;
+	}
+	return (ret);
+}
+
+__weak_reference(_pthread_attr_getaffinity_np, pthread_attr_getaffinity_np);
+int
+_pthread_attr_getaffinity_np(const pthread_attr_t *pattr, size_t cpusetsize,
+	cpuset_t *cpusetp)
+{
+	pthread_attr_t attr;
+	int ret = 0;
+
+	if (pattr == NULL || (attr = (*pattr)) == NULL)
+		ret = EINVAL;
+	else {
+		/* Kernel rejects small set, we check it here too. */ 
+		size_t kern_size = _get_kern_cpuset_size();
+		if (cpusetsize < kern_size)
+			return (ERANGE);
+		if (attr->cpuset != NULL)
+			memcpy(cpusetp, attr->cpuset, MIN(cpusetsize,
+			   attr->cpusetsize));
+		else
+			memset(cpusetp, -1, kern_size);
+		if (cpusetsize > kern_size)
+			memset(((char *)cpusetp) + kern_size, 0, 
+				cpusetsize - kern_size);
+	}
+	return (ret);
 }

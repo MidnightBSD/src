@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_resume_np.c,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -50,12 +50,10 @@ _pthread_resume_np(pthread_t thread)
 	int ret;
 
 	/* Add a reference to the thread: */
-	if ((ret = _thr_ref_add(curthread, thread, /*include dead*/0)) == 0) {
+	if ((ret = _thr_find_thread(curthread, thread, /*include dead*/0)) == 0) {
 		/* Lock the threads scheduling queue: */
-		THR_THREAD_LOCK(curthread, thread);
 		resume_common(thread);
 		THR_THREAD_UNLOCK(curthread, thread);
-		_thr_ref_delete(curthread, thread);
 	}
 	return (ret);
 }
@@ -67,7 +65,7 @@ _pthread_resume_all_np(void)
 	struct pthread *thread;
 
 	/* Take the thread list lock: */
-	THREAD_LIST_LOCK(curthread);
+	THREAD_LIST_RDLOCK(curthread);
 
 	TAILQ_FOREACH(thread, &_thread_list, tle) {
 		if (thread != curthread) {
@@ -87,5 +85,5 @@ resume_common(struct pthread *thread)
 	/* Clear the suspend flag: */
 	thread->flags &= ~THR_FLAGS_NEED_SUSPEND;
 	thread->cycle++;
-	_thr_umtx_wake(&thread->cycle, 1);
+	_thr_umtx_wake(&thread->cycle, 1, 0);
 }

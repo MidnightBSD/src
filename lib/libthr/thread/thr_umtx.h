@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_umtx.h,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _THR_FBSD_UMTX_H_
@@ -32,21 +32,29 @@
 #include <strings.h>
 #include <sys/umtx.h>
 
-#define DEFAULT_UMUTEX	{0}
+#define DEFAULT_UMUTEX	{0,0,{0,0},{0,0,0,0}}
+#define DEFAULT_URWLOCK {0,0,0,0,{0,0,0,0}}
 
-
-int __thr_umutex_lock(struct umutex *mtx) __hidden;
-int __thr_umutex_timedlock(struct umutex *mtx,
+int _umtx_op_err(void *, int op, u_long, void *, void *) __hidden;
+int __thr_umutex_lock(struct umutex *mtx, uint32_t id) __hidden;
+int __thr_umutex_lock_spin(struct umutex *mtx, uint32_t id) __hidden;
+int __thr_umutex_timedlock(struct umutex *mtx, uint32_t id,
 	const struct timespec *timeout) __hidden;
-int __thr_umutex_unlock(struct umutex *mtx) __hidden;
+int __thr_umutex_unlock(struct umutex *mtx, uint32_t id) __hidden;
 int __thr_umutex_trylock(struct umutex *mtx) __hidden;
 int __thr_umutex_set_ceiling(struct umutex *mtx, uint32_t ceiling,
 	uint32_t *oldceiling) __hidden;
 
 void _thr_umutex_init(struct umutex *mtx) __hidden;
+void _thr_urwlock_init(struct urwlock *rwl) __hidden;
+
 int _thr_umtx_wait(volatile long *mtx, long exp,
 	const struct timespec *timeout) __hidden;
-int _thr_umtx_wake(volatile long *mtx, int count) __hidden;
+int _thr_umtx_wait_uint(volatile u_int *mtx, u_int exp,
+	const struct timespec *timeout, int shared) __hidden;
+int _thr_umtx_timedwait_uint(volatile u_int *mtx, u_int exp, int clockid,
+	const struct timespec *timeout, int shared) __hidden;
+int _thr_umtx_wake(volatile void *mtx, int count, int shared) __hidden;
 int _thr_ucond_wait(struct ucond *cv, struct umutex *m,
         const struct timespec *timeout, int check_unpaking) __hidden;
 void _thr_ucond_init(struct ucond *cv) __hidden;
@@ -56,6 +64,11 @@ int _thr_ucond_broadcast(struct ucond *cv) __hidden;
 int __thr_rwlock_rdlock(struct urwlock *rwlock, int flags, struct timespec *tsp) __hidden;
 int __thr_rwlock_wrlock(struct urwlock *rwlock, struct timespec *tsp) __hidden;
 int __thr_rwlock_unlock(struct urwlock *rwlock) __hidden;
+
+/* Internal used only */
+void _thr_rwl_rdlock(struct urwlock *rwlock) __hidden;
+void _thr_rwl_wrlock(struct urwlock *rwlock) __hidden;
+void _thr_rwl_unlock(struct urwlock *rwlock) __hidden;
 
 static inline int
 _thr_umutex_trylock(struct umutex *mtx, uint32_t id)
@@ -70,34 +83,46 @@ _thr_umutex_trylock(struct umutex *mtx, uint32_t id)
 static inline int
 _thr_umutex_trylock2(struct umutex *mtx, uint32_t id)
 {
-    if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_UNOWNED, id))
+    if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_UNOWNED, id) != 0)
 	return (0);
+    if ((uint32_t)mtx->m_owner == UMUTEX_CONTESTED &&
+        __predict_true((mtx->m_flags & (UMUTEX_PRIO_PROTECT | UMUTEX_PRIO_INHERIT)) == 0))
+    	if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_CONTESTED, id | UMUTEX_CONTESTED))
+		return (0);
     return (EBUSY);
 }
 
 static inline int
 _thr_umutex_lock(struct umutex *mtx, uint32_t id)
 {
-    if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_UNOWNED, id))
+    if (_thr_umutex_trylock2(mtx, id) == 0)
 	return (0);
-    return (__thr_umutex_lock(mtx));
+    return (__thr_umutex_lock(mtx, id));
+}
+
+static inline int
+_thr_umutex_lock_spin(struct umutex *mtx, uint32_t id)
+{
+    if (_thr_umutex_trylock2(mtx, id) == 0)
+	return (0);
+    return (__thr_umutex_lock_spin(mtx, id));
 }
 
 static inline int
 _thr_umutex_timedlock(struct umutex *mtx, uint32_t id,
 	const struct timespec *timeout)
 {
-    if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_UNOWNED, id))
+    if (_thr_umutex_trylock2(mtx, id) == 0)
 	return (0);
-    return (__thr_umutex_timedlock(mtx, timeout));
+    return (__thr_umutex_timedlock(mtx, id, timeout));
 }
 
 static inline int
 _thr_umutex_unlock(struct umutex *mtx, uint32_t id)
 {
-    if (atomic_cmpset_rel_32(&mtx->m_owner, id, UMUTEX_UNOWNED))
-	return (0);
-    return (__thr_umutex_unlock(mtx));
+    	if (atomic_cmpset_rel_32(&mtx->m_owner, id, UMUTEX_UNOWNED))
+		return (0);
+	return (__thr_umutex_unlock(mtx, id));
 }
 
 static inline int
@@ -166,8 +191,11 @@ _thr_rwlock_unlock(struct urwlock *rwlock)
 		for (;;) {
 			if (__predict_false(URWLOCK_READER_COUNT(state) == 0))
 				return (EPERM);
-			if (!((state & URWLOCK_WRITE_WAITERS) && URWLOCK_READER_COUNT(state) == 1)) {
-				if (atomic_cmpset_rel_32(&rwlock->rw_state, state, state-1))
+			if (!((state & (URWLOCK_WRITE_WAITERS |
+			    URWLOCK_READ_WAITERS)) &&
+			    URWLOCK_READER_COUNT(state) == 1)) {
+				if (atomic_cmpset_rel_32(&rwlock->rw_state,
+				    state, state-1))
 					return (0);
 				state = rwlock->rw_state;
 			} else {

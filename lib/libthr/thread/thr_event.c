@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_event.c,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "thr_private.h"
@@ -42,7 +42,7 @@ void
 _thr_report_creation(struct pthread *curthread, struct pthread *newthread)
 {
 	curthread->event_buf.event = TD_CREATE;
-	curthread->event_buf.th_p = (td_thrhandle_t *)newthread;
+	curthread->event_buf.th_p = (uintptr_t)newthread;
 	curthread->event_buf.data = 0;
 	THR_UMUTEX_LOCK(curthread, &_thr_event_lock);
 	_thread_last_event = curthread;
@@ -55,7 +55,7 @@ void
 _thr_report_death(struct pthread *curthread)
 {
 	curthread->event_buf.event = TD_DEATH;
-	curthread->event_buf.th_p = (td_thrhandle_t *)curthread;
+	curthread->event_buf.th_p = (uintptr_t)curthread;
 	curthread->event_buf.data = 0;
 	THR_UMUTEX_LOCK(curthread, &_thr_event_lock);
 	_thread_last_event = curthread;

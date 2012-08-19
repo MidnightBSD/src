@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_pspinlock.c,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -104,7 +104,7 @@ _pthread_spin_lock(pthread_spinlock_t *lock)
 		count = SPIN_COUNT;
 		while ((ret = THR_UMUTEX_TRYLOCK(curthread, &lck->s_lock)) != 0) {
 			while (lck->s_lock.m_owner) {
-				if (_thr_is_smp) {
+				if (!_thr_is_smp) {
 					_pthread_yield();
 				} else {
 					CPU_SPINWAIT;

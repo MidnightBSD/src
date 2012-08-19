@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_condattr.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -79,8 +79,7 @@ _pthread_condattr_destroy(pthread_condattr_t *attr)
 }
 
 int
-_pthread_condattr_getclock(const pthread_condattr_t *attr,
-       clockid_t *clock_id)
+_pthread_condattr_getclock(const pthread_condattr_t *attr, clockid_t *clock_id)
 {
 	if (attr == NULL || *attr == NULL)
 		return (EINVAL);
@@ -89,8 +88,7 @@ _pthread_condattr_getclock(const pthread_condattr_t *attr,
 }
 
 int
-_pthread_condattr_setclock(pthread_condattr_t *attr,
-       clockid_t clock_id)
+_pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id)
 {
 	if (attr == NULL || *attr == NULL)
 		return (EINVAL);
@@ -105,8 +103,7 @@ _pthread_condattr_setclock(pthread_condattr_t *attr,
 }
 
 int
-_pthread_condattr_getpshared(const pthread_condattr_t *attr,
-	int *pshared)
+_pthread_condattr_getpshared(const pthread_condattr_t *attr, int *pshared)
 {
 	if (attr == NULL || *attr == NULL)
 		return (EINVAL);

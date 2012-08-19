@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_create.c,v 1.36.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -32,10 +32,12 @@
 #include <sys/rtprio.h>
 #include <sys/signalvar.h>
 #include <errno.h>
+#include <link.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
 #include <pthread.h>
+#include <pthread_np.h>
 #include "un-namespace.h"
 
 #include "thr_private.h"
@@ -55,6 +57,9 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 	struct rtprio rtp;
 	int ret = 0, locked, create_suspended;
 	sigset_t set, oset;
+	cpuset_t *cpusetp = NULL;
+	int cpusetsize = 0;
+	int old_stack_prot;
 
 	_thr_check_init();
 
@@ -73,8 +78,13 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 	if (attr == NULL || *attr == NULL)
 		/* Use the default thread attributes: */
 		new_thread->attr = _pthread_attr_default;
-	else
+	else {
 		new_thread->attr = *(*attr);
+		cpusetp = new_thread->attr.cpuset;
+		cpusetsize = new_thread->attr.cpusetsize;
+		new_thread->attr.cpuset = NULL;
+		new_thread->attr.cpusetsize = 0;
+	}
 	if (new_thread->attr.sched_inherit == PTHREAD_INHERIT_SCHED) {
 		/* inherit scheduling contention scope */
 		if (curthread->attr.flags & PTHREAD_SCOPE_SYSTEM)
@@ -88,6 +98,7 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 
 	new_thread->tid = TID_TERMINATED;
 
+	old_stack_prot = _rtld_get_stack_prot();
 	if (create_stack(&new_thread->attr) != 0) {
 		/* Insufficient memory to create a stack: */
 		_thr_free(curthread, new_thread);
@@ -117,19 +128,22 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 	new_thread->state = PS_RUNNING;
 
 	if (new_thread->attr.flags & PTHREAD_CREATE_DETACHED)
-		new_thread->tlflags |= TLFLAGS_DETACHED;
-
-	if (curthread->in_sigcancel_handler)
-		new_thread->unblock_sigcancel = 1;
-	else
-		new_thread->unblock_sigcancel = 0;
+		new_thread->flags |= THR_FLAGS_DETACHED;
 
 	/* Add the new thread. */
 	new_thread->refcount = 1;
 	_thr_link(curthread, new_thread);
+
+	/*
+	 * Handle the race between __pthread_map_stacks_exec and
+	 * thread linkage.
+	 */
+	if (old_stack_prot != _rtld_get_stack_prot())
+		_thr_stack_fix_protection(new_thread);
+
 	/* Return thread pointer eariler so that new thread can use it. */
 	(*thread) = new_thread;
-	if (SHOULD_REPORT_EVENT(curthread, TD_CREATE)) {
+	if (SHOULD_REPORT_EVENT(curthread, TD_CREATE) || cpusetp != NULL) {
 		THR_THREAD_LOCK(curthread, new_thread);
 		locked = 1;
 	} else
@@ -147,7 +161,7 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 		param.flags |= THR_SYSTEM_SCOPE;
 	if (new_thread->attr.sched_inherit == PTHREAD_INHERIT_SCHED)
 		param.rtp = NULL;
-	else {
+	else { 	 
 		sched_param.sched_priority = new_thread->attr.prio;
 		_schedparam_to_rtp(new_thread->attr.sched_policy,
 			&sched_param, &rtp);
@@ -160,6 +174,7 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 		SIGDELSET(set, SIGTRAP);
 		__sys_sigprocmask(SIG_SETMASK, &set, &oset);
 		new_thread->sigmask = oset;
+		SIGDELSET(new_thread->sigmask, SIGCANCEL);
 	}
 
 	ret = thr_new(&param, sizeof(param));
@@ -181,21 +196,34 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 			THR_THREAD_LOCK(curthread, new_thread);
 		new_thread->state = PS_DEAD;
 		new_thread->tid = TID_TERMINATED;
+		new_thread->flags |= THR_FLAGS_DETACHED;
+		new_thread->refcount--;
 		if (new_thread->flags & THR_FLAGS_NEED_SUSPEND) {
 			new_thread->cycle++;
-			_thr_umtx_wake(&new_thread->cycle, INT_MAX);
+			_thr_umtx_wake(&new_thread->cycle, INT_MAX, 0);
 		}
-		THR_THREAD_UNLOCK(curthread, new_thread);
-		THREAD_LIST_LOCK(curthread);
-		_thread_active_threads--;
-		new_thread->tlflags |= TLFLAGS_DETACHED;
-		_thr_ref_delete_unlocked(curthread, new_thread);
-		THREAD_LIST_UNLOCK(curthread);
-		(*thread) = 0;
+		_thr_try_gc(curthread, new_thread); /* thread lock released */
+		atomic_add_int(&_thread_active_threads, -1);
 	} else if (locked) {
+		if (cpusetp != NULL) {
+			if (cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID,
+				TID(new_thread), cpusetsize, cpusetp)) {
+				ret = errno;
+				/* kill the new thread */
+				new_thread->force_exit = 1;
+				new_thread->flags |= THR_FLAGS_DETACHED;
+				_thr_try_gc(curthread, new_thread);
+				 /* thread lock released */
+				goto out;
+			}
+		}
+
 		_thr_report_creation(curthread, new_thread);
 		THR_THREAD_UNLOCK(curthread, new_thread);
 	}
+out:
+	if (ret)
+		(*thread) = 0;
 	return (ret);
 }
 
@@ -231,13 +259,8 @@ thread_start(struct pthread *curthread)
 	THR_LOCK(curthread);
 	THR_UNLOCK(curthread);
 
-	if (curthread->unblock_sigcancel) {
-		sigset_t set1;
-
-		SIGEMPTYSET(set1);
-		SIGADDSET(set1, SIGCANCEL);
-		__sys_sigprocmask(SIG_UNBLOCK, &set1, NULL);
-	}
+	if (curthread->force_exit)
+		_pthread_exit(PTHREAD_CANCELED);
 
 	if (curthread->attr.suspend == THR_CREATE_SUSPENDED) {
 #if 0
@@ -251,6 +274,11 @@ thread_start(struct pthread *curthread)
 		 */
 		__sys_sigprocmask(SIG_SETMASK, &set, NULL);
 	}
+
+#ifdef _PTHREAD_FORCED_UNWIND
+	curthread->unwind_stackend = (char *)curthread->attr.stackaddr_attr +
+		curthread->attr.stacksize_attr;
+#endif
 
 	/* Run the current thread's start routine with argument: */
 	_pthread_exit(curthread->start_routine(curthread->arg));

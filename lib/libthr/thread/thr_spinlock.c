@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_spinlock.c,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  *
  */
 
@@ -63,16 +63,16 @@ static void	init_spinlock(spinlock_t *lck);
 void
 _spinunlock(spinlock_t *lck)
 {
-	struct spinlock_extra	*extra;
+	struct spinlock_extra	*_extra;
 
-	extra = (struct spinlock_extra *)lck->fname;
-	THR_UMUTEX_UNLOCK(_get_curthread(), &extra->lock);
+	_extra = (struct spinlock_extra *)lck->fname;
+	THR_UMUTEX_UNLOCK(_get_curthread(), &_extra->lock);
 }
 
 void
 _spinlock(spinlock_t *lck)
 {
-	struct spinlock_extra *extra;
+	struct spinlock_extra *_extra;
 
 	if (!__isthreaded)
 		PANIC("Spinlock called when not threaded.");
@@ -80,8 +80,8 @@ _spinlock(spinlock_t *lck)
 		PANIC("Spinlocks not initialized.");
 	if (lck->fname == NULL)
 		init_spinlock(lck);
-	extra = (struct spinlock_extra *)lck->fname;
-	THR_UMUTEX_LOCK(_get_curthread(), &extra->lock);
+	_extra = (struct spinlock_extra *)lck->fname;
+	THR_UMUTEX_LOCK(_get_curthread(), &_extra->lock);
 }
 
 void

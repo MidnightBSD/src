@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libthr/Makefile,v 1.28 2007/10/09 23:31:10 obrien Exp $
+# $FreeBSD$
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
@@ -8,31 +8,33 @@
 # (for system call stubs) to CFLAGS below.  -DSYSLIBC_SCCS affects just the
 # system call stubs.
 
+SHLIBDIR?= /lib
+
 .include <bsd.own.mk>
-
 MK_SSP=	no
-
-.if (${DEFAULT_THREAD_LIB} == "libthr" || ${MK_LIBKSE} == "no") && \
-    ${SHLIBDIR} == "/usr/lib"
-SHLIBDIR= /lib
-.endif
 
 LIB=thr
 SHLIB_MAJOR= 3
-WARNS?= 0
+WARNS?=	3
 CFLAGS+=-DPTHREAD_KERNEL
 CFLAGS+=-I${.CURDIR}/../libc/include -I${.CURDIR}/thread \
 	-I${.CURDIR}/../../include
-CFLAGS+=-I${.CURDIR}/arch/${MACHINE_ARCH}/include
+CFLAGS+=-I${.CURDIR}/arch/${MACHINE_CPUARCH}/include
 CFLAGS+=-I${.CURDIR}/sys
 CFLAGS+=-I${.CURDIR}/../../libexec/rtld-elf
-CFLAGS+=-I${.CURDIR}/../../libexec/rtld-elf/${MACHINE_ARCH}
+CFLAGS+=-I${.CURDIR}/../../libexec/rtld-elf/${MACHINE_CPUARCH}
 CFLAGS+=-I${.CURDIR}/../libthread_db
 CFLAGS+=-Winline
 
-# CFLAGS+=-DSYSTEM_SCOPE_ONLY
+.ifndef NO_THREAD_UNWIND_STACK
+CFLAGS+=-fexceptions
+CFLAGS+=-D_PTHREAD_FORCED_UNWIND
+.endif
 
-VERSION_MAP=${.CURDIR}/pthread.map
+LDFLAGS+=-Wl,-znodelete
+
+VERSION_DEF=${.CURDIR}/../libc/Versions.def
+SYMBOL_MAPS=${.CURDIR}/pthread.map
 
 MAN=	libthr.3
 
@@ -42,18 +44,24 @@ CFLAGS+=-D_PTHREADS_INVARIANTS
 
 PRECIOUSLIB=
 
-.include "${.CURDIR}/arch/${MACHINE_ARCH}/Makefile.inc"
+.PATH: ${.CURDIR}/arch/${MACHINE_CPUARCH}/${MACHINE_CPUARCH}
+
+.include "${.CURDIR}/arch/${MACHINE_CPUARCH}/Makefile.inc"
 .include "${.CURDIR}/sys/Makefile.inc"
 .include "${.CURDIR}/thread/Makefile.inc"
 
-.if ${DEFAULT_THREAD_LIB} == "libthr" || ${MK_LIBKSE} == "no"
+.if ${MK_INSTALLLIB} != "no"
 SYMLINKS+=lib${LIB}.a ${LIBDIR}/libpthread.a
+.endif
 .if !defined(NO_PIC)
 SYMLINKS+=lib${LIB}.so ${LIBDIR}/libpthread.so
 .endif
 .if ${MK_PROFILE} != "no"
 SYMLINKS+=lib${LIB}_p.a ${LIBDIR}/libpthread_p.a
 .endif
+
+.if !defined(WITHOUT_SYSCALL_COMPAT)
+CFLAGS+=-DSYSCALL_COMPAT
 .endif
 
 .include <bsd.lib.mk>

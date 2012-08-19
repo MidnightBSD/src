@@ -1,9 +1,10 @@
-# $FreeBSD: src/lib/libthr/thread/Makefile.inc,v 1.16.6.1 2008/11/25 02:59:29 kensmith Exp $
+# $FreeBSD$
 
 # thr sources
 .PATH: ${.CURDIR}/thread
 
 SRCS+= \
+	thr_affinity.c \
 	thr_attr.c \
 	thr_barrier.c \
 	thr_barrierattr.c \
@@ -19,7 +20,9 @@ SRCS+= \
 	thr_exit.c \
 	thr_fork.c \
 	thr_getprio.c \
+	thr_getcpuclockid.c \
 	thr_getschedparam.c \
+	thr_getthreadid_np.c \
 	thr_info.c \
 	thr_init.c \
 	thr_join.c \
@@ -43,6 +46,7 @@ SRCS+= \
 	thr_setschedparam.c \
 	thr_sig.c \
 	thr_single_np.c \
+	thr_sleepq.c \
 	thr_spec.c \
 	thr_spinlock.c \
 	thr_stack.c \

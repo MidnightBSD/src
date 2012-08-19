@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_spec.c,v 1.6.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include "un-namespace.h"
+#include "libc_private.h"
 
 #include "thr_private.h"
 
@@ -131,9 +132,19 @@ _thread_cleanupspecific(void)
 				curthread->specific[key].data = NULL;
 				curthread->specific_data_count--;
 			}
+			else if (curthread->specific[key].data != NULL) {
+				/* 
+				 * This can happen if the key is deleted via
+				 * pthread_key_delete without first setting the value
+				 * to NULL in all threads.  POSIX says that the
+				 * destructor is not invoked in this case.
+				 */
+				curthread->specific[key].data = NULL;
+				curthread->specific_data_count--;
+			}
 
 			/*
-			 * If there is a destructore, call it
+			 * If there is a destructor, call it
 			 * with the key table entry unlocked:
 			 */
 			if (destructor != NULL) {
@@ -224,4 +235,24 @@ _pthread_getspecific(pthread_key_t key)
 		/* No specific data has been created, so just return NULL: */
 		data = NULL;
 	return (__DECONST(void *, data));
+}
+
+void
+_thr_tsd_unload(struct dl_phdr_info *phdr_info)
+{
+	struct pthread *curthread = _get_curthread();
+	void (*destructor)(void *);
+	int key;
+
+	THR_LOCK_ACQUIRE(curthread, &_keytable_lock);
+	for (key = 0; key < PTHREAD_KEYS_MAX; key++) {
+		if (_thread_keytable[key].allocated) {
+			destructor = _thread_keytable[key].destructor;
+			if (destructor != NULL) {
+				if (__elf_phdr_match_addr(phdr_info, destructor))
+					_thread_keytable[key].destructor = NULL;
+			}
+		}
+	}
+	THR_LOCK_RELEASE(curthread, &_keytable_lock);
 }

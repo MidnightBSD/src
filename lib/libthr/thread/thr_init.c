@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_init.c,v 1.46.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "namespace.h"
@@ -65,7 +65,7 @@ pthreadlist	_thread_list = TAILQ_HEAD_INITIALIZER(_thread_list);
 pthreadlist 	_thread_gc_list = TAILQ_HEAD_INITIALIZER(_thread_gc_list);
 int		_thread_active_threads = 1;
 atfork_head	_thr_atfork_list = TAILQ_HEAD_INITIALIZER(_thr_atfork_list);
-struct umutex	_thr_atfork_lock = DEFAULT_UMUTEX;
+struct urwlock	_thr_atfork_lock = DEFAULT_URWLOCK;
 
 struct pthread_prio	_thr_priorities[3] = {
 	{RTP_PRIO_MIN,  RTP_PRIO_MAX, 0}, /* FIFO */
@@ -75,20 +75,27 @@ struct pthread_prio	_thr_priorities[3] = {
 
 struct pthread_attr _pthread_attr_default = {
 	.sched_policy = SCHED_OTHER,
-	.sched_inherit = 0,
+	.sched_inherit = PTHREAD_INHERIT_SCHED,
 	.prio = 0,
 	.suspend = THR_CREATE_RUNNING,
 	.flags = PTHREAD_SCOPE_SYSTEM,
 	.stackaddr_attr = NULL,
 	.stacksize_attr = THR_STACK_DEFAULT,
-	.guardsize_attr = 0
+	.guardsize_attr = 0,
+	.cpusetsize = 0,
+	.cpuset = NULL
 };
 
 struct pthread_mutex_attr _pthread_mutexattr_default = {
 	.m_type = PTHREAD_MUTEX_DEFAULT,
 	.m_protocol = PTHREAD_PRIO_NONE,
-	.m_ceiling = 0,
-	.m_flags = 0
+	.m_ceiling = 0
+};
+
+struct pthread_mutex_attr _pthread_mutexattr_adaptive_default = {
+	.m_type = PTHREAD_MUTEX_ADAPTIVE_NP,
+	.m_protocol = PTHREAD_PRIO_NONE,
+	.m_ceiling = 0
 };
 
 /* Default condition variable attributes: */
@@ -110,7 +117,7 @@ struct umutex	_mutex_static_lock = DEFAULT_UMUTEX;
 struct umutex	_cond_static_lock = DEFAULT_UMUTEX;
 struct umutex	_rwlock_static_lock = DEFAULT_UMUTEX;
 struct umutex	_keytable_lock = DEFAULT_UMUTEX;
-struct umutex	_thr_list_lock = DEFAULT_UMUTEX;
+struct urwlock	_thr_list_lock = DEFAULT_URWLOCK;
 struct umutex	_thr_event_lock = DEFAULT_UMUTEX;
 
 int	__pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *);
@@ -158,7 +165,6 @@ STATIC_LIB_REQUIRE(_spinlock);
 STATIC_LIB_REQUIRE(_spinlock_debug);
 STATIC_LIB_REQUIRE(_spinunlock);
 STATIC_LIB_REQUIRE(_thread_init_hack);
-STATIC_LIB_REQUIRE(_vfork);
 
 /*
  * These are needed when linking statically.  All references within
@@ -246,7 +252,11 @@ static pthread_func_t jmp_table[][2] = {
 	{DUAL_ENTRY(_pthread_setcanceltype)},	/* PJT_SETCANCELTYPE */
 	{DUAL_ENTRY(_pthread_setspecific)},	/* PJT_SETSPECIFIC */
 	{DUAL_ENTRY(_pthread_sigmask)},		/* PJT_SIGMASK */
-	{DUAL_ENTRY(_pthread_testcancel)}	/* PJT_TESTCANCEL */
+	{DUAL_ENTRY(_pthread_testcancel)},	/* PJT_TESTCANCEL */
+	{DUAL_ENTRY(__pthread_cleanup_pop_imp)},/* PJT_CLEANUP_POP_IMP */
+	{DUAL_ENTRY(__pthread_cleanup_push_imp)},/* PJT_CLEANUP_PUSH_IMP */
+	{DUAL_ENTRY(_pthread_cancel_enter)},	/* PJT_CANCEL_ENTER */
+	{DUAL_ENTRY(_pthread_cancel_leave)}		/* PJT_CANCEL_LEAVE */
 };
 
 static int init_once = 0;
@@ -287,7 +297,6 @@ void
 _libpthread_init(struct pthread *curthread)
 {
 	int fd, first = 0;
-	sigset_t sigset, oldset;
 
 	/* Check if this function has already been called: */
 	if ((_thr_initial != NULL) && (curthread == NULL))
@@ -345,13 +354,8 @@ _libpthread_init(struct pthread *curthread)
 	_tcb_set(curthread->tcb);
 
 	if (first) {
-		SIGFILLSET(sigset);
-		SIGDELSET(sigset, SIGTRAP);
-		__sys_sigprocmask(SIG_SETMASK, &sigset, &oldset);
-		_thr_signal_init();
 		_thr_initial = curthread;
-		SIGDELSET(oldset, SIGCANCEL);
-		__sys_sigprocmask(SIG_SETMASK, &oldset, NULL);
+		_thr_signal_init();
 		if (_thread_event_mask & TD_CREATE)
 			_thr_report_creation(curthread, curthread);
 	}
@@ -405,7 +409,6 @@ init_main_thread(struct pthread *thread)
 
 	thread->cancel_enable = 1;
 	thread->cancel_async = 0;
-	thr_set_name(thread->tid, "initial thread");
 
 	/* Initialize the mutex queue: */
 	TAILQ_INIT(&thread->mutexq);
@@ -416,6 +419,10 @@ init_main_thread(struct pthread *thread)
 	_thr_getscheduler(thread->tid, &thread->attr.sched_policy,
 		 &sched_param);
 	thread->attr.prio = sched_param.sched_priority;
+
+#ifdef _PTHREAD_FORCED_UNWIND
+	thread->unwind_stackend = _usrstack;
+#endif
 
 	/* Others cleared to zero by thr_alloc() */
 }
@@ -431,11 +438,13 @@ init_private(void)
 	_thr_umutex_init(&_cond_static_lock);
 	_thr_umutex_init(&_rwlock_static_lock);
 	_thr_umutex_init(&_keytable_lock);
-	_thr_umutex_init(&_thr_atfork_lock);
+	_thr_urwlock_init(&_thr_atfork_lock);
 	_thr_umutex_init(&_thr_event_lock);
 	_thr_once_init();
 	_thr_spinlock_init();
 	_thr_list_init();
+	_thr_wake_addr_init();
+	_sleepq_init();
 
 	/*
 	 * Avoid reinitializing some things if they don't need to be,
