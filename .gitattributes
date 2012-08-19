@@ -34971,6 +34971,8 @@ lib/libautofs/libautofs.3 -text
 lib/libautofs/libautofs.c -text
 lib/libautofs/libautofs.h -text
 lib/libbegemot/Makefile -text
+lib/libblocksruntime/Makefile -text
+lib/libblocksruntime/config.h -text
 lib/libbluetooth/Makefile -text
 lib/libbluetooth/bluetooth.3 -text
 lib/libbluetooth/bluetooth.c -text
