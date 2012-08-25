@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 DEFAULT_VECTOR=	bfd_elf32_i386_freebsd_vec
 

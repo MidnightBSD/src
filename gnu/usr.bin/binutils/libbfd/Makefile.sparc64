@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 DEFAULT_VECTOR=	bfd_elf64_sparc_freebsd_vec
 

@@ -34014,14 +34014,7 @@ gnu/usr.bin/binutils/ld/elf64ltsmip_fbsd.sh -text
 gnu/usr.bin/binutils/ld/genscripts.sh -text
 gnu/usr.bin/binutils/ld/ld.1 -text
 gnu/usr.bin/binutils/libbfd/Makefile -text
-gnu/usr.bin/binutils/libbfd/Makefile.alpha -text
-gnu/usr.bin/binutils/libbfd/Makefile.amd64 -text
-gnu/usr.bin/binutils/libbfd/Makefile.arm -text
 gnu/usr.bin/binutils/libbfd/Makefile.i386 -text
-gnu/usr.bin/binutils/libbfd/Makefile.ia64 -text
-gnu/usr.bin/binutils/libbfd/Makefile.mips -text
-gnu/usr.bin/binutils/libbfd/Makefile.powerpc -text
-gnu/usr.bin/binutils/libbfd/Makefile.powerpc64 -text
 gnu/usr.bin/binutils/libbfd/Makefile.sparc64 -text
 gnu/usr.bin/binutils/libbfd/bfd.h -text
 gnu/usr.bin/binutils/libbfd/config.h.fbsd -text
