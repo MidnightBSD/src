@@ -28,9 +28,9 @@
 .\"
 .\"     @(#)df.1	8.3 (Berkeley) 5/8/95
 .\" $FreeBSD: src/bin/df/df.1,v 1.42.2.1 2009/08/03 08:13:06 kensmith Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/df/df.1,v 1.4 2010/03/27 21:46:55 laffer1 Exp $
 .\"
-.Dd March 27, 2010
+.Dd March 3, 2012
 .Dt DF 1
 .Os
 .Sh NAME
@@ -64,6 +64,7 @@ The following options are available:
 Show all mount points, including those that were mounted with the
 .Dv MNT_IGNORE
 flag.
+This is implied for file systems specified on the command line.
 .It Fl b
 Use 512-byte blocks rather than the default.
 Note that
@@ -158,7 +159,9 @@ is set, the block counts will be displayed in units of that size block.
 .El
 .Sh SEE ALSO
 .Xr lsvfs 1 ,
+.Xr pstat 1 ,
 .Xr quota 1 ,
+.Xr swapinfo 1 ,
 .Xr fstatfs 2 ,
 .Xr getfsstat 2 ,
 .Xr statfs 2 ,
