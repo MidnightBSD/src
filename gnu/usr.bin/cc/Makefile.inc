@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.3 2012/02/19 23:03:03 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.4 2012/06/02 20:33:57 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.66 2007/05/19 04:25:56 kan Exp $
 
 .include "../Makefile.inc"
@@ -7,10 +7,9 @@
 .if !defined(__CC_MAKEFILE_INC__)
 __CC_MAKEFILE_INC__= ${MFILE}
 
+GCCVER=	4.2
 GCCDIR=	${.CURDIR}/../../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../../contrib/gcclibs
-
-CSTD=	gnu89
 
 .include "Makefile.tgt"
 
@@ -18,18 +17,20 @@ CSTD=	gnu89
 MD_FILE=	${GCCDIR}/config/${GCC_CPU}/${GCC_CPU}.md
 GCC_TARGET=	${TARGET_ARCH}-midnightbsd-freebsd
 
+CFLAGS+=	-DGCCVER=\"${GCCVER}\"
 CFLAGS+=	-DIN_GCC -DHAVE_CONFIG_H
 CFLAGS+=	-DPREFIX=\"${TOOLS_PREFIX}/usr\"
 #CFLAGS+=	-DWANT_COMPILER_INVARIANTS
+CSTD?=	gnu89
+
+.if ${TARGET_ARCH} != ${MACHINE_ARCH}
+CFLAGS+=	-DCROSS_COMPILE
+.endif
 
 # If building 64-bit longs for the i386, "_LARGE_LONG" should also be defined
 # to get the proper sizes in limits.h
 .if defined(LONG_TYPE_SIZE)
 CFLAGS+=	-DLONG_TYPE_SIZE=${LONG_TYPE_SIZE}
-.endif
-
-.if ${TARGET_ARCH} != ${MACHINE_ARCH}
-CFLAGS+=	-DCROSS_COMPILE
 .endif
 
 .if defined(WANT_FORCE_OPTIMIZATION_DOWNGRADE)
