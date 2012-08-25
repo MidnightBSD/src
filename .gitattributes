@@ -8975,6 +8975,7 @@ contrib/gcc4/config/i386/t-svr3dbx -text
 contrib/gcc4/config/i386/t-uwin -text
 contrib/gcc4/config/i386/t-vxworks -text
 contrib/gcc4/config/i386/t-vxworksae -text
+contrib/gcc4/config/i386/tmmintrin.h -text
 contrib/gcc4/config/i386/unix.h -text
 contrib/gcc4/config/i386/uwin.asm -text
 contrib/gcc4/config/i386/uwin.h -text
