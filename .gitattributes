@@ -378,6 +378,9 @@ bin/ps/print.c -text
 bin/ps/ps.1 -text
 bin/ps/ps.c -text
 bin/ps/ps.h -text
+bin/pwait/Makefile -text
+bin/pwait/pwait.1 -text
+bin/pwait/pwait.c -text
 bin/pwd/Makefile -text
 bin/pwd/pwd.1 -text
 bin/pwd/pwd.c -text

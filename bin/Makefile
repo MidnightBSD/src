@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD: src/bin/Makefile,v 1.14 2009/04/03 05:30:12 laffer1 Exp $
+# $MidnightBSD: src/bin/Makefile,v 1.15 2009/04/06 00:00:28 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -32,6 +32,7 @@ SUBDIR= cat \
 	pax \
 	pkill \
 	ps \
+	pwait \
 	pwd \
 	${_rcp} \
 	realpath \
@@ -61,5 +62,9 @@ _rmail=	rmail
 .if ${MK_TCSH} != "no"
 _csh=	csh
 .endif
+
+.include <bsd.arch.inc.mk>
+
+SUBDIR:=	${SUBDIR:O}
 
 .include <bsd.subdir.mk>
