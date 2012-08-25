@@ -31,9 +31,9 @@
 .\"
 .\"	@(#)cp.1	8.3 (Berkeley) 4/18/94
 .\" $FreeBSD: src/bin/cp/cp.1,v 1.33 2005/02/25 00:40:46 trhodes Exp $
-.\" $MidnightBSD: src/bin/cp/cp.1,v 1.6 2008/06/30 02:32:07 laffer1 Exp $
+.\" $MidnightBSD: src/bin/cp/cp.1,v 1.7 2008/06/30 02:34:58 laffer1 Exp $
 .\"
-.Dd June 29, 2008
+.Dd January 17, 2010
 .Dt CP 1
 .Os
 .Sh NAME
@@ -46,7 +46,7 @@
 .Op Fl H | Fl L | Fl P
 .Oc
 .Op Fl f | i | n
-.Op Fl alpv
+.Op Fl alpvx
 .Ar source_file target_file
 .Nm
 .Oo
@@ -54,7 +54,7 @@
 .Op Fl H | Fl L | Fl P
 .Oc
 .Op Fl f | i | n
-.Op Fl alpv
+.Op Fl alpvx
 .Ar source_file ... target_directory
 .Sh DESCRIPTION
 In the first synopsis form, the
@@ -118,7 +118,9 @@ or
 .Xr pax 1
 instead.
 .It Fl a
-Archive mode.  Same as -PpR
+Archive mode.
+Same as
+.Fl RpP .
 .It Fl f
 For each existing destination pathname, remove it and
 create a new file, without prompting for confirmation
@@ -182,6 +184,8 @@ permissions.
 Cause
 .Nm
 to be verbose, showing files as they are copied.
+.It Fl x
+File system mount points are not traversed.
 .El
 .Pp
 For each destination file that already exists, its contents are

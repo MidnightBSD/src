@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)cp.c	8.2 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cp/cp.c,v 1.4 2007/07/23 12:12:50 alex Exp $");
+__MBSDID("$MidnightBSD: src/bin/cp/cp.c,v 1.5 2008/06/30 02:20:01 laffer1 Exp $");
 
 /*
  * Cp copies source files to target files.
@@ -103,8 +103,9 @@ main(int argc, char *argv[])
 	int Hflag, Lflag, Pflag, ch, fts_options, r, have_trailing_slash;
 	char *target;
 
+	fts_options = FTS_NOCHDIR | FTS_PHYSICAL;
 	Hflag = Lflag = Pflag = 0;
-	while ((ch = getopt(argc, argv, "HLPRfafilnprv")) != -1)
+	while ((ch = getopt(argc, argv, "HLPRafilnprvx")) != -1)
 		switch (ch) {
 		case 'H':
 			Hflag = 1;
@@ -121,6 +122,12 @@ main(int argc, char *argv[])
 		case 'R':
 			Rflag = 1;
 			break;
+		case 'a':
+			Pflag = 1;
+			pflag = 1;
+			Rflag = 1;
+			Hflag = Lflag = 0;
+			break;
 		case 'f':
 			fflag = 1;
 			iflag = nflag = 0;
@@ -128,6 +135,9 @@ main(int argc, char *argv[])
 		case 'i':
 			iflag = 1;
 			fflag = nflag = 0;
+			break;
+		case 'l':
+			lflag = 1;
 			break;
 		case 'n':
 			nflag = 1;
@@ -143,14 +153,8 @@ main(int argc, char *argv[])
 		case 'v':
 			vflag = 1;
 			break;
-		case 'l':
-			lflag = 1;
-			break;
-		case 'a':
-			Pflag = 1;
-			pflag = 1;
-			Rflag = 1;
-			Hflag = Lflag = 0;
+		case 'x':
+			fts_options |= FTS_XDEV;
 			break;
 		default:
 			usage();
@@ -162,9 +166,8 @@ main(int argc, char *argv[])
 	if (argc < 2)
 		usage();
 
-	fts_options = FTS_NOCHDIR | FTS_PHYSICAL;
 	if (Rflag && rflag)
-		errx(1, "the -R and -r options may not be specified together.");
+		errx(1, "the -R and -r options may not be specified together");
 	if (rflag)
 		Rflag = 1;
 	if (Rflag) {
@@ -220,6 +223,7 @@ main(int argc, char *argv[])
 		 */
 		if (argc > 1)
 			errx(1, "%s is not a directory", to.p_path);
+
 		/*
 		 * Need to detect the case:
 		 *	cp -R dir foo
@@ -464,6 +468,7 @@ copy(char *argv[], enum op type, int fts_options)
 		case S_IFSOCK:
 			warnx("%s is a socket (not copied).",
 				    curr->fts_path);
+			break;
 		case S_IFIFO:
 			if (Rflag) {
 				if (copy_fifo(curr->fts_statp, !dne))

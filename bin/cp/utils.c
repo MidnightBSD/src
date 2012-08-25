@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)utils.c	8.3 (Berkeley) 4/1/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cp/utils.c,v 1.3 2006/08/27 18:49:41 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/cp/utils.c,v 1.4 2008/06/30 02:20:01 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -57,17 +57,29 @@ __MBSDID("$MidnightBSD: src/bin/cp/utils.c,v 1.3 2006/08/27 18:49:41 laffer1 Exp
 
 #include "extern.h"
 
-#define	cp_pct(x,y)	 ((y == 0) ? 0 : (int)(100.0 * (x) / (y)))
+#define	cp_pct(x, y)	((y == 0) ? 0 : (int)(100.0 * (x) / (y)))
+
+/* Memory strategy threshold, in pages: if physmem is larger then this, use a 
+ * large buffer */
+#define PHYSPAGES_THRESHOLD (32*1024)
+
+/* Maximum buffer size in bytes - do not allow it to grow larger than this */
+#define BUFSIZE_MAX (2*1024*1024)
+
+/* Small (default) buffer size in bytes. It's inefficient for this to be
+ * smaller than MAXPHYS */
+#define BUFSIZE_SMALL (MAXPHYS)
 
 int
 copy_file(const FTSENT *entp, int dne)
 {
-	static char buf[MAXBSIZE];
+	static char *buf = NULL;
+	static size_t bufsize;
 	struct stat *fs;
-	int ch, checkch, from_fd = 0, rcount, rval, to_fd = 0;
 	ssize_t wcount;
 	size_t wresid;
 	off_t wtotal;
+	int ch, checkch, from_fd = 0, rcount, rval, to_fd = 0;
 	char *bufp;
 #ifdef VM_AND_BUFFER_CACHE_SYNCHRONIZED
 	char *p;
@@ -139,48 +151,60 @@ copy_file(const FTSENT *entp, int dne)
 		 * Mmap and write if less than 8M (the limit is so we don't totally
 		 * trash memory on big files.  This is really a minor hack, but it
 		 * wins some CPU back.
+		 * Some filesystems, such as smbnetfs, don't support mmap,
+		 * so this is a best-effort attempt.
 		 */
 #ifdef VM_AND_BUFFER_CACHE_SYNCHRONIZED
 		if (S_ISREG(fs->st_mode) && fs->st_size > 0 &&
-	    	fs->st_size <= 8 * 1048576) {
-			if ((p = mmap(NULL, (size_t)fs->st_size, PROT_READ,
-		    	MAP_SHARED, from_fd, (off_t)0)) == MAP_FAILED) {
+	    	    fs->st_size <= 8 * 1024 * 1024 &&
+		    (p = mmap(NULL, (size_t)fs->st_size, PROT_READ,
+		    MAP_SHARED, from_fd, (off_t)0)) != MAP_FAILED) {
+			wtotal = 0;
+			for (bufp = p, wresid = fs->st_size; ;
+			bufp += wcount, wresid -= (size_t)wcount) {
+				wcount = write(to_fd, bufp, wresid);
+				if (wcount <= 0)
+					break;
+				wtotal += wcount;
+				if (info) {
+					info = 0;
+					(void)fprintf(stderr,
+					    "%s -> %s %3d%%\n",
+					    entp->fts_path, to.p_path,
+					    cp_pct(wtotal, fs->st_size));
+				}
+				if (wcount >= (ssize_t)wresid)
+					break;
+			}
+			if (wcount != (ssize_t)wresid) {
+				warn("%s", to.p_path);
+				rval = 1;
+			}
+			/* Some systems don't unmap on close(2). */
+			if (munmap(p, fs->st_size) < 0) {
 				warn("%s", entp->fts_path);
 				rval = 1;
-			} else {
-				wtotal = 0;
-				for (bufp = p, wresid = fs->st_size; ;
-			    	bufp += wcount, wresid -= (size_t)wcount) {
-					wcount = write(to_fd, bufp, wresid);
-					if (wcount <= 0)
-						break;
-					wtotal += wcount;
-					if (info) {
-						info = 0;
-						(void)fprintf(stderr,
-							"%s -> %s %3d%%\n",
-							entp->fts_path, to.p_path,
-							cp_pct(wtotal, fs->st_size));
-
-					}
-					if (wcount >= (ssize_t)wresid)
-						break;
-				}
-				if (wcount != (ssize_t)wresid) {
-					warn("%s", to.p_path);
-					rval = 1;
-				}
-				/* Some systems don't unmap on close(2). */
-				if (munmap(p, fs->st_size) < 0) {
-					warn("%s", entp->fts_path);
-					rval = 1;
-				}
 			}
 		} else
 #endif
 		{
+			if (buf == NULL) {
+				/*
+				 * Note that buf and bufsize are static. If
+				 * malloc() fails, it will fail at the start
+				 * and not copy only some files. 
+				 */ 
+				if (sysconf(_SC_PHYS_PAGES) > 
+				    PHYSPAGES_THRESHOLD)
+					bufsize = MIN(BUFSIZE_MAX, MAXPHYS * 8);
+				else
+					bufsize = BUFSIZE_SMALL;
+				buf = malloc(bufsize);
+				if (buf == NULL)
+					err(1, "Not enough memory");
+			}
 			wtotal = 0;
-			while ((rcount = read(from_fd, buf, MAXBSIZE)) > 0) {
+			while ((rcount = read(from_fd, buf, bufsize)) > 0) {
 				for (bufp = buf, wresid = rcount; ;
 			    	bufp += wcount, wresid -= wcount) {
 					wcount = write(to_fd, bufp, wresid);
@@ -190,10 +214,9 @@ copy_file(const FTSENT *entp, int dne)
 					if (info) {
 						info = 0;
 						(void)fprintf(stderr,
-							"%s -> %s %3d%%\n",
-							entp->fts_path, to.p_path,
-							cp_pct(wtotal, fs->st_size));
-
+						    "%s -> %s %3d%%\n",
+						    entp->fts_path, to.p_path,
+						    cp_pct(wtotal, fs->st_size));
 					}
 					if (wcount >= (ssize_t)wresid)
 						break;
@@ -215,7 +238,6 @@ copy_file(const FTSENT *entp, int dne)
 			rval = 1;
 		}
 	}
-	(void)close(from_fd);
 	
 	/*
 	 * Don't remove the target even after an error.  The target might
@@ -229,12 +251,14 @@ copy_file(const FTSENT *entp, int dne)
 			rval = 1;
 		if (pflag && preserve_fd_acls(from_fd, to_fd) != 0)
 			rval = 1;
-		(void)close(from_fd);
 		if (close(to_fd)) {
 			warn("%s", to.p_path);
 			rval = 1;
 		}
 	}
+
+	(void)close(from_fd);
+
 	return (rval);
 }
 
@@ -301,8 +325,8 @@ setfile(struct stat *fs, int fd)
 	fs->st_mode &= S_ISUID | S_ISGID | S_ISVTX |
 		       S_IRWXU | S_IRWXG | S_IRWXO;
 
-	TIMESPEC_TO_TIMEVAL(&tv[0], &fs->st_atimespec);
-	TIMESPEC_TO_TIMEVAL(&tv[1], &fs->st_mtimespec);
+	TIMESPEC_TO_TIMEVAL(&tv[0], &fs->st_atim);
+	TIMESPEC_TO_TIMEVAL(&tv[1], &fs->st_mtim);
 	if (islink ? lutimes(to.p_path, tv) : utimes(to.p_path, tv)) {
 		warn("%sutimes: %s", islink ? "l" : "", to.p_path);
 		rval = 1;
@@ -343,7 +367,7 @@ setfile(struct stat *fs, int fd)
 	if (!gotstat || fs->st_flags != ts.st_flags)
 		if (fdval ?
 		    fchflags(fd, fs->st_flags) :
-		    (islink ? (errno = ENOSYS) :
+		    (islink ? lchflags(to.p_path, fs->st_flags) :
 		    chflags(to.p_path, fs->st_flags))) {
 			warn("chflags: %s", to.p_path);
 			rval = 1;
@@ -355,24 +379,52 @@ setfile(struct stat *fs, int fd)
 int
 preserve_fd_acls(int source_fd, int dest_fd)
 {
-	struct acl *aclp;
 	acl_t acl;
+	acl_type_t acl_type;
+	int acl_supported = 0, ret, trivial;
 
-	if (fpathconf(source_fd, _PC_ACL_EXTENDED) != 1 ||
-	    fpathconf(dest_fd, _PC_ACL_EXTENDED) != 1)
+	ret = fpathconf(source_fd, _PC_ACL_NFS4);
+	if (ret > 0 ) {
+		acl_supported = 1;
+		acl_type = ACL_TYPE_NFS4;
+	} else if (ret < 0 && errno != EINVAL) {
+		warn("fpathconf(..., _PC_ACL_NFS4) failed for %s", to.p_path);
+		return (1);
+	}
+	if (acl_supported == 0) {
+		ret = fpathconf(source_fd, _PC_ACL_EXTENDED);
+		if (ret > 0 ) {
+			acl_supported = 1;
+			acl_type = ACL_TYPE_ACCESS;
+		} else if (ret < 0 && errno != EINVAL) {
+			warn("fpathconf(..., _PC_ACL_EXTENDED) failed for %s",
+			    to.p_path);
+			return (1);
+		}
+	}
+	if (acl_supported == 0)
 		return (0);
-	acl = acl_get_fd(source_fd);
+
+	acl = acl_get_fd_np(source_fd, acl_type);
 	if (acl == NULL) {
 		warn("failed to get acl entries while setting %s", to.p_path);
 		return (1);
 	}
-	aclp = &acl->ats_acl;
-	if (aclp->acl_cnt == 3)
-		return (0);
-	if (acl_set_fd(dest_fd, acl) < 0) {
-		warn("failed to set acl entries for %s", to.p_path);
+	if (acl_is_trivial_np(acl, &trivial)) {
+		warn("acl_is_trivial() failed for %s", to.p_path);
+		acl_free(acl);
 		return (1);
 	}
+	if (trivial) {
+		acl_free(acl);
+		return (0);
+	}
+	if (acl_set_fd_np(dest_fd, acl, acl_type) < 0) {
+		warn("failed to set acl entries for %s", to.p_path);
+		acl_free(acl);
+		return (1);
+	}
+	acl_free(acl);
 	return (0);
 }
 
@@ -383,10 +435,31 @@ preserve_dir_acls(struct stat *fs, char *source_dir, char *dest_dir)
 	int (*aclsetf)(const char *, acl_type_t, acl_t);
 	struct acl *aclp;
 	acl_t acl;
+	acl_type_t acl_type;
+	int acl_supported = 0, ret, trivial;
 
-	if (pathconf(source_dir, _PC_ACL_EXTENDED) != 1 ||
-	    pathconf(dest_dir, _PC_ACL_EXTENDED) != 1)
+	ret = pathconf(source_dir, _PC_ACL_NFS4);
+	if (ret > 0) {
+		acl_supported = 1;
+		acl_type = ACL_TYPE_NFS4;
+	} else if (ret < 0 && errno != EINVAL) {
+		warn("fpathconf(..., _PC_ACL_NFS4) failed for %s", source_dir);
+		return (1);
+	}
+	if (acl_supported == 0) {
+		ret = pathconf(source_dir, _PC_ACL_EXTENDED);
+		if (ret > 0) {
+			acl_supported = 1;
+			acl_type = ACL_TYPE_ACCESS;
+		} else if (ret < 0 && errno != EINVAL) {
+			warn("fpathconf(..., _PC_ACL_EXTENDED) failed for %s",
+			    source_dir);
+			return (1);
+		}
+	}
+	if (acl_supported == 0)
 		return (0);
+
 	/*
 	 * If the file is a link we will not follow it
 	 */
@@ -397,34 +470,48 @@ preserve_dir_acls(struct stat *fs, char *source_dir, char *dest_dir)
 		aclgetf = acl_get_file;
 		aclsetf = acl_set_file;
 	}
-	/*
-	 * Even if there is no ACL_TYPE_DEFAULT entry here, a zero
-	 * size ACL will be returned. So it is not safe to simply
-	 * check the pointer to see if the default ACL is present.
-	 */
-	acl = aclgetf(source_dir, ACL_TYPE_DEFAULT);
-	if (acl == NULL) {
-		warn("failed to get default acl entries on %s",
-		    source_dir);
-		return (1);
+	if (acl_type == ACL_TYPE_ACCESS) {
+		/*
+		 * Even if there is no ACL_TYPE_DEFAULT entry here, a zero
+		 * size ACL will be returned. So it is not safe to simply
+		 * check the pointer to see if the default ACL is present.
+		 */
+		acl = aclgetf(source_dir, ACL_TYPE_DEFAULT);
+		if (acl == NULL) {
+			warn("failed to get default acl entries on %s",
+			    source_dir);
+			return (1);
+		}
+		aclp = &acl->ats_acl;
+		if (aclp->acl_cnt != 0 && aclsetf(dest_dir,
+		    ACL_TYPE_DEFAULT, acl) < 0) {
+			warn("failed to set default acl entries on %s",
+			    dest_dir);
+			acl_free(acl);
+			return (1);
+		}
+		acl_free(acl);
 	}
-	aclp = &acl->ats_acl;
-	if (aclp->acl_cnt != 0 && aclsetf(dest_dir,
-	    ACL_TYPE_DEFAULT, acl) < 0) {
-		warn("failed to set default acl entries on %s",
-		    dest_dir);
-		return (1);
-	}
-	acl = aclgetf(source_dir, ACL_TYPE_ACCESS);
+	acl = aclgetf(source_dir, acl_type);
 	if (acl == NULL) {
 		warn("failed to get acl entries on %s", source_dir);
 		return (1);
 	}
-	aclp = &acl->ats_acl;
-	if (aclsetf(dest_dir, ACL_TYPE_ACCESS, acl) < 0) {
-		warn("failed to set acl entries on %s", dest_dir);
+	if (acl_is_trivial_np(acl, &trivial)) {
+		warn("acl_is_trivial() failed on %s", source_dir);
+		acl_free(acl);
 		return (1);
 	}
+	if (trivial) {
+		acl_free(acl);
+		return (0);
+	}
+	if (aclsetf(dest_dir, acl_type, acl) < 0) {
+		warn("failed to set acl entries on %s", dest_dir);
+		acl_free(acl);
+		return (1);
+	}
+	acl_free(acl);
 	return (0);
 }
 
@@ -433,8 +520,8 @@ usage(void)
 {
 
 	(void)fprintf(stderr, "%s\n%s\n",
-"usage: cp [-R [-H | -L | -P]] [-f | -i | -n] [-alpv] source_file target_file",
-"       cp [-R [-H | -L | -P]] [-f | -i | -n] [-alpv] source_file ... "
+"usage: cp [-R [-H | -L | -P]] [-f | -i | -n] [-alpvx] source_file target_file",
+"       cp [-R [-H | -L | -P]] [-f | -i | -n] [-alpvx] source_file ... "
 "target_directory");
 	exit(EX_USAGE);
 }
