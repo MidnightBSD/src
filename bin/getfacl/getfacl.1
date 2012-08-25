@@ -26,12 +26,12 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/bin/getfacl/getfacl.1,v 1.9 2005/01/16 16:41:57 ru Exp $
-.\" $MidnightBSD: src/bin/getfacl/getfacl.1,v 1.2 2006/07/19 13:41:34 laffer1 Exp $
+.\" $MidnightBSD: src/bin/getfacl/getfacl.1,v 1.3 2008/06/30 03:20:01 laffer1 Exp $
 .\"
 .\" Developed by the TrustedBSD Project.
 .\" Support for POSIX.1e access control lists.
 .\"
-.Dd June 29, 2008
+.Dd September 4, 2009
 .Dt GETFACL 1
 .Os
 .Sh NAME
@@ -39,7 +39,7 @@
 .Nd get ACL information
 .Sh SYNOPSIS
 .Nm
-.Op Fl dh
+.Op Fl dhinqv
 .Op Ar
 .Sh DESCRIPTION
 The
@@ -49,7 +49,7 @@ the specified file(s) to standard output.
 If the
 .Xr getconf 1
 utility indicates that
-.Eq { } Va _POSIX_ACL_EXTENDED
+.Brq Va _POSIX_ACL_EXTENDED
 is not in effect for a
 .Ar file
 then the standard discretionary access permissions are interpreted as
@@ -62,13 +62,25 @@ The operation applies to the default ACL of a directory instead of the
 access ACL.
 An error is generated if a default ACL cannot be associated with
 .Ar file .
+This option is not valid for NFSv4 ACLs.
 .It Fl h
 If the target of the operation is a symbolic link, return the ACL from
 the symbolic link itself rather than following the link.
+.It Fl i
+For NFSv4 ACLs, append numerical ID at the end of each entry containing
+user or group name.
+Ignored for POSIX.1e ACLs.
+.It Fl n
+Display user and group IDs numerically rather than converting to
+a user or group name.
+Ignored for POSIX.1e ACLs.
 .It Fl q
 Do not write commented information about file name and ownership.
 This is
 useful when dealing with filenames with unprintable characters.
+.It Fl v
+For NFSv4 ACLs, display access mask and flags in a verbose form.
+Ignored for POSIX.1e ACLs.
 .El
 .Pp
 The following operand is available:
