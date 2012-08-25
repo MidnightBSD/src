@@ -1,7 +1,9 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/cc1plus/Makefile,v 1.2 2009/05/22 00:51:23 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/cc/cc1plus/Makefile,v 1.3 2012/08/25 21:17:57 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/cc1plus/Makefile,v 1.39 2007/05/19 04:25:57 kan Exp $
 
 .include "../Makefile.inc"
+NO_MAN=
+.include <bsd.own.mk>
 
 .PATH: ${GCCDIR}/cp ${GCCDIR}
 
