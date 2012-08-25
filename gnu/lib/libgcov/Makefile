@@ -1,11 +1,9 @@
-# $MidnightBSD: src/gnu/lib/libgcov/Makefile,v 1.3 2009/05/22 00:27:15 laffer1 Exp $
+# $MidnightBSD: src/gnu/lib/libgcov/Makefile,v 1.4 2011/10/22 19:02:28 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libgcov/Makefile,v 1.5 2007/05/19 04:25:55 kan Exp $
 
 NO_PROFILE=
 .include <bsd.own.mk>
-
 MK_SSP=		no
-
 .include "${.CURDIR}/../../usr.bin/cc/Makefile.tgt"
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
@@ -31,7 +29,15 @@ OBJS_T=		${SYMS:S/$/.o/}
 OBJS_P=		${SYMS:S/$/.po/}
 OBJS_S=		${SYMS:S/$/.So/}
 
-COMMONHDRS=	tm.h tconfig.h gcov-iov.h options.h 
+#-----------------------------------------------------------------------
+#
+# Helpful shortcuts for compiler invocations.
+#
+CC_T =	${CC} -c ${CFLAGS} -fPIC
+CC_P =	${CC} -c ${CFLAGS} -p -fPIC
+CC_S =	${CC} -c ${CFLAGS} ${PICFLAG} -DSHARED
+
+COMMONHDRS=	tm.h tconfig.h gcov-iov.h options.h
 CLEANFILES+=	${COMMONHDRS} cs-tm.h cs-tconfig.h options.h optionlist
 
 ${COMMONHDRS}: ${.CURDIR}/../../usr.bin/cc/cc_tools/Makefile
@@ -40,16 +46,16 @@ ${COMMONHDRS}: ${.CURDIR}/../../usr.bin/cc/cc_tools/Makefile
 ${OBJS} beforedepend: ${COMMONHDRS}
 
 ${OBJS_T}: libgcov.c
-	${CC} -c ${CFLAGS} -DL${.PREFIX} -o ${.TARGET} ${.ALLSRC:M*.c}
+	${CC_T} -DL${.PREFIX} -o ${.TARGET} ${.ALLSRC:M*.c}
 
 .if !defined(NO_PIC)
 ${OBJS_S}: libgcov.c
-	${CC} -c ${PICFLAG} ${CFLAGS} -DL${.PREFIX} -o ${.TARGET} ${.ALLSRC:M*.c}
+	${CC_S} -DL${.PREFIX} -o ${.TARGET} ${.ALLSRC:M*.c}
 .endif
 
 .if ${MK_PROFILE} != "no"
 ${OBJS_P}: libgcov.c
-	${CC} -c -p ${CFLAGS} -DL${.PREFIX} -o ${.TARGET} ${.ALLSRC:M*.c}
+	${CC_P} -DL${.PREFIX} -o ${.TARGET} ${.ALLSRC:M*.c}
 .endif
 
 .include <bsd.lib.mk>

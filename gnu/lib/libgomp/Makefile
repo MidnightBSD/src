@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/libgomp/Makefile,v 1.1 2009/05/22 00:27:57 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libgomp/Makefile,v 1.2 2007/05/31 13:21:30 kan Exp $
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
@@ -24,7 +24,7 @@ CFLAGS+= -I${.CURDIR} -I. -I${SRCDIR} -I${SRCDIR}/config/posix
 VERSION_MAP=	${SRCDIR}/libgomp.map
 
 # Target-specific OpenMP configuration
-.if ${MACHINE_ARCH} == i386
+.if ${MACHINE_CPUARCH} == i386
 OMP_LOCK_ALIGN	=	4
 OMP_LOCK_KIND=		4
 OMP_LOCK_SIZE=		4
@@ -46,14 +46,14 @@ gstdint.h:
 CLEANFILES+= gstdint.h
 
 .for HFILE in libgomp_f.h omp.h omp_lib.h
-${HFILE}: ${SRCDIR}/${HFILE}.in
+${HFILE}: ${SRCDIR}/${HFILE}.in ${.CURDIR}/Makefile
 	sed -e 's/@OMP_LOCK_ALIGN@/${OMP_LOCK_ALIGN}/g' \
 	    -e 's/@OMP_LOCK_KIND@/${OMP_LOCK_KIND}/g' \
 	    -e 's/@OMP_LOCK_SIZE@/${OMP_LOCK_SIZE}/g' \
 	    -e 's/@OMP_NEST_LOCK_ALIGN@/${OMP_NEST_LOCK_ALIGN}/g' \
 	    -e 's/@OMP_NEST_LOCK_KIND@/${OMP_NEST_LOCK_KIND}/g' \
 	    -e 's/@OMP_NEST_LOCK_SIZE@/${OMP_NEST_LOCK_SIZE}/g' \
-	    < ${.ALLSRC} > ${.TARGET}
+	    < ${SRCDIR}/${HFILE}.in > ${.TARGET}
 CLEANFILES+= ${HFILE}
 .endfor
 

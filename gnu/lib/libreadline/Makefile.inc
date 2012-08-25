@@ -1,7 +1,7 @@
-# $MidnightBSD: src/gnu/lib/libreadline/Makefile.inc,v 1.2 2007/07/26 20:27:46 laffer1 Exp $
+# $MidnightBSD: src/gnu/lib/libreadline/Makefile.inc,v 1.3 2009/01/04 23:45:20 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libreadline/Makefile.inc,v 1.11.2.1 2005/07/22 17:29:02 kensmith Exp $
 
-SHLIB_MAJOR=7
+SHLIB_MAJOR=8
 RL_LIBRARY_VERSION=5.2
 
 SRCDIR= ${.CURDIR}/../../../../contrib/libreadline
