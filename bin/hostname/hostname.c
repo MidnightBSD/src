@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)hostname.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/hostname/hostname.c,v 1.3 2007/07/23 13:02:06 alex Exp $");
+__MBSDID("$MidnightBSD: src/bin/hostname/hostname.c,v 1.4 2007/07/23 13:03:56 alex Exp $");
 
 #include <sys/param.h>
 
@@ -50,7 +50,7 @@ __MBSDID("$MidnightBSD: src/bin/hostname/hostname.c,v 1.3 2007/07/23 13:02:06 al
 #include <string.h>
 #include <unistd.h>
 
-void usage(void);
+static void usage(void);
 
 int
 main(int argc, char *argv[])
@@ -62,6 +62,11 @@ main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "fs")) != -1)
 		switch (ch) {
 		case 'f':
+			/*
+			 * On Linux, "hostname -f" prints FQDN.
+			 * BSD "hostname" always prints FQDN by
+			 * default, so we accept but ignore -f.
+			 */
 			break;
 		case 's':
 			sflag = 1;
@@ -92,7 +97,7 @@ main(int argc, char *argv[])
 	exit(0);
 }
 
-void
+static void
 usage(void)
 {
 
