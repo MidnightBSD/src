@@ -1,14 +1,12 @@
-# $MidnightBSD: src/gnu/lib/libgcc/Makefile,v 1.7 2009/05/26 02:25:21 laffer1 Exp $
+# $MidnightBSD: src/gnu/lib/libgcc/Makefile,v 1.8 2011/10/22 18:57:55 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libgcc/Makefile,v 1.58 2007/08/14 20:49:57 kan Exp $
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 
-LIB=		gcc
 SHLIB_NAME=	libgcc_s.so.1
 SHLIBDIR?=	/lib
 
 .include <bsd.own.mk>
-
 #
 # libgcc is linked in last and thus cannot depend on ssp symbols coming
 # from earlier libraries. Disable stack protection for this library.
@@ -28,7 +26,7 @@ CFLAGS+=	-DIN_GCC -DIN_LIBGCC2 -D__GCC_FLOAT_NOT_NEEDED \
 LDFLAGS+=	-nodefaultlibs
 LDADD+=		-lc
 
-OBJS=		# added to below in various ways depending on TARGET_ARCH
+OBJS=		# added to below in various ways depending on TARGET_CPUARCH
 
 #---------------------------------------------------------------------------
 #
@@ -102,7 +100,7 @@ LIB2_DIVMOD_FUNCS = _divdi3 _moddi3 _udivdi3 _umoddi3 _udiv_w_sdiv _udivmoddi4
 #	When upgrading GCC, get the following definitions from config/<cpu>/t-*
 #
 
-.if ${TARGET_ARCH} == "sparc64"
+.if ${TARGET_CPUARCH} == "sparc64"
 #	from config/sparc/t-elf
 LIB1ASMSRC =   lb1spc.asm
 LIB1ASMFUNCS = _mulsi3 _divsi3 _modsi3
@@ -149,7 +147,7 @@ OBJ_GRPS =	STD DIV
 #
 # Floating point emulation functions
 #
-.if ${TARGET_ARCH} == "sparc64"
+.if ${TARGET_CPUARCH} == "sparc64"
 
 FPBIT_CFLAGS =	-DFINE_GRAINED_LIBRARIES -DFLOAT
 DPBIT_CFLAGS =	-DFINE_GRAINED_LIBRARIES
@@ -266,7 +264,7 @@ CLEANFILES += cs-*.h option*
 
 #-----------------------------------------------------------------------
 #
-# Build additional static libgcc_eh[_p].a librarries.
+# Build symbol version map
 #
 SHLIB_MKMAP      = ${GCCDIR}/mkmap-symver.awk
 SHLIB_MKMAP_OPTS =
@@ -285,36 +283,38 @@ CLEANFILES +=	libgcc.map
 
 #-----------------------------------------------------------------------
 #
-# Build additional static libgcc_eh[_p].a librarries.
+# Build additional static libgcc_eh[_p].a libraries.
 #
-lib${LIB}_eh.a:	${EH_OBJS_T}
-	@${ECHO} building static ${LIB}_eh library
+libgcc_eh.a:	${EH_OBJS_T}
+	@${ECHO} building static gcc_eh library
 	@rm -f ${.TARGET}
 	@${AR} cq ${.TARGET} `lorder ${EH_OBJS_T} | tsort -q`
 	${RANLIB} ${.TARGET}
 
-all:	lib${LIB}_eh.a
+all:	libgcc_eh.a
 
 .if ${MK_PROFILE} != "no"
-lib${LIB}_eh_p.a:	${EH_OBJS_P}
-	@${ECHO} building profiled ${LIB}_eh library
+libgcc_eh_p.a:	${EH_OBJS_P}
+	@${ECHO} building profiled gcc_eh library
 	@rm -f ${.TARGET}
 	@${AR} cq ${.TARGET} `lorder ${EH_OBJS_P} | tsort -q`
 	${RANLIB} ${.TARGET}
-all:	lib${LIB}_eh_p.a
+all:	libgcc_eh_p.a
 .endif
 
 _libinstall: _lib-eh-install
 
 _lib-eh-install:
+.if ${MK_INSTALLLIB} != "no"
 	${INSTALL} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-		${_INSTALLFLAGS} lib${LIB}_eh.a ${DESTDIR}${LIBDIR}
+		${_INSTALLFLAGS} libgcc_eh.a ${DESTDIR}${LIBDIR}
+.endif
 .if ${MK_PROFILE} != "no"
 	${INSTALL} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-		${_INSTALLFLAGS} lib${LIB}_eh_p.a ${DESTDIR}${LIBDIR}
+		${_INSTALLFLAGS} libgcc_eh_p.a ${DESTDIR}${LIBDIR}
 .endif
 
-CLEANFILES+=	lib${LIB}_eh.a lib${LIB}_eh_p.a ${EH_OBJS_T} ${EH_OBJS_P}
+CLEANFILES+=	libgcc_eh.a libgcc_eh_p.a ${EH_OBJS_T} ${EH_OBJS_P}
 
 .include <bsd.lib.mk>
 
