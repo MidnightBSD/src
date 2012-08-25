@@ -27,7 +27,7 @@
  */
 /* $FreeBSD: src/bin/ed/buf.c,v 1.22 2002/06/30 05:13:53 obrien Exp $ */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/ed/buf.c,v 1.2 2006/07/07 15:55:59 laffer1 Exp $");
 
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -94,6 +94,7 @@ put_sbuf_line(const char *cs)
 		;
 	if (s - cs >= LINECHARS) {
 		errmsg = "line too long";
+		free(lp);
 		return NULL;
 	}
 	len = s - cs;
@@ -102,6 +103,7 @@ put_sbuf_line(const char *cs)
 		if (fseeko(sfp, (off_t)0, SEEK_END) < 0) {
 			fprintf(stderr, "%s\n", strerror(errno));
 			errmsg = "cannot seek temp file";
+			free(lp);
 			return NULL;
 		}
 		sfseek = ftello(sfp);
@@ -112,6 +114,7 @@ put_sbuf_line(const char *cs)
 		sfseek = -1;
 		fprintf(stderr, "%s\n", strerror(errno));
 		errmsg = "cannot write temp file";
+		free(lp);
 		return NULL;
 	}
 	lp->len = len;

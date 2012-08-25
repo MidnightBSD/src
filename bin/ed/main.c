@@ -35,7 +35,7 @@ static const char copyright[] =
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/ed/main.c,v 1.2 2006/07/19 13:39:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/ed/main.c,v 1.3 2008/06/30 03:04:11 laffer1 Exp $");
 
 /*
  * CREDITS
@@ -103,15 +103,10 @@ const char usage[] = "usage: %s [-] [-sx] [-p string] [file]\n";
 
 /* ed: line editor */
 int
-main(int argc, char *argv[])
+main(volatile int argc, char ** volatile argv)
 {
 	int c, n;
 	long status = 0;
-#if __GNUC__
-	/* Avoid longjmp clobbering */
-	(void) &argc;
-	(void) &argv;
-#endif
 
 	(void)setlocale(LC_ALL, "");
 
@@ -197,9 +192,10 @@ top:
 				fputs("?\n", stderr);
 				errmsg = "warning: file modified";
 				if (!isatty(0)) {
-					fprintf(stderr, garrulous ?
-					    "script, line %d: %s\n" :
-					    "", lineno, errmsg);
+					if (garrulous)
+						fprintf(stderr,
+						    "script, line %d: %s\n",
+						    lineno, errmsg);
 					quit(2);
 				}
 				clearerr(stdin);
@@ -230,27 +226,26 @@ top:
 			fputs("?\n", stderr);		/* give warning */
 			errmsg = "warning: file modified";
 			if (!isatty(0)) {
-				fprintf(stderr, garrulous ?
-				    "script, line %d: %s\n" :
-				    "", lineno, errmsg);
+				if (garrulous)
+					fprintf(stderr, "script, line %d: %s\n",
+					    lineno, errmsg);
 				quit(2);
 			}
 			break;
 		case FATAL:
-			if (!isatty(0))
-				fprintf(stderr, garrulous ?
-				    "script, line %d: %s\n" : "",
-				    lineno, errmsg);
-			else
-				fprintf(stderr, garrulous ? "%s\n" : "",
-				    errmsg);
+			if (!isatty(0)) {
+				if (garrulous)
+					fprintf(stderr, "script, line %d: %s\n",
+					    lineno, errmsg);
+			} else if (garrulous)
+				fprintf(stderr, "%s\n", errmsg);
 			quit(3);
 		default:
 			fputs("?\n", stderr);
 			if (!isatty(0)) {
-				fprintf(stderr, garrulous ?
-				    "script, line %d: %s\n" : "",
-				    lineno, errmsg);
+				if (garrulous)
+					fprintf(stderr, "script, line %d: %s\n",
+					    lineno, errmsg);
 				quit(2);
 			}
 			break;

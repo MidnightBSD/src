@@ -26,7 +26,7 @@
  */
 /* $FreeBSD: src/bin/ed/io.c,v 1.14 2003/01/01 18:48:39 schweikh Exp $ */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/ed/io.c,v 1.2 2006/07/19 13:39:36 laffer1 Exp $");
 
 #include "ed.h"
 
@@ -53,7 +53,8 @@ read_file(char *fn, long n)
 		errmsg = "cannot close input file";
 		return ERR;
 	}
-	fprintf(stdout, !scripted ? "%lu\n" : "", size);
+	if (!scripted)
+		fprintf(stdout, "%lu\n", size);
 	return current_addr - n;
 }
 
@@ -161,7 +162,8 @@ write_file(char *fn, const char *mode, long n, long m)
 		errmsg = "cannot close output file";
 		return ERR;
 	}
-	fprintf(stdout, !scripted ? "%lu\n" : "", size);
+	if (!scripted)
+		fprintf(stdout, "%lu\n", size);
 	return n ? m - n + 1 : 0;
 }
 
