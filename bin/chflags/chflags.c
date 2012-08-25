@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/bin/chflags/chflags.c,v 1.4 2008/06/30 01:16:47 laffer1 Exp $
+ * $MidnightBSD: src/bin/chflags/chflags.c,v 1.5 2012/03/09 04:54:42 laffer1 Exp $
  * $FreeBSD: src/bin/chflags/chflags.c,v 1.23 2005/05/14 23:23:10 dd Exp$
  */
 
@@ -55,7 +55,7 @@ static char sccsid[] = "@(#)chflags.c	8.5 (Berkeley) 4/1/94";
 #include <string.h>
 #include <unistd.h>
 
-void	usage(void);
+static void usage(void);
 
 int
 main(int argc, char *argv[])
@@ -198,7 +198,7 @@ main(int argc, char *argv[])
 	exit(rval);
 }
 
-void
+static void
 usage(void)
 {
 	(void)fprintf(stderr,

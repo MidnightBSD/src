@@ -31,7 +31,7 @@
 .\"
 .\"	@(#)chflags.1	8.4 (Berkeley) 5/2/95
 .\" $FreeBSD: src/bin/chflags/chflags.1,v 1.25.2.1 2006/05/17 13:20:21 trhodes Exp $
-.\" $MidnightBSD: src/bin/chflags/chflags.1,v 1.3 2006/10/08 14:27:29 laffer1 Exp $
+.\" $MidnightBSD: src/bin/chflags/chflags.1,v 1.4 2008/06/30 01:16:47 laffer1 Exp $
 .\"
 .Dd June 29, 2008
 .Dt CHFLAGS 1
@@ -59,7 +59,7 @@ operand.
 The options are as follows:
 .Bl -tag -width indent
 .It Fl f
-Do not display a diagnostic message if 
+Do not display a diagnostic message if
 .Nm
 could not modify the flags for
 .Va file ,
@@ -73,7 +73,7 @@ option is specified, symbolic links on the command line are followed.
 If the
 .Ar file
 is a symbolic link,
-change the mode of the link itself rather than the file to which it points.
+change the file flags of the link itself rather than the file to which it points.
 .It Fl L
 If the
 .Fl R
@@ -92,14 +92,13 @@ Cause
 to be verbose, showing filenames as the flags are modified.
 If the
 .Fl v
-option is specified more than once, the old and new flags of the
-file will also be printed, in octal notation.
+option is specified more than once, the old and new flags of the file
+will also be printed, in octal notation.
 .El
 .Pp
 The flags are specified as an octal number or a comma separated list
 of keywords.
 The following keywords are currently defined:
-.Pp
 .Bl -tag -offset indent -width ".Cm opaque"
 .It Cm arch , archived
 set the archived flag (super-user only)
