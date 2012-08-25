@@ -1,14 +1,15 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/libsupc++/Makefile,v 1.4 2009/05/22 00:27:28 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libsupc++/Makefile,v 1.9 2007/05/19 04:25:56 kan Exp $
 
+GCCVER=	4.2
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 SRCDIR=	${.CURDIR}/../../../contrib/libstdc++/libsupc++
 
-.PATH: ${SRCDIR} ${GCCLIB}/libiberty 
+.PATH: ${SRCDIR} ${GCCLIB}/libiberty
 
-# Static only.
 LIB=	supc++
+SHLIB_MAJOR=1
 SRCS+=	del_op.cc del_opnt.cc del_opv.cc del_opvnt.cc eh_alloc.cc eh_arm.cc \
 	eh_aux_runtime.cc eh_call.cc eh_catch.cc eh_exception.cc eh_globals.cc \
 	eh_personality.cc eh_term_handler.cc eh_terminate.cc eh_throw.cc \
@@ -24,15 +25,21 @@ CFLAGS+=	-I${GCCLIB}/include -I${SRCDIR} -I${GCCDIR}
 CFLAGS+=	-I${.CURDIR}/../libstdc++ -I.
 CFLAGS+=	-frandom-seed=RepeatabilityConsideredGood
 CXXFLAGS+=	-fno-implicit-templates -ffunction-sections -fdata-sections
+PO_CXXFLAGS=    ${CXXFLAGS:N-ffunction-sections}
 
 HDRS=	exception new typeinfo cxxabi.h exception_defines.h
 INCS=	${HDRS:S;^;${SRCDIR}/;}
-INCSDIR=${INCLUDEDIR}/c++/4.2
+INCSDIR=${INCLUDEDIR}/c++/${GCCVER}
 
 unwind.h: ${GCCDIR}/unwind-generic.h
 	ln -sf ${.ALLSRC} ${.TARGET}
 
 SRCS+=		unwind.h
 CLEANFILES+=	unwind.h
+
+# Symbol versioning
+
+VERSION_MAP=	${.CURDIR}/Version.map
+
 
 .include <bsd.lib.mk>

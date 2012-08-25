@@ -33955,6 +33955,7 @@ gnu/lib/libstdc++/Makefile -text
 gnu/lib/libstdc++/config.h -text
 gnu/lib/libstdc++/doc/Makefile -text
 gnu/lib/libsupc++/Makefile -text
+gnu/lib/libsupc++/Version.map -text
 gnu/usr.bin/Makefile -text
 gnu/usr.bin/Makefile.inc -text
 gnu/usr.bin/binutils/Makefile -text
