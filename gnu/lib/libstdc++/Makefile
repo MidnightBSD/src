@@ -1,6 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/libstdc++/Makefile,v 1.4 2009/05/22 00:27:26 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libstdc++/Makefile,v 1.61 2007/08/16 23:02:00 kan Exp $
 
+GCCVER=	4.2
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 SRCDIR=	${.CURDIR}/../../../contrib/libstdc++
@@ -19,9 +20,10 @@ CFLAGS+=	-I${GCCLIB}/include -I${SRCDIR}/include -I.
 CFLAGS+=	-frandom-seed=RepeatabilityConsideredGood
 CXXFLAGS+=	-fno-implicit-templates -ffunction-sections -fdata-sections \
 		-Wno-deprecated
+PO_CXXFLAGS=	${CXXFLAGS:N-ffunction-sections}
 
 DPADD=		${LIBM}
-LDADD=		-lm
+LDADD=		-lm  -Wl,-f,libsupc++.so.1
 
 # libstdc++ sources
 SRCS+=	bitmap_allocator.cc pool_allocator.cc \
@@ -63,24 +65,23 @@ SRCS+=	del_op.cc del_opnt.cc del_opv.cc del_opvnt.cc eh_alloc.cc eh_arm.cc \
 SRCS+=	cp-demangle.c
 
 # MD headers location
-.if ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_CPUARCH} == "sparc64"
 MARCHDIR=	sparc
-.elif ${MACHINE_ARCH} == "i386" && ${MACHINE_CPU} != 'i386'
+.elif ${MACHINE_CPUARCH} == "i386" && ${MACHINE_CPU} != 'i386'
 MARCHDIR=	i486
-.elif ${MACHINE_ARCH} == "amd64"
+.elif ${MACHINE_CPUARCH} == "amd64"
 MARCHDIR=	i486
 .else
-MARCHDIR=	${MACHINE_ARCH}
+MARCHDIR=	${MACHINE_CPUARCH}
 .endif
 
-ATOMICITY_H=	atomicity.h
 .if exists(${SRCDIR}/config/cpu/${MARCHDIR}/atomicity.h)
 ATOMICITY_H=	${SRCDIR}/config/cpu/${MARCHDIR}/atomicity.h
 .else
 ATOMICITY_H=	${SRCDIR}/config/cpu/generic/atomicity_mutex/atomicity.h
 .endif
 
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 .if exists(${SRCDIR}/config/cpu/generic/atomicity_builtins/atomicity.h)
 ATOMICITY_H=	${SRCDIR}/config/cpu/generic/atomicity_builtins/atomicity.h
 .endif
@@ -91,8 +92,8 @@ atomicity.cc:	${ATOMICITY_H}
 CLEANFILES+=	atomicity.cc
 
 INCSGROUPS=	BITSHDRS BKWHDRS EXTHDRS BASEHDRS BASEXHDRS STDHDRS \
-		TARGETHDRS THRHDRS DEBUGHDRS TR1HDRS PBHDRS0
-CXXINCLUDEDIR=	${INCLUDEDIR}/c++/4.2
+		TARGETHDRS THRHDRS DEBUGHDRS TR1HDRS PBHDRS0 PBHDRS1
+CXXINCLUDEDIR=	${INCLUDEDIR}/c++/${GCCVER}
 
 STDHDRS=	std_algorithm.h std_bitset.h std_complex.h std_deque.h \
 		std_fstream.h std_functional.h std_iomanip.h std_ios.h \
@@ -205,6 +206,20 @@ PBHDRS0 = \
 	trie_policy.hpp
 PBHDRS0:=	${PBHDRS0:S;^;${SRCDIR}/include/ext/pb_ds/;}
 PBHDRS0DIR=	${CXXINCLUDEDIR}/ext/pb_ds
+
+PBHDRS1 = \
+	basic_types.hpp \
+	cond_dealtor.hpp \
+	constructors_destructor_fn_imps.hpp \
+	container_base_dispatch.hpp \
+	map_debug_base.hpp \
+	priority_queue_base_dispatch.hpp \
+	standard_policies.hpp \
+	tree_trace_base.hpp \
+	type_utils.hpp \
+	types_traits.hpp
+PBHDRS1:=	${PBHDRS1:S;^;${SRCDIR}/include/ext/pb_ds/detail/;}
+PBHDRS1DIR=	${CXXINCLUDEDIR}/ext/pb_ds/detail
 
 PBHDRS+= \
 	basic_tree_policy/basic_tree_policy_base.hpp \

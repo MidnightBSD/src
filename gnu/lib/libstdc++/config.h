@@ -371,9 +371,7 @@
 /* #undef HAVE_TANL */
 
 /* Define to 1 if the target supports thread-local storage. */
-#if !defined(__sparc64__) && !defined(__arm__)
 #define HAVE_TLS 1
-#endif
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
@@ -671,7 +669,7 @@
 /* #undef VERSION */
 
 /* Define if builtin atomic operations are supported on this host. */
-#if defined(__amd64__)
+#if defined(__amd64__) || (defined(__i386__) && !defined(__tune_i386__))
 #define _GLIBCXX_ATOMIC_BUILTINS 1
 #endif
 
