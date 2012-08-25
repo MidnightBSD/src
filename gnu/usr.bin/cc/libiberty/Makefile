@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/libiberty/Makefile,v 1.1 2009/05/22 00:51:41 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/cc/libiberty/Makefile,v 1.2 2012/07/08 05:31:13 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/libiberty/Makefile,v 1.1 2007/05/19 04:25:59 kan Exp $
 
 #
@@ -20,7 +20,7 @@ SRCS=	argv.c choose-temp.c concat.c cp-demangle.c cp-demint.c cplus-dem.c \
 	pexecute.c pex-common.c pex-one.c lrealpath.c strverscmp.c \
 	regex.c
 INTERNALLIB=
-WARNS=	0
+WARNS=	1
 
 CFLAGS+=	-UPREFIX
 

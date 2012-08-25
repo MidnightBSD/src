@@ -34074,6 +34074,7 @@ gnu/usr.bin/cc/cc_tools/i386-freebsd.opt -text
 gnu/usr.bin/cc/cc_tools/size-host.h -text
 gnu/usr.bin/cc/collect2/Makefile -text
 gnu/usr.bin/cc/cpp/Makefile -text
+gnu/usr.bin/cc/cpp/gcpp.1 -text
 gnu/usr.bin/cc/doc/Makefile -text
 gnu/usr.bin/cc/f77/Makefile -text
 gnu/usr.bin/cc/f771/Makefile -text

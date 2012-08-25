@@ -1,16 +1,22 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/cc/cc/Makefile,v 1.33 2007/05/19 04:25:57 kan Exp $
+
+.include <bsd.own.mk>
 
 .include "../Makefile.inc"
 .include "../Makefile.fe"
 
-PROG=	cc
+PROG=	gcc
 MAN=	gcc.1
 SRCS+=  gccspec.c
 
+.if ${MK_SHARED_TOOLCHAIN} == "no"
 NO_SHARED?=yes
+.endif
 
-LINKS=	${BINDIR}/cc ${BINDIR}/gcc
-MLINKS=	gcc.1 cc.1 gcc.1 c++.1 gcc.1 g++.1 gcc.1 CC.1
+MLINKS=	gcc.1 g++.1
+.if ${MK_CLANG_IS_CC} == "no"
+LINKS=	${BINDIR}/gcc ${BINDIR}/cc
+MLINKS+= gcc.1 cc.1 gcc.1 c++.1 gcc.1 CC.1
+.endif
 
 .include <bsd.prog.mk>
