@@ -31,9 +31,9 @@
 .\"
 .\"	@(#)mv.1	8.1 (Berkeley) 5/31/93
 .\" $FreeBSD: src/bin/mv/mv.1,v 1.28 2005/01/16 16:41:58 ru Exp $
-.\" $MidnightBSD: src/bin/mv/mv.1,v 1.2 2006/07/19 13:56:55 laffer1 Exp $
+.\" $MidnightBSD: src/bin/mv/mv.1,v 1.3 2008/06/30 02:36:17 laffer1 Exp $
 .\"
-.Dd July 9, 2002
+.Dd May 12, 2007
 .Dt MV 1
 .Os
 .Sh NAME
@@ -114,9 +114,9 @@ Cause
 to be verbose, showing files after they are moved.
 .El
 .Pp
-It is an error for either the
+It is an error for the
 .Ar source
-operand or the destination path to specify a directory unless both do.
+operand to specify a directory if the target exists and is not a directory.
 .Pp
 If the destination path does not have a mode which permits writing,
 .Nm

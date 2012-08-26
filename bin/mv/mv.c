@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)mv.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/mv/mv.c,v 1.2 2006/07/19 13:56:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/mv/mv.c,v 1.3 2006/11/30 04:09:58 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -66,12 +66,17 @@ __MBSDID("$MidnightBSD: src/bin/mv/mv.c,v 1.2 2006/07/19 13:56:55 laffer1 Exp $"
 #include <sysexits.h>
 #include <unistd.h>
 
+/* Exit code for a failed exec. */
+#define EXEC_FAILED 127
+
 int fflg, iflg, nflg, vflg;
 
-int	copy(char *, char *);
-int	do_move(char *, char *);
-int	fastcopy(char *, char *, struct stat *);
-void	usage(void);
+static int	copy(const char *, const char *);
+static int	do_move(const char *, const char *);
+static int	fastcopy(const char *, const char *, struct stat *);
+static void	usage(void);
+static void	preserve_fd_acls(int source_fd, int dest_fd, const char *source_path,
+		    const char *dest_path);
 
 int
 main(int argc, char *argv[])
@@ -152,8 +157,8 @@ main(int argc, char *argv[])
 	exit(rval);
 }
 
-int
-do_move(char *from, char *to)
+static int
+do_move(const char *from, const char *to)
 {
 	struct stat sb;
 	int ask, ch, first;
@@ -199,6 +204,11 @@ do_move(char *from, char *to)
 			}
 		}
 	}
+	/*
+	 * Rename on FreeBSD will fail with EISDIR and ENOTDIR, before failing
+	 * with EXDEV.  Therefore, copy() doesn't have to perform the checks
+	 * specified in the Step 3 of the POSIX mv specification.
+	 */
 	if (!rename(from, to)) {
 		if (vflg)
 			printf("%s -> %s\n", from, to);
@@ -220,7 +230,7 @@ do_move(char *from, char *to)
 		if (!S_ISLNK(sb.st_mode)) {
 			/* Can't mv(1) a mount point. */
 			if (realpath(from, path) == NULL) {
-				warnx("cannot resolve %s: %s", from, path);
+				warn("cannot resolve %s: %s", from, path);
 				return (1);
 			}
 			if (!statfs(path, &sfs) &&
@@ -247,15 +257,14 @@ do_move(char *from, char *to)
 	    fastcopy(from, to, &sb) : copy(from, to));
 }
 
-int
-fastcopy(char *from, char *to, struct stat *sbp)
+static int
+fastcopy(const char *from, const char *to, struct stat *sbp)
 {
 	struct timeval tval[2];
 	static u_int blen;
 	static char *bp;
 	mode_t oldmode;
 	int nread, from_fd, to_fd;
-	acl_t acl;
 
 	if ((from_fd = open(from, O_RDONLY, 0)) < 0) {
 		warn("%s", from);
@@ -304,23 +313,15 @@ err:		if (unlink(to))
 			sbp->st_mode &= ~(S_ISUID | S_ISGID);
 		}
 	}
-	/*
-	 * POSIX 1003.2c states that if _POSIX_ACL_EXTENDED is in effect
-	 * for dest_file, then it's ACLs shall reflect the ACLs of the
-	 * source_file.
-	 */
-	if (fpathconf(to_fd, _PC_ACL_EXTENDED) == 1 &&
-	    fpathconf(from_fd, _PC_ACL_EXTENDED) == 1) {
-		acl = acl_get_fd(from_fd);
-		if (acl == NULL)
-			warn("failed to get acl entries while setting %s",
-			    from);
-		else if (acl_set_fd(to_fd, acl) < 0)
-			warn("failed to set acl entries for %s", to);
-	}
-	(void)close(from_fd);
 	if (fchmod(to_fd, sbp->st_mode))
 		warn("%s: set mode (was: 0%03o)", to, oldmode);
+	/*
+	 * POSIX 1003.2c states that if _POSIX_ACL_EXTENDED is in effect
+	 * for dest_file, then its ACLs shall reflect the ACLs of the
+	 * source_file.
+	 */
+	preserve_fd_acls(from_fd, to_fd, from, to);
+	(void)close(from_fd);
 	/*
 	 * XXX
 	 * NFS doesn't support chflags; ignore errors unless there's reason
@@ -353,52 +354,138 @@ err:		if (unlink(to))
 	return (0);
 }
 
-int
-copy(char *from, char *to)
+static int
+copy(const char *from, const char *to)
 {
+	struct stat sb;
 	int pid, status;
 
-	if ((pid = fork()) == 0) {
+	if (lstat(to, &sb) == 0) {
+		/* Destination path exists. */
+		if (S_ISDIR(sb.st_mode)) {
+			if (rmdir(to) != 0) {
+				warn("rmdir %s", to);
+				return (1);
+			}
+		} else {
+			if (unlink(to) != 0) {
+				warn("unlink %s", to);
+				return (1);
+			}
+		}
+	} else if (errno != ENOENT) {
+		warn("%s", to);
+		return (1);
+	}
+
+	/* Copy source to destination. */
+	if (!(pid = vfork())) {
 		execl(_PATH_CP, "mv", vflg ? "-PRpv" : "-PRp", "--", from, to,
 		    (char *)NULL);
-		warn("%s", _PATH_CP);
-		_exit(1);
+		_exit(EXEC_FAILED);
 	}
 	if (waitpid(pid, &status, 0) == -1) {
-		warn("%s: waitpid", _PATH_CP);
+		warn("%s %s %s: waitpid", _PATH_CP, from, to);
 		return (1);
 	}
 	if (!WIFEXITED(status)) {
-		warnx("%s: did not terminate normally", _PATH_CP);
+		warnx("%s %s %s: did not terminate normally",
+		    _PATH_CP, from, to);
 		return (1);
 	}
-	if (WEXITSTATUS(status)) {
-		warnx("%s: terminated with %d (non-zero) status",
-		    _PATH_CP, WEXITSTATUS(status));
+	switch (WEXITSTATUS(status)) {
+	case 0:
+		break;
+	case EXEC_FAILED:
+		warnx("%s %s %s: exec failed", _PATH_CP, from, to);
+		return (1);
+	default:
+		warnx("%s %s %s: terminated with %d (non-zero) status",
+		    _PATH_CP, from, to, WEXITSTATUS(status));
 		return (1);
 	}
+
+	/* Delete the source. */
 	if (!(pid = vfork())) {
 		execl(_PATH_RM, "mv", "-rf", "--", from, (char *)NULL);
-		warn("%s", _PATH_RM);
-		_exit(1);
+		_exit(EXEC_FAILED);
 	}
 	if (waitpid(pid, &status, 0) == -1) {
-		warn("%s: waitpid", _PATH_RM);
+		warn("%s %s: waitpid", _PATH_RM, from);
 		return (1);
 	}
 	if (!WIFEXITED(status)) {
-		warnx("%s: did not terminate normally", _PATH_RM);
+		warnx("%s %s: did not terminate normally", _PATH_RM, from);
 		return (1);
 	}
-	if (WEXITSTATUS(status)) {
-		warnx("%s: terminated with %d (non-zero) status",
-		    _PATH_RM, WEXITSTATUS(status));
+	switch (WEXITSTATUS(status)) {
+	case 0:
+		break;
+	case EXEC_FAILED:
+		warnx("%s %s: exec failed", _PATH_RM, from);
+		return (1);
+	default:
+		warnx("%s %s: terminated with %d (non-zero) status",
+		    _PATH_RM, from, WEXITSTATUS(status));
 		return (1);
 	}
 	return (0);
 }
 
-void
+static void
+preserve_fd_acls(int source_fd, int dest_fd, const char *source_path,
+    const char *dest_path)
+{
+	acl_t acl;
+	acl_type_t acl_type;
+	int acl_supported = 0, ret, trivial;
+
+	ret = fpathconf(source_fd, _PC_ACL_NFS4);
+	if (ret > 0 ) {
+		acl_supported = 1;
+		acl_type = ACL_TYPE_NFS4;
+	} else if (ret < 0 && errno != EINVAL) {
+		warn("fpathconf(..., _PC_ACL_NFS4) failed for %s",
+		    source_path);
+		return;
+	}
+	if (acl_supported == 0) {
+		ret = fpathconf(source_fd, _PC_ACL_EXTENDED);
+		if (ret > 0 ) {
+			acl_supported = 1;
+			acl_type = ACL_TYPE_ACCESS;
+		} else if (ret < 0 && errno != EINVAL) {
+			warn("fpathconf(..., _PC_ACL_EXTENDED) failed for %s",
+			    source_path);
+			return;
+		}
+	}
+	if (acl_supported == 0)
+		return;
+
+	acl = acl_get_fd_np(source_fd, acl_type);
+	if (acl == NULL) {
+		warn("failed to get acl entries for %s", source_path);
+		return;
+	}
+	if (acl_is_trivial_np(acl, &trivial)) {
+		warn("acl_is_trivial() failed for %s", source_path);
+		acl_free(acl);
+		return;
+	}
+	if (trivial) {
+		acl_free(acl);
+		return;
+	}
+	if (acl_set_fd_np(dest_fd, acl, acl_type) < 0) {
+		warn("failed to set acl entries for %s", dest_path);
+		acl_free(acl);
+		return;
+	}
+	acl_free(acl);
+}
+
+static void
 usage(void)
 {
 
