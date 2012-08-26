@@ -1,10 +1,10 @@
-# $MidnightBSD$
+# $MidnightBSD: src/secure/lib/libcrypto/Makefile.inc,v 1.4 2011/02/05 19:28:24 laffer1 Exp $
 
 .include <bsd.own.mk>
 
 # OpenSSL version used for manual page generation
-OPENSSL_VER=	0.9.8q
-OPENSSL_DATE=	2010-12-02
+OPENSSL_VER=	0.9.8x
+OPENSSL_DATE=	2012-05-10
 
 LCRYPTO_SRC=	${.CURDIR}/../../../crypto/openssl
 LCRYPTO_DOC=	${.CURDIR}/../../../crypto/openssl/doc
@@ -16,8 +16,6 @@ CFLAGS+=	-DOPENSSL_THREADS -DDSO_DLFCN -DHAVE_DLFCN_H
 .if ${MK_IDEA} == "no"
 CFLAGS+=	-DOPENSSL_NO_IDEA
 .endif
-
-MACHINE_CPUARCH?=	${MACHINE_ARCH}
 
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
 CFLAGS+= -DL_ENDIAN

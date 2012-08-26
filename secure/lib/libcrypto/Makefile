@@ -6,7 +6,8 @@ SUBDIR=		engines
 .include <bsd.own.mk>
 
 LIB=		crypto
-SHLIB_MAJOR=	5
+SHLIB_MAJOR=	6
+ALLOW_SHARED_TEXTREL=
 
 NO_LINT=
 
@@ -73,9 +74,9 @@ SRCS+=	bn_add.c bn_blind.c bn_const.c bn_ctx.c bn_depr.c bn_div.c \
 	bn_lib.c bn_mod.c bn_mont.c bn_mpi.c bn_mul.c bn_nist.c bn_opt.c \
 	bn_prime.c bn_print.c bn_rand.c bn_recp.c bn_shift.c bn_sqr.c \
 	bn_sqrt.c bn_word.c bn_x931p.c
-.if ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "i386"
 SRCS+=	bn-586.s co-586.s
-.elif ${MACHINE_ARCH} == "amd64"
+.elif ${MACHINE_CPUARCH} == "amd64"
 SRCS+=	x86_64-gcc.c
 .else
 SRCS+=	bn_asm.c
@@ -89,7 +90,7 @@ INCS+=	buffer.h
 
 # cast
 SRCS+=	c_cfb64.c c_ecb.c c_ofb64.c c_skey.c
-.if ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "i386"
 SRCS+=	cast-586.s
 .else
 SRCS+=	c_enc.c
@@ -172,7 +173,7 @@ SRCS+=	bio_b64.c bio_enc.c bio_md.c bio_ok.c c_all.c c_allc.c c_alld.c \
 	m_mdc2.c m_null.c m_ripemd.c m_sha.c m_sha1.c names.c \
 	openbsd_hw.c p5_crpt.c p5_crpt2.c p_dec.c p_enc.c p_lib.c \
 	p_open.c p_seal.c p_sign.c p_verify.c
-.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 SRCS+=	e_camellia.c
 .endif
 INCS+=	evp.h
@@ -284,7 +285,7 @@ INCS+=	rsa.h
 
 # sha
 SRCS+=	sha1_one.c sha1dgst.c sha_dgst.c sha_one.c sha256.c sha512.c
-.if ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "i386"
 SRCS+=	sha1-586.s
 .endif
 INCS+=	sha.h
@@ -344,6 +345,10 @@ INCS+=	opensslconf.h evp.h
 INCSDIR=	${INCLUDEDIR}/openssl
 
 CSTD=	gnu89
+
+.if !empty(SRCS:M*.s)
+AFLAGS+=	--noexecstack
+.endif
 
 CLEANFILES=	buildinf.h opensslconf.h evp.h
 
