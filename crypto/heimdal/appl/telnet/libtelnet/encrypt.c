@@ -54,7 +54,7 @@
 
 #include <config.h>
 
-RCSID("$Id: encrypt.c,v 1.2 2011-12-24 03:30:20 laffer1 Exp $");
+RCSID("$Id: encrypt.c,v 1.3 2012-08-26 15:31:23 laffer1 Exp $");
 
 #if	defined(ENCRYPTION)
 
@@ -636,7 +636,7 @@ encrypt_reply(unsigned char *data, int cnt)
 }
 
 /*
- * Called when a ENCRYPT START command is received.
+ * Called when ENCRYPT START is received.
  */
 void
 encrypt_start(unsigned char *data, int cnt)
