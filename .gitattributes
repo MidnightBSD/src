@@ -29580,7 +29580,6 @@ crypto/heimdal/kuser/Makefile.in -text
 crypto/heimdal/kuser/copy_cred_cache.1 -text
 crypto/heimdal/kuser/copy_cred_cache.c -text
 crypto/heimdal/kuser/generate-requests.c -text
-crypto/heimdal/kuser/kauth_options.c -text
 crypto/heimdal/kuser/kdecode_ticket.c -text
 crypto/heimdal/kuser/kdestroy.1 -text
 crypto/heimdal/kuser/kdestroy.c -text
@@ -29592,7 +29591,6 @@ crypto/heimdal/kuser/kimpersonate.1 -text
 crypto/heimdal/kuser/kimpersonate.c -text
 crypto/heimdal/kuser/kinit.1 -text
 crypto/heimdal/kuser/kinit.c -text
-crypto/heimdal/kuser/kinit_options.c -text
 crypto/heimdal/kuser/klist.1 -text
 crypto/heimdal/kuser/klist.c -text
 crypto/heimdal/kuser/kuser_locl.h -text
