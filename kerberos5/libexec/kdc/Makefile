@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 PROG=	kdc
 MAN=	kdc.8

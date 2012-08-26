@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 SUBDIR=	doc tools lib libexec usr.bin usr.sbin
 

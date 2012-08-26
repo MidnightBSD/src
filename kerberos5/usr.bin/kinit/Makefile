@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 PROG=	kinit
 CFLAGS+=-I${KRB5DIR}/lib/roken

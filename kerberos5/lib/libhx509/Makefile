@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 LIB=	hx509
 LDFLAGS=	-Wl,--no-undefined

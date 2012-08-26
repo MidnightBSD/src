@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 INFO=	heimdal
 SRCDIR=	${.CURDIR}/../../crypto/heimdal/doc

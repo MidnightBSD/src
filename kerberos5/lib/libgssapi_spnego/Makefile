@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 LIB=	gssapi_spnego
 LDFLAGS= -Wl,-Bsymbolic -Wl,--no-undefined

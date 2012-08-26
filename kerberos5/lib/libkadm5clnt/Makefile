@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 LIB=	kadm5clnt
 LDFLAGS=	-Wl,--no-undefined

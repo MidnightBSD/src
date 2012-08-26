@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 PROG=	kpasswdd
 MAN=	kpasswdd.8

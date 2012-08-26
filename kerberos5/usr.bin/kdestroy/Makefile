@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 PROG=	kdestroy
 CFLAGS+=-I${KRB5DIR}/lib/roken

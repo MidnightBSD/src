@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 LIB=	heimntlm
 LDFLAGS=	-Wl,--no-undefined

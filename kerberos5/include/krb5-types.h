@@ -1,7 +1,7 @@
 /* krb5-types.h -- this file was generated for i386-unknown-freebsd5.0 by
-                   $Id: krb5-types.h,v 1.1.1.3 2012-07-21 15:07:32 laffer1 Exp $ */
+                   $Id: krb5-types.h,v 1.2 2012-08-26 15:13:11 laffer1 Exp $ */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #ifndef __krb5_types_h__
 #define __krb5_types_h__

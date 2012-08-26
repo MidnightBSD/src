@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 LIB=	krb5
 LDFLAGS=	-Wl,--no-undefined

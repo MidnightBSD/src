@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 SCRIPTS=krb5-config
 MAN=	krb5-config.1

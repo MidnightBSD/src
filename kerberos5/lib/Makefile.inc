@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 SHLIB_MAJOR?=	10
 

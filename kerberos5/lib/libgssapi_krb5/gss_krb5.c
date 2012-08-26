@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
 #include <gssapi/gssapi_krb5.h>
 
-/* RCSID("$Id: gss_krb5.c,v 1.1.1.1 2012-07-21 15:07:32 laffer1 Exp $"); */
+/* RCSID("$Id: gss_krb5.c,v 1.2 2012-08-26 15:13:11 laffer1 Exp $"); */
 
 #include <krb5.h>
 #include <roken.h>
