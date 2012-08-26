@@ -1,9 +1,9 @@
-# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.14 2011/02/05 14:25:54 laffer1 Exp $
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.15 2011/02/06 18:17:31 laffer1 Exp $
 
 .include <bsd.own.mk>
 
 LIB=	ssh
-SHLIB_MAJOR=	4
+SHLIB_MAJOR=	5
 SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	canohost.c channels.c cipher.c cipher-acss.c cipher-aes.c \
 	cipher-bf1.c cipher-ctr.c cipher-3des1.c cleanup.c \
@@ -37,8 +37,8 @@ LDADD=	-lz
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
-DPADD+=	${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
-LDADD+=	-lgssapi -lkrb5 -lasn1 -lcom_err -lmd -lroken
+DPADD+=	${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
+LDADD+=	-lgssapi -lkrb5 -lhx509 -lasn1 -lcom_err -lmd -lroken
 .endif
 
 NO_LINT=
