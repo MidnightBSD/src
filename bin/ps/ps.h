@@ -28,13 +28,18 @@
  *
  *	@(#)ps.h	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/bin/ps/ps.h,v 1.19 2004/06/23 23:48:09 gad Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/bin/ps/ps.h,v 1.2 2007/07/26 20:13:00 laffer1 Exp $
  */
 
 #include <sys/queue.h>
 
 #define	UNLIMITED	0	/* unlimited terminal width */
 enum type { CHAR, UCHAR, SHORT, USHORT, INT, UINT, LONG, ULONG, KPTR, PGTOK };
+
+typedef struct kinfo_str {
+	STAILQ_ENTRY(kinfo_str) ks_next;
+	char *ks_str;	/* formatted string */
+} KINFO_STR;
 
 typedef struct kinfo {
 	struct kinfo_proc *ki_p;	/* kinfo_proc structure */
@@ -43,6 +48,11 @@ typedef struct kinfo {
 	int ki_valid;		/* 1 => uarea stuff valid */
 	double	 ki_pcpu;	/* calculated in main() */
 	segsz_t	 ki_memsize;	/* calculated in main() */
+	union {
+		int level;	/* used in decendant_sort() */
+		char *prefix;	/* calculated in decendant_sort() */
+	} ki_d;
+	STAILQ_HEAD(, kinfo_str) ki_ks;
 } KINFO;
 
 /* Variables. */
@@ -59,14 +69,10 @@ typedef struct var {
 #define	COMM	0x01		/* needs exec arguments and environment (XXX) */
 #define	LJUST	0x02		/* left adjust on output (trailing blanks) */
 #define	USER	0x04		/* needs user structure */
-#define	DSIZ	0x08		/* field size is dynamic*/
 #define	INF127	0x10		/* values >127 displayed as 127 */
 	u_int	flag;
 				/* output routine */
-	void	(*oproc)(struct kinfo *, struct varent *);
-				/* sizing routine*/
-	int	(*sproc)(struct kinfo *);
-	short	width;		/* printing width */
+	char 	*(*oproc)(struct kinfo *, struct varent *);
 	/*
 	 * The following (optional) elements are hooks for passing information
 	 * to the generic output routine pvar (which prints simple elements
@@ -75,10 +81,8 @@ typedef struct var {
 	size_t	off;		/* offset in structure */
 	enum	type type;	/* type of element */
 	const char *fmt;	/* printf format */
-	short	dwidth;		/* dynamic printing width */
-	/*
-	 * glue to link selected fields together
-	 */
+
+	short	width;		/* calculated width */
 } VAR;
 
 #include "extern.h"
