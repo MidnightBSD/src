@@ -29506,7 +29506,6 @@ crypto/heimdal/kadmin/server.c -text
 crypto/heimdal/kadmin/stash.c -text
 crypto/heimdal/kadmin/test_util.c -text
 crypto/heimdal/kadmin/util.c -text
-crypto/heimdal/kadmin/version4.c -text
 crypto/heimdal/kcm/Makefile.am -text
 crypto/heimdal/kcm/Makefile.in -text
 crypto/heimdal/kcm/acl.c -text
