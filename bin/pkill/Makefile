@@ -1,9 +1,8 @@
 #	$NetBSD: Makefile,v 1.1 2002/03/01 11:21:58 ad Exp $
 # $FreeBSD: src/usr.bin/pkill/Makefile,v 1.7 2006/08/20 04:25:20 yar Exp $
-# $MidnightBSD: src/bin/pkill/Makefile,v 1.1 2009/03/27 22:04:42 laffer1 Exp $
+# $MidnightBSD: src/bin/pkill/Makefile,v 1.2 2009/03/27 22:10:43 laffer1 Exp $
 
 PROG=	pkill
-WARNS?=	5
 
 DPADD=	${LIBKVM}
 LDADD=	-lkvm

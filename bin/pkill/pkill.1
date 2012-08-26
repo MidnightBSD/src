@@ -1,7 +1,7 @@
 .\"	$NetBSD: pkill.1,v 1.8 2003/02/14 15:59:18 grant Exp $
 .\"
 .\" $FreeBSD: src/usr.bin/pkill/pkill.1,v 1.22 2006/12/20 11:57:22 ru Exp $
-.\" $MidnightBSD: src/usr.bin/pkill/pkill.1,v 1.2 2009/03/27 22:02:25 laffer1 Exp $
+.\" $MidnightBSD: src/bin/pkill/pkill.1,v 1.1 2009/03/27 22:04:42 laffer1 Exp $
 .\"
 .\" Copyright (c) 2002 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -17,13 +17,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"        This product includes software developed by the NetBSD
-.\"        Foundation, Inc. and its contributors.
-.\" 4. Neither the name of The NetBSD Foundation nor the names of its
-.\"    contributors may be used to endorse or promote products derived
-.\"    from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
 .\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -37,7 +30,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd November 23, 2006
+.Dd February 11, 2010
 .Dt PKILL 1
 .Os
 .Sh NAME
@@ -45,7 +38,7 @@
 .Nd find or signal processes by name
 .Sh SYNOPSIS
 .Nm pgrep
-.Op Fl LSfilnovx
+.Op Fl LSafilnoqvx
 .Op Fl F Ar pidfile
 .Op Fl G Ar gid
 .Op Fl M Ar core
@@ -61,7 +54,7 @@
 .Ar pattern ...
 .Nm pkill
 .Op Fl Ar signal
-.Op Fl ILfinovx
+.Op Fl ILafilnovx
 .Op Fl F Ar pidfile
 .Op Fl G Ar gid
 .Op Fl M Ar core
@@ -129,6 +122,15 @@ The default is a newline.
 This option can only be used with the
 .Nm pgrep
 command.
+.It Fl a
+Include process ancestors in the match list.
+By default, the current
+.Nm pgrep
+or
+.Nm pkill
+process and all of its ancestors are excluded (unless
+.Fl v
+is used).
 .It Fl f
 Match against full argument lists.
 The default is to match against process names.
@@ -155,18 +157,22 @@ The value
 matches processes not in jail.
 .It Fl l
 Long output.
-Print the process name in addition to the process ID for each matching
+For
+.Nm pgrep ,
+print the process name in addition to the process ID for each matching
 process.
 If used in conjunction with
 .Fl f ,
 print the process ID and the full argument list for each matching process.
-This option can only be used with the
-.Nm pgrep
-command.
+For
+.Nm pkill ,
+display the kill command used for each process killed.
 .It Fl n
 Select only the newest (most recently started) of the matching processes.
 .It Fl o
 Select only the oldest (least recently started) of the matching processes.
+.It Fl q
+Do not write anything to standard output.
 .It Fl s Ar sid
 Restrict matches to processes with a session ID in the comma-separated
 list
