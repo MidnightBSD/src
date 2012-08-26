@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/stty/stty.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -62,9 +62,11 @@ main(int argc, char *argv[])
 	struct info i;
 	enum FMT fmt;
 	int ch;
+	const char *file;
 
 	fmt = NOTSET;
 	i.fd = STDIN_FILENO;
+	file = "stdin";
 
 	opterr = 0;
 	while (optind < argc &&
@@ -80,6 +82,7 @@ main(int argc, char *argv[])
 		case 'f':
 			if ((i.fd = open(optarg, O_RDONLY | O_NONBLOCK)) < 0)
 				err(1, "%s", optarg);
+			file = optarg;
 			break;
 		case 'g':
 			fmt = GFLAG;
@@ -93,7 +96,7 @@ args:	argc -= optind;
 	argv += optind;
 
 	if (tcgetattr(i.fd, &i.t) < 0)
-		errx(1, "stdin isn't a terminal");
+		errx(1, "%s isn't a terminal", file);
 	if (ioctl(i.fd, TIOCGETD, &i.ldisc) < 0)
 		err(1, "TIOCGETD");
 	if (ioctl(i.fd, TIOCGWINSZ, &i.win) < 0)

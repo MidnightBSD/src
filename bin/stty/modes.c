@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/stty/modes.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -192,10 +192,12 @@ struct modes omodes[] = {
 	{ "-onlcr",	0, ONLCR },
 	{ "ocrnl",	OCRNL, 0 },
 	{ "-ocrnl",	0, OCRNL },
-	{ "tabs",	0, OXTABS },		/* "preserve" tabs */
-	{ "-tabs",	OXTABS, 0 },
-	{ "oxtabs",	OXTABS, 0 },
-	{ "-oxtabs",	0, OXTABS },
+	{ "tabs",	TAB0, TABDLY },		/* "preserve" tabs */
+	{ "-tabs",	TAB3, TABDLY },
+	{ "oxtabs",	TAB3, TABDLY },
+	{ "-oxtabs",	TAB0, TABDLY },
+	{ "tab0",	TAB0, TABDLY },
+	{ "tab3",	TAB3, TABDLY },
 	{ "onocr",	ONOCR, 0 },
 	{ "-onocr",	0, ONOCR },
 	{ "onlret",	ONLRET, 0 },

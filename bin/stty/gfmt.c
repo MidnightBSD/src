@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/stty/gfmt.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: src/bin/stty/gfmt.c,v 1.20 2004/04/06 20:06:53 markm Exp $")
 #include "stty.h"
 #include "extern.h"
 
-static void gerr(const char *s);
+static void gerr(const char *s) __dead2;
 
 static void
 gerr(const char *s)

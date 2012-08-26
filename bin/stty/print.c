@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/stty/print.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -45,8 +45,6 @@ __FBSDID("$FreeBSD: src/bin/stty/print.c,v 1.20 2005/05/26 06:57:57 ache Exp $")
 #include "stty.h"
 #include "extern.h"
 
-#include <sys/ioctl_compat.h>	/* XXX NTTYDISC is too well hidden */
-
 static void  binit(const char *);
 static void  bput(const char *);
 static const char *ccval(struct cchar *, int);
@@ -65,9 +63,6 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	/* Line discipline. */
 	if (ldisc != TTYDISC) {
 		switch(ldisc) {
-		case NTTYDISC:
-			cnt += printf("new tty disc; ");
-			break;
 		case SLIPDISC:
 			cnt += printf("slip disc; ");
 			break;
@@ -142,7 +137,14 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	put("-opost", OPOST, 1);
 	put("-onlcr", ONLCR, 1);
 	put("-ocrnl", OCRNL, 0);
-	put("-oxtabs", OXTABS, 1);
+	switch(tmp&TABDLY) {
+	case TAB0:
+		bput("tab0");
+		break;
+	case TAB3:
+		bput("tab3");
+		break;
+	}
 	put("-onocr", ONOCR, 0);
 	put("-onlret", ONLRET, 0);
 
