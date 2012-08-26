@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/realpath/realpath.c,v 1.2 2007/07/26 20:13:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -45,20 +45,39 @@ main(int argc, char *argv[])
 {
 	char buf[PATH_MAX];
 	char *p;
+	const char *path;
+	int ch, qflag, rval;
 
-	if (argc == 2) {
-		if ((p = realpath(argv[1], buf)) == NULL)
-			err(1, "%s", buf);
-	} else
-		usage();
-	(void)printf("%s\n", p);
-	exit(0);
+	qflag = 0;
+	while ((ch = getopt(argc, argv, "q")) != -1) {
+		switch (ch) {
+		case 'q':
+			qflag = 1;
+			break;
+		case '?':
+		default:
+			usage();
+		}
+	}
+	argc -= optind;
+	argv += optind;
+	path = *argv != NULL ? *argv++ : ".";
+	rval  = 0;
+	do {
+		if ((p = realpath(path, buf)) == NULL) {
+			if (!qflag)
+				warn("%s", path);
+			rval = 1;
+		} else
+			(void)printf("%s\n", p);
+	} while ((path = *argv++) != NULL);
+	exit(rval);
 }
 
 static void
 usage(void)
 {
 
-	(void)fprintf(stderr, "usage: realpath path\n");
+	(void)fprintf(stderr, "usage: realpath [-q] [path ...]\n");
   	exit(1);
 }

@@ -32,9 +32,9 @@
 .\"     @(#)pwd.1	8.2 (Berkeley) 4/28/95
 .\" From: src/bin/pwd/pwd.1,v 1.11 2000/11/20 11:39:39 ru Exp
 .\" $FreeBSD: src/bin/realpath/realpath.1,v 1.10 2005/01/16 16:41:58 ru Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/realpath/realpath.1,v 1.2 2007/07/26 20:13:00 laffer1 Exp $
 .\"
-.Dd November 24, 2000
+.Dd June 21, 2011
 .Dt REALPATH 1
 .Os
 .Sh NAME
@@ -42,7 +42,8 @@
 .Nd return resolved physical path
 .Sh SYNOPSIS
 .Nm
-.Ar path
+.Op Fl q
+.Op Ar path ...
 .Sh DESCRIPTION
 The
 .Nm
@@ -56,6 +57,17 @@ and
 .Pa /../
 in
 .Ar path .
+If
+.Ar path
+is absent, the current working directory
+.Pq Sq Pa .\&
+is assumed.
+.Pp
+If
+.Fl q
+is specified, warnings will not be printed when
+.Xr realpath 3
+fails.
 .Sh EXIT STATUS
 .Ex -std
 .Sh SEE ALSO
