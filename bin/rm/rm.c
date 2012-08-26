@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/rm/rm.c,v 1.5 2007/07/26 20:13:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD: src/bin/rm/rm.c,v 1.52.2.1 2005/10/08 17:27:37 dougb Exp $")
 int dflag, eval, fflag, iflag, Pflag, vflag, Wflag, stdin_ok;
 int rflag, Iflag;
 uid_t uid;
+volatile sig_atomic_t info;
 
 int	check(char *, char *, struct stat *);
 int	check2(char **);
@@ -69,6 +70,7 @@ void	checkslash(char **);
 void	rm_file(char **);
 int	rm_overwrite(char *, struct stat *);
 void	rm_tree(char **);
+static void siginfo(int __unused);
 void	usage(void);
 
 /*
@@ -89,7 +91,7 @@ main(int argc, char *argv[])
 	 * "unlink", for which the functionality provided is greatly
 	 * simplified.
 	 */
-	if ((p = rindex(argv[0], '/')) == NULL)
+	if ((p = strrchr(argv[0], '/')) == NULL)
 		p = argv[0];
 	else
 		++p;
@@ -151,6 +153,7 @@ main(int argc, char *argv[])
 		checkslash(argv);
 	uid = geteuid();
 
+	(void)signal(SIGINFO, siginfo);
 	if (*argv) {
 		stdin_ok = isatty(STDIN_FILENO);
 
@@ -232,7 +235,7 @@ rm_tree(char **argv)
 			else if (!uid &&
 				 (p->fts_statp->st_flags & (UF_APPEND|UF_IMMUTABLE)) &&
 				 !(p->fts_statp->st_flags & (SF_APPEND|SF_IMMUTABLE)) &&
-				 chflags(p->fts_accpath,
+				 lchflags(p->fts_accpath,
 					 p->fts_statp->st_flags &= ~(UF_APPEND|UF_IMMUTABLE)) < 0)
 				goto err;
 			continue;
@@ -251,7 +254,7 @@ rm_tree(char **argv)
 		if (!uid &&
 		    (p->fts_statp->st_flags & (UF_APPEND|UF_IMMUTABLE)) &&
 		    !(p->fts_statp->st_flags & (SF_APPEND|SF_IMMUTABLE)))
-			rval = chflags(p->fts_accpath,
+			rval = lchflags(p->fts_accpath,
 				       p->fts_statp->st_flags &= ~(UF_APPEND|UF_IMMUTABLE));
 		if (rval == 0) {
 			/*
@@ -267,6 +270,11 @@ rm_tree(char **argv)
 					if (rval == 0 && vflag)
 						(void)printf("%s\n",
 						    p->fts_path);
+					if (rval == 0 && info) {
+						info = 0;
+						(void)printf("%s\n",
+						    p->fts_path);
+					}
 					continue;
 				}
 				break;
@@ -277,6 +285,11 @@ rm_tree(char **argv)
 					if (vflag)
 						(void)printf("%s\n",
 						    p->fts_path);
+					if (info) {
+						info = 0;
+						(void)printf("%s\n",
+						    p->fts_path);
+					}
 					continue;
 				}
 				break;
@@ -289,15 +302,26 @@ rm_tree(char **argv)
 				if (fflag)
 					continue;
 				/* FALLTHROUGH */
-			default:
+
+			case FTS_F:
+			case FTS_NSOK:
 				if (Pflag)
-					if (!rm_overwrite(p->fts_accpath, NULL))
+					if (!rm_overwrite(p->fts_accpath, p->fts_info ==
+					    FTS_NSOK ? NULL : p->fts_statp))
 						continue;
+				/* FALLTHROUGH */
+
+			default:
 				rval = unlink(p->fts_accpath);
 				if (rval == 0 || (fflag && errno == ENOENT)) {
 					if (rval == 0 && vflag)
 						(void)printf("%s\n",
 						    p->fts_path);
+					if (rval == 0 && info) {
+						info = 0;
+						(void)printf("%s\n",
+						    p->fts_path);
+					}
 					continue;
 				}
 			}
@@ -351,7 +375,7 @@ rm_file(char **argv)
 		if (!uid && !S_ISWHT(sb.st_mode) &&
 		    (sb.st_flags & (UF_APPEND|UF_IMMUTABLE)) &&
 		    !(sb.st_flags & (SF_APPEND|SF_IMMUTABLE)))
-			rval = chflags(f, sb.st_flags & ~(UF_APPEND|UF_IMMUTABLE));
+			rval = lchflags(f, sb.st_flags & ~(UF_APPEND|UF_IMMUTABLE));
 		if (rval == 0) {
 			if (S_ISWHT(sb.st_mode))
 				rval = undelete(f);
@@ -370,6 +394,10 @@ rm_file(char **argv)
 		}
 		if (vflag && rval == 0)
 			(void)printf("%s\n", f);
+		if (info && rval == 0) {
+			info = 0;
+			(void)printf("%s\n", f);
+		}
 	}
 }
 
@@ -381,13 +409,13 @@ rm_file(char **argv)
  * This is a cheap way to *really* delete files.  Note that only regular
  * files are deleted, directories (and therefore names) will remain.
  * Also, this assumes a fixed-block file system (like FFS, or a V7 or a
- * System V file system).  In a logging file system, you'll have to have
- * kernel support.
+ * System V file system).  In a logging or COW file system, you'll have to
+ * have kernel support.
  */
 int
 rm_overwrite(char *file, struct stat *sbp)
 {
-	struct stat sb;
+	struct stat sb, sb2;
 	struct statfs fsb;
 	off_t len;
 	int bsize, fd, wlen;
@@ -401,13 +429,20 @@ rm_overwrite(char *file, struct stat *sbp)
 	}
 	if (!S_ISREG(sbp->st_mode))
 		return (1);
-	if (sbp->st_nlink > 1) {
- 		warnx("%s (inode %u): not overwritten due to multiple links",
+	if (sbp->st_nlink > 1 && !fflag) {
+		warnx("%s (inode %u): not overwritten due to multiple links",
 		    file, sbp->st_ino);
- 		return (1);
+		return (0);
 	}
-	if ((fd = open(file, O_WRONLY, 0)) == -1)
+	if ((fd = open(file, O_WRONLY|O_NONBLOCK|O_NOFOLLOW, 0)) == -1)
 		goto err;
+	if (fstat(fd, &sb2))
+		goto err;
+	if (sb2.st_dev != sbp->st_dev || sb2.st_ino != sbp->st_ino ||
+	    !S_ISREG(sb2.st_mode)) {
+		errno = EPERM;
+		goto err;
+	}
 	if (fstatfs(fd, &fsb) == -1)
 		goto err;
 	bsize = MAX(fsb.f_iosize, 1024);
@@ -592,4 +627,11 @@ usage(void)
 	    "usage: rm [-f | -i] [-dIPRrvW] file ...",
 	    "       unlink file");
 	exit(EX_USAGE);
+}
+
+static void
+siginfo(int sig __unused)
+{
+
+	info = 1;
 }

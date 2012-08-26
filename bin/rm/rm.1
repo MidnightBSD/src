@@ -31,9 +31,9 @@
 .\"
 .\"	@(#)rm.1	8.5 (Berkeley) 12/5/94
 .\" $FreeBSD: src/bin/rm/rm.1,v 1.36.2.1 2005/10/08 17:27:37 dougb Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/rm/rm.1,v 1.4 2007/07/26 20:13:00 laffer1 Exp $
 .\"
-.Dd October 30, 2006
+.Dd October 31, 2010
 .Dt RM 1
 .Os
 .Sh NAME
@@ -57,7 +57,7 @@ input device is a terminal, the user is prompted (on the standard error
 output) for confirmation.
 .Pp
 The options are as follows:
-.Bl -tag -width Fl
+.Bl -tag -width indent
 .It Fl d
 Attempt to remove directories as well as other types of files.
 .It Fl f
@@ -89,14 +89,27 @@ yet provides almost the same level of protection against mistakes.
 Overwrite regular files before deleting them.
 Files are overwritten three times, first with the byte pattern 0xff,
 then 0x00, and then 0xff again, before they are deleted.
-Files with multiple links will not be overwritten.
+Files with multiple links will not be overwritten nor deleted
+and a warning will be issued.
+If the
+.Fl f
+option is specified, files with multiple links will also be overwritten
+and deleted.
+No warning will be issued.
 .Pp
 Specifying this flag for a read only file will cause
 .Nm
 to generate an error message and exit.
 The file will not be removed or overwritten.
+.Pp
+N.B.: The
+.Fl P
+flag is not considered a security feature
+.Pq see Sx BUGS .
 .It Fl R
-Attempt to remove the file hierarchy rooted in each file argument.
+Attempt to remove the file hierarchy rooted in each
+.Ar file
+argument.
 The
 .Fl R
 option implies the
@@ -118,7 +131,8 @@ Be verbose when deleting files, showing them as they are removed.
 .It Fl W
 Attempt to undelete the named files.
 Currently, this option can only be used to recover
-files covered by whiteouts.
+files covered by whiteouts in a union file system (see
+.Xr undelete 2 ) .
 .El
 .Pp
 The
@@ -140,7 +154,7 @@ No options may be supplied in this simple mode of operation,
 which performs an
 .Xr unlink 2
 operation on the passed argument.
-.Pp
+.Sh EXIT STATUS
 The
 .Nm
 utility exits 0 if all of the named files or file hierarchies were removed,
@@ -151,7 +165,7 @@ removed.
 If an error occurs,
 .Nm
 exits with a value >0.
-.Sh NOTE
+.Sh NOTES
 The
 .Nm
 command uses
@@ -165,12 +179,21 @@ This will allow the removal of file names that begin
 with a dash
 .Pq Sq - .
 For example:
-.Dl rm -- -filename
+.Pp
+.Dl "rm -- -filename"
+.Pp
 The same behavior can be obtained by using an absolute or relative
 path reference.
 For example:
-.Dl rm /home/user/-filename
-.Dl rm ./-filename
+.Pp
+.Dl "rm /home/user/-filename"
+.Dl "rm ./-filename"
+.Pp
+When
+.Fl P
+is specified with
+.Fl f
+the file will be overwritten and removed even if it has hard links.
 .Sh COMPATIBILITY
 The
 .Nm
@@ -212,8 +235,12 @@ command appeared in
 .Sh BUGS
 The
 .Fl P
-option assumes that the underlying file system is a fixed-block file
-system.
-UFS is a fixed-block file system, LFS is not.
-In addition, only regular files are overwritten, other types of files
-are not.
+option assumes that the underlying storage overwrites file blocks
+when data is written to an existing offset.
+Several factors including the file system and its backing store could defeat
+this assumption.
+This includes, but is not limited to file systems that use a
+Copy-On-Write strategy (e.g. ZFS or UFS when snapshots are being used), Flash
+media that are using a wear leveling algorithm, or when the backing datastore
+does journaling, etc.
+In addition, only regular files are overwritten, other types of files are not.
