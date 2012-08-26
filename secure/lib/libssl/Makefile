@@ -1,8 +1,8 @@
-# $MidnightBSD$
+# $MidnightBSD: src/secure/lib/libssl/Makefile,v 1.3 2011/02/05 19:31:40 laffer1 Exp $
 # $FreeBSD: src/secure/lib/libssl/Makefile,v 1.25 2006/07/29 19:41:38 simon Exp $
 
 LIB=		ssl
-SHLIB_MAJOR=	5
+SHLIB_MAJOR=	6
 
 NO_LINT=
 
