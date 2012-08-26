@@ -29362,7 +29362,6 @@ crypto/heimdal/cf/aix.m4 -text
 crypto/heimdal/cf/auth-modules.m4 -text
 crypto/heimdal/cf/autobuild.m4 -text
 crypto/heimdal/cf/broken-getaddrinfo.m4 -text
-crypto/heimdal/cf/broken-getnameinfo.m4 -text
 crypto/heimdal/cf/broken-glob.m4 -text
 crypto/heimdal/cf/broken-realloc.m4 -text
 crypto/heimdal/cf/broken-snprintf.m4 -text
@@ -29372,7 +29371,6 @@ crypto/heimdal/cf/c-attribute.m4 -text
 crypto/heimdal/cf/c-function.m4 -text
 crypto/heimdal/cf/capabilities.m4 -text
 crypto/heimdal/cf/check-compile-et.m4 -text
-crypto/heimdal/cf/check-declaration.m4 -text
 crypto/heimdal/cf/check-getpwnam_r-posix.m4 -text
 crypto/heimdal/cf/check-man.m4 -text
 crypto/heimdal/cf/check-netinet-ip-and-tcp.m4 -text
