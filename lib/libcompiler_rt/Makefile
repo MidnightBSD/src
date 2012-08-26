@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -14,7 +14,7 @@ CRTARCH=x86_64
 CRTARCH=${MACHINE_CPUARCH}
 .endif
 
-CRTSRC=${.CURDIR}/../../contrib/compiler-rt/lib
+CRTSRC=${.CURDIR}/../../contrib/compiler_rt/lib
 
 .PATH: ${CRTSRC}/${CRTARCH} ${CRTSRC}
 
@@ -126,8 +126,6 @@ SRCF=	absvdi2 \
 	umoddi3 \
 	umodti3
 
-# These are already shipped by libc.a on arm and mips
-.if ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
 SRCF+=	adddf3 \
 	addsf3 \
 	divdf3 \
@@ -146,18 +144,8 @@ SRCF+=	adddf3 \
 	truncdfsf2 \
 	udivsi3 \
 	umodsi3
-.endif
 
 # FreeBSD-specific atomic intrinsics.
-.if ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "mips"
-SRCF+=	__sync_fetch_and_add_4 \
-	__sync_fetch_and_and_4 \
-	__sync_fetch_and_or_4 \
-	__sync_fetch_and_sub_4 \
-	__sync_fetch_and_xor_4 \
-	__sync_lock_test_and_set_4 \
-	__sync_val_compare_and_swap_4
-.endif
 .if ${MACHINE_ARCH:Mmips64*} != ""
 SRCF+=	__sync_fetch_and_add_8 \
 	__sync_fetch_and_and_8 \
@@ -169,24 +157,21 @@ SRCF+=	__sync_fetch_and_add_8 \
 .endif
 
 .for file in ${SRCF}
-. if ${MACHINE_CPUARCH} != "arm" && exists(${CRTSRC}/${CRTARCH}/${file}.S)
+. if exists(${CRTSRC}/${CRTARCH}/${file}.S)
 SRCS+=	${file}.S
 . else
 SRCS+=	${file}.c
 . endif
 .endfor
 
-.if ${MACHINE_CPUARCH} != "mips"
-. if ${MK_INSTALLLIB} != "no"
+.if ${MK_INSTALLLIB} != "no"
 SYMLINKS+=libcompiler_rt.a ${LIBDIR}/libgcc.a
-. endif
-. if ${MK_PROFILE} != "no"
+.endif
+.if ${MK_PROFILE} != "no"
 SYMLINKS+=libcompiler_rt_p.a ${LIBDIR}/libgcc_p.a
-. endif
 .endif
 
-.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386" || \
-    ${MACHINE_CPUARCH} == "powerpc"
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 AFLAGS+=--noexecstack
 ACFLAGS+=-Wa,--noexecstack
 .endif
