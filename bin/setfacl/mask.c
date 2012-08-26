@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/setfacl/mask.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001-2002 Chris D. Faulhaber
  * All rights reserved.
@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD: src/bin/setfacl/mask.c,v 1.8 2005/01/10 08:39:25 imp Exp $")
 
 /* set the appropriate mask the given ACL's */
 int
-set_acl_mask(acl_t *prev_acl)
+set_acl_mask(acl_t *prev_acl, const char *filename)
 {
 	acl_entry_t entry;
 	acl_t acl;
@@ -60,7 +60,7 @@ set_acl_mask(acl_t *prev_acl)
 
 	acl = acl_dup(*prev_acl);
 	if (acl == NULL)
-		err(1, "acl_dup() failed");
+		err(1, "%s: acl_dup() failed", filename);
 
 	if (n_flag == 0) {
 		/*
@@ -71,7 +71,7 @@ set_acl_mask(acl_t *prev_acl)
 		 * class in the resulting ACL
 		 */
 		if (acl_calc_mask(&acl)) {
-			warn("acl_calc_mask() failed");
+			warn("%s: acl_calc_mask() failed", filename);
 			acl_free(acl);
 			return (-1);
 		}
@@ -87,7 +87,8 @@ set_acl_mask(acl_t *prev_acl)
 		while (acl_get_entry(acl, entry_id, &entry) == 1) {
 			entry_id = ACL_NEXT_ENTRY;
 			if (acl_get_tag_type(entry, &tag) == -1)
-				err(1, "acl_get_tag_type() failed");
+				err(1, "%s: acl_get_tag_type() failed",
+				    filename);
 
 			if (tag == ACL_MASK) {
 				acl_free(acl);
@@ -101,7 +102,7 @@ set_acl_mask(acl_t *prev_acl)
 		 * file, then write an error message to standard error and
 		 * continue with the next file.
 		 */
-		warnx("warning: no mask entry");
+		warnx("%s: warning: no mask entry", filename);
 		acl_free(acl);
 		return (0);
 	}

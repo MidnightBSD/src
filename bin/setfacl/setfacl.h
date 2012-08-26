@@ -14,16 +14,16 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR THE VOICES IN HIS HEAD BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/bin/setfacl/setfacl.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
  * $FreeBSD: src/bin/setfacl/setfacl.h,v 1.5 2005/01/10 08:39:25 imp Exp $
  */
 
@@ -39,15 +39,14 @@
 #define	OP_REMOVE_DEF		0x01	/* remove default acl's (-k) */
 #define	OP_REMOVE_EXT		0x02	/* remove extended acl's (-b) */
 #define	OP_REMOVE_ACL		0x03	/* remove acl's (-xX) */
-
-/* ACL types for the acl array */
-#define ACCESS_ACL	0
-#define DEFAULT_ACL	1
+#define OP_REMOVE_BY_NUMBER	0x04	/* remove acl's (-xX) by acl entry number */
+#define OP_ADD_ACL		0x05	/* add acls entries at a given position */
 
 /* TAILQ entry for acl operations */
 struct sf_entry {
 	uint	op;
 	acl_t	acl;
+	uint	entry_number;
 	TAILQ_ENTRY(sf_entry) next;
 };
 TAILQ_HEAD(, sf_entry) entrylist;
@@ -62,21 +61,23 @@ TAILQ_HEAD(, sf_file) filelist;
 /* files.c */
 acl_t  get_acl_from_file(const char *filename);
 /* merge.c */
-int    merge_acl(acl_t acl, acl_t *prev_acl);
+int    merge_acl(acl_t acl, acl_t *prev_acl, const char *filename);
+int    add_acl(acl_t acl, uint entry_number, acl_t *prev_acl, const char *filename);
 /* remove.c */
-int    remove_acl(acl_t acl, acl_t *prev_acl);
-int    remove_default(acl_t *prev_acl);
-void   remove_ext(acl_t *prev_acl);
+int    remove_acl(acl_t acl, acl_t *prev_acl, const char *filename);
+int    remove_by_number(uint entry_number, acl_t *prev_acl, const char *filename);
+int    remove_default(acl_t *prev_acl, const char *filename);
+void   remove_ext(acl_t *prev_acl, const char *filename);
 /* mask.c */
-int    set_acl_mask(acl_t *prev_acl);
+int    set_acl_mask(acl_t *prev_acl, const char *filename);
 /* util.c */
 void  *zmalloc(size_t size);
+const char *brand_name(int brand);
+int    branding_mismatch(int brand1, int brand2);
 
-acl_type_t acl_type;
 uint       have_mask;
 uint       need_mask;
 uint       have_stdin;
-uint       h_flag;
 uint       n_flag;
 
 #endif /* _SETFACL_H */
