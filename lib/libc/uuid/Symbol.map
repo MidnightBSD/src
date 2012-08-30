@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/lib/libc/uuid/Symbol.map,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 FBSD_1.0 {
@@ -11,4 +11,11 @@ FBSD_1.0 {
 	uuid_create_nil;
 	uuid_create;
 	uuid_compare;
+};
+
+FBSD_1.1 {
+	uuid_enc_le;
+	uuid_dec_le;
+	uuid_enc_be;
+	uuid_dec_be;
 };
