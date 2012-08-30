@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/secure/Makefile.inc,v 1.25 2006/03/17 18:54:31 ru Exp $
 
 .include <bsd.own.mk>
@@ -15,3 +16,5 @@ CFLAGS+= -DNO_IDEA
 .if ${MK_OPENSSH} != "no"
 SSHDIR=		${.CURDIR}/../../../crypto/openssh
 .endif
+
+WARNS?=		0
