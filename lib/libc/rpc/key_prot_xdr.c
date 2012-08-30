@@ -38,7 +38,7 @@
 
 /* #pragma ident	"@(#)key_prot.x	1.7	94/04/29 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/key_prot_xdr.c,v 1.5 2004/10/16 06:11:34 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 /* 
  * Compiled from key_prot.x using rpcgen.
@@ -117,12 +117,14 @@ xdr_cryptkeyres(register XDR *xdrs, cryptkeyres *objp)
 bool_t
 xdr_unixcred(register XDR *xdrs, unixcred *objp)
 {
+	u_int **pgids_val;
 
 	if (!xdr_u_int(xdrs, &objp->uid))
 		return (FALSE);
 	if (!xdr_u_int(xdrs, &objp->gid))
 		return (FALSE);
-	if (!xdr_array(xdrs, (char **)&objp->gids.gids_val, (u_int *) &objp->gids.gids_len, MAXGIDS,
+	pgids_val = &objp->gids.gids_val;
+	if (!xdr_array(xdrs, (char **) pgids_val, (u_int *) &objp->gids.gids_len, MAXGIDS,
 		sizeof (u_int), (xdrproc_t) xdr_u_int))
 		return (FALSE);
 	return (TRUE);

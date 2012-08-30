@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)svc.c 1.44 88/02/08 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc.c	2.4 88/08/11 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc.c,v 1.24 2006/02/27 22:10:59 deischen Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * svc.c, Server-side remote procedure call interface.
@@ -67,7 +67,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/svc.c,v 1.24 2006/02/27 22:10:59 deischen E
 #define	RQCRED_SIZE	400		/* this size is excessive */
 
 #define SVC_VERSQUIET 0x0001		/* keep quiet about vers mismatch */
-#define version_keepquiet(xp) ((u_long)(xp)->xp_p3 & SVC_VERSQUIET)
+#define version_keepquiet(xp) (SVC_EXT(xp)->xp_flags & SVC_VERSQUIET)
 
 #define max(a, b) (a > b ? a : b)
 
@@ -108,8 +108,10 @@ xprt_register(xprt)
 	if (__svc_xports == NULL) {
 		__svc_xports = (SVCXPRT **)
 			mem_alloc(FD_SETSIZE * sizeof(SVCXPRT *));
-		if (__svc_xports == NULL)
+		if (__svc_xports == NULL) {
+			rwlock_unlock(&svc_fd_lock);
 			return;
+		}
 		memset(__svc_xports, '\0', FD_SETSIZE * sizeof(SVCXPRT *));
 	}
 	if (sock < FD_SETSIZE) {
@@ -452,20 +454,16 @@ void
 __svc_versquiet_on(xprt)
 	SVCXPRT *xprt;
 {
-	u_long	tmp;
 
-	tmp = ((u_long) xprt->xp_p3) | SVC_VERSQUIET;
-	xprt->xp_p3 = tmp;
+	SVC_EXT(xprt)->xp_flags |= SVC_VERSQUIET;
 }
 
 void
 __svc_versquiet_off(xprt)
 	SVCXPRT *xprt;
 {
-	u_long	tmp;
 
-	tmp = ((u_long) xprt->xp_p3) & ~SVC_VERSQUIET;
-	xprt->xp_p3 = tmp;
+	SVC_EXT(xprt)->xp_flags &= ~SVC_VERSQUIET;
 }
 
 void
@@ -479,7 +477,8 @@ int
 __svc_versquiet_get(xprt)
 	SVCXPRT *xprt;
 {
-	return ((int) xprt->xp_p3) & SVC_VERSQUIET;
+
+	return (SVC_EXT(xprt)->xp_flags & SVC_VERSQUIET);
 }
 #endif
 
@@ -555,6 +554,46 @@ svcerr_progvers(xprt, low_vers, high_vers)
 	SVC_REPLY(xprt, &rply);
 }
 
+/*
+ * Allocate a new server transport structure. All fields are
+ * initialized to zero and xp_p3 is initialized to point at an
+ * extension structure to hold various flags and authentication
+ * parameters.
+ */
+SVCXPRT *
+svc_xprt_alloc()
+{
+	SVCXPRT *xprt;
+	SVCXPRT_EXT *ext;
+
+	xprt = mem_alloc(sizeof(SVCXPRT));
+	if (xprt == NULL)
+		return (NULL);
+	memset(xprt, 0, sizeof(SVCXPRT));
+	ext = mem_alloc(sizeof(SVCXPRT_EXT));
+	if (ext == NULL) {
+		mem_free(xprt, sizeof(SVCXPRT));
+		return (NULL);
+	}
+	memset(ext, 0, sizeof(SVCXPRT_EXT));
+	xprt->xp_p3 = ext;
+	ext->xp_auth.svc_ah_ops = &svc_auth_null_ops;
+
+	return (xprt);
+}
+
+/*
+ * Free a server transport structure.
+ */
+void
+svc_xprt_free(xprt)
+	SVCXPRT *xprt;
+{
+
+	mem_free(xprt->xp_p3, sizeof(SVCXPRT_EXT));
+	mem_free(xprt, sizeof(SVCXPRT));
+}
+
 /* ******************* SERVER INPUT STUFF ******************* */
 
 /*
@@ -596,8 +635,8 @@ svc_getreqset(readfds)
 
 	maskp = readfds->fds_bits;
 	for (sock = 0; sock < FD_SETSIZE; sock += NFDBITS) {
-	    for (mask = *maskp++; (bit = ffs(mask)) != 0;
-		mask ^= (1 << (bit - 1))) {
+	    for (mask = *maskp++; (bit = ffsl(mask)) != 0;
+		mask ^= (1ul << (bit - 1))) {
 		/* sock has input waiting */
 		fd = sock + bit - 1;
 		svc_getreq_common(fd);
@@ -643,7 +682,15 @@ svc_getreq_common(fd)
 			r.rq_cred = msg.rm_call.cb_cred;
 			/* first authenticate the message */
 			if ((why = _authenticate(&r, &msg)) != AUTH_OK) {
-				svcerr_auth(xprt, why);
+				/*
+				 * RPCSEC_GSS uses this return code
+				 * for requests that form part of its
+				 * context establishment protocol and
+				 * should not be dispatched to the
+				 * application.
+				 */
+				if (why != RPCSEC_GSS_NODISPATCH)
+					svcerr_auth(xprt, why);
 				goto call_done;
 			}
 			/* now match message with a registered service*/
@@ -670,7 +717,7 @@ svc_getreq_common(fd)
 			if (prog_found)
 				svcerr_progvers(xprt, low_vers, high_vers);
 			else
-				 svcerr_noprog(xprt);
+				svcerr_noprog(xprt);
 			/* Fall through to ... */
 		}
 		/*

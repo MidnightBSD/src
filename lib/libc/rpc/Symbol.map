@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/lib/libc/rpc/Symbol.map,v 1.3 2007/05/31 13:01:34 deischen Exp $
+ * $MidnightBSD$
  */
 
 FBSD_1.0 {
@@ -239,9 +239,9 @@ FBSDprivate_1.0 {
 	__key_encryptsession_pk_LOCAL;
 	__key_decryptsession_pk_LOCAL;
 	__key_gendes_LOCAL;
-	__tsd_lock;	/*
-			 * Why does usr.bin/rpcinfo/Makefile need rpc_generic.c?
-			 * Remove this hack if rpcinfo stops building with it.
-			 */
 	__svc_clean_idle;
+	__rpc_gss_unwrap;
+	__rpc_gss_unwrap_stub;
+	__rpc_gss_wrap;
+	__rpc_gss_wrap_stub;
 };

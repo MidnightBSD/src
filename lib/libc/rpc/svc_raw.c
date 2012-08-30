@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)svc_raw.c 1.25 89/01/31 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_raw.c,v 1.15 2006/02/27 22:10:59 deischen Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * svc_raw.c,   This a toy for simple testing and timing.
@@ -66,7 +66,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/svc_raw.c,v 1.15 2006/02/27 22:10:59 deisch
  */
 static struct svc_raw_private {
 	char	*raw_buf;	/* should be shared with the cl handle */
-	SVCXPRT	server;
+	SVCXPRT	*server;
 	XDR	xdr_stream;
 	char	verf_body[MAX_AUTH_BYTES];
 } *svc_raw_private;
@@ -96,20 +96,32 @@ svc_raw_create()
 			mutex_unlock(&svcraw_lock);
 			return (NULL);
 		}
-		if (__rpc_rawcombuf == NULL)
+		if (__rpc_rawcombuf == NULL) {
 			__rpc_rawcombuf = calloc(UDPMSGSIZE, sizeof (char));
+			if (__rpc_rawcombuf == NULL) {
+				free(srp);
+				mutex_unlock(&svcraw_lock);
+				return (NULL);
+			}
+		}
 		srp->raw_buf = __rpc_rawcombuf; /* Share it with the client */
+		srp->server = svc_xprt_alloc();
+		if (srp->server == NULL) {
+			free(__rpc_rawcombuf);
+			free(srp);
+			mutex_unlock(&svcraw_lock);
+			return (NULL);
+		}
 		svc_raw_private = srp;
 	}
-	srp->server.xp_fd = FD_SETSIZE;
-	srp->server.xp_port = 0;
-	srp->server.xp_p3 = NULL;
-	svc_raw_ops(&srp->server);
-	srp->server.xp_verf.oa_base = srp->verf_body;
+	srp->server->xp_fd = FD_SETSIZE;
+	srp->server->xp_port = 0;
+	svc_raw_ops(srp->server);
+	srp->server->xp_verf.oa_base = srp->verf_body;
 	xdrmem_create(&srp->xdr_stream, srp->raw_buf, UDPMSGSIZE, XDR_DECODE);
-	xprt_register(&srp->server);
+	xprt_register(srp->server);
 	mutex_unlock(&svcraw_lock);
-	return (&srp->server);
+	return (srp->server);
 }
 
 /*ARGSUSED*/
@@ -154,6 +166,9 @@ svc_raw_reply(xprt, msg)
 {
 	struct svc_raw_private *srp;
 	XDR *xdrs;
+	bool_t stat;
+	xdrproc_t xdr_proc;
+	caddr_t xdr_where;
 
 	mutex_lock(&svcraw_lock);
 	srp = svc_raw_private;
@@ -166,7 +181,19 @@ svc_raw_reply(xprt, msg)
 	xdrs = &srp->xdr_stream;
 	xdrs->x_op = XDR_ENCODE;
 	(void) XDR_SETPOS(xdrs, 0);
-	if (! xdr_replymsg(xdrs, msg)) {
+	if (msg->rm_reply.rp_stat == MSG_ACCEPTED &&
+	    msg->rm_reply.rp_acpt.ar_stat == SUCCESS) {
+		xdr_proc = msg->acpted_rply.ar_results.proc;
+		xdr_where = msg->acpted_rply.ar_results.where;
+		msg->acpted_rply.ar_results.proc = (xdrproc_t) xdr_void;
+		msg->acpted_rply.ar_results.where = NULL;
+
+		stat = xdr_replymsg(xdrs, msg) &&
+		    SVCAUTH_WRAP(&SVC_AUTH(xprt), xdrs, xdr_proc, xdr_where);
+	} else {
+		stat = xdr_replymsg(xdrs, msg);
+	}
+	if (!stat) {
 		return (FALSE);
 	}
 	(void) XDR_GETPOS(xdrs);  /* called just for overhead */
@@ -189,7 +216,9 @@ svc_raw_getargs(xprt, xdr_args, args_ptr)
 		return (FALSE);
 	}
 	mutex_unlock(&svcraw_lock);
-	return (*xdr_args)(&srp->xdr_stream, args_ptr);
+
+	return (SVCAUTH_UNWRAP(&SVC_AUTH(xprt), &srp->xdr_stream,
+		xdr_args, args_ptr));
 }
 
 /*ARGSUSED*/

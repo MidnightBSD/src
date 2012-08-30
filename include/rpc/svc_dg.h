@@ -1,5 +1,5 @@
 /*	$NetBSD: svc_dg.h,v 1.1 2000/06/02 23:11:16 fvdl Exp $	*/
-/*	$FreeBSD: src/include/rpc/svc_dg.h,v 1.1 2001/03/19 12:49:47 alfred Exp $ */
+/*	$MidnightBSD$ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -46,6 +46,7 @@ struct svc_dg_data {
 	XDR		su_xdrs;			/* XDR handle */
 	char		su_verfbody[MAX_AUTH_BYTES];	/* verifier body */
 	void		*su_cache;		/* cached data, NULL if none */
+	struct netbuf   su_srcaddr;		/* dst address of last msg */
 };
 
 #define __rpcb_get_dg_xidp(x)	(&((struct svc_dg_data *)(x)->xp_p2)->su_xid)

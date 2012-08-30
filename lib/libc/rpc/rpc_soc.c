@@ -42,7 +42,7 @@
 static char sccsid[] = "@(#)rpc_soc.c 1.41 89/05/02 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/rpc_soc.c,v 1.15 2006/02/27 22:10:59 deischen Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifdef PORTMAP
 /*
@@ -360,6 +360,14 @@ registerrpc(prognum, versnum, procnum, progname, inproc, outproc)
  */
 static thread_key_t	clnt_broadcast_key;
 static resultproc_t	clnt_broadcast_result_main;
+static once_t		clnt_broadcast_once = ONCE_INITIALIZER;
+
+static void
+clnt_broadcast_key_init(void)
+{
+
+	thr_keycreate(&clnt_broadcast_key, free);
+}
 
 /*
  * Need to translate the netbuf address into sockaddr_in address.
@@ -402,12 +410,7 @@ clnt_broadcast(prog, vers, proc, xargs, argsp, xresults, resultsp, eachresult)
 	if (thr_main())
 		clnt_broadcast_result_main = eachresult;
 	else {
-		if (clnt_broadcast_key == 0) {
-			mutex_lock(&tsd_lock);
-			if (clnt_broadcast_key == 0)
-				thr_keycreate(&clnt_broadcast_key, free);
-			mutex_unlock(&tsd_lock);
-		}
+		thr_once(&clnt_broadcast_once, clnt_broadcast_key_init);
 		thr_setspecific(clnt_broadcast_key, (void *) eachresult);
 	}
 	return rpc_broadcast((rpcprog_t)prog, (rpcvers_t)vers,

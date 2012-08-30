@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)clnt_raw.c 1.22 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)clnt_raw.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_raw.c,v 1.20 2006/02/27 22:10:58 deischen Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * clnt_raw.c
@@ -92,13 +92,13 @@ clnt_raw_create(prog, vers)
 	rpcprog_t prog;
 	rpcvers_t vers;
 {
-	struct clntraw_private *clp = clntraw_private;
+	struct clntraw_private *clp;
 	struct rpc_msg call_msg;
-	XDR *xdrs = &clp->xdr_stream;
-	CLIENT	*client = &clp->client_object;
+	XDR *xdrs;
+	CLIENT	*client;
 
 	mutex_lock(&clntraw_lock);
-	if (clp == NULL) {
+	if ((clp = clntraw_private) == NULL) {
 		clp = (struct clntraw_private *)calloc(1, sizeof (*clp));
 		if (clp == NULL) {
 			mutex_unlock(&clntraw_lock);
@@ -110,6 +110,9 @@ clnt_raw_create(prog, vers)
 		clp->_raw_buf = __rpc_rawcombuf;
 		clntraw_private = clp;
 	}
+	xdrs = &clp->xdr_stream;
+	client = &clp->client_object;
+
 	/*
 	 * pre-serialize the static part of the call msg and stash it away
 	 */

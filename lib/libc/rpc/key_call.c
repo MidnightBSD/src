@@ -32,7 +32,7 @@
 
 #ident	"@(#)key_call.c	1.25	94/04/24 SMI"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/key_call.c,v 1.16 2006/02/27 22:10:59 deischen Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * key_call.c, Interface to keyserver
@@ -279,6 +279,9 @@ struct  key_call_private {
 	uid_t	uid;		/* user-id at last authorization */
 };
 static struct key_call_private *key_call_private_main = NULL;
+static thread_key_t key_call_key;
+static once_t key_call_once = ONCE_INITIALIZER;
+static int key_call_key_error;
 
 static void
 key_call_destroy(void *vp)
@@ -292,6 +295,13 @@ key_call_destroy(void *vp)
 	}
 }
 
+static void
+key_call_init(void)
+{
+
+	key_call_key_error = thr_keycreate(&key_call_key, key_call_destroy);
+}
+
 /*
  * Keep the handle cached.  This call may be made quite often.
  */
@@ -302,12 +312,11 @@ int	vers;
 	void *localhandle;
 	struct netconfig *nconf;
 	struct netconfig *tpconf;
-	struct key_call_private *kcp = key_call_private_main;
+	struct key_call_private *kcp;
 	struct timeval wait_time;
 	struct utsname u;
 	int main_thread;
 	int fd;
-	static thread_key_t key_call_key;
 
 #define	TOTAL_TIMEOUT	30	/* total timeout talking to keyserver */
 #define	TOTAL_TRIES	5	/* Number of tries */
@@ -315,12 +324,9 @@ int	vers;
 	if ((main_thread = thr_main())) {
 		kcp = key_call_private_main;
 	} else {
-		if (key_call_key == 0) {
-			mutex_lock(&tsd_lock);
-			if (key_call_key == 0)
-				thr_keycreate(&key_call_key, key_call_destroy);
-			mutex_unlock(&tsd_lock);
-		}
+		if (thr_once(&key_call_once, key_call_init) != 0 ||
+		    key_call_key_error != 0)
+			return ((CLIENT *) NULL);
 		kcp = (struct key_call_private *)thr_getspecific(key_call_key);
 	}	
 	if (kcp == (struct key_call_private *)NULL) {
@@ -362,7 +368,7 @@ int	vers;
 		return ((CLIENT *) NULL);
 	}
         tpconf = NULL;
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	if (uname(&u) == -1)
 #else
 #if defined(i386)

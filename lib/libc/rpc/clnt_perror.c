@@ -35,7 +35,7 @@ static char *sccsid2 = "@(#)clnt_perror.c 1.15 87/10/07 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)clnt_perror.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_perror.c,v 1.17 2004/10/16 06:11:34 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * clnt_perror.c
@@ -309,7 +309,14 @@ static const char *const auth_errlist[] = {
 	"Server rejected verifier", 		/* 4 - AUTH_REJECTEDVERF */
 	"Client credential too weak",		/* 5 - AUTH_TOOWEAK */
 	"Invalid server verifier",		/* 6 - AUTH_INVALIDRESP */
-	"Failed (unspecified error)"		/* 7 - AUTH_FAILED */
+	"Failed (unspecified error)",		/* 7 - AUTH_FAILED */
+	"Kerberos generic error",		/* 8 - AUTH_KERB_GENERIC*/
+	"Kerberos credential expired",		/* 9 - AUTH_TIMEEXPIRE */
+	"Bad kerberos ticket file",		/* 10 - AUTH_TKT_FILE */
+	"Can't decode kerberos authenticator",	/* 11 - AUTH_DECODE */
+	"Address wrong in kerberos ticket",	/* 12 - AUTH_NET_ADDR */
+	"GSS-API crediential problem",		/* 13 - RPCSEC_GSS_CREDPROBLEM */
+	"GSS-API context problem"		/* 14 - RPCSEC_GSS_CTXPROBLEM */
 };
 
 static char *

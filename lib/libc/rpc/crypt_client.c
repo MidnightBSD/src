@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/crypt_client.c,v 1.9 2003/02/16 17:29:10 nectar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <err.h>
@@ -75,8 +75,8 @@ _des_crypt_call(buf, len, dparms)
 
 	des_crypt_1_arg.desbuf.desbuf_len = len;
 	des_crypt_1_arg.desbuf.desbuf_val = buf;
-	des_crypt_1_arg.des_dir = dparms->des_dir;
-	des_crypt_1_arg.des_mode = dparms->des_mode;
+	des_crypt_1_arg.des_dir = (dparms->des_dir == ENCRYPT) ? ENCRYPT_DES : DECRYPT_DES;
+	des_crypt_1_arg.des_mode = (dparms->des_mode == CBC) ? CBC_DES : ECB_DES;
 	bcopy(dparms->des_ivec, des_crypt_1_arg.des_ivec, 8);
 	bcopy(dparms->des_key, des_crypt_1_arg.des_key, 8);
 

@@ -30,7 +30,7 @@
  *
  *	from: @(#)xdr.h 1.19 87/04/22 SMI
  *	from: @(#)xdr.h	2.2 88/07/29 4.0 RPCSRC
- * $FreeBSD: src/include/rpc/xdr.h,v 1.23 2003/03/07 13:19:40 nectar Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -294,10 +294,13 @@ extern bool_t	xdr_short(XDR *, short *);
 extern bool_t	xdr_u_short(XDR *, u_short *);
 extern bool_t	xdr_int16_t(XDR *, int16_t *);
 extern bool_t	xdr_u_int16_t(XDR *, u_int16_t *);
+extern bool_t	xdr_uint16_t(XDR *, u_int16_t *);
 extern bool_t	xdr_int32_t(XDR *, int32_t *);
 extern bool_t	xdr_u_int32_t(XDR *, u_int32_t *);
+extern bool_t	xdr_uint32_t(XDR *, u_int32_t *);
 extern bool_t	xdr_int64_t(XDR *, int64_t *);
 extern bool_t	xdr_u_int64_t(XDR *, u_int64_t *);
+extern bool_t	xdr_uint64_t(XDR *, u_int64_t *);
 extern bool_t	xdr_bool(XDR *, bool_t *);
 extern bool_t	xdr_enum(XDR *, enum_t *);
 extern bool_t	xdr_array(XDR *, char **, u_int *, u_int, u_int, xdrproc_t);
@@ -319,6 +322,7 @@ extern bool_t	xdr_hyper(XDR *, quad_t *);
 extern bool_t	xdr_u_hyper(XDR *, u_quad_t *);
 extern bool_t	xdr_longlong_t(XDR *, quad_t *);
 extern bool_t	xdr_u_longlong_t(XDR *, u_quad_t *);
+extern unsigned long	xdr_sizeof(xdrproc_t, void *);
 __END_DECLS
 
 /*

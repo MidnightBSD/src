@@ -34472,6 +34472,7 @@ include/rpc/rpc_msg.h -text
 include/rpc/rpcb_clnt.h -text
 include/rpc/rpcb_prot.x -text
 include/rpc/rpcent.h -text
+include/rpc/rpcsec_gss.h -text
 include/rpc/svc.h -text
 include/rpc/svc_auth.h -text
 include/rpc/svc_dg.h -text
@@ -35866,6 +35867,7 @@ lib/libc/rpc/rpcb_prot.c -text
 lib/libc/rpc/rpcb_st_xdr.c -text
 lib/libc/rpc/rpcbind.3 -text
 lib/libc/rpc/rpcdname.c -text
+lib/libc/rpc/rpcsec_gss_stub.c -text
 lib/libc/rpc/rtime.3 -text
 lib/libc/rpc/rtime.c -text
 lib/libc/rpc/svc.c -text

@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)rpcb_prot.c 1.9 89/04/21 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/rpcb_prot.c,v 1.6 2006/09/09 22:29:16 mbr Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * rpcb_prot.c
@@ -320,11 +320,13 @@ xdr_netbuf(xdrs, objp)
 	struct netbuf *objp;
 {
 	bool_t dummy;
+	void **pp;
 
 	if (!xdr_u_int32_t(xdrs, (u_int32_t *) &objp->maxlen)) {
 		return (FALSE);
 	}
-	dummy = xdr_bytes(xdrs, (char **)&(objp->buf),
+	pp = &objp->buf;
+	dummy = xdr_bytes(xdrs, (char **) pp,
 			(u_int *)&(objp->len), objp->maxlen);
 	return (dummy);
 }

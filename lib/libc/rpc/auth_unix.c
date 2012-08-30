@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)auth_unix.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)auth_unix.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/auth_unix.c,v 1.18 2007/06/14 20:07:35 harti Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * auth_unix.c, Implements UNIX style authentication parameters.
@@ -185,24 +185,33 @@ authunix_create(machname, uid, gid, len, aup_gids)
 AUTH *
 authunix_create_default()
 {
-	int len;
+	AUTH *auth;
+	int ngids;
+	long ngids_max;
 	char machname[MAXHOSTNAMELEN + 1];
 	uid_t uid;
 	gid_t gid;
-	gid_t gids[NGROUPS_MAX];
+	gid_t *gids;
+
+	ngids_max = sysconf(_SC_NGROUPS_MAX) + 1;
+	gids = malloc(sizeof(gid_t) * ngids_max);
+	if (gids == NULL)
+		return (NULL);
 
 	if (gethostname(machname, sizeof machname) == -1)
 		abort();
 	machname[sizeof(machname) - 1] = 0;
 	uid = geteuid();
 	gid = getegid();
-	if ((len = getgroups(NGROUPS_MAX, gids)) < 0)
+	if ((ngids = getgroups(ngids_max, gids)) < 0)
 		abort();
-	if (len > NGRPS)
-		len = NGRPS;
+	if (ngids > NGRPS)
+		ngids = NGRPS;
 	/* XXX: interface problem; those should all have been unsigned */
-	return (authunix_create(machname, (int)uid, (int)gid, len,
-	    (int *)gids));
+	auth = authunix_create(machname, (int)uid, (int)gid, ngids,
+	    (int *)gids);
+	free(gids);
+	return (auth);
 }
 
 /*

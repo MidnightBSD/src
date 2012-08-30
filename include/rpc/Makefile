@@ -1,9 +1,9 @@
 #	from: @(#)Makefile	2.3 88/08/11 4.0 RPCSRC
-#	$FreeBSD: src/include/rpc/Makefile,v 1.3 2007/04/10 22:10:16 pjd Exp $
+#	$FreeBSD$
 
 .SUFFIXES: .x
 
-RPCCOM = rpcgen -C
+RPCCOM=	RPCGEN_CPP=${CPP:Q} rpcgen -C
 
 HDRS=	rpcb_prot.h
 
@@ -11,7 +11,7 @@ XFILES= rpcb_prot.x
 
 HFILES=	auth.h auth_unix.h clnt.h clnt_soc.h clnt_stat.h \
 	nettype.h pmap_clnt.h pmap_prot.h pmap_rmt.h raw.h \
-	rpc.h rpc_msg.h rpcb_clnt.h rpcent.h rpc_com.h \
+	rpc.h rpc_msg.h rpcb_clnt.h rpcent.h rpc_com.h rpcsec_gss.h \
 	svc.h svc_auth.h svc_soc.h svc_dg.h xdr.h
 
 # Secure RPC

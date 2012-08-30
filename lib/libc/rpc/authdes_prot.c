@@ -2,7 +2,7 @@
 static char sccsid[] = 	"@(#)authdes_prot.c	2.1 88/07/29 4.0 RPCSRC; from 1.6 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/authdes_prot.c,v 1.4 2002/03/22 23:18:36 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -54,10 +54,11 @@ xdr_authdes_cred(xdrs, cred)
 	XDR *xdrs;
 	struct authdes_cred *cred;
 {
+	enum authdes_namekind *padc_namekind = &cred->adc_namekind;
 	/*
 	 * Unrolled xdr
 	 */
-	ATTEMPT(xdr_enum(xdrs, (enum_t *)&cred->adc_namekind));
+	ATTEMPT(xdr_enum(xdrs, (enum_t *) padc_namekind));
 	switch (cred->adc_namekind) {
 	case ADN_FULLNAME:
 		ATTEMPT(xdr_string(xdrs, &cred->adc_fullname.name,

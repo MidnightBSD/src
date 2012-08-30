@@ -68,7 +68,7 @@
 static char sccsid[] = 	"@(#)svcauth_des.c	2.3 89/07/11 4.0 RPCSRC; from 1.15 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_auth_des.c,v 1.9 2002/03/22 23:18:37 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 extern int key_decryptsession_pk(const char *, netobj *, des_block *);
 
@@ -439,7 +439,7 @@ cache_spot(key, name, timestamp)
 }
 
 
-#if (defined(sun) || defined(vax) || defined(__FreeBSD__))
+#if (defined(sun) || defined(vax) || defined(__FreeBSD__) || defined(__MidnightBSD__))
 /*
  * Local credential handling stuff.
  * NOTE: bsd unix dependent.
@@ -449,10 +449,10 @@ cache_spot(key, name, timestamp)
 #define INVALID		-1 	/* grouplen, if cache entry is invalid */
 
 struct bsdcred {
-	short uid;		/* cached uid */
-	short gid;		/* cached gid */
-	short grouplen;	/* length of cached groups */
-	short groups[NGROUPS];	/* cached groups */
+	uid_t uid;		/* cached uid */
+	gid_t gid;		/* cached gid */
+	int grouplen;	/* length of cached groups */
+	gid_t groups[NGRPS];	/* cached groups */
 };
 
 /*

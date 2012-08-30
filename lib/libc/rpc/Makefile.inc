@@ -1,5 +1,5 @@
 #	@(#)Makefile    5.11 (Berkeley) 9/6/90
-# $FreeBSD: src/lib/libc/rpc/Makefile.inc,v 1.28 2006/03/13 01:14:59 deischen Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/rpc ${.CURDIR}/.
 SRCS+=	auth_none.c auth_unix.c authunix_prot.c bindresvport.c clnt_bcast.c \
@@ -8,8 +8,9 @@ SRCS+=	auth_none.c auth_unix.c authunix_prot.c bindresvport.c clnt_bcast.c \
 	getrpcport.c mt_misc.c pmap_clnt.c pmap_getmaps.c pmap_getport.c \
 	pmap_prot.c pmap_prot2.c pmap_rmt.c rpc_prot.c rpc_commondata.c \
 	rpc_callmsg.c rpc_generic.c rpc_soc.c rpcb_clnt.c rpcb_prot.c \
-	rpcb_st_xdr.c svc.c svc_auth.c svc_dg.c svc_auth_unix.c svc_generic.c \
-	svc_raw.c svc_run.c svc_simple.c svc_vc.c
+	rpcb_st_xdr.c rpcsec_gss_stub.c svc.c svc_auth.c svc_dg.c \
+	svc_auth_unix.c svc_generic.c svc_raw.c svc_run.c svc_simple.c \
+	svc_vc.c
 
 # Secure-RPC
 SRCS+=  auth_time.c auth_des.c authdes_prot.c des_crypt.c des_soft.c \
@@ -33,7 +34,7 @@ CFLAGS+= -I${.CURDIR}/rpc
 CLEANFILES+= crypt_clnt.c crypt_xdr.c crypt.h
 
 RPCDIR= ${DESTDIR}/usr/include/rpcsvc
-RPCGEN= rpcgen -C
+RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -C
 
 crypt_clnt.c: ${RPCDIR}/crypt.x crypt.h
 	${RPCGEN} -l -o ${.TARGET} ${RPCDIR}/crypt.x

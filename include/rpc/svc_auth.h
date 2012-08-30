@@ -30,7 +30,7 @@
  *
  *	from: @(#)svc_auth.h 1.6 86/07/16 SMI
  *	@(#)svc_auth.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: src/include/rpc/svc_auth.h,v 1.14 2002/03/23 17:24:55 imp Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -46,6 +46,8 @@
  * Server side authenticator
  */
 __BEGIN_DECLS
+extern struct svc_auth_ops svc_auth_null_ops;
+
 extern enum auth_stat _authenticate(struct svc_req *, struct rpc_msg *);
 extern int svc_auth_reg(int, enum auth_stat (*)(struct svc_req *,
 			  struct rpc_msg *));

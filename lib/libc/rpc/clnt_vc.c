@@ -35,7 +35,7 @@ static char *sccsid = "@(#)clnt_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_vc.c,v 1.20 2006/09/09 22:18:57 mbr Exp $");
+__MBSDID("$MidnightBSD$");
  
 /*
  * clnt_tcp.c, Implements a TCP/IP based, client side RPC.
@@ -77,6 +77,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_vc.c,v 1.20 2006/09/09 22:18:57 mbr Ex
 #include <signal.h>
 
 #include <rpc/rpc.h>
+#include <rpc/rpcsec_gss.h>
 #include "un-namespace.h"
 #include "rpc_com.h"
 #include "mt_misc.h"
@@ -285,6 +286,7 @@ clnt_vc_create(fd, raddr, prog, vers, sendsz, recvsz)
 	}
 	ct->ct_mpos = XDR_GETPOS(&(ct->ct_xdrs));
 	XDR_DESTROY(&(ct->ct_xdrs));
+	assert(ct->ct_mpos + sizeof(uint32_t) <= MCALL_MSG_SIZE);
 
 	/*
 	 * Create a client handle which uses xdrrec for serialization
@@ -331,6 +333,7 @@ clnt_vc_call(cl, proc, xdr_args, args_ptr, xdr_results, results_ptr, timeout)
 	int refreshes = 2;
 	sigset_t mask, newmask;
 	int rpc_lock_value;
+	bool_t reply_stat;
 
 	assert(cl != NULL);
 
@@ -360,15 +363,28 @@ call_again:
 	ct->ct_error.re_status = RPC_SUCCESS;
 	x_id = ntohl(--(*msg_x_id));
 
-	if ((! XDR_PUTBYTES(xdrs, ct->ct_u.ct_mcallc, ct->ct_mpos)) ||
-	    (! XDR_PUTINT32(xdrs, &proc)) ||
-	    (! AUTH_MARSHALL(cl->cl_auth, xdrs)) ||
-	    (! (*xdr_args)(xdrs, args_ptr))) {
-		if (ct->ct_error.re_status == RPC_SUCCESS)
-			ct->ct_error.re_status = RPC_CANTENCODEARGS;
-		(void)xdrrec_endofrecord(xdrs, TRUE);
-		release_fd_lock(ct->ct_fd, mask);
-		return (ct->ct_error.re_status);
+	if (cl->cl_auth->ah_cred.oa_flavor != RPCSEC_GSS) {
+		if ((! XDR_PUTBYTES(xdrs, ct->ct_u.ct_mcallc, ct->ct_mpos)) ||
+		    (! XDR_PUTINT32(xdrs, &proc)) ||
+		    (! AUTH_MARSHALL(cl->cl_auth, xdrs)) ||
+		    (! (*xdr_args)(xdrs, args_ptr))) {
+			if (ct->ct_error.re_status == RPC_SUCCESS)
+				ct->ct_error.re_status = RPC_CANTENCODEARGS;
+			(void)xdrrec_endofrecord(xdrs, TRUE);
+			release_fd_lock(ct->ct_fd, mask);
+			return (ct->ct_error.re_status);
+		}
+	} else {
+		*(uint32_t *) &ct->ct_u.ct_mcallc[ct->ct_mpos] = htonl(proc);
+		if (! __rpc_gss_wrap(cl->cl_auth, ct->ct_u.ct_mcallc,
+			ct->ct_mpos + sizeof(uint32_t),
+			xdrs, xdr_args, args_ptr)) {
+			if (ct->ct_error.re_status == RPC_SUCCESS)
+				ct->ct_error.re_status = RPC_CANTENCODEARGS;
+			(void)xdrrec_endofrecord(xdrs, TRUE);
+			release_fd_lock(ct->ct_fd, mask);
+			return (ct->ct_error.re_status);
+		}
 	}
 	if (! xdrrec_endofrecord(xdrs, shipnow)) {
 		release_fd_lock(ct->ct_fd, mask);
@@ -419,9 +435,18 @@ call_again:
 		    &reply_msg.acpted_rply.ar_verf)) {
 			ct->ct_error.re_status = RPC_AUTHERROR;
 			ct->ct_error.re_why = AUTH_INVALIDRESP;
-		} else if (! (*xdr_results)(xdrs, results_ptr)) {
-			if (ct->ct_error.re_status == RPC_SUCCESS)
-				ct->ct_error.re_status = RPC_CANTDECODERES;
+		} else {
+			if (cl->cl_auth->ah_cred.oa_flavor != RPCSEC_GSS) {
+				reply_stat = (*xdr_results)(xdrs, results_ptr);
+			} else {
+				reply_stat = __rpc_gss_unwrap(cl->cl_auth,
+				    xdrs, xdr_results, results_ptr);
+			}
+			if (! reply_stat) {
+				if (ct->ct_error.re_status == RPC_SUCCESS)
+					ct->ct_error.re_status =
+						RPC_CANTDECODERES;
+			}
 		}
 		/* free verifier ... */
 		if (reply_msg.acpted_rply.ar_verf.oa_base != NULL) {

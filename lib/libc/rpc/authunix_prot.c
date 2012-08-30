@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)authunix_prot.c 1.15 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)authunix_prot.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/authunix_prot.c,v 1.9 2004/10/16 06:11:34 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * authunix_prot.c
@@ -60,15 +60,18 @@ xdr_authunix_parms(xdrs, p)
 	XDR *xdrs;
 	struct authunix_parms *p;
 {
+	int **paup_gids;
 
 	assert(xdrs != NULL);
 	assert(p != NULL);
+
+	paup_gids = &p->aup_gids;
 
 	if (xdr_u_long(xdrs, &(p->aup_time))
 	    && xdr_string(xdrs, &(p->aup_machname), MAX_MACHINE_NAME)
 	    && xdr_int(xdrs, &(p->aup_uid))
 	    && xdr_int(xdrs, &(p->aup_gid))
-	    && xdr_array(xdrs, (caddr_t *)&(p->aup_gids),
+	    && xdr_array(xdrs, (char **) paup_gids,
 		    &(p->aup_len), NGRPS, sizeof(int), (xdrproc_t)xdr_int) ) {
 		return (TRUE);
 	}

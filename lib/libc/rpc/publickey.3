@@ -1,5 +1,5 @@
 .\" @(#)publickey.3r	2.1 88/08/07 4.0 RPCSRC
-.\" $FreeBSD: src/lib/libc/rpc/publickey.3,v 1.8 2005/11/23 16:44:23 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd October 6, 1987
 .Dt PUBLICKEY 3
@@ -35,14 +35,14 @@ has an extra argument,
 which is used to decrypt the encrypted secret key stored in the database.
 Both routines return 1 if they are successful in finding the key, 0 otherwise.
 The keys are returned as
-.Dv NULL Ns \-terminated ,
+.Dv NUL Ns \-terminated ,
 hexadecimal strings.
 If the password supplied to
 .Fn getsecretkey
 fails to decrypt the secret key, the routine will return 1 but the
 .Fa secretkey
 argument will be a
-.Dv NULL
+.Dv NUL
 string
 .Pq Dq .
 .Sh SEE ALSO

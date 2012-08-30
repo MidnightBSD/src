@@ -34,7 +34,7 @@
 static char *sccsid = "@(#)getrpcent.c 1.14 91/03/11 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/getrpcent.c,v 1.16 2007/05/17 03:34:33 jon Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Copyright (c) 1984 by Sun Microsystems, Inc.
@@ -698,7 +698,7 @@ rpc_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
 		return (NS_RETURN);
 	}
 
-	memcpy(&new_rpc, rpc, sizeof(struct rpcent));
+	new_rpc = *rpc;
 
 	*buffer_size = desired_size;
 	memset(buffer, 0, desired_size);
