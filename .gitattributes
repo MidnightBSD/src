@@ -37413,6 +37413,7 @@ lib/libthr/arch/i386/i386/pthread_md.c -text
 lib/libthr/arch/i386/include/pthread_md.h -text
 lib/libthr/arch/sparc64/Makefile.inc -text
 lib/libthr/arch/sparc64/include/pthread_md.h -text
+lib/libthr/arch/sparc64/sparc64/_umtx_op_err.S -text
 lib/libthr/arch/sparc64/sparc64/pthread_md.c -text
 lib/libthr/libthr.3 -text
 lib/libthr/pthread.map -text
@@ -37420,6 +37421,7 @@ lib/libthr/support/Makefile.inc -text
 lib/libthr/sys/Makefile.inc -text
 lib/libthr/sys/thr_error.c -text
 lib/libthr/thread/Makefile.inc -text
+lib/libthr/thread/thr_affinity.c -text
 lib/libthr/thread/thr_atfork.c -text
 lib/libthr/thread/thr_attr.c -text
 lib/libthr/thread/thr_autoinit.c -text
@@ -37436,8 +37438,10 @@ lib/libthr/thread/thr_equal.c -text
 lib/libthr/thread/thr_event.c -text
 lib/libthr/thread/thr_exit.c -text
 lib/libthr/thread/thr_fork.c -text
+lib/libthr/thread/thr_getcpuclockid.c -text
 lib/libthr/thread/thr_getprio.c -text
 lib/libthr/thread/thr_getschedparam.c -text
+lib/libthr/thread/thr_getthreadid_np.c -text
 lib/libthr/thread/thr_info.c -text
 lib/libthr/thread/thr_init.c -text
 lib/libthr/thread/thr_join.c -text
@@ -37462,6 +37466,7 @@ lib/libthr/thread/thr_setprio.c -text
 lib/libthr/thread/thr_setschedparam.c -text
 lib/libthr/thread/thr_sig.c -text
 lib/libthr/thread/thr_single_np.c -text
+lib/libthr/thread/thr_sleepq.c -text
 lib/libthr/thread/thr_spec.c -text
 lib/libthr/thread/thr_spinlock.c -text
 lib/libthr/thread/thr_stack.c -text
