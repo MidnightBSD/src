@@ -33154,6 +33154,7 @@ etc/minfree -text
 etc/motd -text
 etc/mtree/BIND.chroot.dist -text
 etc/mtree/BIND.include.dist -text
+etc/mtree/BSD.groff.dist -text
 etc/mtree/BSD.include.dist -text
 etc/mtree/BSD.local.dist -text
 etc/mtree/BSD.release.dist -text
