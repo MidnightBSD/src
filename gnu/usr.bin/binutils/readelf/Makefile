@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/binutils/readelf/Makefile,v 1.2 2009/11/26 15:18:04 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/binutils/readelf/Makefile,v 1.10 2004/06/16 07:09:43 obrien Exp $
 
 .include "../Makefile.inc0"
@@ -10,7 +10,6 @@ BINDIR=/usr/bin
 
 PROG=	readelf
 SRCS=	${PROG}.c
-WARNS?=	0
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${.CURDIR}/${RELTOP}/libbinutils -I${SRCDIR}/binutils
 

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/binutils/libopcodes/Makefile,v 1.2 2009/11/26 15:22:09 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/binutils/libopcodes/Makefile,v 1.10 2004/10/24 15:32:26 ru Exp $
 
 .include "../Makefile.inc0"
@@ -6,7 +6,7 @@
 .PATH: ${SRCDIR}/opcodes
 
 LIB=	opcodes
-SRCS+=	dis-buf.c dis-init.c disassemble.c
+SRCS+=	dis-buf.c dis-init.c disassemble.c i386-opc.c
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${SRCDIR}/opcodes -I${SRCDIR}/bfd
 INTERNALLIB=

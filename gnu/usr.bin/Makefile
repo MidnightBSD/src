@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.7 2008/08/25 02:34:27 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.8 2009/05/22 02:12:09 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
 
 .include <bsd.own.mk>
@@ -9,16 +9,16 @@ SUBDIR= ${_binutils} \
 	dialog \
 	diff \
 	diff3 \
+	${_dtc} \
 	${_gdb} \
 	${_gperf} \
 	grep \
 	${_groff} \
-	${_man} \
 	patch \
 	${_rcs} \
 	sort \
 	${_texinfo}
- 
+
 .if ${MK_CXX} != "no"
 _gperf=		gperf
 .if ${MK_GROFF} != "no"
@@ -30,23 +30,26 @@ _groff=		groff
 _cvs=		cvs
 .endif
 
-.if ${MK_MAN} != "no"
-_man=		man
+.if ${MK_FDT}	!= "no"
+_dtc=		dtc
 .endif
 
 .if ${MK_INFO} != "no"
 _texinfo=	texinfo
 .endif
 
-.if ${MK_TOOLCHAIN} != "no"
-_binutils=	binutils
-_cc=		cc
-.if ${MK_GDB} != "no"
-_gdb=		gdb
-.endif
-.endif
 .if ${MK_RCS} != "no"
 _rcs=		rcs
+.endif
+
+.if ${MK_BINUTILS} != "no"
+_binutils=	binutils
+.endif
+.if ${MK_GCC} != "no"
+_cc=		cc
+.endif
+.if ${MK_GDB} != "no"
+_gdb=		gdb
 .endif
 
 .include <bsd.subdir.mk>

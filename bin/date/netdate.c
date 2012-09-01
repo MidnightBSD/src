@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)netdate.c	8.1 (Berkeley) 5/31/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/date/netdate.c,v 1.2 2006/07/07 13:54:43 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/date/netdate.c,v 1.3 2007/07/23 12:22:02 alex Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -109,7 +109,7 @@ netsettime(time_t tval)
 		warnx("all ports in use");
 		goto bad;
 	}
-	memset(&msg,0,sizeof(msg));
+	memset(&msg, 0, sizeof(msg));
 	msg.tsp_type = TSP_SETDATE;
 	msg.tsp_vers = TSPVERSION;
 	if (gethostname(hostname, sizeof(hostname))) {

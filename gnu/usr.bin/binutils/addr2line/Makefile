@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/binutils/addr2line/Makefile,v 1.2 2009/11/26 15:22:09 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/binutils/addr2line/Makefile,v 1.11 2004/06/16 07:09:33 obrien Exp $
 
 .include "../Makefile.inc0"
@@ -7,7 +7,6 @@
 
 PROG=	addr2line
 SRCS=	addr2line.c
-WARNS?=	2
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${.CURDIR}/${RELTOP}/libbinutils
 CFLAGS+= -I${SRCDIR}/binutils

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/binutils/size/Makefile,v 1.2 2009/11/26 15:22:10 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/binutils/size/Makefile,v 1.12 2004/06/16 07:09:43 obrien Exp $
 
 .include "../Makefile.inc0"
@@ -7,7 +7,6 @@
 
 PROG=	size
 SRCS=	size.c
-WARNS?=	2
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${.CURDIR}/${RELTOP}/libbinutils
 CFLAGS+= -I${SRCDIR}/binutils

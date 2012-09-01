@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/chio/chio.c,v 1.3 2007/07/26 20:12:59 laffer1 Exp $ */
 /*	$NetBSD: chio.c,v 1.6 1998/01/04 23:53:58 thorpej Exp $ */
 /*-
  * Copyright (c) 1996 Jason R. Thorpe <thorpej@and.com>
@@ -70,7 +70,7 @@ static	const char *bits_to_string(ces_status_flags, const char *);
 
 static	void find_element(char *, uint16_t *, uint16_t *);
 static	struct changer_element_status *get_element_status
-	   (unsigned int, unsigned int);
+	   (unsigned int, unsigned int, int);
 
 static	int do_move(const char *, int, char **);
 static	int do_exchange(const char *, int, char **);
@@ -970,7 +970,8 @@ do_return(const char *cname, int argc, char **argv)
 	++argv; --argc;
 
 	/* Get the status */
-	ces = get_element_status((unsigned int)type, (unsigned int)element);
+	ces = get_element_status((unsigned int)type, (unsigned int)element,
+	    CHET_VT == type);
 
 	if (NULL == ces)
 		errx(1, "%s: null element status pointer", cname);
@@ -1005,7 +1006,7 @@ usage:
  * should free() it when done.
  */
 static struct changer_element_status *
-get_element_status(unsigned int type, unsigned int element)
+get_element_status(unsigned int type, unsigned int element, int use_voltags)
 {
 	struct changer_element_status_request cesr;
 	struct changer_element_status *ces;
@@ -1021,7 +1022,8 @@ get_element_status(unsigned int type, unsigned int element)
 	cesr.cesr_element_type = (uint16_t)type;
 	cesr.cesr_element_base = (uint16_t)element;
 	cesr.cesr_element_count = 1;		/* Only this one element */
-	cesr.cesr_flags |= CESR_VOLTAGS;	/* Grab voltags as well */
+	if (use_voltags)
+		cesr.cesr_flags |= CESR_VOLTAGS; /* Grab voltags as well */
 	cesr.cesr_element_status = ces;
 
 	if (ioctl(changer_fd, CHIOGSTATUS, (char *)&cesr) == -1) {
@@ -1071,6 +1073,7 @@ find_element(char *voltag, uint16_t *et, uint16_t *eu)
 
 	/* Read in the changer slots */
 	if (cp.cp_nslots > 0) {
+		(void) memset(&cesr, 0, sizeof(cesr));
 		cesr.cesr_element_type = CHET_ST;
 		cesr.cesr_element_base = 0;
 		cesr.cesr_element_count = cp.cp_nslots;

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/binutils/nm/Makefile,v 1.2 2009/11/26 15:22:10 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/binutils/nm/Makefile,v 1.13 2004/06/16 07:09:41 obrien Exp $
 
 .include "../Makefile.inc0"
@@ -7,7 +7,6 @@
 
 PROG=	nm
 SRCS=	nm.c
-WARNS?=	2
 CFLAGS+= -D_GNU_SOURCE
 CFLAGS+= -I${.CURDIR}/${RELTOP}/libbinutils
 CFLAGS+= -I${SRCDIR}/bfd

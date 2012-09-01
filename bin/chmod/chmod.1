@@ -31,9 +31,9 @@
 .\"
 .\"	@(#)chmod.1	8.4 (Berkeley) 3/31/94
 .\" $FreeBSD: src/bin/chmod/chmod.1,v 1.39 2005/02/13 23:45:45 ru Exp $
-.\" $MidnightBSD: src/bin/chmod/chmod.1,v 1.3 2008/06/30 01:30:53 laffer1 Exp $
+.\" $MidnightBSD: src/bin/chmod/chmod.1,v 1.4 2008/06/30 01:34:02 laffer1 Exp $
 .\"
-.Dd June 29, 2008
+.Dd January 26, 2009
 .Dt CHMOD 1
 .Os
 .Sh NAME
@@ -135,7 +135,7 @@ will run with effective gid set to the gid of the file owner.
 See
 .Xr chmod 2
 and
-.Xr sticky 8 .
+.Xr sticky 7 .
 .It Li 0400
 Allow read by owner.
 .It Li 0200
@@ -264,8 +264,6 @@ Then, if no value is supplied for
 each permission bit specified in
 .Ar perm ,
 for which the corresponding bit in the file mode creation mask
-(see
-.Xr umask 2 )
 is clear, is set.
 Otherwise, the mode bits represented by the specified
 .Ar who
@@ -284,6 +282,10 @@ Operations upon the other permissions only (specified by the symbol
 ``o'' by itself), in combination with the
 .Ar perm
 symbols ``s'' or ``t'', are ignored.
+.Pp
+The ``w'' permission on directories will permit file creation, relocation,
+and copy into that directory.
+Files created within the directory itself will inherit its group ID.
 .Sh EXAMPLES
 .Bl -tag -width "u=rwx,go=u-w" -compact
 .It Li 644
@@ -324,10 +326,10 @@ option is non-standard and its use in scripts is not recommended.
 .Xr umask 2 ,
 .Xr fts 3 ,
 .Xr setmode 3 ,
+.Xr sticky 7 ,
 .Xr symlink 7 ,
 .Xr chown 8 ,
-.Xr mount 8 ,
-.Xr sticky 8
+.Xr mount 8
 .Sh STANDARDS
 The
 .Nm
@@ -346,4 +348,4 @@ command appeared in
 .Sh BUGS
 There is no
 .Ar perm
-option for the naughty bits.
+option for the naughty bits of a horse.
