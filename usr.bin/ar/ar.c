@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/ar/ar.c,v 1.2 2012/07/20 02:01:37 laffer1 Exp $");
 
 #include <sys/queue.h>
 #include <sys/types.h>
@@ -386,13 +386,13 @@ ranlib_usage(void)
 static void
 bsdar_version(void)
 {
-	(void)printf("BSD ar %s - %s\n", BSDAR_VERSION, archive_version());
+	(void)printf("BSD ar %s - %s\n", BSDAR_VERSION, archive_version_string());
 	exit(EX_OK);
 }
 
 static void
 ranlib_version(void)
 {
-	(void)printf("ranlib %s - %s\n", BSDAR_VERSION, archive_version());
+	(void)printf("ranlib %s - %s\n", BSDAR_VERSION, archive_version_string());
 	exit(EX_OK);
 }
