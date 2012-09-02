@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/gelf_phdr.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/limits.h>
 
@@ -156,6 +155,8 @@ gelf_update_phdr(Elf *e, int ndx, GElf_Phdr *s)
 		return (0);
 	}
 
+	(void) elf_flagphdr(e, ELF_C_SET, ELF_F_DIRTY);
+
 	if (ec == ELFCLASS64) {
 		ph64 = e->e_u.e_elf.e_phdr.e_phdr64 + ndx;
 		*ph64 = *s;
@@ -172,8 +173,6 @@ gelf_update_phdr(Elf *e, int ndx, GElf_Phdr *s)
 	LIBELF_COPY_U32(ph32, s, p_filesz);
 	LIBELF_COPY_U32(ph32, s, p_memsz);
 	LIBELF_COPY_U32(ph32, s, p_align);
-
-	(void) elf_flagphdr(e, ELF_C_SET, ELF_F_DIRTY);
 
 	return (1);
 }

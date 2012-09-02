@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -26,15 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/elf_shstrndx.c,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <ar.h>
 #include <libelf.h>
 
 #include "_libelf.h"
 
-int
-elf_getshstrndx(Elf *e, size_t *strndx)
+static int
+_libelf_getshdrstrndx(Elf *e, size_t *strndx)
 {
 	void *eh;
 	int ec;
@@ -42,15 +41,27 @@ elf_getshstrndx(Elf *e, size_t *strndx)
 	if (e == NULL || e->e_kind != ELF_K_ELF ||
 	    ((ec = e->e_class) != ELFCLASS32 && ec != ELFCLASS64)) {
 		LIBELF_SET_ERROR(ARGUMENT, 0);
-		return (0);
+		return (-1);
 	}
 
 	if ((eh = _libelf_ehdr(e, ec, 0)) == NULL)
-		return (0);
+		return (-1);
 
 	*strndx = e->e_u.e_elf.e_strndx;
 
-	return (1);
+	return (0);
+}
+
+int
+elf_getshdrstrndx(Elf *e, size_t *strndx)
+{
+	return (_libelf_getshdrstrndx(e, strndx));
+}
+
+int
+elf_getshstrndx(Elf *e, size_t *strndx)	/* Deprecated API. */
+{
+	return (_libelf_getshdrstrndx(e, strndx) >= 0);
 }
 
 int

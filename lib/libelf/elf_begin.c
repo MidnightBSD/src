@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/elf_begin.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -36,6 +35,7 @@ __FBSDID("$FreeBSD: src/lib/libelf/elf_begin.c,v 1.1.6.1 2008/11/25 02:59:29 ken
 #include <ar.h>
 #include <ctype.h>
 #include <libelf.h>
+#include <unistd.h>
 
 #include "_libelf.h"
 
@@ -131,13 +131,15 @@ elf_begin(int fd, Elf_Cmd c, Elf *a)
 	case ELF_C_READ:
 		/*
 		 * Descriptor `a' could be for a regular ELF file, or
-		 * for an ar(1) archive.
+		 * for an ar(1) archive.  If descriptor `a' was opened
+		 * using a valid file descriptor, we need to check if
+		 * the passed in `fd' value matches the original one.
 		 */
-		if (a && (a->e_fd != fd || c != a->e_cmd)) {
+		if (a &&
+		    ((a->e_fd != -1 && a->e_fd != fd) || c != a->e_cmd)) {
 			LIBELF_SET_ERROR(ARGUMENT, 0);
 			return (NULL);
 		}
-
 		break;
 
 	default:
@@ -149,7 +151,7 @@ elf_begin(int fd, Elf_Cmd c, Elf *a)
 	if (a == NULL)
 		e = _libelf_open_object(fd, c);
 	else if (a->e_kind == ELF_K_AR)
-		e = _libelf_ar_open_member(fd, c, a);
+		e = _libelf_ar_open_member(a->e_fd, c, a);
 	else
 		(e = a)->e_activations++;
 

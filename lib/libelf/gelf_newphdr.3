@@ -1,4 +1,4 @@
-.\" Copyright (c) 2006 Joseph Koshy.  All rights reserved.
+.\" Copyright (c) 2006,2007 Joseph Koshy.  All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/lib/libelf/gelf_newphdr.3,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 25, 2006
-.Os
+.Dd October 22, 2007
 .Dt GELF_NEWPHDR 3
+.Os
 .Sh NAME
 .Nm elf32_newphdr ,
 .Nm elf64_newphdr ,
@@ -81,14 +81,8 @@ elements depending on the ELF class of ELF descriptor
 .Ar elf .
 .Pp
 The functions set the
-.Va e_phnum
-field of the executable header for ELF descriptor
-.Ar elf
-to
-.Ar count ,
-and also set the
 .Dv ELF_F_DIRTY
-bit on the program header table.
+flag on the program header table.
 All members of the returned array of Phdr structures
 will be initialized to zero.
 .Pp
@@ -132,6 +126,7 @@ before using these APIs.
 .Xr elf64_getphdr 3 ,
 .Xr elf64_newehdr 3 ,
 .Xr elf_flagphdr 3 ,
+.Xr elf_getphnum 3 ,
 .Xr gelf 3 ,
 .Xr gelf_getphdr 3 ,
 .Xr gelf_newehdr 3 ,

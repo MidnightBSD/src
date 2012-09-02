@@ -1,4 +1,4 @@
-.\" Copyright (c) 2006 Joseph Koshy.  All rights reserved.
+.\" Copyright (c) 2006,2007 Joseph Koshy.  All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/lib/libelf/gelf_newehdr.3,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $MidnightBSD$
 .\"
-.Dd December 16, 2006
-.Os
+.Dd October 22, 2007
 .Dt GELF_NEWEHDR 3
+.Os
 .Sh NAME
 .Nm elf32_newehdr ,
 .Nm elf64_newehdr ,
@@ -58,7 +58,8 @@ structure.
 Function
 .Fn elf64_newehdr
 returns a pointer to a 64 bit
-.Vt Elf64_Ehdr structure.
+.Vt Elf64_Ehdr
+structure.
 .Pp
 When argument
 .Ar elfclass
@@ -122,7 +123,7 @@ as needed before calling
 .Pp
 If successful, these three functions set the
 .Dv ELF_F_DIRTY
-bit on ELF descriptor
+flag on ELF descriptor
 .Ar elf .
 .Sh RETURN VALUES
 These functions return a pointer to a translated header descriptor

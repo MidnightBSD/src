@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libelf/elf_types.m4,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -46,6 +46,7 @@ define(`ELF_TYPE_LIST',
 	`CAP,		Cap,	700025',
 	`DYN,		Dyn,	600102',
 	`EHDR,		Ehdr,	600102',
+	`GNUHASH,	-,	800062',
 	`HALF,		Half,	600102',
 	`LWORD,		Lword,	700025',
 	`MOVE,		Move,	700025',

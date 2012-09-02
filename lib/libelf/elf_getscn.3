@@ -1,4 +1,4 @@
-.\" Copyright (c) 2006 Joseph Koshy.  All rights reserved.
+.\" Copyright (c) 2006,2007 Joseph Koshy.  All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/lib/libelf/elf_getscn.3,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 26, 2006
-.Os
+.Dd October 22, 2007
 .Dt ELF_GETSCN 3
+.Os
 .Sh NAME
 .Nm elf_getscn ,
 .Nm elf_ndxscn ,
@@ -73,7 +73,7 @@ field of the ELF header associated with descriptor
 .Ar elf ,
 and will set the
 .Dv ELF_F_DIRTY
-bit for the new section.
+flag on the returned section descriptor.
 For ELF descriptors opened for writing, the ELF library will
 automatically create an empty section at index zero
 .Dv ( SHN_UNDEF )

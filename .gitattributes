@@ -36676,6 +36676,7 @@ lib/libedit/tty.c -text
 lib/libedit/tty.h -text
 lib/libedit/vi.c -text
 lib/libelf/Makefile -text
+lib/libelf/README -text
 lib/libelf/Version.map -text
 lib/libelf/_libelf.h -text
 lib/libelf/elf.3 -text
@@ -36702,8 +36703,11 @@ lib/libelf/elf_getbase.c -text
 lib/libelf/elf_getdata.3 -text
 lib/libelf/elf_getident.3 -text
 lib/libelf/elf_getident.c -text
+lib/libelf/elf_getphdrnum.3 -text
 lib/libelf/elf_getphnum.3 -text
 lib/libelf/elf_getscn.3 -text
+lib/libelf/elf_getshdrnum.3 -text
+lib/libelf/elf_getshdrstrndx.3 -text
 lib/libelf/elf_getshnum.3 -text
 lib/libelf/elf_getshstrndx.3 -text
 lib/libelf/elf_hash.3 -text
@@ -36769,6 +36773,7 @@ lib/libelf/libelf.h -text
 lib/libelf/libelf_align.c -text
 lib/libelf/libelf_allocate.c -text
 lib/libelf/libelf_ar.c -text
+lib/libelf/libelf_ar_util.c -text
 lib/libelf/libelf_checksum.c -text
 lib/libelf/libelf_convert.m4 -text
 lib/libelf/libelf_data.c -text

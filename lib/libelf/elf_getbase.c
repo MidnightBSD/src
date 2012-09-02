@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/elf_getbase.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <libelf.h>
 
@@ -35,11 +34,13 @@ __FBSDID("$FreeBSD: src/lib/libelf/elf_getbase.c,v 1.1.6.1 2008/11/25 02:59:29 k
 off_t
 elf_getbase(Elf *e)
 {
-	if (e == NULL ||
-	    e->e_parent == NULL) {
+	if (e == NULL) {
 		LIBELF_SET_ERROR(ARGUMENT, 0);
-		return (off_t) -1;
+		return ((off_t) -1);
 	}
+
+	if (e->e_parent == NULL)
+		return ((off_t) 0);
 
 	return ((off_t) ((uintptr_t) e->e_rawfile -
 	    (uintptr_t) e->e_parent->e_rawfile));

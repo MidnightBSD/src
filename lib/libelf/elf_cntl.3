@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/lib/libelf/elf_cntl.3,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $MidnightBSD$
 .\"
 .Dd August 9, 2006
-.Os
 .Dt ELF_CNTL 3
+.Os
 .Sh NAME
 .Nm elf_cntl
 .Nd control an elf file descriptor
@@ -75,7 +75,7 @@ archive, an ELF file, or other data file).
 .Sh IMPLEMENTATION NOTES
 Due to use of
 .Xr mmap 2
-internally, this function is a no-op for for ELF objects opened in
+internally, this function is a no-op for ELF objects opened in
 .Dv ELF_C_READ
 mode.
 .Sh RETURN VALUES

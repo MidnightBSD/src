@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/lib/libelf/elf_strptr.3,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $MidnightBSD$
 .\"
 .Dd December 16, 2006
-.Os
 .Dt ELF_STRPTR 3
+.Os
 .Sh NAME
 .Nm elf_strptr
 .Nd retrieve a string pointer in a string table
@@ -64,7 +64,7 @@ encountered.
 .It Bq Er ELF_E_ARGUMENT
 Argument
 .Ar elf
-was NULL
+was NULL.
 .It Bq Er ELF_E_ARGUMENT
 Argument
 .Ar elf
@@ -76,7 +76,7 @@ was not the section index for a string table.
 .It Bq Er ELF_E_ARGUMENT
 Argument
 .Ar stroffset
-exceeeded the size of the string table.
+exceeded the size of the string table.
 .It Bq Er ELF_E_ARGUMENT
 Argument
 .Ar stroffset

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/libelf_data.c,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <libelf.h>
 #include <osreldate.h>
@@ -43,6 +42,10 @@ _libelf_xlate_shtype(uint32_t sht)
 		return (ELF_T_SYM);
 	case SHT_FINI_ARRAY:
 		return (ELF_T_ADDR);
+#if	__FreeBSD_version >= 800062
+	case SHT_GNU_HASH:
+		return (ELF_T_GNUHASH);
+#endif
 	case SHT_GROUP:
 		return (ELF_T_WORD);
 	case SHT_HASH:
@@ -78,6 +81,8 @@ _libelf_xlate_shtype(uint32_t sht)
 		return (ELF_T_MOVE);
 	case SHT_SUNW_syminfo:
 		return (ELF_T_SYMINFO);
+	case SHT_SUNW_dof:
+		return (ELF_T_BYTE);
 #endif
 	case SHT_AMD64_UNWIND:	/* == SHT_IA_64_UNWIND */
 		return (ELF_T_BYTE);

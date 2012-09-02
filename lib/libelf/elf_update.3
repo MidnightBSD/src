@@ -1,4 +1,4 @@
-.\" Copyright (c) 2006,2007 Joseph Koshy.  All rights reserved.
+.\" Copyright (c) 2006,2007-2008 Joseph Koshy.  All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/lib/libelf/elf_update.3,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $MidnightBSD$
 .\"
-.Dd September 08, 2007
-.Os
+.Dd March 19, 2008
 .Dt ELF_UPDATE 3
+.Os
 .Sh NAME
 .Nm elf_update
 .Nd update an ELF descriptor
@@ -63,10 +63,10 @@ If the
 .Dv ELF_F_LAYOUT
 flag has been set on the ELF descriptor, the application assumes full
 responsibility for the layout of the ELF object.
-If this bit is not set, the ELF library will compute the layout of the
+If this flag is not set, the ELF library will compute the layout of the
 file from its associated section descriptors.
 .Pp
-It is the application's responsibility to manage the the following
+It is the application's responsibility to manage the following
 structure members in the ELF file:
 .Bl -tag -width indent
 .It "Executable Header"
@@ -132,8 +132,8 @@ This value must be a power of two.
 .It Va sh_entsize
 Set to the size of each entry, for sections containing fixed size
 elements, or set to zero for sections without fixed size elements.
-For section contents of types known to the library, the application
-may leave this field as zero.
+If the application is not managing file layout, it may leave this
+field as zero for those sections whose types known to the library.
 .It Va sh_flags
 Set to the desired section flags.
 .It Va sh_info

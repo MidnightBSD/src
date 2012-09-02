@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libelf/libelf.h,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_LIBELF_H_
@@ -76,11 +75,12 @@ typedef enum {
 	ELF_T_VNEED,
 	ELF_T_WORD,
 	ELF_T_XWORD,
+	ELF_T_GNUHASH,	/* GNU style hash tables. */
 	ELF_T_NUM
 } Elf_Type;
 
 #define	ELF_T_FIRST	ELF_T_ADDR
-#define	ELF_T_LAST	ELF_T_XWORD
+#define	ELF_T_LAST	ELF_T_GNUHASH
 
 /* Commands */
 typedef enum {
@@ -193,10 +193,13 @@ Elf_Arsym	*elf_getarsym(Elf *_elf, size_t *_ptr);
 off_t		elf_getbase(Elf *_elf);
 Elf_Data	*elf_getdata(Elf_Scn *, Elf_Data *);
 char		*elf_getident(Elf *_elf, size_t *_ptr);
-int		elf_getphnum(Elf *_elf, size_t *_dst);
+int		elf_getphdrnum(Elf *_elf, size_t *_dst);
+int		elf_getphnum(Elf *_elf, size_t *_dst);	/* Deprecated */
 Elf_Scn		*elf_getscn(Elf *_elf, size_t _index);
-int		elf_getshnum(Elf *_elf, size_t *_dst);
-int		elf_getshstrndx(Elf *_elf, size_t *_dst);
+int		elf_getshdrnum(Elf *_elf, size_t *_dst);
+int		elf_getshnum(Elf *_elf, size_t *_dst);	/* Deprecated */
+int		elf_getshdrstrndx(Elf *_elf, size_t *_dst);
+int		elf_getshstrndx(Elf *_elf, size_t *_dst); /* Deprecated */
 unsigned long	elf_hash(const char *_name);
 Elf_Kind	elf_kind(Elf *_elf);
 Elf		*elf_memory(char *_image, size_t _size);

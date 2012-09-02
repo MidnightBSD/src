@@ -21,11 +21,11 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/lib/libelf/gelf_xlatetof.3,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 24, 2006
-.Os
 .Dt GELF_XLATETOF 3
+.Os
 .Sh NAME
 .Nm elf32_xlate ,
 .Nm elf64_xlate ,
@@ -205,12 +205,6 @@ The
 field of argument
 .Ar src
 specified an unsupported type.
-.It Bq Er ELF_E_DATA
-The
-.Ar src
-argument had a zero
-.Va d_size
-field.
 .It Bq Er ELF_E_DATA
 The
 .Ar src

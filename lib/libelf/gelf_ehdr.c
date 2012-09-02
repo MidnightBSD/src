@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Joseph Koshy
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libelf/gelf_ehdr.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/limits.h>
 
@@ -138,6 +137,8 @@ gelf_update_ehdr(Elf *e, GElf_Ehdr *s)
 	if ((ehdr = _libelf_ehdr(e, ec, 0)) == NULL)
 		return (0);
 
+	(void) elf_flagehdr(e, ELF_C_SET, ELF_F_DIRTY);
+
 	if (ec == ELFCLASS64) {
 		eh64 = (Elf64_Ehdr *) ehdr;
 		*eh64 = *s;
@@ -161,8 +162,6 @@ gelf_update_ehdr(Elf *e, GElf_Ehdr *s)
 	eh32->e_shentsize = s->e_shentsize;
 	eh32->e_shnum     = s->e_shnum;
 	eh32->e_shstrndx  = s->e_shstrndx;
-
-	(void) elf_flagehdr(e, ELF_C_SET, ELF_F_DIRTY);
 
 	return (1);
 }
