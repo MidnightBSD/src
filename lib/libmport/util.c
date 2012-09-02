@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.30 2011/12/24 05:55:12 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.31 2012/04/10 22:11:33 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -258,8 +258,11 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   if (ret == 127) {
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't execute sh(1)");
   }
-  
-  return ret;
+
+  if (WIFEXITED(ret))
+    return MPORT_OK;
+
+  RETURN_ERROR(MPORT_ERR_FATAL, "Error executing command");
 }
   
 
