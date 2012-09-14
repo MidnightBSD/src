@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quota.h	8.3 (Berkeley) 8/19/94
- * $FreeBSD: src/sys/ufs/ufs/quota.h,v 1.30 2007/03/14 08:54:07 kib Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _UFS_UFS_QUOTA_H_
@@ -82,10 +81,14 @@
 
 #define	Q_QUOTAON	0x0100	/* enable quotas */
 #define	Q_QUOTAOFF	0x0200	/* disable quotas */
-#define	Q_GETQUOTA	0x0300	/* get limits and usage */
-#define	Q_SETQUOTA	0x0400	/* set limits and usage */
-#define	Q_SETUSE	0x0500	/* set usage */
+#define	Q_GETQUOTA32	0x0300	/* get limits and usage (32-bit version) */
+#define	Q_SETQUOTA32	0x0400	/* set limits and usage (32-bit version) */
+#define	Q_SETUSE32	0x0500	/* set usage (32-bit version) */
 #define	Q_SYNC		0x0600	/* sync disk copy of a filesystems quotas */
+#define	Q_GETQUOTA	0x0700	/* get limits and usage (64-bit version) */
+#define	Q_SETQUOTA	0x0800	/* set limits and usage (64-bit version) */
+#define	Q_SETUSE	0x0900	/* set usage (64-bit version) */
+#define	Q_GETQUOTASIZE	0x0A00	/* get bit-size of quota file fields */
 
 /*
  * The following structure defines the format of the disk quota file
@@ -94,7 +97,7 @@
  * the vnode for each quota file (a pointer is retained in the ufsmount
  * structure).
  */
-struct dqblk {
+struct dqblk32 {
 	u_int32_t dqb_bhardlimit;	/* absolute limit on disk blks alloc */
 	u_int32_t dqb_bsoftlimit;	/* preferred limit on disk blks */
 	u_int32_t dqb_curblocks;	/* current block count */
@@ -103,6 +106,30 @@ struct dqblk {
 	u_int32_t dqb_curinodes;	/* current # allocated inodes */
 	int32_t   dqb_btime;		/* time limit for excessive disk use */
 	int32_t   dqb_itime;		/* time limit for excessive files */
+};
+
+struct dqblk64 {
+	u_int64_t dqb_bhardlimit;	/* absolute limit on disk blks alloc */
+	u_int64_t dqb_bsoftlimit;	/* preferred limit on disk blks */
+	u_int64_t dqb_curblocks;	/* current block count */
+	u_int64_t dqb_ihardlimit;	/* maximum # allocated inodes + 1 */
+	u_int64_t dqb_isoftlimit;	/* preferred inode limit */
+	u_int64_t dqb_curinodes;	/* current # allocated inodes */
+	int64_t   dqb_btime;		/* time limit for excessive disk use */
+	int64_t   dqb_itime;		/* time limit for excessive files */
+};
+
+#define dqblk dqblk64
+
+#define Q_DQHDR64_MAGIC "QUOTA64"
+#define Q_DQHDR64_VERSION 0x20081104
+
+struct dqhdr64 {
+	char	  dqh_magic[8];		/* Q_DQHDR64_MAGIC */
+	uint32_t  dqh_version;		/* Q_DQHDR64_VERSION */
+	uint32_t  dqh_hdrlen;		/* header length */
+	uint32_t  dqh_reclen;		/* record length */
+	char	  dqh_unused[44];	/* reserved for future extension */
 };
 
 #ifdef _KERNEL
@@ -124,9 +151,9 @@ struct dquot {
 	u_int16_t dq_type;		/* quota type of this dquot */
 	u_int32_t dq_cnt;		/* (h) count of active references */
 	u_int32_t dq_id;		/* identifier this applies to */
-	struct	ufsmount *dq_ump;	/* (h) filesystem that this is
+	struct ufsmount *dq_ump;	/* (h) filesystem that this is
 					   taken from */
-	struct	dqblk dq_dqb;		/* actual usage & quotas */
+	struct dqblk64 dq_dqb;		/* actual usage & quotas */
 };
 /*
  * Flag values.
@@ -200,13 +227,24 @@ void	dqinit(void);
 void	dqrele(struct vnode *, struct dquot *);
 void	dquninit(void);
 int	getinoquota(struct inode *);
+int	qsync(struct mount *);
+int	qsyncvp(struct vnode *);
+int	quotaoff(struct thread *, struct mount *, int);
+int	quotaon(struct thread *, struct mount *, int, void *);
+int	getquota32(struct thread *, struct mount *, u_long, int, void *);
+int	setquota32(struct thread *, struct mount *, u_long, int, void *);
+int	setuse32(struct thread *, struct mount *, u_long, int, void *);
 int	getquota(struct thread *, struct mount *, u_long, int, void *);
-int	qsync(struct mount *mp);
-int	quotaoff(struct thread *td, struct mount *, int);
-int	quotaon(struct thread *td, struct mount *, int, void *);
 int	setquota(struct thread *, struct mount *, u_long, int, void *);
 int	setuse(struct thread *, struct mount *, u_long, int, void *);
+int	getquotasize(struct thread *, struct mount *, u_long, int, void *);
 vfs_quotactl_t ufs_quotactl;
+
+#ifdef SOFTUPDATES
+int	quotaref(struct vnode *, struct dquot **);
+void	quotarele(struct dquot **);
+void	quotaadj(struct dquot **, struct ufsmount *, int64_t);
+#endif /* SOFTUPDATES */
 
 #else /* !_KERNEL */
 

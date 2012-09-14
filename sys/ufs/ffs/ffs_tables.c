@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_tables.c,v 1.12 2005/01/07 02:29:26 imp Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <ufs/ufs/dinode.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufsmount.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/ufs/ufs/ufsmount.h,v 1.37 2006/04/03 22:23:23 tegge Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _UFS_UFS_UFSMOUNT_H_
@@ -41,7 +40,7 @@
  */
 struct ufs_args {
 	char	*fspec;			/* block special device to mount */
-	struct	export_args export;	/* network export information */
+	struct	oexport_args export;	/* network export information */
 };
 
 #ifdef _KERNEL
@@ -58,13 +57,18 @@ struct ucred;
 struct uio;
 struct vnode;
 struct ufs_extattr_per_mount;
+struct jblocks;
+struct inodedep;
+
+TAILQ_HEAD(inodedeplst, inodedep);
+LIST_HEAD(bmsafemaphd, bmsafemap);
 
 /* This structure describes the UFS specific mount structure data. */
 struct ufsmount {
 	struct	mount *um_mountp;		/* filesystem vfs structure */
-	struct cdev *um_dev;			/* device mounted */
-	struct g_consumer *um_cp;
-	struct bufobj *um_bo;			/* Buffer cache object */
+	struct	cdev *um_dev;			/* device mounted */
+	struct	g_consumer *um_cp;
+	struct	bufobj *um_bo;			/* Buffer cache object */
 	struct	vnode *um_devvp;		/* block device mounted vnode */
 	u_long	um_fstype;			/* type of filesystem */
 	struct	fs *um_fs;			/* pointer to superblock */
@@ -73,11 +77,17 @@ struct ufsmount {
 	u_long	um_bptrtodb;			/* indir ptr to disk block */
 	u_long	um_seqinc;			/* inc between seq blocks */
 	struct	mtx um_lock;			/* Protects ufsmount & fs */
+	pid_t	um_fsckpid;			/* PID permitted fsck sysctls */
 	long	um_numindirdeps;		/* outstanding indirdeps */
-	struct workhead softdep_workitem_pending; /* softdep work queue */
-	struct worklist *softdep_worklist_tail;	/* Tail pointer for above */
+	struct	workhead softdep_workitem_pending; /* softdep work queue */
+	struct	worklist *softdep_worklist_tail; /* Tail pointer for above */
+	struct	workhead softdep_journal_pending; /* journal work queue */
+	struct	worklist *softdep_journal_tail;	/* Tail pointer for above */
+	struct	jblocks *softdep_jblocks;	/* Journal block information */
+	struct	inodedeplst softdep_unlinked;	/* Unlinked inodes */
+	struct	bmsafemaphd softdep_dirtycg;	/* Dirty CGs */
+	int	softdep_on_journal;		/* Items on the journal list */
 	int	softdep_on_worklist;		/* Items on the worklist */
-	int	softdep_on_worklist_inprogress;	/* Busy items on worklist */
 	int	softdep_deps;			/* Total dependency count */
 	int	softdep_accdeps;		/* accumulated dep count */
 	int	softdep_req;			/* Wakeup when deps hits 0. */
@@ -87,6 +97,7 @@ struct ufsmount {
 	time_t	um_itime[MAXQUOTAS];		/* inode quota time limit */
 	char	um_qflags[MAXQUOTAS];		/* quota specific flags */
 	int64_t	um_savedmaxfilesize;		/* XXX - limit maxfilesize */
+	int	um_candelete;			/* devvp supports TRIM */
 	int	(*um_balloc)(struct vnode *, off_t, int, struct ucred *, int, struct buf **);
 	int	(*um_blkatoff)(struct vnode *, off_t, char **, struct buf **);
 	int	(*um_truncate)(struct vnode *, off_t, int, struct ucred *, struct thread *);
@@ -94,6 +105,8 @@ struct ufsmount {
 	int	(*um_valloc)(struct vnode *, int, struct ucred *, struct vnode **);
 	int	(*um_vfree)(struct vnode *, ino_t, int);
 	void	(*um_ifree)(struct ufsmount *, struct inode *);
+	int	(*um_rdonly)(struct inode *);
+	void	(*um_snapgone)(struct inode *);
 };
 
 #define UFS_BALLOC(aa, bb, cc, dd, ee, ff) VFSTOUFS((aa)->v_mount)->um_balloc(aa, bb, cc, dd, ee, ff)
@@ -103,6 +116,8 @@ struct ufsmount {
 #define UFS_VALLOC(aa, bb, cc, dd) VFSTOUFS((aa)->v_mount)->um_valloc(aa, bb, cc, dd)
 #define UFS_VFREE(aa, bb, cc) VFSTOUFS((aa)->v_mount)->um_vfree(aa, bb, cc)
 #define UFS_IFREE(aa, bb) ((aa)->um_ifree(aa, bb))
+#define	UFS_RDONLY(aa) ((aa)->i_ump->um_rdonly(aa))
+#define	UFS_SNAPGONE(aa) ((aa)->i_ump->um_snapgone(aa))
 
 #define	UFS_LOCK(aa)	mtx_lock(&(aa)->um_lock)
 #define	UFS_UNLOCK(aa)	mtx_unlock(&(aa)->um_lock)
@@ -119,6 +134,7 @@ struct ufsmount {
  */
 #define	QTF_OPENING	0x01			/* Q_QUOTAON in progress */
 #define	QTF_CLOSING	0x02			/* Q_QUOTAOFF in progress */
+#define QTF_64BIT	0x04			/* 64-bit quota file */
 
 /* Convert mount ptr to ufsmount ptr. */
 #define VFSTOUFS(mp)	((struct ufsmount *)((mp)->mnt_data))

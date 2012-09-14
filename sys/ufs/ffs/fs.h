@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/ufs/ffs/fs.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fs.h	8.13 (Berkeley) 3/21/95
- * $FreeBSD: src/sys/ufs/ffs/fs.h,v 1.49 2006/10/31 21:48:53 pjd Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _UFS_FFS_FS_H_
@@ -104,8 +103,8 @@
  * 2^32 with only two levels of indirection, MINBSIZE is set to 4096.
  * MINBSIZE must be big enough to hold a cylinder group block,
  * thus changes to (struct cg) must keep its size within MINBSIZE.
- * Note that super blocks are always of size SBSIZE,
- * and that both SBSIZE and MAXBSIZE must be >= MINBSIZE.
+ * Note that super blocks are always of size SBLOCKSIZE,
+ * and that both SBLOCKSIZE and MAXBSIZE must be >= MINBSIZE.
  */
 #define MINBSIZE	4096
 
@@ -212,7 +211,12 @@
 #define	FFS_ADJ_NIFREE		 9	/* adjust number of free inodes */
 #define	FFS_ADJ_NFFREE		10 	/* adjust number of free frags */
 #define	FFS_ADJ_NUMCLUSTERS	11	/* adjust number of free clusters */
-#define	FFS_MAXID		12	/* number of valid ffs ids */
+#define FFS_SET_CWD		12	/* set current directory */
+#define	FFS_SET_DOTDOT		13	/* set inode number for ".." */
+#define	FFS_UNLINK		14	/* remove a name in the filesystem */
+#define	FFS_SET_INODE		15	/* update an on-disk inode */
+#define	FFS_SET_BUFOUTPUT	16	/* set buffered writing on descriptor */
+#define	FFS_MAXID		16	/* number of valid ffs ids */
 
 /*
  * Command structure passed in to the filesystem to adjust filesystem values.
@@ -285,7 +289,7 @@ struct fs {
 	int32_t	 fs_spare1[2];		/* old fs_csmask */
 					/* old fs_csshift */
 	int32_t	 fs_nindir;		/* value of NINDIR */
-	int32_t	 fs_inopb;		/* value of INOPB */
+	u_int32_t fs_inopb;		/* value of INOPB */
 	int32_t	 fs_old_nspf;		/* value of NSPF */
 /* yet another configuration parameter */
 	int32_t	 fs_optim;		/* optimization preference, see below */
@@ -338,7 +342,9 @@ struct fs {
 	u_int32_t fs_avgfilesize;	/* expected average file size */
 	u_int32_t fs_avgfpdir;		/* expected # of files per directory */
 	int32_t	 fs_save_cgsize;	/* save real cg size to use fs_bsize */
-	int32_t	 fs_sparecon32[26];	/* reserved for future constants */
+	ufs_time_t fs_mtime;		/* Last mount or fsck time. */
+	int32_t  fs_sujfree;		/* SUJ free list */
+	int32_t	 fs_sparecon32[23];	/* reserved for future constants */
 	int32_t  fs_flags;		/* see FS_ flags below */
 	int32_t	 fs_contigsumsize;	/* size of cluster summary array */ 
 	int32_t	 fs_maxsymlinklen;	/* max length of an internal symlink */
@@ -394,22 +400,26 @@ CTASSERT(sizeof(struct fs) == 1376);
  * flag to indicate that the indicies need to be rebuilt (by fsck) before
  * they can be used.
  *
- * FS_ACLS indicates that ACLs are administratively enabled for the
- * file system, so they should be loaded from extended attributes,
+ * FS_ACLS indicates that POSIX.1e ACLs are administratively enabled
+ * for the file system, so they should be loaded from extended attributes,
  * observed for access control purposes, and be administered by object
- * owners.  FS_MULTILABEL indicates that the TrustedBSD MAC Framework
- * should attempt to back MAC labels into extended attributes on the
- * file system rather than maintain a single mount label for all
- * objects.
+ * owners.  FS_NFS4ACLS indicates that NFSv4 ACLs are administratively
+ * enabled.  This flag is mutually exclusive with FS_ACLS.  FS_MULTILABEL
+ * indicates that the TrustedBSD MAC Framework should attempt to back MAC
+ * labels into extended attributes on the file system rather than maintain
+ * a single mount label for all objects.
  */
-#define FS_UNCLEAN    0x01	/* filesystem not clean at mount */
-#define FS_DOSOFTDEP  0x02	/* filesystem using soft dependencies */
-#define FS_NEEDSFSCK  0x04	/* filesystem needs sync fsck before mount */
-#define FS_INDEXDIRS  0x08	/* kernel supports indexed directories */
-#define FS_ACLS       0x10	/* file system has ACLs enabled */
-#define FS_MULTILABEL 0x20	/* file system is MAC multi-label */
-#define FS_GJOURNAL   0x40	/* gjournaled file system */
-#define FS_FLAGS_UPDATED 0x80	/* flags have been moved to new location */
+#define FS_UNCLEAN	0x0001	/* filesystem not clean at mount */
+#define FS_DOSOFTDEP	0x0002	/* filesystem using soft dependencies */
+#define FS_NEEDSFSCK	0x0004	/* filesystem needs sync fsck before mount */
+#define	FS_SUJ       	0x0008	/* Filesystem using softupdate journal */
+#define FS_ACLS		0x0010	/* file system has POSIX.1e ACLs enabled */
+#define FS_MULTILABEL	0x0020	/* file system is MAC multi-label */
+#define FS_GJOURNAL	0x0040	/* gjournaled file system */
+#define FS_FLAGS_UPDATED 0x0080	/* flags have been moved to new location */
+#define FS_NFS4ACLS	0x0100	/* file system has NFSv4 ACLs enabled */
+#define FS_INDEXDIRS	0x0200	/* kernel supports indexed directories */
+#define	FS_TRIM		0x0400	/* issue BIO_DELETE for deleted blocks */
 
 /*
  * Macros to access bits in the fs_active array.
@@ -599,6 +609,46 @@ struct cg {
 	  ? (fs)->fs_bsize \
 	  : (fragroundup(fs, blkoff(fs, (size)))))
 
+/*
+ * Number of indirects in a filesystem block.
+ */
+#define	NINDIR(fs)	((fs)->fs_nindir)
+
+/*
+ * Indirect lbns are aligned on NDADDR addresses where single indirects
+ * are the negated address of the lowest lbn reachable, double indirects
+ * are this lbn - 1 and triple indirects are this lbn - 2.  This yields
+ * an unusual bit order to determine level.
+ */
+static inline int
+lbn_level(ufs_lbn_t lbn)
+{
+	if (lbn >= 0)
+		return 0;
+	switch (lbn & 0x3) {
+	case 0:
+		return (0);
+	case 1:
+		break;
+	case 2:
+		return (2);
+	case 3:
+		return (1);
+	default:
+		break;
+	}
+	return (-1);
+}
+
+static inline ufs_lbn_t
+lbn_offset(struct fs *fs, int level)
+{
+	ufs_lbn_t res;
+
+	for (res = 1; level > 0; level--)
+		res *= NINDIR(fs);
+	return (res);
+}
 
 /*
  * Number of inodes in a secondary storage block/fragment.
@@ -607,9 +657,107 @@ struct cg {
 #define	INOPF(fs)	((fs)->fs_inopb >> (fs)->fs_fragshift)
 
 /*
- * Number of indirects in a filesystem block.
+ * Softdep journal record format.
  */
-#define	NINDIR(fs)	((fs)->fs_nindir)
+
+#define	JOP_ADDREF	1	/* Add a reference to an inode. */
+#define	JOP_REMREF	2	/* Remove a reference from an inode. */
+#define	JOP_NEWBLK	3	/* Allocate a block. */
+#define	JOP_FREEBLK	4	/* Free a block or a tree of blocks. */
+#define	JOP_MVREF	5	/* Move a reference from one off to another. */
+#define	JOP_TRUNC	6	/* Partial truncation record. */
+#define	JOP_SYNC	7	/* fsync() complete record. */
+
+#define	JREC_SIZE	32	/* Record and segment header size. */
+
+#define	SUJ_MIN		(4 * 1024 * 1024)	/* Minimum journal size */
+#define	SUJ_MAX		(32 * 1024 * 1024)	/* Maximum journal size */
+#define	SUJ_FILE	".sujournal"		/* Journal file name */
+
+/*
+ * Size of the segment record header.  There is at most one for each disk
+ * block in the journal.  The segment header is followed by an array of
+ * records.  fsck depends on the first element in each record being 'op'
+ * and the second being 'ino'.  Segments may span multiple disk blocks but
+ * the header is present on each.
+ */
+struct jsegrec {
+	uint64_t	jsr_seq;	/* Our sequence number */
+	uint64_t	jsr_oldest;	/* Oldest valid sequence number */
+	uint16_t	jsr_cnt;	/* Count of valid records */
+	uint16_t	jsr_blocks;	/* Count of device bsize blocks. */
+	uint32_t	jsr_crc;	/* 32bit crc of the valid space */
+	ufs_time_t	jsr_time;	/* timestamp for mount instance */
+};
+
+/*
+ * Reference record.  Records a single link count modification.
+ */
+struct jrefrec {
+	uint32_t	jr_op;
+	ino_t		jr_ino;
+	ino_t		jr_parent;
+	uint16_t	jr_nlink;
+	uint16_t	jr_mode;
+	off_t		jr_diroff;
+	uint64_t	jr_unused;
+};
+
+/*
+ * Move record.  Records a reference moving within a directory block.  The
+ * nlink is unchanged but we must search both locations.
+ */
+struct jmvrec {
+	uint32_t	jm_op;
+	ino_t		jm_ino;
+	ino_t		jm_parent;
+	uint16_t	jm_unused;
+	off_t		jm_oldoff;
+	off_t		jm_newoff;
+};
+
+/*
+ * Block record.  A set of frags or tree of blocks starting at an indirect are
+ * freed or a set of frags are allocated.
+ */
+struct jblkrec {
+	uint32_t	jb_op;
+	uint32_t	jb_ino;
+	ufs2_daddr_t	jb_blkno;
+	ufs_lbn_t	jb_lbn;
+	uint16_t	jb_frags;
+	uint16_t	jb_oldfrags;
+	uint32_t	jb_unused;
+};
+
+/*
+ * Truncation record.  Records a partial truncation so that it may be
+ * completed at check time.  Also used for sync records.
+ */
+struct jtrncrec {
+	uint32_t	jt_op;
+	uint32_t	jt_ino;
+	off_t		jt_size;
+	uint32_t	jt_extsize;
+	uint32_t	jt_pad[3];
+};
+
+union jrec {
+	struct jsegrec	rec_jsegrec;
+	struct jrefrec	rec_jrefrec;
+	struct jmvrec	rec_jmvrec;
+	struct jblkrec	rec_jblkrec;
+	struct jtrncrec	rec_jtrncrec;
+};
+
+#ifdef CTASSERT
+CTASSERT(sizeof(struct jsegrec) == JREC_SIZE);
+CTASSERT(sizeof(struct jrefrec) == JREC_SIZE);
+CTASSERT(sizeof(struct jmvrec) == JREC_SIZE);
+CTASSERT(sizeof(struct jblkrec) == JREC_SIZE);
+CTASSERT(sizeof(struct jtrncrec) == JREC_SIZE);
+CTASSERT(sizeof(union jrec) == JREC_SIZE);
+#endif
 
 extern int inside[], around[];
 extern u_char *fragtbl[];

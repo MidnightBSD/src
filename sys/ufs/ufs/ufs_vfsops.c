@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vfsops.c,v 1.48 2007/02/01 02:13:53 mpp Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_quota.h"
 #include "opt_ufs.h"
@@ -67,11 +66,10 @@ MALLOC_DEFINE(M_UFSMNT, "ufs_mount", "UFS mount structure");
  * Return the root of a filesystem.
  */
 int
-ufs_root(mp, flags, vpp, td)
+ufs_root(mp, flags, vpp)
 	struct mount *mp;
 	int flags;
 	struct vnode **vpp;
-	struct thread *td;
 {
 	struct vnode *nvp;
 	int error;
@@ -87,18 +85,19 @@ ufs_root(mp, flags, vpp, td)
  * Do operations associated with quotas
  */
 int
-ufs_quotactl(mp, cmds, id, arg, td)
+ufs_quotactl(mp, cmds, id, arg)
 	struct mount *mp;
 	int cmds;
 	uid_t id;
 	void *arg;
-	struct thread *td;
 {
 #ifndef QUOTA
 	return (EOPNOTSUPP);
 #else
+	struct thread *td;
 	int cmd, type, error;
 
+	td = curthread;
 	cmd = cmds >> SUBCMDSHIFT;
 	type = cmds & SUBCMDMASK;
 	if (id == -1) {
@@ -119,9 +118,6 @@ ufs_quotactl(mp, cmds, id, arg, td)
 	if ((u_int)type >= MAXQUOTAS)
 		return (EINVAL);
 
-	if (vfs_busy(mp, LK_NOWAIT, 0, td))
-		return (0);
-
 	switch (cmd) {
 	case Q_QUOTAON:
 		error = quotaon(td, mp, type, arg);
@@ -129,6 +125,18 @@ ufs_quotactl(mp, cmds, id, arg, td)
 
 	case Q_QUOTAOFF:
 		error = quotaoff(td, mp, type);
+		break;
+
+	case Q_SETQUOTA32:
+		error = setquota32(td, mp, id, type, arg);
+		break;
+
+	case Q_SETUSE32:
+		error = setuse32(td, mp, id, type, arg);
+		break;
+
+	case Q_GETQUOTA32:
+		error = getquota32(td, mp, id, type, arg);
 		break;
 
 	case Q_SETQUOTA:
@@ -143,6 +151,10 @@ ufs_quotactl(mp, cmds, id, arg, td)
 		error = getquota(td, mp, id, type, arg);
 		break;
 
+	case Q_GETQUOTASIZE:
+		error = getquotasize(td, mp, id, type, arg);
+		break;
+
 	case Q_SYNC:
 		error = qsync(mp);
 		break;
@@ -151,7 +163,6 @@ ufs_quotactl(mp, cmds, id, arg, td)
 		error = EINVAL;
 		break;
 	}
-	vfs_unbusy(mp, td);
 	return (error);
 #endif
 }
@@ -197,16 +208,17 @@ ufs_uninit(vfsp)
  * Call the VFS_CHECKEXP beforehand to verify access.
  */
 int
-ufs_fhtovp(mp, ufhp, vpp)
+ufs_fhtovp(mp, ufhp, flags, vpp)
 	struct mount *mp;
 	struct ufid *ufhp;
+	int flags;
 	struct vnode **vpp;
 {
 	struct inode *ip;
 	struct vnode *nvp;
 	int error;
 
-	error = VFS_VGET(mp, ufhp->ufid_ino, LK_EXCLUSIVE, &nvp);
+	error = VFS_VGET(mp, ufhp->ufid_ino, flags, &nvp);
 	if (error) {
 		*vpp = NULLVP;
 		return (error);

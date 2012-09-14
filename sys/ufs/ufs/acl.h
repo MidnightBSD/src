@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ufs/ufs/acl.h,v 1.5 2003/08/04 03:29:13 rwatson Exp $
+ * $MidnightBSD$
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -38,6 +37,8 @@
 
 #ifdef _KERNEL
 
+int	ufs_getacl_nfs4_internal(struct vnode *vp, struct acl *aclp, struct thread *td);
+int	ufs_setacl_nfs4_internal(struct vnode *vp, struct acl *aclp, struct thread *td);
 void	ufs_sync_acl_from_inode(struct inode *ip, struct acl *acl);
 void	ufs_sync_inode_from_acl(struct acl *acl, struct inode *ip);
 

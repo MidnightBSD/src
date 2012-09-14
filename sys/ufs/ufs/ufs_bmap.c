@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_bmap.c,v 1.66 2007/06/01 01:12:45 jeff Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -216,7 +215,7 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 		ap->in_exists = 1;
 		bp = getblk(vp, metalbn, mp->mnt_stat.f_iosize, 0, 0, 0);
 		if ((bp->b_flags & B_CACHE) == 0) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (!daddr)
 				panic("ufs_bmaparray: indirect block not in cache");
 #endif

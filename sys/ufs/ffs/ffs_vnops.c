@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -58,12 +57,12 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ufs_readwrite.c	8.11 (Berkeley) 5/8/95
- * from: $FreeBSD: .../ufs/ufs_readwrite.c,v 1.96 2002/08/12 09:22:11 phk ...
+ * from: $MidnightBSD: .../ufs/ufs_readwrite.c,v 1.96 2002/08/12 09:22:11 phk ...
  *	@(#)ffs_vnops.c	8.15 (Berkeley) 5/14/95
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vnops.c,v 1.173 2007/07/13 18:51:08 rodrigc Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -76,9 +75,6 @@ __FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vnops.c,v 1.173 2007/07/13 18:51:08 rodr
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/priv.h>
-#include <sys/proc.h>
-#include <sys/resourcevar.h>
-#include <sys/signalvar.h>
 #include <sys/stat.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
@@ -181,160 +177,170 @@ struct vop_vector ffs_fifoops2 = {
 static int
 ffs_fsync(struct vop_fsync_args *ap)
 {
+	struct vnode *vp;
+	struct bufobj *bo;
 	int error;
 
-	error = ffs_syncvnode(ap->a_vp, ap->a_waitfor);
+	vp = ap->a_vp;
+	bo = &vp->v_bufobj;
+retry:
+	error = ffs_syncvnode(vp, ap->a_waitfor, 0);
 	if (error)
 		return (error);
-	if (ap->a_waitfor == MNT_WAIT &&
-	    (ap->a_vp->v_mount->mnt_flag & MNT_SOFTDEP))
-                error = softdep_fsync(ap->a_vp);
-	return (error);
+	if (ap->a_waitfor == MNT_WAIT && DOINGSOFTDEP(vp)) {
+		error = softdep_fsync(vp);
+		if (error)
+			return (error);
+
+		/*
+		 * The softdep_fsync() function may drop vp lock,
+		 * allowing for dirty buffers to reappear on the
+		 * bo_dirty list. Recheck and resync as needed.
+		 */
+		BO_LOCK(bo);
+		if (vp->v_type == VREG && (bo->bo_numoutput > 0 ||
+		    bo->bo_dirty.bv_cnt > 0)) {
+			BO_UNLOCK(bo);
+			goto retry;
+		}
+		BO_UNLOCK(bo);
+	}
+	return (0);
 }
 
 int
-ffs_syncvnode(struct vnode *vp, int waitfor)
+ffs_syncvnode(struct vnode *vp, int waitfor, int flags)
 {
-	struct inode *ip = VTOI(vp);
+	struct inode *ip;
+	struct bufobj *bo;
 	struct buf *bp;
 	struct buf *nbp;
-	int s, error, wait, passes, skipmeta;
 	ufs_lbn_t lbn;
+	int error, wait, passes;
 
-	wait = (waitfor == MNT_WAIT);
-	lbn = lblkno(ip->i_fs, (ip->i_size + ip->i_fs->fs_bsize - 1));
+	ip = VTOI(vp);
+	ip->i_flag &= ~IN_NEEDSYNC;
+	bo = &vp->v_bufobj;
+
+	/*
+	 * When doing MNT_WAIT we must first flush all dependencies
+	 * on the inode.
+	 */
+	if (DOINGSOFTDEP(vp) && waitfor == MNT_WAIT &&
+	    (error = softdep_sync_metadata(vp)) != 0)
+		return (error);
 
 	/*
 	 * Flush all dirty buffers associated with a vnode.
 	 */
-	passes = NIADDR + 1;
-	skipmeta = 0;
-	if (wait)
-		skipmeta = 1;
-	s = splbio();
-	VI_LOCK(vp);
+	error = 0;
+	passes = 0;
+	wait = 0;	/* Always do an async pass first. */
+	lbn = lblkno(ip->i_fs, (ip->i_size + ip->i_fs->fs_bsize - 1));
+	BO_LOCK(bo);
 loop:
-	TAILQ_FOREACH(bp, &vp->v_bufobj.bo_dirty.bv_hd, b_bobufs)
+	TAILQ_FOREACH(bp, &bo->bo_dirty.bv_hd, b_bobufs)
 		bp->b_vflags &= ~BV_SCANNED;
-	TAILQ_FOREACH_SAFE(bp, &vp->v_bufobj.bo_dirty.bv_hd, b_bobufs, nbp) {
-		/* 
+	TAILQ_FOREACH_SAFE(bp, &bo->bo_dirty.bv_hd, b_bobufs, nbp) {
+		/*
 		 * Reasons to skip this buffer: it has already been considered
-		 * on this pass, this pass is the first time through on a
-		 * synchronous flush request and the buffer being considered
-		 * is metadata, the buffer has dependencies that will cause
+		 * on this pass, the buffer has dependencies that will cause
 		 * it to be redirtied and it has not already been deferred,
 		 * or it is already being written.
 		 */
 		if ((bp->b_vflags & BV_SCANNED) != 0)
 			continue;
 		bp->b_vflags |= BV_SCANNED;
-		if ((skipmeta == 1 && bp->b_lblkno < 0))
+		/* Flush indirects in order. */
+		if (waitfor == MNT_WAIT && bp->b_lblkno <= -NDADDR &&
+		    lbn_level(bp->b_lblkno) >= passes)
 			continue;
+		if (bp->b_lblkno > lbn)
+			panic("ffs_syncvnode: syncing truncated data.");
 		if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL))
 			continue;
-		VI_UNLOCK(vp);
-		if (!wait && !LIST_EMPTY(&bp->b_dep) &&
-		    (bp->b_flags & B_DEFERRED) == 0 &&
-		    buf_countdeps(bp, 0)) {
-			bp->b_flags |= B_DEFERRED;
-			BUF_UNLOCK(bp);
-			VI_LOCK(vp);
-			continue;
-		}
+		BO_UNLOCK(bo);
 		if ((bp->b_flags & B_DELWRI) == 0)
 			panic("ffs_fsync: not dirty");
 		/*
-		 * If this is a synchronous flush request, or it is not a
-		 * file or device, start the write on this buffer immediatly.
+		 * Check for dependencies and potentially complete them.
 		 */
-		if (wait || (vp->v_type != VREG && vp->v_type != VBLK)) {
-
-			/*
-			 * On our final pass through, do all I/O synchronously
-			 * so that we can find out if our flush is failing
-			 * because of write errors.
-			 */
-			if (passes > 0 || !wait) {
-				if ((bp->b_flags & B_CLUSTEROK) && !wait) {
-					(void) vfs_bio_awrite(bp);
-				} else {
-					bremfree(bp);
-					splx(s);
-					(void) bawrite(bp);
-					s = splbio();
-				}
-			} else {
-				bremfree(bp);
-				splx(s);
-				if ((error = bwrite(bp)) != 0)
-					return (error);
-				s = splbio();
+		if (!LIST_EMPTY(&bp->b_dep) &&
+		    (error = softdep_sync_buf(vp, bp,
+		    wait ? MNT_WAIT : MNT_NOWAIT)) != 0) {
+			/* I/O error. */
+			if (error != EBUSY) {
+				BUF_UNLOCK(bp);
+				return (error);
 			}
-		} else if ((vp->v_type == VREG) && (bp->b_lblkno >= lbn)) {
-			/* 
-			 * If the buffer is for data that has been truncated
-			 * off the file, then throw it away.
-			 */
+			/* If we deferred once, don't defer again. */
+		    	if ((bp->b_flags & B_DEFERRED) == 0) {
+				bp->b_flags |= B_DEFERRED;
+				BUF_UNLOCK(bp);
+				goto next;
+			}
+		}
+		if (wait) {
 			bremfree(bp);
-			bp->b_flags |= B_INVAL | B_NOCACHE;
-			splx(s);
-			brelse(bp);
-			s = splbio();
-		} else
-			vfs_bio_awrite(bp);
-
+			if ((error = bwrite(bp)) != 0)
+				return (error);
+		} else if ((bp->b_flags & B_CLUSTEROK)) {
+			(void) vfs_bio_awrite(bp);
+		} else {
+			bremfree(bp);
+			(void) bawrite(bp);
+		}
+next:
 		/*
-		 * Since we may have slept during the I/O, we need 
+		 * Since we may have slept during the I/O, we need
 		 * to start from a known point.
 		 */
-		VI_LOCK(vp);
-		nbp = TAILQ_FIRST(&vp->v_bufobj.bo_dirty.bv_hd);
+		BO_LOCK(bo);
+		nbp = TAILQ_FIRST(&bo->bo_dirty.bv_hd);
 	}
+	if (waitfor != MNT_WAIT) {
+		BO_UNLOCK(bo);
+		if ((flags & NO_INO_UPDT) != 0)
+			return (0);
+		else
+			return (ffs_update(vp, 0));
+	}
+	/* Drain IO to see if we're done. */
+	bufobj_wwait(bo, 0, 0);
 	/*
-	 * If we were asked to do this synchronously, then go back for
-	 * another pass, this time doing the metadata.
+	 * Block devices associated with filesystems may have new I/O
+	 * requests posted for them even if the vnode is locked, so no
+	 * amount of trying will get them clean.  We make several passes
+	 * as a best effort.
+	 *
+	 * Regular files may need multiple passes to flush all dependency
+	 * work as it is possible that we must write once per indirect
+	 * level, once for the leaf, and once for the inode and each of
+	 * these will be done with one sync and one async pass.
 	 */
-	if (skipmeta) {
-		skipmeta = 0;
-		goto loop;
-	}
-
-	if (wait) {
-		bufobj_wwait(&vp->v_bufobj, 3, 0);
-		VI_UNLOCK(vp);
-
-		/* 
-		 * Ensure that any filesystem metatdata associated
-		 * with the vnode has been written.
-		 */
-		splx(s);
-		if ((error = softdep_sync_metadata(vp)) != 0)
-			return (error);
-		s = splbio();
-
-		VI_LOCK(vp);
-		if (vp->v_bufobj.bo_dirty.bv_cnt > 0) {
-			/*
-			 * Block devices associated with filesystems may
-			 * have new I/O requests posted for them even if
-			 * the vnode is locked, so no amount of trying will
-			 * get them clean. Thus we give block devices a
-			 * good effort, then just give up. For all other file
-			 * types, go around and try again until it is clean.
-			 */
-			if (passes > 0) {
-				passes -= 1;
-				goto loop;
-			}
-#ifdef DIAGNOSTIC
-			if (!vn_isdisk(vp, NULL))
-				vprint("ffs_fsync: dirty", vp);
-#endif
+	if (bo->bo_dirty.bv_cnt > 0) {
+		/* Write the inode after sync passes to flush deps. */
+		if (wait && DOINGSOFTDEP(vp) && (flags & NO_INO_UPDT) == 0) {
+			BO_UNLOCK(bo);
+			ffs_update(vp, 1);
+			BO_LOCK(bo);
 		}
+		/* switch between sync/async. */
+		wait = !wait;
+		if (wait == 1 || ++passes < NIADDR + 2)
+			goto loop;
+#ifdef INVARIANTS
+		if (!vn_isdisk(vp, NULL))
+			vprint("ffs_fsync: dirty", vp);
+#endif
 	}
-	VI_UNLOCK(vp);
-	splx(s);
-	return (ffs_update(vp, wait));
+	BO_UNLOCK(bo);
+	error = 0;
+	if ((flags & NO_INO_UPDT) == 0)
+		error = ffs_update(vp, 1);
+	if (DOINGSUJ(vp))
+		softdep_journal_fsync(VTOI(vp));
+	return (error);
 }
 
 static int
@@ -352,7 +358,7 @@ ffs_lock(ap)
 	int flags;
 	struct lock *lkp;
 	int result;
-	
+
 	switch (ap->a_flags & LK_TYPE_MASK) {
 	case LK_SHARED:
 	case LK_UPGRADE:
@@ -360,18 +366,14 @@ ffs_lock(ap)
 		vp = ap->a_vp;
 		flags = ap->a_flags;
 		for (;;) {
-			/*
-			 * vnode interlock must be held to ensure that
-			 * the possibly external lock isn't freed,
-			 * e.g. when mutating from snapshot file vnode
-			 * to regular file vnode.
-			 */
-			if ((flags & LK_INTERLOCK) == 0) {
-				VI_LOCK(vp);
-				flags |= LK_INTERLOCK;
-			}
+#ifdef DEBUG_VFS_LOCKS
+			KASSERT(vp->v_holdcnt != 0,
+			    ("ffs_lock %p: zero hold count", vp));
+#endif
 			lkp = vp->v_vnlock;
-			result = _lockmgr(lkp, flags, VI_MTX(vp), ap->a_td, ap->a_file, ap->a_line);
+			result = _lockmgr_args(lkp, flags, VI_MTX(vp),
+			    LK_WMESG_DEFAULT, LK_PRIO_DEFAULT, LK_TIMO_DEFAULT,
+			    ap->a_file, ap->a_line);
 			if (lkp == vp->v_vnlock || result != 0)
 				break;
 			/*
@@ -382,7 +384,12 @@ ffs_lock(ap)
 			 * right lock.  Release it, and try to get the
 			 * new lock.
 			 */
-			(void) _lockmgr(lkp, LK_RELEASE, VI_MTX(vp), ap->a_td, ap->a_file, ap->a_line);
+			(void) _lockmgr_args(lkp, LK_RELEASE, NULL,
+			    LK_WMESG_DEFAULT, LK_PRIO_DEFAULT, LK_TIMO_DEFAULT,
+			    ap->a_file, ap->a_line);
+			if ((flags & (LK_INTERLOCK | LK_NOWAIT)) ==
+			    (LK_INTERLOCK | LK_NOWAIT))
+				return (EBUSY);
 			if ((flags & LK_TYPE_MASK) == LK_UPGRADE)
 				flags = (flags & ~LK_TYPE_MASK) | LK_EXCLUSIVE;
 			flags &= ~LK_INTERLOCK;
@@ -400,7 +407,6 @@ ffs_lock(ap)
 /*
  * Vnode op for reading.
  */
-/* ARGSUSED */
 static int
 ffs_read(ap)
 	struct vop_read_args /* {
@@ -418,7 +424,8 @@ ffs_read(ap)
 	ufs_lbn_t lbn, nextlbn;
 	off_t bytesinfile;
 	long size, xfersize, blkoffset;
-	int error, orig_resid;
+	ssize_t orig_resid;
+	int error;
 	int seqcount;
 	int ioflag;
 
@@ -444,7 +451,7 @@ ffs_read(ap)
 	seqcount = ap->a_ioflag >> IO_SEQSHIFT;
 	ip = VTOI(vp);
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (uio->uio_rw != UIO_READ)
 		panic("ffs_read: mode");
 
@@ -473,12 +480,12 @@ ffs_read(ap)
 		/*
 		 * size of buffer.  The buffer representing the
 		 * end of the file is rounded up to the size of
-		 * the block type ( fragment or full block, 
+		 * the block type ( fragment or full block,
 		 * depending ).
 		 */
 		size = blksize(fs, ip, lbn);
 		blkoffset = blkoff(fs, uio->uio_offset);
-		
+
 		/*
 		 * The amount we want to transfer in this iteration is
 		 * one FS block less the amount of the data before
@@ -502,7 +509,7 @@ ffs_read(ap)
 			 */
 			error = bread(vp, lbn, size, NOCRED, &bp);
 		} else if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERR) == 0) {
-			/* 
+			/*
 			 * Otherwise if we are allowed to cluster,
 			 * grab as much as we can.
 			 *
@@ -525,7 +532,7 @@ ffs_read(ap)
 			    size, &nextlbn, &nextsize, 1, NOCRED, &bp);
 		} else {
 			/*
-			 * Failing all of the above, just read what the 
+			 * Failing all of the above, just read what the
 			 * user asked for. Interestingly, the same as
 			 * the first option above.
 			 */
@@ -570,7 +577,8 @@ ffs_read(ap)
 			/*
 			 * If there are no dependencies, and it's VMIO,
 			 * then we don't need the buf, mark it available
-			 * for freeing. The VM has the data.
+			 * for freeing.  For non-direct VMIO reads, the VM
+			 * has the data.
 			 */
 			bp->b_flags |= B_RELBUF;
 			brelse(bp);
@@ -585,7 +593,7 @@ ffs_read(ap)
 		}
 	}
 
-	/* 
+	/*
 	 * This can only happen in the case of an error
 	 * because the loop above resets bp to NULL on each iteration
 	 * and on normal completion has not set a new value into it.
@@ -602,7 +610,8 @@ ffs_read(ap)
 	}
 
 	if ((error == 0 || uio->uio_resid != orig_resid) &&
-	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0) {
+	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0 &&
+	    (ip->i_flag & IN_ACCESS) == 0) {
 		VI_LOCK(vp);
 		ip->i_flag |= IN_ACCESS;
 		VI_UNLOCK(vp);
@@ -627,11 +636,11 @@ ffs_write(ap)
 	struct inode *ip;
 	struct fs *fs;
 	struct buf *bp;
-	struct thread *td;
 	ufs_lbn_t lbn;
 	off_t osize;
+	ssize_t resid;
 	int seqcount;
-	int blkoffset, error, flags, ioflag, resid, size, xfersize;
+	int blkoffset, error, flags, ioflag, size, xfersize;
 
 	vp = ap->a_vp;
 	uio = ap->a_uio;
@@ -646,7 +655,7 @@ ffs_write(ap)
 	seqcount = ap->a_ioflag >> IO_SEQSHIFT;
 	ip = VTOI(vp);
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (uio->uio_rw != UIO_WRITE)
 		panic("ffs_write: mode");
 #endif
@@ -679,17 +688,8 @@ ffs_write(ap)
 	 * Maybe this should be above the vnode op call, but so long as
 	 * file servers have no limits, I don't think it matters.
 	 */
-	td = uio->uio_td;
-	if (vp->v_type == VREG && td != NULL) {
-		PROC_LOCK(td->td_proc);
-		if (uio->uio_offset + uio->uio_resid >
-		    lim_cur(td->td_proc, RLIMIT_FSIZE)) {
-			psignal(td->td_proc, SIGXFSZ);
-			PROC_UNLOCK(td->td_proc);
-			return (EFBIG);
-		}
-		PROC_UNLOCK(td->td_proc);
-	}
+	if (vn_rlimit_fsize(vp, uio, uio->uio_td))
+		return (EFBIG);
 
 	resid = uio->uio_resid;
 	osize = ip->i_size;
@@ -709,7 +709,7 @@ ffs_write(ap)
 		if (uio->uio_offset + xfersize > ip->i_size)
 			vnode_pager_setsize(vp, uio->uio_offset + xfersize);
 
-                /*      
+                /*
 		 * We must perform a read-before-write if the transfer size
 		 * does not cover the entire buffer.
                  */
@@ -720,17 +720,10 @@ ffs_write(ap)
 /* XXX is uio->uio_offset the right thing here? */
 		error = UFS_BALLOC(vp, uio->uio_offset, xfersize,
 		    ap->a_cred, flags, &bp);
-		if (error != 0)
+		if (error != 0) {
+			vnode_pager_setsize(vp, ip->i_size);
 			break;
-		/*
-		 * If the buffer is not valid we have to clear out any
-		 * garbage data from the pages instantiated for the buffer.
-		 * If we do not, a failed uiomove() during a write can leave
-		 * the prior contents of the pages exposed to a userland
-		 * mmap().  XXX deal with uiomove() errors a better way.
-		 */
-		if ((bp->b_flags & B_CACHE) == 0 && fs->fs_bsize <= xfersize)
-			vfs_bio_clrbuf(bp);
+		}
 		if (ioflag & IO_DIRECT)
 			bp->b_flags |= B_DIRECT;
 		if ((ioflag & (IO_SYNC|IO_INVAL)) == (IO_SYNC|IO_INVAL))
@@ -747,6 +740,26 @@ ffs_write(ap)
 
 		error =
 		    uiomove((char *)bp->b_data + blkoffset, (int)xfersize, uio);
+		/*
+		 * If the buffer is not already filled and we encounter an
+		 * error while trying to fill it, we have to clear out any
+		 * garbage data from the pages instantiated for the buffer.
+		 * If we do not, a failed uiomove() during a write can leave
+		 * the prior contents of the pages exposed to a userland mmap.
+		 *
+		 * Note that we need only clear buffers with a transfer size
+		 * equal to the block size because buffers with a shorter
+		 * transfer size were cleared above by the call to UFS_BALLOC()
+		 * with the BA_CLRBUF flag set.
+		 *
+		 * If the source region for uiomove identically mmaps the
+		 * buffer, uiomove() performed the NOP copy, and the buffer
+		 * content remains valid because the page fault handler
+		 * validated the pages.
+		 */
+		if (error != 0 && (bp->b_flags & B_CACHE) == 0 &&
+		    fs->fs_bsize == xfersize)
+			vfs_bio_clrbuf(bp);
 		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
 		   (LIST_EMPTY(&bp->b_dep))) {
 			bp->b_flags |= B_RELBUF;
@@ -754,7 +767,7 @@ ffs_write(ap)
 
 		/*
 		 * If IO_SYNC each buffer is written synchronously.  Otherwise
-		 * if we have a severe page deficiency write the buffer 
+		 * if we have a severe page deficiency write the buffer
 		 * asynchronously.  Otherwise try to cluster, and if that
 		 * doesn't do it then either do an async write (if O_DIRECT),
 		 * or a delayed write (if not).
@@ -833,13 +846,13 @@ ffs_getpages(ap)
 	if (mreq->valid) {
 		if (mreq->valid != VM_PAGE_BITS_ALL)
 			vm_page_zero_invalid(mreq, TRUE);
-		vm_page_lock_queues();
 		for (i = 0; i < pcount; i++) {
 			if (i != ap->a_reqpage) {
+				vm_page_lock(ap->a_m[i]);
 				vm_page_free(ap->a_m[i]);
+				vm_page_unlock(ap->a_m[i]);
 			}
 		}
-		vm_page_unlock_queues();
 		VM_OBJECT_UNLOCK(mreq->object);
 		return VM_PAGER_OK;
 	}
@@ -864,13 +877,14 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 	ufs_lbn_t lbn, nextlbn;
 	off_t bytesinfile;
 	long size, xfersize, blkoffset;
-	int error, orig_resid;
+	ssize_t orig_resid;
+	int error;
 
 	ip = VTOI(vp);
 	fs = ip->i_fs;
 	dp = ip->i_din2;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (uio->uio_rw != UIO_READ || fs->fs_magic != FS_UFS2_MAGIC)
 		panic("ffs_extread: mode");
 
@@ -890,12 +904,12 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 		/*
 		 * size of buffer.  The buffer representing the
 		 * end of the file is rounded up to the size of
-		 * the block type ( fragment or full block, 
+		 * the block type ( fragment or full block,
 		 * depending ).
 		 */
 		size = sblksize(fs, dp->di_extsize, lbn);
 		blkoffset = blkoff(fs, uio->uio_offset);
-		
+
 		/*
 		 * The amount we want to transfer in this iteration is
 		 * one FS block less the amount of the data before
@@ -971,7 +985,8 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 			/*
 			 * If there are no dependencies, and it's VMIO,
 			 * then we don't need the buf, mark it available
-			 * for freeing. The VM has the data.
+			 * for freeing.  For non-direct VMIO reads, the VM
+			 * has the data.
 			 */
 			bp->b_flags |= B_RELBUF;
 			brelse(bp);
@@ -986,7 +1001,7 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 		}
 	}
 
-	/* 
+	/*
 	 * This can only happen in the case of an error
 	 * because the loop above resets bp to NULL on each iteration
 	 * and on normal completion has not set a new value into it.
@@ -1000,13 +1015,6 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 		} else {
 			bqrelse(bp);
 		}
-	}
-
-	if ((error == 0 || uio->uio_resid != orig_resid) &&
-	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0) {
-		VI_LOCK(vp);
-		ip->i_flag |= IN_ACCESS;
-		VI_UNLOCK(vp);
 	}
 	return (error);
 }
@@ -1023,16 +1031,14 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 	struct buf *bp;
 	ufs_lbn_t lbn;
 	off_t osize;
-	int blkoffset, error, flags, resid, size, xfersize;
+	ssize_t resid;
+	int blkoffset, error, flags, size, xfersize;
 
 	ip = VTOI(vp);
 	fs = ip->i_fs;
 	dp = ip->i_din2;
 
-	KASSERT(!(ip->i_flag & IN_SPACECOUNTED), ("inode %u: inode is dead",
-	    ip->i_number));
-
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (uio->uio_rw != UIO_WRITE || fs->fs_magic != FS_UFS2_MAGIC)
 		panic("ffs_extwrite: mode");
 #endif
@@ -1057,7 +1063,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 		if (uio->uio_resid < xfersize)
 			xfersize = uio->uio_resid;
 
-                /*      
+		/*
 		 * We must perform a read-before-write if the transfer size
 		 * does not cover the entire buffer.
                  */
@@ -1097,7 +1103,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 
 		/*
 		 * If IO_SYNC each buffer is written synchronously.  Otherwise
-		 * if we have a severe page deficiency write the buffer 
+		 * if we have a severe page deficiency write the buffer
 		 * asynchronously.  Otherwise try to cluster, and if that
 		 * doesn't do it then either do an async write (if O_DIRECT),
 		 * or a delayed write (if not).
@@ -1113,7 +1119,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 			bdwrite(bp);
 		if (error || xfersize == 0)
 			break;
-		ip->i_flag |= IN_CHANGE | IN_UPDATE;
+		ip->i_flag |= IN_CHANGE;
 	}
 	/*
 	 * If we successfully wrote any data, and we are not the superuser
@@ -1227,6 +1233,35 @@ ffs_rdextattr(u_char **p, struct vnode *vp, struct thread *td, int extra)
 	return (0);
 }
 
+static void
+ffs_lock_ea(struct vnode *vp)
+{
+	struct inode *ip;
+
+	ip = VTOI(vp);
+	VI_LOCK(vp);
+	while (ip->i_flag & IN_EA_LOCKED) {
+		ip->i_flag |= IN_EA_LOCKWAIT;
+		msleep(&ip->i_ea_refs, &vp->v_interlock, PINOD + 2, "ufs_ea",
+		    0);
+	}
+	ip->i_flag |= IN_EA_LOCKED;
+	VI_UNLOCK(vp);
+}
+
+static void
+ffs_unlock_ea(struct vnode *vp)
+{
+	struct inode *ip;
+
+	ip = VTOI(vp);
+	VI_LOCK(vp);
+	if (ip->i_flag & IN_EA_LOCKWAIT)
+		wakeup(&ip->i_ea_refs);
+	ip->i_flag &= ~(IN_EA_LOCKED | IN_EA_LOCKWAIT);
+	VI_UNLOCK(vp);
+}
+
 static int
 ffs_open_ea(struct vnode *vp, struct ucred *cred, struct thread *td)
 {
@@ -1236,14 +1271,22 @@ ffs_open_ea(struct vnode *vp, struct ucred *cred, struct thread *td)
 
 	ip = VTOI(vp);
 
-	if (ip->i_ea_area != NULL)
-		return (EBUSY);
+	ffs_lock_ea(vp);
+	if (ip->i_ea_area != NULL) {
+		ip->i_ea_refs++;
+		ffs_unlock_ea(vp);
+		return (0);
+	}
 	dp = ip->i_din2;
 	error = ffs_rdextattr(&ip->i_ea_area, vp, td, 0);
-	if (error)
+	if (error) {
+		ffs_unlock_ea(vp);
 		return (error);
+	}
 	ip->i_ea_len = dp->di_extsize;
 	ip->i_ea_error = 0;
+	ip->i_ea_refs++;
+	ffs_unlock_ea(vp);
 	return (0);
 }
 
@@ -1260,11 +1303,16 @@ ffs_close_ea(struct vnode *vp, int commit, struct ucred *cred, struct thread *td
 	struct ufs2_dinode *dp;
 
 	ip = VTOI(vp);
-	if (ip->i_ea_area == NULL)
+
+	ffs_lock_ea(vp);
+	if (ip->i_ea_area == NULL) {
+		ffs_unlock_ea(vp);
 		return (EINVAL);
+	}
 	dp = ip->i_din2;
 	error = ip->i_ea_error;
 	if (commit && error == 0) {
+		ASSERT_VOP_ELOCKED(vp, "ffs_close_ea commit");
 		if (cred == NOCRED)
 			cred =  vp->v_mount->mnt_cred;
 		liovec.iov_base = ip->i_ea_area;
@@ -1281,10 +1329,13 @@ ffs_close_ea(struct vnode *vp, int commit, struct ucred *cred, struct thread *td
 			error = ffs_truncate(vp, 0, IO_EXT, cred, td);
 		error = ffs_extwrite(vp, &luio, IO_EXT | IO_SYNC, cred);
 	}
-	free(ip->i_ea_area, M_TEMP);
-	ip->i_ea_area = NULL;
-	ip->i_ea_len = 0;
-	ip->i_ea_error = 0;
+	if (--ip->i_ea_refs == 0) {
+		free(ip->i_ea_area, M_TEMP);
+		ip->i_ea_area = NULL;
+		ip->i_ea_len = 0;
+		ip->i_ea_error = 0;
+	}
+	ffs_unlock_ea(vp);
 	return (error);
 }
 
@@ -1337,7 +1388,7 @@ struct vop_openextattr_args {
 	ip = VTOI(ap->a_vp);
 	fs = ip->i_fs;
 
-	if (ap->a_vp->v_type == VCHR)
+	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
 
 	return (ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td));
@@ -1365,7 +1416,7 @@ struct vop_closeextattr_args {
 	ip = VTOI(ap->a_vp);
 	fs = ip->i_fs;
 
-	if (ap->a_vp->v_type == VCHR)
+	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
 
 	if (ap->a_commit && (ap->a_vp->v_mount->mnt_flag & MNT_RDONLY))
@@ -1394,12 +1445,11 @@ vop_deleteextattr {
 	uint32_t ealength, ul;
 	int ealen, olen, eapad1, eapad2, error, i, easize;
 	u_char *eae, *p;
-	int stand_alone;
 
 	ip = VTOI(ap->a_vp);
 	fs = ip->i_fs;
 
-	if (ap->a_vp->v_type == VCHR)
+	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
 
 	if (strlen(ap->a_name) == 0)
@@ -1409,21 +1459,21 @@ vop_deleteextattr {
 		return (EROFS);
 
 	error = extattr_check_cred(ap->a_vp, ap->a_attrnamespace,
-	    ap->a_cred, ap->a_td, IWRITE);
+	    ap->a_cred, ap->a_td, VWRITE);
 	if (error) {
+
+		/*
+		 * ffs_lock_ea is not needed there, because the vnode
+		 * must be exclusively locked.
+		 */
 		if (ip->i_ea_area != NULL && ip->i_ea_error == 0)
 			ip->i_ea_error = error;
 		return (error);
 	}
 
-	if (ip->i_ea_area == NULL) {
-		error = ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td);
-		if (error)
-			return (error);
-		stand_alone = 1;
-	} else {
-		stand_alone = 0;
-	}
+	error = ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td);
+	if (error)
+		return (error);
 
 	ealength = eapad1 = ealen = eapad2 = 0;
 
@@ -1436,8 +1486,7 @@ vop_deleteextattr {
 	if (olen == -1) {
 		/* delete but nonexistent */
 		free(eae, M_TEMP);
-		if (stand_alone)
-			ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
+		ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
 		return(ENOATTR);
 	}
 	bcopy(p, &ul, sizeof ul);
@@ -1448,9 +1497,8 @@ vop_deleteextattr {
 	}
 	if (easize > NXADDR * fs->fs_bsize) {
 		free(eae, M_TEMP);
-		if (stand_alone)
-			ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
-		else if (ip->i_ea_error == 0)
+		ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
+		if (ip->i_ea_area != NULL && ip->i_ea_error == 0)
 			ip->i_ea_error = ENOSPC;
 		return(ENOSPC);
 	}
@@ -1458,8 +1506,7 @@ vop_deleteextattr {
 	ip->i_ea_area = eae;
 	ip->i_ea_len = easize;
 	free(p, M_TEMP);
-	if (stand_alone)
-		error = ffs_close_ea(ap->a_vp, 1, ap->a_cred, ap->a_td);
+	error = ffs_close_ea(ap->a_vp, 1, ap->a_cred, ap->a_td);
 	return(error);
 }
 
@@ -1484,27 +1531,23 @@ vop_getextattr {
 	struct fs *fs;
 	u_char *eae, *p;
 	unsigned easize;
-	int error, ealen, stand_alone;
+	int error, ealen;
 
 	ip = VTOI(ap->a_vp);
 	fs = ip->i_fs;
 
-	if (ap->a_vp->v_type == VCHR)
+	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
 
 	error = extattr_check_cred(ap->a_vp, ap->a_attrnamespace,
-	    ap->a_cred, ap->a_td, IREAD);
+	    ap->a_cred, ap->a_td, VREAD);
 	if (error)
 		return (error);
 
-	if (ip->i_ea_area == NULL) {
-		error = ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td);
-		if (error)
-			return (error);
-		stand_alone = 1;
-	} else {
-		stand_alone = 0;
-	}
+	error = ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td);
+	if (error)
+		return (error);
+
 	eae = ip->i_ea_area;
 	easize = ip->i_ea_len;
 
@@ -1518,8 +1561,8 @@ vop_getextattr {
 			error = uiomove(p, ealen, ap->a_uio);
 	} else
 		error = ENOATTR;
-	if (stand_alone)
-		ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
+
+	ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
 	return(error);
 }
 
@@ -1544,27 +1587,22 @@ vop_listextattr {
 	u_char *eae, *p, *pe, *pn;
 	unsigned easize;
 	uint32_t ul;
-	int error, ealen, stand_alone;
+	int error, ealen;
 
 	ip = VTOI(ap->a_vp);
 	fs = ip->i_fs;
 
-	if (ap->a_vp->v_type == VCHR)
+	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
 
 	error = extattr_check_cred(ap->a_vp, ap->a_attrnamespace,
-	    ap->a_cred, ap->a_td, IREAD);
+	    ap->a_cred, ap->a_td, VREAD);
 	if (error)
 		return (error);
 
-	if (ip->i_ea_area == NULL) {
-		error = ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td);
-		if (error)
-			return (error);
-		stand_alone = 1;
-	} else {
-		stand_alone = 0;
-	}
+	error = ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td);
+	if (error)
+		return (error);
 	eae = ip->i_ea_area;
 	easize = ip->i_ea_len;
 
@@ -1588,8 +1626,7 @@ vop_listextattr {
 			error = uiomove(p, ealen + 1, ap->a_uio);
 		}
 	}
-	if (stand_alone)
-		ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
+	ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
 	return(error);
 }
 
@@ -1612,14 +1649,14 @@ vop_setextattr {
 	struct inode *ip;
 	struct fs *fs;
 	uint32_t ealength, ul;
-	int ealen, olen, eapad1, eapad2, error, i, easize;
+	ssize_t ealen;
+	int olen, eapad1, eapad2, error, i, easize;
 	u_char *eae, *p;
-	int stand_alone;
 
 	ip = VTOI(ap->a_vp);
 	fs = ip->i_fs;
 
-	if (ap->a_vp->v_type == VCHR)
+	if (ap->a_vp->v_type == VCHR || ap->a_vp->v_type == VBLK)
 		return (EOPNOTSUPP);
 
 	if (strlen(ap->a_name) == 0)
@@ -1632,24 +1669,27 @@ vop_setextattr {
 	if (ap->a_vp->v_mount->mnt_flag & MNT_RDONLY)
 		return (EROFS);
 
+	ealen = ap->a_uio->uio_resid;
+	if (ealen < 0 || ealen > lblktosize(fs, NXADDR))
+		return (EINVAL);
+
 	error = extattr_check_cred(ap->a_vp, ap->a_attrnamespace,
-	    ap->a_cred, ap->a_td, IWRITE);
+	    ap->a_cred, ap->a_td, VWRITE);
 	if (error) {
+
+		/*
+		 * ffs_lock_ea is not needed there, because the vnode
+		 * must be exclusively locked.
+		 */
 		if (ip->i_ea_area != NULL && ip->i_ea_error == 0)
 			ip->i_ea_error = error;
 		return (error);
 	}
 
-	if (ip->i_ea_area == NULL) {
-		error = ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td);
-		if (error)
-			return (error);
-		stand_alone = 1;
-	} else {
-		stand_alone = 0;
-	}
+	error = ffs_open_ea(ap->a_vp, ap->a_cred, ap->a_td);
+	if (error)
+		return (error);
 
-	ealen = ap->a_uio->uio_resid;
 	ealength = sizeof(uint32_t) + 3 + strlen(ap->a_name);
 	eapad1 = 8 - (ealength % 8);
 	if (eapad1 == 8)
@@ -1677,11 +1717,10 @@ vop_setextattr {
 			easize += (ealength - ul);
 		}
 	}
-	if (easize > NXADDR * fs->fs_bsize) {
+	if (easize > lblktosize(fs, NXADDR)) {
 		free(eae, M_TEMP);
-		if (stand_alone)
-			ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
-		else if (ip->i_ea_error == 0)
+		ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
+		if (ip->i_ea_area != NULL && ip->i_ea_error == 0)
 			ip->i_ea_error = ENOSPC;
 		return(ENOSPC);
 	}
@@ -1697,9 +1736,8 @@ vop_setextattr {
 	error = uiomove(p, ealen, ap->a_uio);
 	if (error) {
 		free(eae, M_TEMP);
-		if (stand_alone)
-			ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
-		else if (ip->i_ea_error == 0)
+		ffs_close_ea(ap->a_vp, 0, ap->a_cred, ap->a_td);
+		if (ip->i_ea_area != NULL && ip->i_ea_error == 0)
 			ip->i_ea_error = error;
 		return(error);
 	}
@@ -1710,8 +1748,7 @@ vop_setextattr {
 	ip->i_ea_area = eae;
 	ip->i_ea_len = easize;
 	free(p, M_TEMP);
-	if (stand_alone)
-		error = ffs_close_ea(ap->a_vp, 1, ap->a_cred, ap->a_td);
+	error = ffs_close_ea(ap->a_vp, 1, ap->a_cred, ap->a_td);
 	return(error);
 }
 

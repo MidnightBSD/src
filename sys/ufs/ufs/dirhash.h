@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Ian Dowse.  All rights reserved.
  *
@@ -23,11 +22,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ufs/ufs/dirhash.h,v 1.5 2005/01/07 02:29:26 imp Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _UFS_UFS_DIRHASH_H_
 #define _UFS_UFS_DIRHASH_H_
+
+#include <sys/_lock.h>
+#include <sys/_sx.h>
 
 /*
  * For fast operations on large directories, we maintain a hash
@@ -81,12 +83,14 @@
     ((dh)->dh_hash[(slot) >> DH_BLKOFFSHIFT][(slot) & DH_BLKOFFMASK])
 
 struct dirhash {
-	struct mtx dh_mtx;	/* protects all fields except dh_list */
+	struct sx dh_lock;	/* protects all fields except list & score */
+	int	dh_refcount;
 
 	doff_t	**dh_hash;	/* the hash array (2-level) */
 	int	dh_narrays;	/* number of entries in dh_hash */
 	int	dh_hlen;	/* total slots in the 2-level hash array */
 	int	dh_hused;	/* entries in use */
+	int	dh_memreq;	/* Memory used. */
 
 	/* Free space statistics. XXX assumes DIRBLKSIZ is 512. */
 	u_int8_t *dh_blkfree;	/* free DIRALIGN words in each dir block */
@@ -94,12 +98,13 @@ struct dirhash {
 	int	dh_dirblks;	/* number of DIRBLKSIZ blocks in dir */
 	int	dh_firstfree[DH_NFSTATS + 1]; /* first blk with N words free */
 
-	int	dh_seqopt;	/* sequential access optimisation enabled */
 	doff_t	dh_seqoff;	/* sequential access optimisation offset */
 
 	int	dh_score;	/* access count for this dirhash */
 
 	int	dh_onlist;	/* true if on the ufsdirhash_list chain */
+
+	time_t	dh_lastused;	/* time the dirhash was last read or written*/
 
 	/* Protected by ufsdirhash_mtx. */
 	TAILQ_ENTRY(dirhash) dh_list;	/* chain of all dirhashes */

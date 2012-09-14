@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -36,9 +35,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.291 2007/06/12 00:12:01 rwatson Exp $");
+__FBSDID("$MidnightBSD$");
 
-#include "opt_mac.h"
 #include "opt_quota.h"
 #include "opt_suiddir.h"
 #include "opt_ufs.h"
@@ -50,6 +48,7 @@ __FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.291 2007/06/12 00:12:01 rwat
 #include <sys/namei.h>
 #include <sys/kernel.h>
 #include <sys/fcntl.h>
+#include <sys/filio.h>
 #include <sys/stat.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
@@ -62,9 +61,6 @@ __FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.291 2007/06/12 00:12:01 rwat
 #include <sys/lockf.h>
 #include <sys/conf.h>
 #include <sys/acl.h>
-#include <sys/jail.h>
-
-#include <machine/mutex.h>
 
 #include <security/mac/mac_framework.h>
 
@@ -87,19 +83,32 @@ __FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.291 2007/06/12 00:12:01 rwat
 #endif
 #ifdef UFS_GJOURNAL
 #include <ufs/ufs/gjournal.h>
+FEATURE(ufs_gjournal, "Journaling support through GEOM for UFS");
 #endif
+
+#ifdef QUOTA
+FEATURE(ufs_quota, "UFS disk quotas support");
+FEATURE(ufs_quota64, "64bit UFS disk quotas support");
+#endif
+
+#ifdef SUIDDIR
+FEATURE(suiddir,
+    "Give all new files in directory the same ownership as the directory");
+#endif
+
 
 #include <ufs/ffs/ffs_extern.h>
 
-static vop_access_t	ufs_access;
-static vop_advlock_t	ufs_advlock;
+static vop_accessx_t	ufs_accessx;
 static int ufs_chmod(struct vnode *, int, struct ucred *, struct thread *);
 static int ufs_chown(struct vnode *, uid_t, gid_t, struct ucred *, struct thread *);
 static vop_close_t	ufs_close;
 static vop_create_t	ufs_create;
 static vop_getattr_t	ufs_getattr;
+static vop_ioctl_t	ufs_ioctl;
 static vop_link_t	ufs_link;
 static int ufs_makeinode(int mode, struct vnode *, struct vnode **, struct componentname *);
+static vop_markatime_t	ufs_markatime;
 static vop_mkdir_t	ufs_mkdir;
 static vop_mknod_t	ufs_mknod;
 static vop_open_t	ufs_open;
@@ -115,6 +124,9 @@ static vop_symlink_t	ufs_symlink;
 static vop_whiteout_t	ufs_whiteout;
 static vop_close_t	ufsfifo_close;
 static vop_kqfilter_t	ufsfifo_kqfilter;
+static vop_pathconf_t	ufsfifo_pathconf;
+
+SYSCTL_NODE(_vfs, OID_AUTO, ufs, CTLFLAG_RD, 0, "UFS filesystem");
 
 /*
  * A virgin directory (no blushing please).
@@ -137,7 +149,7 @@ ufs_itimes_locked(struct vnode *vp)
 	ASSERT_VI_LOCKED(vp, __func__);
 
 	ip = VTOI(vp);
-	if ((vp->v_mount->mnt_flag & MNT_RDONLY) != 0)
+	if (UFS_RDONLY(ip))
 		goto out;
 	if ((ip->i_flag & (IN_ACCESS | IN_CHANGE | IN_UPDATE)) == 0)
 		return;
@@ -158,11 +170,11 @@ ufs_itimes_locked(struct vnode *vp)
 	if (ip->i_flag & IN_UPDATE) {
 		DIP_SET(ip, i_mtime, ts.tv_sec);
 		DIP_SET(ip, i_mtimensec, ts.tv_nsec);
-		ip->i_modrev++;
 	}
 	if (ip->i_flag & IN_CHANGE) {
 		DIP_SET(ip, i_ctime, ts.tv_sec);
 		DIP_SET(ip, i_ctimensec, ts.tv_nsec);
+		DIP_SET(ip, i_modrev, DIP(ip, i_modrev) + 1);
 	}
 
  out:
@@ -300,20 +312,24 @@ ufs_close(ap)
 }
 
 static int
-ufs_access(ap)
-	struct vop_access_args /* {
+ufs_accessx(ap)
+	struct vop_accessx_args /* {
 		struct vnode *a_vp;
-		int  a_mode;
+		accmode_t a_accmode;
 		struct ucred *a_cred;
 		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 	struct inode *ip = VTOI(vp);
-	mode_t mode = ap->a_mode;
+	accmode_t accmode = ap->a_accmode;
 	int error;
+#ifdef QUOTA
+	int relocked;
+#endif
 #ifdef UFS_ACL
 	struct acl *acl;
+	acl_type_t type;
 #endif
 
 	/*
@@ -321,54 +337,108 @@ ufs_access(ap)
 	 * unless the file is a socket, fifo, or a block or
 	 * character device resident on the filesystem.
 	 */
-	if (mode & VWRITE) {
+	if (accmode & VMODIFY_PERMS) {
 		switch (vp->v_type) {
 		case VDIR:
 		case VLNK:
 		case VREG:
 			if (vp->v_mount->mnt_flag & MNT_RDONLY)
 				return (EROFS);
+#ifdef QUOTA
+			/*
+			 * Inode is accounted in the quotas only if struct
+			 * dquot is attached to it. VOP_ACCESS() is called
+			 * from vn_open_cred() and provides a convenient
+			 * point to call getinoquota().
+			 */
+			if (VOP_ISLOCKED(vp) != LK_EXCLUSIVE) {
+
+				/*
+				 * Upgrade vnode lock, since getinoquota()
+				 * requires exclusive lock to modify inode.
+				 */
+				relocked = 1;
+				vhold(vp);
+				vn_lock(vp, LK_UPGRADE | LK_RETRY);
+				VI_LOCK(vp);
+				if (vp->v_iflag & VI_DOOMED) {
+					vdropl(vp);
+					error = ENOENT;
+					goto relock;
+				}
+				vdropl(vp);
+			} else
+				relocked = 0;
+			error = getinoquota(ip);
+relock:
+			if (relocked)
+				vn_lock(vp, LK_DOWNGRADE | LK_RETRY);
+			if (error != 0)
+				return (error);
+#endif
 			break;
 		default:
 			break;
 		}
 	}
 
-	/* If immutable bit set, nobody gets to write it. */
-	if ((mode & VWRITE) && (ip->i_flags & (IMMUTABLE | SF_SNAPSHOT)))
+	/*
+	 * If immutable bit set, nobody gets to write it.  "& ~VADMIN_PERMS"
+	 * is here, because without it, * it would be impossible for the owner
+	 * to remove the IMMUTABLE flag.
+	 */
+	if ((accmode & (VMODIFY_PERMS & ~VADMIN_PERMS)) &&
+	    (ip->i_flags & (IMMUTABLE | SF_SNAPSHOT)))
 		return (EPERM);
 
 #ifdef UFS_ACL
-	if ((vp->v_mount->mnt_flag & MNT_ACLS) != 0) {
-		acl = uma_zalloc(acl_zone, M_WAITOK);
-		error = VOP_GETACL(vp, ACL_TYPE_ACCESS, acl, ap->a_cred,
-		    ap->a_td);
+	if ((vp->v_mount->mnt_flag & (MNT_ACLS | MNT_NFS4ACLS)) != 0) {
+		if (vp->v_mount->mnt_flag & MNT_NFS4ACLS)
+			type = ACL_TYPE_NFS4;
+		else
+			type = ACL_TYPE_ACCESS;
+
+		acl = acl_alloc(M_WAITOK);
+		if (type == ACL_TYPE_NFS4)
+			error = ufs_getacl_nfs4_internal(vp, acl, ap->a_td);
+		else
+			error = VOP_GETACL(vp, type, acl, ap->a_cred, ap->a_td);
 		switch (error) {
-		case EOPNOTSUPP:
-			error = vaccess(vp->v_type, ip->i_mode, ip->i_uid,
-			    ip->i_gid, ap->a_mode, ap->a_cred, NULL);
-			break;
 		case 0:
-			error = vaccess_acl_posix1e(vp->v_type, ip->i_uid,
-			    ip->i_gid, acl, ap->a_mode, ap->a_cred, NULL);
+			if (type == ACL_TYPE_NFS4) {
+				error = vaccess_acl_nfs4(vp->v_type, ip->i_uid,
+				    ip->i_gid, acl, accmode, ap->a_cred, NULL);
+			} else {
+				error = vfs_unixify_accmode(&accmode);
+				if (error == 0)
+					error = vaccess_acl_posix1e(vp->v_type, ip->i_uid,
+					    ip->i_gid, acl, accmode, ap->a_cred, NULL);
+			}
 			break;
 		default:
-			printf(
-"ufs_access(): Error retrieving ACL on object (%d).\n",
-			    error);
+			if (error != EOPNOTSUPP)
+				printf(
+"ufs_accessx(): Error retrieving ACL on object (%d).\n",
+				    error);
 			/*
 			 * XXX: Fall back until debugged.  Should
 			 * eventually possibly log an error, and return
 			 * EPERM for safety.
 			 */
-			error = vaccess(vp->v_type, ip->i_mode, ip->i_uid,
-			    ip->i_gid, ap->a_mode, ap->a_cred, NULL);
+			error = vfs_unixify_accmode(&accmode);
+			if (error == 0)
+				error = vaccess(vp->v_type, ip->i_mode, ip->i_uid,
+				    ip->i_gid, accmode, ap->a_cred, NULL);
 		}
-		uma_zfree(acl_zone, acl);
-	} else
+		acl_free(acl);
+
+		return (error);
+	}
 #endif /* !UFS_ACL */
+	error = vfs_unixify_accmode(&accmode);
+	if (error == 0)
 		error = vaccess(vp->v_type, ip->i_mode, ip->i_uid, ip->i_gid,
-		    ap->a_mode, ap->a_cred, NULL);
+		    accmode, ap->a_cred, NULL);
 	return (error);
 }
 
@@ -379,7 +449,6 @@ ufs_getattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
@@ -412,9 +481,8 @@ ufs_getattr(ap)
 		vap->va_mtime.tv_nsec = ip->i_din1->di_mtimensec;
 		vap->va_ctime.tv_sec = ip->i_din1->di_ctime;
 		vap->va_ctime.tv_nsec = ip->i_din1->di_ctimensec;
-		vap->va_birthtime.tv_sec = 0;
-		vap->va_birthtime.tv_nsec = 0;
 		vap->va_bytes = dbtob((u_quad_t)ip->i_din1->di_blocks);
+		vap->va_filerev = ip->i_din1->di_modrev;
 	} else {
 		vap->va_rdev = ip->i_din2->di_rdev;
 		vap->va_size = ip->i_din2->di_size;
@@ -425,12 +493,12 @@ ufs_getattr(ap)
 		vap->va_birthtime.tv_sec = ip->i_din2->di_birthtime;
 		vap->va_birthtime.tv_nsec = ip->i_din2->di_birthnsec;
 		vap->va_bytes = dbtob((u_quad_t)ip->i_din2->di_blocks);
+		vap->va_filerev = ip->i_din2->di_modrev;
 	}
 	vap->va_flags = ip->i_flags;
 	vap->va_gen = ip->i_gen;
 	vap->va_blocksize = vp->v_mount->mnt_stat.f_iosize;
 	vap->va_type = IFTOVT(ip->i_mode);
-	vap->va_filerev = ip->i_modrev;
 	return (0);
 }
 
@@ -443,14 +511,13 @@ ufs_setattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vattr *vap = ap->a_vap;
 	struct vnode *vp = ap->a_vp;
 	struct inode *ip = VTOI(vp);
 	struct ucred *cred = ap->a_cred;
-	struct thread *td = ap->a_td;
+	struct thread *td = curthread;
 	int error;
 
 	/*
@@ -462,18 +529,11 @@ ufs_setattr(ap)
 	    ((int)vap->va_bytes != VNOVAL) || (vap->va_gen != VNOVAL)) {
 		return (EINVAL);
 	}
-	/*
-	 * Mark for update the file's access time for vfs_mark_atime().
-	 * We are doing this here to avoid some of the checks done
-	 * below -- this operation is done by request of the kernel and
-	 * should bypass some security checks.  Things like read-only
-	 * checks get handled by other levels (e.g., ffs_update()).
-	 */
-	if (vap->va_vaflags & VA_MARK_ATIME) {
-		ip->i_flag |= IN_ACCESS;
-		return (0);
-	}
 	if (vap->va_flags != VNOVAL) {
+		if ((vap->va_flags & ~(UF_NODUMP | UF_IMMUTABLE | UF_APPEND |
+		    UF_OPAQUE | UF_NOUNLINK | SF_ARCHIVED | SF_IMMUTABLE |
+		    SF_APPEND | SF_NOUNLINK | SF_SNAPSHOT)) != 0)
+			return (EOPNOTSUPP);
 		if (vp->v_mount->mnt_flag & MNT_RDONLY)
 			return (EROFS);
 		/*
@@ -493,8 +553,8 @@ ufs_setattr(ap)
 		 * processes.
 		 */
 		if (!priv_check_cred(cred, PRIV_VFS_SYSFLAGS, 0)) {
-			if (ip->i_flags
-			    & (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND)) {
+			if (ip->i_flags &
+			    (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND)) {
 				error = securelevel_gt(cred, 0);
 				if (error)
 					return (error);
@@ -508,8 +568,8 @@ ufs_setattr(ap)
 			ip->i_flags = vap->va_flags;
 			DIP_SET(ip, i_flags, vap->va_flags);
 		} else {
-			if (ip->i_flags
-			    & (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND) ||
+			if (ip->i_flags &
+			    (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND) ||
 			    (vap->va_flags & UF_SETTABLE) != vap->va_flags)
 				return (EPERM);
 			ip->i_flags &= SF_SETTABLE;
@@ -517,9 +577,15 @@ ufs_setattr(ap)
 			DIP_SET(ip, i_flags, ip->i_flags);
 		}
 		ip->i_flag |= IN_CHANGE;
-		if (vap->va_flags & (IMMUTABLE | APPEND))
-			return (0);
+		error = UFS_UPDATE(vp, 0);
+		if (ip->i_flags & (IMMUTABLE | APPEND))
+			return (error);
 	}
+	/*
+	 * If immutable or append, no one can change any of its attributes
+	 * except the ones already handled (in some cases, file flags
+	 * including the immutability flags themselves for the superuser).
+	 */
 	if (ip->i_flags & (IMMUTABLE | APPEND))
 		return (EPERM);
 	/*
@@ -589,11 +655,20 @@ ufs_setattr(ap)
 		 * check succeeds.
 		 */
 		if (vap->va_vaflags & VA_UTIMES_NULL) {
-			error = VOP_ACCESS(vp, VADMIN, cred, td);
+			/*
+			 * NFSv4.1, draft 21, 6.2.1.3.1, Discussion of Mask Attributes
+			 *
+			 * "A user having ACL_WRITE_DATA or ACL_WRITE_ATTRIBUTES
+			 * will be allowed to set the times [..] to the current
+			 * server time."
+			 *
+			 * XXX: Calling it four times seems a little excessive.
+			 */
+			error = VOP_ACCESSX(vp, VWRITE_ATTRIBUTES, cred, td);
 			if (error)
 				error = VOP_ACCESS(vp, VWRITE, cred, td);
 		} else
-			error = VOP_ACCESS(vp, VADMIN, cred, td);
+			error = VOP_ACCESSX(vp, VWRITE_ATTRIBUTES, cred, td);
 		if (error)
 			return (error);
 		if (vap->va_atime.tv_sec != VNOVAL)
@@ -633,6 +708,54 @@ ufs_setattr(ap)
 	return (error);
 }
 
+#ifdef UFS_ACL
+static int
+ufs_update_nfs4_acl_after_mode_change(struct vnode *vp, int mode,
+    int file_owner_id, struct ucred *cred, struct thread *td)
+{
+	int error;
+	struct acl *aclp;
+
+	aclp = acl_alloc(M_WAITOK);
+	error = ufs_getacl_nfs4_internal(vp, aclp, td);
+	/*
+	 * We don't have to handle EOPNOTSUPP here, as the filesystem claims
+	 * it supports ACLs.
+	 */
+	if (error)
+		goto out;
+
+	acl_nfs4_sync_acl_from_mode(aclp, mode, file_owner_id);
+	error = ufs_setacl_nfs4_internal(vp, aclp, td);
+
+out:
+	acl_free(aclp);
+	return (error);
+}
+#endif /* UFS_ACL */
+
+/*
+ * Mark this file's access time for update for vfs_mark_atime().  This
+ * is called from execve() and mmap().
+ */
+static int
+ufs_markatime(ap)
+	struct vop_markatime_args /* {
+		struct vnode *a_vp;
+	} */ *ap;
+{
+	struct vnode *vp = ap->a_vp;
+	struct inode *ip = VTOI(vp);
+
+	VI_LOCK(vp);
+	ip->i_flag |= IN_ACCESS;
+	VI_UNLOCK(vp);
+	/*
+	 * XXXKIB No UFS_UPDATE(ap->a_vp, 0) there.
+	 */
+	return (0);
+}
+
 /*
  * Change the mode on a file.
  * Inode must be locked before calling.
@@ -651,7 +774,7 @@ ufs_chmod(vp, mode, cred, td)
 	 * To modify the permissions on a file, must possess VADMIN
 	 * for that file.
 	 */
-	if ((error = VOP_ACCESS(vp, VADMIN, cred, td)))
+	if ((error = VOP_ACCESSX(vp, VWRITE_ACL, cred, td)))
 		return (error);
 	/*
 	 * Privileged processes may set the sticky bit on non-directories,
@@ -668,11 +791,28 @@ ufs_chmod(vp, mode, cred, td)
 		if (error)
 			return (error);
 	}
+
+	/*
+	 * Deny setting setuid if we are not the file owner.
+	 */
+	if ((mode & ISUID) && ip->i_uid != cred->cr_uid) {
+		error = priv_check_cred(cred, PRIV_VFS_ADMIN, 0);
+		if (error)
+			return (error);
+	}
+
 	ip->i_mode &= ~ALLPERMS;
 	ip->i_mode |= (mode & ALLPERMS);
 	DIP_SET(ip, i_mode, ip->i_mode);
 	ip->i_flag |= IN_CHANGE;
-	return (0);
+#ifdef UFS_ACL
+	if ((vp->v_mount->mnt_flag & MNT_NFS4ACLS) != 0)
+		error = ufs_update_nfs4_acl_after_mode_change(vp, mode, ip->i_uid, cred, td);
+#endif
+	if (error == 0 && (ip->i_flag & IN_CHANGE) != 0)
+		error = UFS_UPDATE(vp, 0);
+
+	return (error);
 }
 
 /*
@@ -704,14 +844,14 @@ ufs_chown(vp, uid, gid, cred, td)
 	 * To modify the ownership of a file, must possess VADMIN for that
 	 * file.
 	 */
-	if ((error = VOP_ACCESS(vp, VADMIN, cred, td)))
+	if ((error = VOP_ACCESSX(vp, VWRITE_OWNER, cred, td)))
 		return (error);
 	/*
 	 * To change the owner of a file, or change the group of a file to a
 	 * group of which we are not a member, the caller must have
 	 * privilege.
 	 */
-	if ((uid != ip->i_uid || 
+	if (((uid != ip->i_uid && uid != cred->cr_uid) || 
 	    (gid != ip->i_gid && !groupmember(gid, cred))) &&
 	    (error = priv_check_cred(cred, PRIV_VFS_CHOWN, 0)))
 		return (error);
@@ -790,7 +930,8 @@ good:
 			DIP_SET(ip, i_mode, ip->i_mode);
 		}
 	}
-	return (0);
+	error = UFS_UPDATE(vp, 0);
+	return (error);
 }
 
 static int
@@ -830,9 +971,9 @@ ufs_remove(ap)
 		 * while holding the snapshot vnode locked, assuming
 		 * that the directory hasn't been unlinked too.
 		 */
-		VOP_UNLOCK(vp, 0, td);
+		VOP_UNLOCK(vp, 0);
 		(void) VOP_FSYNC(dvp, MNT_WAIT, td);
-		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 	}
 out:
 	return (error);
@@ -856,7 +997,7 @@ ufs_link(ap)
 	struct direct newdir;
 	int error;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ufs_link: no name");
 #endif
@@ -864,9 +1005,20 @@ ufs_link(ap)
 		error = EXDEV;
 		goto out;
 	}
+	if (VTOI(tdvp)->i_effnlink < 2)
+		panic("ufs_link: Bad link count %d on parent",
+		    VTOI(tdvp)->i_effnlink);
 	ip = VTOI(vp);
 	if ((nlink_t)ip->i_nlink >= LINK_MAX) {
 		error = EMLINK;
+		goto out;
+	}
+	/*
+	 * The file may have been removed after namei droped the original
+	 * lock.
+	 */
+	if (ip->i_effnlink == 0) {
+		error = ENOENT;
 		goto out;
 	}
 	if (ip->i_flags & (IMMUTABLE | APPEND)) {
@@ -878,11 +1030,11 @@ ufs_link(ap)
 	DIP_SET(ip, i_nlink, ip->i_nlink);
 	ip->i_flag |= IN_CHANGE;
 	if (DOINGSOFTDEP(vp))
-		softdep_change_linkcnt(ip);
+		softdep_setup_link(VTOI(tdvp), ip);
 	error = UFS_UPDATE(vp, !(DOINGSOFTDEP(vp) | DOINGASYNC(vp)));
 	if (!error) {
 		ufs_makedirentry(ip, cnp, &newdir);
-		error = ufs_direnter(tdvp, vp, &newdir, cnp, NULL);
+		error = ufs_direnter(tdvp, vp, &newdir, cnp, NULL, 0);
 	}
 
 	if (error) {
@@ -891,7 +1043,7 @@ ufs_link(ap)
 		DIP_SET(ip, i_nlink, ip->i_nlink);
 		ip->i_flag |= IN_CHANGE;
 		if (DOINGSOFTDEP(vp))
-			softdep_change_linkcnt(ip);
+			softdep_revert_link(VTOI(tdvp), ip);
 	}
 out:
 	return (error);
@@ -922,7 +1074,7 @@ ufs_whiteout(ap)
 
 	case CREATE:
 		/* create a new directory whiteout */
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 		if ((cnp->cn_flags & SAVENAME) == 0)
 			panic("ufs_whiteout: missing name");
 		if (dvp->v_mount->mnt_maxsymlinklen <= 0)
@@ -933,12 +1085,12 @@ ufs_whiteout(ap)
 		newdir.d_namlen = cnp->cn_namelen;
 		bcopy(cnp->cn_nameptr, newdir.d_name, (unsigned)cnp->cn_namelen + 1);
 		newdir.d_type = DT_WHT;
-		error = ufs_direnter(dvp, NULL, &newdir, cnp, NULL);
+		error = ufs_direnter(dvp, NULL, &newdir, cnp, NULL, 0);
 		break;
 
 	case DELETE:
 		/* remove an existing directory whiteout */
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 		if (dvp->v_mount->mnt_maxsymlinklen <= 0)
 			panic("ufs_whiteout: old format filesystem");
 #endif
@@ -951,6 +1103,11 @@ ufs_whiteout(ap)
 	}
 	return (error);
 }
+
+static volatile int rename_restarts;
+SYSCTL_INT(_vfs_ufs, OID_AUTO, rename_restarts, CTLFLAG_RD,
+    __DEVOLATILE(int *, &rename_restarts), 0,
+    "Times rename had to restart due to lock contention");
 
 /*
  * Rename system call.
@@ -991,110 +1148,185 @@ ufs_rename(ap)
 	struct vnode *tdvp = ap->a_tdvp;
 	struct vnode *fvp = ap->a_fvp;
 	struct vnode *fdvp = ap->a_fdvp;
+	struct vnode *nvp;
 	struct componentname *tcnp = ap->a_tcnp;
 	struct componentname *fcnp = ap->a_fcnp;
 	struct thread *td = fcnp->cn_thread;
-	struct inode *ip, *xp, *dp;
+	struct inode *fip, *tip, *tdp, *fdp;
 	struct direct newdir;
-	int doingdirectory = 0, oldparent = 0, newparent = 0;
-	int error = 0, ioflag;
+	off_t endoff;
+	int doingdirectory, newparent;
+	int error = 0;
+	struct mount *mp;
+	ino_t ino;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((tcnp->cn_flags & HASBUF) == 0 ||
 	    (fcnp->cn_flags & HASBUF) == 0)
 		panic("ufs_rename: no name");
 #endif
+	endoff = 0;
+	mp = tdvp->v_mount;
+	VOP_UNLOCK(tdvp, 0);
+	if (tvp && tvp != tdvp)
+		VOP_UNLOCK(tvp, 0);
 	/*
 	 * Check for cross-device rename.
 	 */
 	if ((fvp->v_mount != tdvp->v_mount) ||
 	    (tvp && (fvp->v_mount != tvp->v_mount))) {
 		error = EXDEV;
-abortit:
-		if (tdvp == tvp)
-			vrele(tdvp);
-		else
-			vput(tdvp);
-		if (tvp)
-			vput(tvp);
-		vrele(fdvp);
-		vrele(fvp);
-		return (error);
+		mp = NULL;
+		goto releout;
 	}
-
+	error = vfs_busy(mp, 0);
+	if (error) {
+		mp = NULL;
+		goto releout;
+	}
+relock:
+	/* 
+	 * We need to acquire 2 to 4 locks depending on whether tvp is NULL
+	 * and fdvp and tdvp are the same directory.  Subsequently we need
+	 * to double-check all paths and in the directory rename case we
+	 * need to verify that we are not creating a directory loop.  To
+	 * handle this we acquire all but fdvp using non-blocking
+	 * acquisitions.  If we fail to acquire any lock in the path we will
+	 * drop all held locks, acquire the new lock in a blocking fashion,
+	 * and then release it and restart the rename.  This acquire/release
+	 * step ensures that we do not spin on a lock waiting for release.
+	 */
+	error = vn_lock(fdvp, LK_EXCLUSIVE);
+	if (error)
+		goto releout;
+	if (vn_lock(tdvp, LK_EXCLUSIVE | LK_NOWAIT) != 0) {
+		VOP_UNLOCK(fdvp, 0);
+		error = vn_lock(tdvp, LK_EXCLUSIVE);
+		if (error)
+			goto releout;
+		VOP_UNLOCK(tdvp, 0);
+		atomic_add_int(&rename_restarts, 1);
+		goto relock;
+	}
+	/*
+	 * Re-resolve fvp to be certain it still exists and fetch the
+	 * correct vnode.
+	 */
+	error = ufs_lookup_ino(fdvp, NULL, fcnp, &ino);
+	if (error) {
+		VOP_UNLOCK(fdvp, 0);
+		VOP_UNLOCK(tdvp, 0);
+		goto releout;
+	}
+	error = VFS_VGET(mp, ino, LK_EXCLUSIVE | LK_NOWAIT, &nvp);
+	if (error) {
+		VOP_UNLOCK(fdvp, 0);
+		VOP_UNLOCK(tdvp, 0);
+		if (error != EBUSY)
+			goto releout;
+		error = VFS_VGET(mp, ino, LK_EXCLUSIVE, &nvp);
+		if (error != 0)
+			goto releout;
+		VOP_UNLOCK(nvp, 0);
+		vrele(fvp);
+		fvp = nvp;
+		atomic_add_int(&rename_restarts, 1);
+		goto relock;
+	}
+	vrele(fvp);
+	fvp = nvp;
+	/*
+	 * Re-resolve tvp and acquire the vnode lock if present.
+	 */
+	error = ufs_lookup_ino(tdvp, NULL, tcnp, &ino);
+	if (error != 0 && error != EJUSTRETURN) {
+		VOP_UNLOCK(fdvp, 0);
+		VOP_UNLOCK(tdvp, 0);
+		VOP_UNLOCK(fvp, 0);
+		goto releout;
+	}
+	/*
+	 * If tvp disappeared we just carry on.
+	 */
+	if (error == EJUSTRETURN && tvp != NULL) {
+		vrele(tvp);
+		tvp = NULL;
+	}
+	/*
+	 * Get the tvp ino if the lookup succeeded.  We may have to restart
+	 * if the non-blocking acquire fails.
+	 */
+	if (error == 0) {
+		nvp = NULL;
+		error = VFS_VGET(mp, ino, LK_EXCLUSIVE | LK_NOWAIT, &nvp);
+		if (tvp)
+			vrele(tvp);
+		tvp = nvp;
+		if (error) {
+			VOP_UNLOCK(fdvp, 0);
+			VOP_UNLOCK(tdvp, 0);
+			VOP_UNLOCK(fvp, 0);
+			if (error != EBUSY)
+				goto releout;
+			error = VFS_VGET(mp, ino, LK_EXCLUSIVE, &nvp);
+			if (error != 0)
+				goto releout;
+			VOP_UNLOCK(nvp, 0);
+			atomic_add_int(&rename_restarts, 1);
+			goto relock;
+		}
+	}
+	fdp = VTOI(fdvp);
+	fip = VTOI(fvp);
+	tdp = VTOI(tdvp);
+	tip = NULL;
+	if (tvp)
+		tip = VTOI(tvp);
 	if (tvp && ((VTOI(tvp)->i_flags & (NOUNLINK | IMMUTABLE | APPEND)) ||
 	    (VTOI(tdvp)->i_flags & APPEND))) {
 		error = EPERM;
-		goto abortit;
+		goto unlockout;
 	}
-
 	/*
 	 * Renaming a file to itself has no effect.  The upper layers should
-	 * not call us in that case.  Temporarily just warn if they do.
+	 * not call us in that case.  However, things could change after
+	 * we drop the locks above.
 	 */
 	if (fvp == tvp) {
-		printf("ufs_rename: fvp == tvp (can't happen)\n");
 		error = 0;
-		goto abortit;
+		goto unlockout;
 	}
-
-	if ((error = vn_lock(fvp, LK_EXCLUSIVE, td)) != 0)
-		goto abortit;
-	dp = VTOI(fdvp);
-	ip = VTOI(fvp);
-	if (ip->i_nlink >= LINK_MAX) {
-		VOP_UNLOCK(fvp, 0, td);
+	doingdirectory = 0;
+	newparent = 0;
+	ino = fip->i_number;
+	if (fip->i_nlink >= LINK_MAX) {
 		error = EMLINK;
-		goto abortit;
+		goto unlockout;
 	}
-	if ((ip->i_flags & (NOUNLINK | IMMUTABLE | APPEND))
-	    || (dp->i_flags & APPEND)) {
-		VOP_UNLOCK(fvp, 0, td);
+	if ((fip->i_flags & (NOUNLINK | IMMUTABLE | APPEND))
+	    || (fdp->i_flags & APPEND)) {
 		error = EPERM;
-		goto abortit;
+		goto unlockout;
 	}
-	if ((ip->i_mode & IFMT) == IFDIR) {
+	if ((fip->i_mode & IFMT) == IFDIR) {
 		/*
 		 * Avoid ".", "..", and aliases of "." for obvious reasons.
 		 */
 		if ((fcnp->cn_namelen == 1 && fcnp->cn_nameptr[0] == '.') ||
-		    dp == ip || (fcnp->cn_flags | tcnp->cn_flags) & ISDOTDOT ||
-		    (ip->i_flag & IN_RENAME)) {
-			VOP_UNLOCK(fvp, 0, td);
+		    fdp == fip ||
+		    (fcnp->cn_flags | tcnp->cn_flags) & ISDOTDOT) {
 			error = EINVAL;
-			goto abortit;
+			goto unlockout;
 		}
-		ip->i_flag |= IN_RENAME;
-		oldparent = dp->i_number;
+		if (fdp->i_number != tdp->i_number)
+			newparent = tdp->i_number;
 		doingdirectory = 1;
 	}
-	vrele(fdvp);
-
-	/*
-	 * When the target exists, both the directory
-	 * and target vnodes are returned locked.
-	 */
-	dp = VTOI(tdvp);
-	xp = NULL;
-	if (tvp)
-		xp = VTOI(tvp);
-
-	/*
-	 * 1) Bump link count while we're moving stuff
-	 *    around.  If we crash somewhere before
-	 *    completing our work, the link count
-	 *    may be wrong, but correctable.
-	 */
-	ip->i_effnlink++;
-	ip->i_nlink++;
-	DIP_SET(ip, i_nlink, ip->i_nlink);
-	ip->i_flag |= IN_CHANGE;
-	if (DOINGSOFTDEP(fvp))
-		softdep_change_linkcnt(ip);
-	if ((error = UFS_UPDATE(fvp, !(DOINGSOFTDEP(fvp) |
-				       DOINGASYNC(fvp)))) != 0) {
-		VOP_UNLOCK(fvp, 0, td);
-		goto bad;
+	if ((fvp->v_type == VDIR && fvp->v_mountedhere != NULL) ||
+	    (tvp != NULL && tvp->v_type == VDIR &&
+	    tvp->v_mountedhere != NULL)) {
+		error = EXDEV;
+		goto unlockout;
 	}
 
 	/*
@@ -1103,34 +1335,55 @@ abortit:
 	 * directory hierarchy above the target, as this would
 	 * orphan everything below the source directory. Also
 	 * the user must have write permission in the source so
-	 * as to be able to change "..". We must repeat the call
-	 * to namei, as the parent directory is unlocked by the
-	 * call to checkpath().
+	 * as to be able to change "..".
 	 */
-	error = VOP_ACCESS(fvp, VWRITE, tcnp->cn_cred, tcnp->cn_thread);
-	VOP_UNLOCK(fvp, 0, td);
-	if (oldparent != dp->i_number)
-		newparent = dp->i_number;
 	if (doingdirectory && newparent) {
-		if (error)	/* write access check above */
-			goto bad;
-		if (xp != NULL)
-			vput(tvp);
-		error = ufs_checkpath(ip, dp, tcnp->cn_cred);
+		error = VOP_ACCESS(fvp, VWRITE, tcnp->cn_cred, tcnp->cn_thread);
 		if (error)
-			goto out;
+			goto unlockout;
+		error = ufs_checkpath(ino, fdp->i_number, tdp, tcnp->cn_cred,
+		    &ino);
+		/*
+		 * We encountered a lock that we have to wait for.  Unlock
+		 * everything else and VGET before restarting.
+		 */
+		if (ino) {
+			VOP_UNLOCK(fdvp, 0);
+			VOP_UNLOCK(fvp, 0);
+			VOP_UNLOCK(tdvp, 0);
+			if (tvp)
+				VOP_UNLOCK(tvp, 0);
+			error = VFS_VGET(mp, ino, LK_SHARED, &nvp);
+			if (error == 0)
+				vput(nvp);
+			atomic_add_int(&rename_restarts, 1);
+			goto relock;
+		}
+		if (error)
+			goto unlockout;
 		if ((tcnp->cn_flags & SAVESTART) == 0)
 			panic("ufs_rename: lost to startdir");
-		VREF(tdvp);
-		error = relookup(tdvp, &tvp, tcnp);
-		if (error)
-			goto out;
-		vrele(tdvp);
-		dp = VTOI(tdvp);
-		xp = NULL;
-		if (tvp)
-			xp = VTOI(tvp);
 	}
+	if (fip->i_effnlink == 0 || fdp->i_effnlink == 0 ||
+	    tdp->i_effnlink == 0)
+		panic("Bad effnlink fip %p, fdp %p, tdp %p", fip, fdp, tdp);
+
+	/*
+	 * 1) Bump link count while we're moving stuff
+	 *    around.  If we crash somewhere before
+	 *    completing our work, the link count
+	 *    may be wrong, but correctable.
+	 */
+	fip->i_effnlink++;
+	fip->i_nlink++;
+	DIP_SET(fip, i_nlink, fip->i_nlink);
+	fip->i_flag |= IN_CHANGE;
+	if (DOINGSOFTDEP(fvp))
+		softdep_setup_link(tdp, fip);
+	error = UFS_UPDATE(fvp, !(DOINGSOFTDEP(fvp) | DOINGASYNC(fvp)));
+	if (error)
+		goto bad;
+
 	/*
 	 * 2) If target doesn't exist, link the target
 	 *    to the source and unlink the source.
@@ -1138,52 +1391,37 @@ abortit:
 	 *    entry to reference the source inode and
 	 *    expunge the original entry's existence.
 	 */
-	if (xp == NULL) {
-		if (dp->i_dev != ip->i_dev)
+	if (tip == NULL) {
+		if (tdp->i_dev != fip->i_dev)
 			panic("ufs_rename: EXDEV");
-		/*
-		 * Account for ".." in new directory.
-		 * When source and destination have the same
-		 * parent we don't fool with the link count.
-		 */
 		if (doingdirectory && newparent) {
-			if ((nlink_t)dp->i_nlink >= LINK_MAX) {
+			/*
+			 * Account for ".." in new directory.
+			 * When source and destination have the same
+			 * parent we don't adjust the link count.  The
+			 * actual link modification is completed when
+			 * .. is rewritten below.
+			 */
+			if ((nlink_t)tdp->i_nlink >= LINK_MAX) {
 				error = EMLINK;
 				goto bad;
 			}
-			dp->i_effnlink++;
-			dp->i_nlink++;
-			DIP_SET(dp, i_nlink, dp->i_nlink);
-			dp->i_flag |= IN_CHANGE;
-			if (DOINGSOFTDEP(tdvp))
-				softdep_change_linkcnt(dp);
-			error = UFS_UPDATE(tdvp, !(DOINGSOFTDEP(tdvp) |
-						   DOINGASYNC(tdvp)));
-			if (error)
-				goto bad;
 		}
-		ufs_makedirentry(ip, tcnp, &newdir);
-		error = ufs_direnter(tdvp, NULL, &newdir, tcnp, NULL);
-		if (error) {
-			if (doingdirectory && newparent) {
-				dp->i_effnlink--;
-				dp->i_nlink--;
-				DIP_SET(dp, i_nlink, dp->i_nlink);
-				dp->i_flag |= IN_CHANGE;
-				if (DOINGSOFTDEP(tdvp))
-					softdep_change_linkcnt(dp);
-				(void)UFS_UPDATE(tdvp, 1);
-			}
+		ufs_makedirentry(fip, tcnp, &newdir);
+		error = ufs_direnter(tdvp, NULL, &newdir, tcnp, NULL, 1);
+		if (error)
 			goto bad;
-		}
-		vput(tdvp);
+		/* Setup tdvp for directory compaction if needed. */
+		if (tdp->i_count && tdp->i_endoff &&
+		    tdp->i_endoff < tdp->i_size)
+			endoff = tdp->i_endoff;
 	} else {
-		if (xp->i_dev != dp->i_dev || xp->i_dev != ip->i_dev)
+		if (tip->i_dev != tdp->i_dev || tip->i_dev != fip->i_dev)
 			panic("ufs_rename: EXDEV");
 		/*
 		 * Short circuit rename(foo, foo).
 		 */
-		if (xp->i_number == ip->i_number)
+		if (tip->i_number == fip->i_number)
 			panic("ufs_rename: same file");
 		/*
 		 * If the parent directory is "sticky", then the caller
@@ -1191,7 +1429,7 @@ abortit:
 		 * destination of the rename.  This implements append-only
 		 * directories.
 		 */
-		if ((dp->i_mode & S_ISTXT) &&
+		if ((tdp->i_mode & S_ISTXT) &&
 		    VOP_ACCESS(tdvp, VADMIN, tcnp->cn_cred, td) &&
 		    VOP_ACCESS(tvp, VADMIN, tcnp->cn_cred, td)) {
 			error = EPERM;
@@ -1202,9 +1440,9 @@ abortit:
 		 * to it. Also, ensure source and target are compatible
 		 * (both directories, or both not directories).
 		 */
-		if ((xp->i_mode&IFMT) == IFDIR) {
-			if ((xp->i_effnlink > 2) ||
-			    !ufs_dirempty(xp, dp->i_number, tcnp->cn_cred)) {
+		if ((tip->i_mode & IFMT) == IFDIR) {
+			if ((tip->i_effnlink > 2) ||
+			    !ufs_dirempty(tip, tdp->i_number, tcnp->cn_cred)) {
 				error = ENOTEMPTY;
 				goto bad;
 			}
@@ -1217,25 +1455,35 @@ abortit:
 			error = EISDIR;
 			goto bad;
 		}
-		error = ufs_dirrewrite(dp, xp, ip->i_number,
-		    IFTODT(ip->i_mode),
-		    (doingdirectory && newparent) ? newparent : doingdirectory);
-		if (error)
-			goto bad;
 		if (doingdirectory) {
 			if (!newparent) {
-				dp->i_effnlink--;
+				tdp->i_effnlink--;
 				if (DOINGSOFTDEP(tdvp))
-					softdep_change_linkcnt(dp);
+					softdep_change_linkcnt(tdp);
 			}
-			xp->i_effnlink--;
+			tip->i_effnlink--;
 			if (DOINGSOFTDEP(tvp))
-				softdep_change_linkcnt(xp);
+				softdep_change_linkcnt(tip);
+		}
+		error = ufs_dirrewrite(tdp, tip, fip->i_number,
+		    IFTODT(fip->i_mode),
+		    (doingdirectory && newparent) ? newparent : doingdirectory);
+		if (error) {
+			if (doingdirectory) {
+				if (!newparent) {
+					tdp->i_effnlink++;
+					if (DOINGSOFTDEP(tdvp))
+						softdep_change_linkcnt(tdp);
+				}
+				tip->i_effnlink++;
+				if (DOINGSOFTDEP(tvp))
+					softdep_change_linkcnt(tip);
+			}
 		}
 		if (doingdirectory && !DOINGSOFTDEP(tvp)) {
 			/*
-			 * Truncate inode. The only stuff left in the directory
-			 * is "." and "..". The "." reference is inconsequential
+			 * The only stuff left in the directory is "."
+			 * and "..". The "." reference is inconsequential
 			 * since we are quashing it. We have removed the "."
 			 * reference and the reference in the parent directory,
 			 * but there may be other hard links. The soft
@@ -1245,117 +1493,304 @@ abortit:
 			 * them now.
 			 */
 			if (!newparent) {
-				dp->i_nlink--;
-				DIP_SET(dp, i_nlink, dp->i_nlink);
-				dp->i_flag |= IN_CHANGE;
+				tdp->i_nlink--;
+				DIP_SET(tdp, i_nlink, tdp->i_nlink);
+				tdp->i_flag |= IN_CHANGE;
 			}
-			xp->i_nlink--;
-			DIP_SET(xp, i_nlink, xp->i_nlink);
-			xp->i_flag |= IN_CHANGE;
-			ioflag = IO_NORMAL;
-			if (!DOINGASYNC(tvp))
-				ioflag |= IO_SYNC;
-			if ((error = UFS_TRUNCATE(tvp, (off_t)0, ioflag,
-			    tcnp->cn_cred, tcnp->cn_thread)) != 0)
-				goto bad;
+			tip->i_nlink--;
+			DIP_SET(tip, i_nlink, tip->i_nlink);
+			tip->i_flag |= IN_CHANGE;
 		}
-		vput(tdvp);
-		vput(tvp);
-		xp = NULL;
 	}
 
 	/*
-	 * 3) Unlink the source.
+	 * 3) Unlink the source.  We have to resolve the path again to
+	 * fixup the directory offset and count for ufs_dirremove.
 	 */
-	fcnp->cn_flags &= ~MODMASK;
-	fcnp->cn_flags |= LOCKPARENT | LOCKLEAF;
-	if ((fcnp->cn_flags & SAVESTART) == 0)
-		panic("ufs_rename: lost from startdir");
-	VREF(fdvp);
-	error = relookup(fdvp, &fvp, fcnp);
-	if (error == 0)
-		vrele(fdvp);
-	if (fvp != NULL) {
-		xp = VTOI(fvp);
-		dp = VTOI(fdvp);
-	} else {
-		/*
-		 * From name has disappeared.  IN_RENAME is not sufficient
-		 * to protect against directory races due to timing windows,
-		 * so we have to remove the panic.  XXX the only real way
-		 * to solve this issue is at a much higher level.  By the
-		 * time we hit ufs_rename() it's too late.
-		 */
-#if 0
-		if (doingdirectory)
-			panic("ufs_rename: lost dir entry");
-#endif
-		vrele(ap->a_fvp);
-		return (0);
+	if (fdvp == tdvp) {
+		error = ufs_lookup_ino(fdvp, NULL, fcnp, &ino);
+		if (error)
+			panic("ufs_rename: from entry went away!");
+		if (ino != fip->i_number)
+			panic("ufs_rename: ino mismatch %d != %d\n", ino,
+			    fip->i_number);
 	}
 	/*
-	 * Ensure that the directory entry still exists and has not
-	 * changed while the new name has been entered. If the source is
-	 * a file then the entry may have been unlinked or renamed. In
-	 * either case there is no further work to be done. If the source
-	 * is a directory then it cannot have been rmdir'ed; the IN_RENAME
-	 * flag ensures that it cannot be moved by another rename or removed
-	 * by a rmdir.
+	 * If the source is a directory with a
+	 * new parent, the link count of the old
+	 * parent directory must be decremented
+	 * and ".." set to point to the new parent.
 	 */
-	if (xp != ip) {
+	if (doingdirectory && newparent) {
 		/*
-		 * From name resolves to a different inode.  IN_RENAME is
-		 * not sufficient protection against timing window races
-		 * so we can't panic here.  XXX the only real way
-		 * to solve this issue is at a much higher level.  By the
-		 * time we hit ufs_rename() it's too late.
+		 * If tip exists we simply use its link, otherwise we must
+		 * add a new one.
 		 */
-#if 0
-		if (doingdirectory)
-			panic("ufs_rename: lost dir entry");
-#endif
-	} else {
-		/*
-		 * If the source is a directory with a
-		 * new parent, the link count of the old
-		 * parent directory must be decremented
-		 * and ".." set to point to the new parent.
-		 */
-		if (doingdirectory && newparent) {
-			xp->i_offset = mastertemplate.dot_reclen;
-			ufs_dirrewrite(xp, dp, newparent, DT_DIR, 0);
-			cache_purge(fdvp);
-		}
-		error = ufs_dirremove(fdvp, xp, fcnp->cn_flags, 0);
-		xp->i_flag &= ~IN_RENAME;
+		if (tip == NULL) {
+			tdp->i_effnlink++;
+			tdp->i_nlink++;
+			DIP_SET(tdp, i_nlink, tdp->i_nlink);
+			tdp->i_flag |= IN_CHANGE;
+			if (DOINGSOFTDEP(tdvp))
+				softdep_setup_dotdot_link(tdp, fip);
+			error = UFS_UPDATE(tdvp, !(DOINGSOFTDEP(tdvp) |
+						   DOINGASYNC(tdvp)));
+			/* Don't go to bad here as the new link exists. */
+			if (error)
+				goto unlockout;
+		} else if (DOINGSUJ(tdvp))
+			/* Journal must account for each new link. */
+			softdep_setup_dotdot_link(tdp, fip);
+		fip->i_offset = mastertemplate.dot_reclen;
+		ufs_dirrewrite(fip, fdp, newparent, DT_DIR, 0);
+		cache_purge(fdvp);
 	}
-	if (dp)
-		vput(fdvp);
-	if (xp)
-		vput(fvp);
-	vrele(ap->a_fvp);
+	error = ufs_dirremove(fdvp, fip, fcnp->cn_flags, 0);
+	/*
+	 * The kern_renameat() looks up the fvp using the DELETE flag, which
+	 * causes the removal of the name cache entry for fvp.
+	 * As the relookup of the fvp is done in two steps:
+	 * ufs_lookup_ino() and then VFS_VGET(), another thread might do a
+	 * normal lookup of the from name just before the VFS_VGET() call,
+	 * causing the cache entry to be re-instantiated.
+	 *
+	 * The same issue also applies to tvp if it exists as
+	 * otherwise we may have a stale name cache entry for the new
+	 * name that references the old i-node if it has other links
+	 * or open file descriptors.
+	 */
+	cache_purge(fvp);
+	if (tvp)
+		cache_purge(tvp);
+
+unlockout:
+	vput(fdvp);
+	vput(fvp);
+	if (tvp)
+		vput(tvp);
+	/*
+	 * If compaction or fsync was requested do it now that other locks
+	 * are no longer needed.
+	 */
+	if (error == 0 && endoff != 0) {
+#ifdef UFS_DIRHASH
+		if (tdp->i_dirhash != NULL)
+			ufsdirhash_dirtrunc(tdp, endoff);
+#endif
+		UFS_TRUNCATE(tdvp, endoff, IO_NORMAL | IO_SYNC, tcnp->cn_cred,
+		    td);
+	}
+	if (error == 0 && tdp->i_flag & IN_NEEDSYNC)
+		error = VOP_FSYNC(tdvp, MNT_WAIT, td);
+	vput(tdvp);
+	if (mp)
+		vfs_unbusy(mp);
 	return (error);
 
 bad:
-	if (xp)
-		vput(ITOV(xp));
-	vput(ITOV(dp));
-out:
-	if (doingdirectory)
-		ip->i_flag &= ~IN_RENAME;
-	if (vn_lock(fvp, LK_EXCLUSIVE, td) == 0) {
-		ip->i_effnlink--;
-		ip->i_nlink--;
-		DIP_SET(ip, i_nlink, ip->i_nlink);
-		ip->i_flag |= IN_CHANGE;
-		ip->i_flag &= ~IN_RENAME;
-		if (DOINGSOFTDEP(fvp))
-			softdep_change_linkcnt(ip);
-		vput(fvp);
-	} else
-		vrele(fvp);
+	fip->i_effnlink--;
+	fip->i_nlink--;
+	DIP_SET(fip, i_nlink, fip->i_nlink);
+	fip->i_flag |= IN_CHANGE;
+	if (DOINGSOFTDEP(fvp))
+		softdep_revert_link(tdp, fip);
+	goto unlockout;
+
+releout:
+	vrele(fdvp);
+	vrele(fvp);
+	vrele(tdvp);
+	if (tvp)
+		vrele(tvp);
+	if (mp)
+		vfs_unbusy(mp);
+
 	return (error);
 }
+
+#ifdef UFS_ACL
+static int
+ufs_do_posix1e_acl_inheritance_dir(struct vnode *dvp, struct vnode *tvp,
+    mode_t dmode, struct ucred *cred, struct thread *td)
+{
+	int error;
+	struct inode *ip = VTOI(tvp);
+	struct acl *dacl, *acl;
+
+	acl = acl_alloc(M_WAITOK);
+	dacl = acl_alloc(M_WAITOK);
+
+	/*
+	 * Retrieve default ACL from parent, if any.
+	 */
+	error = VOP_GETACL(dvp, ACL_TYPE_DEFAULT, acl, cred, td);
+	switch (error) {
+	case 0:
+		/*
+		 * Retrieved a default ACL, so merge mode and ACL if
+		 * necessary.  If the ACL is empty, fall through to
+		 * the "not defined or available" case.
+		 */
+		if (acl->acl_cnt != 0) {
+			dmode = acl_posix1e_newfilemode(dmode, acl);
+			ip->i_mode = dmode;
+			DIP_SET(ip, i_mode, dmode);
+			*dacl = *acl;
+			ufs_sync_acl_from_inode(ip, acl);
+			break;
+		}
+		/* FALLTHROUGH */
+
+	case EOPNOTSUPP:
+		/*
+		 * Just use the mode as-is.
+		 */
+		ip->i_mode = dmode;
+		DIP_SET(ip, i_mode, dmode);
+		error = 0;
+		goto out;
+	
+	default:
+		goto out;
+	}
+
+	/*
+	 * XXX: If we abort now, will Soft Updates notify the extattr
+	 * code that the EAs for the file need to be released?
+	 */
+	error = VOP_SETACL(tvp, ACL_TYPE_ACCESS, acl, cred, td);
+	if (error == 0)
+		error = VOP_SETACL(tvp, ACL_TYPE_DEFAULT, dacl, cred, td);
+	switch (error) {
+	case 0:
+		break;
+
+	case EOPNOTSUPP:
+		/*
+		 * XXX: This should not happen, as EOPNOTSUPP above
+		 * was supposed to free acl.
+		 */
+		printf("ufs_mkdir: VOP_GETACL() but no VOP_SETACL()\n");
+		/*
+		panic("ufs_mkdir: VOP_GETACL() but no VOP_SETACL()");
+		 */
+		break;
+
+	default:
+		goto out;
+	}
+
+out:
+	acl_free(acl);
+	acl_free(dacl);
+
+	return (error);
+}
+
+static int
+ufs_do_posix1e_acl_inheritance_file(struct vnode *dvp, struct vnode *tvp,
+    mode_t mode, struct ucred *cred, struct thread *td)
+{
+	int error;
+	struct inode *ip = VTOI(tvp);
+	struct acl *acl;
+
+	acl = acl_alloc(M_WAITOK);
+
+	/*
+	 * Retrieve default ACL for parent, if any.
+	 */
+	error = VOP_GETACL(dvp, ACL_TYPE_DEFAULT, acl, cred, td);
+	switch (error) {
+	case 0:
+		/*
+		 * Retrieved a default ACL, so merge mode and ACL if
+		 * necessary.
+		 */
+		if (acl->acl_cnt != 0) {
+			/*
+			 * Two possible ways for default ACL to not
+			 * be present.  First, the EA can be
+			 * undefined, or second, the default ACL can
+			 * be blank.  If it's blank, fall through to
+			 * the it's not defined case.
+			 */
+			mode = acl_posix1e_newfilemode(mode, acl);
+			ip->i_mode = mode;
+			DIP_SET(ip, i_mode, mode);
+			ufs_sync_acl_from_inode(ip, acl);
+			break;
+		}
+		/* FALLTHROUGH */
+
+	case EOPNOTSUPP:
+		/*
+		 * Just use the mode as-is.
+		 */
+		ip->i_mode = mode;
+		DIP_SET(ip, i_mode, mode);
+		error = 0;
+		goto out;
+
+	default:
+		goto out;
+	}
+
+	/*
+	 * XXX: If we abort now, will Soft Updates notify the extattr
+	 * code that the EAs for the file need to be released?
+	 */
+	error = VOP_SETACL(tvp, ACL_TYPE_ACCESS, acl, cred, td);
+	switch (error) {
+	case 0:
+		break;
+
+	case EOPNOTSUPP:
+		/*
+		 * XXX: This should not happen, as EOPNOTSUPP above was
+		 * supposed to free acl.
+		 */
+		printf("ufs_makeinode: VOP_GETACL() but no "
+		    "VOP_SETACL()\n");
+		/* panic("ufs_makeinode: VOP_GETACL() but no "
+		    "VOP_SETACL()"); */
+		break;
+
+	default:
+		goto out;
+	}
+
+out:
+	acl_free(acl);
+
+	return (error);
+}
+
+static int
+ufs_do_nfs4_acl_inheritance(struct vnode *dvp, struct vnode *tvp,
+    mode_t child_mode, struct ucred *cred, struct thread *td)
+{
+	int error;
+	struct acl *parent_aclp, *child_aclp;
+
+	parent_aclp = acl_alloc(M_WAITOK);
+	child_aclp = acl_alloc(M_WAITOK | M_ZERO);
+
+	error = ufs_getacl_nfs4_internal(dvp, parent_aclp, td);
+	if (error)
+		goto out;
+	acl_nfs4_compute_inherited_acl(parent_aclp, child_aclp,
+	    child_mode, VTOI(tvp)->i_uid, tvp->v_type == VDIR);
+	error = ufs_setacl_nfs4_internal(tvp, child_aclp, td);
+	if (error)
+		goto out;
+out:
+	acl_free(parent_aclp);
+	acl_free(child_aclp);
+
+	return (error);
+}
+#endif
 
 /*
  * Mkdir system call
@@ -1377,13 +1812,10 @@ ufs_mkdir(ap)
 	struct buf *bp;
 	struct dirtemplate dirtemplate, *dtp;
 	struct direct newdir;
-#ifdef UFS_ACL
-	struct acl *acl, *dacl;
-#endif
 	int error, dmode;
 	long blkoff;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ufs_mkdir: no name");
 #endif
@@ -1409,6 +1841,7 @@ ufs_mkdir(ap)
 	{
 #ifdef QUOTA
 		struct ucred ucred, *ucp;
+		gid_t ucred_group;
 		ucp = cnp->cn_cred;
 #endif
 		/*
@@ -1436,6 +1869,7 @@ ufs_mkdir(ap)
 				refcount_init(&ucred.cr_ref, 1);
 				ucred.cr_uid = ip->i_uid;
 				ucred.cr_ngroups = 1;
+				ucred.cr_groups = &ucred_group;
 				ucred.cr_groups[0] = dp->i_gid;
 				ucp = &ucred;
 			}
@@ -1447,6 +1881,8 @@ ufs_mkdir(ap)
 #ifdef QUOTA
 		if ((error = getinoquota(ip)) ||
 	    	    (error = chkiq(ip, 1, ucp, 0))) {
+			if (DOINGSOFTDEP(tvp))
+				softdep_revert_link(dp, ip);
 			UFS_VFREE(tvp, ip->i_number, dmode);
 			vput(tvp);
 			return (error);
@@ -1459,6 +1895,8 @@ ufs_mkdir(ap)
 #ifdef QUOTA
 	if ((error = getinoquota(ip)) ||
 	    (error = chkiq(ip, 1, cnp->cn_cred, 0))) {
+		if (DOINGSOFTDEP(tvp))
+			softdep_revert_link(dp, ip);
 		UFS_VFREE(tvp, ip->i_number, dmode);
 		vput(tvp);
 		return (error);
@@ -1466,65 +1904,13 @@ ufs_mkdir(ap)
 #endif
 #endif	/* !SUIDDIR */
 	ip->i_flag |= IN_ACCESS | IN_CHANGE | IN_UPDATE;
-#ifdef UFS_ACL
-	acl = dacl = NULL;
-	if ((dvp->v_mount->mnt_flag & MNT_ACLS) != 0) {
-		acl = uma_zalloc(acl_zone, M_WAITOK);
-		dacl = uma_zalloc(acl_zone, M_WAITOK);
-
-		/*
-		 * Retrieve default ACL from parent, if any.
-		 */
-		error = VOP_GETACL(dvp, ACL_TYPE_DEFAULT, acl, cnp->cn_cred,
-		    cnp->cn_thread);
-		switch (error) {
-		case 0:
-			/*
-			 * Retrieved a default ACL, so merge mode and ACL if
-			 * necessary.  If the ACL is empty, fall through to
-			 * the "not defined or available" case.
-			 */
-			if (acl->acl_cnt != 0) {
-				dmode = acl_posix1e_newfilemode(dmode, acl);
-				ip->i_mode = dmode;
-				DIP_SET(ip, i_mode, dmode);
-				*dacl = *acl;
-				ufs_sync_acl_from_inode(ip, acl);
-				break;
-			}
-			/* FALLTHROUGH */
-	
-		case EOPNOTSUPP:
-			/*
-			 * Just use the mode as-is.
-			 */
-			ip->i_mode = dmode;
-			DIP_SET(ip, i_mode, dmode);
-			uma_zfree(acl_zone, acl);
-			uma_zfree(acl_zone, dacl);
-			dacl = acl = NULL;
-			break;
-		
-		default:
-			UFS_VFREE(tvp, ip->i_number, dmode);
-			vput(tvp);
-			uma_zfree(acl_zone, acl);
-			uma_zfree(acl_zone, dacl);
-			return (error);
-		}
-	} else {
-#endif /* !UFS_ACL */
-		ip->i_mode = dmode;
-		DIP_SET(ip, i_mode, dmode);
-#ifdef UFS_ACL
-	}
-#endif
+	ip->i_mode = dmode;
+	DIP_SET(ip, i_mode, dmode);
 	tvp->v_type = VDIR;	/* Rest init'd in getnewvnode(). */
 	ip->i_effnlink = 2;
 	ip->i_nlink = 2;
 	DIP_SET(ip, i_nlink, 2);
-	if (DOINGSOFTDEP(tvp))
-		softdep_change_linkcnt(ip);
+
 	if (cnp->cn_flags & ISWHITEOUT) {
 		ip->i_flags |= UF_OPAQUE;
 		DIP_SET(ip, i_flags, ip->i_flags);
@@ -1540,53 +1926,29 @@ ufs_mkdir(ap)
 	DIP_SET(dp, i_nlink, dp->i_nlink);
 	dp->i_flag |= IN_CHANGE;
 	if (DOINGSOFTDEP(dvp))
-		softdep_change_linkcnt(dp);
-	error = UFS_UPDATE(tvp, !(DOINGSOFTDEP(dvp) | DOINGASYNC(dvp)));
+		softdep_setup_mkdir(dp, ip);
+	error = UFS_UPDATE(dvp, !(DOINGSOFTDEP(dvp) | DOINGASYNC(dvp)));
 	if (error)
 		goto bad;
 #ifdef MAC
 	if (dvp->v_mount->mnt_flag & MNT_MULTILABEL) {
-		error = mac_create_vnode_extattr(cnp->cn_cred, dvp->v_mount,
+		error = mac_vnode_create_extattr(cnp->cn_cred, dvp->v_mount,
 		    dvp, tvp, cnp);
 		if (error)
 			goto bad;
 	}
 #endif
 #ifdef UFS_ACL
-	if (acl != NULL) {
-		/*
-		 * XXX: If we abort now, will Soft Updates notify the extattr
-		 * code that the EAs for the file need to be released?
-		 */
-		error = VOP_SETACL(tvp, ACL_TYPE_ACCESS, acl, cnp->cn_cred,
-		    cnp->cn_thread);
-		if (error == 0)
-			error = VOP_SETACL(tvp, ACL_TYPE_DEFAULT, dacl,
-			    cnp->cn_cred, cnp->cn_thread);
-		switch (error) {
-		case 0:
-			break;
-
-		case EOPNOTSUPP:
-			/*
-			 * XXX: This should not happen, as EOPNOTSUPP above
-			 * was supposed to free acl.
-			 */
-			printf("ufs_mkdir: VOP_GETACL() but no VOP_SETACL()\n");
-			/*
-			panic("ufs_mkdir: VOP_GETACL() but no VOP_SETACL()");
-			 */
-			break;
-
-		default:
-			uma_zfree(acl_zone, acl);
-			uma_zfree(acl_zone, dacl);
-			dacl = acl = NULL;
+	if (dvp->v_mount->mnt_flag & MNT_ACLS) {
+		error = ufs_do_posix1e_acl_inheritance_dir(dvp, tvp, dmode,
+		    cnp->cn_cred, cnp->cn_thread);
+		if (error)
 			goto bad;
-		}
-		uma_zfree(acl_zone, acl);
-		uma_zfree(acl_zone, dacl);
-		dacl = acl = NULL;
+	} else if (dvp->v_mount->mnt_flag & MNT_NFS4ACLS) {
+		error = ufs_do_nfs4_acl_inheritance(dvp, tvp, dmode,
+		    cnp->cn_cred, cnp->cn_thread);
+		if (error)
+			goto bad;
 	}
 #endif /* !UFS_ACL */
 
@@ -1643,24 +2005,16 @@ ufs_mkdir(ap)
 	else if (!DOINGSOFTDEP(dvp) && ((error = bwrite(bp))))
 		goto bad;
 	ufs_makedirentry(ip, cnp, &newdir);
-	error = ufs_direnter(dvp, tvp, &newdir, cnp, bp);
+	error = ufs_direnter(dvp, tvp, &newdir, cnp, bp, 0);
 	
 bad:
 	if (error == 0) {
 		*ap->a_vpp = tvp;
 	} else {
-#ifdef UFS_ACL
-		if (acl != NULL)
-			uma_zfree(acl_zone, acl);
-		if (dacl != NULL)
-			uma_zfree(acl_zone, dacl);
-#endif
 		dp->i_effnlink--;
 		dp->i_nlink--;
 		DIP_SET(dp, i_nlink, dp->i_nlink);
 		dp->i_flag |= IN_CHANGE;
-		if (DOINGSOFTDEP(dvp))
-			softdep_change_linkcnt(dp);
 		/*
 		 * No need to do an explicit VOP_TRUNCATE here, vrele will
 		 * do this for us because we set the link count to 0.
@@ -1670,7 +2024,8 @@ bad:
 		DIP_SET(ip, i_nlink, 0);
 		ip->i_flag |= IN_CHANGE;
 		if (DOINGSOFTDEP(tvp))
-			softdep_change_linkcnt(ip);
+			softdep_revert_mkdir(dp, ip);
+
 		vput(tvp);
 	}
 out:
@@ -1692,7 +2047,7 @@ ufs_rmdir(ap)
 	struct vnode *dvp = ap->a_dvp;
 	struct componentname *cnp = ap->a_cnp;
 	struct inode *ip, *dp;
-	int error, ioflag;
+	int error;
 
 	ip = VTOI(vp);
 	dp = VTOI(dvp);
@@ -1706,10 +2061,13 @@ ufs_rmdir(ap)
 	 * tries to remove a locally mounted on directory).
 	 */
 	error = 0;
-	if ((ip->i_flag & IN_RENAME) || ip->i_effnlink < 2) {
+	if (ip->i_effnlink < 2) {
 		error = EINVAL;
 		goto out;
 	}
+	if (dp->i_effnlink < 3)
+		panic("ufs_dirrem: Bad link count %d on parent",
+		    dp->i_effnlink);
 	if (!ufs_dirempty(ip, dp->i_number, cnp->cn_cred)) {
 		error = ENOTEMPTY;
 		goto out;
@@ -1733,40 +2091,32 @@ ufs_rmdir(ap)
 	 */
 	dp->i_effnlink--;
 	ip->i_effnlink--;
-	if (DOINGSOFTDEP(vp)) {
-		softdep_change_linkcnt(dp);
-		softdep_change_linkcnt(ip);
-	}
+	if (DOINGSOFTDEP(vp))
+		softdep_setup_rmdir(dp, ip);
 	error = ufs_dirremove(dvp, ip, cnp->cn_flags, 1);
 	if (error) {
 		dp->i_effnlink++;
 		ip->i_effnlink++;
-		if (DOINGSOFTDEP(vp)) {
-			softdep_change_linkcnt(dp);
-			softdep_change_linkcnt(ip);
-		}
+		if (DOINGSOFTDEP(vp))
+			softdep_revert_rmdir(dp, ip);
 		goto out;
 	}
 	cache_purge(dvp);
 	/*
-	 * Truncate inode. The only stuff left in the directory is "." and
-	 * "..". The "." reference is inconsequential since we are quashing
-	 * it. The soft dependency code will arrange to do these operations
-	 * after the parent directory entry has been deleted on disk, so
+	 * The only stuff left in the directory is "." and "..". The "."
+	 * reference is inconsequential since we are quashing it. The soft
+	 * dependency code will arrange to do these operations after
+	 * the parent directory entry has been deleted on disk, so
 	 * when running with that code we avoid doing them now.
 	 */
 	if (!DOINGSOFTDEP(vp)) {
 		dp->i_nlink--;
 		DIP_SET(dp, i_nlink, dp->i_nlink);
 		dp->i_flag |= IN_CHANGE;
+		error = UFS_UPDATE(dvp, 0);
 		ip->i_nlink--;
 		DIP_SET(ip, i_nlink, ip->i_nlink);
 		ip->i_flag |= IN_CHANGE;
-		ioflag = IO_NORMAL;
-		if (!DOINGASYNC(vp))
-			ioflag |= IO_SYNC;
-		error = UFS_TRUNCATE(vp, (off_t)0, ioflag, cnp->cn_cred,
-		    cnp->cn_thread);
 	}
 	cache_purge(vp);
 #ifdef UFS_DIRHASH
@@ -1807,10 +2157,11 @@ ufs_symlink(ap)
 		ip->i_size = len;
 		DIP_SET(ip, i_size, len);
 		ip->i_flag |= IN_CHANGE | IN_UPDATE;
+		error = UFS_UPDATE(vp, 0);
 	} else
 		error = vn_rdwr(UIO_WRITE, vp, ap->a_target, len, (off_t)0,
 		    UIO_SYSSPACE, IO_NODELOCKED | IO_NOMACCHECK,
-		    ap->a_cnp->cn_cred, NOCRED, (int *)0, (struct thread *)0);
+		    ap->a_cnp->cn_cred, NOCRED, NULL, NULL);
 	if (error)
 		vput(vp);
 	return (error);
@@ -1837,6 +2188,7 @@ ufs_readdir(ap)
 	} */ *ap;
 {
 	struct uio *uio = ap->a_uio;
+	struct inode *ip;
 	int error;
 	size_t count, lost;
 	off_t off;
@@ -1847,6 +2199,9 @@ ufs_readdir(ap)
 		 * the cookies to determine where in the block to start.
 		 */
 		uio->uio_offset &= ~(DIRBLKSIZ - 1);
+	ip = VTOI(ap->a_vp);
+	if (ip->i_effnlink == 0)
+		return (0);
 	off = uio->uio_offset;
 	count = uio->uio_resid;
 	/* Make sure we don't return partial entries. */
@@ -1872,7 +2227,7 @@ ufs_readdir(ap)
 			auio.uio_iovcnt = 1;
 			auio.uio_segflg = UIO_SYSSPACE;
 			aiov.iov_len = count;
-			MALLOC(dirbuf, caddr_t, count, M_TEMP, M_WAITOK);
+			dirbuf = malloc(count, M_TEMP, M_WAITOK);
 			aiov.iov_base = dirbuf;
 			error = VOP_READ(ap->a_vp, &auio, 0, ap->a_cred);
 			if (error == 0) {
@@ -1893,7 +2248,7 @@ ufs_readdir(ap)
 				if (dp >= edp)
 					error = uiomove(dirbuf, readcnt, uio);
 			}
-			FREE(dirbuf, M_TEMP);
+			free(dirbuf, M_TEMP);
 		}
 #	else
 		error = VOP_READ(ap->a_vp, uio, 0, ap->a_cred);
@@ -1915,7 +2270,7 @@ ufs_readdir(ap)
 		     dp < dpEnd;
 		     dp = (struct dirent *)((caddr_t) dp + dp->d_reclen))
 			ncookies++;
-		MALLOC(cookies, u_long *, ncookies * sizeof(u_long), M_TEMP,
+		cookies = malloc(ncookies * sizeof(u_long), M_TEMP,
 		    M_WAITOK);
 		for (dp = dpStart, cookiep = cookies;
 		     dp < dpEnd;
@@ -1984,7 +2339,7 @@ ufs_strategy(ap)
 			bp->b_error = error;
 			bp->b_ioflags |= BIO_ERROR;
 			bufdone(bp);
-			return (error);
+			return (0);
 		}
 		if ((long)bp->b_blkno == -1)
 			vfs_bio_clrbuf(bp);
@@ -2062,6 +2417,30 @@ ufsfifo_kqfilter(ap)
 }
 
 /*
+ * Return POSIX pathconf information applicable to fifos.
+ */
+static int
+ufsfifo_pathconf(ap)
+	struct vop_pathconf_args /* {
+		struct vnode *a_vp;
+		int a_name;
+		int *a_retval;
+	} */ *ap;
+{
+
+	switch (ap->a_name) {
+	case _PC_ACL_EXTENDED:
+	case _PC_ACL_NFS4:
+	case _PC_ACL_PATH_MAX:
+	case _PC_MAC_PRESENT:
+		return (ufs_pathconf(ap));
+	default:
+		return (fifo_specops.vop_pathconf(ap));
+	}
+	/* NOTREACHED */
+}
+
+/*
  * Return POSIX pathconf information applicable to ufs filesystems.
  */
 static int
@@ -2104,9 +2483,21 @@ ufs_pathconf(ap)
 		*ap->a_retval = 0;
 #endif
 		break;
+
+	case _PC_ACL_NFS4:
+#ifdef UFS_ACL
+		if (ap->a_vp->v_mount->mnt_flag & MNT_NFS4ACLS)
+			*ap->a_retval = 1;
+		else
+			*ap->a_retval = 0;
+#else
+		*ap->a_retval = 0;
+#endif
+		break;
+
 	case _PC_ACL_PATH_MAX:
 #ifdef UFS_ACL
-		if (ap->a_vp->v_mount->mnt_flag & MNT_ACLS)
+		if (ap->a_vp->v_mount->mnt_flag & (MNT_ACLS | MNT_NFS4ACLS))
 			*ap->a_retval = ACL_MAX_ENTRIES;
 		else
 			*ap->a_retval = 3;
@@ -2123,6 +2514,9 @@ ufs_pathconf(ap)
 #else
 		*ap->a_retval = 0;
 #endif
+		break;
+	case _PC_MIN_HOLE_SIZE:
+		*ap->a_retval = ap->a_vp->v_mount->mnt_stat.f_iosize;
 		break;
 	case _PC_ASYNC_IO:
 		/* _PC_ASYNC_IO should have been handled by upper layers. */
@@ -2165,24 +2559,6 @@ ufs_pathconf(ap)
 }
 
 /*
- * Advisory record locking support
- */
-static int
-ufs_advlock(ap)
-	struct vop_advlock_args /* {
-		struct vnode *a_vp;
-		caddr_t  a_id;
-		int  a_op;
-		struct flock *a_fl;
-		int  a_flags;
-	} */ *ap;
-{
-	struct inode *ip = VTOI(ap->a_vp);
-
-	return (lf_advlock(ap, &(ip->i_lockf), ip->i_size));
-}
-
-/*
  * Initialize the vnode associated with a new inode, handle aliased
  * vnodes.
  */
@@ -2203,7 +2579,6 @@ ufs_vinit(mntp, fifoops, vpp)
 	ASSERT_VOP_LOCKED(vp, "ufs_vinit");
 	if (ip->i_number == ROOTINO)
 		vp->v_vflag |= VV_ROOT;
-	ip->i_modrev = init_va_filerev();
 	*vpp = vp;
 	return (0);
 }
@@ -2222,13 +2597,10 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 	struct inode *ip, *pdir;
 	struct direct newdir;
 	struct vnode *tvp;
-#ifdef UFS_ACL
-	struct acl *acl;
-#endif
 	int error;
 
 	pdir = VTOI(dvp);
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ufs_makeinode: no name");
 #endif
@@ -2236,6 +2608,9 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 	if ((mode & IFMT) == 0)
 		mode |= IFREG;
 
+	if (VTOI(dvp)->i_effnlink < 2)
+		panic("ufs_makeinode: Bad link count %d on parent",
+		    VTOI(dvp)->i_effnlink);
 	error = UFS_VALLOC(dvp, mode, cnp->cn_cred, &tvp);
 	if (error)
 		return (error);
@@ -2246,6 +2621,7 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 	{
 #ifdef QUOTA
 		struct ucred ucred, *ucp;
+		gid_t ucred_group;
 		ucp = cnp->cn_cred;
 #endif
 		/*
@@ -2272,6 +2648,7 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 			refcount_init(&ucred.cr_ref, 1);
 			ucred.cr_uid = ip->i_uid;
 			ucred.cr_ngroups = 1;
+			ucred.cr_groups = &ucred_group;
 			ucred.cr_groups[0] = pdir->i_gid;
 			ucp = &ucred;
 #endif
@@ -2283,6 +2660,8 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 #ifdef QUOTA
 		if ((error = getinoquota(ip)) ||
 	    	    (error = chkiq(ip, 1, ucp, 0))) {
+			if (DOINGSOFTDEP(tvp))
+				softdep_revert_link(pdir, ip);
 			UFS_VFREE(tvp, ip->i_number, mode);
 			vput(tvp);
 			return (error);
@@ -2295,6 +2674,8 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 #ifdef QUOTA
 	if ((error = getinoquota(ip)) ||
 	    (error = chkiq(ip, 1, cnp->cn_cred, 0))) {
+		if (DOINGSOFTDEP(tvp))
+			softdep_revert_link(pdir, ip);
 		UFS_VFREE(tvp, ip->i_number, mode);
 		vput(tvp);
 		return (error);
@@ -2302,68 +2683,14 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 #endif
 #endif	/* !SUIDDIR */
 	ip->i_flag |= IN_ACCESS | IN_CHANGE | IN_UPDATE;
-#ifdef UFS_ACL
-	acl = NULL;
-	if ((dvp->v_mount->mnt_flag & MNT_ACLS) != 0) {
-		acl = uma_zalloc(acl_zone, M_WAITOK);
-
-		/*
-		 * Retrieve default ACL for parent, if any.
-		 */
-		error = VOP_GETACL(dvp, ACL_TYPE_DEFAULT, acl, cnp->cn_cred,
-		    cnp->cn_thread);
-		switch (error) {
-		case 0:
-			/*
-			 * Retrieved a default ACL, so merge mode and ACL if
-			 * necessary.
-			 */
-			if (acl->acl_cnt != 0) {
-				/*
-				 * Two possible ways for default ACL to not
-				 * be present.  First, the EA can be
-				 * undefined, or second, the default ACL can
-				 * be blank.  If it's blank, fall through to
-				 * the it's not defined case.
-				 */
-				mode = acl_posix1e_newfilemode(mode, acl);
-				ip->i_mode = mode;
-				DIP_SET(ip, i_mode, mode);
-				ufs_sync_acl_from_inode(ip, acl);
-				break;
-			}
-			/* FALLTHROUGH */
-	
-		case EOPNOTSUPP:
-			/*
-			 * Just use the mode as-is.
-			 */
-			ip->i_mode = mode;
-			DIP_SET(ip, i_mode, mode);
-			uma_zfree(acl_zone, acl);
-			acl = NULL;
-			break;
-	
-		default:
-			UFS_VFREE(tvp, ip->i_number, mode);
-			vput(tvp);
-			uma_zfree(acl_zone, acl);
-			acl = NULL;
-			return (error);
-		}
-	} else {
-#endif
-		ip->i_mode = mode;
-		DIP_SET(ip, i_mode, mode);
-#ifdef UFS_ACL
-	}
-#endif
+	ip->i_mode = mode;
+	DIP_SET(ip, i_mode, mode);
 	tvp->v_type = IFTOVT(mode);	/* Rest init'd in getnewvnode(). */
 	ip->i_effnlink = 1;
 	ip->i_nlink = 1;
 	DIP_SET(ip, i_nlink, 1);
 	if (DOINGSOFTDEP(tvp))
-		softdep_change_linkcnt(ip);
+		softdep_setup_create(VTOI(dvp), ip);
 	if ((ip->i_mode & ISGID) && !groupmember(ip->i_gid, cnp->cn_cred) &&
 	    priv_check_cred(cnp->cn_cred, PRIV_VFS_SETGID, 0)) {
 		ip->i_mode &= ~ISGID;
@@ -2383,44 +2710,27 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 		goto bad;
 #ifdef MAC
 	if (dvp->v_mount->mnt_flag & MNT_MULTILABEL) {
-		error = mac_create_vnode_extattr(cnp->cn_cred, dvp->v_mount,
+		error = mac_vnode_create_extattr(cnp->cn_cred, dvp->v_mount,
 		    dvp, tvp, cnp);
 		if (error)
 			goto bad;
 	}
 #endif
 #ifdef UFS_ACL
-	if (acl != NULL) {
-		/*
-		 * XXX: If we abort now, will Soft Updates notify the extattr
-		 * code that the EAs for the file need to be released?
-		 */
-		error = VOP_SETACL(tvp, ACL_TYPE_ACCESS, acl, cnp->cn_cred,
-		    cnp->cn_thread);
-		switch (error) {
-		case 0:
-			break;
-
-		case EOPNOTSUPP:
-			/*
-			 * XXX: This should not happen, as EOPNOTSUPP above was
-			 * supposed to free acl.
-			 */
-			printf("ufs_makeinode: VOP_GETACL() but no "
-			    "VOP_SETACL()\n");
-			/* panic("ufs_makeinode: VOP_GETACL() but no "
-			    "VOP_SETACL()"); */
-			break;
-
-		default:
-			uma_zfree(acl_zone, acl);
+	if (dvp->v_mount->mnt_flag & MNT_ACLS) {
+		error = ufs_do_posix1e_acl_inheritance_file(dvp, tvp, mode,
+		    cnp->cn_cred, cnp->cn_thread);
+		if (error)
 			goto bad;
-		}
-		uma_zfree(acl_zone, acl);
+	} else if (dvp->v_mount->mnt_flag & MNT_NFS4ACLS) {
+		error = ufs_do_nfs4_acl_inheritance(dvp, tvp, mode,
+		    cnp->cn_cred, cnp->cn_thread);
+		if (error)
+			goto bad;
 	}
 #endif /* !UFS_ACL */
 	ufs_makedirentry(ip, cnp, &newdir);
-	error = ufs_direnter(dvp, tvp, &newdir, cnp, NULL);
+	error = ufs_direnter(dvp, tvp, &newdir, cnp, NULL, 0);
 	if (error)
 		goto bad;
 	*vpp = tvp;
@@ -2436,9 +2746,23 @@ bad:
 	DIP_SET(ip, i_nlink, 0);
 	ip->i_flag |= IN_CHANGE;
 	if (DOINGSOFTDEP(tvp))
-		softdep_change_linkcnt(ip);
+		softdep_revert_create(VTOI(dvp), ip);
 	vput(tvp);
 	return (error);
+}
+
+static int
+ufs_ioctl(struct vop_ioctl_args *ap)
+{
+
+	switch (ap->a_command) {
+	case FIOSEEKDATA:
+	case FIOSEEKHOLE:
+		return (vn_bmap_seekhole(ap->a_vp, ap->a_command,
+		    (off_t *)ap->a_data, ap->a_cred));
+	default:
+		return (ENOTTY);
+	}
 }
 
 /* Global vfs data structures for ufs. */
@@ -2448,16 +2772,17 @@ struct vop_vector ufs_vnodeops = {
 	.vop_read =		VOP_PANIC,
 	.vop_reallocblks =	VOP_PANIC,
 	.vop_write =		VOP_PANIC,
-	.vop_access =		ufs_access,
-	.vop_advlock =		ufs_advlock,
+	.vop_accessx =		ufs_accessx,
 	.vop_bmap =		ufs_bmap,
 	.vop_cachedlookup =	ufs_lookup,
 	.vop_close =		ufs_close,
 	.vop_create =		ufs_create,
 	.vop_getattr =		ufs_getattr,
 	.vop_inactive =		ufs_inactive,
+	.vop_ioctl =		ufs_ioctl,
 	.vop_link =		ufs_link,
 	.vop_lookup =		vfs_cache_lookup,
+	.vop_markatime =	ufs_markatime,
 	.vop_mkdir =		ufs_mkdir,
 	.vop_mknod =		ufs_mknod,
 	.vop_open =		ufs_open,
@@ -2492,11 +2817,13 @@ struct vop_vector ufs_vnodeops = {
 struct vop_vector ufs_fifoops = {
 	.vop_default =		&fifo_specops,
 	.vop_fsync =		VOP_PANIC,
-	.vop_access =		ufs_access,
+	.vop_accessx =		ufs_accessx,
 	.vop_close =		ufsfifo_close,
 	.vop_getattr =		ufs_getattr,
 	.vop_inactive =		ufs_inactive,
 	.vop_kqfilter =		ufsfifo_kqfilter,
+	.vop_markatime =	ufs_markatime,
+	.vop_pathconf = 	ufsfifo_pathconf,
 	.vop_print =		ufs_print,
 	.vop_read =		VOP_PANIC,
 	.vop_reclaim =		ufs_reclaim,

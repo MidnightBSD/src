@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2003 Tor Egge
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_rawread.c,v 1.29 2007/02/04 23:42:02 tegge Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -67,7 +66,7 @@ static int ffs_rawread_readahead(struct vnode *vp,
 static int ffs_rawread_main(struct vnode *vp,
 			    struct uio *uio);
 
-static int ffs_rawread_sync(struct vnode *vp, struct thread *td);
+static int ffs_rawread_sync(struct vnode *vp);
 
 int ffs_rawread(struct vnode *vp, struct uio *uio, int *workdone);
 
@@ -96,36 +95,37 @@ ffs_rawread_setup(void)
 
 
 static int
-ffs_rawread_sync(struct vnode *vp, struct thread *td)
+ffs_rawread_sync(struct vnode *vp)
 {
-	int spl;
 	int error;
 	int upgraded;
 	struct bufobj *bo;
 	struct mount *mp;
+	vm_object_t obj;
 
 	/* Check for dirty mmap, pending writes and dirty buffers */
-	spl = splbio();
-	VI_LOCK(vp);
 	bo = &vp->v_bufobj;
+	BO_LOCK(bo);
+	VI_LOCK(vp);
 	if (bo->bo_numoutput > 0 ||
 	    bo->bo_dirty.bv_cnt > 0 ||
-	    (vp->v_iflag & VI_OBJDIRTY) != 0) {
-		splx(spl);
+	    ((obj = vp->v_object) != NULL &&
+	     (obj->flags & OBJ_MIGHTBEDIRTY) != 0)) {
 		VI_UNLOCK(vp);
+		BO_UNLOCK(bo);
 		
 		if (vn_start_write(vp, &mp, V_NOWAIT) != 0) {
-			if (VOP_ISLOCKED(vp, td) != LK_EXCLUSIVE)
+			if (VOP_ISLOCKED(vp) != LK_EXCLUSIVE)
 				upgraded = 1;
 			else
 				upgraded = 0;
-			VOP_UNLOCK(vp, 0, td);
+			VOP_UNLOCK(vp, 0);
 			(void) vn_start_write(vp, &mp, V_WAIT);
-			VOP_LOCK(vp, LK_EXCLUSIVE, td);
-		} else if (VOP_ISLOCKED(vp, td) != LK_EXCLUSIVE) {
+			VOP_LOCK(vp, LK_EXCLUSIVE);
+		} else if (VOP_ISLOCKED(vp) != LK_EXCLUSIVE) {
 			upgraded = 1;
 			/* Upgrade to exclusive lock, this might block */
-			VOP_LOCK(vp, LK_UPGRADE, td);
+			VOP_LOCK(vp, LK_UPGRADE);
 		} else
 			upgraded = 0;
 			
@@ -135,56 +135,51 @@ ffs_rawread_sync(struct vnode *vp, struct thread *td)
 		if ((vp->v_iflag & VI_DOOMED) != 0) {
 			VI_UNLOCK(vp);
 			if (upgraded != 0)
-				VOP_LOCK(vp, LK_DOWNGRADE, td);
+				VOP_LOCK(vp, LK_DOWNGRADE);
 			vn_finished_write(mp);
 			return (EIO);
 		}
 		/* Attempt to msync mmap() regions to clean dirty mmap */ 
-		if ((vp->v_iflag & VI_OBJDIRTY) != 0) {
+		if ((obj = vp->v_object) != NULL &&
+		    (obj->flags & OBJ_MIGHTBEDIRTY) != 0) {
 			VI_UNLOCK(vp);
-			if (vp->v_object != NULL) {
-				VM_OBJECT_LOCK(vp->v_object);
-				vm_object_page_clean(vp->v_object, 0, 0, OBJPC_SYNC);
-				VM_OBJECT_UNLOCK(vp->v_object);
-			}
-			VI_LOCK(vp);
-		}
+			VM_OBJECT_LOCK(obj);
+			vm_object_page_clean(obj, 0, 0, OBJPC_SYNC);
+			VM_OBJECT_UNLOCK(obj);
+		} else
+			VI_UNLOCK(vp);
 
 		/* Wait for pending writes to complete */
-		spl = splbio();
+		BO_LOCK(bo);
 		error = bufobj_wwait(&vp->v_bufobj, 0, 0);
 		if (error != 0) {
 			/* XXX: can't happen with a zero timeout ??? */
-			splx(spl);
-			VI_UNLOCK(vp);
+			BO_UNLOCK(bo);
 			if (upgraded != 0)
-				VOP_LOCK(vp, LK_DOWNGRADE, td);
+				VOP_LOCK(vp, LK_DOWNGRADE);
 			vn_finished_write(mp);
 			return (error);
 		}
 		/* Flush dirty buffers */
 		if (bo->bo_dirty.bv_cnt > 0) {
-			splx(spl);
-			VI_UNLOCK(vp);
-			if ((error = ffs_syncvnode(vp, MNT_WAIT)) != 0) {
+			BO_UNLOCK(bo);
+			if ((error = ffs_syncvnode(vp, MNT_WAIT, 0)) != 0) {
 				if (upgraded != 0)
-					VOP_LOCK(vp, LK_DOWNGRADE, td);
+					VOP_LOCK(vp, LK_DOWNGRADE);
 				vn_finished_write(mp);
 				return (error);
 			}
-			VI_LOCK(vp);
-			spl = splbio();
+			BO_LOCK(bo);
 			if (bo->bo_numoutput > 0 || bo->bo_dirty.bv_cnt > 0)
 				panic("ffs_rawread_sync: dirty bufs");
 		}
-		splx(spl);
-		VI_UNLOCK(vp);
+		BO_UNLOCK(bo);
 		if (upgraded != 0)
-			VOP_LOCK(vp, LK_DOWNGRADE, td);
+			VOP_LOCK(vp, LK_DOWNGRADE);
 		vn_finished_write(mp);
 	} else {
-		splx(spl);
 		VI_UNLOCK(vp);
+		BO_UNLOCK(bo);
 	}
 	return 0;
 }
@@ -248,8 +243,7 @@ ffs_rawread_readahead(struct vnode *vp,
 		if (vmapbuf(bp) < 0)
 			return EFAULT;
 		
-		if (ticks - PCPU_GET(switchticks) >= hogticks)
-			uio_yield();
+		maybe_yield();
 		bzero(bp->b_data, bp->b_bufsize);
 
 		/* Mark operation completed (similar to bufdone()) */
@@ -467,9 +461,7 @@ ffs_rawread(struct vnode *vp,
 		    (uio->uio_resid & (secsize - 1)) == 0) {
 			
 			/* Sync dirty pages and buffers if needed */
-			error = ffs_rawread_sync(vp,
-						 (uio->uio_td != NULL) ?
-						 uio->uio_td : curthread);
+			error = ffs_rawread_sync(vp);
 			if (error != 0)
 				return error;
 			
