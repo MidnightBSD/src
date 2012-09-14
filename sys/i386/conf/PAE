@@ -1,7 +1,7 @@
 #
 # PAE -- Generic kernel configuration file for MidnightBSD/i386 PAE
 #
-# $MidnightBSD: src/sys/i386/conf/PAE,v 1.5 2008/12/07 03:35:12 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/PAE,v 1.6 2012/04/25 00:52:18 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/PAE,v 1.16.2.2 2005/11/08 22:28:37 scottl Exp $
 
 include GENERIC
@@ -9,11 +9,7 @@ include GENERIC
 ident		PAE-GENERIC
 
 # To make a PAE kernel, the next option is needed
-options		PAE			# Physical Address Extensions Kernel
-
-# Compile acpi in statically since the module isn't built properly.  Most
-# machines which support large amounts of memory require acpi.
-device		acpi
+options 	PAE			# Physical Address Extensions Kernel
 
 # Don't build modules with this kernel config, since they are not built with
 # the correct options headers.
@@ -27,6 +23,7 @@ device		ispfw
 # of these drivers.  Drivers which use DMA and don't handle 64 bit physical
 # address properly may cause data corruption when used in a machine with more
 # than 4 gigabytes of memory.
+
 
 nodevice	ahb
 nodevice	amd
@@ -42,6 +39,8 @@ nodevice	bt
 nodevice	ncv
 nodevice	nsp
 nodevice	stg
+
+nodevice	ctl
 
 nodevice	asr
 nodevice	dpt
@@ -77,19 +76,16 @@ nodevice	ie
 nodevice	sn
 nodevice	xe
 
-nodevice	wlan
-nodevice	wlan_wep	# 802.11 WEP support
-nodevice	wlan_ccmp	# 802.11 CCMP support
-nodevice	wlan_tkip	# 802.11 TKIP support
-nodevice	wlan_amrr	# AMRR transmit rate control algorithm
-nodevice	wlan_scan_ap	# 802.11 AP mode scanning
-nodevice	wlan_scan_sta	# 802.11 STA mode scanning
 nodevice	an
 nodevice	ath		# Atheros pci/cardbus NIC's
-nodevice	ath_hal		# Atheros HAL (Hardware Access Layer)
+nodevice	ath_pci
+nodevice	ath_hal
 nodevice	ath_rate_sample	# SampleRate tx rate control for ath
-nodevice	awi
+nodevice	ipw
+nodevice	iwi
+nodevice	iwn
+nodevice	malo
+nodevice	mwl
 nodevice	ral
 nodevice	wi
-nodevice	ural
-nodevice	rum
+nodevice	wpi

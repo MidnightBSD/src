@@ -1,14 +1,14 @@
 #
 # DEFAULTS -- Default kernel configuration file for MidnightBSD/i386
 #
-# $MidnightBSD$
+# $MidnightBSD: src/sys/i386/conf/DEFAULTS,v 1.3 2009/01/20 17:40:39 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/DEFAULTS,v 1.10 2007/06/11 00:38:06 marcel Exp $
 
 machine		i386
 
 # Bus support.
 device		isa
-options		ISAPNP
+options 	ISAPNP
 
 # Floating point support.
 device		npx
@@ -21,8 +21,13 @@ device		io		# I/O device
 device		uart_ns8250
 
 # Default partitioning schemes
-options 	GEOM_BSD
-options 	GEOM_MBR
+options 	GEOM_PART_BSD
+options 	GEOM_PART_EBR
+options 	GEOM_PART_EBR_COMPAT
+options 	GEOM_PART_MBR
 
-# KSE support went from being default to a kernel option
-options 	KSE
+# enable support for native hardware
+options 	NATIVE
+device		atpic
+
+options 	NEW_PCIB

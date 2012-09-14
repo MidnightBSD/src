@@ -1,7 +1,7 @@
 #
 # DEFAULTS -- Default kernel configuration file for FreeBSD/amd64
 #
-# $FreeBSD: src/sys/amd64/conf/DEFAULTS,v 1.10 2007/06/11 00:38:05 marcel Exp $
+# $MidnightBSD$
 
 machine		amd64
 
@@ -16,8 +16,9 @@ device		io		# I/O device
 device		uart_ns8250
 
 # Default partitioning schemes
-options 	GEOM_BSD
-options 	GEOM_MBR
+options 	GEOM_PART_BSD
+options 	GEOM_PART_EBR
+options 	GEOM_PART_EBR_COMPAT
+options 	GEOM_PART_MBR
 
-# KSE support went from being default to a kernel option
-options 	KSE
+options 	NEW_PCIB

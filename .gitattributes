@@ -47585,7 +47585,6 @@ sys/i386/conf/ALTQ -text
 sys/i386/conf/DEFAULTS -text
 sys/i386/conf/GENERIC -text
 sys/i386/conf/GENERIC.hints -text
-sys/i386/conf/MAC -text
 sys/i386/conf/Makefile -text
 sys/i386/conf/NOTES -text
 sys/i386/conf/PAE -text
