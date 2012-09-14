@@ -48283,7 +48283,6 @@ sys/modules/ath_ahb/Makefile -text
 sys/modules/ath_pci/Makefile -text
 sys/modules/aue/Makefile -text
 sys/modules/auxio/Makefile -text
-sys/modules/awi/Makefile -text
 sys/modules/axe/Makefile -text
 sys/modules/bce/Makefile -text
 sys/modules/bfe/Makefile -text
