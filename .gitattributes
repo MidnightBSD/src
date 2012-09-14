@@ -43201,7 +43201,6 @@ sys/conf/kmod.mk -text
 sys/conf/kmod_syms.awk -text
 sys/conf/ldscript.amd64 -text
 sys/conf/ldscript.i386 -text
-sys/conf/ldscript.powerpc64 -text
 sys/conf/ldscript.sparc64 -text
 sys/conf/makeLINT.mk -text
 sys/conf/makeLINT.sed -text

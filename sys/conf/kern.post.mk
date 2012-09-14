@@ -19,6 +19,10 @@ MKMODULESENV+=	KERNBUILDDIR="${.CURDIR}" SYSDIR="${SYSDIR}"
 MKMODULESENV+=	CONF_CFLAGS="${CONF_CFLAGS}"
 .endif
 
+.if defined(WITH_CTF)
+MKMODULESENV+=	WITH_CTF="${WITH_CTF}"
+.endif
+
 .MAIN: all
 
 .for target in all clean cleandepend cleandir clobber depend install \
@@ -32,13 +36,44 @@ modules-${target}:
 .endif
 .endfor
 
-# Handle out of tree ports 
+# Handle ports (as defined by the user) that build kernel modules
 .if !defined(NO_MODULES) && defined(PORTS_MODULES)
-PORTSMODULESENV=SYSDIR=${SYSDIR}
-.for __target in all install reinstall clean
+#
+# The ports tree needs some environment variables defined to match the new kernel
+#
+# Ports search for some dependencies in PATH, so add the location of the installed files
+LOCALBASE?=	/usr/local
+# SRC_BASE is how the ports tree refers to the location of the base source files
+.if !defined(SRC_BASE)
+SRC_BASE!=	realpath "${SYSDIR:H}/"
+.endif
+# OSVERSION is used by some ports to determine build options
+.if !defined(OSRELDATE)
+# Definition copied from src/Makefile.inc1
+OSRELDATE!=	awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
+		    ${MAKEOBJDIRPREFIX}${SRC_BASE}/include/osreldate.h
+.endif
+# Keep the related ports builds in the obj directory so that they are only rebuilt once per kernel build
+WRKDIRPREFIX?=	${MAKEOBJDIRPREFIX}${SRC_BASE}/sys/${KERNCONF}
+PORTSMODULESENV=\
+	PATH=${PATH}:${LOCALBASE}/bin:${LOCALBASE}/sbin \
+	SRC_BASE=${SRC_BASE} \
+	OSVERSION=${OSRELDATE} \
+	WRKDIRPREFIX=${WRKDIRPREFIX}
+
+# The WRKDIR needs to be cleaned before building, and trying to change the target
+# with a :C pattern below results in install -> instclean
+all:
+.for __i in ${PORTS_MODULES}
+	@${ECHO} "===> Ports module ${__i} (all)"
+	cd $${PORTSDIR:-/usr/ports}/${__i}; ${PORTSMODULESENV} ${MAKE} -B clean all
+.endfor
+
+.for __target in install reinstall clean
 ${__target}: ports-${__target}
 ports-${__target}:
 .for __i in ${PORTS_MODULES}
+	@${ECHO} "===> Ports module ${__i} (${__target})"
 	cd $${PORTSDIR:-/usr/ports}/${__i}; ${PORTSMODULESENV} ${MAKE} -B ${__target:C/install/deinstall reinstall/:C/reinstall/deinstall reinstall/}
 .endfor
 .endfor
@@ -80,8 +115,8 @@ gdbinit:
 	grep -v '# XXX' ${S}/../tools/debugscripts/dot.gdbinit | \
 	    sed "s:MODPATH:${.OBJDIR}/modules:" > .gdbinit
 	cp ${S}/../tools/debugscripts/gdbinit.kernel ${.CURDIR}
-.if exists(${S}/../tools/debugscripts/gdbinit.${MACHINE_ARCH})
-	cp ${S}/../tools/debugscripts/gdbinit.${MACHINE_ARCH} \
+.if exists(${S}/../tools/debugscripts/gdbinit.${MACHINE_CPUARCH})
+	cp ${S}/../tools/debugscripts/gdbinit.${MACHINE_CPUARCH} \
 	    ${.CURDIR}/gdbinit.machine
 .endif
 .endif
@@ -90,21 +125,13 @@ ${FULLKERNEL}: ${SYSTEM_DEP} vers.o
 	@rm -f ${.TARGET}
 	@echo linking ${.TARGET}
 	${SYSTEM_LD}
-.if defined(CTFMERGE)
-	${SYSTEM_CTFMERGE}
-.endif
+	@${SYSTEM_CTFMERGE}
 .if !defined(DEBUG)
 	${OBJCOPY} --strip-debug ${.TARGET}
 .endif
 	${SYSTEM_LD_TAIL}
 .if defined(MFS_IMAGE)
-	@dd if="${MFS_IMAGE}" ibs=8192 of="${FULLKERNEL}"		\
-	   obs=`strings -at d "${FULLKERNEL}" |				\
-	         grep "MFS Filesystem goes here" | awk '{print $$1}'`	\
-	   oseek=1 conv=notrunc 2>/dev/null &&				\
-	 strings ${FULLKERNEL} |					\
-	 grep 'MFS Filesystem had better STOP here' > /dev/null ||	\
-	 (rm ${FULLKERNEL} && echo 'MFS image too large' && false)
+	@sh ${S}/tools/embed_mfs.sh ${FULLKERNEL} ${MFS_IMAGE}
 .endif
 
 .if !exists(${.OBJDIR}/.depend)
@@ -170,10 +197,10 @@ SRCS=	assym.s vnode_if.h ${BEFORE_DEPEND} ${CFILES} \
 	mv .newdep .depend
 
 _ILINKS= machine
-.if ${MACHINE} != ${MACHINE_ARCH}
-_ILINKS+= ${MACHINE_ARCH}
+.if ${MACHINE} != ${MACHINE_CPUARCH}
+_ILINKS+= ${MACHINE_CPUARCH}
 .endif
-.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 _ILINKS+= x86
 .endif
 
@@ -231,7 +258,8 @@ kernel-install:
 .endif
 	mkdir -p ${DESTDIR}${KODIR}
 	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO} ${DESTDIR}${KODIR}
-.if defined(DEBUG) && !defined(INSTALL_NODEBUG)
+.if defined(DEBUG) && !defined(INSTALL_NODEBUG) && \
+    (defined(MK_KERNEL_SYMBOLS) && ${MK_KERNEL_SYMBOLS} != "no")
 	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
 .endif
 .if defined(KERNEL_EXTRA_INSTALL)
@@ -243,12 +271,14 @@ kernel-install:
 kernel-reinstall:
 	@-chflags -R noschg ${DESTDIR}${KODIR}
 	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO} ${DESTDIR}${KODIR}
-.if defined(DEBUG) && !defined(INSTALL_NODEBUG)
+.if defined(DEBUG) && !defined(INSTALL_NODEBUG) && \
+    (defined(MK_KERNEL_SYMBOLS) && ${MK_KERNEL_SYMBOLS} != "no")
 	${INSTALL} -p -m 555 -o ${KMODOWN} -g ${KMODGRP} ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
 .endif
 
 config.o env.o hints.o vers.o vnode_if.o:
 	${NORMAL_C}
+	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || ${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
 
 config.ln env.ln hints.ln vers.ln vnode_if.ln:
 	${NORMAL_LINT}

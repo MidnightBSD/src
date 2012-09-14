@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/Makefile,v 1.8 2011/10/23 15:05:16 laffer1 Exp $
+# $MidnightBSD: src/sys/Makefile,v 1.9 2012/03/24 01:11:05 laffer1 Exp $
 # $FreeBSD: src/sys/Makefile,v 1.33 2005/03/08 00:09:41 grog Exp $
 
 .include <bsd.own.mk>
@@ -9,16 +9,23 @@ SUBDIR=	boot
 .endif
 
 # Directories to include in cscope name file and TAGS.
-CSCOPEDIRS=	bsm cam cddl compat conf contrib crypto ddb dev fs geom gnu \
-		isa kern libkern modules net net80211 netatalk \
+CSCOPEDIRS=	boot bsm cam cddl compat conf contrib crypto ddb dev fs gdb \
+		geom gnu isa kern libkern modules net net80211 netatalk \
 		netgraph netinet netinet6 netipsec netipx netnatm netncp \
-		netsmb nfs nfsclient nfs4client rpc pccard pci security sys \
-		ufs vm ${CSCOPE_ARCHDIR}
-
+		netsmb nfs nfsclient nfsserver nlm ofed opencrypto \
+		pci rpc security sys ufs vm xdr xen ${CSCOPE_ARCHDIR}
+.if !defined(CSCOPE_ARCHDIR)
 .if defined(ALL_ARCH)
 CSCOPE_ARCHDIR ?= amd64 i386 sparc64 x86
 .else
-CSCOPE_ARCHDIR ?= ${MACHINE}
+CSCOPE_ARCHDIR = ${MACHINE} 
+.if ${MACHINE} != ${MACHINE_CPUARCH}
+CSCOPE_ARCHDIR += ${MACHINE_CPUARCH}
+.endif
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+CSCOPE_ARCHDIR += x86
+.endif
+.endif
 .endif
 
 # Loadable kernel modules
@@ -36,7 +43,7 @@ cscope.out: ${.CURDIR}/cscope.files
 
 ${.CURDIR}/cscope.files: .PHONY
 	cd ${.CURDIR}; \
-		find ${CSCOPEDIRS} -name "*.[chSs]" -a -type f > ${.TARGET}
+		find ${CSCOPEDIRS} -name "*.[chSsly]" -a -type f > ${.TARGET}
 
 cscope-clean:
 	rm -f cscope.files cscope.out cscope.in.out cscope.po.out
@@ -48,6 +55,10 @@ TAGS ${.CURDIR}/TAGS: ${.CURDIR}/cscope.files
 
 # You need the textproc/glimpse ports for this.
 glimpse:
+.if !exists(${.CURDIR}/.glimpse_exclude)
+	echo .svn > ${.CURDIR}/.glimpse_exclude
+	echo /compile/ >> ${.CURDIR}/.glimpse_exclude
+.endif
 	cd ${.CURDIR}; glimpseindex -H . -B -f -o .
 
 glimpse-clean:
