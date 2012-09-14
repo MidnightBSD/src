@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 SUBDIR=  addr
 SUBDIR+= cma

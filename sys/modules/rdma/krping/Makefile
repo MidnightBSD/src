@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 RDMA= ${.CURDIR}/../../../contrib/rdma/krping
 .PATH: ${RDMA}
