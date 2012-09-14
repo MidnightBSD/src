@@ -48470,7 +48470,6 @@ sys/modules/glxsb/Makefile -text
 sys/modules/hatm/Makefile -text
 sys/modules/hifn/Makefile -text
 sys/modules/hme/Makefile -text
-sys/modules/hpfs/Makefile -text
 sys/modules/hpt27xx/Makefile -text
 sys/modules/hptiop/Makefile -text
 sys/modules/hptmv/Makefile -text
@@ -48758,7 +48757,6 @@ sys/modules/patm/Makefile -text
 sys/modules/pccard/Makefile -text
 sys/modules/pcfclock/Makefile -text
 sys/modules/pcn/Makefile -text
-sys/modules/pecoff/Makefile -text
 sys/modules/pf/Makefile -text
 sys/modules/pflog/Makefile -text
 sys/modules/pfsync/Makefile -text
