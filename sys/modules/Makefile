@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.31 2012/04/01 06:01:27 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.32 2012/09/14 03:10:57 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -275,7 +275,6 @@ SUBDIR=	${_3dfx} \
 	twe \
 	tx \
 	txp \
-	uark \
 	uart \
 	ubsa \
 	ubsec \
