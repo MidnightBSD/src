@@ -48788,6 +48788,7 @@ sys/modules/rc4/Makefile -text
 sys/modules/rdma/Makefile -text
 sys/modules/rdma/addr/Makefile -text
 sys/modules/rdma/cma/Makefile -text
+sys/modules/rdma/core/Makefile -text
 sys/modules/rdma/iwcm/Makefile -text
 sys/modules/rdma/krping/Makefile -text
 sys/modules/re/Makefile -text
