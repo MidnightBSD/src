@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.33 2012/09/14 03:14:14 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.34 2012/09/14 03:28:21 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -597,6 +597,7 @@ _s3=		s3
 _twa=		twa
 _vesa=		vesa
 _x86bios=	x86bios
+.endif
 .endif
 
 .if ${MACHINE_CPUARCH} == "amd64"
