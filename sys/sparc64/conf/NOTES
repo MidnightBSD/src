@@ -33,18 +33,18 @@ device		fhc
 # Mandatory devices:
 #
 
-device		genclock	# Generic clock interface
 device		eeprom		# eeprom (really a front-end for the MK48Txx)
 device		mk48txx		# Mostek MK48Txx clocks
 device		rtc		# rtc (really a front-end for the MC146818)
 device		mc146818	# Motorola MC146818 and compatible clocks
+device		sbbc		# Sun BootBus controller
 
 #
 # Optional devices:
 #
 
 device		auxio		# auxiliary I/O device
-device		clkbrd		# Clock Board (blinkenlight on Sun Exx00)
+device		epic		# Sun Fire V215/V245 LEDs
 device		creator		# Creator, Creator3D and Elite3D framebuffers
 device		machfb		# ATI Mach64 framebuffers
 
@@ -131,6 +131,7 @@ nodevice	ex
 # Options we don't want to deal with
 
 nooption	FDC_DEBUG
+nooption	COMPAT_FREEBSD4
 nooption	SC_RENDER_DEBUG
 nooption	SC_DEBUG_LEVEL
 nooption	PPC_DEBUG

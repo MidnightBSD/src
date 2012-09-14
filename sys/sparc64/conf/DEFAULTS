@@ -1,7 +1,7 @@
 #
 # DEFAULTS -- Default kernel configuration file for MidnightBSD/sparc64
 #
-# $MidnightBSD$
+# $MidnightBSD: src/sys/sparc64/conf/DEFAULTS,v 1.1 2011/08/22 02:40:55 laffer1 Exp $
 
 machine		sparc64
 
@@ -13,12 +13,11 @@ device		uart_ns8250
 device		uart_sab82532
 device		uart_z8530
 
-# KSE support went from being default to a kernel option
-options 	KSE
-
 # Default partitioning schemes
-options 	GEOM_BSD
-options 	GEOM_SUNLABEL
+options 	GEOM_PART_BSD
+options 	GEOM_PART_VTOC8
 
 # Let sunkbd emulate an AT keyboard by default.
 options 	SUNKBD_EMULATE_ATKBD
+
+options 	NEW_PCIB
