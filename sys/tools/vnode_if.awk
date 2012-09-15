@@ -31,7 +31,7 @@
 #
 #	@(#)vnode_if.sh	8.1 (Berkeley) 6/10/93
 # $FreeBSD: src/sys/tools/vnode_if.awk,v 1.55 2006/05/30 21:13:28 dds Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/sys/tools/vnode_if.awk,v 1.3 2012/03/28 23:22:17 laffer1 Exp $
 #
 # Script to produce VFS front-end sugar.
 #
@@ -72,9 +72,6 @@ function add_debug_code(name, arg, pos, ind)
 	else
 		star = "";
 	if (lockdata[name, arg, pos] && (lockdata[name, arg, pos] != "-")) {
-		if (arg ~ /^\*/) {
-			printc(ind"if ("substr(arg, 2)" != NULL) {");
-		}
 		printc(ind"ASSERT_VI_UNLOCKED("star"a->a_"arg", \""uname"\");");
 		# Add assertions for locking
 		if (lockdata[name, arg, pos] == "L")
@@ -85,9 +82,6 @@ function add_debug_code(name, arg, pos, ind)
 			printc(ind"ASSERT_VOP_ELOCKED(" star "a->a_"arg", \""uname"\");");
 		else if (0) {
 			# XXX More checks!
-		}
-		if (arg ~ /^\*/) {
-			printc("ind}");
 		}
 	}
 }
@@ -149,7 +143,7 @@ common_head = \
     " * This file is produced automatically.\n" \
     " * Do not modify anything in here by hand.\n" \
     " *\n" \
-    " * Created from $MidnightBSD$\n" \
+    " * Created from $MidnightBSD: src/sys/tools/vnode_if.awk,v 1.3 2012/03/28 23:22:17 laffer1 Exp $\n" \
     " */\n" \
     "\n";
 
@@ -172,11 +166,17 @@ if (hfile) {
 
 if (cfile) {
 	printc(common_head \
+	    "#include \"opt_kdtrace.h\"\n" \
+	    "\n" \
 	    "#include <sys/param.h>\n" \
 	    "#include <sys/event.h>\n" \
+	    "#include <sys/kernel.h>\n" \
 	    "#include <sys/mount.h>\n" \
+	    "#include <sys/sdt.h>\n" \
 	    "#include <sys/systm.h>\n" \
 	    "#include <sys/vnode.h>\n" \
+	    "\n" \
+	    "SDT_PROVIDER_DECLARE(vfs);\n" \
 	    "\n" \
 	    "struct vnodeop_desc vop_default_desc = {\n" \
 	    "	\"default\",\n" \
@@ -196,7 +196,7 @@ while ((getline < srcfile) > 0) {
 		continue;
 	if ($1 ~ /^%%/) {
 		if (NF != 6 ||
-		    $2 !~ /^[a-z]+$/  ||  $3 !~ /^[a-z]+$/  ||
+		    $2 !~ /^[a-z_]+$/  ||  $3 !~ /^[a-z]+$/  ||
 		    $4 !~ /^.$/  ||  $5 !~ /^.$/  ||  $6 !~ /^.$/) {
 			die("Invalid %s construction", "%%");
 			continue;
@@ -355,6 +355,10 @@ while ((getline < srcfile) > 0) {
 		printc("\tVDESC_NO_OFFSET");
 		printc("};");
 
+		printc("\n");
+		printc("SDT_PROBE_DEFINE2(vfs, vop, " name ", entry, entry, \"struct vnode *\", \"struct " name "_args *\");\n");
+		printc("SDT_PROBE_DEFINE3(vfs, vop, " name ", return, return, \"struct vnode *\", \"struct " name "_args *\", \"int\");\n");
+
 		# Print out function.
 		printc("\nint\n" uname "_AP(struct " name "_args *a)");
 		printc("{");
@@ -371,6 +375,7 @@ while ((getline < srcfile) > 0) {
 		printc("\t    vop->"name" == NULL && vop->vop_bypass == NULL)")
 		printc("\t\tvop = vop->vop_default;")
 		printc("\tVNASSERT(vop != NULL, a->a_" args[0]", (\"No "name"(%p, %p)\", a->a_" args[0]", a));")
+		printc("\tSDT_PROBE(vfs, vop, " name ", entry, a->a_" args[0] ", a, 0, 0, 0);\n");
 		for (i = 0; i < numargs; ++i)
 			add_debug_code(name, args[i], "Entry", "\t");
 		add_pre(name);
@@ -379,6 +384,7 @@ while ((getline < srcfile) > 0) {
 		printc("\telse")
 		printc("\t\trc = vop->vop_bypass(&a->a_gen);")
 		printc(ctrstr);
+		printc("\tSDT_PROBE(vfs, vop, " name ", return, a->a_" args[0] ", a, rc, 0, 0);\n");
 		printc("\tif (rc == 0) {");
 		for (i = 0; i < numargs; ++i)
 			add_debug_code(name, args[i], "OK", "\t\t");
