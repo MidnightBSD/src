@@ -42753,6 +42753,7 @@ sys/cddl/contrib/opensolaris/common/atomic/amd64/atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/amd64/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/i386/atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/i386/opensolaris_atomic.S -text
+sys/cddl/contrib/opensolaris/common/atomic/ia64/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/powerpc64/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/sparc64/atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/sparc64/opensolaris_atomic.S -text
