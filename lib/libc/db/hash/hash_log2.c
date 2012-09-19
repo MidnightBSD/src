@@ -39,10 +39,12 @@ __FBSDID("$FreeBSD: src/lib/libc/db/hash/hash_log2.c,v 1.3 2007/01/09 00:27:51 i
 #include <sys/types.h>
 
 #include <db.h>
+#include "hash.h"
+#include "page.h"
+#include "extern.h"
 
 u_int32_t
-__log2(num)
-	u_int32_t num;
+__log2(u_int32_t num)
 {
 	u_int32_t i, limit;
 

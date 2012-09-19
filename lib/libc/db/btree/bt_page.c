@@ -55,9 +55,7 @@ __FBSDID("$FreeBSD: src/lib/libc/db/btree/bt_page.c,v 1.4 2007/01/09 00:27:50 im
  *	mpool_put's the page.
  */
 int
-__bt_free(t, h)
-	BTREE *t;
-	PAGE *h;
+__bt_free(BTREE *t, PAGE *h)
 {
 	/* Insert the page at the head of the free list. */
 	h->prevpg = P_INVALID;
@@ -81,9 +79,7 @@ __bt_free(t, h)
  *	Pointer to a page, NULL on error.
  */
 PAGE *
-__bt_new(t, npg)
-	BTREE *t;
-	pgno_t *npg;
+__bt_new(BTREE *t, pgno_t *npg)
 {
 	PAGE *h;
 
@@ -94,5 +90,5 @@ __bt_new(t, npg)
 		F_SET(t, B_METADIRTY);
 		return (h);
 	}
-	return (mpool_new(t->bt_mp, npg));
+	return (mpool_new(t->bt_mp, npg, MPOOL_PAGE_NEXT));
 }

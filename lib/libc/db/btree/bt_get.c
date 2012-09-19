@@ -58,11 +58,7 @@ __FBSDID("$FreeBSD: src/lib/libc/db/btree/bt_get.c,v 1.3 2007/01/09 00:27:50 imp
  *	RET_ERROR, RET_SUCCESS and RET_SPECIAL if the key not found.
  */
 int
-__bt_get(dbp, key, data, flags)
-	const DB *dbp;
-	const DBT *key;
-	DBT *data;
-	u_int flags;
+__bt_get(const DB *dbp, const DBT *key, DBT *data, u_int flags)
 {
 	BTREE *t;
 	EPG *e;

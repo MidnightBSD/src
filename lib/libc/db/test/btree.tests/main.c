@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/test/btree.tests/main.c,v 1.5 2007/01/09 00:27:52 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <fcntl.h>
@@ -133,7 +133,7 @@ main(argc, argv)
 	b.prefix = NULL;
 	b.lorder = 0;
 
-	while ((c = getopt(argc, argv, "bc:di:lp:ru")) != EOF) {
+	while ((c = getopt(argc, argv, "bc:di:lp:ru")) != -1) {
 		switch (c) {
 		case 'b':
 			b.lorder = BIG_ENDIAN;

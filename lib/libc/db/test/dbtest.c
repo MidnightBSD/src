@@ -37,7 +37,7 @@ static char copyright[] =
 static char sccsid[] = "@(#)dbtest.c	8.17 (Berkeley) 9/1/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/test/dbtest.c,v 1.11 2007/01/09 00:27:52 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -99,7 +99,7 @@ main(argc, argv)
 	fname = NULL;
 	oflags = O_CREAT | O_RDWR;
 	sflag = 0;
-	while ((ch = getopt(argc, argv, "f:i:lo:s")) != EOF)
+	while ((ch = getopt(argc, argv, "f:i:lo:s")) != -1)
 		switch (ch) {
 		case 'f':
 			fname = optarg;
