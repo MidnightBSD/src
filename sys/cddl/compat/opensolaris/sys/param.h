@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2007 John Birrell <jb@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/param.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  *
  */
 
@@ -34,5 +33,9 @@
 #include_next <sys/param.h>
 
 #define	PAGESIZE	PAGE_SIZE
+
+#ifdef _KERNEL
+#define	ptob(x)		((uint64_t)(x) << PAGE_SHIFT)
+#endif
 
 #endif

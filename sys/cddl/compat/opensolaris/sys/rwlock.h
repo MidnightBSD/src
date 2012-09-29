@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/rwlock.h,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_RWLOCK_H_
@@ -38,7 +37,6 @@
 #ifdef _KERNEL
 
 typedef enum {
-	RW_DRIVER = 2,		/* driver (DDI) rwlock */
 	RW_DEFAULT = 4		/* kernel default rwlock */
 } krw_type_t;
 
@@ -62,6 +60,7 @@ typedef	struct sx	krwlock_t;
 
 #define	rw_init(lock, desc, type, arg)	do {				\
 	const char *_name;						\
+	ASSERT((type) == 0 || (type) == RW_DEFAULT);			\
 	KASSERT(((lock)->lock_object.lo_flags & LO_ALLMASK) !=		\
 	    LO_EXPECTED, ("lock %s already initialized", #lock));	\
 	bzero((lock), sizeof(struct sx));				\

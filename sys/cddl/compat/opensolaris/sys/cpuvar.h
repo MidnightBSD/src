@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/cpuvar.h,v 1.4.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -68,7 +67,6 @@ extern solaris_cpu_t    solaris_cpu[];
 				sizeof (kmutex_t))
 #define	CPUC_SIZE1		roundup(CPUC_SIZE, CPU_CACHE_COHERENCE_SIZE)
 #define	CPUC_PADSIZE		CPUC_SIZE1 - CPUC_SIZE
-
 
 typedef struct cpu_core {
 	uint16_t	cpuc_dtrace_flags;	/* DTrace flags */

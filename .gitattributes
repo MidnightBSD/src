@@ -42690,7 +42690,6 @@ sys/cddl/compat/opensolaris/sys/acl.h -text
 sys/cddl/compat/opensolaris/sys/atomic.h -text
 sys/cddl/compat/opensolaris/sys/bitmap.h -text
 sys/cddl/compat/opensolaris/sys/byteorder.h -text
-sys/cddl/compat/opensolaris/sys/callb.h -text
 sys/cddl/compat/opensolaris/sys/cmn_err.h -text
 sys/cddl/compat/opensolaris/sys/cpupart.h -text
 sys/cddl/compat/opensolaris/sys/cpuvar.h -text
@@ -42734,11 +42733,9 @@ sys/cddl/compat/opensolaris/sys/sig.h -text
 sys/cddl/compat/opensolaris/sys/stat.h -text
 sys/cddl/compat/opensolaris/sys/string.h -text
 sys/cddl/compat/opensolaris/sys/sunddi.h -text
-sys/cddl/compat/opensolaris/sys/sysmacros.h -text
 sys/cddl/compat/opensolaris/sys/systeminfo.h -text
 sys/cddl/compat/opensolaris/sys/systm.h -text
 sys/cddl/compat/opensolaris/sys/taskq.h -text
-sys/cddl/compat/opensolaris/sys/taskq_impl.h -text
 sys/cddl/compat/opensolaris/sys/time.h -text
 sys/cddl/compat/opensolaris/sys/types.h -text
 sys/cddl/compat/opensolaris/sys/uio.h -text

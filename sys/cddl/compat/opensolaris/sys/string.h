@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/string.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_STRING_H_
@@ -33,6 +32,8 @@
 #include <sys/libkern.h>
 
 char	*strpbrk(const char *, const char *);
-void	 strident_canon(char *s, size_t n);
+void	 strident_canon(char *, size_t);
+char	*kmem_asprintf(const char *, ...);
+void	 strfree(char *);
 
 #endif	/* _OPENSOLARIS_SYS_STRING_H_ */

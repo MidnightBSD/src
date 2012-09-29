@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/vfs.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_VFS_H_
@@ -46,6 +45,7 @@ typedef	struct mount	vfs_t;
 #define	vfs_count	mnt_ref
 #define	vfs_fsid	mnt_stat.f_fsid
 #define	vfs_bsize	mnt_stat.f_bsize
+#define	vfs_resource	mnt_stat.f_mntfromname
 
 #define	v_flag		v_vflag
 #define	v_vfsp		v_mount
@@ -64,6 +64,8 @@ typedef	struct mount	vfs_t;
 	MNT_REL(vfsp);							\
 	MNT_IUNLOCK(vfsp);						\
 } while (0)
+
+#define	fs_vscan(vp, cr, async)	(0)
 
 #define	VROOT		VV_ROOT
 
@@ -108,9 +110,26 @@ void vfs_setmntopt(vfs_t *vfsp, const char *name, const char *arg,
     int flags __unused);
 void vfs_clearmntopt(vfs_t *vfsp, const char *name);
 int vfs_optionisset(const vfs_t *vfsp, const char *opt, char **argp);
-int traverse(vnode_t **cvpp, int lktype);
-int domount(kthread_t *td, vnode_t *vp, const char *fstype, char *fspath,
-    char *fspec, int fsflags);
+int mount_snapshot(kthread_t *td, vnode_t **vpp, const char *fstype,
+    char *fspath, char *fspec, int fsflags);
+
+typedef	uint64_t	vfs_feature_t;
+
+#define	VFSFT_XVATTR		0x100000001	/* Supports xvattr for attrs */
+#define	VFSFT_CASEINSENSITIVE	0x100000002	/* Supports case-insensitive */
+#define	VFSFT_NOCASESENSITIVE	0x100000004	/* NOT case-sensitive */
+#define	VFSFT_DIRENTFLAGS	0x100000008	/* Supports dirent flags */
+#define	VFSFT_ACLONCREATE	0x100000010	/* Supports ACL on create */
+#define	VFSFT_ACEMASKONACCESS	0x100000020	/* Can use ACEMASK for access */
+#define	VFSFT_SYSATTR_VIEWS	0x100000040	/* Supports sysattr view i/f */
+#define	VFSFT_ACCESS_FILTER	0x100000080	/* dirents filtered by access */
+#define	VFSFT_REPARSE		0x100000100	/* Supports reparse point */
+#define	VFSFT_ZEROCOPY_SUPPORTED	0x100000200
+				/* Support loaning /returning cache buffer */
+
+#define	vfs_set_feature(vfsp, feature)		do { } while (0)
+#define	vfs_clear_feature(vfsp, feature)	do { } while (0)
+#define	vfs_has_feature(vfsp, feature)		(0)
 
 #endif	/* _KERNEL */
 

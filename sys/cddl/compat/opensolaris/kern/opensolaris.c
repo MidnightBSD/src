@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris.c,v 1.1 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright 2007 John Birrell <jb@FreeBSD.org>
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  *
  */
 
@@ -32,14 +31,16 @@
 #include <sys/conf.h>
 #include <sys/cpuvar.h>
 #include <sys/errno.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
+#include <sys/misc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
-#include <sys/misc.h>
 
 cpu_core_t	cpu_core[MAXCPU];
 kmutex_t	cpu_lock;
 solaris_cpu_t	solaris_cpu[MAXCPU];
+int		nsec_per_tick;
 
 /*
  *  OpenSolaris subsystem initialisation.
@@ -48,10 +49,6 @@ static void
 opensolaris_load(void *dummy)
 {
 	int i;
-
-	printf("This module (opensolaris) contains code covered by the\n");
-	printf("Common Development and Distribution License (CDDL)\n");
-	printf("see http://opensolaris.org/os/licensing/opensolaris_license/\n");
 
 	/*
 	 * "Enable" all CPUs even though they may not exist just so
@@ -64,6 +61,8 @@ opensolaris_load(void *dummy)
 	}
 
 	mutex_init(&cpu_lock, "OpenSolaris CPU lock", MUTEX_DEFAULT, NULL);
+
+	nsec_per_tick = NANOSEC / hz;
 }
 
 SYSINIT(opensolaris_register, SI_SUB_OPENSOLARIS, SI_ORDER_FIRST, opensolaris_load, NULL);
@@ -83,6 +82,7 @@ opensolaris_modevent(module_t mod __unused, int type, void *data __unused)
 
 	switch (type) {
 	case MOD_LOAD:
+		utsname.nodename = prison0.pr_hostname;
 		break;
 
 	case MOD_UNLOAD:

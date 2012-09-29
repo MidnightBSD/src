@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,11 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_vfs.c,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
+#include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/cred.h>
 #include <sys/vfs.h>
@@ -39,32 +39,39 @@ __FBSDID("$FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_vfs.c,v 1.1
 
 MALLOC_DECLARE(M_MOUNT);
 
-TAILQ_HEAD(vfsoptlist, vfsopt);
-struct vfsopt {
-	TAILQ_ENTRY(vfsopt) link;
-	char	*name;
-	void	*value;
-	int	len;
-};
-
 void
 vfs_setmntopt(vfs_t *vfsp, const char *name, const char *arg,
     int flags __unused)
 {
 	struct vfsopt *opt;
 	size_t namesize;
+	int locked;
+
+	if (!(locked = mtx_owned(MNT_MTX(vfsp))))
+		MNT_ILOCK(vfsp);
 
 	if (vfsp->mnt_opt == NULL) {
-		vfsp->mnt_opt = malloc(sizeof(*vfsp->mnt_opt), M_MOUNT, M_WAITOK);
-		TAILQ_INIT(vfsp->mnt_opt);
+		void *opts;
+
+		MNT_IUNLOCK(vfsp);
+		opts = malloc(sizeof(*vfsp->mnt_opt), M_MOUNT, M_WAITOK);
+		MNT_ILOCK(vfsp);
+		if (vfsp->mnt_opt == NULL) {
+			vfsp->mnt_opt = opts;
+			TAILQ_INIT(vfsp->mnt_opt);
+		} else {
+			free(opts, M_MOUNT);
+		}
 	}
 
-	opt = malloc(sizeof(*opt), M_MOUNT, M_WAITOK);
+	MNT_IUNLOCK(vfsp);
 
+	opt = malloc(sizeof(*opt), M_MOUNT, M_WAITOK);
 	namesize = strlen(name) + 1;
 	opt->name = malloc(namesize, M_MOUNT, M_WAITOK);
 	strlcpy(opt->name, name, namesize);
-
+	opt->pos = -1;
+	opt->seen = 1;
 	if (arg == NULL) {
 		opt->value = NULL;
 		opt->len = 0;
@@ -73,29 +80,23 @@ vfs_setmntopt(vfs_t *vfsp, const char *name, const char *arg,
 		opt->value = malloc(opt->len, M_MOUNT, M_WAITOK);
 		bcopy(arg, opt->value, opt->len);
 	}
-	/* TODO: Locking. */
+
+	MNT_ILOCK(vfsp);
 	TAILQ_INSERT_TAIL(vfsp->mnt_opt, opt, link);
+	if (!locked)
+		MNT_IUNLOCK(vfsp);
 }
 
 void
 vfs_clearmntopt(vfs_t *vfsp, const char *name)
 {
-	struct vfsopt *opt;
+	int locked;
 
-	if (vfsp->mnt_opt == NULL)
-		return;
-	/* TODO: Locking. */
-	TAILQ_FOREACH(opt, vfsp->mnt_opt, link) {
-		if (strcmp(opt->name, name) == 0)
-			break;
-	}
-	if (opt != NULL) {
-		TAILQ_REMOVE(vfsp->mnt_opt, opt, link);
-		free(opt->name, M_MOUNT);
-		if (opt->value != NULL)
-			free(opt->value, M_MOUNT);
-		free(opt, M_MOUNT);
-	}
+	if (!(locked = mtx_owned(MNT_MTX(vfsp))))
+		MNT_ILOCK(vfsp);
+	vfs_deleteopt(vfsp->mnt_opt, name);
+	if (!locked)
+		MNT_IUNLOCK(vfsp);
 }
 
 int
@@ -111,60 +112,13 @@ vfs_optionisset(const vfs_t *vfsp, const char *opt, char **argp)
 }
 
 int
-traverse(vnode_t **cvpp, int lktype)
-{
-	kthread_t *td = curthread;
-	vnode_t *cvp;
-	vnode_t *tvp;
-	vfs_t *vfsp;
-	int error;
-
-	cvp = *cvpp;
-	tvp = NULL;
-
-	/*
-	 * If this vnode is mounted on, then we transparently indirect
-	 * to the vnode which is the root of the mounted file system.
-	 * Before we do this we must check that an unmount is not in
-	 * progress on this vnode.
-	 */
-
-	for (;;) {
-		/*
-		 * Reached the end of the mount chain?
-		 */
-		vfsp = vn_mountedvfs(cvp);
-		if (vfsp == NULL)
-			break;
-		/*
-		 * tvp is NULL for *cvpp vnode, which we can't unlock.
-		 */
-		if (tvp != NULL)
-			vput(cvp);
-		else
-			vrele(cvp);
-
-		/*
-		 * The read lock must be held across the call to VFS_ROOT() to
-		 * prevent a concurrent unmount from destroying the vfs.
-		 */
-		error = VFS_ROOT(vfsp, lktype, &tvp, td);
-		if (error != 0)
-			return (error);
-		cvp = tvp;
-	}
-
-	*cvpp = cvp;
-	return (0);
-}
-
-int
-domount(kthread_t *td, vnode_t *vp, const char *fstype, char *fspath,
+mount_snapshot(kthread_t *td, vnode_t **vpp, const char *fstype, char *fspath,
     char *fspec, int fsflags)
 {
-	struct mount *mp;
 	struct vfsconf *vfsp;
-	struct ucred *newcr, *oldcr;
+	struct mount *mp;
+	vnode_t *vp, *mvp;
+	struct ucred *cr;
 	int error;
 
 	/*
@@ -179,23 +133,30 @@ domount(kthread_t *td, vnode_t *vp, const char *fstype, char *fspath,
 	if (vfsp == NULL)
 		return (ENODEV);
 
+	vp = *vpp;
 	if (vp->v_type != VDIR)
 		return (ENOTDIR);
+	/*
+	 * We need vnode lock to protect v_mountedhere and vnode interlock
+	 * to protect v_iflag.
+	 */
+	vn_lock(vp, LK_SHARED | LK_RETRY);
 	VI_LOCK(vp);
-	if ((vp->v_iflag & VI_MOUNT) != 0 ||
-	    vp->v_mountedhere != NULL) {
+	if ((vp->v_iflag & VI_MOUNT) != 0 || vp->v_mountedhere != NULL) {
 		VI_UNLOCK(vp);
+		VOP_UNLOCK(vp, 0);
 		return (EBUSY);
 	}
 	vp->v_iflag |= VI_MOUNT;
 	VI_UNLOCK(vp);
+	VOP_UNLOCK(vp, 0);
 
 	/*
 	 * Allocate and initialize the filesystem.
+	 * We don't want regular user that triggered snapshot mount to be able
+	 * to unmount it, so pass credentials of the parent mount.
 	 */
-	vn_lock(vp, LK_SHARED | LK_RETRY, td);
-	mp = vfs_mount_alloc(vp, vfsp, fspath, td);
-	VOP_UNLOCK(vp, 0, td);
+	mp = vfs_mount_alloc(vp, vfsp, fspath, vp->v_mount->mnt_cred);
 
 	mp->mnt_optnew = NULL;
 	vfs_setmntopt(mp, "from", fspec, 0);
@@ -204,78 +165,68 @@ domount(kthread_t *td, vnode_t *vp, const char *fstype, char *fspath,
 
 	/*
 	 * Set the mount level flags.
-	 * crdup() can sleep, so do it before acquiring a mutex.
 	 */
-	newcr = crdup(kcred);
-	MNT_ILOCK(mp);
-	if (fsflags & MNT_RDONLY)
-		mp->mnt_flag |= MNT_RDONLY;
-	mp->mnt_flag &=~ MNT_UPDATEMASK;
-	mp->mnt_flag |= fsflags & (MNT_UPDATEMASK | MNT_FORCE | MNT_ROOTFS);
+	mp->mnt_flag = fsflags & MNT_UPDATEMASK;
 	/*
-	 * Unprivileged user can trigger mounting a snapshot, but we don't want
-	 * him to unmount it, so we switch to privileged credentials.
+	 * Snapshots are always read-only.
 	 */
-	oldcr = mp->mnt_cred;
-	mp->mnt_cred = newcr;
-	mp->mnt_stat.f_owner = mp->mnt_cred->cr_uid;
-	MNT_IUNLOCK(mp);
-	crfree(oldcr);
+	mp->mnt_flag |= MNT_RDONLY;
 	/*
-	 * Mount the filesystem.
-	 * XXX The final recipients of VFS_MOUNT just overwrite the ndp they
-	 * get.  No freeing of cn_pnbuf.
+	 * We don't want snapshots to allow access to vulnerable setuid
+	 * programs, so we turn off setuid when mounting snapshots.
 	 */
-	error = VFS_MOUNT(mp, td);
+	mp->mnt_flag |= MNT_NOSUID;
+	/*
+	 * We don't want snapshots to be visible in regular
+	 * mount(8) and df(1) output.
+	 */
+	mp->mnt_flag |= MNT_IGNORE;
+	/*
+	 * XXX: This is evil, but we can't mount a snapshot as a regular user.
+	 * XXX: Is is safe when snapshot is mounted from within a jail?
+	 */
+	cr = td->td_ucred;
+	td->td_ucred = kcred;
+	error = VFS_MOUNT(mp);
+	td->td_ucred = cr;
 
-	if (!error) {
-		if (mp->mnt_opt != NULL)
-			vfs_freeopts(mp->mnt_opt);
-		mp->mnt_opt = mp->mnt_optnew;
-		(void)VFS_STATFS(mp, &mp->mnt_stat, td);
+	if (error != 0) {
+		vrele(vp);
+		vfs_unbusy(mp);
+		vfs_mount_destroy(mp);
+		*vpp = NULL;
+		return (error);
 	}
+
+	if (mp->mnt_opt != NULL)
+		vfs_freeopts(mp->mnt_opt);
+	mp->mnt_opt = mp->mnt_optnew;
+	(void)VFS_STATFS(mp, &mp->mnt_stat);
+
 	/*
 	 * Prevent external consumers of mount options from reading
 	 * mnt_optnew.
 	*/
 	mp->mnt_optnew = NULL;
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
-	/*
-	 * Put the new filesystem on the mount list after root.
-	 */
+
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 #ifdef FREEBSD_NAMECACHE
 	cache_purge(vp);
 #endif
-	if (!error) {
-		vnode_t *mvp;
+	VI_LOCK(vp);
+	vp->v_iflag &= ~VI_MOUNT;
+	VI_UNLOCK(vp);
 
-		VI_LOCK(vp);
-		vp->v_iflag &= ~VI_MOUNT;
-		VI_UNLOCK(vp);
-		vp->v_mountedhere = mp;
-		mtx_lock(&mountlist_mtx);
-		TAILQ_INSERT_TAIL(&mountlist, mp, mnt_list);
-		mtx_unlock(&mountlist_mtx);
-		vfs_event_signal(NULL, VQ_MOUNT, 0);
-		if (VFS_ROOT(mp, LK_EXCLUSIVE, &mvp, td))
-			panic("mount: lost mount");
-		mountcheckdirs(vp, mvp);
-		vput(mvp);
-		VOP_UNLOCK(vp, 0, td);
-		if ((mp->mnt_flag & MNT_RDONLY) == 0)
-			error = vfs_allocate_syncvnode(mp);
-		vfs_unbusy(mp, td);
-		if (error)
-			vrele(vp);
-		else
-			vfs_mountedfrom(mp, fspec);
-	} else {
-		VI_LOCK(vp);
-		vp->v_iflag &= ~VI_MOUNT;
-		VI_UNLOCK(vp);
-		VOP_UNLOCK(vp, 0, td);
-		vfs_unbusy(mp, td);
-		vfs_mount_destroy(mp);
-	}
-	return (error);
+	vp->v_mountedhere = mp;
+	/* Put the new filesystem on the mount list. */
+	mtx_lock(&mountlist_mtx);
+	TAILQ_INSERT_TAIL(&mountlist, mp, mnt_list);
+	mtx_unlock(&mountlist_mtx);
+	vfs_event_signal(NULL, VQ_MOUNT, 0);
+	if (VFS_ROOT(mp, LK_EXCLUSIVE, &mvp))
+		panic("mount: lost mount");
+	vput(vp);
+	vfs_unbusy(mp);
+	*vpp = mvp;
+	return (0);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_misc.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,46 +25,30 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_misc.c,v 1.3.2.2 2009/05/20 23:34:59 kmacy Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/libkern.h>
 #include <sys/limits.h>
 #include <sys/misc.h>
-#include <sys/sunddi.h>
+#include <sys/sysctl.h>
 
 char hw_serial[11] = "0";
 
 struct opensolaris_utsname utsname = {
-	.nodename = "unset"
+	.machine = MACHINE
 };
 
-int
-ddi_strtol(const char *str, char **nptr, int base, long *result)
+static void
+opensolaris_utsname_init(void *arg)
 {
 
-	*result = strtol(str, nptr, base);
-	if (*result == 0)
-		return (EINVAL);
-	else if (*result == LONG_MIN || *result == LONG_MAX)
-		return (ERANGE);
-	return (0);
+	utsname.sysname = ostype;
+	utsname.nodename = prison0.pr_hostname;
+	utsname.release = osrelease;
+	snprintf(utsname.version, sizeof(utsname.version), "%d", osreldate);
 }
-
-int
-ddi_strtoul(const char *str, char **nptr, int base, unsigned long *result)
-{
-
-	if (str == hw_serial) {
-		*result = hostid;
-		return (0);
-	}
-
-	*result = strtoul(str, nptr, base);
-	if (*result == 0)
-		return (EINVAL);
-	else if (*result == ULONG_MAX)
-		return (ERANGE);
-	return (0);
-}
+SYSINIT(opensolaris_utsname_init, SI_SUB_TUNABLES, SI_ORDER_ANY,
+    opensolaris_utsname_init, NULL);

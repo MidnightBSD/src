@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/zone.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_ZONE_H_
@@ -39,9 +38,9 @@
  */
 
 /*
- * Is process in the global zone?
+ * Is thread in the global zone?
  */
-#define	INGLOBALZONE(p)	(!jailed((p)->p_ucred))
+#define	INGLOBALZONE(thread)	(!jailed((thread)->td_ucred))
 
 /*
  * Attach the given dataset to the given jail.
@@ -58,11 +57,16 @@ extern int zone_dataset_detach(struct ucred *, const char *, int);
  */
 extern int zone_dataset_visible(const char *, int *);
 
+/*
+ * Safely get the hostid of the specified zone (defaults to machine's hostid
+ * if the specified zone doesn't emulate a hostid).  Passing NULL retrieves
+ * the global zone's (i.e., physical system's) hostid.
+ */
+extern uint32_t zone_get_hostid(void *);
+
 #else	/* !_KERNEL */
 
 #define	GLOBAL_ZONEID	0
-
-extern int getzoneid(void);
 
 #endif	/* _KERNEL */
 

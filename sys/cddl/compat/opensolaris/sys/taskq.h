@@ -1,87 +1,43 @@
-/* $MidnightBSD$ */
-/*
- * CDDL HEADER START
+/*-
+ * Copyright (c) 2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * All rights reserved.
  *
- * The contents of this file are subject to the terms of the
- * Common Development and Distribution License, Version 1.0 only
- * (the "License").  You may not use this file except in compliance
- * with the License.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
- * See the License for the specific language governing permissions
- * and limitations under the License.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  *
- * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
- * If applicable, add the following below this CDDL HEADER, with the
- * fields enclosed by brackets "[]" replaced with your own identifying
- * information: Portions Copyright [yyyy] [name of copyright owner]
- *
- * CDDL HEADER END
- *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/taskq.h,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
-/*
- * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
- */
 
-#ifndef	_SYS_TASKQ_H
-#define	_SYS_TASKQ_H
+#ifndef _OPENSOLARIS_SYS_TASKQ_H_
+#define	_OPENSOLARIS_SYS_TASKQ_H_
 
-#pragma ident	"@(#)taskq.h	1.5	05/06/08 SMI"
+#include_next <sys/taskq.h>
 
-#include <sys/param.h>
-#include <sys/proc.h>
-#include <sys/kcondvar.h>
+struct ostask {
+	struct task	 ost_task;
+	task_func_t	*ost_func;
+	void		*ost_arg;
+};
 
-#ifdef	__cplusplus
-extern "C" {
-#endif
+taskqid_t taskq_dispatch_safe(taskq_t *tq, task_func_t func, void *arg,
+    u_int flags, struct ostask *task);
 
-#define	TASKQ_NAMELEN	31
-
-typedef struct taskq taskq_t;
-typedef uintptr_t taskqid_t;
-typedef void (task_func_t)(void *);
-
-/*
- * Public flags for taskq_create(): bit range 0-15
- */
-#define	TASKQ_PREPOPULATE	0x0001	/* Prepopulate with threads and data */
-#define	TASKQ_CPR_SAFE		0x0002	/* Use CPR safe protocol */
-#define	TASKQ_DYNAMIC		0x0004	/* Use dynamic thread scheduling */
-
-/*
- * Flags for taskq_dispatch. TQ_SLEEP/TQ_NOSLEEP should be same as
- * KM_SLEEP/KM_NOSLEEP.
- */
-#define	TQ_SLEEP	0x00	/* Can block for memory */
-#define	TQ_NOSLEEP	0x01	/* cannot block for memory; may fail */
-#define	TQ_NOQUEUE	0x02	/* Do not enqueue if can't dispatch */
-#define	TQ_NOALLOC	0x04	/* cannot allocate memory; may fail */
-
-#ifdef _KERNEL
-
-extern taskq_t *system_taskq;
-
-extern taskq_t	*taskq_create(const char *, int, pri_t, int, int, uint_t);
-extern taskq_t	*taskq_create_instance(const char *, int, int, pri_t, int,
-    int, uint_t);
-extern taskqid_t taskq_dispatch(taskq_t *, task_func_t, void *, uint_t);
-extern void	nulltask(void *);
-extern void	taskq_destroy(taskq_t *);
-extern void	taskq_wait(taskq_t *);
-extern void	taskq_suspend(taskq_t *);
-extern int	taskq_suspended(taskq_t *);
-extern void	taskq_resume(taskq_t *);
-extern int	taskq_member(taskq_t *, kthread_t *);
-
-#endif	/* _KERNEL */
-
-#ifdef	__cplusplus
-}
-#endif
-
-#endif	/* _SYS_TASKQ_H */
+#endif	/* _OPENSOLARIS_SYS_TASKQ_H_ */

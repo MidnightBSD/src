@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/lock.h,v 1.2.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_LOCK_H_
@@ -36,8 +35,7 @@
 
 #define	LO_ALLMASK	(LO_INITIALIZED | LO_WITNESS | LO_QUIET |	\
 			 LO_RECURSABLE | LO_SLEEPABLE | LO_UPGRADABLE |	\
-			 LO_DUPOK | LO_ENROLLPEND | LO_CLASSMASK |	\
-			 LO_NOPROFILE)
+			 LO_DUPOK | LO_CLASSMASK | LO_NOPROFILE)
 #define	LO_EXPECTED	(LO_INITIALIZED | LO_WITNESS | LO_RECURSABLE |	\
 			 LO_SLEEPABLE | LO_UPGRADABLE | LO_DUPOK |	\
 			 /* sx lock class */(2 << LO_CLASSSHIFT))

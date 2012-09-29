@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cddl/compat/opensolaris/kern/opensolaris_atomic.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -53,13 +52,22 @@ atomic_init(void)
 }
 #endif
 
-#ifndef __LP64__
+#if !defined(__LP64__) && !defined(__mips_n32)
 void
 atomic_add_64(volatile uint64_t *target, int64_t delta)
 {
 
 	mtx_lock(&atomic_mtx);
 	*target += delta;
+	mtx_unlock(&atomic_mtx);
+}
+
+void
+atomic_dec_64(volatile uint64_t *target)
+{
+
+	mtx_lock(&atomic_mtx);
+	*target -= 1;
 	mtx_unlock(&atomic_mtx);
 }
 #endif
@@ -75,7 +83,7 @@ atomic_add_64_nv(volatile uint64_t *target, int64_t delta)
 	return (newval);
 }
 
-#if defined(__sparc64__) || defined(__powerpc__) || defined(__arm__)
+#if defined(__powerpc__) || defined(__arm__) || defined(__mips__)
 void
 atomic_or_8(volatile uint8_t *target, uint8_t value)
 {
@@ -96,23 +104,6 @@ atomic_or_8_nv(volatile uint8_t *target, uint8_t value)
 	return (newval);
 }
 
-#ifndef __LP64__
-void *
-atomic_cas_ptr(volatile void *target, void *cmp,  void *newval)
-{
-	void *oldval, **trg;
-
-	mtx_lock(&atomic_mtx);
-	trg = __DEVOLATILE(void **, target);
-	oldval = *trg;
-	if (oldval == cmp)
-		*trg = newval;
-	mtx_unlock(&atomic_mtx);
-	return (oldval);
-}
-#endif
-
-#ifndef __sparc64__
 uint64_t
 atomic_cas_64(volatile uint64_t *target, uint64_t cmp, uint64_t newval)
 {
@@ -125,7 +116,19 @@ atomic_cas_64(volatile uint64_t *target, uint64_t cmp, uint64_t newval)
 	mtx_unlock(&atomic_mtx);
 	return (oldval);
 }
-#endif
+
+uint32_t
+atomic_cas_32(volatile uint32_t *target, uint32_t cmp, uint32_t newval)
+{
+	uint32_t oldval;
+
+	mtx_lock(&atomic_mtx);
+	oldval = *target;
+	if (oldval == cmp)
+		*target = newval;
+	mtx_unlock(&atomic_mtx);
+	return (oldval);
+}
 
 void
 membar_producer(void)

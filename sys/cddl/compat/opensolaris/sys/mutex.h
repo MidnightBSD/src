@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/mutex.h,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_MUTEX_H_
@@ -33,9 +32,9 @@
 #ifdef _KERNEL
 
 #include <sys/param.h>
-#include <sys/proc.h>
 #include <sys/lock.h>
 #include_next <sys/mutex.h>
+#include <sys/proc.h>
 #include <sys/sx.h>
 
 typedef enum {
@@ -55,7 +54,7 @@ typedef struct sx	kmutex_t;
 
 #define	mutex_init(lock, desc, type, arg)	do {			\
 	const char *_name;						\
-	ASSERT((type) == MUTEX_DEFAULT);				\
+	ASSERT((type) == 0 || (type) == MUTEX_DEFAULT);			\
 	KASSERT(((lock)->lock_object.lo_flags & LO_ALLMASK) !=		\
 	    LO_EXPECTED, ("lock %s already initialized", #lock));	\
 	bzero((lock), sizeof(struct sx));				\

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,11 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/misc.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_MISC_H_
 #define	_OPENSOLARIS_SYS_MISC_H_
+
+#include <sys/limits.h>
+
+#define	MAXUID	UID_MAX
+
+#define	SPEC_MAXOFFSET_T	OFF_MAX
+
+#define	_ACL_ACLENT_ENABLED	0x1
+#define	_ACL_ACE_ENABLED	0x2
 
 #define	_FIOFFS		(INT_MIN)
 #define	_FIOGDIO	(INT_MIN+1)
@@ -37,10 +45,17 @@
 #define	_FIO_SEEK_DATA	FIOSEEKDATA
 #define	_FIO_SEEK_HOLE	FIOSEEKHOLE
 
+#ifdef _KERNEL
 struct opensolaris_utsname {
-	char *nodename;
+	char	*sysname;
+	char	*nodename;
+	char	*release;
+	char	version[32];
+	char	*machine;
 };
 
 extern char hw_serial[11];
 extern struct opensolaris_utsname utsname;
+#endif
+
 #endif	/* _OPENSOLARIS_SYS_MISC_H_ */

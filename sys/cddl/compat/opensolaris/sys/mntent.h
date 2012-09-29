@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/mntent.h,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -55,5 +54,7 @@
 #define	MNTOPT_EXEC	"exec"		/* enable executables */
 #define	MNTOPT_NOEXEC	"noexec"	/* disable executables */
 #define	MNTOPT_RESTRICT	"restrict"	/* restricted autofs mount */
+#define	MNTOPT_NBMAND	"nbmand"	/* allow non-blocking mandatory locks */
+#define	MNTOPT_NONBMAND	"nonbmand"	/* deny non-blocking mandatory locks */
 
 #endif	/* !_OPENSOLARIS_MNTENT_H_ */

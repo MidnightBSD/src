@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cddl/compat/opensolaris/sys/systm.h,v 1.5 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/compat/opensolaris/sys/systm.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_SYSTM_H_
 #define	_OPENSOLARIS_SYS_SYSTM_H_
 
 #ifdef _KERNEL
+
 #include <sys/param.h>
 #include_next <sys/systm.h>
 
@@ -41,9 +41,6 @@
 #define	PAGEMASK	(~PAGEOFFSET)
 
 #define	delay(x)	pause("soldelay", (x))
-
-#define	xcopyin(u, k, s)	copyin(u, k, s)
-#define	xcopyout(k, u, s)	copyout(k, u, s)
 
 #endif	/* _KERNEL */
 
