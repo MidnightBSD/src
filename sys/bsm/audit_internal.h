@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/bsm/audit_internal.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/bsm/audit_internal.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $ */
 /*
  * Copyright (c) 2005 Apple Inc.
  * Copyright (c) 2005 SPARTA, Inc.
@@ -33,7 +33,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_internal.h#18
  * $FreeBSD: src/sys/bsm/audit_internal.h,v 1.8 2007/07/22 12:28:12 rwatson Exp $
- * $MidnightBSD: src/sys/bsm/audit_internal.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $
+ * $MidnightBSD: src/sys/bsm/audit_internal.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $
  */
 
 #ifndef _AUDIT_INTERNAL_H
@@ -74,7 +74,9 @@ typedef	struct au_record	au_record_t;
  * token structures may contain pointers of whose contents we do not know the
  * size (e.g text tokens).
  */
+#define	AUDIT_HEADER_EX_SIZE(a)	((a)->ai_termid.at_type+18+sizeof(u_int32_t))
 #define	AUDIT_HEADER_SIZE	18
+#define	MAX_AUDIT_HEADER_SIZE	(5*sizeof(u_int32_t)+18)
 #define	AUDIT_TRAILER_SIZE	7
 
 /*

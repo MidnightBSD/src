@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $ */
 /*
  * Copyright (c) 2005 Apple Inc.
  * All rights reserved.
@@ -29,11 +29,17 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_kevents.h#34
  * $FreeBSD: src/sys/bsm/audit_kevents.h,v 1.12 2007/07/22 12:28:12 rwatson Exp $
- * $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $
+ * $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $
  */
 
 #ifndef _BSM_AUDIT_KEVENTS_H_
 #define	_BSM_AUDIT_KEVENTS_H_
+
+/*
+ * The reserved event numbers for kernel events are 1...2047 and 43001..44900.
+ */
+#define	AUE_IS_A_KEVENT(e)	(((e) > 0 && (e) < 2048) || 	\
+    				 ((e) > 43000 && (e) < 45000))
 
 /*
  * Values marked as AUE_NULL are not required to be audited as per CAPP.
@@ -61,7 +67,6 @@
 #define	AUE_UMOUNT		12
 #define	AUE_JUNK		13	/* Solaris-specific. */
 #define	AUE_ACCESS		14
-#define	AUE_CHECKUSERACCESS	AUE_ACCESS	/* Darwin-specific. */
 #define	AUE_KILL		15
 #define	AUE_STAT		16
 #define	AUE_LSTAT		17
@@ -310,6 +315,7 @@
 #define	AUE_PF_POLICY_FLIP	298	/* Solaris-specific. */
 #define	AUE_PF_POLICY_FLUSH	299	/* Solaris-specific. */
 #define	AUE_PF_POLICY_ALGS	300	/* Solaris-specific. */
+#define	AUE_PORTFS		301	/* Solaris-specific. */
 
 /*
  * Events added for Apple Darwin that potentially collide with future Solaris
@@ -518,17 +524,17 @@
 #define	AUE_READDIR		43118	/* Linux. */
 #define	AUE_IOPL		43119	/* Linux. */
 #define	AUE_VM86		43120	/* Linux. */
-#define	AUE_MAC_GET_PROC	43121	/* FreeBSD. */
-#define	AUE_MAC_SET_PROC	43122	/* FreeBSD. */
-#define	AUE_MAC_GET_FD		43123	/* FreeBSD. */
-#define	AUE_MAC_GET_FILE	43124	/* FreeBSD. */
-#define	AUE_MAC_SET_FD		43125	/* FreeBSD. */
-#define	AUE_MAC_SET_FILE	43126	/* FreeBSD. */
+#define	AUE_MAC_GET_PROC	43121	/* FreeBSD/Darwin. */
+#define	AUE_MAC_SET_PROC	43122	/* FreeBSD/Darwin. */
+#define	AUE_MAC_GET_FD		43123	/* FreeBSD/Darwin. */
+#define	AUE_MAC_GET_FILE	43124	/* FreeBSD/Darwin. */
+#define	AUE_MAC_SET_FD		43125	/* FreeBSD/Darwin. */
+#define	AUE_MAC_SET_FILE	43126	/* FreeBSD/Darwin. */
 #define	AUE_MAC_SYSCALL		43127	/* FreeBSD. */
-#define	AUE_MAC_GET_PID		43128	/* FreeBSD. */
-#define	AUE_MAC_GET_LINK	43129	/* FreeBSD. */
-#define	AUE_MAC_SET_LINK	43130	/* FreeBSD. */
-#define	AUE_MAC_EXECVE		43131	/* FreeBSD. */
+#define	AUE_MAC_GET_PID		43128	/* FreeBSD/Darwin. */
+#define	AUE_MAC_GET_LINK	43129	/* FreeBSD/Darwin. */
+#define	AUE_MAC_SET_LINK	43130	/* FreeBSD/Darwin. */
+#define	AUE_MAC_EXECVE		43131	/* FreeBSD/Darwin. */
 #define	AUE_GETPATH_FROMFD	43132	/* FreeBSD. */
 #define	AUE_GETPATH_FROMADDR	43133	/* FreeBSD. */
 #define	AUE_MQ_OPEN		43134	/* FreeBSD. */
@@ -550,6 +556,54 @@
 #define	AUE_MKNODAT		43150	/* FreeBSD. */
 #define	AUE_READLINKAT		43151	/* FreeBSD. */
 #define	AUE_SYMLINKAT		43152	/* FreeBSD. */
+#define	AUE_MAC_GETFSSTAT	43153	/* Darwin. */
+#define	AUE_MAC_GET_MOUNT	43154	/* Darwin. */
+#define	AUE_MAC_GET_LCID	43155	/* Darwin. */
+#define	AUE_MAC_GET_LCTX	43156	/* Darwin. */
+#define	AUE_MAC_SET_LCTX	43157	/* Darwin. */
+#define	AUE_MAC_MOUNT		43158	/* Darwin. */
+#define	AUE_GETLCID		43159	/* Darwin. */
+#define	AUE_SETLCID		43160	/* Darwin. */
+#define	AUE_TASKNAMEFORPID	43161	/* Darwin. */
+#define	AUE_ACCESS_EXTENDED	43162	/* Darwin. */
+#define	AUE_CHMOD_EXTENDED	43163	/* Darwin. */
+#define	AUE_FCHMOD_EXTENDED	43164	/* Darwin. */
+#define	AUE_FSTAT_EXTENDED	43165	/* Darwin. */
+#define	AUE_LSTAT_EXTENDED	43166	/* Darwin. */
+#define	AUE_MKDIR_EXTENDED	43167	/* Darwin. */
+#define	AUE_MKFIFO_EXTENDED	43168	/* Darwin. */
+#define	AUE_OPEN_EXTENDED	43169	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_R	43170	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_RC	43171	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_RT	43172	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_RTC	43173	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_W	43174	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_WC	43175	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_WT	43176	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_WTC	43177	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_RW	43178	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_RWC	43179	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_RWT	43180	/* Darwin. */
+#define	AUE_OPEN_EXTENDED_RWTC	43181	/* Darwin. */
+#define	AUE_STAT_EXTENDED	43182	/* Darwin. */
+#define	AUE_UMASK_EXTENDED	43183	/* Darwin. */
+#define	AUE_OPENAT		43184	/* FreeBSD. */
+#define	AUE_POSIX_OPENPT	43185	/* FreeBSD. */
+#define	AUE_CAP_NEW		43186	/* TrustedBSD. */
+#define	AUE_CAP_GETRIGHTS	43187	/* TrustedBSD. */
+#define	AUE_CAP_ENTER		43188	/* TrustedBSD. */
+#define	AUE_CAP_GETMODE		43189	/* TrustedBSD. */
+#define	AUE_POSIX_SPAWN		43190	/* Darwin. */
+#define	AUE_FSGETPATH		43191	/* Darwin. */
+#define	AUE_PREAD		43192	/* Darwin/FreeBSD. */
+#define	AUE_PWRITE		43193	/* Darwin/FreeBSD. */
+#define	AUE_FSCTL		43194	/* Darwin. */
+#define	AUE_FFSCTL		43195	/* Darwin. */
+#define	AUE_LPATHCONF		43196	/* FreeBSD. */
+#define	AUE_PDFORK		43197	/* FreeBSD. */
+#define	AUE_PDKILL		43198	/* FreeBSD. */
+#define	AUE_PDGETPID		43199	/* FreeBSD. */
+#define	AUE_PDWAIT		43200	/* FreeBSD. */
 
 /*
  * Darwin BSM uses a number of AUE_O_* definitions, which are aliased to the
@@ -621,13 +675,36 @@
 /*
  * Possible desired future values based on review of BSD/Darwin system calls.
  */
+#define	AUE_ATGETMSG		AUE_NULL
+#define	AUE_ATPUTMSG		AUE_NULL
+#define	AUE_ATSOCKET		AUE_NULL
+#define	AUE_ATPGETREQ		AUE_NULL
+#define	AUE_ATPGETRSP		AUE_NULL
+#define	AUE_ATPSNDREQ		AUE_NULL
+#define	AUE_ATPSNDRSP		AUE_NULL
+#define	AUE_BSDTHREADCREATE	AUE_NULL
+#define	AUE_BSDTHREADTERMINATE	AUE_NULL
+#define	AUE_BSDTHREADREGISTER	AUE_NULL
+#define	AUE_CHUD		AUE_NULL
+#define	AUE_CSOPS		AUE_NULL
 #define	AUE_DUP			AUE_NULL
-#define	AUE_FSCTL		AUE_NULL
+#define	AUE_FDATASYNC		AUE_NULL
+#define	AUE_FGETATTRLIST	AUE_NULL
+#define	AUE_FGETXATTR		AUE_NULL
+#define	AUE_FLISTXATTR		AUE_NULL
+#define	AUE_FREMOVEXATTR	AUE_NULL
+#define	AUE_FSETATTRLIST	AUE_NULL
+#define	AUE_FSETXATTR		AUE_NULL
+#define	AUE_FSTATFS64		AUE_NULL
 #define	AUE_FSTATV		AUE_NULL
+#define	AUE_FSTAT64		AUE_NULL
+#define	AUE_FSTAT64_EXTENDED	AUE_NULL
 #define	AUE_GCCONTROL		AUE_NULL
+#define	AUE_GETDIRENTRIES64	AUE_NULL
 #define	AUE_GETDTABLESIZE	AUE_NULL
 #define	AUE_GETEGID		AUE_NULL
 #define	AUE_GETEUID		AUE_NULL
+#define	AUE_GETFSSTAT64		AUE_NULL
 #define	AUE_GETGID		AUE_NULL
 #define	AUE_GETGROUPS		AUE_NULL
 #define	AUE_GETITIMER		AUE_NULL
@@ -640,24 +717,47 @@
 #define	AUE_GETPRIORITY		AUE_NULL
 #define	AUE_GETRLIMIT		AUE_NULL
 #define	AUE_GETRUSAGE		AUE_NULL
+#define	AUE_GETSGROUPS		AUE_NULL
 #define	AUE_GETSID		AUE_NULL
 #define	AUE_GETSOCKNAME		AUE_NULL
 #define	AUE_GETTIMEOFDAY	AUE_NULL
+#define	AUE_GETTID		AUE_NULL
 #define	AUE_GETUID		AUE_NULL
 #define	AUE_GETSOCKOPT		AUE_NULL
-#define	AUE_GTSOCKOPT		AUE_GETSOCKOPT	/* XXX: Typo in Darwin. */
+#define	AUE_GETWGROUPS		AUE_NULL
+#define	AUE_GETXATTR		AUE_NULL
+#define	AUE_IDENTITYSVC		AUE_NULL
+#define	AUE_INITGROUPS		AUE_NULL
+#define	AUE_IOPOLICYSYS		AUE_NULL
 #define	AUE_ISSETUGID		AUE_NULL
+#define	AUE_LIOLISTIO		AUE_NULL
+#define	AUE_LISTXATTR		AUE_NULL
 #define	AUE_LSTATV		AUE_NULL
+#define	AUE_LSTAT64		AUE_NULL
+#define	AUE_LSTAT64_EXTENDED	AUE_NULL
 #define	AUE_MADVISE		AUE_NULL
 #define	AUE_MINCORE		AUE_NULL
 #define	AUE_MKCOMPLEX		AUE_NULL
 #define	AUE_MODWATCH		AUE_NULL
 #define	AUE_MSGCL		AUE_NULL
 #define	AUE_MSYNC		AUE_NULL
-#define	AUE_PREAD		AUE_NULL
-#define	AUE_PWRITE		AUE_NULL
 #define	AUE_PREADV		AUE_NULL
+#define	AUE_PROCINFO		AUE_NULL
+#define	AUE_PTHREADCANCELED	AUE_NULL
+#define	AUE_PTHREADCHDIR	AUE_NULL
+#define	AUE_PTHREADCONDBROADCAST	AUE_NULL
+#define	AUE_PTHREADCONDDESTORY	AUE_NULL
+#define	AUE_PTHREADCONDINIT	AUE_NULL
+#define	AUE_PTHREADCONDSIGNAL	AUE_NULL
+#define	AUE_PTHREADCONDWAIT	AUE_NULL
+#define	AUE_PTHREADFCHDIR	AUE_NULL
+#define	AUE_PTHREADMARK		AUE_NULL
+#define	AUE_PTHREADMUTEXDESTROY	AUE_NULL
+#define	AUE_PTHREADMUTEXINIT	AUE_NULL
+#define	AUE_PTHREADMUTEXTRYLOCK	AUE_NULL
+#define	AUE_PTHREADMUTEXUNLOCK	AUE_NULL
 #define	AUE_PWRITEV		AUE_NULL
+#define	AUE_REMOVEXATTR		AUE_NULL
 #define	AUE_SBRK		AUE_NULL
 #define	AUE_SELECT		AUE_NULL
 #define	AUE_SEMDESTROY		AUE_NULL
@@ -666,7 +766,15 @@
 #define	AUE_SEMPOST		AUE_NULL
 #define	AUE_SEMTRYWAIT		AUE_NULL
 #define	AUE_SEMWAIT		AUE_NULL
+#define	AUE_SEMWAITSIGNAL	AUE_NULL
 #define	AUE_SETITIMER		AUE_NULL
+#define	AUE_SETSGROUPS		AUE_NULL
+#define	AUE_SETTID		AUE_NULL
+#define	AUE_SETTIDWITHPID	AUE_NULL
+#define	AUE_SETWGROUPS		AUE_NULL
+#define	AUE_SETXATTR		AUE_NULL
+#define	AUE_SHAREDREGIONCHECK	AUE_NULL
+#define	AUE_SHAREDREGIONMAP	AUE_NULL
 #define	AUE_SIGACTION		AUE_NULL
 #define	AUE_SIGALTSTACK		AUE_NULL
 #define	AUE_SIGPENDING		AUE_NULL
@@ -675,11 +783,19 @@
 #define	AUE_SIGSUSPEND		AUE_NULL
 #define	AUE_SIGWAIT		AUE_NULL
 #define	AUE_SSTK		AUE_NULL
+#define	AUE_STACKSNAPSHOT	AUE_NULL
+#define	AUE_STATFS64		AUE_NULL
 #define	AUE_STATV		AUE_NULL
+#define	AUE_STAT64		AUE_NULL
+#define	AUE_STAT64_EXTENDED	AUE_NULL
 #define	AUE_SYNC		AUE_NULL
 #define	AUE_SYSCALL		AUE_NULL
 #define	AUE_TABLE		AUE_NULL
+#define	AUE_VMPRESSUREMONITOR	AUE_NULL
 #define	AUE_WAITEVENT		AUE_NULL
+#define	AUE_WAITID		AUE_NULL
 #define	AUE_WATCHEVENT		AUE_NULL
+#define	AUE_WORKQOPEN		AUE_NULL
+#define	AUE_WORKQOPS		AUE_NULL
 
 #endif /* !_BSM_AUDIT_KEVENTS_H_ */

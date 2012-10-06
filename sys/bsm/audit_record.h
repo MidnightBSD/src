@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/bsm/audit_record.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/bsm/audit_record.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $ */
 /*
  * Copyright (c) 2005 Apple Inc.
  * All rights reserved.
@@ -29,7 +29,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_record.h#26
  * $FreeBSD: src/sys/bsm/audit_record.h,v 1.10 2007/07/22 12:28:13 rwatson Exp $
- * $MidnightBSD: src/sys/bsm/audit_record.h,v 1.4 2008/12/03 00:24:27 laffer1 Exp $
+ * $MidnightBSD: src/sys/bsm/audit_record.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $
  */
 
 #ifndef _BSM_AUDIT_RECORD_H_
@@ -50,7 +50,7 @@
 #define	AUT_IPC			0x22
 #define	AUT_PATH		0x23
 #define	AUT_SUBJECT32		0x24
-#define	AUT_SERVER32		0x25
+#define	AUT_XATPATH		0x25
 #define	AUT_PROCESS32		0x26
 #define	AUT_RETURN32		0x27
 #define	AUT_TEXT		0x28
@@ -66,9 +66,7 @@
 #define	AUT_IPC_PERM		0x32
 #define	AUT_LABEL		0x33
 #define	AUT_GROUPS		0x34
-#define	AUT_ILABEL		0x35
-#define	AUT_SLABEL		0x36
-#define	AUT_CLEAR		0x37
+#define	AUT_ACE			0x35
 #define	AUT_PRIV		0x38
 #define	AUT_UPRIV		0x39
 #define	AUT_LIAISON		0x3a
@@ -76,22 +74,28 @@
 #define	AUT_EXEC_ARGS		0x3c
 #define	AUT_EXEC_ENV		0x3d
 #define	AUT_ATTR32		0x3e
-/* #define	AUT_????	0x3f */
+#define	AUT_UNAUTH		0x3f
 #define	AUT_XATOM		0x40
 #define	AUT_XOBJ		0x41
 #define	AUT_XPROTO		0x42
 #define	AUT_XSELECT		0x43
-/* XXXRW: Additional X11 tokens not defined? */
+#define	AUT_XCOLORMAP		0x44
+#define	AUT_XCURSOR		0x45
+#define	AUT_XFONT		0x46
+#define	AUT_XGC			0x47
+#define	AUT_XPIXMAP		0x48
+#define	AUT_XPROPERTY		0x49
+#define	AUT_XWINDOW		0x4a
+#define	AUT_XCLIENT		0x4b
 #define	AUT_CMD			0x51
 #define	AUT_EXIT		0x52
 #define	AUT_ZONENAME		0x60
-/* XXXRW: OpenBSM AUT_HOST 0x70? */
+#define	AUT_HOST		0x70
 #define	AUT_ARG64		0x71
 #define	AUT_RETURN64		0x72
 #define	AUT_ATTR64		0x73
 #define	AUT_HEADER64		0x74
 #define	AUT_SUBJECT64		0x75
-#define	AUT_SERVER64		0x76
 #define	AUT_PROCESS64		0x77
 #define	AUT_OTHER_FILE64	0x78
 #define	AUT_HEADER64_EX		0x79
@@ -110,53 +114,8 @@
 #define	AUT_ARG			AUT_ARG32
 #define	AUT_RETURN		AUT_RETURN32
 #define	AUT_SUBJECT		AUT_SUBJECT32
-#define	AUT_SERVER		AUT_SERVER32
 #define	AUT_PROCESS		AUT_PROCESS32
 #define	AUT_OTHER_FILE		AUT_OTHER_FILE32
-
-/*
- * Darwin's bsm distribution uses the following non-BSM token name defines.
- * We provide them for a single OpenBSM release for compatibility reasons.
- */
-#define	AU_FILE_TOKEN		AUT_OTHER_FILE32
-#define	AU_TRAILER_TOKEN	AUT_TRAILER
-#define	AU_HEADER_32_TOKEN	AUT_HEADER32
-#define	AU_DATA_TOKEN		AUT_DATA
-#define	AU_ARB_TOKEN		AUT_DATA
-#define	AU_IPC_TOKEN		AUT_IPC
-#define	AU_PATH_TOKEN		AUT_PATH
-#define	AU_SUBJECT_32_TOKEN	AUT_SUBJECT32
-#define	AU_PROCESS_32_TOKEN	AUT_PROCESS32
-#define	AU_RETURN_32_TOKEN	AUT_RETURN32
-#define	AU_TEXT_TOKEN		AUT_TEXT
-#define	AU_OPAQUE_TOKEN		AUT_OPAQUE
-#define	AU_IN_ADDR_TOKEN	AUT_IN_ADDR
-#define	AU_IP_TOKEN		AUT_IP
-#define	AU_IPORT_TOKEN		AUT_IPORT
-#define	AU_ARG32_TOKEN		AUT_ARG32
-#define	AU_SOCK_TOKEN		AUT_SOCKET
-#define	AU_SEQ_TOKEN		AUT_SEQ
-#define	AU_ATTR_TOKEN		AUT_ATTR
-#define	AU_IPCPERM_TOKEN	AUT_IPC_PERM
-#define	AU_NEWGROUPS_TOKEN	AUT_NEWGROUPS
-#define	AU_EXEC_ARG_TOKEN	AUT_EXEC_ARGS
-#define	AU_EXEC_ENV_TOKEN	AUT_EXEC_ENV
-#define	AU_ATTR32_TOKEN		AUT_ATTR32
-#define	AU_CMD_TOKEN		AUT_CMD
-#define	AU_EXIT_TOKEN		AUT_EXIT
-#define	AU_ARG64_TOKEN		AUT_ARG64
-#define	AU_RETURN_64_TOKEN	AUT_RETURN64
-#define	AU_ATTR64_TOKEN		AUT_ATTR64
-#define	AU_HEADER_64_TOKEN	AUT_HEADER64
-#define	AU_SUBJECT_64_TOKEN	AUT_SUBJECT64
-#define	AU_PROCESS_64_TOKEN	AUT_PROCESS64
-#define	AU_HEADER_64_EX_TOKEN	AUT_HEADER64_EX
-#define	AU_SUBJECT_32_EX_TOKEN	AUT_SUBJECT32_EX
-#define	AU_PROCESS_32_EX_TOKEN	AUT_PROCESS32_EX
-#define	AU_SUBJECT_64_EX_TOKEN	AUT_SUBJECT64_EX
-#define	AU_PROCESS_64_EX_TOKEN	AUT_PROCESS64_EX
-#define	AU_IN_ADDR_EX_TOKEN	AUT_IN_ADDR_EX
-#define	AU_SOCK_32_EX_TOKEN	AUT_SOCKET_EX
 
 /*
  * The values for the following token ids are not defined by BSM.
@@ -168,9 +127,6 @@
 #define	AUT_SOCKINET32		0x80		/* XXX */
 #define	AUT_SOCKINET128		0x81		/* XXX */
 #define	AUT_SOCKUNIX		0x82		/* XXX */
-#define	AU_SOCK_INET_32_TOKEN	AUT_SOCKINET32
-#define	AU_SOCK_INET_128_TOKEN	AUT_SOCKINET128
-#define	AU_SOCK_UNIX_TOKEN	AUT_SOCKUNIX
 
 /* print values for the arbitrary token */
 #define AUP_BINARY      0
@@ -211,14 +167,11 @@
 #define	AUDIT_HEADER_VERSION_SOLARIS	2
 #define	AUDIT_HEADER_VERSION_TSOL25	3
 #define	AUDIT_HEADER_VERSION_TSOL	4
-#define	AUDIT_HEADER_VERSION_OPENBSM	10
+#define	AUDIT_HEADER_VERSION_OPENBSM10	10
+#define	AUDIT_HEADER_VERSION_OPENBSM11	11
+#define	AUDIT_HEADER_VERSION_OPENBSM	AUDIT_HEADER_VERSION_OPENBSM11
 
-/*
- * BSM define is AUT_TRAILER_MAGIC; Apple BSM define is TRAILER_PAD_MAGIC; we
- * split the difference, will remove the Apple define for the next release.
- */
 #define	AUT_TRAILER_MAGIC	0xb105
-#define	TRAILER_PAD_MAGIC	AUT_TRAILER_MAGIC
 
 /* BSM library calls */
 
@@ -229,6 +182,7 @@ struct in6_addr;
 struct ip;
 struct ipc_perm;
 struct kevent;
+struct sockaddr;
 struct sockaddr_in;
 struct sockaddr_in6;
 struct sockaddr_un;
@@ -242,22 +196,26 @@ int	 au_close(int d, int keep, short event);
 int	 au_close_buffer(int d, short event, u_char *buffer, size_t *buflen);
 int	 au_close_token(token_t *tok, u_char *buffer, size_t *buflen);
 
-token_t	*au_to_file(char *file, struct timeval tm);
+token_t	*au_to_file(const char *file, struct timeval tm);
 
 token_t	*au_to_header32_tm(int rec_size, au_event_t e_type, au_emod_t e_mod,
 	    struct timeval tm);
+token_t	*au_to_header32_ex_tm(int rec_size, au_event_t e_type, au_emod_t e_mod,
+	    struct timeval tm, struct auditinfo_addr *aia);
 token_t	*au_to_header64_tm(int rec_size, au_event_t e_type, au_emod_t e_mod,
 	    struct timeval tm);
 #if !defined(KERNEL) && !defined(_KERNEL)
 token_t	*au_to_header(int rec_size, au_event_t e_type, au_emod_t e_mod);
+token_t	*au_to_header_ex(int rec_size, au_event_t e_type, au_emod_t e_mod);
 token_t	*au_to_header32(int rec_size, au_event_t e_type, au_emod_t e_mod);
 token_t	*au_to_header64(int rec_size, au_event_t e_type, au_emod_t e_mod);
+token_t	*au_to_header32_ex(int rec_size, au_event_t e_type, au_emod_t e_mod);
 #endif
 
 token_t	*au_to_me(void);
-token_t	*au_to_arg(char n, char *text, uint32_t v);
-token_t	*au_to_arg32(char n, char *text, uint32_t v);
-token_t	*au_to_arg64(char n, char *text, uint64_t v);
+token_t	*au_to_arg(char n, const char *text, uint32_t v);
+token_t	*au_to_arg32(char n, const char *text, uint32_t v);
+token_t	*au_to_arg64(char n, const char *text, uint64_t v);
 
 #if defined(_KERNEL) || defined(KERNEL)
 token_t	*au_to_attr(struct vnode_au_info *vni);
@@ -266,7 +224,7 @@ token_t	*au_to_attr64(struct vnode_au_info *vni);
 #endif
 
 token_t	*au_to_data(char unit_print, char unit_type, char unit_count,
-	    char *p);
+	    const char *p);
 token_t	*au_to_exit(int retval, int err);
 token_t	*au_to_groups(int *groups);
 token_t	*au_to_newgroups(uint16_t n, gid_t *groups);
@@ -276,8 +234,8 @@ token_t	*au_to_ip(struct ip *ip);
 token_t	*au_to_ipc(char type, int id);
 token_t	*au_to_ipc_perm(struct ipc_perm *perm);
 token_t	*au_to_iport(uint16_t iport);
-token_t	*au_to_opaque(char *data, uint16_t bytes);
-token_t	*au_to_path(char *path);
+token_t	*au_to_opaque(const char *data, uint16_t bytes);
+token_t	*au_to_path(const char *path);
 token_t	*au_to_process(au_id_t auid, uid_t euid, gid_t egid, uid_t ruid,
 	    gid_t rgid, pid_t pid, au_asid_t sid, au_tid_t *tid);
 token_t	*au_to_process32(au_id_t auid, uid_t euid, gid_t egid, uid_t ruid,
@@ -295,15 +253,8 @@ token_t	*au_to_return(char status, uint32_t ret);
 token_t	*au_to_return32(char status, uint32_t ret);
 token_t	*au_to_return64(char status, uint64_t ret);
 token_t	*au_to_seq(long audit_count);
-
-#if defined(_KERNEL) || defined(KERNEL)
-token_t	*au_to_socket(struct socket *so);
-token_t	*au_to_socket_ex_32(uint16_t lp, uint16_t rp, struct sockaddr *la,
-	    struct sockaddr *ta);
-token_t	*au_to_socket_ex_128(uint16_t lp, uint16_t rp, struct sockaddr *la,
-	    struct sockaddr *ta);
-#endif
-
+token_t	*au_to_socket_ex(u_short so_domain, u_short so_type,
+	    struct sockaddr *sa_local, struct sockaddr *sa_remote);
 token_t	*au_to_sock_inet(struct sockaddr_in *so);
 token_t	*au_to_sock_inet32(struct sockaddr_in *so);
 token_t	*au_to_sock_inet128(struct sockaddr_in6 *so);
@@ -327,10 +278,23 @@ token_t	*au_to_exec_env(char *envs, int envc);
 token_t	*au_to_exec_args(char **argv);
 token_t	*au_to_exec_env(char **envp);
 #endif
-token_t	*au_to_text(char *text);
+token_t	*au_to_text(const char *text);
 token_t	*au_to_kevent(struct kevent *kev);
 token_t	*au_to_trailer(int rec_size);
-token_t	*au_to_zonename(char *zonename);
+token_t	*au_to_zonename(const char *zonename);
+
+/*
+ * BSM library routines for converting between local and BSM constant spaces.
+ */
+int	 au_bsm_to_domain(u_short bsm_domain, int *local_domainp);
+int	 au_bsm_to_errno(u_char bsm_error, int *errorp);
+int	 au_bsm_to_fcntl_cmd(u_short bsm_fcntl_cmd, int *local_fcntl_cmdp);
+int	 au_bsm_to_socket_type(u_short bsm_socket_type,
+	    int *local_socket_typep);
+u_short	 au_domain_to_bsm(int local_domain);
+u_char	 au_errno_to_bsm(int local_errno);
+u_short	 au_fcntl_cmd_to_bsm(int local_fcntl_command);
+u_short	 au_socket_type_to_bsm(int local_socket_type);
 
 __END_DECLS
 
