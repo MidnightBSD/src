@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_ctl.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_ctl.c,v 1.4 2011/12/10 22:55:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -76,7 +76,7 @@ void
 g_ctl_init(void)
 {
 
-	make_dev(&g_ctl_cdevsw, 0,
+	make_dev_credf(MAKEDEV_ETERNAL, &g_ctl_cdevsw, 0, NULL,
 	    UID_ROOT, GID_OPERATOR, 0640, PATH_GEOM_CTL);
 	KASSERT(GCTL_PARAM_RD == VM_PROT_READ,
 		("GCTL_PARAM_RD != VM_PROT_READ"));

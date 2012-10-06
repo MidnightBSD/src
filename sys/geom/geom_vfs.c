@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_vfs.c,v 1.4 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_vfs.c,v 1.5 2011/12/10 22:55:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -71,6 +71,9 @@ g_vfs_done(struct bio *bip)
 {
 	struct buf *bp;
 	int vfslocked;
+	struct mount *mp;
+	struct vnode *vp;
+	struct cdev *cdevp;
 
 	/*
 	 * Provider ('bio_to') could have withered away sometime
@@ -82,12 +85,50 @@ g_vfs_done(struct bio *bip)
 	if (bip->bio_from->provider == NULL)
 		bip->bio_to = NULL;
 
+	/*
+	 * Collect statistics on synchronous and asynchronous read
+	 * and write counts for disks that have associated filesystems.
+	 * Since this is run by the g_up thread it is single threaded and
+	 * we do not need to use atomic increments on the counters.
+	 */
+	bp = bip->bio_caller2;
+	vp = bp->b_vp;
+	if (vp == NULL) {
+		mp = NULL;
+	} else {
+		/*
+		 * If not a disk vnode, use its associated mount point
+		 * otherwise use the mountpoint associated with the disk.
+		 */
+		VI_LOCK(vp);
+		if (vp->v_type != VCHR ||
+		    (cdevp = vp->v_rdev) == NULL ||
+		    cdevp->si_devsw == NULL ||
+		    (cdevp->si_devsw->d_flags & D_DISK) == 0)
+			mp = vp->v_mount;
+		else
+			mp = cdevp->si_mountpt;
+		VI_UNLOCK(vp);
+	}
+	if (mp != NULL) {
+		if (bp->b_iocmd == BIO_WRITE) {
+			if (LK_HOLDER(bp->b_lock.lk_lock) == LK_KERNPROC)
+				mp->mnt_stat.f_asyncwrites++;
+			else
+				mp->mnt_stat.f_syncwrites++;
+		} else {
+			if (LK_HOLDER(bp->b_lock.lk_lock) == LK_KERNPROC)
+				mp->mnt_stat.f_asyncreads++;
+			else
+				mp->mnt_stat.f_syncreads++;
+		}
+	}
+
 	if (bip->bio_error) {
 		printf("g_vfs_done():");
 		g_print_bio(bip);
 		printf("error = %d\n", bip->bio_error);
 	}
-	bp = bip->bio_caller2;
 	bp->b_error = bip->bio_error;
 	bp->b_ioflags = bip->bio_flags;
 	if (bip->bio_error)
@@ -107,7 +148,7 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 	int vfslocked;
 
 	cp = bo->bo_private;
-	G_VALID_CONSUMER(cp);
+	/* G_VALID_CONSUMER(cp); We likely lack topology lock */
 
 	/*
 	 * If the provider has orphaned us, just return EXIO.
@@ -135,12 +176,10 @@ static void
 g_vfs_orphan(struct g_consumer *cp)
 {
 	struct g_geom *gp;
-	struct bufobj *bo;
 
 	g_topology_assert();
 
 	gp = cp->geom;
-	bo = gp->softc;
 	g_trace(G_T_TOPOLOGY, "g_vfs_orphan(%p(%s))", cp, gp->name);
 	if (cp->acr > 0 || cp->acw > 0 || cp->ace > 0)
 		g_access(cp, -cp->acr, -cp->acw, -cp->ace);
@@ -174,7 +213,7 @@ g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr
 	gp = g_new_geomf(&g_vfs_class, "%s.%s", fsname, pp->name);
 	cp = g_new_consumer(gp);
 	g_attach(cp, pp);
-	error = g_access(cp, 1, wr, 1);
+	error = g_access(cp, 1, wr, wr);
 	if (error) {
 		g_wither_geom(gp, ENXIO);
 		return (error);
@@ -193,7 +232,7 @@ g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr
 }
 
 void
-g_vfs_close(struct g_consumer *cp, struct thread *td)
+g_vfs_close(struct g_consumer *cp)
 {
 	struct g_geom *gp;
 	struct bufobj *bo;
@@ -202,7 +241,7 @@ g_vfs_close(struct g_consumer *cp, struct thread *td)
 
 	gp = cp->geom;
 	bo = gp->softc;
-	bufobj_invalbuf(bo, V_SAVE, td, 0, 0);
+	bufobj_invalbuf(bo, V_SAVE, 0, 0);
 	bo->bo_private = cp->private;
 	g_wither_geom_close(gp, ENXIO);
 }

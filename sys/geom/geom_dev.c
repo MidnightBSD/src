@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_dev.c,v 1.6 2011/12/10 22:55:34 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_dev.c,v 1.7 2012/04/01 04:19:13 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_dev.c,v 1.94 2007/05/05 17:02:19 pjd Exp $
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 #include <sys/conf.h>
+#include <sys/ctype.h>
 #include <sys/bio.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -53,6 +54,12 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_dev.c,v 1.94 2007/05/05 17:02:19 pjd Exp $
 #include <sys/limits.h>
 #include <geom/geom.h>
 #include <geom/geom_int.h>
+#include <machine/stdarg.h>
+
+/*
+ * Use the consumer private field to reference a physdev alias (if any).
+ */
+#define cp_alias_dev	private
 
 static d_open_t		g_dev_open;
 static d_close_t	g_dev_close;
@@ -73,24 +80,15 @@ static struct cdevsw g_dev_cdevsw = {
 
 static g_taste_t g_dev_taste;
 static g_orphan_t g_dev_orphan;
-static g_init_t		g_dev_init;
+static g_attrchanged_t g_dev_attrchanged;
 
 static struct g_class g_dev_class	= {
 	.name = "DEV",
 	.version = G_VERSION,
 	.taste = g_dev_taste,
 	.orphan = g_dev_orphan,
-	.init = g_dev_init,
+	.attrchanged = g_dev_attrchanged
 };
-
-static struct unrhdr *unithdr;	/* Locked by topology */
-
-static void
-g_dev_init(struct g_class *mp)
-{
-
-	unithdr = new_unrhdr(0, minor2unit(MAXMINOR), NULL);
-}
 
 void
 g_dev_print(void)
@@ -103,6 +101,40 @@ g_dev_print(void)
 		p = " ";
 	}
 	printf("\n");
+}
+
+static void
+g_dev_attrchanged(struct g_consumer *cp, const char *attr)
+{
+
+	if (strcmp(attr, "GEOM::physpath") != 0)
+		return;
+
+	if (g_access(cp, 1, 0, 0) == 0) {
+		char *physpath;
+		int error, physpath_len;
+
+		physpath_len = MAXPATHLEN;
+		physpath = g_malloc(physpath_len, M_WAITOK|M_ZERO);
+		error =
+		    g_io_getattr("GEOM::physpath", cp, &physpath_len, physpath);
+		g_access(cp, -1, 0, 0);
+		if (error == 0 && strlen(physpath) != 0) {
+			struct cdev *dev;
+			struct cdev *old_alias_dev;
+			struct cdev **alias_devp;
+
+			dev = cp->geom->softc;
+			old_alias_dev = cp->cp_alias_dev;
+			alias_devp = (struct cdev **)&cp->cp_alias_dev;
+			make_dev_physpath_alias(MAKEDEV_WAITOK, alias_devp,
+			    dev, old_alias_dev, physpath);
+		} else if (cp->cp_alias_dev) {
+			destroy_dev((struct cdev *)cp->cp_alias_dev);
+			cp->cp_alias_dev = NULL;
+		}
+		g_free(physpath);
+	}
 }
 
 struct g_provider *
@@ -119,16 +151,14 @@ g_dev_getprovider(struct cdev *dev)
 	return (cp->provider);
 }
 
-
 static struct g_geom *
 g_dev_taste(struct g_class *mp, struct g_provider *pp, int insist __unused)
 {
 	struct g_geom *gp;
 	struct g_consumer *cp;
-	char *alias;
-	int error;
-	struct cdev *dev;
-	u_int unit;
+	int error, len;
+	struct cdev *dev, *adev;
+	char buf[64], *val;
 
 	g_trace(G_T_TOPOLOGY, "dev_taste(%s,%s)", mp->name, pp->name);
 	g_topology_assert();
@@ -140,26 +170,49 @@ g_dev_taste(struct g_class *mp, struct g_provider *pp, int insist __unused)
 	error = g_attach(cp, pp);
 	KASSERT(error == 0,
 	    ("g_dev_taste(%s) failed to g_attach, err=%d", pp->name, error));
-	unit = alloc_unr(unithdr);
-	dev = make_dev(&g_dev_cdevsw, unit2minor(unit),
-	    UID_ROOT, GID_OPERATOR, 0640, gp->name);
+	error = make_dev_p(MAKEDEV_CHECKNAME | MAKEDEV_WAITOK, &dev,
+	    &g_dev_cdevsw, NULL, UID_ROOT, GID_OPERATOR, 0640, "%s", gp->name);
+	if (error != 0) {
+		printf("%s: make_dev_p() failed (gp->name=%s, error=%d)\n",
+		    __func__, gp->name, error);
+		g_detach(cp);
+		g_destroy_consumer(cp);
+		g_destroy_geom(gp);
+		return (NULL);
+	}
+
+	/* Search for device alias name and create it if found. */
+	adev = NULL;
+	for (len = MIN(strlen(gp->name), sizeof(buf) - 15); len > 0; len--) {
+		snprintf(buf, sizeof(buf), "kern.devalias.%s", gp->name);
+		buf[14 + len] = 0;
+		val = getenv(buf);
+		if (val != NULL) {
+			snprintf(buf, sizeof(buf), "%s%s",
+			    val, gp->name + len);
+			freeenv(val);
+			make_dev_alias_p(MAKEDEV_CHECKNAME | MAKEDEV_WAITOK,
+			    &adev, dev, "%s", buf);
+			break;
+		}
+	}
+
 	if (pp->flags & G_PF_CANDELETE)
 		dev->si_flags |= SI_CANDELETE;
 	dev->si_iosize_max = MAXPHYS;
 	gp->softc = dev;
 	dev->si_drv1 = gp;
 	dev->si_drv2 = cp;
+	if (adev != NULL) {
+		if (pp->flags & G_PF_CANDELETE)
+			adev->si_flags |= SI_CANDELETE;
+		adev->si_iosize_max = MAXPHYS;
+		adev->si_drv1 = gp;
+		adev->si_drv2 = cp;
+	}
 
-	g_topology_unlock();
+	g_dev_attrchanged(cp, "GEOM::physpath");
 
-	alias = g_malloc(MAXPATHLEN, M_WAITOK | M_ZERO);
-	error = (pp->geom->ioctl == NULL) ? ENODEV :
-	    pp->geom->ioctl(pp, DIOCGPROVIDERALIAS, alias, 0, curthread);
-	if (!error && alias[0] != '\0')
-		make_dev_alias(dev, "%s", alias);
-	g_free(alias);
-
-	g_topology_lock();
 	return (gp);
 }
 
@@ -257,13 +310,15 @@ g_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread
 {
 	struct g_geom *gp;
 	struct g_consumer *cp;
+	struct g_provider *pp;
 	struct g_kerneldump kd;
-	off_t offset, length;
+	off_t offset, length, chunk;
 	int i, error;
 	u_int u;
 
 	gp = dev->si_drv1;
 	cp = dev->si_drv2;
+	pp = cp->provider;
 
 	error = 0;
 	KASSERT(cp->acr || cp->acw,
@@ -305,8 +360,11 @@ g_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread
 		kd.length = OFF_MAX;
 		i = sizeof kd;
 		error = g_io_getattr("GEOM::kerneldump", cp, &i, &kd);
-		if (!error)
-			dev->si_flags |= SI_DUMPDEV;
+		if (!error) {
+			error = set_dumper(&kd.di);
+			if (!error)
+				dev->si_flags |= SI_DUMPDEV;
+		}
 		break;
 	case DIOCGFLUSH:
 		error = g_io_flush(cp);
@@ -321,16 +379,31 @@ g_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread
 			error = EINVAL;
 			break;
 		}
-		error = g_delete_data(cp, offset, length);
+		while (length > 0) { 
+			chunk = length;
+			if (chunk > 65536 * cp->provider->sectorsize)
+				chunk = 65536 * cp->provider->sectorsize;
+			error = g_delete_data(cp, offset, chunk);
+			length -= chunk;
+			offset += chunk;
+			if (error)
+				break;
+			/*
+			 * Since the request size is unbounded, the service
+			 * time is likewise.  We make this ioctl interruptible
+			 * by checking for signals for each bio.
+			 */
+			if (SIGPENDING(td))
+				break;
+		}
 		break;
 	case DIOCGIDENT:
 		error = g_io_getattr("GEOM::ident", cp, &i, data);
 		break;
 	case DIOCGPROVIDERNAME:
-		/* XXX */
-		if (cp->provider == NULL)
+		if (pp == NULL)
 			return (ENOENT);
-		strlcpy(data, cp->provider->name, i);
+		strlcpy(data, pp->name, i);
 		break;
 	case DIOCGSTRIPESIZE:
 		*(off_t *)data = cp->provider->stripesize;
@@ -438,7 +511,6 @@ g_dev_orphan(struct g_consumer *cp)
 {
 	struct g_geom *gp;
 	struct cdev *dev;
-	u_int unit;
 
 	g_topology_assert();
 	gp = cp->geom;
@@ -450,9 +522,7 @@ g_dev_orphan(struct g_consumer *cp)
 		set_dumper(NULL);
 
 	/* Destroy the struct cdev *so we get no more requests */
-	unit = dev2unit(dev);
 	destroy_dev(dev);
-	free_unr(unithdr, unit);
 
 	/* Wait for the cows to come home */
 	while (cp->nstart != cp->nend)

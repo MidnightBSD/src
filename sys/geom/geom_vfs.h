@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/geom_vfs.h,v 1.2 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -38,6 +38,6 @@ extern struct buf_ops *g_vfs_bufops;
 
 void g_vfs_strategy(struct bufobj *bo, struct buf *bp);
 int g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr);
-void g_vfs_close(struct g_consumer *cp, struct thread *td);
+void g_vfs_close(struct g_consumer *cp);
 
 #endif /* _GEOM_GEOM_VFS_H_ */

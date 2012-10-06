@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Ivan Voras <ivoras@gmail.com>
  * All rights reserved.
@@ -25,10 +24,10 @@
  * SUCH DAMAGE.
  */
 
-// $Id: binstream.c,v 1.2 2008-12-03 00:25:52 laffer1 Exp $
+// $Id: binstream.c,v 1.3 2012-10-06 19:34:53 laffer1 Exp $
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/virstor/binstream.c,v 1.1 2007/09/23 07:34:23 pjd Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/endian.h>
 #include <sys/param.h>

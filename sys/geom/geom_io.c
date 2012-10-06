@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_io.c,v 1.4 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_io.c,v 1.5 2011/12/10 22:55:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -60,6 +60,15 @@ static struct g_bioq g_bio_run_task;
 static u_int pace;
 static uma_zone_t	biozone;
 
+/*
+ * The head of the list of classifiers used in g_io_request.
+ * Use g_register_classifier() and g_unregister_classifier()
+ * to add/remove entries to the list.
+ * Classifiers are invoked in registration order.
+ */
+static TAILQ_HEAD(g_classifier_tailq, g_classifier_hook)
+    g_classifier_tailq = TAILQ_HEAD_INITIALIZER(g_classifier_tailq);
+
 #include <machine/atomic.h>
 
 static void
@@ -116,7 +125,7 @@ g_new_bio(void)
 
 	bp = uma_zalloc(biozone, M_NOWAIT | M_ZERO);
 #ifdef KTR
-	if (KTR_COMPILE & KTR_GEOM) {
+	if ((KTR_COMPILE & KTR_GEOM) && (ktr_mask & KTR_GEOM)) {
 		struct stack st;
 
 		CTR1(KTR_GEOM, "g_new_bio(): %p", bp);
@@ -134,7 +143,7 @@ g_alloc_bio(void)
 
 	bp = uma_zalloc(biozone, M_WAITOK | M_ZERO);
 #ifdef KTR
-	if (KTR_COMPILE & KTR_GEOM) {
+	if ((KTR_COMPILE & KTR_GEOM) && (ktr_mask & KTR_GEOM)) {
 		struct stack st;
 
 		CTR1(KTR_GEOM, "g_alloc_bio(): %p", bp);
@@ -149,7 +158,7 @@ void
 g_destroy_bio(struct bio *bp)
 {
 #ifdef KTR
-	if (KTR_COMPILE & KTR_GEOM) {
+	if ((KTR_COMPILE & KTR_GEOM) && (ktr_mask & KTR_GEOM)) {
 		struct stack st;
 
 		CTR1(KTR_GEOM, "g_destroy_bio(): %p", bp);
@@ -173,10 +182,13 @@ g_clone_bio(struct bio *bp)
 		bp2->bio_offset = bp->bio_offset;
 		bp2->bio_data = bp->bio_data;
 		bp2->bio_attribute = bp->bio_attribute;
+		/* Inherit classification info from the parent */
+		bp2->bio_classifier1 = bp->bio_classifier1;
+		bp2->bio_classifier2 = bp->bio_classifier2;
 		bp->bio_children++;
 	}
 #ifdef KTR
-	if (KTR_COMPILE & KTR_GEOM) {
+	if ((KTR_COMPILE & KTR_GEOM) && (ktr_mask & KTR_GEOM)) {
 		struct stack st;
 
 		CTR2(KTR_GEOM, "g_clone_bio(%p): %p", bp, bp2);
@@ -201,7 +213,7 @@ g_duplicate_bio(struct bio *bp)
 	bp2->bio_attribute = bp->bio_attribute;
 	bp->bio_children++;
 #ifdef KTR
-	if (KTR_COMPILE & KTR_GEOM) {
+	if ((KTR_COMPILE & KTR_GEOM) && (ktr_mask & KTR_GEOM)) {
 		struct stack st;
 
 		CTR2(KTR_GEOM, "g_duplicate_bio(%p): %p", bp, bp2);
@@ -254,6 +266,7 @@ g_io_flush(struct g_consumer *cp)
 	g_trace(G_T_BIO, "bio_flush(%s)", cp->provider->name);
 	bp = g_alloc_bio();
 	bp->bio_cmd = BIO_FLUSH;
+	bp->bio_flags |= BIO_ORDERED;
 	bp->bio_done = NULL;
 	bp->bio_attribute = NULL;
 	bp->bio_offset = cp->provider->mediasize;
@@ -317,6 +330,63 @@ g_io_check(struct bio *bp)
 		break;
 	}
 	return (0);
+}
+
+/*
+ * bio classification support.
+ *
+ * g_register_classifier() and g_unregister_classifier()
+ * are used to add/remove a classifier from the list.
+ * The list is protected using the g_bio_run_down lock,
+ * because the classifiers are called in this path.
+ *
+ * g_io_request() passes bio's that are not already classified
+ * (i.e. those with bio_classifier1 == NULL) to g_run_classifiers().
+ * Classifiers can store their result in the two fields
+ * bio_classifier1 and bio_classifier2.
+ * A classifier that updates one of the fields should
+ * return a non-zero value.
+ * If no classifier updates the field, g_run_classifiers() sets
+ * bio_classifier1 = BIO_NOTCLASSIFIED to avoid further calls.
+ */
+
+int
+g_register_classifier(struct g_classifier_hook *hook)
+{
+
+	g_bioq_lock(&g_bio_run_down);
+	TAILQ_INSERT_TAIL(&g_classifier_tailq, hook, link);
+	g_bioq_unlock(&g_bio_run_down);
+
+	return (0);
+}
+
+void
+g_unregister_classifier(struct g_classifier_hook *hook)
+{
+	struct g_classifier_hook *entry;
+
+	g_bioq_lock(&g_bio_run_down);
+	TAILQ_FOREACH(entry, &g_classifier_tailq, link) {
+		if (entry == hook) {
+			TAILQ_REMOVE(&g_classifier_tailq, hook, link);
+			break;
+		}
+	}
+	g_bioq_unlock(&g_bio_run_down);
+}
+
+static void
+g_run_classifiers(struct bio *bp)
+{
+	struct g_classifier_hook *hook;
+	int classified = 0;
+
+	TAILQ_FOREACH(hook, &g_classifier_tailq, link)
+		classified |= hook->func(hook->arg, bp);
+
+	if (!classified)
+		bp->bio_classifier1 = BIO_NOTCLASSIFIED;
 }
 
 void
@@ -384,8 +454,14 @@ g_io_request(struct bio *bp, struct g_consumer *cp)
 	 * The statistics collection is lockless, as such, but we
 	 * can not update one instance of the statistics from more
 	 * than one thread at a time, so grab the lock first.
+	 *
+	 * We also use the lock to protect the list of classifiers.
 	 */
 	g_bioq_lock(&g_bio_run_down);
+
+	if (!TAILQ_EMPTY(&g_classifier_tailq) && !bp->bio_classifier1)
+		g_run_classifiers(bp);
+
 	if (g_collectstats & 1)
 		devstat_start_transaction(pp->stat, &bp->bio_t0);
 	if (g_collectstats & 2)
@@ -413,14 +489,6 @@ g_io_deliver(struct bio *bp, int error)
 	KASSERT(bp != NULL, ("NULL bp in g_io_deliver"));
 	pp = bp->bio_to;
 	KASSERT(pp != NULL, ("NULL bio_to in g_io_deliver"));
-#ifdef DIAGNOSTIC
-	KASSERT(bp->bio_caller1 == bp->_bio_caller1,
-	    ("bio_caller1 used by the provider %s", pp->name));
-	KASSERT(bp->bio_caller2 == bp->_bio_caller2,
-	    ("bio_caller2 used by the provider %s", pp->name));
-	KASSERT(bp->bio_cflags == bp->_bio_cflags,
-	    ("bio_cflags used by the provider %s", pp->name));
-#endif
 	cp = bp->bio_from;
 	if (cp == NULL) {
 		bp->bio_error = error;
@@ -429,6 +497,21 @@ g_io_deliver(struct bio *bp, int error)
 	}
 	KASSERT(cp != NULL, ("NULL bio_from in g_io_deliver"));
 	KASSERT(cp->geom != NULL, ("NULL bio_from->geom in g_io_deliver"));
+#ifdef DIAGNOSTIC
+	/*
+	 * Some classes - GJournal in particular - can modify bio's
+	 * private fields while the bio is in transit; G_GEOM_VOLATILE_BIO
+	 * flag means it's an expected behaviour for that particular geom.
+	 */
+	if ((cp->geom->flags & G_GEOM_VOLATILE_BIO) == 0) {
+		KASSERT(bp->bio_caller1 == bp->_bio_caller1,
+		    ("bio_caller1 used by the provider %s", pp->name));
+		KASSERT(bp->bio_caller2 == bp->_bio_caller2,
+		    ("bio_caller2 used by the provider %s", pp->name));
+		KASSERT(bp->bio_cflags == bp->_bio_cflags,
+		    ("bio_cflags used by the provider %s", pp->name));
+	}
+#endif
 	KASSERT(bp->bio_completed >= 0, ("bio_completed can't be less than 0"));
 	KASSERT(bp->bio_completed <= bp->bio_length,
 	    ("bio_completed can't be greater than bio_length"));
@@ -592,7 +675,7 @@ g_io_schedule_up(struct thread *tp __unused)
 			g_bioq_unlock(&g_bio_run_up);
 			THREAD_NO_SLEEPING();
 			CTR4(KTR_GEOM, "g_up biodone bp %p provider %s off "
-			    "%ld len %ld", bp, bp->bio_to->name,
+			    "%jd len %ld", bp, bp->bio_to->name,
 			    bp->bio_offset, bp->bio_length);
 			biodone(bp);
 			THREAD_SLEEPING_OK();
@@ -698,19 +781,18 @@ g_print_bio(struct bio *bp)
 		return;
 	case BIO_READ:
 		cmd = "READ";
+		break;
 	case BIO_WRITE:
-		if (cmd == NULL)
-			cmd = "WRITE";
+		cmd = "WRITE";
+		break;
 	case BIO_DELETE:
-		if (cmd == NULL)
-			cmd = "DELETE";
-		printf("%s[%s(offset=%jd, length=%jd)]", pname, cmd,
-		    (intmax_t)bp->bio_offset, (intmax_t)bp->bio_length);
-		return;
+		cmd = "DELETE";
+		break;
 	default:
 		cmd = "UNKNOWN";
 		printf("%s[%s()]", pname, cmd);
 		return;
 	}
-	/* NOTREACHED */
+	printf("%s[%s(offset=%jd, length=%jd)]", pname, cmd,
+	    (intmax_t)bp->bio_offset, (intmax_t)bp->bio_length);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Ivan Voras <ivoras@freebsd.org>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/virstor/g_virstor.c,v 1.3.2.1 2009/12/08 21:46:30 delphij Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/geom/virstor/g_virstor.c,v 1.3.2.1 2009/12/08 21:46:
 #include <sys/mutex.h>
 #include <sys/sx.h>
 #include <sys/bio.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <sys/time.h>
@@ -52,6 +52,8 @@ __FBSDID("$FreeBSD: src/sys/geom/virstor/g_virstor.c,v 1.3.2.1 2009/12/08 21:46:
 
 #include <geom/virstor/g_virstor.h>
 #include <geom/virstor/g_virstor_md.h>
+
+FEATURE(g_virstor, "GEOM virtual storage support");
 
 /* Declare malloc(9) label */
 static MALLOC_DEFINE(M_GVIRSTOR, "gvirstor", "GEOM_VIRSTOR Data");
@@ -99,7 +101,7 @@ SYSCTL_UINT(_kern_geom_virstor, OID_AUTO, component_watermark, CTLFLAG_RW,
     "Minimum number of free components before issuing administrative warning");
 
 static int read_metadata(struct g_consumer *, struct g_virstor_metadata *);
-static int write_metadata(struct g_consumer *, struct g_virstor_metadata *);
+static void write_metadata(struct g_consumer *, struct g_virstor_metadata *);
 static int clear_metadata(struct g_virstor_component *);
 static int add_provider_to_geom(struct g_virstor_softc *, struct g_provider *,
     struct g_virstor_metadata *);
@@ -312,8 +314,13 @@ virstor_ctl_add(struct gctl_req *req, struct g_class *cp)
 
 		snprintf(aname, sizeof aname, "arg%d", i);
 		prov_name = gctl_get_asciiparam(req, aname);
-		if (strncmp(prov_name, _PATH_DEV, strlen(_PATH_DEV)) == 0)
-			prov_name += strlen(_PATH_DEV);
+		if (prov_name == NULL) {
+			gctl_error(req, "Error fetching argument '%s'", aname);
+			g_topology_unlock();
+			return;
+		}
+		if (strncmp(prov_name, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
+			prov_name += sizeof(_PATH_DEV) - 1;
 
 		pp = g_provider_by_name(prov_name);
 		if (pp == NULL) {
@@ -566,8 +573,12 @@ virstor_ctl_remove(struct gctl_req *req, struct g_class *cp)
 
 		sprintf(param, "arg%d", i);
 		prov_name = gctl_get_asciiparam(req, param);
-		if (strncmp(prov_name, _PATH_DEV, strlen(_PATH_DEV)) == 0)
-			prov_name += strlen(_PATH_DEV);
+		if (prov_name == NULL) {
+			gctl_error(req, "Error fetching argument '%s'", param);
+			return;
+		}
+		if (strncmp(prov_name, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
+			prov_name += sizeof(_PATH_DEV) - 1;
 
 		found = -1;
 		for (j = 0; j < sc->n_components; j++) {
@@ -799,10 +810,9 @@ g_virstor_taste(struct g_class *mp, struct g_provider *pp, int flags)
 	/* If the provider name is hardcoded, use the offered provider only
 	 * if it's been offered with its proper name (the one used in
 	 * the label command). */
-	if (md.provider[0] != '\0') {
-		if (strcmp(md.provider, pp->name) != 0)
-			return (NULL);
-	}
+	if (md.provider[0] != '\0' &&
+	    !g_compare_names(md.provider, pp->name))
+		return (NULL);
 
 	/* Iterate all geoms this class already knows about to see if a new
 	 * geom instance of this class needs to be created (in case the provider
@@ -1003,8 +1013,13 @@ read_metadata(struct g_consumer *cp, struct g_virstor_metadata *md)
 /**
  * Utility function: encode & write metadata. Assumes topology lock is
  * held.
+ *
+ * There is no useful way of recovering from errors in this function,
+ * not involving panicking the kernel. If the metadata cannot be written
+ * the most we can do is notify the operator and hope he spots it and
+ * replaces the broken drive.
  */
-static int
+static void
 write_metadata(struct g_consumer *cp, struct g_virstor_metadata *md)
 {
 	struct g_provider *pp;
@@ -1016,8 +1031,11 @@ write_metadata(struct g_consumer *cp, struct g_virstor_metadata *md)
 	LOG_MSG(LVL_DEBUG, "Writing metadata on %s", cp->provider->name);
 	g_topology_assert();
 	error = g_access(cp, 0, 1, 0);
-	if (error != 0)
-		return (error);
+	if (error != 0) {
+		LOG_MSG(LVL_ERROR, "g_access(0,1,0) failed for %s: %d",
+		    cp->provider->name, error);
+		return;
+	}
 	pp = cp->provider;
 
 	buf = malloc(pp->sectorsize, M_GVIRSTOR, M_WAITOK);
@@ -1027,9 +1045,11 @@ write_metadata(struct g_consumer *cp, struct g_virstor_metadata *md)
 	    pp->sectorsize);
 	g_topology_lock();
 	g_access(cp, 0, -1, 0);
-
 	free(buf, M_GVIRSTOR);
-	return (0);
+
+	if (error != 0)
+		LOG_MSG(LVL_ERROR, "Error %d writing metadata to %s",
+		    error, cp->provider->name);
 }
 
 /*

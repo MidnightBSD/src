@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_disk.c,v 1.4 2011/12/10 22:55:34 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_disk.c,v 1.5 2012/03/31 16:58:04 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -44,9 +44,10 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_disk.c,v 1.104.2.1 2009/01/11 21:45:23 sam
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/bio.h>
-#include <sys/conf.h>
+#include <sys/ctype.h>
 #include <sys/fcntl.h>
 #include <sys/malloc.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/devicestat.h>
 #include <machine/md_var.h>
@@ -57,6 +58,16 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_disk.c,v 1.104.2.1 2009/01/11 21:45:23 sam
 #include <geom/geom_disk.h>
 #include <geom/geom_int.h>
 
+#include <dev/led/led.h>
+
+struct g_disk_softc {
+	struct disk		*dp;
+	struct sysctl_ctx_list	sysctl_ctx;
+	struct sysctl_oid	*sysctl_tree;
+	char			led[64];
+	uint32_t		state;
+};
+
 static struct mtx g_disk_done_mtx;
 
 static g_access_t g_disk_access;
@@ -65,6 +76,7 @@ static g_fini_t g_disk_fini;
 static g_start_t g_disk_start;
 static g_ioctl_t g_disk_ioctl;
 static g_dumpconf_t g_disk_dumpconf;
+static g_provgone_t g_disk_providergone;
 
 static struct g_class g_disk_class = {
 	.name = "DISK",
@@ -74,8 +86,12 @@ static struct g_class g_disk_class = {
 	.start = g_disk_start,
 	.access = g_disk_access,
 	.ioctl = g_disk_ioctl,
+	.providergone = g_disk_providergone,
 	.dumpconf = g_disk_dumpconf,
 };
+
+SYSCTL_DECL(_kern_geom);
+SYSCTL_NODE(_kern_geom, OID_AUTO, disk, CTLFLAG_RW, 0, "GEOM_DISK stuff");
 
 static void
 g_disk_init(struct g_class *mp __unused)
@@ -111,13 +127,14 @@ static int
 g_disk_access(struct g_provider *pp, int r, int w, int e)
 {
 	struct disk *dp;
+	struct g_disk_softc *sc;
 	int error;
 
 	g_trace(G_T_ACCESS, "g_disk_access(%s, %d, %d, %d)",
 	    pp->name, r, w, e);
 	g_topology_assert();
-	dp = pp->geom->softc;
-	if (dp == NULL || dp->d_destroyed) {
+	sc = pp->geom->softc;
+	if (sc == NULL || (dp = sc->dp) == NULL || dp->d_destroyed) {
 		/*
 		 * Allow decreasing access count even if disk is not
 		 * avaliable anymore.
@@ -141,6 +158,10 @@ g_disk_access(struct g_provider *pp, int r, int w, int e)
 		}
 		pp->mediasize = dp->d_mediasize;
 		pp->sectorsize = dp->d_sectorsize;
+		if (dp->d_flags & DISKFLAG_CANDELETE)
+			pp->flags |= G_PF_CANDELETE;
+		else
+			pp->flags &= ~G_PF_CANDELETE;
 		pp->stripeoffset = dp->d_stripeoffset;
 		pp->stripesize = dp->d_stripesize;
 		dp->d_flags |= DISKFLAG_OPEN;
@@ -158,6 +179,9 @@ g_disk_access(struct g_provider *pp, int r, int w, int e)
 				    pp->name, error);
 			g_disk_unlock_giant(dp);
 		}
+		sc->state = G_STATE_ACTIVE;
+		if (sc->led[0] != 0)
+			led_set(sc->led, "0");
 		dp->d_flags &= ~DISKFLAG_OPEN;
 	}
 	return (error);
@@ -165,10 +189,8 @@ g_disk_access(struct g_provider *pp, int r, int w, int e)
 
 static void
 g_disk_kerneldump(struct bio *bp, struct disk *dp)
-{ 
-	int error;
+{
 	struct g_kerneldump *gkd;
-	struct dumperinfo di;
 	struct g_geom *gp;
 
 	gkd = (struct g_kerneldump*)bp->bio_data;
@@ -179,15 +201,41 @@ g_disk_kerneldump(struct bio *bp, struct disk *dp)
 		g_io_deliver(bp, ENODEV);
 		return;
 	}
-	di.dumper = dp->d_dump;
-	di.priv = dp;
-	di.blocksize = dp->d_sectorsize;
-	di.mediaoffset = gkd->offset;
+	gkd->di.dumper = dp->d_dump;
+	gkd->di.priv = dp;
+	gkd->di.blocksize = dp->d_sectorsize;
+	gkd->di.maxiosize = dp->d_maxsize;
+	gkd->di.mediaoffset = gkd->offset;
 	if ((gkd->offset + gkd->length) > dp->d_mediasize)
 		gkd->length = dp->d_mediasize - gkd->offset;
-	di.mediasize = gkd->length;
-	error = set_dumper(&di);
-	g_io_deliver(bp, error);
+	gkd->di.mediasize = gkd->length;
+	g_io_deliver(bp, 0);
+}
+
+static void
+g_disk_setstate(struct bio *bp, struct g_disk_softc *sc)
+{
+	const char *cmd;
+
+	memcpy(&sc->state, bp->bio_data, sizeof(sc->state));
+	if (sc->led[0] != 0) {
+		switch (sc->state) {
+		case G_STATE_FAILED:
+			cmd = "1";
+			break;
+		case G_STATE_REBUILD:
+			cmd = "f5";
+			break;
+		case G_STATE_RESYNC:
+			cmd = "f1";
+			break;
+		default:
+			cmd = "0";
+			break;
+		}
+		led_set(sc->led, cmd);
+	}
+	g_io_deliver(bp, 0);
 }
 
 static void
@@ -195,6 +243,7 @@ g_disk_done(struct bio *bp)
 {
 	struct bio *bp2;
 	struct disk *dp;
+	struct g_disk_softc *sc;
 
 	/* See "notes" for why we need a mutex here */
 	/* XXX: will witness accept a mix of Giant/unGiant drivers here ? */
@@ -206,7 +255,8 @@ g_disk_done(struct bio *bp)
 		bp2->bio_error = bp->bio_error;
 	bp2->bio_completed += bp->bio_completed;
 	if ((bp->bio_cmd & (BIO_READ|BIO_WRITE|BIO_DELETE)) &&
-	    (dp = bp2->bio_to->geom->softc)) {
+	    (sc = bp2->bio_to->geom->softc) &&
+	    (dp = sc->dp)) {
 		devstat_end_transaction_bio(dp->d_devstat, bp);
 	}
 	g_destroy_bio(bp);
@@ -223,10 +273,12 @@ g_disk_ioctl(struct g_provider *pp, u_long cmd, void * data, int fflag, struct t
 {
 	struct g_geom *gp;
 	struct disk *dp;
+	struct g_disk_softc *sc;
 	int error;
 
 	gp = pp->geom;
-	dp = gp->softc;
+	sc = gp->softc;
+	dp = sc->dp;
 
 	if (dp->d_ioctl == NULL)
 		return (ENOIOCTL);
@@ -241,11 +293,12 @@ g_disk_start(struct bio *bp)
 {
 	struct bio *bp2, *bp3;
 	struct disk *dp;
+	struct g_disk_softc *sc;
 	int error;
 	off_t off;
 
-	dp = bp->bio_to->geom->softc;
-	if (dp == NULL || dp->d_destroyed) {
+	sc = bp->bio_to->geom->softc;
+	if (sc == NULL || (dp = sc->dp) == NULL || dp->d_destroyed) {
 		g_io_deliver(bp, ENXIO);
 		return;
 	}
@@ -298,7 +351,20 @@ g_disk_start(struct bio *bp)
 		} while (bp2 != NULL);
 		break;
 	case BIO_GETATTR:
-		if (g_handleattr_int(bp, "GEOM::fwsectors", dp->d_fwsectors))
+		/* Give the driver a chance to override */
+		if (dp->d_getattr != NULL) {
+			if (bp->bio_disk == NULL)
+				bp->bio_disk = dp;
+			error = dp->d_getattr(bp);
+			if (error != -1)
+				break;
+			error = EJUSTRETURN;
+		}
+		if (g_handleattr_int(bp, "GEOM::candelete",
+		    (dp->d_flags & DISKFLAG_CANDELETE) != 0))
+			break;
+		else if (g_handleattr_int(bp, "GEOM::fwsectors",
+		    dp->d_fwsectors))
 			break;
 		else if (g_handleattr_int(bp, "GEOM::fwheads", dp->d_fwheads))
 			break;
@@ -306,8 +372,22 @@ g_disk_start(struct bio *bp)
 			break;
 		else if (g_handleattr_str(bp, "GEOM::ident", dp->d_ident))
 			break;
+		else if (g_handleattr(bp, "GEOM::hba_vendor",
+		    &dp->d_hba_vendor, 2))
+			break;
+		else if (g_handleattr(bp, "GEOM::hba_device",
+		    &dp->d_hba_device, 2))
+			break;
+		else if (g_handleattr(bp, "GEOM::hba_subvendor",
+		    &dp->d_hba_subvendor, 2))
+			break;
+		else if (g_handleattr(bp, "GEOM::hba_subdevice",
+		    &dp->d_hba_subdevice, 2))
+			break;
 		else if (!strcmp(bp->bio_attribute, "GEOM::kerneldump"))
 			g_disk_kerneldump(bp, dp);
+		else if (!strcmp(bp->bio_attribute, "GEOM::setstate"))
+			g_disk_setstate(bp, sc);
 		else 
 			error = ENOIOCTL;
 		break;
@@ -342,9 +422,10 @@ static void
 g_disk_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp, struct g_consumer *cp, struct g_provider *pp)
 {
 	struct disk *dp;
+	struct g_disk_softc *sc;
 
-	dp = gp->softc;
-	if (dp == NULL)
+	sc = gp->softc;
+	if (sc == NULL || (dp = sc->dp) == NULL)
 		return;
 	if (indent == NULL) {
 		sbuf_printf(sb, " hd %u", dp->d_fwheads);
@@ -367,13 +448,17 @@ g_disk_create(void *arg, int flag)
 	struct g_geom *gp;
 	struct g_provider *pp;
 	struct disk *dp;
+	struct g_disk_softc *sc;
+	char tmpstr[80];
 
 	if (flag == EV_CANCEL)
 		return;
 	g_topology_assert();
 	dp = arg;
+	sc = g_malloc(sizeof(*sc), M_WAITOK | M_ZERO);
+	sc->dp = dp;
 	gp = g_new_geomf(&g_disk_class, "%s%d", dp->d_name, dp->d_unit);
-	gp->softc = dp;
+	gp->softc = sc;
 	pp = g_new_providerf(gp, "%s", gp->name);
 	pp->mediasize = dp->d_mediasize;
 	pp->sectorsize = dp->d_sectorsize;
@@ -383,8 +468,50 @@ g_disk_create(void *arg, int flag)
 	pp->stripesize = dp->d_stripesize;
 	if (bootverbose)
 		printf("GEOM: new disk %s\n", gp->name);
+	sysctl_ctx_init(&sc->sysctl_ctx);
+	snprintf(tmpstr, sizeof(tmpstr), "GEOM disk %s", gp->name);
+	sc->sysctl_tree = SYSCTL_ADD_NODE(&sc->sysctl_ctx,
+		SYSCTL_STATIC_CHILDREN(_kern_geom_disk), OID_AUTO, gp->name,
+		CTLFLAG_RD, 0, tmpstr);
+	if (sc->sysctl_tree != NULL) {
+		snprintf(tmpstr, sizeof(tmpstr),
+		    "kern.geom.disk.%s.led", gp->name);
+		TUNABLE_STR_FETCH(tmpstr, sc->led, sizeof(sc->led));
+		SYSCTL_ADD_STRING(&sc->sysctl_ctx,
+		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO, "led",
+		    CTLFLAG_RW | CTLFLAG_TUN, sc->led, sizeof(sc->led),
+		    "LED name");
+	}
+	pp->private = sc;
 	dp->d_geom = gp;
 	g_error_provider(pp, 0);
+}
+
+/*
+ * We get this callback after all of the consumers have gone away, and just
+ * before the provider is freed.  If the disk driver provided a d_gone
+ * callback, let them know that it is okay to free resources -- they won't
+ * be getting any more accesses from GEOM.
+ */
+static void
+g_disk_providergone(struct g_provider *pp)
+{
+	struct disk *dp;
+	struct g_disk_softc *sc;
+
+	sc = (struct g_disk_softc *)pp->geom->softc;
+
+	/*
+	 * If the softc is already NULL, then we've probably been through
+	 * g_disk_destroy already; there is nothing for us to do anyway.
+	 */
+	if (sc == NULL)
+		return;
+
+	dp = sc->dp;
+
+	if (dp->d_gone != NULL)
+		dp->d_gone(dp);
 }
 
 static void
@@ -392,11 +519,22 @@ g_disk_destroy(void *ptr, int flag)
 {
 	struct disk *dp;
 	struct g_geom *gp;
+	struct g_disk_softc *sc;
 
 	g_topology_assert();
 	dp = ptr;
 	gp = dp->d_geom;
 	if (gp != NULL) {
+		sc = gp->softc;
+		if (sc->sysctl_tree != NULL) {
+			sysctl_ctx_free(&sc->sysctl_ctx);
+			sc->sysctl_tree = NULL;
+		}
+		if (sc->led[0] != 0) {
+			led_set(sc->led, "0");
+			sc->led[0] = 0;
+		}
+		g_free(sc);
 		gp->softc = NULL;
 		g_wither_geom(gp, ENXIO);
 	}
@@ -404,39 +542,25 @@ g_disk_destroy(void *ptr, int flag)
 }
 
 /*
- * We only allow [a-zA-Z0-9-_@#%.:] characters, the rest is converted to 'x<HH>'.
+ * We only allow printable characters in disk ident,
+ * the rest is converted to 'x<HH>'.
  */
 static void
 g_disk_ident_adjust(char *ident, size_t size)
 {
-	char newid[DISK_IDENT_SIZE], tmp[4];
-	size_t len;
-	char *p;
+	char *p, tmp[4], newid[DISK_IDENT_SIZE];
 
-	bzero(newid, sizeof(newid));
-	len = 0;
-	for (p = ident; *p != '\0' && len < sizeof(newid) - 1; p++) {
-		switch (*p) {
-		default:
-			if ((*p < 'a' || *p > 'z') &&
-			    (*p < 'A' || *p > 'Z') &&
-			    (*p < '0' || *p > '9')) {
-				snprintf(tmp, sizeof(tmp), "x%02hhx", *p);
-				strlcat(newid, tmp, sizeof(newid));
-				len += 3;
-				break;
-			}
-			/* FALLTHROUGH */
-		case '-':
-		case '_':
-		case '@':
-		case '#':
-		case '%':
-		case '.':
-		case ':':
-			newid[len++] = *p;
-			break;
+	newid[0] = '\0';
+	for (p = ident; *p != '\0'; p++) {
+		if (isprint(*p)) {
+			tmp[0] = *p;
+			tmp[1] = '\0';
+		} else {
+			snprintf(tmp, sizeof(tmp), "x%02hhx",
+			    *(unsigned char *)p);
 		}
+		if (strlcat(newid, tmp, sizeof(newid)) >= sizeof(newid))
+			break;
 	}
 	bzero(ident, size);
 	strlcpy(ident, newid, size);
@@ -454,7 +578,7 @@ disk_alloc()
 void
 disk_create(struct disk *dp, int version)
 {
-	if (version != DISK_VERSION_00 && version != DISK_VERSION_01) {
+	if (version != DISK_VERSION_02) {
 		printf("WARNING: Attempt to add disk %s%d %s",
 		    dp->d_name, dp->d_unit,
 		    " using incompatible ABI version of disk(9)\n");
@@ -498,6 +622,18 @@ disk_gone(struct disk *dp)
 			g_wither_provider(pp, ENXIO);
 }
 
+void
+disk_attr_changed(struct disk *dp, const char *attr, int flag)
+{
+	struct g_geom *gp;
+	struct g_provider *pp;
+
+	gp = dp->d_geom;
+	if (gp != NULL)
+		LIST_FOREACH(pp, &gp->provider, provider)
+			(void)g_attr_changed(pp, attr, flag);
+}
+
 static void
 g_kern_disks(void *p, int flag __unused)
 {
@@ -528,6 +664,7 @@ sysctl_disks(SYSCTL_HANDLER_ARGS)
 	return error;
 }
  
-SYSCTL_PROC(_kern, OID_AUTO, disks, CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_NOLOCK, 0, 0, 
+SYSCTL_PROC(_kern, OID_AUTO, disks,
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0,
     sysctl_disks, "A", "names of available disks");
 

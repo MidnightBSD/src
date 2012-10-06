@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_ccd.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/geom_ccd.c,v 1.4 2011/12/10 22:55:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp.
  * Copyright (c) 1995 Jason R. Thorpe.
@@ -59,6 +59,7 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_ccd.c,v 1.155.2.1 2009/01/11 21:45:23 sam 
 #include <sys/module.h>
 #include <sys/bio.h>
 #include <sys/malloc.h>
+#include <sys/sbuf.h>
 #include <geom/geom.h>
 
 /*
@@ -710,8 +711,20 @@ g_ccd_create(struct gctl_req *req, struct g_class *mp)
 
 	g_topology_assert();
 	unit = gctl_get_paraml(req, "unit", sizeof (*unit));
+	if (unit == NULL) {
+		gctl_error(req, "unit parameter not given");
+		return;
+	}
 	ileave = gctl_get_paraml(req, "ileave", sizeof (*ileave));
+	if (ileave == NULL) {
+		gctl_error(req, "ileave parameter not given");
+		return;
+	}
 	nprovider = gctl_get_paraml(req, "nprovider", sizeof (*nprovider));
+	if (nprovider == NULL) {
+		gctl_error(req, "nprovider parameter not given");
+		return;
+	}
 
 	/* Check for duplicate unit */
 	LIST_FOREACH(gp, &mp->geom, geom) {
@@ -839,7 +852,11 @@ g_ccd_list(struct gctl_req *req, struct g_class *mp)
 	struct g_geom *gp;
 	int i, unit, *up;
 
-	up = gctl_get_paraml(req, "unit", sizeof (int));
+	up = gctl_get_paraml(req, "unit", sizeof (*up));
+	if (up == NULL) {
+		gctl_error(req, "unit parameter not given");
+		return;
+	}
 	unit = *up;
 	sb = sbuf_new_auto();
 	LIST_FOREACH(gp, &mp->geom, geom) {
