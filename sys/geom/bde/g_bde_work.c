@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/bde/g_bde_work.c,v 1.4 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -665,7 +665,7 @@ g_bde_worker(void *arg)
 	mtx_unlock(&sc->worklist_mutex);
 	sc->dead = 2;
 	wakeup(sc);
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /*

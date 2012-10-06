@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/bde/g_bde.c,v 1.2 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -42,12 +42,15 @@
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
+#include <sys/sysctl.h>
 
 #include <crypto/rijndael/rijndael-api-fst.h>
 #include <crypto/sha2/sha2.h>
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>
 #define BDE_CLASS_NAME "BDE"
+
+FEATURE(geom_bde, "GEOM-based Disk Encryption");
 
 static void
 g_bde_start(struct bio *bp)
@@ -184,7 +187,7 @@ g_bde_create_geom(struct gctl_req *req, struct g_class *mp, struct g_provider *p
 		TAILQ_INIT(&sc->worklist);
 		mtx_init(&sc->worklist_mutex, "g_bde_worklist", NULL, MTX_DEF);
 		/* XXX: error check */
-		kthread_create(g_bde_worker, gp, &sc->thread, 0, 0,
+		kproc_create(g_bde_worker, gp, &sc->thread, 0, 0,
 			"g_bde %s", gp->name);
 		pp = g_new_providerf(gp, gp->name);
 #if 0
