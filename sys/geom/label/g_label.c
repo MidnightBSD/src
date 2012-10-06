@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/label/g_label.c,v 1.4 2008/12/03 00:25:48 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/label/g_label.c,v 1.5 2011/12/10 15:46:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -35,13 +35,14 @@ __FBSDID("$FreeBSD: src/sys/geom/label/g_label.c,v 1.21.2.5 2011/05/18 16:28:28 
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
-#include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <sys/libkern.h>
+#include <sys/sysctl.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
 #include <geom/label/g_label.h>
 
+FEATURE(geom_label, "GEOM labeling support");
 
 SYSCTL_DECL(_kern_geom);
 SYSCTL_NODE(_kern_geom, OID_AUTO, label, CTLFLAG_RW, 0, "GEOM_LABEL stuff");
@@ -85,6 +86,8 @@ const struct g_label_desc *g_labels[] = {
 	&g_label_ext2fs,
 	&g_label_reiserfs,
 	&g_label_ntfs,
+	&g_label_gpt,
+	&g_label_gpt_uuid,
 	NULL
 };
 
@@ -272,6 +275,10 @@ g_label_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 
 	G_LABEL_DEBUG(2, "Tasting %s.", pp->name);
 
+	/* Skip providers that are already open for writing. */
+	if (pp->acw > 0)
+		return (NULL);
+
 	if (strcmp(pp->geom->class->name, mp->name) == 0)
 		return (NULL);
 
@@ -313,6 +320,8 @@ g_label_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	for (i = 0; g_labels[i] != NULL; i++) {
 		char label[64];
 
+		if (g_labels[i]->ld_enabled == 0)
+			continue;
 		g_topology_unlock();
 		g_labels[i]->ld_taste(cp, label, sizeof(label));
 		g_topology_lock();

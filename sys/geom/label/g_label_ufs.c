@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/label/g_label_ufs.c,v 1.4 2008/12/03 00:25:49 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/label/g_label_ufs.c,v 1.5 2011/12/10 15:46:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002, 2003 Gordon Tetlow
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
@@ -138,13 +138,17 @@ g_label_ufs_id_taste(struct g_consumer *cp, char *label, size_t size)
 	g_label_ufs_taste_common(cp, label, size, G_LABEL_UFS_ID);
 }
 
-
-const struct g_label_desc g_label_ufs_volume = {
+struct g_label_desc g_label_ufs_volume = {
 	.ld_taste = g_label_ufs_volume_taste,
-	.ld_dir = G_LABEL_UFS_VOLUME_DIR
+	.ld_dir = G_LABEL_UFS_VOLUME_DIR,
+	.ld_enabled = 1
 };
 
-const struct g_label_desc g_label_ufs_id = {
+struct g_label_desc g_label_ufs_id = {
 	.ld_taste = g_label_ufs_id_taste,
-	.ld_dir = G_LABEL_UFS_ID_DIR
+	.ld_dir = G_LABEL_UFS_ID_DIR,
+	.ld_enabled = 1
 };
+
+G_LABEL_INIT(ufsid, g_label_ufs_id, "Create device nodes for UFS file system IDs");
+G_LABEL_INIT(ufs, g_label_ufs_volume, "Create device nodes for UFS volume names");

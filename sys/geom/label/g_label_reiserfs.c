@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/label/g_label_reiserfs.c,v 1.3 2008/12/03 00:25:49 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Stanislav Sedov
  * All rights reserved.
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: src/sys/geom/label/g_label_reiserfs.c,v 1.2 2005/08/23 18:55
 #define REISERFS_OLD_DISK_OFFSET 8 * 1024
 #define REISERFS_SUPER_MAGIC	"ReIsEr"
 
-typedef struct resiserfs_sb {
+typedef struct reiserfs_sb {
 	uint8_t		fake1[52];
 	char		s_magic[10];
 	uint8_t		fake2[10];
@@ -112,7 +112,10 @@ exit_free:
 	g_free(fs);
 }
 
-const struct g_label_desc g_label_reiserfs = {
+struct g_label_desc g_label_reiserfs = {
 	.ld_taste = g_label_reiserfs_taste,
-	.ld_dir = "reiserfs"
+	.ld_dir = "reiserfs",
+	.ld_enabled = 1
 };
+
+G_LABEL_INIT(reiserfs, g_label_reiserfs, "Create device nodes for REISERFS volumes");

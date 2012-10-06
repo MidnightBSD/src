@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/label/g_label_msdosfs.c,v 1.4 2008/12/03 00:25:49 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/label/g_label_msdosfs.c,v 1.5 2011/12/10 15:46:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2006 Tobias Reifenberger
@@ -217,7 +217,10 @@ error:
 		g_free(sector);
 }
 
-const struct g_label_desc g_label_msdosfs = {
+struct g_label_desc g_label_msdosfs = {
 	.ld_taste = g_label_msdosfs_taste,
-	.ld_dir = G_LABEL_MSDOSFS_DIR
+	.ld_dir = G_LABEL_MSDOSFS_DIR,
+	.ld_enabled = 1
 };
+
+G_LABEL_INIT(msdosfs, g_label_msdosfs, "Create device nodes for MSDOSFS volumes");

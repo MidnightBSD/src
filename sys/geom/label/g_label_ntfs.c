@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/label/g_label_ntfs.c,v 1.3 2008/12/03 00:25:49 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Takanori Watanabe
  * All rights reserved.
@@ -115,7 +115,10 @@ done:
 		g_free(filerecp);
 }
 
-const struct g_label_desc g_label_ntfs = {
+struct g_label_desc g_label_ntfs = {
 	.ld_taste = g_label_ntfs_taste,
-	.ld_dir = G_LABEL_NTFS_DIR
+	.ld_dir = G_LABEL_NTFS_DIR,
+	.ld_enabled = 1
 };
+
+G_LABEL_INIT(ntfs, g_label_ntfs, "Create device nodes for NTFS volumes");
