@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/raid3/g_raid3.c,v 1.5 2011/12/10 15:46:16 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/raid3/g_raid3.c,v 1.6 2012/04/12 03:31:50 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -52,8 +52,7 @@ FEATURE(geom_raid3, "GEOM RAID-3 functionality");
 static MALLOC_DEFINE(M_RAID3, "raid3_data", "GEOM_RAID3 Data");
 
 SYSCTL_DECL(_kern_geom);
-static SYSCTL_NODE(_kern_geom, OID_AUTO, raid3, CTLFLAG_RW, 0,
-    "GEOM_RAID3 stuff");
+SYSCTL_NODE(_kern_geom, OID_AUTO, raid3, CTLFLAG_RW, 0, "GEOM_RAID3 stuff");
 u_int g_raid3_debug = 0;
 TUNABLE_INT("kern.geom.raid3.debug", &g_raid3_debug);
 SYSCTL_UINT(_kern_geom_raid3, OID_AUTO, debug, CTLFLAG_RW, &g_raid3_debug, 0,
@@ -93,7 +92,7 @@ TUNABLE_INT("kern.geom.raid3.n4k", &g_raid3_n4k);
 SYSCTL_UINT(_kern_geom_raid3, OID_AUTO, n4k, CTLFLAG_RD, &g_raid3_n4k, 0,
     "Maximum number of 4kB allocations");
 
-static SYSCTL_NODE(_kern_geom_raid3, OID_AUTO, stat, CTLFLAG_RW, 0,
+SYSCTL_NODE(_kern_geom_raid3, OID_AUTO, stat, CTLFLAG_RW, 0,
     "GEOM_RAID3 statistics");
 static u_int g_raid3_parity_mismatch = 0;
 SYSCTL_UINT(_kern_geom_raid3_stat, OID_AUTO, parity_mismatch, CTLFLAG_RD,
@@ -2079,7 +2078,7 @@ g_raid3_worker(void *arg)
 				if (g_raid3_try_destroy(sc)) {
 					curthread->td_pflags &= ~TDP_GEOM;
 					G_RAID3_DEBUG(1, "Thread exiting.");
-					kthread_exit(0);
+					kproc_exit(0);
 				}
 			}
 			G_RAID3_DEBUG(5, "%s: I'm here 1.", __func__);
@@ -2103,7 +2102,7 @@ g_raid3_worker(void *arg)
 				if (g_raid3_try_destroy(sc)) {
 					curthread->td_pflags &= ~TDP_GEOM;
 					G_RAID3_DEBUG(1, "Thread exiting.");
-					kthread_exit(0);
+					kproc_exit(0);
 				}
 				mtx_lock(&sc->sc_queue_mtx);
 			}
@@ -3203,7 +3202,7 @@ g_raid3_create(struct g_class *mp, const struct g_raid3_metadata *md)
 		    sc->sc_zones[G_RAID3_ZONE_4K].sz_failed = 0;
 	}
 
-	error = kthread_create(g_raid3_worker, sc, &sc->sc_worker, 0, 0,
+	error = kproc_create(g_raid3_worker, sc, &sc->sc_worker, 0, 0,
 	    "g_raid3 %s", md->md_name);
 	if (error != 0) {
 		G_RAID3_DEBUG(1, "Cannot create kernel thread for %s.",
@@ -3332,7 +3331,8 @@ g_raid3_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		return (NULL);
 	gp = NULL;
 
-	if (md.md_provider[0] != '\0' && strcmp(md.md_provider, pp->name) != 0)
+	if (md.md_provider[0] != '\0' &&
+	    !g_compare_names(md.md_provider, pp->name))
 		return (NULL);
 	if (md.md_provsize != 0 && md.md_provsize != pp->mediasize)
 		return (NULL);

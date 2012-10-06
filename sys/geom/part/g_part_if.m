@@ -23,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/geom/part/g_part_if.m,v 1.2.2.3 2009/03/17 19:38:40 marcel Exp $
+# $FreeBSD$
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -96,15 +96,6 @@ METHOD int create {
 METHOD int destroy {
 	struct g_part_table *table;
 	struct g_part_parms *gpp;
-};
-
-# devalias() - return the name (if any) to be used as an alias for
-# the device special file created for the partition entry.
-METHOD int devalias {
-	struct g_part_table *table;
-	struct g_part_entry *entry;
-	char *buf;
-	size_t bufsz;
 };
 
 # dumpconf()

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/stripe/g_stripe.c,v 1.4 2011/12/10 14:59:51 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/stripe/g_stripe.c,v 1.5 2012/03/31 16:58:05 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -35,12 +35,14 @@ __FBSDID("$FreeBSD: src/sys/geom/stripe/g_stripe.c,v 1.32 2007/06/04 18:25:06 dw
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <vm/uma.h>
 #include <geom/geom.h>
 #include <geom/stripe/g_stripe.h>
 
+FEATURE(geom_stripe, "GEOM striping support");
 
 static MALLOC_DEFINE(M_STRIPE, "stripe_data", "GEOM_STRIPE Data");
 
@@ -634,7 +636,7 @@ g_stripe_start(struct bio *bp)
 	 * Do use "economic" when:
 	 * 1. "Economic" mode is ON.
 	 * or
-	 * 2. "Fast" mode failed. It can only failed if there is no memory.
+	 * 2. "Fast" mode failed. It can only fail if there is no memory.
 	 */
 	if (!fast || error != 0)
 		error = g_stripe_start_economic(bp, no, offset, length);
@@ -819,8 +821,6 @@ g_stripe_create(struct g_class *mp, const struct g_stripe_metadata *md,
 		}
 	}
 	gp = g_new_geomf(mp, "%s", md->md_name);
-	gp->softc = NULL;	/* for a moment */
-
 	sc = malloc(sizeof(*sc), M_STRIPE, M_WAITOK | M_ZERO);
 	gp->start = g_stripe_start;
 	gp->spoiled = g_stripe_orphan;
@@ -915,6 +915,10 @@ g_stripe_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	g_trace(G_T_TOPOLOGY, "%s(%s, %s)", __func__, mp->name, pp->name);
 	g_topology_assert();
 
+	/* Skip providers that are already open for writing. */
+	if (pp->acw > 0)
+		return (NULL);
+
 	G_STRIPE_DEBUG(3, "Tasting %s.", pp->name);
 
 	gp = g_new_geomf(mp, "stripe:taste");
@@ -948,7 +952,8 @@ g_stripe_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	if (md.md_version < 3)
 		md.md_provsize = pp->mediasize;
 
-	if (md.md_provider[0] != '\0' && strcmp(md.md_provider, pp->name) != 0)
+	if (md.md_provider[0] != '\0' &&
+	    !g_compare_names(md.md_provider, pp->name))
 		return (NULL);
 	if (md.md_provsize != pp->mediasize)
 		return (NULL);

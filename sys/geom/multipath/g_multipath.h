@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/multipath/g_multipath.h,v 1.2 2008/12/03 00:25:49 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006-2007 Matthew Jacob <mjacob@FreeBSD.org>
  * All rights reserved.
@@ -44,10 +44,15 @@
 #ifdef	_KERNEL
 
 struct g_multipath_softc {
-	struct g_provider *	pp;
-	struct g_consumer *	cp_active;
+	struct g_provider *	sc_pp;
+	struct g_consumer *	sc_active;
+	struct mtx		sc_mtx;
 	char			sc_name[16];
 	char			sc_uuid[40];
+	int			sc_opened;
+	int			sc_stopping;
+	int			sc_ndisks;
+	int			sc_active_active; /* Active/Active mode */
 };
 #endif	/* _KERNEL */
 
@@ -58,6 +63,7 @@ struct g_multipath_metadata {
 	uint32_t	md_version;	/* version */
 	uint32_t	md_sectorsize;	/* sectorsize of provider */
 	uint64_t	md_size;	/* absolute size of provider */
+	uint8_t		md_active_active; /* Active/Active mode */
 };
 
 static __inline void
@@ -80,6 +86,8 @@ multipath_metadata_encode(const struct g_multipath_metadata *md, u_char *data)
 	le32enc(data, md->md_sectorsize);
 	data += sizeof(md->md_sectorsize);
 	le64enc(data, md->md_size);
+	data += sizeof(md->md_size);
+	*data = md->md_active_active;
 }
 
 static __inline void
@@ -96,5 +104,7 @@ multipath_metadata_decode(u_char *data, struct g_multipath_metadata *md)
 	md->md_sectorsize = le32dec(data);
 	data += sizeof(md->md_sectorsize);
 	md->md_size = le64dec(data);
+	data += sizeof(md->md_size);
+	md->md_active_active = *data;
 }
 #endif	/* _G_MULTIPATH_H_ */

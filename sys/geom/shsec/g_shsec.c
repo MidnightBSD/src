@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/shsec/g_shsec.c,v 1.3 2008/12/03 00:25:50 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -35,12 +35,14 @@ __FBSDID("$FreeBSD: src/sys/geom/shsec/g_shsec.c,v 1.6 2006/11/01 12:30:51 pjd E
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bio.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <vm/uma.h>
 #include <geom/geom.h>
 #include <geom/shsec/g_shsec.h>
 
+FEATURE(geom_shsec, "GEOM shared secret device support");
 
 static MALLOC_DEFINE(M_SHSEC, "shsec_data", "GEOM_SHSEC Data");
 
@@ -546,8 +548,6 @@ g_shsec_create(struct g_class *mp, const struct g_shsec_metadata *md)
 		}
 	}
 	gp = g_new_geomf(mp, "%s", md->md_name);
-	gp->softc = NULL;	/* for a moment */
-
 	sc = malloc(sizeof(*sc), M_SHSEC, M_WAITOK | M_ZERO);
 	gp->start = g_shsec_start;
 	gp->spoiled = g_shsec_orphan;
@@ -639,6 +639,10 @@ g_shsec_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	g_trace(G_T_TOPOLOGY, "%s(%s, %s)", __func__, mp->name, pp->name);
 	g_topology_assert();
 
+	/* Skip providers that are already open for writing. */
+	if (pp->acw > 0)
+		return (NULL);
+
 	G_SHSEC_DEBUG(3, "Tasting %s.", pp->name);
 
 	gp = g_new_geomf(mp, "shsec:taste");
@@ -669,7 +673,8 @@ g_shsec_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	if (md.md_version < 1)
 		md.md_provsize = pp->mediasize;
 
-	if (md.md_provider[0] != '\0' && strcmp(md.md_provider, pp->name) != 0)
+	if (md.md_provider[0] != '\0' &&
+	    !g_compare_names(md.md_provider, pp->name))
 		return (NULL);
 	if (md.md_provsize != pp->mediasize)
 		return (NULL);
