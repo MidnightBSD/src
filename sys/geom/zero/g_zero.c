@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/zero/g_zero.c,v 1.3 2008/12/03 00:25:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -105,7 +105,7 @@ g_zero_destroy_geom(struct gctl_req *req __unused, struct g_class *mp __unused,
 	if (pp->acr > 0 || pp->acw > 0 || pp->ace > 0)
 		return (EBUSY);
 	g_wither_geom(gp, ENXIO);
-	return (EBUSY);
+	return (0);
 }
 
 static struct g_class g_zero_class = {
