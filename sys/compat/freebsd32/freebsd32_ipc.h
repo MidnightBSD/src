@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_ipc.h,v 1.2 2008/12/03 00:24:35 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32_ipc.h,v 1.3 2012/01/04 01:35:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -96,6 +96,8 @@ struct shminfo32 {
 	uint32_t	shmall;
 };
 
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
 struct ipc_perm32_old {
 	uint16_t	cuid;
 	uint16_t	cgid;
@@ -146,5 +148,14 @@ struct shmid_ds32_old {
 	int32_t		shm_ctime;
 	uint32_t	shm_internal;
 };
+
+void	freebsd32_ipcperm_old_in(struct ipc_perm32_old *ip32,
+	    struct ipc_perm *ip);
+void	freebsd32_ipcperm_old_out(struct ipc_perm *ip,
+	    struct ipc_perm32_old *ip32);
+#endif
+
+void	freebsd32_ipcperm_in(struct ipc_perm32 *ip32, struct ipc_perm *ip);
+void	freebsd32_ipcperm_out(struct ipc_perm *ip, struct ipc_perm32 *ip32);
 
 #endif /* !_COMPAT_FREEBSD32_FREEBSD32_IPC_H_ */

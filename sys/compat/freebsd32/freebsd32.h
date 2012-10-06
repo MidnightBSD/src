@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32.h,v 1.3 2008/12/03 00:24:35 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32.h,v 1.4 2012/03/09 00:20:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001 Doug Rabson
  * All rights reserved.
@@ -30,6 +30,10 @@
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_H_
 #define _COMPAT_FREEBSD32_FREEBSD32_H_
 
+#include <sys/procfs.h>
+#include <sys/socket.h>
+#include <sys/user.h>
+
 #define PTRIN(v)	(void *)(uintptr_t) (v)
 #define PTROUT(v)	(u_int32_t)(uintptr_t) (v)
 
@@ -49,13 +53,13 @@ struct timeval32 {
 } while (0)
 
 struct timespec32 {
-	u_int32_t tv_sec;
-	u_int32_t tv_nsec;
+	int32_t tv_sec;
+	int32_t tv_nsec;
 };
 #define TS_CP(src,dst,fld) do {			\
 	CP((src).fld,(dst).fld,tv_sec);		\
 	CP((src).fld,(dst).fld,tv_nsec);	\
-} while (0);
+} while (0)
 
 struct rusage32 {
 	struct timeval32 ru_utime;
@@ -154,6 +158,42 @@ struct stat32 {
 	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
 };
 
+struct ostat32 {
+	__uint16_t st_dev;
+	ino_t	st_ino;
+	mode_t	st_mode;
+	nlink_t	st_nlink;
+	__uint16_t st_uid;
+	__uint16_t st_gid;
+	__uint16_t st_rdev;
+	__int32_t st_size;
+	struct timespec32 st_atim;
+	struct timespec32 st_mtim;
+	struct timespec32 st_ctim;
+	__int32_t st_blksize;
+	__int32_t st_blocks;
+	u_int32_t st_flags;
+	__uint32_t st_gen;
+};
+
+struct jail32_v0 {
+	u_int32_t	version;
+	uint32_t	path;
+	uint32_t	hostname;
+	u_int32_t	ip_number;
+};
+
+struct jail32 {
+	uint32_t	version;
+	uint32_t	path;
+	uint32_t	hostname;
+	uint32_t	jailname;
+	uint32_t	ip4s;
+	uint32_t	ip6s;
+	uint32_t	ip4;
+	uint32_t	ip6;
+};
+
 struct sigaction32 {
 	u_int32_t	sa_u;
 	int		sa_flags;
@@ -172,6 +212,148 @@ struct thr_param32 {
 	int32_t	 flags;
 	uint32_t rtp;
 	uint32_t spare[3];
+};
+
+struct i386_ldt_args32 {
+	uint32_t start;
+	uint32_t descs;
+	uint32_t num;
+};
+
+/*
+ * Alternative layouts for <sys/procfs.h>
+ */
+struct prstatus32 {
+        int     pr_version;
+        u_int   pr_statussz;
+        u_int   pr_gregsetsz;
+        u_int   pr_fpregsetsz;
+        int     pr_osreldate;
+        int     pr_cursig;
+        pid_t   pr_pid;
+        struct reg32 pr_reg;
+};
+
+struct prpsinfo32 {
+        int     pr_version;
+        u_int   pr_psinfosz;
+        char    pr_fname[PRFNAMESZ+1];
+        char    pr_psargs[PRARGSZ+1];
+};
+
+struct thrmisc32 {
+        char    pr_tname[MAXCOMLEN+1];
+        u_int   _pad;
+};
+
+struct mq_attr32 {
+	int	mq_flags;
+	int	mq_maxmsg;
+	int	mq_msgsize;
+	int	mq_curmsgs;
+	int	__reserved[4];
+};
+
+struct kinfo_proc32 {
+	int	ki_structsize;
+	int	ki_layout;
+	uint32_t ki_args;
+	uint32_t ki_paddr;
+	uint32_t ki_addr;
+	uint32_t ki_tracep;
+	uint32_t ki_textvp;
+	uint32_t ki_fd;
+	uint32_t ki_vmspace;
+	uint32_t ki_wchan;
+	pid_t	ki_pid;
+	pid_t	ki_ppid;
+	pid_t	ki_pgid;
+	pid_t	ki_tpgid;
+	pid_t	ki_sid;
+	pid_t	ki_tsid;
+	short	ki_jobc;
+	short	ki_spare_short1;
+	dev_t	ki_tdev;
+	sigset_t ki_siglist;
+	sigset_t ki_sigmask;
+	sigset_t ki_sigignore;
+	sigset_t ki_sigcatch;
+	uid_t	ki_uid;
+	uid_t	ki_ruid;
+	uid_t	ki_svuid;
+	gid_t	ki_rgid;
+	gid_t	ki_svgid;
+	short	ki_ngroups;
+	short	ki_spare_short2;
+	gid_t 	ki_groups[KI_NGROUPS];
+	uint32_t ki_size;
+	int32_t ki_rssize;
+	int32_t ki_swrss;
+	int32_t ki_tsize;
+	int32_t ki_dsize;
+	int32_t ki_ssize;
+	u_short	ki_xstat;
+	u_short	ki_acflag;
+	fixpt_t	ki_pctcpu;
+	u_int	ki_estcpu;
+	u_int	ki_slptime;
+	u_int	ki_swtime;
+	u_int	ki_cow;
+	u_int64_t ki_runtime;
+	struct	timeval32 ki_start;
+	struct	timeval32 ki_childtime;
+	int	ki_flag;
+	int	ki_kiflag;
+	int	ki_traceflag;
+	char	ki_stat;
+	signed char ki_nice;
+	char	ki_lock;
+	char	ki_rqindex;
+	u_char	ki_oncpu;
+	u_char	ki_lastcpu;
+	char	ki_tdname[TDNAMLEN+1];
+	char	ki_wmesg[WMESGLEN+1];
+	char	ki_login[LOGNAMELEN+1];
+	char	ki_lockname[LOCKNAMELEN+1];
+	char	ki_comm[COMMLEN+1];
+	char	ki_emul[KI_EMULNAMELEN+1];
+	char	ki_loginclass[LOGINCLASSLEN+1];
+	char	ki_sparestrings[50];
+	int	ki_spareints[KI_NSPARE_INT];
+	u_int	ki_cr_flags;
+	int	ki_jid;
+	int	ki_numthreads;
+	lwpid_t	ki_tid;
+	struct	priority ki_pri;
+	struct	rusage32 ki_rusage;
+	struct	rusage32 ki_rusage_ch;
+	uint32_t ki_pcb;
+	uint32_t ki_kstack;
+	uint32_t ki_udata;
+	uint32_t ki_tdaddr;
+	uint32_t ki_spareptrs[KI_NSPARE_PTR];	/* spare room for growth */
+	int	ki_sparelongs[KI_NSPARE_LONG];
+	int	ki_sflag;
+	int	ki_tdflags;
+};
+
+struct kld32_file_stat_1 {
+	int	version;	/* set to sizeof(struct kld_file_stat_1) */
+	char	name[MAXPATHLEN];
+	int	refs;
+	int	id;
+	uint32_t address;	/* load address */
+	uint32_t size;		/* size in bytes */
+};
+
+struct kld32_file_stat {
+	int	version;	/* set to sizeof(struct kld_file_stat) */
+	char	name[MAXPATHLEN];
+	int	refs;
+	int	id;
+	uint32_t address;	/* load address */
+	uint32_t size;		/* size in bytes */
+	char	pathname[MAXPATHLEN];
 };
 
 #endif /* !_COMPAT_FREEBSD32_FREEBSD32_H_ */
