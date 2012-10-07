@@ -29,7 +29,7 @@
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
 # $FreeBSD: src/sys/conf/newvers.sh,v 1.69.2.10 2006/02/01 18:04:43 kensmith Exp $
-# $MidnightBSD: src/sys/conf/newvers.sh,v 1.7 2010/09/06 00:21:30 laffer1 Exp $
+# $MidnightBSD: src/sys/conf/newvers.sh,v 1.8 2012/09/14 01:54:57 laffer1 Exp $
 
 TYPE="MidnightBSD"
 REVISION="0.4"
@@ -46,7 +46,7 @@ if [ "X${PARAMFILE}" != "X" ]; then
 		${PARAMFILE})
 else
 	RELDATE=$(awk '/__MidnightBSD_version.*propagated to newvers/ {print $3}' \
-		$(dirname $0)/../sys/param.h)
+		${SYSDIR}/sys/param.h)
 fi
 
 b=share/examples/etc/bsd-style-copyright
