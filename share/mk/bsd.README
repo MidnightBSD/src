@@ -1,6 +1,6 @@
 #	@(#)bsd.README	8.2 (Berkeley) 4/2/94
 # $FreeBSD: src/share/mk/bsd.README,v 1.28 2004/12/21 08:46:54 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.README,v 1.4 2008/10/31 19:40:47 ctriv Exp $
+# $MidnightBSD: src/share/mk/bsd.README,v 1.5 2009/04/15 02:11:37 laffer1 Exp $
 
 This is the README file for the "include" files for the MidnightBSD
 source tree.  The files are installed in /usr/share/mk, and are by
@@ -94,12 +94,12 @@ the command "make b" will echo "bar".  This is for compatibility with the
 way the V7 make behaved.
 
 It's fairly difficult to make the BSD .mk files work when you're building
-multiple programs in a single directory.  It's a lot easier split up the
-programs than to deal with the problem.  Most of the agony comes from making
-the "obj" directory stuff work right, not because we switch to a new version
-of make.  So, don't get mad at us, figure out a better way to handle multiple
-architectures so we can quit using the symbolic link stuff.  (Imake doesn't
-count.)
+multiple programs in a single directory.  It's a lot easier to split up
+the programs than to deal with the problem.  Most of the agony comes from
+making the "obj" directory stuff work right, not because we switch to a new
+version of make.  So, don't get mad at us, figure out a better way to handle
+multiple architectures so we can quit using the symbolic link stuff.
+(Imake doesn't count.)
 
 The file .depend in the source directory is expected to contain dependencies
 for the source files.  This file is read automatically by make after reading
@@ -354,6 +354,10 @@ SRCS		List of source files to build the library.  Suffix types
 		.s, .c, and .f are supported.  Note, .s files are preferred
 		to .c files of the same name.  (This is not the default for
 		versions of make.)
+
+SHLIB_LDSCRIPT	Template file to generate shared library linker script.
+		Unless used, a simple symlink is created to the real
+		shared object.
 
 The include file <bsd.lib.mk> includes the file named "../Makefile.inc"
 if it exists, as well as the include file <bsd.man.mk>.
