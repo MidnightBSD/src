@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unpcb.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/unpcb.h,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_UNPCB_H_
@@ -68,6 +67,7 @@ LIST_HEAD(unp_head, unpcb);
 struct unpcb {
 	LIST_ENTRY(unpcb) unp_link; 	/* glue on list of all PCBs */
 	struct	socket *unp_socket;	/* pointer back to socket */
+	struct	file *unp_file;		/* back-pointer to file for gc. */
 	struct	vnode *unp_vnode;	/* if associated with file */
 	ino_t	unp_ino;		/* fake inode number */
 	struct	unpcb *unp_conn;	/* control block of connected socket */
@@ -77,9 +77,11 @@ struct unpcb {
 	int	unp_cc;			/* copy of rcv.sb_cc */
 	int	unp_mbcnt;		/* copy of rcv.sb_mbcnt */
 	unp_gen_t unp_gencnt;		/* generation count of this instance */
-	int	unp_flags;		/* flags */
+	short	unp_flags;		/* flags */
+	short	unp_gcflag;		/* Garbage collector flags. */
 	struct	xucred unp_peercred;	/* peer credentials, if applicable */
 	u_int	unp_refcount;
+	u_int	unp_msgcount;		/* references from message queue */
 	struct	mtx unp_mtx;		/* mutex */
 };
 
@@ -100,6 +102,10 @@ struct unpcb {
 #define UNP_HAVEPCCACHED		0x002
 #define	UNP_WANTCRED			0x004	/* credentials wanted */
 #define	UNP_CONNWAIT			0x008	/* connect blocks until accepted */
+
+#define	UNPGC_REF			0x1	/* unpcb has external ref. */
+#define	UNPGC_DEAD			0x2	/* unpcb might be dead. */
+#define	UNPGC_SCANNED			0x4	/* Has been scanned. */
 
 /*
  * These flags are used to handle non-atomicity in connect() and bind()

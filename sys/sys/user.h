@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/user.h,v 1.4 2012/02/19 16:59:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1991, 1993
  *	The Regents of the University of California.
@@ -30,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)user.h	8.2 (Berkeley) 9/23/93
- * $FreeBSD: src/sys/sys/user.h,v 1.70.2.4.2.2 2008/12/06 20:36:46 peter Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_USER_H_
@@ -84,33 +83,37 @@
  * it in two places: function fill_kinfo_proc in sys/kern/kern_proc.c and
  * function kvm_proclist in lib/libkvm/kvm_proc.c .
  */
-#define	KI_NSPARE_INT	10
+#define	KI_NSPARE_INT	9
 #define	KI_NSPARE_LONG	12
-#define	KI_NSPARE_PTR	7
+#define	KI_NSPARE_PTR	6
 
-#ifdef __amd64__
-#define	KINFO_PROC_SIZE	1088
-#endif
-#ifdef __arm__
-#define	KINFO_PROC_SIZE	792
-#endif
-#ifdef __i386__
-#define	KINFO_PROC_SIZE	768
-#endif
-#ifdef __sparc64__
-#define	KINFO_PROC_SIZE 1088
-#endif
+#ifndef _KERNEL
 #ifndef KINFO_PROC_SIZE
 #error "Unknown architecture"
 #endif
+#endif /* !_KERNEL */
 
 #define	WMESGLEN	8		/* size of returned wchan message */
 #define	LOCKNAMELEN	8		/* size of returned lock name */
-#define	OCOMMLEN	16		/* size of returned thread name */
+#define	TDNAMLEN	16		/* size of returned thread name */
 #define	COMMLEN		19		/* size of returned ki_comm name */
 #define	KI_EMULNAMELEN	16		/* size of returned ki_emul */
-#define	KI_NGROUPS	16		/* number of groups in ki_groups */
+#define KI_NGROUPS	16		/* number of groups in ki_groups */
 #define	LOGNAMELEN	17		/* size of returned ki_login */
+#define	LOGINCLASSLEN	17		/* size of returned ki_loginclass */
+
+#ifndef BURN_BRIDGES
+#define	OCOMMLEN	TDNAMLEN	
+#define	ki_ocomm	ki_tdname
+#endif
+
+/* Flags for the process credential. */
+#define	KI_CRF_CAPABILITY_MODE	0x00000001
+/*
+ * Steal a bit from ki_cr_flags to indicate that the cred had more than
+ * KI_NGROUPS groups.
+ */
+#define KI_CRF_GRP_OVERFLOW	0x80000000
 
 struct kinfo_proc {
 	int	ki_structsize;		/* size of this structure */
@@ -143,7 +146,7 @@ struct kinfo_proc {
 	gid_t	ki_svgid;		/* Saved effective group id */
 	short	ki_ngroups;		/* number of groups */
 	short	ki_spare_short2;	/* unused (just here for alignment) */
-	gid_t	ki_groups[KI_NGROUPS];	/* groups */
+	gid_t 	ki_groups[KI_NGROUPS];	/* groups */
 	vm_size_t ki_size;		/* virtual size */
 	segsz_t ki_rssize;		/* current resident set size in pages */
 	segsz_t ki_swrss;		/* resident set size before last swap */
@@ -156,7 +159,7 @@ struct kinfo_proc {
 	u_int	ki_estcpu;	 	/* Time averaged value of ki_cpticks */
 	u_int	ki_slptime;	 	/* Time since last blocked */
 	u_int	ki_swtime;	 	/* Time swapped in or out */
-	int	ki_spareint1;	 	/* unused (just here for alignment) */
+	u_int	ki_cow;			/* number of copy-on-write faults */
 	u_int64_t ki_runtime;		/* Real time in microsec */
 	struct	timeval ki_start;	/* starting time */
 	struct	timeval ki_childtime;	/* time used by process children */
@@ -169,19 +172,21 @@ struct kinfo_proc {
 	char	ki_rqindex;		/* Run queue index */
 	u_char	ki_oncpu;		/* Which cpu we are on */
 	u_char	ki_lastcpu;		/* Last cpu we were on */
-	char	ki_ocomm[OCOMMLEN+1];	/* thread name */
+	char	ki_tdname[TDNAMLEN+1];	/* thread name */
 	char	ki_wmesg[WMESGLEN+1];	/* wchan message */
 	char	ki_login[LOGNAMELEN+1];	/* setlogin name */
 	char	ki_lockname[LOCKNAMELEN+1]; /* lock name */
 	char	ki_comm[COMMLEN+1];	/* command name */
 	char	ki_emul[KI_EMULNAMELEN+1];  /* emulation name */
+	char	ki_loginclass[LOGINCLASSLEN+1]; /* login class */
 	/*
 	 * When adding new variables, take space for char-strings from the
 	 * front of ki_sparestrings, and ints from the end of ki_spareints.
 	 * That way the spare room from both arrays will remain contiguous.
 	 */
-	char	ki_sparestrings[68];	/* spare string space */
+	char	ki_sparestrings[50];	/* spare string space */
 	int	ki_spareints[KI_NSPARE_INT];	/* spare room for growth */
+	u_int	ki_cr_flags;		/* Credential flags */
 	int	ki_jid;			/* Process jail ID */
 	int	ki_numthreads;		/* XXXKSE number of threads in total */
 	lwpid_t	ki_tid;			/* XXXKSE thread id */
@@ -192,6 +197,7 @@ struct kinfo_proc {
 	struct	pcb *ki_pcb;		/* kernel virtual addr of pcb */
 	void	*ki_kstack;		/* kernel virtual addr of stack */
 	void	*ki_udata;		/* User convenience pointer */
+	struct	thread *ki_tdaddr;	/* address of thread */
 	/*
 	 * When adding new variables, take space for pointers from the
 	 * front of ki_spareptrs, and longs from the end of ki_sparelongs.
@@ -232,6 +238,8 @@ struct user {
  * The KERN_PROC_FILE sysctl allows a process to dump the file descriptor
  * array of another process.
  */
+#define	KF_ATTR_VALID	0x0001
+
 #define	KF_TYPE_NONE	0
 #define	KF_TYPE_VNODE	1
 #define	KF_TYPE_SOCKET	2
@@ -240,6 +248,11 @@ struct user {
 #define	KF_TYPE_KQUEUE	5
 #define	KF_TYPE_CRYPTO	6
 #define	KF_TYPE_MQUEUE	7
+#define	KF_TYPE_SHM	8
+#define	KF_TYPE_SEM	9
+#define	KF_TYPE_PTS	10
+/* no KF_TYPE_CAPABILITY (11), since capabilities wrap other file objects */
+#define	KF_TYPE_PROCDESC	12
 #define	KF_TYPE_UNKNOWN	255
 
 #define	KF_VTYPE_VNON	0
@@ -256,6 +269,9 @@ struct user {
 #define	KF_FD_TYPE_CWD	-1	/* Current working directory */
 #define	KF_FD_TYPE_ROOT	-2	/* Root directory */
 #define	KF_FD_TYPE_JAIL	-3	/* Jail directory */
+#define	KF_FD_TYPE_TRACE	-4	/* ptrace vnode */
+#define	KF_FD_TYPE_TEXT	-5	/* Text vnode */
+#define	KF_FD_TYPE_CTTY	-6	/* Controlling terminal */
 
 #define	KF_FLAG_READ		0x00000001
 #define	KF_FLAG_WRITE		0x00000002
@@ -265,6 +281,14 @@ struct user {
 #define	KF_FLAG_NONBLOCK	0x00000020
 #define	KF_FLAG_DIRECT		0x00000040
 #define	KF_FLAG_HASLOCK		0x00000080
+#define	KF_FLAG_SHLOCK		0x00000100
+#define	KF_FLAG_EXLOCK		0x00000200
+#define	KF_FLAG_NOFOLLOW	0x00000400
+#define	KF_FLAG_CREAT		0x00000800
+#define	KF_FLAG_TRUNC		0x00001000
+#define	KF_FLAG_EXCL		0x00002000
+#define	KF_FLAG_EXEC		0x00004000
+#define	KF_FLAG_CAPABILITY	0x00008000
 
 /*
  * Old format.  Has variable hidden padding due to alignment.
@@ -299,22 +323,72 @@ struct kinfo_ofile {
 #endif
 
 struct kinfo_file {
-	int	kf_structsize;			/* Variable size of record. */
-	int	kf_type;			/* Descriptor type. */
-	int	kf_fd;				/* Array index. */
-	int	kf_ref_count;			/* Reference count. */
-	int	kf_flags;			/* Flags. */
-	int	_kf_pad0;			/* Round to 64 bit alignment */
-	int64_t	kf_offset;			/* Seek location. */
-	int	kf_vnode_type;			/* Vnode type. */
-	int	kf_sock_domain;			/* Socket domain. */
-	int	kf_sock_type;			/* Socket type. */
-	int	kf_sock_protocol;		/* Socket protocol. */
+	int		kf_structsize;		/* Variable size of record. */
+	int		kf_type;		/* Descriptor type. */
+	int		kf_fd;			/* Array index. */
+	int		kf_ref_count;		/* Reference count. */
+	int		kf_flags;		/* Flags. */
+	int		kf_pad0;		/* Round to 64 bit alignment. */
+	int64_t		kf_offset;		/* Seek location. */
+	int		kf_vnode_type;		/* Vnode type. */
+	int		kf_sock_domain;		/* Socket domain. */
+	int		kf_sock_type;		/* Socket type. */
+	int		kf_sock_protocol;	/* Socket protocol. */
 	struct sockaddr_storage kf_sa_local;	/* Socket address. */
 	struct sockaddr_storage	kf_sa_peer;	/* Peer address. */
-	int	_kf_ispare[16];			/* Space for more stuff. */
+	union {
+		struct {
+			/* Address of so_pcb. */
+			uint64_t	kf_sock_pcb;
+			/* Address of inp_ppcb. */
+			uint64_t	kf_sock_inpcb;
+			/* Address of unp_conn. */
+			uint64_t	kf_sock_unpconn;
+			/* Send buffer state. */
+			uint16_t	kf_sock_snd_sb_state;
+			/* Receive buffer state. */
+			uint16_t	kf_sock_rcv_sb_state;
+			/* Round to 64 bit alignment. */
+			uint32_t	kf_sock_pad0;
+		} kf_sock;
+		struct {
+			/* Global file id. */
+			uint64_t	kf_file_fileid;
+			/* File size. */
+			uint64_t	kf_file_size;
+			/* Vnode filesystem id. */
+			uint32_t	kf_file_fsid;
+			/* File device. */
+			uint32_t	kf_file_rdev;
+			/* File mode. */
+			uint16_t	kf_file_mode;
+			/* Round to 64 bit alignment. */
+			uint16_t	kf_file_pad0;
+			uint32_t	kf_file_pad1;
+		} kf_file;
+		struct {
+			uint64_t	kf_pipe_addr;
+			uint64_t	kf_pipe_peer;
+			uint32_t	kf_pipe_buffer_cnt;
+			/* Round to 64 bit alignment. */
+			uint32_t	kf_pipe_pad0[3];
+		} kf_pipe;
+		struct {
+			uint32_t	kf_pts_dev;
+			/* Round to 64 bit alignment. */
+			uint32_t	kf_pts_pad0[7];
+		} kf_pts;
+		struct {
+			pid_t		kf_pid;
+		} kf_proc;
+	} kf_un;
+	uint16_t	kf_status;		/* Status flags. */
+	uint16_t	kf_pad1;		/* Round to 32 bit alignment. */
+	int		_kf_ispare0;		/* Space for more stuff. */
+	cap_rights_t	kf_cap_rights;		/* Capability rights. */
+	int		_kf_ispare[4];		/* Space for more stuff. */
 	/* Truncated before copyout in sysctl */
-	char	kf_path[PATH_MAX];		/* Path to file, if any. */
+	char		kf_path[PATH_MAX];	/* Path to file, if any. */
 };
 
 /*
@@ -328,6 +402,7 @@ struct kinfo_file {
 #define	KVME_TYPE_DEVICE	4
 #define	KVME_TYPE_PHYS		5
 #define	KVME_TYPE_DEAD		6
+#define	KVME_TYPE_SG		7
 #define	KVME_TYPE_UNKNOWN	255
 
 #define	KVME_PROT_READ		0x00000001
@@ -336,6 +411,8 @@ struct kinfo_file {
 
 #define	KVME_FLAG_COW		0x00000001
 #define	KVME_FLAG_NEEDS_COPY	0x00000002
+#define	KVME_FLAG_NOCOREDUMP	0x00000004
+#define	KVME_FLAG_SUPER		0x00000008
 
 #if defined(__amd64__)
 #define	KINFO_OVMENTRY_SIZE	1168
@@ -373,16 +450,20 @@ struct kinfo_vmentry {
 	uint64_t kve_start;			/* Starting address. */
 	uint64_t kve_end;			/* Finishing address. */
 	uint64_t kve_offset;			/* Mapping offset in object */
-	uint64_t kve_fileid;			/* inode number if vnode */
-	uint32_t kve_fsid;			/* dev_t of vnode location */
+	uint64_t kve_vn_fileid;			/* inode number if vnode */
+	uint32_t kve_vn_fsid;			/* dev_t of vnode location */
 	int	 kve_flags;			/* Flags on map entry. */
 	int	 kve_resident;			/* Number of resident pages. */
 	int	 kve_private_resident;		/* Number of private pages. */
 	int	 kve_protection;		/* Protection bitmask. */
 	int	 kve_ref_count;			/* VM obj ref count. */
 	int	 kve_shadow_count;		/* VM obj shadow count. */
-	int	 _kve_pad0;			/* 64bit align next field */
-	int	 _kve_ispare[16];		/* Space for more stuff. */
+	int	 kve_vn_type;			/* Vnode type. */
+	uint64_t kve_vn_size;			/* File size. */
+	uint32_t kve_vn_rdev;			/* Device id if device. */
+	uint16_t kve_vn_mode;			/* File mode. */
+	uint16_t kve_status;			/* Status flags. */
+	int	 _kve_ispare[12];		/* Space for more stuff. */
 	/* Truncated before copyout in sysctl */
 	char	 kve_path[PATH_MAX];		/* Path to VM obj, if any. */
 };
@@ -408,5 +489,9 @@ struct kinfo_kstack {
 	char	 kkst_trace[KKST_MAXLEN];	/* String representing stack. */
 	int	 _kkst_ispare[16];		/* Space for more stuff. */
 };
+
+#ifdef _KERNEL
+int	vntype_to_kinfo(int vtype);
+#endif /* !_KERNEL */
 
 #endif
