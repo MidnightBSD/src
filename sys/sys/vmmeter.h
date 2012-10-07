@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,11 +27,17 @@
  * SUCH DAMAGE.
  *
  *	@(#)vmmeter.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: src/sys/sys/vmmeter.h,v 1.34.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_VMMETER_H_
 #define _SYS_VMMETER_H_
+
+/*
+ * This value is used by ps(1) to change sleep state flag from 'S' to
+ * 'I' and by the sched process to set the alarm clock.
+ */
+#define	MAXSLP			20
 
 /*
  * System wide statistics counters.
@@ -73,9 +78,9 @@ struct vmmeter {
 	u_int v_pdwakeups;	/* (f) times daemon has awaken from sleep */
 	u_int v_pdpages;	/* (q) pages analyzed by daemon */
 
-	u_int v_tcached;	/* (q) total pages cached */
+	u_int v_tcached;	/* (p) total pages cached */
 	u_int v_dfree;		/* (q) pages freed by daemon */
-	u_int v_pfree;		/* (q) pages freed by exiting processes */
+	u_int v_pfree;		/* (p) pages freed by exiting processes */
 	u_int v_tfree;		/* (p) total pages freed */
 	/*
 	 * Distribution of page usages.
@@ -90,7 +95,7 @@ struct vmmeter {
 	u_int v_active_count;	/* (q) pages active */
 	u_int v_inactive_target; /* (c) pages desired inactive */
 	u_int v_inactive_count;	/* (q) pages inactive */
-	u_int v_cache_count;	/* (f) pages on buffer cache queue */
+	u_int v_cache_count;	/* (f) pages on cache queue */
 	u_int v_cache_min;	/* (c) min pages desired on cache queue */
 	u_int v_cache_max;	/* (c) max pages in cached obj */
 	u_int v_pageout_free_min;   /* (c) min pages reserved for kernel */
@@ -111,17 +116,6 @@ struct vmmeter {
 #ifdef _KERNEL
 
 extern struct vmmeter cnt;
-
-/*
- * Return TRUE if we are under our reserved low-free-pages threshold
- */
-
-static __inline 
-int
-vm_page_count_reserved(void)
-{
-    return (cnt.v_free_reserved > (cnt.v_free_count + cnt.v_cache_count));
-}
 
 /*
  * Return TRUE if we are under our severe low-free-pages threshold
