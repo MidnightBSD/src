@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/watchdog.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 #ifndef _SYS_WATCHDOG_H
 #define	_SYS_WATCHDOG_H
@@ -49,6 +48,12 @@
 	 * The kernel will chose an appropriate timeout duration and
 	 * periodically reset the timer provided everything looks all
 	 * right to the kernel.
+ 	 */
+
+#define WD_LASTVAL	0x0200000
+	/*
+	 * Use the already last used timeout value.
+	 * The kernel will use as timeout the last valid timeout provided.
  	 */
 
 #define WD_INTERVAL	0x00000ff
@@ -79,6 +84,9 @@
 typedef void (*watchdog_fn)(void *, u_int, int *);
 
 EVENTHANDLER_DECLARE(watchdog_list, watchdog_fn);
+
+u_int	wdog_kern_last_timeout(void);
+int	wdog_kern_pat(u_int utim);
 #endif
 
 #endif /* _SYS_WATCHDOG_H */
