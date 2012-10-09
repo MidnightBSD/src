@@ -1,5 +1,5 @@
 /*	$NetBSD: if_arcsubr.c,v 1.36 2001/06/14 05:44:23 itojun Exp $	*/
-/*	$FreeBSD: src/sys/net/if_arcsubr.c,v 1.30.6.1 2008/11/25 02:59:29 kensmith Exp $ */
+/*	$FreeBSD$ */
 
 /*-
  * Copyright (c) 1994, 1995 Ignatios Souvatzis
@@ -64,6 +64,7 @@
 #include <net/if_arc.h>
 #include <net/if_arp.h>
 #include <net/bpf.h>
+#include <net/if_llatbl.h>
 
 #if defined(INET) || defined(INET6)
 #include <netinet/in.h>
@@ -101,13 +102,16 @@ u_int8_t  arcbroadcastaddr = 0;
  */
 int
 arc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
-    struct rtentry *rt0)
+    struct route *ro)
 {
 	struct arc_header	*ah;
 	int			error;
 	u_int8_t		atype, adst;
 	int			loop_copy = 0;
 	int			isphds;
+#if defined(INET) || defined(INET6)
+	struct llentry		*lle;
+#endif
 
 	if (!((ifp->if_flags & IFF_UP) &&
 	    (ifp->if_drv_flags & IFF_DRV_RUNNING)))
@@ -127,7 +131,8 @@ arc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		else if (ifp->if_flags & IFF_NOARP)
 			adst = ntohl(SIN(dst)->sin_addr.s_addr) & 0xFF;
 		else {
-			error = arpresolve(ifp, rt0, m, dst, &adst);
+			error = arpresolve(ifp, ro ? ro->ro_rt : NULL,
+			                   m, dst, &adst, &lle);
 			if (error)
 				return (error == EWOULDBLOCK ? 0 : error);
 		}
@@ -165,7 +170,7 @@ arc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 #endif
 #ifdef INET6
 	case AF_INET6:
-		error = nd6_storelladdr(ifp, rt0, m, dst, (u_char *)&adst);
+		error = nd6_storelladdr(ifp, m, dst, (u_char *)&adst, &lle);
 		if (error)
 			return (error);
 		atype = ARCTYPE_INET6;
@@ -234,7 +239,7 @@ arc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 
 	BPF_MTAP(ifp, m);
 
-	IFQ_HANDOFF(ifp, m, error);
+	error = ifp->if_transmit(ifp, m);
 
 	return (error);
 
@@ -603,6 +608,7 @@ arc_input(struct ifnet *ifp, struct mbuf *m)
 		m_freem(m);
 		return;
 	}
+	M_SETFIB(m, ifp->if_fib);
 	netisr_dispatch(isr, m);
 }
 
@@ -667,7 +673,7 @@ arc_ifdetach(struct ifnet *ifp)
 }
 
 int
-arc_ioctl(struct ifnet *ifp, int command, caddr_t data)
+arc_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 {
 	struct ifaddr *ifa = (struct ifaddr *) data;
 	struct ifreq *ifr = (struct ifreq *) data;
@@ -758,7 +764,9 @@ arc_resolvemulti(struct ifnet *ifp, struct sockaddr **llsa,
     struct sockaddr *sa)
 {
 	struct sockaddr_dl *sdl;
+#ifdef INET
 	struct sockaddr_in *sin;
+#endif
 #ifdef INET6
 	struct sockaddr_in6 *sin6;
 #endif
@@ -778,7 +786,7 @@ arc_resolvemulti(struct ifnet *ifp, struct sockaddr **llsa,
 		sin = (struct sockaddr_in *)sa;
 		if (!IN_MULTICAST(ntohl(sin->sin_addr.s_addr)))
 			return EADDRNOTAVAIL;
-		MALLOC(sdl, struct sockaddr_dl *, sizeof *sdl, M_IFMADDR,
+		sdl = malloc(sizeof *sdl, M_IFMADDR,
 		       M_NOWAIT | M_ZERO);
 		if (sdl == NULL)
 			return ENOMEM;
@@ -806,7 +814,7 @@ arc_resolvemulti(struct ifnet *ifp, struct sockaddr **llsa,
 		}
 		if (!IN6_IS_ADDR_MULTICAST(&sin6->sin6_addr))
 			return EADDRNOTAVAIL;
-		MALLOC(sdl, struct sockaddr_dl *, sizeof *sdl, M_IFMADDR,
+		sdl = malloc(sizeof *sdl, M_IFMADDR,
 		       M_NOWAIT | M_ZERO);
 		if (sdl == NULL)
 			return ENOMEM;

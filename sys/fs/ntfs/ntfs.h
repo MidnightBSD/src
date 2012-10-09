@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs.h,v 1.20 2005/09/11 15:57:07 rodrigc Exp $
+ * $FreeBSD$
  */
 
 /*#define NTFS_DEBUG 1*/
@@ -36,7 +36,7 @@ typedef u_int16_t wchar;
 #pragma pack(1)
 #define BBSIZE			1024
 #define	BBOFF			((off_t)(0))
-#define	BBLOCK			((daddr_t)(0))
+#define	BBLOCK			0
 #define	NTFS_MFTINO		0
 #define	NTFS_VOLUMEINO		3
 #define	NTFS_ATTRDEFINO		4
@@ -183,6 +183,7 @@ struct attr_indexentry {
 };
 
 #define	NTFS_FILEMAGIC	(u_int32_t)(0x454C4946)
+#define	NTFS_BLOCK_SIZE	512
 #define	NTFS_FRFLAG_DIR	0x0002
 struct filerec {
 	struct fixuphdr fr_fixup;
@@ -249,7 +250,7 @@ struct ntfsmount {
 	uid_t           ntm_uid;
 	gid_t           ntm_gid;
 	mode_t          ntm_mode;
-	u_int           ntm_flag;
+	uint64_t	ntm_flag;
 	cn_t		ntm_cfree;
 	struct ntvattrdef *ntm_ad;
 	int		ntm_adnum;
@@ -257,6 +258,7 @@ struct ntfsmount {
  	char **		ntm_u28;	/* Unicode to 8 bit */
 	void *		ntm_ic_l2u;	/* Local to Unicode (iconv) */
 	void *		ntm_ic_u2l;	/* Unicode to Local (iconv) */
+	u_int8_t	ntm_multiplier; /* NTFS blockno to DEV_BSIZE sectorno */
 };
 
 #define ntm_mftcn	ntm_bootfile.bf_mftcn
@@ -296,11 +298,11 @@ MALLOC_DECLARE(M_NTFSNTHASH);
 #if NTFS_DEBUG > 1
 #define ddprintf(a) printf a
 #else
-#define ddprintf(a)
+#define ddprintf(a)	(void)0
 #endif
 #else
-#define dprintf(a)
-#define ddprintf(a)
+#define dprintf(a)	(void)0
+#define ddprintf(a)	(void)0
 #endif
 
 extern struct vop_vector ntfs_vnodeops;

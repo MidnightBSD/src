@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1999-2005 Apple Inc.
+ * Copyright (c) 1999-2008 Apple Inc.
  * Copyright (c) 2006-2008 Robert N. M. Watson
  * All rights reserved.
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/audit/audit_worker.c,v 1.16.2.10.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -79,17 +78,24 @@ static struct proc		*audit_thread;
 
 /*
  * audit_cred and audit_vp are the stored credential and vnode to use for
- * active audit trail.  They are protected by audit_worker_sx, which will be
- * held across all I/O and all rotation to prevent them from being replaced
- * (rotated) while in use.  The audit_file_rotate_wait flag is set when the
- * kernel has delivered a trigger to auditd to rotate the trail, and is
- * cleared when the next rotation takes place.  It is also protected by
- * audit_worker_sx.
+ * active audit trail.  They are protected by the audit worker lock, which
+ * will be held across all I/O and all rotation to prevent them from being
+ * replaced (rotated) while in use.  The audit_file_rotate_wait flag is set
+ * when the kernel has delivered a trigger to auditd to rotate the trail, and
+ * is cleared when the next rotation takes place.  It is also protected by
+ * the audit worker lock.
  */
 static int		 audit_file_rotate_wait;
-static struct sx	 audit_worker_sx;
 static struct ucred	*audit_cred;
 static struct vnode	*audit_vp;
+static struct sx	 audit_worker_lock;
+
+#define	AUDIT_WORKER_LOCK_INIT()	sx_init(&audit_worker_lock, \
+					    "audit_worker_lock");
+#define	AUDIT_WORKER_LOCK_ASSERT()	sx_assert(&audit_worker_lock, \
+					    SA_XLOCKED)
+#define	AUDIT_WORKER_LOCK()		sx_xlock(&audit_worker_lock)
+#define	AUDIT_WORKER_UNLOCK()		sx_xunlock(&audit_worker_lock)
 
 /*
  * Write an audit record to a file, performed as the last stage after both
@@ -112,7 +118,7 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 	struct vattr vattr;
 	long temp;
 
-	sx_assert(&audit_worker_sx, SA_LOCKED);	/* audit_file_rotate_wait. */
+	AUDIT_WORKER_LOCK_ASSERT();
 
 	if (vp == NULL)
 		return;
@@ -125,12 +131,12 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 	 * that we know how we're doing on space.  Consider failure of these
 	 * operations to indicate a future inability to write to the file.
 	 */
-	error = VFS_STATFS(vp->v_mount, mnt_stat, curthread);
+	error = VFS_STATFS(vp->v_mount, mnt_stat);
 	if (error)
 		goto fail;
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
-	error = VOP_GETATTR(vp, &vattr, cred, curthread);
-	VOP_UNLOCK(vp, 0, curthread);
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
+	error = VOP_GETATTR(vp, &vattr, cred);
+	VOP_UNLOCK(vp, 0);
 	if (error)
 		goto fail;
 	audit_fstat.af_currsz = vattr.va_size;
@@ -192,7 +198,7 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 	 */
 	if ((audit_fstat.af_filesz != 0) && (audit_file_rotate_wait == 0) &&
 	    (vattr.va_size >= audit_fstat.af_filesz)) {
-		sx_assert(&audit_worker_sx, SA_XLOCKED);
+		AUDIT_WORKER_LOCK_ASSERT();
 
 		audit_file_rotate_wait = 1;
 		(void)audit_send_trigger(AUDIT_TRIGGER_ROTATE_KERNEL);
@@ -245,9 +251,9 @@ audit_record_write(struct vnode *vp, struct ucred *cred, void *data,
 	 */
 	if (audit_in_failure) {
 		if (audit_q_len == 0 && audit_pre_q_len == 0) {
-			VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
+			VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY);
 			(void)VOP_FSYNC(vp, MNT_WAIT, curthread);
-			VOP_UNLOCK(vp, 0, curthread);
+			VOP_UNLOCK(vp, 0);
 			panic("Audit store overflow; record queue drained.");
 		}
 	}
@@ -262,9 +268,9 @@ fail_enospc:
 	 * space, or ENOSPC returned by the vnode write call.
 	 */
 	if (audit_fail_stop) {
-		VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
+		VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY);
 		(void)VOP_FSYNC(vp, MNT_WAIT, curthread);
-		VOP_UNLOCK(vp, 0, curthread);
+		VOP_UNLOCK(vp, 0);
 		panic("Audit log space exhausted and fail-stop set.");
 	}
 	(void)audit_send_trigger(AUDIT_TRIGGER_NO_SPACE);
@@ -277,9 +283,9 @@ fail:
 	 * lost, which may require an immediate system halt.
 	 */
 	if (audit_panic_on_write_fail) {
-		VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
+		VOP_LOCK(vp, LK_EXCLUSIVE | LK_RETRY);
 		(void)VOP_FSYNC(vp, MNT_WAIT, curthread);
-		VOP_UNLOCK(vp, 0, curthread);
+		VOP_UNLOCK(vp, 0);
 		panic("audit_worker: write error %d\n", error);
 	} else if (ppsratecheck(&last_fail, &cur_fail, 1))
 		printf("audit_worker: write error %d\n", error);
@@ -301,20 +307,20 @@ audit_worker_process_record(struct kaudit_record *ar)
 	au_event_t event;
 	au_id_t auid;
 	int error, sorf;
-	int trail_locked;
+	int locked;
 
 	/*
-	 * We hold the audit_worker_sx lock over both writes, if there are
-	 * two, so that the two records won't be split across a rotation and
-	 * end up in two different trail files.
+	 * We hold the audit worker lock over both writes, if there are two,
+	 * so that the two records won't be split across a rotation and end
+	 * up in two different trail files.
 	 */
 	if (((ar->k_ar_commit & AR_COMMIT_USER) &&
 	    (ar->k_ar_commit & AR_PRESELECT_USER_TRAIL)) ||
 	    (ar->k_ar_commit & AR_PRESELECT_TRAIL)) {
-		sx_xlock(&audit_worker_sx);
-		trail_locked = 1;
+		AUDIT_WORKER_LOCK();
+		locked = 1;
 	} else
-		trail_locked = 0;
+		locked = 0;
 
 	/*
 	 * First, handle the user record, if any: commit to the system trail
@@ -322,7 +328,7 @@ audit_worker_process_record(struct kaudit_record *ar)
 	 */
 	if ((ar->k_ar_commit & AR_COMMIT_USER) &&
 	    (ar->k_ar_commit & AR_PRESELECT_USER_TRAIL)) {
-		sx_assert(&audit_worker_sx, SA_XLOCKED);
+		AUDIT_WORKER_LOCK_ASSERT();
 		audit_record_write(audit_vp, audit_cred, ar->k_udata,
 		    ar->k_ulen);
 	}
@@ -361,7 +367,7 @@ audit_worker_process_record(struct kaudit_record *ar)
 	}
 
 	if (ar->k_ar_commit & AR_PRESELECT_TRAIL) {
-		sx_assert(&audit_worker_sx, SA_XLOCKED);
+		AUDIT_WORKER_LOCK_ASSERT();
 		audit_record_write(audit_vp, audit_cred, bsm->data, bsm->len);
 	}
 
@@ -372,8 +378,8 @@ audit_worker_process_record(struct kaudit_record *ar)
 
 	kau_free(bsm);
 out:
-	if (trail_locked)
-		sx_xunlock(&audit_worker_sx);
+	if (locked)
+		AUDIT_WORKER_UNLOCK();
 }
 
 /*
@@ -454,14 +460,14 @@ audit_rotate_vnode(struct ucred *cred, struct vnode *vp)
 	 * Rotate the vnode/cred, and clear the rotate flag so that we will
 	 * send a rotate trigger if the new file fills.
 	 */
-	sx_xlock(&audit_worker_sx);
+	AUDIT_WORKER_LOCK();
 	old_audit_cred = audit_cred;
 	old_audit_vp = audit_vp;
 	audit_cred = cred;
 	audit_vp = vp;
 	audit_file_rotate_wait = 0;
 	audit_enabled = (audit_vp != NULL);
-	sx_xunlock(&audit_worker_sx);
+	AUDIT_WORKER_UNLOCK();
 
 	/*
 	 * If there was an old vnode/credential, close and free.
@@ -480,9 +486,9 @@ audit_worker_init(void)
 {
 	int error;
 
-	sx_init(&audit_worker_sx, "audit_worker_sx");
-	error = kthread_create(audit_worker, NULL, &audit_thread, RFHIGHPID,
+	AUDIT_WORKER_LOCK_INIT();
+	error = kproc_create(audit_worker, NULL, &audit_thread, RFHIGHPID,
 	    0, "audit");
 	if (error)
-		panic("audit_worker_init: kthread_create returned %d", error);
+		panic("audit_worker_init: kproc_create returned %d", error);
 }

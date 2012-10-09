@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1986, 1990 The Regents of the University of California.
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/mem.c,v 1.117 2006/01/23 15:46:09 ups Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Memory special file
@@ -73,9 +72,10 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/mem.c,v 1.117 2006/01/23 15:46:09 ups Exp 
  */
 MALLOC_DEFINE(M_MEMDESC, "memdesc", "memory range descriptors");
 
+struct mem_range_softc mem_range_softc;
+
 static struct sx memsxlock;
 SX_SYSINIT(memsxlockinit, &memsxlock, "/dev/mem lock");
-
 
 /* ARGSUSED */
 int
@@ -92,10 +92,10 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 	GIANT_REQUIRED;
 
 
-	if (minor(dev) != CDEV_MINOR_MEM && minor(dev) != CDEV_MINOR_KMEM)
+	if (dev2unit(dev) != CDEV_MINOR_MEM && dev2unit(dev) != CDEV_MINOR_KMEM)
 		return EIO;
 
-	if ( minor(dev) == CDEV_MINOR_KMEM && uio->uio_resid > 0) {
+	if (dev2unit(dev) == CDEV_MINOR_KMEM && uio->uio_resid > 0) {
 		if (uio->uio_offset < (vm_offset_t)VADDR(PTDPTDI, 0))
 				return (EFAULT);
 
@@ -113,7 +113,7 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 				panic("memrw");
 			continue;
 		}
-		if (minor(dev) == CDEV_MINOR_MEM) {
+		if (dev2unit(dev) == CDEV_MINOR_MEM) {
 			pa = uio->uio_offset;
 			pa &= ~PAGE_MASK;
 		} else {
@@ -164,12 +164,12 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
  */
 /* ARGSUSED */
 int
-memmmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr,
-    int prot __unused)
+memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int prot __unused, vm_memattr_t *memattr __unused)
 {
-	if (minor(dev) == CDEV_MINOR_MEM)
+	if (dev2unit(dev) == CDEV_MINOR_MEM)
 		*paddr = offset;
-	else if (minor(dev) == CDEV_MINOR_KMEM)
+	else if (dev2unit(dev) == CDEV_MINOR_KMEM)
         	*paddr = vtophys(offset);
 	/* else panic! */
 	return (0);
@@ -233,11 +233,4 @@ memioctl(struct cdev *dev __unused, u_long cmd, caddr_t data, int flags,
 		break;
 	}
 	return (error);
-}
-
-void
-dev_mem_md_init(void)
-{
-	if (mem_range_softc.mr_op != NULL)
-		mem_range_softc.mr_op->init(&mem_range_softc);
 }

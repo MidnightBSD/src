@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -34,7 +27,7 @@
  */ 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_rq.c,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,6 +37,8 @@ __FBSDID("$FreeBSD: src/sys/netncp/ncp_rq.c,v 1.15.6.1 2008/11/25 02:59:29 kensm
 #include <sys/mbuf.h>
 #include <sys/poll.h>
 #include <sys/proc.h>
+#include <sys/socket.h>
+#include <sys/socketvar.h>
 #include <sys/uio.h>
 
 #include <netncp/ncp.h>
@@ -66,7 +61,7 @@ ncp_rq_alloc_any(u_int32_t ptype, u_int8_t fn, struct ncp_conn *ncp,
 	struct ncp_rq *rqp;
 	int error;
 
-	MALLOC(rqp, struct ncp_rq *, sizeof(*rqp), M_NCPRQ, M_WAITOK);
+	rqp = malloc(sizeof(*rqp), M_NCPRQ, M_WAITOK);
 	error = ncp_rq_init_any(rqp, ptype, fn, ncp, td, cred);
 	rqp->nr_flags |= NCPR_ALLOCED;
 	if (error) {
@@ -275,7 +270,9 @@ ncp_request_int(struct ncp_rq *rqp)
 	/*
 	 * Flush out replies on previous reqs
 	 */
-	while (ncp_poll(so, POLLIN) != 0) {
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	while (selsocket(so, POLLIN, &tv, td) == 0) {
 		if (ncp_sock_recv(so, &m, &len) != 0)
 			break;
 		m_freem(m);
@@ -320,7 +317,7 @@ ncp_request_int(struct ncp_rq *rqp)
 		}
 		tv.tv_sec = conn->li.timeout;
 		tv.tv_usec = 0;
-		error = ncp_sock_rselect(so, td, &tv, POLLIN);
+		error = selsocket(so, POLLIN, &tv, td);
 		if (error == EWOULDBLOCK )	/* timeout expired */
 			continue;
 		error = ncp_chkintr(conn, td);
@@ -336,7 +333,9 @@ ncp_request_int(struct ncp_rq *rqp)
 		dosend = 1;	/* resend rq if error */
 		for (;;) {
 			error = 0;
-			if (ncp_poll(so, POLLIN) == 0)
+			tv.tv_sec = 0;
+			tv.tv_usec = 0;
+			if (selsocket(so, POLLIN, &tv, td) != 0)
 				break;
 /*			if (so->so_rcv.sb_cc == 0) {
 				break;

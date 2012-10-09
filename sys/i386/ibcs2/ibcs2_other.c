@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Steven Wallace
  * All rights reserved.
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_other.c,v 1.18.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * IBCS2 compatibility module.
@@ -76,7 +75,7 @@ ibcs2_lseek(struct thread *td, register struct ibcs2_lseek_args *uap)
 	largs.fd = uap->fd;
 	largs.offset = uap->offset;
 	largs.whence = uap->whence;
-	error = lseek(td, &largs);
+	error = sys_lseek(td, &largs);
 	return (error);
 }
 
@@ -96,7 +95,7 @@ spx_open(struct thread *td)
 	sock.domain = AF_UNIX;
 	sock.type = SOCK_STREAM;
 	sock.protocol = 0;
-	error = socket(td, &sock);
+	error = sys_socket(td, &sock);
 	if (error)
 		return error;
 	fd = td->td_retval[0];

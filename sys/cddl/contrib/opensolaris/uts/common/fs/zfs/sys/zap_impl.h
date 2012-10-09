@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,14 +19,11 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef	_SYS_ZAP_IMPL_H
 #define	_SYS_ZAP_IMPL_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/zap.h>
 #include <sys/zfs_context.h>
@@ -43,12 +39,12 @@ extern int fzap_default_block_shift;
 
 #define	FZAP_BLOCK_SHIFT(zap)	((zap)->zap_f.zap_block_shift)
 
-#define	ZAP_MAXCD		(uint32_t)(-1)
-#define	ZAP_HASHBITS		28
 #define	MZAP_ENT_LEN		64
 #define	MZAP_NAME_LEN		(MZAP_ENT_LEN - 8 - 4 - 2)
 #define	MZAP_MAX_BLKSHIFT	SPA_MAXBLOCKSHIFT
 #define	MZAP_MAX_BLKSZ		(1 << MZAP_MAX_BLKSHIFT)
+
+#define	ZAP_NEED_CD		(-1U)
 
 typedef struct mzap_ent_phys {
 	uint64_t mze_value;
@@ -60,7 +56,8 @@ typedef struct mzap_ent_phys {
 typedef struct mzap_phys {
 	uint64_t mz_block_type;	/* ZBT_MICRO */
 	uint64_t mz_salt;
-	uint64_t mz_pad[6];
+	uint64_t mz_normflags;
+	uint64_t mz_pad[5];
 	mzap_ent_phys_t mz_chunk[1];
 	/* actually variable size depending on block size */
 } mzap_phys_t;
@@ -69,9 +66,11 @@ typedef struct mzap_ent {
 	avl_node_t mze_node;
 	int mze_chunkid;
 	uint64_t mze_hash;
-	mzap_ent_phys_t mze_phys;
+	uint32_t mze_cd; /* copy from mze_phys->mze_cd */
 } mzap_ent_t;
 
+#define	MZE_PHYS(zap, mze) \
+	(&(zap)->zap_m.zap_phys->mz_chunk[(mze)->mze_chunkid])
 
 /*
  * The (fat) zap is stored in one object. It is an array of
@@ -128,6 +127,8 @@ typedef struct zap_phys {
 	uint64_t zap_num_leafs;		/* number of leafs */
 	uint64_t zap_num_entries;	/* number of entries */
 	uint64_t zap_salt;		/* salt to stir into hash function */
+	uint64_t zap_normflags;		/* flags for u8_textprep_str() */
+	uint64_t zap_flags;		/* zap_flags_t */
 	/*
 	 * This structure is followed by padding, and then the embedded
 	 * pointer table.  The embedded pointer table takes up second
@@ -143,7 +144,8 @@ typedef struct zap {
 	uint64_t zap_object;
 	struct dmu_buf *zap_dbuf;
 	krwlock_t zap_rwlock;
-	int zap_ismicro;
+	boolean_t zap_ismicro;
+	int zap_normflags;
 	uint64_t zap_salt;
 	union {
 		struct {
@@ -166,37 +168,58 @@ typedef struct zap {
 	} zap_u;
 } zap_t;
 
+typedef struct zap_name {
+	zap_t *zn_zap;
+	int zn_key_intlen;
+	const void *zn_key_orig;
+	int zn_key_orig_numints;
+	const void *zn_key_norm;
+	int zn_key_norm_numints;
+	uint64_t zn_hash;
+	matchtype_t zn_matchtype;
+	char zn_normbuf[ZAP_MAXNAMELEN];
+} zap_name_t;
+
 #define	zap_f	zap_u.zap_fat
 #define	zap_m	zap_u.zap_micro
 
-uint64_t zap_hash(zap_t *zap, const char *name);
+boolean_t zap_match(zap_name_t *zn, const char *matchname);
 int zap_lockdir(objset_t *os, uint64_t obj, dmu_tx_t *tx,
-    krw_t lti, int fatreader, zap_t **zapp);
+    krw_t lti, boolean_t fatreader, boolean_t adding, zap_t **zapp);
 void zap_unlockdir(zap_t *zap);
 void zap_evict(dmu_buf_t *db, void *vmzap);
+zap_name_t *zap_name_alloc(zap_t *zap, const char *key, matchtype_t mt);
+void zap_name_free(zap_name_t *zn);
+int zap_hashbits(zap_t *zap);
+uint32_t zap_maxcd(zap_t *zap);
+uint64_t zap_getflags(zap_t *zap);
 
 #define	ZAP_HASH_IDX(hash, n) (((n) == 0) ? 0 : ((hash) >> (64 - (n))))
 
 void fzap_byteswap(void *buf, size_t size);
 int fzap_count(zap_t *zap, uint64_t *count);
-int fzap_lookup(zap_t *zap, const char *name,
-    uint64_t integer_size, uint64_t num_integers, void *buf);
-int fzap_add(zap_t *zap, const char *name,
-    uint64_t integer_size, uint64_t num_integers,
+int fzap_lookup(zap_name_t *zn,
+    uint64_t integer_size, uint64_t num_integers, void *buf,
+    char *realname, int rn_len, boolean_t *normalization_conflictp);
+void fzap_prefetch(zap_name_t *zn);
+int fzap_count_write(zap_name_t *zn, int add, uint64_t *towrite,
+    uint64_t *tooverwrite);
+int fzap_add(zap_name_t *zn, uint64_t integer_size, uint64_t num_integers,
     const void *val, dmu_tx_t *tx);
-int fzap_update(zap_t *zap, const char *name,
+int fzap_update(zap_name_t *zn,
     int integer_size, uint64_t num_integers, const void *val, dmu_tx_t *tx);
-int fzap_length(zap_t *zap, const char *name,
+int fzap_length(zap_name_t *zn,
     uint64_t *integer_size, uint64_t *num_integers);
-int fzap_remove(zap_t *zap, const char *name, dmu_tx_t *tx);
+int fzap_remove(zap_name_t *zn, dmu_tx_t *tx);
 int fzap_cursor_retrieve(zap_t *zap, zap_cursor_t *zc, zap_attribute_t *za);
 void fzap_get_stats(zap_t *zap, zap_stats_t *zs);
 void zap_put_leaf(struct zap_leaf *l);
 
-int fzap_add_cd(zap_t *zap, const char *name,
+int fzap_add_cd(zap_name_t *zn,
     uint64_t integer_size, uint64_t num_integers,
     const void *val, uint32_t cd, dmu_tx_t *tx);
-void fzap_upgrade(zap_t *zap, dmu_tx_t *tx);
+void fzap_upgrade(zap_t *zap, dmu_tx_t *tx, zap_flags_t flags);
+int fzap_cursor_move_to_key(zap_cursor_t *zc, zap_name_t *zn);
 
 #ifdef	__cplusplus
 }

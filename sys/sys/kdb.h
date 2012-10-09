@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/kdb.h,v 1.4 2012/02/19 16:59:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/kdb.h,v 1.5.10.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_KDB_H_
@@ -32,30 +31,33 @@
 
 #include <machine/setjmp.h>
 
+struct pcb;
+struct thread;
+struct trapframe;
+
 typedef int dbbe_init_f(void);
 typedef void dbbe_trace_f(void);
+typedef void dbbe_trace_thread_f(struct thread *);
 typedef int dbbe_trap_f(int, int);
 
 struct kdb_dbbe {
 	const char	*dbbe_name;
 	dbbe_init_f	*dbbe_init;
 	dbbe_trace_f	*dbbe_trace;
+	dbbe_trace_thread_f *dbbe_trace_thread;
 	dbbe_trap_f	*dbbe_trap;
 	int		dbbe_active;
 };
 
-#define	KDB_BACKEND(name, init, trace, trap)		\
+#define	KDB_BACKEND(name, init, trace, trace_thread, trap) \
 	static struct kdb_dbbe name##_dbbe = {		\
 		.dbbe_name = #name,			\
 		.dbbe_init = init,			\
 		.dbbe_trace = trace,			\
+		.dbbe_trace_thread = trace_thread,	\
 		.dbbe_trap = trap			\
 	};						\
 	DATA_SET(kdb_dbbe_set, name##_dbbe)
-
-struct pcb;
-struct thread;
-struct trapframe;
 
 extern int kdb_active;			/* Non-zero while in debugger. */
 extern int debugger_on_panic;		/* enter the debugger on panic. */
@@ -65,12 +67,16 @@ extern struct pcb *kdb_thrctx;		/* Current context. */
 extern struct thread *kdb_thread;	/* Current thread. */
 
 int	kdb_alt_break(int, int *);
+int	kdb_alt_break_gdb(int, int *);
+int	kdb_break(void);
 void	kdb_backtrace(void);
+void	kdb_backtrace_thread(struct thread *);
 int	kdb_dbbe_select(const char *);
-void	kdb_enter(const char *);
-void	kdb_enter_why(const char *, const char *);
+void	kdb_enter(const char *, const char *);
 void	kdb_init(void);
 void *	kdb_jmpbuf(jmp_buf);
+void	kdb_panic(const char *);
+void	kdb_reboot(void);
 void	kdb_reenter(void);
 struct pcb *kdb_thr_ctx(struct thread *);
 struct thread *kdb_thr_first(void);
@@ -101,10 +107,16 @@ extern const char * volatile kdb_why;
 #define	KDB_WHY_CAM		"cam"		/* CAM has entered debugger. */
 #define	KDB_WHY_NDIS		"ndis"		/* NDIS entered debugger. */
 #define	KDB_WHY_ACPI		"acpi"		/* ACPI entered debugger. */
-#define	KDB_WHY_TRAPSIG		"trapsig"	/* Sun4v/Sparc fault. */
+#define	KDB_WHY_TRAPSIG		"trapsig"	/* Sparc fault. */
 #define	KDB_WHY_POWERFAIL	"powerfail"	/* Powerfail NMI. */
 #define	KDB_WHY_MAC		"mac"		/* MAC Framework. */
+#define	KDB_WHY_POWERPC		"powerpc"	/* Unhandled powerpc intr. */
 #define	KDB_WHY_UNIONFS		"unionfs"	/* Unionfs bug. */
 #define	KDB_WHY_DTRACE		"dtrace"	/* DTrace action entered debugger. */
+
+/* Return values for kdb_alt_break */
+#define	KDB_REQ_DEBUGGER	1	/* User requested Debugger */
+#define	KDB_REQ_PANIC		2	/* User requested a panic */
+#define	KDB_REQ_REBOOT		3	/* User requested a clean reboot */
 
 #endif /* !_SYS_KDB_H_ */

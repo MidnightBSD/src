@@ -96,7 +96,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mpt/mpt.c,v 1.44.2.2 2007/12/15 18:39:07 delphij Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_cam.h> /* XXX For static handler registration */
@@ -128,6 +128,8 @@ static void mpt_send_event_ack(struct mpt_softc *mpt, request_t *ack_req,
 static int mpt_send_event_request(struct mpt_softc *mpt, int onoff);
 static int mpt_soft_reset(struct mpt_softc *mpt);
 static void mpt_hard_reset(struct mpt_softc *mpt);
+static int mpt_dma_buf_alloc(struct mpt_softc *mpt);
+static void mpt_dma_buf_free(struct mpt_softc *mpt);
 static int mpt_configure_ioc(struct mpt_softc *mpt, int, int);
 static int mpt_enable_ioc(struct mpt_softc *mpt, int);
 
@@ -146,7 +148,7 @@ static __inline struct mpt_personality *
 mpt_pers_find(struct mpt_softc *mpt, u_int start_at)
 {
 	KASSERT(start_at <= MPT_MAX_PERSONALITIES,
-		("mpt_pers_find: starting position out of range\n"));
+		("mpt_pers_find: starting position out of range"));
 
 	while (start_at < MPT_MAX_PERSONALITIES
 	    && (mpt->mpt_pers_mask & (0x1 << start_at)) == 0) {
@@ -218,8 +220,8 @@ static struct mpt_personality mpt_core_personality =
 {
 	.name		= "mpt_core",
 	.load		= mpt_core_load,
-	.attach		= mpt_core_attach,
-	.enable		= mpt_core_enable,
+//	.attach		= mpt_core_attach,
+//	.enable		= mpt_core_enable,
 	.event		= mpt_core_event,
 	.reset		= mpt_core_ioc_reset,
 	.shutdown	= mpt_core_shutdown,
@@ -299,67 +301,76 @@ mpt_modevent(module_t mod, int type, void *data)
 	return (error);
 }
 
-int
+static int
 mpt_stdload(struct mpt_personality *pers)
 {
-	/* Load is always successfull. */
+
+	/* Load is always successful. */
 	return (0);
 }
 
-int
+static int
 mpt_stdprobe(struct mpt_softc *mpt)
 {
-	/* Probe is always successfull. */
+
+	/* Probe is always successful. */
 	return (0);
 }
 
-int
+static int
 mpt_stdattach(struct mpt_softc *mpt)
 {
-	/* Attach is always successfull. */
+
+	/* Attach is always successful. */
 	return (0);
 }
 
-int
+static int
 mpt_stdenable(struct mpt_softc *mpt)
 {
-	/* Enable is always successfull. */
+
+	/* Enable is always successful. */
 	return (0);
 }
 
-void
+static void
 mpt_stdready(struct mpt_softc *mpt)
 {
+
 }
 
-
-int
+static int
 mpt_stdevent(struct mpt_softc *mpt, request_t *req, MSG_EVENT_NOTIFY_REPLY *msg)
 {
+
 	mpt_lprt(mpt, MPT_PRT_DEBUG, "mpt_stdevent: 0x%x\n", msg->Event & 0xFF);
 	/* Event was not for us. */
 	return (0);
 }
 
-void
+static void
 mpt_stdreset(struct mpt_softc *mpt, int type)
 {
+
 }
 
-void
+static void
 mpt_stdshutdown(struct mpt_softc *mpt)
 {
+
 }
 
-void
+static void
 mpt_stddetach(struct mpt_softc *mpt)
 {
+
 }
 
-int
+static int
 mpt_stdunload(struct mpt_personality *pers)
 {
-	/* Unload is always successfull. */
+
+	/* Unload is always successful. */
 	return (0);
 }
 
@@ -380,7 +391,6 @@ mpt_postattach(void *unused)
 	}
 }
 SYSINIT(mptdev, SI_SUB_CONFIGURE, SI_ORDER_MIDDLE, mpt_postattach, NULL);
-
 
 /******************************* Bus DMA Support ******************************/
 void
@@ -476,6 +486,7 @@ static int
 mpt_default_reply_handler(struct mpt_softc *mpt, request_t *req,
 	uint32_t reply_desc, MSG_DEFAULT_REPLY *reply_frame)
 {
+
 	mpt_prt(mpt,
 	    "Default Handler Called: req=%p:%u reply_descriptor=%x frame=%p\n",
 	    req, req->serno, reply_desc, reply_frame);
@@ -492,8 +503,8 @@ static int
 mpt_config_reply_handler(struct mpt_softc *mpt, request_t *req,
  uint32_t reply_desc, MSG_DEFAULT_REPLY *reply_frame)
 {
-	if (req != NULL) {
 
+	if (req != NULL) {
 		if (reply_frame != NULL) {
 			MSG_CONFIG *cfgp;
 			MSG_CONFIG_REPLY *reply;
@@ -526,6 +537,7 @@ static int
 mpt_handshake_reply_handler(struct mpt_softc *mpt, request_t *req,
  uint32_t reply_desc, MSG_DEFAULT_REPLY *reply_frame)
 {
+
 	/* Nothing to be done. */
 	return (TRUE);
 }
@@ -648,6 +660,7 @@ static int
 mpt_core_event(struct mpt_softc *mpt, request_t *req,
 	       MSG_EVENT_NOTIFY_REPLY *msg)
 {
+
 	mpt_lprt(mpt, MPT_PRT_DEBUG, "mpt_core_event: 0x%x\n",
                  msg->Event & 0xFF);
 	switch(msg->Event & 0xFF) {
@@ -657,7 +670,7 @@ mpt_core_event(struct mpt_softc *mpt, request_t *req,
 	{
 		int i;
 
-		/* Some error occured that LSI wants logged */
+		/* Some error occurred that LSI wants logged */
 		mpt_prt(mpt, "EvtLogData: IOCLogInfo: 0x%08x\n",
 			msg->IOCLogInfo);
 		mpt_prt(mpt, "\tEvtLogData: Event Data:");
@@ -716,15 +729,16 @@ mpt_intr(void *arg)
 		uint32_t           ctxt_idx;
 		u_int		   cb_index;
 		u_int		   req_index;
+		u_int		   offset;
 		int		   free_rf;
 
 		req = NULL;
 		reply_frame = NULL;
 		reply_baddr = 0;
+		offset = 0;
 		if ((reply_desc & MPI_ADDRESS_REPLY_A_BIT) != 0) {
-			u_int offset;
 			/*
-			 * Insure that the reply frame is coherent.
+			 * Ensure that the reply frame is coherent.
 			 */
 			reply_baddr = MPT_REPLY_BADDR(reply_desc);
 			offset = reply_baddr - (mpt->reply_phys & 0xFFFFFFFF);
@@ -806,10 +820,15 @@ mpt_intr(void *arg)
 			    " 0x%x)\n", req_index, reply_desc);
 		}
 
+		bus_dmamap_sync(mpt->request_dmat, mpt->request_dmap,
+		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		free_rf = mpt_reply_handlers[cb_index](mpt, req,
 		    reply_desc, reply_frame);
 
 		if (reply_frame != NULL && free_rf) {
+			bus_dmamap_sync_range(mpt->reply_dmat,
+			    mpt->reply_dmap, offset, MPT_REPLY_SIZE,
+			    BUS_DMASYNC_PREREAD);
 			mpt_free_reply(mpt, reply_baddr);
 		}
 
@@ -842,13 +861,16 @@ mpt_complete_request_chain(struct mpt_softc *mpt, struct req_queue *chain,
 		MSG_REQUEST_HEADER *msg_hdr;
 		u_int		    cb_index;
 
-		TAILQ_REMOVE(chain, req, links);
+		bus_dmamap_sync(mpt->request_dmat, mpt->request_dmap,
+		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		msg_hdr = (MSG_REQUEST_HEADER *)req->req_vbuf;
 		ioc_status_frame.Function = msg_hdr->Function;
 		ioc_status_frame.MsgContext = msg_hdr->MsgContext;
 		cb_index = MPT_CONTEXT_TO_CBI(le32toh(msg_hdr->MsgContext));
 		mpt_reply_handlers[cb_index](mpt, req, msg_hdr->MsgContext,
 		    &ioc_status_frame);
+		if (mpt_req_on_pending_list(mpt, req) != 0)
+			TAILQ_REMOVE(chain, req, links);
 	}
 }
 
@@ -859,6 +881,7 @@ mpt_complete_request_chain(struct mpt_softc *mpt, struct req_queue *chain,
 void
 mpt_dump_reply_frame(struct mpt_softc *mpt, MSG_DEFAULT_REPLY *reply_frame)
 {
+
 	mpt_prt(mpt, "Address Reply:\n");
 	mpt_print_reply(reply_frame);
 }
@@ -870,12 +893,14 @@ static __inline  uint32_t mpt_rd_intr(struct mpt_softc *mpt);
 static __inline uint32_t
 mpt_rd_db(struct mpt_softc *mpt)
 {
+
 	return mpt_read(mpt, MPT_OFFSET_DOORBELL);
 }
 
 static __inline uint32_t
 mpt_rd_intr(struct mpt_softc *mpt)
 {
+
 	return mpt_read(mpt, MPT_OFFSET_INTR_STATUS);
 }
 
@@ -884,6 +909,7 @@ static int
 mpt_wait_db_ack(struct mpt_softc *mpt)
 {
 	int i;
+
 	for (i=0; i < MPT_MAX_WAIT; i++) {
 		if (!MPT_DB_IS_BUSY(mpt_rd_intr(mpt))) {
 			maxwait_ack = i > maxwait_ack ? i : maxwait_ack;
@@ -899,6 +925,7 @@ static int
 mpt_wait_db_int(struct mpt_softc *mpt)
 {
 	int i;
+
 	for (i = 0; i < MPT_MAX_WAIT; i++) {
 		if (MPT_DB_INTR(mpt_rd_intr(mpt))) {
 			maxwait_int = i > maxwait_int ? i : maxwait_int;
@@ -914,6 +941,7 @@ void
 mpt_check_doorbell(struct mpt_softc *mpt)
 {
 	uint32_t db = mpt_rd_db(mpt);
+
 	if (MPT_STATE(db) != MPT_DB_STATE_RUNNING) {
 		mpt_prt(mpt, "Device not running\n");
 		mpt_print_db(db);
@@ -945,6 +973,7 @@ static int mpt_download_fw(struct mpt_softc *mpt);
 static int
 mpt_soft_reset(struct mpt_softc *mpt)
 {
+
 	mpt_lprt(mpt, MPT_PRT_DEBUG, "soft reset\n");
 
 	/* Have to use hard reset if we are not in Running state */
@@ -1008,6 +1037,7 @@ mpt_enable_diag_mode(struct mpt_softc *mpt)
 static void
 mpt_disable_diag_mode(struct mpt_softc *mpt)
 {
+
 	mpt_write(mpt, MPT_OFFSET_SEQUENCE, 0xFFFFFFFF);
 }
 
@@ -1022,6 +1052,12 @@ mpt_hard_reset(struct mpt_softc *mpt)
 	uint32_t diagreg;
 
 	mpt_lprt(mpt, MPT_PRT_DEBUG, "hard reset\n");
+
+	if (mpt->is_1078) {
+		mpt_write(mpt, MPT_OFFSET_RESET_1078, 0x07);
+		DELAY(1000);
+		return;
+	}
 
 	error = mpt_enable_diag_mode(mpt);
 	if (error) {
@@ -1083,6 +1119,7 @@ mpt_hard_reset(struct mpt_softc *mpt)
 static void
 mpt_core_ioc_reset(struct mpt_softc *mpt, int type)
 {
+
 	/*
 	 * Complete all pending requests with a status
 	 * appropriate for an IOC reset.
@@ -1090,7 +1127,6 @@ mpt_core_ioc_reset(struct mpt_softc *mpt, int type)
 	mpt_complete_request_chain(mpt, &mpt->request_pending_list,
 				   MPI_IOCSTATUS_INVALID_STATE);
 }
-
 
 /*
  * Reset the IOC when needed. Try software command first then if needed
@@ -1164,11 +1200,10 @@ mpt_free_request(struct mpt_softc *mpt, request_t *req)
 {
 	request_t *nxt;
 	struct mpt_evtf_record *record;
-	uint32_t reply_baddr;
+	uint32_t offset, reply_baddr;
 	
 	if (req == NULL || req != &mpt->request_pool[req->index]) {
-		panic("mpt_free_request bad req ptr\n");
-		return;
+		panic("mpt_free_request: bad req ptr");
 	}
 	if ((nxt = req->chain) != NULL) {
 		req->chain = NULL;
@@ -1213,8 +1248,10 @@ mpt_free_request(struct mpt_softc *mpt, request_t *req)
 	req->state = REQ_STATE_ALLOCATED;
 	mpt_assign_serno(mpt, req);
 	mpt_send_event_ack(mpt, req, &record->reply, record->context);
-	reply_baddr = (uint32_t)((uint8_t *)record - mpt->reply)
-		    + (mpt->reply_phys & 0xFFFFFFFF);
+	offset = (uint32_t)((uint8_t *)record - mpt->reply);
+	reply_baddr = offset + (mpt->reply_phys & 0xFFFFFFFF);
+	bus_dmamap_sync_range(mpt->reply_dmat, mpt->reply_dmap, offset,
+	    MPT_REPLY_SIZE, BUS_DMASYNC_PREREAD);
 	mpt_free_reply(mpt, reply_baddr);
 }
 
@@ -1229,7 +1266,7 @@ retry:
 	req = TAILQ_FIRST(&mpt->request_free_list);
 	if (req != NULL) {
 		KASSERT(req == &mpt->request_pool[req->index],
-		    ("mpt_get_request: corrupted request free list\n"));
+		    ("mpt_get_request: corrupted request free list"));
 		KASSERT(req->state == REQ_STATE_FREE,
 		    ("req %p:%u not free on free list %x index %d function %x",
 		    req, req->serno, req->state, req->index,
@@ -1238,7 +1275,6 @@ retry:
 		req->state = REQ_STATE_ALLOCATED;
 		req->chain = NULL;
 		mpt_assign_serno(mpt, req);
-		mpt_callout_init(&req->callout);
 	} else if (sleep_ok != 0) {
 		mpt->getreqwaiter = 1;
 		mpt_sleep(mpt, &mpt->request_free_list, PUSER, "mptgreq", 0);
@@ -1251,11 +1287,12 @@ retry:
 void
 mpt_send_cmd(struct mpt_softc *mpt, request_t *req)
 {
+
 	if (mpt->verbose > MPT_PRT_DEBUG2) {
 		mpt_dump_request(mpt, req);
 	}
 	bus_dmamap_sync(mpt->request_dmat, mpt->request_dmap,
-	    BUS_DMASYNC_PREWRITE);
+	    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 	req->state |= REQ_STATE_QUEUED;
 	KASSERT(mpt_req_on_free_list(mpt, req) == 0,
 	    ("req %p:%u func %x on freelist list in mpt_send_cmd",
@@ -1637,7 +1674,7 @@ mpt_read_extcfg_header(struct mpt_softc *mpt, int PageVersion, int PageNumber,
 		rslt->PageVersion = cfgp->Header.PageVersion;
 		rslt->PageNumber = cfgp->Header.PageNumber;
 		rslt->PageType = cfgp->Header.PageType;
-		rslt->ExtPageLength = cfgp->ExtPageLength;
+		rslt->ExtPageLength = le16toh(cfgp->ExtPageLength);
 		rslt->ExtPageType = cfgp->ExtPageType;
 		error = 0;
 		break;
@@ -1668,7 +1705,7 @@ mpt_read_extcfg_page(struct mpt_softc *mpt, int Action, uint32_t PageAddress,
 
 	req = mpt_get_request(mpt, sleep_ok);
 	if (req == NULL) {
-		mpt_prt(mpt, "mpt_read_cfg_page: Get request failed!\n");
+		mpt_prt(mpt, "mpt_read_extcfg_page: Get request failed!\n");
 		return (-1);
 	}
 
@@ -1694,8 +1731,6 @@ mpt_read_extcfg_page(struct mpt_softc *mpt, int Action, uint32_t PageAddress,
 		mpt_free_request(mpt, req);
 		return (-1);
 	}
-	bus_dmamap_sync(mpt->request_dmat, mpt->request_dmap,
-	    BUS_DMASYNC_POSTREAD);
 	memcpy(buf, ((uint8_t *)req->req_vbuf)+MPT_RQSL(mpt), len);
 	mpt_free_request(mpt, req);
 	return (0);
@@ -1793,8 +1828,6 @@ mpt_read_cfg_page(struct mpt_softc *mpt, int Action, uint32_t PageAddress,
 		mpt_free_request(mpt, req);
 		return (-1);
 	}
-	bus_dmamap_sync(mpt->request_dmat, mpt->request_dmap,
-	    BUS_DMASYNC_POSTREAD);
 	memcpy(hdr, ((uint8_t *)req->req_vbuf)+MPT_RQSL(mpt), len);
 	mpt_free_request(mpt, req);
 	return (0);
@@ -2025,6 +2058,7 @@ mpt_read_config_info_ioc(struct mpt_softc *mpt)
 		mpt_raid_free_mem(mpt);
 		return (EIO);
 	}
+	mpt2host_config_page_ioc3(mpt->ioc_page3);
 	mpt_raid_wakeup(mpt);
 	return (0);
 }
@@ -2055,7 +2089,7 @@ mpt_send_port_enable(struct mpt_softc *mpt, int port)
 
 	mpt_send_cmd(mpt, req);
 	error = mpt_wait_req(mpt, req, REQ_STATE_DONE, REQ_STATE_DONE,
-	    FALSE, (mpt->is_sas || mpt->is_fc)? 30000 : 3000);
+	    FALSE, (mpt->is_sas || mpt->is_fc)? 300000 : 30000);
 	if (error != 0) {
 		mpt_prt(mpt, "port %d enable timed out\n", port);
 		return (-1);
@@ -2101,6 +2135,7 @@ mpt_send_event_request(struct mpt_softc *mpt, int onoff)
 void
 mpt_enable_ints(struct mpt_softc *mpt)
 {
+
 	/* Unmask every thing except door bell int */
 	mpt_write(mpt, MPT_OFFSET_INTR_MASK, MPT_INTR_DB_MASK);
 }
@@ -2111,6 +2146,7 @@ mpt_enable_ints(struct mpt_softc *mpt)
 void
 mpt_disable_ints(struct mpt_softc *mpt)
 {
+
 	/* Mask all interrupts */
 	mpt_write(mpt, MPT_OFFSET_INTR_MASK,
 	    MPT_INTR_REPLY_MASK | MPT_INTR_DB_MASK);
@@ -2123,10 +2159,10 @@ mpt_sysctl_attach(struct mpt_softc *mpt)
 	struct sysctl_ctx_list *ctx = device_get_sysctl_ctx(mpt->dev);
 	struct sysctl_oid *tree = device_get_sysctl_tree(mpt->dev);
 
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
+	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 		       "debug", CTLFLAG_RW, &mpt->verbose, 0,
 		       "Debugging/Verbose level");
-	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
+	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 		       "role", CTLFLAG_RD, &mpt->role, 0,
 		       "HBA role");
 #ifdef	MPT_TEST_MULTIPATH
@@ -2143,6 +2179,9 @@ mpt_attach(struct mpt_softc *mpt)
 	struct mpt_personality *pers;
 	int i;
 	int error;
+
+	mpt_core_attach(mpt);
+	mpt_core_enable(mpt);
 
 	TAILQ_INSERT_TAIL(&mpt_tailq, mpt, links);
 	for (i = 0; i < MPT_MAX_PERSONALITIES; i++) {
@@ -2207,7 +2246,7 @@ mpt_detach(struct mpt_softc *mpt)
 	return (0);
 }
 
-int
+static int
 mpt_core_load(struct mpt_personality *pers)
 {
 	int i;
@@ -2233,7 +2272,7 @@ mpt_core_load(struct mpt_personality *pers)
  * Initialize per-instance driver data and perform
  * initial controller configuration.
  */
-int
+static int
 mpt_core_attach(struct mpt_softc *mpt)
 {
         int val, error;
@@ -2243,13 +2282,6 @@ mpt_core_attach(struct mpt_softc *mpt)
 	TAILQ_INIT(&mpt->request_pending_list);
 	TAILQ_INIT(&mpt->request_free_list);
 	TAILQ_INIT(&mpt->request_timeout_list);
-	MPT_LOCK(mpt);
-	for (val = 0; val < MPT_MAX_REQUESTS(mpt); val++) {
-		request_t *req = &mpt->request_pool[val];
-		req->state = REQ_STATE_ALLOCATED;
-		mpt_free_request(mpt, req);
-	}
-	MPT_UNLOCK(mpt);
 	for (val = 0; val < MPT_MAX_LUNS; val++) {
 		STAILQ_INIT(&mpt->trt[val].atios);
 		STAILQ_INIT(&mpt->trt[val].inots);
@@ -2271,9 +2303,10 @@ mpt_core_attach(struct mpt_softc *mpt)
 	return (error);
 }
 
-int
+static int
 mpt_core_enable(struct mpt_softc *mpt)
 {
+
 	/*
 	 * We enter with the IOC enabled, but async events
 	 * not enabled, ports not enabled and interrupts
@@ -2321,25 +2354,37 @@ mpt_core_enable(struct mpt_softc *mpt)
 	return (0);
 }
 
-void
+static void
 mpt_core_shutdown(struct mpt_softc *mpt)
 {
+
 	mpt_disable_ints(mpt);
 }
 
-void
+static void
 mpt_core_detach(struct mpt_softc *mpt)
 {
+	int val;
+
 	/*
 	 * XXX: FREE MEMORY 
 	 */
 	mpt_disable_ints(mpt);
+
+	/* Make sure no request has pending timeouts. */
+	for (val = 0; val < MPT_MAX_REQUESTS(mpt); val++) {
+		request_t *req = &mpt->request_pool[val];
+		mpt_callout_drain(mpt, &req->callout);
+	}
+
+	mpt_dma_buf_free(mpt);
 }
 
-int
+static int
 mpt_core_unload(struct mpt_personality *pers)
 {
-	/* Unload is always successfull. */
+
+	/* Unload is always successful. */
 	return (0);
 }
 
@@ -2374,10 +2419,12 @@ mpt_upload_fw(struct mpt_softc *mpt)
 	flags <<= MPI_SGE_FLAGS_SHIFT;
 	sge->FlagsLength = htole32(flags | mpt->fw_image_size);
 	sge->Address = htole32(mpt->fw_phys);
+	bus_dmamap_sync(mpt->fw_dmat, mpt->fw_dmap, BUS_DMASYNC_PREREAD);
 	error = mpt_send_handshake_cmd(mpt, sizeof(fw_req_buf), &fw_req_buf);
 	if (error)
 		return(error);
 	error = mpt_recv_handshake_reply(mpt, sizeof(fw_reply), &fw_reply);
+	bus_dmamap_sync(mpt->fw_dmat, mpt->fw_dmap, BUS_DMASYNC_POSTREAD);
 	return (error);
 }
 
@@ -2409,6 +2456,11 @@ mpt_download_fw(struct mpt_softc *mpt)
 	uint32_t ext_offset;
 	uint32_t data;
 
+	if (mpt->pci_pio_reg == NULL) {
+		mpt_prt(mpt, "No PIO resource!\n");
+		return (ENXIO);
+	}
+
 	mpt_prt(mpt, "Downloading Firmware - Image Size %d\n",
 		mpt->fw_image_size);
 
@@ -2422,8 +2474,10 @@ mpt_download_fw(struct mpt_softc *mpt)
 		  MPI_DIAG_RW_ENABLE|MPI_DIAG_DISABLE_ARM);
 
 	fw_hdr = (MpiFwHeader_t *)mpt->fw_image;
+	bus_dmamap_sync(mpt->fw_dmat, mpt->fw_dmap, BUS_DMASYNC_PREWRITE);
 	mpt_diag_outsl(mpt, fw_hdr->LoadStartAddress, (uint32_t*)fw_hdr,
 		       fw_hdr->ImageSize);
+	bus_dmamap_sync(mpt->fw_dmat, mpt->fw_dmap, BUS_DMASYNC_POSTWRITE);
 
 	ext_offset = fw_hdr->NextImageHeaderOffset;
 	while (ext_offset != 0) {
@@ -2431,9 +2485,12 @@ mpt_download_fw(struct mpt_softc *mpt)
 
 		ext = (MpiExtImageHeader_t *)((uintptr_t)fw_hdr + ext_offset);
 		ext_offset = ext->NextImageHeaderOffset;
-
+		bus_dmamap_sync(mpt->fw_dmat, mpt->fw_dmap,
+		    BUS_DMASYNC_PREWRITE);
 		mpt_diag_outsl(mpt, ext->LoadStartAddress, (uint32_t*)ext,
 			       ext->ImageSize);
+		bus_dmamap_sync(mpt->fw_dmat, mpt->fw_dmap,
+		    BUS_DMASYNC_POSTWRITE);
 	}
 
 	if (mpt->is_sas) {
@@ -2468,6 +2525,106 @@ mpt_download_fw(struct mpt_softc *mpt)
 	return (0);
 }
 
+static int
+mpt_dma_buf_alloc(struct mpt_softc *mpt)
+{
+	struct mpt_map_info mi;
+	uint8_t *vptr;
+	uint32_t pptr, end;
+	int i, error;
+
+	/* Create a child tag for data buffers */
+	if (mpt_dma_tag_create(mpt, mpt->parent_dmat, 1,
+	    0, BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR,
+	    NULL, NULL, (mpt->max_cam_seg_cnt - 1) * PAGE_SIZE,
+	    mpt->max_cam_seg_cnt, BUS_SPACE_MAXSIZE_32BIT, 0,
+	    &mpt->buffer_dmat) != 0) {
+		mpt_prt(mpt, "cannot create a dma tag for data buffers\n");
+		return (1);
+	}
+
+	/* Create a child tag for request buffers */
+	if (mpt_dma_tag_create(mpt, mpt->parent_dmat, PAGE_SIZE, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
+	    NULL, NULL, MPT_REQ_MEM_SIZE(mpt), 1, BUS_SPACE_MAXSIZE_32BIT, 0,
+	    &mpt->request_dmat) != 0) {
+		mpt_prt(mpt, "cannot create a dma tag for requests\n");
+		return (1);
+	}
+
+	/* Allocate some DMA accessible memory for requests */
+	if (bus_dmamem_alloc(mpt->request_dmat, (void **)&mpt->request,
+	    BUS_DMA_NOWAIT | BUS_DMA_COHERENT, &mpt->request_dmap) != 0) {
+		mpt_prt(mpt, "cannot allocate %d bytes of request memory\n",
+		    MPT_REQ_MEM_SIZE(mpt));
+		return (1);
+	}
+
+	mi.mpt = mpt;
+	mi.error = 0;
+
+	/* Load and lock it into "bus space" */
+	bus_dmamap_load(mpt->request_dmat, mpt->request_dmap, mpt->request,
+	    MPT_REQ_MEM_SIZE(mpt), mpt_map_rquest, &mi, 0);
+
+	if (mi.error) {
+		mpt_prt(mpt, "error %d loading dma map for DMA request queue\n",
+		    mi.error);
+		return (1);
+	}
+	mpt->request_phys = mi.phys;
+
+	/*
+	 * Now create per-request dma maps
+	 */
+	i = 0;
+	pptr =  mpt->request_phys;
+	vptr =  mpt->request;
+	end = pptr + MPT_REQ_MEM_SIZE(mpt);
+	while(pptr < end) {
+		request_t *req = &mpt->request_pool[i];
+		req->index = i++;
+
+		/* Store location of Request Data */
+		req->req_pbuf = pptr;
+		req->req_vbuf = vptr;
+
+		pptr += MPT_REQUEST_AREA;
+		vptr += MPT_REQUEST_AREA;
+
+		req->sense_pbuf = (pptr - MPT_SENSE_SIZE);
+		req->sense_vbuf = (vptr - MPT_SENSE_SIZE);
+
+		error = bus_dmamap_create(mpt->buffer_dmat, 0, &req->dmap);
+		if (error) {
+			mpt_prt(mpt, "error %d creating per-cmd DMA maps\n",
+			    error);
+			return (1);
+		}
+	}
+
+	return (0);
+}
+
+static void
+mpt_dma_buf_free(struct mpt_softc *mpt)
+{
+	int i;
+
+	if (mpt->request_dmat == 0) {
+		mpt_lprt(mpt, MPT_PRT_DEBUG, "already released dma memory\n");
+		return;
+	}
+	for (i = 0; i < MPT_MAX_REQUESTS(mpt); i++) {
+		bus_dmamap_destroy(mpt->buffer_dmat, mpt->request_pool[i].dmap);
+	}
+	bus_dmamap_unload(mpt->request_dmat, mpt->request_dmap);
+	bus_dmamem_free(mpt->request_dmat, mpt->request, mpt->request_dmap);
+	bus_dma_tag_destroy(mpt->request_dmat);
+	mpt->request_dmat = 0;
+	bus_dma_tag_destroy(mpt->buffer_dmat);
+}
+
 /*
  * Allocate/Initialize data structures for the controller.  Called
  * once at instance startup.
@@ -2476,7 +2633,7 @@ static int
 mpt_configure_ioc(struct mpt_softc *mpt, int tn, int needreset)
 {
 	PTR_MSG_PORT_FACTS_REPLY pfp;
-	int error,  port;
+	int error, port, val;
 	size_t len;
 
 	if (tn == MPT_MAX_TRYS) {
@@ -2536,7 +2693,7 @@ mpt_configure_ioc(struct mpt_softc *mpt, int tn, int needreset)
 
 	/* limited by the number of chain areas the card will support */
 	if (mpt->max_seg_cnt > mpt->ioc_facts.MaxChainDepth) {
-		mpt_lprt(mpt, MPT_PRT_DEBUG,
+		mpt_lprt(mpt, MPT_PRT_INFO,
 		    "chain depth limited to %u (from %u)\n",
 		    mpt->ioc_facts.MaxChainDepth, mpt->max_seg_cnt);
 		mpt->max_seg_cnt = mpt->ioc_facts.MaxChainDepth;
@@ -2545,17 +2702,37 @@ mpt_configure_ioc(struct mpt_softc *mpt, int tn, int needreset)
 	/* converted to the number of simple sges in chain segments. */
 	mpt->max_seg_cnt *= (MPT_NSGL(mpt) - 1);
 
-	mpt_lprt(mpt, MPT_PRT_DEBUG, "Maximum Segment Count: %u\n",
-	    mpt->max_seg_cnt);
-	mpt_lprt(mpt, MPT_PRT_DEBUG, "MsgLength=%u IOCNumber = %d\n",
+	/*
+	 * Use this as the basis for reporting the maximum I/O size to CAM.
+	 */
+	mpt->max_cam_seg_cnt = min(mpt->max_seg_cnt, (MAXPHYS / PAGE_SIZE) + 1);
+
+	error = mpt_dma_buf_alloc(mpt);
+	if (error != 0) {
+		mpt_prt(mpt, "mpt_dma_buf_alloc() failed!\n");
+		return (EIO);
+	}
+
+	for (val = 0; val < MPT_MAX_REQUESTS(mpt); val++) {
+		request_t *req = &mpt->request_pool[val];
+		req->state = REQ_STATE_ALLOCATED;
+		mpt_callout_init(mpt, &req->callout);
+		mpt_free_request(mpt, req);
+	}
+
+	mpt_lprt(mpt, MPT_PRT_INFO, "Maximum Segment Count: %u, Maximum "
+		 "CAM Segment Count: %u\n", mpt->max_seg_cnt,
+		 mpt->max_cam_seg_cnt);
+
+	mpt_lprt(mpt, MPT_PRT_INFO, "MsgLength=%u IOCNumber = %d\n",
 	    mpt->ioc_facts.MsgLength, mpt->ioc_facts.IOCNumber);
-	mpt_lprt(mpt, MPT_PRT_DEBUG,
+	mpt_lprt(mpt, MPT_PRT_INFO,
 	    "IOCFACTS: GlobalCredits=%d BlockSize=%u bytes "
 	    "Request Frame Size %u bytes Max Chain Depth %u\n",
 	    mpt->ioc_facts.GlobalCredits, mpt->ioc_facts.BlockSize,
 	    mpt->ioc_facts.RequestFrameSize << 2,
 	    mpt->ioc_facts.MaxChainDepth);
-	mpt_lprt(mpt, MPT_PRT_DEBUG, "IOCFACTS: Num Ports %d, FWImageSize %d, "
+	mpt_lprt(mpt, MPT_PRT_INFO, "IOCFACTS: Num Ports %d, FWImageSize %d, "
 	    "Flags=%#x\n", mpt->ioc_facts.NumberOfPorts,
 	    mpt->ioc_facts.FWImageSize, mpt->ioc_facts.Flags);
 
@@ -2574,7 +2751,7 @@ mpt_configure_ioc(struct mpt_softc *mpt, int tn, int needreset)
 		/*
 		 * In some configurations, the IOC's firmware is
 		 * stored in a shared piece of system NVRAM that
-		 * is only accessable via the BIOS.  In this
+		 * is only accessible via the BIOS.  In this
 		 * case, the firmware keeps a copy of firmware in
 		 * RAM until the OS driver retrieves it.  Once
 		 * retrieved, we are responsible for re-downloading
@@ -2586,11 +2763,12 @@ mpt_configure_ioc(struct mpt_softc *mpt, int tn, int needreset)
 		    mpt->fw_image_size, 1, mpt->fw_image_size, 0,
 		    &mpt->fw_dmat);
 		if (error != 0) {
-			mpt_prt(mpt, "cannot create firmwarew dma tag\n");
+			mpt_prt(mpt, "cannot create firmware dma tag\n");
 			return (ENOMEM);
 		}
 		error = bus_dmamem_alloc(mpt->fw_dmat,
-		    (void **)&mpt->fw_image, BUS_DMA_NOWAIT, &mpt->fw_dmap);
+		    (void **)&mpt->fw_image, BUS_DMA_NOWAIT |
+		    BUS_DMA_COHERENT, &mpt->fw_dmap);
 		if (error != 0) {
 			mpt_prt(mpt, "cannot allocate firmware memory\n");
 			bus_dma_tag_destroy(mpt->fw_dmat);
@@ -2655,6 +2833,8 @@ mpt_configure_ioc(struct mpt_softc *mpt, int tn, int needreset)
 		mpt->is_fc = 0;
 		mpt->is_sas = 0;
 		mpt->is_spi = 1;
+		if (mpt->mpt_ini_id == MPT_INI_ID_NONE)
+			mpt->mpt_ini_id = pfp->PortSCSIID;
 	} else if (pfp->PortType == MPI_PORTFACTS_PORTTYPE_ISCSI) {
 		mpt_prt(mpt, "iSCSI not supported yet\n");
 		return (ENXIO);
@@ -2683,7 +2863,7 @@ mpt_configure_ioc(struct mpt_softc *mpt, int tn, int needreset)
 	/*
 	 * Enable the IOC
 	 */
-	if (mpt_enable_ioc(mpt, 0) != MPT_OK) {
+	if (mpt_enable_ioc(mpt, 1) != MPT_OK) {
 		mpt_prt(mpt, "unable to initialize IOC\n");
 		return (ENXIO);
 	}
@@ -2743,7 +2923,7 @@ mpt_enable_ioc(struct mpt_softc *mpt, int portenable)
 		mpt_send_event_request(mpt, 1);
 
 		if (mpt_send_port_enable(mpt, 0) != MPT_OK) {
-			mpt_prt(mpt, "failed to enable port 0\n");
+			mpt_prt(mpt, "%s: failed to enable port 0\n", __func__);
 			return (ENXIO);
 		}
 	}
@@ -2757,6 +2937,7 @@ mpt_enable_ioc(struct mpt_softc *mpt, int portenable)
 void
 mpt2host_sge_simple_union(SGE_SIMPLE_UNION *sge)
 {
+
 	MPT_2_HOST32(sge, FlagsLength);
 	MPT_2_HOST32(sge, u.Address64.Low);
 	MPT_2_HOST32(sge, u.Address64.High);
@@ -2765,6 +2946,7 @@ mpt2host_sge_simple_union(SGE_SIMPLE_UNION *sge)
 void
 mpt2host_iocfacts_reply(MSG_IOC_FACTS_REPLY *rp)
 {
+
 	MPT_2_HOST16(rp, MsgVersion);
 	MPT_2_HOST16(rp, HeaderVersion);
 	MPT_2_HOST32(rp, MsgContext);
@@ -2791,6 +2973,7 @@ mpt2host_iocfacts_reply(MSG_IOC_FACTS_REPLY *rp)
 void
 mpt2host_portfacts_reply(MSG_PORT_FACTS_REPLY *pfp)
 {
+
 	MPT_2_HOST16(pfp, Reserved);
 	MPT_2_HOST16(pfp, Reserved1);
 	MPT_2_HOST32(pfp, MsgContext);
@@ -2806,20 +2989,139 @@ mpt2host_portfacts_reply(MSG_PORT_FACTS_REPLY *pfp)
 	MPT_2_HOST16(pfp, Reserved4);
 	MPT_2_HOST32(pfp, Reserved5);
 }
+
 void
 mpt2host_config_page_ioc2(CONFIG_PAGE_IOC_2 *ioc2)
 {
 	int i;
-	ioc2->CapabilitiesFlags = htole32(ioc2->CapabilitiesFlags);
+
+	MPT_2_HOST32(ioc2, CapabilitiesFlags);
 	for (i = 0; i < MPI_IOC_PAGE_2_RAID_VOLUME_MAX; i++) {
 		MPT_2_HOST16(ioc2, RaidVolume[i].Reserved3);
 	}
 }
 
 void
+mpt2host_config_page_ioc3(CONFIG_PAGE_IOC_3 *ioc3)
+{
+
+	MPT_2_HOST16(ioc3, Reserved2);
+}
+
+void
+mpt2host_config_page_scsi_port_0(CONFIG_PAGE_SCSI_PORT_0 *sp0)
+{
+
+	MPT_2_HOST32(sp0, Capabilities);
+	MPT_2_HOST32(sp0, PhysicalInterface);
+}
+
+void
+mpt2host_config_page_scsi_port_1(CONFIG_PAGE_SCSI_PORT_1 *sp1)
+{
+
+	MPT_2_HOST32(sp1, Configuration);
+	MPT_2_HOST32(sp1, OnBusTimerValue);
+	MPT_2_HOST16(sp1, IDConfig);
+}
+
+void
+host2mpt_config_page_scsi_port_1(CONFIG_PAGE_SCSI_PORT_1 *sp1)
+{
+
+	HOST_2_MPT32(sp1, Configuration);
+	HOST_2_MPT32(sp1, OnBusTimerValue);
+	HOST_2_MPT16(sp1, IDConfig);
+}
+
+void
+mpt2host_config_page_scsi_port_2(CONFIG_PAGE_SCSI_PORT_2 *sp2)
+{
+	int i;
+
+	MPT_2_HOST32(sp2, PortFlags);
+	MPT_2_HOST32(sp2, PortSettings);
+	for (i = 0; i < sizeof(sp2->DeviceSettings) /
+	    sizeof(*sp2->DeviceSettings); i++) {
+		MPT_2_HOST16(sp2, DeviceSettings[i].DeviceFlags);
+	}
+}
+
+void
+mpt2host_config_page_scsi_device_0(CONFIG_PAGE_SCSI_DEVICE_0 *sd0)
+{
+
+	MPT_2_HOST32(sd0, NegotiatedParameters);
+	MPT_2_HOST32(sd0, Information);
+}
+
+void
+mpt2host_config_page_scsi_device_1(CONFIG_PAGE_SCSI_DEVICE_1 *sd1)
+{
+
+	MPT_2_HOST32(sd1, RequestedParameters);
+	MPT_2_HOST32(sd1, Reserved);
+	MPT_2_HOST32(sd1, Configuration);
+}
+
+void
+host2mpt_config_page_scsi_device_1(CONFIG_PAGE_SCSI_DEVICE_1 *sd1)
+{
+
+	HOST_2_MPT32(sd1, RequestedParameters);
+	HOST_2_MPT32(sd1, Reserved);
+	HOST_2_MPT32(sd1, Configuration);
+}
+
+void
+mpt2host_config_page_fc_port_0(CONFIG_PAGE_FC_PORT_0 *fp0)
+{
+
+	MPT_2_HOST32(fp0, Flags);
+	MPT_2_HOST32(fp0, PortIdentifier);
+	MPT_2_HOST32(fp0, WWNN.Low);
+	MPT_2_HOST32(fp0, WWNN.High);
+	MPT_2_HOST32(fp0, WWPN.Low);
+	MPT_2_HOST32(fp0, WWPN.High);
+	MPT_2_HOST32(fp0, SupportedServiceClass);
+	MPT_2_HOST32(fp0, SupportedSpeeds);
+	MPT_2_HOST32(fp0, CurrentSpeed);
+	MPT_2_HOST32(fp0, MaxFrameSize);
+	MPT_2_HOST32(fp0, FabricWWNN.Low);
+	MPT_2_HOST32(fp0, FabricWWNN.High);
+	MPT_2_HOST32(fp0, FabricWWPN.Low);
+	MPT_2_HOST32(fp0, FabricWWPN.High);
+	MPT_2_HOST32(fp0, DiscoveredPortsCount);
+	MPT_2_HOST32(fp0, MaxInitiators);
+}
+
+void
+mpt2host_config_page_fc_port_1(CONFIG_PAGE_FC_PORT_1 *fp1)
+{
+
+	MPT_2_HOST32(fp1, Flags);
+	MPT_2_HOST32(fp1, NoSEEPROMWWNN.Low);
+	MPT_2_HOST32(fp1, NoSEEPROMWWNN.High);
+	MPT_2_HOST32(fp1, NoSEEPROMWWPN.Low);
+	MPT_2_HOST32(fp1, NoSEEPROMWWPN.High);
+}
+
+void
+host2mpt_config_page_fc_port_1(CONFIG_PAGE_FC_PORT_1 *fp1)
+{
+
+	HOST_2_MPT32(fp1, Flags);
+	HOST_2_MPT32(fp1, NoSEEPROMWWNN.Low);
+	HOST_2_MPT32(fp1, NoSEEPROMWWNN.High);
+	HOST_2_MPT32(fp1, NoSEEPROMWWPN.Low);
+	HOST_2_MPT32(fp1, NoSEEPROMWWPN.High);
+}
+
+void
 mpt2host_config_page_raid_vol_0(CONFIG_PAGE_RAID_VOL_0 *volp)
 {
 	int i;
+
 	MPT_2_HOST16(volp, VolumeStatus.Reserved);
 	MPT_2_HOST16(volp, VolumeSettings.Settings);
 	MPT_2_HOST32(volp, MaxLBA);
@@ -2833,8 +3135,21 @@ mpt2host_config_page_raid_vol_0(CONFIG_PAGE_RAID_VOL_0 *volp)
 }
 
 void
+mpt2host_config_page_raid_phys_disk_0(CONFIG_PAGE_RAID_PHYS_DISK_0 *rpd0)
+{
+
+	MPT_2_HOST32(rpd0, Reserved1);
+	MPT_2_HOST16(rpd0, PhysDiskStatus.Reserved);
+	MPT_2_HOST32(rpd0, MaxLBA);
+	MPT_2_HOST16(rpd0, ErrorData.Reserved);
+	MPT_2_HOST16(rpd0, ErrorData.ErrorCount);
+	MPT_2_HOST16(rpd0, ErrorData.SmartCount);
+}
+
+void
 mpt2host_mpi_raid_vol_indicator(MPI_RAID_VOL_INDICATOR *vi)
 {
+
 	MPT_2_HOST16(vi, TotalBlocks.High);
 	MPT_2_HOST16(vi, TotalBlocks.Low);
 	MPT_2_HOST16(vi, BlocksRemaining.High);

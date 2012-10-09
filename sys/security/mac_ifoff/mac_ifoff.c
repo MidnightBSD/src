@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2002 Networks Associates Technology, Inc.
+ * Copyright (c) 2006 SPARTA, Inc.
  * All rights reserved.
  *
  * This software was developed by Robert Watson for the TrustedBSD Project.
@@ -10,6 +10,9 @@
  * Associates Laboratories, the Security Research Division of Network
  * Associates, Inc. under DARPA/SPAWAR contract N66001-01-C-8035 ("CBOSS"),
  * as part of the DARPA CHATS research program.
+ *
+ * This software was enhanced by SPARTA ISSO under SPAWAR contract
+ * N66001-04-C-6019 ("SEFOS").
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +35,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_ifoff/mac_ifoff.c,v 1.13 2007/04/23 13:15:21 rwatson Exp $
+ * $FreeBSD$
  */
 
 /*
  * Developed by the TrustedBSD Project.
+ *
  * Limit access to interfaces until they are specifically administratively
  * enabled.  Prevents protocol stack-driven packet leakage in unsafe
  * environments.
@@ -58,108 +62,112 @@ SYSCTL_DECL(_security_mac);
 SYSCTL_NODE(_security_mac, OID_AUTO, ifoff, CTLFLAG_RW, 0,
     "TrustedBSD mac_ifoff policy controls");
 
-static int	mac_ifoff_enabled = 1;
+static int	ifoff_enabled = 1;
 SYSCTL_INT(_security_mac_ifoff, OID_AUTO, enabled, CTLFLAG_RW,
-    &mac_ifoff_enabled, 0, "Enforce ifoff policy");
-TUNABLE_INT("security.mac.ifoff.enabled", &mac_ifoff_enabled);
+    &ifoff_enabled, 0, "Enforce ifoff policy");
+TUNABLE_INT("security.mac.ifoff.enabled", &ifoff_enabled);
 
-static int	mac_ifoff_lo_enabled = 1;
+static int	ifoff_lo_enabled = 1;
 SYSCTL_INT(_security_mac_ifoff, OID_AUTO, lo_enabled, CTLFLAG_RW,
-    &mac_ifoff_lo_enabled, 0, "Enable loopback interfaces");
-TUNABLE_INT("security.mac.ifoff.lo_enabled", &mac_ifoff_lo_enabled);
+    &ifoff_lo_enabled, 0, "Enable loopback interfaces");
+TUNABLE_INT("security.mac.ifoff.lo_enabled", &ifoff_lo_enabled);
 
-static int	mac_ifoff_other_enabled = 0;
+static int	ifoff_other_enabled = 0;
 SYSCTL_INT(_security_mac_ifoff, OID_AUTO, other_enabled, CTLFLAG_RW,
-    &mac_ifoff_other_enabled, 0, "Enable other interfaces");
-TUNABLE_INT("security.mac.ifoff.other_enabled", &mac_ifoff_other_enabled);
+    &ifoff_other_enabled, 0, "Enable other interfaces");
+TUNABLE_INT("security.mac.ifoff.other_enabled", &ifoff_other_enabled);
 
-static int	mac_ifoff_bpfrecv_enabled = 0;
+static int	ifoff_bpfrecv_enabled = 0;
 SYSCTL_INT(_security_mac_ifoff, OID_AUTO, bpfrecv_enabled, CTLFLAG_RW,
-    &mac_ifoff_bpfrecv_enabled, 0, "Enable BPF reception even when interface "
+    &ifoff_bpfrecv_enabled, 0, "Enable BPF reception even when interface "
     "is disabled");
-TUNABLE_INT("security.mac.ifoff.bpfrecv.enabled", &mac_ifoff_bpfrecv_enabled);
+TUNABLE_INT("security.mac.ifoff.bpfrecv.enabled", &ifoff_bpfrecv_enabled);
 
 static int
-check_ifnet_outgoing(struct ifnet *ifp)
+ifnet_check_outgoing(struct ifnet *ifp)
 {
 
-	if (!mac_ifoff_enabled)
+	if (!ifoff_enabled)
 		return (0);
 
-	if (mac_ifoff_lo_enabled && ifp->if_type == IFT_LOOP)
+	if (ifoff_lo_enabled && ifp->if_type == IFT_LOOP)
 		return (0);
 
-	if (mac_ifoff_other_enabled && ifp->if_type != IFT_LOOP)
+	if (ifoff_other_enabled && ifp->if_type != IFT_LOOP)
 		return (0);
 
 	return (EPERM);
 }
 
 static int
-check_ifnet_incoming(struct ifnet *ifp, int viabpf)
+ifnet_check_incoming(struct ifnet *ifp, int viabpf)
 {
-	if (!mac_ifoff_enabled)
+	if (!ifoff_enabled)
 		return (0);
 
-	if (mac_ifoff_lo_enabled && ifp->if_type == IFT_LOOP)
+	if (ifoff_lo_enabled && ifp->if_type == IFT_LOOP)
 		return (0);
 
-	if (mac_ifoff_other_enabled && ifp->if_type != IFT_LOOP)
+	if (ifoff_other_enabled && ifp->if_type != IFT_LOOP)
 		return (0);
 
-	if (viabpf && mac_ifoff_bpfrecv_enabled)
+	if (viabpf && ifoff_bpfrecv_enabled)
 		return (0);
 
 	return (EPERM);
 }
 
+/*
+ * Object-specific entry point implementations are sorted alphabetically by
+ * object type and then by operation.
+ */
 static int
-mac_ifoff_check_bpfdesc_receive(struct bpf_d *d, struct label *dlabel,
+ifoff_bpfdesc_check_receive(struct bpf_d *d, struct label *dlabel,
     struct ifnet *ifp, struct label *ifplabel)
 {
 
-	return (check_ifnet_incoming(ifp, 1));
+	return (ifnet_check_incoming(ifp, 1));
 }
 
 static int
-mac_ifoff_check_ifnet_transmit(struct ifnet *ifp, struct label *ifplabel,
+ifoff_ifnet_check_transmit(struct ifnet *ifp, struct label *ifplabel,
     struct mbuf *m, struct label *mlabel)
 {
 
-	return (check_ifnet_outgoing(ifp));
+	return (ifnet_check_outgoing(ifp));
 }
 
 static int
-mac_ifoff_check_inpcb_deliver(struct inpcb *inp, struct label *inplabel,
-    struct mbuf *m, struct label *mlabel)
-{
-
-	M_ASSERTPKTHDR(m);
-	if (m->m_pkthdr.rcvif != NULL)
-		return (check_ifnet_incoming(m->m_pkthdr.rcvif, 0));
-
-	return (0);
-}
-
-static int
-mac_ifoff_check_socket_deliver(struct socket *so, struct label *solabel,
+ifoff_inpcb_check_deliver(struct inpcb *inp, struct label *inplabel,
     struct mbuf *m, struct label *mlabel)
 {
 
 	M_ASSERTPKTHDR(m);
 	if (m->m_pkthdr.rcvif != NULL)
-		return (check_ifnet_incoming(m->m_pkthdr.rcvif, 0));
+		return (ifnet_check_incoming(m->m_pkthdr.rcvif, 0));
 
 	return (0);
 }
 
-static struct mac_policy_ops mac_ifoff_ops =
+static int
+ifoff_socket_check_deliver(struct socket *so, struct label *solabel,
+    struct mbuf *m, struct label *mlabel)
 {
-	.mpo_check_bpfdesc_receive = mac_ifoff_check_bpfdesc_receive,
-	.mpo_check_ifnet_transmit = mac_ifoff_check_ifnet_transmit,
-	.mpo_check_inpcb_deliver = mac_ifoff_check_inpcb_deliver,
-	.mpo_check_socket_deliver = mac_ifoff_check_socket_deliver,
+
+	M_ASSERTPKTHDR(m);
+	if (m->m_pkthdr.rcvif != NULL)
+		return (ifnet_check_incoming(m->m_pkthdr.rcvif, 0));
+
+	return (0);
+}
+
+static struct mac_policy_ops ifoff_ops =
+{
+	.mpo_bpfdesc_check_receive = ifoff_bpfdesc_check_receive,
+	.mpo_ifnet_check_transmit = ifoff_ifnet_check_transmit,
+	.mpo_inpcb_check_deliver = ifoff_inpcb_check_deliver,
+	.mpo_socket_check_deliver = ifoff_socket_check_deliver,
 };
 
-MAC_POLICY_SET(&mac_ifoff_ops, mac_ifoff, "TrustedBSD MAC/ifoff",
+MAC_POLICY_SET(&ifoff_ops, mac_ifoff, "TrustedBSD MAC/ifoff",
     MPC_LOADTIME_FLAG_UNLOADOK, NULL);

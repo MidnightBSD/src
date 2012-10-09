@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_rtc.c,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -62,6 +62,12 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_rtc.c,v 1.9.6.1 2008/11/25 02:59:29 kensmi
 
 static device_t clock_dev = NULL;
 static long clock_res;
+static struct timespec clock_adj;
+
+/* XXX: should be kern. now, it's no longer machdep.  */
+static int disable_rtc_set;
+SYSCTL_INT(_machdep, OID_AUTO, disable_rtc_set, CTLFLAG_RW, &disable_rtc_set,
+    0, "Disallow adjusting time-of-day clock");
 
 void
 clock_register(device_t dev, long res)	/* res has units of microseconds */
@@ -69,26 +75,25 @@ clock_register(device_t dev, long res)	/* res has units of microseconds */
 
 	if (clock_dev != NULL) {
 		if (clock_res > res) {
-			if (bootverbose) {
+			if (bootverbose)
 				device_printf(dev, "not installed as "
 				    "time-of-day clock: clock %s has higher "
 				    "resolution\n", device_get_name(clock_dev));
-			}
 			return;
-		} else {
-			if (bootverbose) {
-				device_printf(clock_dev, "removed as "
-				    "time-of-day clock: clock %s has higher "
-				    "resolution\n", device_get_name(dev));
-			}
 		}
+		if (bootverbose)
+			device_printf(clock_dev, "removed as "
+			    "time-of-day clock: clock %s has higher "
+			    "resolution\n", device_get_name(dev));
 	}
 	clock_dev = dev;
 	clock_res = res;
-	if (bootverbose) {
+	clock_adj.tv_sec = res / 2 / 1000000;
+	clock_adj.tv_nsec = res / 2 % 1000000 * 1000;
+	if (bootverbose)
 		device_printf(dev, "registered as a time-of-day clock "
-		    "(resolution %ldus)\n", res);
-	}
+		    "(resolution %ldus, adjustment %jd.%09jds)\n", res,
+		    (intmax_t)clock_adj.tv_sec, (intmax_t)clock_adj.tv_nsec);
 }
 
 /*
@@ -104,42 +109,36 @@ clock_register(device_t dev, long res)	/* res has units of microseconds */
 void
 inittodr(time_t base)
 {
-	struct timespec diff, ref, ts;
+	struct timespec ts;
 	int error;
-
-	if (base) {
-		ref.tv_sec = base;
-		ref.tv_nsec = 0;
-		tc_setclock(&ref);
-	}
 
 	if (clock_dev == NULL) {
 		printf("warning: no time-of-day clock registered, system time "
 		    "will not be set accurately\n");
-		return;
+		goto wrong_time;
 	}
+	/* XXX: We should poll all registered RTCs in case of failure */
 	error = CLOCK_GETTIME(clock_dev, &ts);
 	if (error != 0 && error != EINVAL) {
 		printf("warning: clock_gettime failed (%d), the system time "
 		    "will not be set accurately\n", error);
-		return;
+		goto wrong_time;
 	}
 	if (error == EINVAL || ts.tv_sec < 0) {
-		printf("Invalid time in real time clock.\n");
-		printf("Check and reset the date immediately!\n");
+		printf("Invalid time in real time clock.\n"
+		    "Check and reset the date immediately!\n");
+		goto wrong_time;
 	}
 
 	ts.tv_sec += utc_offset();
+	timespecadd(&ts, &clock_adj);
+	tc_setclock(&ts);
+	return;
 
-	if (timespeccmp(&ref, &ts, >)) {
-		diff = ref;
-		timespecsub(&ref, &ts);
-	} else {
-		diff = ts;
-		timespecsub(&diff, &ref);
-	}
-	if (ts.tv_sec >= 2) {
-		/* badly off, adjust it */
+wrong_time:
+	if (base > 0) {
+		ts.tv_sec = base;
+		ts.tv_nsec = 0;
 		tc_setclock(&ts);
 	}
 }
@@ -148,7 +147,7 @@ inittodr(time_t base)
  * Write system time back to RTC
  */
 void
-resettodr()
+resettodr(void)
 {
 	struct timespec ts;
 	int error;
@@ -157,10 +156,10 @@ resettodr()
 		return;
 
 	getnanotime(&ts);
+	timespecadd(&ts, &clock_adj);
 	ts.tv_sec -= utc_offset();
-	if ((error = CLOCK_SETTIME(clock_dev, &ts)) != 0) {
+	/* XXX: We should really set all registered RTCs */
+	if ((error = CLOCK_SETTIME(clock_dev, &ts)) != 0)
 		printf("warning: clock_settime failed (%d), time-of-day clock "
 		    "not adjusted to system time\n", error);
-		return;
-	}
 }

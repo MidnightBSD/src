@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -7,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/sys/amd64/include/smp.h,v 1.91 2007/09/20 20:38:43 attilio Exp $
+ * $FreeBSD$
  *
  */
 
@@ -36,6 +35,13 @@ extern int			mp_naps;
 extern int			boot_cpu_id;
 extern struct pcb		stoppcbs[];
 extern int			cpu_apic_ids[];
+#ifdef COUNT_IPIS
+extern u_long *ipi_invltlb_counts[MAXCPU];
+extern u_long *ipi_invlrng_counts[MAXCPU];
+extern u_long *ipi_invlpg_counts[MAXCPU];
+extern u_long *ipi_invlcache_counts[MAXCPU];
+extern u_long *ipi_rendezvous_counts[MAXCPU];
+#endif
 
 /* IPI handlers */
 inthand_t
@@ -45,32 +51,28 @@ inthand_t
 	IDTVEC(invlcache),	/* Write back and invalidate cache */
 	IDTVEC(ipi_intr_bitmap_handler), /* Bitmap based IPIs */ 
 	IDTVEC(cpustop),	/* CPU stops & waits to be restarted */
+	IDTVEC(cpususpend),	/* CPU suspends & waits to be resumed */
 	IDTVEC(rendezvous);	/* handle CPU rendezvous */
 
 /* functions in mp_machdep.c */
 void	cpu_add(u_int apic_id, char boot_cpu);
 void	cpustop_handler(void);
+void	cpususpend_handler(void);
 void	init_secondary(void);
-void	ipi_selected(u_int cpus, u_int ipi);
-void	ipi_all(u_int ipi);
 void	ipi_all_but_self(u_int ipi);
-void	ipi_self(u_int ipi);
 void 	ipi_bitmap_handler(struct trapframe frame);
+void	ipi_cpu(int cpu, u_int ipi);
+int	ipi_nmi_handler(void);
+void	ipi_selected(cpuset_t cpus, u_int ipi);
 u_int	mp_bootaddress(u_int);
-int	mp_grab_cpu_hlt(void);
-void	mp_topology(void);
 void	smp_cache_flush(void);
 void	smp_invlpg(vm_offset_t addr);
-void	smp_masked_invlpg(u_int mask, vm_offset_t addr);
+void	smp_masked_invlpg(cpuset_t mask, vm_offset_t addr);
 void	smp_invlpg_range(vm_offset_t startva, vm_offset_t endva);
-void	smp_masked_invlpg_range(u_int mask, vm_offset_t startva,
+void	smp_masked_invlpg_range(cpuset_t mask, vm_offset_t startva,
 	    vm_offset_t endva);
 void	smp_invltlb(void);
-void	smp_masked_invltlb(u_int mask);
-
-#ifdef STOP_NMI
-int	ipi_nmi_handler(void);
-#endif
+void	smp_masked_invltlb(cpuset_t mask);
 
 #endif /* !LOCORE */
 #endif /* SMP */

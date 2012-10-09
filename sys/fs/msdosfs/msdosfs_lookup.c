@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_lookup.c,v 1.51 2007/08/31 22:29:55 bde Exp $ */
+/* $FreeBSD$ */
 /*	$NetBSD: msdosfs_lookup.c,v 1.37 1997/11/17 15:36:54 ws Exp $	*/
 
 /*-
@@ -62,6 +61,18 @@
 #include <fs/msdosfs/fat.h>
 #include <fs/msdosfs/msdosfsmount.h>
 
+static int msdosfs_lookup_(struct vnode *vdp, struct vnode **vpp,
+    struct componentname *cnp, u_int64_t *inum);
+static int msdosfs_deget_dotdot(struct vnode *vp, u_long cluster, int blkoff,
+    struct vnode **rvp);
+
+int
+msdosfs_lookup(struct vop_cachedlookup_args *ap)
+{
+
+	return (msdosfs_lookup_(ap->a_dvp, ap->a_vpp, ap->a_cnp, NULL));
+}
+
 /*
  * When we search a directory the blocks containing directory entries are
  * read and examined.  The directory entries contain information that would
@@ -77,18 +88,11 @@
  * out to disk.  This way disk blocks containing directory entries and in
  * memory denode's will be in synch.
  */
-int
-msdosfs_lookup(ap)
-	struct vop_cachedlookup_args /* {
-		struct vnode *a_dvp;
-		struct vnode **a_vpp;
-		struct componentname *a_cnp;
-	} */ *ap;
+static int
+msdosfs_lookup_(struct vnode *vdp, struct vnode **vpp,
+    struct componentname *cnp, u_int64_t *dd_inum)
 {
 	struct mbnambuf nb;
-	struct vnode *vdp = ap->a_dvp;
-	struct vnode **vpp = ap->a_vpp;
-	struct componentname *cnp = ap->a_cnp;
 	daddr_t bn;
 	int error;
 	int slotcount;
@@ -109,8 +113,8 @@ msdosfs_lookup(ap)
 	u_char dosfilename[12];
 	int flags = cnp->cn_flags;
 	int nameiop = cnp->cn_nameiop;
-	struct thread *td = cnp->cn_thread;
 	int unlen;
+	u_int64_t inode1;
 
 	int wincnt = 1;
 	int chksum = -1, chksum_ok;
@@ -121,12 +125,14 @@ msdosfs_lookup(ap)
 #endif
 	dp = VTODE(vdp);
 	pmp = dp->de_pmp;
-	*vpp = NULL;
 #ifdef MSDOSFS_DEBUG
 	printf("msdosfs_lookup(): vdp %p, dp %p, Attr %02x\n",
 	    vdp, dp, dp->de_Attributes);
 #endif
 
+ restart:
+	if (vpp != NULL)
+		*vpp = NULL;
 	/*
 	 * If they are going after the . or .. entry in the root directory,
 	 * they won't find it.  DOS filesystems don't have them in the root
@@ -278,7 +284,7 @@ msdosfs_lookup(ap)
 				/*
 				 * Check for a checksum or name match
 				 */
-				chksum_ok = (chksum == winChksum(dep));
+				chksum_ok = (chksum == winChksum(dep->deName));
 				if (!chksum_ok
 				    && (!olddos || bcmp(dosfilename, dep->deName, 11))) {
 					chksum = -1;
@@ -438,6 +444,11 @@ foundroot:
 	if (FAT32(pmp) && scn == MSDOSFSROOT)
 		scn = pmp->pm_rootdirblk;
 
+	if (dd_inum != NULL) {
+		*dd_inum = (uint64_t)pmp->pm_bpcluster * scn + blkoff;
+		return (0);
+	}
+
 	/*
 	 * If deleting, and at end of pathname, return
 	 * parameters which can be used to remove file.
@@ -447,7 +458,7 @@ foundroot:
 		 * Don't allow deleting the root.
 		 */
 		if (blkoff == MSDOSFSROOT_OFS)
-			return EROFS;				/* really? XXX */
+			return (EBUSY);
 
 		/*
 		 * Write access to directory required to delete files.
@@ -480,7 +491,7 @@ foundroot:
 	 */
 	if (nameiop == RENAME && (flags & ISLASTCN)) {
 		if (blkoff == MSDOSFSROOT_OFS)
-			return EROFS;				/* really? XXX */
+			return (EBUSY);
 
 		error = VOP_ACCESS(vdp, VWRITE, cnp->cn_cred, cnp->cn_thread);
 		if (error)
@@ -510,23 +521,28 @@ foundroot:
 	 * inodes from the root, moving down the directory tree. Thus
 	 * when following backward pointers ".." we must unlock the
 	 * parent directory before getting the requested directory.
-	 * There is a potential race condition here if both the current
-	 * and parent directories are removed before the VFS_VGET for the
-	 * inode associated with ".." returns.  We hope that this occurs
-	 * infrequently since we cannot avoid this race condition without
-	 * implementing a sophisticated deadlock detection algorithm.
-	 * Note also that this simple deadlock detection scheme will not
-	 * work if the filesystem has any hard links other than ".."
-	 * that point backwards in the directory structure.
 	 */
 	pdp = vdp;
 	if (flags & ISDOTDOT) {
-		VOP_UNLOCK(pdp, 0, td);
-		error = deget(pmp, cluster, blkoff,  &tdp);
-		vn_lock(pdp, LK_EXCLUSIVE | LK_RETRY, td); 
-		if (error)
+		error = msdosfs_deget_dotdot(pdp, cluster, blkoff, vpp);
+		if (error) {
+			*vpp = NULL;
 			return (error);
-		*vpp = DETOV(tdp);
+		}
+		/*
+		 * Recheck that ".." still points to the inode we
+		 * looked up before pdp lock was dropped.
+		 */
+		error = msdosfs_lookup_(pdp, NULL, cnp, &inode1);
+		if (error) {
+			vput(*vpp);
+			*vpp = NULL;
+			return (error);
+		}
+		if (VTODE(*vpp)->de_inode != inode1) {
+			vput(*vpp);
+			goto restart;
+		}
 	} else if (dp->de_StartCluster == scn && isadir) {
 		VREF(vdp);	/* we want ourself, ie "." */
 		*vpp = vdp;
@@ -542,6 +558,54 @@ foundroot:
 	if (cnp->cn_flags & MAKEENTRY)
 		cache_enter(vdp, *vpp, cnp);
 	return (0);
+}
+
+static int
+msdosfs_deget_dotdot(struct vnode *vp, u_long cluster, int blkoff,
+    struct vnode **rvp)
+{
+	struct mount *mp;
+	struct msdosfsmount *pmp;
+	struct denode *rdp;
+	int ltype, error;
+
+	mp = vp->v_mount;
+	pmp = VFSTOMSDOSFS(mp);
+	ltype = VOP_ISLOCKED(vp);
+	KASSERT(ltype == LK_EXCLUSIVE || ltype == LK_SHARED,
+	    ("msdosfs_deget_dotdot: vp not locked"));
+
+	error = vfs_busy(mp, MBF_NOWAIT);
+	if (error != 0) {
+		vfs_ref(mp);
+		VOP_UNLOCK(vp, 0);
+		error = vfs_busy(mp, 0);
+		vn_lock(vp, ltype | LK_RETRY);
+		vfs_rel(mp);
+		if (error != 0)
+			return (ENOENT);
+		if (vp->v_iflag & VI_DOOMED) {
+			vfs_unbusy(mp);
+			return (ENOENT);
+		}
+	}
+	VOP_UNLOCK(vp, 0);
+	error = deget(pmp, cluster, blkoff,  &rdp);
+	vfs_unbusy(mp);
+	if (error == 0)
+		*rvp = DETOV(rdp);
+	if (*rvp != vp)
+		vn_lock(vp, ltype | LK_RETRY);
+	if (vp->v_iflag & VI_DOOMED) {
+		if (error == 0) {
+			if (*rvp == vp)
+				vunref(*rvp);
+			else
+				vput(*rvp);
+		}
+		error = ENOENT;
+	}
+	return (error);
 }
 
 /*
@@ -619,14 +683,16 @@ createde(dep, ddep, depp, cnp)
 	 * Now write the Win95 long name
 	 */
 	if (ddep->de_fndcnt > 0) {
-		u_int8_t chksum = winChksum(ndep);
+		u_int8_t chksum = winChksum(ndep->deName);
 		const u_char *un = (const u_char *)cnp->cn_nameptr;
 		int unlen = cnp->cn_namelen;
 		int cnt = 1;
 
 		while (--ddep->de_fndcnt >= 0) {
 			if (!(ddep->de_fndoffset & pmp->pm_crbomask)) {
-				if ((error = bwrite(bp)) != 0)
+				if (DOINGASYNC(DETOV(ddep)))
+					bdwrite(bp);
+				else if ((error = bwrite(bp)) != 0)
 					return error;
 
 				ddep->de_fndoffset -= sizeof(struct direntry);
@@ -654,7 +720,9 @@ createde(dep, ddep, depp, cnp)
 		}
 	}
 
-	if ((error = bwrite(bp)) != 0)
+	if (DOINGASYNC(DETOV(ddep)))
+		bdwrite(bp);
+	else if ((error = bwrite(bp)) != 0)
 		return error;
 
 	/*
@@ -834,8 +902,10 @@ doscheckpath(source, target)
 out:;
 	if (bp)
 		brelse(bp);
+#ifdef MSDOSFS_DEBUG
 	if (error == ENOTDIR)
 		printf("doscheckpath(): .. not a directory?\n");
+#endif
 	if (dep != NULL)
 		vput(DETOV(dep));
 	return (error);
@@ -952,7 +1022,9 @@ removede(pdep, dep)
 			    || ep->deAttributes != ATTR_WIN95)
 				break;
 		}
-		if ((error = bwrite(bp)) != 0)
+		if (DOINGASYNC(DETOV(pdep)))
+			bdwrite(bp);
+		else if ((error = bwrite(bp)) != 0)
 			return error;
 	} while (!(pmp->pm_flags & MSDOSFSMNT_NOWIN95)
 	    && !(offset & pmp->pm_crbomask)

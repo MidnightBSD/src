@@ -42,7 +42,7 @@
 #include "opt_ktrace.h"
 #include "opt_kdtrace.h"
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/capability.h>
 #include <sys/ktr.h>

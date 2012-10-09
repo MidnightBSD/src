@@ -27,12 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_fwsubr.c,v 1.24.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,6 +50,7 @@
 #include <net/if_types.h>
 #include <net/bpf.h>
 #include <net/firewire.h>
+#include <net/if_llatbl.h>
 
 #if defined(INET) || defined(INET6)
 #include <netinet/in.h>
@@ -76,11 +76,10 @@ struct fw_hwaddr firewire_broadcastaddr = {
 
 static int
 firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
-    struct rtentry *rt0)
+    struct route *ro)
 {
 	struct fw_com *fc = IFP2FWC(ifp);
 	int error, type;
-	struct rtentry *rt = NULL;
 	struct m_tag *mtag;
 	union fw_encap *enc;
 	struct fw_hwaddr *destfw;
@@ -89,9 +88,12 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 	struct mbuf *mtail;
 	int unicast, dgl, foff;
 	static int next_dgl;
+#if defined(INET) || defined(INET6)
+	struct llentry *lle;
+#endif
 
 #ifdef MAC
-	error = mac_check_ifnet_transmit(ifp, m);
+	error = mac_ifnet_check_transmit(ifp, m);
 	if (error)
 		goto bad;
 #endif
@@ -100,13 +102,6 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 	   (ifp->if_drv_flags & IFF_DRV_RUNNING))) {
 		error = ENETDOWN;
 		goto bad;
-	}
-
-	if (rt0 != NULL) {
-		error = rt_check(&rt, &rt0, dst);
-		if (error)
-			goto bad;
-		RT_UNLOCK(rt);
 	}
 
 	/*
@@ -136,7 +131,7 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 	}
 
 	switch (dst->sa_family) {
-#ifdef AF_INET
+#ifdef INET
 	case AF_INET:
 		/*
 		 * Only bother with arp for unicast. Allocation of
@@ -144,7 +139,7 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		 * doesn't fit into the arp model.
 		 */
 		if (unicast) {
-			error = arpresolve(ifp, rt, m, dst, (u_char *) destfw);
+			error = arpresolve(ifp, ro ? ro->ro_rt : NULL, m, dst, (u_char *) destfw, &lle);
 			if (error)
 				return (error == EWOULDBLOCK ? 0 : error);
 		}
@@ -173,8 +168,8 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 #ifdef INET6
 	case AF_INET6:
 		if (unicast) {
-			error = nd6_storelladdr(fc->fc_ifp, rt, m, dst,
-			    (u_char *) destfw);
+			error = nd6_storelladdr(fc->fc_ifp, m, dst,
+			    (u_char *) destfw, &lle);
 			if (error)
 				return (error);
 		}
@@ -249,7 +244,7 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		 */
 		enc->ul[0] = htonl(enc->ul[0]);
 
-		IFQ_HANDOFF(ifp, m, error);
+		error = (ifp->if_transmit)(ifp, m);
 		return (error);
 	} else {
 		/*
@@ -309,7 +304,7 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 			enc->ul[0] = htonl(enc->ul[0]);
 			enc->ul[1] = htonl(enc->ul[1]);
 
-			IFQ_HANDOFF(ifp, m, error);
+			error = (ifp->if_transmit)(ifp, m);
 			if (error) {
 				if (mtail)
 					m_freem(mtail);
@@ -557,7 +552,7 @@ firewire_input(struct ifnet *ifp, struct mbuf *m, uint16_t src)
 	 * Tag the mbuf with an appropriate MAC label before any other
 	 * consumers can get to it.
 	 */
-	mac_create_mbuf_from_ifnet(ifp, m);
+	mac_ifnet_create_mbuf(ifp, m);
 #endif
 
 	/*
@@ -632,11 +627,12 @@ firewire_input(struct ifnet *ifp, struct mbuf *m, uint16_t src)
 		return;
 	}
 
+	M_SETFIB(m, ifp->if_fib);
 	netisr_dispatch(isr, m);
 }
 
 int
-firewire_ioctl(struct ifnet *ifp, int command, caddr_t data)
+firewire_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 {
 	struct ifaddr *ifa = (struct ifaddr *) data;
 	struct ifreq *ifr = (struct ifreq *) data;

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004-2007 Sam Leffler, Errno Consulting
+ * Copyright (c) 2004-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2004 Video54 Technologies, Inc.
  * All rights reserved.
  *
@@ -27,8 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD$
- * $FreeBSD: src/sys/dev/ath/if_athrate.h,v 1.6.10.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 #ifndef _ATH_RATECTRL_H_
 #define _ATH_RATECTRL_H_
@@ -98,16 +97,16 @@ void	ath_rate_node_cleanup(struct ath_softc *, struct ath_node *);
  */
 void	ath_rate_newassoc(struct ath_softc *, struct ath_node *,
 		int isNewAssociation);
-/*
- * Update/reset rate control state for 802.11 state transitions.
- * Important mostly as the analog to ath_rate_newassoc when operating
- * in station mode.
- */
-void	ath_rate_newstate(struct ath_softc *, enum ieee80211_state);
 
 /*
  * Transmit handling.
  */
+/*
+ * Return the four TX rate index and try counts for the current data packet.
+ */
+void	ath_rate_getxtxrates(struct ath_softc *sc, struct ath_node *an,
+		uint8_t rix0, uint8_t *rix, uint8_t *try);
+
 /*
  * Return the transmit info for a data packet.  If multi-rate state
  * is to be setup then try0 should contain a value other than ATH_TXMATRY

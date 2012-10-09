@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -64,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_kern.c,v 1.128.4.1 2008/01/17 14:57:50 pjd Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,6 +73,7 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_kern.c,v 1.128.4.1 2008/01/17 14:57:50 pjd Exp
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/malloc.h>
+#include <sys/sysctl.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -90,6 +90,9 @@ vm_map_t kmem_map=0;
 vm_map_t exec_map=0;
 vm_map_t pipe_map;
 vm_map_t buffer_map=0;
+
+const void *zero_region;
+CTASSERT((ZERO_REGION_SIZE & PAGE_MASK) == 0);
 
 /*
  *	kmem_alloc_nofault:
@@ -110,8 +113,37 @@ kmem_alloc_nofault(map, size)
 
 	size = round_page(size);
 	addr = vm_map_min(map);
-	result = vm_map_find(map, NULL, 0,
-	    &addr, size, TRUE, VM_PROT_ALL, VM_PROT_ALL, MAP_NOFAULT);
+	result = vm_map_find(map, NULL, 0, &addr, size, VMFS_ANY_SPACE,
+	    VM_PROT_ALL, VM_PROT_ALL, MAP_NOFAULT);
+	if (result != KERN_SUCCESS) {
+		return (0);
+	}
+	return (addr);
+}
+
+/*
+ *	kmem_alloc_nofault_space:
+ *
+ *	Allocate a virtual address range with no underlying object and
+ *	no initial mapping to physical memory within the specified
+ *	address space.  Any mapping from this range to physical memory
+ *	must be explicitly created prior to its use, typically with
+ *	pmap_qenter().  Any attempt to create a mapping on demand
+ *	through vm_fault() will result in a panic. 
+ */
+vm_offset_t
+kmem_alloc_nofault_space(map, size, find_space)
+	vm_map_t map;
+	vm_size_t size;
+	int find_space;
+{
+	vm_offset_t addr;
+	int result;
+
+	size = round_page(size);
+	addr = vm_map_min(map);
+	result = vm_map_find(map, NULL, 0, &addr, size, find_space,
+	    VM_PROT_ALL, VM_PROT_ALL, MAP_NOFAULT);
 	if (result != KERN_SUCCESS) {
 		return (0);
 	}
@@ -129,7 +161,6 @@ kmem_alloc(map, size)
 {
 	vm_offset_t addr;
 	vm_offset_t offset;
-	vm_offset_t i;
 
 	size = round_page(size);
 
@@ -153,35 +184,6 @@ kmem_alloc(map, size)
 	vm_map_insert(map, kernel_object, offset, addr, addr + size,
 		VM_PROT_ALL, VM_PROT_ALL, 0);
 	vm_map_unlock(map);
-
-	/*
-	 * Guarantee that there are pages already in this object before
-	 * calling vm_map_wire.  This is to prevent the following
-	 * scenario:
-	 *
-	 * 1) Threads have swapped out, so that there is a pager for the
-	 * kernel_object. 2) The kmsg zone is empty, and so we are
-	 * kmem_allocing a new page for it. 3) vm_map_wire calls vm_fault;
-	 * there is no page, but there is a pager, so we call
-	 * pager_data_request.  But the kmsg zone is empty, so we must
-	 * kmem_alloc. 4) goto 1 5) Even if the kmsg zone is not empty: when
-	 * we get the data back from the pager, it will be (very stale)
-	 * non-zero data.  kmem_alloc is defined to return zero-filled memory.
-	 *
-	 * We're intentionally not activating the pages we allocate to prevent a
-	 * race with page-out.  vm_map_wire will wire the pages.
-	 */
-	VM_OBJECT_LOCK(kernel_object);
-	for (i = 0; i < size; i += PAGE_SIZE) {
-		vm_page_t mem;
-
-		mem = vm_page_grab(kernel_object, OFF_TO_IDX(offset + i),
-		    VM_ALLOC_NOBUSY | VM_ALLOC_ZERO | VM_ALLOC_RETRY);
-		mem->valid = VM_PAGE_BITS_ALL;
-		KASSERT((mem->flags & PG_UNMANAGED) != 0,
-		    ("kmem_alloc: page %p is managed", mem));
-	}
-	VM_OBJECT_UNLOCK(kernel_object);
 
 	/*
 	 * And finally, mark the data as non-pageable.
@@ -222,25 +224,23 @@ kmem_free(map, addr, size)
  *	parent		Map to take range from
  *	min, max	Returned endpoints of map
  *	size		Size of range to find
+ *	superpage_align	Request that min is superpage aligned
  */
 vm_map_t
-kmem_suballoc(parent, min, max, size)
-	vm_map_t parent;
-	vm_offset_t *min, *max;
-	vm_size_t size;
+kmem_suballoc(vm_map_t parent, vm_offset_t *min, vm_offset_t *max,
+    vm_size_t size, boolean_t superpage_align)
 {
 	int ret;
 	vm_map_t result;
 
 	size = round_page(size);
 
-	*min = (vm_offset_t) vm_map_min(parent);
-	ret = vm_map_find(parent, NULL, (vm_offset_t) 0,
-	    min, size, TRUE, VM_PROT_ALL, VM_PROT_ALL, 0);
-	if (ret != KERN_SUCCESS) {
-		printf("kmem_suballoc: bad status return of %d.\n", ret);
-		panic("kmem_suballoc");
-	}
+	*min = vm_map_min(parent);
+	ret = vm_map_find(parent, NULL, 0, min, size, superpage_align ?
+	    VMFS_ALIGNED_SPACE : VMFS_ANY_SPACE, VM_PROT_ALL, VM_PROT_ALL,
+	    MAP_ACC_NO_CHARGE);
+	if (ret != KERN_SUCCESS)
+		panic("kmem_suballoc: bad status return of %d", ret);
 	*max = *min + size;
 	result = vm_map_create(vm_map_pmap(parent), *min, *max);
 	if (result == NULL)
@@ -262,14 +262,8 @@ kmem_suballoc(parent, min, max, size)
  * 	(kmem_object).  This, combined with the fact that only malloc uses
  * 	this routine, ensures that we will never block in map or object waits.
  *
- * 	Note that this still only works in a uni-processor environment and
- * 	when called at splhigh().
- *
  * 	We don't worry about expanding the map (adding entries) since entries
  * 	for wired maps are statically allocated.
- *
- *	NOTE:  This routine is not supposed to block if M_NOWAIT is set, but
- *	I have not verified that it actually does not block.
  *
  *	`map' is ONLY allowed to be kmem_map or one of the mbuf submaps to
  *	which we never free.
@@ -280,11 +274,8 @@ kmem_malloc(map, size, flags)
 	vm_size_t size;
 	int flags;
 {
-	vm_offset_t offset, i;
-	vm_map_entry_t entry;
 	vm_offset_t addr;
-	vm_page_t m;
-	int pflags;
+	int i, rv;
 
 	size = round_page(size);
 	addr = vm_map_min(map);
@@ -317,19 +308,42 @@ kmem_malloc(map, size, flags)
 			return (0);
 		}
 	}
+
+	rv = kmem_back(map, addr, size, flags);
+	vm_map_unlock(map);
+	return (rv == KERN_SUCCESS ? addr : 0);
+}
+
+/*
+ *	kmem_back:
+ *
+ *	Allocate physical pages for the specified virtual address range.
+ */
+int
+kmem_back(vm_map_t map, vm_offset_t addr, vm_size_t size, int flags)
+{
+	vm_offset_t offset, i;
+	vm_map_entry_t entry;
+	vm_page_t m;
+	int pflags;
+	boolean_t found;
+
+	KASSERT(vm_map_locked(map), ("kmem_back: map %p is not locked", map));
 	offset = addr - VM_MIN_KERNEL_ADDRESS;
 	vm_object_reference(kmem_object);
 	vm_map_insert(map, kmem_object, offset, addr, addr + size,
-		VM_PROT_ALL, VM_PROT_ALL, 0);
+	    VM_PROT_ALL, VM_PROT_ALL, 0);
 
 	/*
-	 * Note: if M_NOWAIT specified alone, allocate from 
-	 * interrupt-safe queues only (just the free list).  If 
-	 * M_USE_RESERVE is also specified, we can also
-	 * allocate from the cache.  Neither of the latter two
-	 * flags may be specified from an interrupt since interrupts
-	 * are not allowed to mess with the cache queue.
+	 * Assert: vm_map_insert() will never be able to extend the
+	 * previous entry so vm_map_lookup_entry() will find a new
+	 * entry exactly corresponding to this address range and it
+	 * will have wired_count == 0.
 	 */
+	found = vm_map_lookup_entry(map, addr, &entry);
+	KASSERT(found && entry->start == addr && entry->end == addr + size &&
+	    entry->wired_count == 0 && (entry->eflags & MAP_ENTRY_IN_TRANSITION)
+	    == 0, ("kmem_back: entry not found or misaligned"));
 
 	if ((flags & (M_NOWAIT|M_USE_RESERVE)) == M_NOWAIT)
 		pflags = VM_ALLOC_INTERRUPT | VM_ALLOC_WIRED;
@@ -338,6 +352,8 @@ kmem_malloc(map, size, flags)
 
 	if (flags & M_ZERO)
 		pflags |= VM_ALLOC_ZERO;
+	if (flags & M_NODUMP)
+		pflags |= VM_ALLOC_NODUMP;
 
 	VM_OBJECT_LOCK(kmem_object);
 	for (i = 0; i < size; i += PAGE_SIZE) {
@@ -352,9 +368,15 @@ retry:
 		if (m == NULL) {
 			if ((flags & M_NOWAIT) == 0) {
 				VM_OBJECT_UNLOCK(kmem_object);
+				entry->eflags |= MAP_ENTRY_IN_TRANSITION;
 				vm_map_unlock(map);
 				VM_WAIT;
 				vm_map_lock(map);
+				KASSERT(
+(entry->eflags & (MAP_ENTRY_IN_TRANSITION | MAP_ENTRY_NEEDS_WAKEUP)) ==
+				    MAP_ENTRY_IN_TRANSITION,
+				    ("kmem_back: volatile entry"));
+				entry->eflags &= ~MAP_ENTRY_IN_TRANSITION;
 				VM_OBJECT_LOCK(kmem_object);
 				goto retry;
 			}
@@ -368,34 +390,27 @@ retry:
 				i -= PAGE_SIZE;
 				m = vm_page_lookup(kmem_object,
 						   OFF_TO_IDX(offset + i));
-				vm_page_lock_queues();
 				vm_page_unwire(m, 0);
 				vm_page_free(m);
-				vm_page_unlock_queues();
 			}
 			VM_OBJECT_UNLOCK(kmem_object);
 			vm_map_delete(map, addr, addr + size);
-			vm_map_unlock(map);
-			return (0);
+			return (KERN_NO_SPACE);
 		}
 		if (flags & M_ZERO && (m->flags & PG_ZERO) == 0)
 			pmap_zero_page(m);
 		m->valid = VM_PAGE_BITS_ALL;
-		KASSERT((m->flags & PG_UNMANAGED) != 0,
+		KASSERT((m->oflags & VPO_UNMANAGED) != 0,
 		    ("kmem_malloc: page %p is managed", m));
 	}
 	VM_OBJECT_UNLOCK(kmem_object);
 
 	/*
-	 * Mark map entry as non-pageable. Assert: vm_map_insert() will never
-	 * be able to extend the previous entry so there will be a new entry
-	 * exactly corresponding to this address range and it will have
-	 * wired_count == 0.
+	 * Mark map entry as non-pageable.  Repeat the assert.
 	 */
-	if (!vm_map_lookup_entry(map, addr, &entry) ||
-	    entry->start != addr || entry->end != addr + size ||
-	    entry->wired_count != 0)
-		panic("kmem_malloc: entry not found or misaligned");
+	KASSERT(entry->start == addr && entry->end == addr + size &&
+	    entry->wired_count == 0,
+	    ("kmem_back: entry not found or misaligned after allocation"));
 	entry->wired_count = 1;
 
 	/*
@@ -414,13 +429,13 @@ retry:
 		/*
 		 * Because this is kernel_pmap, this call will not block.
 		 */
-		pmap_enter(kernel_pmap, addr + i, m, VM_PROT_ALL, 1);
+		pmap_enter(kernel_pmap, addr + i, VM_PROT_ALL, m, VM_PROT_ALL,
+		    TRUE);
 		vm_page_wakeup(m);
 	}
 	VM_OBJECT_UNLOCK(kmem_object);
-	vm_map_unlock(map);
 
-	return (addr);
+	return (KERN_SUCCESS);
 }
 
 /*
@@ -439,6 +454,8 @@ kmem_alloc_wait(map, size)
 	vm_offset_t addr;
 
 	size = round_page(size);
+	if (!swap_reserve(size))
+		return (0);
 
 	for (;;) {
 		/*
@@ -451,12 +468,14 @@ kmem_alloc_wait(map, size)
 		/* no space now; see if we can ever get space */
 		if (vm_map_max(map) - vm_map_min(map) < size) {
 			vm_map_unlock(map);
+			swap_release(size);
 			return (0);
 		}
 		map->needs_wakeup = TRUE;
-		vm_map_unlock_and_wait(map, FALSE);
+		vm_map_unlock_and_wait(map, 0);
 	}
-	vm_map_insert(map, NULL, 0, addr, addr + size, VM_PROT_ALL, VM_PROT_ALL, 0);
+	vm_map_insert(map, NULL, 0, addr, addr + size, VM_PROT_ALL,
+	    VM_PROT_ALL, MAP_ACC_CHARGED);
 	vm_map_unlock(map);
 	return (addr);
 }
@@ -483,6 +502,32 @@ kmem_free_wakeup(map, addr, size)
 	vm_map_unlock(map);
 }
 
+static void
+kmem_init_zero_region(void)
+{
+	vm_offset_t addr, i;
+	vm_page_t m;
+	int error;
+
+	/*
+	 * Map a single physical page of zeros to a larger virtual range.
+	 * This requires less looping in places that want large amounts of
+	 * zeros, while not using much more physical resources.
+	 */
+	addr = kmem_alloc_nofault(kernel_map, ZERO_REGION_SIZE);
+	m = vm_page_alloc(NULL, 0, VM_ALLOC_NORMAL |
+	    VM_ALLOC_NOOBJ | VM_ALLOC_WIRED | VM_ALLOC_ZERO);
+	if ((m->flags & PG_ZERO) == 0)
+		pmap_zero_page(m);
+	for (i = 0; i < ZERO_REGION_SIZE; i += PAGE_SIZE)
+		pmap_qenter(addr + i, &m, 1);
+	error = vm_map_protect(kernel_map, addr, addr + ZERO_REGION_SIZE,
+	    VM_PROT_READ, TRUE);
+	KASSERT(error == 0, ("error=%d", error));
+
+	zero_region = (const void *)addr;
+}
+
 /*
  * 	kmem_init:
  *
@@ -503,8 +548,37 @@ kmem_init(start, end)
 	/* N.B.: cannot use kgdb to debug, starting with this assignment ... */
 	kernel_map = m;
 	(void) vm_map_insert(m, NULL, (vm_ooffset_t) 0,
-	    VM_MIN_KERNEL_ADDRESS, start, VM_PROT_ALL, VM_PROT_ALL,
-	    MAP_NOFAULT);
+#ifdef __amd64__
+	    KERNBASE,
+#else		     
+	    VM_MIN_KERNEL_ADDRESS,
+#endif
+	    start, VM_PROT_ALL, VM_PROT_ALL, MAP_NOFAULT);
 	/* ... and ending with the completion of the above `insert' */
 	vm_map_unlock(m);
+
+	kmem_init_zero_region();
 }
+
+#ifdef DIAGNOSTIC
+/*
+ * Allow userspace to directly trigger the VM drain routine for testing
+ * purposes.
+ */
+static int
+debug_vm_lowmem(SYSCTL_HANDLER_ARGS)
+{
+	int error, i;
+
+	i = 0;
+	error = sysctl_handle_int(oidp, &i, 0, req);
+	if (error)
+		return (error);
+	if (i)	 
+		EVENTHANDLER_INVOKE(vm_lowmem, 0);
+	return (0);
+}
+
+SYSCTL_PROC(_debug, OID_AUTO, vm_lowmem, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
+    debug_vm_lowmem, "I", "set to trigger vm_lowmem event");
+#endif

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989 Regents of the University of California.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)float.h	7.1 (Berkeley) 5/8/90
- * $FreeBSD: src/sys/amd64/include/float.h,v 1.15 2005/01/05 20:17:20 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_FLOAT_H_
@@ -43,7 +42,7 @@ __END_DECLS
 #define FLT_RADIX	2		/* b */
 #define FLT_ROUNDS	__flt_rounds()
 #if __ISO_C_VISIBLE >= 1999
-#define	FLT_EVAL_METHOD	(-1)		/* i387 semantics are...interesting */
+#define	FLT_EVAL_METHOD	0		/* no promotions */
 #define	DECIMAL_DIG	21		/* max precision in decimal digits */
 #endif
 

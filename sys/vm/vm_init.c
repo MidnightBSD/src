@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/vm/vm_init.c,v 1.2 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -64,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_init.c,v 1.46 2005/04/25 19:22:05 kris Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -187,16 +186,17 @@ again:
 		panic("startup: table size inconsistency");
 
 	clean_map = kmem_suballoc(kernel_map, &kmi->clean_sva, &kmi->clean_eva,
-			(nbuf*BKVASIZE) + (nswbuf*MAXPHYS));
+	    (long)nbuf * BKVASIZE + (long)nswbuf * MAXPHYS, TRUE);
 	buffer_map = kmem_suballoc(clean_map, &kmi->buffer_sva,
-			&kmi->buffer_eva, (nbuf*BKVASIZE));
+	    &kmi->buffer_eva, (long)nbuf * BKVASIZE, FALSE);
 	buffer_map->system_map = 1;
 	pager_map = kmem_suballoc(clean_map, &kmi->pager_sva, &kmi->pager_eva,
-				(nswbuf*MAXPHYS));
+	    (long)nswbuf * MAXPHYS, FALSE);
 	pager_map->system_map = 1;
 	exec_map = kmem_suballoc(kernel_map, &minaddr, &maxaddr,
-				(exec_map_entries*(ARG_MAX+(PAGE_SIZE*3))));
-	pipe_map = kmem_suballoc(kernel_map, &minaddr, &maxaddr, maxpipekva);
+	    exec_map_entries * round_page(PATH_MAX + ARG_MAX), FALSE);
+	pipe_map = kmem_suballoc(kernel_map, &minaddr, &maxaddr, maxpipekva,
+	    FALSE);
 
 	/*
 	 * XXX: Mbuf system machine-specific initializations should

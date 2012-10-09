@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Mitsaru Iwasaki
  * Copyright (c) 2000 Michael Smith
@@ -32,9 +31,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdMemory.c,v 1.15.2.1 2010/07/20 19:43:25 jkim Exp $");
+__FBSDID("$FreeBSD$");
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
 
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -56,7 +55,7 @@ AcpiOsFree(void *Memory)
 }
 
 void *
-AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_NATIVE_UINT Length)
+AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length)
 {
     return (pmap_mapbios((vm_offset_t)PhysicalAddress, Length));
 }
@@ -73,23 +72,6 @@ AcpiOsGetPhysicalAddress(void *LogicalAddress,
 {
     /* We can't necessarily do this, so cop out. */
     return (AE_BAD_ADDRESS);
-}
-
-ACPI_STATUS
-AcpiOsValidateInterface (char *Interface)
-{
-    return (AE_SUPPORT);
-}
-
-/*
- * There is no clean way to do this.  We make the charitable assumption
- * that callers will not pass garbage to us.
- */
-ACPI_STATUS
-AcpiOsValidateAddress (UINT8 SpaceId, ACPI_PHYSICAL_ADDRESS Address,
-    ACPI_SIZE Length)
-{
-    return (AE_OK);
 }
 
 BOOLEAN

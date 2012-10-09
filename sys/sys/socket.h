@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/socket.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1985, 1986, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socket.h	8.4 (Berkeley) 2/21/94
- * $FreeBSD: src/sys/sys/socket.h,v 1.95.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_SOCKET_H_
@@ -37,9 +36,7 @@
 #include <sys/cdefs.h>
 #include <sys/_types.h>
 #include <sys/_iovec.h>
-#define _NO_NAMESPACE_POLLUTION
-#include <machine/param.h>
-#undef _NO_NAMESPACE_POLLUTION
+#include <machine/_align.h>
 
 /*
  * Definitions related to sockets: types, address families, options.
@@ -140,6 +137,9 @@ typedef	__uid_t		uid_t;
 #define	SO_LISTENQLEN	0x1012		/* socket's complete queue length */
 #define	SO_LISTENINCQLEN	0x1013	/* socket's incomplete queue length */
 #define	SO_SETFIB	0x1014		/* use this FIB to route */
+#define	SO_USER_COOKIE	0x1015		/* user cookie (dummynet etc.) */
+#define	SO_PROTOCOL	0x1016		/* get socket protocol (Linux name) */
+#define	SO_PROTOTYPE	SO_PROTOCOL	/* alias for SO_PROTOCOL (SunOS name) */
 #endif
 
 /*
@@ -291,26 +291,7 @@ struct sockproto {
 };
 #endif
 
-#ifndef	_STRUCT_SOCKADDR_STORAGE_DECLARED
-/*
- * RFC 2553: protocol-independent placeholder for socket addresses
- */
-#define	_SS_MAXSIZE	128U
-#define	_SS_ALIGNSIZE	(sizeof(__int64_t))
-#define	_SS_PAD1SIZE	(_SS_ALIGNSIZE - sizeof(unsigned char) - \
-			    sizeof(sa_family_t))
-#define	_SS_PAD2SIZE	(_SS_MAXSIZE - sizeof(unsigned char) - \
-			    sizeof(sa_family_t) - _SS_PAD1SIZE - _SS_ALIGNSIZE)
-
-struct sockaddr_storage {
-	unsigned char	ss_len;		/* address length */
-	sa_family_t	ss_family;	/* address family */
-	char		__ss_pad1[_SS_PAD1SIZE];
-	__int64_t	__ss_align;	/* force desired struct alignment */
-	char		__ss_pad2[_SS_PAD2SIZE];
-};
-#define	_STRUCT_SOCKADDR_STORAGE_DECLARED
-#endif
+#include <sys/_sockaddr_storage.h>
 
 #if __BSD_VISIBLE
 /*
@@ -417,7 +398,9 @@ struct sockaddr_storage {
 #define NET_RT_FLAGS	2		/* by flags, e.g. RESOLVING */
 #define NET_RT_IFLIST	3		/* survey interface list */
 #define	NET_RT_IFMALIST	4		/* return multicast address list */
-#define	NET_RT_MAXID	5
+#define	NET_RT_IFLISTL	5		/* Survey interface list, using 'l'en
+					 * versions of msghdr structs. */
+#define	NET_RT_MAXID	6
 
 #define CTL_NET_RT_NAMES { \
 	{ 0, 0 }, \
@@ -425,6 +408,7 @@ struct sockaddr_storage {
 	{ "flags", CTLTYPE_STRUCT }, \
 	{ "iflist", CTLTYPE_STRUCT }, \
 	{ "ifmalist", CTLTYPE_STRUCT }, \
+	{ "iflistl", CTLTYPE_STRUCT }, \
 }
 #endif /* __BSD_VISIBLE */
 
@@ -484,8 +468,8 @@ struct cmsghdr {
 #if __BSD_VISIBLE
 /*
  * While we may have more groups than this, the cmsgcred struct must
- * be able to fit in an mbuf, and NGROUPS_MAX is too large to allow
- * this.
+ * be able to fit in an mbuf and we have historically supported a
+ * maximum of 16 groups.
 */
 #define CMGROUP_MAX 16
 
@@ -536,7 +520,7 @@ struct sockcred {
 	  _ALIGN(sizeof(struct cmsghdr)) > \
 	    (char *)(mhdr)->msg_control + (mhdr)->msg_controllen) ? \
 	    (struct cmsghdr *)0 : \
-	    (struct cmsghdr *)((char *)(cmsg) + \
+	    (struct cmsghdr *)(void *)((char *)(cmsg) + \
 	    _ALIGN(((struct cmsghdr *)(cmsg))->cmsg_len)))
 
 /*
@@ -617,6 +601,7 @@ struct sf_hdtr {
  */
 #define	SF_NODISKIO     0x00000001
 #define	SF_MNOWAIT	0x00000002
+#define	SF_SYNC		0x00000004
 #endif
 
 #ifndef	_KERNEL
@@ -640,6 +625,7 @@ ssize_t	sendto(int, const void *,
 ssize_t	sendmsg(int, const struct msghdr *, int);
 #if __BSD_VISIBLE
 int	sendfile(int, int, off_t, size_t, struct sf_hdtr *, off_t *, int);
+int	setfib(int);
 #endif
 int	setsockopt(int, int, int, const void *, socklen_t);
 int	shutdown(int, int);

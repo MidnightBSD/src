@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/xform_tcp.c,v 1.5.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
+/*	$FreeBSD$ */
 
 /*-
  * Copyright (c) 2003 Bruce M. Simpson <bms@spc.org>
@@ -48,6 +48,8 @@
 #include <netinet/tcp_var.h>
 
 #include <net/route.h>
+#include <net/vnet.h>
+
 #include <netipsec/ipsec.h>
 #include <netipsec/xform.h>
 

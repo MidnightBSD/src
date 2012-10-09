@@ -30,30 +30,48 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/in_proto.c,v 1.87.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ipx.h"
 #include "opt_mrouting.h"
 #include "opt_ipsec.h"
+#include "opt_inet.h"
 #include "opt_inet6.h"
-#include "opt_pf.h"
-#include "opt_carp.h"
 #include "opt_sctp.h"
+#include "opt_mpath.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
 #include <sys/domain.h>
+#include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
 
+/*
+ * While this file provides the domain and protocol switch tables for IPv4, it
+ * also provides the sysctl node declarations for net.inet.* often shared with
+ * IPv6 for common features or by upper layer protocols.  In case of no IPv4
+ * support compile out everything but these sysctl nodes.
+ */
+#ifdef INET
 #include <net/if.h>
 #include <net/route.h>
+#ifdef RADIX_MPATH
+#include <net/radix_mpath.h>
+#endif
+#include <net/vnet.h>
+#endif /* INET */
 
+#if defined(INET) || defined(INET6)
 #include <netinet/in.h>
+#endif
+
+#ifdef INET
 #include <netinet/in_systm.h>
+#include <netinet/in_var.h>
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
@@ -82,14 +100,7 @@ static struct pr_usrreqs nousrreqs;
 #include <netinet/sctp_var.h>
 #endif /* SCTP */
 
-#ifdef DEV_PFSYNC
-#include <net/pfvar.h>
-#include <net/if_pfsync.h>
-#endif
-
-#ifdef DEV_CARP
-#include <netinet/ip_carp.h>
-#endif
+FEATURE(inet, "Internet Protocol version 4");
 
 extern	struct domain inetdomain;
 
@@ -107,6 +118,9 @@ struct protosw inetsw[] = {
 	.pr_domain =		&inetdomain,
 	.pr_protocol =		IPPROTO_IP,
 	.pr_init =		ip_init,
+#ifdef VIMAGE
+	.pr_destroy =		ip_destroy,
+#endif
 	.pr_slowtimo =		ip_slowtimo,
 	.pr_drain =		ip_drain,
 	.pr_usrreqs =		&nousrreqs
@@ -118,8 +132,11 @@ struct protosw inetsw[] = {
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
 	.pr_input =		udp_input,
 	.pr_ctlinput =		udp_ctlinput,
-	.pr_ctloutput =		ip_ctloutput,
+	.pr_ctloutput =		udp_ctloutput,
 	.pr_init =		udp_init,
+#ifdef VIMAGE
+	.pr_destroy =		udp_destroy,
+#endif
 	.pr_usrreqs =		&udp_usrreqs
 },
 {
@@ -131,45 +148,39 @@ struct protosw inetsw[] = {
 	.pr_ctlinput =		tcp_ctlinput,
 	.pr_ctloutput =		tcp_ctloutput,
 	.pr_init =		tcp_init,
+#ifdef VIMAGE
+	.pr_destroy =		tcp_destroy,
+#endif
 	.pr_slowtimo =		tcp_slowtimo,
 	.pr_drain =		tcp_drain,
 	.pr_usrreqs =		&tcp_usrreqs
 },
 #ifdef SCTP
 { 
-	.pr_type = 	SOCK_DGRAM,
-	.pr_domain =  	&inetdomain,
-        .pr_protocol = 	IPPROTO_SCTP,
-        .pr_flags = 	PR_WANTRCVD,
-        .pr_input = 	sctp_input,
-        .pr_ctlinput =  sctp_ctlinput,	
-        .pr_ctloutput = sctp_ctloutput,
-        .pr_init = 	sctp_init,	
-        .pr_drain = 	sctp_drain,
-        .pr_usrreqs = 	&sctp_usrreqs
+	.pr_type =		SOCK_SEQPACKET,
+	.pr_domain =		&inetdomain,
+	.pr_protocol =		IPPROTO_SCTP,
+	.pr_flags =		PR_WANTRCVD,
+	.pr_input =		sctp_input,
+	.pr_ctlinput =		sctp_ctlinput,
+	.pr_ctloutput =		sctp_ctloutput,
+	.pr_init =		sctp_init,
+#ifdef VIMAGE
+	.pr_destroy =		sctp_finish,
+#endif
+	.pr_drain =		sctp_drain,
+	.pr_usrreqs =		&sctp_usrreqs
 },
-{
-	.pr_type = 	SOCK_SEQPACKET,
-	.pr_domain =  	&inetdomain,
-        .pr_protocol = 	IPPROTO_SCTP,
-        .pr_flags = 	PR_WANTRCVD,
-        .pr_input = 	sctp_input,
-        .pr_ctlinput =  sctp_ctlinput,	
-        .pr_ctloutput = sctp_ctloutput,
-        .pr_drain = 	sctp_drain,
-        .pr_usrreqs = 	&sctp_usrreqs
-},
-
 { 
-	.pr_type = 	SOCK_STREAM,
-	.pr_domain =  	&inetdomain,
-        .pr_protocol = 	IPPROTO_SCTP,
-        .pr_flags = 	PR_WANTRCVD,
-        .pr_input = 	sctp_input,
-        .pr_ctlinput =  sctp_ctlinput,	
-        .pr_ctloutput = sctp_ctloutput,
-        .pr_drain = 	sctp_drain,
-        .pr_usrreqs = 	&sctp_usrreqs
+	.pr_type =		SOCK_STREAM,
+	.pr_domain =		&inetdomain,
+	.pr_protocol =		IPPROTO_SCTP,
+	.pr_flags =		PR_WANTRCVD,
+	.pr_input =		sctp_input,
+	.pr_ctlinput =		sctp_ctlinput,
+	.pr_ctloutput =		sctp_ctloutput,
+	.pr_drain =		sctp_drain,
+	.pr_usrreqs =		&sctp_usrreqs
 },
 #endif /* SCTP */
 {
@@ -198,7 +209,6 @@ struct protosw inetsw[] = {
 	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
 	.pr_input =		igmp_input,
 	.pr_ctloutput =		rip_ctloutput,
-	.pr_init =		igmp_init,
 	.pr_fasttimo =		igmp_fasttimo,
 	.pr_slowtimo =		igmp_slowtimo,
 	.pr_usrreqs =		&rip_usrreqs
@@ -301,29 +311,6 @@ struct protosw inetsw[] = {
 	.pr_ctloutput =		rip_ctloutput,
 	.pr_usrreqs =		&rip_usrreqs
 },
-#ifdef DEV_PFSYNC
-{
-	.pr_type =		SOCK_RAW,
-	.pr_domain =		&inetdomain,
-	.pr_protocol =		IPPROTO_PFSYNC,
-	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		pfsync_input,
-	.pr_ctloutput =		rip_ctloutput,
-	.pr_usrreqs =		&rip_usrreqs
-},
-#endif	/* DEV_PFSYNC */
-#ifdef DEV_CARP
-{
-	.pr_type =		SOCK_RAW,
-	.pr_domain =		&inetdomain,
-	.pr_protocol =		IPPROTO_CARP,
-	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		carp_input,
-	.pr_output =		(pr_output_t*)rip_output,
-	.pr_ctloutput =		rip_ctloutput,
-	.pr_usrreqs =		&rip_usrreqs
-},
-#endif /* DEV_CARP */
 /* Spacer n-times for loadable protocols. */
 IPPROTOSPACER,
 IPPROTOSPACER,
@@ -341,23 +328,37 @@ IPPROTOSPACER,
 	.pr_input =		rip_input,
 	.pr_ctloutput =		rip_ctloutput,
 	.pr_init =		rip_init,
+#ifdef VIMAGE
+	.pr_destroy =		rip_destroy,
+#endif
 	.pr_usrreqs =		&rip_usrreqs
 },
 };
 
 extern int in_inithead(void **, int);
+extern int in_detachhead(void **, int);
 
 struct domain inetdomain = {
 	.dom_family =		AF_INET,
 	.dom_name =		"internet",
 	.dom_protosw =		inetsw,
 	.dom_protoswNPROTOSW =	&inetsw[sizeof(inetsw)/sizeof(inetsw[0])],
+#ifdef RADIX_MPATH
+	.dom_rtattach =		rn4_mpath_inithead,
+#else
 	.dom_rtattach =		in_inithead,
+#endif
+#ifdef VIMAGE
+	.dom_rtdetach =		in_detachhead,
+#endif
 	.dom_rtoffset =		32,
-	.dom_maxrtkey =		sizeof(struct sockaddr_in)
+	.dom_maxrtkey =		sizeof(struct sockaddr_in),
+	.dom_ifattach =		in_domifattach,
+	.dom_ifdetach =		in_domifdetach
 };
 
-DOMAIN_SET(inet);
+VNET_DOMAIN_SET(inet);
+#endif /* INET */
 
 SYSCTL_NODE(_net,      PF_INET,		inet,	CTLFLAG_RW, 0,
 	"Internet Family");
@@ -379,9 +380,3 @@ SYSCTL_NODE(_net_inet, IPPROTO_IPCOMP,	ipcomp,	CTLFLAG_RW, 0,	"IPCOMP");
 SYSCTL_NODE(_net_inet, IPPROTO_IPIP,	ipip,	CTLFLAG_RW, 0,	"IPIP");
 #endif /* IPSEC */
 SYSCTL_NODE(_net_inet, IPPROTO_RAW,	raw,	CTLFLAG_RW, 0,	"RAW");
-#ifdef DEV_PFSYNC
-SYSCTL_NODE(_net_inet, IPPROTO_PFSYNC,	pfsync,	CTLFLAG_RW, 0,	"PFSYNC");
-#endif
-#ifdef DEV_CARP
-SYSCTL_NODE(_net_inet, IPPROTO_CARP,	carp,	CTLFLAG_RW, 0,	"CARP");
-#endif

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003, 2004, 2005 Jeffrey Roberson <jeff@FreeBSD.org>
  * Copyright (c) 2004, 2005 Bosko Milekic <bmilekic@FreeBSD.org>
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/uma_dbg.c,v 1.21 2005/07/16 09:51:52 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -199,15 +198,15 @@ uma_dbg_getslab(uma_zone_t zone, void *item)
 	uma_keg_t keg;
 	u_int8_t *mem;
 
-	keg = zone->uz_keg;
 	mem = (u_int8_t *)((unsigned long)item & (~UMA_SLAB_MASK));
-	if (keg->uk_flags & UMA_ZONE_MALLOC) {
+	if (zone->uz_flags & UMA_ZONE_VTOSLAB) {
 		slab = vtoslab((vm_offset_t)mem);
-	} else if (keg->uk_flags & UMA_ZONE_HASH) {
-		slab = hash_sfind(&keg->uk_hash, mem);
 	} else {
-		mem += keg->uk_pgoff;
-		slab = (uma_slab_t)mem;
+		keg = LIST_FIRST(&zone->uz_kegs)->kl_keg;
+		if (keg->uk_flags & UMA_ZONE_HASH)
+			slab = hash_sfind(&keg->uk_hash, mem);
+		else
+			slab = (uma_slab_t)(mem + keg->uk_pgoff);
 	}
 
 	return (slab);
@@ -225,13 +224,13 @@ uma_dbg_alloc(uma_zone_t zone, uma_slab_t slab, void *item)
 	uma_slabrefcnt_t slabref;
 	int freei;
 
-	keg = zone->uz_keg;
 	if (slab == NULL) {
 		slab = uma_dbg_getslab(zone, item);
 		if (slab == NULL) 
 			panic("uma: item %p did not belong to zone %s\n",
 			    item, zone->uz_name);
 	}
+	keg = slab->us_keg;
 
 	freei = ((unsigned long)item - (unsigned long)slab->us_data)
 	    / keg->uk_rsize;
@@ -259,13 +258,13 @@ uma_dbg_free(uma_zone_t zone, uma_slab_t slab, void *item)
 	uma_slabrefcnt_t slabref;
 	int freei;
 
-	keg = zone->uz_keg;
 	if (slab == NULL) {
 		slab = uma_dbg_getslab(zone, item);
 		if (slab == NULL) 
 			panic("uma: Freed item %p did not belong to zone %s\n",
 			    item, zone->uz_name);
 	}
+	keg = slab->us_keg;
 
 	freei = ((unsigned long)item - (unsigned long)slab->us_data)
 	    / keg->uk_rsize;

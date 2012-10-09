@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_sim.h,v 1.8.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_SIM_H
@@ -104,7 +104,9 @@ struct cam_sim {
 	u_int32_t		flags;
 #define	CAM_SIM_REL_TIMEOUT_PENDING	0x01
 #define	CAM_SIM_MPSAFE			0x02
-#define CAM_SIM_ON_DONEQ		0x04
+#define	CAM_SIM_ON_DONEQ		0x04
+#define	CAM_SIM_POLLED			0x08
+#define	CAM_SIM_BATCH			0x10
 	struct callout		callout;
 	struct cam_devq 	*devq;	/* Device Queue to use for this SIM */
 	int			refcount; /* References to the SIM. */

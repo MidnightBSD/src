@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Nate Lawson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_package.c,v 1.9 2007/01/07 21:53:42 njl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -37,7 +36,8 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_package.c,v 1.9 2007/01/07 21:53:42 
 #include <machine/resource.h>
 #include <sys/rman.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 /*
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_package.c,v 1.9 2007/01/07 21:53:42 
  */
 
 int
-acpi_PkgInt(ACPI_OBJECT *res, int idx, ACPI_INTEGER *dst)
+acpi_PkgInt(ACPI_OBJECT *res, int idx, UINT64 *dst)
 {
     ACPI_OBJECT		*obj;
 
@@ -60,7 +60,7 @@ acpi_PkgInt(ACPI_OBJECT *res, int idx, ACPI_INTEGER *dst)
 int
 acpi_PkgInt32(ACPI_OBJECT *res, int idx, uint32_t *dst)
 {
-    ACPI_INTEGER	tmp;
+    UINT64		tmp;
     int			error;
 
     error = acpi_PkgInt(res, idx, &tmp);

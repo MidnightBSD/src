@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -32,11 +31,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/in_cksum.c,v 1.28.10.1 2007/10/26 07:15:04 bz Exp $");
+__FBSDID("$FreeBSD$");
 
-/*
- * MPsafe: alfred
- */
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>

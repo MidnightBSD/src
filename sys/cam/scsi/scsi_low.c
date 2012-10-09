@@ -2,7 +2,7 @@
 /*	$NetBSD$	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_low.c,v 1.29.2.2.2.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #define	SCSI_LOW_STATICS
 #define	SCSI_LOW_DEBUG
@@ -895,8 +895,6 @@ scsi_low_target_open(link, cf)
 #define	SCSI_LOW_ALLOC_CCB(flags)	scsi_low_get_ccb()
 
 static void scsi_low_poll_cam(struct cam_sim *);
-static void scsi_low_cam_rescan_callback(struct cam_periph *, union ccb *);
-static void scsi_low_rescan_bus_cam(struct scsi_low_softc *);
 void scsi_low_scsi_action_cam(struct cam_sim *, union ccb *);
 
 static int scsi_low_attach_cam(struct scsi_low_softc *);
@@ -952,38 +950,6 @@ scsi_low_poll_cam(sim)
 		slp->sl_si.si_poll_count = 0;
 		scsi_low_timeout_check(slp);
 	}
-}
-
-static void
-scsi_low_cam_rescan_callback(periph, ccb)
-	struct cam_periph *periph;
-	union ccb *ccb;
-{
-
-	xpt_free_path(ccb->ccb_h.path);
-	xpt_free_ccb(ccb);
-}
-
-static void
-scsi_low_rescan_bus_cam(slp)
-	struct scsi_low_softc *slp;
-{
-  	struct cam_path *path;
-	union ccb *ccb; 
-	cam_status status;
-
-	status = xpt_create_path(&path, xpt_periph,
-				 cam_sim_path(slp->sl_si.sim), -1, 0);
-	if (status != CAM_REQ_CMP)
-		return;
-
-	ccb = xpt_alloc_ccb();
-	bzero(ccb, sizeof(union ccb));
-	xpt_setup_ccb(&ccb->ccb_h, path, 5);
-	ccb->ccb_h.func_code = XPT_SCAN_BUS;
-	ccb->ccb_h.cbfcnp = scsi_low_cam_rescan_callback;
-	ccb->crcn.flags = CAM_FLAG_NONE;
-	xpt_action(ccb);
 }
 
 void
@@ -1376,8 +1342,6 @@ scsi_low_world_start_cam(slp)
 	struct scsi_low_softc *slp;
 {
 
-	if (!cold)
-		scsi_low_rescan_bus_cam(slp);
 	return 0;
 }
 
@@ -2613,12 +2577,16 @@ resume:
 #ifdef	SCSI_LOW_DEBUG
 				if (scsi_low_debug & SCSI_LOW_DEBUG_SENSE)
 				{
-					printf("SENSE: [%x][%x][%x][%x][%x]\n",
-					(u_int) cb->ccb_sense.error_code,
-					(u_int) cb->ccb_sense.segment,
-					(u_int) cb->ccb_sense.flags,
-					(u_int) cb->ccb_sense.add_sense_code,
-					(u_int) cb->ccb_sense.add_sense_code_qual);
+					int error_code, sense_key, asc, ascq;
+
+					scsi_extract_sense(&cb->ccb_sense,
+							   &error_code,
+							   &sense_key,
+							   &asc,
+							   &ascq);
+					printf("SENSE: [%x][%x][%x][%x]\n",
+					       error_code, sense_key, asc,
+					       ascq);
 				}
 #endif	/* SCSI_LOW_DEBUG */
 			}

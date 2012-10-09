@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/amr/amr.c,v 1.3 2012/04/12 01:23:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -57,6 +56,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the AMI MegaRaid family of controllers.
@@ -174,8 +174,6 @@ static void	amr_printcommand(struct amr_command *ac);
 static void	amr_init_sysctl(struct amr_softc *sc);
 static int	amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr,
 		    int32_t flag, struct thread *td);
-
-MALLOC_DEFINE(M_AMR, "amr", "AMR memory");
 
 MALLOC_DEFINE(M_AMR, "amr", "AMR memory");
 

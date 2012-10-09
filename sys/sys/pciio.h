@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/pciio.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, Stefan Esser <se@FreeBSD.ORG>
  * Copyright (c) 1997, 1998, 1999, Kenneth D. Merry <ken@FreeBSD.ORG>
@@ -25,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/sys/pciio.h,v 1.7.2.2 2009/02/26 18:54:24 jhb Exp $
+ *	$MidnightBSD$
  *
  */
 

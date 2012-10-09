@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_genassym.c,v 1.5 2006/10/05 01:56:11 davidxu Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 
@@ -14,6 +13,9 @@ __FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_genassym.c,v 1.5 2006/10/05 01:56:1
 
 ASSYM(IA32_SIGF_HANDLER, offsetof(struct ia32_sigframe, sf_ah));
 ASSYM(IA32_SIGF_UC, offsetof(struct ia32_sigframe, sf_uc));
+#ifdef COMPAT_43
+ASSYM(IA32_SIGF_SC, offsetof(struct ia32_sigframe3, sf_siginfo.si_sc));
+#endif
 ASSYM(IA32_UC_GS, offsetof(struct ia32_ucontext, uc_mcontext.mc_gs));
 ASSYM(IA32_UC_FS, offsetof(struct ia32_ucontext, uc_mcontext.mc_fs));
 ASSYM(IA32_UC_ES, offsetof(struct ia32_ucontext, uc_mcontext.mc_es));

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1991 Regents of The University of Michigan.
  * All Rights Reserved.
@@ -21,7 +20,7 @@
  *	+1-313-763-0525
  *	netatalk@itd.umich.edu
  *
- * $FreeBSD: src/sys/netatalk/at_proto.c,v 1.13.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/atphy.c,v 1.1.2.11 2011/09/11 20:25:57 marius Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Attansic/Atheros F1 10/100/1000 PHY.
@@ -53,27 +53,20 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/atphy.c,v 1.1.2.11 2011/09/11 20:25:57 mariu
 static int atphy_probe(device_t);
 static int atphy_attach(device_t);
 
-struct atphy_softc {
-	struct mii_softc mii_sc;
-	int mii_oui;
-	int mii_model;
-	int mii_rev;
-};
-
 static device_method_t atphy_methods[] = {
 	/* Device interface. */
 	DEVMETHOD(device_probe,		atphy_probe),
 	DEVMETHOD(device_attach,	atphy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ NULL, NULL }
+	DEVMETHOD_END
 };
 
 static devclass_t atphy_devclass;
 static driver_t atphy_driver = {
 	"atphy",
 	atphy_methods,
-	sizeof(struct atphy_softc)
+	sizeof(struct mii_softc)
 };
 
 DRIVER_MODULE(atphy, miibus, atphy_driver, atphy_devclass, 0, 0);
@@ -85,10 +78,16 @@ static uint16_t	atphy_anar(struct ifmedia_entry *);
 static int	atphy_setmedia(struct mii_softc *, int);
 
 static const struct mii_phydesc atphys[] = {
-	MII_PHY_DESC(ATHEROS, F1),
-	MII_PHY_DESC(ATHEROS, F1_7),
-	MII_PHY_DESC(ATHEROS, F2),
+	MII_PHY_DESC(xxATHEROS, F1),
+	MII_PHY_DESC(xxATHEROS, F1_7),
+	MII_PHY_DESC(xxATHEROS, F2),
 	MII_PHY_END
+};
+
+static const struct mii_phy_funcs atphy_funcs = {
+	atphy_service,
+	atphy_status,
+	atphy_reset
 };
 
 static int
@@ -101,43 +100,8 @@ atphy_probe(device_t dev)
 static int
 atphy_attach(device_t dev)
 {
-	struct atphy_softc *asc;
-	struct mii_softc *sc;
-	struct mii_attach_args *ma;
-	struct mii_data *mii;
 
-	asc = device_get_softc(dev);
-	sc = &asc->mii_sc;
-	ma = device_get_ivars(dev);
-	sc->mii_dev = device_get_parent(dev);
-	mii = ma->mii_data;
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
-
-	sc->mii_flags = miibus_get_flags(dev);
-	sc->mii_inst = mii->mii_instance++;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = atphy_service;
-	sc->mii_pdata = mii;
-
-	sc->mii_flags |= MIIF_NOMANPAUSE;
-
-	asc->mii_oui = MII_OUI(ma->mii_id1, ma->mii_id2);
-	asc->mii_model = MII_MODEL(ma->mii_id2);
-	asc->mii_rev = MII_REV(ma->mii_id2);
-	if (bootverbose)
-		device_printf(dev, "OUI 0x%06x, model 0x%04x, rev. %d\n",
-		    asc->mii_oui, asc->mii_model, asc->mii_rev);
-
-	atphy_reset(sc);
-
-	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
-	if (sc->mii_capabilities & BMSR_EXTSTAT)
-		sc->mii_extcapabilities = PHY_READ(sc, MII_EXTSR);
-	device_printf(dev, " ");
-	mii_phy_add_media(sc);
-	printf("\n");
-
-	MIIBUS_MEDIAINIT(sc->mii_dev);
+	mii_phy_dev_attach(dev, MIIF_NOMANPAUSE, &atphy_funcs, 1);
 	return (0);
 }
 
@@ -246,7 +210,7 @@ done:
 	}
 
 	/* Update the media status. */
-	atphy_status(sc);
+	PHY_STATUS(sc);
 
 	/* Callback if something changed. */
 	mii_phy_update(sc, cmd);
@@ -383,7 +347,6 @@ atphy_anar(struct ifmedia_entry *ife)
 static int
 atphy_setmedia(struct mii_softc *sc, int media)
 {
-	struct atphy_softc *asc;
 	uint16_t anar;
 
 	anar = BMSR_MEDIA_TO_ANAR(sc->mii_capabilities) | ANAR_CSMA;
@@ -396,7 +359,7 @@ atphy_setmedia(struct mii_softc *sc, int media)
 	     (EXTSR_1000TFDX | EXTSR_1000THDX)) != 0)
 		PHY_WRITE(sc, MII_100T2CR, GTCR_ADV_1000TFDX |
 		    GTCR_ADV_1000THDX);
-	else {
+	else if (sc->mii_mpd_model == MII_MODEL_xxATHEROS_F1) {
 		/*
 		 * AR8132 has 10/100 PHY and the PHY uses the same
 		 * model number of F1 gigabit PHY.  The PHY has no
@@ -406,9 +369,7 @@ atphy_setmedia(struct mii_softc *sc, int media)
 		 * not establish a link against gigabit link partner
 		 * unless the link partner supports down-shifting.
 		 */
-		asc = (struct atphy_softc *)sc;
-		if (asc->mii_model == MII_MODEL_ATHEROS_F1)
-			PHY_WRITE(sc, MII_100T2CR, 0);
+		PHY_WRITE(sc, MII_100T2CR, 0);
 	}
 	PHY_WRITE(sc, MII_BMCR, BMCR_RESET | BMCR_AUTOEN | BMCR_STARTNEG);
 

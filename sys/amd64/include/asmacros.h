@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/asmacros.h,v 1.33 2007/08/22 04:26:07 jkoshy Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASMACROS_H_
@@ -162,7 +161,13 @@
 	movq	%r12,TF_R12(%rsp) ;					\
 	movq	%r13,TF_R13(%rsp) ;					\
 	movq	%r14,TF_R14(%rsp) ;					\
-	movq	%r15,TF_R15(%rsp)
+	movq	%r15,TF_R15(%rsp) ;					\
+	movw	%fs,TF_FS(%rsp) ;					\
+	movw	%gs,TF_GS(%rsp) ;					\
+	movw	%es,TF_ES(%rsp) ;					\
+	movw	%ds,TF_DS(%rsp) ;					\
+	movl	$TF_HASSEGS,TF_FLAGS(%rsp) ;				\
+	cld
 
 #define POP_FRAME							\
 	movq	TF_RDI(%rsp),%rdi ;					\

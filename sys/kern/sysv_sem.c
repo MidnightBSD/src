@@ -37,10 +37,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sysv_sem.c,v 1.89.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
+#include "opt_compat.h"
 #include "opt_sysvipc.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,6 +51,7 @@ __FBSDID("$FreeBSD: src/sys/kern/sysv_sem.c,v 1.89.2.1.2.1 2008/11/25 02:59:29 k
 #include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/racct.h>
 #include <sys/sem.h>
 #include <sys/syscall.h>
 #include <sys/syscallsubr.h>
@@ -62,6 +63,8 @@ __FBSDID("$FreeBSD: src/sys/kern/sysv_sem.c,v 1.89.2.1.2.1 2008/11/25 02:59:29 k
 
 #include <security/mac/mac_framework.h>
 
+FEATURE(sysv_sem, "System V semaphores support");
+
 static MALLOC_DEFINE(M_SEM, "sem", "SVID compatible semaphores");
 
 #ifdef SEM_DEBUG
@@ -70,7 +73,7 @@ static MALLOC_DEFINE(M_SEM, "sem", "SVID compatible semaphores");
 #define DPRINTF(a)
 #endif
 
-static void seminit(void);
+static int seminit(void);
 static int sysvsem_modload(struct module *, int, void *);
 static int semunload(void);
 static void semexit_myhook(void *arg, struct proc *p);
@@ -88,25 +91,21 @@ int semop(struct thread *td, struct semop_args *uap);
 
 static struct sem_undo *semu_alloc(struct thread *td);
 static int semundo_adjust(struct thread *td, struct sem_undo **supptr,
-		int semid, int semnum, int adjval);
+    int semid, int semseq, int semnum, int adjval);
 static void semundo_clear(int semid, int semnum);
 
-/* XXX casting to (sy_call_t *) is bogus, as usual. */
-static sy_call_t *semcalls[] = {
-	(sy_call_t *)__semctl, (sy_call_t *)semget,
-	(sy_call_t *)semop
-};
-
 static struct mtx	sem_mtx;	/* semaphore global lock */
+static struct mtx sem_undo_mtx;
 static int	semtot = 0;
 static struct semid_kernel *sema;	/* semaphore id pool */
 static struct mtx *sema_mtx;	/* semaphore id pool mutexes*/
 static struct sem *sem;		/* semaphore pool */
-SLIST_HEAD(, sem_undo) semu_list;	/* list of active undo structures */
+LIST_HEAD(, sem_undo) semu_list;	/* list of active undo structures */
+LIST_HEAD(, sem_undo) semu_free_list;	/* list of free undo structures */
 static int	*semu;		/* undo structure pool */
 static eventhandler_tag semexit_tag;
 
-#define SEMUNDO_MTX		sem_mtx
+#define SEMUNDO_MTX		sem_undo_mtx
 #define SEMUNDO_LOCK()		mtx_lock(&SEMUNDO_MTX);
 #define SEMUNDO_UNLOCK()	mtx_unlock(&SEMUNDO_MTX);
 #define SEMUNDO_LOCKASSERT(how)	mtx_assert(&SEMUNDO_MTX, (how));
@@ -122,13 +121,14 @@ struct sem {
  * Undo structure (one per process)
  */
 struct sem_undo {
-	SLIST_ENTRY(sem_undo) un_next;	/* ptr to next active undo structure */
+	LIST_ENTRY(sem_undo) un_next;	/* ptr to next active undo structure */
 	struct	proc *un_proc;		/* owner of this structure */
 	short	un_cnt;			/* # of active entries */
 	struct undo {
 		short	un_adjval;	/* adjust on exit values */
 		short	un_num;		/* semaphore # */
 		int	un_id;		/* semid */
+		unsigned short un_seq;
 	} un_ent[1];			/* undo entries */
 };
 
@@ -136,22 +136,19 @@ struct sem_undo {
  * Configuration parameters
  */
 #ifndef SEMMNI
-#define SEMMNI	10		/* # of semaphore identifiers */
+#define SEMMNI	50		/* # of semaphore identifiers */
 #endif
 #ifndef SEMMNS
-#define SEMMNS	60		/* # of semaphores in system */
+#define SEMMNS	340		/* # of semaphores in system */
 #endif
 #ifndef SEMUME
-#define SEMUME	10		/* max # of undo entries per process */
+#define SEMUME	50		/* max # of undo entries per process */
 #endif
 #ifndef SEMMNU
-#define SEMMNU	30		/* # of undo structures in system */
+#define SEMMNU	150		/* # of undo structures in system */
 #endif
 
 /* shouldn't need tuning */
-#ifndef SEMMAP
-#define SEMMAP	30		/* # of entries in semaphore map */
-#endif
 #ifndef SEMMSL
 #define SEMMSL	SEMMNS		/* max # of semaphores per id */
 #endif
@@ -182,7 +179,6 @@ struct sem_undo {
  * semaphore info struct
  */
 struct seminfo seminfo = {
-                SEMMAP,         /* # of entries in semaphore map */
                 SEMMNI,         /* # of semaphore identifiers */
                 SEMMNS,         /* # of semaphores in system */
                 SEMMNU,         /* # of undo structures in system */
@@ -194,8 +190,6 @@ struct seminfo seminfo = {
                 SEMAEM          /* adjust on exit max value */
 };
 
-SYSCTL_INT(_kern_ipc, OID_AUTO, semmap, CTLFLAG_RW, &seminfo.semmap, 0,
-    "Number of entries in the semaphore map");
 SYSCTL_INT(_kern_ipc, OID_AUTO, semmni, CTLFLAG_RDTUN, &seminfo.semmni, 0,
     "Number of semaphore identifiers");
 SYSCTL_INT(_kern_ipc, OID_AUTO, semmns, CTLFLAG_RDTUN, &seminfo.semmns, 0,
@@ -214,15 +208,47 @@ SYSCTL_INT(_kern_ipc, OID_AUTO, semvmx, CTLFLAG_RW, &seminfo.semvmx, 0,
     "Semaphore maximum value");
 SYSCTL_INT(_kern_ipc, OID_AUTO, semaem, CTLFLAG_RW, &seminfo.semaem, 0,
     "Adjust on exit max value");
-SYSCTL_PROC(_kern_ipc, OID_AUTO, sema, CTLFLAG_RD,
-    NULL, 0, sysctl_sema, "", "");
+SYSCTL_PROC(_kern_ipc, OID_AUTO, sema, CTLTYPE_OPAQUE | CTLFLAG_RD,
+    NULL, 0, sysctl_sema, "", "Semaphore id pool");
 
-static void
+static struct syscall_helper_data sem_syscalls[] = {
+	SYSCALL_INIT_HELPER(__semctl),
+	SYSCALL_INIT_HELPER(semget),
+	SYSCALL_INIT_HELPER(semop),
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+	SYSCALL_INIT_HELPER(semsys),
+	SYSCALL_INIT_HELPER_COMPAT(freebsd7___semctl),
+#endif
+	SYSCALL_INIT_LAST
+};
+
+#ifdef COMPAT_FREEBSD32
+#include <compat/freebsd32/freebsd32.h>
+#include <compat/freebsd32/freebsd32_ipc.h>
+#include <compat/freebsd32/freebsd32_proto.h>
+#include <compat/freebsd32/freebsd32_signal.h>
+#include <compat/freebsd32/freebsd32_syscall.h>
+#include <compat/freebsd32/freebsd32_util.h>
+
+static struct syscall_helper_data sem32_syscalls[] = {
+	SYSCALL32_INIT_HELPER(freebsd32_semctl),
+	SYSCALL32_INIT_HELPER_COMPAT(semget),
+	SYSCALL32_INIT_HELPER_COMPAT(semop),
+	SYSCALL32_INIT_HELPER(freebsd32_semsys),
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+	SYSCALL32_INIT_HELPER(freebsd7_freebsd32_semctl),
+#endif
+	SYSCALL_INIT_LAST
+};
+#endif
+
+static int
 seminit(void)
 {
-	int i;
+	int i, error;
 
-	TUNABLE_INT_FETCH("kern.ipc.semmap", &seminfo.semmap);
 	TUNABLE_INT_FETCH("kern.ipc.semmni", &seminfo.semmni);
 	TUNABLE_INT_FETCH("kern.ipc.semmns", &seminfo.semmns);
 	TUNABLE_INT_FETCH("kern.ipc.semmnu", &seminfo.semmnu);
@@ -245,19 +271,32 @@ seminit(void)
 		sema[i].u.sem_perm.mode = 0;
 		sema[i].u.sem_perm.seq = 0;
 #ifdef MAC
-		mac_init_sysv_sem(&sema[i]);
+		mac_sysvsem_init(&sema[i]);
 #endif
 	}
 	for (i = 0; i < seminfo.semmni; i++)
 		mtx_init(&sema_mtx[i], "semid", NULL, MTX_DEF);
+	LIST_INIT(&semu_free_list);
 	for (i = 0; i < seminfo.semmnu; i++) {
 		struct sem_undo *suptr = SEMU(i);
 		suptr->un_proc = NULL;
+		LIST_INSERT_HEAD(&semu_free_list, suptr, un_next);
 	}
-	SLIST_INIT(&semu_list);
+	LIST_INIT(&semu_list);
 	mtx_init(&sem_mtx, "sem", NULL, MTX_DEF);
+	mtx_init(&sem_undo_mtx, "semu", NULL, MTX_DEF);
 	semexit_tag = EVENTHANDLER_REGISTER(process_exit, semexit_myhook, NULL,
 	    EVENTHANDLER_PRI_ANY);
+
+	error = syscall_helper_register(sem_syscalls);
+	if (error != 0)
+		return (error);
+#ifdef COMPAT_FREEBSD32
+	error = syscall32_helper_register(sem32_syscalls);
+	if (error != 0)
+		return (error);
+#endif
+	return (0);
 }
 
 static int
@@ -265,20 +304,27 @@ semunload(void)
 {
 	int i;
 
+	/* XXXKIB */
 	if (semtot != 0)
 		return (EBUSY);
 
+#ifdef COMPAT_FREEBSD32
+	syscall32_helper_unregister(sem32_syscalls);
+#endif
+	syscall_helper_unregister(sem_syscalls);
 	EVENTHANDLER_DEREGISTER(process_exit, semexit_tag);
 #ifdef MAC
 	for (i = 0; i < seminfo.semmni; i++)
-		mac_destroy_sysv_sem(&sema[i]);
+		mac_sysvsem_destroy(&sema[i]);
 #endif
 	free(sem, M_SEM);
 	free(sema, M_SEM);
 	free(semu, M_SEM);
 	for (i = 0; i < seminfo.semmni; i++)
 		mtx_destroy(&sema_mtx[i]);
+	free(sema_mtx, M_SEM);
 	mtx_destroy(&sem_mtx);
+	mtx_destroy(&sem_undo_mtx);
 	return (0);
 }
 
@@ -289,7 +335,9 @@ sysvsem_modload(struct module *module, int cmd, void *arg)
 
 	switch (cmd) {
 	case MOD_LOAD:
-		seminit();
+		error = seminit();
+		if (error != 0)
+			semunload();
 		break;
 	case MOD_UNLOAD:
 		error = semunload();
@@ -309,40 +357,8 @@ static moduledata_t sysvsem_mod = {
 	NULL
 };
 
-SYSCALL_MODULE_HELPER(semsys);
-SYSCALL_MODULE_HELPER(__semctl);
-SYSCALL_MODULE_HELPER(semget);
-SYSCALL_MODULE_HELPER(semop);
-
-DECLARE_MODULE(sysvsem, sysvsem_mod,
-	SI_SUB_SYSV_SEM, SI_ORDER_FIRST);
+DECLARE_MODULE(sysvsem, sysvsem_mod, SI_SUB_SYSV_SEM, SI_ORDER_FIRST);
 MODULE_VERSION(sysvsem, 1);
-
-/*
- * Entry point for all SEM calls.
- */
-int
-semsys(td, uap)
-	struct thread *td;
-	/* XXX actually varargs. */
-	struct semsys_args /* {
-		int	which;
-		int	a2;
-		int	a3;
-		int	a4;
-		int	a5;
-	} */ *uap;
-{
-	int error;
-
-	if (!jail_sysvipc_allowed && jailed(td->td_ucred))
-		return (ENOSYS);
-	if (uap->which < 0 ||
-	    uap->which >= sizeof(semcalls)/sizeof(semcalls[0]))
-		return (EINVAL);
-	error = (*semcalls[uap->which])(td, &uap->a2);
-	return (error);
-}
 
 /*
  * Allocate a new sem_undo structure for a process
@@ -350,69 +366,31 @@ semsys(td, uap)
  */
 
 static struct sem_undo *
-semu_alloc(td)
-	struct thread *td;
+semu_alloc(struct thread *td)
 {
-	int i;
 	struct sem_undo *suptr;
-	struct sem_undo **supptr;
-	int attempt;
 
 	SEMUNDO_LOCKASSERT(MA_OWNED);
-	/*
-	 * Try twice to allocate something.
-	 * (we'll purge an empty structure after the first pass so
-	 * two passes are always enough)
-	 */
+	if ((suptr = LIST_FIRST(&semu_free_list)) == NULL)
+		return (NULL);
+	LIST_REMOVE(suptr, un_next);
+	LIST_INSERT_HEAD(&semu_list, suptr, un_next);
+	suptr->un_cnt = 0;
+	suptr->un_proc = td->td_proc;
+	return (suptr);
+}
 
-	for (attempt = 0; attempt < 2; attempt++) {
-		/*
-		 * Look for a free structure.
-		 * Fill it in and return it if we find one.
-		 */
+static int
+semu_try_free(struct sem_undo *suptr)
+{
 
-		for (i = 0; i < seminfo.semmnu; i++) {
-			suptr = SEMU(i);
-			if (suptr->un_proc == NULL) {
-				SLIST_INSERT_HEAD(&semu_list, suptr, un_next);
-				suptr->un_cnt = 0;
-				suptr->un_proc = td->td_proc;
-				return(suptr);
-			}
-		}
+	SEMUNDO_LOCKASSERT(MA_OWNED);
 
-		/*
-		 * We didn't find a free one, if this is the first attempt
-		 * then try to free a structure.
-		 */
-
-		if (attempt == 0) {
-			/* All the structures are in use - try to free one */
-			int did_something = 0;
-
-			SLIST_FOREACH_PREVPTR(suptr, supptr, &semu_list,
-			    un_next) {
-				if (suptr->un_cnt == 0) {
-					suptr->un_proc = NULL;
-					did_something = 1;
-					*supptr = SLIST_NEXT(suptr, un_next);
-					break;
-				}
-			}
-
-			/* If we didn't free anything then just give-up */
-			if (!did_something)
-				return(NULL);
-		} else {
-			/*
-			 * The second pass failed even though we freed
-			 * something after the first pass!
-			 * This is IMPOSSIBLE!
-			 */
-			panic("semu_alloc - second attempt failed");
-		}
-	}
-	return (NULL);
+	if (suptr->un_cnt != 0)
+		return (0);
+	LIST_REMOVE(suptr, un_next);
+	LIST_INSERT_HEAD(&semu_free_list, suptr, un_next);
+	return (1);
 }
 
 /*
@@ -420,11 +398,8 @@ semu_alloc(td)
  */
 
 static int
-semundo_adjust(td, supptr, semid, semnum, adjval)
-	struct thread *td;
-	struct sem_undo **supptr;
-	int semid, semnum;
-	int adjval;
+semundo_adjust(struct thread *td, struct sem_undo **supptr, int semid,
+    int semseq, int semnum, int adjval)
 {
 	struct proc *p = td->td_proc;
 	struct sem_undo *suptr;
@@ -437,7 +412,7 @@ semundo_adjust(td, supptr, semid, semnum, adjval)
 
 	suptr = *supptr;
 	if (suptr == NULL) {
-		SLIST_FOREACH(suptr, &semu_list, un_next) {
+		LIST_FOREACH(suptr, &semu_list, un_next) {
 			if (suptr->un_proc == p) {
 				*supptr = suptr;
 				break;
@@ -448,7 +423,7 @@ semundo_adjust(td, supptr, semid, semnum, adjval)
 				return(0);
 			suptr = semu_alloc(td);
 			if (suptr == NULL)
-				return(ENOSPC);
+				return (ENOSPC);
 			*supptr = suptr;
 		}
 	}
@@ -472,58 +447,59 @@ semundo_adjust(td, supptr, semid, semnum, adjval)
 			if (i < suptr->un_cnt)
 				suptr->un_ent[i] =
 				    suptr->un_ent[suptr->un_cnt];
+			if (suptr->un_cnt == 0)
+				semu_try_free(suptr);
 		}
-		return(0);
+		return (0);
 	}
 
 	/* Didn't find the right entry - create it */
 	if (adjval == 0)
-		return(0);
+		return (0);
 	if (adjval > seminfo.semaem || adjval < -seminfo.semaem)
 		return (ERANGE);
 	if (suptr->un_cnt != seminfo.semume) {
 		sunptr = &suptr->un_ent[suptr->un_cnt];
 		suptr->un_cnt++;
 		sunptr->un_adjval = adjval;
-		sunptr->un_id = semid; sunptr->un_num = semnum;
+		sunptr->un_id = semid;
+		sunptr->un_num = semnum;
+		sunptr->un_seq = semseq;
 	} else
-		return(EINVAL);
-	return(0);
+		return (EINVAL);
+	return (0);
 }
 
 static void
-semundo_clear(semid, semnum)
-	int semid, semnum;
+semundo_clear(int semid, int semnum)
 {
-	struct sem_undo *suptr;
+	struct sem_undo *suptr, *suptr1;
+	struct undo *sunptr;
+	int i;
 
 	SEMUNDO_LOCKASSERT(MA_OWNED);
-	SLIST_FOREACH(suptr, &semu_list, un_next) {
-		struct undo *sunptr = &suptr->un_ent[0];
-		int i = 0;
-
-		while (i < suptr->un_cnt) {
-			if (sunptr->un_id == semid) {
-				if (semnum == -1 || sunptr->un_num == semnum) {
-					suptr->un_cnt--;
-					if (i < suptr->un_cnt) {
-						suptr->un_ent[i] =
-						  suptr->un_ent[suptr->un_cnt];
-						continue;
-					}
+	LIST_FOREACH_SAFE(suptr, &semu_list, un_next, suptr1) {
+		sunptr = &suptr->un_ent[0];
+		for (i = 0; i < suptr->un_cnt; i++, sunptr++) {
+			if (sunptr->un_id != semid)
+				continue;
+			if (semnum == -1 || sunptr->un_num == semnum) {
+				suptr->un_cnt--;
+				if (i < suptr->un_cnt) {
+					suptr->un_ent[i] =
+					    suptr->un_ent[suptr->un_cnt];
+					continue;
 				}
-				if (semnum != -1)
-					break;
+				semu_try_free(suptr);
 			}
-			i++, sunptr++;
+			if (semnum != -1)
+				break;
 		}
 	}
 }
 
 static int
-semvalid(semid, semakptr)
-	int semid;
-	struct semid_kernel *semakptr;
+semvalid(int semid, struct semid_kernel *semakptr)
 {
 
 	return ((semakptr->u.sem_perm.mode & SEM_ALLOC) == 0 ||
@@ -542,9 +518,7 @@ struct __semctl_args {
 };
 #endif
 int
-__semctl(td, uap)
-	struct thread *td;
-	struct __semctl_args *uap;
+sys___semctl(struct thread *td, struct __semctl_args *uap)
 {
 	struct semid_ds dsbuf;
 	union semun arg, semun;
@@ -616,7 +590,7 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 
 	DPRINTF(("call to semctl(%d, %d, %d, 0x%p)\n",
 	    semid, semnum, cmd, arg));
-	if (!jail_sysvipc_allowed && jailed(td->td_ucred))
+	if (!prison_allow(td->td_ucred, PR_ALLOW_SYSVIPC))
 		return (ENOSYS);
 
 	array = NULL;
@@ -639,7 +613,7 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 		if ((error = ipcperm(td, &semakptr->u.sem_perm, IPC_R)))
 			goto done2;
 #ifdef MAC
-		error = mac_check_sysv_semctl(cred, semakptr, cmd);
+		error = mac_sysvsem_check_semctl(cred, semakptr, cmd);
 		if (error != 0)
 			goto done2;
 #endif
@@ -655,9 +629,11 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 
 	semakptr = &sema[semidx];
 	sema_mtxp = &sema_mtx[semidx];
+	if (cmd == IPC_RMID)
+		mtx_lock(&sem_mtx);
 	mtx_lock(sema_mtxp);
 #ifdef MAC
-	error = mac_check_sysv_semctl(cred, semakptr, cmd);
+	error = mac_sysvsem_check_semctl(cred, semakptr, cmd);
 	if (error != 0)
 		goto done2;
 #endif
@@ -673,22 +649,32 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 			goto done2;
 		semakptr->u.sem_perm.cuid = cred->cr_uid;
 		semakptr->u.sem_perm.uid = cred->cr_uid;
-		semtot -= semakptr->u.sem_nsems;
+		semakptr->u.sem_perm.mode = 0;
+		racct_sub_cred(semakptr->cred, RACCT_NSEM, semakptr->u.sem_nsems);
+		crfree(semakptr->cred);
+		semakptr->cred = NULL;
+		SEMUNDO_LOCK();
+		semundo_clear(semidx, -1);
+		SEMUNDO_UNLOCK();
+#ifdef MAC
+		mac_sysvsem_cleanup(semakptr);
+#endif
+		wakeup(semakptr);
+		for (i = 0; i < seminfo.semmni; i++) {
+			if ((sema[i].u.sem_perm.mode & SEM_ALLOC) &&
+			    sema[i].u.sem_base > semakptr->u.sem_base)
+				mtx_lock_flags(&sema_mtx[i], LOP_DUPOK);
+		}
 		for (i = semakptr->u.sem_base - sem; i < semtot; i++)
 			sem[i] = sem[i + semakptr->u.sem_nsems];
 		for (i = 0; i < seminfo.semmni; i++) {
 			if ((sema[i].u.sem_perm.mode & SEM_ALLOC) &&
-			    sema[i].u.sem_base > semakptr->u.sem_base)
+			    sema[i].u.sem_base > semakptr->u.sem_base) {
 				sema[i].u.sem_base -= semakptr->u.sem_nsems;
+				mtx_unlock(&sema_mtx[i]);
+			}
 		}
-		semakptr->u.sem_perm.mode = 0;
-#ifdef MAC
-		mac_cleanup_sysv_sem(semakptr);
-#endif
-		SEMUNDO_LOCK();
-		semundo_clear(semidx, -1);
-		SEMUNDO_UNLOCK();
-		wakeup(semakptr);
+		semtot -= semakptr->u.sem_nsems;
 		break;
 
 	case IPC_SET:
@@ -855,6 +841,8 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 
 done2:
 	mtx_unlock(sema_mtxp);
+	if (cmd == IPC_RMID)
+		mtx_unlock(&sem_mtx);
 	if (array != NULL)
 		free(array, M_TEMP);
 	return(error);
@@ -868,9 +856,7 @@ struct semget_args {
 };
 #endif
 int
-semget(td, uap)
-	struct thread *td;
-	struct semget_args *uap;
+sys_semget(struct thread *td, struct semget_args *uap)
 {
 	int semid, error = 0;
 	int key = uap->key;
@@ -879,10 +865,10 @@ semget(td, uap)
 	struct ucred *cred = td->td_ucred;
 
 	DPRINTF(("semget(0x%x, %d, 0%o)\n", key, nsems, semflg));
-	if (!jail_sysvipc_allowed && jailed(td->td_ucred))
+	if (!prison_allow(td->td_ucred, PR_ALLOW_SYSVIPC))
 		return (ENOSYS);
 
-	mtx_lock(&Giant);
+	mtx_lock(&sem_mtx);
 	if (key != IPC_PRIVATE) {
 		for (semid = 0; semid < seminfo.semmni; semid++) {
 			if ((sema[semid].u.sem_perm.mode & SEM_ALLOC) &&
@@ -906,7 +892,7 @@ semget(td, uap)
 				goto done2;
 			}
 #ifdef MAC
-			error = mac_check_sysv_semget(cred, &sema[semid]);
+			error = mac_sysvsem_check_semget(cred, &sema[semid]);
 			if (error != 0)
 				goto done2;
 #endif
@@ -938,13 +924,26 @@ semget(td, uap)
 			error = ENOSPC;
 			goto done2;
 		}
+#ifdef RACCT
+		PROC_LOCK(td->td_proc);
+		error = racct_add(td->td_proc, RACCT_NSEM, nsems);
+		PROC_UNLOCK(td->td_proc);
+		if (error != 0) {
+			error = ENOSPC;
+			goto done2;
+		}
+#endif
 		DPRINTF(("semid %d is available\n", semid));
+		mtx_lock(&sema_mtx[semid]);
+		KASSERT((sema[semid].u.sem_perm.mode & SEM_ALLOC) == 0,
+		    ("Lost semaphore %d", semid));
 		sema[semid].u.sem_perm.key = key;
 		sema[semid].u.sem_perm.cuid = cred->cr_uid;
 		sema[semid].u.sem_perm.uid = cred->cr_uid;
 		sema[semid].u.sem_perm.cgid = cred->cr_gid;
 		sema[semid].u.sem_perm.gid = cred->cr_gid;
 		sema[semid].u.sem_perm.mode = (semflg & 0777) | SEM_ALLOC;
+		sema[semid].cred = crhold(cred);
 		sema[semid].u.sem_perm.seq =
 		    (sema[semid].u.sem_perm.seq + 1) & 0x7fff;
 		sema[semid].u.sem_nsems = nsems;
@@ -955,8 +954,9 @@ semget(td, uap)
 		bzero(sema[semid].u.sem_base,
 		    sizeof(sema[semid].u.sem_base[0])*nsems);
 #ifdef MAC
-		mac_create_sysv_sem(cred, &sema[semid]);
+		mac_sysvsem_create(cred, &sema[semid]);
 #endif
+		mtx_unlock(&sema_mtx[semid]);
 		DPRINTF(("sembase = %p, next = %p\n",
 		    sema[semid].u.sem_base, &sem[semtot]));
 	} else {
@@ -968,7 +968,7 @@ semget(td, uap)
 found:
 	td->td_retval[0] = IXSEQ_TO_IPCID(semid, sema[semid].u.sem_perm);
 done2:
-	mtx_unlock(&Giant);
+	mtx_unlock(&sem_mtx);
 	return (error);
 }
 
@@ -980,9 +980,7 @@ struct semop_args {
 };
 #endif
 int
-semop(td, uap)
-	struct thread *td;
-	struct semop_args *uap;
+sys_semop(struct thread *td, struct semop_args *uap)
 {
 #define SMALL_SOPS	8
 	struct sembuf small_sops[SMALL_SOPS];
@@ -997,13 +995,14 @@ semop(td, uap)
 	size_t i, j, k;
 	int error;
 	int do_wakeup, do_undos;
+	unsigned short seq;
 
 #ifdef SEM_DEBUG
 	sops = NULL;
 #endif
 	DPRINTF(("call to semop(%d, %p, %u)\n", semid, sops, nsops));
 
-	if (!jail_sysvipc_allowed && jailed(td->td_ucred))
+	if (!prison_allow(td->td_ucred, PR_ALLOW_SYSVIPC))
 		return (ENOSYS);
 
 	semid = IPCID_TO_IX(semid);	/* Convert back to zero origin */
@@ -1014,12 +1013,21 @@ semop(td, uap)
 	/* Allocate memory for sem_ops */
 	if (nsops <= SMALL_SOPS)
 		sops = small_sops;
-	else if (nsops <= seminfo.semopm)
-		sops = malloc(nsops * sizeof(*sops), M_TEMP, M_WAITOK);
-	else {
+	else if (nsops > seminfo.semopm) {
 		DPRINTF(("too many sops (max=%d, nsops=%d)\n", seminfo.semopm,
 		    nsops));
 		return (E2BIG);
+	} else {
+#ifdef RACCT
+		PROC_LOCK(td->td_proc);
+		if (nsops > racct_get_available(td->td_proc, RACCT_NSEMOP)) {
+			PROC_UNLOCK(td->td_proc);
+			return (E2BIG);
+		}
+		PROC_UNLOCK(td->td_proc);
+#endif
+
+		sops = malloc(nsops * sizeof(*sops), M_TEMP, M_WAITOK);
 	}
 	if ((error = copyin(uap->sops, sops, nsops * sizeof(sops[0]))) != 0) {
 		DPRINTF(("error = %d from copyin(%p, %p, %d)\n", error,
@@ -1036,7 +1044,8 @@ semop(td, uap)
 		error = EINVAL;
 		goto done2;
 	}
-	if (semakptr->u.sem_perm.seq != IPCID_TO_SEQ(uap->semid)) {
+	seq = semakptr->u.sem_perm.seq;
+	if (seq != IPCID_TO_SEQ(uap->semid)) {
 		error = EINVAL;
 		goto done2;
 	}
@@ -1063,7 +1072,7 @@ semop(td, uap)
 		goto done2;
 	}
 #ifdef MAC
-	error = mac_check_sysv_semop(td->td_ucred, semakptr, j);
+	error = mac_sysvsem_check_semop(td->td_ucred, semakptr, j);
 	if (error != 0)
 		goto done2;
 #endif
@@ -1160,8 +1169,9 @@ semop(td, uap)
 		/*
 		 * Make sure that the semaphore still exists
 		 */
+		seq = semakptr->u.sem_perm.seq;
 		if ((semakptr->u.sem_perm.mode & SEM_ALLOC) == 0 ||
-		    semakptr->u.sem_perm.seq != IPCID_TO_SEQ(uap->semid)) {
+		    seq != IPCID_TO_SEQ(uap->semid)) {
 			error = EIDRM;
 			goto done2;
 		}
@@ -1213,7 +1223,7 @@ done:
 			adjval = sops[i].sem_op;
 			if (adjval == 0)
 				continue;
-			error = semundo_adjust(td, &suptr, semid,
+			error = semundo_adjust(td, &suptr, semid, seq,
 			    sops[i].sem_num, -adjval);
 			if (error == 0)
 				continue;
@@ -1234,7 +1244,7 @@ done:
 				adjval = sops[k].sem_op;
 				if (adjval == 0)
 					continue;
-				if (semundo_adjust(td, &suptr, semid,
+				if (semundo_adjust(td, &suptr, semid, seq,
 				    sops[k].sem_num, adjval) != 0)
 					panic("semop - can't undo undos");
 			}
@@ -1281,28 +1291,28 @@ done2:
  * semaphores.
  */
 static void
-semexit_myhook(arg, p)
-	void *arg;
-	struct proc *p;
+semexit_myhook(void *arg, struct proc *p)
 {
 	struct sem_undo *suptr;
-	struct sem_undo **supptr;
+	struct semid_kernel *semakptr;
+	struct mtx *sema_mtxp;
+	int semid, semnum, adjval, ix;
+	unsigned short seq;
 
 	/*
 	 * Go through the chain of undo vectors looking for one
 	 * associated with this process.
 	 */
 	SEMUNDO_LOCK();
-	SLIST_FOREACH_PREVPTR(suptr, supptr, &semu_list, un_next) {
-		if (suptr->un_proc == p) {
-			*supptr = SLIST_NEXT(suptr, un_next);
+	LIST_FOREACH(suptr, &semu_list, un_next) {
+		if (suptr->un_proc == p)
 			break;
-		}
 	}
-	SEMUNDO_UNLOCK();
-
-	if (suptr == NULL)
+	if (suptr == NULL) {
+		SEMUNDO_UNLOCK();
 		return;
+	}
+	LIST_REMOVE(suptr, un_next);
 
 	DPRINTF(("proc @%p has undo structure with %d entries\n", p,
 	    suptr->un_cnt));
@@ -1311,21 +1321,21 @@ semexit_myhook(arg, p)
 	 * If there are any active undo elements then process them.
 	 */
 	if (suptr->un_cnt > 0) {
-		int ix;
-
+		SEMUNDO_UNLOCK();
 		for (ix = 0; ix < suptr->un_cnt; ix++) {
-			int semid = suptr->un_ent[ix].un_id;
-			int semnum = suptr->un_ent[ix].un_num;
-			int adjval = suptr->un_ent[ix].un_adjval;
-			struct semid_kernel *semakptr;
-			struct mtx *sema_mtxp;
-
+			semid = suptr->un_ent[ix].un_id;
+			semnum = suptr->un_ent[ix].un_num;
+			adjval = suptr->un_ent[ix].un_adjval;
+			seq = suptr->un_ent[ix].un_seq;
 			semakptr = &sema[semid];
 			sema_mtxp = &sema_mtx[semid];
+
 			mtx_lock(sema_mtxp);
-			SEMUNDO_LOCK();
-			if ((semakptr->u.sem_perm.mode & SEM_ALLOC) == 0)
-				panic("semexit - semid not allocated");
+			if ((semakptr->u.sem_perm.mode & SEM_ALLOC) == 0 ||
+			    (semakptr->u.sem_perm.seq != seq)) {
+				mtx_unlock(sema_mtxp);
+				continue;
+			}
 			if (semnum >= semakptr->u.sem_nsems)
 				panic("semexit - semnum out of range");
 
@@ -1336,29 +1346,26 @@ semexit_myhook(arg, p)
 			    suptr->un_ent[ix].un_adjval,
 			    semakptr->u.sem_base[semnum].semval));
 
-			if (adjval < 0) {
-				if (semakptr->u.sem_base[semnum].semval <
-				    -adjval)
-					semakptr->u.sem_base[semnum].semval = 0;
-				else
-					semakptr->u.sem_base[semnum].semval +=
-					    adjval;
-			} else
+			if (adjval < 0 && semakptr->u.sem_base[semnum].semval <
+			    -adjval)
+				semakptr->u.sem_base[semnum].semval = 0;
+			else
 				semakptr->u.sem_base[semnum].semval += adjval;
 
 			wakeup(semakptr);
 			DPRINTF(("semexit:  back from wakeup\n"));
 			mtx_unlock(sema_mtxp);
-			SEMUNDO_UNLOCK();
 		}
+		SEMUNDO_LOCK();
 	}
 
 	/*
 	 * Deallocate the undo vector.
 	 */
 	DPRINTF(("removing vector\n"));
-	SEMUNDO_LOCK();
 	suptr->un_proc = NULL;
+	suptr->un_cnt = 0;
+	LIST_INSERT_HEAD(&semu_free_list, suptr, un_next);
 	SEMUNDO_UNLOCK();
 }
 
@@ -1369,3 +1376,291 @@ sysctl_sema(SYSCTL_HANDLER_ARGS)
 	return (SYSCTL_OUT(req, sema,
 	    sizeof(struct semid_kernel) * seminfo.semmni));
 }
+
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+
+/* XXX casting to (sy_call_t *) is bogus, as usual. */
+static sy_call_t *semcalls[] = {
+	(sy_call_t *)freebsd7___semctl, (sy_call_t *)sys_semget,
+	(sy_call_t *)sys_semop
+};
+
+/*
+ * Entry point for all SEM calls.
+ */
+int
+sys_semsys(td, uap)
+	struct thread *td;
+	/* XXX actually varargs. */
+	struct semsys_args /* {
+		int	which;
+		int	a2;
+		int	a3;
+		int	a4;
+		int	a5;
+	} */ *uap;
+{
+	int error;
+
+	if (!prison_allow(td->td_ucred, PR_ALLOW_SYSVIPC))
+		return (ENOSYS);
+	if (uap->which < 0 ||
+	    uap->which >= sizeof(semcalls)/sizeof(semcalls[0]))
+		return (EINVAL);
+	error = (*semcalls[uap->which])(td, &uap->a2);
+	return (error);
+}
+
+#ifndef CP
+#define CP(src, dst, fld)	do { (dst).fld = (src).fld; } while (0)
+#endif
+
+#ifndef _SYS_SYSPROTO_H_
+struct freebsd7___semctl_args {
+	int	semid;
+	int	semnum;
+	int	cmd;
+	union	semun_old *arg;
+};
+#endif
+int
+freebsd7___semctl(struct thread *td, struct freebsd7___semctl_args *uap)
+{
+	struct semid_ds_old dsold;
+	struct semid_ds dsbuf;
+	union semun_old arg;
+	union semun semun;
+	register_t rval;
+	int error;
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_SET:
+	case IPC_STAT:
+	case GETALL:
+	case SETVAL:
+	case SETALL:
+		error = copyin(uap->arg, &arg, sizeof(arg));
+		if (error)
+			return (error);
+		break;
+	}
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_STAT:
+		semun.buf = &dsbuf;
+		break;
+	case IPC_SET:
+		error = copyin(arg.buf, &dsold, sizeof(dsold));
+		if (error)
+			return (error);
+		ipcperm_old2new(&dsold.sem_perm, &dsbuf.sem_perm);
+		CP(dsold, dsbuf, sem_base);
+		CP(dsold, dsbuf, sem_nsems);
+		CP(dsold, dsbuf, sem_otime);
+		CP(dsold, dsbuf, sem_ctime);
+		semun.buf = &dsbuf;
+		break;
+	case GETALL:
+	case SETALL:
+		semun.array = arg.array;
+		break;
+	case SETVAL:
+		semun.val = arg.val;
+		break;		
+	}
+
+	error = kern_semctl(td, uap->semid, uap->semnum, uap->cmd, &semun,
+	    &rval);
+	if (error)
+		return (error);
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_STAT:
+		bzero(&dsold, sizeof(dsold));
+		ipcperm_new2old(&dsbuf.sem_perm, &dsold.sem_perm);
+		CP(dsbuf, dsold, sem_base);
+		CP(dsbuf, dsold, sem_nsems);
+		CP(dsbuf, dsold, sem_otime);
+		CP(dsbuf, dsold, sem_ctime);
+		error = copyout(&dsold, arg.buf, sizeof(dsold));
+		break;
+	}
+
+	if (error == 0)
+		td->td_retval[0] = rval;
+	return (error);
+}
+
+#endif /* COMPAT_FREEBSD{4,5,6,7} */
+
+#ifdef COMPAT_FREEBSD32
+
+int
+freebsd32_semsys(struct thread *td, struct freebsd32_semsys_args *uap)
+{
+
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+	switch (uap->which) {
+	case 0:
+		return (freebsd7_freebsd32_semctl(td,
+		    (struct freebsd7_freebsd32_semctl_args *)&uap->a2));
+	default:
+		return (sys_semsys(td, (struct semsys_args *)uap));
+	}
+#else
+	return (nosys(td, NULL));
+#endif
+}
+
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+int
+freebsd7_freebsd32_semctl(struct thread *td,
+    struct freebsd7_freebsd32_semctl_args *uap)
+{
+	struct semid_ds32_old dsbuf32;
+	struct semid_ds dsbuf;
+	union semun semun;
+	union semun32 arg;
+	register_t rval;
+	int error;
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_SET:
+	case IPC_STAT:
+	case GETALL:
+	case SETVAL:
+	case SETALL:
+		error = copyin(uap->arg, &arg, sizeof(arg));
+		if (error)
+			return (error);		
+		break;
+	}
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_STAT:
+		semun.buf = &dsbuf;
+		break;
+	case IPC_SET:
+		error = copyin(PTRIN(arg.buf), &dsbuf32, sizeof(dsbuf32));
+		if (error)
+			return (error);
+		freebsd32_ipcperm_old_in(&dsbuf32.sem_perm, &dsbuf.sem_perm);
+		PTRIN_CP(dsbuf32, dsbuf, sem_base);
+		CP(dsbuf32, dsbuf, sem_nsems);
+		CP(dsbuf32, dsbuf, sem_otime);
+		CP(dsbuf32, dsbuf, sem_ctime);
+		semun.buf = &dsbuf;
+		break;
+	case GETALL:
+	case SETALL:
+		semun.array = PTRIN(arg.array);
+		break;
+	case SETVAL:
+		semun.val = arg.val;
+		break;
+	}
+
+	error = kern_semctl(td, uap->semid, uap->semnum, uap->cmd, &semun,
+	    &rval);
+	if (error)
+		return (error);
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_STAT:
+		bzero(&dsbuf32, sizeof(dsbuf32));
+		freebsd32_ipcperm_old_out(&dsbuf.sem_perm, &dsbuf32.sem_perm);
+		PTROUT_CP(dsbuf, dsbuf32, sem_base);
+		CP(dsbuf, dsbuf32, sem_nsems);
+		CP(dsbuf, dsbuf32, sem_otime);
+		CP(dsbuf, dsbuf32, sem_ctime);
+		error = copyout(&dsbuf32, PTRIN(arg.buf), sizeof(dsbuf32));
+		break;
+	}
+
+	if (error == 0)
+		td->td_retval[0] = rval;
+	return (error);
+}
+#endif
+
+int
+freebsd32_semctl(struct thread *td, struct freebsd32_semctl_args *uap)
+{
+	struct semid_ds32 dsbuf32;
+	struct semid_ds dsbuf;
+	union semun semun;
+	union semun32 arg;
+	register_t rval;
+	int error;
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_SET:
+	case IPC_STAT:
+	case GETALL:
+	case SETVAL:
+	case SETALL:
+		error = copyin(uap->arg, &arg, sizeof(arg));
+		if (error)
+			return (error);		
+		break;
+	}
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_STAT:
+		semun.buf = &dsbuf;
+		break;
+	case IPC_SET:
+		error = copyin(PTRIN(arg.buf), &dsbuf32, sizeof(dsbuf32));
+		if (error)
+			return (error);
+		freebsd32_ipcperm_in(&dsbuf32.sem_perm, &dsbuf.sem_perm);
+		PTRIN_CP(dsbuf32, dsbuf, sem_base);
+		CP(dsbuf32, dsbuf, sem_nsems);
+		CP(dsbuf32, dsbuf, sem_otime);
+		CP(dsbuf32, dsbuf, sem_ctime);
+		semun.buf = &dsbuf;
+		break;
+	case GETALL:
+	case SETALL:
+		semun.array = PTRIN(arg.array);
+		break;
+	case SETVAL:
+		semun.val = arg.val;
+		break;		
+	}
+
+	error = kern_semctl(td, uap->semid, uap->semnum, uap->cmd, &semun,
+	    &rval);
+	if (error)
+		return (error);
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_STAT:
+		bzero(&dsbuf32, sizeof(dsbuf32));
+		freebsd32_ipcperm_out(&dsbuf.sem_perm, &dsbuf32.sem_perm);
+		PTROUT_CP(dsbuf, dsbuf32, sem_base);
+		CP(dsbuf, dsbuf32, sem_nsems);
+		CP(dsbuf, dsbuf32, sem_otime);
+		CP(dsbuf, dsbuf32, sem_ctime);
+		error = copyout(&dsbuf32, PTRIN(arg.buf), sizeof(dsbuf32));
+		break;
+	}
+
+	if (error == 0)
+		td->td_retval[0] = rval;
+	return (error);
+}
+
+#endif /* COMPAT_FREEBSD32 */

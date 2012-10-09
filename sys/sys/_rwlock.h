@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_rwlock.h,v 1.4.8.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS__RWLOCK_H_
@@ -39,7 +38,6 @@
 struct rwlock {
 	struct lock_object	lock_object;
 	volatile uintptr_t	rw_lock;
-	volatile unsigned	rw_recurse;
 };
 
 #endif /* !_SYS__RWLOCK_H_ */

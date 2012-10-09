@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@
  *
  *	@(#)nlist.h	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/sys/sys/nlist_aout.h,v 1.11.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_NLIST_AOUT_H_
@@ -52,11 +51,11 @@
 struct nlist {
 #ifdef _AOUT_INCLUDE_
 	union {
-		char *n_name;	/* symbol name (in memory) */
+		const char *n_name; /* symbol name (in memory) */
 		long n_strx;	/* file string table offset (on disk) */
 	} n_un;
 #else
-	char *n_name;		/* symbol name (in memory) */
+	const char *n_name;	/* symbol name (in memory) */
 	int : 8 * (sizeof(long) > sizeof(char *) ?
 	    sizeof(long) - sizeof(char *) : sizeof(char *) - sizeof(long));
 #endif

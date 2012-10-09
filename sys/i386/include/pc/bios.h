@@ -24,8 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/i386/include/pc/bios.h,v 1.2 2011/10/16 05:17:39 laffer1 Exp $
- * $FreeBSD: src/sys/i386/include/pc/bios.h,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PC_BIOS_H_

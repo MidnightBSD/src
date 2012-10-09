@@ -29,11 +29,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/linux32/linux32_machdep.c,v 1.45 2007/07/04 23:06:43 peter Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/file.h>
 #include <sys/fcntl.h>
 #include <sys/clock.h>
@@ -51,6 +52,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/linux32/linux32_machdep.c,v 1.45 2007/07/04 23
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
 #include <sys/unistd.h>
+#include <sys/wait.h>
 
 #include <machine/frame.h>
 #include <machine/pcb.h>
@@ -60,13 +62,13 @@ __FBSDID("$FreeBSD: src/sys/amd64/linux32/linux32_machdep.c,v 1.45 2007/07/04 23
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
-#include <vm/vm_extern.h>
-#include <vm/vm_kern.h>
 #include <vm/vm_map.h>
 
+#include <compat/freebsd32/freebsd32_util.h>
 #include <amd64/linux32/linux.h>
 #include <amd64/linux32/linux32_proto.h>
 #include <compat/linux/linux_ipc.h>
+#include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
 #include <compat/linux/linux_emul.h>
@@ -107,103 +109,28 @@ bsd_to_linux_sigaltstack(int bsa)
 	return (lsa);
 }
 
-/*
- * Custom version of exec_copyin_args() so that we can translate
- * the pointers.
- */
-static int
-linux_exec_copyin_args(struct image_args *args, char *fname,
-    enum uio_seg segflg, char **argv, char **envv)
+static void
+bsd_to_linux_rusage(struct rusage *ru, struct l_rusage *lru)
 {
-	char *argp, *envp;
-	u_int32_t *p32, arg;
-	size_t length;
-	int error;
 
-	bzero(args, sizeof(*args));
-	if (argv == NULL)
-		return (EFAULT);
-
-	/*
-	 * Allocate temporary demand zeroed space for argument and
-	 *	environment strings
-	 */
-	args->buf = (char *)kmem_alloc_wait(exec_map,
-	    PATH_MAX + ARG_MAX + MAXSHELLCMDLEN);
-	if (args->buf == NULL)
-		return (ENOMEM);
-	args->begin_argv = args->buf;
-	args->endp = args->begin_argv;
-	args->stringspace = ARG_MAX;
-
-	args->fname = args->buf + ARG_MAX;
-
-	/*
-	 * Copy the file name.
-	 */
-	error = (segflg == UIO_SYSSPACE) ?
-	    copystr(fname, args->fname, PATH_MAX, &length) :
-	    copyinstr(fname, args->fname, PATH_MAX, &length);
-	if (error != 0)
-		goto err_exit;
-
-	/*
-	 * extract arguments first
-	 */
-	p32 = (u_int32_t *)argv;
-	for (;;) {
-		error = copyin(p32++, &arg, sizeof(arg));
-		if (error)
-			goto err_exit;
-		if (arg == 0)
-			break;
-		argp = PTRIN(arg);
-		error = copyinstr(argp, args->endp, args->stringspace, &length);
-		if (error) {
-			if (error == ENAMETOOLONG)
-				error = E2BIG;
-
-			goto err_exit;
-		}
-		args->stringspace -= length;
-		args->endp += length;
-		args->argc++;
-	}
-
-	args->begin_envv = args->endp;
-
-	/*
-	 * extract environment strings
-	 */
-	if (envv) {
-		p32 = (u_int32_t *)envv;
-		for (;;) {
-			error = copyin(p32++, &arg, sizeof(arg));
-			if (error)
-				goto err_exit;
-			if (arg == 0)
-				break;
-			envp = PTRIN(arg);
-			error = copyinstr(envp, args->endp, args->stringspace,
-			    &length);
-			if (error) {
-				if (error == ENAMETOOLONG)
-					error = E2BIG;
-				goto err_exit;
-			}
-			args->stringspace -= length;
-			args->endp += length;
-			args->envc++;
-		}
-	}
-
-	return (0);
-
-err_exit:
-	kmem_free_wakeup(exec_map, (vm_offset_t)args->buf,
-	    PATH_MAX + ARG_MAX + MAXSHELLCMDLEN);
-	args->buf = NULL;
-	return (error);
+	lru->ru_utime.tv_sec = ru->ru_utime.tv_sec;
+	lru->ru_utime.tv_usec = ru->ru_utime.tv_usec;
+	lru->ru_stime.tv_sec = ru->ru_stime.tv_sec;
+	lru->ru_stime.tv_usec = ru->ru_stime.tv_usec;
+	lru->ru_maxrss = ru->ru_maxrss;
+	lru->ru_ixrss = ru->ru_ixrss;
+	lru->ru_idrss = ru->ru_idrss;
+	lru->ru_isrss = ru->ru_isrss;
+	lru->ru_minflt = ru->ru_minflt;
+	lru->ru_majflt = ru->ru_majflt;
+	lru->ru_nswap = ru->ru_nswap;
+	lru->ru_inblock = ru->ru_inblock;
+	lru->ru_oublock = ru->ru_oublock;
+	lru->ru_msgsnd = ru->ru_msgsnd;
+	lru->ru_msgrcv = ru->ru_msgrcv;
+	lru->ru_nsignals = ru->ru_nsignals;
+	lru->ru_nvcsw = ru->ru_nvcsw;
+	lru->ru_nivcsw = ru->ru_nivcsw;
 }
 
 int
@@ -220,8 +147,8 @@ linux_execve(struct thread *td, struct linux_execve_args *args)
 		printf(ARGS(execve, "%s"), path);
 #endif
 
-	error = linux_exec_copyin_args(&eargs, path, UIO_SYSSPACE, args->argp,
-	    args->envp);
+	error = freebsd32_exec_copyin_args(&eargs, path, UIO_SYSSPACE,
+	    args->argp, args->envp);
 	free(path, M_TEMP);
 	if (error == 0)
 		error = kern_execve(td, &eargs, NULL);
@@ -231,25 +158,20 @@ linux_execve(struct thread *td, struct linux_execve_args *args)
 		 * linux_proc_init, this leads to a panic on KASSERT
 		 * because such process has p->p_emuldata == NULL.
 		 */
-	   	if (td->td_proc->p_sysent == &elf_linux_sysvec)
+		if (SV_PROC_ABI(td->td_proc) == SV_ABI_LINUX)
 			error = linux_proc_init(td, 0, 0);
 	return (error);
 }
 
-struct iovec32 {
-	u_int32_t iov_base;
-	int	iov_len;
-};
-
-CTASSERT(sizeof(struct iovec32) == 8);
+CTASSERT(sizeof(struct l_iovec32) == 8);
 
 static int
-linux32_copyinuio(struct iovec32 *iovp, u_int iovcnt, struct uio **uiop)
+linux32_copyinuio(struct l_iovec32 *iovp, l_ulong iovcnt, struct uio **uiop)
 {
-	struct iovec32 iov32;
+	struct l_iovec32 iov32;
 	struct iovec *iov;
 	struct uio *uio;
-	u_int iovlen;
+	uint32_t iovlen;
 	int error, i;
 
 	*uiop = NULL;
@@ -259,7 +181,7 @@ linux32_copyinuio(struct iovec32 *iovp, u_int iovcnt, struct uio **uiop)
 	uio = malloc(iovlen + sizeof(*uio), M_IOV, M_WAITOK);
 	iov = (struct iovec *)(uio + 1);
 	for (i = 0; i < iovcnt; i++) {
-		error = copyin(&iovp[i], &iov32, sizeof(struct iovec32));
+		error = copyin(&iovp[i], &iov32, sizeof(struct l_iovec32));
 		if (error) {
 			free(uio, M_IOV);
 			return (error);
@@ -282,6 +204,34 @@ linux32_copyinuio(struct iovec32 *iovp, u_int iovcnt, struct uio **uiop)
 	}
 	*uiop = uio;
 	return (0);
+}
+
+int
+linux32_copyiniov(struct l_iovec32 *iovp32, l_ulong iovcnt, struct iovec **iovp,
+    int error)
+{
+	struct l_iovec32 iov32;
+	struct iovec *iov;
+	uint32_t iovlen;
+	int i;
+
+	*iovp = NULL;
+	if (iovcnt > UIO_MAXIOV)
+		return (error);
+	iovlen = iovcnt * sizeof(struct iovec);
+	iov = malloc(iovlen, M_IOV, M_WAITOK);
+	for (i = 0; i < iovcnt; i++) {
+		error = copyin(&iovp32[i], &iov32, sizeof(struct l_iovec32));
+		if (error) {
+			free(iov, M_IOV);
+			return (error);
+		}
+		iov[i].iov_base = PTRIN(iov32.iov_base);
+		iov[i].iov_len = iov32.iov_len;
+	}
+	*iovp = iov;
+	return(0);
+
 }
 
 int
@@ -460,280 +410,54 @@ linux_old_select(struct thread *td, struct linux_old_select_args *args)
 }
 
 int
-linux_fork(struct thread *td, struct linux_fork_args *args)
+linux_set_cloned_tls(struct thread *td, void *desc)
 {
+	struct user_segment_descriptor sd;
+	struct l_user_desc info;
+	struct pcb *pcb;
 	int error;
-	struct proc *p2;
-	struct thread *td2;
+	int a[2];
 
-#ifdef DEBUG
-	if (ldebug(fork))
-		printf(ARGS(fork, ""));
-#endif
-
-	if ((error = fork1(td, RFFDG | RFPROC | RFSTOPPED, 0, &p2)) != 0)
-		return (error);
-
-	if (error == 0) {
-		td->td_retval[0] = p2->p_pid;
-		td->td_retval[1] = 0;
-	}
-
-	if (td->td_retval[1] == 1)
-		td->td_retval[0] = 0;
-	error = linux_proc_init(td, td->td_retval[0], 0);
-	if (error)
-		return (error);
-
-	td2 = FIRST_THREAD_IN_PROC(p2);
-
-	/*
-	 * Make this runnable after we are finished with it.
-	 */
-	thread_lock(td2);
-	TD_SET_CAN_RUN(td2);
-	sched_add(td2, SRQ_BORING);
-	thread_unlock(td2);
-
-	return (0);
-}
-
-int
-linux_vfork(struct thread *td, struct linux_vfork_args *args)
-{
-	int error;
-	struct proc *p2;
-	struct thread *td2;
-
-#ifdef DEBUG
-	if (ldebug(vfork))
-		printf(ARGS(vfork, ""));
-#endif
-
-	/* Exclude RFPPWAIT */
-	if ((error = fork1(td, RFFDG | RFPROC | RFMEM | RFSTOPPED, 0, &p2)) != 0)
-		return (error);
-	if (error == 0) {
-	   	td->td_retval[0] = p2->p_pid;
-		td->td_retval[1] = 0;
-	}
-	/* Are we the child? */
-	if (td->td_retval[1] == 1)
-		td->td_retval[0] = 0;
-	error = linux_proc_init(td, td->td_retval[0], 0);
-	if (error)
-		return (error);
-
-	PROC_LOCK(p2);
-	p2->p_flag |= P_PPWAIT;
-	PROC_UNLOCK(p2);
-
-	td2 = FIRST_THREAD_IN_PROC(p2);
-
-	/*
-	 * Make this runnable after we are finished with it.
-	 */
-	thread_lock(td2);
-	TD_SET_CAN_RUN(td2);
-	sched_add(td2, SRQ_BORING);
-	thread_unlock(td2);
-
-	/* wait for the children to exit, ie. emulate vfork */
-	PROC_LOCK(p2);
-	while (p2->p_flag & P_PPWAIT)
-	   	msleep(td->td_proc, &p2->p_mtx, PWAIT, "ppwait", 0);
-	PROC_UNLOCK(p2);
-
-	return (0);
-}
-
-int
-linux_clone(struct thread *td, struct linux_clone_args *args)
-{
-	int error, ff = RFPROC | RFSTOPPED;
-	struct proc *p2;
-	struct thread *td2;
-	int exit_signal;
-	struct linux_emuldata *em;
-
-#ifdef DEBUG
-	if (ldebug(clone)) {
-		printf(ARGS(clone, "flags %x, stack %p, parent tid: %p, "
-		    "child tid: %p"), (unsigned)args->flags,
-		    args->stack, args->parent_tidptr, args->child_tidptr);
-	}
-#endif
-
-	exit_signal = args->flags & 0x000000ff;
-	if (LINUX_SIG_VALID(exit_signal)) {
-		if (exit_signal <= LINUX_SIGTBLSZ)
-			exit_signal =
-			    linux_to_bsd_signal[_SIG_IDX(exit_signal)];
-	} else if (exit_signal != 0)
-		return (EINVAL);
-
-	if (args->flags & LINUX_CLONE_VM)
-		ff |= RFMEM;
-	if (args->flags & LINUX_CLONE_SIGHAND)
-		ff |= RFSIGSHARE;
-	/*
-	 * XXX: In Linux, sharing of fs info (chroot/cwd/umask)
-	 * and open files is independant.  In FreeBSD, its in one
-	 * structure but in reality it does not cause any problems
-	 * because both of these flags are usually set together.
-	 */
-	if (!(args->flags & (LINUX_CLONE_FILES | LINUX_CLONE_FS)))
-		ff |= RFFDG;
-
-	/*
-	 * Attempt to detect when linux_clone(2) is used for creating
-	 * kernel threads. Unfortunately despite the existence of the
-	 * CLONE_THREAD flag, version of linuxthreads package used in
-	 * most popular distros as of beginning of 2005 doesn't make
-	 * any use of it. Therefore, this detection relies on
-	 * empirical observation that linuxthreads sets certain
-	 * combination of flags, so that we can make more or less
-	 * precise detection and notify the FreeBSD kernel that several
-	 * processes are in fact part of the same threading group, so
-	 * that special treatment is necessary for signal delivery
-	 * between those processes and fd locking.
-	 */
-	if ((args->flags & 0xffffff00) == LINUX_THREADING_FLAGS)
-		ff |= RFTHREAD;
-
-	if (args->flags & LINUX_CLONE_PARENT_SETTID)
-		if (args->parent_tidptr == NULL)
-			return (EINVAL);
-
-	error = fork1(td, ff, 0, &p2);
-	if (error)
-		return (error);
-
-	if (args->flags & (LINUX_CLONE_PARENT | LINUX_CLONE_THREAD)) {
-	   	sx_xlock(&proctree_lock);
-		PROC_LOCK(p2);
-		proc_reparent(p2, td->td_proc->p_pptr);
-		PROC_UNLOCK(p2);
-		sx_xunlock(&proctree_lock);
-	}
-
-	/* create the emuldata */
-	error = linux_proc_init(td, p2->p_pid, args->flags);
-	/* reference it - no need to check this */
-	em = em_find(p2, EMUL_DOLOCK);
-	KASSERT(em != NULL, ("clone: emuldata not found.\n"));
-	/* and adjust it */
-
-	if (args->flags & LINUX_CLONE_THREAD) {
-#ifdef notyet
-	   	PROC_LOCK(p2);
-	   	p2->p_pgrp = td->td_proc->p_pgrp;
-	   	PROC_UNLOCK(p2);
-#endif
-		exit_signal = 0;
-	}
-
-	if (args->flags & LINUX_CLONE_CHILD_SETTID)
-		em->child_set_tid = args->child_tidptr;
-	else
-	   	em->child_set_tid = NULL;
-
-	if (args->flags & LINUX_CLONE_CHILD_CLEARTID)
-		em->child_clear_tid = args->child_tidptr;
-	else
-	   	em->child_clear_tid = NULL;
-
-	EMUL_UNLOCK(&emul_lock);
-
-	if (args->flags & LINUX_CLONE_PARENT_SETTID) {
-		error = copyout(&p2->p_pid, args->parent_tidptr,
-		    sizeof(p2->p_pid));
+	error = copyin(desc, &info, sizeof(struct l_user_desc));
+	if (error) {
+		printf(LMSG("copyin failed!"));
+	} else {
+		/* We might copy out the entry_number as GUGS32_SEL. */
+		info.entry_number = GUGS32_SEL;
+		error = copyout(&info, desc, sizeof(struct l_user_desc));
 		if (error)
 			printf(LMSG("copyout failed!"));
-	}
 
-	PROC_LOCK(p2);
-	p2->p_sigparent = exit_signal;
-	PROC_UNLOCK(p2);
-	td2 = FIRST_THREAD_IN_PROC(p2);
-	/*
-	 * In a case of stack = NULL, we are supposed to COW calling process
-	 * stack. This is what normal fork() does, so we just keep tf_rsp arg
-	 * intact.
-	 */
-	if (args->stack)
-		td2->td_frame->tf_rsp = PTROUT(args->stack);
+		a[0] = LINUX_LDT_entry_a(&info);
+		a[1] = LINUX_LDT_entry_b(&info);
 
-	if (args->flags & LINUX_CLONE_SETTLS) {
-		struct user_segment_descriptor sd;
-		struct l_user_desc info;
-		int a[2];
-
-		error = copyin((void *)td->td_frame->tf_rsi, &info,
-		    sizeof(struct l_user_desc));
-		if (error) {
-			printf(LMSG("copyin failed!"));
-		} else {
-			/* We might copy out the entry_number as GUGS32_SEL. */
-			info.entry_number = GUGS32_SEL;
-			error = copyout(&info, (void *)td->td_frame->tf_rsi,
-			    sizeof(struct l_user_desc));
-			if (error)
-				printf(LMSG("copyout failed!"));
-
-			a[0] = LINUX_LDT_entry_a(&info);
-			a[1] = LINUX_LDT_entry_b(&info);
-
-			memcpy(&sd, &a, sizeof(a));
+		memcpy(&sd, &a, sizeof(a));
 #ifdef DEBUG
-			if (ldebug(clone))
-				printf("Segment created in clone with "
-				    "CLONE_SETTLS: lobase: %x, hibase: %x, "
-				    "lolimit: %x, hilimit: %x, type: %i, "
-				    "dpl: %i, p: %i, xx: %i, long: %i, "
-				    "def32: %i, gran: %i\n", sd.sd_lobase,
-				    sd.sd_hibase, sd.sd_lolimit, sd.sd_hilimit,
-				    sd.sd_type, sd.sd_dpl, sd.sd_p, sd.sd_xx,
-				    sd.sd_long, sd.sd_def32, sd.sd_gran);
+		if (ldebug(clone))
+			printf("Segment created in clone with "
+			    "CLONE_SETTLS: lobase: %x, hibase: %x, "
+			    "lolimit: %x, hilimit: %x, type: %i, "
+			    "dpl: %i, p: %i, xx: %i, long: %i, "
+			    "def32: %i, gran: %i\n", sd.sd_lobase,
+			    sd.sd_hibase, sd.sd_lolimit, sd.sd_hilimit,
+			    sd.sd_type, sd.sd_dpl, sd.sd_p, sd.sd_xx,
+			    sd.sd_long, sd.sd_def32, sd.sd_gran);
 #endif
-			td2->td_pcb->pcb_gsbase = (register_t)info.base_addr;
-			td2->td_pcb->pcb_gs32sd = sd;
-			td2->td_pcb->pcb_gs32p = &gdt[GUGS32_SEL];
-			td2->td_pcb->pcb_gs = GSEL(GUGS32_SEL, SEL_UPL);
-			td2->td_pcb->pcb_flags |= PCB_GS32BIT | PCB_32BIT;
-		}
+		pcb = td->td_pcb;
+		pcb->pcb_gsbase = (register_t)info.base_addr;
+/* XXXKIB	pcb->pcb_gs32sd = sd; */
+		td->td_frame->tf_gs = GSEL(GUGS32_SEL, SEL_UPL);
+		set_pcb_flags(pcb, PCB_GS32BIT | PCB_32BIT);
 	}
 
-#ifdef DEBUG
-	if (ldebug(clone))
-		printf(LMSG("clone: successful rfork to %d, "
-		    "stack %p sig = %d"), (int)p2->p_pid, args->stack,
-		    exit_signal);
-#endif
-	if (args->flags & LINUX_CLONE_VFORK) {
-	   	PROC_LOCK(p2);
-	   	p2->p_flag |= P_PPWAIT;
-	   	PROC_UNLOCK(p2);
-	}
+	return (error);
+}
 
-	/*
-	 * Make this runnable after we are finished with it.
-	 */
-	thread_lock(td2);
-	TD_SET_CAN_RUN(td2);
-	sched_add(td2, SRQ_BORING);
-	thread_unlock(td2);
+int
+linux_set_upcall_kse(struct thread *td, register_t stack)
+{
 
-	td->td_retval[0] = p2->p_pid;
-	td->td_retval[1] = 0;
-
-	if (args->flags & LINUX_CLONE_VFORK) {
-		/* wait for the children to exit, ie. emulate vfork */
-		PROC_LOCK(p2);
-		while (p2->p_flag & P_PPWAIT)
-			msleep(td->td_proc, &p2->p_mtx, PWAIT, "ppwait", 0);
-		PROC_UNLOCK(p2);
-	}
+	td->td_frame->tf_rsp = stack;
 
 	return (0);
 }
@@ -804,8 +528,7 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 	 * Linux mmap(2):
 	 * You must specify exactly one of MAP_SHARED and MAP_PRIVATE
 	 */
-	if (! (flags & LINUX_MAP_SHARED) ^
-	    (flags & LINUX_MAP_PRIVATE))
+	if (!((flags & LINUX_MAP_SHARED) ^ (flags & LINUX_MAP_PRIVATE)))
 		return (EINVAL);
 
 	if (flags & LINUX_MAP_SHARED)
@@ -844,7 +567,7 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 		 * protection options specified.
 		 */
 
-		if ((error = fget(td, bsd_args.fd, &fp)) != 0)
+		if ((error = fget(td, bsd_args.fd, CAP_MMAP, &fp)) != 0)
 			return (error);
 		if (fp->f_type != DTYPE_VNODE) {
 			fdrop(fp, td);
@@ -906,14 +629,21 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 			PROC_UNLOCK(p);
 		}
 
-		/* This gives us our maximum stack size */
+		/*
+		 * This gives us our maximum stack size and a new BOS.
+		 * If we're using VM_STACK, then mmap will just map
+		 * the top SGROWSIZ bytes, and let the stack grow down
+		 * to the limit at BOS.  If we're not using VM_STACK
+		 * we map the full stack, since we don't have a way
+		 * to autogrow it.
+		 */
 		if (len > STACK_SIZE - GUARD_SIZE) {
 			bsd_args.addr = (caddr_t)PTRIN(addr);
 			bsd_args.len = len;
 		} else {
 			bsd_args.addr = (caddr_t)PTRIN(addr) -
-				(STACK_SIZE - GUARD_SIZE - len);
-			bsd_args.len  = STACK_SIZE - GUARD_SIZE;
+			    (STACK_SIZE - GUARD_SIZE - len);
+			bsd_args.len = STACK_SIZE - GUARD_SIZE;
 		}
 	} else {
 		bsd_args.addr = (caddr_t)PTRIN(addr);
@@ -928,7 +658,7 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 		    (void *)bsd_args.addr, (int)bsd_args.len, bsd_args.prot,
 		    bsd_args.flags, bsd_args.fd, (int)bsd_args.pos);
 #endif
-	error = mmap(td, &bsd_args);
+	error = sys_mmap(td, &bsd_args);
 #ifdef DEBUG
 	if (ldebug(mmap))
 		printf("-> %s() return: 0x%x (0x%08x)\n",
@@ -947,7 +677,7 @@ linux_mprotect(struct thread *td, struct linux_mprotect_args *uap)
 	bsd_args.prot = uap->prot;
 	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))
 		bsd_args.prot |= PROT_READ | PROT_EXEC;
-	return (mprotect(td, &bsd_args));
+	return (sys_mprotect(td, &bsd_args));
 }
 
 int
@@ -970,33 +700,20 @@ linux_iopl(struct thread *td, struct linux_iopl_args *args)
 int
 linux_pipe(struct thread *td, struct linux_pipe_args *args)
 {
-	int pip[2];
 	int error;
-	register_t reg_rdx;
+	int fildes[2];
 
 #ifdef DEBUG
 	if (ldebug(pipe))
 		printf(ARGS(pipe, "*"));
 #endif
 
-	reg_rdx = td->td_retval[1];
-	error = pipe(td, 0);
-	if (error) {
-		td->td_retval[1] = reg_rdx;
+	error = kern_pipe(td, fildes);
+	if (error)
 		return (error);
-	}
 
-	pip[0] = td->td_retval[0];
-	pip[1] = td->td_retval[1];
-	error = copyout(pip, args->pipefds, 2 * sizeof(int));
-	if (error) {
-		td->td_retval[1] = reg_rdx;
-		return (error);
-	}
-
-	td->td_retval[1] = reg_rdx;
-	td->td_retval[0] = 0;
-	return (0);
+	/* XXX: Close descriptors on error. */
+	return (copyout(fildes, args->pipefds, sizeof fildes));
 }
 
 int
@@ -1146,7 +863,7 @@ linux_ftruncate64(struct thread *td, struct linux_ftruncate64_args *args)
 
 	sa.fd = args->fd;
 	sa.length = args->length;
-	return ftruncate(td, &sa);
+	return sys_ftruncate(td, &sa);
 }
 
 int
@@ -1209,24 +926,7 @@ linux_getrusage(struct thread *td, struct linux_getrusage_args *uap)
 	if (error != 0)
 		return (error);
 	if (uap->rusage != NULL) {
-		s32.ru_utime.tv_sec = s.ru_utime.tv_sec;
-		s32.ru_utime.tv_usec = s.ru_utime.tv_usec;
-		s32.ru_stime.tv_sec = s.ru_stime.tv_sec;
-		s32.ru_stime.tv_usec = s.ru_stime.tv_usec;
-		s32.ru_maxrss = s.ru_maxrss;
-		s32.ru_ixrss = s.ru_ixrss;
-		s32.ru_idrss = s.ru_idrss;
-		s32.ru_isrss = s.ru_isrss;
-		s32.ru_minflt = s.ru_minflt;
-		s32.ru_majflt = s.ru_majflt;
-		s32.ru_nswap = s.ru_nswap;
-		s32.ru_inblock = s.ru_inblock;
-		s32.ru_oublock = s.ru_oublock;
-		s32.ru_msgsnd = s.ru_msgsnd;
-		s32.ru_msgrcv = s.ru_msgrcv;
-		s32.ru_nsignals = s.ru_nsignals;
-		s32.ru_nvcsw = s.ru_nvcsw;
-		s32.ru_nivcsw = s.ru_nivcsw;
+		bsd_to_linux_rusage(&s, &s32);
 		error = copyout(&s32, uap->rusage, sizeof(s32));
 	}
 	return (error);
@@ -1254,6 +954,7 @@ linux_set_thread_area(struct thread *td,
 {
 	struct l_user_desc info;
 	struct user_segment_descriptor sd;
+	struct pcb *pcb;
 	int a[2];
 	int error;
 
@@ -1342,13 +1043,44 @@ linux_set_thread_area(struct thread *td,
 		    sd.sd_gran);
 #endif
 
-	critical_enter();
-	td->td_pcb->pcb_gsbase = (register_t)info.base_addr;
-	td->td_pcb->pcb_gs32sd = gdt[GUGS32_SEL] = sd;
-	td->td_pcb->pcb_gs32p = &gdt[GUGS32_SEL];
-	td->td_pcb->pcb_flags |= PCB_32BIT;
-	wrmsr(MSR_KGSBASE, td->td_pcb->pcb_gsbase);
-	critical_exit();
+	pcb = td->td_pcb;
+	pcb->pcb_gsbase = (register_t)info.base_addr;
+	set_pcb_flags(pcb, PCB_32BIT | PCB_GS32BIT);
+	update_gdt_gsbase(td, info.base_addr);
 
 	return (0);
+}
+
+int
+linux_wait4(struct thread *td, struct linux_wait4_args *args)
+{
+	int error, options;
+	struct rusage ru, *rup;
+	struct l_rusage lru;
+
+#ifdef DEBUG
+	if (ldebug(wait4))
+		printf(ARGS(wait4, "%d, %p, %d, %p"),
+		    args->pid, (void *)args->status, args->options,
+		    (void *)args->rusage);
+#endif
+
+	options = (args->options & (WNOHANG | WUNTRACED));
+	/* WLINUXCLONE should be equal to __WCLONE, but we make sure */
+	if (args->options & __WCLONE)
+		options |= WLINUXCLONE;
+
+	if (args->rusage != NULL)
+		rup = &ru;
+	else
+		rup = NULL;
+	error = linux_common_wait(td, args->pid, args->status, options, rup);
+	if (error)
+		return (error);
+	if (args->rusage != NULL) {
+		bsd_to_linux_rusage(rup, &lru);
+		error = copyout(&lru, args->rusage, sizeof(lru));
+	}
+
+	return (error);
 }

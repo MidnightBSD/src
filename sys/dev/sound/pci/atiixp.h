@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/atiixp.h,v 1.3.2.2 2008/07/22 19:52:23 delphij Exp $
+ * $FreeBSD$
  */
 
 #ifndef _ATIIXP_H_

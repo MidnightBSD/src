@@ -26,10 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/rpc/clnt_rc.c,v 1.2.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -46,11 +47,12 @@ __FBSDID("$FreeBSD: src/sys/rpc/clnt_rc.c,v 1.2.2.4.2.1 2008/11/25 02:59:29 kens
 #include <rpc/rpc_com.h>
 
 static enum clnt_stat clnt_reconnect_call(CLIENT *, struct rpc_callextra *,
-    rpcproc_t, xdrproc_t, void *, xdrproc_t, void *, struct timeval);
+    rpcproc_t, struct mbuf *, struct mbuf **, struct timeval);
 static void clnt_reconnect_geterr(CLIENT *, struct rpc_err *);
 static bool_t clnt_reconnect_freeres(CLIENT *, xdrproc_t, void *);
 static void clnt_reconnect_abort(CLIENT *);
 static bool_t clnt_reconnect_control(CLIENT *, u_int, void *);
+static void clnt_reconnect_close(CLIENT *);
 static void clnt_reconnect_destroy(CLIENT *);
 
 static struct clnt_ops clnt_reconnect_ops = {
@@ -58,9 +60,12 @@ static struct clnt_ops clnt_reconnect_ops = {
 	.cl_abort =	clnt_reconnect_abort,
 	.cl_geterr =	clnt_reconnect_geterr,
 	.cl_freeres =	clnt_reconnect_freeres,
+	.cl_close =	clnt_reconnect_close,
 	.cl_destroy =	clnt_reconnect_destroy,
 	.cl_control =	clnt_reconnect_control
 };
+
+static int	fake_wchan;
 
 struct rc_data {
 	struct mtx		rc_lock;
@@ -73,10 +78,14 @@ struct rc_data {
 	struct timeval		rc_timeout;
 	struct timeval		rc_retry;
 	int			rc_retries;
-	const char		*rc_waitchan;
+	int			rc_privport;
+	char			*rc_waitchan;
 	int			rc_intr;
 	int			rc_connecting;
+	int			rc_closed;
+	struct ucred		*rc_ucred;
 	CLIENT*			rc_client; /* underlying RPC client */
+	struct rpc_err		rc_err;
 };
 
 CLIENT *
@@ -110,9 +119,12 @@ clnt_reconnect_create(
 	rc->rc_retry.tv_sec = 3;
 	rc->rc_retry.tv_usec = 0;
 	rc->rc_retries = INT_MAX;
+	rc->rc_privport = FALSE;
 	rc->rc_waitchan = "rpcrecv";
 	rc->rc_intr = 0;
 	rc->rc_connecting = FALSE;
+	rc->rc_closed = FALSE;
+	rc->rc_ucred = crdup(curthread->td_ucred);
 	rc->rc_client = NULL;
 
 	cl->cl_refs = 1;
@@ -127,70 +139,101 @@ clnt_reconnect_create(
 static enum clnt_stat
 clnt_reconnect_connect(CLIENT *cl)
 {
+	struct thread *td = curthread;
 	struct rc_data *rc = (struct rc_data *)cl->cl_private;
 	struct socket *so;
 	enum clnt_stat stat;
 	int error;
 	int one = 1;
+	struct ucred *oldcred;
+	CLIENT *newclient = NULL;
 
 	mtx_lock(&rc->rc_lock);
-again:
-	if (rc->rc_connecting) {
-		while (!rc->rc_client) {
-			error = msleep(rc, &rc->rc_lock,
-			    rc->rc_intr ? PCATCH : 0, "rpcrecon", 0);
-			if (error) {
-				mtx_unlock(&rc->rc_lock);
-				return (RPC_INTR);
-			}
+	while (rc->rc_connecting) {
+		error = msleep(rc, &rc->rc_lock,
+		    rc->rc_intr ? PCATCH : 0, "rpcrecon", 0);
+		if (error) {
+			mtx_unlock(&rc->rc_lock);
+			return (RPC_INTR);
 		}
-		/*
-		 * If the other guy failed to connect, we might as
-		 * well have another go.
-		 */
-		if (!rc->rc_client && !rc->rc_connecting)
-			goto again;
+	}
+	if (rc->rc_closed) {
+		mtx_unlock(&rc->rc_lock);
+		return (RPC_CANTSEND);
+	}
+	if (rc->rc_client) {
 		mtx_unlock(&rc->rc_lock);
 		return (RPC_SUCCESS);
-	} else {
-		rc->rc_connecting = TRUE;
 	}
+
+	/*
+	 * My turn to attempt a connect. The rc_connecting variable
+	 * serializes the following code sequence, so it is guaranteed
+	 * that rc_client will still be NULL after it is re-locked below,
+	 * since that is the only place it is set non-NULL.
+	 */
+	rc->rc_connecting = TRUE;
 	mtx_unlock(&rc->rc_lock);
 
+	oldcred = td->td_ucred;
+	td->td_ucred = rc->rc_ucred;
 	so = __rpc_nconf2socket(rc->rc_nconf);
 	if (!so) {
 		stat = rpc_createerr.cf_stat = RPC_TLIERROR;
 		rpc_createerr.cf_error.re_errno = 0;
+		td->td_ucred = oldcred;
 		goto out;
 	}
 
+	if (rc->rc_privport)
+		bindresvport(so, NULL);
+
 	if (rc->rc_nconf->nc_semantics == NC_TPI_CLTS)
-		rc->rc_client = clnt_dg_create(so,
+		newclient = clnt_dg_create(so,
 		    (struct sockaddr *) &rc->rc_addr, rc->rc_prog, rc->rc_vers,
 		    rc->rc_sendsz, rc->rc_recvsz);
 	else
-		rc->rc_client = clnt_vc_create(so,
+		newclient = clnt_vc_create(so,
 		    (struct sockaddr *) &rc->rc_addr, rc->rc_prog, rc->rc_vers,
-		    rc->rc_sendsz, rc->rc_recvsz);
+		    rc->rc_sendsz, rc->rc_recvsz, rc->rc_intr);
+	td->td_ucred = oldcred;
 
-	if (!rc->rc_client) {
+	if (!newclient) {
+		soclose(so);
+		rc->rc_err = rpc_createerr.cf_error;
 		stat = rpc_createerr.cf_stat;
 		goto out;
 	}
 
-	CLNT_CONTROL(rc->rc_client, CLSET_FD_CLOSE, 0);
-	CLNT_CONTROL(rc->rc_client, CLSET_CONNECT, &one);
-	CLNT_CONTROL(rc->rc_client, CLSET_TIMEOUT, &rc->rc_timeout);
-	CLNT_CONTROL(rc->rc_client, CLSET_RETRY_TIMEOUT, &rc->rc_retry);
-	CLNT_CONTROL(rc->rc_client, CLSET_WAITCHAN, &rc->rc_waitchan);
-	CLNT_CONTROL(rc->rc_client, CLSET_INTERRUPTIBLE, &rc->rc_intr);
+	CLNT_CONTROL(newclient, CLSET_FD_CLOSE, 0);
+	CLNT_CONTROL(newclient, CLSET_CONNECT, &one);
+	CLNT_CONTROL(newclient, CLSET_TIMEOUT, &rc->rc_timeout);
+	CLNT_CONTROL(newclient, CLSET_RETRY_TIMEOUT, &rc->rc_retry);
+	CLNT_CONTROL(newclient, CLSET_WAITCHAN, rc->rc_waitchan);
+	CLNT_CONTROL(newclient, CLSET_INTERRUPTIBLE, &rc->rc_intr);
 	stat = RPC_SUCCESS;
 
 out:
 	mtx_lock(&rc->rc_lock);
+	KASSERT(rc->rc_client == NULL, ("rc_client not null"));
+	if (!rc->rc_closed) {
+		rc->rc_client = newclient;
+		newclient = NULL;
+	}
 	rc->rc_connecting = FALSE;
 	wakeup(rc);
 	mtx_unlock(&rc->rc_lock);
+
+	if (newclient) {
+		/*
+		 * It has been closed, so discard the new client.
+		 * nb: clnt_[dg|vc]_close()/clnt_[dg|vc]_destroy() cannot
+		 * be called with the rc_lock mutex held, since they may
+		 * msleep() while holding a different mutex.
+		 */
+		CLNT_CLOSE(newclient);
+		CLNT_RELEASE(newclient);
+	}
 
 	return (stat);
 }
@@ -200,33 +243,58 @@ clnt_reconnect_call(
 	CLIENT		*cl,		/* client handle */
 	struct rpc_callextra *ext,	/* call metadata */
 	rpcproc_t	proc,		/* procedure number */
-	xdrproc_t	xargs,		/* xdr routine for args */
-	void		*argsp,		/* pointer to args */
-	xdrproc_t	xresults,	/* xdr routine for results */
-	void		*resultsp,	/* pointer to results */
-	struct timeval	utimeout)	/* seconds to wait before giving up */
+	struct mbuf	*args,		/* pointer to args */
+	struct mbuf	**resultsp,	/* pointer to results */
+	struct timeval	utimeout)
 {
 	struct rc_data *rc = (struct rc_data *)cl->cl_private;
 	CLIENT *client;
 	enum clnt_stat stat;
-	int tries;
+	int tries, error;
 
 	tries = 0;
 	do {
-		if (!rc->rc_client) {
-			stat = clnt_reconnect_connect(cl);
-			if (stat != RPC_SUCCESS)
-				return (stat);
+		mtx_lock(&rc->rc_lock);
+		if (rc->rc_closed) {
+			mtx_unlock(&rc->rc_lock);
+			return (RPC_CANTSEND);
 		}
 
-		mtx_lock(&rc->rc_lock);
+		if (!rc->rc_client) {
+			mtx_unlock(&rc->rc_lock);
+			stat = clnt_reconnect_connect(cl);
+			if (stat == RPC_SYSTEMERROR) {
+				error = tsleep(&fake_wchan,
+				    rc->rc_intr ? PCATCH | PBDRY : 0, "rpccon",
+				    hz);
+				if (error == EINTR || error == ERESTART)
+					return (RPC_INTR);
+				tries++;
+				if (tries >= rc->rc_retries)
+					return (stat);
+				continue;
+			}
+			if (stat != RPC_SUCCESS)
+				return (stat);
+			mtx_lock(&rc->rc_lock);
+		}
+
+		if (!rc->rc_client) {
+			mtx_unlock(&rc->rc_lock);
+			stat = RPC_FAILED;
+			continue;
+		}
 		CLNT_ACQUIRE(rc->rc_client);
 		client = rc->rc_client;
 		mtx_unlock(&rc->rc_lock);
-		stat = CLNT_CALL_EXT(client, ext, proc, xargs, argsp,
-		    xresults, resultsp, utimeout);
+		stat = CLNT_CALL_MBUF(client, ext, proc, args,
+		    resultsp, utimeout);
 
-		CLNT_RELEASE(client);
+		if (stat != RPC_SUCCESS) {
+			if (!ext)
+				CLNT_GETERR(client, &rc->rc_err);
+		}
+
 		if (stat == RPC_TIMEDOUT) {
 			/*
 			 * Check for async send misfeature for NLM
@@ -237,17 +305,18 @@ clnt_reconnect_call(
 			    || (rc->rc_timeout.tv_sec == -1
 				&& utimeout.tv_sec == 0
 				&& utimeout.tv_usec == 0)) {
+				CLNT_RELEASE(client);
 				break;
 			}
 		}
 
-		if (stat == RPC_INTR)
-			break;
-
-		if (stat != RPC_SUCCESS) {
+		if (stat == RPC_TIMEDOUT || stat == RPC_CANTSEND
+		    || stat == RPC_CANTRECV) {
 			tries++;
-			if (tries >= rc->rc_retries)
+			if (tries >= rc->rc_retries) {
+				CLNT_RELEASE(client);
 				break;
+			}
 
 			if (ext && ext->rc_feedback)
 				ext->rc_feedback(FEEDBACK_RECONNECT, proc,
@@ -256,15 +325,28 @@ clnt_reconnect_call(
 			mtx_lock(&rc->rc_lock);
 			/*
 			 * Make sure that someone else hasn't already
-			 * reconnected.
+			 * reconnected by checking if rc_client has changed.
+			 * If not, we are done with the client and must
+			 * do CLNT_RELEASE(client) twice to dispose of it,
+			 * because there is both an initial refcnt and one
+			 * acquired by CLNT_ACQUIRE() above.
 			 */
 			if (rc->rc_client == client) {
-				CLNT_RELEASE(rc->rc_client);
 				rc->rc_client = NULL;
+				mtx_unlock(&rc->rc_lock);
+				CLNT_RELEASE(client);
+			} else {
+				mtx_unlock(&rc->rc_lock);
 			}
-			mtx_unlock(&rc->rc_lock);
+			CLNT_RELEASE(client);
+		} else {
+			CLNT_RELEASE(client);
+			break;
 		}
 	} while (stat != RPC_SUCCESS);
+
+	KASSERT(stat != RPC_SUCCESS || *resultsp,
+	    ("RPC_SUCCESS without reply"));
 
 	return (stat);
 }
@@ -274,12 +356,13 @@ clnt_reconnect_geterr(CLIENT *cl, struct rpc_err *errp)
 {
 	struct rc_data *rc = (struct rc_data *)cl->cl_private;
 
-	if (rc->rc_client)
-		CLNT_GETERR(rc->rc_client, errp);
-	else
-		memset(errp, 0, sizeof(*errp));
+	*errp = rc->rc_err;
 }
 
+/*
+ * Since this function requires that rc_client be valid, it can
+ * only be called when that is guaranteed to be the case.
+ */
 static bool_t
 clnt_reconnect_freeres(CLIENT *cl, xdrproc_t xdr_res, void *res_ptr)
 {
@@ -294,6 +377,10 @@ clnt_reconnect_abort(CLIENT *h)
 {
 }
 
+/*
+ * CLNT_CONTROL() on the client returned by clnt_reconnect_create() must
+ * always be called before CLNT_CALL_MBUF() by a single thread only.
+ */
 static bool_t
 clnt_reconnect_control(CLIENT *cl, u_int request, void *info)
 {
@@ -344,7 +431,7 @@ clnt_reconnect_control(CLIENT *cl, u_int request, void *info)
 		break;
 
 	case CLSET_WAITCHAN:
-		rc->rc_waitchan = *(const char **)info;
+		rc->rc_waitchan = (char *)info;
 		if (rc->rc_client)
 			CLNT_CONTROL(rc->rc_client, request, info);
 		break;
@@ -371,11 +458,44 @@ clnt_reconnect_control(CLIENT *cl, u_int request, void *info)
 		*(int *) info = rc->rc_retries;
 		break;
 
+	case CLSET_PRIVPORT:
+		rc->rc_privport = *(int *) info;
+		break;
+
+	case CLGET_PRIVPORT:
+		*(int *) info = rc->rc_privport;
+		break;
+
 	default:
 		return (FALSE);
 	}
 
 	return (TRUE);
+}
+
+static void
+clnt_reconnect_close(CLIENT *cl)
+{
+	struct rc_data *rc = (struct rc_data *)cl->cl_private;
+	CLIENT *client;
+
+	mtx_lock(&rc->rc_lock);
+
+	if (rc->rc_closed) {
+		mtx_unlock(&rc->rc_lock);
+		return;
+	}
+
+	rc->rc_closed = TRUE;
+	client = rc->rc_client;
+	rc->rc_client = NULL;
+
+	mtx_unlock(&rc->rc_lock);
+
+	if (client) {
+		CLNT_CLOSE(client);
+		CLNT_RELEASE(client);
+	}
 }
 
 static void
@@ -385,6 +505,7 @@ clnt_reconnect_destroy(CLIENT *cl)
 
 	if (rc->rc_client)
 		CLNT_DESTROY(rc->rc_client);
+	crfree(rc->rc_ucred);
 	mtx_destroy(&rc->rc_lock);
 	mem_free(rc, sizeof(*rc));
 	mem_free(cl, sizeof (CLIENT));

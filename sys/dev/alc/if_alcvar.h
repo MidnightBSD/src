@@ -24,8 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: src/sys/dev/alc/if_alcvar.h,v 1.1.2.5 2011/02/20 01:10:14 yongari Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_ALCVAR_H

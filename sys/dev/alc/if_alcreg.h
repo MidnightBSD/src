@@ -24,8 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/dev/alc/if_alcreg.h,v 1.1 2011/02/07 00:17:46 laffer1 Exp $
- * $FreeBSD: src/sys/dev/alc/if_alcreg.h,v 1.1.2.4 2011/01/23 02:18:18 yongari Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_ALCREG_H

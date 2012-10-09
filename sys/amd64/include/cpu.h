@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cpu.h	5.4 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/amd64/include/cpu.h,v 1.76 2006/05/11 17:29:24 phk Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -43,12 +42,6 @@
 #include <machine/psl.h>
 #include <machine/frame.h>
 #include <machine/segments.h>
-
-/*
- * definitions of cpu-dependent requirements
- * referenced in generic code
- */
-#undef	COPY_SIGCODE		/* don't copy sigcode above user stack in exec */
 
 #define	cpu_exec(p)	/* nothing */
 #define	cpu_swapin(p)	/* nothing */

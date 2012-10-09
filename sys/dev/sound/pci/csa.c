@@ -37,7 +37,11 @@
 #include <machine/resource.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
-#include <sys/soundcard.h>
+
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/chip.h>
 #include <dev/sound/pci/csareg.h>
@@ -46,9 +50,9 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-#include <gnu/dev/sound/pci/csaimg.h>
+#include <dev/sound/pci/cs461x_dsp.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/csa.c,v 1.37 2007/03/17 19:37:09 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* This is the pci device id. */
 #define CS4610_PCI_ID 0x60011013
@@ -91,6 +95,7 @@ static int csa_teardown_intr(device_t bus, device_t child,
 static driver_intr_t csa_intr;
 static int csa_initialize(sc_p scp);
 static int csa_downloadimage(csa_res *resp);
+static int csa_transferimage(csa_res *resp, u_int32_t *src, u_long dest, u_long len);
 
 static devclass_t csa_devclass;
 
@@ -123,12 +128,13 @@ clkrun_hack(int run)
 
 	for (i = 0, busp = pci_devices; i < pci_count; i++, busp++) {
 		pci_childcount = 0;
-		device_get_children(*busp, &pci_children, &pci_childcount);
+		if (device_get_children(*busp, &pci_children, &pci_childcount))
+			continue;
 		for (j = 0, childp = pci_children; j < pci_childcount; j++, childp++) {
 			if (pci_get_vendor(*childp) == 0x8086 && pci_get_device(*childp) == 0x7113) {
 				port = (pci_read_config(*childp, 0x41, 1) << 8) + 0x10;
 				/* XXX */
-				btag = I386_BUS_SPACE_IO;
+				btag = X86_BUS_SPACE_IO;
 
 				control = bus_space_read_2(btag, 0x0, port);
 				control &= ~0x2000;
@@ -855,27 +861,46 @@ csa_resetdsp(csa_res *resp)
 static int
 csa_downloadimage(csa_res *resp)
 {
-	int i;
-	u_int32_t tmp, src, dst, count, data;
+	int ret;
+	u_long ul, offset;
 
-	for (i = 0; i < CLEAR__COUNT; i++) {
-		dst = ClrStat[i].BA1__DestByteOffset;
-		count = ClrStat[i].BA1__SourceSize;
-		for (tmp = 0; tmp < count; tmp += 4)
-			csa_writemem(resp, dst + tmp, 0x00000000);
+	for (ul = 0, offset = 0 ; ul < INKY_MEMORY_COUNT ; ul++) {
+	        /*
+	         * DMA this block from host memory to the appropriate
+	         * memory on the CSDevice.
+	         */
+		ret = csa_transferimage(resp,
+		    cs461x_firmware.BA1Array + offset,
+		    cs461x_firmware.MemoryStat[ul].ulDestAddr,
+		    cs461x_firmware.MemoryStat[ul].ulSourceSize);
+		if (ret)
+			return (ret);
+		offset += cs461x_firmware.MemoryStat[ul].ulSourceSize >> 2;
 	}
+	return (0);
+}
 
-	for (i = 0; i < FILL__COUNT; i++) {
-		src = 0;
-		dst = FillStat[i].Offset;
-		count = FillStat[i].Size;
-		for (tmp = 0; tmp < count; tmp += 4) {
-			data = FillStat[i].pFill[src];
-			csa_writemem(resp, dst + tmp, data);
-			src++;
-		}
-	}
+static int
+csa_transferimage(csa_res *resp, u_int32_t *src, u_long dest, u_long len)
+{
+	u_long ul;
+	
+	/*
+	 * We do not allow DMAs from host memory to host memory (although the DMA
+	 * can do it) and we do not allow DMAs which are not a multiple of 4 bytes
+	 * in size (because that DMA can not do that).  Return an error if either
+	 * of these conditions exist.
+	 */
+	if ((len & 0x3) != 0)
+		return (EINVAL);
 
+	/* Check the destination address that it is a multiple of 4 */
+	if ((dest & 0x3) != 0)
+		return (EINVAL);
+
+	/* Write the buffer out. */
+	for (ul = 0 ; ul < len ; ul += 4)
+		csa_writemem(resp, dest + ul, src[ul >> 2]);
 	return (0);
 }
 
@@ -883,13 +908,13 @@ int
 csa_readcodec(csa_res *resp, u_long offset, u_int32_t *data)
 {
 	int i;
-	u_int32_t acsda, acctl, acsts;
+	u_int32_t acctl, acsts;
 
 	/*
 	 * Make sure that there is not data sitting around from a previous
 	 * uncompleted access. ACSDA = Status Data Register = 47Ch
 	 */
-	acsda = csa_readio(resp, BA0_ACSDA);
+	csa_readio(resp, BA0_ACSDA);
 
 	/*
 	 * Setup the AC97 control registers on the CS461x to send the
@@ -1071,7 +1096,6 @@ static device_method_t csa_methods[] = {
 	DEVMETHOD(device_resume,	csa_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_alloc_resource,	csa_alloc_resource),
 	DEVMETHOD(bus_release_resource,	csa_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
@@ -1079,7 +1103,7 @@ static device_method_t csa_methods[] = {
 	DEVMETHOD(bus_setup_intr,	csa_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	csa_teardown_intr),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t csa_driver = {

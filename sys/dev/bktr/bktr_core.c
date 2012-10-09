@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/bktr/bktr_core.c,v 1.2 2008/12/02 02:24:36 laffer1 Exp $ */
 /*-
  * 1. Redistributions of source code must retain the 
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/nullfs/null_vnops.c,v 1.4 2008/12/03 00:25:42 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@
  *	...and...
  *	@(#)null_vnodeops.c 1.20 92/07/07 UCLA Ficus project
  *
- * $FreeBSD: src/sys/fs/nullfs/null_vnops.c,v 1.95.2.1 2007/10/22 05:44:07 daichi Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -297,7 +296,7 @@ null_bypass(struct vop_generic_args *ap)
 			*(vps_p[i]) = old_vps[i];
 #if 0
 			if (reles & VDESC_VP0_WILLUNLOCK)
-				VOP_UNLOCK(*(vps_p[i]), 0, curthread);
+				VOP_UNLOCK(*(vps_p[i]), 0);
 #endif
 			if (reles & VDESC_VP0_WILLRELE)
 				vrele(*(vps_p[i]));
@@ -366,9 +365,7 @@ null_lookup(struct vop_lookup_args *ap)
 			vrele(lvp);
 		} else {
 			error = null_nodeget(dvp->v_mount, lvp, &vp);
-			if (error)
-				vput(lvp);
-			else
+			if (error == 0)
 				*ap->a_vpp = vp;
 		}
 	}
@@ -451,14 +448,14 @@ static int
 null_access(struct vop_access_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
-	mode_t mode = ap->a_mode;
+	accmode_t accmode = ap->a_accmode;
 
 	/*
 	 * Disallow write attempts on read-only layers;
 	 * unless the file is a socket, fifo, or a block or
 	 * character device resident on the filesystem.
 	 */
-	if (mode & VWRITE) {
+	if (accmode & VWRITE) {
 		switch (vp->v_type) {
 		case VDIR:
 		case VLNK:
@@ -471,6 +468,58 @@ null_access(struct vop_access_args *ap)
 		}
 	}
 	return (null_bypass((struct vop_generic_args *)ap));
+}
+
+static int
+null_accessx(struct vop_accessx_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	accmode_t accmode = ap->a_accmode;
+
+	/*
+	 * Disallow write attempts on read-only layers;
+	 * unless the file is a socket, fifo, or a block or
+	 * character device resident on the filesystem.
+	 */
+	if (accmode & VWRITE) {
+		switch (vp->v_type) {
+		case VDIR:
+		case VLNK:
+		case VREG:
+			if (vp->v_mount->mnt_flag & MNT_RDONLY)
+				return (EROFS);
+			break;
+		default:
+			break;
+		}
+	}
+	return (null_bypass((struct vop_generic_args *)ap));
+}
+
+/*
+ * Increasing refcount of lower vnode is needed at least for the case
+ * when lower FS is NFS to do sillyrename if the file is in use.
+ * Unfortunately v_usecount is incremented in many places in
+ * the kernel and, as such, there may be races that result in
+ * the NFS client doing an extraneous silly rename, but that seems
+ * preferable to not doing a silly rename when it is needed.
+ */
+static int
+null_remove(struct vop_remove_args *ap)
+{
+	int retval, vreleit;
+	struct vnode *lvp;
+
+	if (vrefcnt(ap->a_vp) > 1) {
+		lvp = NULLVPTOLOWERVP(ap->a_vp);
+		VREF(lvp);
+		vreleit = 1;
+	} else
+		vreleit = 0;
+	retval = null_bypass(&ap->a_gen);
+	if (vreleit != 0)
+		vrele(lvp);
+	return (retval);
 }
 
 /*
@@ -513,7 +562,6 @@ null_lock(struct vop_lock1_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
 	int flags = ap->a_flags;
-	struct thread *td = ap->a_td;
 	struct null_node *nn;
 	struct vnode *lvp;
 	int error;
@@ -544,7 +592,7 @@ null_lock(struct vop_lock1_args *ap)
 		 * here.
 		 */
 		vholdl(lvp);
-		error = VOP_LOCK(lvp, flags, td);
+		error = VOP_LOCK(lvp, flags);
 
 		/*
 		 * We might have slept to get the lock and someone might have
@@ -566,7 +614,7 @@ null_lock(struct vop_lock1_args *ap)
 				panic("Unsupported lock request %d\n",
 				    ap->a_flags);
 			}
-			VOP_UNLOCK(lvp, 0, td);
+			VOP_UNLOCK(lvp, 0);
 			error = vop_stdlock(ap);
 		}
 		vdrop(lvp);
@@ -587,7 +635,6 @@ null_unlock(struct vop_unlock_args *ap)
 	struct vnode *vp = ap->a_vp;
 	int flags = ap->a_flags;
 	int mtxlkflag = 0;
-	struct thread *td = ap->a_td;
 	struct null_node *nn;
 	struct vnode *lvp;
 	int error;
@@ -604,7 +651,7 @@ null_unlock(struct vop_unlock_args *ap)
 		flags |= LK_INTERLOCK;
 		vholdl(lvp);
 		VI_UNLOCK(vp);
-		error = VOP_UNLOCK(lvp, flags, td);
+		error = VOP_UNLOCK(lvp, flags);
 		vdrop(lvp);
 		if (mtxlkflag == 0)
 			VI_LOCK(vp);
@@ -617,22 +664,13 @@ null_unlock(struct vop_unlock_args *ap)
 	return (error);
 }
 
-static int
-null_islocked(struct vop_islocked_args *ap)
-{
-	struct vnode *vp = ap->a_vp;
-	struct thread *td = ap->a_td;
-
-	return (lockstatus(vp->v_vnlock, td));
-}
-
 /*
  * There is no way to tell that someone issued remove/rmdir operation
- * on the underlying filesystem. For now we just have to release lowevrp
+ * on the underlying filesystem. For now we just have to release lowervp
  * as soon as possible.
  *
  * Note, we can't release any resources nor remove vnode from hash before 
- * appropriate VXLOCK stuff is is done because other process can find this
+ * appropriate VXLOCK stuff is done because other process can find this
  * vnode in hash during inactivation and may be sitting in vget() and waiting
  * for null_inactive to unlock vnode. Thus we will do all those in VOP_RECLAIM.
  */
@@ -659,29 +697,30 @@ null_inactive(struct vop_inactive_args *ap)
 static int
 null_reclaim(struct vop_reclaim_args *ap)
 {
-	struct vnode *vp = ap->a_vp;
-	struct null_node *xp = VTONULL(vp);
-	struct vnode *lowervp = xp->null_lowervp;
-	struct lock *vnlock;
+	struct vnode *vp;
+	struct null_node *xp;
+	struct vnode *lowervp;
 
-	if (lowervp)
-		null_hashrem(xp);
+	vp = ap->a_vp;
+	xp = VTONULL(vp);
+	lowervp = xp->null_lowervp;
+
+	KASSERT(lowervp != NULL && vp->v_vnlock != &vp->v_lock,
+	    ("Reclaiming inclomplete null vnode %p", vp));
+
+	null_hashrem(xp);
 	/*
 	 * Use the interlock to protect the clearing of v_data to
 	 * prevent faults in null_lock().
 	 */
+	lockmgr(&vp->v_lock, LK_EXCLUSIVE, NULL);
 	VI_LOCK(vp);
 	vp->v_data = NULL;
 	vp->v_object = NULL;
-	vnlock = vp->v_vnlock;
 	vp->v_vnlock = &vp->v_lock;
-	if (lowervp) {
-		lockmgr(vp->v_vnlock,
-		    LK_EXCLUSIVE|LK_INTERLOCK, VI_MTX(vp), curthread);
-		vput(lowervp);
-	} else
-		panic("null_reclaim: reclaiming an node with now lowervp");
-	FREE(xp, M_NULLFSNODE);
+	VI_UNLOCK(vp);
+	vput(lowervp);
+	free(xp, M_NULLFSNODE);
 
 	return (0);
 }
@@ -691,7 +730,7 @@ null_print(struct vop_print_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
 
-	printf("\tvp=%p, lowervp=%p\n", vp, NULLVPTOLOWERVP(vp));
+	printf("\tvp=%p, lowervp=%p\n", vp, VTONULL(vp)->null_lowervp);
 	return (0);
 }
 
@@ -729,25 +768,76 @@ null_vptofh(struct vop_vptofh_args *ap)
 	return VOP_VPTOFH(lvp, ap->a_fhp);
 }
 
+static int
+null_vptocnp(struct vop_vptocnp_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	struct vnode **dvp = ap->a_vpp;
+	struct vnode *lvp, *ldvp;
+	struct ucred *cred = ap->a_cred;
+	int error, locked;
+
+	if (vp->v_type == VDIR)
+		return (vop_stdvptocnp(ap));
+
+	locked = VOP_ISLOCKED(vp);
+	lvp = NULLVPTOLOWERVP(vp);
+	vhold(lvp);
+	VOP_UNLOCK(vp, 0); /* vp is held by vn_vptocnp_locked that called us */
+	ldvp = lvp;
+	vref(lvp);
+	error = vn_vptocnp(&ldvp, cred, ap->a_buf, ap->a_buflen);
+	vdrop(lvp);
+	if (error != 0) {
+		vn_lock(vp, locked | LK_RETRY);
+		return (ENOENT);
+	}
+
+	/*
+	 * Exclusive lock is required by insmntque1 call in
+	 * null_nodeget()
+	 */
+	error = vn_lock(ldvp, LK_EXCLUSIVE);
+	if (error != 0) {
+		vrele(ldvp);
+		vn_lock(vp, locked | LK_RETRY);
+		return (ENOENT);
+	}
+	vref(ldvp);
+	error = null_nodeget(vp->v_mount, ldvp, dvp);
+	if (error == 0) {
+#ifdef DIAGNOSTIC
+		NULLVPTOLOWERVP(*dvp);
+#endif
+		VOP_UNLOCK(*dvp, 0); /* keep reference on *dvp */
+	}
+	vn_lock(vp, locked | LK_RETRY);
+	return (error);
+}
+
 /*
  * Global vfs data structures
  */
 struct vop_vector null_vnodeops = {
 	.vop_bypass =		null_bypass,
 	.vop_access =		null_access,
+	.vop_accessx =		null_accessx,
+	.vop_advlockpurge =	vop_stdadvlockpurge,
 	.vop_bmap =		VOP_EOPNOTSUPP,
 	.vop_getattr =		null_getattr,
 	.vop_getwritemount =	null_getwritemount,
 	.vop_inactive =		null_inactive,
-	.vop_islocked =		null_islocked,
+	.vop_islocked =		vop_stdislocked,
 	.vop_lock1 =		null_lock,
 	.vop_lookup =		null_lookup,
 	.vop_open =		null_open,
 	.vop_print =		null_print,
 	.vop_reclaim =		null_reclaim,
+	.vop_remove =		null_remove,
 	.vop_rename =		null_rename,
 	.vop_setattr =		null_setattr,
 	.vop_strategy =		VOP_EOPNOTSUPP,
 	.vop_unlock =		null_unlock,
+	.vop_vptocnp =		null_vptocnp,
 	.vop_vptofh =		null_vptofh,
 };

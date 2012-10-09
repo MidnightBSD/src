@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/elf_machdep.c,v 1.26 2007/05/22 02:22:57 kan Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -33,9 +32,11 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/elf_machdep.c,v 1.26 2007/05/22 02:22:57
 #include <sys/exec.h>
 #include <sys/imgact.h>
 #include <sys/linker.h>
+#include <sys/proc.h>
 #include <sys/sysent.h>
 #include <sys/imgact_elf.h>
 #include <sys/syscall.h>
+#include <sys/sysent.h>
 #include <sys/signalvar.h>
 #include <sys/vnode.h>
 
@@ -47,64 +48,90 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/elf_machdep.c,v 1.26 2007/05/22 02:22:57
 #include <machine/md_var.h>
 
 struct sysentvec elf64_freebsd_sysvec = {
-	SYS_MAXSYSCALL,
-	sysent,
-	0,
-	0,
-	NULL,
-	0,
-	NULL,
-	NULL,
-	__elfN(freebsd_fixup),
-	sendsig,
-	sigcode,
-	&szsigcode,
-	NULL,
-	"FreeBSD ELF64",
-	__elfN(coredump),
-	NULL,
-	MINSIGSTKSZ,
-	PAGE_SIZE,
-	VM_MIN_ADDRESS,
-	VM_MAXUSER_ADDRESS,
-	USRSTACK,
-	PS_STRINGS,
-	VM_PROT_ALL,
-	exec_copyout_strings,
-	exec_setregs,
-	NULL
+	.sv_size	= SYS_MAXSYSCALL,
+	.sv_table	= sysent,
+	.sv_mask	= 0,
+	.sv_sigsize	= 0,
+	.sv_sigtbl	= NULL,
+	.sv_errsize	= 0,
+	.sv_errtbl	= NULL,
+	.sv_transtrap	= NULL,
+	.sv_fixup	= __elfN(freebsd_fixup),
+	.sv_sendsig	= sendsig,
+	.sv_sigcode	= sigcode,
+	.sv_szsigcode	= &szsigcode,
+	.sv_prepsyscall	= NULL,
+	.sv_name	= "FreeBSD ELF64",
+	.sv_coredump	= __elfN(coredump),
+	.sv_imgact_try	= NULL,
+	.sv_minsigstksz	= MINSIGSTKSZ,
+	.sv_pagesize	= PAGE_SIZE,
+	.sv_minuser	= VM_MIN_ADDRESS,
+	.sv_maxuser	= VM_MAXUSER_ADDRESS,
+	.sv_usrstack	= USRSTACK,
+	.sv_psstrings	= PS_STRINGS,
+	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_strings	= exec_copyout_strings,
+	.sv_setregs	= exec_setregs,
+	.sv_fixlimit	= NULL,
+	.sv_maxssiz	= NULL,
+	.sv_flags	= SV_ABI_FREEBSD | SV_LP64 | SV_SHP,
+	.sv_set_syscall_retval = cpu_set_syscall_retval,
+	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
+	.sv_syscallnames = syscallnames,
+	.sv_shared_page_base = SHAREDPAGE,
+	.sv_shared_page_len = PAGE_SIZE,
+	.sv_schedtail	= NULL,
 };
+INIT_SYSENTVEC(elf64_sysvec, &elf64_freebsd_sysvec);
 
 static Elf64_Brandinfo freebsd_brand_info = {
-						ELFOSABI_FREEBSD,
-						EM_X86_64,
-						"FreeBSD",
-						NULL,
-						"/libexec/ld-elf.so.1",
-						&elf64_freebsd_sysvec,
-						NULL,
-						BI_CAN_EXEC_DYN,
-					  };
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_X86_64,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/libexec/ld-elf.so.1",
+	.sysvec		= &elf64_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf64_freebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE
+};
 
-SYSINIT(elf64, SI_SUB_EXEC, SI_ORDER_ANY,
+SYSINIT(elf64, SI_SUB_EXEC, SI_ORDER_FIRST,
 	(sysinit_cfunc_t) elf64_insert_brand_entry,
 	&freebsd_brand_info);
 
 static Elf64_Brandinfo freebsd_brand_oinfo = {
-						ELFOSABI_FREEBSD,
-						EM_X86_64,
-						"FreeBSD",
-						NULL,
-						"/usr/libexec/ld-elf.so.1",
-						&elf64_freebsd_sysvec,
-						NULL,
-						BI_CAN_EXEC_DYN,
-					  };
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_X86_64,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/usr/libexec/ld-elf.so.1",
+	.sysvec		= &elf64_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf64_freebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE
+};
 
 SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf64_insert_brand_entry,
 	&freebsd_brand_oinfo);
 
+static Elf64_Brandinfo kfreebsd_brand_info = {
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_X86_64,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/lib/ld-kfreebsd-x86-64.so.1",
+	.sysvec		= &elf64_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf64_kfreebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE_MANDATORY
+};
+
+SYSINIT(kelf64, SI_SUB_EXEC, SI_ORDER_ANY,
+	(sysinit_cfunc_t) elf64_insert_brand_entry,
+	&kfreebsd_brand_info);
 
 void
 elf64_dump_thread(struct thread *td __unused, void *dst __unused,

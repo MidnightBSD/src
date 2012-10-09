@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/ia32/ia32_reg.c,v 1.3 2005/10/24 00:00:00 ps Exp $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/ia32/ia32_reg.c,v 1.3 2005/10/24 00:00:00 ps Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 
@@ -85,9 +85,17 @@ fill_regs32(struct thread *td, struct reg32 *regs)
 
 	tp = td->td_frame;
 	pcb = td->td_pcb;
-	regs->r_fs = pcb->pcb_fs;
-	regs->r_es = pcb->pcb_es;
-	regs->r_ds = pcb->pcb_ds;
+	if (tp->tf_flags & TF_HASSEGS) {
+		regs->r_gs = tp->tf_gs;
+		regs->r_fs = tp->tf_fs;
+		regs->r_es = tp->tf_es;
+		regs->r_ds = tp->tf_ds;
+	} else {
+		regs->r_gs = _ugssel;
+		regs->r_fs = _ufssel;
+		regs->r_es = _udatasel;
+		regs->r_ds = _udatasel;
+	}
 	regs->r_edi = tp->tf_rdi;
 	regs->r_esi = tp->tf_rsi;
 	regs->r_ebp = tp->tf_rbp;
@@ -100,7 +108,6 @@ fill_regs32(struct thread *td, struct reg32 *regs)
 	regs->r_eflags = tp->tf_rflags;
 	regs->r_esp = tp->tf_rsp;
 	regs->r_ss = tp->tf_ss;
-	regs->r_gs = pcb->pcb_gs;
 	return (0);
 }
 
@@ -114,14 +121,12 @@ set_regs32(struct thread *td, struct reg32 *regs)
 	if (!EFL_SECURE(regs->r_eflags, tp->tf_rflags) || !CS_SECURE(regs->r_cs))
 		return (EINVAL);
 	pcb = td->td_pcb;
-#if 0
-	load_fs(regs->r_fs);
-	pcb->pcb_fs = regs->r_fs;
-	load_es(regs->r_es);
-	pcb->pcb_es = regs->r_es;
-	load_ds(regs->r_ds);
-	pcb->pcb_ds = regs->r_ds;
-#endif
+	tp->tf_gs = regs->r_gs;
+	tp->tf_fs = regs->r_fs;
+	tp->tf_es = regs->r_es;
+	tp->tf_ds = regs->r_ds;
+	set_pcb_flags(pcb, PCB_FULL_IRET);
+	tp->tf_flags = TF_HASSEGS;
 	tp->tf_rdi = regs->r_edi;
 	tp->tf_rsi = regs->r_esi;
 	tp->tf_rbp = regs->r_ebp;
@@ -134,23 +139,24 @@ set_regs32(struct thread *td, struct reg32 *regs)
 	tp->tf_rflags = regs->r_eflags;
 	tp->tf_rsp = regs->r_esp;
 	tp->tf_ss = regs->r_ss;
-#if 0
-	load_gs(regs->r_gs);
-	pcb->pcb_gs = regs->r_gs;
-#endif
 	return (0);
 }
 
 int
 fill_fpregs32(struct thread *td, struct fpreg32 *regs)
 {
-	struct save87 *sv_87 = (struct save87 *)regs;
-	struct env87 *penv_87 = &sv_87->sv_env;
-	struct savefpu *sv_fpu = &td->td_pcb->pcb_save;
-	struct envxmm *penv_xmm = &sv_fpu->sv_env;
+	struct savefpu *sv_fpu;
+	struct save87 *sv_87;
+	struct env87 *penv_87;
+	struct envxmm *penv_xmm;
 	int i;
 
 	bzero(regs, sizeof(*regs));
+	sv_87 = (struct save87 *)regs;
+	penv_87 = &sv_87->sv_env;
+	fpugetregs(td);
+	sv_fpu = get_pcb_user_save_td(td);
+	penv_xmm = &sv_fpu->sv_env;
 	
 	/* FPU control/status */
 	penv_87->en_cw = penv_xmm->en_cw;
@@ -166,7 +172,8 @@ fill_fpregs32(struct thread *td, struct fpreg32 *regs)
 	penv_87->en_fcs = td->td_frame->tf_cs;
 	penv_87->en_opcode = penv_xmm->en_opcode;
 	penv_87->en_foo = penv_xmm->en_rdp;
-	penv_87->en_fos = td->td_pcb->pcb_ds;
+	/* Entry into the kernel always sets TF_HASSEGS */
+	penv_87->en_fos = td->td_frame->tf_ds;
 
 	/* FPU registers */
 	for (i = 0; i < 8; ++i)
@@ -180,7 +187,7 @@ set_fpregs32(struct thread *td, struct fpreg32 *regs)
 {
 	struct save87 *sv_87 = (struct save87 *)regs;
 	struct env87 *penv_87 = &sv_87->sv_env;
-	struct savefpu *sv_fpu = &td->td_pcb->pcb_save;
+	struct savefpu *sv_fpu = get_pcb_user_save_td(td);
 	struct envxmm *penv_xmm = &sv_fpu->sv_env;
 	int i;
 
@@ -198,6 +205,7 @@ set_fpregs32(struct thread *td, struct fpreg32 *regs)
 		sv_fpu->sv_fp[i].fp_acc = sv_87->sv_ac[i];
 	for (i = 8; i < 16; ++i)
 		bzero(&sv_fpu->sv_fp[i].fp_acc, sizeof(sv_fpu->sv_fp[i].fp_acc));
+	fpuuserinited(td);
 
 	return (0);
 }
@@ -211,8 +219,6 @@ fill_dbregs32(struct thread *td, struct dbreg32 *regs)
 	err = fill_dbregs(td, &dr);
 	for (i = 0; i < 8; i++)
 		regs->dr[i] = dr.dr[i];
-	for (i = 8; i < 16; i++)
-		regs->dr[i] = 0;
 	return (err);
 }
 

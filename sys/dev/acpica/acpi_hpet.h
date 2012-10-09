@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/acpica/acpi_hpet.h,v 1.1.6.1 2008/01/24 18:52:26 jhb Exp $
+ * $FreeBSD$
  */
 
 #ifndef __ACPI_HPET_H__
@@ -58,9 +57,11 @@
 #define	HPET_TCAP_PER_INT	0x00000010 /* Supports periodic interrupts */
 #define	HPET_TCNF_TYPE		0x00000008 /* 1 = periodic, 0 = one-shot */
 #define	HPET_TCNF_INT_ENB	0x00000004
-#define	HPET_TCNT_INT_TYPE	0x00000002 /* 1 = level triggered, 0 = edge */
+#define	HPET_TCNF_INT_TYPE	0x00000002 /* 1 = level triggered, 0 = edge */
 #define	HPET_TIMER_COMPARATOR(x) ((x) * 0x20 + 0x108)
 #define	HPET_TIMER_FSB_VAL(x)	((x) * 0x20 + 0x110)
 #define	HPET_TIMER_FSB_ADDR(x)	((x) * 0x20 + 0x114)
+
+#define	HPET_MIN_CYCLES		128	/* Period considered reliable. */
 
 #endif /* !__ACPI_HPET_H__ */

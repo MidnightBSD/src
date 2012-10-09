@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*-
  * Kernel interface to machine-dependent clock driver.
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
  *
- * $FreeBSD: src/sys/amd64/include/clock.h,v 1.54.2.2 2009/01/21 20:53:36 jkim Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CLOCK_H_
@@ -16,14 +15,11 @@
  * XXX large parts of the driver and its interface are misplaced.
  */
 extern int	clkintr_pending;
-extern int	pscnt;
-extern int	psdiv;
-extern int	statclock_disable;
-extern u_int	timer_freq;
-extern int	timer0_max_count;
+extern u_int	i8254_freq;
+extern int	i8254_max_count;
 extern uint64_t	tsc_freq;
-extern int	tsc_is_broken;
 extern int	tsc_is_invariant;
+extern int	tsc_perf_stat;
 
 void	i8254_init(void);
 
@@ -31,13 +27,13 @@ void	i8254_init(void);
  * Driver to clock driver interface.
  */
 
-int	acquire_timer2(int mode);
-int	release_timer2(void);
-int	rtcin(int reg);
-void	writertc(int reg, unsigned char val);
-int	sysbeep(int pitch, int period);
+void	startrtclock(void);
 void	init_TSC(void);
-void	init_TSC_tc(void);
+
+#define	HAS_TIMER_SPKR 1
+int	timer_spkr_acquire(void);
+int	timer_spkr_release(void);
+void	timer_spkr_setfreq(int freq);
 
 #endif /* _KERNEL */
 

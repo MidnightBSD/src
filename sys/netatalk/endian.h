@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990,1991 Regents of The University of Michigan.
  * All Rights Reserved.
@@ -21,7 +20,7 @@
  *	+1-313-763-0525
  *	netatalk@itd.umich.edu
  *
- * $FreeBSD: src/sys/netatalk/endian.h,v 1.4 2005/01/07 02:35:34 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _ATALK_ENDIAN_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -31,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/procfs/procfs_type.c,v 1.12 2005/01/06 18:10:40 imp Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -49,9 +48,9 @@ procfs_doproctype(PFS_FILL_ARGS)
 	static const char *none = "Not Available";
 
 	if (p != NULL && p->p_sysent && p->p_sysent->sv_name)
-		sbuf_printf(sb, p->p_sysent->sv_name);
+		sbuf_printf(sb, "%s", p->p_sysent->sv_name);
 	else
-		sbuf_printf(sb, none);
+		sbuf_printf(sb, "%s", none);
 	sbuf_putc(sb, '\n');
 	return (0);
 }

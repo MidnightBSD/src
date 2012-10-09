@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -33,51 +32,20 @@
  * SUCH DAMAGE.
  *
  *	@(#)ioctl.h	8.6 (Berkeley) 3/28/94
- * $FreeBSD: src/sys/sys/ioctl.h,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_SYS_IOCTL_H_
 #define	_SYS_IOCTL_H_
 
 #ifdef _KERNEL
-#ifndef _SYS_CDEFS_H_
-#error this file needs sys/cdefs.h as a prerequisite
-#endif
-#ifdef __CC_SUPPORTS_WARNING
-#warning "Don't #include ioctl.h in the kernel.  Include xxxio.h instead."
-#endif
+#error "Don't #include ioctl.h in the kernel.  Include xxxio.h instead."
 #endif /* _KERNEL */
-
-#include <sys/ttycom.h>
-
-/*
- * Pun for SunOS prior to 3.2.  SunOS 3.2 and later support TIOCGWINSZ
- * and TIOCSWINSZ (yes, even 3.2-3.5, the fact that it wasn't documented
- * notwithstanding).
- */
-struct ttysize {
-	unsigned short	ts_lines;
-	unsigned short	ts_cols;
-	unsigned short	ts_xxx;
-	unsigned short	ts_yyy;
-};
-#define	TIOCGSIZE	TIOCGWINSZ
-#define	TIOCSSIZE	TIOCSWINSZ
 
 #include <sys/ioccom.h>
 
 #include <sys/filio.h>
 #include <sys/sockio.h>
+#include <sys/ttycom.h>
 
 #endif /* !_SYS_IOCTL_H_ */
-
-/*
- * Keep outside _SYS_IOCTL_H_
- * Compatibility with old terminal driver
- *
- * Source level -> #define USE_OLD_TTY
- * Kernel level -> options COMPAT_43TTY
- */
-#if defined(USE_OLD_TTY) || defined(COMPAT_43TTY)
-#include <sys/ioctl_compat.h>
-#endif

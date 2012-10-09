@@ -31,8 +31,8 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
- * $DragonFly: src/sys/dev/netif/bwi/if_bwireg.h,v 1.1 2007/09/08 06:15:54 sephe Exp $
+ * $DragonFly: src/sys/dev/netif/bwi/if_bwireg.h,v 1.4 2007/10/19 14:27:04 sephe Exp $
+ * $FreeBSD$
  */
 
 #ifndef _IF_BWIREG_H
@@ -204,6 +204,7 @@
 #define BWI_COMM_MOBJ_HFLAGS_MI		0x60
 #define BWI_COMM_MOBJ_HFLAGS_HI		0x62
 #define BWI_COMM_MOBJ_RF_ATTEN		0x64
+#define BWI_COMM_MOBJ_RF_NOISE		0x6e
 #define BWI_COMM_MOBJ_TSSI_OFDM		0x70
 #define BWI_COMM_MOBJ_PROBE_RESP_TO	0x74
 #define BWI_COMM_MOBJ_CHAN		0xa0
@@ -414,16 +415,34 @@
 #define BWI_LED_ACT_MASK		__BITS(6, 0)
 #define BWI_LED_ACT_OFF			0
 #define BWI_LED_ACT_ON			1
-#define BWI_LED_ACT_ACTIVE		2
-#define BWI_LED_ACT_RFEN		3
+#define BWI_LED_ACT_BLINK		2
+#define BWI_LED_ACT_RF_ENABLED		3
 #define BWI_LED_ACT_5GHZ		4
 #define BWI_LED_ACT_2GHZ		5
 #define BWI_LED_ACT_11G			6
-#define BWI_LED_ACT_MID			7
-#define BWI_LED_ACT_FAST		8
+#define BWI_LED_ACT_BLINK_SLOW		7
+#define BWI_LED_ACT_BLINK_POLL		8
 #define BWI_LED_ACT_UNKN		9
-#define BWI_LED_ACT_RUN			10
+#define BWI_LED_ACT_ASSOC		10
 #define BWI_LED_ACT_NULL		11
+
+#define BWI_VENDOR_LED_ACT_COMPAQ	\
+	BWI_LED_ACT_RF_ENABLED,		\
+	BWI_LED_ACT_2GHZ,		\
+	BWI_LED_ACT_5GHZ,		\
+	BWI_LED_ACT_OFF
+
+#define BWI_VENDOR_LED_ACT_LINKSYS	\
+	BWI_LED_ACT_ASSOC,		\
+	BWI_LED_ACT_2GHZ,		\
+	BWI_LED_ACT_5GHZ,		\
+	BWI_LED_ACT_OFF
+
+#define BWI_VENDOR_LED_ACT_DEFAULT	\
+	BWI_LED_ACT_BLINK,		\
+	BWI_LED_ACT_2GHZ,		\
+	BWI_LED_ACT_5GHZ,		\
+	BWI_LED_ACT_OFF
 
 /*
  * BBP IDs
@@ -437,35 +456,10 @@
 /*
  * Register window types
  */
-#define BWI_REGWIN_T_CC			0x800	//CC
-#define BWI_REGWIN_T_ILINE20		0x801
-#define BWI_REGWIN_T_SDRAM		0x803
-#define BWI_REGWIN_T_PCI		0x804	//BUSPCI
-#define BWI_REGWIN_T_MIPS		0x805
-#define BWI_REGWIN_T_ENET		0x806
-#define BWI_REGWIN_T_CODEC		0x807
-#define BWI_REGWIN_T_USB		0x808
-#define BWI_REGWIN_T_ADSL		0x809
-#define BWI_REGWIN_T_ILINE100		0x80a
-#define BWI_REGWIN_T_IPSEC		0x80b
-#define BWI_REGWIN_T_PCMCIA		0x80d
-#define BWI_REGWIN_T_SOCRAM		0x80e
-#define BWI_REGWIN_T_MEMC		0x80f
-#define BWI_REGWIN_T_EXTIF		0x811
-#define BWI_REGWIN_T_D11		0x812	//MAC
-#define BWI_REGWIN_T_MIPS33		0x816
-#define BWI_REGWIN_T_USB11H		0x817
-#define BWI_REGWIN_T_USB11D		0x818
-#define BWI_REGWIN_T_USB20H		0x819
-#define BWI_REGWIN_T_USB20D		0x81a
-#define BWI_REGWIN_T_SDIOH		0x81b
-#define BWI_REGWIN_T_ROBO		0x81c
-#define BWI_REGWIN_T_ATA100		0x81d
-#define BWI_REGWIN_T_SATAXOR		0x81e
-#define BWI_REGWIN_T_GIGETH		0x81f
-#define BWI_REGWIN_T_PCIE		0x820
-#define BWI_REGWIN_T_SRAMC		0x822
-#define BWI_REGWIN_T_MINIMAC		0x823
+#define BWI_REGWIN_T_COM		0x800
+#define BWI_REGWIN_T_BUSPCI		0x804
+#define BWI_REGWIN_T_MAC		0x812
+#define BWI_REGWIN_T_BUSPCIE		0x820
 
 /*
  * MAC interrupts

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005 Nate Lawson (SDG)
  * Copyright (c) 2001 Michael Smith
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_throttle.c,v 1.11 2007/03/22 18:16:40 jkim Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -40,7 +39,8 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_throttle.c,v 1.11 2007/03/22 18:16:4
 
 #include <machine/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/pci/pcivar.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/fcntl.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1983, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fcntl.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/fcntl.h,v 1.16.18.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_FCNTL_H_
@@ -115,6 +114,22 @@ typedef	__pid_t		pid_t;
 #define O_DIRECT	0x00010000
 #endif
 
+/* Defined by POSIX Extended API Set Part 2 */
+#if __BSD_VISIBLE
+#define	O_DIRECTORY	0x00020000	/* Fail if not directory */
+#define	O_EXEC		0x00040000	/* Open for execute only */
+#endif
+#ifdef	_KERNEL
+#define	FEXEC		O_EXEC
+#endif
+
+#if __POSIX_VISIBLE >= 200809
+/* Defined by POSIX 1003.1-2008; BSD default, but reserve for future use. */
+#define	O_TTY_INIT	0x00080000	/* Restore default termios attributes */
+
+#define	O_CLOEXEC	0x00100000
+#endif
+
 /*
  * XXX missing O_DSYNC, O_RSYNC.
  */
@@ -125,9 +140,22 @@ typedef	__pid_t		pid_t;
 #define	OFLAGS(fflags)	((fflags) - 1)
 
 /* bits to save after open */
-#define	FMASK		(FREAD|FWRITE|FAPPEND|FASYNC|FFSYNC|FNONBLOCK|O_DIRECT)
+#define	FMASK	(FREAD|FWRITE|FAPPEND|FASYNC|FFSYNC|FNONBLOCK|O_DIRECT|FEXEC)
 /* bits settable by fcntl(F_SETFL, ...) */
-#define	FCNTLFLAGS	(FAPPEND|FASYNC|FFSYNC|FNONBLOCK|FPOSIXSHM|O_DIRECT)
+#define	FCNTLFLAGS	(FAPPEND|FASYNC|FFSYNC|FNONBLOCK|FRDAHEAD|O_DIRECT)
+
+#if defined(COMPAT_FREEBSD7) || defined(COMPAT_FREEBSD6) || \
+    defined(COMPAT_FREEBSD5) || defined(COMPAT_FREEBSD4)
+/*
+ * Set by shm_open(3) in older libc's to get automatic MAP_ASYNC
+ * behavior for POSIX shared memory objects (which are otherwise
+ * implemented as plain files).
+ */
+#define	FPOSIXSHM	O_NOFOLLOW
+#undef FCNTLFLAGS
+#define	FCNTLFLAGS	(FAPPEND|FASYNC|FFSYNC|FNONBLOCK|FPOSIXSHM|FRDAHEAD| \
+			 O_DIRECT)
+#endif
 #endif
 
 /*
@@ -151,13 +179,26 @@ typedef	__pid_t		pid_t;
  * different meaning for fcntl(2).
  */
 #if __BSD_VISIBLE
+/* Read ahead */
+#define	FRDAHEAD	O_CREAT
+#endif
+
+/* Defined by POSIX Extended API Set Part 2 */
+#if __BSD_VISIBLE
+/*
+ * Magic value that specify the use of the current working directory
+ * to determine the target of relative file paths in the openat() and
+ * similar syscalls.
+ */
+#define	AT_FDCWD		-100
 
 /*
- * Set by shm_open(3) to get automatic MAP_ASYNC behavior
- * for POSIX shared memory objects (which are otherwise
- * implemented as plain files).
+ * Miscellaneous flags for the *at() syscalls.
  */
-#define	FPOSIXSHM	O_NOFOLLOW
+#define	AT_EACCESS		0x100	/* Check access using effective user and group ID */
+#define	AT_SYMLINK_NOFOLLOW	0x200   /* Do not follow symbolic links */
+#define	AT_SYMLINK_FOLLOW	0x400	/* Follow symbolic link */
+#define	AT_REMOVEDIR		0x800	/* Remove directory instead of file */
 #endif
 
 /*
@@ -182,6 +223,8 @@ typedef	__pid_t		pid_t;
 #define	F_SETLK		12		/* set record locking information */
 #define	F_SETLKW	13		/* F_SETLK; wait if blocked */
 #define	F_SETLK_REMOTE	14		/* debugging support for remote locks */
+#define	F_READAHEAD	15		/* read ahead */
+#define	F_RDAHEAD	16		/* Darwin compatible read ahead */
 
 /* file descriptor flags (F_GETFD, F_SETFD) */
 #define	FD_CLOEXEC	1		/* close-on-exec flag */
@@ -234,15 +277,30 @@ struct oflock {
 #define	LOCK_UN		0x08		/* unlock file */
 #endif
 
+#if __POSIX_VISIBLE >= 200112
 /*
- * XXX missing posix_fadvise() and posix_fallocate(), and POSIX_FADV_* macros.
+ * Advice to posix_fadvise
  */
+#define	POSIX_FADV_NORMAL	0	/* no special treatment */
+#define	POSIX_FADV_RANDOM	1	/* expect random page references */
+#define	POSIX_FADV_SEQUENTIAL	2	/* expect sequential page references */
+#define	POSIX_FADV_WILLNEED	3	/* will need these pages */
+#define	POSIX_FADV_DONTNEED	4	/* dont need these pages */
+#define	POSIX_FADV_NOREUSE	5	/* access data only once */
+#endif
 
 #ifndef _KERNEL
 __BEGIN_DECLS
 int	open(const char *, int, ...);
 int	creat(const char *, mode_t);
 int	fcntl(int, int, ...);
+#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+int	openat(int, const char *, int, ...);
+#endif
+#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200112
+int	posix_fadvise(int, off_t, off_t, int);
+int	posix_fallocate(int, off_t, off_t);
+#endif
 #if __BSD_VISIBLE
 int	flock(int, int);
 #endif

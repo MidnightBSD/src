@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 University of Utah.
  * Copyright (c) 1991, 1993
@@ -33,23 +32,25 @@
  * SUCH DAMAGE.
  *
  *	@(#)vnode_pager.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/vm/vnode_pager.h,v 1.20 2005/01/24 21:21:59 phk Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_VNODE_PAGER_
 #define	_VNODE_PAGER_	1
 
 #ifdef _KERNEL
-struct vnode *vnode_pager_lock(vm_object_t);
 
-/*
- * XXX Generic routines; currently called by badly written FS code; these
- * XXX should go away soon.
- */
 int vnode_pager_generic_getpages(struct vnode *vp, vm_page_t *m,
 					  int count, int reqpage);
 int vnode_pager_generic_putpages(struct vnode *vp, vm_page_t *m,
 					  int count, boolean_t sync,
 					  int *rtvals);
+
+void vnode_pager_release_writecount(vm_object_t object, vm_offset_t start,
+    vm_offset_t end);
+void vnode_pager_undirty_pages(vm_page_t *ma, int *rtvals, int written);
+void vnode_pager_update_writecount(vm_object_t object, vm_offset_t start,
+    vm_offset_t end);
+
 #endif				/* _KERNEL */
 #endif				/* _VNODE_PAGER_ */

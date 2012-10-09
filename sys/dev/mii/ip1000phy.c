@@ -27,6 +27,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the IC Plus IP1000A/IP1001 10/100/1000 PHY.
@@ -55,12 +56,6 @@
 
 static int ip1000phy_probe(device_t);
 static int ip1000phy_attach(device_t);
-
-struct ip1000phy_softc {
-	struct mii_softc mii_sc;
-	int model;
-	int revision;
-};
 
 static device_method_t ip1000phy_methods[] = {
 	/* device interface */
@@ -233,7 +228,6 @@ done:
 static void
 ip1000phy_status(struct mii_softc *sc)
 {
-	struct ip1000phy_softc *isc;
 	struct mii_data *mii = sc->mii_pdata;
 	uint32_t bmsr, bmcr, stat;
 
@@ -315,7 +309,6 @@ ip1000phy_status(struct mii_softc *sc)
 static int
 ip1000phy_mii_phy_auto(struct mii_softc *sc, int media)
 {
-	struct ip1000phy_softc *isc;
 	uint32_t reg;
 
 	reg = 0;

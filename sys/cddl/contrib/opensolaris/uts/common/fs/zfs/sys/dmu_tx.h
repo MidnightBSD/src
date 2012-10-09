@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef	_SYS_DMU_TX_H
 #define	_SYS_DMU_TX_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/dmu.h>
 #include <sys/txg.h>
@@ -59,12 +56,14 @@ struct dmu_tx {
 	txg_handle_t tx_txgh;
 	void *tx_tempreserve_cookie;
 	struct dmu_tx_hold *tx_needassign_txh;
+	list_t tx_callbacks; /* list of dmu_tx_callback_t on this dmu_tx */
 	uint8_t tx_anyobj;
 	int tx_err;
 #ifdef ZFS_DEBUG
 	uint64_t tx_space_towrite;
 	uint64_t tx_space_tofree;
 	uint64_t tx_space_tooverwrite;
+	uint64_t tx_space_tounref;
 	refcount_t tx_space_written;
 	refcount_t tx_space_freed;
 #endif
@@ -77,6 +76,7 @@ enum dmu_tx_hold_type {
 	THT_FREE,
 	THT_ZAP,
 	THT_SPACE,
+	THT_SPILL,
 	THT_NUMTYPES
 };
 
@@ -87,6 +87,9 @@ typedef struct dmu_tx_hold {
 	uint64_t txh_space_towrite;
 	uint64_t txh_space_tofree;
 	uint64_t txh_space_tooverwrite;
+	uint64_t txh_space_tounref;
+	uint64_t txh_memory_tohold;
+	uint64_t txh_fudge;
 #ifdef ZFS_DEBUG
 	enum dmu_tx_hold_type txh_type;
 	uint64_t txh_arg1;
@@ -94,6 +97,11 @@ typedef struct dmu_tx_hold {
 #endif
 } dmu_tx_hold_t;
 
+typedef struct dmu_tx_callback {
+	list_node_t		dcb_node;    /* linked to tx_callbacks list */
+	dmu_tx_callback_func_t	*dcb_func;   /* caller function pointer */
+	void			*dcb_data;   /* caller private data */
+} dmu_tx_callback_t;
 
 /*
  * These routines are defined in dmu.h, and are called by the user.
@@ -104,6 +112,10 @@ void dmu_tx_commit(dmu_tx_t *tx);
 void dmu_tx_abort(dmu_tx_t *tx);
 uint64_t dmu_tx_get_txg(dmu_tx_t *tx);
 void dmu_tx_wait(dmu_tx_t *tx);
+
+void dmu_tx_callback_register(dmu_tx_t *tx, dmu_tx_callback_func_t *dcb_func,
+    void *dcb_data);
+void dmu_tx_do_callbacks(list_t *cb_list, int error);
 
 /*
  * These routines are defined in dmu_spa.h, and are called by the SPA.

@@ -31,8 +31,8 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD: src/sys/dev/bwi/if_bwivar.h,v 1.1 2009/01/19 22:02:25 laffer1 Exp $
- * $DragonFly: src/sys/dev/netif/bwi/if_bwivar.h,v 1.1 2007/09/08 06:15:54 sephe Exp $
+ * $DragonFly: src/sys/dev/netif/bwi/if_bwivar.h,v 1.14 2008/02/15 11:15:38 sephe Exp $
+ * $FreeBSD$
  */
 
 #ifndef _IF_BWIVAR_H
@@ -55,6 +55,18 @@
 #define BWI_LGRETRY		4
 #define BWI_SHRETRY_FB		3
 #define BWI_LGRETRY_FB		2
+
+#define BWI_LED_EVENT_NONE	-1
+#define BWI_LED_EVENT_POLL	0
+#define BWI_LED_EVENT_TX	1
+#define BWI_LED_EVENT_RX	2
+#define BWI_LED_SLOWDOWN(dur)	(dur) = (((dur) * 3) / 2)
+
+enum bwi_txpwrcb_type {
+	BWI_TXPWR_INIT = 0,
+	BWI_TXPWR_FORCE = 1,
+	BWI_TXPWR_CALIB = 2
+};
 
 #define BWI_NOISE_FLOOR		-95	/* TODO: noise floor calc */
 #define BWI_FRAME_MIN_LEN(hdr)	\
@@ -86,10 +98,25 @@
 	CSR_WRITE_2((sc), (reg), CSR_READ_2((sc), (reg)) & ~(bits))
 
 #ifdef BWI_DEBUG
-#define DPRINTF(sc, fmt, ...)	device_printf(sc->sc_dev, fmt, __VA_ARGS__)
-#else
-#define DPRINTF(sc, fmt, ...)	((void)0)
-#endif
+
+#define DPRINTF(sc, dbg, fmt, ...) \
+do { \
+	if ((sc)->sc_debug & (dbg)) \
+		device_printf((sc)->sc_dev, fmt, __VA_ARGS__); \
+} while (0)
+
+#define _DPRINTF(sc, dbg, fmt, ...) \
+do { \
+	if ((sc)->sc_debug & (dbg)) \
+		printf(fmt, __VA_ARGS__); \
+} while (0)
+
+#else	/* !BWI_DEBUG */
+
+#define DPRINTF(sc, dbg, fmt, ...)	((void)0)
+#define _DPRINTF(sc, dbg, fmt, ...)	((void)0)
+
+#endif	/* BWI_DEBUG */
 
 struct bwi_desc32 {
 	/* Little endian */
@@ -206,7 +233,7 @@ struct bwi_txbuf {
 	bus_dmamap_t		tb_dmap;
 
 	struct ieee80211_node	*tb_ni;
-	int			tb_rate_idx[2];
+	int			tb_rate[2];
 };
 
 struct bwi_txbuf_data {
@@ -264,6 +291,7 @@ struct bwi_fwhdr {
 #define BWI_FW_VERSION3_REVMAX	0x128
 
 #define BWI_FW_PATH		"bwi_v%d_"
+#define BWI_FW_STUB_PATH	BWI_FW_PATH "ucode"
 #define BWI_FW_UCODE_PATH	BWI_FW_PATH "ucode%d"
 #define BWI_FW_PCM_PATH		BWI_FW_PATH "pcm%d"
 #define BWI_FW_IV_PATH		BWI_FW_PATH "b0g0initvals%d"
@@ -284,9 +312,13 @@ struct bwi_fw_iv {
 struct bwi_led {
 	uint8_t			l_flags;	/* BWI_LED_F_ */
 	uint8_t			l_act;		/* BWI_LED_ACT_ */
+	uint8_t			l_mask;
 };
 
 #define BWI_LED_F_ACTLOW	0x1
+#define BWI_LED_F_BLINK		0x2
+#define BWI_LED_F_POLLABLE	0x4
+#define BWI_LED_F_SLOW		0x8
 
 enum bwi_clock_mode {
 	BWI_CLOCK_MODE_SLOW,
@@ -388,6 +420,9 @@ struct bwi_rf {
 	int			(*rf_calc_rssi)
 				(struct bwi_mac *,
 				 const struct bwi_rxbuf_hdr *);
+	int			(*rf_calc_noise)(struct bwi_mac *);
+
+	void			(*rf_lo_update)(struct bwi_mac *);
 
 #define BWI_TSSI_MAX		64
 	int8_t			rf_txpower_map0[BWI_TSSI_MAX];
@@ -431,6 +466,7 @@ struct bwi_mac {
 	struct bwi_tpctl	mac_tpctl;	/* TX power control */
 	uint32_t		mac_flags;	/* BWI_MAC_F_ */
 
+	const struct firmware	*mac_stub;
 	const struct firmware	*mac_ucode;
 	const struct firmware	*mac_pcm;
 	const struct firmware	*mac_iv;
@@ -444,12 +480,13 @@ struct bwi_mac {
 #define BWI_MAC_F_ENABLED	0x10
 #define BWI_MAC_F_LOCKED	0x20	/* for debug */
 #define BWI_MAC_F_TPCTL_ERROR	0x40
+#define BWI_MAC_F_PHYE_RESET	0x80
 
 #define BWI_CREATE_MAC(mac, sc, id, rev)	\
 do {						\
 	BWI_CREATE_REGWIN(&(mac)->mac_regwin,	\
 			  (id),			\
-			  BWI_REGWIN_T_D11,	\
+			  BWI_REGWIN_T_MAC,	\
 			  (rev));		\
 	(mac)->mac_sc = (sc);			\
 } while (0)
@@ -496,15 +533,15 @@ struct bwi_rx_radiotap_hdr {
 	/* TODO: sq */
 };
 
-struct bwi_node {
-	struct ieee80211_node		ni;	/* must be the first */
-	struct ieee80211_amrr_node	amn;
+struct bwi_vap {
+	struct ieee80211vap	bv_vap;
+	int			(*bv_newstate)(struct ieee80211vap *,
+				    enum ieee80211_state, int);
 };
+#define	BWI_VAP(vap)	((struct bwi_vap *)(vap))
 
 struct bwi_softc {
 	struct ifnet		*sc_ifp;
-	struct ieee80211com	sc_ic;
-	struct ieee80211_amrr	sc_amrr;
 	uint32_t		sc_flags;	/* BWI_F_ */
 	device_t		sc_dev;
 	struct mtx		sc_mtx;
@@ -534,7 +571,7 @@ struct bwi_softc {
 	bus_space_handle_t	sc_mem_bh;
 
 	struct callout		sc_calib_ch;
-	struct callout		sc_amrr_ch;
+	struct callout		sc_watchdog_timer;
 
 	struct bwi_regwin	*sc_cur_regwin;
 	struct bwi_regwin	sc_com_regwin;
@@ -543,6 +580,15 @@ struct bwi_softc {
 	int			sc_nmac;
 	struct bwi_mac		sc_mac[BWI_MAC_MAX];
 
+	int			sc_rx_rate;
+	int			sc_tx_rate;
+	enum bwi_txpwrcb_type	sc_txpwrcb_type;
+
+	int			sc_led_blinking;
+	int			sc_led_ticks;
+	struct bwi_led		*sc_blink_led;
+	struct callout		sc_led_blink_ch;
+	int			sc_led_blink_offdur;
 	struct bwi_led		sc_leds[BWI_LED_MAX];
 
 	enum bwi_bus_space	sc_bus_space;
@@ -560,16 +606,13 @@ struct bwi_softc {
 	struct bwi_txstats_data	*sc_txstats;
 
 	int			sc_tx_timer;
+	const struct ieee80211_rate_table *sc_rates;
 
-	struct bpf_if		*sc_drvbpf;
 	struct bwi_tx_radiotap_hdr sc_tx_th;
-	int			sc_tx_th_len;
 	struct bwi_rx_radiotap_hdr sc_rx_th;
-	int			sc_rx_th_len;
 
-	int			(*sc_newstate)
-				(struct ieee80211com *,
-				 enum ieee80211_state, int);
+	struct taskqueue	*sc_tq;
+	struct task		sc_restart_task;
 
 	int			(*sc_init_tx_ring)(struct bwi_softc *, int);
 	void			(*sc_free_tx_ring)(struct bwi_softc *, int);
@@ -582,7 +625,7 @@ struct bwi_softc {
 
 	void			(*sc_setup_rxdesc)
 				(struct bwi_softc *, int, bus_addr_t, int);
-	void			(*sc_rxeof)(struct bwi_softc *);
+	int			(*sc_rxeof)(struct bwi_softc *);
 
 	void			(*sc_setup_txdesc)
 				(struct bwi_softc *, struct bwi_ring_data *,
@@ -595,18 +638,39 @@ struct bwi_softc {
 	/* Sysctl variables */
 	int			sc_fw_version;	/* BWI_FW_VERSION[34] */
 	int			sc_dwell_time;	/* milliseconds */
+	int			sc_led_idle;
+	int			sc_led_blink;
+	int			sc_txpwr_calib;
+	uint32_t		sc_debug;	/* BWI_DBG_ */
 };
 
 #define BWI_F_BUS_INITED	0x1
 #define BWI_F_PROMISC		0x2
+#define BWI_F_STOP		0x4
+
+#define BWI_DBG_MAC		0x00000001
+#define BWI_DBG_RF		0x00000002
+#define BWI_DBG_PHY		0x00000004
+#define BWI_DBG_MISC		0x00000008
+
+#define BWI_DBG_ATTACH		0x00000010
+#define BWI_DBG_INIT		0x00000020
+#define BWI_DBG_FIRMWARE	0x00000040
+#define BWI_DBG_80211		0x00000080
+#define BWI_DBG_TXPOWER		0x00000100
+#define BWI_DBG_INTR		0x00000200
+#define BWI_DBG_RX		0x00000400
+#define BWI_DBG_TX		0x00000800
+#define BWI_DBG_TXEOF		0x00001000
+#define BWI_DBG_LED		0x00002000
 
 #define	BWI_LOCK_INIT(sc) \
 	mtx_init(&(sc)->sc_mtx, device_get_nameunit((sc)->sc_dev), \
-	    MTX_NETWORK_LOCK, MTX_DEF | MTX_RECURSE);
+	    MTX_NETWORK_LOCK, MTX_DEF | MTX_RECURSE)
 #define	BWI_LOCK_DESTROY(sc)	mtx_destroy(&(sc)->sc_mtx)
-#define	BWI_LOCK(sc)	mtx_lock(&sc->sc_mtx)
-#define	BWI_UNLOCK(sc)	mtx_unlock(&sc->sc_mtx)
-#define	BWI_LOCK_ASSERT(sc)	mtx_assert(&sc->sc_mtx, MA_OWNED)
+#define	BWI_LOCK(sc)		mtx_lock(&(sc)->sc_mtx)
+#define	BWI_UNLOCK(sc)		mtx_unlock(&(sc)->sc_mtx)
+#define	BWI_ASSERT_LOCKED(sc)	mtx_assert(&(sc)->sc_mtx, MA_OWNED)
 
 int		bwi_attach(struct bwi_softc *);
 int		bwi_detach(struct bwi_softc *);
@@ -625,41 +689,8 @@ void		bwi_regwin_enable(struct bwi_softc *, struct bwi_regwin *,
 				  uint32_t);
 void		bwi_regwin_disable(struct bwi_softc *, struct bwi_regwin *,
 				   uint32_t);
-uint8_t		bwi_rate2plcp(uint8_t);	/* XXX belongs to 802.11 */
 
 #define abs(a)	__builtin_abs(a)
-
-enum ieee80211_modtype {
-	IEEE80211_MODTYPE_DS,
-	IEEE80211_MODTYPE_PBCC,
-	IEEE80211_MODTYPE_OFDM
-};
-#define	IEEE80211_MODTYPE_CCK	IEEE80211_MODTYPE_DS
-
-/*
- * Contention window (slots).
- */
-#define IEEE80211_CW_MAX	1023	/* aCWmax */
-#define IEEE80211_CW_MIN_0	31	/* DS/CCK aCWmin, ERP aCWmin(0) */
-#define IEEE80211_CW_MIN_1	15	/* OFDM aCWmin, ERP aCWmin(1) */
-
-/*
- * SIFS (microseconds).
- */
-#define IEEE80211_DUR_SIFS	10	/* DS/CCK/ERP SIFS */
-#define IEEE80211_DUR_OFDM_SIFS	16	/* OFDM SIFS */
-
-/*
- * Slot time (microseconds).
- */
-#define IEEE80211_DUR_SLOT	20	/* DS/CCK slottime, ERP long slottime */
-#define IEEE80211_DUR_SHSLOT	9	/* ERP short slottime */
-#define IEEE80211_DUR_OFDM_SLOT	9	/* OFDM slottime */
-
-/*
- * DIFS (microseconds).
- */
-#define IEEE80211_DUR_DIFS(sifs, slot)	((sifs) + 2 * (slot))
 
 /* XXX does not belong here */
 struct ieee80211_ds_plcp_hdr {
@@ -668,11 +699,5 @@ struct ieee80211_ds_plcp_hdr {
 	uint16_t	i_length;
 	uint16_t	i_crc;
 } __packed;
-
-enum ieee80211_modtype	ieee80211_rate2modtype(uint8_t rate);
-uint8_t		ieee80211_ack_rate(struct ieee80211_node *ni, uint8_t rate);
-uint16_t	ieee80211_txtime(struct ieee80211_node *ni, u_int len,
-				 uint8_t rs_rate, uint32_t flags);
-uint8_t		ieee80211_plcp2rate(uint8_t, int);
 
 #endif	/* !_IF_BWIVAR_H */

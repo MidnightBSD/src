@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -58,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm_kern.h,v 1.29 2006/11/20 16:23:34 ru Exp $
+ * $FreeBSD$
  */
 
 #ifndef _VM_VM_KERN_H_
@@ -70,6 +69,6 @@ extern vm_map_t kernel_map;
 extern vm_map_t kmem_map;
 extern vm_map_t exec_map;
 extern vm_map_t pipe_map;
-extern u_int vm_kmem_size;
+extern u_long vm_kmem_size;
 
 #endif				/* _VM_VM_KERN_H_ */

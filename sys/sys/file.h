@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/file.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)file.h	8.3 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/file.h,v 1.73 2007/01/05 19:59:46 jhb Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_FILE_H_
@@ -40,6 +39,7 @@
 #include <sys/unistd.h>
 #else
 #include <sys/queue.h>
+#include <sys/refcount.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 
@@ -60,6 +60,12 @@ struct socket;
 #define	DTYPE_KQUEUE	5	/* event queue */
 #define	DTYPE_CRYPTO	6	/* crypto */
 #define	DTYPE_MQUEUE	7	/* posix message queue */
+#define	DTYPE_SHM	8	/* swap-backed shared memory */
+#define	DTYPE_SEM	9	/* posix semaphore */
+#define	DTYPE_PTS	10	/* pseudo teletype master device */
+#define	DTYPE_DEV	11	/* Device specific fd type */
+#define	DTYPE_CAPABILITY	12	/* capability */
+#define	DTYPE_PROCDESC	13	/* process descriptor */
 
 #ifdef _KERNEL
 
@@ -70,6 +76,8 @@ typedef int fo_rdwr_t(struct file *fp, struct uio *uio,
 		    struct ucred *active_cred, int flags,
 		    struct thread *td);
 #define	FOF_OFFSET	1	/* Use the offset in uio argument */
+typedef	int fo_truncate_t(struct file *fp, off_t length,
+		    struct ucred *active_cred, struct thread *td);
 typedef	int fo_ioctl_t(struct file *fp, u_long com, void *data,
 		    struct ucred *active_cred, struct thread *td);
 typedef	int fo_poll_t(struct file *fp, int events,
@@ -78,74 +86,84 @@ typedef	int fo_kqfilter_t(struct file *fp, struct knote *kn);
 typedef	int fo_stat_t(struct file *fp, struct stat *sb,
 		    struct ucred *active_cred, struct thread *td);
 typedef	int fo_close_t(struct file *fp, struct thread *td);
+typedef	int fo_chmod_t(struct file *fp, mode_t mode,
+		    struct ucred *active_cred, struct thread *td);
+typedef	int fo_chown_t(struct file *fp, uid_t uid, gid_t gid,
+		    struct ucred *active_cred, struct thread *td);
 typedef	int fo_flags_t;
 
 struct fileops {
 	fo_rdwr_t	*fo_read;
 	fo_rdwr_t	*fo_write;
+	fo_truncate_t	*fo_truncate;
 	fo_ioctl_t	*fo_ioctl;
 	fo_poll_t	*fo_poll;
 	fo_kqfilter_t	*fo_kqfilter;
 	fo_stat_t	*fo_stat;
 	fo_close_t	*fo_close;
+	fo_chmod_t	*fo_chmod;
+	fo_chown_t	*fo_chown;
 	fo_flags_t	fo_flags;	/* DFLAG_* below */
 };
 
 #define DFLAG_PASSABLE	0x01	/* may be passed via unix sockets. */
 #define DFLAG_SEEKABLE	0x02	/* seekable / nonsequential */
+#endif /* _KERNEL */
 
+#if defined(_KERNEL) || defined(_WANT_FILE)
 /*
  * Kernel descriptor table.
  * One entry for each open kernel vnode and socket.
  *
  * Below is the list of locks that protects members in struct file.
  *
- * (fl)	filelist_lock
- * (f)	f_mtx in struct file
+ * (f) protected with mtx_lock(mtx_pool_find(fp))
  * (d) cdevpriv_mtx
  * none	not locked
  */
 
-struct file {
-	LIST_ENTRY(file) f_list;/* (fl) list of active files */
-	short	f_type;		/* descriptor type */
-	void	*f_data;	/* file descriptor specific data */
-	u_int	f_flag;		/* see fcntl.h */
-	struct mtx	*f_mtxp;	/* mutex to protect data */
-	struct fileops *f_ops;	/* File operations */
-	struct	ucred *f_cred;	/* credentials associated with descriptor */
-	int	f_count;	/* (f) reference count */
-	struct vnode *f_vnode;	/* NULL or applicable vnode */
-
-	/* DFLAG_SEEKABLE specific fields */
-	off_t	f_offset;
-	short	f_vnread_flags; /* 
-				   * (f) home grown sleep lock for f_offset
-				   * Used only for shared vnode locking in
-				   * vnread()
-				   */
-#define  FOFFSET_LOCKED       0x1
-#define  FOFFSET_LOCK_WAITING 0x2		 
-	/* DTYPE_SOCKET specific fields */
-	short	f_gcflag;	/* used by thread doing fd garbage collection */
-#define	FMARK		0x1	/* mark during gc() */
-#define	FDEFER		0x2	/* defer for next gc pass */
-#define	FWAIT		0x4	/* gc is scanning message buffers */
-	int	f_msgcount;	/* (f) references from message queue */
-
-	/* DTYPE_VNODE specific fields */
-	int	f_seqcount;	/*
-				 * count of sequential accesses -- cleared
-				 * by most seek operations.
-				 */
-	off_t	f_nextoff;	/*
-				 * offset of next expected read or write
-				 */
-	void	*f_label;	/* Place-holder for struct label pointer. */
-	struct cdev_privdata *f_cdevpriv; /* (d) Private data for the cdev. */
+struct fadvise_info {
+	int		fa_advice;	/* (f) FADV_* type. */
+	off_t		fa_start;	/* (f) Region start. */
+	off_t		fa_end;		/* (f) Region end. */
 };
 
-#endif /* _KERNEL */
+struct file {
+	void		*f_data;	/* file descriptor specific data */
+	struct fileops	*f_ops;		/* File operations */
+	struct ucred	*f_cred;	/* associated credentials. */
+	struct vnode 	*f_vnode;	/* NULL or applicable vnode */
+	short		f_type;		/* descriptor type */
+	short		f_vnread_flags; /* (f) Sleep lock for f_offset */
+	volatile u_int	f_flag;		/* see fcntl.h */
+	volatile u_int 	f_count;	/* reference count */
+	/*
+	 *  DTYPE_VNODE specific fields.
+	 */
+	int		f_seqcount;	/* Count of sequential accesses. */
+	off_t		f_nextoff;	/* next expected read/write offset. */
+	union {
+		struct cdev_privdata *fvn_cdevpriv;
+					/* (d) Private data for the cdev. */
+		struct fadvise_info *fvn_advice;
+	} f_vnun;
+	/*
+	 *  DFLAG_SEEKABLE specific fields
+	 */
+	off_t		f_offset;
+	/*
+	 * Mandatory Access control information.
+	 */
+	void		*f_label;	/* Place-holder for MAC label. */
+};
+
+#define	f_cdevpriv	f_vnun.fvn_cdevpriv
+#define	f_advice	f_vnun.fvn_advice
+
+#define	FOFFSET_LOCKED       0x1
+#define	FOFFSET_LOCK_WAITING 0x2		 
+
+#endif /* _KERNEL || _WANT_FILE */
 
 /*
  * Userland version of struct file, for sysctl
@@ -171,20 +189,22 @@ struct xfile {
 MALLOC_DECLARE(M_FILE);
 #endif
 
-LIST_HEAD(filelist, file);
-extern struct filelist filehead; /* (fl) head of list of open files */
 extern struct fileops vnops;
 extern struct fileops badfileops;
 extern struct fileops socketops;
 extern int maxfiles;		/* kernel limit on number of open files */
 extern int maxfilesperproc;	/* per process limit on number of open files */
-extern int openfiles;		/* (fl) actual number of open files */
-extern struct sx filelist_lock; /* sx to protect filelist and openfiles */
+extern volatile int openfiles;	/* actual number of open files */
 
-int fget(struct thread *td, int fd, struct file **fpp);
-int fget_read(struct thread *td, int fd, struct file **fpp);
-int fget_write(struct thread *td, int fd, struct file **fpp);
-int fdrop(struct file *fp, struct thread *td);
+int fget(struct thread *td, int fd, cap_rights_t rights, struct file **fpp);
+int fget_mmap(struct thread *td, int fd, cap_rights_t rights,
+    u_char *maxprotp, struct file **fpp);
+int fget_read(struct thread *td, int fd, cap_rights_t rights,
+    struct file **fpp);
+int fget_write(struct thread *td, int fd, cap_rights_t rights,
+    struct file **fpp);
+int fgetcap(struct thread *td, int fd, struct file **fpp);
+int _fdrop(struct file *fp, struct thread *td);
 
 /*
  * The socket operations are used a couple of places.
@@ -193,120 +213,128 @@ int fdrop(struct file *fp, struct thread *td);
  */
 fo_rdwr_t	soo_read;
 fo_rdwr_t	soo_write;
+fo_truncate_t	soo_truncate;
 fo_ioctl_t	soo_ioctl;
 fo_poll_t	soo_poll;
 fo_kqfilter_t	soo_kqfilter;
 fo_stat_t	soo_stat;
 fo_close_t	soo_close;
 
-/* Lock a file. */
-#define	FILE_LOCK(f)	mtx_lock((f)->f_mtxp)
-#define	FILE_UNLOCK(f)	mtx_unlock((f)->f_mtxp)
-#define	FILE_LOCKED(f)	mtx_owned((f)->f_mtxp)
-#define	FILE_LOCK_ASSERT(f, type) mtx_assert((f)->f_mtxp, (type))
+fo_chmod_t	invfo_chmod;
+fo_chown_t	invfo_chown;
 
-int fgetvp(struct thread *td, int fd, struct vnode **vpp);
-int fgetvp_read(struct thread *td, int fd, struct vnode **vpp);
-int fgetvp_write(struct thread *td, int fd, struct vnode **vpp);
+void finit(struct file *, u_int, short, void *, struct fileops *);
+int fgetvp(struct thread *td, int fd, cap_rights_t rights, struct vnode **vpp);
+int fgetvp_rights(struct thread *td, int fd, cap_rights_t need,
+    cap_rights_t *have, struct vnode **vpp);
+int fgetvp_read(struct thread *td, int fd, cap_rights_t rights,
+    struct vnode **vpp);
+int fgetvp_write(struct thread *td, int fd, cap_rights_t rights,
+    struct vnode **vpp);
 
-int fgetsock(struct thread *td, int fd, struct socket **spp, u_int *fflagp);
+int fgetsock(struct thread *td, int fd, cap_rights_t rights,
+    struct socket **spp, u_int *fflagp);
 void fputsock(struct socket *sp);
 
-#define	fhold_locked(fp)						\
-	do {								\
-		FILE_LOCK_ASSERT(fp, MA_OWNED);				\
-		(fp)->f_count++;					\
-	} while (0)
+static __inline int
+_fnoop(void)
+{
+
+	return (0);
+}
 
 #define	fhold(fp)							\
-	do {								\
-		FILE_LOCK(fp);						\
-		(fp)->f_count++;					\
-		FILE_UNLOCK(fp);					\
-	} while (0)
+	(refcount_acquire(&(fp)->f_count))
+#define	fdrop(fp, td)							\
+	(refcount_release(&(fp)->f_count) ? _fdrop((fp), (td)) : _fnoop())
 
 static __inline fo_rdwr_t	fo_read;
 static __inline fo_rdwr_t	fo_write;
+static __inline fo_truncate_t	fo_truncate;
 static __inline fo_ioctl_t	fo_ioctl;
 static __inline fo_poll_t	fo_poll;
 static __inline fo_kqfilter_t	fo_kqfilter;
 static __inline fo_stat_t	fo_stat;
 static __inline fo_close_t	fo_close;
+static __inline fo_chmod_t	fo_chmod;
+static __inline fo_chown_t	fo_chown;
 
 static __inline int
-fo_read(fp, uio, active_cred, flags, td)
-	struct file *fp;
-	struct uio *uio;
-	struct ucred *active_cred;
-	int flags;
-	struct thread *td;
+fo_read(struct file *fp, struct uio *uio, struct ucred *active_cred,
+    int flags, struct thread *td)
 {
 
 	return ((*fp->f_ops->fo_read)(fp, uio, active_cred, flags, td));
 }
 
 static __inline int
-fo_write(fp, uio, active_cred, flags, td)
-	struct file *fp;
-	struct uio *uio;
-	struct ucred *active_cred;
-	int flags;
-	struct thread *td;
+fo_write(struct file *fp, struct uio *uio, struct ucred *active_cred,
+    int flags, struct thread *td)
 {
 
 	return ((*fp->f_ops->fo_write)(fp, uio, active_cred, flags, td));
 }
 
 static __inline int
-fo_ioctl(fp, com, data, active_cred, td)
-	struct file *fp;
-	u_long com;
-	void *data;
-	struct ucred *active_cred;
-	struct thread *td;
+fo_truncate(struct file *fp, off_t length, struct ucred *active_cred,
+    struct thread *td)
+{
+
+	return ((*fp->f_ops->fo_truncate)(fp, length, active_cred, td));
+}
+
+static __inline int
+fo_ioctl(struct file *fp, u_long com, void *data, struct ucred *active_cred,
+    struct thread *td)
 {
 
 	return ((*fp->f_ops->fo_ioctl)(fp, com, data, active_cred, td));
 }
 
 static __inline int
-fo_poll(fp, events, active_cred, td)
-	struct file *fp;
-	int events;
-	struct ucred *active_cred;
-	struct thread *td;
+fo_poll(struct file *fp, int events, struct ucred *active_cred,
+    struct thread *td)
 {
 
 	return ((*fp->f_ops->fo_poll)(fp, events, active_cred, td));
 }
 
 static __inline int
-fo_stat(fp, sb, active_cred, td)
-	struct file *fp;
-	struct stat *sb;
-	struct ucred *active_cred;
-	struct thread *td;
+fo_stat(struct file *fp, struct stat *sb, struct ucred *active_cred,
+    struct thread *td)
 {
 
 	return ((*fp->f_ops->fo_stat)(fp, sb, active_cred, td));
 }
 
 static __inline int
-fo_close(fp, td)
-	struct file *fp;
-	struct thread *td;
+fo_close(struct file *fp, struct thread *td)
 {
 
 	return ((*fp->f_ops->fo_close)(fp, td));
 }
 
 static __inline int
-fo_kqfilter(fp, kn)
-	struct file *fp;
-	struct knote *kn;
+fo_kqfilter(struct file *fp, struct knote *kn)
 {
 
 	return ((*fp->f_ops->fo_kqfilter)(fp, kn));
+}
+
+static __inline int
+fo_chmod(struct file *fp, mode_t mode, struct ucred *active_cred,
+    struct thread *td)
+{
+
+	return ((*fp->f_ops->fo_chmod)(fp, mode, active_cred, td));
+}
+
+static __inline int
+fo_chown(struct file *fp, uid_t uid, gid_t gid, struct ucred *active_cred,
+    struct thread *td)
+{
+
+	return ((*fp->f_ops->fo_chown)(fp, uid, gid, active_cred, td));
 }
 
 #endif /* _KERNEL */

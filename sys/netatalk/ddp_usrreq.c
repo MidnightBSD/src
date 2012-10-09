@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2004-2005 Robert N. M. Watson
+ * Copyright (c) 2004-2009 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,7 +47,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $FreeBSD: src/sys/netatalk/ddp_usrreq.c,v 1.55 2007/05/11 10:20:49 rwatson Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -71,16 +70,33 @@
 static u_long	ddp_sendspace = DDP_MAXSZ; /* Max ddp size + 1 (ddp_type) */
 static u_long	ddp_recvspace = 10 * (587 + sizeof(struct sockaddr_at));
 
-static struct ifqueue atintrq1, atintrq2, aarpintrq;
+static const struct netisr_handler atalk1_nh = {
+	.nh_name = "atalk1",
+	.nh_handler = at1intr,
+	.nh_proto = NETISR_ATALK1,
+	.nh_policy = NETISR_POLICY_SOURCE,
+};
+
+static const struct netisr_handler atalk2_nh = {
+	.nh_name = "atalk2",
+	.nh_handler = at2intr,
+	.nh_proto = NETISR_ATALK2,
+	.nh_policy = NETISR_POLICY_SOURCE,
+};
+
+static const struct netisr_handler aarp_nh = {
+	.nh_name = "aarp",
+	.nh_handler = aarpintr,
+	.nh_proto = NETISR_AARP,
+	.nh_policy = NETISR_POLICY_SOURCE,
+};
 
 static int
 ddp_attach(struct socket *so, int proto, struct thread *td)
 {
-	struct ddpcb *ddp;
 	int error = 0;
 	
-	ddp = sotoddpcb(so);
-	KASSERT(ddp == NULL, ("ddp_attach: ddp != NULL"));
+	KASSERT(sotoddpcb(so) == NULL, ("ddp_attach: ddp != NULL"));
 
 	/*
 	 * Allocate socket buffer space first so that it's present
@@ -176,10 +192,8 @@ ddp_disconnect(struct socket *so)
 static int
 ddp_shutdown(struct socket *so)
 {
-	struct ddpcb	*ddp;
 
-	ddp = sotoddpcb(so);
-	KASSERT(ddp != NULL, ("ddp_shutdown: ddp == NULL"));
+	KASSERT(sotoddpcb(so) != NULL, ("ddp_shutdown: ddp == NULL"));
 
 	socantsendmore(so);
 	return (0);
@@ -261,16 +275,11 @@ void
 ddp_init(void)
 {
 
-	atintrq1.ifq_maxlen = IFQ_MAXLEN;
-	atintrq2.ifq_maxlen = IFQ_MAXLEN;
-	aarpintrq.ifq_maxlen = IFQ_MAXLEN;
-	mtx_init(&atintrq1.ifq_mtx, "at1_inq", NULL, MTX_DEF);
-	mtx_init(&atintrq2.ifq_mtx, "at2_inq", NULL, MTX_DEF);
-	mtx_init(&aarpintrq.ifq_mtx, "aarp_inq", NULL, MTX_DEF);
 	DDP_LIST_LOCK_INIT();
-	netisr_register(NETISR_ATALK1, at1intr, &atintrq1, NETISR_MPSAFE);
-	netisr_register(NETISR_ATALK2, at2intr, &atintrq2, NETISR_MPSAFE);
-	netisr_register(NETISR_AARP, aarpintr, &aarpintrq, NETISR_MPSAFE);
+	TAILQ_INIT(&at_ifaddrhead);
+	netisr_register(&atalk1_nh);
+	netisr_register(&atalk2_nh);
+	netisr_register(&aarp_nh);
 }
 
 #if 0

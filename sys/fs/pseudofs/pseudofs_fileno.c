@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/pseudofs/pseudofs_fileno.c,v 1.15 2007/04/15 17:10:01 des Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pseudofs.h"
 

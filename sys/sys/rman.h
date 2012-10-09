@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -27,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/rman.h,v 1.34.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_RMAN_H_
@@ -117,7 +116,9 @@ struct rman {
 TAILQ_HEAD(rman_head, rman);
 
 int	rman_activate_resource(struct resource *r);
+int	rman_adjust_resource(struct resource *r, u_long start, u_long end);
 int	rman_await_resource(struct resource *r, int pri, int timo);
+int	rman_first_free_region(struct rman *rm, u_long *start, u_long *end);
 bus_space_handle_t rman_get_bushandle(struct resource *);
 bus_space_tag_t rman_get_bustag(struct resource *);
 u_long	rman_get_end(struct resource *);
@@ -131,6 +132,7 @@ int	rman_deactivate_resource(struct resource *r);
 int	rman_fini(struct rman *rm);
 int	rman_init(struct rman *rm);
 int	rman_init_from_resource(struct rman *rm, struct resource *r);
+int	rman_last_free_region(struct rman *rm, u_long *start, u_long *end);
 uint32_t rman_make_alignment_flags(uint32_t size);
 int	rman_manage_region(struct rman *rm, u_long start, u_long end);
 int	rman_is_region_manager(struct resource *r, struct rman *rm);

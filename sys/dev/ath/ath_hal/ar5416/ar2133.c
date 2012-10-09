@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: ar2133.c,v 1.1 2011-09-30 01:20:05 laffer1 Exp $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -46,14 +46,8 @@ struct ar2133State {
 
 #define	ar5416ModifyRfBuffer	ar5212ModifyRfBuffer	/*XXX*/
 
-extern  void ar5416ModifyRfBuffer(uint32_t *rfBuf, uint32_t reg32,
-	uint32_t numBits, uint32_t firstBit, uint32_t column);
-HAL_BOOL ar2133GetChipPowerLimits(struct ath_hal *ah, HAL_CHANNEL 
-	*chans, uint32_t nchans);
-	
-static HAL_BOOL ar2133GetChannelMaxMinPower(struct ath_hal *, HAL_CHANNEL *, 
-		int16_t *maxPow,int16_t *minPow);
-int16_t ar2133GetNfAdjust(struct ath_hal *ah, const HAL_CHANNEL_INTERNAL *c);
+void	ar5416ModifyRfBuffer(uint32_t *rfBuf, uint32_t reg32,
+	    uint32_t numBits, uint32_t firstBit, uint32_t column);
 
 static void
 ar2133WriteRegs(struct ath_hal *ah, u_int modesIndex, u_int freqIndex,
@@ -64,12 +58,71 @@ ar2133WriteRegs(struct ath_hal *ah, u_int modesIndex, u_int freqIndex,
 }
 
 /*
+ * Fix on 2.4 GHz band for orientation sensitivity issue by increasing
+ * rf_pwd_icsyndiv.
+ * 
+ * Theoretical Rules:
+ *   if 2 GHz band
+ *      if forceBiasAuto
+ *         if synth_freq < 2412
+ *            bias = 0
+ *         else if 2412 <= synth_freq <= 2422
+ *            bias = 1
+ *         else // synth_freq > 2422
+ *            bias = 2
+ *      else if forceBias > 0
+ *         bias = forceBias & 7
+ *      else
+ *         no change, use value from ini file
+ *   else
+ *      no change, invalid band
+ *
+ *  1st Mod:
+ *    2422 also uses value of 2
+ *    <approved>
+ *
+ *  2nd Mod:
+ *    Less than 2412 uses value of 0, 2412 and above uses value of 2
+ */
+static void
+ar2133ForceBias(struct ath_hal *ah, uint16_t synth_freq)
+{
+        uint32_t tmp_reg;
+        int reg_writes = 0;
+        uint32_t new_bias = 0;
+	struct ar2133State *priv = AR2133(ah);
+
+	/* XXX this is a bit of a silly check for 2.4ghz channels -adrian */
+        if (synth_freq >= 3000)
+                return;
+
+        if (synth_freq < 2412)
+                new_bias = 0;
+        else if (synth_freq < 2422)
+                new_bias = 1;
+        else
+                new_bias = 2;
+
+        /* pre-reverse this field */
+        tmp_reg = ath_hal_reverseBits(new_bias, 3);
+
+        HALDEBUG(ah, HAL_DEBUG_ANY, "%s: Force rf_pwd_icsyndiv to %1d on %4d\n",
+                  __func__, new_bias, synth_freq);
+
+        /* swizzle rf_pwd_icsyndiv */
+        ar5416ModifyRfBuffer(priv->Bank6Data, tmp_reg, 3, 181, 3);
+
+        /* write Bank 6 with new params */
+        ath_hal_ini_bank_write(ah, &AH5416(ah)->ah_ini_bank6, priv->Bank6Data, reg_writes);
+}
+
+/*
  * Take the MHz channel value and set the Channel value
  *
  * ASSUMES: Writes enabled to analog bus
  */
 static HAL_BOOL
-ar2133SetChannel(struct ath_hal *ah,  HAL_CHANNEL_INTERNAL *chan)
+ar2133SetChannel(struct ath_hal *ah, const struct ieee80211_channel *chan)
 {
 	uint32_t channelSel  = 0;
 	uint32_t bModeSynth  = 0;
@@ -78,9 +131,9 @@ ar2133SetChannel(struct ath_hal *ah,  HAL_CHANNEL_INTERNAL *chan)
 	uint16_t freq;
 	CHAN_CENTERS centers;
     
-	OS_MARK(ah, AH_MARK_SETCHANNEL, chan->channel);
+	OS_MARK(ah, AH_MARK_SETCHANNEL, chan->ic_freq);
     
-	ar5416GetChannelCenters(ah,  chan, &centers);
+	ar5416GetChannelCenters(ah, chan, &centers);
 	freq = centers.synth_center;
 
 	if (freq < 4800) {
@@ -112,13 +165,13 @@ ar2133SetChannel(struct ath_hal *ah,  HAL_CHANNEL_INTERNAL *chan)
 		}
 	} else if ((freq % 20) == 0 && freq >= 5120) {
 		channelSel = ath_hal_reverseBits(((freq - 4800) / 20 << 2), 8);
-		if (AR_SREV_SOWL_10_OR_LATER(ah))
+		if (AR_SREV_HOWL(ah) || AR_SREV_SOWL_10_OR_LATER(ah))
 			aModeRefSel = ath_hal_reverseBits(3, 2);
 		else
 			aModeRefSel = ath_hal_reverseBits(1, 2);
 	} else if ((freq % 10) == 0) {
 		channelSel = ath_hal_reverseBits(((freq - 4800) / 10 << 1), 8);
-		if (AR_SREV_SOWL_10_OR_LATER(ah))
+		if (AR_SREV_HOWL(ah) || AR_SREV_SOWL_10_OR_LATER(ah))
 			aModeRefSel = ath_hal_reverseBits(2, 2);
 		else
 			aModeRefSel = ath_hal_reverseBits(1, 2);
@@ -130,6 +183,10 @@ ar2133SetChannel(struct ath_hal *ah,  HAL_CHANNEL_INTERNAL *chan)
 		    __func__, freq);
 		return AH_FALSE;
 	}
+
+	/* Workaround for hw bug - AR5416 specific */
+	if (AR_SREV_OWL(ah) && ah->ah_config.ah_ar5416_biasadj)
+		ar2133ForceBias(ah, freq);
 
 	reg32 = (channelSel << 8) | (aModeRefSel << 2) | (bModeSynth << 1) |
 		(1 << 5) | 0x1;
@@ -169,7 +226,7 @@ ar2133GetRfBank(struct ath_hal *ah, int bank)
  * REQUIRES: Access to the analog rf device
  */
 static HAL_BOOL
-ar2133SetRfRegs(struct ath_hal *ah, HAL_CHANNEL_INTERNAL *chan,
+ar2133SetRfRegs(struct ath_hal *ah, const struct ieee80211_channel *chan,
                 uint16_t modesIndex, uint16_t *rfXpdGain)
 {
 	struct ar2133State *priv = AR2133(ah);
@@ -193,12 +250,20 @@ ar2133SetRfRegs(struct ath_hal *ah, HAL_CHANNEL_INTERNAL *chan,
 	ath_hal_ini_bank_setup(priv->Bank6Data, &AH5416(ah)->ah_ini_bank6, modesIndex);
 	
 	/* Only the 5 or 2 GHz OB/DB need to be set for a mode */
-	if (IS_CHAN_2GHZ(chan)) {
+	if (IEEE80211_IS_CHAN_2GHZ(chan)) {
+		HALDEBUG(ah, HAL_DEBUG_EEPROM, "%s: 2ghz: OB_2:%d, DB_2:%d\n",
+		    __func__,
+		    ath_hal_eepromGet(ah, AR_EEP_OB_2, AH_NULL),
+		    ath_hal_eepromGet(ah, AR_EEP_DB_2, AH_NULL));
 		ar5416ModifyRfBuffer(priv->Bank6Data,
 		    ath_hal_eepromGet(ah, AR_EEP_OB_2, AH_NULL), 3, 197, 0);
 		ar5416ModifyRfBuffer(priv->Bank6Data,
 		    ath_hal_eepromGet(ah, AR_EEP_DB_2, AH_NULL), 3, 194, 0);
 	} else {
+		HALDEBUG(ah, HAL_DEBUG_EEPROM, "%s: 5ghz: OB_5:%d, DB_5:%d\n",
+		    __func__,
+		    ath_hal_eepromGet(ah, AR_EEP_OB_5, AH_NULL),
+		    ath_hal_eepromGet(ah, AR_EEP_DB_5, AH_NULL));
 		ar5416ModifyRfBuffer(priv->Bank6Data,
 		    ath_hal_eepromGet(ah, AR_EEP_OB_5, AH_NULL), 3, 203, 0);
 		ar5416ModifyRfBuffer(priv->Bank6Data,
@@ -233,7 +298,7 @@ ar2133SetRfRegs(struct ath_hal *ah, HAL_CHANNEL_INTERNAL *chan,
 
 static HAL_BOOL
 ar2133SetPowerTable(struct ath_hal *ah, int16_t *pPowerMin, int16_t *pPowerMax, 
-	HAL_CHANNEL_INTERNAL *chan, uint16_t *rfXpdGain)
+	const struct ieee80211_channel *chan, uint16_t *rfXpdGain)
 {
 	return AH_TRUE;
 }
@@ -267,8 +332,9 @@ ar2133GetMinPower(struct ath_hal *ah, EXPN_DATA_PER_CHANNEL_5112 *data)
 #endif
 
 static HAL_BOOL
-ar2133GetChannelMaxMinPower(struct ath_hal *ah, HAL_CHANNEL *chan, int16_t *maxPow,
-                int16_t *minPow)
+ar2133GetChannelMaxMinPower(struct ath_hal *ah,
+	const struct ieee80211_channel *chan,
+	int16_t *maxPow, int16_t *minPow)
 {
 #if 0
     struct ath_hal_5212 *ahp = AH5212(ah);
@@ -328,11 +394,28 @@ ar2133GetChannelMaxMinPower(struct ath_hal *ah, HAL_CHANNEL *chan, int16_t *maxP
 #endif
 }
 
+/*
+ * The ordering of nfarray is thus:
+ *
+ * nfarray[0]:	Chain 0 ctl
+ * nfarray[1]:	Chain 1 ctl
+ * nfarray[2]:	Chain 2 ctl
+ * nfarray[3]:	Chain 0 ext
+ * nfarray[4]:	Chain 1 ext
+ * nfarray[5]:	Chain 2 ext
+ */
 static void 
 ar2133GetNoiseFloor(struct ath_hal *ah, int16_t nfarray[])
 {
 	struct ath_hal_5416 *ahp = AH5416(ah);
 	int16_t nf;
+
+	/*
+	 * Blank nf array - some chips may only
+	 * have one or two RX chainmasks enabled.
+	 */
+	nfarray[0] = nfarray[1] = nfarray[2] = 0;
+	nfarray[3] = nfarray[4] = nfarray[5] = 0;
 
 	switch (ahp->ah_rx_chainmask) {
         case 0x7:
@@ -341,7 +424,7 @@ ar2133GetNoiseFloor(struct ath_hal *ah, int16_t nfarray[])
 			nf = 0 - ((nf ^ 0x1ff) + 1);
 		HALDEBUG(ah, HAL_DEBUG_NFCAL,
 		    "NF calibrated [ctl] [chain 2] is %d\n", nf);
-		nfarray[4] = nf;
+		nfarray[2] = nf;
 
 		nf = MS(OS_REG_READ(ah, AR_PHY_CH2_EXT_CCA), AR_PHY_CH2_EXT_MINCCA_PWR);
 		if (nf & 0x100)
@@ -357,7 +440,7 @@ ar2133GetNoiseFloor(struct ath_hal *ah, int16_t nfarray[])
 			nf = 0 - ((nf ^ 0x1ff) + 1);
 		HALDEBUG(ah, HAL_DEBUG_NFCAL,
 		    "NF calibrated [ctl] [chain 1] is %d\n", nf);
-		nfarray[2] = nf;
+		nfarray[1] = nf;
 
 
 		nf = MS(OS_REG_READ(ah, AR_PHY_CH1_EXT_CCA), AR_PHY_CH1_EXT_MINCCA_PWR);
@@ -365,7 +448,7 @@ ar2133GetNoiseFloor(struct ath_hal *ah, int16_t nfarray[])
 			nf = 0 - ((nf ^ 0x1ff) + 1);
 		HALDEBUG(ah, HAL_DEBUG_NFCAL,
 		    "NF calibrated [ext] [chain 1] is %d\n", nf);
-		nfarray[3] = nf;
+		nfarray[4] = nf;
 		/* fall thru... */
         case 0x1:
 		nf = MS(OS_REG_READ(ah, AR_PHY_CCA), AR_PHY_MINCCA_PWR);
@@ -380,7 +463,7 @@ ar2133GetNoiseFloor(struct ath_hal *ah, int16_t nfarray[])
 			nf = 0 - ((nf ^ 0x1ff) + 1);
 		HALDEBUG(ah, HAL_DEBUG_NFCAL,
 		    "NF calibrated [ext] [chain 0] is %d\n", nf);
-		nfarray[1] = nf;
+		nfarray[3] = nf;
 
 		break;
 	}
@@ -390,7 +473,7 @@ ar2133GetNoiseFloor(struct ath_hal *ah, int16_t nfarray[])
  * Adjust NF based on statistical values for 5GHz frequencies.
  * Stubbed:Not used by Fowl
  */
-int16_t
+static int16_t
 ar2133GetNfAdjust(struct ath_hal *ah, const HAL_CHANNEL_INTERNAL *c)
 {
 	return 0;
@@ -419,6 +502,8 @@ ar2133RfAttach(struct ath_hal *ah, HAL_STATUS *status)
 	struct ath_hal_5212 *ahp = AH5212(ah);
 	struct ar2133State *priv;
 	uint32_t *bankData;
+
+	HALDEBUG(ah, HAL_DEBUG_ATTACH, "%s: attach AR2133 radio\n", __func__);
 
 	HALASSERT(ahp->ah_rfHal == AH_NULL);
 	priv = ath_hal_malloc(sizeof(struct ar2133State)

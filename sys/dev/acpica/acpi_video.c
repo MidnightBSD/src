@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_video.c,v 1.3 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002-2003 Taku YAMAMOTO <taku@cent.saitama-u.ac.jp>
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: acpi_video.c,v 1.4 2012-03-14 23:20:38 laffer1 Exp $
+ *	$Id: acpi_video.c,v 1.5 2012-10-09 04:08:08 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_video.c,v 1.13.2.2 2010/03/10 18:13:17 jkim Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -39,7 +38,8 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_video.c,v 1.13.2.2 2010/03/10 18:13:
 #include <sys/queue.h>
 #include <sys/sysctl.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 /* ACPI video extension driver. */
@@ -75,6 +75,7 @@ static void	acpi_video_identify(driver_t *driver, device_t parent);
 static int	acpi_video_probe(device_t);
 static int	acpi_video_attach(device_t);
 static int	acpi_video_detach(device_t);
+static int	acpi_video_resume(device_t);
 static int	acpi_video_shutdown(device_t);
 static void	acpi_video_notify_handler(ACPI_HANDLE, UINT32, void *);
 static void	acpi_video_power_profile(void *);
@@ -155,6 +156,7 @@ static device_method_t acpi_video_methods[] = {
 	DEVMETHOD(device_probe, acpi_video_probe),
 	DEVMETHOD(device_attach, acpi_video_attach),
 	DEVMETHOD(device_detach, acpi_video_detach),
+	DEVMETHOD(device_resume, acpi_video_resume),
 	DEVMETHOD(device_shutdown, acpi_video_shutdown),
 	{ 0, 0 }
 };
@@ -305,6 +307,36 @@ acpi_video_detach(device_t dev)
 }
 
 static int
+acpi_video_resume(device_t dev)
+{
+	struct acpi_video_softc *sc;
+	struct acpi_video_output *vo, *vn;
+	int level;
+
+	sc = device_get_softc(dev);
+
+	/* Restore brightness level */
+	ACPI_SERIAL_BEGIN(video);
+	ACPI_SERIAL_BEGIN(video_output);
+	STAILQ_FOREACH_SAFE(vo, &sc->vid_outputs, vo_next, vn) {
+		if ((vo->adr & DOD_DEVID_MASK_FULL) != DOD_DEVID_LCD &&
+		    (vo->adr & DOD_DEVID_MASK) != DOD_DEVID_INTDFP)
+			continue;
+
+		if ((vo_get_device_status(vo->handle) & DCS_ACTIVE) == 0)
+			continue;
+
+		level = vo_get_brightness(vo->handle);
+		if (level != -1)
+			vo_set_brightness(vo->handle, level);
+	}
+	ACPI_SERIAL_END(video_output);
+	ACPI_SERIAL_END(video);
+
+	return (0);
+}
+
+static int
 acpi_video_shutdown(device_t dev)
 {
 	struct acpi_video_softc *sc;
@@ -429,15 +461,11 @@ acpi_video_vo_init(UINT32 adr)
 {
 	struct acpi_video_output *vn, *vo, *vp;
 	int n, x;
-	int display_index;
-	int display_port;
 	char name[8], env[32];
 	const char *type, *desc;
 	struct acpi_video_output_queue *voqh;
 
 	ACPI_SERIAL_ASSERT(video);
-	display_index = adr & DOD_DEVID_MASK_DISPIDX;
-	display_port = (adr & DOD_DEVID_MASK_DISPPORT) >> 4;
 
 	switch (adr & DOD_DEVID_MASK) {
 	case DOD_DEVID_MONITOR:
@@ -474,7 +502,7 @@ acpi_video_vo_init(UINT32 adr)
 	}
 
 	n = 0;
-	vn = vp = NULL;
+	vp = NULL;
 	STAILQ_FOREACH(vn, voqh, vo_unit.next) {
 		if (vn->vo_unit.num != n)
 			break;
@@ -541,7 +569,7 @@ acpi_video_vo_init(UINT32 adr)
 			SYSCTL_ADD_PROC(&vo->vo_sysctl_ctx,
 			    SYSCTL_CHILDREN(vo->vo_sysctl_tree),
 			    OID_AUTO, "levels",
-			    CTLTYPE_OPAQUE|CTLFLAG_RD, vo, 0,
+			    CTLTYPE_INT | CTLFLAG_RD, vo, 0,
 			    acpi_video_vo_levels_sysctl, "I",
 			    "supported brightness levels");
 		} else
@@ -584,8 +612,8 @@ acpi_video_vo_bind(struct acpi_video_output *vo, ACPI_HANDLE handle)
 			vo->vo_economy = vo->vo_levels[BCL_ECONOMY];
 	}
 	if (vo->vo_levels != NULL)
-	    AcpiInstallNotifyHandler(handle, ACPI_DEVICE_NOTIFY,
-		acpi_video_vo_notify_handler, vo);
+		AcpiInstallNotifyHandler(handle, ACPI_DEVICE_NOTIFY,
+		    acpi_video_vo_notify_handler, vo);
 	ACPI_SERIAL_END(video_output);
 }
 
@@ -782,7 +810,6 @@ acpi_video_vo_presets_sysctl(SYSCTL_HANDLER_ARGS)
 	struct acpi_video_output *vo;
 	int i, level, *preset, err;
 
-	err = 0;
 	vo = (struct acpi_video_output *)arg1;
 	ACPI_SERIAL_BEGIN(video_output);
 	if (vo->handle == NULL) {
@@ -924,7 +951,7 @@ vid_enum_outputs(ACPI_HANDLE handle,
 	argset.dod_pkg  = res;
 	argset.count    = 0;
 	status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, handle, 1,
-	    vid_enum_outputs_subr, &argset, NULL);
+	    vid_enum_outputs_subr, NULL, &argset, NULL);
 	if (ACPI_FAILURE(status))
 		printf("failed walking down %s - %s\n",
 		       acpi_name(handle), AcpiFormatException(status));
@@ -942,7 +969,6 @@ vo_get_brightness_levels(ACPI_HANDLE handle, int **levelp)
 	ACPI_OBJECT *res;
 	int num, i, n, *levels;
 
-	num = 0;
 	bcl_buf.Length = ACPI_ALLOCATE_BUFFER;
 	bcl_buf.Pointer = NULL;
 	status = AcpiEvaluateObject(handle, "_BCL", NULL, &bcl_buf);
@@ -950,39 +976,34 @@ vo_get_brightness_levels(ACPI_HANDLE handle, int **levelp)
 		if (status != AE_NOT_FOUND)
 			printf("can't evaluate %s._BCL - %s\n",
 			       acpi_name(handle), AcpiFormatException(status));
-		num = -1;
 		goto out;
 	}
 	res = (ACPI_OBJECT *)bcl_buf.Pointer;
 	if (!ACPI_PKG_VALID(res, 2)) {
 		printf("evaluation of %s._BCL makes no sense\n",
 		       acpi_name(handle));
-		num = -1;
 		goto out;
 	}
 	num = res->Package.Count;
-	if (levelp == NULL)
+	if (num < 2 || levelp == NULL)
 		goto out;
 	levels = AcpiOsAllocate(num * sizeof(*levels));
-	if (levels == NULL) {
-		num = -1;
+	if (levels == NULL)
 		goto out;
-	}
 	for (i = 0, n = 0; i < num; i++)
 		if (acpi_PkgInt32(res, i, &levels[n]) == 0)
 			n++;
 	if (n < 2) {
-		num = -1;
 		AcpiOsFree(levels);
-	} else {
-		num = n;
-		*levelp = levels;
+		goto out;
 	}
+	*levelp = levels;
+	return (n);
+
 out:
 	if (bcl_buf.Pointer != NULL)
 		AcpiOsFree(bcl_buf.Pointer);
-
-	return (num);
+	return (0);
 }
 
 static int

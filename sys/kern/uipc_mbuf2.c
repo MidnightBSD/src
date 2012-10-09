@@ -61,11 +61,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_mbuf2.c,v 1.33.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 /*#define PULLDOWN_DEBUG*/
-
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -309,14 +307,14 @@ m_tag_free_default(struct m_tag *t)
 {
 #ifdef MAC
 	if (t->m_tag_id == PACKET_TAG_MACLABEL)
-		mac_destroy_mbuf_tag(t);
+		mac_mbuf_tag_destroy(t);
 #endif
 	free(t, M_PACKET_TAGS);
 }
 
 /* Get a packet tag structure along with specified data following. */
 struct m_tag *
-m_tag_alloc(u_int32_t cookie, int type, int len, int wait)
+m_tag_alloc(uint32_t cookie, int type, int len, int wait)
 {
 	struct m_tag *t;
 
@@ -378,7 +376,7 @@ m_tag_delete_nonpersistent(struct mbuf *m)
 
 /* Find a tag, starting from a given position. */
 struct m_tag *
-m_tag_locate(struct mbuf *m, u_int32_t cookie, int type, struct m_tag *t)
+m_tag_locate(struct mbuf *m, uint32_t cookie, int type, struct m_tag *t)
 {
 	struct m_tag *p;
 
@@ -413,11 +411,11 @@ m_tag_copy(struct m_tag *t, int how)
 	 * special from the mbuf code?
 	 */
 	if (t->m_tag_id == PACKET_TAG_MACLABEL) {
-		if (mac_init_mbuf_tag(p, how) != 0) {
+		if (mac_mbuf_tag_init(p, how) != 0) {
 			m_tag_free(p);
 			return (NULL);
 		}
-		mac_copy_mbuf_tag(t, p);
+		mac_mbuf_tag_copy(t, p);
 	} else
 #endif
 		bcopy(t + 1, p + 1, t->m_tag_len); /* Copy the data */

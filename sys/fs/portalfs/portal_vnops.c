@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/portalfs/portal_vnops.c,v 1.3 2008/12/03 00:25:43 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,14 +31,17 @@
  *
  *	@(#)portal_vnops.c	8.14 (Berkeley) 5/21/95
  *
- * $FreeBSD: src/sys/fs/portalfs/portal_vnops.c,v 1.73.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
  * Portal Filesystem
  */
 
+#include "opt_capsicum.h"
+
 #include <sys/param.h>
+#include <sys/capability.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/kernel.h>
@@ -60,6 +62,8 @@
 #include <sys/vnode.h>
 
 #include <fs/portalfs/portal.h>
+
+#include <net/vnet.h>
 
 static int portal_fileid = PORTAL_ROOTFILEID+1;
 
@@ -104,7 +108,6 @@ portal_lookup(ap)
 	struct vnode **vpp = ap->a_vpp;
 	struct vnode *dvp = ap->a_dvp;
 	char *pname = cnp->cn_nameptr;
-	struct thread *td = cnp->cn_thread;
 	struct portalnode *pt;
 	int error;
 	struct vnode *fvp = 0;
@@ -129,12 +132,12 @@ portal_lookup(ap)
 	 * might cause a bogus v_data pointer to get dereferenced
 	 * elsewhere if MALLOC should block.
 	 */
-	MALLOC(pt, struct portalnode *, sizeof(struct portalnode),
+	pt = malloc(sizeof(struct portalnode),
 		M_TEMP, M_WAITOK);
 
 	error = getnewvnode("portal", dvp->v_mount, &portal_vnodeops, &fvp);
 	if (error) {
-		FREE(pt, M_TEMP);
+		free(pt, M_TEMP);
 		goto bad;
 	}
 	fvp->v_type = VREG;
@@ -154,7 +157,7 @@ portal_lookup(ap)
 	pt->pt_fileid = portal_fileid++;
 
 	*vpp = fvp;
-	vn_lock(fvp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(fvp, LK_EXCLUSIVE | LK_RETRY);
 	error = insmntque(fvp, dvp->v_mount);
 	if (error != 0) {
 		*vpp = NULLVP;
@@ -187,8 +190,12 @@ portal_connect(so, so2)
 	if ((so2->so_options & SO_ACCEPTCONN) == 0)
 		return (ECONNREFUSED);
 
-	if ((so3 = sonewconn(so2, 0)) == 0)
+	CURVNET_SET(so2->so_vnet);
+	if ((so3 = sonewconn(so2, 0)) == 0) {
+		CURVNET_RESTORE();
 		return (ECONNREFUSED);
+	}
+	CURVNET_RESTORE();
 
 	unp2 = sotounpcb(so2);
 	unp3 = sotounpcb(so3);
@@ -228,6 +235,15 @@ portal_open(ap)
 	struct file *fp;
 	struct portal_cred pcred;
 
+#ifdef CAPABILITY_MODE
+	/*
+	 * This may require access to a global namespace (e.g. an IP address);
+	 * disallow it entirely, as we do open(2).
+	 */
+	if (IN_CAPABILITY_MODE(td))
+		return (ECAPMODE);
+#endif
+
 	/*
 	 * Nothing to do when opening the root node.
 	 */
@@ -248,7 +264,7 @@ portal_open(ap)
 	/*
 	 * Create a new socket.
 	 */
-	error = socreate(AF_UNIX, &so, SOCK_STREAM, 0, ap->a_td->td_ucred,
+	error = socreate(AF_UNIX, &so, SOCK_STREAM, 0, ap->a_cred,
 	    ap->a_td);
 	if (error)
 		goto bad;
@@ -313,8 +329,9 @@ portal_open(ap)
 
 	pcred.pcr_flag = ap->a_mode;
 	pcred.pcr_uid = ap->a_cred->cr_uid;
-	pcred.pcr_ngroups = ap->a_cred->cr_ngroups;
-	bcopy(ap->a_cred->cr_groups, pcred.pcr_groups, NGROUPS * sizeof(gid_t));
+	pcred.pcr_ngroups = MIN(ap->a_cred->cr_ngroups, XU_NGROUPS);
+	bcopy(ap->a_cred->cr_groups, pcred.pcr_groups,
+	    pcred.pcr_ngroups * sizeof(gid_t));
 	aiov[0].iov_base = (caddr_t) &pcred;
 	aiov[0].iov_len = sizeof(pcred);
 	aiov[1].iov_base = pt->pt_arg;
@@ -409,7 +426,7 @@ portal_open(ap)
 	 * Check that the mode the file is being opened for is a subset
 	 * of the mode of the existing descriptor.
 	 */
-	if ((error = fget(td, fd, &fp)) != 0)
+	if ((error = fget(td, fd, 0, &fp)) != 0)
 		goto bad;
 	if (((ap->a_mode & (FREAD|FWRITE)) | fp->f_flag) != fp->f_flag) {
 		fdrop(fp, td);
@@ -448,14 +465,11 @@ portal_getattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 	struct vattr *vap = ap->a_vap;
 
-	bzero(vap, sizeof(*vap));
-	vattr_null(vap);
 	vap->va_uid = 0;
 	vap->va_gid = 0;
 	vap->va_size = DEV_BSIZE;
@@ -465,9 +479,10 @@ portal_getattr(ap)
 	vap->va_ctime = vap->va_mtime;
 	vap->va_gen = 0;
 	vap->va_flags = 0;
-	vap->va_rdev = 0;
+	vap->va_rdev = NODEV;
 	/* vap->va_qbytes = 0; */
 	vap->va_bytes = 0;
+	vap->va_filerev = 0;
 	/* vap->va_qsize = 0; */
 	if (vp->v_vflag & VV_ROOT) {
 		vap->va_type = VDIR;
@@ -493,7 +508,6 @@ portal_setattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 
@@ -547,7 +561,7 @@ portal_reclaim(ap)
 		free((caddr_t) pt->pt_arg, M_TEMP);
 		pt->pt_arg = 0;
 	}
-	FREE(ap->a_vp->v_data, M_TEMP);
+	free(ap->a_vp->v_data, M_TEMP);
 	ap->a_vp->v_data = 0;
 
 	return (0);

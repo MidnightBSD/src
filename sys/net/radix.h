@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)radix.h	8.2 (Berkeley) 10/31/94
- * $FreeBSD: src/sys/net/radix.h,v 1.26.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _RADIX_H_
@@ -36,6 +36,7 @@
 #ifdef _KERNEL
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
+#include <sys/_rwlock.h>
 #endif
 
 #ifdef MALLOC_DECLARE
@@ -104,6 +105,8 @@ typedef int walktree_f_t(struct radix_node *, void *);
 
 struct radix_node_head {
 	struct	radix_node *rnh_treetop;
+	u_int	rnh_gen;		/* generation counter */
+	int	rnh_multipath;		/* multipath capable ? */
 	int	rnh_addrsize;		/* permit, but not require fixed keys */
 	int	rnh_pktsize;		/* permit, but not require fixed keys */
 	struct	radix_node *(*rnh_addaddr)	/* add based on sockaddr */
@@ -131,7 +134,7 @@ struct radix_node_head {
 		(struct radix_node *rn, struct radix_node_head *head);
 	struct	radix_node rnh_nodes[3];	/* empty tree for common case */
 #ifdef _KERNEL
-	struct	mtx rnh_mtx;			/* locks entire radix tree */
+	struct	rwlock rnh_lock;		/* locks entire radix tree */
 #endif
 };
 
@@ -145,15 +148,22 @@ struct radix_node_head {
 #define Free(p) free((caddr_t)p, M_RTABLE);
 
 #define	RADIX_NODE_HEAD_LOCK_INIT(rnh)	\
-    mtx_init(&(rnh)->rnh_mtx, "radix node head", NULL, MTX_DEF | MTX_RECURSE)
-#define	RADIX_NODE_HEAD_LOCK(rnh)	mtx_lock(&(rnh)->rnh_mtx)
-#define	RADIX_NODE_HEAD_UNLOCK(rnh)	mtx_unlock(&(rnh)->rnh_mtx)
-#define	RADIX_NODE_HEAD_DESTROY(rnh)	mtx_destroy(&(rnh)->rnh_mtx)
-#define	RADIX_NODE_HEAD_LOCK_ASSERT(rnh) mtx_assert(&(rnh)->rnh_mtx, MA_OWNED)
+    rw_init_flags(&(rnh)->rnh_lock, "radix node head", 0)
+#define	RADIX_NODE_HEAD_LOCK(rnh)	rw_wlock(&(rnh)->rnh_lock)
+#define	RADIX_NODE_HEAD_UNLOCK(rnh)	rw_wunlock(&(rnh)->rnh_lock)
+#define	RADIX_NODE_HEAD_RLOCK(rnh)	rw_rlock(&(rnh)->rnh_lock)
+#define	RADIX_NODE_HEAD_RUNLOCK(rnh)	rw_runlock(&(rnh)->rnh_lock)
+#define	RADIX_NODE_HEAD_LOCK_TRY_UPGRADE(rnh)	rw_try_upgrade(&(rnh)->rnh_lock)
+
+
+#define	RADIX_NODE_HEAD_DESTROY(rnh)	rw_destroy(&(rnh)->rnh_lock)
+#define	RADIX_NODE_HEAD_LOCK_ASSERT(rnh) rw_assert(&(rnh)->rnh_lock, RA_LOCKED)
+#define	RADIX_NODE_HEAD_WLOCK_ASSERT(rnh) rw_assert(&(rnh)->rnh_lock, RA_WLOCKED)
 #endif /* _KERNEL */
 
-void	 rn_init(void);
+void	 rn_init(int);
 int	 rn_inithead(void **, int);
+int	 rn_detachhead(void **);
 int	 rn_refines(void *, void *);
 struct radix_node
 	 *rn_addmask(void *, int, int),

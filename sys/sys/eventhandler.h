@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/eventhandler.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/eventhandler.h,v 1.37.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef SYS_EVENTHANDLER_H
@@ -41,6 +40,14 @@ struct eventhandler_entry {
 #define	EHE_DEAD_PRIORITY	(-1)
 	void				*ee_arg;
 };
+
+#ifdef VIMAGE
+struct eventhandler_entry_vimage {
+	void	(* func)(void);		/* Original function registered. */
+	void	*ee_arg;		/* Original argument registered. */
+	void	*sparep[2];
+};
+#endif
 
 struct eventhandler_list {
 	char				*el_name;
@@ -143,6 +150,14 @@ void	eventhandler_deregister(struct eventhandler_list *list,
 struct eventhandler_list *eventhandler_find_list(const char *name);
 void	eventhandler_prune_list(struct eventhandler_list *list);
 
+#ifdef VIMAGE
+typedef	void (*vimage_iterator_func_t)(void *, ...);
+
+eventhandler_tag vimage_eventhandler_register(struct eventhandler_list *list,
+	    const char *name, void *func, void *arg, int priority,
+	    vimage_iterator_func_t);
+#endif
+
 /*
  * Standard system event queues.
  */
@@ -163,14 +178,19 @@ EVENTHANDLER_DECLARE(shutdown_pre_sync, shutdown_fn);	/* before fs sync */
 EVENTHANDLER_DECLARE(shutdown_post_sync, shutdown_fn);	/* after fs sync */
 EVENTHANDLER_DECLARE(shutdown_final, shutdown_fn);
 
+/* Power state change events */
+typedef void (*power_change_fn)(void *);
+EVENTHANDLER_DECLARE(power_resume, power_change_fn);
+EVENTHANDLER_DECLARE(power_suspend, power_change_fn);
+
 /* Low memory event */
 typedef void (*vm_lowmem_handler_t)(void *, int);
 #define	LOWMEM_PRI_DEFAULT	EVENTHANDLER_PRI_FIRST
 EVENTHANDLER_DECLARE(vm_lowmem, vm_lowmem_handler_t);
 
-/* Low vnodes event */
-typedef void (*vfs_lowvnodes_handler_t)(void *, int);
-EVENTHANDLER_DECLARE(vfs_lowvnodes, vfs_lowvnodes_handler_t);
+/* Root mounted event */
+typedef void (*mountroot_handler_t)(void *);
+EVENTHANDLER_DECLARE(mountroot, mountroot_handler_t);
 
 /* VLAN state change events */
 struct ifnet;
@@ -178,6 +198,12 @@ typedef void (*vlan_config_fn)(void *, struct ifnet *, uint16_t);
 typedef void (*vlan_unconfig_fn)(void *, struct ifnet *, uint16_t);
 EVENTHANDLER_DECLARE(vlan_config, vlan_config_fn);
 EVENTHANDLER_DECLARE(vlan_unconfig, vlan_unconfig_fn);
+
+/* BPF attach/detach events */
+struct ifnet;
+typedef void (*bpf_track_fn)(void *, struct ifnet *, int /* dlt */,
+    int /* 1 =>'s attach */);
+EVENTHANDLER_DECLARE(bpf_track, bpf_track_fn);
 
 /*
  * Process events
@@ -202,7 +228,20 @@ EVENTHANDLER_DECLARE(process_exit, exitlist_fn);
 EVENTHANDLER_DECLARE(process_fork, forklist_fn);
 EVENTHANDLER_DECLARE(process_exec, execlist_fn);
 
+/*
+ * application dump event
+ */
 struct thread;
+typedef void (*app_coredump_start_fn)(void *, struct thread *, char *name);
+typedef void (*app_coredump_progress_fn)(void *, struct thread *td, int byte_count);
+typedef void (*app_coredump_finish_fn)(void *, struct thread *td);
+typedef void (*app_coredump_error_fn)(void *, struct thread *td, char *msg, ...);
+
+EVENTHANDLER_DECLARE(app_coredump_start, app_coredump_start_fn);
+EVENTHANDLER_DECLARE(app_coredump_progress, app_coredump_progress_fn);
+EVENTHANDLER_DECLARE(app_coredump_finish, app_coredump_finish_fn);
+EVENTHANDLER_DECLARE(app_coredump_error, app_coredump_error_fn);
+
 typedef void (*thread_ctor_fn)(void *, struct thread *);
 typedef void (*thread_dtor_fn)(void *, struct thread *);
 typedef void (*thread_fini_fn)(void *, struct thread *);
@@ -216,6 +255,4 @@ typedef void (*uma_zone_chfn)(void *);
 EVENTHANDLER_DECLARE(nmbclusters_change, uma_zone_chfn);
 EVENTHANDLER_DECLARE(maxsockets_change, uma_zone_chfn);
 
-typedef void(*schedtail_fn)(void *, struct proc *);
-EVENTHANDLER_DECLARE(schedtail, schedtail_fn);
 #endif /* SYS_EVENTHANDLER_H */

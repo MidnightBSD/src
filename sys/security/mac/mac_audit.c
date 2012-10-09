@@ -1,8 +1,8 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1999-2002 Robert N. M. Watson
+ * Copyright (c) 1999-2002, 2009 Robert N. M. Watson
  * Copyright (c) 2001 Ilmar S. Habibulin
  * Copyright (c) 2001-2004 Networks Associates Technology, Inc.
+ * Copyright (c) 2006 SPARTA, Inc.
  *
  * This software was developed by Robert Watson and Ilmar Habibulin for the
  * TrustedBSD Project.
@@ -11,6 +11,12 @@
  * Associates Laboratories, the Security Research Division of Network
  * Associates, Inc. under DARPA/SPAWAR contract N66001-01-C-8035 ("CBOSS"),
  * as part of the DARPA CHATS research program.
+ *
+ * This software was enhanced by SPARTA ISSO under SPAWAR contract
+ * N66001-04-C-6019 ("SEFOS").
+ *
+ * This software was developed at the University of Cambridge Computer
+ * Laboratory with support from a grant from Google, Inc. 
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,12 +38,18 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/security/mac/mac_audit.c,v 1.2 2007/06/26 14:14:01 rwatson Exp $
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
+#include "opt_kdtrace.h"
+
 #include <sys/param.h>
+#include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/queue.h>
+#include <sys/sdt.h>
 #include <sys/vnode.h>
 
 #include <security/audit/audit.h>
@@ -46,67 +58,88 @@
 #include <security/mac/mac_internal.h>
 #include <security/mac/mac_policy.h>
 
+MAC_CHECK_PROBE_DEFINE2(cred_check_setaudit, "struct ucred *",
+    "struct auditinfo *");
+
 int
-mac_check_proc_setaudit(struct ucred *cred, struct auditinfo *ai)
+mac_cred_check_setaudit(struct ucred *cred, struct auditinfo *ai)
 {
 	int error;
 
-	MAC_CHECK(check_proc_setaudit, cred, ai);
+	MAC_POLICY_CHECK_NOSLEEP(cred_check_setaudit, cred, ai);
+	MAC_CHECK_PROBE2(cred_check_setaudit, error, cred, ai);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(cred_check_setaudit_addr, "struct ucred *",
+    "struct auditinfo_addr *");
+
 int
-mac_check_proc_setaudit_addr(struct ucred *cred, struct auditinfo_addr *aia)
+mac_cred_check_setaudit_addr(struct ucred *cred, struct auditinfo_addr *aia)
 {
 	int error;
 
-	MAC_CHECK(check_proc_setaudit_addr, cred, aia);
+	MAC_POLICY_CHECK_NOSLEEP(cred_check_setaudit_addr, cred, aia);
+	MAC_CHECK_PROBE2(cred_check_setaudit_addr, error, cred, aia);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(cred_check_setauid, "struct ucred *", "uid_t");
+
 int
-mac_check_proc_setauid(struct ucred *cred, uid_t auid)
+mac_cred_check_setauid(struct ucred *cred, uid_t auid)
 {
 	int error;
 
-	MAC_CHECK(check_proc_setauid, cred, auid);
+	MAC_POLICY_CHECK_NOSLEEP(cred_check_setauid, cred, auid);
+	MAC_CHECK_PROBE2(cred_check_setauid, error, cred, auid);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE3(system_check_audit, "struct ucred *", "void *",
+    "int");
+
 int
-mac_check_system_audit(struct ucred *cred, void *record, int length)
+mac_system_check_audit(struct ucred *cred, void *record, int length)
 {
 	int error;
 
-	MAC_CHECK(check_system_audit, cred, record, length);
+	MAC_POLICY_CHECK_NOSLEEP(system_check_audit, cred, record, length);
+	MAC_CHECK_PROBE3(system_check_audit, error, cred, record, length);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(system_check_auditctl, "struct ucred *",
+    "struct vnode *");
+
 int
-mac_check_system_auditctl(struct ucred *cred, struct vnode *vp)
+mac_system_check_auditctl(struct ucred *cred, struct vnode *vp)
 {
 	int error;
 	struct label *vl;
 
-	ASSERT_VOP_LOCKED(vp, "mac_check_system_auditctl");
+	ASSERT_VOP_LOCKED(vp, "mac_system_check_auditctl");
 
 	vl = (vp != NULL) ? vp->v_label : NULL;
-
-	MAC_CHECK(check_system_auditctl, cred, vp, vl);
+	MAC_POLICY_CHECK(system_check_auditctl, cred, vp, vl);
+	MAC_CHECK_PROBE2(system_check_auditctl, error, cred, vp);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(system_check_auditon, "struct ucred *", "int");
+
 int
-mac_check_system_auditon(struct ucred *cred, int cmd)
+mac_system_check_auditon(struct ucred *cred, int cmd)
 {
 	int error;
 
-	MAC_CHECK(check_system_auditon, cred, cmd);
+	MAC_POLICY_CHECK_NOSLEEP(system_check_auditon, cred, cmd);
+	MAC_CHECK_PROBE2(system_check_auditon, error, cred, cmd);
 
 	return (error);
 }

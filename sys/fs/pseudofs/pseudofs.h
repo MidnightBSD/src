@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -26,11 +25,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *      $FreeBSD: src/sys/fs/pseudofs/pseudofs.h,v 1.36 2007/04/15 17:10:01 des Exp $
+ *      $FreeBSD$
  */
 
 #ifndef _PSEUDOFS_H_INCLUDED
 #define _PSEUDOFS_H_INCLUDED
+
+#include <sys/jail.h>
 
 /*
  * Opaque structures
@@ -242,16 +243,12 @@ struct pfs_node {
 /*
  * VFS interface
  */
-int		 pfs_mount	(struct pfs_info *pi, struct mount *mp,
-				 struct thread *td);
-int		 pfs_cmount	(struct mntarg *ma, void *data, int flags,
-				 struct thread *td);
-int		 pfs_unmount	(struct mount *mp, int mntflags,
-				 struct thread *td);
+int		 pfs_mount	(struct pfs_info *pi, struct mount *mp);
+int		 pfs_cmount	(struct mntarg *ma, void *data, uint64_t flags);
+int		 pfs_unmount	(struct mount *mp, int mntflags);
 int		 pfs_root	(struct mount *mp, int flags,
-				 struct vnode **vpp, struct thread *td);
-int		 pfs_statfs	(struct mount *mp, struct statfs *sbp,
-				 struct thread *td);
+				 struct vnode **vpp);
+int		 pfs_statfs	(struct mount *mp, struct statfs *sbp);
 int		 pfs_init	(struct pfs_info *pi, struct vfsconf *vfc);
 int		 pfs_uninit	(struct pfs_info *pi, struct vfsconf *vfc);
 
@@ -276,7 +273,7 @@ int		 pfs_destroy	(struct pfs_node *pn);
 /*
  * Now for some initialization magic...
  */
-#define PSEUDOFS(name, version)						\
+#define PSEUDOFS(name, version, jflag)					\
 									\
 static struct pfs_info name##_info = {					\
 	#name,								\
@@ -285,8 +282,10 @@ static struct pfs_info name##_info = {					\
 };									\
 									\
 static int								\
-_##name##_mount(struct mount *mp, struct thread *td) {			\
-	return pfs_mount(&name##_info, mp, td);				\
+_##name##_mount(struct mount *mp) {					\
+        if (jflag && !prison_allow(curthread->td_ucred, jflag))		\
+                return (EPERM);						\
+	return pfs_mount(&name##_info, mp);				\
 }									\
 									\
 static int								\
@@ -308,7 +307,7 @@ static struct vfsops name##_vfsops = {					\
 	.vfs_uninit =		_##name##_uninit,			\
 	.vfs_unmount =		pfs_unmount,				\
 };									\
-VFS_SET(name##_vfsops, name, VFCF_SYNTHETIC);				\
+VFS_SET(name##_vfsops, name, VFCF_SYNTHETIC | (jflag ? VFCF_JAIL : 0));	\
 MODULE_VERSION(name, version);						\
 MODULE_DEPEND(name, pseudofs, 1, 1, 1);
 

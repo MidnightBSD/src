@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/pseudofs/pseudofs_vnops.c,v 1.4 2008/12/03 00:25:44 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/pseudofs/pseudofs_vnops.c,v 1.65 2007/10/05 17:37:25 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pseudofs.h"
 
@@ -52,6 +51,20 @@ __FBSDID("$FreeBSD: src/sys/fs/pseudofs/pseudofs_vnops.c,v 1.65 2007/10/05 17:37
 
 #include <fs/pseudofs/pseudofs.h>
 #include <fs/pseudofs/pseudofs_internal.h>
+
+#define KASSERT_PN_IS_DIR(pn)						\
+	KASSERT((pn)->pn_type == pfstype_root ||			\
+	    (pn)->pn_type == pfstype_dir ||				\
+	    (pn)->pn_type == pfstype_procdir,				\
+	    ("%s(): VDIR vnode refers to non-directory pfs_node", __func__))
+
+#define KASSERT_PN_IS_FILE(pn)						\
+	KASSERT((pn)->pn_type == pfstype_file,				\
+	    ("%s(): VREG vnode refers to non-file pfs_node", __func__))
+
+#define KASSERT_PN_IS_LINK(pn)						\
+	KASSERT((pn)->pn_type == pfstype_symlink,			\
+	    ("%s(): VLNK vnode refers to non-link pfs_node", __func__))
 
 /*
  * Returns the fileno, adjusted for target pid
@@ -129,11 +142,11 @@ pfs_access(struct vop_access_args *va)
 	PFS_TRACE(("%s", pvd->pvd_pn->pn_name));
 	(void)pvd;
 
-	error = VOP_GETATTR(vn, &vattr, va->a_cred, va->a_td);
+	error = VOP_GETATTR(vn, &vattr, va->a_cred);
 	if (error)
 		PFS_RETURN (error);
 	error = vaccess(vn->v_type, vattr.va_mode, vattr.va_uid,
-	    vattr.va_gid, va->a_mode, va->a_cred, NULL);
+	    vattr.va_gid, va->a_accmode, va->a_cred, NULL);
 	PFS_RETURN (error);
 }
 
@@ -192,12 +205,12 @@ pfs_getattr(struct vop_getattr_args *va)
 	if (!pfs_visible(curthread, pn, pvd->pvd_pid, &proc))
 		PFS_RETURN (ENOENT);
 
-	VATTR_NULL(vap);
 	vap->va_type = vn->v_type;
 	vap->va_fileid = pn_fileno(pn, pvd->pvd_pid);
 	vap->va_flags = 0;
 	vap->va_blocksize = PAGE_SIZE;
 	vap->va_bytes = vap->va_size = 0;
+	vap->va_filerev = 0;
 	vap->va_fsid = vn->v_mount->mnt_stat.f_fsid.val[0];
 	vap->va_nlink = 1;
 	nanotime(&vap->va_ctime);
@@ -227,13 +240,16 @@ pfs_getattr(struct vop_getattr_args *va)
 	if (proc != NULL) {
 		vap->va_uid = proc->p_ucred->cr_ruid;
 		vap->va_gid = proc->p_ucred->cr_rgid;
-		if (pn->pn_attr != NULL)
-			error = pn_attr(va->a_td, proc, pn, vap);
-		PROC_UNLOCK(proc);
 	} else {
 		vap->va_uid = 0;
 		vap->va_gid = 0;
 	}
+
+	if (pn->pn_attr != NULL)
+		error = pn_attr(curthread, proc, pn, vap);
+
+	if(proc != NULL)
+		PROC_UNLOCK(proc);
 
 	PFS_RETURN (error);
 }
@@ -244,33 +260,50 @@ pfs_getattr(struct vop_getattr_args *va)
 static int
 pfs_ioctl(struct vop_ioctl_args *va)
 {
-	struct vnode *vn = va->a_vp;
-	struct pfs_vdata *pvd = vn->v_data;
-	struct pfs_node *pn = pvd->pvd_pn;
+	struct vnode *vn;
+	struct pfs_vdata *pvd;
+	struct pfs_node *pn;
 	struct proc *proc;
 	int error;
+
+	vn = va->a_vp;
+	vn_lock(vn, LK_SHARED | LK_RETRY);
+	if (vn->v_iflag & VI_DOOMED) {
+		VOP_UNLOCK(vn, 0);
+		return (EBADF);
+	}
+	pvd = vn->v_data;
+	pn = pvd->pvd_pn;
 
 	PFS_TRACE(("%s: %lx", pn->pn_name, va->a_command));
 	pfs_assert_not_owned(pn);
 
-	if (vn->v_type != VREG)
+	if (vn->v_type != VREG) {
+		VOP_UNLOCK(vn, 0);
 		PFS_RETURN (EINVAL);
+	}
+	KASSERT_PN_IS_FILE(pn);
 
-	if (pn->pn_ioctl == NULL)
+	if (pn->pn_ioctl == NULL) {
+		VOP_UNLOCK(vn, 0);
 		PFS_RETURN (ENOTTY);
+	}
 
 	/*
 	 * This is necessary because process' privileges may
 	 * have changed since the open() call.
 	 */
-	if (!pfs_visible(curthread, pn, pvd->pvd_pid, &proc))
+	if (!pfs_visible(curthread, pn, pvd->pvd_pid, &proc)) {
+		VOP_UNLOCK(vn, 0);
 		PFS_RETURN (EIO);
+	}
 
 	error = pn_ioctl(curthread, proc, pn, va->a_command, va->a_data);
 
 	if (proc != NULL)
 		PROC_UNLOCK(proc);
 
+	VOP_UNLOCK(vn, 0);
 	PFS_RETURN (error);
 }
 
@@ -310,6 +343,84 @@ pfs_getextattr(struct vop_getextattr_args *va)
 }
 
 /*
+ * Convert a vnode to its component name
+ */
+static int
+pfs_vptocnp(struct vop_vptocnp_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	struct vnode **dvp = ap->a_vpp;
+	struct pfs_vdata *pvd = vp->v_data;
+	struct pfs_node *pd = pvd->pvd_pn;
+	struct pfs_node *pn;
+	struct mount *mp;
+	char *buf = ap->a_buf;
+	int *buflen = ap->a_buflen;
+	char pidbuf[PFS_NAMELEN];
+	pid_t pid = pvd->pvd_pid;
+	int len, i, error, locked;
+
+	i = *buflen;
+	error = 0;
+
+	pfs_lock(pd);
+
+	if (vp->v_type == VDIR && pd->pn_type == pfstype_root) {
+		*dvp = vp;
+		vhold(*dvp);
+		pfs_unlock(pd);
+		PFS_RETURN (0);
+	} else if (vp->v_type == VDIR && pd->pn_type == pfstype_procdir) {
+		len = snprintf(pidbuf, sizeof(pidbuf), "%d", pid);
+		i -= len;
+		if (i < 0) {
+			error = ENOMEM;
+			goto failed;
+		}
+		bcopy(pidbuf, buf + i, len);
+	} else {
+		len = strlen(pd->pn_name);
+		i -= len;
+		if (i < 0) {
+			error = ENOMEM;
+			goto failed;
+		}
+		bcopy(pd->pn_name, buf + i, len);
+	}
+
+	pn = pd->pn_parent;
+	pfs_unlock(pd);
+
+	mp = vp->v_mount;
+	error = vfs_busy(mp, 0);
+	if (error)
+		return (error);
+
+	/*
+	 * vp is held by caller.
+	 */
+	locked = VOP_ISLOCKED(vp);
+	VOP_UNLOCK(vp, 0);
+
+	error = pfs_vncache_alloc(mp, dvp, pn, pid);
+	if (error) {
+		vn_lock(vp, locked | LK_RETRY);
+		vfs_unbusy(mp);
+		PFS_RETURN(error);
+	}
+
+	*buflen = i;
+	VOP_UNLOCK(*dvp, 0);
+	vn_lock(vp, locked | LK_RETRY);
+	vfs_unbusy(mp);
+
+	PFS_RETURN (0);
+failed:
+	pfs_unlock(pd);
+	PFS_RETURN(error);
+}
+
+/*
  * Look up a file or directory
  */
 static int
@@ -321,6 +432,7 @@ pfs_lookup(struct vop_cachedlookup_args *va)
 	struct pfs_vdata *pvd = vn->v_data;
 	struct pfs_node *pd = pvd->pvd_pn;
 	struct pfs_node *pn, *pdn = NULL;
+	struct mount *mp;
 	pid_t pid = pvd->pvd_pid;
 	char *pname;
 	int error, i, namelen, visible;
@@ -330,6 +442,7 @@ pfs_lookup(struct vop_cachedlookup_args *va)
 
 	if (vn->v_type != VDIR)
 		PFS_RETURN (ENOTDIR);
+	KASSERT_PN_IS_DIR(pd);
 
 	error = VOP_ACCESS(vn, VEXEC, cnp->cn_cred, cnp->cn_thread);
 	if (error)
@@ -362,11 +475,27 @@ pfs_lookup(struct vop_cachedlookup_args *va)
 		PFS_RETURN (0);
 	}
 
+	mp = vn->v_mount;
+
 	/* parent */
 	if (cnp->cn_flags & ISDOTDOT) {
 		if (pd->pn_type == pfstype_root)
 			PFS_RETURN (EIO);
-		VOP_UNLOCK(vn, 0, cnp->cn_thread);
+		error = vfs_busy(mp, MBF_NOWAIT);
+		if (error != 0) {
+			vfs_ref(mp);
+			VOP_UNLOCK(vn, 0);
+			error = vfs_busy(mp, 0);
+			vn_lock(vn, LK_EXCLUSIVE | LK_RETRY);
+			vfs_rel(mp);
+			if (error != 0)
+				PFS_RETURN(ENOENT);
+			if (vn->v_iflag & VI_DOOMED) {
+				vfs_unbusy(mp);
+				PFS_RETURN(ENOENT);
+			}
+		}
+		VOP_UNLOCK(vn, 0);
 		KASSERT(pd->pn_parent != NULL,
 		    ("%s(): non-root directory has no parent", __func__));
 		/*
@@ -423,18 +552,28 @@ pfs_lookup(struct vop_cachedlookup_args *va)
 		goto failed;
 	}
 
-	error = pfs_vncache_alloc(vn->v_mount, vpp, pn, pid);
+	error = pfs_vncache_alloc(mp, vpp, pn, pid);
 	if (error)
 		goto failed;
 
-	if (cnp->cn_flags & ISDOTDOT)
-		vn_lock(vn, LK_EXCLUSIVE|LK_RETRY, cnp->cn_thread);
-	if (cnp->cn_flags & MAKEENTRY)
+	if (cnp->cn_flags & ISDOTDOT) {
+		vfs_unbusy(mp);
+		vn_lock(vn, LK_EXCLUSIVE | LK_RETRY);
+		if (vn->v_iflag & VI_DOOMED) {
+			vput(*vpp);
+			*vpp = NULL;
+			PFS_RETURN(ENOENT);
+		}
+	}
+	if (cnp->cn_flags & MAKEENTRY && !(vn->v_iflag & VI_DOOMED))
 		cache_enter(vn, *vpp, cnp);
 	PFS_RETURN (0);
  failed:
-	if (cnp->cn_flags & ISDOTDOT)
-		vn_lock(vn, LK_EXCLUSIVE|LK_RETRY, cnp->cn_thread);
+	if (cnp->cn_flags & ISDOTDOT) {
+		vfs_unbusy(mp);
+		vn_lock(vn, LK_EXCLUSIVE | LK_RETRY);
+		*vpp = NULL;
+	}
 	PFS_RETURN(error);
 }
 
@@ -476,14 +615,16 @@ pfs_read(struct vop_read_args *va)
 	struct uio *uio = va->a_uio;
 	struct proc *proc;
 	struct sbuf *sb = NULL;
-	int error;
-	unsigned int buflen, offset, resid;
+	int error, locked;
+	off_t offset;
+	ssize_t buflen, resid;
 
 	PFS_TRACE(("%s", pn->pn_name));
 	pfs_assert_not_owned(pn);
 
 	if (vn->v_type != VREG)
 		PFS_RETURN (EINVAL);
+	KASSERT_PN_IS_FILE(pn);
 
 	if (!(pn->pn_flags & PFS_RD))
 		PFS_RETURN (EBADF);
@@ -502,50 +643,55 @@ pfs_read(struct vop_read_args *va)
 		PROC_UNLOCK(proc);
 	}
 
+	vhold(vn);
+	locked = VOP_ISLOCKED(vn);
+	VOP_UNLOCK(vn, 0);
+
 	if (pn->pn_flags & PFS_RAWRD) {
-		PFS_TRACE(("%lu resid", (unsigned long)uio->uio_resid));
+		PFS_TRACE(("%zd resid", uio->uio_resid));
 		error = pn_fill(curthread, proc, pn, NULL, uio);
-		PFS_TRACE(("%lu resid", (unsigned long)uio->uio_resid));
-		if (proc != NULL)
-			PRELE(proc);
-		PFS_RETURN (error);
+		PFS_TRACE(("%zd resid", uio->uio_resid));
+		goto ret;
 	}
 
 	/* beaucoup sanity checks so we don't ask for bogus allocation */
 	if (uio->uio_offset < 0 || uio->uio_resid < 0 ||
 	    (offset = uio->uio_offset) != uio->uio_offset ||
 	    (resid = uio->uio_resid) != uio->uio_resid ||
-	    (buflen = offset + resid + 1) < offset || buflen > INT_MAX) {
-		if (proc != NULL)
-			PRELE(proc);
-		PFS_RETURN (EINVAL);
+	    (buflen = offset + resid) < offset || buflen >= INT_MAX) {
+		error = EINVAL;
+		goto ret;
 	}
-	if (buflen > MAXPHYS + 1) {
-		if (proc != NULL)
-			PRELE(proc);
-		PFS_RETURN (EIO);
-	}
+	if (buflen > MAXPHYS)
+		buflen = MAXPHYS;
 
-	sb = sbuf_new(sb, NULL, buflen, 0);
+	sb = sbuf_new(sb, NULL, buflen + 1, 0);
 	if (sb == NULL) {
-		if (proc != NULL)
-			PRELE(proc);
-		PFS_RETURN (EIO);
+		error = EIO;
+		goto ret;
 	}
 
 	error = pn_fill(curthread, proc, pn, sb, uio);
 
-	if (proc != NULL)
-		PRELE(proc);
-
 	if (error) {
 		sbuf_delete(sb);
-		PFS_RETURN (error);
+		goto ret;
 	}
 
-	sbuf_finish(sb);
-	error = uiomove_frombuf(sbuf_data(sb), sbuf_len(sb), uio);
+	/*
+	 * XXX: If the buffer overflowed, sbuf_len() will not return
+	 * the data length. Then just use the full length because an
+	 * overflowed sbuf must be full.
+	 */
+	if (sbuf_finish(sb) == 0)
+		buflen = sbuf_len(sb);
+	error = uiomove_frombuf(sbuf_data(sb), buflen, uio);
 	sbuf_delete(sb);
+ret:
+	vn_lock(vn, locked | LK_RETRY);
+	vdrop(vn);
+	if (proc != NULL)
+		PRELE(proc);
 	PFS_RETURN (error);
 }
 
@@ -598,6 +744,13 @@ pfs_iterate(struct thread *td, struct proc *proc, struct pfs_node *pd,
 	return (0);
 }
 
+/* Directory entry list */
+struct pfsentry {
+	STAILQ_ENTRY(pfsentry)	link;
+	struct dirent		entry;
+};
+STAILQ_HEAD(pfsdirentlist, pfsentry);
+
 /*
  * Return directory entries.
  */
@@ -610,12 +763,14 @@ pfs_readdir(struct vop_readdir_args *va)
 	pid_t pid = pvd->pvd_pid;
 	struct proc *p, *proc;
 	struct pfs_node *pn;
-	struct dirent *entry;
 	struct uio *uio;
+	struct pfsentry *pfsent, *pfsent2;
+	struct pfsdirentlist lst;
 	off_t offset;
 	int error, i, resid;
-	char *buf, *ent;
 
+	STAILQ_INIT(&lst);
+	error = 0;
 	KASSERT(pd->pn_info == vn->v_mount->mnt_data,
 	    ("%s(): pn_info does not match mountpoint", __func__));
 	PFS_TRACE(("%s pid %lu", pd->pn_name, (unsigned long)pid));
@@ -623,6 +778,7 @@ pfs_readdir(struct vop_readdir_args *va)
 
 	if (vn->v_type != VDIR)
 		PFS_RETURN (ENOTDIR);
+	KASSERT_PN_IS_DIR(pd);
 	uio = va->a_uio;
 
 	/* only allow reading entire entries */
@@ -634,8 +790,6 @@ pfs_readdir(struct vop_readdir_args *va)
 	if (resid == 0)
 		PFS_RETURN (0);
 
-	/* can't do this while holding the proc lock... */
-	buf = malloc(resid, M_IOV, M_WAITOK | M_ZERO);
 	sx_slock(&allproc_lock);
 	pfs_lock(pd);
 
@@ -643,7 +797,6 @@ pfs_readdir(struct vop_readdir_args *va)
         if (!pfs_visible(curthread, pd, pid, &proc)) {
 		sx_sunlock(&allproc_lock);
 		pfs_unlock(pd);
-		free(buf, M_IOV);
                 PFS_RETURN (ENOENT);
 	}
 	KASSERT(pid == NO_PID || proc != NULL,
@@ -657,57 +810,64 @@ pfs_readdir(struct vop_readdir_args *va)
 				PROC_UNLOCK(proc);
 			pfs_unlock(pd);
 			sx_sunlock(&allproc_lock);
-			free(buf, M_IOV);
 			PFS_RETURN (0);
 		}
 	}
 
 	/* fill in entries */
-	ent = buf;
 	while (pfs_iterate(curthread, proc, pd, &pn, &p) != -1 &&
 	    resid >= PFS_DELEN) {
-		entry = (struct dirent *)ent;
-		entry->d_reclen = PFS_DELEN;
-		entry->d_fileno = pn_fileno(pn, pid);
+		if ((pfsent = malloc(sizeof(struct pfsentry), M_IOV,
+		    M_NOWAIT | M_ZERO)) == NULL) {
+			error = ENOMEM;
+			break;
+		}
+		pfsent->entry.d_reclen = PFS_DELEN;
+		pfsent->entry.d_fileno = pn_fileno(pn, pid);
 		/* PFS_DELEN was picked to fit PFS_NAMLEN */
 		for (i = 0; i < PFS_NAMELEN - 1 && pn->pn_name[i] != '\0'; ++i)
-			entry->d_name[i] = pn->pn_name[i];
-		entry->d_name[i] = 0;
-		entry->d_namlen = i;
+			pfsent->entry.d_name[i] = pn->pn_name[i];
+		pfsent->entry.d_name[i] = 0;
+		pfsent->entry.d_namlen = i;
 		switch (pn->pn_type) {
 		case pfstype_procdir:
 			KASSERT(p != NULL,
 			    ("reached procdir node with p == NULL"));
-			entry->d_namlen = snprintf(entry->d_name,
+			pfsent->entry.d_namlen = snprintf(pfsent->entry.d_name,
 			    PFS_NAMELEN, "%d", p->p_pid);
 			/* fall through */
 		case pfstype_root:
 		case pfstype_dir:
 		case pfstype_this:
 		case pfstype_parent:
-			entry->d_type = DT_DIR;
+			pfsent->entry.d_type = DT_DIR;
 			break;
 		case pfstype_file:
-			entry->d_type = DT_REG;
+			pfsent->entry.d_type = DT_REG;
 			break;
 		case pfstype_symlink:
-			entry->d_type = DT_LNK;
+			pfsent->entry.d_type = DT_LNK;
 			break;
 		default:
 			panic("%s has unexpected node type: %d", pn->pn_name, pn->pn_type);
 		}
-		PFS_TRACE(("%s", entry->d_name));
+		PFS_TRACE(("%s", pfsent->entry.d_name));
+		STAILQ_INSERT_TAIL(&lst, pfsent, link);
 		offset += PFS_DELEN;
 		resid -= PFS_DELEN;
-		ent += PFS_DELEN;
 	}
 	if (proc != NULL)
 		PROC_UNLOCK(proc);
 	pfs_unlock(pd);
 	sx_sunlock(&allproc_lock);
-	PFS_TRACE(("%zd bytes", ent - buf));
-	error = uiomove(buf, ent - buf, uio);
-	free(buf, M_IOV);
+	i = 0;
+	STAILQ_FOREACH_SAFE(pfsent, &lst, link, pfsent2) {
+		if (error == 0)
+			error = uiomove(&pfsent->entry, PFS_DELEN, uio);
+		free(pfsent, M_IOV);
+		i++;
+	}
+	PFS_TRACE(("%d bytes", i * PFS_DELEN));
 	PFS_RETURN (error);
 }
 
@@ -724,13 +884,14 @@ pfs_readlink(struct vop_readlink_args *va)
 	struct proc *proc = NULL;
 	char buf[PATH_MAX];
 	struct sbuf sb;
-	int error;
+	int error, locked;
 
 	PFS_TRACE(("%s", pn->pn_name));
 	pfs_assert_not_owned(pn);
 
 	if (vn->v_type != VLNK)
 		PFS_RETURN (EINVAL);
+	KASSERT_PN_IS_LINK(pn);
 
 	if (pn->pn_fill == NULL)
 		PFS_RETURN (EIO);
@@ -745,6 +906,9 @@ pfs_readlink(struct vop_readlink_args *va)
 		_PHOLD(proc);
 		PROC_UNLOCK(proc);
 	}
+	vhold(vn);
+	locked = VOP_ISLOCKED(vn);
+	VOP_UNLOCK(vn, 0);
 
 	/* sbuf_new() can't fail with a static buffer */
 	sbuf_new(&sb, buf, sizeof buf, 0);
@@ -753,13 +917,19 @@ pfs_readlink(struct vop_readlink_args *va)
 
 	if (proc != NULL)
 		PRELE(proc);
+	vn_lock(vn, locked | LK_RETRY);
+	vdrop(vn);
 
 	if (error) {
 		sbuf_delete(&sb);
 		PFS_RETURN (error);
 	}
 
-	sbuf_finish(&sb);
+	if (sbuf_finish(&sb) != 0) {
+		sbuf_delete(&sb);
+		PFS_RETURN (ENAMETOOLONG);
+	}
+
 	error = uiomove_frombuf(sbuf_data(&sb), sbuf_len(&sb), uio);
 	sbuf_delete(&sb);
 	PFS_RETURN (error);
@@ -816,8 +986,7 @@ pfs_write(struct vop_write_args *va)
 
 	if (vn->v_type != VREG)
 		PFS_RETURN (EINVAL);
-	KASSERT(pn->pn_type != pfstype_file,
-	    ("%s(): VREG vnode refers to non-file pfs_node", __func__));
+	KASSERT_PN_IS_FILE(pn);
 
 	if (!(pn->pn_flags & PFS_WR))
 		PFS_RETURN (EBADF);
@@ -837,9 +1006,7 @@ pfs_write(struct vop_write_args *va)
 	}
 
 	if (pn->pn_flags & PFS_RAWWR) {
-		pfs_lock(pn);
 		error = pn_fill(curthread, proc, pn, NULL, uio);
-		pfs_unlock(pn);
 		if (proc != NULL)
 			PRELE(proc);
 		PFS_RETURN (error);
@@ -887,6 +1054,7 @@ struct vop_vector pfs_vnodeops = {
 	.vop_rmdir =		VOP_EOPNOTSUPP,
 	.vop_setattr =		pfs_setattr,
 	.vop_symlink =		VOP_EOPNOTSUPP,
+	.vop_vptocnp =		pfs_vptocnp,
 	.vop_write =		pfs_write,
 	/* XXX I've probably forgotten a few that need VOP_EOPNOTSUPP */
 };

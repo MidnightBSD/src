@@ -66,6 +66,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* $FreeBSD$ */
+
 #ifndef _NCR53C9XVAR_H_
 #define	_NCR53C9XVAR_H_
 
@@ -129,7 +131,6 @@ struct ncr53c9x_ecb {
 #define	ECB_RESET		0x80
 #define	ECB_TENTATIVE_DONE	0x100
 	int timeout;
-	struct callout ch;
 
 	struct {
 		uint8_t	msg[3];			/* Selection Id msg and tags */

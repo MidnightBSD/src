@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pcm/buffer.h,v 1.17 2007/06/14 11:15:51 ariff Exp $
+ * $FreeBSD$
  */
 
 #define SND_DMA(b) (sndbuf_getflags((b)) & SNDBUF_F_DMA)
@@ -46,9 +46,9 @@ struct snd_dbuf {
 	volatile int rp; /* pointers to the ready area */
 	volatile int rl; /* length of ready area */
 	volatile int hp;
-	volatile u_int32_t total, prev_total;
+	volatile u_int64_t total, prev_total;
 	int dmachan, dir;       /* dma channel */
-	u_int32_t fmt, spd, bps;
+	u_int32_t fmt, spd, bps, align;
 	unsigned int blksz, blkcnt;
 	int xrun;
 	u_int32_t flags;
@@ -74,6 +74,7 @@ int sndbuf_remalloc(struct snd_dbuf *b, unsigned int blkcnt, unsigned int blksz)
 void sndbuf_reset(struct snd_dbuf *b);
 void sndbuf_clear(struct snd_dbuf *b, unsigned int length);
 void sndbuf_fillsilence(struct snd_dbuf *b);
+void sndbuf_fillsilence_rl(struct snd_dbuf *b, u_int rl);
 void sndbuf_softreset(struct snd_dbuf *b);
 void sndbuf_clearshadow(struct snd_dbuf *b);
 
@@ -107,10 +108,10 @@ unsigned int sndbuf_getfree(struct snd_dbuf *b);
 unsigned int sndbuf_getfreeptr(struct snd_dbuf *b);
 unsigned int sndbuf_getready(struct snd_dbuf *b);
 unsigned int sndbuf_getreadyptr(struct snd_dbuf *b);
-unsigned int sndbuf_getblocks(struct snd_dbuf *b);
-unsigned int sndbuf_getprevblocks(struct snd_dbuf *b);
-unsigned int sndbuf_gettotal(struct snd_dbuf *b);
-unsigned int snd_xbytes(unsigned int v, unsigned int from, unsigned int to);
+u_int64_t sndbuf_getblocks(struct snd_dbuf *b);
+u_int64_t sndbuf_getprevblocks(struct snd_dbuf *b);
+u_int64_t sndbuf_gettotal(struct snd_dbuf *b);
+u_int64_t sndbuf_getprevtotal(struct snd_dbuf *b);
 unsigned int sndbuf_xbytes(unsigned int v, struct snd_dbuf *from, struct snd_dbuf *to);
 u_int8_t sndbuf_zerodata(u_int32_t fmt);
 void sndbuf_updateprevtotal(struct snd_dbuf *b);
@@ -131,3 +132,14 @@ void sndbuf_dmabounce(struct snd_dbuf *b);
 #ifdef OSSV4_EXPERIMENT
 void sndbuf_getpeaks(struct snd_dbuf *b, int *lp, int *rp);
 #endif
+
+static inline u_int32_t
+snd_xbytes(u_int32_t v, u_int32_t from, u_int32_t to)
+{
+
+	if (from == to)
+		return (v);
+	if (from == 0)
+		return (0);
+	return ((u_int64_t)v * to / from);
+}

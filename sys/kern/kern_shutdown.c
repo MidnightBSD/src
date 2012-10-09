@@ -35,14 +35,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.182.4.1 2008/01/30 21:21:50 ru Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"
-#include "opt_mac.h"
 #include "opt_panic.h"
-#include "opt_show_busybufs.h"
 #include "opt_sched.h"
+#include "opt_watchdog.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,8 +50,10 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.182.4.1 2008/01/30 21:21:50
 #include <sys/conf.h>
 #include <sys/cons.h>
 #include <sys/eventhandler.h>
+#include <sys/jail.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
+#include <sys/kerneldump.h>
 #include <sys/kthread.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
@@ -61,9 +62,11 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.182.4.1 2008/01/30 21:21:50
 #include <sys/reboot.h>
 #include <sys/resourcevar.h>
 #include <sys/sched.h>
-#include <sys/smp.h>		/* smp_active */
+#include <sys/smp.h>
 #include <sys/sysctl.h>
 #include <sys/sysproto.h>
+#include <sys/vnode.h>
+#include <sys/watchdog.h>
 
 #include <ddb/ddb.h>
 
@@ -97,23 +100,41 @@ int debugger_on_panic = 0;
 #else
 int debugger_on_panic = 1;
 #endif
-SYSCTL_INT(_debug, OID_AUTO, debugger_on_panic, CTLFLAG_RW,
-	&debugger_on_panic, 0, "Run debugger on kernel panic");
+SYSCTL_INT(_debug, OID_AUTO, debugger_on_panic,
+    CTLFLAG_RW | CTLFLAG_SECURE | CTLFLAG_TUN,
+    &debugger_on_panic, 0, "Run debugger on kernel panic");
+TUNABLE_INT("debug.debugger_on_panic", &debugger_on_panic);
 
 #ifdef KDB_TRACE
-int trace_on_panic = 1;
+static int trace_on_panic = 1;
 #else
-int trace_on_panic = 0;
+static int trace_on_panic = 0;
 #endif
-SYSCTL_INT(_debug, OID_AUTO, trace_on_panic, CTLFLAG_RW,
-	&trace_on_panic, 0, "Print stack trace on kernel panic");
+SYSCTL_INT(_debug, OID_AUTO, trace_on_panic,
+    CTLFLAG_RW | CTLFLAG_SECURE | CTLFLAG_TUN,
+    &trace_on_panic, 0, "Print stack trace on kernel panic");
+TUNABLE_INT("debug.trace_on_panic", &trace_on_panic);
 #endif /* KDB */
 
-int sync_on_panic = 0;
-SYSCTL_INT(_kern, OID_AUTO, sync_on_panic, CTLFLAG_RW,
+static int sync_on_panic = 0;
+SYSCTL_INT(_kern, OID_AUTO, sync_on_panic, CTLFLAG_RW | CTLFLAG_TUN,
 	&sync_on_panic, 0, "Do a sync before rebooting from a panic");
+TUNABLE_INT("kern.sync_on_panic", &sync_on_panic);
+
+static int stop_scheduler_on_panic = 1;
+SYSCTL_INT(_kern, OID_AUTO, stop_scheduler_on_panic, CTLFLAG_RW | CTLFLAG_TUN,
+    &stop_scheduler_on_panic, 0, "stop scheduler upon entering panic");
+TUNABLE_INT("kern.stop_scheduler_on_panic", &stop_scheduler_on_panic);
 
 SYSCTL_NODE(_kern, OID_AUTO, shutdown, CTLFLAG_RW, 0, "Shutdown environment");
+
+#ifndef DIAGNOSTIC
+static int show_busybufs;
+#else
+static int show_busybufs = 1;
+#endif
+SYSCTL_INT(_kern_shutdown, OID_AUTO, show_busybufs, CTLFLAG_RW,
+	&show_busybufs, 0, "");
 
 /*
  * Variable panicstr contains argument to first call to panic; used as flag
@@ -129,7 +150,6 @@ static struct dumperinfo dumper;	/* our selected dumper */
 static struct pcb dumppcb;		/* Registers. */
 static lwpid_t dumptid;			/* Thread ID. */
 
-static void boot(int) __dead2;
 static void poweroff_wait(void *, int);
 static void shutdown_halt(void *junk, int howto);
 static void shutdown_panic(void *junk, int howto);
@@ -157,19 +177,19 @@ SYSINIT(shutdown_conf, SI_SUB_INTRINSIC, SI_ORDER_ANY, shutdown_conf, NULL);
  */
 /* ARGSUSED */
 int
-reboot(struct thread *td, struct reboot_args *uap)
+sys_reboot(struct thread *td, struct reboot_args *uap)
 {
 	int error;
 
 	error = 0;
 #ifdef MAC
-	error = mac_check_system_reboot(td->td_ucred, uap->opt);
+	error = mac_system_check_reboot(td->td_ucred, uap->opt);
 #endif
 	if (error == 0)
 		error = priv_check(td, PRIV_REBOOT);
 	if (error == 0) {
 		mtx_lock(&Giant);
-		boot(uap->opt);
+		kern_reboot(uap->opt);
 		mtx_unlock(&Giant);
 	}
 	return (error);
@@ -189,11 +209,11 @@ shutdown_nice(int howto)
 	/* Send a signal to init(8) and have it shutdown the world */
 	if (initproc != NULL) {
 		PROC_LOCK(initproc);
-		psignal(initproc, SIGINT);
+		kern_psignal(initproc, SIGINT);
 		PROC_UNLOCK(initproc);
 	} else {
 		/* No init(8) running, so simply reboot */
-		boot(RB_NOSYNC);
+		kern_reboot(RB_NOSYNC);
 	}
 	return;
 }
@@ -226,37 +246,39 @@ print_uptime(void)
 	printf("%lds\n", (long)ts.tv_sec);
 }
 
-static void
-doadump(void)
+int
+doadump(boolean_t textdump)
 {
+	boolean_t coredump;
 
-	/*
-	 * Sometimes people have to call this from the kernel debugger. 
-	 * (if 'panic' can not dump)
-	 * Give them a clue as to why they can't dump.
-	 */
-	if (dumper.dumper == NULL) {
-		printf("Cannot dump. No dump device defined.\n");
-		return;
-	}
+	if (dumping)
+		return (EBUSY);
+	if (dumper.dumper == NULL)
+		return (ENXIO);
 
 	savectx(&dumppcb);
 	dumptid = curthread->td_tid;
 	dumping++;
+
+	coredump = TRUE;
 #ifdef DDB
-	if (textdump_pending)
+	if (textdump && textdump_pending) {
+		coredump = FALSE;
 		textdump_dumpsys(&dumper);
-	else
+	}
 #endif
+	if (coredump)
 		dumpsys(&dumper);
+
 	dumping--;
+	return (0);
 }
 
 static int
 isbufbusy(struct buf *bp)
 {
 	if (((bp->b_flags & (B_INVAL | B_PERSISTENT)) == 0 &&
-	    BUF_REFCNT(bp) > 0) ||
+	    BUF_ISLOCKED(bp)) ||
 	    ((bp->b_flags & (B_DELWRI | B_INVAL)) == B_DELWRI))
 		return (1);
 	return (0);
@@ -265,8 +287,8 @@ isbufbusy(struct buf *bp)
 /*
  * Shutdown the system cleanly to prepare for reboot, halt, or power off.
  */
-static void
-boot(int howto)
+void
+kern_reboot(int howto)
 {
 	static int first_buf_printf = 1;
 
@@ -276,10 +298,12 @@ boot(int howto)
 	 * systems don't shutdown properly (i.e., ACPI power off) if we
 	 * run on another processor.
 	 */
-	thread_lock(curthread);
-	sched_bind(curthread, 0);
-	thread_unlock(curthread);
-	KASSERT(PCPU_GET(cpuid) == 0, ("boot: not running on cpu 0"));
+	if (!SCHEDULER_STOPPED()) {
+		thread_lock(curthread);
+		sched_bind(curthread, 0);
+		thread_unlock(curthread);
+		KASSERT(PCPU_GET(cpuid) == 0, ("boot: not running on cpu 0"));
+	}
 #endif
 	/* We're in the process of rebooting. */
 	rebooting = 1;
@@ -307,7 +331,8 @@ boot(int howto)
 
 		waittime = 0;
 
-		sync(curthread, NULL);
+		wdog_kern_pat(WD_LASTVAL);
+		sys_sync(curthread, NULL);
 
 		/*
 		 * With soft updates, some buffers that are
@@ -332,7 +357,9 @@ boot(int howto)
 			if (nbusy < pbusy)
 				iter = 0;
 			pbusy = nbusy;
-			sync(curthread, NULL);
+
+			wdog_kern_pat(WD_LASTVAL);
+			sys_sync(curthread, NULL);
 
 #ifdef PREEMPTION
 			/*
@@ -374,13 +401,17 @@ boot(int howto)
 				}
 #endif
 				nbusy++;
-#if defined(SHOW_BUSYBUFS) || defined(DIAGNOSTIC)
-				printf(
-			    "%d: bufobj:%p, flags:%0x, blkno:%ld, lblkno:%ld\n",
-				    nbusy, bp->b_bufobj,
-				    bp->b_flags, (long)bp->b_blkno,
-				    (long)bp->b_lblkno);
-#endif
+				if (show_busybufs > 0) {
+					printf(
+	    "%d: buf:%p, vnode:%p, flags:%0x, blkno:%jd, lblkno:%jd, buflock:",
+					    nbusy, bp, bp->b_vp, bp->b_flags,
+					    (intmax_t)bp->b_blkno,
+					    (intmax_t)bp->b_lblkno);
+					BUF_LOCKPRINTINFO(bp);
+					if (show_busybufs > 1)
+						vn_printf(bp->b_vp,
+						    "vnode content: ");
+				}
 			}
 		}
 		if (nbusy) {
@@ -405,17 +436,16 @@ boot(int howto)
 
 	print_uptime();
 
+	cngrab();
+
 	/*
 	 * Ok, now do things that assume all filesystem activity has
 	 * been completed.
 	 */
 	EVENTHANDLER_INVOKE(shutdown_post_sync, howto);
 
-	/* XXX This doesn't disable interrupts any more.  Reconsider? */
-	splhigh();
-
 	if ((howto & (RB_HALT|RB_DUMP)) == RB_DUMP && !cold && !dumping) 
-		doadump();
+		doadump(TRUE);
 
 	/* Now that we're going to really halt the system... */
 	EVENTHANDLER_INVOKE(shutdown_final, howto);
@@ -489,14 +519,28 @@ shutdown_reset(void *junk, int howto)
 
 	printf("Rebooting...\n");
 	DELAY(1000000);	/* wait 1 sec for printf's to complete and be read */
+
+	/*
+	 * Acquiring smp_ipi_mtx here has a double effect:
+	 * - it disables interrupts avoiding CPU0 preemption
+	 *   by fast handlers (thus deadlocking  against other CPUs)
+	 * - it avoids deadlocks against smp_rendezvous() or, more 
+	 *   generally, threads busy-waiting, with this spinlock held,
+	 *   and waiting for responses by threads on other CPUs
+	 *   (ie. smp_tlb_shootdown()).
+	 *
+	 * For the !SMP case it just needs to handle the former problem.
+	 */
+#ifdef SMP
+	mtx_lock_spin(&smp_ipi_mtx);
+#else
+	spinlock_enter();
+#endif
+
 	/* cpu_boot(howto); */ /* doesn't do anything at the moment */
 	cpu_reset();
 	/* NOTREACHED */ /* assuming reset worked */
 }
-
-#ifdef SMP
-static u_int panic_cpu = NOCPU;
-#endif
 
 /*
  * Panic is called on unresolvable fatal errors.  It prints "panic: mesg",
@@ -506,12 +550,20 @@ static u_int panic_cpu = NOCPU;
 void
 panic(const char *fmt, ...)
 {
+#ifdef SMP
+	static volatile u_int panic_cpu = NOCPU;
+	cpuset_t other_cpus;
+#endif
 	struct thread *td = curthread;
 	int bootopt, newpanic;
 	va_list ap;
 	static char buf[256];
 
-	critical_enter();
+	if (stop_scheduler_on_panic)
+		spinlock_enter();
+	else
+		critical_enter();
+
 #ifdef SMP
 	/*
 	 * We don't want multiple CPU's to panic at the same time, so we
@@ -524,13 +576,30 @@ panic(const char *fmt, ...)
 		    PCPU_GET(cpuid)) == 0)
 			while (panic_cpu != NOCPU)
 				; /* nothing */
+
+	if (stop_scheduler_on_panic) {
+		if (panicstr == NULL && !kdb_active) {
+			other_cpus = all_cpus;
+			CPU_CLR(PCPU_GET(cpuid), &other_cpus);
+			stop_cpus_hard(other_cpus);
+		}
+
+		/*
+		 * We set stop_scheduler here and not in the block above,
+		 * because we want to ensure that if panic has been called and
+		 * stop_scheduler_on_panic is true, then stop_scheduler will
+		 * always be set.  Even if panic has been entered from kdb.
+		 */
+		td->td_stopsched = 1;
+	}
 #endif
 
-	bootopt = RB_AUTOBOOT | RB_DUMP;
+	bootopt = RB_AUTOBOOT;
 	newpanic = 0;
 	if (panicstr)
 		bootopt |= RB_NOSYNC;
 	else {
+		bootopt |= RB_DUMP;
 		panicstr = fmt;
 		newpanic = 1;
 	}
@@ -539,6 +608,7 @@ panic(const char *fmt, ...)
 	if (newpanic) {
 		(void)vsnprintf(buf, sizeof(buf), fmt, ap);
 		panicstr = buf;
+		cngrab();
 		printf("panic: %s\n", buf);
 	} else {
 		printf("panic: ");
@@ -554,28 +624,24 @@ panic(const char *fmt, ...)
 	if (newpanic && trace_on_panic)
 		kdb_backtrace();
 	if (debugger_on_panic)
-		kdb_enter_why(KDB_WHY_PANIC, "panic");
-#ifdef RESTARTABLE_PANICS
-	/* See if the user aborted the panic, in which case we continue. */
-	if (panicstr == NULL) {
-#ifdef SMP
-		atomic_store_rel_int(&panic_cpu, NOCPU);
-#endif
-		return;
-	}
-#endif
+		kdb_enter(KDB_WHY_PANIC, "panic");
 #endif
 	/*thread_lock(td); */
 	td->td_flags |= TDF_INPANIC;
 	/* thread_unlock(td); */
 	if (!sync_on_panic)
 		bootopt |= RB_NOSYNC;
-	critical_exit();
-	boot(bootopt);
+	if (!stop_scheduler_on_panic)
+		critical_exit();
+	kern_reboot(bootopt);
 }
 
 /*
  * Support for poweroff delay.
+ *
+ * Please note that setting this delay too short might power off your machine
+ * before the write cache on your hard disk has been flushed, leading to
+ * soft-updates inconsistencies.
  */
 #ifndef POWEROFF_DELAY
 # define POWEROFF_DELAY 5000
@@ -609,17 +675,35 @@ void
 kproc_shutdown(void *arg, int howto)
 {
 	struct proc *p;
-	char procname[MAXCOMLEN + 1];
 	int error;
 
 	if (panicstr)
 		return;
 
 	p = (struct proc *)arg;
-	strlcpy(procname, p->p_comm, sizeof(procname));
 	printf("Waiting (max %d seconds) for system process `%s' to stop...",
-	    kproc_shutdown_wait, procname);
-	error = kthread_suspend(p, kproc_shutdown_wait * hz);
+	    kproc_shutdown_wait, p->p_comm);
+	error = kproc_suspend(p, kproc_shutdown_wait * hz);
+
+	if (error == EWOULDBLOCK)
+		printf("timed out\n");
+	else
+		printf("done\n");
+}
+
+void
+kthread_shutdown(void *arg, int howto)
+{
+	struct thread *td;
+	int error;
+
+	if (panicstr)
+		return;
+
+	td = (struct thread *)arg;
+	printf("Waiting (max %d seconds) for system thread `%s' to stop...",
+	    kproc_shutdown_wait, td->td_name);
+	error = kthread_suspend(td, kproc_shutdown_wait * hz);
 
 	if (error == EWOULDBLOCK)
 		printf("timed out\n");
@@ -650,17 +734,31 @@ dump_write(struct dumperinfo *di, void *virtual, vm_offset_t physical,
 
 	if (length != 0 && (offset < di->mediaoffset ||
 	    offset - di->mediaoffset + length > di->mediasize)) {
-		printf("Attempt to write outside dump device boundaries.\n");
-		return (ENXIO);
+		printf("Attempt to write outside dump device boundaries.\n"
+	    "offset(%jd), mediaoffset(%jd), length(%ju), mediasize(%jd).\n",
+		    (intmax_t)offset, (intmax_t)di->mediaoffset,
+		    (uintmax_t)length, (intmax_t)di->mediasize);
+		return (ENOSPC);
 	}
 	return (di->dumper(di->priv, virtual, physical, offset, length));
 }
 
-#if defined(__powerpc__)
 void
-dumpsys(struct dumperinfo *di __unused)
+mkdumpheader(struct kerneldumpheader *kdh, char *magic, uint32_t archver,
+    uint64_t dumplen, uint32_t blksz)
 {
 
-	printf("Kernel dumps not implemented on this architecture\n");
+	bzero(kdh, sizeof(*kdh));
+	strncpy(kdh->magic, magic, sizeof(kdh->magic));
+	strncpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
+	kdh->version = htod32(KERNELDUMPVERSION);
+	kdh->architectureversion = htod32(archver);
+	kdh->dumplength = htod64(dumplen);
+	kdh->dumptime = htod64(time_second);
+	kdh->blocksize = htod32(blksz);
+	strncpy(kdh->hostname, prison0.pr_hostname, sizeof(kdh->hostname));
+	strncpy(kdh->versionstring, version, sizeof(kdh->versionstring));
+	if (panicstr != NULL)
+		strncpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
+	kdh->parity = kerneldump_parity(kdh);
 }
-#endif

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/emu10kx.h,v 1.4 2007/09/12 07:43:42 ariff Exp $
+ * $FreeBSD$
  */
 
 #ifndef EMU10KX_H
@@ -51,6 +51,14 @@
 #define	EMU_VAR_ISEMU10K1 	2
 #define	EMU_VAR_MCH_DISABLED 	3
 #define	EMU_VAR_MCH_REC 	4
+
+#define EMU_A_IOCFG_DISABLE_ANALOG	0x0040	/* = 'enable' for Audigy2 */
+#define EMU_A_IOCFG_GPOUT2	0x0001
+#define EMU_AC97SLOT_REAR_RIGHT	0x01
+#define EMU_AC97SLOT_REAR_LEFT	0x02
+#define EMU_HCFG_GPOUT0		0x00001000
+#define EMU_HCFG_GPOUT1		0x00000800
+#define EMU_HCFG_GPOUT2		0x00000400
 
 #define	RT_FRONT		0
 #define	RT_REAR			1

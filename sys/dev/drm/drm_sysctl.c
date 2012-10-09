@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_sysctl.c,v 1.2.2.3.2.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_sysctl.c
  * Implementation of various sysctls for controlling DRM behavior and reporting
@@ -95,7 +95,7 @@ int drm_sysctl_init(struct drm_device *dev)
 			SYSCTL_CHILDREN(top), 
 			OID_AUTO, 
 			drm_sysctl_list[i].name, 
-			CTLTYPE_INT | CTLFLAG_RD, 
+			CTLTYPE_STRING | CTLFLAG_RD, 
 			dev, 
 			0, 
 			drm_sysctl_list[i].f, 
@@ -188,7 +188,7 @@ static int drm_vm_info DRM_SYSCTL_HANDLER_ARGS
 	DRM_UNLOCK();
 
 	DRM_SYSCTL_PRINT("\nslot offset	        size       "
-	    "type flags address            mtrr\n");
+	    "type flags address            handle mtrr\n");
 
 	for (i = 0; i < mapcount; i++) {
 		map = &tempmaps[i];
@@ -204,9 +204,11 @@ static int drm_vm_info DRM_SYSCTL_HANDLER_ARGS
 			yesno = "yes";
 
 		DRM_SYSCTL_PRINT(
-		    "%4d 0x%016lx 0x%08lx %4.4s  0x%02x 0x%016lx %s\n", i,
-		    map->offset, map->size, type, map->flags,
-		    (unsigned long)map->handle, yesno);
+		    "%4d 0x%016lx 0x%08lx %4.4s  0x%02x 0x%016lx %6d %s\n",
+		    i, map->offset, map->size, type, map->flags,
+		    (unsigned long)map->virtual,
+		    (unsigned int)((unsigned long)map->handle >>
+		    DRM_MAP_HANDLE_SHIFT), yesno);
 	}
 	SYSCTL_OUT(req, "", 1);
 
@@ -257,7 +259,7 @@ static int drm_bufs_info DRM_SYSCTL_HANDLER_ARGS
 				       *(1 << dma->bufs[i].page_order),
 				       (dma->bufs[i].seg_count
 					* (1 << dma->bufs[i].page_order))
-				       * PAGE_SIZE / 1024);
+				       * (int)PAGE_SIZE / 1024);
 	}
 	DRM_SYSCTL_PRINT("\n");
 	for (i = 0; i < dma->buf_count; i++) {
@@ -298,12 +300,13 @@ static int drm_clients_info DRM_SYSCTL_HANDLER_ARGS
 
 	DRM_UNLOCK();
 
-	DRM_SYSCTL_PRINT("\na dev	pid    uid	magic	  ioctls\n");
+	DRM_SYSCTL_PRINT(
+	    "\na dev            pid   uid      magic     ioctls\n");
 	for (i = 0; i < privcount; i++) {
 		priv = &tempprivs[i];
-		DRM_SYSCTL_PRINT("%c %3d %5d %5d %10u %10lu\n",
+		DRM_SYSCTL_PRINT("%c %-12s %5d %5d %10u %10lu\n",
 			       priv->authenticated ? 'y' : 'n',
-			       priv->minor,
+			       devtoname(priv->dev->devnode),
 			       priv->pid,
 			       priv->uid,
 			       priv->magic,

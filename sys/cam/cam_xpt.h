@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_xpt.h,v 1.9.10.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_XPT_H
@@ -48,7 +48,26 @@ struct cam_path;
 
 #ifdef _KERNEL
 
+/*
+ * Definition of an async handler callback block.  These are used to add
+ * SIMs and peripherals to the async callback lists.
+ */
+struct async_node {
+	SLIST_ENTRY(async_node)	links;
+	u_int32_t	event_enable;	/* Async Event enables */
+	void		(*callback)(void *arg, u_int32_t code,
+				    struct cam_path *path, void *args);
+	void		*callback_arg;
+};
+
+SLIST_HEAD(async_list, async_node);
+SLIST_HEAD(periph_list, cam_periph);
+
 void			xpt_action(union ccb *new_ccb);
+void			xpt_action_default(union ccb *new_ccb);
+union ccb		*xpt_alloc_ccb(void);
+union ccb		*xpt_alloc_ccb_nowait(void);
+void			xpt_free_ccb(union ccb *free_ccb);
 void			xpt_setup_ccb(struct ccb_hdr *ccb_h,
 				      struct cam_path *path,
 				      u_int32_t priority);
@@ -62,7 +81,12 @@ cam_status		xpt_create_path_unlocked(struct cam_path **new_path_ptr,
 					struct cam_periph *perph,
 					path_id_t path_id,
 					target_id_t target_id, lun_id_t lun_id);
+int			xpt_getattr(char *buf, size_t len, const char *attr,
+				    struct cam_path *path);
 void			xpt_free_path(struct cam_path *path);
+void			xpt_path_counts(struct cam_path *path, uint32_t *bus_ref,
+					uint32_t *periph_ref, uint32_t *target_ref,
+					uint32_t *device_ref);
 int			xpt_path_comp(struct cam_path *path1,
 				      struct cam_path *path2);
 void			xpt_print_path(struct cam_path *path);
@@ -72,16 +96,26 @@ int			xpt_path_string(struct cam_path *path, char *str,
 path_id_t		xpt_path_path_id(struct cam_path *path);
 target_id_t		xpt_path_target_id(struct cam_path *path);
 lun_id_t		xpt_path_lun_id(struct cam_path *path);
+int			xpt_path_legacy_ata_id(struct cam_path *path);
 struct cam_sim		*xpt_path_sim(struct cam_path *path);
 struct cam_periph	*xpt_path_periph(struct cam_path *path);
 void			xpt_async(u_int32_t async_code, struct cam_path *path,
 				  void *async_arg);
 void			xpt_rescan(union ccb *ccb);
+void			xpt_hold_boot(void);
+void			xpt_release_boot(void);
 void			xpt_lock_buses(void);
 void			xpt_unlock_buses(void);
 cam_status		xpt_register_async(int event, ac_callback_t *cbfunc,
 					   void *cbarg, struct cam_path *path);
+cam_status		xpt_compile_path(struct cam_path *new_path,
+					 struct cam_periph *perph,
+					 path_id_t path_id,
+					 target_id_t target_id,
+					 lun_id_t lun_id);
+
+void			xpt_release_path(struct cam_path *path);
+
 #endif /* _KERNEL */
 
 #endif /* _CAM_CAM_XPT_H */
-

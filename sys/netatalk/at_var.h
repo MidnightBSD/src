@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1991 Regents of The University of Michigan.
  * All Rights Reserved.
@@ -21,7 +20,7 @@
  *	+1-313-763-0525
  *	netatalk@itd.umich.edu
  *
- * $FreeBSD: src/sys/netatalk/at_var.h,v 1.15 2007/01/12 13:18:08 rwatson Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETATALK_AT_VAR_H_
@@ -41,10 +40,12 @@ struct at_ifaddr {
 	u_short			 aa_lastnet;
 	int			 aa_probcnt;
 	struct callout		 aa_callout;
-	struct at_ifaddr	*aa_next;
+	TAILQ_ENTRY(at_ifaddr)	 aa_link;
 };
 #define	aa_ifp		aa_ifa.ifa_ifp
 #define	aa_dstaddr	aa_broadaddr;
+
+TAILQ_HEAD(at_ifaddrhead, at_ifaddr);
 
 struct at_aliasreq {
 	char			ifra_name[IFNAMSIZ];
@@ -62,7 +63,15 @@ struct at_aliasreq {
 #define	AFA_PHASE2	0x0004
 
 #ifdef _KERNEL
-extern struct at_ifaddr	*at_ifaddr_list;
+extern struct rwlock		at_ifaddr_rw;
+extern struct at_ifaddrhead	at_ifaddrhead;
+
+#define	AT_IFADDR_LOCK_INIT()	rw_init(&at_ifaddr_rw, "at_ifaddr_rw")
+#define	AT_IFADDR_LOCK_ASSERT()	rw_assert(&at_ifaddr_rw, RA_LOCKED)
+#define	AT_IFADDR_RLOCK()	rw_rlock(&at_ifaddr_rw)
+#define	AT_IFADDR_RUNLOCK()	rw_runlock(&at_ifaddr_rw)
+#define	AT_IFADDR_WLOCK()	rw_wlock(&at_ifaddr_rw)
+#define	AT_IFADDR_WUNLOCK()	rw_wunlock(&at_ifaddr_rw)
 #endif
 
 #endif /* _NETATALK_AT_VAR_H_ */

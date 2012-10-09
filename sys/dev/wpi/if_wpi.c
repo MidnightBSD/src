@@ -19,7 +19,7 @@
 #define VERSION "20071127"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/wpi/if_wpi.c,v 1.5.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for Intel PRO/Wireless 3945ABG 802.11 network adapters.
@@ -1038,7 +1038,7 @@ wpi_reset_rx_ring(struct wpi_softc *sc, struct wpi_rx_ring *ring)
 	wpi_mem_unlock(sc);
 
 #ifdef WPI_DEBUG
-	if (ntries == 100)
+	if (ntries == 100 && wpi_debug > 0)
 		device_printf(sc->sc_dev, "timeout resetting Rx ring\n");
 #endif
 
@@ -1763,6 +1763,7 @@ wpi_notif_intr(struct wpi_softc *sc)
 				ieee80211_beacon_miss(ic);
 			}
 			break;
+		}
 		}
 
 		sc->rxq.cur = (sc->rxq.cur + 1) % WPI_RX_RING_COUNT;

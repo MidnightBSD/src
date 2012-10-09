@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -34,8 +33,8 @@
  *	@(#)procfs_ctl.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_ctl.c,v 1.4 2008-12-03 00:25:43 laffer1 Exp $
- * $FreeBSD: src/sys/fs/procfs/procfs_ctl.c,v 1.56 2007/06/05 00:00:51 jeff Exp $
+ *	$Id: procfs_ctl.c,v 1.5 2012-10-09 04:08:14 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -111,6 +110,7 @@ static int
 procfs_control(struct thread *td, struct proc *p, int op)
 {
 	int error = 0;
+	struct thread *temp;
 
 	/*
 	 * Attach - attaches the target process for debugging
@@ -147,7 +147,7 @@ procfs_control(struct thread *td, struct proc *p, int op)
 			p->p_oppid = p->p_pptr->p_pid;
 			proc_reparent(p, td->td_proc);
 		}
-		psignal(p, SIGSTOP);
+		kern_psignal(p, SIGSTOP);
 out:
 		PROC_UNLOCK(p);
 		sx_xunlock(&proctree_lock);
@@ -190,7 +190,7 @@ out:
 	/*
 	 * do single-step fixup if needed
 	 */
-	FIX_SSTEP(FIRST_THREAD_IN_PROC(p));	/* XXXKSE */
+	FIX_SSTEP(FIRST_THREAD_IN_PROC(p));
 #endif
 
 	/*
@@ -213,10 +213,12 @@ out:
 		}
 
 		/* not being traced any more */
-		p->p_flag &= ~P_TRACED;
+		p->p_flag &= ~(P_TRACED | P_STOPPED_TRACE);
 
 		/* remove pending SIGTRAP, else the process will die */
 		sigqueue_delete_proc(p, SIGTRAP);
+		FOREACH_THREAD_IN_PROC(p, temp)
+			temp->td_dbgflags &= ~TDB_SUSPEND;
 		PROC_UNLOCK(p);
 
 		/* give process back to original parent */
@@ -234,7 +236,6 @@ out:
 			PROC_LOCK(p);
 		p->p_oppid = 0;
 		p->p_flag &= ~P_WAITED;	/* XXX ? */
-		PROC_UNLOCK(p);
 		sx_xunlock(&proctree_lock);
 
 		wakeup(td->td_proc);	/* XXX for CTL_WAIT below ? */
@@ -246,10 +247,11 @@ out:
 	 * What does it mean to single step a threaded program?
 	 */
 	case PROCFS_CTL_STEP:
-		error = proc_sstep(FIRST_THREAD_IN_PROC(p)); /* XXXKSE */
-		PROC_UNLOCK(p);
-		if (error)
+		error = proc_sstep(FIRST_THREAD_IN_PROC(p));
+		if (error) {
+			PROC_UNLOCK(p);
 			return (error);
+		}
 		break;
 
 	/*
@@ -258,7 +260,6 @@ out:
 	 */
 	case PROCFS_CTL_RUN:
 		p->p_flag &= ~P_STOPPED_SIG;	/* this uses SIGSTOP */
-		PROC_UNLOCK(p);
 		break;
 
 	/*
@@ -290,6 +291,7 @@ out:
 	PROC_SLOCK(p);
 	thread_unsuspend(p); /* If it can run, let it do so. */
 	PROC_SUNLOCK(p);
+	PROC_UNLOCK(p);
 	return (0);
 }
 
@@ -336,20 +338,17 @@ procfs_doprocctl(PFS_FILL_ARGS)
 			printf("procfs: got a sig%s\n", sbuf_data(sb));
 			PROC_LOCK(p);
 
-			/* This is very broken XXXKSE: */
 			if (TRACE_WAIT_P(td->td_proc, p)) {
 				p->p_xstat = nm->nm_val;
 #ifdef FIX_SSTEP
-				/* XXXKSE: */
 				FIX_SSTEP(FIRST_THREAD_IN_PROC(p));
 #endif
-				/* XXXKSE: */
 				p->p_flag &= ~P_STOPPED_SIG;
 				PROC_SLOCK(p);
 				thread_unsuspend(p);
 				PROC_SUNLOCK(p);
 			} else
-				psignal(p, nm->nm_val);
+				kern_psignal(p, nm->nm_val);
 			PROC_UNLOCK(p);
 			error = 0;
 		}

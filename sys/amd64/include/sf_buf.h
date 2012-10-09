@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2005 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/sf_buf.h,v 1.3 2005/02/28 23:38:15 peter Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SF_BUF_H_

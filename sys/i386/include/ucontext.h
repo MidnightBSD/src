@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/ucontext.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.

@@ -29,13 +29,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_cpuset.c,v 1.13.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_ddb.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -48,8 +49,8 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_cpuset.c,v 1.13.2.1.2.1 2008/11/25 02:59:2
 #include <sys/syscallsubr.h>
 #include <sys/cpuset.h>
 #include <sys/sx.h>
-#include <sys/refcount.h>
 #include <sys/queue.h>
+#include <sys/libkern.h>
 #include <sys/limits.h>
 #include <sys/bus.h>
 #include <sys/interrupt.h>
@@ -79,7 +80,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_cpuset.c,v 1.13.2.1.2.1 2008/11/25 02:59:2
  * not.  This means that anonymous sets are immutable because they may be
  * shared.  To modify an anonymous set a new set is created with the desired
  * mask and the same parent as the existing anonymous set.  This gives the
- * illusion of each thread having a private mask.A
+ * illusion of each thread having a private mask.
  *
  * Via the syscall apis a user may ask to retrieve or modify the root, base,
  * or mask that is discovered via a pid, tid, or setid.  Modifying a set
@@ -87,7 +88,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_cpuset.c,v 1.13.2.1.2.1 2008/11/25 02:59:2
  * Modifying a pid or tid's mask applies only to that tid but must still
  * exist within the assigned parent set.
  *
- * A thread may not be assigned to a a group seperate from other threads in
+ * A thread may not be assigned to a group separate from other threads in
  * the process.  This is to remove ambiguity when the setid is queried with
  * a pid argument.  There is no other technical limitation.
  *
@@ -98,7 +99,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_cpuset.c,v 1.13.2.1.2.1 2008/11/25 02:59:2
  *
  * A simple application should not concern itself with sets at all and
  * rather apply masks to its own threads via CPU_WHICH_TID and a -1 id
- * meaning 'curthread'.  It may query availble cpus for that tid with a
+ * meaning 'curthread'.  It may query available cpus for that tid with a
  * getaffinity call using (CPU_LEVEL_CPUSET, CPU_WHICH_PID, -1, ...).
  */
 static uma_zone_t cpuset_zone;
@@ -106,6 +107,10 @@ static struct mtx cpuset_lock;
 static struct setlist cpuset_ids;
 static struct unrhdr *cpuset_unr;
 static struct cpuset *cpuset_zero;
+
+/* Return the size of cpuset_t at the kernel level */
+SYSCTL_INT(_kern_sched, OID_AUTO, cpusetsize, CTLFLAG_RD,
+	0, sizeof(cpuset_t), "sizeof(cpuset_t)");
 
 cpuset_t *cpuset_root;
 
@@ -153,7 +158,7 @@ cpuset_refbase(struct cpuset *set)
 }
 
 /*
- * Release a reference in a context where it is safe to allocte.
+ * Release a reference in a context where it is safe to allocate.
  */
 void
 cpuset_rel(struct cpuset *set)
@@ -208,7 +213,7 @@ cpuset_rel_complete(struct cpuset *set)
  * Find a set based on an id.  Returns it with a ref.
  */
 static struct cpuset *
-cpuset_lookup(cpusetid_t setid)
+cpuset_lookup(cpusetid_t setid, struct thread *td)
 {
 	struct cpuset *set;
 
@@ -221,6 +226,21 @@ cpuset_lookup(cpusetid_t setid)
 	if (set)
 		cpuset_ref(set);
 	mtx_unlock_spin(&cpuset_lock);
+
+	KASSERT(td != NULL, ("[%s:%d] td is NULL", __func__, __LINE__));
+	if (set != NULL && jailed(td->td_ucred)) {
+		struct cpuset *jset, *tset;
+
+		jset = td->td_ucred->cr_prison->pr_cpuset;
+		for (tset = set; tset != NULL; tset = tset->cs_parent)
+			if (tset == jset)
+				break;
+		if (tset == NULL) {
+			cpuset_rel(set);
+			set = NULL;
+		}
+	}
+
 	return (set);
 }
 
@@ -230,7 +250,7 @@ cpuset_lookup(cpusetid_t setid)
  * will have no valid cpu based on restrictions from the parent.
  */
 static int
-_cpuset_create(struct cpuset *set, struct cpuset *parent, cpuset_t *mask,
+_cpuset_create(struct cpuset *set, struct cpuset *parent, const cpuset_t *mask,
     cpusetid_t id)
 {
 
@@ -241,7 +261,7 @@ _cpuset_create(struct cpuset *set, struct cpuset *parent, cpuset_t *mask,
 	refcount_init(&set->cs_ref, 1);
 	set->cs_flags = 0;
 	mtx_lock_spin(&cpuset_lock);
-	CPU_AND(mask, &parent->cs_mask);
+	CPU_AND(&set->cs_mask, &parent->cs_mask);
 	set->cs_id = id;
 	set->cs_parent = cpuset_ref(parent);
 	LIST_INSERT_HEAD(&parent->cs_children, set, cs_siblings);
@@ -258,7 +278,7 @@ _cpuset_create(struct cpuset *set, struct cpuset *parent, cpuset_t *mask,
  * allocated.
  */
 static int
-cpuset_create(struct cpuset **setp, struct cpuset *parent, cpuset_t *mask)
+cpuset_create(struct cpuset **setp, struct cpuset *parent, const cpuset_t *mask)
 {
 	struct cpuset *set;
 	cpusetid_t id;
@@ -334,6 +354,15 @@ cpuset_modify(struct cpuset *set, cpuset_t *mask)
 	if (error)
 		return (error);
 	/*
+	 * In case we are called from within the jail
+	 * we do not allow modifying the dedicated root
+	 * cpuset of the jail but may still allow to
+	 * change child sets.
+	 */
+	if (jailed(curthread->td_ucred) &&
+	    set->cs_flags & CPU_SET_ROOT)
+		return (EPERM);
+	/*
 	 * Verify that we have access to this set of
 	 * cpus.
 	 */
@@ -392,21 +421,10 @@ cpuset_which(cpuwhich_t which, id_t id, struct proc **pp, struct thread **tdp,
 			td = curthread;
 			break;
 		}
-		sx_slock(&allproc_lock);
-		FOREACH_PROC_IN_SYSTEM(p) {
-			PROC_LOCK(p);
-			PROC_SLOCK(p);
-			FOREACH_THREAD_IN_PROC(p, td)
-				if (td->td_tid == id)
-					break;
-			PROC_SUNLOCK(p);
-			if (td != NULL)
-				break;
-			PROC_UNLOCK(p);
-		}
-		sx_sunlock(&allproc_lock);
+		td = tdfind(id, -1);
 		if (td == NULL)
 			return (ESRCH);
+		p = td->td_proc;
 		break;
 	case CPU_WHICH_CPUSET:
 		if (id == -1) {
@@ -414,12 +432,29 @@ cpuset_which(cpuwhich_t which, id_t id, struct proc **pp, struct thread **tdp,
 			set = cpuset_refbase(curthread->td_cpuset);
 			thread_unlock(curthread);
 		} else
-			set = cpuset_lookup(id);
+			set = cpuset_lookup(id, curthread);
 		if (set) {
 			*setp = set;
 			return (0);
 		}
 		return (ESRCH);
+	case CPU_WHICH_JAIL:
+	{
+		/* Find `set' for prison with given id. */
+		struct prison *pr;
+
+		sx_slock(&allprison_lock);
+		pr = prison_find_child(curthread->td_ucred->cr_prison, id);
+		sx_sunlock(&allprison_lock);
+		if (pr == NULL)
+			return (ESRCH);
+		cpuset_ref(pr->pr_cpuset);
+		*setp = pr->pr_cpuset;
+		mtx_unlock(&pr->pr_mtx);
+		return (0);
+	}
+	case CPU_WHICH_IRQ:
+		return (0);
 	default:
 		return (EINVAL);
 	}
@@ -441,7 +476,7 @@ cpuset_which(cpuwhich_t which, id_t id, struct proc **pp, struct thread **tdp,
  * the new set is a child of 'set'.
  */
 static int
-cpuset_shadow(struct cpuset *set, struct cpuset *fset, cpuset_t *mask)
+cpuset_shadow(struct cpuset *set, struct cpuset *fset, const cpuset_t *mask)
 {
 	struct cpuset *parent;
 
@@ -493,11 +528,9 @@ cpuset_setproc(pid_t pid, struct cpuset *set, cpuset_t *mask)
 		error = cpuset_which(CPU_WHICH_PID, pid, &p, &td, &nset);
 		if (error)
 			goto out;
-		PROC_SLOCK(p);
 		if (nfree >= p->p_numthreads)
 			break;
 		threads = p->p_numthreads;
-		PROC_SUNLOCK(p);
 		PROC_UNLOCK(p);
 		for (; nfree < threads; nfree++) {
 			nset = uma_zalloc(cpuset_zone, M_WAITOK);
@@ -505,7 +538,6 @@ cpuset_setproc(pid_t pid, struct cpuset *set, cpuset_t *mask)
 		}
 	}
 	PROC_LOCK_ASSERT(p, MA_OWNED);
-	PROC_SLOCK_ASSERT(p, MA_OWNED);
 	/*
 	 * Now that the appropriate locks are held and we have enough cpusets,
 	 * make sure the operation will succeed before applying changes.  The
@@ -539,8 +571,8 @@ cpuset_setproc(pid_t pid, struct cpuset *set, cpuset_t *mask)
 	}
 	/*
 	 * Replace each thread's cpuset while using deferred release.  We
-	 * must do this because the PROC_SLOCK has to be held while traversing
-	 * the thread list and this limits the type of operations allowed.
+	 * must do this because the thread lock must be held while operating
+	 * on the thread and this limits the type of operations allowed.
 	 */
 	FOREACH_THREAD_IN_PROC(p, td) {
 		thread_lock(td);
@@ -574,7 +606,6 @@ cpuset_setproc(pid_t pid, struct cpuset *set, cpuset_t *mask)
 		thread_unlock(td);
 	}
 unlock_out:
-	PROC_SUNLOCK(p);
 	PROC_UNLOCK(p);
 out:
 	while ((nset = LIST_FIRST(&droplist)) != NULL)
@@ -584,6 +615,86 @@ out:
 		uma_zfree(cpuset_zone, nset);
 	}
 	return (error);
+}
+
+/*
+ * Calculate the ffs() of the cpuset.
+ */
+int
+cpusetobj_ffs(const cpuset_t *set)
+{
+	size_t i;
+	int cbit;
+
+	cbit = 0;
+	for (i = 0; i < _NCPUWORDS; i++) {
+		if (set->__bits[i] != 0) {
+			cbit = ffsl(set->__bits[i]);
+			cbit += i * _NCPUBITS;
+			break;
+		}
+	}
+	return (cbit);
+}
+
+/*
+ * Return a string representing a valid layout for a cpuset_t object.
+ * It expects an incoming buffer at least sized as CPUSETBUFSIZ.
+ */
+char *
+cpusetobj_strprint(char *buf, const cpuset_t *set)
+{
+	char *tbuf;
+	size_t i, bytesp, bufsiz;
+
+	tbuf = buf;
+	bytesp = 0;
+	bufsiz = CPUSETBUFSIZ;
+
+	for (i = _NCPUWORDS - 1; i > 0; i--) {
+		bytesp = snprintf(tbuf, bufsiz, "%lx, ", set->__bits[i]);
+		bufsiz -= bytesp;
+		tbuf += bytesp;
+	}
+	snprintf(tbuf, bufsiz, "%lx", set->__bits[0]);
+	return (buf);
+}
+
+/*
+ * Build a valid cpuset_t object from a string representation.
+ * It expects an incoming buffer at least sized as CPUSETBUFSIZ.
+ */
+int
+cpusetobj_strscan(cpuset_t *set, const char *buf)
+{
+	u_int nwords;
+	int i, ret;
+
+	if (strlen(buf) > CPUSETBUFSIZ - 1)
+		return (-1);
+
+	/* Allow to pass a shorter version of the mask when necessary. */
+	nwords = 1;
+	for (i = 0; buf[i] != '\0'; i++)
+		if (buf[i] == ',')
+			nwords++;
+	if (nwords > _NCPUWORDS)
+		return (-1);
+
+	CPU_ZERO(set);
+	for (i = nwords - 1; i > 0; i--) {
+		ret = sscanf(buf, "%lx, ", &set->__bits[i]);
+		if (ret == 0 || ret == -1)
+			return (-1);
+		buf = strstr(buf, " ");
+		if (buf == NULL)
+			return (-1);
+		buf++;
+	}
+	ret = sscanf(buf, "%lx", &set->__bits[0]);
+	if (ret == 0 || ret == -1)
+		return (-1);
+	return (0);
 }
 
 /*
@@ -646,7 +757,7 @@ cpuset_thread0(void)
 	 * cpuset_create() due to NULL parent.
 	 */
 	set = uma_zalloc(cpuset_zone, M_WAITOK | M_ZERO);
-	set->cs_mask.__bits[0] = -1;
+	CPU_FILL(&set->cs_mask);
 	LIST_INIT(&set->cs_children);
 	LIST_INSERT_HEAD(&cpuset_ids, set, cs_link);
 	set->cs_ref = 1;
@@ -668,20 +779,63 @@ cpuset_thread0(void)
 }
 
 /*
+ * Create a cpuset, which would be cpuset_create() but
+ * mark the new 'set' as root.
+ *
+ * We are not going to reparent the td to it.  Use cpuset_setproc_update_set()
+ * for that.
+ *
+ * In case of no error, returns the set in *setp locked with a reference.
+ */
+int
+cpuset_create_root(struct prison *pr, struct cpuset **setp)
+{
+	struct cpuset *set;
+	int error;
+
+	KASSERT(pr != NULL, ("[%s:%d] invalid pr", __func__, __LINE__));
+	KASSERT(setp != NULL, ("[%s:%d] invalid setp", __func__, __LINE__));
+
+	error = cpuset_create(setp, pr->pr_cpuset, &pr->pr_cpuset->cs_mask);
+	if (error)
+		return (error);
+
+	KASSERT(*setp != NULL, ("[%s:%d] cpuset_create returned invalid data",
+	    __func__, __LINE__));
+
+	/* Mark the set as root. */
+	set = *setp;
+	set->cs_flags |= CPU_SET_ROOT;
+
+	return (0);
+}
+
+int
+cpuset_setproc_update_set(struct proc *p, struct cpuset *set)
+{
+	int error;
+
+	KASSERT(p != NULL, ("[%s:%d] invalid proc", __func__, __LINE__));
+	KASSERT(set != NULL, ("[%s:%d] invalid set", __func__, __LINE__));
+
+	cpuset_ref(set);
+	error = cpuset_setproc(p->p_pid, set, NULL);
+	if (error)
+		return (error);
+	cpuset_rel(set);
+	return (0);
+}
+
+/*
  * This is called once the final set of system cpus is known.  Modifies
- * the root set and all children and mark the root readonly.  
+ * the root set and all children and mark the root read-only.  
  */
 static void
 cpuset_init(void *arg)
 {
 	cpuset_t mask;
 
-	CPU_ZERO(&mask);
-#ifdef SMP
-	mask.__bits[0] = all_cpus;
-#else
-	mask.__bits[0] = 1;
-#endif
+	mask = all_cpus;
 	if (cpuset_modify(cpuset_zero, &mask))
 		panic("Can't set initial cpuset mask.\n");
 	cpuset_zero->cs_flags |= CPU_SET_RDONLY;
@@ -694,7 +848,7 @@ struct cpuset_args {
 };
 #endif
 int
-cpuset(struct thread *td, struct cpuset_args *uap)
+sys_cpuset(struct thread *td, struct cpuset_args *uap)
 {
 	struct cpuset *root;
 	struct cpuset *set;
@@ -722,7 +876,7 @@ struct cpuset_setid_args {
 };
 #endif
 int
-cpuset_setid(struct thread *td, struct cpuset_setid_args *uap)
+sys_cpuset_setid(struct thread *td, struct cpuset_setid_args *uap)
 {
 	struct cpuset *set;
 	int error;
@@ -732,7 +886,7 @@ cpuset_setid(struct thread *td, struct cpuset_setid_args *uap)
 	 */
 	if (uap->which != CPU_WHICH_PID)
 		return (EINVAL);
-	set = cpuset_lookup(uap->setid);
+	set = cpuset_lookup(uap->setid, td);
 	if (set == NULL)
 		return (ESRCH);
 	error = cpuset_setproc(uap->id, set, NULL);
@@ -748,7 +902,7 @@ struct cpuset_getid_args {
 	cpusetid_t	*setid;
 #endif
 int
-cpuset_getid(struct thread *td, struct cpuset_getid_args *uap)
+sys_cpuset_getid(struct thread *td, struct cpuset_getid_args *uap)
 {
 	struct cpuset *nset;
 	struct cpuset *set;
@@ -771,7 +925,10 @@ cpuset_getid(struct thread *td, struct cpuset_getid_args *uap)
 		PROC_UNLOCK(p);
 		break;
 	case CPU_WHICH_CPUSET:
+	case CPU_WHICH_JAIL:
 		break;
+	case CPU_WHICH_IRQ:
+		return (EINVAL);
 	}
 	switch (uap->level) {
 	case CPU_LEVEL_ROOT:
@@ -802,7 +959,7 @@ struct cpuset_getaffinity_args {
 };
 #endif
 int
-cpuset_getaffinity(struct thread *td, struct cpuset_getaffinity_args *uap)
+sys_cpuset_getaffinity(struct thread *td, struct cpuset_getaffinity_args *uap)
 {
 	struct thread *ttd;
 	struct cpuset *nset;
@@ -831,7 +988,11 @@ cpuset_getaffinity(struct thread *td, struct cpuset_getaffinity_args *uap)
 			thread_unlock(ttd);
 			break;
 		case CPU_WHICH_CPUSET:
+		case CPU_WHICH_JAIL:
 			break;
+		case CPU_WHICH_IRQ:
+			error = EINVAL;
+			goto out;
 		}
 		if (uap->level == CPU_LEVEL_ROOT)
 			nset = cpuset_refroot(set);
@@ -848,16 +1009,18 @@ cpuset_getaffinity(struct thread *td, struct cpuset_getaffinity_args *uap)
 			thread_unlock(ttd);
 			break;
 		case CPU_WHICH_PID:
-			PROC_SLOCK(p);
 			FOREACH_THREAD_IN_PROC(p, ttd) {
 				thread_lock(ttd);
 				CPU_OR(mask, &ttd->td_cpuset->cs_mask);
 				thread_unlock(ttd);
 			}
-			PROC_SUNLOCK(p);
 			break;
 		case CPU_WHICH_CPUSET:
+		case CPU_WHICH_JAIL:
 			CPU_COPY(&set->cs_mask, mask);
+			break;
+		case CPU_WHICH_IRQ:
+			error = intr_getaffinity(uap->id, mask);
 			break;
 		}
 		break;
@@ -886,7 +1049,7 @@ struct cpuset_setaffinity_args {
 };
 #endif
 int
-cpuset_setaffinity(struct thread *td, struct cpuset_setaffinity_args *uap)
+sys_cpuset_setaffinity(struct thread *td, struct cpuset_setaffinity_args *uap)
 {
 	struct cpuset *nset;
 	struct cpuset *set;
@@ -934,7 +1097,11 @@ cpuset_setaffinity(struct thread *td, struct cpuset_setaffinity_args *uap)
 			PROC_UNLOCK(p);
 			break;
 		case CPU_WHICH_CPUSET:
+		case CPU_WHICH_JAIL:
 			break;
+		case CPU_WHICH_IRQ:
+			error = EINVAL;
+			goto out;
 		}
 		if (uap->level == CPU_LEVEL_ROOT)
 			nset = cpuset_refroot(set);
@@ -953,12 +1120,16 @@ cpuset_setaffinity(struct thread *td, struct cpuset_setaffinity_args *uap)
 			error = cpuset_setproc(uap->id, NULL, mask);
 			break;
 		case CPU_WHICH_CPUSET:
-			error = cpuset_which(CPU_WHICH_CPUSET, uap->id, &p,
+		case CPU_WHICH_JAIL:
+			error = cpuset_which(uap->which, uap->id, &p,
 			    &ttd, &set);
 			if (error == 0) {
 				error = cpuset_modify(set, mask);
 				cpuset_rel(set);
 			}
+			break;
+		case CPU_WHICH_IRQ:
+			error = intr_setaffinity(uap->id, mask);
 			break;
 		default:
 			error = EINVAL;

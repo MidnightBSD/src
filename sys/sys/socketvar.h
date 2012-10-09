@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/socketvar.h,v 1.4 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $FreeBSD: src/sys/sys/socketvar.h,v 1.158.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_SOCKETVAR_H_
@@ -46,6 +45,8 @@
 #include <sys/sockopt.h>
 #endif
 
+struct vnet;
+
 /*
  * Kernel structure per socket.
  * Contains send and receive buffer queues,
@@ -53,6 +54,8 @@
  * private data and error information.
  */
 typedef	u_quad_t so_gen_t;
+
+struct socket;
 
 /*-
  * Locking key to struct socket:
@@ -73,6 +76,7 @@ struct socket {
 	short	so_state;		/* (b) internal state flags SS_* */
 	int	so_qstate;		/* (e) internal state flags SQ_* */
 	void	*so_pcb;		/* protocol control block */
+	struct	vnet *so_vnet;		/* network stack instance */
 	struct	protosw *so_proto;	/* (a) protocol handle */
 /*
  * Variables for connection queuing.
@@ -99,10 +103,9 @@ struct socket {
 					   out of band data (SIGURG) */
 	u_long	so_oobmark;		/* (c) chars to oob mark */
 	TAILQ_HEAD(, aiocblist) so_aiojobq; /* AIO ops waiting on socket */
+
 	struct sockbuf so_rcv, so_snd;
 
-	void	(*so_upcall)(struct socket *, void *, int);
-	void	*so_upcallarg;
 	struct	ucred *so_cred;		/* (a) user credentials */
 	struct	label *so_label;	/* (b) MAC label for socket */
 	struct	label *so_peerlabel;	/* (b) cached MAC label for peer */
@@ -114,7 +117,14 @@ struct socket {
 		void	*so_accept_filter_arg;	/* saved filter args */
 		char	*so_accept_filter_str;	/* saved user args */
 	} *so_accf;
+	/*
+	 * so_fibnum, so_user_cookie and friends can be used to attach
+	 * some user-specified metadata to a socket, which then can be
+	 * used by the kernel for various actions.
+	 * so_user_cookie is used by ipfw/dummynet.
+	 */
 	int so_fibnum;		/* routing domain for this socket */
+	uint32_t so_user_cookie;
 };
 
 /*
@@ -194,10 +204,11 @@ struct xsocket {
     ((so)->so_proto->pr_flags & PR_ATOMIC)
 
 /* can we read something from so? */
-#define	soreadable(so) \
+#define	soreadabledata(so) \
     ((so)->so_rcv.sb_cc >= (so)->so_rcv.sb_lowat || \
-	((so)->so_rcv.sb_state & SBS_CANTRCVMORE) || \
 	!TAILQ_EMPTY(&(so)->so_comp) || (so)->so_error)
+#define	soreadable(so) \
+	(soreadabledata(so) || ((so)->so_rcv.sb_state & SBS_CANTRCVMORE))
 
 /* can we write something to so? */
 #define	sowriteable(so) \
@@ -229,17 +240,6 @@ struct xsocket {
 		ACCEPT_UNLOCK();					\
 	}								\
 } while (0)
-
-#define	sotryfree(so) do {						\
-	ACCEPT_LOCK_ASSERT();						\
-	SOCK_LOCK_ASSERT(so);						\
-	if ((so)->so_count == 0)					\
-		sofree(so);						\
-	else {								\
-		SOCK_UNLOCK(so);					\
-		ACCEPT_UNLOCK();					\
-	}								\
-} while(0)
 
 /*
  * In sorwakeup() and sowwakeup(), acquire the socket buffer lock to
@@ -277,7 +277,7 @@ struct xsocket {
 
 struct accept_filter {
 	char	accf_name[16];
-	void	(*accf_callback)
+	int	(*accf_callback)
 		(struct socket *so, void *arg, int waitflag);
 	void *	(*accf_create)
 		(struct socket *so, char *arg);
@@ -301,6 +301,14 @@ struct mbuf;
 struct sockaddr;
 struct ucred;
 struct uio;
+
+/* 'which' values for socket upcalls. */
+#define	SO_RCV		1
+#define	SO_SND		2
+
+/* Return values for socket upcalls. */
+#define	SU_OK		0
+#define	SU_ISCONNECTED	1
 
 /*
  * From uipc_socket and friends
@@ -334,6 +342,9 @@ int	sopoll_generic(struct socket *so, int events,
 	    struct ucred *active_cred, struct thread *td);
 int	soreceive(struct socket *so, struct sockaddr **paddr, struct uio *uio,
 	    struct mbuf **mp0, struct mbuf **controlp, int *flagsp);
+int	soreceive_stream(struct socket *so, struct sockaddr **paddr,
+	    struct uio *uio, struct mbuf **mp0, struct mbuf **controlp,
+	    int *flagsp);
 int	soreceive_dgram(struct socket *so, struct sockaddr **paddr,
 	    struct uio *uio, struct mbuf **mp0, struct mbuf **controlp,
 	    int *flagsp);
@@ -353,7 +364,12 @@ int	sosend_generic(struct socket *so, struct sockaddr *addr,
 	    int flags, struct thread *td);
 int	soshutdown(struct socket *so, int how);
 void	sotoxsocket(struct socket *so, struct xsocket *xso);
+void	soupcall_clear(struct socket *so, int which);
+void	soupcall_set(struct socket *so, int which,
+	    int (*func)(struct socket *, void *, int), void *arg);
 void	sowakeup(struct socket *so, struct sockbuf *sb);
+int	selsocket(struct socket *so, int events, struct timeval *tv,
+	    struct thread *td);
 
 /*
  * Accept filter functions (duh).

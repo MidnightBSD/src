@@ -1,6 +1,5 @@
-/* $MidnightBSD: src/sys/sys/copyright.h,v 1.9 2010/12/31 21:53:50 laffer1 Exp $ */
 /*-
- * Copyright (C) 1992-2006 The FreeBSD Project. All rights reserved.
+ * Copyright (C) 1992-2012 The FreeBSD Project. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,23 +22,31 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/sys/copyright.h,v 1.9 2010/12/31 21:53:50 laffer1 Exp $
- * $FreeBSD: src/sys/sys/copyright.h,v 1.19.2.1 2006/02/08 09:11:58 ru Exp $
+ * $MidnightBSD$
  */
 
 
 /* Copyrights macros  */
 
-/* MidnightBSD */
-#define COPYRIGHT_MidnightBSD \
-	"Copyright (c) 2006-2012 The MidnightBSD Project.\n"
-  
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
-	"Copyright (c) 1992-2006 The FreeBSD Project.\n"
+	"Copyright (c) 1992-2012 The FreeBSD Project.\n"
+
+/* Foundation */
+#define	TRADEMARK_Foundation \
+	"FreeBSD is a registered trademark of The FreeBSD Foundation.\n"
 
 /* Berkeley */
 #define COPYRIGHT_UCB \
 	"Copyright (c) 1979, 1980, 1983, 1986, 1988, 1989, 1991, 1992, 1993, 1994\n\tThe Regents of the University of California. All rights reserved.\n"
 
-char copyright[] = COPYRIGHT_MidnightBSD COPYRIGHT_FreeBSD COPYRIGHT_UCB;
+/* a port of FreeBSD to the NEC PC98, Japan */
+#if defined(PC98)
+#define COPYRIGHT_PC98 \
+	"Copyright (c) 1994-2003 FreeBSD(98) porting team.\nCopyright (c) 1992  A.Kojima F.Ukai M.Ishii (KMC).\n"
+#else
+#define COPYRIGHT_PC98
+#endif
+
+char copyright[] = COPYRIGHT_FreeBSD COPYRIGHT_PC98 COPYRIGHT_UCB;
+char trademark[] = TRADEMARK_Foundation;

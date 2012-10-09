@@ -56,6 +56,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Broadcom BCM5201/BCM5202 "Mini-Theta" PHYs.  This also
@@ -84,11 +85,6 @@
 static int	bmtphy_probe(device_t);
 static int	bmtphy_attach(device_t);
 
-struct bmtphy_softc {
-	struct mii_softc mii_sc;
-	int mii_model;
-};
-
 static device_method_t bmtphy_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		bmtphy_probe),
@@ -103,7 +99,7 @@ static devclass_t	bmtphy_devclass;
 static driver_t	bmtphy_driver = {
 	"bmtphy",
 	bmtphy_methods,
-	sizeof(struct bmtphy_softc)
+	sizeof(struct mii_softc)
 };
 
 DRIVER_MODULE(bmtphy, miibus, bmtphy_driver, bmtphy_devclass, 0, 0);

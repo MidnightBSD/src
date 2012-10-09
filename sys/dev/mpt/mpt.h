@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/mpt/mpt.h,v 1.42 2007/08/14 19:17:35 scottl Exp $ */
+/* $FreeBSD$ */
 /*-
  * Generic defines for LSI '909 FC  adapters.
  * FreeBSD Version.
@@ -130,6 +130,11 @@
 #include <machine/clock.h>
 #endif
 
+#ifdef __sparc64__
+#include <dev/ofw/openfirm.h>
+#include <machine/ofw_machdep.h>
+#endif
+
 #include <sys/rman.h>
 
 #if __FreeBSD_version < 500000  
@@ -171,6 +176,8 @@
 #define	MPT_ROLE_TARGET		2
 #define	MPT_ROLE_BOTH		3
 #define	MPT_ROLE_DEFAULT	MPT_ROLE_INITIATOR
+
+#define	MPT_INI_ID_NONE		-1
 
 /**************************** Forward Declarations ****************************/
 struct mpt_softc;
@@ -270,20 +277,30 @@ void mpt_map_rquest(void *, bus_dma_segment_t *, int, int);
 #define	mpt_setup_intr	bus_setup_intr
 #endif
 
+/* **************************** NewBUS CAM Support ****************************/
+#if __FreeBSD_version < 700049
+#define mpt_xpt_bus_register(sim, parent, bus)	\
+	xpt_bus_register(sim, bus)
+#else
+#define mpt_xpt_bus_register	xpt_bus_register
+#endif
+
 /**************************** Kernel Thread Support ***************************/
-#if __FreeBSD_version > 500005
+#if __FreeBSD_version > 800001
+#define mpt_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
+	kproc_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
+#define	mpt_kthread_exit(status)	\
+	kproc_exit(status)
+#elif __FreeBSD_version > 500005
 #define mpt_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
 	kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
+#define	mpt_kthread_exit(status)	\
+	kthread_exit(status)
 #else
 #define mpt_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
 	kthread_create(func, farg, proc_ptr, fmtstr, arg)
-#endif
-
-/****************************** Timer Facilities ******************************/
-#if __FreeBSD_version > 500000
-#define mpt_callout_init(c)	callout_init(c, /*mpsafe*/1);
-#else
-#define mpt_callout_init(c)	callout_init(c);
+#define	mpt_kthread_exit(status)	\
+	kthread_exit(status)
 #endif
 
 /********************************** Endianess *********************************/
@@ -300,14 +317,39 @@ void mpt2host_sge_simple_union(SGE_SIMPLE_UNION *);
 void mpt2host_iocfacts_reply(MSG_IOC_FACTS_REPLY *);
 void mpt2host_portfacts_reply(MSG_PORT_FACTS_REPLY *);
 void mpt2host_config_page_ioc2(CONFIG_PAGE_IOC_2 *);
+void mpt2host_config_page_ioc3(CONFIG_PAGE_IOC_3 *);
+void mpt2host_config_page_scsi_port_0(CONFIG_PAGE_SCSI_PORT_0 *);
+void mpt2host_config_page_scsi_port_1(CONFIG_PAGE_SCSI_PORT_1 *);
+void host2mpt_config_page_scsi_port_1(CONFIG_PAGE_SCSI_PORT_1 *);
+void mpt2host_config_page_scsi_port_2(CONFIG_PAGE_SCSI_PORT_2 *);
+void mpt2host_config_page_scsi_device_0(CONFIG_PAGE_SCSI_DEVICE_0 *);
+void mpt2host_config_page_scsi_device_1(CONFIG_PAGE_SCSI_DEVICE_1 *);
+void host2mpt_config_page_scsi_device_1(CONFIG_PAGE_SCSI_DEVICE_1 *);
+void mpt2host_config_page_fc_port_0(CONFIG_PAGE_FC_PORT_0 *);
+void mpt2host_config_page_fc_port_1(CONFIG_PAGE_FC_PORT_1 *);
+void host2mpt_config_page_fc_port_1(CONFIG_PAGE_FC_PORT_1 *);
 void mpt2host_config_page_raid_vol_0(CONFIG_PAGE_RAID_VOL_0 *);
+void mpt2host_config_page_raid_phys_disk_0(CONFIG_PAGE_RAID_PHYS_DISK_0 *);
 void mpt2host_mpi_raid_vol_indicator(MPI_RAID_VOL_INDICATOR *);
 #else
 #define	mpt2host_sge_simple_union(x)		do { ; } while (0)
 #define	mpt2host_iocfacts_reply(x)		do { ; } while (0)
 #define	mpt2host_portfacts_reply(x)		do { ; } while (0)
 #define	mpt2host_config_page_ioc2(x)		do { ; } while (0)
+#define	mpt2host_config_page_ioc3(x)		do { ; } while (0)
+#define	mpt2host_config_page_scsi_port_0(x)	do { ; } while (0)
+#define	mpt2host_config_page_scsi_port_1(x)	do { ; } while (0)
+#define	host2mpt_config_page_scsi_port_1(x)	do { ; } while (0)
+#define	mpt2host_config_page_scsi_port_2(x)	do { ; } while (0)
+#define	mpt2host_config_page_scsi_device_0(x)	do { ; } while (0)
+#define	mpt2host_config_page_scsi_device_1(x)	do { ; } while (0)
+#define	host2mpt_config_page_scsi_device_1(x)	do { ; } while (0)
+#define	mpt2host_config_page_fc_port_0(x)	do { ; } while (0)
+#define	mpt2host_config_page_fc_port_1(x)	do { ; } while (0)
+#define	host2mpt_config_page_fc_port_1(x)	do { ; } while (0)
 #define	mpt2host_config_page_raid_vol_0(x)	do { ; } while (0)
+#define	mpt2host_config_page_raid_phys_disk_0(x)			\
+	do { ; } while (0)
 #define	mpt2host_mpi_raid_vol_indicator(x)	do { ; } while (0)
 #endif
 
@@ -329,7 +371,7 @@ struct req_entry {
 	mpt_req_state_t	state;		/* Request State Information */
 	uint16_t	index;		/* Index of this entry */
 	uint16_t	IOCStatus;	/* Completion status */
-	uint16_t	ResponseCode;	/* TMF Reponse Code */
+	uint16_t	ResponseCode;	/* TMF Response Code */
 	uint16_t	serno;		/* serial number */
 	union ccb      *ccb;		/* CAM request */
 	void	       *req_vbuf;	/* Virtual Address of Entry */
@@ -566,7 +608,7 @@ struct mpt_softc {
 #endif
 	uint32_t		mpt_pers_mask;
 	uint32_t
-				: 8,
+				: 7,
 		unit		: 8,
 		ready		: 1,
 		fw_uploaded	: 1,
@@ -583,7 +625,8 @@ struct mpt_softc {
 		disabled	: 1,
 		is_spi		: 1,
 		is_sas		: 1,
-		is_fc		: 1;
+		is_fc		: 1,
+		is_1078		: 1;
 
 	u_int			cfg_role;
 	u_int			role;	/* role: none, ini, target, both */
@@ -602,7 +645,6 @@ struct mpt_softc {
 	 * Port Facts
 	 */
 	MSG_PORT_FACTS_REPLY *	port_facts;
-#define	mpt_ini_id	port_facts[0].PortSCSIID
 #define	mpt_max_tgtcmds	port_facts[0].MaxPostedCmdBuffers
 
 	/*
@@ -615,6 +657,7 @@ struct mpt_softc {
 			CONFIG_PAGE_SCSI_PORT_2		_port_page2;
 			CONFIG_PAGE_SCSI_DEVICE_0	_dev_page0[16];
 			CONFIG_PAGE_SCSI_DEVICE_1	_dev_page1[16];
+			int				_ini_id;
 			uint16_t			_tag_enable;
 			uint16_t			_disc_enable;
 		} spi;
@@ -623,6 +666,7 @@ struct mpt_softc {
 #define	mpt_port_page2		cfg.spi._port_page2
 #define	mpt_dev_page0		cfg.spi._dev_page0
 #define	mpt_dev_page1		cfg.spi._dev_page1
+#define	mpt_ini_id		cfg.spi._ini_id
 #define	mpt_tag_enable		cfg.spi._tag_enable
 #define	mpt_disc_enable		cfg.spi._disc_enable
 		struct mpi_fc_cfg {
@@ -671,18 +715,18 @@ struct mpt_softc {
 	 */
 	int			pci_msi_count;
 	struct resource *	pci_irq;	/* Interrupt map for chip */
-	void *			ih;		/* Interupt handle */
+	void *			ih;		/* Interrupt handle */
+#if 0
 	struct mpt_pci_cfg	pci_cfg;	/* saved PCI conf registers */
+#endif
 
 	/*
 	 * DMA Mapping Stuff
 	 */
 	struct resource *	pci_reg;	/* Register map for chip */
-	int			pci_mem_rid;	/* Resource ID */
 	bus_space_tag_t		pci_st;		/* Bus tag for registers */
 	bus_space_handle_t	pci_sh;		/* Bus handle for registers */
 	/* PIO versions of above. */
-	int			pci_pio_rid;
 	struct resource *	pci_pio_reg;
 	bus_space_tag_t		pci_pio_st;
 	bus_space_handle_t	pci_pio_sh;
@@ -700,6 +744,7 @@ struct mpt_softc {
 	bus_addr_t		request_phys;	/* BusAddr of request memory */
 
 	uint32_t		max_seg_cnt;	/* calculated after IOC facts */
+	uint32_t		max_cam_seg_cnt;/* calculated from MAXPHYS*/
 
 	/*
 	 * Hardware management
@@ -768,6 +813,9 @@ struct mpt_softc {
 	/* Shutdown Event Handler. */
 	eventhandler_tag         eh;
 
+	/* Userland management interface. */
+	struct cdev		*cdev;
+
 	TAILQ_ENTRY(mpt_softc)	links;
 };
 
@@ -806,7 +854,7 @@ mpt_lockspl(struct mpt_softc *mpt)
                mpt->mpt_splsaved = s;
        } else {
                splx(s);
-	       panic("Recursed lock with mask: 0x%x\n", s);
+	       panic("Recursed lock with mask: 0x%x", s);
        }
 }
 
@@ -818,7 +866,7 @@ mpt_unlockspl(struct mpt_softc *mpt)
                        splx(mpt->mpt_splsaved);
                }
        } else
-	       panic("Negative lock count\n");
+	       panic("Negative lock count");
 }
 
 static __inline int
@@ -844,6 +892,10 @@ mpt_sleep(struct mpt_softc *mpt, void *ident, int priority,
 	callout_reset(&(req)->callout, (ticks), (func), (arg));
 #define mpt_req_untimeout(req, func, arg) \
 	callout_stop(&(req)->callout)
+#define mpt_callout_init(mpt, c) \
+	callout_init(c)
+#define mpt_callout_drain(mpt, c) \
+	callout_stop(c)
 
 #else
 #if 1
@@ -866,9 +918,13 @@ mpt_sleep(struct mpt_softc *mpt, void *ident, int priority,
 #define mpt_sleep(mpt, ident, priority, wmesg, timo) \
 	msleep(ident, &(mpt)->mpt_lock, priority, wmesg, timo)
 #define mpt_req_timeout(req, ticks, func, arg) \
-	callout_reset(&(req)->callout, (ticks), (func), (arg));
+	callout_reset(&(req)->callout, (ticks), (func), (arg))
 #define mpt_req_untimeout(req, func, arg) \
 	callout_stop(&(req)->callout)
+#define mpt_callout_init(mpt, c) \
+	callout_init_mtx(c, &(mpt)->mpt_lock, 0)
+#define mpt_callout_drain(mpt, c) \
+	callout_drain(c)
 
 #else
 
@@ -881,17 +937,17 @@ mpt_sleep(struct mpt_softc *mpt, void *ident, int priority,
 #define	MPTLOCK_2_CAMLOCK(mpt)
 #define	CAMLOCK_2_MPTLOCK(mpt)
 
+#define mpt_req_timeout(req, ticks, func, arg) \
+	callout_reset(&(req)->callout, (ticks), (func), (arg))
+#define mpt_req_untimeout(req, func, arg) \
+	callout_stop(&(req)->callout)
+#define mpt_callout_init(mpt, c) \
+	callout_init(c, 0)
+#define mpt_callout_drain(mpt, c) \
+	callout_drain(c)
+
 static __inline int
 mpt_sleep(struct mpt_softc *, void *, int, const char *, int);
-
-#define mpt_ccb_timeout(ccb, ticks, func, arg) \
-	do {	\
-		(ccb)->ccb_h.timeout_ch = timeout((func), (arg), (ticks)); \
-	} while (0)
-#define mpt_ccb_untimeout(ccb, func, arg) \
-	untimeout((func), (arg), (ccb)->ccb_h.timeout_ch)
-#define mpt_ccb_timeout_init(ccb) \
-	callout_handle_init(&(ccb)->ccb_h.timeout_ch)
 
 static __inline int
 mpt_sleep(struct mpt_softc *mpt, void *i, int p, const char *w, int t)
@@ -929,12 +985,14 @@ mpt_read(struct mpt_softc *mpt, int offset)
 static __inline void
 mpt_pio_write(struct mpt_softc *mpt, size_t offset, uint32_t val)
 {
+	KASSERT(mpt->pci_pio_reg != NULL, ("no PIO resource"));
 	bus_space_write_4(mpt->pci_pio_st, mpt->pci_pio_sh, offset, val);
 }
 
 static __inline uint32_t
 mpt_pio_read(struct mpt_softc *mpt, int offset)
 {
+	KASSERT(mpt->pci_pio_reg != NULL, ("no PIO resource"));
 	return (bus_space_read_4(mpt->pci_pio_st, mpt->pci_pio_sh, offset));
 }
 /*********************** Reply Frame/Request Management ***********************/
@@ -997,7 +1055,7 @@ mpt_pop_reply_queue(struct mpt_softc *mpt)
 void
 mpt_complete_request_chain(struct mpt_softc *, struct req_queue *, u_int);
 
-/************************** Scatter Gather Managment **************************/
+/************************** Scatter Gather Management **************************/
 /* MPT_RQSL- size of request frame, in bytes */
 #define	MPT_RQSL(mpt)		(mpt->ioc_facts.RequestFrameSize << 2)
 
@@ -1022,16 +1080,6 @@ mpt_complete_request_chain(struct mpt_softc *, struct req_queue *, u_int);
 int mpt_reset(struct mpt_softc *, int /*reinit*/);
 
 /****************************** Debugging ************************************/
-typedef struct mpt_decode_entry {
-	char    *name;
-	u_int	 value;
-	u_int	 mask;
-} mpt_decode_entry_t;
-
-int mpt_decode_value(mpt_decode_entry_t *table, u_int num_entries,
-		     const char *name, u_int value, u_int *cur_column,
-		     u_int wrap_point);
-
 void mpt_dump_data(struct mpt_softc *, const char *, void *, int);
 void mpt_dump_request(struct mpt_softc *, request_t *);
 
@@ -1057,16 +1105,20 @@ do {						\
 		mpt_prt(mpt, __VA_ARGS__);	\
 } while (0)
 
-#define mpt_lprtc(mpt, level, ...)		 \
-do {						 \
-	if (level <= (mpt)->debug_level)	 \
-		mpt_prtc(mpt, __VA_ARGS__);	 \
+#if 0
+#define mpt_lprtc(mpt, level, ...)		\
+do {						\
+	if (level <= (mpt)->verbose)		\
+		mpt_prtc(mpt, __VA_ARGS__);	\
 } while (0)
+#endif
 #else
 void mpt_lprt(struct mpt_softc *, int, const char *, ...)
 	__printflike(3, 4);
+#if 0
 void mpt_lprtc(struct mpt_softc *, int, const char *, ...)
 	__printflike(3, 4);
+#endif
 #endif
 void mpt_prt(struct mpt_softc *, const char *, ...)
 	__printflike(2, 3);
@@ -1097,23 +1149,17 @@ static __inline request_t *
 mpt_tag_2_req(struct mpt_softc *mpt, uint32_t tag)
 {
 	uint16_t rtg = (tag >> 18);
-	KASSERT(rtg < mpt->tgt_cmds_allocated, ("bad tag %d\n", tag));
+	KASSERT(rtg < mpt->tgt_cmds_allocated, ("bad tag %d", tag));
 	KASSERT(mpt->tgt_cmd_ptrs, ("no cmd backpointer array"));
 	KASSERT(mpt->tgt_cmd_ptrs[rtg], ("no cmd backpointer"));
 	return (mpt->tgt_cmd_ptrs[rtg]);
 }
-
+#endif
 
 static __inline int
 mpt_req_on_free_list(struct mpt_softc *, request_t *);
 static __inline int
 mpt_req_on_pending_list(struct mpt_softc *, request_t *);
-
-static __inline void
-mpt_req_spcl(struct mpt_softc *, request_t *, const char *, int);
-static __inline void
-mpt_req_not_spcl(struct mpt_softc *, request_t *, const char *, int);
-
 
 /*
  * Is request on freelist?
@@ -1147,6 +1193,12 @@ mpt_req_on_pending_list(struct mpt_softc *mpt, request_t *req)
 	return (0);
 }
 
+#ifdef	INVARIANTS
+static __inline void
+mpt_req_spcl(struct mpt_softc *, request_t *, const char *, int);
+static __inline void
+mpt_req_not_spcl(struct mpt_softc *, request_t *, const char *, int);
+
 /*
  * Make sure that req *is* part of one of the special lists
  */
@@ -1164,7 +1216,7 @@ mpt_req_spcl(struct mpt_softc *mpt, request_t *req, const char *s, int line)
 			return;
 		}
 	}
-	panic("%s(%d): req %p:%u function %x not in els or tgt ptrs\n",
+	panic("%s(%d): req %p:%u function %x not in els or tgt ptrs",
 	    s, line, req, req->serno,
 	    ((PTR_MSG_REQUEST_HEADER)req->req_vbuf)->Function);
 }
@@ -1178,13 +1230,13 @@ mpt_req_not_spcl(struct mpt_softc *mpt, request_t *req, const char *s, int line)
 	int i;
 	for (i = 0; i < mpt->els_cmds_allocated; i++) {
 		KASSERT(req != mpt->els_cmd_ptrs[i],
-		    ("%s(%d): req %p:%u func %x in els ptrs at ioindex %d\n",
+		    ("%s(%d): req %p:%u func %x in els ptrs at ioindex %d",
 		    s, line, req, req->serno,
 		    ((PTR_MSG_REQUEST_HEADER)req->req_vbuf)->Function, i));
 	}
 	for (i = 0; i < mpt->tgt_cmds_allocated; i++) {
 		KASSERT(req != mpt->tgt_cmd_ptrs[i],
-		    ("%s(%d): req %p:%u func %x in tgt ptrs at ioindex %d\n",
+		    ("%s(%d): req %p:%u func %x in tgt ptrs at ioindex %d",
 		    s, line, req, req->serno,
 		    ((PTR_MSG_REQUEST_HEADER)req->req_vbuf)->Function, i));
 	}
@@ -1224,7 +1276,6 @@ void		mpt_check_doorbell(struct mpt_softc *mpt);
 void		mpt_dump_reply_frame(struct mpt_softc *mpt,
 				     MSG_DEFAULT_REPLY *reply_frame);
 
-void		mpt_set_config_regs(struct mpt_softc *);
 int		mpt_issue_cfg_req(struct mpt_softc */*mpt*/, request_t */*req*/,
 				  cfgparms_t *params,
 				  bus_addr_t /*addr*/, bus_size_t/*len*/,
@@ -1278,6 +1329,5 @@ char *mpt_ioc_diag(uint32_t diag);
 void mpt_req_state(mpt_req_state_t state);
 void mpt_print_config_request(void *vmsg);
 void mpt_print_request(void *vmsg);
-void mpt_print_scsi_io_request(MSG_SCSI_IO_REQUEST *msg);
 void mpt_dump_sgl(SGE_IO_UNION *se, int offset);
 #endif /* _MPT_H_ */

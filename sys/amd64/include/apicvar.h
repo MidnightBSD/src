@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/apicvar.h,v 1.25 2007/05/08 22:01:03 jhb Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_APICVAR_H_
@@ -103,19 +102,15 @@
  * smp_ipi_mtx and waits for the completion of the IPI (Only one IPI user 
  * at a time) The second group uses a single interrupt and a bitmap to avoid
  * redundant IPI interrupts.
- *
- * Right now IPI_STOP used by kdb shares the interrupt priority class with
- * the two IPI groups mentioned above. As such IPI_STOP may cause a deadlock.
- * Eventually IPI_STOP should use NMI IPIs - this would eliminate this and
- * other deadlocks caused by IPI_STOP.
  */ 
 
 /* Interrupts for local APIC LVT entries other than the timer. */
 #define	APIC_LOCAL_INTS	240
 #define	APIC_ERROR_INT	APIC_LOCAL_INTS
 #define	APIC_THERMAL_INT (APIC_LOCAL_INTS + 1)
+#define	APIC_CMC_INT	(APIC_LOCAL_INTS + 2)
 
-#define	APIC_IPI_INTS	(APIC_LOCAL_INTS + 2)
+#define	APIC_IPI_INTS	(APIC_LOCAL_INTS + 3)
 #define	IPI_RENDEZVOUS	(APIC_IPI_INTS)		/* Inter-CPU rendezvous. */
 #define	IPI_INVLTLB	(APIC_IPI_INTS + 1)	/* TLB Shootdown IPIs */
 #define	IPI_INVLPG	(APIC_IPI_INTS + 2)
@@ -127,10 +122,13 @@
 /* IPIs handled by IPI_BITMAPED_VECTOR  (XXX ups is there a better place?) */
 #define	IPI_AST		0 	/* Generate software trap. */
 #define IPI_PREEMPT     1
-#define IPI_BITMAP_LAST IPI_PREEMPT
+#define IPI_HARDCLOCK   2
+#define IPI_BITMAP_LAST IPI_HARDCLOCK
 #define IPI_IS_BITMAPED(x) ((x) <= IPI_BITMAP_LAST)
 
 #define	IPI_STOP	(APIC_IPI_INTS + 7)	/* Stop CPU until restarted. */
+#define	IPI_SUSPEND	(APIC_IPI_INTS + 8)	/* Suspend CPU until restarted. */
+#define	IPI_STOP_HARD	(APIC_IPI_INTS + 9)	/* Stop CPU with a NMI. */
 
 /*
  * The spurious interrupt can share the priority class with the IPIs since
@@ -144,7 +142,8 @@
 #define	LVT_ERROR	3
 #define	LVT_PMC		4
 #define	LVT_THERMAL	5
-#define	LVT_MAX		LVT_THERMAL
+#define	LVT_CMCI	6
+#define	LVT_MAX		LVT_CMCI
 
 #ifndef LOCORE
 
@@ -174,17 +173,21 @@ struct apic_enumerator {
 inthand_t
 	IDTVEC(apic_isr1), IDTVEC(apic_isr2), IDTVEC(apic_isr3),
 	IDTVEC(apic_isr4), IDTVEC(apic_isr5), IDTVEC(apic_isr6),
-	IDTVEC(apic_isr7), IDTVEC(spuriousint), IDTVEC(timerint);
+	IDTVEC(apic_isr7), IDTVEC(cmcint), IDTVEC(errorint),
+	IDTVEC(spuriousint), IDTVEC(timerint);
 
 extern vm_paddr_t lapic_paddr;
+extern int apic_cpuids[];
 
-u_int	apic_alloc_vector(u_int irq);
-u_int	apic_alloc_vectors(u_int *irqs, u_int count, u_int align);
-void	apic_disable_vector(u_int vector);
-void	apic_enable_vector(u_int vector);
-void	apic_free_vector(u_int vector, u_int irq);
-u_int	apic_idt_to_irq(u_int vector);
+u_int	apic_alloc_vector(u_int apic_id, u_int irq);
+u_int	apic_alloc_vectors(u_int apic_id, u_int *irqs, u_int count,
+	    u_int align);
+void	apic_disable_vector(u_int apic_id, u_int vector);
+void	apic_enable_vector(u_int apic_id, u_int vector);
+void	apic_free_vector(u_int apic_id, u_int vector, u_int irq);
+u_int	apic_idt_to_irq(u_int apic_id, u_int vector);
 void	apic_register_enumerator(struct apic_enumerator *enumerator);
+u_int	apic_cpuid(u_int apic_id);
 void	*ioapic_create(vm_paddr_t addr, int32_t apic_id, int intbase);
 int	ioapic_disable_pin(void *cookie, u_int pin);
 int	ioapic_get_vector(void *cookie, u_int pin);
@@ -199,7 +202,10 @@ int	ioapic_set_triggermode(void *cookie, u_int pin,
 int	ioapic_set_smi(void *cookie, u_int pin);
 void	lapic_create(u_int apic_id, int boot_cpu);
 void	lapic_disable(void);
+void	lapic_disable_pmc(void);
 void	lapic_dump(const char *str);
+void	lapic_enable_cmc(void);
+int	lapic_enable_pmc(void);
 void	lapic_eoi(void);
 int	lapic_id(void);
 void	lapic_init(vm_paddr_t addr);
@@ -207,8 +213,11 @@ int	lapic_intr_pending(u_int vector);
 void	lapic_ipi_raw(register_t icrlo, u_int dest);
 void	lapic_ipi_vectored(u_int vector, int dest);
 int	lapic_ipi_wait(int delay);
+void	lapic_handle_cmc(void);
+void	lapic_handle_error(void);
 void	lapic_handle_intr(int vector, struct trapframe *frame);
 void	lapic_handle_timer(struct trapframe *frame);
+void	lapic_reenable_pmc(void);
 void	lapic_set_logical_id(u_int apic_id, u_int cluster, u_int cluster_id);
 int	lapic_set_lvt_mask(u_int apic_id, u_int lvt, u_char masked);
 int	lapic_set_lvt_mode(u_int apic_id, u_int lvt, u_int32_t mode);
@@ -218,7 +227,6 @@ int	lapic_set_lvt_triggermode(u_int apic_id, u_int lvt,
 	    enum intr_trigger trigger);
 void	lapic_set_tpr(u_int vector);
 void	lapic_setup(int boot);
-int	lapic_setup_clock(void);
 
 #endif /* !LOCORE */
 #endif /* _MACHINE_APICVAR_H_ */

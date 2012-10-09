@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/dest6.c,v 1.11.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -93,7 +93,7 @@ dest6_input(struct mbuf **mp, int *offp, int proto)
 	for (optlen = 0; dstoptlen > 0; dstoptlen -= optlen, opt += optlen) {
 		if (*opt != IP6OPT_PAD1 &&
 		    (dstoptlen < IP6OPT_MINLEN || *(opt + 1) + 2 > dstoptlen)) {
-			ip6stat.ip6s_toosmall++;
+			V_ip6stat.ip6s_toosmall++;
 			goto bad;
 		}
 

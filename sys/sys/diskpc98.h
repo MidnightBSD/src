@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)disklabel.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: src/sys/sys/diskpc98.h,v 1.103.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_DISKPC98_H_
@@ -37,15 +36,27 @@
 #include <sys/ioccom.h>
 
 #define	DOSBBSECTOR	0	/* DOS boot block relative sector number */
+#undef DOSPARTOFF
 #define	DOSPARTOFF	0
+#undef DOSPARTSIZE
 #define	DOSPARTSIZE	32
+#undef NDOSPART
 #define	NDOSPART	16
 #define	DOSMAGICOFFSET	510
 #define	DOSMAGIC	0xAA55
 
-#define	DOSMID_386BSD	(0x14|0x80)	/* 386BSD | bootable */
-#define	DOSSID_386BSD	(0x44|0x80)	/* 386BSD | active */
-#define	DOSPTYP_386BSD	(DOSSID_386BSD << 8 | DOSMID_386BSD)
+#define	PC98_MID_BOOTABLE	0x80
+#define	PC98_MID_MASK		0x7f
+#define	PC98_MID_386BSD		0x14
+
+#define	PC98_SID_ACTIVE		0x80
+#define	PC98_SID_MASK		0x7f
+#define	PC98_SID_386BSD		0x44
+
+#define	DOSMID_386BSD		(PC98_MID_386BSD | PC98_MID_BOOTABLE)
+#define	DOSSID_386BSD		(PC98_SID_386BSD | PC98_SID_ACTIVE)
+#undef DOSPTYP_386BSD
+#define	DOSPTYP_386BSD		(DOSSID_386BSD << 8 | DOSMID_386BSD)
 
 struct pc98_partition {
     	unsigned char	dp_mid;

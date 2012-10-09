@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: src/sys/dev/ath/ath_hal/ar5312/ar5312_attach.c,v 1.3.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -61,7 +61,8 @@ ar5312AniSetup(struct ath_hal *ah)
  */
 static struct ath_hal *
 ar5312Attach(uint16_t devid, HAL_SOFTC sc,
-	HAL_BUS_TAG st, HAL_BUS_HANDLE sh, HAL_STATUS *status)
+	HAL_BUS_TAG st, HAL_BUS_HANDLE sh, uint16_t *eepromdata,
+	HAL_STATUS *status)
 {
 	struct ath_hal_5212 *ahp = AH_NULL;
 	struct ath_hal *ah;
@@ -70,13 +71,13 @@ ar5312Attach(uint16_t devid, HAL_SOFTC sc,
 	uint16_t eeval;
 	HAL_STATUS ecode;
 
-	HALDEBUG(AH_NULL, HAL_DEBUG_ATTACH, "%s: sc %p st %p sh %p\n",
+	HALDEBUG_G(AH_NULL, HAL_DEBUG_ATTACH, "%s: sc %p st %p sh %p\n",
 		 __func__, sc, st, (void*) sh);
 
 	/* NB: memory is returned zero'd */
 	ahp = ath_hal_malloc(sizeof (struct ath_hal_5212));
 	if (ahp == AH_NULL) {
-		HALDEBUG(AH_NULL, HAL_DEBUG_ANY,
+		HALDEBUG_G(AH_NULL, HAL_DEBUG_ANY,
 		    "%s: cannot allocate memory for state block\n", __func__);
 		*status = HAL_ENOMEM;
 		return AH_NULL;
@@ -321,6 +322,7 @@ ar5312Probe(uint16_t vendorid, uint16_t devid)
 		case AR5212_AR2315_REV7:
 			return "Atheros 2315 WiSoC";
 		case AR5212_AR2317_REV1:
+		case AR5212_AR2317_REV2:
 			return "Atheros 2317 WiSoC";
 		case AR5212_AR2413:
 			return "Atheros 2413";

@@ -68,9 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_acct.c,v 1.95.6.1 2008/11/25 02:59:29 kensmith Exp $");
-
-#include "opt_mac.h"
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -195,7 +193,7 @@ SYSCTL_INT(_kern, OID_AUTO, acct_suspended, CTLFLAG_RD, &acct_suspended, 0,
  * implementation done by Mark Tinguely.
  */
 int
-acct(struct thread *td, struct acct_args *uap)
+sys_acct(struct thread *td, struct acct_args *uap)
 {
 	struct nameidata nd;
 	int error, flags, vfslocked;
@@ -218,15 +216,15 @@ acct(struct thread *td, struct acct_args *uap)
 		vfslocked = NDHASGIANT(&nd);
 		NDFREE(&nd, NDF_ONLY_PNBUF);
 #ifdef MAC
-		error = mac_check_system_acct(td->td_ucred, nd.ni_vp);
+		error = mac_system_check_acct(td->td_ucred, nd.ni_vp);
 		if (error) {
-			VOP_UNLOCK(nd.ni_vp, 0, td);
+			VOP_UNLOCK(nd.ni_vp, 0);
 			vn_close(nd.ni_vp, flags, td->td_ucred, td);
 			VFS_UNLOCK_GIANT(vfslocked);
 			return (error);
 		}
 #endif
-		VOP_UNLOCK(nd.ni_vp, 0, td);
+		VOP_UNLOCK(nd.ni_vp, 0);
 		if (nd.ni_vp->v_type != VREG) {
 			vn_close(nd.ni_vp, flags, td->td_ucred, td);
 			VFS_UNLOCK_GIANT(vfslocked);
@@ -235,7 +233,7 @@ acct(struct thread *td, struct acct_args *uap)
 		VFS_UNLOCK_GIANT(vfslocked);
 #ifdef MAC
 	} else {
-		error = mac_check_system_acct(td->td_ucred, NULL);
+		error = mac_system_check_acct(td->td_ucred, NULL);
 		if (error)
 			return (error);
 #endif
@@ -283,7 +281,7 @@ acct(struct thread *td, struct acct_args *uap)
 		 * than one, but if so the extras will commit suicide as
 		 * soon as they start up.
 		 */
-		error = kthread_create(acct_thread, NULL, NULL, 0, 0,
+		error = kproc_create(acct_thread, NULL, NULL, 0, 0,
 		    "accounting");
 		if (error) {
 			vfslocked = VFS_LOCK_GIANT(acct_vp->v_mount);
@@ -366,16 +364,25 @@ acct_process(struct thread *td)
 	 * Get process accounting information.
 	 */
 
+	sx_slock(&proctree_lock);
 	PROC_LOCK(p);
-	/* (1) The name of the command that ran */
+
+	/* (1) The terminal from which the process was started */
+	if ((p->p_flag & P_CONTROLT) && p->p_pgrp->pg_session->s_ttyp)
+		acct.ac_tty = tty_udev(p->p_pgrp->pg_session->s_ttyp);
+	else
+		acct.ac_tty = NODEV;
+	sx_sunlock(&proctree_lock);
+
+	/* (2) The name of the command that ran */
 	bcopy(p->p_comm, acct.ac_comm, sizeof acct.ac_comm);
 
-	/* (2) The amount of user and system time that was used */
+	/* (3) The amount of user and system time that was used */
 	rufetchcalc(p, &ru, &ut, &st);
 	acct.ac_utime = encode_timeval(ut);
 	acct.ac_stime = encode_timeval(st);
 
-	/* (3) The elapsed time the command ran (and its starting time) */
+	/* (4) The elapsed time the command ran (and its starting time) */
 	tmp = boottime;
 	timevaladd(&tmp, &p->p_stats->p_start);
 	acct.ac_btime = tmp.tv_sec;
@@ -383,7 +390,7 @@ acct_process(struct thread *td)
 	timevalsub(&tmp, &p->p_stats->p_start);
 	acct.ac_etime = encode_timeval(tmp);
 
-	/* (4) The average amount of memory used */
+	/* (5) The average amount of memory used */
 	tmp = ut;
 	timevaladd(&tmp, &st);
 	/* Convert tmp (i.e. u + s) into hz units to match ru_i*. */
@@ -394,20 +401,12 @@ acct_process(struct thread *td)
 	else
 		acct.ac_mem = 0;
 
-	/* (5) The number of disk I/O operations done */
+	/* (6) The number of disk I/O operations done */
 	acct.ac_io = encode_long(ru.ru_inblock + ru.ru_oublock);
 
-	/* (6) The UID and GID of the process */
+	/* (7) The UID and GID of the process */
 	acct.ac_uid = p->p_ucred->cr_ruid;
 	acct.ac_gid = p->p_ucred->cr_rgid;
-
-	/* (7) The terminal from which the process was started */
-	SESS_LOCK(p->p_session);
-	if ((p->p_flag & P_CONTROLT) && p->p_pgrp->pg_session->s_ttyp)
-		acct.ac_tty = dev2udev(p->p_pgrp->pg_session->s_ttyp->t_dev);
-	else
-		acct.ac_tty = NODEV;
-	SESS_UNLOCK(p->p_session);
 
 	/* (8) The boolean flags that tell how the process terminated, etc. */
 	acct.ac_flagx = p->p_acflag;
@@ -435,10 +434,9 @@ acct_process(struct thread *td)
 	 * Write the accounting information to the file.
 	 */
 	vfslocked = VFS_LOCK_GIANT(acct_vp->v_mount);
-	VOP_LEASE(acct_vp, td, acct_cred, LEASE_WRITE);
 	ret = vn_rdwr(UIO_WRITE, acct_vp, (caddr_t)&acct, sizeof (acct),
 	    (off_t)0, UIO_SYSSPACE, IO_APPEND|IO_UNIT, acct_cred, NOCRED,
-	    (int *)0, td);
+	    NULL, td);
 	VFS_UNLOCK_GIANT(vfslocked);
 	sx_sunlock(&acct_sx);
 	return (ret);
@@ -496,7 +494,7 @@ encode_timeval(struct timeval tv)
 			val = 1000000 * tv.tv_sec + tv.tv_usec;
 		} else {
 			exp = log2_s + LOG2_1M - CALC_BITS;
-			val = (unsigned int)(((u_int64_t)1000000 * tv.tv_sec +
+			val = (unsigned int)(((uint64_t)1000000 * tv.tv_sec +
 			    tv.tv_usec) >> exp);
 		}
 	}
@@ -586,7 +584,7 @@ acctwatch(void)
 	 * Stopping here is better than continuing, maybe it will be VBAD
 	 * next time around.
 	 */
-	if (VFS_STATFS(acct_vp->v_mount, &sb, curthread) < 0) {
+	if (VFS_STATFS(acct_vp->v_mount, &sb) < 0) {
 		VFS_UNLOCK_GIANT(vfslocked);
 		return;
 	}
@@ -625,7 +623,7 @@ acct_thread(void *dummy)
 	sx_xlock(&acct_sx);
 	if (acct_state & ACCT_RUNNING) {
 		sx_xunlock(&acct_sx);
-		kthread_exit(0);
+		kproc_exit(0);
 	}
 	acct_state |= ACCT_RUNNING;
 
@@ -652,5 +650,5 @@ acct_thread(void *dummy)
 	 */
 	acct_state = 0;
 	sx_xunlock(&acct_sx);
-	kthread_exit(0);
+	kproc_exit(0);
 }

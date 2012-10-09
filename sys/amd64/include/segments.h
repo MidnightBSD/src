@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz
  * Copyright (c) 1990 The Regents of the University of California.
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)segments.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/amd64/include/segments.h,v 1.39 2007/03/30 00:06:21 jkim Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SEGMENTS_H_
@@ -75,6 +74,13 @@ struct	user_segment_descriptor {
 	u_int64_t sd_hibase:8;		/* segment base address  (msb) */
 } __packed;
 
+#define	USD_GETBASE(sd)		(((sd)->sd_lobase) | (sd)->sd_hibase << 24) 
+#define	USD_SETBASE(sd, b)	(sd)->sd_lobase = (b); 	\
+				(sd)->sd_hibase = ((b) >> 24);
+#define	USD_GETLIMIT(sd)	(((sd)->sd_lolimit) | (sd)->sd_hilimit << 16)
+#define	USD_SETLIMIT(sd, l)	(sd)->sd_lolimit = (l);	\
+				(sd)->sd_hilimit = ((l) >> 16);
+
 /*
  * System segment descriptors (128 bit wide)
  */
@@ -109,12 +115,29 @@ struct	gate_descriptor {
 	u_int64_t sd_xx1:32;
 } __packed;
 
+/*
+ * Generic descriptor
+ */
+union	descriptor	{
+	struct	user_segment_descriptor sd;
+	struct	gate_descriptor gd;
+};
+
 	/* system segments and gate types */
 #define	SDT_SYSNULL	 0	/* system null */
+#define	SDT_SYS286TSS	 1	/* system 286 TSS available */
 #define	SDT_SYSLDT	 2	/* system 64 bit local descriptor table */
+#define	SDT_SYS286BSY	 3	/* system 286 TSS busy */
+#define	SDT_SYS286CGT	 4	/* system 286 call gate */
+#define	SDT_SYSTASKGT	 5	/* system task gate */
+#define	SDT_SYS286IGT	 6	/* system 286 interrupt gate */
+#define	SDT_SYS286TGT	 7	/* system 286 trap gate */
+#define	SDT_SYSNULL2	 8	/* system null again */
 #define	SDT_SYSTSS	 9	/* system available 64 bit TSS */
+#define	SDT_SYSNULL3	10	/* system null again */
 #define	SDT_SYSBSY	11	/* system busy 64 bit TSS */
 #define	SDT_SYSCGT	12	/* system 64 bit call gate */
+#define	SDT_SYSNULL4	13	/* system null again */
 #define	SDT_SYSIGT	14	/* system 64 bit interrupt gate */
 #define	SDT_SYSTGT	15	/* system 64 bit trap gate */
 
@@ -191,20 +214,25 @@ struct region_descriptor {
 #define	IDT_XF		19	/* #XF: SIMD Floating-Point Exception */
 #define	IDT_IO_INTS	NRSVIDT	/* Base of IDT entries for I/O interrupts. */
 #define	IDT_SYSCALL	0x80	/* System Call Interrupt Vector */
+#define	IDT_DTRACE_RET	0x92	/* DTrace pid provider Interrupt Vector */
 
 /*
  * Entries in the Global Descriptor Table (GDT)
  */
 #define	GNULL_SEL	0	/* Null Descriptor */
-#define	GCODE_SEL	1	/* Kernel Code Descriptor */
-#define	GDATA_SEL	2	/* Kernel Data Descriptor */
-#define	GUCODE32_SEL	3	/* User 32 bit code Descriptor */
-#define	GUDATA_SEL	4	/* User 32/64 bit Data Descriptor */
-#define	GUCODE_SEL	5	/* User 64 bit Code Descriptor */
-#define	GPROC0_SEL	6	/* TSS for entering kernel etc */
-/* slot 6 is second half of GPROC0_SEL */
-#define	GUGS32_SEL	8	/* User 32 bit GS Descriptor */
-#define	NGDT 		9
+#define	GNULL2_SEL	1	/* Null Descriptor */
+#define	GUFS32_SEL	2	/* User 32 bit %fs Descriptor */
+#define	GUGS32_SEL	3	/* User 32 bit %gs Descriptor */
+#define	GCODE_SEL	4	/* Kernel Code Descriptor */
+#define	GDATA_SEL	5	/* Kernel Data Descriptor */
+#define	GUCODE32_SEL	6	/* User 32 bit code Descriptor */
+#define	GUDATA_SEL	7	/* User 32/64 bit Data Descriptor */
+#define	GUCODE_SEL	8	/* User 64 bit Code Descriptor */
+#define	GPROC0_SEL	9	/* TSS for entering kernel etc */
+/* slot 10 is second half of GPROC0_SEL */
+#define	GUSERLDT_SEL	11	/* LDT */
+/* slot 11 is second half of GUSERLDT_SEL */
+#define	NGDT 		13
 
 #ifdef _KERNEL
 extern struct user_segment_descriptor gdt[];
@@ -219,6 +247,9 @@ void	ssdtosd(struct soft_segment_descriptor *ssdp,
 	    struct user_segment_descriptor *sdp);
 void	ssdtosyssd(struct soft_segment_descriptor *ssdp,
 	    struct system_segment_descriptor *sdp);
+void	update_gdt_gsbase(struct thread *td, uint32_t base);
+void	update_gdt_fsbase(struct thread *td, uint32_t base);
+
 #endif /* _KERNEL */
 
 #endif /* !_MACHINE_SEGMENTS_H_ */

@@ -1,9 +1,11 @@
-/* $MidnightBSD$ */
 /*
  * Memory range attribute operations, peformed on /dev/mem
  *
- * $FreeBSD: src/sys/sys/memrange.h,v 1.7.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
+
+#ifndef _SYS_MEMRANGE_H_
+#define	_SYS_MEMRANGE_H_
 
 /* Memory range attributes */
 #define MDF_UNCACHEABLE		(1<<0)	/* region not cached */
@@ -53,6 +55,7 @@ struct mem_range_ops
 	void	(*init)(struct mem_range_softc *sc);
 	int	(*set)(struct mem_range_softc *sc, struct mem_range_desc *mrd, int *arg);
     	void	(*initAP)(struct mem_range_softc *sc);
+    	void	(*reinit)(struct mem_range_softc *sc);
 };
 
 struct mem_range_softc 
@@ -65,8 +68,12 @@ struct mem_range_softc
 
 extern struct mem_range_softc mem_range_softc;
 
-extern int mem_range_attr_get(struct mem_range_desc *mrd, int *arg);
-extern int mem_range_attr_set(struct mem_range_desc *mrd, int *arg);
+extern void	mem_range_init(void);
+extern void	mem_range_destroy(void);
 
-#endif
+extern int	mem_range_attr_get(struct mem_range_desc *mrd, int *arg);
+extern int	mem_range_attr_set(struct mem_range_desc *mrd, int *arg);
 
+#endif /* _KERNEL */
+
+#endif /* _SYS_MEMRANGE_H_ */

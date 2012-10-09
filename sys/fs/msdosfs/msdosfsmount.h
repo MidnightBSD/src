@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfsmount.h,v 1.39 2007/07/12 16:09:07 bde Exp $ */
+/* $FreeBSD$ */
 /*	$NetBSD: msdosfsmount.h,v 1.17 1997/11/17 15:37:07 ws Exp $	*/
 
 /*-
@@ -54,6 +53,9 @@
 
 #ifdef _KERNEL
 
+#include <sys/types.h>
+#include <sys/lock.h>
+#include <sys/lockmgr.h>
 #include <sys/tree.h>
 
 #ifdef MALLOC_DECLARE
@@ -75,7 +77,8 @@ struct msdosfsmount {
 				   for files */
 	mode_t pm_dirmask;	/* mask to and with file protection bits
 				   for directories */
-	struct vnode *pm_devvp;	/* vnode for block device mntd */
+	struct vnode *pm_devvp;	/* vnode for character device mounted */
+	struct cdev *pm_dev;	/* character device mounted */
 	struct bpb50 pm_bpb;	/* BIOS parameter blk for this fs */
 	u_long pm_BlkPerSec;	/* How many DEV_BSIZE blocks fit inside a physical sector */
 	u_long pm_FATsecs;	/* actual number of fat sectors */
@@ -100,13 +103,15 @@ struct msdosfsmount {
 	u_int pm_fatdiv;	/*	offset computation */
 	u_int pm_curfat;	/* current fat for FAT32 (0 otherwise) */
 	u_int *pm_inusemap;	/* ptr to bitmap of in-use clusters */
-	u_int pm_flags;		/* see below */
+	uint64_t pm_flags;	/* see below */
 	void *pm_u2w;	/* Local->Unicode iconv handle */
 	void *pm_w2u;	/* Unicode->Local iconv handle */
 	void *pm_u2d;	/* Unicode->DOS iconv handle */
 	void *pm_d2u;	/* DOS->Local iconv handle */
 	u_int32_t pm_nfileno;	/* next 32-bit fileno */
-	RB_HEAD(msdosfs_filenotree, msdosfs_fileno) pm_filenos; /* 64<->32-bit fileno mapping */
+	RB_HEAD(msdosfs_filenotree, msdosfs_fileno)
+	    pm_filenos; /* 64<->32-bit fileno mapping */
+	struct lock pm_fatlock;	/* lockmgr protecting allocations and rb tree */
 };
 
 /*
@@ -215,6 +220,13 @@ void msdosfs_fileno_init(struct mount *);
 void msdosfs_fileno_free(struct mount *);
 uint32_t msdosfs_fileno_map(struct mount *, uint64_t);
 
+#define	MSDOSFS_LOCK_MP(pmp) \
+	lockmgr(&(pmp)->pm_fatlock, LK_EXCLUSIVE, NULL)
+#define	MSDOSFS_UNLOCK_MP(pmp) \
+	lockmgr(&(pmp)->pm_fatlock, LK_RELEASE, NULL)
+#define	MSDOSFS_ASSERT_MP_LOCKED(pmp) \
+	lockmgr_assert(&(pmp)->pm_fatlock, KA_XLOCKED)
+
 #endif /* _KERNEL */
 
 /*
@@ -222,7 +234,7 @@ uint32_t msdosfs_fileno_map(struct mount *, uint64_t);
  */
 struct msdosfs_args {
 	char	*fspec;		/* blocks special holding the fs to mount */
-	struct	export_args export;	/* network export information */
+	struct	oexport_args export;	/* network export information */
 	uid_t	uid;		/* uid that owns msdosfs files */
 	gid_t	gid;		/* gid that owns msdosfs files */
 	mode_t	mask;		/* file mask to be applied for msdosfs perms */

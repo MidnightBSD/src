@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm
  * Copyright (c) 1999 Marcel Moolenaar
@@ -27,20 +26,29 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/ucontext.h,v 1.18 2003/11/08 04:39:22 peter Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_UCONTEXT_H_
 #define	_MACHINE_UCONTEXT_H_
 
+/*
+ * mc_trapno bits. Shall be in sync with TF_XXX.
+ */
+#define	_MC_HASSEGS	0x1
+#define	_MC_HASBASES	0x2
+#define	_MC_HASFPXSTATE	0x4
+#define	_MC_FLAG_MASK	(_MC_HASSEGS | _MC_HASBASES | _MC_HASFPXSTATE)
+
 typedef struct __mcontext {
 	/*
-	 * The first 20 fields must match the definition of
-	 * sigcontext. So that we can support sigcontext
-	 * and ucontext_t at the same time.
+	 * The definition of mcontext_t must match the layout of
+	 * struct sigcontext after the sc_mask member.  This is so
+	 * that we can support sigcontext and ucontext_t at the same
+	 * time.
 	 */
-	__register_t	mc_onstack;		/* XXX - sigcontext compat. */
-	__register_t	mc_rdi;			/* machine state (struct trapframe) */
+	__register_t	mc_onstack;	/* XXX - sigcontext compat. */
+	__register_t	mc_rdi;		/* machine state (struct trapframe) */
 	__register_t	mc_rsi;
 	__register_t	mc_rdx;
 	__register_t	mc_rcx;
@@ -55,9 +63,13 @@ typedef struct __mcontext {
 	__register_t	mc_r13;
 	__register_t	mc_r14;
 	__register_t	mc_r15;
-	__register_t	mc_trapno;
+	__uint32_t	mc_trapno;
+	__uint16_t	mc_fs;
+	__uint16_t	mc_gs;
 	__register_t	mc_addr;
-	__register_t	mc_flags;
+	__uint32_t	mc_flags;
+	__uint16_t	mc_es;
+	__uint16_t	mc_ds;
 	__register_t	mc_err;
 	__register_t	mc_rip;
 	__register_t	mc_cs;
@@ -66,6 +78,7 @@ typedef struct __mcontext {
 	__register_t	mc_ss;
 
 	long	mc_len;			/* sizeof(mcontext_t) */
+
 #define	_MC_FPFMT_NODEV		0x10000	/* device not present or configured */
 #define	_MC_FPFMT_XMM		0x10002
 	long	mc_fpformat;
@@ -77,7 +90,14 @@ typedef struct __mcontext {
 	 * See <machine/fpu.h> for the internals of mc_fpstate[].
 	 */
 	long	mc_fpstate[64] __aligned(16);
-	long	mc_spare[8];
+
+	__register_t	mc_fsbase;
+	__register_t	mc_gsbase;
+
+	__register_t	mc_xfpustate;
+	__register_t	mc_xfpustate_len;
+
+	long	mc_spare[4];
 } mcontext_t;
 
 #endif /* !_MACHINE_UCONTEXT_H_ */

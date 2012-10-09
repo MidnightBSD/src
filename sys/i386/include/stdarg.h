@@ -1,5 +1,4 @@
 /*-
- * Copyright (c) 2008 Lucas Holt.  All rights reserved.
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdarg.h	8.1 (Berkeley) 6/10/93
- * $MidnightBSD: src/sys/i386/include/stdarg.h,v 1.2 2008/05/13 04:14:11 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_STDARG_H_
@@ -50,7 +49,7 @@ typedef	__va_list	va_list;
 #ifdef __GNUCLIKE_BUILTIN_STDARG
 
 #define	va_start(ap, last) \
-	__builtin_stdarg_start((ap), (last))
+	__builtin_va_start((ap), (last))
 
 #define	va_arg(ap, type) \
 	__builtin_va_arg((ap), type)
@@ -62,17 +61,6 @@ typedef	__va_list	va_list;
 
 #define	va_end(ap) \
 	__builtin_va_end(ap)
-
-#elif defined(__PCC__) /* !__GNUCLIKE_BUILTIN_STDARG */
-
-#define va_start(ap, last) \
-	__builtin_stdarg_start((ap), last)
-#define va_arg(ap, type) \
-	__builtin_va_arg((ap), type)
-#define va_end(ap) \
-	__builtin_va_end((ap))
-#define __va_copy(dest, src) \
-	__builtin_va_copy((dest), (src))
 
 #else	/* !__GNUCLIKE_BUILTIN_STDARG */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,11 +32,22 @@
  * SUCH DAMAGE.
  *
  *	@(#)timeb.h	8.2 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/timeb.h,v 1.9.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_TIMEB_H_
 #define _SYS_TIMEB_H_
+
+#ifdef __GNUC__
+#warning "this file includes <sys/timeb.h> which is deprecated"
+#endif
+
+#include <sys/_types.h>
+
+#ifndef _TIME_T_DECLARED
+typedef	__time_t	time_t;
+#define	_TIME_T_DECLARED
+#endif
 
 /* The ftime(2) system call structure -- deprecated. */
 struct timeb {
@@ -55,4 +65,4 @@ int ftime(struct timeb *);
 __END_DECLS
 #endif /* _KERNEL */
 
-#endif
+#endif /* !_SYS_TIMEB_H_ */

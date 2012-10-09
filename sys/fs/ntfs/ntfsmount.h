@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfsmount.h,v 1.8 2003/09/26 20:26:23 fjoe Exp $
+ * $FreeBSD$
  */
 
 #define	NTFS_MFLAG_CASEINS	0x00000001
@@ -34,7 +34,7 @@
 
 struct ntfs_args {
 	char	*fspec;			/* block special device to mount */
-	struct	export_args export;	/* network export information */
+	struct	oexport_args export;	/* network export information */
 	uid_t	uid;			/* uid that owns ntfs files */
 	gid_t	gid;			/* gid that owns ntfs files */
 	mode_t	mode;			/* mask to be applied for ntfs perms */

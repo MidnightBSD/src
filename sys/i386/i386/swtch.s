@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/i386/swtch.s,v 1.156 2007/08/22 05:06:14 jkoshy Exp $
+ * $FreeBSD$
  */
 
 #include "opt_npx.h"
@@ -88,7 +88,7 @@ ENTRY(cpu_throw)
 	movl	8(%esp),%ecx			/* New thread */
 	movl	TD_PCB(%ecx),%edx
 	movl	PCB_CR3(%edx),%eax
-	movl	%eax,%cr3			/* new address space */
+	LOAD_CR3(%eax)
 	/* set bit in new pm_active */
 	movl	TD_PROC(%ecx),%eax
 	movl	P_VMSPACE(%eax), %ebx
@@ -130,7 +130,7 @@ ENTRY(cpu_switch)
 	movl	%ebp,PCB_EBP(%edx)
 	movl	%esi,PCB_ESI(%edx)
 	movl	%edi,PCB_EDI(%edx)
-	movl	%gs,PCB_GS(%edx)
+	mov	%gs,PCB_GS(%edx)
 	pushfl					/* PSL */
 	popl	PCB_PSL(%edx)
 	/* Test if debug registers should be saved. */
@@ -156,8 +156,7 @@ ENTRY(cpu_switch)
 	/* have we used fp, and need a save? */
 	cmpl	%ecx,PCPU(FPCURTHREAD)
 	jne	1f
-	addl	$PCB_SAVEFPU,%edx		/* h/w bugs make saving complicated */
-	pushl	%edx
+	pushl	PCB_SAVEFPU(%edx)		/* h/w bugs make saving complicated */
 	call	npxsave				/* do it in a big C function */
 	popl	%eax
 1:
@@ -181,10 +180,10 @@ ENTRY(cpu_switch)
 	cmpl	%eax,IdlePTD			/* Kernel address space? */
 #endif
 	je	sw0
-	movl	%cr3,%ebx			/* The same address space? */
+	READ_CR3(%ebx)				/* The same address space? */
 	cmpl	%ebx,%eax
 	je	sw0
-	movl	%eax,%cr3			/* new address space */
+	LOAD_CR3(%eax)				/* new address space */
 	movl	%esi,%eax
 	movl	PCPU(CPUID),%esi
 	SETOP	%eax,TD_LOCK(%edi)		/* Switchout td_lock */
@@ -211,6 +210,18 @@ sw0:
 	SETOP	%esi,TD_LOCK(%edi)		/* Switchout td_lock */
 sw1:
 	BLOCK_SPIN(%ecx)
+#ifdef XEN
+	pushl	%eax
+	pushl	%ecx
+	pushl	%edx
+	call	xen_handle_thread_switch
+	popl	%edx
+	popl	%ecx
+	popl	%eax
+	/*
+	 * XXX set IOPL
+	 */
+#else		
 	/*
 	 * At this point, we've switched address spaces and are ready
 	 * to load up the rest of the next context.
@@ -259,7 +270,7 @@ sw1:
 	movl	12(%esi), %ebx
 	movl	%eax, 8(%edi)
 	movl	%ebx, 12(%edi)
-
+#endif
 	/* Restore context. */
 	movl	PCB_EBX(%edx),%ebx
 	movl	PCB_ESP(%edx),%esp
@@ -285,7 +296,7 @@ sw1:
 	movl	_default_ldt,%eax
 	cmpl	PCPU(CURRENTLDT),%eax
 	je	2f
-	lldt	_default_ldt
+	LLDT(_default_ldt)
 	movl	%eax,PCPU(CURRENTLDT)
 	jmp	2f
 1:
@@ -301,7 +312,7 @@ sw1:
 	/* This must be done after loading the user LDT. */
 	.globl	cpu_switch_load_gs
 cpu_switch_load_gs:
-	movl	PCB_GS(%edx),%gs
+	mov	PCB_GS(%edx),%gs
 
 	/* Test if debug registers should be restored. */
 	testl	$PCB_DBREGS,PCB_FLAGS(%edx)
@@ -371,7 +382,7 @@ ENTRY(savectx)
 	movl	%ebp,PCB_EBP(%ecx)
 	movl	%esi,PCB_ESI(%ecx)
 	movl	%edi,PCB_EDI(%ecx)
-	movl	%gs,PCB_GS(%ecx)
+	mov	%gs,PCB_GS(%ecx)
 	pushfl
 	popl	PCB_PSL(%ecx)
 
@@ -389,14 +400,14 @@ ENTRY(savectx)
 	 * parent's npx state for forks by forgetting to reload.
 	 */
 	pushfl
-	cli
+	CLI
 	movl	PCPU(FPCURTHREAD),%eax
 	testl	%eax,%eax
 	je	1f
 
 	pushl	%ecx
 	movl	TD_PCB(%eax),%eax
-	leal	PCB_SAVEFPU(%eax),%eax
+	movl	PCB_SAVEFPU(%eax),%eax
 	pushl	%eax
 	pushl	%eax
 	call	npxsave
@@ -405,7 +416,7 @@ ENTRY(savectx)
 	popl	%ecx
 
 	pushl	$PCB_SAVEFPU_SIZE
-	leal	PCB_SAVEFPU(%ecx),%ecx
+	leal	PCB_USERFPU(%ecx),%ecx
 	pushl	%ecx
 	pushl	%eax
 	call	bcopy
@@ -416,3 +427,140 @@ ENTRY(savectx)
 
 	ret
 END(savectx)
+
+/*
+ * suspendctx(pcb)
+ * Update pcb, suspending current processor state.
+ */
+ENTRY(suspendctx)
+	/* Fetch PCB. */
+	movl	4(%esp),%ecx
+
+	/* Save context by calling savectx(). */
+	pushl	%ecx
+	call	savectx
+	addl	$4,%esp
+
+	/* Fetch PCB again. */
+	movl	4(%esp),%ecx
+
+	/* Update caller's return address and stack pointer. */
+	movl	(%esp),%eax
+	movl	%eax,PCB_EIP(%ecx)
+	movl	%esp,PCB_ESP(%ecx)
+
+	/* Save other registers and descriptor tables. */
+	movl	%cr0,%eax
+	movl	%eax,PCB_CR0(%ecx)
+	movl	%cr2,%eax
+	movl	%eax,PCB_CR2(%ecx)
+	movl	%cr4,%eax
+	movl	%eax,PCB_CR4(%ecx)
+
+	movl	%dr0,%eax
+	movl	%eax,PCB_DR0(%ecx)
+	movl	%dr1,%eax
+	movl	%eax,PCB_DR1(%ecx)
+	movl	%dr2,%eax
+	movl	%eax,PCB_DR2(%ecx)
+	movl	%dr3,%eax
+	movl	%eax,PCB_DR3(%ecx)
+	movl	%dr6,%eax
+	movl	%eax,PCB_DR6(%ecx)
+	movl	%dr7,%eax
+	movl	%eax,PCB_DR7(%ecx)
+
+	mov	%ds,PCB_DS(%ecx)
+	mov	%es,PCB_ES(%ecx)
+	mov	%fs,PCB_FS(%ecx)
+	mov	%ss,PCB_SS(%ecx)
+	
+	sgdt	PCB_GDT(%ecx)
+	sidt	PCB_IDT(%ecx)
+	sldt	PCB_LDT(%ecx)
+	str	PCB_TR(%ecx)
+
+	movl	$1,%eax
+	ret
+END(suspendctx)
+
+/*
+ * resumectx(pcb in %esi)
+ * Resuming processor state from pcb.
+ */
+ENTRY(resumectx)
+	/* Fetch PCB. */
+	movl	%esi,%ecx
+
+	/* Restore GDT. */
+	lgdt	PCB_GDT(%ecx)
+
+	/* Restore segment registers */
+	movzwl	PCB_DS(%ecx),%eax
+	mov	%ax,%ds
+	movzwl	PCB_ES(%ecx),%eax
+	mov	%ax,%es
+	movzwl	PCB_FS(%ecx),%eax
+	mov	%ax,%fs
+	movzwl	PCB_GS(%ecx),%eax
+	movw	%ax,%gs
+	movzwl	PCB_SS(%ecx),%eax
+	mov	%ax,%ss
+
+	/* Restore CR2, CR4, CR3 and CR0 */
+	movl	PCB_CR2(%ecx),%eax
+	movl	%eax,%cr2
+	movl	PCB_CR4(%ecx),%eax
+	movl	%eax,%cr4
+	movl	PCB_CR3(%ecx),%eax
+	movl	%eax,%cr3
+	movl	PCB_CR0(%ecx),%eax
+	movl	%eax,%cr0
+	jmp	1f
+1:
+
+	/* Restore descriptor tables */
+	lidt	PCB_IDT(%ecx)
+	lldt	PCB_LDT(%ecx)
+
+#define SDT_SYS386TSS	9
+#define SDT_SYS386BSY	11
+	/* Clear "task busy" bit and reload TR */
+	movl	PCPU(TSS_GDT),%eax
+	andb	$(~SDT_SYS386BSY | SDT_SYS386TSS),5(%eax)
+	movzwl	PCB_TR(%ecx),%eax
+	ltr	%ax
+#undef SDT_SYS386TSS
+#undef SDT_SYS386BSY
+
+	/* Restore debug registers */
+	movl	PCB_DR0(%ecx),%eax
+	movl	%eax,%dr0
+	movl	PCB_DR1(%ecx),%eax
+	movl	%eax,%dr1
+	movl	PCB_DR2(%ecx),%eax
+	movl	%eax,%dr2
+	movl	PCB_DR3(%ecx),%eax
+	movl	%eax,%dr3
+	movl	PCB_DR6(%ecx),%eax
+	movl	%eax,%dr6
+	movl	PCB_DR7(%ecx),%eax
+	movl	%eax,%dr7
+
+#ifdef DEV_NPX
+	/* XXX FIX ME */
+#endif
+
+	/* Restore other registers */
+	movl	PCB_EDI(%ecx),%edi
+	movl	PCB_ESI(%ecx),%esi
+	movl	PCB_EBP(%ecx),%ebp
+	movl	PCB_ESP(%ecx),%esp
+	movl	PCB_EBX(%ecx),%ebx
+
+	/* reload code selector by turning return into intersegmental return */
+	pushl	PCB_EIP(%ecx)
+	movl	$KCSEL,4(%esp)
+	xorl	%eax,%eax
+	lret
+END(resumectx)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2000 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/linker.h,v 1.46.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_LINKER_H_
@@ -210,7 +209,7 @@ void *linker_hwpmc_list_objects(void);
 #define MODINFOMD_ESYM		0x0004		/* end of symbols */
 #define MODINFOMD_DYNAMIC	0x0005		/* _DYNAMIC pointer */
 /* These values are MD on these two platforms */
-#if !defined(__sparc64__)
+#if !defined(__sparc64__) && !defined(__powerpc__)
 #define MODINFOMD_ENVP		0x0006		/* envp[] */
 #define MODINFOMD_HOWTO		0x0007		/* boothowto */
 #define MODINFOMD_KERNEND	0x0008		/* kernend */
@@ -235,7 +234,11 @@ void *linker_hwpmc_list_objects(void);
 /*
  * Module lookup
  */
+extern vm_offset_t	preload_addr_relocate;
 extern caddr_t		preload_metadata;
+
+extern void *		preload_fetch_addr(caddr_t _mod);
+extern size_t		preload_fetch_size(caddr_t _mod);
 extern caddr_t		preload_search_by_name(const char *_name);
 extern caddr_t		preload_search_by_type(const char *_type);
 extern caddr_t		preload_search_next_name(caddr_t _base);
@@ -265,6 +268,7 @@ typedef Elf_Addr elf_lookup_fn(linker_file_t, Elf_Size, int);
 /* Support functions */
 int	elf_reloc(linker_file_t _lf, Elf_Addr base, const void *_rel, int _type, elf_lookup_fn _lu);
 int	elf_reloc_local(linker_file_t _lf, Elf_Addr base, const void *_rel, int _type, elf_lookup_fn _lu);
+Elf_Addr elf_relocaddr(linker_file_t _lf, Elf_Addr addr);
 const Elf_Sym *elf_get_sym(linker_file_t _lf, Elf_Size _symidx);
 const char *elf_get_symname(linker_file_t _lf, Elf_Size _symidx);
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/devfs/devfs_rule.c,v 1.3 2008/12/03 00:25:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Dima Dorfman.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/devfs/devfs_rule.c,v 1.23 2006/11/06 13:41:56 rwatson Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -139,6 +138,8 @@ void
 devfs_rules_apply(struct devfs_mount *dm, struct devfs_dirent *de)
 {
 	struct devfs_ruleset *ds;
+
+	sx_assert(&dm->dm_lock, SX_XLOCKED);
 
 	if (dm->dm_ruleset == 0)
 		return;
@@ -528,6 +529,8 @@ devfs_rule_match(struct devfs_krule *dk, struct devfs_dirent *de)
 {
 	struct devfs_rule *dr = &dk->dk_rule;
 	struct cdev *dev;
+	struct cdevsw *dsw;
+	int ref;
 
 	dev = devfs_rule_getdev(de);
 	/*
@@ -541,13 +544,19 @@ devfs_rule_match(struct devfs_krule *dk, struct devfs_dirent *de)
 	 * They're actually testing to see whether the condition does
 	 * *not* match, since the default is to assume the rule should
 	 * be run (such as if there are no conditions).
-	 *
-	 * XXX: lacks threadref on dev
 	 */
-	if (dr->dr_icond & DRC_DSWFLAGS)
-		if (dev == NULL ||
-		    (dev->si_devsw->d_flags & dr->dr_dswflags) == 0)
+	if (dr->dr_icond & DRC_DSWFLAGS) {
+		if (dev == NULL)
 			return (0);
+		dsw = dev_refthread(dev, &ref);
+		if (dsw == NULL)
+			return (0);
+		if ((dsw->d_flags & dr->dr_dswflags) == 0) {
+			dev_relthread(dev, ref);
+			return (0);
+		}
+		dev_relthread(dev, ref);
+	}
 	if (dr->dr_icond & DRC_PATHPTRN)
 		if (!devfs_rule_matchpath(dk, de))
 			return (0);
@@ -608,7 +617,7 @@ devfs_rule_run(struct devfs_krule *dk, struct devfs_dirent *de, unsigned depth)
 		 * XXX: not work as this is called when devices are created
 		 * XXX: long time after the rules were instantiated.
 		 * XXX: a printf() would probably give too much noise, or
-		 * XXX: DoS the machine.  I guess a a rate-limited message
+		 * XXX: DoS the machine.  I guess a rate-limited message
 		 * XXX: might work.
 		 */
 		if (depth > 0) {
@@ -729,20 +738,20 @@ devfs_ruleset_use(devfs_rsnum rsnum, struct devfs_mount *dm)
 {
 	struct devfs_ruleset *cds, *ds;
 
-	if (rsnum == 0) {
-		dm->dm_ruleset = 0;
-		return(0);
-	}
-
-	ds = devfs_ruleset_bynum(rsnum);
-	if (ds == NULL)
-		ds = devfs_ruleset_create(rsnum);
 	if (dm->dm_ruleset != 0) {
 		cds = devfs_ruleset_bynum(dm->dm_ruleset);
 		--cds->ds_refcount;
 		devfs_ruleset_reap(cds);
 	}
 
+	if (rsnum == 0) {
+		dm->dm_ruleset = 0;
+		return (0);
+	}
+
+	ds = devfs_ruleset_bynum(rsnum);
+	if (ds == NULL)
+		ds = devfs_ruleset_create(rsnum);
 	/* These should probably be made atomic somehow. */
 	++ds->ds_refcount;
 	dm->dm_ruleset = rsnum;
@@ -761,4 +770,39 @@ devfs_rules_cleanup(struct devfs_mount *dm)
 		--ds->ds_refcount;
 		devfs_ruleset_reap(ds);
 	}
+}
+
+/*
+ * Make rsnum the active ruleset for dm (locked)
+ */
+void
+devfs_ruleset_set(devfs_rsnum rsnum, struct devfs_mount *dm)
+{
+
+	sx_assert(&dm->dm_lock, SX_XLOCKED);
+
+	sx_xlock(&sx_rules);
+	devfs_ruleset_use(rsnum, dm);
+	sx_xunlock(&sx_rules);
+}
+
+/*
+ * Apply the current active ruleset on a mount
+ */
+void
+devfs_ruleset_apply(struct devfs_mount *dm)
+{
+	struct devfs_ruleset *ds;
+
+	sx_assert(&dm->dm_lock, SX_XLOCKED);
+
+	sx_xlock(&sx_rules);
+	if (dm->dm_ruleset == 0) {
+		sx_xunlock(&sx_rules);
+		return;
+	}
+	ds = devfs_ruleset_bynum(dm->dm_ruleset);
+	if (ds != NULL)
+		devfs_ruleset_applydm(ds, dm);
+	sx_xunlock(&sx_rules);
 }

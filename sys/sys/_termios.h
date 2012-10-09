@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)termios.h	8.3 (Berkeley) 3/28/94
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _SYS__TERMIOS_H_

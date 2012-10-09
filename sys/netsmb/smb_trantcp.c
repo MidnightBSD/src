@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -32,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_trantcp.c,v 1.26.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -96,97 +89,20 @@ nb_setsockopt_int(struct socket *so, int level, int name, int val)
 }
 
 static int
-nbssn_rselect(struct nbpcb *nbp, struct timeval *tv, int events,
-	struct thread *td)
-{
-	struct timeval atv, rtv, ttv;
-	int ncoll, timo, error, revents;
-
-	if (tv) {
-		atv = *tv;
-		if (itimerfix(&atv)) {
-			error = EINVAL;
-			goto done_noproclock;
-		}
-		getmicrouptime(&rtv);
-		timevaladd(&atv, &rtv);
-	}
-	timo = 0;
-	mtx_lock(&sellock);
-retry:
-
-	ncoll = nselcoll;
-	thread_lock(td);
-	td->td_flags |= TDF_SELECT;
-	thread_unlock(td);
-	mtx_unlock(&sellock);
-
-	/* XXX: Should be done when the thread is initialized. */
-	TAILQ_INIT(&td->td_selq);
-	revents = sopoll(nbp->nbp_tso, events, NULL, td);
-	mtx_lock(&sellock);
-	if (revents) {
-		error = 0;
-		goto done;
-	}
-	if (tv) {
-		getmicrouptime(&rtv);
-		if (timevalcmp(&rtv, &atv, >=)) {
-			error = EWOULDBLOCK;
-			goto done;
-		}
-		ttv = atv;
-		timevalsub(&ttv, &rtv);
-		timo = tvtohz(&ttv);
-	}
-	/*
-	 * An event of our interest may occur during locking a process.
-	 * In order to avoid missing the event that occurred during locking
-	 * the process, test P_SELECT and rescan file descriptors if
-	 * necessary.
-	 */
-	thread_lock(td);
-	if ((td->td_flags & TDF_SELECT) == 0 || nselcoll != ncoll) {
-		thread_unlock(td);
-		goto retry;
-	}
-	thread_unlock(td);
-
-	if (timo > 0)
-		error = cv_timedwait(&selwait, &sellock, timo);
-	else {
-		cv_wait(&selwait, &sellock);
-		error = 0;
-	}
-
-done:
-	clear_selinfo_list(td);
-	
-	thread_lock(td);
-	td->td_flags &= ~TDF_SELECT;
-	thread_unlock(td);
-	mtx_unlock(&sellock);
-
-done_noproclock:
-	if (error == ERESTART)
-		return 0;
-	return error;
-}
-
-static int
 nb_intr(struct nbpcb *nbp, struct proc *p)
 {
 	return 0;
 }
 
-static void
+static int
 nb_upcall(struct socket *so, void *arg, int waitflag)
 {
 	struct nbpcb *nbp = arg;
 
 	if (arg == NULL || nbp->nbp_selectid == NULL)
-		return;
+		return (SU_OK);
 	wakeup(nbp->nbp_selectid);
+	return (SU_OK);
 }
 
 static int
@@ -231,10 +147,8 @@ nb_connect_in(struct nbpcb *nbp, struct sockaddr_in *to, struct thread *td)
 	if (error)
 		return error;
 	nbp->nbp_tso = so;
-	so->so_upcallarg = (caddr_t)nbp;
-	so->so_upcall = nb_upcall;
 	SOCKBUF_LOCK(&so->so_rcv);
-	so->so_rcv.sb_flags |= SB_UPCALL;
+	soupcall_set(so, SO_RCV, nb_upcall, nbp);
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	so->so_rcv.sb_timeo = (5 * hz);
 	so->so_snd.sb_timeo = (5 * hz);
@@ -303,7 +217,7 @@ nbssn_rq_request(struct nbpcb *nbp, struct thread *td)
 	if (error)
 		return error;
 	TIMESPEC_TO_TIMEVAL(&tv, &nbp->nbp_timo);
-	error = nbssn_rselect(nbp, &tv, POLLIN, td);
+	error = selsocket(nbp->nbp_tso, POLLIN, &tv, td);
 	if (error == EWOULDBLOCK) {	/* Timeout */
 		NBDEBUG("initial request timeout\n");
 		return ETIMEDOUT;
@@ -517,7 +431,7 @@ smb_nbst_create(struct smb_vc *vcp, struct thread *td)
 {
 	struct nbpcb *nbp;
 
-	MALLOC(nbp, struct nbpcb *, sizeof *nbp, M_NBDATA, M_WAITOK);
+	nbp = malloc(sizeof *nbp, M_NBDATA, M_WAITOK);
 	bzero(nbp, sizeof *nbp);
 	nbp->nbp_timo.tv_sec = 15;	/* XXX: sysctl ? */
 	nbp->nbp_state = NBST_CLOSED;
@@ -651,9 +565,7 @@ smb_nbst_send(struct smb_vc *vcp, struct mbuf *m0, struct thread *td)
 		error = ENOTCONN;
 		goto abort;
 	}
-	M_PREPEND(m0, 4, M_TRYWAIT);
-	if (m0 == NULL)
-		return ENOBUFS;
+	M_PREPEND(m0, 4, M_WAIT);
 	nb_sethdr(m0, NB_SSN_MESSAGE, m_fixhdr(m0) - 4);
 	error = nb_sosend(nbp->nbp_tso, m0, 0, td);
 	return error;

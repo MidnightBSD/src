@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001, 2002 Scott Long <scottl@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/udf/ecma167-udf.h,v 1.7 2006/07/25 14:15:50 yar Exp $
+ * $FreeBSD$
  */
 
 /* ecma167-udf.h */
@@ -354,6 +353,18 @@ struct file_entry {
 #define	UDF_FENTRY_PERM_USER_MASK	0x07
 #define	UDF_FENTRY_PERM_GRP_MASK	0xE0
 #define	UDF_FENTRY_PERM_OWNER_MASK	0x1C00
+
+/* Path Component [4/14.16.1] */
+struct path_component {
+	uint8_t			type;
+	uint8_t			length;
+	uint16_t		version;
+	uint8_t			identifier[1];
+} __packed;
+#define	UDF_PATH_ROOT		2
+#define	UDF_PATH_DOTDOT		3
+#define	UDF_PATH_DOT		4
+#define	UDF_PATH_PATH		5
 
 union dscrptr {
 	struct desc_tag		tag;

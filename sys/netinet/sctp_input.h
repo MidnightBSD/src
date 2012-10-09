@@ -1,15 +1,17 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
  * a) Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ *    this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the distribution.
+ *    the documentation and/or other materials provided with the distribution.
  *
  * c) Neither the name of Cisco Systems, Inc. nor the names of its
  *    contributors may be used to endorse or promote products derived
@@ -28,19 +30,20 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $KAME: sctp_input.h,v 1.6 2005/03/06 16:04:17 itojun Exp $	 */
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.h,v 1.7.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
-#ifndef __sctp_input_h__
-#define __sctp_input_h__
+#ifndef _NETINET_SCTP_INPUT_H_
+#define _NETINET_SCTP_INPUT_H_
 
 #if defined(_KERNEL) || defined(__Userspace__)
 void
 sctp_common_input_processing(struct mbuf **, int, int, int,
-    struct sctphdr *, struct sctp_chunkhdr *, struct sctp_inpcb *,
-    struct sctp_tcb *, struct sctp_nets *, uint8_t, uint32_t, uint16_t);
+    struct sctphdr *, struct sctp_chunkhdr *,
+    struct sctp_inpcb *, struct sctp_tcb *,
+    struct sctp_nets *, uint8_t,
+    uint8_t, uint32_t,
+    uint32_t, uint16_t);
 
 struct sctp_stream_reset_out_request *
 sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq,
@@ -51,7 +54,7 @@ sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries,
     uint16_t * list);
 
 
-int sctp_is_there_unsent_data(struct sctp_tcb *stcb);
+int sctp_is_there_unsent_data(struct sctp_tcb *stcb, int so_locked);
 
 #endif
 #endif

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -24,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/metadata.h,v 1.2 2005/01/05 20:17:20 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_METADATA_H_
 #define	_MACHINE_METADATA_H_
 
 #define	MODINFOMD_SMAP		0x1001
+#define	MODINFOMD_SMAP_XATTR	0x1002
 
 #endif /* !_MACHINE_METADATA_H_ */

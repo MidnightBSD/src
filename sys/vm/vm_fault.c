@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -73,7 +72,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_fault.c,v 1.237 2007/10/08 20:09:53 kib Exp $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_ktrace.h"
+#include "opt_vm.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -85,6 +87,9 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_fault.c,v 1.237 2007/10/08 20:09:53 kib Exp $"
 #include <sys/sysctl.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
+#ifdef KTRACE
+#include <sys/ktrace.h>
+#endif
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -95,7 +100,6 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_fault.c,v 1.237 2007/10/08 20:09:53 kib Exp $"
 #include <vm/vm_pageout.h>
 #include <vm/vm_kern.h>
 #include <vm/vm_pager.h>
-#include <vm/vnode_pager.h>
 #include <vm/vm_extern.h>
 
 #include <sys/mount.h>	/* XXX Temporary for VFS_LOCK_GIANT() */
@@ -114,9 +118,11 @@ static int prefault_pageorder[] = {
 static int vm_fault_additional_pages(vm_page_t, int, int, vm_page_t *, int *);
 static void vm_fault_prefault(pmap_t, vm_offset_t, vm_map_entry_t);
 
-#define VM_FAULT_READ_AHEAD 8
-#define VM_FAULT_READ_BEHIND 7
-#define VM_FAULT_READ (VM_FAULT_READ_AHEAD+VM_FAULT_READ_BEHIND+1)
+#define	VM_FAULT_READ_BEHIND	8
+#define	VM_FAULT_READ_MAX	(1 + VM_FAULT_READ_AHEAD_MAX)
+#define	VM_FAULT_NINCR		(VM_FAULT_READ_MAX / VM_FAULT_READ_BEHIND)
+#define	VM_FAULT_SUM		(VM_FAULT_NINCR * (VM_FAULT_NINCR + 1) / 2)
+#define	VM_FAULT_CACHE_BEHIND	(VM_FAULT_READ_BEHIND * VM_FAULT_SUM)
 
 struct faultstate {
 	vm_page_t m;
@@ -129,21 +135,26 @@ struct faultstate {
 	vm_map_entry_t entry;
 	int lookup_still_valid;
 	struct vnode *vp;
+	int vfslocked;
 };
+
+static void vm_fault_cache_behind(const struct faultstate *fs, int distance);
 
 static inline void
 release_page(struct faultstate *fs)
 {
+
 	vm_page_wakeup(fs->m);
-	vm_page_lock_queues();
+	vm_page_lock(fs->m);
 	vm_page_deactivate(fs->m);
-	vm_page_unlock_queues();
+	vm_page_unlock(fs->m);
 	fs->m = NULL;
 }
 
 static inline void
 unlock_map(struct faultstate *fs)
 {
+
 	if (fs->lookup_still_valid) {
 		vm_map_lookup_done(fs->map, fs->entry);
 		fs->lookup_still_valid = FALSE;
@@ -158,9 +169,9 @@ unlock_and_deallocate(struct faultstate *fs)
 	VM_OBJECT_UNLOCK(fs->object);
 	if (fs->object != fs->first_object) {
 		VM_OBJECT_LOCK(fs->first_object);
-		vm_page_lock_queues();
+		vm_page_lock(fs->first_m);
 		vm_page_free(fs->first_m);
-		vm_page_unlock_queues();
+		vm_page_unlock(fs->first_m);
 		vm_object_pip_wakeup(fs->first_object);
 		VM_OBJECT_UNLOCK(fs->first_object);
 		fs->first_m = NULL;
@@ -168,13 +179,11 @@ unlock_and_deallocate(struct faultstate *fs)
 	vm_object_deallocate(fs->first_object);
 	unlock_map(fs);	
 	if (fs->vp != NULL) { 
-		int vfslocked;
-
-		vfslocked = VFS_LOCK_GIANT(fs->vp->v_mount);
 		vput(fs->vp);
 		fs->vp = NULL;
-		VFS_UNLOCK_GIANT(vfslocked);
 	}
+	VFS_UNLOCK_GIANT(fs->vfslocked);
+	fs->vfslocked = 0;
 }
 
 /*
@@ -184,7 +193,7 @@ unlock_and_deallocate(struct faultstate *fs)
  *	      default objects are zero-fill, there is no real pager.
  */
 #define TRYPAGER	(fs.object->type != OBJT_DEFAULT && \
-			(((fault_flags & VM_FAULT_WIRE_MASK) == 0) || wired))
+			((fault_flags & VM_FAULT_CHANGE_WIRING) == 0 || wired))
 
 /*
  *	vm_fault:
@@ -200,27 +209,54 @@ unlock_and_deallocate(struct faultstate *fs)
  *	KERN_SUCCESS is returned if the page fault is handled; otherwise,
  *	a standard error specifying why the fault is fatal is returned.
  *
- *
  *	The map in question must be referenced, and remains so.
  *	Caller may hold no locks.
  */
 int
 vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
-	 int fault_flags)
+    int fault_flags)
+{
+	struct thread *td;
+	int result;
+
+	td = curthread;
+	if ((td->td_pflags & TDP_NOFAULTING) != 0)
+		return (KERN_PROTECTION_FAILURE);
+#ifdef KTRACE
+	if (map != kernel_map && KTRPOINT(td, KTR_FAULT))
+		ktrfault(vaddr, fault_type);
+#endif
+	result = vm_fault_hold(map, trunc_page(vaddr), fault_type, fault_flags,
+	    NULL);
+#ifdef KTRACE
+	if (map != kernel_map && KTRPOINT(td, KTR_FAULTEND))
+		ktrfaultend(result);
+#endif
+	return (result);
+}
+
+int
+vm_fault_hold(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
+    int fault_flags, vm_page_t *m_hold)
 {
 	vm_prot_t prot;
-	int is_first_object_locked, result;
-	boolean_t growstack, wired;
+	long ahead, behind;
+	int alloc_req, era, faultcount, nera, reqpage, result;
+	boolean_t growstack, is_first_object_locked, wired;
 	int map_generation;
 	vm_object_t next_object;
-	vm_page_t marray[VM_FAULT_READ];
+	vm_page_t marray[VM_FAULT_READ_MAX];
 	int hardfault;
-	int faultcount;
 	struct faultstate fs;
+	struct vnode *vp;
+	int locked, error;
 
 	hardfault = 0;
 	growstack = TRUE;
 	PCPU_INC(cnt.v_vm_faults);
+	fs.vp = NULL;
+	fs.vfslocked = 0;
+	faultcount = reqpage = 0;
 
 RetryFault:;
 
@@ -232,42 +268,15 @@ RetryFault:;
 	result = vm_map_lookup(&fs.map, vaddr, fault_type, &fs.entry,
 	    &fs.first_object, &fs.first_pindex, &prot, &wired);
 	if (result != KERN_SUCCESS) {
-		if (result != KERN_PROTECTION_FAILURE ||
-		    (fault_flags & VM_FAULT_WIRE_MASK) != VM_FAULT_USER_WIRE) {
-			if (growstack && result == KERN_INVALID_ADDRESS &&
-			    map != kernel_map && curproc != NULL) {
-				result = vm_map_growstack(curproc, vaddr);
-				if (result != KERN_SUCCESS)
-					return (KERN_FAILURE);
-				growstack = FALSE;
-				goto RetryFault;
-			}
-			return (result);
+		if (growstack && result == KERN_INVALID_ADDRESS &&
+		    map != kernel_map) {
+			result = vm_map_growstack(curproc, vaddr);
+			if (result != KERN_SUCCESS)
+				return (KERN_FAILURE);
+			growstack = FALSE;
+			goto RetryFault;
 		}
-
-		/*
-   		 * If we are user-wiring a r/w segment, and it is COW, then
-   		 * we need to do the COW operation.  Note that we don't COW
-   		 * currently RO sections now, because it is NOT desirable
-   		 * to COW .text.  We simply keep .text from ever being COW'ed
-   		 * and take the heat that one cannot debug wired .text sections.
-   		 */
-		result = vm_map_lookup(&fs.map, vaddr,
-			VM_PROT_READ|VM_PROT_WRITE|VM_PROT_OVERRIDE_WRITE,
-			&fs.entry, &fs.first_object, &fs.first_pindex, &prot, &wired);
-		if (result != KERN_SUCCESS)
-			return (result);
-
-		/*
-		 * If we don't COW now, on a user wire, the user will never
-		 * be able to write to the mapping.  If we don't make this
-		 * restriction, the bookkeeping would be nearly impossible.
-		 *
-		 * XXX The following assignment modifies the map without
-		 * holding a write lock on it.
-		 */
-		if ((fs.entry->protection & VM_PROT_WRITE) == 0)
-			fs.entry->max_protection &= ~VM_PROT_WRITE;
+		return (result);
 	}
 
 	map_generation = fs.map->timestamp;
@@ -286,27 +295,15 @@ RetryFault:;
 	 * Bump the paging-in-progress count to prevent size changes (e.g. 
 	 * truncation operations) during I/O.  This must be done after
 	 * obtaining the vnode lock in order to avoid possible deadlocks.
-	 *
-	 * XXX vnode_pager_lock() can block without releasing the map lock.
 	 */
-	if (fs.first_object->flags & OBJ_NEEDGIANT)
-		mtx_lock(&Giant);
 	VM_OBJECT_LOCK(fs.first_object);
 	vm_object_reference_locked(fs.first_object);
-	fs.vp = vnode_pager_lock(fs.first_object);
-	KASSERT(fs.vp == NULL || !fs.map->system_map,
-	    ("vm_fault: vnode-backed object mapped by system map"));
-	KASSERT((fs.first_object->flags & OBJ_NEEDGIANT) == 0 ||
-	    !fs.map->system_map,
-	    ("vm_fault: Object requiring giant mapped by system map"));
-	if (fs.first_object->flags & OBJ_NEEDGIANT)
-		mtx_unlock(&Giant);
 	vm_object_pip_add(fs.first_object, 1);
 
 	fs.lookup_still_valid = TRUE;
 
 	if (wired)
-		fault_type = prot;
+		fault_type = prot | (fault_type & VM_PROT_COPY);
 
 	fs.first_m = NULL;
 
@@ -338,12 +335,11 @@ RetryFault:;
 			 * removes the page from the backing object, 
 			 * which is not what we want.
 			 */
-			vm_page_lock_queues();
+			vm_page_lock(fs.m);
 			if ((fs.m->cow) && 
 			    (fault_type & VM_PROT_WRITE) &&
 			    (fs.object == fs.first_object)) {
 				vm_page_cowfault(fs.m);
-				vm_page_unlock_queues();
 				unlock_and_deallocate(&fs);
 				goto RetryFault;
 			}
@@ -365,27 +361,28 @@ RetryFault:;
 			 * to pmap it.
 			 */
 			if ((fs.m->oflags & VPO_BUSY) || fs.m->busy) {
-				vm_page_unlock_queues();
-				VM_OBJECT_UNLOCK(fs.object);
+				/*
+				 * Reference the page before unlocking and
+				 * sleeping so that the page daemon is less
+				 * likely to reclaim it. 
+				 */
+				vm_page_aflag_set(fs.m, PGA_REFERENCED);
+				vm_page_unlock(fs.m);
 				if (fs.object != fs.first_object) {
-					VM_OBJECT_LOCK(fs.first_object);
-					vm_page_lock_queues();
+					if (!VM_OBJECT_TRYLOCK(
+					    fs.first_object)) {
+						VM_OBJECT_UNLOCK(fs.object);
+						VM_OBJECT_LOCK(fs.first_object);
+						VM_OBJECT_LOCK(fs.object);
+					}
+					vm_page_lock(fs.first_m);
 					vm_page_free(fs.first_m);
-					vm_page_unlock_queues();
+					vm_page_unlock(fs.first_m);
 					vm_object_pip_wakeup(fs.first_object);
 					VM_OBJECT_UNLOCK(fs.first_object);
 					fs.first_m = NULL;
 				}
 				unlock_map(&fs);
-				if (fs.vp != NULL) {
-					int vfslck;
-
-					vfslck = VFS_LOCK_GIANT(fs.vp->v_mount);
-					vput(fs.vp);
-					fs.vp = NULL;
-					VFS_UNLOCK_GIANT(vfslck);
-				}
-				VM_OBJECT_LOCK(fs.object);
 				if (fs.m == vm_page_lookup(fs.object,
 				    fs.pindex)) {
 					vm_page_sleep_if_busy(fs.m, TRUE,
@@ -398,7 +395,7 @@ RetryFault:;
 				goto RetryFault;
 			}
 			vm_pageq_remove(fs.m);
-			vm_page_unlock_queues();
+			vm_page_unlock(fs.m);
 
 			/*
 			 * Mark page busy for other processes, and the 
@@ -407,11 +404,8 @@ RetryFault:;
 			 * found the page ).
 			 */
 			vm_page_busy(fs.m);
-			if (((fs.m->valid & VM_PAGE_BITS_ALL) != VM_PAGE_BITS_ALL) &&
-				fs.m->object != kernel_object && fs.m->object != kmem_object) {
+			if (fs.m->valid != VM_PAGE_BITS_ALL)
 				goto readrest;
-			}
-
 			break;
 		}
 
@@ -427,17 +421,34 @@ RetryFault:;
 
 			/*
 			 * Allocate a new page for this object/offset pair.
+			 *
+			 * Unlocked read of the p_flag is harmless. At
+			 * worst, the P_KILLED might be not observed
+			 * there, and allocation can fail, causing
+			 * restart and new reading of the p_flag.
 			 */
 			fs.m = NULL;
-			if (!vm_page_count_severe()) {
+			if (!vm_page_count_severe() || P_KILLED(curproc)) {
+#if VM_NRESERVLEVEL > 0
+				if ((fs.object->flags & OBJ_COLORED) == 0) {
+					fs.object->flags |= OBJ_COLORED;
+					fs.object->pg_color = atop(vaddr) -
+					    fs.pindex;
+				}
+#endif
+				alloc_req = P_KILLED(curproc) ?
+				    VM_ALLOC_SYSTEM : VM_ALLOC_NORMAL;
+				if (fs.object->type != OBJT_VNODE &&
+				    fs.object->backing_object == NULL)
+					alloc_req |= VM_ALLOC_ZERO;
 				fs.m = vm_page_alloc(fs.object, fs.pindex,
-				    (fs.vp || fs.object->backing_object)? VM_ALLOC_NORMAL: VM_ALLOC_ZERO);
+				    alloc_req);
 			}
 			if (fs.m == NULL) {
 				unlock_and_deallocate(&fs);
 				VM_WAITPFAULT;
 				goto RetryFault;
-			} else if ((fs.m->valid & VM_PAGE_BITS_ALL) == VM_PAGE_BITS_ALL)
+			} else if (fs.m->valid == VM_PAGE_BITS_ALL)
 				break;
 		}
 
@@ -453,70 +464,103 @@ readrest:
 		 */
 		if (TRYPAGER) {
 			int rv;
-			int reqpage = 0;
-			int ahead, behind;
 			u_char behavior = vm_map_entry_behavior(fs.entry);
 
-			if (behavior == MAP_ENTRY_BEHAV_RANDOM) {
-				ahead = 0;
+			if (behavior == MAP_ENTRY_BEHAV_RANDOM ||
+			    P_KILLED(curproc)) {
 				behind = 0;
+				ahead = 0;
+			} else if (behavior == MAP_ENTRY_BEHAV_SEQUENTIAL) {
+				behind = 0;
+				ahead = atop(fs.entry->end - vaddr) - 1;
+				if (ahead > VM_FAULT_READ_AHEAD_MAX)
+					ahead = VM_FAULT_READ_AHEAD_MAX;
+				if (fs.pindex == fs.entry->next_read)
+					vm_fault_cache_behind(&fs,
+					    VM_FAULT_READ_MAX);
 			} else {
-				behind = (vaddr - fs.entry->start) >> PAGE_SHIFT;
+				/*
+				 * If this is a sequential page fault, then
+				 * arithmetically increase the number of pages
+				 * in the read-ahead window.  Otherwise, reset
+				 * the read-ahead window to its smallest size.
+				 */
+				behind = atop(vaddr - fs.entry->start);
 				if (behind > VM_FAULT_READ_BEHIND)
 					behind = VM_FAULT_READ_BEHIND;
-
-				ahead = ((fs.entry->end - vaddr) >> PAGE_SHIFT) - 1;
-				if (ahead > VM_FAULT_READ_AHEAD)
-					ahead = VM_FAULT_READ_AHEAD;
+				ahead = atop(fs.entry->end - vaddr) - 1;
+				era = fs.entry->read_ahead;
+				if (fs.pindex == fs.entry->next_read) {
+					nera = era + behind;
+					if (nera > VM_FAULT_READ_AHEAD_MAX)
+						nera = VM_FAULT_READ_AHEAD_MAX;
+					behind = 0;
+					if (ahead > nera)
+						ahead = nera;
+					if (era == VM_FAULT_READ_AHEAD_MAX)
+						vm_fault_cache_behind(&fs,
+						    VM_FAULT_CACHE_BEHIND);
+				} else if (ahead > VM_FAULT_READ_AHEAD_MIN)
+					ahead = VM_FAULT_READ_AHEAD_MIN;
+				if (era != ahead)
+					fs.entry->read_ahead = ahead;
 			}
-			is_first_object_locked = FALSE;
-			if ((behavior == MAP_ENTRY_BEHAV_SEQUENTIAL ||
-			     (behavior != MAP_ENTRY_BEHAV_RANDOM &&
-			      fs.pindex >= fs.entry->lastr &&
-			      fs.pindex < fs.entry->lastr + VM_FAULT_READ)) &&
-			    (fs.first_object == fs.object ||
-			     (is_first_object_locked = VM_OBJECT_TRYLOCK(fs.first_object))) &&
-			    fs.first_object->type != OBJT_DEVICE) {
-				vm_pindex_t firstpindex, tmppindex;
 
-				if (fs.first_pindex < 2 * VM_FAULT_READ)
-					firstpindex = 0;
-				else
-					firstpindex = fs.first_pindex - 2 * VM_FAULT_READ;
+			/*
+			 * Call the pager to retrieve the data, if any, after
+			 * releasing the lock on the map.  We hold a ref on
+			 * fs.object and the pages are VPO_BUSY'd.
+			 */
+			unlock_map(&fs);
 
-				vm_page_lock_queues();
-				/*
-				 * note: partially valid pages cannot be 
-				 * included in the lookahead - NFS piecemeal
-				 * writes will barf on it badly.
-				 */
-				for (tmppindex = fs.first_pindex - 1;
-					tmppindex >= firstpindex;
-					--tmppindex) {
-					vm_page_t mt;
+vnode_lock:
+			if (fs.object->type == OBJT_VNODE) {
+				vp = fs.object->handle;
+				if (vp == fs.vp)
+					goto vnode_locked;
+				else if (fs.vp != NULL) {
+					vput(fs.vp);
+					fs.vp = NULL;
+				}
+				locked = VOP_ISLOCKED(vp);
 
-					mt = vm_page_lookup(fs.first_object, tmppindex);
-					if (mt == NULL || (mt->valid != VM_PAGE_BITS_ALL))
-						break;
-					if (mt->busy ||
-					    (mt->oflags & VPO_BUSY) ||
-					    (mt->flags & (PG_FICTITIOUS | PG_UNMANAGED)) ||
-						mt->hold_count ||
-						mt->wire_count) 
-						continue;
-					pmap_remove_all(mt);
-					if (mt->dirty) {
-						vm_page_deactivate(mt);
-					} else {
-						vm_page_cache(mt);
+				if (VFS_NEEDSGIANT(vp->v_mount) && !fs.vfslocked) {
+					fs.vfslocked = 1;
+					if (!mtx_trylock(&Giant)) {
+						VM_OBJECT_UNLOCK(fs.object);
+						mtx_lock(&Giant);
+						VM_OBJECT_LOCK(fs.object);
+						goto vnode_lock;
 					}
 				}
-				vm_page_unlock_queues();
-				ahead += behind;
-				behind = 0;
+				if (locked != LK_EXCLUSIVE)
+					locked = LK_SHARED;
+				/* Do not sleep for vnode lock while fs.m is busy */
+				error = vget(vp, locked | LK_CANRECURSE |
+				    LK_NOWAIT, curthread);
+				if (error != 0) {
+					int vfslocked;
+
+					vfslocked = fs.vfslocked;
+					fs.vfslocked = 0; /* Keep Giant */
+					vhold(vp);
+					release_page(&fs);
+					unlock_and_deallocate(&fs);
+					error = vget(vp, locked | LK_RETRY |
+					    LK_CANRECURSE, curthread);
+					vdrop(vp);
+					fs.vp = vp;
+					fs.vfslocked = vfslocked;
+					KASSERT(error == 0,
+					    ("vm_fault: vget failed"));
+					goto RetryFault;
+				}
+				fs.vp = vp;
 			}
-			if (is_first_object_locked)
-				VM_OBJECT_UNLOCK(fs.first_object);
+vnode_locked:
+			KASSERT(fs.vp == NULL || !fs.map->system_map,
+			    ("vm_fault: vnode-backed object mapped by system map"));
+
 			/*
 			 * now we find out if any other pages should be paged
 			 * in at this time this routine checks to see if the
@@ -530,28 +574,9 @@ readrest:
 			 * vm_page_t passed to the routine.
 			 *
 			 * fs.m plus the additional pages are VPO_BUSY'd.
-			 *
-			 * XXX vm_fault_additional_pages() can block
-			 * without releasing the map lock.
 			 */
 			faultcount = vm_fault_additional_pages(
 			    fs.m, behind, ahead, marray, &reqpage);
-
-			/*
-			 * update lastr imperfectly (we do not know how much
-			 * getpages will actually read), but good enough.
-			 *
-			 * XXX The following assignment modifies the map
-			 * without holding a write lock on it.
-			 */
-			fs.entry->lastr = fs.pindex + faultcount - behind;
-
-			/*
-			 * Call the pager to retrieve the data, if any, after
-			 * releasing the lock on the map.  We hold a ref on
-			 * fs.object and the pages are VPO_BUSY'd.
-			 */
-			unlock_map(&fs);
 
 			rv = faultcount ?
 			    vm_pager_get_pages(fs.object, marray, faultcount,
@@ -603,17 +628,17 @@ readrest:
 			 */
 			if (((fs.map != kernel_map) && (rv == VM_PAGER_ERROR)) ||
 				(rv == VM_PAGER_BAD)) {
-				vm_page_lock_queues();
+				vm_page_lock(fs.m);
 				vm_page_free(fs.m);
-				vm_page_unlock_queues();
+				vm_page_unlock(fs.m);
 				fs.m = NULL;
 				unlock_and_deallocate(&fs);
 				return ((rv == VM_PAGER_ERROR) ? KERN_FAILURE : KERN_PROTECTION_FAILURE);
 			}
 			if (fs.object != fs.first_object) {
-				vm_page_lock_queues();
+				vm_page_lock(fs.m);
 				vm_page_free(fs.m);
-				vm_page_unlock_queues();
+				vm_page_unlock(fs.m);
 				fs.m = NULL;
 				/*
 				 * XXX - we cannot just fall out at this
@@ -691,7 +716,7 @@ readrest:
 		/*
 		 * We only really need to copy if we want to write it.
 		 */
-		if (fault_type & VM_PROT_WRITE) {
+		if ((fault_type & (VM_PROT_COPY | VM_PROT_WRITE)) != 0) {
 			/*
 			 * This allows pages to be virtually copied from a 
 			 * backing_object into the first_object, where the 
@@ -726,18 +751,20 @@ readrest:
 				 * We don't chase down the shadow chain
 				 */
 			    fs.object == fs.first_object->backing_object) {
-				vm_page_lock_queues();
 				/*
 				 * get rid of the unnecessary page
 				 */
+				vm_page_lock(fs.first_m);
 				vm_page_free(fs.first_m);
+				vm_page_unlock(fs.first_m);
 				/*
 				 * grab the page and put it into the 
 				 * process'es object.  The page is 
 				 * automatically made dirty.
 				 */
+				vm_page_lock(fs.m);
 				vm_page_rename(fs.m, fs.first_object, fs.first_pindex);
-				vm_page_unlock_queues();
+				vm_page_unlock(fs.m);
 				vm_page_busy(fs.m);
 				fs.first_m = fs.m;
 				fs.m = NULL;
@@ -748,8 +775,16 @@ readrest:
 				 */
 				pmap_copy_page(fs.m, fs.first_m);
 				fs.first_m->valid = VM_PAGE_BITS_ALL;
-			}
-			if (fs.m) {
+				if (wired && (fault_flags &
+				    VM_FAULT_CHANGE_WIRING) == 0) {
+					vm_page_lock(fs.first_m);
+					vm_page_wire(fs.first_m);
+					vm_page_unlock(fs.first_m);
+					
+					vm_page_lock(fs.m);
+					vm_page_unwire(fs.m, FALSE);
+					vm_page_unlock(fs.m);
+				}
 				/*
 				 * We no longer need the old page or object.
 				 */
@@ -770,6 +805,7 @@ readrest:
 			if (!is_first_object_locked)
 				VM_OBJECT_LOCK(fs.object);
 			PCPU_INC(cnt.v_cow_faults);
+			curthread->td_cow++;
 		} else {
 			prot &= ~VM_PROT_WRITE;
 		}
@@ -829,23 +865,30 @@ readrest:
 			prot &= retry_prot;
 		}
 	}
-	if (prot & VM_PROT_WRITE) {
+	/*
+	 * If the page was filled by a pager, update the map entry's
+	 * last read offset.  Since the pager does not return the
+	 * actual set of pages that it read, this update is based on
+	 * the requested set.  Typically, the requested and actual
+	 * sets are the same.
+	 *
+	 * XXX The following assignment modifies the map
+	 * without holding a write lock on it.
+	 */
+	if (hardfault)
+		fs.entry->next_read = fs.pindex + faultcount - reqpage;
+
+	if ((prot & VM_PROT_WRITE) != 0 ||
+	    (fault_flags & VM_FAULT_DIRTY) != 0) {
 		vm_object_set_writeable_dirty(fs.object);
 
 		/*
-		 * If the fault is a write, we know that this page is being
-		 * written NOW so dirty it explicitly to save on 
-		 * pmap_is_modified() calls later.
-		 *
 		 * If this is a NOSYNC mmap we do not want to set VPO_NOSYNC
 		 * if the page is already dirty to prevent data written with
 		 * the expectation of being synced from not being synced.
 		 * Likewise if this entry does not request NOSYNC then make
 		 * sure the page isn't marked NOSYNC.  Applications sharing
 		 * data should use the same flags to avoid ping ponging.
-		 *
-		 * Also tell the backing pager, if any, that it should remove
-		 * any swap backing since the page is now dirty.
 		 */
 		if (fs.entry->eflags & MAP_ENTRY_NOSYNC) {
 			if (fs.m->dirty == 0)
@@ -853,7 +896,18 @@ readrest:
 		} else {
 			fs.m->oflags &= ~VPO_NOSYNC;
 		}
-		if (fault_flags & VM_FAULT_DIRTY) {
+
+		/*
+		 * If the fault is a write, we know that this page is being
+		 * written NOW so dirty it explicitly to save on 
+		 * pmap_is_modified() calls later.
+		 *
+		 * Also tell the backing pager, if any, that it should remove
+		 * any swap backing since the page is now dirty.
+		 */
+		if (((fault_type & VM_PROT_WRITE) != 0 &&
+		    (fault_flags & VM_FAULT_CHANGE_WIRING) == 0) ||
+		    (fault_flags & VM_FAULT_DIRTY) != 0) {
 			vm_page_dirty(fs.m);
 			vm_pager_page_unswapped(fs.m);
 		}
@@ -865,13 +919,11 @@ readrest:
 	KASSERT(fs.m->oflags & VPO_BUSY,
 		("vm_fault: page %p not busy!", fs.m));
 	/*
-	 * Sanity check: page must be completely valid or it is not fit to
+	 * Page must be completely valid or it is not fit to
 	 * map into user space.  vm_pager_get_pages() ensures this.
 	 */
-	if (fs.m->valid != VM_PAGE_BITS_ALL) {
-		vm_page_zero_invalid(fs.m, TRUE);
-		printf("Warning: page %p partially invalid on fault\n", fs.m);
-	}
+	KASSERT(fs.m->valid == VM_PAGE_BITS_ALL,
+	    ("vm_fault: page %p partially invalid", fs.m));
 	VM_OBJECT_UNLOCK(fs.object);
 
 	/*
@@ -880,27 +932,28 @@ readrest:
 	 * back on the active queue until later so that the pageout daemon
 	 * won't find it (yet).
 	 */
-	pmap_enter(fs.map->pmap, vaddr, fs.m, prot, wired);
-	if (((fault_flags & VM_FAULT_WIRE_MASK) == 0) && (wired == 0)) {
+	pmap_enter(fs.map->pmap, vaddr, fault_type, fs.m, prot, wired);
+	if ((fault_flags & VM_FAULT_CHANGE_WIRING) == 0 && wired == 0)
 		vm_fault_prefault(fs.map->pmap, vaddr, fs.entry);
-	}
 	VM_OBJECT_LOCK(fs.object);
-	vm_page_lock_queues();
-	vm_page_flag_set(fs.m, PG_REFERENCED);
+	vm_page_lock(fs.m);
 
 	/*
 	 * If the page is not wired down, then put it where the pageout daemon
 	 * can find it.
 	 */
-	if (fault_flags & VM_FAULT_WIRE_MASK) {
+	if (fault_flags & VM_FAULT_CHANGE_WIRING) {
 		if (wired)
 			vm_page_wire(fs.m);
 		else
 			vm_page_unwire(fs.m, 1);
-	} else {
+	} else
 		vm_page_activate(fs.m);
+	if (m_hold != NULL) {
+		*m_hold = fs.m;
+		vm_page_hold(fs.m);
 	}
-	vm_page_unlock_queues();
+	vm_page_unlock(fs.m);
 	vm_page_wakeup(fs.m);
 
 	/*
@@ -913,6 +966,60 @@ readrest:
 		curthread->td_ru.ru_minflt++;
 
 	return (KERN_SUCCESS);
+}
+
+/*
+ * Speed up the reclamation of up to "distance" pages that precede the
+ * faulting pindex within the first object of the shadow chain.
+ */
+static void
+vm_fault_cache_behind(const struct faultstate *fs, int distance)
+{
+	vm_object_t first_object, object;
+	vm_page_t m, m_prev;
+	vm_pindex_t pindex;
+
+	object = fs->object;
+	VM_OBJECT_LOCK_ASSERT(object, MA_OWNED);
+	first_object = fs->first_object;
+	if (first_object != object) {
+		if (!VM_OBJECT_TRYLOCK(first_object)) {
+			VM_OBJECT_UNLOCK(object);
+			VM_OBJECT_LOCK(first_object);
+			VM_OBJECT_LOCK(object);
+		}
+	}
+	if (first_object->type != OBJT_DEVICE &&
+	    first_object->type != OBJT_PHYS && first_object->type != OBJT_SG) {
+		if (fs->first_pindex < distance)
+			pindex = 0;
+		else
+			pindex = fs->first_pindex - distance;
+		if (pindex < OFF_TO_IDX(fs->entry->offset))
+			pindex = OFF_TO_IDX(fs->entry->offset);
+		m = first_object != object ? fs->first_m : fs->m;
+		KASSERT((m->oflags & VPO_BUSY) != 0,
+		    ("vm_fault_cache_behind: page %p is not busy", m));
+		m_prev = vm_page_prev(m);
+		while ((m = m_prev) != NULL && m->pindex >= pindex &&
+		    m->valid == VM_PAGE_BITS_ALL) {
+			m_prev = vm_page_prev(m);
+			if (m->busy != 0 || (m->oflags & VPO_BUSY) != 0)
+				continue;
+			vm_page_lock(m);
+			if (m->hold_count == 0 && m->wire_count == 0) {
+				pmap_remove_all(m);
+				vm_page_aflag_clear(m, PGA_REFERENCED);
+				if (m->dirty != 0)
+					vm_page_deactivate(m);
+				else
+					vm_page_cache(m);
+			}
+			vm_page_unlock(m);
+		}
+	}
+	if (first_object != object)
+		VM_OBJECT_UNLOCK(first_object);
 }
 
 /*
@@ -961,8 +1068,8 @@ vm_fault_prefault(pmap_t pmap, vm_offset_t addra, vm_map_entry_t entry)
 		while ((m = vm_page_lookup(lobject, pindex)) == NULL &&
 		    lobject->type == OBJT_DEFAULT &&
 		    (backing_object = lobject->backing_object) != NULL) {
-			if (lobject->backing_object_offset & PAGE_MASK)
-				break;
+			KASSERT((lobject->backing_object_offset & PAGE_MASK) ==
+			    0, ("vm_fault_prefault: unaligned object offset"));
 			pindex += lobject->backing_object_offset >> PAGE_SHIFT;
 			VM_OBJECT_LOCK(backing_object);
 			VM_OBJECT_UNLOCK(lobject);
@@ -975,34 +1082,89 @@ vm_fault_prefault(pmap_t pmap, vm_offset_t addra, vm_map_entry_t entry)
 			VM_OBJECT_UNLOCK(lobject);
 			break;
 		}
-		if (((m->valid & VM_PAGE_BITS_ALL) == VM_PAGE_BITS_ALL) &&
-			(m->busy == 0) &&
-		    (m->flags & PG_FICTITIOUS) == 0) {
-
-			vm_page_lock_queues();
+		if (m->valid == VM_PAGE_BITS_ALL &&
+		    (m->flags & PG_FICTITIOUS) == 0)
 			pmap_enter_quick(pmap, addr, m, entry->protection);
-			vm_page_unlock_queues();
-		}
 		VM_OBJECT_UNLOCK(lobject);
 	}
 }
 
 /*
- *	vm_fault_quick:
- *
- *	Ensure that the requested virtual address, which may be in userland,
- *	is valid.  Fault-in the page if necessary.  Return -1 on failure.
+ * Hold each of the physical pages that are mapped by the specified range of
+ * virtual addresses, ["addr", "addr" + "len"), if those mappings are valid
+ * and allow the specified types of access, "prot".  If all of the implied
+ * pages are successfully held, then the number of held pages is returned
+ * together with pointers to those pages in the array "ma".  However, if any
+ * of the pages cannot be held, -1 is returned.
  */
 int
-vm_fault_quick(caddr_t v, int prot)
+vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
+    vm_prot_t prot, vm_page_t *ma, int max_count)
 {
-	int r;
+	vm_offset_t end, va;
+	vm_page_t *mp;
+	int count;
+	boolean_t pmap_failed;
 
-	if (prot & VM_PROT_WRITE)
-		r = subyte(v, fubyte(v));
-	else
-		r = fubyte(v);
-	return(r);
+	if (len == 0)
+		return (0);
+	end = round_page(addr + len);	
+	addr = trunc_page(addr);
+
+	/*
+	 * Check for illegal addresses.
+	 */
+	if (addr < vm_map_min(map) || addr > end || end > vm_map_max(map))
+		return (-1);
+
+	count = howmany(end - addr, PAGE_SIZE);
+	if (count > max_count)
+		panic("vm_fault_quick_hold_pages: count > max_count");
+
+	/*
+	 * Most likely, the physical pages are resident in the pmap, so it is
+	 * faster to try pmap_extract_and_hold() first.
+	 */
+	pmap_failed = FALSE;
+	for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE) {
+		*mp = pmap_extract_and_hold(map->pmap, va, prot);
+		if (*mp == NULL)
+			pmap_failed = TRUE;
+		else if ((prot & VM_PROT_WRITE) != 0 &&
+		    (*mp)->dirty != VM_PAGE_BITS_ALL) {
+			/*
+			 * Explicitly dirty the physical page.  Otherwise, the
+			 * caller's changes may go unnoticed because they are
+			 * performed through an unmanaged mapping or by a DMA
+			 * operation.
+			 *
+			 * The object lock is not held here.
+			 * See vm_page_clear_dirty_mask().
+			 */
+			vm_page_dirty(*mp);
+		}
+	}
+	if (pmap_failed) {
+		/*
+		 * One or more pages could not be held by the pmap.  Either no
+		 * page was mapped at the specified virtual address or that
+		 * mapping had insufficient permissions.  Attempt to fault in
+		 * and hold these pages.
+		 */
+		for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE)
+			if (*mp == NULL && vm_fault_hold(map, va, prot,
+			    VM_FAULT_NORMAL, mp) != KERN_SUCCESS)
+				goto error;
+	}
+	return (count);
+error:	
+	for (mp = ma; mp < ma + count; mp++)
+		if (*mp != NULL) {
+			vm_page_lock(*mp);
+			vm_page_unhold(*mp);
+			vm_page_unlock(*mp);
+		}
+	return (-1);
 }
 
 /*
@@ -1012,7 +1174,7 @@ vm_fault_quick(caddr_t v, int prot)
  */
 int
 vm_fault_wire(vm_map_t map, vm_offset_t start, vm_offset_t end,
-    boolean_t user_wire, boolean_t fictitious)
+    boolean_t fictitious)
 {
 	vm_offset_t va;
 	int rv;
@@ -1023,9 +1185,7 @@ vm_fault_wire(vm_map_t map, vm_offset_t start, vm_offset_t end,
 	 * read-only sections.
 	 */
 	for (va = start; va < end; va += PAGE_SIZE) {
-		rv = vm_fault(map, va,
-		    user_wire ? VM_PROT_READ : VM_PROT_READ | VM_PROT_WRITE,
-		    user_wire ? VM_FAULT_USER_WIRE : VM_FAULT_CHANGE_WIRING);
+		rv = vm_fault(map, va, VM_PROT_NONE, VM_FAULT_CHANGE_WIRING);
 		if (rv) {
 			if (va != start)
 				vm_fault_unwire(map, start, va, fictitious);
@@ -1046,6 +1206,7 @@ vm_fault_unwire(vm_map_t map, vm_offset_t start, vm_offset_t end,
 {
 	vm_paddr_t pa;
 	vm_offset_t va;
+	vm_page_t m;
 	pmap_t pmap;
 
 	pmap = vm_map_pmap(map);
@@ -1059,9 +1220,10 @@ vm_fault_unwire(vm_map_t map, vm_offset_t start, vm_offset_t end,
 		if (pa != 0) {
 			pmap_change_wiring(pmap, va, FALSE);
 			if (!fictitious) {
-				vm_page_lock_queues();
-				vm_page_unwire(PHYS_TO_VM_PAGE(pa), 1);
-				vm_page_unlock_queues();
+				m = PHYS_TO_VM_PAGE(pa);
+				vm_page_lock(m);
+				vm_page_unwire(m, TRUE);
+				vm_page_unlock(m);
 			}
 		}
 	}
@@ -1071,7 +1233,10 @@ vm_fault_unwire(vm_map_t map, vm_offset_t start, vm_offset_t end,
  *	Routine:
  *		vm_fault_copy_entry
  *	Function:
- *		Copy all of the pages from a wired-down map entry to another.
+ *		Create new shadow object backing dst_entry with private copy of
+ *		all underlying pages. When src_entry is equal to dst_entry,
+ *		function implements COW for wired-down map entry. Otherwise,
+ *		it forks wired entry into dst_map.
  *
  *	In/out conditions:
  *		The source and destination maps must be locked for write.
@@ -1079,28 +1244,27 @@ vm_fault_unwire(vm_map_t map, vm_offset_t start, vm_offset_t end,
  *		entry corresponding to a main map entry that is wired down).
  */
 void
-vm_fault_copy_entry(dst_map, src_map, dst_entry, src_entry)
-	vm_map_t dst_map;
-	vm_map_t src_map;
-	vm_map_entry_t dst_entry;
-	vm_map_entry_t src_entry;
+vm_fault_copy_entry(vm_map_t dst_map, vm_map_t src_map,
+    vm_map_entry_t dst_entry, vm_map_entry_t src_entry,
+    vm_ooffset_t *fork_charge)
 {
-	vm_object_t backing_object, dst_object, object;
-	vm_object_t src_object;
-	vm_ooffset_t dst_offset;
-	vm_ooffset_t src_offset;
-	vm_pindex_t pindex;
-	vm_prot_t prot;
+	vm_object_t backing_object, dst_object, object, src_object;
+	vm_pindex_t dst_pindex, pindex, src_pindex;
+	vm_prot_t access, prot;
 	vm_offset_t vaddr;
 	vm_page_t dst_m;
 	vm_page_t src_m;
+	boolean_t src_readonly, upgrade;
 
 #ifdef	lint
 	src_map++;
 #endif	/* lint */
 
+	upgrade = src_entry == dst_entry;
+
 	src_object = src_entry->object.vm_object;
-	src_offset = src_entry->offset;
+	src_pindex = OFF_TO_IDX(src_entry->offset);
+	src_readonly = (src_entry->protection & VM_PROT_WRITE) == 0;
 
 	/*
 	 * Create the top-level object for the destination entry. (Doesn't
@@ -1108,28 +1272,56 @@ vm_fault_copy_entry(dst_map, src_map, dst_entry, src_entry)
 	 */
 	dst_object = vm_object_allocate(OBJT_DEFAULT,
 	    OFF_TO_IDX(dst_entry->end - dst_entry->start));
+#if VM_NRESERVLEVEL > 0
+	dst_object->flags |= OBJ_COLORED;
+	dst_object->pg_color = atop(dst_entry->start);
+#endif
 
 	VM_OBJECT_LOCK(dst_object);
+	KASSERT(upgrade || dst_entry->object.vm_object == NULL,
+	    ("vm_fault_copy_entry: vm_object not NULL"));
 	dst_entry->object.vm_object = dst_object;
 	dst_entry->offset = 0;
-
-	prot = dst_entry->max_protection;
+	dst_object->charge = dst_entry->end - dst_entry->start;
+	if (fork_charge != NULL) {
+		KASSERT(dst_entry->cred == NULL,
+		    ("vm_fault_copy_entry: leaked swp charge"));
+		dst_object->cred = curthread->td_ucred;
+		crhold(dst_object->cred);
+		*fork_charge += dst_object->charge;
+	} else {
+		dst_object->cred = dst_entry->cred;
+		dst_entry->cred = NULL;
+	}
+	access = prot = dst_entry->protection;
+	/*
+	 * If not an upgrade, then enter the mappings in the pmap as
+	 * read and/or execute accesses.  Otherwise, enter them as
+	 * write accesses.
+	 *
+	 * A writeable large page mapping is only created if all of
+	 * the constituent small page mappings are modified. Marking
+	 * PTEs as modified on inception allows promotion to happen
+	 * without taking potentially large number of soft faults.
+	 */
+	if (!upgrade)
+		access &= ~VM_PROT_WRITE;
 
 	/*
 	 * Loop through all of the pages in the entry's range, copying each
 	 * one from the source object (it should be there) to the destination
 	 * object.
 	 */
-	for (vaddr = dst_entry->start, dst_offset = 0;
+	for (vaddr = dst_entry->start, dst_pindex = 0;
 	    vaddr < dst_entry->end;
-	    vaddr += PAGE_SIZE, dst_offset += PAGE_SIZE) {
+	    vaddr += PAGE_SIZE, dst_pindex++) {
 
 		/*
-		 * Allocate a page in the destination object
+		 * Allocate a page in the destination object.
 		 */
 		do {
-			dst_m = vm_page_alloc(dst_object,
-				OFF_TO_IDX(dst_offset), VM_ALLOC_NORMAL);
+			dst_m = vm_page_alloc(dst_object, dst_pindex,
+			    VM_ALLOC_NORMAL);
 			if (dst_m == NULL) {
 				VM_OBJECT_UNLOCK(dst_object);
 				VM_WAIT;
@@ -1144,10 +1336,9 @@ vm_fault_copy_entry(dst_map, src_map, dst_entry, src_entry)
 		 */
 		VM_OBJECT_LOCK(src_object);
 		object = src_object;
-		pindex = 0;
-		while ((src_m = vm_page_lookup(object, pindex +
-		    OFF_TO_IDX(dst_offset + src_offset))) == NULL &&
-		    (src_entry->protection & VM_PROT_WRITE) == 0 &&
+		pindex = src_pindex + dst_pindex;
+		while ((src_m = vm_page_lookup(object, pindex)) == NULL &&
+		    src_readonly &&
 		    (backing_object = object->backing_object) != NULL) {
 			/*
 			 * Allow fallback to backing objects if we are reading.
@@ -1165,20 +1356,37 @@ vm_fault_copy_entry(dst_map, src_map, dst_entry, src_entry)
 		VM_OBJECT_UNLOCK(dst_object);
 
 		/*
-		 * Enter it in the pmap...
+		 * Enter it in the pmap. If a wired, copy-on-write
+		 * mapping is being replaced by a write-enabled
+		 * mapping, then wire that new mapping.
 		 */
-		pmap_enter(dst_map->pmap, vaddr, dst_m, prot, FALSE);
+		pmap_enter(dst_map->pmap, vaddr, access, dst_m, prot, upgrade);
 
 		/*
 		 * Mark it no longer busy, and put it on the active list.
 		 */
 		VM_OBJECT_LOCK(dst_object);
-		vm_page_lock_queues();
-		vm_page_activate(dst_m);
-		vm_page_unlock_queues();
+		
+		if (upgrade) {
+			vm_page_lock(src_m);
+			vm_page_unwire(src_m, 0);
+			vm_page_unlock(src_m);
+
+			vm_page_lock(dst_m);
+			vm_page_wire(dst_m);
+			vm_page_unlock(dst_m);
+		} else {
+			vm_page_lock(dst_m);
+			vm_page_activate(dst_m);
+			vm_page_unlock(dst_m);
+		}
 		vm_page_wakeup(dst_m);
 	}
 	VM_OBJECT_UNLOCK(dst_object);
+	if (upgrade) {
+		dst_entry->eflags &= ~(MAP_ENTRY_COW | MAP_ENTRY_NEEDS_COPY);
+		vm_object_deallocate(src_object);
+	}
 }
 
 
@@ -1195,8 +1403,6 @@ vm_fault_copy_entry(dst_map, src_map, dst_entry, src_entry)
  *
  * Return value:
  *  number of pages in marray
- *
- * This routine can't block.
  */
 static int
 vm_fault_additional_pages(m, rbehind, rahead, marray, reqpage)
@@ -1308,4 +1514,24 @@ vm_fault_additional_pages(m, rbehind, rahead, marray, reqpage)
 
 	/* return number of pages */
 	return i;
+}
+
+/*
+ * Block entry into the machine-independent layer's page fault handler by
+ * the calling thread.  Subsequent calls to vm_fault() by that thread will
+ * return KERN_PROTECTION_FAILURE.  Enable machine-dependent handling of
+ * spurious page faults. 
+ */
+int
+vm_fault_disable_pagefaults(void)
+{
+
+	return (curthread_pflags_set(TDP_NOFAULTING | TDP_RESETSPUR));
+}
+
+void
+vm_fault_enable_pagefaults(int save)
+{
+
+	curthread_pflags_restore(save);
 }

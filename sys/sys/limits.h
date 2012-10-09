@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/limits.h,v 1.10.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_LIMITS_H_
@@ -89,7 +88,7 @@
 #define	QUAD_MIN	(__QUAD_MIN)	/* min value for a quad_t */
 #endif
 
-#if __XSI_VISIBLE
+#if __XSI_VISIBLE || __POSIX_VISIBLE >= 200809
 #define	LONG_BIT	__LONG_BIT
 #define	WORD_BIT	__WORD_BIT
 #endif

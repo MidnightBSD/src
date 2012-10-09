@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Scott Bartram
  * Copyright (c) 1995 Steven Wallace
@@ -25,10 +24,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_ipc.c,v 1.24.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/limits.h>
 #include <sys/msg.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
@@ -118,7 +118,7 @@ ibcs2_msgget(struct thread *td, void *v)
 
 	ap.key = uap->key;
 	ap.msgflg = uap->msgflg;
-	return msgget(td, &ap);
+	return sys_msgget(td, &ap);
 }
 
 struct ibcs2_msgctl_args {
@@ -176,7 +176,7 @@ ibcs2_msgrcv(struct thread *td, void *v)
 	ap.msgsz = uap->msgsz;
 	ap.msgtyp = uap->msgtyp;
 	ap.msgflg = uap->msgflg;
-	return (msgrcv(td, &ap));
+	return (sys_msgrcv(td, &ap));
 }
 
 struct ibcs2_msgsnd_args {
@@ -197,7 +197,7 @@ ibcs2_msgsnd(struct thread *td, void *v)
 	ap.msgp = uap->msgp;
 	ap.msgsz = uap->msgsz;
 	ap.msgflg = uap->msgflg;
-	return (msgsnd(td, &ap));
+	return (sys_msgsnd(td, &ap));
 }
 
 int
@@ -363,7 +363,7 @@ ibcs2_semget(struct thread *td, void *v)
 	ap.key = uap->key;
 	ap.nsems = uap->nsems;
 	ap.semflg = uap->semflg;
-	return (semget(td, &ap));
+	return (sys_semget(td, &ap));
 }
 
 struct ibcs2_semop_args {
@@ -382,7 +382,7 @@ ibcs2_semop(struct thread *td, void *v)
 	ap.semid = uap->semid;
 	ap.sops = uap->sops;
 	ap.nsops = uap->nsops;
-	return (semop(td, &ap));
+	return (sys_semop(td, &ap));
 }
 
 int
@@ -416,7 +416,10 @@ struct ibcs2_shmid_ds *ibp;
 	ibp->shm_segsz = bp->shm_segsz;
 	ibp->shm_lpid = bp->shm_lpid;
 	ibp->shm_cpid = bp->shm_cpid;
-	ibp->shm_nattch = bp->shm_nattch;
+	if (bp->shm_nattch > SHRT_MAX)
+		ibp->shm_nattch = SHRT_MAX;
+	else
+		ibp->shm_nattch = bp->shm_nattch;
 	ibp->shm_cnattch = 0;			/* ignored anyway */
 	ibp->shm_atime = bp->shm_atime;
 	ibp->shm_dtime = bp->shm_dtime;
@@ -437,7 +440,6 @@ struct shmid_ds *bp;
 	bp->shm_atime = ibp->shm_atime;
 	bp->shm_dtime = ibp->shm_dtime;
 	bp->shm_ctime = ibp->shm_ctime;
-	bp->shm_internal = (void *)0;		/* ignored anyway */
 	return;
 }
 
@@ -457,7 +459,7 @@ ibcs2_shmat(struct thread *td, void *v)
 	ap.shmid = uap->shmid;
 	ap.shmaddr = uap->shmaddr;
 	ap.shmflg = uap->shmflg;
-	return (shmat(td, &ap));
+	return (sys_shmat(td, &ap));
 }
 
 struct ibcs2_shmctl_args {
@@ -512,7 +514,7 @@ ibcs2_shmdt(struct thread *td, void *v)
 	struct shmdt_args ap;
 
 	ap.shmaddr = uap->shmaddr;
-	return (shmdt(td, &ap));
+	return (sys_shmdt(td, &ap));
 }
 
 struct ibcs2_shmget_args {
@@ -531,7 +533,7 @@ ibcs2_shmget(struct thread *td, void *v)
 	ap.key = uap->key;
 	ap.size = uap->size;
 	ap.shmflg = uap->shmflg;
-	return (shmget(td, &ap));
+	return (sys_shmget(td, &ap));
 }
 
 int

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_timer.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp_timer.h,v 1.39.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_TCP_TIMER_H_
@@ -86,9 +86,6 @@
 #define	TCPTV_KEEPINTVL	( 75*hz)		/* default probe interval */
 #define	TCPTV_KEEPCNT	8			/* max probes before drop */
 
-#define	TCPTV_INFLIGHT_RTTTHRESH (10*hz/1000)	/* below which inflight
-						   disengages, in msec */
-
 #define TCPTV_FINWAIT2_TIMEOUT (60*hz)         /* FIN_WAIT_2 timeout if no receiver */
 
 /*
@@ -141,6 +138,8 @@ static const char *tcptimers[] =
 
 #ifdef _KERNEL
 
+struct xtcp_timer;
+
 struct tcp_timer {
 	struct	callout tt_rexmt;	/* retransmit timer */
 	struct	callout tt_persist;	/* retransmit persistence */
@@ -154,10 +153,16 @@ struct tcp_timer {
 #define TT_KEEP		0x08
 #define TT_2MSL		0x10
 
+#define	TP_KEEPINIT(tp)	((tp)->t_keepinit ? (tp)->t_keepinit : tcp_keepinit)
+#define	TP_KEEPIDLE(tp)	((tp)->t_keepidle ? (tp)->t_keepidle : tcp_keepidle)
+#define	TP_KEEPINTVL(tp) ((tp)->t_keepintvl ? (tp)->t_keepintvl : tcp_keepintvl)
+#define	TP_KEEPCNT(tp)	((tp)->t_keepcnt ? (tp)->t_keepcnt : tcp_keepcnt)
+#define	TP_MAXIDLE(tp)	(TP_KEEPCNT(tp) * TP_KEEPINTVL(tp))
+
 extern int tcp_keepinit;		/* time to establish connection */
 extern int tcp_keepidle;		/* time before keepalive probes begin */
 extern int tcp_keepintvl;		/* time between keepalive probes */
-extern int tcp_maxidle;			/* time to drop after starting probes */
+extern int tcp_keepcnt;			/* number of keepalives */
 extern int tcp_delacktime;		/* time before sending a delayed ACK */
 extern int tcp_maxpersistidle;
 extern int tcp_rexmit_min;
@@ -177,6 +182,8 @@ void	tcp_timer_keep(void *xtp);
 void	tcp_timer_persist(void *xtp);
 void	tcp_timer_rexmt(void *xtp);
 void	tcp_timer_delack(void *xtp);
+void	tcp_timer_to_xtimer(struct tcpcb *tp, struct tcp_timer *timer,
+	struct xtcp_timer *xtimer);
 
 #endif /* _KERNEL */
 

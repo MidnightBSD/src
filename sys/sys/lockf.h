@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/lockf.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)lockf.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/sys/lockf.h,v 1.20.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_LOCKF_H_
@@ -81,6 +80,7 @@ struct lockf_entry {
 	LIST_ENTRY(lockf_entry) lf_link;  /* (s) Linkage for lock lists */
 	struct lockf_edge_list lf_outedges; /* (s) list of out-edges */
 	struct lockf_edge_list lf_inedges; /* (s) list of out-edges */
+	int	lf_refs;	    /* (s) ref count */
 };
 LIST_HEAD(lockf_entry_list, lockf_entry);
 

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if_loop.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_disc.c,v 1.54.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -66,7 +66,7 @@ struct disc_softc {
 };
 
 static int	discoutput(struct ifnet *, struct mbuf *,
-		    struct sockaddr *, struct rtentry *);
+		    struct sockaddr *, struct route *);
 static void	discrtrequest(int, struct rtentry *, struct rt_addrinfo *);
 static int	discioctl(struct ifnet *, u_long, caddr_t);
 static int	disc_clone_create(struct if_clone *, int, caddr_t);
@@ -92,6 +92,16 @@ disc_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	ifp->if_softc = sc;
 	if_initname(ifp, ifc->ifc_name, unit);
 	ifp->if_mtu = DSMTU;
+	/*
+	 * IFF_LOOPBACK should not be removed from disc's flags because
+	 * it controls what PF-specific routes are magically added when
+	 * a network address is assigned to the interface.  Things just
+	 * won't work as intended w/o such routes because the output
+	 * interface selection for a packet is totally route-driven.
+	 * A valid alternative to IFF_LOOPBACK can be IFF_BROADCAST or
+	 * IFF_POINTOPOINT, but it would result in different properties
+	 * of the interface.
+	 */
 	ifp->if_flags = IFF_LOOPBACK | IFF_MULTICAST;
 	ifp->if_drv_flags = IFF_DRV_RUNNING;
 	ifp->if_ioctl = discioctl;
@@ -146,7 +156,7 @@ DECLARE_MODULE(if_disc, disc_mod, SI_SUB_PSEUDO, SI_ORDER_ANY);
 
 static int
 discoutput(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
-    struct rtentry *rt)
+    struct route *ro)
 {
 	u_int32_t af;
 

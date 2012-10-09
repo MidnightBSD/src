@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,13 +33,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_subs.c,v 1.146.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
  * the nfs op functions. They do things like create the rpc header and
  * copy data between mbuf chains and uio lists.
  */
+
+#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,18 +59,17 @@ __FBSDID("$FreeBSD: src/sys/nfsclient/nfs_subs.c,v 1.146.2.2.2.1 2008/11/25 02:5
 #include <sys/sysent.h>
 #include <sys/syscall.h>
 #include <sys/sysproto.h>
+#include <sys/taskqueue.h>
 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_extern.h>
 #include <vm/uma.h>
 
-#include <rpc/rpcclnt.h>
-
-#include <nfs/rpcv2.h>
 #include <nfs/nfsproto.h>
 #include <nfsclient/nfs.h>
 #include <nfsclient/nfsnode.h>
+#include <nfs/nfs_kdtrace.h>
 #include <nfs/xdr_subs.h>
 #include <nfsclient/nfsm_subs.h>
 #include <nfsclient/nfsmount.h>
@@ -82,13 +82,29 @@ __FBSDID("$FreeBSD: src/sys/nfsclient/nfs_subs.c,v 1.146.2.2.2.1 2008/11/25 02:5
  */
 #include <machine/stdarg.h>
 
+#ifdef KDTRACE_HOOKS
+dtrace_nfsclient_attrcache_flush_probe_func_t
+    dtrace_nfsclient_attrcache_flush_done_probe;
+uint32_t nfsclient_attrcache_flush_done_id;
+
+dtrace_nfsclient_attrcache_get_hit_probe_func_t
+    dtrace_nfsclient_attrcache_get_hit_probe;
+uint32_t nfsclient_attrcache_get_hit_id;
+
+dtrace_nfsclient_attrcache_get_miss_probe_func_t
+    dtrace_nfsclient_attrcache_get_miss_probe;
+uint32_t nfsclient_attrcache_get_miss_id;
+
+dtrace_nfsclient_attrcache_load_probe_func_t
+    dtrace_nfsclient_attrcache_load_done_probe;
+uint32_t nfsclient_attrcache_load_done_id;
+#endif /* !KDTRACE_HOOKS */
+
 /*
  * Data items converted to xdr at startup, since they are constant
  * This is kinda hokey, but may save a little time doing byte swaps
  */
 u_int32_t	nfs_xdrneg1;
-u_int32_t	rpc_call, rpc_vers, rpc_reply, rpc_msgdenied, rpc_autherr,
-		    rpc_mismatch, rpc_auth_unix, rpc_msgaccepted;
 u_int32_t	nfs_true, nfs_false;
 
 /* And other global data */
@@ -100,10 +116,9 @@ static enum vtype nv2tov_type[8]= {
 int		nfs_ticks;
 int		nfs_pbuf_freecnt = -1;	/* start out unlimited */
 
-struct nfs_reqq	nfs_reqq;
-struct mtx nfs_reqq_mtx;
 struct nfs_bufq	nfs_bufq;
 static struct mtx nfs_xid_mtx;
+struct task	nfs_nfsiodnew_task;
 
 /*
  * and the reverse mapping from generic to Version 2 procedure numbers
@@ -166,92 +181,11 @@ nfsm_reqhead(struct vnode *vp, u_long procid, int hsiz)
 {
 	struct mbuf *mb;
 
-	MGET(mb, M_TRYWAIT, MT_DATA);
+	MGET(mb, M_WAIT, MT_DATA);
 	if (hsiz >= MINCLSIZE)
-		MCLGET(mb, M_TRYWAIT);
+		MCLGET(mb, M_WAIT);
 	mb->m_len = 0;
 	return (mb);
-}
-
-/*
- * Build the RPC header and fill in the authorization info.
- * The authorization string argument is only used when the credentials
- * come from outside of the kernel.
- * Returns the head of the mbuf list.
- */
-struct mbuf *
-nfsm_rpchead(struct ucred *cr, int nmflag, int procid, int auth_type,
-    int auth_len, struct mbuf *mrest, int mrest_len, struct mbuf **mbp,
-    u_int32_t **xidpp)
-{
-	struct mbuf *mb;
-	u_int32_t *tl;
-	caddr_t bpos;
-	int i;
-	struct mbuf *mreq;
-	int grpsiz, authsiz;
-
-	authsiz = nfsm_rndup(auth_len);
-	MGETHDR(mb, M_TRYWAIT, MT_DATA);
-	if ((authsiz + 10 * NFSX_UNSIGNED) >= MINCLSIZE) {
-		MCLGET(mb, M_TRYWAIT);
-	} else if ((authsiz + 10 * NFSX_UNSIGNED) < MHLEN) {
-		MH_ALIGN(mb, authsiz + 10 * NFSX_UNSIGNED);
-	} else {
-		MH_ALIGN(mb, 8 * NFSX_UNSIGNED);
-	}
-	mb->m_len = 0;
-	mreq = mb;
-	bpos = mtod(mb, caddr_t);
-
-	/*
-	 * First the RPC header.
-	 */
-	tl = nfsm_build(u_int32_t *, 8 * NFSX_UNSIGNED);
-
-	*xidpp = tl;
-	*tl++ = txdr_unsigned(nfs_xid_gen());
-	*tl++ = rpc_call;
-	*tl++ = rpc_vers;
-	*tl++ = txdr_unsigned(NFS_PROG);
-	if (nmflag & NFSMNT_NFSV3) {
-		*tl++ = txdr_unsigned(NFS_VER3);
-		*tl++ = txdr_unsigned(procid);
-	} else {
-		*tl++ = txdr_unsigned(NFS_VER2);
-		*tl++ = txdr_unsigned(nfsv2_procid[procid]);
-	}
-
-	/*
-	 * And then the authorization cred.
-	 */
-	*tl++ = txdr_unsigned(auth_type);
-	*tl = txdr_unsigned(authsiz);
-	switch (auth_type) {
-	case RPCAUTH_UNIX:
-		tl = nfsm_build(u_int32_t *, auth_len);
-		*tl++ = 0;		/* stamp ?? */
-		*tl++ = 0;		/* NULL hostname */
-		*tl++ = txdr_unsigned(cr->cr_uid);
-		*tl++ = txdr_unsigned(cr->cr_groups[0]);
-		grpsiz = (auth_len >> 2) - 5;
-		*tl++ = txdr_unsigned(grpsiz);
-		for (i = 1; i <= grpsiz; i++)
-			*tl++ = txdr_unsigned(cr->cr_groups[i]);
-		break;
-	}
-
-	/*
-	 * And the verifier...
-	 */
-	tl = nfsm_build(u_int32_t *, 2 * NFSX_UNSIGNED);
-	*tl++ = txdr_unsigned(RPCAUTH_NULL);
-	*tl = 0;
-	mb->m_next = mrest;
-	mreq->m_pkthdr.len = authsiz + 10 * NFSX_UNSIGNED + mrest_len;
-	mreq->m_pkthdr.rcvif = NULL;
-	*mbp = mb;
-	return (mreq);
 }
 
 /*
@@ -267,10 +201,7 @@ nfsm_uiotombuf(struct uio *uiop, struct mbuf **mq, int siz, caddr_t *bpos)
 	int uiosiz, clflg, rem;
 	char *cp;
 
-#ifdef DIAGNOSTIC
-	if (uiop->uio_iovcnt != 1)
-		panic("nfsm_uiotombuf: iovcnt != 1");
-#endif
+	KASSERT(uiop->uio_iovcnt == 1, ("nfsm_uiotombuf: iovcnt != 1"));
 
 	if (siz > MLEN)		/* or should it >= MCLBYTES ?? */
 		clflg = 1;
@@ -287,9 +218,9 @@ nfsm_uiotombuf(struct uio *uiop, struct mbuf **mq, int siz, caddr_t *bpos)
 		while (left > 0) {
 			mlen = M_TRAILINGSPACE(mp);
 			if (mlen == 0) {
-				MGET(mp, M_TRYWAIT, MT_DATA);
+				MGET(mp, M_WAIT, MT_DATA);
 				if (clflg)
-					MCLGET(mp, M_TRYWAIT);
+					MCLGET(mp, M_WAIT);
 				mp->m_len = 0;
 				mp2->m_next = mp;
 				mp2 = mp;
@@ -320,7 +251,7 @@ nfsm_uiotombuf(struct uio *uiop, struct mbuf **mq, int siz, caddr_t *bpos)
 	}
 	if (rem > 0) {
 		if (rem > M_TRAILINGSPACE(mp)) {
-			MGET(mp, M_TRYWAIT, MT_DATA);
+			MGET(mp, M_WAIT, MT_DATA);
 			mp->m_len = 0;
 			mp2->m_next = mp;
 		}
@@ -365,9 +296,9 @@ nfsm_strtmbuf(struct mbuf **mb, char **bpos, const char *cp, long siz)
 	}
 	/* Loop around adding mbufs */
 	while (siz > 0) {
-		MGET(m1, M_TRYWAIT, MT_DATA);
+		MGET(m1, M_WAIT, MT_DATA);
 		if (siz > MLEN)
-			MCLGET(m1, M_TRYWAIT);
+			MCLGET(m1, M_WAIT);
 		m1->m_len = NFSMSIZ(m1);
 		m2->m_next = m1;
 		m2 = m1;
@@ -407,14 +338,6 @@ nfs_init(struct vfsconf *vfsp)
 
 	nfsmount_zone = uma_zcreate("NFSMOUNT", sizeof(struct nfsmount),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
-	rpc_vers = txdr_unsigned(RPC_VER2);
-	rpc_call = txdr_unsigned(RPC_CALL);
-	rpc_reply = txdr_unsigned(RPC_REPLY);
-	rpc_msgdenied = txdr_unsigned(RPC_MSGDENIED);
-	rpc_msgaccepted = txdr_unsigned(RPC_MSGACCEPTED);
-	rpc_mismatch = txdr_unsigned(RPC_MISMATCH);
-	rpc_autherr = txdr_unsigned(RPC_AUTHERR);
-	rpc_auth_unix = txdr_unsigned(RPCAUTH_UNIX);
 	nfs_true = txdr_unsigned(TRUE);
 	nfs_false = txdr_unsigned(FALSE);
 	nfs_xdrneg1 = txdr_unsigned(-1);
@@ -423,7 +346,7 @@ nfs_init(struct vfsconf *vfsp)
 		nfs_ticks = 1;
 	/* Ensure async daemons disabled */
 	for (i = 0; i < NFS_MAXASYNCDAEMON; i++) {
-		nfs_iodwant[i] = NULL;
+		nfs_iodwant[i] = NFSIOD_NOT_AVAILABLE;
 		nfs_iodmount[i] = NULL;
 	}
 	nfs_nhinit();			/* Init the nfsnode table */
@@ -431,11 +354,9 @@ nfs_init(struct vfsconf *vfsp)
 	/*
 	 * Initialize reply list and start timer
 	 */
-	TAILQ_INIT(&nfs_reqq);
-	callout_init(&nfs_callout, CALLOUT_MPSAFE);
-	mtx_init(&nfs_reqq_mtx, "NFS reqq lock", NULL, MTX_DEF);
 	mtx_init(&nfs_iod_mtx, "NFS iod lock", NULL, MTX_DEF);
 	mtx_init(&nfs_xid_mtx, "NFS xid lock", NULL, MTX_DEF);
+	TASK_INIT(&nfs_nfsiodnew_task, 0, nfs_nfsiodnew_tq, NULL);
 
 	nfs_pbuf_freecnt = nswbuf / 2 + 1;
 
@@ -447,19 +368,18 @@ nfs_uninit(struct vfsconf *vfsp)
 {
 	int i;
 
-	callout_stop(&nfs_callout);
-
-	KASSERT(TAILQ_EMPTY(&nfs_reqq),
-	    ("nfs_uninit: request queue not empty"));
-
 	/*
 	 * Tell all nfsiod processes to exit. Clear nfs_iodmax, and wakeup
 	 * any sleeping nfsiods so they check nfs_iodmax and exit.
+	 * Drain nfsiodnew task before we wait for them to finish.
 	 */
 	mtx_lock(&nfs_iod_mtx);
 	nfs_iodmax = 0;
+	mtx_unlock(&nfs_iod_mtx);
+	taskqueue_drain(taskqueue_thread, &nfs_nfsiodnew_task);
+	mtx_lock(&nfs_iod_mtx);
 	for (i = 0; i < nfs_numasync; i++)
-		if (nfs_iodwant[i])
+		if (nfs_iodwant[i] == NFSIOD_AVAILABLE)
 			wakeup(&nfs_iodwant[i]);
 	/* The last nfsiod to exit will wake us up when nfs_numasync hits 0 */
 	while (nfs_numasync)
@@ -490,31 +410,28 @@ nfs_dircookie_unlock(struct nfsnode *np)
 }
 
 int
-nfs_upgrade_vnlock(struct vnode *vp, struct thread *td)
+nfs_upgrade_vnlock(struct vnode *vp)
 {
 	int old_lock;
-	
- 	if ((old_lock = VOP_ISLOCKED(vp, td)) != LK_EXCLUSIVE) {
- 		if (old_lock == LK_SHARED) {
- 			/* Upgrade to exclusive lock, this might block */
- 			vn_lock(vp, LK_UPGRADE | LK_RETRY, td);
- 		} else {
- 			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
- 		}
+
+	ASSERT_VOP_LOCKED(vp, "nfs_upgrade_vnlock");
+	old_lock = VOP_ISLOCKED(vp);
+	if (old_lock != LK_EXCLUSIVE) {
+		KASSERT(old_lock == LK_SHARED,
+		    ("nfs_upgrade_vnlock: wrong old_lock %d", old_lock));
+		/* Upgrade to exclusive lock, this might block */
+		vn_lock(vp, LK_UPGRADE | LK_RETRY);
   	}
-	return old_lock;
+	return (old_lock);
 }
 
 void
-nfs_downgrade_vnlock(struct vnode *vp, struct thread *td, int old_lock)
+nfs_downgrade_vnlock(struct vnode *vp, int old_lock)
 {
 	if (old_lock != LK_EXCLUSIVE) {
- 		if (old_lock == LK_SHARED) {
- 			/* Downgrade from exclusive lock, this might block */
- 			vn_lock(vp, LK_DOWNGRADE, td);
- 		} else {
- 			VOP_UNLOCK(vp, 0, td);
- 		}
+		KASSERT(old_lock == LK_SHARED, ("wrong old_lock %d", old_lock));
+		/* Downgrade from exclusive lock. */
+		vn_lock(vp, LK_DOWNGRADE | LK_RETRY);
   	}
 }
 
@@ -525,7 +442,7 @@ nfs_printf(const char *fmt, ...)
 
 	mtx_lock(&Giant);
 	va_start(ap, fmt);
-	printf(fmt, ap);
+	vprintf(fmt, ap);
 	va_end(ap);
 	mtx_unlock(&Giant);
 }
@@ -551,7 +468,7 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 	struct vnode *vp = *vpp;
 	struct vattr *vap;
 	struct nfs_fattr *fp;
-	struct nfsnode *np;
+	struct nfsnode *np = NULL;
 	int32_t t1;
 	caddr_t cp2;
 	int rdev;
@@ -560,13 +477,15 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 	u_short vmode;
 	struct timespec mtime, mtime_save;
 	int v3 = NFS_ISV3(vp);
-	struct thread *td = curthread;
+	int error = 0;
 
 	md = *mdp;
 	t1 = (mtod(md, caddr_t) + md->m_len) - *dposp;
-	cp2 = nfsm_disct(mdp, dposp, NFSX_FATTR(v3), t1, M_TRYWAIT);
-	if (cp2 == NULL)
-		return EBADRPC;
+	cp2 = nfsm_disct(mdp, dposp, NFSX_FATTR(v3), t1, M_WAIT);
+	if (cp2 == NULL) {
+		error = EBADRPC;
+		goto out;
+	}
 	fp = (struct nfs_fattr *)cp2;
 	if (v3) {
 		vtyp = nfsv3tov_type(fp->fa_type);
@@ -661,14 +580,6 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 		vap->va_filerev = 0;
 	}
 	np->n_attrstamp = time_second;
-	/* Timestamp the NFS otw getattr fetch */
-	if (td->td_proc) {
-		np->n_ac_ts_tid = td->td_tid;
-		np->n_ac_ts_pid = td->td_proc->p_pid;
-		np->n_ac_ts_syscalls = td->td_syscalls;
-	} else
-		bzero(&np->n_ac_ts, sizeof(struct nfs_attrcache_timestamp));
-	
 	if (vap->va_size != np->n_size) {
 		if (vap->va_type == VREG) {
 			if (dontshrink && vap->va_size < np->n_size) {
@@ -679,6 +590,7 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 				 */
 				vap->va_size = np->n_size;
 				np->n_attrstamp = 0;
+				KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
 			} else if (np->n_flag & NMODIFIED) {
 				/*
 				 * We've modified the file: Use the larger
@@ -711,9 +623,11 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 	 * We detect this by for the mtime moving back. We invalidate the 
 	 * attrcache when this happens.
 	 */
-	if (timespeccmp(&mtime_save, &vap->va_mtime, >))
+	if (timespeccmp(&mtime_save, &vap->va_mtime, >)) {
 		/* Size changed or mtime went backwards */
 		np->n_attrstamp = 0;
+		KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
+	}
 	if (vaper != NULL) {
 		bcopy((caddr_t)vap, (caddr_t)vaper, sizeof(*vap));
 		if (np->n_flag & NCHG) {
@@ -723,15 +637,26 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 				vaper->va_mtime = np->n_mtim;
 		}
 	}
+
+#ifdef KDTRACE_HOOKS
+	if (np->n_attrstamp != 0)
+		KDTRACE_NFS_ATTRCACHE_LOAD_DONE(vp, &np->n_vattr, 0);
+#endif
 	mtx_unlock(&np->n_mtx);
-	return (0);
+out:
+#ifdef KDTRACE_HOOKS
+	if (error)
+		KDTRACE_NFS_ATTRCACHE_LOAD_DONE(vp, NULL, error);
+#endif
+	return (error);
 }
 
 #ifdef NFS_ACDEBUG
 #include <sys/sysctl.h>
-SYSCTL_DECL(_vfs_nfs);
+SYSCTL_DECL(_vfs_oldnfs);
 static int nfs_acdebug;
-SYSCTL_INT(_vfs_nfs, OID_AUTO, acdebug, CTLFLAG_RW, &nfs_acdebug, 0, "");
+SYSCTL_INT(_vfs_oldnfs, OID_AUTO, acdebug, CTLFLAG_RW, &nfs_acdebug, 0,
+    "Toggle acdebug (attribute cache debug) flag");
 #endif
 
 /*
@@ -788,7 +713,11 @@ nfs_getattrcache(struct vnode *vp, struct vattr *vaper)
 	if ((time_second - np->n_attrstamp) >= timeo) {
 		nfsstats.attrcache_misses++;
 		mtx_unlock(&np->n_mtx);
-		return( ENOENT);
+#ifdef NFS_ACDEBUG
+		mtx_unlock(&Giant);	/* nfs_printf() */
+#endif
+		KDTRACE_NFS_ATTRCACHE_GET_MISS(vp);
+		return (ENOENT);
 	}
 	nfsstats.attrcache_hits++;
 	if (vap->va_size != np->n_size) {
@@ -817,7 +746,31 @@ nfs_getattrcache(struct vnode *vp, struct vattr *vaper)
 #ifdef NFS_ACDEBUG
 	mtx_unlock(&Giant);	/* nfs_printf() */
 #endif
+	KDTRACE_NFS_ATTRCACHE_GET_HIT(vp, vap);
 	return (0);
+}
+
+/*
+ * Purge all cached information about an NFS vnode including name
+ * cache entries, the attribute cache, and the access cache.  This is
+ * called when an NFS request for a node fails with a stale
+ * filehandle.
+ */
+void
+nfs_purgecache(struct vnode *vp)
+{
+	struct nfsnode *np;
+	int i;
+
+	np = VTONFS(vp);
+	cache_purge(vp);
+	mtx_lock(&np->n_mtx);
+	np->n_attrstamp = 0;
+	KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
+	for (i = 0; i < NFS_ACCESSCACHESIZE; i++)
+		np->n_accesscache[i].stamp = 0;
+	KDTRACE_NFS_ACCESSCACHE_FLUSH_DONE(vp);
+	mtx_unlock(&np->n_mtx);
 }
 
 static nfsuint64 nfs_nullcookie = { { 0, 0 } };
@@ -834,17 +787,14 @@ nfs_getcookie(struct nfsnode *np, off_t off, int add)
 	
 	pos = (uoff_t)off / NFS_DIRBLKSIZ;
 	if (pos == 0 || off < 0) {
-#ifdef DIAGNOSTIC
-		if (add)
-			panic("nfs getcookie add at <= 0");
-#endif
+		KASSERT(!add, ("nfs getcookie add at <= 0"));
 		return (&nfs_nullcookie);
 	}
 	pos--;
 	dp = LIST_FIRST(&np->n_cookies);
 	if (!dp) {
 		if (add) {
-			MALLOC(dp, struct nfsdmap *, sizeof (struct nfsdmap),
+			dp = malloc(sizeof (struct nfsdmap),
 				M_NFSDIROFF, M_WAITOK);
 			dp->ndm_eocookie = 0;
 			LIST_INSERT_HEAD(&np->n_cookies, dp, ndm_list);
@@ -859,7 +809,7 @@ nfs_getcookie(struct nfsnode *np, off_t off, int add)
 				goto out;
 			dp = LIST_NEXT(dp, ndm_list);
 		} else if (add) {
-			MALLOC(dp2, struct nfsdmap *, sizeof (struct nfsdmap),
+			dp2 = malloc(sizeof (struct nfsdmap),
 				M_NFSDIROFF, M_WAITOK);
 			dp2->ndm_eocookie = 0;
 			LIST_INSERT_AFTER(dp, dp2, ndm_list);
@@ -888,10 +838,7 @@ nfs_invaldir(struct vnode *vp)
 {
 	struct nfsnode *np = VTONFS(vp);
 
-#ifdef DIAGNOSTIC
-	if (vp->v_type != VDIR)
-		panic("nfs: invaldir not dir");
-#endif
+	KASSERT(vp->v_type == VDIR, ("nfs: invaldir not dir"));
 	nfs_dircookie_lock(np);
 	np->n_direofoffset = 0;
 	np->n_cookieverf.nfsuquad[0] = 0;
@@ -916,28 +863,22 @@ nfs_clearcommit(struct mount *mp)
 {
 	struct vnode *vp, *nvp;
 	struct buf *bp, *nbp;
-	int s;
+	struct bufobj *bo;
 
-	s = splbio();
-	MNT_ILOCK(mp);
-	MNT_VNODE_FOREACH(vp, mp, nvp) {
-		VI_LOCK(vp);
-		if (vp->v_iflag & VI_DOOMED) {
-			VI_UNLOCK(vp);
-			continue;
-		}
-		MNT_IUNLOCK(mp);
-		TAILQ_FOREACH_SAFE(bp, &vp->v_bufobj.bo_dirty.bv_hd, b_bobufs, nbp) {
-			if (BUF_REFCNT(bp) == 0 &&
+	MNT_VNODE_FOREACH_ALL(vp, mp, nvp) {
+		bo = &vp->v_bufobj;
+		vholdl(vp);
+		VI_UNLOCK(vp);
+		BO_LOCK(bo);
+		TAILQ_FOREACH_SAFE(bp, &bo->bo_dirty.bv_hd, b_bobufs, nbp) {
+			if (!BUF_ISLOCKED(bp) &&
 			    (bp->b_flags & (B_DELWRI | B_NEEDCOMMIT))
 				== (B_DELWRI | B_NEEDCOMMIT))
 				bp->b_flags &= ~(B_NEEDCOMMIT | B_CLUSTEROK);
 		}
-		VI_UNLOCK(vp);
-		MNT_ILOCK(mp);
+		BO_UNLOCK(bo);
+		vdrop(vp);
 	}
-	MNT_IUNLOCK(mp);
-	splx(s);
 }
 
 /*
@@ -1028,8 +969,8 @@ nfsm_loadattr_xx(struct vnode **v, struct vattr *va, struct mbuf **md,
 }
 
 int
-nfsm_postop_attr_xx(struct vnode **v, int *f, struct mbuf **md,
-		    caddr_t *dpos)
+nfsm_postop_attr_xx(struct vnode **v, int *f, struct vattr *va,
+		    struct mbuf **md, caddr_t *dpos)
 {
 	u_int32_t *tl;
 	int t1;
@@ -1040,7 +981,7 @@ nfsm_postop_attr_xx(struct vnode **v, int *f, struct mbuf **md,
 		return EBADRPC;
 	*f = fxdr_unsigned(int, *tl);
 	if (*f != 0) {
-		t1 = nfs_loadattrcache(&ttvp, md, dpos, NULL, 1);
+		t1 = nfs_loadattrcache(&ttvp, md, dpos, va, 1);
 		if (t1 != 0) {
 			*f = 0;
 			return t1;
@@ -1070,7 +1011,7 @@ nfsm_wcc_data_xx(struct vnode **v, int *f, struct mbuf **md, caddr_t *dpos)
 				  VTONFS(*v)->n_mtime.tv_nsec == fxdr_unsigned(u_int32_t, *(tl + 3))); 
 		mtx_unlock(&(VTONFS(*v))->n_mtx);
 	}
-	t1 = nfsm_postop_attr_xx(v, &ttattrf, md, dpos);
+	t1 = nfsm_postop_attr_xx(v, &ttattrf, NULL, md, dpos);
 	if (t1)
 		return t1;
 	if (*f)

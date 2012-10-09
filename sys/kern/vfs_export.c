@@ -35,17 +35,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_export.c,v 1.341.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/dirent.h>
 #include <sys/domain.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
+#include <sys/rwlock.h>
 #include <sys/refcount.h>
 #include <sys/socket.h>
 #include <sys/systm.h>
@@ -67,7 +69,9 @@ static struct netcred *vfs_export_lookup(struct mount *, struct sockaddr *);
 struct netcred {
 	struct	radix_node netc_rnodes[2];
 	int	netc_exflags;
-	struct	ucred netc_anon;
+	struct	ucred *netc_anon;
+	int	netc_numsecflavors;
+	int	netc_secflavors[MAXSECFLAVORS];
 };
 
 /*
@@ -80,7 +84,7 @@ struct netexport {
 
 /*
  * Build hash lists of net addresses and hang them off the mount point.
- * Called by ufs_mount() to set up the lists of export addresses.
+ * Called by vfs_export() to set up the lists of export addresses.
  */
 static int
 vfs_hang_addrlist(struct mount *mp, struct netexport *nep,
@@ -115,12 +119,15 @@ vfs_hang_addrlist(struct mount *mp, struct netexport *nep,
 		}
 		np = &nep->ne_defexported;
 		np->netc_exflags = argp->ex_flags;
-		bzero(&np->netc_anon, sizeof(np->netc_anon));
-		np->netc_anon.cr_uid = argp->ex_anon.cr_uid;
-		np->netc_anon.cr_ngroups = argp->ex_anon.cr_ngroups;
-		bcopy(argp->ex_anon.cr_groups, np->netc_anon.cr_groups,
-		    sizeof(np->netc_anon.cr_groups));
-		refcount_init(&np->netc_anon.cr_ref, 1);
+		np->netc_anon = crget();
+		np->netc_anon->cr_uid = argp->ex_anon.cr_uid;
+		crsetgroups(np->netc_anon, argp->ex_anon.cr_ngroups,
+		    argp->ex_anon.cr_groups);
+		np->netc_anon->cr_prison = &prison0;
+		prison_hold(np->netc_anon->cr_prison);
+		np->netc_numsecflavors = argp->ex_numsecflavors;
+		bcopy(argp->ex_secflavors, np->netc_secflavors,
+		    sizeof(np->netc_secflavors));
 		MNT_ILOCK(mp);
 		mp->mnt_flag |= MNT_DEFEXPORTED;
 		MNT_IUNLOCK(mp);
@@ -198,12 +205,15 @@ vfs_hang_addrlist(struct mount *mp, struct netexport *nep,
 		goto out;
 	}
 	np->netc_exflags = argp->ex_flags;
-	bzero(&np->netc_anon, sizeof(np->netc_anon));
-	np->netc_anon.cr_uid = argp->ex_anon.cr_uid;
-	np->netc_anon.cr_ngroups = argp->ex_anon.cr_ngroups;
-	bcopy(argp->ex_anon.cr_groups, np->netc_anon.cr_groups,
-	    sizeof(np->netc_anon.cr_groups));
-	refcount_init(&np->netc_anon.cr_ref, 1);
+	np->netc_anon = crget();
+	np->netc_anon->cr_uid = argp->ex_anon.cr_uid;
+	crsetgroups(np->netc_anon, argp->ex_anon.cr_ngroups,
+	    np->netc_anon->cr_groups);
+	np->netc_anon->cr_prison = &prison0;
+	prison_hold(np->netc_anon->cr_prison);
+	np->netc_numsecflavors = argp->ex_numsecflavors;
+	bcopy(argp->ex_secflavors, np->netc_secflavors,
+	    sizeof(np->netc_secflavors));
 	return (0);
 out:
 	free(np, M_NETADDR);
@@ -215,9 +225,13 @@ out:
 static int
 vfs_free_netcred(struct radix_node *rn, void *w)
 {
-	register struct radix_node_head *rnh = (struct radix_node_head *) w;
+	struct radix_node_head *rnh = (struct radix_node_head *) w;
+	struct ucred *cred;
 
 	(*rnh->rnh_deladdr) (rn->rn_key, rn->rn_mask, rnh);
+	cred = ((struct netcred *)rn)->netc_anon;
+	if (cred != NULL)
+		crfree(cred);
 	free(rn, M_NETADDR);
 	return (0);
 }
@@ -228,17 +242,24 @@ vfs_free_netcred(struct radix_node *rn, void *w)
 static void
 vfs_free_addrlist(struct netexport *nep)
 {
-	register int i;
-	register struct radix_node_head *rnh;
+	int i;
+	struct radix_node_head *rnh;
+	struct ucred *cred;
 
-	for (i = 0; i <= AF_MAX; i++)
+	for (i = 0; i <= AF_MAX; i++) {
 		if ((rnh = nep->ne_rtable[i])) {
 			RADIX_NODE_HEAD_LOCK(rnh);
 			(*rnh->rnh_walktree) (rnh, vfs_free_netcred, rnh);
+			RADIX_NODE_HEAD_UNLOCK(rnh);
 			RADIX_NODE_HEAD_DESTROY(rnh);
 			free(rnh, M_RTABLE);
 			nep->ne_rtable[i] = NULL;	/* not SMP safe XXX */
 		}
+	}
+	cred = nep->ne_defexported.netc_anon;
+	if (cred != NULL)
+		crfree(cred);
+
 }
 
 /*
@@ -253,9 +274,13 @@ vfs_export(struct mount *mp, struct export_args *argp)
 	struct netexport *nep;
 	int error;
 
-	nep = mp->mnt_export;
+	if (argp->ex_numsecflavors < 0
+	    || argp->ex_numsecflavors >= MAXSECFLAVORS)
+		return (EINVAL);
+
 	error = 0;
-	lockmgr(&mp->mnt_explock, LK_EXCLUSIVE, NULL, curthread);
+	lockmgr(&mp->mnt_explock, LK_EXCLUSIVE, NULL);
+	nep = mp->mnt_export;
 	if (argp->ex_flags & MNT_DELEXPORT) {
 		if (nep == NULL) {
 			error = ENOENT;
@@ -295,7 +320,7 @@ vfs_export(struct mount *mp, struct export_args *argp)
 	}
 
 out:
-	lockmgr(&mp->mnt_explock, LK_RELEASE, NULL, curthread);
+	lockmgr(&mp->mnt_explock, LK_RELEASE, NULL);
 	/*
 	 * Once we have executed the vfs_export() command, we do
 	 * not want to keep the "export" option around in the
@@ -330,7 +355,7 @@ vfs_setpublicfs(struct mount *mp, struct netexport *nep,
 		if (nfs_pub.np_valid) {
 			nfs_pub.np_valid = 0;
 			if (nfs_pub.np_index != NULL) {
-				FREE(nfs_pub.np_index, M_TEMP);
+				free(nfs_pub.np_index, M_TEMP);
 				nfs_pub.np_index = NULL;
 			}
 		}
@@ -349,7 +374,7 @@ vfs_setpublicfs(struct mount *mp, struct netexport *nep,
 	bzero(&nfs_pub.np_handle, sizeof(nfs_pub.np_handle));
 	nfs_pub.np_handle.fh_fsid = mp->mnt_stat.f_fsid;
 
-	if ((error = VFS_ROOT(mp, LK_EXCLUSIVE, &rvp, curthread /* XXX */)))
+	if ((error = VFS_ROOT(mp, LK_EXCLUSIVE, &rvp)))
 		return (error);
 
 	if ((error = VOP_VPTOFH(rvp, &nfs_pub.np_handle.fh_fid)))
@@ -361,8 +386,9 @@ vfs_setpublicfs(struct mount *mp, struct netexport *nep,
 	 * If an indexfile was specified, pull it in.
 	 */
 	if (argp->ex_indexfile != NULL) {
-		MALLOC(nfs_pub.np_index, char *, MAXNAMLEN + 1, M_TEMP,
-		    M_WAITOK);
+		if (nfs_pub.np_index != NULL)
+			nfs_pub.np_index = malloc(MAXNAMLEN + 1, M_TEMP,
+			    M_WAITOK);
 		error = copyinstr(argp->ex_indexfile, nfs_pub.np_index,
 		    MAXNAMLEN, (size_t *)0);
 		if (!error) {
@@ -377,7 +403,8 @@ vfs_setpublicfs(struct mount *mp, struct netexport *nep,
 			}
 		}
 		if (error) {
-			FREE(nfs_pub.np_index, M_TEMP);
+			free(nfs_pub.np_index, M_TEMP);
+			nfs_pub.np_index = NULL;
 			return (error);
 		}
 	}
@@ -389,7 +416,7 @@ vfs_setpublicfs(struct mount *mp, struct netexport *nep,
 
 /*
  * Used by the filesystems to determine if a given network address
- * (passed in 'nam') is present in thier exports list, returns a pointer
+ * (passed in 'nam') is present in their exports list, returns a pointer
  * to struct netcred so that the filesystem can examine it for
  * access rights (read/write/etc).
  */
@@ -413,10 +440,10 @@ vfs_export_lookup(struct mount *mp, struct sockaddr *nam)
 			saddr = nam;
 			rnh = nep->ne_rtable[saddr->sa_family];
 			if (rnh != NULL) {
-				RADIX_NODE_HEAD_LOCK(rnh);
+				RADIX_NODE_HEAD_RLOCK(rnh);
 				np = (struct netcred *)
 				    (*rnh->rnh_matchaddr)(saddr, rnh);
-				RADIX_NODE_HEAD_UNLOCK(rnh);
+				RADIX_NODE_HEAD_RUNLOCK(rnh);
 				if (np && np->netc_rnodes->rn_flags & RNF_ROOT)
 					np = NULL;
 			}
@@ -441,17 +468,25 @@ vfs_export_lookup(struct mount *mp, struct sockaddr *nam)
 
 int 
 vfs_stdcheckexp(struct mount *mp, struct sockaddr *nam, int *extflagsp,
-    struct ucred **credanonp)
+    struct ucred **credanonp, int *numsecflavors, int **secflavors)
 {
 	struct netcred *np;
 
-	lockmgr(&mp->mnt_explock, LK_SHARED, NULL, curthread);
+	lockmgr(&mp->mnt_explock, LK_SHARED, NULL);
 	np = vfs_export_lookup(mp, nam);
-	lockmgr(&mp->mnt_explock, LK_RELEASE, NULL, curthread);
-	if (np == NULL)
+	if (np == NULL) {
+		lockmgr(&mp->mnt_explock, LK_RELEASE, NULL);
+		*credanonp = NULL;
 		return (EACCES);
+	}
 	*extflagsp = np->netc_exflags;
-	*credanonp = &np->netc_anon;
+	if ((*credanonp = np->netc_anon) != NULL)
+		crhold(*credanonp);
+	if (numsecflavors)
+		*numsecflavors = np->netc_numsecflavors;
+	if (secflavors)
+		*secflavors = np->netc_secflavors;
+	lockmgr(&mp->mnt_explock, LK_RELEASE, NULL);
 	return (0);
 }
 

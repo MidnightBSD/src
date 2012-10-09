@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/atapi-cd.h,v 1.46.2.2 2009/12/20 01:38:21 marius Exp $
+ * $FreeBSD$
  */
 
 /* CDROM Table Of Contents */

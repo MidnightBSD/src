@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 M. Warner Losh.
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/_bus.h,v 1.1 2005/04/18 21:45:33 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef AMD64_INCLUDE__BUS_H

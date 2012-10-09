@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Jan-Simon Pendry
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
- * Copyright (c) 2005, 2006 Masanori Ozawa <ozawa@ongs.co.jp>, ONGS Inc.
- * Copyright (c) 2006 Daichi Goto <daichi@freebsd.org>
+ * Copyright (c) 2005, 2006, 2012 Masanori Ozawa <ozawa@ongs.co.jp>, ONGS Inc.
+ * Copyright (c) 2006, 2012 Daichi Goto <daichi@freebsd.org>
  *
  * This code is derived from software contributed to Berkeley by
  * Jan-Simon Pendry.
@@ -34,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union_subr.c	8.20 (Berkeley) 5/20/95
- * $FreeBSD: src/sys/fs/unionfs/union_subr.c,v 1.92.2.9 2009/08/13 17:51:26 jhb Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -53,9 +52,7 @@
 #include <sys/stat.h>
 #include <sys/resourcevar.h>
 
-#ifdef MAC
-#include <sys/mac.h>
-#endif
+#include <security/mac/mac_framework.h>
 
 #include <vm/uma.h>
 
@@ -323,7 +320,7 @@ unionfs_nodeget(struct mount *mp, struct vnode *uppervp,
 
 unionfs_nodeget_out:
 	if (lkflags & LK_TYPE_MASK)
-		vn_lock(vp, lkflags | LK_RETRY, td);
+		vn_lock(vp, lkflags | LK_RETRY);
 
 	return (0);
 }
@@ -353,18 +350,21 @@ unionfs_noderem(struct vnode *vp, struct thread *td)
 	uvp = unp->un_uppervp;
 	dvp = unp->un_dvp;
 	unp->un_lowervp = unp->un_uppervp = NULLVP;
-
 	vp->v_vnlock = &(vp->v_lock);
 	vp->v_data = NULL;
-	lockmgr(vp->v_vnlock, LK_EXCLUSIVE | LK_INTERLOCK, VI_MTX(vp), td);
-	if (lvp != NULLVP)
-		VOP_UNLOCK(lvp, 0, td);
-	if (uvp != NULLVP)
-		VOP_UNLOCK(uvp, 0, td);
 	vp->v_object = NULL;
+	VI_UNLOCK(vp);
+
+	if (lvp != NULLVP)
+		VOP_UNLOCK(lvp, LK_RELEASE);
+	if (uvp != NULLVP)
+		VOP_UNLOCK(uvp, LK_RELEASE);
 
 	if (dvp != NULLVP && unp->un_hash.le_prev != NULL)
 		unionfs_rem_cached_vnode(unp, dvp);
+
+	if (lockmgr(vp->v_vnlock, LK_EXCLUSIVE, VI_MTX(vp)) != 0)
+		panic("the lock for deletion is unacquirable.");
 
 	if (lvp != NULLVP) {
 		vfslocked = VFS_LOCK_GIANT(lvp->v_mount);
@@ -509,7 +509,7 @@ unionfs_create_uppervattr(struct unionfs_mount *ump,
 	int		error;
 	struct vattr	lva;
 
-	if ((error = VOP_GETATTR(lvp, &lva, cred, td)))
+	if ((error = VOP_GETATTR(lvp, &lva, cred)))
 		return (error);
 
 	unionfs_create_uppervattr_core(ump, &lva, uva, td);
@@ -553,12 +553,12 @@ unionfs_relookup(struct vnode *dvp, struct vnode **vpp,
 		cn->cn_flags |= (cnp->cn_flags & SAVESTART);
 
 	vref(dvp);
-	VOP_UNLOCK(dvp, 0, td);
+	VOP_UNLOCK(dvp, LK_RELEASE);
 
 	if ((error = relookup(dvp, vpp, cn))) {
 		uma_zfree(namei_zone, cn->cn_pnbuf);
 		cn->cn_flags &= ~HASBUF;
-		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY);
 	} else
 		vrele(dvp);
 
@@ -710,7 +710,7 @@ static void
 unionfs_node_update(struct unionfs_node *unp, struct vnode *uvp,
 		    struct thread *td)
 {
-	int		count, lockcnt;
+	unsigned	count, lockrec;
 	struct vnode   *vp;
 	struct vnode   *lvp;
 	struct vnode   *dvp;
@@ -726,12 +726,10 @@ unionfs_node_update(struct unionfs_node *unp, struct vnode *uvp,
 	VI_LOCK(vp);
 	unp->un_uppervp = uvp;
 	vp->v_vnlock = uvp->v_vnlock;
-	lockcnt = lvp->v_vnlock->lk_exclusivecount;
-	if (lockcnt <= 0)
-		panic("unionfs: no exclusive lock");
 	VI_UNLOCK(vp);
-	for (count = 1; count < lockcnt; count++)
-		vn_lock(uvp, LK_EXCLUSIVE | LK_CANRECURSE | LK_RETRY, td);
+	lockrec = lvp->v_vnlock->lk_recurse;
+	for (count = 0; count < lockrec; count++)
+		vn_lock(uvp, LK_EXCLUSIVE | LK_CANRECURSE | LK_RETRY);
 
 	/*
 	 * cache update
@@ -780,6 +778,10 @@ unionfs_mkshadowdir(struct unionfs_mount *ump, struct vnode *udvp,
 	/* Authority change to root */
 	rootinfo = uifind((uid_t)0);
 	cred = crdup(cnp->cn_cred);
+	/*
+	 * The calls to chgproccnt() are needed to compensate for change_ruid()
+	 * calling chgproccnt().
+	 */
 	chgproccnt(cred->cr_ruidinfo, 1, 0);
 	change_euid(cred, rootinfo);
 	change_ruid(cred, rootinfo);
@@ -789,7 +791,7 @@ unionfs_mkshadowdir(struct unionfs_mount *ump, struct vnode *udvp,
 
 	memset(&cn, 0, sizeof(cn));
 
-	if ((error = VOP_GETATTR(lvp, &lva, cnp->cn_cred, td)))
+	if ((error = VOP_GETATTR(lvp, &lva, cnp->cn_cred)))
 		goto unionfs_mkshadowdir_abort;
 
 	if ((error = unionfs_relookup(udvp, &uvp, cnp, &cn, td, cnp->cn_nameptr, cnp->cn_namelen, CREATE)))
@@ -806,10 +808,6 @@ unionfs_mkshadowdir(struct unionfs_mount *ump, struct vnode *udvp,
 
 	if ((error = vn_start_write(udvp, &mp, V_WAIT | PCATCH)))
 		goto unionfs_mkshadowdir_free_out;
-	if ((error = VOP_LEASE(udvp, td, cn.cn_cred, LEASE_WRITE))) {
-		vn_finished_write(mp);
-		goto unionfs_mkshadowdir_free_out;
-	}
 	unionfs_create_uppervattr_core(ump, &lva, &va, td);
 
 	error = VOP_MKDIR(udvp, &uvp, &cn, &va);
@@ -822,7 +820,7 @@ unionfs_mkshadowdir(struct unionfs_mount *ump, struct vnode *udvp,
 		 * Ignore errors.
 		 */
 		va.va_type = VNON;
-		VOP_SETATTR(uvp, &va, cn.cn_cred, td);
+		VOP_SETATTR(uvp, &va, cn.cn_cred);
 	}
 	vn_finished_write(mp);
 
@@ -875,8 +873,7 @@ unionfs_mkwhiteout(struct vnode *dvp, struct componentname *cnp,
 
 	if ((error = vn_start_write(dvp, &mp, V_WAIT | PCATCH)))
 		goto unionfs_mkwhiteout_free_out;
-	if (!(error = VOP_LEASE(dvp, td, td->td_ucred, LEASE_WRITE)))
-		error = VOP_WHITEOUT(dvp, &cn, CREATE);
+	error = VOP_WHITEOUT(dvp, &cn, CREATE);
 
 	vn_finished_write(mp);
 
@@ -918,7 +915,7 @@ unionfs_vn_create_on_upper(struct vnode **vpp, struct vnode *udvp,
 	fmode = FFLAGS(O_WRONLY | O_CREAT | O_TRUNC | O_EXCL);
 	error = 0;
 
-	if ((error = VOP_GETATTR(lvp, &lva, cred, td)) != 0)
+	if ((error = VOP_GETATTR(lvp, &lva, cred)) != 0)
 		return (error);
 	unionfs_create_uppervattr_core(ump, &lva, uvap, td);
 
@@ -950,9 +947,6 @@ unionfs_vn_create_on_upper(struct vnode **vpp, struct vnode *udvp,
 		goto unionfs_vn_create_on_upper_free_out1;
 	}
 
-	if ((error = VOP_LEASE(udvp, td, cred, LEASE_WRITE)) != 0)
-		goto unionfs_vn_create_on_upper_free_out1;
-
 	if ((error = VOP_CREATE(udvp, &vp, &cn, uvap)) != 0)
 		goto unionfs_vn_create_on_upper_free_out1;
 
@@ -964,7 +958,7 @@ unionfs_vn_create_on_upper(struct vnode **vpp, struct vnode *udvp,
 	*vpp = vp;
 
 unionfs_vn_create_on_upper_free_out1:
-	VOP_UNLOCK(udvp, 0, td);
+	VOP_UNLOCK(udvp, LK_RELEASE);
 
 unionfs_vn_create_on_upper_free_out2:
 	if (cn.cn_flags & HASBUF) {
@@ -1000,10 +994,6 @@ unionfs_copyfile_core(struct vnode *lvp, struct vnode *uvp,
 	uio.uio_segflg = UIO_SYSSPACE;
 	uio.uio_offset = 0;
 
-	if ((error = VOP_LEASE(lvp, td, cred, LEASE_READ)) != 0)
-		return (error);
-	if ((error = VOP_LEASE(uvp, td, cred, LEASE_WRITE)) != 0)
-		return (error);
 	buf = malloc(MAXBSIZE, M_TEMP, M_WAITOK);
 
 	while (error == 0) {
@@ -1106,7 +1096,7 @@ unionfs_copyfile(struct unionfs_node *unp, int docopy, struct ucred *cred,
 	if (error == 0) {
 		/* Reset the attributes. Ignore errors. */
 		uva.va_type = VNON;
-		VOP_SETATTR(uvp, &uva, cred, td);
+		VOP_SETATTR(uvp, &uva, cred);
 	}
 
 	unionfs_node_update(unp, uvp, td);
@@ -1147,14 +1137,14 @@ unionfs_check_rmdir(struct vnode *vp, struct ucred *cred, struct thread *td)
 	lvp = UNIONFSVPTOLOWERVP(vp);
 
 	/* check opaque */
-	if ((error = VOP_GETATTR(uvp, &va, cred, td)) != 0)
+	if ((error = VOP_GETATTR(uvp, &va, cred)) != 0)
 		return (error);
 	if (va.va_flags & OPAQUE)
 		return (0);
 
 	/* open vnode */
 #ifdef MAC
-	if ((error = mac_check_vnode_open(cred, vp, VEXEC|VREAD)) != 0)
+	if ((error = mac_vnode_check_open(cred, vp, VEXEC|VREAD)) != 0)
 		return (error);
 #endif
 	if ((error = VOP_ACCESS(vp, VEXEC|VREAD, cred, td)) != 0)
@@ -1168,7 +1158,7 @@ unionfs_check_rmdir(struct vnode *vp, struct ucred *cred, struct thread *td)
 	uio.uio_offset = 0;
 
 #ifdef MAC
-	error = mac_check_vnode_readdir(td->td_ucred, lvp);
+	error = mac_vnode_check_readdir(td->td_ucred, lvp);
 #endif
 	while (!error && !eofflag) {
 		iov.iov_base = buf;
@@ -1256,7 +1246,7 @@ unionfs_checkuppervp(struct vnode *vp, char *fil, int lno)
 	if (vp->v_op != unionfs_vnodeop_p) {
 		printf("unionfs_checkuppervp: on non-unionfs-node.\n");
 #ifdef KDB
-		kdb_enter_why(KDB_WHY_UNIONFS,
+		kdb_enter(KDB_WHY_UNIONFS,
 		    "unionfs_checkuppervp: on non-unionfs-node.\n");
 #endif
 		panic("unionfs_checkuppervp");
@@ -1276,7 +1266,7 @@ unionfs_checklowervp(struct vnode *vp, char *fil, int lno)
 	if (vp->v_op != unionfs_vnodeop_p) {
 		printf("unionfs_checklowervp: on non-unionfs-node.\n");
 #ifdef KDB
-		kdb_enter_why(KDB_WHY_UNIONFS,
+		kdb_enter(KDB_WHY_UNIONFS,
 		    "unionfs_checklowervp: on non-unionfs-node.\n");
 #endif
 		panic("unionfs_checklowervp");

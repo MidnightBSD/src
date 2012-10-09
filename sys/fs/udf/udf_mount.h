@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Ryuichiro Imura
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/udf/udf_mount.h,v 1.3 2003/11/05 06:56:08 scottl Exp $
+ * $FreeBSD$
  */
 
 #define	UDFMNT_KICONV	0x00000001

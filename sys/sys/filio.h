@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)filio.h	8.1 (Berkeley) 3/28/94
- * $FreeBSD: src/sys/sys/filio.h,v 1.10.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_SYS_FILIO_H_
@@ -56,6 +55,8 @@ struct fiodgname_arg {
 	void	*buf;
 };
 #define	FIODGNAME	_IOW('f', 120, struct fiodgname_arg) /* get dev. name */
+#define	FIONWRITE	_IOR('f', 119, int)	/* get # bytes (yet) to write */
+#define	FIONSPACE	_IOR('f', 118, int)	/* get space in send queue */
 /* Handle lseek SEEK_DATA and SEEK_HOLE for holey file knowledge. */
 #define	FIOSEEKDATA	_IOWR('f', 97, off_t)	/* SEEK_DATA */
 #define	FIOSEEKHOLE	_IOWR('f', 98, off_t)	/* SEEK_HOLE */

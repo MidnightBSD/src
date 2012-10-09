@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_battery.c,v 1.5 2011/07/23 21:24:58 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_battery.c,v 1.25.4.1 2008/01/23 00:15:22 jkim Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -37,7 +36,8 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_battery.c,v 1.25.4.1 2008/01/23 00:1
 #include <sys/ioccom.h>
 #include <sys/sysctl.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpiio.h>
 
@@ -204,6 +204,14 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 	    bst[i].cap = (bst[i].cap * bif->dvol) / 1000;
 	    bif->lfcap = (bif->lfcap * bif->dvol) / 1000;
 	}
+
+	/*
+	 * The calculation above may set bif->lfcap to zero. This was
+	 * seen on a laptop with a broken battery. The result of the
+	 * division was rounded to zero.
+	 */
+	if (!acpi_battery_bif_valid(bif))
+	    continue;
 
 	/* Calculate percent capacity remaining. */
 	bi[i].cap = (100 * bst[i].cap) / bif->lfcap;

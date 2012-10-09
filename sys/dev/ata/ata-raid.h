@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2000 - 2007 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2000 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/ata-raid.h,v 1.46.2.1 2009/03/01 16:50:46 scottl Exp $
+ * $FreeBSD$
  */
 
 /* misc defines */

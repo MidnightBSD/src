@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/nwfs/nwfs_vfsops.c,v 1.44.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -115,7 +108,7 @@ nwfs_initnls(struct nwmount *nmp) {
 		nmp->m.nls.u2n = ncp_defnls.u2n;
 		return 0;
 	}
-	MALLOC(pe, char *, 256 * 4, M_NWFSDATA, M_WAITOK);
+	pe = malloc(256 * 4, M_NWFSDATA, M_WAITOK);
 	pc = pe;
 	do {
 		COPY_TABLE(nmp->m.nls.to_lower, ncp_defnls.to_lower);
@@ -130,8 +123,7 @@ nwfs_initnls(struct nwmount *nmp) {
 	return 0;
 }
 
-static int nwfs_cmount(struct mntarg *ma, void *data, int flags,
-		      struct thread *td)
+static int nwfs_cmount(struct mntarg *ma, void *data, uint64_t flags)
 {
 	struct nwfs_args args; 	  /* will hold data from mount request */
 	int error;
@@ -156,7 +148,7 @@ static int nwfs_cmount(struct mntarg *ma, void *data, int flags,
  * mp - path - addr in user space of mount point (ie /usr or whatever)
  * data - addr in user space of mount params 
  */
-static int nwfs_mount(struct mount *mp, struct thread *td)
+static int nwfs_mount(struct mount *mp)
 {
 	struct nwfs_args args; 	  /* will hold data from mount request */
 	int error;
@@ -164,8 +156,10 @@ static int nwfs_mount(struct mount *mp, struct thread *td)
 	struct ncp_conn *conn = NULL;
 	struct ncp_handle *handle = NULL;
 	struct vnode *vp;
+	struct thread *td;
 	char *pc,*pe;
 
+	td = curthread;
 	if (mp->mnt_flag & MNT_ROOTFS)
 		return (EOPNOTSUPP);
 	if (mp->mnt_flag & MNT_UPDATE) {
@@ -192,14 +186,13 @@ static int nwfs_mount(struct mount *mp, struct thread *td)
 	ncp_conn_unlock(conn, td);	/* we keep the ref */
 	mp->mnt_stat.f_iosize = conn->buffer_size;
         /* We must malloc our own mount info */
-        MALLOC(nmp,struct nwmount *,sizeof(struct nwmount),M_NWFSDATA,
-	    M_WAITOK | M_USE_RESERVE | M_ZERO);
+        nmp = malloc(sizeof(struct nwmount), M_NWFSDATA, M_WAITOK | M_ZERO);
         if (nmp == NULL) {
                 nwfs_printf("could not alloc nwmount\n");
                 error = ENOMEM;
 		goto bad;
         }
-        mp->mnt_data = (qaddr_t)nmp;
+        mp->mnt_data = nmp;
 	nmp->connh = handle;
 	nmp->n_root = NULL;
 	nmp->n_id = nwfsid++;
@@ -225,13 +218,13 @@ static int nwfs_mount(struct mount *mp, struct thread *td)
 	/* protect against invalid mount points */
 	nmp->m.mount_point[sizeof(nmp->m.mount_point)-1] = '\0';
 	vfs_getnewfsid(mp);
-	error = nwfs_root(mp, LK_EXCLUSIVE, &vp, td);
+	error = nwfs_root(mp, LK_EXCLUSIVE, &vp);
 	if (error)
 		goto bad;
 	/*
 	 * Lose the lock but keep the ref.
 	 */
-	VOP_UNLOCK(vp, 0, curthread);
+	VOP_UNLOCK(vp, 0);
 	NCPVODEBUG("rootvp.vrefcnt=%d\n",vrefcnt(vp));
 	return error;
 bad:
@@ -244,13 +237,15 @@ bad:
 
 /* Unmount the filesystem described by mp. */
 static int
-nwfs_unmount(struct mount *mp, int mntflags, struct thread *td)
+nwfs_unmount(struct mount *mp, int mntflags)
 {
+	struct thread *td;
 	struct nwmount *nmp = VFSTONWFS(mp);
 	struct ncp_conn *conn;
 	int error, flags;
 
 	NCPVODEBUG("nwfs_unmount: flags=%04x\n",mntflags);
+	td = curthread;
 	flags = 0;
 	if (mntflags & MNT_FORCE)
 		flags |= FORCECLOSE;
@@ -264,7 +259,7 @@ nwfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 		if(ncp_conn_free(conn))
 			ncp_conn_unlock(conn, td);
 	}
-	mp->mnt_data = (qaddr_t)0;
+	mp->mnt_data = NULL;
 	if (nmp->m.flags & NWFS_MOUNT_HAVE_NLS)
 		free(nmp->m.nls.to_lower, M_NWFSDATA);
 	free(nmp, M_NWFSDATA);
@@ -276,15 +271,19 @@ nwfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 
 /*  Return locked vnode to root of a filesystem */
 static int
-nwfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td) {
+nwfs_root(struct mount *mp, int flags, struct vnode **vpp) {
 	struct vnode *vp;
 	struct nwmount *nmp;
 	struct nwnode *np;
 	struct ncp_conn *conn;
 	struct nw_entry_info fattr;
-	struct ucred *cred =  td->td_ucred;
+	struct thread *td;
+	struct ucred *cred;
 	int error, nsf, opt;
 	u_char vol;
+
+	td = curthread;
+	cred = td->td_ucred;
 
 	nmp = VFSTONWFS(mp);
 	conn = NWFSTOCONN(nmp);
@@ -372,12 +371,11 @@ nwfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td) {
  */
 /* ARGSUSED */
 static int
-nwfs_quotactl(mp, cmd, uid, arg, td)
+nwfs_quotactl(mp, cmd, uid, arg)
 	struct mount *mp;
 	int cmd;
 	uid_t uid;
 	void *arg;
-	struct thread *td;
 {
 	NCPVODEBUG("return EOPNOTSUPP\n");
 	return (EOPNOTSUPP);
@@ -407,12 +405,12 @@ nwfs_uninit(struct vfsconf *vfsp)
  * nwfs_statfs call
  */
 int
-nwfs_statfs(mp, sbp, td)
+nwfs_statfs(mp, sbp)
 	struct mount *mp;
 	struct statfs *sbp;
-	struct thread *td;
 {
 	struct nwmount *nmp = VFSTONWFS(mp);
+	struct thread *td = curthread;
 	int error = 0, secsize;
 	struct nwnode *np = nmp->n_root;
 	struct ncp_volume_info vi;

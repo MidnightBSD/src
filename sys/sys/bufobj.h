@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/bufobj.h,v 1.3 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/bufobj.h,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -53,10 +52,11 @@
 #if defined(_KERNEL) || defined(_KVM_VNODE)
 
 #include <sys/queue.h>
+#include <sys/_lock.h>
+#include <sys/_mutex.h>
 
 struct bufobj;
 struct buf_ops;
-struct thread;
 
 extern struct buf_ops buf_ops_bio;
 
@@ -71,7 +71,7 @@ struct bufv {
 
 typedef void b_strategy_t(struct bufobj *, struct buf *);
 typedef int b_write_t(struct buf *);
-typedef int b_sync_t(struct bufobj *, int waitfor, struct thread *td);
+typedef int b_sync_t(struct bufobj *, int waitfor);
 typedef void b_bdflush_t(struct bufobj *, struct buf *);
 
 struct buf_ops {
@@ -83,12 +83,12 @@ struct buf_ops {
 };
 
 #define BO_STRATEGY(bo, bp)	((bo)->bo_ops->bop_strategy((bo), (bp)))
-#define BO_SYNC(bo, w, td)	((bo)->bo_ops->bop_sync((bo), (w), (td)))
+#define BO_SYNC(bo, w)		((bo)->bo_ops->bop_sync((bo), (w)))
 #define BO_WRITE(bo, bp)	((bo)->bo_ops->bop_write((bp)))
 #define BO_BDFLUSH(bo, bp)	((bo)->bo_ops->bop_bdflush((bo), (bp)))
 
 struct bufobj {
-	struct mtx	*bo_mtx;	/* Mutex which protects "i" things */
+	struct mtx	bo_mtx;		/* Mutex which protects "i" things */
 	struct bufv	bo_clean;	/* i Clean buffers */
 	struct bufv	bo_dirty;	/* i Dirty buffers */
 	long		bo_numoutput;	/* i Writes in progress */
@@ -113,28 +113,18 @@ struct bufobj {
 #define	BO_WWAIT	(1 << 1)	/* Wait for output to complete */
 #define	BO_NEEDSGIANT	(1 << 2)	/* Require giant for child buffers. */
 
-#define	BO_LOCK(bo) \
-	do { \
-		KASSERT((bo)->bo_mtx != NULL, ("No lock in bufobj")); \
-		mtx_lock((bo)->bo_mtx); \
-	} while (0)
-
-#define BO_UNLOCK(bo) \
-	do { \
-		KASSERT((bo)->bo_mtx != NULL, ("No lock in bufobj")); \
-		mtx_unlock((bo)->bo_mtx); \
-	} while (0)
-
-#define	BO_MTX(bo)		((bo)->bo_mtx)
-#define	ASSERT_BO_LOCKED(bo)	mtx_assert(bo->bo_mtx, MA_OWNED)
-#define	ASSERT_BO_UNLOCKED(bo)	mtx_assert(bo->bo_mtx, MA_NOTOWNED)
+#define	BO_MTX(bo)		(&(bo)->bo_mtx)
+#define	BO_LOCK(bo)		mtx_lock(BO_MTX((bo)))
+#define	BO_UNLOCK(bo)		mtx_unlock(BO_MTX((bo)))
+#define	ASSERT_BO_LOCKED(bo)	mtx_assert(BO_MTX((bo)), MA_OWNED)
+#define	ASSERT_BO_UNLOCKED(bo)	mtx_assert(BO_MTX((bo)), MA_NOTOWNED)
 
 void bufobj_wdrop(struct bufobj *bo);
 void bufobj_wref(struct bufobj *bo);
 void bufobj_wrefl(struct bufobj *bo);
-int bufobj_invalbuf(struct bufobj *bo, int flags, struct thread *td, int slpflag, int slptimeo);
+int bufobj_invalbuf(struct bufobj *bo, int flags, int slpflag, int slptimeo);
 int bufobj_wwait(struct bufobj *bo, int slpflag, int timeo);
-int bufsync(struct bufobj *bo, int waitfor, struct thread *td);
+int bufsync(struct bufobj *bo, int waitfor);
 void bufbdflush(struct bufobj *bo, struct buf *bp);
 
 #endif /* defined(_KERNEL) || defined(_KVM_VNODE) */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * vkbd.c
  */
@@ -28,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: vkbd.c,v 1.4 2008-12-02 22:43:16 laffer1 Exp $
- * $FreeBSD: src/sys/dev/vkbd/vkbd.c,v 1.11 2006/09/27 19:57:00 ru Exp $
+ * $Id: vkbd.c,v 1.5 2012-10-09 04:08:14 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include "opt_compat.h"
@@ -159,7 +158,7 @@ static int		vkbd_data_read(vkbd_state_t *, int);
 
 static struct cdevsw	vkbd_dev_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_PSEUDO | D_NEEDGIANT,
+	.d_flags =	D_PSEUDO | D_NEEDGIANT | D_NEEDMINOR,
 	.d_open =	vkbd_dev_open,
 	.d_close =	vkbd_dev_close,
 	.d_read =	vkbd_dev_read,
@@ -188,7 +187,7 @@ vkbd_dev_clone(void *arg, struct ucred *cred, char *name, int namelen,
 
 	/* find any existing device, or allocate new unit number */
 	if (clone_create(&vkbd_dev_clones, &vkbd_dev_cdevsw, &unit, dev, 0)) {
-		*dev = make_dev(&vkbd_dev_cdevsw, unit2minor(unit),
+		*dev = make_dev(&vkbd_dev_cdevsw, unit,
 			UID_ROOT, GID_WHEEL, 0600, DEVICE_NAME "%d", unit);
 		if (*dev != NULL) {
 			dev_ref(*dev);
@@ -279,11 +278,11 @@ vkbd_dev_close(struct cdev *dev, int foo, int bar, struct thread *td)
 
 	VKBD_UNLOCK(state);
 
-	(*kbdsw[kbd->kb_index]->disable)(kbd);
+	kbdd_disable(kbd);
 #ifdef KBD_INSTALL_CDEV
 	kbd_detach(kbd);
 #endif /* def KBD_INSTALL_CDEV */
-	(*kbdsw[kbd->kb_index]->term)(kbd);
+	kbdd_term(kbd);
 
 	/* XXX FIXME: dev->si_drv1 locking */
 	dev->si_drv1 = NULL;
@@ -438,8 +437,7 @@ vkbd_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thre
 {
 	keyboard_t	*kbd = VKBD_KEYBOARD(dev);
 
-	return ((kbd == NULL)? ENXIO : 
-			(*kbdsw[kbd->kb_index]->ioctl)(kbd, cmd, data));
+	return ((kbd == NULL)? ENXIO : kbdd_ioctl(kbd, cmd, data));
 }
 
 /* Poll device */
@@ -483,7 +481,7 @@ vkbd_dev_intr(void *xkbd, int pending)
 	keyboard_t	*kbd = (keyboard_t *) xkbd;
 	vkbd_state_t	*state = (vkbd_state_t *) kbd->kb_data;
 
-	(*kbdsw[kbd->kb_index]->intr)(kbd, NULL);
+	kbdd_intr(kbd, NULL);
 
 	VKBD_LOCK(state);
 
@@ -1210,6 +1208,7 @@ vkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 		break;
 
 	case PIO_KEYMAP:	/* set keyboard translation table */
+	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 	case PIO_KEYMAPENT:	/* set keyboard translation table entry */
 	case PIO_DEADKEYMAP:	/* set accent key translation table */
 		state->ks_accents = 0;

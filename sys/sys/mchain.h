@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/mchain.h,v 1.10.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 #ifndef _SYS_MCHAIN_H_
 #define _SYS_MCHAIN_H_
@@ -74,6 +67,7 @@ struct mbuf *mb_detach(struct mbchain *mbp);
 int  mb_fixhdr(struct mbchain *mbp);
 caddr_t mb_reserve(struct mbchain *mbp, int size);
 
+int  mb_put_padbyte(struct mbchain *mbp);
 int  mb_put_uint8(struct mbchain *mbp, u_int8_t x);
 int  mb_put_uint16be(struct mbchain *mbp, u_int16_t x);
 int  mb_put_uint16le(struct mbchain *mbp, u_int16_t x);

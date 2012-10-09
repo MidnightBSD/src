@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* misc IOCTL's */
 
 /* Unix to Jerq I/O control */

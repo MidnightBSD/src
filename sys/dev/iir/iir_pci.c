@@ -29,9 +29,8 @@
  * SUCH DAMAGE.
  */
 
-#ident "$Id: iir_pci.c,v 1.4 2011-09-04 16:28:41 laffer1 Exp $"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iir/iir_pci.c,v 1.20.2.1 2009/06/04 17:55:42 brueffer Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  *  iir_pci.c:  PCI Bus Attachment for Intel Integrated RAID Controller driver
@@ -318,8 +317,8 @@ iir_pci_attach(device_t dev)
     gdt->sc_test_busy = gdt_mpr_test_busy;
 
     /* Allocate a dmatag representing the capabilities of this attachment */
-    /* XXX Should be a child of the PCI bus dma tag */
-    if (bus_dma_tag_create(/*parent*/NULL, /*alignemnt*/1, /*boundary*/0,
+    if (bus_dma_tag_create(/*parent*/bus_get_dma_tag(dev),
+                           /*alignemnt*/1, /*boundary*/0,
                            /*lowaddr*/BUS_SPACE_MAXADDR_32BIT,
                            /*highaddr*/BUS_SPACE_MAXADDR,
                            /*filter*/NULL, /*filterarg*/NULL,

@@ -55,6 +55,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for Texas Instruments's ThunderLAN PHYs

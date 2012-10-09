@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1999, Boris Popov
+ * Copyright (c) 1999 Boris Popov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,21 +23,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/nwfs/nwfs_io.c,v 1.46.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  *
  */
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/resourcevar.h>	/* defines plimit structure in proc struct */
 #include <sys/kernel.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
-#include <sys/proc.h>
 #include <sys/mount.h>
 #include <sys/namei.h>
 #include <sys/vnode.h>
 #include <sys/dirent.h>
-#include <sys/signalvar.h>
 #include <sys/sysctl.h>
 
 #include <vm/vm.h>
@@ -179,11 +169,11 @@ nwfs_readvnode(struct vnode *vp, struct uio *uiop, struct ucred *cred) {
 	biosize = NWFSTOCONN(nmp)->buffer_size;
 	if (np->n_flag & NMODIFIED) {
 		nwfs_attr_cacheremove(vp);
-		error = VOP_GETATTR(vp, &vattr, cred, td);
+		error = VOP_GETATTR(vp, &vattr, cred);
 		if (error) return (error);
 		np->n_mtime = vattr.va_mtime.tv_sec;
 	} else {
-		error = VOP_GETATTR(vp, &vattr, cred, td);
+		error = VOP_GETATTR(vp, &vattr, cred);
 		if (error) return (error);
 		if (np->n_mtime != vattr.va_mtime.tv_sec) {
 			error = nwfs_vinvalbuf(vp, td);
@@ -229,23 +219,17 @@ nwfs_writevnode(vp, uiop, cred, ioflag)
 		 * the correct size. */
 #ifdef notyet
 			nwfs_attr_cacheremove(vp);
-			error = VOP_GETATTR(vp, &vattr, cred, td);
+			error = VOP_GETATTR(vp, &vattr, cred);
 			if (error) return (error);
 #endif
 			uiop->uio_offset = np->n_size;
 		}
 	}
 	if (uiop->uio_resid == 0) return 0;
-	if (td != NULL) {
-		PROC_LOCK(td->td_proc);
-		if  (uiop->uio_offset + uiop->uio_resid >
-		    lim_cur(td->td_proc, RLIMIT_FSIZE)) {
-			psignal(td->td_proc, SIGXFSZ);
-			PROC_UNLOCK(td->td_proc);
-			return (EFBIG);
-		}
-		PROC_UNLOCK(td->td_proc);
-	}
+
+	if (vn_rlimit_fsize(vp, uiop, td))
+		return (EFBIG);
+
 	error = ncp_write(NWFSTOCONN(nmp), &np->n_fh, uiop, cred);
 	NCPVNDEBUG("after: ofs=%d,resid=%d\n",(int)uiop->uio_offset, uiop->uio_resid);
 	if (!error) {
@@ -444,19 +428,19 @@ nwfs_getpages(ap)
 	VM_OBJECT_LOCK(object);
 	if (error && (uio.uio_resid == count)) {
 		printf("nwfs_getpages: error %d\n",error);
-		vm_page_lock_queues();
 		for (i = 0; i < npages; i++) {
-			if (ap->a_reqpage != i)
+			if (ap->a_reqpage != i) {
+				vm_page_lock(pages[i]);
 				vm_page_free(pages[i]);
+				vm_page_unlock(pages[i]);
+			}
 		}
-		vm_page_unlock_queues();
 		VM_OBJECT_UNLOCK(object);
 		return VM_PAGER_ERROR;
 	}
 
 	size = count - uio.uio_resid;
 
-	vm_page_lock_queues();
 	for (i = 0, toff = 0; i < npages; i++, toff = nextoff) {
 		vm_page_t m;
 		nextoff = toff + PAGE_SIZE;
@@ -464,10 +448,13 @@ nwfs_getpages(ap)
 
 		if (nextoff <= size) {
 			m->valid = VM_PAGE_BITS_ALL;
-			m->dirty = 0;
+			KASSERT(m->dirty == 0,
+			    ("nwfs_getpages: page %p is dirty", m));
 		} else {
 			int nvalid = ((size + DEV_BSIZE - 1) - toff) & ~(DEV_BSIZE - 1);
-			vm_page_set_validclean(m, 0, nvalid);
+			vm_page_set_valid(m, 0, nvalid);
+			KASSERT((m->dirty & vm_page_bits(0, nvalid)) == 0,
+			    ("nwfs_getpages: page %p is dirty", m));
 		}
 
 		if (i != ap->a_reqpage) {
@@ -484,17 +471,23 @@ nwfs_getpages(ap)
 			 * now tell them that it is ok to use.
 			 */
 			if (!error) {
-				if (m->oflags & VPO_WANTED)
+				if (m->oflags & VPO_WANTED) {
+					vm_page_lock(m);
 					vm_page_activate(m);
-				else
+					vm_page_unlock(m);
+				} else {
+					vm_page_lock(m);
 					vm_page_deactivate(m);
+					vm_page_unlock(m);
+				}
 				vm_page_wakeup(m);
 			} else {
+				vm_page_lock(m);
 				vm_page_free(m);
+				vm_page_unlock(m);
 			}
 		}
 	}
-	vm_page_unlock_queues();
 	VM_OBJECT_UNLOCK(object);
 	return 0;
 #endif /* NWFS_RWCACHE */
@@ -551,7 +544,7 @@ nwfs_putpages(ap)
 	npages = btoc(count);
 
 	for (i = 0; i < npages; i++) {
-		rtvals[i] = VM_PAGER_AGAIN;
+		rtvals[i] = VM_PAGER_ERROR;
 	}
 
 	bp = getpbuf(&nwfs_pbuf_freecnt);
@@ -576,15 +569,8 @@ nwfs_putpages(ap)
 	pmap_qremove(kva, npages);
 	relpbuf(bp, &nwfs_pbuf_freecnt);
 
-	if (!error) {
-		int nwritten = round_page(count - uio.uio_resid) / PAGE_SIZE;
-		vm_page_lock_queues();
-		for (i = 0; i < nwritten; i++) {
-			rtvals[i] = VM_PAGER_OK;
-			vm_page_undirty(pages[i]);
-		}
-		vm_page_unlock_queues();
-	}
+	if (!error)
+		vnode_pager_undirty_pages(pages, rtvals, count - uio.uio_resid);
 	return rtvals[0];
 #endif /* NWFS_RWCACHE */
 }
@@ -619,7 +605,7 @@ nwfs_vinvalbuf(vp, td)
 		VM_OBJECT_UNLOCK(vp->v_bufobj.bo_object);
 	}
 
-	error = vinvalbuf(vp, V_SAVE, td, PCATCH, 0);
+	error = vinvalbuf(vp, V_SAVE, PCATCH, 0);
 	while (error) {
 		if (error == ERESTART || error == EINTR) {
 			np->n_flag &= ~NFLUSHINPROG;
@@ -629,7 +615,7 @@ nwfs_vinvalbuf(vp, td)
 			}
 			return EINTR;
 		}
-		error = vinvalbuf(vp, V_SAVE, td, PCATCH, 0);
+		error = vinvalbuf(vp, V_SAVE, PCATCH, 0);
 	}
 	np->n_flag &= ~(NMODIFIED | NFLUSHINPROG);
 	if (np->n_flag & NFLUSHWANT) {

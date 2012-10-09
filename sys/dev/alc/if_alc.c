@@ -28,8 +28,7 @@
 /* Driver for Atheros AR813x/AR815x PCIe Ethernet. */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/sys/dev/alc/if_alc.c,v 1.1.2.9 2010/08/30 21:17:11 yongari Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/alc/if_alc.c,v 1.11 2011/11/24 16:18:09 laffer1 Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -350,9 +349,9 @@ alc_mediastatus(struct ifnet *ifp, struct ifmediareq *ifmr)
 	mii = device_get_softc(sc->alc_miibus);
 
 	mii_pollstat(mii);
-	ALC_UNLOCK(sc);
 	ifmr->ifm_status = mii->mii_media_status;
 	ifmr->ifm_active = mii->mii_media_active;
+	ALC_UNLOCK(sc);
 }
 
 static int
@@ -367,7 +366,7 @@ alc_mediachange(struct ifnet *ifp)
 	ALC_LOCK(sc);
 	mii = device_get_softc(sc->alc_miibus);
 	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
-		mii_phy_reset(miisc);
+		PHY_RESET(miisc);
 	error = mii_mediachg(mii);
 	ALC_UNLOCK(sc);
 
@@ -796,7 +795,7 @@ alc_attach(device_t dev)
 	sc->alc_dma_rd_burst = 0;
 	sc->alc_dma_wr_burst = 0;
 	sc->alc_rcb = DMA_CFG_RCB_64;
-	if (pci_find_extcap(dev, PCIY_EXPRESS, &base) == 0) {
+	if (pci_find_cap(dev, PCIY_EXPRESS, &base) == 0) {
 		sc->alc_flags |= ALC_FLAG_PCIE;
 		sc->alc_expcap = base;
 		burst = CSR_READ_2(sc, base + PCIR_EXPRESS_DEVICE_CTL);
@@ -976,7 +975,7 @@ alc_attach(device_t dev)
 	IFQ_SET_READY(&ifp->if_snd);
 	ifp->if_capabilities = IFCAP_TXCSUM | IFCAP_TSO4;
 	ifp->if_hwassist = ALC_CSUM_FEATURES | CSUM_TSO;
-	if (pci_find_extcap(dev, PCIY_PMG, &base) == 0) {
+	if (pci_find_cap(dev, PCIY_PMG, &base) == 0) {
 		ifp->if_capabilities |= IFCAP_WOL_MAGIC | IFCAP_WOL_MCAST;
 		sc->alc_flags |= ALC_FLAG_PM;
 		sc->alc_pmcap = base;
@@ -1118,7 +1117,7 @@ alc_detach(device_t dev)
 #define	ALC_SYSCTL_STAT_ADD32(c, h, n, p, d)	\
 	    SYSCTL_ADD_UINT(c, h, OID_AUTO, n, CTLFLAG_RD, p, 0, d)
 #define	ALC_SYSCTL_STAT_ADD64(c, h, n, p, d)	\
-	    SYSCTL_ADD_QUAD(c, h, OID_AUTO, n, CTLFLAG_RD, p, d)
+	    SYSCTL_ADD_UQUAD(c, h, OID_AUTO, n, CTLFLAG_RD, p, d)
 
 static void
 alc_sysctl_node(struct alc_softc *sc)
@@ -3730,7 +3729,7 @@ alc_rxfilter(struct alc_softc *sc)
 		goto chipit;
 	}
 
-	IF_ADDR_LOCK(ifp);
+	if_maddr_rlock(ifp);
 	TAILQ_FOREACH(ifma, &sc->alc_ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -3738,7 +3737,7 @@ alc_rxfilter(struct alc_softc *sc)
 		    ifma->ifma_addr), ETHER_ADDR_LEN);
 		mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 
 chipit:
 	CSR_WRITE_4(sc, ALC_MAR0, mchash[0]);

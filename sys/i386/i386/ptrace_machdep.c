@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/ptrace_machdep.c,v 1.6 2006/05/30 23:44:21 davidxu Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 
@@ -52,7 +51,7 @@ cpu_ptrace(struct thread *td, int req, void *addr, int data)
 	if (!cpu_fxsr)
 		return (EINVAL);
 
-	fpstate = &td->td_pcb->pcb_save.sv_xmm;
+	fpstate = &td->td_pcb->pcb_user_save.sv_xmm;
 	switch (req) {
 	case PT_GETXMMREGS:
 		error = copyout(fpstate, addr, sizeof(*fpstate));

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_offload.c,v 1.4.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,6 +41,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_offload.c,v 1.4.2.3.2.1 2008/11/25 02:59
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/if_var.h>
+#include <net/route.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -59,7 +61,7 @@ tcp_offload_connect(struct socket *so, struct sockaddr *nam)
 	struct toedev *tdev;
 	struct rtentry *rt;
 	int error;
-	
+
 	if (toedev_registration_count == 0)
 		return (EINVAL);
 	
@@ -107,20 +109,20 @@ void
 tcp_offload_twstart(struct tcpcb *tp)
 {
 
-	INP_INFO_WLOCK(&tcbinfo);
+	INP_INFO_WLOCK(&V_tcbinfo);
 	INP_WLOCK(tp->t_inpcb);
 	tcp_twstart(tp);
-	INP_INFO_WUNLOCK(&tcbinfo);
+	INP_INFO_WUNLOCK(&V_tcbinfo);
 }
 
 struct tcpcb *
 tcp_offload_close(struct tcpcb *tp)
 {
-	
-	INP_INFO_WLOCK(&tcbinfo);
+
+	INP_INFO_WLOCK(&V_tcbinfo);
 	INP_WLOCK(tp->t_inpcb);
 	tp = tcp_close(tp);
-	INP_INFO_WUNLOCK(&tcbinfo);
+	INP_INFO_WUNLOCK(&V_tcbinfo);
 	if (tp)
 		INP_WUNLOCK(tp->t_inpcb);
 
@@ -130,11 +132,11 @@ tcp_offload_close(struct tcpcb *tp)
 struct tcpcb *
 tcp_offload_drop(struct tcpcb *tp, int error)
 {
-	
-	INP_INFO_WLOCK(&tcbinfo);
+
+	INP_INFO_WLOCK(&V_tcbinfo);
 	INP_WLOCK(tp->t_inpcb);
 	tp = tcp_drop(tp, error);
-	INP_INFO_WUNLOCK(&tcbinfo);
+	INP_INFO_WUNLOCK(&V_tcbinfo);
 	if (tp)
 		INP_WUNLOCK(tp->t_inpcb);
 

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/keydb.h,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: keydb.h,v 1.14 2000/08/02 17:58:26 sakane Exp $	*/
 
 /*-
@@ -52,7 +52,7 @@ union sockaddr_union {
 /* Security Assocciation Index */
 /* NOTE: Ensure to be same address family */
 struct secasindex {
-	union sockaddr_union src;	/* srouce address for SA */
+	union sockaddr_union src;	/* source address for SA */
 	union sockaddr_union dst;	/* destination address for SA */
 	u_int16_t proto;		/* IPPROTO_ESP or IPPROTO_AH */
 	u_int8_t mode;			/* mode of protocol, see ipsec.h */
@@ -85,6 +85,12 @@ struct seclifetime {
 	u_int64_t usetime;
 };
 
+union sa_route_union {
+	struct route		sa_route;
+	struct route		sin_route;	/* Duplicate for consistency. */
+	struct route_in6	sin6_route;
+};
+
 /* Security Association Data Base */
 struct secashead {
 	LIST_ENTRY(secashead) chain;
@@ -100,7 +106,7 @@ struct secashead {
 					/* SA chain */
 					/* The first of this list is newer SA */
 
-	struct route sa_route;		/* route cache */
+	union sa_route_union route_cache;
 };
 
 struct xformsw;
@@ -151,6 +157,12 @@ struct secasvar {
 	struct auth_hash *tdb_authalgxform;	/* authentication algorithm */
 	struct comp_algo *tdb_compalgxform;	/* compression algorithm */
 	u_int64_t tdb_cryptoid;		/* crypto session id */
+
+	/*
+	 * NAT-Traversal.
+	 */
+	u_int16_t natt_type;		/* IKE/ESP-marker in output. */
+	u_int16_t natt_esp_frag_len;	/* MTU for payload fragmentation. */
 };
 
 #define	SECASVAR_LOCK_INIT(_sav) \

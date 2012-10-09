@@ -2,9 +2,13 @@
  * Copyright (C) 1994, David Greenman
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 2007 The FreeBSD Foundation
  *
  * This code is derived from software contributed to Berkeley by
  * the University of Utah, and William Jolitz.
+ *
+ * Portions of this software were developed by A. Joseph Koshy under
+ * sponsorship from the FreeBSD Foundation and Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,34 +42,54 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_trap.c,v 1.299.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
+#include "opt_capsicum.h"
+#include "opt_hwpmc_hooks.h"
 #include "opt_ktrace.h"
-#include "opt_mac.h"
-#ifdef __i386__
-#include "opt_npx.h"
-#endif
+#include "opt_kdtrace.h"
 #include "opt_sched.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
+#include <sys/capability.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/pmckern.h>
 #include <sys/proc.h>
 #include <sys/ktr.h>
+#include <sys/pioctl.h>
+#include <sys/ptrace.h>
 #include <sys/resourcevar.h>
 #include <sys/sched.h>
 #include <sys/signalvar.h>
+#include <sys/syscall.h>
+#include <sys/syscallsubr.h>
+#include <sys/sysent.h>
 #include <sys/systm.h>
 #include <sys/vmmeter.h>
 #ifdef KTRACE
 #include <sys/uio.h>
 #include <sys/ktrace.h>
 #endif
+#include <security/audit/audit.h>
 
 #include <machine/cpu.h>
-#include <machine/pcb.h>
+
+#ifdef VIMAGE
+#include <net/vnet.h>
+#endif
+
+#ifdef XEN
+#include <vm/vm.h>
+#include <vm/vm_param.h>
+#include <vm/pmap.h>
+#endif
+
+#ifdef	HWPMC_HOOKS
+#include <sys/pmckern.h>
+#endif
 
 #include <security/mac/mac_framework.h>
 
@@ -79,7 +103,10 @@ userret(struct thread *td, struct trapframe *frame)
 	struct proc *p = td->td_proc;
 
 	CTR3(KTR_SYSC, "userret: thread %p (pid %d, %s)", td, p->p_pid,
-            p->p_comm);
+            td->td_name);
+	KASSERT((p->p_flag & P_WEXIT) == 0,
+	    ("Exiting process returns to usermode"));
+#if 0
 #ifdef DIAGNOSTIC
 	/* Check that we called signotify() enough. */
 	PROC_LOCK(p);
@@ -90,11 +117,10 @@ userret(struct thread *td, struct trapframe *frame)
 	thread_unlock(td);
 	PROC_UNLOCK(p);
 #endif
-
+#endif
 #ifdef KTRACE
 	KTRUSERRET(td);
 #endif
-
 	/*
 	 * If this thread tickled GEOM, we need to wait for the giggling to
 	 * stop before we return to userland
@@ -103,39 +129,26 @@ userret(struct thread *td, struct trapframe *frame)
 		g_waitidle();
 
 	/*
-	 * We need to check to see if we have to exit or wait due to a
-	 * single threading requirement or some other STOP condition.
-	 * Don't bother doing all the work if the stop bits are not set
-	 * at this time.. If we miss it, we miss it.. no big deal.
-	 */
-	if (P_SHOULDSTOP(p)) {
-		PROC_LOCK(p);
-		thread_suspend_check(0);	/* Can suspend or kill */
-		PROC_UNLOCK(p);
-	}
-
-#ifdef KSE
-	/*
-	 * Do special thread processing, e.g. upcall tweaking and such.
-	 */
-	if (p->p_flag & P_SA)
-		thread_userret(td, frame);
-#endif
-
-	/*
 	 * Charge system time if profiling.
 	 */
-	if (p->p_flag & P_PROFIL) {
-
+	if (p->p_flag & P_PROFIL)
 		addupc_task(td, TRAPF_PC(frame), td->td_pticks * psratio);
-	}
-
 	/*
 	 * Let the scheduler adjust our priority etc.
 	 */
 	sched_userret(td);
 	KASSERT(td->td_locks == 0,
 	    ("userret: Returning with %d locks held.", td->td_locks));
+#ifdef VIMAGE
+	/* Unfortunately td_vnet_lpush needs VNET_DEBUG. */
+	VNET_ASSERT(curvnet == NULL,
+	    ("%s: Returning on td %p (pid %d, %s) with vnet %p set in %s",
+	    __func__, td, p->p_pid, td->td_name, curvnet,
+	    (td->td_vnet_lpush != NULL) ? td->td_vnet_lpush : "N/A"));
+#endif
+#ifdef XEN
+	PT_UPDATES_FLUSH();
+#endif
 }
 
 /*
@@ -150,10 +163,6 @@ ast(struct trapframe *framep)
 	struct proc *p;
 	int flags;
 	int sig;
-#if defined(DEV_NPX) && !defined(SMP)
-	int ucode;
-	ksiginfo_t ksi;
-#endif
 
 	td = curthread;
 	p = td->td_proc;
@@ -167,11 +176,6 @@ ast(struct trapframe *framep)
 	td->td_frame = framep;
 	td->td_pticks = 0;
 
-#ifdef KSE
-	if ((p->p_flag & P_SA) && (td->td_mailbox == NULL))
-		thread_user_enter(td);
-#endif
-
 	/*
 	 * This updates the td_flag's for the checks below in one
 	 * "atomic" operation with turning off the astpending flag.
@@ -181,19 +185,11 @@ ast(struct trapframe *framep)
 	 */
 	thread_lock(td);
 	flags = td->td_flags;
-	td->td_flags &= ~(TDF_ASTPENDING | TDF_NEEDSIGCHK |
-	    TDF_NEEDRESCHED | TDF_INTERRUPT | TDF_ALRMPEND | TDF_PROFPEND |
-	    TDF_MACPEND);
+	td->td_flags &= ~(TDF_ASTPENDING | TDF_NEEDSIGCHK | TDF_NEEDSUSPCHK |
+	    TDF_NEEDRESCHED | TDF_ALRMPEND | TDF_PROFPEND | TDF_MACPEND);
 	thread_unlock(td);
 	PCPU_INC(cnt.v_trap);
 
-	/*
-	 * XXXKSE While the fact that we owe a user profiling
-	 * tick is stored per thread in this code, the statistics
-	 * themselves are still stored per process.
-	 * This should probably change, by which I mean that
-	 * possibly the location of both might change.
-	 */
 	if (td->td_ucred != p->p_ucred) 
 		cred_update_thread(td);
 	if (td->td_pflags & TDP_OWEUPC && p->p_flag & P_PROFIL) {
@@ -201,27 +197,19 @@ ast(struct trapframe *framep)
 		td->td_profil_ticks = 0;
 		td->td_pflags &= ~TDP_OWEUPC;
 	}
+#ifdef HWPMC_HOOKS
+	/* Handle Software PMC callchain capture. */
+	if (PMC_IS_PENDING_CALLCHAIN(td))
+		PMC_CALL_HOOK_UNLOCKED(td, PMC_FN_USER_CALLCHAIN_SOFT, (void *) framep);
+#endif
 	if (flags & TDF_ALRMPEND) {
 		PROC_LOCK(p);
-		psignal(p, SIGVTALRM);
+		kern_psignal(p, SIGVTALRM);
 		PROC_UNLOCK(p);
 	}
-#if defined(DEV_NPX) && !defined(SMP)
-	if (PCPU_GET(curpcb)->pcb_flags & PCB_NPXTRAP) {
-		atomic_clear_int(&PCPU_GET(curpcb)->pcb_flags,
-		    PCB_NPXTRAP);
-		ucode = npxtrap();
-		if (ucode != -1) {
-			ksiginfo_init_trap(&ksi);
-			ksi.ksi_signo = SIGFPE;
-			ksi.ksi_code = ucode;
-			trapsignal(td, &ksi);
-		}
-	}
-#endif
 	if (flags & TDF_PROFPEND) {
 		PROC_LOCK(p);
-		psignal(p, SIGPROF);
+		kern_psignal(p, SIGPROF);
 		PROC_UNLOCK(p);
 	}
 #ifdef MAC
@@ -231,27 +219,59 @@ ast(struct trapframe *framep)
 	if (flags & TDF_NEEDRESCHED) {
 #ifdef KTRACE
 		if (KTRPOINT(td, KTR_CSW))
-			ktrcsw(1, 1);
+			ktrcsw(1, 1, __func__);
 #endif
 		thread_lock(td);
 		sched_prio(td, td->td_user_pri);
-		SCHED_STAT_INC(switch_needresched);
-		mi_switch(SW_INVOL, NULL);
+		mi_switch(SW_INVOL | SWT_NEEDRESCHED, NULL);
 		thread_unlock(td);
 #ifdef KTRACE
 		if (KTRPOINT(td, KTR_CSW))
-			ktrcsw(0, 1);
+			ktrcsw(0, 1, __func__);
 #endif
 	}
-	if (flags & TDF_NEEDSIGCHK) {
+
+	/*
+	 * Check for signals. Unlocked reads of p_pendingcnt or
+	 * p_siglist might cause process-directed signal to be handled
+	 * later.
+	 */
+	if (flags & TDF_NEEDSIGCHK || p->p_pendingcnt > 0 ||
+	    !SIGISEMPTY(p->p_siglist)) {
 		PROC_LOCK(p);
 		mtx_lock(&p->p_sigacts->ps_mtx);
-		while ((sig = cursig(td)) != 0)
+		while ((sig = cursig(td, SIG_STOP_ALLOWED)) != 0)
 			postsig(sig);
 		mtx_unlock(&p->p_sigacts->ps_mtx);
 		PROC_UNLOCK(p);
 	}
+	/*
+	 * We need to check to see if we have to exit or wait due to a
+	 * single threading requirement or some other STOP condition.
+	 */
+	if (flags & TDF_NEEDSUSPCHK) {
+		PROC_LOCK(p);
+		thread_suspend_check(0);
+		PROC_UNLOCK(p);
+	}
+
+	if (td->td_pflags & TDP_OLDMASK) {
+		td->td_pflags &= ~TDP_OLDMASK;
+		kern_sigprocmask(td, SIG_SETMASK, &td->td_oldsigmask, NULL, 0);
+	}
 
 	userret(td, framep);
 	mtx_assert(&Giant, MA_NOTOWNED);
+}
+
+const char *
+syscallname(struct proc *p, u_int code)
+{
+	static const char unknown[] = "unknown";
+	struct sysentvec *sv;
+
+	sv = p->p_sysent;
+	if (sv->sv_syscallnames == NULL || code >= sv->sv_size)
+		return (unknown);
+	return (sv->sv_syscallnames[code]);
 }

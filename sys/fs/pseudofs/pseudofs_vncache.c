@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/pseudofs/pseudofs_vncache.c,v 1.38 2007/04/23 19:17:01 des Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pseudofs.h"
 
@@ -112,7 +111,7 @@ int
 pfs_vncache_alloc(struct mount *mp, struct vnode **vpp,
 		  struct pfs_node *pn, pid_t pid)
 {
-	struct pfs_vdata *pvd;
+	struct pfs_vdata *pvd, *pvd2;
 	struct vnode *vp;
 	int error;
 
@@ -147,20 +146,13 @@ retry:
 		}
 	}
 	mtx_unlock(&pfs_vncache_mutex);
-	++pfs_vncache_misses;
 
 	/* nope, get a new one */
-	MALLOC(pvd, struct pfs_vdata *, sizeof *pvd, M_PFSVNCACHE, M_WAITOK);
-	mtx_lock(&pfs_vncache_mutex);
-	if (++pfs_vncache_entries > pfs_vncache_maxentries)
-		pfs_vncache_maxentries = pfs_vncache_entries;
-	mtx_unlock(&pfs_vncache_mutex);
+	pvd = malloc(sizeof *pvd, M_PFSVNCACHE, M_WAITOK);
+	pvd->pvd_next = pvd->pvd_prev = NULL;
 	error = getnewvnode("pseudofs", mp, &pfs_vnodeops, vpp);
 	if (error) {
-		mtx_lock(&pfs_vncache_mutex);
-		--pfs_vncache_entries;
-		mtx_unlock(&pfs_vncache_mutex);
-		FREE(pvd, M_PFSVNCACHE);
+		free(pvd, M_PFSVNCACHE);
 		return (error);
 	}
 	pvd->pvd_pn = pn;
@@ -197,18 +189,41 @@ retry:
 	if ((pn->pn_flags & PFS_PROCDEP) != 0)
 		(*vpp)->v_vflag |= VV_PROCDEP;
 	pvd->pvd_vnode = *vpp;
-	(*vpp)->v_vnlock->lk_flags |= LK_CANRECURSE;
-	vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY, curthread);
+	vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY);
+	VN_LOCK_AREC(*vpp);
 	error = insmntque(*vpp, mp);
 	if (error != 0) {
-		mtx_lock(&pfs_vncache_mutex);
-		--pfs_vncache_entries;
-		mtx_unlock(&pfs_vncache_mutex);
-		FREE(pvd, M_PFSVNCACHE);
+		free(pvd, M_PFSVNCACHE);
 		*vpp = NULLVP;
 		return (error);
 	}
+retry2:
 	mtx_lock(&pfs_vncache_mutex);
+	/*
+	 * Other thread may race with us, creating the entry we are
+	 * going to insert into the cache. Recheck after
+	 * pfs_vncache_mutex is reacquired.
+	 */
+	for (pvd2 = pfs_vncache; pvd2; pvd2 = pvd2->pvd_next) {
+		if (pvd2->pvd_pn == pn && pvd2->pvd_pid == pid &&
+		    pvd2->pvd_vnode->v_mount == mp) {
+			vp = pvd2->pvd_vnode;
+			VI_LOCK(vp);
+			mtx_unlock(&pfs_vncache_mutex);
+			if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, curthread) == 0) {
+				++pfs_vncache_hits;
+				vgone(*vpp);
+				vput(*vpp);
+				*vpp = vp;
+				cache_purge(vp);
+				return (0);
+			}
+			goto retry2;
+		}
+	}
+	++pfs_vncache_misses;
+	if (++pfs_vncache_entries > pfs_vncache_maxentries)
+		pfs_vncache_maxentries = pfs_vncache_entries;
 	pvd->pvd_prev = NULL;
 	pvd->pvd_next = pfs_vncache;
 	if (pvd->pvd_next)
@@ -231,14 +246,16 @@ pfs_vncache_free(struct vnode *vp)
 	KASSERT(pvd != NULL, ("pfs_vncache_free(): no vnode data\n"));
 	if (pvd->pvd_next)
 		pvd->pvd_next->pvd_prev = pvd->pvd_prev;
-	if (pvd->pvd_prev)
+	if (pvd->pvd_prev) {
 		pvd->pvd_prev->pvd_next = pvd->pvd_next;
-	else
+		--pfs_vncache_entries;
+	} else if (pfs_vncache == pvd) {
 		pfs_vncache = pvd->pvd_next;
-	--pfs_vncache_entries;
+		--pfs_vncache_entries;
+	}
 	mtx_unlock(&pfs_vncache_mutex);
 
-	FREE(pvd, M_PFSVNCACHE);
+	free(pvd, M_PFSVNCACHE);
 	vp->v_data = NULL;
 	return (0);
 }
@@ -256,38 +273,42 @@ pfs_vncache_free(struct vnode *vp)
  * The only way to improve this situation is to change the data structure
  * used to implement the cache.
  */
-void
-pfs_purge(struct pfs_node *pn)
+static void
+pfs_purge_locked(struct pfs_node *pn)
 {
 	struct pfs_vdata *pvd;
 	struct vnode *vnp;
 
-	mtx_lock(&pfs_vncache_mutex);
+	mtx_assert(&pfs_vncache_mutex, MA_OWNED);
 	pvd = pfs_vncache;
 	while (pvd != NULL) {
 		if (pvd->pvd_dead || (pn != NULL && pvd->pvd_pn == pn)) {
 			vnp = pvd->pvd_vnode;
 			vhold(vnp);
 			mtx_unlock(&pfs_vncache_mutex);
-			VOP_LOCK(vnp, LK_EXCLUSIVE, curthread);
+			VOP_LOCK(vnp, LK_EXCLUSIVE);
 			vgone(vnp);
-			VOP_UNLOCK(vnp, 0, curthread);
-			vdrop(vnp);
+			VOP_UNLOCK(vnp, 0);
 			mtx_lock(&pfs_vncache_mutex);
+			vdrop(vnp);
 			pvd = pfs_vncache;
 		} else {
 			pvd = pvd->pvd_next;
 		}
 	}
+}
+
+void
+pfs_purge(struct pfs_node *pn)
+{
+
+	mtx_lock(&pfs_vncache_mutex);
+	pfs_purge_locked(pn);
 	mtx_unlock(&pfs_vncache_mutex);
 }
 
 /*
  * Free all vnodes associated with a defunct process
- *
- * XXXRW: It is unfortunate that pfs_exit() always acquires and releases two
- * mutexes (one of which is Giant) for every process exit, even if procfs
- * isn't mounted.
  */
 static void
 pfs_exit(void *arg, struct proc *p)
@@ -297,13 +318,11 @@ pfs_exit(void *arg, struct proc *p)
 
 	if (pfs_vncache == NULL)
 		return;
-	mtx_lock(&Giant);
 	mtx_lock(&pfs_vncache_mutex);
 	for (pvd = pfs_vncache, dead = 0; pvd != NULL; pvd = pvd->pvd_next)
 		if (pvd->pvd_pid == p->p_pid)
 			dead = pvd->pvd_dead = 1;
-	mtx_unlock(&pfs_vncache_mutex);
 	if (dead)
-		pfs_purge(NULL);
-	mtx_unlock(&Giant);
+		pfs_purge_locked(NULL);
+	mtx_unlock(&pfs_vncache_mutex);
 }

@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.60 2007/02/15 22:08:32 pjd Exp $
+ * $FreeBSD$
  *
  */
 
@@ -81,8 +81,6 @@ static vop_cachedlookup_t	ntfs_lookup;
 static vop_fsync_t	ntfs_fsync;
 static vop_pathconf_t	ntfs_pathconf;
 static vop_vptofh_t	ntfs_vptofh;
-
-int	ntfs_prtactive = 1;	/* 1 => print out reclaim of active vnodes */
 
 /*
  * This is a noop, simply returning what one has been given.
@@ -191,7 +189,7 @@ ntfs_getattr(ap)
 	vap->va_nlink = (ip->i_nlink || ip->i_flag & IN_LOADED ? ip->i_nlink : 1);
 	vap->va_uid = ip->i_mp->ntm_uid;
 	vap->va_gid = ip->i_mp->ntm_gid;
-	vap->va_rdev = 0;				/* XXX UNODEV ? */
+	vap->va_rdev = NODEV;
 	vap->va_size = fp->f_size;
 	vap->va_bytes = fp->f_allocated;
 	vap->va_atime = ntfs_nttimetounix(fp->f_times.t_access);
@@ -214,15 +212,12 @@ ntfs_inactive(ap)
 		struct vnode *a_vp;
 	} */ *ap;
 {
-	register struct vnode *vp = ap->a_vp;
 #ifdef NTFS_DEBUG
-	register struct ntnode *ip = VTONT(vp);
+	register struct ntnode *ip = VTONT(ap->a_vp);
 #endif
 
-	dprintf(("ntfs_inactive: vnode: %p, ntnode: %d\n", vp, ip->i_number));
-
-	if (ntfs_prtactive && vrefcnt(vp) != 0)
-		vprint("ntfs_inactive: pushing active", vp);
+	dprintf(("ntfs_inactive: vnode: %p, ntnode: %d\n", ap->a_vp,
+	    ip->i_number));
 
 	/* XXX since we don't support any filesystem changes
 	 * right now, nothing more needs to be done
@@ -245,9 +240,6 @@ ntfs_reclaim(ap)
 	int error;
 
 	dprintf(("ntfs_reclaim: vnode: %p, ntnode: %d\n", vp, ip->i_number));
-
-	if (ntfs_prtactive && vrefcnt(vp) != 0)
-		vprint("ntfs_reclaim: pushing active", vp);
 
 	/*
 	 * Destroy the vm object and flush associated pages.
@@ -339,7 +331,7 @@ ntfs_strategy(ap)
 		}
 	}
 	bufdone(bp);
-	return (error);
+	return (0);
 }
 
 static int
@@ -386,17 +378,14 @@ int
 ntfs_access(ap)
 	struct vop_access_args /* {
 		struct vnode *a_vp;
-		int  a_mode;
+		accmode_t a_accmode;
 		struct ucred *a_cred;
 		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 	struct ntnode *ip = VTONT(vp);
-	mode_t mode = ap->a_mode;
-#ifdef QUOTA
-	int error;
-#endif
+	accmode_t accmode = ap->a_accmode;
 
 	dprintf(("ntfs_access: %d\n",ip->i_number));
 
@@ -405,23 +394,19 @@ ntfs_access(ap)
 	 * unless the file is a socket, fifo, or a block or
 	 * character device resident on the filesystem.
 	 */
-	if (mode & VWRITE) {
+	if (accmode & VWRITE) {
 		switch ((int)vp->v_type) {
 		case VDIR:
 		case VLNK:
 		case VREG:
 			if (vp->v_mount->mnt_flag & MNT_RDONLY)
 				return (EROFS);
-#ifdef QUOTA
-			if (error = getinoquota(ip))
-				return (error);
-#endif
 			break;
 		}
 	}
 
 	return (vaccess(vp->v_type, ip->i_mp->ntm_mode, ip->i_mp->ntm_uid,
-	    ip->i_mp->ntm_gid, ap->a_mode, ap->a_cred, NULL));
+	    ip->i_mp->ntm_gid, ap->a_accmode, ap->a_cred, NULL));
 } 
 
 /*
@@ -496,7 +481,7 @@ ntfs_readdir(ap)
 	struct uio *uio = ap->a_uio;
 	struct ntfsmount *ntmp = ip->i_mp;
 	int i, j, error = 0;
-	wchar c;
+	char *c, tmpbuf[5];
 	u_int32_t faked = 0, num;
 	int ncookies = 0;
 	struct dirent cde;
@@ -553,11 +538,10 @@ ntfs_readdir(ap)
 			if(!ntfs_isnamepermitted(ntmp,iep))
 				continue;
 
-			for(i=0, j=0; i<iep->ie_fnamelen; i++, j++) {
+			for(i=0, j=0; i<iep->ie_fnamelen; i++) {
 				c = NTFS_U28(iep->ie_fname[i]);
-				if (c&0xFF00)
-					cde.d_name[j++] = (char)(c>>8);
-				cde.d_name[j] = (char)c&0xFF;
+				while (*c != '\0')
+					cde.d_name[j++] = *c++;
 			}
 			cde.d_name[j] = '\0';
 			dprintf(("ntfs_readdir: elem: %d, fname:[%s] type: %d, flag: %d, ",
@@ -595,7 +579,7 @@ ntfs_readdir(ap)
 		dpStart = (struct dirent *)
 		     ((caddr_t)uio->uio_iov->iov_base -
 			 (uio->uio_offset - off));
-		MALLOC(cookies, u_long *, ncookies * sizeof(u_long),
+		cookies = malloc(ncookies * sizeof(u_long),
 		       M_TEMP, M_WAITOK);
 		for (dp = dpStart, cookiep = cookies, i=0;
 		     i < ncookies;
@@ -657,14 +641,14 @@ ntfs_lookup(ap)
 		if(error)
 			return (error);
 
-		VOP_UNLOCK(dvp,0,cnp->cn_thread);
+		VOP_UNLOCK(dvp,0);
 		dprintf(("ntfs_lookup: parentdir: %d\n",
 			 vap->va_a_name->n_pnumber));
 		error = VFS_VGET(ntmp->ntm_mountp, vap->va_a_name->n_pnumber,
 				 LK_EXCLUSIVE, ap->a_vpp); 
 		ntfs_ntvattrrele(vap);
 		if (error) {
-			vn_lock(dvp,LK_EXCLUSIVE|LK_RETRY,cnp->cn_thread);
+			vn_lock(dvp,LK_EXCLUSIVE|LK_RETRY);
 			return (error);
 		}
 	} else {

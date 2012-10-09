@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/net/firewire.h,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
+ *	$FreeBSD$
  */
 
 #ifndef _NET_FIREWIRE_H_
@@ -135,7 +135,7 @@ extern	void	firewire_input(struct ifnet *ifp, struct mbuf *m, uint16_t src);
 extern	void	firewire_ifattach(struct ifnet *, struct fw_hwaddr *);
 extern	void	firewire_ifdetach(struct ifnet *);
 extern	void	firewire_busreset(struct ifnet *);
-extern	int	firewire_ioctl(struct ifnet *, int, caddr_t);
+extern	int	firewire_ioctl(struct ifnet *, u_long, caddr_t);
 
 #endif /* !_KERNEL */
 

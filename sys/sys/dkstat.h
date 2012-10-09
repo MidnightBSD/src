@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dkstat.h	8.2 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/dkstat.h,v 1.18.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_DKSTAT_H_

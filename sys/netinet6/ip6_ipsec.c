@@ -28,8 +28,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/ip6_ipsec.c,v 1.6.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
+#include "opt_inet.h"
+#include "opt_inet6.h"
 #include "opt_ipsec.h"
 
 #include <sys/param.h>
@@ -42,14 +44,17 @@ __FBSDID("$FreeBSD: src/sys/netinet6/ip6_ipsec.c,v 1.6.2.4.2.1 2008/11/25 02:59:
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
+#include <sys/syslog.h>
 
 #include <net/if.h>
 #include <net/route.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/in_pcb.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip_options.h>
@@ -73,19 +78,38 @@ __FBSDID("$FreeBSD: src/sys/netinet6/ip6_ipsec.c,v 1.6.2.4.2.1 2008/11/25 02:59:
 
 extern	struct protosw inet6sw[];
 
+
+#ifdef INET6 
+#ifdef IPSEC
+#ifdef IPSEC_FILTERTUNNEL
+static VNET_DEFINE(int, ip6_ipsec6_filtertunnel) = 1;
+#else
+static VNET_DEFINE(int, ip6_ipsec6_filtertunnel) = 0;
+#endif
+#define	V_ip6_ipsec6_filtertunnel	VNET(ip6_ipsec6_filtertunnel)
+
+SYSCTL_DECL(_net_inet6_ipsec6);
+SYSCTL_VNET_INT(_net_inet6_ipsec6, OID_AUTO,
+	filtertunnel, CTLFLAG_RW, &VNET_NAME(ip6_ipsec6_filtertunnel),  0,
+	"If set filter packets from an IPsec tunnel.");
+#endif /* IPSEC */
+#endif /* INET6 */
+
 /*
  * Check if we have to jump over firewall processing for this packet.
- * Called from ip_input().
+ * Called from ip6_input().
  * 1 = jump over firewall, 0 = packet goes through firewall.
  */
 int
 ip6_ipsec_filtertunnel(struct mbuf *m)
 {
-#if defined(IPSEC) && !defined(IPSEC_FILTERTUNNEL)
+#if defined(IPSEC)
+
 	/*
-	 * Bypass packet filtering for packets from a tunnel.
+	 * Bypass packet filtering for packets previously handled by IPsec.
 	 */
-	if (m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL) != NULL)
+	if (!V_ip6_ipsec6_filtertunnel &&
+	    m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL) != NULL)
 		return 1;
 #endif
 	return 0;
@@ -94,7 +118,7 @@ ip6_ipsec_filtertunnel(struct mbuf *m)
 /*
  * Check if this packet has an active SA and needs to be dropped instead
  * of forwarded.
- * Called from ip_input().
+ * Called from ip6_input().
  * 1 = drop packet, 0 = forward packet.
  */
 int
@@ -117,7 +141,7 @@ ip6_ipsec_fwd(struct mbuf *m)
 	if (sp == NULL) {	/* NB: can happen if error */
 		splx(s);
 		/*XXX error stat???*/
-		DPRINTF(("ip_input: no SP for forwarding\n"));	/*XXX*/
+		DPRINTF(("%s: no SP for forwarding\n", __func__));	/*XXX*/
 		return 1;
 	}
 
@@ -128,7 +152,7 @@ ip6_ipsec_fwd(struct mbuf *m)
 	KEY_FREESP(&sp);
 	splx(s);
 	if (error) {
-		ip6stat.ip6s_cantforward++;
+		V_ip6stat.ip6s_cantforward++;
 		return 1;
 	}
 #endif /* IPSEC */
@@ -139,7 +163,7 @@ ip6_ipsec_fwd(struct mbuf *m)
  * Check if protocol type doesn't have a further header and do IPSEC
  * decryption or reject right now.  Protocols with further headers get
  * their IPSEC treatment within the protocol specific processing.
- * Called from ip_input().
+ * Called from ip6_input().
  * 1 = drop packet, 0 = continue processing packet.
  */
 int
@@ -182,7 +206,7 @@ ip6_ipsec_input(struct mbuf *m, int nxt)
 		} else {
 			/* XXX error stat??? */
 			error = EINVAL;
-			DPRINTF(("ip_input: no SP, packet discarded\n"));/*XXX*/
+			DPRINTF(("%s: no SP, packet discarded\n", __func__));/*XXX*/
 			return 1;
 		}
 		splx(s);
@@ -267,9 +291,14 @@ ip6_ipsec_output(struct mbuf **m, struct inpcb *inp, int *flags, int *error,
 		/*
 		 * Do delayed checksums now because we send before
 		 * this is done in the normal processing path.
+		 * XXX-BZ CSUM_DELAY_DATA_IPV6?
 		 */
 		if ((*m)->m_pkthdr.csum_flags & CSUM_DELAY_DATA) {
+			ipseclog((LOG_DEBUG,
+			    "%s: we do not support IPv4 over IPv6", __func__));
+#ifdef INET
 			in_delayed_cksum(*m);
+#endif
 			(*m)->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA;
 		}
 
@@ -335,9 +364,7 @@ ip6_ipsec_mtu(struct mbuf *m)
 				   &ipsecerror);
 	if (sp != NULL) {
 		/* count IPsec header size */
-		ipsechdr = ipsec4_hdrsiz(m,
-					 IPSEC_DIR_OUTBOUND,
-					 NULL);
+		ipsechdr = ipsec_hdrsiz(m, IPSEC_DIR_OUTBOUND, NULL);
 
 		/*
 		 * find the correct route for outer IPv4
@@ -346,7 +373,7 @@ ip6_ipsec_mtu(struct mbuf *m)
 		if (sp->req != NULL &&
 		    sp->req->sav != NULL &&
 		    sp->req->sav->sah != NULL) {
-			ro = &sp->req->sav->sah->sa_route;
+			ro = &sp->req->sav->sah->route_cache.sa_route;
 			if (ro->ro_rt && ro->ro_rt->rt_ifp) {
 				mtu =
 				    ro->ro_rt->rt_rmx.rmx_mtu ?

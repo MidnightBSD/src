@@ -30,7 +30,7 @@
  *
  *	from: @(#)rpc_msg.h 1.7 86/07/16 SMI
  *	from: @(#)rpc_msg.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: src/sys/rpc/rpc_msg.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -208,7 +208,7 @@ extern bool_t	xdr_rejected_reply(XDR *, struct rejected_reply *);
  * 	struct rpc_msg *msg;
  * 	struct rpc_err *error;
  */
-extern void	_seterr_reply(struct rpc_msg *, struct rpc_err *);
+extern enum clnt_stat _seterr_reply(struct rpc_msg *, struct rpc_err *);
 __END_DECLS
 
 #endif /* !_RPC_RPC_MSG_H */

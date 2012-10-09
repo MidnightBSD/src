@@ -1,11 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
  * The contents of this file are subject to the terms of the
- * Common Development and Distribution License, Version 1.0 only
- * (the "License").  You may not use this file except in compliance
- * with the License.
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
@@ -21,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef _SYS_TXG_IMPL_H
 #define	_SYS_TXG_IMPL_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/spa.h>
 #include <sys/txg.h>
@@ -41,13 +37,13 @@ struct tx_cpu {
 	kmutex_t	tc_lock;
 	kcondvar_t	tc_cv[TXG_SIZE];
 	uint64_t	tc_count[TXG_SIZE];
+	list_t		tc_callbacks[TXG_SIZE]; /* commit cb list */
 	char		tc_pad[16];
 };
 
 typedef struct tx_state {
 	tx_cpu_t	*tx_cpu;	/* protects right to enter txg	*/
 	kmutex_t	tx_sync_lock;	/* protects tx_state_t */
-	krwlock_t	tx_suspend;
 	uint64_t	tx_open_txg;	/* currently open txg id */
 	uint64_t	tx_quiesced_txg; /* quiesced txg waiting for sync */
 	uint64_t	tx_syncing_txg;	/* currently syncing txg id */
@@ -60,7 +56,7 @@ typedef struct tx_state {
 	kcondvar_t	tx_sync_done_cv;
 	kcondvar_t	tx_quiesce_more_cv;
 	kcondvar_t	tx_quiesce_done_cv;
-	kcondvar_t	tx_timeout_exit_cv;
+	kcondvar_t	tx_timeout_cv;
 	kcondvar_t	tx_exit_cv;	/* wait for all threads to exit */
 
 	uint8_t		tx_threads;	/* number of threads */
@@ -68,7 +64,8 @@ typedef struct tx_state {
 
 	kthread_t	*tx_sync_thread;
 	kthread_t	*tx_quiesce_thread;
-	kthread_t	*tx_timelimit_thread;
+
+	taskq_t		*tx_commit_cb_taskq; /* commit callback taskq */
 } tx_state_t;
 
 #ifdef	__cplusplus

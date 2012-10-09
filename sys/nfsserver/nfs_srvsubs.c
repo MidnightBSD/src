@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsubs.c,v 1.149.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -68,7 +67,8 @@ __FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsubs.c,v 1.149.2.2.2.1 2008/11/25 0
 #include <vm/vm_extern.h>
 #include <vm/uma.h>
 
-#include <nfs/rpcv2.h>
+#include <rpc/rpc.h>
+
 #include <nfs/nfsproto.h>
 #include <nfsserver/nfs.h>
 #include <nfs/xdr_subs.h>
@@ -81,10 +81,7 @@ __FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsubs.c,v 1.149.2.2.2.1 2008/11/25 0
  * This is kinda hokey, but may save a little time doing byte swaps
  */
 u_int32_t nfsrv_nfs_xdrneg1;
-u_int32_t nfsrv_rpc_call, nfsrv_rpc_vers, nfsrv_rpc_reply,
-	nfsrv_rpc_msgdenied, nfsrv_rpc_autherr,
-	nfsrv_rpc_mismatch, nfsrv_rpc_auth_unix, nfsrv_rpc_msgaccepted;
-u_int32_t nfsrv_nfs_prog, nfsrv_nfs_true, nfsrv_nfs_false;
+u_int32_t nfsrv_nfs_true, nfsrv_nfs_false;
 
 /* And other global data */
 static const nfstype nfsv2_type[9] = { NFNON, NFREG, NFDIR, NFBLK, NFCHR,
@@ -93,15 +90,6 @@ static const nfstype nfsv2_type[9] = { NFNON, NFREG, NFDIR, NFBLK, NFCHR,
 #define vtonfsv3_mode(m)	txdr_unsigned((m) & ALLPERMS)
 
 int nfsrv_ticks;
-
-struct nfssvc_sockhead nfssvc_sockhead;
-int nfssvc_sockhead_flag;
-struct nfsd_head nfsd_head;
-int nfsd_head_flag;
-
-static int nfssvc_offset = SYS_nfssvc;
-static struct sysent nfssvc_prev_sysent;
-MAKE_SYSENT(nfssvc);
 
 struct mtx nfsd_mtx;
 
@@ -518,27 +506,19 @@ static const short *nfsrv_v3errmap[] = {
 	nfsv3err_commit,
 };
 
+extern int (*nfsd_call_nfsserver)(struct thread *, struct nfssvc_args *);
+
 /*
  * Called once to initialize data structures...
  */
 static int
 nfsrv_modevent(module_t mod, int type, void *data)
 {
-	static int registered;
 	int error = 0;
 
 	switch (type) {
 	case MOD_LOAD:
 		mtx_init(&nfsd_mtx, "nfsd_mtx", NULL, MTX_DEF);
-		nfsrv_rpc_vers = txdr_unsigned(RPC_VER2);
-		nfsrv_rpc_call = txdr_unsigned(RPC_CALL);
-		nfsrv_rpc_reply = txdr_unsigned(RPC_REPLY);
-		nfsrv_rpc_msgdenied = txdr_unsigned(RPC_MSGDENIED);
-		nfsrv_rpc_msgaccepted = txdr_unsigned(RPC_MSGACCEPTED);
-		nfsrv_rpc_mismatch = txdr_unsigned(RPC_MISMATCH);
-		nfsrv_rpc_autherr = txdr_unsigned(RPC_AUTHERR);
-		nfsrv_rpc_auth_unix = txdr_unsigned(RPCAUTH_UNIX);
-		nfsrv_nfs_prog = txdr_unsigned(NFS_PROG);
 		nfsrv_nfs_true = txdr_unsigned(TRUE);
 		nfsrv_nfs_false = txdr_unsigned(FALSE);
 		nfsrv_nfs_xdrneg1 = txdr_unsigned(-1);
@@ -546,18 +526,11 @@ nfsrv_modevent(module_t mod, int type, void *data)
 		if (nfsrv_ticks < 1)
 			nfsrv_ticks = 1;
 
-		nfsrv_initcache();	/* Init the server request cache */
 		NFSD_LOCK();
 		nfsrv_init(0);		/* Init server data structures */
-		callout_init(&nfsrv_callout, CALLOUT_MPSAFE);
 		NFSD_UNLOCK();
-		nfsrv_timer(0);
 
-		error = syscall_register(&nfssvc_offset, &nfssvc_sysent,
-		    &nfssvc_prev_sysent);
-		if (error)
-			break;
-		registered = 1;
+		nfsd_call_nfsserver = nfssvc_nfsserver;
 		break;
 
 	case MOD_UNLOAD:
@@ -566,10 +539,8 @@ nfsrv_modevent(module_t mod, int type, void *data)
 			break;
 		}
 
-		if (registered)
-			syscall_deregister(&nfssvc_offset, &nfssvc_prev_sysent);
+		nfsd_call_nfsserver = NULL;
 		callout_drain(&nfsrv_callout);
-		nfsrv_destroycache();	/* Free the server request cache */
 		mtx_destroy(&nfsd_mtx);
 		break;
 	default:
@@ -587,6 +558,9 @@ DECLARE_MODULE(nfsserver, nfsserver_mod, SI_SUB_VFS, SI_ORDER_ANY);
 
 /* So that loader and kldload(2) can find us, wherever we are.. */
 MODULE_VERSION(nfsserver, 1);
+MODULE_DEPEND(nfsserver, nfssvc, 1, 1, 1);
+MODULE_DEPEND(nfsserver, krpc, 1, 1, 1);
+MODULE_DEPEND(nfsserver, nfs_common, 1, 1, 1);
 
 /*
  * Set up nameidata for a lookup() call and do it.
@@ -605,10 +579,11 @@ MODULE_VERSION(nfsserver, 1);
  * released by the caller.
  */
 int
-nfs_namei(struct nameidata *ndp, fhandle_t *fhp, int len,
-    struct nfssvc_sock *slp, struct sockaddr *nam, struct mbuf **mdp,
+nfs_namei(struct nameidata *ndp, struct nfsrv_descript *nfsd,
+    fhandle_t *fhp, int len, struct nfssvc_sock *slp,
+    struct sockaddr *nam, struct mbuf **mdp,
     caddr_t *dposp, struct vnode **retdirp, int v3, struct vattr *retdirattrp,
-    int *retdirattr_retp, struct thread *td, int pubflag)
+    int *retdirattr_retp, int pubflag)
 {
 	int i, rem;
 	struct mbuf *md;
@@ -664,16 +639,18 @@ nfs_namei(struct nameidata *ndp, fhandle_t *fhp, int len,
 			goto out;
 	}
 
+	if (!pubflag && nfs_ispublicfh(fhp))
+		return (ESTALE);
+
 	/*
 	 * Extract and set starting directory.
 	 */
-	error = nfsrv_fhtovp(fhp, FALSE, &dp, &dvfslocked,
-	    ndp->ni_cnd.cn_cred, slp, nam, &rdonly, pubflag);
+	error = nfsrv_fhtovp(fhp, 0, &dp, &dvfslocked, nfsd, slp, nam, &rdonly);
 	if (error)
 		goto out;
 	vfslocked = VFS_LOCK_GIANT(dp->v_mount);
 	if (dp->v_type != VDIR) {
-		vrele(dp);
+		vput(dp);
 		error = ENOTDIR;
 		goto out;
 	}
@@ -687,11 +664,11 @@ nfs_namei(struct nameidata *ndp, fhandle_t *fhp, int len,
 	 */
 	*retdirp = dp;
 	if (v3) {
-		vn_lock(dp, LK_EXCLUSIVE | LK_RETRY, td);
 		*retdirattr_retp = VOP_GETATTR(dp, retdirattrp,
-			ndp->ni_cnd.cn_cred, td);
-		VOP_UNLOCK(dp, 0, td);
+			ndp->ni_cnd.cn_cred);
 	}
+
+	VOP_UNLOCK(dp, 0);
 
 	if (pubflag) {
 		/*
@@ -766,7 +743,7 @@ nfs_namei(struct nameidata *ndp, fhandle_t *fhp, int len,
 	 * because lookup() will dereference ni_startdir.
 	 */
 
-	cnp->cn_thread = td;
+	cnp->cn_thread = curthread;
 	VREF(dp);
 	ndp->ni_startdir = dp;
 
@@ -801,7 +778,7 @@ nfs_namei(struct nameidata *ndp, fhandle_t *fhp, int len,
 			else
 				uma_zfree(namei_zone, cnp->cn_pnbuf);
 			if (ndp->ni_vp && !lockleaf)
-				VOP_UNLOCK(ndp->ni_vp, 0, td);
+				VOP_UNLOCK(ndp->ni_vp, 0);
 			break;
 		}
 
@@ -809,7 +786,7 @@ nfs_namei(struct nameidata *ndp, fhandle_t *fhp, int len,
 		 * Validate symlink
 		 */
 		if ((cnp->cn_flags & LOCKPARENT) && ndp->ni_pathlen == 1)
-			VOP_UNLOCK(ndp->ni_dvp, 0, td);
+			VOP_UNLOCK(ndp->ni_dvp, 0);
 		if (!pubflag) {
 			error = EINVAL;
 			goto badlink2;
@@ -1044,8 +1021,8 @@ nfsm_srvfattr(struct nfsrv_descript *nfsd, struct vattr *vap,
 		fp->fa_mode = vtonfsv3_mode(vap->va_mode);
 		txdr_hyper(vap->va_size, &fp->fa3_size);
 		txdr_hyper(vap->va_bytes, &fp->fa3_used);
-		fp->fa3_rdev.specdata1 = txdr_unsigned(umajor(vap->va_rdev));
-		fp->fa3_rdev.specdata2 = txdr_unsigned(uminor(vap->va_rdev));
+		fp->fa3_rdev.specdata1 = txdr_unsigned(major(vap->va_rdev));
+		fp->fa3_rdev.specdata2 = txdr_unsigned(minor(vap->va_rdev));
 		fp->fa3_fsid.nfsuquad[0] = 0;
 		fp->fa3_fsid.nfsuquad[1] = txdr_unsigned(vap->va_fsid);
 		fp->fa3_fileid.nfsuquad[0] = 0;
@@ -1076,42 +1053,88 @@ nfsm_srvfattr(struct nfsrv_descript *nfsd, struct vattr *vap,
  * 	- look up fsid in mount list (if not found ret error)
  *	- get vp and export rights by calling VFS_FHTOVP()
  *	- if cred->cr_uid == 0 or MNT_EXPORTANON set it to credanon
- *	- if not lockflag unlock it with VOP_UNLOCK()
  */
 int
-nfsrv_fhtovp(fhandle_t *fhp, int lockflag, struct vnode **vpp, int *vfslockedp,
-    struct ucred *cred, struct nfssvc_sock *slp, struct sockaddr *nam,
-    int *rdonlyp, int pubflag)
+nfsrv_fhtovp(fhandle_t *fhp, int flags, struct vnode **vpp, int *vfslockedp,
+    struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
+    struct sockaddr *nam, int *rdonlyp)
 {
-	struct thread *td = curthread; /* XXX */
 	struct mount *mp;
 	int i;
-	struct ucred *credanon;
+	struct ucred *cred, *credanon;
 	int error, exflags;
 #ifdef MNT_EXNORESPORT		/* XXX needs mountd and /etc/exports help yet */
 	struct sockaddr_int *saddr;
 #endif
+	int credflavor;
 	int vfslocked;
+	int numsecflavors, *secflavors;
+	int authsys;
+	int v3 = nfsd->nd_flag & ND_NFSV3;
+	int mountreq;
 
 	*vfslockedp = 0;
 	*vpp = NULL;
 
 	if (nfs_ispublicfh(fhp)) {
-		if (!pubflag || !nfs_pub.np_valid)
+		if (!nfs_pub.np_valid)
 			return (ESTALE);
 		fhp = &nfs_pub.np_handle;
 	}
 
-	mp = vfs_getvfs(&fhp->fh_fsid);
+	mp = vfs_busyfs(&fhp->fh_fsid);
 	if (!mp)
 		return (ESTALE);
 	vfslocked = VFS_LOCK_GIANT(mp);
-	error = VFS_CHECKEXP(mp, nam, &exflags, &credanon);
-	if (error)
+	error = VFS_CHECKEXP(mp, nam, &exflags, &credanon,
+	    &numsecflavors, &secflavors);
+	if (error) {
+		vfs_unbusy(mp);
 		goto out;
-	error = VFS_FHTOVP(mp, &fhp->fh_fid, vpp);
-	if (error)
+	}
+	if (numsecflavors == 0) {
+		/*
+		 * This can happen if the system is running with an
+		 * old mountd that doesn't pass in a secflavor list.
+		 */
+		numsecflavors = 1;
+		authsys = AUTH_SYS;
+		secflavors = &authsys;
+	}
+	credflavor = nfsd->nd_credflavor;
+	for (i = 0; i < numsecflavors; i++) {
+		if (secflavors[i] == credflavor)
+			break;
+	}
+	if (i == numsecflavors) {
+		/*
+		 * RFC 2623 section 2.3.2 - allow certain procedures
+		 * used at NFS client mount time even if they have
+		 * weak authentication.
+		 */
+		mountreq = FALSE;
+		if (v3) {
+			if (nfsd->nd_procnum == NFSPROC_FSINFO
+			    || nfsd->nd_procnum == NFSPROC_GETATTR)
+				mountreq = TRUE;
+		} else {
+			if (nfsd->nd_procnum == NFSPROC_FSSTAT
+			    || nfsd->nd_procnum == NFSPROC_GETATTR)
+				mountreq = TRUE;
+		}
+		if (!mountreq) {
+			error = NFSERR_AUTHERR | AUTH_TOOWEAK;
+			vfs_unbusy(mp);
+			goto out;
+		}
+	}
+	error = VFS_FHTOVP(mp, &fhp->fh_fid, LK_EXCLUSIVE, vpp);
+	if (error) {
+		/* Make sure the server replies ESTALE to the client. */
+		error = ESTALE;
+		vfs_unbusy(mp);
 		goto out;
+	}
 #ifdef MNT_EXNORESPORT
 	if (!(exflags & (MNT_EXNORESPORT|MNT_EXPUBLIC))) {
 		saddr = (struct sockaddr_in *)nam;
@@ -1122,30 +1145,33 @@ nfsrv_fhtovp(fhandle_t *fhp, int lockflag, struct vnode **vpp, int *vfslockedp,
 			vput(*vpp);
 			*vpp = NULL;
 			error = NFSERR_AUTHERR | AUTH_TOOWEAK;
+			vfs_unbusy(mp);
+			goto out;
 		}
 	}
 #endif
 	/*
 	 * Check/setup credentials.
 	 */
+	cred = nfsd->nd_cr;
 	if (cred->cr_uid == 0 || (exflags & MNT_EXPORTANON)) {
 		cred->cr_uid = credanon->cr_uid;
-		for (i = 0; i < credanon->cr_ngroups && i < NGROUPS; i++)
-			cred->cr_groups[i] = credanon->cr_groups[i];
-		cred->cr_ngroups = i;
+		crsetgroups(cred, credanon->cr_ngroups, credanon->cr_groups);
 	}
 	if (exflags & MNT_EXRDONLY)
 		*rdonlyp = 1;
 	else
 		*rdonlyp = 0;
 
-	if (!lockflag)
-		VOP_UNLOCK(*vpp, 0, td);
+	if (!(flags & NFSRV_FLAG_BUSY))
+		vfs_unbusy(mp);
 out:
-	vfs_rel(mp);
-	if (error) {
+	if (credanon != NULL)
+		crfree(credanon);
+
+	if (error)
 		VFS_UNLOCK_GIANT(vfslocked);
-	} else
+	else
 		*vfslockedp = vfslocked;
 	return (error);
 }
@@ -1168,48 +1194,6 @@ nfs_ispublicfh(fhandle_t *fhp)
 		if (*cp++ != 0)
 			return (FALSE);
 	return (TRUE);
-}
-
-/*
- * This function compares two net addresses by family and returns TRUE
- * if they are the same host.
- * If there is any doubt, return FALSE.
- * The AF_INET family is handled as a special case so that address mbufs
- * don't need to be saved to store "struct in_addr", which is only 4 bytes.
- */
-int
-netaddr_match(int family, union nethostaddr *haddr, struct sockaddr *nam)
-{
-	struct sockaddr_in *inetaddr;
-
-	NFSD_LOCK_DONTCARE();
-
-	switch (family) {
-	case AF_INET:
-		inetaddr = (struct sockaddr_in *)nam;
-		if (inetaddr->sin_family == AF_INET &&
-		    inetaddr->sin_addr.s_addr == haddr->had_inetaddr)
-			return (1);
-		break;
-#ifdef INET6
-	case AF_INET6:
-	{
-		register struct sockaddr_in6 *inet6addr1, *inet6addr2;
-
-		inet6addr1 = (struct sockaddr_in6 *)nam;
-		inet6addr2 = (struct sockaddr_in6 *)haddr->had_nam;
-	/* XXX - should test sin6_scope_id ? */
-		if (inet6addr1->sin6_family == AF_INET6 &&
-		    IN6_ARE_ADDR_EQUAL(&inet6addr1->sin6_addr,
-				       &inet6addr2->sin6_addr))
-			return (1);
-		break;
-	}
-#endif
-	default:
-		break;
-	};
-	return (0);
 }
 
 /*
@@ -1354,8 +1338,8 @@ nfsm_clget_xx(u_int32_t **tl, struct mbuf *mb, struct mbuf **mp,
 	if (*bp >= *be) {
 		if (*mp == mb)
 			(*mp)->m_len += *bp - bpos;
-		MGET(nmp, M_TRYWAIT, MT_DATA);
-		MCLGET(nmp, M_TRYWAIT);
+		MGET(nmp, M_WAIT, MT_DATA);
+		MCLGET(nmp, M_WAIT);
 		nmp->m_len = NFSMSIZ(nmp);
 		(*mp)->m_next = nmp;
 		*mp = nmp;
@@ -1366,13 +1350,12 @@ nfsm_clget_xx(u_int32_t **tl, struct mbuf *mb, struct mbuf **mp,
 }
 
 int
-nfsm_srvmtofh_xx(fhandle_t *f, struct nfsrv_descript *nfsd, struct mbuf **md,
-    caddr_t *dpos)
+nfsm_srvmtofh_xx(fhandle_t *f, int v3, struct mbuf **md, caddr_t *dpos)
 {
 	u_int32_t *tl;
 	int fhlen;
 
-	if (nfsd->nd_flag & ND_NFSV3) {
+	if (v3) {
 		tl = nfsm_dissect_xx_nonblock(NFSX_UNSIGNED, md, dpos);
 		if (tl == NULL)
 			return EBADRPC;

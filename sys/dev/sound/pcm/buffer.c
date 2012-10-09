@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
+ * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
+ * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
+ * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,11 +26,18 @@
  * SUCH DAMAGE.
  */
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pcm/buffer.c,v 1.37 2007/06/16 03:37:27 ariff Exp $");
+#define SND_USE_FXDIV
+#include "snd_fxdiv_gen.h"
+
+SND_DECLARE_FILE("$FreeBSD$");
 
 struct snd_dbuf *
 sndbuf_create(device_t dev, char *drv, char *desc, struct pcm_channel *channel)
@@ -84,7 +93,7 @@ sndbuf_alloc(struct snd_dbuf *b, bus_dma_tag_t dmatag, int dmaflags,
 	int ret;
 
 	b->dmatag = dmatag;
-	b->dmaflags = dmaflags | BUS_DMA_NOWAIT;
+	b->dmaflags = dmaflags | BUS_DMA_NOWAIT | BUS_DMA_COHERENT;
 	b->maxsize = size;
 	b->bufsize = b->maxsize;
 	b->buf_addr = 0;
@@ -154,7 +163,7 @@ sndbuf_resize(struct snd_dbuf *b, unsigned int blkcnt, unsigned int blksz)
 	unsigned int bufsize, allocsize;
 	u_int8_t *tmpbuf;
 
-	chn_lock(b->channel);
+	CHN_LOCK(b->channel);
 	if (b->maxsize == 0)
 		goto out;
 	if (blkcnt == 0)
@@ -162,7 +171,7 @@ sndbuf_resize(struct snd_dbuf *b, unsigned int blkcnt, unsigned int blksz)
 	if (blksz == 0)
 		blksz = b->blksz;
 	if (blkcnt < 2 || blksz < 16 || (blkcnt * blksz) > b->maxsize) {
-		chn_unlock(b->channel);
+		CHN_UNLOCK(b->channel);
 		return EINVAL;
 	}
 	if (blkcnt == b->blkcnt && blksz == b->blksz)
@@ -173,9 +182,9 @@ sndbuf_resize(struct snd_dbuf *b, unsigned int blkcnt, unsigned int blksz)
 	if (bufsize > b->allocsize ||
 	    bufsize < (b->allocsize >> SNDBUF_CACHE_SHIFT)) {
 		allocsize = round_page(bufsize);
-		chn_unlock(b->channel);
+		CHN_UNLOCK(b->channel);
 		tmpbuf = malloc(allocsize, M_DEVBUF, M_WAITOK);
-		chn_lock(b->channel);
+		CHN_LOCK(b->channel);
 		if (snd_verbose > 3)
 			printf("%s(): b=%p %p -> %p [%d -> %d : %d]\n",
 			    __func__, b, b->tmpbuf, tmpbuf,
@@ -194,7 +203,7 @@ sndbuf_resize(struct snd_dbuf *b, unsigned int blkcnt, unsigned int blksz)
 
 	sndbuf_reset(b);
 out:
-	chn_unlock(b->channel);
+	CHN_UNLOCK(b->channel);
 	return 0;
 }
 
@@ -212,11 +221,11 @@ sndbuf_remalloc(struct snd_dbuf *b, unsigned int blkcnt, unsigned int blksz)
 	if (bufsize > b->allocsize ||
 	    bufsize < (b->allocsize >> SNDBUF_CACHE_SHIFT)) {
 		allocsize = round_page(bufsize);
-		chn_unlock(b->channel);
+		CHN_UNLOCK(b->channel);
 		buf = malloc(allocsize, M_DEVBUF, M_WAITOK);
 		tmpbuf = malloc(allocsize, M_DEVBUF, M_WAITOK);
 		shadbuf = malloc(allocsize, M_DEVBUF, M_WAITOK);
-		chn_lock(b->channel);
+		CHN_LOCK(b->channel);
 		if (b->buf != NULL)
 			free(b->buf, M_DEVBUF);
 		b->buf = buf;
@@ -292,6 +301,15 @@ sndbuf_fillsilence(struct snd_dbuf *b)
 	b->rl = b->bufsize;
 }
 
+void
+sndbuf_fillsilence_rl(struct snd_dbuf *b, u_int rl)
+{
+	if (b->bufsize > 0)
+		memset(sndbuf_getbuf(b), sndbuf_zerodata(b->fmt), b->bufsize);
+	b->rp = 0;
+	b->rl = min(b->bufsize, rl);
+}
+
 /**
  * @brief Reset buffer w/o flushing statistics
  *
@@ -334,14 +352,17 @@ int
 sndbuf_setfmt(struct snd_dbuf *b, u_int32_t fmt)
 {
 	b->fmt = fmt;
-	b->bps = 1;
-	b->bps <<= (b->fmt & AFMT_STEREO)? 1 : 0;
+	b->bps = AFMT_BPS(b->fmt);
+	b->align = AFMT_ALIGN(b->fmt);
+#if 0
+	b->bps = AFMT_CHANNEL(b->fmt);
 	if (b->fmt & AFMT_16BIT)
 		b->bps <<= 1;
 	else if (b->fmt & AFMT_24BIT)
 		b->bps *= 3;
 	else if (b->fmt & AFMT_32BIT)
 		b->bps <<= 2;
+#endif
 	return 0;
 }
 
@@ -360,9 +381,7 @@ sndbuf_setspd(struct snd_dbuf *b, unsigned int spd)
 unsigned int
 sndbuf_getalign(struct snd_dbuf *b)
 {
-	static int align[] = {0, 1, 1, 2, 2, 2, 2, 3};
-
-	return align[b->bps - 1];
+	return (b->align);
 }
 
 unsigned int
@@ -515,7 +534,7 @@ sndbuf_getfreeptr(struct snd_dbuf *b)
 	return (b->rp + b->rl) % b->bufsize;
 }
 
-unsigned int
+u_int64_t
 sndbuf_getblocks(struct snd_dbuf *b)
 {
 	SNDBUF_LOCKASSERT(b);
@@ -523,7 +542,7 @@ sndbuf_getblocks(struct snd_dbuf *b)
 	return b->total / b->blksz;
 }
 
-unsigned int
+u_int64_t
 sndbuf_getprevblocks(struct snd_dbuf *b)
 {
 	SNDBUF_LOCKASSERT(b);
@@ -531,12 +550,20 @@ sndbuf_getprevblocks(struct snd_dbuf *b)
 	return b->prev_total / b->blksz;
 }
 
-unsigned int
+u_int64_t
 sndbuf_gettotal(struct snd_dbuf *b)
 {
 	SNDBUF_LOCKASSERT(b);
 
 	return b->total;
+}
+
+u_int64_t
+sndbuf_getprevtotal(struct snd_dbuf *b)
+{
+	SNDBUF_LOCKASSERT(b);
+
+	return b->prev_total;
 }
 
 void
@@ -548,43 +575,19 @@ sndbuf_updateprevtotal(struct snd_dbuf *b)
 }
 
 unsigned int
-snd_xbytes(unsigned int v, unsigned int from, unsigned int to)
-{
-	unsigned int w, x, y;
-
-	if (from == to)
-		return v;
-
-	if (from == 0 || to == 0 || v == 0)
-		return 0;
-
-	x = from;
-	y = to;
-	while (y != 0) {
-		w = x % y;
-		x = y;
-		y = w;
-	}
-	from /= x;
-	to /= x;
-
-	return (unsigned int)(((u_int64_t)v * to) / from);
-}
-
-unsigned int
 sndbuf_xbytes(unsigned int v, struct snd_dbuf *from, struct snd_dbuf *to)
 {
 	if (from == NULL || to == NULL || v == 0)
 		return 0;
 
-	return snd_xbytes(v, sndbuf_getbps(from) * sndbuf_getspd(from),
-	    sndbuf_getbps(to) * sndbuf_getspd(to));
+	return snd_xbytes(v, sndbuf_getalign(from) * sndbuf_getspd(from),
+	    sndbuf_getalign(to) * sndbuf_getspd(to));
 }
 
 u_int8_t
 sndbuf_zerodata(u_int32_t fmt)
 {
-	if (fmt & AFMT_SIGNED)
+	if (fmt & (AFMT_SIGNED | AFMT_PASSTHROUGH))
 		return (0x00);
 	else if (fmt & AFMT_MU_LAW)
 		return (0x7f);
@@ -670,26 +673,55 @@ sndbuf_dispose(struct snd_dbuf *b, u_int8_t *to, unsigned int count)
 	return 0;
 }
 
+#ifdef SND_DIAGNOSTIC
+static uint32_t snd_feeder_maxfeed = 0;
+SYSCTL_UINT(_hw_snd, OID_AUTO, feeder_maxfeed, CTLFLAG_RD,
+    &snd_feeder_maxfeed, 0, "maximum feeder count request");
+
+static uint32_t snd_feeder_maxcycle = 0;
+SYSCTL_UINT(_hw_snd, OID_AUTO, feeder_maxcycle, CTLFLAG_RD,
+    &snd_feeder_maxcycle, 0, "maximum feeder cycle");
+#endif
+
 /* count is number of bytes we want added to destination buffer */
 int
 sndbuf_feed(struct snd_dbuf *from, struct snd_dbuf *to, struct pcm_channel *channel, struct pcm_feeder *feeder, unsigned int count)
 {
-	unsigned int cnt;
+	unsigned int cnt, maxfeed;
+#ifdef SND_DIAGNOSTIC
+	unsigned int cycle;
+
+	if (count > snd_feeder_maxfeed)
+		snd_feeder_maxfeed = count;
+
+	cycle = 0;
+#endif
 
 	KASSERT(count > 0, ("can't feed 0 bytes"));
 
 	if (sndbuf_getfree(to) < count)
-		return EINVAL;
+		return (EINVAL);
+
+	maxfeed = SND_FXROUND(SND_FXDIV_MAX, sndbuf_getalign(to));
 
 	do {
-		cnt = FEEDER_FEED(feeder, channel, to->tmpbuf, count, from);
-		if (cnt) {
-			sndbuf_acquire(to, to->tmpbuf, cnt);
-			count -= cnt;
-		}
-	} while (count && cnt);
+		cnt = FEEDER_FEED(feeder, channel, to->tmpbuf,
+		    min(count, maxfeed), from);
+		if (cnt == 0)
+			break;
+		sndbuf_acquire(to, to->tmpbuf, cnt);
+		count -= cnt;
+#ifdef SND_DIAGNOSTIC
+		cycle++;
+#endif
+	} while (count != 0);
 
-	return 0;
+#ifdef SND_DIAGNOSTIC
+	if (cycle > snd_feeder_maxcycle)
+		snd_feeder_maxcycle = cycle;
+#endif
+
+	return (0);
 }
 
 /************************************************************/
@@ -703,7 +735,7 @@ sndbuf_dump(struct snd_dbuf *b, char *s, u_int32_t what)
 	if (what & 0x02)
 		printf(" dl: %d, rp: %d, rl: %d, hp: %d", b->dl, b->rp, b->rl, b->hp);
 	if (what & 0x04)
-		printf(" total: %d, prev_total: %d, xrun: %d", b->total, b->prev_total, b->xrun);
+		printf(" total: %ju, prev_total: %ju, xrun: %d", (uintmax_t)b->total, (uintmax_t)b->prev_total, b->xrun);
    	if (what & 0x08)
 		printf(" fmt: 0x%x, spd: %d", b->fmt, b->spd);
 	if (what & 0x10)

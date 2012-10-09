@@ -34,7 +34,11 @@
 #include <machine/resource.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
-#include <sys/soundcard.h>
+
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/chip.h>
 #include "bus_if.h"
@@ -42,7 +46,7 @@
 #include <isa/isavar.h>
 #include <isa/isa_common.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/gusc.c,v 1.19 2007/02/23 19:40:13 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define LOGICALID_NOPNP 0
 #define LOGICALID_PCM   0x0000561e
@@ -301,11 +305,9 @@ static int
 gusc_attach(device_t dev)
 {
 	sc_p scp;
-	int unit;
 	void *ih;
 
 	scp = device_get_softc(dev);
-	unit = device_get_unit(dev);
 
 	bzero(scp, sizeof(*scp));
 
@@ -580,16 +582,14 @@ alloc_resource(sc_p scp)
 static int
 release_resource(sc_p scp)
 {
-	int i, lid, flags;
+	int i, lid;
 	device_t dev;
 
-	flags = 0;
 	if (isa_get_vendorid(scp->dev))
 		lid = isa_get_logicalid(scp->dev);
-	else {
+	else
 		lid = LOGICALID_NOPNP;
-		flags = device_get_flags(scp->dev);
-	}
+
 	switch(lid) {
 	case LOGICALID_PCM:
 	case LOGICALID_NOPNP:		/* XXX Non-PnP */
@@ -644,7 +644,6 @@ static device_method_t gusc_methods[] = {
 	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_alloc_resource,	gusc_alloc_resource),
 	DEVMETHOD(bus_release_resource,	gusc_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
@@ -652,7 +651,7 @@ static device_method_t gusc_methods[] = {
 	DEVMETHOD(bus_setup_intr,	gusc_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t gusc_driver = {

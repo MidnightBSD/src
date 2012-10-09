@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/net/if.h,v 1.3 2008/12/03 00:26:54 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if.h,v 1.108 2007/06/11 20:08:11 andre Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NET_IF_H_
@@ -44,9 +43,11 @@
 /*
  * <net/if.h> does not depend on <sys/time.h> on most other systems.  This
  * helps userland compatibility.  (struct timeval ifi_lastchange)
+ * The same holds for <sys/socket.h>.  (struct sockaddr ifru_addr)
  */
 #ifndef _KERNEL
 #include <sys/time.h>
+#include <sys/socket.h>
 #endif
 
 struct ifnet;
@@ -146,11 +147,12 @@ struct if_data {
 #define	IFF_LINK2	0x4000		/* per link layer defined bit */
 #define	IFF_ALTPHYS	IFF_LINK2	/* use alternate physical connection */
 #define	IFF_MULTICAST	0x8000		/* (i) supports multicast */
-/*			0x10000		*/
+#define	IFF_CANTCONFIG	0x10000		/* (i) unconfigurable using ioctl(2) */
 #define	IFF_PPROMISC	0x20000		/* (n) user-requested promisc mode */
 #define	IFF_MONITOR	0x40000		/* (n) user-requested monitor mode */
 #define	IFF_STATICARP	0x80000		/* (n) static ARP */
-#define	IFF_NEEDSGIANT	0x100000	/* (i) hold Giant over if_start calls */
+#define	IFF_DYING	0x200000	/* (n) interface is winding down */
+#define	IFF_RENAMING	0x400000	/* (n) interface is being renamed */
 
 /*
  * Old names for driver flags so that user space tools can continue to use
@@ -165,7 +167,7 @@ struct if_data {
 #define	IFF_CANTCHANGE \
 	(IFF_BROADCAST|IFF_POINTOPOINT|IFF_DRV_RUNNING|IFF_DRV_OACTIVE|\
 	    IFF_SIMPLEX|IFF_MULTICAST|IFF_ALLMULTI|IFF_SMART|IFF_PROMISC|\
-	    IFF_NEEDSGIANT)
+	    IFF_DYING|IFF_CANTCONFIG)
 
 /*
  * Values for if_link_state.
@@ -199,10 +201,17 @@ struct if_data {
  *   field.  IFCAP_* and CSUM_* do not match one to one and CSUM_* may be
  *   more detailed or differenciated than IFCAP_*.
  *   Hwassist features are defined CSUM_* in sys/mbuf.h
+ *
+ * Capabilities that cannot be arbitrarily changed with ifconfig/ioctl
+ * are listed in IFCAP_CANTCHANGE, similar to IFF_CANTCHANGE.
+ * This is not strictly necessary because the common code never
+ * changes capabilities, and it is left to the individual driver
+ * to do the right thing. However, having the filter here
+ * avoids replication of the same code in all individual drivers.
  */
-#define IFCAP_RXCSUM		0x00001  /* can offload checksum on RX */
-#define IFCAP_TXCSUM		0x00002  /* can offload checksum on TX */
-#define IFCAP_NETCONS		0x00004  /* can be a network console */
+#define	IFCAP_RXCSUM		0x00001  /* can offload checksum on RX */
+#define	IFCAP_TXCSUM		0x00002  /* can offload checksum on TX */
+#define	IFCAP_NETCONS		0x00004  /* can be a network console */
 #define	IFCAP_VLAN_MTU		0x00008	/* VLAN-compatible MTU */
 #define	IFCAP_VLAN_HWTAGGING	0x00010	/* hardware VLAN tag support */
 #define	IFCAP_JUMBO_MTU		0x00020	/* 9000 byte MTU supported */
@@ -211,20 +220,27 @@ struct if_data {
 #define	IFCAP_TSO4		0x00100	/* can do TCP Segmentation Offload */
 #define	IFCAP_TSO6		0x00200	/* can do TCP6 Segmentation Offload */
 #define	IFCAP_LRO		0x00400	/* can do Large Receive Offload */
-#define IFCAP_WOL_UCAST		0x00800 /* wake on any unicast frame */
-#define IFCAP_WOL_MCAST		0x01000 /* wake on any multicast frame */
-#define IFCAP_WOL_MAGIC		0x02000 /* wake on any Magic Packet */
-#define IFCAP_TOE4		0x04000 /* interface can offload TCP */
-#define IFCAP_TOE6		0x08000 /* interface can offload TCP6 */
-#define IFCAP_VLAN_HWFILTER	0x10000 /* interface hw can filter vlan tag */
-#define IFCAP_POLLING_NOCOUNT	0x20000 /* polling ticks cannot be fragmented */
-#define IFCAP_VLAN_HWTSO	0x40000 /* can do IFCAP_TSO on VLANs */
-#define IFCAP_LINKSTATE		0x80000 /* the runtime link state is dynamic */
+#define	IFCAP_WOL_UCAST		0x00800	/* wake on any unicast frame */
+#define	IFCAP_WOL_MCAST		0x01000	/* wake on any multicast frame */
+#define	IFCAP_WOL_MAGIC		0x02000	/* wake on any Magic Packet */
+#define	IFCAP_TOE4		0x04000	/* interface can offload TCP */
+#define	IFCAP_TOE6		0x08000	/* interface can offload TCP6 */
+#define	IFCAP_VLAN_HWFILTER	0x10000 /* interface hw can filter vlan tag */
+#define	IFCAP_POLLING_NOCOUNT	0x20000 /* polling ticks cannot be fragmented */
+#define	IFCAP_VLAN_HWTSO	0x40000 /* can do IFCAP_TSO on VLANs */
+#define	IFCAP_LINKSTATE		0x80000 /* the runtime link state is dynamic */
+#define	IFCAP_NETMAP		0x100000 /* netmap mode supported/enabled */
+#define	IFCAP_RXCSUM_IPV6	0x200000  /* can offload checksum on IPv6 RX */
+#define	IFCAP_TXCSUM_IPV6	0x400000  /* can offload checksum on IPv6 TX */
 
-#define IFCAP_HWCSUM		(IFCAP_RXCSUM | IFCAP_TXCSUM)
-#define	IFCAP_TSO		(IFCAP_TSO4 | IFCAP_TSO6)
-#define IFCAP_WOL		(IFCAP_WOL_UCAST | IFCAP_WOL_MCAST | IFCAP_WOL_MAGIC)
-#define IFCAP_TOE		(IFCAP_TOE4 | IFCAP_TOE6)
+#define IFCAP_HWCSUM_IPV6	(IFCAP_RXCSUM_IPV6 | IFCAP_TXCSUM_IPV6)
+
+#define IFCAP_HWCSUM	(IFCAP_RXCSUM | IFCAP_TXCSUM)
+#define	IFCAP_TSO	(IFCAP_TSO4 | IFCAP_TSO6)
+#define	IFCAP_WOL	(IFCAP_WOL_UCAST | IFCAP_WOL_MCAST | IFCAP_WOL_MAGIC)
+#define	IFCAP_TOE	(IFCAP_TOE4 | IFCAP_TOE6)
+
+#define	IFCAP_CANTCHANGE	(IFCAP_NETMAP)
 
 #define	IFQ_MAXLEN	50
 #define	IFNET_SLOWHZ	1		/* granularity is 1 second */
@@ -232,6 +248,7 @@ struct if_data {
 /*
  * Message format for use in obtaining information about interfaces
  * from getkerninfo and the routing socket
+ * For the new, extensible interface see struct if_msghdrl below.
  */
 struct if_msghdr {
 	u_short	ifm_msglen;	/* to skip over non-understood messages */
@@ -244,8 +261,34 @@ struct if_msghdr {
 };
 
 /*
+ * The 'l' version shall be used by new interfaces, like NET_RT_IFLISTL.  It is
+ * extensible after ifm_data_off or within ifm_data.  Both the if_msghdr and
+ * if_data now have a member field detailing the struct length in addition to
+ * the routing message length.  Macros are provided to find the start of
+ * ifm_data and the start of the socket address strucutres immediately following
+ * struct if_msghdrl given a pointer to struct if_msghdrl.
+ */
+#define	IF_MSGHDRL_IFM_DATA(_l) \
+    (struct if_data *)((char *)(_l) + (_l)->ifm_data_off)
+#define	IF_MSGHDRL_RTA(_l) \
+    (void *)((uintptr_t)(_l) + (_l)->ifm_len)
+struct if_msghdrl {
+	u_short	ifm_msglen;	/* to skip over non-understood messages */
+	u_char	ifm_version;	/* future binary compatibility */
+	u_char	ifm_type;	/* message type */
+	int	ifm_addrs;	/* like rtm_addrs */
+	int	ifm_flags;	/* value of if_flags */
+	u_short	ifm_index;	/* index for associated ifp */
+	u_short _ifm_spare1;	/* spare space to grow if_index, see if_var.h */
+	u_short	ifm_len;	/* length of if_msghdrl incl. if_data */
+	u_short	ifm_data_off;	/* offset of if_data from beginning */
+	struct	if_data ifm_data;/* statistics and other data about if */
+};
+
+/*
  * Message format for use in obtaining information about interface addresses
  * from getkerninfo and the routing socket
+ * For the new, extensible interface see struct ifa_msghdrl below.
  */
 struct ifa_msghdr {
 	u_short	ifam_msglen;	/* to skip over non-understood messages */
@@ -255,6 +298,33 @@ struct ifa_msghdr {
 	int	ifam_flags;	/* value of ifa_flags */
 	u_short	ifam_index;	/* index for associated ifp */
 	int	ifam_metric;	/* value of ifa_metric */
+};
+
+/*
+ * The 'l' version shall be used by new interfaces, like NET_RT_IFLISTL.  It is
+ * extensible after ifam_metric or within ifam_data.  Both the ifa_msghdrl and
+ * if_data now have a member field detailing the struct length in addition to
+ * the routing message length.  Macros are provided to find the start of
+ * ifm_data and the start of the socket address strucutres immediately following
+ * struct ifa_msghdrl given a pointer to struct ifa_msghdrl.
+ */
+#define	IFA_MSGHDRL_IFAM_DATA(_l) \
+    (struct if_data *)((char *)(_l) + (_l)->ifam_data_off)
+#define	IFA_MSGHDRL_RTA(_l) \
+    (void *)((uintptr_t)(_l) + (_l)->ifam_len)
+struct ifa_msghdrl {
+	u_short	ifam_msglen;	/* to skip over non-understood messages */
+	u_char	ifam_version;	/* future binary compatibility */
+	u_char	ifam_type;	/* message type */
+	int	ifam_addrs;	/* like rtm_addrs */
+	int	ifam_flags;	/* value of ifa_flags */
+	u_short	ifam_index;	/* index for associated ifp */
+	u_short _ifam_spare1;	/* spare space to grow if_index, see if_var.h */
+	u_short	ifam_len;	/* length of ifa_msghdrl incl. if_data */
+	u_short	ifam_data_off;	/* offset of if_data from beginning */
+	int	ifam_metric;	/* value of ifa_metric */
+	struct	if_data ifam_data;/* statistics and other data about if or
+				 * address */
 };
 
 /*
@@ -286,6 +356,14 @@ struct if_announcemsghdr {
 #define	IFAN_DEPARTURE	1	/* interface departure */
 
 /*
+ * Buffer with length to be used in SIOCGIFDESCR/SIOCSIFDESCR requests
+ */
+struct ifreq_buffer {
+	size_t	length;
+	void	*buffer;
+};
+
+/*
  * Interface request structure used for socket
  * ioctl's.  All interface ioctl's must have parameter
  * definitions which begin with ifr_name.  The
@@ -297,20 +375,25 @@ struct	ifreq {
 		struct	sockaddr ifru_addr;
 		struct	sockaddr ifru_dstaddr;
 		struct	sockaddr ifru_broadaddr;
+		struct	ifreq_buffer ifru_buffer;
 		short	ifru_flags[2];
 		short	ifru_index;
+		int	ifru_jid;
 		int	ifru_metric;
 		int	ifru_mtu;
 		int	ifru_phys;
 		int	ifru_media;
 		caddr_t	ifru_data;
 		int	ifru_cap[2];
+		u_int	ifru_fib;
 	} ifr_ifru;
 #define	ifr_addr	ifr_ifru.ifru_addr	/* address */
 #define	ifr_dstaddr	ifr_ifru.ifru_dstaddr	/* other end of p-to-p link */
 #define	ifr_broadaddr	ifr_ifru.ifru_broadaddr	/* broadcast address */
+#define	ifr_buffer	ifr_ifru.ifru_buffer	/* user supplied buffer with its length */
 #define	ifr_flags	ifr_ifru.ifru_flags[0]	/* flags (low 16 bits) */
 #define	ifr_flagshigh	ifr_ifru.ifru_flags[1]	/* flags (high 16 bits) */
+#define	ifr_jid		ifr_ifru.ifru_jid	/* jail/vnet */
 #define	ifr_metric	ifr_ifru.ifru_metric	/* metric */
 #define	ifr_mtu		ifr_ifru.ifru_mtu	/* mtu */
 #define ifr_phys	ifr_ifru.ifru_phys	/* physical wire */
@@ -319,6 +402,7 @@ struct	ifreq {
 #define	ifr_reqcap	ifr_ifru.ifru_cap[0]	/* requested capabilities */
 #define	ifr_curcap	ifr_ifru.ifru_cap[1]	/* current capabilities */
 #define	ifr_index	ifr_ifru.ifru_index	/* interface index */
+#define	ifr_fib		ifr_ifru.ifru_fib	/* interface fib */
 };
 
 #define	_SIZEOF_ADDR_IFREQ(ifr) \
@@ -378,16 +462,6 @@ struct	ifconf {
 #define	ifc_buf	ifc_ifcu.ifcu_buf	/* buffer address */
 #define	ifc_req	ifc_ifcu.ifcu_req	/* array of structures returned */
 };
-
-#if defined (__amd64__) || defined (COMPAT_32BIT)
-struct ifconf32 {
-	int	ifc_len;		/* size of associated buffer */
-	union {
-		u_int	ifcu_buf;
-		u_int	ifcu_req;
-	} ifc_ifcu;
-};
-#endif
 
 /*
  * interface groups
@@ -456,8 +530,6 @@ __END_DECLS
 #endif
 
 #ifdef _KERNEL
-struct thread;
-
 /* XXX - this should go away soon. */
 #include <net/if_var.h>
 #endif

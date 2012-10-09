@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/kern/kern_ctf.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -68,7 +68,7 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	int flags;
 	int i;
 	int nbytes;
-	int resid;
+	ssize_t resid;
 	int vfslocked;
 	size_t sz;
 	struct nameidata nd;
@@ -90,7 +90,7 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	 * ctfcnt to -1. See below.
 	 */
 	if (ef->ctfcnt < 0)
-		return (0);
+		return (EFTYPE);
 
 	/* Now check if we've already loaded the CTF data.. */
 	if (ef->ctfcnt > 0) {
@@ -164,8 +164,13 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	 * section names aren't present, then we can't locate the
 	 * .SUNW_ctf section containing the CTF data.
 	 */
-	if (hdr->e_shstrndx == 0 || shdr[hdr->e_shstrndx].sh_type != SHT_STRTAB)
+	if (hdr->e_shstrndx == 0 || shdr[hdr->e_shstrndx].sh_type != SHT_STRTAB) {
+		printf("%s(%d): module %s e_shstrndx is %d, sh_type is %d\n",
+		    __func__, __LINE__, lf->pathname, hdr->e_shstrndx,
+		    shdr[hdr->e_shstrndx].sh_type);
+		error = EFTYPE;
 		goto out;
+	}
 
 	/* Allocate memory to buffer the section header strings. */
 	if ((shstrtab = malloc(shdr[hdr->e_shstrndx].sh_size, M_LINKER,
@@ -187,8 +192,12 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 			break;
 
 	/* Check if the CTF section wasn't found. */
-	if (i >= hdr->e_shnum)
+	if (i >= hdr->e_shnum) {
+		printf("%s(%d): module %s has no .SUNW_ctf section\n",
+		    __func__, __LINE__, lf->pathname);
+		error = EFTYPE;
 		goto out;
+	}
 
 	/* Read the CTF header. */
 	if ((error = vn_rdwr(UIO_READ, nd.ni_vp, ctf_hdr, sizeof(ctf_hdr),
@@ -197,12 +206,21 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 		goto out;
 
 	/* Check the CTF magic number. (XXX check for big endian!) */
-	if (ctf_hdr[0] != 0xf1 || ctf_hdr[1] != 0xcf)
+	if (ctf_hdr[0] != 0xf1 || ctf_hdr[1] != 0xcf) {
+		printf("%s(%d): module %s has invalid format\n",
+		    __func__, __LINE__, lf->pathname);
+		error = EFTYPE;
 		goto out;
+	}
 
 	/* Check if version 2. */
-	if (ctf_hdr[2] != 2)
+	if (ctf_hdr[2] != 2) {
+		printf("%s(%d): module %s CTF format version is %d "
+		    "(2 expected)\n",
+		    __func__, __LINE__, lf->pathname, ctf_hdr[2]);
+		error = EFTYPE;
 		goto out;
+	}
 
 	/* Check if the data is compressed. */
 	if ((ctf_hdr[3] & 0x1) != 0) {
@@ -303,7 +321,7 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	lc->typlenp = &ef->typlen;
 
 out:
-	VOP_UNLOCK(nd.ni_vp, 0, td);
+	VOP_UNLOCK(nd.ni_vp, 0);
 	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
 	VFS_UNLOCK_GIANT(vfslocked);
 

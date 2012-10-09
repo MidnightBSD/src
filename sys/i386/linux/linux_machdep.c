@@ -27,10 +27,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/linux/linux_machdep.c,v 1.78.2.1 2007/12/05 13:31:57 kib Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/file.h>
 #include <sys/fcntl.h>
 #include <sys/imgact.h>
@@ -63,6 +64,7 @@ __FBSDID("$FreeBSD: src/sys/i386/linux/linux_machdep.c,v 1.78.2.1 2007/12/05 13:
 #include <i386/linux/linux.h>
 #include <i386/linux/linux_proto.h>
 #include <compat/linux/linux_ipc.h>
+#include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
 #include <compat/linux/linux_emul.h>
@@ -146,8 +148,8 @@ linux_execve(struct thread *td, struct linux_execve_args *args)
 		 * linux_proc_init, this leads to a panic on KASSERT
 		 * because such process has p->p_emuldata == NULL
 		 */
-	   	if (td->td_proc->p_sysent == &elf_linux_sysvec)
-   		   	error = linux_proc_init(td, 0, 0);
+		if (SV_PROC_ABI(td->td_proc) == SV_ABI_LINUX)
+   			error = linux_proc_init(td, 0, 0);
 	return (error);
 }
 
@@ -299,295 +301,66 @@ linux_old_select(struct thread *td, struct linux_old_select_args *args)
 }
 
 int
-linux_fork(struct thread *td, struct linux_fork_args *args)
+linux_set_cloned_tls(struct thread *td, void *desc)
 {
-	int error;
-	struct proc *p2;
-	struct thread *td2;
+	struct segment_descriptor sd;
+	struct l_user_desc info;
+	int idx, error;
+	int a[2];
 
-#ifdef DEBUG
-	if (ldebug(fork))
-		printf(ARGS(fork, ""));
-#endif
+	error = copyin(desc, &info, sizeof(struct l_user_desc));
+	if (error) {
+		printf(LMSG("copyin failed!"));
+	} else {
+		idx = info.entry_number;
 
-	if ((error = fork1(td, RFFDG | RFPROC | RFSTOPPED, 0, &p2)) != 0)
-		return (error);
-	
-	if (error == 0) {
-		td->td_retval[0] = p2->p_pid;
-		td->td_retval[1] = 0;
-	}
-
-	if (td->td_retval[1] == 1)
-		td->td_retval[0] = 0;
-	error = linux_proc_init(td, td->td_retval[0], 0);
-	if (error)
-		return (error);
-
-	td2 = FIRST_THREAD_IN_PROC(p2);
-
-	/*
-	 * Make this runnable after we are finished with it.
-	 */
-	thread_lock(td2);
-	TD_SET_CAN_RUN(td2);
-	sched_add(td2, SRQ_BORING);
-	thread_unlock(td2);
-
-	return (0);
-}
-
-int
-linux_vfork(struct thread *td, struct linux_vfork_args *args)
-{
-	int error;
-	struct proc *p2;
-	struct thread *td2;
-
-#ifdef DEBUG
-	if (ldebug(vfork))
-		printf(ARGS(vfork, ""));
-#endif
-
-	/* exclude RFPPWAIT */
-	if ((error = fork1(td, RFFDG | RFPROC | RFMEM | RFSTOPPED, 0, &p2)) != 0)
-		return (error);
-	if (error == 0) {
-		td->td_retval[0] = p2->p_pid;
-		td->td_retval[1] = 0;
-	}
-	/* Are we the child? */
-	if (td->td_retval[1] == 1)
-		td->td_retval[0] = 0;
-	error = linux_proc_init(td, td->td_retval[0], 0);
-	if (error)
-		return (error);
-
-	PROC_LOCK(p2);
-	p2->p_flag |= P_PPWAIT;
-	PROC_UNLOCK(p2);
-
-	td2 = FIRST_THREAD_IN_PROC(p2);
-	
-	/*
-	 * Make this runnable after we are finished with it.
-	 */
-	thread_lock(td2);
-	TD_SET_CAN_RUN(td2);
-	sched_add(td2, SRQ_BORING);
-	thread_unlock(td2);
-
-	/* wait for the children to exit, ie. emulate vfork */
-	PROC_LOCK(p2);
-	while (p2->p_flag & P_PPWAIT)
-	   	msleep(td->td_proc, &p2->p_mtx, PWAIT, "ppwait", 0);
-	PROC_UNLOCK(p2);
-
-	return (0);
-}
-
-int
-linux_clone(struct thread *td, struct linux_clone_args *args)
-{
-	int error, ff = RFPROC | RFSTOPPED;
-	struct proc *p2;
-	struct thread *td2;
-	int exit_signal;
-	struct linux_emuldata *em;
-
-#ifdef DEBUG
-	if (ldebug(clone)) {
-   	   	printf(ARGS(clone, "flags %x, stack %x, parent tid: %x, child tid: %x"),
-		    (unsigned int)args->flags, (unsigned int)args->stack, 
-		    (unsigned int)args->parent_tidptr, (unsigned int)args->child_tidptr);
-	}
-#endif
-
-	exit_signal = args->flags & 0x000000ff;
-	if (LINUX_SIG_VALID(exit_signal)) {
-		if (exit_signal <= LINUX_SIGTBLSZ)
-			exit_signal =
-			    linux_to_bsd_signal[_SIG_IDX(exit_signal)];
-	} else if (exit_signal != 0)
-		return (EINVAL);
-
-	if (args->flags & LINUX_CLONE_VM)
-		ff |= RFMEM;
-	if (args->flags & LINUX_CLONE_SIGHAND)
-		ff |= RFSIGSHARE;
-	/* 
-	 * XXX: in linux sharing of fs info (chroot/cwd/umask)
-	 * and open files is independant. in fbsd its in one
-	 * structure but in reality it doesn't cause any problems
-	 * because both of these flags are usually set together.
-	 */
-	if (!(args->flags & (LINUX_CLONE_FILES | LINUX_CLONE_FS)))
-		ff |= RFFDG;
-
-	/*
-	 * Attempt to detect when linux_clone(2) is used for creating
-	 * kernel threads. Unfortunately despite the existence of the
-	 * CLONE_THREAD flag, version of linuxthreads package used in
-	 * most popular distros as of beginning of 2005 doesn't make
-	 * any use of it. Therefore, this detection relies on
-	 * empirical observation that linuxthreads sets certain
-	 * combination of flags, so that we can make more or less
-	 * precise detection and notify the FreeBSD kernel that several
-	 * processes are in fact part of the same threading group, so
-	 * that special treatment is necessary for signal delivery
-	 * between those processes and fd locking.
-	 */
-	if ((args->flags & 0xffffff00) == LINUX_THREADING_FLAGS)
-		ff |= RFTHREAD;
-
-	if (args->flags & LINUX_CLONE_PARENT_SETTID)
-		if (args->parent_tidptr == NULL)
-			return (EINVAL);
-
-	error = fork1(td, ff, 0, &p2);
-	if (error)
-		return (error);
-
-	if (args->flags & (LINUX_CLONE_PARENT | LINUX_CLONE_THREAD)) {
-	   	sx_xlock(&proctree_lock);
-		PROC_LOCK(p2);
-		proc_reparent(p2, td->td_proc->p_pptr);
-		PROC_UNLOCK(p2);
-		sx_xunlock(&proctree_lock);
-	}
-	
-	/* create the emuldata */
-	error = linux_proc_init(td, p2->p_pid, args->flags);
-	/* reference it - no need to check this */
-	em = em_find(p2, EMUL_DOLOCK);
-	KASSERT(em != NULL, ("clone: emuldata not found.\n"));
-	/* and adjust it */
-
-	if (args->flags & LINUX_CLONE_THREAD) {
-	   	/* XXX: linux mangles pgrp and pptr somehow
-		 * I think it might be this but I am not sure.
+		/* 
+		 * looks like we're getting the idx we returned
+		 * in the set_thread_area() syscall
 		 */
-#ifdef notyet
-	   	PROC_LOCK(p2);
-	   	p2->p_pgrp = td->td_proc->p_pgrp;
-	   	PROC_UNLOCK(p2);
-#endif
-	 	exit_signal = 0;
-	}
+		if (idx != 6 && idx != 3) {
+			printf(LMSG("resetting idx!"));
+			idx = 3;
+		}
 
-	if (args->flags & LINUX_CLONE_CHILD_SETTID)
-		em->child_set_tid = args->child_tidptr;
-	else
-	   	em->child_set_tid = NULL;
+		/* this doesnt happen in practice */
+		if (idx == 6) {
+	   		/* we might copy out the entry_number as 3 */
+		   	info.entry_number = 3;
+			error = copyout(&info, desc, sizeof(struct l_user_desc));
+			if (error)
+				printf(LMSG("copyout failed!"));
+		}
 
-	if (args->flags & LINUX_CLONE_CHILD_CLEARTID)
-		em->child_clear_tid = args->child_tidptr;
-	else
-	   	em->child_clear_tid = NULL;
+		a[0] = LINUX_LDT_entry_a(&info);
+		a[1] = LINUX_LDT_entry_b(&info);
 
-	EMUL_UNLOCK(&emul_lock);
-
-	if (args->flags & LINUX_CLONE_PARENT_SETTID) {
-		error = copyout(&p2->p_pid, args->parent_tidptr, sizeof(p2->p_pid));
-		if (error)
-			printf(LMSG("copyout failed!"));
-	}
-
-	PROC_LOCK(p2);
-	p2->p_sigparent = exit_signal;
-	PROC_UNLOCK(p2);
-	td2 = FIRST_THREAD_IN_PROC(p2);
-	/* 
-	 * in a case of stack = NULL we are supposed to COW calling process stack
-	 * this is what normal fork() does so we just keep the tf_esp arg intact
-	 */
-	if (args->stack)
-   	   	td2->td_frame->tf_esp = (unsigned int)args->stack;
-
-	if (args->flags & LINUX_CLONE_SETTLS) {
-   	   	struct l_user_desc info;
-   	   	int idx;
-	   	int a[2];
-		struct segment_descriptor sd;
-
-	   	error = copyin((void *)td->td_frame->tf_esi, &info, sizeof(struct l_user_desc));
-		if (error) {
-			printf(LMSG("copyin failed!"));
-		} else {
-		
-			idx = info.entry_number;
-		
-			/* 
-			 * looks like we're getting the idx we returned
-			 * in the set_thread_area() syscall
-			 */
-			if (idx != 6 && idx != 3) {
-				printf(LMSG("resetting idx!"));
-				idx = 3;
-			}
-
-			/* this doesnt happen in practice */
-			if (idx == 6) {
-		   		/* we might copy out the entry_number as 3 */
-			   	info.entry_number = 3;
-				error = copyout(&info, (void *) td->td_frame->tf_esi, sizeof(struct l_user_desc));
-				if (error)
-					printf(LMSG("copyout failed!"));
-			}
-
-			a[0] = LINUX_LDT_entry_a(&info);
-			a[1] = LINUX_LDT_entry_b(&info);
-
-			memcpy(&sd, &a, sizeof(a));
+		memcpy(&sd, &a, sizeof(a));
 #ifdef DEBUG
 		if (ldebug(clone))
-		   	printf("Segment created in clone with CLONE_SETTLS: lobase: %x, hibase: %x, lolimit: %x, hilimit: %x, type: %i, dpl: %i, p: %i, xx: %i, def32: %i, gran: %i\n", sd.sd_lobase,
-			sd.sd_hibase,
-			sd.sd_lolimit,
-			sd.sd_hilimit,
-			sd.sd_type,
-			sd.sd_dpl,
-			sd.sd_p,
-			sd.sd_xx,
-			sd.sd_def32,
-			sd.sd_gran);
+			printf("Segment created in clone with "
+			"CLONE_SETTLS: lobase: %x, hibase: %x, "
+			"lolimit: %x, hilimit: %x, type: %i, "
+			"dpl: %i, p: %i, xx: %i, def32: %i, "
+			"gran: %i\n", sd.sd_lobase, sd.sd_hibase,
+			sd.sd_lolimit, sd.sd_hilimit, sd.sd_type,
+			sd.sd_dpl, sd.sd_p, sd.sd_xx,
+			sd.sd_def32, sd.sd_gran);
 #endif
 
-			/* set %gs */
-			td2->td_pcb->pcb_gsd = sd;
-			td2->td_pcb->pcb_gs = GSEL(GUGS_SEL, SEL_UPL);
-		}
-	} 
-
-#ifdef DEBUG
-	if (ldebug(clone))
-		printf(LMSG("clone: successful rfork to %ld, stack %p sig = %d"),
-		    (long)p2->p_pid, args->stack, exit_signal);
-#endif
-	if (args->flags & LINUX_CLONE_VFORK) {
-	   	PROC_LOCK(p2);
-		p2->p_flag |= P_PPWAIT;
-	   	PROC_UNLOCK(p2);
+		/* set %gs */
+		td->td_pcb->pcb_gsd = sd;
+		td->td_pcb->pcb_gs = GSEL(GUGS_SEL, SEL_UPL);
 	}
 
-	/*
-	 * Make this runnable after we are finished with it.
-	 */
-	thread_lock(td2);
-	TD_SET_CAN_RUN(td2);
-	sched_add(td2, SRQ_BORING);
-	thread_unlock(td2);
+	return (error);
+}
 
-	td->td_retval[0] = p2->p_pid;
-	td->td_retval[1] = 0;
+int
+linux_set_upcall_kse(struct thread *td, register_t stack)
+{
 
-	if (args->flags & LINUX_CLONE_VFORK) {
-   	   	/* wait for the children to exit, ie. emulate vfork */
-   	   	PROC_LOCK(p2);
-		while (p2->p_flag & P_PPWAIT)
-   		   	msleep(td->td_proc, &p2->p_mtx, PWAIT, "ppwait", 0);
-		PROC_UNLOCK(p2);
-	}
+	td->td_frame->tf_esp = stack;
 
 	return (0);
 }
@@ -681,6 +454,7 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 	/*
 	 * PROT_READ, PROT_WRITE, or PROT_EXEC implies PROT_READ and PROT_EXEC
 	 * on Linux/i386. We do this to ensure maximum compatibility.
+	 * Linux/ia64 does the same in i386 emulation mode.
 	 */
 	bsd_args.prot = prot;
 	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))
@@ -694,9 +468,12 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 		 * The file descriptor fildes is opened with
 		 * read permission, regardless of the
 		 * protection options specified.
+		 *
+		 * Checking just CAP_MMAP is fine here, since the real work
+		 * is done in the FreeBSD mmap().
 		 */
 
-		if ((error = fget(td, bsd_args.fd, &fp)) != 0)
+		if ((error = fget(td, bsd_args.fd, CAP_MMAP, &fp)) != 0)
 			return (error);
 		if (fp->f_type != DTYPE_VNODE) {
 			fdrop(fp, td);
@@ -758,14 +535,21 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 			PROC_UNLOCK(p);
 		}
 
-		/* This gives us our maximum stack size */
+		/*
+		 * This gives us our maximum stack size and a new BOS.
+		 * If we're using VM_STACK, then mmap will just map
+		 * the top SGROWSIZ bytes, and let the stack grow down
+		 * to the limit at BOS.  If we're not using VM_STACK
+		 * we map the full stack, since we don't have a way
+		 * to autogrow it.
+		 */
 		if (len > STACK_SIZE - GUARD_SIZE) {
 			bsd_args.addr = (caddr_t)PTRIN(addr);
 			bsd_args.len = len;
 		} else {
 			bsd_args.addr = (caddr_t)PTRIN(addr) -
-				(STACK_SIZE - GUARD_SIZE - len);
-			bsd_args.len  = STACK_SIZE - GUARD_SIZE;
+			    (STACK_SIZE - GUARD_SIZE - len);
+			bsd_args.len = STACK_SIZE - GUARD_SIZE;
 		}
 	} else {
 		bsd_args.addr = (caddr_t)PTRIN(addr);
@@ -780,7 +564,7 @@ linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
 		    (void *)bsd_args.addr, bsd_args.len, bsd_args.prot,
 		    bsd_args.flags, bsd_args.fd, (int)bsd_args.pos);
 #endif
-	error = mmap(td, &bsd_args);
+	error = sys_mmap(td, &bsd_args);
 #ifdef DEBUG
 	if (ldebug(mmap))
 		printf("-> %s() return: 0x%x (0x%08x)\n",
@@ -799,36 +583,26 @@ linux_mprotect(struct thread *td, struct linux_mprotect_args *uap)
 	bsd_args.prot = uap->prot;
 	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))
 		bsd_args.prot |= PROT_READ | PROT_EXEC;
-	return (mprotect(td, &bsd_args));
+	return (sys_mprotect(td, &bsd_args));
 }
 
 int
 linux_pipe(struct thread *td, struct linux_pipe_args *args)
 {
 	int error;
-	int reg_edx;
+	int fildes[2];
 
 #ifdef DEBUG
 	if (ldebug(pipe))
 		printf(ARGS(pipe, "*"));
 #endif
 
-	reg_edx = td->td_retval[1];
-	error = pipe(td, 0);
-	if (error) {
-		td->td_retval[1] = reg_edx;
+	error = kern_pipe(td, fildes);
+	if (error)
 		return (error);
-	}
 
-	error = copyout(td->td_retval, args->pipefds, 2*sizeof(int));
-	if (error) {
-		td->td_retval[1] = reg_edx;
-		return (error);
-	}
-
-	td->td_retval[1] = reg_edx;
-	td->td_retval[0] = 0;
-	return (0);
+	/* XXX: Close descriptors on error. */
+	return (copyout(fildes, args->pipefds, sizeof fildes));
 }
 
 int
@@ -868,9 +642,6 @@ linux_modify_ldt(struct thread *td, struct linux_modify_ldt_args *uap)
 	struct l_descriptor ld;
 	union descriptor desc;
 	int size, written;
-
-	if (uap->ptr == NULL)
-		return (EINVAL);
 
 	switch (uap->func) {
 	case 0x00: /* read_ldt */
@@ -914,7 +685,7 @@ linux_modify_ldt(struct thread *td, struct linux_modify_ldt_args *uap)
 		error = i386_set_ldt(td, &ldt, &desc);
 		break;
 	default:
-		error = EINVAL;
+		error = ENOSYS;
 		break;
 	}
 
@@ -1073,7 +844,7 @@ linux_ftruncate64(struct thread *td, struct linux_ftruncate64_args *args)
 
 	sa.fd = args->fd;
 	sa.length = args->length;
-	return ftruncate(td, &sa);
+	return sys_ftruncate(td, &sa);
 }
 
 int
@@ -1229,31 +1000,31 @@ linux_get_thread_area(struct thread *td, struct linux_get_thread_area_args *args
 int
 linux_timer_create(struct thread *td, struct linux_timer_create_args *args)
 {
-   	return ktimer_create(td, (struct ktimer_create_args *) args);
+   	return sys_ktimer_create(td, (struct ktimer_create_args *) args);
 }
 
 int
 linux_timer_settime(struct thread *td, struct linux_timer_settime_args *args)
 {
-   	return ktimer_settime(td, (struct ktimer_settime_args *) args);
+   	return sys_ktimer_settime(td, (struct ktimer_settime_args *) args);
 }
 
 int
 linux_timer_gettime(struct thread *td, struct linux_timer_gettime_args *args)
 {
-   	return ktimer_gettime(td, (struct ktimer_gettime_args *) args);
+   	return sys_ktimer_gettime(td, (struct ktimer_gettime_args *) args);
 }
 
 int
 linux_timer_getoverrun(struct thread *td, struct linux_timer_getoverrun_args *args)
 {
-   	return ktimer_getoverrun(td, (struct ktimer_getoverrun_args *) args);
+   	return sys_ktimer_getoverrun(td, (struct ktimer_getoverrun_args *) args);
 }
 
 int
 linux_timer_delete(struct thread *td, struct linux_timer_delete_args *args)
 {
-   	return ktimer_delete(td, (struct ktimer_delete_args *) args);
+   	return sys_ktimer_delete(td, (struct ktimer_delete_args *) args);
 }
 
 /* XXX: this wont work with module - convert it */
@@ -1261,7 +1032,7 @@ int
 linux_mq_open(struct thread *td, struct linux_mq_open_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return kmq_open(td, (struct kmq_open_args *) args);
+   	return sys_kmq_open(td, (struct kmq_open_args *) args);
 #else
 	return (ENOSYS);
 #endif
@@ -1271,7 +1042,7 @@ int
 linux_mq_unlink(struct thread *td, struct linux_mq_unlink_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return kmq_unlink(td, (struct kmq_unlink_args *) args);
+   	return sys_kmq_unlink(td, (struct kmq_unlink_args *) args);
 #else
 	return (ENOSYS);
 #endif
@@ -1281,7 +1052,7 @@ int
 linux_mq_timedsend(struct thread *td, struct linux_mq_timedsend_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return kmq_timedsend(td, (struct kmq_timedsend_args *) args);
+   	return sys_kmq_timedsend(td, (struct kmq_timedsend_args *) args);
 #else
 	return (ENOSYS);
 #endif
@@ -1291,7 +1062,7 @@ int
 linux_mq_timedreceive(struct thread *td, struct linux_mq_timedreceive_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return kmq_timedreceive(td, (struct kmq_timedreceive_args *) args);
+   	return sys_kmq_timedreceive(td, (struct kmq_timedreceive_args *) args);
 #else
 	return (ENOSYS);
 #endif
@@ -1301,7 +1072,7 @@ int
 linux_mq_notify(struct thread *td, struct linux_mq_notify_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-	return kmq_notify(td, (struct kmq_notify_args *) args);
+	return sys_kmq_notify(td, (struct kmq_notify_args *) args);
 #else
 	return (ENOSYS);
 #endif
@@ -1311,9 +1082,39 @@ int
 linux_mq_getsetattr(struct thread *td, struct linux_mq_getsetattr_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return kmq_setattr(td, (struct kmq_setattr_args *) args);
+   	return sys_kmq_setattr(td, (struct kmq_setattr_args *) args);
 #else
 	return (ENOSYS);
 #endif
 }
 
+int
+linux_wait4(struct thread *td, struct linux_wait4_args *args)
+{
+	int error, options;
+	struct rusage ru, *rup;
+
+#ifdef DEBUG
+	if (ldebug(wait4))
+		printf(ARGS(wait4, "%d, %p, %d, %p"),
+		    args->pid, (void *)args->status, args->options,
+		    (void *)args->rusage);
+#endif
+
+	options = (args->options & (WNOHANG | WUNTRACED));
+	/* WLINUXCLONE should be equal to __WCLONE, but we make sure */
+	if (args->options & __WCLONE)
+		options |= WLINUXCLONE;
+
+	if (args->rusage != NULL)
+		rup = &ru;
+	else
+		rup = NULL;
+	error = linux_common_wait(td, args->pid, args->status, options, rup);
+	if (error)
+		return (error);
+	if (args->rusage != NULL)
+		error = copyout(&ru, args->rusage, sizeof(ru));
+
+	return (error);
+}

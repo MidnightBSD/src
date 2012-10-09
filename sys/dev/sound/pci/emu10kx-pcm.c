@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/emu10kx-pcm.c,v 1.11 2007/09/12 07:43:42 ariff Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -39,14 +39,18 @@
 #include <sys/lock.h>
 #include <sys/mutex.h>
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/chip.h>
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
 
 #include "mixer_if.h"
 
+#include <dev/sound/pci/emuxkireg.h>
 #include <dev/sound/pci/emu10kx.h>
-#include "emu10k1-alsa%diked.h"
 
 struct emu_pcm_pchinfo {
 	int		spd;
@@ -112,8 +116,8 @@ struct emu_pcm_info {
 
 
 static uint32_t emu_rfmt_adc[] = {
-	AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S16_LE,
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
 	0
 };
 static struct pcmchan_caps emu_reccaps_adc = {
@@ -121,7 +125,7 @@ static struct pcmchan_caps emu_reccaps_adc = {
 };
 
 static uint32_t emu_rfmt_efx[] = {
-	AFMT_S16_LE,
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
 	0
 };
 
@@ -142,15 +146,15 @@ static int emu_rates_audigy[] = {
 };
 
 static uint32_t emu_pfmt[] = {
-	AFMT_U8,
-	AFMT_STEREO | AFMT_U8,
-	AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S16_LE,
+	SND_FORMAT(AFMT_U8, 1, 0),
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
 	0
 };
 static uint32_t emu_pfmt_mono[] = {
-	AFMT_U8,
-	AFMT_S16_LE,
+	SND_FORMAT(AFMT_U8, 1, 0),
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
 	0
 };
 
@@ -385,7 +389,7 @@ emu_dspmixer_set(struct snd_mixer *m, unsigned dev, unsigned left, unsigned righ
 	return  (0);
 }
 
-static int
+static u_int32_t
 emu_dspmixer_setrecsrc(struct snd_mixer *m, u_int32_t src)
 {
 	struct emu_pcm_info *sc;
@@ -467,7 +471,7 @@ static kobj_method_t emudspmixer_methods[] = {
 	KOBJMETHOD(mixer_uninit,	emu_dspmixer_uninit),
 	KOBJMETHOD(mixer_set,		emu_dspmixer_set),
 	KOBJMETHOD(mixer_setrecsrc,	emu_dspmixer_setrecsrc),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 MIXER_DECLARE(emudspmixer);
 
@@ -486,7 +490,7 @@ emu_efxmixer_set(struct snd_mixer *m, unsigned dev, unsigned left, unsigned righ
 	return  (0);
 }
 
-static int
+static u_int32_t
 emu_efxmixer_setrecsrc(struct snd_mixer *m __unused, u_int32_t src __unused)
 {
 	return (SOUND_MASK_MONITOR);
@@ -496,7 +500,7 @@ static kobj_method_t emuefxmixer_methods[] = {
 	KOBJMETHOD(mixer_init,		emu_efxmixer_init),
 	KOBJMETHOD(mixer_set,		emu_efxmixer_set),
 	KOBJMETHOD(mixer_setrecsrc,	emu_efxmixer_setrecsrc),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 MIXER_DECLARE(emuefxmixer);
 
@@ -551,8 +555,8 @@ emu_ac97_read_emulation(struct emu_pcm_info *sc, int regno)
 		break;
 	}
 
-	emu_wr(sc->card, AC97ADDRESS, regno, 1);
-	tmp = emu_rd(sc->card, AC97DATA, 2);
+	emu_wr(sc->card, EMU_AC97ADDR, regno, 1);
+	tmp = emu_rd(sc->card, EMU_AC97DATA, 2);
 
 	if (use_ac97)
 		emulated = tmp;
@@ -617,8 +621,8 @@ emu_ac97_write_emulation(struct emu_pcm_info *sc, int regno, uint32_t data)
 		break;
 	}
 	if (write_ac97) {
-		emu_wr(sc->card, AC97ADDRESS, regno, 1);
-		emu_wr(sc->card, AC97DATA, data, 2);
+		emu_wr(sc->card, EMU_AC97ADDR, regno, 1);
+		emu_wr(sc->card, EMU_AC97DATA, data, 2);
 	}
 }
 
@@ -642,7 +646,7 @@ emu_ewrcd(kobj_t obj __unused, void *devinfo, int regno, uint32_t data)
 static kobj_method_t emu_eac97_methods[] = {
 	KOBJMETHOD(ac97_read, emu_erdcd),
 	KOBJMETHOD(ac97_write, emu_ewrcd),
-	{0, 0}
+	KOBJMETHOD_END
 };
 AC97_DECLARE(emu_eac97);
 
@@ -654,8 +658,8 @@ emu_rdcd(kobj_t obj __unused, void *devinfo, int regno)
 	struct emu_pcm_info *sc = (struct emu_pcm_info *)devinfo;
 
 	KASSERT(sc->card != NULL, ("emu_rdcd: no soundcard"));
-	emu_wr(sc->card, AC97ADDRESS, regno, 1);
-	rd = emu_rd(sc->card, AC97DATA, 2);
+	emu_wr(sc->card, EMU_AC97ADDR, regno, 1);
+	rd = emu_rd(sc->card, EMU_AC97DATA, 2);
 	return (rd);
 }
 
@@ -665,15 +669,15 @@ emu_wrcd(kobj_t obj __unused, void *devinfo, int regno, uint32_t data)
 	struct emu_pcm_info *sc = (struct emu_pcm_info *)devinfo;
 
 	KASSERT(sc->card != NULL, ("emu_wrcd: no soundcard"));
-	emu_wr(sc->card, AC97ADDRESS, regno, 1);
-	emu_wr(sc->card, AC97DATA, data, 2);
+	emu_wr(sc->card, EMU_AC97ADDR, regno, 1);
+	emu_wr(sc->card, EMU_AC97DATA, data, 2);
 	return (0);
 }
 
 static kobj_method_t emu_ac97_methods[] = {
 	KOBJMETHOD(ac97_read, emu_rdcd),
 	KOBJMETHOD(ac97_write, emu_wrcd),
-	{0, 0}
+	KOBJMETHOD_END
 };
 AC97_DECLARE(emu_ac97);
 
@@ -718,7 +722,7 @@ emupchan_init(kobj_t obj __unused, void *devinfo, struct snd_dbuf *b, struct pcm
 	ch->pcm = sc;
 	ch->channel = c;
 	ch->blksz = sc->bufsz;
-	ch->fmt = AFMT_U8;
+	ch->fmt = SND_FORMAT(AFMT_U8, 1, 0);
 	ch->spd = 8000;
 	ch->master = emu_valloc(sc->card);
 	/*
@@ -753,7 +757,7 @@ emupchan_setformat(kobj_t obj __unused, void *c_devinfo, uint32_t format)
 	return (0);
 }
 
-static int
+static uint32_t
 emupchan_setspeed(kobj_t obj __unused, void *c_devinfo, uint32_t speed)
 {
 	struct emu_pcm_pchinfo *ch = c_devinfo;
@@ -762,7 +766,7 @@ emupchan_setspeed(kobj_t obj __unused, void *c_devinfo, uint32_t speed)
 	return (ch->spd);
 }
 
-static int
+static uint32_t
 emupchan_setblocksize(kobj_t obj __unused, void *c_devinfo, uint32_t blocksize)
 {
 	struct emu_pcm_pchinfo *ch = c_devinfo;
@@ -772,7 +776,7 @@ emupchan_setblocksize(kobj_t obj __unused, void *c_devinfo, uint32_t blocksize)
 		blocksize = ch->pcm->bufsz;
 	snd_mtxlock(sc->lock);
 	ch->blksz = blocksize;
-	emu_timer_set(sc->card, ch->timer, ch->blksz / sndbuf_getbps(ch->buffer));
+	emu_timer_set(sc->card, ch->timer, ch->blksz / sndbuf_getalign(ch->buffer));
 	snd_mtxunlock(sc->lock);
 	return (ch->blksz);
 }
@@ -789,12 +793,12 @@ emupchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 	snd_mtxlock(sc->lock); /* XXX can we trigger on parallel threads ? */
 	if (go == PCMTRIG_START) {
 		emu_vsetup(ch->master, ch->fmt, ch->spd);
-		if ((ch->fmt & AFMT_STEREO) == AFMT_STEREO)
+		if (AFMT_CHANNEL(ch->fmt) > 1)
 			emu_vroute(sc->card, &(sc->rt), ch->master);
 		else
 			emu_vroute(sc->card, &(sc->rt_mono), ch->master);
 		emu_vwrite(sc->card, ch->master);
-		emu_timer_set(sc->card, ch->timer, ch->blksz / sndbuf_getbps(ch->buffer));
+		emu_timer_set(sc->card, ch->timer, ch->blksz / sndbuf_getalign(ch->buffer));
 		emu_timer_enable(sc->card, ch->timer, 1);
 	}
 	/* PCM interrupt handler will handle PCMTRIG_STOP event */
@@ -804,7 +808,7 @@ emupchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 	return (0);
 }
 
-static int
+static uint32_t
 emupchan_getptr(kobj_t obj __unused, void *c_devinfo)
 {
 	struct emu_pcm_pchinfo *ch = c_devinfo;
@@ -848,7 +852,7 @@ static kobj_method_t emupchan_methods[] = {
 	KOBJMETHOD(channel_trigger, emupchan_trigger),
 	KOBJMETHOD(channel_getptr, emupchan_getptr),
 	KOBJMETHOD(channel_getcaps, emupchan_getcaps),
-	{0, 0}
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(emupchan);
 
@@ -864,14 +868,14 @@ emurchan_init(kobj_t obj __unused, void *devinfo, struct snd_dbuf *b, struct pcm
 	ch->pcm = sc;
 	ch->channel = c;
 	ch->blksz = sc->bufsz / 2; /* We rise interrupt for half-full buffer */
-	ch->fmt = AFMT_U8;
+	ch->fmt = SND_FORMAT(AFMT_U8, 1, 0);
 	ch->spd = 8000;
-	ch->idxreg = sc->is_emu10k1 ? ADCIDX : A_ADCIDX;
-	ch->basereg = ADCBA;
-	ch->sizereg = ADCBS;
-	ch->setupreg = ADCCR;
-	ch->irqmask = INTE_ADCBUFENABLE;
-	ch->iprmask = IPR_ADCBUFFULL | IPR_ADCBUFHALFFULL;
+	ch->idxreg = sc->is_emu10k1 ? EMU_ADCIDX : EMU_A_ADCIDX;
+	ch->basereg = EMU_ADCBA;
+	ch->sizereg = EMU_ADCBS;
+	ch->setupreg = EMU_ADCCR;
+	ch->irqmask = EMU_INTE_ADCBUFENABLE;
+	ch->iprmask = EMU_IPR_ADCBUFFULL | EMU_IPR_ADCBUFHALFFULL;
 
 	if (sndbuf_alloc(ch->buffer, emu_gettag(sc->card), 0, sc->bufsz) != 0)
 		return (NULL);
@@ -902,7 +906,7 @@ emurchan_setformat(kobj_t obj __unused, void *c_devinfo, uint32_t format)
 	return (0);
 }
 
-static int
+static uint32_t
 emurchan_setspeed(kobj_t obj __unused, void *c_devinfo, uint32_t speed)
 {
 	struct emu_pcm_rchinfo *ch = c_devinfo;
@@ -916,7 +920,7 @@ emurchan_setspeed(kobj_t obj __unused, void *c_devinfo, uint32_t speed)
 	return (ch->spd);
 }
 
-static int
+static uint32_t
 emurchan_setblocksize(kobj_t obj __unused, void *c_devinfo, uint32_t blocksize)
 {
 	struct emu_pcm_rchinfo *ch = c_devinfo;
@@ -929,7 +933,7 @@ emurchan_setblocksize(kobj_t obj __unused, void *c_devinfo, uint32_t blocksize)
 	 * (and use) timer interrupts. Otherwise channel will be marked dead.
 	 */
 	if (ch->blksz < (ch->pcm->bufsz / 2)) {
-		emu_timer_set(sc->card, ch->timer, ch->blksz / sndbuf_getbps(ch->buffer));
+		emu_timer_set(sc->card, ch->timer, ch->blksz / sndbuf_getalign(ch->buffer));
 		emu_timer_enable(sc->card, ch->timer, 1);
 	} else {
 		emu_timer_enable(sc->card, ch->timer, 0);
@@ -949,22 +953,22 @@ emurchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 
 	switch (sc->bufsz) {
 	case 4096:
-		sz = ADCBS_BUFSIZE_4096;
+		sz = EMU_RECBS_BUFSIZE_4096;
 		break;
 	case 8192:
-		sz = ADCBS_BUFSIZE_8192;
+		sz = EMU_RECBS_BUFSIZE_8192;
 		break;
 	case 16384:
-		sz = ADCBS_BUFSIZE_16384;
+		sz = EMU_RECBS_BUFSIZE_16384;
 		break;
 	case 32768:
-		sz = ADCBS_BUFSIZE_32768;
+		sz = EMU_RECBS_BUFSIZE_32768;
 		break;
 	case 65536:
-		sz = ADCBS_BUFSIZE_65536;
+		sz = EMU_RECBS_BUFSIZE_65536;
 		break;
 	default:
-		sz = ADCBS_BUFSIZE_4096;
+		sz = EMU_RECBS_BUFSIZE_4096;
 	}
 
 	snd_mtxlock(sc->lock);
@@ -972,9 +976,9 @@ emurchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 	case PCMTRIG_START:
 		ch->run = 1;
 		emu_wrptr(sc->card, 0, ch->sizereg, sz);
-		val = sc->is_emu10k1 ? ADCCR_LCHANENABLE : A_ADCCR_LCHANENABLE;
-		if (ch->fmt & AFMT_STEREO)
-			val |= sc->is_emu10k1 ? ADCCR_RCHANENABLE : A_ADCCR_RCHANENABLE;
+		val = sc->is_emu10k1 ? EMU_ADCCR_LCHANENABLE : EMU_A_ADCCR_LCHANENABLE;
+		if (AFMT_CHANNEL(ch->fmt) > 1)
+			val |= sc->is_emu10k1 ? EMU_ADCCR_RCHANENABLE : EMU_A_ADCCR_RCHANENABLE;
 		val |= sc->is_emu10k1 ? emu_k1_recval(ch->spd) : emu_k2_recval(ch->spd);
 		emu_wrptr(sc->card, 0, ch->setupreg, 0);
 		emu_wrptr(sc->card, 0, ch->setupreg, val);
@@ -1001,7 +1005,7 @@ emurchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 	return (0);
 }
 
-static int
+static uint32_t
 emurchan_getptr(kobj_t obj __unused, void *c_devinfo)
 {
 	struct emu_pcm_rchinfo *ch = c_devinfo;
@@ -1028,7 +1032,7 @@ static kobj_method_t emurchan_methods[] = {
 	KOBJMETHOD(channel_trigger, emurchan_trigger),
 	KOBJMETHOD(channel_getptr, emurchan_getptr),
 	KOBJMETHOD(channel_getcaps, emurchan_getcaps),
-	{0, 0}
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(emurchan);
 
@@ -1043,13 +1047,13 @@ emufxrchan_init(kobj_t obj __unused, void *devinfo, struct snd_dbuf *b, struct p
 	if (sc == NULL) return (NULL);
 
 	ch = &(sc->rch_efx);
-	ch->fmt = AFMT_S16_LE;
+	ch->fmt = SND_FORMAT(AFMT_S16_LE, 1, 0);
 	ch->spd = sc->is_emu10k1 ? 48000*32 : 48000 * 64;
-	ch->idxreg = FXIDX;
-	ch->basereg = FXBA;
-	ch->sizereg = FXBS;
-	ch->irqmask = INTE_EFXBUFENABLE;
-	ch->iprmask = IPR_EFXBUFFULL | IPR_EFXBUFHALFFULL;
+	ch->idxreg = EMU_FXIDX;
+	ch->basereg = EMU_FXBA;
+	ch->sizereg = EMU_FXBS;
+	ch->irqmask = EMU_INTE_EFXBUFENABLE;
+	ch->iprmask = EMU_IPR_EFXBUFFULL | EMU_IPR_EFXBUFHALFFULL;
 	ch->buffer = b;
 	ch->pcm = sc;
 	ch->channel = c;
@@ -1067,11 +1071,11 @@ emufxrchan_init(kobj_t obj __unused, void *devinfo, struct snd_dbuf *b, struct p
 static int
 emufxrchan_setformat(kobj_t obj __unused, void *c_devinfo __unused, uint32_t format)
 {
-	if (format == AFMT_S16_LE) return (0);
+	if (format == SND_FORMAT(AFMT_S16_LE, 1, 0)) return (0);
 	return (EINVAL);
 }
 
-static int
+static uint32_t
 emufxrchan_setspeed(kobj_t obj __unused, void *c_devinfo, uint32_t speed)
 {
 	struct emu_pcm_rchinfo *ch = c_devinfo;
@@ -1080,7 +1084,7 @@ emufxrchan_setspeed(kobj_t obj __unused, void *c_devinfo, uint32_t speed)
 	return (ch->spd);
 }
 
-static int
+static uint32_t
 emufxrchan_setblocksize(kobj_t obj __unused, void *c_devinfo, uint32_t blocksize)
 {
 	struct emu_pcm_rchinfo *ch = c_devinfo;
@@ -1109,22 +1113,22 @@ emufxrchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 
 	switch (sc->bufsz) {
 	case 4096:
-		sz = ADCBS_BUFSIZE_4096;
+		sz = EMU_RECBS_BUFSIZE_4096;
 		break;
 	case 8192:
-		sz = ADCBS_BUFSIZE_8192;
+		sz = EMU_RECBS_BUFSIZE_8192;
 		break;
 	case 16384:
-		sz = ADCBS_BUFSIZE_16384;
+		sz = EMU_RECBS_BUFSIZE_16384;
 		break;
 	case 32768:
-		sz = ADCBS_BUFSIZE_32768;
+		sz = EMU_RECBS_BUFSIZE_32768;
 		break;
 	case 65536:
-		sz = ADCBS_BUFSIZE_65536;
+		sz = EMU_RECBS_BUFSIZE_65536;
 		break;
 	default:
-		sz = ADCBS_BUFSIZE_4096;
+		sz = EMU_RECBS_BUFSIZE_4096;
 	}
 
 	snd_mtxlock(sc->lock);
@@ -1136,14 +1140,14 @@ emufxrchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 		/*
 		 * SB Live! is limited to 32 mono channels. Audigy
 		 * has 64 mono channels. Channels are enabled
-		 * by setting a bit in A_FXWC[1|2] registers.
+		 * by setting a bit in EMU_A_FXWC[1|2] registers.
 		 */
 		/* XXX there is no way to demultiplex this streams for now */
 		if (sc->is_emu10k1) {
-			emu_wrptr(sc->card, 0, FXWC, 0xffffffff);
+			emu_wrptr(sc->card, 0, EMU_FXWC, 0xffffffff);
 		} else {
-			emu_wrptr(sc->card, 0, A_FXWC1, 0xffffffff);
-			emu_wrptr(sc->card, 0, A_FXWC2, 0xffffffff);
+			emu_wrptr(sc->card, 0, EMU_A_FXWC1, 0xffffffff);
+			emu_wrptr(sc->card, 0, EMU_A_FXWC2, 0xffffffff);
 		}
 		break;
 	case PCMTRIG_STOP:
@@ -1151,10 +1155,10 @@ emufxrchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 	case PCMTRIG_ABORT:
 		ch->run = 0;
 		if (sc->is_emu10k1) {
-			emu_wrptr(sc->card, 0, FXWC, 0x0);
+			emu_wrptr(sc->card, 0, EMU_FXWC, 0x0);
 		} else {
-			emu_wrptr(sc->card, 0, A_FXWC1, 0x0);
-			emu_wrptr(sc->card, 0, A_FXWC2, 0x0);
+			emu_wrptr(sc->card, 0, EMU_A_FXWC1, 0x0);
+			emu_wrptr(sc->card, 0, EMU_A_FXWC2, 0x0);
 		}
 		emu_wrptr(sc->card, 0, ch->sizereg, 0);
 		(void)emu_intr_unregister(sc->card, ch->ihandle);
@@ -1171,7 +1175,7 @@ emufxrchan_trigger(kobj_t obj __unused, void *c_devinfo, int go)
 	return (0);
 }
 
-static int
+static uint32_t
 emufxrchan_getptr(kobj_t obj __unused, void *c_devinfo)
 {
 	struct emu_pcm_rchinfo *ch = c_devinfo;
@@ -1218,7 +1222,7 @@ static kobj_method_t emufxrchan_methods[] = {
 	KOBJMETHOD(channel_getptr, emufxrchan_getptr),
 	KOBJMETHOD(channel_getcaps, emufxrchan_getcaps),
 	KOBJMETHOD(channel_getrates, emufxrchan_getrates),
-	{0, 0}
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(emufxrchan);
 
@@ -1234,8 +1238,8 @@ emu_pcm_intr(void *pcm, uint32_t stat)
 
 	snd_mtxlock(sc->lock);
 	
-	if (stat & IPR_INTERVALTIMER) {
-		ack |= IPR_INTERVALTIMER;
+	if (stat & EMU_IPR_INTERVALTIMER) {
+		ack |= EMU_IPR_INTERVALTIMER;
 		for (i = 0; i < MAX_CHANNELS; i++)
 			if (sc->pch[i].channel) {
 				if (sc->pch[i].run == 1) {
@@ -1258,8 +1262,8 @@ emu_pcm_intr(void *pcm, uint32_t stat)
 	}
 
 
-	if (stat & (IPR_ADCBUFFULL | IPR_ADCBUFHALFFULL)) {
-		ack |= stat & (IPR_ADCBUFFULL | IPR_ADCBUFHALFFULL);
+	if (stat & (EMU_IPR_ADCBUFFULL | EMU_IPR_ADCBUFHALFFULL)) {
+		ack |= stat & (EMU_IPR_ADCBUFFULL | EMU_IPR_ADCBUFHALFFULL);
 		if (sc->rch_adc.channel) {
 			snd_mtxunlock(sc->lock);
 			chn_intr(sc->rch_adc.channel);
@@ -1267,8 +1271,8 @@ emu_pcm_intr(void *pcm, uint32_t stat)
 		}
 	}
 
-	if (stat & (IPR_EFXBUFFULL | IPR_EFXBUFHALFFULL)) {
-		ack |= stat & (IPR_EFXBUFFULL | IPR_EFXBUFHALFFULL);
+	if (stat & (EMU_IPR_EFXBUFFULL | EMU_IPR_EFXBUFHALFFULL)) {
+		ack |= stat & (EMU_IPR_EFXBUFFULL | EMU_IPR_EFXBUFHALFFULL);
 		if (sc->rch_efx.channel) {
 			snd_mtxunlock(sc->lock);
 			chn_intr(sc->rch_efx.channel);
@@ -1446,8 +1450,8 @@ emu_pcm_attach(device_t dev)
 		goto bad;
 	}
 
-	inte = INTE_INTERVALTIMERENB;
-	ipr = IPR_INTERVALTIMER; /* Used by playback & ADC */
+	inte = EMU_INTE_INTERTIMERENB;
+	ipr = EMU_IPR_INTERVALTIMER; /* Used by playback & ADC */
 	sc->ihandle = emu_intr_register(sc->card, inte, ipr, &emu_pcm_intr, sc);
 
 	if (emu_pcm_init(sc) == -1) {

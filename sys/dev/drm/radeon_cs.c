@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/radeon_cs.c,v 1.2.4.2.2.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 #include "dev/drm/drmP.h"
 #include "dev/drm/radeon_drm.h"
 #include "dev/drm/radeon_drv.h"
@@ -765,7 +765,7 @@ static int r600_cs_parse(struct drm_radeon_cs_parser *parser)
 	memcpy(parser->ib, ib_chunk->kdata, ib_chunk->length_dw * sizeof(uint32_t));
 
 	/* read back last byte to flush WC buffers */
-	rb = readl(((vm_offset_t)parser->ib + (ib_chunk->length_dw-1) * sizeof(uint32_t)));
+	rb = *(volatile u_int32_t *) (((vm_offset_t)parser->ib + (ib_chunk->length_dw-1) * sizeof(uint32_t)));
 
 	return 0;
 }
@@ -821,7 +821,7 @@ static int r600_ib_get(struct drm_radeon_cs_parser *parser)
 	}
 	buf->file_priv = parser->file_priv;
 	dev_priv->cs_buf = buf;
-	parser->ib = (void *)((vm_offset_t)dev->agp_buffer_map->handle +
+	parser->ib = (void *)((vm_offset_t)dev->agp_buffer_map->virtual +
 	    buf->offset);
 
 	return 0;

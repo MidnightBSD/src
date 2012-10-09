@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Scott Bartram
  * Copyright (c) 1995 Steven Wallace

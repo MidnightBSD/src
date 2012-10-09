@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/raw_cb.h,v 1.19.10.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NET_RAW_CB_H_
@@ -55,7 +55,9 @@ struct rawcb {
 #define	RAWRCVQ		8192
 
 #ifdef _KERNEL
-extern LIST_HEAD(rawcb_list_head, rawcb) rawcb_list;
+VNET_DECLARE(LIST_HEAD(rawcb_list_head, rawcb), rawcb_list);
+#define	V_rawcb_list	VNET(rawcb_list)
+
 extern struct mtx rawcb_mtx;
 
 /*
@@ -68,9 +70,14 @@ pr_init_t	raw_init;
  * Library routines for raw socket usrreq functions; will always be wrapped
  * so that protocol-specific functions can be handled.
  */
+typedef int (*raw_input_cb_fn)(struct mbuf *, struct sockproto *,
+    struct sockaddr *, struct rawcb *);
+
 int	 raw_attach(struct socket *, int);
 void	 raw_detach(struct rawcb *);
 void	 raw_input(struct mbuf *, struct sockproto *, struct sockaddr *);
+void	 raw_input_ext(struct mbuf *, struct sockproto *, struct sockaddr *,
+	    raw_input_cb_fn);
 
 /*
  * Generic pr_usrreqs entries for raw socket protocols, usually wrapped so

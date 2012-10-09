@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/rwlock.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/rwlock.h,v 1.14.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_RWLOCK_H_
@@ -36,6 +35,7 @@
 #include <sys/_lock.h>
 #include <sys/_rwlock.h>
 #include <sys/lock_profile.h>
+#include <sys/lockstat.h>
 
 #ifdef _KERNEL
 #include <sys/pcpu.h>
@@ -55,22 +55,16 @@
  *
  * When the lock is not locked by any thread, it is encoded as a read lock
  * with zero waiters.
- *
- * A note about memory barriers.  Write locks need to use the same memory
- * barriers as mutexes: _acq when acquiring a write lock and _rel when
- * releasing a write lock.  Read locks also need to use an _acq barrier when
- * acquiring a read lock.  However, since read locks do not update any
- * locked data (modulo bugs of course), no memory barrier is needed when
- * releasing a read lock.
  */
 
 #define	RW_LOCK_READ		0x01
 #define	RW_LOCK_READ_WAITERS	0x02
 #define	RW_LOCK_WRITE_WAITERS	0x04
-#define	RW_LOCK_RECURSED	0x08
+#define	RW_LOCK_WRITE_SPINNER	0x08
 #define	RW_LOCK_FLAGMASK						\
 	(RW_LOCK_READ | RW_LOCK_READ_WAITERS | RW_LOCK_WRITE_WAITERS |	\
-	RW_LOCK_RECURSED)
+	RW_LOCK_WRITE_SPINNER)
+#define	RW_LOCK_WAITERS		(RW_LOCK_READ_WAITERS | RW_LOCK_WRITE_WAITERS)
 
 #define	RW_OWNER(x)		((x) & ~RW_LOCK_FLAGMASK)
 #define	RW_READERS_SHIFT	4
@@ -82,6 +76,8 @@
 #define	RW_DESTROYED		(RW_LOCK_READ_WAITERS | RW_LOCK_WRITE_WAITERS)
 
 #ifdef _KERNEL
+
+#define	rw_recurse	lock_object.lo_data
 
 /* Very simple operations on rw_lock. */
 
@@ -105,16 +101,18 @@
 						                        \
 	if (!_rw_write_lock((rw), _tid))				\
 		_rw_wlock_hard((rw), _tid, (file), (line));		\
-	else								\
-		lock_profile_obtain_lock_success(&(rw)->lock_object, 0,	\
-		    0, (file), (line));					\
+	else 								\
+		LOCKSTAT_PROFILE_OBTAIN_LOCK_SUCCESS(LS_RW_WLOCK_ACQUIRE, \
+		    rw, 0, 0, (file), (line));				\
 } while (0)
 
 /* Release a write lock. */
 #define	__rw_wunlock(rw, tid, file, line) do {				\
 	uintptr_t _tid = (uintptr_t)(tid);				\
 									\
-	if (!_rw_write_unlock((rw), _tid))				\
+	if ((rw)->rw_recurse)						\
+		(rw)->rw_recurse--;					\
+	else if (!_rw_write_unlock((rw), _tid))				\
 		_rw_wunlock_hard((rw), _tid, (file), (line));		\
 } while (0)
 
@@ -128,6 +126,7 @@
 void	rw_init_flags(struct rwlock *rw, const char *name, int opts);
 void	rw_destroy(struct rwlock *rw);
 void	rw_sysinit(void *arg);
+void	rw_sysinit_flags(void *arg);
 int	rw_wowned(struct rwlock *rw);
 void	_rw_wlock(struct rwlock *rw, const char *file, int line);
 int	_rw_try_wlock(struct rwlock *rw, const char *file, int line);
@@ -167,6 +166,12 @@ void	_rw_assert(struct rwlock *rw, int what, const char *file, int line);
 #define	rw_try_upgrade(rw)	_rw_try_upgrade((rw), LOCK_FILE, LOCK_LINE)
 #define	rw_try_wlock(rw)	_rw_try_wlock((rw), LOCK_FILE, LOCK_LINE)
 #define	rw_downgrade(rw)	_rw_downgrade((rw), LOCK_FILE, LOCK_LINE)
+#define	rw_unlock(rw)	do {						\
+	if (rw_wowned(rw))						\
+		rw_wunlock(rw);						\
+	else								\
+		rw_runlock(rw);						\
+} while (0)
 #define	rw_sleep(chan, rw, pri, wmesg, timo)				\
 	_sleep((chan), &(rw)->lock_object, (pri), (wmesg), (timo))
 
@@ -177,6 +182,12 @@ struct rw_args {
 	const char 	*ra_desc;
 };
 
+struct rw_args_flags {
+	struct rwlock	*ra_rw;
+	const char 	*ra_desc;
+	int		ra_flags;
+};
+
 #define	RW_SYSINIT(name, rw, desc)					\
 	static struct rw_args name##_args = {				\
 		(rw),							\
@@ -184,6 +195,18 @@ struct rw_args {
 	};								\
 	SYSINIT(name##_rw_sysinit, SI_SUB_LOCK, SI_ORDER_MIDDLE,	\
 	    rw_sysinit, &name##_args);					\
+	SYSUNINIT(name##_rw_sysuninit, SI_SUB_LOCK, SI_ORDER_MIDDLE,	\
+	    rw_destroy, (rw))
+
+
+#define	RW_SYSINIT_FLAGS(name, rw, desc, flags)				\
+	static struct rw_args_flags name##_args = {			\
+		(rw),							\
+		(desc),							\
+		(flags),						\
+	};								\
+	SYSINIT(name##_rw_sysinit, SI_SUB_LOCK, SI_ORDER_MIDDLE,	\
+	    rw_sysinit_flags, &name##_args);				\
 	SYSUNINIT(name##_rw_sysuninit, SI_SUB_LOCK, SI_ORDER_MIDDLE,	\
 	    rw_destroy, (rw))
 

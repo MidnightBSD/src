@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_pass.c,v 1.48.2.3 2010/10/08 18:06:30 mdf Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_pass.c,v 1.48.2.3 2010/10/08 18:06:30 
 #include <sys/errno.h>
 #include <sys/devicestat.h>
 #include <sys/proc.h>
+#include <sys/taskqueue.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -54,7 +55,8 @@ __FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_pass.c,v 1.48.2.3 2010/10/08 18:06:30 
 typedef enum {
 	PASS_FLAG_OPEN			= 0x01,
 	PASS_FLAG_LOCKED		= 0x02,
-	PASS_FLAG_INVALID		= 0x04
+	PASS_FLAG_INVALID		= 0x04,
+	PASS_FLAG_INITIAL_PHYSPATH	= 0x08
 } pass_flags;
 
 typedef enum {
@@ -70,12 +72,14 @@ typedef enum {
 #define ccb_bp		ppriv_ptr1
 
 struct pass_softc {
-	pass_state		state;
-	pass_flags		flags;
-	u_int8_t		pd_type;
-	union ccb		saved_ccb;
-	struct devstat		*device_stats;
-	struct cdev *dev;
+	pass_state	 state;
+	pass_flags	 flags;
+	u_int8_t	 pd_type;
+	union ccb	 saved_ccb;
+	struct devstat	*device_stats;
+	struct cdev	*dev;
+	struct cdev	*alias_dev;
+	struct task	 add_physpath_task;
 };
 
 
@@ -88,6 +92,7 @@ static	periph_ctor_t	passregister;
 static	periph_oninv_t	passoninvalidate;
 static	periph_dtor_t	passcleanup;
 static	periph_start_t	passstart;
+static void		pass_add_physpath(void *context, int pending);
 static	void		passasync(void *callback_arg, u_int32_t code,
 				  struct cam_path *path, void *arg);
 static	void		passdone(struct cam_periph *periph, 
@@ -107,7 +112,7 @@ PERIPHDRIVER_DECLARE(pass, passdriver);
 
 static struct cdevsw pass_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	0,
+	.d_flags =	D_TRACKCLOSE,
 	.d_open =	passopen,
 	.d_close =	passclose,
 	.d_ioctl =	passioctl,
@@ -129,7 +134,18 @@ passinit(void)
 		printf("pass: Failed to attach master async callback "
 		       "due to status 0x%x!\n", status);
 	}
-	
+
+}
+
+static void
+passdevgonecb(void *arg)
+{
+	struct cam_periph *periph;
+
+	periph = (struct cam_periph *)arg;
+
+	xpt_print(periph->path, "%s: devfs entry is gone\n", __func__);
+	cam_periph_release(periph);
 }
 
 static void
@@ -145,6 +161,12 @@ passoninvalidate(struct cam_periph *periph)
 	xpt_register_async(0, passasync, periph, periph->path);
 
 	softc->flags |= PASS_FLAG_INVALID;
+
+	/*
+	 * Tell devfs this device has gone away, and ask for a callback
+	 * when it has cleaned up its state.
+	 */
+	destroy_dev_sched_cb(softc->dev, passdevgonecb, periph);
 
 	/*
 	 * XXX Return all queued I/O with ENXIO.
@@ -168,14 +190,56 @@ passcleanup(struct cam_periph *periph)
 	if (bootverbose)
 		xpt_print(periph->path, "removing device entry\n");
 	devstat_remove_entry(softc->device_stats);
+
 	cam_periph_unlock(periph);
-	/*
-	 * passcleanup() is indirectly a d_close method via passclose,
-	 * so using destroy_dev(9) directly can result in deadlock.
-	 */
-	destroy_dev_sched(softc->dev);
+	taskqueue_drain(taskqueue_thread, &softc->add_physpath_task);
+
 	cam_periph_lock(periph);
+
 	free(softc, M_DEVBUF);
+}
+
+static void
+pass_add_physpath(void *context, int pending)
+{
+	struct cam_periph *periph;
+	struct pass_softc *softc;
+	char *physpath;
+
+	/*
+	 * If we have one, create a devfs alias for our
+	 * physical path.
+	 */
+	periph = context;
+	softc = periph->softc;
+	cam_periph_lock(periph);
+	if (periph->flags & CAM_PERIPH_INVALID) {
+		cam_periph_unlock(periph);
+		return;
+	}
+	cam_periph_unlock(periph);
+	physpath = malloc(MAXPATHLEN, M_DEVBUF, M_WAITOK);
+	if (xpt_getattr(physpath, MAXPATHLEN,
+			"GEOM::physpath", periph->path) == 0
+	 && strlen(physpath) != 0) {
+
+		make_dev_physpath_alias(MAKEDEV_WAITOK, &softc->alias_dev,
+					softc->dev, softc->alias_dev, physpath);
+	}
+	free(physpath, M_DEVBUF);
+
+	/*
+	 * Now that we've made our alias, we no longer have to have a
+	 * reference to the device.
+	 */
+	cam_periph_lock(periph);
+	if ((softc->flags & PASS_FLAG_INITIAL_PHYSPATH) == 0) {
+		softc->flags |= PASS_FLAG_INITIAL_PHYSPATH;
+		cam_periph_unlock(periph);
+		dev_rel(softc->dev);
+	}
+	else
+		cam_periph_unlock(periph);
 }
 
 static void
@@ -183,7 +247,6 @@ passasync(void *callback_arg, u_int32_t code,
 	  struct cam_path *path, void *arg)
 {
 	struct cam_periph *periph;
-	struct cam_sim *sim;
 
 	periph = (struct cam_periph *)callback_arg;
 
@@ -202,7 +265,6 @@ passasync(void *callback_arg, u_int32_t code,
 		 * this device and start the probe
 		 * process.
 		 */
-		sim = xpt_path_sim(cgd->ccb_h.path);
 		status = cam_periph_alloc(passregister, passoninvalidate,
 					  passcleanup, passstart, "pass",
 					  CAM_PERIPH_BIO, cgd->ccb_h.path,
@@ -221,6 +283,20 @@ passasync(void *callback_arg, u_int32_t code,
 
 		break;
 	}
+	case AC_ADVINFO_CHANGED:
+	{
+		uintptr_t buftype;
+
+		buftype = (uintptr_t)arg;
+		if (buftype == CDAI_TYPE_PHYS_PATH) {
+			struct pass_softc *softc;
+
+			softc = (struct pass_softc *)periph->softc;
+			taskqueue_enqueue(taskqueue_thread,
+					  &softc->add_physpath_task);
+		}
+		break;
+	}
 	default:
 		cam_periph_async(periph, code, path, arg);
 		break;
@@ -232,16 +308,17 @@ passregister(struct cam_periph *periph, void *arg)
 {
 	struct pass_softc *softc;
 	struct ccb_getdev *cgd;
+	struct ccb_pathinq cpi;
 	int    no_tags;
 
 	cgd = (struct ccb_getdev *)arg;
 	if (periph == NULL) {
-		printf("passregister: periph was NULL!!\n");
+		printf("%s: periph was NULL!!\n", __func__);
 		return(CAM_REQ_CMP_ERR);
 	}
 
 	if (cgd == NULL) {
-		printf("passregister: no getdev CCB, can't register device\n");
+		printf("%s: no getdev CCB, can't register device\n", __func__);
 		return(CAM_REQ_CMP_ERR);
 	}
 
@@ -249,16 +326,26 @@ passregister(struct cam_periph *periph, void *arg)
 					    M_DEVBUF, M_NOWAIT);
 
 	if (softc == NULL) {
-		printf("passregister: Unable to probe new device. "
-		       "Unable to allocate softc\n");				
+		printf("%s: Unable to probe new device. "
+		       "Unable to allocate softc\n", __func__);
 		return(CAM_REQ_CMP_ERR);
 	}
 
 	bzero(softc, sizeof(*softc));
 	softc->state = PASS_STATE_NORMAL;
-	softc->pd_type = SID_TYPE(&cgd->inq_data);
+	if (cgd->protocol == PROTO_SCSI || cgd->protocol == PROTO_ATAPI)
+		softc->pd_type = SID_TYPE(&cgd->inq_data);
+	else if (cgd->protocol == PROTO_SATAPM)
+		softc->pd_type = T_ENCLOSURE;
+	else
+		softc->pd_type = T_DIRECT;
 
 	periph->softc = softc;
+
+	bzero(&cpi, sizeof(cpi));
+	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
+	cpi.ccb_h.func_code = XPT_PATH_INQ;
+	xpt_action((union ccb *)&cpi);
 
 	/*
 	 * We pass in 0 for a blocksize, since we don't 
@@ -268,26 +355,58 @@ passregister(struct cam_periph *periph, void *arg)
 	mtx_unlock(periph->sim->mtx);
 	no_tags = (cgd->inq_data.flags & SID_CmdQue) == 0;
 	softc->device_stats = devstat_new_entry("pass",
-			  unit2minor(periph->unit_number), 0,
+			  periph->unit_number, 0,
 			  DEVSTAT_NO_BLOCKSIZE
 			  | (no_tags ? DEVSTAT_NO_ORDERED_TAGS : 0),
 			  softc->pd_type |
-			  DEVSTAT_TYPE_IF_SCSI |
+			  XPORT_DEVSTAT_TYPE(cpi.transport) |
 			  DEVSTAT_TYPE_PASS,
 			  DEVSTAT_PRIORITY_PASS);
 
+	/*
+	 * Acquire a reference to the periph before we create the devfs
+	 * instance for it.  We'll release this reference once the devfs
+	 * instance has been freed.
+	 */
+	if (cam_periph_acquire(periph) != CAM_REQ_CMP) {
+		xpt_print(periph->path, "%s: lost periph during "
+			  "registration!\n", __func__);
+		mtx_lock(periph->sim->mtx);
+		return (CAM_REQ_CMP_ERR);
+	}
+
 	/* Register the device */
-	softc->dev = make_dev(&pass_cdevsw, unit2minor(periph->unit_number),
+	softc->dev = make_dev(&pass_cdevsw, periph->unit_number,
 			      UID_ROOT, GID_OPERATOR, 0600, "%s%d",
 			      periph->periph_name, periph->unit_number);
+
+	/*
+	 * Now that we have made the devfs instance, hold a reference to it
+	 * until the task queue has run to setup the physical path alias.
+	 * That way devfs won't get rid of the device before we add our
+	 * alias.
+	 */
+	dev_ref(softc->dev);
+
 	mtx_lock(periph->sim->mtx);
 	softc->dev->si_drv1 = periph;
 
+	TASK_INIT(&softc->add_physpath_task, /*priority*/0,
+		  pass_add_physpath, periph);
+
 	/*
-	 * Add an async callback so that we get
-	 * notified if this device goes away.
+	 * See if physical path information is already available.
 	 */
-	xpt_register_async(AC_LOST_DEVICE, passasync, periph, periph->path);
+	taskqueue_enqueue(taskqueue_thread, &softc->add_physpath_task);
+
+	/*
+	 * Add an async callback so that we get notified if
+	 * this device goes away or its physical path
+	 * (stored in the advanced info data of the EDT) has
+	 * changed.
+	 */
+	xpt_register_async(AC_LOST_DEVICE | AC_ADVINFO_CHANGED,
+			   passasync, periph, periph->path);
 
 	if (bootverbose)
 		xpt_announce_periph(periph, NULL);
@@ -302,8 +421,6 @@ passopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	struct pass_softc *softc;
 	int error;
 
-	error = 0; /* default to no error */
-
 	periph = (struct cam_periph *)dev->si_drv1;
 	if (cam_periph_acquire(periph) != CAM_REQ_CMP)
 		return (ENXIO);
@@ -313,8 +430,8 @@ passopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	softc = (struct pass_softc *)periph->softc;
 
 	if (softc->flags & PASS_FLAG_INVALID) {
+		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
-		cam_periph_release(periph);
 		return(ENXIO);
 	}
 
@@ -323,8 +440,8 @@ passopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	 */
 	error = securelevel_gt(td->td_ucred, 1);
 	if (error) {
+		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
-		cam_periph_release(periph);
 		return(error);
 	}
 
@@ -332,8 +449,8 @@ passopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	 * Only allow read-write access.
 	 */
 	if (((flags & FWRITE) == 0) || ((flags & FREAD) == 0)) {
+		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
-		cam_periph_release(periph);
 		return(EPERM);
 	}
 
@@ -342,19 +459,12 @@ passopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	 */
 	if ((flags & O_NONBLOCK) != 0) {
 		xpt_print(periph->path, "can't do nonblocking access\n");
+		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
-		cam_periph_release(periph);
 		return(EINVAL);
 	}
 
-	if ((softc->flags & PASS_FLAG_OPEN) == 0) {
-		softc->flags |= PASS_FLAG_OPEN;
-		cam_periph_unlock(periph);
-	} else {
-		/* Device closes aren't symmertical, so fix up the refcount */
-		cam_periph_unlock(periph);
-		cam_periph_release(periph);
-	}
+	cam_periph_unlock(periph);
 
 	return (error);
 }
@@ -363,18 +473,11 @@ static int
 passclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 {
 	struct 	cam_periph *periph;
-	struct	pass_softc *softc;
 
 	periph = (struct cam_periph *)dev->si_drv1;
 	if (periph == NULL)
 		return (ENXIO);	
 
-	cam_periph_lock(periph);
-
-	softc = (struct pass_softc *)periph->softc;
-	softc->flags &= ~PASS_FLAG_OPEN;
-
-	cam_periph_unlock(periph);
 	cam_periph_release(periph);
 
 	return (0);
@@ -528,17 +631,21 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 	 * We only attempt to map the user memory into kernel space
 	 * if they haven't passed in a physical memory pointer,
 	 * and if there is actually an I/O operation to perform.
-	 * Right now cam_periph_mapmem() only supports SCSI and device
-	 * match CCBs.  For the SCSI CCBs, we only pass the CCB in if
-	 * there's actually data to map.  cam_periph_mapmem() will do the
-	 * right thing, even if there isn't data to map, but since CCBs
+	 * cam_periph_mapmem() supports SCSI, ATA, SMP, ADVINFO and device
+	 * match CCBs.  For the SCSI, ATA and ADVINFO CCBs, we only pass the
+	 * CCB in if there's actually data to map.  cam_periph_mapmem() will
+	 * do the right thing, even if there isn't data to map, but since CCBs
 	 * without data are a reasonably common occurance (e.g. test unit
 	 * ready), it will save a few cycles if we check for it here.
 	 */
 	if (((ccb->ccb_h.flags & CAM_DATA_PHYS) == 0)
-	 && (((ccb->ccb_h.func_code == XPT_SCSI_IO)
+	 && (((ccb->ccb_h.func_code == XPT_SCSI_IO ||
+	       ccb->ccb_h.func_code == XPT_ATA_IO)
 	    && ((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE))
-	  || (ccb->ccb_h.func_code == XPT_DEV_MATCH))) {
+	  || (ccb->ccb_h.func_code == XPT_DEV_MATCH)
+	  || (ccb->ccb_h.func_code == XPT_SMP_IO)
+	  || ((ccb->ccb_h.func_code == XPT_DEV_ADVINFO)
+	   && (ccb->cdai.bufsiz > 0)))) {
 
 		bzero(&mapinfo, sizeof(mapinfo));
 
@@ -570,12 +677,10 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 	 * that request.  Otherwise, it's up to the user to perform any
 	 * error recovery.
 	 */
-	error = cam_periph_runccb(ccb,
-				  (ccb->ccb_h.flags & CAM_PASS_ERR_RECOVER) ?
-				  passerror : NULL,
-				  /* cam_flags */ CAM_RETRY_SELTO,
-				  /* sense_flags */SF_RETRY_UA,
-				  softc->device_stats);
+	cam_periph_runccb(ccb, passerror, /* cam_flags */ CAM_RETRY_SELTO,
+	    /* sense_flags */ ((ccb->ccb_h.flags & CAM_PASS_ERR_RECOVER) ?
+	     SF_RETRY_UA : SF_NO_RECOVERY) | SF_NO_PRINT,
+	    softc->device_stats);
 
 	if (need_unmap != 0)
 		cam_periph_unmapmem(ccb, &mapinfo);
@@ -584,7 +689,7 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 	ccb->ccb_h.periph_priv = inccb->ccb_h.periph_priv;
 	bcopy(ccb, inccb, sizeof(union ccb));
 
-	return(error);
+	return(0);
 }
 
 static int

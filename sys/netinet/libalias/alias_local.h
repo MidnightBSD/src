@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/libalias/alias_local.h,v 1.34.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -57,11 +57,18 @@
 
 /* XXX: LibAliasSetTarget() uses this constant. */
 #define	INADDR_NONE	0xffffffff
+
+#include <netinet/libalias/alias_sctp.h>
+#else
+#include "alias_sctp.h"
 #endif
 
 /* Sizes of input and output link tables */
 #define LINK_TABLE_OUT_SIZE        4001
 #define LINK_TABLE_IN_SIZE         4001
+
+#define	GET_ALIAS_PORT		-1
+#define	GET_ALIAS_ID		GET_ALIAS_PORT
 
 struct proxy_entry;
 
@@ -147,7 +154,29 @@ struct libalias {
 
 	struct in_addr	true_addr;	/* in network byte order. */
 	u_short		true_port;	/* in host byte order. */
+
+	/*
+	 * sctp code support
+	 */
+
+	/* counts associations that have progressed to UP and not yet removed */
+	int		sctpLinkCount;
 #ifdef  _KERNEL
+	/* timing queue for keeping track of association timeouts */
+	struct sctp_nat_timer sctpNatTimer;
+	
+	/* size of hash table used in this instance */
+	u_int sctpNatTableSize;
+	
+/* 
+ * local look up table sorted by l_vtag/l_port 
+ */
+	LIST_HEAD(sctpNatTableL, sctp_nat_assoc) *sctpTableLocal;
+/* 
+ * global look up table sorted by g_vtag/g_port 
+ */
+	LIST_HEAD(sctpNatTableG, sctp_nat_assoc) *sctpTableGlobal;
+	
 	/* 
 	 * avoid races in libalias: every public function has to use it.
 	 */
@@ -199,6 +228,14 @@ struct libalias {
 /* Prototypes */
 
 /*
+ * SctpFunction prototypes
+ * 
+ */
+void AliasSctpInit(struct libalias *la);
+void AliasSctpTerm(struct libalias *la);
+int SctpAlias(struct libalias *la, struct ip *ip, int direction);
+
+/*
  * We do not calculate TCP checksums when libalias is a kernel
  * module, since it has no idea about checksum offloading.
  * If TCP data has changed, then we just set checksum to zero,
@@ -214,6 +251,10 @@ void
 DifferentialChecksum(u_short * _cksum, void * _new, void * _old, int _n);
 
 /* Internal data access */
+struct alias_link *
+AddLink(struct libalias *la, struct in_addr src_addr, struct in_addr dst_addr,
+    struct in_addr alias_addr, u_short src_port, u_short dst_port,
+    int alias_param, int link_type);
 struct alias_link *
 FindIcmpIn(struct libalias *la, struct in_addr _dst_addr, struct in_addr _alias_addr,
     u_short _id_alias, int _create);
@@ -264,6 +305,8 @@ struct in_addr
 		FindOriginalAddress(struct libalias *la, struct in_addr _alias_addr);
 struct in_addr
 		FindAliasAddress(struct libalias *la, struct in_addr _original_addr);
+struct in_addr 
+FindSctpRedirectAddress(struct libalias *la,  struct sctp_nat_msg *sm);
 
 /* External data access/modification */
 int
@@ -296,9 +339,10 @@ u_short		GetProxyPort(struct alias_link *_lnk);
 void		SetProxyPort(struct alias_link *_lnk, u_short _port);
 void		SetAckModified(struct alias_link *_lnk);
 int		GetAckModified(struct alias_link *_lnk);
-int		GetDeltaAckIn(struct ip *_pip, struct alias_link *_lnk);
-int		GetDeltaSeqOut(struct ip *_pip, struct alias_link *_lnk);
-void		AddSeq    (struct ip *_pip, struct alias_link *_lnk, int _delta);
+int		GetDeltaAckIn(u_long, struct alias_link *_lnk);
+int             GetDeltaSeqOut(u_long, struct alias_link *lnk);
+void            AddSeq(struct alias_link *lnk, int delta, u_int ip_hl, 
+		    u_short ip_len, u_long th_seq, u_int th_off);
 void		SetExpire (struct alias_link *_lnk, int _expire);
 void		ClearCheckNewLink(struct libalias *la);
 void		SetProtocolFlags(struct alias_link *_lnk, int _pflags);
@@ -318,8 +362,9 @@ void		HouseKeeping(struct libalias *);
 
 /* Transparent proxy routines */
 int
-ProxyCheck(struct libalias *la, struct ip *_pip, struct in_addr *_proxy_server_addr,
-    u_short * _proxy_server_port);
+ProxyCheck(struct libalias *la, struct in_addr *proxy_server_addr,
+    u_short * proxy_server_port, struct in_addr src_addr, 
+    struct in_addr dst_addr, u_short dst_port, u_char ip_p);
 void
 ProxyModify(struct libalias *la, struct alias_link *_lnk, struct ip *_pip,
     int _maxpacketsize, int _proxy_type);

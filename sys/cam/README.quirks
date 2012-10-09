@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/cam/README.quirks,v 1.2 2007/06/10 04:31:55 mjacob Exp $ */
+/* $FreeBSD$ */
 
                      FreeBSD Quirk Guidelines
 

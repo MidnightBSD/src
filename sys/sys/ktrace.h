@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ktrace.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/ktrace.h,v 1.33.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_KTRACE_H_
@@ -53,7 +52,7 @@ struct ktr_header {
 	int	ktr_len;		/* length of buf */
 	short	ktr_type;		/* trace record type */
 	pid_t	ktr_pid;		/* process id */
-	char	ktr_comm[MAXCOMLEN+1];	/* command name */
+	char	ktr_comm[MAXCOMLEN + 1];/* command name */
 	struct	timeval ktr_time;	/* timestamp */
 	intptr_t	ktr_tid;	/* was ktr_buffer */
 };
@@ -73,10 +72,6 @@ struct ktr_header {
 #define	KTRUSERRET(td) do {						\
 	if (KTRCHECKDRAIN(td))						\
 		ktruserret(td);						\
-} while (0)
-#define	KTRPROCEXIT(td) do {						\
-	if (KTRCHECKDRAIN(td))						\
-		ktrprocexit(td);					\
 } while (0)
 
 /*
@@ -140,9 +135,15 @@ struct ktr_psig {
  * KTR_CSW - trace context switches
  */
 #define KTR_CSW		6
+struct ktr_csw_old {
+	int	out;	/* 1 if switch out, 0 if switch in */
+	int	user;	/* 1 if usermode (ivcsw), 0 if kernel (vcsw) */
+};
+
 struct ktr_csw {
 	int	out;	/* 1 if switch out, 0 if switch in */
 	int	user;	/* 1 if usermode (ivcsw), 0 if kernel (vcsw) */
+	char	wmesg[8];
 };
 
 /*
@@ -155,8 +156,49 @@ struct ktr_csw {
  * KTR_STRUCT - misc. structs
  */
 #define KTR_STRUCT	8
+	/*
+	 * record contains null-terminated struct name followed by
+	 * struct contents
+	 */
 struct sockaddr;
 struct stat;
+struct sysentvec;
+
+/*
+ * KTR_SYSCTL - name of a sysctl MIB
+ */
+#define	KTR_SYSCTL	9
+	/* record contains null-terminated MIB name */
+
+/*
+ * KTR_PROCCTOR - trace process creation (multiple ABI support)
+ */
+#define KTR_PROCCTOR	10
+struct ktr_proc_ctor {
+	u_int	sv_flags;	/* struct sysentvec sv_flags copy */
+};
+
+/*
+ * KTR_PROCDTOR - trace process destruction (multiple ABI support)
+ */
+#define KTR_PROCDTOR	11
+
+/*
+ * KTR_FAULT - page fault record
+ */
+#define KTR_FAULT	13
+struct ktr_fault {
+	vm_offset_t vaddr;
+	int type;
+};
+
+/*
+ * KTR_FAULTEND - end of page fault record
+ */
+#define KTR_FAULTEND	14
+struct ktr_faultend {
+	int result;
+};
 
 /*
  * KTR_DROP - If this bit is set in ktr_type, then at least one event
@@ -176,6 +218,12 @@ struct stat;
 #define KTRFAC_CSW	(1<<KTR_CSW)
 #define KTRFAC_USER	(1<<KTR_USER)
 #define KTRFAC_STRUCT	(1<<KTR_STRUCT)
+#define KTRFAC_SYSCTL	(1<<KTR_SYSCTL)
+#define KTRFAC_PROCCTOR	(1<<KTR_PROCCTOR)
+#define KTRFAC_PROCDTOR	(1<<KTR_PROCDTOR)
+#define KTRFAC_FAULT	(1<<KTR_FAULT)
+#define KTRFAC_FAULTEND	(1<<KTR_FAULTEND)
+
 /*
  * trace flags (also in p_traceflags)
  */
@@ -184,21 +232,25 @@ struct stat;
 #define	KTRFAC_DROP	0x20000000	/* last event was dropped */
 
 #ifdef	_KERNEL
-extern struct mtx ktrace_mtx;
-
 void	ktrnamei(char *);
-void	ktrcsw(int, int);
+void	ktrcsw(int, int, const char *);
 void	ktrpsig(int, sig_t, sigset_t *, int);
+void	ktrfault(vm_offset_t, int);
+void	ktrfaultend(int);
 void	ktrgenio(int, enum uio_rw, struct uio *, int);
 void	ktrsyscall(int, int narg, register_t args[]);
+void	ktrsysctl(int *name, u_int namelen);
 void	ktrsysret(int, int, register_t);
+void	ktrprocctor(struct proc *);
+void	ktrprocexec(struct proc *, struct ucred **, struct vnode **);
 void	ktrprocexit(struct thread *);
+void	ktrprocfork(struct proc *, struct proc *);
 void	ktruserret(struct thread *);
-void	ktrstruct(const char *, size_t, void *, size_t);
+void	ktrstruct(const char *, void *, size_t);
 #define ktrsockaddr(s) \
-	ktrstruct("sockaddr", 8, (s), ((struct sockaddr *)(s))->sa_len)
+	ktrstruct("sockaddr", (s), ((struct sockaddr *)(s))->sa_len)
 #define ktrstat(s) \
-	ktrstruct("stat", 4, (s), sizeof(struct stat))
+	ktrstruct("stat", (s), sizeof(struct stat))
 
 #else
 

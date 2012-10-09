@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)rpcb_prot.c 1.9 89/04/21 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/rpc/rpcb_prot.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpcb_prot.c
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: src/sys/rpc/rpcb_prot.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 ke
 #include <rpc/rpcb_prot.h>
 
 bool_t
-xdr_pmap(XDR *xdrs, struct pmap *regs)
+xdr_portmap(XDR *xdrs, struct portmap *regs)
 {
 
 	if (xdr_u_long(xdrs, &regs->pm_prog) &&

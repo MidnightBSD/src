@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mtxpool.c,v 1.12.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -146,8 +146,8 @@ mtx_pool_create(const char *mtx_name, int pool_size, int opts)
 		    mtx_name);
 		pool_size = 128;
 	}
-	MALLOC(pool, struct mtx_pool *,
-	    sizeof (struct mtx_pool) + ((pool_size - 1) * sizeof (struct mtx)),
+	pool = malloc(sizeof (struct mtx_pool) +
+	    ((pool_size - 1) * sizeof (struct mtx)),
 	    M_MTXPOOL, M_WAITOK | M_ZERO);
 	mtx_pool_initialize(pool, mtx_name, pool_size, opts);
 	return pool;
@@ -161,7 +161,7 @@ mtx_pool_destroy(struct mtx_pool **poolp)
 
 	for (i = pool->mtx_pool_size - 1; i >= 0; --i)
 		mtx_destroy(&pool->mtx_pool_ary[i]);
-	FREE(pool, M_MTXPOOL);
+	free(pool, M_MTXPOOL);
 	*poolp = NULL;
 }
 
@@ -208,7 +208,7 @@ mtx_pool_alloc(struct mtx_pool *pool)
  * memory allocator.  The lockmgr subsystem is initialized by
  * SYSINIT(..., SI_SUB_LOCKMGR, ...).
  *
- * We can't call MALLOC() to dynamically allocate the sleep pool
+ * We can't call malloc() to dynamically allocate the sleep pool
  * until after kmeminit() has been called, which is done by
  * SYSINIT(..., SI_SUB_KMEM, ...).
  */

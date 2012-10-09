@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990,1991 Regents of The University of Michigan.
  * All Rights Reserved.
@@ -24,7 +23,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $FreeBSD: src/sys/netatalk/aarp.h,v 1.6 2007/06/28 12:54:58 rwatson Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETATALK_AARP_H_

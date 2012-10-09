@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ibcs2_mount.h,v 1.2 1994/10/26 02:53:00 cgd Exp $	*/
-/* $FreeBSD: src/sys/i386/ibcs2/ibcs2_mount.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 1994 Scott Bartram

@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * Backend for the Statically Defined Tracing (SDT) kernel support. This is
  * required to allow a module to load even though DTrace kernel support may

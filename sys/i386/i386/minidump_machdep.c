@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Peter Wemm
  * All rights reserved.
@@ -26,7 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/minidump_machdep.c,v 1.3.4.1 2008/01/30 21:21:50 ru Exp $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_watchdog.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,6 +36,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/minidump_machdep.c,v 1.3.4.1 2008/01/30 21
 #include <sys/kernel.h>
 #include <sys/kerneldump.h>
 #include <sys/msgbuf.h>
+#include <sys/watchdog.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <machine/atomic.h>
@@ -66,6 +68,11 @@ static void *dump_va;
 static uint64_t counter, progress;
 
 CTASSERT(sizeof(*vm_page_dump) == 4);
+#ifndef XEN
+#define xpmap_mtop(x) (x)
+#define xpmap_ptom(x) (x)
+#endif
+
 
 static int
 is_dumpable(vm_paddr_t pa)
@@ -77,27 +84,6 @@ is_dumpable(vm_paddr_t pa)
 			return (1);
 	}
 	return (0);
-}
-
-/* XXX should be MI */
-static void
-mkdumpheader(struct kerneldumpheader *kdh, uint32_t archver, uint64_t dumplen,
-    uint32_t blksz)
-{
-
-	bzero(kdh, sizeof(*kdh));
-	strncpy(kdh->magic, KERNELDUMPMAGIC, sizeof(kdh->magic));
-	strncpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
-	kdh->version = htod32(KERNELDUMPVERSION);
-	kdh->architectureversion = htod32(archver);
-	kdh->dumplength = htod64(dumplen);
-	kdh->dumptime = htod64(time_second);
-	kdh->blocksize = htod32(blksz);
-	strncpy(kdh->hostname, hostname, sizeof(kdh->hostname));
-	strncpy(kdh->versionstring, version, sizeof(kdh->versionstring));
-	if (panicstr != NULL)
-		strncpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
-	kdh->parity = kerneldump_parity(kdh);
 }
 
 #define PG2MB(pgs) (((pgs) + (1 << 8) - 1) >> 8)
@@ -121,7 +107,11 @@ blk_write(struct dumperinfo *di, char *ptr, vm_paddr_t pa, size_t sz)
 {
 	size_t len;
 	int error, i, c;
+	u_int maxdumpsz;
 
+	maxdumpsz = min(di->maxiosize, MAXDUMPPGS * PAGE_SIZE);
+	if (maxdumpsz == 0)	/* seatbelt */
+		maxdumpsz = PAGE_SIZE;
 	error = 0;
 	if ((sz % PAGE_SIZE) != 0) {
 		printf("size not page aligned\n");
@@ -142,7 +132,7 @@ blk_write(struct dumperinfo *di, char *ptr, vm_paddr_t pa, size_t sz)
 			return (error);
 	}
 	while (sz) {
-		len = (MAXDUMPPGS * PAGE_SIZE) - fragsz;
+		len = maxdumpsz - fragsz;
 		if (len > sz)
 			len = sz;
 		counter += len;
@@ -151,6 +141,9 @@ blk_write(struct dumperinfo *di, char *ptr, vm_paddr_t pa, size_t sz)
 			printf(" %lld", PG2MB(progress >> PAGE_SHIFT));
 			counter &= (1<<24) - 1;
 		}
+
+		wdog_kern_pat(WD_LASTVAL);
+
 		if (ptr) {
 			error = dump_write(di, ptr, 0, dumplo, len);
 			if (error)
@@ -164,7 +157,7 @@ blk_write(struct dumperinfo *di, char *ptr, vm_paddr_t pa, size_t sz)
 			fragsz += len;
 			pa += len;
 			sz -= len;
-			if (fragsz == (MAXDUMPPGS * PAGE_SIZE)) {
+			if (fragsz == maxdumpsz) {
 				error = blk_flush(di);
 				if (error)
 					return (error);
@@ -212,7 +205,7 @@ minidumpsys(struct dumperinfo *di)
 		j = va >> PDRSHIFT;
 		if ((pd[j] & (PG_PS | PG_V)) == (PG_PS | PG_V))  {
 			/* This is an entire 2M page. */
-			pa = pd[j] & PG_PS_FRAME;
+			pa = xpmap_mtop(pd[j] & PG_PS_FRAME);
 			for (k = 0; k < NPTEPG; k++) {
 				if (is_dumpable(pa))
 					dump_add_page(pa);
@@ -222,10 +215,10 @@ minidumpsys(struct dumperinfo *di)
 		}
 		if ((pd[j] & PG_V) == PG_V) {
 			/* set bit for each valid page in this 2MB block */
-			pt = pmap_kenter_temporary(pd[j] & PG_FRAME, 0);
+			pt = pmap_kenter_temporary(xpmap_mtop(pd[j] & PG_FRAME), 0);
 			for (k = 0; k < NPTEPG; k++) {
 				if ((pt[k] & PG_V) == PG_V) {
-					pa = pt[k] & PG_FRAME;
+					pa = xpmap_mtop(pt[k] & PG_FRAME);
 					if (is_dumpable(pa))
 						dump_add_page(pa);
 				}
@@ -276,7 +269,7 @@ minidumpsys(struct dumperinfo *di)
 	mdhdr.paemode = 1;
 #endif
 
-	mkdumpheader(&kdh, KERNELDUMP_I386_VERSION, dumpsize, di->blocksize);
+	mkdumpheader(&kdh, KERNELDUMPMAGIC, KERNELDUMP_I386_VERSION, dumpsize, di->blocksize);
 
 	printf("Physical memory: %ju MB\n", ptoa((uintmax_t)physmem) / 1048576);
 	printf("Dumping %llu MB:", (long long)dumpsize >> 20);
@@ -325,8 +318,24 @@ minidumpsys(struct dumperinfo *di)
 			continue;
 		}
 		if ((pd[j] & PG_V) == PG_V) {
-			pa = pd[j] & PG_FRAME;
+			pa = xpmap_mtop(pd[j] & PG_FRAME);
+#ifndef XEN
 			error = blk_write(di, 0, pa, PAGE_SIZE);
+#else
+			pt = pmap_kenter_temporary(pa, 0);
+			memcpy(fakept, pt, PAGE_SIZE);
+			for (i = 0; i < NPTEPG; i++) 
+				fakept[i] = xpmap_mtop(fakept[i]);
+			error = blk_write(di, (char *)&fakept, 0, PAGE_SIZE);
+			if (error)
+				goto fail;
+			/* flush, in case we reuse fakept in the same block */
+			error = blk_flush(di);
+			if (error)
+				goto fail;
+			bzero(fakept, sizeof(fakept));
+#endif			
+			
 			if (error)
 				goto fail;
 		} else {

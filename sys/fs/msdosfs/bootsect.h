@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/bootsect.h,v 1.13 2005/09/29 14:09:46 peadar Exp $ */
+/* $FreeBSD$ */
 /*	$NetBSD: bootsect.h,v 1.9 1997/11/17 15:36:17 ws Exp $	*/
 
 /*-
@@ -17,6 +16,8 @@
  *
  * October 1992
  */
+#ifndef _FS_MSDOSFS_BOOTSECT_H_
+#define	_FS_MSDOSFS_BOOTSECT_H_
 
 /*
  * Format of a boot sector.  This is the first sector on a DOS floppy disk
@@ -92,3 +93,5 @@ union bootsector {
 #define	bsHiddenSecs	bsBPB.bpbHiddenSecs
 #define	bsHugeSectors	bsBPB.bpbHugeSectors
 #endif
+
+#endif /* !_FS_MSDOSFS_BOOTSECT_H_ */

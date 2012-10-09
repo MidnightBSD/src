@@ -24,13 +24,17 @@
  * SUCH DAMAGE.
  */
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/chip.h>
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/isa/sb.h>
 
 #include <isa/isavar.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/sbc.c,v 1.48 2007/03/15 16:41:25 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define IO_MAX	3
 #define IRQ_MAX	1
@@ -786,7 +790,6 @@ static device_method_t sbc_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_read_ivar,	sbc_read_ivar),
 	DEVMETHOD(bus_write_ivar,	sbc_write_ivar),
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_alloc_resource,	sbc_alloc_resource),
 	DEVMETHOD(bus_release_resource,	sbc_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
@@ -794,7 +797,7 @@ static device_method_t sbc_methods[] = {
 	DEVMETHOD(bus_setup_intr,	sbc_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	sbc_teardown_intr),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t sbc_driver = {

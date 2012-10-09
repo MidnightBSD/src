@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)errno.h	8.5 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/errno.h,v 1.28.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_ERRNO_H_
@@ -166,7 +165,7 @@ __END_DECLS
 #define	EILSEQ		86		/* Illegal byte sequence */
 #define	ENOATTR		87		/* Attribute not found */
 
-#define EDOOFUS		88		/* Programming error */
+#define	EDOOFUS		88		/* Programming error */
 #endif /* _POSIX_SOURCE */
 
 #define	EBADMSG		89		/* Bad message */
@@ -175,7 +174,12 @@ __END_DECLS
 #define	EPROTO		92		/* Protocol error */
 
 #ifndef _POSIX_SOURCE
-#define	ELAST		92		/* Must be equal largest errno */
+#define	ENOTCAPABLE	93		/* Capabilities insufficient */
+#define	ECAPMODE	94		/* Not permitted in capability mode */
+#endif /* _POSIX_SOURCE */
+
+#ifndef _POSIX_SOURCE
+#define	ELAST		94		/* Must be equal largest errno */
 #endif /* _POSIX_SOURCE */
 
 #ifdef _KERNEL

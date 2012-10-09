@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_memory.c,v 1.2.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_memory.c
  * Wrappers for kernel memory allocation routines, and MTRR management support.
@@ -60,6 +60,8 @@ MALLOC_DEFINE(DRM_MEM_CTXBITMAP, "drm_ctxbitmap",
     "DRM CTXBITMAP Data Structures");
 MALLOC_DEFINE(DRM_MEM_SGLISTS, "drm_sglists", "DRM SGLISTS Data Structures");
 MALLOC_DEFINE(DRM_MEM_DRAWABLE, "drm_drawable", "DRM DRAWABLE Data Structures");
+MALLOC_DEFINE(DRM_MEM_MM, "drm_sman", "DRM MEMORY MANAGER Data Structures");
+MALLOC_DEFINE(DRM_MEM_HASHTAB, "drm_hashtab", "DRM HASHTABLE Data Structures");
 
 void drm_mem_init(void)
 {
@@ -71,7 +73,7 @@ void drm_mem_uninit(void)
 
 void *drm_ioremap_wc(struct drm_device *dev, drm_local_map_t *map)
 {
-	return pmap_mapdev_attr(map->offset, map->size, PAT_WRITE_COMBINING);
+	return pmap_mapdev_attr(map->offset, map->size, VM_MEMATTR_WRITE_COMBINING);
 }
 
 void *drm_ioremap(struct drm_device *dev, drm_local_map_t *map)
@@ -81,7 +83,7 @@ void *drm_ioremap(struct drm_device *dev, drm_local_map_t *map)
 
 void drm_ioremapfree(drm_local_map_t *map)
 {
-	pmap_unmapdev((vm_offset_t) map->handle, map->size);
+	pmap_unmapdev((vm_offset_t) map->virtual, map->size);
 }
 
 int

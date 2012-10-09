@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/kern/linker_if.m,v 1.6.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
 #
 
 #include <sys/linker.h>
@@ -102,6 +102,24 @@ METHOD void unload {
 METHOD int ctf_get {
 	linker_file_t	file;
 	linker_ctf_t	*lc;
+};
+
+#
+# Get the symbol table, returning it in **symtab.  Return the 
+# number of symbols, otherwise zero.
+#
+METHOD long symtab_get {
+	linker_file_t	file;
+	const Elf_Sym	**symtab;
+};
+
+#
+# Get the string table, returning it in *strtab.  Return the
+# size (in bytes) of the string table, otherwise zero.
+#
+METHOD long strtab_get {
+	linker_file_t	file;
+	caddr_t		*strtab;
 };
 
 #

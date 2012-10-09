@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/amd64/support.S,v 1.128.2.3 2010/08/30 18:50:18 delphij Exp $
+ * $FreeBSD$
  */
 
 #include "opt_ddb.h"
@@ -37,18 +37,6 @@
 #include <machine/pmap.h>
 
 #include "assym.s"
-
-	.data
-	ALIGN_DATA
-	.globl	intrcnt, eintrcnt
-intrcnt:
-	.space	INTRCNT_COUNT * 8
-eintrcnt:
-
-	.globl	intrnames, eintrnames
-intrnames:
-	.space	INTRCNT_COUNT * (MAXCOMLEN + 1)
-eintrnames:
 
 	.text
 
@@ -698,25 +686,6 @@ ENTRY(longjmp)
 	incl	%eax
 	ret
 END(longjmp)
-
-/*
- * Support for BB-profiling (gcc -a).  The kernbb program will extract
- * the data from the kernel.
- */
-
-	.data
-	ALIGN_DATA
-	.globl bbhead
-bbhead:
-	.quad 0
-
-	.text
-NON_GPROF_ENTRY(__bb_init_func)
-	movq	$1,(%rdi)
-	movq	bbhead,%rax
-	movq	%rax,32(%rdi)
-	movq	%rdi,bbhead
-	NON_GPROF_RET
 
 /*
  * Support for reading MSRs in the safe manner.

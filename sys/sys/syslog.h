@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)syslog.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/syslog.h,v 1.26.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_SYSLOG_H_
@@ -194,7 +193,9 @@ void	closelog(void);
 void	openlog(const char *, int, int);
 int	setlogmask(int);
 void	syslog(int, const char *, ...) __printflike(2, 3);
+#if __BSD_VISIBLE
 void	vsyslog(int, const char *, __va_list) __printflike(2, 0);
+#endif
 __END_DECLS
 
 #endif /* !_KERNEL */

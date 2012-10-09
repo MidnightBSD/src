@@ -1,7 +1,6 @@
-/* $MidnightBSD: src/sys/i386/i386/bpf_jit_machdep.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (C) 2002-2003 NetGroup, Politecnico di Torino (Italy)
- * Copyright (C) 2005-2008 Jung-uk Kim <jkim@FreeBSD.org>
+ * Copyright (C) 2005-2009 Jung-uk Kim <jkim@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/i386/bpf_jit_machdep.h,v 1.3.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _BPF_JIT_MACHDEP_H_
@@ -61,7 +60,17 @@
 #define DL	2
 #define BL	3
 
-/* A stream of native binary code.*/
+/* Optimization flags */
+#define	BPF_JIT_FRET	0x01
+#define	BPF_JIT_FPKT	0x02
+#define	BPF_JIT_FMEM	0x04
+#define	BPF_JIT_FJMP	0x08
+#define	BPF_JIT_FADK	0x10
+
+#define	BPF_JIT_FLAG_ALL	\
+    (BPF_JIT_FPKT | BPF_JIT_FMEM | BPF_JIT_FJMP | BPF_JIT_FADK)
+
+/* A stream of native binary code */
 typedef struct bpf_bin_stream {
 	/* Current native instruction pointer. */
 	int		cur_ip;
@@ -93,7 +102,7 @@ typedef struct bpf_bin_stream {
 typedef void (*emit_func)(bpf_bin_stream *stream, u_int value, u_int n);
 
 /*
- * native Instruction Macros
+ * Native instruction macros
  */
 
 /* movl i32,r32 */
@@ -166,9 +175,14 @@ typedef void (*emit_func)(bpf_bin_stream *stream, u_int value, u_int n);
 	emitm(&stream, (5 << 4) | (1 << 3) | (r32 & 0x7), 1);		\
 } while (0)
 
-/* leave/ret */
-#define LEAVE_RET() do {						\
-	emitm(&stream, 0xc3c9, 2);					\
+/* leave */
+#define LEAVE() do {							\
+	emitm(&stream, 0xc9, 1);					\
+} while (0)
+
+/* ret */
+#define RET() do {							\
+	emitm(&stream, 0xc3, 1);					\
 } while (0)
 
 /* addl sr32,dr32 */
@@ -202,6 +216,13 @@ typedef void (*emit_func)(bpf_bin_stream *stream, u_int value, u_int n);
 #define SUB_EAXi(i32) do {						\
 	emitm(&stream, 0x2d, 1);					\
 	emitm(&stream, i32, 4);						\
+} while (0)
+
+/* subl i8,r32 */
+#define SUBib(i8, r32) do {						\
+	emitm(&stream, 0x83, 1);					\
+	emitm(&stream, (29 << 3) | (r32 & 0x7), 1);			\
+	emitm(&stream, i8, 1);						\
 } while (0)
 
 /* mull r32 */
@@ -395,6 +416,12 @@ typedef void (*emit_func)(bpf_bin_stream *stream, u_int value, u_int n);
 		emitm(&stream, stream.refs[stream.bpf_pc + ins->jf] -	\
 		    stream.refs[stream.bpf_pc], 4);			\
 	}								\
+} while (0)
+
+#define	JUMP(off) do {							\
+	if ((off) != 0)							\
+		JMP(stream.refs[stream.bpf_pc + (off)] -		\
+		    stream.refs[stream.bpf_pc]);			\
 } while (0)
 
 #endif	/* _BPF_JIT_MACHDEP_H_ */

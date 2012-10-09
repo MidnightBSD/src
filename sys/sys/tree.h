@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: tree.h,v 1.8 2004/03/28 19:38:30 provos Exp $	*/
 /*	$OpenBSD: tree.h,v 1.7 2002/10/17 21:51:54 art Exp $	*/
-/* $FreeBSD: src/sys/sys/tree.h,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
+/* $MidnightBSD$ */
 
 /*-
  * Copyright 2002 Niels Provos <provos@citi.umich.edu>
@@ -738,9 +737,29 @@ name##_RB_MINMAX(struct name *head, int val)				\
 	     (x) != NULL;						\
 	     (x) = name##_RB_NEXT(x))
 
+#define RB_FOREACH_FROM(x, name, y)					\
+	for ((x) = (y);							\
+	    ((x) != NULL) && ((y) = name##_RB_NEXT(x), (x) != NULL);	\
+	     (x) = (y))
+
+#define RB_FOREACH_SAFE(x, name, head, y)				\
+	for ((x) = RB_MIN(name, head);					\
+	    ((x) != NULL) && ((y) = name##_RB_NEXT(x), (x) != NULL);	\
+	     (x) = (y))
+
 #define RB_FOREACH_REVERSE(x, name, head)				\
 	for ((x) = RB_MAX(name, head);					\
 	     (x) != NULL;						\
 	     (x) = name##_RB_PREV(x))
+
+#define RB_FOREACH_REVERSE_FROM(x, name, y)				\
+	for ((x) = (y);							\
+	    ((x) != NULL) && ((y) = name##_RB_PREV(x), (x) != NULL);	\
+	     (x) = (y))
+
+#define RB_FOREACH_REVERSE_SAFE(x, name, head, y)			\
+	for ((x) = RB_MAX(name, head);					\
+	    ((x) != NULL) && ((y) = name##_RB_PREV(x), (x) != NULL);	\
+	     (x) = (y))
 
 #endif	/* _SYS_TREE_H_ */

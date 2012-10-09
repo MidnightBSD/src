@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/stat.h,v 1.4 2012/03/09 00:20:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stat.h	8.12 (Berkeley) 6/16/95
- * $FreeBSD: src/sys/sys/stat.h,v 1.42 2006/08/04 23:47:30 jb Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_STAT_H_

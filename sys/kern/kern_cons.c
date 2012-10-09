@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_ddb.h"
 

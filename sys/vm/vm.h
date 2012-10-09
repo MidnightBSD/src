@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -56,11 +55,13 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm.h,v 1.27 2006/07/21 23:22:49 alc Exp $
+ * $FreeBSD$
  */
 
 #ifndef VM_H
 #define VM_H
+
+#include <machine/vm.h>
 
 typedef char vm_inherit_t;	/* inheritance codes */
 
@@ -75,14 +76,14 @@ typedef u_char vm_prot_t;	/* protection codes */
 #define	VM_PROT_READ		((vm_prot_t) 0x01)
 #define	VM_PROT_WRITE		((vm_prot_t) 0x02)
 #define	VM_PROT_EXECUTE		((vm_prot_t) 0x04)
-#define	VM_PROT_OVERRIDE_WRITE	((vm_prot_t) 0x08)	/* copy-on-write */
+#define	VM_PROT_COPY		((vm_prot_t) 0x08)	/* copy-on-read */
 
 #define	VM_PROT_ALL		(VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE)
 #define VM_PROT_RW		(VM_PROT_READ|VM_PROT_WRITE)
 #define	VM_PROT_DEFAULT		VM_PROT_ALL
 
 enum obj_type { OBJT_DEFAULT, OBJT_SWAP, OBJT_VNODE, OBJT_DEVICE, OBJT_PHYS,
-		OBJT_DEAD };
+		OBJT_DEAD, OBJT_SG, OBJT_MGTDEVICE };
 typedef u_char objtype_t;
 
 union vm_map_object;
@@ -108,12 +109,21 @@ typedef struct vm_object *vm_object_t;
 typedef int boolean_t;
 
 /*
+ * The exact set of memory attributes is machine dependent.  However, every
+ * machine is required to define VM_MEMATTR_DEFAULT.
+ */
+typedef	char vm_memattr_t;	/* memory attribute codes */
+
+/*
  * This is defined in <sys/types.h> for the kernel so that vnode_if.h
  * doesn't have to include <vm/vm.h>.
  */
 struct vm_page;
 typedef struct vm_page *vm_page_t;
 #endif				/* _KERNEL */
+
+struct vm_reserv;
+typedef struct vm_reserv *vm_reserv_t;
 
 /*
  * Information passed from the machine-independant VM initialization code
@@ -130,6 +140,13 @@ struct kva_md_info {
 
 extern struct kva_md_info	kmi;
 extern void vm_ksubmap_init(struct kva_md_info *);
+
+struct ucred;
+int swap_reserve(vm_ooffset_t incr);
+int swap_reserve_by_cred(vm_ooffset_t incr, struct ucred *cred);
+void swap_reserve_force(vm_ooffset_t incr);
+void swap_release(vm_ooffset_t decr);
+void swap_release_by_cred(vm_ooffset_t decr, struct ucred *cred);
 
 #endif				/* VM_H */
 

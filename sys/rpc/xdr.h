@@ -30,7 +30,7 @@
  *
  *	from: @(#)xdr.h 1.19 87/04/22 SMI
  *	from: @(#)xdr.h	2.2 88/07/29 4.0 RPCSRC
- * $FreeBSD: src/sys/rpc/xdr.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -216,8 +216,8 @@ xdr_putint32(XDR *xdrs, int32_t *ip)
 		(*(xdrs)->x_ops->x_destroy)(xdrs)
 
 #define XDR_CONTROL(xdrs, req, op)			\
-	if ((xdrs)->x_ops->x_control)			\
-		(*(xdrs)->x_ops->x_control)(xdrs, req, op)
+	(((xdrs)->x_ops->x_control == NULL) ? (FALSE) :	\
+		(*(xdrs)->x_ops->x_control)(xdrs, req, op))
 #define xdr_control(xdrs, req, op) XDR_CONTROL(xdrs, req, op)
 
 /*
@@ -338,6 +338,22 @@ typedef struct netobj netobj;
 extern bool_t   xdr_netobj(XDR *, struct netobj *);
 
 /*
+ * These are XDR control operators
+ */
+
+#define	XDR_GET_BYTES_AVAIL 	1
+#define	XDR_PEEK		2
+#define	XDR_SKIPBYTES		3
+
+struct xdr_bytesrec {
+	bool_t xc_is_last_record;
+	size_t xc_num_avail;
+};
+
+typedef struct xdr_bytesrec xdr_bytesrec;
+
+
+/*
  * These are the public routines for the various implementations of
  * xdr streams.
  */
@@ -348,6 +364,8 @@ extern void   xdrmem_create(XDR *, char *, u_int, enum xdr_op);
 /* XDR using mbufs */
 struct mbuf;
 extern void   xdrmbuf_create(XDR *, struct mbuf *, enum xdr_op);
+extern void   xdrmbuf_append(XDR *, struct mbuf *);
+extern struct mbuf * xdrmbuf_getall(XDR *);
 
 /* XDR pseudo records for tcp */
 extern void   xdrrec_create(XDR *, u_int, u_int, void *,

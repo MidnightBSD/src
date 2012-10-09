@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/pipe.h,v 1.2 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1996 John S. Dyson
  * All rights reserved.
@@ -19,7 +18,7 @@
  * 5. Modifications may be freely made to this file if the above conditions
  *    are met.
  *
- * $FreeBSD: src/sys/sys/pipe.h,v 1.29 2005/01/07 02:29:23 imp Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_PIPE_H_
@@ -57,7 +56,7 @@
 /*
  * See sys_pipe.c for info on what these limits mean. 
  */
-extern int	maxpipekva;
+extern long	maxpipekva;
 
 /*
  * Pipe buffer information.
@@ -115,6 +114,13 @@ struct pipe {
 	int	pipe_present;		/* still present? */
 	ino_t	pipe_ino;		/* fake inode for stat(2) */
 };
+
+/*
+ * Values for the pipe_present.
+ */
+#define PIPE_ACTIVE		1
+#define	PIPE_CLOSING		2
+#define	PIPE_FINALIZED		3
 
 /*
  * Container structure to hold the two pipe endpoints, mutex, and label

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/mbuf.h,v 1.217.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_MBUF_H_
@@ -61,12 +60,12 @@
 
 #ifdef _KERNEL
 /*-
- * Macros for type conversion:
+ * Macro for type conversion: convert mbuf pointer to data pointer of correct
+ * type:
+ *
  * mtod(m, t)	-- Convert mbuf pointer to data pointer of correct type.
- * dtom(x)	-- Convert data pointer within mbuf to mbuf pointer (XXX).
  */
 #define	mtod(m, t)	((t)((m)->m_data))
-#define	dtom(x)		((struct mbuf *)((intptr_t)(x) & ~(MSIZE-1)))
 
 /*
  * Argument structure passed to UMA routines during mbuf and packet
@@ -116,13 +115,20 @@ struct pkthdr {
 	/* variables for ip and tcp reassembly */
 	void		*header;	/* pointer to packet header */
 	int		 len;		/* total packet length */
+	uint32_t	 flowid;	/* packet's 4-tuple system
+					 * flow identifier
+					 */
 	/* variables for hardware checksum */
 	int		 csum_flags;	/* flags regarding checksum */
 	int		 csum_data;	/* data field used by csum routines */
 	u_int16_t	 tso_segsz;	/* TSO segment size */
-	u_int16_t	 ether_vtag;	/* Ethernet 802.1p+q vlan tag */
+	union {
+		u_int16_t vt_vtag;	/* Ethernet 802.1p+q vlan tag */
+		u_int16_t vt_nrecs;	/* # of IGMPv3 records in this chain */
+	} PH_vt;
 	SLIST_HEAD(packet_tags, m_tag) tags; /* list of packet tags */
 };
+#define ether_vtag	PH_vt.vt_vtag
 
 /*
  * Description of external storage mapped into mbuf; valid only if M_EXT is
@@ -132,7 +138,8 @@ struct m_ext {
 	caddr_t		 ext_buf;	/* start of buffer */
 	void		(*ext_free)	/* free routine if not the usual */
 			    (void *, void *);
-	void		*ext_args;	/* optional argument pointer */
+	void		*ext_arg1;	/* optional argument pointer */
+	void		*ext_arg2;	/* optional argument pointer */
 	u_int		 ext_size;	/* size of buffer, for ext_free */
 	volatile u_int	*ref_cnt;	/* pointer to ref count info */
 	int		 ext_type;	/* type of external storage */
@@ -192,6 +199,9 @@ struct mbuf {
 #define	M_PROTO6	0x00080000 /* protocol-specific */
 #define	M_PROTO7	0x00100000 /* protocol-specific */
 #define	M_PROTO8	0x00200000 /* protocol-specific */
+#define	M_FLOWID	0x00400000 /* deprecated: flowid is valid */
+#define	M_HASHTYPEBITS	0x0F000000 /* mask of bits holding flowid hash type */
+
 /*
  * For RELENG_{6,7} steal these flags for limited multiple routing table
  * support. In RELENG_8 and beyond, use just one flag and a tag.
@@ -207,11 +217,45 @@ struct mbuf {
     (M_PROTO1|M_PROTO2|M_PROTO3|M_PROTO4|M_PROTO5|M_PROTO6|M_PROTO7|M_PROTO8)
 
 /*
+ * Network interface cards are able to hash protocol fields (such as IPv4
+ * addresses and TCP port numbers) classify packets into flows.  These flows
+ * can then be used to maintain ordering while delivering packets to the OS
+ * via parallel input queues, as well as to provide a stateless affinity
+ * model.  NIC drivers can pass up the hash via m->m_pkthdr.flowid, and set
+ * m_flag fields to indicate how the hash should be interpreted by the
+ * network stack.
+ *
+ * Most NICs support RSS, which provides ordering and explicit affinity, and
+ * use the hash m_flag bits to indicate what header fields were covered by
+ * the hash.  M_HASHTYPE_OPAQUE can be set by non-RSS cards or configurations
+ * that provide an opaque flow identifier, allowing for ordering and
+ * distribution without explicit affinity.
+ */
+#define	M_HASHTYPE_SHIFT		24
+#define	M_HASHTYPE_NONE			0x0
+#define	M_HASHTYPE_RSS_IPV4		0x1	/* IPv4 2-tuple */
+#define	M_HASHTYPE_RSS_TCP_IPV4		0x2	/* TCPv4 4-tuple */
+#define	M_HASHTYPE_RSS_IPV6		0x3	/* IPv6 2-tuple */
+#define	M_HASHTYPE_RSS_TCP_IPV6		0x4	/* TCPv6 4-tuple */
+#define	M_HASHTYPE_RSS_IPV6_EX		0x5	/* IPv6 2-tuple + ext hdrs */
+#define	M_HASHTYPE_RSS_TCP_IPV6_EX	0x6	/* TCPv6 4-tiple + ext hdrs */
+#define	M_HASHTYPE_OPAQUE		0xf	/* ordering, not affinity */
+
+#define	M_HASHTYPE_CLEAR(m)	(m)->m_flags &= ~(M_HASHTYPEBITS)
+#define	M_HASHTYPE_GET(m)	(((m)->m_flags & M_HASHTYPEBITS) >> \
+				    M_HASHTYPE_SHIFT)
+#define	M_HASHTYPE_SET(m, v)	do {					\
+	(m)->m_flags &= ~M_HASHTYPEBITS;				\
+	(m)->m_flags |= ((v) << M_HASHTYPE_SHIFT);			\
+} while (0)
+#define	M_HASHTYPE_TEST(m, v)	(M_HASHTYPE_GET(m) == (v))
+
+/*
  * Flags preserved when copying m_pkthdr.
  */
 #define	M_COPYFLAGS \
     (M_PKTHDR|M_EOR|M_RDONLY|M_PROTOFLAGS|M_SKIP_FIREWALL|M_BCAST|M_MCAST|\
-     M_FRAG|M_FIRSTFRAG|M_LASTFRAG|M_VLANTAG|M_PROMISC|M_FIB)
+     M_FRAG|M_FIRSTFRAG|M_LASTFRAG|M_VLANTAG|M_PROMISC|M_FIB|M_HASHTYPEBITS)
 
 /*
  * External buffer types: identify ext_buf type.
@@ -238,14 +282,25 @@ struct mbuf {
 #define	CSUM_IP_FRAGS		0x0008		/* will csum IP fragments */
 #define	CSUM_FRAGMENT		0x0010		/* will do IP fragmentation */
 #define	CSUM_TSO		0x0020		/* will do TSO */
+#define	CSUM_SCTP		0x0040		/* will csum SCTP */
+#define CSUM_SCTP_IPV6		0x0080		/* will csum IPv6/SCTP */
 
 #define	CSUM_IP_CHECKED		0x0100		/* did csum IP */
 #define	CSUM_IP_VALID		0x0200		/*   ... the csum is valid */
 #define	CSUM_DATA_VALID		0x0400		/* csum_data field is valid */
 #define	CSUM_PSEUDO_HDR		0x0800		/* csum_data has pseudo hdr */
+#define	CSUM_SCTP_VALID		0x1000		/* SCTP checksum is valid */
+#define	CSUM_UDP_IPV6		0x2000		/* will csum IPv6/UDP */
+#define	CSUM_TCP_IPV6		0x4000		/* will csum IPv6/TCP */
+/*	CSUM_TSO_IPV6		0x8000		will do IPv6/TSO */
+
+/*	CSUM_FRAGMENT_IPV6	0x10000		will do IPv6 fragementation */
+
+#define	CSUM_DELAY_DATA_IPV6	(CSUM_TCP_IPV6 | CSUM_UDP_IPV6)
+#define	CSUM_DATA_VALID_IPV6	CSUM_DATA_VALID
 
 #define	CSUM_DELAY_DATA		(CSUM_TCP | CSUM_UDP)
-#define	CSUM_DELAY_IP		(CSUM_IP)	/* XXX add ipv6 here too? */
+#define	CSUM_DELAY_IP		(CSUM_IP)	/* Only v4, no v6 IP hdr csum */
 
 /*
  * mbuf types.
@@ -296,11 +351,11 @@ struct mbstat {
  *
  * The flag to use is as follows:
  * - M_DONTWAIT or M_NOWAIT from an interrupt handler to not block allocation.
- * - M_WAIT or M_WAITOK or M_TRYWAIT from wherever it is safe to block.
+ * - M_WAIT or M_WAITOK from wherever it is safe to block.
  *
  * M_DONTWAIT/M_NOWAIT means that we will not block the thread explicitly and
  * if we cannot allocate immediately we may return NULL, whereas
- * M_WAIT/M_WAITOK/M_TRYWAIT means that if we cannot allocate resources we
+ * M_WAIT/M_WAITOK means that if we cannot allocate resources we
  * will block until they are available, and thus never return NULL.
  *
  * XXX Eventually just phase this out to use M_WAITOK/M_NOWAIT.
@@ -318,7 +373,7 @@ struct mbstat {
 #define	MBUF_MEM_NAME		"mbuf"
 #define	MBUF_CLUSTER_MEM_NAME	"mbuf_cluster"
 #define	MBUF_PACKET_MEM_NAME	"mbuf_packet"
-#define	MBUF_JUMBOP_MEM_NAME	"mbuf_jumbo_pagesize"
+#define	MBUF_JUMBOP_MEM_NAME	"mbuf_jumbo_page"
 #define	MBUF_JUMBO9_MEM_NAME	"mbuf_jumbo_9k"
 #define	MBUF_JUMBO16_MEM_NAME	"mbuf_jumbo_16k"
 #define	MBUF_TAG_MEM_NAME	"mbuf_tag"
@@ -356,18 +411,21 @@ static __inline struct mbuf	*m_gethdr(int how, short type);
 static __inline struct mbuf	*m_getjcl(int how, short type, int flags,
 				    int size);
 static __inline struct mbuf	*m_getclr(int how, short type);	/* XXX */
+static __inline int		 m_init(struct mbuf *m, uma_zone_t zone,
+				    int size, int how, short type, int flags);
 static __inline struct mbuf	*m_free(struct mbuf *m);
 static __inline void		 m_clget(struct mbuf *m, int how);
 static __inline void		*m_cljget(struct mbuf *m, int how, int size);
 static __inline void		 m_chtype(struct mbuf *m, short new_type);
 void				 mb_free_ext(struct mbuf *);
 static __inline struct mbuf	*m_last(struct mbuf *m);
+int				 m_pkthdr_init(struct mbuf *m, int how);
 
 static __inline int
 m_gettype(int size)
 {
 	int type;
-	
+
 	switch (size) {
 	case MSIZE:
 		type = EXT_MBUF;
@@ -397,7 +455,7 @@ static __inline uma_zone_t
 m_getzone(int size)
 {
 	uma_zone_t zone;
-	
+
 	switch (size) {
 	case MSIZE:
 		zone = zone_mbuf;
@@ -421,6 +479,33 @@ m_getzone(int size)
 	}
 
 	return (zone);
+}
+
+/*
+ * Initialize an mbuf with linear storage.
+ *
+ * Inline because the consumer text overhead will be roughly the same to
+ * initialize or call a function with this many parameters and M_PKTHDR
+ * should go away with constant propagation for !MGETHDR.
+ */
+static __inline int
+m_init(struct mbuf *m, uma_zone_t zone, int size, int how, short type,
+    int flags)
+{
+	int error;
+
+	m->m_next = NULL;
+	m->m_nextpkt = NULL;
+	m->m_data = m->m_dat;
+	m->m_len = 0;
+	m->m_flags = flags;
+	m->m_type = type;
+	if (flags & M_PKTHDR) {
+		if ((error = m_pkthdr_init(m, how)) != 0)
+			return (error);
+	}
+
+	return (0);
 }
 
 static __inline struct mbuf *
@@ -483,6 +568,9 @@ m_getjcl(int how, short type, int flags, int size)
 	struct mbuf *m, *n;
 	uma_zone_t zone;
 
+	if (size == MCLBYTES)
+		return m_getcl(how, type, flags);
+
 	args.flags = flags;
 	args.type = type;
 
@@ -502,7 +590,10 @@ m_getjcl(int how, short type, int flags, int size)
 static __inline void
 m_free_fast(struct mbuf *m)
 {
-	KASSERT(SLIST_EMPTY(&m->m_pkthdr.tags), ("doing fast free of mbuf with tags"));
+#ifdef INVARIANTS
+	if (m->m_flags & M_PKTHDR)
+		KASSERT(SLIST_EMPTY(&m->m_pkthdr.tags), ("doing fast free of mbuf with tags"));
+#endif
 
 	uma_zfree_arg(zone_mbuf, m, (void *)MB_NOTAGS);
 }
@@ -563,7 +654,7 @@ m_cljset(struct mbuf *m, void *cl, int type)
 {
 	uma_zone_t zone;
 	int size;
-	
+
 	switch (type) {
 	case EXT_CLUSTER:
 		size = MCLBYTES;
@@ -589,7 +680,7 @@ m_cljset(struct mbuf *m, void *cl, int type)
 	}
 
 	m->m_data = m->m_ext.ext_buf = cl;
-	m->m_ext.ext_free = m->m_ext.ext_args = NULL;
+	m->m_ext.ext_free = m->m_ext.ext_arg1 = m->m_ext.ext_arg2 = NULL;
 	m->m_ext.ext_size = size;
 	m->m_ext.ext_type = type;
 	m->m_ext.ref_cnt = uma_find_refcnt(zone, cl);
@@ -613,6 +704,16 @@ m_last(struct mbuf *m)
 	return (m);
 }
 
+extern void (*m_addr_chg_pf_p)(struct mbuf *m);
+
+static __inline void
+m_addr_changed(struct mbuf *m)
+{
+
+	if (m_addr_chg_pf_p)
+		m_addr_chg_pf_p(m);
+}
+
 /*
  * mbuf, cluster, and external object allocation macros (for compatibility
  * purposes).
@@ -621,8 +722,8 @@ m_last(struct mbuf *m)
 #define	MGET(m, how, type)	((m) = m_get((how), (type)))
 #define	MGETHDR(m, how, type)	((m) = m_gethdr((how), (type)))
 #define	MCLGET(m, how)		m_clget((m), (how))
-#define	MEXTADD(m, buf, size, free, args, flags, type) 			\
-    m_extadd((m), (caddr_t)(buf), (size), (free), (args), (flags), (type))
+#define	MEXTADD(m, buf, size, free, arg1, arg2, flags, type)		\
+    m_extadd((m), (caddr_t)(buf), (size), (free),(arg1),(arg2),(flags), (type))
 #define	m_getm(m, len, how, type)					\
     m_getm2((m), (len), (how), (type), M_PKTHDR)
 
@@ -637,7 +738,7 @@ m_last(struct mbuf *m)
 
 /* Check if the supplied mbuf has a packet header, or else panic. */
 #define	M_ASSERTPKTHDR(m)						\
-	KASSERT(m != NULL && m->m_flags & M_PKTHDR,			\
+	KASSERT((m) != NULL && (m)->m_flags & M_PKTHDR,			\
 	    ("%s: no mbuf packet header!", __func__))
 
 /*
@@ -748,7 +849,7 @@ int		 m_apply(struct mbuf *, int, int,
 int		 m_append(struct mbuf *, int, c_caddr_t);
 void		 m_cat(struct mbuf *, struct mbuf *);
 void		 m_extadd(struct mbuf *, caddr_t, u_int,
-		    void (*)(void *, void *), void *, int, int);
+		    void (*)(void *, void *), void *, void *, int, int);
 struct mbuf	*m_collapse(struct mbuf *, int, int);
 void		 m_copyback(struct mbuf *, int, int, c_caddr_t);
 void		 m_copydata(const struct mbuf *, int, int, caddr_t);
@@ -770,6 +871,7 @@ void		 m_freem(struct mbuf *);
 struct mbuf	*m_getm2(struct mbuf *, int, int, short, int);
 struct mbuf	*m_getptr(struct mbuf *, int, int *);
 u_int		 m_length(struct mbuf *, struct mbuf **);
+int		 m_mbuftouio(struct uio *, struct mbuf *, int);
 void		 m_move_pkthdr(struct mbuf *, struct mbuf *);
 struct mbuf	*m_prepend(struct mbuf *, int, int);
 void		 m_print(const struct mbuf *, int);
@@ -854,7 +956,9 @@ struct mbuf	*m_unshare(struct mbuf *, int how);
 #define	PACKET_TAG_PF				21 /* PF + ALTQ information */
 #define	PACKET_TAG_RTSOCKFAM			25 /* rtsock sa family */
 #define	PACKET_TAG_IPOPTIONS			27 /* Saved IP options */
-#define	PACKET_TAG_CARP                         28 /* CARP info */
+#define	PACKET_TAG_CARP				28 /* CARP info */
+#define	PACKET_TAG_IPSEC_NAT_T_PORTS		29 /* two uint16_t */
+#define	PACKET_TAG_ND_OUTGOING			30 /* ND outgoing */
 
 /* Specific cookies and tags. */
 
@@ -970,8 +1074,16 @@ m_tag_find(struct mbuf *m, int type, struct m_tag *start)
 #define M_SETFIB(_m, _fib) do {						\
 	_m->m_flags &= ~M_FIB;					   	\
 	_m->m_flags |= (((_fib) << M_FIBSHIFT) & M_FIB);  \
-} while (0) 
+} while (0)
 
 #endif /* _KERNEL */
+
+#ifdef MBUF_PROFILING
+ void m_profile(struct mbuf *m);
+ #define M_PROFILE(m) m_profile(m)
+#else
+ #define M_PROFILE(m)
+#endif
+
 
 #endif /* !_SYS_MBUF_H_ */

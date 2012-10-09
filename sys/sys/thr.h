@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, Jeffrey Roberson <jeff@freebsd.org>
  * All rights reserved.
@@ -24,13 +23,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/thr.h,v 1.14.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 
 #ifndef _SYS_THR_H_
 #define	_SYS_THR_H_
 
+#include <sys/cdefs.h>
 #include <sys/_types.h>
 #include <sys/sched.h>
 
@@ -69,6 +69,7 @@ typedef __pid_t		pid_t;
 #define _PID_T_DECLARED
 #endif
 
+__BEGIN_DECLS
 int thr_create(ucontext_t *ctx, long *id, int flags);
 int thr_new(struct thr_param *param, int param_size);
 int thr_self(long *id);
@@ -78,7 +79,7 @@ int thr_kill2(pid_t pid, long id, int sig);
 int thr_suspend(const struct timespec *timeout);
 int thr_wake(long id);
 int thr_set_name(long id, const char *name);
-
+__END_DECLS
 #endif /* !_KERNEL */
 
 #endif /* ! _SYS_THR_H_ */

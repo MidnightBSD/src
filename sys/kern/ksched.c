@@ -34,18 +34,22 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/ksched.c,v 1.36.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_posix.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
+#include <sys/sysctl.h>
+#include <sys/kernel.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/posix4.h>
 #include <sys/resource.h>
 #include <sys/sched.h>
+
+FEATURE(kposix_priority_scheduling, "POSIX P1003.1B realtime extensions");
 
 /* ksched: Real-time extension to support POSIX priority scheduling.
  */
@@ -81,9 +85,8 @@ ksched_detach(struct ksched *ks)
  *	higher priority.  It also permits sched_setparam to be
  *	implementation defined for SCHED_OTHER.  I don't like
  *	the notion of inverted priorites for normal processes when
- *  you can use "setpriority" for that.
+ *      you can use "setpriority" for that.
  *
- *	I'm rejecting sched_setparam for SCHED_OTHER with EINVAL.
  */
 
 /* Macros to convert between the unix (lower numerically is higher priority)
@@ -92,6 +95,9 @@ ksched_detach(struct ksched *ks)
 
 #define p4prio_to_rtpprio(P) (RTP_PRIO_MAX - (P))
 #define rtpprio_to_p4prio(P) (RTP_PRIO_MAX - (P))
+
+#define p4prio_to_tsprio(P) ((PRI_MAX_TIMESHARE - PRI_MIN_TIMESHARE) - (P))
+#define tsprio_to_p4prio(P) ((PRI_MAX_TIMESHARE - PRI_MIN_TIMESHARE) - (P))
 
 /* These improve readability a bit for me:
  */
@@ -134,9 +140,6 @@ ksched_setparam(struct ksched *ksched,
 
 	if (e == 0)
 	{
-		if (policy == SCHED_OTHER)
-			e = EINVAL;
-		else
 			e = ksched_setscheduler(ksched, td, policy, param);
 	}
 
@@ -152,7 +155,16 @@ ksched_getparam(struct ksched *ksched,
 	pri_to_rtp(td, &rtp);
 	if (RTP_PRIO_IS_REALTIME(rtp.type))
 		param->sched_priority = rtpprio_to_p4prio(rtp.prio);
-
+	else {
+		if (PRI_MIN_TIMESHARE < rtp.prio) 
+			/*
+		 	 * The interactive score has it to min realtime
+			 * so we must show max (64 most likely
+			 */ 
+			param->sched_priority = (PRI_MAX_TIMESHARE - PRI_MIN_TIMESHARE);
+		else
+			param->sched_priority = tsprio_to_p4prio(rtp.prio);
+	}
 	return 0;
 }
 
@@ -191,11 +203,14 @@ ksched_setscheduler(struct ksched *ksched,
 		break;
 
 		case SCHED_OTHER:
-		{
+		if (param->sched_priority >= 0 &&
+			param->sched_priority <= (PRI_MAX_TIMESHARE - PRI_MIN_TIMESHARE)) {
 			rtp.type = RTP_PRIO_NORMAL;
-			rtp.prio = p4prio_to_rtpprio(param->sched_priority);
+			rtp.prio = p4prio_to_tsprio(param->sched_priority);
 			rtp_to_pri(&rtp, td);
-		}
+		} else
+			e = EINVAL;
+
 		break;
 		
 		default:

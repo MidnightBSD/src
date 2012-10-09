@@ -33,14 +33,13 @@
  * SUCH DAMAGE.
  *
  *	from: if_ethersubr.c,v 1.5 1994/12/13 22:31:45 wollman Exp
- * $FreeBSD: src/sys/net/if_fddisubr.c,v 1.104.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "opt_atalk.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipx.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,7 +54,9 @@
 #include <net/if_dl.h>
 #include <net/if_llc.h>
 #include <net/if_types.h>
+#include <net/if_llatbl.h>
 
+#include <net/ethernet.h>
 #include <net/netisr.h>
 #include <net/route.h>
 #include <net/bpf.h>
@@ -96,7 +97,7 @@ static const u_char fddibroadcastaddr[FDDI_ADDR_LEN] =
 static int fddi_resolvemulti(struct ifnet *, struct sockaddr **,
 			      struct sockaddr *);
 static int fddi_output(struct ifnet *, struct mbuf *, struct sockaddr *,
-		       struct rtentry *); 
+		       struct route *); 
 static void fddi_input(struct ifnet *ifp, struct mbuf *m);
 
 #define	senderr(e)	do { error = (e); goto bad; } while (0)
@@ -109,19 +110,22 @@ static void fddi_input(struct ifnet *ifp, struct mbuf *m);
  * Assumes that ifp is actually pointer to arpcom structure.
  */
 static int
-fddi_output(ifp, m, dst, rt0)
+fddi_output(ifp, m, dst, ro)
 	struct ifnet *ifp;
 	struct mbuf *m;
 	struct sockaddr *dst;
-	struct rtentry *rt0;
+	struct route *ro;
 {
 	u_int16_t type;
 	int loop_copy = 0, error = 0, hdrcmplt = 0;
  	u_char esrc[FDDI_ADDR_LEN], edst[FDDI_ADDR_LEN];
 	struct fddi_header *fh;
+#if defined(INET) || defined(INET6)
+	struct llentry *lle;
+#endif
 
 #ifdef MAC
-	error = mac_check_ifnet_transmit(ifp, m);
+	error = mac_ifnet_check_transmit(ifp, m);
 	if (error)
 		senderr(error);
 #endif
@@ -136,7 +140,11 @@ fddi_output(ifp, m, dst, rt0)
 	switch (dst->sa_family) {
 #ifdef INET
 	case AF_INET: {
-		error = arpresolve(ifp, rt0, m, dst, edst);
+		struct rtentry *rt0 = NULL;
+
+		if (ro != NULL)
+			rt0 = ro->ro_rt;
+		error = arpresolve(ifp, rt0, m, dst, edst, &lle);
 		if (error)
 			return (error == EWOULDBLOCK ? 0 : error);
 		type = htons(ETHERTYPE_IP);
@@ -172,7 +180,7 @@ fddi_output(ifp, m, dst, rt0)
 #endif /* INET */
 #ifdef INET6
 	case AF_INET6:
-		error = nd6_storelladdr(ifp, rt0, m, dst, (u_char *)edst);
+		error = nd6_storelladdr(ifp, m, dst, (u_char *)edst, &lle);
 		if (error)
 			return (error); /* Something bad happened */
 		type = htons(ETHERTYPE_IPV6);
@@ -204,9 +212,7 @@ fddi_output(ifp, m, dst, rt0)
 	    if (aa->aa_flags & AFA_PHASE2) {
 		struct llc llc;
 
-		M_PREPEND(m, LLC_SNAPFRAMELEN, M_TRYWAIT);
-		if (m == 0)
-			senderr(ENOBUFS);
+		M_PREPEND(m, LLC_SNAPFRAMELEN, M_WAIT);
 		llc.llc_dsap = llc.llc_ssap = LLC_SNAP_LSAP;
 		llc.llc_control = LLC_UI;
 		bcopy(at_org_code, llc.llc_snap.org_code, sizeof(at_org_code));
@@ -216,6 +222,7 @@ fddi_output(ifp, m, dst, rt0)
 	    } else {
 		type = htons(ETHERTYPE_AT);
 	    }
+	    ifa_free(&aa->aa_ifa);
 	    break;
 	}
 #endif /* NETATALK */
@@ -336,7 +343,7 @@ fddi_output(ifp, m, dst, rt0)
 		}
 	}
 
-	IFQ_HANDOFF(ifp, m, error);
+	error = (ifp->if_transmit)(ifp, m);
 	if (error)
 		ifp->if_oerrors++;
 
@@ -407,7 +414,7 @@ fddi_input(ifp, m)
 	}
 
 #ifdef MAC
-	mac_create_mbuf_from_ifnet(ifp, m);
+	mac_ifnet_create_mbuf(ifp, m);
 #endif
 
 	/*
@@ -543,6 +550,7 @@ fddi_input(ifp, m)
 		ifp->if_noproto++;
 		goto dropanyway;
 	}
+	M_SETFIB(m, ifp->if_fib);
 	netisr_dispatch(isr, m);
 	return;
 
@@ -611,7 +619,7 @@ fddi_ifdetach(ifp, bpf)
 int
 fddi_ioctl (ifp, command, data)
 	struct ifnet *ifp;
-	int command;
+	u_long command;
 	caddr_t data;
 {
 	struct ifaddr *ifa;
@@ -697,7 +705,9 @@ fddi_resolvemulti(ifp, llsa, sa)
 	struct sockaddr *sa;
 {
 	struct sockaddr_dl *sdl;
+#ifdef INET
 	struct sockaddr_in *sin;
+#endif
 #ifdef INET6
 	struct sockaddr_in6 *sin6;
 #endif
@@ -720,7 +730,7 @@ fddi_resolvemulti(ifp, llsa, sa)
 		sin = (struct sockaddr_in *)sa;
 		if (!IN_MULTICAST(ntohl(sin->sin_addr.s_addr)))
 			return (EADDRNOTAVAIL);
-		MALLOC(sdl, struct sockaddr_dl *, sizeof *sdl, M_IFMADDR,
+		sdl = malloc(sizeof *sdl, M_IFMADDR,
 		       M_NOWAIT | M_ZERO);
 		if (sdl == NULL)
 			return (ENOMEM);
@@ -751,7 +761,7 @@ fddi_resolvemulti(ifp, llsa, sa)
 		}
 		if (!IN6_IS_ADDR_MULTICAST(&sin6->sin6_addr))
 			return (EADDRNOTAVAIL);
-		MALLOC(sdl, struct sockaddr_dl *, sizeof *sdl, M_IFMADDR,
+		sdl = malloc(sizeof *sdl, M_IFMADDR,
 		       M_NOWAIT | M_ZERO);
 		if (sdl == NULL)
 			return (ENOMEM);

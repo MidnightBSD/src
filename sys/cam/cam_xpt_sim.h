@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cam/cam_xpt_sim.h,v 1.3 2008/12/03 00:24:27 laffer1 Exp $ */
 /*-
  * Data structures and definitions for dealing with the 
  * Common Access Method Transport (xpt) layer.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_xpt_sim.h,v 1.9.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_XPT_SIM_H
@@ -44,10 +43,16 @@ int32_t		xpt_bus_deregister(path_id_t path_id);
 u_int32_t	xpt_freeze_simq(struct cam_sim *sim, u_int count);
 void		xpt_release_simq(struct cam_sim *sim, int run_queue);
 u_int32_t	xpt_freeze_devq(struct cam_path *path, u_int count);
-void		xpt_release_devq(struct cam_path *path, u_int count,
-				 int run_queue);
+u_int32_t	xpt_freeze_devq_rl(struct cam_path *path, cam_rl rl,
+		    u_int count);
+void		xpt_release_devq(struct cam_path *path,
+		    u_int count, int run_queue);
+void		xpt_release_devq_rl(struct cam_path *path, cam_rl rl,
+		    u_int count, int run_queue);
 int		xpt_sim_opened(struct cam_sim *sim);
 void		xpt_done(union ccb *done_ccb);
+void		xpt_batch_start(struct cam_sim *sim);
+void		xpt_batch_done(struct cam_sim *sim);
 #endif
 
 #endif /* _CAM_CAM_XPT_SIM_H */

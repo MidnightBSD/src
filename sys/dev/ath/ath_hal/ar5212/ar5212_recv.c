@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: ar5212_recv.c,v 1.1 2011-09-30 01:28:40 laffer1 Exp $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -59,8 +59,10 @@ ar5212EnableReceive(struct ath_hal *ah)
 HAL_BOOL
 ar5212StopDmaReceive(struct ath_hal *ah)
 {
+	OS_MARK(ah, AH_MARK_RX_CTL, AH_MARK_RX_CTL_DMA_STOP);
 	OS_REG_WRITE(ah, AR_CR, AR_CR_RXD);	/* Set receive disable bit */
 	if (!ath_hal_wait(ah, AR_CR, AR_CR_RXE, 0)) {
+		OS_MARK(ah, AH_MARK_RX_CTL, AH_MARK_RX_CTL_DMA_STOP_ERR);
 #ifdef AH_DEBUG
 		ath_hal_printf(ah, "%s: dma failed to stop in 10ms\n"
 			"AR_CR=0x%08x\nAR_DIAG_SW=0x%08x\n",
@@ -82,6 +84,7 @@ ar5212StartPcuReceive(struct ath_hal *ah)
 {
 	struct ath_hal_private *ahp = AH_PRIVATE(ah);
 
+	OS_MARK(ah, AH_MARK_RX_CTL, AH_MARK_RX_CTL_PCU_START);
 	OS_REG_WRITE(ah, AR_DIAG_SW,
 		OS_REG_READ(ah, AR_DIAG_SW) &~ AR_DIAG_RX_DIS);
 	ar5212EnableMibCounters(ah);
@@ -95,6 +98,7 @@ ar5212StartPcuReceive(struct ath_hal *ah)
 void
 ar5212StopPcuReceive(struct ath_hal *ah)
 {
+	OS_MARK(ah, AH_MARK_RX_CTL, AH_MARK_RX_CTL_PCU_STOP);
 	OS_REG_WRITE(ah, AR_DIAG_SW,
 		OS_REG_READ(ah, AR_DIAG_SW) | AR_DIAG_RX_DIS);
 	ar5212DisableMibCounters(ah);
@@ -163,6 +167,9 @@ ar5212GetRxFilter(struct ath_hal *ah)
 		bits |= HAL_RX_FILTER_PHYRADAR;
 	if (phybits & (AR_PHY_ERR_OFDM_TIMING|AR_PHY_ERR_CCK_TIMING))
 		bits |= HAL_RX_FILTER_PHYERR;
+	if (AH_PRIVATE(ah)->ah_caps.halBssidMatchSupport &&
+	    (AH5212(ah)->ah_miscMode & AR_MISC_MODE_BSSID_MATCH_FORCE))
+		bits |= HAL_RX_FILTER_BSSID;
 	return bits;
 }
 
@@ -172,10 +179,12 @@ ar5212GetRxFilter(struct ath_hal *ah)
 void
 ar5212SetRxFilter(struct ath_hal *ah, uint32_t bits)
 {
+	struct ath_hal_5212 *ahp = AH5212(ah);
 	uint32_t phybits;
 
 	OS_REG_WRITE(ah, AR_RX_FILTER,
-	    bits &~ (HAL_RX_FILTER_PHYRADAR|HAL_RX_FILTER_PHYERR));
+	    bits &~ (HAL_RX_FILTER_PHYRADAR|HAL_RX_FILTER_PHYERR|
+	    HAL_RX_FILTER_BSSID));
 	phybits = 0;
 	if (bits & HAL_RX_FILTER_PHYRADAR)
 		phybits |= AR_PHY_ERR_RADAR;
@@ -188,6 +197,13 @@ ar5212SetRxFilter(struct ath_hal *ah, uint32_t bits)
 	} else {
 		OS_REG_WRITE(ah, AR_RXCFG,
 			OS_REG_READ(ah, AR_RXCFG) &~ AR_RXCFG_ZLFDMA);
+	}
+	if (AH_PRIVATE(ah)->ah_caps.halBssidMatchSupport) {
+		if (bits & HAL_RX_FILTER_BSSID)
+			ahp->ah_miscMode |= AR_MISC_MODE_BSSID_MATCH_FORCE;
+		else
+			ahp->ah_miscMode &= ~AR_MISC_MODE_BSSID_MATCH_FORCE;
+		OS_REG_WRITE(ah, AR_MISC_MODE, OS_REG_READ(ah, AR_MISC_MODE) | ahp->ah_miscMode);
 	}
 }
 

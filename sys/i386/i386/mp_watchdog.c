@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/i386/mp_watchdog.c,v 1.5 2007/06/04 23:56:33 jeff Exp $
+ * $FreeBSD$
  */
 
 #include "opt_mp_watchdog.h"
@@ -45,7 +44,7 @@
 #include <sys/systm.h>
 
 #include <machine/smp.h>
-#include <machine/apicreg.h>
+#include <x86/apicreg.h>
 #include <machine/apicvar.h>
 #include <machine/mp_watchdog.h>
 
@@ -204,8 +203,7 @@ ap_watchdog(u_int cpuid)
 			if (watchdog_nmi)
 				watchdog_ipi_nmi();
 			else
-				kdb_enter_why(KDB_WHY_WATCHDOG,
-				   "mp_watchdog");
+				kdb_enter(KDB_WHY_WATCHDOG, "mp_watchdog");
 		}
 	}
 	bcopy(old_pcomm, p->p_comm, MAXCOMLEN + 1);

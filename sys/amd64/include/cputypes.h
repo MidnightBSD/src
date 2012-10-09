@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Christopher G. Demetriou
  * All rights reserved.
@@ -25,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/cputypes.h,v 1.19.10.2 2009/07/13 22:13:13 jkim Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPUTYPES_H_

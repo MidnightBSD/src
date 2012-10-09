@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2002, 2003, 2004, 2005 Jeffrey Roberson <jeff@FreeBSD.org>
+ * Copyright (c) 2002-2005, 2009 Jeffrey Roberson <jeff@FreeBSD.org>
  * Copyright (c) 2004, 2005 Bosko Milekic <bmilekic@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/vm/uma_int.h,v 1.38 2007/05/09 22:53:34 rwatson Exp $
+ * $FreeBSD$
  *
  */
 
@@ -46,7 +45,7 @@
  *  
  * The uma_slab_t may be embedded in a UMA_SLAB_SIZE chunk of memory or it may
  * be allocated off the page from a special slab zone.  The free list within a
- * slab is managed with a linked list of indexes, which are 8 bit values.  If
+ * slab is managed with a linked list of indices, which are 8 bit values.  If
  * UMA_SLAB_SIZE is defined to be too large I will have to switch to 16bit
  * values.  Currently on alpha you can get 250 or so 32 byte items and on x86
  * you can get 250 or so 16byte items.  For item sizes that would yield more
@@ -57,9 +56,9 @@
  * wasted between items due to alignment problems.  This may yield a much better
  * memory footprint for certain sizes of objects.  Another alternative is to
  * increase the UMA_SLAB_SIZE, or allow for dynamic slab sizes.  I prefer
- * dynamic slab sizes because we could stick with 8 bit indexes and only use
+ * dynamic slab sizes because we could stick with 8 bit indices and only use
  * large slab sizes for zones with a lot of waste per slab.  This may create
- * ineffeciencies in the vm subsystem due to fragmentation in the address space.
+ * inefficiencies in the vm subsystem due to fragmentation in the address space.
  *
  * The only really gross cases, with regards to memory waste, are for those
  * items that are just over half the page size.   You can get nearly 50% waste,
@@ -119,7 +118,7 @@
 #define UMA_SLAB_MASK	(PAGE_SIZE - 1)	/* Mask to get back to the page */
 #define UMA_SLAB_SHIFT	PAGE_SHIFT	/* Number of bits PAGE_MASK */
 
-#define UMA_BOOT_PAGES		48	/* Pages allocated for startup */
+#define UMA_BOOT_PAGES		64	/* Pages allocated for startup */
 
 /* Max waste before going to off page slab management */
 #define UMA_MAX_WASTE	(UMA_SLAB_SIZE / 10)
@@ -145,10 +144,10 @@
 
 #define UMA_HASH_INSERT(h, s, mem)					\
 		SLIST_INSERT_HEAD(&(h)->uh_slab_hash[UMA_HASH((h),	\
-		    (mem))], (s), us_hlink);
+		    (mem))], (s), us_hlink)
 #define UMA_HASH_REMOVE(h, s, mem)					\
 		SLIST_REMOVE(&(h)->uh_slab_hash[UMA_HASH((h),		\
-		    (mem))], (s), uma_slab, us_hlink);
+		    (mem))], (s), uma_slab, us_hlink)
 
 /* Hash table for freed address -> slab translation */
 
@@ -159,6 +158,15 @@ struct uma_hash {
 	int		uh_hashsize;	/* Current size of the hash table */
 	int		uh_hashmask;	/* Mask used during hashing */
 };
+
+/*
+ * align field or structure to cache line
+ */
+#if defined(__amd64__)
+#define UMA_ALIGN	__aligned(CACHE_LINE_SIZE)
+#else
+#define UMA_ALIGN
+#endif
 
 /*
  * Structures for per cpu queues.
@@ -178,7 +186,7 @@ struct uma_cache {
 	uma_bucket_t	uc_allocbucket;	/* Bucket to allocate from */
 	u_int64_t	uc_allocs;	/* Count of allocations */
 	u_int64_t	uc_frees;	/* Count of frees */
-};
+} UMA_ALIGN;
 
 typedef struct uma_cache * uma_cache_t;
 
@@ -194,6 +202,7 @@ struct uma_keg {
 	struct mtx	uk_lock;	/* Lock for the keg */
 	struct uma_hash	uk_hash;
 
+	char		*uk_name;		/* Name of creating zone. */
 	LIST_HEAD(,uma_zone)	uk_zones;	/* Keg's zones */
 	LIST_HEAD(,uma_slab)	uk_part_slab;	/* partially allocated slabs */
 	LIST_HEAD(,uma_slab)	uk_free_slab;	/* empty slab list */
@@ -221,9 +230,7 @@ struct uma_keg {
 	u_int16_t	uk_ipers;	/* Items per slab */
 	u_int32_t	uk_flags;	/* Internal flags */
 };
-
-/* Simpler reference to uma_keg for internal use. */
-typedef struct uma_keg * uma_keg_t;
+typedef struct uma_keg	* uma_keg_t;
 
 /* Page management structure */
 
@@ -272,6 +279,8 @@ struct uma_slab_refcnt {
 
 typedef struct uma_slab * uma_slab_t;
 typedef struct uma_slab_refcnt * uma_slabrefcnt_t;
+typedef uma_slab_t (*uma_slaballoc)(uma_zone_t, uma_keg_t, int);
+
 
 /*
  * These give us the size of one free item reference within our corresponding
@@ -283,6 +292,12 @@ typedef struct uma_slab_refcnt * uma_slabrefcnt_t;
 #define	UMA_FRITMREF_SZ	(sizeof(struct uma_slab_refcnt) -	\
     sizeof(struct uma_slab_head))
 
+struct uma_klink {
+	LIST_ENTRY(uma_klink)	kl_link;
+	uma_keg_t		kl_keg;
+};
+typedef struct uma_klink *uma_klink_t;
+
 /*
  * Zone management structure 
  *
@@ -292,20 +307,27 @@ typedef struct uma_slab_refcnt * uma_slabrefcnt_t;
 struct uma_zone {
 	char		*uz_name;	/* Text name of the zone */
 	struct mtx	*uz_lock;	/* Lock for the zone (keg's lock) */
-	uma_keg_t	uz_keg;		/* Our underlying Keg */
 
 	LIST_ENTRY(uma_zone)	uz_link;	/* List of all zones in keg */
 	LIST_HEAD(,uma_bucket)	uz_full_bucket;	/* full buckets */
 	LIST_HEAD(,uma_bucket)	uz_free_bucket;	/* Buckets for frees */
 
+	LIST_HEAD(,uma_klink)	uz_kegs;	/* List of kegs. */
+	struct uma_klink	uz_klink;	/* klink for first keg. */
+
+	uma_slaballoc	uz_slab;	/* Allocate a slab from the backend. */
 	uma_ctor	uz_ctor;	/* Constructor for each allocation */
 	uma_dtor	uz_dtor;	/* Destructor */
 	uma_init	uz_init;	/* Initializer for each item */
 	uma_fini	uz_fini;	/* Discards memory */
 
-	u_int64_t	uz_allocs;	/* Total number of allocations */
+	u_int32_t	uz_flags;	/* Flags inherited from kegs */
+	u_int32_t	uz_size;	/* Size inherited from kegs */
+
+	u_int64_t	uz_allocs UMA_ALIGN; /* Total number of allocations */
 	u_int64_t	uz_frees;	/* Total number of frees */
 	u_int64_t	uz_fails;	/* Total number of alloc failures */
+	u_int64_t	uz_sleeps;	/* Total number of alloc sleeps */
 	uint16_t	uz_fills;	/* Outstanding bucket fills */
 	uint16_t	uz_count;	/* Highest value ub_ptr can have */
 
@@ -313,16 +335,24 @@ struct uma_zone {
 	 * This HAS to be the last item because we adjust the zone size
 	 * based on NCPU and then allocate the space for the zones.
 	 */
-	struct uma_cache	uz_cpu[1];	/* Per cpu caches */
+	struct uma_cache	uz_cpu[1]; /* Per cpu caches */
 };
 
 /*
  * These flags must not overlap with the UMA_ZONE flags specified in uma.h.
  */
+#define	UMA_ZFLAG_BUCKET	0x02000000	/* Bucket zone. */
+#define	UMA_ZFLAG_MULTI		0x04000000	/* Multiple kegs in the zone. */
+#define	UMA_ZFLAG_DRAINING	0x08000000	/* Running zone_drain. */
 #define UMA_ZFLAG_PRIVALLOC	0x10000000	/* Use uz_allocf. */
 #define UMA_ZFLAG_INTERNAL	0x20000000	/* No offpage no PCPU. */
 #define UMA_ZFLAG_FULL		0x40000000	/* Reached uz_maxpages */
 #define UMA_ZFLAG_CACHEONLY	0x80000000	/* Don't ask VM for buckets. */
+
+#define	UMA_ZFLAG_INHERIT	(UMA_ZFLAG_INTERNAL | UMA_ZFLAG_CACHEONLY | \
+				    UMA_ZFLAG_BUCKET)
+
+#undef UMA_ALIGN
 
 #ifdef _KERNEL
 /* Internal prototypes */
@@ -332,17 +362,19 @@ void uma_large_free(uma_slab_t slab);
 
 /* Lock Macros */
 
-#define	ZONE_LOCK_INIT(z, lc)					\
+#define	KEG_LOCK_INIT(k, lc)					\
 	do {							\
 		if ((lc))					\
-			mtx_init((z)->uz_lock, (z)->uz_name,	\
-			    (z)->uz_name, MTX_DEF | MTX_DUPOK);	\
+			mtx_init(&(k)->uk_lock, (k)->uk_name,	\
+			    (k)->uk_name, MTX_DEF | MTX_DUPOK);	\
 		else						\
-			mtx_init((z)->uz_lock, (z)->uz_name,	\
+			mtx_init(&(k)->uk_lock, (k)->uk_name,	\
 			    "UMA zone", MTX_DEF | MTX_DUPOK);	\
 	} while (0)
 	    
-#define	ZONE_LOCK_FINI(z)	mtx_destroy((z)->uz_lock)
+#define	KEG_LOCK_FINI(k)	mtx_destroy(&(k)->uk_lock)
+#define	KEG_LOCK(k)	mtx_lock(&(k)->uk_lock)
+#define	KEG_UNLOCK(k)	mtx_unlock(&(k)->uk_lock)
 #define	ZONE_LOCK(z)	mtx_lock((z)->uz_lock)
 #define ZONE_UNLOCK(z)	mtx_unlock((z)->uz_lock)
 

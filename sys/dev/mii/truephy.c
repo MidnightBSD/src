@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/mii_layer/truephy.c,v 1.3 2008/02/10 07:29:27 sephe Exp $
- * $FreeBSD: src/sys/dev/mii/truephy.c,v 1.1.2.7 2011/09/11 20:25:57 marius Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -72,7 +72,7 @@ static device_method_t truephy_methods[] = {
 	DEVMETHOD(device_attach,	truephy_attach),
 	DEVMETHOD(device_detach,	mii_phy_detach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static const struct mii_phydesc truephys[] = {
@@ -90,6 +90,12 @@ static driver_t truephy_driver = {
 };
 
 DRIVER_MODULE(truephy, miibus, truephy_driver, truephy_devclass, 0, 0);
+
+static const struct mii_phy_funcs truephy_funcs = {
+	truephy_service,
+	truephy_status,
+	truephy_reset
+};
 
 static const struct truephy_dsp {
 	uint16_t	index;
@@ -140,31 +146,15 @@ static int
 truephy_attach(device_t dev)
 {
 	struct mii_softc *sc;
-	struct mii_attach_args *ma;
-	struct mii_data *mii;
 
 	sc = device_get_softc(dev);
-	ma = device_get_ivars(dev);
 
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_dev = device_get_parent(dev);
-	mii = ma->mii_data;
-	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
+	mii_phy_dev_attach(dev, MIIF_NOISOLATE | MIIF_NOMANPAUSE,
+	   &truephy_funcs, 0);
 
-	sc->mii_flags = miibus_get_flags(dev);
-	sc->mii_inst = mii->mii_instance++;
-	sc->mii_phy = ma->mii_phyno;
-	sc->mii_service = truephy_service;
-	sc->mii_pdata = mii;
+	PHY_RESET(sc);
 
-	sc->mii_flags |= MIIF_NOISOLATE | MIIF_NOLOOP | MIIF_NOMANPAUSE;
-
-	if (MII_MODEL(ma->mii_id2) == MII_MODEL_AGERE_ET1011)
-		mii_phy_reset(sc);
-	else
-		truephy_reset(sc);
-
-	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
+	sc->mii_capabilities = PHY_READ(sc, MII_BMSR) & sc->mii_capmask;
 	if (sc->mii_capabilities & BMSR_EXTSTAT) {
 		sc->mii_extcapabilities = PHY_READ(sc, MII_EXTSR);
 		/* No 1000baseT half-duplex support */
@@ -222,7 +212,7 @@ truephy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 	}
 
 	/* Update the media status. */
-	truephy_status(sc);
+	PHY_STATUS(sc);
 
 	/* Callback if something changed. */
 	mii_phy_update(sc, cmd);
@@ -233,6 +223,11 @@ static void
 truephy_reset(struct mii_softc *sc)
 {
 	int i;
+
+	if (sc->mii_mpd_model == MII_MODEL_AGERE_ET1011) {
+		mii_phy_reset(sc);
+		return;
+	}
 
 	for (i = 0; i < 2; ++i) {
 		PHY_READ(sc, MII_PHYIDR1);

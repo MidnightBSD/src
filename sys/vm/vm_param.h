@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -58,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm_param.h,v 1.22 2007/04/19 04:52:47 alc Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -91,15 +90,15 @@
 	{ 0, 0 }, \
 	{ "vmtotal", CTLTYPE_STRUCT }, \
 	{ "loadavg", CTLTYPE_STRUCT }, \
-	{ "v_free_min", CTLTYPE_INT }, \
-	{ "v_free_target", CTLTYPE_INT }, \
-	{ "v_free_reserved", CTLTYPE_INT }, \
-	{ "v_inactive_target", CTLTYPE_INT }, \
-	{ "v_cache_min", CTLTYPE_INT }, \
-	{ "v_cache_max", CTLTYPE_INT }, \
-	{ "v_pageout_free_min", CTLTYPE_INT}, \
+	{ "v_free_min", CTLTYPE_UINT }, \
+	{ "v_free_target", CTLTYPE_UINT }, \
+	{ "v_free_reserved", CTLTYPE_UINT }, \
+	{ "v_inactive_target", CTLTYPE_UINT }, \
+	{ "v_cache_min", CTLTYPE_UINT }, \
+	{ "v_cache_max", CTLTYPE_UINT }, \
+	{ "v_pageout_free_min", CTLTYPE_UINT}, \
 	{ "pageout_algorithm", CTLTYPE_INT}, \
-	{ "swapping_enabled", CTLTYPE_INT},\
+	{ "swap_enabled", CTLTYPE_INT},\
 }
 
 /*
@@ -126,6 +125,14 @@ struct xswdev {
 #define	KERN_RESOURCE_SHORTAGE	6
 #define	KERN_NOT_RECEIVER	7
 #define	KERN_NO_ACCESS		8
+
+#ifndef PA_LOCK_COUNT
+#ifdef SMP
+#define	PA_LOCK_COUNT	32
+#else
+#define PA_LOCK_COUNT	1
+#endif	/* !SMP */
+#endif	/* !PA_LOCK_COUNT */
 
 #ifndef ASSEMBLER
 #ifdef _KERNEL

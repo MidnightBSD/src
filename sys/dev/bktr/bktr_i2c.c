@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/bktr/bktr_i2c.c,v 1.2 2008/12/02 02:24:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.

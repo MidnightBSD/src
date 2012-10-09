@@ -24,6 +24,10 @@
  * Use is subject to license terms.
  */
 
+/*
+ * Copyright (c) 2011, Joyent, Inc. All rights reserved.
+ */
+
 #ifndef _SYS_DTRACE_H
 #define	_SYS_DTRACE_H
 
@@ -251,6 +255,10 @@ typedef enum dtrace_probespec {
 #define	DIF_VAR_ERRNO		0x0120	/* thread errno */
 #define	DIF_VAR_EXECARGS	0x0121	/* process arguments */
 
+#if !defined(sun)
+#define	DIF_VAR_CPU		0x0200
+#endif
+
 #define	DIF_SUBR_RAND			0
 #define	DIF_SUBR_MUTEX_OWNED		1
 #define	DIF_SUBR_MUTEX_OWNER		2
@@ -477,6 +485,7 @@ typedef struct dtrace_difv {
 #define	DTRACEAGG_STDDEV		(DTRACEACT_AGGREGATION + 6)
 #define	DTRACEAGG_QUANTIZE		(DTRACEACT_AGGREGATION + 7)
 #define	DTRACEAGG_LQUANTIZE		(DTRACEACT_AGGREGATION + 8)
+#define	DTRACEAGG_LLQUANTIZE		(DTRACEACT_AGGREGATION + 9)
 
 #define	DTRACEACT_ISAGG(x)		\
 	(DTRACEACT_CLASS(x) == DTRACEACT_AGGREGATION)
@@ -510,6 +519,31 @@ typedef struct dtrace_difv {
 #define	DTRACE_LQUANTIZE_BASE(x)		\
 	(int32_t)(((x) & DTRACE_LQUANTIZE_BASEMASK) >> \
 	DTRACE_LQUANTIZE_BASESHIFT)
+
+#define	DTRACE_LLQUANTIZE_FACTORSHIFT		48
+#define	DTRACE_LLQUANTIZE_FACTORMASK		((uint64_t)UINT16_MAX << 48)
+#define	DTRACE_LLQUANTIZE_LOWSHIFT		32
+#define	DTRACE_LLQUANTIZE_LOWMASK		((uint64_t)UINT16_MAX << 32)
+#define	DTRACE_LLQUANTIZE_HIGHSHIFT		16
+#define	DTRACE_LLQUANTIZE_HIGHMASK		((uint64_t)UINT16_MAX << 16)
+#define	DTRACE_LLQUANTIZE_NSTEPSHIFT		0
+#define	DTRACE_LLQUANTIZE_NSTEPMASK		UINT16_MAX
+
+#define	DTRACE_LLQUANTIZE_FACTOR(x)		\
+	(uint16_t)(((x) & DTRACE_LLQUANTIZE_FACTORMASK) >> \
+	DTRACE_LLQUANTIZE_FACTORSHIFT)
+
+#define	DTRACE_LLQUANTIZE_LOW(x)		\
+	(uint16_t)(((x) & DTRACE_LLQUANTIZE_LOWMASK) >> \
+	DTRACE_LLQUANTIZE_LOWSHIFT)
+
+#define	DTRACE_LLQUANTIZE_HIGH(x)		\
+	(uint16_t)(((x) & DTRACE_LLQUANTIZE_HIGHMASK) >> \
+	DTRACE_LLQUANTIZE_HIGHSHIFT)
+
+#define	DTRACE_LLQUANTIZE_NSTEP(x)		\
+	(uint16_t)(((x) & DTRACE_LLQUANTIZE_NSTEPMASK) >> \
+	DTRACE_LLQUANTIZE_NSTEPSHIFT)
 
 #define	DTRACE_USTACK_NFRAMES(x)	(uint32_t)((x) & UINT32_MAX)
 #define	DTRACE_USTACK_STRSIZE(x)	(uint32_t)((x) >> 32)
@@ -1322,15 +1356,24 @@ typedef struct {
  * helpers and should no longer be used.  No other ioctls are valid on the
  * helper minor node.
  */
+#if defined(sun)
 #define	DTRACEHIOC		(('d' << 24) | ('t' << 16) | ('h' << 8))
 #define	DTRACEHIOC_ADD		(DTRACEHIOC | 1)	/* add helper */
 #define	DTRACEHIOC_REMOVE	(DTRACEHIOC | 2)	/* remove helper */
 #define	DTRACEHIOC_ADDDOF	(DTRACEHIOC | 3)	/* add helper DOF */
+#else
+#define	DTRACEHIOC_ADD		_IOWR('z', 1, dof_hdr_t)/* add helper */
+#define	DTRACEHIOC_REMOVE	_IOW('z', 2, int)	/* remove helper */
+#define	DTRACEHIOC_ADDDOF	_IOWR('z', 3, dof_helper_t)/* add helper DOF */
+#endif
 
 typedef struct dof_helper {
 	char dofhp_mod[DTRACE_MODNAMELEN];	/* executable or library name */
 	uint64_t dofhp_addr;			/* base address of object */
 	uint64_t dofhp_dof;			/* address of helper DOF */
+#if !defined(sun)
+	int gen;
+#endif
 } dof_helper_t;
 
 #define	DTRACEMNR_DTRACE	"dtrace"	/* node for DTrace ops */
@@ -2219,10 +2262,11 @@ extern void dtrace_vtime_enable(void);
 extern void dtrace_vtime_disable(void);
 
 struct regs;
+struct reg;
 
 #if defined(sun)
-extern int (*dtrace_pid_probe_ptr)(struct regs *);
-extern int (*dtrace_return_probe_ptr)(struct regs *);
+extern int (*dtrace_pid_probe_ptr)(struct reg *);
+extern int (*dtrace_return_probe_ptr)(struct reg *);
 extern void (*dtrace_fasttrap_fork_ptr)(proc_t *, proc_t *);
 extern void (*dtrace_fasttrap_exec_ptr)(proc_t *);
 extern void (*dtrace_fasttrap_exit_ptr)(proc_t *);
@@ -2277,6 +2321,11 @@ extern void dtrace_invop_callsite(void);
 #ifdef __sparc
 extern int dtrace_blksuword32(uintptr_t, uint32_t *, int);
 extern void dtrace_getfsr(uint64_t *);
+#endif
+
+#if !defined(sun)
+extern void dtrace_helpers_duplicate(proc_t *, proc_t *);
+extern void dtrace_helpers_destroy(proc_t *);
 #endif
 
 #define	DTRACE_CPUFLAG_ISSET(flag) \

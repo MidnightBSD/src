@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)uio.h	8.5 (Berkeley) 2/22/94
- * $FreeBSD: src/sys/sys/uio.h,v 1.40.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_UIO_H_
@@ -65,7 +64,7 @@ struct uio {
 	struct	iovec *uio_iov;		/* scatter/gather list */
 	int	uio_iovcnt;		/* length of scatter/gather list */
 	off_t	uio_offset;		/* offset in target object */
-	int	uio_resid;		/* remaining bytes to process */
+	ssize_t	uio_resid;		/* remaining bytes to process */
 	enum	uio_seg uio_segflg;	/* address space */
 	enum	uio_rw uio_rw;		/* operation */
 	struct	thread *uio_td;		/* owner */
@@ -95,11 +94,13 @@ int	copyiniov(struct iovec *iovp, u_int iovcnt, struct iovec **iov,
 int	copyinstrfrom(const void * __restrict src, void * __restrict dst,
 	    size_t len, size_t * __restrict copied, int seg);
 int	copyinuio(struct iovec *iovp, u_int iovcnt, struct uio **uiop);
-void	uio_yield(void);
+int	copyout_map(struct thread *td, vm_offset_t *addr, size_t sz);
+int	copyout_unmap(struct thread *td, vm_offset_t addr, size_t sz);
 int	uiomove(void *cp, int n, struct uio *uio);
 int	uiomove_frombuf(void *buf, int buflen, struct uio *uio);
 int	uiomove_fromphys(struct vm_page *ma[], vm_offset_t offset, int n,
 	    struct uio *uio);
+int	uiomove_nofault(void *cp, int n, struct uio *uio);
 int	uiomoveco(void *cp, int n, struct uio *uio, int disposable);
 
 #else /* !_KERNEL */
@@ -107,8 +108,10 @@ int	uiomoveco(void *cp, int n, struct uio *uio, int disposable);
 __BEGIN_DECLS
 ssize_t	readv(int, const struct iovec *, int);
 ssize_t	writev(int, const struct iovec *, int);
+#if __BSD_VISIBLE
 ssize_t	preadv(int, const struct iovec *, int, off_t);
 ssize_t	pwritev(int, const struct iovec *, int, off_t);
+#endif
 __END_DECLS
 
 #endif /* _KERNEL */

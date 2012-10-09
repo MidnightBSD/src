@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_fifoops.c,v 1.5 2005/12/11 12:24:29 christos Exp $	*/
 
 /*-
@@ -35,7 +34,7 @@
  * tmpfs vnode interface for named pipes.
  */
 #include <sys/cdefs.h>
- __FBSDID("$FreeBSD: src/sys/fs/tmpfs/tmpfs_fifoops.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+ __FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/filedesc.h>

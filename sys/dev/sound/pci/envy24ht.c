@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 2006 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
  * Copyright (c) 2001 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
  * All rights reserved.
@@ -37,6 +37,10 @@
  *
  */
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
 #include <dev/sound/pci/spicds.h>
@@ -47,7 +51,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/envy24ht.c,v 1.15 2007/06/02 17:28:26 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 MALLOC_DEFINE(M_ENVY24HT, "envy24ht", "envy24ht audio");
 
@@ -63,7 +67,7 @@ struct sc_info;
 
 #define ENVY24HT_TIMEOUT 1000
 
-#define ENVY24HT_DEFAULT_FORMAT (AFMT_STEREO | AFMT_S16_LE)
+#define ENVY24HT_DEFAULT_FORMAT	SND_FORMAT(AFMT_S16_LE, 2, 0)
 
 #define ENVY24HT_NAMELEN 32
 
@@ -186,10 +190,10 @@ static void envy24ht_r32sl(struct sc_chinfo *);
 /* channel interface */
 static void *envy24htchan_init(kobj_t, void *, struct snd_dbuf *, struct pcm_channel *, int);
 static int envy24htchan_setformat(kobj_t, void *, u_int32_t);
-static int envy24htchan_setspeed(kobj_t, void *, u_int32_t);
-static int envy24htchan_setblocksize(kobj_t, void *, u_int32_t);
+static u_int32_t envy24htchan_setspeed(kobj_t, void *, u_int32_t);
+static u_int32_t envy24htchan_setblocksize(kobj_t, void *, u_int32_t);
 static int envy24htchan_trigger(kobj_t, void *, int);
-static int envy24htchan_getptr(kobj_t, void *);
+static u_int32_t envy24htchan_getptr(kobj_t, void *);
 static struct pcmchan_caps *envy24htchan_getcaps(kobj_t, void *);
 
 /* mixer interface */
@@ -323,7 +327,7 @@ static struct cfg_info cfg_table[] = {
                 0x153b, 0x1150,
                 0x10, 0x80, 0xf0, 0xc3,
                 0x7ffbc7, 0x7fffff, 0x438,
-                0x20, 0x10, 0x400, 0x00, 0x00,
+                0x10, 0x20, 0x400, 0x01, 0x00,
                 0,
                 &spi_codec,
         },
@@ -349,7 +353,7 @@ static struct cfg_info cfg_table[] = {
                 "Envy24HT audio (M-Audio Revolution 7.1)",
                 0x1412, 0x3630,
                 0x43, 0x80, 0xf8, 0xc1,
-                0x3fff85, 0x72, 0x4000fa,
+                0x3fff85, 0x400072, 0x4000fa,
                 0x08, 0x02, 0x20, 0x00, 0x04,
                 0,
                 &spi_codec,
@@ -358,7 +362,7 @@ static struct cfg_info cfg_table[] = {
                 "Envy24GT audio (M-Audio Revolution 5.1)",
                 0x1412, 0x3631,
                 0x42, 0x80, 0xf8, 0xc1,
-                0x3fff85, 0x72, 0x4000fa,
+                0x3fff05, 0x4000f0, 0x4000fa,
                 0x08, 0x02, 0x10, 0x00, 0x03,
                 0,
                 &spi_codec,
@@ -391,6 +395,15 @@ static struct cfg_info cfg_table[] = {
                 &spi_codec,
         },
 	{
+                "Envy24HT-S audio (Terrasoniq TS22PCI)",
+                0x153b, 0x117b,
+                0x10, 0x80, 0xf0, 0xc3,
+                0x7ffbc7, 0x7fffff, 0x438,
+                0x10, 0x20, 0x400, 0x01, 0x00,
+                0,
+                &spi_codec,
+	},
+	{
 		"Envy24HT audio (Generic)",
 		0, 0,
 		0x0b, 0x80, 0xfc, 0xc3,
@@ -402,16 +415,16 @@ static struct cfg_info cfg_table[] = {
 };
 
 static u_int32_t envy24ht_recfmt[] = {
-	AFMT_STEREO | AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S32_LE,
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
+	SND_FORMAT(AFMT_S32_LE, 2, 0),
 	0
 };
 static struct pcmchan_caps envy24ht_reccaps = {8000, 96000, envy24ht_recfmt, 0};
 
 static u_int32_t envy24ht_playfmt[] = {
-	AFMT_STEREO | AFMT_U8,
-	AFMT_STEREO | AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S32_LE,
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
+	SND_FORMAT(AFMT_S32_LE, 2, 0),
 	0
 };
 
@@ -424,15 +437,15 @@ struct envy24ht_emldma {
 };
 
 static struct envy24ht_emldma envy24ht_pemltab[] = {
-	{AFMT_STEREO | AFMT_U8, envy24ht_p8u, 2},
-	{AFMT_STEREO | AFMT_S16_LE, envy24ht_p16sl, 4},
-	{AFMT_STEREO | AFMT_S32_LE, envy24ht_p32sl, 8},
+	{SND_FORMAT(AFMT_U8, 2, 0), envy24ht_p8u, 2},
+	{SND_FORMAT(AFMT_S16_LE, 2, 0), envy24ht_p16sl, 4},
+	{SND_FORMAT(AFMT_S32_LE, 2, 0), envy24ht_p32sl, 8},
 	{0, NULL, 0}
 };
 
 static struct envy24ht_emldma envy24ht_remltab[] = {
-	{AFMT_STEREO | AFMT_S16_LE, envy24ht_r16sl, 4},
-	{AFMT_STEREO | AFMT_S32_LE, envy24ht_r32sl, 8},
+	{SND_FORMAT(AFMT_S16_LE, 2, 0), envy24ht_r16sl, 4},
+	{SND_FORMAT(AFMT_S32_LE, 2, 0), envy24ht_r32sl, 8},
 	{0, NULL, 0}
 };
 
@@ -800,7 +813,7 @@ envy24ht_wrcd(kobj_t obj, void *devinfo, int regno, u_int16_t data)
 static kobj_method_t envy24ht_ac97_methods[] = {
 	KOBJMETHOD(ac97_read,	envy24ht_rdcd),
 	KOBJMETHOD(ac97_write,	envy24ht_wrcd),
-	{0, 0}
+	KOBJMETHOD_END
 };
 AC97_DECLARE(envy24ht_ac97);
 #endif
@@ -1028,7 +1041,7 @@ static struct {
 	{0, 0x10}
 };
 
-static int
+static u_int32_t
 envy24ht_setspeed(struct sc_info *sc, u_int32_t speed) {
 	u_int32_t code, i2sfmt;
 	int i = 0;
@@ -1593,7 +1606,7 @@ envy24htchan_setformat(kobj_t obj, void *data, u_int32_t format)
   start triggerd, some other channel is running, and that channel's
   speed isn't same with, then trigger function will fail.
 */
-static int
+static u_int32_t
 envy24htchan_setspeed(kobj_t obj, void *data, u_int32_t speed)
 {
 	struct sc_chinfo *ch = data;
@@ -1618,7 +1631,7 @@ envy24htchan_setspeed(kobj_t obj, void *data, u_int32_t speed)
 	return ch->speed;
 }
 
-static int
+static u_int32_t
 envy24htchan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct sc_chinfo *ch = data;
@@ -1668,6 +1681,7 @@ envy24htchan_trigger(kobj_t obj, void *data, int go)
 	struct sc_info *sc = ch->parent;
 	u_int32_t ptr;
 	int slot;
+	int error = 0;
 #if 0
 	int i;
 
@@ -1689,8 +1703,10 @@ envy24htchan_trigger(kobj_t obj, void *data, int go)
 			sc->caps[0].minspeed = sc->caps[0].maxspeed = sc->speed;
 			sc->caps[1].minspeed = sc->caps[1].maxspeed = sc->speed;
 		}
-		else if (ch->speed != 0 && ch->speed != sc->speed)
-			return -1;
+		else if (ch->speed != 0 && ch->speed != sc->speed) {
+			error = -1;
+			goto fail;
+		}
 		if (ch->speed == 0)
 			ch->channel->speed = sc->speed;
 		/* start or enable channel */
@@ -1720,16 +1736,20 @@ envy24htchan_trigger(kobj_t obj, void *data, int go)
 #if(0)
 		device_printf(sc->dev, "envy24htchan_trigger(): emldmawr\n");
 #endif
-		if (ch->run != 1)
-			return -1;
+		if (ch->run != 1) {
+			error = -1;
+			goto fail;
+		}
 		ch->emldma(ch);
 		break;
 	case PCMTRIG_EMLDMARD:
 #if(0)
 		device_printf(sc->dev, "envy24htchan_trigger(): emldmard\n");
 #endif
-		if (ch->run != 1)
-			return -1;
+		if (ch->run != 1) {
+			error = -1;
+			goto fail;
+		}
 		ch->emldma(ch);
 		break;
 	case PCMTRIG_ABORT:
@@ -1759,18 +1779,17 @@ envy24htchan_trigger(kobj_t obj, void *data, int go)
 		}
 		break;
 	}
+fail:
 	snd_mtxunlock(sc->lock);
-
-	return 0;
+	return (error);
 }
 
-static int
+static u_int32_t
 envy24htchan_getptr(kobj_t obj, void *data)
 {
 	struct sc_chinfo *ch = data;
 	struct sc_info *sc = ch->parent;
-	u_int32_t ptr;
-	int rtn;
+	u_int32_t ptr, rtn;
 
 #if(0)
 	device_printf(sc->dev, "envy24htchan_getptr()\n");
@@ -1824,7 +1843,7 @@ static kobj_method_t envy24htchan_methods[] = {
 	KOBJMETHOD(channel_trigger,		envy24htchan_trigger),
 	KOBJMETHOD(channel_getptr,		envy24htchan_getptr),
 	KOBJMETHOD(channel_getcaps,		envy24htchan_getcaps),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(envy24htchan);
 
@@ -1949,7 +1968,7 @@ static kobj_method_t envy24htmixer_methods[] = {
 	KOBJMETHOD(mixer_uninit,	envy24htmixer_uninit),
 	KOBJMETHOD(mixer_set,		envy24htmixer_set),
 	KOBJMETHOD(mixer_setrecsrc,	envy24htmixer_setrecsrc),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 MIXER_DECLARE(envy24htmixer);
 
@@ -2217,7 +2236,8 @@ envy24ht_putcfg(struct sc_info *sc)
 	else
 		printf("not implemented\n");
         switch (sc->adcn) {
-        case 0x01 || 0x02:
+        case 0x01:
+	case 0x02:
                 printf("  ADC #: ");
                 printf("%d\n", sc->adcn);
                 break;
@@ -2416,7 +2436,7 @@ envy24ht_alloc_resource(struct sc_info *sc)
 	    pci_read_config(sc->dev, PCIR_MT, 4));
 #endif
 
-	/* allocate interupt resource */
+	/* allocate interrupt resource */
 	sc->irqid = 0;
 	sc->irq = bus_alloc_resource(sc->dev, SYS_RES_IRQ, &sc->irqid,
 				 0, ~0, 1, RF_ACTIVE | RF_SHAREABLE);

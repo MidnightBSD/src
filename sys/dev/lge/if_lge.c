@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/lge/if_lge.c,v 1.50 2007/02/23 12:18:45 piso Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Level 1 LXT1001 gigabit ethernet driver for FreeBSD. Public
@@ -110,7 +110,7 @@ __FBSDID("$FreeBSD: src/sys/dev/lge/if_lge.c,v 1.50 2007/02/23 12:18:45 piso Exp
 /*
  * Various supported device vendors/types and their names.
  */
-static struct lge_type lge_devs[] = {
+static const struct lge_type const lge_devs[] = {
 	{ LGE_VENDORID, LGE_DEVICEID, "Level 1 Gigabit Ethernet" },
 	{ 0, 0, NULL }
 };
@@ -137,8 +137,8 @@ static int lge_ioctl(struct ifnet *, u_long, caddr_t);
 static void lge_init(void *);
 static void lge_init_locked(struct lge_softc *);
 static void lge_stop(struct lge_softc *);
-static void lge_watchdog(struct ifnet *);
-static void lge_shutdown(device_t);
+static void lge_watchdog(struct lge_softc *);
+static int lge_shutdown(device_t);
 static int lge_ifmedia_upd(struct ifnet *);
 static void lge_ifmedia_upd_locked(struct ifnet *);
 static void lge_ifmedia_sts(struct ifnet *, struct ifmediareq *);
@@ -170,16 +170,12 @@ static device_method_t lge_methods[] = {
 	DEVMETHOD(device_detach,	lge_detach),
 	DEVMETHOD(device_shutdown,	lge_shutdown),
 
-	/* bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
-
 	/* MII interface */
 	DEVMETHOD(miibus_readreg,	lge_miibus_readreg),
 	DEVMETHOD(miibus_writereg,	lge_miibus_writereg),
 	DEVMETHOD(miibus_statchg,	lge_miibus_statchg),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t lge_driver = {
@@ -393,7 +389,7 @@ lge_setmulti(sc)
 	CSR_WRITE_4(sc, LGE_MAR1, 0);
 
 	/* now program new ones */
-	IF_ADDR_LOCK(ifp);
+	if_maddr_rlock(ifp);
 	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -404,7 +400,7 @@ lge_setmulti(sc)
 		else
 			hashes[1] |= (1 << (h - 32));
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 
 	CSR_WRITE_4(sc, LGE_MAR0, hashes[0]);
 	CSR_WRITE_4(sc, LGE_MAR1, hashes[1]);
@@ -442,7 +438,7 @@ static int
 lge_probe(dev)
 	device_t		dev;
 {
-	struct lge_type		*t;
+	const struct lge_type	*t;
 
 	t = lge_devs;
 
@@ -535,7 +531,6 @@ lge_attach(dev)
 	ifp = sc->lge_ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
 		device_printf(dev, "can not if_alloc()\n");
-		lge_free_jumbo_mem(sc);
 		error = ENOSPC;
 		goto fail;
 	}
@@ -545,7 +540,6 @@ lge_attach(dev)
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = lge_ioctl;
 	ifp->if_start = lge_start;
-	ifp->if_watchdog = lge_watchdog;
 	ifp->if_init = lge_init;
 	ifp->if_snd.ifq_maxlen = LGE_TX_LIST_CNT - 1;
 	ifp->if_capabilities = IFCAP_RXCSUM;
@@ -559,11 +553,10 @@ lge_attach(dev)
 	/*
 	 * Do MII setup.
 	 */
-	if (mii_phy_probe(dev, &sc->lge_miibus,
-	    lge_ifmedia_upd, lge_ifmedia_sts)) {
-		device_printf(dev, "MII without any PHY!\n");
-		lge_free_jumbo_mem(sc);
-		error = ENXIO;
+	error = mii_attach(dev, &sc->lge_miibus, ifp, lge_ifmedia_upd,
+	    lge_ifmedia_sts, BMSR_DEFCAPMASK, MII_PHY_ANY, MII_OFFSET_ANY, 0);
+	if (error != 0) {
+		device_printf(dev, "attaching PHYs failed\n");
 		goto fail;
 	}
 
@@ -583,6 +576,7 @@ lge_attach(dev)
 	return (0);
 
 fail:
+	lge_free_jumbo_mem(sc);
 	if (sc->lge_ldata)
 		contigfree(sc->lge_ldata,
 		    sizeof(struct lge_list_data), M_DEVBUF);
@@ -719,7 +713,7 @@ lge_newbuf(sc, c, m)
 		m_new->m_data = (void *)buf;
 		m_new->m_len = m_new->m_pkthdr.len = LGE_JUMBO_FRAMELEN;
 		MEXTADD(m_new, buf, LGE_JUMBO_FRAMELEN, lge_jfree,
-		    (struct lge_softc *)sc, 0, EXT_NET_DRV);
+		    buf, (struct lge_softc *)sc, 0, EXT_NET_DRV);
 	} else {
 		m_new = m;
 		m_new->m_len = m_new->m_pkthdr.len = LGE_JUMBO_FRAMELEN;
@@ -804,10 +798,19 @@ static void
 lge_free_jumbo_mem(sc)
 	struct lge_softc	*sc;
 {
-	int			i;
 	struct lge_jpool_entry	*entry;
 
-	for (i = 0; i < LGE_JSLOTS; i++) {
+	if (sc->lge_cdata.lge_jumbo_buf == NULL)
+		return;
+
+	while ((entry = SLIST_FIRST(&sc->lge_jinuse_listhead))) {
+		device_printf(sc->lge_dev,
+		    "asked to free buffer that is in use!\n");
+		SLIST_REMOVE_HEAD(&sc->lge_jinuse_listhead, jpool_entries);
+		SLIST_INSERT_HEAD(&sc->lge_jfree_listhead, entry,
+		    jpool_entries);
+	}
+	while (!SLIST_EMPTY(&sc->lge_jfree_listhead)) {
 		entry = SLIST_FIRST(&sc->lge_jfree_listhead);
 		SLIST_REMOVE_HEAD(&sc->lge_jfree_listhead, jpool_entries);
 		free(entry, M_DEVBUF);
@@ -992,7 +995,7 @@ lge_txeof(sc)
 	ifp = sc->lge_ifp;
 
 	/* Clear the timeout timer. */
-	ifp->if_timer = 0;
+	sc->lge_timer = 0;
 
 	/*
 	 * Go through our tx list and free mbufs for those
@@ -1013,7 +1016,7 @@ lge_txeof(sc)
 
 		txdone--;
 		LGE_INC(idx, LGE_TX_LIST_CNT);
-		ifp->if_timer = 0;
+		sc->lge_timer = 0;
 	}
 
 	sc->lge_cdata.lge_tx_cons = idx;
@@ -1056,6 +1059,8 @@ lge_tick(xsc)
 		}
 	}
 
+	if (sc->lge_timer != 0 && --sc->lge_timer == 0)
+		lge_watchdog(sc);
 	callout_reset(&sc->lge_stat_callout, hz, lge_tick, sc);
 
 	return;
@@ -1228,7 +1233,7 @@ lge_start_locked(ifp)
 	/*
 	 * Set a timeout in case the chip goes out to lunch.
 	 */
-	ifp->if_timer = 5;
+	sc->lge_timer = 5;
 
 	return;
 }
@@ -1249,7 +1254,6 @@ lge_init_locked(sc)
 	struct lge_softc	*sc;
 {
 	struct ifnet		*ifp = sc->lge_ifp;
-	struct mii_data		*mii;
 
 	LGE_LOCK_ASSERT(sc);
 	if (ifp->if_drv_flags & IFF_DRV_RUNNING)
@@ -1260,8 +1264,6 @@ lge_init_locked(sc)
 	 */
 	lge_stop(sc);
 	lge_reset(sc);
-
-	mii = device_get_softc(sc->lge_miibus);
 
 	/* Set MAC address */
 	CSR_WRITE_4(sc, LGE_PAR0, *(u_int32_t *)(&IF_LLADDR(sc->lge_ifp)[0]));
@@ -1396,18 +1398,15 @@ lge_ifmedia_upd_locked(ifp)
 {
 	struct lge_softc	*sc;
 	struct mii_data		*mii;
+	struct mii_softc	*miisc;
 
 	sc = ifp->if_softc;
 
 	LGE_LOCK_ASSERT(sc);
 	mii = device_get_softc(sc->lge_miibus);
 	sc->lge_link = 0;
-	if (mii->mii_instance) {
-		struct mii_softc	*miisc;
-		for (miisc = LIST_FIRST(&mii->mii_phys); miisc != NULL;
-		    miisc = LIST_NEXT(miisc, mii_list))
-			mii_phy_reset(miisc);
-	}
+	LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
+		PHY_RESET(miisc);
 	mii_mediachg(mii);
 }
 
@@ -1427,9 +1426,9 @@ lge_ifmedia_sts(ifp, ifmr)
 	LGE_LOCK(sc);
 	mii = device_get_softc(sc->lge_miibus);
 	mii_pollstat(mii);
-	LGE_UNLOCK(sc);
 	ifmr->ifm_active = mii->mii_media_active;
 	ifmr->ifm_status = mii->mii_media_status;
+	LGE_UNLOCK(sc);
 
 	return;
 }
@@ -1501,14 +1500,14 @@ lge_ioctl(ifp, command, data)
 }
 
 static void
-lge_watchdog(ifp)
-	struct ifnet		*ifp;
-{
+lge_watchdog(sc)
 	struct lge_softc	*sc;
+{
+	struct ifnet		*ifp;
 
-	sc = ifp->if_softc;
+	LGE_LOCK_ASSERT(sc);
+	ifp = sc->lge_ifp;
 
-	LGE_LOCK(sc);
 	ifp->if_oerrors++;
 	if_printf(ifp, "watchdog timeout\n");
 
@@ -1519,9 +1518,6 @@ lge_watchdog(ifp)
 
 	if (ifp->if_snd.ifq_head != NULL)
 		lge_start_locked(ifp);
-	LGE_UNLOCK(sc);
-
-	return;
 }
 
 /*
@@ -1537,7 +1533,7 @@ lge_stop(sc)
 
 	LGE_LOCK_ASSERT(sc);
 	ifp = sc->lge_ifp;
-	ifp->if_timer = 0;
+	sc->lge_timer = 0;
 	callout_stop(&sc->lge_stat_callout);
 	CSR_WRITE_4(sc, LGE_IMR, LGE_IMR_INTR_ENB);
 
@@ -1579,7 +1575,7 @@ lge_stop(sc)
  * Stop all chip I/O so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 lge_shutdown(dev)
 	device_t		dev;
 {
@@ -1592,5 +1588,5 @@ lge_shutdown(dev)
 	lge_stop(sc);
 	LGE_UNLOCK(sc);
 
-	return;
+	return (0);
 }

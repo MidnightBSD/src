@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)iso.h	8.6 (Berkeley) 5/10/95
- * $FreeBSD: src/sys/fs/cd9660/iso.h,v 1.33 2007/02/15 22:08:34 pjd Exp $
+ * $FreeBSD$
  */
 
 #define ISODCL(from, to) (to - from + 1)
@@ -221,7 +220,7 @@ enum ISO_FTYPE	{ ISO_FTYPE_DEFAULT, ISO_FTYPE_9660, ISO_FTYPE_RRIP,
 #endif
 
 struct iso_mnt {
-	int im_flags;
+	uint64_t im_flags;
 
 	struct mount *im_mountp;
 	struct cdev *im_dev;

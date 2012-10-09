@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/kern/tty_subr.c,v 1.3 2012/03/23 20:48:39 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994, David Greenman
  * All rights reserved.
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_subr.c,v 1.43 2005/01/06 23:35:40 imp Exp $");
+__FBSDID("$MidnightBSD: src/sys/kern/tty_subr.c,v 1.43 2005/01/06 23:35:40 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

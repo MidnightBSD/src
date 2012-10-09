@@ -1,7 +1,7 @@
 /*
  * Fundamental constants relating to ethernet.
  *
- * $FreeBSD: src/sys/net/ethernet.h,v 1.32.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  *
  */
 
@@ -69,11 +69,6 @@ struct ether_header {
 struct ether_addr {
 	u_char octet[ETHER_ADDR_LEN];
 } __packed;
-
-#ifdef CTASSERT
-CTASSERT(sizeof (struct ether_header) == ETHER_ADDR_LEN * 2 + 2);
-CTASSERT(sizeof (struct ether_addr) == ETHER_ADDR_LEN);
-#endif
 
 #define	ETHER_IS_MULTICAST(addr) (*(addr) & 0x01) /* is address mcast/bcast? */
 
@@ -370,7 +365,7 @@ CTASSERT(sizeof (struct ether_addr) == ETHER_ADDR_LEN);
 
 struct ifnet;
 struct mbuf;
-struct rtentry;
+struct route;
 struct sockaddr;
 struct bpf_if;
 
@@ -381,7 +376,7 @@ extern	void ether_ifattach(struct ifnet *, const u_int8_t *);
 extern	void ether_ifdetach(struct ifnet *);
 extern	int  ether_ioctl(struct ifnet *, u_long, caddr_t);
 extern	int  ether_output(struct ifnet *,
-		   struct mbuf *, struct sockaddr *, struct rtentry *);
+		   struct mbuf *, struct sockaddr *, struct route *);
 extern	int  ether_output_frame(struct ifnet *, struct mbuf *);
 extern	char *ether_sprintf(const u_int8_t *);
 void	ether_vlan_mtap(struct bpf_if *, struct mbuf *,

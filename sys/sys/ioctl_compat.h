@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,17 +32,14 @@
  * SUCH DAMAGE.
  *
  *	@(#)ioctl_compat.h	8.4 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/ioctl_compat.h,v 1.10.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_IOCTL_COMPAT_H_
 #define	_SYS_IOCTL_COMPAT_H_
 
-#include <sys/ttychars.h>
-#include <sys/ttydev.h>
-
-#ifdef USE_OLD_TTY
-#warning "Old BSD tty API used and depends on COMPAT_43TTY. Use termios.h instead"
+#ifndef COMPAT_43TTY
+#error "Definitions not available without TTY ioctl compat."
 #endif
 
 struct tchars {
@@ -67,8 +63,6 @@ struct ltchars {
 /*
  * Structure for TIOCGETP and TIOCSETP ioctls.
  */
-#ifndef _SGTTYB_
-#define	_SGTTYB_
 struct sgttyb {
 	char	sg_ispeed;		/* input speed */
 	char	sg_ospeed;		/* output speed */
@@ -76,23 +70,15 @@ struct sgttyb {
 	char	sg_kill;		/* kill character */
 	short	sg_flags;		/* mode flags */
 };
-#endif
 
-#ifdef USE_OLD_TTY
-# undef  TIOCGETD
-# define TIOCGETD	_IOR('t', 0, int)	/* get line discipline */
-# undef  TIOCSETD
-# define TIOCSETD	_IOW('t', 1, int)	/* set line discipline */
-#else
-# define OTIOCGETD	_IOR('t', 0, int)	/* get line discipline */
-# define OTIOCSETD	_IOW('t', 1, int)	/* set line discipline */
-#endif
-#define	TIOCHPCL	_IO('t', 2)		/* hang up on last close */
-#define	TIOCGETP	_IOR('t', 8,struct sgttyb)/* get parameters -- gtty */
-#define	TIOCSETP	_IOW('t', 9,struct sgttyb)/* set parameters -- stty */
-#define	TIOCSETN	_IOW('t',10,struct sgttyb)/* as above, but no flushtty*/
-#define	TIOCSETC	_IOW('t',17,struct tchars)/* set special characters */
-#define	TIOCGETC	_IOR('t',18,struct tchars)/* get special characters */
+#define	OTIOCGETD	_IOR('t', 0, int)	/* get line discipline */
+#define	OTIOCSETD	_IOW('t', 1, int)	/* set line discipline */
+#define	TIOCHPCL	 _IO('t', 2)		/* hang up on last close */
+#define	TIOCGETP	_IOR('t', 8, struct sgttyb) /* get parameters */
+#define	TIOCSETP	_IOW('t', 9, struct sgttyb) /* set parameters */
+#define	TIOCSETN	_IOW('t',10, struct sgttyb) /* as above, but no flush */
+#define	TIOCSETC	_IOW('t',17, struct tchars) /* set special characters */
+#define	TIOCGETC	_IOR('t',18, struct tchars) /* get special characters */
 #define		TANDEM		0x00000001	/* send stopc on out q full */
 #define		CBREAK		0x00000002	/* half-cooked mode */
 #define		LCASE		0x00000004	/* simulate lower case */
@@ -140,9 +126,9 @@ struct sgttyb {
 #define		PENDIN		0x20000000	/* tp->t_rawq needs reread */
 #define		DECCTQ		0x40000000	/* only ^Q starts after ^S */
 #define		NOFLSH		0x80000000	/* no output flush on signal */
-#define	TIOCLBIS	_IOW('t', 127, int)	/* bis local mode bits */
-#define	TIOCLBIC	_IOW('t', 126, int)	/* bic local mode bits */
-#define	TIOCLSET	_IOW('t', 125, int)	/* set entire local mode word */
+#define	OTIOCCONS	 _IO('t', 98)	/* for hp300 -- sans int arg */
+#define	TIOCGLTC	_IOR('t', 116,struct ltchars) /* get special chars */
+#define	TIOCSLTC	_IOW('t', 117,struct ltchars) /* set special chars */
 #define	TIOCLGET	_IOR('t', 124, int)	/* get local modes */
 #define		LCRTBS		(CRTBS>>16)
 #define		LPRTERA		(PRTERA>>16)
@@ -159,11 +145,8 @@ struct sgttyb {
 #define		LPENDIN		(PENDIN>>16)
 #define		LDECCTQ		(DECCTQ>>16)
 #define		LNOFLSH		(NOFLSH>>16)
-#define	TIOCSLTC	_IOW('t',117,struct ltchars)/* set local special chars*/
-#define	TIOCGLTC	_IOR('t',116,struct ltchars)/* get local special chars*/
-#define OTIOCCONS	_IO('t', 98)	/* for hp300 -- sans int arg */
-#define	OTTYDISC	0
-#define	NETLDISC	1
-#define	NTTYDISC	2
+#define	TIOCLSET	_IOW('t', 125, int)	/* set entire local mode word */
+#define	TIOCLBIC	_IOW('t', 126, int)	/* bic local mode bits */
+#define	TIOCLBIS	_IOW('t', 127, int)	/* bis local mode bits */
 
 #endif /* !_SYS_IOCTL_COMPAT_H_ */

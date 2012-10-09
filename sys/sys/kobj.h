@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/kobj.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000,2003 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/sys/kobj.h,v 1.11 2006/08/24 21:09:39 rik Exp $
+ *	$MidnightBSD$
  */
 
 #ifndef _SYS_KOBJ_H_
@@ -92,8 +91,11 @@ struct kobjop_desc {
 
 /*
  * Shorthand for constructing method tables.
+ * The ternary operator is (ab)used to provoke a warning when FUNC
+ * has a signature that is not compatible with kobj method signature.
  */
-#define KOBJMETHOD(NAME, FUNC) { &NAME##_desc, (kobjop_t) FUNC }
+#define KOBJMETHOD(NAME, FUNC) \
+	{ &NAME##_desc, (kobjop_t) (1 ? FUNC : (NAME##_t *)NULL) }
 
 /*
  *
@@ -120,7 +122,7 @@ DEFINE_CLASS_0(name, name ## _class, methods, size)
 #define DEFINE_CLASS_0(name, classvar, methods, size)	\
 							\
 struct kobj_class classvar = {				\
-	#name, methods, size, 0				\
+	#name, methods, size, NULL			\
 }
 
 /*
@@ -133,7 +135,7 @@ struct kobj_class classvar = {				\
 		       base1)				\
 							\
 static kobj_class_t name ## _baseclasses[] =		\
-	{ &base1, 0 };					\
+	{ &base1, NULL };				\
 struct kobj_class classvar = {				\
 	#name, methods, size, name ## _baseclasses	\
 }
@@ -149,7 +151,7 @@ struct kobj_class classvar = {				\
 							\
 static kobj_class_t name ## _baseclasses[] =		\
 	{ &base1,					\
-	  &base2, 0 };					\
+	  &base2, NULL };				\
 struct kobj_class name ## _class = {			\
 	#name, methods, size, name ## _baseclasses	\
 }
@@ -166,7 +168,7 @@ struct kobj_class name ## _class = {			\
 static kobj_class_t name ## _baseclasses[] =		\
 	{ &base1,					\
 	  &base2,					\
-	  &base3, 0 };					\
+	  &base3, NULL };				\
 struct kobj_class name ## _class = {			\
 	#name, methods, size, name ## _baseclasses	\
 }
@@ -199,6 +201,7 @@ kobj_t		kobj_create(kobj_class_t cls,
  * Initialise a pre-allocated object.
  */
 void		kobj_init(kobj_t obj, kobj_class_t cls);
+void		kobj_init_static(kobj_t obj, kobj_class_t cls);
 
 /*
  * Delete an object. If mtype is non-zero, free the memory.
@@ -251,10 +254,5 @@ kobj_method_t* kobj_lookup_method(kobj_class_t cls,
  * Default method implementation. Returns ENXIO.
  */
 int kobj_error_method(void);
-
-/*
- * Machine-dependent initialisation call for boot-time kobj clients
- */
-void kobj_machdep_init(void);
 
 #endif /* !_SYS_KOBJ_H_ */

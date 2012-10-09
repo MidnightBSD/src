@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2000-2001, Boris Popov
+ * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -32,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_rq.c,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,7 +64,7 @@ smb_rq_alloc(struct smb_connobj *layer, u_char cmd, struct smb_cred *scred,
 	struct smb_rq *rqp;
 	int error;
 
-	MALLOC(rqp, struct smb_rq *, sizeof(*rqp), M_SMBRQ, M_WAITOK);
+	rqp = malloc(sizeof(*rqp), M_SMBRQ, M_WAITOK);
 	if (rqp == NULL)
 		return ENOMEM;
 	error = smb_rq_init(rqp, layer, cmd, scred);
@@ -384,7 +377,7 @@ smb_t2_alloc(struct smb_connobj *layer, u_short setup, struct smb_cred *scred,
 	struct smb_t2rq *t2p;
 	int error;
 
-	MALLOC(t2p, struct smb_t2rq *, sizeof(*t2p), M_SMBRQ, M_WAITOK);
+	t2p = malloc(sizeof(*t2p), M_SMBRQ, M_WAITOK);
 	if (t2p == NULL)
 		return ENOMEM;
 	error = smb_t2_init(t2p, layer, setup, scred);
@@ -434,9 +427,7 @@ smb_t2_placedata(struct mbuf *mtop, u_int16_t offset, u_int16_t count,
 	struct mbuf *m, *m0;
 	int len;
 
-	m0 = m_split(mtop, offset, M_TRYWAIT);
-	if (m0 == NULL)
-		return EBADRPC;
+	m0 = m_split(mtop, offset, M_WAIT);
 	len = m_length(m0, &m);
 	m->m_len -= len - count;
 	if (mdp->md_top == NULL) {

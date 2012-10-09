@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Sean Eric Fagan
  * Copyright (c) 1994 Søren Schmidt
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_xenix.c,v 1.42.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -104,7 +103,7 @@ xenix_chsize(td, uap)
 	DPRINTF(("IBCS2: 'xenix chsize'\n"));
 	sa.fd = uap->fd;
 	sa.length = uap->size;
-	return ftruncate(td, &sa);
+	return sys_ftruncate(td, &sa);
 }
 
 

@@ -71,7 +71,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_sack.c,v 1.40.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -96,6 +96,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_sack.c,v 1.40.2.2.2.1 2008/11/25 02:59:2
 
 #include <net/if.h>
 #include <net/route.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -121,27 +122,31 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_sack.c,v 1.40.2.2.2.1 2008/11/25 02:59:2
 
 #include <machine/in_cksum.h>
 
-extern struct uma_zone *sack_hole_zone;
+VNET_DECLARE(struct uma_zone *, sack_hole_zone);
+#define	V_sack_hole_zone		VNET(sack_hole_zone)
 
 SYSCTL_NODE(_net_inet_tcp, OID_AUTO, sack, CTLFLAG_RW, 0, "TCP SACK");
-int tcp_do_sack = 1;
-SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, enable, CTLFLAG_RW,
-    &tcp_do_sack, 0, "Enable/Disable TCP SACK support");
-TUNABLE_INT("net.inet.tcp.sack.enable", &tcp_do_sack);
+VNET_DEFINE(int, tcp_do_sack) = 1;
+#define	V_tcp_do_sack			VNET(tcp_do_sack)
+SYSCTL_VNET_INT(_net_inet_tcp_sack, OID_AUTO, enable, CTLFLAG_RW,
+    &VNET_NAME(tcp_do_sack), 0, "Enable/Disable TCP SACK support");
 
-static int tcp_sack_maxholes = 128;
-SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, maxholes, CTLFLAG_RW,
-    &tcp_sack_maxholes, 0, 
+VNET_DEFINE(int, tcp_sack_maxholes) = 128;
+#define	V_tcp_sack_maxholes		VNET(tcp_sack_maxholes)
+SYSCTL_VNET_INT(_net_inet_tcp_sack, OID_AUTO, maxholes, CTLFLAG_RW,
+    &VNET_NAME(tcp_sack_maxholes), 0,
     "Maximum number of TCP SACK holes allowed per connection");
 
-static int tcp_sack_globalmaxholes = 65536;
-SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, globalmaxholes, CTLFLAG_RW,
-    &tcp_sack_globalmaxholes, 0, 
+VNET_DEFINE(int, tcp_sack_globalmaxholes) = 65536;
+#define	V_tcp_sack_globalmaxholes	VNET(tcp_sack_globalmaxholes)
+SYSCTL_VNET_INT(_net_inet_tcp_sack, OID_AUTO, globalmaxholes, CTLFLAG_RW,
+    &VNET_NAME(tcp_sack_globalmaxholes), 0, 
     "Global maximum number of TCP SACK holes");
 
-static int tcp_sack_globalholes = 0;
-SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, globalholes, CTLFLAG_RD,
-    &tcp_sack_globalholes, 0,
+VNET_DEFINE(int, tcp_sack_globalholes) = 0;
+#define	V_tcp_sack_globalholes		VNET(tcp_sack_globalholes)
+SYSCTL_VNET_INT(_net_inet_tcp_sack, OID_AUTO, globalholes, CTLFLAG_RD,
+    &VNET_NAME(tcp_sack_globalholes), 0,
     "Global number of TCP SACK holes currently allocated");
 
 /*
@@ -254,13 +259,13 @@ tcp_sackhole_alloc(struct tcpcb *tp, tcp_seq start, tcp_seq end)
 {
 	struct sackhole *hole;
 
-	if (tp->snd_numholes >= tcp_sack_maxholes ||
-	    tcp_sack_globalholes >= tcp_sack_globalmaxholes) {
-		tcpstat.tcps_sack_sboverflow++;
+	if (tp->snd_numholes >= V_tcp_sack_maxholes ||
+	    V_tcp_sack_globalholes >= V_tcp_sack_globalmaxholes) {
+		TCPSTAT_INC(tcps_sack_sboverflow);
 		return NULL;
 	}
 
-	hole = (struct sackhole *)uma_zalloc(sack_hole_zone, M_NOWAIT);
+	hole = (struct sackhole *)uma_zalloc(V_sack_hole_zone, M_NOWAIT);
 	if (hole == NULL)
 		return NULL;
 
@@ -269,7 +274,7 @@ tcp_sackhole_alloc(struct tcpcb *tp, tcp_seq start, tcp_seq end)
 	hole->rxmit = start;
 
 	tp->snd_numholes++;
-	tcp_sack_globalholes++;
+	atomic_add_int(&V_tcp_sack_globalholes, 1);
 
 	return hole;
 }
@@ -281,13 +286,13 @@ static void
 tcp_sackhole_free(struct tcpcb *tp, struct sackhole *hole)
 {
 
-	uma_zfree(sack_hole_zone, hole);
+	uma_zfree(V_sack_hole_zone, hole);
 
 	tp->snd_numholes--;
-	tcp_sack_globalholes--;
+	atomic_subtract_int(&V_tcp_sack_globalholes, 1);
 
 	KASSERT(tp->snd_numholes >= 0, ("tp->snd_numholes >= 0"));
-	KASSERT(tcp_sack_globalholes >= 0, ("tcp_sack_globalholes >= 0"));
+	KASSERT(V_tcp_sack_globalholes >= 0, ("tcp_sack_globalholes >= 0"));
 }
 
 /*
@@ -420,6 +425,7 @@ tcp_sack_doack(struct tcpcb *tp, struct tcpopt *to, tcp_seq th_ack)
 	 * are received.
 	 */
 	sblkp = &sack_blocks[num_sack_blks - 1];	/* Last SACK block */
+	tp->sackhint.last_sack_ack = sblkp->end;
 	if (SEQ_LT(tp->snd_fack, sblkp->start)) {
 		/*
 		 * The highest SACK block is beyond fack.  Append new SACK
@@ -571,7 +577,7 @@ tcp_sack_partialack(struct tcpcb *tp, struct tcphdr *th)
 	tcp_timer_activate(tp, TT_REXMT, 0);
 	tp->t_rtttime = 0;
 	/* Send one or 2 segments based on how much new data was acked. */
-	if (((th->th_ack - tp->snd_una) / tp->t_maxseg) > 2)
+	if ((BYTES_THIS_ACK(tp, th) / tp->t_maxseg) >= 2)
 		num_segs = 2;
 	tp->snd_cwnd = (tp->sackhint.sack_bytes_rexmit +
 	    (tp->snd_nxt - tp->sack_newdata) + num_segs * tp->t_maxseg);

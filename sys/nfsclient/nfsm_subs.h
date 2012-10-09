@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsm_subs.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfsclient/nfsm_subs.h,v 1.37.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NFSCLIENT_NFSM_SUBS_H_
@@ -55,10 +54,6 @@ struct vnode;
  */
 u_int32_t nfs_xid_gen(void);
 struct mbuf *nfsm_reqhead(struct vnode *vp, u_long procid, int hsiz);
-struct mbuf *nfsm_rpchead(struct ucred *cr, int nmflag, int procid,
-			  int auth_type, int auth_len,
-			  struct mbuf *mrest, int mrest_len,
-			  struct mbuf **mbp, u_int32_t **xidpp);
 
 #define	M_HASCL(m)	((m)->m_flags & M_EXT)
 #define	NFSMINOFF(m) \
@@ -148,17 +143,6 @@ do { \
 	} \
 } while (0)
 
-#define	nfsm_request_mnt(n, t, p, c) \
-do { \
-	error = nfs4_request_mnt((n), mreq, (t), (p), (c), &mrep, &md, &dpos); \
-	if (error != 0) { \
-		if (error & NFSERR_RETERR) \
-			error &= ~NFSERR_RETERR; \
-		else \
-			goto nfsmout; \
-	} \
-} while (0)
-
 /* *********************************** */
 /* Reply interpretation phase macros */
 
@@ -168,8 +152,8 @@ int	nfsm_getfh_xx(nfsfh_t **f, int *s, int v3, struct mbuf **md,
 	    caddr_t *dpos);
 int	nfsm_loadattr_xx(struct vnode **v, struct vattr *va, struct mbuf **md,
 	    caddr_t *dpos);
-int	nfsm_postop_attr_xx(struct vnode **v, int *f, struct mbuf **md,
-	    caddr_t *dpos);
+int	nfsm_postop_attr_xx(struct vnode **v, int *f, struct vattr *va,
+	    struct mbuf **md, caddr_t *dpos);
 int	nfsm_wcc_data_xx(struct vnode **v, int *f, struct mbuf **md,
 	    caddr_t *dpos);
 
@@ -197,7 +181,14 @@ do { \
 #define	nfsm_postop_attr(v, f) \
 do { \
 	int32_t t1; \
-	t1 = nfsm_postop_attr_xx(&v, &f, &md, &dpos); \
+	t1 = nfsm_postop_attr_xx(&v, &f, NULL, &md, &dpos);	\
+	nfsm_dcheck(t1, mrep); \
+} while (0)
+
+#define	nfsm_postop_attr_va(v, f, va)		\
+do { \
+	int32_t t1; \
+	t1 = nfsm_postop_attr_xx(&v, &f, va, &md, &dpos);	\
 	nfsm_dcheck(t1, mrep); \
 } while (0)
 

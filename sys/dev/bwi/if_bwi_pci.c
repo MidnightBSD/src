@@ -28,6 +28,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * PCI/Cardbus front-end for the Broadcom Wireless LAN controller driver.
@@ -59,9 +60,9 @@
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
 
-#include "if_bwivar.h"
-#include "if_bwireg.h"
-#include "bitops.h"
+#include <dev/bwi/if_bwivar.h>
+#include <dev/bwi/if_bwireg.h>
+#include <dev/bwi/bitops.h>
 
 /*
  * PCI glue.
@@ -79,16 +80,19 @@ static const struct bwi_dev {
 	uint16_t	did;
 	const char	*desc;
 } bwi_devices[] = {
-	{ PCI_VENDOR_BROADCOM, 0x4301,"Broadcom BCM4301 802.11 Wireless Lan" },
-	{ PCI_VENDOR_BROADCOM, 0x4307,"Broadcom BCM4307 802.11 Wireless Lan" },
-	{ PCI_VENDOR_BROADCOM, 0x4311,"Broadcom BCM4311 802.11 Wireless Lan" },
-	{ PCI_VENDOR_BROADCOM, 0x4312,"Broadcom BCM4312 802.11 Wireless Lan" },
-	{ PCI_VENDOR_BROADCOM, 0x4320,"Broadcom BCM4306v1 802.11 Wireless Lan"},
-	{ PCI_VENDOR_BROADCOM, 0x4321,"Broadcom BCM4306v2 802.11 Wireless Lan"},
-	{ PCI_VENDOR_BROADCOM, 0x4325,"Broadcom BCM4306v3 802.11 Wireless Lan"},
-	{ PCI_VENDOR_BROADCOM, 0x4324,"Broadcom BCM4309 802.11 Wireless Lan" },
-	{ PCI_VENDOR_BROADCOM, 0x4318,"Broadcom BCM4318 802.11 Wireless Lan" },
-	{ PCI_VENDOR_BROADCOM, 0x4319,"Broadcom BCM4319 802.11 Wireless Lan" }
+	{ PCI_VENDOR_BROADCOM, 0x4301,"Broadcom BCM4301 802.11b Wireless Lan" },
+	{ PCI_VENDOR_BROADCOM, 0x4307,"Broadcom BCM4307 802.11b Wireless Lan" },
+	{ PCI_VENDOR_BROADCOM, 0x4311,"Broadcom BCM4311 802.11b/g Wireless Lan" },
+	{ PCI_VENDOR_BROADCOM, 0x4312,"Broadcom BCM4312 802.11a/b/g Wireless Lan" },
+	{ PCI_VENDOR_BROADCOM, 0x4313,"Broadcom BCM4312 802.11a Wireless Lan" },
+	{ PCI_VENDOR_BROADCOM, 0x4320,"Broadcom BCM4306 802.11b/g Wireless Lan"},
+	{ PCI_VENDOR_BROADCOM, 0x4321,"Broadcom BCM4306 802.11a Wireless Lan"},
+	{ PCI_VENDOR_BROADCOM, 0x4325,"Broadcom BCM4306 802.11b/g Wireless Lan"},
+	{ PCI_VENDOR_BROADCOM, 0x4324,"Broadcom BCM4309 802.11a/b/g Wireless Lan" },
+	{ PCI_VENDOR_BROADCOM, 0x4318,"Broadcom BCM4318 802.11b/g Wireless Lan" },
+	{ PCI_VENDOR_BROADCOM, 0x4319,"Broadcom BCM4318 802.11a/b/g Wireless Lan" },
+	{ PCI_VENDOR_BROADCOM, 0x431a,"Broadcom BCM4318 802.11a Wireless Lan" },
+	{ 0, 0, NULL }
 };
 
 static int
@@ -109,36 +113,6 @@ bwi_pci_probe(device_t dev)
 	return ENXIO;
 }
 
-static u_int32_t
-bwi_pci_setup(device_t dev)
-{
-	u_int32_t cmd;
-
-	/*
-	 * Enable memory mapping and bus mastering.
-	 */
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	cmd |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, cmd, 4);
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	if ((cmd & PCIM_CMD_MEMEN) == 0) {
-		device_printf(dev, "failed to enable memory mapping\n");
-		return 0;
-	}
-	if ((cmd & PCIM_CMD_BUSMASTEREN) == 0) {
-		device_printf(dev, "failed to enable bus mastering\n");
-		return 0;
-	}
-
-	/*
-	 * Disable retry timeout to keep PCI Tx retries from
-	 * interfering with C3 CPU state.
-	 */
-	pci_write_config(dev, PCIR_RETRY_TIMEOUT, 0, 1);
-
-	return 1;
-}
-
 static int
 bwi_pci_attach(device_t dev)
 {
@@ -148,8 +122,10 @@ bwi_pci_attach(device_t dev)
 
 	sc->sc_dev = dev;
 
-	if (!bwi_pci_setup(dev))
-		goto bad;
+	/*
+	 * Enable bus mastering.
+	 */
+	pci_enable_busmaster(dev);
 
 	/* 
 	 * Setup memory-mapping of PCI registers.
@@ -250,9 +226,6 @@ bwi_pci_resume(device_t dev)
 {
 	struct bwi_pci_softc *psc = device_get_softc(dev);
 
-	if (!bwi_pci_setup(dev))
-		return ENXIO;
-
 	bwi_resume(&psc->sc_sc);
 
 	return (0);
@@ -275,9 +248,7 @@ static driver_t bwi_driver = {
 	sizeof (struct bwi_pci_softc)
 };
 static	devclass_t bwi_devclass;
-DRIVER_MODULE(if_bwi, pci, bwi_driver, bwi_devclass, 0, 0);
-DRIVER_MODULE(bwi, cardbus, bwi_driver, bwi_devclass, 0, 0);
-MODULE_VERSION(if_bwi, 1);
-MODULE_DEPEND(if_bwi, wlan, 1, 1, 1);		/* 802.11 media layer */
-MODULE_DEPEND(if_bwi, firmware, 1, 1, 1);	/* firmware support */
-MODULE_DEPEND(if_bwi, wlan_amrr, 1, 1, 1);
+DRIVER_MODULE(bwi, pci, bwi_driver, bwi_devclass, 0, 0);
+MODULE_DEPEND(bwi, wlan, 1, 1, 1);		/* 802.11 media layer */
+MODULE_DEPEND(bwi, firmware, 1, 1, 1);		/* firmware support */
+MODULE_DEPEND(bwi, wlan_amrr, 1, 1, 1);

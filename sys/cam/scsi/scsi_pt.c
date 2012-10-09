@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_pt.c,v 1.47.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -148,8 +148,8 @@ ptopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 
 	cam_periph_lock(periph);
 	if (softc->flags & PT_FLAG_DEVICE_INVALID) {
+		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
-		cam_periph_release(periph);
 		return(ENXIO);
 	}
 
@@ -182,8 +182,8 @@ ptclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 	cam_periph_lock(periph);
 
 	softc->flags &= ~PT_FLAG_OPEN;
+	cam_periph_release_locked(periph);
 	cam_periph_unlock(periph);
-	cam_periph_release(periph);
 	return (0);
 }
 
@@ -224,7 +224,7 @@ ptstrategy(struct bio *bp)
 	/*
 	 * Schedule ourselves for performing the work.
 	 */
-	xpt_schedule(periph, /* XXX priority */1);
+	xpt_schedule(periph, CAM_PRIORITY_NORMAL);
 	cam_periph_unlock(periph);
 
 	return;
@@ -252,6 +252,7 @@ ptctor(struct cam_periph *periph, void *arg)
 {
 	struct pt_softc *softc;
 	struct ccb_getdev *cgd;
+	struct ccb_pathinq cpi;
 
 	cgd = (struct ccb_getdev *)arg;
 	if (periph == NULL) {
@@ -280,12 +281,18 @@ ptctor(struct cam_periph *periph, void *arg)
 	softc->io_timeout = SCSI_PT_DEFAULT_TIMEOUT * 1000;
 
 	periph->softc = softc;
-	
+
+	bzero(&cpi, sizeof(cpi));
+	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
+	cpi.ccb_h.func_code = XPT_PATH_INQ;
+	xpt_action((union ccb *)&cpi);
+
 	cam_periph_unlock(periph);
 	softc->device_stats = devstat_new_entry("pt",
 			  periph->unit_number, 0,
 			  DEVSTAT_NO_BLOCKSIZE,
-			  SID_TYPE(&cgd->inq_data) | DEVSTAT_TYPE_IF_SCSI,
+			  SID_TYPE(&cgd->inq_data) |
+			  XPORT_DEVSTAT_TYPE(cpi.transport),
 			  DEVSTAT_PRIORITY_OTHER);
 
 	softc->dev = make_dev(&pt_cdevsw, periph->unit_number, UID_ROOT,
@@ -366,6 +373,9 @@ ptasync(void *callback_arg, u_int32_t code, struct cam_path *path, void *arg)
 		if (cgd == NULL)
 			break;
 
+		if (cgd->protocol != PROTO_SCSI)
+			break;
+
 		if (SID_TYPE(&cgd->inq_data) != T_PROCESSOR)
 			break;
 
@@ -415,12 +425,14 @@ ptstart(struct cam_periph *periph, union ccb *start_ccb)
 
 	softc = (struct pt_softc *)periph->softc;
 
+	CAM_DEBUG(periph->path, CAM_DEBUG_TRACE, ("ptstart\n"));
+
 	/*
 	 * See if there is a buf with work for us to do..
 	 */
 	bp = bioq_first(&softc->bio_queue);
 	if (periph->immediate_priority <= periph->pinfo.priority) {
-		CAM_DEBUG_PRINT(CAM_DEBUG_SUBTRACE,
+		CAM_DEBUG(periph->path, CAM_DEBUG_SUBTRACE,
 				("queuing for immediate ccb\n"));
 		start_ccb->ccb_h.ccb_state = PT_CCB_WAITING;
 		SLIST_INSERT_HEAD(&periph->ccb_list, &start_ccb->ccb_h,
@@ -461,7 +473,7 @@ ptstart(struct cam_periph *periph, union ccb *start_ccb)
 		
 		if (bp != NULL) {
 			/* Have more work to do, so ensure we stay scheduled */
-			xpt_schedule(periph, /* XXX priority */1);
+			xpt_schedule(periph, CAM_PRIORITY_NORMAL);
 		}
 	}
 }
@@ -473,6 +485,9 @@ ptdone(struct cam_periph *periph, union ccb *done_ccb)
 	struct ccb_scsiio *csio;
 
 	softc = (struct pt_softc *)periph->softc;
+
+	CAM_DEBUG(periph->path, CAM_DEBUG_TRACE, ("ptdone\n"));
+
 	csio = &done_ccb->csio;
 	switch (csio->ccb_h.ccb_state) {
 	case PT_CCB_BUFFER_IO:

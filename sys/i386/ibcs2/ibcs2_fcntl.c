@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Scott Bartram
  * All rights reserved.
@@ -27,12 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_fcntl.c,v 1.28.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_spx_hack.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
@@ -204,7 +204,7 @@ ibcs2_open(td, uap)
 		struct file *fp;
 		int error;
 
-		error = fget(td, td->td_retval[0], &fp);
+		error = fget(td, td->td_retval[0], CAP_IOCTL, &fp);
 		PROC_UNLOCK(p);
 		if (error)
 			return (EBADF);

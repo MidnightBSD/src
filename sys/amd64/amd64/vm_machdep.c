@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986 The Regents of the University of California.
  * Copyright (c) 1989, 1990 William Jolitz
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.255 2007/06/04 23:57:29 jeff Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_isa.h"
 #include "opt_cpu.h"
@@ -52,7 +51,6 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.255 2007/06/04 23:57:29
 #include <sys/systm.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
-#include <sys/kse.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
@@ -64,6 +62,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.255 2007/06/04 23:57:29
 #include <sys/sf_buf.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
+#include <sys/sysent.h>
 #include <sys/unistd.h>
 #include <sys/vnode.h>
 #include <sys/vmmeter.h>
@@ -71,7 +70,9 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.255 2007/06/04 23:57:29
 #include <machine/cpu.h>
 #include <machine/md_var.h>
 #include <machine/pcb.h>
+#include <machine/smp.h>
 #include <machine/specialreg.h>
+#include <machine/tss.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -80,13 +81,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.255 2007/06/04 23:57:29
 #include <vm/vm_map.h>
 #include <vm/vm_param.h>
 
-#include <amd64/isa/isa.h>
-
-#ifdef COMPAT_IA32
-
-extern struct sysentvec ia32_freebsd_sysvec;
-
-#endif
+#include <x86/isa/isa.h>
 
 static void	cpu_reset_real(void);
 #ifdef SMP
@@ -94,6 +89,51 @@ static void	cpu_reset_proxy(void);
 static u_int	cpu_reset_proxyid;
 static volatile u_int	cpu_reset_proxy_active;
 #endif
+
+struct savefpu *
+get_pcb_user_save_td(struct thread *td)
+{
+	vm_offset_t p;
+
+	p = td->td_kstack + td->td_kstack_pages * PAGE_SIZE -
+	    cpu_max_ext_state_size;
+	KASSERT((p % 64) == 0, ("Unaligned pcb_user_save area"));
+	return ((struct savefpu *)p);
+}
+
+struct savefpu *
+get_pcb_user_save_pcb(struct pcb *pcb)
+{
+	vm_offset_t p;
+
+	p = (vm_offset_t)(pcb + 1);
+	return ((struct savefpu *)p);
+}
+
+struct pcb *
+get_pcb_td(struct thread *td)
+{
+	vm_offset_t p;
+
+	p = td->td_kstack + td->td_kstack_pages * PAGE_SIZE -
+	    cpu_max_ext_state_size - sizeof(struct pcb);
+	return ((struct pcb *)p);
+}
+
+void *
+alloc_fpusave(int flags)
+{
+	struct pcb *res;
+	struct savefpu_ymm *sf;
+
+	res = malloc(cpu_max_ext_state_size, M_DEVBUF, flags);
+	if (use_xsave) {
+		sf = (struct savefpu_ymm *)res;
+		bzero(&sf->sv_xstate.sx_hd, sizeof(sf->sv_xstate.sx_hd));
+		sf->sv_xstate.sx_hd.xstate_bv = xsave_mask;
+	}
+	return (res);
+}
 
 /*
  * Finish a fork operation, with process p2 nearly set up.
@@ -109,22 +149,39 @@ cpu_fork(td1, p2, td2, flags)
 {
 	register struct proc *p1;
 	struct pcb *pcb2;
-	struct mdproc *mdp2;
+	struct mdproc *mdp1, *mdp2;
+	struct proc_ldt *pldt;
+	pmap_t pmap2;
 
 	p1 = td1->td_proc;
-	if ((flags & RFPROC) == 0)
+	if ((flags & RFPROC) == 0) {
+		if ((flags & RFMEM) == 0) {
+			/* unshare user LDT */
+			mdp1 = &p1->p_md;
+			mtx_lock(&dt_lock);
+			if ((pldt = mdp1->md_ldt) != NULL &&
+			    pldt->ldt_refcnt > 1 &&
+			    user_ldt_alloc(p1, 1) == NULL)
+				panic("could not copy LDT");
+			mtx_unlock(&dt_lock);
+		}
 		return;
+	}
 
-	/* Ensure that p1's pcb is up to date. */
+	/* Ensure that td1's pcb is up to date. */
 	fpuexit(td1);
 
 	/* Point the pcb to the top of the stack */
-	pcb2 = (struct pcb *)(td2->td_kstack +
-	    td2->td_kstack_pages * PAGE_SIZE) - 1;
+	pcb2 = get_pcb_td(td2);
 	td2->td_pcb = pcb2;
 
-	/* Copy p1's pcb */
+	/* Copy td1's pcb */
 	bcopy(td1->td_pcb, pcb2, sizeof(*pcb2));
+
+	/* Properly initialize pcb_save */
+	pcb2->pcb_save = get_pcb_user_save_pcb(pcb2);
+	bcopy(get_pcb_user_save_td(td1), get_pcb_user_save_pcb(pcb2),
+	    cpu_max_ext_state_size);
 
 	/* Point mdproc and then copy over td1's contents */
 	mdp2 = &p2->p_md;
@@ -157,7 +214,8 @@ cpu_fork(td1, p2, td2, flags)
 	 * Set registers for trampoline to user mode.  Leave space for the
 	 * return address on stack.  These are the kernel mode register values.
 	 */
-	pcb2->pcb_cr3 = vtophys(vmspace_pmap(p2->p_vmspace)->pm_pml4);
+	pmap2 = vmspace_pmap(p2->p_vmspace);
+	pcb2->pcb_cr3 = DMAP_TO_PHYS((vm_offset_t)pmap2->pm_pml4);
 	pcb2->pcb_r12 = (register_t)fork_return;	/* fork_trampoline argument */
 	pcb2->pcb_rbp = 0;
 	pcb2->pcb_rsp = (register_t)td2->td_frame - sizeof(void *);
@@ -174,6 +232,35 @@ cpu_fork(td1, p2, td2, flags)
 	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
+
+	/* As an i386, do not copy io permission bitmap. */
+	pcb2->pcb_tssp = NULL;
+
+	/* New segment registers. */
+	set_pcb_flags(pcb2, PCB_FULL_IRET);
+
+	/* Copy the LDT, if necessary. */
+	mdp1 = &td1->td_proc->p_md;
+	mdp2 = &p2->p_md;
+	mtx_lock(&dt_lock);
+	if (mdp1->md_ldt != NULL) {
+		if (flags & RFMEM) {
+			mdp1->md_ldt->ldt_refcnt++;
+			mdp2->md_ldt = mdp1->md_ldt;
+			bcopy(&mdp1->md_ldt_sd, &mdp2->md_ldt_sd, sizeof(struct
+			    system_segment_descriptor));
+		} else {
+			mdp2->md_ldt = NULL;
+			mdp2->md_ldt = user_ldt_alloc(p2, 0);
+			if (mdp2->md_ldt == NULL)
+				panic("could not copy LDT");
+			amd64_set_ldt_data(td2, 0, max_ldt_segment,
+			    (struct user_segment_descriptor *)
+			    mdp1->md_ldt->ldt_base);
+		}
+	} else
+		mdp2->md_ldt = NULL;
+	mtx_unlock(&dt_lock);
 
 	/*
 	 * Now, cpu_switch() can schedule the new process.
@@ -209,25 +296,51 @@ cpu_set_fork_handler(td, func, arg)
 void
 cpu_exit(struct thread *td)
 {
+
+	/*
+	 * If this process has a custom LDT, release it.
+	 */
+	mtx_lock(&dt_lock);
+	if (td->td_proc->p_md.md_ldt != 0)
+		user_ldt_free(td);
+	else
+		mtx_unlock(&dt_lock);
 }
 
 void
 cpu_thread_exit(struct thread *td)
 {
+	struct pcb *pcb;
 
+	critical_enter();
 	if (td == PCPU_GET(fpcurthread))
 		fpudrop();
+	critical_exit();
+
+	pcb = td->td_pcb;
 
 	/* Disable any hardware breakpoints. */
-	if (td->td_pcb->pcb_flags & PCB_DBREGS) {
+	if (pcb->pcb_flags & PCB_DBREGS) {
 		reset_dbregs();
-		td->td_pcb->pcb_flags &= ~PCB_DBREGS;
+		clear_pcb_flags(pcb, PCB_DBREGS);
 	}
 }
 
 void
 cpu_thread_clean(struct thread *td)
 {
+	struct pcb *pcb;
+
+	pcb = td->td_pcb;
+
+	/*
+	 * Clean TSS/iomap
+	 */
+	if (pcb->pcb_tssp != NULL) {
+		kmem_free(kernel_map, (vm_offset_t)pcb->pcb_tssp,
+		    ctob(IOPAGES + 1));
+		pcb->pcb_tssp = NULL;
+	}
 }
 
 void
@@ -243,15 +356,65 @@ cpu_thread_swapout(struct thread *td)
 void
 cpu_thread_alloc(struct thread *td)
 {
+	struct pcb *pcb;
+	struct xstate_hdr *xhdr;
 
-	td->td_pcb = (struct pcb *)(td->td_kstack +
-	    td->td_kstack_pages * PAGE_SIZE) - 1;
-	td->td_frame = (struct trapframe *)td->td_pcb - 1;
+	td->td_pcb = pcb = get_pcb_td(td);
+	td->td_frame = (struct trapframe *)pcb - 1;
+	pcb->pcb_save = get_pcb_user_save_pcb(pcb);
+	if (use_xsave) {
+		xhdr = (struct xstate_hdr *)(pcb->pcb_save + 1);
+		bzero(xhdr, sizeof(*xhdr));
+		xhdr->xstate_bv = xsave_mask;
+	}
 }
 
 void
 cpu_thread_free(struct thread *td)
 {
+
+	cpu_thread_clean(td);
+}
+
+void
+cpu_set_syscall_retval(struct thread *td, int error)
+{
+
+	switch (error) {
+	case 0:
+		td->td_frame->tf_rax = td->td_retval[0];
+		td->td_frame->tf_rdx = td->td_retval[1];
+		td->td_frame->tf_rflags &= ~PSL_C;
+		break;
+
+	case ERESTART:
+		/*
+		 * Reconstruct pc, we know that 'syscall' is 2 bytes,
+		 * lcall $X,y is 7 bytes, int 0x80 is 2 bytes.
+		 * We saved this in tf_err.
+		 * %r10 (which was holding the value of %rcx) is restored
+		 * for the next iteration.
+		 * %r10 restore is only required for freebsd/amd64 processes,
+		 * but shall be innocent for any ia32 ABI.
+		 */
+		td->td_frame->tf_rip -= td->td_frame->tf_err;
+		td->td_frame->tf_r10 = td->td_frame->tf_rcx;
+		break;
+
+	case EJUSTRETURN:
+		break;
+
+	default:
+		if (td->td_proc->p_sysent->sv_errsize) {
+			if (error >= td->td_proc->p_sysent->sv_errsize)
+				error = -1;	/* XXX */
+			else
+				error = td->td_proc->p_sysent->sv_errtbl[error];
+		}
+		td->td_frame->tf_rax = error;
+		td->td_frame->tf_rflags |= PSL_C;
+		break;
+	}
 }
 
 /*
@@ -273,30 +436,31 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	 * Copy the upcall pcb.  This loads kernel regs.
 	 * Those not loaded individually below get their default
 	 * values here.
-	 *
-	 * XXXKSE It might be a good idea to simply skip this as
-	 * the values of the other registers may be unimportant.
-	 * This would remove any requirement for knowing the KSE
-	 * at this time (see the matching comment below for
-	 * more analysis) (need a good safe default).
 	 */
 	bcopy(td0->td_pcb, pcb2, sizeof(*pcb2));
-	pcb2->pcb_flags &= ~PCB_FPUINITDONE;
+	clear_pcb_flags(pcb2, PCB_FPUINITDONE | PCB_USERFPUINITDONE);
+	pcb2->pcb_save = get_pcb_user_save_pcb(pcb2);
+	bcopy(get_pcb_user_save_td(td0), pcb2->pcb_save,
+	    cpu_max_ext_state_size);
+	set_pcb_flags(pcb2, PCB_FULL_IRET);
 
 	/*
 	 * Create a new fresh stack for the new thread.
-	 * Don't forget to set this stack value into whatever supplies
-	 * the address for the fault handlers.
-	 * The contexts are filled in at the time we actually DO the
-	 * upcall as only then do we know which KSE we got.
 	 */
 	bcopy(td0->td_frame, td->td_frame, sizeof(struct trapframe));
+
+	/* If the current thread has the trap bit set (i.e. a debugger had
+	 * single stepped the process to the system call), we need to clear
+	 * the trap flag from the new frame. Otherwise, the new thread will
+	 * receive a (likely unexpected) SIGTRAP when it executes the first
+	 * instruction after returning to userland.
+	 */
+	td->td_frame->tf_rflags &= ~PSL_T;
 
 	/*
 	 * Set registers for trampoline to user mode.  Leave space for the
 	 * return address on stack.  These are the kernel mode register values.
 	 */
-	pcb2->pcb_cr3 = vtophys(vmspace_pmap(td->td_proc->p_vmspace)->pm_pml4);
 	pcb2->pcb_r12 = (register_t)fork_return;	    /* trampoline arg */
 	pcb2->pcb_rbp = 0;
 	pcb2->pcb_rsp = (register_t)td->td_frame - sizeof(void *);	/* trampoline arg */
@@ -304,6 +468,7 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	pcb2->pcb_rip = (register_t)fork_trampoline;
 	/*
 	 * If we didn't copy the pcb, we'd need to do the following registers:
+	 * pcb2->pcb_cr3:	cloned above.
 	 * pcb2->pcb_dr*:	cloned above.
 	 * pcb2->pcb_savefpu:	cloned above.
 	 * pcb2->pcb_onfault:	cloned above (always NULL here?).
@@ -334,8 +499,8 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 	 */
 	cpu_thread_clean(td);
 
-#ifdef COMPAT_IA32
-	if (td->td_proc->p_sysent == &ia32_freebsd_sysvec) {
+#ifdef COMPAT_FREEBSD32
+	if (SV_PROC_FLAG(td->td_proc, SV_ILP32)) {
 		/*
 	 	 * Set the trap frame to point at the beginning of the uts
 		 * function.
@@ -365,6 +530,11 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 	    ((register_t)stack->ss_sp + stack->ss_size) & ~0x0f;
 	td->td_frame->tf_rsp -= 8;
 	td->td_frame->tf_rip = (register_t)entry;
+	td->td_frame->tf_ds = _udatasel;
+	td->td_frame->tf_es = _udatasel;
+	td->td_frame->tf_fs = _ufssel;
+	td->td_frame->tf_gs = _ugssel;
+	td->td_frame->tf_flags = TF_HASSEGS;
 
 	/*
 	 * Pass the address of the mailbox for this kse to the uts
@@ -376,31 +546,20 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 int
 cpu_set_user_tls(struct thread *td, void *tls_base)
 {
+	struct pcb *pcb;
 
 	if ((u_int64_t)tls_base >= VM_MAXUSER_ADDRESS)
 		return (EINVAL);
 
-#ifdef COMPAT_IA32
-	if (td->td_proc->p_sysent == &ia32_freebsd_sysvec) {
-		if (td == curthread) {
-			critical_enter();
-			td->td_pcb->pcb_gsbase = (register_t)tls_base;
-			wrmsr(MSR_KGSBASE, td->td_pcb->pcb_gsbase);
-			critical_exit();
-		} else {
-			td->td_pcb->pcb_gsbase = (register_t)tls_base;
-		}
+	pcb = td->td_pcb;
+	set_pcb_flags(pcb, PCB_FULL_IRET);
+#ifdef COMPAT_FREEBSD32
+	if (SV_PROC_FLAG(td->td_proc, SV_ILP32)) {
+		pcb->pcb_gsbase = (register_t)tls_base;
 		return (0);
 	}
 #endif
-	if (td == curthread) {
-		critical_enter();
-		td->td_pcb->pcb_fsbase = (register_t)tls_base;
-		wrmsr(MSR_FSBASE, td->td_pcb->pcb_fsbase);
-		critical_exit();
-	} else {
-		td->td_pcb->pcb_fsbase = (register_t)tls_base;
-	}
+	pcb->pcb_fsbase = (register_t)tls_base;
 	return (0);
 }
 
@@ -408,11 +567,13 @@ cpu_set_user_tls(struct thread *td, void *tls_base)
 static void
 cpu_reset_proxy()
 {
+	cpuset_t tcrp;
 
 	cpu_reset_proxy_active = 1;
 	while (cpu_reset_proxy_active == 1)
 		;	/* Wait for other cpu to see that we've started */
-	stop_cpus((1<<cpu_reset_proxyid));
+	CPU_SETOF(cpu_reset_proxyid, &tcrp);
+	stop_cpus(tcrp);
 	printf("cpu_reset_proxy: Stopped CPU %d\n", cpu_reset_proxyid);
 	DELAY(1000000);
 	cpu_reset_real();
@@ -423,11 +584,14 @@ void
 cpu_reset()
 {
 #ifdef SMP
-	u_int cnt, map;
+	cpuset_t map;
+	u_int cnt;
 
 	if (smp_active) {
-		map = PCPU_GET(other_cpus) & ~stopped_cpus;
-		if (map != 0) {
+		map = all_cpus;
+		CPU_CLR(PCPU_GET(cpuid), &map);
+		CPU_NAND(&map, &stopped_cpus);
+		if (!CPU_EMPTY(&map)) {
 			printf("cpu_reset: Stopping other CPUs\n");
 			stop_cpus(map);
 		}
@@ -439,7 +603,8 @@ cpu_reset()
 			printf("cpu_reset: Restarting BSP\n");
 
 			/* Restart CPU #0. */
-			atomic_store_rel_int(&started_cpus, 1 << 0);
+			CPU_SETOF(0, &started_cpus);
+			wmb();
 
 			cnt = 0;
 			while (cpu_reset_proxy_active == 0 && cnt < 10000000)

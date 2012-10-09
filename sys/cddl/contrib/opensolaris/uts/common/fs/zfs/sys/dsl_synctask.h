@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,14 +19,11 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef	_SYS_DSL_SYNCTASK_H
 #define	_SYS_DSL_SYNCTASK_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/txg.h>
 #include <sys/zfs_context.h>
@@ -57,6 +53,7 @@ typedef struct dsl_sync_task_group {
 	uint64_t dstg_txg;
 	int dstg_err;
 	int dstg_space;
+	boolean_t dstg_nowaiter;
 } dsl_sync_task_group_t;
 
 dsl_sync_task_group_t *dsl_sync_task_group_create(struct dsl_pool *dp);
@@ -64,12 +61,16 @@ void dsl_sync_task_create(dsl_sync_task_group_t *dstg,
     dsl_checkfunc_t *, dsl_syncfunc_t *,
     void *arg1, void *arg2, int blocks_modified);
 int dsl_sync_task_group_wait(dsl_sync_task_group_t *dstg);
+void dsl_sync_task_group_nowait(dsl_sync_task_group_t *dstg, dmu_tx_t *tx);
 void dsl_sync_task_group_destroy(dsl_sync_task_group_t *dstg);
 void dsl_sync_task_group_sync(dsl_sync_task_group_t *dstg, dmu_tx_t *tx);
 
 int dsl_sync_task_do(struct dsl_pool *dp,
     dsl_checkfunc_t *checkfunc, dsl_syncfunc_t *syncfunc,
     void *arg1, void *arg2, int blocks_modified);
+void dsl_sync_task_do_nowait(struct dsl_pool *dp,
+    dsl_checkfunc_t *checkfunc, dsl_syncfunc_t *syncfunc,
+    void *arg1, void *arg2, int blocks_modified, dmu_tx_t *tx);
 
 #ifdef	__cplusplus
 }

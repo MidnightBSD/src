@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/key_debug.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: key_debug.h,v 1.10 2001/08/05 08:37:52 itojun Exp $	*/
 
 /*-
@@ -54,9 +54,10 @@
 #define KEYDEBUG_IPSEC_DUMP	(KEYDEBUG_IPSEC | KEYDEBUG_DUMP)
 
 #define KEYDEBUG(lev,arg) \
-	do { if ((key_debug_level & (lev)) == (lev)) { arg; } } while (0)
+	do { if ((V_key_debug_level & (lev)) == (lev)) { arg; } } while (0)
 
-extern u_int32_t key_debug_level;
+VNET_DECLARE(u_int32_t, key_debug_level);
+#define	V_key_debug_level	VNET(key_debug_level)
 #endif /*_KERNEL*/
 
 struct sadb_msg;

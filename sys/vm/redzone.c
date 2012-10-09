@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/redzone.c,v 1.1 2006/01/31 11:09:20 pjd Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,6 +54,8 @@ static u_long
 redzone_roundup(u_long n)
 {
 
+	if (n < REDZONE_HSIZE)
+		n = REDZONE_HSIZE;
 	if (n <= 128)
 		return (128);
 	else if (n <= 256)
@@ -153,10 +154,10 @@ redzone_check(caddr_t naddr)
 		    "corrupted before %p (%lu bytes allocated).\n",
 		    ncorruptions, ncorruptions == 1 ? "" : "s", naddr, nsize);
 		printf("Allocation backtrace:\n");
-		stack_print(&ast);
+		stack_print_ddb(&ast);
 		printf("Free backtrace:\n");
 		stack_save(&fst);
-		stack_print(&fst);
+		stack_print_ddb(&fst);
 		if (redzone_panic)
 			panic("Stopping here.");
 	}
@@ -172,10 +173,10 @@ redzone_check(caddr_t naddr)
 		    "after %p (%lu bytes allocated).\n", ncorruptions,
 		    ncorruptions == 1 ? "" : "s", naddr + nsize, nsize);
 		printf("Allocation backtrace:\n");
-		stack_print(&ast);
+		stack_print_ddb(&ast);
 		printf("Free backtrace:\n");
 		stack_save(&fst);
-		stack_print(&fst);
+		stack_print_ddb(&fst);
 		if (redzone_panic)
 			panic("Stopping here.");
 	}

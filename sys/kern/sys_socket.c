@@ -30,9 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sys_socket.c,v 1.73.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
-
-#include "opt_mac.h"
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,17 +51,21 @@ __FBSDID("$FreeBSD: src/sys/kern/sys_socket.c,v 1.73.2.2.2.1 2008/11/25 02:59:29
 
 #include <net/if.h>
 #include <net/route.h>
+#include <net/vnet.h>
 
 #include <security/mac/mac_framework.h>
 
 struct fileops	socketops = {
 	.fo_read = soo_read,
 	.fo_write = soo_write,
+	.fo_truncate = soo_truncate,
 	.fo_ioctl = soo_ioctl,
 	.fo_poll = soo_poll,
 	.fo_kqfilter = soo_kqfilter,
 	.fo_stat = soo_stat,
 	.fo_close = soo_close,
+	.fo_chmod = invfo_chmod,
+	.fo_chown = invfo_chown,
 	.fo_flags = DFLAG_PASSABLE
 };
 
@@ -73,16 +75,15 @@ soo_read(struct file *fp, struct uio *uio, struct ucred *active_cred,
     int flags, struct thread *td)
 {
 	struct socket *so = fp->f_data;
-#ifdef MAC
 	int error;
 
-	SOCK_LOCK(so);
-	error = mac_check_socket_receive(active_cred, so);
-	SOCK_UNLOCK(so);
+#ifdef MAC
+	error = mac_socket_check_receive(active_cred, so);
 	if (error)
 		return (error);
 #endif
-	return (soreceive(so, 0, uio, 0, 0, 0));
+	error = soreceive(so, 0, uio, 0, 0, 0);
+	return (error);
 }
 
 /* ARGSUSED */
@@ -94,19 +95,25 @@ soo_write(struct file *fp, struct uio *uio, struct ucred *active_cred,
 	int error;
 
 #ifdef MAC
-	SOCK_LOCK(so);
-	error = mac_check_socket_send(active_cred, so);
-	SOCK_UNLOCK(so);
+	error = mac_socket_check_send(active_cred, so);
 	if (error)
 		return (error);
 #endif
 	error = sosend(so, 0, uio, 0, 0, 0, uio->uio_td);
 	if (error == EPIPE && (so->so_options & SO_NOSIGPIPE) == 0) {
 		PROC_LOCK(uio->uio_td->td_proc);
-		psignal(uio->uio_td->td_proc, SIGPIPE);
+		tdsignal(uio->uio_td, SIGPIPE);
 		PROC_UNLOCK(uio->uio_td->td_proc);
 	}
 	return (error);
+}
+
+int
+soo_truncate(struct file *fp, off_t length, struct ucred *active_cred,
+    struct thread *td)
+{
+
+	return (EINVAL);
 }
 
 int
@@ -161,6 +168,19 @@ soo_ioctl(struct file *fp, u_long cmd, void *data, struct ucred *active_cred,
 		*(int *)data = so->so_rcv.sb_cc;
 		break;
 
+	case FIONWRITE:
+		/* Unlocked read. */
+		*(int *)data = so->so_snd.sb_cc;
+		break;
+
+	case FIONSPACE:
+		if ((so->so_snd.sb_hiwat < so->so_snd.sb_cc) ||
+		    (so->so_snd.sb_mbmax < so->so_snd.sb_mbcnt))
+			*(int *)data = 0;
+		else
+			*(int *)data = sbspace(&so->so_snd);
+		break;
+
 	case FIOSETOWN:
 		error = fsetown(*(int *)data, &so->so_sigio);
 		break;
@@ -189,11 +209,16 @@ soo_ioctl(struct file *fp, u_long cmd, void *data, struct ucred *active_cred,
 		 */
 		if (IOCGROUP(cmd) == 'i')
 			error = ifioctl(so, cmd, data, td);
-		else if (IOCGROUP(cmd) == 'r')
+		else if (IOCGROUP(cmd) == 'r') {
+			CURVNET_SET(so->so_vnet);
 			error = rtioctl_fib(cmd, data, so->so_fibnum);
-		else
+			CURVNET_RESTORE();
+		} else {
+			CURVNET_SET(so->so_vnet);
 			error = ((*so->so_proto->pr_usrreqs->pru_control)
 			    (so, cmd, data, 0, td));
+			CURVNET_RESTORE();
+		}
 		break;
 	}
 	return (error);
@@ -207,9 +232,7 @@ soo_poll(struct file *fp, int events, struct ucred *active_cred,
 #ifdef MAC
 	int error;
 
-	SOCK_LOCK(so);
-	error = mac_check_socket_poll(active_cred, so);
-	SOCK_UNLOCK(so);
+	error = mac_socket_check_poll(active_cred, so);
 	if (error)
 		return (error);
 #endif
@@ -228,9 +251,7 @@ soo_stat(struct file *fp, struct stat *ub, struct ucred *active_cred,
 	bzero((caddr_t)ub, sizeof (*ub));
 	ub->st_mode = S_IFSOCK;
 #ifdef MAC
-	SOCK_LOCK(so);
-	error = mac_check_socket_stat(active_cred, so);
-	SOCK_UNLOCK(so);
+	error = mac_socket_check_stat(active_cred, so);
 	if (error)
 		return (error);
 #endif

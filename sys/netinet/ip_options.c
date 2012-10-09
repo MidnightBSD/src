@@ -30,10 +30,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_options.c,v 1.6.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ipstealth.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,6 +51,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/ip_options.c,v 1.6.2.4.2.1 2008/11/25 02:59:
 #include <net/if_dl.h>
 #include <net/route.h>
 #include <net/netisr.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -64,8 +64,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/ip_options.c,v 1.6.2.4.2.1 2008/11/25 02:59:
 #include <machine/in_cksum.h>
 
 #include <sys/socketvar.h>
-
-#include <security/mac/mac_framework.h>
 
 static int	ip_dosourceroute = 0;
 SYSCTL_INT(_net_inet_ip, IPCTL_SOURCEROUTE, sourceroute, CTLFLAG_RW,
@@ -102,7 +100,7 @@ ip_dooptions(struct mbuf *m, int pass)
 	struct in_ifaddr *ia;
 	int opt, optlen, cnt, off, code, type = ICMP_PARAMPROB, forward = 0;
 	struct in_addr *sin, dst;
-	n_time ntime;
+	uint32_t ntime;
 	struct	sockaddr_in ipaddr = { sizeof(ipaddr), AF_INET };
 
 	/* Ignore or reject packets with IP options. */
@@ -150,7 +148,7 @@ ip_dooptions(struct mbuf *m, int pass)
 		case IPOPT_LSRR:
 		case IPOPT_SSRR:
 #ifdef IPSTEALTH
-			if (ipstealth && pass > 0)
+			if (V_ipstealth && pass > 0)
 				break;
 #endif
 			if (optlen < IPOPT_OFFSET + sizeof(*cp)) {
@@ -162,9 +160,8 @@ ip_dooptions(struct mbuf *m, int pass)
 				goto bad;
 			}
 			ipaddr.sin_addr = ip->ip_dst;
-			ia = (struct in_ifaddr *)
-				ifa_ifwithaddr((struct sockaddr *)&ipaddr);
-			if (ia == NULL) {
+			if (ifa_ifwithaddr_check((struct sockaddr *)&ipaddr)
+			    == 0) {
 				if (opt == IPOPT_SSRR) {
 					type = ICMP_UNREACH;
 					code = ICMP_UNREACH_SRCFAIL;
@@ -189,11 +186,11 @@ ip_dooptions(struct mbuf *m, int pass)
 				break;
 			}
 #ifdef IPSTEALTH
-			if (ipstealth)
+			if (V_ipstealth)
 				goto dropit;
 #endif
 			if (!ip_dosourceroute) {
-				if (ipforwarding) {
+				if (V_ipforwarding) {
 					char buf[16]; /* aaa.bbb.ccc.ddd\0 */
 					/*
 					 * Acting as a router, so generate
@@ -215,7 +212,7 @@ nosourcerouting:
 #ifdef IPSTEALTH
 dropit:
 #endif
-					ipstat.ips_cantforward++;
+					IPSTAT_INC(ips_cantforward);
 					m_freem(m);
 					return (1);
 				}
@@ -231,7 +228,7 @@ dropit:
 #define	INA	struct in_ifaddr *
 #define	SA	struct sockaddr *
 			    if ((ia = (INA)ifa_ifwithdstaddr((SA)&ipaddr)) == NULL)
-				ia = (INA)ifa_ifwithnet((SA)&ipaddr);
+				    ia = (INA)ifa_ifwithnet((SA)&ipaddr, 0);
 			} else
 /* XXX MRT 0 for routing */
 				ia = ip_rtaddr(ipaddr.sin_addr, M_GETFIB(m));
@@ -243,6 +240,7 @@ dropit:
 			ip->ip_dst = ipaddr.sin_addr;
 			(void)memcpy(cp + off, &(IA_SIN(ia)->sin_addr),
 			    sizeof(struct in_addr));
+			ifa_free(&ia->ia_ifa);
 			cp[IPOPT_OFFSET] += sizeof(struct in_addr);
 			/*
 			 * Let ip_intr's mcast routing check handle mcast pkts
@@ -252,7 +250,7 @@ dropit:
 
 		case IPOPT_RR:
 #ifdef IPSTEALTH
-			if (ipstealth && pass == 0)
+			if (V_ipstealth && pass == 0)
 				break;
 #endif
 			if (optlen < IPOPT_OFFSET + sizeof(*cp)) {
@@ -284,12 +282,13 @@ dropit:
 			}
 			(void)memcpy(cp + off, &(IA_SIN(ia)->sin_addr),
 			    sizeof(struct in_addr));
+			ifa_free(&ia->ia_ifa);
 			cp[IPOPT_OFFSET] += sizeof(struct in_addr);
 			break;
 
 		case IPOPT_TS:
 #ifdef IPSTEALTH
-			if (ipstealth && pass == 0)
+			if (V_ipstealth && pass == 0)
 				break;
 #endif
 			code = cp - (u_char *)ip;
@@ -317,7 +316,7 @@ dropit:
 				break;
 
 			case IPOPT_TS_TSANDADDR:
-				if (off + sizeof(n_time) +
+				if (off + sizeof(uint32_t) +
 				    sizeof(struct in_addr) > optlen) {
 					code = &cp[IPOPT_OFFSET] - (u_char *)ip;
 					goto bad;
@@ -329,19 +328,20 @@ dropit:
 					continue;
 				(void)memcpy(sin, &IA_SIN(ia)->sin_addr,
 				    sizeof(struct in_addr));
+				ifa_free(&ia->ia_ifa);
 				cp[IPOPT_OFFSET] += sizeof(struct in_addr);
 				off += sizeof(struct in_addr);
 				break;
 
 			case IPOPT_TS_PRESPEC:
-				if (off + sizeof(n_time) +
+				if (off + sizeof(uint32_t) +
 				    sizeof(struct in_addr) > optlen) {
 					code = &cp[IPOPT_OFFSET] - (u_char *)ip;
 					goto bad;
 				}
 				(void)memcpy(&ipaddr.sin_addr, sin,
 				    sizeof(struct in_addr));
-				if (ifa_ifwithaddr((SA)&ipaddr) == NULL)
+				if (ifa_ifwithaddr_check((SA)&ipaddr) == 0)
 					continue;
 				cp[IPOPT_OFFSET] += sizeof(struct in_addr);
 				off += sizeof(struct in_addr);
@@ -352,18 +352,18 @@ dropit:
 				goto bad;
 			}
 			ntime = iptime();
-			(void)memcpy(cp + off, &ntime, sizeof(n_time));
-			cp[IPOPT_OFFSET] += sizeof(n_time);
+			(void)memcpy(cp + off, &ntime, sizeof(uint32_t));
+			cp[IPOPT_OFFSET] += sizeof(uint32_t);
 		}
 	}
-	if (forward && ipforwarding) {
+	if (forward && V_ipforwarding) {
 		ip_forward(m, 1);
 		return (1);
 	}
 	return (0);
 bad:
 	icmp_error(m, type, code, 0, 0);
-	ipstat.ips_badoptions++;
+	IPSTAT_INC(ips_badoptions);
 	return (1);
 }
 
@@ -679,4 +679,65 @@ ip_pcbopts(struct inpcb *inp, int optname, struct mbuf *m)
 bad:
 	(void)m_free(m);
 	return (EINVAL);
+}
+
+/*
+ * Check for the presence of the IP Router Alert option [RFC2113]
+ * in the header of an IPv4 datagram.
+ *
+ * This call is not intended for use from the forwarding path; it is here
+ * so that protocol domains may check for the presence of the option.
+ * Given how FreeBSD's IPv4 stack is currently structured, the Router Alert
+ * option does not have much relevance to the implementation, though this
+ * may change in future.
+ * Router alert options SHOULD be passed if running in IPSTEALTH mode and
+ * we are not the endpoint.
+ * Length checks on individual options should already have been peformed
+ * by ip_dooptions() therefore they are folded under INVARIANTS here.
+ *
+ * Return zero if not present or options are invalid, non-zero if present.
+ */
+int
+ip_checkrouteralert(struct mbuf *m)
+{
+	struct ip *ip = mtod(m, struct ip *);
+	u_char *cp;
+	int opt, optlen, cnt, found_ra;
+
+	found_ra = 0;
+	cp = (u_char *)(ip + 1);
+	cnt = (ip->ip_hl << 2) - sizeof (struct ip);
+	for (; cnt > 0; cnt -= optlen, cp += optlen) {
+		opt = cp[IPOPT_OPTVAL];
+		if (opt == IPOPT_EOL)
+			break;
+		if (opt == IPOPT_NOP)
+			optlen = 1;
+		else {
+#ifdef INVARIANTS
+			if (cnt < IPOPT_OLEN + sizeof(*cp))
+				break;
+#endif
+			optlen = cp[IPOPT_OLEN];
+#ifdef INVARIANTS
+			if (optlen < IPOPT_OLEN + sizeof(*cp) || optlen > cnt)
+				break;
+#endif
+		}
+		switch (opt) {
+		case IPOPT_RA:
+#ifdef INVARIANTS
+			if (optlen != IPOPT_OFFSET + sizeof(uint16_t) ||
+			    (*((uint16_t *)&cp[IPOPT_OFFSET]) != 0))
+			    break;
+			else
+#endif
+			found_ra = 1;
+			break;
+		default:
+			break;
+		}
+	}
+
+	return (found_ra);
 }

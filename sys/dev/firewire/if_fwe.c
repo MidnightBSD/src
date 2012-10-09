@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/if_fwe.c,v 1.44 2007/06/06 14:31:36 simokawa Exp $
+ * $FreeBSD$
  */
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
@@ -106,18 +105,19 @@ TUNABLE_INT("hw.firewire.fwe.rx_queue_len", &rx_queue_len);
 #ifdef DEVICE_POLLING
 static poll_handler_t fwe_poll;
 
-static void
+static int
 fwe_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 {
 	struct fwe_softc *fwe;
 	struct firewire_comm *fc;
 
 	if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
-		return;
+		return (0);
 
 	fwe = ((struct fwe_eth_softc *)ifp->if_softc)->fwe;
 	fc = fwe->fd.fc;
 	fc->poll(fc, (cmd == POLL_AND_CHECK_STATUS)?0:1, count);
+	return (0);
 }
 #endif /* DEVICE_POLLING */
 
@@ -358,19 +358,11 @@ fwe_init(void *arg)
 		STAILQ_INIT(&xferq->stdma);
 		xferq->stproc = NULL;
 		for (i = 0; i < xferq->bnchunk; i ++) {
-			m =
-#if defined(__DragonFly__) || __FreeBSD_version < 500000
-				m_getcl(M_WAIT, MT_DATA, M_PKTHDR);
-#else
-				m_getcl(M_TRYWAIT, MT_DATA, M_PKTHDR);
-#endif
+			m = m_getcl(M_WAIT, MT_DATA, M_PKTHDR);
 			xferq->bulkxfer[i].mbuf = m;
-			if (m != NULL) {
-				m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
-				STAILQ_INSERT_TAIL(&xferq->stfree,
-						&xferq->bulkxfer[i], link);
-			} else
-				printf("%s: m_getcl failed\n", __FUNCTION__);
+			m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
+			STAILQ_INSERT_TAIL(&xferq->stfree,
+					&xferq->bulkxfer[i], link);
 		}
 		STAILQ_INIT(&fwe->xferlist);
 		for (i = 0; i < TX_MAX_QUEUE; i++) {
@@ -454,7 +446,7 @@ fwe_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 #ifdef DEVICE_POLLING
 		    {
 			struct ifreq *ifr = (struct ifreq *) data;
-			struct firewire_comm *fc = fc = fwe->fd.fc;
+			struct firewire_comm *fc = fwe->fd.fc;
 
 			if (ifr->ifr_reqcap & IFCAP_POLLING &&
 			    !(ifp->if_capenable & IFCAP_POLLING)) {
@@ -464,6 +456,7 @@ fwe_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 				/* Disable interrupts */
 				fc->set_intr(fc, 0);
 				ifp->if_capenable |= IFCAP_POLLING;
+				ifp->if_capenable |= IFCAP_POLLING_NOCOUNT;
 				return (error);
 			}
 			if (!(ifr->ifr_reqcap & IFCAP_POLLING) &&
@@ -472,6 +465,7 @@ fwe_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 				/* Enable interrupts. */
 				fc->set_intr(fc, 1);
 				ifp->if_capenable &= ~IFCAP_POLLING;
+				ifp->if_capenable &= ~IFCAP_POLLING_NOCOUNT;
 				return (error);
 			}
 		    }

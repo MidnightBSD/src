@@ -30,11 +30,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_timewait.c,v 1.287.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
-#include "opt_mac.h"
 #include "opt_tcpdebug.h"
 
 #include <sys/param.h>
@@ -55,25 +54,22 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_timewait.c,v 1.287.2.1.2.1 2008/11/25 02
 
 #include <net/route.h>
 #include <net/if.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#ifdef INET6
-#include <netinet/ip6.h>
-#endif
 #include <netinet/in_pcb.h>
-#ifdef INET6
-#include <netinet6/in6_pcb.h>
-#endif
+#include <netinet/in_systm.h>
 #include <netinet/in_var.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/ip_var.h>
 #ifdef INET6
+#include <netinet/ip6.h>
+#include <netinet6/in6_pcb.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/scope6_var.h>
 #include <netinet6/nd6.h>
 #endif
-#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <netinet/tcp_fsm.h>
 #include <netinet/tcp_seq.h>
@@ -86,13 +82,16 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_timewait.c,v 1.287.2.1.2.1 2008/11/25 02
 #ifdef TCPDEBUG
 #include <netinet/tcp_debug.h>
 #endif
+#ifdef INET6
 #include <netinet6/ip6protosw.h>
+#endif
 
 #include <machine/in_cksum.h>
 
 #include <security/mac/mac_framework.h>
 
-static uma_zone_t tcptw_zone;
+static VNET_DEFINE(uma_zone_t, tcptw_zone);
+#define	V_tcptw_zone			VNET(tcptw_zone)
 static int	maxtcptw;
 
 /*
@@ -101,7 +100,8 @@ static int	maxtcptw;
  * queue pointers in each tcptw structure, are protected using the global
  * tcbinfo lock, which must be held over queue iteration and modification.
  */
-static TAILQ_HEAD(, tcptw)	twq_2msl;
+static VNET_DEFINE(TAILQ_HEAD(, tcptw), twq_2msl);
+#define	V_twq_2msl			VNET(twq_2msl)
 
 static void	tcp_tw_2msl_reset(struct tcptw *, int);
 static void	tcp_tw_2msl_stop(struct tcptw *);
@@ -115,10 +115,10 @@ tcptw_auto_size(void)
 	 * Max out at half the ephemeral port range so that TIME_WAIT
 	 * sockets don't tie up too many ephemeral ports.
 	 */
-	if (ipport_lastauto > ipport_firstauto)
-		halfrange = (ipport_lastauto - ipport_firstauto) / 2;
+	if (V_ipport_lastauto > V_ipport_firstauto)
+		halfrange = (V_ipport_lastauto - V_ipport_firstauto) / 2;
 	else
-		halfrange = (ipport_firstauto - ipport_lastauto) / 2;
+		halfrange = (V_ipport_firstauto - V_ipport_lastauto) / 2;
 	/* Protect against goofy port ranges smaller than 32. */
 	return (imin(imax(halfrange, 32), maxsockets / 5));
 }
@@ -136,7 +136,7 @@ sysctl_maxtcptw(SYSCTL_HANDLER_ARGS)
 	if (error == 0 && req->newptr)
 		if (new >= 32) {
 			maxtcptw = new;
-			uma_zone_set_max(tcptw_zone, maxtcptw);
+			uma_zone_set_max(V_tcptw_zone, maxtcptw);
 		}
 	return (error);
 }
@@ -145,9 +145,10 @@ SYSCTL_PROC(_net_inet_tcp, OID_AUTO, maxtcptw, CTLTYPE_INT|CTLFLAG_RW,
     &maxtcptw, 0, sysctl_maxtcptw, "IU",
     "Maximum number of compressed TCP TIME_WAIT entries");
 
-static int	nolocaltimewait = 0;
-SYSCTL_INT(_net_inet_tcp, OID_AUTO, nolocaltimewait, CTLFLAG_RW,
-    &nolocaltimewait, 0,
+VNET_DEFINE(int, nolocaltimewait) = 0;
+#define	V_nolocaltimewait	VNET(nolocaltimewait)
+SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, nolocaltimewait, CTLFLAG_RW,
+    &VNET_NAME(nolocaltimewait), 0,
     "Do not create compressed TCP TIME_WAIT entries for local connections");
 
 void
@@ -155,22 +156,37 @@ tcp_tw_zone_change(void)
 {
 
 	if (maxtcptw == 0)
-		uma_zone_set_max(tcptw_zone, tcptw_auto_size());
+		uma_zone_set_max(V_tcptw_zone, tcptw_auto_size());
 }
 
 void
 tcp_tw_init(void)
 {
 
-	tcptw_zone = uma_zcreate("tcptw", sizeof(struct tcptw),
+	V_tcptw_zone = uma_zcreate("tcptw", sizeof(struct tcptw),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
 	TUNABLE_INT_FETCH("net.inet.tcp.maxtcptw", &maxtcptw);
 	if (maxtcptw == 0)
-		uma_zone_set_max(tcptw_zone, tcptw_auto_size());
+		uma_zone_set_max(V_tcptw_zone, tcptw_auto_size());
 	else
-		uma_zone_set_max(tcptw_zone, maxtcptw);
-	TAILQ_INIT(&twq_2msl);
+		uma_zone_set_max(V_tcptw_zone, maxtcptw);
+	TAILQ_INIT(&V_twq_2msl);
 }
+
+#ifdef VIMAGE
+void
+tcp_tw_destroy(void)
+{
+	struct tcptw *tw;
+
+	INP_INFO_WLOCK(&V_tcbinfo);
+	while((tw = TAILQ_FIRST(&V_twq_2msl)) != NULL)
+		tcp_twclose(tw, 0);
+	INP_INFO_WUNLOCK(&V_tcbinfo);
+
+	uma_zdestroy(V_tcptw_zone);
+}
+#endif
 
 /*
  * Move a TCP connection into TIME_WAIT state.
@@ -184,18 +200,34 @@ tcp_twstart(struct tcpcb *tp)
 	struct inpcb *inp = tp->t_inpcb;
 	int acknow;
 	struct socket *so;
+#ifdef INET6
+	int isipv6 = inp->inp_inc.inc_flags & INC_ISIPV6;
+#endif
 
-	INP_INFO_WLOCK_ASSERT(&tcbinfo);	/* tcp_tw_2msl_reset(). */
+	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);	/* tcp_tw_2msl_reset(). */
 	INP_WLOCK_ASSERT(inp);
 
-	if (nolocaltimewait && in_localip(inp->inp_faddr)) {
-		tp = tcp_close(tp);
-		if (tp != NULL)
-			INP_WUNLOCK(inp);
-		return;
+	if (V_nolocaltimewait) {
+		int error = 0;
+#ifdef INET6
+		if (isipv6)
+			error = in6_localaddr(&inp->in6p_faddr);
+#endif
+#if defined(INET6) && defined(INET)
+		else
+#endif
+#ifdef INET
+			error = in_localip(inp->inp_faddr);
+#endif
+		if (error) {
+			tp = tcp_close(tp);
+			if (tp != NULL)
+				INP_WUNLOCK(inp);
+			return;
+		}
 	}
 
-	tw = uma_zalloc(tcptw_zone, M_NOWAIT);
+	tw = uma_zalloc(V_tcptw_zone, M_NOWAIT);
 	if (tw == NULL) {
 		tw = tcp_tw_2msl_scan(1);
 		if (tw == NULL) {
@@ -210,7 +242,10 @@ tcp_twstart(struct tcpcb *tp)
 	/*
 	 * Recover last window size sent.
 	 */
-	tw->last_win = (tp->rcv_adv - tp->rcv_nxt) >> tp->rcv_scale;
+	if (SEQ_GT(tp->rcv_adv, tp->rcv_nxt))
+		tw->last_win = (tp->rcv_adv - tp->rcv_nxt) >> tp->rcv_scale;
+	else
+		tw->last_win = 0;
 
 	/*
 	 * Set t_recent if timestamps are used on the connection.
@@ -256,17 +291,17 @@ tcp_twstart(struct tcpcb *tp)
 	if (acknow)
 		tcp_twrespond(tw, TH_ACK);
 	inp->inp_ppcb = tw;
-	inp->inp_vflag |= INP_TIMEWAIT;
+	inp->inp_flags |= INP_TIMEWAIT;
 	tcp_tw_2msl_reset(tw, 0);
 
 	/*
 	 * If the inpcb owns the sole reference to the socket, then we can
 	 * detach and free the socket as it is not needed in time wait.
 	 */
-	if (inp->inp_vflag & INP_SOCKREF) {
+	if (inp->inp_flags & INP_SOCKREF) {
 		KASSERT(so->so_state & SS_PROTOREF,
 		    ("tcp_twstart: !SS_PROTOREF"));
-		inp->inp_vflag &= ~INP_SOCKREF;
+		inp->inp_flags &= ~INP_SOCKREF;
 		INP_WUNLOCK(inp);
 		ACCEPT_LOCK();
 		SOCK_LOCK(so);
@@ -298,7 +333,7 @@ tcp_twrecycleable(struct tcptw *tw)
 	tcp_seq new_iss = tw->iss;
 	tcp_seq new_irs = tw->irs;
 
-	INP_INFO_WLOCK_ASSERT(&tcbinfo);
+	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
 	new_iss += (ticks - tw->t_starttime) * (ISN_BYTES_PER_SECOND / hz);
 	new_irs += (ticks - tw->t_starttime) * (MS_ISN_BYTES_PER_SECOND / hz);
 
@@ -320,14 +355,9 @@ tcp_twcheck(struct inpcb *inp, struct tcpopt *to, struct tcphdr *th,
 	struct tcptw *tw;
 	int thflags;
 	tcp_seq seq;
-#ifdef INET6
-	int isipv6 = (mtod(m, struct ip *)->ip_v == 6) ? 1 : 0;
-#else
-	const int isipv6 = 0;
-#endif
 
 	/* tcbinfo lock required for tcp_twclose(), tcp_tw_2msl_reset(). */
-	INP_INFO_WLOCK_ASSERT(&tcbinfo);
+	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
 	INP_WLOCK_ASSERT(inp);
 
 	/*
@@ -384,7 +414,7 @@ tcp_twcheck(struct inpcb *inp, struct tcpopt *to, struct tcphdr *th,
 	}
 
 	/*
-	 * Drop the the segment if it does not contain an ACK.
+	 * Drop the segment if it does not contain an ACK.
 	 */
 	if ((thflags & TH_ACK) == 0)
 		goto drop;
@@ -404,46 +434,6 @@ tcp_twcheck(struct inpcb *inp, struct tcpopt *to, struct tcphdr *th,
 	if (thflags != TH_ACK || tlen != 0 ||
 	    th->th_seq != tw->rcv_nxt || th->th_ack != tw->snd_nxt)
 		tcp_twrespond(tw, TH_ACK);
-	goto drop;
-
-	/*
-	 * Generate a RST, dropping incoming segment.
-	 * Make ACK acceptable to originator of segment.
-	 * Don't bother to respond if destination was broadcast/multicast.
-	 */
-	if (m->m_flags & (M_BCAST|M_MCAST))
-		goto drop;
-	if (isipv6) {
-#ifdef INET6
-		struct ip6_hdr *ip6;
-
-		/* IPv6 anycast check is done at tcp6_input() */
-		ip6 = mtod(m, struct ip6_hdr *);
-		if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst) ||
-		    IN6_IS_ADDR_MULTICAST(&ip6->ip6_src))
-			goto drop;
-#endif
-	} else {
-		struct ip *ip;
-
-		ip = mtod(m, struct ip *);
-		if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr)) ||
-		    IN_MULTICAST(ntohl(ip->ip_src.s_addr)) ||
-		    ip->ip_src.s_addr == htonl(INADDR_BROADCAST) ||
-		    in_broadcast(ip->ip_dst, m->m_pkthdr.rcvif))
-			goto drop;
-	}
-	if (thflags & TH_ACK) {
-		tcp_respond(NULL,
-		    mtod(m, void *), th, m, 0, th->th_ack, TH_RST);
-	} else {
-		seq = th->th_seq + (thflags & TH_SYN ? 1 : 0);
-		tcp_respond(NULL,
-		    mtod(m, void *), th, m, seq, 0, TH_RST|TH_ACK);
-	}
-	INP_WUNLOCK(inp);
-	return (0);
-
 drop:
 	INP_WUNLOCK(inp);
 	m_freem(m);
@@ -466,9 +456,9 @@ tcp_twclose(struct tcptw *tw, int reuse)
 	 *     notify the socket layer.
 	 */
 	inp = tw->tw_inpcb;
-	KASSERT((inp->inp_vflag & INP_TIMEWAIT), ("tcp_twclose: !timewait"));
+	KASSERT((inp->inp_flags & INP_TIMEWAIT), ("tcp_twclose: !timewait"));
 	KASSERT(intotw(inp) == tw, ("tcp_twclose: inp_ppcb != tw"));
-	INP_INFO_WLOCK_ASSERT(&tcbinfo);	/* tcp_tw_2msl_stop(). */
+	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);	/* tcp_tw_2msl_stop(). */
 	INP_WLOCK_ASSERT(inp);
 
 	tw->tw_inpcb = NULL;
@@ -484,8 +474,8 @@ tcp_twclose(struct tcptw *tw, int reuse)
 		 * in which case another reference exists (XXXRW: think
 		 * about this more), and we don't need to take action.
 		 */
-		if (inp->inp_vflag & INP_SOCKREF) {
-			inp->inp_vflag &= ~INP_SOCKREF;
+		if (inp->inp_flags & INP_SOCKREF) {
+			inp->inp_flags &= ~INP_SOCKREF;
 			INP_WUNLOCK(inp);
 			ACCEPT_LOCK();
 			SOCK_LOCK(so);
@@ -501,35 +491,33 @@ tcp_twclose(struct tcptw *tw, int reuse)
 			 */
 			INP_WUNLOCK(inp);
 		}
-	} else {
-#ifdef INET6
-		if (inp->inp_vflag & INP_IPV6PROTO)
-			in6_pcbfree(inp);
-		else
-#endif
-			in_pcbfree(inp);
-	}
-	tcpstat.tcps_closed++;
+	} else
+		in_pcbfree(inp);
+	TCPSTAT_INC(tcps_closed);
 	crfree(tw->tw_cred);
 	tw->tw_cred = NULL;
 	if (reuse)
 		return;
-	uma_zfree(tcptw_zone, tw);
+	uma_zfree(V_tcptw_zone, tw);
 }
 
 int
 tcp_twrespond(struct tcptw *tw, int flags)
 {
 	struct inpcb *inp = tw->tw_inpcb;
-	struct tcphdr *th;
+#if defined(INET6) || defined(INET)
+	struct tcphdr *th = NULL;
+#endif
 	struct mbuf *m;
+#ifdef INET
 	struct ip *ip = NULL;
+#endif
 	u_int hdrlen, optlen;
-	int error;
+	int error = 0;			/* Keep compiler happy */
 	struct tcpopt to;
 #ifdef INET6
 	struct ip6_hdr *ip6 = NULL;
-	int isipv6 = inp->inp_inc.inc_isipv6;
+	int isipv6 = inp->inp_inc.inc_flags & INC_ISIPV6;
 #endif
 
 	INP_WLOCK_ASSERT(inp);
@@ -540,7 +528,7 @@ tcp_twrespond(struct tcptw *tw, int flags)
 	m->m_data += max_linkhdr;
 
 #ifdef MAC
-	mac_create_mbuf_from_inpcb(inp, m);
+	mac_inpcb_create_mbuf(inp, m);
 #endif
 
 #ifdef INET6
@@ -549,14 +537,19 @@ tcp_twrespond(struct tcptw *tw, int flags)
 		ip6 = mtod(m, struct ip6_hdr *);
 		th = (struct tcphdr *)(ip6 + 1);
 		tcpip_fillheaders(inp, ip6, th);
-	} else
+	}
 #endif
+#if defined(INET6) && defined(INET)
+	else
+#endif
+#ifdef INET
 	{
 		hdrlen = sizeof(struct tcpiphdr);
 		ip = mtod(m, struct ip *);
 		th = (struct tcphdr *)(ip + 1);
 		tcpip_fillheaders(inp, ip, th);
 	}
+#endif
 	to.to_flags = 0;
 
 	/*
@@ -565,7 +558,7 @@ tcp_twrespond(struct tcptw *tw, int flags)
 	 */
 	if (tw->t_recent && flags == TH_ACK) {
 		to.to_flags |= TOF_TS;
-		to.to_tsval = ticks + tw->ts_offset;
+		to.to_tsval = tcp_ts_getticks() + tw->ts_offset;
 		to.to_tsecr = tw->t_recent;
 	}
 	optlen = tcp_addoptions(&to, (u_char *)(th + 1));
@@ -581,32 +574,38 @@ tcp_twrespond(struct tcptw *tw, int flags)
 	th->th_flags = flags;
 	th->th_win = htons(tw->last_win);
 
+	m->m_pkthdr.csum_data = offsetof(struct tcphdr, th_sum);
 #ifdef INET6
 	if (isipv6) {
-		th->th_sum = in6_cksum(m, IPPROTO_TCP, sizeof(struct ip6_hdr),
-		    sizeof(struct tcphdr) + optlen);
+		m->m_pkthdr.csum_flags = CSUM_TCP_IPV6;
+		th->th_sum = in6_cksum_pseudo(ip6,
+		    sizeof(struct tcphdr) + optlen, IPPROTO_TCP, 0);
 		ip6->ip6_hlim = in6_selecthlim(inp, NULL);
 		error = ip6_output(m, inp->in6p_outputopts, NULL,
 		    (tw->tw_so_options & SO_DONTROUTE), NULL, NULL, inp);
-	} else
+	}
 #endif
+#if defined(INET6) && defined(INET)
+	else
+#endif
+#ifdef INET
 	{
+		m->m_pkthdr.csum_flags = CSUM_TCP;
 		th->th_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr,
 		    htons(sizeof(struct tcphdr) + optlen + IPPROTO_TCP));
-		m->m_pkthdr.csum_flags = CSUM_TCP;
-		m->m_pkthdr.csum_data = offsetof(struct tcphdr, th_sum);
 		ip->ip_len = m->m_pkthdr.len;
-		if (path_mtu_discovery)
+		if (V_path_mtu_discovery)
 			ip->ip_off |= IP_DF;
 		error = ip_output(m, inp->inp_options, NULL,
 		    ((tw->tw_so_options & SO_DONTROUTE) ? IP_ROUTETOIF : 0),
 		    NULL, inp);
 	}
+#endif
 	if (flags & TH_ACK)
-		tcpstat.tcps_sndacks++;
+		TCPSTAT_INC(tcps_sndacks);
 	else
-		tcpstat.tcps_sndctrl++;
-	tcpstat.tcps_sndtotal++;
+		TCPSTAT_INC(tcps_sndctrl);
+	TCPSTAT_INC(tcps_sndtotal);
 	return (error);
 }
 
@@ -614,20 +613,20 @@ static void
 tcp_tw_2msl_reset(struct tcptw *tw, int rearm)
 {
 
-	INP_INFO_WLOCK_ASSERT(&tcbinfo);
+	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
 	INP_WLOCK_ASSERT(tw->tw_inpcb);
 	if (rearm)
-		TAILQ_REMOVE(&twq_2msl, tw, tw_2msl);
+		TAILQ_REMOVE(&V_twq_2msl, tw, tw_2msl);
 	tw->tw_time = ticks + 2 * tcp_msl;
-	TAILQ_INSERT_TAIL(&twq_2msl, tw, tw_2msl);
+	TAILQ_INSERT_TAIL(&V_twq_2msl, tw, tw_2msl);
 }
 
 static void
 tcp_tw_2msl_stop(struct tcptw *tw)
 {
 
-	INP_INFO_WLOCK_ASSERT(&tcbinfo);
-	TAILQ_REMOVE(&twq_2msl, tw, tw_2msl);
+	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
+	TAILQ_REMOVE(&V_twq_2msl, tw, tw_2msl);
 }
 
 struct tcptw *
@@ -635,10 +634,10 @@ tcp_tw_2msl_scan(int reuse)
 {
 	struct tcptw *tw;
 
-	INP_INFO_WLOCK_ASSERT(&tcbinfo);
+	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
 	for (;;) {
-		tw = TAILQ_FIRST(&twq_2msl);
-		if (tw == NULL || (!reuse && tw->tw_time > ticks))
+		tw = TAILQ_FIRST(&V_twq_2msl);
+		if (tw == NULL || (!reuse && (tw->tw_time - ticks) > 0))
 			break;
 		INP_WLOCK(tw->tw_inpcb);
 		tcp_twclose(tw, reuse);

@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/linux32/linux.h,v 1.16 2007/09/18 19:50:32 dwmalone Exp $
+ * $FreeBSD$
  */
 
 #ifndef _AMD64_LINUX_H_
@@ -47,7 +47,10 @@ extern u_char linux_debug_map[];
 MALLOC_DECLARE(M_LINUX);
 #endif
 
-#define	LINUX32_USRSTACK	((1ul << 32) - PAGE_SIZE)
+#define	LINUX32_MAXUSER		((1ul << 32) - PAGE_SIZE)
+#define	LINUX32_SHAREDPAGE	(LINUX32_MAXUSER - PAGE_SIZE)
+#define	LINUX32_USRSTACK	LINUX32_SHAREDPAGE
+
 /* XXX 16 = sizeof(linux32_ps_strings) */
 #define	LINUX32_PS_STRINGS	(LINUX32_USRSTACK - 16)
 #define	LINUX32_MAXDSIZ		(512 * 1024 * 1024)	/* 512MB */
@@ -86,6 +89,8 @@ typedef l_long		l_suseconds_t;
 typedef l_long		l_time_t;
 typedef l_uint		l_uid_t;
 typedef l_ushort	l_uid16_t;
+typedef l_int		l_timer_t;
+typedef l_int		l_mqd_t;
 
 typedef struct {
 	l_int		val[2];
@@ -94,7 +99,7 @@ typedef struct {
 typedef struct {
 	l_time_t	tv_sec;
 	l_suseconds_t	tv_usec;
-} __packed l_timeval;
+} l_timeval;
 
 #define	l_fd_set	fd_set
 
@@ -177,8 +182,8 @@ struct l_mmap_argv {
 	l_int		prot;
 	l_int		flags;
 	l_int		fd;
-	l_off_t		pgoff;
-} __packed;
+	l_ulong		pgoff;
+};
 
 /*
  * stat family of syscalls
@@ -304,6 +309,7 @@ struct l_new_utsname {
 #define	LINUX_SIGPOLL		LINUX_SIGIO
 #define	LINUX_SIGPWR		30
 #define	LINUX_SIGSYS		31
+#define	LINUX_SIGRTMIN		32
 
 #define	LINUX_SIGTBLSZ		31
 #define	LINUX_NSIG_WORDS	2
@@ -368,28 +374,28 @@ typedef struct {
 
 /* The Linux sigcontext, pretty much a standard 386 trapframe. */
 struct l_sigcontext {
-	l_int		sc_gs;
-	l_int		sc_fs;
-	l_int		sc_es;
-	l_int		sc_ds;
-	l_int		sc_edi;
-	l_int		sc_esi;
-	l_int		sc_ebp;
-	l_int		sc_esp;
-	l_int		sc_ebx;
-	l_int		sc_edx;
-	l_int		sc_ecx;
-	l_int		sc_eax;
-	l_int		sc_trapno;
-	l_int		sc_err;
-	l_int		sc_eip;
-	l_int		sc_cs;
-	l_int		sc_eflags;
-	l_int		sc_esp_at_signal;
-	l_int		sc_ss;
-	l_int		sc_387;
-	l_int		sc_mask;
-	l_int		sc_cr2;
+	l_uint		sc_gs;
+	l_uint		sc_fs;
+	l_uint		sc_es;
+	l_uint		sc_ds;
+	l_uint		sc_edi;
+	l_uint		sc_esi;
+	l_uint		sc_ebp;
+	l_uint		sc_esp;
+	l_uint		sc_ebx;
+	l_uint		sc_edx;
+	l_uint		sc_ecx;
+	l_uint		sc_eax;
+	l_uint		sc_trapno;
+	l_uint		sc_err;
+	l_uint		sc_eip;
+	l_uint		sc_cs;
+	l_uint		sc_eflags;
+	l_uint		sc_esp_at_signal;
+	l_uint		sc_ss;
+	l_uint		sc_387;
+	l_uint		sc_mask;
+	l_uint		sc_cr2;
 } __packed;
 
 struct l_ucontext {
@@ -403,10 +409,10 @@ struct l_ucontext {
 #define	LINUX_SI_MAX_SIZE	128
 #define	LINUX_SI_PAD_SIZE	((LINUX_SI_MAX_SIZE/sizeof(l_int)) - 3)
 
-union l_sigval {
+typedef union l_sigval {
 	l_int		sival_int;
 	l_uintptr_t	sival_ptr;
-};
+} l_sigval_t;
 
 typedef struct l_siginfo {
 	l_int		lsi_signo;
@@ -417,23 +423,26 @@ typedef struct l_siginfo {
 
 		struct {
 			l_pid_t		_pid;
-			l_uid16_t	_uid;
+			l_uid_t		_uid;
 		} __packed _kill;
 
 		struct {
-			l_uint		_timer1;
-			l_uint		_timer2;
+			l_timer_t	_tid;
+			l_int		_overrun;
+			char		_pad[sizeof(l_uid_t) - sizeof(l_int)];
+			l_sigval_t	_sigval;
+			l_int		_sys_private;
 		} __packed _timer;
 
 		struct {
 			l_pid_t		_pid;		/* sender's pid */
-			l_uid16_t	_uid;		/* sender's uid */
-			union l_sigval _sigval;
+			l_uid_t		_uid;		/* sender's uid */
+			l_sigval_t	_sigval;
 		} __packed _rt;
 
 		struct {
 			l_pid_t		_pid;		/* which child */
-			l_uid16_t	_uid;		/* sender's uid */
+			l_uid_t		_uid;		/* sender's uid */
 			l_int		_status;	/* exit code */
 			l_clock_t	_utime;
 			l_clock_t	_stime;
@@ -444,7 +453,7 @@ typedef struct l_siginfo {
 		} __packed _sigfault;
 
 		struct {
-			l_int		_band;	/* POLL_IN,POLL_OUT,POLL_MSG */
+			l_long		_band;	/* POLL_IN,POLL_OUT,POLL_MSG */
 			l_int		_fd;
 		} __packed _sigpoll;
 	} _sifields;
@@ -452,6 +461,9 @@ typedef struct l_siginfo {
 
 #define	lsi_pid		_sifields._kill._pid
 #define	lsi_uid		_sifields._kill._uid
+#define	lsi_tid		_sifields._timer._tid
+#define	lsi_overrun	_sifields._timer._overrun
+#define	lsi_sys_private	_sifields._timer._sys_private
 #define	lsi_status	_sifields._sigchld._status
 #define	lsi_utime	_sifields._sigchld._utime
 #define	lsi_stime	_sifields._sigchld._stime
@@ -584,7 +596,15 @@ int	linux_ioctl_unregister_handler(struct linux_ioctl_handler *h);
 #define	LINUX_F_WRLCK		1
 #define	LINUX_F_UNLCK		2
 
-#define	LINUX_AT_FDCWD		-100
+/*
+ * posix_fadvise advice
+ */
+#define	LINUX_POSIX_FADV_NORMAL		0
+#define	LINUX_POSIX_FADV_RANDOM		1
+#define	LINUX_POSIX_FADV_SEQUENTIAL    	2
+#define	LINUX_POSIX_FADV_WILLNEED      	3
+#define	LINUX_POSIX_FADV_DONTNEED      	4
+#define	LINUX_POSIX_FADV_NOREUSE       	5
 
 /*
  * mount flags
@@ -663,14 +683,7 @@ union l_semun {
 #define	LINUX_GETSOCKOPT	15
 #define	LINUX_SENDMSG		16
 #define	LINUX_RECVMSG		17
-
-#define	LINUX_AF_UNSPEC		0
-#define	LINUX_AF_UNIX		1
-#define	LINUX_AF_INET		2
-#define	LINUX_AF_AX25		3
-#define	LINUX_AF_IPX		4
-#define	LINUX_AF_APPLETALK	5
-#define	LINUX_AF_INET6		10
+#define	LINUX_ACCEPT4		18
 
 #define	LINUX_SOL_SOCKET	1
 #define	LINUX_SOL_IP		0
@@ -715,6 +728,22 @@ struct l_sockaddr {
 	l_ushort	sa_family;
 	char		sa_data[14];
 } __packed;
+
+struct l_msghdr {
+	l_uintptr_t	msg_name;
+	l_int		msg_namelen;
+	l_uintptr_t	msg_iov;
+	l_size_t	msg_iovlen;
+	l_uintptr_t	msg_control;
+	l_size_t	msg_controllen;
+	l_uint		msg_flags;
+};
+
+struct l_cmsghdr {
+	l_size_t	cmsg_len;
+	l_int		cmsg_level;
+	l_int		cmsg_type;
+};
 
 struct l_ifmap {
 	l_ulong		mem_start;
@@ -867,9 +896,6 @@ struct l_user_desc {
 #define	LINUX_CLOCK_REALTIME_HR		4
 #define	LINUX_CLOCK_MONOTONIC_HR	5
 
-typedef int l_timer_t;
-typedef int l_mqd_t;
-
 #define	LINUX_CLONE_VM			0x00000100
 #define	LINUX_CLONE_FS			0x00000200
 #define	LINUX_CLONE_FILES		0x00000400
@@ -886,5 +912,29 @@ typedef int l_mqd_t;
 #define	LINUX_THREADING_FLAGS					\
 	(LINUX_CLONE_VM | LINUX_CLONE_FS | LINUX_CLONE_FILES |	\
 	LINUX_CLONE_SIGHAND | LINUX_CLONE_THREAD)
+
+struct iovec;
+
+struct l_iovec32 {
+	uint32_t	iov_base;
+	l_size_t	iov_len;
+};
+
+int linux32_copyiniov(struct l_iovec32 *iovp32, l_ulong iovcnt,
+			    struct iovec **iovp, int error);
+
+/* robust futexes */
+struct linux_robust_list {
+	l_uintptr_t			next;
+};
+
+struct linux_robust_list_head {
+	struct linux_robust_list	list;
+	l_long				futex_offset;
+	l_uintptr_t			pending_list;
+};
+
+int linux_set_upcall_kse(struct thread *td, register_t stack);
+int linux_set_cloned_tls(struct thread *td, void *desc);
 
 #endif /* !_AMD64_LINUX_H_ */

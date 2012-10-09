@@ -25,20 +25,24 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_kthread.c,v 1.38.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/cpuset.h>
 #include <sys/kthread.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/resourcevar.h>
+#include <sys/rwlock.h>
 #include <sys/signalvar.h>
 #include <sys/sx.h>
 #include <sys/unistd.h>
 #include <sys/wait.h>
 #include <sys/sched.h>
+#include <vm/vm.h>
+#include <vm/vm_extern.h>
 
 #include <machine/stdarg.h>
 
@@ -56,7 +60,7 @@ kproc_start(udata)
 	const struct kproc_desc	*kp = udata;
 	int error;
 
-	error = kthread_create((void (*)(void *))kp->func, NULL,
+	error = kproc_create((void (*)(void *))kp->func, NULL,
 		    kp->global_procpp, 0, 0, "%s", kp->arg0);
 	if (error)
 		panic("kproc_start: %s: error %d", kp->arg0, error);
@@ -73,7 +77,7 @@ kproc_start(udata)
  * fmt and following will be *printf'd into (*newpp)->p_comm (for ps, etc.).
  */
 int
-kthread_create(void (*func)(void *), void *arg,
+kproc_create(void (*func)(void *), void *arg,
     struct proc **newpp, int flags, int pages, const char *fmt, ...)
 {
 	int error;
@@ -82,10 +86,10 @@ kthread_create(void (*func)(void *), void *arg,
 	struct proc *p2;
 
 	if (!proc0.p_stats)
-		panic("kthread_create called too soon");
+		panic("kproc_create called too soon");
 
 	error = fork1(&thread0, RFMEM | RFFDG | RFPROC | RFSTOPPED | flags,
-	    pages, &p2);
+	    pages, &p2, NULL, 0);
 	if (error)
 		return error;
 
@@ -95,7 +99,9 @@ kthread_create(void (*func)(void *), void *arg,
 
 	/* this is a non-swapped system process */
 	PROC_LOCK(p2);
+	td = FIRST_THREAD_IN_PROC(p2);
 	p2->p_flag |= P_SYSTEM | P_KTHREAD;
+	td->td_pflags |= TDP_KTHREAD;
 	mtx_lock(&p2->p_sigacts->ps_mtx);
 	p2->p_sigacts->ps_flag |= PS_NOCLDWAIT;
 	mtx_unlock(&p2->p_sigacts->ps_mtx);
@@ -105,24 +111,34 @@ kthread_create(void (*func)(void *), void *arg,
 	va_start(ap, fmt);
 	vsnprintf(p2->p_comm, sizeof(p2->p_comm), fmt, ap);
 	va_end(ap);
+	/* set up arg0 for 'ps', et al */
+	va_start(ap, fmt);
+	vsnprintf(td->td_name, sizeof(td->td_name), fmt, ap);
+	va_end(ap);
+#ifdef KTR
+	sched_clear_tdname(td);
+#endif
 
 	/* call the processes' main()... */
-	td = FIRST_THREAD_IN_PROC(p2);
 	cpu_set_fork_handler(td, func, arg);
+
+	/* Avoid inheriting affinity from a random parent. */
+	cpuset_setthread(td->td_tid, cpuset_root);
+	thread_lock(td);
 	TD_SET_CAN_RUN(td);
+	sched_prio(td, PVM);
+	sched_user_prio(td, PUSER);
 
 	/* Delay putting it on the run queue until now. */
-	if (!(flags & RFSTOPPED)) {
-		thread_lock(td);
+	if (!(flags & RFSTOPPED))
 		sched_add(td, SRQ_BORING); 
-		thread_unlock(td);
-	}
+	thread_unlock(td);
 
 	return 0;
 }
 
 void
-kthread_exit(int ecode)
+kproc_exit(int ecode)
 {
 	struct thread *td;
 	struct proc *p;
@@ -154,7 +170,7 @@ kthread_exit(int ecode)
  * Participation is voluntary.
  */
 int
-kthread_suspend(struct proc *p, int timo)
+kproc_suspend(struct proc *p, int timo)
 {
 	/*
 	 * Make sure this is indeed a system process and we can safely
@@ -167,11 +183,11 @@ kthread_suspend(struct proc *p, int timo)
 	}
 	SIGADDSET(p->p_siglist, SIGSTOP);
 	wakeup(p);
-	return msleep(&p->p_siglist, &p->p_mtx, PPAUSE | PDROP, "suspkt", timo);
+	return msleep(&p->p_siglist, &p->p_mtx, PPAUSE | PDROP, "suspkp", timo);
 }
 
 int
-kthread_resume(struct proc *p)
+kproc_resume(struct proc *p)
 {
 	/*
 	 * Make sure this is indeed a system process and we can safely
@@ -189,12 +205,266 @@ kthread_resume(struct proc *p)
 }
 
 void
-kthread_suspend_check(struct proc *p)
+kproc_suspend_check(struct proc *p)
 {
 	PROC_LOCK(p);
 	while (SIGISMEMBER(p->p_siglist, SIGSTOP)) {
 		wakeup(&p->p_siglist);
-		msleep(&p->p_siglist, &p->p_mtx, PPAUSE, "ktsusp", 0);
+		msleep(&p->p_siglist, &p->p_mtx, PPAUSE, "kpsusp", 0);
 	}
 	PROC_UNLOCK(p);
+}
+
+
+/*
+ * Start a kernel thread.  
+ *
+ * This function is used to start "internal" daemons and intended
+ * to be called from SYSINIT().
+ */
+
+void
+kthread_start(udata)
+	const void *udata;
+{
+	const struct kthread_desc	*kp = udata;
+	int error;
+
+	error = kthread_add((void (*)(void *))kp->func, NULL,
+		    NULL, kp->global_threadpp, 0, 0, "%s", kp->arg0);
+	if (error)
+		panic("kthread_start: %s: error %d", kp->arg0, error);
+}
+
+/*
+ * Create a kernel thread.  It shares its address space
+ * with proc0 - ie: kernel only.
+ *
+ * func is the function to start.
+ * arg is the parameter to pass to function on first startup.
+ * newtdp is the return value pointing to the thread's struct thread.
+ *  ** XXX fix this --> flags are flags to fork1 (in unistd.h) 
+ * fmt and following will be *printf'd into (*newtd)->td_name (for ps, etc.).
+ */
+int
+kthread_add(void (*func)(void *), void *arg, struct proc *p,
+    struct thread **newtdp, int flags, int pages, const char *fmt, ...)
+{
+	va_list ap;
+	struct thread *newtd, *oldtd;
+
+	if (!proc0.p_stats)
+		panic("kthread_add called too soon");
+
+	/* If no process supplied, put it on proc0 */
+	if (p == NULL) {
+		p = &proc0;
+		oldtd = &thread0;
+	} else {
+		oldtd = FIRST_THREAD_IN_PROC(p);
+	}
+
+	/* Initialize our new td  */
+	newtd = thread_alloc(pages);
+	if (newtd == NULL)
+		return (ENOMEM);
+
+	bzero(&newtd->td_startzero,
+	    __rangeof(struct thread, td_startzero, td_endzero));
+/* XXX check if we should zero. */
+	bcopy(&oldtd->td_startcopy, &newtd->td_startcopy,
+	    __rangeof(struct thread, td_startcopy, td_endcopy));
+
+	/* set up arg0 for 'ps', et al */
+	va_start(ap, fmt);
+	vsnprintf(newtd->td_name, sizeof(newtd->td_name), fmt, ap);
+	va_end(ap);
+
+	newtd->td_proc = p;  /* needed for cpu_set_upcall */
+
+	/* XXX optimise this probably? */
+	/* On x86 (and probably the others too) it is way too full of junk */
+	/* Needs a better name */
+	cpu_set_upcall(newtd, oldtd);
+	/* put the designated function(arg) as the resume context */
+	cpu_set_fork_handler(newtd, func, arg);
+
+	newtd->td_pflags |= TDP_KTHREAD;
+	newtd->td_ucred = crhold(p->p_ucred);
+
+	/* this code almost the same as create_thread() in kern_thr.c */
+	PROC_LOCK(p);
+	p->p_flag |= P_HADTHREADS;
+	newtd->td_sigmask = oldtd->td_sigmask; /* XXX dubious */
+	thread_link(newtd, p);
+	thread_lock(oldtd);
+	/* let the scheduler know about these things. */
+	sched_fork_thread(oldtd, newtd);
+	TD_SET_CAN_RUN(newtd);
+	thread_unlock(oldtd);
+	PROC_UNLOCK(p);
+
+	tidhash_add(newtd);
+
+	/* Avoid inheriting affinity from a random parent. */
+	cpuset_setthread(newtd->td_tid, cpuset_root);
+
+	/* Delay putting it on the run queue until now. */
+	if (!(flags & RFSTOPPED)) {
+		thread_lock(newtd);
+		sched_add(newtd, SRQ_BORING); 
+		thread_unlock(newtd);
+	}
+	if (newtdp)
+		*newtdp = newtd;
+	return 0;
+}
+
+void
+kthread_exit(void)
+{
+	struct proc *p;
+
+	p = curthread->td_proc;
+
+	/* A module may be waiting for us to exit. */
+	wakeup(curthread);
+
+	/*
+	 * The last exiting thread in a kernel process must tear down
+	 * the whole process.
+	 */
+	rw_wlock(&tidhash_lock);
+	PROC_LOCK(p);
+	if (p->p_numthreads == 1) {
+		PROC_UNLOCK(p);
+		rw_wunlock(&tidhash_lock);
+		kproc_exit(0);
+	}
+	LIST_REMOVE(curthread, td_hash);
+	rw_wunlock(&tidhash_lock);
+	PROC_SLOCK(p);
+	thread_exit();
+}
+
+/*
+ * Advise a kernel process to suspend (or resume) in its main loop.
+ * Participation is voluntary.
+ */
+int
+kthread_suspend(struct thread *td, int timo)
+{
+	struct proc *p;
+
+	p = td->td_proc;
+
+	/*
+	 * td_pflags should not be read by any thread other than
+	 * curthread, but as long as this flag is invariant during the
+	 * thread's lifetime, it is OK to check its state.
+	 */
+	if ((td->td_pflags & TDP_KTHREAD) == 0)
+		return (EINVAL);
+
+	/*
+	 * The caller of the primitive should have already checked that the
+	 * thread is up and running, thus not being blocked by other
+	 * conditions.
+	 */
+	PROC_LOCK(p);
+	thread_lock(td);
+	td->td_flags |= TDF_KTH_SUSP;
+	thread_unlock(td);
+	return (msleep(&td->td_flags, &p->p_mtx, PPAUSE | PDROP, "suspkt",
+	    timo));
+}
+
+/*
+ * Resume a thread previously put asleep with kthread_suspend().
+ */
+int
+kthread_resume(struct thread *td)
+{
+	struct proc *p;
+
+	p = td->td_proc;
+
+	/*
+	 * td_pflags should not be read by any thread other than
+	 * curthread, but as long as this flag is invariant during the
+	 * thread's lifetime, it is OK to check its state.
+	 */
+	if ((td->td_pflags & TDP_KTHREAD) == 0)
+		return (EINVAL);
+
+	PROC_LOCK(p);
+	thread_lock(td);
+	td->td_flags &= ~TDF_KTH_SUSP;
+	thread_unlock(td);
+	wakeup(&td->td_flags);
+	PROC_UNLOCK(p);
+	return (0);
+}
+
+/*
+ * Used by the thread to poll as to whether it should yield/sleep
+ * and notify the caller that is has happened.
+ */
+void
+kthread_suspend_check()
+{
+	struct proc *p;
+	struct thread *td;
+
+	td = curthread;
+	p = td->td_proc;
+
+	if ((td->td_pflags & TDP_KTHREAD) == 0)
+		panic("%s: curthread is not a valid kthread", __func__);
+
+	/*
+	 * As long as the double-lock protection is used when accessing the
+	 * TDF_KTH_SUSP flag, synchronizing the read operation via proc mutex
+	 * is fine.
+	 */
+	PROC_LOCK(p);
+	while (td->td_flags & TDF_KTH_SUSP) {
+		wakeup(&td->td_flags);
+		msleep(&td->td_flags, &p->p_mtx, PPAUSE, "ktsusp", 0);
+	}
+	PROC_UNLOCK(p);
+}
+
+int
+kproc_kthread_add(void (*func)(void *), void *arg,
+            struct proc **procptr, struct thread **tdptr,
+            int flags, int pages, const char *procname, const char *fmt, ...) 
+{
+	int error;
+	va_list ap;
+	char buf[100];
+	struct thread *td;
+
+	if (*procptr == 0) {
+		error = kproc_create(func, arg,
+		    	procptr, flags, pages, "%s", procname);
+		if (error)
+			return (error);
+		td = FIRST_THREAD_IN_PROC(*procptr);
+		if (tdptr)
+			*tdptr = td;
+		va_start(ap, fmt);
+		vsnprintf(td->td_name, sizeof(td->td_name), fmt, ap);
+		va_end(ap);
+#ifdef KTR
+		sched_clear_tdname(td);
+#endif
+		return (0); 
+	}
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	error = kthread_add(func, arg, *procptr,
+		    tdptr, flags, pages, "%s", buf);
+	return (error);
 }

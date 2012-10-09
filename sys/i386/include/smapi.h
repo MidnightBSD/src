@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/smapi.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Matthew N. Dodd <winter@freebsd.org>
  * All rights reserved.

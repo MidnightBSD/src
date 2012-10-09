@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/jmphyreg.h,v 1.1.2.2 2011/01/27 19:04:17 yongari Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_DEV_MII_JMPHYREG_H_

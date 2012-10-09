@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Hans Petter Selasky
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/acpica/acpi_smbus.h,v 1.1 2005/10/23 00:20:13 njl Exp $
+ *	$FreeBSD$
  */
 
 #ifndef _ACPI_SMBUS_H_

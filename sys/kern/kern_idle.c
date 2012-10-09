@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_idle.c,v 1.48.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,29 +58,28 @@ idle_setup(void *dummy)
 	struct thread *td;
 	int error;
 
+	p = NULL; /* start with no idle process */
 #ifdef SMP
-	SLIST_FOREACH(pc, &cpuhead, pc_allcpu) {
-		error = kthread_create(sched_idletd, NULL, &p,
-		    RFSTOPPED | RFHIGHPID, 0, "idle: cpu%d", pc->pc_cpuid);
-		pc->pc_idlethread = FIRST_THREAD_IN_PROC(p);
+	STAILQ_FOREACH(pc, &cpuhead, pc_allcpu) {
+#endif
+#ifdef SMP
+		error = kproc_kthread_add(sched_idletd, NULL, &p, &td,
+		    RFSTOPPED | RFHIGHPID, 0, "idle", "idle: cpu%d", pc->pc_cpuid);
+		pc->pc_idlethread = td;
 #else
-		error = kthread_create(sched_idletd, NULL, &p,
-		    RFSTOPPED | RFHIGHPID, 0, "idle");
-		PCPU_SET(idlethread, FIRST_THREAD_IN_PROC(p));
+		error = kproc_kthread_add(sched_idletd, NULL, &p, &td,
+		    RFSTOPPED | RFHIGHPID, 0, "idle", "idle");
+		PCPU_SET(idlethread, td);
 #endif
 		if (error)
-			panic("idle_setup: kthread_create error %d\n", error);
+			panic("idle_setup: kproc_create error %d\n", error);
 
-		PROC_LOCK(p);
-		p->p_flag |= P_NOLOAD;
-		td = FIRST_THREAD_IN_PROC(p);
 		thread_lock(td);
 		TD_SET_CAN_RUN(td);
-		td->td_flags |= TDF_IDLETD;
+		td->td_flags |= TDF_IDLETD | TDF_NOLOAD;
 		sched_class(td, PRI_IDLE);
 		sched_prio(td, PRI_MAX_IDLE);
 		thread_unlock(td);
-		PROC_UNLOCK(p);
 #ifdef SMP
 	}
 #endif

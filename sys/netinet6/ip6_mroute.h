@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: ip6_mroute.h,v 1.19 2001/06/14 06:12:55 suz Exp $
- * $FreeBSD: src/sys/netinet6/ip6_mroute.h,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*	BSDI ip_mroute.h,v 2.5 1996/10/11 16:01:48 pjd Exp	*/
@@ -212,7 +212,7 @@ struct mif6 {
 	u_quad_t	m6_pkt_out;	/* # pkts out on interface           */
 	u_quad_t	m6_bytes_in;	/* # bytes in on interface	     */
 	u_quad_t	m6_bytes_out;	/* # bytes out on interface	     */
-	struct route_in6 m6_route;/* cached route if this is a tunnel */
+	struct route_in6 m6_route;	/* cached route */
 #ifdef notyet
 	u_int		m6_rsvp_on;	/* RSVP listening on this vif */
 	struct socket   *m6_rsvpd;	/* RSVP daemon socket */
@@ -265,7 +265,7 @@ struct rtdetq {		/* XXX: rtdetq is also defined in ip_mroute.h */
 extern int	(*ip6_mrouter_set)(struct socket *so, struct sockopt *sopt);
 extern int	(*ip6_mrouter_get)(struct socket *so, struct sockopt *sopt);
 extern int	(*ip6_mrouter_done)(void);
-extern int	(*mrt6_ioctl)(int, caddr_t);
+extern int	(*mrt6_ioctl)(u_long, caddr_t);
 #endif /* _KERNEL */
 
 #endif /* !_NETINET6_IP6_MROUTE_H_ */

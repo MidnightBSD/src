@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/aio.h,v 1.5 2011/10/22 14:32:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997 John S. Dyson.  All rights reserved.
  *
@@ -14,13 +13,12 @@
  * bad that happens because of using this software isn't the responsibility
  * of the author.  This software is distributed AS-IS.
  *
- * $FreeBSD: src/sys/sys/aio.h,v 1.32.2.1 2009/01/21 18:38:12 jhb Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_AIO_H_
 #define	_SYS_AIO_H_
 
-#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/signal.h>
 
@@ -80,6 +78,8 @@ typedef struct aiocb {
 
 #ifndef _KERNEL
 
+struct timespec;
+
 __BEGIN_DECLS
 /*
  * Asynchronously read from a file
@@ -124,7 +124,9 @@ int	aio_cancel(int, struct aiocb *);
  */
 int	aio_suspend(const struct aiocb * const[], int, const struct timespec *);
 
+#ifdef __BSD_VISIBLE
 int	aio_waitcomplete(struct aiocb **, struct timespec *);
+#endif
 
 int	aio_fsync(int op, struct aiocb *aiocbp);
 __END_DECLS

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/ah_osdep.c,v 1.3.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -72,12 +71,7 @@ extern	void ath_hal_assert_failed(const char* filename,
 		int lineno, const char* msg);
 #endif
 #ifdef AH_DEBUG
-#if HAL_ABI_VERSION >= 0x08090101
-extern	void HALDEBUG(struct ath_hal *ah, u_int mask, const char* fmt, ...);
-#else
-extern	void HALDEBUG(struct ath_hal *ah, const char* fmt, ...);
-extern	void HALDEBUGn(struct ath_hal *ah, u_int level, const char* fmt, ...);
-#endif
+extern	void DO_HALDEBUG(struct ath_hal *ah, u_int mask, const char* fmt, ...);
 #endif /* AH_DEBUG */
 
 /* NB: put this here instead of the driver to avoid circular references */
@@ -85,25 +79,11 @@ SYSCTL_NODE(_hw, OID_AUTO, ath, CTLFLAG_RD, 0, "Atheros driver parameters");
 SYSCTL_NODE(_hw_ath, OID_AUTO, hal, CTLFLAG_RD, 0, "Atheros HAL parameters");
 
 #ifdef AH_DEBUG
-static	int ath_hal_debug = 0;
+int ath_hal_debug = 0;
 SYSCTL_INT(_hw_ath_hal, OID_AUTO, debug, CTLFLAG_RW, &ath_hal_debug,
-	    0, "Atheros HAL debugging printfs");
+    0, "Atheros HAL debugging printfs");
 TUNABLE_INT("hw.ath.hal.debug", &ath_hal_debug);
 #endif /* AH_DEBUG */
-
-/* NB: these are deprecated; they exist for now for compatibility */
-int	ath_hal_dma_beacon_response_time = 2;	/* in TU's */
-SYSCTL_INT(_hw_ath_hal, OID_AUTO, dma_brt, CTLFLAG_RW,
-	   &ath_hal_dma_beacon_response_time, 0,
-	   "Atheros HAL DMA beacon response time");
-int	ath_hal_sw_beacon_response_time = 10;	/* in TU's */
-SYSCTL_INT(_hw_ath_hal, OID_AUTO, sw_brt, CTLFLAG_RW,
-	   &ath_hal_sw_beacon_response_time, 0,
-	   "Atheros HAL software beacon response time");
-int	ath_hal_additional_swba_backoff = 0;	/* in TU's */
-SYSCTL_INT(_hw_ath_hal, OID_AUTO, swba_backoff, CTLFLAG_RW,
-	   &ath_hal_additional_swba_backoff, 0,
-	   "Atheros HAL additional SWBA backoff time");
 
 MALLOC_DEFINE(M_ATH_HAL, "ath_hal", "ath hal data");
 
@@ -116,7 +96,7 @@ ath_hal_malloc(size_t size)
 void
 ath_hal_free(void* p)
 {
-	return free(p, M_ATH_HAL);
+	free(p, M_ATH_HAL);
 }
 
 void
@@ -141,40 +121,22 @@ ath_hal_ether_sprintf(const u_int8_t *mac)
 }
 
 #ifdef AH_DEBUG
-#if HAL_ABI_VERSION >= 0x08090101
-void
-HALDEBUG(struct ath_hal *ah, u_int mask, const char* fmt, ...)
-{
-	if (ath_hal_debug & mask) {
-		__va_list ap;
-		va_start(ap, fmt);
-		ath_hal_vprintf(ah, fmt, ap);
-		va_end(ap);
-	}
-}
-#else
-void
-HALDEBUG(struct ath_hal *ah, const char* fmt, ...)
-{
-	if (ath_hal_debug) {
-		__va_list ap;
-		va_start(ap, fmt);
-		ath_hal_vprintf(ah, fmt, ap);
-		va_end(ap);
-	}
-}
 
+/* This must match the definition in ath_hal/ah_debug.h */
+#define	HAL_DEBUG_UNMASKABLE	0xf0000000
 void
-HALDEBUGn(struct ath_hal *ah, u_int level, const char* fmt, ...)
+DO_HALDEBUG(struct ath_hal *ah, u_int mask, const char* fmt, ...)
 {
-	if (ath_hal_debug >= level) {
+	if ((mask == HAL_DEBUG_UNMASKABLE) ||
+	    (ah->ah_config.ah_debug & mask) ||
+	    (ath_hal_debug & mask)) {
 		__va_list ap;
 		va_start(ap, fmt);
 		ath_hal_vprintf(ah, fmt, ap);
 		va_end(ap);
 	}
 }
-#endif
+#undef	HAL_DEBUG_UNMASKABLE
 #endif /* AH_DEBUG */
 
 #ifdef AH_DEBUG_ALQ
@@ -198,7 +160,11 @@ HALDEBUGn(struct ath_hal *ah, u_int level, const char* fmt, ...)
 static	struct alq *ath_hal_alq;
 static	int ath_hal_alq_emitdev;	/* need to emit DEVICE record */
 static	u_int ath_hal_alq_lost;		/* count of lost records */
-static	const char *ath_hal_logfile = "/tmp/ath_hal.log";
+static	char ath_hal_logfile[MAXPATHLEN] = "/tmp/ath_hal.log";
+
+SYSCTL_STRING(_hw_ath_hal, OID_AUTO, alq_logfile, CTLFLAG_RW,
+    &ath_hal_logfile, sizeof(kernelname), "Name of ALQ logfile");
+
 static	u_int ath_hal_alq_qsize = 64*1024;
 
 static int
@@ -284,7 +250,7 @@ ath_hal_reg_write(struct ath_hal *ah, u_int32_t reg, u_int32_t val)
 		}
 	}
 #if _BYTE_ORDER == _BIG_ENDIAN
-	if (reg >= 0x4000 && reg < 0x5000)
+	if (OS_REG_UNSWAPPED(reg))
 		bus_space_write_4(tag, h, reg, val);
 	else
 #endif
@@ -299,7 +265,7 @@ ath_hal_reg_read(struct ath_hal *ah, u_int32_t reg)
 	u_int32_t val;
 
 #if _BYTE_ORDER == _BIG_ENDIAN
-	if (reg >= 0x4000 && reg < 0x5000)
+	if (OS_REG_UNSWAPPED(reg))
 		val = bus_space_read_4(tag, h, reg);
 	else
 #endif
@@ -350,7 +316,7 @@ ath_hal_reg_write(struct ath_hal *ah, u_int32_t reg, u_int32_t val)
 	bus_space_handle_t h = ah->ah_sh;
 
 #if _BYTE_ORDER == _BIG_ENDIAN
-	if (reg >= 0x4000 && reg < 0x5000)
+	if (OS_REG_UNSWAPPED(reg))
 		bus_space_write_4(tag, h, reg, val);
 	else
 #endif
@@ -365,7 +331,7 @@ ath_hal_reg_read(struct ath_hal *ah, u_int32_t reg)
 	u_int32_t val;
 
 #if _BYTE_ORDER == _BIG_ENDIAN
-	if (reg >= 0x4000 && reg < 0x5000)
+	if (OS_REG_UNSWAPPED(reg))
 		val = bus_space_read_4(tag, h, reg);
 	else
 #endif
@@ -383,33 +349,3 @@ ath_hal_assert_failed(const char* filename, int lineno, const char *msg)
 	panic("ath_hal_assert");
 }
 #endif /* AH_ASSERT */
-
-/*
- * Delay n microseconds.
- */
-void
-ath_hal_delay(int n)
-{
-	DELAY(n);
-}
-
-u_int32_t
-ath_hal_getuptime(struct ath_hal *ah)
-{
-	struct bintime bt;
-	getbinuptime(&bt);
-	return (bt.sec * 1000) +
-		(((uint64_t)1000 * (uint32_t)(bt.frac >> 32)) >> 32);
-}
-
-void
-ath_hal_memzero(void *dst, size_t n)
-{
-	bzero(dst, n);
-}
-
-void *
-ath_hal_memcpy(void *dst, const void *src, size_t n)
-{
-	return memcpy(dst, src, n);
-}

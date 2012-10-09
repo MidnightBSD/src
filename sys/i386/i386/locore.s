@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)locore.s	7.3 (Berkeley) 5/13/91
- * $FreeBSD: src/sys/i386/i386/locore.s,v 1.188 2007/03/24 19:53:22 alc Exp $
+ * $FreeBSD$
  *
  *		originally from: locore.s, by William F. Jolitz
  *
@@ -72,16 +72,6 @@
 	.set	PTD,PTmap + (PTDPTDI * PAGE_SIZE)
 	.set	PTDpde,PTD + (PTDPTDI * PDESIZE)
 
-#ifdef SMP
-/*
- * Define layout of per-cpu address space.
- * This is "constructed" in locore.s on the BSP and in mp_machdep.c
- * for each AP.  DO NOT REORDER THESE WITHOUT UPDATING THE REST!
- */
-	.globl	SMP_prvspace
-	.set	SMP_prvspace,(MPPTDI << PDRSHIFT)
-#endif /* SMP */
-
 /*
  * Compiled KERNBASE location and the kernel load address
  */
@@ -106,16 +96,6 @@ bootinfo:	.space	BOOTINFO_SIZE	/* bootinfo that we can handle */
 KERNend:	.long	0		/* phys addr end of kernel (just after bss) */
 physfree:	.long	0		/* phys addr of next free page */
 
-#ifdef SMP
-		.globl	cpu0prvpage
-cpu0pp:		.long	0		/* phys addr cpu0 private pg */
-cpu0prvpage:	.long	0		/* relocated version */
-
-		.globl	SMPpt
-SMPptpa:	.long	0		/* phys addr SMP page table */
-SMPpt:		.long	0		/* relocated version */
-#endif /* SMP */
-
 	.globl	IdlePTD
 IdlePTD:	.long	0		/* phys addr of kernel PTD */
 
@@ -124,15 +104,14 @@ IdlePTD:	.long	0		/* phys addr of kernel PTD */
 IdlePDPT:	.long	0		/* phys addr of kernel PDPT */
 #endif
 
-#ifdef SMP
+	.globl	KPTmap
+KPTmap:		.long	0		/* address of kernel page tables */
+
 	.globl	KPTphys
-#endif
 KPTphys:	.long	0		/* phys addr of kernel page tables */
 
 	.globl	proc0kstack
-proc0uarea:	.long	0		/* address of proc 0 uarea (unused)*/
 proc0kstack:	.long	0		/* address of proc 0 kstack space */
-p0upa:		.long	0		/* phys addr of proc0 UAREA (unused) */
 p0kpa:		.long	0		/* phys addr of proc0's STACK */
 
 vm86phystk:	.long	0		/* PA of vm86/bios stack */
@@ -358,7 +337,7 @@ NON_GPROF_ENTRY(sigcode)
 	pushl	%eax
 	testl	$PSL_VM,UC_EFLAGS(%eax)
 	jne	1f
-	movl	UC_GS(%eax),%gs		/* restore %gs */
+	mov	UC_GS(%eax),%gs		/* restore %gs */
 1:
 	movl	$SYS_sigreturn,%eax
 	pushl	%eax			/* junk to fake return addr. */
@@ -375,7 +354,7 @@ freebsd4_sigcode:
 	pushl	%eax
 	testl	$PSL_VM,UC4_EFLAGS(%eax)
 	jne	1f
-	movl	UC4_GS(%eax),%gs	/* restore %gs */
+	mov	UC4_GS(%eax),%gs	/* restore %gs */
 1:
 	movl	$344,%eax		/* 4.x SYS_sigreturn */
 	pushl	%eax			/* junk to fake return addr. */
@@ -393,7 +372,7 @@ osigcode:
 	pushl	%eax
 	testl	$PSL_VM,SC_PS(%eax)
 	jne	9f
-	movl	SC_GS(%eax),%gs		/* restore %gs */
+	mov	SC_GS(%eax),%gs		/* restore %gs */
 9:
 	movl	$103,%eax		/* 3.x SYS_sigreturn */
 	pushl	%eax			/* junk to fake return addr. */
@@ -739,6 +718,8 @@ no_kernend:
 /* Allocate Kernel Page Tables */
 	ALLOCPAGES(NKPT)
 	movl	%esi,R(KPTphys)
+	addl	$(KERNBASE-(KPTDI<<(PDRSHIFT-PAGE_SHIFT+PTESHIFT))),%esi
+	movl	%esi,R(KPTmap)
 
 /* Allocate Page Table Directory */
 #ifdef PAE
@@ -762,20 +743,6 @@ no_kernend:
 	movl	%esi,R(vm86pa)
 	addl	$KERNBASE, %esi
 	movl	%esi, R(vm86paddr)
-
-#ifdef SMP
-/* Allocate cpu0's private data page */
-	ALLOCPAGES(1)
-	movl	%esi,R(cpu0pp)
-	addl	$KERNBASE, %esi
-	movl	%esi, R(cpu0prvpage)	/* relocated to KVM space */
-
-/* Allocate SMP page table page */
-	ALLOCPAGES(1)
-	movl	%esi,R(SMPptpa)
-	addl	$KERNBASE, %esi
-	movl	%esi, R(SMPpt)		/* relocated to KVM space */
-#endif	/* SMP */
 
 /*
  * Enable PSE and PGE.
@@ -816,6 +783,11 @@ no_kernend:
 	shrl	$PAGE_SHIFT,%ecx
 	fillkptphys($PG_RW)
 
+/* Map page table pages. */
+	movl	R(KPTphys),%eax
+	movl	$NKPT,%ecx
+	fillkptphys($PG_RW)
+
 /* Map page directory. */
 #ifdef PAE
 	movl	R(IdlePDPT), %eax
@@ -853,37 +825,6 @@ no_kernend:
 	movl	$ISA_HOLE_START>>PAGE_SHIFT, %ebx
 	movl	$ISA_HOLE_LENGTH>>PAGE_SHIFT, %ecx
 	fillkpt(R(vm86pa), $PG_RW|PG_U)
-
-#ifdef SMP
-/* Map cpu0's private page into global kmem (4K @ cpu0prvpage) */
-	movl	R(cpu0pp), %eax
-	movl	$1, %ecx
-	fillkptphys($PG_RW)
-
-/* Map SMP page table page into global kmem FWIW */
-	movl	R(SMPptpa), %eax
-	movl	$1, %ecx
-	fillkptphys($PG_RW)
-
-/* Map the private page into the SMP page table */
-	movl	R(cpu0pp), %eax
-	movl	$0, %ebx		/* pte offset = 0 */
-	movl	$1, %ecx		/* one private page coming right up */
-	fillkpt(R(SMPptpa), $PG_RW)
-
-/* ... and put the page table table in the pde. */
-	movl	R(SMPptpa), %eax
-	movl	$MPPTDI, %ebx
-	movl	$1, %ecx
-	fillkpt(R(IdlePTD), $PG_RW)
-
-/* Fakeup VA for the local apic to allow early traps. */
-	ALLOCPAGES(1)
-	movl	%esi, %eax
-	movl	$(NPTEPG-1), %ebx	/* pte offset = NTEPG-1 */
-	movl	$1, %ecx		/* one private pt coming right up */
-	fillkpt(R(SMPptpa), $PG_RW)
-#endif	/* SMP */
 
 /*
  * Create an identity mapping for low physical memory, including the kernel.

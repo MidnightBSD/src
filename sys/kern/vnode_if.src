@@ -27,8 +27,8 @@
 # SUCH DAMAGE.
 #
 #	@(#)vnode_if.src	8.12 (Berkeley) 5/14/95
-# $FreeBSD: src/sys/kern/vnode_if.src,v 1.87.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 # $MidnightBSD$
+#
 
 #
 # Above each of the vop descriptors in lines starting with %%
@@ -50,7 +50,7 @@
 # X: locked if not nil.
 #
 # The paramater named "vpp" is assumed to be always used with double
-# indirection (**vpp) and that name is hard-codeed in vnode_if.awk !
+# indirection (**vpp) and that name is hard-coded in vnode_if.awk !
 #
 # Lines starting with %! specify a pre or post-condition function
 # to call before/after the vop call.
@@ -61,7 +61,6 @@
 
 vop_islocked {
 	IN struct vnode *vp;
-	IN struct thread *td;
 };
 
 %% lookup	dvp	L ? ?
@@ -134,7 +133,7 @@ vop_open {
 };
 
 
-%% close	vp	E E E
+%% close	vp	L L L
 
 vop_close {
 	IN struct vnode *vp;
@@ -148,7 +147,17 @@ vop_close {
 
 vop_access {
 	IN struct vnode *vp;
-	IN int mode;
+	IN accmode_t accmode;
+	IN struct ucred *cred;
+	IN struct thread *td;
+};
+
+
+%% accessx	vp	L L L
+
+vop_accessx {
+	IN struct vnode *vp;
+	IN accmode_t accmode;
 	IN struct ucred *cred;
 	IN struct thread *td;
 };
@@ -160,7 +169,6 @@ vop_getattr {
 	IN struct vnode *vp;
 	OUT struct vattr *vap;
 	IN struct ucred *cred;
-	IN struct thread *td;
 };
 
 
@@ -171,9 +179,13 @@ vop_setattr {
 	IN struct vnode *vp;
 	IN struct vattr *vap;
 	IN struct ucred *cred;
-	IN struct thread *td;
 };
 
+%% markatime	vp	L L L
+
+vop_markatime {
+	IN struct vnode *vp;
+};
 
 %% read		vp	L L L
 
@@ -185,7 +197,7 @@ vop_read {
 };
 
 
-%% write	vp	E E E
+%% write	vp	L L L
 %! write	pre	VOP_WRITE_PRE
 %! write	post	VOP_WRITE_POST
 
@@ -194,16 +206,6 @@ vop_write {
 	INOUT struct uio *uio;
 	IN int ioflag;
 	IN struct ucred *cred;
-};
-
-
-%% lease	vp	= = =
-
-vop_lease {
-	IN struct vnode *vp;
-	IN struct thread *td;
-	IN struct ucred *cred;
-	IN int flag;
 };
 
 
@@ -219,7 +221,7 @@ vop_ioctl {
 };
 
 
-%% poll	vp	U U U
+%% poll		vp	U U U
 
 vop_poll {
 	IN struct vnode *vp;
@@ -245,7 +247,7 @@ vop_revoke {
 };
 
 
-%% fsync	vp	E E E
+%% fsync	vp	L L L
 
 vop_fsync {
 	IN struct vnode *vp;
@@ -368,7 +370,6 @@ vop_reclaim {
 vop_lock1 {
 	IN struct vnode *vp;
 	IN int flags;
-	IN struct thread *td;
 	IN char *file;
 	IN int line;
 };
@@ -380,7 +381,6 @@ vop_lock1 {
 vop_unlock {
 	IN struct vnode *vp;
 	IN int flags;
-	IN struct thread *td;
 };
 
 
@@ -413,7 +413,7 @@ vop_getwritemount {
 };
 
 
-%% print	vp	= = =
+%% print	vp	- - -
 
 vop_print {
 	IN struct vnode *vp;
@@ -450,6 +450,13 @@ vop_advlockasync {
 	IN int flags;
 	IN struct task *task;	
 	INOUT void **cookiep;
+};
+
+
+%% advlockpurge	vp	E E E
+
+vop_advlockpurge {
+	IN struct vnode *vp;
 };
 
 
@@ -562,6 +569,7 @@ vop_openextattr {
 
 
 %% deleteextattr	vp	E E E
+%! deleteextattr	post	vop_deleteextattr_post
 
 vop_deleteextattr {
 	IN struct vnode *vp;
@@ -573,6 +581,7 @@ vop_deleteextattr {
 
 
 %% setextattr	vp	E E E
+%! setextattr	post	vop_setextattr_post
 
 vop_setextattr {
 	IN struct vnode *vp;
@@ -594,9 +603,72 @@ vop_setlabel {
 };
 
 
-%% setlabel	vp	= = =
+%% vptofh	vp	= = =
 
 vop_vptofh {
 	IN struct vnode *vp;
 	IN struct fid *fhp;
+};
+
+
+%% vptocnp		vp	L L L
+%% vptocnp		vpp	- U -
+
+vop_vptocnp {
+	IN struct vnode *vp;
+	OUT struct vnode **vpp;
+	IN struct ucred *cred;
+	INOUT char *buf;
+	INOUT int *buflen;
+};
+
+
+%% allocate	vp	E E E
+
+vop_allocate {
+	IN struct vnode *vp;
+	INOUT off_t *offset;
+	INOUT off_t *len;
+};
+
+%% advise	vp	U U U
+
+vop_advise {
+	IN struct vnode *vp;
+	IN off_t start;
+	IN off_t end;
+	IN int advice;
+};
+
+%% unp_bind	vp	E E E
+
+vop_unp_bind {
+	IN struct vnode *vp;
+	IN struct socket *socket;
+};
+
+%% unp_connect	vp	L L L
+
+vop_unp_connect {
+	IN struct vnode *vp;
+	OUT struct socket **socket;
+};
+
+%% unp_detach	vp	= = =
+
+vop_unp_detach {
+	IN struct vnode *vp;
+};
+
+# The VOPs below are spares at the end of the table to allow new VOPs to be
+# added in stable branches without breaking the KBI.  New VOPs in HEAD should
+# be added above these spares.  When merging a new VOP to a stable branch,
+# the new VOP should replace one of the spares.
+
+vop_spare4 {
+	IN struct vnode *vp;
+};
+
+vop_spare5 {
+	IN struct vnode *vp;
 };

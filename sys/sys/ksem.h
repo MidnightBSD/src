@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Alfred Perlstein <alfred@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/ksem.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _POSIX4_KSEM_H_
@@ -35,26 +34,32 @@
 #endif
 
 #include <sys/condvar.h>
-#include <sys/queue.h>
-
-struct kuser {
-	pid_t ku_pid;
-	LIST_ENTRY(kuser) ku_next;
-};
 
 struct ksem {
-	LIST_ENTRY(ksem) ks_entry;	/* global list entry */
-	int ks_onlist;			/* boolean if on a list (ks_entry) */
-	char *ks_name;			/* if named, this is the name */
-	int ks_ref;			/* number of references */
-	mode_t ks_mode;			/* protection bits */
-	uid_t ks_uid;			/* creator uid */
-	gid_t ks_gid;			/* creator gid */
-	unsigned int ks_value;		/* current value */
-	struct cv ks_cv;		/* waiters sleep here */
-	int ks_waiters;			/* number of waiters */
-	LIST_HEAD(, kuser) ks_users;	/* pids using this sem */
-	struct label *ks_label;		/* MAC label */
+	int		ks_ref;		/* number of references */
+	mode_t		ks_mode;	/* protection bits */
+	uid_t		ks_uid;		/* creator uid */
+	gid_t		ks_gid;		/* creator gid */
+	unsigned int	ks_value;	/* current value */
+	struct cv	ks_cv;		/* waiters sleep here */
+	int		ks_waiters;	/* number of waiters */
+	int		ks_flags;
+
+	/*
+	 * Values maintained solely to make this a better-behaved file
+	 * descriptor for fstat() to run on.
+	 *
+	 * XXX: dubious
+	 */
+	struct timespec	ks_atime;
+	struct timespec	ks_mtime;
+	struct timespec	ks_ctime;
+	struct timespec	ks_birthtime;
+
+	struct label	*ks_label;	/* MAC label */
 };
+
+#define	KS_ANONYMOUS	0x0001		/* Anonymous (unnamed) semaphore. */
+#define	KS_DEAD		0x0002		/* No new waiters allowed. */
 
 #endif /* !_POSIX4_KSEM_H_ */

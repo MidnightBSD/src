@@ -1,15 +1,26 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/drm/Makefile,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $
+
+.include <bsd.own.mk>
+
+# Modules that include binary-only blobs of microcode should be selectable by
+# MK_SOURCELESS_UCODE option (see below).
 
 SUBDIR = \
 	drm \
 	i915 \
 	mach64 \
-	mga \
-	r128 \
-	radeon \
+	${_mga} \
+	${_r128} \
+	${_radeon} \
 	savage \
 	sis \
-	tdfx
+	tdfx \
+	via
+
+.if ${MK_SOURCELESS_UCODE} != "no"
+_mga=		mga
+_r128=		r128
+_radeon=	radeon
+.endif
 
 .include <bsd.subdir.mk>

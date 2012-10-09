@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2006 Atheros Communications, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: ar5211_xmit.c,v 1.1 2011-09-30 01:20:05 laffer1 Exp $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -233,7 +233,7 @@ HAL_BOOL
 ar5211ResetTxQueue(struct ath_hal *ah, u_int q)
 {
 	struct ath_hal_5211 *ahp = AH5211(ah);
-	HAL_CHANNEL_INTERNAL *chan = AH_PRIVATE(ah)->ah_curchan;
+	const struct ieee80211_channel *chan = AH_PRIVATE(ah)->ah_curchan;
 	HAL_TX_QUEUE_INFO *qi;
 	uint32_t cwMin, chanCwMin, value;
 
@@ -254,7 +254,7 @@ ar5211ResetTxQueue(struct ath_hal *ah, u_int q)
 		 * Select cwmin according to channel type.
 		 * NB: chan can be NULL during attach
 		 */
-		if (chan && IS_CHAN_B(chan))
+		if (chan && IEEE80211_IS_CHAN_B(chan))
 			chanCwMin = INIT_CWMIN_11B;
 		else
 			chanCwMin = INIT_CWMIN;
@@ -345,8 +345,9 @@ ar5211ResetTxQueue(struct ath_hal *ah, u_int q)
 			| AR_Q_MISC_CBR_INCR_DIS0 | AR_Q_MISC_RDYTIME_EXP_POLICY);
 
 		value = (ahp->ah_beaconInterval
-			- (ath_hal_sw_beacon_response_time - ath_hal_dma_beacon_response_time)
-			- ath_hal_additional_swba_backoff) * 1024;
+			- (ah->ah_config.ah_sw_beacon_response_time
+			        - ah->ah_config.ah_dma_beacon_response_time)
+			- ah->ah_config.ah_additional_swba_backoff) * 1024;
 		OS_REG_WRITE(ah, AR_QRDYTIMECFG(q), value | AR_Q_RDYTIMECFG_EN);
 
 		/* Configure DCU for CAB */
@@ -660,3 +661,13 @@ ar5211GetTxIntrQueue(struct ath_hal *ah, uint32_t *txqs)
 {
 	return;
 }
+
+/*
+ * Retrieve the rate table from the given TX completion descriptor
+ */
+HAL_BOOL
+ar5211GetTxCompletionRates(struct ath_hal *ah, const struct ath_desc *ds0, int *rates, int *tries)
+{
+	return AH_FALSE;
+}
+

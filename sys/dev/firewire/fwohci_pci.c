@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Hidetoshi Shimokawa
  * Copyright (c) 1998-2002 Katsushi Kobayashi and Hidetoshi Shimokawa
@@ -31,9 +30,10 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
- * $FreeBSD: src/sys/dev/firewire/fwohci_pci.c,v 1.60 2007/06/06 14:31:36 simokawa Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #define BOUNCE_BUFFER_TEST	0
 
@@ -335,14 +335,11 @@ fwohci_pci_attach(device_t self)
 		return ENXIO;
 	}
 
-
 	err = bus_setup_intr(self, sc->irq_res,
-			INTR_TYPE_NET | INTR_MPSAFE,
-#if FWOHCI_INTFILT
-		     fwohci_filt, NULL, sc, &sc->ih);
-#else
-		     NULL, (driver_intr_t *) fwohci_intr, sc, &sc->ih);
-#endif
+				INTR_TYPE_NET | INTR_MPSAFE,
+				NULL, (driver_intr_t *) fwohci_intr,
+				sc, &sc->ih);
+
 #if defined(__DragonFly__) || __FreeBSD_version < 500000
 	/* XXX splcam() should mask this irq for sbp.c*/
 	err = bus_setup_intr(self, sc->irq_res, INTR_TYPE_CAM,
@@ -491,7 +488,7 @@ fwohci_pci_shutdown(device_t dev)
 }
 
 static device_t
-fwohci_pci_add_child(device_t dev, int order, const char *name, int unit)
+fwohci_pci_add_child(device_t dev, u_int order, const char *name, int unit)
 {
 	struct fwohci_softc *sc;
 	device_t child;
@@ -540,9 +537,8 @@ static device_method_t fwohci_methods[] = {
 
 	/* Bus interface */
 	DEVMETHOD(bus_add_child,	fwohci_pci_add_child),
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t fwohci_driver = {
@@ -557,4 +553,3 @@ static devclass_t fwohci_devclass;
 MODULE_DEPEND(fwohci, firewire, 1, 1, 1);
 #endif
 DRIVER_MODULE(fwohci, pci, fwohci_driver, fwohci_devclass, 0, 0);
-DRIVER_MODULE(fwohci, cardbus, fwohci_driver, fwohci_devclass, 0, 0);

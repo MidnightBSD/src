@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mib.c,v 1.84.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 #include "opt_posix.h"
@@ -52,11 +52,12 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_mib.c,v 1.84.2.4.2.1 2008/11/25 02:59:29 k
 #include <sys/mutex.h>
 #include <sys/jail.h>
 #include <sys/smp.h>
+#include <sys/sx.h>
 #include <sys/unistd.h>
 
 SYSCTL_NODE(, 0,	  sysctl, CTLFLAG_RW, 0,
 	"Sysctl internal magic");
-SYSCTL_NODE(, CTL_KERN,	  kern,   CTLFLAG_RW, 0,
+SYSCTL_NODE(, CTL_KERN,	  kern,   CTLFLAG_RW|CTLFLAG_CAPRD, 0,
 	"High kernel, proc, limits &c");
 SYSCTL_NODE(, CTL_VM,	  vm,     CTLFLAG_RW, 0,
 	"Virtual memory");
@@ -89,23 +90,23 @@ SYSCTL_NODE(, OID_AUTO, regression, CTLFLAG_RW, 0,
 SYSCTL_STRING(_kern, OID_AUTO, ident, CTLFLAG_RD|CTLFLAG_MPSAFE,
     kern_ident, 0, "Kernel identifier");
 
-SYSCTL_STRING(_kern, KERN_OSRELEASE, osrelease, CTLFLAG_RD|CTLFLAG_MPSAFE,
-    osrelease, 0, "Operating system release");
+SYSCTL_STRING(_kern, KERN_OSRELEASE, osrelease, CTLFLAG_RD|CTLFLAG_MPSAFE|
+    CTLFLAG_CAPRD, osrelease, 0, "Operating system release");
 
-SYSCTL_INT(_kern, KERN_OSREV, osrevision, CTLFLAG_RD,
+SYSCTL_INT(_kern, KERN_OSREV, osrevision, CTLFLAG_RD|CTLFLAG_CAPRD,
     0, BSD, "Operating system revision");
 
 SYSCTL_STRING(_kern, KERN_VERSION, version, CTLFLAG_RD|CTLFLAG_MPSAFE,
     version, 0, "Kernel version");
 
-SYSCTL_STRING(_kern, KERN_OSTYPE, ostype, CTLFLAG_RD|CTLFLAG_MPSAFE,
-    ostype, 0, "Operating system type");
+SYSCTL_STRING(_kern, KERN_OSTYPE, ostype, CTLFLAG_RD|CTLFLAG_MPSAFE|
+    CTLFLAG_CAPRD, ostype, 0, "Operating system type");
 
 /*
  * NOTICE: The *userland* release date is available in
  * /usr/include/osreldate.h
  */
-SYSCTL_INT(_kern, KERN_OSRELDATE, osreldate, CTLFLAG_RD,
+SYSCTL_INT(_kern, KERN_OSRELDATE, osreldate, CTLFLAG_RD|CTLFLAG_CAPRD,
     &osreldate, 0, "Kernel release date");
 
 SYSCTL_INT(_kern, KERN_MAXPROC, maxproc, CTLFLAG_RDTUN,
@@ -117,23 +118,24 @@ SYSCTL_INT(_kern, KERN_MAXPROCPERUID, maxprocperuid, CTLFLAG_RW,
 SYSCTL_INT(_kern, OID_AUTO, maxusers, CTLFLAG_RDTUN,
     &maxusers, 0, "Hint for kernel tuning");
 
-SYSCTL_INT(_kern, KERN_ARGMAX, argmax, CTLFLAG_RD,
+SYSCTL_INT(_kern, KERN_ARGMAX, argmax, CTLFLAG_RD|CTLFLAG_CAPRD,
     0, ARG_MAX, "Maximum bytes of argument to execve(2)");
 
-SYSCTL_INT(_kern, KERN_POSIX1, posix1version, CTLFLAG_RD,
+SYSCTL_INT(_kern, KERN_POSIX1, posix1version, CTLFLAG_RD|CTLFLAG_CAPRD,
     0, _POSIX_VERSION, "Version of POSIX attempting to comply to");
 
-SYSCTL_INT(_kern, KERN_NGROUPS, ngroups, CTLFLAG_RD,
-    0, NGROUPS_MAX, "Maximum number of groups a user can belong to");
+SYSCTL_INT(_kern, KERN_NGROUPS, ngroups, CTLFLAG_RDTUN|CTLFLAG_CAPRD,
+    &ngroups_max, 0,
+    "Maximum number of supplemental groups a user can belong to");
 
-SYSCTL_INT(_kern, KERN_JOB_CONTROL, job_control, CTLFLAG_RD,
+SYSCTL_INT(_kern, KERN_JOB_CONTROL, job_control, CTLFLAG_RD|CTLFLAG_CAPRD,
     0, 1, "Whether job control is available");
 
 #ifdef _POSIX_SAVED_IDS
-SYSCTL_INT(_kern, KERN_SAVED_IDS, saved_ids, CTLFLAG_RD,
+SYSCTL_INT(_kern, KERN_SAVED_IDS, saved_ids, CTLFLAG_RD|CTLFLAG_CAPRD,
     0, 1, "Whether saved set-group/user ID is available");
 #else
-SYSCTL_INT(_kern, KERN_SAVED_IDS, saved_ids, CTLFLAG_RD,
+SYSCTL_INT(_kern, KERN_SAVED_IDS, saved_ids, CTLFLAG_RD|CTLFLAG_CAPRD,
     0, 0, "Whether saved set-group/user ID is available");
 #endif
 
@@ -142,13 +144,13 @@ char kernelname[MAXPATHLEN] = "/kernel";	/* XXX bloat */
 SYSCTL_STRING(_kern, KERN_BOOTFILE, bootfile, CTLFLAG_RW,
     kernelname, sizeof kernelname, "Name of kernel file booted");
 
-SYSCTL_INT(_hw, HW_NCPU, ncpu, CTLFLAG_RD,
+SYSCTL_INT(_hw, HW_NCPU, ncpu, CTLFLAG_RD|CTLFLAG_CAPRD,
     &mp_ncpus, 0, "Number of active CPUs");
 
-SYSCTL_INT(_hw, HW_BYTEORDER, byteorder, CTLFLAG_RD,
+SYSCTL_INT(_hw, HW_BYTEORDER, byteorder, CTLFLAG_RD|CTLFLAG_CAPRD,
     0, BYTE_ORDER, "System byte order");
 
-SYSCTL_INT(_hw, HW_PAGESIZE, pagesize, CTLFLAG_RD,
+SYSCTL_INT(_hw, HW_PAGESIZE, pagesize, CTLFLAG_RD|CTLFLAG_CAPRD,
     0, PAGE_SIZE, "System memory page size");
 
 static int
@@ -165,8 +167,8 @@ sysctl_kern_arnd(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_PROC(_kern, KERN_ARND, arandom,
-    CTLTYPE_OPAQUE | CTLFLAG_RD | CTLFLAG_MPSAFE,
-    NULL, 0, sysctl_kern_arnd, "", "arc4rand");
+    CTLTYPE_OPAQUE | CTLFLAG_RD | CTLFLAG_MPSAFE | CTLFLAG_CAPRD, NULL, 0,
+    sysctl_kern_arnd, "", "arc4rand");
 
 static int
 sysctl_hw_physmem(SYSCTL_HANDLER_ARGS)
@@ -201,55 +203,124 @@ sysctl_hw_usermem(SYSCTL_HANDLER_ARGS)
 SYSCTL_PROC(_hw, HW_USERMEM, usermem, CTLTYPE_ULONG | CTLFLAG_RD,
 	0, 0, sysctl_hw_usermem, "LU", "");
 
-SYSCTL_ULONG(_hw, OID_AUTO, availpages, CTLFLAG_RD, &physmem, 0, "");
+SYSCTL_LONG(_hw, OID_AUTO, availpages, CTLFLAG_RD, &physmem, 0, "");
 
-static char	machine_arch[] = MACHINE_ARCH;
-SYSCTL_STRING(_hw, HW_MACHINE_ARCH, machine_arch, CTLFLAG_RD,
-    machine_arch, 0, "System architecture");
+u_long pagesizes[MAXPAGESIZES] = { PAGE_SIZE };
 
-char hostname[MAXHOSTNAMELEN];
+static int
+sysctl_hw_pagesizes(SYSCTL_HANDLER_ARGS)
+{
+	int error;
+#ifdef SCTL_MASK32
+	int i;
+	uint32_t pagesizes32[MAXPAGESIZES];
+
+	if (req->flags & SCTL_MASK32) {
+		/*
+		 * Recreate the "pagesizes" array with 32-bit elements.  Truncate
+		 * any page size greater than UINT32_MAX to zero.
+		 */
+		for (i = 0; i < MAXPAGESIZES; i++)
+			pagesizes32[i] = (uint32_t)pagesizes[i];
+
+		error = SYSCTL_OUT(req, pagesizes32, sizeof(pagesizes32));
+	} else
+#endif
+		error = SYSCTL_OUT(req, pagesizes, sizeof(pagesizes));
+	return (error);
+}
+SYSCTL_PROC(_hw, OID_AUTO, pagesizes, CTLTYPE_ULONG | CTLFLAG_RD,
+    NULL, 0, sysctl_hw_pagesizes, "LU", "Supported page sizes");
+
+#ifdef SCTL_MASK32
+int adaptive_machine_arch = 1;
+SYSCTL_INT(_debug, OID_AUTO, adaptive_machine_arch, CTLFLAG_RW,
+    &adaptive_machine_arch, 1,
+    "Adapt reported machine architecture to the ABI of the binary");
+#endif
+
+static int
+sysctl_hw_machine_arch(SYSCTL_HANDLER_ARGS)
+{
+	int error;
+	static const char machine_arch[] = MACHINE_ARCH;
+#ifdef SCTL_MASK32
+	static const char machine_arch32[] = MACHINE_ARCH32;
+
+	if ((req->flags & SCTL_MASK32) != 0 && adaptive_machine_arch)
+		error = SYSCTL_OUT(req, machine_arch32, sizeof(machine_arch32));
+	else
+#endif
+		error = SYSCTL_OUT(req, machine_arch, sizeof(machine_arch));
+	return (error);
+
+}
+SYSCTL_PROC(_hw, HW_MACHINE_ARCH, machine_arch, CTLTYPE_STRING | CTLFLAG_RD,
+    NULL, 0, sysctl_hw_machine_arch, "A", "System architecture");
 
 static int
 sysctl_hostname(SYSCTL_HANDLER_ARGS)
 {
-	struct prison *pr;
-	char tmphostname[MAXHOSTNAMELEN];
-	int error;
+	struct prison *pr, *cpr;
+	size_t pr_offset;
+	char tmpname[MAXHOSTNAMELEN];
+	int descend, error, len;
+
+	/*
+	 * This function can set: hostname domainname hostuuid.
+	 * Keep that in mind when comments say "hostname".
+	 */
+	pr_offset = (size_t)arg1;
+	len = arg2;
+	KASSERT(len <= sizeof(tmpname),
+	    ("length %d too long for %s", len, __func__));
 
 	pr = req->td->td_ucred->cr_prison;
-	if (pr != NULL) {
-		if (!jail_set_hostname_allowed && req->newptr)
-			return (EPERM);
+	if (!(pr->pr_allow & PR_ALLOW_SET_HOSTNAME) && req->newptr)
+		return (EPERM);
+	/*
+	 * Make a local copy of hostname to get/set so we don't have to hold
+	 * the jail mutex during the sysctl copyin/copyout activities.
+	 */
+	mtx_lock(&pr->pr_mtx);
+	bcopy((char *)pr + pr_offset, tmpname, len);
+	mtx_unlock(&pr->pr_mtx);
+
+	error = sysctl_handle_string(oidp, tmpname, len, req);
+
+	if (req->newptr != NULL && error == 0) {
 		/*
-		 * Process is in jail, so make a local copy of jail
-		 * hostname to get/set so we don't have to hold the jail
-		 * mutex during the sysctl copyin/copyout activities.
+		 * Copy the locally set hostname to all jails that share
+		 * this host info.
 		 */
+		sx_slock(&allprison_lock);
+		while (!(pr->pr_flags & PR_HOST))
+			pr = pr->pr_parent;
 		mtx_lock(&pr->pr_mtx);
-		bcopy(pr->pr_host, tmphostname, MAXHOSTNAMELEN);
+		bcopy(tmpname, (char *)pr + pr_offset, len);
+		FOREACH_PRISON_DESCENDANT_LOCKED(pr, cpr, descend)
+			if (cpr->pr_flags & PR_HOST)
+				descend = 0;
+			else
+				bcopy(tmpname, (char *)cpr + pr_offset, len);
 		mtx_unlock(&pr->pr_mtx);
-
-		error = sysctl_handle_string(oidp, tmphostname,
-		    sizeof pr->pr_host, req);
-
-		if (req->newptr != NULL && error == 0) {
-			/*
-			 * Copy the locally set hostname to the jail, if
-			 * appropriate.
-			 */
-			mtx_lock(&pr->pr_mtx);
-			bcopy(tmphostname, pr->pr_host, MAXHOSTNAMELEN);
-			mtx_unlock(&pr->pr_mtx);
-		}
-	} else
-		error = sysctl_handle_string(oidp,
-		    hostname, sizeof hostname, req);
+		sx_sunlock(&allprison_lock);
+	}
 	return (error);
 }
 
 SYSCTL_PROC(_kern, KERN_HOSTNAME, hostname,
-       CTLTYPE_STRING|CTLFLAG_RW|CTLFLAG_PRISON|CTLFLAG_MPSAFE,
-       0, 0, sysctl_hostname, "A", "Hostname");
+    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE,
+    (void *)(offsetof(struct prison, pr_hostname)), MAXHOSTNAMELEN,
+    sysctl_hostname, "A", "Hostname");
+SYSCTL_PROC(_kern, KERN_NISDOMAINNAME, domainname,
+    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE,
+    (void *)(offsetof(struct prison, pr_domainname)), MAXHOSTNAMELEN,
+    sysctl_hostname, "A", "Name of the current YP/NIS domain");
+SYSCTL_PROC(_kern, KERN_HOSTUUID, hostuuid,
+    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE,
+    (void *)(offsetof(struct prison, pr_hostuuid)), HOSTUUIDLEN,
+    sysctl_hostname, "A", "Host UUID");
 
 static int	regression_securelevel_nonmonotonic = 0;
 
@@ -258,55 +329,43 @@ SYSCTL_INT(_regression, OID_AUTO, securelevel_nonmonotonic, CTLFLAG_RW,
     &regression_securelevel_nonmonotonic, 0, "securelevel may be lowered");
 #endif
 
-int securelevel = -1;
-static struct mtx securelevel_mtx;
-
-MTX_SYSINIT(securelevel_lock, &securelevel_mtx, "securelevel mutex lock",
-    MTX_DEF);
-
 static int
 sysctl_kern_securelvl(SYSCTL_HANDLER_ARGS)
 {
-	struct prison *pr;
-	int error, level;
+	struct prison *pr, *cpr;
+	int descend, error, level;
 
 	pr = req->td->td_ucred->cr_prison;
 
 	/*
-	 * If the process is in jail, return the maximum of the global and
-	 * local levels; otherwise, return the global level.  Perform a
-	 * lockless read since the securelevel is an integer.
+	 * Reading the securelevel is easy, since the current jail's level
+	 * is known to be at least as secure as any higher levels.  Perform
+	 * a lockless read since the securelevel is an integer.
 	 */
-	if (pr != NULL)
-		level = imax(securelevel, pr->pr_securelevel);
-	else
-		level = securelevel;
+	level = pr->pr_securelevel;
 	error = sysctl_handle_int(oidp, &level, 0, req);
 	if (error || !req->newptr)
 		return (error);
-	/*
-	 * Permit update only if the new securelevel exceeds the
-	 * global level, and local level if any.
-	 */
-	if (pr != NULL) {
-		mtx_lock(&pr->pr_mtx);
-		if (!regression_securelevel_nonmonotonic &&
-		    (level < imax(securelevel, pr->pr_securelevel))) {
-			mtx_unlock(&pr->pr_mtx);
-			return (EPERM);
-		}
-		pr->pr_securelevel = level;
+	/* Permit update only if the new securelevel exceeds the old. */
+	sx_slock(&allprison_lock);
+	mtx_lock(&pr->pr_mtx);
+	if (!regression_securelevel_nonmonotonic &&
+	    level < pr->pr_securelevel) {
 		mtx_unlock(&pr->pr_mtx);
-	} else {
-		mtx_lock(&securelevel_mtx);
-		if (!regression_securelevel_nonmonotonic &&
-		    (level < securelevel)) {
-			mtx_unlock(&securelevel_mtx);
-			return (EPERM);
-		}
-		securelevel = level;
-		mtx_unlock(&securelevel_mtx);
+		sx_sunlock(&allprison_lock);
+		return (EPERM);
 	}
+	pr->pr_securelevel = level;
+	/*
+	 * Set all child jails to be at least this level, but do not lower
+	 * them (even if regression_securelevel_nonmonotonic).
+	 */
+	FOREACH_PRISON_DESCENDANT_LOCKED(pr, cpr, descend) {
+		if (cpr->pr_securelevel < level)
+			cpr->pr_securelevel = level;
+	}
+	mtx_unlock(&pr->pr_mtx);
+	sx_sunlock(&allprison_lock);
 	return (error);
 }
 
@@ -329,15 +388,43 @@ SYSCTL_PROC(_kern, OID_AUTO, conftxt, CTLTYPE_STRING|CTLFLAG_RW,
     0, 0, sysctl_kern_config, "", "Kernel configuration file");
 #endif
 
-char domainname[MAXHOSTNAMELEN];
-SYSCTL_STRING(_kern, KERN_NISDOMAINNAME, domainname, CTLFLAG_RW,
-    &domainname, sizeof(domainname), "Name of the current YP/NIS domain");
+static int
+sysctl_hostid(SYSCTL_HANDLER_ARGS)
+{
+	struct prison *pr, *cpr;
+	u_long tmpid;
+	int descend, error;
 
-u_long hostid;
-SYSCTL_ULONG(_kern, KERN_HOSTID, hostid, CTLFLAG_RW, &hostid, 0, "Host ID");
-char hostuuid[64] = "00000000-0000-0000-0000-000000000000";
-SYSCTL_STRING(_kern, KERN_HOSTUUID, hostuuid, CTLFLAG_RW, hostuuid,
-    sizeof(hostuuid), "Host UUID");
+	/*
+	 * Like sysctl_hostname, except it operates on a u_long
+	 * instead of a string, and is used only for hostid.
+	 */
+	pr = req->td->td_ucred->cr_prison;
+	if (!(pr->pr_allow & PR_ALLOW_SET_HOSTNAME) && req->newptr)
+		return (EPERM);
+	tmpid = pr->pr_hostid;
+	error = sysctl_handle_long(oidp, &tmpid, 0, req);
+
+	if (req->newptr != NULL && error == 0) {
+		sx_slock(&allprison_lock);
+		while (!(pr->pr_flags & PR_HOST))
+			pr = pr->pr_parent;
+		mtx_lock(&pr->pr_mtx);
+		pr->pr_hostid = tmpid;
+		FOREACH_PRISON_DESCENDANT_LOCKED(pr, cpr, descend)
+			if (cpr->pr_flags & PR_HOST)
+				descend = 0;
+			else
+				cpr->pr_hostid = tmpid;
+		mtx_unlock(&pr->pr_mtx);
+		sx_sunlock(&allprison_lock);
+	}
+	return (error);
+}
+
+SYSCTL_PROC(_kern, KERN_HOSTID, hostid,
+    CTLTYPE_ULONG | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE,
+    NULL, 0, sysctl_hostid, "LU", "Host ID");
 
 SYSCTL_NODE(_kern, OID_AUTO, features, CTLFLAG_RD, 0, "Kernel Features");
 
@@ -353,10 +440,16 @@ FEATURE(compat_freebsd5, "Compatible with FreeBSD 5");
 FEATURE(compat_freebsd6, "Compatible with FreeBSD 6");
 #endif
 
+#ifdef COMPAT_FREEBSD7
+FEATURE(compat_freebsd7, "Compatible with FreeBSD 7");
+#endif
+
 /*
  * This is really cheating.  These actually live in the libc, something
  * which I'm not quite sure is a good idea anyway, but in order for
  * getnext and friends to actually work, we define dummies here.
+ *
+ * XXXRW: These probably should be CTLFLAG_CAPRD.
  */
 SYSCTL_STRING(_user, USER_CS_PATH, cs_path, CTLFLAG_RD,
     "", 0, "PATH that finds all the standard utilities");

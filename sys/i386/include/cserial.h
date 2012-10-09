@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/cserial.h,v 1.4 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Ioctl interface to Cronyx serial drivers.
  *

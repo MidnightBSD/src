@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Charles D. Cranor and Washington University.
  * All rights reserved.
@@ -40,7 +39,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netnatm/natm_pcb.c,v 1.18 2007/01/08 22:30:39 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -92,7 +91,7 @@ npcb_free(struct natmpcb *npcb, int op)
 		if (npcb->npcb_inq) {
 			npcb->npcb_flags = NPCB_DRAIN;	/* flag for distruct. */
 		} else {
-			FREE(npcb, M_PCB);		/* kill it! */
+			free(npcb, M_PCB);		/* kill it! */
 		}
 	}
 }

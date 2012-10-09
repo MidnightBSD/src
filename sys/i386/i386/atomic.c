@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Peter Jeremy
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/atomic.c,v 1.6 2003/08/25 09:48:46 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 /* This file creates publically callable functions to perform various
  * simple arithmetic on memory which is atomic in the presence of

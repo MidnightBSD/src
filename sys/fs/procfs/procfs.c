@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Dag-Erling Smørgrav
  * Copyright (c) 1993 Jan-Simon Pendry
@@ -38,7 +37,7 @@
  *
  *	@(#)procfs_vfsops.c	8.7 (Berkeley) 5/10/95
  *
- * $FreeBSD: src/sys/fs/procfs/procfs.c,v 1.16 2007/03/12 12:16:52 des Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -68,24 +67,23 @@
 int
 procfs_doprocfile(PFS_FILL_ARGS)
 {
-	char *fullpath = "unknown";
-	char *freepath = NULL;
+	char *fullpath;
+	char *freepath;
 	struct vnode *textvp;
-	int err;
+	int error;
 
+	freepath = NULL;
+	PROC_LOCK(p);
 	textvp = p->p_textvp;
-	VI_LOCK(textvp);
-	vholdl(textvp);
-	err = vn_lock(textvp, LK_EXCLUSIVE | LK_INTERLOCK, td);
+	vhold(textvp);
+	PROC_UNLOCK(p);
+	error = vn_fullpath(td, textvp, &fullpath, &freepath);
 	vdrop(textvp);
-	if (err)
-		return (err);
-	vn_fullpath(td, textvp, &fullpath, &freepath);
-	VOP_UNLOCK(textvp, 0, td);
-	sbuf_printf(sb, "%s", fullpath);
-	if (freepath)
+	if (error == 0)
+		sbuf_printf(sb, "%s", fullpath);
+	if (freepath != NULL)
 		free(freepath, M_TEMP);
-	return (0);
+	return (error);
 }
 
 /*
@@ -104,7 +102,6 @@ procfs_docurproc(PFS_FILL_ARGS)
 int
 procfs_attr(PFS_ATTR_ARGS)
 {
-	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	/* XXX inefficient, split into separate functions */
 	if (strcmp(pn->pn_name, "ctl") == 0 ||
@@ -114,14 +111,16 @@ procfs_attr(PFS_ATTR_ARGS)
 	else if (strcmp(pn->pn_name, "mem") == 0 ||
 	    strcmp(pn->pn_name, "regs") == 0 ||
 	    strcmp(pn->pn_name, "dbregs") == 0 ||
-	    strcmp(pn->pn_name, "fpregs") == 0)
+	    strcmp(pn->pn_name, "fpregs") == 0 ||
+	    strcmp(pn->pn_name, "osrel") == 0)
 		vap->va_mode = 0600;
 
-	if ((p->p_flag & P_SUGID) && pn->pn_type != pfstype_procdir)
-		vap->va_mode = 0;
+	if (p != NULL) {
+		PROC_LOCK_ASSERT(p, MA_OWNED);
 
-	vap->va_uid = p->p_ucred->cr_uid;
-	vap->va_gid = p->p_ucred->cr_gid;
+		if ((p->p_flag & P_SUGID) && pn->pn_type != pfstype_procdir)
+			vap->va_mode = 0;
+	}
 
 	return (0);
 }
@@ -191,6 +190,8 @@ procfs_init(PFS_INIT_ARGS)
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "status", procfs_doprocstatus,
 	    NULL, NULL, NULL, PFS_RD);
+	pfs_create_file(dir, "osrel", procfs_doosrel,
+	    procfs_attr, procfs_candebug, NULL, PFS_RDWR);
 
 	pfs_create_link(dir, "file", procfs_doprocfile,
 	    NULL, procfs_notsystem, NULL, 0);
@@ -208,4 +209,4 @@ procfs_uninit(PFS_INIT_ARGS)
 	return (0);
 }
 
-PSEUDOFS(procfs, 1);
+PSEUDOFS(procfs, 1, PR_ALLOW_MOUNT_PROCFS);

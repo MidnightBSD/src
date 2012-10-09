@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011 by Delphix. All rights reserved.
  */
 
 #ifndef _SYS_METASLAB_H
 #define	_SYS_METASLAB_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/spa.h>
 #include <sys/space_map.h>
@@ -39,29 +36,45 @@
 extern "C" {
 #endif
 
-typedef struct metaslab_class metaslab_class_t;
-typedef struct metaslab_group metaslab_group_t;
+extern space_map_ops_t *zfs_metaslab_ops;
 
 extern metaslab_t *metaslab_init(metaslab_group_t *mg, space_map_obj_t *smo,
     uint64_t start, uint64_t size, uint64_t txg);
 extern void metaslab_fini(metaslab_t *msp);
 extern void metaslab_sync(metaslab_t *msp, uint64_t txg);
 extern void metaslab_sync_done(metaslab_t *msp, uint64_t txg);
+extern void metaslab_sync_reassess(metaslab_group_t *mg);
 
-extern int metaslab_alloc(spa_t *spa, uint64_t psize, blkptr_t *bp,
-    int ncopies, uint64_t txg, blkptr_t *hintbp, boolean_t hintbp_avoid);
+#define	METASLAB_HINTBP_FAVOR	0x0
+#define	METASLAB_HINTBP_AVOID	0x1
+#define	METASLAB_GANG_HEADER	0x2
+#define	METASLAB_GANG_CHILD	0x4
+#define	METASLAB_GANG_AVOID	0x8
+
+extern int metaslab_alloc(spa_t *spa, metaslab_class_t *mc, uint64_t psize,
+    blkptr_t *bp, int ncopies, uint64_t txg, blkptr_t *hintbp, int flags);
 extern void metaslab_free(spa_t *spa, const blkptr_t *bp, uint64_t txg,
     boolean_t now);
 extern int metaslab_claim(spa_t *spa, const blkptr_t *bp, uint64_t txg);
 
-extern metaslab_class_t *metaslab_class_create(void);
+extern metaslab_class_t *metaslab_class_create(spa_t *spa,
+    space_map_ops_t *ops);
 extern void metaslab_class_destroy(metaslab_class_t *mc);
-extern void metaslab_class_add(metaslab_class_t *mc, metaslab_group_t *mg);
-extern void metaslab_class_remove(metaslab_class_t *mc, metaslab_group_t *mg);
+extern int metaslab_class_validate(metaslab_class_t *mc);
+
+extern void metaslab_class_space_update(metaslab_class_t *mc,
+    int64_t alloc_delta, int64_t defer_delta,
+    int64_t space_delta, int64_t dspace_delta);
+extern uint64_t metaslab_class_get_alloc(metaslab_class_t *mc);
+extern uint64_t metaslab_class_get_space(metaslab_class_t *mc);
+extern uint64_t metaslab_class_get_dspace(metaslab_class_t *mc);
+extern uint64_t metaslab_class_get_deferred(metaslab_class_t *mc);
 
 extern metaslab_group_t *metaslab_group_create(metaslab_class_t *mc,
     vdev_t *vd);
 extern void metaslab_group_destroy(metaslab_group_t *mg);
+extern void metaslab_group_activate(metaslab_group_t *mg);
+extern void metaslab_group_passivate(metaslab_group_t *mg);
 
 #ifdef	__cplusplus
 }

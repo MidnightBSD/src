@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/kbd/kbdreg.h,v 1.18 2005/07/13 23:58:57 emax Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_KBD_KBDREG_H_
@@ -61,6 +60,7 @@ struct keyboard {
 #define KB_INITIALIZED	(1 << 19)	/* device initialized */
 #define KB_REGISTERED	(1 << 20)	/* device registered to kbdio */
 #define KB_BUSY		(1 << 21)	/* device used by a client */
+#define KB_POLLED	(1 << 22)	/* device is polled */
 	int		kb_active;	/* 0: inactive */
 	void		*kb_token;	/* id of the current client */
 	keyboard_callback_t kb_callback;/* callback function */
@@ -108,6 +108,9 @@ struct keyboard {
 #define KBD_IS_BUSY(k)		((k)->kb_flags & KB_BUSY)
 #define KBD_BUSY(k)		((k)->kb_flags |= KB_BUSY)
 #define KBD_UNBUSY(k)		((k)->kb_flags &= ~KB_BUSY)
+#define KBD_IS_POLLED(k)	((k)->kb_flags & KB_POLLED)
+#define KBD_POLL(k)		((k)->kb_flags |= KB_POLLED)
+#define KBD_UNPOLL(k)		((k)->kb_flags &= ~KB_POLLED)
 #define KBD_IS_ACTIVE(k)	((k)->kb_active)
 #define KBD_ACTIVATE(k)		(++(k)->kb_active)
 #define KBD_DEACTIVATE(k)	(--(k)->kb_active)
@@ -157,6 +160,50 @@ typedef struct keyboard_switch {
 	kbd_poll_mode_t *poll;
 	kbd_diag_t	*diag;
 } keyboard_switch_t;
+
+/*
+ * Keyboard disciplines: call actual handlers via kbdsw[].
+ */
+#define kbdd_probe(kbd, unit, arg, flags)				\
+	(*kbdsw[(kbd)->kb_index]->probe)((unit), (arg), (flags))
+#define kbdd_init(kbd, unit, kbdpp, arg, flags)				\
+	(*kbdsw[(kbd)->kb_index]->init)((unit), (kbdpp), (arg), (flags))
+#define kbdd_term(kbd)							\
+	(*kbdsw[(kbd)->kb_index]->term)((kbd))
+#define kbdd_intr(kbd, arg)						\
+	(*kbdsw[(kbd)->kb_index]->intr)((kbd), (arg))
+#define kbdd_test_if(kbd)						\
+	(*kbdsw[(kbd)->kb_index]->test_if)((kbd))
+#define kbdd_enable(kbd)						\
+	(*kbdsw[(kbd)->kb_index]->enable)((kbd))
+#define kbdd_disable(kbd)						\
+	(*kbdsw[(kbd)->kb_index]->disable)((kbd))
+#define kbdd_read(kbd, wait)						\
+	(*kbdsw[(kbd)->kb_index]->read)((kbd), (wait))
+#define kbdd_check(kbd)							\
+	(*kbdsw[(kbd)->kb_index]->check)((kbd))
+#define kbdd_read_char(kbd, wait)					\
+	(*kbdsw[(kbd)->kb_index]->read_char)((kbd), (wait))
+#define kbdd_check_char(kbd)						\
+	(*kbdsw[(kbd)->kb_index]->check_char)((kbd))
+#define kbdd_ioctl(kbd, cmd, arg)					\
+	(((kbd) == NULL) ?						\
+	    ENODEV :							\
+ 	    (*kbdsw[(kbd)->kb_index]->ioctl)((kbd), (cmd), (arg)))
+#define kbdd_lock(kbd, lockf)						\
+	(*kbdsw[(kbd)->kb_index]->lock)((kbd), (lockf))
+#define kbdd_clear_state(kbd)						\
+	(*kbdsw[(kbd)->kb_index]->clear_state)((kbd))
+#define kbdd_get_state(kbd, buf, len)					\
+	(*kbdsw[(kbd)->kb_index]->get_state)((kbd), (buf), (len))
+#define kbdd_set_state(kbd, buf, len)					\
+	(*kbdsw[(kbd)->kb_index]->set_state)((kbd), (buf), (len))
+#define kbdd_get_fkeystr(kbd, fkey, len)				\
+	(*kbdsw[(kbd)->kb_index]->get_fkeystr)((kbd), (fkey), (len))
+#define kbdd_poll(kbd, on)						\
+	(*kbdsw[(kbd)->kb_index]->poll)((kbd), (on))
+#define kbdd_diag(kbd, level)						\
+	(*kbdsw[(kbd)->kb_index]->diag)((kbd), (leve))
 
 /* keyboard driver */
 typedef struct keyboard_driver {

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/bootinfo.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (C) 1994 by Rodney W. Grimes, Milwaukie, Oregon  97222
  * All rights reserved.

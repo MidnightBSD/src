@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_periph.h,v 1.18.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_PERIPH_H
@@ -42,6 +42,7 @@ extern struct cam_periph *xpt_periph;
 
 extern struct periph_driver **periph_drivers;
 void periphdriver_register(void *);
+void periphdriver_init(int level);
 
 #include <sys/module.h>
 #define PERIPHDRIVER_DECLARE(name, driver) \
@@ -79,6 +80,8 @@ struct periph_driver {
 	char			 *driver_name;
 	TAILQ_HEAD(,cam_periph)	 units;
 	u_int			 generation;
+	u_int			 flags;
+#define CAM_PERIPH_DRV_EARLY		0x01
 };
 
 typedef enum {
@@ -115,7 +118,7 @@ struct cam_periph {
 #define CAM_PERIPH_INVALID		0x08
 #define CAM_PERIPH_NEW_DEV_FOUND	0x10
 #define CAM_PERIPH_RECOVERY_INPROG	0x20
-#define CAM_PERIPH_POLLED		0x40
+#define CAM_PERIPH_FREE			0x80
 	u_int32_t		 immediate_priority;
 	u_int32_t		 refcount;
 	SLIST_HEAD(, ccb_hdr)	 ccb_list;	/* For "immediate" requests */
@@ -139,9 +142,11 @@ cam_status cam_periph_alloc(periph_ctor_t *periph_ctor,
 			    char *name, cam_periph_type type, struct cam_path *,
 			    ac_callback_t *, ac_code, void *arg);
 struct cam_periph *cam_periph_find(struct cam_path *path, char *name);
+int		cam_periph_list(struct cam_path *, struct sbuf *);
 cam_status	cam_periph_acquire(struct cam_periph *periph);
 void		cam_periph_release(struct cam_periph *periph);
 void		cam_periph_release_locked(struct cam_periph *periph);
+void		cam_periph_release_locked_buses(struct cam_periph *periph);
 int		cam_periph_hold(struct cam_periph *periph, int priority);
 void		cam_periph_unhold(struct cam_periph *periph);
 void		cam_periph_invalidate(struct cam_periph *periph);
@@ -158,14 +163,16 @@ int		cam_periph_runccb(union ccb *ccb,
 						       u_int32_t sense_flags),
 				  cam_flags camflags, u_int32_t sense_flags,
 				  struct devstat *ds);
-int		cam_periph_ioctl(struct cam_periph *periph, int cmd, 
+int		cam_periph_ioctl(struct cam_periph *periph, u_long cmd, 
 				 caddr_t addr,
 				 int (*error_routine)(union ccb *ccb,
 						      cam_flags camflags,
 						      u_int32_t sense_flags));
 void		cam_freeze_devq(struct cam_path *path);
+void		cam_freeze_devq_arg(struct cam_path *path, u_int32_t flags,
+		    uint32_t arg);
 u_int32_t	cam_release_devq(struct cam_path *path, u_int32_t relsim_flags,
-				 u_int32_t opening_reduction, u_int32_t timeout,
+				 u_int32_t opening_reduction, u_int32_t arg,
 				 int getcount_only);
 void		cam_periph_async(struct cam_periph *periph, u_int32_t code,
 		 		 struct cam_path *path, void *arg);
@@ -187,6 +194,19 @@ static __inline void
 cam_periph_unlock(struct cam_periph *periph)
 {
 	mtx_unlock(periph->sim->mtx);
+}
+
+static __inline int
+cam_periph_owned(struct cam_periph *periph)
+{
+	return (mtx_owned(periph->sim->mtx));
+}
+
+static __inline int
+cam_periph_sleep(struct cam_periph *periph, void *chan, int priority,
+		 const char *wmesg, int timo)
+{
+	return (msleep(chan, periph->sim->mtx, priority, wmesg, timo));
 }
 
 #endif /* _KERNEL */

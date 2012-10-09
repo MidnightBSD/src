@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996 Massachusetts Institute of Technology
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/perfmon.c,v 1.38 2004/06/16 09:47:07 phk Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -129,18 +128,18 @@ perfmon_avail(void)
 int
 perfmon_setup(int pmc, unsigned int control)
 {
-	register_t	savecrit;
+	register_t	saveintr;
 
 	if (pmc < 0 || pmc >= NPMC)
 		return EINVAL;
 
 	perfmon_inuse |= (1 << pmc);
 	control &= ~(PMCF_SYS_FLAGS << 16);
-	savecrit = intr_disable();
+	saveintr = intr_disable();
 	ctl_shadow[pmc] = control;
 	writectl(pmc);
 	wrmsr(msr_pmc[pmc], pmc_shadow[pmc] = 0);
-	intr_restore(savecrit);
+	intr_restore(saveintr);
 	return 0;
 }
 
@@ -175,17 +174,17 @@ perfmon_fini(int pmc)
 int
 perfmon_start(int pmc)
 {
-	register_t	savecrit;
+	register_t	saveintr;
 
 	if (pmc < 0 || pmc >= NPMC)
 		return EINVAL;
 
 	if (perfmon_inuse & (1 << pmc)) {
-		savecrit = intr_disable();
+		saveintr = intr_disable();
 		ctl_shadow[pmc] |= (PMCF_EN << 16);
 		wrmsr(msr_pmc[pmc], pmc_shadow[pmc]);
 		writectl(pmc);
-		intr_restore(savecrit);
+		intr_restore(saveintr);
 		return 0;
 	}
 	return EBUSY;
@@ -194,17 +193,17 @@ perfmon_start(int pmc)
 int
 perfmon_stop(int pmc)
 {
-	register_t	savecrit;
+	register_t	saveintr;
 
 	if (pmc < 0 || pmc >= NPMC)
 		return EINVAL;
 
 	if (perfmon_inuse & (1 << pmc)) {
-		savecrit = intr_disable();
+		saveintr = intr_disable();
 		pmc_shadow[pmc] = rdmsr(msr_pmc[pmc]) & 0xffffffffffULL;
 		ctl_shadow[pmc] &= ~(PMCF_EN << 16);
 		writectl(pmc);
-		intr_restore(savecrit);
+		intr_restore(saveintr);
 		return 0;
 	}
 	return EBUSY;
@@ -337,6 +336,7 @@ perfmon_ioctl(struct cdev *dev, u_long cmd, caddr_t param, int flags, struct thr
 	struct pmc *pmc;
 	struct pmc_data *pmcd;
 	struct pmc_tstamp *pmct;
+	uint64_t freq;
 	int *ip;
 	int rv;
 
@@ -387,13 +387,14 @@ perfmon_ioctl(struct cdev *dev, u_long cmd, caddr_t param, int flags, struct thr
 		break;
 
 	case PMIOTSTAMP:
-		if (!tsc_freq) {
+		freq = atomic_load_acq_64(&tsc_freq);
+		if (freq == 0) {
 			rv = ENOTTY;
 			break;
 		}
 		pmct = (struct pmc_tstamp *)param;
 		/* XXX interface loses precision. */
-		pmct->pmct_rate = tsc_freq / 1000000;
+		pmct->pmct_rate = freq / 1000000;
 		pmct->pmct_value = rdtsc();
 		rv = 0;
 		break;

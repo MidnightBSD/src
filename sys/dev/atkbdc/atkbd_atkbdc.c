@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbd_atkbdc.c,v 1.20.10.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kbd.h"
 
@@ -94,8 +94,7 @@ atkbdprobe(device_t dev)
 
 	/* see if IRQ is available */
 	rid = KBDC_RID_KBD;
-	res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
-				     RF_SHAREABLE | RF_ACTIVE);
+	res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE);
 	if (res == NULL) {
 		if (bootverbose)
 			device_printf(dev, "unable to allocate IRQ\n");
@@ -132,8 +131,7 @@ atkbdattach(device_t dev)
 		return error;
 
 	/* declare our interrupt handler */
-	sc->intr = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
-					  RF_SHAREABLE | RF_ACTIVE);
+	sc->intr = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE);
 	if (sc->intr == NULL)
 		return ENXIO;
 	error = bus_setup_intr(dev, sc->intr, INTR_TYPE_TTY, NULL, atkbdintr,
@@ -158,9 +156,9 @@ atkbdresume(device_t dev)
 		kbd->kb_flags &= ~KB_INITIALIZED;
 		args[0] = device_get_unit(device_get_parent(dev));
 		args[1] = rman_get_start(sc->intr);
-		(*kbdsw[kbd->kb_index]->init)(device_get_unit(dev), &kbd,
-					      args, device_get_flags(dev));
-		(*kbdsw[kbd->kb_index]->clear_state)(kbd);
+		kbdd_init(kbd, device_get_unit(dev), &kbd, args,
+		    device_get_flags(dev));
+		kbdd_clear_state(kbd);
 	}
 	return 0;
 }
@@ -171,7 +169,7 @@ atkbdintr(void *arg)
 	keyboard_t *kbd;
 
 	kbd = (keyboard_t *)arg;
-	(*kbdsw[kbd->kb_index]->intr)(kbd, NULL);
+	kbdd_intr(kbd, NULL);
 }
 
 DRIVER_MODULE(atkbd, atkbdc, atkbd_driver, atkbd_devclass, 0, 0);

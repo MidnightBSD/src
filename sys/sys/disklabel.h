@@ -27,8 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)disklabel.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: src/sys/sys/disklabel.h,v 1.108.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
- * $MidnightBSD: src/sys/sys/disklabel.h,v 1.4 2011/07/13 00:58:24 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_DISKLABEL_H_
@@ -52,7 +51,8 @@
  */
 
 /* XXX these should be defined per controller (or drive) elsewhere, not here! */
-#if defined(__i386__) || defined(__amd64__) || defined(__arm__)
+#if defined(__i386__) || defined(__amd64__) || defined(__arm__) || \
+    defined(__ia64__) || defined(__powerpc__) || defined(__mips__)
 #define LABELSECTOR	1			/* sector containing label */
 #define LABELOFFSET	0			/* offset of label in sector */
 #endif

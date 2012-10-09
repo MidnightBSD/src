@@ -24,8 +24,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_enc.c,v 1.6.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
+
+#include "opt_inet.h"
+#include "opt_inet6.h"
+#include "opt_enc.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,21 +50,19 @@
 #include <net/route.h>
 #include <net/netisr.h>
 #include <net/bpf.h>
-#include <net/bpfdesc.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
 #include <netinet/in_var.h>
-#include "opt_inet6.h"
 
 #ifdef INET6
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #endif
 
-#include "opt_enc.h"
 #include <netipsec/ipsec.h>
 #include <netipsec/xform.h>
 
@@ -86,7 +88,7 @@ struct enc_softc {
 
 static int	enc_ioctl(struct ifnet *, u_long, caddr_t);
 static int	enc_output(struct ifnet *ifp, struct mbuf *m,
-		    struct sockaddr *dst, struct rtentry *rt);
+		    struct sockaddr *dst, struct route *ro);
 static int	enc_clone_create(struct if_clone *, int, caddr_t);
 static void	enc_clone_destroy(struct ifnet *);
 
@@ -104,18 +106,18 @@ SYSCTL_NODE(_net, OID_AUTO, enc, CTLFLAG_RW, 0, "enc sysctl");
 
 SYSCTL_NODE(_net_enc, OID_AUTO, in, CTLFLAG_RW, 0, "enc input sysctl");
 static int ipsec_filter_mask_in = ENC_BEFORE;
-SYSCTL_XINT(_net_enc_in, OID_AUTO, ipsec_filter_mask, CTLFLAG_RW,
+SYSCTL_INT(_net_enc_in, OID_AUTO, ipsec_filter_mask, CTLFLAG_RW,
 	&ipsec_filter_mask_in, 0, "IPsec input firewall filter mask");
 static int ipsec_bpf_mask_in = ENC_BEFORE;
-SYSCTL_XINT(_net_enc_in, OID_AUTO, ipsec_bpf_mask, CTLFLAG_RW,
+SYSCTL_INT(_net_enc_in, OID_AUTO, ipsec_bpf_mask, CTLFLAG_RW,
 	&ipsec_bpf_mask_in, 0, "IPsec input bpf mask");
 
 SYSCTL_NODE(_net_enc, OID_AUTO, out, CTLFLAG_RW, 0, "enc output sysctl");
 static int ipsec_filter_mask_out = ENC_BEFORE;
-SYSCTL_XINT(_net_enc_out, OID_AUTO, ipsec_filter_mask, CTLFLAG_RW,
+SYSCTL_INT(_net_enc_out, OID_AUTO, ipsec_filter_mask, CTLFLAG_RW,
 	&ipsec_filter_mask_out, 0, "IPsec output firewall filter mask");
 static int ipsec_bpf_mask_out = ENC_BEFORE|ENC_AFTER;
-SYSCTL_XINT(_net_enc_out, OID_AUTO, ipsec_bpf_mask, CTLFLAG_RW,
+SYSCTL_INT(_net_enc_out, OID_AUTO, ipsec_bpf_mask, CTLFLAG_RW,
 	&ipsec_bpf_mask_out, 0, "IPsec output bpf mask");
 
 static void
@@ -186,7 +188,7 @@ DECLARE_MODULE(enc, enc_mod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY);
 
 static int
 enc_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
-    struct rtentry *rt)
+    struct route *ro)
 {
 	m_freem(m);
 	return (0);
@@ -243,11 +245,14 @@ ipsec_filter(struct mbuf **mp, int dir, int flags)
 	}
 
 	/* Skip pfil(9) if no filters are loaded */
-	if (!(PFIL_HOOKED(&inet_pfil_hook)
-#ifdef INET6
-	    || PFIL_HOOKED(&inet6_pfil_hook)
+	if (1
+#ifdef INET
+	    && !PFIL_HOOKED(&V_inet_pfil_hook)
 #endif
-	    )) {
+#ifdef INET6
+	    && !PFIL_HOOKED(&V_inet6_pfil_hook)
+#endif
+	    ) {
 		return (0);
 	}
 
@@ -263,6 +268,7 @@ ipsec_filter(struct mbuf **mp, int dir, int flags)
 	error = 0;
 	ip = mtod(*mp, struct ip *);
 	switch (ip->ip_v) {
+#ifdef INET
 		case 4:
 			/*
 			 * before calling the firewall, swap fields the same as
@@ -271,7 +277,7 @@ ipsec_filter(struct mbuf **mp, int dir, int flags)
 			ip->ip_len = ntohs(ip->ip_len);
 			ip->ip_off = ntohs(ip->ip_off);
 
-			error = pfil_run_hooks(&inet_pfil_hook, mp,
+			error = pfil_run_hooks(&V_inet_pfil_hook, mp,
 			    encif, dir, NULL);
 
 			if (*mp == NULL || error != 0)
@@ -282,10 +288,10 @@ ipsec_filter(struct mbuf **mp, int dir, int flags)
 			ip->ip_len = htons(ip->ip_len);
 			ip->ip_off = htons(ip->ip_off);
 			break;
-
+#endif
 #ifdef INET6
 		case 6:
-			error = pfil_run_hooks(&inet6_pfil_hook, mp,
+			error = pfil_run_hooks(&V_inet6_pfil_hook, mp,
 			    encif, dir, NULL);
 			break;
 #endif

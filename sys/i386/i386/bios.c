@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Michael Smith
  * Copyright (c) 1998 Jonathan Lemon
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/bios.c,v 1.74 2007/04/19 09:18:51 phk Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Code for dealing with the BIOS in x86 PC systems.
@@ -523,7 +522,7 @@ bios_oem_strings(struct bios_oem *oem, u_char *buffer, size_t maxlen)
 		s = (u_char *)BIOS_PADDRTOVADDR(from);
 		se = (u_char *)BIOS_PADDRTOVADDR(to-len);
 		for (; s<se; s++) {
-			if (!memcmp(str, s, len)) {
+			if (!bcmp(str, s, len)) {
 				bios_str = s;
 				break;
 			}
@@ -700,9 +699,10 @@ pnpbios_identify(driver_t *driver, device_t parent)
 	    (!(pd->attrib & PNPATTR_NOCONFIG) && 
 		PNPATTR_CONFIG(pd->attrib) != PNPATTR_CONFIG_STATIC)
 		? ISACFGATTR_DYNAMIC : 0);
+	isa_set_pnpbios_handle(dev, pd->handle);
 	ISA_SET_CONFIG_CALLBACK(parent, dev, pnpbios_set_config, 0);
 	pnp_parse_resources(dev, &pd->devdata[0],
-			    pd->size - sizeof(struct pnp_sysdev), 0);
+	    pd->size - sizeof(struct pnp_sysdev), 0);
 	if (!device_get_desc(dev))
 	    device_set_desc_copy(dev, pnp_eisaformat(pd->devid));
 

@@ -408,26 +408,6 @@ ed_pccard_kick_phy(struct ed_softc *sc)
 }
 
 static int
-ed_pccard_kick_phy(struct ed_softc *sc)
-{
-	struct mii_softc *miisc;
-	struct mii_data *mii;
-
-	/*
-	 * Many of the PHYs that wind up on PC Cards are weird in
-	 * this way.  Generally, we don't need to worry so much about
-	 * the Isolation protocol since there's only one PHY in
-	 * these designs, so this workaround is reasonable.
-	 */
-	mii = device_get_softc(sc->miibus);
-	LIST_FOREACH(miisc, &mii->mii_phys, mii_list) {
-		miisc->mii_flags |= MIIF_FORCEANEG;
-		mii_phy_reset(miisc);
-	}
-	return (mii_mediachg(mii));
-}
-
-static int
 ed_pccard_media_ioctl(struct ed_softc *sc, struct ifreq *ifr, u_long command)
 {
 	struct mii_data *mii;
@@ -981,7 +961,6 @@ ed_pccard_ax88x90_mii_readbits(struct ed_softc *sc, int nbits)
 			val++;
 		ed_asic_outb(sc, ED_AX88X90_MIIBUS, mdio | ED_AX88X90_MII_CLK);
 	}
-	printf("AX88x90 %#x+%#x Reading %d bits: %x\n", (unsigned int)sc->port_bsh, sc->asic_offset, nbits, val);
 	return val;
 }
 

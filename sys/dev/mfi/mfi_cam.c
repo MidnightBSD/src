@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_cam.c,v 1.2.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mfi.h"
 
@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_cam.c,v 1.2.2.1.4.1 2008/11/25 02:59:29 
 #include <sys/uio.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
+#include <sys/sysctl.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -54,12 +55,9 @@ __FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_cam.c,v 1.2.2.1.4.1 2008/11/25 02:59:29 
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
 
-#include <sys/bus.h>
-#include <sys/conf.h>
 #include <machine/md_var.h>
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <sys/rman.h>
 
 #include <dev/mfi/mfireg.h>
 #include <dev/mfi/mfi_ioctl.h>
@@ -95,6 +93,7 @@ static driver_t mfip_driver = {
 };
 DRIVER_MODULE(mfip, mfi, mfip_driver, mfip_devclass, 0, 0);
 MODULE_DEPEND(mfip, cam, 1, 1, 1);
+MODULE_DEPEND(mfip, mfi, 1, 1, 1);
 
 #define ccb_mfip_ptr sim_priv.entries[0].ptr
 
@@ -271,11 +270,17 @@ mfip_start(void *data)
 	struct mfip_softc *sc;
 	struct mfi_pass_frame *pt;
 	struct mfi_command *cm;
+	uint32_t context = 0;
 
 	sc = ccbh->ccb_mfip_ptr;
 
 	if ((cm = mfi_dequeue_free(sc->mfi_sc)) == NULL)
 		return (NULL);
+
+	/* Zero out the MFI frame */
+	context = cm->cm_frame->header.context;
+	bzero(cm->cm_frame, sizeof(union mfi_frame));
+	cm->cm_frame->header.context = context;
 
 	pt = &cm->cm_frame->pass;
 	pt->header.cmd = MFI_CMD_PD_SCSI_IO;
@@ -288,8 +293,8 @@ mfip_start(void *data)
 	pt->header.data_len = csio->dxfer_len;
 	pt->header.sense_len = MFI_SENSE_LEN;
 	pt->header.cdb_len = csio->cdb_len;
-	pt->sense_addr_lo = cm->cm_sense_busaddr;
-	pt->sense_addr_hi = 0;
+	pt->sense_addr_lo = (uint32_t)cm->cm_sense_busaddr;
+	pt->sense_addr_hi = (uint32_t)((uint64_t)cm->cm_sense_busaddr >> 32);
 	if (ccbh->flags & CAM_CDB_POINTER)
 		bcopy(csio->cdb_io.cdb_ptr, &pt->cdb[0], csio->cdb_len);
 	else
@@ -339,14 +344,14 @@ mfip_done(struct mfi_command *cm)
 		ccbh->status = CAM_REQ_CMP;
 		csio->scsi_status = pt->header.scsi_status;
 		if (ccbh->flags & CAM_CDB_POINTER)
-			command = ccb->csio.cdb_io.cdb_ptr[0];
+			command = csio->cdb_io.cdb_ptr[0];
 		else
-			command = ccb->csio.cdb_io.cdb_bytes[0];
+			command = csio->cdb_io.cdb_bytes[0];
 		if (command == INQUIRY) {
-			device = ccb->csio.data_ptr[0] & 0x1f;
+			device = csio->data_ptr[0] & 0x1f;
 			if ((device == T_DIRECT) || (device == T_PROCESSOR))
 				csio->data_ptr[0] =
-				     (device & 0xe0) | T_NODEVICE;
+				     (csio->data_ptr[0] & 0xe0) | T_NODEVICE;
 		}
 		break;
 	}
@@ -356,7 +361,13 @@ mfip_done(struct mfi_command *cm)
 
 		ccbh->status = CAM_SCSI_STATUS_ERROR | CAM_AUTOSNS_VALID;
 		csio->scsi_status = pt->header.scsi_status;
-		sense_len = min(pt->header.sense_len, sizeof(struct scsi_sense_data));
+		if (pt->header.sense_len < csio->sense_len)
+			csio->sense_resid = csio->sense_len -
+			    pt->header.sense_len;
+		else
+			csio->sense_resid = 0;
+		sense_len = min(pt->header.sense_len,
+		    sizeof(struct scsi_sense_data));
 		bzero(&csio->sense_data, sizeof(struct scsi_sense_data));
 		bcopy(&cm->cm_sense->data[0], &csio->sense_data, sense_len);
 		break;

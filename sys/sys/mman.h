@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mman.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/mman.h,v 1.40.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_MMAN_H_
@@ -83,11 +82,15 @@
  */
 #define	MAP_FILE	 0x0000	/* map from file (default) */
 #define	MAP_ANON	 0x1000	/* allocated from memory, swap space */
+#ifndef _KERNEL
+#define	MAP_ANONYMOUS	 MAP_ANON /* For compatibility. */
+#endif /* !_KERNEL */
 
 /*
  * Extended flags
  */
 #define	MAP_NOCORE	 0x00020000 /* dont include these pages in a coredump */
+#define	MAP_PREFAULT_READ 0x00040000 /* prefault mapping for reading */
 #endif /* __BSD_VISIBLE */
 
 #if __POSIX_VISIBLE >= 199309
@@ -140,6 +143,12 @@
 #define	MINCORE_MODIFIED	 0x4 /* Page has been modified by us */
 #define	MINCORE_REFERENCED_OTHER 0x8 /* Page has been referenced */
 #define	MINCORE_MODIFIED_OTHER	0x10 /* Page has been modified */
+#define	MINCORE_SUPER		0x20 /* Page is a "super" page */
+
+/*
+ * Anonymous object constant for shm_open().
+ */
+#define	SHM_ANON		((char *)1)
 #endif /* __BSD_VISIBLE */
 
 /*
@@ -169,7 +178,42 @@ typedef	__size_t	size_t;
 #define	_SIZE_T_DECLARED
 #endif
 
-#ifndef _KERNEL
+#if defined(_KERNEL) || defined(_WANT_FILE)
+#include <vm/vm.h>
+
+struct file;
+
+struct shmfd {
+	size_t		shm_size;
+	vm_object_t	shm_object;
+	int		shm_refs;
+	uid_t		shm_uid;
+	gid_t		shm_gid;
+	mode_t		shm_mode;
+	int		shm_kmappings;
+
+	/*
+	 * Values maintained solely to make this a better-behaved file
+	 * descriptor for fstat() to run on.
+	 */
+	struct timespec	shm_atime;
+	struct timespec	shm_mtime;
+	struct timespec	shm_ctime;
+	struct timespec	shm_birthtime;
+
+	struct label	*shm_label;		/* MAC label */
+	const char	*shm_path;
+};
+#endif
+
+#ifdef _KERNEL
+int	shm_mmap(struct shmfd *shmfd, vm_size_t objsize, vm_ooffset_t foff,
+	    vm_object_t *obj);
+int	shm_map(struct file *fp, size_t size, off_t offset, void **memp);
+int	shm_unmap(struct file *fp, void *mem, size_t size);
+void	shm_path(struct shmfd *shmfd, char *path, size_t size);
+
+#else /* !_KERNEL */
 
 __BEGIN_DECLS
 /*
@@ -177,6 +221,7 @@ __BEGIN_DECLS
  * posix_typed_mem_open().
  */
 #if __BSD_VISIBLE
+int	getpagesizes(size_t *, int);
 int	madvise(void *, size_t, int);
 int	mincore(const void *, size_t, char *);
 int	minherit(void *, size_t, int);

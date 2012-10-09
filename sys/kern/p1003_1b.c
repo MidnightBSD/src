@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/p1003_1b.c,v 1.36.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_posix.h"
 
@@ -63,7 +63,7 @@ int
 syscall_not_present(struct thread *td, const char *s, struct nosys_args *uap)
 {
 	log(LOG_ERR, "cmd %s pid %d tried to use non-present %s\n",
-			td->td_proc->p_comm, td->td_proc->p_pid, s);
+			td->td_name, td->td_proc->p_pid, s);
 
 	/* a " return nosys(p, uap); " here causes a core dump.
 	 */
@@ -102,13 +102,13 @@ sched_attach(void)
 	int ret = ksched_attach(&ksched);
 
 	if (ret == 0)
-		p31b_setcfg(CTL_P1003_1B_PRIORITY_SCHEDULING, 1);
+		p31b_setcfg(CTL_P1003_1B_PRIORITY_SCHEDULING, 200112L);
 
 	return ret;
 }
 
 int
-sched_setparam(struct thread *td, struct sched_setparam_args *uap)
+sys_sched_setparam(struct thread *td, struct sched_setparam_args *uap)
 {
 	struct thread *targettd;
 	struct proc *targetp;
@@ -140,7 +140,7 @@ sched_setparam(struct thread *td, struct sched_setparam_args *uap)
 }
 
 int
-sched_getparam(struct thread *td, struct sched_getparam_args *uap)
+sys_sched_getparam(struct thread *td, struct sched_getparam_args *uap)
 {
 	int e;
 	struct sched_param sched_param;
@@ -156,7 +156,7 @@ sched_getparam(struct thread *td, struct sched_getparam_args *uap)
 		if (targetp == NULL) {
 			return (ESRCH);
 		}
-		targettd = FIRST_THREAD_IN_PROC(targetp); /* XXXKSE */
+		targettd = FIRST_THREAD_IN_PROC(targetp);
 	}
 
 	e = p_cansee(td, targetp);
@@ -170,7 +170,7 @@ sched_getparam(struct thread *td, struct sched_getparam_args *uap)
 }
 
 int
-sched_setscheduler(struct thread *td, struct sched_setscheduler_args *uap)
+sys_sched_setscheduler(struct thread *td, struct sched_setscheduler_args *uap)
 {
 	int e;
 	struct sched_param sched_param;
@@ -207,7 +207,7 @@ sched_setscheduler(struct thread *td, struct sched_setscheduler_args *uap)
 }
 
 int
-sched_getscheduler(struct thread *td, struct sched_getscheduler_args *uap)
+sys_sched_getscheduler(struct thread *td, struct sched_getscheduler_args *uap)
 {
 	int e, policy;
 	struct thread *targettd;
@@ -219,11 +219,9 @@ sched_getscheduler(struct thread *td, struct sched_getscheduler_args *uap)
 		PROC_LOCK(targetp);
 	} else {
 		targetp = pfind(uap->pid);
-		if (targetp == NULL) {
-			e = ESRCH;
-			goto done2;
-		}
-		targettd = FIRST_THREAD_IN_PROC(targetp); /* XXXKSE */
+		if (targetp == NULL)
+			return (ESRCH);
+		targettd = FIRST_THREAD_IN_PROC(targetp);
 	}
 
 	e = p_cansee(td, targetp);
@@ -233,12 +231,11 @@ sched_getscheduler(struct thread *td, struct sched_getscheduler_args *uap)
 	}
 	PROC_UNLOCK(targetp);
 
-done2:
 	return (e);
 }
 
 int
-sched_yield(struct thread *td, struct sched_yield_args *uap)
+sys_sched_yield(struct thread *td, struct sched_yield_args *uap)
 {
 
 	sched_relinquish(curthread);
@@ -246,7 +243,7 @@ sched_yield(struct thread *td, struct sched_yield_args *uap)
 }
 
 int
-sched_get_priority_max(struct thread *td,
+sys_sched_get_priority_max(struct thread *td,
     struct sched_get_priority_max_args *uap)
 {
 	int error, prio;
@@ -257,7 +254,7 @@ sched_get_priority_max(struct thread *td,
 }
 
 int
-sched_get_priority_min(struct thread *td,
+sys_sched_get_priority_min(struct thread *td,
     struct sched_get_priority_min_args *uap)
 {
 	int error, prio;
@@ -268,7 +265,7 @@ sched_get_priority_min(struct thread *td,
 }
 
 int
-sched_rr_get_interval(struct thread *td,
+sys_sched_rr_get_interval(struct thread *td,
     struct sched_rr_get_interval_args *uap)
 {
 	struct timespec timespec;
@@ -293,13 +290,10 @@ kern_sched_rr_get_interval(struct thread *td, pid_t pid,
 		targetp = td->td_proc;
 		PROC_LOCK(targetp);
 	} else {
-		targetp = td->td_proc;
-		PROC_LOCK(targetp);
-		targettd = thread_find(targetp, pid);
-		if (targettd == NULL) {
-			PROC_UNLOCK(targetp);
+		targetp = pfind(pid);
+		if (targetp == NULL)
 			return (ESRCH);
-		}
+		targettd = FIRST_THREAD_IN_PROC(targetp);
 	}
 
 	e = p_cansee(td, targetp);

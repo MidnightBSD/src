@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -65,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_pager.c,v 1.108 2007/08/05 21:04:32 alc Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -83,13 +82,11 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_pager.c,v 1.108 2007/08/05 21:04:32 alc Exp $"
 #include <vm/vm_pager.h>
 #include <vm/vm_extern.h>
 
-MALLOC_DEFINE(M_VMPGDATA, "vm_pgdata", "XXX: VM pager private data");
-
 int cluster_pbuf_freecnt = -1;	/* unlimited to begin with */
 
 static int dead_pager_getpages(vm_object_t, vm_page_t *, int, int);
 static vm_object_t dead_pager_alloc(void *, vm_ooffset_t, vm_prot_t,
-	vm_ooffset_t);
+    vm_ooffset_t, struct ucred *);
 static void dead_pager_putpages(vm_object_t, vm_page_t *, int, int, int *);
 static boolean_t dead_pager_haspage(vm_object_t, vm_pindex_t, int *, int *);
 static void dead_pager_dealloc(vm_object_t);
@@ -105,11 +102,8 @@ dead_pager_getpages(obj, ma, count, req)
 }
 
 static vm_object_t
-dead_pager_alloc(handle, size, prot, off)
-	void *handle;
-	vm_ooffset_t size;
-	vm_prot_t prot;
-	vm_ooffset_t off;
+dead_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
+    vm_ooffset_t off, struct ucred *cred)
 {
 	return NULL;
 }
@@ -164,7 +158,9 @@ struct pagerops *pagertab[] = {
 	&vnodepagerops,		/* OBJT_VNODE */
 	&devicepagerops,	/* OBJT_DEVICE */
 	&physpagerops,		/* OBJT_PHYS */
-	&deadpagerops		/* OBJT_DEAD */
+	&deadpagerops,		/* OBJT_DEAD */
+	&sgpagerops,		/* OBJT_SG */
+	&mgtdevicepagerops,	/* OBJT_MGTDEVICE */
 };
 
 static const int npagers = sizeof(pagertab) / sizeof(pagertab[0]);
@@ -193,7 +189,7 @@ vm_pager_init()
 	 * Initialize known pagers
 	 */
 	for (pgops = pagertab; pgops < &pagertab[npagers]; pgops++)
-		if (pgops && ((*pgops)->pgo_init != NULL))
+		if ((*pgops)->pgo_init != NULL)
 			(*(*pgops)->pgo_init) ();
 }
 
@@ -231,14 +227,14 @@ vm_pager_bufferinit()
  */
 vm_object_t
 vm_pager_allocate(objtype_t type, void *handle, vm_ooffset_t size,
-		  vm_prot_t prot, vm_ooffset_t off)
+    vm_prot_t prot, vm_ooffset_t off, struct ucred *cred)
 {
 	vm_object_t ret;
 	struct pagerops *ops;
 
 	ops = pagertab[type];
 	if (ops)
-		ret = (*ops->pgo_alloc) (handle, size, prot, off);
+		ret = (*ops->pgo_alloc) (handle, size, prot, off, cred);
 	else
 		ret = NULL;
 	return (ret);
@@ -275,14 +271,15 @@ vm_pager_object_lookup(struct pagerlst *pg_list, void *handle)
 	vm_object_t object;
 
 	TAILQ_FOREACH(object, pg_list, pager_object_list) {
-		VM_OBJECT_LOCK(object);
-		if (object->handle == handle &&
-		    (object->flags & OBJ_DEAD) == 0) {
-			vm_object_reference_locked(object);
+		if (object->handle == handle) {
+			VM_OBJECT_LOCK(object);
+			if ((object->flags & OBJ_DEAD) == 0) {
+				vm_object_reference_locked(object);
+				VM_OBJECT_UNLOCK(object);
+				break;
+			}
 			VM_OBJECT_UNLOCK(object);
-			break;
 		}
-		VM_OBJECT_UNLOCK(object);
 	}
 	return (object);
 }

@@ -1,6 +1,5 @@
-/* $MidnightBSD: src/sys/dev/ath/if_ath_pci.c,v 1.4 2011/09/30 01:20:04 laffer1 Exp $ */
 /*-
- * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ath/if_ath_pci.c,v 1.19.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * PCI/Cardbus front-end for the Atheros Wireless LAN controller driver.
@@ -88,36 +87,6 @@ ath_pci_probe(device_t dev)
 	return ENXIO;
 }
 
-static u_int32_t
-ath_pci_setup(device_t dev)
-{
-	u_int32_t cmd;
-
-	/*
-	 * Enable memory mapping and bus mastering.
-	 */
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	cmd |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, cmd, 4);
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	if ((cmd & PCIM_CMD_MEMEN) == 0) {
-		device_printf(dev, "failed to enable memory mapping\n");
-		return 0;
-	}
-	if ((cmd & PCIM_CMD_BUSMASTEREN) == 0) {
-		device_printf(dev, "failed to enable bus mastering\n");
-		return 0;
-	}
-
-	/*
-	 * Disable retry timeout to keep PCI Tx retries from
-	 * interfering with C3 CPU state.
-	 */
-	pci_write_config(dev, PCIR_RETRY_TIMEOUT, 0, 1);
-
-	return 1;
-}
-
 static int
 ath_pci_attach(device_t dev)
 {
@@ -128,8 +97,16 @@ ath_pci_attach(device_t dev)
 
 	sc->sc_dev = dev;
 
-	if (!ath_pci_setup(dev))
-		goto bad;
+	/*
+	 * Enable bus mastering.
+	 */
+	pci_enable_busmaster(dev);
+
+	/*
+	 * Disable retry timeout to keep PCI Tx retries from
+	 * interfering with C3 CPU state.
+	 */
+	pci_write_config(dev, PCIR_RETRY_TIMEOUT, 0, 1);
 
 	/* 
 	 * Setup memory-mapping of PCI registers.
@@ -141,6 +118,7 @@ ath_pci_attach(device_t dev)
 		device_printf(dev, "cannot map register space\n");
 		goto bad;
 	}
+	/* XXX uintptr_t is a bandaid for ia64; to be fixed */
 	sc->sc_st = (HAL_BUS_TAG)(uintptr_t) rman_get_bustag(psc->sc_sr);
 	sc->sc_sh = (HAL_BUS_HANDLE) rman_get_bushandle(psc->sc_sr);
 	/*
@@ -250,9 +228,6 @@ ath_pci_resume(device_t dev)
 {
 	struct ath_pci_softc *psc = device_get_softc(dev);
 
-	if (!ath_pci_setup(dev))
-		return ENXIO;
-
 	ath_resume(&psc->sc_sc);
 
 	return (0);
@@ -275,7 +250,7 @@ static driver_t ath_pci_driver = {
 	sizeof (struct ath_pci_softc)
 };
 static	devclass_t ath_devclass;
-DRIVER_MODULE(if_ath, pci, ath_pci_driver, ath_devclass, 0, 0);
-DRIVER_MODULE(if_ath, cardbus, ath_pci_driver, ath_devclass, 0, 0);
-MODULE_VERSION(if_ath, 1);
-MODULE_DEPEND(if_ath, wlan, 1, 1, 1);		/* 802.11 media layer */
+DRIVER_MODULE(ath_pci, pci, ath_pci_driver, ath_devclass, 0, 0);
+MODULE_VERSION(ath_pci, 1);
+MODULE_DEPEND(ath_pci, wlan, 1, 1, 1);		/* 802.11 media layer */
+MODULE_DEPEND(ath_pci, if_ath, 1, 1, 1);	/* if_ath driver */

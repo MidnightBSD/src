@@ -68,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_ch.c,v 1.46.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -107,8 +107,7 @@ static const u_int32_t	CH_TIMEOUT_SEND_VOLTAG		     = 10000;
 static const u_int32_t	CH_TIMEOUT_INITIALIZE_ELEMENT_STATUS = 500000;
 
 typedef enum {
-	CH_FLAG_INVALID		= 0x001,
-	CH_FLAG_OPEN		= 0x002
+	CH_FLAG_INVALID		= 0x001
 } ch_flags;
 
 typedef enum {
@@ -211,7 +210,7 @@ PERIPHDRIVER_DECLARE(ch, chdriver);
 
 static struct cdevsw ch_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	0,
+	.d_flags =	D_TRACKCLOSE,
 	.d_open =	chopen,
 	.d_close =	chclose,
 	.d_ioctl =	chioctl,
@@ -287,6 +286,9 @@ chasync(void *callback_arg, u_int32_t code, struct cam_path *path, void *arg)
 		if (cgd == NULL)
 			break;
 
+		if (cgd->protocol != PROTO_SCSI)
+			break;
+
 		if (SID_TYPE(&cgd->inq_data)!= T_CHANGER)
 			break;
 
@@ -319,6 +321,7 @@ chregister(struct cam_periph *periph, void *arg)
 {
 	struct ch_softc *softc;
 	struct ccb_getdev *cgd;
+	struct ccb_pathinq cpi;
 
 	cgd = (struct ccb_getdev *)arg;
 	if (periph == NULL) {
@@ -344,6 +347,11 @@ chregister(struct cam_periph *periph, void *arg)
 	periph->softc = softc;
 	softc->quirks = CH_Q_NONE;
 
+	bzero(&cpi, sizeof(cpi));
+	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
+	cpi.ccb_h.func_code = XPT_PATH_INQ;
+	xpt_action((union ccb *)&cpi);
+
 	/*
 	 * Changers don't have a blocksize, and obviously don't support
 	 * tagged queueing.
@@ -352,7 +360,8 @@ chregister(struct cam_periph *periph, void *arg)
 	softc->device_stats = devstat_new_entry("ch",
 			  periph->unit_number, 0,
 			  DEVSTAT_NO_BLOCKSIZE | DEVSTAT_NO_ORDERED_TAGS,
-			  SID_TYPE(&cgd->inq_data)| DEVSTAT_TYPE_IF_SCSI,
+			  SID_TYPE(&cgd->inq_data) |
+			  XPORT_DEVSTAT_TYPE(cpi.transport),
 			  DEVSTAT_PRIORITY_OTHER);
 
 	/* Register the device */
@@ -373,7 +382,7 @@ chregister(struct cam_periph *periph, void *arg)
 	 * This first call can't block
 	 */
 	(void)cam_periph_hold(periph, PRIBIO);
-	xpt_schedule(periph, /*priority*/5);
+	xpt_schedule(periph, CAM_PRIORITY_DEV);
 
 	return(CAM_REQ_CMP);
 }
@@ -394,15 +403,10 @@ chopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	cam_periph_lock(periph);
 	
 	if (softc->flags & CH_FLAG_INVALID) {
+		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
-		cam_periph_release(periph);
 		return(ENXIO);
 	}
-
-	if ((softc->flags & CH_FLAG_OPEN) == 0)
-		softc->flags |= CH_FLAG_OPEN;
-	else
-		cam_periph_release(periph);
 
 	if ((error = cam_periph_hold(periph, PRIBIO | PCATCH)) != 0) {
 		cam_periph_unlock(periph);
@@ -414,9 +418,8 @@ chopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	 * Load information about this changer device into the softc.
 	 */
 	if ((error = chgetparams(periph)) != 0) {
-		softc->flags &= ~CH_FLAG_OPEN;
+		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
-		cam_periph_release(periph);
 		return(error);
 	}
 
@@ -441,11 +444,6 @@ chclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 
 	softc = (struct ch_softc *)periph->softc;
 
-	cam_periph_lock(periph);
-
-	softc->flags &= ~CH_FLAG_OPEN;
-
-	cam_periph_unlock(periph);
 	cam_periph_release(periph);
 
 	return(0);
@@ -603,7 +601,8 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 					retry_scheduled = 0;
 
 				/* Don't wedge this device's queue */
-				cam_release_devq(done_ccb->ccb_h.path,
+				if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0)
+					cam_release_devq(done_ccb->ccb_h.path,
 						 /*relsim_flags*/0,
 						 /*reduction*/0,
 						 /*timeout*/0,
@@ -806,7 +805,7 @@ chmove(struct cam_periph *periph, struct changer_move *cm)
 	fromelem = softc->sc_firsts[cm->cm_fromtype] + cm->cm_fromunit;
 	toelem = softc->sc_firsts[cm->cm_totype] + cm->cm_tounit;
 
-	ccb = cam_periph_getccb(periph, /*priority*/ 1);
+	ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 
 	scsi_move_medium(&ccb->csio,
 			 /* retries */ 1,
@@ -865,7 +864,7 @@ chexchange(struct cam_periph *periph, struct changer_exchange *ce)
 	dst1 = softc->sc_firsts[ce->ce_fdsttype] + ce->ce_fdstunit;
 	dst2 = softc->sc_firsts[ce->ce_sdsttype] + ce->ce_sdstunit;
 
-	ccb = cam_periph_getccb(periph, /*priority*/ 1);
+	ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 
 	scsi_exchange_medium(&ccb->csio,
 			     /* retries */ 1,
@@ -915,7 +914,7 @@ chposition(struct cam_periph *periph, struct changer_position *cp)
 	 */
 	dst = softc->sc_firsts[cp->cp_type] + cp->cp_unit;
 
-	ccb = cam_periph_getccb(periph, /*priority*/ 1);
+	ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 
 	scsi_position_to_element(&ccb->csio,
 				 /* retries */ 1,
@@ -1072,7 +1071,7 @@ chgetelemstatus(struct cam_periph *periph,
 	data = (caddr_t)malloc(1024, M_DEVBUF, M_WAITOK);
 
 	cam_periph_lock(periph);
-	ccb = cam_periph_getccb(periph, /*priority*/ 1);
+	ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 
 	scsi_read_element_status(&ccb->csio,
 				 /* retries */ 1,
@@ -1198,7 +1197,7 @@ chielem(struct cam_periph *periph,
 	error = 0;
 	softc = (struct ch_softc *)periph->softc;
 
-	ccb = cam_periph_getccb(periph, /*priority*/ 1);
+	ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 
 	scsi_initialize_element_status(&ccb->csio,
 				      /* retries */ 1,
@@ -1282,7 +1281,7 @@ chsetvoltag(struct cam_periph *periph,
 	       min(strlen(csvr->csvr_voltag.cv_volid), sizeof(ssvtp.vitf)));
 	scsi_ulto2b(csvr->csvr_voltag.cv_serial, ssvtp.minvsn);
 
-	ccb = cam_periph_getccb(periph, /*priority*/ 1);
+	ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 
 	scsi_send_volume_tag(&ccb->csio,
 			     /* retries */ 1,
@@ -1320,7 +1319,7 @@ chgetparams(struct cam_periph *periph)
 
 	softc = (struct ch_softc *)periph->softc;
 
-	ccb = cam_periph_getccb(periph, /*priority*/ 1);
+	ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 
 	/*
 	 * The scsi_mode_sense_data structure is just a convenience

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet/icmp6.h,v 1.21.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: icmp6.h,v 1.46 2001/04/27 15:09:48 itojun Exp $	*/
 
 /*-
@@ -125,6 +125,7 @@ struct icmp6_hdr {
 #define ICMP6_FQDN_REPLY		140	/* FQDN reply */
 #define ICMP6_NI_QUERY			139	/* node information request */
 #define ICMP6_NI_REPLY			140	/* node information reply */
+#define MLDV2_LISTENER_REPORT		143	/* RFC3810 listener report */
 
 /* The definitions below are experimental. TBA */
 #define MLD_MTRACE_RESP			200	/* mtrace resp (to sender) */
@@ -194,6 +195,8 @@ struct mld_hdr {
 #define mld_cksum	mld_icmp6_hdr.icmp6_cksum
 #define mld_maxdelay	mld_icmp6_hdr.icmp6_data16[0]
 #define mld_reserved	mld_icmp6_hdr.icmp6_data16[1]
+#define mld_v2_reserved	mld_icmp6_hdr.icmp6_data16[0]
+#define mld_v2_numrecs	mld_icmp6_hdr.icmp6_data16[1]
 
 /*
  * Neighbor Discovery
@@ -294,8 +297,9 @@ struct nd_opt_hdr {		/* Neighbor discovery option header */
 #define ND_OPT_PREFIX_INFORMATION	3
 #define ND_OPT_REDIRECTED_HEADER	4
 #define ND_OPT_MTU			5
-
-#define ND_OPT_ROUTE_INFO		200	/* draft-ietf-ipngwg-router-preference, not officially assigned yet */
+#define ND_OPT_ROUTE_INFO		24	/* RFC 4191 */
+#define ND_OPT_RDNSS			25	/* RFC 6106 */
+#define ND_OPT_DNSSL			31	/* RFC 6106 */
 
 struct nd_opt_prefix_info {	/* prefix information */
 	u_int8_t	nd_opt_pi_type;
@@ -333,6 +337,22 @@ struct nd_opt_route_info {	/* route info */
 	u_int8_t	nd_opt_rti_flags;
 	u_int32_t	nd_opt_rti_lifetime;
 	/* prefix follows */
+} __packed;
+
+struct nd_opt_rdnss {		/* RDNSS option (RFC 6106) */
+	u_int8_t	nd_opt_rdnss_type;
+	u_int8_t	nd_opt_rdnss_len;
+	u_int16_t	nd_opt_rdnss_reserved;
+	u_int32_t	nd_opt_rdnss_lifetime;
+	/* followed by list of recursive DNS servers */
+} __packed;
+
+struct nd_opt_dnssl {		/* DNSSL option (RFC 6106) */
+	u_int8_t	nd_opt_dnssl_type;
+	u_int8_t	nd_opt_dnssl_len;
+	u_int16_t	nd_opt_dnssl_reserved;
+	u_int32_t	nd_opt_dnssl_lifetime;
+	/* followed by list of DNS search domains */
 } __packed;
 
 /*
@@ -596,6 +616,22 @@ struct icmp6stat {
 	u_quad_t icp6s_badredirect;	/* bad redirect message */
 };
 
+#ifdef _KERNEL
+/*
+ * In-kernel consumers can use these accessor macros directly to update
+ * stats.
+ */
+#define	ICMP6STAT_ADD(name, val)	V_icmp6stat.name += (val)
+#define	ICMP6STAT_INC(name)		ICMP6STAT_ADD(name, 1)
+
+/*
+ * Kernel module consumers must use this accessor macro.
+ */
+void	kmod_icmp6stat_inc(int statnum);
+#define	KMOD_ICMP6STAT_INC(name)					\
+	kmod_icmp6stat_inc(offsetof(struct icmp6stat, name) / sizeof(u_quad_t))
+#endif
+
 /*
  * Names for ICMP sysctl objects
  */
@@ -633,12 +669,12 @@ struct	rtentry;
 struct	rttimer;
 struct	in6_multi;
 # endif
-void	icmp6_init(void);
 void	icmp6_paramerror(struct mbuf *, int);
 void	icmp6_error(struct mbuf *, int, int, int);
 void	icmp6_error2(struct mbuf *, int, int, int, struct ifnet *);
 int	icmp6_input(struct mbuf **, int *, int);
 void	icmp6_fasttimo(void);
+void	icmp6_slowtimo(void);
 void	icmp6_reflect(struct mbuf *, size_t);
 void	icmp6_prepare(struct mbuf *);
 void	icmp6_redirect_input(struct mbuf *, int);
@@ -707,8 +743,11 @@ do { \
 		} \
 } while (/*CONSTCOND*/ 0)
 
-extern int	icmp6_rediraccept;	/* accept/process redirects */
-extern int	icmp6_redirtimeout;	/* cache time for redirect routes */
+VNET_DECLARE(int, icmp6_rediraccept);	/* accept/process redirects */
+VNET_DECLARE(int, icmp6_redirtimeout);	/* cache time for redirect routes */
+
+#define	V_icmp6_rediraccept	VNET(icmp6_rediraccept)
+#define	V_icmp6_redirtimeout	VNET(icmp6_redirtimeout)
 
 #define ICMP6_NODEINFO_FQDNOK		0x1
 #define ICMP6_NODEINFO_NODEADDROK	0x2

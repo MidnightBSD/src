@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/extattr.h,v 1.18.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -59,13 +58,14 @@
 	EXTATTR_NAMESPACE_SYSTEM_STRING }
 
 #ifdef _KERNEL
+#include <sys/types.h>
 
 #define	EXTATTR_MAXNAMELEN	NAME_MAX
 struct thread;
 struct ucred;
 struct vnode;
 int	extattr_check_cred(struct vnode *vp, int attrnamespace,
-	    struct ucred *cred, struct thread *td, int access);
+	    struct ucred *cred, struct thread *td, accmode_t accmode);
 
 #else
 #include <sys/cdefs.h>

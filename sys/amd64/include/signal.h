@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1986, 1989, 1991, 1993
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/amd64/include/signal.h,v 1.29 2005/08/20 16:44:40 stefanf Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SIGNAL_H_
@@ -48,18 +47,14 @@ typedef long sig_atomic_t;
 #include <machine/trap.h>	/* codes for SIGILL, SIGFPE */
 
 /*
- * Only the kernel should need these old type definitions.
- */
-/*
  * Information pushed on stack when a signal is delivered.
  * This is used by the kernel to restore state following
  * execution of the signal handler.  It is also made available
  * to the handler to allow it to restore state properly if
  * a non-standard exit is performed.
- */
-/*
- * The sequence of the fields/registers in struct sigcontext should match
- * those in mcontext_t.
+ *
+ * The sequence of the fields/registers after sc_mask in struct
+ * sigcontext must match those in mcontext_t and struct trapframe.
  */
 struct sigcontext {
 	struct __sigset sc_mask;	/* signal mask to restore */
@@ -79,9 +74,13 @@ struct sigcontext {
 	long	sc_r13;
 	long	sc_r14;
 	long	sc_r15;
-	long	sc_trapno;
+	int	sc_trapno;
+	short	sc_fs;
+	short	sc_gs;
 	long	sc_addr;
-	long	sc_flags;
+	int	sc_flags;
+	short	sc_es;
+	short	sc_ds;
 	long	sc_err;
 	long	sc_rip;
 	long	sc_cs;
@@ -90,13 +89,20 @@ struct sigcontext {
 	long	sc_ss;
 	long	sc_len;			/* sizeof(mcontext_t) */
 	/*
-	 * XXX - See <machine/ucontext.h> and <machine/fpu.h> for
-	 *       the following fields.
+	 * See <machine/ucontext.h> and <machine/fpu.h> for the following
+	 * fields.
 	 */
 	long	sc_fpformat;
 	long	sc_ownedfp;
 	long	sc_fpstate[64] __aligned(16);
-	long	sc_spare[8];
+
+	long	sc_fsbase;
+	long	sc_gsbase;
+
+	long	sc_xfpustate;
+	long	sc_xfpustate_len;
+
+	long	sc_spare[4];
 };
 #endif /* __BSD_VISIBLE */
 

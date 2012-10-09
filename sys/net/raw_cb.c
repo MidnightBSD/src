@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/raw_cb.c,v 1.34.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -43,7 +43,9 @@
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
+#include <net/if.h>
 #include <net/raw_cb.h>
+#include <net/vnet.h>
 
 /*
  * Routines to manage the raw protocol control blocks.
@@ -55,7 +57,7 @@
  */
 
 struct mtx rawcb_mtx;
-struct rawcb_list_head rawcb_list;
+VNET_DEFINE(struct rawcb_list_head, rawcb_list);
 
 SYSCTL_NODE(_net, OID_AUTO, raw, CTLFLAG_RW, 0, "Raw socket infrastructure");
 
@@ -92,7 +94,7 @@ raw_attach(struct socket *so, int proto)
 	rp->rcb_proto.sp_family = so->so_proto->pr_domain->dom_family;
 	rp->rcb_proto.sp_protocol = proto;
 	mtx_lock(&rawcb_mtx);
-	LIST_INSERT_HEAD(&rawcb_list, rp, list);
+	LIST_INSERT_HEAD(&V_rawcb_list, rp, list);
 	mtx_unlock(&rawcb_mtx);
 	return (0);
 }

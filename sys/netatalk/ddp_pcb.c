@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2004-2005 Robert N. M. Watson
+ * Copyright (c) 2004-2009 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,7 +46,7 @@
  *	Ann Arbor, Michigan
  *	+1-313-764-2278
  *	netatalk@umich.edu
- * $FreeBSD: src/sys/netatalk/ddp_pcb.c,v 1.52 2007/01/12 15:07:51 rwatson Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -105,6 +104,7 @@ at_pcbsetaddr(struct ddpcb *ddp, struct sockaddr *addr, struct thread *td)
 	/*
 	 * Validate passed address.
 	 */
+	aa = NULL;
 	if (addr != NULL) {
 		sat = (struct sockaddr_at *)addr;
 		if (sat->sat_family != AF_APPLETALK)
@@ -112,14 +112,15 @@ at_pcbsetaddr(struct ddpcb *ddp, struct sockaddr *addr, struct thread *td)
 
 		if (sat->sat_addr.s_node != ATADDR_ANYNODE ||
 		    sat->sat_addr.s_net != ATADDR_ANYNET) {
-			for (aa = at_ifaddr_list; aa != NULL;
-			    aa = aa->aa_next) {
+			AT_IFADDR_RLOCK();
+			TAILQ_FOREACH(aa, &at_ifaddrhead, aa_link) {
 				if ((sat->sat_addr.s_net ==
 				    AA_SAT(aa)->sat_addr.s_net) &&
 				    (sat->sat_addr.s_node ==
 				    AA_SAT(aa)->sat_addr.s_node))
 					break;
 			}
+			AT_IFADDR_RUNLOCK();
 			if (aa == NULL)
 				return (EADDRNOTAVAIL);
 		}
@@ -143,9 +144,13 @@ at_pcbsetaddr(struct ddpcb *ddp, struct sockaddr *addr, struct thread *td)
 
 	if (sat->sat_addr.s_node == ATADDR_ANYNODE &&
 	    sat->sat_addr.s_net == ATADDR_ANYNET) {
-		if (at_ifaddr_list == NULL)
+		AT_IFADDR_RLOCK();
+		if (TAILQ_EMPTY(&at_ifaddrhead)) {
+			AT_IFADDR_RUNLOCK();
 			return (EADDRNOTAVAIL);
-		sat->sat_addr = AA_SAT(at_ifaddr_list)->sat_addr;
+		}
+		sat->sat_addr = AA_SAT(TAILQ_FIRST(&at_ifaddrhead))->sat_addr;
+		AT_IFADDR_RUNLOCK();
 	}
 	ddp->ddp_lsat = *sat;
 
@@ -221,9 +226,9 @@ at_pcbconnect(struct ddpcb *ddp, struct sockaddr *addr, struct thread *td)
 		else
 			net = sat->sat_addr.s_net;
 		aa = NULL;
+		AT_IFADDR_RLOCK();
 		if ((ifp = ro->ro_rt->rt_ifp) != NULL) {
-			for (aa = at_ifaddr_list; aa != NULL;
-			    aa = aa->aa_next) {
+			TAILQ_FOREACH(aa, &at_ifaddrhead, aa_link) {
 				if (aa->aa_ifp == ifp &&
 				    ntohs(net) >= ntohs(aa->aa_firstnet) &&
 				    ntohs(net) <= ntohs(aa->aa_lastnet))
@@ -237,6 +242,7 @@ at_pcbconnect(struct ddpcb *ddp, struct sockaddr *addr, struct thread *td)
 			RTFREE(ro->ro_rt);
 			ro->ro_rt = NULL;
 		}
+		AT_IFADDR_RUNLOCK();
 	}
 
 	/*
@@ -259,10 +265,12 @@ at_pcbconnect(struct ddpcb *ddp, struct sockaddr *addr, struct thread *td)
 	 */
 	aa = NULL;
 	if (ro->ro_rt && (ifp = ro->ro_rt->rt_ifp)) {
-		for (aa = at_ifaddr_list; aa != NULL; aa = aa->aa_next) {
+		AT_IFADDR_RLOCK();
+		TAILQ_FOREACH(aa, &at_ifaddrhead, aa_link) {
 			if (aa->aa_ifp == ifp)
 				break;
 		}
+		AT_IFADDR_RUNLOCK();
 	}
 	if (aa == NULL)
 		return (ENETUNREACH);
@@ -291,7 +299,7 @@ at_pcballoc(struct socket *so)
 
 	DDP_LIST_XLOCK_ASSERT();
 
-	MALLOC(ddp, struct ddpcb *, sizeof *ddp, M_PCB, M_NOWAIT | M_ZERO);
+	ddp = malloc(sizeof *ddp, M_PCB, M_NOWAIT | M_ZERO);
 	if (ddp == NULL)
 		return (ENOBUFS);
 	DDP_LOCK_INIT(ddp);
@@ -345,7 +353,7 @@ at_pcbdetach(struct socket *so, struct ddpcb *ddp)
 		ddp->ddp_next->ddp_prev = ddp->ddp_prev;
 	DDP_UNLOCK(ddp);
 	DDP_LOCK_DESTROY(ddp);
-	FREE(ddp, M_PCB);
+	free(ddp, M_PCB);
 }
 
 /*

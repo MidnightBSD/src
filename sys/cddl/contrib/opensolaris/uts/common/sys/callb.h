@@ -1,11 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
  * The contents of this file are subject to the terms of the
- * Common Development and Distribution License, Version 1.0 only
- * (the "License").  You may not use this file except in compliance
- * with the License.
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
@@ -21,17 +19,14 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef	_SYS_CALLB_H
 #define	_SYS_CALLB_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
-#include <sys/t_lock.h>
-#include <sys/thread.h>
+#include <sys/kcondvar.h>
 
 #ifdef	__cplusplus
 extern "C" {
@@ -70,7 +65,8 @@ extern "C" {
 #define	CB_CL_MDBOOT		CB_CL_UADMIN
 #define	CB_CL_ENTER_DEBUGGER	14
 #define	CB_CL_CPR_POST_KERNEL	15
-#define	NCBCLASS		16 /* CHANGE ME if classes are added/removed */
+#define	CB_CL_CPU_DEEP_IDLE	16
+#define	NCBCLASS		17 /* CHANGE ME if classes are added/removed */
 
 /*
  * CB_CL_CPR_DAEMON class specific definitions are given below:
@@ -135,10 +131,14 @@ typedef struct callb_cpr {
  * later on.  No lock held is needed for this initialization.
  */
 #define	CALLB_CPR_INIT(cp, lockp, func, name)	{			\
+		strlcpy(curthread->td_name, (name),			\
+		    sizeof(curthread->td_name));			\
 		bzero((caddr_t)(cp), sizeof (callb_cpr_t));		\
 		(cp)->cc_lockp = lockp;					\
 		(cp)->cc_id = callb_add(func, (void *)(cp),		\
 			CB_CL_CPR_DAEMON, name);			\
+		cv_init(&(cp)->cc_callb_cv, NULL, CV_DEFAULT, NULL);	\
+		cv_init(&(cp)->cc_stop_cv, NULL, CV_DEFAULT, NULL);	\
 	}
 
 #ifndef __lock_lint

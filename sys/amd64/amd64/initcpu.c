@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/amd64/amd64/initcpu.c,v 1.8 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) KATO Takenori, 1997, 1998.
  * 
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/initcpu.c,v 1.50.2.6 2010/08/27 18:55:48 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 
@@ -73,74 +72,71 @@ u_int	cpu_vendor_id;		/* CPU vendor ID */
 u_int	cpu_fxsr;		/* SSE enabled */
 u_int	cpu_mxcsr_mask;		/* Valid bits in mxcsr */
 u_int	cpu_clflush_line_size = 32;
+u_int	cpu_max_ext_state_size;
 
 SYSCTL_UINT(_hw, OID_AUTO, via_feature_rng, CTLFLAG_RD,
-	&via_feature_rng, 0, "VIA C3/C7 RNG feature available in CPU");
+	&via_feature_rng, 0, "VIA RNG feature available in CPU");
 SYSCTL_UINT(_hw, OID_AUTO, via_feature_xcrypt, CTLFLAG_RD,
-	&via_feature_xcrypt, 0, "VIA C3/C7 xcrypt feature available in CPU");
+	&via_feature_xcrypt, 0, "VIA xcrypt feature available in CPU");
+
+static void
+init_amd(void)
+{
+
+	/*
+	 * Work around Erratum 721 for Family 10h and 12h processors.
+	 * These processors may incorrectly update the stack pointer
+	 * after a long series of push and/or near-call instructions,
+	 * or a long series of pop and/or near-return instructions.
+	 *
+	 * http://support.amd.com/us/Processor_TechDocs/41322_10h_Rev_Gd.pdf
+	 * http://support.amd.com/us/Processor_TechDocs/44739_12h_Rev_Gd.pdf
+	 */
+	switch (CPUID_TO_FAMILY(cpu_id)) {
+	case 0x10:
+	case 0x12:
+		wrmsr(0xc0011029, rdmsr(0xc0011029) | 1);
+		break;
+	}
+}
 
 /*
- * Initialize special VIA C3/C7 features
+ * Initialize special VIA features
  */
 static void
 init_via(void)
 {
 	u_int regs[4], val;
-	u_int64_t msreg;
 
+	/*
+	 * Check extended CPUID for PadLock features.
+	 *
+	 * http://www.via.com.tw/en/downloads/whitepapers/initiatives/padlock/programming_guide.pdf
+	 */
 	do_cpuid(0xc0000000, regs);
-	val = regs[0];
-	if (val >= 0xc0000001) {
+	if (regs[0] >= 0xc0000001) {
 		do_cpuid(0xc0000001, regs);
 		val = regs[3];
 	} else
-		val = 0;
+		return;
 
-	/* Enable RNG if present and disabled */
-	if (val & VIA_CPUID_HAS_RNG) {
-		if (!(val & VIA_CPUID_DO_RNG)) {
-			msreg = rdmsr(0x110B);
-			msreg |= 0x40;
-			wrmsr(0x110B, msreg);
-		}
+	/* Enable RNG if present. */
+	if ((val & VIA_CPUID_HAS_RNG) != 0) {
 		via_feature_rng = VIA_HAS_RNG;
+		wrmsr(0x110B, rdmsr(0x110B) | VIA_CPUID_DO_RNG);
 	}
-	/* Enable AES engine if present and disabled */
-	if (val & VIA_CPUID_HAS_ACE) {
-		if (!(val & VIA_CPUID_DO_ACE)) {
-			msreg = rdmsr(0x1107);
-			msreg |= (0x01 << 28);
-			wrmsr(0x1107, msreg);
-		}
+
+	/* Enable PadLock if present. */
+	if ((val & VIA_CPUID_HAS_ACE) != 0)
 		via_feature_xcrypt |= VIA_HAS_AES;
-	}
-	/* Enable ACE2 engine if present and disabled */
-	if (val & VIA_CPUID_HAS_ACE2) {
-		if (!(val & VIA_CPUID_DO_ACE2)) {
-			msreg = rdmsr(0x1107);
-			msreg |= (0x01 << 28);
-			wrmsr(0x1107, msreg);
-		}
+	if ((val & VIA_CPUID_HAS_ACE2) != 0)
 		via_feature_xcrypt |= VIA_HAS_AESCTR;
-	}
-	/* Enable SHA engine if present and disabled */
-	if (val & VIA_CPUID_HAS_PHE) {
-		if (!(val & VIA_CPUID_DO_PHE)) {
-			msreg = rdmsr(0x1107);
-			msreg |= (0x01 << 28/**/);
-			wrmsr(0x1107, msreg);
-		}
+	if ((val & VIA_CPUID_HAS_PHE) != 0)
 		via_feature_xcrypt |= VIA_HAS_SHA;
-	}
-	/* Enable MM engine if present and disabled */
-	if (val & VIA_CPUID_HAS_PMM) {
-		if (!(val & VIA_CPUID_DO_PMM)) {
-			msreg = rdmsr(0x1107);
-			msreg |= (0x01 << 28/**/);
-			wrmsr(0x1107, msreg);
-		}
+	if ((val & VIA_CPUID_HAS_PMM) != 0)
 		via_feature_xcrypt |= VIA_HAS_MM;
-	}
+	if (via_feature_xcrypt != 0)
+		wrmsr(0x1107, rdmsr(0x1107) | (1 << 28));
 }
 
 /*
@@ -155,40 +151,19 @@ initializecpu(void)
 		load_cr4(rcr4() | CR4_FXSR | CR4_XMM);
 		cpu_fxsr = hw_instruction_sse = 1;
 	}
-
-	if (cpu_vendor_id == CPU_VENDOR_AMD) {
-		switch((cpu_id & 0xFF0000)) {
-		case 0x100000:
-		case 0x120000:
-                       /*
-                        * Errata 721 is the cpu bug found by your's truly
-                        * (Matthew Dillon).  It is a bug where a sequence
-                        * of 5 or more popq's + a retq, under involved
-                        * deep recursion circumstances, can cause the %rsp
-                        * to not be properly updated, almost always
-                        * resulting in a seg-fault soon after.
-                        */
-/* XXX causing crashes
-			msr = rdmsr(0xc0011029);
-			if ((msr & 1) == 0) {
-				printf("Errata 721 workaround installed\n");
-				msr |= 1;
-				wrmsr(0xc0011029, msr);
-			}
-*/
-			break;
-		}
-	}
-
 	if ((amd_feature & AMDID_NX) != 0) {
 		msr = rdmsr(MSR_EFER) | EFER_NXE;
 		wrmsr(MSR_EFER, msr);
 		pg_nx = PG_NX;
 	}
-	if (cpu_vendor_id == CPU_VENDOR_CENTAUR &&
-	    CPUID_TO_FAMILY(cpu_id) == 0x6 &&
-	    CPUID_TO_MODEL(cpu_id) >= 0xf)
+	switch (cpu_vendor_id) {
+	case CPU_VENDOR_AMD:
+		init_amd();
+		break;
+	case CPU_VENDOR_CENTAUR:
 		init_via();
+		break;
+	}
 }
 
 void

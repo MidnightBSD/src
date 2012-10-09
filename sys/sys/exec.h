@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)exec.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/exec.h,v 1.32.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_EXEC_H_
@@ -116,7 +115,8 @@ int exec_unregister(const struct execsw *);
 		__CONCAT(name,_modevent), \
 		(void *)& execsw_arg \
 	}; \
-	DECLARE_MODULE(name, __CONCAT(name,_mod), SI_SUB_EXEC, SI_ORDER_ANY)
+	DECLARE_MODULE_TIED(name, __CONCAT(name,_mod), SI_SUB_EXEC, \
+	    SI_ORDER_ANY)
 #endif
 
 #endif

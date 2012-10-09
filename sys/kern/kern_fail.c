@@ -50,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/ctype.h>
 #include <sys/errno.h>

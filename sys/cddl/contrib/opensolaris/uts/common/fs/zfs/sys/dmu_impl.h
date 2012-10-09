@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,19 +19,21 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
+ * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ * Copyright (c) 2012, Martin Matuska <mm@FreeBSD.org>. All rights reserved.
  */
 
 #ifndef _SYS_DMU_IMPL_H
 #define	_SYS_DMU_IMPL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/txg_impl.h>
 #include <sys/zio.h>
 #include <sys/dnode.h>
+#include <sys/kstat.h>
 #include <sys/zfs_context.h>
+#include <sys/zfs_ioctl.h>
 
 #ifdef	__cplusplus
 extern "C" {
@@ -52,7 +53,7 @@ extern "C" {
  * XXX try to improve evicting path?
  *
  * dp_config_rwlock > os_obj_lock > dn_struct_rwlock >
- * 	dn_dbufs_mtx > hash_mutexes > db_mtx > leafs
+ * 	dn_dbufs_mtx > hash_mutexes > db_mtx > dd_lock > leafs
  *
  * dp_config_rwlock
  *    must be held before: everything
@@ -178,7 +179,10 @@ extern "C" {
  *   	dmu_tx_try_assign: dn_notxholds(cv)
  *   	dmu_tx_unassign: none
  *
- * dd_lock (leaf)
+ * dd_lock
+ *    must be held before:
+ *      ds_lock
+ *      ancestors' dd_lock
  *    protects:
  *    	dd_prop_cbs
  *    	dd_sync_*
@@ -208,13 +212,14 @@ extern "C" {
  *   	dnode_setdirty: none (dn_dirtyblksz, os_*_dnodes)
  *   	dnode_free: none (dn_dirtyblksz, os_*_dnodes)
  *
- * ds_lock (leaf)
+ * ds_lock
  *    protects:
- *    	ds_user_ptr
- *    	ds_user_evice_func
+ *    	ds_objset
  *    	ds_open_refcount
  *    	ds_snapname
  *    	ds_phys accounting
+ *	ds_phys userrefs zapobj
+ *	ds_reserved
  *    held from:
  *    	dsl_dataset_*
  *
@@ -230,6 +235,66 @@ extern "C" {
 
 struct objset;
 struct dmu_pool;
+
+typedef struct dmu_xuio {
+	int next;
+	int cnt;
+	struct arc_buf **bufs;
+	iovec_t *iovp;
+} dmu_xuio_t;
+
+typedef struct xuio_stats {
+	/* loaned yet not returned arc_buf */
+	kstat_named_t xuiostat_onloan_rbuf;
+	kstat_named_t xuiostat_onloan_wbuf;
+	/* whether a copy is made when loaning out a read buffer */
+	kstat_named_t xuiostat_rbuf_copied;
+	kstat_named_t xuiostat_rbuf_nocopy;
+	/* whether a copy is made when assigning a write buffer */
+	kstat_named_t xuiostat_wbuf_copied;
+	kstat_named_t xuiostat_wbuf_nocopy;
+} xuio_stats_t;
+
+static xuio_stats_t xuio_stats = {
+	{ "onloan_read_buf",	KSTAT_DATA_UINT64 },
+	{ "onloan_write_buf",	KSTAT_DATA_UINT64 },
+	{ "read_buf_copied",	KSTAT_DATA_UINT64 },
+	{ "read_buf_nocopy",	KSTAT_DATA_UINT64 },
+	{ "write_buf_copied",	KSTAT_DATA_UINT64 },
+	{ "write_buf_nocopy",	KSTAT_DATA_UINT64 }
+};
+
+#define	XUIOSTAT_INCR(stat, val)	\
+	atomic_add_64(&xuio_stats.stat.value.ui64, (val))
+#define	XUIOSTAT_BUMP(stat)	XUIOSTAT_INCR(stat, 1)
+
+/*
+ * The list of data whose inclusion in a send stream can be pending from
+ * one call to backup_cb to another.  Multiple calls to dump_free() and
+ * dump_freeobjects() can be aggregated into a single DRR_FREE or
+ * DRR_FREEOBJECTS replay record.
+ */
+typedef enum {
+	PENDING_NONE,
+	PENDING_FREE,
+	PENDING_FREEOBJECTS
+} dmu_pendop_t;
+
+typedef struct dmu_sendarg {
+	list_node_t dsa_link;
+	dmu_replay_record_t *dsa_drr;
+	kthread_t *dsa_td;
+	struct file *dsa_fp;
+	int dsa_outfd;
+	struct proc *dsa_proc;
+	offset_t *dsa_off;
+	objset_t *dsa_os;
+	zio_cksum_t dsa_zc;
+	uint64_t dsa_toguid;
+	int dsa_err;
+	dmu_pendop_t dsa_pending_op;
+} dmu_sendarg_t;
+
 
 #ifdef	__cplusplus
 }

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_var.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/netinet/ip_var.h,v 1.101.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_IP_VAR_H_
@@ -76,25 +76,6 @@ struct ipq {
 struct ipoption {
 	struct	in_addr ipopt_dst;	/* first-hop dst if source routed */
 	char	ipopt_list[MAX_IPOPTLEN];	/* options proper */
-};
-
-/*
- * Multicast source list entry.
- */
-struct in_msource {
-	TAILQ_ENTRY(in_msource) ims_next;	/* next source */
-	struct sockaddr_storage ims_addr;	/* address of this source */
-};
-
-/*
- * Multicast filter descriptor; there is one instance per group membership
- * on a socket, allocated as an expandable vector hung off ip_moptions.
- * struct in_multi contains separate IPv4-stack-wide state for IGMPv3.
- */
-struct in_mfilter {
-	uint16_t	imf_fmode;	/* filter mode for this socket/group */
-	uint16_t	imf_nsources;	/* # of sources for this socket/group */
-	TAILQ_HEAD(, in_msource) imf_sources;	/* source list */
 };
 
 /*
@@ -148,6 +129,27 @@ struct	ipstat {
 
 #ifdef _KERNEL
 
+#include <net/vnet.h>
+
+/*
+ * In-kernel consumers can use these accessor macros directly to update
+ * stats.
+ */
+#define	IPSTAT_ADD(name, val)	V_ipstat.name += (val)
+#define	IPSTAT_SUB(name, val)	V_ipstat.name -= (val)
+#define	IPSTAT_INC(name)	IPSTAT_ADD(name, 1)
+#define	IPSTAT_DEC(name)	IPSTAT_SUB(name, 1)
+
+/*
+ * Kernel module consumers must use this accessor macro.
+ */
+void	kmod_ipstat_inc(int statnum);
+#define	KMOD_IPSTAT_INC(name)						\
+	kmod_ipstat_inc(offsetof(struct ipstat, name) / sizeof(u_long))
+void	kmod_ipstat_dec(int statnum);
+#define	KMOD_IPSTAT_DEC(name)						\
+	kmod_ipstat_dec(offsetof(struct ipstat, name) / sizeof(u_long))
+
 /* flags passed to ip_output as last parameter */
 #define	IP_FORWARDING		0x1		/* most of ip header exists */
 #define	IP_RAWOUTPUT		0x2		/* raw ip header exists */
@@ -172,20 +174,31 @@ struct inpcb;
 struct route;
 struct sockopt;
 
-extern struct	ipstat	ipstat;
-extern u_short	ip_id;			/* ip packet ctr, for ids */
-extern int	ip_defttl;		/* default IP ttl */
-extern int	ipforwarding;		/* ip forwarding */
+VNET_DECLARE(struct ipstat, ipstat);
+VNET_DECLARE(u_short, ip_id);			/* ip packet ctr, for ids */
+VNET_DECLARE(int, ip_defttl);			/* default IP ttl */
+VNET_DECLARE(int, ipforwarding);		/* ip forwarding */
 #ifdef IPSTEALTH
-extern int	ipstealth;		/* stealth forwarding */
+VNET_DECLARE(int, ipstealth);			/* stealth forwarding */
 #endif
 extern u_char	ip_protox[];
-extern struct socket *ip_rsvpd;		/* reservation protocol daemon */
-extern struct socket *ip_mrouter;	/* multicast routing daemon */
+VNET_DECLARE(struct socket *, ip_rsvpd);	/* reservation protocol daemon*/
+VNET_DECLARE(struct socket *, ip_mrouter);	/* multicast routing daemon */
 extern int	(*legal_vif_num)(int);
 extern u_long	(*ip_mcast_src)(int);
-extern int rsvp_on;
+VNET_DECLARE(int, rsvp_on);
 extern struct	pr_usrreqs rip_usrreqs;
+
+#define	V_ipstat		VNET(ipstat)
+#define	V_ip_id			VNET(ip_id)
+#define	V_ip_defttl		VNET(ip_defttl)
+#define	V_ipforwarding		VNET(ipforwarding)
+#ifdef IPSTEALTH
+#define	V_ipstealth		VNET(ipstealth)
+#endif
+#define	V_ip_rsvpd		VNET(ip_rsvpd)
+#define	V_ip_mrouter		VNET(ip_mrouter)
+#define	V_rsvp_on		VNET(rsvp_on)
 
 void	inp_freemoptions(struct ip_moptions *);
 int	inp_getmoptions(struct inpcb *, struct sockopt *);
@@ -193,19 +206,21 @@ int	inp_setmoptions(struct inpcb *, struct sockopt *);
 
 int	ip_ctloutput(struct socket *, struct sockopt *sopt);
 void	ip_drain(void);
-void	ip_fini(void *xtp);
 int	ip_fragment(struct ip *ip, struct mbuf **m_frag, int mtu,
 	    u_long if_hwassist_flags, int sw_csum);
 void	ip_forward(struct mbuf *m, int srcrt);
 void	ip_init(void);
+#ifdef VIMAGE
+void	ip_destroy(void);
+#endif
 extern int
 	(*ip_mforward)(struct ip *, struct ifnet *, struct mbuf *,
 	    struct ip_moptions *);
 int	ip_output(struct mbuf *,
 	    struct mbuf *, struct route *, int, struct ip_moptions *,
 	    struct inpcb *);
-int	ipproto_register(u_char);
-int	ipproto_unregister(u_char);
+int	ipproto_register(short);
+int	ipproto_unregister(short);
 struct mbuf *
 	ip_reass(struct mbuf *);
 struct in_ifaddr *
@@ -217,6 +232,9 @@ u_int16_t	ip_randomid(void);
 int	rip_ctloutput(struct socket *, struct sockopt *);
 void	rip_ctlinput(int, struct sockaddr *, void *);
 void	rip_init(void);
+#ifdef VIMAGE
+void	rip_destroy(void);
+#endif
 void	rip_input(struct mbuf *, int);
 int	rip_output(struct mbuf *, struct socket *, u_long);
 void	ipip_input(struct mbuf *, int);
@@ -227,21 +245,70 @@ extern int	(*ip_rsvp_vif)(struct socket *, struct sockopt *);
 extern void	(*ip_rsvp_force_done)(struct socket *);
 extern void	(*rsvp_input_p)(struct mbuf *m, int off);
 
-extern	struct pfil_head inet_pfil_hook;	/* packet filter hooks */
+VNET_DECLARE(struct pfil_head, inet_pfil_hook);	/* packet filter hooks */
+#define	V_inet_pfil_hook	VNET(inet_pfil_hook)
 
 void	in_delayed_cksum(struct mbuf *m);
 
-static __inline uint16_t ip_newid(void);
-extern int ip_do_randomid;
+/* Hooks for ipfw, dummynet, divert etc. Most are declared in raw_ip.c */
+/*
+ * Reference to an ipfw or packet filter rule that can be carried
+ * outside critical sections.
+ * A rule is identified by rulenum:rule_id which is ordered.
+ * In version chain_id the rule can be found in slot 'slot', so
+ * we don't need a lookup if chain_id == chain->id.
+ *
+ * On exit from the firewall this structure refers to the rule after
+ * the matching one (slot points to the new rule; rulenum:rule_id-1
+ * is the matching rule), and additional info (e.g. info often contains
+ * the insn argument or tablearg in the low 16 bits, in host format).
+ * On entry, the structure is valid if slot>0, and refers to the starting
+ * rules. 'info' contains the reason for reinject, e.g. divert port,
+ * divert direction, and so on.
+ */
+struct ipfw_rule_ref {
+	uint32_t	slot;		/* slot for matching rule	*/
+	uint32_t	rulenum;	/* matching rule number		*/
+	uint32_t	rule_id;	/* matching rule id		*/
+	uint32_t	chain_id;	/* ruleset id			*/
+	uint32_t	info;		/* see below			*/
+};
 
-static __inline uint16_t
-ip_newid(void)
-{
-	if (ip_do_randomid)
-		return ip_randomid();
+enum {
+	IPFW_INFO_MASK	= 0x0000ffff,
+	IPFW_INFO_OUT	= 0x00000000,	/* outgoing, just for convenience */
+	IPFW_INFO_IN	= 0x80000000,	/* incoming, overloads dir */
+	IPFW_ONEPASS	= 0x40000000,	/* One-pass, do not reinject */
+	IPFW_IS_MASK	= 0x30000000,	/* which source ? */
+	IPFW_IS_DIVERT	= 0x20000000,
+	IPFW_IS_DUMMYNET =0x10000000,
+	IPFW_IS_PIPE	= 0x08000000,	/* pip1=1, queue = 0 */
+};
+#define MTAG_IPFW	1148380143	/* IPFW-tagged cookie */
+#define MTAG_IPFW_RULE	1262273568	/* rule reference */
+#define	MTAG_IPFW_CALL	1308397630	/* call stack */
 
-	return htons(ip_id++);
-}
+struct ip_fw_args;
+typedef int	(*ip_fw_chk_ptr_t)(struct ip_fw_args *args);
+typedef int	(*ip_fw_ctl_ptr_t)(struct sockopt *);
+VNET_DECLARE(ip_fw_chk_ptr_t, ip_fw_chk_ptr);
+VNET_DECLARE(ip_fw_ctl_ptr_t, ip_fw_ctl_ptr);
+#define	V_ip_fw_chk_ptr		VNET(ip_fw_chk_ptr)
+#define	V_ip_fw_ctl_ptr		VNET(ip_fw_ctl_ptr)
+
+/* Divert hooks. */
+extern void	(*ip_divert_ptr)(struct mbuf *m, int incoming);
+/* ng_ipfw hooks -- XXX make it the same as divert and dummynet */
+extern int	(*ng_ipfw_input_p)(struct mbuf **, int,
+			struct ip_fw_args *, int);
+
+extern int	(*ip_dn_ctl_ptr)(struct sockopt *);
+extern int	(*ip_dn_io_ptr)(struct mbuf **, int, struct ip_fw_args *);
+
+VNET_DECLARE(int, ip_do_randomid);
+#define	V_ip_do_randomid	VNET(ip_do_randomid)
+#define	ip_newid()	((V_ip_do_randomid != 0) ? ip_randomid() : \
+			    htons(V_ip_id++))
 
 #endif /* _KERNEL */
 

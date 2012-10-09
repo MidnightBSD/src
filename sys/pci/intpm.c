@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/pci/intpm.c,v 1.3 2008/12/03 00:11:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998, 1999 Takanori Watanabe
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/intpm.c,v 1.39.2.4 2009/11/01 11:41:20 avg Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,7 +98,13 @@ intsmb_probe(device_t dev)
 #endif
 		device_set_desc(dev, "Intel PIIX4 SMBUS Interface");
 		break;
+	case 0x43721002:
+		device_set_desc(dev, "ATI IXP400 SMBus Controller");
+		break;
 	case 0x43851002:
+		/* SB800 and newer can not be configured in a compatible way. */
+		if (pci_get_revid(dev) >= 0x40)
+			return (ENXIO);
 		device_set_desc(dev, "AMD SB600/700/710/750 SMBus Controller");
 		/* XXX Maybe force polling right here? */
 		break;
@@ -196,8 +201,8 @@ intsmb_attach(device_t dev)
 		goto fail;
 	}
 
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_MISC, NULL, 
-	    intsmb_rawintr, sc, &sc->irq_hand);
+	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_MISC | INTR_MPSAFE,
+	    NULL, intsmb_rawintr, sc, &sc->irq_hand);
 	if (error) {
 		device_printf(dev, "Failed to map intr\n");
 		goto fail;
@@ -270,7 +275,7 @@ intsmb_callback(device_t dev, int index, void *data)
 	case SMB_RELEASE_BUS:
 		break;
 	default:
-		error = EINVAL;
+		error = SMB_EINVAL;
 	}
 
 	return (error);
@@ -517,7 +522,7 @@ intsmb_quick(device_t dev, u_char slave, int how)
 		data |= LSB;
 		break;
 	default:
-		return (EINVAL);
+		return (SMB_EINVAL);
 	}
 
 	INTSMB_LOCK(sc);
@@ -772,7 +777,7 @@ intsmb_bread(device_t dev, u_char slave, char cmd, u_char *count, char *buf)
 			}
 			*count = nread;
 		} else
-			error = EIO;
+			error = SMB_EBUSERR;
 	}
 	INTSMB_UNLOCK(sc);
 	return (error);
@@ -785,9 +790,6 @@ static device_method_t intsmb_methods[] = {
 	DEVMETHOD(device_probe,		intsmb_probe),
 	DEVMETHOD(device_attach,	intsmb_attach),
 	DEVMETHOD(device_detach,	intsmb_detach),
-
-	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 
 	/* SMBus interface */
 	DEVMETHOD(smbus_callback,	intsmb_callback),
@@ -802,7 +804,7 @@ static device_method_t intsmb_methods[] = {
 	DEVMETHOD(smbus_bwrite,		intsmb_bwrite),
 	DEVMETHOD(smbus_bread,		intsmb_bread),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t intsmb_driver = {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,11 +20,10 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright 2011 Nexenta Systems, Inc. All rights reserved.
+ * Copyright (c) 2011 by Delphix. All rights reserved.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/zfs_context.h>
 #include <sys/spa.h>
@@ -39,21 +37,24 @@
 #include <sys/sunddi.h>
 #ifdef _KERNEL
 #include <sys/kobj.h>
+#include <sys/zone.h>
 #endif
 
 /*
  * Pool configuration repository.
  *
- * The configuration for all pools, in addition to being stored on disk, is
- * stored in /etc/zfs/zpool.cache as a packed nvlist.  The kernel maintains
- * this list as pools are created, destroyed, or modified.
+ * Pool configuration is stored as a packed nvlist on the filesystem.  By
+ * default, all pools are stored in /etc/zfs/zpool.cache and loaded on boot
+ * (when the ZFS module is loaded).  Pools can also have the 'cachefile'
+ * property set that allows them to be stored in an alternate location until
+ * the control of external software.
  *
- * We have a single nvlist which holds all the configuration information.  When
- * the module loads, we read this information from the cache and populate the
- * SPA namespace.  This namespace is maintained independently in spa.c.
- * Whenever the namespace is modified, or the configuration of a pool is
- * changed, we call spa_config_sync(), which walks through all the active pools
- * and writes the configuration to disk.
+ * For each cache file, we have a single nvlist which holds all the
+ * configuration information.  When the module loads, we read this information
+ * from /etc/zfs/zpool.cache and populate the SPA namespace.  This namespace is
+ * maintained independently in spa.c.  Whenever the namespace is modified, or
+ * the configuration of a pool is changed, we call spa_config_sync(), which
+ * walks through all the active pools and writes the configuration to disk.
  */
 
 static uint64_t spa_config_generation = 1;
@@ -62,7 +63,7 @@ static uint64_t spa_config_generation = 1;
  * This can be overridden in userland to preserve an alternate namespace for
  * userland pools when doing testing.
  */
-const char *spa_config_dir = ZPOOL_CACHE_DIR;
+const char *spa_config_path = ZPOOL_CACHE;
 
 /*
  * Called when the module is first loaded, this routine loads the configuration
@@ -75,45 +76,40 @@ spa_config_load(void)
 	void *buf = NULL;
 	nvlist_t *nvlist, *child;
 	nvpair_t *nvpair;
-	spa_t *spa;
-	char pathname[128];
+	char *pathname;
 	struct _buf *file;
 	uint64_t fsize;
 
 	/*
 	 * Open the configuration file.
 	 */
-	(void) snprintf(pathname, sizeof (pathname), "%s/%s",
-	    spa_config_dir, ZPOOL_CACHE_FILE);
+	pathname = kmem_alloc(MAXPATHLEN, KM_SLEEP);
+
+	(void) snprintf(pathname, MAXPATHLEN, "%s", spa_config_path);
 
 	file = kobj_open_file(pathname);
-	if (file == (struct _buf *)-1) {
-		ZFS_LOG(1, "Cannot open %s.", pathname);
-		return;
-	}
 
-	if (kobj_get_filesize(file, &fsize) != 0) {
-		ZFS_LOG(1, "Cannot get size of %s.", pathname);
+	kmem_free(pathname, MAXPATHLEN);
+
+	if (file == (struct _buf *)-1)
+		return;
+
+	if (kobj_get_filesize(file, &fsize) != 0)
 		goto out;
-	}
 
 	buf = kmem_alloc(fsize, KM_SLEEP);
 
 	/*
 	 * Read the nvlist from the file.
 	 */
-	if (kobj_read_file(file, buf, fsize, 0) < 0) {
-		ZFS_LOG(1, "Cannot read %s.", pathname);
+	if (kobj_read_file(file, buf, fsize, 0) < 0)
 		goto out;
-	}
 
 	/*
 	 * Unpack the nvlist.
 	 */
 	if (nvlist_unpack(buf, fsize, &nvlist, KM_SLEEP) != 0)
 		goto out;
-
-	ZFS_LOG(1, "File %s loaded.", pathname);
 
 	/*
 	 * Iterate over all elements in the nvlist, creating a new spa_t for
@@ -122,7 +118,6 @@ spa_config_load(void)
 	mutex_enter(&spa_namespace_lock);
 	nvpair = NULL;
 	while ((nvpair = nvlist_next_nvpair(nvlist, nvpair)) != NULL) {
-
 		if (nvpair_type(nvpair) != DATA_TYPE_NVLIST)
 			continue;
 
@@ -130,13 +125,7 @@ spa_config_load(void)
 
 		if (spa_lookup(nvpair_name(nvpair)) != NULL)
 			continue;
-		spa = spa_add(nvpair_name(nvpair), NULL);
-
-		/*
-		 * We blindly duplicate the configuration here.  If it's
-		 * invalid, we will catch it when the pool is first opened.
-		 */
-		VERIFY(nvlist_dup(child, &spa->spa_config, 0) == 0);
+		(void) spa_add(nvpair_name(nvpair), child, NULL);
 	}
 	mutex_exit(&spa_namespace_lock);
 
@@ -149,47 +138,32 @@ out:
 	kobj_close_file(file);
 }
 
-/*
- * Synchronize all pools to disk.  This must be called with the namespace lock
- * held.
- */
-void
-spa_config_sync(void)
+static void
+spa_config_write(spa_config_dirent_t *dp, nvlist_t *nvl)
 {
-	spa_t *spa = NULL;
-	nvlist_t *config;
 	size_t buflen;
 	char *buf;
 	vnode_t *vp;
 	int oflags = FWRITE | FTRUNC | FCREAT | FOFFMAX;
-	char pathname[128];
-	char pathname2[128];
-
-	ASSERT(MUTEX_HELD(&spa_namespace_lock));
-
-	VERIFY(nvlist_alloc(&config, NV_UNIQUE_NAME, KM_SLEEP) == 0);
+	char *temp;
 
 	/*
-	 * Add all known pools to the configuration list, ignoring those with
-	 * alternate root paths.
+	 * If the nvlist is empty (NULL), then remove the old cachefile.
 	 */
-	spa = NULL;
-	while ((spa = spa_next(spa)) != NULL) {
-		mutex_enter(&spa->spa_config_cache_lock);
-		if (spa->spa_config && spa->spa_name && spa->spa_root == NULL)
-			VERIFY(nvlist_add_nvlist(config, spa->spa_name,
-			    spa->spa_config) == 0);
-		mutex_exit(&spa->spa_config_cache_lock);
+	if (nvl == NULL) {
+		(void) vn_remove(dp->scd_path, UIO_SYSSPACE, RMFILE);
+		return;
 	}
 
 	/*
 	 * Pack the configuration into a buffer.
 	 */
-	VERIFY(nvlist_size(config, &buflen, NV_ENCODE_XDR) == 0);
+	VERIFY(nvlist_size(nvl, &buflen, NV_ENCODE_XDR) == 0);
 
 	buf = kmem_alloc(buflen, KM_SLEEP);
+	temp = kmem_zalloc(MAXPATHLEN, KM_SLEEP);
 
-	VERIFY(nvlist_pack(config, &buf, &buflen, NV_ENCODE_XDR,
+	VERIFY(nvlist_pack(nvl, &buf, &buflen, NV_ENCODE_XDR,
 	    KM_SLEEP) == 0);
 
 	/*
@@ -197,29 +171,94 @@ spa_config_sync(void)
 	 * 'write to temporary file, sync, move over original' to make sure we
 	 * always have a consistent view of the data.
 	 */
-	(void) snprintf(pathname, sizeof (pathname), "%s/%s", spa_config_dir,
-	    ZPOOL_CACHE_TMP);
+	(void) snprintf(temp, MAXPATHLEN, "%s.tmp", dp->scd_path);
 
-	if (vn_open(pathname, UIO_SYSSPACE, oflags, 0644, &vp, CRCREAT, 0) != 0)
-		goto out;
-
-	if (vn_rdwr(UIO_WRITE, vp, buf, buflen, 0, UIO_SYSSPACE,
-	    0, RLIM64_INFINITY, kcred, NULL) == 0 &&
-	    VOP_FSYNC(vp, FSYNC, kcred) == 0) {
-		(void) snprintf(pathname2, sizeof (pathname2), "%s/%s",
-		    spa_config_dir, ZPOOL_CACHE_FILE);
-		(void) vn_rename(pathname, pathname2, UIO_SYSSPACE);
+	if (vn_open(temp, UIO_SYSSPACE, oflags, 0644, &vp, CRCREAT, 0) == 0) {
+		if (vn_rdwr(UIO_WRITE, vp, buf, buflen, 0, UIO_SYSSPACE,
+		    0, RLIM64_INFINITY, kcred, NULL) == 0 &&
+		    VOP_FSYNC(vp, FSYNC, kcred, NULL) == 0) {
+			(void) vn_rename(temp, dp->scd_path, UIO_SYSSPACE);
+		}
+		(void) VOP_CLOSE(vp, oflags, 1, 0, kcred, NULL);
 	}
 
-	(void) VOP_CLOSE(vp, oflags, 1, 0, kcred);
-	VN_RELE(vp);
-
-out:
-	(void) vn_remove(pathname, UIO_SYSSPACE, RMFILE);
-	spa_config_generation++;
+	(void) vn_remove(temp, UIO_SYSSPACE, RMFILE);
 
 	kmem_free(buf, buflen);
-	nvlist_free(config);
+	kmem_free(temp, MAXPATHLEN);
+}
+
+/*
+ * Synchronize pool configuration to disk.  This must be called with the
+ * namespace lock held.
+ */
+void
+spa_config_sync(spa_t *target, boolean_t removing, boolean_t postsysevent)
+{
+	spa_config_dirent_t *dp, *tdp;
+	nvlist_t *nvl;
+
+	ASSERT(MUTEX_HELD(&spa_namespace_lock));
+
+	if (rootdir == NULL || !(spa_mode_global & FWRITE))
+		return;
+
+	/*
+	 * Iterate over all cachefiles for the pool, past or present.  When the
+	 * cachefile is changed, the new one is pushed onto this list, allowing
+	 * us to update previous cachefiles that no longer contain this pool.
+	 */
+	for (dp = list_head(&target->spa_config_list); dp != NULL;
+	    dp = list_next(&target->spa_config_list, dp)) {
+		spa_t *spa = NULL;
+		if (dp->scd_path == NULL)
+			continue;
+
+		/*
+		 * Iterate over all pools, adding any matching pools to 'nvl'.
+		 */
+		nvl = NULL;
+		while ((spa = spa_next(spa)) != NULL) {
+			if (spa == target && removing)
+				continue;
+
+			mutex_enter(&spa->spa_props_lock);
+			tdp = list_head(&spa->spa_config_list);
+			if (spa->spa_config == NULL ||
+			    tdp->scd_path == NULL ||
+			    strcmp(tdp->scd_path, dp->scd_path) != 0) {
+				mutex_exit(&spa->spa_props_lock);
+				continue;
+			}
+
+			if (nvl == NULL)
+				VERIFY(nvlist_alloc(&nvl, NV_UNIQUE_NAME,
+				    KM_SLEEP) == 0);
+
+			VERIFY(nvlist_add_nvlist(nvl, spa->spa_name,
+			    spa->spa_config) == 0);
+			mutex_exit(&spa->spa_props_lock);
+		}
+
+		spa_config_write(dp, nvl);
+		nvlist_free(nvl);
+	}
+
+	/*
+	 * Remove any config entries older than the current one.
+	 */
+	dp = list_head(&target->spa_config_list);
+	while ((tdp = list_next(&target->spa_config_list, dp)) != NULL) {
+		list_remove(&target->spa_config_list, tdp);
+		if (tdp->scd_path != NULL)
+			spa_strfree(tdp->scd_path);
+		kmem_free(tdp, sizeof (spa_config_dirent_t));
+	}
+
+	spa_config_generation++;
+
+	if (postsysevent)
+		spa_event_notify(target, NULL, ESC_ZFS_CONFIG_SYNC);
 }
 
 /*
@@ -232,27 +271,25 @@ nvlist_t *
 spa_all_configs(uint64_t *generation)
 {
 	nvlist_t *pools;
-	spa_t *spa;
+	spa_t *spa = NULL;
 
 	if (*generation == spa_config_generation)
 		return (NULL);
 
 	VERIFY(nvlist_alloc(&pools, NV_UNIQUE_NAME, KM_SLEEP) == 0);
 
-	spa = NULL;
 	mutex_enter(&spa_namespace_lock);
 	while ((spa = spa_next(spa)) != NULL) {
-		if (INGLOBALZONE(curproc) ||
+		if (INGLOBALZONE(curthread) ||
 		    zone_dataset_visible(spa_name(spa), NULL)) {
-			mutex_enter(&spa->spa_config_cache_lock);
+			mutex_enter(&spa->spa_props_lock);
 			VERIFY(nvlist_add_nvlist(pools, spa_name(spa),
 			    spa->spa_config) == 0);
-			mutex_exit(&spa->spa_config_cache_lock);
+			mutex_exit(&spa->spa_props_lock);
 		}
 	}
-	mutex_exit(&spa_namespace_lock);
-
 	*generation = spa_config_generation;
+	mutex_exit(&spa_namespace_lock);
 
 	return (pools);
 }
@@ -260,11 +297,11 @@ spa_all_configs(uint64_t *generation)
 void
 spa_config_set(spa_t *spa, nvlist_t *config)
 {
-	mutex_enter(&spa->spa_config_cache_lock);
+	mutex_enter(&spa->spa_props_lock);
 	if (spa->spa_config != NULL)
 		nvlist_free(spa->spa_config);
 	spa->spa_config = config;
-	mutex_exit(&spa->spa_config_cache_lock);
+	mutex_exit(&spa->spa_props_lock);
 }
 
 /*
@@ -278,11 +315,17 @@ spa_config_generate(spa_t *spa, vdev_t *vd, uint64_t txg, int getstats)
 	nvlist_t *config, *nvroot;
 	vdev_t *rvd = spa->spa_root_vdev;
 	unsigned long hostid = 0;
+	boolean_t locked = B_FALSE;
+	uint64_t split_guid;
 
-	ASSERT(spa_config_held(spa, RW_READER));
-
-	if (vd == NULL)
+	if (vd == NULL) {
 		vd = rvd;
+		locked = B_TRUE;
+		spa_config_enter(spa, SCL_CONFIG | SCL_STATE, FTAG, RW_READER);
+	}
+
+	ASSERT(spa_config_held(spa, SCL_CONFIG | SCL_STATE, RW_READER) ==
+	    (SCL_CONFIG | SCL_STATE));
 
 	/*
 	 * If txg is -1, report the current value of spa->spa_config_txg.
@@ -302,9 +345,23 @@ spa_config_generate(spa_t *spa, vdev_t *vd, uint64_t txg, int getstats)
 	    txg) == 0);
 	VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_POOL_GUID,
 	    spa_guid(spa)) == 0);
+	VERIFY(spa->spa_comment == NULL || nvlist_add_string(config,
+	    ZPOOL_CONFIG_COMMENT, spa->spa_comment) == 0);
+
+
+#ifdef	_KERNEL
+	hostid = zone_get_hostid(NULL);
+#else	/* _KERNEL */
+	/*
+	 * We're emulating the system's hostid in userland, so we can't use
+	 * zone_get_hostid().
+	 */
 	(void) ddi_strtoul(hw_serial, NULL, 10, &hostid);
-	VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_HOSTID,
-	    hostid) == 0);
+#endif	/* _KERNEL */
+	if (hostid != 0) {
+		VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_HOSTID,
+		    hostid) == 0);
+	}
 	VERIFY(nvlist_add_string(config, ZPOOL_CONFIG_HOSTNAME,
 	    utsname.nodename) == 0);
 
@@ -316,19 +373,77 @@ spa_config_generate(spa_t *spa, vdev_t *vd, uint64_t txg, int getstats)
 		if (vd->vdev_isspare)
 			VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_IS_SPARE,
 			    1ULL) == 0);
+		if (vd->vdev_islog)
+			VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_IS_LOG,
+			    1ULL) == 0);
 		vd = vd->vdev_top;		/* label contains top config */
+	} else {
+		/*
+		 * Only add the (potentially large) split information
+		 * in the mos config, and not in the vdev labels
+		 */
+		if (spa->spa_config_splitting != NULL)
+			VERIFY(nvlist_add_nvlist(config, ZPOOL_CONFIG_SPLIT,
+			    spa->spa_config_splitting) == 0);
 	}
 
-	nvroot = vdev_config_generate(spa, vd, getstats, B_FALSE);
+	/*
+	 * Add the top-level config.  We even add this on pools which
+	 * don't support holes in the namespace.
+	 */
+	vdev_top_config_generate(spa, config);
+
+	/*
+	 * If we're splitting, record the original pool's guid.
+	 */
+	if (spa->spa_config_splitting != NULL &&
+	    nvlist_lookup_uint64(spa->spa_config_splitting,
+	    ZPOOL_CONFIG_SPLIT_GUID, &split_guid) == 0) {
+		VERIFY(nvlist_add_uint64(config, ZPOOL_CONFIG_SPLIT_GUID,
+		    split_guid) == 0);
+	}
+
+	nvroot = vdev_config_generate(spa, vd, getstats, 0);
 	VERIFY(nvlist_add_nvlist(config, ZPOOL_CONFIG_VDEV_TREE, nvroot) == 0);
 	nvlist_free(nvroot);
+
+	if (getstats && spa_load_state(spa) == SPA_LOAD_NONE) {
+		ddt_histogram_t *ddh;
+		ddt_stat_t *dds;
+		ddt_object_t *ddo;
+
+		ddh = kmem_zalloc(sizeof (ddt_histogram_t), KM_SLEEP);
+		ddt_get_dedup_histogram(spa, ddh);
+		VERIFY(nvlist_add_uint64_array(config,
+		    ZPOOL_CONFIG_DDT_HISTOGRAM,
+		    (uint64_t *)ddh, sizeof (*ddh) / sizeof (uint64_t)) == 0);
+		kmem_free(ddh, sizeof (ddt_histogram_t));
+
+		ddo = kmem_zalloc(sizeof (ddt_object_t), KM_SLEEP);
+		ddt_get_dedup_object_stats(spa, ddo);
+		VERIFY(nvlist_add_uint64_array(config,
+		    ZPOOL_CONFIG_DDT_OBJ_STATS,
+		    (uint64_t *)ddo, sizeof (*ddo) / sizeof (uint64_t)) == 0);
+		kmem_free(ddo, sizeof (ddt_object_t));
+
+		dds = kmem_zalloc(sizeof (ddt_stat_t), KM_SLEEP);
+		ddt_get_dedup_stats(spa, dds);
+		VERIFY(nvlist_add_uint64_array(config,
+		    ZPOOL_CONFIG_DDT_STATS,
+		    (uint64_t *)dds, sizeof (*dds) / sizeof (uint64_t)) == 0);
+		kmem_free(dds, sizeof (ddt_stat_t));
+	}
+
+	if (locked)
+		spa_config_exit(spa, SCL_CONFIG | SCL_STATE, FTAG);
 
 	return (config);
 }
 
 /*
  * Update all disk labels, generate a fresh config based on the current
- * in-core state, and sync the global config cache.
+ * in-core state, and sync the global config cache (do not sync the config
+ * cache if this is a booting rootpool).
  */
 void
 spa_config_update(spa_t *spa, int what)
@@ -339,7 +454,7 @@ spa_config_update(spa_t *spa, int what)
 
 	ASSERT(MUTEX_HELD(&spa_namespace_lock));
 
-	spa_config_enter(spa, RW_WRITER, FTAG);
+	spa_config_enter(spa, SCL_ALL, FTAG, RW_WRITER);
 	txg = spa_last_synced_txg(spa) + 1;
 	if (what == SPA_CONFIG_UPDATE_POOL) {
 		vdev_config_dirty(rvd);
@@ -353,13 +468,12 @@ spa_config_update(spa_t *spa, int what)
 		 */
 		for (c = 0; c < rvd->vdev_children; c++) {
 			vdev_t *tvd = rvd->vdev_child[c];
-			if (tvd->vdev_ms_array == 0) {
-				vdev_init(tvd, txg);
-				vdev_config_dirty(tvd);
-			}
+			if (tvd->vdev_ms_array == 0)
+				vdev_metaslab_set_size(tvd);
+			vdev_expand(tvd, txg);
 		}
 	}
-	spa_config_exit(spa, FTAG);
+	spa_config_exit(spa, SCL_ALL, FTAG);
 
 	/*
 	 * Wait for the mosconfig to be regenerated and synced.
@@ -369,7 +483,8 @@ spa_config_update(spa_t *spa, int what)
 	/*
 	 * Update the global config cache to reflect the new mosconfig.
 	 */
-	spa_config_sync();
+	if (!spa->spa_is_root)
+		spa_config_sync(spa, B_FALSE, what != SPA_CONFIG_UPDATE_POOL);
 
 	if (what == SPA_CONFIG_UPDATE_POOL)
 		spa_config_update(spa, SPA_CONFIG_UPDATE_VDEVS);

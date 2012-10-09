@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/ipsec.h,v 1.13.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ipsec.h,v 1.53 2001/11/20 08:32:38 itojun Exp $	*/
 
 /*-
@@ -44,9 +44,15 @@
 
 #include <net/pfkeyv2.h>
 #include <netipsec/keydb.h>
-#include <netipsec/ipsec_osdep.h>
 
 #ifdef _KERNEL
+
+#define	IPSEC_ASSERT(_c,_m) KASSERT(_c, _m)
+
+#define	IPSEC_IS_PRIVILEGED_SO(_so) \
+	((_so)->so_cred != NULL && \
+	 priv_check_cred((_so)->so_cred, PRIV_NETINET_IPSEC, 0) \
+	 == 0)
 
 /*
  * Security Policy Index
@@ -55,7 +61,7 @@
  * specifies ICMPv6 type, and the port field in "dst" specifies ICMPv6 code.
  */
 struct secpolicyindex {
-	u_int8_t dir;			/* direction of packet flow, see blow */
+	u_int8_t dir;			/* direction of packet flow, see below */
 	union sockaddr_union src;	/* IP src address for SP */
 	union sockaddr_union dst;	/* IP dst address for SP */
 	u_int8_t prefs;			/* prefix length in bits for src */
@@ -117,7 +123,7 @@ struct ipsecrequest {
 
 	struct secasvar *sav;	/* place holder of SA for use */
 	struct secpolicy *sp;	/* back pointer to SP */
-	struct mtx lock;	/* to interlock updates */
+	struct rwlock lock;	/* to interlock updates */
 };
 
 /*
@@ -126,11 +132,15 @@ struct ipsecrequest {
  * hard it is to remove this...
  */
 #define	IPSECREQUEST_LOCK_INIT(_isr) \
-	mtx_init(&(_isr)->lock, "ipsec request", NULL, MTX_DEF | MTX_RECURSE)
-#define	IPSECREQUEST_LOCK(_isr)		mtx_lock(&(_isr)->lock)
-#define	IPSECREQUEST_UNLOCK(_isr)	mtx_unlock(&(_isr)->lock)
-#define	IPSECREQUEST_LOCK_DESTROY(_isr)	mtx_destroy(&(_isr)->lock)
-#define	IPSECREQUEST_LOCK_ASSERT(_isr)	mtx_assert(&(_isr)->lock, MA_OWNED)
+	rw_init_flags(&(_isr)->lock, "ipsec request", RW_RECURSE)
+#define	IPSECREQUEST_LOCK(_isr)		rw_rlock(&(_isr)->lock)
+#define	IPSECREQUEST_UNLOCK(_isr)	rw_runlock(&(_isr)->lock)
+#define	IPSECREQUEST_WLOCK(_isr)	rw_wlock(&(_isr)->lock)
+#define	IPSECREQUEST_WUNLOCK(_isr)	rw_wunlock(&(_isr)->lock)
+#define	IPSECREQUEST_UPGRADE(_isr)	rw_try_upgrade(&(_isr)->lock)
+#define	IPSECREQUEST_DOWNGRADE(_isr)	rw_downgrade(&(_isr)->lock)
+#define	IPSECREQUEST_LOCK_DESTROY(_isr)	rw_destroy(&(_isr)->lock)
+#define	IPSECREQUEST_LOCK_ASSERT(_isr)	rw_assert(&(_isr)->lock, RA_LOCKED)
 
 /* security policy in PCB */
 struct inpcbpolicy {
@@ -326,28 +336,44 @@ struct ipsec_history {
 	u_int32_t ih_spi;
 };
 
-extern int ipsec_debug;
+VNET_DECLARE(int, ipsec_debug);
+#define	V_ipsec_debug		VNET(ipsec_debug)
+
 #ifdef REGRESSION
-extern int ipsec_replay;
-extern int ipsec_integrity;
+VNET_DECLARE(int, ipsec_replay);
+VNET_DECLARE(int, ipsec_integrity);
+
+#define	V_ipsec_replay		VNET(ipsec_replay)
+#define	V_ipsec_integrity	VNET(ipsec_integrity)
 #endif
 
-extern struct ipsecstat ipsec4stat;
-extern struct secpolicy ip4_def_policy;
-extern int ip4_esp_trans_deflev;
-extern int ip4_esp_net_deflev;
-extern int ip4_ah_trans_deflev;
-extern int ip4_ah_net_deflev;
-extern int ip4_ah_cleartos;
-extern int ip4_ah_offsetmask;
-extern int ip4_ipsec_dfbit;
-extern int ip4_ipsec_ecn;
-extern int ip4_esp_randpad;
-extern int crypto_support;
+VNET_DECLARE(struct ipsecstat, ipsec4stat);
+VNET_DECLARE(struct secpolicy, ip4_def_policy);
+VNET_DECLARE(int, ip4_esp_trans_deflev);
+VNET_DECLARE(int, ip4_esp_net_deflev);
+VNET_DECLARE(int, ip4_ah_trans_deflev);
+VNET_DECLARE(int, ip4_ah_net_deflev);
+VNET_DECLARE(int, ip4_ah_offsetmask);
+VNET_DECLARE(int, ip4_ipsec_dfbit);
+VNET_DECLARE(int, ip4_ipsec_ecn);
+VNET_DECLARE(int, ip4_esp_randpad);
+VNET_DECLARE(int, crypto_support);
 
-#define ipseclog(x)	do { if (ipsec_debug) log x; } while (0)
+#define	V_ipsec4stat		VNET(ipsec4stat)
+#define	V_ip4_def_policy	VNET(ip4_def_policy)
+#define	V_ip4_esp_trans_deflev	VNET(ip4_esp_trans_deflev)
+#define	V_ip4_esp_net_deflev	VNET(ip4_esp_net_deflev)
+#define	V_ip4_ah_trans_deflev	VNET(ip4_ah_trans_deflev)
+#define	V_ip4_ah_net_deflev	VNET(ip4_ah_net_deflev)
+#define	V_ip4_ah_offsetmask	VNET(ip4_ah_offsetmask)
+#define	V_ip4_ipsec_dfbit	VNET(ip4_ipsec_dfbit)
+#define	V_ip4_ipsec_ecn		VNET(ip4_ipsec_ecn)
+#define	V_ip4_esp_randpad	VNET(ip4_esp_randpad)
+#define	V_crypto_support	VNET(crypto_support)
+
+#define ipseclog(x)	do { if (V_ipsec_debug) log x; } while (0)
 /* for openbsd compatibility */
-#define	DPRINTF(x)	do { if (ipsec_debug) printf x; } while (0)
+#define	DPRINTF(x)	do { if (V_ipsec_debug) printf x; } while (0)
 
 extern	struct ipsecrequest *ipsec_newisr(void);
 extern	void ipsec_delisr(struct ipsecrequest *);
@@ -357,8 +383,6 @@ extern struct secpolicy *ipsec_getpolicy __P((struct tdb_ident*, u_int));
 struct inpcb;
 extern struct secpolicy *ipsec4_checkpolicy __P((struct mbuf *, u_int, u_int,
 	int *, struct inpcb *));
-extern struct secpolicy *ipsec_getpolicybysock(struct mbuf *, u_int,
-	struct inpcb *, int *);
 extern struct secpolicy * ipsec_getpolicybyaddr(struct mbuf *, u_int,
 	int, int *);
 
@@ -369,11 +393,11 @@ extern int ipsec_copy_policy
 extern u_int ipsec_get_reqlevel __P((struct ipsecrequest *));
 extern int ipsec_in_reject __P((struct secpolicy *, struct mbuf *));
 
-extern int ipsec4_set_policy __P((struct inpcb *inp, int optname,
+extern int ipsec_set_policy __P((struct inpcb *inp, int optname,
 	caddr_t request, size_t len, struct ucred *cred));
-extern int ipsec4_get_policy __P((struct inpcb *inpcb, caddr_t request,
+extern int ipsec_get_policy __P((struct inpcb *inpcb, caddr_t request,
 	size_t len, struct mbuf **mp));
-extern int ipsec4_delete_pcbpolicy __P((struct inpcb *));
+extern int ipsec_delete_pcbpolicy __P((struct inpcb *));
 extern int ipsec4_in_reject __P((struct mbuf *, struct inpcb *));
 
 struct secas;
@@ -381,7 +405,7 @@ struct tcpcb;
 extern int ipsec_chkreplay __P((u_int32_t, struct secasvar *));
 extern int ipsec_updatereplay __P((u_int32_t, struct secasvar *));
 
-extern size_t ipsec4_hdrsiz __P((struct mbuf *, u_int, struct inpcb *));
+extern size_t ipsec_hdrsiz __P((struct mbuf *, u_int, struct inpcb *));
 extern size_t ipsec_hdrsiz_tcp __P((struct tcpcb *));
 
 union sockaddr_union;
@@ -427,6 +451,7 @@ extern int ipsec_get_policylen __P((caddr_t));
 extern char *ipsec_dump_policy __P((caddr_t, char *));
 
 extern const char *ipsec_strerror __P((void));
-#endif /* !_KERNEL */
+
+#endif /* ! KERNEL */
 
 #endif /* _NETIPSEC_IPSEC_H_ */

@@ -1,11 +1,9 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/refcount.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
  * The contents of this file are subject to the terms of the
- * Common Development and Distribution License, Version 1.0 only
- * (the "License").  You may not use this file except in compliance
- * with the License.
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
@@ -21,16 +19,13 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/zfs_context.h>
 #include <sys/refcount.h>
 
-#if defined(DEBUG) || !defined(_KERNEL)
+#ifdef	ZFS_DEBUG
 
 #ifdef _KERNEL
 int reference_tracking_enable = FALSE; /* runs out of memory too easily */
@@ -62,11 +57,13 @@ refcount_fini(void)
 void
 refcount_create(refcount_t *rc)
 {
+	mutex_init(&rc->rc_mtx, NULL, MUTEX_DEFAULT, NULL);
 	list_create(&rc->rc_list, sizeof (reference_t),
 	    offsetof(reference_t, ref_link));
 	list_create(&rc->rc_removed, sizeof (reference_t),
 	    offsetof(reference_t, ref_link));
-	mutex_init(&rc->rc_mtx, NULL, MUTEX_DEFAULT, NULL);
+	rc->rc_count = 0;
+	rc->rc_removed_count = 0;
 }
 
 void
@@ -192,4 +189,35 @@ refcount_remove(refcount_t *rc, void *holder)
 	return (refcount_remove_many(rc, 1, holder));
 }
 
-#endif
+void
+refcount_transfer(refcount_t *dst, refcount_t *src)
+{
+	int64_t count, removed_count;
+	list_t list, removed;
+
+	list_create(&list, sizeof (reference_t),
+	    offsetof(reference_t, ref_link));
+	list_create(&removed, sizeof (reference_t),
+	    offsetof(reference_t, ref_link));
+
+	mutex_enter(&src->rc_mtx);
+	count = src->rc_count;
+	removed_count = src->rc_removed_count;
+	src->rc_count = 0;
+	src->rc_removed_count = 0;
+	list_move_tail(&list, &src->rc_list);
+	list_move_tail(&removed, &src->rc_removed);
+	mutex_exit(&src->rc_mtx);
+
+	mutex_enter(&dst->rc_mtx);
+	dst->rc_count += count;
+	dst->rc_removed_count += removed_count;
+	list_move_tail(&dst->rc_list, &list);
+	list_move_tail(&dst->rc_removed, &removed);
+	mutex_exit(&dst->rc_mtx);
+
+	list_destroy(&list);
+	list_destroy(&removed);
+}
+
+#endif	/* ZFS_DEBUG */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Maxime Henrion <mux@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/stddef.h,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_STDDEF_H_
@@ -34,7 +33,10 @@
 #include <sys/_null.h>
 #include <machine/_types.h>
 
+#ifndef _PTRDIFF_T_DECLARED
 typedef	__ptrdiff_t	ptrdiff_t;
+#define	_PTRDIFF_T_DECLARED
+#endif
 
 #define	offsetof(type, field)	__offsetof(type, field)
 

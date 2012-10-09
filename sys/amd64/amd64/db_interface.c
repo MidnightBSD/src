@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_interface.c,v 1.81 2005/01/05 20:17:20 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Interface to new debugger.
@@ -140,7 +139,11 @@ void
 db_show_mdpcpu(struct pcpu *pc)
 {
 
-#if 0
-	db_printf("currentldt   = 0x%x\n", pc->pc_currentldt);
-#endif
+	db_printf("curpmap      = %p\n", pc->pc_curpmap);
+	db_printf("tssp         = %p\n", pc->pc_tssp);
+	db_printf("commontssp   = %p\n", pc->pc_commontssp);
+	db_printf("rsp0         = 0x%lx\n", pc->pc_rsp0);
+	db_printf("gs32p        = %p\n", pc->pc_gs32p);
+	db_printf("ldt          = %p\n", pc->pc_ldt);
+	db_printf("tss          = %p\n", pc->pc_tss);
 }

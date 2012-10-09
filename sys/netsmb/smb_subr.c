@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -32,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_subr.c,v 1.21.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -100,7 +93,7 @@ char *
 smb_strdup(const char *s)
 {
 	char *p;
-	int len;
+	size_t len;
 
 	len = s ? strlen(s) + 1 : 1;
 	p = malloc(len, M_SMBSTR, M_WAITOK);
@@ -115,11 +108,13 @@ smb_strdup(const char *s)
  * duplicate string from a user space.
  */
 char *
-smb_strdupin(char *s, int maxlen)
+smb_strdupin(char *s, size_t maxlen)
 {
 	char *p, bt;
-	int error, len = 0;
+	int error;
+	size_t len;
 
+	len = 0;
 	for (p = s; ;p++) {
 		if (copyin(p, &bt, 1))
 			return NULL;
@@ -142,7 +137,7 @@ smb_strdupin(char *s, int maxlen)
  * duplicate memory block from a user space.
  */
 void *
-smb_memdupin(void *umem, int len)
+smb_memdupin(void *umem, size_t len)
 {
 	char *p;
 
@@ -185,7 +180,7 @@ smb_memfree(void *s)
 }
 
 void *
-smb_zmalloc(unsigned long size, struct malloc_type *type, int flags)
+smb_zmalloc(size_t size, struct malloc_type *type, int flags)
 {
 
 	return malloc(size, type, flags | M_ZERO);
@@ -204,12 +199,12 @@ smb_strtouni(u_int16_t *dst, const char *src)
 void
 m_dumpm(struct mbuf *m) {
 	char *p;
-	int len;
+	size_t len;
 	printf("d=");
 	while(m) {
 		p=mtod(m,char *);
 		len=m->m_len;
-		printf("(%d)",len);
+		printf("(%zu)",len);
 		while(len--){
 			printf("%02x ",((int)*(p++)) & 0xff);
 		}
@@ -344,7 +339,7 @@ smb_copy_iconv(struct mbchain *mbp, c_caddr_t src, caddr_t dst,
 
 int
 smb_put_dmem(struct mbchain *mbp, struct smb_vc *vcp, const char *src,
-	int size, int caseopt)
+	size_t size, int caseopt)
 {
 	struct iconv_drv *dp = vcp->vc_toserver;
 
@@ -355,6 +350,8 @@ smb_put_dmem(struct mbchain *mbp, struct smb_vc *vcp, const char *src,
 	}
 	mbp->mb_copy = smb_copy_iconv;
 	mbp->mb_udata = dp;
+	if (SMB_UNICODE_STRINGS(vcp))
+		mb_put_padbyte(mbp);
 	return mb_put_mem(mbp, src, size, MB_MCUSTOM);
 }
 
@@ -367,6 +364,8 @@ smb_put_dstring(struct mbchain *mbp, struct smb_vc *vcp, const char *src,
 	error = smb_put_dmem(mbp, vcp, src, strlen(src), caseopt);
 	if (error)
 		return error;
+	if (SMB_UNICODE_STRINGS(vcp))
+		return mb_put_uint16le(mbp, 0);
 	return mb_put_uint8(mbp, 0);
 }
 

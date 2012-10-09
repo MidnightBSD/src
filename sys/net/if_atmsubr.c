@@ -35,11 +35,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net/if_atmsubr.c,v 1.45.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
-#include "opt_mac.h"
 #include "opt_natm.h"
 
 #include <sys/param.h>
@@ -113,17 +112,17 @@ MALLOC_DEFINE(M_IFATM, "ifatm", "atm interface internals");
  *     "ifp" = ATM interface to output to
  *     "m0" = the packet to output
  *     "dst" = the sockaddr to send to (either IP addr, or raw VPI/VCI)
- *     "rt0" = the route to use
+ *     "ro" = the route to use
  *   returns: error code   [0 == ok]
  *
  *   note: special semantic: if (dst == NULL) then we assume "m" already
  *		has an atm_pseudohdr on it and just send it directly.
  *		[for native mode ATM output]   if dst is null, then
- *		rt0 must also be NULL.
+ *		ro->ro_rt must also be NULL.
  */
 int
 atm_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
-    struct rtentry *rt0)
+    struct route *ro)
 {
 	u_int16_t etype = 0;			/* if using LLC/SNAP */
 	int error = 0, sz;
@@ -134,7 +133,7 @@ atm_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 	u_int32_t atm_flags;
 
 #ifdef MAC
-	error = mac_check_ifnet_transmit(ifp, m);
+	error = mac_ifnet_check_transmit(ifp, m);
 	if (error)
 		senderr(error);
 #endif
@@ -153,22 +152,11 @@ atm_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 		case AF_INET:
 		case AF_INET6:
 		{
-			struct rtentry *rt = NULL;
-			/*  
-			 * check route
-			 */
-			if (rt0 != NULL) {
-				error = rt_check(&rt, &rt0, dst);
-				if (error)
-					goto bad;
-				RT_UNLOCK(rt);
-			}
-
 			if (dst->sa_family == AF_INET6)
 			        etype = ETHERTYPE_IPV6;
 			else
 			        etype = ETHERTYPE_IP;
-			if (!atmresolve(rt, m, dst, &atmdst)) {
+			if (!atmresolve(ro->ro_rt, m, dst, &atmdst)) {
 				m = NULL; 
 				/* XXX: atmresolve already free'd it */
 				senderr(EHOSTUNREACH);
@@ -261,7 +249,7 @@ atm_input(struct ifnet *ifp, struct atm_pseudohdr *ah, struct mbuf *m,
 		return;
 	}
 #ifdef MAC
-	mac_create_mbuf_from_ifnet(ifp, m);
+	mac_ifnet_create_mbuf(ifp, m);
 #endif
 	ifp->if_ibytes += m->m_pkthdr.len;
 
@@ -344,6 +332,7 @@ atm_input(struct ifnet *ifp, struct atm_pseudohdr *ah, struct mbuf *m,
 			return;
 		}
 	}
+	M_SETFIB(m, ifp->if_fib);
 	netisr_dispatch(isr, m);
 }
 

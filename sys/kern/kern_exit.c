@@ -35,27 +35,31 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_exit.c,v 1.304.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
 #include "opt_ktrace.h"
-#include "opt_mac.h"
+#include "opt_procdesc.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
+#include <sys/capability.h>
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/procdesc.h>
 #include <sys/pioctl.h>
+#include <sys/jail.h>
 #include <sys/tty.h>
 #include <sys/wait.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
+#include <sys/racct.h>
 #include <sys/resourcevar.h>
 #include <sys/sbuf.h>
 #include <sys/signalvar.h>
@@ -90,20 +94,29 @@ dtrace_execexit_func_t	dtrace_fasttrap_exit;
 #endif
 
 SDT_PROVIDER_DECLARE(proc);
-SDT_PROBE_DEFINE(proc, kernel, , exit);
+SDT_PROBE_DEFINE(proc, kernel, , exit, exit);
 SDT_PROBE_ARGTYPE(proc, kernel, , exit, 0, "int");
-
-/* Required to be non-static for SysVR4 emulator */
-MALLOC_DEFINE(M_ZOMBIE, "zombie", "zombie proc status");
 
 /* Hook for NFS teardown procedure. */
 void (*nlminfo_release_p)(struct proc *p);
+
+static void
+clear_orphan(struct proc *p)
+{
+
+	PROC_LOCK_ASSERT(p, MA_OWNED);
+
+	if (p->p_flag & P_ORPHAN) {
+		LIST_REMOVE(p, p_orphan);
+		p->p_flag &= ~P_ORPHAN;
+	}
+}
 
 /*
  * exit -- death of process.
  */
 void
-sys_exit(struct thread *td, struct sys_exit_args *uap)
+sys_sys_exit(struct thread *td, struct sys_exit_args *uap)
 {
 
 	exit1(td, W_EXITCODE(uap->rval, 0));
@@ -119,25 +132,20 @@ void
 exit1(struct thread *td, int rv)
 {
 	struct proc *p, *nq, *q;
-	struct tty *tp;
-	struct vnode *ttyvp;
 	struct vnode *vtmp;
-#ifdef KTRACE
-	struct vnode *tracevp;
-	struct ucred *tracecred;
-#endif
+	struct vnode *ttyvp = NULL;
 	struct plimit *plim;
 	int locked;
 
-	/*
-	 * Drop Giant if caller has it.  Eventually we should warn about
-	 * being called with Giant held.
-	 */ 
-	while (mtx_owned(&Giant))
-		mtx_unlock(&Giant);
+	mtx_assert(&Giant, MA_NOTOWNED);
 
 	p = td->td_proc;
-	if (p == initproc) {
+	/*
+	 * XXX in case we're rebooting we just let init die in order to
+	 * work around an unsolved stack overflow seen very late during
+	 * shutdown on sparc64 when the gmirror worker process exists.
+	 */ 
+	if (p == initproc && rebooting == 0) {
 		printf("init died (signal %d, exit %d)\n",
 		    WTERMSIG(rv), WEXITSTATUS(rv));
 		panic("Going nowhere without my init!");
@@ -147,8 +155,7 @@ exit1(struct thread *td, int rv)
 	 * MUST abort all other threads before proceeding past here.
 	 */
 	PROC_LOCK(p);
-	if (p->p_flag & P_HADTHREADS) {
-retry:
+	while (p->p_flag & P_HADTHREADS) {
 		/*
 		 * First check if some other thread got here before us..
 		 * if so, act apropriatly, (exit or suspend);
@@ -172,8 +179,8 @@ retry:
 		 * re-check all suspension request, the thread should
 		 * either be suspended there or exit.
 		 */
-		if (thread_single(SINGLE_EXIT))
-			goto retry;
+		if (! thread_single(SINGLE_EXIT))
+			break;
 
 		/*
 		 * All other activity in this process is now stopped.
@@ -182,6 +189,7 @@ retry:
 	}
 	KASSERT(p->p_numthreads == 1,
 	    ("exit1: proc %p exiting with %d threads", p, p->p_numthreads));
+	racct_sub(p, RACCT_NTHR, 1);
 	/*
 	 * Wakeup anyone in procfs' PIOCWAIT.  They should have a hold
 	 * on our vmspace, so we should block below until they have
@@ -206,6 +214,7 @@ retry:
 	while (p->p_lock > 0)
 		msleep(&p->p_lock, &p->p_mtx, PWAIT, "exithold", 0);
 
+	p->p_xstat = rv;	/* Let event handler change exit status */
 	PROC_UNLOCK(p);
 	/* Drain the limit callout while we don't have the proc locked */
 	callout_drain(&p->p_limco);
@@ -217,7 +226,7 @@ retry:
 	 * it was.  The exit status is WEXITSTATUS(rv), but it's not clear
 	 * what the return value is.
 	 */
-	AUDIT_ARG(exit, WEXITSTATUS(rv), 0);
+	AUDIT_ARG_EXIT(WEXITSTATUS(rv), 0);
 	AUDIT_SYSCALL_EXIT(0, td);
 #endif
 
@@ -227,7 +236,7 @@ retry:
 		q = p->p_peers;
 		while (q != NULL) {
 			PROC_LOCK(q);
-			psignal(q, SIGKILL);
+			kern_psignal(q, SIGKILL);
 			PROC_UNLOCK(q);
 			q = q->p_peers;
 		}
@@ -248,6 +257,7 @@ retry:
 	 * P_PPWAIT is set; we will wakeup the parent below.
 	 */
 	PROC_LOCK(p);
+	rv = p->p_xstat;	/* Event handler could change exit status */
 	stopprofclock(p);
 	p->p_flag &= ~(P_TRACED | P_PPWAIT);
 
@@ -304,95 +314,61 @@ retry:
 
 	vmspace_exit(td);
 
-	mtx_lock(&Giant);	/* XXX TTY */
 	sx_xlock(&proctree_lock);
 	if (SESS_LEADER(p)) {
-		struct session *sp;
+		struct session *sp = p->p_session;
+		struct tty *tp;
 
-		sp = p->p_session;
-		if (sp->s_ttyvp) {
-			/*
-			 * Controlling process.
-			 * Signal foreground pgrp,
-			 * drain controlling terminal
-			 * and revoke access to controlling terminal.
-			 */
-			if (sp->s_ttyp && (sp->s_ttyp->t_session == sp)) {
-				tp = sp->s_ttyp;
-				if (sp->s_ttyp->t_pgrp) {
-					PGRP_LOCK(sp->s_ttyp->t_pgrp);
-					pgsignal(sp->s_ttyp->t_pgrp, SIGHUP, 1);
-					PGRP_UNLOCK(sp->s_ttyp->t_pgrp);
-				}
-				/* XXX tp should be locked. */
-				sx_xunlock(&proctree_lock);
-				(void) ttywait(tp);
-				sx_xlock(&proctree_lock);
-				/*
-				 * The tty could have been revoked
-				 * if we blocked.
-				 */
-				if (sp->s_ttyvp) {
-					ttyvp = sp->s_ttyvp;
-					SESS_LOCK(p->p_session);
-					sp->s_ttyvp = NULL;
-					SESS_UNLOCK(p->p_session);
-					sx_xunlock(&proctree_lock);
-					VOP_LOCK(ttyvp, LK_EXCLUSIVE, td);
-					VOP_REVOKE(ttyvp, REVOKEALL);
-					vput(ttyvp);
-					sx_xlock(&proctree_lock);
-				}
-			}
-			if (sp->s_ttyvp) {
-				ttyvp = sp->s_ttyvp;
-				SESS_LOCK(p->p_session);
-				sp->s_ttyvp = NULL;
-				SESS_UNLOCK(p->p_session);
-				vrele(ttyvp);
-			}
-			/*
-			 * s_ttyp is not zero'd; we use this to indicate
-			 * that the session once had a controlling terminal.
-			 * (for logging and informational purposes)
-			 */
-		}
-		SESS_LOCK(p->p_session);
+		/*
+		 * s_ttyp is not zero'd; we use this to indicate that
+		 * the session once had a controlling terminal. (for
+		 * logging and informational purposes)
+		 */
+		SESS_LOCK(sp);
+		ttyvp = sp->s_ttyvp;
+		tp = sp->s_ttyp;
+		sp->s_ttyvp = NULL;
+		sp->s_ttydp = NULL;
 		sp->s_leader = NULL;
-		SESS_UNLOCK(p->p_session);
+		SESS_UNLOCK(sp);
+
+		/*
+		 * Signal foreground pgrp and revoke access to
+		 * controlling terminal if it has not been revoked
+		 * already.
+		 *
+		 * Because the TTY may have been revoked in the mean
+		 * time and could already have a new session associated
+		 * with it, make sure we don't send a SIGHUP to a
+		 * foreground process group that does not belong to this
+		 * session.
+		 */
+
+		if (tp != NULL) {
+			tty_lock(tp);
+			if (tp->t_session == sp)
+				tty_signal_pgrp(tp, SIGHUP);
+			tty_unlock(tp);
+		}
+
+		if (ttyvp != NULL) {
+			sx_xunlock(&proctree_lock);
+			if (vn_lock(ttyvp, LK_EXCLUSIVE) == 0) {
+				VOP_REVOKE(ttyvp, REVOKEALL);
+				VOP_UNLOCK(ttyvp, 0);
+			}
+			sx_xlock(&proctree_lock);
+		}
 	}
 	fixjobc(p, p->p_pgrp, 0);
 	sx_xunlock(&proctree_lock);
 	(void)acct_process(td);
-	mtx_unlock(&Giant);	
+
+	/* Release the TTY now we've unlocked everything. */
+	if (ttyvp != NULL)
+		vrele(ttyvp);
 #ifdef KTRACE
-	/*
-	 * Disable tracing, then drain any pending records and release
-	 * the trace file.
-	 */
-	if (p->p_traceflag != 0) {
-		PROC_LOCK(p);
-		mtx_lock(&ktrace_mtx);
-		p->p_traceflag = 0;
-		mtx_unlock(&ktrace_mtx);
-		PROC_UNLOCK(p);
-		ktrprocexit(td);
-		PROC_LOCK(p);
-		mtx_lock(&ktrace_mtx);
-		tracevp = p->p_tracevp;
-		p->p_tracevp = NULL;
-		tracecred = p->p_tracecred;
-		p->p_tracecred = NULL;
-		mtx_unlock(&ktrace_mtx);
-		PROC_UNLOCK(p);
-		if (tracevp != NULL) {
-			locked = VFS_LOCK_GIANT(tracevp->v_mount);
-			vrele(tracevp);
-			VFS_UNLOCK_GIANT(locked);
-		}
-		if (tracecred != NULL)
-			crfree(tracecred);
-	}
+	ktrprocexit(td);
 #endif
 	/*
 	 * Release reference to text vnode
@@ -412,6 +388,8 @@ retry:
 	p->p_limit = NULL;
 	PROC_UNLOCK(p);
 	lim_free(plim);
+
+	tidhash_remove(td);
 
 	/*
 	 * Remove proc from allproc queue and pidhash chain.
@@ -450,16 +428,38 @@ retry:
 		 * since their existence means someone is screwing up.
 		 */
 		if (q->p_flag & P_TRACED) {
+			struct thread *temp;
+
+			/*
+			 * Since q was found on our children list, the
+			 * proc_reparent() call moved q to the orphan
+			 * list due to present P_TRACED flag. Clear
+			 * orphan link for q now while q is locked.
+			 */
+			clear_orphan(q);
 			q->p_flag &= ~(P_TRACED | P_STOPPED_TRACE);
-			psignal(q, SIGKILL);
+			FOREACH_THREAD_IN_PROC(q, temp)
+				temp->td_dbgflags &= ~TDB_SUSPEND;
+			kern_psignal(q, SIGKILL);
 		}
+		PROC_UNLOCK(q);
+	}
+
+	/*
+	 * Also get rid of our orphans.
+	 */
+	while ((q = LIST_FIRST(&p->p_orphans)) != NULL) {
+		PROC_LOCK(q);
+		clear_orphan(q);
 		PROC_UNLOCK(q);
 	}
 
 	/* Save exit status. */
 	PROC_LOCK(p);
-	p->p_xstat = rv;
 	p->p_xthread = td;
+
+	/* Tell the prison that we are gone. */
+	prison_proc_free(p->p_ucred->cr_prison);
 
 #ifdef KDTRACE_HOOKS
 	/*
@@ -483,6 +483,7 @@ retry:
 		reason = CLD_KILLED;
 	SDT_PROBE(proc, kernel, , exit, reason, 0, 0, 0, 0);
 #endif
+
 	/*
 	 * Just delete all entries in the p_klist. At this point we won't
 	 * report any more events, and there are nasty race conditions that
@@ -491,39 +492,54 @@ retry:
 	knlist_clear(&p->p_klist, 1);
 
 	/*
-	 * Notify parent that we're gone.  If parent has the PS_NOCLDWAIT
-	 * flag set, or if the handler is set to SIG_IGN, notify process
-	 * 1 instead (and hope it will handle this situation).
+	 * If this is a process with a descriptor, we may not need to deliver
+	 * a signal to the parent.  proctree_lock is held over
+	 * procdesc_exit() to serialize concurrent calls to close() and
+	 * exit().
 	 */
-	PROC_LOCK(p->p_pptr);
-	mtx_lock(&p->p_pptr->p_sigacts->ps_mtx);
-	if (p->p_pptr->p_sigacts->ps_flag & (PS_NOCLDWAIT | PS_CLDSIGIGN)) {
-		struct proc *pp;
-
-		mtx_unlock(&p->p_pptr->p_sigacts->ps_mtx);
-		pp = p->p_pptr;
-		PROC_UNLOCK(pp);
-		proc_reparent(p, initproc);
-		p->p_sigparent = SIGCHLD;
-		PROC_LOCK(p->p_pptr);
+#ifdef PROCDESC
+	if (p->p_procdesc == NULL || procdesc_exit(p)) {
+#endif
 		/*
-		 * If this was the last child of our parent, notify
-		 * parent, so in case he was wait(2)ing, he will
-		 * continue.
+		 * Notify parent that we're gone.  If parent has the
+		 * PS_NOCLDWAIT flag set, or if the handler is set to SIG_IGN,
+		 * notify process 1 instead (and hope it will handle this
+		 * situation).
 		 */
-		if (LIST_EMPTY(&pp->p_children))
-			wakeup(pp);
-	} else
-		mtx_unlock(&p->p_pptr->p_sigacts->ps_mtx);
+		PROC_LOCK(p->p_pptr);
+		mtx_lock(&p->p_pptr->p_sigacts->ps_mtx);
+		if (p->p_pptr->p_sigacts->ps_flag &
+		    (PS_NOCLDWAIT | PS_CLDSIGIGN)) {
+			struct proc *pp;
 
-	if (p->p_pptr == initproc)
-		psignal(p->p_pptr, SIGCHLD);
-	else if (p->p_sigparent != 0) {
-		if (p->p_sigparent == SIGCHLD)
-			childproc_exited(p);
-		else	/* LINUX thread */
-			psignal(p->p_pptr, p->p_sigparent);
-	}
+			mtx_unlock(&p->p_pptr->p_sigacts->ps_mtx);
+			pp = p->p_pptr;
+			PROC_UNLOCK(pp);
+			proc_reparent(p, initproc);
+			p->p_sigparent = SIGCHLD;
+			PROC_LOCK(p->p_pptr);
+
+			/*
+			 * Notify parent, so in case he was wait(2)ing or
+			 * executing waitpid(2) with our pid, he will
+			 * continue.
+			 */
+			wakeup(pp);
+		} else
+			mtx_unlock(&p->p_pptr->p_sigacts->ps_mtx);
+
+		if (p->p_pptr == initproc)
+			kern_psignal(p->p_pptr, SIGCHLD);
+		else if (p->p_sigparent != 0) {
+			if (p->p_sigparent == SIGCHLD)
+				childproc_exited(p);
+			else	/* LINUX thread */
+				kern_psignal(p->p_pptr, p->p_sigparent);
+		}
+#ifdef PROCDESC
+	} else
+		PROC_LOCK(p->p_pptr);
+#endif
 	sx_xunlock(&proctree_lock);
 
 	/*
@@ -545,9 +561,8 @@ retry:
 	 * proc lock.
 	 */
 	wakeup(p->p_pptr);
-	PROC_SLOCK(p->p_pptr);
+	cv_broadcast(&p->p_pwait);
 	sched_exit(p->p_pptr, td);
-	PROC_SUNLOCK(p->p_pptr);
 	PROC_SLOCK(p);
 	p->p_state = PRS_ZOMBIE;
 	PROC_UNLOCK(p->p_pptr);
@@ -581,14 +596,12 @@ struct abort2_args {
 #endif
 
 int
-abort2(struct thread *td, struct abort2_args *uap)
+sys_abort2(struct thread *td, struct abort2_args *uap)
 {
 	struct proc *p = td->td_proc;
 	struct sbuf *sb;
 	void *uargs[16];
 	int error, i, sig;
-
-	error = 0;	/* satisfy compiler */
 
 	/*
 	 * Do it right now so we can log either proper call of abort2(), or
@@ -671,7 +684,7 @@ owait(struct thread *td, struct owait_args *uap __unused)
  * The dirty work is handled by kern_wait().
  */
 int
-wait4(struct thread *td, struct wait_args *uap)
+sys_wait4(struct thread *td, struct wait_args *uap)
 {
 	struct rusage ru, *rup;
 	int error, status;
@@ -688,14 +701,190 @@ wait4(struct thread *td, struct wait_args *uap)
 	return (error);
 }
 
+/*
+ * Reap the remains of a zombie process and optionally return status and
+ * rusage.  Asserts and will release both the proctree_lock and the process
+ * lock as part of its work.
+ */
+void
+proc_reap(struct thread *td, struct proc *p, int *status, int options,
+    struct rusage *rusage)
+{
+	struct proc *q, *t;
+
+	sx_assert(&proctree_lock, SA_XLOCKED);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
+	PROC_SLOCK_ASSERT(p, MA_OWNED);
+	KASSERT(p->p_state == PRS_ZOMBIE, ("proc_reap: !PRS_ZOMBIE"));
+
+	q = td->td_proc;
+	if (rusage) {
+		*rusage = p->p_ru;
+		calcru(p, &rusage->ru_utime, &rusage->ru_stime);
+	}
+	PROC_SUNLOCK(p);
+	td->td_retval[0] = p->p_pid;
+	if (status)
+		*status = p->p_xstat;	/* convert to int */
+	if (options & WNOWAIT) {
+		/*
+		 *  Only poll, returning the status.  Caller does not wish to
+		 * release the proc struct just yet.
+		 */
+		PROC_UNLOCK(p);
+		sx_xunlock(&proctree_lock);
+		return;
+	}
+
+	PROC_LOCK(q);
+	sigqueue_take(p->p_ksi);
+	PROC_UNLOCK(q);
+	PROC_UNLOCK(p);
+
+	/*
+	 * If we got the child via a ptrace 'attach', we need to give it back
+	 * to the old parent.
+	 */
+	if (p->p_oppid && (t = pfind(p->p_oppid)) != NULL) {
+		PROC_LOCK(p);
+		proc_reparent(p, t);
+		p->p_oppid = 0;
+		PROC_UNLOCK(p);
+		pksignal(t, SIGCHLD, p->p_ksi);
+		wakeup(t);
+		cv_broadcast(&p->p_pwait);
+		PROC_UNLOCK(t);
+		sx_xunlock(&proctree_lock);
+		return;
+	}
+
+	/*
+	 * Remove other references to this process to ensure we have an
+	 * exclusive reference.
+	 */
+	sx_xlock(&allproc_lock);
+	LIST_REMOVE(p, p_list);	/* off zombproc */
+	sx_xunlock(&allproc_lock);
+	LIST_REMOVE(p, p_sibling);
+	PROC_LOCK(p);
+	clear_orphan(p);
+	PROC_UNLOCK(p);
+	leavepgrp(p);
+#ifdef PROCDESC
+	if (p->p_procdesc != NULL)
+		procdesc_reap(p);
+#endif
+	sx_xunlock(&proctree_lock);
+
+	/*
+	 * As a side effect of this lock, we know that all other writes to
+	 * this proc are visible now, so no more locking is needed for p.
+	 */
+	PROC_LOCK(p);
+	p->p_xstat = 0;		/* XXX: why? */
+	PROC_UNLOCK(p);
+	PROC_LOCK(q);
+	ruadd(&q->p_stats->p_cru, &q->p_crux, &p->p_ru, &p->p_rux);
+	PROC_UNLOCK(q);
+
+	/*
+	 * Decrement the count of procs running with this uid.
+	 */
+	(void)chgproccnt(p->p_ucred->cr_ruidinfo, -1, 0);
+
+	/*
+	 * Destroy resource accounting information associated with the process.
+	 */
+#ifdef RACCT
+	PROC_LOCK(p);
+	racct_sub(p, RACCT_NPROC, 1);
+	PROC_UNLOCK(p);
+#endif
+	racct_proc_exit(p);
+
+	/*
+	 * Free credentials, arguments, and sigacts.
+	 */
+	crfree(p->p_ucred);
+	p->p_ucred = NULL;
+	pargs_drop(p->p_args);
+	p->p_args = NULL;
+	sigacts_free(p->p_sigacts);
+	p->p_sigacts = NULL;
+
+	/*
+	 * Do any thread-system specific cleanups.
+	 */
+	thread_wait(p);
+
+	/*
+	 * Give vm and machine-dependent layer a chance to free anything that
+	 * cpu_exit couldn't release while still running in process context.
+	 */
+	vm_waitproc(p);
+#ifdef MAC
+	mac_proc_destroy(p);
+#endif
+	KASSERT(FIRST_THREAD_IN_PROC(p),
+	    ("proc_reap: no residual thread!"));
+	uma_zfree(proc_zone, p);
+	sx_xlock(&allproc_lock);
+	nprocs--;
+	sx_xunlock(&allproc_lock);
+}
+
+static int
+proc_to_reap(struct thread *td, struct proc *p, pid_t pid, int *status,
+    int options, struct rusage *rusage)
+{
+	struct proc *q;
+
+	sx_assert(&proctree_lock, SA_XLOCKED);
+
+	q = td->td_proc;
+	PROC_LOCK(p);
+	if (pid != WAIT_ANY && p->p_pid != pid && p->p_pgid != -pid) {
+		PROC_UNLOCK(p);
+		return (0);
+	}
+	if (p_canwait(td, p)) {
+		PROC_UNLOCK(p);
+		return (0);
+	}
+
+	/*
+	 * This special case handles a kthread spawned by linux_clone
+	 * (see linux_misc.c).  The linux_wait4 and linux_waitpid
+	 * functions need to be able to distinguish between waiting
+	 * on a process and waiting on a thread.  It is a thread if
+	 * p_sigparent is not SIGCHLD, and the WLINUXCLONE option
+	 * signifies we want to wait for threads and not processes.
+	 */
+	if ((p->p_sigparent != SIGCHLD) ^
+	    ((options & WLINUXCLONE) != 0)) {
+		PROC_UNLOCK(p);
+		return (0);
+	}
+
+	PROC_SLOCK(p);
+	if (p->p_state == PRS_ZOMBIE) {
+		proc_reap(td, p, status, options, rusage);
+		return (-1);
+	}
+	PROC_SUNLOCK(p);
+	PROC_UNLOCK(p);
+	return (1);
+}
+
 int
 kern_wait(struct thread *td, pid_t pid, int *status, int options,
     struct rusage *rusage)
 {
-	struct proc *p, *q, *t;
-	int error, nfound;
+	struct proc *p, *q;
+	int error, nfound, ret;
 
-	AUDIT_ARG(pid, pid);
+	AUDIT_ARG_PID(pid);
+	AUDIT_ARG_VALUE(options);
 
 	q = td->td_proc;
 	if (pid == 0) {
@@ -703,7 +892,8 @@ kern_wait(struct thread *td, pid_t pid, int *status, int options,
 		pid = -q->p_pgid;
 		PROC_UNLOCK(q);
 	}
-	if (options &~ (WUNTRACED|WNOHANG|WCONTINUED|WNOWAIT|WLINUXCLONE))
+	/* If we don't know the option, just return. */
+	if (options & ~(WUNTRACED|WNOHANG|WCONTINUED|WNOWAIT|WLINUXCLONE))
 		return (EINVAL);
 loop:
 	if (q->p_flag & P_STATCHILD) {
@@ -714,136 +904,16 @@ loop:
 	nfound = 0;
 	sx_xlock(&proctree_lock);
 	LIST_FOREACH(p, &q->p_children, p_sibling) {
-		PROC_LOCK(p);
-		if (pid != WAIT_ANY &&
-		    p->p_pid != pid && p->p_pgid != -pid) {
-			PROC_UNLOCK(p);
+		ret = proc_to_reap(td, p, pid, status, options, rusage);
+		if (ret == 0)
 			continue;
-		}
-		if (p_canwait(td, p)) {
-			PROC_UNLOCK(p);
-			continue;
-		}
-
-		/*
-		 * This special case handles a kthread spawned by linux_clone
-		 * (see linux_misc.c).  The linux_wait4 and linux_waitpid
-		 * functions need to be able to distinguish between waiting
-		 * on a process and waiting on a thread.  It is a thread if
-		 * p_sigparent is not SIGCHLD, and the WLINUXCLONE option
-		 * signifies we want to wait for threads and not processes.
-		 */
-		if ((p->p_sigparent != SIGCHLD) ^
-		    ((options & WLINUXCLONE) != 0)) {
-			PROC_UNLOCK(p);
-			continue;
-		}
-
-		nfound++;
-		PROC_SLOCK(p);
-		if (p->p_state == PRS_ZOMBIE) {
-			if (rusage) {
-				*rusage = p->p_ru;
-				calcru(p, &rusage->ru_utime, &rusage->ru_stime);
-			}
-			PROC_SUNLOCK(p);
-			td->td_retval[0] = p->p_pid;
-			if (status)
-				*status = p->p_xstat;	/* convert to int */
-			if (options & WNOWAIT) {
-
-				/*
-				 *  Only poll, returning the status.
-				 *  Caller does not wish to release the proc
-				 *  struct just yet.
-				 */
-				PROC_UNLOCK(p);
-				sx_xunlock(&proctree_lock);
-				return (0);
-			}
-
-			PROC_LOCK(q);
-			sigqueue_take(p->p_ksi);
-			PROC_UNLOCK(q);
-			PROC_UNLOCK(p);
-
-			/*
-			 * If we got the child via a ptrace 'attach',
-			 * we need to give it back to the old parent.
-			 */
-			if (p->p_oppid && (t = pfind(p->p_oppid)) != NULL) {
-				PROC_LOCK(p);
-				p->p_oppid = 0;
-				proc_reparent(p, t);
-				PROC_UNLOCK(p);
-				tdsignal(t, NULL, SIGCHLD, p->p_ksi);
-				wakeup(t);
-				PROC_UNLOCK(t);
-				sx_xunlock(&proctree_lock);
-				return (0);
-			}
-
-			/*
-			 * Remove other references to this process to ensure
-			 * we have an exclusive reference.
-			 */
-			sx_xlock(&allproc_lock);
-			LIST_REMOVE(p, p_list);	/* off zombproc */
-			sx_xunlock(&allproc_lock);
-			LIST_REMOVE(p, p_sibling);
-			leavepgrp(p);
-			sx_xunlock(&proctree_lock);
-
-			/*
-			 * As a side effect of this lock, we know that
-			 * all other writes to this proc are visible now, so
-			 * no more locking is needed for p.
-			 */
-			PROC_LOCK(p);
-			p->p_xstat = 0;		/* XXX: why? */
-			PROC_UNLOCK(p);
-			PROC_LOCK(q);
-			ruadd(&q->p_stats->p_cru, &q->p_crux, &p->p_ru,
-			    &p->p_rux);
-			PROC_UNLOCK(q);
-
-			/*
-			 * Decrement the count of procs running with this uid.
-			 */
-			(void)chgproccnt(p->p_ucred->cr_ruidinfo, -1, 0);
-
-			/*
-			 * Free credentials, arguments, and sigacts.
-			 */
-			crfree(p->p_ucred);
-			p->p_ucred = NULL;
-			pargs_drop(p->p_args);
-			p->p_args = NULL;
-			sigacts_free(p->p_sigacts);
-			p->p_sigacts = NULL;
-
-			/*
-			 * Do any thread-system specific cleanups.
-			 */
-			thread_wait(p);
-
-			/*
-			 * Give vm and machine-dependent layer a chance
-			 * to free anything that cpu_exit couldn't
-			 * release while still running in process context.
-			 */
-			vm_waitproc(p);
-#ifdef MAC
-			mac_destroy_proc(p);
-#endif
-			KASSERT(FIRST_THREAD_IN_PROC(p),
-			    ("kern_wait: no residual thread!"));
-			uma_zfree(proc_zone, p);
-			sx_xlock(&allproc_lock);
-			nprocs--;
-			sx_xunlock(&allproc_lock);
+		else if (ret == 1)
+			nfound++;
+		else
 			return (0);
-		}
+
+		PROC_LOCK(p);
+		PROC_SLOCK(p);
 		if ((p->p_flag & P_STOPPED_SIG) &&
 		    (p->p_suspcount == p->p_numthreads) &&
 		    (p->p_flag & P_WAITED) == 0 &&
@@ -878,6 +948,28 @@ loop:
 			return (0);
 		}
 		PROC_UNLOCK(p);
+	}
+
+	/*
+	 * Look in the orphans list too, to allow the parent to
+	 * collect it's child exit status even if child is being
+	 * debugged.
+	 *
+	 * Debugger detaches from the parent upon successful
+	 * switch-over from parent to child.  At this point due to
+	 * re-parenting the parent loses the child to debugger and a
+	 * wait4(2) call would report that it has no children to wait
+	 * for.  By maintaining a list of orphans we allow the parent
+	 * to successfully wait until the child becomes a zombie.
+	 */
+	LIST_FOREACH(p, &q->p_orphans, p_orphan) {
+		ret = proc_to_reap(td, p, pid, status, options, rusage);
+		if (ret == 0)
+			continue;
+		else if (ret == 1)
+			nfound++;
+		else
+			return (0);
 	}
 	if (nfound == 0) {
 		sx_xunlock(&proctree_lock);
@@ -919,5 +1011,12 @@ proc_reparent(struct proc *child, struct proc *parent)
 	PROC_UNLOCK(child->p_pptr);
 	LIST_REMOVE(child, p_sibling);
 	LIST_INSERT_HEAD(&parent->p_children, child, p_sibling);
+
+	clear_orphan(child);
+	if (child->p_flag & P_TRACED) {
+		LIST_INSERT_HEAD(&child->p_pptr->p_orphans, child, p_orphan);
+		child->p_flag |= P_ORPHAN;
+	}
+
 	child->p_pptr = parent;
 }

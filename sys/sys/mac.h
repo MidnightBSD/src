@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
@@ -36,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/mac.h,v 1.74.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 /*
  * Userland interface for Mandatory Access Control.  Loosely based on the

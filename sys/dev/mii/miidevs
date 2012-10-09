@@ -1,3 +1,4 @@
+$FreeBSD$
 /*$NetBSD: miidevs,v 1.105 2011/11/25 23:28:14 jakllsch Exp $*/
 
 /*-
@@ -48,7 +49,6 @@
 oui AGERE			0x00053d	Agere Systems
 oui ALTIMA			0x0010a9	Altima Communications
 oui AMD				0x00001a	Advanced Micro Devices
-oui ATHEROS			0x001374	Atheros Communications
 oui BROADCOM			0x001018	Broadcom Corporation
 oui BROADCOM2			0x000af7	Broadcom Corporation
 oui BROADCOM3			0x001be9	Broadcom Corporation
@@ -229,10 +229,6 @@ model yyINTEL IGP01E1000	0x0038 Intel IGP01E1000 Gigabit PHY
 
 /* Jato Technologies PHYs */
 model xxJATO BASEX		0x0000 Jato 1000baseX media interface
-
-/* JMicron Technologies PHYs */
-model JMICRON JMP211		0x0021 JMP211 10/100/1000 media interface
-model JMICRON JMP202		0x0022 JMP202 10/100 media interface
 
 /* JMicron Technologies PHYs */
 model JMICRON JMP211		0x0021 JMP211 10/100/1000 media interface

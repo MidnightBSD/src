@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)authunix_prot.c 1.15 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)authunix_prot.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/rpc/authunix_prot.c,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * authunix_prot.c
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: src/sys/rpc/authunix_prot.c,v 1.2.2.2.2.1 2008/11/25 02:59:2
  */
 
 #include <sys/param.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/ucred.h>
@@ -66,12 +67,14 @@ xdr_authunix_parms(XDR *xdrs, uint32_t *time, struct xucred *cred)
 	uint32_t namelen;
 	uint32_t ngroups, i;
 	uint32_t junk;
+	char hostbuf[MAXHOSTNAMELEN];
 
 	if (xdrs->x_op == XDR_ENCODE) {
 		/*
 		 * Restrict name length to 255 according to RFC 1057.
 		 */
-		namelen = strlen(hostname);
+		getcredhostname(NULL, hostbuf, sizeof(hostbuf));
+		namelen = strlen(hostbuf);
 		if (namelen > 255)
 			namelen = 255;
 	} else {
@@ -87,7 +90,7 @@ xdr_authunix_parms(XDR *xdrs, uint32_t *time, struct xucred *cred)
 	 * Ignore the hostname on decode.
 	 */
 	if (xdrs->x_op == XDR_ENCODE) {
-		if (!xdr_opaque(xdrs, hostname, namelen))
+		if (!xdr_opaque(xdrs, hostbuf, namelen))
 			return (FALSE);
 	} else {
 		xdr_setpos(xdrs, xdr_getpos(xdrs) + RNDUP(namelen));
@@ -107,7 +110,7 @@ xdr_authunix_parms(XDR *xdrs, uint32_t *time, struct xucred *cred)
 	if (!xdr_uint32_t(xdrs, &ngroups))
 		return (FALSE);
 	for (i = 0; i < ngroups; i++) {
-		if (i + 1 < NGROUPS) {
+		if (i + 1 < ngroups_max + 1) {
 			if (!xdr_uint32_t(xdrs, &cred->cr_groups[i + 1]))
 				return (FALSE);
 		} else {
@@ -117,8 +120,8 @@ xdr_authunix_parms(XDR *xdrs, uint32_t *time, struct xucred *cred)
 	}
 
 	if (xdrs->x_op == XDR_DECODE) {
-		if (ngroups + 1 > NGROUPS)
-			cred->cr_ngroups = NGROUPS;
+		if (ngroups + 1 > ngroups_max + 1)
+			cred->cr_ngroups = ngroups_max + 1;
 		else
 			cred->cr_ngroups = ngroups + 1;
 	}

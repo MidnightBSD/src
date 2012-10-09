@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/net/pfil.h,v 1.16.6.1 2008/11/25 02:59:29 kensmith Exp $ */
+/*	$FreeBSD$ */
 /*	$NetBSD: pfil.h,v 1.22 2003/06/23 12:57:08 martin Exp $	*/
 
 /*-
@@ -37,7 +37,7 @@
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 #include <sys/lock.h>
-#include <sys/rwlock.h>
+#include <sys/rmlock.h>
 
 struct mbuf;
 struct ifnet;
@@ -49,9 +49,9 @@ struct inpcb;
  */
 struct packet_filter_hook {
         TAILQ_ENTRY(packet_filter_hook) pfil_link;
-	int	(*pfil_func)(void *, struct mbuf **, struct ifnet *, int, struct inpcb *);
+	int	(*pfil_func)(void *, struct mbuf **, struct ifnet *, int,
+		    struct inpcb *);
 	void	*pfil_arg;
-	int	pfil_flags;
 };
 
 #define PFIL_IN		0x00000001
@@ -69,7 +69,11 @@ struct pfil_head {
 	pfil_list_t	ph_out;
 	int		ph_type;
 	int		ph_nhooks;
-	struct rwlock	ph_mtx;
+#if defined( __linux__ ) || defined( _WIN32 )
+	rwlock_t	ph_mtx;
+#else
+	struct rmlock	ph_lock;
+#endif
 	union {
 		u_long		phu_val;
 		void		*phu_ptr;
@@ -79,13 +83,12 @@ struct pfil_head {
 	LIST_ENTRY(pfil_head) ph_list;
 };
 
+int	pfil_add_hook(int (*func)(void *, struct mbuf **, struct ifnet *,
+	    int, struct inpcb *), void *, int, struct pfil_head *);
+int	pfil_remove_hook(int (*func)(void *, struct mbuf **, struct ifnet *,
+	    int, struct inpcb *), void *, int, struct pfil_head *);
 int	pfil_run_hooks(struct pfil_head *, struct mbuf **, struct ifnet *,
 	    int, struct inpcb *inp);
-
-int	pfil_add_hook(int (*func)(void *, struct mbuf **,
-	    struct ifnet *, int, struct inpcb *), void *, int, struct pfil_head *);
-int	pfil_remove_hook(int (*func)(void *, struct mbuf **,
-	    struct ifnet *, int, struct inpcb *), void *, int, struct pfil_head *);
 
 int	pfil_head_register(struct pfil_head *);
 int	pfil_head_unregister(struct pfil_head *);
@@ -93,16 +96,20 @@ int	pfil_head_unregister(struct pfil_head *);
 struct pfil_head *pfil_head_get(int, u_long);
 
 #define	PFIL_HOOKED(p) ((p)->ph_nhooks > 0)
-#define PFIL_RLOCK(p) rw_rlock(&(p)->ph_mtx)
-#define PFIL_WLOCK(p) rw_wlock(&(p)->ph_mtx)
-#define PFIL_RUNLOCK(p) rw_runlock(&(p)->ph_mtx)
-#define PFIL_WUNLOCK(p) rw_wunlock(&(p)->ph_mtx)
+#define	PFIL_LOCK_INIT(p) \
+    rm_init_flags(&(p)->ph_lock, "PFil hook read/write mutex", RM_RECURSE)
+#define	PFIL_LOCK_DESTROY(p) rm_destroy(&(p)->ph_lock)
+#define PFIL_RLOCK(p, t) rm_rlock(&(p)->ph_lock, (t))
+#define PFIL_WLOCK(p) rm_wlock(&(p)->ph_lock)
+#define PFIL_RUNLOCK(p, t) rm_runlock(&(p)->ph_lock, (t))
+#define PFIL_WUNLOCK(p) rm_wunlock(&(p)->ph_lock)
 #define PFIL_LIST_LOCK() mtx_lock(&pfil_global_lock)
 #define PFIL_LIST_UNLOCK() mtx_unlock(&pfil_global_lock)
 
 static __inline struct packet_filter_hook *
 pfil_hook_get(int dir, struct pfil_head *ph)
 {
+
 	if (dir == PFIL_IN)
 		return (TAILQ_FIRST(&ph->ph_in));
 	else if (dir == PFIL_OUT)

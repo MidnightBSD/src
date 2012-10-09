@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,14 +19,11 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _SYS_UBERBLOCK_IMPL_H
 #define	_SYS_UBERBLOCK_IMPL_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/uberblock.h>
 
@@ -50,11 +46,14 @@ extern "C" {
 
 struct uberblock {
 	uint64_t	ub_magic;	/* UBERBLOCK_MAGIC		*/
-	uint64_t	ub_version;	/* ZFS_VERSION			*/
+	uint64_t	ub_version;	/* SPA_VERSION			*/
 	uint64_t	ub_txg;		/* txg of last sync		*/
 	uint64_t	ub_guid_sum;	/* sum of all vdev guids	*/
 	uint64_t	ub_timestamp;	/* UTC time of last sync	*/
 	blkptr_t	ub_rootbp;	/* MOS objset_phys_t		*/
+
+	/* highest SPA_VERSION supported by software that wrote this txg */
+	uint64_t	ub_software_version;
 };
 
 #ifdef	__cplusplus

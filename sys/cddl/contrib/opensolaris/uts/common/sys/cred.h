@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -34,8 +33,6 @@
 
 #ifndef _SYS_CRED_H
 #define	_SYS_CRED_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/types.h>
 
@@ -56,6 +53,10 @@ typedef struct cred cred_t;
 
 struct proc;				/* cred.h is included in proc.h */
 struct prcred;
+struct ksid;
+struct ksidlist;
+struct credklpd;
+struct credgrp;
 
 struct auditinfo_addr;			/* cred.h is included in audit.h */
 
@@ -69,6 +70,7 @@ extern void cred_init(void);
 extern void crhold(cred_t *);
 extern void crfree(cred_t *);
 extern cred_t *cralloc(void);		/* all but ref uninitialized */
+extern cred_t *cralloc_ksid(void);	/* cralloc() + ksid alloc'ed */
 extern cred_t *crget(void);		/* initialized */
 extern cred_t *crcopy(cred_t *);
 extern void crcopy_to(cred_t *, cred_t *);
@@ -76,6 +78,7 @@ extern cred_t *crdup(cred_t *);
 extern void crdup_to(cred_t *, cred_t *);
 extern cred_t *crgetcred(void);
 extern void crset(struct proc *, cred_t *);
+extern void crset_zone_privall(cred_t *);
 extern int groupmember(gid_t, const cred_t *);
 extern int supgroupmember(gid_t, const cred_t *);
 extern int hasprocperm(const cred_t *, const cred_t *);
@@ -92,6 +95,8 @@ extern gid_t crgetsgid(const cred_t *);
 extern zoneid_t crgetzoneid(const cred_t *);
 extern projid_t crgetprojid(const cred_t *);
 
+extern cred_t *crgetmapped(const cred_t *);
+
 
 extern const struct auditinfo_addr *crgetauinfo(const cred_t *);
 extern struct auditinfo_addr *crgetauinfo_modifiable(cred_t *);
@@ -99,6 +104,7 @@ extern struct auditinfo_addr *crgetauinfo_modifiable(cred_t *);
 extern uint_t crgetref(const cred_t *);
 
 extern const gid_t *crgetgroups(const cred_t *);
+extern const gid_t *crgetggroups(const struct credgrp *);
 
 extern int crgetngroups(const cred_t *);
 
@@ -115,7 +121,13 @@ extern int crsetresgid(cred_t *, gid_t, gid_t, gid_t);
  */
 extern int crsetugid(cred_t *, uid_t, gid_t);
 
+/*
+ * Functions to handle the supplemental group list.
+ */
 extern int crsetgroups(cred_t *, int, gid_t *);
+extern struct credgrp *crgrpcopyin(int, gid_t *);
+extern void crgrprele(struct credgrp *);
+extern void crsetcredgrp(cred_t *, struct credgrp *);
 
 /*
  * Private interface for setting zone association of credential.
@@ -145,6 +157,32 @@ extern void cred2prcred(const cred_t *, struct prcred *);
 struct ts_label_s;
 extern struct ts_label_s *crgetlabel(const cred_t *);
 extern boolean_t crisremote(const cred_t *);
+
+/*
+ * Private interfaces for ephemeral uids.
+ */
+#define	VALID_UID(id, zn)					\
+	((id) <= MAXUID || valid_ephemeral_uid((zn), (id)))
+
+#define	VALID_GID(id, zn)					\
+	((id) <= MAXUID || valid_ephemeral_gid((zn), (id)))
+
+extern boolean_t valid_ephemeral_uid(struct zone *, uid_t);
+extern boolean_t valid_ephemeral_gid(struct zone *, gid_t);
+
+extern int eph_uid_alloc(struct zone *, int, uid_t *, int);
+extern int eph_gid_alloc(struct zone *, int, gid_t *, int);
+
+extern void crsetsid(cred_t *, struct ksid *, int);
+extern void crsetsidlist(cred_t *, struct ksidlist *);
+
+extern struct ksid *crgetsid(const cred_t *, int);
+extern struct ksidlist *crgetsidlist(const cred_t *);
+
+extern int crsetpriv(cred_t *, ...);
+
+extern struct credklpd *crgetcrklpd(const cred_t *);
+extern void crsetcrklpd(cred_t *, struct credklpd *);
 
 #endif	/* _KERNEL */
 

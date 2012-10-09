@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,10 +35,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_init.c,v 1.85 2007/02/16 17:32:41 pjd Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/fnv_hash.h>
 #include <sys/kernel.h>
 #include <sys/linker.h>
 #include <sys/mount.h>
@@ -64,6 +64,18 @@ int maxvfsconf = VFS_GENERIC + 1;
  * New entries are added/deleted by vfs_register()/vfs_unregister()
  */
 struct vfsconfhead vfsconf = TAILQ_HEAD_INITIALIZER(vfsconf);
+
+/*
+ * Loader.conf variable vfs.typenumhash enables setting vfc_typenum using a hash
+ * calculation on vfc_name, so that it doesn't change when file systems are
+ * loaded in a different order. This will avoid the NFS server file handles from
+ * changing for file systems that use vfc_typenum in their fsid.
+ */
+static int	vfs_typenumhash = 1;
+TUNABLE_INT("vfs.typenumhash", &vfs_typenumhash);
+SYSCTL_INT(_vfs, OID_AUTO, typenumhash, CTLFLAG_RDTUN, &vfs_typenumhash, 0,
+    "Set vfc_typenum using a hash calculation on vfc_name, so that it does not"
+    "change when file systems are loaded in a different order.");
 
 /*
  * A Zen vnode attribute structure.
@@ -139,6 +151,9 @@ vfs_register(struct vfsconf *vfc)
 	struct sysctl_oid *oidp;
 	struct vfsops *vfsops;
 	static int once;
+	struct vfsconf *tvfc;
+	uint32_t hashval;
+	int secondpass;
 
 	if (!once) {
 		vattr_null(&va_null);
@@ -153,7 +168,34 @@ vfs_register(struct vfsconf *vfc)
 	if (vfs_byname(vfc->vfc_name) != NULL)
 		return EEXIST;
 
-	vfc->vfc_typenum = maxvfsconf++;
+	if (vfs_typenumhash != 0) {
+		/*
+		 * Calculate a hash on vfc_name to use for vfc_typenum. Unless
+		 * all of 1<->255 are assigned, it is limited to 8bits since
+		 * that is what ZFS uses from vfc_typenum and is also the
+		 * preferred range for vfs_getnewfsid().
+		 */
+		hashval = fnv_32_str(vfc->vfc_name, FNV1_32_INIT);
+		hashval &= 0xff;
+		secondpass = 0;
+		do {
+			/* Look for and fix any collision. */
+			TAILQ_FOREACH(tvfc, &vfsconf, vfc_list) {
+				if (hashval == tvfc->vfc_typenum) {
+					if (hashval == 255 && secondpass == 0) {
+						hashval = 1;
+						secondpass = 1;
+					} else
+						hashval++;
+					break;
+				}
+			}
+		} while (tvfc != NULL);
+		vfc->vfc_typenum = hashval;
+		if (vfc->vfc_typenum >= maxvfsconf)
+			maxvfsconf = vfc->vfc_typenum + 1;
+	} else
+		vfc->vfc_typenum = maxvfsconf++;
 	TAILQ_INSERT_TAIL(&vfsconf, vfc, vfc_list);
 
 	/*
@@ -172,6 +214,7 @@ vfs_register(struct vfsconf *vfc)
 			sysctl_unregister_oid(oidp);
 			oidp->oid_number = vfc->vfc_typenum;
 			sysctl_register_oid(oidp);
+			break;
 		}
 	sysctl_unlock();
 

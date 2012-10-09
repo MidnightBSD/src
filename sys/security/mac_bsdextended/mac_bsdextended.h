@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002 Robert N. M. Watson
  * Copyright (c) 2001-2004 Networks Associates Technology, Inc.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_bsdextended/mac_bsdextended.h,v 1.7 2007/07/05 13:16:04 rwatson Exp $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SECURITY_MAC_BSDEXTENDED_H

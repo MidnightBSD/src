@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/compat/ia32/ia32_util.h,v 1.2 2008/12/03 00:24:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998-1999 Andrew Gallatin
  * All rights reserved.
@@ -26,8 +25,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ia32/ia32_util.h,v 1.9 2003/12/11 01:05:09 peter Exp $
+ * $FreeBSD$
  */
+
+#ifndef	_COMPAT_IA32_IA32_UTIL_H
+#define	_COMPAT_IA32_IA32_UTIL_H
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -38,9 +40,24 @@
 #include <sys/sysent.h>
 #include <sys/cdefs.h>
 
-#define FREEBSD32_USRSTACK	((1ul << 32) - IA32_PAGE_SIZE)
+#ifdef __ia64__
+#define FREEBSD32_MAXUSER	((1ul << 32) - IA32_PAGE_SIZE * 2)
+#define	FREEBSD32_SHAREDPAGE	0
+#define FREEBSD32_USRSTACK	FREEBSD32_MAXUSER
+#else
+#define	FREEBSD32_MAXUSER	((1ul << 32) - IA32_PAGE_SIZE)
+#define	FREEBSD32_SHAREDPAGE	(FREEBSD32_MAXUSER - IA32_PAGE_SIZE)
+#define FREEBSD32_USRSTACK	FREEBSD32_SHAREDPAGE
+#endif
 
 #define	IA32_PAGE_SIZE	4096
 #define	IA32_MAXDSIZ	(512*1024*1024)		/* 512MB */
 #define	IA32_MAXSSIZ	(64*1024*1024)		/* 64MB */
 #define IA32_MAXVMEM	0			/* Unlimited */
+
+struct syscall_args;
+int ia32_fetch_syscall_args(struct thread *td, struct syscall_args *sa);
+void ia32_set_syscall_retval(struct thread *, int);
+void ia32_fixlimit(struct rlimit *rl, int which);
+
+#endif

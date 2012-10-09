@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/stack_protector.c,v 1.2.2.2 2009/10/24 04:55:14 ru Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>

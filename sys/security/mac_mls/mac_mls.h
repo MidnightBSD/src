@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002 Robert N. M. Watson
  * Copyright (c) 2001-2004 Networks Associates Technology, Inc.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_mls/mac_mls.h,v 1.8 2004/07/16 02:03:50 rwatson Exp $
+ * $FreeBSD$
  */
 /*
  * Definitions for the TrustedBSD MLS confidentiality policy module.

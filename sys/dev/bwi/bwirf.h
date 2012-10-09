@@ -31,8 +31,8 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
- * $DragonFly: src/sys/dev/netif/bwi/bwirf.h,v 1.1 2007/09/08 06:15:54 sephe Exp $
+ * $DragonFly: src/sys/dev/netif/bwi/bwirf.h,v 1.3 2007/10/03 04:53:19 sephe Exp $
+ * $FreeBSD$
  */
 
 #ifndef _BWI_RF_H
@@ -47,7 +47,6 @@ void		bwi_rf_set_chan(struct bwi_mac *, u_int, int);
 void		bwi_rf_get_gains(struct bwi_mac *);
 void		bwi_rf_init(struct bwi_mac *);
 void		bwi_rf_init_bcm2050(struct bwi_mac *);
-void		bwi_rf_lo_update(struct bwi_mac *);
 void		bwi_rf_init_hw_nrssi_table(struct bwi_mac *, uint16_t);
 void		bwi_rf_set_ant_mode(struct bwi_mac *, int);
 
@@ -95,6 +94,18 @@ static __inline int
 bwi_rf_calc_rssi(struct bwi_mac *_mac, const struct bwi_rxbuf_hdr *_hdr)
 {
 	return _mac->mac_rf.rf_calc_rssi(_mac, _hdr);
+}
+
+static __inline int
+bwi_rf_calc_noise(struct bwi_mac *_mac)
+{
+	return _mac->mac_rf.rf_calc_noise(_mac);
+}
+
+static __inline void
+bwi_rf_lo_update(struct bwi_mac *_mac)
+{
+	return _mac->mac_rf.rf_lo_update(_mac);
 }
 
 #define RF_WRITE(mac, ofs, val)		bwi_rf_write((mac), (ofs), (val))

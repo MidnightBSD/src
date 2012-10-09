@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1994, David Greenman
  * Copyright (c) 1990, 1993
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.307.2.1 2007/12/06 14:20:24 kib Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * 386 Trap and System call handling
@@ -50,7 +49,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.307.2.1 2007/12/06 14:20:24 kib
 #include "opt_hwpmc_hooks.h"
 #include "opt_isa.h"
 #include "opt_kdb.h"
-#include "opt_ktrace.h"
+#include "opt_kdtrace.h"
 #include "opt_npx.h"
 #include "opt_trap.h"
 
@@ -72,11 +71,11 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.307.2.1 2007/12/06 14:20:24 kib
 #include <sys/sysent.h>
 #include <sys/uio.h>
 #include <sys/vmmeter.h>
-#ifdef KTRACE
-#include <sys/ktrace.h>
-#endif
 #ifdef HWPMC_HOOKS
 #include <sys/pmckern.h>
+PMC_SOFT_DEFINE( , , page_fault, all);
+PMC_SOFT_DEFINE( , , page_fault, read);
+PMC_SOFT_DEFINE( , , page_fault, write);
 #endif
 #include <security/audit/audit.h>
 
@@ -90,6 +89,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.307.2.1 2007/12/06 14:20:24 kib
 
 #include <machine/cpu.h>
 #include <machine/intr_machdep.h>
+#include <x86/mca.h>
 #include <machine/md_var.h>
 #include <machine/pcb.h>
 #ifdef SMP
@@ -103,6 +103,33 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.307.2.1 2007/12/06 14:20:24 kib
 #include <machine/clock.h>
 #endif
 
+#ifdef KDTRACE_HOOKS
+#include <sys/dtrace_bsd.h>
+
+/*
+ * This is a hook which is initialised by the dtrace module
+ * to handle traps which might occur during DTrace probe
+ * execution.
+ */
+dtrace_trap_func_t	dtrace_trap_func;
+
+dtrace_doubletrap_func_t	dtrace_doubletrap_func;
+
+/*
+ * This is a hook which is initialised by the systrace module
+ * when it is loaded. This keeps the DTrace syscall provider
+ * implementation opaque. 
+ */
+systrace_probe_func_t	systrace_probe_func;
+
+/*
+ * These hooks are necessary for the pid, usdt and fasttrap providers.
+ */
+dtrace_fasttrap_probe_ptr_t	dtrace_fasttrap_probe_ptr;
+dtrace_pid_probe_ptr_t		dtrace_pid_probe_ptr;
+dtrace_return_probe_ptr_t	dtrace_return_probe_ptr;
+#endif
+
 extern void trap(struct trapframe *frame);
 extern void syscall(struct trapframe *frame);
 
@@ -112,7 +139,7 @@ void dblfault_handler(void);
 
 extern inthand_t IDTVEC(lcall_syscall);
 
-#define MAX_TRAP_MSG		30
+#define MAX_TRAP_MSG		33
 static char *trap_msg[] = {
 	"",					/*  0 unused */
 	"privileged instruction fault",		/*  1 T_PRIVINFLT */
@@ -145,6 +172,10 @@ static char *trap_msg[] = {
 	"machine check trap",			/* 28 T_MCHK */
 	"SIMD floating-point exception",	/* 29 T_XMMFLT */
 	"reserved (unknown) fault",		/* 30 T_RESERVED */
+	"",					/* 31 unused (reserved) */
+	"DTrace pid return trap",               /* 32 T_DTRACE_RET */
+	"DTrace fasttrap probe trap",           /* 33 T_DTRACE_PROBE */
+
 };
 
 #if defined(I586_CPU) && !defined(NO_F00F_HACK)
@@ -155,15 +186,15 @@ extern int has_f00f_bug;
 static int kdb_on_nmi = 1;
 SYSCTL_INT(_machdep, OID_AUTO, kdb_on_nmi, CTLFLAG_RW,
 	&kdb_on_nmi, 0, "Go to KDB on NMI");
+TUNABLE_INT("machdep.kdb_on_nmi", &kdb_on_nmi);
 #endif
 static int panic_on_nmi = 1;
 SYSCTL_INT(_machdep, OID_AUTO, panic_on_nmi, CTLFLAG_RW,
 	&panic_on_nmi, 0, "Panic on NMI");
+TUNABLE_INT("machdep.panic_on_nmi", &panic_on_nmi);
 static int prot_fault_translation = 0;
 SYSCTL_INT(_machdep, OID_AUTO, prot_fault_translation, CTLFLAG_RW,
 	&prot_fault_translation, 0, "Select signal to deliver on protection fault");
-
-extern char *syscallnames[];
 
 /*
  * Exception, fault, and trap interface to the FreeBSD kernel.
@@ -190,13 +221,11 @@ trap(struct trapframe *frame)
 	type = frame->tf_trapno;
 
 #ifdef SMP
-#ifdef STOP_NMI
 	/* Handler for NMI IPIs used for stopping CPUs. */
 	if (type == T_NMI) {
 	         if (ipi_nmi_handler() == 0)
 	                   goto out;
 	}
-#endif /* STOP_NMI */
 #endif /* SMP */
 
 #ifdef KDB
@@ -205,6 +234,11 @@ trap(struct trapframe *frame)
 		goto out;
 	}
 #endif
+
+	if (type == T_RESERVED) {
+		trap_fatal(frame, 0);
+		goto out;
+	}
 
 #ifdef	HWPMC_HOOKS
 	/*
@@ -215,9 +249,49 @@ trap(struct trapframe *frame)
 	 * return immediately.
 	 */
 	if (type == T_NMI && pmc_intr &&
-	    (*pmc_intr)(PCPU_GET(cpuid), (uintptr_t) frame->tf_eip,
-		TRAPF_USERMODE(frame)))
+	    (*pmc_intr)(PCPU_GET(cpuid), frame))
 	    goto out;
+#endif
+
+	if (type == T_MCHK) {
+		mca_intr();
+		goto out;
+	}
+
+#ifdef KDTRACE_HOOKS
+	/*
+	 * A trap can occur while DTrace executes a probe. Before
+	 * executing the probe, DTrace blocks re-scheduling and sets
+	 * a flag in it's per-cpu flags to indicate that it doesn't
+	 * want to fault. On returning from the probe, the no-fault
+	 * flag is cleared and finally re-scheduling is enabled.
+	 *
+	 * If the DTrace kernel module has registered a trap handler,
+	 * call it and if it returns non-zero, assume that it has
+	 * handled the trap and modified the trap frame so that this
+	 * function can return normally.
+	 */
+	if (type == T_DTRACE_PROBE || type == T_DTRACE_RET ||
+	    type == T_BPTFLT) {
+		struct reg regs;
+
+		fill_frame_regs(frame, &regs);
+		if (type == T_DTRACE_PROBE &&
+		    dtrace_fasttrap_probe_ptr != NULL &&
+		    dtrace_fasttrap_probe_ptr(&regs) == 0)
+			goto out;
+		if (type == T_BPTFLT &&
+		    dtrace_pid_probe_ptr != NULL &&
+		    dtrace_pid_probe_ptr(&regs) == 0)
+			goto out;
+		if (type == T_DTRACE_RET &&
+		    dtrace_return_probe_ptr != NULL &&
+		    dtrace_return_probe_ptr(&regs) == 0)
+			goto out;
+	}
+	if ((type == T_PROTFLT || type == T_PAGEFLT) &&
+	    dtrace_trap_func != NULL && (*dtrace_trap_func)(frame, type))
+		goto out;
 #endif
 
 	if ((frame->tf_eflags & PSL_I) == 0) {
@@ -229,9 +303,9 @@ trap(struct trapframe *frame)
 		 * enabled later.
 		 */
 		if (ISPL(frame->tf_cs) == SEL_UPL || (frame->tf_eflags & PSL_VM))
-			printf(
+			uprintf(
 			    "pid %ld (%s): trap %d with interrupts disabled\n",
-			    (long)curproc->p_pid, curproc->p_comm, type);
+			    (long)curproc->p_pid, curthread->td_name, type);
 		else if (type != T_BPTFLT && type != T_TRCTRAP &&
 			 frame->tf_eip != (int)cpu_switch_load_gs) {
 			/*
@@ -250,7 +324,6 @@ trap(struct trapframe *frame)
 				enable_intr();
 		}
 	}
-
 	eva = 0;
 	code = frame->tf_err;
 	if (type == T_PAGEFLT) {
@@ -258,28 +331,13 @@ trap(struct trapframe *frame)
 		 * For some Cyrix CPUs, %cr2 is clobbered by
 		 * interrupts.  This problem is worked around by using
 		 * an interrupt gate for the pagefault handler.  We
-		 * are finally ready to read %cr2 and then must
-		 * reenable interrupts.
-		 *
-		 * If we get a page fault while in a critical section, then
-		 * it is most likely a fatal kernel page fault.  The kernel
-		 * is already going to panic trying to get a sleep lock to
-		 * do the VM lookup, so just consider it a fatal trap so the
-		 * kernel can print out a useful trap message and even get
-		 * to the debugger.
-		 *
-		 * If we get a page fault while holding a non-sleepable
-		 * lock, then it is most likely a fatal kernel page fault.
-		 * If WITNESS is enabled, then it's going to whine about
-		 * bogus LORs with various VM locks, so just skip to the
-		 * fatal trap handling directly.
+		 * are finally ready to read %cr2 and conditionally
+		 * reenable interrupts.  If we hold a spin lock, then
+		 * we must not reenable interrupts.  This might be a
+		 * spurious page fault.
 		 */
 		eva = rcr2();
-		if (td->td_critnest != 0 ||
-		    WITNESS_CHECK(WARN_SLEEPOK | WARN_GIANTOK, NULL,
-		    "Kernel page fault") != 0)
-			trap_fatal(frame, eva);
-		else
+		if (td->td_md.md_spinlock_count == 0)
 			enable_intr();
 	}
 
@@ -350,10 +408,6 @@ trap(struct trapframe *frame)
 			break;
 
 		case T_PAGEFLT:		/* page fault */
-#ifdef KSE
-			if (td->td_pflags & TDP_SA)
-				thread_user_enter(td);
-#endif
 
 			i = trap_pfault(frame, TRUE, eva);
 #if defined(I586_CPU) && !defined(NO_F00F_HACK)
@@ -385,7 +439,8 @@ trap(struct trapframe *frame)
 					 * This check also covers the images
 					 * without the ABI-tag ELF note.
 					 */
-					if (p->p_osrel >= 700004) {
+					if (SV_CURPROC_ABI() == SV_ABI_FREEBSD
+					    && p->p_osrel >= P_OSREL_SIGSEGV) {
 						i = SIGSEGV;
 						ucode = SEGV_ACCERR;
 					} else {
@@ -420,17 +475,14 @@ trap(struct trapframe *frame)
 #ifndef TIMER_FREQ
 #  define TIMER_FREQ 1193182
 #endif
-			mtx_lock(&Giant);
 			if (time_second - lastalert > 10) {
 				log(LOG_WARNING, "NMI: power fail\n");
-				sysbeep(TIMER_FREQ/880, hz);
+				sysbeep(880, hz);
 				lastalert = time_second;
 			}
-			mtx_unlock(&Giant);
 			goto userout;
 #else /* !POWERFAIL_NMI */
 			/* machine/parity/power fail/"kitchen sink" faults */
-			/* XXX Giant */
 			if (isa_nmi(code) == 0) {
 #ifdef KDB
 				/*
@@ -461,11 +513,13 @@ trap(struct trapframe *frame)
 
 		case T_DNA:
 #ifdef DEV_NPX
+			KASSERT(PCB_USER_FPU(td->td_pcb),
+			    ("kernel FPU ctx has leaked"));
 			/* transparent fault (due to context switch "late") */
 			if (npxdna())
 				goto userout;
 #endif
-			printf("pid %d killed due to lack of floating point\n",
+			uprintf("pid %d killed due to lack of floating point\n",
 				p->p_pid);
 			i = SIGKILL;
 			ucode = 0;
@@ -493,15 +547,22 @@ trap(struct trapframe *frame)
 
 		case T_DNA:
 #ifdef DEV_NPX
-			/*
-			 * The kernel is apparently using npx for copying.
-			 * XXX this should be fatal unless the kernel has
-			 * registered such use.
-			 */
+			KASSERT(!PCB_USER_FPU(td->td_pcb),
+			    ("Unregistered use of FPU in kernel"));
 			if (npxdna())
 				goto out;
 #endif
 			break;
+
+		case T_ARITHTRAP:	/* arithmetic trap */
+		case T_XMMFLT:		/* SIMD floating-point exception */
+		case T_FPOPFLT:		/* FPU operand fetch fault */
+			/*
+			 * XXXKIB for now disable any FPU traps in kernel
+			 * handler registration seems to be overkill
+			 */
+			trap_fatal(frame, 0);
+			goto out;
 
 			/*
 			 * The following two traps can happen in
@@ -541,7 +602,7 @@ trap(struct trapframe *frame)
 				PCPU_GET(curpcb)->pcb_gs = 0;
 #if 0				
 				PROC_LOCK(p);
-				psignal(p, SIGBUS);
+				kern_psignal(p, SIGBUS);
 				PROC_UNLOCK(p);
 #endif				
 				goto out;
@@ -627,7 +688,6 @@ trap(struct trapframe *frame)
 			 * in kernel space because that is useful when
 			 * debugging the kernel.
 			 */
-			/* XXX Giant */
 			if (user_dbreg_trap() && 
 			   !(PCPU_GET(curpcb)->pcb_flags & PCB_VM86CALL)) {
 				/*
@@ -654,16 +714,13 @@ trap(struct trapframe *frame)
 #ifdef DEV_ISA
 		case T_NMI:
 #ifdef POWERFAIL_NMI
-			mtx_lock(&Giant);
 			if (time_second - lastalert > 10) {
 				log(LOG_WARNING, "NMI: power fail\n");
-				sysbeep(TIMER_FREQ/880, hz);
+				sysbeep(880, hz);
 				lastalert = time_second;
 			}
-			mtx_unlock(&Giant);
 			goto out;
 #else /* !POWERFAIL_NMI */
-			/* XXX Giant */
 			/* machine/parity/power fail/"kitchen sink" faults */
 			if (isa_nmi(code) == 0) {
 #ifdef KDB
@@ -712,6 +769,8 @@ trap(struct trapframe *frame)
 user:
 	userret(td, frame);
 	mtx_assert(&Giant, MA_NOTOWNED);
+	KASSERT(PCB_USER_FPU(td->td_pcb),
+	    ("Return from trap with kernel FPU ctx leaked"));
 userout:
 out:
 	return;
@@ -731,6 +790,50 @@ trap_pfault(frame, usermode, eva)
 	struct thread *td = curthread;
 	struct proc *p = td->td_proc;
 
+	if (__predict_false((td->td_pflags & TDP_NOFAULTING) != 0)) {
+		/*
+		 * Due to both processor errata and lazy TLB invalidation when
+		 * access restrictions are removed from virtual pages, memory
+		 * accesses that are allowed by the physical mapping layer may
+		 * nonetheless cause one spurious page fault per virtual page. 
+		 * When the thread is executing a "no faulting" section that
+		 * is bracketed by vm_fault_{disable,enable}_pagefaults(),
+		 * every page fault is treated as a spurious page fault,
+		 * unless it accesses the same virtual address as the most
+		 * recent page fault within the same "no faulting" section.
+		 */
+		if (td->td_md.md_spurflt_addr != eva ||
+		    (td->td_pflags & TDP_RESETSPUR) != 0) {
+			/*
+			 * Do nothing to the TLB.  A stale TLB entry is
+			 * flushed automatically by a page fault.
+			 */
+			td->td_md.md_spurflt_addr = eva;
+			td->td_pflags &= ~TDP_RESETSPUR;
+			return (0);
+		}
+	} else {
+		/*
+		 * If we get a page fault while in a critical section, then
+		 * it is most likely a fatal kernel page fault.  The kernel
+		 * is already going to panic trying to get a sleep lock to
+		 * do the VM lookup, so just consider it a fatal trap so the
+		 * kernel can print out a useful trap message and even get
+		 * to the debugger.
+		 *
+		 * If we get a page fault while holding a non-sleepable
+		 * lock, then it is most likely a fatal kernel page fault.
+		 * If WITNESS is enabled, then it's going to whine about
+		 * bogus LORs with various VM locks, so just skip to the
+		 * fatal trap handling directly.
+		 */
+		if (td->td_critnest != 0 ||
+		    WITNESS_CHECK(WARN_SLEEPOK | WARN_GIANTOK, NULL,
+		    "Kernel page fault") != 0) {
+			trap_fatal(frame, eva);
+			return (-1);
+		}
+	}
 	va = trunc_page(eva);
 	if (va >= KERNBASE) {
 		/*
@@ -762,6 +865,11 @@ trap_pfault(frame, usermode, eva)
 			goto nogo;
 
 		map = &vm->vm_map;
+		if (!usermode && (td->td_intr_nesting_level != 0 ||
+		    PCPU_GET(curpcb)->pcb_onfault == NULL)) {
+			trap_fatal(frame, eva);
+			return (-1);
+		}
 	}
 
 	/*
@@ -787,9 +895,7 @@ trap_pfault(frame, usermode, eva)
 		PROC_UNLOCK(p);
 
 		/* Fault in the user page: */
-		rv = vm_fault(map, va, ftype,
-			      (ftype & VM_PROT_WRITE) ? VM_FAULT_DIRTY
-						      : VM_FAULT_NORMAL);
+		rv = vm_fault(map, va, ftype, VM_FAULT_NORMAL);
 
 		PROC_LOCK(p);
 		--p->p_lock;
@@ -801,8 +907,20 @@ trap_pfault(frame, usermode, eva)
 		 */
 		rv = vm_fault(map, va, ftype, VM_FAULT_NORMAL);
 	}
-	if (rv == KERN_SUCCESS)
+	if (rv == KERN_SUCCESS) {
+#ifdef HWPMC_HOOKS
+		if (ftype == VM_PROT_READ || ftype == VM_PROT_WRITE) {
+			PMC_SOFT_CALL_TF( , , page_fault, all, frame);
+			if (ftype == VM_PROT_READ)
+				PMC_SOFT_CALL_TF( , , page_fault, read,
+				    frame);
+			else
+				PMC_SOFT_CALL_TF( , , page_fault, write,
+				    frame);
+		}
+#endif
 		return (0);
+	}
 nogo:
 	if (!usermode) {
 		if (td->td_intr_nesting_level == 0 &&
@@ -880,7 +998,7 @@ trap_fatal(frame, eva)
 	printf("IOPL = %d\n", (frame->tf_eflags & PSL_IOPL) >> 12);
 	printf("current process		= ");
 	if (curproc) {
-		printf("%lu (%s)\n", (u_long)curproc->p_pid, curproc->p_comm);
+		printf("%lu (%s)\n", (u_long)curproc->p_pid, curthread->td_name);
 	} else {
 		printf("Idle\n");
 	}
@@ -917,6 +1035,10 @@ trap_fatal(frame, eva)
 void
 dblfault_handler()
 {
+#ifdef KDTRACE_HOOKS
+	if (dtrace_doubletrap_func != NULL)
+		(*dtrace_doubletrap_func)();
+#endif
 	printf("\nFatal double fault:\n");
 	printf("eip = 0x%x\n", PCPU_GET(common_tss.tss_eip));
 	printf("esp = 0x%x\n", PCPU_GET(common_tss.tss_esp));
@@ -929,26 +1051,74 @@ dblfault_handler()
 	panic("double fault");
 }
 
+int
+cpu_fetch_syscall_args(struct thread *td, struct syscall_args *sa)
+{
+	struct proc *p;
+	struct trapframe *frame;
+	caddr_t params;
+	int error;
+
+	p = td->td_proc;
+	frame = td->td_frame;
+
+	params = (caddr_t)frame->tf_esp + sizeof(int);
+	sa->code = frame->tf_eax;
+
+	/*
+	 * Need to check if this is a 32 bit or 64 bit syscall.
+	 */
+	if (sa->code == SYS_syscall) {
+		/*
+		 * Code is first argument, followed by actual args.
+		 */
+		sa->code = fuword(params);
+		params += sizeof(int);
+	} else if (sa->code == SYS___syscall) {
+		/*
+		 * Like syscall, but code is a quad, so as to maintain
+		 * quad alignment for the rest of the arguments.
+		 */
+		sa->code = fuword(params);
+		params += sizeof(quad_t);
+	}
+
+ 	if (p->p_sysent->sv_mask)
+ 		sa->code &= p->p_sysent->sv_mask;
+ 	if (sa->code >= p->p_sysent->sv_size)
+ 		sa->callp = &p->p_sysent->sv_table[0];
+  	else
+ 		sa->callp = &p->p_sysent->sv_table[sa->code];
+	sa->narg = sa->callp->sy_narg;
+
+	if (params != NULL && sa->narg != 0)
+		error = copyin(params, (caddr_t)sa->args,
+		    (u_int)(sa->narg * sizeof(int)));
+	else
+		error = 0;
+
+	if (error == 0) {
+		td->td_retval[0] = 0;
+		td->td_retval[1] = frame->tf_edx;
+	}
+		
+	return (error);
+}
+
+#include "../../kern/subr_syscall.c"
+
 /*
- *	syscall -	system call request C handler
- *
- *	A system call is essentially treated as a trap.
+ * syscall - system call request C handler.  A system call is
+ * essentially treated as a trap by reusing the frame layout.
  */
 void
 syscall(struct trapframe *frame)
 {
-	caddr_t params;
-	struct sysent *callp;
-	struct thread *td = curthread;
-	struct proc *p = td->td_proc;
+	struct thread *td;
+	struct syscall_args sa;
 	register_t orig_tf_eflags;
 	int error;
-	int narg;
-	int args[8];
-	u_int code;
 	ksiginfo_t ksi;
-
-	PCPU_INC(cnt.v_syscall);
 
 #ifdef DIAGNOSTIC
 	if (ISPL(frame->tf_cs) != SEL_UPL) {
@@ -956,116 +1126,12 @@ syscall(struct trapframe *frame)
 		/* NOT REACHED */
 	}
 #endif
-
-	td->td_pticks = 0;
-	td->td_frame = frame;
-	if (td->td_ucred != p->p_ucred) 
-		cred_update_thread(td);
-#ifdef KSE
-	if (p->p_flag & P_SA)
-		thread_user_enter(td);
-#endif
-	params = (caddr_t)frame->tf_esp + sizeof(int);
-	code = frame->tf_eax;
 	orig_tf_eflags = frame->tf_eflags;
 
-	if (p->p_sysent->sv_prepsyscall) {
-		/*
-		 * The prep code is MP aware.
-		 */
-		(*p->p_sysent->sv_prepsyscall)(frame, args, &code, &params);
-	} else {
-		/*
-		 * Need to check if this is a 32 bit or 64 bit syscall.
-		 * fuword is MP aware.
-		 */
-		if (code == SYS_syscall) {
-			/*
-			 * Code is first argument, followed by actual args.
-			 */
-			code = fuword(params);
-			params += sizeof(int);
-		} else if (code == SYS___syscall) {
-			/*
-			 * Like syscall, but code is a quad, so as to maintain
-			 * quad alignment for the rest of the arguments.
-			 */
-			code = fuword(params);
-			params += sizeof(quad_t);
-		}
-	}
+	td = curthread;
+	td->td_frame = frame;
 
- 	if (p->p_sysent->sv_mask)
- 		code &= p->p_sysent->sv_mask;
-
- 	if (code >= p->p_sysent->sv_size)
- 		callp = &p->p_sysent->sv_table[0];
-  	else
- 		callp = &p->p_sysent->sv_table[code];
-
-	narg = callp->sy_narg;
-
-	/*
-	 * copyin and the ktrsyscall()/ktrsysret() code is MP-aware
-	 */
-	if (params != NULL && narg != 0)
-		error = copyin(params, (caddr_t)args,
-		    (u_int)(narg * sizeof(int)));
-	else
-		error = 0;
-		
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_SYSCALL))
-		ktrsyscall(code, narg, args);
-#endif
-
-	CTR4(KTR_SYSC, "syscall enter thread %p pid %d proc %s code %d", td,
-	    td->td_proc->p_pid, td->td_proc->p_comm, code);
-
-	td->td_syscalls++;
-
-	if (error == 0) {
-		td->td_retval[0] = 0;
-		td->td_retval[1] = frame->tf_edx;
-
-		STOPEVENT(p, S_SCE, narg);
-
-		PTRACESTOP_SC(p, td, S_PT_SCE);
-
-		AUDIT_SYSCALL_ENTER(code, td);
-		error = (*callp->sy_call)(td, args);
-		AUDIT_SYSCALL_EXIT(error, td);
-	}
-
-	switch (error) {
-	case 0:
-		frame->tf_eax = td->td_retval[0];
-		frame->tf_edx = td->td_retval[1];
-		frame->tf_eflags &= ~PSL_C;
-		break;
-
-	case ERESTART:
-		/*
-		 * Reconstruct pc, assuming lcall $X,y is 7 bytes,
-		 * int 0x80 is 2 bytes. We saved this in tf_err.
-		 */
-		frame->tf_eip -= frame->tf_err;
-		break;
-
-	case EJUSTRETURN:
-		break;
-
-	default:
- 		if (p->p_sysent->sv_errsize) {
- 			if (error >= p->p_sysent->sv_errsize)
-  				error = -1;	/* XXX */
-   			else
-  				error = p->p_sysent->sv_errtbl[error];
-		}
-		frame->tf_eax = error;
-		frame->tf_eflags |= PSL_C;
-		break;
-	}
+	error = syscallenter(td, &sa);
 
 	/*
 	 * Traced syscall.
@@ -1079,39 +1145,12 @@ syscall(struct trapframe *frame)
 		trapsignal(td, &ksi);
 	}
 
-	/*
-	 * Check for misbehavior.
-	 */
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
-	KASSERT(td->td_critnest == 0,
-	    ("System call %s returning in a critical section",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
-	KASSERT(td->td_locks == 0,
-	    ("System call %s returning with %d locks held",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
-	    td->td_locks));
+	KASSERT(PCB_USER_FPU(td->td_pcb),
+	    ("System call %s returning with kernel FPU ctx leaked",
+	     syscallname(td->td_proc, sa.code)));
+	KASSERT(td->td_pcb->pcb_save == &td->td_pcb->pcb_user_save,
+	    ("System call %s returning with mangled pcb_save",
+	     syscallname(td->td_proc, sa.code)));
 
-	/*
-	 * Handle reschedule and other end-of-syscall issues
-	 */
-	userret(td, frame);
-
-	CTR4(KTR_SYSC, "syscall exit thread %p pid %d proc %s code %d", td,
-	    td->td_proc->p_pid, td->td_proc->p_comm, code);
-
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_SYSRET))
-		ktrsysret(code, error, td->td_retval[0]);
-#endif
-
-	/*
-	 * This works because errno is findable through the
-	 * register set.  If we ever support an emulation where this
-	 * is not the case, this code will need to be revisited.
-	 */
-	STOPEVENT(p, S_SCX, code);
-
-	PTRACESTOP_SC(p, td, S_PT_SCX);
+	syscallret(td, error, &sa);
 }
-

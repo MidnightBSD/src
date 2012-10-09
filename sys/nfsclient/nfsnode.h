@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,12 +30,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsnode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: src/sys/nfsclient/nfsnode.h,v 1.60.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_
 #define _NFSCLIENT_NFSNODE_H_
 
+#include <sys/_task.h>
 #if !defined(_NFSCLIENT_NFS_H_) && !defined(_KERNEL)
 #include <nfs/nfs.h>
 #endif
@@ -46,6 +46,7 @@
  * can be removed by nfs_inactive()
  */
 struct sillyrename {
+	struct	task s_task;
 	struct	ucred *s_cred;
 	struct	vnode *s_dvp;
 	int	(*s_removeit)(struct sillyrename *sp);
@@ -75,16 +76,12 @@ struct nfsdmap {
 #define ndm_cookies	ndm_un1.ndmu3_cookies
 #define ndm4_cookies	ndm_un1.ndmu4_cookies
 
-#define n_ac_ts_tid		n_ac_ts.nfs_ac_ts_tid
-#define n_ac_ts_pid		n_ac_ts.nfs_ac_ts_pid
-#define n_ac_ts_syscalls	n_ac_ts.nfs_ac_ts_syscalls
-
-struct nfs_attrcache_timestamp {
-	lwpid_t		nfs_ac_ts_tid;
-	pid_t		nfs_ac_ts_pid;
-	unsigned long	nfs_ac_ts_syscalls;	
+struct nfs_accesscache {
+	u_int32_t		mode;		/* ACCESS mode cache */
+	uid_t			uid;		/* credentials having mode */
+	time_t			stamp;		/* mode cache timestamp */
 };
-
+	
 /*
  * The nfsnode is the nfs equivalent to ufs's inode. Any similarity
  * is purely coincidental.
@@ -105,12 +102,11 @@ struct nfsnode {
 	u_quad_t		n_lrev;		/* Modify rev for lease */
 	struct vattr		n_vattr;	/* Vnode attribute cache */
 	time_t			n_attrstamp;	/* Attr. cache timestamp */
-	u_int32_t		n_mode;		/* ACCESS mode cache */
-	uid_t			n_modeuid;	/* credentials having mode */
-	time_t			n_modestamp;	/* mode cache timestamp */
+	struct nfs_accesscache	n_accesscache[NFS_ACCESSCACHESIZE];
 	struct timespec		n_mtime;	/* Prev modify time. */
-	time_t			n_ctime;	/* Prev create time. */
-	time_t			n_expiry;	/* Lease expiry time */
+	struct timespec		n_unused0;
+	struct timespec		n_unused1;
+	int			n_unused2;
 	nfsfh_t			*n_fhp;		/* NFS File Handle */
 	struct vnode		*n_vnode;	/* associated vnode */
 	struct vnode		*n_dvp;		/* parent vnode */
@@ -131,13 +127,11 @@ struct nfsnode {
 	short			n_fhsize;	/* size in bytes, of fh */
 	short			n_flag;		/* Flag for locking.. */
 	nfsfh_t			n_fh;		/* Small File Handle */
-	struct nfs4_fctx	n_rfc;
-	struct nfs4_fctx	n_wfc;
 	u_char			*n_name;	/* leaf name, for v4 OPEN op */
 	uint32_t		n_namelen;
 	int			n_directio_opens;
 	int                     n_directio_asyncwr;
-	struct nfs_attrcache_timestamp n_ac_ts;
+	struct ucred		*n_writecred;	/* Cred. for putpages */
 };
 
 #define n_atim		n_un1.nf_atim
@@ -174,22 +168,27 @@ struct nfsnode {
 #define NFS_TIMESPEC_COMPARE(T1, T2)	(((T1)->tv_sec != (T2)->tv_sec) || ((T1)->tv_nsec != (T2)->tv_nsec))
 
 /*
+ * NFS iod threads can be in one of these two states once spawned.
+ * NFSIOD_NOT_AVAILABLE - Cannot be assigned an I/O operation at this time.
+ * NFSIOD_AVAILABLE - Available to be assigned an I/O operation.
+ */
+enum nfsiod_state {
+	NFSIOD_NOT_AVAILABLE = 0,
+	NFSIOD_AVAILABLE = 1,
+};
+
+/*
  * Queue head for nfsiod's
  */
 extern TAILQ_HEAD(nfs_bufq, buf) nfs_bufq;
-extern struct proc *nfs_iodwant[NFS_MAXASYNCDAEMON];
+extern enum nfsiod_state nfs_iodwant[NFS_MAXASYNCDAEMON];
 extern struct nfsmount *nfs_iodmount[NFS_MAXASYNCDAEMON];
 
 #if defined(_KERNEL)
 
 extern	struct vop_vector	nfs_fifoops;
 extern	struct vop_vector	nfs_vnodeops;
-extern	struct vop_vector	nfs4_vnodeops;
 extern struct buf_ops buf_ops_nfs;
-extern struct buf_ops buf_ops_nfs4;
-
-extern vop_advlock_t *nfs_advlock_p;
-extern vop_reclaim_t *nfs_reclaim_p;
 
 /*
  * Prototypes for NFS vnode operations
@@ -202,14 +201,11 @@ int	nfs_reclaim(struct vop_reclaim_args *);
 
 /* other stuff */
 int	nfs_removeit(struct sillyrename *);
-int	nfs4_removeit(struct sillyrename *);
 int	nfs_nget(struct mount *, nfsfh_t *, int, struct nfsnode **, int flags);
 nfsuint64 *nfs_getcookie(struct nfsnode *, off_t, int);
-uint64_t *nfs4_getcookie(struct nfsnode *, off_t, int);
 void	nfs_invaldir(struct vnode *);
-void	nfs4_invaldir(struct vnode *);
-int	nfs_upgrade_vnlock(struct vnode *vp, struct thread *td);
-void	nfs_downgrade_vnlock(struct vnode *vp, struct thread *td, int old_lock);
+int	nfs_upgrade_vnlock(struct vnode *vp);
+void	nfs_downgrade_vnlock(struct vnode *vp, int old_lock);
 void	nfs_printf(const char *fmt, ...);
 
 void nfs_dircookie_lock(struct nfsnode *np);

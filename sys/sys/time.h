@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)time.h	8.5 (Berkeley) 5/4/95
- * $FreeBSD: src/sys/sys/time.h,v 1.73.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_TIME_H_
@@ -90,6 +89,25 @@ bintime_sub(struct bintime *bt, const struct bintime *bt2)
 		bt->sec--;
 	bt->sec -= bt2->sec;
 }
+
+static __inline void
+bintime_mul(struct bintime *bt, u_int x)
+{
+	uint64_t p1, p2;
+
+	p1 = (bt->frac & 0xffffffffull) * x;
+	p2 = (bt->frac >> 32) * x + (p1 >> 32);
+	bt->sec *= x;
+	bt->sec += (p2 >> 32);
+	bt->frac = (p2 << 32) | (p1 & 0xffffffffull);
+}
+
+#define	bintime_clear(a)	((a)->sec = (a)->frac = 0)
+#define	bintime_isset(a)	((a)->sec || (a)->frac)
+#define	bintime_cmp(a, b, cmp)						\
+	(((a)->sec == (b)->sec) ?					\
+	    ((a)->frac cmp (b)->frac) :					\
+	    ((a)->sec cmp (b)->sec))
 
 /*-
  * Background information:
@@ -256,8 +274,16 @@ struct clockinfo {
 #endif
 
 #ifdef _KERNEL
+
+/*
+ * Kernel to clock driver interface.
+ */
+void	inittodr(time_t base);
+void	resettodr(void);
+
 extern time_t	time_second;
 extern time_t	time_uptime;
+extern struct bintime boottimebin;
 extern struct timeval boottime;
 
 /*
@@ -277,7 +303,7 @@ extern struct timeval boottime;
  *
  * Functions with the "get" prefix returns a less precise result
  * much faster than the functions without "get" prefix and should
- * be used where a precision of 10 msec is acceptable or where
+ * be used where a precision of 1/hz seconds is acceptable or where
  * performance is priority. (NB: "precision", _not_ "resolution" !) 
  * 
  */
@@ -310,16 +336,25 @@ int	tvtohz(struct timeval *tv);
 #include <time.h>
 
 #include <sys/cdefs.h>
+#include <sys/select.h>
 
 __BEGIN_DECLS
+int	setitimer(int, const struct itimerval *, struct itimerval *);
+int	utimes(const char *, const struct timeval *);
+
+#if __BSD_VISIBLE
 int	adjtime(const struct timeval *, struct timeval *);
 int	futimes(int, const struct timeval *);
+int	futimesat(int, const char *, const struct timeval [2]);
+int	lutimes(const char *, const struct timeval *);
+int	settimeofday(const struct timeval *, const struct timezone *);
+#endif
+
+#if __XSI_VISIBLE
 int	getitimer(int, struct itimerval *);
 int	gettimeofday(struct timeval *, struct timezone *);
-int	lutimes(const char *, const struct timeval *);
-int	setitimer(int, const struct itimerval *, struct itimerval *);
-int	settimeofday(const struct timeval *, const struct timezone *);
-int	utimes(const char *, const struct timeval *);
+#endif
+
 __END_DECLS
 
 #endif /* !_KERNEL */

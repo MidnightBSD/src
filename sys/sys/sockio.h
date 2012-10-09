@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)sockio.h	8.1 (Berkeley) 3/28/94
- * $FreeBSD: src/sys/sys/sockio.h,v 1.31.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_SOCKIO_H_
@@ -63,9 +62,6 @@
 #define	SIOCSIFBRDADDR	 _IOW('i', 19, struct ifreq)	/* set broadcast addr */
 #define	OSIOCGIFCONF	_IOWR('i', 20, struct ifconf)	/* get ifnet list */
 #define	SIOCGIFCONF	_IOWR('i', 36, struct ifconf)	/* get ifnet list */
-#if  defined (__amd64__)
-#define	SIOCGIFCONF32	_IOWR('i', 36, struct ifconf32)	/* get ifnet list */
-#endif
 #define	OSIOCGIFNETMASK	_IOWR('i', 21, struct ifreq)	/* get net addr mask */
 #define	SIOCGIFNETMASK	_IOWR('i', 37, struct ifreq)	/* get net addr mask */
 #define	SIOCSIFNETMASK	 _IOW('i', 22, struct ifreq)	/* set net addr mask */
@@ -83,6 +79,8 @@
 #define	SIOCGIFMAC	_IOWR('i', 38, struct ifreq)	/* get IF MAC label */
 #define	SIOCSIFMAC	 _IOW('i', 39, struct ifreq)	/* set IF MAC label */
 #define	SIOCSIFNAME	 _IOW('i', 40, struct ifreq)	/* set IF name */
+#define	SIOCSIFDESCR	 _IOW('i', 41, struct ifreq)	/* set ifnet descr */ 
+#define	SIOCGIFDESCR	_IOWR('i', 42, struct ifreq)	/* get ifnet descr */ 
 
 #define	SIOCADDMULTI	 _IOW('i', 49, struct ifreq)	/* add m'cast addr */
 #define	SIOCDELMULTI	 _IOW('i', 50, struct ifreq)	/* del m'cast addr */
@@ -108,6 +106,12 @@
 
 #define	SIOCGPRIVATE_0	_IOWR('i', 80, struct ifreq)	/* device private 0 */
 #define	SIOCGPRIVATE_1	_IOWR('i', 81, struct ifreq)	/* device private 1 */
+
+#define	SIOCSIFVNET	_IOWR('i', 90, struct ifreq)	/* move IF jail/vnet */
+#define	SIOCSIFRVNET	_IOWR('i', 91, struct ifreq)	/* reclaim vnet IF */
+
+#define	SIOCGIFFIB	_IOWR('i', 92, struct ifreq)	/* get IF fib */
+#define	SIOCSIFFIB	 _IOW('i', 93, struct ifreq)	/* set IF fib */
 
 #define	SIOCSDRVSPEC	_IOW('i', 123, struct ifdrv)	/* set driver-specific
 								  parameters */

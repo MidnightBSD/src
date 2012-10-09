@@ -3,7 +3,7 @@
 
 #include <compat/svr4/svr4_syscall.h>		/* system call numbers */
 
-/* $FreeBSD: src/sys/i386/svr4/svr4_locore.s,v 1.14.30.1 2008/11/25 02:59:29 kensmith Exp $ */
+/* $FreeBSD$ */
 	
 NON_GPROF_ENTRY(svr4_sigcode)
 	call	*SVR4_SIGF_HANDLER(%esp)
@@ -14,7 +14,7 @@ NON_GPROF_ENTRY(svr4_sigcode)
 	testl	$PSL_VM,SVR4_UC_EFLAGS(%eax)
 	jnz	1f
 #endif
-	movl	SVR4_UC_GS(%eax),%gs
+	mov	SVR4_UC_GS(%eax),%gs
 1:	pushl	%eax			# pointer to ucontext
 	pushl	$1			# set context
 	movl	$svr4_sys_context,%eax

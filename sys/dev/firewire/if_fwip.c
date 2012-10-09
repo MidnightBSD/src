@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004
  *	Doug Rabson
@@ -34,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/if_fwip.c,v 1.16 2007/06/06 14:31:36 simokawa Exp $
+ * $FreeBSD$
  */
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
@@ -113,18 +112,19 @@ TUNABLE_INT("hw.firewire.fwip.rx_queue_len", &rx_queue_len);
 #ifdef DEVICE_POLLING
 static poll_handler_t fwip_poll;
 
-static void
+static int
 fwip_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 {
 	struct fwip_softc *fwip;
 	struct firewire_comm *fc;
 
 	if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
-		return;
+		return (0);
 
 	fwip = ((struct fwip_eth_softc *)ifp->if_softc)->fwip;
 	fc = fwip->fd.fc;
 	fc->poll(fc, (cmd == POLL_AND_CHECK_STATUS)?0:1, count);
+	return (0);
 }
 #endif /* DEVICE_POLLING */
 
@@ -333,19 +333,11 @@ fwip_init(void *arg)
 		STAILQ_INIT(&xferq->stdma);
 		xferq->stproc = NULL;
 		for (i = 0; i < xferq->bnchunk; i ++) {
-			m =
-#if defined(__DragonFly__) || __FreeBSD_version < 500000
-				m_getcl(M_WAIT, MT_DATA, M_PKTHDR);
-#else
-				m_getcl(M_TRYWAIT, MT_DATA, M_PKTHDR);
-#endif
+			m = m_getcl(M_WAIT, MT_DATA, M_PKTHDR);
 			xferq->bulkxfer[i].mbuf = m;
-			if (m != NULL) {
-				m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
-				STAILQ_INSERT_TAIL(&xferq->stfree,
-						&xferq->bulkxfer[i], link);
-			} else
-				printf("fwip_as_input: m_getcl failed\n");
+			m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
+			STAILQ_INSERT_TAIL(&xferq->stfree,
+					&xferq->bulkxfer[i], link);
 		}
 
 		fwip->fwb.start = INET_FIFO;
@@ -357,7 +349,7 @@ fwip_init(void *arg)
 			xfer = fw_xfer_alloc(M_FWIP);
 			if (xfer == NULL)
 				break;
-			m = m_getcl(M_TRYWAIT, MT_DATA, M_PKTHDR);
+			m = m_getcl(M_WAIT, MT_DATA, M_PKTHDR);
 			xfer->recv.payload = mtod(m, uint32_t *);
 			xfer->recv.pay_len = MCLBYTES;
 			xfer->hand = fwip_unicast_input;
@@ -436,7 +428,7 @@ fwip_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 #ifdef DEVICE_POLLING
 	    {
 		struct ifreq *ifr = (struct ifreq *) data;
-		struct firewire_comm *fc = fc = fwip->fd.fc;
+		struct firewire_comm *fc = fwip->fd.fc;
 
 		if (ifr->ifr_reqcap & IFCAP_POLLING &&
 		    !(ifp->if_capenable & IFCAP_POLLING)) {
@@ -445,7 +437,8 @@ fwip_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 				return(error);
 			/* Disable interrupts */
 			fc->set_intr(fc, 0);
-			ifp->if_capenable |= IFCAP_POLLING;
+			ifp->if_capenable |= IFCAP_POLLING |
+			    IFCAP_POLLING_NOCOUNT;
 			return (error);
 			
 		}
@@ -455,6 +448,7 @@ fwip_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			/* Enable interrupts. */
 			fc->set_intr(fc, 1);
 			ifp->if_capenable &= ~IFCAP_POLLING;
+			ifp->if_capenable &= ~IFCAP_POLLING_NOCOUNT;
 			return (error);
 		}
 	    }
@@ -877,7 +871,7 @@ fwip_unicast_input_recycle(struct fwip_softc *fwip, struct fw_xfer *xfer)
 	 * We have finished with a unicast xfer. Allocate a new
 	 * cluster and stick it on the back of the input queue.
 	 */
-	m = m_getcl(M_TRYWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_WAIT, MT_DATA, M_PKTHDR);
 	xfer->mbuf = m;
 	xfer->recv.payload = mtod(m, uint32_t *);
 	xfer->recv.pay_len = MCLBYTES;

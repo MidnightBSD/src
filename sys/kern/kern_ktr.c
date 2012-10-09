@@ -33,15 +33,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_ktr.c,v 1.53.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_ddb.h"
 #include "opt_ktr.h"
 #include "opt_alq.h"
 
 #include <sys/param.h>
+#include <sys/queue.h>
 #include <sys/alq.h>
 #include <sys/cons.h>
+#include <sys/cpuset.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/libkern.h>
@@ -65,11 +67,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_ktr.c,v 1.53.6.1 2008/11/25 02:59:29 kensm
 #endif
 
 #ifndef KTR_MASK
-#define	KTR_MASK	(KTR_GEN)
-#endif
-
-#ifndef KTR_CPUMASK
-#define	KTR_CPUMASK	(~0)
+#define	KTR_MASK	(0)
 #endif
 
 #ifndef KTR_TIME
@@ -80,24 +78,74 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_ktr.c,v 1.53.6.1 2008/11/25 02:59:29 kensm
 #define	KTR_CPU		PCPU_GET(cpuid)
 #endif
 
-SYSCTL_NODE(_debug, OID_AUTO, ktr, CTLFLAG_RD, 0, "KTR options");
+FEATURE(ktr, "Kernel support for KTR kernel tracing facility");
 
-int	ktr_cpumask = KTR_CPUMASK;
-TUNABLE_INT("debug.ktr.cpumask", &ktr_cpumask);
-SYSCTL_INT(_debug_ktr, OID_AUTO, cpumask, CTLFLAG_RW, &ktr_cpumask, 0, "");
+SYSCTL_NODE(_debug, OID_AUTO, ktr, CTLFLAG_RD, 0, "KTR options");
 
 int	ktr_mask = KTR_MASK;
 TUNABLE_INT("debug.ktr.mask", &ktr_mask);
-SYSCTL_INT(_debug_ktr, OID_AUTO, mask, CTLFLAG_RW, &ktr_mask, 0, "");
+SYSCTL_INT(_debug_ktr, OID_AUTO, mask, CTLFLAG_RW,
+    &ktr_mask, 0, "Bitmask of KTR event classes for which logging is enabled");
 
 int	ktr_compile = KTR_COMPILE;
-SYSCTL_INT(_debug_ktr, OID_AUTO, compile, CTLFLAG_RD, &ktr_compile, 0, "");
+SYSCTL_INT(_debug_ktr, OID_AUTO, compile, CTLFLAG_RD,
+    &ktr_compile, 0, "Bitmask of KTR event classes compiled into the kernel");
 
 int	ktr_entries = KTR_ENTRIES;
-SYSCTL_INT(_debug_ktr, OID_AUTO, entries, CTLFLAG_RD, &ktr_entries, 0, "");
+SYSCTL_INT(_debug_ktr, OID_AUTO, entries, CTLFLAG_RD,
+    &ktr_entries, 0, "Number of entries in the KTR buffer");
 
 int	ktr_version = KTR_VERSION;
-SYSCTL_INT(_debug_ktr, OID_AUTO, version, CTLFLAG_RD, &ktr_version, 0, "");
+SYSCTL_INT(_debug_ktr, OID_AUTO, version, CTLFLAG_RD,
+    &ktr_version, 0, "Version of the KTR interface");
+
+cpuset_t ktr_cpumask;
+static char ktr_cpumask_str[CPUSETBUFSIZ];
+TUNABLE_STR("debug.ktr.cpumask", ktr_cpumask_str, sizeof(ktr_cpumask_str));
+
+static void
+ktr_cpumask_initializer(void *dummy __unused)
+{
+
+	CPU_FILL(&ktr_cpumask);
+#ifdef KTR_CPUMASK
+	if (cpusetobj_strscan(&ktr_cpumask, KTR_CPUMASK) == -1)
+		CPU_FILL(&ktr_cpumask);
+#endif
+
+	/*
+	 * TUNABLE_STR() runs with SI_ORDER_MIDDLE priority, thus it must be
+	 * already set, if necessary.
+	 */
+	if (ktr_cpumask_str[0] != '\0' &&
+	    cpusetobj_strscan(&ktr_cpumask, ktr_cpumask_str) == -1)
+		CPU_FILL(&ktr_cpumask);
+}
+SYSINIT(ktr_cpumask_initializer, SI_SUB_TUNABLES, SI_ORDER_ANY,
+    ktr_cpumask_initializer, NULL);
+
+static int
+sysctl_debug_ktr_cpumask(SYSCTL_HANDLER_ARGS)
+{
+	char lktr_cpumask_str[CPUSETBUFSIZ];
+	cpuset_t imask;
+	int error;
+
+	cpusetobj_strprint(lktr_cpumask_str, &ktr_cpumask);
+	error = sysctl_handle_string(oidp, lktr_cpumask_str,
+	    sizeof(lktr_cpumask_str), req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	if (cpusetobj_strscan(&imask, lktr_cpumask_str) == -1)
+		return (EINVAL);
+	CPU_COPY(&imask, &ktr_cpumask);
+
+	return (error);
+}
+SYSCTL_PROC(_debug_ktr, OID_AUTO, cpumask,
+    CTLFLAG_RW | CTLFLAG_MPSAFE | CTLTYPE_STRING, NULL, 0,
+    sysctl_debug_ktr_cpumask, "S",
+    "Bitmask of CPUs on which KTR logging is enabled");
 
 volatile int	ktr_idx = 0;
 struct	ktr_entry ktr_buf[KTR_ENTRIES];
@@ -194,9 +242,8 @@ ktr_tracepoint(u_int mask, const char *file, int line, const char *format,
 	struct ktr_entry *entry;
 #ifdef KTR_ALQ
 	struct ale *ale = NULL;
-#else
-	int newindex, saveindex;
 #endif
+	int newindex, saveindex;
 #if defined(KTR_VERBOSE) || defined(KTR_ALQ)
 	struct thread *td;
 #endif
@@ -207,7 +254,7 @@ ktr_tracepoint(u_int mask, const char *file, int line, const char *format,
 	if ((ktr_mask & mask) == 0)
 		return;
 	cpu = KTR_CPU;
-	if (((1 << cpu) & ktr_cpumask) == 0)
+	if (!CPU_ISSET(cpu, &ktr_cpumask))
 		return;
 #if defined(KTR_VERBOSE) || defined(KTR_ALQ)
 	td = curthread;
@@ -216,27 +263,30 @@ ktr_tracepoint(u_int mask, const char *file, int line, const char *format,
 	td->td_pflags |= TDP_INKTR;
 #endif
 #ifdef KTR_ALQ
-	if (ktr_alq_enabled &&
-	    td->td_critnest == 0 &&
-	    (td->td_flags & TDF_IDLETD) == 0 &&
-	    td != ald_thread) {
-		if (ktr_alq_max && ktr_alq_cnt > ktr_alq_max)
-			goto done;
-		if ((ale = alq_get(ktr_alq, ALQ_NOWAIT)) == NULL) {
-			ktr_alq_failed++;
+	if (ktr_alq_enabled) {
+		if (td->td_critnest == 0 &&
+		    (td->td_flags & TDF_IDLETD) == 0 &&
+		    td != ald_thread) {
+			if (ktr_alq_max && ktr_alq_cnt > ktr_alq_max)
+				goto done;
+			if ((ale = alq_get(ktr_alq, ALQ_NOWAIT)) == NULL) {
+				ktr_alq_failed++;
+				goto done;
+			}
+			ktr_alq_cnt++;
+			entry = (struct ktr_entry *)ale->ae_data;
+		} else {
 			goto done;
 		}
-		ktr_alq_cnt++;
-		entry = (struct ktr_entry *)ale->ae_data;
 	} else
-		goto done;
-#else
-	do {
-		saveindex = ktr_idx;
-		newindex = (saveindex + 1) & (KTR_ENTRIES - 1);
-	} while (atomic_cmpset_rel_int(&ktr_idx, saveindex, newindex) == 0);
-	entry = &ktr_buf[saveindex];
 #endif
+	{
+		do {
+			saveindex = ktr_idx;
+			newindex = (saveindex + 1) & (KTR_ENTRIES - 1);
+		} while (atomic_cmpset_rel_int(&ktr_idx, saveindex, newindex) == 0);
+		entry = &ktr_buf[saveindex];
+	}
 	entry->ktr_timestamp = KTR_TIME;
 	entry->ktr_cpu = cpu;
 	entry->ktr_thread = curthread;
@@ -266,7 +316,7 @@ ktr_tracepoint(u_int mask, const char *file, int line, const char *format,
 	entry->ktr_parms[4] = arg5;
 	entry->ktr_parms[5] = arg6;
 #ifdef KTR_ALQ
-	if (ale)
+	if (ktr_alq_enabled && ale)
 		alq_post(ktr_alq, ale);
 done:
 #endif
@@ -290,7 +340,9 @@ DB_SHOW_COMMAND(ktr, db_ktr_all)
 	
 	tstate.cur = (ktr_idx - 1) & (KTR_ENTRIES - 1);
 	tstate.first = -1;
-	db_ktr_verbose = index(modif, 'v') != NULL;
+	db_ktr_verbose = 0;
+	db_ktr_verbose |= (index(modif, 'v') != NULL) ? 2 : 0;
+	db_ktr_verbose |= (index(modif, 'V') != NULL) ? 1 : 0; /* just timestap please */
 	if (index(modif, 'a') != NULL) {
 		db_disable_pager();
 		while (cncheckc() != -1)
@@ -324,9 +376,11 @@ db_mach_vtrace(void)
 	db_printf(":cpu%d", kp->ktr_cpu);
 #endif
 	db_printf(")");
-	if (db_ktr_verbose) {
-		db_printf(" %10.10lld %s.%d", (long long)kp->ktr_timestamp,
-		    kp->ktr_file, kp->ktr_line);
+	if (db_ktr_verbose >= 1) {
+		db_printf(" %10.10lld", (long long)kp->ktr_timestamp);
+	}
+	if (db_ktr_verbose >= 2) {
+		db_printf(" %s.%d", kp->ktr_file, kp->ktr_line);
 	}
 	db_printf(": ");
 	db_printf(kp->ktr_desc, kp->ktr_parms[0], kp->ktr_parms[1],

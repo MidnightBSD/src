@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_node.c,v 1.34.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -206,7 +199,7 @@ loop:
 		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td) != 0)
 			goto retry;
 		/* Force cached attributes to be refreshed if stale. */
-		(void)VOP_GETATTR(vp, &vattr, td->td_ucred, td);
+		(void)VOP_GETATTR(vp, &vattr, td->td_ucred);
 		/*
 		 * If the file type on the server is inconsistent with
 		 * what it was when we created the vnode, kill the
@@ -230,15 +223,15 @@ loop:
 	if (fap == NULL)
 		return ENOENT;
 
-	MALLOC(np, struct smbnode *, sizeof *np, M_SMBNODE, M_WAITOK);
+	np = malloc(sizeof *np, M_SMBNODE, M_WAITOK);
 	error = getnewvnode("smbfs", mp, &smbfs_vnodeops, &vp);
 	if (error) {
-		FREE(np, M_SMBNODE);
+		free(np, M_SMBNODE);
 		return error;
 	}
 	error = insmntque(vp, mp);	/* XXX: Too early for mpsafe fs */
 	if (error != 0) {
-		FREE(np, M_SMBNODE);
+		free(np, M_SMBNODE);
 		return (error);
 	}
 	vp->v_type = fap->fa_attr & SMB_FA_DIR ? VDIR : VREG;
@@ -260,8 +253,8 @@ loop:
 	} else if (vp->v_type == VREG)
 		SMBERROR("new vnode '%s' born without parent ?\n", np->n_name);
 
-	vp->v_vnlock->lk_flags |= LK_CANRECURSE;
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
+	VN_LOCK_AREC(vp);
 
 	smbfs_hash_lock(smp);
 	LIST_FOREACH(np2, nhpp, n_hash) {
@@ -270,7 +263,7 @@ loop:
 			continue;
 		vput(vp);
 /*		smb_name_free(np->n_name);
-		FREE(np, M_SMBNODE);*/
+		free(np, M_SMBNODE);*/
 		goto loop;
 	}
 	LIST_INSERT_HEAD(nhpp, np, n_hash);
@@ -336,7 +329,7 @@ smbfs_reclaim(ap)
 	smbfs_hash_unlock(smp);
 	if (np->n_name)
 		smbfs_name_free(np->n_name);
-	FREE(np, M_SMBNODE);
+	free(np, M_SMBNODE);
 	if (dvp != NULL) {
 		vrele(dvp);
 		/*
@@ -367,7 +360,7 @@ smbfs_inactive(ap)
 		smb_makescred(&scred, td, cred);
 		smbfs_vinvalbuf(vp, td);
 		if (vp->v_type == VREG) {
-			VOP_GETATTR(vp, &va, cred, td);
+			VOP_GETATTR(vp, &va, cred);
 			smbfs_smb_close(np->n_mount->sm_share, np->n_fid,
 			    &np->n_mtime, &scred);
 		} else if (vp->v_type == VDIR) {
@@ -439,7 +432,7 @@ smbfs_attr_cachelookup(struct vnode *vp, struct vattr *va)
 	va->va_atime = va->va_ctime = va->va_mtime;	/* time file changed */
 	va->va_gen = VNOVAL;		/* generation number of file */
 	va->va_flags = 0;		/* flags defined for file */
-	va->va_rdev = VNOVAL;		/* device the special file represents */
+	va->va_rdev = NODEV;		/* device the special file represents */
 	va->va_bytes = va->va_size;	/* bytes of disk space held by file */
 	va->va_filerev = 0;		/* file modification number */
 	va->va_vaflags = 0;		/* operations flags */

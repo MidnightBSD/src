@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/gem/if_gemvar.h,v 1.3 2012/04/12 01:50:10 laffer1 Exp $ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * All rights reserved.
@@ -26,6 +25,7 @@
  *
  *	from: NetBSD: gemvar.h,v 1.8 2002/05/15 02:36:12 matt Exp
  *
+ * $FreeBSD$
  */
 
 #ifndef	_IF_GEMVAR_H

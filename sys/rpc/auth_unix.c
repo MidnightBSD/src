@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)auth_unix.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)auth_unix.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/rpc/auth_unix.c,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * auth_unix.c, Implements UNIX style authentication parameters.
@@ -54,21 +54,23 @@ __FBSDID("$FreeBSD: src/sys/rpc/auth_unix.c,v 1.2.2.2.2.1 2008/11/25 02:59:29 ke
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
-#include <sys/refcount.h>
 #include <sys/pcpu.h>
+#include <sys/refcount.h>
 #include <sys/sx.h>
 #include <sys/ucred.h>
 
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 #include <rpc/auth.h>
+#include <rpc/clnt.h>
 
 #include <rpc/rpc_com.h>
 
 /* auth_unix.c */
 static void authunix_nextverf (AUTH *);
-static bool_t authunix_marshal (AUTH *, XDR *);
-static bool_t authunix_validate (AUTH *, struct opaque_auth *);
+static bool_t authunix_marshal (AUTH *, uint32_t, XDR *, struct mbuf *);
+static bool_t authunix_validate (AUTH *, uint32_t, struct opaque_auth *,
+    struct mbuf **);
 static bool_t authunix_refresh (AUTH *, void *);
 static void authunix_destroy (AUTH *);
 static void marshal_new_auth (AUTH *);
@@ -78,7 +80,7 @@ static struct auth_ops authunix_ops = {
 	.ah_marshal =		authunix_marshal,
 	.ah_validate =		authunix_validate,
 	.ah_refresh =		authunix_refresh,
-	.ah_destroy =		authunix_destroy
+	.ah_destroy =		authunix_destroy,
 };
 
 /*
@@ -246,23 +248,32 @@ authunix_nextverf(AUTH *auth)
 }
 
 static bool_t
-authunix_marshal(AUTH *auth, XDR *xdrs)
+authunix_marshal(AUTH *auth, uint32_t xid, XDR *xdrs, struct mbuf *args)
 {
 	struct audata *au;
 
 	au = AUTH_PRIVATE(auth);
-	return (XDR_PUTBYTES(xdrs, au->au_marshed, au->au_mpos));
+	if (!XDR_PUTBYTES(xdrs, au->au_marshed, au->au_mpos))
+		return (FALSE);
+
+	xdrmbuf_append(xdrs, args);
+
+	return (TRUE);
 }
 
 static bool_t
-authunix_validate(AUTH *auth, struct opaque_auth *verf)
+authunix_validate(AUTH *auth, uint32_t xid, struct opaque_auth *verf,
+    struct mbuf **mrepp)
 {
 	struct audata *au;
-	XDR xdrs;
+	XDR txdrs;
+
+	if (!verf)
+		return (TRUE);
 
 	if (verf->oa_flavor == AUTH_SHORT) {
 		au = AUTH_PRIVATE(auth);
-		xdrmem_create(&xdrs, verf->oa_base, verf->oa_length,
+		xdrmem_create(&txdrs, verf->oa_base, verf->oa_length,
 		    XDR_DECODE);
 
 		if (au->au_shcred.oa_base != NULL) {
@@ -270,16 +281,17 @@ authunix_validate(AUTH *auth, struct opaque_auth *verf)
 			    au->au_shcred.oa_length);
 			au->au_shcred.oa_base = NULL;
 		}
-		if (xdr_opaque_auth(&xdrs, &au->au_shcred)) {
+		if (xdr_opaque_auth(&txdrs, &au->au_shcred)) {
 			auth->ah_cred = au->au_shcred;
 		} else {
-			xdrs.x_op = XDR_FREE;
-			(void)xdr_opaque_auth(&xdrs, &au->au_shcred);
+			txdrs.x_op = XDR_FREE;
+			(void)xdr_opaque_auth(&txdrs, &au->au_shcred);
 			au->au_shcred.oa_base = NULL;
 			auth->ah_cred = au->au_origcred;
 		}
 		marshal_new_auth(auth);
 	}
+
 	return (TRUE);
 }
 

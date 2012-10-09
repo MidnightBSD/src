@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)portal_vfsops.c	8.11 (Berkeley) 5/14/95
  *
- * $FreeBSD: src/sys/fs/portalfs/portal_vfsops.c,v 1.60 2007/03/13 01:50:23 tegge Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -41,6 +40,7 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/domain.h>
 #include <sys/filedesc.h>
 #include <sys/kernel.h>
@@ -69,7 +69,7 @@ static const char *portal_opts[] = {
 };
 
 static int
-portal_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
+portal_cmount(struct mntarg *ma, void *data, uint64_t flags)
 {
 	struct portal_args args;
 	int error;
@@ -91,16 +91,18 @@ portal_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
  * Mount the per-process file descriptors (/dev/fd)
  */
 static int
-portal_mount(struct mount *mp, struct thread *td)
+portal_mount(struct mount *mp)
 {
 	struct file *fp;
 	struct portalmount *fmp;
 	struct socket *so;
 	struct vnode *rvp;
+	struct thread *td;
 	struct portalnode *pn;
 	int error, v;
 	char *p;
 
+	td = curthread;
 	if (vfs_filteropt(mp->mnt_optnew, portal_opts))
 		return (EINVAL);
 
@@ -111,7 +113,12 @@ portal_mount(struct mount *mp, struct thread *td)
 	if (error)
 		return (error);
 
-	if ((error = fget(td, v, &fp)) != 0)
+	/*
+	 * Capsicum is not incompatible with portalfs, but we don't really
+	 * know what rights are required. In the spirit of "better safe than
+	 * sorry", pretend that all rights are required for now.
+	 */
+	if ((error = fget(td, v, CAP_MASK_VALID, &fp)) != 0)
 		return (error);
         if (fp->f_type != DTYPE_SOCKET) {
 		fdrop(fp, td);
@@ -123,24 +130,24 @@ portal_mount(struct mount *mp, struct thread *td)
 		return (ESOCKTNOSUPPORT);
 	}
 
-	MALLOC(pn, struct portalnode *, sizeof(struct portalnode),
+	pn = malloc(sizeof(struct portalnode),
 		M_TEMP, M_WAITOK);
 
-	MALLOC(fmp, struct portalmount *, sizeof(struct portalmount),
+	fmp = malloc(sizeof(struct portalmount),
 		M_PORTALFSMNT, M_WAITOK);	/* XXX */
 
 	error = getnewvnode("portal", mp, &portal_vnodeops, &rvp); /* XXX */
 	if (error) {
-		FREE(fmp, M_PORTALFSMNT);
-		FREE(pn, M_TEMP);
+		free(fmp, M_PORTALFSMNT);
+		free(pn, M_TEMP);
 		fdrop(fp, td);
 		return (error);
 	}
 
 	error = insmntque(rvp, mp);	/* XXX: Too early for mpsafe fs */
 	if (error != 0) {
-		FREE(fmp, M_PORTALFSMNT);
-		FREE(pn, M_TEMP);
+		free(fmp, M_PORTALFSMNT);
+		free(pn, M_TEMP);
 		fdrop(fp, td);
 		return (error);
 	}
@@ -157,7 +164,7 @@ portal_mount(struct mount *mp, struct thread *td)
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
 	MNT_IUNLOCK(mp);
-	mp->mnt_data = (qaddr_t) fmp;
+	mp->mnt_data =  fmp;
 	vfs_getnewfsid(mp);
 
 	vfs_mountedfrom(mp, p);
@@ -166,10 +173,9 @@ portal_mount(struct mount *mp, struct thread *td)
 }
 
 static int
-portal_unmount(mp, mntflags, td)
+portal_unmount(mp, mntflags)
 	struct mount *mp;
 	int mntflags;
-	struct thread *td;
 {
 	int error, flags = 0;
 
@@ -188,7 +194,7 @@ portal_unmount(mp, mntflags, td)
 		return (EBUSY);
 #endif
 	/* There is 1 extra root vnode reference (pm_root). */
-	error = vflush(mp, 1, flags, td);
+	error = vflush(mp, 1, flags, curthread);
 	if (error)
 		return (error);
 
@@ -212,11 +218,10 @@ portal_unmount(mp, mntflags, td)
 }
 
 static int
-portal_root(mp, flags, vpp, td)
+portal_root(mp, flags, vpp)
 	struct mount *mp;
 	int flags;
 	struct vnode **vpp;
-	struct thread *td;
 {
 	struct vnode *vp;
 
@@ -225,16 +230,15 @@ portal_root(mp, flags, vpp, td)
 	 */
 	vp = VFSTOPORTAL(mp)->pm_root;
 	VREF(vp);
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 	*vpp = vp;
 	return (0);
 }
 
 static int
-portal_statfs(mp, sbp, td)
+portal_statfs(mp, sbp)
 	struct mount *mp;
 	struct statfs *sbp;
-	struct thread *td;
 {
 
 	sbp->f_flags = 0;

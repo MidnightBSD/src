@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/mga_drv.c,v 1.12.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -74,7 +74,11 @@ static int mga_driver_device_is_agp(struct drm_device * dev)
 	 * device is 0x0021 (HB6 Universal PCI-PCI bridge), we reject the
 	 * device.
 	 */
+#if __FreeBSD_version >= 700010
 	bus = device_get_parent(device_get_parent(dev->device));
+#else
+	bus = device_get_parent(dev->device);
+#endif
 	if (pci_get_device(dev->device) == 0x0525 &&
 	    pci_get_vendor(bus) == 0x3388 &&
 	    pci_get_device(bus) == 0x0021)
@@ -163,5 +167,9 @@ static driver_t mga_driver = {
 };
 
 extern devclass_t drm_devclass;
+#if __FreeBSD_version >= 700010
 DRIVER_MODULE(mga, vgapci, mga_driver, drm_devclass, 0, 0);
+#else
+DRIVER_MODULE(mga, pci, mga_driver, drm_devclass, 0, 0);
+#endif
 MODULE_DEPEND(mga, drm, 1, 1, 1);

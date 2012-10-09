@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet/ip6.h,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ip6.h,v 1.18 2001/03/29 05:34:30 itojun Exp $	*/
 
 /*-
@@ -219,7 +219,7 @@ struct ip6_rthdr {
 	/* followed by routing type specific data */
 } __packed;
 
-/* Type 0 Routing header */
+/* Type 0 Routing header, deprecated by RFC 5095. */
 struct ip6_rthdr0 {
 	u_int8_t  ip6r0_nxt;		/* next header */
 	u_int8_t  ip6r0_len;		/* length in units of 8 octets */
@@ -263,7 +263,7 @@ struct ip6_frag {
 /*
  * IP6_EXTHDR_CHECK ensures that region between the IP6 header and the
  * target header (including IPv6 itself, extension headers and
- * TCP/UDP/ICMP6 headers) are continuous. KAME requires drivers
+ * TCP/UDP/ICMP6 headers) are contiguous. KAME requires drivers
  * to store incoming data into one internal mbuf or one or more external
  * mbufs(never into two or more internal mbufs). Thus, the third case is
  * supposed to never be matched but is prepared just in case.
@@ -275,24 +275,24 @@ do {									\
 	if (((m)->m_flags & M_LOOP) &&					\
 	    ((m)->m_len < (off) + (hlen)) &&				\
 	    (((m) = m_pullup((m), (off) + (hlen))) == NULL)) {		\
-		ip6stat.ip6s_exthdrtoolong++;				\
+		V_ip6stat.ip6s_exthdrtoolong++;				\
 		return ret;						\
 	} else if ((m)->m_flags & M_EXT) {				\
 		if ((m)->m_len < (off) + (hlen)) {			\
-			ip6stat.ip6s_exthdrtoolong++;			\
+			V_ip6stat.ip6s_exthdrtoolong++;			\
 			m_freem(m);					\
 			return ret;					\
 		}							\
 	} else {							\
 		if ((m)->m_len < (off) + (hlen)) {			\
-			ip6stat.ip6s_exthdrtoolong++;			\
+			V_ip6stat.ip6s_exthdrtoolong++;			\
 			m_freem(m);					\
 			return ret;					\
 		}							\
 	}								\
     } else {								\
 	if ((m)->m_len < (off) + (hlen)) {				\
-		ip6stat.ip6s_tooshort++;				\
+		V_ip6stat.ip6s_tooshort++;				\
 		in6_ifstat_inc(m->m_pkthdr.rcvif, ifs6_in_truncated);	\
 		m_freem(m);						\
 		return ret;						\
@@ -346,6 +346,7 @@ do {									\
 		}							\
 	}								\
 } while (/*CONSTCOND*/ 0)
+
 #endif /*_KERNEL*/
 
 #endif /* not _NETINET_IP6_H_ */

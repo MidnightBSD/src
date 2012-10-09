@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)namei.h	8.5 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/namei.h,v 1.48.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_NAMEI_H_
@@ -42,7 +41,7 @@ struct componentname {
 	 * Arguments to lookup.
 	 */
 	u_long	cn_nameiop;	/* namei operation */
-	u_long	cn_flags;	/* flags to namei */
+	u_int64_t cn_flags;	/* flags to namei */
 	struct	thread *cn_thread;/* thread requesting lookup */
 	struct	ucred *cn_cred;	/* credentials */
 	int	cn_lkflags;	/* Lock flags LK_EXCLUSIVE or LK_SHARED */
@@ -64,12 +63,19 @@ struct nameidata {
 	 */
 	const	char *ni_dirp;		/* pathname pointer */
 	enum	uio_seg ni_segflg;	/* location of pathname */
+	cap_rights_t ni_rightsneeded;	/* rights required to look up vnode */
 	/*
 	 * Arguments to lookup.
 	 */
-	struct	vnode *ni_startdir;	/* starting directory */
+	struct  vnode *ni_startdir;	/* starting directory */
 	struct	vnode *ni_rootdir;	/* logical root directory */
 	struct	vnode *ni_topdir;	/* logical top directory */
+	int	ni_dirfd;		/* starting directory for *at functions */
+	int	ni_strictrelative;	/* relative lookup only; no '..' */
+	/*
+	 * Results: returned from namei
+	 */
+	cap_rights_t ni_baserights;	/* rights the *at base has (or -1) */
 	/*
 	 * Results: returned from/manipulated by lookup
 	 */
@@ -80,7 +86,7 @@ struct nameidata {
 	 */
 	size_t	ni_pathlen;		/* remaining chars in path */
 	char	*ni_next;		/* next location in pathname */
-	u_long	ni_loopcnt;		/* count of symlinks encountered */
+	u_int	ni_loopcnt;		/* count of symlinks encountered */
 	/*
 	 * Lookup parameters: this structure describes the subset of
 	 * information from the nameidata structure that is passed
@@ -123,45 +129,61 @@ struct nameidata {
  * name being sought. The caller is responsible for releasing the
  * buffer and for vrele'ing ni_startdir.
  */
-#define	RDONLY		0x0000200 /* lookup with read-only semantics */
-#define	HASBUF		0x0000400 /* has allocated pathname buffer */
-#define	SAVENAME	0x0000800 /* save pathname buffer */
-#define	SAVESTART	0x0001000 /* save starting directory */
-#define ISDOTDOT	0x0002000 /* current component name is .. */
-#define MAKEENTRY	0x0004000 /* entry is to be added to name cache */
-#define ISLASTCN	0x0008000 /* this is last component of pathname */
-#define ISSYMLINK	0x0010000 /* symlink needs interpretation */
-#define	ISWHITEOUT	0x0020000 /* found whiteout */
-#define	DOWHITEOUT	0x0040000 /* do whiteouts */
-#define	WILLBEDIR	0x0080000 /* new files will be dirs; allow trailing / */
-#define	ISUNICODE	0x0100000 /* current component name is unicode*/
-#define	ISOPEN		0x0200000 /* caller is opening; return a real vnode. */
-#define	NOCROSSMOUNT	0x0400000 /* do not cross mount points */
-#define	NOMACCHECK	0x0800000 /* do not perform MAC checks */
-#define	MPSAFE		0x1000000 /* namei() must acquire Giant if needed. */
-#define	GIANTHELD	0x2000000 /* namei() is holding giant. */
-#define	AUDITVNODE1	0x4000000 /* audit the looked up vnode information */
-#define	AUDITVNODE2 	0x8000000 /* audit the looked up vnode information */
-#define	PARAMASK	0xffffe00 /* mask of parameter descriptors */
+#define	RDONLY		0x00000200 /* lookup with read-only semantics */
+#define	HASBUF		0x00000400 /* has allocated pathname buffer */
+#define	SAVENAME	0x00000800 /* save pathname buffer */
+#define	SAVESTART	0x00001000 /* save starting directory */
+#define	ISDOTDOT	0x00002000 /* current component name is .. */
+#define	MAKEENTRY	0x00004000 /* entry is to be added to name cache */
+#define	ISLASTCN	0x00008000 /* this is last component of pathname */
+#define	ISSYMLINK	0x00010000 /* symlink needs interpretation */
+#define	ISWHITEOUT	0x00020000 /* found whiteout */
+#define	DOWHITEOUT	0x00040000 /* do whiteouts */
+#define	WILLBEDIR	0x00080000 /* new files will be dirs; allow trailing / */
+#define	ISUNICODE	0x00100000 /* current component name is unicode*/
+#define	ISOPEN		0x00200000 /* caller is opening; return a real vnode. */
+#define	NOCROSSMOUNT	0x00400000 /* do not cross mount points */
+#define	NOMACCHECK	0x00800000 /* do not perform MAC checks */
+#define	MPSAFE		0x01000000 /* namei() must acquire Giant if needed. */
+#define	GIANTHELD	0x02000000 /* namei() is holding giant. */
+#define	AUDITVNODE1	0x04000000 /* audit the looked up vnode information */
+#define	AUDITVNODE2 	0x08000000 /* audit the looked up vnode information */
+#define	TRAILINGSLASH	0x10000000 /* path ended in a slash */
+#define	PARAMASK	0x1ffffe00 /* mask of parameter descriptors */
 
 #define	NDHASGIANT(NDP)	(((NDP)->ni_cnd.cn_flags & GIANTHELD) != 0)
 
 /*
  * Initialization of a nameidata structure.
  */
-static void NDINIT(struct nameidata *, u_long, u_long, enum uio_seg,
-	    const char *, struct thread *);
+#define	NDINIT(ndp, op, flags, segflg, namep, td)			\
+	NDINIT_ALL(ndp, op, flags, segflg, namep, AT_FDCWD, NULL, 0, td)
+#define	NDINIT_AT(ndp, op, flags, segflg, namep, dirfd, td)		\
+	NDINIT_ALL(ndp, op, flags, segflg, namep, dirfd, NULL, 0, td)
+#define	NDINIT_ATRIGHTS(ndp, op, flags, segflg, namep, dirfd, rights, td) \
+	NDINIT_ALL(ndp, op, flags, segflg, namep, dirfd, NULL, rights, td)
+#define	NDINIT_ATVP(ndp, op, flags, segflg, namep, vp, td)		\
+	NDINIT_ALL(ndp, op, flags, segflg, namep, AT_FDCWD, vp, 0, td)
+
 static __inline void
-NDINIT(struct nameidata *ndp,
+NDINIT_ALL(struct nameidata *ndp,
 	u_long op, u_long flags,
 	enum uio_seg segflg,
 	const char *namep,
+	int dirfd,
+	struct vnode *startdir,
+	cap_rights_t rights,
 	struct thread *td)
 {
 	ndp->ni_cnd.cn_nameiop = op;
 	ndp->ni_cnd.cn_flags = flags;
 	ndp->ni_segflg = segflg;
 	ndp->ni_dirp = namep;
+	ndp->ni_dirfd = dirfd;
+	ndp->ni_startdir = startdir;
+	ndp->ni_strictrelative = 0;
+	ndp->ni_rightsneeded = rights;
+	ndp->ni_baserights = 0;
 	ndp->ni_cnd.cn_thread = td;
 }
 

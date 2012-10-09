@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/compat/ia32/ia32_reg.h,v 1.2 2008/12/03 00:24:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)reg.h	5.5 (Berkeley) 1/18/91
- * $FreeBSD: src/sys/compat/ia32/ia32_reg.h,v 1.1 2005/06/30 07:49:21 peter Exp $
+ * $FreeBSD$
  */
 
 #ifndef _COMPAT_IA32_IA32_REG_H_
@@ -91,35 +90,19 @@ struct env87 {
 	int	en_fos;		/* floating operand segment selector */
 };
 
+#ifdef __ia64__
+/* Layout of an x87 fpu register (amd64 gets this elsewhere) */
+struct fpacc87 {
+	u_char  fp_bytes[10];
+};
+#endif
+
 /* Floating point context */
 struct save87 {
 	struct	env87 sv_env;	/* floating point control/status */
 	struct	fpacc87 sv_ac[8];	/* accumulator contents, 0-7 */
 	u_char	sv_pad0[4];	/* padding for (now unused) saved status word */
 	u_char	sv_pad[64];	/* padding; used by emulators */
-};
-
-
-/*
- * Alternative layouts for <sys/procfs.h>
- * Used in core dumps, the reason for this file existing.
- */
-struct prstatus32 {
-	int	pr_version;
-	u_int	pr_statussz;
-	u_int	pr_gregsetsz;
-	u_int	pr_fpregsetsz;
-	int	pr_osreldate;
-	int	pr_cursig;
-	pid_t	pr_pid;
-	struct reg32 pr_reg;
-};
-
-struct prpsinfo32 {
-	int	pr_version;
-	u_int	pr_psinfosz;
-	char	pr_fname[PRFNAMESZ+1];
-	char	pr_psargs[PRARGSZ+1];
 };
 
 /*

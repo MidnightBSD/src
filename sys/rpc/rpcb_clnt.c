@@ -56,7 +56,7 @@
 static char sccsid[] = "@(#)rpcb_clnt.c 1.30 89/06/21 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/rpc/rpcb_clnt.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpcb_clnt.c
@@ -477,7 +477,7 @@ local_rpcb()
 
 	tsize = __rpc_get_t_size(AF_LOCAL, 0, 0);
 	client = clnt_vc_create(so, (struct sockaddr *)&sun, (rpcprog_t)RPCBPROG,
-	    (rpcvers_t)RPCBVERS, tsize, tsize);
+	    (rpcvers_t)RPCBVERS, tsize, tsize, 1);
 
 	if (client != NULL) {
 		/* Mark the socket to be closed in destructor */
@@ -492,7 +492,7 @@ try_nconf:
 
 #if 0
 	static struct netconfig *loopnconf;
-	static char *hostname;
+	static char *localhostname;
 
 /* VARIABLES PROTECTED BY loopnconf_lock: loopnconf */
 	mutex_lock(&loopnconf_lock);
@@ -527,9 +527,9 @@ try_nconf:
 				_close(fd);
 				tmpnconf = nconf;
 				if (!strcmp(nconf->nc_protofmly, NC_INET))
-					hostname = IN4_LOCALHOST_STRING;
+					localhostname = IN4_LOCALHOST_STRING;
 				else
-					hostname = IN6_LOCALHOST_STRING;
+					localhostname = IN6_LOCALHOST_STRING;
 			}
 		}
 		if (tmpnconf == NULL) {
@@ -542,7 +542,7 @@ try_nconf:
 		endnetconfig(nc_handle);
 	}
 	mutex_unlock(&loopnconf_lock);
-	client = getclnthandle(hostname, loopnconf, NULL);
+	client = getclnthandle(localhostname, loopnconf, NULL);
 	return (client);
 #else
 	return (NULL);

@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 1999 Seigo Tanimura
- * (c) 2003 Mathew Kanner
+ * Copyright (c) 2003 Mathew Kanner
  * Copyright (c) 2003-2006 Yuriy Tsibizov <yuriy.tsibizov@gfk.ru>
  * All rights reserved
  *
@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/emu10kx-midi.c,v 1.4 2007/09/12 07:43:42 ariff Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -39,6 +39,10 @@
 #include <sys/lock.h>
 #include <sys/mutex.h>
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/chip.h>
 #include <dev/sound/pcm/sound.h>
 
@@ -46,8 +50,8 @@
 #include <dev/sound/midi/mpu401.h>
 #include "mpufoi_if.h"
 
+#include <dev/sound/pci/emuxkireg.h>
 #include <dev/sound/pci/emu10kx.h>
-#include "emu10k1-alsa%diked.h"
 
 struct emu_midi_softc {
 	struct mtx	mtx;
@@ -65,8 +69,9 @@ static uint32_t	emu_midi_card_intr(void *p, uint32_t arg);
 static devclass_t emu_midi_devclass;
 
 static unsigned char
-emu_mread(void *arg __unused, struct emu_midi_softc *sc, int reg)
+emu_mread(struct mpu401 *arg __unused, void *cookie, int reg)
 {
+	struct emu_midi_softc *sc = cookie;
 	unsigned int d;
 
 	d = 0;
@@ -79,8 +84,9 @@ emu_mread(void *arg __unused, struct emu_midi_softc *sc, int reg)
 }
 
 static void
-emu_mwrite(void *arg __unused, struct emu_midi_softc *sc, int reg, unsigned char b)
+emu_mwrite(struct mpu401 *arg __unused, void *cookie, int reg, unsigned char b)
 {
+	struct emu_midi_softc *sc = cookie;
 
 	if (sc->is_emu10k1)
 		emu_wr(sc->card, 0x18 + reg, b, 1);
@@ -89,8 +95,9 @@ emu_mwrite(void *arg __unused, struct emu_midi_softc *sc, int reg, unsigned char
 }
 
 static int
-emu_muninit(void *arg __unused, struct emu_midi_softc *sc)
+emu_muninit(struct mpu401 *arg __unused, void *cookie)
 {
+	struct emu_midi_softc *sc = cookie;
 
 	mtx_lock(&sc->mtx);
 	sc->mpu_intr = NULL;
@@ -103,7 +110,7 @@ static kobj_method_t emu_mpu_methods[] = {
 	KOBJMETHOD(mpufoi_read, emu_mread),
 	KOBJMETHOD(mpufoi_write, emu_mwrite),
 	KOBJMETHOD(mpufoi_uninit, emu_muninit),
-	{0, 0}
+	KOBJMETHOD_END
 };
 static DEFINE_CLASS(emu_mpu, emu_mpu_methods, 0);
 
@@ -169,25 +176,25 @@ emu_midi_attach(device_t dev)
 	if (scp->is_emu10k1) {
 		/* SB Live! - only one MIDI device here */
 		inte_val = 0;
-		/* inte_val |= INTE_MIDITXENABLE;*/
-		inte_val |= INTE_MIDIRXENABLE;
-		ipr_val = IPR_MIDITRANSBUFEMPTY;
-		ipr_val |= IPR_MIDIRECVBUFEMPTY;
+		/* inte_val |= EMU_INTE_MIDITXENABLE;*/
+		inte_val |= EMU_INTE_MIDIRXENABLE;
+		ipr_val = EMU_IPR_MIDITRANSBUFE;
+		ipr_val |= EMU_IPR_MIDIRECVBUFE;
 	} else {
-		if (scp->port == A_MUDATA1) {
+		if (scp->port == EMU_A_MUDATA1) {
 			/* EXTERNAL MIDI (AudigyDrive) */
 			inte_val = 0;
-			/* inte_val |= A_INTE_MIDITXENABLE1;*/
-			inte_val |= INTE_MIDIRXENABLE;
-			ipr_val = IPR_MIDITRANSBUFEMPTY;
-			ipr_val |= IPR_MIDIRECVBUFEMPTY;
+			/* inte_val |= A_EMU_INTE_MIDITXENABLE1;*/
+			inte_val |= EMU_INTE_MIDIRXENABLE;
+			ipr_val = EMU_IPR_MIDITRANSBUFE;
+			ipr_val |= EMU_IPR_MIDIRECVBUFE;
 		} else {
 			/* MIDI hw config port 2 */
 			inte_val = 0;
-			/* inte_val |= A_INTE_MIDITXENABLE2;*/
-			inte_val |= INTE_A_MIDIRXENABLE2;
-			ipr_val = IPR_A_MIDITRANSBUFEMPTY2;
-			ipr_val |= IPR_A_MIDIRECVBUFEMPTY2;
+			/* inte_val |= A_EMU_INTE_MIDITXENABLE2;*/
+			inte_val |= EMU_INTE_A_MIDIRXENABLE2;
+			ipr_val = EMU_IPR_A_MIDITRANSBUFE2;
+			ipr_val |= EMU_IPR_A_MIDIRECBUFE2;
 		}
 	}
 
@@ -207,7 +214,7 @@ emu_midi_attach(device_t dev)
 	if (scp->is_emu10k1)
 		emu_enable_ir(scp->card);
 	else {
-		if (scp->port == A_MUDATA1)
+		if (scp->port == EMU_A_MUDATA1)
 			emu_enable_ir(scp->card);
 	}
 

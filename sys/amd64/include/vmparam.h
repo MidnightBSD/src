@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/amd64/include/vmparam.h,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -39,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/amd64/include/vmparam.h,v 1.49 2007/09/25 06:25:04 alc Exp $
+ * $FreeBSD$
  */
 
 
@@ -69,17 +68,6 @@
 #ifndef SGROWSIZ
 #define	SGROWSIZ	(128UL*1024)		/* amount to grow stack */
 #endif
-
-/*
- * The time for a process to be blocked before being very swappable.
- * This is a number of seconds which the system takes as being a non-trivial
- * amount of real time.  You probably shouldn't change this;
- * it is used in subtle ways (fractions and multiples of it are, that is, like
- * half of a ``long time'', almost a long time, etc.)
- * It is related to human patience and other factors which don't really
- * change over time.
- */
-#define	MAXSLP 		20
 
 /*
  * We provide a machine specific single page allocator through the use
@@ -133,26 +121,52 @@
 #define	VM_NFREEORDER		13
 
 /*
+ * Only one memory domain.
+ */
+#ifndef VM_NDOMAIN
+#define	VM_NDOMAIN		1
+#endif
+
+/*
+ * Enable superpage reservations: 1 level.
+ */
+#ifndef	VM_NRESERVLEVEL
+#define	VM_NRESERVLEVEL		1
+#endif
+
+/*
+ * Level 0 reservations consist of 512 pages.
+ */
+#ifndef	VM_LEVEL_0_ORDER
+#define	VM_LEVEL_0_ORDER	9
+#endif
+
+#ifdef	SMP
+#define	PA_LOCK_COUNT	256
+#endif
+
+/*
  * Virtual addresses of things.  Derived from the page directory and
  * page table indexes from pmap.h for precision.
  *
  * 0x0000000000000000 - 0x00007fffffffffff   user map
  * 0x0000800000000000 - 0xffff7fffffffffff   does not exist (hole)
  * 0xffff800000000000 - 0xffff804020100fff   recursive page table (512GB slot)
- * 0xffff804020101000 - 0xfffffeffffffffff   unused
- * 0xffffff0000000000 - 0xffffff7fffffffff   512GB direct map mappings
- * 0xffffff8000000000 - 0xffffffff7fffffff   unused (510GB)
- * 0xffffffff80000000 - 0xffffffffffffffff   2GB kernel map
+ * 0xffff804020101000 - 0xfffffdffffffffff   unused
+ * 0xfffffe0000000000 - 0xfffffeffffffffff   1TB direct map
+ * 0xffffff0000000000 - 0xffffff7fffffffff   unused
+ * 0xffffff8000000000 - 0xffffffffffffffff   512GB kernel map
  *
  * Within the kernel map:
+ *
  * 0xffffffff80000000                        KERNBASE
  */
 
-#define	VM_MAX_KERNEL_ADDRESS	KVADDR(KPML4I, NPDPEPG-1, NKPDE-1, NPTEPG-1)
-#define	VM_MIN_KERNEL_ADDRESS	KVADDR(KPML4I, KPDPI, 0, 0)
+#define	VM_MAX_KERNEL_ADDRESS	KVADDR(KPML4I, NPDPEPG-1, NPDEPG-1, NPTEPG-1)
+#define	VM_MIN_KERNEL_ADDRESS	KVADDR(KPML4I, NPDPEPG-512, 0, 0)
 
 #define	DMAP_MIN_ADDRESS	KVADDR(DMPML4I, 0, 0, 0)
-#define	DMAP_MAX_ADDRESS	KVADDR(DMPML4I+1, 0, 0, 0)
+#define	DMAP_MAX_ADDRESS	KVADDR(DMPML4I + NDMPML4E, 0, 0, 0)
 
 #define	KERNBASE		KVADDR(KPML4I, KPDPI, 0, 0)
 
@@ -161,7 +175,8 @@
 
 #define	VM_MAXUSER_ADDRESS	UVADDR(NUPML4E, 0, 0, 0)
 
-#define	USRSTACK		VM_MAXUSER_ADDRESS
+#define	SHAREDPAGE		(VM_MAXUSER_ADDRESS - PAGE_SIZE)
+#define	USRSTACK		SHAREDPAGE
 
 #define	VM_MAX_ADDRESS		UPT_MAX_ADDRESS
 #define	VM_MIN_ADDRESS		(0)
@@ -181,19 +196,22 @@
  * is the total KVA space allocated for kmem_map.
  */
 #ifndef VM_KMEM_SIZE_SCALE
-#define	VM_KMEM_SIZE_SCALE	(3)
+#define	VM_KMEM_SIZE_SCALE	(1)
 #endif
 
 /*
  * Ceiling on amount of kmem_map kva space.
  */
 #ifndef VM_KMEM_SIZE_MAX
-#define	VM_KMEM_SIZE_MAX	(400 * 1024 * 1024)
+#define	VM_KMEM_SIZE_MAX	((VM_MAX_KERNEL_ADDRESS - \
+    VM_MIN_KERNEL_ADDRESS + 1) * 3 / 5)
 #endif
 
 /* initial pagein size of beginning of executable file */
 #ifndef VM_INITIAL_PAGEIN
 #define	VM_INITIAL_PAGEIN	16
 #endif
+
+#define	ZERO_REGION_SIZE	(2 * 1024 * 1024)	/* 2MB */
 
 #endif /* _MACHINE_VMPARAM_H_ */

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_uuid.c,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -36,11 +36,13 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_uuid.c,v 1.13.6.1 2008/11/25 02:59:29 kens
 #include <sys/socket.h>
 #include <sys/sysproto.h>
 #include <sys/systm.h>
+#include <sys/jail.h>
 #include <sys/uuid.h>
 
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
+#include <net/vnet.h>
 
 /*
  * See also:
@@ -92,25 +94,31 @@ uuid_node(uint16_t *node)
 	struct sockaddr_dl *sdl;
 	int i;
 
-	IFNET_RLOCK();
-	TAILQ_FOREACH(ifp, &ifnet, if_link) {
+	CURVNET_SET(TD_TO_VNET(curthread));
+	IFNET_RLOCK_NOSLEEP();
+	TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
 		/* Walk the address list */
+		IF_ADDR_RLOCK(ifp);
 		TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 			sdl = (struct sockaddr_dl*)ifa->ifa_addr;
 			if (sdl != NULL && sdl->sdl_family == AF_LINK &&
 			    sdl->sdl_type == IFT_ETHER) {
 				/* Got a MAC address. */
 				bcopy(LLADDR(sdl), node, UUID_NODE_LEN);
-				IFNET_RUNLOCK();
+				IF_ADDR_RUNLOCK(ifp);
+				IFNET_RUNLOCK_NOSLEEP();
+				CURVNET_RESTORE();
 				return;
 			}
 		}
+		IF_ADDR_RUNLOCK(ifp);
 	}
-	IFNET_RUNLOCK();
+	IFNET_RUNLOCK_NOSLEEP();
 
 	for (i = 0; i < (UUID_NODE_LEN>>1); i++)
 		node[i] = (uint16_t)arc4random();
 	*((uint8_t*)node) |= 0x01;
+	CURVNET_RESTORE();
 }
 
 /*
@@ -179,7 +187,7 @@ struct uuidgen_args {
 };
 #endif
 int
-uuidgen(struct thread *td, struct uuidgen_args *uap)
+sys_uuidgen(struct thread *td, struct uuidgen_args *uap)
 {
 	struct uuid *store;
 	size_t count;

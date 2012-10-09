@@ -1,15 +1,17 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
  * a) Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ *    this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the distribution.
+ *    the documentation and/or other materials provided with the distribution.
  *
  * c) Neither the name of Cisco Systems, Inc. nor the names of its
  *    contributors may be used to endorse or promote products derived
@@ -28,11 +30,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-/* $KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	 */
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.16.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
+
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
@@ -53,10 +53,19 @@ sctp_can_peel_off(struct socket *head, sctp_assoc_t assoc_id)
 	struct sctp_tcb *stcb;
 	uint32_t state;
 
+	if (head == NULL) {
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, EBADF);
+		return (EBADF);
+	}
 	inp = (struct sctp_inpcb *)head->so_pcb;
 	if (inp == NULL) {
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, EFAULT);
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, EFAULT);
 		return (EFAULT);
+	}
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, EOPNOTSUPP);
+		return (EOPNOTSUPP);
 	}
 	stcb = sctp_findassociation_ep_asocid(inp, assoc_id, 1);
 	if (stcb == NULL) {
@@ -112,8 +121,11 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	n_inp->sctp_features = inp->sctp_features;
 	n_inp->sctp_mobility_features = inp->sctp_mobility_features;
 	n_inp->sctp_frag_point = inp->sctp_frag_point;
+	n_inp->sctp_cmt_on_off = inp->sctp_cmt_on_off;
+	n_inp->sctp_ecn_enable = inp->sctp_ecn_enable;
 	n_inp->partial_delivery_point = inp->partial_delivery_point;
 	n_inp->sctp_context = inp->sctp_context;
+	n_inp->local_strreset_support = inp->local_strreset_support;
 	n_inp->inp_starting_point_for_iterator = NULL;
 	/* copy in the authentication parameters from the original endpoint */
 	if (n_inp->sctp_ep.local_hmacs)
@@ -163,8 +175,10 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	}
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
+	CURVNET_SET(head->so_vnet);
 	newso = sonewconn(head, SS_ISCONNECTED
 	    );
+	CURVNET_RESTORE();
 	if (newso == NULL) {
 		SCTPDBG(SCTP_DEBUG_PEEL1, "sctp_peeloff:sonewconn failed\n");
 		SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTP_PEELOFF, ENOMEM);
@@ -183,8 +197,11 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
 	n_inp->sctp_features = inp->sctp_features;
 	n_inp->sctp_frag_point = inp->sctp_frag_point;
+	n_inp->sctp_cmt_on_off = inp->sctp_cmt_on_off;
+	n_inp->sctp_ecn_enable = inp->sctp_ecn_enable;
 	n_inp->partial_delivery_point = inp->partial_delivery_point;
 	n_inp->sctp_context = inp->sctp_context;
+	n_inp->local_strreset_support = inp->local_strreset_support;
 	n_inp->inp_starting_point_for_iterator = NULL;
 
 	/* copy in the authentication parameters from the original endpoint */

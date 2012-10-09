@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.88 2007/09/21 23:50:15 rodrigc Exp $
+ * $FreeBSD$
  */
 
 
@@ -33,6 +33,7 @@
 #include <sys/systm.h>
 #include <sys/namei.h>
 #include <sys/conf.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/kernel.h>
 #include <sys/vnode.h>
@@ -41,6 +42,7 @@
 #include <sys/buf.h>
 #include <sys/fcntl.h>
 #include <sys/malloc.h>
+#include <sys/stat.h>
 #include <sys/systm.h>
 
 #include <geom/geom.h>
@@ -64,8 +66,6 @@ static MALLOC_DEFINE(M_NTFSMNT, "ntfs_mount", "NTFS mount structure");
 MALLOC_DEFINE(M_NTFSNTNODE,"ntfs_ntnode",  "NTFS ntnode information");
 MALLOC_DEFINE(M_NTFSFNODE,"ntfs_fnode",  "NTFS fnode information");
 MALLOC_DEFINE(M_NTFSDIR,"ntfs_dir",  "NTFS dir buffer");
-
-struct sockaddr;
 
 static int	ntfs_mountfs(register struct vnode *, struct mount *, 
 				  struct thread *);
@@ -116,17 +116,18 @@ static int
 ntfs_cmount ( 
 	struct mntarg *ma,
 	void *data,
-	int flags,
-	struct thread *td )
+	uint64_t flags)
 {
-	int error;
 	struct ntfs_args args;
+	struct export_args exp;
+	int error;
 
-	error = copyin(data, (caddr_t)&args, sizeof args);
+	error = copyin(data, &args, sizeof(args));
 	if (error)
 		return (error);
+	vfs_oexport_conv(&args.export, &exp);
 	ma = mount_argsu(ma, "from", args.fspec, MAXPATHLEN);
-	ma = mount_arg(ma, "export", &args.export, sizeof args.export);
+	ma = mount_arg(ma, "export", &exp, sizeof(exp));
 	ma = mount_argf(ma, "uid", "%d", args.uid);
 	ma = mount_argf(ma, "gid", "%d", args.gid);
 	ma = mount_argf(ma, "mode", "%d", args.mode);
@@ -148,15 +149,16 @@ static const char *ntfs_opts[] = {
 };
 
 static int
-ntfs_mount ( 
-	struct mount *mp,
-	struct thread *td )
+ntfs_mount(struct mount *mp)
 {
-	int		err = 0, error;
-	struct vnode	*devvp;
+	int err = 0, error;
+	accmode_t accmode;
+	struct vnode *devvp;
 	struct nameidata ndp;
+	struct thread *td;
 	char *from;
 
+	td = curthread;
 	if (vfs_filteropt(mp->mnt_optnew, ntfs_opts))
 		return (EINVAL);
 
@@ -193,6 +195,21 @@ ntfs_mount (
 	devvp = ndp.ni_vp;
 
 	if (!vn_isdisk(devvp, &err))  {
+		vput(devvp);
+		return (err);
+	}
+
+	/*
+	 * If mount by non-root, then verify that user has necessary
+	 * permissions on the device.
+	 */
+	accmode = VREAD;
+	if ((mp->mnt_flag & MNT_RDONLY) == 0)
+		accmode |= VWRITE;
+	err = VOP_ACCESS(devvp, accmode, td->td_ucred, td);
+	if (err)
+		err = priv_check(td, PRIV_VFS_MOUNT_PERM);
+	if (err) {
 		vput(devvp);
 		return (err);
 	}
@@ -243,7 +260,7 @@ error_1:	/* no state to back out*/
 	/* XXX: missing NDFREE(&ndp, ...) */
 
 success:
-	return(err);
+	return (err);
 }
 
 /*
@@ -283,7 +300,7 @@ ntfs_mountfs(devvp, mp, td)
 
 	g_topology_unlock();
 	PICKUP_GIANT();
-	VOP_UNLOCK(devvp, 0, td);
+	VOP_UNLOCK(devvp, 0);
 	if (error)
 		return (error);
 
@@ -318,6 +335,8 @@ ntfs_mountfs(devvp, mp, td)
 		else
 			ntmp->ntm_bpmftrec = (1 << (-cpr)) / ntmp->ntm_bps;
 	}
+	ntmp->ntm_multiplier = ntmp->ntm_bps / DEV_BSIZE;
+
 	dprintf(("ntfs_mountfs(): bps: %d, spc: %d, media: %x, mftrecsz: %d (%d sects)\n",
 		ntmp->ntm_bps,ntmp->ntm_spc,ntmp->ntm_bootfile.bf_media,
 		ntmp->ntm_mftrecsz,ntmp->ntm_bpmftrec));
@@ -326,12 +345,12 @@ ntfs_mountfs(devvp, mp, td)
 
 	ntmp->ntm_mountp = mp;
 	ntmp->ntm_devvp = devvp;
-	if (1 == vfs_scanopt(mp->mnt_optnew, "uid", "%d", &v))
+	if (vfs_scanopt(mp->mnt_optnew, "uid", "%d", &v) == 1)
 		ntmp->ntm_uid = v;
-	if (1 == vfs_scanopt(mp->mnt_optnew, "gid", "%d", &v))
+	if (vfs_scanopt(mp->mnt_optnew, "gid", "%d", &v) == 1)
 		ntmp->ntm_gid = v;
-	if (1 == vfs_scanopt(mp->mnt_optnew, "mode", "%d", &v))
-		ntmp->ntm_mode = v;
+	if (vfs_scanopt(mp->mnt_optnew, "mode", "%d", &v) == 1)
+		ntmp->ntm_mode = v & ACCESSPERMS;
 	vfs_flagopt(mp->mnt_optnew,
 	    "caseins", &ntmp->ntm_flag, NTFS_MFLAG_CASEINS);
 	vfs_flagopt(mp->mnt_optnew,
@@ -353,7 +372,7 @@ ntfs_mountfs(devvp, mp, td)
 	else
 		ntfs_u28_init(ntmp, ntmp->ntm_82u, cs_local, cs_ntfs);
 
-	mp->mnt_data = (qaddr_t)ntmp;
+	mp->mnt_data = ntmp;
 
 	dprintf(("ntfs_mountfs(): case-%s,%s uid: %d, gid: %d, mode: %o\n",
 		(ntmp->ntm_flag & NTFS_MFLAG_CASEINS)?"insens.":"sens.",
@@ -415,8 +434,7 @@ ntfs_mountfs(devvp, mp, td)
 		}
 
 		/* Alloc memory for attribute definitions */
-		MALLOC(ntmp->ntm_ad, struct ntvattrdef *,
-			num * sizeof(struct ntvattrdef),
+		ntmp->ntm_ad = malloc(num * sizeof(struct ntvattrdef),
 			M_NTFSMNT, M_WAITOK);
 
 		ntmp->ntm_adnum = num;
@@ -461,7 +479,7 @@ out:
 
 	DROP_GIANT();
 	g_topology_lock();
-	g_vfs_close(cp, td);
+	g_vfs_close(cp);
 	g_topology_unlock();
 	PICKUP_GIANT();
 	
@@ -471,13 +489,14 @@ out:
 static int
 ntfs_unmount( 
 	struct mount *mp,
-	int mntflags,
-	struct thread *td)
+	int mntflags)
 {
+	struct thread *td;
 	struct ntfsmount *ntmp;
 	int error, flags, i;
 
 	dprintf(("ntfs_unmount: unmounting...\n"));
+	td = curthread;
 	ntmp = VFSTONTFS(mp);
 
 	flags = 0;
@@ -505,11 +524,11 @@ ntfs_unmount(
 	if (error)
 		printf("ntfs_unmount: vflush failed(sysnodes): %d\n",error);
 
-	vinvalbuf(ntmp->ntm_devvp, V_SAVE, td, 0, 0);
+	vinvalbuf(ntmp->ntm_devvp, V_SAVE, 0, 0);
 
 	DROP_GIANT();
 	g_topology_lock();
-	g_vfs_close(ntmp->ntm_cp, td);
+	g_vfs_close(ntmp->ntm_cp);
 	g_topology_unlock();
 	PICKUP_GIANT();
 
@@ -521,12 +540,12 @@ ntfs_unmount(
 	dprintf(("ntfs_umount: freeing memory...\n"));
 	ntfs_u28_uninit(ntmp);
 	ntfs_82u_uninit(ntmp);
-	mp->mnt_data = (qaddr_t)0;
+	mp->mnt_data = NULL;
 	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;
 	MNT_IUNLOCK(mp);
-	FREE(ntmp->ntm_ad, M_NTFSMNT);
-	FREE(ntmp, M_NTFSMNT);
+	free(ntmp->ntm_ad, M_NTFSMNT);
+	free(ntmp, M_NTFSMNT);
 	return (error);
 }
 
@@ -534,8 +553,7 @@ static int
 ntfs_root(
 	struct mount *mp,
 	int flags,
-	struct vnode **vpp,
-	struct thread *td )
+	struct vnode **vpp)
 {
 	struct vnode *nvp;
 	int error = 0;
@@ -567,7 +585,7 @@ ntfs_calccfree(
 
 	bmsize = VTOF(vp)->f_size;
 
-	MALLOC(tmp, u_int8_t *, bmsize, M_TEMP, M_WAITOK);
+	tmp = malloc(bmsize, M_TEMP, M_WAITOK);
 
 	error = ntfs_readattr(ntmp, VTONT(vp), NTFS_A_DATA, NULL,
 			       0, bmsize, tmp, NULL);
@@ -580,15 +598,14 @@ ntfs_calccfree(
 	*cfreep = cfree;
 
     out:
-	FREE(tmp, M_TEMP);
+	free(tmp, M_TEMP);
 	return(error);
 }
 
 static int
 ntfs_statfs(
 	struct mount *mp,
-	struct statfs *sbp,
-	struct thread *td)
+	struct statfs *sbp)
 {
 	struct ntfsmount *ntmp = VFSTONTFS(mp);
 	u_int64_t mftsize,mftallocated;
@@ -616,6 +633,7 @@ static int
 ntfs_fhtovp(
 	struct mount *mp,
 	struct fid *fhp,
+	int flags,
 	struct vnode **vpp)
 {
 	struct vnode *nvp;
@@ -742,7 +760,7 @@ ntfs_vgetex(
 	ntfs_ntput(ip);
 
 	if (lkflags & LK_TYPE_MASK) {
-		error = vn_lock(vp, lkflags, td);
+		error = vn_lock(vp, lkflags);
 		if (error) {
 			vput(vp);
 			return (error);

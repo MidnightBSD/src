@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,9 +30,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsm_subs.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfs/nfs_common.h,v 1.38 2005/07/14 20:08:26 ps Exp $
+ * $FreeBSD$
  */
-
 
 #ifndef _NFS_NFS_COMMON_H_
 #define _NFS_NFS_COMMON_H_
@@ -50,6 +48,7 @@ extern nfstype nfsv3_type[];
 int	nfs_adv(struct mbuf **, caddr_t *, int, int);
 u_quad_t nfs_curusec(void);
 void	*nfsm_disct(struct mbuf **, caddr_t *, int, int, int);
+int	nfs_realign(struct mbuf **, int);
 
 /* ****************************** */
 /* Build request/reply phase macros */
@@ -87,7 +86,7 @@ do { \
 		goto nfsmout; \
 	} \
 } while (0)
-		
+
 #define	nfsm_dissect(c, s) \
 ({ \
 	void *ret; \

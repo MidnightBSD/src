@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/tmpfs/tmpfs.h,v 1.3 2012/04/09 16:38:24 laffer1 Exp $ */
 /*	$NetBSD: tmpfs.h,v 1.26 2007/02/22 06:37:00 thorpej Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/tmpfs/tmpfs.h,v 1.11.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _FS_TMPFS_TMPFS_H_
@@ -73,7 +72,8 @@ struct tmpfs_dirent {
 	* td_namelen field must always be used when accessing its value. */
 	char *				td_name;
 
-	/* Pointer to the node this entry refers to. */
+	/* Pointer to the node this entry refers to.  In case this field
+	 * is NULL, the node is a whiteout. */
 	struct tmpfs_node *		td_node;
 };
 
@@ -283,7 +283,6 @@ struct tmpfs_node {
 			 * issue the required page ins or page outs whenever
 			 * a position within the file is accessed. */
 			vm_object_t		tn_aobj;
-			size_t			tn_aobj_pages;
 
 		}tn_reg;
 
@@ -304,10 +303,30 @@ LIST_HEAD(tmpfs_node_list, tmpfs_node);
 
 #define TMPFS_NODE_LOCK(node) mtx_lock(&(node)->tn_interlock)
 #define TMPFS_NODE_UNLOCK(node) mtx_unlock(&(node)->tn_interlock)
-#define        TMPFS_NODE_MTX(node) (&(node)->tn_interlock)
+#define TMPFS_NODE_MTX(node) (&(node)->tn_interlock)
+
+#ifdef INVARIANTS
+#define TMPFS_ASSERT_LOCKED(node) do {					\
+		MPASS(node != NULL);					\
+		MPASS(node->tn_vnode != NULL);				\
+		if (!VOP_ISLOCKED(node->tn_vnode) &&			\
+		    !mtx_owned(TMPFS_NODE_MTX(node)))			\
+			panic("tmpfs: node is not locked: %p", node);	\
+	} while (0)
+#define TMPFS_ASSERT_ELOCKED(node) do {					\
+		MPASS((node) != NULL);					\
+		MPASS((node)->tn_vnode != NULL);			\
+		mtx_assert(TMPFS_NODE_MTX(node), MA_OWNED);		\
+		ASSERT_VOP_LOCKED((node)->tn_vnode, "tmpfs");		\
+	} while (0)
+#else
+#define TMPFS_ASSERT_LOCKED(node) (void)0
+#define TMPFS_ASSERT_ELOCKED(node) (void)0
+#endif
 
 #define TMPFS_VNODE_ALLOCATING	1
 #define TMPFS_VNODE_WANT	2
+#define TMPFS_VNODE_DOOMED	4
 /* --------------------------------------------------------------------- */
 
 /*
@@ -318,11 +337,10 @@ struct tmpfs_mount {
 	 * system, set during mount time.  This variable must never be
 	 * used directly as it may be bigger than the current amount of
 	 * free memory; in the extreme case, it will hold the SIZE_MAX
-	 * value.  Instead, use the TMPFS_PAGES_MAX macro. */
+	 * value. */
 	size_t			tm_pages_max;
 
-	/* Number of pages in use by the file system.  Cannot be bigger
-	 * than the value returned by TMPFS_PAGES_MAX in any case. */
+	/* Number of pages in use by the file system. */
 	size_t			tm_pages_used;
 
 	/* Pointer to the node representing the root directory of this
@@ -395,28 +413,29 @@ struct tmpfs_fid {
 
 int	tmpfs_alloc_node(struct tmpfs_mount *, enum vtype,
 	    uid_t uid, gid_t gid, mode_t mode, struct tmpfs_node *,
-	    char *, dev_t, struct thread *, struct tmpfs_node **);
+	    char *, dev_t, struct tmpfs_node **);
 void	tmpfs_free_node(struct tmpfs_mount *, struct tmpfs_node *);
 int	tmpfs_alloc_dirent(struct tmpfs_mount *, struct tmpfs_node *,
 	    const char *, uint16_t, struct tmpfs_dirent **);
 void	tmpfs_free_dirent(struct tmpfs_mount *, struct tmpfs_dirent *,
 	    boolean_t);
 int	tmpfs_alloc_vp(struct mount *, struct tmpfs_node *, int,
-	    struct vnode **, struct thread *);
+	    struct vnode **);
 void	tmpfs_free_vp(struct vnode *);
 int	tmpfs_alloc_file(struct vnode *, struct vnode **, struct vattr *,
 	    struct componentname *, char *);
 void	tmpfs_dir_attach(struct vnode *, struct tmpfs_dirent *);
 void	tmpfs_dir_detach(struct vnode *, struct tmpfs_dirent *);
 struct tmpfs_dirent *	tmpfs_dir_lookup(struct tmpfs_node *node,
+			    struct tmpfs_node *f,
 			    struct componentname *cnp);
-struct tmpfs_dirent *tmpfs_dir_search(struct tmpfs_node *node,
-    struct tmpfs_node *f);
 int	tmpfs_dir_getdotdent(struct tmpfs_node *, struct uio *);
 int	tmpfs_dir_getdotdotdent(struct tmpfs_node *, struct uio *);
 struct tmpfs_dirent *	tmpfs_dir_lookupbycookie(struct tmpfs_node *, off_t);
 int	tmpfs_dir_getdents(struct tmpfs_node *, struct uio *, off_t *);
-int	tmpfs_reg_resize(struct vnode *, off_t);
+int	tmpfs_dir_whiteout_add(struct vnode *, struct componentname *);
+void	tmpfs_dir_whiteout_remove(struct vnode *, struct componentname *);
+int	tmpfs_reg_resize(struct vnode *, off_t, boolean_t);
 int	tmpfs_chflags(struct vnode *, int, struct ucred *, struct thread *);
 int	tmpfs_chmod(struct vnode *, mode_t, struct ucred *, struct thread *);
 int	tmpfs_chown(struct vnode *, uid_t, gid_t, struct ucred *,
@@ -446,7 +465,7 @@ int	tmpfs_truncate(struct vnode *, off_t);
  */
 #define TMPFS_DIRENT_MATCHES(de, name, len) \
     (de->td_namelen == (uint16_t)len && \
-    memcmp((de)->td_name, (name), (de)->td_namelen) == 0)
+    bcmp((de)->td_name, (name), (de)->td_namelen) == 0)
 
 /* --------------------------------------------------------------------- */
 
@@ -466,61 +485,15 @@ int	tmpfs_truncate(struct vnode *, off_t);
  * Memory management stuff.
  */
 
-/* Amount of memory pages to reserve for the system (e.g., to not use by
- * tmpfs).
- * XXX: Should this be tunable through sysctl, for instance? */
-#define TMPFS_PAGES_RESERVED (4 * 1024 * 1024 / PAGE_SIZE)
-
 /*
- * Returns information about the number of available memory pages,
- * including physical and virtual ones.
- *
- * If 'total' is TRUE, the value returned is the total amount of memory
- * pages configured for the system (either in use or free).
- * If it is FALSE, the value returned is the amount of free memory pages.
- *
- * Remember to remove TMPFS_PAGES_RESERVED from the returned value to avoid
- * excessive memory usage.
- *
+ * Amount of memory pages to reserve for the system (e.g., to not use by
+ * tmpfs).
  */
-static __inline size_t
-tmpfs_mem_info(void)
-{
+#define TMPFS_PAGES_MINRESERVED		(4 * 1024 * 1024 / PAGE_SIZE)
 
-	return (swap_pager_avail + cnt.v_free_count + cnt.v_cache_count);
-}
+size_t tmpfs_mem_avail(void);
 
-/* Returns the maximum size allowed for a tmpfs file system.  This macro
- * must be used instead of directly retrieving the value from tm_pages_max.
- * The reason is that the size of a tmpfs file system is dynamic: it lets
- * the user store files as long as there is enough free memory (including
- * physical memory and swap space).  Therefore, the amount of memory to be
- * used is either the limit imposed by the user during mount time or the
- * amount of available memory, whichever is lower.  To avoid consuming all
- * the memory for a given mount point, the system will always reserve a
- * minimum of TMPFS_PAGES_RESERVED pages, which is also taken into account
- * by this macro (see above). */
-static __inline size_t
-TMPFS_PAGES_MAX(struct tmpfs_mount *tmp)
-{
-	size_t freepages;
-
-	freepages = tmpfs_mem_info();
-	freepages -= freepages < TMPFS_PAGES_RESERVED ?
-	    freepages : TMPFS_PAGES_RESERVED;
-
-	return MIN(tmp->tm_pages_max, freepages + tmp->tm_pages_used);
-}
-
-/* Returns the available space for the given file system. */
-#define TMPFS_META_PAGES(tmp) (howmany((tmp)->tm_nodes_inuse * (sizeof(struct tmpfs_node) \
-				+ sizeof(struct tmpfs_dirent)), PAGE_SIZE))
-#define TMPFS_FILE_PAGES(tmp) ((tmp)->tm_pages_used)
-
-#define TMPFS_PAGES_AVAIL(tmp) (TMPFS_PAGES_MAX(tmp) > \
-			TMPFS_META_PAGES(tmp)+TMPFS_FILE_PAGES(tmp)? \
-			TMPFS_PAGES_MAX(tmp) - TMPFS_META_PAGES(tmp) \
-			- TMPFS_FILE_PAGES(tmp):0)
+size_t tmpfs_pages_used(struct tmpfs_mount *tmp);
 
 #endif
 

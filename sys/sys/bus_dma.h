@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bus.h,v 1.12 1997/10/01 08:25:15 fvdl Exp $	*/
 
 /*-
@@ -68,7 +67,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* $FreeBSD: src/sys/sys/bus_dma.h,v 1.30.6.1 2008/11/25 02:59:29 kensmith Exp $ */
+/* $MidnightBSD$ */
 
 #ifndef _BUS_DMA_H_
 #define _BUS_DMA_H_
@@ -102,7 +101,13 @@
  */
 #define	BUS_DMA_NOWRITE		0x100
 #define	BUS_DMA_NOCACHE		0x200
-#define	BUS_DMA_ISA		0x400	/* map memory for AXP ISA dma */
+
+/*
+ * The following flag is a DMA tag hint that the page offset of the
+ * loaded kernel virtual address must be preserved in the first
+ * physical segment address, when the KVA is loaded into DMA.
+ */
+#define	BUS_DMA_KEEP_PG_OFFSET	0x400
 
 /* Forwards needed by prototypes below. */
 struct mbuf;

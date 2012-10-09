@@ -73,21 +73,24 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/in6_rmx.c,v 1.18.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/sysctl.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/mbuf.h>
+#include <sys/rwlock.h>
 #include <sys/syslog.h>
 #include <sys/callout.h>
 
 #include <net/if.h>
 #include <net/route.h>
+
 #include <netinet/in.h>
 #include <netinet/ip_var.h>
 #include <netinet/in_var.h>
@@ -104,6 +107,9 @@ __FBSDID("$FreeBSD: src/sys/netinet6/in6_rmx.c,v 1.18.2.3.2.1 2008/11/25 02:59:2
 #include <netinet/tcp_var.h>
 
 extern int	in6_inithead(void **head, int off);
+#ifdef VIMAGE
+extern int	in6_detachhead(void **head, int off);
+#endif
 
 #define RTPRF_OURS		RTF_PROTO3	/* set on routes we manage */
 
@@ -118,6 +124,7 @@ in6_addroute(void *v_arg, void *n_arg, struct radix_node_head *head,
 	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)rt_key(rt);
 	struct radix_node *ret;
 
+	RADIX_NODE_HEAD_WLOCK_ASSERT(head);
 	if (IN6_IS_ADDR_MULTICAST(&sin6->sin6_addr))
 		rt->rt_flags |= RTF_MULTICAST;
 
@@ -147,27 +154,7 @@ in6_addroute(void *v_arg, void *n_arg, struct radix_node_head *head,
 		rt->rt_rmx.rmx_mtu = IN6_LINKMTU(rt->rt_ifp);
 
 	ret = rn_addroute(v_arg, n_arg, head, treenodes);
-	if (ret == NULL && rt->rt_flags & RTF_HOST) {
-		struct rtentry *rt2;
-		/*
-		 * We are trying to add a host route, but can't.
-		 * Find out if it is because of an
-		 * ARP entry and delete it if so.
-		 */
-		rt2 = rtalloc1((struct sockaddr *)sin6, 0, RTF_CLONING);
-		if (rt2) {
-			if (rt2->rt_flags & RTF_LLINFO &&
-				rt2->rt_flags & RTF_HOST &&
-				rt2->rt_gateway &&
-				rt2->rt_gateway->sa_family == AF_LINK) {
-				rtexpunge(rt2);
-				RTFREE_LOCKED(rt2);
-				ret = rn_addroute(v_arg, n_arg, head,
-					treenodes);
-			} else
-				RTFREE_LOCKED(rt2);
-		}
-	} else if (ret == NULL && rt->rt_flags & RTF_CLONING) {
+	if (ret == NULL) {
 		struct rtentry *rt2;
 		/*
 		 * We are trying to add a net route, but can't.
@@ -181,10 +168,10 @@ in6_addroute(void *v_arg, void *n_arg, struct radix_node_head *head,
 		 *	net route entry, 3ffe:0501:: -> if0.
 		 *	This case should not raise an error.
 		 */
-		rt2 = rtalloc1((struct sockaddr *)sin6, 0, RTF_CLONING);
+		rt2 = in6_rtalloc1((struct sockaddr *)sin6, 0, RTF_RNH_LOCKED,
+		    rt->rt_fibnum);
 		if (rt2) {
-			if ((rt2->rt_flags & (RTF_CLONING|RTF_HOST|RTF_GATEWAY))
-					== RTF_CLONING
+			if (((rt2->rt_flags & (RTF_HOST|RTF_GATEWAY)) == 0)
 			 && rt2->rt_gateway
 			 && rt2->rt_gateway->sa_family == AF_LINK
 			 && rt2->rt_ifp == rt->rt_ifp) {
@@ -193,7 +180,7 @@ in6_addroute(void *v_arg, void *n_arg, struct radix_node_head *head,
 			RTFREE_LOCKED(rt2);
 		}
 	}
-	return ret;
+	return (ret);
 }
 
 /*
@@ -207,65 +194,36 @@ in6_matroute(void *v_arg, struct radix_node_head *head)
 	struct radix_node *rn = rn_match(v_arg, head);
 	struct rtentry *rt = (struct rtentry *)rn;
 
-	if (rt && rt->rt_refcnt == 0) { /* this is first reference */
+	if (rt) {
+		RT_LOCK(rt);
 		if (rt->rt_flags & RTPRF_OURS) {
 			rt->rt_flags &= ~RTPRF_OURS;
 			rt->rt_rmx.rmx_expire = 0;
 		}
+		RT_UNLOCK(rt);
 	}
 	return rn;
 }
 
 SYSCTL_DECL(_net_inet6_ip6);
 
-static int rtq_reallyold = 60*60;
+static VNET_DEFINE(int, rtq_reallyold6) = 60*60;
 	/* one hour is ``really old'' */
-SYSCTL_INT(_net_inet6_ip6, IPV6CTL_RTEXPIRE, rtexpire,
-	CTLFLAG_RW, &rtq_reallyold , 0, "");
+#define	V_rtq_reallyold6		VNET(rtq_reallyold6)
+SYSCTL_VNET_INT(_net_inet6_ip6, IPV6CTL_RTEXPIRE, rtexpire, CTLFLAG_RW,
+    &VNET_NAME(rtq_reallyold6) , 0, "");
 
-static int rtq_minreallyold = 10;
+static VNET_DEFINE(int, rtq_minreallyold6) = 10;
 	/* never automatically crank down to less */
-SYSCTL_INT(_net_inet6_ip6, IPV6CTL_RTMINEXPIRE, rtminexpire,
-	CTLFLAG_RW, &rtq_minreallyold , 0, "");
+#define	V_rtq_minreallyold6		VNET(rtq_minreallyold6)
+SYSCTL_VNET_INT(_net_inet6_ip6, IPV6CTL_RTMINEXPIRE, rtminexpire, CTLFLAG_RW,
+    &VNET_NAME(rtq_minreallyold6) , 0, "");
 
-static int rtq_toomany = 128;
+static VNET_DEFINE(int, rtq_toomany6) = 128;
 	/* 128 cached routes is ``too many'' */
-SYSCTL_INT(_net_inet6_ip6, IPV6CTL_RTMAXCACHE, rtmaxcache,
-	CTLFLAG_RW, &rtq_toomany , 0, "");
-
-
-/*
- * On last reference drop, mark the route as belong to us so that it can be
- * timed out.
- */
-static void
-in6_clsroute(struct radix_node *rn, struct radix_node_head *head)
-{
-	struct rtentry *rt = (struct rtentry *)rn;
-
-	RT_LOCK_ASSERT(rt);
-
-	if (!(rt->rt_flags & RTF_UP))
-		return;		/* prophylactic measures */
-
-	if ((rt->rt_flags & (RTF_LLINFO | RTF_HOST)) != RTF_HOST)
-		return;
-
-	if ((rt->rt_flags & (RTF_WASCLONED | RTPRF_OURS)) != RTF_WASCLONED)
-		return;
-
-	/*
-	 * As requested by David Greenman:
-	 * If rtq_reallyold is 0, just delete the route without
-	 * waiting for a timeout cycle to kill it.
-	 */
-	if (rtq_reallyold != 0) {
-		rt->rt_flags |= RTPRF_OURS;
-		rt->rt_rmx.rmx_expire = time_uptime + rtq_reallyold;
-	} else {
-		rtexpunge(rt);
-	}
-}
+#define	V_rtq_toomany6			VNET(rtq_toomany6)
+SYSCTL_VNET_INT(_net_inet6_ip6, IPV6CTL_RTMAXCACHE, rtmaxcache, CTLFLAG_RW,
+    &VNET_NAME(rtq_toomany6) , 0, "");
 
 struct rtqk_arg {
 	struct radix_node_head *rnh;
@@ -280,7 +238,7 @@ struct rtqk_arg {
 /*
  * Get rid of old routes.  When draining, this deletes everything, even when
  * the timeout is not expired yet.  When updating, this makes sure that
- * nothing has a timeout longer than the current value of rtq_reallyold.
+ * nothing has a timeout longer than the current value of rtq_reallyold6.
  */
 static int
 in6_rtqkill(struct radix_node *rn, void *rock)
@@ -289,6 +247,8 @@ in6_rtqkill(struct radix_node *rn, void *rock)
 	struct rtentry *rt = (struct rtentry *)rn;
 	int err;
 
+	RADIX_NODE_HEAD_WLOCK_ASSERT(ap->rnh);
+
 	if (rt->rt_flags & RTPRF_OURS) {
 		ap->found++;
 
@@ -296,10 +256,11 @@ in6_rtqkill(struct radix_node *rn, void *rock)
 			if (rt->rt_refcnt > 0)
 				panic("rtqkill route really not free");
 
-			err = rtrequest(RTM_DELETE,
+			err = in6_rtrequest(RTM_DELETE,
 					(struct sockaddr *)rt_key(rt),
 					rt->rt_gateway, rt_mask(rt),
-					rt->rt_flags, 0);
+					rt->rt_flags|RTF_RNH_LOCKED, 0,
+					rt->rt_fibnum);
 			if (err) {
 				log(LOG_WARNING, "in6_rtqkill: error %d", err);
 			} else {
@@ -308,9 +269,9 @@ in6_rtqkill(struct radix_node *rn, void *rock)
 		} else {
 			if (ap->updating
 			   && (rt->rt_rmx.rmx_expire - time_uptime
-			       > rtq_reallyold)) {
+			       > V_rtq_reallyold6)) {
 				rt->rt_rmx.rmx_expire = time_uptime
-					+ rtq_reallyold;
+					+ V_rtq_reallyold6;
 			}
 			ap->nextstop = lmin(ap->nextstop,
 					    rt->rt_rmx.rmx_expire);
@@ -321,20 +282,21 @@ in6_rtqkill(struct radix_node *rn, void *rock)
 }
 
 #define RTQ_TIMEOUT	60*10	/* run no less than once every ten minutes */
-static int rtq_timeout = RTQ_TIMEOUT;
-static struct callout rtq_timer;
+static VNET_DEFINE(int, rtq_timeout6) = RTQ_TIMEOUT;
+static VNET_DEFINE(struct callout, rtq_timer6);
+
+#define	V_rtq_timeout6			VNET(rtq_timeout6)
+#define	V_rtq_timer6			VNET(rtq_timer6)
 
 static void
-in6_rtqtimo(void *rock)
+in6_rtqtimo_one(struct radix_node_head *rnh)
 {
-	struct radix_node_head *rnh = rock;
 	struct rtqk_arg arg;
-	struct timeval atv;
 	static time_t last_adjusted_timeout = 0;
 
 	arg.found = arg.killed = 0;
 	arg.rnh = rnh;
-	arg.nextstop = time_uptime + rtq_timeout;
+	arg.nextstop = time_uptime + V_rtq_timeout6;
 	arg.draining = arg.updating = 0;
 	RADIX_NODE_HEAD_LOCK(rnh);
 	rnh->rnh_walktree(rnh, in6_rtqkill, &arg);
@@ -345,21 +307,21 @@ in6_rtqtimo(void *rock)
 	 * If there are ``too many'' routes sitting around taking up space,
 	 * then crank down the timeout, and see if we can't make some more
 	 * go away.  However, we make sure that we will never adjust more
-	 * than once in rtq_timeout seconds, to keep from cranking down too
+	 * than once in rtq_timeout6 seconds, to keep from cranking down too
 	 * hard.
 	 */
-	if ((arg.found - arg.killed > rtq_toomany)
-	   && (time_uptime - last_adjusted_timeout >= rtq_timeout)
-	   && rtq_reallyold > rtq_minreallyold) {
-		rtq_reallyold = 2*rtq_reallyold / 3;
-		if (rtq_reallyold < rtq_minreallyold) {
-			rtq_reallyold = rtq_minreallyold;
+	if ((arg.found - arg.killed > V_rtq_toomany6)
+	   && (time_uptime - last_adjusted_timeout >= V_rtq_timeout6)
+	   && V_rtq_reallyold6 > V_rtq_minreallyold6) {
+		V_rtq_reallyold6 = 2*V_rtq_reallyold6 / 3;
+		if (V_rtq_reallyold6 < V_rtq_minreallyold6) {
+			V_rtq_reallyold6 = V_rtq_minreallyold6;
 		}
 
 		last_adjusted_timeout = time_uptime;
 #ifdef DIAGNOSTIC
-		log(LOG_DEBUG, "in6_rtqtimo: adjusted rtq_reallyold to %d",
-		    rtq_reallyold);
+		log(LOG_DEBUG, "in6_rtqtimo: adjusted rtq_reallyold6 to %d",
+		    V_rtq_reallyold6);
 #endif
 		arg.found = arg.killed = 0;
 		arg.updating = 1;
@@ -367,10 +329,26 @@ in6_rtqtimo(void *rock)
 		rnh->rnh_walktree(rnh, in6_rtqkill, &arg);
 		RADIX_NODE_HEAD_UNLOCK(rnh);
 	}
+}
+
+static void
+in6_rtqtimo(void *rock)
+{
+	CURVNET_SET_QUIET((struct vnet *) rock);
+	struct radix_node_head *rnh;
+	struct timeval atv;
+	u_int fibnum;
+
+	for (fibnum = 0; fibnum < rt_numfibs; fibnum++) {
+		rnh = rt_tables_get_rnh(fibnum, AF_INET6);
+		if (rnh != NULL)
+			in6_rtqtimo_one(rnh);
+	}
 
 	atv.tv_usec = 0;
-	atv.tv_sec = arg.nextstop - time_uptime;
-	callout_reset(&rtq_timer, tvtohz(&atv), in6_rtqtimo, rock);
+	atv.tv_sec = V_rtq_timeout6;
+	callout_reset(&V_rtq_timer6, tvtohz(&atv), in6_rtqtimo, rock);
+	CURVNET_RESTORE();
 }
 
 /*
@@ -380,7 +358,8 @@ struct mtuex_arg {
 	struct radix_node_head *rnh;
 	time_t nextstop;
 };
-static struct callout rtq_mtutimer;
+static VNET_DEFINE(struct callout, rtq_mtutimer);
+#define	V_rtq_mtutimer			VNET(rtq_mtutimer)
 
 static int
 in6_mtuexpire(struct radix_node *rn, void *rock)
@@ -407,45 +386,36 @@ in6_mtuexpire(struct radix_node *rn, void *rock)
 #define	MTUTIMO_DEFAULT	(60*1)
 
 static void
-in6_mtutimo(void *rock)
+in6_mtutimo_one(struct radix_node_head *rnh)
 {
-	struct radix_node_head *rnh = rock;
 	struct mtuex_arg arg;
-	struct timeval atv;
 
 	arg.rnh = rnh;
 	arg.nextstop = time_uptime + MTUTIMO_DEFAULT;
 	RADIX_NODE_HEAD_LOCK(rnh);
 	rnh->rnh_walktree(rnh, in6_mtuexpire, &arg);
 	RADIX_NODE_HEAD_UNLOCK(rnh);
-
-	atv.tv_usec = 0;
-	atv.tv_sec = arg.nextstop - time_uptime;
-	if (atv.tv_sec < 0) {
-		printf("invalid mtu expiration time on routing table\n");
-		arg.nextstop = time_uptime + 30;	/* last resort */
-		atv.tv_sec = 30;
-	}
-	callout_reset(&rtq_mtutimer, tvtohz(&atv), in6_mtutimo, rock);
 }
 
-#if 0
-void
-in6_rtqdrain(void)
+static void
+in6_mtutimo(void *rock)
 {
-	struct radix_node_head *rnh = rt_tables[AF_INET6];
-	struct rtqk_arg arg;
+	CURVNET_SET_QUIET((struct vnet *) rock);
+	struct radix_node_head *rnh;
+	struct timeval atv;
+	u_int fibnum;
 
-	arg.found = arg.killed = 0;
-	arg.rnh = rnh;
-	arg.nextstop = 0;
-	arg.draining = 1;
-	arg.updating = 0;
-	RADIX_NODE_HEAD_LOCK(rnh);
-	rnh->rnh_walktree(rnh, in6_rtqkill, &arg);
-	RADIX_NODE_HEAD_UNLOCK(rnh);
+	for (fibnum = 0; fibnum < rt_numfibs; fibnum++) {
+		rnh = rt_tables_get_rnh(fibnum, AF_INET6);
+		if (rnh != NULL)
+			in6_mtutimo_one(rnh);
+	}
+
+	atv.tv_sec = MTUTIMO_DEFAULT;
+	atv.tv_usec = 0;
+	callout_reset(&V_rtq_mtutimer, tvtohz(&atv), in6_mtutimo, rock);
+	CURVNET_RESTORE();
 }
-#endif
 
 /*
  * Initialize our routing tree.
@@ -454,6 +424,9 @@ in6_rtqdrain(void)
  * value should be so just use that).. FIX AFTER RELENG_7 is MFC'd
  * see also comments in in_inithead() vfs_export.c and domain.h
  */
+static VNET_DEFINE(int, _in6_rt_was_here);
+#define	V__in6_rt_was_here	VNET(_in6_rt_was_here)
+
 int
 in6_inithead(void **head, int off)
 {
@@ -468,10 +441,65 @@ in6_inithead(void **head, int off)
 	rnh = *head;
 	rnh->rnh_addaddr = in6_addroute;
 	rnh->rnh_matchaddr = in6_matroute;
-	rnh->rnh_close = in6_clsroute;
-	callout_init(&rtq_timer, CALLOUT_MPSAFE);
-	in6_rtqtimo(rnh);	/* kick off timeout first time */
-	callout_init(&rtq_mtutimer, CALLOUT_MPSAFE);
-	in6_mtutimo(rnh);	/* kick off timeout first time */
+
+	if (V__in6_rt_was_here == 0) {
+		callout_init(&V_rtq_timer6, CALLOUT_MPSAFE);
+		callout_init(&V_rtq_mtutimer, CALLOUT_MPSAFE);
+		in6_rtqtimo(curvnet);	/* kick off timeout first time */
+		in6_mtutimo(curvnet);	/* kick off timeout first time */
+		V__in6_rt_was_here = 1;
+	}
+
 	return 1;
+}
+
+#ifdef VIMAGE
+int
+in6_detachhead(void **head, int off)
+{
+
+	callout_drain(&V_rtq_timer6);
+	callout_drain(&V_rtq_mtutimer);
+	return (1);
+}
+#endif
+
+/*
+ * Extended API for IPv6 FIB support.
+ */
+void
+in6_rtredirect(struct sockaddr *dst, struct sockaddr *gw, struct sockaddr *nm,
+    int flags, struct sockaddr *src, u_int fibnum)
+{
+
+	rtredirect_fib(dst, gw, nm, flags, src, fibnum);
+}
+
+int
+in6_rtrequest(int req, struct sockaddr *dst, struct sockaddr *gw,
+    struct sockaddr *mask, int flags, struct rtentry **ret_nrt, u_int fibnum)
+{
+
+	return (rtrequest_fib(req, dst, gw, mask, flags, ret_nrt, fibnum));
+}
+
+void
+in6_rtalloc(struct route_in6 *ro, u_int fibnum)
+{
+
+	rtalloc_ign_fib((struct route *)ro, 0ul, fibnum);
+}
+
+void
+in6_rtalloc_ign(struct route_in6 *ro, u_long ignflags, u_int fibnum)
+{
+
+	rtalloc_ign_fib((struct route *)ro, ignflags, fibnum);
+}
+
+struct rtentry *
+in6_rtalloc1(struct sockaddr *dst, int report, u_long ignflags, u_int fibnum)
+{
+
+	return (rtalloc1_fib(dst, report, ignflags, fibnum));
 }

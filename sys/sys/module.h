@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/module.h,v 1.4 2012/03/31 17:05:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/module.h,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_MODULE_H_
@@ -117,21 +116,34 @@ struct mod_metadata {
 
 /*
  * Every kernel has a 'kernel' module with the version set to
- * __MidnightBSD_version.  We embed a MODULE_DEPEND() inside every module
+ * __FreeBSD_version.  We embed a MODULE_DEPEND() inside every module
  * that depends on the 'kernel' module.  It uses the current value of
- * __MidnightBSD_version as the minimum and preferred versions.  For the
+ * __FreeBSD_version as the minimum and preferred versions.  For the
  * maximum version it rounds the version up to the end of its branch
  * (i.e. M99999 for M.x).  This allows a module built on M.x to work
  * on M.y systems where y >= x, but fail on M.z systems where z < x.
  */
-#define	MODULE_KERNEL_MAXVER	(roundup(__MidnightBSD_version, 100000) - 1)
+#define	MODULE_KERNEL_MAXVER	(roundup(__FreeBSD_version, 100000) - 1)
 
-#define	DECLARE_MODULE(name, data, sub, order)				\
-	MODULE_DEPEND(name, kernel, __MidnightBSD_version,		\
-	    __MidnightBSD_version, MODULE_KERNEL_MAXVER);		\
+#define	DECLARE_MODULE_WITH_MAXVER(name, data, sub, order, maxver)	\
+	MODULE_DEPEND(name, kernel, __FreeBSD_version,			\
+	    __FreeBSD_version, maxver);			\
 	MODULE_METADATA(_md_##name, MDT_MODULE, &data, #name);		\
 	SYSINIT(name##module, sub, order, module_register_init, &data);	\
 	struct __hack
+
+#define	DECLARE_MODULE(name, data, sub, order)				\
+	DECLARE_MODULE_WITH_MAXVER(name, data, sub, order, MODULE_KERNEL_MAXVER)
+
+/*
+ * The module declared with DECLARE_MODULE_TIED can only be loaded
+ * into the kernel with exactly the same __FreeBSD_version.
+ *
+ * Use it for modules that use kernel interfaces that are not stable
+ * even on STABLE/X branches.
+ */
+#define	DECLARE_MODULE_TIED(name, data, sub, order)				\
+	DECLARE_MODULE_WITH_MAXVER(name, data, sub, order, __FreeBSD_version)
 
 #define	MODULE_VERSION(module, version)					\
 	static struct mod_version _##module##_version = {		\
@@ -155,11 +167,13 @@ void	module_register_init(const void *);
 int	module_register(const struct moduledata *, struct linker_file *);
 module_t	module_lookupbyname(const char *);
 module_t	module_lookupbyid(int);
+int	module_quiesce(module_t);
 void	module_reference(module_t);
 void	module_release(module_t);
-int	module_unload(module_t, int flags);
+int	module_unload(module_t);
 int	module_getid(module_t);
 module_t	module_getfnext(module_t);
+const char *	module_getname(module_t);
 void	module_setspecific(module_t, modspecific_t *);
 struct linker_file *module_file(module_t);
 

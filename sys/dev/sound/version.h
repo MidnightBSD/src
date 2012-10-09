@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/version.h,v 1.2 2007/06/16 03:37:27 ariff Exp $
+ * $FreeBSD$
  */
 
 #ifndef _SND_VERSION_H_
@@ -37,6 +37,6 @@
  * Last 2 decimal places reserved for daily versioning, starting
  * with 0.
  */
-#define SND_DRV_VERSION		2007061600
+#define SND_DRV_VERSION		2009061500
 
 #endif /* !_SND_VERSION_H_ */

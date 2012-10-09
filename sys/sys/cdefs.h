@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/cdefs.h,v 1.7 2012/02/12 21:14:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,12 +30,19 @@
  * SUCH DAMAGE.
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $
- * $MidnightBSD: src/sys/sys/cdefs.h,v 1.7 2012/02/12 21:14:24 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_SYS_CDEFS_H_
 #define	_SYS_CDEFS_H_
+
+#if defined(__cplusplus)
+#define	__BEGIN_DECLS	extern "C" {
+#define	__END_DECLS	}
+#else
+#define	__BEGIN_DECLS
+#define	__END_DECLS
+#endif
 
 /*
  * This code has been put in place to help reduce the addition of
@@ -55,8 +61,6 @@
 #define __GNUCLIKE___TYPEOF 1
 #define __GNUCLIKE___OFFSETOF 1
 #define __GNUCLIKE___SECTION 1
-
-#define __GNUCLIKE_ATTRIBUTE_MODE_DI 1
 
 #ifndef __INTEL_COMPILER
 # define __GNUCLIKE_CTOR_SECTION_HANDLING 1
@@ -96,9 +100,6 @@
 #define __CC_SUPPORTS_VARADIC_XXX 1 /* see varargs.h */
 
 #define __CC_SUPPORTS_DYNAMIC_ARRAY_INIT 1
-
-/* XXX: sys/dev/mpt/mpilib/mpi_type.h uses it, someone should review it */
-#define __CC_INT_IS_32BIT 1
 
 #endif /* __GNUC__ || __INTEL_COMPILER */
 
@@ -178,24 +179,6 @@
  * for a given compiler, let the compile fail if it is told to use
  * a feature that we cannot live without.
  */
-
-/*
- * Non-static C99 inline functions are optional bodies.  They don't
- * create global symbols if not used, but can be replaced if desirable.
- * This differs from the behavior of GCC before version 4.3.  The nearest
- * equivalent for older GCC is `extern inline'.  For newer GCC, use the
- * gnu_inline attribute additionally to get the old behavior.
- *
- * For C99 compilers other than GCC, the C99 behavior is expected.
- */
-#if defined(__GNUC__) && defined(__GNUC_STDC_INLINE__)
-#define __c99inline     extern __attribute__((__gnu_inline__)) __inline
-#elif defined(__GNUC__)
-#define __c99inline     extern __inline
-#elif defined(__STDC_VERSION__)
-define __c99inline     __inline
-#endif
-
 #ifdef lint
 #define	__dead2
 #define	__pure2
@@ -234,10 +217,59 @@ define __c99inline     __inline
 #define __section(x)	__attribute__((__section__(x)))
 #endif
 #if defined(__PCC__)
-#define __packed	/* not yet */
-#define __aligned(x)	/* not yet */
-#define __section(x)	/* not yet */
+#define __packed       /* not yet */
+#define __aligned(x)   /* not yet */
+#define __section(x)   /* not yet */
 #endif
+#endif
+
+#if !__GNUC_PREREQ__(2, 95)
+#define	__alignof(x)	__offsetof(struct { char __a; x __b; }, __b)
+#endif
+
+/*
+ * Keywords added in C11.
+ */
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#define	_Alignas(e)		alignas(e)
+#define	_Alignof(e)		alignof(e)
+#define	_Noreturn		[[noreturn]]
+#define	_Static_assert(e, s)	static_assert(e, s)
+/* FIXME: change this to thread_local when clang in base supports it */
+#define	_Thread_local		__thread
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+/* Do nothing.  They are language keywords. */
+#else
+/* Not supported.  Implement them using our versions. */
+#define	_Alignas(x)		__aligned(x)
+#define	_Alignof(x)		__alignof(x)
+#define	_Noreturn		__dead2
+#define	_Thread_local		__thread
+#ifdef __COUNTER__
+#define	_Static_assert(x, y)	__Static_assert(x, __COUNTER__)
+#define	__Static_assert(x, y)	___Static_assert(x, y)
+#define	___Static_assert(x, y)	typedef char __assert_ ## y[(x) ? 1 : -1]
+#else
+#define	_Static_assert(x, y)	struct __hack
+#endif
+#endif
+
+/*
+ * Emulation of C11 _Generic().  Unlike the previously defined C11
+ * keywords, it is not possible to implement this using exactly the same
+ * syntax.  Therefore implement something similar under the name
+ * __generic().  Unlike _Generic(), this macro can only distinguish
+ * between a single type, so it requires nested invocations to
+ * distinguish multiple cases.
+ */
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define	__generic(expr, t, yes, no)					\
+	_Generic(expr, t: yes, default: no)
+#elif __GNUC_PREREQ__(3, 1) && !defined(__cplusplus)
+#define	__generic(expr, t, yes, no)					\
+	__builtin_choose_expr(						\
+	    __builtin_types_compatible_p(__typeof(expr), t), yes, no)
 #endif
 
 #if __GNUC_PREREQ__(2, 96)
@@ -264,6 +296,18 @@ define __c99inline     __inline
 #define __nonnull(x)	__attribute__((__nonnull__(x)))
 #else
 #define __nonnull(x)
+#endif
+
+#if __GNUC_PREREQ__(3, 4)
+#define	__fastcall	__attribute__((__fastcall__))
+#else
+#define	__fastcall
+#endif
+
+#if __GNUC_PREREQ__(4, 1)
+#define	__returns_twice	__attribute__((__returns_twice__))
+#else
+#define	__returns_twice
 #endif
 
 /* XXX: should use `#if __STDC_VERSION__ < 199901'. */
@@ -298,33 +342,6 @@ define __c99inline     __inline
 #else
 #define	__restrict	restrict
 #endif
-#endif
-
-#if __GNUC_PREREQ__(4, 0)
-#  define __dso_public	__attribute__((__visibility__("default")))
-#  define __dso_hidden	__attribute__((__visibility__("hidden")))
-#  define __BEGIN_PUBLIC	_Pragma("GCC visibility push(default)")
-#  define __END_PUBLIC		_Pragma("GCC visibility pop")
-#  define __BEGIN_HIDDEN	_Pragma("GCC visibility push(hidden)")
-#  define __END_HIDDEN		_Pragma("GCC visibility pop")
-#else
-#  define __dso_public
-#  define __dso_hidden
-#  define __BEGIN_PUBLIC
-#  define __END_PUBLIC
-#  define __BEGIN_HIDDEN
-#  define __END_HIDDEN
-#endif
-
-
-#if defined(__cplusplus)
-#define	__BEGIN_DECLS		__BEGIN_PUBLIC extern "C" {
-#define	__END_DECLS		} __END_PUBLIC
-#define	__static_cast(x,y)	static_cast<x>(y)
-#else
-#define	__BEGIN_DECLS		__BEGIN_PUBLIC
-#define	__END_DECLS		__END_PUBLIC
-#define	__static_cast(x,y)	(x)y
 #endif
 
 /*
@@ -379,10 +396,11 @@ define __c99inline     __inline
 #define __offsetof(type, field)	 __builtin_offsetof(type, field)
 #else
 #ifndef __cplusplus
-#define	__offsetof(type, field)	((size_t)(&((type *)0)->field))
+#define	__offsetof(type, field) \
+	((__size_t)(__uintptr_t)((const volatile void *)&((type *)0)->field))
 #else
 #define __offsetof(type, field)					\
-  (__offsetof__ (reinterpret_cast <size_t>			\
+  (__offsetof__ (reinterpret_cast <__size_t>			\
                  (&reinterpret_cast <const volatile char &>	\
                   (static_cast<type *> (0)->field))))
 #endif
@@ -400,17 +418,22 @@ define __c99inline     __inline
 #define	__printflike(fmtarg, firstvararg)
 #define	__scanflike(fmtarg, firstvararg)
 #define	__format_arg(fmtarg)
+#define	__strfmonlike(fmtarg, firstvararg)
+#define	__strftimelike(fmtarg, firstvararg)
 #else
 #define	__printflike(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__printf__, fmtarg, firstvararg)))
 #define	__scanflike(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__scanf__, fmtarg, firstvararg)))
 #define	__format_arg(fmtarg)	__attribute__((__format_arg__ (fmtarg)))
+#define	__strfmonlike(fmtarg, firstvararg) \
+	    __attribute__((__format__ (__strfmon__, fmtarg, firstvararg)))
+#define	__strftimelike(fmtarg, firstvararg) \
+	    __attribute__((__format__ (__strftime__, fmtarg, firstvararg)))
 #endif
 
 /* Compiler-dependent macros that rely on FreeBSD-specific extensions. */
-#if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 300001 && \
-    defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if __FreeBSD_cc_version >= 300001 && defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #define	__printf0like(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__printf0__, fmtarg, firstvararg)))
 #else
@@ -468,7 +491,7 @@ define __c99inline     __inline
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.7 2012/02/12 21:14:24 laffer1 Exp $");
+ *	__MBSDID("$MidnightBSD$");
  */
 #ifndef	__MBSDID
 #if !defined(lint) && !defined(STRIP_MBSDID)
@@ -479,8 +502,8 @@ define __c99inline     __inline
 #endif
 
 /* XXX temporary hack until the source tree is updated */
-#ifndef __FBSDID
-#define __FBSDID(s)	struct __hack
+#ifndef	__FBSDID
+#define	__FBSDID(s)	struct __hack
 #endif
 
 #ifndef	__RCSID
@@ -516,15 +539,15 @@ define __c99inline     __inline
 #endif
 
 #ifndef	__DECONST
-#define	__DECONST(type, var)	((type)(uintptr_t)(const void *)(var))
+#define	__DECONST(type, var)	((type)(__uintptr_t)(const void *)(var))
 #endif
 
 #ifndef	__DEVOLATILE
-#define	__DEVOLATILE(type, var)	((type)(uintptr_t)(volatile void *)(var))
+#define	__DEVOLATILE(type, var)	((type)(__uintptr_t)(volatile void *)(var))
 #endif
 
 #ifndef	__DEQUALIFY
-#define	__DEQUALIFY(type, var)	((type)(uintptr_t)(const volatile void *)(var))
+#define	__DEQUALIFY(type, var)	((type)(__uintptr_t)(const volatile void *)(var))
 #endif
 
 /*-
@@ -638,6 +661,16 @@ define __c99inline     __inline
 #define	__BSD_VISIBLE		1
 #define	__ISO_C_VISIBLE		1999
 #endif
+#endif
+
+#ifndef	__has_feature
+#define	__has_feature(x) 0
+#endif
+#ifndef	__has_include
+#define	__has_include(x) 0
+#endif
+#ifndef	__has_builtin
+#define	__has_builtin(x) 0
 #endif
 
 #endif /* !_SYS_CDEFS_H_ */

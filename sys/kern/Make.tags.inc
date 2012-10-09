@@ -1,5 +1,4 @@
-# $MidnightBSD: src/sys/kern/Make.tags.inc,v 1.6 2012/03/26 12:10:20 laffer1 Exp $
-# $FreeBSD: src/sys/kern/Make.tags.inc,v 1.20 2007/07/05 08:55:14 bz Exp $
+# $MidnightBSD$
 #	@(#)Make.tags.inc	8.1 (Berkeley) 6/11/93
 
 SYS?=	${.CURDIR}/..
@@ -28,6 +27,7 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/fs/devfs/*.[ch] \
 	${SYS}/fs/fdescfs/*.[ch] \
 	${SYS}/fs/fifofs/*.[ch] \
+	${SYS}/fs/hpfs/*.[ch] \
 	${SYS}/fs/msdosfs/*.[ch] \
 	${SYS}/fs/ntfs/*.[ch] \
 	${SYS}/fs/nullfs/*.[ch] \
@@ -37,6 +37,7 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/fs/smbfs/*.[ch] \
 	${SYS}/fs/udf/*.[ch] \
 	${SYS}/fs/unionfs/*.[ch] \
+	${SYS}/geom/*.[ch] \
 	${SYS}/kern/*.[ch] \
 	${SYS}/net/*.[ch] \
 	${SYS}/netatalk/*.[ch] \
@@ -55,6 +56,7 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/sys/*.[ch]
 
 COMMDIR1= ${SYS}/conf \
+	${SYS}/geom \
 	${SYS}/kern \
 	${SYS}/net \
 	${SYS}/netatalk \

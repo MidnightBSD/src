@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/elf.h,v 1.3 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1996-1997 John D. Polstra.
  * All rights reserved.
@@ -24,6 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ELF_H_

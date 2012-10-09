@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/fwdma.h,v 1.3 2005/01/06 01:42:41 imp Exp $
+ * $FreeBSD$
  */
 
 struct fwdma_alloc {

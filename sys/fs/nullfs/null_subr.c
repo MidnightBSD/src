@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)null_subr.c	8.7 (Berkeley) 5/14/95
  *
- * $FreeBSD: src/sys/fs/nullfs/null_subr.c,v 1.51.2.1 2007/10/22 05:44:07 daichi Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -104,11 +103,9 @@ null_hashget(mp, lowervp)
 	struct mount *mp;
 	struct vnode *lowervp;
 {
-	struct thread *td = curthread;	/* XXX */
 	struct null_node_hashhead *hd;
 	struct null_node *a;
 	struct vnode *vp;
-	int error;
 
 	ASSERT_VOP_LOCKED(lowervp, "null_hashget");
 
@@ -122,24 +119,15 @@ null_hashget(mp, lowervp)
 	mtx_lock(&null_hashmtx);
 	LIST_FOREACH(a, hd, null_hash) {
 		if (a->null_lowervp == lowervp && NULLTOV(a)->v_mount == mp) {
-			vp = NULLTOV(a);
-			VI_LOCK(vp);
-			mtx_unlock(&null_hashmtx);
-			/*
-			 * We need to clear the OWEINACT flag here as this
-			 * may lead vget() to try to lock our vnode which
-			 * is already locked via lowervp.
-			 */
-			vp->v_iflag &= ~VI_OWEINACT;
-			error = vget(vp, LK_INTERLOCK, td);
 			/*
 			 * Since we have the lower node locked the nullfs
 			 * node can not be in the process of recycling.  If
 			 * it had been recycled before we grabed the lower
 			 * lock it would not have been found on the hash.
 			 */
-			if (error)
-				panic("null_hashget: vget error %d", error);
+			vp = NULLTOV(a);
+			vref(vp);
+			mtx_unlock(&null_hashmtx);
 			return (vp);
 		}
 	}
@@ -156,11 +144,9 @@ null_hashins(mp, xp)
 	struct mount *mp;
 	struct null_node *xp;
 {
-	struct thread *td = curthread;	/* XXX */
 	struct null_node_hashhead *hd;
 	struct null_node *oxp;
 	struct vnode *ovp;
-	int error;
 
 	hd = NULL_NHASH(xp->null_lowervp);
 	mtx_lock(&null_hashmtx);
@@ -172,12 +158,8 @@ null_hashins(mp, xp)
 			 * operation.
 			 */
 			ovp = NULLTOV(oxp);
-			VI_LOCK(ovp);
+			vref(ovp);
 			mtx_unlock(&null_hashmtx);
-			ovp->v_iflag &= ~VI_OWEINACT;
-			error = vget(ovp, LK_INTERLOCK, td);
-			if (error)
-				panic("null_hashins: vget error %d", error);
 			return (ovp);
 		}
 	}
@@ -187,15 +169,26 @@ null_hashins(mp, xp)
 }
 
 static void
-null_insmntque_dtr(struct vnode *vp, void *xp)
+null_destroy_proto(struct vnode *vp, void *xp)
 {
+
+	lockmgr(&vp->v_lock, LK_EXCLUSIVE, NULL);
+	VI_LOCK(vp);
 	vp->v_data = NULL;
 	vp->v_vnlock = &vp->v_lock;
-	FREE(xp, M_NULLFSNODE);
 	vp->v_op = &dead_vnodeops;
-	(void) vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
+	VI_UNLOCK(vp);
 	vgone(vp);
 	vput(vp);
+	free(xp, M_NULLFSNODE);
+}
+
+static void
+null_insmntque_dtr(struct vnode *vp, void *xp)
+{
+
+	vput(((struct null_node *)xp)->null_lowervp);
+	null_destroy_proto(vp, xp);
 }
 
 /*
@@ -216,6 +209,13 @@ null_nodeget(mp, lowervp, vpp)
 	struct vnode *vp;
 	int error;
 
+	/*
+	 * The insmntque1() call below requires the exclusive lock on
+	 * the nullfs vnode.
+	 */
+	ASSERT_VOP_ELOCKED(lowervp, "lowervp");
+	KASSERT(lowervp->v_usecount >= 1, ("Unreferenced vnode %p\n", lowervp));
+
 	/* Lookup the hash firstly */
 	*vpp = null_hashget(mp, lowervp);
 	if (*vpp != NULL) {
@@ -226,22 +226,20 @@ null_nodeget(mp, lowervp, vpp)
 	/*
 	 * We do not serialize vnode creation, instead we will check for
 	 * duplicates later, when adding new vnode to hash.
-	 *
 	 * Note that duplicate can only appear in hash if the lowervp is
 	 * locked LK_SHARED.
-	 */
-
-	/*
+	 *
 	 * Do the MALLOC before the getnewvnode since doing so afterward
 	 * might cause a bogus v_data pointer to get dereferenced
 	 * elsewhere if MALLOC should block.
 	 */
-	MALLOC(xp, struct null_node *, sizeof(struct null_node),
+	xp = malloc(sizeof(struct null_node),
 	    M_NULLFSNODE, M_WAITOK);
 
 	error = getnewvnode("null", mp, &null_vnodeops, &vp);
 	if (error) {
-		FREE(xp, M_NULLFSNODE);
+		vput(lowervp);
+		free(xp, M_NULLFSNODE);
 		return (error);
 	}
 
@@ -262,9 +260,7 @@ null_nodeget(mp, lowervp, vpp)
 	*vpp = null_hashins(mp, xp);
 	if (*vpp != NULL) {
 		vrele(lowervp);
-		vp->v_vnlock = &vp->v_lock;
-		xp->null_lowervp = NULL;
-		vrele(vp);
+		null_destroy_proto(vp, xp);
 		return (0);
 	}
 	*vpp = vp;
@@ -287,20 +283,14 @@ null_hashrem(xp)
 
 #ifdef DIAGNOSTIC
 
-#ifdef KDB
-#define	null_checkvp_barrier	1
-#else
-#define	null_checkvp_barrier	0
-#endif
-
 struct vnode *
 null_checkvp(vp, fil, lno)
 	struct vnode *vp;
 	char *fil;
 	int lno;
 {
-	int interlock = 0;
 	struct null_node *a = VTONULL(vp);
+
 #ifdef notyet
 	/*
 	 * Can't do this check because vop_reclaim runs
@@ -308,43 +298,24 @@ null_checkvp(vp, fil, lno)
 	 */
 	if (vp->v_op != null_vnodeop_p) {
 		printf ("null_checkvp: on non-null-node\n");
-		while (null_checkvp_barrier) /*WAIT*/ ;
 		panic("null_checkvp");
-	};
+	}
 #endif
 	if (a->null_lowervp == NULLVP) {
 		/* Should never happen */
-		int i; u_long *p;
-		printf("vp = %p, ZERO ptr\n", (void *)vp);
-		for (p = (u_long *) a, i = 0; i < 8; i++)
-			printf(" %lx", p[i]);
-		printf("\n");
-		/* wait for debugger */
-		while (null_checkvp_barrier) /*WAIT*/ ;
-		panic("null_checkvp");
+		panic("null_checkvp %p", vp);
 	}
-	if (mtx_owned(VI_MTX(vp)) != 0) {
-		VI_UNLOCK(vp);
-		interlock = 1;
-	}
-	if (vrefcnt(a->null_lowervp) < 1) {
-		int i; u_long *p;
-		printf("vp = %p, unref'ed lowervp\n", (void *)vp);
-		for (p = (u_long *) a, i = 0; i < 8; i++)
-			printf(" %lx", p[i]);
-		printf("\n");
-		/* wait for debugger */
-		while (null_checkvp_barrier) /*WAIT*/ ;
-		panic ("null with unref'ed lowervp");
-	};
-	if (interlock != 0)
-		VI_LOCK(vp);
+	VI_LOCK_FLAGS(a->null_lowervp, MTX_DUPOK);
+	if (a->null_lowervp->v_usecount < 1)
+		panic ("null with unref'ed lowervp, vp %p lvp %p",
+		    vp, a->null_lowervp);
+	VI_UNLOCK(a->null_lowervp);
 #ifdef notyet
 	printf("null %x/%d -> %x/%d [%s, %d]\n",
 	        NULLTOV(a), vrefcnt(NULLTOV(a)),
 		a->null_lowervp, vrefcnt(a->null_lowervp),
 		fil, lno);
 #endif
-	return a->null_lowervp;
+	return (a->null_lowervp);
 }
 #endif

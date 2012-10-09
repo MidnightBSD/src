@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1995
  *	The Regents of the University of California.
@@ -30,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fifo_vnops.c	8.10 (Berkeley) 5/27/95
- * $FreeBSD: src/sys/fs/fifofs/fifo_vnops.c,v 1.138 2007/07/26 16:58:09 pjd Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -44,7 +43,7 @@
 #include <sys/mutex.h>
 #include <sys/malloc.h>
 #include <sys/poll.h>
-#include <sys/proc.h> /* XXXKSE */
+#include <sys/proc.h>
 #include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -62,34 +61,41 @@ static fo_poll_t        fifo_poll_f;
 static fo_kqfilter_t    fifo_kqfilter_f;
 static fo_stat_t        fifo_stat_f;
 static fo_close_t       fifo_close_f;
+static fo_truncate_t    fifo_truncate_f;
 
 struct fileops fifo_ops_f = {
 	.fo_read =      fifo_read_f,
 	.fo_write =     fifo_write_f,
+	.fo_truncate =  fifo_truncate_f,
 	.fo_ioctl =     fifo_ioctl_f,
 	.fo_poll =      fifo_poll_f,
 	.fo_kqfilter =  fifo_kqfilter_f,
 	.fo_stat =      fifo_stat_f,
 	.fo_close =     fifo_close_f,
+	.fo_chmod =	vn_chmod,
+	.fo_chown =	vn_chown,
 	.fo_flags =     DFLAG_PASSABLE
 };
 
 /*
  * This structure is associated with the FIFO vnode and stores
  * the state associated with the FIFO.
+ * Notes about locking:
+ *   - fi_readsock and fi_writesock are invariant since init time.
+ *   - fi_readers and fi_writers are vnode lock protected.
+ *   - fi_wgen is fif_mtx lock protected.
  */
 struct fifoinfo {
 	struct socket	*fi_readsock;
 	struct socket	*fi_writesock;
 	long		fi_readers;
 	long		fi_writers;
+	int		fi_wgen;
 };
 
 static vop_print_t	fifo_print;
 static vop_open_t	fifo_open;
 static vop_close_t	fifo_close;
-static vop_ioctl_t	fifo_ioctl;
-static vop_kqfilter_t	fifo_kqfilter;
 static vop_pathconf_t	fifo_pathconf;
 static vop_advlock_t	fifo_advlock;
 
@@ -100,24 +106,31 @@ static int	filt_fifowrite(struct knote *kn, long hint);
 static void	filt_fifodetach_notsup(struct knote *kn);
 static int	filt_fifo_notsup(struct knote *kn, long hint);
 
-static struct filterops fiforead_filtops =
-	{ 1, NULL, filt_fifordetach, filt_fiforead };
-static struct filterops fifowrite_filtops =
-	{ 1, NULL, filt_fifowdetach, filt_fifowrite };
-static struct filterops fifo_notsup_filtops =
-	{ 1, NULL, filt_fifodetach_notsup, filt_fifo_notsup };
+static struct filterops fiforead_filtops = {
+	.f_isfd = 1,
+	.f_detach = filt_fifordetach,
+	.f_event = filt_fiforead,
+};
+static struct filterops fifowrite_filtops = {
+	.f_isfd = 1,
+	.f_detach = filt_fifowdetach,
+	.f_event = filt_fifowrite,
+};
+static struct filterops fifo_notsup_filtops = {
+	.f_isfd = 1,
+	.f_detach = filt_fifodetach_notsup,
+	.f_event = filt_fifo_notsup,
+};
 
 struct vop_vector fifo_specops = {
 	.vop_default =		&default_vnodeops,
 
-	.vop_access =		VOP_EBADF,
 	.vop_advlock =		fifo_advlock,
 	.vop_close =		fifo_close,
 	.vop_create =		VOP_PANIC,
 	.vop_getattr =		VOP_EBADF,
-	.vop_ioctl =		fifo_ioctl,
-	.vop_kqfilter =		fifo_kqfilter,
-	.vop_lease =		VOP_NULL,
+	.vop_ioctl =		VOP_PANIC,
+	.vop_kqfilter =		VOP_PANIC,
 	.vop_link =		VOP_PANIC,
 	.vop_mkdir =		VOP_PANIC,
 	.vop_mknod =		VOP_PANIC,
@@ -148,12 +161,12 @@ fifo_cleanup(struct vnode *vp)
 {
 	struct fifoinfo *fip = vp->v_fifoinfo;
 
-	ASSERT_VOP_LOCKED(vp, "fifo_cleanup");
+	ASSERT_VOP_ELOCKED(vp, "fifo_cleanup");
 	if (fip->fi_readers == 0 && fip->fi_writers == 0) {
 		vp->v_fifoinfo = NULL;
 		(void)soclose(fip->fi_readsock);
 		(void)soclose(fip->fi_writesock);
-		FREE(fip, M_VNODE);
+		free(fip, M_VNODE);
 	}
 }
 
@@ -169,7 +182,7 @@ fifo_open(ap)
 		int  a_mode;
 		struct ucred *a_cred;
 		struct thread *a_td;
-		int a_fdidx;
+		struct file *a_fp;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
@@ -184,7 +197,7 @@ fifo_open(ap)
 	if (fp == NULL)
 		return (EINVAL);
 	if ((fip = vp->v_fifoinfo) == NULL) {
-		MALLOC(fip, struct fifoinfo *, sizeof(*fip), M_VNODE, M_WAITOK);
+		fip = malloc(sizeof(*fip), M_VNODE, M_WAITOK);
 		error = socreate(AF_LOCAL, &rso, SOCK_STREAM, 0, cred, td);
 		if (error)
 			goto fail1;
@@ -194,6 +207,9 @@ fifo_open(ap)
 			goto fail2;
 		fip->fi_writesock = wso;
 		error = soconnect2(wso, rso);
+		/* Close the direction we do not use, so we can get POLLHUP. */
+		if (error == 0)
+			error = soshutdown(rso, SHUT_WR);
 		if (error) {
 			(void)soclose(wso);
 fail2:
@@ -202,7 +218,7 @@ fail1:
 			free(fip, M_VNODE);
 			return (error);
 		}
-		fip->fi_readers = fip->fi_writers = 0;
+		fip->fi_wgen = fip->fi_readers = fip->fi_writers = 0;
 		wso->so_snd.sb_lowat = PIPE_BUF;
 		SOCKBUF_LOCK(&rso->so_rcv);
 		rso->so_rcv.sb_state |= SBS_CANTRCVMORE;
@@ -213,14 +229,9 @@ fail1:
 	}
 
 	/*
-	 * General access to fi_readers and fi_writers is protected using
-	 * the vnode lock.
-	 *
-	 * Protect the increment of fi_readers and fi_writers and the
-	 * associated calls to wakeup() with the fifo mutex in addition
-	 * to the vnode lock.  This allows the vnode lock to be dropped
-	 * for the msleep() calls below, and using the fifo mutex with
-	 * msleep() prevents the wakeup from being missed.
+	 * Use the fifo_mtx lock here, in addition to the vnode lock,
+	 * in order to allow vnode lock dropping before msleep() calls
+	 * and still avoiding missed wakeups.
 	 */
 	mtx_lock(&fifo_mtx);
 	if (ap->a_mode & FREAD) {
@@ -234,10 +245,13 @@ fail1:
 				sowwakeup(fip->fi_writesock);
 			}
 		}
+		fp->f_seqcount = fip->fi_wgen - fip->fi_writers;
 	}
 	if (ap->a_mode & FWRITE) {
 		if ((ap->a_mode & O_NONBLOCK) && fip->fi_readers == 0) {
 			mtx_unlock(&fifo_mtx);
+			if (fip->fi_writers == 0)
+				fifo_cleanup(vp);
 			return (ENXIO);
 		}
 		fip->fi_writers++;
@@ -253,10 +267,10 @@ fail1:
 	}
 	if ((ap->a_mode & O_NONBLOCK) == 0) {
 		if ((ap->a_mode & FREAD) && fip->fi_writers == 0) {
-			VOP_UNLOCK(vp, 0, td);
+			VOP_UNLOCK(vp, 0);
 			error = msleep(&fip->fi_readers, &fifo_mtx,
 			    PDROP | PCATCH | PSOCK, "fifoor", 0);
-			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 			if (error) {
 				fip->fi_readers--;
 				if (fip->fi_readers == 0) {
@@ -273,14 +287,17 @@ fail1:
 			 */
 		}
 		if ((ap->a_mode & FWRITE) && fip->fi_readers == 0) {
-			VOP_UNLOCK(vp, 0, td);
+			VOP_UNLOCK(vp, 0);
 			error = msleep(&fip->fi_writers, &fifo_mtx,
 			    PDROP | PCATCH | PSOCK, "fifoow", 0);
-			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 			if (error) {
 				fip->fi_writers--;
 				if (fip->fi_writers == 0) {
 					socantrcvmore(fip->fi_readsock);
+					mtx_lock(&fifo_mtx);
+					fip->fi_wgen++;
+					mtx_unlock(&fifo_mtx);
 					fifo_cleanup(vp);
 				}
 				return (error);
@@ -295,48 +312,9 @@ fail1:
 	}
 	mtx_unlock(&fifo_mtx);
 	KASSERT(fp != NULL, ("can't fifo/vnode bypass"));
-	FILE_LOCK(fp);
 	KASSERT(fp->f_ops == &badfileops, ("not badfileops in fifo_open"));
-	fp->f_data = fip;
-	fp->f_ops = &fifo_ops_f;
-	FILE_UNLOCK(fp);
+	finit(fp, fp->f_flag, DTYPE_FIFO, fip, &fifo_ops_f);
 	return (0);
-}
-
-/*
- * Now unused vnode ioctl routine.
- */
-/* ARGSUSED */
-static int
-fifo_ioctl(ap)
-	struct vop_ioctl_args /* {
-		struct vnode *a_vp;
-		u_long  a_command;
-		caddr_t  a_data;
-		int  a_fflag;
-		struct ucred *a_cred;
-		struct thread *a_td;
-	} */ *ap;
-{
-
-	printf("WARNING: fifo_ioctl called unexpectedly\n");
-	return (ENOTTY);
-}
-
-/*
- * Now unused vnode kqfilter routine.
- */
-/* ARGSUSED */
-static int
-fifo_kqfilter(ap)
-	struct vop_kqfilter_args /* {
-		struct vnode *a_vp;
-		struct knote *a_kn;
-	} */ *ap;
-{
-
-	printf("WARNING: fifo_kqfilter called unexpectedly\n");
-	return (EINVAL);
 }
 
 static void
@@ -424,8 +402,11 @@ fifo_close(ap)
 	struct vnode *vp = ap->a_vp;
 	struct fifoinfo *fip = vp->v_fifoinfo;
 
-	ASSERT_VOP_LOCKED(vp, "fifo_close");
-	KASSERT(fip != NULL, ("fifo_close: no v_fifoinfo"));
+	ASSERT_VOP_ELOCKED(vp, "fifo_close");
+	if (fip == NULL) {
+		printf("fifo_close: no v_fifoinfo %p\n", vp);
+		return (0);
+	}
 	if (ap->a_fflag & FREAD) {
 		fip->fi_readers--;
 		if (fip->fi_readers == 0)
@@ -433,8 +414,12 @@ fifo_close(ap)
 	}
 	if (ap->a_fflag & FWRITE) {
 		fip->fi_writers--;
-		if (fip->fi_writers == 0)
+		if (fip->fi_writers == 0) {
 			socantrcvmore(fip->fi_readsock);
+			mtx_lock(&fifo_mtx);
+			fip->fi_wgen++;
+			mtx_unlock(&fifo_mtx);
+		}
 	}
 	fifo_cleanup(vp);
 	return (0);
@@ -467,6 +452,7 @@ fifo_print(ap)
 		struct vnode *a_vp;
 	} */ *ap;
 {
+	printf("    ");
 	fifo_printinfo(ap->a_vp);
 	printf("\n");
 	return (0);
@@ -671,28 +657,13 @@ fifo_poll_f(struct file *fp, int events, struct ucred *cred, struct thread *td)
 	levents = events &
 	    (POLLIN | POLLINIGNEOF | POLLPRI | POLLRDNORM | POLLRDBAND);
 	if ((fp->f_flag & FREAD) && levents) {
-		/*
-		 * If POLLIN or POLLRDNORM is requested and POLLINIGNEOF is
-		 * not, then convert the first two to the last one.  This
-		 * tells the socket poll function to ignore EOF so that we
-		 * block if there is no writer (and no data).  Callers can
-		 * set POLLINIGNEOF to get non-blocking behavior.
-		 */
-		if (levents & (POLLIN | POLLRDNORM) &&
-		    !(levents & POLLINIGNEOF)) {
-			levents &= ~(POLLIN | POLLRDNORM);
-			levents |= POLLINIGNEOF;
-		}
-
 		filetmp.f_data = fip->fi_readsock;
 		filetmp.f_cred = cred;
+		mtx_lock(&fifo_mtx);
+		if (fp->f_seqcount == fip->fi_wgen)
+			levents |= POLLINIGNEOF;
+		mtx_unlock(&fifo_mtx);
 		revents |= soo_poll(&filetmp, levents, cred, td);
-
-		/* Reverse the above conversion. */
-		if ((revents & POLLINIGNEOF) && !(events & POLLINIGNEOF)) {
-			revents |= (events & (POLLIN | POLLRDNORM));
-			revents &= ~POLLINIGNEOF;
-		}
 	}
 	levents = events & (POLLOUT | POLLWRNORM | POLLWRBAND);
 	if ((fp->f_flag & FWRITE) && levents) {
@@ -707,17 +678,14 @@ static int
 fifo_read_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, struct thread *td)
 {
 	struct fifoinfo *fip;
-	int error, sflags;
+	int sflags;
 
 	fip = fp->f_data;
 	KASSERT(uio->uio_rw == UIO_READ,("fifo_read mode"));
 	if (uio->uio_resid == 0)
 		return (0);
 	sflags = (fp->f_flag & FNONBLOCK) ? MSG_NBIO : 0;
-	mtx_lock(&Giant);
-	error = soreceive(fip->fi_readsock, NULL, uio, NULL, NULL, &sflags);
-	mtx_unlock(&Giant);
-	return (error);
+	return (soreceive(fip->fi_readsock, NULL, uio, NULL, NULL, &sflags));
 }
 
 static int
@@ -728,16 +696,20 @@ fifo_stat_f(struct file *fp, struct stat *sb, struct ucred *cred, struct thread 
 }
 
 static int
+fifo_truncate_f(struct file *fp, off_t length, struct ucred *cred, struct thread *td)
+{
+
+	return (vnops.fo_truncate(fp, length, cred, td));
+}
+
+static int
 fifo_write_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, struct thread *td)
 {
 	struct fifoinfo *fip;
-	int error, sflags;
+	int sflags;
 
 	fip = fp->f_data;
 	KASSERT(uio->uio_rw == UIO_WRITE,("fifo_write mode"));
 	sflags = (fp->f_flag & FNONBLOCK) ? MSG_NBIO : 0;
-	mtx_lock(&Giant);
-	error = sosend(fip->fi_writesock, NULL, uio, 0, NULL, sflags, td);
-	mtx_unlock(&Giant);
-	return (error);
+	return (sosend(fip->fi_writesock, NULL, uio, 0, NULL, sflags, td));
 }

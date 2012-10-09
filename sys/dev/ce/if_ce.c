@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/ce/if_ce.c,v 1.3 2008/12/02 02:24:37 laffer1 Exp $ */
 /*
  * Cronyx-Tau32-PCI adapter driver for FreeBSD.
  *

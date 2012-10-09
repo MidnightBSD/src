@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)icmp_var.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/icmp_var.h,v 1.26.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_ICMP_VAR_H_
@@ -57,6 +57,22 @@ struct	icmpstat {
 	u_long	icps_noroute;		/* no route back */
 };
 
+#ifdef _KERNEL
+/*
+ * In-kernel consumers can use these accessor macros directly to update
+ * stats.
+ */
+#define	ICMPSTAT_ADD(name, val)	V_icmpstat.name += (val)
+#define	ICMPSTAT_INC(name)	ICMPSTAT_ADD(name, 1)
+
+/*
+ * Kernel module consumers must use this accessor macro.
+ */
+void	kmod_icmpstat_inc(int statnum);
+#define	KMOD_ICMPSTAT_INC(name)						\
+	kmod_icmpstat_inc(offsetof(struct icmpstat, name) / sizeof(u_long))
+#endif
+
 /*
  * Names for ICMP sysctl objects
  */
@@ -74,7 +90,10 @@ struct	icmpstat {
 
 #ifdef _KERNEL
 SYSCTL_DECL(_net_inet_icmp);
-extern struct icmpstat icmpstat;	/* icmp statistics */
+
+VNET_DECLARE(struct icmpstat, icmpstat);	/* icmp statistics. */
+#define	V_icmpstat	VNET(icmpstat)
+
 extern int badport_bandlim(int);
 #define BANDLIM_UNLIMITED -1
 #define BANDLIM_ICMP_UNREACH 0
@@ -83,7 +102,8 @@ extern int badport_bandlim(int);
 #define BANDLIM_RST_CLOSEDPORT 3 /* No connection, and no listeners */
 #define BANDLIM_RST_OPENPORT 4   /* No connection, listener */
 #define BANDLIM_ICMP6_UNREACH 5
-#define BANDLIM_MAX 5
+#define BANDLIM_SCTP_OOTB 6
+#define BANDLIM_MAX 6
 #endif
 
 #endif

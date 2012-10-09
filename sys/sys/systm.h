@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/systm.h,v 1.5 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)systm.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD: src/sys/sys/systm.h,v 1.260.2.9 2011/05/15 08:27:32 avg Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_SYSTM_H_
@@ -46,20 +45,12 @@
 #include <sys/queue.h>
 #include <sys/stdint.h>		/* for people using printf mainly */
 
-extern int securelevel;		/* system security level (see init(8)) */
-
 extern int cold;		/* nonzero if we are doing a cold boot */
-extern int rebooting;		/* boot() has been called. */
+extern int rebooting;		/* kern_reboot() has been called. */
 extern const char *panicstr;	/* panic message */
 extern char version[];		/* system version */
 extern char copyright[];	/* system copyright */
 extern int kstack_pages;	/* number of kernel stack pages */
-
-extern int nswap;		/* size of swap space */
-
-extern u_int nselcoll;		/* select collisions since boot */
-extern struct mtx sellock;	/* select lock variable */
-extern struct cv selwait;	/* select conditional variable */
 
 extern u_long pagesizes[];	/* supported page sizes */
 extern long physmem;		/* physical memory */
@@ -71,6 +62,7 @@ extern int boothowto;		/* reboot flags, from console subsystem */
 extern int bootverbose;		/* nonzero to print verbose messages */
 
 extern int maxusers;		/* system tune hint */
+extern int ngroups_max;		/* max # of supplemental groups */
 extern int vm_guest;		/* Running as virtual machine guest? */
 
 /*
@@ -78,7 +70,7 @@ extern int vm_guest;		/* Running as virtual machine guest? */
  * and/or add to the VM_GUEST_VM type if specific VM functionality is
  * ever implemented (e.g. vendor-specific paravirtualization features).
  */
-enum VM_GUEST { VM_GUEST_NO = 0, VM_GUEST_VM };
+enum VM_GUEST { VM_GUEST_NO = 0, VM_GUEST_VM, VM_GUEST_XEN };
 
 #ifdef	INVARIANTS		/* The option is always available */
 #define	KASSERT(exp,msg) do {						\
@@ -87,7 +79,7 @@ enum VM_GUEST { VM_GUEST_NO = 0, VM_GUEST_VM };
 } while (0)
 #define	VNASSERT(exp, vp, msg) do {					\
 	if (__predict_false(!(exp))) {					\
-		vn_printf(vp, "VNASSERT failed\n");		\
+		vn_printf(vp, "VNASSERT failed\n");			\
 		panic msg;						\
 	}								\
 } while (0)
@@ -117,6 +109,14 @@ enum VM_GUEST { VM_GUEST_NO = 0, VM_GUEST_VM };
 	    ((uintptr_t)&(var) & (sizeof(void *) - 1)) == 0, msg)
 
 /*
+ * If we have already panic'd and this is the thread that called
+ * panic(), then don't block on any mutexes but silently succeed.
+ * Otherwise, the kernel will deadlock since the scheduler isn't
+ * going to run the thread that holds any lock we need.
+ */
+#define	SCHEDULER_STOPPED() __predict_false(curthread->td_stopsched)
+
+/*
  * XXX the hints declarations are even more misplaced than most declarations
  * in this file, since they are needed in one file (per arch) and only used
  * in two files.
@@ -133,6 +133,11 @@ extern char static_hints[];	/* by config for now */
 
 extern char **kenvp;
 
+extern const void *zero_region;	/* address space maps to a zeroed page	*/
+
+extern int iosize_max_clamp;
+#define	IOSIZE_MAX	(iosize_max_clamp ? INT_MAX : SSIZE_MAX)
+
 /*
  * General function declarations.
  */
@@ -142,22 +147,22 @@ struct lock_object;
 struct malloc_type;
 struct mtx;
 struct proc;
-struct kse;
 struct socket;
 struct thread;
 struct tty;
 struct ucred;
 struct uio;
 struct _jmp_buf;
+struct trapframe;
 
-int	setjmp(struct _jmp_buf *);
+int	setjmp(struct _jmp_buf *) __returns_twice;
 void	longjmp(struct _jmp_buf *, int) __dead2;
 int	dumpstatus(vm_offset_t addr, off_t count);
 int	nullop(void);
 int	eopnotsupp(void);
 int	ureadc(int, struct uio *);
 void	hashdestroy(void *, struct malloc_type *, u_long);
-void	*hashinit(int count, struct malloc_type *type, u_long *hashmark);
+void	*hashinit(int count, struct malloc_type *type, u_long *hashmask);
 void	*hashinit_flags(int count, struct malloc_type *type,
     u_long *hashmask, int flags);
 #define	HASH_NOWAIT	0x00000001
@@ -166,19 +171,16 @@ void	*hashinit_flags(int count, struct malloc_type *type,
 void	*phashinit(int count, struct malloc_type *type, u_long *nentries);
 void	g_waitidle(void);
 
-#ifdef RESTARTABLE_PANICS
-void	panic(const char *, ...) __printflike(1, 2);
-#else
 void	panic(const char *, ...) __dead2 __printflike(1, 2);
-#endif
 
 void	cpu_boot(int);
+void	cpu_flush_dcache(void *, size_t);
 void	cpu_rootconf(void);
 void	critical_enter(void);
 void	critical_exit(void);
 void	init_param1(void);
 void	init_param2(long physpages);
-void	init_param3(long kmempages);
+void	init_static_kenv(char *, size_t);
 void	tablefull(const char *);
 int	kvprintf(char const *, void (*)(int, void*), void *, int,
 	    __va_list) __printflike(1, 0);
@@ -212,7 +214,7 @@ void	bcopy(const void *from, void *to, size_t len) __nonnull(1) __nonnull(2);
 void	bzero(void *buf, size_t len) __nonnull(1);
 
 void	*memcpy(void *to, const void *from, size_t len) __nonnull(1) __nonnull(2);
-void	*memmove(void *dest, const void *src, size_t len) __nonnull(1) __nonnull(2);
+void	*memmove(void *dest, const void *src, size_t n) __nonnull(1) __nonnull(2);
 
 int	copystr(const void * __restrict kfaddr, void * __restrict kdaddr,
 	    size_t len, size_t * __restrict lencopied)
@@ -222,7 +224,11 @@ int	copyinstr(const void * __restrict udaddr, void * __restrict kaddr,
 	    __nonnull(1) __nonnull(2);
 int	copyin(const void * __restrict udaddr, void * __restrict kaddr,
 	    size_t len) __nonnull(1) __nonnull(2);
+int	copyin_nofault(const void * __restrict udaddr, void * __restrict kaddr,
+	    size_t len) __nonnull(1) __nonnull(2);
 int	copyout(const void * __restrict kaddr, void * __restrict udaddr,
+	    size_t len) __nonnull(1) __nonnull(2);
+int	copyout_nofault(const void * __restrict kaddr, void * __restrict udaddr,
 	    size_t len) __nonnull(1) __nonnull(2);
 
 int	fubyte(const void *base);
@@ -240,16 +246,28 @@ u_long	 casuword(volatile u_long *p, u_long oldval, u_long newval);
 
 void	realitexpire(void *);
 
+int	sysbeep(int hertz, int period);
+
 void	hardclock(int usermode, uintfptr_t pc);
+void	hardclock_cnt(int cnt, int usermode);
 void	hardclock_cpu(int usermode);
+void	hardclock_sync(int cpu);
 void	softclock(void *);
 void	statclock(int usermode);
+void	statclock_cnt(int cnt, int usermode);
 void	profclock(int usermode, uintfptr_t pc);
+void	profclock_cnt(int cnt, int usermode, uintfptr_t pc);
+
+int	hardclockintr(void);
 
 void	startprofclock(struct proc *);
 void	stopprofclock(struct proc *);
 void	cpu_startprofclock(void);
 void	cpu_stopprofclock(void);
+void	cpu_idleclock(void);
+void	cpu_activeclock(void);
+extern int	cpu_can_deep_sleep;
+extern int	cpu_disable_deep_sleep;
 
 int	cr_cansee(struct ucred *u1, struct ucred *u2);
 int	cr_canseesocket(struct ucred *cred, struct socket *so);
@@ -258,8 +276,9 @@ int	cr_canseeinpcb(struct ucred *cred, struct inpcb *inp);
 char	*getenv(const char *name);
 void	freeenv(char *env);
 int	getenv_int(const char *name, int *data);
-long	getenv_long(const char *name, long *data);
-unsigned long getenv_ulong(const char *name, unsigned long *data);
+int	getenv_uint(const char *name, unsigned int *data);
+int	getenv_long(const char *name, long *data);
+int	getenv_ulong(const char *name, unsigned long *data);
 int	getenv_string(const char *name, char *data, int size);
 int	getenv_quad(const char *name, quad_t *data);
 int	setenv(const char *name, const char *value);
@@ -282,9 +301,12 @@ void	adjust_timeout_calltodo(struct timeval *time_change);
 /* Initialize the world */
 void	consinit(void);
 void	cpu_initclocks(void);
+void	cpu_initclocks_bsp(void);
+void	cpu_initclocks_ap(void);
 void	usrinfoinit(void);
 
 /* Finalize the world */
+void	kern_reboot(int) __dead2;
 void	shutdown_nice(int);
 
 /* Timeouts */
@@ -337,10 +359,7 @@ void	wakeup_one(void *chan) __nonnull(1);
  */
 
 struct cdev;
-int minor(struct cdev *x);
 dev_t dev2udev(struct cdev *x);
-int uminor(dev_t dev);
-int umajor(dev_t dev);
 const char *devtoname(struct cdev *cdev);
 
 int poll_no_poll(int events);
@@ -366,6 +385,7 @@ void delete_unrhdr(struct unrhdr *uh);
 void clean_unrhdr(struct unrhdr *uh);
 void clean_unrhdrl(struct unrhdr *uh);
 int alloc_unr(struct unrhdr *uh);
+int alloc_unr_specific(struct unrhdr *uh, u_int item);
 int alloc_unrl(struct unrhdr *uh);
 void free_unr(struct unrhdr *uh, u_int item);
 
@@ -382,6 +402,17 @@ bitcount32(uint32_t x)
 	x = (x + (x >> 4)) & 0x0f0f0f0f;
 	x = (x + (x >> 8));
 	x = (x + (x >> 16)) & 0x000000ff;
+	return (x);
+}
+
+static __inline uint16_t
+bitcount16(uint32_t x)
+{
+
+	x = (x & 0x5555) + ((x & 0xaaaa) >> 1);
+	x = (x & 0x3333) + ((x & 0xcccc) >> 2);
+	x = (x + (x >> 4)) & 0x0f0f;
+	x = (x + (x >> 8)) & 0x00ff;
 	return (x);
 }
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/amr/amr_linux.c,v 1.5 2012/04/12 01:23:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Paul Saab
  * All rights reserved.
@@ -27,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

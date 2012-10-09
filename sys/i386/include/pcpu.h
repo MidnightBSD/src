@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/pcpu.h,v 1.3 2012/04/10 19:39:40 laffer1 Exp $ */
 /*-
  * Copyright (c) Peter Wemm
  * All rights reserved.
@@ -104,9 +103,6 @@ struct shadow_time_info {
 	int	pc_private_tss;		/* Flag indicating private tss*/\
 	u_int	pc_cmci_mask		/* MCx banks for CMCI */	\
 	PCPU_XEN_FIELDS
-
-#ifdef _KERNEL
-
 
 #ifdef _KERNEL
 

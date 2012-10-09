@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpivar.h,v 1.3 2008/12/02 02:24:29 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
  * Copyright (c) 2000 Michael Smith <msmith@freebsd.org>
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/acpica/acpivar.h,v 1.108.2.1 2009/10/29 17:15:22 jhb Exp $
+ * $FreeBSD$
  */
 
 #ifndef _ACPIVAR_H_
@@ -52,13 +51,10 @@ struct acpi_softc {
     device_t		acpi_dev;
     struct cdev		*acpi_dev_t;
 
-    struct resource	*acpi_irq;
-    int			acpi_irq_rid;
-    void		*acpi_irq_handle;
-
     int			acpi_enabled;
     int			acpi_sstate;
     int			acpi_sleep_disabled;
+    int			acpi_resources_reserved;
 
     struct sysctl_ctx_list acpi_sysctl_ctx;
     struct sysctl_oid	*acpi_sysctl_tree;
@@ -89,7 +85,6 @@ struct acpi_softc {
 struct acpi_device {
     /* ACPI ivars */
     ACPI_HANDLE			ad_handle;
-    uintptr_t			ad_magic;
     void			*ad_private;
     int				ad_flags;
 
@@ -191,18 +186,20 @@ extern struct mtx			acpi_mutex;
 /*
  * Various features and capabilities for the acpi_get_features() method.
  * In particular, these are used for the ACPI 3.0 _PDC and _OSC methods.
- * See the Intel document titled "Processor Driver Capabilities Bit
- * Definitions", number 302223-002.
+ * See the Intel document titled "Intel Processor Vendor-Specific ACPI",
+ * number 302223-005.
  */
-#define ACPI_CAP_PERF_MSRS	(1 << 0) /* Intel SpeedStep PERF_CTL MSRs */
-#define ACPI_CAP_C1_IO_HALT	(1 << 1) /* Intel C1 "IO then halt" sequence */
-#define ACPI_CAP_THR_MSRS	(1 << 2) /* Intel OnDemand throttling MSRs */
-#define ACPI_CAP_SMP_SAME	(1 << 3) /* MP C1, Px, and Tx (all the same) */
-#define ACPI_CAP_SMP_SAME_C3	(1 << 4) /* MP C2 and C3 (all the same) */
-#define ACPI_CAP_SMP_DIFF_PX	(1 << 5) /* MP Px (different, using _PSD) */
-#define ACPI_CAP_SMP_DIFF_CX	(1 << 6) /* MP Cx (different, using _CSD) */
-#define ACPI_CAP_SMP_DIFF_TX	(1 << 7) /* MP Tx (different, using _TSD) */
-#define ACPI_CAP_SMP_C1_NATIVE	(1 << 8) /* MP C1 support other than halt */
+#define	ACPI_CAP_PERF_MSRS	(1 << 0)  /* Intel SpeedStep PERF_CTL MSRs */
+#define	ACPI_CAP_C1_IO_HALT	(1 << 1)  /* Intel C1 "IO then halt" sequence */
+#define	ACPI_CAP_THR_MSRS	(1 << 2)  /* Intel OnDemand throttling MSRs */
+#define	ACPI_CAP_SMP_SAME	(1 << 3)  /* MP C1, Px, and Tx (all the same) */
+#define	ACPI_CAP_SMP_SAME_C3	(1 << 4)  /* MP C2 and C3 (all the same) */
+#define	ACPI_CAP_SMP_DIFF_PX	(1 << 5)  /* MP Px (different, using _PSD) */
+#define	ACPI_CAP_SMP_DIFF_CX	(1 << 6)  /* MP Cx (different, using _CSD) */
+#define	ACPI_CAP_SMP_DIFF_TX	(1 << 7)  /* MP Tx (different, using _TSD) */
+#define	ACPI_CAP_SMP_C1_NATIVE	(1 << 8)  /* MP C1 support other than halt */
+#define	ACPI_CAP_SMP_C3_NATIVE	(1 << 9)  /* MP C2 and C3 support */
+#define	ACPI_CAP_PX_HW_COORD	(1 << 11) /* Intel P-state HW coordination */
 
 /*
  * Quirk flags.
@@ -225,7 +222,7 @@ extern int	acpi_quirks;
  * attach to ACPI.
  */
 #define ACPI_IVAR_HANDLE	0x100
-#define ACPI_IVAR_MAGIC		0x101
+#define ACPI_IVAR_UNUSED	0x101	/* Unused/reserved. */
 #define ACPI_IVAR_PRIVATE	0x102
 #define ACPI_IVAR_FLAGS		0x103
 
@@ -251,11 +248,10 @@ static __inline void varp ## _set_ ## var(device_t dev, type t)	\
 }
 
 __ACPI_BUS_ACCESSOR(acpi, handle, ACPI, HANDLE, ACPI_HANDLE)
-__ACPI_BUS_ACCESSOR(acpi, magic, ACPI, MAGIC, uintptr_t)
 __ACPI_BUS_ACCESSOR(acpi, private, ACPI, PRIVATE, void *)
 __ACPI_BUS_ACCESSOR(acpi, flags, ACPI, FLAGS, int)
 
-void acpi_fake_objhandler(ACPI_HANDLE h, UINT32 fn, void *data);
+void acpi_fake_objhandler(ACPI_HANDLE h, void *data);
 static __inline device_t
 acpi_get_device(ACPI_HANDLE handle)
 {
@@ -275,6 +271,16 @@ acpi_get_type(device_t dev)
     if (AcpiGetType(h, &t) != AE_OK)
 	return (ACPI_TYPE_NOT_FOUND);
     return (t);
+}
+
+/* Find the difference between two PM tick counts. */
+static __inline uint32_t
+acpi_TimerDelta(uint32_t end, uint32_t start)
+{
+
+	if (end < start && (AcpiGbl_FADT.Flags & ACPI_FADT_32BIT_TIMER) == 0)
+		end |= 0x01000000;
+	return (end - start);
 }
 
 #ifdef ACPI_DEBUGGER
@@ -315,7 +321,6 @@ BOOLEAN		acpi_DeviceIsPresent(device_t dev);
 BOOLEAN		acpi_BatteryIsPresent(device_t dev);
 ACPI_STATUS	acpi_GetHandleInScope(ACPI_HANDLE parent, char *path,
 		    ACPI_HANDLE *result);
-uint32_t	acpi_TimerDelta(uint32_t end, uint32_t start);
 ACPI_BUFFER	*acpi_AllocBuffer(int size);
 ACPI_STATUS	acpi_ConvertBufferToInteger(ACPI_BUFFER *bufp,
 		    UINT32 *number);
@@ -334,7 +339,6 @@ ACPI_STATUS	acpi_SetIntrModel(int model);
 int		acpi_ReqSleepState(struct acpi_softc *sc, int state);
 int		acpi_AckSleepState(struct apm_clone_data *clone, int error);
 ACPI_STATUS	acpi_SetSleepState(struct acpi_softc *sc, int state);
-int		acpi_wake_init(device_t dev, int type);
 int		acpi_wake_set_enable(device_t dev, int enable);
 int		acpi_parse_prw(ACPI_HANDLE h, struct acpi_prw_data *prw);
 ACPI_STATUS	acpi_Startup(void);
@@ -345,23 +349,24 @@ int		acpi_bus_alloc_gas(device_t dev, int *type, int *rid,
 		    u_int flags);
 void		acpi_walk_subtables(void *first, void *end,
 		    acpi_subtable_handler *handler, void *arg);
+BOOLEAN		acpi_MatchHid(ACPI_HANDLE h, const char *hid);
 
 struct acpi_parse_resource_set {
     void	(*set_init)(device_t dev, void *arg, void **context);
     void	(*set_done)(device_t dev, void *context);
-    void	(*set_ioport)(device_t dev, void *context, uint32_t base,
-		    uint32_t length);
-    void	(*set_iorange)(device_t dev, void *context, uint32_t low,
-		    uint32_t high, uint32_t length, uint32_t align);
-    void	(*set_memory)(device_t dev, void *context, uint32_t base,
-		    uint32_t length);
-    void	(*set_memoryrange)(device_t dev, void *context, uint32_t low,
-		    uint32_t high, uint32_t length, uint32_t align);
-    void	(*set_irq)(device_t dev, void *context, u_int8_t *irq,
+    void	(*set_ioport)(device_t dev, void *context, uint64_t base,
+		    uint64_t length);
+    void	(*set_iorange)(device_t dev, void *context, uint64_t low,
+		    uint64_t high, uint64_t length, uint64_t align);
+    void	(*set_memory)(device_t dev, void *context, uint64_t base,
+		    uint64_t length);
+    void	(*set_memoryrange)(device_t dev, void *context, uint64_t low,
+		    uint64_t high, uint64_t length, uint64_t align);
+    void	(*set_irq)(device_t dev, void *context, uint8_t *irq,
 		    int count, int trig, int pol);
-    void	(*set_ext_irq)(device_t dev, void *context, u_int32_t *irq,
+    void	(*set_ext_irq)(device_t dev, void *context, uint32_t *irq,
 		    int count, int trig, int pol);
-    void	(*set_drq)(device_t dev, void *context, u_int8_t *drq,
+    void	(*set_drq)(device_t dev, void *context, uint8_t *drq,
 		    int count);
     void	(*set_start_dependent)(device_t dev, void *context,
 		    int preference);
@@ -370,11 +375,14 @@ struct acpi_parse_resource_set {
 
 extern struct	acpi_parse_resource_set acpi_res_parse_set;
 
+int		acpi_identify(void);
 void		acpi_config_intr(device_t dev, ACPI_RESOURCE *res);
 ACPI_STATUS	acpi_lookup_irq_resource(device_t dev, int rid,
 		    struct resource *res, ACPI_RESOURCE *acpi_res);
 ACPI_STATUS	acpi_parse_resources(device_t dev, ACPI_HANDLE handle,
 		    struct acpi_parse_resource_set *set, void *arg);
+struct resource *acpi_alloc_sysres(device_t child, int type, int *rid,
+		    u_long start, u_long end, u_long count, u_int flags);
 
 /* ACPI event handling */
 UINT32		acpi_event_power_button_sleep(void *context);
@@ -394,6 +402,11 @@ EVENTHANDLER_DECLARE(acpi_wakeup_event, acpi_event_handler_t);
 /* Device power control. */
 ACPI_STATUS	acpi_pwr_wake_enable(ACPI_HANDLE consumer, int enable);
 ACPI_STATUS	acpi_pwr_switch_consumer(ACPI_HANDLE consumer, int state);
+int		acpi_device_pwr_for_sleep(device_t bus, device_t dev,
+		    int *dstate);
+
+/* APM emulation */
+void		acpi_apm_init(struct acpi_softc *);
 
 /* Misc. */
 static __inline struct acpi_softc *
@@ -446,7 +459,7 @@ int		acpi_acad_get_acline(int *);
 #define ACPI_PKG_VALID(pkg, size)				\
     ((pkg) != NULL && (pkg)->Type == ACPI_TYPE_PACKAGE &&	\
      (pkg)->Package.Count >= (size))
-int		acpi_PkgInt(ACPI_OBJECT *res, int idx, ACPI_INTEGER *dst);
+int		acpi_PkgInt(ACPI_OBJECT *res, int idx, UINT64 *dst);
 int		acpi_PkgInt32(ACPI_OBJECT *res, int idx, uint32_t *dst);
 int		acpi_PkgStr(ACPI_OBJECT *res, int idx, void *dst, size_t size);
 int		acpi_PkgGas(device_t dev, ACPI_OBJECT *res, int idx, int *type,
@@ -459,7 +472,12 @@ ACPI_HANDLE	acpi_GetReference(ACPI_HANDLE scope, ACPI_OBJECT *obj);
  * probe order sorted so that things like sysresource are available before
  * their children need them.
  */
-#define	ACPI_DEV_BASE_ORDER	10
+#define	ACPI_DEV_BASE_ORDER	100
+
+/* Default maximum number of tasks to enqueue. */
+#ifndef ACPI_MAX_TASKS
+#define	ACPI_MAX_TASKS		32
+#endif
 
 /* Default number of task queue threads to start. */
 #ifndef ACPI_MAX_THREADS
@@ -468,6 +486,8 @@ ACPI_HANDLE	acpi_GetReference(ACPI_HANDLE scope, ACPI_OBJECT *obj);
 
 /* Use the device logging level for ktr(4). */
 #define	KTR_ACPI		KTR_DEV
+
+SYSCTL_DECL(_debug_acpi);
 
 #endif /* _KERNEL */
 #endif /* !_ACPIVAR_H_ */

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/key.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: key.h,v 1.21 2001/07/27 03:51:30 itojun Exp $	*/
 
 /*-
@@ -53,9 +53,11 @@ extern struct secpolicy *key_allocsp(struct secpolicyindex *, u_int,
 extern struct secpolicy *key_allocsp2(u_int32_t spi, union sockaddr_union *dst,
 	u_int8_t proto, u_int dir, const char*, int);
 extern struct secpolicy *key_newsp(const char*, int);
+#if 0
 extern struct secpolicy *key_gettunnel(const struct sockaddr *,
 	const struct sockaddr *, const struct sockaddr *,
 	const struct sockaddr *, const char*, int);
+#endif
 /* NB: prepend with _ for KAME IPv6 compatbility */
 extern void _key_freesp(struct secpolicy **, const char*, int);
 
@@ -65,17 +67,22 @@ extern void _key_freesp(struct secpolicy **, const char*, int);
 	key_allocsp2(spi, dst, proto, dir, __FILE__, __LINE__)
 #define	KEY_NEWSP()						\
 	key_newsp(__FILE__, __LINE__)
+#if 0
 #define	KEY_GETTUNNEL(osrc, odst, isrc, idst)			\
 	key_gettunnel(osrc, odst, isrc, idst, __FILE__, __LINE__)
+#endif
 #define	KEY_FREESP(spp)						\
 	_key_freesp(spp, __FILE__, __LINE__)
 
 extern struct secasvar *key_allocsa(union sockaddr_union *, u_int, u_int32_t,
 	const char*, int);
+extern void key_addrefsa(struct secasvar *, const char*, int);
 extern void key_freesav(struct secasvar **, const char*, int);
 
 #define	KEY_ALLOCSA(dst, proto, spi)				\
 	key_allocsa(dst, proto, spi, __FILE__, __LINE__)
+#define	KEY_ADDREFSA(sav)					\
+	key_addrefsa(sav, __FILE__, __LINE__)
 #define	KEY_FREESAV(psav)					\
 	key_freesav(psav, __FILE__, __LINE__)
 
@@ -96,9 +103,17 @@ extern void key_randomfill __P((void *, size_t));
 extern void key_freereg __P((struct socket *));
 extern int key_parse __P((struct mbuf *, struct socket *));
 extern void key_init __P((void));
+#ifdef VIMAGE
+extern void key_destroy(void);
+#endif
 extern void key_sa_recordxfer __P((struct secasvar *, struct mbuf *));
 extern void key_sa_routechange __P((struct sockaddr *));
 extern void key_sa_stir_iv __P((struct secasvar *));
+#ifdef IPSEC_NAT_T
+u_int16_t key_portfromsaddr(struct sockaddr *);
+#define	KEY_PORTFROMSADDR(saddr)				\
+	key_portfromsaddr((struct sockaddr *)(saddr))
+#endif
 
 #ifdef MALLOC_DECLARE
 MALLOC_DECLARE(M_IPSEC_SA);

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/bktr/ioctl_meteor.h,v 1.2 2008/12/02 02:24:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995 Mark Tinguely and Jim Lowe
  * All rights reserved.

@@ -61,10 +61,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/in6_src.c,v 1.46.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
+#include "opt_mpath.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -79,17 +80,27 @@ __FBSDID("$FreeBSD: src/sys/netinet6/in6_src.c,v 1.46.2.6.2.1 2008/11/25 02:59:2
 #include <sys/sysctl.h>
 #include <sys/errno.h>
 #include <sys/time.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/sx.h>
 
 #include <net/if.h>
+#include <net/if_dl.h>
 #include <net/route.h>
+#include <net/if_llatbl.h>
+#ifdef RADIX_MPATH
+#include <net/radix_mpath.h>
+#endif
 
 #include <netinet/in.h>
 #include <netinet/in_var.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/in_pcb.h>
+#include <netinet/ip_var.h>
+#include <netinet/udp.h>
+#include <netinet/udp_var.h>
+
 #include <netinet6/in6_var.h>
 #include <netinet/ip6.h>
 #include <netinet6/in6_pcb.h>
@@ -111,15 +122,17 @@ static struct sx addrsel_sxlock;
 #define	ADDRSEL_XUNLOCK()	sx_xunlock(&addrsel_sxlock)
 
 #define ADDR_LABEL_NOTAPP (-1)
-struct in6_addrpolicy defaultaddrpolicy;
+static VNET_DEFINE(struct in6_addrpolicy, defaultaddrpolicy);
+#define	V_defaultaddrpolicy		VNET(defaultaddrpolicy)
 
-int ip6_prefer_tempaddr = 0;
+VNET_DEFINE(int, ip6_prefer_tempaddr) = 0;
 
 static int selectroute __P((struct sockaddr_in6 *, struct ip6_pktopts *,
 	struct ip6_moptions *, struct route_in6 *, struct ifnet **,
-	struct rtentry **, int, int));
+	struct rtentry **, int, u_int));
 static int in6_selectif __P((struct sockaddr_in6 *, struct ip6_pktopts *,
-	struct ip6_moptions *, struct route_in6 *ro, struct ifnet **));
+	struct ip6_moptions *, struct route_in6 *ro, struct ifnet **,
+	struct ifnet *, u_int));
 
 static struct in6_addrpolicy *lookup_addrsel_policy(struct sockaddr_in6 *);
 
@@ -138,9 +151,9 @@ static struct in6_addrpolicy *match_addrsel_policy(struct sockaddr_in6 *);
  * an entry to the caller for later use.
  */
 #define REPLACE(r) do {\
-	if ((r) < sizeof(ip6stat.ip6s_sources_rule) / \
-		sizeof(ip6stat.ip6s_sources_rule[0])) /* check for safety */ \
-		ip6stat.ip6s_sources_rule[(r)]++; \
+	if ((r) < sizeof(V_ip6stat.ip6s_sources_rule) / \
+		sizeof(V_ip6stat.ip6s_sources_rule[0])) /* check for safety */ \
+		V_ip6stat.ip6s_sources_rule[(r)]++; \
 	/* { \
 	char ip6buf[INET6_ADDRSTRLEN], ip6b[INET6_ADDRSTRLEN]; \
 	printf("in6_selectsrc: replace %s with %s by %d\n", ia_best ? ip6_sprintf(ip6buf, &ia_best->ia_addr.sin6_addr) : "none", ip6_sprintf(ip6b, &ia->ia_addr.sin6_addr), (r)); \
@@ -148,9 +161,9 @@ static struct in6_addrpolicy *match_addrsel_policy(struct sockaddr_in6 *);
 	goto replace; \
 } while(0)
 #define NEXT(r) do {\
-	if ((r) < sizeof(ip6stat.ip6s_sources_rule) / \
-		sizeof(ip6stat.ip6s_sources_rule[0])) /* check for safety */ \
-		ip6stat.ip6s_sources_rule[(r)]++; \
+	if ((r) < sizeof(V_ip6stat.ip6s_sources_rule) / \
+		sizeof(V_ip6stat.ip6s_sources_rule[0])) /* check for safety */ \
+		V_ip6stat.ip6s_sources_rule[(r)]++; \
 	/* { \
 	char ip6buf[INET6_ADDRSTRLEN], ip6b[INET6_ADDRSTRLEN]; \
 	printf("in6_selectsrc: keep %s against %s by %d\n", ia_best ? ip6_sprintf(ip6buf, &ia_best->ia_addr.sin6_addr) : "none", ip6_sprintf(ip6b, &ia->ia_addr.sin6_addr), (r)); \
@@ -158,31 +171,43 @@ static struct in6_addrpolicy *match_addrsel_policy(struct sockaddr_in6 *);
 	goto next;		/* XXX: we can't use 'continue' here */ \
 } while(0)
 #define BREAK(r) do { \
-	if ((r) < sizeof(ip6stat.ip6s_sources_rule) / \
-		sizeof(ip6stat.ip6s_sources_rule[0])) /* check for safety */ \
-		ip6stat.ip6s_sources_rule[(r)]++; \
+	if ((r) < sizeof(V_ip6stat.ip6s_sources_rule) / \
+		sizeof(V_ip6stat.ip6s_sources_rule[0])) /* check for safety */ \
+		V_ip6stat.ip6s_sources_rule[(r)]++; \
 	goto out;		/* XXX: we can't use 'break' here */ \
 } while(0)
 
-struct in6_addr *
+int
 in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
     struct inpcb *inp, struct route_in6 *ro, struct ucred *cred,
-    struct ifnet **ifpp, int *errorp)
+    struct ifnet **ifpp, struct in6_addr *srcp)
 {
-	struct in6_addr dst;
-	struct ifnet *ifp = NULL;
+	struct in6_addr dst, tmp;
+	struct ifnet *ifp = NULL, *oifp = NULL;
 	struct in6_ifaddr *ia = NULL, *ia_best = NULL;
 	struct in6_pktinfo *pi = NULL;
 	int dst_scope = -1, best_scope = -1, best_matchlen = -1;
 	struct in6_addrpolicy *dst_policy = NULL, *best_policy = NULL;
 	u_int32_t odstzone;
 	int prefer_tempaddr;
+	int error;
 	struct ip6_moptions *mopts;
 
+	KASSERT(srcp != NULL, ("%s: srcp is NULL", __func__));
+
 	dst = dstsock->sin6_addr; /* make a copy for local operation */
-	*errorp = 0;
-	if (ifpp)
+	if (ifpp) {
+		/*
+		 * Save a possibly passed in ifp for in6_selectsrc. Only
+		 * neighbor discovery code should use this feature, where
+		 * we may know the interface but not the FIB number holding
+		 * the connected subnet in case someone deleted it from the
+		 * default FIB and we need to check the interface.
+		 */
+		if (*ifpp != NULL)
+			oifp = *ifpp;
 		*ifpp = NULL;
+	}
 
 	if (inp != NULL) {
 		INP_LOCK_ASSERT(inp);
@@ -203,10 +228,10 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		struct in6_ifaddr *ia6;
 
 		/* get the outgoing interface */
-		if ((*errorp = in6_selectif(dstsock, opts, mopts, ro, &ifp))
-		    != 0) {
-			return (NULL);
-		}
+		if ((error = in6_selectif(dstsock, opts, mopts, ro, &ifp, oifp,
+		    (inp != NULL) ? inp->inp_inc.inc_fibnum : RT_DEFAULT_FIB))
+		    != 0)
+			return (error);
 
 		/*
 		 * determine the appropriate zone id of the source based on
@@ -220,47 +245,69 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		srcsock.sin6_len = sizeof(srcsock);
 		srcsock.sin6_addr = pi->ipi6_addr;
 		if (ifp) {
-			*errorp = in6_setscope(&srcsock.sin6_addr, ifp, NULL);
-			if (*errorp != 0)
-				return (NULL);
+			error = in6_setscope(&srcsock.sin6_addr, ifp, NULL);
+			if (error)
+				return (error);
 		}
+		if (cred != NULL && (error = prison_local_ip6(cred,
+		    &srcsock.sin6_addr, (inp != NULL &&
+		    (inp->inp_flags & IN6P_IPV6_V6ONLY) != 0))) != 0)
+			return (error);
 
-		ia6 = (struct in6_ifaddr *)ifa_ifwithaddr((struct sockaddr *)(&srcsock));
+		ia6 = (struct in6_ifaddr *)ifa_ifwithaddr(
+		    (struct sockaddr *)&srcsock);
 		if (ia6 == NULL ||
 		    (ia6->ia6_flags & (IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))) {
-			*errorp = EADDRNOTAVAIL;
-			return (NULL);
+			if (ia6 != NULL)
+				ifa_free(&ia6->ia_ifa);
+			return (EADDRNOTAVAIL);
 		}
 		pi->ipi6_addr = srcsock.sin6_addr; /* XXX: this overrides pi */
 		if (ifpp)
 			*ifpp = ifp;
-		return (&ia6->ia_addr.sin6_addr);
+		bcopy(&ia6->ia_addr.sin6_addr, srcp, sizeof(*srcp));
+		ifa_free(&ia6->ia_ifa);
+		return (0);
 	}
 
 	/*
 	 * Otherwise, if the socket has already bound the source, just use it.
 	 */
 	if (inp != NULL && !IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_laddr)) {
-		return (&inp->in6p_laddr);
+		if (cred != NULL &&
+		    (error = prison_local_ip6(cred, &inp->in6p_laddr,
+		    ((inp->inp_flags & IN6P_IPV6_V6ONLY) != 0))) != 0)
+			return (error);
+		bcopy(&inp->in6p_laddr, srcp, sizeof(*srcp));
+		return (0);
 	}
+
+	/*
+	 * Bypass source address selection and use the primary jail IP
+	 * if requested.
+	 */
+	if (cred != NULL && !prison_saddrsel_ip6(cred, srcp))
+		return (0);
 
 	/*
 	 * If the address is not specified, choose the best one based on
 	 * the outgoing interface and the destination address.
 	 */
 	/* get the outgoing interface */
-	if ((*errorp = in6_selectif(dstsock, opts, mopts, ro, &ifp)) != 0)
-		return (NULL);
+	if ((error = in6_selectif(dstsock, opts, mopts, ro, &ifp, oifp,
+	    (inp != NULL) ? inp->inp_inc.inc_fibnum : RT_DEFAULT_FIB)) != 0)
+		return (error);
 
 #ifdef DIAGNOSTIC
 	if (ifp == NULL)	/* this should not happen */
 		panic("in6_selectsrc: NULL ifp");
 #endif
-	*errorp = in6_setscope(&dst, ifp, &odstzone);
-	if (*errorp != 0)
-		return (NULL);
+	error = in6_setscope(&dst, ifp, &odstzone);
+	if (error)
+		return (error);
 
-	for (ia = in6_ifaddr; ia; ia = ia->ia_next) {
+	IN6_IFADDR_RLOCK();
+	TAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
 		int new_scope = -1, new_matchlen = -1;
 		struct in6_addrpolicy *new_policy = NULL;
 		u_int32_t srczone, osrczone, dstzone;
@@ -289,7 +336,12 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		     (IN6_IFF_NOTREADY | IN6_IFF_ANYCAST | IN6_IFF_DETACHED))) {
 				continue;
 		}
-		if (!ip6_use_deprecated && IFA6_IS_DEPRECATED(ia))
+		if (!V_ip6_use_deprecated && IFA6_IS_DEPRECATED(ia))
+			continue;
+
+		/* If jailed only take addresses of the jail into account. */
+		if (cred != NULL &&
+		    prison_check_ip6(cred, &ia->ia_addr.sin6_addr) != 0)
 			continue;
 
 		/* Rule 1: Prefer same address */
@@ -360,7 +412,7 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		 */
 		if (opts == NULL ||
 		    opts->ip6po_prefer_tempaddr == IP6PO_TEMPADDR_SYSTEM) {
-			prefer_tempaddr = ip6_prefer_tempaddr;
+			prefer_tempaddr = V_ip6_prefer_tempaddr;
 		} else if (opts->ip6po_prefer_tempaddr ==
 		    IP6PO_TEMPADDR_NOTPREFER) {
 			prefer_tempaddr = 0;
@@ -432,14 +484,32 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 	}
 
 	if ((ia = ia_best) == NULL) {
-		*errorp = EADDRNOTAVAIL;
-		return (NULL);
+		IN6_IFADDR_RUNLOCK();
+		return (EADDRNOTAVAIL);
+	}
+
+	/*
+	 * At this point at least one of the addresses belonged to the jail
+	 * but it could still be, that we want to further restrict it, e.g.
+	 * theoratically IN6_IS_ADDR_LOOPBACK.
+	 * It must not be IN6_IS_ADDR_UNSPECIFIED anymore.
+	 * prison_local_ip6() will fix an IN6_IS_ADDR_LOOPBACK but should
+	 * let all others previously selected pass.
+	 * Use tmp to not change ::1 on lo0 to the primary jail address.
+	 */
+	tmp = ia->ia_addr.sin6_addr;
+	if (cred != NULL && prison_local_ip6(cred, &tmp, (inp != NULL &&
+	    (inp->inp_flags & IN6P_IPV6_V6ONLY) != 0)) != 0) {
+		IN6_IFADDR_RUNLOCK();
+		return (EADDRNOTAVAIL);
 	}
 
 	if (ifpp)
 		*ifpp = ifp;
 
-	return (&ia->ia_addr.sin6_addr);
+	bcopy(&tmp, srcp, sizeof(*srcp));
+	IN6_IFADDR_RUNLOCK();
+	return (0);
 }
 
 /*
@@ -448,8 +518,7 @@ in6_selectsrc(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 static int
 selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
     struct ip6_moptions *mopts, struct route_in6 *ro,
-    struct ifnet **retifp, struct rtentry **retrt, int clone,
-    int norouteok)
+    struct ifnet **retifp, struct rtentry **retrt, int norouteok, u_int fibnum)
 {
 	int error = 0;
 	struct ifnet *ifp = NULL;
@@ -504,9 +573,10 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 	 */
 	if (opts && opts->ip6po_nexthop) {
 		struct route_in6 *ron;
-
+		struct llentry *la;
+	    
 		sin6_next = satosin6(opts->ip6po_nexthop);
-
+		
 		/* at this moment, we only support AF_INET6 next hops */
 		if (sin6_next->sin6_family != AF_INET6) {
 			error = EAFNOSUPPORT; /* or should we proceed? */
@@ -518,6 +588,36 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		 * by that address must be a neighbor of the sending host.
 		 */
 		ron = &opts->ip6po_nextroute;
+		/*
+		 * XXX what do we do here?
+		 * PLZ to be fixing
+		 */
+
+
+		if (ron->ro_rt == NULL) {
+			in6_rtalloc(ron, fibnum); /* multi path case? */
+			if (ron->ro_rt == NULL) {
+				if (ron->ro_rt) {
+					RTFREE(ron->ro_rt);
+					ron->ro_rt = NULL;
+				}
+				error = EHOSTUNREACH;
+				goto done;
+			} 
+		}
+
+		rt = ron->ro_rt;
+		ifp = rt->rt_ifp;
+		IF_AFDATA_LOCK(ifp);
+		la = lla_lookup(LLTABLE6(ifp), 0, (struct sockaddr *)&sin6_next->sin6_addr);
+		IF_AFDATA_UNLOCK(ifp);
+		if (la != NULL) 
+			LLE_RUNLOCK(la);
+		else {
+			error = EHOSTUNREACH;
+			goto done;
+		}
+#if 0
 		if ((ron->ro_rt &&
 		     (ron->ro_rt->rt_flags & (RTF_UP | RTF_LLINFO)) !=
 		     (RTF_UP | RTF_LLINFO)) ||
@@ -530,7 +630,7 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 			*satosin6(&ron->ro_dst) = *sin6_next;
 		}
 		if (ron->ro_rt == NULL) {
-			rtalloc((struct route *)ron); /* multi path case? */
+			in6_rtalloc(ron, fibnum); /* multi path case? */
 			if (ron->ro_rt == NULL ||
 			    !(ron->ro_rt->rt_flags & RTF_LLINFO)) {
 				if (ron->ro_rt) {
@@ -541,16 +641,14 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 				goto done;
 			}
 		}
-		rt = ron->ro_rt;
-		ifp = rt->rt_ifp;
+#endif
 
 		/*
 		 * When cloning is required, try to allocate a route to the
 		 * destination so that the caller can store path MTU
 		 * information.
 		 */
-		if (!clone)
-			goto done;
+		goto done;
 	}
 
 	/*
@@ -576,16 +674,17 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 			*sa6 = *dstsock;
 			sa6->sin6_scope_id = 0;
 
-			if (clone) {
-				rtalloc((struct route *)ro);
-			} else {
-				ro->ro_rt = rtalloc1(&((struct route *)ro)
-						     ->ro_dst, 0, 0UL);
+#ifdef RADIX_MPATH
+				rtalloc_mpath_fib((struct route *)ro,
+				    ntohl(sa6->sin6_addr.s6_addr32[3]), fibnum);
+#else			
+				ro->ro_rt = in6_rtalloc1((struct sockaddr *)
+				    &ro->ro_dst, 0, 0UL, fibnum);
 				if (ro->ro_rt)
 					RT_UNLOCK(ro->ro_rt);
-			}
+#endif
 		}
-
+				
 		/*
 		 * do not care about the result if we have the nexthop
 		 * explicitly specified.
@@ -632,10 +731,27 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		error = EHOSTUNREACH;
 	}
 	if (error == EHOSTUNREACH)
-		ip6stat.ip6s_noroute++;
+		V_ip6stat.ip6s_noroute++;
 
-	if (retifp != NULL)
+	if (retifp != NULL) {
 		*retifp = ifp;
+
+		/*
+		 * Adjust the "outgoing" interface.  If we're going to loop 
+		 * the packet back to ourselves, the ifp would be the loopback 
+		 * interface. However, we'd rather know the interface associated 
+		 * to the destination address (which should probably be one of 
+		 * our own addresses.)
+		 */
+		if (rt) {
+			if ((rt->rt_ifp->if_flags & IFF_LOOPBACK) &&
+			    (rt->rt_gateway->sa_family == AF_LINK))
+				*retifp = 
+					ifnet_byindex(((struct sockaddr_dl *)
+						       rt->rt_gateway)->sdl_index);
+		}
+	}
+
 	if (retrt != NULL)
 		*retrt = rt;	/* rt may be NULL */
 
@@ -644,11 +760,14 @@ selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 
 static int
 in6_selectif(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
-    struct ip6_moptions *mopts, struct route_in6 *ro, struct ifnet **retifp)
+    struct ip6_moptions *mopts, struct route_in6 *ro, struct ifnet **retifp,
+    struct ifnet *oifp, u_int fibnum)
 {
 	int error;
 	struct route_in6 sro;
 	struct rtentry *rt = NULL;
+
+	KASSERT(retifp != NULL, ("%s: retifp is NULL", __func__));
 
 	if (ro == NULL) {
 		bzero(&sro, sizeof(sro));
@@ -656,9 +775,14 @@ in6_selectif(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 	}
 
 	if ((error = selectroute(dstsock, opts, mopts, ro, retifp,
-				     &rt, 0, 1)) != 0) {
+	    &rt, 1, fibnum)) != 0) {
 		if (ro == &sro && rt && rt == sro.ro_rt)
 			RTFREE(rt);
+		/* Help ND. See oifp comment in in6_selectsrc(). */
+		if (oifp != NULL && fibnum == RT_DEFAULT_FIB) {
+			*retifp = oifp;
+			error = 0;
+		}
 		return (error);
 	}
 
@@ -687,33 +811,38 @@ in6_selectif(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
 		return (flags);
 	}
 
-	/*
-	 * Adjust the "outgoing" interface.  If we're going to loop the packet
-	 * back to ourselves, the ifp would be the loopback interface.
-	 * However, we'd rather know the interface associated to the
-	 * destination address (which should probably be one of our own
-	 * addresses.)
-	 */
-	if (rt && rt->rt_ifa && rt->rt_ifa->ifa_ifp)
-		*retifp = rt->rt_ifa->ifa_ifp;
-
 	if (ro == &sro && rt && rt == sro.ro_rt)
 		RTFREE(rt);
 	return (0);
 }
 
 /*
- * clone - meaningful only for bsdi and freebsd
+ * Public wrapper function to selectroute().
+ *
+ * XXX-BZ in6_selectroute() should and will grow the FIB argument. The
+ * in6_selectroute_fib() function is only there for backward compat on stable.
  */
 int
 in6_selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
     struct ip6_moptions *mopts, struct route_in6 *ro,
-    struct ifnet **retifp, struct rtentry **retrt, int clone)
+    struct ifnet **retifp, struct rtentry **retrt)
 {
 
 	return (selectroute(dstsock, opts, mopts, ro, retifp,
-	    retrt, clone, 0));
+	    retrt, 0, RT_DEFAULT_FIB));
 }
+
+#ifndef BURN_BRIDGES
+int
+in6_selectroute_fib(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
+    struct ip6_moptions *mopts, struct route_in6 *ro,
+    struct ifnet **retifp, struct rtentry **retrt, u_int fibnum)
+{
+
+	return (selectroute(dstsock, opts, mopts, ro, retifp,
+	    retrt, 0, fibnum));
+}
+#endif
 
 /*
  * Default hop limit selection. The precedence is as follows:
@@ -723,7 +852,7 @@ in6_selectroute(struct sockaddr_in6 *dstsock, struct ip6_pktopts *opts,
  * 3. The system default hoplimit.
  */
 int
-in6_selecthlim(struct in6pcb *in6p, struct ifnet *ifp)
+in6_selecthlim(struct inpcb *in6p, struct ifnet *ifp)
 {
 
 	if (in6p && in6p->in6p_hops >= 0)
@@ -738,16 +867,15 @@ in6_selecthlim(struct in6pcb *in6p, struct ifnet *ifp)
 		ro6.ro_dst.sin6_family = AF_INET6;
 		ro6.ro_dst.sin6_len = sizeof(struct sockaddr_in6);
 		ro6.ro_dst.sin6_addr = in6p->in6p_faddr;
-		rtalloc((struct route *)&ro6);
+		in6_rtalloc(&ro6, in6p->inp_inc.inc_fibnum);
 		if (ro6.ro_rt) {
 			lifp = ro6.ro_rt->rt_ifp;
 			RTFREE(ro6.ro_rt);
 			if (lifp)
 				return (ND_IFINFO(lifp)->chlim);
-		} else
-			return (ip6_defhlim);
+		}
 	}
-	return (ip6_defhlim);
+	return (V_ip6_defhlim);
 }
 
 /*
@@ -758,85 +886,29 @@ int
 in6_pcbsetport(struct in6_addr *laddr, struct inpcb *inp, struct ucred *cred)
 {
 	struct socket *so = inp->inp_socket;
-	u_int16_t lport = 0, first, last, *lastport;
-	int count, error = 0, wild = 0;
+	u_int16_t lport = 0;
+	int error, lookupflags = 0;
+#ifdef INVARIANTS
 	struct inpcbinfo *pcbinfo = inp->inp_pcbinfo;
+#endif
 
-	INP_INFO_WLOCK_ASSERT(pcbinfo);
 	INP_WLOCK_ASSERT(inp);
+	INP_HASH_WLOCK_ASSERT(pcbinfo);
+
+	error = prison_local_ip6(cred, laddr,
+	    ((inp->inp_flags & IN6P_IPV6_V6ONLY) != 0));
+	if (error)
+		return(error);
 
 	/* XXX: this is redundant when called from in6_pcbbind */
 	if ((so->so_options & (SO_REUSEADDR|SO_REUSEPORT)) == 0)
-		wild = INPLOOKUP_WILDCARD;
+		lookupflags = INPLOOKUP_WILDCARD;
 
 	inp->inp_flags |= INP_ANONPORT;
 
-	if (inp->inp_flags & INP_HIGHPORT) {
-		first = ipport_hifirstauto;	/* sysctl */
-		last  = ipport_hilastauto;
-		lastport = &pcbinfo->ipi_lasthi;
-	} else if (inp->inp_flags & INP_LOWPORT) {
-		error = priv_check_cred(cred, PRIV_NETINET_RESERVEDPORT, 0);
-		if (error)
-			return error;
-		first = ipport_lowfirstauto;	/* 1023 */
-		last  = ipport_lowlastauto;	/* 600 */
-		lastport = &pcbinfo->ipi_lastlow;
-	} else {
-		first = ipport_firstauto;	/* sysctl */
-		last  = ipport_lastauto;
-		lastport = &pcbinfo->ipi_lastport;
-	}
-	/*
-	 * Simple check to ensure all ports are not used up causing
-	 * a deadlock here.
-	 *
-	 * We split the two cases (up and down) so that the direction
-	 * is not being tested on each round of the loop.
-	 */
-	if (first > last) {
-		/*
-		 * counting down
-		 */
-		count = first - last;
-
-		do {
-			if (count-- < 0) {	/* completely used? */
-				/*
-				 * Undo any address bind that may have
-				 * occurred above.
-				 */
-				inp->in6p_laddr = in6addr_any;
-				return (EAGAIN);
-			}
-			--*lastport;
-			if (*lastport > first || *lastport < last)
-				*lastport = first;
-			lport = htons(*lastport);
-		} while (in6_pcblookup_local(pcbinfo, &inp->in6p_laddr,
-		    lport, wild, cred));
-	} else {
-		/*
-			 * counting up
-			 */
-		count = last - first;
-
-		do {
-			if (count-- < 0) {	/* completely used? */
-				/*
-				 * Undo any address bind that may have
-				 * occurred above.
-				 */
-				inp->in6p_laddr = in6addr_any;
-				return (EAGAIN);
-			}
-			++*lastport;
-			if (*lastport < first || *lastport > last)
-				*lastport = first;
-			lport = htons(*lastport);
-		} while (in6_pcblookup_local(pcbinfo, &inp->in6p_laddr,
-		    lport, wild, cred));
-	}
+	error = in_pcb_lport(inp, NULL, &lport, cred, lookupflags);
+	if (error != 0)
+		return (error);
 
 	inp->inp_lport = lport;
 	if (in_pcbinshash(inp) != 0) {
@@ -851,14 +923,18 @@ in6_pcbsetport(struct in6_addr *laddr, struct inpcb *inp, struct ucred *cred)
 void
 addrsel_policy_init(void)
 {
-	ADDRSEL_LOCK_INIT();
-	ADDRSEL_SXLOCK_INIT();
 
 	init_policy_queue();
 
 	/* initialize the "last resort" policy */
-	bzero(&defaultaddrpolicy, sizeof(defaultaddrpolicy));
-	defaultaddrpolicy.label = ADDR_LABEL_NOTAPP;
+	bzero(&V_defaultaddrpolicy, sizeof(V_defaultaddrpolicy));
+	V_defaultaddrpolicy.label = ADDR_LABEL_NOTAPP;
+
+	if (!IS_DEFAULT_VNET(curvnet))
+		return;
+
+	ADDRSEL_LOCK_INIT();
+	ADDRSEL_SXLOCK_INIT();
 }
 
 static struct in6_addrpolicy *
@@ -870,7 +946,7 @@ lookup_addrsel_policy(struct sockaddr_in6 *key)
 	match = match_addrsel_policy(key);
 
 	if (match == NULL)
-		match = &defaultaddrpolicy;
+		match = &V_defaultaddrpolicy;
 	else
 		match->use++;
 	ADDRSEL_UNLOCK();
@@ -950,13 +1026,14 @@ struct addrsel_policyent {
 
 TAILQ_HEAD(addrsel_policyhead, addrsel_policyent);
 
-struct addrsel_policyhead addrsel_policytab;
+static VNET_DEFINE(struct addrsel_policyhead, addrsel_policytab);
+#define	V_addrsel_policytab		VNET(addrsel_policytab)
 
 static void
 init_policy_queue(void)
 {
 
-	TAILQ_INIT(&addrsel_policytab);
+	TAILQ_INIT(&V_addrsel_policytab);
 }
 
 static int
@@ -964,20 +1041,20 @@ add_addrsel_policyent(struct in6_addrpolicy *newpolicy)
 {
 	struct addrsel_policyent *new, *pol;
 
-	MALLOC(new, struct addrsel_policyent *, sizeof(*new), M_IFADDR,
+	new = malloc(sizeof(*new), M_IFADDR,
 	       M_WAITOK);
 	ADDRSEL_XLOCK();
 	ADDRSEL_LOCK();
 
 	/* duplication check */
-	TAILQ_FOREACH(pol, &addrsel_policytab, ape_entry) {
+	TAILQ_FOREACH(pol, &V_addrsel_policytab, ape_entry) {
 		if (IN6_ARE_ADDR_EQUAL(&newpolicy->addr.sin6_addr,
 				       &pol->ape_policy.addr.sin6_addr) &&
 		    IN6_ARE_ADDR_EQUAL(&newpolicy->addrmask.sin6_addr,
 				       &pol->ape_policy.addrmask.sin6_addr)) {
 			ADDRSEL_UNLOCK();
 			ADDRSEL_XUNLOCK();
-			FREE(new, M_IFADDR);
+			free(new, M_IFADDR);
 			return (EEXIST);	/* or override it? */
 		}
 	}
@@ -987,7 +1064,7 @@ add_addrsel_policyent(struct in6_addrpolicy *newpolicy)
 	/* XXX: should validate entry */
 	new->ape_policy = *newpolicy;
 
-	TAILQ_INSERT_TAIL(&addrsel_policytab, new, ape_entry);
+	TAILQ_INSERT_TAIL(&V_addrsel_policytab, new, ape_entry);
 	ADDRSEL_UNLOCK();
 	ADDRSEL_XUNLOCK();
 
@@ -1003,7 +1080,7 @@ delete_addrsel_policyent(struct in6_addrpolicy *key)
 	ADDRSEL_LOCK();
 
 	/* search for the entry in the table */
-	TAILQ_FOREACH(pol, &addrsel_policytab, ape_entry) {
+	TAILQ_FOREACH(pol, &V_addrsel_policytab, ape_entry) {
 		if (IN6_ARE_ADDR_EQUAL(&key->addr.sin6_addr,
 		    &pol->ape_policy.addr.sin6_addr) &&
 		    IN6_ARE_ADDR_EQUAL(&key->addrmask.sin6_addr,
@@ -1017,7 +1094,7 @@ delete_addrsel_policyent(struct in6_addrpolicy *key)
 		return (ESRCH);
 	}
 
-	TAILQ_REMOVE(&addrsel_policytab, pol, ape_entry);
+	TAILQ_REMOVE(&V_addrsel_policytab, pol, ape_entry);
 	ADDRSEL_UNLOCK();
 	ADDRSEL_XUNLOCK();
 
@@ -1032,7 +1109,7 @@ walk_addrsel_policy(int (*callback)(struct in6_addrpolicy *, void *),
 	int error = 0;
 
 	ADDRSEL_SLOCK();
-	TAILQ_FOREACH(pol, &addrsel_policytab, ape_entry) {
+	TAILQ_FOREACH(pol, &V_addrsel_policytab, ape_entry) {
 		if ((error = (*callback)(&pol->ape_policy, w)) != 0) {
 			ADDRSEL_SUNLOCK();
 			return (error);
@@ -1061,7 +1138,7 @@ match_addrsel_policy(struct sockaddr_in6 *key)
 	int matchlen, bestmatchlen = -1;
 	u_char *mp, *ep, *k, *p, m;
 
-	TAILQ_FOREACH(pent, &addrsel_policytab, ape_entry) {
+	TAILQ_FOREACH(pent, &V_addrsel_policytab, ape_entry) {
 		matchlen = 0;
 
 		pol = &pent->ape_policy;

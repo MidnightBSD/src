@@ -26,11 +26,10 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_switch.c,v 1.137.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_sched.h"
 
-#ifndef KERN_SWITCH_INCLUDE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kdb.h>
@@ -41,13 +40,8 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_switch.c,v 1.137.2.2.2.1 2008/11/25 02:59:
 #include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/sched.h>
-#else  /* KERN_SWITCH_INCLUDE */
-#if defined(SMP) && (defined(__i386__) || defined(__amd64__))
 #include <sys/smp.h>
-#endif
-#if defined(SMP) && defined(SCHED_4BSD)
 #include <sys/sysctl.h>
-#endif
 
 #include <machine/cpu.h>
 
@@ -79,27 +73,51 @@ static int kern_sched_preemption = 0;
 SYSCTL_INT(_kern_sched, OID_AUTO, preemption, CTLFLAG_RD,
     &kern_sched_preemption, 0, "Kernel preemption enabled");
 
+/*
+ * Support for scheduler stats exported via kern.sched.stats.  All stats may
+ * be reset with kern.sched.stats.reset = 1.  Stats may be defined elsewhere
+ * with SCHED_STAT_DEFINE().
+ */
 #ifdef SCHED_STATS
-long switch_preempt;
-long switch_owepreempt;
-long switch_turnstile;
-long switch_sleepq;
-long switch_sleepqtimo;
-long switch_relinquish;
-long switch_needresched;
-static SYSCTL_NODE(_kern_sched, OID_AUTO, stats, CTLFLAG_RW, 0, "switch stats");
-SYSCTL_INT(_kern_sched_stats, OID_AUTO, preempt, CTLFLAG_RD, &switch_preempt, 0, "");
-SYSCTL_INT(_kern_sched_stats, OID_AUTO, owepreempt, CTLFLAG_RD, &switch_owepreempt, 0, "");
-SYSCTL_INT(_kern_sched_stats, OID_AUTO, turnstile, CTLFLAG_RD, &switch_turnstile, 0, "");
-SYSCTL_INT(_kern_sched_stats, OID_AUTO, sleepq, CTLFLAG_RD, &switch_sleepq, 0, "");
-SYSCTL_INT(_kern_sched_stats, OID_AUTO, sleepqtimo, CTLFLAG_RD, &switch_sleepqtimo, 0, "");
-SYSCTL_INT(_kern_sched_stats, OID_AUTO, relinquish, CTLFLAG_RD, &switch_relinquish, 0, "");
-SYSCTL_INT(_kern_sched_stats, OID_AUTO, needresched, CTLFLAG_RD, &switch_needresched, 0, "");
+SYSCTL_NODE(_kern_sched, OID_AUTO, stats, CTLFLAG_RW, 0, "switch stats");
+
+/* Switch reasons from mi_switch(). */
+DPCPU_DEFINE(long, sched_switch_stats[SWT_COUNT]);
+SCHED_STAT_DEFINE_VAR(uncategorized,
+    &DPCPU_NAME(sched_switch_stats[SWT_NONE]), "");
+SCHED_STAT_DEFINE_VAR(preempt,
+    &DPCPU_NAME(sched_switch_stats[SWT_PREEMPT]), "");
+SCHED_STAT_DEFINE_VAR(owepreempt,
+    &DPCPU_NAME(sched_switch_stats[SWT_OWEPREEMPT]), "");
+SCHED_STAT_DEFINE_VAR(turnstile,
+    &DPCPU_NAME(sched_switch_stats[SWT_TURNSTILE]), "");
+SCHED_STAT_DEFINE_VAR(sleepq,
+    &DPCPU_NAME(sched_switch_stats[SWT_SLEEPQ]), "");
+SCHED_STAT_DEFINE_VAR(sleepqtimo,
+    &DPCPU_NAME(sched_switch_stats[SWT_SLEEPQTIMO]), "");
+SCHED_STAT_DEFINE_VAR(relinquish, 
+    &DPCPU_NAME(sched_switch_stats[SWT_RELINQUISH]), "");
+SCHED_STAT_DEFINE_VAR(needresched,
+    &DPCPU_NAME(sched_switch_stats[SWT_NEEDRESCHED]), "");
+SCHED_STAT_DEFINE_VAR(idle, 
+    &DPCPU_NAME(sched_switch_stats[SWT_IDLE]), "");
+SCHED_STAT_DEFINE_VAR(iwait,
+    &DPCPU_NAME(sched_switch_stats[SWT_IWAIT]), "");
+SCHED_STAT_DEFINE_VAR(suspend,
+    &DPCPU_NAME(sched_switch_stats[SWT_SUSPEND]), "");
+SCHED_STAT_DEFINE_VAR(remotepreempt,
+    &DPCPU_NAME(sched_switch_stats[SWT_REMOTEPREEMPT]), "");
+SCHED_STAT_DEFINE_VAR(remotewakeidle,
+    &DPCPU_NAME(sched_switch_stats[SWT_REMOTEWAKEIDLE]), "");
+
 static int
 sysctl_stats_reset(SYSCTL_HANDLER_ARGS)
 {
+	struct sysctl_oid *p;
+	uintptr_t counter;
         int error;
 	int val;
+	int i;
 
         val = 0;
         error = sysctl_handle_int(oidp, &val, 0, req);
@@ -107,14 +125,18 @@ sysctl_stats_reset(SYSCTL_HANDLER_ARGS)
                 return (error);
         if (val == 0)
                 return (0);
-	switch_preempt = 0;
-	switch_owepreempt = 0;
-	switch_turnstile = 0;
-	switch_sleepq = 0;
-	switch_sleepqtimo = 0;
-	switch_relinquish = 0;
-	switch_needresched = 0;
-
+	/*
+	 * Traverse the list of children of _kern_sched_stats and reset each
+	 * to 0.  Skip the reset entry.
+	 */
+	SLIST_FOREACH(p, oidp->oid_parent, oid_link) {
+		if (p == oidp || p->oid_arg1 == NULL)
+			continue;
+		counter = (uintptr_t)p->oid_arg1;
+		CPU_FOREACH(i) {
+			*(long *)(dpcpu_off[i] + counter) = 0;
+		}
+	}
 	return (0);
 }
 
@@ -163,13 +185,14 @@ critical_enter(void)
 	td = curthread;
 	td->td_critnest++;
 	CTR4(KTR_CRITICAL, "critical_enter by thread %p (%ld, %s) to %d", td,
-	    (long)td->td_proc->p_pid, td->td_proc->p_comm, td->td_critnest);
+	    (long)td->td_proc->p_pid, td->td_name, td->td_critnest);
 }
 
 void
 critical_exit(void)
 {
 	struct thread *td;
+	int flags;
 
 	td = curthread;
 	KASSERT(td->td_critnest != 0,
@@ -177,120 +200,24 @@ critical_exit(void)
 
 	if (td->td_critnest == 1) {
 		td->td_critnest = 0;
-		if (td->td_owepreempt) {
+		if (td->td_owepreempt && !kdb_active) {
 			td->td_critnest = 1;
 			thread_lock(td);
 			td->td_critnest--;
-			SCHED_STAT_INC(switch_owepreempt);
-			mi_switch(SW_INVOL|SW_PREEMPT, NULL);
+			flags = SW_INVOL | SW_PREEMPT;
+			if (TD_IS_IDLETHREAD(td))
+				flags |= SWT_IDLE;
+			else
+				flags |= SWT_OWEPREEMPT;
+			mi_switch(flags, NULL);
 			thread_unlock(td);
 		}
 	} else
 		td->td_critnest--;
 
 	CTR4(KTR_CRITICAL, "critical_exit by thread %p (%ld, %s) to %d", td,
-	    (long)td->td_proc->p_pid, td->td_proc->p_comm, td->td_critnest);
+	    (long)td->td_proc->p_pid, td->td_name, td->td_critnest);
 }
-
-/*
- * This function is called when a thread is about to be put on run queue
- * because it has been made runnable or its priority has been adjusted.  It
- * determines if the new thread should be immediately preempted to.  If so,
- * it switches to it and eventually returns true.  If not, it returns false
- * so that the caller may place the thread on an appropriate run queue.
- */
-int
-maybe_preempt(struct thread *td)
-{
-#ifdef PREEMPTION
-	struct thread *ctd;
-	int cpri, pri;
-#endif
-
-#ifdef PREEMPTION
-	/*
-	 * The new thread should not preempt the current thread if any of the
-	 * following conditions are true:
-	 *
-	 *  - The kernel is in the throes of crashing (panicstr).
-	 *  - The current thread has a higher (numerically lower) or
-	 *    equivalent priority.  Note that this prevents curthread from
-	 *    trying to preempt to itself.
-	 *  - It is too early in the boot for context switches (cold is set).
-	 *  - The current thread has an inhibitor set or is in the process of
-	 *    exiting.  In this case, the current thread is about to switch
-	 *    out anyways, so there's no point in preempting.  If we did,
-	 *    the current thread would not be properly resumed as well, so
-	 *    just avoid that whole landmine.
-	 *  - If the new thread's priority is not a realtime priority and
-	 *    the current thread's priority is not an idle priority and
-	 *    FULL_PREEMPTION is disabled.
-	 *
-	 * If all of these conditions are false, but the current thread is in
-	 * a nested critical section, then we have to defer the preemption
-	 * until we exit the critical section.  Otherwise, switch immediately
-	 * to the new thread.
-	 */
-	ctd = curthread;
-	THREAD_LOCK_ASSERT(td, MA_OWNED);
-	KASSERT ((ctd->td_sched != NULL && ctd->td_sched->ts_thread == ctd),
-	  ("thread has no (or wrong) sched-private part."));
-	KASSERT((td->td_inhibitors == 0),
-			("maybe_preempt: trying to run inhibited thread"));
-	pri = td->td_priority;
-	cpri = ctd->td_priority;
-	if (panicstr != NULL || pri >= cpri || cold /* || dumping */ ||
-	    TD_IS_INHIBITED(ctd))
-		return (0);
-#ifndef FULL_PREEMPTION
-	if (pri > PRI_MAX_ITHD && cpri < PRI_MIN_IDLE)
-		return (0);
-#endif
-
-	if (ctd->td_critnest > 1) {
-		CTR1(KTR_PROC, "maybe_preempt: in critical section %d",
-		    ctd->td_critnest);
-		ctd->td_owepreempt = 1;
-		return (0);
-	}
-	/*
-	 * Thread is runnable but not yet put on system run queue.
-	 */
-	MPASS(ctd->td_lock == td->td_lock);
-	MPASS(TD_ON_RUNQ(td));
-	TD_SET_RUNNING(td);
-	CTR3(KTR_PROC, "preempting to thread %p (pid %d, %s)\n", td,
-	    td->td_proc->p_pid, td->td_proc->p_comm);
-	SCHED_STAT_INC(switch_preempt);
-	mi_switch(SW_INVOL|SW_PREEMPT, td);
-	/*
-	 * td's lock pointer may have changed.  We have to return with it
-	 * locked.
-	 */
-	spinlock_enter();
-	thread_unlock(ctd);
-	thread_lock(td);
-	spinlock_exit();
-	return (1);
-#else
-	return (0);
-#endif
-}
-
-#if 0
-#ifndef PREEMPTION
-/* XXX: There should be a non-static version of this. */
-static void
-printf_caddr_t(void *data)
-{
-	printf("%s", (char *)data);
-}
-static char preempt_warning[] =
-    "WARNING: Kernel preemption is disabled, expect reduced performance.\n";
-SYSINIT(preempt_warning, SI_SUB_COPYRIGHT, SI_ORDER_ANY, printf_caddr_t,
-    preempt_warning);
-#endif
-#endif
 
 /************************************************************************
  * SYSTEM RUN QUEUE manipulations and tests				*
@@ -402,39 +329,39 @@ runq_setbit(struct runq *rq, int pri)
  * corresponding status bit.
  */
 void
-runq_add(struct runq *rq, struct td_sched *ts, int flags)
+runq_add(struct runq *rq, struct thread *td, int flags)
 {
 	struct rqhead *rqh;
 	int pri;
 
-	pri = ts->ts_thread->td_priority / RQ_PPQ;
-	ts->ts_rqindex = pri;
+	pri = td->td_priority / RQ_PPQ;
+	td->td_rqindex = pri;
 	runq_setbit(rq, pri);
 	rqh = &rq->rq_queues[pri];
-	CTR5(KTR_RUNQ, "runq_add: td=%p ts=%p pri=%d %d rqh=%p",
-	    ts->ts_thread, ts, ts->ts_thread->td_priority, pri, rqh);
+	CTR4(KTR_RUNQ, "runq_add: td=%p pri=%d %d rqh=%p",
+	    td, td->td_priority, pri, rqh);
 	if (flags & SRQ_PREEMPTED) {
-		TAILQ_INSERT_HEAD(rqh, ts, ts_procq);
+		TAILQ_INSERT_HEAD(rqh, td, td_runq);
 	} else {
-		TAILQ_INSERT_TAIL(rqh, ts, ts_procq);
+		TAILQ_INSERT_TAIL(rqh, td, td_runq);
 	}
 }
 
 void
-runq_add_pri(struct runq *rq, struct td_sched *ts, u_char pri, int flags)
+runq_add_pri(struct runq *rq, struct thread *td, u_char pri, int flags)
 {
 	struct rqhead *rqh;
 
 	KASSERT(pri < RQ_NQS, ("runq_add_pri: %d out of range", pri));
-	ts->ts_rqindex = pri;
+	td->td_rqindex = pri;
 	runq_setbit(rq, pri);
 	rqh = &rq->rq_queues[pri];
-	CTR5(KTR_RUNQ, "runq_add_pri: td=%p ke=%p pri=%d idx=%d rqh=%p",
-	    ts->ts_thread, ts, ts->ts_thread->td_priority, pri, rqh);
+	CTR4(KTR_RUNQ, "runq_add_pri: td=%p pri=%d idx=%d rqh=%p",
+	    td, td->td_priority, pri, rqh);
 	if (flags & SRQ_PREEMPTED) {
-		TAILQ_INSERT_HEAD(rqh, ts, ts_procq);
+		TAILQ_INSERT_HEAD(rqh, td, td_runq);
 	} else {
-		TAILQ_INSERT_TAIL(rqh, ts, ts_procq);
+		TAILQ_INSERT_TAIL(rqh, td, td_runq);
 	}
 }
 /*
@@ -460,72 +387,88 @@ runq_check(struct runq *rq)
 	return (0);
 }
 
-#if defined(SMP) && defined(SCHED_4BSD)
-int runq_fuzz = 1;
-SYSCTL_INT(_kern_sched, OID_AUTO, runq_fuzz, CTLFLAG_RW, &runq_fuzz, 0, "");
-#endif
-
 /*
  * Find the highest priority process on the run queue.
  */
-struct td_sched *
-runq_choose(struct runq *rq)
+struct thread *
+runq_choose_fuzz(struct runq *rq, int fuzz)
 {
 	struct rqhead *rqh;
-	struct td_sched *ts;
+	struct thread *td;
 	int pri;
 
 	while ((pri = runq_findbit(rq)) != -1) {
 		rqh = &rq->rq_queues[pri];
-#if defined(SMP) && defined(SCHED_4BSD)
 		/* fuzz == 1 is normal.. 0 or less are ignored */
-		if (runq_fuzz > 1) {
+		if (fuzz > 1) {
 			/*
 			 * In the first couple of entries, check if
 			 * there is one for our CPU as a preference.
 			 */
-			int count = runq_fuzz;
+			int count = fuzz;
 			int cpu = PCPU_GET(cpuid);
-			struct td_sched *ts2;
-			ts2 = ts = TAILQ_FIRST(rqh);
+			struct thread *td2;
+			td2 = td = TAILQ_FIRST(rqh);
 
-			while (count-- && ts2) {
-				if (ts2->ts_thread->td_lastcpu == cpu) {
-					ts = ts2;
+			while (count-- && td2) {
+				if (td2->td_lastcpu == cpu) {
+					td = td2;
 					break;
 				}
-				ts2 = TAILQ_NEXT(ts2, ts_procq);
+				td2 = TAILQ_NEXT(td2, td_runq);
 			}
 		} else
-#endif
-			ts = TAILQ_FIRST(rqh);
-		KASSERT(ts != NULL, ("runq_choose: no proc on busy queue"));
+			td = TAILQ_FIRST(rqh);
+		KASSERT(td != NULL, ("runq_choose_fuzz: no proc on busy queue"));
 		CTR3(KTR_RUNQ,
-		    "runq_choose: pri=%d td_sched=%p rqh=%p", pri, ts, rqh);
-		return (ts);
+		    "runq_choose_fuzz: pri=%d thread=%p rqh=%p", pri, td, rqh);
+		return (td);
 	}
-	CTR1(KTR_RUNQ, "runq_choose: idleproc pri=%d", pri);
+	CTR1(KTR_RUNQ, "runq_choose_fuzz: idleproc pri=%d", pri);
 
 	return (NULL);
 }
 
-struct td_sched *
+/*
+ * Find the highest priority process on the run queue.
+ */
+struct thread *
+runq_choose(struct runq *rq)
+{
+	struct rqhead *rqh;
+	struct thread *td;
+	int pri;
+
+	while ((pri = runq_findbit(rq)) != -1) {
+		rqh = &rq->rq_queues[pri];
+		td = TAILQ_FIRST(rqh);
+		KASSERT(td != NULL, ("runq_choose: no thread on busy queue"));
+		CTR3(KTR_RUNQ,
+		    "runq_choose: pri=%d thread=%p rqh=%p", pri, td, rqh);
+		return (td);
+	}
+	CTR1(KTR_RUNQ, "runq_choose: idlethread pri=%d", pri);
+
+	return (NULL);
+}
+
+struct thread *
 runq_choose_from(struct runq *rq, u_char idx)
 {
 	struct rqhead *rqh;
-	struct td_sched *ts;
+	struct thread *td;
 	int pri;
 
 	if ((pri = runq_findbit_from(rq, idx)) != -1) {
 		rqh = &rq->rq_queues[pri];
-		ts = TAILQ_FIRST(rqh);
-		KASSERT(ts != NULL, ("runq_choose: no proc on busy queue"));
+		td = TAILQ_FIRST(rqh);
+		KASSERT(td != NULL, ("runq_choose: no thread on busy queue"));
 		CTR4(KTR_RUNQ,
-		    "runq_choose_from: pri=%d kse=%p idx=%d rqh=%p",
-		    pri, ts, ts->ts_rqindex, rqh);
-		return (ts);
+		    "runq_choose_from: pri=%d thread=%p idx=%d rqh=%p",
+		    pri, td, td->td_rqindex, rqh);
+		return (td);
 	}
-	CTR1(KTR_RUNQ, "runq_choose_from: idleproc pri=%d", pri);
+	CTR1(KTR_RUNQ, "runq_choose_from: idlethread pri=%d", pri);
 
 	return (NULL);
 }
@@ -535,36 +478,26 @@ runq_choose_from(struct runq *rq, u_char idx)
  * Caller must set state afterwards.
  */
 void
-runq_remove(struct runq *rq, struct td_sched *ts)
+runq_remove(struct runq *rq, struct thread *td)
 {
 
-	runq_remove_idx(rq, ts, NULL);
+	runq_remove_idx(rq, td, NULL);
 }
 
 void
-runq_remove_idx(struct runq *rq, struct td_sched *ts, u_char *idx)
+runq_remove_idx(struct runq *rq, struct thread *td, u_char *idx)
 {
 	struct rqhead *rqh;
 	u_char pri;
 
-	KASSERT(ts->ts_thread->td_flags & TDF_INMEM,
+	KASSERT(td->td_flags & TDF_INMEM,
 		("runq_remove_idx: thread swapped out"));
-	pri = ts->ts_rqindex;
+	pri = td->td_rqindex;
 	KASSERT(pri < RQ_NQS, ("runq_remove_idx: Invalid index %d\n", pri));
 	rqh = &rq->rq_queues[pri];
-	CTR5(KTR_RUNQ, "runq_remove_idx: td=%p, ts=%p pri=%d %d rqh=%p",
-	    ts->ts_thread, ts, ts->ts_thread->td_priority, pri, rqh);
-	{
-		struct td_sched *nts;
-
-		TAILQ_FOREACH(nts, rqh, ts_procq)
-			if (nts == ts)
-				break;
-		if (ts != nts)
-			panic("runq_remove_idx: ts %p not on rqindex %d",
-			    ts, pri);
-	}
-	TAILQ_REMOVE(rqh, ts, ts_procq);
+	CTR4(KTR_RUNQ, "runq_remove_idx: td=%p, pri=%d %d rqh=%p",
+	    td, td->td_priority, pri, rqh);
+	TAILQ_REMOVE(rqh, td, td_runq);
 	if (TAILQ_EMPTY(rqh)) {
 		CTR0(KTR_RUNQ, "runq_remove_idx: empty");
 		runq_clrbit(rq, pri);
@@ -572,39 +505,3 @@ runq_remove_idx(struct runq *rq, struct td_sched *ts, u_char *idx)
 			*idx = (pri + 1) % RQ_NQS;
 	}
 }
-
-/****** functions that are temporarily here ***********/
-#include <vm/uma.h>
-
-/*
- *  Allocate scheduler specific per-process resources.
- * The thread and proc have already been linked in.
- *
- * Called from:
- *  proc_init() (UMA init method)
- */
-void
-sched_newproc(struct proc *p, struct thread *td)
-{
-}
-
-/*
- * thread is being either created or recycled.
- * Fix up the per-scheduler resources associated with it.
- * Called from:
- *  sched_fork_thread()
- *  thread_dtor()  (*may go away)
- *  thread_init()  (*may go away)
- */
-void
-sched_newthread(struct thread *td)
-{
-	struct td_sched *ts;
-
-	ts = (struct td_sched *) (td + 1);
-	bzero(ts, sizeof(*ts));
-	td->td_sched     = ts;
-	ts->ts_thread	= td;
-}
-
-#endif /* KERN_SWITCH_INCLUDE */

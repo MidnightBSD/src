@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *      $FreeBSD: src/sys/fs/procfs/procfs_ioctl.c,v 1.19 2007/06/12 00:11:58 rwatson Exp $
+ *      $FreeBSD$
  */
 
 #include "opt_compat.h"
@@ -43,7 +42,7 @@
 #include <fs/pseudofs/pseudofs.h>
 #include <fs/procfs/procfs.h>
 
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 struct procfs_status32 {
 	int	state;	/* Running, stopped, something else? */
 	int	flags;	/* Any flags */
@@ -63,7 +62,7 @@ int
 procfs_ioctl(PFS_IOCTL_ARGS)
 {
 	struct procfs_status *ps;
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 	struct procfs_status32 *ps32;
 #endif
 	int error, flags, sig;
@@ -143,7 +142,7 @@ procfs_ioctl(PFS_IOCTL_ARGS)
 		ps->why = p->p_step ? p->p_stype : 0;
 		ps->val = p->p_step ? p->p_xstat : 0;
 		break;
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 	case PIOCWAIT32:
 		while (p->p_step == 0 && (p->p_flag & P_WEXIT) == 0) {
 			/* sleep until p stops */
@@ -189,10 +188,10 @@ procfs_ioctl(PFS_IOCTL_ARGS)
 			thread_unsuspend(p);
 			PROC_SUNLOCK(p);
 		} else if (sig)
-			psignal(p, sig);
+			kern_psignal(p, sig);
 #else
 		if (sig)
-			psignal(p, sig);
+			kern_psignal(p, sig);
 		p->p_step = 0;
 		wakeup(&p->p_step);
 #endif

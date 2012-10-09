@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_faith.c,v 1.42.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 /*
  * derived from
@@ -61,6 +61,7 @@
 #include <net/netisr.h>
 #include <net/route.h>
 #include <net/bpf.h>
+#include <net/vnet.h>
 
 #ifdef	INET
 #include <netinet/in.h>
@@ -86,7 +87,7 @@ struct faith_softc {
 
 static int faithioctl(struct ifnet *, u_long, caddr_t);
 int faithoutput(struct ifnet *, struct mbuf *, struct sockaddr *,
-	struct rtentry *);
+	struct route *);
 static void faithrtrequest(int, struct rtentry *, struct rt_addrinfo *);
 #ifdef INET6
 static int faithprefix(struct in6_addr *);
@@ -186,17 +187,20 @@ faith_clone_destroy(ifp)
 }
 
 int
-faithoutput(ifp, m, dst, rt)
+faithoutput(ifp, m, dst, ro)
 	struct ifnet *ifp;
 	struct mbuf *m;
 	struct sockaddr *dst;
-	struct rtentry *rt;
+	struct route *ro;
 {
 	int isr;
 	u_int32_t af;
+	struct rtentry *rt = NULL;
 
 	M_ASSERTPKTHDR(m);
 
+	if (ro != NULL)
+		rt = ro->ro_rt;
 	/* BPF writes need to be handled specially. */
 	if (dst->sa_family == AF_UNSPEC) {
 		bcopy(dst->sa_data, &af, sizeof(af));
@@ -327,14 +331,14 @@ faithprefix(in6)
 	struct sockaddr_in6 sin6;
 	int ret;
 
-	if (ip6_keepfaith == 0)
+	if (V_ip6_keepfaith == 0)
 		return 0;
 
 	bzero(&sin6, sizeof(sin6));
 	sin6.sin6_family = AF_INET6;
 	sin6.sin6_len = sizeof(struct sockaddr_in6);
 	sin6.sin6_addr = *in6;
-	rt = rtalloc1((struct sockaddr *)&sin6, 0, 0UL);
+	rt = in6_rtalloc1((struct sockaddr *)&sin6, 0, 0UL, RT_DEFAULT_FIB);
 	if (rt && rt->rt_ifp && rt->rt_ifp->if_type == IFT_FAITH &&
 	    (rt->rt_ifp->if_flags & IFF_UP) != 0)
 		ret = 1;

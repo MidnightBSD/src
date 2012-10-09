@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Peter Wemm
  *
@@ -25,11 +24,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/phys_pager.c,v 1.28.2.1 2007/11/10 11:21:17 remko Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/linker_set.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -61,7 +59,7 @@ phys_pager_init(void)
  */
 static vm_object_t
 phys_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
-		 vm_ooffset_t foff)
+    vm_ooffset_t foff, struct ucred *cred)
 {
 	vm_object_t object, object1;
 	vm_pindex_t pindex;
@@ -150,12 +148,13 @@ phys_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
 		}
 		KASSERT(m[i]->valid == VM_PAGE_BITS_ALL,
 		    ("phys_pager_getpages: partially valid page %p", m[i]));
-		m[i]->dirty = 0;
+		KASSERT(m[i]->dirty == 0,
+		    ("phys_pager_getpages: dirty page %p", m[i]));
 		/* The requested page must remain busy, the others not. */
-		if (reqpage != i) {
-			m[i]->oflags &= ~VPO_BUSY;
-			m[i]->busy = 0;
-		}
+		if (i == reqpage)
+			vm_page_flash(m[i]);
+		else
+			vm_page_wakeup(m[i]);
 	}
 	return (VM_PAGER_OK);
 }

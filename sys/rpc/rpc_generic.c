@@ -34,7 +34,7 @@
 
 /* #pragma ident	"@(#)rpc_generic.c	1.17	94/04/24 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/rpc/rpc_generic.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_generic.c, Miscl routines for RPC.
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/rpc/rpc_generic.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
+#include <sys/mbuf.h>
 #include <sys/module.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
@@ -55,14 +56,22 @@ __FBSDID("$FreeBSD: src/sys/rpc/rpc_generic.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 
 #include <sys/socketvar.h>
 #include <sys/syslog.h>
 
+#include <net/vnet.h>
+
 #include <rpc/rpc.h>
 #include <rpc/nettype.h>
+#include <rpc/rpcsec_gss.h>
 
 #include <rpc/rpc_com.h>
+
+extern	u_long sb_max_adj;	/* not defined in socketvar.h */
 
 #if __FreeBSD_version < 700000
 #define strrchr rindex
 #endif
+
+/* Provide an entry point hook for the rpcsec_gss module. */
+struct rpc_gss_entries	rpc_gss_entries;
 
 struct handle {
 	NCONF_HANDLE *nhandle;
@@ -110,9 +119,8 @@ u_int
 /*ARGSUSED*/
 __rpc_get_t_size(int af, int proto, int size)
 {
-	int maxsize, defsize;
+	int defsize;
 
-	maxsize = 256 * 1024;	/* XXX */
 	switch (proto) {
 	case IPPROTO_TCP:
 		defsize = 64 * 1024;	/* XXX */
@@ -128,7 +136,7 @@ __rpc_get_t_size(int af, int proto, int size)
 		return defsize;
 
 	/* Check whether the value is within the upper max limit */
-	return (size > maxsize ? (u_int)maxsize : (u_int)size);
+	return (size > sb_max_adj ? (u_int)sb_max_adj : (u_int)size);
 }
 
 /*
@@ -183,7 +191,9 @@ __rpc_socket2sockinfo(struct socket *so, struct __rpc_sockinfo *sip)
 	struct sockopt opt;
 	int error;
 
+	CURVNET_SET(so->so_vnet);
 	error = so->so_proto->pr_usrreqs->pru_sockaddr(so, &sa);
+	CURVNET_RESTORE();
 	if (error)
 		return 0;
 
@@ -303,7 +313,7 @@ __rpc_taddr2uaddr_af(int af, const struct netbuf *nbuf)
 	switch (af) {
 	case AF_INET:
 		sin = nbuf->buf;
-		if (__rpc_inet_ntop(af, &sin->sin_addr, namebuf, sizeof namebuf)
+		if (inet_ntop(af, &sin->sin_addr, namebuf, sizeof namebuf)
 		    == NULL)
 			return NULL;
 		port = ntohs(sin->sin_port);
@@ -315,7 +325,7 @@ __rpc_taddr2uaddr_af(int af, const struct netbuf *nbuf)
 #ifdef INET6
 	case AF_INET6:
 		sin6 = nbuf->buf;
-		if (__rpc_inet_ntop(af, &sin6->sin6_addr, namebuf6, sizeof namebuf6)
+		if (inet_ntop(af, &sin6->sin6_addr, namebuf6, sizeof namebuf6)
 		    == NULL)
 			return NULL;
 		port = ntohs(sin6->sin6_port);
@@ -393,7 +403,7 @@ __rpc_uaddr2taddr_af(int af, const char *uaddr)
 		memset(sin, 0, sizeof *sin);
 		sin->sin_family = AF_INET;
 		sin->sin_port = htons(port);
-		if (__rpc_inet_pton(AF_INET, addrstr, &sin->sin_addr) <= 0) {
+		if (inet_pton(AF_INET, addrstr, &sin->sin_addr) <= 0) {
 			free(sin, M_RPC);
 			free(ret, M_RPC);
 			ret = NULL;
@@ -411,7 +421,7 @@ __rpc_uaddr2taddr_af(int af, const char *uaddr)
 		memset(sin6, 0, sizeof *sin6);
 		sin6->sin6_family = AF_INET6;
 		sin6->sin6_port = htons(port);
-		if (__rpc_inet_pton(AF_INET6, addrstr, &sin6->sin6_addr) <= 0) {
+		if (inet_pton(AF_INET6, addrstr, &sin6->sin6_addr) <= 0) {
 			free(sin6, M_RPC);
 			free(ret, M_RPC);
 			ret = NULL;
@@ -719,6 +729,140 @@ __rpc_sockisbound(struct socket *so)
 	free(sa, M_SONAME);
 
 	return bound;
+}
+
+/*
+ * Implement XDR-style API for RPC call.
+ */
+enum clnt_stat
+clnt_call_private(
+	CLIENT		*cl,		/* client handle */
+	struct rpc_callextra *ext,	/* call metadata */
+	rpcproc_t	proc,		/* procedure number */
+	xdrproc_t	xargs,		/* xdr routine for args */
+	void		*argsp,		/* pointer to args */
+	xdrproc_t	xresults,	/* xdr routine for results */
+	void		*resultsp,	/* pointer to results */
+	struct timeval	utimeout)	/* seconds to wait before giving up */
+{
+	XDR xdrs;
+	struct mbuf *mreq;
+	struct mbuf *mrep;
+	enum clnt_stat stat;
+
+	MGET(mreq, M_WAIT, MT_DATA);
+	MCLGET(mreq, M_WAIT);
+	mreq->m_len = 0;
+
+	xdrmbuf_create(&xdrs, mreq, XDR_ENCODE);
+	if (!xargs(&xdrs, argsp)) {
+		m_freem(mreq);
+		return (RPC_CANTENCODEARGS);
+	}
+	XDR_DESTROY(&xdrs);
+
+	stat = CLNT_CALL_MBUF(cl, ext, proc, mreq, &mrep, utimeout);
+	m_freem(mreq);
+
+	if (stat == RPC_SUCCESS) {
+		xdrmbuf_create(&xdrs, mrep, XDR_DECODE);
+		if (!xresults(&xdrs, resultsp)) {
+			XDR_DESTROY(&xdrs);
+			return (RPC_CANTDECODERES);
+		}
+		XDR_DESTROY(&xdrs);
+	}
+
+	return (stat);
+}
+
+/*
+ * Bind a socket to a privileged IP port
+ */
+int
+bindresvport(struct socket *so, struct sockaddr *sa)
+{
+	int old, error, af;
+	bool_t freesa = FALSE;
+	struct sockaddr_in *sin;
+#ifdef INET6
+	struct sockaddr_in6 *sin6;
+#endif
+	struct sockopt opt;
+	int proto, portrange, portlow;
+	u_int16_t *portp;
+	socklen_t salen;
+
+	if (sa == NULL) {
+		error = so->so_proto->pr_usrreqs->pru_sockaddr(so, &sa);
+		if (error)
+			return (error);
+		freesa = TRUE;
+		af = sa->sa_family;
+		salen = sa->sa_len;
+		memset(sa, 0, sa->sa_len);
+	} else {
+		af = sa->sa_family;
+		salen = sa->sa_len;
+	}
+
+	switch (af) {
+	case AF_INET:
+		proto = IPPROTO_IP;
+		portrange = IP_PORTRANGE;
+		portlow = IP_PORTRANGE_LOW;
+		sin = (struct sockaddr_in *)sa;
+		portp = &sin->sin_port;
+		break;
+#ifdef INET6
+	case AF_INET6:
+		proto = IPPROTO_IPV6;
+		portrange = IPV6_PORTRANGE;
+		portlow = IPV6_PORTRANGE_LOW;
+		sin6 = (struct sockaddr_in6 *)sa;
+		portp = &sin6->sin6_port;
+		break;
+#endif
+	default:
+		return (EPFNOSUPPORT);
+	}
+
+	sa->sa_family = af;
+	sa->sa_len = salen;
+
+	if (*portp == 0) {
+		bzero(&opt, sizeof(opt));
+		opt.sopt_dir = SOPT_GET;
+		opt.sopt_level = proto;
+		opt.sopt_name = portrange;
+		opt.sopt_val = &old;
+		opt.sopt_valsize = sizeof(old);
+		error = sogetopt(so, &opt);
+		if (error) {
+			goto out;
+		}
+
+		opt.sopt_dir = SOPT_SET;
+		opt.sopt_val = &portlow;
+		error = sosetopt(so, &opt);
+		if (error)
+			goto out;
+	}
+
+	error = sobind(so, sa, curthread);
+
+	if (*portp == 0) {
+		if (error) {
+			opt.sopt_dir = SOPT_SET;
+			opt.sopt_val = &old;
+			sosetopt(so, &opt);
+		}
+	}
+out:
+	if (freesa)
+		free(sa, M_SONAME);
+
+	return (error);
 }
 
 /*

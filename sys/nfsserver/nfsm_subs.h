@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsm_subs.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfsserver/nfsm_subs.h,v 1.39.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NFSSERVER_NFSM_SUBS_H_
@@ -76,8 +75,7 @@
 int	nfsm_srvstrsiz_xx(int *s, int m, struct mbuf **md, caddr_t *dpos);
 int	nfsm_srvnamesiz_xx(int *s, int m, struct mbuf **md, caddr_t *dpos);
 int	nfsm_srvnamesiz0_xx(int *s, int m, struct mbuf **md, caddr_t *dpos);
-int	nfsm_srvmtofh_xx(fhandle_t *f, struct nfsrv_descript *nfsd,
-	    struct mbuf **md, caddr_t *dpos);
+int	nfsm_srvmtofh_xx(fhandle_t *f, int v3, struct mbuf **md, caddr_t *dpos);
 int	nfsm_srvsattr_xx(struct vattr *a, struct mbuf **md, caddr_t *dpos);
 
 #define	nfsm_srvstrsiz(s, m) \
@@ -113,7 +111,7 @@ do { \
 #define nfsm_srvmtofh(f) \
 do { \
 	int t1; \
-	t1 = nfsm_srvmtofh_xx((f), nfsd, &md, &dpos); \
+	t1 = nfsm_srvmtofh_xx((f), nfsd->nd_flag & ND_NFSV3, &md, &dpos); \
 	if (t1) { \
 		error = t1; \
 		nfsm_reply(0); \

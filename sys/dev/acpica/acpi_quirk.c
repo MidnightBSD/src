@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.4 2012/03/13 13:14:34 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Nate Lawson (SDG)
  * All rights reserved.
@@ -26,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_quirk.c,v 1.4.2.1 2008/09/22 15:57:58 jkim Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 enum ops_t {

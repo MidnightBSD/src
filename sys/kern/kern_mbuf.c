@@ -26,9 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.32.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
-#include "opt_mac.h"
 #include "opt_param.h"
 
 #include <sys/param.h>
@@ -45,6 +44,8 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.32.2.4.2.1 2008/11/25 02:59:29 
 #include <security/mac/mac_framework.h>
 
 #include <vm/vm.h>
+#include <vm/vm_extern.h>
+#include <vm/vm_kern.h>
 #include <vm/vm_page.h>
 #include <vm/uma.h>
 #include <vm/uma_int.h>
@@ -101,20 +102,25 @@ int nmbjumbo9;			/* limits number of 9k jumbo clusters */
 int nmbjumbo16;			/* limits number of 16k jumbo clusters */
 struct mbstat mbstat;
 
+/*
+ * tunable_mbinit() has to be run before init_maxsockets() thus
+ * the SYSINIT order below is SI_ORDER_MIDDLE while init_maxsockets()
+ * runs at SI_ORDER_ANY.
+ */
 static void
 tunable_mbinit(void *dummy)
 {
+	TUNABLE_INT_FETCH("kern.ipc.nmbclusters", &nmbclusters);
 
 	/* This has to be done before VM init. */
-	nmbclusters = 1024 + maxusers * 64;
+	if (nmbclusters == 0)
+		nmbclusters = 1024 + maxusers * 64;
 	nmbjumbop = nmbclusters / 2;
 	nmbjumbo9 = nmbjumbop / 2;
 	nmbjumbo16 = nmbjumbo9 / 2;
-	TUNABLE_INT_FETCH("kern.ipc.nmbclusters", &nmbclusters);
 }
-SYSINIT(tunable_mbinit, SI_SUB_TUNABLES, SI_ORDER_ANY, tunable_mbinit, NULL);
+SYSINIT(tunable_mbinit, SI_SUB_TUNABLES, SI_ORDER_MIDDLE, tunable_mbinit, NULL);
 
-/* XXX: These should be tuneables. Can't change UMA limits on the fly. */
 static int
 sysctl_nmbclusters(SYSCTL_HANDLER_ARGS)
 {
@@ -227,10 +233,7 @@ static void	mb_zfini_pack(void *, int);
 
 static void	mb_reclaim(void *);
 static void	mbuf_init(void *);
-static void    *mbuf_jumbo_alloc(uma_zone_t, int, u_int8_t *, int);
-static void	mbuf_jumbo_free(void *, int, u_int8_t);
-
-static MALLOC_DEFINE(M_JUMBOFRAME, "jumboframes", "mbuf jumbo frame buffers");
+static void    *mbuf_jumbo_alloc(uma_zone_t, int, uint8_t *, int);
 
 /* Ensure that MSIZE doesn't break dtom() - it must be a power of 2 */
 CTASSERT((((MSIZE - 1) ^ MSIZE) + 1) >> 1 == MSIZE);
@@ -292,7 +295,6 @@ mbuf_init(void *dummy)
 	if (nmbjumbo9 > 0)
 		uma_zone_set_max(zone_jumbo9, nmbjumbo9);
 	uma_zone_set_allocf(zone_jumbo9, mbuf_jumbo_alloc);
-	uma_zone_set_freef(zone_jumbo9, mbuf_jumbo_free);
 
 	zone_jumbo16 = uma_zcreate(MBUF_JUMBO16_MEM_NAME, MJUM16BYTES,
 	    mb_ctor_clust, mb_dtor_clust,
@@ -305,7 +307,6 @@ mbuf_init(void *dummy)
 	if (nmbjumbo16 > 0)
 		uma_zone_set_max(zone_jumbo16, nmbjumbo16);
 	uma_zone_set_allocf(zone_jumbo16, mbuf_jumbo_alloc);
-	uma_zone_set_freef(zone_jumbo16, mbuf_jumbo_free);
 
 	zone_ext_refcnt = uma_zcreate(MBUF_EXTREFCNT_MEM_NAME, sizeof(u_int),
 	    NULL, NULL,
@@ -349,23 +350,13 @@ mbuf_init(void *dummy)
  * pages.
  */
 static void *
-mbuf_jumbo_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
+mbuf_jumbo_alloc(uma_zone_t zone, int bytes, uint8_t *flags, int wait)
 {
 
 	/* Inform UMA that this allocator uses kernel_map/object. */
 	*flags = UMA_SLAB_KERNEL;
-	return (contigmalloc(bytes, M_JUMBOFRAME, wait, (vm_paddr_t)0,
-	    ~(vm_paddr_t)0, 1, 0));
-}
-
-/*
- * UMA backend page deallocator for the jumbo frame zones.
- */
-static void
-mbuf_jumbo_free(void *mem, int size, u_int8_t flags)
-{
-
-	contigfree(mem, size, M_JUMBOFRAME);
+	return ((void *)kmem_alloc_contig(kernel_map, bytes, wait,
+	    (vm_paddr_t)0, ~(vm_paddr_t)0, 1, 0, VM_MEMATTR_DEFAULT));
 }
 
 /*
@@ -409,16 +400,17 @@ mb_ctor_mbuf(void *mem, int size, void *arg, int how)
 	if (flags & M_PKTHDR) {
 		m->m_data = m->m_pktdat;
 		m->m_pkthdr.rcvif = NULL;
-		m->m_pkthdr.len = 0;
 		m->m_pkthdr.header = NULL;
+		m->m_pkthdr.len = 0;
 		m->m_pkthdr.csum_flags = 0;
 		m->m_pkthdr.csum_data = 0;
 		m->m_pkthdr.tso_segsz = 0;
 		m->m_pkthdr.ether_vtag = 0;
+		m->m_pkthdr.flowid = 0;
 		SLIST_INIT(&m->m_pkthdr.tags);
 #ifdef MAC
 		/* If the label init fails, fail the alloc */
-		error = mac_init_mbuf(m, how);
+		error = mac_mbuf_init(m, how);
 		if (error)
 			return (error);
 #endif
@@ -438,11 +430,11 @@ mb_dtor_mbuf(void *mem, int size, void *arg)
 
 	m = (struct mbuf *)mem;
 	flags = (unsigned long)arg;
-	
+
 	if ((flags & MB_NOTAGS) == 0 && (m->m_flags & M_PKTHDR) != 0)
 		m_tag_delete_chain(m, NULL);
 	KASSERT((m->m_flags & M_EXT) == 0, ("%s: M_EXT set", __func__));
-	KASSERT((m->m_flags & M_NOFREE) == 0, ("%s: M_NOFREE set", __func__));	
+	KASSERT((m->m_flags & M_NOFREE) == 0, ("%s: M_NOFREE set", __func__));
 #ifdef INVARIANTS
 	trash_dtor(mem, size, arg);
 #endif
@@ -464,7 +456,8 @@ mb_dtor_pack(void *mem, int size, void *arg)
 	KASSERT((m->m_flags & M_EXT) == M_EXT, ("%s: M_EXT not set", __func__));
 	KASSERT(m->m_ext.ext_buf != NULL, ("%s: ext_buf == NULL", __func__));
 	KASSERT(m->m_ext.ext_free == NULL, ("%s: ext_free != NULL", __func__));
-	KASSERT(m->m_ext.ext_args == NULL, ("%s: ext_args != NULL", __func__));
+	KASSERT(m->m_ext.ext_arg1 == NULL, ("%s: ext_arg1 != NULL", __func__));
+	KASSERT(m->m_ext.ext_arg2 == NULL, ("%s: ext_arg2 != NULL", __func__));
 	KASSERT(m->m_ext.ext_size == MCLBYTES, ("%s: ext_size != MCLBYTES", __func__));
 	KASSERT(m->m_ext.ext_type == EXT_PACKET, ("%s: ext_type != EXT_PACKET", __func__));
 	KASSERT(*m->m_ext.ref_cnt == 1, ("%s: ref_cnt != 1", __func__));
@@ -472,13 +465,15 @@ mb_dtor_pack(void *mem, int size, void *arg)
 	trash_dtor(m->m_ext.ext_buf, MCLBYTES, arg);
 #endif
 	/*
-	 * If there are processes blocked on zone_clust, waiting for pages to be freed up,
-	 * cause them to be woken up by draining the packet zone. We are exposed to a race here 
-	 * (in the check for the UMA_ZFLAG_FULL) where we might miss the flag set, but that is 
-	 * deliberate. We don't want to acquire the zone lock for every mbuf free.
+	 * If there are processes blocked on zone_clust, waiting for pages
+	 * to be freed up, * cause them to be woken up by draining the
+	 * packet zone.  We are exposed to a race here * (in the check for
+	 * the UMA_ZFLAG_FULL) where we might miss the flag set, but that
+	 * is deliberate. We don't want to acquire the zone lock for every
+	 * mbuf free.
 	 */
- 	if (uma_zone_exhausted_nolock(zone_clust))
- 		zone_drain(zone_pack);
+	if (uma_zone_exhausted_nolock(zone_clust))
+		zone_drain(zone_pack);
 }
 
 /*
@@ -496,7 +491,7 @@ mb_ctor_clust(void *mem, int size, void *arg, int how)
 	u_int *refcnt;
 	int type;
 	uma_zone_t zone;
-	
+
 #ifdef INVARIANTS
 	trash_ctor(mem, size, arg, how);
 #endif
@@ -526,13 +521,14 @@ mb_ctor_clust(void *mem, int size, void *arg, int how)
 
 	m = (struct mbuf *)arg;
 	refcnt = uma_find_refcnt(zone, mem);
-	*refcnt = 1;			
+	*refcnt = 1;
 	if (m != NULL) {
 		m->m_ext.ext_buf = (caddr_t)mem;
 		m->m_data = m->m_ext.ext_buf;
 		m->m_flags |= M_EXT;
 		m->m_ext.ext_free = NULL;
-		m->m_ext.ext_args = NULL;
+		m->m_ext.ext_arg1 = NULL;
+		m->m_ext.ext_arg2 = NULL;
 		m->m_ext.ext_size = size;
 		m->m_ext.ext_type = type;
 		m->m_ext.ref_cnt = refcnt;
@@ -626,7 +622,7 @@ mb_ctor_pack(void *mem, int size, void *arg, int how)
 	m->m_len = 0;
 	m->m_flags = (flags | M_EXT);
 	m->m_type = type;
-	    
+
 	if (flags & M_PKTHDR) {
 		m->m_pkthdr.rcvif = NULL;
 		m->m_pkthdr.len = 0;
@@ -635,15 +631,42 @@ mb_ctor_pack(void *mem, int size, void *arg, int how)
 		m->m_pkthdr.csum_data = 0;
 		m->m_pkthdr.tso_segsz = 0;
 		m->m_pkthdr.ether_vtag = 0;
+		m->m_pkthdr.flowid = 0;
 		SLIST_INIT(&m->m_pkthdr.tags);
 #ifdef MAC
 		/* If the label init fails, fail the alloc */
-		error = mac_init_mbuf(m, how);
+		error = mac_mbuf_init(m, how);
 		if (error)
 			return (error);
 #endif
 	}
 	/* m_ext is already initialized. */
+
+	return (0);
+}
+
+int
+m_pkthdr_init(struct mbuf *m, int how)
+{
+#ifdef MAC
+	int error;
+#endif
+	m->m_data = m->m_pktdat;
+	SLIST_INIT(&m->m_pkthdr.tags);
+	m->m_pkthdr.rcvif = NULL;
+	m->m_pkthdr.header = NULL;
+	m->m_pkthdr.len = 0;
+	m->m_pkthdr.flowid = 0;
+	m->m_pkthdr.csum_flags = 0;
+	m->m_pkthdr.csum_data = 0;
+	m->m_pkthdr.tso_segsz = 0;
+	m->m_pkthdr.ether_vtag = 0;
+#ifdef MAC
+	/* If the label init fails, fail the alloc */
+	error = mac_mbuf_init(m, how);
+	if (error)
+		return (error);
+#endif
 
 	return (0);
 }

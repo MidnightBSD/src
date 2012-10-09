@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/kernel.h,v 1.5 2011/10/23 16:17:29 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995 Terrence R. Lambert
  * All rights reserved.
@@ -40,7 +39,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kernel.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/kernel.h,v 1.136.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_KERNEL_H_
@@ -56,10 +55,6 @@
 /* Global variables for the kernel. */
 
 /* 1.1 */
-extern unsigned long hostid;
-extern char hostuuid[64];
-extern char hostname[MAXHOSTNAMELEN];
-extern char domainname[MAXHOSTNAMELEN];
 extern char kernelname[MAXPATHLEN];
 
 extern int tick;			/* usec per tick (1000000 / hz) */
@@ -69,7 +64,6 @@ extern int stathz;			/* statistics clock's frequency */
 extern int profhz;			/* profiling clock's frequency */
 extern int profprocs;			/* number of process's profiling */
 extern int ticks;
-extern int lbolt;			/* once a second sleep address */
 
 #endif /* _KERNEL */
 
@@ -112,13 +106,16 @@ enum sysinit_sub_id {
 	SI_SUB_MTX_POOL_DYNAMIC	= 0x1AC0000,	/* dynamic mutex pool */
 	SI_SUB_LOCK		= 0x1B00000,	/* various locks */
 	SI_SUB_EVENTHANDLER	= 0x1C00000,	/* eventhandler init */
+	SI_SUB_VNET_PRELINK	= 0x1E00000,	/* vnet init before modules */
 	SI_SUB_KLD		= 0x2000000,	/* KLD and module setup */
 	SI_SUB_CPU		= 0x2100000,	/* CPU resource(s)*/
+	SI_SUB_RACCT		= 0x2110000,	/* resource accounting */
 	SI_SUB_RANDOM		= 0x2120000,	/* random number generator */
 	SI_SUB_KDTRACE		= 0x2140000,	/* Kernel dtrace hooks */
 	SI_SUB_MAC		= 0x2180000,	/* TrustedBSD MAC subsystem */
 	SI_SUB_MAC_POLICY	= 0x21C0000,	/* TrustedBSD MAC policies */
 	SI_SUB_MAC_LATE		= 0x21D0000,	/* TrustedBSD MAC subsystem */
+	SI_SUB_VNET		= 0x21E0000,	/* vnet 0 */
 	SI_SUB_INTRINSIC	= 0x2200000,	/* proc 0*/
 	SI_SUB_VM_CONF		= 0x2300000,	/* config VM, set limits*/
 	SI_SUB_DDB_SERVICES	= 0x2380000,	/* capture, scripting, etc. */
@@ -152,6 +149,7 @@ enum sysinit_sub_id {
 	SI_SUB_EXEC		= 0x7400000,	/* execve() handlers */
 	SI_SUB_PROTO_BEGIN	= 0x8000000,	/* XXX: set splimp (kludge)*/
 	SI_SUB_PROTO_IF		= 0x8400000,	/* interfaces*/
+	SI_SUB_PROTO_DOMAININIT	= 0x8600000,	/* domain registration system */
 	SI_SUB_PROTO_DOMAIN	= 0x8800000,	/* domains (address families?)*/
 	SI_SUB_PROTO_IFATTACHDOMAIN	= 0x8800001,	/* domain dependent data init*/
 	SI_SUB_PROTO_END	= 0x8ffffff,	/* XXX: set splx (kludge)*/
@@ -161,10 +159,10 @@ enum sysinit_sub_id {
 	SI_SUB_ROOT_CONF	= 0xb000000,	/* Find root devices */
 	SI_SUB_DUMP_CONF	= 0xb200000,	/* Find dump devices */
 	SI_SUB_RAID		= 0xb380000,	/* Configure GEOM classes */
-	SI_SUB_MOUNT_ROOT	= 0xb400000,	/* root mount*/
 	SI_SUB_SWAP		= 0xc000000,	/* swap */
 	SI_SUB_INTRINSIC_POST	= 0xd000000,	/* proc 0 cleanup*/
 	SI_SUB_SYSCALLS		= 0xd800000,	/* register system calls */
+	SI_SUB_VNET_DONE	= 0xdc00000,	/* vnet registration complete */
 	SI_SUB_KTHREAD_INIT	= 0xe000000,	/* init process*/
 	SI_SUB_KTHREAD_PAGE	= 0xe400000,	/* pageout daemon*/
 	SI_SUB_KTHREAD_VM	= 0xe800000,	/* vm daemon*/
@@ -172,6 +170,7 @@ enum sysinit_sub_id {
 	SI_SUB_KTHREAD_UPDATE	= 0xec00000,	/* update daemon*/
 	SI_SUB_KTHREAD_IDLE	= 0xee00000,	/* idle procs*/
 	SI_SUB_SMP		= 0xf000000,	/* start the APs*/
+	SI_SUB_RACCTD		= 0xf100000,	/* start raccd*/
 	SI_SUB_RUN_SCHEDULER	= 0xfffffff	/* scheduler*/
 };
 
@@ -183,6 +182,7 @@ enum sysinit_elem_order {
 	SI_ORDER_FIRST		= 0x0000000,	/* first*/
 	SI_ORDER_SECOND		= 0x0000001,	/* second*/
 	SI_ORDER_THIRD		= 0x0000002,	/* third*/
+	SI_ORDER_FOURTH		= 0x0000003,	/* fourth*/
 	SI_ORDER_MIDDLE		= 0x1000000,	/* somewhere in the middle */
 	SI_ORDER_ANY		= 0xfffffff	/* last*/
 };
@@ -240,7 +240,7 @@ struct sysinit {
 		func,						\
 		(ident)						\
 	};							\
-	DATA_SET(sysinit_set,uniquifier ## _sys_init);
+	DATA_SET(sysinit_set,uniquifier ## _sys_init)
 
 #define	SYSINIT(uniquifier, subsystem, order, func, ident)	\
 	C_SYSINIT(uniquifier, subsystem, order,			\

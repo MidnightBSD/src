@@ -30,7 +30,7 @@
  *
  *	from: @(#)svc_auth.h 1.6 86/07/16 SMI
  *	@(#)svc_auth.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: src/sys/rpc/svc_auth.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -47,19 +47,31 @@
  */
 __BEGIN_DECLS
 extern enum auth_stat _authenticate(struct svc_req *, struct rpc_msg *);
+#ifdef _KERNEL
+extern int svc_auth_reg(int,
+    enum auth_stat (*)(struct svc_req *, struct rpc_msg *),
+    int (*)(struct svc_req *, struct ucred **, int *));
+#else
+extern int svc_auth_reg(int, enum auth_stat (*)(struct svc_req *,
+                          struct rpc_msg *));
+#endif
 
-extern int svc_getcred(struct svc_req *, struct ucred *, int *);
+
+extern int svc_getcred(struct svc_req *, struct ucred **, int *);
 /*
  * struct svc_req *req;                 -- RPC request
- * struct ucred *cr			-- Kernel cred to modify
+ * struct ucred **crp			-- Kernel cred to modify
  * int *flavorp				-- Return RPC auth flavor
  *
  * Retrieve unix creds corresponding to an RPC request, if
  * possible. The auth flavor (AUTH_NONE or AUTH_UNIX) is returned in
- * *flavorp. If the flavor is AUTH_UNIX the caller's ucred structure
- * will be modified to reflect the values from the request. Return's
- * non-zero if credentials were retrieved form the request, otherwise
- * zero.
+ * *flavorp. If the flavor is AUTH_UNIX the caller's ucred pointer
+ * will be modified to point at a ucred structure which reflects the
+ * values from the request. The caller should call crfree on this
+ * pointer.
+ *
+ * Return's non-zero if credentials were retrieved from the request,
+ * otherwise zero.
  */
 
 __END_DECLS

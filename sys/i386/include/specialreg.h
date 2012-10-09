@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/specialreg.h,v 1.8 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -28,6 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)specialreg.h	7.1 (Berkeley) 5/9/91
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SPECIALREG_H_
@@ -242,20 +242,6 @@
 #define	AMDID_CMP_CORES		0x000000ff
 #define	AMDID_COREID_SIZE	0x0000f000
 #define	AMDID_COREID_SIZE_SHIFT	12
-
-/*
- * CPUID manufacturers identifiers
- */
-#define	AMD_VENDOR_ID		"AuthenticAMD"
-#define	CENTAUR_VENDOR_ID	"CentaurHauls"
-#define	CYRIX_VENDOR_ID		"CyrixInstead"
-#define	INTEL_VENDOR_ID		"GenuineIntel"
-#define	NEXGEN_VENDOR_ID	"NexGenDriven"
-#define	NSC_VENDOR_ID		"Geode by NSC"
-#define	RISE_VENDOR_ID		"RiseRiseRise"
-#define	SIS_VENDOR_ID		"SiS SiS SiS "
-#define	TRANSMETA_VENDOR_ID	"GenuineTMx86"
-#define	UMC_VENDOR_ID		"UMC UMC UMC "
 
 /*
  * CPUID manufacturers identifiers

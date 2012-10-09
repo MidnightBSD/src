@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  ***********************************************************************
  *								       *
@@ -46,7 +45,7 @@
  * 17 Sep 93    David L. Mills
  *      Created file
  *
- * $FreeBSD: src/sys/sys/timex.h,v 1.18.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 /*
  * This header file defines the Network Time Protocol (NTP) interfaces

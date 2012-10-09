@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/sbp_targ.c,v 1.16 2007/06/17 05:55:50 scottl Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -42,6 +41,7 @@
 #include <sys/types.h>
 #include <sys/conf.h>
 #include <sys/malloc.h>
+#include <sys/endian.h>
 #if __FreeBSD_version < 500000
 #include <sys/devicestat.h>
 #endif
@@ -488,7 +488,7 @@ sbp_targ_send_lstate_events(struct sbp_targ_softc *sc,
 {
 #if 0
 	struct ccb_hdr *ccbh;
-	struct ccb_immed_notify *inot;
+	struct ccb_immediate_notify *inot;
 
 	printf("%s: not implemented yet\n", __func__);
 #endif
@@ -633,6 +633,12 @@ sbp_targ_send_status(struct orb_info *orbi, union ccb *ccb)
 	{
 		struct sbp_cmd_status *sbp_cmd_status;
 		struct scsi_sense_data *sense;
+		int error_code, sense_key, asc, ascq;
+		uint8_t stream_bits;
+		uint8_t sks[3];
+		uint64_t info;
+		int64_t sinfo;
+		int sense_len;
 
 		if (debug)
 			printf("%s: STATUS %d\n", __func__,
@@ -660,35 +666,75 @@ sbp_targ_send_status(struct orb_info *orbi, union ccb *ccb)
 #endif
 #endif
 
-		if ((sense->error_code & SSD_ERRCODE) == SSD_CURRENT_ERROR)
+		sense_len = ccb->csio.sense_len - ccb->csio.sense_resid;
+		scsi_extract_sense_len(sense, sense_len, &error_code,
+		    &sense_key, &asc, &ascq, /*show_errors*/ 0);
+
+		switch (error_code) {
+		case SSD_CURRENT_ERROR:
+		case SSD_DESC_CURRENT_ERROR:
 			sbp_cmd_status->sfmt = SBP_SFMT_CURR;
-		else
+			break;
+		default:
 			sbp_cmd_status->sfmt = SBP_SFMT_DEFER;
+			break;
+		}
 
-		sbp_cmd_status->valid = (sense->error_code & SSD_ERRCODE_VALID)
-		    ? 1 : 0;
-		sbp_cmd_status->s_key = sense->flags & SSD_KEY;
-		sbp_cmd_status->mark = (sense->flags & SSD_FILEMARK)? 1 : 0;
-		sbp_cmd_status->eom = (sense->flags & SSD_EOM) ? 1 : 0;
-		sbp_cmd_status->ill_len = (sense->flags & SSD_ILI) ? 1 : 0;
+		if (scsi_get_sense_info(sense, sense_len, SSD_DESC_INFO, &info,
+					&sinfo) == 0) {
+			uint32_t info_trunc;
+			sbp_cmd_status->valid = 1;
+			info_trunc = info;
 
-		bcopy(&sense->info[0], &sbp_cmd_status->info, 4);
+			sbp_cmd_status->info = htobe32(info_trunc);
+		} else {
+			sbp_cmd_status->valid = 0;
+		}
 
-		if (sense->extra_len <= 6)
-			/* add_sense_code(_qual), info, cmd_spec_info */
-			sbp_status->len = 4;
-		else
-			/* fru, sense_key_spec */
+		sbp_cmd_status->s_key = sense_key;
+
+		if (scsi_get_stream_info(sense, sense_len, NULL,
+					 &stream_bits) == 0) {
+			sbp_cmd_status->mark =
+			    (stream_bits & SSD_FILEMARK) ? 1 : 0;
+			sbp_cmd_status->eom =
+			    (stream_bits & SSD_EOM) ? 1 : 0;
+			sbp_cmd_status->ill_len =
+			    (stream_bits & SSD_ILI) ? 1 : 0;
+		} else {
+			sbp_cmd_status->mark = 0;
+			sbp_cmd_status->eom = 0;
+			sbp_cmd_status->ill_len = 0;
+		}
+
+
+		/* add_sense_code(_qual), info, cmd_spec_info */
+		sbp_status->len = 4;
+
+		if (scsi_get_sense_info(sense, sense_len, SSD_DESC_COMMAND,
+					&info, &sinfo) == 0) {
+			uint32_t cmdspec_trunc;
+
+			cmdspec_trunc = info;
+
+			sbp_cmd_status->cdb = htobe32(cmdspec_trunc);
+		}
+
+		sbp_cmd_status->s_code = asc;
+		sbp_cmd_status->s_qlfr = ascq;
+
+		if (scsi_get_sense_info(sense, sense_len, SSD_DESC_FRU, &info,
+					&sinfo) == 0) {
+			sbp_cmd_status->fru = (uint8_t)info;
 			sbp_status->len = 5;
-			
-		bcopy(&sense->cmd_spec_info[0], &sbp_cmd_status->cdb, 4);
+		} else {
+			sbp_cmd_status->fru = 0;
+		}
 
-		sbp_cmd_status->s_code = sense->add_sense_code;
-		sbp_cmd_status->s_qlfr = sense->add_sense_code_qual;
-		sbp_cmd_status->fru = sense->fru;
-
-		bcopy(&sense->sense_key_spec[0],
-		    &sbp_cmd_status->s_keydep[0], 3);
+		if (scsi_get_sks(sense, sense_len, sks) == 0) {
+			bcopy(sks, &sbp_cmd_status->s_keydep[0], sizeof(sks));
+			sbp_status->len = 5;
+		}
 
 		break;
 	}
@@ -776,7 +822,7 @@ sbp_targ_abort_ccb(struct sbp_targ_softc *sc, union ccb *ccb)
 
 	if (accb->ccb_h.func_code == XPT_ACCEPT_TARGET_IO)
 		list = &lstate->accept_tios;
-	else if (accb->ccb_h.func_code == XPT_IMMED_NOTIFY)
+	else if (accb->ccb_h.func_code == XPT_IMMEDIATE_NOTIFY)
 		list = &lstate->immed_notifies;
 	else
 		return (CAM_UA_ABORT);
@@ -1054,8 +1100,8 @@ sbp_targ_action1(struct cam_sim *sim, union ccb *ccb)
 				}
 		}
 		break;
-	case XPT_NOTIFY_ACK:		/* recycle notify ack */
-	case XPT_IMMED_NOTIFY:		/* Add Immediate Notify Resource */
+	case XPT_NOTIFY_ACKNOWLEDGE:	/* recycle notify ack */
+	case XPT_IMMEDIATE_NOTIFY:	/* Add Immediate Notify Resource */
 		if (status != CAM_REQ_CMP) {
 			ccb->ccb_h.status = status;
 			xpt_done(ccb);
@@ -1101,7 +1147,7 @@ sbp_targ_action1(struct cam_sim *sim, union ccb *ccb)
 
 		switch (accb->ccb_h.func_code) {
 		case XPT_ACCEPT_TARGET_IO:
-		case XPT_IMMED_NOTIFY:
+		case XPT_IMMEDIATE_NOTIFY:
 			ccb->ccb_h.status = sbp_targ_abort_ccb(sc, ccb);
 			break;
 		case XPT_CONT_TARGET_IO:

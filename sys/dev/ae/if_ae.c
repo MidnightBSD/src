@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ae/if_ae.c,v 1.1.2.5.2.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -105,7 +105,7 @@ static void	ae_phy_init(ae_softc_t *sc);
 static int	ae_reset(ae_softc_t *sc);
 static void	ae_init(void *arg);
 static int	ae_init_locked(ae_softc_t *sc);
-static unsigned	int	ae_detach(device_t dev);
+static int	ae_detach(device_t dev);
 static int	ae_miibus_readreg(device_t dev, int phy, int reg);
 static int	ae_miibus_writereg(device_t dev, int phy, int reg, int val);
 static void	ae_miibus_statchg(device_t dev);
@@ -124,10 +124,10 @@ static int	ae_resume(device_t dev);
 static unsigned int	ae_tx_avail_size(ae_softc_t *sc);
 static int	ae_encap(ae_softc_t *sc, struct mbuf **m_head);
 static void	ae_start(struct ifnet *ifp);
+static void	ae_start_locked(struct ifnet *ifp);
 static void	ae_link_task(void *arg, int pending);
 static void	ae_stop_rxmac(ae_softc_t *sc);
 static void	ae_stop_txmac(ae_softc_t *sc);
-static void	ae_tx_task(void *arg, int pending);
 static void	ae_mac_config(ae_softc_t *sc);
 static int	ae_intr(void *arg);
 static void	ae_int_task(void *arg, int pending);
@@ -206,43 +206,6 @@ TUNABLE_INT("hw.ae.msi_disable", &msi_disable);
 	(((vtag) >> 4) | (((vtag) & 0x07) << 13) | (((vtag) & 0x08) << 9))
 #define	AE_TXD_VLAN(vtag) \
 	(((vtag) << 4) | (((vtag) >> 13) & 0x07) | (((vtag) >> 9) & 0x08))
-
-/*
- * ae statistics.
- */
-#define	STATS_ENTRY(node, desc, field) \
-    { node, desc, offsetof(struct ae_stats, field) }
-struct {
-	const char	*node;
-	const char	*desc;
-	intptr_t	offset;
-} ae_stats_tx[] = {
-	STATS_ENTRY("bcast", "broadcast frames", tx_bcast),
-	STATS_ENTRY("mcast", "multicast frames", tx_mcast),
-	STATS_ENTRY("pause", "PAUSE frames", tx_pause),
-	STATS_ENTRY("control", "control frames", tx_ctrl),
-	STATS_ENTRY("defers", "deferrals occuried", tx_defer),
-	STATS_ENTRY("exc_defers", "excessive deferrals occuried", tx_excdefer),
-	STATS_ENTRY("singlecols", "single collisions occuried", tx_singlecol),
-	STATS_ENTRY("multicols", "multiple collisions occuried", tx_multicol),
-	STATS_ENTRY("latecols", "late collisions occuried", tx_latecol),
-	STATS_ENTRY("aborts", "transmit aborts due collisions", tx_abortcol),
-	STATS_ENTRY("underruns", "Tx FIFO underruns", tx_underrun)
-}, ae_stats_rx[] = {
-	STATS_ENTRY("bcast", "broadcast frames", rx_bcast),
-	STATS_ENTRY("mcast", "multicast frames", rx_mcast),
-	STATS_ENTRY("pause", "PAUSE frames", rx_pause),
-	STATS_ENTRY("control", "control frames", rx_ctrl),
-	STATS_ENTRY("crc_errors", "frames with CRC errors", rx_crcerr),
-	STATS_ENTRY("code_errors", "frames with invalid opcode", rx_codeerr),
-	STATS_ENTRY("runt", "runt frames", rx_runt),
-	STATS_ENTRY("frag", "fragmented frames", rx_frag),
-	STATS_ENTRY("align_errors", "frames with alignment errors", rx_align),
-	STATS_ENTRY("truncated", "frames truncated due to Rx FIFO inderrun",
-	    rx_trunc)
-};
-#define	AE_STATS_RX_LEN	(sizeof(ae_stats_rx) / sizeof(*ae_stats_rx))
-#define	AE_STATS_TX_LEN	(sizeof(ae_stats_tx) / sizeof(*ae_stats_tx))
 
 static int
 ae_probe(device_t dev)
@@ -360,13 +323,11 @@ ae_attach(device_t dev)
 	if (error != 0)
 		goto fail;
 
-	/* Set default PHY address. */
-	sc->phyaddr = AE_PHYADDR_DEFAULT;
-
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
 		device_printf(dev, "could not allocate ifnet structure.\n");
 		error = ENXIO;
+		goto fail;
 	}
 
 	ifp->if_softc = sc;
@@ -377,10 +338,10 @@ ae_attach(device_t dev)
 	ifp->if_init = ae_init;
 	ifp->if_capabilities = IFCAP_VLAN_MTU | IFCAP_VLAN_HWTAGGING;
 	ifp->if_hwassist = 0;
-	ifp->if_snd.ifq_drv_maxlen = IFQ_MAXLEN;
+	ifp->if_snd.ifq_drv_maxlen = ifqmaxlen;
 	IFQ_SET_MAXLEN(&ifp->if_snd, ifp->if_snd.ifq_drv_maxlen);
 	IFQ_SET_READY(&ifp->if_snd);
-	if (pci_find_extcap(dev, PCIY_PMG, &pmc) == 0) {
+	if (pci_find_cap(dev, PCIY_PMG, &pmc) == 0) {
 		ifp->if_capabilities |= IFCAP_WOL_MAGIC;
 		sc->flags |= AE_FLAG_PMG;
 	}
@@ -389,10 +350,11 @@ ae_attach(device_t dev)
 	/*
 	 * Configure and attach MII bus.
 	 */
-	error = mii_phy_probe(dev, &sc->miibus, ae_mediachange,
-	    ae_mediastatus);
+	error = mii_attach(dev, &sc->miibus, ifp, ae_mediachange,
+	    ae_mediastatus, BMSR_DEFCAPMASK, AE_PHYADDR_DEFAULT,
+	    MII_OFFSET_ANY, 0);
 	if (error != 0) {
-		device_printf(dev, "no PHY found.\n");
+		device_printf(dev, "attaching PHYs failed\n");
 		goto fail;
 	}
 
@@ -403,7 +365,6 @@ ae_attach(device_t dev)
 	/*
 	 * Create and run all helper tasks.
 	 */
-	TASK_INIT(&sc->tx_task, 1, ae_tx_task, ifp);
 	sc->tq = taskqueue_create_fast("ae_taskq", M_WAITOK,
             taskqueue_thread_enqueue, &sc->tq);
 	if (sc->tq == NULL) {
@@ -435,13 +396,15 @@ fail:
 	return (error);
 }
 
+#define	AE_SYSCTL(stx, parent, name, desc, ptr)	\
+	SYSCTL_ADD_UINT(ctx, parent, OID_AUTO, name, CTLFLAG_RD, ptr, 0, desc)
+
 static void
 ae_init_tunables(ae_softc_t *sc)
 {
 	struct sysctl_ctx_list *ctx;
 	struct sysctl_oid *root, *stats, *stats_rx, *stats_tx;
 	struct ae_stats *ae_stats;
-	unsigned int i;
 
 	KASSERT(sc != NULL, ("[ae, %d]: sc is NULL", __LINE__));
 	ae_stats = &sc->stats;
@@ -456,20 +419,54 @@ ae_init_tunables(ae_softc_t *sc)
 	 */
 	stats_rx = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(stats), OID_AUTO, "rx",
 	    CTLFLAG_RD, NULL, "Rx MAC statistics");
-	for (i = 0; i < AE_STATS_RX_LEN; i++)
-		SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(stats_rx), OID_AUTO,
-		    ae_stats_rx[i].node, CTLFLAG_RD, (char *)ae_stats +
-		    ae_stats_rx[i].offset, 0, ae_stats_rx[i].desc);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "bcast",
+	    "broadcast frames", &ae_stats->rx_bcast);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "mcast",
+	    "multicast frames", &ae_stats->rx_mcast);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "pause",
+	    "PAUSE frames", &ae_stats->rx_pause);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "control",
+	    "control frames", &ae_stats->rx_ctrl);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "crc_errors",
+	    "frames with CRC errors", &ae_stats->rx_crcerr);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "code_errors",
+	    "frames with invalid opcode", &ae_stats->rx_codeerr);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "runt",
+	    "runt frames", &ae_stats->rx_runt);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "frag",
+	    "fragmented frames", &ae_stats->rx_frag);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "align_errors",
+	    "frames with alignment errors", &ae_stats->rx_align);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "truncated",
+	    "frames truncated due to Rx FIFO inderrun", &ae_stats->rx_trunc);
 
 	/*
 	 * Receiver statistcics.
 	 */
 	stats_tx = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(stats), OID_AUTO, "tx",
 	    CTLFLAG_RD, NULL, "Tx MAC statistics");
-	for (i = 0; i < AE_STATS_TX_LEN; i++)
-		SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(stats_tx), OID_AUTO,
-		    ae_stats_tx[i].node, CTLFLAG_RD, (char *)ae_stats +
-		    ae_stats_tx[i].offset, 0, ae_stats_tx[i].desc);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "bcast",
+	    "broadcast frames", &ae_stats->tx_bcast);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "mcast",
+	    "multicast frames", &ae_stats->tx_mcast);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "pause",
+	    "PAUSE frames", &ae_stats->tx_pause);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "control",
+	    "control frames", &ae_stats->tx_ctrl);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "defers",
+	    "deferrals occuried", &ae_stats->tx_defer);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "exc_defers",
+	    "excessive deferrals occuried", &ae_stats->tx_excdefer);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "singlecols",
+	    "single collisions occuried", &ae_stats->tx_singlecol);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "multicols",
+	    "multiple collisions occuried", &ae_stats->tx_multicol);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "latecols",
+	    "late collisions occuried", &ae_stats->tx_latecol);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "aborts",
+	    "transmit aborts due collisions", &ae_stats->tx_abortcol);
+	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "underruns",
+	    "Tx FIFO underruns", &ae_stats->tx_underrun);
 }
 
 static void
@@ -564,6 +561,8 @@ ae_init_locked(ae_softc_t *sc)
 	AE_LOCK_ASSERT(sc);
 
 	ifp = sc->ifp;
+	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+		return (0);
 	mii = device_get_softc(sc->miibus);
 
 	ae_stop(sc);
@@ -746,7 +745,7 @@ ae_init_locked(ae_softc_t *sc)
 	return (0);
 }
 
-static unsigned int
+static int
 ae_detach(device_t dev)
 {
 	struct ae_softc *sc;
@@ -762,7 +761,6 @@ ae_detach(device_t dev)
 		AE_UNLOCK(sc);
 		callout_drain(&sc->tick_ch);
 		taskqueue_drain(sc->tq, &sc->int_task);
-		taskqueue_drain(sc->tq, &sc->tx_task);
 		taskqueue_drain(taskqueue_swi, &sc->link_task);
 		ether_ifdetach(ifp);
 	}
@@ -810,9 +808,6 @@ ae_miibus_readreg(device_t dev, int phy, int reg)
 	 * Locking is done in upper layers.
 	 */
 
-	if (phy != sc->phyaddr)
-		return (0);
-
 	val = ((reg << AE_MDIO_REGADDR_SHIFT) & AE_MDIO_REGADDR_MASK) |
 	    AE_MDIO_START | AE_MDIO_READ | AE_MDIO_SUP_PREAMBLE |
 	    ((AE_MDIO_CLK_25_4 << AE_MDIO_CLK_SHIFT) & AE_MDIO_CLK_MASK);
@@ -847,9 +842,6 @@ ae_miibus_writereg(device_t dev, int phy, int reg, int val)
 	/*
 	 * Locking is done in upper layers.
 	 */
-
-	if (phy != sc->phyaddr)
-		return (0);
 
 	aereg = ((reg << AE_MDIO_REGADDR_SHIFT) & AE_MDIO_REGADDR_MASK) |
 	    AE_MDIO_START | AE_MDIO_SUP_PREAMBLE |
@@ -911,10 +903,8 @@ ae_mediachange(struct ifnet *ifp)
 	KASSERT(sc != NULL, ("[ae, %d]: sc is NULL", __LINE__));
 	AE_LOCK(sc);
 	mii = device_get_softc(sc->miibus);
-	if (mii->mii_instance != 0) {
-		LIST_FOREACH(mii_sc, &mii->mii_phys, mii_list)
-			mii_phy_reset(mii_sc);
-	}
+	LIST_FOREACH(mii_sc, &mii->mii_phys, mii_list)
+		PHY_RESET(mii_sc);
 	error = mii_mediachg(mii);
 	AE_UNLOCK(sc);
 
@@ -937,7 +927,7 @@ ae_check_eeprom_present(ae_softc_t *sc, int *vpdc)
 		val &= ~AE_SPICTL_VPD_EN;
 		AE_WRITE_4(sc, AE_SPICTL_REG, val);
 	}
-	error = pci_find_extcap(sc->dev, PCIY_VPD, vpdc);
+	error = pci_find_cap(sc->dev, PCIY_VPD, vpdc);
 	return (error);
 }
 
@@ -1391,12 +1381,13 @@ ae_pm_init(ae_softc_t *sc)
 	/*
 	 * Configure PME.
 	 */
-	pci_find_extcap(sc->dev, PCIY_PMG, &pmc);
-	pmstat = pci_read_config(sc->dev, pmc + PCIR_POWER_STATUS, 2);
-	pmstat &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
-	if ((ifp->if_capenable & IFCAP_WOL) != 0)
-		pmstat |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
-	pci_write_config(sc->dev, pmc + PCIR_POWER_STATUS, pmstat, 2);
+	if (pci_find_cap(sc->dev, PCIY_PMG, &pmc) == 0) {
+		pmstat = pci_read_config(sc->dev, pmc + PCIR_POWER_STATUS, 2);
+		pmstat &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
+		if ((ifp->if_capenable & IFCAP_WOL) != 0)
+			pmstat |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
+		pci_write_config(sc->dev, pmc + PCIR_POWER_STATUS, pmstat, 2);
+	}
 }
 
 static int
@@ -1441,7 +1432,7 @@ ae_tx_avail_size(ae_softc_t *sc)
 	else
 		avail = sc->txd_ack - sc->txd_cur;
 
-	return (avail - 4);	/* 4-byte header. */
+	return (avail);
 }
 
 static int
@@ -1458,7 +1449,7 @@ ae_encap(ae_softc_t *sc, struct mbuf **m_head)
 	len = m0->m_pkthdr.len;
 	
 	if ((sc->flags & AE_FLAG_TXAVAIL) == 0 ||
-	    ae_tx_avail_size(sc) < len) {
+	    len + sizeof(ae_txd_t) + 3 > ae_tx_avail_size(sc)) {
 #ifdef AE_DEBUG
 		if_printf(sc->ifp, "No free Tx available.\n");
 #endif
@@ -1467,11 +1458,10 @@ ae_encap(ae_softc_t *sc, struct mbuf **m_head)
 
 	hdr = (ae_txd_t *)(sc->txd_base + sc->txd_cur);
 	bzero(hdr, sizeof(*hdr));
-	sc->txd_cur = (sc->txd_cur + 4) % AE_TXD_BUFSIZE_DEFAULT; /* Header
-								     size. */
-	to_end = AE_TXD_BUFSIZE_DEFAULT - sc->txd_cur; /* Space available to
-							* the end of the ring
-							*/
+	/* Skip header size. */
+	sc->txd_cur = (sc->txd_cur + sizeof(ae_txd_t)) % AE_TXD_BUFSIZE_DEFAULT;
+	/* Space available to the end of the ring */
+	to_end = AE_TXD_BUFSIZE_DEFAULT - sc->txd_cur;
 	if (to_end >= len) {
 		m_copydata(m0, 0, len, (caddr_t)(sc->txd_base + sc->txd_cur));
 	} else {
@@ -1523,23 +1513,32 @@ static void
 ae_start(struct ifnet *ifp)
 {
 	ae_softc_t *sc;
+
+	sc = ifp->if_softc;
+	AE_LOCK(sc);
+	ae_start_locked(ifp);
+	AE_UNLOCK(sc);
+}
+
+static void
+ae_start_locked(struct ifnet *ifp)
+{
+	ae_softc_t *sc;
 	unsigned int count;
 	struct mbuf *m0;
 	int error;
 
 	sc = ifp->if_softc;
 	KASSERT(sc != NULL, ("[ae, %d]: sc is NULL", __LINE__));
-	AE_LOCK(sc);
+	AE_LOCK_ASSERT(sc);
 
 #ifdef AE_DEBUG
 	if_printf(ifp, "Start called.\n");
 #endif
 
 	if ((ifp->if_drv_flags & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
-	    IFF_DRV_RUNNING || (sc->flags & AE_FLAG_LINK) == 0) {
-		AE_UNLOCK(sc);
+	    IFF_DRV_RUNNING || (sc->flags & AE_FLAG_LINK) == 0)
 		return;
-	}
 
 	count = 0;
 	while (!IFQ_DRV_IS_EMPTY(&ifp->if_snd)) {
@@ -1575,7 +1574,6 @@ ae_start(struct ifnet *ifp)
 		if_printf(ifp, "Tx pos now is %d.\n", sc->txd_cur);
 #endif
 	}
-	AE_UNLOCK(sc);
 }
 
 static void
@@ -1709,15 +1707,6 @@ ae_stop_txmac(ae_softc_t *sc)
 }
 
 static void
-ae_tx_task(void *arg, int pending)
-{
-	struct ifnet *ifp;
-
-	ifp = (struct ifnet *)arg;
-	ae_start(ifp);
-}
-
-static void
 ae_mac_config(ae_softc_t *sc)
 {
 	struct mii_data *mii;
@@ -1785,7 +1774,10 @@ ae_int_task(void *arg, int pending)
 	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
 		if ((val & (AE_ISR_DMAR_TIMEOUT | AE_ISR_DMAW_TIMEOUT |
 		    AE_ISR_PHY_LINKDOWN)) != 0) {
+			ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 			ae_init_locked(sc);
+			AE_UNLOCK(sc);
+			return;
 		}
 		if ((val & AE_ISR_TX_EVENT) != 0)
 			ae_tx_intr(sc);
@@ -1848,8 +1840,8 @@ ae_tx_intr(ae_softc_t *sc)
 		/*
 		 * Move txd ack and align on 4-byte boundary.
 		 */
-		sc->txd_ack = ((sc->txd_ack + le16toh(txd->len) + 4 + 3) & ~3) %
-		    AE_TXD_BUFSIZE_DEFAULT;
+		sc->txd_ack = ((sc->txd_ack + le16toh(txd->len) +
+		    sizeof(ae_txs_t) + 3) & ~3) % AE_TXD_BUFSIZE_DEFAULT;
 
 		if ((flags & AE_TXS_SUCCESS) != 0)
 			ifp->if_opackets++;
@@ -1871,7 +1863,7 @@ ae_tx_intr(ae_softc_t *sc)
 	
 	if ((sc->flags & AE_FLAG_TXAVAIL) != 0) {
 		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-			taskqueue_enqueue(sc->tq, &sc->tx_task);
+			ae_start_locked(ifp);
 	}
 
 	/*
@@ -1996,9 +1988,10 @@ ae_watchdog(ae_softc_t *sc)
 		if_printf(ifp, "watchdog timeout - resetting.\n");
 
 	ifp->if_oerrors++;
+	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	ae_init_locked(sc);
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-		taskqueue_enqueue(sc->tq, &sc->tx_task);
+		ae_start_locked(ifp);
 }
 
 static void
@@ -2073,7 +2066,7 @@ ae_rxfilter(ae_softc_t *sc)
 	 * Load multicast tables.
 	 */
 	bzero(mchash, sizeof(mchash));
-	IF_ADDR_LOCK(ifp);
+	if_maddr_rlock(ifp);
 	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -2081,7 +2074,7 @@ ae_rxfilter(ae_softc_t *sc)
 			ifma->ifma_addr), ETHER_ADDR_LEN);
 		mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 	AE_WRITE_4(sc, AE_REG_MHT0, mchash[0]);
 	AE_WRITE_4(sc, AE_REG_MHT1, mchash[1]);
 	AE_WRITE_4(sc, AE_MAC_REG, rxcfg);
@@ -2106,8 +2099,10 @@ ae_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		else if (ifp->if_mtu != ifr->ifr_mtu) {
 			AE_LOCK(sc);
 			ifp->if_mtu = ifr->ifr_mtu;
-			if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+			if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
+				ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 				ae_init_locked(sc);
+			}
 			AE_UNLOCK(sc);
 		}
 		break;

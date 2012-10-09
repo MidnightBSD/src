@@ -98,6 +98,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -450,9 +451,6 @@ ncr53c9x_detach(struct ncr53c9x_softc *sc)
 	xpt_register_async(0, ncr53c9x_async, sc->sc_sim, sc->sc_path);
 	xpt_free_path(sc->sc_path);
 	xpt_bus_deregister(cam_sim_path(sc->sc_sim));
-
-	NCR_UNLOCK(sc);
-
 	cam_sim_free(sc->sc_sim, TRUE);
 
 	NCR_UNLOCK(sc);
@@ -849,6 +847,7 @@ ncr53c9x_select(struct ncr53c9x_softc *sc, struct ncr53c9x_ecb *ecb)
 		ti->curr.offset = 0;
 		ti->curr.width = MSG_EXT_WDTR_BUS_8_BIT;
 	}
+	ncr53c9x_setsync(sc, ti);
 
 	selatn3 = selatns = 0;
 	if (ecb->tag[0] != 0) {
@@ -1335,7 +1334,6 @@ ncr53c9x_sched(struct ncr53c9x_softc *sc)
 			NCR_TRACE(("[%s %d:%d busy] \n", __func__,
 			    ecb->ccb->ccb_h.target_id,
 			    ecb->ccb->ccb_h.target_lun));
-		}
 	}
 }
 
@@ -1428,7 +1426,6 @@ ncr53c9x_done(struct ncr53c9x_softc *sc, struct ncr53c9x_ecb *ecb)
 				    sense_returned;
 			else
 				ccb->csio.sense_resid = 0;
->>>>>>> 1.1.1.3
 		} else if (ecb->stat == SCSI_STATUS_CHECK_COND) {
 			if ((ecb->flags & ECB_SENSE) != 0)
 				ccb->ccb_h.status = CAM_AUTOSENSE_FAIL;
@@ -1567,7 +1564,6 @@ ncr53c9x_flushfifo(struct ncr53c9x_softc *sc)
 static int
 ncr53c9x_rdfifo(struct ncr53c9x_softc *sc, int how)
 {
-	u_char *ibuf;
 	int i, n;
 	uint8_t *ibuf;
 
@@ -2296,21 +2292,6 @@ ncr53c9x_intr(void *arg)
 	NCR_UNLOCK(sc);
 }
 
-void
-ncr53c9x_intr(void *arg)
-{
-	struct ncr53c9x_softc *sc = arg;
-
-	if (!NCRDMA_ISINTR(sc))
-		return;
-
-	NCR_LOCK(sc);
-
-	ncr53c9x_intr1(sc);
-
-	NCR_UNLOCK(sc);
-}
-
 /*
  * This is the most critical part of the driver, and has to know
  * how to deal with *all* error conditions and phases from the SCSI
@@ -2988,15 +2969,6 @@ msgin:
 #if 0
 			DELAY(1);
 #endif
-		}
-		/*
-		 * If we have more messages to send, e.g. WDTR or SDTR
-		 * after we've sent a TAG, set ATN so we'll go back to
-		 * MESSAGE_OUT_PHASE.
-		 */
-		if (sc->sc_msgpriq) {
-			NCRCMD(sc, NCRCMD_SETATN);
-			sc->sc_flags |= NCR_ATN;
 		}
 		/*
 		 * If we have more messages to send, e.g. WDTR or SDTR

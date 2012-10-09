@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Michael Smith
  * Copyright (c) 1998 Jonathan Lemon
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/bios.c,v 1.73 2005/07/21 09:48:36 phk Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Subset of the i386 bios support code.  We cannot make bios16 nor bios32

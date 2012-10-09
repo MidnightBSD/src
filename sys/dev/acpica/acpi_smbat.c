@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_smbat.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2005 Hans Petter Selasky
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_smbat.c,v 1.5.2.3 2011/03/11 17:12:39 avg Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -34,7 +33,8 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_smbat.c,v 1.5.2.3 2011/03/11 17:12:3
 #include <sys/module.h>
 #include <sys/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpiio.h>
 #include <dev/acpica/acpi_smbus.h>
@@ -62,7 +62,6 @@ static int	acpi_smbat_get_bst(device_t dev, struct acpi_bst *bst);
 
 ACPI_SERIAL_DECL(smbat, "ACPI Smart Battery");
 
-SYSCTL_DECL(_debug_acpi);
 SYSCTL_NODE(_debug_acpi, OID_AUTO, batt, CTLFLAG_RD, NULL, "Battery debugging");
 
 /* On some laptops with smart batteries, enabling battery monitoring
@@ -190,7 +189,7 @@ acpi_smbus_read_2(struct acpi_smbat_softc *sc, uint8_t addr, uint8_t cmd,
     uint16_t *ptr)
 {
 	int error, to;
-	ACPI_INTEGER val;
+	UINT64 val;
 
 	ACPI_SERIAL_ASSERT(smbat);
 
@@ -257,7 +256,7 @@ static int
 acpi_smbus_read_multi_1(struct acpi_smbat_softc *sc, uint8_t addr, uint8_t cmd,
     uint8_t *ptr, uint16_t len)
 {
-	ACPI_INTEGER val;
+	UINT64 val;
 	uint8_t	to;
 	int error;
 

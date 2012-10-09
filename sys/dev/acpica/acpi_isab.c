@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_isab.c,v 1.10 2005/09/11 18:39:01 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ISA Bridge driver for Generic ISA Bus Devices.  See section 10.7 of the
@@ -40,7 +39,9 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_isab.c,v 1.10 2005/09/11 18:39:01 ob
 #include <sys/malloc.h>
 #include <sys/module.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+
 #include <dev/acpica/acpivar.h>
 #include <isa/isavar.h>
 
@@ -67,7 +68,6 @@ static device_method_t acpi_isab_methods[] = {
 	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_read_ivar,	acpi_isab_read_ivar),
 	DEVMETHOD(bus_alloc_resource,	bus_generic_alloc_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_release_resource),
@@ -76,7 +76,7 @@ static device_method_t acpi_isab_methods[] = {
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t acpi_isab_driver = {

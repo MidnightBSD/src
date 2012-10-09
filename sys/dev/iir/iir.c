@@ -39,11 +39,11 @@
  *              Mike Smith;             Some driver source code.
  *              FreeBSD.ORG;            Great O/S to work on and for.
  *
- * $Id: iir.c,v 1.3 2008-11-30 20:02:36 laffer1 Exp $"
+ * $Id: iir.c,v 1.4 2012-10-09 04:08:11 laffer1 Exp $"
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iir/iir.c,v 1.19 2007/06/17 05:55:50 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 #define _IIR_C_
 
@@ -66,9 +66,6 @@ __FBSDID("$FreeBSD: src/sys/dev/iir/iir.c,v 1.19 2007/06/17 05:55:50 scottl Exp 
 #include <cam/cam_debug.h>
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
-
-#include <vm/vm.h>
-#include <vm/pmap.h>
 
 #include <dev/iir/iir.h>
 
@@ -156,7 +153,6 @@ static void     iir_action(struct cam_sim *sim, union ccb *ccb);
 static void     iir_poll(struct cam_sim *sim);
 static void     iir_shutdown(void *arg, int howto);
 static void     iir_timeout(void *arg);
-static void     iir_watchdog(void *arg);
 
 static void     gdt_eval_mapping(u_int32_t size, int *cyls, int *heads, 
                                  int *secs);
@@ -1160,20 +1156,25 @@ gdt_internal_cache_cmd(struct gdt_softc *gdt,union ccb *ccb)
         break;
       case INQUIRY:
         {
-            struct scsi_inquiry_data *inq;
+            struct scsi_inquiry_data inq;
+            size_t copylen = MIN(sizeof(inq), ccb->csio.dxfer_len);
 
-            inq = (struct scsi_inquiry_data *)ccb->csio.data_ptr;       
-            bzero(inq, sizeof(struct scsi_inquiry_data));
-            inq->device = (gdt->sc_hdr[t].hd_devtype & 4) ?
+            bzero(&inq, sizeof(inq));
+            inq.device = (gdt->sc_hdr[t].hd_devtype & 4) ?
                 T_CDROM : T_DIRECT;
-            inq->dev_qual2 = (gdt->sc_hdr[t].hd_devtype & 1) ? 0x80 : 0;
-            inq->version = SCSI_REV_2;
-            inq->response_format = 2; 
-            inq->additional_length = 32; 
-            inq->flags = SID_CmdQue | SID_Sync; 
-            strcpy(inq->vendor, gdt->oem_name);
-            sprintf(inq->product, "Host Drive   #%02d", t);
-            strcpy(inq->revision, "   ");
+            inq.dev_qual2 = (gdt->sc_hdr[t].hd_devtype & 1) ? 0x80 : 0;
+            inq.version = SCSI_REV_2;
+            inq.response_format = 2; 
+            inq.additional_length = 32; 
+            inq.flags = SID_CmdQue | SID_Sync; 
+            strncpy(inq.vendor, gdt->oem_name, sizeof(inq.vendor));
+            snprintf(inq.product, sizeof(inq.product),
+                     "Host Drive   #%02d", t);
+            strncpy(inq.revision, "   ", sizeof(inq.revision));
+            bcopy(&inq, ccb->csio.data_ptr, copylen );
+            if( ccb->csio.dxfer_len > copylen )
+                bzero( ccb->csio.data_ptr+copylen,
+                       ccb->csio.dxfer_len - copylen );
             break;
         }
       case MODE_SENSE_6:
@@ -1182,18 +1183,24 @@ gdt_internal_cache_cmd(struct gdt_softc *gdt,union ccb *ccb)
                 struct scsi_mode_hdr_6 hd;
                 struct scsi_mode_block_descr bd;
                 struct scsi_control_page cp;
-            } *mpd;
+            } mpd;
+            size_t copylen = MIN(sizeof(mpd), ccb->csio.dxfer_len);
             u_int8_t page;
 
-            mpd = (struct mpd_data *)ccb->csio.data_ptr;        
-            bzero(mpd, sizeof(struct mpd_data));
-            mpd->hd.datalen = sizeof(struct scsi_mode_hdr_6) +
+            /*mpd = (struct mpd_data *)ccb->csio.data_ptr;*/
+            bzero(&mpd, sizeof(mpd));
+            mpd.hd.datalen = sizeof(struct scsi_mode_hdr_6) +
                 sizeof(struct scsi_mode_block_descr);
-            mpd->hd.dev_specific = (gdt->sc_hdr[t].hd_devtype & 2) ? 0x80 : 0;
-            mpd->hd.block_descr_len = sizeof(struct scsi_mode_block_descr);
-            mpd->bd.block_len[0] = (GDT_SECTOR_SIZE & 0x00ff0000) >> 16;
-            mpd->bd.block_len[1] = (GDT_SECTOR_SIZE & 0x0000ff00) >> 8;
-            mpd->bd.block_len[2] = (GDT_SECTOR_SIZE & 0x000000ff);
+            mpd.hd.dev_specific = (gdt->sc_hdr[t].hd_devtype & 2) ? 0x80 : 0;
+            mpd.hd.block_descr_len = sizeof(struct scsi_mode_block_descr);
+            mpd.bd.block_len[0] = (GDT_SECTOR_SIZE & 0x00ff0000) >> 16;
+            mpd.bd.block_len[1] = (GDT_SECTOR_SIZE & 0x0000ff00) >> 8;
+            mpd.bd.block_len[2] = (GDT_SECTOR_SIZE & 0x000000ff);
+
+            bcopy(&mpd, ccb->csio.data_ptr, copylen );
+            if( ccb->csio.dxfer_len > copylen )
+                bzero( ccb->csio.data_ptr+copylen,
+                       ccb->csio.dxfer_len - copylen );
             page=((struct scsi_mode_sense_6 *)ccb->csio.cdb_io.cdb_bytes)->page;
             switch (page) {
               default:
@@ -1204,12 +1211,17 @@ gdt_internal_cache_cmd(struct gdt_softc *gdt,union ccb *ccb)
         }
       case READ_CAPACITY:
         {
-            struct scsi_read_capacity_data *rcd;
+            struct scsi_read_capacity_data rcd;
+            size_t copylen = MIN(sizeof(rcd), ccb->csio.dxfer_len);
               
-            rcd = (struct scsi_read_capacity_data *)ccb->csio.data_ptr; 
-            bzero(rcd, sizeof(struct scsi_read_capacity_data));
-            scsi_ulto4b(gdt->sc_hdr[t].hd_size - 1, rcd->addr);
-            scsi_ulto4b(GDT_SECTOR_SIZE, rcd->length);
+            /*rcd = (struct scsi_read_capacity_data *)ccb->csio.data_ptr;*/
+            bzero(&rcd, sizeof(rcd));
+            scsi_ulto4b(gdt->sc_hdr[t].hd_size - 1, rcd.addr);
+            scsi_ulto4b(GDT_SECTOR_SIZE, rcd.length);
+            bcopy(&rcd, ccb->csio.data_ptr, copylen );
+            if( ccb->csio.dxfer_len > copylen )
+                bzero( ccb->csio.data_ptr+copylen,
+                       ccb->csio.dxfer_len - copylen );
             break;
         }
       default:
@@ -1469,40 +1481,6 @@ static void
 iir_timeout(void *arg)
 {
     GDT_DPRINTF(GDT_D_TIMEOUT, ("iir_timeout(%p)\n", gccb));
-}
-
-static void
-iir_watchdog(void *arg)
-{
-    struct gdt_softc *gdt;
-
-    gdt = (struct gdt_softc *)arg;
-    GDT_DPRINTF(GDT_D_DEBUG, ("iir_watchdog(%p)\n", gdt));
-
-    {
-        int ccbs = 0, ucmds = 0, frees = 0, pends = 0;
-        struct gdt_ccb *p;
-        struct ccb_hdr *h;
-        struct gdt_ucmd *u;
-
-        for (h = TAILQ_FIRST(&gdt->sc_ccb_queue); h != NULL; 
-             h = TAILQ_NEXT(h, sim_links.tqe))
-            ccbs++;
-        for (u = TAILQ_FIRST(&gdt->sc_ucmd_queue); u != NULL; 
-             u = TAILQ_NEXT(u, links))
-            ucmds++;
-        for (p = SLIST_FIRST(&gdt->sc_free_gccb); p != NULL; 
-             p = SLIST_NEXT(p, sle))
-            frees++;
-        for (p = SLIST_FIRST(&gdt->sc_pending_gccb); p != NULL; 
-             p = SLIST_NEXT(p, sle))
-            pends++;
-
-        GDT_DPRINTF(GDT_D_TIMEOUT, ("ccbs %d ucmds %d frees %d pends %d\n",
-               ccbs, ucmds, frees, pends));
-    }
-
-    timeout(iir_watchdog, (caddr_t)gdt, hz * 15);
 }
 
 static void     
@@ -1861,13 +1839,20 @@ gdt_sync_event(struct gdt_softc *gdt, int service,
         } else {
             /* error */
             if (gccb->gc_service == GDT_CACHESERVICE) {
+                struct scsi_sense_data *sense;
+
                 ccb->ccb_h.status |= CAM_SCSI_STATUS_ERROR | CAM_AUTOSNS_VALID;
                 ccb->ccb_h.status &= ~CAM_SIM_QUEUED;
                 ccb->csio.scsi_status = SCSI_STATUS_CHECK_COND;
                 bzero(&ccb->csio.sense_data, ccb->csio.sense_len);
-                ccb->csio.sense_data.error_code =
-                    SSD_CURRENT_ERROR | SSD_ERRCODE_VALID;
-                ccb->csio.sense_data.flags = SSD_KEY_NOT_READY;
+                sense = &ccb->csio.sense_data;
+                scsi_set_sense_data(sense,
+                                    /*sense_format*/ SSD_TYPE_NONE,
+                                    /*current_error*/ 1,
+                                    /*sense_key*/ SSD_KEY_NOT_READY,
+                                    /*asc*/ 0x4,
+                                    /*ascq*/ 0x01,
+                                    SSD_ELEM_NONE);
 
                 gdt->sc_dvr.size = sizeof(gdt->sc_dvr.eu.sync);
                 gdt->sc_dvr.eu.sync.ionode  = gdt->sc_hanum;

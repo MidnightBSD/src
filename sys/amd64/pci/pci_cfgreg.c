@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/pci/pci_cfgreg.c,v 1.109.2.4 2009/11/01 18:40:03 avg Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,7 +64,7 @@ static vm_offset_t pcie_base;
 static int pcie_minbus, pcie_maxbus;
 static uint32_t pcie_badslots;
 static struct mtx pcicfg_mtx;
-static int mcfg_enable = 0;
+static int mcfg_enable = 1;
 TUNABLE_INT("hw.pci.mcfg", &mcfg_enable);
 SYSCTL_INT(_hw_pci, OID_AUTO, mcfg, CTLFLAG_RDTUN, &mcfg_enable, 0,
     "Enable support for PCI-e memory mapped config access");

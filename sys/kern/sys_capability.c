@@ -54,7 +54,7 @@
 #include "opt_capsicum.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/capability.h>

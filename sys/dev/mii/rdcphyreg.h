@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/rdcphyreg.h,v 1.1.4.2 2011/02/04 20:27:50 yongari Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_MII_RDCPHYREG_H_

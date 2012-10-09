@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_prf.c,v 1.130.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_ddb.h"
 #include "opt_printf.h"
@@ -94,6 +94,7 @@ struct snprintf_arg {
 extern	int log_open;
 
 static void  msglogchar(int c, int pri);
+static void  msglogstr(char *str, int pri, int filter_cr);
 static void  putchar(int ch, void *arg);
 static char *ksprintn(char *nbuf, uintmax_t num, int base, int *len, int upper);
 static void  snprintf_func(int ch, void *arg);
@@ -105,6 +106,14 @@ static int      log_console_output = 1;
 TUNABLE_INT("kern.log_console_output", &log_console_output);
 SYSCTL_INT(_kern, OID_AUTO, log_console_output, CTLFLAG_RW,
     &log_console_output, 0, "Duplicate console output to the syslog.");
+
+/*
+ * See the comment in log_console() below for more explanation of this.
+ */
+static int log_console_add_linefeed = 0;
+TUNABLE_INT("kern.log_console_add_linefeed", &log_console_add_linefeed);
+SYSCTL_INT(_kern, OID_AUTO, log_console_add_linefeed, CTLFLAG_RW,
+    &log_console_add_linefeed, 0, "log_console() adds extra newlines.");
 
 static int	always_console_output = 0;
 TUNABLE_INT("kern.always_console_output", &always_console_output);
@@ -127,16 +136,17 @@ tablefull(const char *tab)
 int
 uprintf(const char *fmt, ...)
 {
-	struct thread *td = curthread;
-	struct proc *p = td->td_proc;
 	va_list ap;
 	struct putchar_arg pca;
+	struct proc *p;
+	struct thread *td;
 	int retval;
 
-	if (td == NULL || TD_IS_IDLETHREAD(td))
+	td = curthread;
+	if (TD_IS_IDLETHREAD(td))
 		return (0);
 
-	mtx_lock(&Giant);
+	sx_slock(&proctree_lock);
 	p = td->td_proc;
 	PROC_LOCK(p);
 	if ((p->p_flag & P_CONTROLT) == 0) {
@@ -153,11 +163,14 @@ uprintf(const char *fmt, ...)
 		goto out;
 	}
 	pca.flags = TOTTY;
+	pca.p_bufr = NULL;
 	va_start(ap, fmt);
+	tty_lock(pca.tty);
 	retval = kvprintf(fmt, putchar, &pca, 10, ap);
+	tty_unlock(pca.tty);
 	va_end(ap);
 out:
-	mtx_unlock(&Giant);
+	sx_sunlock(&proctree_lock);
 	return (retval);
 }
 
@@ -174,19 +187,17 @@ tprintf(struct proc *p, int pri, const char *fmt, ...)
 	struct putchar_arg pca;
 	struct session *sess = NULL;
 
-	mtx_lock(&Giant);
+	sx_slock(&proctree_lock);
 	if (pri != -1)
 		flags |= TOLOG;
 	if (p != NULL) {
 		PROC_LOCK(p);
 		if (p->p_flag & P_CONTROLT && p->p_session->s_ttyvp) {
 			sess = p->p_session;
-			SESS_LOCK(sess);
+			sess_hold(sess);
 			PROC_UNLOCK(p);
-			SESSHOLD(sess);
 			tp = sess->s_ttyp;
-			SESS_UNLOCK(sess);
-			if (ttycheckoutq(tp, 0))
+			if (tp != NULL && tty_checkoutq(tp))
 				flags |= TOTTY;
 			else
 				tp = NULL;
@@ -196,13 +207,18 @@ tprintf(struct proc *p, int pri, const char *fmt, ...)
 	pca.pri = pri;
 	pca.tty = tp;
 	pca.flags = flags;
+	pca.p_bufr = NULL;
 	va_start(ap, fmt);
+	if (pca.tty != NULL)
+		tty_lock(pca.tty);
 	kvprintf(fmt, putchar, &pca, 10, ap);
+	if (pca.tty != NULL)
+		tty_unlock(pca.tty);
 	va_end(ap);
 	if (sess != NULL)
-		SESSRELE(sess);
+		sess_release(sess);
 	msgbuftrigger = 1;
-	mtx_unlock(&Giant);
+	sx_sunlock(&proctree_lock);
 }
 
 /*
@@ -220,6 +236,7 @@ ttyprintf(struct tty *tp, const char *fmt, ...)
 	va_start(ap, fmt);
 	pca.tty = tp;
 	pca.flags = TOTTY;
+	pca.p_bufr = NULL;
 	retval = kvprintf(fmt, putchar, &pca, 10, ap);
 	va_end(ap);
 	return (retval);
@@ -235,16 +252,37 @@ log(int level, const char *fmt, ...)
 {
 	va_list ap;
 	struct putchar_arg pca;
+#ifdef PRINTF_BUFR_SIZE
+	char bufr[PRINTF_BUFR_SIZE];
+#endif
 
 	pca.tty = NULL;
 	pca.pri = level;
 	pca.flags = log_open ? TOLOG : TOCONS;
+#ifdef PRINTF_BUFR_SIZE
+	pca.p_bufr = bufr;
+	pca.p_next = pca.p_bufr;
+	pca.n_bufr = sizeof(bufr);
+	pca.remain = sizeof(bufr);
+	*pca.p_next = '\0';
+#else
 	pca.p_bufr = NULL;
+#endif
 
 	va_start(ap, fmt);
 	kvprintf(fmt, putchar, &pca, 10, ap);
 	va_end(ap);
 
+#ifdef PRINTF_BUFR_SIZE
+	/* Write any buffered console/log output: */
+	if (*pca.p_bufr != '\0') {
+		if (pca.flags & TOLOG)
+			msglogstr(pca.p_bufr, level, /*filter_cr*/1);
+
+		if (pca.flags & TOCONS)
+			cnputs(pca.p_bufr);
+	}
+#endif
 	msgbuftrigger = 1;
 }
 
@@ -253,7 +291,7 @@ log(int level, const char *fmt, ...)
 void
 log_console(struct uio *uio)
 {
-	int c, i, error, nl;
+	int c, error, nl;
 	char *consbuffer;
 	int pri;
 
@@ -266,20 +304,48 @@ log_console(struct uio *uio)
 
 	nl = 0;
 	while (uio->uio_resid > 0) {
-		c = imin(uio->uio_resid, CONSCHUNK);
+		c = imin(uio->uio_resid, CONSCHUNK - 1);
 		error = uiomove(consbuffer, c, uio);
 		if (error != 0)
 			break;
-		for (i = 0; i < c; i++) {
-			msglogchar(consbuffer[i], pri);
-			if (consbuffer[i] == '\n')
-				nl = 1;
-			else
-				nl = 0;
-		}
+		/* Make sure we're NUL-terminated */
+		consbuffer[c] = '\0';
+		if (consbuffer[c - 1] == '\n')
+			nl = 1;
+		else
+			nl = 0;
+		msglogstr(consbuffer, pri, /*filter_cr*/ 1);
 	}
-	if (!nl)
-		msglogchar('\n', pri);
+	/*
+	 * The previous behavior in log_console() is preserved when
+	 * log_console_add_linefeed is non-zero.  For that behavior, if an
+	 * individual console write came in that was not terminated with a
+	 * line feed, it would add a line feed.
+	 *
+	 * This results in different data in the message buffer than
+	 * appears on the system console (which doesn't add extra line feed
+	 * characters).
+	 *
+	 * A number of programs and rc scripts write a line feed, or a period
+	 * and a line feed when they have completed their operation.  On
+	 * the console, this looks seamless, but when displayed with
+	 * 'dmesg -a', you wind up with output that looks like this:
+	 *
+	 * Updating motd:
+	 * .
+	 *
+	 * On the console, it looks like this:
+	 * Updating motd:.
+	 *
+	 * We could add logic to detect that situation, or just not insert
+	 * the extra newlines.  Set the kern.log_console_add_linefeed
+	 * sysctl/tunable variable to get the old behavior.
+	 */
+	if (!nl && log_console_add_linefeed) {
+		consbuffer[0] = '\n';
+		consbuffer[1] = '\0';
+		msglogstr(consbuffer, pri, /*filter_cr*/ 1);
+	}
 	msgbuftrigger = 1;
 	free(uio, M_IOV);
 	free(consbuffer, M_TEMP);
@@ -290,38 +356,11 @@ int
 printf(const char *fmt, ...)
 {
 	va_list ap;
-	struct putchar_arg pca;
 	int retval;
-#ifdef PRINTF_BUFR_SIZE
-	char bufr[PRINTF_BUFR_SIZE];
-#endif
 
 	va_start(ap, fmt);
-	pca.tty = NULL;
-	pca.flags = TOCONS | TOLOG;
-	pca.pri = -1;
-#ifdef PRINTF_BUFR_SIZE
-	pca.p_bufr = bufr;
-	pca.p_next = pca.p_bufr;
-	pca.n_bufr = sizeof(bufr);
-	pca.remain = sizeof(bufr);
-	*pca.p_next = '\0';
-#else
-	/* Don't buffer console output. */
-	pca.p_bufr = NULL;
-#endif
-
-	retval = kvprintf(fmt, putchar, &pca, 10, ap);
+	retval = vprintf(fmt, ap);
 	va_end(ap);
-
-#ifdef PRINTF_BUFR_SIZE
-	/* Write any buffered console output: */
-	if (*pca.p_bufr != '\0')
-		cnputs(pca.p_bufr);
-#endif
-
-	if (!panicstr)
-		msgbuftrigger = 1;
 
 	return (retval);
 }
@@ -352,9 +391,11 @@ vprintf(const char *fmt, va_list ap)
 	retval = kvprintf(fmt, putchar, &pca, 10, ap);
 
 #ifdef PRINTF_BUFR_SIZE
-	/* Write any buffered console output: */
-	if (*pca.p_bufr != '\0')
+	/* Write any buffered console/log output: */
+	if (*pca.p_bufr != '\0') {
 		cnputs(pca.p_bufr);
+		msglogstr(pca.p_bufr, pca.pri, /*filter_cr*/ 1);
+	}
 #endif
 
 	if (!panicstr)
@@ -364,18 +405,18 @@ vprintf(const char *fmt, va_list ap)
 }
 
 static void
-putcons(int c, struct putchar_arg *ap)
+putbuf(int c, struct putchar_arg *ap)
 {
 	/* Check if no console output buffer was provided. */
-	if (ap->p_bufr == NULL)
+	if (ap->p_bufr == NULL) {
 		/* Output direct to the console. */
-		cnputc(c);
-	else {
+		if (ap->flags & TOCONS)
+			cnputc(c);
+
+		if (ap->flags & TOLOG)
+			msglogchar(c, ap->pri);
+	} else {
 		/* Buffer the character: */
-		if (c == '\n') {
-			*ap->p_next++ = '\r';
-			ap->remain--;
-		}
 		*ap->p_next++ = c;
 		ap->remain--;
 
@@ -383,12 +424,35 @@ putcons(int c, struct putchar_arg *ap)
 		*ap->p_next = '\0';
 
 		/* Check if the buffer needs to be flushed. */
-		if (ap->remain < 3 || c == '\n') {
-			cnputs(ap->p_bufr);
+		if (ap->remain == 2 || c == '\n') {
+
+			if (ap->flags & TOLOG)
+				msglogstr(ap->p_bufr, ap->pri, /*filter_cr*/1);
+
+			if (ap->flags & TOCONS) {
+				if ((panicstr == NULL) && (constty != NULL))
+					msgbuf_addstr(&consmsgbuf, -1,
+					    ap->p_bufr, /*filter_cr*/ 0);
+
+				if ((constty == NULL) ||(always_console_output))
+					cnputs(ap->p_bufr);
+			}
+
 			ap->p_next = ap->p_bufr;
 			ap->remain = ap->n_bufr;
 			*ap->p_next = '\0';
 		}
+
+		/*
+		 * Since we fill the buffer up one character at a time,
+		 * this should not happen.  We should always catch it when
+		 * ap->remain == 2 (if not sooner due to a newline), flush
+		 * the buffer and move on.  One way this could happen is
+		 * if someone sets PRINTF_BUFR_SIZE to 1 or something
+		 * similarly silly.
+		 */
+		KASSERT(ap->remain > 2, ("Bad buffer logic, remain = %zd",
+		    ap->remain));
 	}
 }
 
@@ -403,26 +467,25 @@ putchar(int c, void *arg)
 	struct putchar_arg *ap = (struct putchar_arg*) arg;
 	struct tty *tp = ap->tty;
 	int flags = ap->flags;
+	int putbuf_done = 0;
 
 	/* Don't use the tty code after a panic or while in ddb. */
 	if (kdb_active) {
 		if (c != '\0')
 			cnputc(c);
-	} else if (panicstr || ((flags & TOCONS) && constty == NULL)) {
-		if (c != '\0')
-			putcons(c, ap);
 	} else {
-		if ((flags & TOTTY) && tp != NULL)
-			tputchar(c, tp);
+		if ((panicstr == NULL) && (flags & TOTTY) && (tp != NULL))
+			tty_putchar(tp, c);
+
 		if (flags & TOCONS) {
-			if (constty != NULL)
-				msgbuf_addchar(&consmsgbuf, c);
-			if (always_console_output && c != '\0')
-				putcons(c, ap);
+			putbuf(c, ap);
+			putbuf_done = 1;
 		}
 	}
-	if ((flags & TOLOG))
-		msglogchar(c, ap->pri);
+	if ((flags & TOLOG) && (putbuf_done == 0)) {
+		if (c != '\0')
+			putbuf(c, ap);
+	}
 }
 
 /*
@@ -810,7 +873,7 @@ handle_sign:
 			else if (lflag)
 				num = va_arg(ap, long);
 			else if (zflag)
-				num = va_arg(ap, size_t);
+				num = va_arg(ap, ssize_t);
 			else if (hflag)
 				num = (short)va_arg(ap, int);
 			else if (cflag)
@@ -822,7 +885,8 @@ number:
 				neg = 1;
 				num = -(intmax_t)num;
 			}
-			p = ksprintn(nbuf, num, base, &tmp, upper);
+			p = ksprintn(nbuf, num, base, &n, upper);
+			tmp = 0;
 			if (sharpflag && num != 0) {
 				if (base == 8)
 					tmp++;
@@ -832,10 +896,13 @@ number:
 			if (neg)
 				tmp++;
 
-			if (!ladjust && padc != '0' && width
-			    && (width -= tmp) > 0)
-				while (width--)
-					PCHAR(padc);
+			if (!ladjust && padc == '0')
+				dwidth = width - tmp;
+			width -= tmp + imax(dwidth, n);
+			dwidth -= n;
+			if (!ladjust)
+				while (width-- > 0)
+					PCHAR(' ');
 			if (neg)
 				PCHAR('-');
 			if (sharpflag && num != 0) {
@@ -846,16 +913,15 @@ number:
 					PCHAR('x');
 				}
 			}
-			if (!ladjust && width && (width -= tmp) > 0)
-				while (width--)
-					PCHAR(padc);
+			while (dwidth-- > 0)
+				PCHAR('0');
 
 			while (*p)
 				PCHAR(*p--);
 
-			if (ladjust && width && (width -= tmp) > 0)
-				while (width--)
-					PCHAR(padc);
+			if (ladjust)
+				while (width-- > 0)
+					PCHAR(' ');
 
 			break;
 		default:
@@ -909,6 +975,15 @@ msglogchar(int c, int pri)
 	}
 }
 
+static void
+msglogstr(char *str, int pri, int filter_cr)
+{
+	if (!msgbufmapped)
+		return;
+
+	msgbuf_addstr(msgbufp, pri, str, filter_cr);
+}
+
 void
 msgbufinit(void *ptr, int size)
 {
@@ -945,17 +1020,25 @@ sysctl_kern_msgbuf(SYSCTL_HANDLER_ARGS)
 	}
 
 	/* Read the whole buffer, one chunk at a time. */
+	mtx_lock(&msgbuf_lock);
 	msgbuf_peekbytes(msgbufp, NULL, 0, &seq);
-	while ((len = msgbuf_peekbytes(msgbufp, buf, sizeof(buf), &seq)) > 0) {
+	for (;;) {
+		len = msgbuf_peekbytes(msgbufp, buf, sizeof(buf), &seq);
+		mtx_unlock(&msgbuf_lock);
+		if (len == 0)
+			return (0);
+
 		error = sysctl_handle_opaque(oidp, buf, len, req);
 		if (error)
 			return (error);
+
+		mtx_lock(&msgbuf_lock);
 	}
-	return (0);
 }
 
-SYSCTL_PROC(_kern, OID_AUTO, msgbuf, CTLTYPE_STRING | CTLFLAG_RD,
-    0, 0, sysctl_kern_msgbuf, "A", "Contents of kernel message buffer");
+SYSCTL_PROC(_kern, OID_AUTO, msgbuf,
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
+    NULL, 0, sysctl_kern_msgbuf, "A", "Contents of kernel message buffer");
 
 static int msgbuf_clearflag;
 
@@ -965,15 +1048,18 @@ sysctl_kern_msgbuf_clear(SYSCTL_HANDLER_ARGS)
 	int error;
 	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
 	if (!error && req->newptr) {
+		mtx_lock(&msgbuf_lock);
 		msgbuf_clear(msgbufp);
+		mtx_unlock(&msgbuf_lock);
 		msgbuf_clearflag = 0;
 	}
 	return (error);
 }
 
 SYSCTL_PROC(_kern, OID_AUTO, msgbuf_clear,
-    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_SECURE, &msgbuf_clearflag, 0,
-    sysctl_kern_msgbuf_clear, "I", "Clear kernel message buffer");
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_SECURE | CTLFLAG_MPSAFE,
+    &msgbuf_clearflag, 0, sysctl_kern_msgbuf_clear, "I",
+    "Clear kernel message buffer");
 
 #ifdef DDB
 

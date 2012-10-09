@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sg.c,v 1.9.2.4 2010/04/24 23:13:05 mjacob Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,9 +61,8 @@ __FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sg.c,v 1.9.2.4 2010/04/24 23:13:05 mja
 #include <compat/linux/linux_ioctl.h>
 
 typedef enum {
-	SG_FLAG_OPEN		= 0x01,
-	SG_FLAG_LOCKED		= 0x02,
-	SG_FLAG_INVALID		= 0x04
+	SG_FLAG_LOCKED		= 0x01,
+	SG_FLAG_INVALID		= 0x02
 } sg_flags;
 
 typedef enum {
@@ -141,7 +140,7 @@ PERIPHDRIVER_DECLARE(sg, sgdriver);
 
 static struct cdevsw sg_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
+	.d_flags =	D_NEEDGIANT | D_TRACKCLOSE,
 	.d_open =	sgopen,
 	.d_close =	sgclose,
 	.d_ioctl =	sgioctl,
@@ -226,6 +225,9 @@ sgasync(void *callback_arg, uint32_t code, struct cam_path *path, void *arg)
 		if (cgd == NULL)
 			break;
 
+		if (cgd->protocol != PROTO_SCSI)
+			break;
+
 		/*
 		 * Allocate a peripheral instance for this device and
 		 * start the probe process.
@@ -255,6 +257,7 @@ sgregister(struct cam_periph *periph, void *arg)
 {
 	struct sg_softc *softc;
 	struct ccb_getdev *cgd;
+	struct ccb_pathinq cpi;
 	int no_tags;
 
 	cgd = (struct ccb_getdev *)arg;
@@ -281,6 +284,11 @@ sgregister(struct cam_periph *periph, void *arg)
 	TAILQ_INIT(&softc->rdwr_done);
 	periph->softc = softc;
 
+	bzero(&cpi, sizeof(cpi));
+	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
+	cpi.ccb_h.func_code = XPT_PATH_INQ;
+	xpt_action((union ccb *)&cpi);
+
 	/*
 	 * We pass in 0 for all blocksize, since we don't know what the
 	 * blocksize of the device is, if it even has a blocksize.
@@ -288,19 +296,26 @@ sgregister(struct cam_periph *periph, void *arg)
 	cam_periph_unlock(periph);
 	no_tags = (cgd->inq_data.flags & SID_CmdQue) == 0;
 	softc->device_stats = devstat_new_entry("sg",
-			unit2minor(periph->unit_number), 0,
+			periph->unit_number, 0,
 			DEVSTAT_NO_BLOCKSIZE
 			| (no_tags ? DEVSTAT_NO_ORDERED_TAGS : 0),
 			softc->pd_type |
-			DEVSTAT_TYPE_IF_SCSI |
+			XPORT_DEVSTAT_TYPE(cpi.transport) |
 			DEVSTAT_TYPE_PASS,
 			DEVSTAT_PRIORITY_PASS);
 
 	/* Register the device */
-	softc->dev = make_dev(&sg_cdevsw, unit2minor(periph->unit_number),
+	softc->dev = make_dev(&sg_cdevsw, periph->unit_number,
 			      UID_ROOT, GID_OPERATOR, 0600, "%s%d",
 			      periph->periph_name, periph->unit_number);
-	(void)make_dev_alias(softc->dev, "sg%c", 'a' + periph->unit_number);
+	if (periph->unit_number < 26) {
+		(void)make_dev_alias(softc->dev, "sg%c",
+		    periph->unit_number + 'a');
+	} else {
+		(void)make_dev_alias(softc->dev, "sg%c%c",
+		    ((periph->unit_number / 26) - 1) + 'a',
+		    (periph->unit_number % 26) + 'a');
+	}
 	cam_periph_lock(periph);
 	softc->dev->si_drv1 = periph;
 
@@ -383,29 +398,28 @@ sgopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	if (periph == NULL)
 		return (ENXIO);
 
+	if (cam_periph_acquire(periph) != CAM_REQ_CMP)
+		return (ENXIO);
+
 	/*
 	 * Don't allow access when we're running at a high securelevel.
 	 */
 	error = securelevel_gt(td->td_ucred, 1);
-	if (error)
+	if (error) {
+		cam_periph_release(periph);
 		return (error);
+	}
 
 	cam_periph_lock(periph);
 
 	softc = (struct sg_softc *)periph->softc;
 	if (softc->flags & SG_FLAG_INVALID) {
+		cam_periph_release_locked(periph);
 		cam_periph_unlock(periph);
 		return (ENXIO);
 	}
 
-	if ((softc->flags & SG_FLAG_OPEN) == 0) {
-		softc->flags |= SG_FLAG_OPEN;
-		cam_periph_unlock(periph);
-	} else {
-		/* Device closes aren't symmetrical, fix up the refcount. */
-		cam_periph_unlock(periph);
-		cam_periph_release(periph);
-	}
+	cam_periph_unlock(periph);
 
 	return (error);
 }
@@ -414,18 +428,11 @@ static int
 sgclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 {
 	struct cam_periph *periph;
-	struct sg_softc *softc;
 
 	periph = (struct cam_periph *)dev->si_drv1;
 	if (periph == NULL)
 		return (ENXIO);
 
-	cam_periph_lock(periph);
-
-	softc = (struct sg_softc *)periph->softc;
-	softc->flags &= ~SG_FLAG_OPEN;
-
-	cam_periph_unlock(periph);
 	cam_periph_release(periph);
 
 	return (0);
@@ -507,7 +514,7 @@ sgioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 			break;
 		}
 
-		ccb = cam_periph_getccb(periph, /*priority*/5);
+		ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
 		csio = &ccb->csio;
 
 		error = copyin(req.cmdp, &csio->cdb_io.cdb_bytes,
@@ -726,7 +733,7 @@ sgwrite(struct cdev *dev, struct uio *uio, int ioflag)
 
 	cam_periph_lock(periph);
 	sc = periph->softc;
-	xpt_setup_ccb(&ccb->ccb_h, periph->path, /*priority*/5);
+	xpt_setup_ccb(&ccb->ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 	cam_fill_csio(csio,
 		      /*retries*/1,
 		      sgdone,
@@ -953,6 +960,7 @@ sg_scsiio_status(struct ccb_scsiio *csio, u_short *hoststat, u_short *drvstat)
 	case CAM_SCSI_STATUS_ERROR:
 		*hoststat = DID_ERROR;
 		*drvstat = 0;
+		break;
 	case CAM_SCSI_BUS_RESET:
 		*hoststat = DID_RESET;
 		*drvstat = 0;
@@ -964,6 +972,7 @@ sg_scsiio_status(struct ccb_scsiio *csio, u_short *hoststat, u_short *drvstat)
 	case CAM_SCSI_BUSY:
 		*hoststat = DID_BUS_BUSY;
 		*drvstat = 0;
+		break;
 	default:
 		*hoststat = DID_ERROR;
 		*drvstat = DRIVER_ERROR;

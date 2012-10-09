@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Jake Burkholder <jake@freebsd.org>.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/condvar.h,v 1.14.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_SYS_CONDVAR_H_
@@ -73,7 +72,7 @@ void	cv_broadcastpri(struct cv *cvp, int pri);
 #define	cv_timedwait_sig(cvp, lock, timo)				\
 	_cv_timedwait_sig((cvp), &(lock)->lock_object, (timo))
 
-#define cv_broadcast(cvp)	cv_broadcastpri(cvp, -1)
+#define cv_broadcast(cvp)	cv_broadcastpri(cvp, 0)
 
 #define	cv_wmesg(cvp)		((cvp)->cv_description)
 

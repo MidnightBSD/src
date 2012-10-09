@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_acl_posix1e.c,v 1.52.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,13 +53,18 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_acl_posix1e.c,v 1.52.6.1 2008/11/25 02:59:
  */
 int
 vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
-    struct acl *acl, mode_t acc_mode, struct ucred *cred, int *privused)
+    struct acl *acl, accmode_t accmode, struct ucred *cred, int *privused)
 {
 	struct acl_entry *acl_other, *acl_mask;
-	mode_t dac_granted;
-	mode_t priv_granted;
-	mode_t acl_mask_granted;
+	accmode_t dac_granted;
+	accmode_t priv_granted;
+	accmode_t acl_mask_granted;
 	int group_matched, i;
+
+	KASSERT((accmode & ~(VEXEC | VWRITE | VREAD | VADMIN | VAPPEND)) == 0,
+	    ("invalid bit in accmode"));
+	KASSERT((accmode & VAPPEND) == 0 || (accmode & VWRITE),
+	    	("VAPPEND without VWRITE"));
 
 	/*
 	 * Look for a normal, non-privileged way to access the file/directory
@@ -81,23 +86,29 @@ vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
 	priv_granted = 0;
 
 	if (type == VDIR) {
-		if ((acc_mode & VEXEC) && !priv_check_cred(cred,
+		if ((accmode & VEXEC) && !priv_check_cred(cred,
 		     PRIV_VFS_LOOKUP, 0))
 			priv_granted |= VEXEC;
 	} else {
-		if ((acc_mode & VEXEC) && !priv_check_cred(cred,
-		    PRIV_VFS_EXEC, 0))
+		/*
+		 * Ensure that at least one execute bit is on. Otherwise,
+		 * a privileged user will always succeed, and we don't want
+		 * this to happen unless the file really is executable.
+		 */
+		if ((accmode & VEXEC) && (acl_posix1e_acl_to_mode(acl) &
+		    (S_IXUSR | S_IXGRP | S_IXOTH)) != 0 &&
+		    !priv_check_cred(cred, PRIV_VFS_EXEC, 0))
 			priv_granted |= VEXEC;
 	}
 
-	if ((acc_mode & VREAD) && !priv_check_cred(cred, PRIV_VFS_READ, 0))
+	if ((accmode & VREAD) && !priv_check_cred(cred, PRIV_VFS_READ, 0))
 		priv_granted |= VREAD;
 
-	if (((acc_mode & VWRITE) || (acc_mode & VAPPEND)) &&
+	if (((accmode & VWRITE) || (accmode & VAPPEND)) &&
 	    !priv_check_cred(cred, PRIV_VFS_WRITE, 0))
 		priv_granted |= (VWRITE | VAPPEND);
 
-	if ((acc_mode & VADMIN) && !priv_check_cred(cred, PRIV_VFS_ADMIN, 0))
+	if ((accmode & VADMIN) && !priv_check_cred(cred, PRIV_VFS_ADMIN, 0))
 		priv_granted |= VADMIN;
 
 	/*
@@ -120,14 +131,14 @@ vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
 				dac_granted |= VREAD;
 			if (acl->acl_entry[i].ae_perm & ACL_WRITE)
 				dac_granted |= (VWRITE | VAPPEND);
-			if ((acc_mode & dac_granted) == acc_mode)
+			if ((accmode & dac_granted) == accmode)
 				return (0);
 
 			/*
 			 * XXXRW: Do privilege lookup here.
 			 */
-			if ((acc_mode & (dac_granted | priv_granted)) ==
-			    acc_mode) {
+			if ((accmode & (dac_granted | priv_granted)) ==
+			    accmode) {
 				if (privused != NULL)
 					*privused = 1;
 				return (0);
@@ -197,13 +208,13 @@ vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
 			if (acl->acl_entry[i].ae_perm & ACL_WRITE)
 				dac_granted |= (VWRITE | VAPPEND);
 			dac_granted &= acl_mask_granted;
-			if ((acc_mode & dac_granted) == acc_mode)
+			if ((accmode & dac_granted) == accmode)
 				return (0);
 			/*
 			 * XXXRW: Do privilege lookup here.
 			 */
-			if ((acc_mode & (dac_granted | priv_granted)) !=
-			    acc_mode)
+			if ((accmode & (dac_granted | priv_granted)) !=
+			    accmode)
 				goto error;
 
 			if (privused != NULL)
@@ -234,7 +245,7 @@ vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
 				dac_granted |= (VWRITE | VAPPEND);
 			dac_granted  &= acl_mask_granted;
 
-			if ((acc_mode & dac_granted) == acc_mode)
+			if ((accmode & dac_granted) == accmode)
 				return (0);
 
 			group_matched = 1;
@@ -252,7 +263,7 @@ vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
 				dac_granted |= (VWRITE | VAPPEND);
 			dac_granted  &= acl_mask_granted;
 
-			if ((acc_mode & dac_granted) == acc_mode)
+			if ((accmode & dac_granted) == accmode)
 				return (0);
 
 			group_matched = 1;
@@ -285,8 +296,8 @@ vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
 				/*
 				 * XXXRW: Do privilege lookup here.
 				 */
-				if ((acc_mode & (dac_granted | priv_granted))
-				    != acc_mode)
+				if ((accmode & (dac_granted | priv_granted))
+				    != accmode)
 					break;
 
 				if (privused != NULL)
@@ -309,8 +320,8 @@ vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
 				/*
 				 * XXXRW: Do privilege lookup here.
 				 */
-				if ((acc_mode & (dac_granted | priv_granted))
-				    != acc_mode)
+				if ((accmode & (dac_granted | priv_granted))
+				    != accmode)
 					break;
 
 				if (privused != NULL)
@@ -339,19 +350,19 @@ vaccess_acl_posix1e(enum vtype type, uid_t file_uid, gid_t file_gid,
 	if (acl_other->ae_perm & ACL_WRITE)
 		dac_granted |= (VWRITE | VAPPEND);
 
-	if ((acc_mode & dac_granted) == acc_mode)
+	if ((accmode & dac_granted) == accmode)
 		return (0);
 	/*
 	 * XXXRW: Do privilege lookup here.
 	 */
-	if ((acc_mode & (dac_granted | priv_granted)) == acc_mode) {
+	if ((accmode & (dac_granted | priv_granted)) == accmode) {
 		if (privused != NULL)
 			*privused = 1;
 		return (0);
 	}
 
 error:
-	return ((acc_mode & VADMIN) ? EPERM : EACCES);
+	return ((accmode & VADMIN) ? EPERM : EACCES);
 }
 
 /*
@@ -409,6 +420,8 @@ acl_posix1e_mode_to_entry(acl_tag_t tag, uid_t uid, gid_t gid, mode_t mode)
 
 	acl_entry.ae_tag = tag;
 	acl_entry.ae_perm = acl_posix1e_mode_to_perm(tag, mode);
+	acl_entry.ae_entry_type = 0;
+	acl_entry.ae_flags = 0;
 	switch(tag) {
 	case ACL_USER_OBJ:
 		acl_entry.ae_id = uid;
@@ -551,7 +564,7 @@ acl_posix1e_check(struct acl *acl)
 	 */
 	num_acl_user_obj = num_acl_user = num_acl_group_obj = num_acl_group =
 	    num_acl_mask = num_acl_other = 0;
-	if (acl->acl_cnt > ACL_MAX_ENTRIES || acl->acl_cnt < 0)
+	if (acl->acl_cnt > ACL_MAX_ENTRIES)
 		return (EINVAL);
 	for (i = 0; i < acl->acl_cnt; i++) {
 		/*

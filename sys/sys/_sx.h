@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Attilio Rao <attilio@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_sx.h,v 1.1.8.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_SYS__SX_H_
@@ -38,7 +37,6 @@
 struct sx {
 	struct lock_object	lock_object;
 	volatile uintptr_t	sx_lock;
-	volatile unsigned	sx_recurse;
 };
 
 #endif	/* !_SYS__SX_H_ */

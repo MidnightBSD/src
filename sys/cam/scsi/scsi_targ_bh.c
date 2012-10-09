@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Implementation of the Target Mode 'Black Hole device' for CAM.
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_targ_bh.c,v 1.25 2007/05/16 16:54:23 scottl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -113,20 +112,20 @@ static struct scsi_inquiry_data no_lun_inq_data =
 	/* version */2, /* format version */2
 };
 
-static struct scsi_sense_data no_lun_sense_data =
+static struct scsi_sense_data_fixed no_lun_sense_data =
 {
 	SSD_CURRENT_ERROR|SSD_ERRCODE_VALID,
 	0,
 	SSD_KEY_NOT_READY, 
 	{ 0, 0, 0, 0 },
-	/*extra_len*/offsetof(struct scsi_sense_data, fru)
-                   - offsetof(struct scsi_sense_data, extra_len),
+	/*extra_len*/offsetof(struct scsi_sense_data_fixed, fru)
+                   - offsetof(struct scsi_sense_data_fixed, extra_len),
 	{ 0, 0, 0, 0 },
 	/* Logical Unit Not Supported */
 	/*ASC*/0x25, /*ASCQ*/0
 };
 
-static const int request_sense_size = offsetof(struct scsi_sense_data, fru);
+static const int request_sense_size = offsetof(struct scsi_sense_data_fixed, fru);
 
 static periph_init_t	targbhinit;
 static void		targbhasync(void *callback_arg, u_int32_t code,
@@ -241,7 +240,7 @@ targbhenlun(struct cam_periph *periph)
 	if ((softc->flags & TARGBH_FLAG_LUN_ENABLED) != 0)
 		return (CAM_REQ_CMP);
 
-	xpt_setup_ccb(&immed_ccb.ccb_h, periph->path, /*priority*/1);
+	xpt_setup_ccb(&immed_ccb.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 	immed_ccb.ccb_h.func_code = XPT_EN_LUN;
 
 	/* Don't need support for any vendor specific commands */
@@ -281,7 +280,7 @@ targbhenlun(struct cam_periph *periph)
 			break;
 		}
 
-		xpt_setup_ccb(&atio->ccb_h, periph->path, /*priority*/1);
+		xpt_setup_ccb(&atio->ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 		atio->ccb_h.func_code = XPT_ACCEPT_TARGET_IO;
 		atio->ccb_h.cbfcnp = targbhdone;
 		xpt_action((union ccb *)atio);
@@ -319,7 +318,7 @@ targbhenlun(struct cam_periph *periph)
 			break;
 		}
 
-		xpt_setup_ccb(&inot->ccb_h, periph->path, /*priority*/1);
+		xpt_setup_ccb(&inot->ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 		inot->ccb_h.func_code = XPT_IMMED_NOTIFY;
 		inot->ccb_h.cbfcnp = targbhdone;
 		xpt_action((union ccb *)inot);
@@ -362,7 +361,7 @@ targbhdislun(struct cam_periph *periph)
 		
 		softc->accept_tio_list =
 		    ((struct targbh_cmd_desc*)atio->ccb_h.ccb_descr)->atio_link;
-		xpt_setup_ccb(&ccb.cab.ccb_h, periph->path, /*priority*/1);
+		xpt_setup_ccb(&ccb.cab.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 		ccb.cab.ccb_h.func_code = XPT_ABORT;
 		ccb.cab.abort_ccb = (union ccb *)atio;
 		xpt_action(&ccb);
@@ -370,7 +369,7 @@ targbhdislun(struct cam_periph *periph)
 
 	while ((ccb_h = SLIST_FIRST(&softc->immed_notify_slist)) != NULL) {
 		SLIST_REMOVE_HEAD(&softc->immed_notify_slist, periph_links.sle);
-		xpt_setup_ccb(&ccb.cab.ccb_h, periph->path, /*priority*/1);
+		xpt_setup_ccb(&ccb.cab.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 		ccb.cab.ccb_h.func_code = XPT_ABORT;
 		ccb.cab.abort_ccb = (union ccb *)ccb_h;
 		xpt_action(&ccb);
@@ -379,7 +378,7 @@ targbhdislun(struct cam_periph *periph)
 	/*
 	 * Dissable this lun.
 	 */
-	xpt_setup_ccb(&ccb.cel.ccb_h, periph->path, /*priority*/1);
+	xpt_setup_ccb(&ccb.cel.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 	ccb.cel.ccb_h.func_code = XPT_EN_LUN;
 	ccb.cel.enable = 0;
 	xpt_action(&ccb);
@@ -430,7 +429,7 @@ targbhdtor(struct cam_periph *periph)
 
 	switch (softc->init_level) {
 	case 0:
-		panic("targdtor - impossible init level");;
+		panic("targdtor - impossible init level");
 	case 1:
 		/* FALLTHROUGH */
 	default:
@@ -529,7 +528,7 @@ targbhstart(struct cam_periph *periph, union ccb *start_ccb)
 		ccbh = TAILQ_FIRST(&softc->work_queue);
 	}
 	if (ccbh != NULL)
-		xpt_schedule(periph, /*priority*/1);
+		xpt_schedule(periph, CAM_PRIORITY_NORMAL);
 }
 
 static void
@@ -588,7 +587,9 @@ targbhdone(struct cam_periph *periph, union ccb *done_ccb)
 				 * This needs to have other than a
 				 * no_lun_sense_data response.
 				 */
-				atio->sense_data = no_lun_sense_data;
+				bcopy(&no_lun_sense_data, &atio->sense_data,
+				      min(sizeof(no_lun_sense_data),
+					  sizeof(atio->sense_data)));
 				atio->sense_len = sizeof(no_lun_sense_data);
 				descr->data_resid = 0;
 				descr->data_increment = 0;
@@ -603,7 +604,7 @@ targbhdone(struct cam_periph *periph, union ccb *done_ccb)
 			atio->ccb_h.flags |= CAM_DIR_IN;
 			descr->data = &no_lun_inq_data;
 			descr->data_resid = MIN(sizeof(no_lun_inq_data),
-						SCSI_CDB6_LEN(inq->length));
+						scsi_2btoul(inq->length));
 			descr->data_increment = descr->data_resid;
 			descr->timeout = 5 * 1000;
 			descr->status = SCSI_STATUS_OK;
@@ -631,7 +632,9 @@ targbhdone(struct cam_periph *periph, union ccb *done_ccb)
 			/* Direction is always relative to the initator */
 			atio->ccb_h.flags &= ~CAM_DIR_MASK;
 			atio->ccb_h.flags |= CAM_DIR_NONE;
-			atio->sense_data = no_lun_sense_data;
+			bcopy(&no_lun_sense_data, &atio->sense_data,
+			      min(sizeof(no_lun_sense_data),
+				  sizeof(atio->sense_data)));
 			atio->sense_len = sizeof (no_lun_sense_data);
 			descr->data_resid = 0;
 			descr->data_increment = 0;
@@ -648,7 +651,7 @@ targbhdone(struct cam_periph *periph, union ccb *done_ccb)
 		} else {
 			TAILQ_INSERT_TAIL(&softc->work_queue, &atio->ccb_h,
 					  periph_links.tqe);
-			priority = 1;
+			priority = CAM_PRIORITY_NORMAL;
 		}
 		xpt_schedule(periph, priority);
 		break;

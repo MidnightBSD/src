@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2007 Nate Lawson (SDG)
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/cpu.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_CPU_H_
@@ -37,12 +36,22 @@
  */
 
 #define CPU_IVAR_PCPU		1
+#define CPU_IVAR_NOMINAL_MHZ	2
 
 static __inline struct pcpu *cpu_get_pcpu(device_t dev)
 {
 	uintptr_t v = 0;
 	BUS_READ_IVAR(device_get_parent(dev), dev, CPU_IVAR_PCPU, &v);
 	return ((struct pcpu *)v);
+}
+
+static __inline int32_t cpu_get_nominal_mhz(device_t dev)
+{
+	uintptr_t v = 0;
+	if (BUS_READ_IVAR(device_get_parent(dev), dev,
+	    CPU_IVAR_NOMINAL_MHZ, &v) != 0)
+		return (-1);
+	return ((int32_t)v);
 }
 
 /*

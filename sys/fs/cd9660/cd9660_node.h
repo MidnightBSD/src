@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)cd9660_node.h	8.6 (Berkeley) 5/14/95
- * $FreeBSD: src/sys/fs/cd9660/cd9660_node.h,v 1.33 2007/02/11 13:54:25 rodrigc Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -59,15 +58,12 @@ typedef	struct	{
 
 struct iso_node {
 	struct	vnode *i_vnode;	/* vnode associated with this inode */
-	u_long	i_flag;		/* see below */
 	ino_t	i_number;	/* the identity of the inode */
 				/* we use the actual starting block of the file */
 	struct	iso_mnt *i_mnt;	/* filesystem associated with this inode */
 	struct	lockf *i_lockf;	/* head of byte-level lock list */
 	doff_t	i_endoff;	/* end of useful stuff in directory */
 	doff_t	i_diroff;	/* offset in dir, where we found last entry */
-	doff_t	i_offset;	/* offset of free space in directory */
-	ino_t	i_ino;		/* inode number of found directory */
 
 	long iso_extent;	/* extent of file */
 	unsigned long i_size;
@@ -78,9 +74,6 @@ struct iso_node {
 
 #define	i_forw		i_chain[0]
 #define	i_back		i_chain[1]
-
-/* flags */
-#define	IN_ACCESS	0x0020		/* inode access time to be updated */
 
 #define VTOI(vp) ((struct iso_node *)(vp)->v_data)
 #define ITOV(ip) ((ip)->i_vnode)

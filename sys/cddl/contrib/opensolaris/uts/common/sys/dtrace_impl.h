@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: src/sys/cddl/contrib/opensolaris/uts/common/sys/dtrace_impl.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -1268,7 +1268,7 @@ extern void dtrace_copyout(uintptr_t, uintptr_t, size_t, volatile uint16_t *);
 extern void dtrace_copyoutstr(uintptr_t, uintptr_t, size_t,
     volatile uint16_t *);
 extern void dtrace_getpcstack(pc_t *, int, int, uint32_t *);
-extern ulong_t dtrace_getreg(struct regs *, uint_t);
+extern ulong_t dtrace_getreg(struct trapframe *, uint_t);
 extern int dtrace_getstackdepth(int);
 extern void dtrace_getupcstack(uint64_t *, int);
 extern void dtrace_getufpstack(uint64_t *, uint64_t *, int);

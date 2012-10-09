@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/disk.h,v 1.5 2012/04/01 04:02:32 laffer1 Exp $ */
 /*-
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -7,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/sys/sys/disk.h,v 1.42 2007/05/05 17:02:19 pjd Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -123,12 +122,6 @@ void disk_err(struct bio *bp, const char *what, int blkdone, int nl);
 	 * This has similar rules to ident, but is intended to uniquely
 	 * identify the physical location of the device, not the current
 	 * occupant of that location.
-	 */
-
-#define DIOCGPROVIDERALIAS _IOR('d', 142, char[MAXPATHLEN])
-	/*- XXX this should be phased out
-	 * Store the provider alias, if present, in a buffer. The buffer must
-	 * be at least MAXPATHLEN bytes long.
 	 */
 
 #endif /* _SYS_DISK_H_ */

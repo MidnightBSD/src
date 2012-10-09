@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_acad.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Takanori Watanabe
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_acad.c,v 1.38 2007/03/22 18:16:40 jkim Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -41,7 +40,8 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_acad.c,v 1.38 2007/03/22 18:16:40 jk
 #include <sys/conf.h>
 #include <sys/power.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpiio.h>
 #include <isa/isavar.h>

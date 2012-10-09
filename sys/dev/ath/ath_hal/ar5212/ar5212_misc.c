@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,16 +14,14 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: src/sys/dev/ath/ath_hal/ar5212/ar5212_misc.c,v 1.2.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
 #include "ah.h"
 #include "ah_internal.h"
 #include "ah_devid.h"
-#ifdef AH_DEBUG
 #include "ah_desc.h"			/* NB: for HAL_PHYERR* */
-#endif
 
 #include "ar5212/ar5212.h"
 #include "ar5212/ar5212reg.h"
@@ -33,8 +31,6 @@
 
 #define	AR_NUM_GPIO	6		/* 6 GPIO pins */
 #define	AR_GPIOD_MASK	0x0000002F	/* GPIO data reg r/w mask */
-
-extern void ar5212SetRateDurationTable(struct ath_hal *, HAL_CHANNEL *);
 
 void
 ar5212GetMacAddress(struct ath_hal *ah, uint8_t *mac)
@@ -266,6 +262,13 @@ ar5212GetTsf32(struct ath_hal *ah)
 	return OS_REG_READ(ah, AR_TSF_L32);
 }
 
+void
+ar5212SetTsf64(struct ath_hal *ah, uint64_t tsf64)
+{
+	OS_REG_WRITE(ah, AR_TSF_L32, tsf64 & 0xffffffff);
+	OS_REG_WRITE(ah, AR_TSF_U32, (tsf64 >> 32) & 0xffffffff);
+}
+
 /*
  * Reset the current hardware tsf for stamlme.
  */
@@ -294,12 +297,12 @@ ar5212ResetTsf(struct ath_hal *ah)
 void
 ar5212SetBasicRate(struct ath_hal *ah, HAL_RATE_SET *rs)
 {
-	HAL_CHANNEL_INTERNAL *chan = AH_PRIVATE(ah)->ah_curchan;
+	const struct ieee80211_channel *chan = AH_PRIVATE(ah)->ah_curchan;
 	uint32_t reg;
 	uint8_t xset;
 	int i;
 
-	if (chan == AH_NULL || !IS_CHAN_CCK(chan))
+	if (chan == AH_NULL || !IEEE80211_IS_CHAN_CCK(chan))
 		return;
 	xset = 0;
 	for (i = 0; i < rs->rs_count; i++) {
@@ -423,15 +426,15 @@ HAL_BOOL
 ar5212SetAntennaSwitch(struct ath_hal *ah, HAL_ANT_SETTING setting)
 {
 	struct ath_hal_5212 *ahp = AH5212(ah);
-	const HAL_CHANNEL_INTERNAL *ichan = AH_PRIVATE(ah)->ah_curchan;
+	const struct ieee80211_channel *chan = AH_PRIVATE(ah)->ah_curchan;
 
-	if (!ahp->ah_phyPowerOn || ichan == AH_NULL) {
+	if (!ahp->ah_phyPowerOn || chan == AH_NULL) {
 		/* PHY powered off, just stash settings */
 		ahp->ah_antControl = setting;
 		ahp->ah_diversity = (setting == HAL_ANT_VARIABLE);
 		return AH_TRUE;
 	}
-	return ar5212SetAntennaSwitchInternal(ah, setting, ichan);
+	return ar5212SetAntennaSwitchInternal(ah, setting, chan);
 }
 
 HAL_BOOL
@@ -452,8 +455,8 @@ ar5212SetSifsTime(struct ath_hal *ah, u_int us)
 		return AH_FALSE;
 	} else {
 		/* convert to system clocks */
-		OS_REG_WRITE(ah, AR_D_GBL_IFS_SIFS, ath_hal_mac_clks(ah, us));
-		ahp->ah_slottime = us;
+		OS_REG_WRITE(ah, AR_D_GBL_IFS_SIFS, ath_hal_mac_clks(ah, us-2));
+		ahp->ah_sifstime = us;
 		return AH_TRUE;
 	}
 }
@@ -462,7 +465,7 @@ u_int
 ar5212GetSifsTime(struct ath_hal *ah)
 {
 	u_int clks = OS_REG_READ(ah, AR_D_GBL_IFS_SIFS) & 0xffff;
-	return ath_hal_mac_usec(ah, clks);	/* convert from system clocks */
+	return ath_hal_mac_usec(ah, clks)+2;	/* convert from system clocks */
 }
 
 HAL_BOOL
@@ -570,7 +573,7 @@ ar5212SetDecompMask(struct ath_hal *ah, uint16_t keyidx, int en)
 	struct ath_hal_5212 *ahp = AH5212(ah);
 
         if (keyidx >= HAL_DECOMP_MASK_SIZE)
-                return HAL_EINVAL; 
+                return AH_FALSE;
         OS_REG_WRITE(ah, AR_DCM_A, keyidx);
         OS_REG_WRITE(ah, AR_DCM_D, en ? AR_DCM_D_EN : 0);
         ahp->ah_decompMask[keyidx] = en;
@@ -592,7 +595,7 @@ ar5212SetCoverageClass(struct ath_hal *ah, uint8_t coverageclass, int now)
 			return;
 
 		/* Don't apply coverage class to non A channels */
-		if (!IS_CHAN_A(AH_PRIVATE(ah)->ah_curchan))
+		if (!IEEE80211_IS_CHAN_A(AH_PRIVATE(ah)->ah_curchan))
 			return;
 
 		/* Get core clock rate */
@@ -601,10 +604,10 @@ ar5212SetCoverageClass(struct ath_hal *ah, uint8_t coverageclass, int now)
 		/* Compute EIFS */
 		slot = coverageclass * 3 * clkRate;
 		eifs = coverageclass * 6 * clkRate;
-		if (IS_CHAN_HALF_RATE(AH_PRIVATE(ah)->ah_curchan)) {
+		if (IEEE80211_IS_CHAN_HALF(AH_PRIVATE(ah)->ah_curchan)) {
 			slot += IFS_SLOT_HALF_RATE;
 			eifs += IFS_EIFS_HALF_RATE;
-		} else if (IS_CHAN_QUARTER_RATE(AH_PRIVATE(ah)->ah_curchan)) {
+		} else if (IEEE80211_IS_CHAN_QUARTER(AH_PRIVATE(ah)->ah_curchan)) {
 			slot += IFS_SLOT_QUARTER_RATE;
 			eifs += IFS_EIFS_QUARTER_RATE;
 		} else { /* full rate */
@@ -627,6 +630,20 @@ ar5212SetCoverageClass(struct ath_hal *ah, uint8_t coverageclass, int now)
 			  SM(timeout, AR_TIME_OUT_CTS)
 			| SM(timeout, AR_TIME_OUT_ACK));
 	}
+}
+
+HAL_STATUS
+ar5212SetQuiet(struct ath_hal *ah, uint32_t period, uint32_t duration,
+    uint32_t nextStart, HAL_QUIET_FLAG flag)
+{
+	OS_REG_WRITE(ah, AR_QUIET2, period | (duration << AR_QUIET2_QUIET_DUR_S));
+	if (flag & HAL_QUIET_ENABLE) {
+		OS_REG_WRITE(ah, AR_QUIET1, nextStart | (1 << 16));
+	}
+	else {
+		OS_REG_WRITE(ah, AR_QUIET1, nextStart);
+	}
+	return HAL_OK;
 }
 
 void
@@ -852,7 +869,7 @@ ar5212GetCapability(struct ath_hal *ah, HAL_CAPABILITY_TYPE type,
 	case HAL_CAP_MCAST_KEYSRCH:	/* multicast frame keycache search */
 		switch (capability) {
 		case 0:			/* hardware capability */
-			return HAL_OK;
+			return pCap->halMcastKeySrchSupport ? HAL_OK : HAL_ENXIO;
 		case 1:
 			return (ahp->ah_staId1Defaults &
 			    AR_STA_ID1_MCAST_KSRCH) ? HAL_OK : HAL_ENXIO;
@@ -875,16 +892,16 @@ ar5212GetCapability(struct ath_hal *ah, HAL_CAPABILITY_TYPE type,
 		return HAL_OK;
 	case HAL_CAP_INTMIT:		/* interference mitigation */
 		switch (capability) {
-		case 0:			/* hardware capability */
+		case HAL_CAP_INTMIT_PRESENT:		/* hardware capability */
 			return HAL_OK;
-		case 1:
+		case HAL_CAP_INTMIT_ENABLE:
 			return (ahp->ah_procPhyErr & HAL_ANI_ENA) ?
 				HAL_OK : HAL_ENXIO;
-		case 2:			/* HAL_ANI_NOISE_IMMUNITY_LEVEL */
-		case 3:			/* HAL_ANI_OFDM_WEAK_SIGNAL_DETECTION */
-		case 4:			/* HAL_ANI_CCK_WEAK_SIGNAL_THR */
-		case 5:			/* HAL_ANI_FIRSTEP_LEVEL */
-		case 6:			/* HAL_ANI_SPUR_IMMUNITY_LEVEL */
+		case HAL_CAP_INTMIT_NOISE_IMMUNITY_LEVEL:
+		case HAL_CAP_INTMIT_OFDM_WEAK_SIGNAL_LEVEL:
+		case HAL_CAP_INTMIT_CCK_WEAK_SIGNAL_THR:
+		case HAL_CAP_INTMIT_FIRSTEP_LEVEL:
+		case HAL_CAP_INTMIT_SPUR_IMMUNITY_LEVEL:
 			ani = ar5212AniGetCurrentState(ah);
 			if (ani == AH_NULL)
 				return HAL_ENXIO;
@@ -929,7 +946,7 @@ ar5212SetCapability(struct ath_hal *ah, HAL_CAPABILITY_TYPE type,
 		else
 			ahp->ah_miscMode |= AR_MISC_MODE_MIC_NEW_LOC_ENABLE;
 		/* NB: write here so keys can be setup w/o a reset */
-		OS_REG_WRITE(ah, AR_MISC_MODE, ahp->ah_miscMode);
+		OS_REG_WRITE(ah, AR_MISC_MODE, OS_REG_READ(ah, AR_MISC_MODE) | ahp->ah_miscMode);
 		return AH_TRUE;
 	case HAL_CAP_DIVERSITY:
 		if (ahp->ah_phyPowerOn) {
@@ -975,6 +992,8 @@ ar5212SetCapability(struct ath_hal *ah, HAL_CAPABILITY_TYPE type,
 		OS_REG_WRITE(ah, AR_TPC, ahp->ah_macTPC);
 		return AH_TRUE;
 	case HAL_CAP_INTMIT: {		/* interference mitigation */
+		/* This maps the public ANI commands to the internal ANI commands */
+		/* Private: HAL_ANI_CMD; Public: HAL_CAP_INTMIT_CMD */
 		static const HAL_ANI_CMD cmds[] = {
 			HAL_ANI_PRESENT,
 			HAL_ANI_MODE,
@@ -985,7 +1004,7 @@ ar5212SetCapability(struct ath_hal *ah, HAL_CAPABILITY_TYPE type,
 			HAL_ANI_SPUR_IMMUNITY_LEVEL,
 		};
 		return capability < N(cmds) ?
-			ar5212AniControl(ah, cmds[capability], setting) :
+			AH5212(ah)->ah_aniControl(ah, cmds[capability], setting) :
 			AH_FALSE;
 	}
 	case HAL_CAP_TSF_ADJUST:	/* hardware has beacon tsf adjust */
@@ -1048,7 +1067,7 @@ ar5212GetDiagState(struct ath_hal *ah, int request,
 	case HAL_DIAG_ANI_CMD:
 		if (argsize != 2*sizeof(uint32_t))
 			return AH_FALSE;
-		ar5212AniControl(ah, ((const uint32_t *)args)[0],
+		AH5212(ah)->ah_aniControl(ah, ((const uint32_t *)args)[0],
 			((const uint32_t *)args)[1]);
 		return AH_TRUE;
 	case HAL_DIAG_ANI_PARAMS:
@@ -1071,5 +1090,145 @@ ar5212GetDiagState(struct ath_hal *ah, int request,
 			return ar5212AniSetParams(ah, args, args);
 		}
 	}
+	return AH_FALSE;
+}
+
+/*
+ * Check whether there's an in-progress NF completion.
+ *
+ * Returns AH_TRUE if there's a in-progress NF calibration, AH_FALSE
+ * otherwise.
+ */
+HAL_BOOL
+ar5212IsNFCalInProgress(struct ath_hal *ah)
+{
+	if (OS_REG_READ(ah, AR_PHY_AGC_CONTROL) & AR_PHY_AGC_CONTROL_NF)
+		return AH_TRUE;
+	return AH_FALSE;
+}
+
+/*
+ * Wait for an in-progress NF calibration to complete.
+ *
+ * The completion function waits "i" times 10uS.
+ * It returns AH_TRUE if the NF calibration completed (or was never
+ * in progress); AH_FALSE if it was still in progress after "i" checks.
+ */
+HAL_BOOL
+ar5212WaitNFCalComplete(struct ath_hal *ah, int i)
+{
+	int j;
+	if (i <= 0)
+		i = 1;	  /* it should run at least once */
+	for (j = 0; j < i; j++) {
+		if (! ar5212IsNFCalInProgress(ah))
+			return AH_TRUE;
+		OS_DELAY(10);
+	}
+	return AH_FALSE;
+}
+
+void
+ar5212EnableDfs(struct ath_hal *ah, HAL_PHYERR_PARAM *pe)
+{
+	uint32_t val;
+	val = OS_REG_READ(ah, AR_PHY_RADAR_0);
+
+	if (pe->pe_firpwr != HAL_PHYERR_PARAM_NOVAL) {
+		val &= ~AR_PHY_RADAR_0_FIRPWR;
+		val |= SM(pe->pe_firpwr, AR_PHY_RADAR_0_FIRPWR);
+	}
+	if (pe->pe_rrssi != HAL_PHYERR_PARAM_NOVAL) {
+		val &= ~AR_PHY_RADAR_0_RRSSI;
+		val |= SM(pe->pe_rrssi, AR_PHY_RADAR_0_RRSSI);
+	}
+	if (pe->pe_height != HAL_PHYERR_PARAM_NOVAL) {
+		val &= ~AR_PHY_RADAR_0_HEIGHT;
+		val |= SM(pe->pe_height, AR_PHY_RADAR_0_HEIGHT);
+	}
+	if (pe->pe_prssi != HAL_PHYERR_PARAM_NOVAL) {
+		val &= ~AR_PHY_RADAR_0_PRSSI;
+		val |= SM(pe->pe_prssi, AR_PHY_RADAR_0_PRSSI);
+	}
+	if (pe->pe_inband != HAL_PHYERR_PARAM_NOVAL) {
+		val &= ~AR_PHY_RADAR_0_INBAND;
+		val |= SM(pe->pe_inband, AR_PHY_RADAR_0_INBAND);
+	}
+	OS_REG_WRITE(ah, AR_PHY_RADAR_0, val | AR_PHY_RADAR_0_ENA);
+}
+
+void
+ar5212GetDfsThresh(struct ath_hal *ah, HAL_PHYERR_PARAM *pe)
+{
+	uint32_t val,temp;
+
+	val = OS_REG_READ(ah, AR_PHY_RADAR_0);
+
+	temp = MS(val,AR_PHY_RADAR_0_FIRPWR);
+	temp |= 0xFFFFFF80;
+	pe->pe_firpwr = temp;
+	pe->pe_rrssi = MS(val, AR_PHY_RADAR_0_RRSSI);
+	pe->pe_height =  MS(val, AR_PHY_RADAR_0_HEIGHT);
+	pe->pe_prssi = MS(val, AR_PHY_RADAR_0_PRSSI);
+	pe->pe_inband = MS(val, AR_PHY_RADAR_0_INBAND);
+
+	pe->pe_relpwr = 0;
+	pe->pe_relstep = 0;
+	pe->pe_maxlen = 0;
+	pe->pe_extchannel = AH_FALSE;
+}
+
+/*
+ * Process the radar phy error and extract the pulse duration.
+ */
+HAL_BOOL
+ar5212ProcessRadarEvent(struct ath_hal *ah, struct ath_rx_status *rxs,
+    uint64_t fulltsf, const char *buf, HAL_DFS_EVENT *event)
+{
+	uint8_t dur;
+	uint8_t rssi;
+
+	/* Check whether the given phy error is a radar event */
+	if ((rxs->rs_phyerr != HAL_PHYERR_RADAR) &&
+	    (rxs->rs_phyerr != HAL_PHYERR_FALSE_RADAR_EXT))
+		return AH_FALSE;
+
+	/*
+	 * The first byte is the pulse width - if there's
+	 * no data, simply set the duration to 0
+	 */
+	if (rxs->rs_datalen >= 1)
+		/* The pulse width is byte 0 of the data */
+		dur = ((uint8_t) buf[0]) & 0xff;
+	else
+		dur = 0;
+
+	/* Pulse RSSI is the normal reported RSSI */
+	rssi = (uint8_t) rxs->rs_rssi;
+
+	/* 0 duration/rssi is not a valid radar event */
+	if (dur == 0 && rssi == 0)
+		return AH_FALSE;
+
+	HALDEBUG(ah, HAL_DEBUG_DFS, "%s: rssi=%d, dur=%d\n",
+	    __func__, rssi, dur);
+
+	/* Record the event */
+	event->re_full_ts = fulltsf;
+	event->re_ts = rxs->rs_tstamp;
+	event->re_rssi = rssi;
+	event->re_dur = dur;
+	event->re_flags = HAL_DFS_EVENT_PRICH;
+
+	return AH_TRUE;
+}
+
+/*
+ * Return whether 5GHz fast-clock (44MHz) is enabled.
+ * It's always disabled for AR5212 series NICs.
+ */
+HAL_BOOL
+ar5212IsFastClockEnabled(struct ath_hal *ah)
+{
 	return AH_FALSE;
 }

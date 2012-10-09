@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * Various routines from the OSTA 2.01 specs.  Copyrights are included with
  * each code segment.  Slight whitespace modifications have been made for
  * formatting purposes.  Typos/bugs have been fixed.
  *
- * $FreeBSD: src/sys/fs/udf/osta.c,v 1.4 2005/01/06 18:10:41 imp Exp $
+ * $FreeBSD$
  */
 
 #include <fs/udf/osta.h>
@@ -281,7 +280,7 @@ main()
  * Define MAXLEN = 255
  *
  * Macintosh:
- * Define MAC.
+ * Define APPLE_MAC.
  * Define MAXLEN = 31.
  *
  * UNIX
@@ -485,7 +484,7 @@ int UnicodeInString(
  */
 int IsIllegal(unicode_t ch)
 {
-#ifdef MAC
+#ifdef APPLE_MAC
 	/* Only illegal character on the MAC is the colon. */
 	if (ch == 0x003A) {
 		return(1);

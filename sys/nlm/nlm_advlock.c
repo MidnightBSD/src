@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -27,27 +26,28 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nlm/nlm_advlock.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/lockf.h>
 #include <sys/malloc.h>
+#include <sys/mbuf.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/socket.h>
 #include <sys/syslog.h>
 #include <sys/systm.h>
 #include <sys/unistd.h>
 #include <sys/vnode.h>
 
-#include <rpc/rpcclnt.h>
 #include <nfs/nfsproto.h>
 #include <nfsclient/nfs.h>
-#include <nfsclient/nfsnode.h>
 #include <nfsclient/nfsmount.h>
 
 #include <nlm/nlm_prot.h>
@@ -196,7 +196,6 @@ nlm_advlock_internal(struct vnode *vp, void *id, int op, struct flock *fl,
 {
 	struct thread *td = curthread;
 	struct nfsmount *nmp;
-	struct nfsnode *np;
 	off_t size;
 	size_t fhlen;
 	union nfsfh fh;
@@ -214,29 +213,23 @@ nlm_advlock_internal(struct vnode *vp, void *id, int op, struct flock *fl,
 	struct nlm_file_svid *ns;
 	int svid;
 	int error;
+	int is_v3;
 
 	ASSERT_VOP_LOCKED(vp, "nlm_advlock_1");
 
+	nmp = VFSTONFS(vp->v_mount);
 	/*
 	 * Push any pending writes to the server and flush our cache
 	 * so that if we are contending with another machine for a
 	 * file, we get whatever they wrote and vice-versa.
 	 */
 	if (op == F_SETLK || op == F_UNLCK)
-		nfs_vinvalbuf(vp, V_SAVE, td, 1);
+		nmp->nm_vinvalbuf(vp, V_SAVE, td, 1);
 
-	np = VTONFS(vp);
-	nmp = VFSTONFS(vp->v_mount);
-	size = np->n_size;
-	sa = nmp->nm_nam;
-	memcpy(&ss, sa, sa->sa_len);
-	sa = (struct sockaddr *) &ss;
 	strcpy(servername, nmp->nm_hostname);
-	fhlen = np->n_fhsize;
-	memcpy(&fh.fh_bytes, np->n_fhp, fhlen);
-	timo.tv_sec = nmp->nm_timeo / NFS_HZ;
-	timo.tv_usec = (nmp->nm_timeo % NFS_HZ) * (1000000 / NFS_HZ);
-	if (NFS_ISV3(vp))
+	nmp->nm_getinfo(vp, fh.fh_bytes, &fhlen, &ss, &is_v3, &size, &timo);
+	sa = (struct sockaddr *) &ss;
+	if (is_v3 != 0)
 		vers = NLM_VERS4;
 	else
 		vers = NLM_VERS;
@@ -247,7 +240,7 @@ nlm_advlock_internal(struct vnode *vp, void *id, int op, struct flock *fl,
 		retries = INT_MAX;
 
 	if (unlock_vp)
-		VOP_UNLOCK(vp, 0, td);
+		VOP_UNLOCK(vp, 0);
 
 	/*
 	 * We need to switch to mount-point creds so that we can send
@@ -266,6 +259,7 @@ nlm_advlock_internal(struct vnode *vp, void *id, int op, struct flock *fl,
 
 	ext.rc_feedback = nlm_feedback;
 	ext.rc_feedback_arg = &nf;
+	ext.rc_timers = NULL;
 
 	ns = NULL;
 	if (flags & F_FLOCK) {
@@ -502,7 +496,7 @@ nlm_client_recover_lock(struct vnode *vp, struct flock *fl, void *arg)
 	if (nr->nr_state != state)
 		return (ERESTART);
 
-	error = vn_lock(vp, LK_SHARED, td);
+	error = vn_lock(vp, LK_SHARED);
 	if (error)
 		return (error);
 
@@ -715,8 +709,8 @@ nlm_record_lock(struct vnode *vp, int op, struct flock *fl,
 	newfl.l_sysid = NLM_SYSID_CLIENT | sysid;
 
 	error = lf_advlockasync(&a, &vp->v_lockf, size);
-	KASSERT(error == 0, ("Failed to register NFS lock locally - error=%d",
-		error));
+	KASSERT(error == 0 || error == ENOENT,
+	    ("Failed to register NFS lock locally - error=%d", error));
 }
 
 static int
@@ -752,7 +746,7 @@ nlm_setlock(struct nlm_host *host, struct rpc_callextra *ext,
 
 	retry = 5*hz;
 	for (;;) {
-		client = nlm_host_get_rpc(host);
+		client = nlm_host_get_rpc(host, FALSE);
 		if (!client)
 			return (ENOLCK); /* XXX retry? */
 
@@ -833,7 +827,7 @@ nlm_setlock(struct nlm_host *host, struct rpc_callextra *ext,
 				cancel.alock = args.alock;
 
 				do {
-					client = nlm_host_get_rpc(host);
+					client = nlm_host_get_rpc(host, FALSE);
 					if (!client)
 						/* XXX retry? */
 						return (ENOLCK);
@@ -941,7 +935,7 @@ nlm_clearlock(struct nlm_host *host, struct rpc_callextra *ext,
 		return (error);
 
 	for (;;) {
-		client = nlm_host_get_rpc(host);
+		client = nlm_host_get_rpc(host, FALSE);
 		if (!client)
 			return (ENOLCK); /* XXX retry? */
 
@@ -1022,7 +1016,7 @@ nlm_getlock(struct nlm_host *host, struct rpc_callextra *ext,
 	args.exclusive = exclusive;
 
 	for (;;) {
-		client = nlm_host_get_rpc(host);
+		client = nlm_host_get_rpc(host, FALSE);
 		if (!client)
 			return (ENOLCK); /* XXX retry? */
 
@@ -1219,11 +1213,13 @@ nlm_init_lock(struct flock *fl, int flags, int svid,
 			return (EOVERFLOW);
 	}
 
-	snprintf(oh_space, 32, "%d@%s", svid, hostname);
+	snprintf(oh_space, 32, "%d@", svid);
+	oh_len = strlen(oh_space);
+	getcredhostname(NULL, oh_space + oh_len, 32 - oh_len);
 	oh_len = strlen(oh_space);
 
 	memset(lock, 0, sizeof(*lock));
-	lock->caller_name = hostname;
+	lock->caller_name = prison0.pr_hostname;
 	lock->fh.n_len = fhlen;
 	lock->fh.n_bytes = fh;
 	lock->oh.n_len = oh_len;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_ef.c,v 1.39.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "opt_inet.h"
@@ -47,8 +47,8 @@
 #include <net/if_dl.h>
 #include <net/if_types.h>
 #include <net/netisr.h>
-#include <net/route.h>
 #include <net/bpf.h>
+#include <net/vnet.h>
 
 #ifdef INET
 #include <netinet/in.h>
@@ -128,9 +128,8 @@ ef_attach(struct efnet *sc)
 	struct ifnet *ifp = sc->ef_ifp;
 
 	ifp->if_start = ef_start;
-	ifp->if_watchdog = NULL;
 	ifp->if_init = ef_init;
-	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	ifp->if_flags = (IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST);
 	/*
 	 * Attach the interface
@@ -219,7 +218,7 @@ ef_start(struct ifnet *ifp)
 		if (m == 0)
 			break;
 		BPF_MTAP(ifp, m);
-		IFQ_HANDOFF(p, m, error);
+		error = p->if_transmit(p, m);
 		if (error) {
 			ifp->if_oerrors++;
 			continue;
@@ -415,11 +414,7 @@ ef_output(struct ifnet *ifp, struct mbuf **mp, struct sockaddr *dst, short *tp,
 		type = htons(m->m_pkthdr.len);
 		break;
 	    case ETHER_FT_8022:
-		M_PREPEND(m, ETHER_HDR_LEN + 3, M_TRYWAIT);
-		if (m == NULL) {
-			*mp = NULL;
-			return ENOBUFS;
-		}
+		M_PREPEND(m, ETHER_HDR_LEN + 3, M_WAIT);
 		/*
 		 * Ensure that ethernet header and next three bytes
 		 * will fit into single mbuf
@@ -438,11 +433,7 @@ ef_output(struct ifnet *ifp, struct mbuf **mp, struct sockaddr *dst, short *tp,
 		*hlen += 3;
 		break;
 	    case ETHER_FT_SNAP:
-		M_PREPEND(m, 8, M_TRYWAIT);
-		if (m == NULL) {
-			*mp = NULL;
-			return ENOBUFS;
-		}
+		M_PREPEND(m, 8, M_WAIT);
 		type = htons(m->m_pkthdr.len);
 		cp = mtod(m, u_char *);
 		bcopy("\xAA\xAA\x03\x00\x00\x00\x81\x37", cp, 8);
@@ -491,43 +482,63 @@ ef_clone(struct ef_link *efl, int ft)
 static int
 ef_load(void)
 {
+	VNET_ITERATOR_DECL(vnet_iter);
 	struct ifnet *ifp;
 	struct efnet *efp;
 	struct ef_link *efl = NULL, *efl_temp;
 	int error = 0, d;
 
-	IFNET_RLOCK();
-	TAILQ_FOREACH(ifp, &ifnet, if_link) {
-		if (ifp->if_type != IFT_ETHER) continue;
-		EFDEBUG("Found interface %s\n", ifp->if_xname);
-		efl = (struct ef_link*)malloc(sizeof(struct ef_link), 
-		    M_IFADDR, M_WAITOK | M_ZERO);
-		if (efl == NULL) {
-			error = ENOMEM;
-			break;
-		}
+	VNET_LIST_RLOCK();
+	VNET_FOREACH(vnet_iter) {
+		CURVNET_SET(vnet_iter);
 
-		efl->el_ifp = ifp;
+		/*
+		 * XXXRW: The following loop walks the ifnet list while
+		 * modifying it, something not well-supported by ifnet
+		 * locking.  To avoid lock upgrade/recursion issues, manually
+		 * acquire a write lock of ifnet_sxlock here, rather than a
+		 * read lock, so that when if_alloc() recurses the lock, we
+		 * don't panic.  This structure, in which if_ef automatically
+		 * attaches to all ethernet interfaces, should be replaced
+		 * with a model like that found in if_vlan, in which
+		 * interfaces are explicitly configured, which would avoid
+		 * this (and other) problems.
+		 */
+		sx_xlock(&ifnet_sxlock);
+		TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+			if (ifp->if_type != IFT_ETHER) continue;
+			EFDEBUG("Found interface %s\n", ifp->if_xname);
+			efl = (struct ef_link*)malloc(sizeof(struct ef_link), 
+			    M_IFADDR, M_WAITOK | M_ZERO);
+			if (efl == NULL) {
+				error = ENOMEM;
+				break;
+			}
+
+			efl->el_ifp = ifp;
 #ifdef ETHER_II
-		error = ef_clone(efl, ETHER_FT_EII);
-		if (error) break;
+			error = ef_clone(efl, ETHER_FT_EII);
+			if (error) break;
 #endif
 #ifdef ETHER_8023
-		error = ef_clone(efl, ETHER_FT_8023);
-		if (error) break;
+			error = ef_clone(efl, ETHER_FT_8023);
+			if (error) break;
 #endif
 #ifdef ETHER_8022
-		error = ef_clone(efl, ETHER_FT_8022);
-		if (error) break;
+			error = ef_clone(efl, ETHER_FT_8022);
+			if (error) break;
 #endif
 #ifdef ETHER_SNAP
-		error = ef_clone(efl, ETHER_FT_SNAP);
-		if (error) break;
+			error = ef_clone(efl, ETHER_FT_SNAP);
+			if (error) break;
 #endif
-		efcount++;
-		SLIST_INSERT_HEAD(&efdev, efl, el_next);
+			efcount++;
+			SLIST_INSERT_HEAD(&efdev, efl, el_next);
+		}
+		sx_xunlock(&ifnet_sxlock);
+		CURVNET_RESTORE();
 	}
-	IFNET_RUNLOCK();
+	VNET_LIST_RUNLOCK();
 	if (error) {
 		if (efl)
 			SLIST_INSERT_HEAD(&efdev, efl, el_next);

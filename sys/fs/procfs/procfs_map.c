@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -33,7 +32,7 @@
  *
  *	@(#)procfs_status.c	8.3 (Berkeley) 2/17/94
  *
- * $FreeBSD: src/sys/fs/procfs/procfs_map.c,v 1.40 2007/04/23 06:12:24 alc Exp $
+ * $FreeBSD$
  */
 
 #include "opt_compat.h"
@@ -46,6 +45,11 @@
 #include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/resourcevar.h>
+#include <sys/sbuf.h>
+#ifdef COMPAT_FREEBSD32
+#include <sys/sysent.h>
+#endif
 #include <sys/uio.h>
 #include <sys/vnode.h>
 
@@ -53,19 +57,11 @@
 #include <fs/procfs/procfs.h>
 
 #include <vm/vm.h>
+#include <vm/vm_extern.h>
 #include <vm/pmap.h>
 #include <vm/vm_map.h>
 #include <vm/vm_page.h>
 #include <vm/vm_object.h>
-
-#ifdef COMPAT_IA32
-#include <sys/procfs.h>
-#include <machine/fpu.h>
-#include <compat/ia32/ia32_reg.h>
-
-extern struct sysentvec ia32_freebsd_sysvec;
-#endif
-
 
 #define MEBUFFERSIZE 256
 
@@ -82,15 +78,15 @@ extern struct sysentvec ia32_freebsd_sysvec;
 int
 procfs_doprocmap(PFS_FILL_ARGS)
 {
-	int len;
-	int error, vfslocked;
-	vm_map_t map = &p->p_vmspace->vm_map;
+	struct vmspace *vm;
+	vm_map_t map;
 	vm_map_entry_t entry, tmp_entry;
 	struct vnode *vp;
-	char mebuffer[MEBUFFERSIZE];
 	char *fullpath, *freepath;
+	struct ucred *cred;
+	int error, vfslocked;
 	unsigned int last_timestamp;
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 	int wrap32 = 0;
 #endif
 
@@ -103,30 +99,36 @@ procfs_doprocmap(PFS_FILL_ARGS)
 	if (uio->uio_rw != UIO_READ)
 		return (EOPNOTSUPP);
 
-	if (uio->uio_offset != 0)
-		return (0);
-
-#ifdef COMPAT_IA32
-        if (curthread->td_proc->p_sysent == &ia32_freebsd_sysvec) {
-                if (p->p_sysent != &ia32_freebsd_sysvec)
+#ifdef COMPAT_FREEBSD32
+        if (SV_CURPROC_FLAG(SV_ILP32)) {
+                if (!(SV_PROC_FLAG(p, SV_ILP32)))
                         return (EOPNOTSUPP);
                 wrap32 = 1;
         }
 #endif
 
+	vm = vmspace_acquire_ref(p);
+	if (vm == NULL)
+		return (ESRCH);
+	map = &vm->vm_map;
 	vm_map_lock_read(map);
-	for (entry = map->header.next;
-		((uio->uio_resid > 0) && (entry != &map->header));
-		entry = entry->next) {
+	for (entry = map->header.next; entry != &map->header;
+	     entry = entry->next) {
 		vm_object_t obj, tobj, lobj;
 		int ref_count, shadow_count, flags;
-		vm_offset_t addr;
+		vm_offset_t e_start, e_end, addr;
 		int resident, privateresident;
 		char *type;
+		vm_eflags_t e_eflags;
+		vm_prot_t e_prot;
 
 		if (entry->eflags & MAP_ENTRY_IS_SUB_MAP)
 			continue;
 
+		e_eflags = entry->eflags;
+		e_prot = entry->protection;
+		e_start = entry->start;
+		e_end = entry->end;
 		privateresident = 0;
 		obj = entry->object.vm_object;
 		if (obj != NULL) {
@@ -134,6 +136,7 @@ procfs_doprocmap(PFS_FILL_ARGS)
 			if (obj->shadow_count == 1)
 				privateresident = obj->resident_page_count;
 		}
+		cred = (entry->cred) ? entry->cred : (obj ? obj->cred : NULL);
 
 		resident = 0;
 		addr = entry->start;
@@ -150,11 +153,13 @@ procfs_doprocmap(PFS_FILL_ARGS)
 				VM_OBJECT_UNLOCK(lobj);
 			lobj = tobj;
 		}
+		last_timestamp = map->timestamp;
+		vm_map_unlock_read(map);
 
 		freepath = NULL;
 		fullpath = "-";
 		if (lobj) {
-			switch(lobj->type) {
+			switch (lobj->type) {
 			default:
 			case OBJT_DEFAULT:
 				type = "default";
@@ -169,6 +174,7 @@ procfs_doprocmap(PFS_FILL_ARGS)
 				type = "swap";
 				vp = NULL;
 				break;
+			case OBJT_SG:
 			case OBJT_DEVICE:
 				type = "device";
 				vp = NULL;
@@ -182,10 +188,9 @@ procfs_doprocmap(PFS_FILL_ARGS)
 			shadow_count = obj->shadow_count;
 			VM_OBJECT_UNLOCK(obj);
 			if (vp != NULL) {
-				vfslocked = VFS_LOCK_GIANT(vp->v_mount);
-				vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
 				vn_fullpath(td, vp, &fullpath, &freepath);
-				vput(vp);
+				vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+				vrele(vp);
 				VFS_UNLOCK_GIANT(vfslocked);
 			}
 		} else {
@@ -197,49 +202,45 @@ procfs_doprocmap(PFS_FILL_ARGS)
 
 		/*
 		 * format:
-		 *  start, end, resident, private resident, cow, access, type.
+		 *  start, end, resident, private resident, cow, access, type,
+		 *         charged, charged uid.
 		 */
-		snprintf(mebuffer, sizeof mebuffer,
-		    "0x%lx 0x%lx %d %d %p %s%s%s %d %d 0x%x %s %s %s %s\n",
-			(u_long)entry->start, (u_long)entry->end,
+		error = sbuf_printf(sb,
+		    "0x%lx 0x%lx %d %d %p %s%s%s %d %d 0x%x %s %s %s %s %s %d\n",
+			(u_long)e_start, (u_long)e_end,
 			resident, privateresident,
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 			wrap32 ? NULL : obj,	/* Hide 64 bit value */
 #else
 			obj,
 #endif
-			(entry->protection & VM_PROT_READ)?"r":"-",
-			(entry->protection & VM_PROT_WRITE)?"w":"-",
-			(entry->protection & VM_PROT_EXECUTE)?"x":"-",
+			(e_prot & VM_PROT_READ)?"r":"-",
+			(e_prot & VM_PROT_WRITE)?"w":"-",
+			(e_prot & VM_PROT_EXECUTE)?"x":"-",
 			ref_count, shadow_count, flags,
-			(entry->eflags & MAP_ENTRY_COW)?"COW":"NCOW",
-			(entry->eflags & MAP_ENTRY_NEEDS_COPY)?"NC":"NNC",
-			type, fullpath);
+			(e_eflags & MAP_ENTRY_COW)?"COW":"NCOW",
+			(e_eflags & MAP_ENTRY_NEEDS_COPY)?"NC":"NNC",
+			type, fullpath,
+			cred ? "CH":"NCH", cred ? cred->cr_ruid : -1);
 
 		if (freepath != NULL)
 			free(freepath, M_TEMP);
-
-		len = strlen(mebuffer);
-		if (len > uio->uio_resid) {
-			error = EFBIG;
+		vm_map_lock_read(map);
+		if (error == -1) {
+			error = 0;
 			break;
 		}
-		last_timestamp = map->timestamp;
-		vm_map_unlock_read(map);
-		error = uiomove(mebuffer, len, uio);
-		vm_map_lock_read(map);
-		if (error)
-			break;
-		if (last_timestamp + 1 != map->timestamp) {
+		if (last_timestamp != map->timestamp) {
 			/*
 			 * Look again for the entry because the map was
 			 * modified while it was unlocked.  Specifically,
 			 * the entry may have been clipped, merged, or deleted.
 			 */
-			vm_map_lookup_entry(map, addr - 1, &tmp_entry);
+			vm_map_lookup_entry(map, e_end - 1, &tmp_entry);
 			entry = tmp_entry;
 		}
 	}
 	vm_map_unlock_read(map);
+	vmspace_free(vm);
 	return (error);
 }

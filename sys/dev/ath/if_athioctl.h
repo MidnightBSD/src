@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD$
- * $FreeBSD: src/sys/dev/ath/if_athioctl.h,v 1.19.10.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -80,7 +79,7 @@ struct ath_stats {
 	u_int32_t	ast_rx_badcrypt;/* rx failed 'cuz decryption */
 	u_int32_t	ast_rx_badmic;	/* rx failed 'cuz MIC failure */
 	u_int32_t	ast_rx_phyerr;	/* rx failed 'cuz of PHY err */
-	u_int32_t	ast_rx_phy[32];	/* rx PHY error per-code counts */
+	u_int32_t	ast_rx_phy[64];	/* rx PHY error per-code counts */
 	u_int32_t	ast_rx_tooshort;/* rx discarded 'cuz frame too short */
 	u_int32_t	ast_rx_toobig;	/* rx discarded 'cuz frame too large */
 	u_int32_t	ast_rx_packets;	/* packet recv on the interface */
@@ -110,10 +109,36 @@ struct ath_stats {
 	u_int32_t	ast_ff_flush;	/* fast frames flushed from staging q */
 	u_int32_t	ast_tx_qfull;	/* tx dropped 'cuz of queue limit */
 	int8_t		ast_rx_noise;	/* rx noise floor */
-	u_int32_t	ast_pad[22];
+	u_int32_t	ast_tx_nobuf;	/* tx dropped 'cuz no ath buffer */
+	u_int32_t	ast_tdma_update;/* TDMA slot timing updates */
+	u_int32_t	ast_tdma_timers;/* TDMA slot update set beacon timers */
+	u_int32_t	ast_tdma_tsf;	/* TDMA slot update set TSF */
+	u_int16_t	ast_tdma_tsfadjp;/* TDMA slot adjust+ (usec, smoothed)*/
+	u_int16_t	ast_tdma_tsfadjm;/* TDMA slot adjust- (usec, smoothed)*/
+	u_int32_t	ast_tdma_ack;	/* TDMA tx failed 'cuz ACK required */
+	u_int32_t	ast_tx_raw_fail;/* raw tx failed 'cuz h/w down */
+	u_int32_t	ast_tx_nofrag;	/* tx dropped 'cuz no ath frag buffer */
+	u_int32_t	ast_be_missed;	/* missed beacons */
+	u_int32_t	ast_ani_cal;	/* ANI calibrations performed */
+	u_int32_t	ast_rx_agg;	/* number of aggregate frames RX'ed */
+	u_int32_t	ast_rx_halfgi;	/* RX half-GI */
+	u_int32_t	ast_rx_2040;	/* RX 40mhz frame */
+	u_int32_t	ast_rx_pre_crc_err;	/* RX pre-delimiter CRC error */
+	u_int32_t	ast_rx_post_crc_err;	/* RX post-delimiter CRC error */
+	u_int32_t	ast_rx_decrypt_busy_err;	/* RX decrypt engine busy error */
+	u_int32_t	ast_rx_hi_rx_chain;
+	u_int32_t	ast_tx_htprotect;	/* HT tx frames with protection */
+	u_int32_t	ast_rx_hitqueueend;	/* RX hit descr queue end */
+	u_int32_t	ast_tx_timeout;		/* Global TX timeout */
+	u_int32_t	ast_tx_cst;		/* Carrier sense timeout */
+	u_int32_t	ast_tx_xtxop;	/* tx exceeded TXOP */
+	u_int32_t	ast_tx_timerexpired;	/* tx exceeded TX_TIMER */
+	u_int32_t	ast_tx_desccfgerr;	/* tx desc cfg error */
+	u_int32_t	ast_pad[13];
 };
 
 #define	SIOCGATHSTATS	_IOWR('i', 137, struct ifreq)
+#define	SIOCZATHSTATS	_IOWR('i', 139, struct ifreq)
 
 struct ath_diag {
 	char	ad_name[IFNAMSIZ];	/* if name, e.g. "ath0" */
@@ -129,6 +154,7 @@ struct ath_diag {
 
 };
 #define	SIOCGATHDIAG	_IOWR('i', 138, struct ath_diag)
+#define	SIOCGATHPHYERR	_IOWR('i', 140, struct ath_diag)
 
 /*
  * Radio capture format.
@@ -179,5 +205,35 @@ struct ath_tx_radiotap_header {
 	u_int8_t	wt_chan_ieee;
 	int8_t		wt_chan_maxpow;
 } __packed;
+
+/*
+ * DFS ioctl commands
+ */
+
+#define	DFS_SET_THRESH		2
+#define	DFS_GET_THRESH		3
+#define	DFS_RADARDETECTS	6
+
+/*
+ * DFS ioctl parameter types
+ */
+#define DFS_PARAM_FIRPWR	1
+#define DFS_PARAM_RRSSI		2
+#define DFS_PARAM_HEIGHT	3
+#define DFS_PARAM_PRSSI		4
+#define DFS_PARAM_INBAND	5
+#define DFS_PARAM_NOL		6	/* XXX not used in FreeBSD */
+#define DFS_PARAM_RELSTEP_EN	7
+#define DFS_PARAM_RELSTEP	8
+#define DFS_PARAM_RELPWR_EN	9
+#define DFS_PARAM_RELPWR	10
+#define DFS_PARAM_MAXLEN	11
+#define DFS_PARAM_USEFIR128	12
+#define DFS_PARAM_BLOCKRADAR	13
+#define DFS_PARAM_MAXRSSI_EN	14
+
+/* FreeBSD-specific start at 32 */
+#define	DFS_PARAM_ENABLE	32
+#define	DFS_PARAM_EN_EXTCH	33
 
 #endif /* _DEV_ATH_ATHIOCTL_H */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)resourcevar.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/resourcevar.h,v 1.52.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_SYS_RESOURCEVAR_H_
@@ -80,25 +79,33 @@ struct plimit {
 	int	pl_refcnt;		/* number of references */
 };
 
+struct racct;
+
 /*-
- * Per uid resource consumption
+ * Per uid resource consumption.  This structure is used to track
+ * the total resource consumption (process count, socket buffer size,
+ * etc) for the uid and impose limits.
  *
  * Locking guide:
  * (a) Constant from inception
- * (b) Locked by ui_mtxp
+ * (b) Lockless, updated using atomics
  * (c) Locked by global uihashtbl_mtx
+ * (d) Locked by the ui_vmsize_mtx
  */
 struct uidinfo {
 	LIST_ENTRY(uidinfo) ui_hash;	/* (c) hash chain of uidinfos */
-	rlim_t	ui_sbsize;		/* (b) socket buffer space consumed */
+	struct mtx ui_vmsize_mtx;
+	vm_ooffset_t ui_vmsize;		/* (d) swap reservation by uid */
+	long	ui_sbsize;		/* (b) socket buffer space consumed */
 	long	ui_proccnt;		/* (b) number of processes */
+	long	ui_ptscnt;		/* (b) number of pseudo-terminals */
 	uid_t	ui_uid;			/* (a) uid */
 	u_int	ui_ref;			/* (b) reference count */
-	struct mtx *ui_mtxp;		/* protect all counts/limits */
+	struct racct *ui_racct;		/* (a) resource accounting */
 };
 
-#define	UIDINFO_LOCK(ui)	mtx_lock((ui)->ui_mtxp)
-#define	UIDINFO_UNLOCK(ui)	mtx_unlock((ui)->ui_mtxp)
+#define	UIDINFO_VMSIZE_LOCK(ui)		mtx_lock(&((ui)->ui_vmsize_mtx))
+#define	UIDINFO_VMSIZE_UNLOCK(ui)	mtx_unlock(&((ui)->ui_vmsize_mtx))
 
 struct proc;
 struct rusage_ext;
@@ -108,10 +115,13 @@ void	 addupc_intr(struct thread *td, uintfptr_t pc, u_int ticks);
 void	 addupc_task(struct thread *td, uintfptr_t pc, u_int ticks);
 void	 calccru(struct proc *p, struct timeval *up, struct timeval *sp);
 void	 calcru(struct proc *p, struct timeval *up, struct timeval *sp);
-int	 chgproccnt(struct uidinfo *uip, int diff, int maxval);
+int	 chgproccnt(struct uidinfo *uip, int diff, rlim_t maxval);
 int	 chgsbsize(struct uidinfo *uip, u_int *hiwat, u_int to,
 	    rlim_t maxval);
+int	 chgptscnt(struct uidinfo *uip, int diff, rlim_t maxval);
 int	 fuswintr(void *base);
+int	 kern_proc_setrlimit(struct thread *td, struct proc *p, u_int which,
+	    struct rlimit *limp);
 struct plimit
 	*lim_alloc(void);
 void	 lim_copy(struct plimit *dst, struct plimit *src);
@@ -128,13 +138,16 @@ void	 rucollect(struct rusage *ru, struct rusage *ru2);
 void	 rufetch(struct proc *p, struct rusage *ru);
 void	 rufetchcalc(struct proc *p, struct rusage *ru, struct timeval *up,
 	    struct timeval *sp);
-void	 ruxagg(struct rusage_ext *rux, struct thread *td);
+void	 rufetchtd(struct thread *td, struct rusage *ru);
+void	 ruxagg(struct proc *p, struct thread *td);
 int	 suswintr(void *base, int word);
 struct uidinfo
 	*uifind(uid_t uid);
 void	 uifree(struct uidinfo *uip);
 void	 uihashinit(void);
 void	 uihold(struct uidinfo *uip);
+void	 ui_racct_foreach(void (*callback)(struct racct *racct,
+	    void *arg2, void *arg3), void *arg2, void *arg3);
 
 #endif /* _KERNEL */
 #endif /* !_SYS_RESOURCEVAR_H_ */

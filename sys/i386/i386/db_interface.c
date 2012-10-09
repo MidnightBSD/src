@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/db_interface.c,v 1.83 2005/01/05 19:09:59 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Interface to new debugger.

@@ -31,11 +31,11 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
- * $DragonFly: src/sys/dev/netif/bwi/bwiphy.c,v 1.1 2007/09/08 06:15:54 sephe Exp $
+ * $DragonFly: src/sys/dev/netif/bwi/bwiphy.c,v 1.5 2008/01/15 09:01:13 sephe Exp $
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -65,12 +65,12 @@
 
 #include <machine/bus.h>
 
-#include "bitops.h"
-#include "if_bwireg.h"
-#include "if_bwivar.h"
-#include "bwimac.h"
-#include "bwirf.h"
-#include "bwiphy.h"
+#include <dev/bwi/bitops.h>
+#include <dev/bwi/if_bwireg.h>
+#include <dev/bwi/if_bwivar.h>
+#include <dev/bwi/bwimac.h>
+#include <dev/bwi/bwirf.h>
+#include <dev/bwi/bwiphy.h>
 
 static void	bwi_phy_init_11a(struct bwi_mac *);
 static void	bwi_phy_init_11g(struct bwi_mac *);
@@ -135,7 +135,6 @@ bwi_phy_write(struct bwi_mac *mac, uint16_t ctrl, uint16_t data)
 {
 	struct bwi_softc *sc = mac->mac_sc;
 
-	/* TODO: 11A */
 	CSR_WRITE_2(sc, BWI_PHY_CTRL, ctrl);
 	CSR_WRITE_2(sc, BWI_PHY_DATA, data);
 }
@@ -145,7 +144,6 @@ bwi_phy_read(struct bwi_mac *mac, uint16_t ctrl)
 {
 	struct bwi_softc *sc = mac->mac_sc;
 
-	/* TODO: 11A */
 	CSR_WRITE_2(sc, BWI_PHY_CTRL, ctrl);
 	return CSR_READ_2(sc, BWI_PHY_DATA);
 }
@@ -183,7 +181,6 @@ bwi_phy_attach(struct bwi_mac *mac)
 		phy->phy_tbl_ctrl = BWI_PHYR_TBL_CTRL_11A;
 		phy->phy_tbl_data_lo = BWI_PHYR_TBL_DATA_LO_11A;
 		phy->phy_tbl_data_hi = BWI_PHYR_TBL_DATA_HI_11A;
-		device_printf(sc->sc_dev, "PHY: 802.11A attach\n");
 		break;
 	case BWI_PHYINFO_TYPE_11B:
 #define N(arr)	(int)(sizeof(arr) / sizeof(arr[0]))
@@ -200,7 +197,6 @@ bwi_phy_attach(struct bwi_mac *mac)
 		}
 #undef N
 		phy->phy_mode = IEEE80211_MODE_11B;
-		device_printf(sc->sc_dev, "PHY: 802.11B attach\n");
 		break;
 	case BWI_PHYINFO_TYPE_11G:
 		if (phyrev > 8) {
@@ -213,7 +209,6 @@ bwi_phy_attach(struct bwi_mac *mac)
 		phy->phy_tbl_ctrl = BWI_PHYR_TBL_CTRL_11G;
 		phy->phy_tbl_data_lo = BWI_PHYR_TBL_DATA_LO_11G;
 		phy->phy_tbl_data_hi = BWI_PHYR_TBL_DATA_HI_11G;
-		device_printf(sc->sc_dev, "PHY: 802.11G attach\n");
 		break;
 	default:
 		device_printf(sc->sc_dev, "unsupported PHY type %d\n",
@@ -378,7 +373,7 @@ bwi_phy_init_11g(struct bwi_mac *mac)
 			RF_WRITE(mac, 0x52,
 				 (tpctl->tp_ctrl1 << 4) | tpctl->tp_ctrl2);
 		} else {
-			RF_FILT_SETBITS(mac, 0x52, 0xfff0, tpctl->tp_ctrl1);
+			RF_FILT_SETBITS(mac, 0x52, 0xfff0, tpctl->tp_ctrl2);
 		}
 
 		if (phy->phy_rev >= 6) {
@@ -432,16 +427,77 @@ static void
 bwi_phy_init_11b_rev2(struct bwi_mac *mac)
 { 
 	/* TODO:11B */
-	if_printf(mac->mac_sc->sc_ic.ic_ifp,
+	if_printf(mac->mac_sc->sc_ifp,
 		  "%s is not implemented yet\n", __func__);
 }
 
 static void
 bwi_phy_init_11b_rev4(struct bwi_mac *mac)
 {
-	/* TODO:11B */
-	if_printf(mac->mac_sc->sc_ic.ic_ifp,
-		  "%s is not implemented yet\n", __func__);
+	struct bwi_softc *sc = mac->mac_sc;
+	struct bwi_rf *rf = &mac->mac_rf;
+	uint16_t val, ofs;
+	u_int chan;
+
+	CSR_WRITE_2(sc, BWI_BPHY_CTRL, BWI_BPHY_CTRL_INIT);
+
+	PHY_WRITE(mac, 0x20, 0x301c);
+	PHY_WRITE(mac, 0x26, 0);
+	PHY_WRITE(mac, 0x30, 0xc6);
+	PHY_WRITE(mac, 0x88, 0x3e00);
+
+	for (ofs = 0, val = 0x3c3d; ofs < 30; ++ofs, val -= 0x202)
+		PHY_WRITE(mac, 0x89 + ofs, val);
+
+	CSR_WRITE_2(sc, BWI_PHY_MAGIC_REG1, BWI_PHY_MAGIC_REG1_VAL1);
+
+	chan = rf->rf_curchan;
+	if (chan == IEEE80211_CHAN_ANY)
+		chan = 6;	/* Force to channel 6 */
+	bwi_rf_set_chan(mac, chan, 0);
+
+	if (rf->rf_type != BWI_RF_T_BCM2050) {
+		RF_WRITE(mac, 0x75, 0x80);
+		RF_WRITE(mac, 0x79, 0x81);
+	}
+
+	RF_WRITE(mac, 0x50, 0x20);
+	RF_WRITE(mac, 0x50, 0x23);
+
+	if (rf->rf_type == BWI_RF_T_BCM2050) {
+		RF_WRITE(mac, 0x50, 0x20);
+		RF_WRITE(mac, 0x5a, 0x70);
+		RF_WRITE(mac, 0x5b, 0x7b);
+		RF_WRITE(mac, 0x5c, 0xb0);
+		RF_WRITE(mac, 0x7a, 0xf);
+		PHY_WRITE(mac, 0x38, 0x677);
+		bwi_rf_init_bcm2050(mac);
+	}
+
+	PHY_WRITE(mac, 0x14, 0x80);
+	PHY_WRITE(mac, 0x32, 0xca);
+	if (rf->rf_type == BWI_RF_T_BCM2050)
+		PHY_WRITE(mac, 0x32, 0xe0);
+	PHY_WRITE(mac, 0x35, 0x7c2);
+
+	bwi_rf_lo_update(mac);
+
+	PHY_WRITE(mac, 0x26, 0xcc00);
+	if (rf->rf_type == BWI_RF_T_BCM2050)
+		PHY_WRITE(mac, 0x26, 0xce00);
+
+	CSR_WRITE_2(sc, BWI_RF_CHAN_EX, 0x1100);
+
+	PHY_WRITE(mac, 0x2a, 0x88a3);
+	if (rf->rf_type == BWI_RF_T_BCM2050)
+		PHY_WRITE(mac, 0x2a, 0x88c2);
+
+	bwi_mac_set_tpctl_11bg(mac, NULL);
+	if (sc->sc_card_flags & BWI_CARD_F_SW_NRSSI) {
+		bwi_rf_calc_nrssi_slope(mac);
+		bwi_rf_set_nrssi_thr(mac);
+	}
+	bwi_mac_init_tpctl_11bg(mac);
 }
 
 static void
@@ -606,6 +662,9 @@ bwi_phy_init_11b_rev6(struct bwi_mac *mac)
 	for (ofs = 0xa8; ofs < 0xc8; ++ofs) {
 		PHY_WRITE(mac, ofs, (val & 0x3f3f));
 		val += 0x202;
+
+		/* XXX: delay 10 us to avoid PCI parity errors with BCM4318 */
+		DELAY(10);
 	}
 
 	if (phy->phy_mode == IEEE80211_MODE_11G) {
@@ -737,7 +796,7 @@ bwi_phy_config_11g(struct bwi_mac *mac)
 			bwi_tbl_write_2(mac, BWI_PHYTBL_RSSI + i, i);
 
 		/* Fill noise table */
-		for (i = 0; i < sizeof(bwi_phy_noise_11g); ++i) {
+		for (i = 0; i < N(bwi_phy_noise_11g); ++i) {
 			bwi_tbl_write_2(mac, BWI_PHYTBL_NOISE + i,
 					bwi_phy_noise_11g[i]);
 		}

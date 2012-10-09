@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $FreeBSD: src/sys/sys/sockbuf.h,v 1.5.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 #ifndef _SYS_SOCKBUF_H_
 #define _SYS_SOCKBUF_H_
@@ -38,7 +37,7 @@
 #include <sys/_mutex.h>
 #include <sys/_sx.h>
 
-#define	SB_MAX		(256*1024)	/* default for max chars in sockbuf */
+#define	SB_MAX		(2*1024*1024)	/* default for max chars in sockbuf */
 
 /*
  * Constants for sb_flags field of struct sockbuf.
@@ -58,9 +57,10 @@
 #define	SBS_CANTRCVMORE		0x0020	/* can't receive more data from peer */
 #define	SBS_RCVATMARK		0x0040	/* at mark on input */
 
-struct socket;
-struct sockaddr;
 struct mbuf;
+struct sockaddr;
+struct socket;
+struct thread;
 
 struct	xsockbuf {
 	u_int	sb_cc;
@@ -99,8 +99,10 @@ struct	sockbuf {
 	int	sb_lowat;	/* (c/d) low water mark */
 	int	sb_timeo;	/* (c/d) timeout for read/write */
 	short	sb_flags;	/* (c/d) flags, see below */
+	int	(*sb_upcall)(struct socket *, void *, int); /* (c/d) */
+	void	*sb_upcallarg;	/* (c/d) */
 };
-		
+
 #ifdef _KERNEL
 
 /*

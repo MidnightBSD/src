@@ -25,11 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/imgact_shell.c,v 1.35.10.2 2011/03/13 13:37:23 kib Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/vnode.h>
 #include <sys/proc.h>
+#include <sys/sbuf.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
 #include <sys/exec.h>
@@ -45,12 +46,17 @@ __FBSDID("$FreeBSD: src/sys/kern/imgact_shell.c,v 1.35.10.2 2011/03/13 13:37:23 
 /*
  * At the time of this writing, MAXSHELLCMDLEN == PAGE_SIZE.  This is
  * significant because the caller has only mapped in one page of the
- * file we're reading.  This code should be changed to know how to
- * read in the second page, but I'm not doing that just yet...
+ * file we're reading.
  */
 #if MAXSHELLCMDLEN > PAGE_SIZE
 #error "MAXSHELLCMDLEN is larger than a single page!"
 #endif
+
+/*
+ * MAXSHELLCMDLEN must be at least MAXINTERP plus the size of the `#!'
+ * prefix and terminating newline.
+ */
+CTASSERT(MAXSHELLCMDLEN >= MAXINTERP + 3);
 
 /**
  * Shell interpreter image activator. An interpreter name beginning at
@@ -95,21 +101,22 @@ exec_shell_imgact(imgp)
 	struct image_params *imgp;
 {
 	const char *image_header = imgp->image_header;
-	const char *ihp, *interpb, *interpe, *maxp, *optb, *opte;
+	const char *ihp, *interpb, *interpe, *maxp, *optb, *opte, *fname;
 	int error, offset;
-	size_t length, clength;
+	size_t length;
 	struct vattr vattr;
+	struct sbuf *sname;
 
 	/* a shell script? */
-	if (((const short *) image_header)[0] != SHELLMAGIC)
-		return(-1);
+	if (((const short *)image_header)[0] != SHELLMAGIC)
+		return (-1);
 
 	/*
 	 * Don't allow a shell script to be the shell for a shell
 	 *	script. :-)
 	 */
 	if (imgp->interpreted)
-		return(ENOEXEC);
+		return (ENOEXEC);
 
 	imgp->interpreted = 1;
 
@@ -119,18 +126,15 @@ exec_shell_imgact(imgp)
 	 * valid -- the actual file might be much shorter than the page.
 	 * So find out the file size.
  	 */
-	error = VOP_GETATTR(imgp->vp, &vattr, imgp->proc->p_ucred, curthread);
+	error = VOP_GETATTR(imgp->vp, &vattr, imgp->proc->p_ucred);
 	if (error)
 		return (error);
 
 	/*
 	 * Copy shell name and arguments from image_header into a string
-	 *	buffer.  Remember that the caller has mapped only the
-	 *	first page of the file into memory.
+	 * buffer.
 	 */
-	clength = (vattr.va_size > PAGE_SIZE) ? PAGE_SIZE : vattr.va_size;
-
-	maxp = &image_header[clength];
+	maxp = &image_header[MIN(vattr.va_size, MAXSHELLCMDLEN)];
 	ihp = &image_header[2];
 
 	/*
@@ -147,7 +151,7 @@ exec_shell_imgact(imgp)
 	interpe = ihp;
 	if (interpb == interpe)
 		return (ENOEXEC);
-	if ((interpe - interpb) >= MAXSHELLCMDLEN)
+	if (interpe - interpb >= MAXINTERP)
 		return (ENAMETOOLONG);
 
 	/*
@@ -161,8 +165,20 @@ exec_shell_imgact(imgp)
 	while (ihp < maxp && ((*ihp != '\n') && (*ihp != '\0')))
 		ihp++;
 	opte = ihp;
+	if (opte == maxp)
+		return (ENOEXEC);
 	while (--ihp > optb && ((*ihp == ' ') || (*ihp == '\t')))
 		opte = ihp;
+
+	if (imgp->args->fname != NULL) {
+		fname = imgp->args->fname;
+		sname = NULL;
+	} else {
+		sname = sbuf_new_auto();
+		sbuf_printf(sname, "/dev/fd/%d", imgp->args->fd);
+		sbuf_finish(sname);
+		fname = sbuf_data(sname);
+	}
 
 	/*
 	 * We need to "pop" (remove) the present value of arg[0], and "push"
@@ -175,12 +191,15 @@ exec_shell_imgact(imgp)
 	offset = interpe - interpb + 1;			/* interpreter */
 	if (opte > optb)				/* options (if any) */
 		offset += opte - optb + 1;
-	offset += strlen(imgp->args->fname) + 1;	/* fname of script */
+	offset += strlen(fname) + 1;			/* fname of script */
 	length = (imgp->args->argc == 0) ? 0 :
 	    strlen(imgp->args->begin_argv) + 1;		/* bytes to delete */
 
-	if (offset > imgp->args->stringspace + length)
+	if (offset > imgp->args->stringspace + length) {
+		if (sname != NULL)
+			sbuf_delete(sname);
 		return (E2BIG);
+	}
 
 	bcopy(imgp->args->begin_argv + length, imgp->args->begin_argv + offset,
 	    imgp->args->endp - (imgp->args->begin_argv + length));
@@ -205,13 +224,13 @@ exec_shell_imgact(imgp)
 	 * the interpreter name and options-string.
 	 */
 	length = interpe - interpb;
-	bcopy(interpb, imgp->args->buf, length);
-	*(imgp->args->buf + length) = '\0';
+	bcopy(interpb, imgp->args->begin_argv, length);
+	*(imgp->args->begin_argv + length) = '\0';
 	offset = length + 1;
 	if (opte > optb) {
 		length = opte - optb;
-		bcopy(optb, imgp->args->buf + offset, length);
-		*(imgp->args->buf + offset + length) = '\0';
+		bcopy(optb, imgp->args->begin_argv + offset, length);
+		*(imgp->args->begin_argv + offset + length) = '\0';
 		offset += length + 1;
 		imgp->args->argc++;
 	}
@@ -221,13 +240,14 @@ exec_shell_imgact(imgp)
 	 * use and copy the interpreter's name to imgp->interpreter_name
 	 * for exec to use.
 	 */
-	error = copystr(imgp->args->fname, imgp->args->buf + offset,
-	    imgp->args->stringspace, &length);
+	error = copystr(fname, imgp->args->begin_argv + offset,
+	    imgp->args->stringspace, NULL);
 
 	if (error == 0)
-		error = copystr(imgp->args->begin_argv, imgp->interpreter_name,
-		    MAXSHELLCMDLEN, &length);
+		imgp->interpreter_name = imgp->args->begin_argv;
 
+	if (sname != NULL)
+		sbuf_delete(sname);
 	return (error);
 }
 

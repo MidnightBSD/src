@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-card.c,v 1.40 2007/02/21 19:07:18 sos Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,7 +49,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/ata-card.c,v 1.40 2007/02/21 19:07:18 sos Ex
 
 #include "pccarddevs.h"
 
-static const struct pccard_product ata_pccard_products[] = {
+static const struct pccard_product const ata_pccard_products[] = {
 	PCMCIA_CARD(FREECOM, PCCARDIDE),
 	PCMCIA_CARD(EXP, EXPMULTIMEDIA),
 	PCMCIA_CARD(IODATA3, CBIDE2),
@@ -91,6 +90,11 @@ ata_pccard_attach(device_t dev)
     struct ata_channel *ch = device_get_softc(dev);
     struct resource *io, *ctlio;
     int i, rid, err;
+    uint16_t funce;
+
+    if (ch->attached)
+	return (0);
+    ch->attached = 1;
 
     /* allocate the io range to get start and length */
     rid = ATA_IOADDR_RID;
@@ -129,7 +133,11 @@ ata_pccard_attach(device_t dev)
 
     /* initialize softc for this channel */
     ch->unit = 0;
-    ch->flags |= (ATA_USE_16BIT | ATA_NO_SLAVE);
+    ch->flags |= ATA_USE_16BIT;
+    funce = 0;		/* Default to sane setting of FUNCE */
+    pccard_get_funce_disk(dev, &funce); 
+    if (!(funce & PFD_I_D))
+        ch-> flags |= ATA_NO_SLAVE;
     ata_generic_hw(dev);
     err = ata_probe(dev);
     if (err)
@@ -142,6 +150,10 @@ ata_pccard_detach(device_t dev)
 {
     struct ata_channel *ch = device_get_softc(dev);
     int i;
+
+    if (!ch->attached)
+	return (0);
+    ch->attached = 0;
 
     ata_detach(dev);
     if (ch->r_io[ATA_CONTROL].res != ch->r_io[ATA_DATA].res)
@@ -160,7 +172,7 @@ static device_method_t ata_pccard_methods[] = {
     DEVMETHOD(device_attach,            ata_pccard_attach),
     DEVMETHOD(device_detach,            ata_pccard_detach),
 
-    { 0, 0 }
+    DEVMETHOD_END
 };
 
 static driver_t ata_pccard_driver = {
@@ -169,5 +181,5 @@ static driver_t ata_pccard_driver = {
     sizeof(struct ata_channel),
 };
 
-DRIVER_MODULE(ata, pccard, ata_pccard_driver, ata_devclass, 0, 0);
+DRIVER_MODULE(ata, pccard, ata_pccard_driver, ata_devclass, NULL, NULL);
 MODULE_DEPEND(ata, ata, 1, 1, 1);

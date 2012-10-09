@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mitsuru IWASAKI
  * All rights reserved.
@@ -24,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/acpica_machdep.h,v 1.7 2007/03/22 18:16:39 jkim Exp $
+ * $FreeBSD$
  */
 
 /******************************************************************************
  *
  * Name: acpica_machdep.h - arch-specific defines, etc.
- *       $Revision: 1.3 $
+ *       $Revision: 1.4 $
  *
  *****************************************************************************/
 
@@ -78,5 +77,8 @@ extern int	acpi_release_global_lock(uint32_t *lock);
 
 void	acpi_SetDefaultIntrModel(int model);
 void	acpi_cpu_c1(void);
+void	*acpi_map_table(vm_paddr_t pa, const char *sig);
+void	acpi_unmap_table(void *table);
+vm_paddr_t acpi_find_table(const char *sig);
 
 #endif /* __ACPICA_MACHDEP_H__ */

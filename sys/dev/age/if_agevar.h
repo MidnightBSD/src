@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/age/if_agevar.h,v 1.1.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_AGEVAR_H
@@ -222,7 +222,6 @@ struct age_softc {
 	int			age_tpd_cons;
 
 	struct task		age_int_task;
-	struct task		age_tx_task;
 	struct task		age_link_task;
 	struct taskqueue	*age_tq;
 	struct mtx		age_mtx;

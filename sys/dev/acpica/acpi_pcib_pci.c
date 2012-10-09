@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/acpica/acpi_pcib_pci.c,v 1.3 2008/12/02 02:24:28 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pcib_pci.c,v 1.17.2.1 2011/04/27 21:13:40 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 
@@ -36,8 +35,11 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pcib_pci.c,v 1.17.2.1 2011/04/27 21:
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/rman.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpi_pcibvar.h>
 
@@ -79,6 +81,7 @@ static device_method_t acpi_pcib_pci_methods[] = {
 
     /* pcib interface */
     DEVMETHOD(pcib_route_interrupt,	acpi_pcib_pci_route_interrupt),
+    DEVMETHOD(pcib_power_for_sleep,	acpi_pcib_power_for_sleep),
 
     {0, 0}
 };

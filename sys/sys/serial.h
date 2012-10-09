@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -28,7 +27,7 @@
  * (both async and sync), but which do not necessarily have anything to
  * do with tty processing.
  *
- * $FreeBSD: src/sys/sys/serial.h,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_SERIAL_H_

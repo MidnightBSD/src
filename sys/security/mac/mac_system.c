@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2003 Networks Associates Technology, Inc.
- * Copyright (c) 2007 Robert N. M. Watson
+ * Copyright (c) 2006 SPARTA, Inc.
+ * Copyright (c) 2007, 2009 Robert N. M. Watson
  * All rights reserved.
  *
  * This software was developed for the FreeBSD Project in part by Network
@@ -11,6 +11,12 @@
  *
  * Portions of this software were developed by Robert Watson for the
  * TrustedBSD Project.
+ *
+ * This software was enhanced by SPARTA ISSO under SPAWAR contract
+ * N66001-04-C-6019 ("SEFOS").
+ *
+ * This software was developed at the University of Cambridge Computer
+ * Laboratory with support from a grant from Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,8 +51,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_system.c,v 1.112 2007/04/22 19:55:56 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
+#include "opt_kdtrace.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>
@@ -55,6 +62,7 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_system.c,v 1.112 2007/04/22 19:55:5
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/sdt.h>
 #include <sys/systm.h>
 #include <sys/vnode.h>
 #include <sys/sysctl.h>
@@ -63,117 +71,156 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_system.c,v 1.112 2007/04/22 19:55:5
 #include <security/mac/mac_internal.h>
 #include <security/mac/mac_policy.h>
 
+MAC_CHECK_PROBE_DEFINE1(kenv_check_dump, "struct ucred *");
+
 int
-mac_check_kenv_dump(struct ucred *cred)
+mac_kenv_check_dump(struct ucred *cred)
 {
 	int error;
 
-	MAC_CHECK(check_kenv_dump, cred);
+	MAC_POLICY_CHECK_NOSLEEP(kenv_check_dump, cred);
+	MAC_CHECK_PROBE1(kenv_check_dump, error, cred);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(kenv_check_get, "struct ucred *", "char *");
+
 int
-mac_check_kenv_get(struct ucred *cred, char *name)
+mac_kenv_check_get(struct ucred *cred, char *name)
 {
 	int error;
 
-	MAC_CHECK(check_kenv_get, cred, name);
+	MAC_POLICY_CHECK_NOSLEEP(kenv_check_get, cred, name);
+	MAC_CHECK_PROBE2(kenv_check_get, error, cred, name);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE3(kenv_check_set, "struct ucred *", "char *",
+    "char *");
+
 int
-mac_check_kenv_set(struct ucred *cred, char *name, char *value)
+mac_kenv_check_set(struct ucred *cred, char *name, char *value)
 {
 	int error;
 
-	MAC_CHECK(check_kenv_set, cred, name, value);
+	MAC_POLICY_CHECK_NOSLEEP(kenv_check_set, cred, name, value);
+	MAC_CHECK_PROBE3(kenv_check_set, error, cred, name, value);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(kenv_check_unset, "struct ucred *", "char *");
+
 int
-mac_check_kenv_unset(struct ucred *cred, char *name)
+mac_kenv_check_unset(struct ucred *cred, char *name)
 {
 	int error;
 
-	MAC_CHECK(check_kenv_unset, cred, name);
+	MAC_POLICY_CHECK_NOSLEEP(kenv_check_unset, cred, name);
+	MAC_CHECK_PROBE2(kenv_check_unset, error, cred, name);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(kld_check_load, "struct ucred *", "struct vnode *");
+
 int
-mac_check_kld_load(struct ucred *cred, struct vnode *vp)
+mac_kld_check_load(struct ucred *cred, struct vnode *vp)
 {
 	int error;
 
-	ASSERT_VOP_LOCKED(vp, "mac_check_kld_load");
+	ASSERT_VOP_LOCKED(vp, "mac_kld_check_load");
 
-	MAC_CHECK(check_kld_load, cred, vp, vp->v_label);
+	MAC_POLICY_CHECK(kld_check_load, cred, vp, vp->v_label);
+	MAC_CHECK_PROBE2(kld_check_load, error, cred, vp);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE1(kld_check_stat, "struct ucred *");
+
 int
-mac_check_kld_stat(struct ucred *cred)
+mac_kld_check_stat(struct ucred *cred)
 {
 	int error;
 
-	MAC_CHECK(check_kld_stat, cred);
+	MAC_POLICY_CHECK_NOSLEEP(kld_check_stat, cred);
+	MAC_CHECK_PROBE1(kld_check_stat, error, cred);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(system_check_acct, "struct ucred *",
+    "struct vnode *");
+
 int
-mac_check_system_acct(struct ucred *cred, struct vnode *vp)
+mac_system_check_acct(struct ucred *cred, struct vnode *vp)
 {
 	int error;
 
 	if (vp != NULL) {
-		ASSERT_VOP_LOCKED(vp, "mac_check_system_acct");
+		ASSERT_VOP_LOCKED(vp, "mac_system_check_acct");
 	}
 
-	MAC_CHECK(check_system_acct, cred, vp,
+	MAC_POLICY_CHECK(system_check_acct, cred, vp,
 	    vp != NULL ? vp->v_label : NULL);
+	MAC_CHECK_PROBE2(system_check_acct, error, cred, vp);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(system_check_reboot, "struct ucred *", "int");
+
 int
-mac_check_system_reboot(struct ucred *cred, int howto)
+mac_system_check_reboot(struct ucred *cred, int howto)
 {
 	int error;
 
-	MAC_CHECK(check_system_reboot, cred, howto);
+	MAC_POLICY_CHECK_NOSLEEP(system_check_reboot, cred, howto);
+	MAC_CHECK_PROBE2(system_check_reboot, error, cred, howto);
 
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(system_check_swapon, "struct ucred *",
+    "struct vnode *");
+
 int
-mac_check_system_swapon(struct ucred *cred, struct vnode *vp)
+mac_system_check_swapon(struct ucred *cred, struct vnode *vp)
 {
 	int error;
 
-	ASSERT_VOP_LOCKED(vp, "mac_check_system_swapon");
+	ASSERT_VOP_LOCKED(vp, "mac_system_check_swapon");
 
-	MAC_CHECK(check_system_swapon, cred, vp, vp->v_label);
+	MAC_POLICY_CHECK(system_check_swapon, cred, vp, vp->v_label);
+	MAC_CHECK_PROBE2(system_check_swapon, error, cred, vp);
+
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE2(system_check_swapoff, "struct ucred *",
+    "struct vnode *");
+
 int
-mac_check_system_swapoff(struct ucred *cred, struct vnode *vp)
+mac_system_check_swapoff(struct ucred *cred, struct vnode *vp)
 {
 	int error;
 
-	ASSERT_VOP_LOCKED(vp, "mac_check_system_swapoff");
+	ASSERT_VOP_LOCKED(vp, "mac_system_check_swapoff");
 
-	MAC_CHECK(check_system_swapoff, cred, vp, vp->v_label);
+	MAC_POLICY_CHECK(system_check_swapoff, cred, vp, vp->v_label);
+	MAC_CHECK_PROBE2(system_check_swapoff, error, cred, vp);
+
 	return (error);
 }
 
+MAC_CHECK_PROBE_DEFINE3(system_check_sysctl, "struct ucred *",
+    "struct sysctl_oid *", "struct sysctl_req *");
+
 int
-mac_check_system_sysctl(struct ucred *cred, struct sysctl_oid *oidp,
+mac_system_check_sysctl(struct ucred *cred, struct sysctl_oid *oidp,
     void *arg1, int arg2, struct sysctl_req *req)
 {
 	int error;
@@ -182,7 +229,9 @@ mac_check_system_sysctl(struct ucred *cred, struct sysctl_oid *oidp,
 	 * XXXMAC: We would very much like to assert the SYSCTL_LOCK here,
 	 * but since it's not exported from kern_sysctl.c, we can't.
 	 */
-	MAC_CHECK(check_system_sysctl, cred, oidp, arg1, arg2, req);
+	MAC_POLICY_CHECK_NOSLEEP(system_check_sysctl, cred, oidp, arg1, arg2,
+	    req);
+	MAC_CHECK_PROBE3(system_check_sysctl, error, cred, oidp, req);
 
 	return (error);
 }

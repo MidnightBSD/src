@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/ath_rate/onoe/onoe.h,v 1.3.10.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -38,11 +38,14 @@
 /* per-device state */
 struct onoe_softc {
 	struct ath_ratectrl arc;	/* base state */
-	struct callout timer;		/* periodic timer */
 };
 
 /* per-node state */
 struct onoe_node {
+	int		on_rix;		/* current rate index */
+	int		on_ticks;	/* time of last update */
+	int		on_interval;	/* update interval (ticks) */
+
 	u_int		on_tx_ok;	/* tx ok pkt */
 	u_int		on_tx_err;	/* tx !ok pkt */
 	u_int		on_tx_retr;	/* tx retry count */

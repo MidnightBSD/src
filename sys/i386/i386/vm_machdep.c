@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986 The Regents of the University of California.
  * Copyright (c) 1989, 1990 William Jolitz
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.283.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_isa.h"
 #include "opt_npx.h"
@@ -54,7 +53,6 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.283.2.4.2.1 2008/11/25 02
 #include <sys/systm.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
-#include <sys/kse.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
@@ -63,6 +61,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.283.2.4.2.1 2008/11/25 02
 #include <sys/mutex.h>
 #include <sys/pioctl.h>
 #include <sys/proc.h>
+#include <sys/sysent.h>
 #include <sys/sf_buf.h>
 #include <sys/smp.h>
 #include <sys/sched.h>
@@ -90,10 +89,13 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.283.2.4.2.1 2008/11/25 02
 #include <vm/vm_map.h>
 #include <vm/vm_param.h>
 
+#ifdef XEN
+#include <xen/hypervisor.h>
+#endif
 #ifdef PC98
 #include <pc98/cbus/cbus.h>
 #else
-#include <i386/isa/isa.h>
+#include <x86/isa/isa.h>
 #endif
 
 #ifdef XBOX
@@ -148,9 +150,6 @@ cpu_fork(td1, p2, td2, flags)
 	register struct proc *p1;
 	struct pcb *pcb2;
 	struct mdproc *mdp2;
-#ifdef DEV_NPX
-	register_t savecrit;
-#endif
 
 	p1 = td1->td_proc;
 	if ((flags & RFPROC) == 0) {
@@ -174,14 +173,14 @@ cpu_fork(td1, p2, td2, flags)
 		return;
 	}
 
-	/* Ensure that p1's pcb is up to date. */
+	/* Ensure that td1's pcb is up to date. */
 	if (td1 == curthread)
 		td1->td_pcb->pcb_gs = rgs();
 #ifdef DEV_NPX
-	savecrit = intr_disable();
+	critical_enter();
 	if (PCPU_GET(fpcurthread) == td1)
-		npxsave(&td1->td_pcb->pcb_save);
-	intr_restore(savecrit);
+		npxsave(td1->td_pcb->pcb_save);
+	critical_exit();
 #endif
 
 	/* Point the pcb to the top of the stack */
@@ -189,8 +188,11 @@ cpu_fork(td1, p2, td2, flags)
 	    td2->td_kstack_pages * PAGE_SIZE) - 1;
 	td2->td_pcb = pcb2;
 
-	/* Copy p1's pcb */
+	/* Copy td1's pcb */
 	bcopy(td1->td_pcb, pcb2, sizeof(*pcb2));
+
+	/* Properly initialize pcb_save */
+	pcb2->pcb_save = &pcb2->pcb_user_save;
 
 	/* Point mdproc and then copy over td1's contents */
 	mdp2 = &p2->p_md;
@@ -266,8 +268,10 @@ cpu_fork(td1, p2, td2, flags)
 
 	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
+	/*
+	 * XXX XEN need to check on PSL_USER is handled
+	 */
 	td2->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
-
 	/*
 	 * Now, cpu_switch() can schedule the new process.
 	 * pcb_esp is loaded pointing to the cpu_switch() stack frame
@@ -321,8 +325,10 @@ cpu_thread_exit(struct thread *td)
 {
 
 #ifdef DEV_NPX
+	critical_enter();
 	if (td == PCPU_GET(fpcurthread))
 		npxdrop();
+	critical_exit();
 #endif
 
 	/* Disable any hardware breakpoints. */
@@ -339,7 +345,6 @@ cpu_thread_clean(struct thread *td)
 
 	pcb = td->td_pcb; 
 	if (pcb->pcb_ext != NULL) {
-		/* XXXKSE  XXXSMP  not SMP SAFE.. what locks do we have? */
 		/* if (pcb->pcb_ext->ext_refcount-- == 1) ?? */
 		/*
 		 * XXX do we need to move the TSS off the allocated pages
@@ -369,6 +374,7 @@ cpu_thread_alloc(struct thread *td)
 	    td->td_kstack_pages * PAGE_SIZE) - 1;
 	td->td_frame = (struct trapframe *)((caddr_t)td->td_pcb - 16) - 1;
 	td->td_pcb->pcb_ext = NULL; 
+	td->td_pcb->pcb_save = &td->td_pcb->pcb_user_save;
 }
 
 void
@@ -376,6 +382,41 @@ cpu_thread_free(struct thread *td)
 {
 
 	cpu_thread_clean(td);
+}
+
+void
+cpu_set_syscall_retval(struct thread *td, int error)
+{
+
+	switch (error) {
+	case 0:
+		td->td_frame->tf_eax = td->td_retval[0];
+		td->td_frame->tf_edx = td->td_retval[1];
+		td->td_frame->tf_eflags &= ~PSL_C;
+		break;
+
+	case ERESTART:
+		/*
+		 * Reconstruct pc, assuming lcall $X,y is 7 bytes, int
+		 * 0x80 is 2 bytes. We saved this in tf_err.
+		 */
+		td->td_frame->tf_eip -= td->td_frame->tf_err;
+		break;
+
+	case EJUSTRETURN:
+		break;
+
+	default:
+		if (td->td_proc->p_sysent->sv_errsize) {
+			if (error >= td->td_proc->p_sysent->sv_errsize)
+				error = -1;	/* XXX */
+			else
+				error = td->td_proc->p_sysent->sv_errtbl[error];
+		}
+		td->td_frame->tf_eax = error;
+		td->td_frame->tf_eflags |= PSL_C;
+		break;
+	}
 }
 
 /*
@@ -397,35 +438,28 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	 * Copy the upcall pcb.  This loads kernel regs.
 	 * Those not loaded individually below get their default
 	 * values here.
-	 *
-	 * XXXKSE It might be a good idea to simply skip this as
-	 * the values of the other registers may be unimportant.
-	 * This would remove any requirement for knowing the KSE
-	 * at this time (see the matching comment below for
-	 * more analysis) (need a good safe default).
 	 */
 	bcopy(td0->td_pcb, pcb2, sizeof(*pcb2));
-	pcb2->pcb_flags &= ~(PCB_NPXTRAP|PCB_NPXINITDONE);
+	pcb2->pcb_flags &= ~(PCB_NPXINITDONE | PCB_NPXUSERINITDONE);
+	pcb2->pcb_save = &pcb2->pcb_user_save;
 
 	/*
 	 * Create a new fresh stack for the new thread.
-	 * The -16 is so we can expand the trapframe if we go to vm86.
-	 * Don't forget to set this stack value into whatever supplies
-	 * the address for the fault handlers.
-	 * The contexts are filled in at the time we actually DO the
-	 * upcall as only then do we know which KSE we got.
 	 */
 	bcopy(td0->td_frame, td->td_frame, sizeof(struct trapframe));
+
+	/* If the current thread has the trap bit set (i.e. a debugger had
+	 * single stepped the process to the system call), we need to clear
+	 * the trap flag from the new frame. Otherwise, the new thread will
+	 * receive a (likely unexpected) SIGTRAP when it executes the first
+	 * instruction after returning to userland.
+	 */
+	td->td_frame->tf_eflags &= ~PSL_T;
 
 	/*
 	 * Set registers for trampoline to user mode.  Leave space for the
 	 * return address on stack.  These are the kernel mode register values.
 	 */
-#ifdef PAE
-	pcb2->pcb_cr3 = vtophys(vmspace_pmap(td->td_proc->p_vmspace)->pm_pdpt);
-#else
-	pcb2->pcb_cr3 = vtophys(vmspace_pmap(td->td_proc->p_vmspace)->pm_pdir);
-#endif
 	pcb2->pcb_edi = 0;
 	pcb2->pcb_esi = (int)fork_return;		    /* trampoline arg */
 	pcb2->pcb_ebp = 0;
@@ -436,11 +470,12 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	pcb2->pcb_gs = rgs();
 	/*
 	 * If we didn't copy the pcb, we'd need to do the following registers:
+	 * pcb2->pcb_cr3:	cloned above.
 	 * pcb2->pcb_dr*:	cloned above.
 	 * pcb2->pcb_savefpu:	cloned above.
 	 * pcb2->pcb_flags:	cloned above.
 	 * pcb2->pcb_onfault:	cloned above (always NULL here?).
-	 * pcb2->pcb_gs:	cloned above.  XXXKSE ???
+	 * pcb2->pcb_gs:	cloned above.
 	 * pcb2->pcb_ext:	cleared below.
 	 */
 	pcb2->pcb_ext = NULL;
@@ -538,11 +573,13 @@ kvtop(void *addr)
 static void
 cpu_reset_proxy()
 {
+	cpuset_t tcrp;
 
 	cpu_reset_proxy_active = 1;
 	while (cpu_reset_proxy_active == 1)
 		;	/* Wait for other cpu to see that we've started */
-	stop_cpus((1<<cpu_reset_proxyid));
+	CPU_SETOF(cpu_reset_proxyid, &tcrp);
+	stop_cpus(tcrp);
 	printf("cpu_reset_proxy: Stopped CPU %d\n", cpu_reset_proxyid);
 	DELAY(1000000);
 	cpu_reset_real();
@@ -561,11 +598,14 @@ cpu_reset()
 #endif
 
 #ifdef SMP
-	u_int cnt, map;
+	cpuset_t map;
+	u_int cnt;
 
 	if (smp_active) {
-		map = PCPU_GET(other_cpus) & ~stopped_cpus;
-		if (map != 0) {
+		map = all_cpus;
+		CPU_CLR(PCPU_GET(cpuid), &map);
+		CPU_NAND(&map, &stopped_cpus);
+		if (!CPU_EMPTY(&map)) {
 			printf("cpu_reset: Stopping other CPUs\n");
 			stop_cpus(map);
 		}
@@ -578,7 +618,8 @@ cpu_reset()
 
 			/* Restart CPU #0. */
 			/* XXX: restart_cpus(1 << 0); */
-			atomic_store_rel_int(&started_cpus, (1 << 0));
+			CPU_SETOF(0, &started_cpus);
+			wmb();
 
 			cnt = 0;
 			while (cpu_reset_proxy_active == 0 && cnt < 10000000)
@@ -608,6 +649,12 @@ cpu_reset_real()
 #endif
 
 	disable_intr();
+#ifdef XEN
+	if (smp_processor_id() == 0)
+		HYPERVISOR_shutdown(SHUTDOWN_reboot);
+	else
+		HYPERVISOR_shutdown(SHUTDOWN_poweroff);
+#endif 
 #ifdef CPU_ELAN
 	if (elan_mmcr != NULL)
 		elan_mmcr->RESCFG = 1;
@@ -711,6 +758,39 @@ sf_buf_init(void *arg)
 }
 
 /*
+ * Invalidate the cache lines that may belong to the page, if
+ * (possibly old) mapping of the page by sf buffer exists.  Returns
+ * TRUE when mapping was found and cache invalidated.
+ */
+boolean_t
+sf_buf_invalidate_cache(vm_page_t m)
+{
+	struct sf_head *hash_list;
+	struct sf_buf *sf;
+	boolean_t ret;
+
+	hash_list = &sf_buf_active[SF_BUF_HASH(m)];
+	ret = FALSE;
+	mtx_lock(&sf_buf_lock);
+	LIST_FOREACH(sf, hash_list, list_entry) {
+		if (sf->m == m) {
+			/*
+			 * Use pmap_qenter to update the pte for
+			 * existing mapping, in particular, the PAT
+			 * settings are recalculated.
+			 */
+			pmap_qenter(sf->kva, &m, 1);
+			pmap_invalidate_cache_range(sf->kva, sf->kva +
+			    PAGE_SIZE);
+			ret = TRUE;
+			break;
+		}
+	}
+	mtx_unlock(&sf_buf_lock);
+	return (ret);
+}
+
+/*
  * Get an sf_buf from the freelist.  May block if none are available.
  */
 struct sf_buf *
@@ -720,7 +800,8 @@ sf_buf_alloc(struct vm_page *m, int flags)
 	struct sf_head *hash_list;
 	struct sf_buf *sf;
 #ifdef SMP
-	cpumask_t cpumask, other_cpus;
+	cpuset_t other_cpus;
+	u_int cpuid;
 #endif
 	int error;
 
@@ -776,7 +857,13 @@ sf_buf_alloc(struct vm_page *m, int flags)
 	 */
 	ptep = vtopte(sf->kva);
 	opte = *ptep;
-	*ptep = VM_PAGE_TO_PHYS(m) | pgeflag | PG_RW | PG_V;
+#ifdef XEN
+       PT_SET_MA(sf->kva, xpmap_ptom(VM_PAGE_TO_PHYS(m)) | pgeflag
+	   | PG_RW | PG_V | pmap_cache_bits(m->md.pat_mode, 0));
+#else
+	*ptep = VM_PAGE_TO_PHYS(m) | pgeflag | PG_RW | PG_V |
+	    pmap_cache_bits(m->md.pat_mode, 0);
+#endif
 
 	/*
 	 * Avoid unnecessary TLB invalidations: If the sf_buf's old
@@ -786,22 +873,24 @@ sf_buf_alloc(struct vm_page *m, int flags)
 	 */
 #ifdef SMP
 	if ((opte & (PG_V | PG_A)) ==  (PG_V | PG_A))
-		sf->cpumask = 0;
+		CPU_ZERO(&sf->cpumask);
 shootdown:
 	sched_pin();
-	cpumask = PCPU_GET(cpumask);
-	if ((sf->cpumask & cpumask) == 0) {
-		sf->cpumask |= cpumask;
+	cpuid = PCPU_GET(cpuid);
+	if (!CPU_ISSET(cpuid, &sf->cpumask)) {
+		CPU_SET(cpuid, &sf->cpumask);
 		invlpg(sf->kva);
 	}
 	if ((flags & SFB_CPUPRIVATE) == 0) {
-		other_cpus = PCPU_GET(other_cpus) & ~sf->cpumask;
-		if (other_cpus != 0) {
-			sf->cpumask |= other_cpus;
+		other_cpus = all_cpus;
+		CPU_CLR(cpuid, &other_cpus);
+		CPU_NAND(&other_cpus, &sf->cpumask);
+		if (!CPU_EMPTY(&other_cpus)) {
+			CPU_OR(&sf->cpumask, &other_cpus);
 			smp_masked_invlpg(other_cpus, sf->kva);
 		}
 	}
-	sched_unpin();	
+	sched_unpin();
 #else
 	if ((opte & (PG_V | PG_A)) ==  (PG_V | PG_A))
 		pmap_invalidate_page(kernel_pmap, sf->kva);
@@ -826,8 +915,16 @@ sf_buf_free(struct sf_buf *sf)
 	if (sf->ref_count == 0) {
 		TAILQ_INSERT_TAIL(&sf_buf_freelist, sf, free_entry);
 		nsfbufsused--;
+#ifdef XEN
+/*
+ * Xen doesn't like having dangling R/W mappings
+ */
+		pmap_qremove(sf->kva, 1);
+		sf->m = NULL;
+		LIST_REMOVE(sf, list_entry);
+#endif
 		if (sf_buf_alloc_want > 0)
-			wakeup_one(&sf_buf_freelist);
+			wakeup(&sf_buf_freelist);
 	}
 	mtx_unlock(&sf_buf_lock);
 }

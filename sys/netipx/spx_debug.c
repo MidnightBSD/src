@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/spx_debug.c,v 1.19.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_tcpdebug.h"
@@ -82,10 +82,12 @@ __FBSDID("$FreeBSD: src/sys/netipx/spx_debug.c,v 1.19.6.1 2008/11/25 02:59:29 ke
 #define	SANAMES
 #include <netipx/spx_debug.h>
 
+#ifdef INET
 #ifdef TCPDEBUG
 static	int spxconsdebug = 0;
 static	struct spx_debug spx_debug[SPX_NDEBUG];
 static	int spx_debx;
+#endif
 #endif
 
 /*

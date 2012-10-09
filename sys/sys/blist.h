@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/blist.h,v 1.2 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998 Matthew Dillon.  All Rights Reserved.
  * Redistribution and use in source and binary forms, with or without
@@ -50,7 +49,7 @@
  *		that.  Managing something like 512MB worth of 4K blocks 
  *		eats around 32 KBytes of memory. 
  *
- * $FreeBSD: src/sys/sys/blist.h,v 1.9.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
 
  */
 

@@ -1,5 +1,4 @@
-/* $MidnightBSD: src/sys/fs/msdosfs/msdosfs_conv.c,v 1.4 2008/12/03 00:25:41 laffer1 Exp $ */
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_conv.c,v 1.53 2007/08/31 22:29:55 bde Exp $ */
+/* $FreeBSD$ */
 /*	$NetBSD: msdosfs_conv.c,v 1.25 1997/11/17 15:36:40 ws Exp $	*/
 
 /*-
@@ -62,9 +61,9 @@
 extern struct iconv_functions *msdosfs_iconv;
 
 static int mbsadjpos(const char **, size_t, size_t, int, int, void *handle);
-static u_int16_t dos2unixchr(const u_char **, size_t *, int, struct msdosfsmount *);
+static u_char * dos2unixchr(u_char *, const u_char **, size_t *, int, struct msdosfsmount *);
 static u_int16_t unix2doschr(const u_char **, size_t *, struct msdosfsmount *);
-static u_int32_t win2unixchr(u_int16_t, struct msdosfsmount *);
+static u_char * win2unixchr(u_char *, u_int16_t, struct msdosfsmount *);
 static u_int16_t unix2winchr(const u_char **, size_t *, int, struct msdosfsmount *);
 
 /*
@@ -222,109 +221,6 @@ l2u[256] = {
 	0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff, /* f8-ff */
 };
 
-static int iconv_u2w(const char **inbuf, size_t *inbytes,
-        char **outbuf, size_t *outbytes)
-{   
-    u_int8_t mark;
-    u_int16_t uc = 0;
-    char * obuf  = NULL;
-    const char *ibuf, *ibuf_end, *obuf_end;
-    if ((inbuf&&inbytes&&outbuf&&outbytes)
-            && (*inbuf&&*inbytes&&*outbuf&&*outbytes)){
-        ibuf = *inbuf;
-        ibuf_end = *inbuf+*inbytes;
-        obuf = *outbuf;
-        obuf_end = *outbuf+*outbytes;
-        int follow = 0;
-        while(ibuf<ibuf_end && &obuf[1]<obuf_end){
-            mark = (u_int8_t)*ibuf++;
-            if (mark<0xF0 && mark>0xE0){
-                /* 1110XXXX */
-                uc = mark&0x0F;
-                follow = 2;
-            }else if (mark<0xE0 && mark>0xC0){
-                /* 110XXXXX */
-                uc = mark&0x1F;
-                follow = 1;
-            }else if (mark<0x80){
-                /* 0XXXXXXX */
-                uc = mark;
-                follow = 0;
-            }else{
-                /* convert fail: 0xF0 0xE0 should NOT in UTF-8 seq */
-                printf("convert fail 0xF0 0xE0\n");
-                break;
-            }
-            if (&ibuf[follow] > ibuf_end){
-                /* unexpect input end */
-                break;
-            }
-            for (; follow>0; follow--){
-                /* 10XX.XXXX 0x80-0xBF*/
-                if ((*ibuf&0xC0) != 0x80){
-                    *outbytes = obuf_end - *outbuf;
-                    *inbytes = ibuf_end - *inbuf;
-                    printf("convert fail SEQ\n");
-                    return 0;
-                }
-                uc = (uc<<6)|(*ibuf++&0x3F);
-            }
-            *obuf++ = (uc>>8);
-            *obuf++ = uc;
-            *outbuf = obuf;
-            *inbuf = ibuf;
-        }
-        *outbytes = obuf_end - *outbuf;
-        *inbytes = ibuf_end - *inbuf;
-    }
-    return 0;
-}
-
-static int iconv_w2u(const char **inbuf, size_t *inbytes,
-        char **outbuf, size_t *outbytes)
-{
-    u_int16_t uc = 0;
-    char *obuf  = NULL;
-    const char *ibuf, *ibuf_end, *obuf_end;
-    if ((inbuf&&inbytes&&outbuf&&outbytes)
-            && (*inbuf&&*inbytes&&*outbuf&&*outbytes)){
-        ibuf = *inbuf;
-        ibuf_end = *inbuf+*inbytes;
-        obuf = *outbuf;
-        obuf_end = *outbuf+*outbytes;
-        int follow = 0;
-        while(&ibuf[1]<ibuf_end && obuf<obuf_end){
-            uc = (0xFF&*ibuf++);
-            uc = (0xFF&*ibuf++)|(uc<<8);
-            if (uc < 0x80){
-                *obuf++ = (uc);
-                follow = 0;
-            }else if (uc < 0x800){
-                *obuf++ = (uc>>6)|0xC0;
-                follow = 1;
-            }else {
-                /* assert(uc<=0xFFFF); */
-                *obuf++ = (uc>>12)|0xE0;
-                follow = 2;
-            }
-            if (&obuf[follow] > obuf_end){
-                /*no output buffer */
-                break;
-            }
-            for (follow--;follow>=0;follow--){
-                int shift = follow*6;
-                u_int8_t ch = uc>>shift;
-                *obuf++ = (ch&0x3F)|0x80;
-            }
-            *outbuf = obuf;
-            *inbuf = ibuf;
-        }
-        *outbytes = obuf_end - *outbuf;
-        *inbytes = ibuf_end - *inbuf;
-    }
-    return 0;
-}
-
 /*
  * DOS filenames are made of 2 parts, the name part and the extension part.
  * The name part is 8 characters long and the extension part is 3
@@ -346,7 +242,7 @@ dos2unixfn(dn, un, lower, pmp)
 {
 	size_t i;
 	int thislong = 0;
-	u_int16_t c;
+	u_char *c, tmpbuf[5];
 
 	/*
 	 * If first char of the filename is SLOT_E5 (0x05), then the real
@@ -361,14 +257,12 @@ dos2unixfn(dn, un, lower, pmp)
 	 * Copy the name portion into the unix filename string.
 	 */
 	for (i = 8; i > 0 && *dn != ' ';) {
-		c = dos2unixchr((const u_char **)&dn, &i, lower & LCASE_BASE,
-		    pmp);
-		if (c & 0xff00) {
-			*un++ = c >> 8;
+		c = dos2unixchr(tmpbuf, (const u_char **)&dn, &i,
+		    lower & LCASE_BASE, pmp);
+		while (*c != '\0') {
+			*un++ = *c++;
 			thislong++;
 		}
-		*un++ = c;
-		thislong++;
 	}
 	dn += i;
 
@@ -380,14 +274,12 @@ dos2unixfn(dn, un, lower, pmp)
 		*un++ = '.';
 		thislong++;
 		for (i = 3; i > 0 && *dn != ' ';) {
-			c = dos2unixchr((const u_char **)&dn, &i,
+			c = dos2unixchr(tmpbuf, (const u_char **)&dn, &i,
 			    lower & LCASE_EXT, pmp);
-			if (c & 0xff00) {
-				*un++ = c >> 8;
+			while (*c != '\0') {
+				*un++ = *c++;
 				thislong++;
 			}
-			*un++ = c;
-			thislong++;
 		}
 	}
 	*un++ = 0;
@@ -756,9 +648,10 @@ win2unixfn(nbp, wep, chksum, pmp)
 	int chksum;
 	struct msdosfsmount *pmp;
 {
+	u_char *c, tmpbuf[5];
 	u_int8_t *cp;
 	u_int8_t *np, name[WIN_CHARS * 3 + 1];
-	u_int32_t code;
+	u_int16_t code;
 	int i;
 
 	if ((wep->weCnt&WIN_CNT) > howmany(WIN_MAXLEN, WIN_CHARS)
@@ -790,12 +683,9 @@ win2unixfn(nbp, wep, chksum, pmp)
 			*np = '\0';
 			return -1;
 		default:
-			code = win2unixchr(code, pmp);
-			if (code & 0xff0000)
-				*np++ = code >> 16;
-			if (code & 0xff00)
-				*np++ = code >> 8;
-			*np++ = code;
+			c = win2unixchr(tmpbuf, code, pmp);
+			while (*c != '\0')
+				*np++ = *c++;
 			break;
 		}
 		cp += 2;
@@ -811,12 +701,9 @@ win2unixfn(nbp, wep, chksum, pmp)
 			*np = '\0';
 			return -1;
 		default:
-			code = win2unixchr(code, pmp);
-			if (code & 0xff0000)
-				*np++ = code >> 16;
-			if (code & 0xff00)
-				*np++ = code >> 8;
-			*np++ = code;
+			c = win2unixchr(tmpbuf, code, pmp);
+			while (*c != '\0')
+				*np++ = *c++;
 			break;
 		}
 		cp += 2;
@@ -832,12 +719,9 @@ win2unixfn(nbp, wep, chksum, pmp)
 			*np = '\0';
 			return -1;
 		default:
-			code = win2unixchr(code, pmp);
-			if (code & 0xff0000)
-				*np++ = code >> 16;
-			if (code & 0xff00)
-				*np++ = code >> 8;
-			*np++ = code;
+			c = win2unixchr(tmpbuf, code, pmp);
+			while (*c != '\0')
+				*np++ = *c++;
 			break;
 		}
 		cp += 2;
@@ -851,22 +735,13 @@ win2unixfn(nbp, wep, chksum, pmp)
  * Compute the unrolled checksum of a DOS filename for Win95 LFN use.
  */
 u_int8_t
-winChksum(struct direntry *dep)
+winChksum(u_int8_t *name)
 {
+	int i;
 	u_int8_t s;
 
-	s = dep->deName[0];
-	s = ((s << 7) | (s >> 1)) + dep->deName[1];
-	s = ((s << 7) | (s >> 1)) + dep->deName[2];
-	s = ((s << 7) | (s >> 1)) + dep->deName[3];
-	s = ((s << 7) | (s >> 1)) + dep->deName[4];
-	s = ((s << 7) | (s >> 1)) + dep->deName[5];
-	s = ((s << 7) | (s >> 1)) + dep->deName[6];
-	s = ((s << 7) | (s >> 1)) + dep->deName[7];
-	s = ((s << 7) | (s >> 1)) + dep->deExtension[0];
-	s = ((s << 7) | (s >> 1)) + dep->deExtension[1];
-	s = ((s << 7) | (s >> 1)) + dep->deExtension[2];
-
+	for (s = 0, i = 11; --i >= 0; s += *name++)
+		s = (s << 7)|(s >> 1);
 	return (s);
 }
 
@@ -887,10 +762,7 @@ winSlotCnt(un, unlen, pmp)
 	if (pmp->pm_flags & MSDOSFSMNT_KICONV && msdosfs_iconv) {
 		wlen = WIN_MAXLEN * 2;
 		wnp = wn;
-        if (pmp->pm_u2w != NULL)
-            msdosfs_iconv->conv(pmp->pm_u2w, (const char **)&un, &unlen, &wnp, &wlen);
-        else
-            iconv_u2w((const char**)&un, &unlen, &wnp, &wlen);
+		msdosfs_iconv->conv(pmp->pm_u2w, (const char **)&un, &unlen, &wnp, &wlen);
 		if (unlen > 0)
 			return 0;
 		return howmany(WIN_MAXLEN - wlen/2, WIN_CHARS);
@@ -928,10 +800,7 @@ mbsadjpos(const char **instr, size_t inlen, size_t outlen, int weight, int flag,
 	if (flag & MSDOSFSMNT_KICONV && msdosfs_iconv) {
 		outp = outstr;
 		outlen *= weight;
-        if (handle != NULL)
-            msdosfs_iconv->conv(handle, instr, &inlen, &outp, &outlen);
-        else
-            iconv_u2w(instr, &inlen, &outp, &outlen);
+		msdosfs_iconv->conv(handle, instr, &inlen, &outp, &outlen);
 		return (inlen);
 	}
 
@@ -942,24 +811,22 @@ mbsadjpos(const char **instr, size_t inlen, size_t outlen, int weight, int flag,
 /*
  * Convert DOS char to Local char
  */
-static u_int16_t
-dos2unixchr(const u_char **instr, size_t *ilen, int lower, struct msdosfsmount *pmp)
+static u_char *
+dos2unixchr(u_char *outbuf, const u_char **instr, size_t *ilen, int lower, struct msdosfsmount *pmp)
 {
-	u_char c;
-	char *outp, outbuf[3];
-	u_int16_t wc;
+	u_char c, *outp;
 	size_t len, olen;
 
+	outp = outbuf;
 	if (pmp->pm_flags & MSDOSFSMNT_KICONV && msdosfs_iconv) {
-		olen = len = 2;
-		outp = outbuf;
+		olen = len = 4;
 
 		if (lower & (LCASE_BASE | LCASE_EXT))
 			msdosfs_iconv->convchr_case(pmp->pm_d2u, (const char **)instr,
-						  ilen, &outp, &olen, KICONV_LOWER);
+						  ilen, (char **)&outp, &olen, KICONV_LOWER);
 		else
 			msdosfs_iconv->convchr(pmp->pm_d2u, (const char **)instr,
-					     ilen, &outp, &olen);
+					     ilen, (char **)&outp, &olen);
 		len -= olen;
 
 		/*
@@ -968,21 +835,21 @@ dos2unixchr(const u_char **instr, size_t *ilen, int lower, struct msdosfsmount *
 		if (len == 0) {
 			(*ilen)--;
 			(*instr)++;
-			return ('?');
+			*outp++ = '?';
 		}
-
-		wc = 0;
-		while(len--)
-			wc |= (*(outp - len - 1) & 0xff) << (len << 3);
-		return (wc);
+	} else {
+		(*ilen)--;
+		c = *(*instr)++;
+		c = dos2unix[c];
+		if (lower & (LCASE_BASE | LCASE_EXT))
+			c = u2l[c];
+		*outp++ = c;
+		outbuf[1] = '\0';
 	}
 
-	(*ilen)--;
-	c = *(*instr)++;
-	c = dos2unix[c];
-	if (lower & (LCASE_BASE | LCASE_EXT))
-		c = u2l[c];
-	return ((u_int16_t)c);
+	*outp = '\0';
+	outp = outbuf;
+	return (outp);
 }
 
 /*
@@ -1003,11 +870,8 @@ unix2doschr(const u_char **instr, size_t *ilen, struct msdosfsmount *pmp)
 		ucslen = 2;
 		len = *ilen;
 		up = unicode;
-        if (pmp->pm_u2w != NULL)
-            msdosfs_iconv->convchr(pmp->pm_u2w, (const char **)instr,
-                    ilen, &up, &ucslen);
-        else
-            iconv_u2w((const char**)instr, ilen, &up, &ucslen);
+		msdosfs_iconv->convchr(pmp->pm_u2w, (const char **)instr,
+				     ilen, &up, &ucslen);
 		unixlen = len - *ilen;
 
 		/*
@@ -1068,49 +932,37 @@ unix2doschr(const u_char **instr, size_t *ilen, struct msdosfsmount *pmp)
 /*
  * Convert Windows char to Local char
  */
-static u_int32_t
-win2unixchr(u_int16_t wc, struct msdosfsmount *pmp)
+static u_char *
+win2unixchr(u_char *outbuf, u_int16_t wc, struct msdosfsmount *pmp)
 {
-	u_char *inp, *outp, inbuf[3], outbuf[4];
+	u_char *inp, *outp, inbuf[3];
 	size_t ilen, olen, len;
 
-	if (wc == 0)
-		return (0);
-
+	outp = outbuf;
 	if (pmp->pm_flags & MSDOSFSMNT_KICONV && msdosfs_iconv) {
 		inbuf[0] = (u_char)(wc>>8);
 		inbuf[1] = (u_char)wc;
 		inbuf[2] = '\0';
 
-		ilen = olen = len = 2;
-        len = olen = 4;
+		ilen = 2;
+		olen = len = 4;
 		inp = inbuf;
-		outp = outbuf;
-        if (pmp->pm_w2u != NULL)
-            msdosfs_iconv->convchr(pmp->pm_w2u, (const char **)&inp, &ilen,
-                    (char **)&outp, &olen);
-        else
-            iconv_w2u((const char**)&inp, &ilen, (char**)&outp, &olen);
+		msdosfs_iconv->convchr(pmp->pm_w2u, (const char **)&inp, &ilen,
+				     (char **)&outp, &olen);
 		len -= olen;
 
 		/*
 		 * return '?' if failed to convert
 		 */
-		if (len == 0) {
-			wc = '?';
-			return (wc);
-		}
-
-		u_int32_t wc32 = 0;
-		while(len--)
-			wc32 |= (*(outp - len - 1) & 0xff) << (len << 3);
-		return (wc32);
+		if (len == 0)
+			*outp++ = '?';
+	} else {
+		*outp++ = (wc & 0xff00) ? '?' : (u_char)(wc & 0xff);
 	}
 
-	if (wc & 0xff00)
-		wc = '?';
-
-	return (wc);
+	*outp = '\0';
+	outp = outbuf;
+	return (outp);
 }
 
 /*
@@ -1129,9 +981,7 @@ unix2winchr(const u_char **instr, size_t *ilen, int lower, struct msdosfsmount *
 	if (pmp->pm_flags & MSDOSFSMNT_KICONV && msdosfs_iconv) {
 		outp = outbuf;
 		olen = 2;
-        if (pmp->pm_u2w == NULL)
-            iconv_u2w((const char**)instr, ilen, (char **)&outp, &olen);
-        else if (lower & (LCASE_BASE | LCASE_EXT))
+		if (lower & (LCASE_BASE | LCASE_EXT))
 			msdosfs_iconv->convchr_case(pmp->pm_u2w, (const char **)instr,
 						  ilen, (char **)&outp, &olen,
 						  KICONV_FROM_LOWER);
@@ -1145,7 +995,7 @@ unix2winchr(const u_char **instr, size_t *ilen, int lower, struct msdosfsmount *
 		if (olen == 2)
 			return (0);
 
-        wc = (outbuf[0]<<8)|outbuf[1];
+		wc = (outbuf[0]<<8) | outbuf[1];
 
 		return (wc);
 	}
@@ -1185,15 +1035,22 @@ mbnambuf_write(struct mbnambuf *nbp, char *name, int id)
 	char *slot;
 	size_t count, newlen;
 
-	KASSERT(nbp->nb_len == 0 || id == nbp->nb_last_id - 1,
-	    ("non-decreasing id: id %d, last id %d", id, nbp->nb_last_id));
+	if (nbp->nb_len != 0 && id != nbp->nb_last_id - 1) {
+#ifdef MSDOSFS_DEBUG
+		printf("msdosfs: non-decreasing id: id %d, last id %d\n",
+		    id, nbp->nb_last_id);
+#endif
+		return;
+	}
 
 	/* Will store this substring in a WIN_CHARS-aligned slot. */
 	slot = &nbp->nb_buf[id * WIN_CHARS];
 	count = strlen(name);
 	newlen = nbp->nb_len + count;
 	if (newlen > WIN_MAXLEN || newlen > MAXNAMLEN) {
+#ifdef MSDOSFS_DEBUG
 		printf("msdosfs: file name length %zu too large\n", newlen);
+#endif
 		return;
 	}
 

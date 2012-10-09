@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/iir/iir.h,v 1.16 2007/06/17 05:55:50 scottl Exp $ */
+/* $FreeBSD$ */
 /*-
  *       Copyright (c) 2000-04 ICP vortex GmbH
  *       Copyright (c) 2002-04 Intel Corporation
@@ -41,7 +41,7 @@
  * credits:     Niklas Hallqvist;       OpenBSD driver for the ICP Controllers.
  *              FreeBSD.ORG;            Great O/S to work on and for.
  *
- * $Id: iir.h,v 1.3 2008-11-30 20:02:36 laffer1 Exp $"
+ * $Id: iir.h,v 1.4 2012-10-09 04:08:11 laffer1 Exp $"
  */
 
 #ifndef _IIR_H

@@ -31,8 +31,8 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
- * $DragonFly: src/sys/dev/netif/bwi/bwimac.h,v 1.1 2007/09/08 06:15:54 sephe Exp $
+ * $DragonFly: src/sys/dev/netif/bwi/bwimac.h,v 1.2 2008/02/15 11:15:38 sephe Exp $
+ * $FreeBSD$
  */
 
 #ifndef _BWI_MAC_H
@@ -49,7 +49,8 @@ void		bwi_mac_shutdown(struct bwi_mac *);
 void		bwi_mac_updateslot(struct bwi_mac *, int);
 void		bwi_mac_set_promisc(struct bwi_mac *, int);
 
-void		bwi_mac_calibrate_txpower(struct bwi_mac *);
+void		bwi_mac_calibrate_txpower(struct bwi_mac *,
+					  enum bwi_txpwrcb_type);
 void		bwi_mac_set_tpctl_11bg(struct bwi_mac *,
 				       const struct bwi_tpctl *);
 void		bwi_mac_init_tpctl_11bg(struct bwi_mac *);

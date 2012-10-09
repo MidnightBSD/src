@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -32,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_dev.c,v 1.33.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -90,28 +83,38 @@ int smb_dev_queue(struct smb_dev *ndp, struct smb_rq *rqp, int prio);
 
 static struct cdevsw nsmb_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
+	.d_flags =	D_NEEDGIANT | D_NEEDMINOR,
 	.d_open =	nsmb_dev_open,
 	.d_close =	nsmb_dev_close,
 	.d_ioctl =	nsmb_dev_ioctl,
 	.d_name =	NSMB_NAME
 };
 
-static eventhandler_tag nsmb_dev_tag;
+static eventhandler_tag	 nsmb_dev_tag;
+static struct clonedevs	*nsmb_clones;
 
 static void
 nsmb_dev_clone(void *arg, struct ucred *cred, char *name, int namelen,
     struct cdev **dev)
 {
-	int u;
+	int i, u;
 
 	if (*dev != NULL)
 		return;
-	if (dev_stdclone(name, NULL, NSMB_NAME, &u) != 1)
+
+	if (strcmp(name, NSMB_NAME) == 0)
+		u = -1;
+	else if (dev_stdclone(name, NULL, NSMB_NAME, &u) != 1)
 		return;
-	*dev = make_dev(&nsmb_cdevsw, unit2minor(u), 0, 0, 0600,
-	    NSMB_NAME"%d", u);
-	dev_ref(*dev);
+	i = clone_create(&nsmb_clones, &nsmb_cdevsw, &u, dev, 0);
+	if (i) {
+		*dev = make_dev(&nsmb_cdevsw, u, UID_ROOT, GID_WHEEL, 0600,
+		    "%s%d", NSMB_NAME, u);
+		if (*dev != NULL) {
+			dev_ref(*dev);
+			(*dev)->si_flags |= SI_CHEAPCLONE;
+		}
+	}
 }
 
 static int
@@ -133,8 +136,8 @@ nsmb_dev_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	 * someone should take care of it.
 	 */
 	if ((dev->si_flags & SI_NAMED) == 0)
-		make_dev(&nsmb_cdevsw, minor(dev), cred->cr_uid, cred->cr_gid, 0700,
-		    NSMB_NAME"%d", dev2unit(dev));
+		make_dev(&nsmb_cdevsw, dev2unit(dev), cred->cr_uid,
+		    cred->cr_gid, 0700, NSMB_NAME"%d", dev2unit(dev));
 	bzero(sdp, sizeof(*sdp));
 /*
 	STAILQ_INIT(&sdp->sd_rqlist);
@@ -205,7 +208,7 @@ nsmb_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thre
 		if (error)
 			break;
 		sdp->sd_vc = vcp;
-		smb_vc_unlock(vcp, 0, td);
+		smb_vc_unlock(vcp, 0);
 		sdp->sd_level = SMBL_VC;
 		break;
 	    case SMBIOC_OPENSHARE:
@@ -218,7 +221,7 @@ nsmb_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thre
 		if (error)
 			break;
 		sdp->sd_share = ssp;
-		smb_share_unlock(ssp, 0, td);
+		smb_share_unlock(ssp, 0);
 		sdp->sd_level = SMBL_SHARE;
 		break;
 	    case SMBIOC_REQUEST:
@@ -288,12 +291,12 @@ nsmb_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thre
 			break;
 		if (vcp) {
 			sdp->sd_vc = vcp;
-			smb_vc_unlock(vcp, 0, td);
+			smb_vc_unlock(vcp, 0);
 			sdp->sd_level = SMBL_VC;
 		}
 		if (ssp) {
 			sdp->sd_share = ssp;
-			smb_share_unlock(ssp, 0, td);
+			smb_share_unlock(ssp, 0);
 			sdp->sd_level = SMBL_SHARE;
 		}
 		break;
@@ -341,8 +344,8 @@ nsmb_dev_load(module_t mod, int cmd, void *arg)
 			smb_sm_done();
 			break;
 		}
+		clone_setup(&nsmb_clones);
 		nsmb_dev_tag = EVENTHANDLER_REGISTER(dev_clone, nsmb_dev_clone, 0, 1000);
-		printf("netsmb_dev: loaded\n");
 		break;
 	    case MOD_UNLOAD:
 		smb_iod_done();
@@ -351,8 +354,8 @@ nsmb_dev_load(module_t mod, int cmd, void *arg)
 			break;
 		EVENTHANDLER_DEREGISTER(dev_clone, nsmb_dev_tag);
 		drain_dev_clone_events();
+		clone_cleanup(&nsmb_clones);
 		destroy_dev_drain(&nsmb_cdevsw);
-		printf("netsmb_dev: unloaded\n");
 		break;
 	    default:
 		error = EINVAL;

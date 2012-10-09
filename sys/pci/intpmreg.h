@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/pci/intpmreg.h,v 1.3 2008/12/03 00:11:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998, 1999 Takanori Watanabe
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pci/intpmreg.h,v 1.4.2.1 2009/11/01 11:41:20 avg Exp $
+ * $FreeBSD$
  */
 
 #ifndef __INTPMREG_H__

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/cd9660/cd9660_vnops.c,v 1.2 2008/12/03 00:25:40 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/cd9660/cd9660_vnops.c,v 1.113 2007/02/15 22:08:34 pjd Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -87,7 +86,6 @@ cd9660_setattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
@@ -127,14 +125,14 @@ static int
 cd9660_access(ap)
 	struct vop_access_args /* {
 		struct vnode *a_vp;
-		int  a_mode;
+		accmode_t a_accmode;
 		struct ucred *a_cred;
 		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 	struct iso_node *ip = VTOI(vp);
-	mode_t mode = ap->a_mode;
+	accmode_t accmode = ap->a_accmode;
 
 	if (vp->v_type == VCHR || vp->v_type == VBLK)
 		return (EOPNOTSUPP);
@@ -144,7 +142,7 @@ cd9660_access(ap)
 	 * fifo, or a block or character device resident on the
 	 * filesystem.
 	 */
-	if (mode & VWRITE) {
+	if (accmode & VWRITE) {
 		switch (vp->v_type) {
 		case VDIR:
 		case VLNK:
@@ -157,7 +155,7 @@ cd9660_access(ap)
 	}
 
 	return (vaccess(vp->v_type, ip->inode.iso_mode, ip->inode.iso_uid,
-	    ip->inode.iso_gid, ap->a_mode, ap->a_cred, NULL));
+	    ip->inode.iso_gid, ap->a_accmode, ap->a_cred, NULL));
 }
 
 static int
@@ -167,13 +165,17 @@ cd9660_open(ap)
 		int a_mode;
 		struct ucred *a_cred;
 		struct thread *a_td;
-		int a_fdidx;
+		struct file *a_fp;
 	} */ *ap;
 {
-	struct iso_node *ip = VTOI(ap->a_vp);
+	struct vnode *vp = ap->a_vp;
+	struct iso_node *ip = VTOI(vp);
 
-	vnode_create_vobject(ap->a_vp, ip->i_size, ap->a_td);
-	return 0;
+	if (vp->v_type == VCHR || vp->v_type == VBLK)
+		return (EOPNOTSUPP);
+
+	vnode_create_vobject(vp, ip->i_size, ap->a_td);
+	return (0);
 }
 
 
@@ -183,7 +185,6 @@ cd9660_getattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 
 {
@@ -210,7 +211,7 @@ cd9660_getattr(ap)
 		struct uio auio;
 		char *cp;
 
-		MALLOC(cp, char *, MAXPATHLEN, M_TEMP, M_WAITOK);
+		cp = malloc(MAXPATHLEN, M_TEMP, M_WAITOK);
 		aiov.iov_base = cp;
 		aiov.iov_len = MAXPATHLEN;
 		auio.uio_iov = &aiov;
@@ -218,14 +219,14 @@ cd9660_getattr(ap)
 		auio.uio_offset = 0;
 		auio.uio_rw = UIO_READ;
 		auio.uio_segflg = UIO_SYSSPACE;
-		auio.uio_td = ap->a_td;
+		auio.uio_td = curthread;
 		auio.uio_resid = MAXPATHLEN;
 		rdlnk.a_uio = &auio;
 		rdlnk.a_vp = ap->a_vp;
 		rdlnk.a_cred = ap->a_cred;
 		if (cd9660_readlink(&rdlnk) == 0)
 			vap->va_size = MAXPATHLEN - auio.uio_resid;
-		FREE(cp, M_TEMP);
+		free(cp, M_TEMP);
 	}
 	vap->va_flags	= 0;
 	vap->va_gen = 1;
@@ -250,20 +251,35 @@ cd9660_ioctl(ap)
 		struct thread *a_td;
 	} */ *ap;
 {
-	struct vnode *vp = ap->a_vp;
-	struct iso_node *ip = VTOI(vp);
+	struct vnode *vp;
+	struct iso_node *ip;
+	int error;
 
-	if (vp->v_type == VCHR || vp->v_type == VBLK)
+	vp = ap->a_vp;
+	vn_lock(vp, LK_SHARED | LK_RETRY);
+	if (vp->v_iflag & VI_DOOMED) {
+		VOP_UNLOCK(vp, 0);
+		return (EBADF);
+	}
+	if (vp->v_type == VCHR || vp->v_type == VBLK) {
+		VOP_UNLOCK(vp, 0);
 		return (EOPNOTSUPP);
+	}
+
+	ip = VTOI(vp);
+	error = 0;
 
 	switch (ap->a_command) {
-
 	case FIOGETLBA:
 		*(int *)(ap->a_data) = ip->iso_start;
-		return 0;
+		break;
 	default:
-		return (ENOTTY);
+		error = ENOTTY;
+		break;
 	}
+
+	VOP_UNLOCK(vp, 0);
+	return (error);
 }
 
 /*
@@ -298,13 +314,11 @@ cd9660_read(ap)
 		return (0);
 	if (uio->uio_offset < 0)
 		return (EINVAL);
-	ip->i_flag |= IN_ACCESS;
 	imp = ip->i_mnt;
 	do {
 		lbn = lblkno(imp, uio->uio_offset);
 		on = blkoff(imp, uio->uio_offset);
-		n = min((u_int)(imp->logical_block_size - on),
-			uio->uio_resid);
+		n = MIN(imp->logical_block_size - on, uio->uio_resid);
 		diff = (off_t)ip->i_size - uio->uio_offset;
 		if (diff <= 0)
 			return (0);
@@ -328,7 +342,7 @@ cd9660_read(ap)
 			} else
 				error = bread(vp, lbn, size, NOCRED, &bp);
 		}
-		n = min(n, size - bp->b_resid);
+		n = MIN(n, size - bp->b_resid);
 		if (error) {
 			brelse(bp);
 			return (error);
@@ -400,7 +414,7 @@ iso_shipdir(idp)
 
 	cl = idp->current.d_namlen;
 	cname = idp->current.d_name;
-assoc = (cl > 1) && (*cname == ASSOCCHAR);
+	assoc = (cl > 1) && (*cname == ASSOCCHAR);
 	if (assoc) {
 		cl--;
 		cname++;
@@ -473,7 +487,7 @@ cd9660_readdir(ap)
 	imp = dp->i_mnt;
 	bmask = imp->im_bmask;
 
-	MALLOC(idp, struct isoreaddir *, sizeof(*idp), M_TEMP, M_WAITOK);
+	idp = malloc(sizeof(*idp), M_TEMP, M_WAITOK);
 	idp->saveent.d_namlen = idp->assocent.d_namlen = 0;
 	/*
 	 * XXX
@@ -489,7 +503,7 @@ cd9660_readdir(ap)
 		 * Guess the number of cookies needed.
 		 */
 		ncookies = uio->uio_resid / 16;
-		MALLOC(cookies, u_long *, ncookies * sizeof(u_long),
+		cookies = malloc(ncookies * sizeof(u_long),
 		    M_TEMP, M_WAITOK);
 		idp->cookies = cookies;
 		idp->ncookies = ncookies;
@@ -500,7 +514,7 @@ cd9660_readdir(ap)
 
 	if ((entryoffsetinblock = idp->curroff & bmask) &&
 	    (error = cd9660_blkatoff(vdp, (off_t)idp->curroff, NULL, &bp))) {
-		FREE(idp, M_TEMP);
+		free(idp, M_TEMP);
 		return (error);
 	}
 	endsearch = dp->i_size;
@@ -623,7 +637,7 @@ cd9660_readdir(ap)
 	uio->uio_offset = idp->uio_off;
 	*ap->a_eofflag = idp->eofflag;
 
-	FREE(idp, M_TEMP);
+	free(idp, M_TEMP);
 
 	return (error);
 }
@@ -747,12 +761,6 @@ cd9660_strategy(ap)
 	if (bp->b_blkno == bp->b_lblkno) {
 		bp->b_blkno = (ip->iso_start + bp->b_lblkno) <<
 		    (ip->i_mnt->im_bshift - DEV_BSHIFT);
-		if ((long)bp->b_blkno == -1)	/* XXX: cut&paste junk ? */
-			clrbuf(bp);
-	}
-	if ((long)bp->b_blkno == -1) {	/* XXX: cut&paste junk ? */
-		bufdone(bp);
-		return (0);
 	}
 	bp->b_iooffset = dbtob(bp->b_blkno);
 	bo = ip->i_mnt->im_bo;
@@ -810,20 +818,25 @@ cd9660_vptofh(ap)
 		struct fid *a_fhp;
 	} */ *ap;
 {
+	struct ifid ifh;
 	struct iso_node *ip = VTOI(ap->a_vp);
-	struct ifid *ifhp;
 
-	ifhp = (struct ifid *)ap->a_fhp;
-	ifhp->ifid_len = sizeof(struct ifid);
+	ifh.ifid_len = sizeof(struct ifid);
 
-	ifhp->ifid_ino = ip->i_number;
-	ifhp->ifid_start = ip->iso_start;
+	ifh.ifid_ino = ip->i_number;
+	ifh.ifid_start = ip->iso_start;
+	/*
+	 * This intentionally uses sizeof(ifh) in order to not copy stack
+	 * garbage on ILP32.
+	 */
+	memcpy(ap->a_fhp, &ifh, sizeof(ifh));
 
 #ifdef	ISOFS_DBG
 	printf("vptofh: ino %d, start %ld\n",
-	       ifhp->ifid_ino,ifhp->ifid_start);
+	    ifh.ifid_ino, ifh.ifid_start);
 #endif
-	return 0;
+
+	return (0);
 }
 
 /*

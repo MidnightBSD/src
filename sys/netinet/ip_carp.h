@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet/ip_carp.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: ip_carp.h,v 1.8 2004/07/29 22:12:15 mcbride Exp $	*/
 
 /*
@@ -117,6 +117,11 @@ struct carpstats {
 	uint64_t	carps_preempt;		/* if enabled, preemptions */
 };
 
+#ifdef _KERNEL
+#define	CARPSTATS_ADD(name, val)	carpstats.name += (val)
+#define	CARPSTATS_INC(name)		CARPSTATS_ADD(name, 1)
+#endif
+
 /*
  * Configuration structure for SIOCSVH SIOCGVH
  */
@@ -152,15 +157,35 @@ struct carpreq {
 }
 
 #ifdef _KERNEL
-void		 carp_carpdev_state(void *);
+void		 carp_carpdev_state(struct ifnet *);
 void		 carp_input (struct mbuf *, int);
 int		 carp6_input (struct mbuf **, int *, int);
 int		 carp_output (struct ifnet *, struct mbuf *, struct sockaddr *,
 		     struct rtentry *);
-int		 carp_iamatch (void *, struct in_ifaddr *, struct in_addr *,
+int		 carp_iamatch (struct ifnet *, struct in_ifaddr *, struct in_addr *,
 		     u_int8_t **);
-struct ifaddr	*carp_iamatch6(void *, struct in6_addr *);
-void		*carp_macmatch6(void *, struct mbuf *, const struct in6_addr *);
-struct	ifnet	*carp_forus (void *, void *);
+struct ifaddr	*carp_iamatch6(struct ifnet *, struct in6_addr *);
+caddr_t		carp_macmatch6(struct ifnet *, struct mbuf *, const struct in6_addr *);
+struct	ifnet	*carp_forus (struct ifnet *, u_char *);
+
+/* These are external networking stack hooks for CARP */
+/* net/if.c */
+extern void (*carp_linkstate_p)(struct ifnet *);
+/* net/if_bridge.c net/if_ethersubr.c */
+extern struct ifnet *(*carp_forus_p)(struct ifnet *, u_char *);
+/* net/if_ethersubr.c */
+extern int (*carp_output_p)(struct ifnet *, struct mbuf *,
+    struct sockaddr *, struct rtentry *);
+#ifdef INET
+/* netinet/if_ether.c */
+extern int (*carp_iamatch_p)(struct ifnet *, struct in_ifaddr *,
+    struct in_addr *, u_int8_t **);
+#endif
+#ifdef INET6
+/* netinet6/nd6_nbr.c */
+extern struct ifaddr *(*carp_iamatch6_p)(struct ifnet *, struct in6_addr *);
+extern caddr_t (*carp_macmatch6_p)(struct ifnet *, struct mbuf *,
+    const struct in6_addr *);
+#endif
 #endif
 #endif /* _IP_CARP_H */

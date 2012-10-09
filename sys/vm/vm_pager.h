@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 University of Utah.
  * Copyright (c) 1991, 1993
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vm_pager.h	8.4 (Berkeley) 1/12/94
- * $FreeBSD: src/sys/vm/vm_pager.h,v 1.50 2005/05/18 22:08:52 alc Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -47,10 +46,9 @@
 
 TAILQ_HEAD(pagerlst, vm_object);
 
-struct bio;
-
 typedef void pgo_init_t(void);
-typedef vm_object_t pgo_alloc_t(void *, vm_ooffset_t, vm_prot_t, vm_ooffset_t);
+typedef vm_object_t pgo_alloc_t(void *, vm_ooffset_t, vm_prot_t, vm_ooffset_t,
+    struct ucred *);
 typedef void pgo_dealloc_t(vm_object_t);
 typedef int pgo_getpages_t(vm_object_t, vm_page_t *, int, int);
 typedef void pgo_putpages_t(vm_object_t, vm_page_t *, int, int, int *);
@@ -72,6 +70,8 @@ extern struct pagerops swappagerops;
 extern struct pagerops vnodepagerops;
 extern struct pagerops devicepagerops;
 extern struct pagerops physpagerops;
+extern struct pagerops sgpagerops;
+extern struct pagerops mgtdevicepagerops;
 
 /*
  * get/put return values
@@ -91,19 +91,16 @@ extern struct pagerops physpagerops;
 
 #define	VM_PAGER_PUT_SYNC		0x0001
 #define	VM_PAGER_PUT_INVAL		0x0002
-#define VM_PAGER_IGNORE_CLEANCHK	0x0004
 #define VM_PAGER_CLUSTER_OK		0x0008
 
 #ifdef _KERNEL
-#ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_VMPGDATA);
-#endif
 
 extern vm_map_t pager_map;
 extern struct pagerops *pagertab[];
 extern struct mtx pbuf_mtx;
 
-vm_object_t vm_pager_allocate(objtype_t, void *, vm_ooffset_t, vm_prot_t, vm_ooffset_t);
+vm_object_t vm_pager_allocate(objtype_t, void *, vm_ooffset_t, vm_prot_t,
+    vm_ooffset_t, struct ucred *);
 void vm_pager_bufferinit(void);
 void vm_pager_deallocate(vm_object_t);
 static __inline int vm_pager_get_pages(vm_object_t, vm_page_t *, int, int);
@@ -195,6 +192,20 @@ vm_pager_page_unswapped(vm_page_t m)
 	if (pagertab[m->object->type]->pgo_pageunswapped)
 		(*pagertab[m->object->type]->pgo_pageunswapped)(m);
 }
+
+struct cdev_pager_ops {
+	int (*cdev_pg_fault)(vm_object_t vm_obj, vm_ooffset_t offset,
+	    int prot, vm_page_t *mres);
+	int (*cdev_pg_ctor)(void *handle, vm_ooffset_t size, vm_prot_t prot,
+	    vm_ooffset_t foff, struct ucred *cred, u_short *color);
+	void (*cdev_pg_dtor)(void *handle);
+};
+
+vm_object_t cdev_pager_allocate(void *handle, enum obj_type tp,
+    struct cdev_pager_ops *ops, vm_ooffset_t size, vm_prot_t prot,
+    vm_ooffset_t foff, struct ucred *cred);
+vm_object_t cdev_pager_lookup(void *handle);
+void cdev_pager_free_page(vm_object_t object, vm_page_t m);
 
 #endif				/* _KERNEL */
 #endif				/* _VM_PAGER_ */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)psl.h	5.2 (Berkeley) 1/18/91
- * $FreeBSD: src/sys/amd64/include/psl.h,v 1.13 2004/04/05 21:25:51 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PSL_H_

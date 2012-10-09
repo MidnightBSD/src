@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/vdev_cache.c,v 1.2 2008/12/03 00:24:31 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -20,16 +19,15 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/zfs_context.h>
 #include <sys/spa.h>
 #include <sys/vdev_impl.h>
 #include <sys/zio.h>
+#include <sys/kstat.h>
 
 /*
  * Virtual device read-ahead caching.
@@ -37,15 +35,16 @@
  * This file implements a simple LRU read-ahead cache.  When the DMU reads
  * a given block, it will often want other, nearby blocks soon thereafter.
  * We take advantage of this by reading a larger disk region and caching
- * the result.  In the best case, this can turn 256 back-to-back 512-byte
- * reads into a single 128k read followed by 255 cache hits; this reduces
+ * the result.  In the best case, this can turn 128 back-to-back 512-byte
+ * reads into a single 64k read followed by 127 cache hits; this reduces
  * latency dramatically.  In the worst case, it can turn an isolated 512-byte
- * read into a 128k read, which doesn't affect latency all that much but is
+ * read into a 64k read, which doesn't affect latency all that much but is
  * terribly wasteful of bandwidth.  A more intelligent version of the cache
  * could keep track of access patterns and not do read-ahead unless it sees
- * at least two temporally close I/Os to the same region.  It could also
- * take advantage of semantic information about the I/O.  And it could use
- * something faster than an AVL tree; that was chosen solely for convenience.
+ * at least two temporally close I/Os to the same region.  Currently, only
+ * metadata I/O is inflated.  A futher enhancement could take advantage of
+ * more semantic information about the I/O.  And it could use something
+ * faster than an AVL tree; that was chosen solely for convenience.
  *
  * There are five cache operations: allocate, fill, read, write, evict.
  *
@@ -70,12 +69,21 @@
 /*
  * All i/os smaller than zfs_vdev_cache_max will be turned into
  * 1<<zfs_vdev_cache_bshift byte reads by the vdev_cache (aka software
- * track buffer.  At most zfs_vdev_cache_size bytes will be kept in each
+ * track buffer).  At most zfs_vdev_cache_size bytes will be kept in each
  * vdev's vdev_cache.
+ *
+ * TODO: Note that with the current ZFS code, it turns out that the
+ * vdev cache is not helpful, and in some cases actually harmful.  It
+ * is better if we disable this.  Once some time has passed, we should
+ * actually remove this to simplify the code.  For now we just disable
+ * it by setting the zfs_vdev_cache_size to zero.  Note that Solaris 11
+ * has made these same changes.
  */
-int zfs_vdev_cache_max = 1<<14;
-int zfs_vdev_cache_size = 10ULL << 20;
+int zfs_vdev_cache_max = 1<<14;			/* 16KB */
+int zfs_vdev_cache_size = 0;
 int zfs_vdev_cache_bshift = 16;
+
+#define	VCBS (1 << zfs_vdev_cache_bshift)	/* 64KB */
 
 SYSCTL_DECL(_vfs_zfs_vdev);
 SYSCTL_NODE(_vfs_zfs_vdev, OID_AUTO, cache, CTLFLAG_RW, 0, "ZFS VDEV Cache");
@@ -85,8 +93,25 @@ SYSCTL_INT(_vfs_zfs_vdev_cache, OID_AUTO, max, CTLFLAG_RDTUN,
 TUNABLE_INT("vfs.zfs.vdev.cache.size", &zfs_vdev_cache_size);
 SYSCTL_INT(_vfs_zfs_vdev_cache, OID_AUTO, size, CTLFLAG_RDTUN,
     &zfs_vdev_cache_size, 0, "Size of VDEV cache");
+TUNABLE_INT("vfs.zfs.vdev.cache.bshift", &zfs_vdev_cache_bshift);
+SYSCTL_INT(_vfs_zfs_vdev_cache, OID_AUTO, bshift, CTLFLAG_RDTUN,
+    &zfs_vdev_cache_bshift, 0, "Turn too small requests into 1 << this value");
 
-#define	VCBS (1 << zfs_vdev_cache_bshift)
+kstat_t	*vdc_ksp = NULL;
+
+typedef struct vdc_stats {
+	kstat_named_t vdc_stat_delegations;
+	kstat_named_t vdc_stat_hits;
+	kstat_named_t vdc_stat_misses;
+} vdc_stats_t;
+
+static vdc_stats_t vdc_stats = {
+	{ "delegations",	KSTAT_DATA_UINT64 },
+	{ "hits",		KSTAT_DATA_UINT64 },
+	{ "misses",		KSTAT_DATA_UINT64 }
+};
+
+#define	VDCSTAT_BUMP(stat)	atomic_add_64(&vdc_stats.stat.value.ui64, 1);
 
 static int
 vdev_cache_offset_compare(const void *a1, const void *a2)
@@ -128,10 +153,6 @@ vdev_cache_evict(vdev_cache_t *vc, vdev_cache_entry_t *ve)
 	ASSERT(ve->ve_fill_io == NULL);
 	ASSERT(ve->ve_data != NULL);
 
-	dprintf("evicting %p, off %llx, LRU %llu, age %lu, hits %u, stale %u\n",
-	    vc, ve->ve_offset, ve->ve_lastused, LBOLT - ve->ve_lastused,
-	    ve->ve_hits, ve->ve_missed_update);
-
 	avl_remove(&vc->vc_lastused_tree, ve);
 	avl_remove(&vc->vc_offset_tree, ve);
 	zio_buf_free(ve->ve_data, VCBS);
@@ -162,17 +183,15 @@ vdev_cache_allocate(zio_t *zio)
 	if ((avl_numnodes(&vc->vc_lastused_tree) << zfs_vdev_cache_bshift) >
 	    zfs_vdev_cache_size) {
 		ve = avl_first(&vc->vc_lastused_tree);
-		if (ve->ve_fill_io != NULL) {
-			dprintf("can't evict in %p, still filling\n", vc);
+		if (ve->ve_fill_io != NULL)
 			return (NULL);
-		}
 		ASSERT(ve->ve_hits != 0);
 		vdev_cache_evict(vc, ve);
 	}
 
 	ve = kmem_zalloc(sizeof (vdev_cache_entry_t), KM_SLEEP);
 	ve->ve_offset = offset;
-	ve->ve_lastused = LBOLT;
+	ve->ve_lastused = ddi_get_lbolt();
 	ve->ve_data = zio_buf_alloc(VCBS);
 
 	avl_add(&vc->vc_offset_tree, ve);
@@ -189,9 +208,9 @@ vdev_cache_hit(vdev_cache_t *vc, vdev_cache_entry_t *ve, zio_t *zio)
 	ASSERT(MUTEX_HELD(&vc->vc_lock));
 	ASSERT(ve->ve_fill_io == NULL);
 
-	if (ve->ve_lastused != LBOLT) {
+	if (ve->ve_lastused != ddi_get_lbolt()) {
 		avl_remove(&vc->vc_lastused_tree, ve);
-		ve->ve_lastused = LBOLT;
+		ve->ve_lastused = ddi_get_lbolt();
 		avl_add(&vc->vc_lastused_tree, ve);
 	}
 
@@ -203,23 +222,23 @@ vdev_cache_hit(vdev_cache_t *vc, vdev_cache_entry_t *ve, zio_t *zio)
  * Fill a previously allocated cache entry with data.
  */
 static void
-vdev_cache_fill(zio_t *zio)
+vdev_cache_fill(zio_t *fio)
 {
-	vdev_t *vd = zio->io_vd;
+	vdev_t *vd = fio->io_vd;
 	vdev_cache_t *vc = &vd->vdev_cache;
-	vdev_cache_entry_t *ve = zio->io_private;
-	zio_t *dio;
+	vdev_cache_entry_t *ve = fio->io_private;
+	zio_t *pio;
 
-	ASSERT(zio->io_size == VCBS);
+	ASSERT(fio->io_size == VCBS);
 
 	/*
 	 * Add data to the cache.
 	 */
 	mutex_enter(&vc->vc_lock);
 
-	ASSERT(ve->ve_fill_io == zio);
-	ASSERT(ve->ve_offset == zio->io_offset);
-	ASSERT(ve->ve_data == zio->io_data);
+	ASSERT(ve->ve_fill_io == fio);
+	ASSERT(ve->ve_offset == fio->io_offset);
+	ASSERT(ve->ve_data == fio->io_data);
 
 	ve->ve_fill_io = NULL;
 
@@ -228,20 +247,13 @@ vdev_cache_fill(zio_t *zio)
 	 * any reads that were queued up before the missed update are still
 	 * valid, so we can satisfy them from this line before we evict it.
 	 */
-	for (dio = zio->io_delegate_list; dio; dio = dio->io_delegate_next)
-		vdev_cache_hit(vc, ve, dio);
+	while ((pio = zio_walk_parents(fio)) != NULL)
+		vdev_cache_hit(vc, ve, pio);
 
-	if (zio->io_error || ve->ve_missed_update)
+	if (fio->io_error || ve->ve_missed_update)
 		vdev_cache_evict(vc, ve);
 
 	mutex_exit(&vc->vc_lock);
-
-	while ((dio = zio->io_delegate_list) != NULL) {
-		zio->io_delegate_list = dio->io_delegate_next;
-		dio->io_delegate_next = NULL;
-		dio->io_error = zio->io_error;
-		zio_next_stage(dio);
-	}
 }
 
 /*
@@ -267,7 +279,7 @@ vdev_cache_read(zio_t *zio)
 	/*
 	 * If the I/O straddles two or more cache blocks, don't cache it.
 	 */
-	if (P2CROSS(zio->io_offset, zio->io_offset + zio->io_size - 1, VCBS))
+	if (P2BOUNDARY(zio->io_offset, zio->io_size, VCBS))
 		return (EXDEV);
 
 	ASSERT(cache_phase + zio->io_size <= VCBS);
@@ -284,10 +296,10 @@ vdev_cache_read(zio_t *zio)
 		}
 
 		if ((fio = ve->ve_fill_io) != NULL) {
-			zio->io_delegate_next = fio->io_delegate_list;
-			fio->io_delegate_list = zio;
 			zio_vdev_io_bypass(zio);
+			zio_add_child(zio, fio);
 			mutex_exit(&vc->vc_lock);
+			VDCSTAT_BUMP(vdc_stat_delegations);
 			return (0);
 		}
 
@@ -295,7 +307,7 @@ vdev_cache_read(zio_t *zio)
 		zio_vdev_io_bypass(zio);
 
 		mutex_exit(&vc->vc_lock);
-		zio_next_stage(zio);
+		VDCSTAT_BUMP(vdc_stat_hits);
 		return (0);
 	}
 
@@ -306,18 +318,17 @@ vdev_cache_read(zio_t *zio)
 		return (ENOMEM);
 	}
 
-	fio = zio_vdev_child_io(zio, NULL, zio->io_vd, cache_offset,
+	fio = zio_vdev_delegated_io(zio->io_vd, cache_offset,
 	    ve->ve_data, VCBS, ZIO_TYPE_READ, ZIO_PRIORITY_CACHE_FILL,
-	    ZIO_FLAG_DONT_CACHE | ZIO_FLAG_DONT_PROPAGATE |
-	    ZIO_FLAG_DONT_RETRY | ZIO_FLAG_NOBOOKMARK,
-	    vdev_cache_fill, ve);
+	    ZIO_FLAG_DONT_CACHE, vdev_cache_fill, ve);
 
 	ve->ve_fill_io = fio;
-	fio->io_delegate_list = zio;
 	zio_vdev_io_bypass(zio);
+	zio_add_child(zio, fio);
 
 	mutex_exit(&vc->vc_lock);
 	zio_nowait(fio);
+	VDCSTAT_BUMP(vdc_stat_misses);
 
 	return (0);
 }
@@ -362,6 +373,18 @@ vdev_cache_write(zio_t *zio)
 }
 
 void
+vdev_cache_purge(vdev_t *vd)
+{
+	vdev_cache_t *vc = &vd->vdev_cache;
+	vdev_cache_entry_t *ve;
+
+	mutex_enter(&vc->vc_lock);
+	while ((ve = avl_first(&vc->vc_offset_tree)) != NULL)
+		vdev_cache_evict(vc, ve);
+	mutex_exit(&vc->vc_lock);
+}
+
+void
 vdev_cache_init(vdev_t *vd)
 {
 	vdev_cache_t *vc = &vd->vdev_cache;
@@ -381,15 +404,32 @@ void
 vdev_cache_fini(vdev_t *vd)
 {
 	vdev_cache_t *vc = &vd->vdev_cache;
-	vdev_cache_entry_t *ve;
 
-	mutex_enter(&vc->vc_lock);
-	while ((ve = avl_first(&vc->vc_offset_tree)) != NULL)
-		vdev_cache_evict(vc, ve);
-	mutex_exit(&vc->vc_lock);
+	vdev_cache_purge(vd);
 
 	avl_destroy(&vc->vc_offset_tree);
 	avl_destroy(&vc->vc_lastused_tree);
 
 	mutex_destroy(&vc->vc_lock);
+}
+
+void
+vdev_cache_stat_init(void)
+{
+	vdc_ksp = kstat_create("zfs", 0, "vdev_cache_stats", "misc",
+	    KSTAT_TYPE_NAMED, sizeof (vdc_stats) / sizeof (kstat_named_t),
+	    KSTAT_FLAG_VIRTUAL);
+	if (vdc_ksp != NULL) {
+		vdc_ksp->ks_data = &vdc_stats;
+		kstat_install(vdc_ksp);
+	}
+}
+
+void
+vdev_cache_stat_fini(void)
+{
+	if (vdc_ksp != NULL) {
+		kstat_delete(vdc_ksp);
+		vdc_ksp = NULL;
+	}
 }

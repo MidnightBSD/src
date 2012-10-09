@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1990, 1993
@@ -38,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ipc.h	8.4 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/ipc.h,v 1.25.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -70,15 +69,25 @@ typedef	__uid_t		uid_t;
 #define	_UID_T_DECLARED
 #endif
 
-/*
- * XXX almost all members have wrong types.
- */
-struct ipc_perm {
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+struct ipc_perm_old {
 	unsigned short	cuid;	/* creator user id */
 	unsigned short	cgid;	/* creator group id */
 	unsigned short	uid;	/* user id */
 	unsigned short	gid;	/* group id */
 	unsigned short	mode;	/* r/w permission */
+	unsigned short	seq;	/* sequence # (to generate unique ipcid) */
+	key_t		key;	/* user specified msg/sem/shm key */
+};
+#endif
+
+struct ipc_perm {
+	uid_t		cuid;	/* creator user id */
+	gid_t		cgid;	/* creator group id */
+	uid_t		uid;	/* user id */
+	gid_t		gid;	/* group id */
+	mode_t		mode;	/* r/w permission */
 	unsigned short	seq;	/* sequence # (to generate unique ipcid) */
 	key_t		key;	/* user specified msg/sem/shm key */
 };
@@ -101,6 +110,9 @@ struct ipc_perm {
 #define	IPC_SET		1	/* set options */
 #define	IPC_STAT	2	/* get options */
 #if __BSD_VISIBLE
+/*
+ * For Linux compatability.
+ */
 #define	IPC_INFO	3	/* get info */
 #endif
 
@@ -113,6 +125,12 @@ struct ipc_perm {
 struct thread;
 struct proc;
 struct vmspace;
+
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+void	ipcperm_old2new(struct ipc_perm_old *, struct ipc_perm *);
+void	ipcperm_new2old(struct ipc_perm *, struct ipc_perm_old *);
+#endif
 
 int	ipcperm(struct thread *, struct ipc_perm *, int);
 extern void (*shmfork_hook)(struct proc *, struct proc *);

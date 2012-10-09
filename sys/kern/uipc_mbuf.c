@@ -30,11 +30,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_mbuf.c,v 1.174.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
-#include "opt_mac.h"
 #include "opt_param.h"
 #include "opt_mbuf_stress_test.h"
+#include "opt_mbuf_profiling.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,8 +47,6 @@ __FBSDID("$FreeBSD: src/sys/kern/uipc_mbuf.c,v 1.174.2.2.2.1 2008/11/25 02:59:29
 #include <sys/domain.h>
 #include <sys/protosw.h>
 #include <sys/uio.h>
-
-#include <security/mac/mac_framework.h>
 
 int	max_linkhdr;
 int	max_protohdr;
@@ -186,7 +184,7 @@ m_freem(struct mbuf *mb)
  */
 void
 m_extadd(struct mbuf *mb, caddr_t buf, u_int size,
-    void (*freef)(void *, void *), void *args, int flags, int type)
+    void (*freef)(void *, void *), void *arg1, void *arg2, int flags, int type)
 {
 	KASSERT(type != EXT_CLUSTER, ("%s: EXT_CLUSTER not allowed", __func__));
 
@@ -199,7 +197,8 @@ m_extadd(struct mbuf *mb, caddr_t buf, u_int size,
 		mb->m_data = mb->m_ext.ext_buf;
 		mb->m_ext.ext_size = size;
 		mb->m_ext.ext_free = freef;
-		mb->m_ext.ext_args = args;
+		mb->m_ext.ext_arg1 = arg1;
+		mb->m_ext.ext_arg2 = arg2;
 		mb->m_ext.ext_type = type;
         }
 }
@@ -254,8 +253,8 @@ mb_free_ext(struct mbuf *m)
 		case EXT_EXTREF:
 			KASSERT(m->m_ext.ext_free != NULL,
 				("%s: ext_free not set", __func__));
-			(*(m->m_ext.ext_free))(m->m_ext.ext_buf,
-			    m->m_ext.ext_args);
+			(*(m->m_ext.ext_free))(m->m_ext.ext_arg1,
+			    m->m_ext.ext_arg2);
 			break;
 		default:
 			KASSERT(m->m_ext.ext_type == 0,
@@ -271,7 +270,8 @@ mb_free_ext(struct mbuf *m)
 	 */
 	m->m_ext.ext_buf = NULL;
 	m->m_ext.ext_free = NULL;
-	m->m_ext.ext_args = NULL;
+	m->m_ext.ext_arg1 = NULL;
+	m->m_ext.ext_arg2 = NULL;
 	m->m_ext.ref_cnt = NULL;
 	m->m_ext.ext_size = 0;
 	m->m_ext.ext_type = 0;
@@ -280,7 +280,7 @@ mb_free_ext(struct mbuf *m)
 }
 
 /*
- * Attach the the cluster from *m to *n, set up m_ext in *n
+ * Attach the cluster from *m to *n, set up m_ext in *n
  * and bump the refcount of the cluster.
  */
 static void
@@ -296,7 +296,8 @@ mb_dupcl(struct mbuf *n, struct mbuf *m)
 		atomic_add_int(m->m_ext.ref_cnt, 1);
 	n->m_ext.ext_buf = m->m_ext.ext_buf;
 	n->m_ext.ext_free = m->m_ext.ext_free;
-	n->m_ext.ext_args = m->m_ext.ext_args;
+	n->m_ext.ext_arg1 = m->m_ext.ext_arg1;
+	n->m_ext.ext_arg2 = m->m_ext.ext_arg2;
 	n->m_ext.ext_size = m->m_ext.ext_size;
 	n->m_ext.ref_cnt = m->m_ext.ref_cnt;
 	n->m_ext.ext_type = m->m_ext.ext_type;
@@ -320,11 +321,13 @@ m_demote(struct mbuf *m0, int all)
 			m->m_flags &= ~M_PKTHDR;
 			bzero(&m->m_pkthdr, sizeof(struct pkthdr));
 		}
-		if (m->m_type == MT_HEADER)
-			m->m_type = MT_DATA;
-		if (m != m0 && m->m_nextpkt != NULL)
+		if (m != m0 && m->m_nextpkt != NULL) {
+			KASSERT(m->m_nextpkt == NULL,
+			    ("%s: m_nextpkt not NULL", __func__));
+			m_freem(m->m_nextpkt);
 			m->m_nextpkt = NULL;
-		m->m_flags = m->m_flags & (M_EXT|M_EOR|M_RDONLY|M_FREELIST);
+		}
+		m->m_flags = m->m_flags & (M_EXT|M_RDONLY|M_FREELIST|M_NOFREE);
 	}
 }
 
@@ -517,7 +520,7 @@ m_prepend(struct mbuf *m, int len, int how)
 /*
  * Make a copy of an mbuf chain starting "off0" bytes from the beginning,
  * continuing for "len" bytes.  If len is M_COPYALL, copy to end of mbuf.
- * The wait parameter is a choice of M_TRYWAIT/M_DONTWAIT from caller.
+ * The wait parameter is a choice of M_WAIT/M_DONTWAIT from caller.
  * Note that the copy is read-only, because clusters are not copied,
  * only their reference counts are incremented.
  */
@@ -946,9 +949,8 @@ m_adj(struct mbuf *mp, int req_len)
 				len = 0;
 			}
 		}
-		m = mp;
 		if (mp->m_flags & M_PKTHDR)
-			m->m_pkthdr.len -= (req_len - len);
+			mp->m_pkthdr.len -= (req_len - len);
 	} else {
 		/*
 		 * Trim from tail.  Scan the mbuf chain,
@@ -1268,6 +1270,10 @@ m_copyback(struct mbuf *m0, int off, int len, c_caddr_t cp)
 		m = m->m_next;
 	}
 	while (len > 0) {
+		if (m->m_next == NULL && (len > m->m_len - off)) {
+			m->m_len += min(len - (m->m_len - off),
+			    M_TRAILINGSPACE(m));
+		}
 		mlen = min (m->m_len - off, len);
 		bcopy(cp, off + mtod(m, caddr_t), (u_int)mlen);
 		cp += mlen;
@@ -1403,6 +1409,11 @@ m_print(const struct mbuf *m, int maxlen)
 	int len;
 	int pdata;
 	const struct mbuf *m2;
+
+	if (m == NULL) {
+		printf("mbuf: %p\n", m);
+		return;
+	}
 
 	if (m->m_flags & M_PKTHDR)
 		len = m->m_pkthdr.len;
@@ -1715,7 +1726,8 @@ struct mbuf *
 m_uiotombuf(struct uio *uio, int how, int len, int align, int flags)
 {
 	struct mbuf *m, *mb;
-	int error, length, total;
+	int error, length;
+	ssize_t total;
 	int progress = 0;
 
 	/*
@@ -1761,6 +1773,34 @@ m_uiotombuf(struct uio *uio, int how, int len, int align, int flags)
 	KASSERT(progress == total, ("%s: progress != total", __func__));
 
 	return (m);
+}
+
+/*
+ * Copy an mbuf chain into a uio limited by len if set.
+ */
+int
+m_mbuftouio(struct uio *uio, struct mbuf *m, int len)
+{
+	int error, length, total;
+	int progress = 0;
+
+	if (len > 0)
+		total = min(uio->uio_resid, len);
+	else
+		total = uio->uio_resid;
+
+	/* Fill the uio with data from the mbufs. */
+	for (; m != NULL; m = m->m_next) {
+		length = min(m->m_len, total - progress);
+
+		error = uiomove(mtod(m, void *), length, uio);
+		if (error)
+			return (error);
+
+		progress += length;
+	}
+
+	return (0);
 }
 
 /*
@@ -1934,3 +1974,154 @@ m_unshare(struct mbuf *m0, int how)
 	}
 	return (m0);
 }
+
+#ifdef MBUF_PROFILING
+
+#define MP_BUCKETS 32 /* don't just change this as things may overflow.*/
+struct mbufprofile {
+	uintmax_t wasted[MP_BUCKETS];
+	uintmax_t used[MP_BUCKETS];
+	uintmax_t segments[MP_BUCKETS];
+} mbprof;
+
+#define MP_MAXDIGITS 21	/* strlen("16,000,000,000,000,000,000") == 21 */
+#define MP_NUMLINES 6
+#define MP_NUMSPERLINE 16
+#define MP_EXTRABYTES 64	/* > strlen("used:\nwasted:\nsegments:\n") */
+/* work out max space needed and add a bit of spare space too */
+#define MP_MAXLINE ((MP_MAXDIGITS+1) * MP_NUMSPERLINE)
+#define MP_BUFSIZE ((MP_MAXLINE * MP_NUMLINES) + 1 + MP_EXTRABYTES)
+
+char mbprofbuf[MP_BUFSIZE];
+
+void
+m_profile(struct mbuf *m)
+{
+	int segments = 0;
+	int used = 0;
+	int wasted = 0;
+	
+	while (m) {
+		segments++;
+		used += m->m_len;
+		if (m->m_flags & M_EXT) {
+			wasted += MHLEN - sizeof(m->m_ext) +
+			    m->m_ext.ext_size - m->m_len;
+		} else {
+			if (m->m_flags & M_PKTHDR)
+				wasted += MHLEN - m->m_len;
+			else
+				wasted += MLEN - m->m_len;
+		}
+		m = m->m_next;
+	}
+	/* be paranoid.. it helps */
+	if (segments > MP_BUCKETS - 1)
+		segments = MP_BUCKETS - 1;
+	if (used > 100000)
+		used = 100000;
+	if (wasted > 100000)
+		wasted = 100000;
+	/* store in the appropriate bucket */
+	/* don't bother locking. if it's slightly off, so what? */
+	mbprof.segments[segments]++;
+	mbprof.used[fls(used)]++;
+	mbprof.wasted[fls(wasted)]++;
+}
+
+static void
+mbprof_textify(void)
+{
+	int offset;
+	char *c;
+	uint64_t *p;
+	
+
+	p = &mbprof.wasted[0];
+	c = mbprofbuf;
+	offset = snprintf(c, MP_MAXLINE + 10, 
+	    "wasted:\n"
+	    "%ju %ju %ju %ju %ju %ju %ju %ju "
+	    "%ju %ju %ju %ju %ju %ju %ju %ju\n",
+	    p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+	    p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+#ifdef BIG_ARRAY
+	p = &mbprof.wasted[16];
+	c += offset;
+	offset = snprintf(c, MP_MAXLINE, 
+	    "%ju %ju %ju %ju %ju %ju %ju %ju "
+	    "%ju %ju %ju %ju %ju %ju %ju %ju\n",
+	    p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+	    p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+#endif
+	p = &mbprof.used[0];
+	c += offset;
+	offset = snprintf(c, MP_MAXLINE + 10, 
+	    "used:\n"
+	    "%ju %ju %ju %ju %ju %ju %ju %ju "
+	    "%ju %ju %ju %ju %ju %ju %ju %ju\n",
+	    p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+	    p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+#ifdef BIG_ARRAY
+	p = &mbprof.used[16];
+	c += offset;
+	offset = snprintf(c, MP_MAXLINE, 
+	    "%ju %ju %ju %ju %ju %ju %ju %ju "
+	    "%ju %ju %ju %ju %ju %ju %ju %ju\n",
+	    p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+	    p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+#endif
+	p = &mbprof.segments[0];
+	c += offset;
+	offset = snprintf(c, MP_MAXLINE + 10, 
+	    "segments:\n"
+	    "%ju %ju %ju %ju %ju %ju %ju %ju "
+	    "%ju %ju %ju %ju %ju %ju %ju %ju\n",
+	    p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+	    p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+#ifdef BIG_ARRAY
+	p = &mbprof.segments[16];
+	c += offset;
+	offset = snprintf(c, MP_MAXLINE, 
+	    "%ju %ju %ju %ju %ju %ju %ju %ju "
+	    "%ju %ju %ju %ju %ju %ju %ju %jju",
+	    p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+	    p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+#endif
+}
+
+static int
+mbprof_handler(SYSCTL_HANDLER_ARGS)
+{
+	int error;
+
+	mbprof_textify();
+	error = SYSCTL_OUT(req, mbprofbuf, strlen(mbprofbuf) + 1);
+	return (error);
+}
+
+static int
+mbprof_clr_handler(SYSCTL_HANDLER_ARGS)
+{
+	int clear, error;
+ 
+	clear = 0;
+	error = sysctl_handle_int(oidp, &clear, 0, req);
+	if (error || !req->newptr)
+		return (error);
+ 
+	if (clear) {
+		bzero(&mbprof, sizeof(mbprof));
+	}
+ 
+	return (error);
+}
+
+
+SYSCTL_PROC(_kern_ipc, OID_AUTO, mbufprofile, CTLTYPE_STRING|CTLFLAG_RD,
+	    NULL, 0, mbprof_handler, "A", "mbuf profiling statistics");
+
+SYSCTL_PROC(_kern_ipc, OID_AUTO, mbufprofileclr, CTLTYPE_INT|CTLFLAG_RW,
+	    NULL, 0, mbprof_clr_handler, "I", "clear mbuf profiling statistics");
+#endif
+

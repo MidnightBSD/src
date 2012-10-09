@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * Copyright (c) 1999-2005 Apple Inc.
+ * Copyright (c) 1999-2009 Apple Inc.
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
  *
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/audit/audit_bsm_klib.c,v 1.7.2.8.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -39,7 +38,9 @@ __FBSDID("$FreeBSD: src/sys/security/audit/audit_bsm_klib.c,v 1.7.2.8.2.1 2008/1
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/proc.h>
+#include <sys/rwlock.h>
 #include <sys/sem.h>
+#include <sys/sbuf.h>
 #include <sys/syscall.h>
 #include <sys/sysctl.h>
 #include <sys/sysent.h>
@@ -65,8 +66,51 @@ struct evclass_list {
 };
 
 static MALLOC_DEFINE(M_AUDITEVCLASS, "audit_evclass", "Audit event class");
-static struct mtx		evclass_mtx;
+static struct rwlock		evclass_lock;
 static struct evclass_list	evclass_hash[EVCLASSMAP_HASH_TABLE_SIZE];
+
+#define	EVCLASS_LOCK_INIT()	rw_init(&evclass_lock, "evclass_lock")
+#define	EVCLASS_RLOCK()		rw_rlock(&evclass_lock)
+#define	EVCLASS_RUNLOCK()	rw_runlock(&evclass_lock)
+#define	EVCLASS_WLOCK()		rw_wlock(&evclass_lock)
+#define	EVCLASS_WUNLOCK()	rw_wunlock(&evclass_lock)
+
+struct aue_open_event {
+	int		aoe_flags;
+	au_event_t	aoe_event;
+};
+
+static const struct aue_open_event aue_open[] = {
+	{ O_RDONLY,					AUE_OPEN_R },
+	{ (O_RDONLY | O_CREAT),				AUE_OPEN_RC },
+	{ (O_RDONLY | O_CREAT | O_TRUNC),		AUE_OPEN_RTC },
+	{ (O_RDONLY | O_TRUNC),				AUE_OPEN_RT },
+	{ O_RDWR,					AUE_OPEN_RW },
+	{ (O_RDWR | O_CREAT),				AUE_OPEN_RWC },
+	{ (O_RDWR | O_CREAT | O_TRUNC),			AUE_OPEN_RWTC },
+	{ (O_RDWR | O_TRUNC),				AUE_OPEN_RWT },
+	{ O_WRONLY,					AUE_OPEN_W },
+	{ (O_WRONLY | O_CREAT),				AUE_OPEN_WC },
+	{ (O_WRONLY | O_CREAT | O_TRUNC),		AUE_OPEN_WTC },
+	{ (O_WRONLY | O_TRUNC),				AUE_OPEN_WT },
+};
+static const int aue_open_count = sizeof(aue_open) / sizeof(aue_open[0]);
+
+static const struct aue_open_event aue_openat[] = {
+	{ O_RDONLY,					AUE_OPENAT_R },
+	{ (O_RDONLY | O_CREAT),				AUE_OPENAT_RC },
+	{ (O_RDONLY | O_CREAT | O_TRUNC),		AUE_OPENAT_RTC },
+	{ (O_RDONLY | O_TRUNC),				AUE_OPENAT_RT },
+	{ O_RDWR,					AUE_OPENAT_RW },
+	{ (O_RDWR | O_CREAT),				AUE_OPENAT_RWC },
+	{ (O_RDWR | O_CREAT | O_TRUNC),			AUE_OPENAT_RWTC },
+	{ (O_RDWR | O_TRUNC),				AUE_OPENAT_RWT },
+	{ O_WRONLY,					AUE_OPENAT_W },
+	{ (O_WRONLY | O_CREAT),				AUE_OPENAT_WC },
+	{ (O_WRONLY | O_CREAT | O_TRUNC),		AUE_OPENAT_WTC },
+	{ (O_WRONLY | O_TRUNC),				AUE_OPENAT_WT },
+};
+static const int aue_openat_count = sizeof(aue_openat) / sizeof(aue_openat[0]);
 
 /*
  * Look up the class for an audit event in the class mapping table.
@@ -78,7 +122,7 @@ au_event_class(au_event_t event)
 	struct evclass_elem *evc;
 	au_class_t class;
 
-	mtx_lock(&evclass_mtx);
+	EVCLASS_RLOCK();
 	evcl = &evclass_hash[event % EVCLASSMAP_HASH_TABLE_SIZE];
 	class = 0;
 	LIST_FOREACH(evc, &evcl->head, entry) {
@@ -88,7 +132,7 @@ au_event_class(au_event_t event)
 		}
 	}
 out:
-	mtx_unlock(&evclass_mtx);
+	EVCLASS_RUNLOCK();
 	return (class);
 }
 
@@ -111,12 +155,12 @@ au_evclassmap_insert(au_event_t event, au_class_t class)
 	 */
 	evc_new = malloc(sizeof(*evc), M_AUDITEVCLASS, M_WAITOK);
 
-	mtx_lock(&evclass_mtx);
+	EVCLASS_WLOCK();
 	evcl = &evclass_hash[event % EVCLASSMAP_HASH_TABLE_SIZE];
 	LIST_FOREACH(evc, &evcl->head, entry) {
 		if (evc->event == event) {
 			evc->class = class;
-			mtx_unlock(&evclass_mtx);
+			EVCLASS_WUNLOCK();
 			free(evc_new, M_AUDITEVCLASS);
 			return;
 		}
@@ -125,7 +169,7 @@ au_evclassmap_insert(au_event_t event, au_class_t class)
 	evc->event = event;
 	evc->class = class;
 	LIST_INSERT_HEAD(&evcl->head, evc, entry);
-	mtx_unlock(&evclass_mtx);
+	EVCLASS_WUNLOCK();
 }
 
 void
@@ -133,7 +177,7 @@ au_evclassmap_init(void)
 {
 	int i;
 
-	mtx_init(&evclass_mtx, "evclass_mtx", NULL, MTX_DEF);
+	EVCLASS_LOCK_INIT();
 	for (i = 0; i < EVCLASSMAP_HASH_TABLE_SIZE; i++)
 		LIST_INIT(&evclass_hash[i].head);
 
@@ -246,100 +290,39 @@ audit_ctlname_to_sysctlevent(int name[], uint64_t valid_arg)
 au_event_t
 audit_flags_and_error_to_openevent(int oflags, int error)
 {
-	au_event_t aevent;
+	int i;
 
 	/*
 	 * Need to check only those flags we care about.
 	 */
 	oflags = oflags & (O_RDONLY | O_CREAT | O_TRUNC | O_RDWR | O_WRONLY);
+	for (i = 0; i < aue_open_count; i++) {
+		if (aue_open[i].aoe_flags == oflags)
+			return (aue_open[i].aoe_event);
+	}
+	return (AUE_OPEN);
+}
+
+au_event_t
+audit_flags_and_error_to_openatevent(int oflags, int error)
+{
+	int i;
 
 	/*
-	 * These checks determine what flags are on with the condition that
-	 * ONLY that combination is on, and no other flags are on.
+	 * Need to check only those flags we care about.
 	 */
-	switch (oflags) {
-	case O_RDONLY:
-		aevent = AUE_OPEN_R;
-		break;
-
-	case (O_RDONLY | O_CREAT):
-		aevent = AUE_OPEN_RC;
-		break;
-
-	case (O_RDONLY | O_CREAT | O_TRUNC):
-		aevent = AUE_OPEN_RTC;
-		break;
-
-	case (O_RDONLY | O_TRUNC):
-		aevent = AUE_OPEN_RT;
-		break;
-
-	case O_RDWR:
-		aevent = AUE_OPEN_RW;
-		break;
-
-	case (O_RDWR | O_CREAT):
-		aevent = AUE_OPEN_RWC;
-		break;
-
-	case (O_RDWR | O_CREAT | O_TRUNC):
-		aevent = AUE_OPEN_RWTC;
-		break;
-
-	case (O_RDWR | O_TRUNC):
-		aevent = AUE_OPEN_RWT;
-		break;
-
-	case O_WRONLY:
-		aevent = AUE_OPEN_W;
-		break;
-
-	case (O_WRONLY | O_CREAT):
-		aevent = AUE_OPEN_WC;
-		break;
-
-	case (O_WRONLY | O_CREAT | O_TRUNC):
-		aevent = AUE_OPEN_WTC;
-		break;
-
-	case (O_WRONLY | O_TRUNC):
-		aevent = AUE_OPEN_WT;
-		break;
-
-	default:
-		aevent = AUE_OPEN;
-		break;
+	oflags = oflags & (O_RDONLY | O_CREAT | O_TRUNC | O_RDWR | O_WRONLY);
+	for (i = 0; i < aue_openat_count; i++) {
+		if (aue_openat[i].aoe_flags == oflags)
+			return (aue_openat[i].aoe_event);
 	}
-
-#if 0
-	/*
-	 * Convert chatty errors to better matching events.  Failures to
-	 * find a file are really just attribute events -- so recast them as
-	 * such.
-	 *
-	 * XXXAUDIT: Solaris defines that AUE_OPEN will never be returned, it
-	 * is just a placeholder.  However, in Darwin we return that in
-	 * preference to other events.  For now, comment this out as we don't
-	 * have a BSM conversion routine for AUE_OPEN.
-	 */
-	switch (aevent) {
-	case AUE_OPEN_R:
-	case AUE_OPEN_RT:
-	case AUE_OPEN_RW:
-	case AUE_OPEN_RWT:
-	case AUE_OPEN_W:
-	case AUE_OPEN_WT:
-		if (error == ENOENT)
-			aevent = AUE_OPEN;
-	}
-#endif
-	return (aevent);
+	return (AUE_OPENAT);
 }
 
 /*
  * Convert a MSGCTL command to a specific event.
  */
-int
+au_event_t
 audit_msgctl_to_event(int cmd)
 {
 
@@ -362,7 +345,7 @@ audit_msgctl_to_event(int cmd)
 /*
  * Convert a SEMCTL command to a specific event.
  */
-int
+au_event_t
 audit_semctl_to_event(int cmd)
 {
 
@@ -406,7 +389,7 @@ audit_semctl_to_event(int cmd)
 /*
  * Convert a command for the auditon() system call to a audit event.
  */
-int
+au_event_t
 auditon_command_event(int cmd)
 {
 
@@ -477,73 +460,97 @@ auditon_command_event(int cmd)
  * directory is NULL, we could use 'rootvnode' to obtain the root directory,
  * but this results in a volfs name written to the audit log. So we will
  * leave the filename starting with '/' in the audit log in this case.
- *
- * XXXRW: Since we combine two paths here, ideally a buffer of size
- * MAXPATHLEN * 2 would be passed in.
  */
 void
 audit_canon_path(struct thread *td, char *path, char *cpath)
 {
-	char *bufp;
-	char *retbuf, *freebuf;
-	struct vnode *vnp;
+	struct vnode *cvnp, *rvnp;
+	char *rbuf, *fbuf, *copy;
 	struct filedesc *fdp;
-	int cisr, error, vfslocked;
+	struct sbuf sbf;
+	int error, cwir;
 
-	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL,
-	    "audit_canon_path() at %s:%d", __FILE__, __LINE__);
+	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL, "%s: at %s:%d",
+	    __func__,  __FILE__, __LINE__);
 
+	copy = path;
+	rvnp = cvnp = NULL;
 	fdp = td->td_proc->p_fd;
-	bufp = path;
-	cisr = 0;
 	FILEDESC_SLOCK(fdp);
-	if (*(path) == '/') {
-		while (*(bufp) == '/')
-			bufp++;			/* Skip leading '/'s. */
-		/*
-		 * If no process root, or it is the same as the system root,
-		 * audit the path as passed in with a single '/'.
-		 */
-		if ((fdp->fd_rdir == NULL) ||
-		    (fdp->fd_rdir == rootvnode)) {
-			vnp = NULL;
-			bufp--;			/* Restore one '/'. */
-		} else {
-			vnp = fdp->fd_rdir;	/* Use process root. */
-			vref(vnp);
-		}
-	} else {
-		vnp = fdp->fd_cdir;	/* Prepend the current dir. */
-		cisr = (fdp->fd_rdir == fdp->fd_cdir);
-		vref(vnp);
-		bufp = path;
+	/*
+	 * Make sure that we handle the chroot(2) case.  If there is an
+	 * alternate root directory, prepend it to the audited pathname.
+	 */
+	if (fdp->fd_rdir != NULL && fdp->fd_rdir != rootvnode) {
+		rvnp = fdp->fd_rdir;
+		vhold(rvnp);
 	}
+	/*
+	 * If the supplied path is relative, make sure we capture the current
+	 * working directory so we can prepend it to the supplied relative
+	 * path.
+	 */
+	if (*path != '/') {
+		cvnp = fdp->fd_cdir;
+		vhold(cvnp);
+	}
+	cwir = (fdp->fd_rdir == fdp->fd_cdir);
 	FILEDESC_SUNLOCK(fdp);
-	if (vnp != NULL) {
-		/*
-		 * XXX: vn_fullpath() on FreeBSD is "less reliable" than
-		 * vn_getpath() on Darwin, so this will need more attention
-		 * in the future.  Also, the question and string bounding
-		 * here seems a bit questionable and will also require
-		 * attention.
-		 */
-		vfslocked = VFS_LOCK_GIANT(vnp->v_mount);
-		vn_lock(vnp, LK_EXCLUSIVE | LK_RETRY, td);
-		error = vn_fullpath(td, vnp, &retbuf, &freebuf);
-		if (error == 0) {
-			/* Copy and free buffer allocated by vn_fullpath().
-			 * If the current working directory was the same as
-			 * the root directory, and the path was a relative
-			 * pathname, do not separate the two components with
-			 * the '/' character.
-			 */
-			snprintf(cpath, MAXPATHLEN, "%s%s%s", retbuf,
-			    cisr ? "" : "/", bufp);
-			free(freebuf, M_TEMP);
-		} else
+	/*
+	 * NB: We require that the supplied array be at least MAXPATHLEN bytes
+	 * long.  If this is not the case, then we can run into serious trouble.
+	 */
+	(void) sbuf_new(&sbf, cpath, MAXPATHLEN, SBUF_FIXEDLEN);
+	/*
+	 * Strip leading forward slashes.
+	 */
+	while (*copy == '/')
+		copy++;
+	/*
+	 * Make sure we handle chroot(2) and prepend the global path to these
+	 * environments.
+	 *
+	 * NB: vn_fullpath(9) on FreeBSD is less reliable than vn_getpath(9)
+	 * on Darwin.  As a result, this may need some additional attention
+	 * in the future.
+	 */
+	if (rvnp != NULL) {
+		error = vn_fullpath_global(td, rvnp, &rbuf, &fbuf);
+		vdrop(rvnp);
+		if (error) {
 			cpath[0] = '\0';
-		vput(vnp);
-		VFS_UNLOCK_GIANT(vfslocked);
-	} else
-		strlcpy(cpath, bufp, MAXPATHLEN);
+			if (cvnp != NULL)
+				vdrop(cvnp);
+			return;
+		}
+		(void) sbuf_cat(&sbf, rbuf);
+		free(fbuf, M_TEMP);
+	}
+	if (cvnp != NULL) {
+		error = vn_fullpath(td, cvnp, &rbuf, &fbuf);
+		vdrop(cvnp);
+		if (error) {
+			cpath[0] = '\0';
+			return;
+		}
+		(void) sbuf_cat(&sbf, rbuf);
+		free(fbuf, M_TEMP);
+	}
+	if (cwir == 0 || (cwir != 0 && cvnp == NULL))
+		(void) sbuf_putc(&sbf, '/');
+	/*
+	 * Now that we have processed any alternate root and relative path
+	 * names, add the supplied pathname.
+	 */
+        (void) sbuf_cat(&sbf, copy);
+	/*
+	 * One or more of the previous sbuf operations could have resulted in
+	 * the supplied buffer being overflowed.  Check to see if this is the
+	 * case.
+	 */
+	if (sbuf_error(&sbf) != 0) {
+		cpath[0] = '\0';
+		return;
+	}
+	sbuf_finish(&sbf);
 }

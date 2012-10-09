@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbd.c,v 1.52.2.1.2.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_kbd.h"
@@ -44,10 +44,10 @@ __FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbd.c,v 1.52.2.1.2.1 2010/02/10 00:26:2
 #include <machine/bus.h>
 #include <machine/resource.h>
 
-#ifdef __i386__
+#if defined(__i386__) || defined(__amd64__)
 #include <machine/md_var.h>
 #include <machine/psl.h>
-#include <machine/vm86.h>
+#include <compat/x86bios/x86bios.h>
 #include <machine/pc/bios.h>
 
 #include <vm/vm.h>
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbd.c,v 1.52.2.1.2.1 2010/02/10 00:26:2
 #include <vm/vm_param.h>
 
 #include <isa/isareg.h>
-#endif /* __i386__ */
+#endif /* __i386__ || __amd64__ */
 
 #include <sys/kbio.h>
 #include <dev/kbd/kbdreg.h>
@@ -162,15 +162,15 @@ atkbd_timeout(void *arg)
 	 */
 	s = spltty();
 	kbd = (keyboard_t *)arg;
-	if ((*kbdsw[kbd->kb_index]->lock)(kbd, TRUE)) {
+	if (kbdd_lock(kbd, TRUE)) {
 		/*
 		 * We have seen the lock flag is not set. Let's reset
 		 * the flag early, otherwise the LED update routine fails
 		 * which may want the lock during the interrupt routine.
 		 */
-		(*kbdsw[kbd->kb_index]->lock)(kbd, FALSE);
-		if ((*kbdsw[kbd->kb_index]->check_char)(kbd))
-			(*kbdsw[kbd->kb_index]->intr)(kbd, NULL);
+		kbdd_lock(kbd, FALSE);
+		if (kbdd_check_char(kbd))
+			kbdd_intr(kbd, NULL);
 	}
 	splx(s);
 	timeout(atkbd_timeout, arg, hz/10);
@@ -982,6 +982,7 @@ atkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 		return error;
 
 	case PIO_KEYMAP:	/* set keyboard translation table */
+	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 	case PIO_KEYMAPENT:	/* set keyboard translation table entry */
 	case PIO_DEADKEYMAP:	/* set accent key translation table */
 		state->ks_accents = 0;
@@ -1089,34 +1090,55 @@ atkbd_shutdown_final(void *v)
 static int
 get_typematic(keyboard_t *kbd)
 {
-#ifdef __i386__
+#if defined(__i386__) || defined(__amd64__)
 	/*
-	 * Only some systems allow us to retrieve the keyboard repeat 
+	 * Only some systems allow us to retrieve the keyboard repeat
 	 * rate previously set via the BIOS...
 	 */
-	struct vm86frame vmf;
-	u_int32_t p;
+	x86regs_t regs;
+	uint8_t *p;
 
-	bzero(&vmf, sizeof(vmf));
-	vmf.vmf_ax = 0xc000;
-	vm86_intcall(0x15, &vmf);
-	if ((vmf.vmf_eflags & PSL_C) || vmf.vmf_ah)
-		return ENODEV;
-        p = BIOS_PADDRTOVADDR(((u_int32_t)vmf.vmf_es << 4) + vmf.vmf_bx);
-	if ((readb(p + 6) & 0x40) == 0)	/* int 16, function 0x09 supported? */
-		return ENODEV;
-	vmf.vmf_ax = 0x0900;
-	vm86_intcall(0x16, &vmf);
-	if ((vmf.vmf_al & 0x08) == 0)	/* int 16, function 0x0306 supported? */
-		return ENODEV;
-	vmf.vmf_ax = 0x0306;
-	vm86_intcall(0x16, &vmf);
-	kbd->kb_delay1 = typematic_delay(vmf.vmf_bh << 5);
-	kbd->kb_delay2 = typematic_rate(vmf.vmf_bl);
-	return 0;
+	/*
+	 * Traditional entry points of int 0x15 and 0x16 are fixed
+	 * and later BIOSes follow them.  (U)EFI CSM specification
+	 * also mandates these fixed entry points.
+	 *
+	 * Validate the entry points here before we proceed further.
+	 * It's known that some recent laptops does not have the
+	 * same entry point and hang on boot if we call it.
+	 */
+	if (x86bios_get_intr(0x15) != 0xf000f859 ||
+	    x86bios_get_intr(0x16) != 0xf000e82e)
+		return (ENODEV);
+
+	/* Is BIOS system configuration table supported? */
+	x86bios_init_regs(&regs);
+	regs.R_AH = 0xc0;
+	x86bios_intr(&regs, 0x15);
+	if ((regs.R_FLG & PSL_C) != 0 || regs.R_AH != 0)
+		return (ENODEV);
+
+	/* Is int 0x16, function 0x09 supported? */
+	p = x86bios_offset((regs.R_ES << 4) + regs.R_BX);
+	if (readw(p) < 5 || (readb(p + 6) & 0x40) == 0)
+		return (ENODEV);
+
+	/* Is int 0x16, function 0x0306 supported? */
+	x86bios_init_regs(&regs);
+	regs.R_AH = 0x09;
+	x86bios_intr(&regs, 0x16);
+	if ((regs.R_AL & 0x08) == 0)
+		return (ENODEV);
+
+	x86bios_init_regs(&regs);
+	regs.R_AX = 0x0306;
+	x86bios_intr(&regs, 0x16);
+	kbd->kb_delay1 = typematic_delay(regs.R_BH << 5);
+	kbd->kb_delay2 = typematic_rate(regs.R_BL);
+	return (0);
 #else
-	return ENODEV;
-#endif /* __i386__ */
+	return (ENODEV);
+#endif /* __i386__ || __amd64__ */
 }
 
 static int

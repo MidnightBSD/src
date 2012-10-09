@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -47,9 +47,9 @@ extern "C" {
  * providers. Those providers are each represented by a fasttrap_provider_t.
  * All providers for a given process have a pointer to a shared
  * fasttrap_proc_t. The fasttrap_proc_t has two states: active or defunct.
- * When the count of live providers goes to zero it becomes defunct; providers
- * drop their count when they are removed individually or en masse when a
- * process exits or performs an exec.
+ * When the count of active providers goes to zero it becomes defunct; a
+ * provider drops its active count when it is removed individually or as part
+ * of a mass removal when a process exits or performs an exec.
  *
  * Each probe is represented by a fasttrap_probe_t which has a pointer to
  * its associated provider as well as a list of fasttrap_id_tp_t structures
@@ -58,8 +58,8 @@ extern "C" {
  * and it contains two lists of fasttrap_id_t structures (to be fired pre-
  * and post-instruction emulation) that identify the probes attached to the
  * tracepoint. Tracepoints also have a pointer to the fasttrap_proc_t for the
- * process they trace which is used when looking up a tracepoint both at
- * probe fire time and when enabling and disabling probes.
+ * process they trace which is used when looking up a tracepoint both when a
+ * probe fires and when enabling and disabling probes.
  *
  * It's important to note that probes are preallocated with the necessary
  * number of tracepoints, but that tracepoints can be shared by probes and
@@ -73,12 +73,8 @@ extern "C" {
 typedef struct fasttrap_proc {
 	pid_t ftpc_pid;				/* process ID for this proc */
 	uint64_t ftpc_acount;			/* count of active providers */
-	uint64_t ftpc_rcount;			/* provider reference count */
-#if defined(sun)
-	kmutex_t ftpc_mtx;			/* proc lock */
-#else
-	struct mtx ftpc_mtx;			/* proc lock */
-#endif
+	uint64_t ftpc_rcount;			/* count of extant providers */
+	kmutex_t ftpc_mtx;			/* lock on all but acount */
 	struct fasttrap_proc *ftpc_next;	/* next proc in hash chain */
 } fasttrap_proc_t;
 
@@ -88,13 +84,8 @@ typedef struct fasttrap_provider {
 	dtrace_provider_id_t ftp_provid;	/* DTrace provider handle */
 	uint_t ftp_marked;			/* mark for possible removal */
 	uint_t ftp_retired;			/* mark when retired */
-#if defined(sun)
 	kmutex_t ftp_mtx;			/* provider lock */
 	kmutex_t ftp_cmtx;			/* lock on creating probes */
-#else
-	struct mtx ftp_mtx;			/* provider lock */
-	struct mtx ftp_cmtx;			/* lock on creating probes */
-#endif
 	uint64_t ftp_rcount;			/* enabled probes ref count */
 	uint64_t ftp_ccount;			/* consumers creating probes */
 	uint64_t ftp_mcount;			/* meta provider count */
@@ -148,14 +139,10 @@ struct fasttrap_tracepoint {
 };
 
 typedef struct fasttrap_bucket {
-#if defined(sun)
 	kmutex_t ftb_mtx;			/* bucket lock */
-#else
-	struct mtx ftb_mtx;			/* bucket lock */
-#endif
 	void *ftb_data;				/* data payload */
 
-	uint8_t ftb_pad[64 - sizeof (struct mtx) - sizeof (void *)];
+	uint8_t ftb_pad[64 - sizeof (kmutex_t) - sizeof (void *)];
 } fasttrap_bucket_t;
 
 typedef struct fasttrap_hash {
@@ -171,10 +158,16 @@ typedef struct fasttrap_hash {
  */
 #define	fasttrap_copyout	copyout
 #define	fasttrap_fuword32	fuword32
-#define	fasttrap_suword32	suword32
+#define	fasttrap_suword32(_k, _u)	copyout((_k), (_u), sizeof(uint32_t))
+#define	fasttrap_suword64(_k, _u)	copyout((_k), (_u), sizeof(uint64_t))
 
-#define	fasttrap_fulword	fulword
-#define	fasttrap_sulword	sulword
+#ifdef __amd64__
+#define	fasttrap_fulword	fuword64
+#define	fasttrap_sulword	fasttrap_suword64
+#else
+#define	fasttrap_fulword	fuword32
+#define	fasttrap_sulword	fasttrap_suword32
+#endif
 
 extern void fasttrap_sigtrap(proc_t *, kthread_t *, uintptr_t);
 
@@ -192,8 +185,9 @@ extern int fasttrap_tracepoint_init(proc_t *, fasttrap_tracepoint_t *,
 extern int fasttrap_tracepoint_install(proc_t *, fasttrap_tracepoint_t *);
 extern int fasttrap_tracepoint_remove(proc_t *, fasttrap_tracepoint_t *);
 
-extern int fasttrap_pid_probe(struct regs *);
-extern int fasttrap_return_probe(struct regs *);
+struct reg;
+extern int fasttrap_pid_probe(struct reg *);
+extern int fasttrap_return_probe(struct reg *);
 
 extern uint64_t fasttrap_pid_getarg(void *, dtrace_id_t, void *, int, int);
 extern uint64_t fasttrap_usdt_getarg(void *, dtrace_id_t, void *, int, int);

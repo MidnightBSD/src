@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)buf.h	8.9 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/sys/buf.h,v 1.196.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_BUF_H_
@@ -89,7 +88,7 @@ typedef unsigned char b_xflags_t;
  *	completes, b_resid is usually 0 indicating 100% success.
  *
  *	All fields are protected by the buffer lock except those marked:
- *		V - Protected by owning vnode lock
+ *		V - Protected by owning bufobj lock
  *		Q - Protected by the buf queue lock
  *		D - Protected by an dependency implementation specific lock
  */
@@ -216,7 +215,7 @@ struct buf {
 #define	B_DIRTY		0x00200000	/* Needs writing later (in EXT2FS). */
 #define	B_RELBUF	0x00400000	/* Release VMIO buffer. */
 #define	B_00800000	0x00800000	/* Available flag. */
-#define	B_01000000	0x01000000	/* Available flag. */
+#define	B_NOCOPY	0x01000000	/* Don't copy-on-write this buf. */
 #define	B_NEEDSGIANT	0x02000000	/* Buffer's vnode needs giant. */
 #define	B_PAGING	0x04000000	/* volatile paging I/O -- bypass VMIO */
 #define B_MANAGED	0x08000000	/* Managed by FS. */
@@ -225,8 +224,8 @@ struct buf {
 #define B_CLUSTER	0x40000000	/* pagein op, so swap() can count it */
 #define B_REMFREE	0x80000000	/* Delayed bremfree */
 
-#define PRINT_BUF_FLAGS "\20\40remfree\37cluster\36vmio\35ram\34b27" \
-	"\33paging\32b25\31b24\30b23\27relbuf\26dirty\25b20" \
+#define PRINT_BUF_FLAGS "\20\40remfree\37cluster\36vmio\35ram\34managed" \
+	"\33paging\32needsgiant\31nocopy\30b23\27relbuf\26dirty\25b20" \
 	"\24b19\23b18\22clusterok\21malloc\20nocache\17b14\16inval" \
 	"\15b12\14b11\13eintr\12done\11persist\10delwri\7validsuspwrt" \
 	"\6cache\5deferred\4direct\3async\2needcommit\1age"
@@ -240,6 +239,8 @@ struct buf {
 #define BX_BKGRDMARKER	0x00000020	/* Mark buffer for splay tree */
 #define	BX_ALTDATA	0x00000040	/* Holds extended data */
 
+#define	PRINT_BUF_XFLAGS "\20\7altdata\6bkgrdmarker\5bkgrdwrite\2clean\1dirty"
+
 #define	NOOFFSET	(-1LL)		/* No buffer offset calculated yet */
 
 /*
@@ -248,6 +249,9 @@ struct buf {
 #define	BV_SCANNED	0x00000001	/* VOP_FSYNC funcs mark written bufs */
 #define	BV_BKGRDINPROG	0x00000002	/* Background write in progress */
 #define	BV_BKGRDWAIT	0x00000004	/* Background write waiting */
+#define	BV_INFREECNT	0x80000000	/* buf is counted in numfreebufs */
+
+#define	PRINT_BUF_VFLAGS "\20\40infreecnt\3bkgrdwait\2bkgrdinprog\1scanned"
 
 #ifdef _KERNEL
 /*
@@ -261,74 +265,83 @@ extern const char *buf_wmesg;		/* Default buffer lock message */
 /*
  * Initialize a lock.
  */
-#define BUF_LOCKINIT(bp) \
+#define BUF_LOCKINIT(bp)						\
 	lockinit(&(bp)->b_lock, PRIBIO + 4, buf_wmesg, 0, 0)
 /*
  *
  * Get a lock sleeping non-interruptably until it becomes available.
  */
-static __inline int BUF_LOCK(struct buf *, int, struct mtx *);
-static __inline int
-BUF_LOCK(struct buf *bp, int locktype, struct mtx *interlock)
-{
-	int s, ret;
+#define	BUF_LOCK(bp, locktype, interlock)				\
+	_lockmgr_args(&(bp)->b_lock, (locktype), (interlock),		\
+	    LK_WMESG_DEFAULT, LK_PRIO_DEFAULT, LK_TIMO_DEFAULT,		\
+	    LOCK_FILE, LOCK_LINE)
 
-	s = splbio();
-	mtx_lock(bp->b_lock.lk_interlock);
-	locktype |= LK_INTERNAL;
-	bp->b_lock.lk_wmesg = buf_wmesg;
-	bp->b_lock.lk_prio = PRIBIO + 4;
-	ret = lockmgr(&(bp)->b_lock, locktype, interlock, curthread);
-	splx(s);
-	return ret;
-}
 /*
  * Get a lock sleeping with specified interruptably and timeout.
  */
-static __inline int BUF_TIMELOCK(struct buf *, int, struct mtx *,
-    char *, int, int);
-static __inline int
-BUF_TIMELOCK(struct buf *bp, int locktype, struct mtx *interlock,
-    char *wmesg, int catch, int timo)
-{
-	int s, ret;
+#define	BUF_TIMELOCK(bp, locktype, interlock, wmesg, catch, timo)	\
+	_lockmgr_args(&(bp)->b_lock, (locktype) | LK_TIMELOCK,		\
+	    (interlock), (wmesg), (PRIBIO + 4) | (catch), (timo),	\
+	    LOCK_FILE, LOCK_LINE)
 
-	s = splbio();
-	mtx_lock(bp->b_lock.lk_interlock);
-	locktype |= LK_INTERNAL | LK_TIMELOCK;
-	bp->b_lock.lk_wmesg = wmesg;
-	bp->b_lock.lk_prio = (PRIBIO + 4) | catch;
-	bp->b_lock.lk_timo = timo;
-	ret = lockmgr(&(bp)->b_lock, (locktype), interlock, curthread);
-	splx(s);
-	return ret;
-}
 /*
  * Release a lock. Only the acquiring process may free the lock unless
  * it has been handed off to biodone.
  */
-static __inline void BUF_UNLOCK(struct buf *);
-static __inline void
-BUF_UNLOCK(struct buf *bp)
-{
-	int s;
+#define	BUF_UNLOCK(bp) do {						\
+	KASSERT(((bp)->b_flags & B_REMFREE) == 0,			\
+	    ("BUF_UNLOCK %p while B_REMFREE is still set.", (bp)));	\
+									\
+	(void)_lockmgr_args(&(bp)->b_lock, LK_RELEASE, NULL,		\
+	    LK_WMESG_DEFAULT, LK_PRIO_DEFAULT, LK_TIMO_DEFAULT,		\
+	    LOCK_FILE, LOCK_LINE);					\
+} while (0)
 
-	s = splbio();
-	KASSERT((bp->b_flags & B_REMFREE) == 0,
-	    ("BUF_UNLOCK %p while B_REMFREE is still set.", bp));
-	lockmgr(&(bp)->b_lock, LK_RELEASE, NULL, curthread);
-	splx(s);
-}
+/*
+ * Check if a buffer lock is recursed.
+ */
+#define	BUF_LOCKRECURSED(bp)						\
+	lockmgr_recursed(&(bp)->b_lock)
 
+/*
+ * Check if a buffer lock is currently held.
+ */
+#define	BUF_ISLOCKED(bp)						\
+	lockstatus(&(bp)->b_lock)
 /*
  * Free a buffer lock.
  */
-#define BUF_LOCKFREE(bp) 			\
-do {						\
-	if (BUF_REFCNT(bp) > 0)			\
-		panic("free locked buf");	\
-	lockdestroy(&(bp)->b_lock);		\
-} while (0)
+#define BUF_LOCKFREE(bp) 						\
+	lockdestroy(&(bp)->b_lock)
+
+/*
+ * Print informations on a buffer lock.
+ */
+#define BUF_LOCKPRINTINFO(bp) 						\
+	lockmgr_printinfo(&(bp)->b_lock)
+
+/*
+ * Buffer lock assertions.
+ */
+#if defined(INVARIANTS) && defined(INVARIANT_SUPPORT)
+#define	BUF_ASSERT_LOCKED(bp)						\
+	_lockmgr_assert(&(bp)->b_lock, KA_LOCKED, LOCK_FILE, LOCK_LINE)
+#define	BUF_ASSERT_SLOCKED(bp)						\
+	_lockmgr_assert(&(bp)->b_lock, KA_SLOCKED, LOCK_FILE, LOCK_LINE)
+#define	BUF_ASSERT_XLOCKED(bp)						\
+	_lockmgr_assert(&(bp)->b_lock, KA_XLOCKED, LOCK_FILE, LOCK_LINE)
+#define	BUF_ASSERT_UNLOCKED(bp)						\
+	_lockmgr_assert(&(bp)->b_lock, KA_UNLOCKED, LOCK_FILE, LOCK_LINE)
+#define	BUF_ASSERT_HELD(bp)
+#define	BUF_ASSERT_UNHELD(bp)
+#else
+#define	BUF_ASSERT_LOCKED(bp)
+#define	BUF_ASSERT_SLOCKED(bp)
+#define	BUF_ASSERT_XLOCKED(bp)
+#define	BUF_ASSERT_UNLOCKED(bp)
+#define	BUF_ASSERT_HELD(bp)
+#define	BUF_ASSERT_UNHELD(bp)
+#endif
 
 #ifdef _SYS_PROC_H_	/* Avoid #include <sys/proc.h> pollution */
 /*
@@ -337,50 +350,15 @@ do {						\
  * original owning process can no longer acquire it recursively, but must
  * wait until the I/O is completed and the lock has been freed by biodone.
  */
-static __inline void BUF_KERNPROC(struct buf *);
-static __inline void
-BUF_KERNPROC(struct buf *bp)
-{
-	struct thread *td = curthread;
-
-	if (!TD_IS_IDLETHREAD(td) && bp->b_lock.lk_lockholder == td)
-		td->td_locks--;
-	bp->b_lock.lk_lockholder = LK_KERNPROC;
-}
+#define	BUF_KERNPROC(bp)						\
+	_lockmgr_disown(&(bp)->b_lock, LOCK_FILE, LOCK_LINE)
 #endif
-/*
- * Find out the number of references to a lock.
- */
-static __inline int BUF_REFCNT(struct buf *);
-static __inline int
-BUF_REFCNT(struct buf *bp)
-{
-	int s, ret;
-
-	/*
-	 * When the system is panicing, the lock manager grants all lock
-	 * requests whether or not the lock is available. To avoid "unlocked
-	 * buffer" panics after a crash, we just claim that all buffers
-	 * are locked when cleaning up after a system panic.
-	 */
-	if (panicstr != NULL)
-		return (1);
-	s = splbio();
-	ret = lockcount(&(bp)->b_lock);
-	splx(s);
-	return ret;
-}
-
 
 /*
- * Find out the number of waiters on a lock.
+ * Find out if the lock has waiters or not.
  */
-static __inline int BUF_LOCKWAITERS(struct buf *);
-static __inline int
-BUF_LOCKWAITERS(struct buf *bp)
-{
-	return (lockwaiters(&bp->b_lock));
-}
+#define	BUF_LOCKWAITERS(bp)						\
+	lockmgr_waiters(&(bp)->b_lock)
 
 #endif /* _KERNEL */
 
@@ -476,13 +454,14 @@ buf_countdeps(struct buf *bp, int i)
  */
 #define	GB_LOCK_NOWAIT	0x0001		/* Fail if we block on a buf lock. */
 #define	GB_NOCREAT	0x0002		/* Don't create a buf if not found. */
+#define	GB_NOWAIT_BD	0x0004		/* Do not wait for bufdaemon */
 
 #ifdef _KERNEL
 extern int	nbuf;			/* The number of buffer headers */
-extern int	maxswzone;		/* Max KVA for swap structures */
-extern int	maxbcache;		/* Max KVA for buffer cache */
-extern int	runningbufspace;
-extern int	hibufspace;
+extern long	maxswzone;		/* Max KVA for swap structures */
+extern long	maxbcache;		/* Max KVA for buffer cache */
+extern long	runningbufspace;
+extern long	hibufspace;
 extern int	dirtybufthresh;
 extern int	bdwriteskip;
 extern int	dirtybufferflushes;
@@ -508,6 +487,8 @@ int	bread(struct vnode *, daddr_t, int, struct ucred *, struct buf **);
 void	breada(struct vnode *, daddr_t *, int *, int, struct ucred *);
 int	breadn(struct vnode *, daddr_t, int, daddr_t *, int *, int,
 	    struct ucred *, struct buf **);
+int	breadn_flags(struct vnode *, daddr_t, int, daddr_t *, int *, int,
+	    struct ucred *, int, struct buf **);
 void	bdwrite(struct buf *);
 void	bawrite(struct buf *);
 void	bdirty(struct buf *);
@@ -520,17 +501,18 @@ struct buf *     getpbuf(int *);
 struct buf *incore(struct bufobj *, daddr_t);
 struct buf *gbincore(struct bufobj *, daddr_t);
 struct buf *getblk(struct vnode *, daddr_t, int, int, int, int);
-struct buf *geteblk(int);
+struct buf *geteblk(int, int);
 int	bufwait(struct buf *);
 int	bufwrite(struct buf *);
 void	bufdone(struct buf *);
 void	bufdone_finish(struct buf *);
+void	bd_speedup(void);
 
 int	cluster_read(struct vnode *, u_quad_t, daddr_t, long,
 	    struct ucred *, long, int, struct buf **);
 int	cluster_wbuild(struct vnode *, long, daddr_t, int);
 void	cluster_write(struct vnode *, struct buf *, u_quad_t, int);
-void	vfs_bio_set_validclean(struct buf *, int base, int size);
+void	vfs_bio_set_valid(struct buf *, int base, int size);
 void	vfs_bio_clrbuf(struct buf *);
 void	vfs_busy_pages(struct buf *, int clear_modify);
 void	vfs_unbusy_pages(struct buf *);

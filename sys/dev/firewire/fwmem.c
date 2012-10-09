@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2003
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -36,7 +35,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/firewire/fwmem.c,v 1.34 2007/06/06 14:31:36 simokawa Exp $");
+__FBSDID("$FreeBSD$");
 #endif
 
 #include <sys/param.h>
@@ -446,7 +445,8 @@ int
 #if defined(__DragonFly__) || __FreeBSD_version < 500102
 fwmem_mmap (struct cdev *dev, vm_offset_t offset, int nproto)
 #else
-fwmem_mmap (struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int nproto)
+fwmem_mmap (struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int nproto, vm_memattr_t *memattr)
 #endif
 {  
 	return EINVAL;

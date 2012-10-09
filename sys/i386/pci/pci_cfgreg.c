@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/pci/pci_cfgreg.c,v 1.124.2.5 2009/11/01 18:40:03 avg Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_xbox.h"
 
@@ -85,7 +85,7 @@ static uint32_t pcie_badslots;
 static int cfgmech;
 static int devmax;
 static struct mtx pcicfg_mtx;
-static int mcfg_enable = 0;
+static int mcfg_enable = 1;
 TUNABLE_INT("hw.pci.mcfg", &mcfg_enable);
 SYSCTL_INT(_hw_pci, OID_AUTO, mcfg, CTLFLAG_RDTUN, &mcfg_enable, 0,
     "Enable support for PCI-e memory mapped config access");
@@ -94,7 +94,9 @@ static uint32_t	pci_docfgregread(int bus, int slot, int func, int reg,
 		    int bytes);
 static int	pcireg_cfgread(int bus, int slot, int func, int reg, int bytes);
 static void	pcireg_cfgwrite(int bus, int slot, int func, int reg, int data, int bytes);
+#ifndef XEN
 static int	pcireg_cfgopen(void);
+#endif
 static int	pciereg_cfgread(int bus, unsigned slot, unsigned func,
 		    unsigned reg, unsigned bytes);
 static void	pciereg_cfgwrite(int bus, unsigned slot, unsigned func,
@@ -115,6 +117,7 @@ pci_i386_map_intline(int line)
 	return (line);
 }
 
+#ifndef XEN
 static u_int16_t
 pcibios_get_version(void)
 {
@@ -135,6 +138,7 @@ pcibios_get_version(void)
 	}
 	return (args.ebx & 0xffff);
 }
+#endif
 
 /* 
  * Initialise access to PCI configuration space 
@@ -142,6 +146,9 @@ pcibios_get_version(void)
 int
 pci_cfgregopen(void)
 {
+#ifdef XEN
+	return (0);
+#else
 	static int		opened = 0;
 	uint64_t		pciebar;
 	u_int16_t		vid, did;
@@ -196,6 +203,7 @@ pci_cfgregopen(void)
 	}
 
 	return(1);
+#endif
 }
 
 static uint32_t
@@ -383,6 +391,7 @@ pcireg_cfgwrite(int bus, int slot, int func, int reg, int data, int bytes)
 	mtx_unlock_spin(&pcicfg_mtx);
 }
 
+#ifndef XEN
 /* check whether the configuration mechanism has been correctly identified */
 static int
 pci_cfgcheck(int maxdev)
@@ -544,7 +553,7 @@ pcie_cfgregopen(uint64_t base, uint8_t minbus, uint8_t maxbus)
 		    (uintmax_t)base);
 
 #ifdef SMP
-	SLIST_FOREACH(pc, &cpuhead, pc_allcpu)
+	STAILQ_FOREACH(pc, &cpuhead, pc_allcpu)
 #endif
 	{
 
@@ -599,6 +608,7 @@ pcie_cfgregopen(uint64_t base, uint8_t minbus, uint8_t maxbus)
 
 	return (1);
 }
+#endif /* !XEN */
 
 #define PCIE_PADDR(bar, reg, bus, slot, func)	\
 	((bar)				|	\

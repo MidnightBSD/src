@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/i386/vm86bios.s,v 1.32 2006/12/17 05:07:01 kmacy Exp $
+ * $FreeBSD$
  */
 
 #include "opt_npx.h"
@@ -73,10 +73,9 @@ ENTRY(vm86_bioscall)
 	je 	1f			/* no curproc/npxproc */
 	pushl	%edx
 	movl	TD_PCB(%ecx),%ecx
-	addl	$PCB_SAVEFPU,%ecx
-	pushl	%ecx
+	pushl	PCB_SAVEFPU(%ecx)
 	call	npxsave
-	popl	%ecx
+	addl	$4,%esp
 	popl	%edx			/* recover our pcb */
 1:
 	popfl

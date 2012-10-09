@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/sys/agpio.h,v 1.4.28.1 2008/11/25 02:59:29 kensmith Exp $
+ *	$MidnightBSD$
  */
 
 #ifndef _SYS_AGPIO_H_
@@ -89,6 +88,7 @@
 #define AGPIOC_DEALLOCATE _IOW (AGPIOC_BASE, 7, int)
 #define AGPIOC_BIND       _IOW (AGPIOC_BASE, 8, agp_bind)
 #define AGPIOC_UNBIND     _IOW (AGPIOC_BASE, 9, agp_unbind)
+#define AGPIOC_CHIPSET_FLUSH _IO (AGPIOC_BASE, 10)
 
 typedef struct _agp_version {
 	u_int16_t major;

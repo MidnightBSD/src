@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/in6_gif.c,v 1.29.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -41,10 +41,11 @@ __FBSDID("$FreeBSD: src/sys/netinet6/in6_gif.c,v 1.29.2.1.2.1 2008/11/25 02:59:2
 #include <sys/sockio.h>
 #include <sys/mbuf.h>
 #include <sys/errno.h>
+#include <sys/kernel.h>
 #include <sys/queue.h>
 #include <sys/syslog.h>
+#include <sys/sysctl.h>
 #include <sys/protosw.h>
-
 #include <sys/malloc.h>
 
 #include <net/if.h>
@@ -70,16 +71,26 @@ __FBSDID("$FreeBSD: src/sys/netinet6/in6_gif.c,v 1.29.2.1.2.1 2008/11/25 02:59:2
 
 #include <net/if_gif.h>
 
+VNET_DEFINE(int, ip6_gif_hlim) = GIF_HLIM;
+#define	V_ip6_gif_hlim			VNET(ip6_gif_hlim)
+
+SYSCTL_DECL(_net_inet6_ip6);
+SYSCTL_VNET_INT(_net_inet6_ip6, IPV6CTL_GIF_HLIM, gifhlim, CTLFLAG_RW,
+    &VNET_NAME(ip6_gif_hlim), 0, "");
+
 static int gif_validate6(const struct ip6_hdr *, struct gif_softc *,
 			 struct ifnet *);
 
 extern  struct domain inet6domain;
-struct ip6protosw in6_gif_protosw =
-{ SOCK_RAW,	&inet6domain,	0/* IPPROTO_IPV[46] */,	PR_ATOMIC|PR_ADDR,
-  in6_gif_input, rip6_output,	0,		rip6_ctloutput,
-  0,
-  0,		0,		0,		0,
-  &rip6_usrreqs
+struct ip6protosw in6_gif_protosw = {
+	.pr_type =	SOCK_RAW,
+	.pr_domain =	&inet6domain,
+	.pr_protocol =	0,			/* IPPROTO_IPV[46] */
+	.pr_flags =	PR_ATOMIC|PR_ADDR,
+	.pr_input =	in6_gif_input,
+	.pr_output =	rip6_output,
+	.pr_ctloutput =	rip6_ctloutput,
+	.pr_usrreqs =	&rip6_usrreqs
 };
 
 int
@@ -93,7 +104,7 @@ in6_gif_output(struct ifnet *ifp,
 	struct sockaddr_in6 *sin6_dst = (struct sockaddr_in6 *)sc->gif_pdst;
 	struct ip6_hdr *ip6;
 	struct etherip_header eiphdr;
-	int proto, error;
+	int error, len, proto;
 	u_int8_t itos, otos;
 
 	GIF_LOCK_ASSERT(sc);
@@ -139,8 +150,22 @@ in6_gif_output(struct ifnet *ifp,
 #endif
 	case AF_LINK:
 		proto = IPPROTO_ETHERIP;
-		eiphdr.eip_ver = ETHERIP_VERSION & ETHERIP_VER_VERS_MASK;
-		eiphdr.eip_pad = 0;
+
+		/*
+		 * GIF_SEND_REVETHIP (disabled by default) intentionally
+		 * sends an EtherIP packet with revered version field in
+		 * the header.  This is a knob for backward compatibility
+		 * with FreeBSD 7.2R or prior.
+		 */
+		if ((sc->gif_options & GIF_SEND_REVETHIP)) {
+			eiphdr.eip_ver = 0;
+			eiphdr.eip_resvl = ETHERIP_VERSION;
+			eiphdr.eip_resvh = 0;
+		} else {
+			eiphdr.eip_ver = ETHERIP_VERSION;
+			eiphdr.eip_resvl = 0;
+			eiphdr.eip_resvh = 0;
+		}
 		/* prepend Ethernet-in-IP header */
 		M_PREPEND(m, sizeof(struct etherip_header), M_DONTWAIT);
 		if (m && m->m_len < sizeof(struct etherip_header))
@@ -161,13 +186,27 @@ in6_gif_output(struct ifnet *ifp,
 	}
 
 	/* prepend new IP header */
-	M_PREPEND(m, sizeof(struct ip6_hdr), M_DONTWAIT);
-	if (m && m->m_len < sizeof(struct ip6_hdr))
-		m = m_pullup(m, sizeof(struct ip6_hdr));
+	len = sizeof(struct ip6_hdr);
+#ifndef __NO_STRICT_ALIGNMENT
+	if (family == AF_LINK)
+		len += ETHERIP_ALIGN;
+#endif
+	M_PREPEND(m, len, M_DONTWAIT);
+	if (m != NULL && m->m_len < len)
+		m = m_pullup(m, len);
 	if (m == NULL) {
 		printf("ENOBUFS in in6_gif_output %d\n", __LINE__);
 		return ENOBUFS;
 	}
+#ifndef __NO_STRICT_ALIGNMENT
+	if (family == AF_LINK) {
+		len = mtod(m, vm_offset_t) & 3;
+		KASSERT(len == 0 || len == ETHERIP_ALIGN,
+		    ("in6_gif_output: unexpected misalignment"));
+		m->m_data += len;
+		m->m_len -= ETHERIP_ALIGN;
+	}
+#endif
 
 	ip6 = mtod(m, struct ip6_hdr *);
 	ip6->ip6_flow	= 0;
@@ -175,7 +214,7 @@ in6_gif_output(struct ifnet *ifp,
 	ip6->ip6_vfc	|= IPV6_VERSION;
 	ip6->ip6_plen	= htons((u_short)m->m_pkthdr.len);
 	ip6->ip6_nxt	= proto;
-	ip6->ip6_hlim	= ip6_gif_hlim;
+	ip6->ip6_hlim	= V_ip6_gif_hlim;
 	ip6->ip6_src	= sin6_src->sin6_addr;
 	/* bidirectional configured tunnel mode */
 	if (!IN6_IS_ADDR_UNSPECIFIED(&sin6_dst->sin6_addr))
@@ -188,6 +227,8 @@ in6_gif_output(struct ifnet *ifp,
 		       &otos, &itos);
 	ip6->ip6_flow &= ~htonl(0xff << 20);
 	ip6->ip6_flow |= htonl((u_int32_t)otos << 20);
+
+	M_SETFIB(m, sc->gif_fibnum);
 
 	if (dst->sin6_family != sin6_dst->sin6_family ||
 	     !IN6_ARE_ADDR_EQUAL(&dst->sin6_addr, &sin6_dst->sin6_addr)) {
@@ -206,7 +247,7 @@ in6_gif_output(struct ifnet *ifp,
 	}
 
 	if (sc->gif_ro6.ro_rt == NULL) {
-		rtalloc((struct route *)&sc->gif_ro6);
+		in6_rtalloc(&sc->gif_ro6, sc->gif_fibnum);
 		if (sc->gif_ro6.ro_rt == NULL) {
 			m_freem(m);
 			return ENETUNREACH;
@@ -222,6 +263,8 @@ in6_gif_output(struct ifnet *ifp,
 			- sizeof(struct ip6_hdr);
 #endif
 	}
+
+	m_addr_changed(m);
 
 #ifdef IPV6_MINMTU
 	/*
@@ -258,14 +301,14 @@ in6_gif_input(struct mbuf **mp, int *offp, int proto)
 	sc = (struct gif_softc *)encap_getarg(m);
 	if (sc == NULL) {
 		m_freem(m);
-		ip6stat.ip6s_nogif++;
+		V_ip6stat.ip6s_nogif++;
 		return IPPROTO_DONE;
 	}
 
 	gifp = GIF2IFP(sc);
 	if (gifp == NULL || (gifp->if_flags & IFF_UP) == 0) {
 		m_freem(m);
-		ip6stat.ip6s_nogif++;
+		V_ip6stat.ip6s_nogif++;
 		return IPPROTO_DONE;
 	}
 
@@ -320,7 +363,7 @@ in6_gif_input(struct mbuf **mp, int *offp, int proto)
 		break;
 
 	default:
-		ip6stat.ip6s_nogif++;
+		V_ip6stat.ip6s_nogif++;
 		m_freem(m);
 		return IPPROTO_DONE;
 	}
@@ -363,7 +406,8 @@ gif_validate6(const struct ip6_hdr *ip6, struct gif_softc *sc,
 		sin6.sin6_addr = ip6->ip6_src;
 		sin6.sin6_scope_id = 0; /* XXX */
 
-		rt = rtalloc1((struct sockaddr *)&sin6, 0, 0UL);
+		rt = in6_rtalloc1((struct sockaddr *)&sin6, 0, 0UL,
+		    sc->gif_fibnum);
 		if (!rt || rt->rt_ifp != ifp) {
 #if 0
 			char ip6buf[INET6_ADDRSTRLEN];
@@ -372,10 +416,10 @@ gif_validate6(const struct ip6_hdr *ip6, struct gif_softc *sc,
 			    ip6_sprintf(ip6buf, &sin6.sin6_addr));
 #endif
 			if (rt)
-				rtfree(rt);
+				RTFREE_LOCKED(rt);
 			return 0;
 		}
-		rtfree(rt);
+		RTFREE_LOCKED(rt);
 	}
 
 	return 128 * 2;

@@ -25,17 +25,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/imgact_aout.c,v 1.101.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
 #include <sys/imgact.h>
 #include <sys/imgact_aout.h>
 #include <sys/kernel.h>
+#include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/racct.h>
 #include <sys/resourcevar.h>
 #include <sys/signalvar.h>
 #include <sys/syscall.h>
@@ -52,53 +54,111 @@ __FBSDID("$FreeBSD: src/sys/kern/imgact_aout.c,v 1.101.2.1.2.1 2008/11/25 02:59:
 #include <vm/vm_object.h>
 #include <vm/vm_param.h>
 
+#ifdef __amd64__
+#include <compat/freebsd32/freebsd32_signal.h>
+#include <compat/freebsd32/freebsd32_util.h>
+#include <compat/freebsd32/freebsd32_proto.h>
+#include <compat/freebsd32/freebsd32_syscall.h>
+#include <compat/ia32/ia32_signal.h>
+#endif
+
 static int	exec_aout_imgact(struct image_params *imgp);
 static int	aout_fixup(register_t **stack_base, struct image_params *imgp);
 
+#if defined(__i386__)
 struct sysentvec aout_sysvec = {
-	SYS_MAXSYSCALL,
-	sysent,
-	0,
-	0,
-	NULL,
-	0,
-	NULL,
-	NULL,
-	aout_fixup,
-	sendsig,
-	sigcode,
-	&szsigcode,
-	NULL,
-	"FreeBSD a.out",
-	NULL,
-	NULL,
-	MINSIGSTKSZ,
-	PAGE_SIZE,
-	VM_MIN_ADDRESS,
-	VM_MAXUSER_ADDRESS,
-	USRSTACK,
-	PS_STRINGS,
-	VM_PROT_ALL,
-	exec_copyout_strings,
-	exec_setregs,
-	NULL
+	.sv_size	= SYS_MAXSYSCALL,
+	.sv_table	= sysent,
+	.sv_mask	= 0,
+	.sv_sigsize	= 0,
+	.sv_sigtbl	= NULL,
+	.sv_errsize	= 0,
+	.sv_errtbl	= NULL,
+	.sv_transtrap	= NULL,
+	.sv_fixup	= aout_fixup,
+	.sv_sendsig	= sendsig,
+	.sv_sigcode	= sigcode,
+	.sv_szsigcode	= &szsigcode,
+	.sv_prepsyscall	= NULL,
+	.sv_name	= "FreeBSD a.out",
+	.sv_coredump	= NULL,
+	.sv_imgact_try	= NULL,
+	.sv_minsigstksz	= MINSIGSTKSZ,
+	.sv_pagesize	= PAGE_SIZE,
+	.sv_minuser	= VM_MIN_ADDRESS,
+	.sv_maxuser	= VM_MAXUSER_ADDRESS,
+	.sv_usrstack	= USRSTACK,
+	.sv_psstrings	= PS_STRINGS,
+	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_strings	= exec_copyout_strings,
+	.sv_setregs	= exec_setregs,
+	.sv_fixlimit	= NULL,
+	.sv_maxssiz	= NULL,
+	.sv_flags	= SV_ABI_FREEBSD | SV_AOUT | SV_IA32 | SV_ILP32,
+	.sv_set_syscall_retval = cpu_set_syscall_retval,
+	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
+	.sv_syscallnames = syscallnames,
+	.sv_schedtail	= NULL,
 };
 
+#elif defined(__amd64__)
+
+#define	AOUT32_USRSTACK	0xbfc00000
+#define	AOUT32_PS_STRINGS \
+    (AOUT32_USRSTACK - sizeof(struct freebsd32_ps_strings))
+
+extern const char *freebsd32_syscallnames[];
+extern u_long ia32_maxssiz;
+
+struct sysentvec aout_sysvec = {
+	.sv_size	= FREEBSD32_SYS_MAXSYSCALL,
+	.sv_table	= freebsd32_sysent,
+	.sv_mask	= 0,
+	.sv_sigsize	= 0,
+	.sv_sigtbl	= NULL,
+	.sv_errsize	= 0,
+	.sv_errtbl	= NULL,
+	.sv_transtrap	= NULL,
+	.sv_fixup	= aout_fixup,
+	.sv_sendsig	= ia32_sendsig,
+	.sv_sigcode	= ia32_sigcode,
+	.sv_szsigcode	= &sz_ia32_sigcode,
+	.sv_prepsyscall	= NULL,
+	.sv_name	= "FreeBSD a.out",
+	.sv_coredump	= NULL,
+	.sv_imgact_try	= NULL,
+	.sv_minsigstksz	= MINSIGSTKSZ,
+	.sv_pagesize	= IA32_PAGE_SIZE,
+	.sv_minuser	= 0,
+	.sv_maxuser	= AOUT32_USRSTACK,
+	.sv_usrstack	= AOUT32_USRSTACK,
+	.sv_psstrings	= AOUT32_PS_STRINGS,
+	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_strings	= freebsd32_copyout_strings,
+	.sv_setregs	= ia32_setregs,
+	.sv_fixlimit	= ia32_fixlimit,
+	.sv_maxssiz	= &ia32_maxssiz,
+	.sv_flags	= SV_ABI_FREEBSD | SV_AOUT | SV_IA32 | SV_ILP32,
+	.sv_set_syscall_retval = ia32_set_syscall_retval,
+	.sv_fetch_syscall_args = ia32_fetch_syscall_args,
+	.sv_syscallnames = freebsd32_syscallnames,
+};
+#else
+#error "Port me"
+#endif
+
 static int
-aout_fixup(stack_base, imgp)
-	register_t **stack_base;
-	struct image_params *imgp;
+aout_fixup(register_t **stack_base, struct image_params *imgp)
 {
 
-	return (suword(--(*stack_base), imgp->args->argc));
+	*(char **)stack_base -= sizeof(uint32_t);
+	return (suword32(*stack_base, imgp->args->argc));
 }
 
 static int
-exec_aout_imgact(imgp)
-	struct image_params *imgp;
+exec_aout_imgact(struct image_params *imgp)
 {
 	const struct exec *a_out = (const struct exec *) imgp->image_header;
-	struct thread *td = curthread;
 	struct vmspace *vmspace;
 	vm_map_t map;
 	vm_object_t object;
@@ -164,7 +224,14 @@ exec_aout_imgact(imgp)
 	    a_out->a_entry >= virtual_offset + a_out->a_text ||
 
 	    /* text and data size must each be page rounded */
-	    a_out->a_text & PAGE_MASK || a_out->a_data & PAGE_MASK)
+	    a_out->a_text & PAGE_MASK || a_out->a_data & PAGE_MASK
+
+#ifdef __amd64__
+	    ||
+	    /* overflows */
+	    virtual_offset + a_out->a_text + a_out->a_data + bss_size > UINT_MAX
+#endif
+	    )
 		return (-1);
 
 	/* text + data can't exceed file size */
@@ -179,7 +246,8 @@ exec_aout_imgact(imgp)
 	    a_out->a_text > maxtsiz ||
 
 	    /* data + bss can't exceed rlimit */
-	    a_out->a_data + bss_size > lim_cur(imgp->proc, RLIMIT_DATA)) {
+	    a_out->a_data + bss_size > lim_cur(imgp->proc, RLIMIT_DATA) ||
+	    racct_set(imgp->proc, RACCT_DATA, a_out->a_data + bss_size) != 0) {
 			PROC_UNLOCK(imgp->proc);
 			return (ENOMEM);
 	}
@@ -193,14 +261,14 @@ exec_aout_imgact(imgp)
 	 * However, in cases where the vnode lock is external, such as nullfs,
 	 * v_usecount may become zero.
 	 */
-	VOP_UNLOCK(imgp->vp, 0, td);
+	VOP_UNLOCK(imgp->vp, 0);
 
 	/*
 	 * Destroy old process VM and create a new one (with a new stack)
 	 */
 	error = exec_new_vmspace(imgp, &aout_sysvec);
 
-	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY);
 	if (error)
 		return (error);
 

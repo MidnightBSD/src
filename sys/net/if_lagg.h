@@ -15,11 +15,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: src/sys/net/if_lagg.h,v 1.10.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NET_LAGG_H
 #define _NET_LAGG_H
+
+#include <sys/sysctl.h>
 
 /*
  * Global definitions
@@ -28,6 +30,12 @@
 #define	LAGG_MAX_PORTS		32	/* logically */
 #define	LAGG_MAX_NAMESIZE	32	/* name of a protocol */
 #define	LAGG_MAX_STACKING	4	/* maximum number of stacked laggs */
+
+/* Lagg flags */
+#define	LAGG_F_HASHL2		0x00000001	/* hash layer 2 */
+#define	LAGG_F_HASHL3		0x00000002	/* hash layer 3 */
+#define	LAGG_F_HASHL4		0x00000004	/* hash layer 4 */
+#define	LAGG_F_HASHMASK		0x00000007
 
 /* Port flags */
 #define	LAGG_PORT_SLAVE		0x00000000	/* normal enslaved port */
@@ -120,6 +128,14 @@ struct lagg_reqall {
 #define	SIOCGLAGG		_IOWR('i', 143, struct lagg_reqall)
 #define	SIOCSLAGG		 _IOW('i', 144, struct lagg_reqall)
 
+struct lagg_reqflags {
+	char			rf_ifname[IFNAMSIZ];	/* name of the lagg */
+	uint32_t		rf_flags;		/* lagg protocol */
+};
+
+#define	SIOCGLAGGFLAGS		_IOWR('i', 145, struct lagg_reqflags)
+#define	SIOCSLAGGHASH		 _IOW('i', 146, struct lagg_reqflags)
+
 #ifdef _KERNEL
 /*
  * Internal kernel part
@@ -177,6 +193,7 @@ struct lagg_softc {
 	struct ifmedia			sc_media;	/* media config */
 	caddr_t				sc_psc;		/* protocol data */
 	uint32_t			sc_seq;		/* sequence counter */
+	uint32_t			sc_flags;
 
 	SLIST_HEAD(__tplhd, lagg_port)	sc_ports;	/* list of interfaces */
 	SLIST_ENTRY(lagg_softc)	sc_entries;
@@ -198,6 +215,12 @@ struct lagg_softc {
 	void	(*sc_lladdr)(struct lagg_softc *);
 	void	(*sc_req)(struct lagg_softc *, caddr_t);
 	void	(*sc_portreq)(struct lagg_port *, caddr_t);
+#if __FreeBSD_version >= 800000
+	eventhandler_tag vlan_attach;
+	eventhandler_tag vlan_detach;
+#endif
+	struct sysctl_ctx_list		ctx;		/* sysctl variables */
+	int				use_flowid;	/* use M_FLOWID */
 };
 
 struct lagg_port {
@@ -218,7 +241,7 @@ struct lagg_port {
 	/* Redirected callbacks */
 	int	(*lp_ioctl)(struct ifnet *, u_long, caddr_t);
 	int	(*lp_output)(struct ifnet *, struct mbuf *, struct sockaddr *,
-		     struct rtentry *);
+		     struct route *);
 
 	SLIST_ENTRY(lagg_port)		lp_entries;
 };
@@ -236,7 +259,7 @@ extern struct mbuf *(*lagg_input_p)(struct ifnet *, struct mbuf *);
 extern void	(*lagg_linkstate_p)(struct ifnet *, int );
 
 int		lagg_enqueue(struct ifnet *, struct mbuf *);
-uint32_t	lagg_hashmbuf(struct mbuf *, uint32_t);
+uint32_t	lagg_hashmbuf(struct lagg_softc *, struct mbuf *, uint32_t);
 
 #endif /* _KERNEL */
 

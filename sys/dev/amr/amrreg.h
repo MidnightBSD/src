@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/amr/amrreg.h,v 1.3 2012/04/12 01:23:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -54,6 +53,7 @@
  * SUCH DAMAGE.
  *
  *
+ *      $FreeBSD$
  */
 
 /********************************************************************************

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/kerneldump.h,v 1.3 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -33,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/kerneldump.h,v 1.8.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_KERNELDUMP_H
@@ -61,19 +60,21 @@
 struct kerneldumpheader {
 	char		magic[20];
 #define	KERNELDUMPMAGIC		"FreeBSD Kernel Dump"
-#define	TEXTDUMPMAGIC		"MidnightBSD Text Dump"
+#define	TEXTDUMPMAGIC		"FreeBSD Text Dump"
 #define	KERNELDUMPMAGIC_CLEARED	"Cleared Kernel Dump"
 	char		architecture[12];
 	uint32_t	version;
 #define	KERNELDUMPVERSION	1
 	uint32_t	architectureversion;
 #define	KERNELDUMP_ALPHA_VERSION	1
-#define	KERNELDUMP_I386_VERSION	2
-#define	KERNELDUMP_IA64_VERSION	1
-#define	KERNELDUMP_SPARC64_VERSION	1
 #define	KERNELDUMP_AMD64_VERSION	2
-#define	KERNELDUMP_ARM_VERSION	1
-#define	KERNELDUMP_TEXT_VERSION	1
+#define	KERNELDUMP_ARM_VERSION		1
+#define	KERNELDUMP_I386_VERSION		2
+#define	KERNELDUMP_IA64_VERSION		1
+#define	KERNELDUMP_MIPS_VERSION		1
+#define	KERNELDUMP_POWERPC_VERSION	1
+#define	KERNELDUMP_SPARC64_VERSION	1
+#define	KERNELDUMP_TEXT_VERSION		1
 	uint64_t	dumplength;		/* excl headers */
 	uint64_t	dumptime;
 	uint32_t	blocksize;
@@ -98,5 +99,10 @@ kerneldump_parity(struct kerneldumpheader *kdhp)
 		parity ^= *up++;
 	return (parity);
 }
+
+#ifdef _KERNEL
+void mkdumpheader(struct kerneldumpheader *kdh, char *magic, uint32_t archver,
+    uint64_t dumplen, uint32_t blksz);
+#endif
 
 #endif /* _SYS_KERNELDUMP_H */

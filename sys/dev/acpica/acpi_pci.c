@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * Copyright (c) 2000, Michael Smith <msmith@freebsd.org>
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pci.c,v 1.31.2.1 2007/10/31 16:10:12 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -37,7 +36,9 @@ __FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pci.c,v 1.31.2.1 2007/10/31 16:10:12
 #include <sys/malloc.h>
 #include <sys/module.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+
 #include <dev/acpica/acpivar.h>
 
 #include <sys/pciio.h>
@@ -98,7 +99,8 @@ static device_method_t acpi_pci_methods[] = {
 
 static devclass_t pci_devclass;
 
-DEFINE_CLASS_1(pci, acpi_pci_driver, acpi_pci_methods, 0, pci_driver);
+DEFINE_CLASS_1(pci, acpi_pci_driver, acpi_pci_methods, sizeof(struct pci_softc),
+    pci_driver);
 DRIVER_MODULE(acpi_pci, pcib, acpi_pci_driver, pci_devclass, 0, 0);
 MODULE_DEPEND(acpi_pci, acpi, 1, 1, 1);
 MODULE_DEPEND(acpi_pci, pci, 1, 1, 1);
@@ -178,18 +180,22 @@ acpi_pci_set_powerstate_method(device_t dev, device_t child, int state)
 	 */
 	ACPI_SERIAL_BEGIN(pci_powerstate);
 	old_state = pci_get_powerstate(child);
-	if (old_state < state) {
+	if (old_state < state && pci_do_power_suspend) {
 		error = pci_set_powerstate_method(dev, child, state);
 		if (error)
 			goto out;
 	}
 	h = acpi_get_handle(child);
 	status = acpi_pwr_switch_consumer(h, state);
-	if (ACPI_FAILURE(status) && status != AE_NOT_FOUND)
+	if (ACPI_SUCCESS(status)) {
+		if (bootverbose)
+			device_printf(dev, "set ACPI power state D%d on %s\n",
+			    state, acpi_name(h));
+	} else if (status != AE_NOT_FOUND)
 		device_printf(dev,
-		    "Failed to set ACPI power state D%d on %s: %s\n",
+		    "failed to set ACPI power state D%d on %s: %s\n",
 		    state, acpi_name(h), AcpiFormatException(status));
-	if (old_state > state)
+	if (old_state > state && pci_do_power_resume)
 		error = pci_set_powerstate_method(dev, child, state);
 
 out:
@@ -204,38 +210,24 @@ acpi_pci_update_device(ACPI_HANDLE handle, device_t pci_child)
 	device_t child;
 
 	/*
-	 * Lookup and remove the unused device that acpi0 creates when it walks
-	 * the namespace creating devices.
+	 * Occasionally a PCI device may show up as an ACPI device
+	 * with a _HID.  (For example, the TabletPC TC1000 has a
+	 * second PCI-ISA bridge that has a _HID for an
+	 * acpi_sysresource device.)  In that case, leave ACPI-CA's
+	 * device data pointing at the ACPI-enumerated device.
 	 */
 	child = acpi_get_device(handle);
 	if (child != NULL) {
-		if (device_is_alive(child)) {
-			/*
-			 * The TabletPC TC1000 has a second PCI-ISA bridge
-			 * that has a _HID for an acpi_sysresource device.
-			 * In that case, leave ACPI-CA's device data pointing
-			 * at the ACPI-enumerated device.
-			 */
-			device_printf(child,
-			    "Conflicts with PCI device %d:%d:%d\n",
-			    pci_get_bus(pci_child), pci_get_slot(pci_child),
-			    pci_get_function(pci_child));
-			return;
-		}
 		KASSERT(device_get_parent(child) ==
 		    devclass_get_device(devclass_find("acpi"), 0),
 		    ("%s: child (%s)'s parent is not acpi0", __func__,
 		    acpi_name(handle)));
-		device_delete_child(device_get_parent(child), child);
+		return;
 	}
 
 	/*
 	 * Update ACPI-CA to use the PCI enumerated device_t for this handle.
 	 */
-	status = AcpiDetachData(handle, acpi_fake_objhandler);
-	if (ACPI_FAILURE(status))
-		printf("WARNING: Unable to detach object data from %s - %s\n",
-		    acpi_name(handle), AcpiFormatException(status));
 	status = AcpiAttachData(handle, acpi_fake_objhandler, pci_child);
 	if (ACPI_FAILURE(status))
 		printf("WARNING: Unable to attach object data to %s - %s\n",
@@ -276,8 +268,6 @@ static int
 acpi_pci_probe(device_t dev)
 {
 
-	if (pcib_get_bus(dev) < 0)
-		return (ENXIO);
 	if (acpi_get_handle(dev) == NULL)
 		return (ENXIO);
 	device_set_desc(dev, "ACPI PCI bus");
@@ -287,7 +277,11 @@ acpi_pci_probe(device_t dev)
 static int
 acpi_pci_attach(device_t dev)
 {
-	int busno, domain;
+	int busno, domain, error;
+
+	error = pci_attach_common(dev);
+	if (error)
+		return (error);
 
 	/*
 	 * Since there can be multiple independantly numbered PCI
@@ -297,9 +291,6 @@ acpi_pci_attach(device_t dev)
 	 */
 	domain = pcib_get_domain(dev);
 	busno = pcib_get_bus(dev);
-	if (bootverbose)
-		device_printf(dev, "domain=%d, physical bus=%d\n",
-		    domain, busno);
 
 	/*
 	 * First, PCI devices are added as in the normal PCI bus driver.
@@ -313,7 +304,7 @@ acpi_pci_attach(device_t dev)
 	 */
 	pci_add_children(dev, domain, busno, sizeof(struct acpi_pci_devinfo));
 	AcpiWalkNamespace(ACPI_TYPE_DEVICE, acpi_get_handle(dev), 1,
-	    acpi_pci_save_handle, dev, NULL);
+	    acpi_pci_save_handle, NULL, dev, NULL);
 
 	return (bus_generic_attach(dev));
 }

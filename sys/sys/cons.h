@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1991 The Regents of the University of California.
@@ -33,21 +32,24 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cons.h	7.2 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/sys/cons.h,v 1.40.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _MACHINE_CONS_H_
 #define	_MACHINE_CONS_H_
 
 struct consdev;
+struct tty;
+
 typedef	void	cn_probe_t(struct consdev *);
 typedef	void	cn_init_t(struct consdev *);
 typedef	void	cn_term_t(struct consdev *);
+typedef	void	cn_grab_t(struct consdev *);
+typedef	void	cn_ungrab_t(struct consdev *);
 typedef	int	cn_getc_t(struct consdev *);
-typedef	int	cn_checkc_t(struct consdev *);
 typedef	void	cn_putc_t(struct consdev *, int);
 
-struct consdev {
+struct consdev_ops {
 	cn_probe_t	*cn_probe;
 				/* probe hardware and fill in consdev info */
 	cn_init_t	*cn_init;
@@ -56,14 +58,19 @@ struct consdev {
 				/* turn off as console */
 	cn_getc_t	*cn_getc;
 				/* kernel getchar interface */
-	cn_checkc_t	*cn_checkc;
-				/* kernel "return char if available" interface */
 	cn_putc_t	*cn_putc;
 				/* kernel putchar interface */
-	struct	tty *cn_tp;	/* tty structure for console device */
+	cn_grab_t	*cn_grab;
+				/* grab console for exclusive kernel use */
+	cn_ungrab_t	*cn_ungrab;
+				/* ungrab console */
+};
+
+struct consdev {
+	const struct consdev_ops *cn_ops;
+				/* console device operations. */
 	short	cn_pri;		/* pecking order; the higher the better */
 	void	*cn_arg;	/* drivers method argument */
-	int	cn_unit;	/* some drivers prefer this */
 	int	cn_flags;	/* capabilities of this console */
 	char	cn_name[SPECNAMELEN + 1];	/* console (device) name */
 };
@@ -79,23 +86,34 @@ struct consdev {
 #define	CN_FLAG_NODEBUG	0x00000001	/* Not supported with debugger. */
 #define	CN_FLAG_NOAVAIL	0x00000002	/* Temporarily not available. */
 
+/* Visibility of characters in cngets() */
+#define	GETS_NOECHO	0	/* Disable echoing of characters. */
+#define	GETS_ECHO	1	/* Enable echoing of characters. */
+#define	GETS_ECHOPASS	2	/* Print a * for every character. */
+
 #ifdef _KERNEL
 
-#define CONS_DRIVER(name, probe, init, term, getc, checkc, putc, dbctl)	\
-	static struct consdev name##_consdev = {			\
-		probe, init, term, getc, checkc, putc			\
-	};								\
-	DATA_SET(cons_set, name##_consdev)
+extern	struct msgbuf consmsgbuf; /* Message buffer for constty. */
+extern	struct tty *constty;	/* Temporary virtual console. */
 
-#define CONSOLE_DRIVER(name)						\
-	static struct consdev name##_consdev = {			\
+#define	CONSOLE_DEVICE(name, ops, arg)					\
+	static struct consdev name = {					\
+		.cn_ops = &ops,						\
+		.cn_arg = (arg),					\
+	};								\
+	DATA_SET(cons_set, name)
+
+#define	CONSOLE_DRIVER(name)						\
+	static const struct consdev_ops name##_consdev_ops = {		\
 		.cn_probe = name##_cnprobe,				\
 		.cn_init = name##_cninit,				\
 		.cn_term = name##_cnterm,				\
 		.cn_getc = name##_cngetc,				\
 		.cn_putc = name##_cnputc,				\
+		.cn_grab = name##_cngrab,				\
+		.cn_ungrab = name##_cnungrab,				\
 	};								\
-	DATA_SET(cons_set, name##_consdev)
+	CONSOLE_DEVICE(name##_consdev, name##_consdev_ops, NULL)
 
 /* Other kernel entry points. */
 void	cninit(void);
@@ -104,11 +122,16 @@ int	cnadd(struct consdev *);
 void	cnavailable(struct consdev *, int);
 void	cnremove(struct consdev *);
 void	cnselect(struct consdev *);
+void	cngrab(void);
+void	cnungrab(void);
 int	cncheckc(void);
 int	cngetc(void);
+void	cngets(char *, size_t, int);
 void	cnputc(int);
 void	cnputs(char *);
 int	cnunavailable(void);
+void	constty_set(struct tty *tp);
+void	constty_clear(void);
 
 #endif /* _KERNEL */
 

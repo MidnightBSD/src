@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: ar5212_xmit.c,v 1.1 2011-09-30 01:28:40 laffer1 Exp $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -48,16 +48,19 @@ ar5212UpdateTxTrigLevel(struct ath_hal *ah, HAL_BOOL bIncTrigLevel)
 	uint32_t txcfg, curLevel, newLevel;
 	HAL_INT omask;
 
+	if (ahp->ah_txTrigLev >= ahp->ah_maxTxTrigLev)
+		return AH_FALSE;
+
 	/*
 	 * Disable interrupts while futzing with the fifo level.
 	 */
-	omask = ar5212SetInterrupts(ah, ahp->ah_maskReg &~ HAL_INT_GLOBAL);
+	omask = ath_hal_setInterrupts(ah, ahp->ah_maskReg &~ HAL_INT_GLOBAL);
 
 	txcfg = OS_REG_READ(ah, AR_TXCFG);
 	curLevel = MS(txcfg, AR_FTRIG);
 	newLevel = curLevel;
 	if (bIncTrigLevel) {		/* increase the trigger level */
-		if (curLevel < MAX_TX_FIFO_THRESHOLD)
+		if (curLevel < ahp->ah_maxTxTrigLev)
 			newLevel++;
 	} else if (curLevel > MIN_TX_FIFO_THRESHOLD)
 		newLevel--;
@@ -66,8 +69,10 @@ ar5212UpdateTxTrigLevel(struct ath_hal *ah, HAL_BOOL bIncTrigLevel)
 		OS_REG_WRITE(ah, AR_TXCFG,
 			(txcfg &~ AR_FTRIG) | SM(newLevel, AR_FTRIG));
 
+	ahp->ah_txTrigLev = newLevel;
+
 	/* re-enable chip interrupts */
-	ar5212SetInterrupts(ah, omask);
+	ath_hal_setInterrupts(ah, omask);
 
 	return (newLevel != curLevel);
 }
@@ -263,7 +268,7 @@ ar5212ResetTxQueue(struct ath_hal *ah, u_int q)
 {
 	struct ath_hal_5212 *ahp = AH5212(ah);
 	HAL_CAPABILITIES *pCap = &AH_PRIVATE(ah)->ah_caps;
-	HAL_CHANNEL_INTERNAL *chan = AH_PRIVATE(ah)->ah_curchan;
+	const struct ieee80211_channel *chan = AH_PRIVATE(ah)->ah_curchan;
 	HAL_TX_QUEUE_INFO *qi;
 	uint32_t cwMin, chanCwMin, value, qmisc, dmisc;
 
@@ -286,7 +291,7 @@ ar5212ResetTxQueue(struct ath_hal *ah, u_int q)
 		 * Select cwmin according to channel type.
 		 * NB: chan can be NULL during attach
 		 */
-		if (chan && IS_CHAN_B(chan))
+		if (chan && IEEE80211_IS_CHAN_B(chan))
 			chanCwMin = INIT_CWMIN_11B;
 		else
 			chanCwMin = INIT_CWMIN;
@@ -411,9 +416,9 @@ ar5212ResetTxQueue(struct ath_hal *ah, u_int q)
 			 * here solely for backwards compatibility.
 			 */
 			value = (ahp->ah_beaconInterval
-				- (ath_hal_sw_beacon_response_time -
-					ath_hal_dma_beacon_response_time)
-				- ath_hal_additional_swba_backoff) * 1024;
+				- (ah->ah_config.ah_sw_beacon_response_time -
+					ah->ah_config.ah_dma_beacon_response_time)
+				- ah->ah_config.ah_additional_swba_backoff) * 1024;
 			OS_REG_WRITE(ah, AR_QRDYTIMECFG(q), value | AR_Q_RDYTIMECFG_ENA);
 		}
 		dmisc |= SM(AR_D_MISC_ARB_LOCKOUT_CNTRL_GLOBAL,
@@ -869,16 +874,13 @@ ar5212ProcTxDesc(struct ath_hal *ah,
 		ts->ts_rate = MS(ads->ds_ctl3, AR_XmitRate0);
 		break;
 	case 1:
-		ts->ts_rate = MS(ads->ds_ctl3, AR_XmitRate1) |
-			HAL_TXSTAT_ALTRATE;
+		ts->ts_rate = MS(ads->ds_ctl3, AR_XmitRate1);
 		break;
 	case 2:
-		ts->ts_rate = MS(ads->ds_ctl3, AR_XmitRate2) |
-			HAL_TXSTAT_ALTRATE;
+		ts->ts_rate = MS(ads->ds_ctl3, AR_XmitRate2);
 		break;
 	case 3:
-		ts->ts_rate = MS(ads->ds_ctl3, AR_XmitRate3) |
-			HAL_TXSTAT_ALTRATE;
+		ts->ts_rate = MS(ads->ds_ctl3, AR_XmitRate3);
 		break;
 	}
 	ts->ts_rssi = MS(ads->ds_txstatus1, AR_AckSigStrength);
@@ -916,3 +918,24 @@ ar5212GetTxIntrQueue(struct ath_hal *ah, uint32_t *txqs)
 	*txqs &= ahp->ah_intrTxqs;
 	ahp->ah_intrTxqs &= ~(*txqs);
 }
+
+/*
+ * Retrieve the rate table from the given TX completion descriptor
+ */
+HAL_BOOL
+ar5212GetTxCompletionRates(struct ath_hal *ah, const struct ath_desc *ds0, int *rates, int *tries)
+{ 
+	const struct ar5212_desc *ads = AR5212DESC_CONST(ds0);
+
+	rates[0] = MS(ads->ds_ctl3, AR_XmitRate0);
+	rates[1] = MS(ads->ds_ctl3, AR_XmitRate1);
+	rates[2] = MS(ads->ds_ctl3, AR_XmitRate2);
+	rates[3] = MS(ads->ds_ctl3, AR_XmitRate3);
+
+	tries[0] = MS(ads->ds_ctl2, AR_XmitDataTries0);
+	tries[1] = MS(ads->ds_ctl2, AR_XmitDataTries1);
+	tries[2] = MS(ads->ds_ctl2, AR_XmitDataTries2);
+	tries[3] = MS(ads->ds_ctl2, AR_XmitDataTries3);
+
+	return AH_TRUE;
+}  

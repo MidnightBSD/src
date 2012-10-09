@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
+ * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
+ * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
+ * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pcm/dsp.h,v 1.13 2007/06/16 03:37:28 ariff Exp $
+ * $FreeBSD$
  */
 
 #ifndef _PCMDSP_H_

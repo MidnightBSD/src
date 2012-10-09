@@ -28,19 +28,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/ip_divert.c,v 1.130.2.3.2.2 2008/11/25 20:02:47 julian Exp $");
+__FBSDID("$FreeBSD$");
 
 #if !defined(KLD_MODULE)
 #include "opt_inet.h"
-#include "opt_ipfw.h"
-#include "opt_mac.h"
+#include "opt_sctp.h"
 #ifndef INET
 #error "IPDIVERT requires INET."
 #endif
-#ifndef IPFIREWALL
-#error "IPDIVERT requires IPFIREWALL"
 #endif
-#endif
+#include "opt_inet6.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -52,27 +49,27 @@ __FBSDID("$FreeBSD: src/sys/netinet/ip_divert.c,v 1.130.2.3.2.2 2008/11/25 20:02
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
-#include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-#include <sys/sx.h>
 #include <sys/sysctl.h>
-#include <sys/systm.h>
-
-#include <vm/uma.h>
+#include <net/vnet.h>
 
 #include <net/if.h>
 #include <net/netisr.h> 
-#include <net/route.h>
 
 #include <netinet/in.h>
 #include <netinet/in_pcb.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
 #include <netinet/ip.h>
-#include <netinet/ip_divert.h>
 #include <netinet/ip_var.h>
-#include <netinet/ip_fw.h>
+#ifdef INET6
+#include <netinet/ip6.h>
+#include <netinet6/ip6_var.h>
+#endif
+#ifdef SCTP
+#include <netinet/sctp_crc32.h>
+#endif
 
 #include <security/mac/mac_framework.h>
 
@@ -87,35 +84,42 @@ __FBSDID("$FreeBSD: src/sys/netinet/ip_divert.c,v 1.130.2.3.2.2 2008/11/25 20:02
 #define	DIVRCVQ		(65536 + 100)
 
 /*
- * Divert sockets work in conjunction with ipfw, see the divert(4)
- * manpage for features.
- * Internally, packets selected by ipfw in ip_input() or ip_output(),
- * and never diverted before, are passed to the input queue of the
- * divert socket with a given 'divert_port' number (as specified in
- * the matching ipfw rule), and they are tagged with a 16 bit cookie
- * (representing the rule number of the matching ipfw rule), which
- * is passed to process reading from the socket.
+ * Divert sockets work in conjunction with ipfw or other packet filters,
+ * see the divert(4) manpage for features.
+ * Packets are selected by the packet filter and tagged with an
+ * MTAG_IPFW_RULE tag carrying the 'divert port' number (as set by
+ * the packet filter) and information on the matching filter rule for
+ * subsequent reinjection. The divert_port is used to put the packet
+ * on the corresponding divert socket, while the rule number is passed
+ * up (at least partially) as the sin_port in the struct sockaddr.
  *
- * Packets written to the divert socket are again tagged with a cookie
- * (usually the same as above) and a destination address.
- * If the destination address is INADDR_ANY then the packet is
- * treated as outgoing and sent to ip_output(), otherwise it is
- * treated as incoming and sent to ip_input().
- * In both cases, the packet is tagged with the cookie.
+ * Packets written to the divert socket carry in sin_addr a
+ * destination address, and in sin_port the number of the filter rule
+ * after which to continue processing.
+ * If the destination address is INADDR_ANY, the packet is treated as
+ * as outgoing and sent to ip_output(); otherwise it is treated as
+ * incoming and sent to ip_input().
+ * Further, sin_zero carries some information on the interface,
+ * which can be used in the reinject -- see comments in the code.
  *
  * On reinjection, processing in ip_input() and ip_output()
  * will be exactly the same as for the original packet, except that
- * ipfw processing will start at the rule number after the one
- * written in the cookie (so, tagging a packet with a cookie of 0
- * will cause it to be effectively considered as a standard packet).
+ * packet filter processing will start at the rule number after the one
+ * written in the sin_port (ipfw does not allow a rule #0, so sin_port=0
+ * will apply the entire ruleset to the packet).
  */
 
 /* Internal variables. */
-static struct inpcbhead divcb;
-static struct inpcbinfo divcbinfo;
+static VNET_DEFINE(struct inpcbhead, divcb);
+static VNET_DEFINE(struct inpcbinfo, divcbinfo);
+
+#define	V_divcb				VNET(divcb)
+#define	V_divcbinfo			VNET(divcbinfo)
 
 static u_long	div_sendspace = DIVSNDQ;	/* XXX sysctl ? */
 static u_long	div_recvspace = DIVRCVQ;	/* XXX sysctl ? */
+
+static eventhandler_tag ip_divert_event_tag;
 
 /*
  * Initialize divert connection block queue.
@@ -124,7 +128,7 @@ static void
 div_zone_change(void *tag)
 {
 
-	uma_zone_set_max(divcbinfo.ipi_zone, maxsockets);
+	uma_zone_set_max(V_divcbinfo.ipi_zone, maxsockets);
 }
 
 static int
@@ -144,37 +148,36 @@ div_inpcb_fini(void *mem, int size)
 	INP_LOCK_DESTROY(inp);
 }
 
-void
+static void
 div_init(void)
 {
 
-	INP_INFO_LOCK_INIT(&divcbinfo, "div");
-	LIST_INIT(&divcb);
-	divcbinfo.ipi_listhead = &divcb;
 	/*
-	 * XXX We don't use the hash list for divert IP, but it's easier
-	 * to allocate a one entry hash list than it is to check all
-	 * over the place for hashbase == NULL.
+	 * XXX We don't use the hash list for divert IP, but it's easier to
+	 * allocate one-entry hash lists than it is to check all over the
+	 * place for hashbase == NULL.
 	 */
-	divcbinfo.ipi_hashbase = hashinit(1, M_PCB, &divcbinfo.ipi_hashmask);
-	divcbinfo.ipi_porthashbase = hashinit(1, M_PCB,
-	    &divcbinfo.ipi_porthashmask);
-	divcbinfo.ipi_zone = uma_zcreate("divcb", sizeof(struct inpcb),
-	    NULL, NULL, div_inpcb_init, div_inpcb_fini, UMA_ALIGN_PTR,
-	    UMA_ZONE_NOFREE);
-	uma_zone_set_max(divcbinfo.ipi_zone, maxsockets);
-	EVENTHANDLER_REGISTER(maxsockets_change, div_zone_change,
-		NULL, EVENTHANDLER_PRI_ANY);
+	in_pcbinfo_init(&V_divcbinfo, "div", &V_divcb, 1, 1, "divcb",
+	    div_inpcb_init, div_inpcb_fini, UMA_ZONE_NOFREE,
+	    IPI_HASHFIELDS_NONE);
+}
+
+static void
+div_destroy(void)
+{
+
+	in_pcbinfo_destroy(&V_divcbinfo);
 }
 
 /*
  * IPPROTO_DIVERT is not in the real IP protocol number space; this
  * function should never be called.  Just in case, drop any packets.
  */
-void
+static void
 div_input(struct mbuf *m, int off)
 {
-	ipstat.ips_noproto++;
+
+	KMOD_IPSTAT_INC(ips_noproto);
 	m_freem(m);
 }
 
@@ -194,9 +197,8 @@ divert_packet(struct mbuf *m, int incoming)
 	struct sockaddr_in divsrc;
 	struct m_tag *mtag;
 
-	mtag = m_tag_find(m, PACKET_TAG_DIVERT, NULL);
+	mtag = m_tag_locate(m, MTAG_IPFW_RULE, 0, NULL);
 	if (mtag == NULL) {
-		printf("%s: no divert tag\n", __func__);
 		m_freem(m);
 		return;
 	}
@@ -213,29 +215,41 @@ divert_packet(struct mbuf *m, int incoming)
 		m->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA;
 		ip->ip_len = htons(ip->ip_len);
 	}
-
+#ifdef SCTP
+	if (m->m_pkthdr.csum_flags & CSUM_SCTP) {
+		ip->ip_len = ntohs(ip->ip_len);
+		sctp_delayed_cksum(m, (uint32_t)(ip->ip_hl << 2));
+		m->m_pkthdr.csum_flags &= ~CSUM_SCTP;
+		ip->ip_len = htons(ip->ip_len);
+	}
+#endif
+	bzero(&divsrc, sizeof(divsrc));
+	divsrc.sin_len = sizeof(divsrc);
+	divsrc.sin_family = AF_INET;
+	/* record matching rule, in host format */
+	divsrc.sin_port = ((struct ipfw_rule_ref *)(mtag+1))->rulenum;
 	/*
 	 * Record receive interface address, if any.
 	 * But only for incoming packets.
 	 */
-	bzero(&divsrc, sizeof(divsrc));
-	divsrc.sin_len = sizeof(divsrc);
-	divsrc.sin_family = AF_INET;
-	divsrc.sin_port = divert_cookie(mtag);	/* record matching rule */
 	if (incoming) {
 		struct ifaddr *ifa;
+		struct ifnet *ifp;
 
 		/* Sanity check */
 		M_ASSERTPKTHDR(m);
 
 		/* Find IP address for receive interface */
-		TAILQ_FOREACH(ifa, &m->m_pkthdr.rcvif->if_addrhead, ifa_link) {
+		ifp = m->m_pkthdr.rcvif;
+		if_addr_rlock(ifp);
+		TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr->sa_family != AF_INET)
 				continue;
 			divsrc.sin_addr =
 			    ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr;
 			break;
 		}
+		if_addr_runlock(ifp);
 	}
 	/*
 	 * Record the incoming interface name whenever we have one.
@@ -265,9 +279,9 @@ divert_packet(struct mbuf *m, int incoming)
 
 	/* Put packet on socket queue, if any */
 	sa = NULL;
-	nport = htons((u_int16_t)divert_info(mtag));
-	INP_INFO_RLOCK(&divcbinfo);
-	LIST_FOREACH(inp, &divcb, inp_list) {
+	nport = htons((u_int16_t)(((struct ipfw_rule_ref *)(mtag+1))->info));
+	INP_INFO_RLOCK(&V_divcbinfo);
+	LIST_FOREACH(inp, &V_divcb, inp_list) {
 		/* XXX why does only one socket match? */
 		if (inp->inp_lport == nport) {
 			INP_RLOCK(inp);
@@ -284,11 +298,11 @@ divert_packet(struct mbuf *m, int incoming)
 			break;
 		}
 	}
-	INP_INFO_RUNLOCK(&divcbinfo);
+	INP_INFO_RUNLOCK(&V_divcbinfo);
 	if (sa == NULL) {
 		m_freem(m);
-		ipstat.ips_noproto++;
-		ipstat.ips_delivered--;
+		KMOD_IPSTAT_INC(ips_noproto);
+		KMOD_IPSTAT_DEC(ips_delivered);
         }
 }
 
@@ -303,10 +317,10 @@ static int
 div_output(struct socket *so, struct mbuf *m, struct sockaddr_in *sin,
     struct mbuf *control)
 {
+	struct ip *const ip = mtod(m, struct ip *);
 	struct m_tag *mtag;
-	struct divert_tag *dt;
+	struct ipfw_rule_ref *dt;
 	int error = 0;
-	struct mbuf *options;
 
 	/*
 	 * An mbuf may hasn't come from userland, but we pretend
@@ -319,23 +333,31 @@ div_output(struct socket *so, struct mbuf *m, struct sockaddr_in *sin,
 	if (control)
 		m_freem(control);		/* XXX */
 
-	if ((mtag = m_tag_find(m, PACKET_TAG_DIVERT, NULL)) == NULL) {
-		mtag = m_tag_get(PACKET_TAG_DIVERT, sizeof(struct divert_tag),
-		    M_NOWAIT | M_ZERO);
+	mtag = m_tag_locate(m, MTAG_IPFW_RULE, 0, NULL);
+	if (mtag == NULL) {
+		/* this should be normal */
+		mtag = m_tag_alloc(MTAG_IPFW_RULE, 0,
+		    sizeof(struct ipfw_rule_ref), M_NOWAIT | M_ZERO);
 		if (mtag == NULL) {
 			error = ENOBUFS;
 			goto cantsend;
 		}
-		dt = (struct divert_tag *)(mtag+1);
 		m_tag_prepend(m, mtag);
-	} else
-		dt = (struct divert_tag *)(mtag+1);
+	}
+	dt = (struct ipfw_rule_ref *)(mtag+1);
 
 	/* Loopback avoidance and state recovery */
 	if (sin) {
 		int i;
 
-		dt->cookie = sin->sin_port;
+		/* set the starting point. We provide a non-zero slot,
+		 * but a non_matching chain_id to skip that info and use
+		 * the rulenum/rule_id.
+		 */
+		dt->slot = 1; /* dummy, chain_id is invalid */
+		dt->chain_id = 0;
+		dt->rulenum = sin->sin_port+1; /* host format ? */
+		dt->rule_id = 0;
 		/*
 		 * Find receive interface with the given name, stuffed
 		 * (if it exists) in the sin_zero[] field.
@@ -350,76 +372,106 @@ div_output(struct socket *so, struct mbuf *m, struct sockaddr_in *sin,
 
 	/* Reinject packet into the system as incoming or outgoing */
 	if (!sin || sin->sin_addr.s_addr == 0) {
-		struct ip *const ip = mtod(m, struct ip *);
+		struct mbuf *options = NULL;
 		struct inpcb *inp;
 
-		dt->info |= IP_FW_DIVERT_OUTPUT_FLAG;
-		INP_INFO_WLOCK(&divcbinfo);
+		dt->info |= IPFW_IS_DIVERT | IPFW_INFO_OUT;
 		inp = sotoinpcb(so);
 		INP_RLOCK(inp);
-		/*
-		 * Don't allow both user specified and setsockopt options,
-		 * and don't allow packet length sizes that will crash
-		 */
-		if (((ip->ip_hl != (sizeof (*ip) >> 2)) && inp->inp_options) ||
-		     ((u_short)ntohs(ip->ip_len) > m->m_pkthdr.len)) {
-			error = EINVAL;
-			INP_RUNLOCK(inp);
-			INP_INFO_WUNLOCK(&divcbinfo);
-			m_freem(m);
-		} else {
+		switch (ip->ip_v) {
+		case IPVERSION:
+			/*
+			 * Don't allow both user specified and setsockopt
+			 * options, and don't allow packet length sizes that
+			 * will crash.
+			 */
+			if ((((ip->ip_hl << 2) != sizeof(struct ip)) &&
+			    inp->inp_options != NULL) ||
+			    ((u_short)ntohs(ip->ip_len) > m->m_pkthdr.len)) {
+				error = EINVAL;
+				INP_RUNLOCK(inp);
+				goto cantsend;
+			}
+
 			/* Convert fields to host order for ip_output() */
 			ip->ip_len = ntohs(ip->ip_len);
 			ip->ip_off = ntohs(ip->ip_off);
+			break;
+#ifdef INET6
+		case IPV6_VERSION >> 4:
+		    {
+			struct ip6_hdr *const ip6 = mtod(m, struct ip6_hdr *);
 
-			/* Send packet to output processing */
-			ipstat.ips_rawout++;			/* XXX */
+			/* Don't allow packet length sizes that will crash */
+			if (((u_short)ntohs(ip6->ip6_plen) > m->m_pkthdr.len)) {
+				error = EINVAL;
+				INP_RUNLOCK(inp);
+				goto cantsend;
+			}
+
+			ip6->ip6_plen = ntohs(ip6->ip6_plen);
+			break;
+		    }
+#endif
+		default:
+			error = EINVAL;
+			INP_RUNLOCK(inp);
+			goto cantsend;
+		}
+
+		/* Send packet to output processing */
+		KMOD_IPSTAT_INC(ips_rawout);		/* XXX */
 
 #ifdef MAC
-			mac_create_mbuf_from_inpcb(inp, m);
+		mac_inpcb_create_mbuf(inp, m);
 #endif
-			/*
-			 * Get ready to inject the packet into ip_output().
-			 * Just in case socket options were specified on the
-			 * divert socket, we duplicate them.  This is done
-			 * to avoid having to hold the PCB locks over the call
-			 * to ip_output(), as doing this results in a number of
-			 * lock ordering complexities.
-			 *
-			 * Note that we set the multicast options argument for
-			 * ip_output() to NULL since it should be invariant that
-			 * they are not present.
-			 */
-			KASSERT(inp->inp_moptions == NULL,
-			    ("multicast options set on a divert socket"));
-			options = NULL;
-			/*
-			 * XXXCSJP: It is unclear to me whether or not it makes
-			 * sense for divert sockets to have options.  However,
-			 * for now we will duplicate them with the INP locks
-			 * held so we can use them in ip_output() without
-			 * requring a reference to the pcb.
-			 */
-			if (inp->inp_options != NULL) {
-				options = m_dup(inp->inp_options, M_DONTWAIT);
-				if (options == NULL)
-					error = ENOBUFS;
+		/*
+		 * Get ready to inject the packet into ip_output().
+		 * Just in case socket options were specified on the
+		 * divert socket, we duplicate them.  This is done
+		 * to avoid having to hold the PCB locks over the call
+		 * to ip_output(), as doing this results in a number of
+		 * lock ordering complexities.
+		 *
+		 * Note that we set the multicast options argument for
+		 * ip_output() to NULL since it should be invariant that
+		 * they are not present.
+		 */
+		KASSERT(inp->inp_moptions == NULL,
+		    ("multicast options set on a divert socket"));
+		/*
+		 * XXXCSJP: It is unclear to me whether or not it makes
+		 * sense for divert sockets to have options.  However,
+		 * for now we will duplicate them with the INP locks
+		 * held so we can use them in ip_output() without
+		 * requring a reference to the pcb.
+		 */
+		if (inp->inp_options != NULL) {
+			options = m_dup(inp->inp_options, M_NOWAIT);
+			if (options == NULL) {
+				INP_RUNLOCK(inp);
+				error = ENOBUFS;
+				goto cantsend;
 			}
-			INP_RUNLOCK(inp);
-			INP_INFO_WUNLOCK(&divcbinfo);
-			if (error == ENOBUFS) {
-				m_freem(m);
-				return (error);
-			}
-			error = ip_output(m, options, NULL,
-			    ((so->so_options & SO_DONTROUTE) ?
-			    IP_ROUTETOIF : 0) | IP_ALLOWBROADCAST |
-			    IP_RAWOUTPUT, NULL, NULL);
-			if (options != NULL)
-				m_freem(options);
 		}
+		INP_RUNLOCK(inp);
+
+		switch (ip->ip_v) {
+		case IPVERSION:
+			error = ip_output(m, options, NULL,
+			    ((so->so_options & SO_DONTROUTE) ? IP_ROUTETOIF : 0)
+			    | IP_ALLOWBROADCAST | IP_RAWOUTPUT, NULL, NULL);
+			break;
+#ifdef INET6
+		case IPV6_VERSION >> 4:
+			error = ip6_output(m, NULL, NULL, 0, NULL, NULL, NULL);
+			break;
+#endif
+		}
+		if (options != NULL)
+			m_freem(options);
 	} else {
-		dt->info |= IP_FW_DIVERT_LOOPBACK_FLAG;
+		dt->info |= IPFW_IS_DIVERT | IPFW_INFO_IN;
 		if (m->m_pkthdr.rcvif == NULL) {
 			/*
 			 * No luck with the name, check by IP address.
@@ -436,21 +488,32 @@ div_output(struct socket *so, struct mbuf *m, struct sockaddr_in *sin,
 				goto cantsend;
 			}
 			m->m_pkthdr.rcvif = ifa->ifa_ifp;
+			ifa_free(ifa);
 		}
 #ifdef MAC
-		SOCK_LOCK(so);
-		mac_create_mbuf_from_socket(so, m);
-		SOCK_UNLOCK(so);
+		mac_socket_create_mbuf(so, m);
 #endif
 		/* Send packet to input processing via netisr */
-		netisr_queue(NETISR_IP, m);
+		switch (ip->ip_v) {
+		case IPVERSION:
+			netisr_queue_src(NETISR_IP, (uintptr_t)so, m);
+			break;
+#ifdef INET6
+		case IPV6_VERSION >> 4:
+			netisr_queue_src(NETISR_IPV6, (uintptr_t)so, m);
+			break;
+#endif
+		default:
+			error = EINVAL;
+			goto cantsend;
+		}
 	}
 
-	return error;
+	return (error);
 
 cantsend:
 	m_freem(m);
-	return error;
+	return (error);
 }
 
 static int
@@ -469,14 +532,14 @@ div_attach(struct socket *so, int proto, struct thread *td)
 	error = soreserve(so, div_sendspace, div_recvspace);
 	if (error)
 		return error;
-	INP_INFO_WLOCK(&divcbinfo);
-	error = in_pcballoc(so, &divcbinfo);
+	INP_INFO_WLOCK(&V_divcbinfo);
+	error = in_pcballoc(so, &V_divcbinfo);
 	if (error) {
-		INP_INFO_WUNLOCK(&divcbinfo);
+		INP_INFO_WUNLOCK(&V_divcbinfo);
 		return error;
 	}
 	inp = (struct inpcb *)so->so_pcb;
-	INP_INFO_WUNLOCK(&divcbinfo);
+	INP_INFO_WUNLOCK(&V_divcbinfo);
 	inp->inp_ip_p = proto;
 	inp->inp_vflag |= INP_IPV4;
 	inp->inp_flags |= INP_HDRINCL;
@@ -491,11 +554,11 @@ div_detach(struct socket *so)
 
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("div_detach: inp == NULL"));
-	INP_INFO_WLOCK(&divcbinfo);
+	INP_INFO_WLOCK(&V_divcbinfo);
 	INP_WLOCK(inp);
 	in_pcbdetach(inp);
 	in_pcbfree(inp);
-	INP_INFO_WUNLOCK(&divcbinfo);
+	INP_INFO_WUNLOCK(&V_divcbinfo);
 }
 
 static int
@@ -516,11 +579,13 @@ div_bind(struct socket *so, struct sockaddr *nam, struct thread *td)
 	if (nam->sa_family != AF_INET)
 		return EAFNOSUPPORT;
 	((struct sockaddr_in *)nam)->sin_addr.s_addr = INADDR_ANY;
-	INP_INFO_WLOCK(&divcbinfo);
+	INP_INFO_WLOCK(&V_divcbinfo);
 	INP_WLOCK(inp);
+	INP_HASH_WLOCK(&V_divcbinfo);
 	error = in_pcbbind(inp, nam, td->td_ucred);
+	INP_HASH_WUNLOCK(&V_divcbinfo);
 	INP_WUNLOCK(inp);
-	INP_INFO_WUNLOCK(&divcbinfo);
+	INP_INFO_WUNLOCK(&V_divcbinfo);
 	return error;
 }
 
@@ -541,10 +606,11 @@ static int
 div_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
     struct mbuf *control, struct thread *td)
 {
+
 	/* Packet must have a header (but that's about it) */
 	if (m->m_len < sizeof (struct ip) &&
 	    (m = m_pullup(m, sizeof (struct ip))) == 0) {
-		ipstat.ips_toosmall++;
+		KMOD_IPSTAT_INC(ips_toosmall);
 		m_freem(m);
 		return EINVAL;
 	}
@@ -553,7 +619,7 @@ div_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 	return div_output(so, m, (struct sockaddr_in *)nam, control);
 }
 
-void
+static void
 div_ctlinput(int cmd, struct sockaddr *sa, void *vip)
 {
         struct in_addr faddr;
@@ -578,9 +644,9 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	 * resource-intensive to repeat twice on every request.
 	 */
 	if (req->oldptr == 0) {
-		n = divcbinfo.ipi_count;
-		req->oldidx = 2 * (sizeof xig)
-			+ (n + n/8) * sizeof(struct xinpcb);
+		n = V_divcbinfo.ipi_count;
+		n += imax(n / 8, 10);
+		req->oldidx = 2 * (sizeof xig) + n * sizeof(struct xinpcb);
 		return 0;
 	}
 
@@ -590,10 +656,10 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	/*
 	 * OK, now we're committed to doing something.
 	 */
-	INP_INFO_RLOCK(&divcbinfo);
-	gencnt = divcbinfo.ipi_gencnt;
-	n = divcbinfo.ipi_count;
-	INP_INFO_RUNLOCK(&divcbinfo);
+	INP_INFO_RLOCK(&V_divcbinfo);
+	gencnt = V_divcbinfo.ipi_gencnt;
+	n = V_divcbinfo.ipi_count;
+	INP_INFO_RUNLOCK(&V_divcbinfo);
 
 	error = sysctl_wire_old_buffer(req,
 	    2 * sizeof(xig) + n*sizeof(struct xinpcb));
@@ -612,16 +678,18 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	if (inp_list == 0)
 		return ENOMEM;
 	
-	INP_INFO_RLOCK(&divcbinfo);
-	for (inp = LIST_FIRST(divcbinfo.ipi_listhead), i = 0; inp && i < n;
+	INP_INFO_RLOCK(&V_divcbinfo);
+	for (inp = LIST_FIRST(V_divcbinfo.ipi_listhead), i = 0; inp && i < n;
 	     inp = LIST_NEXT(inp, inp_list)) {
-		INP_RLOCK(inp);
+		INP_WLOCK(inp);
 		if (inp->inp_gencnt <= gencnt &&
-		    cr_canseeinpcb(req->td->td_ucred, inp) == 0)
+		    cr_canseeinpcb(req->td->td_ucred, inp) == 0) {
+			in_pcbref(inp);
 			inp_list[i++] = inp;
-		INP_RUNLOCK(inp);
+		}
+		INP_WUNLOCK(inp);
 	}
-	INP_INFO_RUNLOCK(&divcbinfo);
+	INP_INFO_RUNLOCK(&V_divcbinfo);
 	n = i;
 
 	error = 0;
@@ -641,6 +709,15 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 		} else
 			INP_RUNLOCK(inp);
 	}
+	INP_INFO_WLOCK(&V_divcbinfo);
+	for (i = 0; i < n; i++) {
+		inp = inp_list[i];
+		INP_RLOCK(inp);
+		if (!in_pcbrele_rlocked(inp))
+			INP_RUNLOCK(inp);
+	}
+	INP_INFO_WUNLOCK(&V_divcbinfo);
+
 	if (!error) {
 		/*
 		 * Give the user an updated idea of our state.
@@ -649,11 +726,11 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 		 * while we were processing this request, and it
 		 * might be necessary to retry.
 		 */
-		INP_INFO_RLOCK(&divcbinfo);
-		xig.xig_gen = divcbinfo.ipi_gencnt;
+		INP_INFO_RLOCK(&V_divcbinfo);
+		xig.xig_gen = V_divcbinfo.ipi_gencnt;
 		xig.xig_sogen = so_gencnt;
-		xig.xig_count = divcbinfo.ipi_count;
-		INP_INFO_RUNLOCK(&divcbinfo);
+		xig.xig_count = V_divcbinfo.ipi_count;
+		INP_INFO_RUNLOCK(&V_divcbinfo);
 		error = SYSCTL_OUT(req, &xig, sizeof xig);
 	}
 	free(inp_list, M_TEMP);
@@ -662,8 +739,8 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 
 #ifdef SYSCTL_NODE
 SYSCTL_NODE(_net_inet, IPPROTO_DIVERT, divert, CTLFLAG_RW, 0, "IPDIVERT");
-SYSCTL_PROC(_net_inet_divert, OID_AUTO, pcblist, CTLFLAG_RD, 0, 0,
-	    div_pcblist, "S,xinpcb", "List of active divert sockets");
+SYSCTL_PROC(_net_inet_divert, OID_AUTO, pcblist, CTLTYPE_OPAQUE | CTLFLAG_RD,
+    NULL, 0, div_pcblist, "S,xinpcb", "List of active divert sockets");
 #endif
 
 struct pr_usrreqs div_usrreqs = {
@@ -686,6 +763,9 @@ struct protosw div_protosw = {
 	.pr_ctlinput =		div_ctlinput,
 	.pr_ctloutput =		ip_ctloutput,
 	.pr_init =		div_init,
+#ifdef VIMAGE
+	.pr_destroy =		div_destroy,
+#endif
 	.pr_usrreqs =		&div_usrreqs
 };
 
@@ -693,7 +773,9 @@ static int
 div_modevent(module_t mod, int type, void *unused)
 {
 	int err = 0;
+#ifndef VIMAGE
 	int n;
+#endif
 
 	switch (type) {
 	case MOD_LOAD:
@@ -703,7 +785,11 @@ div_modevent(module_t mod, int type, void *unused)
 		 * a true IP protocol that goes over the wire.
 		 */
 		err = pf_proto_register(PF_INET, &div_protosw);
+		if (err != 0)
+			return (err);
 		ip_divert_ptr = divert_packet;
+		ip_divert_event_tag = EVENTHANDLER_REGISTER(maxsockets_change,
+		    div_zone_change, NULL, EVENTHANDLER_PRI_ANY);
 		break;
 	case MOD_QUIESCE:
 		/*
@@ -714,6 +800,10 @@ div_modevent(module_t mod, int type, void *unused)
 		err = EPERM;
 		break;
 	case MOD_UNLOAD:
+#ifdef VIMAGE
+		err = EPERM;
+		break;
+#else
 		/*
 		 * Forced unload.
 		 *
@@ -725,19 +815,20 @@ div_modevent(module_t mod, int type, void *unused)
 		 * socket open request could be spinning on the lock and then
 		 * we destroy the lock.
 		 */
-		INP_INFO_WLOCK(&divcbinfo);
-		n = divcbinfo.ipi_count;
+		INP_INFO_WLOCK(&V_divcbinfo);
+		n = V_divcbinfo.ipi_count;
 		if (n != 0) {
 			err = EBUSY;
-			INP_INFO_WUNLOCK(&divcbinfo);
+			INP_INFO_WUNLOCK(&V_divcbinfo);
 			break;
 		}
 		ip_divert_ptr = NULL;
 		err = pf_proto_unregister(PF_INET, IPPROTO_DIVERT, SOCK_RAW);
-		INP_INFO_WUNLOCK(&divcbinfo);
-		INP_INFO_LOCK_DESTROY(&divcbinfo);
-		uma_zdestroy(divcbinfo.ipi_zone);
+		INP_INFO_WUNLOCK(&V_divcbinfo);
+		div_destroy();
+		EVENTHANDLER_DEREGISTER(maxsockets_change, ip_divert_event_tag);
 		break;
+#endif /* !VIMAGE */
 	default:
 		err = EOPNOTSUPP;
 		break;
@@ -752,5 +843,5 @@ static moduledata_t ipdivertmod = {
 };
 
 DECLARE_MODULE(ipdivert, ipdivertmod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY);
-MODULE_DEPEND(dummynet, ipfw, 2, 2, 2);
+MODULE_DEPEND(ipdivert, ipfw, 2, 2, 2);
 MODULE_VERSION(ipdivert, 1);

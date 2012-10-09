@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_context.c,v 1.2.2.2.2.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_context.c
  * Implementation of the context management ioctls.
@@ -147,7 +147,7 @@ int drm_getsareactx(struct drm_device *dev, void *data,
 	map = dev->context_sareas[request->ctx_id];
 	DRM_UNLOCK();
 
-	request->handle = map->handle;
+	request->handle = (void *)map->handle;
 
 	return 0;
 }

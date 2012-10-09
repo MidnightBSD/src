@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: nd6.h,v 1.76 2001/12/18 02:10:31 itojun Exp $
- * $FreeBSD: src/sys/netinet6/nd6.h,v 1.21.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET6_ND6_H_
@@ -41,20 +41,7 @@
 #include <sys/queue.h>
 #include <sys/callout.h>
 
-struct	llinfo_nd6 {
-	struct	llinfo_nd6 *ln_next;
-	struct	llinfo_nd6 *ln_prev;
-	struct	rtentry *ln_rt;
-	struct	mbuf *ln_hold;	/* last packet until resolved/timeout */
-	long	ln_asked;	/* number of queries already sent for this addr */
-	u_long	ln_expire;	/* lifetime for NDP state transition */
-	short	ln_state;	/* reachability state */
-	short	ln_router;	/* 2^0: ND6 router bit */
-	int	ln_byhint;	/* # of times we made it reachable by UL hint */
-
-	long	ln_ntick;
-	struct callout ln_timer_ch;
-};
+struct llentry;
 
 #define ND6_LLINFO_NOSTATE	-2
 /*
@@ -72,7 +59,7 @@ struct	llinfo_nd6 {
 #define ND6_LLINFO_PROBE	4
 
 #define ND6_IS_LLINFO_PROBREACH(n) ((n)->ln_state > ND6_LLINFO_INCOMPLETE)
-#define ND6_LLINFO_PERMANENT(n) (((n)->ln_expire == 0) && ((n)->ln_state > ND6_LLINFO_INCOMPLETE))
+#define ND6_LLINFO_PERMANENT(n) (((n)->la_expire == 0) && ((n)->ln_state > ND6_LLINFO_INCOMPLETE))
 
 struct nd_ifinfo {
 	u_int32_t linkmtu;		/* LinkMTU */
@@ -97,6 +84,11 @@ struct nd_ifinfo {
 				     * DAD failure.  (XXX: not ND-specific)
 				     */
 #define ND6_IFF_DONT_SET_IFROUTE	0x10
+#define ND6_IFF_AUTO_LINKLOCAL	0x20
+#define	ND6_IFF_NO_RADR		0x40
+
+#define	ND6_CREATE		LLE_CREATE
+#define	ND6_EXCLUSIVE		LLE_EXCLUSIVE
 
 #ifdef _KERNEL
 #define ND_IFINFO(ifp) \
@@ -286,8 +278,6 @@ struct nd_prefix {
 	int	ndpr_refcnt;	/* reference couter from addresses */
 };
 
-#define ndpr_next		ndpr_entry.le_next
-
 #define ndpr_raf		ndpr_flags
 #define ndpr_raf_onlink		ndpr_flags.onlink
 #define ndpr_raf_auto		ndpr_flags.autonomous
@@ -321,36 +311,51 @@ struct inet6_ndpr_msghdr {
 
 struct nd_pfxrouter {
 	LIST_ENTRY(nd_pfxrouter) pfr_entry;
-#define pfr_next pfr_entry.le_next
 	struct nd_defrouter *router;
 };
 
 LIST_HEAD(nd_prhead, nd_prefix);
 
 /* nd6.c */
-extern int nd6_prune;
-extern int nd6_delay;
-extern int nd6_umaxtries;
-extern int nd6_mmaxtries;
-extern int nd6_useloopback;
-extern int nd6_maxnudhint;
-extern int nd6_gctimer;
-extern struct llinfo_nd6 llinfo_nd6;
-extern struct nd_drhead nd_defrouter;
-extern struct nd_prhead nd_prefix;
-extern int nd6_debug;
-extern int nd6_onlink_ns_rfc4861;
+VNET_DECLARE(int, nd6_prune);
+VNET_DECLARE(int, nd6_delay);
+VNET_DECLARE(int, nd6_umaxtries);
+VNET_DECLARE(int, nd6_mmaxtries);
+VNET_DECLARE(int, nd6_useloopback);
+VNET_DECLARE(int, nd6_maxnudhint);
+VNET_DECLARE(int, nd6_gctimer);
+VNET_DECLARE(struct nd_drhead, nd_defrouter);
+VNET_DECLARE(struct nd_prhead, nd_prefix);
+VNET_DECLARE(int, nd6_debug);
+VNET_DECLARE(int, nd6_onlink_ns_rfc4861);
+#define	V_nd6_prune			VNET(nd6_prune)
+#define	V_nd6_delay			VNET(nd6_delay)
+#define	V_nd6_umaxtries			VNET(nd6_umaxtries)
+#define	V_nd6_mmaxtries			VNET(nd6_mmaxtries)
+#define	V_nd6_useloopback		VNET(nd6_useloopback)
+#define	V_nd6_maxnudhint		VNET(nd6_maxnudhint)
+#define	V_nd6_gctimer			VNET(nd6_gctimer)
+#define	V_nd_defrouter			VNET(nd_defrouter)
+#define	V_nd_prefix			VNET(nd_prefix)
+#define	V_nd6_debug			VNET(nd6_debug)
+#define	V_nd6_onlink_ns_rfc4861		VNET(nd6_onlink_ns_rfc4861)
 
-#define nd6log(x)	do { if (nd6_debug) log x; } while (/*CONSTCOND*/ 0)
+#define nd6log(x)	do { if (V_nd6_debug) log x; } while (/*CONSTCOND*/ 0)
 
-extern struct callout nd6_timer_ch;
+VNET_DECLARE(struct callout, nd6_timer_ch);
+#define	V_nd6_timer_ch			VNET(nd6_timer_ch)
 
 /* nd6_rtr.c */
-extern int nd6_defifindex;
-extern int ip6_desync_factor;	/* seconds */
-extern u_int32_t ip6_temp_preferred_lifetime; /* seconds */
-extern u_int32_t ip6_temp_valid_lifetime; /* seconds */
-extern int ip6_temp_regen_advance; /* seconds */
+VNET_DECLARE(int, nd6_defifindex);
+VNET_DECLARE(int, ip6_desync_factor);	/* seconds */
+VNET_DECLARE(u_int32_t, ip6_temp_preferred_lifetime); /* seconds */
+VNET_DECLARE(u_int32_t, ip6_temp_valid_lifetime); /* seconds */
+VNET_DECLARE(int, ip6_temp_regen_advance); /* seconds */
+#define	V_nd6_defifindex		VNET(nd6_defifindex)
+#define	V_ip6_desync_factor		VNET(ip6_desync_factor)
+#define	V_ip6_temp_preferred_lifetime	VNET(ip6_temp_preferred_lifetime)
+#define	V_ip6_temp_valid_lifetime	VNET(ip6_temp_valid_lifetime)
+#define	V_ip6_temp_regen_advance	VNET(ip6_temp_regen_advance)
 
 union nd_opts {
 	struct nd_opt_hdr *nd_opt_array[8];	/* max = target address list */
@@ -380,15 +385,19 @@ union nd_opts {
 /* XXX: need nd6_var.h?? */
 /* nd6.c */
 void nd6_init __P((void));
+#ifdef VIMAGE
+void nd6_destroy __P((void));
+#endif
 struct nd_ifinfo *nd6_ifattach __P((struct ifnet *));
 void nd6_ifdetach __P((struct nd_ifinfo *));
 int nd6_is_addr_neighbor __P((struct sockaddr_in6 *, struct ifnet *));
 void nd6_option_init __P((void *, int, union nd_opts *));
 struct nd_opt_hdr *nd6_option __P((union nd_opts *));
 int nd6_options __P((union nd_opts *));
-struct	rtentry *nd6_lookup __P((struct in6_addr *, int, struct ifnet *));
+struct	llentry *nd6_lookup __P((struct in6_addr *, int, struct ifnet *));
 void nd6_setmtu __P((struct ifnet *));
-void nd6_llinfo_settimer __P((struct llinfo_nd6 *, long));
+void nd6_llinfo_settimer __P((struct llentry *, long));
+void nd6_llinfo_settimer_locked __P((struct llentry *, long));
 void nd6_timer __P((void *));
 void nd6_purge __P((struct ifnet *));
 void nd6_nud_hint __P((struct rtentry *, struct in6_addr *, int));
@@ -396,13 +405,18 @@ int nd6_resolve __P((struct ifnet *, struct rtentry *, struct mbuf *,
 	struct sockaddr *, u_char *));
 void nd6_rtrequest __P((int, struct rtentry *, struct rt_addrinfo *));
 int nd6_ioctl __P((u_long, caddr_t, struct ifnet *));
-struct rtentry *nd6_cache_lladdr __P((struct ifnet *, struct in6_addr *,
+struct llentry *nd6_cache_lladdr __P((struct ifnet *, struct in6_addr *,
 	char *, int, int, int));
 int nd6_output __P((struct ifnet *, struct ifnet *, struct mbuf *,
 	struct sockaddr_in6 *, struct rtentry *));
+int nd6_output_lle __P((struct ifnet *, struct ifnet *, struct mbuf *,
+	struct sockaddr_in6 *, struct rtentry *, struct llentry *,
+	struct mbuf **));
+int nd6_output_flush __P((struct ifnet *, struct ifnet *, struct mbuf *,
+	struct sockaddr_in6 *, struct route *));
 int nd6_need_cache __P((struct ifnet *));
-int nd6_storelladdr __P((struct ifnet *, struct rtentry *, struct mbuf *,
-	struct sockaddr *, u_char *));
+int nd6_storelladdr __P((struct ifnet *, struct mbuf *,
+	struct sockaddr *, u_char *, struct llentry **));
 
 /* nd6_nbr.c */
 void nd6_na_input __P((struct mbuf *, int, int));
@@ -410,7 +424,7 @@ void nd6_na_output __P((struct ifnet *, const struct in6_addr *,
 	const struct in6_addr *, u_long, int, struct sockaddr *));
 void nd6_ns_input __P((struct mbuf *, int, int));
 void nd6_ns_output __P((struct ifnet *, const struct in6_addr *,
-	const struct in6_addr *, struct llinfo_nd6 *, int));
+	const struct in6_addr *, struct llentry *, int));
 caddr_t nd6_ifptomac __P((struct ifnet *));
 void nd6_dad_start __P((struct ifaddr *, int));
 void nd6_dad_stop __P((struct ifaddr *));
@@ -420,15 +434,12 @@ void nd6_dad_duplicated __P((struct ifaddr *));
 void nd6_rs_input __P((struct mbuf *, int, int));
 void nd6_ra_input __P((struct mbuf *, int, int));
 void prelist_del __P((struct nd_prefix *));
-void defrouter_addreq __P((struct nd_defrouter *));
 void defrouter_reset __P((void));
 void defrouter_select __P((void));
 void defrtrlist_del __P((struct nd_defrouter *));
 void prelist_remove __P((struct nd_prefix *));
 int nd6_prelist_add __P((struct nd_prefixctl *, struct nd_defrouter *,
 	struct nd_prefix **));
-int nd6_prefix_onlink __P((struct nd_prefix *));
-int nd6_prefix_offlink __P((struct nd_prefix *));
 void pfxlist_onlink_check __P((void));
 struct nd_defrouter *defrouter_lookup __P((struct in6_addr *, struct ifnet *));
 struct nd_prefix *nd6_prefix_lookup __P((struct nd_prefixctl *));

@@ -27,26 +27,34 @@
  * SUCH DAMAGE.
  *
  *	@(#)radix.c	8.5 (Berkeley) 5/19/95
- * $FreeBSD: src/sys/net/radix.c,v 1.38.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
  * Routines to build and maintain radix trees for routing lookups.
  */
-#ifndef _RADIX_H_
 #include <sys/param.h>
 #ifdef	_KERNEL
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/rwlock.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
-#include <sys/domain.h>
-#else
-#include <stdlib.h>
-#endif
 #include <sys/syslog.h>
 #include <net/radix.h>
+#include "opt_mpath.h"
+#ifdef RADIX_MPATH
+#include <net/radix_mpath.h>
 #endif
+#else /* !_KERNEL */
+#include <stdio.h>
+#include <strings.h>
+#include <stdlib.h>
+#define log(x, arg...)	fprintf(stderr, ## arg)
+#define panic(x)	fprintf(stderr, "PANIC: %s", x), exit(1)
+#define min(a, b) ((a) < (b) ? (a) : (b) )
+#include <net/radix.h>
+#endif /* !_KERNEL */
 
 static int	rn_walktree_from(struct radix_node_head *h, void *a, void *m,
 		    walktree_f_t *f, void *w);
@@ -64,6 +72,8 @@ static struct radix_node_head *mask_rnhead;
 /*
  * Work area -- the following point to 3 buffers of size max_keylen,
  * allocated in this order in a block of memory malloc'ed by rn_init.
+ * rn_zeros, rn_ones are set in rn_init and used in readonly afterwards.
+ * addmask_key is used in rn_addmask in rw mode and not thread-safe.
  */
 static char *rn_zeros, *rn_ones, *addmask_key;
 
@@ -127,8 +137,9 @@ static int	rn_satisfies_leaf(char *trial, struct radix_node *leaf,
  * To make the assumption more explicit, we use the LEN() macro to access
  * this field. It is safe to pass an expression with side effects
  * to LEN() as the argument is evaluated only once.
+ * We cast the result to int as this is the dominant usage.
  */
-#define LEN(x) (*(const u_char *)(x))
+#define LEN(x) ( (int) (*(const u_char *)(x)) )
 
 /*
  * XXX THIS NEEDS TO BE FIXED
@@ -189,7 +200,7 @@ rn_refines(m_arg, n_arg)
 {
 	register caddr_t m = m_arg, n = n_arg;
 	register caddr_t lim, lim2 = lim = n + LEN(n);
-	int longer = LEN(n++) - (int)LEN(m++);
+	int longer = LEN(n++) - LEN(m++);
 	int masks_are_equal = 1;
 
 	if (longer > 0)
@@ -242,10 +253,10 @@ rn_satisfies_leaf(trial, leaf, skip)
 	char *cplim;
 	int length = min(LEN(cp), LEN(cp2));
 
-	if (cp3 == 0)
+	if (cp3 == NULL)
 		cp3 = rn_ones;
 	else
-		length = min(length, *(u_char *)cp3);
+		length = min(length, LEN(cp3));
 	cplim = cp + length; cp3 += skip; cp2 += skip;
 	for (cp += skip; cp < cplim; cp++, cp2++, cp3++)
 		if ((*cp ^ *cp2) & *cp3)
@@ -416,7 +427,7 @@ rn_insert(v_arg, head, dupentry, nodes)
 {
 	caddr_t v = v_arg;
 	struct radix_node *top = head->rnh_treetop;
-	int head_off = top->rn_offset, vlen = (int)LEN(v);
+	int head_off = top->rn_offset, vlen = LEN(v);
 	register struct radix_node *t = rn_search(v_arg, top);
 	register caddr_t cp = v + head_off;
 	register int b;
@@ -630,6 +641,21 @@ rn_addroute(v_arg, n_arg, head, treenodes)
 	saved_tt = tt = rn_insert(v, head, &keyduplicated, treenodes);
 	if (keyduplicated) {
 		for (t = tt; tt; t = tt, tt = tt->rn_dupedkey) {
+#ifdef RADIX_MPATH
+			/* permit multipath, if enabled for the family */
+			if (rn_mpath_capable(head) && netmask == tt->rn_mask) {
+				/*
+				 * go down to the end of multipaths, so that
+				 * new entry goes into the end of rn_dupedkey
+				 * chain.
+				 */
+				do {
+					t = tt;
+					tt = tt->rn_dupedkey;
+				} while (tt && t->rn_mask == tt->rn_mask);
+				break;
+			}
+#endif
 			if (tt->rn_mask == netmask)
 				return (0);
 			if (netmask == 0 ||
@@ -735,8 +761,10 @@ on2:
 		if (m->rm_flags & RNF_NORMAL) {
 			mmask = m->rm_leaf->rn_mask;
 			if (tt->rn_flags & RNF_NORMAL) {
+#if !defined(RADIX_MPATH)
 			    log(LOG_ERR,
 			        "Non-unique normal route, mask not entered\n");
+#endif
 				return tt;
 			}
 		} else
@@ -910,7 +938,7 @@ on1:
 			if (m)
 				log(LOG_ERR,
 				    "rn_delete: Orphaned Mask %p at %p\n",
-				    (void *)m, (void *)x);
+				    m, x);
 		}
 	}
 	/*
@@ -1064,6 +1092,7 @@ rn_walktree(h, f, w)
 	 * while applying the function f to it, so we need to calculate
 	 * the successor node in advance.
 	 */
+
 	/* First time through node, go left */
 	while (rn->rn_bit >= 0)
 		rn = rn->rn_left;
@@ -1134,17 +1163,28 @@ rn_inithead(head, off)
 	return (1);
 }
 
+int
+rn_detachhead(void **head)
+{
+	struct radix_node_head *rnh;
+
+	KASSERT((head != NULL && *head != NULL),
+	    ("%s: head already freed", __func__));
+	rnh = *head;
+	
+	/* Free <left,root,right> nodes. */
+	Free(rnh);
+
+	*head = NULL;
+	return (1);
+}
+
 void
-rn_init()
+rn_init(int maxk)
 {
 	char *cp, *cplim;
-#ifdef _KERNEL
-	struct domain *dom;
 
-	for (dom = domains; dom; dom = dom->dom_next)
-		if (dom->dom_maxrtkey > max_keylen)
-			max_keylen = dom->dom_maxrtkey;
-#endif
+	max_keylen = maxk;
 	if (max_keylen == 0) {
 		log(LOG_ERR,
 		    "rn_init: radix functions require max_keylen be set\n");

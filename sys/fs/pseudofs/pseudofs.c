@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/pseudofs/pseudofs.c,v 1.32 2007/04/15 17:10:01 des Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pseudofs.h"
 
@@ -72,7 +71,7 @@ pfs_alloc_node(struct pfs_info *pi, const char *name, pfs_type_t type)
 	KASSERT(strlen(name) < PFS_NAMELEN,
 	    ("%s(): node name is too long", __func__));
 
-	MALLOC(pn, struct pfs_node *, sizeof *pn,
+	pn = malloc(sizeof *pn,
 	    M_PFSNODES, M_WAITOK|M_ZERO);
 	mtx_init(&pn->pn_mutex, "pfs_node", NULL, MTX_DEF | MTX_DUPOK);
 	strlcpy(pn->pn_name, name, sizeof pn->pn_name);
@@ -291,7 +290,7 @@ pfs_destroy(struct pfs_node *pn)
 	/* destroy the node */
 	pfs_fileno_free(pn);
 	mtx_destroy(&pn->pn_mutex);
-	FREE(pn, M_PFSNODES);
+	free(pn, M_PFSNODES);
 
 	return (0);
 }
@@ -300,7 +299,7 @@ pfs_destroy(struct pfs_node *pn)
  * Mount a pseudofs instance
  */
 int
-pfs_mount(struct pfs_info *pi, struct mount *mp, struct thread *td)
+pfs_mount(struct pfs_info *pi, struct mount *mp)
 {
 	struct statfs *sbp;
 
@@ -311,7 +310,7 @@ pfs_mount(struct pfs_info *pi, struct mount *mp, struct thread *td)
 	mp->mnt_flag |= MNT_LOCAL;
 	mp->mnt_kern_flag |= MNTK_MPSAFE;
 	MNT_IUNLOCK(mp);
-	mp->mnt_data = (qaddr_t)pi;
+	mp->mnt_data = pi;
 	vfs_getnewfsid(mp);
 
 	sbp = &mp->mnt_stat;
@@ -331,7 +330,7 @@ pfs_mount(struct pfs_info *pi, struct mount *mp, struct thread *td)
  * Compatibility shim for old mount(2) system call
  */
 int
-pfs_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
+pfs_cmount(struct mntarg *ma, void *data, uint64_t flags)
 {
 	int error;
 
@@ -343,11 +342,12 @@ pfs_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
  * Unmount a pseudofs instance
  */
 int
-pfs_unmount(struct mount *mp, int mntflags, struct thread *td)
+pfs_unmount(struct mount *mp, int mntflags)
 {
 	int error;
 
-	error = vflush(mp, 0, (mntflags & MNT_FORCE) ?  FORCECLOSE : 0, td);
+	error = vflush(mp, 0, (mntflags & MNT_FORCE) ?  FORCECLOSE : 0,
+	    curthread);
 	return (error);
 }
 
@@ -355,7 +355,7 @@ pfs_unmount(struct mount *mp, int mntflags, struct thread *td)
  * Return a root vnode
  */
 int
-pfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
+pfs_root(struct mount *mp, int flags, struct vnode **vpp)
 {
 	struct pfs_info *pi;
 
@@ -367,7 +367,7 @@ pfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
  * Return filesystem stats
  */
 int
-pfs_statfs(struct mount *mp, struct statfs *sbp, struct thread *td)
+pfs_statfs(struct mount *mp, struct statfs *sbp)
 {
 	/* no-op:  always called with mp->mnt_stat */
 	return (0);

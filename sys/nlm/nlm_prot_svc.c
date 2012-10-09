@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -38,7 +37,7 @@
 /*static char sccsid[] = "from: * @(#)nlm_prot.x	2.1 88/08/01 4.0 RPCSRC";*/
 __RCSID("$NetBSD: nlm_prot.x,v 1.6 2000/06/07 14:30:15 bouyer Exp $");
 #endif /* not lint */
-__FBSDID("$FreeBSD: src/sys/nlm/nlm_prot_svc.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 void nlm_prog_0(struct svc_req *rqstp, SVCXPRT *transp);
 void nlm_prog_1(struct svc_req *rqstp, SVCXPRT *transp);
@@ -58,8 +57,9 @@ nlm_prog_0(struct svc_req *rqstp, SVCXPRT *transp)
 
 	switch (rqstp->rq_proc) {
 	case NULLPROC:
-		(void) svc_sendreply(transp,
+		(void) svc_sendreply(rqstp,
 			(xdrproc_t) xdr_void, (char *)NULL);
+		svc_freereq(rqstp);
 		return;
 
 	case NLM_SM_NOTIFY:
@@ -69,22 +69,25 @@ nlm_prog_0(struct svc_req *rqstp, SVCXPRT *transp)
 		break;
 
 	default:
-		svcerr_noproc(transp);
+		svcerr_noproc(rqstp);
+		svc_freereq(rqstp);
 		return;
 	}
 	(void) memset((char *)&argument, 0, sizeof (argument));
-	if (!svc_getargs(transp, xdr_argument, (char *)(caddr_t) &argument)) {
-		svcerr_decode(transp);
+	if (!svc_getargs(rqstp, xdr_argument, (char *)(caddr_t) &argument)) {
+		svcerr_decode(rqstp);
+		svc_freereq(rqstp);
 		return;
 	}
 	retval = (bool_t) (*local)((char *)&argument, (void *)&result, rqstp);
-	if (retval > 0 && !svc_sendreply(transp, xdr_result, (char *)&result)) {
-		svcerr_systemerr(transp);
+	if (retval > 0 && !svc_sendreply(rqstp, xdr_result, (char *)&result)) {
+		svcerr_systemerr(rqstp);
 	}
-	if (!svc_freeargs(transp, xdr_argument, (char *)(caddr_t) &argument)) {
+	if (!svc_freeargs(rqstp, xdr_argument, (char *)(caddr_t) &argument)) {
 		printf("unable to free arguments");
 		//exit(1);
 	}
+	svc_freereq(rqstp);
 
 	return;
 }
@@ -122,8 +125,9 @@ nlm_prog_1(struct svc_req *rqstp, SVCXPRT *transp)
 
 	switch (rqstp->rq_proc) {
 	case NULLPROC:
-		(void) svc_sendreply(transp,
+		(void) svc_sendreply(rqstp,
 			(xdrproc_t) xdr_void, (char *)NULL);
+		svc_freereq(rqstp);
 		return;
 
 	case NLM_TEST:
@@ -217,22 +221,25 @@ nlm_prog_1(struct svc_req *rqstp, SVCXPRT *transp)
 		break;
 
 	default:
-		svcerr_noproc(transp);
+		svcerr_noproc(rqstp);
+		svc_freereq(rqstp);
 		return;
 	}
 	(void) memset((char *)&argument, 0, sizeof (argument));
-	if (!svc_getargs(transp, xdr_argument, (char *)(caddr_t) &argument)) {
-		svcerr_decode(transp);
+	if (!svc_getargs(rqstp, xdr_argument, (char *)(caddr_t) &argument)) {
+		svcerr_decode(rqstp);
+		svc_freereq(rqstp);
 		return;
 	}
 	retval = (bool_t) (*local)((char *)&argument, (void *)&result, rqstp);
-	if (retval > 0 && !svc_sendreply(transp, xdr_result, (char *)&result)) {
-		svcerr_systemerr(transp);
+	if (retval > 0 && !svc_sendreply(rqstp, xdr_result, (char *)&result)) {
+		svcerr_systemerr(rqstp);
 	}
-	if (!svc_freeargs(transp, xdr_argument, (char *)(caddr_t) &argument)) {
+	if (!svc_freeargs(rqstp, xdr_argument, (char *)(caddr_t) &argument)) {
 		printf("unable to free arguments");
 		//exit(1);
 	}
+	svc_freereq(rqstp);
 	if (!nlm_prog_1_freeresult(transp, xdr_result, (caddr_t) &result))
 		printf("unable to free results");
 
@@ -259,8 +266,9 @@ nlm_prog_3(struct svc_req *rqstp, SVCXPRT *transp)
 
 	switch (rqstp->rq_proc) {
 	case NULLPROC:
-		(void) svc_sendreply(transp,
+		(void) svc_sendreply(rqstp,
 			(xdrproc_t) xdr_void, (char *)NULL);
+		svc_freereq(rqstp);
 		return;
 
 	case NLM_TEST:
@@ -306,22 +314,25 @@ nlm_prog_3(struct svc_req *rqstp, SVCXPRT *transp)
 		break;
 
 	default:
-		svcerr_noproc(transp);
+		svcerr_noproc(rqstp);
+		svc_freereq(rqstp);
 		return;
 	}
 	(void) memset((char *)&argument, 0, sizeof (argument));
-	if (!svc_getargs(transp, xdr_argument, (char *)(caddr_t) &argument)) {
-		svcerr_decode(transp);
+	if (!svc_getargs(rqstp, xdr_argument, (char *)(caddr_t) &argument)) {
+		svcerr_decode(rqstp);
+		svc_freereq(rqstp);
 		return;
 	}
 	retval = (bool_t) (*local)((char *)&argument, (void *)&result, rqstp);
-	if (retval > 0 && !svc_sendreply(transp, xdr_result, (char *)&result)) {
-		svcerr_systemerr(transp);
+	if (retval > 0 && !svc_sendreply(rqstp, xdr_result, (char *)&result)) {
+		svcerr_systemerr(rqstp);
 	}
-	if (!svc_freeargs(transp, xdr_argument, (char *)(caddr_t) &argument)) {
+	if (!svc_freeargs(rqstp, xdr_argument, (char *)(caddr_t) &argument)) {
 		printf("unable to free arguments");
 		//exit(1);
 	}
+	svc_freereq(rqstp);
 	if (!nlm_prog_3_freeresult(transp, xdr_result, (caddr_t) &result))
 		printf("unable to free results");
 
@@ -368,8 +379,9 @@ nlm_prog_4(struct svc_req *rqstp, SVCXPRT *transp)
 
 	switch (rqstp->rq_proc) {
 	case NULLPROC:
-		(void) svc_sendreply(transp,
+		(void) svc_sendreply(rqstp,
 			(xdrproc_t) xdr_void, (char *)NULL);
+		svc_freereq(rqstp);
 		return;
 
 	case NLM4_TEST:
@@ -487,22 +499,25 @@ nlm_prog_4(struct svc_req *rqstp, SVCXPRT *transp)
 		break;
 
 	default:
-		svcerr_noproc(transp);
+		svcerr_noproc(rqstp);
+		svc_freereq(rqstp);
 		return;
 	}
 	(void) memset((char *)&argument, 0, sizeof (argument));
-	if (!svc_getargs(transp, xdr_argument, (char *)(caddr_t) &argument)) {
-		svcerr_decode(transp);
+	if (!svc_getargs(rqstp, xdr_argument, (char *)(caddr_t) &argument)) {
+		svcerr_decode(rqstp);
+		svc_freereq(rqstp);
 		return;
 	}
 	retval = (bool_t) (*local)((char *)&argument, (void *)&result, rqstp);
-	if (retval > 0 && !svc_sendreply(transp, xdr_result, (char *)&result)) {
-		svcerr_systemerr(transp);
+	if (retval > 0 && !svc_sendreply(rqstp, xdr_result, (char *)&result)) {
+		svcerr_systemerr(rqstp);
 	}
-	if (!svc_freeargs(transp, xdr_argument, (char *)(caddr_t) &argument)) {
+	if (!svc_freeargs(rqstp, xdr_argument, (char *)(caddr_t) &argument)) {
 		printf("unable to free arguments");
 		//exit(1);
 	}
+	svc_freereq(rqstp);
 	if (!nlm_prog_4_freeresult(transp, xdr_result, (caddr_t) &result))
 		printf("unable to free results");
 

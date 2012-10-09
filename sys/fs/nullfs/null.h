@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)null.h	8.3 (Berkeley) 8/20/94
  *
- * $FreeBSD: src/sys/fs/nullfs/null.h,v 1.23 2005/03/15 13:49:33 jeff Exp $
+ * $FreeBSD$
  */
 
 struct null_mount {

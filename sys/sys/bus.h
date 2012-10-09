@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/bus.h,v 1.5 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997,1998,2003 Doug Rabson
  * All rights reserved.
@@ -24,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/bus.h,v 1.78.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_BUS_H_
 #define _SYS_BUS_H_
 
+#include <machine/_limits.h>
 #include <sys/_bus_dma.h>
 
 /**
@@ -50,10 +50,11 @@ struct u_businfo {
  * @brief State of the device.
  */
 typedef enum device_state {
-	DS_NOTPRESENT,			/**< @brief not probed or probe failed */
-	DS_ALIVE,			/**< @brief probe succeeded */
-	DS_ATTACHED,			/**< @brief attach method called */
-	DS_BUSY				/**< @brief device is open */
+	DS_NOTPRESENT = 10,		/**< @brief not probed or probe failed */
+	DS_ALIVE = 20,			/**< @brief probe succeeded */
+	DS_ATTACHING = 25,		/**< @brief currently attaching */
+	DS_ATTACHED = 30,		/**< @brief attach method called */
+	DS_BUSY = 40			/**< @brief device is open */
 } device_state_t;
 
 /**
@@ -85,8 +86,11 @@ struct u_device {
  * included in case devctl_notify isn't sufficiently general.
  */
 boolean_t devctl_process_running(void);
+void devctl_notify_f(const char *__system, const char *__subsystem,
+    const char *__type, const char *__data, int __flags);
 void devctl_notify(const char *__system, const char *__subsystem,
     const char *__type, const char *__data);
+void devctl_queue_data_f(char *__data, int __flags);
 void devctl_queue_data(char *__data);
 
 /**
@@ -188,10 +192,13 @@ enum intr_type {
 	INTR_TYPE_MISC = 16,
 	INTR_TYPE_CLK = 32,
 	INTR_TYPE_AV = 64,
-	INTR_FAST = 128,
 	INTR_EXCL = 256,		/* exclusive interrupt */
 	INTR_MPSAFE = 512,		/* this interrupt is SMP safe */
-	INTR_ENTROPY = 1024		/* this interrupt provides entropy */
+	INTR_ENTROPY = 1024,		/* this interrupt provides entropy */
+	INTR_MD1 = 4096,		/* flag reserved for MD use */
+	INTR_MD2 = 8192,		/* flag reserved for MD use */
+	INTR_MD3 = 16384,		/* flag reserved for MD use */
+	INTR_MD4 = 32768		/* flag reserved for MD use */
 };
 
 enum intr_trigger {
@@ -231,12 +238,17 @@ struct resource_list_entry {
 	STAILQ_ENTRY(resource_list_entry) link;
 	int	type;			/**< @brief type argument to alloc_resource */
 	int	rid;			/**< @brief resource identifier */
+	int	flags;			/**< @brief resource flags */
 	struct	resource *res;		/**< @brief the real resource when allocated */
 	u_long	start;			/**< @brief start of resource range */
 	u_long	end;			/**< @brief end of resource range */
 	u_long	count;			/**< @brief count within range */
 };
 STAILQ_HEAD(resource_list, resource_list_entry);
+
+#define	RLE_RESERVED		0x0001	/* Reserved by the parent bus. */
+#define	RLE_ALLOCATED		0x0002	/* Reserved resource is allocated. */
+#define	RLE_PREFETCH		0x0004	/* Resource is a prefetch range. */
 
 void	resource_list_init(struct resource_list *rl);
 void	resource_list_free(struct resource_list *rl);
@@ -247,6 +259,9 @@ struct resource_list_entry *
 int	resource_list_add_next(struct resource_list *rl,
 			  int type,
 			  u_long start, u_long end, u_long count);
+int	resource_list_busy(struct resource_list *rl,
+			   int type, int rid);
+int	resource_list_reserved(struct resource_list *rl, int type, int rid);
 struct resource_list_entry*
 	resource_list_find(struct resource_list *rl,
 			   int type, int rid);
@@ -261,6 +276,15 @@ struct resource *
 int	resource_list_release(struct resource_list *rl,
 			      device_t bus, device_t child,
 			      int type, int rid, struct resource *res);
+struct resource *
+	resource_list_reserve(struct resource_list *rl,
+			      device_t bus, device_t child,
+			      int type, int *rid,
+			      u_long start, u_long end,
+			      u_long count, u_int flags);
+int	resource_list_unreserve(struct resource_list *rl,
+				device_t bus, device_t child,
+				int type, int rid);
 void	resource_list_purge(struct resource_list *rl);
 int	resource_list_print_type(struct resource_list *rl,
 				 const char *name, int type,
@@ -280,8 +304,11 @@ void	root_bus_configure(void);
 int	bus_generic_activate_resource(device_t dev, device_t child, int type,
 				      int rid, struct resource *r);
 device_t
-	bus_generic_add_child(device_t dev, int order, const char *name,
+	bus_generic_add_child(device_t dev, u_int order, const char *name,
 			      int unit);
+int	bus_generic_adjust_resource(device_t bus, device_t child, int type,
+				    struct resource *r, u_long start,
+				    u_long end);
 struct resource *
 	bus_generic_alloc_resource(device_t bus, device_t child, int type,
 				   int *rid, u_long start, u_long end,
@@ -292,6 +319,9 @@ int	bus_generic_bind_intr(device_t dev, device_t child,
 int	bus_generic_child_present(device_t dev, device_t child);
 int	bus_generic_config_intr(device_t, int, enum intr_trigger,
 				enum intr_polarity);
+int	bus_generic_describe_intr(device_t dev, device_t child,
+				  struct resource *irq, void *cookie,
+				  const char *descr);
 int	bus_generic_deactivate_resource(device_t dev, device_t child, int type,
 					int rid, struct resource *r);
 int	bus_generic_detach(device_t dev);
@@ -300,6 +330,7 @@ bus_dma_tag_t
 	bus_generic_get_dma_tag(device_t dev, device_t child);
 struct resource_list *
 	bus_generic_get_resource_list (device_t, device_t);
+void	bus_generic_new_pass(device_t dev);
 int	bus_print_child_header(device_t dev, device_t child);
 int	bus_print_child_footer(device_t dev, device_t child);
 int	bus_generic_print_child(device_t dev, device_t child);
@@ -343,9 +374,13 @@ struct resource_spec {
 	int	flags;
 };
 
-int bus_alloc_resources(device_t dev, struct resource_spec *rs, struct resource **res);
-void bus_release_resources(device_t dev, const struct resource_spec *rs, struct resource **res);
+int	bus_alloc_resources(device_t dev, struct resource_spec *rs,
+			    struct resource **res);
+void	bus_release_resources(device_t dev, const struct resource_spec *rs,
+			      struct resource **res);
 
+int	bus_adjust_resource(device_t child, int type, struct resource *r,
+			    u_long start, u_long end);
 struct	resource *bus_alloc_resource(device_t dev, int type, int *rid,
 				     u_long start, u_long end, u_long count,
 				     u_int flags);
@@ -362,6 +397,8 @@ int	bus_setup_intr(device_t dev, struct resource *r, int flags,
 		       void *arg, void **cookiep);
 int	bus_teardown_intr(device_t dev, struct resource *r, void *cookie);
 int	bus_bind_intr(device_t dev, struct resource *r, int cpu);
+int	bus_describe_intr(device_t dev, struct resource *irq, void *cookie,
+			  const char *fmt, ...);
 int	bus_set_resource(device_t dev, int type, int rid,
 			 u_long start, u_long count);
 int	bus_get_resource(device_t dev, int type, int rid,
@@ -384,10 +421,11 @@ bus_alloc_resource_any(device_t dev, int type, int *rid, u_int flags)
  * Access functions for device.
  */
 device_t	device_add_child(device_t dev, const char *name, int unit);
-device_t	device_add_child_ordered(device_t dev, int order,
+device_t	device_add_child_ordered(device_t dev, u_int order,
 					 const char *name, int unit);
 void	device_busy(device_t dev);
 int	device_delete_child(device_t dev, device_t child);
+int	device_delete_children(device_t dev);
 int	device_attach(device_t dev);
 int	device_detach(device_t dev);
 void	device_disable(device_t dev);
@@ -415,6 +453,7 @@ int	device_is_enabled(device_t dev);
 int	device_is_quiet(device_t dev);
 int	device_print_prettyname(device_t dev);
 int	device_printf(device_t dev, const char *, ...) __printflike(2, 3);
+int	device_probe(device_t dev);
 int	device_probe_and_attach(device_t dev);
 int	device_probe_child(device_t bus, device_t dev);
 int	device_quiesce(device_t dev);
@@ -433,11 +472,11 @@ void	device_verbose(device_t dev);
 /*
  * Access functions for devclass.
  */
-int	devclass_add_driver(devclass_t dc, kobj_class_t driver);
-int	devclass_delete_driver(devclass_t dc, kobj_class_t driver);
+int		devclass_add_driver(devclass_t dc, driver_t *driver,
+				    int pass, devclass_t *dcp);
 devclass_t	devclass_create(const char *classname);
+int		devclass_delete_driver(devclass_t busclass, driver_t *driver);
 devclass_t	devclass_find(const char *classname);
-kobj_class_t	devclass_find_driver(devclass_t dc, const char *classname);
 const char	*devclass_get_name(devclass_t dc);
 device_t	devclass_get_device(devclass_t dc, int unit);
 void	*devclass_get_softc(devclass_t dc, int unit);
@@ -450,7 +489,6 @@ void	devclass_set_parent(devclass_t dc, devclass_t pdc);
 devclass_t	devclass_get_parent(devclass_t dc);
 struct sysctl_ctx_list *devclass_get_sysctl_ctx(devclass_t dc);
 struct sysctl_oid *devclass_get_sysctl_tree(devclass_t dc);
-int	devclass_quiesce_driver(devclass_t dc, kobj_class_t driver);
 
 /*
  * Access functions for device resources.
@@ -498,7 +536,10 @@ void	bus_data_generation_update(void);
  * is for drivers that wish to have a generic form and a specialized form,
  * like is done with the pci bus and the acpi pci bus.  BUS_PROBE_HOOVER is
  * for those busses that implement a generic device place-holder for devices on
- * the bus that have no more specific driver for them (aka ugen).
+ * the bus that have no more specific river for them (aka ugen).
+ * BUS_PROBE_NOWILDCARD or lower means that the device isn't really bidding
+ * for a device node, but accepts only devices that its parent has told it
+ * use this driver.
  */
 #define BUS_PROBE_SPECIFIC	0	/* Only I can use this device */
 #define BUS_PROBE_VENDOR	(-10)	/* Vendor supplied driver */
@@ -506,11 +547,35 @@ void	bus_data_generation_update(void);
 #define BUS_PROBE_LOW_PRIORITY	(-40)	/* Older, less desirable drivers */
 #define BUS_PROBE_GENERIC	(-100)	/* generic driver for dev */
 #define BUS_PROBE_HOOVER	(-500)	/* Generic dev for all devs on bus */
+#define BUS_PROBE_NOWILDCARD	(-2000000000) /* No wildcard device matches */
 
 /**
- * Shorthand for constructing method tables.
+ * During boot, the device tree is scanned multiple times.  Each scan,
+ * or pass, drivers may be attached to devices.  Each driver
+ * attachment is assigned a pass number.  Drivers may only probe and
+ * attach to devices if their pass number is less than or equal to the
+ * current system-wide pass number.  The default pass is the last pass
+ * and is used by most drivers.  Drivers needed by the scheduler are
+ * probed in earlier passes.
+ */
+#define	BUS_PASS_ROOT		0	/* Used to attach root0. */
+#define	BUS_PASS_BUS		10	/* Busses and bridges. */
+#define	BUS_PASS_CPU		20	/* CPU devices. */
+#define	BUS_PASS_RESOURCE	30	/* Resource discovery. */
+#define	BUS_PASS_INTERRUPT	40	/* Interrupt controllers. */
+#define	BUS_PASS_TIMER		50	/* Timers and clocks. */
+#define	BUS_PASS_SCHEDULER	60	/* Start scheduler. */
+#define	BUS_PASS_DEFAULT	__INT_MAX /* Everything else. */
+
+extern int bus_current_pass;
+
+void	bus_set_pass(int pass);
+
+/**
+ * Shorthands for constructing method tables.
  */
 #define	DEVMETHOD	KOBJMETHOD
+#define	DEVMETHOD_END	KOBJMETHOD_END
 
 /*
  * Some common device interfaces.
@@ -531,15 +596,18 @@ struct driver_module_data {
 	const char	*dmd_busname;
 	kobj_class_t	dmd_driver;
 	devclass_t	*dmd_devclass;
+	int		dmd_pass;
 };
 
-#define	DRIVER_MODULE(name, busname, driver, devclass, evh, arg)	\
+#define	EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, devclass,	\
+    evh, arg, order, pass)						\
 									\
 static struct driver_module_data name##_##busname##_driver_mod = {	\
 	evh, arg,							\
 	#busname,							\
 	(kobj_class_t) &driver,						\
-	&devclass							\
+	&devclass,							\
+	pass								\
 };									\
 									\
 static moduledata_t name##_##busname##_mod = {				\
@@ -548,7 +616,20 @@ static moduledata_t name##_##busname##_mod = {				\
 	&name##_##busname##_driver_mod					\
 };									\
 DECLARE_MODULE(name##_##busname, name##_##busname##_mod,		\
-	       SI_SUB_DRIVERS, SI_ORDER_MIDDLE)
+	       SI_SUB_DRIVERS, order)
+
+#define	EARLY_DRIVER_MODULE(name, busname, driver, devclass, evh, arg, pass) \
+	EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, devclass,	\
+	    evh, arg, SI_ORDER_MIDDLE, pass)
+
+#define	DRIVER_MODULE_ORDERED(name, busname, driver, devclass, evh, arg,\
+    order)								\
+	EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, devclass,	\
+	    evh, arg, order, BUS_PASS_DEFAULT)
+
+#define	DRIVER_MODULE(name, busname, driver, devclass, evh, arg)	\
+	EARLY_DRIVER_MODULE(name, busname, driver, devclass, evh, arg,	\
+	    BUS_PASS_DEFAULT)
 
 /**
  * Generic ivar accessor generation macros for bus drivers

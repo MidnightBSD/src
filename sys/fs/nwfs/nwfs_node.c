@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/nwfs/nwfs_node.c,v 1.39.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -141,7 +134,6 @@ static int
 nwfs_allocvp(struct mount *mp, ncpfid fid, struct nw_entry_info *fap,
 	struct vnode *dvp, struct vnode **vpp)
 {
-	struct thread *td = curthread;	/* XXX */
 	struct nwnode *np;
 	struct nwnode_hash_head *nhpp;
 	struct nwmount *nmp = VFSTONWFS(mp);
@@ -153,9 +145,9 @@ loop:
 rescan:
 	if (nwfs_hashlookup(nmp, fid, &np) == 0) {
 		vp = NWTOV(np);
-		mtx_lock(&vp->v_interlock);
+		VI_LOCK(vp);
 		sx_xunlock(&nwhashlock);
-		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td))
+		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, curthread))
 			goto loop;
 		if (fap)
 			np->n_attr = fap->attributes;
@@ -171,16 +163,16 @@ rescan:
 	 * might cause a bogus v_data pointer to get dereferenced
 	 * elsewhere if MALLOC should block.
 	 */
-	MALLOC(np, struct nwnode *, sizeof *np, M_NWNODE, M_WAITOK | M_ZERO);
+	np = malloc(sizeof *np, M_NWNODE, M_WAITOK | M_ZERO);
 	error = getnewvnode("nwfs", mp, &nwfs_vnodeops, &vp);
 	if (error) {
 		*vpp = NULL;
-		FREE(np, M_NWNODE);
+		free(np, M_NWNODE);
 		return (error);
 	}
 	error = insmntque(vp, mp);	/* XXX: Too early for mpsafe fs */
 	if (error != 0) {
-		FREE(np, M_NWNODE);
+		free(np, M_NWNODE);
 		*vpp = NULL;
 		return (error);
 	}
@@ -193,7 +185,6 @@ rescan:
 	if (dvp) {
 		np->n_parent = VTONW(dvp)->n_fid;
 	}
-	vp->v_vnlock->lk_flags |= LK_CANRECURSE;
 	sx_xlock(&nwhashlock);
 	/*
 	 * Another process can create vnode while we blocked in malloc() or
@@ -203,13 +194,14 @@ rescan:
 		vp->v_data = NULL;
 		np->n_vnode = NULL;
 		vrele(vp);
-		FREE(np, M_NWNODE);
+		free(np, M_NWNODE);
 		goto rescan;
 	}
 	*vpp = vp;
 	nhpp = NWNOHASH(fid);
 	LIST_INSERT_HEAD(nhpp, np, n_hash);
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
+	VN_LOCK_AREC(vp);
 	sx_xunlock(&nwhashlock);
 	
 	ASSERT_VOP_LOCKED(dvp, "nwfs_allocvp");
@@ -285,7 +277,7 @@ nwfs_reclaim(ap)
 		nmp->n_root = NULL;
 	}
 	vp->v_data = NULL;
-	FREE(np, M_NWNODE);
+	free(np, M_NWNODE);
 	if (dvp) {
 		vrele(dvp);
 	}

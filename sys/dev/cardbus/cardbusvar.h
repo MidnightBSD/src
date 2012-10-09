@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/cardbus/cardbusvar.h,v 1.14.2.1 2009/06/10 19:21:23 imp Exp $
+ * $FreeBSD$
  */
 
 /*

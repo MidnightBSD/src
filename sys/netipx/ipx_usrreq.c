@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/ipx_usrreq.c,v 1.62.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ipx.h"
 
@@ -90,16 +90,18 @@ __FBSDID("$FreeBSD: src/sys/netipx/ipx_usrreq.c,v 1.62.6.1 2008/11/25 02:59:29 k
 #include <netipx/ipx_pcb.h>
 #include <netipx/ipx_var.h>
 
+#include <security/mac/mac_framework.h>
+
 /*
  * IPX protocol implementation.
  */
 
 static int ipxsendspace = IPXSNDQ;
 SYSCTL_INT(_net_ipx_ipx, OID_AUTO, ipxsendspace, CTLFLAG_RW,
-            &ipxsendspace, 0, "");
+            &ipxsendspace, 0, "Send buffer space");
 static int ipxrecvspace = IPXRCVQ;
 SYSCTL_INT(_net_ipx_ipx, OID_AUTO, ipxrecvspace, CTLFLAG_RW,
-            &ipxrecvspace, 0, "");
+            &ipxrecvspace, 0, "Receive buffer space");
 
 static	void ipx_usr_abort(struct socket *so);
 static	int ipx_attach(struct socket *so, int proto, struct thread *td);
@@ -185,6 +187,12 @@ ipx_input(struct mbuf *m, struct ipxpcb *ipxp)
 		m->m_pkthdr.len -= sizeof(struct ipx);
 		m->m_data += sizeof(struct ipx);
 	}
+#ifdef MAC
+	if (mac_socket_check_deliver(ipxp->ipxp_socket, m) != 0) {
+		m_freem(m);
+		return;
+	}
+#endif
 	if (sbappendaddr(&ipxp->ipxp_socket->so_rcv,
 	    (struct sockaddr *)&ipx_ipx, m, NULL) == 0)
 		m_freem(m);
@@ -412,6 +420,7 @@ ipx_ctloutput(struct socket *so, struct sockopt *sopt)
 
 		case SO_IPX_CHECKSUM:
 			mask = IPXP_CHECKSUM;
+			goto set_head;
 
 		case SO_HEADERS_ON_OUTPUT:
 			mask = IPXP_RAWOUT;
@@ -576,6 +585,9 @@ ipx_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 	 * used by ipx_pcbconnect() and ipx_pcbdisconnect(), just the IPX
 	 * pcb lock.
 	 */
+#ifdef MAC
+	mac_socket_create_mbuf(so, m);
+#endif
 	if (nam != NULL) {
 		IPX_LIST_LOCK();
 		IPX_LOCK(ipxp);

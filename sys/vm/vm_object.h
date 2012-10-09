@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/vm/vm_object.h,v 1.3 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -58,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm_object.h,v 1.114.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -93,14 +92,16 @@ struct vm_object {
 	int generation;			/* generation ID */
 	int ref_count;			/* How many refs?? */
 	int shadow_count;		/* how many objects that this is a shadow for */
+	vm_memattr_t memattr;		/* default memory attribute for pages */
 	objtype_t type;			/* type of pager */
 	u_short flags;			/* see below */
 	u_short pg_color;		/* (c) color of first page in obj */
-	u_short paging_in_progress;	/* Paging (in or out) so don't collapse or destroy */
+	u_short pad1;			/* Old pip counter */
 	int resident_page_count;	/* number of resident pages */
 	struct vm_object *backing_object; /* object that I'm a shadow of */
 	vm_ooffset_t backing_object_offset;/* Offset in backing object */
 	TAILQ_ENTRY(vm_object) pager_object_list; /* list of all objects of this pager type */
+	LIST_HEAD(, vm_reserv) rvq;	/* list of reservations */
 	vm_page_t cache;		/* root of the cache page splay tree */
 	void *handle;
 	union {
@@ -111,6 +112,7 @@ struct vm_object {
 		 */
 		struct {
 			off_t vnp_size;
+			vm_ooffset_t writemappings;
 		} vnp;
 
 		/*
@@ -120,7 +122,17 @@ struct vm_object {
 		 */
 		struct {
 			TAILQ_HEAD(, vm_page) devp_pglist;
+			struct cdev_pager_ops *ops;
 		} devp;
+
+		/*
+		 * SG pager
+		 *
+		 *	sgp_pglist - list of allocated pages
+		 */
+		struct {
+			TAILQ_HEAD(, vm_page) sgp_pglist;
+		} sgp;
 
 		/*
 		 * Swap pager
@@ -133,6 +145,9 @@ struct vm_object {
 			int swp_bcount;
 		} swp;
 	} un_pager;
+	struct ucred *cred;
+	vm_ooffset_t charge;
+	u_int paging_in_progress;	/* Paging (in or out) so don't collapse or destroy */
 };
 
 /*
@@ -142,11 +157,10 @@ struct vm_object {
 #define OBJ_DEAD	0x0008		/* dead objects (during rundown) */
 #define	OBJ_NOSPLIT	0x0010		/* dont split this object */
 #define OBJ_PIPWNT	0x0040		/* paging in progress wanted */
-#define OBJ_MIGHTBEDIRTY 0x0100		/* object might be dirty */
-#define OBJ_CLEANING	0x0200
+#define OBJ_MIGHTBEDIRTY 0x0100		/* object might be dirty, only for vnode */
+#define	OBJ_COLORED	0x1000		/* pg_color is defined */
 #define	OBJ_ONEMAPPING	0x2000		/* One USE (a single, non-forked) mapping flag */
 #define	OBJ_DISCONNECTWNT 0x4000	/* disconnect from vnode wanted */
-#define	OBJ_NEEDGIANT	0x8000		/* object requires Giant */
 
 #define IDX_TO_OFF(idx) (((vm_ooffset_t)(idx)) << PAGE_SHIFT)
 #define OFF_TO_IDX(off) ((vm_pindex_t)(((vm_ooffset_t)(off)) >> PAGE_SHIFT))
@@ -156,6 +170,12 @@ struct vm_object {
 #define OBJPC_SYNC	0x1			/* sync I/O */
 #define OBJPC_INVAL	0x2			/* invalidate */
 #define OBJPC_NOSYNC	0x4			/* skip if PG_NOSYNC */
+
+/*
+ * The following options are supported by vm_object_page_remove().
+ */
+#define	OBJPR_CLEANONLY	0x1		/* Don't remove dirty pages. */
+#define	OBJPR_NOTMAPPED	0x2		/* Don't unmap pages. */
 
 TAILQ_HEAD(object_q, vm_object);
 
@@ -198,22 +218,30 @@ void vm_object_pip_wait(vm_object_t object, char *waitid);
 
 vm_object_t vm_object_allocate (objtype_t, vm_pindex_t);
 void _vm_object_allocate (objtype_t, vm_pindex_t, vm_object_t);
-boolean_t vm_object_coalesce(vm_object_t, vm_ooffset_t, vm_size_t, vm_size_t);
+boolean_t vm_object_coalesce(vm_object_t, vm_ooffset_t, vm_size_t, vm_size_t,
+   boolean_t);
 void vm_object_collapse (vm_object_t);
 void vm_object_deallocate (vm_object_t);
 void vm_object_destroy (vm_object_t);
 void vm_object_terminate (vm_object_t);
 void vm_object_set_writeable_dirty (vm_object_t);
 void vm_object_init (void);
-void vm_object_page_clean (vm_object_t, vm_pindex_t, vm_pindex_t, boolean_t);
-void vm_object_page_remove (vm_object_t, vm_pindex_t, vm_pindex_t, boolean_t);
+void vm_object_madvise(vm_object_t, vm_pindex_t, vm_pindex_t, int);
+void vm_object_page_cache(vm_object_t object, vm_pindex_t start,
+    vm_pindex_t end);
+boolean_t vm_object_page_clean(vm_object_t object, vm_ooffset_t start,
+    vm_ooffset_t end, int flags);
+void vm_object_page_remove(vm_object_t object, vm_pindex_t start,
+    vm_pindex_t end, int options);
+boolean_t vm_object_populate(vm_object_t, vm_pindex_t, vm_pindex_t);
+void vm_object_print(long addr, boolean_t have_addr, long count, char *modif);
 void vm_object_reference (vm_object_t);
 void vm_object_reference_locked(vm_object_t);
+int  vm_object_set_memattr(vm_object_t object, vm_memattr_t memattr);
 void vm_object_shadow (vm_object_t *, vm_ooffset_t *, vm_size_t);
 void vm_object_split(vm_map_entry_t);
-void vm_object_sync(vm_object_t, vm_ooffset_t, vm_size_t, boolean_t,
+boolean_t vm_object_sync(vm_object_t, vm_ooffset_t, vm_size_t, boolean_t,
     boolean_t);
-void vm_object_madvise (vm_object_t, vm_pindex_t, int, int);
 #endif				/* _KERNEL */
 
 #endif				/* _VM_OBJECT_ */

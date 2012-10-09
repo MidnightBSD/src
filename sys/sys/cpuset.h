@@ -27,38 +27,42 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/sys/sys/cpuset.h,v 1.7.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_CPUSET_H_
 #define	_SYS_CPUSET_H_
 
-#ifdef _KERNEL
-#define	CPU_SETSIZE	MAXCPU
-#endif
+#include <sys/_cpuset.h>
 
-#define	CPU_MAXSIZE	128
+#define	CPUSETBUFSIZ	((2 + sizeof(long) * 2) * _NCPUWORDS)
 
-#ifndef	CPU_SETSIZE
-#define	CPU_SETSIZE	CPU_MAXSIZE
-#endif
+/*
+ * Macros addressing word and bit within it, tuned to make compiler
+ * optimize cases when CPU_SETSIZE fits into single machine word.
+ */
+#define	__cpuset_mask(n)				\
+	((long)1 << ((_NCPUWORDS == 1) ? (__size_t)(n) : ((n) % _NCPUBITS)))
+#define	__cpuset_word(n)	((_NCPUWORDS == 1) ? 0 : ((n) / _NCPUBITS))
 
-#define	_NCPUBITS	(sizeof(long) * NBBY)	/* bits per mask */
-#define	_NCPUWORDS	howmany(CPU_SETSIZE, _NCPUBITS)
-
-typedef	struct _cpuset {
-	long	__bits[howmany(CPU_SETSIZE, _NCPUBITS)];
-} cpuset_t;
-
-#define	__cpuset_mask(n)	((long)1 << ((n) % _NCPUBITS))
-#define	CPU_CLR(n, p)	((p)->__bits[(n)/_NCPUBITS] &= ~__cpuset_mask(n))
+#define	CPU_CLR(n, p)	((p)->__bits[__cpuset_word(n)] &= ~__cpuset_mask(n))
 #define	CPU_COPY(f, t)	(void)(*(t) = *(f))
-#define	CPU_ISSET(n, p)	(((p)->__bits[(n)/_NCPUBITS] & __cpuset_mask(n)) != 0)
-#define	CPU_SET(n, p)	((p)->__bits[(n)/_NCPUBITS] |= __cpuset_mask(n))
+#define	CPU_ISSET(n, p)	(((p)->__bits[__cpuset_word(n)] & __cpuset_mask(n)) != 0)
+#define	CPU_SET(n, p)	((p)->__bits[__cpuset_word(n)] |= __cpuset_mask(n))
 #define	CPU_ZERO(p) do {				\
 	__size_t __i;					\
 	for (__i = 0; __i < _NCPUWORDS; __i++)		\
 		(p)->__bits[__i] = 0;			\
+} while (0)
+
+#define	CPU_FILL(p) do {				\
+	__size_t __i;					\
+	for (__i = 0; __i < _NCPUWORDS; __i++)		\
+		(p)->__bits[__i] = -1;			\
+} while (0)
+
+#define	CPU_SETOF(n, p) do {					\
+	CPU_ZERO(p);						\
+	((p)->__bits[__cpuset_word(n)] = __cpuset_mask(n));	\
 } while (0)
 
 /* Is p empty. */
@@ -66,6 +70,15 @@ typedef	struct _cpuset {
 	__size_t __i;					\
 	for (__i = 0; __i < _NCPUWORDS; __i++)		\
 		if ((p)->__bits[__i])			\
+			break;				\
+	__i == _NCPUWORDS;				\
+})
+
+/* Is p full set. */
+#define	CPU_ISFULLSET(p) __extension__ ({		\
+	__size_t __i;					\
+	for (__i = 0; __i < _NCPUWORDS; __i++)		\
+		if ((p)->__bits[__i] != (long)-1)	\
 			break;				\
 	__i == _NCPUWORDS;				\
 })
@@ -119,6 +132,27 @@ typedef	struct _cpuset {
 		(d)->__bits[__i] &= ~(s)->__bits[__i];	\
 } while (0)
 
+#define	CPU_CLR_ATOMIC(n, p)						\
+	atomic_clear_long(&(p)->__bits[__cpuset_word(n)], __cpuset_mask(n))
+
+#define	CPU_SET_ATOMIC(n, p)						\
+	atomic_set_long(&(p)->__bits[__cpuset_word(n)], __cpuset_mask(n))
+
+/* Convenience functions catering special cases. */ 
+#define	CPU_OR_ATOMIC(d, s) do {			\
+	__size_t __i;					\
+	for (__i = 0; __i < _NCPUWORDS; __i++)		\
+		atomic_set_long(&(d)->__bits[__i],	\
+		    (s)->__bits[__i]);			\
+} while (0)
+
+#define	CPU_COPY_STORE_REL(f, t) do {				\
+	__size_t __i;						\
+	for (__i = 0; __i < _NCPUWORDS; __i++)			\
+		atomic_store_rel_long(&(t)->__bits[__i],	\
+		    (f)->__bits[__i]);				\
+} while (0)
+
 /*
  * Valid cpulevel_t values.
  */
@@ -132,6 +166,8 @@ typedef	struct _cpuset {
 #define	CPU_WHICH_TID		1	/* Specifies a thread id. */
 #define	CPU_WHICH_PID		2	/* Specifies a process id. */
 #define	CPU_WHICH_CPUSET	3	/* Specifies a set id. */
+#define	CPU_WHICH_IRQ		4	/* Specifies an irq #. */
+#define	CPU_WHICH_JAIL		5	/* Specifies a jail id. */
 
 /*
  * Reserved cpuset identifiers.
@@ -168,11 +204,18 @@ struct cpuset {
 #define CPU_SET_RDONLY  0x0002  /* No modification allowed. */
 
 extern cpuset_t *cpuset_root;
+struct prison;
+struct proc;
 
 struct cpuset *cpuset_thread0(void);
 struct cpuset *cpuset_ref(struct cpuset *);
 void	cpuset_rel(struct cpuset *);
 int	cpuset_setthread(lwpid_t id, cpuset_t *);
+int	cpuset_create_root(struct prison *, struct cpuset **);
+int	cpuset_setproc_update_set(struct proc *, struct cpuset *);
+int	cpusetobj_ffs(const cpuset_t *);
+char	*cpusetobj_strprint(char *, const cpuset_t *);
+int	cpusetobj_strscan(cpuset_t *, const char *);
 
 #else
 __BEGIN_DECLS

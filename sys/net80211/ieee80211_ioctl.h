@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2001 Atsushi Onoe
- * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_ioctl.h,v 1.24.2.2.4.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 #ifndef _NET80211_IEEE80211_IOCTL_H_
 #define _NET80211_IEEE80211_IOCTL_H_
@@ -64,6 +64,7 @@ struct ieee80211_nodestats {
 
 	uint32_t	ns_tx_data;		/* tx data frames */
 	uint32_t	ns_tx_mgmt;		/* tx management frames */
+	uint32_t	ns_tx_ctrl;		/* tx control frames */
 	uint32_t	ns_tx_ucast;		/* tx unicast frames */
 	uint32_t	ns_tx_mcast;		/* tx multi/broadcast frames */
 	uint64_t	ns_tx_bytes;		/* tx data count (bytes) */
@@ -83,6 +84,7 @@ struct ieee80211_nodestats {
 	uint32_t	ns_tx_deauth_code;	/* last deauth reason */
 	uint32_t	ns_tx_disassoc;		/* disassociations */
 	uint32_t	ns_tx_disassoc_code;	/* last disassociation reason */
+	uint32_t	ns_spare[8];
 };
 
 /*
@@ -101,7 +103,7 @@ struct ieee80211_stats {
 	uint32_t	is_rx_wepfail;		/* rx wep processing failed */
 	uint32_t	is_rx_decap;		/* rx decapsulation failed */
 	uint32_t	is_rx_mgtdiscard;	/* rx discard mgt frames */
-	uint32_t	is_rx_ctl;		/* rx discard ctrl frames */
+	uint32_t	is_rx_ctl;		/* rx ctrl frames */
 	uint32_t	is_rx_beacon;		/* rx beacon frames */
 	uint32_t	is_rx_rstoobig;		/* rx rate set truncated */
 	uint32_t	is_rx_elem_missing;	/* rx required element missing*/
@@ -196,6 +198,8 @@ struct ieee80211_stats {
 	uint32_t	is_tx_badstate;		/* tx discard state != RUN */
 	uint32_t	is_tx_notassoc;		/* tx failed, sta not assoc */
 	uint32_t	is_tx_classify;		/* tx classification failed */
+	uint32_t	is_dwds_mcast;		/* discard mcast over dwds */
+	uint32_t	is_dwds_qdrop;		/* dwds pending frame q full */
 	uint32_t	is_ht_assoc_nohtcap;	/* non-HT sta rejected */
 	uint32_t	is_ht_assoc_downgrade;	/* HT sta forced to legacy */
 	uint32_t	is_ht_assoc_norate;	/* HT assoc w/ rate mismatch */
@@ -205,10 +209,40 @@ struct ieee80211_stats {
 	uint32_t	is_addba_norequest;	/* ADDBA response w/o ADDBA */
 	uint32_t	is_addba_badtoken;	/* ADDBA response w/ wrong
 						   dialogtoken */
+	uint32_t	is_addba_badpolicy;	/* ADDBA resp w/ wrong policy */
 	uint32_t	is_ampdu_stop;		/* A-MPDU stream stopped */
 	uint32_t	is_ampdu_stop_failed;	/* A-MPDU stream not running */
 	uint32_t	is_ampdu_rx_reorder;	/* A-MPDU held for rx reorder */
-	uint32_t	is_spare[16];
+	uint32_t	is_scan_bg;		/* background scans started */
+	uint8_t		is_rx_deauth_code;	/* last rx'd deauth reason */
+	uint8_t		is_rx_disassoc_code;	/* last rx'd disassoc reason */
+	uint8_t		is_rx_authfail_code;	/* last rx'd auth fail reason */
+	uint32_t	is_beacon_miss;		/* beacon miss notification */
+	uint32_t	is_rx_badstate;		/* rx discard state != RUN */
+	uint32_t	is_ff_flush;		/* ff's flush'd from stageq */
+	uint32_t	is_tx_ctl;		/* tx ctrl frames */
+	uint32_t	is_ampdu_rexmt;		/* A-MPDU frames rexmt ok */
+	uint32_t	is_ampdu_rexmt_fail;	/* A-MPDU frames rexmt fail */
+
+	uint32_t	is_mesh_wrongmesh;	/* dropped 'cuz not mesh sta*/
+	uint32_t	is_mesh_nolink;		/* dropped 'cuz link not estab*/
+	uint32_t	is_mesh_fwd_ttl;	/* mesh not fwd'd 'cuz ttl 0 */
+	uint32_t	is_mesh_fwd_nobuf;	/* mesh not fwd'd 'cuz no mbuf*/
+	uint32_t	is_mesh_fwd_tooshort;	/* mesh not fwd'd 'cuz no hdr */
+	uint32_t	is_mesh_fwd_disabled;	/* mesh not fwd'd 'cuz disabled */
+	uint32_t	is_mesh_fwd_nopath;	/* mesh not fwd'd 'cuz path unknown */
+
+	uint32_t	is_hwmp_wrongseq;	/* wrong hwmp seq no. */
+	uint32_t	is_hwmp_rootreqs;	/* root PREQs sent */
+	uint32_t	is_hwmp_rootrann;	/* root RANNs sent */
+
+	uint32_t	is_mesh_badae;		/* dropped 'cuz invalid AE */
+	uint32_t	is_mesh_rtaddfailed;	/* route add failed */
+	uint32_t	is_mesh_notproxy;	/* dropped 'cuz not proxying */
+	uint32_t	is_rx_badalign;		/* dropped 'cuz misaligned */
+	uint32_t	is_hwmp_proxy;		/* PREP for proxy route */
+	
+	uint32_t	is_spare[11];
 };
 
 /*
@@ -264,6 +298,7 @@ struct ieee80211req_mlme {
 #define	IEEE80211_MLME_DEAUTH		3	/* deauthenticate station */
 #define	IEEE80211_MLME_AUTHORIZE	4	/* authorize station */
 #define	IEEE80211_MLME_UNAUTHORIZE	5	/* unauthorize station */
+#define	IEEE80211_MLME_AUTH		6	/* authenticate station */
 	uint8_t		im_ssid_len;	/* length of optional ssid */
 	uint16_t	im_reason;	/* 802.11 reason code */
 	uint8_t		im_macaddr[IEEE80211_ADDR_LEN];
@@ -281,20 +316,55 @@ enum {
 	IEEE80211_MACCMD_DETACH		= 4,	/* detach ACL policy */
 	IEEE80211_MACCMD_POLICY		= 5,	/* get ACL policy */
 	IEEE80211_MACCMD_LIST		= 6,	/* get ACL database */
+	IEEE80211_MACCMD_POLICY_RADIUS	= 7,	/* set policy: RADIUS managed */
 };
 
 struct ieee80211req_maclist {
 	uint8_t		ml_macaddr[IEEE80211_ADDR_LEN];
+} __packed;
+
+/*
+ * Mesh Routing Table Operations.
+ */
+enum {
+	IEEE80211_MESH_RTCMD_LIST   = 0, /* list HWMP routing table */
+	IEEE80211_MESH_RTCMD_FLUSH  = 1, /* flush HWMP routing table */
+	IEEE80211_MESH_RTCMD_ADD    = 2, /* add entry to the table */
+	IEEE80211_MESH_RTCMD_DELETE = 3, /* delete an entry from the table */
+};
+
+struct ieee80211req_mesh_route {
+	uint8_t		imr_flags;
+#define	IEEE80211_MESHRT_FLAGS_VALID	0x01
+#define	IEEE80211_MESHRT_FLAGS_PROXY	0x02
+	uint8_t		imr_dest[IEEE80211_ADDR_LEN];
+	uint8_t		imr_nexthop[IEEE80211_ADDR_LEN];
+	uint16_t	imr_nhops;
+	uint8_t		imr_pad;
+	uint32_t	imr_metric;
+	uint32_t	imr_lifetime;
+	uint32_t	imr_lastmseq;
 };
 
 /*
- * Set the active channel list.  Note this list is
- * intersected with the available channel list in
- * calculating the set of channels actually used in
- * scanning.
+ * HWMP root modes
+ */
+enum {
+	IEEE80211_HWMP_ROOTMODE_DISABLED	= 0, 	/* disabled */
+	IEEE80211_HWMP_ROOTMODE_NORMAL		= 1,	/* normal PREPs */
+	IEEE80211_HWMP_ROOTMODE_PROACTIVE	= 2,	/* proactive PREPS */
+	IEEE80211_HWMP_ROOTMODE_RANN		= 3,	/* use RANN elemid */
+};
+
+
+/*
+ * Set the active channel list by IEEE channel #: each channel
+ * to be marked active is set in a bit vector.  Note this list is
+ * intersected with the available channel list in calculating
+ * the set of channels actually used in scanning.
  */
 struct ieee80211req_chanlist {
-	uint8_t		ic_channels[IEEE80211_CHAN_BYTES];
+	uint8_t		ic_channels[32];	/* NB: can be variable length */
 };
 
 /*
@@ -302,8 +372,13 @@ struct ieee80211req_chanlist {
  */
 struct ieee80211req_chaninfo {
 	u_int	ic_nchans;
-	struct ieee80211_channel ic_chans[IEEE80211_CHAN_MAX];
+	struct ieee80211_channel ic_chans[1];	/* NB: variable length */
 };
+#define	IEEE80211_CHANINFO_SIZE(_nchan) \
+	(sizeof(struct ieee80211req_chaninfo) + \
+	 (((_nchan)-1) * sizeof(struct ieee80211_channel)))
+#define	IEEE80211_CHANINFO_SPACE(_ci) \
+	IEEE80211_CHANINFO_SIZE((_ci)->ic_nchans)
 
 /*
  * Retrieve the WPA/RSN information element for an associated station.
@@ -335,12 +410,12 @@ struct ieee80211req_sta_stats {
  * to retrieve other data like stats, unicast key, etc.
  */
 struct ieee80211req_sta_info {
-	uint16_t	isi_len;		/* length (mult of 4) */
+	uint16_t	isi_len;		/* total length (mult of 4) */
 	uint16_t	isi_ie_off;		/* offset to IE data */
 	uint16_t	isi_ie_len;		/* IE length */
 	uint16_t	isi_freq;		/* MHz */
 	uint32_t	isi_flags;		/* channel flags */
-	uint16_t	isi_state;		/* state flags */
+	uint32_t	isi_state;		/* state flags */
 	uint8_t		isi_authmode;		/* authentication algorithm */
 	int8_t		isi_rssi;		/* receive signal strength */
 	int8_t		isi_noise;		/* noise floor */
@@ -350,7 +425,7 @@ struct ieee80211req_sta_info {
 	uint8_t		isi_nrates;
 						/* negotiated rates */
 	uint8_t		isi_rates[IEEE80211_RATE_MAXSIZE];
-	uint8_t		isi_txrate;		/* index to isi_rates[] */
+	uint8_t		isi_txrate;		/* legacy/IEEE rate or MCS */
 	uint16_t	isi_associd;		/* assoc response */
 	uint16_t	isi_txpower;		/* current tx power */
 	uint16_t	isi_vlan;		/* vlan tag */
@@ -358,6 +433,14 @@ struct ieee80211req_sta_info {
 	uint16_t	isi_txseqs[IEEE80211_TID_SIZE];/* tx seq #/TID */
 	uint16_t	isi_rxseqs[IEEE80211_TID_SIZE];/* rx seq#/TID */
 	uint16_t	isi_inact;		/* inactivity timer */
+	uint16_t	isi_txmbps;		/* current tx rate in .5 Mb/s */
+	uint16_t	isi_pad;
+	uint32_t	isi_jointime;		/* time of assoc/join */
+	struct ieee80211_mimo_info isi_mimo;	/* MIMO info for 11n sta's */
+	/* 11s info */
+	uint16_t	isi_peerid;
+	uint16_t	isi_localid;
+	uint8_t		isi_peerstate;
 	/* XXX frag state? */
 	/* variable length IE data */
 };
@@ -384,14 +467,107 @@ struct ieee80211req_sta_txpow {
 };
 
 /*
- * WME parameters are set and return using i_val and i_len.
- * i_val holds the value itself.  i_len specifies the AC
- * and, as appropriate, then high bit specifies whether the
- * operation is to be applied to the BSS or ourself.
+ * WME parameters manipulated with IEEE80211_IOC_WME_CWMIN
+ * through IEEE80211_IOC_WME_ACKPOLICY are set and return
+ * using i_val and i_len.  i_val holds the value itself.
+ * i_len specifies the AC and, as appropriate, then high bit
+ * specifies whether the operation is to be applied to the
+ * BSS or ourself.
  */
 #define	IEEE80211_WMEPARAM_SELF	0x0000		/* parameter applies to self */
 #define	IEEE80211_WMEPARAM_BSS	0x8000		/* parameter applies to BSS */
 #define	IEEE80211_WMEPARAM_VAL	0x7fff		/* parameter value */
+
+/*
+ * Application Information Elements can be appended to a variety
+ * of frames with the IEE80211_IOC_APPIE request.  This request
+ * piggybacks on a normal ieee80211req; the frame type is passed
+ * in i_val as the 802.11 FC0 bytes and the length of the IE data
+ * is passed in i_len.  The data is referenced in i_data.  If i_len
+ * is zero then any previously configured IE data is removed.  At
+ * most IEEE80211_MAX_APPIE data be appened.  Note that multiple
+ * IE's can be supplied; the data is treated opaquely.
+ */
+#define	IEEE80211_MAX_APPIE	1024		/* max app IE data */
+/*
+ * Hack: the WPA authenticator uses this mechanism to specify WPA
+ * ie's that are used instead of the ones normally constructed using
+ * the cipher state setup with separate ioctls.  This avoids issues
+ * like the authenticator ordering ie data differently than the
+ * net80211 layer and needing to keep separate state for WPA and RSN.
+ */
+#define	IEEE80211_APPIE_WPA \
+	(IEEE80211_FC0_TYPE_MGT | IEEE80211_FC0_SUBTYPE_BEACON | \
+	 IEEE80211_FC0_SUBTYPE_PROBE_RESP)
+
+/*
+ * Station mode roaming parameters.  These are maintained
+ * per band/mode and control the roaming algorithm.
+ */
+struct ieee80211_roamparams_req {
+	struct ieee80211_roamparam params[IEEE80211_MODE_MAX];
+};
+
+/*
+ * Transmit parameters.  These can be used to set fixed transmit
+ * rate for each operating mode when operating as client or on a
+ * per-client basis according to the capabilities of the client
+ * (e.g. an 11b client associated to an 11g ap) when operating as
+ * an ap.
+ *
+ * MCS are distinguished from legacy rates by or'ing in 0x80.
+ */
+struct ieee80211_txparams_req {
+	struct ieee80211_txparam params[IEEE80211_MODE_MAX];
+};
+
+/*
+ * Set regulatory domain state with IEEE80211_IOC_REGDOMAIN.
+ * Note this is both the regulatory description and the channel
+ * list.  The get request for IEEE80211_IOC_REGDOMAIN returns
+ * only the regdomain info; the channel list is obtained
+ * separately with IEEE80211_IOC_CHANINFO.
+ */
+struct ieee80211_regdomain_req {
+	struct ieee80211_regdomain	rd;
+	struct ieee80211req_chaninfo	chaninfo;
+};
+#define	IEEE80211_REGDOMAIN_SIZE(_nchan) \
+	(sizeof(struct ieee80211_regdomain_req) + \
+	 (((_nchan)-1) * sizeof(struct ieee80211_channel)))
+#define	IEEE80211_REGDOMAIN_SPACE(_req) \
+	IEEE80211_REGDOMAIN_SIZE((_req)->chaninfo.ic_nchans)
+
+/*
+ * Get driver capabilities.  Driver, hardware crypto, and
+ * HT/802.11n capabilities, and a table that describes what
+ * the radio can do.
+ */
+struct ieee80211_devcaps_req {
+	uint32_t	dc_drivercaps;		/* general driver caps */
+	uint32_t	dc_cryptocaps;		/* hardware crypto support */
+	uint32_t	dc_htcaps;		/* HT/802.11n support */
+	struct ieee80211req_chaninfo dc_chaninfo;
+};
+#define	IEEE80211_DEVCAPS_SIZE(_nchan) \
+	(sizeof(struct ieee80211_devcaps_req) + \
+	 (((_nchan)-1) * sizeof(struct ieee80211_channel)))
+#define	IEEE80211_DEVCAPS_SPACE(_dc) \
+	IEEE80211_DEVCAPS_SIZE((_dc)->dc_chaninfo.ic_nchans)
+
+struct ieee80211_chanswitch_req {
+	struct ieee80211_channel csa_chan;	/* new channel */
+	int		csa_mode;		/* CSA mode */
+	int		csa_count;		/* beacon count to switch */
+};
+
+/*
+ * Get/set per-station vlan tag.
+ */
+struct ieee80211req_sta_vlan {
+	uint8_t		sv_macaddr[IEEE80211_ADDR_LEN];
+	uint16_t	sv_vlan;
+};
 
 #ifdef __FreeBSD__
 /*
@@ -402,7 +578,7 @@ struct ieee80211req {
 	char		i_name[IFNAMSIZ];	/* if_name, e.g. "wi0" */
 	uint16_t	i_type;			/* req type */
 	int16_t		i_val;			/* Index or simple value */
-	int16_t		i_len;			/* Index or simple value */
+	uint16_t	i_len;			/* Index or simple value */
 	void		*i_data;		/* Extra data */
 };
 #define	SIOCS80211		 _IOW('i', 234, struct ieee80211req)
@@ -443,8 +619,8 @@ struct ieee80211req {
 #define	IEEE80211_IOC_WPAKEY		19
 #define	IEEE80211_IOC_DELKEY		20
 #define	IEEE80211_IOC_MLME		21
-#define	IEEE80211_IOC_OPTIE		22	/* optional info. element */
-#define	IEEE80211_IOC_SCAN_REQ		23
+/* 22 was IEEE80211_IOC_OPTIE, replaced by IEEE80211_IOC_APPIE */
+/* 23 was IEEE80211_IOC_SCAN_REQ */
 /* 24 was IEEE80211_IOC_SCAN_RESULTS */
 #define	IEEE80211_IOC_COUNTERMEASURES	25	/* WPA/TKIP countermeasures */
 #define	IEEE80211_IOC_WPA		26	/* WPA mode (0,1,2) */
@@ -452,14 +628,8 @@ struct ieee80211req {
 #define	IEEE80211_IOC_WME		28	/* WME mode (on, off) */
 #define	IEEE80211_IOC_HIDESSID		29	/* hide SSID mode (on, off) */
 #define	IEEE80211_IOC_APBRIDGE		30	/* AP inter-sta bridging */
-#define	IEEE80211_IOC_MCASTCIPHER	31	/* multicast/default cipher */
-#define	IEEE80211_IOC_MCASTKEYLEN	32	/* multicast key length */
-#define	IEEE80211_IOC_UCASTCIPHERS	33	/* unicast cipher suites */
-#define	IEEE80211_IOC_UCASTCIPHER	34	/* unicast cipher */
-#define	IEEE80211_IOC_UCASTKEYLEN	35	/* unicast key length */
-#define	IEEE80211_IOC_DRIVER_CAPS	36	/* driver capabilities */
-#define	IEEE80211_IOC_KEYMGTALGS	37	/* key management algorithms */
-#define	IEEE80211_IOC_RSNCAPS		38	/* RSN capabilities */
+/* 31-35,37-38 were for WPA authenticator settings */
+/* 36 was IEEE80211_IOC_DRIVER_CAPS */
 #define	IEEE80211_IOC_WPAIE		39	/* WPA information element */
 #define	IEEE80211_IOC_STA_STATS		40	/* per-station statistics */
 #define	IEEE80211_IOC_MACCMD		41	/* MAC ACL operation */
@@ -484,13 +654,7 @@ struct ieee80211req {
 #define	IEEE80211_IOC_BGSCAN_IDLE	60	/* bg scan idle threshold */
 #define	IEEE80211_IOC_BGSCAN_INTERVAL	61	/* bg scan interval */
 #define	IEEE80211_IOC_SCANVALID		65	/* scan cache valid threshold */
-#define	IEEE80211_IOC_ROAM_RSSI_11A	66	/* rssi threshold in 11a */
-#define	IEEE80211_IOC_ROAM_RSSI_11B	67	/* rssi threshold in 11b */
-#define	IEEE80211_IOC_ROAM_RSSI_11G	68	/* rssi threshold in 11g */
-#define	IEEE80211_IOC_ROAM_RATE_11A	69	/* tx rate threshold in 11a */
-#define	IEEE80211_IOC_ROAM_RATE_11B	70	/* tx rate threshold in 11b */
-#define	IEEE80211_IOC_ROAM_RATE_11G	71	/* tx rate threshold in 11g */
-#define	IEEE80211_IOC_MCAST_RATE	72	/* tx rate for mcast frames */
+/* 66-72 were IEEE80211_IOC_ROAM_* and IEEE80211_IOC_MCAST_RATE */
 #define	IEEE80211_IOC_FRAGTHRESHOLD	73	/* tx fragmentation threshold */
 #define	IEEE80211_IOC_BURST		75	/* packet bursting */
 #define	IEEE80211_IOC_SCAN_RESULTS	76	/* get scan results */
@@ -506,13 +670,109 @@ struct ieee80211req {
 #define	IEEE80211_IOC_AMSDU_LIMIT	86	/* A-MSDU length limit */
 #define	IEEE80211_IOC_PUREN		87	/* pure 11n (no legacy sta's) */
 #define	IEEE80211_IOC_DOTH		88	/* 802.11h (on, off) */
-#define	IEEE80211_IOC_REGDOMAIN		89	/* regulatory domain */
-#define	IEEE80211_IOC_COUNTRYCODE	90	/* ISO country code */
-#define	IEEE80211_IOC_LOCATION		91	/* indoor/outdoor/anywhere */
+/* 89-91 were regulatory items */
 #define	IEEE80211_IOC_HTCOMPAT		92	/* support pre-D1.10 HT ie's */
+#define	IEEE80211_IOC_DWDS		93	/* DWDS/4-address handling */
 #define	IEEE80211_IOC_INACTIVITY	94	/* sta inactivity handling */
+#define	IEEE80211_IOC_APPIE		95	/* application IE's */
+#define	IEEE80211_IOC_WPS		96	/* WPS operation */
+#define	IEEE80211_IOC_TSN		97	/* TSN operation */
+#define	IEEE80211_IOC_DEVCAPS		98	/* driver+device capabilities */
+#define	IEEE80211_IOC_CHANSWITCH	99	/* start 11h channel switch */
+#define	IEEE80211_IOC_DFS		100	/* DFS (on, off) */
+#define	IEEE80211_IOC_DOTD		101	/* 802.11d (on, off) */
 #define IEEE80211_IOC_HTPROTMODE	102	/* HT protection (off, rts) */
+#define	IEEE80211_IOC_SCAN_REQ		103	/* scan w/ specified params */
+#define	IEEE80211_IOC_SCAN_CANCEL	104	/* cancel ongoing scan */
 #define	IEEE80211_IOC_HTCONF		105	/* HT config (off, HT20, HT40)*/
+#define	IEEE80211_IOC_REGDOMAIN		106	/* regulatory domain info */
+#define	IEEE80211_IOC_ROAM		107	/* roaming params en masse */
+#define	IEEE80211_IOC_TXPARAMS		108	/* tx parameters */
+#define	IEEE80211_IOC_STA_VLAN		109	/* per-station vlan tag */
+#define	IEEE80211_IOC_SMPS		110	/* MIMO power save */
+#define	IEEE80211_IOC_RIFS		111	/* RIFS config (on, off) */
+#define	IEEE80211_IOC_GREENFIELD	112	/* Greenfield (on, off) */
+#define	IEEE80211_IOC_STBC		113	/* STBC Tx/RX (on, off) */
+
+#define	IEEE80211_IOC_MESH_ID		170	/* mesh identifier */
+#define	IEEE80211_IOC_MESH_AP		171	/* accepting peerings */
+#define	IEEE80211_IOC_MESH_FWRD		172	/* forward frames */
+#define	IEEE80211_IOC_MESH_PROTO	173	/* mesh protocols */
+#define	IEEE80211_IOC_MESH_TTL		174	/* mesh TTL */
+#define	IEEE80211_IOC_MESH_RTCMD	175	/* mesh routing table commands*/
+#define	IEEE80211_IOC_MESH_PR_METRIC	176	/* mesh metric protocol */
+#define	IEEE80211_IOC_MESH_PR_PATH	177	/* mesh path protocol */
+#define	IEEE80211_IOC_MESH_PR_SIG	178	/* mesh sig protocol */
+#define	IEEE80211_IOC_MESH_PR_CC	179	/* mesh congestion protocol */
+#define	IEEE80211_IOC_MESH_PR_AUTH	180	/* mesh auth protocol */
+
+#define	IEEE80211_IOC_HWMP_ROOTMODE	190	/* HWMP root mode */
+#define	IEEE80211_IOC_HWMP_MAXHOPS	191	/* number of hops before drop */
+#define	IEEE80211_IOC_HWMP_TTL		192	/* HWMP TTL */
+
+#define	IEEE80211_IOC_TDMA_SLOT		201	/* TDMA: assigned slot */
+#define	IEEE80211_IOC_TDMA_SLOTCNT	202	/* TDMA: slots in bss */
+#define	IEEE80211_IOC_TDMA_SLOTLEN	203	/* TDMA: slot length (usecs) */
+#define	IEEE80211_IOC_TDMA_BINTERVAL	204	/* TDMA: beacon intvl (slots) */
+
+/*
+ * Parameters for controlling a scan requested with
+ * IEEE80211_IOC_SCAN_REQ.
+ *
+ * Active scans cause ProbeRequest frames to be issued for each
+ * specified ssid and, by default, a broadcast ProbeRequest frame.
+ * The set of ssid's is specified in the request.
+ *
+ * By default the scan will cause a BSS to be joined (in station/adhoc
+ * mode) or a channel to be selected for operation (hostap mode).
+ * To disable that specify IEEE80211_IOC_SCAN_NOPICK and if the
+ *
+ * If the station is currently associated to an AP then a scan request
+ * will cause the station to leave the current channel and potentially
+ * miss frames from the AP.  Alternatively the station may notify the
+ * AP that it is going into power save mode before it leaves the channel.
+ * This ensures frames for the station are buffered by the AP.  This is
+ * termed a ``bg scan'' and is requested with the IEEE80211_IOC_SCAN_BGSCAN
+ * flag.  Background scans may take longer than foreground scans and may
+ * be preempted by traffic.  If a station is not associated to an AP
+ * then a request for a background scan is automatically done in the
+ * foreground.
+ *
+ * The results of the scan request are cached by the system.  This
+ * information is aged out and/or invalidated based on events like not
+ * being able to associated to an AP.  To flush the current cache
+ * contents before doing a scan the IEEE80211_IOC_SCAN_FLUSH flag may
+ * be specified.
+ *
+ * By default the scan will be done until a suitable AP is located
+ * or a channel is found for use.  A scan can also be constrained
+ * to be done once (IEEE80211_IOC_SCAN_ONCE) or to last for no more
+ * than a specified duration.
+ */
+struct ieee80211_scan_req {
+	int		sr_flags;
+#define	IEEE80211_IOC_SCAN_NOPICK	0x00001	/* scan only, no selection */
+#define	IEEE80211_IOC_SCAN_ACTIVE	0x00002	/* active scan (probe req) */
+#define	IEEE80211_IOC_SCAN_PICK1ST	0x00004	/* ``hey sailor'' mode */
+#define	IEEE80211_IOC_SCAN_BGSCAN	0x00008	/* bg scan, exit ps at end */
+#define	IEEE80211_IOC_SCAN_ONCE		0x00010	/* do one complete pass */
+#define	IEEE80211_IOC_SCAN_NOBCAST	0x00020	/* don't send bcast probe req */
+#define	IEEE80211_IOC_SCAN_NOJOIN	0x00040	/* no auto-sequencing */
+#define	IEEE80211_IOC_SCAN_FLUSH	0x10000	/* flush scan cache first */
+#define	IEEE80211_IOC_SCAN_CHECK	0x20000	/* check scan cache first */
+	u_int		sr_duration;		/* duration (ms) */
+#define	IEEE80211_IOC_SCAN_DURATION_MIN	1
+#define	IEEE80211_IOC_SCAN_DURATION_MAX	0x7fffffff
+#define	IEEE80211_IOC_SCAN_FOREVER	IEEE80211_IOC_SCAN_DURATION_MAX
+	u_int		sr_mindwell;		/* min channel dwelltime (ms) */
+	u_int		sr_maxdwell;		/* max channel dwelltime (ms) */
+	int		sr_nssid;
+#define	IEEE80211_IOC_SCAN_MAX_SSID	3
+	struct {
+		int	 len;				/* length in bytes */
+		uint8_t ssid[IEEE80211_NWID_LEN];	/* ssid contents */
+	} sr_ssid[IEEE80211_IOC_SCAN_MAX_SSID];
+};
 
 /*
  * Scan result data returned for IEEE80211_IOC_SCAN_RESULTS.
@@ -523,27 +783,67 @@ struct ieee80211req {
  * in isr_len.  Result records are rounded to a multiple of 4 bytes.
  */
 struct ieee80211req_scan_result {
-	uint16_t	isr_len;		/* length (mult of 4) */
-	uint16_t	isr_ie_off;		/* offset to IE data */
+	uint16_t	isr_len;		/* total length (mult of 4) */
+	uint16_t	isr_ie_off;		/* offset to SSID+IE data */
 	uint16_t	isr_ie_len;		/* IE length */
 	uint16_t	isr_freq;		/* MHz */
 	uint16_t	isr_flags;		/* channel flags */
 	int8_t		isr_noise;
 	int8_t		isr_rssi;
-	uint8_t		isr_intval;		/* beacon interval */
+	uint16_t	isr_intval;		/* beacon interval */
 	uint8_t		isr_capinfo;		/* capabilities */
 	uint8_t		isr_erp;		/* ERP element */
 	uint8_t		isr_bssid[IEEE80211_ADDR_LEN];
 	uint8_t		isr_nrates;
 	uint8_t		isr_rates[IEEE80211_RATE_MAXSIZE];
 	uint8_t		isr_ssid_len;		/* SSID length */
-	/* variable length SSID followed by IE data */
+	uint8_t		isr_meshid_len;		/* MESH ID length */
+	/* variable length SSID, followed by variable length MESH ID,
+	  followed by IE data */
 };
 
+/*
+ * Virtual AP cloning parameters.  The parent device must
+ * be a vap-capable device.  All parameters specified with
+ * the clone request are fixed for the lifetime of the vap.
+ *
+ * There are two flavors of WDS vaps: legacy and dynamic.
+ * Legacy WDS operation implements a static binding between
+ * two stations encapsulating traffic in 4-address frames.
+ * Dynamic WDS vaps are created when a station associates to
+ * an AP and sends a 4-address frame.  If the AP vap is
+ * configured to support WDS then this will generate an
+ * event to user programs listening on the routing socket
+ * and a Dynamic WDS vap will be created to handle traffic
+ * to/from that station.  In both cases the bssid of the
+ * peer must be specified when creating the vap.
+ *
+ * By default a vap will inherit the mac address/bssid of
+ * the underlying device.  To request a unique address the
+ * IEEE80211_CLONE_BSSID flag should be supplied.  This is
+ * meaningless for WDS vaps as they share the bssid of an
+ * AP vap that must otherwise exist.  Note that some devices
+ * may not be able to support multiple addresses.
+ *
+ * Station mode vap's normally depend on the device to notice
+ * when the AP stops sending beacon frames.  If IEEE80211_CLONE_NOBEACONS
+ * is specified the net80211 layer will do this in s/w.  This
+ * is mostly useful when setting up a WDS repeater/extender where
+ * an AP vap is combined with a sta vap and the device isn't able
+ * to track beacon frames in hardware.
+ */
 struct ieee80211_clone_params {
 	char	icp_parent[IFNAMSIZ];		/* parent device */
-	int	icp_opmode;			/* operating mode */
+	uint16_t icp_opmode;			/* operating mode */
+	uint16_t icp_flags;			/* see below */
+	uint8_t	icp_bssid[IEEE80211_ADDR_LEN];	/* for WDS links */
+	uint8_t	icp_macaddr[IEEE80211_ADDR_LEN];/* local address */
 };
+#define	IEEE80211_CLONE_BSSID		0x0001	/* allocate unique mac/bssid */
+#define	IEEE80211_CLONE_NOBEACONS	0x0002	/* don't setup beacon timers */
+#define	IEEE80211_CLONE_WDSLEGACY	0x0004	/* legacy WDS processing */
+#define	IEEE80211_CLONE_MACADDR		0x0008	/* use specified mac addr */
+#define	IEEE80211_CLONE_TDMA		0x0010	/* operate in TDMA mode */
 #endif /* __FreeBSD__ */
 
 #endif /* _NET80211_IEEE80211_IOCTL_H_ */

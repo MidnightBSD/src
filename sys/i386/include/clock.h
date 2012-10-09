@@ -1,9 +1,9 @@
-/* $MidnightBSD: src/sys/i386/include/clock.h,v 1.3 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Kernel interface to machine-dependent clock driver.
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
  *
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CLOCK_H_

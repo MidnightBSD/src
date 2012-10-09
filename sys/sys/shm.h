@@ -1,5 +1,4 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/sys/sys/shm.h,v 1.24.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*	$NetBSD: shm.h,v 1.15 1994/06/29 06:45:17 cgd Exp $	*/
 
 /*-
@@ -57,7 +56,7 @@
 #define	SHM_LOCK	11
 #define	SHM_UNLOCK	12
 
-/* ipcs shmctl commands */
+/* ipcs shmctl commands for Linux compatability */
 #define	SHM_STAT	13
 #define	SHM_INFO	14
 
@@ -76,8 +75,10 @@ typedef	__size_t	size_t;
 #define	_SIZE_T_DECLARED
 #endif
 
-struct shmid_ds {
-	struct ipc_perm shm_perm;	/* operation permission structure */
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD7)
+struct shmid_ds_old {
+	struct ipc_perm_old shm_perm;	/* operation permission structure */
 	int             shm_segsz;	/* size of segment in bytes */
 	pid_t           shm_lpid;   /* process ID of last shared memory op */
 	pid_t           shm_cpid;	/* process ID of creator */
@@ -87,8 +88,21 @@ struct shmid_ds {
 	time_t          shm_ctime;	/* time of last change by shmctl() */
 	void           *shm_internal;   /* sysv stupidity */
 };
+#endif
+
+struct shmid_ds {
+	struct ipc_perm shm_perm;	/* operation permission structure */
+	size_t          shm_segsz;	/* size of segment in bytes */
+	pid_t           shm_lpid;   /* process ID of last shared memory op */
+	pid_t           shm_cpid;	/* process ID of creator */
+	int		shm_nattch;	/* number of current attaches */
+	time_t          shm_atime;	/* time of last shmat() */
+	time_t          shm_dtime;	/* time of last shmdt() */
+	time_t          shm_ctime;	/* time of last change by shmctl() */
+};
 
 #ifdef _KERNEL
+#include <vm/vm.h>
 
 /*
  * System 5 style catch-all structure for shared memory constants that
@@ -108,7 +122,9 @@ struct shminfo {
  */
 struct shmid_kernel {
 	struct shmid_ds u;
+	vm_object_t object;
 	struct label *label;	/* MAC label */
+	struct ucred *cred;	/* creator's credendials */
 };
 
 extern struct shminfo	shminfo;
@@ -138,7 +154,9 @@ typedef __size_t        size_t;
 #endif
 
 __BEGIN_DECLS
+#ifdef __BSD_VISIBLE
 int shmsys(int, ...);
+#endif
 void *shmat(int, const void *, int);
 int shmget(key_t, size_t, int);
 int shmctl(int, int, struct shmid_ds *);

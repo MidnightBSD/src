@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)syslimits.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/syslimits.h,v 1.23.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_SYSLIMITS_H_
@@ -55,7 +54,9 @@
 #define	MAX_CANON		  255	/* max bytes in term canon input line */
 #define	MAX_INPUT		  255	/* max bytes in terminal input */
 #define	NAME_MAX		  255	/* max bytes in a file name */
-#define	NGROUPS_MAX		   16	/* max supplemental group id's */
+#ifndef NGROUPS_MAX
+#define	NGROUPS_MAX	 	 1023	/* max supplemental group id's */
+#endif
 #ifndef OPEN_MAX
 #define	OPEN_MAX		   64	/* max open files per process */
 #endif

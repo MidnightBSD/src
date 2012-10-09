@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/nsphyterreg.h,v 1.1.2.2 2010/10/17 12:11:43 marius Exp $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_MII_NSPHYTERREG_H_

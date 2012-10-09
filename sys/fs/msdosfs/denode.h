@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/denode.h,v 1.37 2007/08/07 03:22:10 bde Exp $ */
+/* $FreeBSD$ */
 /*	$NetBSD: denode.h,v 1.25 1997/11/17 15:36:28 ws Exp $	*/
 
 /*-
@@ -133,13 +132,6 @@ struct fatcache {
 	(dep)->de_fc[(slot)].fc_frcn = (frcn); \
 	(dep)->de_fc[(slot)].fc_fsrcn = (fsrcn);
 
-#define	fc_last_to_nexttolast(dep) do {		 \
-	(dep)->de_fc[FC_NEXTTOLASTFC].fc_frcn =  \
-	(dep)->de_fc[FC_LASTFC].fc_frcn;	 \
-	(dep)->de_fc[FC_NEXTTOLASTFC].fc_fsrcn = \
-	(dep)->de_fc[FC_LASTFC].fc_fsrcn;	 \
-} while (0)
-
 /*
  * This is the in memory variant of a dos directory entry.  It is usually
  * contained within a vnode.
@@ -147,7 +139,6 @@ struct fatcache {
 struct denode {
 	struct vnode *de_vnode;	/* addr of vnode we are part of */
 	u_long de_flag;		/* flag bits */
-	struct cdev *de_dev;	/* device where direntry lives */
 	u_long de_dirclust;	/* cluster of the directory file containing this entry */
 	u_long de_diroffset;	/* offset of this entry in the directory cluster */
 	u_long de_fndoffset;	/* offset of found dir entry */
@@ -167,7 +158,6 @@ struct denode {
 	u_long de_FileSize;	/* size of file in bytes */
 	struct fatcache de_fc[FC_SIZE];	/* fat cache */
 	u_quad_t de_modrev;	/* Revision level for lease. */
-	struct lockf *de_lockf; /* lockf */
 	u_int64_t de_inode;	/* Inode number (really byte offset of direntry) */
 };
 
@@ -216,9 +206,6 @@ struct denode {
 	 putulong((dp)->deFileSize,			\
 	     ((dep)->de_Attributes & ATTR_DIRECTORY) ? 0 : (dep)->de_FileSize), \
 	 putushort((dp)->deHighClust, (dep)->de_StartCluster >> 16))
-
-#define	de_forw		de_chain[0]
-#define	de_back		de_chain[1]
 
 #ifdef _KERNEL
 

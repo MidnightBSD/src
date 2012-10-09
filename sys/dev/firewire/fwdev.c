@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Hidetoshi Shimokawa
  * Copyright (c) 1998-2002 Katsushi Kobayashi and Hidetoshi Shimokawa
@@ -32,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/fwdev.c,v 1.52 2007/06/06 14:31:36 simokawa Exp $
+ * $FreeBSD$
  *
  */
 
@@ -214,7 +213,7 @@ fw_open (struct cdev *dev, int flags, int fmt, fw_proc *td)
 		int unit = DEV2UNIT(dev);
 		int sub = DEV2SUB(dev);
 
-		make_dev(&firewire_cdevsw, minor(dev),
+		make_dev(&firewire_cdevsw, dev2unit(dev),
 			UID_ROOT, GID_OPERATOR, 0660,
 			"fw%d.%d", unit, sub);
 	}
@@ -444,7 +443,7 @@ fw_write_async(struct fw_drv1 *d, struct uio *uio, int ioflag)
 	xfer->send.pay_len = uio->uio_resid;
 	if (uio->uio_resid > 0) {
 		if ((err = uiomove((caddr_t)&xfer->send.payload[0],
-		    uio->uio_resid, uio)));
+		    uio->uio_resid, uio)))
 			goto out;
 	}
 
@@ -885,7 +884,8 @@ static int
 #if defined(__DragonFly__) || __FreeBSD_version < 500102
 fw_mmap (struct cdev *dev, vm_offset_t offset, int nproto)
 #else
-fw_mmap (struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int nproto)
+fw_mmap (struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int nproto, vm_memattr_t *memattr)
 #endif
 {  
 
@@ -893,7 +893,7 @@ fw_mmap (struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int nproto)
 #if defined(__DragonFly__) || __FreeBSD_version < 500102
 		return fwmem_mmap(dev, offset, nproto);
 #else
-		return fwmem_mmap(dev, offset, paddr, nproto);
+		return fwmem_mmap(dev, offset, paddr, nproto, memattr);
 #endif
 
 	return EINVAL;

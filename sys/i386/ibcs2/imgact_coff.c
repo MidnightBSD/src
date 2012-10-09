@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Sean Eric Fagan
  * Copyright (c) 1994 Søren Schmidt
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/imgact_coff.c,v 1.67.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -92,9 +91,10 @@ load_coff_section(struct vmspace *vmspace, struct vnode *vp, vm_offset_t offset,
 		map_len = round_page(offset + filsz) - trunc_page(map_offset);
 	}
 
-	DPRINTF(("%s(%d):  vm_mmap(&vmspace->vm_map, &0x%08lx, 0x%x, 0x%x, "
+	DPRINTF(("%s(%d):  vm_mmap(&vmspace->vm_map, &0x%08jx, 0x%x, 0x%x, "
 		"VM_PROT_ALL, MAP_PRIVATE | MAP_FIXED, OBJT_VNODE, vp, 0x%x)\n",
-		__FILE__, __LINE__, map_addr, map_len, prot, map_offset));
+		__FILE__, __LINE__, (uintmax_t)map_addr, map_len, prot,
+	        map_offset));
 
 	if ((error = vm_mmap(&vmspace->vm_map,
 			     &map_addr,
@@ -124,16 +124,16 @@ load_coff_section(struct vmspace *vmspace, struct vnode *vp, vm_offset_t offset,
 	map_addr = trunc_page((vm_offset_t)vmaddr + filsz);
 	map_len = round_page((vm_offset_t)vmaddr + memsz) - map_addr;
 
-	DPRINTF(("%s(%d): vm_map_find(&vmspace->vm_map, NULL, 0, &0x%08lx,0x%x, FALSE, VM_PROT_ALL, VM_PROT_ALL, 0)\n", __FILE__, __LINE__, map_addr, map_len));
+	DPRINTF(("%s(%d): vm_map_find(&vmspace->vm_map, NULL, 0, &0x%08jx,0x%x, VMFS_NO_SPACE, VM_PROT_ALL, VM_PROT_ALL, 0)\n", __FILE__, __LINE__, (uintmax_t)map_addr, map_len));
 
 	if (map_len != 0) {
 		error = vm_map_find(&vmspace->vm_map, NULL, 0, &map_addr,
-				    map_len, FALSE, VM_PROT_ALL, VM_PROT_ALL, 0);
+		    map_len, VMFS_NO_SPACE, VM_PROT_ALL, VM_PROT_ALL, 0);
 		if (error)
-			return error;
+			return (vm_mmap_to_errno(error));
 	}
 
-	if ((error = vm_mmap(kernel_map,
+	if ((error = vm_mmap(exec_map,
 			    (vm_offset_t *) &data_buf,
 			    PAGE_SIZE,
 			    VM_PROT_READ,
@@ -146,10 +146,7 @@ load_coff_section(struct vmspace *vmspace, struct vnode *vp, vm_offset_t offset,
 
 	error = copyout(data_buf, (caddr_t) map_addr, copy_len);
 
-	if (vm_map_remove(kernel_map,
-			  (vm_offset_t) data_buf,
-			  (vm_offset_t) data_buf + PAGE_SIZE))
-		panic("load_coff_section vm_map_remove failed");
+	kmem_free_wakeup(exec_map, (vm_offset_t)data_buf, PAGE_SIZE);
 
 	return error;
 }
@@ -189,7 +186,7 @@ coff_load_file(struct thread *td, char *name)
     		goto fail;
   	}
 
-  	if ((error = VOP_GETATTR(vp, &attr, td->td_ucred, td)) != 0)
+  	if ((error = VOP_GETATTR(vp, &attr, td->td_ucred)) != 0)
     		goto fail;
 
   	if ((vp->v_mount->mnt_flag & MNT_NOEXEC)
@@ -212,9 +209,9 @@ coff_load_file(struct thread *td, char *name)
 	 * Lose the lock on the vnode. It's no longer needed, and must not
 	 * exist for the pagefault paging to work below.
 	 */
-	VOP_UNLOCK(vp, 0, td);
+	VOP_UNLOCK(vp, 0);
 
-  	if ((error = vm_mmap(kernel_map,
+	if ((error = vm_mmap(exec_map,
 			    (vm_offset_t *) &ptr,
 			    PAGE_SIZE,
 			    VM_PROT_READ,
@@ -280,13 +277,9 @@ coff_load_file(struct thread *td, char *name)
   	error = 0;
 
  dealloc_and_fail:
-	if (vm_map_remove(kernel_map,
-			  (vm_offset_t) ptr,
-			  (vm_offset_t) ptr + PAGE_SIZE))
-    		panic("%s vm_map_remove failed", __func__);
-
+	kmem_free_wakeup(exec_map, (vm_offset_t)ptr,  PAGE_SIZE);
  fail:
-	VOP_UNLOCK(vp, 0, td);
+	VOP_UNLOCK(vp, 0);
  unlocked_fail:
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	vrele(nd.ni_vp);
@@ -307,8 +300,7 @@ exec_coff_imgact(imgp)
 	unsigned long text_offset = 0, text_address = 0, text_size = 0;
 	unsigned long data_offset = 0, data_address = 0, data_size = 0;
 	unsigned long bss_size = 0;
-	caddr_t hole;
-	struct thread *td = curthread;
+	vm_offset_t hole;
 
 	if (fhdr->f_magic != I386_COFF ||
 	    !(fhdr->f_flags & F_EXEC)) {
@@ -336,7 +328,7 @@ exec_coff_imgact(imgp)
 	       ((const char*)(imgp->image_header) + sizeof(struct filehdr) +
 		sizeof(struct aouthdr));
 
-	VOP_UNLOCK(imgp->vp, 0, td);
+	VOP_UNLOCK(imgp->vp, 0);
 
 	error = exec_new_vmspace(imgp, &ibcs2_svr3_sysvec);
 	if (error)
@@ -345,9 +337,9 @@ exec_coff_imgact(imgp)
 
 	for (i = 0; i < nscns; i++) {
 
-	  DPRINTF(("i = %d, scns[i].s_name = %s, scns[i].s_vaddr = %08lx, "
-		   "scns[i].s_scnptr = %d\n", i, scns[i].s_name,
-		   scns[i].s_vaddr, scns[i].s_scnptr));
+	  DPRINTF(("i = %d, s_name = %s, s_vaddr = %08lx, "
+		   "s_scnptr = %ld s_size = %lx\n", i, scns[i].s_name,
+		   scns[i].s_vaddr, scns[i].s_scnptr, scns[i].s_size));
 	  if (scns[i].s_flags & STYP_NOLOAD) {
 	    	/*
 	     	 * A section that is not loaded, for whatever
@@ -374,12 +366,12 @@ exec_coff_imgact(imgp)
 	    	int len = round_page(scns[i].s_size + PAGE_SIZE);
 	    	int j;
 
-	    	if ((error = vm_mmap(kernel_map,
+		if ((error = vm_mmap(exec_map,
 				    (vm_offset_t *) &buf,
 				    len,
 				    VM_PROT_READ,
 				    VM_PROT_READ,
-				    0,
+				    MAP_SHARED,
 				    OBJT_VNODE,
 				    imgp->vp,
 				    foff)) != 0) {
@@ -407,21 +399,22 @@ exec_coff_imgact(imgp)
 				DPRINTF(("%s(%d):  shared library %s\n",
 					 __FILE__, __LINE__, libname));
 				strlcpy(&libbuf[emul_path_len], libname, MAXPATHLEN);
-/* XXXKSE only 1:1 in coff */  	error = coff_load_file(
+			  	error = coff_load_file(
 				    FIRST_THREAD_IN_PROC(imgp->proc), libbuf);
 		      		if (error)
 	      				error = coff_load_file(
 					    FIRST_THREAD_IN_PROC(imgp->proc),
 					    libname);
-		      		if (error)
+				if (error) {
+					printf(
+				"error %d loading coff shared library %s\n",
+					    error, libname);
 					break;
+				}
 		    	}
 			free(libbuf, M_TEMP);
 		}
-		if (vm_map_remove(kernel_map,
-				  (vm_offset_t) buf,
-				  (vm_offset_t) buf + len))
-	      		panic("exec_coff_imgact vm_map_remove failed");
+		kmem_free_wakeup(exec_map, (vm_offset_t)buf, len);
 	    	if (error)
 	      		goto fail;
 	  	}
@@ -431,7 +424,7 @@ exec_coff_imgact(imgp)
 	 */
 
 	DPRINTF(("%s(%d):  load_coff_section(vmspace, "
-		"imgp->vp, %08lx, %08lx, 0x%x, 0x%x, 0x%x)\n",
+		"imgp->vp, %08lx, %08lx, 0x%lx, 0x%lx, 0x%x)\n",
 		__FILE__, __LINE__, text_offset, text_address,
 		text_size, text_size, VM_PROT_READ | VM_PROT_EXECUTE));
 	if ((error = load_coff_section(vmspace, imgp->vp,
@@ -448,7 +441,7 @@ exec_coff_imgact(imgp)
 
 
 	DPRINTF(("%s(%d): load_coff_section(vmspace, "
-		"imgp->vp, 0x%08lx, 0x%08lx, 0x%x, 0x%x, 0x%x)\n",
+		"imgp->vp, 0x%08lx, 0x%08lx, 0x%lx, 0x%lx, 0x%x)\n",
 		__FILE__, __LINE__, data_offset, data_address,
 		data_size + bss_size, data_size, VM_PROT_ALL));
 	if ((error = load_coff_section(vmspace, imgp->vp,
@@ -469,26 +462,25 @@ exec_coff_imgact(imgp)
 	vmspace->vm_taddr = (caddr_t)(void *)(uintptr_t)text_address;
 	vmspace->vm_daddr = (caddr_t)(void *)(uintptr_t)data_address;
 
-	hole = (caddr_t)trunc_page((vm_offset_t)vmspace->vm_daddr) + ctob(vmspace->vm_dsize);
+	hole = trunc_page((vm_offset_t)vmspace->vm_daddr +
+	    ctob(vmspace->vm_dsize));
 
-
-	DPRINTF(("%s(%d): vm_map_find(&vmspace->vm_map, NULL, 0, &0x%08lx, PAGE_SIZE, FALSE, VM_PROT_ALL, VM_PROT_ALL, 0)\n",
-		__FILE__, __LINE__, hole));
+	DPRINTF(("%s(%d): vm_map_find(&vmspace->vm_map, NULL, 0, &0x%jx, PAGE_SIZE, FALSE, VM_PROT_ALL, VM_PROT_ALL, 0)\n",
+	    __FILE__, __LINE__, (uintmax_t)hole));
         DPRINTF(("imgact: error = %d\n", error));
 
-	error = vm_map_find(&vmspace->vm_map, NULL, 0,
-			    (vm_offset_t *) &hole, PAGE_SIZE, FALSE,
-				VM_PROT_ALL, VM_PROT_ALL, 0);
-
-	DPRINTF(("IBCS2: start vm_dsize = 0x%x, vm_daddr = 0x%x end = 0x%x\n",
+	vm_map_find(&vmspace->vm_map, NULL, 0,
+	    (vm_offset_t *)&hole, PAGE_SIZE, VMFS_NO_SPACE,
+	    VM_PROT_ALL, VM_PROT_ALL, 0);
+	DPRINTF(("IBCS2: start vm_dsize = 0x%x, vm_daddr = 0x%p end = 0x%p\n",
 		ctob(vmspace->vm_dsize), vmspace->vm_daddr,
 		ctob(vmspace->vm_dsize) + vmspace->vm_daddr ));
-	DPRINTF(("%s(%d):  returning successfully!\n", __FILE__, __LINE__));
+	DPRINTF(("%s(%d):  returning %d!\n", __FILE__, __LINE__, error));
 
 fail:
-	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY);
 
-	return error;
+	return (error);
 }
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/intr_machdep.h,v 1.18 2007/05/08 21:29:13 jhb Exp $
+ * $FreeBSD$
  */
 
 #ifndef __MACHINE_INTR_MACHDEP_H__
@@ -48,7 +47,7 @@
  * IRQ values beyond 256 are used by MSI.  We leave 255 unused to avoid
  * confusion since 255 is used in PCI to indicate an invalid IRQ.
  */
-#define	NUM_MSI_INTS	128
+#define	NUM_MSI_INTS	512
 #define	FIRST_MSI_INT	256
 #define	NUM_IO_INTS	(FIRST_MSI_INT + NUM_MSI_INTS)
 
@@ -61,10 +60,10 @@
  * - 1 ??? dummy counter.
  * - 2 counters for each I/O interrupt.
  * - 1 counter for each CPU for lapic timer.
- * - 7 counters for each CPU for IPI counters for SMP.
+ * - 8 counters for each CPU for IPI counters for SMP.
  */
 #ifdef SMP
-#define	INTRCNT_COUNT	(1 + NUM_IO_INTS * 2 + (1 + 7) * MAXCPU)
+#define	INTRCNT_COUNT	(1 + NUM_IO_INTS * 2 + (1 + 8) * MAXCPU)
 #else
 #define	INTRCNT_COUNT	(1 + NUM_IO_INTS * 2 + 1)
 #endif
@@ -94,7 +93,7 @@ struct pic {
 	void (*pic_resume)(struct pic *);
 	int (*pic_config_intr)(struct intsrc *, enum intr_trigger,
 	    enum intr_polarity);
-	void (*pic_assign_cpu)(struct intsrc *, u_int apic_id);
+	int (*pic_assign_cpu)(struct intsrc *, u_int apic_id);
 	STAILQ_ENTRY(pic) pics;
 };
 
@@ -121,6 +120,15 @@ struct intsrc {
 
 struct trapframe;
 
+/*
+ * The following data structure holds per-cpu data, and is placed just
+ * above the top of the space used for the NMI stack.
+ */
+struct nmi_pcpu {
+	register_t	np_pcpu;
+	register_t	__padding;	/* pad to 16 bytes */
+};
+
 extern struct mtx icu_lock;
 extern int elcr_found;
 
@@ -132,9 +140,7 @@ int	elcr_probe(void);
 enum intr_trigger elcr_read_trigger(u_int irq);
 void	elcr_resume(void);
 void	elcr_write_trigger(u_int irq, enum intr_trigger trigger);
-#ifdef SMP
 void	intr_add_cpu(u_int cpu);
-#endif
 int	intr_add_handler(const char *name, int vector, driver_filter_t filter, 
 			 driver_intr_t handler, void *arg, enum intr_type flags, 
 			 void **cookiep);    
@@ -143,7 +149,9 @@ int	intr_bind(u_int vector, u_char cpu);
 #endif
 int	intr_config_intr(int vector, enum intr_trigger trig,
     enum intr_polarity pol);
+int	intr_describe(u_int vector, void *ih, const char *descr);
 void	intr_execute_handlers(struct intsrc *isrc, struct trapframe *frame);
+u_int	intr_next_cpu(void);
 struct intsrc *intr_lookup_source(int vector);
 int	intr_register_pic(struct pic *pic);
 int	intr_register_source(struct intsrc *isrc);

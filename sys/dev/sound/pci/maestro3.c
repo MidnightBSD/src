@@ -52,16 +52,22 @@
  * http://virgo.caltech.edu/~dmoore/maestro3.pdf.gz
  */
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-#include <gnu/dev/sound/pci/maestro3_reg.h>
-#include <gnu/dev/sound/pci/maestro3_dsp.h>
+#define M3_MODEL 1
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/maestro3.c,v 1.35 2007/06/17 06:10:42 ariff Exp $");
+#include <dev/sound/pci/allegro_reg.h>
+#include <dev/sound/pci/allegro_code.h>
+
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* -------------------------------------------------------------------- */
 
@@ -92,6 +98,7 @@ static struct m3_card_type {
 #define M3_PCHANS 4 /* create /dev/dsp0.[0-N] to use more than one */
 #define M3_RCHANS 1
 #define M3_MAXADDR ((1 << 27) - 1)
+#define M3_DEFAULT_VOL 0x6800
 
 struct sc_info;
 
@@ -162,8 +169,8 @@ struct sc_info {
 static void *m3_pchan_init(kobj_t, void *, struct snd_dbuf *, struct pcm_channel *, int);
 static int m3_pchan_free(kobj_t, void *);
 static int m3_pchan_setformat(kobj_t, void *, u_int32_t);
-static int m3_pchan_setspeed(kobj_t, void *, u_int32_t);
-static int m3_pchan_setblocksize(kobj_t, void *, u_int32_t);
+static u_int32_t m3_pchan_setspeed(kobj_t, void *, u_int32_t);
+static u_int32_t m3_pchan_setblocksize(kobj_t, void *, u_int32_t);
 static int m3_pchan_trigger(kobj_t, void *, int);
 static int m3_pchan_trigger_locked(kobj_t, void *, int);
 static u_int32_t m3_pchan_getptr_internal(struct sc_pchinfo *);
@@ -174,8 +181,8 @@ static struct pcmchan_caps *m3_pchan_getcaps(kobj_t, void *);
 static void *m3_rchan_init(kobj_t, void *, struct snd_dbuf *, struct pcm_channel *, int);
 static int m3_rchan_free(kobj_t, void *);
 static int m3_rchan_setformat(kobj_t, void *, u_int32_t);
-static int m3_rchan_setspeed(kobj_t, void *, u_int32_t);
-static int m3_rchan_setblocksize(kobj_t, void *, u_int32_t);
+static u_int32_t m3_rchan_setspeed(kobj_t, void *, u_int32_t);
+static u_int32_t m3_rchan_setblocksize(kobj_t, void *, u_int32_t);
 static int m3_rchan_trigger(kobj_t, void *, int);
 static int m3_rchan_trigger_locked(kobj_t, void *, int);
 static u_int32_t m3_rchan_getptr_internal(struct sc_rchinfo *);
@@ -185,7 +192,7 @@ static struct pcmchan_caps *m3_rchan_getcaps(kobj_t, void *);
 static int m3_chan_active(struct sc_info *);
 
 /* talk to the codec - called from ac97.c */
-static int	 m3_initcd(kobj_t, void *);
+static u_int32_t m3_initcd(kobj_t, void *);
 static int	 m3_rdcd(kobj_t, void *, int);
 static int  	 m3_wrcd(kobj_t, void *, int, u_int32_t);
 
@@ -206,7 +213,7 @@ static kobj_method_t m3_codec_methods[] = {
 	KOBJMETHOD(ac97_init,	m3_initcd),
 	KOBJMETHOD(ac97_read,	m3_rdcd),
 	KOBJMETHOD(ac97_write,	m3_wrcd),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 AC97_DECLARE(m3_codec);
 
@@ -214,10 +221,10 @@ AC97_DECLARE(m3_codec);
 /* channel descriptors */
 
 static u_int32_t m3_playfmt[] = {
-	AFMT_U8,
-	AFMT_STEREO | AFMT_U8,
-	AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S16_LE,
+	SND_FORMAT(AFMT_U8, 1, 0),
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
 	0
 };
 static struct pcmchan_caps m3_playcaps = {8000, 48000, m3_playfmt, 0};
@@ -231,15 +238,15 @@ static kobj_method_t m3_pch_methods[] = {
 	KOBJMETHOD(channel_getptr,		m3_pchan_getptr),
 	KOBJMETHOD(channel_getcaps,		m3_pchan_getcaps),
 	KOBJMETHOD(channel_free,		m3_pchan_free),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(m3_pch);
 
 static u_int32_t m3_recfmt[] = {
-	AFMT_U8,
-	AFMT_STEREO | AFMT_U8,
-	AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S16_LE,
+	SND_FORMAT(AFMT_U8, 1, 0),
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
 	0
 };
 static struct pcmchan_caps m3_reccaps = {8000, 48000, m3_recfmt, 0};
@@ -253,7 +260,7 @@ static kobj_method_t m3_rch_methods[] = {
 	KOBJMETHOD(channel_getptr,		m3_rchan_getptr),
 	KOBJMETHOD(channel_getcaps,		m3_rchan_getcaps),
 	KOBJMETHOD(channel_free,		m3_rchan_free),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(m3_rch);
 
@@ -309,7 +316,7 @@ m3_wait(struct sc_info *sc)
 /* -------------------------------------------------------------------- */
 /* ac97 codec */
 
-static int
+static u_int32_t
 m3_initcd(kobj_t kobj, void *devinfo)
 {
 	struct sc_info *sc = (struct sc_info *)devinfo;
@@ -349,7 +356,7 @@ m3_wrcd(kobj_t kobj, void *devinfo, int regno, u_int32_t data)
 	struct sc_info *sc = (struct sc_info *)devinfo;
 	if (m3_wait(sc)) {
 		device_printf(sc->dev, "m3_wrcd timed out.\n");
-		return -1;;
+		return -1;
 	}
 	m3_wr_2(sc, CODEC_DATA, data);
 	m3_wr_1(sc, CODEC_COMMAND, regno & 0x7f);
@@ -371,6 +378,31 @@ m3_pchan_init(kobj_t kobj, void *devinfo, struct snd_dbuf *b, struct pcm_channel
 	u_int32_t bus_addr, i;
 	int idx, data_bytes, dac_data;
 	int dsp_in_size, dsp_out_size, dsp_in_buf, dsp_out_buf;
+
+	struct data_word {
+	    u_int16_t addr, val;
+	} pv[] = {
+	    {CDATA_LEFT_VOLUME, M3_DEFAULT_VOL},
+	    {CDATA_RIGHT_VOLUME, M3_DEFAULT_VOL},
+	    {SRC3_DIRECTION_OFFSET, 0} ,
+	    {SRC3_DIRECTION_OFFSET + 3, 0x0000},
+	    {SRC3_DIRECTION_OFFSET + 4, 0},
+	    {SRC3_DIRECTION_OFFSET + 5, 0},
+	    {SRC3_DIRECTION_OFFSET + 6, 0},
+	    {SRC3_DIRECTION_OFFSET + 7, 0},
+	    {SRC3_DIRECTION_OFFSET + 8, 0},
+	    {SRC3_DIRECTION_OFFSET + 9, 0},
+	    {SRC3_DIRECTION_OFFSET + 10, 0x8000},
+	    {SRC3_DIRECTION_OFFSET + 11, 0xFF00},
+	    {SRC3_DIRECTION_OFFSET + 13, 0},
+	    {SRC3_DIRECTION_OFFSET + 14, 0},
+	    {SRC3_DIRECTION_OFFSET + 15, 0},
+	    {SRC3_DIRECTION_OFFSET + 16, 8},
+	    {SRC3_DIRECTION_OFFSET + 17, 50*2},
+	    {SRC3_DIRECTION_OFFSET + 18, MINISRC_BIQUAD_STAGE - 1},
+	    {SRC3_DIRECTION_OFFSET + 20, 0},
+	    {SRC3_DIRECTION_OFFSET + 21, 0}
+	};
 
 	M3_LOCK(sc);
 	idx = sc->pch_cnt; /* dac instance number, no active reuse! */
@@ -404,7 +436,7 @@ m3_pchan_init(kobj_t kobj, void *devinfo, struct snd_dbuf *b, struct pcm_channel
 	ch->buffer = b;
 	ch->parent = sc;
 	ch->channel = c;
-	ch->fmt = AFMT_U8;
+	ch->fmt = SND_FORMAT(AFMT_U8, 1, 0);
 	ch->spd = DSP_DEFAULT_SPEED;
 	M3_UNLOCK(sc); /* XXX */
 	if (sndbuf_alloc(ch->buffer, sc->parent_dmat, 0, sc->bufsz) != 0) {
@@ -516,10 +548,10 @@ m3_pchan_setformat(kobj_t kobj, void *chdata, u_int32_t format)
 		 ("m3_pchan_setformat(dac=%d, format=0x%x{%s-%s})\n",
 		  ch->dac_idx, format,
 		  format & (AFMT_U8|AFMT_S8) ? "8bit":"16bit",
-		  format & AFMT_STEREO ? "STEREO":"MONO"));
+		  (AFMT_CHANNEL(format) > 1) ? "STEREO":"MONO"));
 
 	/* mono word */
-        data = (format & AFMT_STEREO) ? 0 : 1;
+        data = (AFMT_CHANNEL(format) > 1)? 0 : 1;
         m3_wr_assp_data(sc, ch->dac_data + SRC3_MODE_OFFSET, data);
 
         /* 8bit word */
@@ -532,7 +564,7 @@ m3_pchan_setformat(kobj_t kobj, void *chdata, u_int32_t format)
         return (0);
 }
 
-static int
+static u_int32_t
 m3_pchan_setspeed(kobj_t kobj, void *chdata, u_int32_t speed)
 {
 	struct sc_pchinfo *ch = chdata;
@@ -555,7 +587,7 @@ m3_pchan_setspeed(kobj_t kobj, void *chdata, u_int32_t speed)
 	return (speed);
 }
 
-static int
+static u_int32_t
 m3_pchan_setblocksize(kobj_t kobj, void *chdata, u_int32_t blocksize)
 {
 	struct sc_pchinfo *ch = chdata;
@@ -725,6 +757,33 @@ m3_rchan_init(kobj_t kobj, void *devinfo, struct snd_dbuf *b, struct pcm_channel
 	int idx, data_bytes, adc_data;
 	int dsp_in_size, dsp_out_size, dsp_in_buf, dsp_out_buf; 
 
+	struct data_word {
+	u_int16_t addr, val;
+	} rv[] = {
+	    {CDATA_LEFT_VOLUME, M3_DEFAULT_VOL},
+	    {CDATA_RIGHT_VOLUME, M3_DEFAULT_VOL},
+	    {SRC3_DIRECTION_OFFSET, 1},
+	    {SRC3_DIRECTION_OFFSET + 3, 0x0000},
+	    {SRC3_DIRECTION_OFFSET + 4, 0},
+	    {SRC3_DIRECTION_OFFSET + 5, 0},
+	    {SRC3_DIRECTION_OFFSET + 6, 0},
+	    {SRC3_DIRECTION_OFFSET + 7, 0},
+	    {SRC3_DIRECTION_OFFSET + 8, 0},
+	    {SRC3_DIRECTION_OFFSET + 9, 0},
+	    {SRC3_DIRECTION_OFFSET + 10, 0x8000},
+	    {SRC3_DIRECTION_OFFSET + 11, 0xFF00},
+	    {SRC3_DIRECTION_OFFSET + 13, 0},
+	    {SRC3_DIRECTION_OFFSET + 14, 0},
+	    {SRC3_DIRECTION_OFFSET + 15, 0},
+	    {SRC3_DIRECTION_OFFSET + 16, 50},
+	    {SRC3_DIRECTION_OFFSET + 17, 8},
+	    {SRC3_DIRECTION_OFFSET + 18, 0},
+	    {SRC3_DIRECTION_OFFSET + 19, 0},
+	    {SRC3_DIRECTION_OFFSET + 20, 0},
+	    {SRC3_DIRECTION_OFFSET + 21, 0},
+	    {SRC3_DIRECTION_OFFSET + 22, 0xff}
+	};
+
 	M3_LOCK(sc);
 	idx = sc->rch_cnt; /* adc instance number, no active reuse! */
         M3_DEBUG(CHANGE, ("m3_rchan_init(adc=%d)\n", idx));
@@ -756,7 +815,7 @@ m3_rchan_init(kobj_t kobj, void *devinfo, struct snd_dbuf *b, struct pcm_channel
 	ch->buffer = b;
 	ch->parent = sc;
 	ch->channel = c;
-	ch->fmt = AFMT_U8;
+	ch->fmt = SND_FORMAT(AFMT_U8, 1, 0);
 	ch->spd = DSP_DEFAULT_SPEED;
 	M3_UNLOCK(sc); /* XXX */
 	if (sndbuf_alloc(ch->buffer, sc->parent_dmat, 0, sc->bufsz) != 0) {
@@ -863,10 +922,10 @@ m3_rchan_setformat(kobj_t kobj, void *chdata, u_int32_t format)
 		 ("m3_rchan_setformat(dac=%d, format=0x%x{%s-%s})\n",
 		  ch->adc_idx, format,
 		  format & (AFMT_U8|AFMT_S8) ? "8bit":"16bit",
-		  format & AFMT_STEREO ? "STEREO":"MONO"));
+		  (AFMT_CHANNEL(format) > 1) ? "STEREO":"MONO"));
 
 	/* mono word */
-        data = (format & AFMT_STEREO) ? 0 : 1;
+        data = (AFMT_CHANNEL(format) > 1) ? 0 : 1;
         m3_wr_assp_data(sc, ch->adc_data + SRC3_MODE_OFFSET, data);
 
         /* 8bit word */
@@ -878,7 +937,7 @@ m3_rchan_setformat(kobj_t kobj, void *chdata, u_int32_t format)
         return (0);
 }
 
-static int
+static u_int32_t
 m3_rchan_setspeed(kobj_t kobj, void *chdata, u_int32_t speed)
 {
 	struct sc_rchinfo *ch = chdata;
@@ -901,7 +960,7 @@ m3_rchan_setspeed(kobj_t kobj, void *chdata, u_int32_t speed)
 	return (speed);
 }
 
-static int
+static u_int32_t
 m3_rchan_setblocksize(kobj_t kobj, void *chdata, u_int32_t blocksize)
 {
 	struct sc_rchinfo *ch = chdata;
@@ -1185,25 +1244,25 @@ m3_init(struct sc_info *sc)
 	m3_wr_assp_data(sc, KDATA_CURRENT_DMA,
 			KDATA_DMA_XFER0);
 	/* write kernel into code memory */
-	size = sizeof(assp_kernel_image);
+	size = sizeof(gaw_kernel_vect_code);
 	for(i = 0 ; i < size / 2; i++) {
 		m3_wr_assp_code(sc, REV_B_CODE_MEMORY_BEGIN + i,
-				assp_kernel_image[i]);
+				gaw_kernel_vect_code[i]);
 	}
 	/*
 	 * We only have this one client and we know that 0x400 is free in
 	 * our kernel's mem map, so lets just drop it there.  It seems that
 	 * the minisrc doesn't need vectors, so we won't bother with them..
 	 */
-	size = sizeof(assp_minisrc_image);
+	size = sizeof(gaw_minisrc_code_0400);
 	for(i = 0 ; i < size / 2; i++) {
-		m3_wr_assp_code(sc, 0x400 + i, assp_minisrc_image[i]);
+		m3_wr_assp_code(sc, 0x400 + i, gaw_minisrc_code_0400[i]);
 	}
 	/* write the coefficients for the low pass filter? */
-	size = sizeof(minisrc_lpf_image);
+	size = sizeof(minisrc_lpf);
 	for(i = 0; i < size / 2 ; i++) {
 		m3_wr_assp_code(sc,0x400 + MINISRC_COEF_LOC + i,
-				minisrc_lpf_image[i]);
+				minisrc_lpf[i]);
 	}
 	m3_wr_assp_code(sc, 0x400 + MINISRC_COEF_LOC + size, 0x8000);
 	/* the minisrc is the only thing on our task list */
@@ -1211,8 +1270,8 @@ m3_init(struct sc_info *sc)
 	/* init the mixer number */
 	m3_wr_assp_data(sc, KDATA_MIXER_TASK_NUMBER, 0);
 	/* extreme kernel master volume */
-	m3_wr_assp_data(sc, KDATA_DAC_LEFT_VOLUME, ARB_VOLUME);
-	m3_wr_assp_data(sc, KDATA_DAC_RIGHT_VOLUME, ARB_VOLUME);
+	m3_wr_assp_data(sc, KDATA_DAC_LEFT_VOLUME, M3_DEFAULT_VOL);
+	m3_wr_assp_data(sc, KDATA_DAC_RIGHT_VOLUME, M3_DEFAULT_VOL);
 
 	m3_amp_enable(sc);
 

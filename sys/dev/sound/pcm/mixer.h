@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
+ * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
+ * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pcm/mixer.h,v 1.19 2007/06/16 03:37:28 ariff Exp $
+ * $FreeBSD$
  */
 
 struct snd_mixer *mixer_create(device_t dev, kobj_class_t cls, void *devinfo,
@@ -56,6 +57,7 @@ void mix_setrealdev(struct snd_mixer *m, u_int32_t dev, u_int32_t realdev);
 u_int32_t mix_getparent(struct snd_mixer *m, u_int32_t dev);
 u_int32_t mix_getchild(struct snd_mixer *m, u_int32_t dev);
 void *mix_getdevinfo(struct snd_mixer *m);
+struct mtx *mixer_get_lock(struct snd_mixer *m);
 
 extern int mixer_count;
 

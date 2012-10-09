@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)exec.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/amd64/include/exec.h,v 1.10 2005/02/19 21:16:48 ru Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_EXEC_H_

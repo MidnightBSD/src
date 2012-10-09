@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -35,7 +34,7 @@
  * interfaces on 64bit machines). This assists network interfaces that may need
  * huge numbers of mbufs.
  *
- * $FreeBSD: src/sys/sys/mbpool.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 #ifndef _SYS_MBPOOL_H_
 #define	_SYS_MBPOOL_H_

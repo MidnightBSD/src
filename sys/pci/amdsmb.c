@@ -1,6 +1,31 @@
-/* $MidnightBSD$ */
+/*-
+ * Copyright (c) 2005 Ruslan Ermilov
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/amdsmb.c,v 1.4 2007/01/11 19:56:24 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -85,8 +110,6 @@ static int amdsmb_debug = 0;
 struct amdsmb_softc {
 	int rid;
 	struct resource *res;
-	bus_space_tag_t smbst;
-	bus_space_handle_t smbsh;
 	device_t smbus;
 	struct mtx lock;
 };
@@ -96,9 +119,9 @@ struct amdsmb_softc {
 #define	AMDSMB_LOCK_ASSERT(amdsmb)	mtx_assert(&(amdsmb)->lock, MA_OWNED)
 
 #define	AMDSMB_ECINB(amdsmb, register)					\
-	(bus_space_read_1(amdsmb->smbst, amdsmb->smbsh, register))
+	(bus_read_1(amdsmb->res, register))
 #define	AMDSMB_ECOUTB(amdsmb, register, value) \
-	(bus_space_write_1(amdsmb->smbst, amdsmb->smbsh, register, value))
+	(bus_write_1(amdsmb->res, register, value))
 
 static int	amdsmb_detach(device_t dev);
 
@@ -138,8 +161,6 @@ amdsmb_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	amdsmb_sc->smbst = rman_get_bustag(amdsmb_sc->res);
-	amdsmb_sc->smbsh = rman_get_bushandle(amdsmb_sc->res);
 	mtx_init(&amdsmb_sc->lock, device_get_nameunit(dev), "amdsmb", MTX_DEF);
 
 	/* Allocate a new smbus device */

@@ -1,7 +1,11 @@
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz.
  * Copyright (c) 1990 The Regents of the University of California.
+ * Copyright (c) 2007 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * Portions of this software were developed by A. Joseph Koshy under
+ * sponsorship from the FreeBSD Foundation and Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +31,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/i386/exception.s,v 1.117.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include "opt_apic.h"
+#include "opt_atpic.h"
+#include "opt_hwpmc_hooks.h"
 #include "opt_kdtrace.h"
 #include "opt_npx.h"
 
@@ -42,7 +48,6 @@
 
 #define	SEL_RPL_MASK	0x0003
 #define	GSEL_KPL	0x0020	/* GSEL(GCODE_SEL, SEL_KPL) */
-
 
 #ifdef KDTRACE_HOOKS
 	.bss
@@ -60,7 +65,9 @@ dtrace_invop_calltrap_addr:
 	.zero	8
 #endif
 	.text
-
+#ifdef HWPMC_HOOKS
+	ENTRY(start_exceptions)
+#endif
 /*****************************************************************************/
 /* Trap handling                                                             */
 /*****************************************************************************/
@@ -102,6 +109,8 @@ IDTVEC(nmi)
 	pushl $0; TRAP(T_NMI)
 IDTVEC(bpt)
 	pushl $0; TRAP(T_BPTFLT)
+IDTVEC(dtrace_ret)
+	pushl $0; TRAP(T_DTRACE_RET)
 IDTVEC(ofl)
 	pushl $0; TRAP(T_OFLOW)
 IDTVEC(bnd)
@@ -153,6 +162,7 @@ alltraps:
 	pushl	%fs
 alltraps_with_regs_pushed:
 	SET_KERNEL_SREGS
+	cld
 	FAKE_MCOUNT(TF_EIP(%esp))
 calltrap:
 	pushl	%esp
@@ -227,6 +237,7 @@ IDTVEC(lcall_syscall)
 	pushl	%es
 	pushl	%fs
 	SET_KERNEL_SREGS
+	cld
 	FAKE_MCOUNT(TF_EIP(%esp))
 	pushl	%esp
 	call	syscall
@@ -250,6 +261,7 @@ IDTVEC(int0x80_syscall)
 	pushl	%es
 	pushl	%fs
 	SET_KERNEL_SREGS
+	cld
 	FAKE_MCOUNT(TF_EIP(%esp))
 	pushl	%esp
 	call	syscall
@@ -288,14 +300,18 @@ ENTRY(fork_trampoline)
 	SUPERALIGN_TEXT
 MCOUNT_LABEL(bintr)
 
-#include <i386/isa/atpic_vector.s>
+#ifdef DEV_ATPIC
+#include <i386/i386/atpic_vector.s>
+#endif
 
-#ifdef DEV_APIC
+#if defined(DEV_APIC) && defined(DEV_ATPIC)
 	.data
 	.p2align 4
 	.text
 	SUPERALIGN_TEXT
+#endif
 
+#ifdef DEV_APIC
 #include <i386/i386/apic_vector.s>
 #endif
 
@@ -320,8 +336,18 @@ doreti:
 	FAKE_MCOUNT($bintr)		/* init "from" bintr -> doreti */
 doreti_next:
 	/*
-	 * Check if ASTs can be handled now.  PSL_VM must be checked first
-	 * since segment registers only have an RPL in non-VM86 mode.
+	 * Check if ASTs can be handled now.  ASTs cannot be safely
+	 * processed when returning from an NMI.
+	 */
+	cmpb	$T_NMI,TF_TRAPNO(%esp)
+#ifdef HWPMC_HOOKS
+	je	doreti_nmi
+#else
+	je	doreti_exit
+#endif
+	/*
+	 * PSL_VM must be checked first since segment registers only
+	 * have an RPL in non-VM86 mode.
 	 */
 	testl	$PSL_VM,TF_EFLAGS(%esp)	/* are we in vm86 mode? */
 	jz	doreti_notvm86
@@ -399,3 +425,41 @@ doreti_popl_fs_fault:
 	movl	$0,TF_ERR(%esp)	/* XXX should be the error code */
 	movl	$T_PROTFLT,TF_TRAPNO(%esp)
 	jmp	alltraps_with_regs_pushed
+#ifdef HWPMC_HOOKS
+doreti_nmi:
+	/*
+	 * Since we are returning from an NMI, check if the current trap
+	 * was from user mode and if so whether the current thread
+	 * needs a user call chain capture.
+	 */
+	testb	$SEL_RPL_MASK,TF_CS(%esp)
+	jz	doreti_exit
+	movl	PCPU(CURTHREAD),%eax	/* curthread present? */
+	orl	%eax,%eax
+	jz	doreti_exit
+	testl	$TDP_CALLCHAIN,TD_PFLAGS(%eax) /* flagged for capture? */
+	jz	doreti_exit
+	/*
+	 * Take the processor out of NMI mode by executing a fake "iret".
+	 */
+	pushfl
+	pushl	%cs
+	pushl	$outofnmi
+	iret
+outofnmi:
+	/*
+	 * Call the callchain capture hook after turning interrupts back on.
+	 */
+	movl	pmc_hook,%ecx
+	orl	%ecx,%ecx
+	jz	doreti_exit
+	pushl	%esp			/* frame pointer */
+	pushl	$PMC_FN_USER_CALLCHAIN	/* command */
+	movl	PCPU(CURTHREAD),%eax
+	pushl	%eax			/* curthread */
+	sti
+	call	*%ecx
+	addl	$12,%esp
+	jmp	doreti_ast
+	ENTRY(end_exceptions)
+#endif

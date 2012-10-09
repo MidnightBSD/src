@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993, 1994 by Chris Provenzano, proven@mit.edu
  * Copyright (c) 1995-1998 by John Birrell <jb@cimlogic.com.au>
@@ -31,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_pthreadtypes.h,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS__PTHREADTYPES_H_
@@ -62,7 +61,10 @@ struct pthread_spinlock;
  * or assignment operators for the types pthread_attr_t, pthread_cond_t,
  * pthread_condattr_t, pthread_mutex_t, pthread_mutexattr_t.
  */
+#ifndef _PTHREAD_T_DECLARED
 typedef struct	pthread			*pthread_t;
+#define	_PTHREAD_T_DECLARED
+#endif
 typedef struct	pthread_attr		*pthread_attr_t;
 typedef struct	pthread_mutex		*pthread_mutex_t;
 typedef struct	pthread_mutex_attr	*pthread_mutexattr_t;

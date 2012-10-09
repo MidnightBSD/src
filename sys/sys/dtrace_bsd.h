@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/dtrace_bsd.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  * This file contains BSD shims for Sun's DTrace code.
  */
@@ -32,22 +32,21 @@
 #define	_SYS_DTRACE_BSD_H
 
 /* Forward definitions: */
+struct mbuf;
 struct trapframe;
 struct thread;
+struct vattr;
+struct vnode;
+struct reg;
 
 /*
  * Cyclic clock function type definition used to hook the cyclic
  * subsystem into the appropriate timer interrupt.
  */
 typedef	void (*cyclic_clock_func_t)(struct trapframe *);
+extern cyclic_clock_func_t	cyclic_clock_func;
 
-/*
- * These external variables are actually machine-dependent, so
- * they might not actually exist.
- *
- * Defining them here avoids a proliferation of header files.
- */
-extern cyclic_clock_func_t     lapic_cyclic_clock_func[];
+void clocksource_cyc_set(const struct bintime *t);
 
 /*
  * The dtrace module handles traps that occur during a DTrace probe.
@@ -67,6 +66,14 @@ typedef void (*dtrace_doubletrap_func_t)(void);
 /* Global variables in trap.c */
 extern	dtrace_invop_func_t	dtrace_invop_func;
 extern	dtrace_doubletrap_func_t	dtrace_doubletrap_func;
+
+/* Pid provider hooks */
+typedef int (*dtrace_fasttrap_probe_ptr_t)(struct reg *);
+extern	dtrace_fasttrap_probe_ptr_t	dtrace_fasttrap_probe_ptr;
+typedef int (*dtrace_pid_probe_ptr_t)(struct reg *);
+extern	dtrace_pid_probe_ptr_t	dtrace_pid_probe_ptr;
+typedef int (*dtrace_return_probe_ptr_t)(struct reg *);
+extern	dtrace_return_probe_ptr_t	dtrace_return_probe_ptr;
 
 /* Virtual time hook function type. */
 typedef	void (*dtrace_vtime_switch_func_t)(struct thread *);
@@ -92,6 +99,74 @@ typedef	void (*dtrace_malloc_probe_func_t)(u_int32_t, uintptr_t arg0,
     uintptr_t arg1, uintptr_t arg2, uintptr_t arg3, uintptr_t arg4);
 
 extern dtrace_malloc_probe_func_t   dtrace_malloc_probe;
+
+/* dtnfsclient NFSv[34] access cache provider hooks. */
+typedef void (*dtrace_nfsclient_accesscache_flush_probe_func_t)(uint32_t,
+    struct vnode *);
+extern dtrace_nfsclient_accesscache_flush_probe_func_t
+    dtrace_nfsclient_accesscache_flush_done_probe;
+extern dtrace_nfsclient_accesscache_flush_probe_func_t
+    dtrace_nfscl_accesscache_flush_done_probe;
+
+typedef void (*dtrace_nfsclient_accesscache_get_probe_func_t)(uint32_t,
+    struct vnode *, uid_t, uint32_t);
+extern dtrace_nfsclient_accesscache_get_probe_func_t
+    dtrace_nfsclient_accesscache_get_hit_probe,
+    dtrace_nfsclient_accesscache_get_miss_probe;
+extern dtrace_nfsclient_accesscache_get_probe_func_t
+    dtrace_nfscl_accesscache_get_hit_probe,
+    dtrace_nfscl_accesscache_get_miss_probe;
+
+typedef void (*dtrace_nfsclient_accesscache_load_probe_func_t)(uint32_t,
+    struct vnode *, uid_t, uint32_t, int);
+extern dtrace_nfsclient_accesscache_load_probe_func_t
+    dtrace_nfsclient_accesscache_load_done_probe;
+extern dtrace_nfsclient_accesscache_load_probe_func_t
+    dtrace_nfscl_accesscache_load_done_probe;
+
+/* dtnfsclient NFSv[234] attribute cache provider hooks. */
+typedef void (*dtrace_nfsclient_attrcache_flush_probe_func_t)(uint32_t,
+    struct vnode *);
+extern dtrace_nfsclient_attrcache_flush_probe_func_t
+    dtrace_nfsclient_attrcache_flush_done_probe;
+extern dtrace_nfsclient_attrcache_flush_probe_func_t
+    dtrace_nfscl_attrcache_flush_done_probe;
+
+typedef void (*dtrace_nfsclient_attrcache_get_hit_probe_func_t)(uint32_t,
+    struct vnode *, struct vattr *);
+extern dtrace_nfsclient_attrcache_get_hit_probe_func_t
+    dtrace_nfsclient_attrcache_get_hit_probe;
+extern dtrace_nfsclient_attrcache_get_hit_probe_func_t
+    dtrace_nfscl_attrcache_get_hit_probe;
+
+typedef void (*dtrace_nfsclient_attrcache_get_miss_probe_func_t)(uint32_t,
+    struct vnode *);
+extern dtrace_nfsclient_attrcache_get_miss_probe_func_t
+    dtrace_nfsclient_attrcache_get_miss_probe;
+extern dtrace_nfsclient_attrcache_get_miss_probe_func_t
+    dtrace_nfscl_attrcache_get_miss_probe;
+
+typedef void (*dtrace_nfsclient_attrcache_load_probe_func_t)(uint32_t,
+    struct vnode *, struct vattr *, int);
+extern dtrace_nfsclient_attrcache_load_probe_func_t
+    dtrace_nfsclient_attrcache_load_done_probe;
+extern dtrace_nfsclient_attrcache_load_probe_func_t
+    dtrace_nfscl_attrcache_load_done_probe;
+
+/* dtnfsclient NFSv[234] RPC provider hooks. */
+typedef void (*dtrace_nfsclient_nfs23_start_probe_func_t)(uint32_t,
+    struct vnode *, struct mbuf *, struct ucred *, int);
+extern dtrace_nfsclient_nfs23_start_probe_func_t
+    dtrace_nfsclient_nfs23_start_probe;
+extern dtrace_nfsclient_nfs23_start_probe_func_t
+    dtrace_nfscl_nfs234_start_probe;
+
+typedef void (*dtrace_nfsclient_nfs23_done_probe_func_t)(uint32_t,
+    struct vnode *, struct mbuf *, struct ucred *, int, int);
+extern dtrace_nfsclient_nfs23_done_probe_func_t
+    dtrace_nfsclient_nfs23_done_probe;
+extern dtrace_nfsclient_nfs23_done_probe_func_t
+    dtrace_nfscl_nfs234_done_probe;
 
 /*
  * Functions which allow the dtrace module to check that the kernel 

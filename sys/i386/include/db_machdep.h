@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/db_machdep.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University

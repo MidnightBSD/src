@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007-2008, Chelsio Inc.
+ * Copyright (c) 2007, Chelsio Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/toedev.h,v 1.5.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_TOEDEV_H_

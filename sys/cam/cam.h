@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam.h,v 1.11.22.1 2010/02/10 00:26:20 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_H
@@ -60,13 +60,29 @@ typedef u_int lun_id_t;
 struct cam_periph;
 
 /*
- * Priority information for a CAM structure.  The generation number is
- * incremented everytime a new entry is entered into the queue giving round
- * robin per priority level scheduling.
+ * Priority information for a CAM structure. 
+ */
+typedef enum {
+    CAM_RL_HOST,
+    CAM_RL_BUS,
+    CAM_RL_XPT,
+    CAM_RL_DEV,
+    CAM_RL_NORMAL,
+    CAM_RL_VALUES
+} cam_rl;
+/*
+ * The generation number is incremented everytime a new entry is entered into
+ * the queue giving round robin per priority level scheduling.
  */
 typedef struct {
 	u_int32_t priority;
+#define CAM_PRIORITY_HOST	((CAM_RL_HOST << 8) + 0x80)
+#define CAM_PRIORITY_BUS	((CAM_RL_BUS << 8) + 0x80)
+#define CAM_PRIORITY_XPT	((CAM_RL_XPT << 8) + 0x80)
+#define CAM_PRIORITY_DEV	((CAM_RL_DEV << 8) + 0x80)
+#define CAM_PRIORITY_NORMAL	((CAM_RL_NORMAL << 8) + 0x80)
 #define CAM_PRIORITY_NONE	(u_int32_t)-1
+#define CAM_PRIORITY_TO_RL(x)	((x) >> 8)
 	u_int32_t generation;
 	int       index;
 #define CAM_UNQUEUED_INDEX	-1
@@ -91,6 +107,15 @@ typedef enum {
 	CAM_EXPECT_INQ_CHANGE	= 0x01,
 	CAM_RETRY_SELTO		= 0x02 /* Retry Selection Timeouts */
 } cam_flags;
+
+enum {
+	SF_RETRY_UA		= 0x01,	/* Retry UNIT ATTENTION conditions. */
+	SF_NO_PRINT		= 0x02,	/* Never print error status. */
+	SF_QUIET_IR		= 0x04,	/* Be quiet about Illegal Request reponses */
+	SF_PRINT_ALWAYS		= 0x08,	/* Always print error status. */
+	SF_NO_RECOVERY		= 0x10,	/* Don't do active error recovery. */
+	SF_NO_RETRY		= 0x20	/* Don't do any retries. */
+};
 
 /* CAM  Status field values */
 typedef enum {
@@ -129,6 +154,9 @@ typedef enum {
 				 * requests for the target at the sim level
 				 * back into the XPT queue.
 				 */
+	CAM_ATA_STATUS_ERROR,	/* ATA error, look at error code in CCB */
+	CAM_SCSI_IT_NEXUS_LOST,	/* Initiator/Target Nexus lost. */
+	CAM_SMP_STATUS_ERROR,	/* SMP error, look at error code in CCB */
 	CAM_IDE = 0x33,		/* Initiator Detected Error */
 	CAM_RESRC_UNAVAIL,	/* Resource Unavailable */
 	CAM_UNACKED_EVENT,	/* Unacknowledged Event by Host */
@@ -178,6 +206,18 @@ typedef enum {
 	CAM_ESF_PRINT_STATUS	= 0x10,
 	CAM_ESF_PRINT_SENSE	= 0x20
 } cam_error_scsi_flags;
+
+typedef enum {
+	CAM_ESMF_PRINT_NONE	= 0x00,
+	CAM_ESMF_PRINT_STATUS	= 0x10,
+	CAM_ESMF_PRINT_FULL_CMD	= 0x20,
+} cam_error_smp_flags;
+
+typedef enum {
+	CAM_EAF_PRINT_NONE	= 0x00,
+	CAM_EAF_PRINT_STATUS	= 0x10,
+	CAM_EAF_PRINT_RESULT	= 0x20
+} cam_error_ata_flags;
 
 struct cam_status_entry
 {

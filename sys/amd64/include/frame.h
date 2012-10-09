@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1990 The Regents of the University of California.
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)frame.h	5.2 (Berkeley) 1/18/91
- * $FreeBSD: src/sys/amd64/include/frame.h,v 1.30 2005/12/22 22:16:05 jhb Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_FRAME_H_
@@ -65,9 +64,13 @@ struct trapframe {
 	register_t	tf_r13;
 	register_t	tf_r14;
 	register_t	tf_r15;
-	register_t	tf_trapno;
+	uint32_t	tf_trapno;
+	uint16_t	tf_fs;
+	uint16_t	tf_gs;
 	register_t	tf_addr;
-	register_t	tf_flags;
+	uint32_t	tf_flags;
+	uint16_t	tf_es;
+	uint16_t	tf_ds;
 	/* below portion defined in hardware */
 	register_t	tf_err;
 	register_t	tf_rip;
@@ -76,5 +79,9 @@ struct trapframe {
 	register_t	tf_rsp;
 	register_t	tf_ss;
 };
+
+#define	TF_HASSEGS	0x1
+#define	TF_HASBASES	0x2
+#define	TF_HASFPXSTATE	0x4
 
 #endif /* _MACHINE_FRAME_H_ */

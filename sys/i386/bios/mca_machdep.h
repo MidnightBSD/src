@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/bios/mca_machdep.h,v 1.1 1999/09/03 02:04:28 mdodd Exp $
+ * $FreeBSD$
  */
 
 extern int	MCA_system;

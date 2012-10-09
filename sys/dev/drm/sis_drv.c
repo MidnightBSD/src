@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/sis_drv.c,v 1.7.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/sis_drm.h"
@@ -107,5 +107,9 @@ static driver_t sis_driver = {
 };
 
 extern devclass_t drm_devclass;
+#if __FreeBSD_version >= 700010
 DRIVER_MODULE(sisdrm, vgapci, sis_driver, drm_devclass, 0, 0);
+#else
+DRIVER_MODULE(sisdrm, pci, sis_driver, drm_devclass, 0, 0);
+#endif
 MODULE_DEPEND(sisdrm, drm, 1, 1, 1);

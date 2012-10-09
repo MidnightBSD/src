@@ -58,7 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_var.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet6/ip6_var.h,v 1.39.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET6_IP6_VAR_H_
@@ -83,6 +83,7 @@ struct	ip6q {
 	u_char		*ip6q_nxtp;
 #endif
 	int		ip6q_nfrag;	/* # of fragments */
+	struct label	*ip6q_label;
 };
 
 struct	ip6asfrag {
@@ -97,11 +98,19 @@ struct	ip6asfrag {
 
 #define IP6_REASS_MBUF(ip6af) (*(struct mbuf **)&((ip6af)->ip6af_m))
 
-struct	ip6_moptions {
+/*
+ * Structure attached to inpcb.in6p_moptions and
+ * passed to ip6_output when IPv6 multicast options are in use.
+ * This structure is lazy-allocated.
+ */
+struct ip6_moptions {
 	struct	ifnet *im6o_multicast_ifp; /* ifp for outgoing multicasts */
 	u_char	im6o_multicast_hlim;	/* hoplimit for outgoing multicasts */
 	u_char	im6o_multicast_loop;	/* 1 >= hear sends if a member */
-	LIST_HEAD(, in6_multi_mship) im6o_memberships;
+	u_short	im6o_num_memberships;	/* no. memberships this socket */
+	u_short	im6o_max_memberships;	/* max memberships this socket */
+	struct	in6_multi **im6o_membership;	/* group memberships */
+	struct	in6_mfilter *im6o_mfilters;	/* source filters */
 };
 
 /*
@@ -200,7 +209,7 @@ struct	ip6stat {
 	u_quad_t ip6s_m2m[32];		/* two or more mbuf */
 	u_quad_t ip6s_mext1;		/* one ext mbuf */
 	u_quad_t ip6s_mext2m;		/* two or more ext mbuf */
-	u_quad_t ip6s_exthdrtoolong;	/* ext hdr are not continuous */
+	u_quad_t ip6s_exthdrtoolong;	/* ext hdr are not contiguous */
 	u_quad_t ip6s_nogif;		/* no match gif found */
 	u_quad_t ip6s_toomanyhdr;	/* discarded due to too many headers */
 
@@ -228,12 +237,16 @@ struct	ip6stat {
 	/* number of times that a deprecated address is chosen */
 	u_quad_t ip6s_sources_deprecated[16];
 
-	u_quad_t ip6s_forward_cachehit;
-	u_quad_t ip6s_forward_cachemiss;
-
 	/* number of times that each rule of source selection is applied. */
 	u_quad_t ip6s_sources_rule[16];
 };
+
+#ifdef _KERNEL
+#define	IP6STAT_ADD(name, val)	V_ip6stat.name += (val)
+#define	IP6STAT_SUB(name, val)	V_ip6stat.name -= (val)
+#define	IP6STAT_INC(name)	IP6STAT_ADD(name, 1)
+#define	IP6STAT_DEC(name)	IP6STAT_SUB(name, 1)
+#endif
 
 #ifdef _KERNEL
 /*
@@ -278,49 +291,77 @@ struct ip6aux {
 #define IP6_HDR_ALIGNED_P(ip)	((((intptr_t) (ip)) & 3) == 0)
 #endif
 
-extern struct	ip6stat ip6stat;	/* statistics */
-extern int	ip6_defhlim;		/* default hop limit */
-extern int	ip6_defmcasthlim;	/* default multicast hop limit */
-extern int	ip6_forwarding;		/* act as router? */
-extern int	ip6_forward_srcrt;	/* forward src-routed? */
-extern int	ip6_gif_hlim;		/* Hop limit for gif encap packet */
-extern int	ip6_use_deprecated;	/* allow deprecated addr as source */
-extern int	ip6_rr_prune;		/* router renumbering prefix
+VNET_DECLARE(struct ip6stat, ip6stat);	/* statistics */
+VNET_DECLARE(int, ip6_defhlim);		/* default hop limit */
+VNET_DECLARE(int, ip6_defmcasthlim);	/* default multicast hop limit */
+VNET_DECLARE(int, ip6_forwarding);	/* act as router? */
+VNET_DECLARE(int, ip6_use_deprecated);	/* allow deprecated addr as source */
+VNET_DECLARE(int, ip6_rr_prune);	/* router renumbering prefix
 					 * walk list every 5 sec.    */
-extern int	ip6_mcast_pmtu;		/* enable pMTU discovery for multicast? */
-extern int	ip6_v6only;
+VNET_DECLARE(int, ip6_mcast_pmtu);	/* enable pMTU discovery for multicast? */
+VNET_DECLARE(int, ip6_v6only);
+#define	V_ip6stat			VNET(ip6stat)
+#define	V_ip6_defhlim			VNET(ip6_defhlim)
+#define	V_ip6_defmcasthlim		VNET(ip6_defmcasthlim)
+#define	V_ip6_forwarding		VNET(ip6_forwarding)
+#define	V_ip6_use_deprecated		VNET(ip6_use_deprecated)
+#define	V_ip6_rr_prune			VNET(ip6_rr_prune)
+#define	V_ip6_mcast_pmtu		VNET(ip6_mcast_pmtu)
+#define	V_ip6_v6only			VNET(ip6_v6only)
 
-extern struct socket *ip6_mrouter;	/* multicast routing daemon */
-extern int	ip6_sendredirects;	/* send IP redirects when forwarding? */
-extern int	ip6_maxfragpackets; /* Maximum packets in reassembly queue */
-extern int	ip6_maxfrags;	/* Maximum fragments in reassembly queue */
-extern int	ip6_sourcecheck;	/* Verify source interface */
-extern int	ip6_sourcecheck_interval; /* Interval between log messages */
-extern int	ip6_accept_rtadv;	/* Acts as a host not a router */
-extern int	ip6_keepfaith;		/* Firewall Aided Internet Translator */
-extern int	ip6_log_interval;
-extern time_t	ip6_log_time;
-extern int	ip6_hdrnestlimit; /* upper limit of # of extension headers */
-extern int	ip6_dad_count;		/* DupAddrDetectionTransmits */
+VNET_DECLARE(struct socket *, ip6_mrouter);	/* multicast routing daemon */
+VNET_DECLARE(int, ip6_sendredirects);	/* send IP redirects when forwarding? */
+VNET_DECLARE(int, ip6_maxfragpackets);	/* Maximum packets in reassembly
+					 * queue */
+VNET_DECLARE(int, ip6_maxfrags);	/* Maximum fragments in reassembly
+					 * queue */
+VNET_DECLARE(int, ip6_accept_rtadv);	/* Acts as a host not a router */
+VNET_DECLARE(int, ip6_no_radr);		/* No defroute from RA */
+VNET_DECLARE(int, ip6_norbit_raif);	/* Disable R-bit in NA on RA
+					 * receiving IF. */
+VNET_DECLARE(int, ip6_rfc6204w3);	/* Accept defroute from RA even when
+					   forwarding enabled */
+VNET_DECLARE(int, ip6_keepfaith);	/* Firewall Aided Internet Translator */
+VNET_DECLARE(int, ip6_log_interval);
+VNET_DECLARE(time_t, ip6_log_time);
+VNET_DECLARE(int, ip6_hdrnestlimit);	/* upper limit of # of extension
+					 * headers */
+VNET_DECLARE(int, ip6_dad_count);	/* DupAddrDetectionTransmits */
+#define	V_ip6_mrouter			VNET(ip6_mrouter)
+#define	V_ip6_sendredirects		VNET(ip6_sendredirects)
+#define	V_ip6_maxfragpackets		VNET(ip6_maxfragpackets)
+#define	V_ip6_maxfrags			VNET(ip6_maxfrags)
+#define	V_ip6_accept_rtadv		VNET(ip6_accept_rtadv)
+#define	V_ip6_no_radr			VNET(ip6_no_radr)
+#define	V_ip6_norbit_raif		VNET(ip6_norbit_raif)
+#define	V_ip6_rfc6204w3			VNET(ip6_rfc6204w3)
+#define	V_ip6_keepfaith			VNET(ip6_keepfaith)
+#define	V_ip6_log_interval		VNET(ip6_log_interval)
+#define	V_ip6_log_time			VNET(ip6_log_time)
+#define	V_ip6_hdrnestlimit		VNET(ip6_hdrnestlimit)
+#define	V_ip6_dad_count			VNET(ip6_dad_count)
 
-extern int ip6_auto_flowlabel;
-extern int ip6_auto_linklocal;
+VNET_DECLARE(int, ip6_auto_flowlabel);
+VNET_DECLARE(int, ip6_auto_linklocal);
+#define	V_ip6_auto_flowlabel		VNET(ip6_auto_flowlabel)
+#define	V_ip6_auto_linklocal		VNET(ip6_auto_linklocal)
 
-extern int   ip6_anonportmin;		/* minimum ephemeral port */
-extern int   ip6_anonportmax;		/* maximum ephemeral port */
-extern int   ip6_lowportmin;		/* minimum reserved port */
-extern int   ip6_lowportmax;		/* maximum reserved port */
+VNET_DECLARE(int, ip6_use_tempaddr);	/* Whether to use temporary addresses */
+VNET_DECLARE(int, ip6_prefer_tempaddr);	/* Whether to prefer temporary
+					 * addresses in the source address
+					 * selection */
+#define	V_ip6_use_tempaddr		VNET(ip6_use_tempaddr)
+#define	V_ip6_prefer_tempaddr		VNET(ip6_prefer_tempaddr)
 
-extern int	ip6_use_tempaddr; /* whether to use temporary addresses. */
-extern int	ip6_prefer_tempaddr; /* whether to prefer temporary addresses
-					in the source address selection */
+VNET_DECLARE(int, ip6_use_defzone);	/* Whether to use the default scope
+					 * zone when unspecified */
+#define	V_ip6_use_defzone		VNET(ip6_use_defzone)
 
-extern int	ip6_use_defzone; /* whether to use the default scope zone
-				    when unspecified */
-
-extern	struct pfil_head inet6_pfil_hook;	/* packet filter hooks */
+VNET_DECLARE (struct pfil_head, inet6_pfil_hook);	/* packet filter hooks */
+#define	V_inet6_pfil_hook	VNET(inet6_pfil_hook)
 #ifdef IPSTEALTH
-extern int	ip6stealth;
+VNET_DECLARE(int, ip6stealth);
+#define	V_ip6stealth			VNET(ip6stealth)
 #endif
 
 extern struct	pr_usrreqs rip6_usrreqs;
@@ -332,18 +373,24 @@ int	icmp6_ctloutput __P((struct socket *, struct sockopt *sopt));
 
 struct in6_ifaddr;
 void	ip6_init __P((void));
+#ifdef VIMAGE
+void	ip6_destroy __P((void));
+#endif
+int	ip6proto_register(short);
+int	ip6proto_unregister(short);
+
 void	ip6_input __P((struct mbuf *));
 struct in6_ifaddr *ip6_getdstifaddr __P((struct mbuf *));
 void	ip6_freepcbopts __P((struct ip6_pktopts *));
-void	ip6_freemoptions __P((struct ip6_moptions *));
+
 int	ip6_unknown_opt __P((u_int8_t *, struct mbuf *, int));
 char *	ip6_get_prevhdr __P((struct mbuf *, int));
 int	ip6_nexthdr __P((struct mbuf *, int, int, int *));
 int	ip6_lasthdr __P((struct mbuf *, int, int, int *));
 
-struct ip6aux *ip6_addaux __P((struct mbuf *));
+#ifdef __notyet__
 struct ip6aux *ip6_findaux __P((struct mbuf *));
-void	ip6_delaux __P((struct mbuf *));
+#endif
 
 extern int	(*ip6_mforward)(struct ip6_hdr *, struct ifnet *,
     struct mbuf *);
@@ -392,12 +439,15 @@ int	rip6_usrreq __P((struct socket *,
 int	dest6_input __P((struct mbuf **, int *, int));
 int	none_input __P((struct mbuf **, int *, int));
 
-struct in6_addr *in6_selectsrc __P((struct sockaddr_in6 *, struct ip6_pktopts *,
+int	in6_selectsrc(struct sockaddr_in6 *, struct ip6_pktopts *,
 	struct inpcb *inp, struct route_in6 *, struct ucred *cred,
-	struct ifnet **, int *));
+	struct ifnet **, struct in6_addr *);
 int in6_selectroute __P((struct sockaddr_in6 *, struct ip6_pktopts *,
 	struct ip6_moptions *, struct route_in6 *, struct ifnet **,
-	struct rtentry **, int));
+	struct rtentry **));
+int	in6_selectroute_fib(struct sockaddr_in6 *, struct ip6_pktopts *,
+	    struct ip6_moptions *, struct route_in6 *, struct ifnet **,
+	    struct rtentry **, u_int);
 u_int32_t ip6_randomid __P((void));
 u_int32_t ip6_randomflowlabel __P((void));
 #endif /* _KERNEL */

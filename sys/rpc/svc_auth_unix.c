@@ -32,7 +32,7 @@ static char *sccsid2 = "@(#)svc_auth_unix.c 1.28 88/02/08 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc_auth_unix.c	2.3 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/rpc/svc_auth_unix.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * svc_auth_unix.c
@@ -95,13 +95,13 @@ _svcauth_unix(struct svc_req *rqst, struct rpc_msg *msg)
 			goto done;
 		}
 		for (i = 0; i < gid_len; i++) {
-			if (i + 1 < NGROUPS)
+			if (i + 1 < XU_NGROUPS)
 				xcr->cr_groups[i + 1] = IXDR_GET_INT32(buf);
 			else
 				buf++;
 		}
-		if (gid_len + 1 > NGROUPS)
-			xcr->cr_ngroups = NGROUPS;
+		if (gid_len + 1 > XU_NGROUPS)
+			xcr->cr_ngroups = XU_NGROUPS;
 		else
 			xcr->cr_ngroups = gid_len + 1;
 
@@ -120,8 +120,7 @@ _svcauth_unix(struct svc_req *rqst, struct rpc_msg *msg)
 		goto done;
 	}
 
-	rqst->rq_xprt->xp_verf.oa_flavor = AUTH_NULL;
-	rqst->rq_xprt->xp_verf.oa_length = 0;
+	rqst->rq_verf = _null_auth;
 	stat = AUTH_OK;
 done:
 	XDR_DESTROY(&xdrs);

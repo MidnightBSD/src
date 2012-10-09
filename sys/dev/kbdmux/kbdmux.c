@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbdmux.c,v 1.5 2012-03-24 01:11:05 laffer1 Exp $
- * $FreeBSD: src/sys/dev/kbdmux/kbdmux.c,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $Id: kbdmux.c,v 1.6 2012-10-09 04:08:11 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #include "opt_compat.h"
@@ -52,7 +52,6 @@
 #include <sys/selinfo.h>
 #include <sys/systm.h>
 #include <sys/taskqueue.h>
-#include <sys/tty.h>
 #include <sys/uio.h>
 #include <dev/kbd/kbdreg.h>
 #include <dev/kbd/kbdtables.h>
@@ -118,27 +117,6 @@ MALLOC_DEFINE(M_KBDMUX, KEYBOARD_NAME, "Keyboard multiplexor");
 	taskqueue_enqueue(taskqueue_swi_giant, &(s)->ks_task)
 #endif /* not yet */
 
-#define	KBDMUX_INTR(kbd, arg) \
-	(*kbdsw[(kbd)->kb_index]->intr)((kbd), (arg))
-
-#define	KBDMUX_IOCTL(kbd, cmd, arg) \
-	(*kbdsw[(kbd)->kb_index]->ioctl)((kbd), (cmd), (caddr_t) (arg))
-
-#define	KBDMUX_CHECK_CHAR(kbd) \
-	(*kbdsw[(kbd)->kb_index]->check_char)((kbd))
-
-#define	KBDMUX_READ_CHAR(kbd, wait) \
-	(*kbdsw[(kbd)->kb_index]->read_char)((kbd), (wait))
-
-#define	KBDMUX_ENABLE(kbd) \
-	(*kbdsw[(kbd)->kb_index]->enable)((kbd))
-
-#define	KBDMUX_POLL(kbd, on) \
-	(*kbdsw[(kbd)->kb_index]->poll)((kbd), (on))
-
-#define	KBDMUX_CLEAR_STATE(kbd) \
-	(*kbdsw[(kbd)->kb_index]->clear_state)((kbd))
-
 /*
  * kbdmux keyboard
  */
@@ -155,7 +133,9 @@ typedef struct kbdmux_kbd	kbdmux_kbd_t;
  */
 struct kbdmux_state
 {
-	struct clist		 ks_inq;	/* input chars queue */
+	char			 ks_inq[KBDMUX_Q_SIZE]; /* input chars queue */
+	unsigned int		 ks_inq_start;
+	unsigned int		 ks_inq_length;
 	struct task		 ks_task;	/* interrupt task */
 	struct callout		 ks_timo;	/* timeout handler */
 #define TICKS			(hz)		/* rate */
@@ -188,6 +168,34 @@ static task_fn_t		kbdmux_kbd_intr;
 static timeout_t		kbdmux_kbd_intr_timo;
 static kbd_callback_func_t	kbdmux_kbd_event;
 
+static void
+kbdmux_kbd_putc(kbdmux_state_t *state, char c)
+{
+	unsigned int p;
+
+	if (state->ks_inq_length == KBDMUX_Q_SIZE)
+		return;
+
+	p = (state->ks_inq_start + state->ks_inq_length) % KBDMUX_Q_SIZE;
+	state->ks_inq[p] = c;
+	state->ks_inq_length++;
+}
+
+static int
+kbdmux_kbd_getc(kbdmux_state_t *state)
+{
+	unsigned char c;
+
+	if (state->ks_inq_length == 0)
+		return (-1);
+
+	c = state->ks_inq[state->ks_inq_start];
+	state->ks_inq_start = (state->ks_inq_start + 1) % KBDMUX_Q_SIZE;
+	state->ks_inq_length--;
+
+	return (c);
+}
+
 /*
  * Interrupt handler task
  */
@@ -197,7 +205,7 @@ kbdmux_kbd_intr(void *xkbd, int pending)
 	keyboard_t	*kbd = (keyboard_t *) xkbd;
 	kbdmux_state_t	*state = (kbdmux_state_t *) kbd->kb_data;
 
-	KBDMUX_INTR(kbd, NULL);
+	kbdd_intr(kbd, NULL);
 
 	KBDMUX_LOCK(state);
 
@@ -226,7 +234,7 @@ kbdmux_kbd_intr_timo(void *xstate)
 	callout_deactivate(&state->ks_timo);
 
 	/* queue interrupt task if needed */
-	if (state->ks_inq.c_cc > 0 && !(state->ks_flags & TASK) &&
+	if (state->ks_inq_length > 0 && !(state->ks_flags & TASK) &&
 	    KBDMUX_QUEUE_INTR(state) == 0)
 		state->ks_flags |= TASK;
 
@@ -258,8 +266,8 @@ kbdmux_kbd_event(keyboard_t *kbd, int event, void *arg)
 		 * NOKEY.
 		 */
 
-		while (KBDMUX_CHECK_CHAR(kbd)) {
-			c = KBDMUX_READ_CHAR(kbd, 0);
+		while (kbdd_check_char(kbd)) {
+			c = kbdd_read_char(kbd, 0);
 			if (c == NOKEY)
 				break;
 			if (c == ERRKEY)
@@ -267,11 +275,11 @@ kbdmux_kbd_event(keyboard_t *kbd, int event, void *arg)
 			if (!KBD_IS_BUSY(kbd))
 				continue; /* not open - discard the input */
 
-			putc(c, &state->ks_inq);
+			kbdmux_kbd_putc(state, c);
 		}
 
 		/* queue interrupt task if needed */
-		if (state->ks_inq.c_cc > 0 && !(state->ks_flags & TASK) &&
+		if (state->ks_inq_length > 0 && !(state->ks_flags & TASK) &&
 		    KBDMUX_QUEUE_INTR(state) == 0)
 			state->ks_flags |= TASK;
 
@@ -405,8 +413,6 @@ kbdmux_init(int unit, keyboard_t **kbdp, void *arg, int flags)
 		}
 
 		KBDMUX_LOCK_INIT(state);
-		clist_alloc_cblocks(&state->ks_inq,
-				KBDMUX_Q_SIZE, KBDMUX_Q_SIZE / 2);
 		TASK_INIT(&state->ks_task, 0, kbdmux_kbd_intr, (void *) kbd);
 		KBDMUX_CALLOUT_INIT(state);
 		SLIST_INIT(&state->ks_kbds);
@@ -469,10 +475,8 @@ kbdmux_init(int unit, keyboard_t **kbdp, void *arg, int flags)
 	return (0);
 bad:
 	if (needfree) {
-		if (state != NULL) {
-			clist_free_cblocks(&state->ks_inq);
+		if (state != NULL)
 			free(state, M_KBDMUX);
-		}
 		if (keymap != NULL)
 			free(keymap, M_KBDMUX);
 		if (accmap != NULL)
@@ -515,10 +519,6 @@ kbdmux_term(keyboard_t *kbd)
 
 		free(k, M_KBDMUX);
 	}
-
-	/* flush input queue */
-	ndflush(&state->ks_inq, state->ks_inq.c_cc);
-	clist_free_cblocks(&state->ks_inq);
 
 	KBDMUX_UNLOCK(state);
 
@@ -598,7 +598,7 @@ kbdmux_read(keyboard_t *kbd, int wait)
 	int		 c;
 
 	KBDMUX_LOCK(state);
-	c = getc(&state->ks_inq);
+	c = kbdmux_kbd_getc(state);
 	KBDMUX_UNLOCK(state);
 
 	if (c != -1)
@@ -620,7 +620,7 @@ kbdmux_check(keyboard_t *kbd)
 		return (FALSE);
 
 	KBDMUX_LOCK(state);
-	ready = (state->ks_inq.c_cc > 0)? TRUE : FALSE;
+	ready = (state->ks_inq_length > 0) ? TRUE : FALSE;
 	KBDMUX_UNLOCK(state);
 
 	return (ready);
@@ -656,14 +656,14 @@ next_code:
 	}
 
 	/* see if there is something in the keyboard queue */
-	scancode = getc(&state->ks_inq);
+	scancode = kbdmux_kbd_getc(state);
 	if (scancode == -1) {
 		if (state->ks_flags & POLLING) {
 			kbdmux_kbd_t	*k;
 
 			SLIST_FOREACH(k, &state->ks_kbds, next) {
-				while (KBDMUX_CHECK_CHAR(k->kbd)) {
-					scancode = KBDMUX_READ_CHAR(k->kbd, 0);
+				while (kbdd_check_char(k->kbd)) {
+					scancode = kbdd_read_char(k->kbd, 0);
 					if (scancode == NOKEY)
 						break;
 					if (scancode == ERRKEY)
@@ -671,11 +671,11 @@ next_code:
 					if (!KBD_IS_BUSY(k->kbd))
 						continue; 
 
-					putc(scancode, &state->ks_inq);
+					kbdmux_kbd_putc(state, scancode);
 				}
 			}
 
-			if (state->ks_inq.c_cc > 0)
+			if (state->ks_inq_length > 0)
 				goto next_code;
 		}
 
@@ -916,7 +916,7 @@ kbdmux_check_char(keyboard_t *kbd)
 	if (!(state->ks_flags & COMPOSE) && (state->ks_composed_char != 0))
 		ready = TRUE;
 	else
-		ready = (state->ks_inq.c_cc > 0)? TRUE : FALSE;
+		ready = (state->ks_inq_length > 0) ? TRUE : FALSE;
 
 	KBDMUX_UNLOCK(state);
 
@@ -992,16 +992,16 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 			return (EINVAL); /* bad keyboard */
 		}
 
-		KBDMUX_ENABLE(k->kbd);
-		KBDMUX_CLEAR_STATE(k->kbd);
+		kbdd_enable(k->kbd);
+		kbdd_clear_state(k->kbd);
 
 		/* set K_RAW mode on slave keyboard */
 		mode = K_RAW;
-		error = KBDMUX_IOCTL(k->kbd, KDSKBMODE, &mode);
+		error = kbdd_ioctl(k->kbd, KDSKBMODE, (caddr_t)&mode);
 		if (error == 0) {
 			/* set lock keys state on slave keyboard */
 			mode = state->ks_state & LOCK_MASK;
-			error = KBDMUX_IOCTL(k->kbd, KDSKBSTATE, &mode);
+			error = kbdd_ioctl(k->kbd, KDSKBSTATE, (caddr_t)&mode);
 		}
 
 		if (error != 0) {
@@ -1115,7 +1115,7 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 		/* KDSETLED on all slave keyboards */
 		SLIST_FOREACH(k, &state->ks_kbds, next)
-			KBDMUX_IOCTL(k->kbd, KDSETLED, arg);
+			(void)kbdd_ioctl(k->kbd, KDSETLED, arg);
 
 		KBDMUX_UNLOCK(state);
 		break;
@@ -1146,7 +1146,7 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 		/* KDSKBSTATE on all slave keyboards */
 		SLIST_FOREACH(k, &state->ks_kbds, next)
-			KBDMUX_IOCTL(k->kbd, KDSKBSTATE, arg);
+			(void)kbdd_ioctl(k->kbd, KDSKBSTATE, arg);
 
 		KBDMUX_UNLOCK(state);
 
@@ -1192,12 +1192,13 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 		/* perform command on all slave keyboards */
 		SLIST_FOREACH(k, &state->ks_kbds, next)
-			KBDMUX_IOCTL(k->kbd, cmd, arg);
+			(void)kbdd_ioctl(k->kbd, cmd, arg);
 
 		KBDMUX_UNLOCK(state);
 		break;
 
 	case PIO_KEYMAP:	/* set keyboard translation table */
+	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 	case PIO_KEYMAPENT:	/* set keyboard translation table entry */
 	case PIO_DEADKEYMAP:	/* set accent key translation table */
 		KBDMUX_LOCK(state);
@@ -1205,7 +1206,7 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 		/* perform command on all slave keyboards */
 		SLIST_FOREACH(k, &state->ks_kbds, next)
-			KBDMUX_IOCTL(k->kbd, cmd, arg);
+			(void)kbdd_ioctl(k->kbd, cmd, arg);
 
 		KBDMUX_UNLOCK(state);
                 /* FALLTHROUGH */
@@ -1240,8 +1241,7 @@ kbdmux_clear_state_locked(kbdmux_state_t *state)
 	state->ks_accents = 0;
 	state->ks_composed_char = 0;
 /*	state->ks_prefix = 0;		XXX */
-
-	ndflush(&state->ks_inq, state->ks_inq.c_cc);
+	state->ks_inq_length = 0;
 }
 
 static void
@@ -1302,7 +1302,7 @@ kbdmux_poll(keyboard_t *kbd, int on)
 
 	/* set poll on slave keyboards */
 	SLIST_FOREACH(k, &state->ks_kbds, next)
-		KBDMUX_POLL(k->kbd, on);
+		kbdd_poll(k->kbd, on);
 
 	KBDMUX_UNLOCK(state);
 
@@ -1367,15 +1367,14 @@ kbdmux_modevent(module_t mod, int type, void *data)
 			panic("kbd_get_switch(" KEYBOARD_NAME ") == NULL");
 
 		kbd = kbd_get_keyboard(kbd_find_keyboard(KEYBOARD_NAME, 0));
-		if (kbd == NULL)
-			 panic("kbd_get_keyboard(kbd_find_keyboard(" KEYBOARD_NAME ", 0)) == NULL");
-
-		(*sw->disable)(kbd);
+		if (kbd != NULL) {
+			(*sw->disable)(kbd);
 #ifdef KBD_INSTALL_CDEV
-		kbd_detach(kbd);
+			kbd_detach(kbd);
 #endif
-		(*sw->term)(kbd);
-		kbd_delete_driver(&kbdmux_kbd_driver);
+			(*sw->term)(kbd);
+			kbd_delete_driver(&kbdmux_kbd_driver);
+		}
 		error = 0;
 		break;
 
@@ -1384,7 +1383,7 @@ kbdmux_modevent(module_t mod, int type, void *data)
 		break;
 	}
 
-	return (0);
+	return (error);
 }
 
 DEV_MODULE(kbdmux, kbdmux_modevent, NULL);

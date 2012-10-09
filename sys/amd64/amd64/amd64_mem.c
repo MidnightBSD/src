@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/amd64/amd64/amd64_mem.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/amd64_mem.c,v 1.25.18.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -36,6 +35,11 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/amd64_mem.c,v 1.25.18.3.2.1 2008/11/25 0
 #include <sys/smp.h>
 #include <sys/sysctl.h>
 
+#include <vm/vm.h>
+#include <vm/vm_param.h>
+#include <vm/pmap.h>
+
+#include <machine/cputypes.h>
 #include <machine/md_var.h>
 #include <machine/specialreg.h>
 
@@ -73,11 +77,13 @@ static void	amd64_mrinit(struct mem_range_softc *sc);
 static int	amd64_mrset(struct mem_range_softc *sc,
 		    struct mem_range_desc *mrd, int *arg);
 static void	amd64_mrAPinit(struct mem_range_softc *sc);
+static void	amd64_mrreinit(struct mem_range_softc *sc);
 
 static struct mem_range_ops amd64_mrops = {
 	amd64_mrinit,
 	amd64_mrset,
-	amd64_mrAPinit
+	amd64_mrAPinit,
+	amd64_mrreinit
 };
 
 /* XXX for AP startup hook */
@@ -301,20 +307,23 @@ amd64_mrstoreone(void *arg)
 	struct mem_range_desc *mrd;
 	u_int64_t omsrv, msrv;
 	int i, j, msr;
-	u_int cr4save;
+	u_long cr0, cr4;
 
 	mrd = sc->mr_desc;
 
+	critical_enter();
+
 	/* Disable PGE. */
-	cr4save = rcr4();
-	if (cr4save & CR4_PGE)
-		load_cr4(cr4save & ~CR4_PGE);
+	cr4 = rcr4();
+	load_cr4(cr4 & ~CR4_PGE);
 
 	/* Disable caches (CD = 1, NW = 0). */
-	load_cr0((rcr0() & ~CR0_NW) | CR0_CD);
+	cr0 = rcr0();
+	load_cr0((cr0 & ~CR0_NW) | CR0_CD);
 
 	/* Flushes caches and TLBs. */
 	wbinvd();
+	invltlb();
 
 	/* Disable MTRRs (E = 0). */
 	wrmsr(MSR_MTRRdefType, rdmsr(MSR_MTRRdefType) & ~MTRR_DEF_ENABLE);
@@ -382,17 +391,18 @@ amd64_mrstoreone(void *arg)
 		wrmsr(msr + 1, msrv);
 	}
 
-	/* Flush caches, TLBs. */
+	/* Flush caches and TLBs. */
 	wbinvd();
+	invltlb();
 
 	/* Enable MTRRs. */
 	wrmsr(MSR_MTRRdefType, rdmsr(MSR_MTRRdefType) | MTRR_DEF_ENABLE);
 
-	/* Enable caches (CD = 0, NW = 0). */
-	load_cr0(rcr0() & ~(CR0_CD | CR0_NW));
+	/* Restore caches and PGE. */
+	load_cr0(cr0);
+	load_cr4(cr4);
 
-	/* Restore PGE. */
-	load_cr4(cr4save);
+	critical_exit();
 }
 
 /*
@@ -525,9 +535,9 @@ static int
 amd64_mrset(struct mem_range_softc *sc, struct mem_range_desc *mrd, int *arg)
 {
 	struct mem_range_desc *targ;
-	int error = 0;
+	int error, i;
 
-	switch(*arg) {
+	switch (*arg) {
 	case MEMRANGE_SET_UPDATE:
 		/*
 		 * Make sure that what's being asked for is even
@@ -564,6 +574,21 @@ amd64_mrset(struct mem_range_softc *sc, struct mem_range_desc *mrd, int *arg)
 
 	default:
 		return (EOPNOTSUPP);
+	}
+
+	/*
+	 * Ensure that the direct map region does not contain any mappings
+	 * that span MTRRs of different types.  However, the fixed MTRRs can
+	 * be ignored, because a large page mapping the first 1 MB of physical
+	 * memory is a special case that the processor handles.  The entire
+	 * TLB will be invalidated by amd64_mrstore(), so pmap_demote_DMAP()
+	 * needn't do it.
+	 */
+	i = (sc->mr_cap & MR686_FIXMTRR) ? MTRR_N64K + MTRR_N16K + MTRR_N4K : 0;
+	mrd = sc->mr_desc + i;
+	for (; i < sc->mr_ndesc; i++, mrd++) {
+		if ((mrd->mr_flags & (MDF_ACTIVE | MDF_BOGUS)) == MDF_ACTIVE)
+			pmap_demote_DMAP(mrd->mr_base, mrd->mr_len, FALSE);
 	}
 
 	/* Update the hardware. */
@@ -655,6 +680,21 @@ amd64_mrinit(struct mem_range_softc *sc)
 		if (mrd->mr_flags & MDF_ACTIVE)
 			mrd->mr_flags |= MDF_FIRMWARE;
 	}
+
+	/*
+	 * Ensure that the direct map region does not contain any mappings
+	 * that span MTRRs of different types.  However, the fixed MTRRs can
+	 * be ignored, because a large page mapping the first 1 MB of physical
+	 * memory is a special case that the processor handles.  Invalidate
+	 * any old TLB entries that might hold inconsistent memory type
+	 * information. 
+	 */
+	i = (sc->mr_cap & MR686_FIXMTRR) ? MTRR_N64K + MTRR_N16K + MTRR_N4K : 0;
+	mrd = sc->mr_desc + i;
+	for (; i < sc->mr_ndesc; i++, mrd++) {
+		if ((mrd->mr_flags & (MDF_ACTIVE | MDF_BOGUS)) == MDF_ACTIVE)
+			pmap_demote_DMAP(mrd->mr_base, mrd->mr_len, TRUE);
+	}
 }
 
 /*
@@ -668,6 +708,30 @@ amd64_mrAPinit(struct mem_range_softc *sc)
 	wrmsr(MSR_MTRRdefType, mtrrdef);
 }
 
+/*
+ * Re-initialise running CPU(s) MTRRs to match the ranges in the descriptor
+ * list.
+ *
+ * XXX Must be called with interrupts enabled.
+ */
+static void
+amd64_mrreinit(struct mem_range_softc *sc)
+{
+#ifdef SMP
+	/*
+	 * We should use ipi_all_but_self() to call other CPUs into a
+	 * locking gate, then call a target function to do this work.
+	 * The "proper" solution involves a generalised locking gate
+	 * implementation, not ready yet.
+	 */
+	smp_rendezvous(NULL, (void *)amd64_mrAPinit, NULL, sc);
+#else
+	disable_intr();				/* disable interrupts */
+	amd64_mrAPinit(sc);
+	enable_intr();
+#endif
+}
+
 static void
 amd64_mem_drvinit(void *unused)
 {
@@ -678,9 +742,14 @@ amd64_mem_drvinit(void *unused)
 		return;
 	if ((cpu_id & 0xf00) != 0x600 && (cpu_id & 0xf00) != 0xf00)
 		return;
-	if ((strcmp(cpu_vendor, "GenuineIntel") != 0) &&
-	    (strcmp(cpu_vendor, "AuthenticAMD") != 0))
+	switch (cpu_vendor_id) {
+	case CPU_VENDOR_INTEL:
+	case CPU_VENDOR_AMD:
+	case CPU_VENDOR_CENTAUR:
+		break;
+	default:
 		return;
+	}
 	mem_range_softc.mr_op = &amd64_mrops;
 }
 SYSINIT(amd64memdev, SI_SUB_DRIVERS, SI_ORDER_FIRST, amd64_mem_drvinit, NULL);

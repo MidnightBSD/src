@@ -31,11 +31,11 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD: src/sys/dev/bwi/bwirf.c,v 1.1 2009/01/19 22:02:25 laffer1 Exp $
- * $DragonFly: src/sys/dev/netif/bwi/bwirf.c,v 1.1 2007/09/08 06:15:54 sephe Exp $
+ * $DragonFly: src/sys/dev/netif/bwi/bwirf.c,v 1.9 2008/08/21 12:19:33 swildner Exp $
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_bwi.h"
@@ -66,12 +66,12 @@
 
 #include <machine/bus.h>
 
-#include "bitops.h"
-#include "if_bwireg.h"
-#include "if_bwivar.h"
-#include "bwimac.h"
-#include "bwirf.h"
-#include "bwiphy.h"
+#include <dev/bwi/bitops.h>
+#include <dev/bwi/if_bwireg.h>
+#include <dev/bwi/if_bwivar.h>
+#include <dev/bwi/bwimac.h>
+#include <dev/bwi/bwirf.h>
+#include <dev/bwi/bwiphy.h>
 
 #define RF_LO_WRITE(mac, lo)	bwi_rf_lo_write((mac), (lo))
 
@@ -81,8 +81,12 @@
 #define BWI_DEFAULT_IDLE_TSSI	52
 
 struct rf_saveregs {
+	uint16_t	phy_01;
+	uint16_t	phy_03;
+	uint16_t	phy_0a;
 	uint16_t	phy_15;
 	uint16_t	phy_2a;
+	uint16_t	phy_30;
 	uint16_t	phy_35;
 	uint16_t	phy_60;
 	uint16_t	phy_429;
@@ -108,11 +112,15 @@ static void	bwi_rf_work_around(struct bwi_mac *, u_int);
 static int	bwi_rf_gain_max_reached(struct bwi_mac *, int);
 static uint16_t	bwi_rf_calibval(struct bwi_mac *);
 static uint16_t	bwi_rf_get_tp_ctrl2(struct bwi_mac *);
-static uint32_t	bwi_rf_lo_devi_measure(struct bwi_mac *, uint16_t);
-static void	bwi_rf_lo_measure(struct bwi_mac *,
-			const struct bwi_rf_lo *, struct bwi_rf_lo *, uint8_t);
-static uint8_t	_bwi_rf_lo_update(struct bwi_mac *, uint16_t);
 
+static void	bwi_rf_lo_update_11b(struct bwi_mac *);
+static uint16_t	bwi_rf_lo_measure_11b(struct bwi_mac *);
+
+static void	bwi_rf_lo_update_11g(struct bwi_mac *);
+static uint32_t	bwi_rf_lo_devi_measure(struct bwi_mac *, uint16_t);
+static void	bwi_rf_lo_measure_11g(struct bwi_mac *,
+			const struct bwi_rf_lo *, struct bwi_rf_lo *, uint8_t);
+static uint8_t	_bwi_rf_lo_update_11g(struct bwi_mac *, uint16_t);
 static void	bwi_rf_lo_write(struct bwi_mac *, const struct bwi_rf_lo *);
 
 static void	bwi_rf_set_nrssi_ofs_11g(struct bwi_mac *);
@@ -129,6 +137,9 @@ static int	bwi_rf_calc_rssi_bcm2053(struct bwi_mac *,
 			const struct bwi_rxbuf_hdr *);
 static int	bwi_rf_calc_rssi_bcm2060(struct bwi_mac *,
 			const struct bwi_rxbuf_hdr *);
+static int	bwi_rf_calc_noise_bcm2050(struct bwi_mac *);
+static int	bwi_rf_calc_noise_bcm2053(struct bwi_mac *);
+static int	bwi_rf_calc_noise_bcm2060(struct bwi_mac *);
 
 static void	bwi_rf_on_11a(struct bwi_mac *);
 static void	bwi_rf_on_11bg(struct bwi_mac *);
@@ -212,6 +223,7 @@ int
 bwi_rf_attach(struct bwi_mac *mac)
 {
 	struct bwi_softc *sc = mac->mac_sc;
+	struct bwi_phy *phy = &mac->mac_phy;
 	struct bwi_rf *rf = &mac->mac_rf;
 	uint16_t type, manu;
 	uint8_t rev;
@@ -253,7 +265,7 @@ bwi_rf_attach(struct bwi_mac *mac)
 	 */
 	rf->rf_ctrl_rd = 0;
 	rf->rf_ctrl_adj = 0;
-	switch (mac->mac_phy.phy_mode) {
+	switch (phy->phy_mode) {
 	case IEEE80211_MODE_11A:
 		if (manu != BWI_RF_MANUFACT_BCM ||
 		    type != BWI_RF_T_BCM2060 ||
@@ -266,14 +278,17 @@ bwi_rf_attach(struct bwi_mac *mac)
 		rf->rf_on = bwi_rf_on_11a;
 		rf->rf_off = bwi_rf_off_11a;
 		rf->rf_calc_rssi = bwi_rf_calc_rssi_bcm2060;
+		rf->rf_calc_noise = bwi_rf_calc_noise_bcm2060;
 		break;
 	case IEEE80211_MODE_11B:
 		if (type == BWI_RF_T_BCM2050) {
 			rf->rf_ctrl_rd = BWI_RF_CTRL_RD_11BG;
 			rf->rf_calc_rssi = bwi_rf_calc_rssi_bcm2050;
+			rf->rf_calc_noise = bwi_rf_calc_noise_bcm2050;
 		} else if (type == BWI_RF_T_BCM2053) {
 			rf->rf_ctrl_adj = 1;
 			rf->rf_calc_rssi = bwi_rf_calc_rssi_bcm2053;
+			rf->rf_calc_noise = bwi_rf_calc_noise_bcm2053;
 		} else {
 			device_printf(sc->sc_dev, "only BCM2050/BCM2053 RF "
 				      "is supported for 11B PHY\n");
@@ -283,6 +298,10 @@ bwi_rf_attach(struct bwi_mac *mac)
 		rf->rf_off = bwi_rf_off_11bg;
 		rf->rf_calc_nrssi_slope = bwi_rf_calc_nrssi_slope_11b;
 		rf->rf_set_nrssi_thr = bwi_rf_set_nrssi_thr_11b;
+		if (phy->phy_rev == 6)
+			rf->rf_lo_update = bwi_rf_lo_update_11g;
+		else
+			rf->rf_lo_update = bwi_rf_lo_update_11b;
 		break;
 	case IEEE80211_MODE_11G:
 		if (type != BWI_RF_T_BCM2050) {
@@ -299,6 +318,8 @@ bwi_rf_attach(struct bwi_mac *mac)
 		rf->rf_calc_nrssi_slope = bwi_rf_calc_nrssi_slope_11g;
 		rf->rf_set_nrssi_thr = bwi_rf_set_nrssi_thr_11g;
 		rf->rf_calc_rssi = bwi_rf_calc_rssi_bcm2050;
+		rf->rf_calc_noise = bwi_rf_calc_noise_bcm2050;
+		rf->rf_lo_update = bwi_rf_lo_update_11g;
 		break;
 	default:
 		device_printf(sc->sc_dev, "unsupported PHY mode\n");
@@ -491,7 +512,8 @@ loop1_exit:
 	 */
 	rf->rf_lo_gain = (loop2 * 6) - (loop1 * 4) - 11;
 	rf->rf_rx_gain = trsw * 2;
-	DPRINTF(mac->mac_sc, "lo gain: %u, rx gain: %u\n",
+	DPRINTF(mac->mac_sc, BWI_DBG_RF | BWI_DBG_INIT,
+		"lo gain: %u, rx gain: %u\n",
 		rf->rf_lo_gain, rf->rf_rx_gain);
 
 #undef SAVE_RF_MAX
@@ -935,7 +957,8 @@ bwi_rf_init_bcm2050(struct bwi_mac *mac)
 	else
 		rf->rf_calib = calib;
 	if (rf->rf_calib != 0xffff) {
-		DPRINTF(sc, "RF calibration value: 0x%04x\n", rf->rf_calib);
+		DPRINTF(sc, BWI_DBG_RF | BWI_DBG_INIT,
+			"RF calibration value: 0x%04x\n", rf->rf_calib);
 		rf->rf_flags |= BWI_RF_F_INITED;
 	}
 
@@ -1084,7 +1107,8 @@ bwi_rf_map_txpower(struct bwi_mac *mac)
 		device_printf(sc->sc_dev, "invalid max txpower in sprom\n");
 		rf->rf_txpower_max = 74;
 	}
-	DPRINTF(sc, "max txpower from sprom: %d dBm\n", rf->rf_txpower_max);
+	DPRINTF(sc, BWI_DBG_RF | BWI_DBG_TXPOWER | BWI_DBG_ATTACH,
+		"max txpower from sprom: %d dBm\n", rf->rf_txpower_max);
 
 	/*
 	 * Find out region/domain max TX power, which is adjusted
@@ -1101,17 +1125,20 @@ bwi_rf_map_txpower(struct bwi_mac *mac)
 		ant_gain = 2;
 	}
 	ant_gain *= 4;
-	DPRINTF(sc, "ant gain %d dBm\n", ant_gain);
+	DPRINTF(sc, BWI_DBG_RF | BWI_DBG_TXPOWER | BWI_DBG_ATTACH,
+		"ant gain %d dBm\n", ant_gain);
 
 	reg_txpower_max = 90 - ant_gain - 6;	/* XXX magic number */
-	DPRINTF(sc, "region/domain max txpower %d dBm\n", reg_txpower_max);
+	DPRINTF(sc, BWI_DBG_RF | BWI_DBG_TXPOWER | BWI_DBG_ATTACH,
+		"region/domain max txpower %d dBm\n", reg_txpower_max);
 
 	/*
 	 * Force max TX power within region/domain TX power limit
 	 */
 	if (rf->rf_txpower_max > reg_txpower_max)
 		rf->rf_txpower_max = reg_txpower_max;
-	DPRINTF(sc, "max txpower %d dBm\n", rf->rf_txpower_max);
+	DPRINTF(sc, BWI_DBG_RF | BWI_DBG_TXPOWER | BWI_DBG_ATTACH,
+		"max txpower %d dBm\n", rf->rf_txpower_max);
 
 	/*
 	 * Create TSSI to TX power mapping
@@ -1153,9 +1180,14 @@ bwi_rf_map_txpower(struct bwi_mac *mac)
 			}
 
 			if (phy->phy_mode == IEEE80211_MODE_11G) {
-				DPRINTF(sc, "%s\n", "use default 11g TSSI map");
+				DPRINTF(sc,
+				BWI_DBG_RF | BWI_DBG_TXPOWER | BWI_DBG_ATTACH,
+				"%s\n", "use default 11g TSSI map");
 				txpower_map = bwi_txpower_map_11g;
 			} else {
+				DPRINTF(sc,
+				BWI_DBG_RF | BWI_DBG_TXPOWER | BWI_DBG_ATTACH,
+				"%s\n", "use default 11b TSSI map");
 				txpower_map = bwi_txpower_map_11b;
 			}
 
@@ -1176,7 +1208,8 @@ bwi_rf_map_txpower(struct bwi_mac *mac)
 	 * Extract idle TSSI from SPROM.
 	 */
 	val = bwi_read_sprom(sc, BWI_SPROM_IDLE_TSSI);
-	DPRINTF(sc, "sprom idle tssi: 0x%04x\n", val);
+	DPRINTF(sc, BWI_DBG_RF | BWI_DBG_TXPOWER | BWI_DBG_ATTACH,
+		"sprom idle tssi: 0x%04x\n", val);
 
 	if (phy->phy_mode == IEEE80211_MODE_11A)
 		mask = BWI_SPROM_IDLE_TSSI_MASK_11A;
@@ -1192,7 +1225,8 @@ bwi_rf_map_txpower(struct bwi_mac *mac)
 	/*
 	 * Calculate TX power map, which is indexed by TSSI
 	 */
-	device_printf(sc->sc_dev, "TSSI-TX power map:\n");
+	DPRINTF(sc, BWI_DBG_RF | BWI_DBG_ATTACH | BWI_DBG_TXPOWER,
+		"%s\n", "TSSI-TX power map:");
 	for (i = 0; i < BWI_TSSI_MAX; ++i) {
 		error = bwi_rf_calc_txpower(&rf->rf_txpower_map0[i], i,
 					    pa_params);
@@ -1201,21 +1235,30 @@ bwi_rf_map_txpower(struct bwi_mac *mac)
 				  "bwi_rf_calc_txpower failed\n");
 			break;
 		}
-		if (i != 0 && i % 8 == 0)
-			printf("\n");
-		printf("%d ", rf->rf_txpower_map0[i]);
+
+#ifdef BWI_DEBUG
+		if (i != 0 && i % 8 == 0) {
+			_DPRINTF(sc,
+			BWI_DBG_RF | BWI_DBG_ATTACH | BWI_DBG_TXPOWER,
+			"%s\n", "");
+		}
+#endif
+		_DPRINTF(sc, BWI_DBG_RF | BWI_DBG_ATTACH | BWI_DBG_TXPOWER,
+			 "%d ", rf->rf_txpower_map0[i]);
 	}
-	printf("\n");
+	_DPRINTF(sc, BWI_DBG_RF | BWI_DBG_ATTACH | BWI_DBG_TXPOWER,
+		 "%s\n", "");
 back:
-	DPRINTF(sc, "idle tssi0: %d\n", rf->rf_idle_tssi0);
+	DPRINTF(sc, BWI_DBG_RF | BWI_DBG_TXPOWER | BWI_DBG_ATTACH,
+		"idle tssi0: %d\n", rf->rf_idle_tssi0);
 	return error;
 }
 
-void
-bwi_rf_lo_update(struct bwi_mac *mac)
+static void
+bwi_rf_lo_update_11g(struct bwi_mac *mac)
 {
 	struct bwi_softc *sc = mac->mac_sc;
-	struct ifnet *ifp = sc->sc_ic.ic_ifp;
+	struct ifnet *ifp = sc->sc_ifp;
 	struct bwi_rf *rf = &mac->mac_rf;
 	struct bwi_phy *phy = &mac->mac_phy;
 	struct bwi_tpctl *tpctl = &mac->mac_tpctl;
@@ -1291,7 +1334,7 @@ bwi_rf_lo_update(struct bwi_mac *mac)
 	/*
 	 * Measure all RF LO
 	 */
-	devi_ctrl = _bwi_rf_lo_update(mac, regs.rf_7a);
+	devi_ctrl = _bwi_rf_lo_update_11g(mac, regs.rf_7a);
 
 	/*
 	 * Restore saved RF/PHY registers
@@ -1405,7 +1448,7 @@ bwi_rf_get_tp_ctrl2(struct bwi_mac *mac)
 }
 
 static uint8_t
-_bwi_rf_lo_update(struct bwi_mac *mac, uint16_t orig_rf7a)
+_bwi_rf_lo_update_11g(struct bwi_mac *mac, uint16_t orig_rf7a)
 {
 #define RF_ATTEN_LISTSZ	14
 #define BBP_ATTEN_MAX	4	/* half */
@@ -1417,7 +1460,7 @@ _bwi_rf_lo_update(struct bwi_mac *mac, uint16_t orig_rf7a)
 	static const int rf_lo_measure_order[RF_ATTEN_LISTSZ] =
 	{ 3, 1, 5, 7, 9, 2, 0, 4, 6, 8, 10, 11, 12, 13 };
 
-	struct ifnet *ifp = mac->mac_sc->sc_ic.ic_ifp;
+	struct ifnet *ifp = mac->mac_sc->sc_ifp;
 	struct bwi_rf_lo lo_save, *lo;
 	uint8_t devi_ctrl = 0;
 	int idx, adj_rf7a = 0;
@@ -1492,7 +1535,7 @@ _bwi_rf_lo_update(struct bwi_mac *mac, uint16_t orig_rf7a)
 
 			lo = bwi_get_rf_lo(mac,
 				rf_lo_measure_order[idx], bbp_atten * 2);
-			bwi_rf_lo_measure(mac, &lo_save, lo, devi_ctrl);
+			bwi_rf_lo_measure_11g(mac, &lo_save, lo, devi_ctrl);
 		}
 	}
 	return devi_ctrl;
@@ -1502,7 +1545,7 @@ _bwi_rf_lo_update(struct bwi_mac *mac, uint16_t orig_rf7a)
 }
 
 static void
-bwi_rf_lo_measure(struct bwi_mac *mac, const struct bwi_rf_lo *src_lo,
+bwi_rf_lo_measure_11g(struct bwi_mac *mac, const struct bwi_rf_lo *src_lo,
 	struct bwi_rf_lo *dst_lo, uint8_t devi_ctrl)
 {
 #define LO_ADJUST_MIN	1
@@ -2071,7 +2114,7 @@ bwi_rf_init_hw_nrssi_table(struct bwi_mac *mac, uint16_t adjust)
 		val -= adjust;
 		if (val < -32)
 			val = -32;
-		else if (val > 31);
+		else if (val > 31)
 			val = 31;
 
 		bwi_nrssi_write(mac, i, val);
@@ -2373,8 +2416,6 @@ bwi_rf_calc_rssi_bcm2050(struct bwi_mac *mac, const struct bwi_rxbuf_hdr *hdr)
 	flags1 = le16toh(hdr->rxh_flags1);
 	flags3 = le16toh(hdr->rxh_flags3);
 
-#define NEW_BCM2050_RSSI
-#ifdef NEW_BCM2050_RSSI
 	if (flags1 & BWI_RXH_F1_OFDM) {
 		if (rssi > 127)
 			rssi -= 256;
@@ -2406,10 +2447,9 @@ bwi_rf_calc_rssi_bcm2050(struct bwi_mac *mac, const struct bwi_rxbuf_hdr *hdr)
 
 	lna_gain = __SHIFTOUT(le16toh(hdr->rxh_phyinfo),
 			      BWI_RXH_PHYINFO_LNAGAIN);
-#if 0
-	DPRINTF(mac->mac_sc, "lna_gain %d, phyinfo 0x%04x\n",
+	DPRINTF(mac->mac_sc, BWI_DBG_RF | BWI_DBG_RX,
+		"lna_gain %d, phyinfo 0x%04x\n",
 		lna_gain, le16toh(hdr->rxh_phyinfo));
-#endif
 	switch (lna_gain) {
 	case 0:
 		rssi += 27;
@@ -2433,40 +2473,6 @@ bwi_rf_calc_rssi_bcm2050(struct bwi_mac *mac, const struct bwi_rxbuf_hdr *hdr)
 	default:
 		panic("impossible lna gain %d", lna_gain);
 	}
-#else	/* !NEW_BCM2050_RSSI */
-	lna_gain = 0; /* shut up gcc warning */
-
-	if (flags1 & BWI_RXH_F1_OFDM) {
-		if (rssi > 127)
-			rssi -= 256;
-		rssi = (rssi * 73) / 64;
-
-		if (flags3 & BWI_RXH_F3_BCM2050_RSSI)
-			rssi += 25;
-		else
-			rssi -= 3;
-		return rssi;
-	}
-
-	if (mac->mac_sc->sc_card_flags & BWI_CARD_F_SW_NRSSI) {
-		struct bwi_rf *rf = &mac->mac_rf;
-
-		if (rssi >= BWI_NRSSI_TBLSZ)
-			rssi = BWI_NRSSI_TBLSZ - 1;
-
-		rssi = ((31 - (int)rf->rf_nrssi_table[rssi]) * -131) / 128;
-		rssi -= 57;
-	} else {
-		rssi = ((31 - rssi) * -149) / 128;
-		rssi -= 68;
-	}
-
-	if (mac->mac_phy.phy_mode != IEEE80211_MODE_11G)
-		return rssi;
-
-	if (flags3 & BWI_RXH_F3_BCM2050_RSSI)
-		rssi += 25;
-#endif	/* NEW_BCM2050_RSSI */
 	return rssi;
 }
 
@@ -2495,4 +2501,190 @@ bwi_rf_calc_rssi_bcm2060(struct bwi_mac *mac, const struct bwi_rxbuf_hdr *hdr)
 	if (rssi > 127)
 		rssi -= 256;
 	return rssi;
+}
+
+static int
+bwi_rf_calc_noise_bcm2050(struct bwi_mac *mac)
+{
+	uint16_t val;
+	int noise;
+
+	val = MOBJ_READ_2(mac, BWI_COMM_MOBJ, BWI_COMM_MOBJ_RF_NOISE);
+	noise = (int)val;	/* XXX check bounds? */
+
+	if (mac->mac_sc->sc_card_flags & BWI_CARD_F_SW_NRSSI) {
+		struct bwi_rf *rf = &mac->mac_rf;
+
+		if (noise >= BWI_NRSSI_TBLSZ)
+			noise = BWI_NRSSI_TBLSZ - 1;
+
+		noise = ((31 - (int)rf->rf_nrssi_table[noise]) * -131) / 128;
+		noise -= 67;
+	} else {
+		noise = ((31 - noise) * -149) / 128;
+		noise -= 68;
+	}
+	return noise;
+}
+
+static int
+bwi_rf_calc_noise_bcm2053(struct bwi_mac *mac)
+{
+	uint16_t val;
+	int noise;
+
+	val = MOBJ_READ_2(mac, BWI_COMM_MOBJ, BWI_COMM_MOBJ_RF_NOISE);
+	noise = (int)val;	/* XXX check bounds? */
+
+	noise = ((noise - 11) * 103) / 64;
+	noise -= 109;
+	return noise;
+}
+
+static int
+bwi_rf_calc_noise_bcm2060(struct bwi_mac *mac)
+{
+	/* XXX Dont know how to calc */
+	return (BWI_NOISE_FLOOR);
+}
+
+static uint16_t
+bwi_rf_lo_measure_11b(struct bwi_mac *mac)
+{
+	uint16_t val;
+	int i;
+
+	val = 0;
+	for (i = 0; i < 10; ++i) {
+		PHY_WRITE(mac, 0x15, 0xafa0);
+		DELAY(1);
+		PHY_WRITE(mac, 0x15, 0xefa0);
+		DELAY(10);
+		PHY_WRITE(mac, 0x15, 0xffa0);
+		DELAY(40);
+
+		val += PHY_READ(mac, 0x2c);
+	}
+	return val;
+}
+
+static void
+bwi_rf_lo_update_11b(struct bwi_mac *mac)
+{
+	struct bwi_softc *sc = mac->mac_sc;
+	struct bwi_rf *rf = &mac->mac_rf;
+	struct rf_saveregs regs;
+	uint16_t rf_val, phy_val, min_val, val;
+	uint16_t rf52, bphy_ctrl;
+	int i;
+
+	DPRINTF(sc, BWI_DBG_RF | BWI_DBG_INIT, "%s enter\n", __func__);
+
+	bzero(&regs, sizeof(regs));
+	bphy_ctrl = 0;
+
+	/*
+	 * Save RF/PHY registers for later restoration
+	 */
+	SAVE_PHY_REG(mac, &regs, 15);
+	rf52 = RF_READ(mac, 0x52) & 0xfff0;
+	if (rf->rf_type == BWI_RF_T_BCM2050) {
+		SAVE_PHY_REG(mac, &regs, 0a);
+		SAVE_PHY_REG(mac, &regs, 2a);
+		SAVE_PHY_REG(mac, &regs, 35);
+		SAVE_PHY_REG(mac, &regs, 03);
+		SAVE_PHY_REG(mac, &regs, 01);
+		SAVE_PHY_REG(mac, &regs, 30);
+
+		SAVE_RF_REG(mac, &regs, 43);
+		SAVE_RF_REG(mac, &regs, 7a);
+
+		bphy_ctrl = CSR_READ_2(sc, BWI_BPHY_CTRL);
+
+		SAVE_RF_REG(mac, &regs, 52);
+		regs.rf_52 &= 0xf0;
+
+		PHY_WRITE(mac, 0x30, 0xff);
+		CSR_WRITE_2(sc, BWI_PHY_CTRL, 0x3f3f);
+		PHY_WRITE(mac, 0x35, regs.phy_35 & 0xff7f);
+		RF_WRITE(mac, 0x7a, regs.rf_7a & 0xfff0);
+	}
+
+	PHY_WRITE(mac, 0x15, 0xb000);
+
+	if (rf->rf_type == BWI_RF_T_BCM2050) {
+		PHY_WRITE(mac, 0x2b, 0x203);
+		PHY_WRITE(mac, 0x2a, 0x8a3);
+	} else {
+		PHY_WRITE(mac, 0x2b, 0x1402);
+	}
+
+	/*
+	 * Setup RF signal
+	 */
+	rf_val = 0;
+	min_val = UINT16_MAX;
+
+	for (i = 0; i < 4; ++i) {
+		RF_WRITE(mac, 0x52, rf52 | i);
+		bwi_rf_lo_measure_11b(mac);	/* Ignore return value */
+	}
+	for (i = 0; i < 10; ++i) {
+		RF_WRITE(mac, 0x52, rf52 | i);
+
+		val = bwi_rf_lo_measure_11b(mac) / 10;
+		if (val < min_val) {
+			min_val = val;
+			rf_val = i;
+		}
+	}
+	RF_WRITE(mac, 0x52, rf52 | rf_val);
+
+	/*
+	 * Setup PHY signal
+	 */
+	phy_val = 0;
+	min_val = UINT16_MAX;
+
+	for (i = -4; i < 5; i += 2) {
+		int j;
+
+		for (j = -4; j < 5; j += 2) {
+			uint16_t phy2f;
+
+			phy2f = (0x100 * i) + j;
+			if (j < 0)
+				phy2f += 0x100;
+			PHY_WRITE(mac, 0x2f, phy2f);
+
+			val = bwi_rf_lo_measure_11b(mac) / 10;
+			if (val < min_val) {
+				min_val = val;
+				phy_val = phy2f;
+			}
+		}
+	}
+	PHY_WRITE(mac, 0x2f, phy_val + 0x101);
+
+	/*
+	 * Restore saved RF/PHY registers
+	 */
+	if (rf->rf_type == BWI_RF_T_BCM2050) {
+		RESTORE_PHY_REG(mac, &regs, 0a);
+		RESTORE_PHY_REG(mac, &regs, 2a);
+		RESTORE_PHY_REG(mac, &regs, 35);
+		RESTORE_PHY_REG(mac, &regs, 03);
+		RESTORE_PHY_REG(mac, &regs, 01);
+		RESTORE_PHY_REG(mac, &regs, 30);
+
+		RESTORE_RF_REG(mac, &regs, 43);
+		RESTORE_RF_REG(mac, &regs, 7a);
+
+		RF_FILT_SETBITS(mac, 0x52, 0xf, regs.rf_52);
+
+		CSR_WRITE_2(sc, BWI_BPHY_CTRL, bphy_ctrl);
+	}
+	RESTORE_PHY_REG(mac, &regs, 15);
+
+	bwi_rf_work_around(mac, rf->rf_curchan);
 }

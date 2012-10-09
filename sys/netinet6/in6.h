@@ -58,7 +58,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD: src/sys/netinet6/in6.h,v 1.51.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef __KAME_NETINET_IN_H_INCLUDED_
@@ -78,7 +78,7 @@
 
 /*
  * IPv6 port allocation rules should mirror the IPv4 rules and are controlled
- * by the the net.inet.ip.portrange sysctl tree. The following defines exist
+ * by the net.inet.ip.portrange sysctl tree. The following defines exist
  * for compatibility with userland applications that need them.
  */
 #if __BSD_VISIBLE
@@ -201,6 +201,9 @@ extern const struct in6_addr in6mask128;
 #define IN6ADDR_LINKLOCAL_ALLROUTERS_INIT \
 	{{{ 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
 	    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 }}}
+#define IN6ADDR_LINKLOCAL_ALLV2ROUTERS_INIT \
+	{{{ 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+	    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16 }}}
 #endif
 
 extern const struct in6_addr in6addr_any;
@@ -209,6 +212,7 @@ extern const struct in6_addr in6addr_loopback;
 extern const struct in6_addr in6addr_nodelocal_allnodes;
 extern const struct in6_addr in6addr_linklocal_allnodes;
 extern const struct in6_addr in6addr_linklocal_allrouters;
+extern const struct in6_addr in6addr_linklocal_allv2routers;
 #endif
 
 /*
@@ -371,6 +375,9 @@ extern const struct in6_addr in6addr_linklocal_allrouters;
 #if __BSD_VISIBLE
 struct route_in6 {
 	struct	rtentry *ro_rt;
+	struct	llentry *ro_lle;
+	struct	in6_addr *ro_ia6;
+	int		ro_flags;
 	struct	sockaddr_in6 ro_dst;
 };
 #endif
@@ -392,8 +399,8 @@ struct route_in6 {
 #define IPV6_MULTICAST_IF	9  /* u_int; set/get IP6 multicast i/f  */
 #define IPV6_MULTICAST_HOPS	10 /* int; set/get IP6 multicast hops */
 #define IPV6_MULTICAST_LOOP	11 /* u_int; set/get IP6 multicast loopback */
-#define IPV6_JOIN_GROUP		12 /* ip6_mreq; join a group membership */
-#define IPV6_LEAVE_GROUP	13 /* ip6_mreq; leave a group membership */
+#define IPV6_JOIN_GROUP		12 /* ipv6_mreq; join a group membership */
+#define IPV6_LEAVE_GROUP	13 /* ipv6_mreq; leave a group membership */
 #define IPV6_PORTRANGE		14 /* int; range to choose for unspec port */
 #define ICMP6_FILTER		18 /* icmp6_filter; icmp6 filter */
 /* RFC2292 options */
@@ -472,6 +479,8 @@ struct route_in6 {
 				    * the source address.
 				    */
 
+#define	IPV6_BINDANY		64 /* bool: allow bind to any address */
+
 /*
  * The following option is private; do not use it from user applications.
  * It is deliberately defined to the same value as IP_MSFILTER.
@@ -493,24 +502,27 @@ struct route_in6 {
 #define IPV6_DEFAULT_MULTICAST_LOOP 1	/* normally hear sends if a member */
 
 /*
+ * The im6o_membership vector for each socket is now dynamically allocated at
+ * run-time, bounded by USHRT_MAX, and is reallocated when needed, sized
+ * according to a power-of-two increment.
+ */
+#define	IPV6_MIN_MEMBERSHIPS	31
+#define	IPV6_MAX_MEMBERSHIPS	4095
+
+/*
+ * Default resource limits for IPv6 multicast source filtering.
+ * These may be modified by sysctl.
+ */
+#define	IPV6_MAX_GROUP_SRC_FILTER	512	/* sources per group */
+#define	IPV6_MAX_SOCK_SRC_FILTER	128	/* sources per socket/group */
+
+/*
  * Argument structure for IPV6_JOIN_GROUP and IPV6_LEAVE_GROUP.
  */
 struct ipv6_mreq {
 	struct in6_addr	ipv6mr_multiaddr;
 	unsigned int	ipv6mr_interface;
 };
-
-#ifdef notyet
-/*
- * Argument structure for IPV6_ADD_SOURCE_MEMBERSHIP,
- * IPV6_DROP_SOURCE_MEMBERSHIP, IPV6_BLOCK_SOURCE, and IPV6_UNBLOCK_SOURCE.
- */
-struct ipv6_mreq_source {
-	struct in6_addr	ipv6mr_multiaddr;
-	struct in6_addr	ipv6mr_sourceaddr;
-	uint32_t	ipv6mr_interface;
-};
-#endif
 
 /*
  * IPV6_PKTINFO: Packet information(RFC2292 sec 5)
@@ -601,7 +613,12 @@ struct ip6_mtuinfo {
 #define IPV6CTL_STEALTH		45
 
 #define	ICMPV6CTL_ND6_ONLINKNSRFC4861	47
-#define IPV6CTL_MAXID		48
+#define	IPV6CTL_NO_RADR		48	/* No defroute from RA */
+#define	IPV6CTL_NORBIT_RAIF	49	/* Disable R-bit in NA on RA
+					 * receiving IF. */
+#define	IPV6CTL_RFC6204W3	50	/* Accept defroute even when forwarding
+					   enabled */
+#define	IPV6CTL_MAXID		51
 #endif /* __BSD_VISIBLE */
 
 /*
@@ -611,12 +628,16 @@ struct ip6_mtuinfo {
 #define	M_DECRYPTED	M_PROTO3
 #define	M_LOOP		M_PROTO4
 #define	M_AUTHIPDGM	M_PROTO5
+#define	M_RTALERT_MLD	M_PROTO6
 
 #ifdef _KERNEL
 struct cmsghdr;
+struct ip6_hdr;
 
+int	in6_cksum_pseudo(struct ip6_hdr *, uint32_t, uint8_t, uint16_t);
 int	in6_cksum __P((struct mbuf *, u_int8_t, u_int32_t, u_int32_t));
 int	in6_localaddr __P((struct in6_addr *));
+int	in6_localip(struct in6_addr *);
 int	in6_addrscope __P((struct in6_addr *));
 struct	in6_ifaddr *in6_ifawithifp __P((struct ifnet *, struct in6_addr *));
 extern void in6_if_up __P((struct ifnet *));

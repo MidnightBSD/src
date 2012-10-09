@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_drv.c,v 1.6.2.16.2.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_drv.c
  * The catch-all file for DRM device support, including module setup/teardown,
@@ -52,9 +52,6 @@ static int drm_load(struct drm_device *dev);
 static void drm_unload(struct drm_device *dev);
 static drm_pci_id_list_t *drm_find_description(int vendor, int device,
     drm_pci_id_list_t *idlist);
-
-#define DRIVER_SOFTC(unit) \
-	((struct drm_device *)devclass_get_softc(drm_devclass, unit))
 
 MODULE_VERSION(drm, 1);
 MODULE_DEPEND(drm, agp, 1, 1, 1);
@@ -165,8 +162,19 @@ int drm_probe(device_t kdev, drm_pci_id_list_t *idlist)
 {
 	drm_pci_id_list_t *id_entry;
 	int vendor, device;
+#if __FreeBSD_version < 700010
+	device_t realdev;
+
+	if (!strcmp(device_get_name(kdev), "drmsub"))
+		realdev = device_get_parent(kdev);
+	else
+		realdev = kdev;
+	vendor = pci_get_vendor(realdev);
+	device = pci_get_device(realdev);
+#else
 	vendor = pci_get_vendor(kdev);
 	device = pci_get_device(kdev);
+#endif
 
 	if (pci_get_class(kdev) != PCIC_DISPLAY
 	    || pci_get_subclass(kdev) != PCIS_DISPLAY_VGA)
@@ -193,15 +201,27 @@ int drm_attach(device_t kdev, drm_pci_id_list_t *idlist)
 	unit = device_get_unit(kdev);
 	dev = device_get_softc(kdev);
 
+#if __FreeBSD_version < 700010
+	if (!strcmp(device_get_name(kdev), "drmsub"))
+		dev->device = device_get_parent(kdev);
+	else
+		dev->device = kdev;
+#else
 	dev->device = kdev;
+#endif
 	dev->devnode = make_dev(&drm_cdevsw,
-			unit,
+			0,
 			DRM_DEV_UID,
 			DRM_DEV_GID,
 			DRM_DEV_MODE,
 			"dri/card%d", unit);
+	dev->devnode->si_drv1 = dev;
 
+#if __FreeBSD_version >= 700053
 	dev->pci_domain = pci_get_domain(dev->device);
+#else
+	dev->pci_domain = 0;
+#endif
 	dev->pci_bus = pci_get_bus(dev->device);
 	dev->pci_slot = pci_get_slot(dev->device);
 	dev->pci_func = pci_get_function(dev->device);
@@ -414,6 +434,12 @@ static int drm_load(struct drm_device *dev)
 	DRM_DEBUG("\n");
 
 	TAILQ_INIT(&dev->maplist);
+	dev->map_unrhdr = new_unrhdr(1, ((1 << DRM_MAP_HANDLE_BITS) - 1), NULL);
+	if (dev->map_unrhdr == NULL) {
+		DRM_ERROR("Couldn't allocate map number allocator\n");
+		return EINVAL;
+	}
+
 
 	drm_mem_init();
 	drm_sysctl_init(dev);
@@ -452,7 +478,7 @@ static int drm_load(struct drm_device *dev)
 			retcode = ENOMEM;
 			goto error;
 		}
-		if (dev->agp != NULL) {
+		if (dev->agp != NULL && dev->agp->info.ai_aperture_base != 0) {
 			if (drm_mtrr_add(dev->agp->info.ai_aperture_base,
 			    dev->agp->info.ai_aperture_size, DRM_MTRR_WC) == 0)
 				dev->agp->mtrr = 1;
@@ -545,6 +571,7 @@ static void drm_unload(struct drm_device *dev)
 	}
 
 	delete_unrhdr(dev->drw_unrhdr);
+	delete_unrhdr(dev->map_unrhdr);
 
 	drm_mem_uninit();
 
@@ -587,7 +614,7 @@ int drm_open(struct cdev *kdev, int flags, int fmt, DRM_STRUCTPROC *p)
 	struct drm_device *dev = NULL;
 	int retcode = 0;
 
-	dev = DRIVER_SOFTC(dev2unit(kdev));
+	dev = kdev->si_drv1;
 
 	DRM_DEBUG("open_count = %d\n", dev->open_count);
 

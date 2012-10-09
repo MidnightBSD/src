@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2010, Intel Corporation 
+  Copyright (c) 2001-2011, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: src/sys/dev/e1000/if_lem.h,v 1.2.4.5 2010/11/27 01:09:54 jfv Exp $*/
+/*$FreeBSD$*/
 
 
 #ifndef _LEM_H_DEFINED_
@@ -217,6 +217,10 @@
 #define EM_BAR_MEM_TYPE_64BIT	0x00000004
 #define EM_MSIX_BAR		3	/* On 82575 */
 
+#if __FreeBSD_version < 900000
+#define SYSCTL_ADD_UQUAD SYSCTL_ADD_QUAD
+#endif
+
 /* Defines for printing debug information */
 #define DEBUG_INIT  0
 #define DEBUG_IOCTL 0
@@ -285,6 +289,9 @@ struct em_int_delay_info {
 /* Our adapter structure */
 struct adapter {
 	struct ifnet	*ifp;
+#if __FreeBSD_version >= 800000
+	struct buf_ring	*br;
+#endif
 	struct e1000_hw	hw;
 
 	/* FreeBSD operating-system-specific structures. */

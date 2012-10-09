@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/imgact_gzip.c,v 1.55.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: src/sys/kern/imgact_gzip.c,v 1.55.2.1.2.1 2008/11/25 02:59:2
 #include <sys/mman.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/racct.h>
 #include <sys/resourcevar.h>
 #include <sys/sysent.h>
 #include <sys/systm.h>
@@ -69,7 +70,7 @@ static int
 exec_gzip_imgact(imgp)
 	struct image_params *imgp;
 {
-	int             error, error2 = 0;
+	int             error;
 	const u_char   *p = (const u_char *) imgp->image_header;
 	struct imgact_gzip igz;
 	struct inflate  infl;
@@ -135,22 +136,17 @@ exec_gzip_imgact(imgp)
 			VM_PROT_READ|VM_PROT_EXECUTE,0);
 	}
 
-	if (igz.inbuf) {
-		error2 =
-			vm_map_remove(kernel_map, (vm_offset_t) igz.inbuf,
-			    (vm_offset_t) igz.inbuf + PAGE_SIZE);
-	}
-	if (igz.error || error || error2) {
+	if (igz.inbuf)
+		kmem_free_wakeup(exec_map, (vm_offset_t)igz.inbuf, PAGE_SIZE);
+	if (igz.error || error) {
 		printf("Output=%lu ", igz.output);
-		printf("Inflate_error=%d igz.error=%d error2=%d where=%d\n",
-		       error, igz.error, error2, igz.where);
+		printf("Inflate_error=%d igz.error=%d where=%d\n",
+		       error, igz.error, igz.where);
 	}
 	if (igz.error)
 		return igz.error;
 	if (error)
 		return ENOEXEC;
-	if (error2)
-		return error2;
 	return 0;
 }
 
@@ -158,7 +154,6 @@ static int
 do_aout_hdr(struct imgact_gzip * gz)
 {
 	int             error;
-	struct thread  *td = curthread;
 	struct vmspace *vmspace;
 	vm_offset_t     vmaddr;
 
@@ -217,7 +212,9 @@ do_aout_hdr(struct imgact_gzip * gz)
 
 	/* data + bss can't exceed rlimit */
 	    gz->a_out.a_data + gz->bss_size >
-	    lim_cur(gz->ip->proc, RLIMIT_DATA)) {
+	    lim_cur(gz->ip->proc, RLIMIT_DATA) ||
+	    racct_set(gz->ip->proc, RACCT_DATA,
+	    gz->a_out.a_data + gz->bss_size) != 0) {
 		PROC_UNLOCK(gz->ip->proc);
 		gz->where = __LINE__;
 		return (ENOMEM);
@@ -234,14 +231,14 @@ do_aout_hdr(struct imgact_gzip * gz)
 	 * However, in cases where the vnode lock is external, such as nullfs,
 	 * v_usecount may become zero.
 	 */
-	VOP_UNLOCK(gz->ip->vp, 0, td);
+	VOP_UNLOCK(gz->ip->vp, 0);
 
 	/*
 	 * Destroy old process VM and create a new one (with a new stack)
 	 */
 	error = exec_new_vmspace(gz->ip, &aout_sysvec);
 
-	vn_lock(gz->ip->vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(gz->ip->vp, LK_EXCLUSIVE | LK_RETRY);
 	if (error) {
 		gz->where = __LINE__;
 		return (error);
@@ -312,18 +309,11 @@ NextByte(void *vp)
 	if (igz->inbuf && igz->idx < (igz->offset + PAGE_SIZE)) {
 		return igz->inbuf[(igz->idx++) - igz->offset];
 	}
-	if (igz->inbuf) {
-		error = vm_map_remove(kernel_map, (vm_offset_t) igz->inbuf,
-			    (vm_offset_t) igz->inbuf + PAGE_SIZE);
-		if (error) {
-			igz->where = __LINE__;
-			igz->error = error;
-			return GZ_EOF;
-		}
-	}
+	if (igz->inbuf)
+		kmem_free_wakeup(exec_map, (vm_offset_t)igz->inbuf, PAGE_SIZE);
 	igz->offset = igz->idx & ~PAGE_MASK;
 
-	error = vm_mmap(kernel_map,	/* map */
+	error = vm_mmap(exec_map,	/* map */
 			(vm_offset_t *) & igz->inbuf,	/* address */
 			PAGE_SIZE,	/* size */
 			VM_PROT_READ,	/* protection */

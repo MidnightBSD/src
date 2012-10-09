@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * APM (Advanced Power Management) BIOS Device Driver
  *
@@ -18,12 +17,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/bios/apm.c,v 1.147.2.1 2007/12/09 00:24:16 njl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
-#include <sys/clock.h>
 #include <sys/conf.h>
 #include <sys/condvar.h>
 #include <sys/eventhandler.h>
@@ -61,6 +59,7 @@ __FBSDID("$FreeBSD: src/sys/i386/bios/apm.c,v 1.147.2.1 2007/12/09 00:24:16 njl 
 #include <vm/vm_param.h>
 
 #include <i386/bios/apm.h>
+#include <isa/rtc.h>
 
 /* Used by the apm_saver screen saver module */
 int apm_display(int newstate);
@@ -80,9 +79,8 @@ int	apm_evindex;
 #define	SCFLAG_OCTL	0x0000002
 #define	SCFLAG_OPEN	(SCFLAG_ONORMAL|SCFLAG_OCTL)
 
-#define APMDEV(dev)	(minor(dev)&0x0f)
 #define APMDEV_NORMAL	0
-#define APMDEV_CTL	8
+#define APMDEV_CTL	1
 
 #ifdef PC98
 extern int bios32_apm98(struct bios_regs *, u_int, u_short);
@@ -486,28 +484,31 @@ apm_do_suspend(void)
 	apm_op_inprog = 0;
 	sc->suspends = sc->suspend_countdown = 0;
 
+	EVENTHANDLER_INVOKE(power_suspend);
+
 	/*
 	 * Be sure to hold Giant across DEVICE_SUSPEND/RESUME since
 	 * non-MPSAFE drivers need this.
 	 */
 	mtx_lock(&Giant);
 	error = DEVICE_SUSPEND(root_bus);
-	if (error) {
-		mtx_unlock(&Giant);
-		return;
-	}
+	if (error)
+		goto backout;
 
 	apm_execute_hook(hook[APM_HOOK_SUSPEND]);
 	if (apm_suspend_system(PMST_SUSPEND) == 0) {
 		sc->suspending = 1;
 		apm_processevent();
-	} else {
-		/* Failure, 'resume' the system again */
-		apm_execute_hook(hook[APM_HOOK_RESUME]);
-		DEVICE_RESUME(root_bus);
+		mtx_unlock(&Giant);
+		return;
 	}
+
+	/* Failure, 'resume' the system again */
+	apm_execute_hook(hook[APM_HOOK_RESUME]);
+	DEVICE_RESUME(root_bus);
+backout:
 	mtx_unlock(&Giant);
-	return;
+	EVENTHANDLER_INVOKE(power_resume);
 }
 
 static void
@@ -614,7 +615,7 @@ apm_resume(void)
 	mtx_lock(&Giant);
 	DEVICE_RESUME(root_bus);
 	mtx_unlock(&Giant);
-	return;
+	EVENTHANDLER_INVOKE(power_resume);
 }
 
 
@@ -765,7 +766,7 @@ apm_event_thread(void *arg)
 		mtx_unlock(&sc->mtx);
 	}
 	sc->running = 0;
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /* enable APM BIOS */
@@ -781,7 +782,7 @@ apm_event_enable(void)
 
 	/* Start the thread */
 	sc->active = 1;
-	if (kthread_create(apm_event_thread, sc, &sc->event_thread, 0, 0,
+	if (kproc_create(apm_event_thread, sc, &sc->event_thread, 0, 0,
 	    "apm worker"))
 		panic("Cannot create apm worker thread");
 
@@ -1156,8 +1157,10 @@ apm_attach(device_t dev)
 	mtx_init(&sc->mtx, device_get_nameunit(dev), "apm", MTX_DEF);
 	cv_init(&sc->cv, "cbb cv");
 
+#ifndef PC98
 	if (device_get_flags(dev) & 0x20)
-		statclock_disable = 1;
+		atrtcclock_disable = 1;
+#endif
 
 	sc->initialized = 0;
 
@@ -1248,8 +1251,10 @@ apm_attach(device_t dev)
 	sc->suspending = 0;
 	sc->running = 0;
 
-	make_dev(&apm_cdevsw, 0, 0, 5, 0664, "apm");
-	make_dev(&apm_cdevsw, 8, 0, 5, 0660, "apmctl");
+	make_dev(&apm_cdevsw, APMDEV_NORMAL,
+	    UID_ROOT, GID_OPERATOR, 0664, "apm");
+	make_dev(&apm_cdevsw, APMDEV_CTL,
+	    UID_ROOT, GID_OPERATOR, 0660, "apmctl");
 	return 0;
 }
 
@@ -1257,12 +1262,11 @@ static int
 apmopen(struct cdev *dev, int flag, int fmt, struct thread *td)
 {
 	struct apm_softc *sc = &apm_softc;
-	int ctl = APMDEV(dev);
 
 	if (sc == NULL || sc->initialized == 0)
 		return (ENXIO);
 
-	switch (ctl) {
+	switch (dev2unit(dev)) {
 	case APMDEV_CTL:
 		if (!(flag & FWRITE))
 			return EINVAL;
@@ -1274,9 +1278,6 @@ apmopen(struct cdev *dev, int flag, int fmt, struct thread *td)
 	case APMDEV_NORMAL:
 		sc->sc_flags |= SCFLAG_ONORMAL;
 		break;
-	default:
-		return ENXIO;
-		break;
 	}
 	return 0;
 }
@@ -1285,9 +1286,8 @@ static int
 apmclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 {
 	struct apm_softc *sc = &apm_softc;
-	int ctl = APMDEV(dev);
 
-	switch (ctl) {
+	switch (dev2unit(dev)) {
 	case APMDEV_CTL:
 		apm_lastreq_rejected();
 		sc->sc_flags &= ~SCFLAG_OCTL;
@@ -1392,6 +1392,23 @@ apmioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td
 			return (EPERM);
 		/* XXX compatibility with the old interface */
 		args = (struct apm_bios_arg *)addr;
+#ifdef PC98
+		if (((args->eax >> 8) & 0xff) == 0x53) {
+			sc->bios.r.eax = args->eax & ~0xffff;
+			sc->bios.r.eax |= APM_BIOS << 8;
+			switch (args->eax & 0xff) {
+			case 0x0a:
+				sc->bios.r.eax |= APM_GETPWSTATUS;
+				break;
+			case 0x0e:
+				sc->bios.r.eax |= APM_DRVVERSION;
+				break;
+			default:
+				sc->bios.r.eax |= args->eax & 0xff;
+				break;
+			}
+		} else
+#endif
 		sc->bios.r.eax = args->eax;
 		sc->bios.r.ebx = args->ebx;
 		sc->bios.r.ecx = args->ecx;
@@ -1428,7 +1445,7 @@ apmioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td
 	}
 
 	/* for /dev/apmctl */
-	if (APMDEV(dev) == APMDEV_CTL) {
+	if (dev2unit(dev) == APMDEV_CTL) {
 		struct apm_event_info *evp;
 		int i;
 
@@ -1467,7 +1484,7 @@ apmwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	int error;
 	u_char enabled;
 
-	if (APMDEV(dev) != APMDEV_CTL)
+	if (dev2unit(dev) != APMDEV_CTL)
 		return(ENODEV);
 	if (uio->uio_resid != sizeof(u_int))
 		return(E2BIG);

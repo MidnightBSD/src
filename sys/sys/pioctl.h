@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copryight 1997 Sean Eric Fagan
+ * Copyright 1997 Sean Eric Fagan
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +33,7 @@
 /*
  * procfs ioctl definitions.
  *
- * $FreeBSD: src/sys/sys/pioctl.h,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_PIOCTL_H
@@ -70,7 +69,7 @@ struct procfs_status {
 
 /*
  * If PF_LINGER is set in procp->p_pfsflags, then the last close
- * of a /proc/<pid>/mem file will nto clear out the stops and continue
+ * of a /proc/<pid>/mem file will not clear out the stops and continue
  * the process.
  */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  *
  *	@(#)fbio.h	8.2 (Berkeley) 10/30/93
  *
- * $FreeBSD: src/sys/sys/fbio.h,v 1.16.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_FBIO_H_
@@ -270,6 +269,7 @@ struct video_info {
 #define V_INFO_GRAPHICS	(1 << 1)
 #define V_INFO_LINEAR	(1 << 2)
 #define V_INFO_VESA	(1 << 3)
+#define	V_INFO_NONVGA	(1 << 4)
     int			vi_width;
     int			vi_height;
     int			vi_cwidth;
@@ -332,6 +332,7 @@ struct video_adapter {
 #define V_ADP_INITIALIZED (1 << 17)
 #define V_ADP_REGISTERED (1 << 18)
 #define V_ADP_ATTACHED	(1 << 19)
+#define	V_ADP_DAC8	(1 << 20)
     vm_offset_t		va_io_base;
     int			va_io_size;
     vm_offset_t		va_crtc_addr;

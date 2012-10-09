@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 John D. Polstra.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/procfs.h,v 1.5.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_PROCFS_H_
@@ -81,6 +80,13 @@ typedef struct prpsinfo {
     char	pr_psargs[PRARGSZ+1];	/* Arguments, null terminated (1) */
 } prpsinfo_t;
 
-typedef void *psaddr_t;		/* An address in the target process. */
+#define THRMISC_VERSION		1	/* Current version of thrmisc_t */
+
+typedef struct thrmisc {
+    char	pr_tname[MAXCOMLEN+1];	/* Thread name, null terminated (1) */
+    u_int	_pad;			/* Convenience pad, 0-filled (1) */
+} thrmisc_t;
+
+typedef uint64_t psaddr_t;	/* An address in the target process. */
 
 #endif /* _SYS_PROCFS_H_ */

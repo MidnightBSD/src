@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/amd64/amd64/db_disasm.c,v 1.3 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_disasm.c,v 1.31.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Instruction disassembler.

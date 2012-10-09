@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/aac/aac.c,v 1.5 2012/08/06 01:15:26 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -670,8 +670,6 @@ aac_detach(device_t dev)
 	mtx_unlock(&sc->aac_io_lock);
 	KASSERT((sc->aifflags & AAC_AIFFLAGS_RUNNING) == 0,
 	    ("%s: invalid detach state", __func__));
-
-	callout_drain(&sc->aac_daemontime);
 
 	/* Remove the child containers */
 	while ((co = TAILQ_FIRST(&sc->aac_container_tqh)) != NULL) {
@@ -3153,8 +3151,6 @@ aac_ioctl_send_raw_srb(struct aac_softc *sc, caddr_t arg)
 				goto out;
 		}
 	}
-	return(error);
-}
 
 	fib->Header.Size = sizeof(struct aac_fib_header) +
 	    sizeof(struct aac_srb);

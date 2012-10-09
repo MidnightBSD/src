@@ -31,8 +31,8 @@
  */
 
 /*
- * $FreeBSD: src/sys/net/if_tap.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
- * $Id: if_tap.h,v 1.4 2012-03-23 20:48:39 laffer1 Exp $
+ * $FreeBSD$
+ * $Id: if_tap.h,v 1.5 2012-10-09 04:07:25 laffer1 Exp $
  */
 
 #ifndef _NET_IF_TAP_H_
@@ -55,6 +55,7 @@ struct tapinfo {
 #define	TAPGDEBUG		_IOR('t', 89, int)
 #define	TAPSIFINFO		_IOW('t', 91, struct tapinfo)
 #define	TAPGIFINFO		_IOR('t', 92, struct tapinfo)
+#define	TAPGIFNAME		_IOR('t', 93, struct ifreq)
 
 /* VMware ioctl's */
 #define VMIO_SIOCSIFFLAGS	_IOWINT('V', 0)

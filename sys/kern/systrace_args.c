@@ -7,7 +7,7 @@
  */
 
 static void
-systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
+systrace_args(int sysnum, void *params, uint64_t *uarg, int *n_args)
 {
 	int64_t *iarg  = (int64_t *) uarg;
 	switch (sysnum) {
@@ -391,7 +391,7 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		struct readlink_args *p = params;
 		uarg[0] = (intptr_t) p->path; /* char * */
 		uarg[1] = (intptr_t) p->buf; /* char * */
-		iarg[2] = p->count; /* int */
+		uarg[2] = p->count; /* size_t */
 		*n_args = 3;
 		break;
 	}
@@ -864,29 +864,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 2;
 		break;
 	}
-	/* getdomainname */
-	case 162: {
-		struct getdomainname_args *p = params;
-		uarg[0] = (intptr_t) p->domainname; /* char * */
-		iarg[1] = p->len; /* int */
-		*n_args = 2;
-		break;
-	}
-	/* setdomainname */
-	case 163: {
-		struct setdomainname_args *p = params;
-		uarg[0] = (intptr_t) p->domainname; /* char * */
-		iarg[1] = p->len; /* int */
-		*n_args = 2;
-		break;
-	}
-	/* uname */
-	case 164: {
-		struct uname_args *p = params;
-		uarg[0] = (intptr_t) p->name; /* struct utsname * */
-		*n_args = 1;
-		break;
-	}
 	/* sysarch */
 	case 165: {
 		struct sysarch_args *p = params;
@@ -1215,16 +1192,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 0;
 		break;
 	}
-	/* freebsd7___semctl */
-	case 220: {
-		struct freebsd7___semctl_args *p = params;
-		iarg[0] = p->semid; /* int */
-		iarg[1] = p->semnum; /* int */
-		iarg[2] = p->cmd; /* int */
-		uarg[3] = (intptr_t) p->arg; /* union semun_old * */
-		*n_args = 4;
-		break;
-	}
 	/* semget */
 	case 221: {
 		struct semget_args *p = params;
@@ -1240,15 +1207,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		iarg[0] = p->semid; /* int */
 		uarg[1] = (intptr_t) p->sops; /* struct sembuf * */
 		uarg[2] = p->nsops; /* size_t */
-		*n_args = 3;
-		break;
-	}
-	/* freebsd7_msgctl */
-	case 224: {
-		struct freebsd7_msgctl_args *p = params;
-		iarg[0] = p->msqid; /* int */
-		iarg[1] = p->cmd; /* int */
-		uarg[2] = (intptr_t) p->buf; /* struct msqid_ds_old * */
 		*n_args = 3;
 		break;
 	}
@@ -1287,15 +1245,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		iarg[0] = p->shmid; /* int */
 		uarg[1] = (intptr_t) p->shmaddr; /* const void * */
 		iarg[2] = p->shmflg; /* int */
-		*n_args = 3;
-		break;
-	}
-	/* freebsd7_shmctl */
-	case 229: {
-		struct freebsd7_shmctl_args *p = params;
-		iarg[0] = p->shmid; /* int */
-		iarg[1] = p->cmd; /* int */
-		uarg[2] = (intptr_t) p->buf; /* struct shmid_ds_old * */
 		*n_args = 3;
 		break;
 	}
@@ -1821,6 +1770,17 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 1;
 		break;
 	}
+	/* nnpfs_syscall */
+	case 339: {
+		struct nnpfs_syscall_args *p = params;
+		iarg[0] = p->operation; /* int */
+		uarg[1] = (intptr_t) p->a_pathP; /* char * */
+		iarg[2] = p->a_opcode; /* int */
+		uarg[3] = (intptr_t) p->a_paramsP; /* void * */
+		iarg[4] = p->a_followSymlinks; /* int */
+		*n_args = 5;
+		break;
+	}
 	/* sigprocmask */
 	case 340: {
 		struct sigprocmask_args *p = params;
@@ -2062,6 +2022,19 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 2;
 		break;
 	}
+	/* afs3_syscall */
+	case 377: {
+		struct afs3_syscall_args *p = params;
+		iarg[0] = p->syscall; /* long */
+		iarg[1] = p->parm1; /* long */
+		iarg[2] = p->parm2; /* long */
+		iarg[3] = p->parm3; /* long */
+		iarg[4] = p->parm4; /* long */
+		iarg[5] = p->parm5; /* long */
+		iarg[6] = p->parm6; /* long */
+		*n_args = 7;
+		break;
+	}
 	/* nmount */
 	case 378: {
 		struct nmount_args *p = params;
@@ -2069,42 +2042,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		uarg[1] = p->iovcnt; /* unsigned int */
 		iarg[2] = p->flags; /* int */
 		*n_args = 3;
-		break;
-	}
-	/* kse_exit */
-	case 379: {
-		*n_args = 0;
-		break;
-	}
-	/* kse_wakeup */
-	case 380: {
-		struct kse_wakeup_args *p = params;
-		uarg[0] = (intptr_t) p->mbx; /* struct kse_mailbox * */
-		*n_args = 1;
-		break;
-	}
-	/* kse_create */
-	case 381: {
-		struct kse_create_args *p = params;
-		uarg[0] = (intptr_t) p->mbx; /* struct kse_mailbox * */
-		iarg[1] = p->newgroup; /* int */
-		*n_args = 2;
-		break;
-	}
-	/* kse_thr_interrupt */
-	case 382: {
-		struct kse_thr_interrupt_args *p = params;
-		uarg[0] = (intptr_t) p->tmbx; /* struct kse_thr_mailbox * */
-		iarg[1] = p->cmd; /* int */
-		iarg[2] = p->data; /* long */
-		*n_args = 3;
-		break;
-	}
-	/* kse_release */
-	case 383: {
-		struct kse_release_args *p = params;
-		uarg[0] = (intptr_t) p->timeout; /* struct timespec * */
-		*n_args = 1;
 		break;
 	}
 	/* __mac_get_proc */
@@ -2538,14 +2475,6 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 4;
 		break;
 	}
-	/* kse_switchin */
-	case 440: {
-		struct kse_switchin_args *p = params;
-		uarg[0] = (intptr_t) p->tmbx; /* struct kse_thr_mailbox * */
-		iarg[1] = p->flags; /* int */
-		*n_args = 2;
-		break;
-	}
 	/* ksem_timedwait */
 	case 441: {
 		struct ksem_timedwait_args *p = params;
@@ -2875,6 +2804,22 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 3;
 		break;
 	}
+	/* shm_open */
+	case 482: {
+		struct shm_open_args *p = params;
+		uarg[0] = (intptr_t) p->path; /* const char * */
+		iarg[1] = p->flags; /* int */
+		iarg[2] = p->mode; /* mode_t */
+		*n_args = 3;
+		break;
+	}
+	/* shm_unlink */
+	case 483: {
+		struct shm_unlink_args *p = params;
+		uarg[0] = (intptr_t) p->path; /* const char * */
+		*n_args = 1;
+		break;
+	}
 	/* cpuset */
 	case 484: {
 		struct cpuset_args *p = params;
@@ -2923,6 +2868,198 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		*n_args = 5;
 		break;
 	}
+	/* faccessat */
+	case 489: {
+		struct faccessat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		iarg[2] = p->mode; /* int */
+		iarg[3] = p->flag; /* int */
+		*n_args = 4;
+		break;
+	}
+	/* fchmodat */
+	case 490: {
+		struct fchmodat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		iarg[2] = p->mode; /* mode_t */
+		iarg[3] = p->flag; /* int */
+		*n_args = 4;
+		break;
+	}
+	/* fchownat */
+	case 491: {
+		struct fchownat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		uarg[2] = p->uid; /* uid_t */
+		iarg[3] = p->gid; /* gid_t */
+		iarg[4] = p->flag; /* int */
+		*n_args = 5;
+		break;
+	}
+	/* fexecve */
+	case 492: {
+		struct fexecve_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->argv; /* char ** */
+		uarg[2] = (intptr_t) p->envv; /* char ** */
+		*n_args = 3;
+		break;
+	}
+	/* fstatat */
+	case 493: {
+		struct fstatat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		uarg[2] = (intptr_t) p->buf; /* struct stat * */
+		iarg[3] = p->flag; /* int */
+		*n_args = 4;
+		break;
+	}
+	/* futimesat */
+	case 494: {
+		struct futimesat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		uarg[2] = (intptr_t) p->times; /* struct timeval * */
+		*n_args = 3;
+		break;
+	}
+	/* linkat */
+	case 495: {
+		struct linkat_args *p = params;
+		iarg[0] = p->fd1; /* int */
+		uarg[1] = (intptr_t) p->path1; /* char * */
+		iarg[2] = p->fd2; /* int */
+		uarg[3] = (intptr_t) p->path2; /* char * */
+		iarg[4] = p->flag; /* int */
+		*n_args = 5;
+		break;
+	}
+	/* mkdirat */
+	case 496: {
+		struct mkdirat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		iarg[2] = p->mode; /* mode_t */
+		*n_args = 3;
+		break;
+	}
+	/* mkfifoat */
+	case 497: {
+		struct mkfifoat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		iarg[2] = p->mode; /* mode_t */
+		*n_args = 3;
+		break;
+	}
+	/* mknodat */
+	case 498: {
+		struct mknodat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		iarg[2] = p->mode; /* mode_t */
+		iarg[3] = p->dev; /* dev_t */
+		*n_args = 4;
+		break;
+	}
+	/* openat */
+	case 499: {
+		struct openat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		iarg[2] = p->flag; /* int */
+		iarg[3] = p->mode; /* mode_t */
+		*n_args = 4;
+		break;
+	}
+	/* readlinkat */
+	case 500: {
+		struct readlinkat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		uarg[2] = (intptr_t) p->buf; /* char * */
+		uarg[3] = p->bufsize; /* size_t */
+		*n_args = 4;
+		break;
+	}
+	/* renameat */
+	case 501: {
+		struct renameat_args *p = params;
+		iarg[0] = p->oldfd; /* int */
+		uarg[1] = (intptr_t) p->old; /* char * */
+		iarg[2] = p->newfd; /* int */
+		uarg[3] = (intptr_t) p->new; /* char * */
+		*n_args = 4;
+		break;
+	}
+	/* symlinkat */
+	case 502: {
+		struct symlinkat_args *p = params;
+		uarg[0] = (intptr_t) p->path1; /* char * */
+		iarg[1] = p->fd; /* int */
+		uarg[2] = (intptr_t) p->path2; /* char * */
+		*n_args = 3;
+		break;
+	}
+	/* unlinkat */
+	case 503: {
+		struct unlinkat_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->path; /* char * */
+		iarg[2] = p->flag; /* int */
+		*n_args = 3;
+		break;
+	}
+	/* posix_openpt */
+	case 504: {
+		struct posix_openpt_args *p = params;
+		iarg[0] = p->flags; /* int */
+		*n_args = 1;
+		break;
+	}
+	/* gssd_syscall */
+	case 505: {
+		struct gssd_syscall_args *p = params;
+		uarg[0] = (intptr_t) p->path; /* char * */
+		*n_args = 1;
+		break;
+	}
+	/* jail_get */
+	case 506: {
+		struct jail_get_args *p = params;
+		uarg[0] = (intptr_t) p->iovp; /* struct iovec * */
+		uarg[1] = p->iovcnt; /* unsigned int */
+		iarg[2] = p->flags; /* int */
+		*n_args = 3;
+		break;
+	}
+	/* jail_set */
+	case 507: {
+		struct jail_set_args *p = params;
+		uarg[0] = (intptr_t) p->iovp; /* struct iovec * */
+		uarg[1] = p->iovcnt; /* unsigned int */
+		iarg[2] = p->flags; /* int */
+		*n_args = 3;
+		break;
+	}
+	/* jail_remove */
+	case 508: {
+		struct jail_remove_args *p = params;
+		iarg[0] = p->jid; /* int */
+		*n_args = 1;
+		break;
+	}
+	/* closefrom */
+	case 509: {
+		struct closefrom_args *p = params;
+		iarg[0] = p->lowfd; /* int */
+		*n_args = 1;
+		break;
+	}
 	/* __semctl */
 	case 510: {
 		struct __semctl_args *p = params;
@@ -2949,6 +3086,162 @@ systrace_args(int sysnum, void *params, u_int64_t *uarg, int *n_args)
 		iarg[1] = p->cmd; /* int */
 		uarg[2] = (intptr_t) p->buf; /* struct shmid_ds * */
 		*n_args = 3;
+		break;
+	}
+	/* lpathconf */
+	case 513: {
+		struct lpathconf_args *p = params;
+		uarg[0] = (intptr_t) p->path; /* char * */
+		iarg[1] = p->name; /* int */
+		*n_args = 2;
+		break;
+	}
+	/* cap_new */
+	case 514: {
+		struct cap_new_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = p->rights; /* u_int64_t */
+		*n_args = 2;
+		break;
+	}
+	/* cap_getrights */
+	case 515: {
+		struct cap_getrights_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->rightsp; /* u_int64_t * */
+		*n_args = 2;
+		break;
+	}
+	/* cap_enter */
+	case 516: {
+		*n_args = 0;
+		break;
+	}
+	/* cap_getmode */
+	case 517: {
+		struct cap_getmode_args *p = params;
+		uarg[0] = (intptr_t) p->modep; /* u_int * */
+		*n_args = 1;
+		break;
+	}
+	/* pdfork */
+	case 518: {
+		struct pdfork_args *p = params;
+		uarg[0] = (intptr_t) p->fdp; /* int * */
+		iarg[1] = p->flags; /* int */
+		*n_args = 2;
+		break;
+	}
+	/* pdkill */
+	case 519: {
+		struct pdkill_args *p = params;
+		iarg[0] = p->fd; /* int */
+		iarg[1] = p->signum; /* int */
+		*n_args = 2;
+		break;
+	}
+	/* pdgetpid */
+	case 520: {
+		struct pdgetpid_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t) p->pidp; /* pid_t * */
+		*n_args = 2;
+		break;
+	}
+	/* pselect */
+	case 522: {
+		struct pselect_args *p = params;
+		iarg[0] = p->nd; /* int */
+		uarg[1] = (intptr_t) p->in; /* fd_set * */
+		uarg[2] = (intptr_t) p->ou; /* fd_set * */
+		uarg[3] = (intptr_t) p->ex; /* fd_set * */
+		uarg[4] = (intptr_t) p->ts; /* const struct timespec * */
+		uarg[5] = (intptr_t) p->sm; /* const sigset_t * */
+		*n_args = 6;
+		break;
+	}
+	/* getloginclass */
+	case 523: {
+		struct getloginclass_args *p = params;
+		uarg[0] = (intptr_t) p->namebuf; /* char * */
+		uarg[1] = p->namelen; /* size_t */
+		*n_args = 2;
+		break;
+	}
+	/* setloginclass */
+	case 524: {
+		struct setloginclass_args *p = params;
+		uarg[0] = (intptr_t) p->namebuf; /* const char * */
+		*n_args = 1;
+		break;
+	}
+	/* rctl_get_racct */
+	case 525: {
+		struct rctl_get_racct_args *p = params;
+		uarg[0] = (intptr_t) p->inbufp; /* const void * */
+		uarg[1] = p->inbuflen; /* size_t */
+		uarg[2] = (intptr_t) p->outbufp; /* void * */
+		uarg[3] = p->outbuflen; /* size_t */
+		*n_args = 4;
+		break;
+	}
+	/* rctl_get_rules */
+	case 526: {
+		struct rctl_get_rules_args *p = params;
+		uarg[0] = (intptr_t) p->inbufp; /* const void * */
+		uarg[1] = p->inbuflen; /* size_t */
+		uarg[2] = (intptr_t) p->outbufp; /* void * */
+		uarg[3] = p->outbuflen; /* size_t */
+		*n_args = 4;
+		break;
+	}
+	/* rctl_get_limits */
+	case 527: {
+		struct rctl_get_limits_args *p = params;
+		uarg[0] = (intptr_t) p->inbufp; /* const void * */
+		uarg[1] = p->inbuflen; /* size_t */
+		uarg[2] = (intptr_t) p->outbufp; /* void * */
+		uarg[3] = p->outbuflen; /* size_t */
+		*n_args = 4;
+		break;
+	}
+	/* rctl_add_rule */
+	case 528: {
+		struct rctl_add_rule_args *p = params;
+		uarg[0] = (intptr_t) p->inbufp; /* const void * */
+		uarg[1] = p->inbuflen; /* size_t */
+		uarg[2] = (intptr_t) p->outbufp; /* void * */
+		uarg[3] = p->outbuflen; /* size_t */
+		*n_args = 4;
+		break;
+	}
+	/* rctl_remove_rule */
+	case 529: {
+		struct rctl_remove_rule_args *p = params;
+		uarg[0] = (intptr_t) p->inbufp; /* const void * */
+		uarg[1] = p->inbuflen; /* size_t */
+		uarg[2] = (intptr_t) p->outbufp; /* void * */
+		uarg[3] = p->outbuflen; /* size_t */
+		*n_args = 4;
+		break;
+	}
+	/* posix_fallocate */
+	case 530: {
+		struct posix_fallocate_args *p = params;
+		iarg[0] = p->fd; /* int */
+		iarg[1] = p->offset; /* off_t */
+		iarg[2] = p->len; /* off_t */
+		*n_args = 3;
+		break;
+	}
+	/* posix_fadvise */
+	case 531: {
+		struct posix_fadvise_args *p = params;
+		iarg[0] = p->fd; /* int */
+		iarg[1] = p->offset; /* off_t */
+		iarg[2] = p->len; /* off_t */
+		iarg[3] = p->advice; /* int */
+		*n_args = 4;
 		break;
 	}
 	default:
@@ -3547,7 +3840,7 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			p = "char *";
 			break;
 		case 2:
-			p = "int";
+			p = "size_t";
 			break;
 		default:
 			break;
@@ -4329,42 +4622,6 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		};
 		break;
-	/* getdomainname */
-	case 162:
-		switch(ndx) {
-		case 0:
-			p = "char *";
-			break;
-		case 1:
-			p = "int";
-			break;
-		default:
-			break;
-		};
-		break;
-	/* setdomainname */
-	case 163:
-		switch(ndx) {
-		case 0:
-			p = "char *";
-			break;
-		case 1:
-			p = "int";
-			break;
-		default:
-			break;
-		};
-		break;
-	/* uname */
-	case 164:
-		switch(ndx) {
-		case 0:
-			p = "struct utsname *";
-			break;
-		default:
-			break;
-		};
-		break;
 	/* sysarch */
 	case 165:
 		switch(ndx) {
@@ -4876,25 +5133,6 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 	/* lkmnosys */
 	case 219:
 		break;
-	/* freebsd7___semctl */
-	case 220:
-		switch(ndx) {
-		case 0:
-			p = "int";
-			break;
-		case 1:
-			p = "int";
-			break;
-		case 2:
-			p = "int";
-			break;
-		case 3:
-			p = "union semun_old *";
-			break;
-		default:
-			break;
-		};
-		break;
 	/* semget */
 	case 221:
 		switch(ndx) {
@@ -4922,22 +5160,6 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		case 2:
 			p = "size_t";
-			break;
-		default:
-			break;
-		};
-		break;
-	/* freebsd7_msgctl */
-	case 224:
-		switch(ndx) {
-		case 0:
-			p = "int";
-			break;
-		case 1:
-			p = "int";
-			break;
-		case 2:
-			p = "struct msqid_ds_old *";
 			break;
 		default:
 			break;
@@ -5008,22 +5230,6 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		case 2:
 			p = "int";
-			break;
-		default:
-			break;
-		};
-		break;
-	/* freebsd7_shmctl */
-	case 229:
-		switch(ndx) {
-		case 0:
-			p = "int";
-			break;
-		case 1:
-			p = "int";
-			break;
-		case 2:
-			p = "struct shmid_ds_old *";
 			break;
 		default:
 			break;
@@ -5854,6 +6060,28 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		};
 		break;
+	/* nnpfs_syscall */
+	case 339:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "int";
+			break;
+		case 3:
+			p = "void *";
+			break;
+		case 4:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
 	/* sigprocmask */
 	case 340:
 		switch(ndx) {
@@ -6279,6 +6507,34 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		};
 		break;
+	/* afs3_syscall */
+	case 377:
+		switch(ndx) {
+		case 0:
+			p = "long";
+			break;
+		case 1:
+			p = "long";
+			break;
+		case 2:
+			p = "long";
+			break;
+		case 3:
+			p = "long";
+			break;
+		case 4:
+			p = "long";
+			break;
+		case 5:
+			p = "long";
+			break;
+		case 6:
+			p = "long";
+			break;
+		default:
+			break;
+		};
+		break;
 	/* nmount */
 	case 378:
 		switch(ndx) {
@@ -6290,58 +6546,6 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		case 2:
 			p = "int";
-			break;
-		default:
-			break;
-		};
-		break;
-	/* kse_exit */
-	case 379:
-		break;
-	/* kse_wakeup */
-	case 380:
-		switch(ndx) {
-		case 0:
-			p = "struct kse_mailbox *";
-			break;
-		default:
-			break;
-		};
-		break;
-	/* kse_create */
-	case 381:
-		switch(ndx) {
-		case 0:
-			p = "struct kse_mailbox *";
-			break;
-		case 1:
-			p = "int";
-			break;
-		default:
-			break;
-		};
-		break;
-	/* kse_thr_interrupt */
-	case 382:
-		switch(ndx) {
-		case 0:
-			p = "struct kse_thr_mailbox *";
-			break;
-		case 1:
-			p = "int";
-			break;
-		case 2:
-			p = "long";
-			break;
-		default:
-			break;
-		};
-		break;
-	/* kse_release */
-	case 383:
-		switch(ndx) {
-		case 0:
-			p = "struct timespec *";
 			break;
 		default:
 			break;
@@ -7068,19 +7272,6 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		};
 		break;
-	/* kse_switchin */
-	case 440:
-		switch(ndx) {
-		case 0:
-			p = "struct kse_thr_mailbox *";
-			break;
-		case 1:
-			p = "int";
-			break;
-		default:
-			break;
-		};
-		break;
 	/* ksem_timedwait */
 	case 441:
 		switch(ndx) {
@@ -7661,6 +7852,32 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		};
 		break;
+	/* shm_open */
+	case 482:
+		switch(ndx) {
+		case 0:
+			p = "const char *";
+			break;
+		case 1:
+			p = "int";
+			break;
+		case 2:
+			p = "mode_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* shm_unlink */
+	case 483:
+		switch(ndx) {
+		case 0:
+			p = "const char *";
+			break;
+		default:
+			break;
+		};
+		break;
 	/* cpuset */
 	case 484:
 		switch(ndx) {
@@ -7750,6 +7967,341 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		};
 		break;
+	/* faccessat */
+	case 489:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "int";
+			break;
+		case 3:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* fchmodat */
+	case 490:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "mode_t";
+			break;
+		case 3:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* fchownat */
+	case 491:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "uid_t";
+			break;
+		case 3:
+			p = "gid_t";
+			break;
+		case 4:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* fexecve */
+	case 492:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char **";
+			break;
+		case 2:
+			p = "char **";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* fstatat */
+	case 493:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "struct stat *";
+			break;
+		case 3:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* futimesat */
+	case 494:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "struct timeval *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* linkat */
+	case 495:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "int";
+			break;
+		case 3:
+			p = "char *";
+			break;
+		case 4:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* mkdirat */
+	case 496:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "mode_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* mkfifoat */
+	case 497:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "mode_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* mknodat */
+	case 498:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "mode_t";
+			break;
+		case 3:
+			p = "dev_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* openat */
+	case 499:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "int";
+			break;
+		case 3:
+			p = "mode_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* readlinkat */
+	case 500:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "char *";
+			break;
+		case 3:
+			p = "size_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* renameat */
+	case 501:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "int";
+			break;
+		case 3:
+			p = "char *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* symlinkat */
+	case 502:
+		switch(ndx) {
+		case 0:
+			p = "char *";
+			break;
+		case 1:
+			p = "int";
+			break;
+		case 2:
+			p = "char *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* unlinkat */
+	case 503:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "char *";
+			break;
+		case 2:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* posix_openpt */
+	case 504:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* gssd_syscall */
+	case 505:
+		switch(ndx) {
+		case 0:
+			p = "char *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* jail_get */
+	case 506:
+		switch(ndx) {
+		case 0:
+			p = "struct iovec *";
+			break;
+		case 1:
+			p = "unsigned int";
+			break;
+		case 2:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* jail_set */
+	case 507:
+		switch(ndx) {
+		case 0:
+			p = "struct iovec *";
+			break;
+		case 1:
+			p = "unsigned int";
+			break;
+		case 2:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* jail_remove */
+	case 508:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
 	/* closefrom */
 	case 509:
 		switch(ndx) {
@@ -7806,6 +8358,275 @@ systrace_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		case 2:
 			p = "struct shmid_ds *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* lpathconf */
+	case 513:
+		switch(ndx) {
+		case 0:
+			p = "char *";
+			break;
+		case 1:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* cap_new */
+	case 514:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "u_int64_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* cap_getrights */
+	case 515:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "u_int64_t *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* cap_enter */
+	case 516:
+		break;
+	/* cap_getmode */
+	case 517:
+		switch(ndx) {
+		case 0:
+			p = "u_int *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* pdfork */
+	case 518:
+		switch(ndx) {
+		case 0:
+			p = "int *";
+			break;
+		case 1:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* pdkill */
+	case 519:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* pdgetpid */
+	case 520:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "pid_t *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* pselect */
+	case 522:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "fd_set *";
+			break;
+		case 2:
+			p = "fd_set *";
+			break;
+		case 3:
+			p = "fd_set *";
+			break;
+		case 4:
+			p = "const struct timespec *";
+			break;
+		case 5:
+			p = "const sigset_t *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* getloginclass */
+	case 523:
+		switch(ndx) {
+		case 0:
+			p = "char *";
+			break;
+		case 1:
+			p = "size_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* setloginclass */
+	case 524:
+		switch(ndx) {
+		case 0:
+			p = "const char *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* rctl_get_racct */
+	case 525:
+		switch(ndx) {
+		case 0:
+			p = "const void *";
+			break;
+		case 1:
+			p = "size_t";
+			break;
+		case 2:
+			p = "void *";
+			break;
+		case 3:
+			p = "size_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* rctl_get_rules */
+	case 526:
+		switch(ndx) {
+		case 0:
+			p = "const void *";
+			break;
+		case 1:
+			p = "size_t";
+			break;
+		case 2:
+			p = "void *";
+			break;
+		case 3:
+			p = "size_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* rctl_get_limits */
+	case 527:
+		switch(ndx) {
+		case 0:
+			p = "const void *";
+			break;
+		case 1:
+			p = "size_t";
+			break;
+		case 2:
+			p = "void *";
+			break;
+		case 3:
+			p = "size_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* rctl_add_rule */
+	case 528:
+		switch(ndx) {
+		case 0:
+			p = "const void *";
+			break;
+		case 1:
+			p = "size_t";
+			break;
+		case 2:
+			p = "void *";
+			break;
+		case 3:
+			p = "size_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* rctl_remove_rule */
+	case 529:
+		switch(ndx) {
+		case 0:
+			p = "const void *";
+			break;
+		case 1:
+			p = "size_t";
+			break;
+		case 2:
+			p = "void *";
+			break;
+		case 3:
+			p = "size_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* posix_fallocate */
+	case 530:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "off_t";
+			break;
+		case 2:
+			p = "off_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* posix_fadvise */
+	case 531:
+		switch(ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "off_t";
+			break;
+		case 2:
+			p = "off_t";
+			break;
+		case 3:
+			p = "int";
 			break;
 		default:
 			break;

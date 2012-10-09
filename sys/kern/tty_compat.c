@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_compat.c,v 1.39.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 
@@ -44,6 +44,11 @@ __FBSDID("$FreeBSD: src/sys/kern/tty_compat.c,v 1.39.6.1 2008/11/25 02:59:29 ken
 #include <sys/tty.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
+
+struct speedtab {
+	int sp_speed;			/* Speed. */
+	int sp_code;			/* Code. */
+};
 
 static int ttcompatgetflags(struct tty *tp);
 static void ttcompatsetflags(struct tty *tp, struct termios *t);
@@ -102,19 +107,22 @@ ttsetcompat(struct tty *tp, u_long *com, caddr_t data, struct termios *term)
 
 		if ((speed = sg->sg_ispeed) > MAX_SPEED || speed < 0)
 			return(EINVAL);
-		else if (speed != ttcompatspeedtab(tp->t_ispeed, compatspeeds))
+		else if (speed != ttcompatspeedtab(tp->t_termios.c_ispeed,
+		    compatspeeds))
 			term->c_ispeed = compatspcodes[speed];
 		else
-			term->c_ispeed = tp->t_ispeed;
+			term->c_ispeed = tp->t_termios.c_ispeed;
 		if ((speed = sg->sg_ospeed) > MAX_SPEED || speed < 0)
 			return(EINVAL);
-		else if (speed != ttcompatspeedtab(tp->t_ospeed, compatspeeds))
+		else if (speed != ttcompatspeedtab(tp->t_termios.c_ospeed,
+		    compatspeeds))
 			term->c_ospeed = compatspcodes[speed];
 		else
-			term->c_ospeed = tp->t_ospeed;
+			term->c_ospeed = tp->t_termios.c_ospeed;
 		term->c_cc[VERASE] = sg->sg_erase;
 		term->c_cc[VKILL] = sg->sg_kill;
-		tp->t_flags = (tp->t_flags&0xffff0000) | (sg->sg_flags&0xffff);
+		tp->t_compatflags = (tp->t_compatflags&0xffff0000) |
+		    (sg->sg_flags&0xffff);
 		ttcompatsetflags(tp, term);
 		*com = (*com == TIOCSETP) ? TIOCSETAF : TIOCSETA;
 		break;
@@ -153,14 +161,15 @@ ttsetcompat(struct tty *tp, u_long *com, caddr_t data, struct termios *term)
 	case TIOCLBIC:
 	case TIOCLSET:
 		if (*com == TIOCLSET)
-			tp->t_flags = (tp->t_flags&0xffff) | *(int *)data<<16;
+			tp->t_compatflags = (tp->t_compatflags&0xffff) |
+			    *(int *)data<<16;
 		else {
-			tp->t_flags =
-			 (ttcompatgetflags(tp)&0xffff0000)|(tp->t_flags&0xffff);
+			tp->t_compatflags = (ttcompatgetflags(tp)&0xffff0000) |
+			    (tp->t_compatflags&0xffff);
 			if (*com == TIOCLBIS)
-				tp->t_flags |= *(int *)data<<16;
+				tp->t_compatflags |= *(int *)data<<16;
 			else
-				tp->t_flags &= ~(*(int *)data<<16);
+				tp->t_compatflags &= ~(*(int *)data<<16);
 		}
 		ttcompatsetlflags(tp, term);
 		*com = TIOCSETA;
@@ -171,7 +180,8 @@ ttsetcompat(struct tty *tp, u_long *com, caddr_t data, struct termios *term)
 
 /*ARGSUSED*/
 int
-ttcompat(struct tty *tp, u_long com, caddr_t data, int flag)
+tty_ioctl_compat(struct tty *tp, u_long com, caddr_t data, int fflag,
+    struct thread *td)
 {
 	switch (com) {
 	case TIOCSETP:
@@ -187,25 +197,27 @@ ttcompat(struct tty *tp, u_long com, caddr_t data, int flag)
 		term = tp->t_termios;
 		if ((error = ttsetcompat(tp, &com, data, &term)) != 0)
 			return error;
-		return ttioctl(tp, com, &term, flag);
+		return tty_ioctl(tp, com, &term, fflag, td);
 	}
 	case TIOCGETP: {
 		struct sgttyb *sg = (struct sgttyb *)data;
-		cc_t *cc = tp->t_cc;
+		cc_t *cc = tp->t_termios.c_cc;
 
-		sg->sg_ospeed = ttcompatspeedtab(tp->t_ospeed, compatspeeds);
-		if (tp->t_ispeed == 0)
+		sg->sg_ospeed = ttcompatspeedtab(tp->t_termios.c_ospeed,
+		    compatspeeds);
+		if (tp->t_termios.c_ispeed == 0)
 			sg->sg_ispeed = sg->sg_ospeed;
 		else
-			sg->sg_ispeed = ttcompatspeedtab(tp->t_ispeed, compatspeeds);
+			sg->sg_ispeed = ttcompatspeedtab(tp->t_termios.c_ispeed,
+			    compatspeeds);
 		sg->sg_erase = cc[VERASE];
 		sg->sg_kill = cc[VKILL];
-		sg->sg_flags = tp->t_flags = ttcompatgetflags(tp);
+		sg->sg_flags = tp->t_compatflags = ttcompatgetflags(tp);
 		break;
 	}
 	case TIOCGETC: {
 		struct tchars *tc = (struct tchars *)data;
-		cc_t *cc = tp->t_cc;
+		cc_t *cc = tp->t_termios.c_cc;
 
 		tc->t_intrc = cc[VINTR];
 		tc->t_quitc = cc[VQUIT];
@@ -217,7 +229,7 @@ ttcompat(struct tty *tp, u_long com, caddr_t data, int flag)
 	}
 	case TIOCGLTC: {
 		struct ltchars *ltc = (struct ltchars *)data;
-		cc_t *cc = tp->t_cc;
+		cc_t *cc = tp->t_termios.c_cc;
 
 		ltc->t_suspc = cc[VSUSP];
 		ltc->t_dsuspc = cc[VDSUSP];
@@ -228,28 +240,29 @@ ttcompat(struct tty *tp, u_long com, caddr_t data, int flag)
 		break;
 	}
 	case TIOCLGET:
-		tp->t_flags =
+		tp->t_compatflags =
 		 (ttcompatgetflags(tp) & 0xffff0000UL)
-		   | (tp->t_flags & 0xffff);
-		*(int *)data = tp->t_flags>>16;
+		   | (tp->t_compatflags & 0xffff);
+		*(int *)data = tp->t_compatflags>>16;
 		if (ttydebug)
 			printf("CLGET: returning %x\n", *(int *)data);
 		break;
 
 	case OTIOCGETD:
-		*(int *)data = tp->t_line ? tp->t_line : 2;
+		*(int *)data = 2;
 		break;
 
 	case OTIOCSETD: {
 		int ldisczero = 0;
 
-		return (ttioctl(tp, TIOCSETD,
-			*(int *)data == 2 ? (caddr_t)&ldisczero : data, flag));
+		return (tty_ioctl(tp, TIOCSETD,
+			*(int *)data == 2 ? (caddr_t)&ldisczero : data,
+			fflag, td));
 	    }
 
 	case OTIOCCONS:
 		*(int *)data = 1;
-		return (ttioctl(tp, TIOCCONS, data, flag));
+		return (tty_ioctl(tp, TIOCCONS, data, fflag, td));
 
 	default:
 		return (ENOIOCTL);
@@ -260,10 +273,10 @@ ttcompat(struct tty *tp, u_long com, caddr_t data, int flag)
 static int
 ttcompatgetflags(struct tty *tp)
 {
-	tcflag_t iflag	= tp->t_iflag;
-	tcflag_t lflag	= tp->t_lflag;
-	tcflag_t oflag	= tp->t_oflag;
-	tcflag_t cflag	= tp->t_cflag;
+	tcflag_t iflag	= tp->t_termios.c_iflag;
+	tcflag_t lflag	= tp->t_termios.c_lflag;
+	tcflag_t oflag	= tp->t_termios.c_oflag;
+	tcflag_t cflag	= tp->t_termios.c_cflag;
 	int flags = 0;
 
 	if (iflag&IXOFF)
@@ -299,7 +312,7 @@ ttcompatgetflags(struct tty *tp)
 		flags |= MDMBUF;
 	if ((cflag&HUPCL) == 0)
 		flags |= NOHANG;
-	if (oflag&OXTABS)
+	if (oflag&TAB3)
 		flags |= XTABS;
 	if (lflag&ECHOE)
 		flags |= CRTERA|CRTBS;
@@ -320,7 +333,7 @@ ttcompatgetflags(struct tty *tp)
 static void
 ttcompatsetflags(struct tty *tp, struct termios *t)
 {
-	int flags = tp->t_flags;
+	int flags = tp->t_compatflags;
 	tcflag_t iflag	= t->c_iflag;
 	tcflag_t oflag	= t->c_oflag;
 	tcflag_t lflag	= t->c_lflag;
@@ -334,9 +347,9 @@ ttcompatsetflags(struct tty *tp, struct termios *t)
 		iflag |= BRKINT|IXON|IMAXBEL;
 		lflag |= ISIG|IEXTEN|ECHOCTL;	/* XXX was echoctl on ? */
 		if (flags & XTABS)
-			oflag |= OXTABS;
+			oflag |= TAB3;
 		else
-			oflag &= ~OXTABS;
+			oflag &= ~TAB3;
 		if (flags & CBREAK)
 			lflag &= ~ICANON;
 		else
@@ -397,7 +410,7 @@ ttcompatsetflags(struct tty *tp, struct termios *t)
 static void
 ttcompatsetlflags(struct tty *tp, struct termios *t)
 {
-	int flags = tp->t_flags;
+	int flags = tp->t_compatflags;
 	tcflag_t iflag	= t->c_iflag;
 	tcflag_t oflag	= t->c_oflag;
 	tcflag_t lflag	= t->c_lflag;

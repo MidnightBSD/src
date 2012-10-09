@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/amd64/amd64/mem.c,v 1.2 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1986, 1990 The Regents of the University of California.
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/mem.c,v 1.121.18.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Memory special file
@@ -73,6 +72,8 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/mem.c,v 1.121.18.1.2.1 2008/11/25 02:59:
  */
 MALLOC_DEFINE(M_MEMDESC, "memdesc", "memory range descriptors");
 
+struct mem_range_softc mem_range_softc;
+
 /* ARGSUSED */
 int
 memrw(struct cdev *dev, struct uio *uio, int flags)
@@ -94,7 +95,7 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 				panic("memrw");
 			continue;
 		}
-		if (minor(dev) == CDEV_MINOR_MEM) {
+		if (dev2unit(dev) == CDEV_MINOR_MEM) {
 			v = uio->uio_offset;
 kmemphys:
 			o = v & PAGE_MASK;
@@ -102,7 +103,7 @@ kmemphys:
 			error = uiomove((void *)PHYS_TO_DMAP(v), (int)c, uio);
 			continue;
 		}
-		else if (minor(dev) == CDEV_MINOR_KMEM) {
+		else if (dev2unit(dev) == CDEV_MINOR_KMEM) {
 			v = uio->uio_offset;
 
 			if (v >= DMAP_MIN_ADDRESS && v < DMAP_MAX_ADDRESS) {
@@ -120,7 +121,7 @@ kmemphys:
 			addr = trunc_page(v);
 			eaddr = round_page(v + c);
 
-			if (addr < (vm_offset_t)KERNBASE)
+			if (addr < VM_MIN_KERNEL_ADDRESS)
 				return (EFAULT);
 			for (; addr < eaddr; addr += PAGE_SIZE) 
 				if (pmap_extract(kernel_pmap, addr) == 0)
@@ -145,12 +146,12 @@ kmemphys:
  */
 /* ARGSUSED */
 int
-memmmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr,
-    int prot __unused)
+memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int prot __unused, vm_memattr_t *memattr __unused)
 {
-	if (minor(dev) == CDEV_MINOR_MEM)
+	if (dev2unit(dev) == CDEV_MINOR_MEM)
 		*paddr = offset;
-	else if (minor(dev) == CDEV_MINOR_KMEM)
+	else if (dev2unit(dev) == CDEV_MINOR_KMEM)
         	*paddr = vtophys(offset);
 	/* else panic! */
 	return (0);
@@ -214,11 +215,4 @@ memioctl(struct cdev *dev __unused, u_long cmd, caddr_t data, int flags,
 		break;
 	}
 	return (error);
-}
-
-void
-dev_mem_md_init(void)
-{
-	if (mem_range_softc.mr_op != NULL)
-		mem_range_softc.mr_op->init(&mem_range_softc);
 }

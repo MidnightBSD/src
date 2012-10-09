@@ -25,14 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_ioctl.h,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
-#if defined(__amd64__) /* Assume amd64 wants 32 bit Linux */
+#include <dev/mfi/mfireg.h>
+
 struct iovec32 {
 	u_int32_t	iov_base;
 	int		iov_len;
 };
-#endif
 
 #define MFIQ_FREE	0
 #define MFIQ_BIO	1
@@ -77,7 +77,7 @@ struct mfi_ioc_packet {
 	struct iovec mfi_sgl[MAX_IOCTL_SGE];
 } __packed;
 
-#ifdef __amd64__
+#ifdef COMPAT_FREEBSD32
 struct mfi_ioc_packet32 {
 	uint16_t	mfi_adapter_no;
 	uint16_t	mfi_pad1;
@@ -102,7 +102,7 @@ struct mfi_ioc_aen {
 } __packed;
 
 #define MFI_CMD		_IOWR('M', 1, struct mfi_ioc_packet)
-#ifdef __amd64__
+#ifdef COMPAT_FREEBSD32
 #define MFI_CMD32	_IOWR('M', 1, struct mfi_ioc_packet32)
 #endif
 #define MFI_SET_AEN	_IOW('M', 3, struct mfi_ioc_aen)
@@ -134,7 +134,7 @@ struct mfi_ioc_passthru {
 	uint8_t			*buf;
 } __packed;
 
-#ifdef __amd64__
+#ifdef COMPAT_FREEBSD32
 struct mfi_ioc_passthru32 {
 	struct mfi_dcmd_frame	ioc_frame;
 	uint32_t		buf_size;
@@ -144,7 +144,7 @@ struct mfi_ioc_passthru32 {
 
 #define MFIIO_STATS	_IOWR('Q', 101, union mfi_statrequest)
 #define MFIIO_PASSTHRU	_IOWR('C', 102, struct mfi_ioc_passthru)
-#ifdef __amd64__
+#ifdef COMPAT_FREEBSD32
 #define MFIIO_PASSTHRU32	_IOWR('C', 102, struct mfi_ioc_passthru32)
 #endif
 

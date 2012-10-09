@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2000-2001, Boris Popov
+ * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,14 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_io.c,v 1.41.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  *
  */
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/resourcevar.h>	/* defines plimit structure in proc struct */
 #include <sys/kernel.h>
-#include <sys/proc.h>
 #include <sys/fcntl.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
@@ -204,24 +195,24 @@ smbfs_readvnode(struct vnode *vp, struct uio *uiop, struct ucred *cred)
 		return EFBIG;*/
 	td = uiop->uio_td;
 	if (vp->v_type == VDIR) {
-		lks = LK_EXCLUSIVE;/*lockstatus(vp->v_vnlock, td);*/
+		lks = LK_EXCLUSIVE;	/* lockstatus(vp->v_vnlock); */
 		if (lks == LK_SHARED)
-			vn_lock(vp, LK_UPGRADE | LK_RETRY, td);
+			vn_lock(vp, LK_UPGRADE | LK_RETRY);
 		error = smbfs_readvdir(vp, uiop, cred);
 		if (lks == LK_SHARED)
-			vn_lock(vp, LK_DOWNGRADE | LK_RETRY, td);
+			vn_lock(vp, LK_DOWNGRADE | LK_RETRY);
 		return error;
 	}
 
 /*	biosize = SSTOCN(smp->sm_share)->sc_txmax;*/
 	if (np->n_flag & NMODIFIED) {
 		smbfs_attr_cacheremove(vp);
-		error = VOP_GETATTR(vp, &vattr, cred, td);
+		error = VOP_GETATTR(vp, &vattr, cred);
 		if (error)
 			return error;
 		np->n_mtime.tv_sec = vattr.va_mtime.tv_sec;
 	} else {
-		error = VOP_GETATTR(vp, &vattr, cred, td);
+		error = VOP_GETATTR(vp, &vattr, cred);
 		if (error)
 			return error;
 		if (np->n_mtime.tv_sec != vattr.va_mtime.tv_sec) {
@@ -242,7 +233,6 @@ smbfs_writevnode(struct vnode *vp, struct uio *uiop,
 	struct smbmount *smp = VTOSMBFS(vp);
 	struct smbnode *np = VTOSMB(vp);
 	struct smb_cred scred;
-	struct proc *p;
 	struct thread *td;
 	int error = 0;
 
@@ -256,7 +246,6 @@ smbfs_writevnode(struct vnode *vp, struct uio *uiop,
 /*	if (uiop->uio_offset + uiop->uio_resid > smp->nm_maxfilesize)
 		return (EFBIG);*/
 	td = uiop->uio_td;
-	p = td->td_proc;
 	if (ioflag & (IO_APPEND | IO_SYNC)) {
 		if (np->n_flag & NMODIFIED) {
 			smbfs_attr_cacheremove(vp);
@@ -270,7 +259,7 @@ smbfs_writevnode(struct vnode *vp, struct uio *uiop,
 			 * File size can be changed by another client
 			 */
 			smbfs_attr_cacheremove(vp);
-			error = VOP_GETATTR(vp, &vattr, cred, td);
+			error = VOP_GETATTR(vp, &vattr, cred);
 			if (error) return (error);
 #endif
 			uiop->uio_offset = np->n_size;
@@ -278,16 +267,10 @@ smbfs_writevnode(struct vnode *vp, struct uio *uiop,
 	}
 	if (uiop->uio_resid == 0)
 		return 0;
-	if (p != NULL) {
-		PROC_LOCK(p);
-		if (uiop->uio_offset + uiop->uio_resid >
-		    lim_cur(p, RLIMIT_FSIZE)) {
-			psignal(p, SIGXFSZ);
-			PROC_UNLOCK(p);
-			return EFBIG;
-		}
-		PROC_UNLOCK(p);
-	}
+
+	if (vn_rlimit_fsize(vp, uiop, td))
+		return (EFBIG);
+
 	smb_makescred(&scred, td, cred);
 	error = smb_write(smp->sm_share, np->n_fid, uiop, &scred);
 	SMBVDEBUG("after: ofs=%d,resid=%d\n",(int)uiop->uio_offset, uiop->uio_resid);
@@ -457,14 +440,13 @@ smbfs_getpages(ap)
 
 	VM_OBJECT_LOCK(object);
 	if (m->valid != 0) {
-		/* handled by vm_fault now	  */
-		/* vm_page_zero_invalid(m, TRUE); */
-		vm_page_lock_queues();
 		for (i = 0; i < npages; ++i) {
-			if (i != reqpage)
+			if (i != reqpage) {
+				vm_page_lock(pages[i]);
 				vm_page_free(pages[i]);
+				vm_page_unlock(pages[i]);
+			}
 		}
-		vm_page_unlock_queues();
 		VM_OBJECT_UNLOCK(object);
 		return 0;
 	}
@@ -497,19 +479,19 @@ smbfs_getpages(ap)
 	VM_OBJECT_LOCK(object);
 	if (error && (uio.uio_resid == count)) {
 		printf("smbfs_getpages: error %d\n",error);
-		vm_page_lock_queues();
 		for (i = 0; i < npages; i++) {
-			if (reqpage != i)
+			if (reqpage != i) {
+				vm_page_lock(pages[i]);
 				vm_page_free(pages[i]);
+				vm_page_unlock(pages[i]);
+			}
 		}
-		vm_page_unlock_queues();
 		VM_OBJECT_UNLOCK(object);
 		return VM_PAGER_ERROR;
 	}
 
 	size = count - uio.uio_resid;
 
-	vm_page_lock_queues();
 	for (i = 0, toff = 0; i < npages; i++, toff = nextoff) {
 		vm_page_t m;
 		nextoff = toff + PAGE_SIZE;
@@ -520,15 +502,16 @@ smbfs_getpages(ap)
 			 * Read operation filled an entire page
 			 */
 			m->valid = VM_PAGE_BITS_ALL;
-			vm_page_undirty(m);
+			KASSERT(m->dirty == 0,
+			    ("smbfs_getpages: page %p is dirty", m));
 		} else if (size > toff) {
 			/*
 			 * Read operation filled a partial page.
 			 */
 			m->valid = 0;
-			vm_page_set_validclean(m, 0, size - toff);
-			/* handled by vm_fault now	  */
-			/* vm_page_zero_invalid(m, TRUE); */
+			vm_page_set_valid(m, 0, size - toff);
+			KASSERT(m->dirty == 0,
+			    ("smbfs_getpages: page %p is dirty", m));
 		} else {
 			/*
 			 * Read operation was short.  If no error occured
@@ -552,17 +535,23 @@ smbfs_getpages(ap)
 			 * now tell them that it is ok to use.
 			 */
 			if (!error) {
-				if (m->oflags & VPO_WANTED)
+				if (m->oflags & VPO_WANTED) {
+					vm_page_lock(m);
 					vm_page_activate(m);
-				else
+					vm_page_unlock(m);
+				} else {
+					vm_page_lock(m);
 					vm_page_deactivate(m);
+					vm_page_unlock(m);
+				}
 				vm_page_wakeup(m);
 			} else {
+				vm_page_lock(m);
 				vm_page_free(m);
+				vm_page_unlock(m);
 			}
 		}
 	}
-	vm_page_unlock_queues();
 	VM_OBJECT_UNLOCK(object);
 	return 0;
 #endif /* SMBFS_RWGENERIC */
@@ -620,7 +609,7 @@ smbfs_putpages(ap)
 	npages = btoc(count);
 
 	for (i = 0; i < npages; i++) {
-		rtvals[i] = VM_PAGER_AGAIN;
+		rtvals[i] = VM_PAGER_ERROR;
 	}
 
 	bp = getpbuf(&smbfs_pbuf_freecnt);
@@ -650,15 +639,8 @@ smbfs_putpages(ap)
 
 	relpbuf(bp, &smbfs_pbuf_freecnt);
 
-	if (!error) {
-		int nwritten = round_page(count - uio.uio_resid) / PAGE_SIZE;
-		vm_page_lock_queues();
-		for (i = 0; i < nwritten; i++) {
-			rtvals[i] = VM_PAGER_OK;
-			vm_page_undirty(pages[i]);
-		}
-		vm_page_unlock_queues();
-	}
+	if (!error)
+		vnode_pager_undirty_pages(pages, rtvals, count - uio.uio_resid);
 	return rtvals[0];
 #endif /* SMBFS_RWGENERIC */
 }
@@ -691,7 +673,7 @@ smbfs_vinvalbuf(struct vnode *vp, struct thread *td)
 		VM_OBJECT_UNLOCK(vp->v_bufobj.bo_object);
 	}
 
-	error = vinvalbuf(vp, V_SAVE, td, PCATCH, 0);
+	error = vinvalbuf(vp, V_SAVE, PCATCH, 0);
 	while (error) {
 		if (error == ERESTART || error == EINTR) {
 			np->n_flag &= ~NFLUSHINPROG;
@@ -701,7 +683,7 @@ smbfs_vinvalbuf(struct vnode *vp, struct thread *td)
 			}
 			return EINTR;
 		}
-		error = vinvalbuf(vp, V_SAVE, td, PCATCH, 0);
+		error = vinvalbuf(vp, V_SAVE, PCATCH, 0);
 	}
 	np->n_flag &= ~(NMODIFIED | NFLUSHINPROG);
 	if (np->n_flag & NFLUSHWANT) {

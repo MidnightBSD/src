@@ -1,5 +1,5 @@
 /*	$NetBSD: if_arc.h,v 1.13 1999/11/19 20:41:19 thorpej Exp $	*/
-/* $FreeBSD: src/sys/net/if_arc.h,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 1982, 1986, 1993
@@ -133,8 +133,8 @@ void	arc_storelladdr(struct ifnet *, u_int8_t);
 int	arc_isphds(u_int8_t);
 void	arc_input(struct ifnet *, struct mbuf *);
 int	arc_output(struct ifnet *, struct mbuf *,
-	    struct sockaddr *, struct rtentry *);
-int	arc_ioctl(struct ifnet *, int, caddr_t);
+	    struct sockaddr *, struct route *);
+int	arc_ioctl(struct ifnet *, u_long, caddr_t);
 
 void		arc_frag_init(struct ifnet *);
 struct mbuf *	arc_frag_next(struct ifnet *);

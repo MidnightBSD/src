@@ -1,11 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
  * The contents of this file are subject to the terms of the
- * Common Development and Distribution License, Version 1.0 only
- * (the "License").  You may not use this file except in compliance
- * with the License.
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
@@ -21,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef _SYS_ZFS_CONTEXT_H
 #define	_SYS_ZFS_CONTEXT_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -46,14 +42,18 @@ extern "C" {
 #include <sys/cmn_err.h>
 #include <sys/kmem.h>
 #include <sys/taskq.h>
+#include <sys/taskqueue.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
 #include <sys/mutex.h>
 #include <sys/rwlock.h>
+#include <sys/kcondvar.h>
 #include <sys/random.h>
 #include <sys/byteorder.h>
 #include <sys/systm.h>
 #include <sys/list.h>
+#include <sys/zfs_debug.h>
+#include <sys/sysevent.h>
 #include <sys/uio.h>
 #include <sys/dirent.h>
 #include <sys/time.h>
@@ -74,11 +74,20 @@ extern "C" {
 #include <sys/ktr.h>
 #include <sys/stack.h>
 #include <sys/lockf.h>
+#include <sys/pathname.h>
 #include <sys/policy.h>
+#include <sys/refstr.h>
 #include <sys/zone.h>
 #include <sys/eventhandler.h>
+#include <sys/extattr.h>
 #include <sys/misc.h>
-#include <sys/zfs_debug.h>
+#include <sys/sig.h>
+#include <sys/osd.h>
+#include <sys/sysevent/dev.h>
+#include <sys/sysevent/eventdefs.h>
+#include <sys/u8_textprep.h>
+#include <sys/fm/util.h>
+#include <sys/sunddi.h>
 
 #include <machine/stdarg.h>
 
@@ -100,6 +109,14 @@ extern "C" {
 
 #define	CPU_SEQID	(curcpu)
 
+#define	tsd_create(keyp, destructor)	do {				\
+	*(keyp) = osd_thread_register((destructor));			\
+	KASSERT(*(keyp) > 0, ("cannot register OSD"));			\
+} while (0)
+#define	tsd_destroy(keyp)		osd_thread_deregister(*(keyp))
+#define	tsd_get(key)			osd_thread_get(curthread, (key))
+#define	tsd_set(key, value)		osd_thread_set(curthread, (key), (value))
+
 #ifdef	__cplusplus
 }
 #endif
@@ -117,5 +134,7 @@ extern struct mtx zfs_debug_mtx;
 		mtx_unlock(&zfs_debug_mtx);				\
 	}								\
 } while (0)
+
+#define	sys_shutdown	rebooting
 
 #endif	/* _SYS_ZFS_CONTEXT_H */

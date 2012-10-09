@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pci/vga_pci.c,v 1.5.2.2 2011/01/26 20:26:58 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Simple driver for PCI VGA display devices.  Drivers such as agp(4) and
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/dev/pci/vga_pci.c,v 1.5.2.2 2011/01/26 20:26:58 jhb 
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/rman.h>
+#include <sys/sysctl.h>
 #include <sys/systm.h>
 
 #include <dev/pci/pcireg.h>
@@ -58,9 +59,19 @@ struct vga_pci_softc {
 	struct vga_resource vga_res[PCIR_MAX_BAR_0 + 1];
 };
 
+SYSCTL_DECL(_hw_pci);
+
+int vga_pci_default_unit = -1;
+TUNABLE_INT("hw.pci.default_vgapci_unit", &vga_pci_default_unit);
+SYSCTL_INT(_hw_pci, OID_AUTO, default_vgapci_unit, CTLFLAG_RDTUN,
+    &vga_pci_default_unit, -1, "Default VGA-compatible display");
+
 static int
 vga_pci_probe(device_t dev)
 {
+	device_t bdev;
+	int unit;
+	uint16_t bctl;
 
 	switch (pci_get_class(dev)) {
 	case PCIC_DISPLAY:
@@ -72,6 +83,16 @@ vga_pci_probe(device_t dev)
 	default:
 		return (ENXIO);
 	}
+
+	/* Probe default display. */
+	unit = device_get_unit(dev);
+	bdev = device_get_parent(device_get_parent(dev));
+	bctl = pci_read_config(bdev, PCIR_BRIDGECTL_1, 2);
+	if (vga_pci_default_unit < 0 && (bctl & PCIB_BCR_VGA_ENABLE) != 0)
+		vga_pci_default_unit = unit;
+	if (vga_pci_default_unit == unit)
+		device_set_flags(dev, 1);
+
 	device_set_desc(dev, "VGA-compatible display");
 	return (BUS_PROBE_GENERIC);
 }
@@ -84,6 +105,7 @@ vga_pci_attach(device_t dev)
 
 	/* Always create a drm child for now to make it easier on drm. */
 	device_add_child(dev, "drm", -1);
+	device_add_child(dev, "drmn", -1);
 	bus_generic_attach(dev);
 	return (0);
 }
@@ -211,7 +233,7 @@ vga_pci_read_config(device_t dev, device_t child, int reg, int width)
 }
 
 static void
-vga_pci_write_config(device_t dev, device_t child, int reg, 
+vga_pci_write_config(device_t dev, device_t child, int reg,
     uint32_t val, int width)
 {
 
@@ -384,7 +406,6 @@ static device_method_t vga_pci_methods[] = {
 	DEVMETHOD(bus_write_ivar,	vga_pci_write_ivar),
 	DEVMETHOD(bus_setup_intr,	vga_pci_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	vga_pci_teardown_intr),
-
 	DEVMETHOD(bus_alloc_resource,	vga_pci_alloc_resource),
 	DEVMETHOD(bus_release_resource,	vga_pci_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),

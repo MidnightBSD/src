@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993, David Greenman
  * All rights reserved.
@@ -27,13 +26,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/imgact.h,v 1.40.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_IMGACT_H_
 #define	_SYS_IMGACT_H_
 
 #include <sys/uio.h>
+
+#include <vm/vm.h>
 
 #define MAXSHELLCMDLEN	PAGE_SIZE
 
@@ -43,9 +44,11 @@ struct image_args {
 	char *begin_envv;	/* beginning of envv in buf */
 	char *endp;		/* current `end' pointer of arg & env strings */
 	char *fname;            /* pointer to filename of executable (system space) */
+	char *fname_buf;	/* pointer to optional malloc(M_TEMP) buffer */
 	int stringspace;	/* space left in arg & env buffer */
 	int argc;		/* count of argument strings */
 	int envc;		/* count of environment strings */
+	int fd;			/* file descriptor of the executable */
 };
 
 struct image_params {
@@ -56,6 +59,7 @@ struct image_params {
 	struct vattr *attr;	/* attributes of file */
 	const char *image_header; /* head of file to exec */
 	unsigned long entry_addr; /* entry address of target executable */
+	unsigned long reloc_base; /* load address of image */
 	char vmspace_destroyed;	/* flag - we've blown away original vm space */
 	char interpreted;	/* flag - this executable is interpreted */
 	char opened;		/* flag - we have opened executable vnode */
@@ -66,16 +70,28 @@ struct image_params {
 	size_t auxarg_size;
 	struct image_args *args;	/* system call arguments */
 	struct sysentvec *sysent;	/* system entry vector */
+	char *execpath;
+	unsigned long execpathp;
+	char *freepath;
+	unsigned long canary;
+	int canarylen;
+	unsigned long pagesizes;
+	int pagesizeslen;
+	vm_prot_t stack_prot;
 };
 
 #ifdef _KERNEL
 struct sysentvec;
 struct thread;
 
+#define IMGACT_CORE_COMPRESS	0x01
+
+int	exec_alloc_args(struct image_args *);
 int	exec_check_permissions(struct image_params *);
 register_t *exec_copyout_strings(struct image_params *);
+void	exec_free_args(struct image_args *);
 int	exec_new_vmspace(struct image_params *, struct sysentvec *);
-void	exec_setregs(struct thread *, u_long, u_long, u_long);
+void	exec_setregs(struct thread *, struct image_params *, u_long);
 int	exec_shell_imgact(struct image_params *);
 int	exec_copyin_args(struct image_args *, char *, enum uio_seg,
 	char **, char **);

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/acpica_machdep.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Mitsuru IWASAKI
  * All rights reserved.
@@ -30,7 +29,7 @@
 /******************************************************************************
  *
  * Name: acpica_machdep.h - arch-specific defines, etc.
- *       $Revision: 1.3 $
+ *       $Revision: 1.4 $
  *
  *****************************************************************************/
 

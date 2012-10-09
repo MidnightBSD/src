@@ -27,7 +27,7 @@
 #include "opt_compat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_module.c,v 1.52.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_module.c,v 1.52.2.2.2.1 2008/11/25 02:59:2
 
 static MALLOC_DEFINE(M_MODULE, "module", "module data structures");
 
-typedef TAILQ_HEAD(, module) modulelist_t;
 struct module {
 	TAILQ_ENTRY(module)	link;	/* chain together all modules */
 	TAILQ_ENTRY(module)	flink;	/* all modules in a file */
@@ -61,7 +60,7 @@ struct module {
 
 #define MOD_EVENT(mod, type)	(mod)->handler((mod), (type), (mod)->arg)
 
-static modulelist_t modules;
+static TAILQ_HEAD(modulelist, module) modules;
 struct sx modules_sx;
 static int nextid = 1;
 static void module_shutdown(void *, int);
@@ -101,7 +100,7 @@ module_shutdown(void *arg1, int arg2)
 		return;
 	mtx_lock(&Giant);
 	MOD_SLOCK;
-	TAILQ_FOREACH(mod, &modules, link)
+	TAILQ_FOREACH_REVERSE(mod, &modules, modulelist, link)
 		MOD_EVENT(mod, MOD_SHUTDOWN);
 	MOD_SUNLOCK;
 	mtx_unlock(&Giant);
@@ -130,6 +129,21 @@ module_register_init(const void *arg)
 		printf("module_register_init: MOD_LOAD (%s, %p, %p) error"
 		    " %d\n", data->name, (void *)data->evhand, data->priv,
 		    error); 
+	} else {
+		MOD_XLOCK;
+		if (mod->file) {
+			/*
+			 * Once a module is succesfully loaded, move
+			 * it to the head of the module list for this
+			 * linker file.  This resorts the list so that
+			 * when the kernel linker iterates over the
+			 * modules to unload them, it will unload them
+			 * in the reverse order they were loaded.
+			 */
+			TAILQ_REMOVE(&mod->file->modules, mod, flink);
+			TAILQ_INSERT_HEAD(&mod->file->modules, mod, flink);
+		}
+		MOD_XUNLOCK;
 	}
 	mtx_unlock(&Giant);
 }
@@ -196,9 +210,7 @@ module_release(module_t mod)
 		TAILQ_REMOVE(&modules, mod, link);
 		if (mod->file)
 			TAILQ_REMOVE(&mod->file->modules, mod, flink);
-		MOD_XUNLOCK;
 		free(mod, M_MODULE);
-		MOD_XLOCK;
 	}
 }
 
@@ -232,16 +244,25 @@ module_lookupbyid(int modid)
 }
 
 int
-module_unload(module_t mod, int flags)
+module_quiesce(module_t mod)
 {
 	int error;
 
 	mtx_lock(&Giant);
 	error = MOD_EVENT(mod, MOD_QUIESCE);
+	mtx_unlock(&Giant);
 	if (error == EOPNOTSUPP || error == EINVAL)
 		error = 0;
-	if (error == 0 || flags == LINKER_UNLOAD_FORCE)
-		error = MOD_EVENT(mod, MOD_UNLOAD);
+	return (error);
+}
+
+int
+module_unload(module_t mod)
+{
+	int error;
+
+	mtx_lock(&Giant);
+	error = MOD_EVENT(mod, MOD_UNLOAD);
 	mtx_unlock(&Giant);
 	return (error);
 }
@@ -260,6 +281,14 @@ module_getfnext(module_t mod)
 
 	MOD_LOCK_ASSERT;
 	return (TAILQ_NEXT(mod, flink));
+}
+
+const char *
+module_getname(module_t mod)
+{
+
+	MOD_LOCK_ASSERT;
+	return (mod->name);
 }
 
 void
@@ -281,7 +310,7 @@ module_file(module_t mod)
  * Syscalls.
  */
 int
-modnext(struct thread *td, struct modnext_args *uap)
+sys_modnext(struct thread *td, struct modnext_args *uap)
 {
 	module_t mod;
 	int error = 0;
@@ -312,7 +341,7 @@ done2:
 }
 
 int
-modfnext(struct thread *td, struct modfnext_args *uap)
+sys_modfnext(struct thread *td, struct modfnext_args *uap)
 {
 	module_t mod;
 	int error;
@@ -342,7 +371,7 @@ struct module_stat_v1 {
 };
 
 int
-modstat(struct thread *td, struct modstat_args *uap)
+sys_modstat(struct thread *td, struct modstat_args *uap)
 {
 	module_t mod;
 	modspecific_t data;
@@ -395,7 +424,7 @@ modstat(struct thread *td, struct modstat_args *uap)
 }
 
 int
-modfind(struct thread *td, struct modfind_args *uap)
+sys_modfind(struct thread *td, struct modfind_args *uap)
 {
 	int error = 0;
 	char name[MAXMODNAME];
@@ -414,9 +443,9 @@ modfind(struct thread *td, struct modfind_args *uap)
 	return (error);
 }
 
-MODULE_VERSION(kernel, __MidnightBSD_version);
+MODULE_VERSION(kernel, __FreeBSD_version);
 
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 #include <sys/mount.h>
 #include <sys/socket.h>
 #include <compat/freebsd32/freebsd32_util.h>
@@ -425,9 +454,9 @@ MODULE_VERSION(kernel, __MidnightBSD_version);
 
 typedef union modspecific32 {
 	int		intval;
-	u_int32_t	uintval;
+	uint32_t	uintval;
 	int		longval;
-	u_int32_t	ulongval;
+	uint32_t	ulongval;
 } modspecific32_t;
 
 struct module_stat32 {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,10 +27,20 @@
  * SUCH DAMAGE.
  *
  *	@(#)ptrace.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/amd64/include/ptrace.h,v 1.13 2005/01/05 20:17:20 imp Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PTRACE_H_
 #define _MACHINE_PTRACE_H_
+
+#define	__HAVE_PTRACE_MACHDEP
+
+/*
+ * On amd64 (PT_FIRSTMACH + 0) and (PT_FIRSTMACH + 1) are old values for
+ * PT_GETXSTATE and PT_SETXSTATE.  They should not be (re)used.
+ */
+
+#define	PT_GETXSTATE	(PT_FIRSTMACH + 2)
+#define	PT_SETXSTATE	(PT_FIRSTMACH + 3)
 
 #endif

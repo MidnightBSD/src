@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/amr/amr_pci.c,v 1.3 2012/04/12 01:23:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -56,6 +55,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

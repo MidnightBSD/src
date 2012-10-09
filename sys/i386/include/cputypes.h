@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/cputypes.h,v 1.3 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993 Christopher G. Demetriou
  * All rights reserved.
@@ -25,6 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPUTYPES_H_

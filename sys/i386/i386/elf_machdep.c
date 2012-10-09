@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/elf_machdep.c,v 1.22 2007/05/22 02:22:58 kan Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -33,6 +32,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/elf_machdep.c,v 1.22 2007/05/22 02:22:58 k
 #include <sys/exec.h>
 #include <sys/imgact.h>
 #include <sys/linker.h>
+#include <sys/proc.h>
 #include <sys/sysent.h>
 #include <sys/imgact_elf.h>
 #include <sys/syscall.h>
@@ -47,63 +47,87 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/elf_machdep.c,v 1.22 2007/05/22 02:22:58 k
 #include <machine/md_var.h>
 
 struct sysentvec elf32_freebsd_sysvec = {
-	SYS_MAXSYSCALL,
-	sysent,
-	0,
-	0,
-	NULL,
-	0,
-	NULL,
-	NULL,
-	__elfN(freebsd_fixup),
-	sendsig,
-	sigcode,
-	&szsigcode,
-	NULL,
-	"FreeBSD ELF32",
-	__elfN(coredump),
-	NULL,
-	MINSIGSTKSZ,
-	PAGE_SIZE,
-	VM_MIN_ADDRESS,
-	VM_MAXUSER_ADDRESS,
-	USRSTACK,
-	PS_STRINGS,
-	VM_PROT_ALL,
-	exec_copyout_strings,
-	exec_setregs,
-	NULL
+	.sv_size	= SYS_MAXSYSCALL,
+	.sv_table	= sysent,
+	.sv_mask	= 0,
+	.sv_sigsize	= 0,
+	.sv_sigtbl	= NULL,
+	.sv_errsize	= 0,
+	.sv_errtbl	= NULL,
+	.sv_transtrap	= NULL,
+	.sv_fixup	= __elfN(freebsd_fixup),
+	.sv_sendsig	= sendsig,
+	.sv_sigcode	= sigcode,
+	.sv_szsigcode	= &szsigcode,
+	.sv_prepsyscall	= NULL,
+	.sv_name	= "FreeBSD ELF32",
+	.sv_coredump	= __elfN(coredump),
+	.sv_imgact_try	= NULL,
+	.sv_minsigstksz	= MINSIGSTKSZ,
+	.sv_pagesize	= PAGE_SIZE,
+	.sv_minuser	= VM_MIN_ADDRESS,
+	.sv_maxuser	= VM_MAXUSER_ADDRESS,
+	.sv_usrstack	= USRSTACK,
+	.sv_psstrings	= PS_STRINGS,
+	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_strings	= exec_copyout_strings,
+	.sv_setregs	= exec_setregs,
+	.sv_fixlimit	= NULL,
+	.sv_maxssiz	= NULL,
+	.sv_flags	= SV_ABI_FREEBSD | SV_IA32 | SV_ILP32,
+	.sv_set_syscall_retval = cpu_set_syscall_retval,
+	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
+	.sv_syscallnames = syscallnames,
+	.sv_schedtail	= NULL,
 };
 
 static Elf32_Brandinfo freebsd_brand_info = {
-						ELFOSABI_FREEBSD,
-						EM_386,
-						"FreeBSD",
-						NULL,
-						"/libexec/ld-elf.so.1",
-						&elf32_freebsd_sysvec,
-						NULL,
-						BI_CAN_EXEC_DYN,
-					  };
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_386,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/libexec/ld-elf.so.1",
+	.sysvec		= &elf32_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf32_freebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE
+};
 
-SYSINIT(elf32, SI_SUB_EXEC, SI_ORDER_ANY,
+SYSINIT(elf32, SI_SUB_EXEC, SI_ORDER_FIRST,
 	(sysinit_cfunc_t) elf32_insert_brand_entry,
 	&freebsd_brand_info);
 
 static Elf32_Brandinfo freebsd_brand_oinfo = {
-						ELFOSABI_FREEBSD,
-						EM_386,
-						"FreeBSD",
-						NULL,
-						"/usr/libexec/ld-elf.so.1",
-						&elf32_freebsd_sysvec,
-						NULL,
-						BI_CAN_EXEC_DYN,
-					  };
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_386,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/usr/libexec/ld-elf.so.1",
+	.sysvec		= &elf32_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf32_freebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE
+};
 
 SYSINIT(oelf32, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf32_insert_brand_entry,
 	&freebsd_brand_oinfo);
+
+static Elf32_Brandinfo kfreebsd_brand_info = {
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_386,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/lib/ld.so.1",
+	.sysvec		= &elf32_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf32_kfreebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE_MANDATORY
+};
+
+SYSINIT(kelf32, SI_SUB_EXEC, SI_ORDER_ANY,
+	(sysinit_cfunc_t) elf32_insert_brand_entry,
+	&kfreebsd_brand_info);
 
 
 void
@@ -146,7 +170,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 
 	if (local) {
 		if (rtype == R_386_RELATIVE) {	/* A + B */
-			addr = relocbase + addend;
+			addr = elf_relocaddr(lf, relocbase + addend);
 			if (*where != addr)
 				*where = addr;
 		}

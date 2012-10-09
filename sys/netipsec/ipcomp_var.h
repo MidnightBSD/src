@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/ipcomp_var.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ipcomp.h,v 1.8 2000/09/26 07:55:14 itojun Exp $	*/
 
 /*-
@@ -41,6 +41,7 @@
  */
 #define	IPCOMP_ALG_MAX	8
 
+#define	IPCOMPSTAT_VERSION	1
 struct ipcompstat {
 	u_int32_t	ipcomps_hdrops;	/* Packet shorter than header shows */
 	u_int32_t	ipcomps_nopf;	/* Protocol family not supported */
@@ -58,10 +59,16 @@ struct ipcompstat {
 	u_int32_t	ipcomps_pdrops;	/* Packet blocked due to policy */
 	u_int32_t	ipcomps_crypto;	/* "Crypto" processing failure */
 	u_int32_t	ipcomps_hist[IPCOMP_ALG_MAX];/* Per-algorithm op count */
+	u_int32_t	version;	/* Version of this structure. */
+	u_int32_t	ipcomps_threshold; /* Packet < comp. algo. threshold. */
+	u_int32_t	ipcomps_uncompr; /* Compression was useles. */
 };
 
 #ifdef _KERNEL
-extern	int ipcomp_enable;
-extern	struct ipcompstat ipcompstat;
+VNET_DECLARE(int, ipcomp_enable);
+VNET_DECLARE(struct ipcompstat, ipcompstat);
+
+#define	V_ipcomp_enable		VNET(ipcomp_enable)
+#define	V_ipcompstat		VNET(ipcompstat)
 #endif /* _KERNEL */
 #endif /*_NETIPSEC_IPCOMP_VAR_H_*/

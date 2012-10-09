@@ -1,5 +1,5 @@
 /*
- * $Id: kern_gzio.c,v 1.1.1.1 2012-07-21 15:17:31 laffer1 Exp $
+ * $Id: kern_gzio.c,v 1.2 2012-10-09 04:08:16 laffer1 Exp $
  *
  * core_gzip.c -- gzip routines used in compressing user process cores
  *
@@ -12,7 +12,7 @@
  *
  */
 
-/* @(#) $FreeBSD$ */
+/* @(#) $MidnightBSD$ */
 
 #include <sys/param.h>
 #include <sys/proc.h>

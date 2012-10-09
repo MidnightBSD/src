@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/sys/asm_linkage.h,v 1.2 2008/12/03 00:24:33 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *

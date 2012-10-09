@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/npx.h,v 1.3 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,6 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)npx.h	5.3 (Berkeley) 1/18/91
+ * $FreeBSD$
  */
 
 /*
@@ -92,7 +92,7 @@ struct  envxmm {
 	u_int32_t	en_foo;		/* floating operand offset */
 	u_int16_t	en_fos;		/* floating operand segment selector */
 	u_int16_t	en_pad1;	/* padding */
-	u_int32_t	en_mxcsr;	/* SSE sontorol/status register */
+	u_int32_t	en_mxcsr;	/* SSE control/status register */
 	u_int32_t	en_mxcsr_mask;	/* valid bits in mxcsr */
 };
 

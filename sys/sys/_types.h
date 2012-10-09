@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/_types.h,v 1.4 2011/10/15 20:18:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_types.h,v 1.23.2.2 2009/05/20 22:10:34 kmacy Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS__TYPES_H_
@@ -39,6 +38,7 @@
 typedef	__uint32_t	__blksize_t;	/* file block size */
 typedef	__int64_t	__blkcnt_t;	/* file block count */
 typedef	__int32_t	__clockid_t;	/* clock_gettime()... */
+typedef	__uint64_t	__cap_rights_t;	/* capability rights */
 typedef	__uint32_t	__fflags_t;	/* file flags */
 typedef	__uint64_t	__fsblkcnt_t;
 typedef	__uint64_t	__fsfilcnt_t;

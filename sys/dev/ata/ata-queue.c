@@ -1,6 +1,5 @@
-/* $MidnightBSD: src/sys/dev/ata/ata-queue.c,v 1.9 2010/02/06 22:59:54 laffer1 Exp $ */
 /*-
- * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-queue.c,v 1.69.2.3 2011/03/01 18:05:57 jh Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -44,26 +43,37 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/ata-queue.c,v 1.69.2.3 2011/03/01 18:05:57 j
 #include <dev/ata/ata-all.h>
 #include <ata_if.h>
 
+#ifndef ATA_CAM
 /* prototypes */
 static void ata_completed(void *, int);
 static void ata_sort_queue(struct ata_channel *ch, struct ata_request *request);
-static char *ata_skey2str(u_int8_t);
+static const char *ata_skey2str(u_int8_t);
+#endif
 
+#ifndef ATA_CAM
 void
 ata_queue_request(struct ata_request *request)
 {
     struct ata_channel *ch;
+    struct ata_device *atadev = device_get_softc(request->dev);
 
     /* treat request as virgin (this might be an ATA_R_REQUEUE) */
     request->result = request->status = request->error = 0;
 
-    /* check that that the device is still valid */
+    /* Prepare paramers required by low-level code. */
+    request->unit = atadev->unit;
     if (!(request->parent = device_get_parent(request->dev))) {
 	request->result = ENXIO;
 	if (request->callback)
 	    (request->callback)(request);
 	return;
     }
+    if ((atadev->param.config & ATA_PROTO_MASK) == ATA_PROTO_ATAPI_16)
+	request->flags |= ATA_R_ATAPI16;
+    if ((atadev->param.config & ATA_DRQ_MASK) == ATA_DRQ_INTR)
+	request->flags |= ATA_R_ATAPI_INTR;
+    if ((request->flags & ATA_R_ATAPI) == 0)
+	ata_modify_if_48bit(request);
     ch = device_get_softc(request->parent);
     callout_init_mtx(&request->callout, &ch->state_mtx, CALLOUT_RETURNUNLOCKED);
     if (!request->callback && !(request->flags & ATA_R_REQUEUE))
@@ -105,6 +115,7 @@ ata_queue_request(struct ata_request *request)
 	ATA_DEBUG_RQ(request, "wait for completion");
 	if (!dumping &&
 	    sema_timedwait(&request->done, request->timeout * hz * 4)) {
+	    callout_drain(&request->callout);
 	    device_printf(request->dev,
 			  "WARNING - %s taskqueue timeout "
 			  "- completing request directly\n",
@@ -115,7 +126,9 @@ ata_queue_request(struct ata_request *request)
 	sema_destroy(&request->done);
     }
 }
+#endif
 
+#ifndef ATA_CAM
 int
 ata_controlcmd(device_t dev, u_int8_t command, u_int16_t feature,
 	       u_int64_t lba, u_int16_t count)
@@ -145,21 +158,19 @@ ata_controlcmd(device_t dev, u_int8_t command, u_int16_t feature,
     }
     return error;
 }
+#endif
 
+#ifndef ATA_CAM
 int
 ata_atapicmd(device_t dev, u_int8_t *ccb, caddr_t data,
 	     int count, int flags, int timeout)
 {
     struct ata_request *request = ata_alloc_request();
-    struct ata_device *atadev = device_get_softc(dev);
     int error = ENOMEM;
 
     if (request) {
 	request->dev = dev;
-	if ((atadev->param.config & ATA_PROTO_MASK) == ATA_PROTO_ATAPI_12)
-	    bcopy(ccb, request->u.atapi.ccb, 12);
-	else
-	    bcopy(ccb, request->u.atapi.ccb, 16);
+	bcopy(ccb, request->u.atapi.ccb, 16);
 	request->data = data;
 	request->bytecount = count;
 	request->transfersize = min(request->bytecount, 65534);
@@ -172,7 +183,9 @@ ata_atapicmd(device_t dev, u_int8_t *ccb, caddr_t data,
     }
     return error;
 }
+#endif
 
+#ifndef ATA_CAM
 void
 ata_start(device_t dev)
 {
@@ -219,22 +232,21 @@ ata_start(device_t dev)
 		    ata_finish(request);
 		    return;
 		}
-		if (dumping) {
-		    mtx_unlock(&ch->state_mtx);
-		    mtx_unlock(&ch->queue_mtx);
-		    while (ch->running) {
-			ata_interrupt(ch);
-			DELAY(10);
-		    }
-		    return;
-		}       
 	    }
 	    mtx_unlock(&ch->state_mtx);
 	}
     }
     mtx_unlock(&ch->queue_mtx);
+    if (dumping) {
+	while (ch->running) {
+	    ata_interrupt(ch);
+	    DELAY(10);
+	}
+    }
 }
+#endif
 
+#ifndef ATA_CAM
 void
 ata_finish(struct ata_request *request)
 {
@@ -262,7 +274,9 @@ ata_finish(struct ata_request *request)
 	}
     }
 }
+#endif
 
+#ifndef ATA_CAM
 static void
 ata_completed(void *context, int dummy)
 {
@@ -367,9 +381,9 @@ ata_completed(void *context, int dummy)
 			      "\6MEDIA_CHANGED\5NID_NOT_FOUND"
 			      "\4MEDIA_CHANGE_REQEST"
 			      "\3ABORTED\2NO_MEDIA\1ILLEGAL_LENGTH");
-		if ((request->flags & ATA_R_DMA) &&
-		    (request->dmastat & ATA_BMSTAT_ERROR))
-		    printf(" dma=0x%02x", request->dmastat);
+		if ((request->flags & ATA_R_DMA) && request->dma &&
+		    (request->dma->status & ATA_BMSTAT_ERROR))
+		    printf(" dma=0x%02x", request->dma->status);
 		if (!(request->flags & (ATA_R_ATAPI | ATA_R_CONTROL)))
 		    printf(" LBA=%ju", request->u.ata.lba);
 		printf("\n");
@@ -445,8 +459,7 @@ ata_completed(void *context, int dummy)
 	}
 
 	if (!request->result &&
-	     (request->u.atapi.sense.key & ATA_SENSE_KEY_MASK ?
-	     request->u.atapi.sense.key & ATA_SENSE_KEY_MASK : 
+	     (request->u.atapi.sense.key & ATA_SENSE_KEY_MASK ||
 	     request->error))
 	    request->result = EIO;
     }
@@ -495,6 +508,7 @@ ata_completed(void *context, int dummy)
     if (ch)
 	ata_start(ch->dev);
 }
+#endif
 
 void
 ata_timeout(struct ata_request *request)
@@ -512,15 +526,25 @@ ata_timeout(struct ata_request *request)
      */
     if (ch->state == ATA_ACTIVE) {
 	request->flags |= ATA_R_TIMEOUT;
+	if (ch->dma.unload)
+	    ch->dma.unload(request);
+	ch->running = NULL;
+	ch->state = ATA_IDLE;
+#ifdef ATA_CAM
+	ata_cam_end_transaction(ch->dev, request);
+#endif
 	mtx_unlock(&ch->state_mtx);
+#ifndef ATA_CAM
 	ATA_LOCKING(ch->dev, ATA_LF_UNLOCK);
 	ata_finish(request);
+#endif
     }
     else {
 	mtx_unlock(&ch->state_mtx);
     }
 }
 
+#ifndef ATA_CAM
 void
 ata_fail_requests(device_t dev)
 {
@@ -559,7 +583,29 @@ ata_fail_requests(device_t dev)
         ata_finish(request);
     }
 }
+#endif
 
+#ifndef ATA_CAM
+/*
+ * Rudely drop all requests queued to the channel of specified device.
+ * XXX: The requests are leaked, use only in fatal case.
+ */
+void
+ata_drop_requests(device_t dev)
+{
+    struct ata_channel *ch = device_get_softc(device_get_parent(dev));
+    struct ata_request *request, *tmp;
+
+    mtx_lock(&ch->queue_mtx);
+    TAILQ_FOREACH_SAFE(request, &ch->ata_queue, chain, tmp) {
+	TAILQ_REMOVE(&ch->ata_queue, request, chain);
+	request->result = ENXIO;
+    }
+    mtx_unlock(&ch->queue_mtx);
+}
+#endif
+
+#ifndef ATA_CAM
 static u_int64_t
 ata_get_lba(struct ata_request *request)
 {
@@ -581,7 +627,9 @@ ata_get_lba(struct ata_request *request)
     else
 	return request->u.ata.lba;
 }
+#endif
 
+#ifndef ATA_CAM
 static void
 ata_sort_queue(struct ata_channel *ch, struct ata_request *request)
 {
@@ -634,8 +682,9 @@ ata_sort_queue(struct ata_channel *ch, struct ata_request *request)
 	ch->freezepoint = request;
     TAILQ_INSERT_AFTER(&ch->ata_queue, this, request, chain);
 }
+#endif
 
-char *
+const char *
 ata_cmd2str(struct ata_request *request)
 {
     static char buffer[20];
@@ -705,11 +754,13 @@ ata_cmd2str(struct ata_request *request)
 	case 0x24: return ("READ48");
 	case 0x25: return ("READ_DMA48");
 	case 0x26: return ("READ_DMA_QUEUED48");
+	case 0x27: return ("READ_NATIVE_MAX_ADDRESS48");
 	case 0x29: return ("READ_MUL48");
 	case 0x30: return ("WRITE");
 	case 0x34: return ("WRITE48");
 	case 0x35: return ("WRITE_DMA48");
 	case 0x36: return ("WRITE_DMA_QUEUED48");
+	case 0x37: return ("SET_MAX_ADDRESS48");
 	case 0x39: return ("WRITE_MUL48");
 	case 0x70: return ("SEEK");
 	case 0xa0: return ("PACKET_CMD");
@@ -738,13 +789,17 @@ ata_cmd2str(struct ata_request *request)
 	    }
 	    sprintf(buffer, "SETFEATURES 0x%02x", request->u.ata.feature);
 	    return buffer;
+	case 0xf5: return ("SECURITY_FREE_LOCK");
+	case 0xf8: return ("READ_NATIVE_MAX_ADDRESS");
+	case 0xf9: return ("SET_MAX_ADDRESS");
 	}
     }
     sprintf(buffer, "unknown CMD (0x%02x)", request->u.ata.command);
     return buffer;
 }
 
-static char *
+#ifndef ATA_CAM
+static const char *
 ata_skey2str(u_int8_t skey)
 {
     switch (skey) {
@@ -767,3 +822,4 @@ ata_skey2str(u_int8_t skey)
     default: return("UNKNOWN");
     }
 }
+#endif

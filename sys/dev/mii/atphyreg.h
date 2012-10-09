@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/atphyreg.h,v 1.1.2.1 2008/06/19 03:56:39 yongari Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_DEV_MII_ATPHYREG_H_

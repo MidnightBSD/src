@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/segments.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz
  * Copyright (c) 1990 The Regents of the University of California.

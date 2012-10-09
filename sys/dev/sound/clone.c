@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/clone.c,v 1.4 2007/06/14 11:10:21 ariff Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -32,6 +32,10 @@
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/proc.h>
+
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
 
 #if defined(SND_DIAGNOSTIC) || defined(SND_DEBUG)
 #include <dev/sound/pcm/sound.h>
@@ -88,9 +92,9 @@ struct snd_clone {
 #define SND_CLONE_ASSERT(x, y)		do {			\
 	if (!(x))						\
 		panic y;					\
-} while(0)
+} while (0)
 #else
-#define SND_CLONE_ASSERT(x...)		KASSERT(x)
+#define SND_CLONE_ASSERT(...)		KASSERT(__VA_ARGS__)
 #endif
 
 /*

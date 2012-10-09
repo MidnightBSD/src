@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/md_var.h,v 1.6 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995 Bruce D. Evans.
  * All rights reserved.
@@ -27,6 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MD_VAR_H_

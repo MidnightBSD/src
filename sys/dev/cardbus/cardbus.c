@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cardbus/cardbus.c,v 1.66.2.2 2009/06/10 19:21:23 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -80,10 +80,6 @@ static void	cardbus_driver_added(device_t cbdev, driver_t *driver);
 static int	cardbus_probe(device_t cbdev);
 static int	cardbus_read_ivar(device_t cbdev, device_t child, int which,
 		    uintptr_t *result);
-static void	cardbus_release_all_resources(device_t cbdev,
-		    struct cardbus_devinfo *dinfo);
-static int	cardbus_write_ivar(device_t cbdev, device_t child, int which,
-		    uintptr_t value);
 
 /************************************************************************/
 /* Probe/Attach								*/
@@ -207,7 +203,7 @@ cardbus_attach_card(device_t cbdev)
 	}
 	if (cardattached > 0)
 		return (0);
-	POWER_DISABLE_SOCKET(brdev, cbdev);
+/*	POWER_DISABLE_SOCKET(brdev, cbdev); */
 	return (ENOENT);
 }
 
@@ -221,7 +217,6 @@ cardbus_detach_card(device_t cbdev)
 
 	if (device_get_children(cbdev, &devlist, &numdevs) != 0)
 		return (ENOENT);
-
 	if (numdevs == 0) {
 		free(devlist, M_TEMP);
 		return (ENOENT);
@@ -229,16 +224,11 @@ cardbus_detach_card(device_t cbdev)
 
 	for (tmp = 0; tmp < numdevs; tmp++) {
 		struct cardbus_devinfo *dinfo = device_get_ivars(devlist[tmp]);
-		int status = device_get_state(devlist[tmp]);
 
 		if (dinfo->pci.cfg.dev != devlist[tmp])
 			device_printf(cbdev, "devinfo dev mismatch\n");
-		if (status == DS_ATTACHED || status == DS_BUSY)
-			device_detach(devlist[tmp]);
-		cardbus_release_all_resources(cbdev, dinfo);
 		cardbus_device_destroy(dinfo);
-		device_delete_child(cbdev, devlist[tmp]);
-		pci_freecfg((struct pci_devinfo *)dinfo);
+		pci_delete_child(cbdev, devlist[tmp]);
 	}
 	POWER_DISABLE_SOCKET(device_get_parent(cbdev), cbdev);
 	free(devlist, M_TEMP);
@@ -275,33 +265,15 @@ cardbus_driver_added(device_t cbdev, driver_t *driver)
 			continue;
 		dinfo = device_get_ivars(dev);
 		pci_print_verbose(&dinfo->pci);
+		if (bootverbose)
+			printf("pci%d:%d:%d:%d: reprobing on driver added\n",
+			    dinfo->pci.cfg.domain, dinfo->pci.cfg.bus,
+			    dinfo->pci.cfg.slot, dinfo->pci.cfg.func);
 		pci_cfg_restore(dinfo->pci.cfg.dev, &dinfo->pci);
 		if (device_probe_and_attach(dev) != 0)
 			pci_cfg_save(dev, &dinfo->pci, 1);
 	}
 	free(devlist, M_TEMP);
-}
-
-static void
-cardbus_release_all_resources(device_t cbdev, struct cardbus_devinfo *dinfo)
-{
-	struct resource_list_entry *rle;
-
-	/* Free all allocated resources */
-	STAILQ_FOREACH(rle, &dinfo->pci.resources, link) {
-		if (rle->res) {
-			BUS_RELEASE_RESOURCE(device_get_parent(cbdev),
-			    cbdev, rle->type, rle->rid, rle->res);
-			rle->res = NULL;
-			/*
-			 * zero out config so the card won't acknowledge
-			 * access to the space anymore. XXX doesn't handle
-			 * 64-bit bars.
-			 */
-			pci_write_config(dinfo->pci.cfg.dev, rle->rid, 0, 4);
-		}
-	}
-	resource_list_free(&dinfo->pci.resources);
 }
 
 /************************************************************************/
@@ -335,12 +307,6 @@ cardbus_read_ivar(device_t cbdev, device_t child, int which, uintptr_t *result)
 	return 0;
 }
 
-static int
-cardbus_write_ivar(device_t cbdev, device_t child, int which, uintptr_t value)
-{
-	return(pci_write_ivar(cbdev, child, which, value));
-}
-
 static device_method_t cardbus_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		cardbus_probe),
@@ -350,8 +316,8 @@ static device_method_t cardbus_methods[] = {
 	DEVMETHOD(device_resume,	cardbus_resume),
 
 	/* Bus interface */
+	DEVMETHOD(bus_get_dma_tag,	bus_generic_get_dma_tag),
 	DEVMETHOD(bus_read_ivar,	cardbus_read_ivar),
-	DEVMETHOD(bus_write_ivar,	cardbus_write_ivar),
 	DEVMETHOD(bus_driver_added,	cardbus_driver_added),
 
 	/* Card Interface */

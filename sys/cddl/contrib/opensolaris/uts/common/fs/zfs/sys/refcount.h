@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/refcount.h,v 1.2 2008/12/03 00:24:32 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -20,15 +19,14 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef	_SYS_REFCOUNT_H
 #define	_SYS_REFCOUNT_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
+#include <sys/cdefs.h>
+#include <sys/types.h>
 #include_next <sys/refcount.h>
 #include <sys/list.h>
 #include <sys/zfs_context.h>
@@ -44,7 +42,7 @@ extern "C" {
  */
 #define	FTAG ((char *)__func__)
 
-#if defined(DEBUG) || !defined(_KERNEL)
+#ifdef	ZFS_DEBUG
 typedef struct reference {
 	list_node_t ref_link;
 	void *ref_holder;
@@ -60,7 +58,7 @@ typedef struct refcount {
 	int64_t rc_removed_count;
 } refcount_t;
 
-/* Note: refcount_t should be initialized to zero before use. */
+/* Note: refcount_t must be initialized with refcount_create() */
 
 void refcount_create(refcount_t *rc);
 void refcount_destroy(refcount_t *rc);
@@ -71,11 +69,12 @@ int64_t refcount_add(refcount_t *rc, void *holder_tag);
 int64_t refcount_remove(refcount_t *rc, void *holder_tag);
 int64_t refcount_add_many(refcount_t *rc, uint64_t number, void *holder_tag);
 int64_t refcount_remove_many(refcount_t *rc, uint64_t number, void *holder_tag);
+void refcount_transfer(refcount_t *dst, refcount_t *src);
 
 void refcount_sysinit(void);
 void refcount_fini(void);
 
-#else /* DEBUG */
+#else	/* ZFS_DEBUG */
 
 typedef struct refcount {
 	uint64_t rc_count;
@@ -92,11 +91,16 @@ typedef struct refcount {
 	atomic_add_64_nv(&(rc)->rc_count, number)
 #define	refcount_remove_many(rc, number, holder) \
 	atomic_add_64_nv(&(rc)->rc_count, -number)
+#define	refcount_transfer(dst, src) { \
+	uint64_t __tmp = (src)->rc_count; \
+	atomic_add_64(&(src)->rc_count, -__tmp); \
+	atomic_add_64(&(dst)->rc_count, __tmp); \
+}
 
 #define	refcount_sysinit()
 #define	refcount_fini()
 
-#endif /* DEBUG */
+#endif	/* ZFS_DEBUG */
 
 #ifdef	__cplusplus
 }

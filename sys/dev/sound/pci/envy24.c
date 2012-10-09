@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 2001 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
  * All rights reserved.
  *
@@ -20,10 +20,14 @@
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHERIN CONTRACT, STRICT
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
  */
+
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
 
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
@@ -35,7 +39,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/envy24.c,v 1.13.2.2 2009/08/15 15:48:10 stas Exp $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 MALLOC_DEFINE(M_ENVY24, "envy24", "envy24 audio");
 
@@ -51,7 +55,7 @@ struct sc_info;
 
 #define ENVY24_TIMEOUT 1000
 
-#define ENVY24_DEFAULT_FORMAT (AFMT_STEREO | AFMT_S16_LE)
+#define ENVY24_DEFAULT_FORMAT	SND_FORMAT(AFMT_S16_LE, 2, 0)
 
 #define ENVY24_NAMELEN 32
 
@@ -187,10 +191,10 @@ static void envy24_r32sl(struct sc_chinfo *);
 /* channel interface */
 static void *envy24chan_init(kobj_t, void *, struct snd_dbuf *, struct pcm_channel *, int);
 static int envy24chan_setformat(kobj_t, void *, u_int32_t);
-static int envy24chan_setspeed(kobj_t, void *, u_int32_t);
-static int envy24chan_setblocksize(kobj_t, void *, u_int32_t);
+static u_int32_t envy24chan_setspeed(kobj_t, void *, u_int32_t);
+static u_int32_t envy24chan_setblocksize(kobj_t, void *, u_int32_t);
 static int envy24chan_trigger(kobj_t, void *, int);
-static int envy24chan_getptr(kobj_t, void *);
+static u_int32_t envy24chan_getptr(kobj_t, void *);
 static struct pcmchan_caps *envy24chan_getcaps(kobj_t, void *);
 
 /* mixer interface */
@@ -278,7 +282,7 @@ static struct cfg_info cfg_table[] = {
 		"Envy24 audio (M Audio Delta Dio 2496)",
 		0x1412, 0xd631,
 		0x10, 0x80, 0xf0, 0x03,
-		0xff, 0x00, 0x00,
+		0x02, 0xc0, 0xfd,
 		0x10, 0x20, 0x40, 0x00, 0x00,
 		0x00,
 		&delta_codec,
@@ -301,6 +305,51 @@ static struct cfg_info cfg_table[] = {
 		0x00,
  		&delta_codec,
  	},
+        {
+                "Envy24 audio (M Audio Delta 66)",
+                0x1412, 0xd632,
+                0x15, 0x80, 0xf0, 0x03,
+                0x02, 0xc0, 0xfd,
+                0x10, 0x20, 0x40, 0x00, 0x00,
+                0x00,
+                &delta_codec,
+        },
+        {
+                "Envy24 audio (M Audio Delta 44)",
+                0x1412, 0xd633,
+                0x15, 0x80, 0xf0, 0x00,
+                0x02, 0xc0, 0xfd,
+                0x10, 0x20, 0x40, 0x00, 0x00,
+                0x00,
+                &delta_codec,
+        },
+        {
+                "Envy24 audio (M Audio Delta 1010)",
+                0x1412, 0xd630,
+                0x1f, 0x80, 0xf0, 0x03,
+                0x22, 0xd0, 0xdd,
+                0x10, 0x20, 0x40, 0x00, 0x00,
+                0x00,
+                &delta_codec,
+        },
+        {
+                "Envy24 audio (M Audio Delta 1010LT)",
+                0x1412, 0xd63b,
+                0x1f, 0x80, 0x72, 0x03,
+                0x04, 0x7e, 0xfb,
+                0x08, 0x02, 0x70, 0x00, 0x00,
+                0x00,
+                &delta_codec,
+        },
+        {
+                "Envy24 audio (Terratec EWX 2496)",
+                0x153b, 0x1130,
+                0x10, 0x80, 0xf0, 0x03,
+                0xc0, 0x3f, 0x3f,
+                0x10, 0x20, 0x01, 0x01, 0x00,
+                0x00,
+                &delta_codec,
+        },
 	{
 		"Envy24 audio (Generic)",
 		0, 0,
@@ -313,16 +362,16 @@ static struct cfg_info cfg_table[] = {
 };
 
 static u_int32_t envy24_recfmt[] = {
-	AFMT_STEREO | AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S32_LE,
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
+	SND_FORMAT(AFMT_S32_LE, 2, 0),
 	0
 };
 static struct pcmchan_caps envy24_reccaps = {8000, 96000, envy24_recfmt, 0};
 
 static u_int32_t envy24_playfmt[] = {
-	AFMT_STEREO | AFMT_U8,
-	AFMT_STEREO | AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S32_LE,
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
+	SND_FORMAT(AFMT_S32_LE, 2, 0),
 	0
 };
 
@@ -335,15 +384,15 @@ struct envy24_emldma {
 };
 
 static struct envy24_emldma envy24_pemltab[] = {
-	{AFMT_STEREO | AFMT_U8, envy24_p8u, 2},
-	{AFMT_STEREO | AFMT_S16_LE, envy24_p16sl, 4},
-	{AFMT_STEREO | AFMT_S32_LE, envy24_p32sl, 8},
+	{SND_FORMAT(AFMT_U8, 2, 0), envy24_p8u, 2},
+	{SND_FORMAT(AFMT_S16_LE, 2, 0), envy24_p16sl, 4},
+	{SND_FORMAT(AFMT_S32_LE, 2, 0), envy24_p32sl, 8},
 	{0, NULL, 0}
 };
 
 static struct envy24_emldma envy24_remltab[] = {
-	{AFMT_STEREO | AFMT_S16_LE, envy24_r16sl, 4},
-	{AFMT_STEREO | AFMT_S32_LE, envy24_r32sl, 8},
+	{SND_FORMAT(AFMT_S16_LE, 2, 0), envy24_r16sl, 4},
+	{SND_FORMAT(AFMT_S32_LE, 2, 0), envy24_r32sl, 8},
 	{0, NULL, 0}
 };
 
@@ -685,7 +734,7 @@ envy24_wrcd(kobj_t obj, void *devinfo, int regno, u_int16_t data)
 static kobj_method_t envy24_ac97_methods[] = {
 	KOBJMETHOD(ac97_read,	envy24_rdcd),
 	KOBJMETHOD(ac97_write,	envy24_wrcd),
-	{0, 0}
+	KOBJMETHOD_END
 };
 AC97_DECLARE(envy24_ac97);
 #endif
@@ -1042,7 +1091,7 @@ static struct {
 	{0, 0x10}
 };
 
-static int
+static u_int32_t
 envy24_setspeed(struct sc_info *sc, u_int32_t speed) {
 	u_int32_t code;
 	int i = 0;
@@ -1646,7 +1695,7 @@ envy24chan_setformat(kobj_t obj, void *data, u_int32_t format)
   start triggerd, some other channel is running, and that channel's
   speed isn't same with, then trigger function will fail.
 */
-static int
+static u_int32_t
 envy24chan_setspeed(kobj_t obj, void *data, u_int32_t speed)
 {
 	struct sc_chinfo *ch = data;
@@ -1671,7 +1720,7 @@ envy24chan_setspeed(kobj_t obj, void *data, u_int32_t speed)
 	return ch->speed;
 }
 
-static int
+static u_int32_t
 envy24chan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct sc_chinfo *ch = data;
@@ -1826,13 +1875,12 @@ fail:
 	return (error);
 }
 
-static int
+static u_int32_t
 envy24chan_getptr(kobj_t obj, void *data)
 {
 	struct sc_chinfo *ch = data;
 	struct sc_info *sc = ch->parent;
-	u_int32_t ptr;
-	int rtn;
+	u_int32_t ptr, rtn;
 
 #if(0)
 	device_printf(sc->dev, "envy24chan_getptr()\n");
@@ -1886,7 +1934,7 @@ static kobj_method_t envy24chan_methods[] = {
 	KOBJMETHOD(channel_trigger,		envy24chan_trigger),
 	KOBJMETHOD(channel_getptr,		envy24chan_getptr),
 	KOBJMETHOD(channel_getcaps,		envy24chan_getcaps),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(envy24chan);
 
@@ -2006,7 +2054,7 @@ static kobj_method_t envy24mixer_methods[] = {
 	KOBJMETHOD(mixer_uninit,	envy24mixer_uninit),
 	KOBJMETHOD(mixer_set,		envy24mixer_set),
 	KOBJMETHOD(mixer_setrecsrc,	envy24mixer_setrecsrc),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 MIXER_DECLARE(envy24mixer);
 

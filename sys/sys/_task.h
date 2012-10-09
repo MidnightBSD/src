@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_task.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS__TASK_H_
@@ -37,15 +36,19 @@
  * taskqueue_run().  The first argument is taken from the 'ta_context'
  * field of struct task and the second argument is a count of how many
  * times the task was enqueued before the call to taskqueue_run().
+ *
+ * List of locks	 
+ * (c)	const after init	 
+ * (q)	taskqueue lock
  */
 typedef void task_fn_t(void *context, int pending);
 
 struct task {
-	STAILQ_ENTRY(task) ta_link;	/* link for queue */
-	u_short	ta_pending;		/* count times queued */
-	u_short	ta_priority;		/* Priority */
-	task_fn_t *ta_func;		/* task handler */
-	void	*ta_context;		/* argument for handler */
+	STAILQ_ENTRY(task) ta_link;	/* (q) link for queue */
+	u_short	ta_pending;		/* (q) count times queued */
+	u_short	ta_priority;		/* (c) Priority */
+	task_fn_t *ta_func;		/* (c) task handler */
+	void	*ta_context;		/* (c) argument for handler */
 };
 
 #endif /* !_SYS__TASK_H_ */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 Kenneth D. Merry.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/sys/tiio.h,v 1.1.32.1 2008/11/25 02:59:29 kensmith Exp $
+ *	$MidnightBSD$
  */
 /*
  * The ti_stats structure below is from code with the following copyright, 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/legacy.c,v 1.63 2007/09/30 11:05:16 marius Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This code implements a system driver for legacy systems that do not
@@ -53,28 +52,29 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/legacy.c,v 1.63 2007/09/30 11:05:16 marius
 #include <i386/bios/mca_machdep.h>
 #endif
 
+#include <machine/clock.h>
 #include <machine/legacyvar.h>
 #include <machine/resource.h>
 
 static MALLOC_DEFINE(M_LEGACYDEV, "legacydrv", "legacy system device");
 struct legacy_device {
-	int			lg_pcibus;
+	int	lg_pcibus;
+	int	lg_pcislot;
+	int	lg_pcifunc;
 };
 
 #define DEVTOAT(dev)	((struct legacy_device *)device_get_ivars(dev))
 
-static void legacy_identify(driver_t *driver, device_t parent);
 static	int legacy_probe(device_t);
 static	int legacy_attach(device_t);
 static	int legacy_print_child(device_t, device_t);
-static device_t legacy_add_child(device_t bus, int order, const char *name,
+static device_t legacy_add_child(device_t bus, u_int order, const char *name,
 				int unit);
 static	int legacy_read_ivar(device_t, device_t, int, uintptr_t *);
 static	int legacy_write_ivar(device_t, device_t, int, uintptr_t);
 
 static device_method_t legacy_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_identify,	legacy_identify),
 	DEVMETHOD(device_probe,		legacy_probe),
 	DEVMETHOD(device_attach,	legacy_attach),
 	DEVMETHOD(device_detach,	bus_generic_detach),
@@ -88,6 +88,7 @@ static device_method_t legacy_methods[] = {
 	DEVMETHOD(bus_read_ivar,	legacy_read_ivar),
 	DEVMETHOD(bus_write_ivar,	legacy_write_ivar),
 	DEVMETHOD(bus_alloc_resource,	bus_generic_alloc_resource),
+	DEVMETHOD(bus_adjust_resource,	bus_generic_adjust_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
@@ -106,29 +107,10 @@ static devclass_t legacy_devclass;
 
 DRIVER_MODULE(legacy, nexus, legacy_driver, legacy_devclass, 0, 0);
 
-static void
-legacy_identify(driver_t *driver, device_t parent)
-{
-
-	/*
-	 * Add child device with order of 11 so it gets probed
-	 * after ACPI (which is at order 10).
-	 */
-	if (BUS_ADD_CHILD(parent, 11, "legacy", 0) == NULL)
-		panic("legacy: could not attach");
-}
-
 static int
 legacy_probe(device_t dev)
 {
-	device_t acpi;
 
-	/*
-	 * Fail to probe if ACPI is ok.
-	 */
-	acpi = devclass_get_device(devclass_find("acpi"), 0);
-	if (acpi != NULL && device_is_alive(acpi))
-		return (ENXIO);
 	device_set_desc(dev, "legacy system");
 	device_quiet(dev);
 	return (0);
@@ -138,20 +120,10 @@ static int
 legacy_attach(device_t dev)
 {
 	device_t child;
-	int i;
-
-	/* First, attach the CPU pseudo-driver. */
-	for (i = 0; i <= mp_maxid; i++)
-		if (!CPU_ABSENT(i)) {
-			child = BUS_ADD_CHILD(dev, 0, "cpu", i);
-			if (child == NULL)
-				panic("legacy_attach cpu");
-			device_probe_and_attach(child);
-		}
 
 	/*
-	 * Second, let our child driver's identify any child devices that
-	 * they can find.  Once that is done attach any devices that we
+	 * Let our child drivers identify any child devices that they
+	 * can find.  Once that is done attach any devices that we
 	 * found.
 	 */
 	bus_generic_probe(dev);
@@ -202,7 +174,7 @@ legacy_print_child(device_t bus, device_t child)
 }
 
 static device_t
-legacy_add_child(device_t bus, int order, const char *name, int unit)
+legacy_add_child(device_t bus, u_int order, const char *name, int unit)
 {
 	device_t child;
 	struct legacy_device *atdev;
@@ -212,6 +184,8 @@ legacy_add_child(device_t bus, int order, const char *name, int unit)
 	if (atdev == NULL)
 		return(NULL);
 	atdev->lg_pcibus = -1;
+	atdev->lg_pcislot = -1;
+	atdev->lg_pcifunc = -1;
 
 	child = device_add_child_ordered(bus, order, name, unit);
 	if (child == NULL)
@@ -235,6 +209,12 @@ legacy_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 	case LEGACY_IVAR_PCIBUS:
 		*result = atdev->lg_pcibus;
 		break;
+	case LEGACY_IVAR_PCISLOT:
+		*result = atdev->lg_pcislot;
+		break;
+	case LEGACY_IVAR_PCIFUNC:
+		*result = atdev->lg_pcifunc;
+		break;
 	default:
 		return ENOENT;
 	}
@@ -253,6 +233,12 @@ legacy_write_ivar(device_t dev, device_t child, int which, uintptr_t value)
 	case LEGACY_IVAR_PCIBUS:
 		atdev->lg_pcibus = value;
 		break;
+	case LEGACY_IVAR_PCISLOT:
+		atdev->lg_pcislot = value;
+		break;
+	case LEGACY_IVAR_PCIFUNC:
+		atdev->lg_pcifunc = value;
+		break;
 	default:
 		return ENOENT;
 	}
@@ -263,9 +249,10 @@ legacy_write_ivar(device_t dev, device_t child, int which, uintptr_t value)
  * Legacy CPU attachment when ACPI is not available.  Drivers like
  * cpufreq(4) hang off this.
  */
+static void	cpu_identify(driver_t *driver, device_t parent);
 static int	cpu_read_ivar(device_t dev, device_t child, int index,
 		    uintptr_t *result);
-static device_t cpu_add_child(device_t bus, int order, const char *name,
+static device_t cpu_add_child(device_t bus, u_int order, const char *name,
 		    int unit);
 static struct resource_list *cpu_get_rlist(device_t dev, device_t child);
 
@@ -276,6 +263,7 @@ struct cpu_device {
 
 static device_method_t cpu_methods[] = {
 	/* Device interface */
+	DEVMETHOD(device_identify,	cpu_identify),
 	DEVMETHOD(device_probe,		bus_generic_probe),
 	DEVMETHOD(device_attach,	bus_generic_attach),
 	DEVMETHOD(device_detach,	bus_generic_detach),
@@ -286,19 +274,17 @@ static device_method_t cpu_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_add_child,	cpu_add_child),
 	DEVMETHOD(bus_read_ivar,	cpu_read_ivar),
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_get_resource_list, cpu_get_rlist),
 	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
 	DEVMETHOD(bus_set_resource,	bus_generic_rl_set_resource),
 	DEVMETHOD(bus_alloc_resource,	bus_generic_rl_alloc_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
-	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t cpu_driver = {
@@ -309,8 +295,26 @@ static driver_t cpu_driver = {
 static devclass_t cpu_devclass;
 DRIVER_MODULE(cpu, legacy, cpu_driver, cpu_devclass, 0, 0);
 
+static void
+cpu_identify(driver_t *driver, device_t parent)
+{
+	device_t child;
+	int i;
+
+	/*
+	 * Attach a cpuX device for each CPU.  We use an order of 150
+	 * so that these devices are attached after the Host-PCI
+	 * bridges (which are added at order 100).
+	 */
+	CPU_FOREACH(i) {
+		child = BUS_ADD_CHILD(parent, 150, "cpu", i);
+		if (child == NULL)
+			panic("legacy_attach cpu");
+	}
+}
+
 static device_t
-cpu_add_child(device_t bus, int order, const char *name, int unit)
+cpu_add_child(device_t bus, u_int order, const char *name, int unit)
 {
 	struct cpu_device *cd;
 	device_t child;
@@ -346,9 +350,20 @@ cpu_read_ivar(device_t dev, device_t child, int index, uintptr_t *result)
 {
 	struct cpu_device *cpdev;
 
-	if (index != CPU_IVAR_PCPU)
+	switch (index) {
+	case CPU_IVAR_PCPU:
+		cpdev = device_get_ivars(child);
+		*result = (uintptr_t)cpdev->cd_pcpu;
+		break;
+	case CPU_IVAR_NOMINAL_MHZ:
+		if (tsc_is_invariant) {
+			*result = (uintptr_t)(atomic_load_acq_64(&tsc_freq) /
+			    1000000);
+			break;
+		}
+		/* FALLTHROUGH */
+	default:
 		return (ENOENT);
-	cpdev = device_get_ivars(child);
-	*result = (uintptr_t)cpdev->cd_pcpu;
+	}
 	return (0);
 }

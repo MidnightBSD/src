@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/apicvar.h,v 1.4 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_xxx.c,v 1.49 2007/03/05 13:10:57 rwatson Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 
@@ -102,9 +102,13 @@ ogethostid(td, uap)
 	struct thread *td;
 	struct ogethostid_args *uap;
 {
+	size_t len = sizeof(long);
+	int name[2];
 
-	*(long *)(td->td_retval) = hostid;
-	return (0);
+	name[0] = CTL_KERN;
+	name[1] = KERN_HOSTID;
+	return (kernel_sysctl(td, name, 2, (long *)td->td_retval, &len,
+	    NULL, 0, NULL, 0));
 }
 #endif /* COMPAT_43 */
 
@@ -120,15 +124,12 @@ osethostid(td, uap)
 	struct thread *td;
 	struct osethostid_args *uap;
 {
-	int error;
+	int name[2];
 
-	error = priv_check(td, PRIV_SETHOSTID);
-	if (error)
-		return (error);
-	mtx_lock(&Giant);
-	hostid = uap->hostid;
-	mtx_unlock(&Giant);
-	return (0);
+	name[0] = CTL_KERN;
+	name[1] = KERN_HOSTID;
+	return (kernel_sysctl(td, name, 2, NULL, NULL, &uap->hostid,
+	    sizeof(uap->hostid), NULL, 0));
 }
 
 int
@@ -347,8 +348,9 @@ ogetkerninfo(struct thread *td, struct getkerninfo_args *uap)
 }
 #endif /* COMPAT_43 */
 
+#ifdef COMPAT_FREEBSD4
 /*
- * This is the FreeBSD-1.1 compatable uname(2) interface.  These days it is
+ * This is the FreeBSD-1.1 compatible uname(2) interface.  These days it is
  * done in libc as a wrapper around a bunch of sysctl's.  This must maintain
  * the old 1.1 binary ABI.
  */
@@ -357,14 +359,12 @@ ogetkerninfo(struct thread *td, struct getkerninfo_args *uap)
 #endif
 #ifndef _SYS_SYSPROTO_H_
 struct uname_args {
-        struct utsname  *name;
+	struct utsname  *name;
 };
 #endif
 /* ARGSUSED */
 int
-uname(td, uap)
-	struct thread *td;
-	struct uname_args *uap;
+freebsd4_uname(struct thread *td, struct freebsd4_uname_args *uap)
 {
 	int name[2], error;
 	size_t len;
@@ -432,54 +432,40 @@ uname(td, uap)
 
 #ifndef _SYS_SYSPROTO_H_
 struct getdomainname_args {
-        char    *domainname;
-        int     len;
+	char    *domainname;
+	int     len;
 };
 #endif
 /* ARGSUSED */
 int
-getdomainname(td, uap)
-        struct thread *td;
-        struct getdomainname_args *uap;
+freebsd4_getdomainname(struct thread *td,
+    struct freebsd4_getdomainname_args *uap)
 {
-	int domainnamelen;
-	int error;
+	int name[2];
+	size_t len = uap->len;
 
-	mtx_lock(&Giant);
-	domainnamelen = strlen(domainname) + 1;
-	if ((u_int)uap->len > domainnamelen)
-		uap->len = domainnamelen;
-	error = copyout(domainname, uap->domainname, uap->len);
-	mtx_unlock(&Giant);
-	return (error);
+	name[0] = CTL_KERN;
+	name[1] = KERN_NISDOMAINNAME;
+	return (userland_sysctl(td, name, 2, uap->domainname, &len,
+	    1, 0, 0, 0, 0));
 }
 
 #ifndef _SYS_SYSPROTO_H_
 struct setdomainname_args {
-        char    *domainname;
-        int     len;
+	char    *domainname;
+	int     len;
 };
 #endif
 /* ARGSUSED */
 int
-setdomainname(td, uap)
-        struct thread *td;
-        struct setdomainname_args *uap;
+freebsd4_setdomainname(struct thread *td,
+    struct freebsd4_setdomainname_args *uap)
 {
-        int error, domainnamelen;
+	int name[2];
 
-	error = priv_check(td, PRIV_SETDOMAINNAME);
-	if (error)
-		return (error);
-	mtx_lock(&Giant);
-        if ((u_int)uap->len > sizeof (domainname) - 1) {
-		error = EINVAL;
-		goto done2;
-	}
-        domainnamelen = uap->len;
-        error = copyin(uap->domainname, domainname, uap->len);
-        domainname[domainnamelen] = 0;
-done2:
-	mtx_unlock(&Giant);
-        return (error);
+	name[0] = CTL_KERN;
+	name[1] = KERN_NISDOMAINNAME;
+	return (userland_sysctl(td, name, 2, 0, 0, 0, uap->domainname,
+	    uap->len, 0, 0));
 }
+#endif /* COMPAT_FREEBSD4 */

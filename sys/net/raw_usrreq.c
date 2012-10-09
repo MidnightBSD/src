@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_usrreq.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/raw_usrreq.c,v 1.44.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -45,7 +45,9 @@
 #include <sys/sx.h>
 #include <sys/systm.h>
 
+#include <net/if.h>
 #include <net/raw_cb.h>
+#include <net/vnet.h>
 
 MTX_SYSINIT(rawcb_mtx, &rawcb_mtx, "rawcb", MTX_DEF);
 
@@ -56,7 +58,7 @@ void
 raw_init(void)
 {
 
-	LIST_INIT(&rawcb_list);
+	LIST_INIT(&V_rawcb_list);
 }
 
 /*
@@ -69,17 +71,27 @@ raw_init(void)
 void
 raw_input(struct mbuf *m0, struct sockproto *proto, struct sockaddr *src)
 {
+
+	return (raw_input_ext(m0, proto, src, NULL));
+}
+
+void
+raw_input_ext(struct mbuf *m0, struct sockproto *proto, struct sockaddr *src,
+    raw_input_cb_fn cb)
+{
 	struct rawcb *rp;
 	struct mbuf *m = m0;
 	struct socket *last;
 
 	last = 0;
 	mtx_lock(&rawcb_mtx);
-	LIST_FOREACH(rp, &rawcb_list, list) {
+	LIST_FOREACH(rp, &V_rawcb_list, list) {
 		if (rp->rcb_proto.sp_family != proto->sp_family)
 			continue;
 		if (rp->rcb_proto.sp_protocol  &&
 		    rp->rcb_proto.sp_protocol != proto->sp_protocol)
+			continue;
+		if (cb != NULL && (*cb)(m, proto, src, rp) != 0)
 			continue;
 		if (last) {
 			struct mbuf *n;

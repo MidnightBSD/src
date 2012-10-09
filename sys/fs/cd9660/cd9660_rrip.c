@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/cd9660/cd9660_rrip.c,v 1.2 2008/12/03 00:25:40 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -36,12 +35,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/cd9660/cd9660_rrip.c,v 1.30.6.2 2008/11/29 05:08:49 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
+#include <sys/jail.h>
 #include <sys/vnode.h>
 #include <sys/mount.h>
 #include <sys/kernel.h>
@@ -118,6 +118,7 @@ cd9660_rrip_slink(p,ana)
 	ISO_RRIP_SLINK_COMPONENT *pcompe;
 	int len, wlen, cont;
 	char *outbuf, *inbuf;
+	char hostbuf[MAXHOSTNAMELEN];
 
 	pcomp = (ISO_RRIP_SLINK_COMPONENT *)p->component;
 	pcompe = (ISO_RRIP_SLINK_COMPONENT *)((char *)p + isonum_711(p->h.length));
@@ -172,8 +173,10 @@ cd9660_rrip_slink(p,ana)
 
 		case ISO_SUSP_CFLAG_HOST:
 			/* Inserting hostname i.e. "kurt.tools.de" */
-			inbuf = hostname;
-			wlen = strlen(hostname);
+			getcredhostname(curthread->td_ucred, hostbuf,
+			    sizeof(hostbuf));
+			inbuf = hostbuf;
+			wlen = strlen(inbuf);
 			break;
 
 		case ISO_SUSP_CFLAG_CONTINUE:
@@ -226,6 +229,7 @@ cd9660_rrip_altname(p,ana)
 	char *inbuf;
 	int wlen;
 	int cont;
+	char hostbuf[MAXHOSTNAMELEN];
 
 	inbuf = "..";
 	wlen = 0;
@@ -244,8 +248,9 @@ cd9660_rrip_altname(p,ana)
 
 	case ISO_SUSP_CFLAG_HOST:
 		/* Inserting hostname i.e. "kurt.tools.de" */
-		inbuf = hostname;
-		wlen = strlen(hostname);
+		getcredhostname(curthread->td_ucred, hostbuf, sizeof(hostbuf));
+		inbuf = hostbuf;
+		wlen = strlen(inbuf);
 		break;
 
 	case ISO_SUSP_CFLAG_CONTINUE:
@@ -412,9 +417,9 @@ cd9660_rrip_device(p,ana)
 	low  = isonum_733(p->dev_t_low);
 
 	if (high == 0)
-		ana->inop->inode.iso_rdev = makedev(umajor(low), uminor(low));
+		ana->inop->inode.iso_rdev = makedev(major(low), minor(low));
 	else
-		ana->inop->inode.iso_rdev = makedev(high, uminor(low));
+		ana->inop->inode.iso_rdev = makedev(high, minor(low));
 	ana->fields &= ~ISO_SUSP_DEVICE;
 	return ISO_SUSP_DEVICE;
 }

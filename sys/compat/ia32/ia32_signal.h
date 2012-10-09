@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
  * Copyright (c) 2003 Peter Wemm
@@ -27,8 +26,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ia32/ia32_signal.h,v 1.10 2006/10/05 01:56:11 davidxu Exp $
+ * $FreeBSD$
  */
+
+#ifndef	_COMPAT_IA32_IA32_SIGNAL_H
+#define	_COMPAT_IA32_IA32_SIGNAL_H
+
+#define	_MC_IA32_HASSEGS	0x1
+#define	_MC_IA32_HASBASES	0x2
+#define	_MC_IA32_HASFPXSTATE	0x4
+#define	_MC_IA32_FLAG_MASK	\
+    (_MC_IA32_HASSEGS | _MC_IA32_HASBASES | _MC_IA32_HASFPXSTATE)
 
 struct ia32_mcontext {
 	u_int32_t	mc_onstack;		/* XXX - sigcontext compat. */
@@ -55,12 +63,16 @@ struct ia32_mcontext {
 	/* We use the same values for fpformat and ownedfp */
 	u_int32_t	mc_fpformat;
 	u_int32_t	mc_ownedfp;
-	u_int32_t	mc_spare1[1];		/* align next field to 16 bytes */
+	u_int32_t	mc_flags;
 	/*
 	 * See <i386/include/npx.h> for the internals of mc_fpstate[].
 	 */
 	u_int32_t	mc_fpstate[128] __aligned(16);
-	u_int32_t	mc_spare2[8];
+	u_int32_t	mc_fsbase;
+	u_int32_t	mc_gsbase;
+	u_int32_t	mc_xfpustate;
+	u_int32_t	mc_xfpustate_len;
+	u_int32_t	mc_spare2[4];
 };
 
 struct ia32_ucontext {
@@ -108,7 +120,7 @@ struct ia32_ucontext4 {
 };
 #endif
 
-#ifdef COMPAT_FREEBSD3
+#ifdef COMPAT_43
 struct ia32_sigcontext3 {
 	u_int32_t	sc_onstack;
 	u_int32_t	sc_mask;
@@ -161,7 +173,7 @@ struct ia32_sigframe {
 	struct siginfo32	sf_si;		/* = *sf_siginfo (SA_SIGINFO case) */
 };
 
-#ifdef COMPAT_FREEBSD3
+#ifdef COMPAT_43
 struct ia32_siginfo3 {
 	struct ia32_sigcontext3 si_sc;
 	int			si_signo;
@@ -179,10 +191,18 @@ struct ia32_sigframe3 {
 #endif
 
 struct ksiginfo;
+struct image_params;
 extern char ia32_sigcode[];
 extern char freebsd4_ia32_sigcode[];
+extern char ia32_osigcode[];
+extern char lcall_tramp;
 extern int sz_ia32_sigcode;
 extern int sz_freebsd4_ia32_sigcode;
-extern void ia32_sendsig(sig_t, struct ksiginfo *, sigset_t *);
-extern void ia32_setregs(struct thread *td, u_long entry, u_long stack,
-    u_long ps_strings);
+extern int sz_ia32_osigcode;
+extern int sz_lcall_tramp;
+void ia32_sendsig(sig_t, struct ksiginfo *, sigset_t *);
+void ia32_setregs(struct thread *td, struct image_params *imgp,
+    u_long stack);
+int setup_lcall_gate(void);
+
+#endif

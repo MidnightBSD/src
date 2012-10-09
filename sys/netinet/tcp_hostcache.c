@@ -37,7 +37,7 @@
  * significant speed-ups for new TCP connections after the first one.
  *
  * Due to the tcp_hostcache, all TCP-specific metrics information in the
- * routing table has been removed.  The inpcb no longer keeps a pointer to
+ * routing table have been removed.  The inpcb no longer keeps a pointer to
  * the routing entry, and protocol-initiated route cloning has been removed
  * as well.  With these changes, the routing table has gone back to being
  * more lightwight and only carries information related to packet forwarding.
@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_hostcache.c,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 
@@ -78,6 +78,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_hostcache.c,v 1.17.6.1 2008/11/25 02:59:
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/route.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -91,41 +93,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/tcp_hostcache.c,v 1.17.6.1 2008/11/25 02:59:
 #endif
 #include <netinet/tcp.h>
 #include <netinet/tcp_var.h>
+#include <netinet/tcp_hostcache.h>
 #ifdef INET6
 #include <netinet6/tcp6_var.h>
 #endif
 
 #include <vm/uma.h>
-
-
-TAILQ_HEAD(hc_qhead, hc_metrics);
-
-struct hc_head {
-	struct hc_qhead	hch_bucket;
-	u_int		hch_length;
-	struct mtx	hch_mtx;
-};
-
-struct hc_metrics {
-	/* housekeeping */
-	TAILQ_ENTRY(hc_metrics) rmx_q;
-	struct	hc_head *rmx_head; /* head of bucket tail queue */
-	struct	in_addr ip4;	/* IP address */
-	struct	in6_addr ip6;	/* IP6 address */
-	/* endpoint specific values for TCP */
-	u_long	rmx_mtu;	/* MTU for this path */
-	u_long	rmx_ssthresh;	/* outbound gateway buffer limit */
-	u_long	rmx_rtt;	/* estimated round trip time */
-	u_long	rmx_rttvar;	/* estimated rtt variance */
-	u_long	rmx_bandwidth;	/* estimated bandwidth */
-	u_long	rmx_cwnd;	/* congestion window */
-	u_long	rmx_sendpipe;	/* outbound delay-bandwidth product */
-	u_long	rmx_recvpipe;	/* inbound delay-bandwidth product */
-	/* TCP hostcache internal data */
-	int	rmx_expire;	/* lifetime for object */
-	u_long	rmx_hits;	/* number of hits */
-	u_long	rmx_updates;	/* number of updates */
-};
 
 /* Arbitrary values */
 #define TCP_HOSTCACHE_HASHSIZE		512
@@ -133,49 +106,48 @@ struct hc_metrics {
 #define TCP_HOSTCACHE_EXPIRE		60*60	/* one hour */
 #define TCP_HOSTCACHE_PRUNE		5*60	/* every 5 minutes */
 
-struct tcp_hostcache {
-	struct	hc_head *hashbase;
-	uma_zone_t zone;
-	u_int	hashsize;
-	u_int	hashmask;
-	u_int	bucket_limit;
-	u_int	cache_count;
-	u_int	cache_limit;
-	int	expire;
-	int	prune;
-	int	purgeall;
-};
-static struct tcp_hostcache tcp_hostcache;
+static VNET_DEFINE(struct tcp_hostcache, tcp_hostcache);
+#define	V_tcp_hostcache		VNET(tcp_hostcache)
 
-static struct callout tcp_hc_callout;
+static VNET_DEFINE(struct callout, tcp_hc_callout);
+#define	V_tcp_hc_callout	VNET(tcp_hc_callout)
 
 static struct hc_metrics *tcp_hc_lookup(struct in_conninfo *);
 static struct hc_metrics *tcp_hc_insert(struct in_conninfo *);
 static int sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS);
+static void tcp_hc_purge_internal(int);
 static void tcp_hc_purge(void *);
 
-SYSCTL_NODE(_net_inet_tcp, OID_AUTO, hostcache, CTLFLAG_RW, 0, "TCP Host cache");
+SYSCTL_NODE(_net_inet_tcp, OID_AUTO, hostcache, CTLFLAG_RW, 0,
+    "TCP Host cache");
 
-SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, cachelimit, CTLFLAG_RDTUN,
-    &tcp_hostcache.cache_limit, 0, "Overall entry limit for hostcache");
+SYSCTL_VNET_UINT(_net_inet_tcp_hostcache, OID_AUTO, cachelimit, CTLFLAG_RDTUN,
+    &VNET_NAME(tcp_hostcache.cache_limit), 0,
+    "Overall entry limit for hostcache");
 
-SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, hashsize, CTLFLAG_RDTUN,
-    &tcp_hostcache.hashsize, 0, "Size of TCP hostcache hashtable");
+SYSCTL_VNET_UINT(_net_inet_tcp_hostcache, OID_AUTO, hashsize, CTLFLAG_RDTUN,
+    &VNET_NAME(tcp_hostcache.hashsize), 0,
+    "Size of TCP hostcache hashtable");
 
-SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, bucketlimit, CTLFLAG_RDTUN,
-    &tcp_hostcache.bucket_limit, 0, "Per-bucket hash limit for hostcache");
+SYSCTL_VNET_UINT(_net_inet_tcp_hostcache, OID_AUTO, bucketlimit,
+    CTLFLAG_RDTUN, &VNET_NAME(tcp_hostcache.bucket_limit), 0,
+    "Per-bucket hash limit for hostcache");
 
-SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, count, CTLFLAG_RD,
-    &tcp_hostcache.cache_count, 0, "Current number of entries in hostcache");
+SYSCTL_VNET_UINT(_net_inet_tcp_hostcache, OID_AUTO, count, CTLFLAG_RD,
+     &VNET_NAME(tcp_hostcache.cache_count), 0,
+    "Current number of entries in hostcache");
 
-SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, expire, CTLFLAG_RW,
-    &tcp_hostcache.expire, 0, "Expire time of TCP hostcache entries");
+SYSCTL_VNET_INT(_net_inet_tcp_hostcache, OID_AUTO, expire, CTLFLAG_RW,
+    &VNET_NAME(tcp_hostcache.expire), 0,
+    "Expire time of TCP hostcache entries");
 
-SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, prune, CTLFLAG_RW,
-     &tcp_hostcache.prune, 0, "Time between purge runs");
+SYSCTL_VNET_INT(_net_inet_tcp_hostcache, OID_AUTO, prune, CTLFLAG_RW,
+    &VNET_NAME(tcp_hostcache.prune), 0,
+    "Time between purge runs");
 
-SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, purge, CTLFLAG_RW,
-    &tcp_hostcache.purgeall, 0, "Expire all entires on next purge run");
+SYSCTL_VNET_INT(_net_inet_tcp_hostcache, OID_AUTO, purge, CTLFLAG_RW,
+    &VNET_NAME(tcp_hostcache.purgeall), 0,
+    "Expire all entires on next purge run");
 
 SYSCTL_PROC(_net_inet_tcp_hostcache, OID_AUTO, list,
     CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP, 0, 0,
@@ -186,7 +158,7 @@ static MALLOC_DEFINE(M_HOSTCACHE, "hostcache", "TCP hostcache");
 
 #define HOSTCACHE_HASH(ip) \
 	(((ip)->s_addr ^ ((ip)->s_addr >> 7) ^ ((ip)->s_addr >> 17)) &	\
-	  tcp_hostcache.hashmask)
+	  V_tcp_hostcache.hashmask)
 
 /* XXX: What is the recommended hash to get good entropy for IPv6 addresses? */
 #define HOSTCACHE_HASH6(ip6)				\
@@ -194,7 +166,7 @@ static MALLOC_DEFINE(M_HOSTCACHE, "hostcache", "TCP hostcache");
 	  (ip6)->s6_addr32[1] ^				\
 	  (ip6)->s6_addr32[2] ^				\
 	  (ip6)->s6_addr32[3]) &			\
-	 tcp_hostcache.hashmask)
+	 V_tcp_hostcache.hashmask)
 
 #define THC_LOCK(lp)		mtx_lock(lp)
 #define THC_UNLOCK(lp)		mtx_unlock(lp)
@@ -207,56 +179,78 @@ tcp_hc_init(void)
 	/*
 	 * Initialize hostcache structures.
 	 */
-	tcp_hostcache.cache_count = 0;
-	tcp_hostcache.hashsize = TCP_HOSTCACHE_HASHSIZE;
-	tcp_hostcache.bucket_limit = TCP_HOSTCACHE_BUCKETLIMIT;
-	tcp_hostcache.cache_limit =
-	    tcp_hostcache.hashsize * tcp_hostcache.bucket_limit;
-	tcp_hostcache.expire = TCP_HOSTCACHE_EXPIRE;
-	tcp_hostcache.prune = TCP_HOSTCACHE_PRUNE;
+	V_tcp_hostcache.cache_count = 0;
+	V_tcp_hostcache.hashsize = TCP_HOSTCACHE_HASHSIZE;
+	V_tcp_hostcache.bucket_limit = TCP_HOSTCACHE_BUCKETLIMIT;
+	V_tcp_hostcache.cache_limit =
+	    V_tcp_hostcache.hashsize * V_tcp_hostcache.bucket_limit;
+	V_tcp_hostcache.expire = TCP_HOSTCACHE_EXPIRE;
+	V_tcp_hostcache.prune = TCP_HOSTCACHE_PRUNE;
 
 	TUNABLE_INT_FETCH("net.inet.tcp.hostcache.hashsize",
-	    &tcp_hostcache.hashsize);
+	    &V_tcp_hostcache.hashsize);
 	TUNABLE_INT_FETCH("net.inet.tcp.hostcache.cachelimit",
-	    &tcp_hostcache.cache_limit);
+	    &V_tcp_hostcache.cache_limit);
 	TUNABLE_INT_FETCH("net.inet.tcp.hostcache.bucketlimit",
-	    &tcp_hostcache.bucket_limit);
-	if (!powerof2(tcp_hostcache.hashsize)) {
+	    &V_tcp_hostcache.bucket_limit);
+	if (!powerof2(V_tcp_hostcache.hashsize)) {
 		printf("WARNING: hostcache hash size is not a power of 2.\n");
-		tcp_hostcache.hashsize = TCP_HOSTCACHE_HASHSIZE; /* default */
+		V_tcp_hostcache.hashsize = TCP_HOSTCACHE_HASHSIZE; /* default */
 	}
-	tcp_hostcache.hashmask = tcp_hostcache.hashsize - 1;
+	V_tcp_hostcache.hashmask = V_tcp_hostcache.hashsize - 1;
 
 	/*
 	 * Allocate the hash table.
 	 */
-	tcp_hostcache.hashbase = (struct hc_head *)
-	    malloc(tcp_hostcache.hashsize * sizeof(struct hc_head),
+	V_tcp_hostcache.hashbase = (struct hc_head *)
+	    malloc(V_tcp_hostcache.hashsize * sizeof(struct hc_head),
 		   M_HOSTCACHE, M_WAITOK | M_ZERO);
 
 	/*
 	 * Initialize the hash buckets.
 	 */
-	for (i = 0; i < tcp_hostcache.hashsize; i++) {
-		TAILQ_INIT(&tcp_hostcache.hashbase[i].hch_bucket);
-		tcp_hostcache.hashbase[i].hch_length = 0;
-		mtx_init(&tcp_hostcache.hashbase[i].hch_mtx, "tcp_hc_entry",
+	for (i = 0; i < V_tcp_hostcache.hashsize; i++) {
+		TAILQ_INIT(&V_tcp_hostcache.hashbase[i].hch_bucket);
+		V_tcp_hostcache.hashbase[i].hch_length = 0;
+		mtx_init(&V_tcp_hostcache.hashbase[i].hch_mtx, "tcp_hc_entry",
 			  NULL, MTX_DEF);
 	}
 
 	/*
 	 * Allocate the hostcache entries.
 	 */
-	tcp_hostcache.zone = uma_zcreate("hostcache", sizeof(struct hc_metrics),
+	V_tcp_hostcache.zone =
+	    uma_zcreate("hostcache", sizeof(struct hc_metrics),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
-	uma_zone_set_max(tcp_hostcache.zone, tcp_hostcache.cache_limit);
+	uma_zone_set_max(V_tcp_hostcache.zone, V_tcp_hostcache.cache_limit);
 
 	/*
 	 * Set up periodic cache cleanup.
 	 */
-	callout_init(&tcp_hc_callout, CALLOUT_MPSAFE);
-	callout_reset(&tcp_hc_callout, tcp_hostcache.prune * hz, tcp_hc_purge, 0);
+	callout_init(&V_tcp_hc_callout, CALLOUT_MPSAFE);
+	callout_reset(&V_tcp_hc_callout, V_tcp_hostcache.prune * hz,
+	    tcp_hc_purge, curvnet);
 }
+
+#ifdef VIMAGE
+void
+tcp_hc_destroy(void)
+{
+	int i;
+
+	callout_drain(&V_tcp_hc_callout);
+
+	/* Purge all hc entries. */
+	tcp_hc_purge_internal(1);
+
+	/* Free the uma zone and the allocated hash table. */
+	uma_zdestroy(V_tcp_hostcache.zone);
+
+	for (i = 0; i < V_tcp_hostcache.hashsize; i++)
+		mtx_destroy(&V_tcp_hostcache.hashbase[i].hch_mtx);
+	free(V_tcp_hostcache.hashbase, M_HOSTCACHE);
+}
+#endif
 
 /*
  * Internal function: look up an entry in the hostcache or return NULL.
@@ -276,12 +270,12 @@ tcp_hc_lookup(struct in_conninfo *inc)
 	/*
 	 * Hash the foreign ip address.
 	 */
-	if (inc->inc_isipv6)
+	if (inc->inc_flags & INC_ISIPV6)
 		hash = HOSTCACHE_HASH6(&inc->inc6_faddr);
 	else
 		hash = HOSTCACHE_HASH(&inc->inc_faddr);
 
-	hc_head = &tcp_hostcache.hashbase[hash];
+	hc_head = &V_tcp_hostcache.hashbase[hash];
 
 	/*
 	 * Acquire lock for this bucket row; we release the lock if we don't
@@ -294,7 +288,7 @@ tcp_hc_lookup(struct in_conninfo *inc)
 	 * Iterate through entries in bucket row looking for a match.
 	 */
 	TAILQ_FOREACH(hc_entry, &hc_head->hch_bucket, rmx_q) {
-		if (inc->inc_isipv6) {
+		if (inc->inc_flags & INC_ISIPV6) {
 			if (memcmp(&inc->inc6_faddr, &hc_entry->ip6,
 			    sizeof(inc->inc6_faddr)) == 0)
 				return hc_entry;
@@ -331,12 +325,12 @@ tcp_hc_insert(struct in_conninfo *inc)
 	/*
 	 * Hash the foreign ip address.
 	 */
-	if (inc->inc_isipv6)
+	if (inc->inc_flags & INC_ISIPV6)
 		hash = HOSTCACHE_HASH6(&inc->inc6_faddr);
 	else
 		hash = HOSTCACHE_HASH(&inc->inc_faddr);
 
-	hc_head = &tcp_hostcache.hashbase[hash];
+	hc_head = &V_tcp_hostcache.hashbase[hash];
 
 	/*
 	 * Acquire lock for this bucket row; we release the lock if we don't
@@ -348,8 +342,8 @@ tcp_hc_insert(struct in_conninfo *inc)
 	/*
 	 * If the bucket limit is reached, reuse the least-used element.
 	 */
-	if (hc_head->hch_length >= tcp_hostcache.bucket_limit ||
-	    tcp_hostcache.cache_count >= tcp_hostcache.cache_limit) {
+	if (hc_head->hch_length >= V_tcp_hostcache.bucket_limit ||
+	    V_tcp_hostcache.cache_count >= V_tcp_hostcache.cache_limit) {
 		hc_entry = TAILQ_LAST(&hc_head->hch_bucket, hc_qhead);
 		/*
 		 * At first we were dropping the last element, just to
@@ -365,17 +359,17 @@ tcp_hc_insert(struct in_conninfo *inc)
 			return NULL;
 		}
 		TAILQ_REMOVE(&hc_head->hch_bucket, hc_entry, rmx_q);
-		tcp_hostcache.hashbase[hash].hch_length--;
-		tcp_hostcache.cache_count--;
-		tcpstat.tcps_hc_bucketoverflow++;
+		V_tcp_hostcache.hashbase[hash].hch_length--;
+		V_tcp_hostcache.cache_count--;
+		TCPSTAT_INC(tcps_hc_bucketoverflow);
 #if 0
-		uma_zfree(tcp_hostcache.zone, hc_entry);
+		uma_zfree(V_tcp_hostcache.zone, hc_entry);
 #endif
 	} else {
 		/*
 		 * Allocate a new entry, or balk if not possible.
 		 */
-		hc_entry = uma_zalloc(tcp_hostcache.zone, M_NOWAIT);
+		hc_entry = uma_zalloc(V_tcp_hostcache.zone, M_NOWAIT);
 		if (hc_entry == NULL) {
 			THC_UNLOCK(&hc_head->hch_mtx);
 			return NULL;
@@ -386,20 +380,20 @@ tcp_hc_insert(struct in_conninfo *inc)
 	 * Initialize basic information of hostcache entry.
 	 */
 	bzero(hc_entry, sizeof(*hc_entry));
-	if (inc->inc_isipv6)
+	if (inc->inc_flags & INC_ISIPV6)
 		bcopy(&inc->inc6_faddr, &hc_entry->ip6, sizeof(hc_entry->ip6));
 	else
 		hc_entry->ip4 = inc->inc_faddr;
 	hc_entry->rmx_head = hc_head;
-	hc_entry->rmx_expire = tcp_hostcache.expire;
+	hc_entry->rmx_expire = V_tcp_hostcache.expire;
 
 	/*
 	 * Put it upfront.
 	 */
 	TAILQ_INSERT_HEAD(&hc_head->hch_bucket, hc_entry, rmx_q);
-	tcp_hostcache.hashbase[hash].hch_length++;
-	tcp_hostcache.cache_count++;
-	tcpstat.tcps_hc_added++;
+	V_tcp_hostcache.hashbase[hash].hch_length++;
+	V_tcp_hostcache.cache_count++;
+	TCPSTAT_INC(tcps_hc_added);
 
 	return hc_entry;
 }
@@ -427,7 +421,7 @@ tcp_hc_get(struct in_conninfo *inc, struct hc_metrics_lite *hc_metrics_lite)
 		return;
 	}
 	hc_entry->rmx_hits++;
-	hc_entry->rmx_expire = tcp_hostcache.expire; /* start over again */
+	hc_entry->rmx_expire = V_tcp_hostcache.expire; /* start over again */
 
 	hc_metrics_lite->rmx_mtu = hc_entry->rmx_mtu;
 	hc_metrics_lite->rmx_ssthresh = hc_entry->rmx_ssthresh;
@@ -460,7 +454,7 @@ tcp_hc_getmtu(struct in_conninfo *inc)
 		return 0;
 	}
 	hc_entry->rmx_hits++;
-	hc_entry->rmx_expire = tcp_hostcache.expire; /* start over again */
+	hc_entry->rmx_expire = V_tcp_hostcache.expire; /* start over again */
 
 	mtu = hc_entry->rmx_mtu;
 	THC_UNLOCK(&hc_entry->rmx_head->hch_mtx);
@@ -490,7 +484,7 @@ tcp_hc_updatemtu(struct in_conninfo *inc, u_long mtu)
 			return;
 	}
 	hc_entry->rmx_updates++;
-	hc_entry->rmx_expire = tcp_hostcache.expire; /* start over again */
+	hc_entry->rmx_expire = V_tcp_hostcache.expire; /* start over again */
 
 	hc_entry->rmx_mtu = mtu;
 
@@ -522,7 +516,7 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 			return;
 	}
 	hc_entry->rmx_updates++;
-	hc_entry->rmx_expire = tcp_hostcache.expire; /* start over again */
+	hc_entry->rmx_expire = V_tcp_hostcache.expire; /* start over again */
 
 	if (hcml->rmx_rtt != 0) {
 		if (hc_entry->rmx_rtt == 0)
@@ -530,7 +524,7 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		else
 			hc_entry->rmx_rtt =
 			    (hc_entry->rmx_rtt + hcml->rmx_rtt) / 2;
-		tcpstat.tcps_cachedrtt++;
+		TCPSTAT_INC(tcps_cachedrtt);
 	}
 	if (hcml->rmx_rttvar != 0) {
 	        if (hc_entry->rmx_rttvar == 0)
@@ -538,7 +532,7 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		else
 			hc_entry->rmx_rttvar =
 			    (hc_entry->rmx_rttvar + hcml->rmx_rttvar) / 2;
-		tcpstat.tcps_cachedrttvar++;
+		TCPSTAT_INC(tcps_cachedrttvar);
 	}
 	if (hcml->rmx_ssthresh != 0) {
 		if (hc_entry->rmx_ssthresh == 0)
@@ -546,7 +540,7 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		else
 			hc_entry->rmx_ssthresh =
 			    (hc_entry->rmx_ssthresh + hcml->rmx_ssthresh) / 2;
-		tcpstat.tcps_cachedssthresh++;
+		TCPSTAT_INC(tcps_cachedssthresh);
 	}
 	if (hcml->rmx_bandwidth != 0) {
 		if (hc_entry->rmx_bandwidth == 0)
@@ -554,7 +548,7 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		else
 			hc_entry->rmx_bandwidth =
 			    (hc_entry->rmx_bandwidth + hcml->rmx_bandwidth) / 2;
-		/* tcpstat.tcps_cachedbandwidth++; */
+		/* TCPSTAT_INC(tcps_cachedbandwidth); */
 	}
 	if (hcml->rmx_cwnd != 0) {
 		if (hc_entry->rmx_cwnd == 0)
@@ -562,7 +556,7 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		else
 			hc_entry->rmx_cwnd =
 			    (hc_entry->rmx_cwnd + hcml->rmx_cwnd) / 2;
-		/* tcpstat.tcps_cachedcwnd++; */
+		/* TCPSTAT_INC(tcps_cachedcwnd); */
 	}
 	if (hcml->rmx_sendpipe != 0) {
 		if (hc_entry->rmx_sendpipe == 0)
@@ -570,7 +564,7 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		else
 			hc_entry->rmx_sendpipe =
 			    (hc_entry->rmx_sendpipe + hcml->rmx_sendpipe) /2;
-		/* tcpstat.tcps_cachedsendpipe++; */
+		/* TCPSTAT_INC(tcps_cachedsendpipe); */
 	}
 	if (hcml->rmx_recvpipe != 0) {
 		if (hc_entry->rmx_recvpipe == 0)
@@ -578,7 +572,7 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		else
 			hc_entry->rmx_recvpipe =
 			    (hc_entry->rmx_recvpipe + hcml->rmx_recvpipe) /2;
-		/* tcpstat.tcps_cachedrecvpipe++; */
+		/* TCPSTAT_INC(tcps_cachedrecvpipe); */
 	}
 
 	TAILQ_REMOVE(&hc_entry->rmx_head->hch_bucket, hc_entry, rmx_q);
@@ -602,7 +596,7 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 	char ip6buf[INET6_ADDRSTRLEN];
 #endif
 
-	bufsize = linesize * (tcp_hostcache.cache_count + 1);
+	bufsize = linesize * (V_tcp_hostcache.cache_count + 1);
 
 	p = buf = (char *)malloc(bufsize, M_TEMP, M_WAITOK|M_ZERO);
 
@@ -612,9 +606,9 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 	p += len;
 
 #define msec(u) (((u) + 500) / 1000)
-	for (i = 0; i < tcp_hostcache.hashsize; i++) {
-		THC_LOCK(&tcp_hostcache.hashbase[i].hch_mtx);
-		TAILQ_FOREACH(hc_entry, &tcp_hostcache.hashbase[i].hch_bucket,
+	for (i = 0; i < V_tcp_hostcache.hashsize; i++) {
+		THC_LOCK(&V_tcp_hostcache.hashbase[i].hch_mtx);
+		TAILQ_FOREACH(hc_entry, &V_tcp_hostcache.hashbase[i].hch_bucket,
 			      rmx_q) {
 			len = snprintf(p, linesize,
 			    "%-15s %5lu %8lu %6lums %6lums %9lu %8lu %8lu %8lu "
@@ -630,7 +624,7 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 			    msec(hc_entry->rmx_rtt *
 				(RTM_RTTUNIT / (hz * TCP_RTT_SCALE))),
 			    msec(hc_entry->rmx_rttvar *
-				(RTM_RTTUNIT / (hz * TCP_RTT_SCALE))),
+				(RTM_RTTUNIT / (hz * TCP_RTTVAR_SCALE))),
 			    hc_entry->rmx_bandwidth * 8,
 			    hc_entry->rmx_cwnd,
 			    hc_entry->rmx_sendpipe,
@@ -640,12 +634,38 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 			    hc_entry->rmx_expire);
 			p += len;
 		}
-		THC_UNLOCK(&tcp_hostcache.hashbase[i].hch_mtx);
+		THC_UNLOCK(&V_tcp_hostcache.hashbase[i].hch_mtx);
 	}
 #undef msec
 	error = SYSCTL_OUT(req, buf, p - buf);
 	free(buf, M_TEMP);
 	return(error);
+}
+
+/*
+ * Caller has to make sure the curvnet is set properly.
+ */
+static void
+tcp_hc_purge_internal(int all)
+{
+	struct hc_metrics *hc_entry, *hc_next;
+	int i;
+
+	for (i = 0; i < V_tcp_hostcache.hashsize; i++) {
+		THC_LOCK(&V_tcp_hostcache.hashbase[i].hch_mtx);
+		TAILQ_FOREACH_SAFE(hc_entry,
+		    &V_tcp_hostcache.hashbase[i].hch_bucket, rmx_q, hc_next) {
+			if (all || hc_entry->rmx_expire <= 0) {
+				TAILQ_REMOVE(&V_tcp_hostcache.hashbase[i].hch_bucket,
+					      hc_entry, rmx_q);
+				uma_zfree(V_tcp_hostcache.zone, hc_entry);
+				V_tcp_hostcache.hashbase[i].hch_length--;
+				V_tcp_hostcache.cache_count--;
+			} else
+				hc_entry->rmx_expire -= V_tcp_hostcache.prune;
+		}
+		THC_UNLOCK(&V_tcp_hostcache.hashbase[i].hch_mtx);
+	}
 }
 
 /*
@@ -655,29 +675,17 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 static void
 tcp_hc_purge(void *arg)
 {
-	struct hc_metrics *hc_entry, *hc_next;
-	int all = (intptr_t)arg;
-	int i;
+	CURVNET_SET((struct vnet *) arg);
+	int all = 0;
 
-	if (tcp_hostcache.purgeall) {
+	if (V_tcp_hostcache.purgeall) {
 		all = 1;
-		tcp_hostcache.purgeall = 0;
+		V_tcp_hostcache.purgeall = 0;
 	}
 
-	for (i = 0; i < tcp_hostcache.hashsize; i++) {
-		THC_LOCK(&tcp_hostcache.hashbase[i].hch_mtx);
-		TAILQ_FOREACH_SAFE(hc_entry, &tcp_hostcache.hashbase[i].hch_bucket,
-			      rmx_q, hc_next) {
-			if (all || hc_entry->rmx_expire <= 0) {
-				TAILQ_REMOVE(&tcp_hostcache.hashbase[i].hch_bucket,
-					      hc_entry, rmx_q);
-				uma_zfree(tcp_hostcache.zone, hc_entry);
-				tcp_hostcache.hashbase[i].hch_length--;
-				tcp_hostcache.cache_count--;
-			} else
-				hc_entry->rmx_expire -= tcp_hostcache.prune;
-		}
-		THC_UNLOCK(&tcp_hostcache.hashbase[i].hch_mtx);
-	}
-	callout_reset(&tcp_hc_callout, tcp_hostcache.prune * hz, tcp_hc_purge, 0);
+	tcp_hc_purge_internal(all);
+
+	callout_reset(&V_tcp_hc_callout, V_tcp_hostcache.prune * hz,
+	    tcp_hc_purge, arg);
+	CURVNET_RESTORE();
 }

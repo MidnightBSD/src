@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1991 Regents of the University of California.
@@ -40,7 +39,7 @@
  *
  *	from: hp300: @(#)pmap.h	7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h	7.4 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/amd64/include/pmap.h,v 1.138 2006/12/05 11:31:33 ru Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -58,7 +57,7 @@
 #define	PG_NC_PCD	0x010	/* PCD	Cache disable		*/
 #define PG_A		0x020	/* A	Accessed		*/
 #define	PG_M		0x040	/* D	Dirty			*/
-#define	PG_PS		0x080	/* PS	Page size (0=4k,1=4M)	*/
+#define	PG_PS		0x080	/* PS	Page size (0=4k,1=2M)	*/
 #define	PG_PTE_PAT	0x080	/* PAT	PAT index		*/
 #define	PG_G		0x100	/* G	Global			*/
 #define	PG_AVAIL1	0x200	/*    /	Available for system	*/
@@ -75,6 +74,17 @@
 #define	PG_PS_FRAME	(0x000fffffffe00000ul)
 #define	PG_PROT		(PG_RW|PG_U)	/* all protection bits . */
 #define PG_N		(PG_NC_PWT|PG_NC_PCD)	/* Non-cacheable */
+
+/* Page level cache control fields used to determine the PAT type */
+#define PG_PDE_CACHE	(PG_PDE_PAT | PG_NC_PWT | PG_NC_PCD)
+#define PG_PTE_CACHE	(PG_PTE_PAT | PG_NC_PWT | PG_NC_PCD)
+
+/*
+ * Promotion to a 2MB (PDE) page mapping requires that the corresponding 4KB
+ * (PTE) page mappings have identical settings for the following fields:
+ */
+#define	PG_PTE_PROMOTE	(PG_NX | PG_MANAGED | PG_W | PG_G | PG_PTE_PAT | \
+	    PG_M | PG_A | PG_NC_PCD | PG_NC_PWT | PG_U | PG_RW | PG_V)
 
 /*
  * Page Protection Exception bits
@@ -105,27 +115,31 @@
 
 /* Initial number of kernel page tables. */
 #ifndef NKPT
-/* 240 page tables needed to map 16G (120B "struct vm_page", 2M page tables). */
-#define	NKPT		240
+#define	NKPT		32
 #endif
 
 #define NKPML4E		1		/* number of kernel PML4 slots */
-#define NKPDPE		1		/* number of kernel PDP slots */
-#define	NKPDE		(NKPDPE*NPDEPG)	/* number of kernel PD slots */
+#define NKPDPE		howmany(NKPT, NPDEPG)/* number of kernel PDP slots */
 
 #define	NUPML4E		(NPML4EPG/2)	/* number of userland PML4 pages */
 #define	NUPDPE		(NUPML4E*NPDPEPG)/* number of userland PDP pages */
 #define	NUPDE		(NUPDPE*NPDEPG)	/* number of userland PD entries */
 
-#define	NDMPML4E	1		/* number of dmap PML4 slots */
+/*
+ * NDMPML4E is the number of PML4 entries that are used to implement the
+ * direct map.  It must be a power of two.
+ */
+#define	NDMPML4E	2
 
 /*
- * The *PDI values control the layout of virtual memory
+ * The *PDI values control the layout of virtual memory.  The starting address
+ * of the direct map, which is controlled by DMPML4I, must be a multiple of
+ * its size.  (See the PHYS_TO_DMAP() and DMAP_TO_PHYS() macros.)
  */
 #define	PML4PML4I	(NPML4EPG/2)	/* Index of recursive pml4 mapping */
 
 #define	KPML4I		(NPML4EPG-1)	/* Top 512GB for KVM */
-#define	DMPML4I		(KPML4I-1)	/* Next 512GB down for direct map */
+#define	DMPML4I		rounddown(KPML4I - NDMPML4E, NDMPML4E) /* Below KVM */
 
 #define	KPDPI		(NPDPEPG-2)	/* kernbase at -2GB */
 
@@ -138,6 +152,7 @@
 #ifndef LOCORE
 
 #include <sys/queue.h>
+#include <sys/_cpuset.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 
@@ -152,13 +167,7 @@ typedef u_int64_t pml4_entry_t;
 #define	PDESHIFT	(3)
 
 /*
- * Address of current and alternate address space page table maps
- * and directories.
- * XXX it might be saner to just direct map all of physical memory
- * into the kernel using 2MB pages.  We have enough space to do
- * it (2^47 bits of KVM, while current max physical addressability
- * is 2^40 physical bits).  Then we can get rid of the evil hole
- * in the page tables and the evil overlapping.
+ * Address of current address space page table maps and directories.
  */
 #ifdef _KERNEL
 #define	addr_PTmap	(KVADDR(PML4PML4I, 0, 0, 0))
@@ -172,10 +181,9 @@ typedef u_int64_t pml4_entry_t;
 #define	PML4map		((pd_entry_t *)(addr_PML4map))
 #define	PML4pml4e	((pd_entry_t *)(addr_PML4pml4e))
 
+extern u_int64_t KPDPphys;	/* physical address of kernel level 3 */
 extern u_int64_t KPML4phys;	/* physical address of kernel level 4 */
-#endif
 
-#ifdef _KERNEL
 /*
  * virtual address to page table entry and
  * to physical address.
@@ -232,17 +240,22 @@ struct	pv_entry;
 struct	pv_chunk;
 
 struct md_page {
-	int pv_list_count;
 	TAILQ_HEAD(,pv_entry)	pv_list;
+	int			pat_mode;
 };
 
+/*
+ * The kernel virtual address (KVA) of the level 4 page table page is always
+ * within the direct map (DMAP) region.
+ */
 struct pmap {
 	struct mtx		pm_mtx;
 	pml4_entry_t		*pm_pml4;	/* KVA of level 4 page table */
 	TAILQ_HEAD(,pv_chunk)	pm_pvchunk;	/* list of mappings in pmap */
-	u_int			pm_active;	/* active on cpus */
+	cpuset_t		pm_active;	/* active on cpus */
 	/* spare u_int here due to padding */
 	struct pmap_statistics	pm_stats;	/* pmap statistics */
+	vm_page_t		pm_root;	/* spare page table pages */
 };
 
 typedef struct pmap	*pmap_t;
@@ -282,19 +295,11 @@ struct pv_chunk {
 	pmap_t			pc_pmap;
 	TAILQ_ENTRY(pv_chunk)	pc_list;
 	uint64_t		pc_map[_NPCM];	/* bitmap; 1 = free */
-	uint64_t		pc_spare[2];
+	TAILQ_ENTRY(pv_chunk)	pc_lru;
 	struct pv_entry		pc_pventry[_NPCPV];
 };
 
 #ifdef	_KERNEL
-
-#define NPPROVMTRR		8
-#define PPRO_VMTRRphysBase0	0x200
-#define PPRO_VMTRRphysMask0	0x201
-struct ppro_vmtrr {
-	u_int64_t base, mask;
-};
-extern struct ppro_vmtrr PPro_vmtrr[NPPROVMTRR];
 
 extern caddr_t	CADDR1;
 extern pt_entry_t *CMAP1;
@@ -303,25 +308,29 @@ extern vm_paddr_t dump_avail[];
 extern vm_offset_t virtual_avail;
 extern vm_offset_t virtual_end;
 
-#define	pmap_page_is_mapped(m)	(!TAILQ_EMPTY(&(m)->md.pv_list))
+#define	pmap_page_get_memattr(m)	((vm_memattr_t)(m)->md.pat_mode)
 #define	pmap_unmapbios(va, sz)	pmap_unmapdev((va), (sz))
 
 void	pmap_bootstrap(vm_paddr_t *);
 int	pmap_change_attr(vm_offset_t, vm_size_t, int);
+void	pmap_demote_DMAP(vm_paddr_t base, vm_size_t len, boolean_t invalidate);
 void	pmap_init_pat(void);
 void	pmap_kenter(vm_offset_t va, vm_paddr_t pa);
-void	pmap_kenter_attr(vm_offset_t va, vm_paddr_t pa, int mode);
 void	*pmap_kenter_temporary(vm_paddr_t pa, int i);
 vm_paddr_t pmap_kextract(vm_offset_t);
 void	pmap_kremove(vm_offset_t);
 void	*pmap_mapbios(vm_paddr_t, vm_size_t);
 void	*pmap_mapdev(vm_paddr_t, vm_size_t);
 void	*pmap_mapdev_attr(vm_paddr_t, vm_size_t, int);
+boolean_t pmap_page_is_mapped(vm_page_t m);
+void	pmap_page_set_memattr(vm_page_t m, vm_memattr_t ma);
 void	pmap_unmapdev(vm_offset_t, vm_size_t);
 void	pmap_invalidate_page(pmap_t, vm_offset_t);
 void	pmap_invalidate_range(pmap_t, vm_offset_t, vm_offset_t);
 void	pmap_invalidate_all(pmap_t);
 void	pmap_invalidate_cache(void);
+void	pmap_invalidate_cache_pages(vm_page_t *pages, int count);
+void	pmap_invalidate_cache_range(vm_offset_t sva, vm_offset_t eva);
 
 #endif /* _KERNEL */
 

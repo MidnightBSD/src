@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/sys/sys/cpuctl.h,v 1.1.2.2 2009/08/15 16:15:50 stas Exp $
  */
 
 #ifndef _CPUCTL_H_

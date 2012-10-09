@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fifo.h	8.6 (Berkeley) 5/21/95
- * $FreeBSD: src/sys/fs/fifofs/fifo.h,v 1.20 2005/01/06 18:10:38 imp Exp $
+ * $FreeBSD$
  */
 
 /*

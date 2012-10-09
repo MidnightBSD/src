@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/timespec.h,v 1.3 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)time.h	8.5 (Berkeley) 5/4/95
  * from: FreeBSD: src/sys/sys/time.h,v 1.43 2000/03/20 14:09:05 phk Exp
- *	$FreeBSD: src/sys/sys/timespec.h,v 1.5 2005/10/23 04:22:56 davidxu Exp $
+ *	$MidnightBSD$
  */
 
 #ifndef _SYS_TIMESPEC_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * Copyright (c) 1999 Takanori Watanabe <takawata@jp.FreeBSD.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/device_port.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #if defined(__NetBSD__)

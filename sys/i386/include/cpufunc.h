@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/cpufunc.h,v 1.3 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -27,6 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $FreeBSD$
  */
 
 /*
@@ -145,13 +145,6 @@ cpu_mwait(u_long extensions, u_int hints)
 {
 
 	__asm __volatile("mwait" : : "a" (hints), "c" (extensions));
-}
-
-static __inline void
-mfence(void)
-{
-
-	__asm __volatile("mfence" : : : "memory");
 }
 
 static __inline void

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/radeon_drv.c,v 1.14.2.2.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -127,5 +127,9 @@ static driver_t radeon_driver = {
 };
 
 extern devclass_t drm_devclass;
+#if __FreeBSD_version >= 700010
 DRIVER_MODULE(radeon, vgapci, radeon_driver, drm_devclass, 0, 0);
+#else
+DRIVER_MODULE(radeon, pci, radeon_driver, drm_devclass, 0, 0);
+#endif
 MODULE_DEPEND(radeon, drm, 1, 1, 1);

@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-lowlevel.c,v 1.79.2.1 2008/01/09 08:54:48 delphij Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -48,7 +47,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/ata-lowlevel.c,v 1.79.2.1 2008/01/09 08:54:4
 
 /* prototypes */
 static int ata_generic_status(device_t dev);
-static int ata_wait(struct ata_channel *ch, struct ata_device *, u_int8_t);
+static int ata_wait(struct ata_channel *ch, int unit, u_int8_t);
 static void ata_pio_read(struct ata_request *, int);
 static void ata_pio_write(struct ata_request *, int);
 static void ata_tf_read(struct ata_request *);
@@ -65,29 +64,31 @@ ata_generic_hw(device_t dev)
     ch->hw.begin_transaction = ata_begin_transaction;
     ch->hw.end_transaction = ata_end_transaction;
     ch->hw.status = ata_generic_status;
+    ch->hw.softreset = NULL;
     ch->hw.command = ata_generic_command;
     ch->hw.tf_read = ata_tf_read;
     ch->hw.tf_write = ata_tf_write;
+    ch->hw.pm_read = NULL;
+    ch->hw.pm_write = NULL;
 }
 
 /* must be called with ATA channel locked and state_mtx held */
 int
 ata_begin_transaction(struct ata_request *request)
 {
-    struct ata_channel *ch = device_get_softc(device_get_parent(request->dev));
-    struct ata_device *atadev = device_get_softc(request->dev);
+    struct ata_channel *ch = device_get_softc(request->parent);
     int dummy, error;
 
     ATA_DEBUG_RQ(request, "begin transaction");
 
     /* disable ATAPI DMA writes if HW doesn't support it */
+    if ((ch->flags & ATA_NO_ATAPI_DMA) &&
+	(request->flags & ATA_R_ATAPI) == ATA_R_ATAPI)
+	    request->flags &= ~ATA_R_DMA;
     if ((ch->flags & ATA_ATAPI_DMA_RO) &&
 	((request->flags & (ATA_R_ATAPI | ATA_R_DMA | ATA_R_WRITE)) ==
 	 (ATA_R_ATAPI | ATA_R_DMA | ATA_R_WRITE)))
 	request->flags &= ~ATA_R_DMA;
-
-    /* check for 48 bit access and convert if needed */
-    ata_modify_if_48bit(request);
 
     switch (request->flags & (ATA_R_ATAPI | ATA_R_DMA)) {
 
@@ -99,7 +100,7 @@ ata_begin_transaction(struct ata_request *request)
 
 	    /* issue command */
 	    if (ch->hw.command(request)) {
-		device_printf(request->dev, "error issuing %s command\n",
+		device_printf(request->parent, "error issuing %s command\n",
 			   ata_cmd2str(request));
 		request->result = EIO;
 		goto begin_finished;
@@ -120,8 +121,8 @@ ata_begin_transaction(struct ata_request *request)
 
 	    /* if write command output the data */
 	    if (write) {
-		if (ata_wait(ch, atadev, (ATA_S_READY | ATA_S_DRQ)) < 0) {
-		    device_printf(request->dev,
+		if (ata_wait(ch, request->unit, (ATA_S_READY | ATA_S_DRQ)) < 0) {
+		    device_printf(request->parent,
 				  "timeout waiting for write DRQ\n");
 		    request->result = EIO;
 		    goto begin_finished;
@@ -134,25 +135,32 @@ ata_begin_transaction(struct ata_request *request)
     /* ATA DMA data transfer commands */
     case ATA_R_DMA:
 	/* check sanity, setup SG list and DMA engine */
-	if ((error = ch->dma->load(ch->dev, request->data, request->bytecount,
-				   request->flags & ATA_R_READ, ch->dma->sg, 
-				   &dummy))) {
-	    device_printf(request->dev, "setting up DMA failed\n");
+	if ((error = ch->dma.load(request, NULL, &dummy))) {
+	    device_printf(request->parent, "setting up DMA failed\n");
 	    request->result = error;
+	    goto begin_finished;
+	}
+
+	/* start DMA engine if necessary */
+	if ((ch->flags & ATA_DMA_BEFORE_CMD) &&
+	   ch->dma.start && ch->dma.start(request)) {
+	    device_printf(request->parent, "error starting DMA\n");
+	    request->result = EIO;
 	    goto begin_finished;
 	}
 
 	/* issue command */
 	if (ch->hw.command(request)) {
-	    device_printf(request->dev, "error issuing %s command\n",
+	    device_printf(request->parent, "error issuing %s command\n",
 		       ata_cmd2str(request));
 	    request->result = EIO;
 	    goto begin_finished;
 	}
 
 	/* start DMA engine */
-	if (ch->dma->start && ch->dma->start(request->dev)) {
-	    device_printf(request->dev, "error starting DMA\n");
+	if (!(ch->flags & ATA_DMA_BEFORE_CMD) &&
+	   ch->dma.start && ch->dma.start(request)) {
+	    device_printf(request->parent, "error starting DMA\n");
 	    request->result = EIO;
 	    goto begin_finished;
 	}
@@ -162,7 +170,7 @@ ata_begin_transaction(struct ata_request *request)
     case ATA_R_ATAPI:
 	/* is this just a POLL DSC command ? */
 	if (request->u.atapi.ccb[0] == ATAPI_POLL_DSC) {
-	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | atadev->unit);
+	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_DEV(request->unit));
 	    DELAY(10);
 	    if (!(ATA_IDX_INB(ch, ATA_ALTSTAT) & ATA_S_DSC))
 		request->result = EBUSY;
@@ -171,7 +179,7 @@ ata_begin_transaction(struct ata_request *request)
 
 	/* start ATAPI operation */
 	if (ch->hw.command(request)) {
-	    device_printf(request->dev, "error issuing ATA PACKET command\n");
+	    device_printf(request->parent, "error issuing ATA PACKET command\n");
 	    request->result = EIO;
 	    goto begin_finished;
 	}
@@ -181,7 +189,7 @@ ata_begin_transaction(struct ata_request *request)
     case ATA_R_ATAPI|ATA_R_DMA:
 	/* is this just a POLL DSC command ? */
 	if (request->u.atapi.ccb[0] == ATAPI_POLL_DSC) {
-	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | atadev->unit);
+	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_DEV(request->unit));
 	    DELAY(10);
 	    if (!(ATA_IDX_INB(ch, ATA_ALTSTAT) & ATA_S_DSC))
 		request->result = EBUSY;
@@ -189,23 +197,21 @@ ata_begin_transaction(struct ata_request *request)
 	}
 
 	/* check sanity, setup SG list and DMA engine */
-	if ((error = ch->dma->load(ch->dev, request->data, request->bytecount,
-				   request->flags & ATA_R_READ, ch->dma->sg,
-				   &dummy))) {
-	    device_printf(request->dev, "setting up DMA failed\n");
+	if ((error = ch->dma.load(request, NULL, &dummy))) {
+	    device_printf(request->parent, "setting up DMA failed\n");
 	    request->result = error;
 	    goto begin_finished;
 	}
 
 	/* start ATAPI operation */
 	if (ch->hw.command(request)) {
-	    device_printf(request->dev, "error issuing ATA PACKET command\n");
+	    device_printf(request->parent, "error issuing ATA PACKET command\n");
 	    request->result = EIO;
 	    goto begin_finished;
 	}
 
 	/* start DMA engine */
-	if (ch->dma->start && ch->dma->start(request->dev)) {
+	if (ch->dma.start && ch->dma.start(request)) {
 	    request->result = EIO;
 	    goto begin_finished;
 	}
@@ -215,8 +221,9 @@ ata_begin_transaction(struct ata_request *request)
     printf("ata_begin_transaction OOPS!!!\n");
 
 begin_finished:
-    if (ch->dma && ch->dma->flags & ATA_DMA_LOADED)
-	ch->dma->unload(ch->dev);
+    if (ch->dma.unload) {
+        ch->dma.unload(request);
+    }
     return ATA_OP_FINISHED;
 
 begin_continue:
@@ -229,8 +236,7 @@ begin_continue:
 int
 ata_end_transaction(struct ata_request *request)
 {
-    struct ata_channel *ch = device_get_softc(device_get_parent(request->dev));
-    struct ata_device *atadev = device_get_softc(request->dev);
+    struct ata_channel *ch = device_get_softc(request->parent);
     int length;
 
     ATA_DEBUG_RQ(request, "end transaction");
@@ -267,8 +273,8 @@ ata_end_transaction(struct ata_request *request)
 
 		if (request->u.ata.command != ATA_ATAPI_IDENTIFY)
 		    flags |= ATA_S_READY;
-		if (ata_wait(ch, atadev, flags) < 0) {
-		    device_printf(request->dev,
+		if (ata_wait(ch, request->unit, flags) < 0) {
+		    device_printf(request->parent,
 				  "timeout waiting for read DRQ\n");
 		    request->result = EIO;
 		    goto end_finished;
@@ -291,8 +297,8 @@ ata_end_transaction(struct ata_request *request)
 		if (request->flags & ATA_R_WRITE) {
 
 		    /* if we get an error here we are done with the HW */
-		    if (ata_wait(ch, atadev, (ATA_S_READY | ATA_S_DRQ)) < 0) {
-			device_printf(request->dev,
+		    if (ata_wait(ch, request->unit, (ATA_S_READY | ATA_S_DRQ)) < 0) {
+			device_printf(request->parent,
 				      "timeout waiting for write DRQ\n");
 			request->status = ATA_IDX_INB(ch, ATA_STATUS);
 			goto end_finished;
@@ -315,19 +321,19 @@ ata_end_transaction(struct ata_request *request)
     case ATA_R_DMA:
 
 	/* stop DMA engine and get status */
-	if (ch->dma->stop)
-	    request->dmastat = ch->dma->stop(request->dev);
+	if (ch->dma.stop)
+	    request->dma->status = ch->dma.stop(request);
 
 	/* did we get error or data */
 	if (request->status & ATA_S_ERROR)
 	    request->error = ATA_IDX_INB(ch, ATA_ERROR);
-	else if (request->dmastat & ATA_BMSTAT_ERROR)
+	else if (request->dma->status & ATA_BMSTAT_ERROR)
 	    request->status |= ATA_S_ERROR;
 	else if (!(request->flags & ATA_R_TIMEOUT))
 	    request->donecount = request->bytecount;
 
 	/* release SG list etc */
-	ch->dma->unload(ch->dev);
+	ch->dma.unload(request);
 
 	/* done with HW */
 	goto end_finished;
@@ -348,20 +354,19 @@ ata_end_transaction(struct ata_request *request)
 	    DELAY(10);
 
 	    if (!(request->status & ATA_S_DRQ)) {
-		device_printf(request->dev, "command interrupt without DRQ\n");
+		device_printf(request->parent, "command interrupt without DRQ\n");
 		request->status = ATA_S_ERROR;
 		goto end_finished;
 	    }
 	    ATA_IDX_OUTSW_STRM(ch, ATA_DATA, (int16_t *)request->u.atapi.ccb,
-			       (atadev->param.config &
-				ATA_PROTO_MASK)== ATA_PROTO_ATAPI_12 ? 6 : 8);
+			       (request->flags & ATA_R_ATAPI16) ? 8 : 6);
 	    /* return wait for interrupt */
 	    goto end_continue;
 
 	case ATAPI_P_WRITE:
 	    if (request->flags & ATA_R_READ) {
 		request->status = ATA_S_ERROR;
-		device_printf(request->dev,
+		device_printf(request->parent,
 			      "%s trying to write on read buffer\n",
 			   ata_cmd2str(request));
 		goto end_finished;
@@ -379,7 +384,7 @@ ata_end_transaction(struct ata_request *request)
 	case ATAPI_P_READ:
 	    if (request->flags & ATA_R_WRITE) {
 		request->status = ATA_S_ERROR;
-		device_printf(request->dev,
+		device_printf(request->parent,
 			      "%s trying to read on write buffer\n",
 			   ata_cmd2str(request));
 		goto end_finished;
@@ -394,7 +399,7 @@ ata_end_transaction(struct ata_request *request)
 	    goto end_continue;
 
 	case ATAPI_P_DONEDRQ:
-	    device_printf(request->dev,
+	    device_printf(request->parent,
 			  "WARNING - %s DONEDRQ non conformant device\n",
 			  ata_cmd2str(request));
 	    if (request->flags & ATA_R_READ) {
@@ -416,7 +421,7 @@ ata_end_transaction(struct ata_request *request)
 	    goto end_finished;
 
 	default:
-	    device_printf(request->dev, "unknown transfer phase\n");
+	    device_printf(request->parent, "unknown transfer phase\n");
 	    request->status = ATA_S_ERROR;
 	}
 
@@ -427,19 +432,19 @@ ata_end_transaction(struct ata_request *request)
     case ATA_R_ATAPI|ATA_R_DMA:
 
 	/* stop DMA engine and get status */
-	if (ch->dma->stop)
-	    request->dmastat = ch->dma->stop(request->dev);
+	if (ch->dma.stop)
+	    request->dma->status = ch->dma.stop(request);
 
 	/* did we get error or data */
 	if (request->status & (ATA_S_ERROR | ATA_S_DWF))
 	    request->error = ATA_IDX_INB(ch, ATA_ERROR);
-	else if (request->dmastat & ATA_BMSTAT_ERROR)
+	else if (request->dma->status & ATA_BMSTAT_ERROR)
 	    request->status |= ATA_S_ERROR;
 	else if (!(request->flags & ATA_R_TIMEOUT))
 	    request->donecount = request->bytecount;
  
 	/* release SG list etc */
-	ch->dma->unload(ch->dev);
+	ch->dma.unload(request);
 
 	/* done with HW */
 	goto end_finished;
@@ -466,20 +471,22 @@ ata_generic_reset(device_t dev)
     int mask = 0, timeout;
 
     /* do we have any signs of ATA/ATAPI HW being present ? */
-    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_D_LBA | ATA_MASTER);
+    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_D_LBA | ATA_DEV(ATA_MASTER));
     DELAY(10);
     ostat0 = ATA_IDX_INB(ch, ATA_STATUS);
-    if ((ostat0 & 0xf8) != 0xf8 && ostat0 != 0xa5) {
+    if (((ostat0 & 0xf8) != 0xf8 || (ch->flags & ATA_KNOWN_PRESENCE)) &&
+	    ostat0 != 0xa5) {
 	stat0 = ATA_S_BUSY;
 	mask |= 0x01;
     }
 
     /* in some setups we dont want to test for a slave */
     if (!(ch->flags & ATA_NO_SLAVE)) {
-	ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_D_LBA | ATA_SLAVE);
+	ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_D_LBA | ATA_DEV(ATA_SLAVE));
 	DELAY(10);      
 	ostat1 = ATA_IDX_INB(ch, ATA_STATUS);
-	if ((ostat1 & 0xf8) != 0xf8 && ostat1 != 0xa5) {
+	if (((ostat1 & 0xf8) != 0xf8 || (ch->flags & ATA_KNOWN_PRESENCE)) &&
+		ostat1 != 0xa5) {
 	    stat1 = ATA_S_BUSY;
 	    mask |= 0x02;
 	}
@@ -496,7 +503,7 @@ ata_generic_reset(device_t dev)
 	return;
 
     /* reset (both) devices on this channel */
-    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_D_LBA | ATA_MASTER);
+    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_D_LBA | ATA_DEV(ATA_MASTER));
     DELAY(10);
     ATA_IDX_OUTB(ch, ATA_CONTROL, ATA_A_IDS | ATA_A_RESET);
     ata_udelay(10000); 
@@ -507,12 +514,15 @@ ata_generic_reset(device_t dev)
     /* wait for BUSY to go inactive */
     for (timeout = 0; timeout < 310; timeout++) {
 	if ((mask & 0x01) && (stat0 & ATA_S_BUSY)) {
-	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_MASTER);
+	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_DEV(ATA_MASTER));
 	    DELAY(10);
+	    if (ch->flags & ATA_STATUS_IS_LONG)
+		    stat0 = ATA_IDX_INL(ch, ATA_STATUS) & 0xff;
+	    else
+		    stat0 = ATA_IDX_INB(ch, ATA_STATUS);
 	    err = ATA_IDX_INB(ch, ATA_ERROR);
 	    lsb = ATA_IDX_INB(ch, ATA_CYL_LSB);
 	    msb = ATA_IDX_INB(ch, ATA_CYL_MSB);
-	    stat0 = ATA_IDX_INB(ch, ATA_STATUS);
 	    if (bootverbose)
 		device_printf(dev,
 			      "stat0=0x%02x err=0x%02x lsb=0x%02x msb=0x%02x\n",
@@ -525,7 +535,7 @@ ata_generic_reset(device_t dev)
 		    if (lsb == ATAPI_MAGIC_LSB && msb == ATAPI_MAGIC_MSB) {
 			ch->devices |= ATA_ATAPI_MASTER;
 		    }
-		    else if (stat0 & ATA_S_READY) {
+		    else if (lsb == 0 && msb == 0 && (stat0 & ATA_S_READY)) {
 			ch->devices |= ATA_ATA_MASTER;
 		    }
 		}
@@ -537,12 +547,15 @@ ata_generic_reset(device_t dev)
 
 	if ((mask & 0x02) && (stat1 & ATA_S_BUSY) &&
 	    !((mask & 0x01) && (stat0 & ATA_S_BUSY))) {
-	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_SLAVE);
+	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_DEV(ATA_SLAVE));
 	    DELAY(10);
+	    if (ch->flags & ATA_STATUS_IS_LONG)
+		    stat1 = ATA_IDX_INL(ch, ATA_STATUS) & 0xff;
+	    else
+		    stat1 = ATA_IDX_INB(ch, ATA_STATUS);
 	    err = ATA_IDX_INB(ch, ATA_ERROR);
 	    lsb = ATA_IDX_INB(ch, ATA_CYL_LSB);
 	    msb = ATA_IDX_INB(ch, ATA_CYL_MSB);
-	    stat1 = ATA_IDX_INB(ch, ATA_STATUS);
 	    if (bootverbose)
 		device_printf(dev,
 			      "stat1=0x%02x err=0x%02x lsb=0x%02x msb=0x%02x\n",
@@ -555,7 +568,7 @@ ata_generic_reset(device_t dev)
 		    if (lsb == ATAPI_MAGIC_LSB && msb == ATAPI_MAGIC_MSB) {
 			ch->devices |= ATA_ATAPI_SLAVE;
 		    }
-		    else if (stat1 & ATA_S_READY) {
+		    else if (lsb == 0 && msb == 0 && (stat1 & ATA_S_READY)) {
 			ch->devices |= ATA_ATA_SLAVE;
 		    }
 		}
@@ -565,29 +578,22 @@ ata_generic_reset(device_t dev)
 	    }
 	}
 
-	if (mask == 0x00)       /* nothing to wait for */
-	    break;
-	if (mask == 0x01)       /* wait for master only */
-	    if (!(stat0 & ATA_S_BUSY) || (stat0 == 0xff && timeout > 10))
-		break;
-	if (mask == 0x02)       /* wait for slave only */
-	    if (!(stat1 & ATA_S_BUSY) || (stat1 == 0xff && timeout > 10))
-		break;
-	if (mask == 0x03) {     /* wait for both master & slave */
-	    if (!(stat0 & ATA_S_BUSY) && !(stat1 & ATA_S_BUSY))
-		break;
-	    if ((stat0 == 0xff) && (timeout > 20))
-		mask &= ~0x01;
-	    if ((stat1 == 0xff) && (timeout > 20))
-		mask &= ~0x02;
+	if ((ch->flags & ATA_KNOWN_PRESENCE) == 0 &&
+	    timeout > ((mask == 0x03) ? 20 : 10)) {
+		if ((mask & 0x01) && stat0 == 0xff)
+			mask &= ~0x01;
+		if ((mask & 0x02) && stat1 == 0xff)
+			mask &= ~0x02;
 	}
+	if (((mask & 0x01) == 0 || !(stat0 & ATA_S_BUSY)) &&
+	    ((mask & 0x02) == 0 || !(stat1 & ATA_S_BUSY)))
+		break;
 	ata_udelay(100000);
     }
 
     if (bootverbose)
-	device_printf(dev, "reset tp2 stat0=%02x stat1=%02x devices=0x%b\n",
-		      stat0, stat1, ch->devices,
-		      "\20\4ATAPI_SLAVE\3ATAPI_MASTER\2ATA_SLAVE\1ATA_MASTER");
+	device_printf(dev, "reset tp2 stat0=%02x stat1=%02x devices=0x%x\n",
+		      stat0, stat1, ch->devices);
 }
 
 /* must be called with ATA channel locked and state_mtx held */
@@ -605,7 +611,7 @@ ata_generic_status(device_t dev)
 }
 
 static int
-ata_wait(struct ata_channel *ch, struct ata_device *atadev, u_int8_t mask)
+ata_wait(struct ata_channel *ch, int unit, u_int8_t mask)
 {
     u_int8_t status;
     int timeout = 0;
@@ -618,7 +624,7 @@ ata_wait(struct ata_channel *ch, struct ata_device *atadev, u_int8_t mask)
 
 	/* if drive fails status, reselect the drive and try again */
 	if (status == 0xff) {
-	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | atadev->unit);
+	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_DEV(unit));
 	    timeout += 1000;
 	    DELAY(1000);
 	    continue;
@@ -658,16 +664,16 @@ ata_wait(struct ata_channel *ch, struct ata_device *atadev, u_int8_t mask)
 int
 ata_generic_command(struct ata_request *request)
 {
-    struct ata_channel *ch = device_get_softc(device_get_parent(request->dev));
-    struct ata_device *atadev = device_get_softc(request->dev);
+    struct ata_channel *ch = device_get_softc(request->parent);
 
     /* select device */
-    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_D_LBA | atadev->unit);
+    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_D_LBA | ATA_DEV(request->unit));
 
     /* ready to issue command ? */
-    if (ata_wait(ch, atadev, 0) < 0) { 
-	device_printf(request->dev, "timeout waiting to issue command\n");
-	return -1;
+    if (ata_wait(ch, request->unit, 0) < 0) { 
+	device_printf(request->parent, "timeout waiting to issue command\n");
+	request->flags |= ATA_R_TIMEOUT;
+	return (-1);
     }
 
     /* enable interrupt */
@@ -675,6 +681,7 @@ ata_generic_command(struct ata_request *request)
 
     if (request->flags & ATA_R_ATAPI) {
 	int timeout = 5000;
+	int res;
 
 	/* issue packet command to controller */
 	if (request->flags & ATA_R_DMA) {
@@ -690,9 +697,19 @@ ata_generic_command(struct ata_request *request)
 	ATA_IDX_OUTB(ch, ATA_COMMAND, ATA_PACKET_CMD);
 
 	/* command interrupt device ? just return and wait for interrupt */
-	if ((atadev->param.config & ATA_DRQ_MASK) == ATA_DRQ_INTR)
-	    return 0;
+	if (request->flags & ATA_R_ATAPI_INTR)
+	    return (0);
 
+	/* command processed ? */
+	res = ata_wait(ch, request->unit, 0);
+	if (res != 0) {
+	    if (res < 0) {
+		    device_printf(request->parent,
+			"timeout waiting for PACKET command\n");
+		    request->flags |= ATA_R_TIMEOUT;
+	    }
+	    return (-1);
+	}
 	/* wait for ready to write ATAPI command block */
 	while (timeout--) {
 	    int reason = ATA_IDX_INB(ch, ATA_IREASON);
@@ -704,9 +721,10 @@ ata_generic_command(struct ata_request *request)
 	    DELAY(20);
 	}
 	if (timeout <= 0) {
-	    device_printf(request->dev, "timeout waiting for ATAPI ready\n");
-	    request->result = EIO;
-	    return -1;
+	    device_printf(request->parent,
+		"timeout waiting for ATAPI ready\n");
+	    request->flags |= ATA_R_TIMEOUT;
+	    return (-1);
 	}
 
 	/* this seems to be needed for some (slow) devices */
@@ -714,8 +732,7 @@ ata_generic_command(struct ata_request *request)
 		    
 	/* output command block */
 	ATA_IDX_OUTSW_STRM(ch, ATA_DATA, (int16_t *)request->u.atapi.ccb,
-			   (atadev->param.config & ATA_PROTO_MASK) ==
-			   ATA_PROTO_ATAPI_12 ? 6 : 8);
+			   (request->flags & ATA_R_ATAPI16) ? 8 : 6);
     }
     else {
 	ch->hw.tf_write(request);
@@ -723,16 +740,15 @@ ata_generic_command(struct ata_request *request)
 	/* issue command to controller */
 	ATA_IDX_OUTB(ch, ATA_COMMAND, request->u.ata.command);
     }
-    return 0;
+    return (0);
 }
 
 static void
 ata_tf_read(struct ata_request *request)
 {
-    struct ata_channel *ch = device_get_softc(device_get_parent(request->dev));
-    struct ata_device *atadev = device_get_softc(request->dev);
+    struct ata_channel *ch = device_get_softc(request->parent);
 
-    if (atadev->flags & ATA_D_48BIT_ACTIVE) {
+    if (request->flags & ATA_R_48BIT) {
 	ATA_IDX_OUTB(ch, ATA_CONTROL, ATA_A_4BIT | ATA_A_HOB);
 	request->u.ata.count = (ATA_IDX_INB(ch, ATA_COUNT) << 8);
 	request->u.ata.lba =
@@ -759,10 +775,12 @@ ata_tf_read(struct ata_request *request)
 static void
 ata_tf_write(struct ata_request *request)
 {
-    struct ata_channel *ch = device_get_softc(device_get_parent(request->dev));
+    struct ata_channel *ch = device_get_softc(request->parent);
+#ifndef ATA_CAM
     struct ata_device *atadev = device_get_softc(request->dev);
+#endif
 
-    if (atadev->flags & ATA_D_48BIT_ACTIVE) {
+    if (request->flags & ATA_R_48BIT) {
 	ATA_IDX_OUTB(ch, ATA_FEATURE, request->u.ata.feature >> 8);
 	ATA_IDX_OUTB(ch, ATA_FEATURE, request->u.ata.feature);
 	ATA_IDX_OUTB(ch, ATA_COUNT, request->u.ata.count >> 8);
@@ -773,11 +791,12 @@ ata_tf_write(struct ata_request *request)
 	ATA_IDX_OUTB(ch, ATA_CYL_LSB, request->u.ata.lba >> 8);
 	ATA_IDX_OUTB(ch, ATA_CYL_MSB, request->u.ata.lba >> 40);
 	ATA_IDX_OUTB(ch, ATA_CYL_MSB, request->u.ata.lba >> 16);
-	ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_LBA | atadev->unit);
+	ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_LBA | ATA_DEV(request->unit));
     }
     else {
 	ATA_IDX_OUTB(ch, ATA_FEATURE, request->u.ata.feature);
 	ATA_IDX_OUTB(ch, ATA_COUNT, request->u.ata.count);
+#ifndef ATA_CAM
 	if (atadev->flags & ATA_D_USE_CHS) {
 	    int heads, sectors;
     
@@ -795,41 +814,50 @@ ata_tf_write(struct ata_request *request)
 			 (request->u.ata.lba / (sectors * heads)));
 	    ATA_IDX_OUTB(ch, ATA_CYL_MSB,
 			 (request->u.ata.lba / (sectors * heads)) >> 8);
-	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | atadev->unit | 
+	    ATA_IDX_OUTB(ch, ATA_DRIVE, ATA_D_IBM | ATA_DEV(request->unit) | 
 			 (((request->u.ata.lba% (sectors * heads)) /
 			   sectors) & 0xf));
 	}
 	else {
+#endif
 	    ATA_IDX_OUTB(ch, ATA_SECTOR, request->u.ata.lba);
 	    ATA_IDX_OUTB(ch, ATA_CYL_LSB, request->u.ata.lba >> 8);
 	    ATA_IDX_OUTB(ch, ATA_CYL_MSB, request->u.ata.lba >> 16);
 	    ATA_IDX_OUTB(ch, ATA_DRIVE,
-			 ATA_D_IBM | ATA_D_LBA | atadev->unit |
+			 ATA_D_IBM | ATA_D_LBA | ATA_DEV(request->unit) |
 			 ((request->u.ata.lba >> 24) & 0x0f));
+#ifndef ATA_CAM
 	}
+#endif
     }
 }
 
 static void
 ata_pio_read(struct ata_request *request, int length)
 {
-    struct ata_channel *ch = device_get_softc(device_get_parent(request->dev));
+    struct ata_channel *ch = device_get_softc(request->parent);
     int size = min(request->transfersize, length);
     int resid;
+    uint8_t buf[2];
 
-    if (ch->flags & ATA_USE_16BIT || (size % sizeof(int32_t)))
+    if (ch->flags & ATA_USE_16BIT || (size % sizeof(int32_t))) {
 	ATA_IDX_INSW_STRM(ch, ATA_DATA,
 			  (void*)((uintptr_t)request->data+request->donecount),
 			  size / sizeof(int16_t));
-    else
+	if (size & 1) {
+	    ATA_IDX_INSW_STRM(ch, ATA_DATA, (void*)buf, 1);
+	    ((uint8_t *)request->data + request->donecount +
+		(size & ~1))[0] = buf[0];
+	}
+    } else
 	ATA_IDX_INSL_STRM(ch, ATA_DATA,
 			  (void*)((uintptr_t)request->data+request->donecount),
 			  size / sizeof(int32_t));
 
     if (request->transfersize < length) {
-	device_printf(request->dev, "WARNING - %s read data overrun %d>%d\n",
+	device_printf(request->parent, "WARNING - %s read data overrun %d>%d\n",
 		   ata_cmd2str(request), length, request->transfersize);
-	for (resid = request->transfersize; resid < length;
+	for (resid = request->transfersize + (size & 1); resid < length;
 	     resid += sizeof(int16_t))
 	    ATA_IDX_INW(ch, ATA_DATA);
     }
@@ -838,23 +866,29 @@ ata_pio_read(struct ata_request *request, int length)
 static void
 ata_pio_write(struct ata_request *request, int length)
 {
-    struct ata_channel *ch = device_get_softc(device_get_parent(request->dev));
+    struct ata_channel *ch = device_get_softc(request->parent);
     int size = min(request->transfersize, length);
     int resid;
+    uint8_t buf[2];
 
-    if (ch->flags & ATA_USE_16BIT || (size % sizeof(int32_t)))
+    if (ch->flags & ATA_USE_16BIT || (size % sizeof(int32_t))) {
 	ATA_IDX_OUTSW_STRM(ch, ATA_DATA,
 			   (void*)((uintptr_t)request->data+request->donecount),
 			   size / sizeof(int16_t));
-    else
+	if (size & 1) {
+	    buf[0] = ((uint8_t *)request->data + request->donecount +
+		(size & ~1))[0];
+	    ATA_IDX_OUTSW_STRM(ch, ATA_DATA, (void*)buf, 1);
+	}
+    } else
 	ATA_IDX_OUTSL_STRM(ch, ATA_DATA,
 			   (void*)((uintptr_t)request->data+request->donecount),
 			   size / sizeof(int32_t));
 
     if (request->transfersize < length) {
-	device_printf(request->dev, "WARNING - %s write data underrun %d>%d\n",
+	device_printf(request->parent, "WARNING - %s write data underrun %d>%d\n",
 		   ata_cmd2str(request), length, request->transfersize);
-	for (resid = request->transfersize; resid < length;
+	for (resid = request->transfersize + (size & 1); resid < length;
 	     resid += sizeof(int16_t))
 	    ATA_IDX_OUTW(ch, ATA_DATA, 0);
     }

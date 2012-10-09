@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Scott Bartram
  * Copyright (c) 1995 Steven Wallace
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_signal.c,v 1.35.18.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -438,5 +437,5 @@ ibcs2_kill(td, uap)
 		return (EINVAL);
 	ka.pid = uap->pid;
 	ka.signum = ibcs2_to_bsd_sig[_SIG_IDX(uap->signo)];
-	return kill(td, &ka);
+	return sys_kill(td, &ka);
 }

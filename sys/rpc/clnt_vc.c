@@ -35,7 +35,7 @@ static char *sccsid = "@(#)clnt_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/rpc/clnt_vc.c,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
  
 /*
  * clnt_tcp.c, Implements a TCP/IP based, client side RPC.
@@ -64,11 +64,16 @@ __FBSDID("$FreeBSD: src/sys/rpc/clnt_vc.c,v 1.2.2.2.2.1 2008/11/25 02:59:29 kens
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
 #include <sys/proc.h>
+#include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/syslog.h>
 #include <sys/time.h>
 #include <sys/uio.h>
+
+#include <net/vnet.h>
+
+#include <netinet/tcp.h>
 
 #include <rpc/rpc.h>
 #include <rpc/rpc_com.h>
@@ -81,20 +86,22 @@ struct cmessage {
 };
 
 static enum clnt_stat clnt_vc_call(CLIENT *, struct rpc_callextra *,
-    rpcproc_t, xdrproc_t, void *, xdrproc_t, void *, struct timeval);
+    rpcproc_t, struct mbuf *, struct mbuf **, struct timeval);
 static void clnt_vc_geterr(CLIENT *, struct rpc_err *);
 static bool_t clnt_vc_freeres(CLIENT *, xdrproc_t, void *);
 static void clnt_vc_abort(CLIENT *);
 static bool_t clnt_vc_control(CLIENT *, u_int, void *);
+static void clnt_vc_close(CLIENT *);
 static void clnt_vc_destroy(CLIENT *);
 static bool_t time_not_ok(struct timeval *);
-static void clnt_vc_soupcall(struct socket *so, void *arg, int waitflag);
+static int clnt_vc_soupcall(struct socket *so, void *arg, int waitflag);
 
 static struct clnt_ops clnt_vc_ops = {
 	.cl_call =	clnt_vc_call,
 	.cl_abort =	clnt_vc_abort,
 	.cl_geterr =	clnt_vc_geterr,
 	.cl_freeres =	clnt_vc_freeres,
+	.cl_close =	clnt_vc_close,
 	.cl_destroy =	clnt_vc_destroy,
 	.cl_control =	clnt_vc_control
 };
@@ -109,6 +116,7 @@ struct ct_request {
 	uint32_t		cr_xid;		/* XID of request */
 	struct mbuf		*cr_mrep;	/* reply received by upcall */
 	int			cr_error;	/* any error from upcall */
+	char			cr_verf[MAX_AUTH_BYTES]; /* reply verf */
 };
 
 TAILQ_HEAD(ct_request_list, ct_request);
@@ -116,7 +124,8 @@ TAILQ_HEAD(ct_request_list, ct_request);
 struct ct_data {
 	struct mtx	ct_lock;
 	int		ct_threads;	/* number of threads in clnt_vc_call */
-	bool_t		ct_closing;	/* TRUE if we are destroying client */
+	bool_t		ct_closing;	/* TRUE if we are closing */
+	bool_t		ct_closed;	/* TRUE if we are closed */
 	struct socket	*ct_socket;	/* connection socket */
 	bool_t		ct_closeit;	/* close it on destroy */
 	struct timeval	ct_wait;	/* wait interval in milliseconds */
@@ -131,7 +140,10 @@ struct ct_data {
 	size_t		ct_record_resid; /* how much left of reply to read */
 	bool_t		ct_record_eor;	 /* true if reading last fragment */
 	struct ct_request_list ct_pending;
+	int		ct_upcallrefs;	/* Ref cnt of upcalls in prog. */
 };
+
+static void clnt_vc_upcallsdone(struct ct_data *);
 
 static const char clnt_vc_errstr[] = "%s : %s";
 static const char clnt_vc_str[] = "clnt_vc_create";
@@ -156,7 +168,8 @@ clnt_vc_create(
 	const rpcprog_t prog,		/* program number */
 	const rpcvers_t vers,		/* version number */
 	size_t sendsz,			/* buffer recv size */
-	size_t recvsz)			/* buffer send size */
+	size_t recvsz,			/* buffer send size */
+	int intrflag)			/* interruptible */
 {
 	CLIENT *cl;			/* client handle */
 	struct ct_data *ct = NULL;	/* client handle */
@@ -165,7 +178,8 @@ clnt_vc_create(
 	static uint32_t disrupt;
 	struct __rpc_sockinfo si;
 	XDR xdrs;
-	int error, interrupted;
+	int error, interrupted, one = 1, sleep_flag;
+	struct sockopt sopt;
 
 	if (disrupt == 0)
 		disrupt = (uint32_t)(long)raddr;
@@ -176,15 +190,20 @@ clnt_vc_create(
 	mtx_init(&ct->ct_lock, "ct->ct_lock", NULL, MTX_DEF);
 	ct->ct_threads = 0;
 	ct->ct_closing = FALSE;
+	ct->ct_closed = FALSE;
+	ct->ct_upcallrefs = 0;
 
 	if ((so->so_state & (SS_ISCONNECTED|SS_ISCONFIRMING)) == 0) {
 		error = soconnect(so, raddr, curthread);
 		SOCK_LOCK(so);
 		interrupted = 0;
+		sleep_flag = PSOCK;
+		if (intrflag != 0)
+			sleep_flag |= (PCATCH | PBDRY);
 		while ((so->so_state & SS_ISCONNECTING)
 		    && so->so_error == 0) {
 			error = msleep(&so->so_timeo, SOCK_MTX(so),
-			    PSOCK | PCATCH, "connec", 0);
+			    sleep_flag, "connec", 0);
 			if (error) {
 				if (error == EINTR || error == ERESTART)
 					interrupted = 1;
@@ -205,8 +224,29 @@ clnt_vc_create(
 		}
 	}
 
-	if (!__rpc_socket2sockinfo(so, &si))
+	if (!__rpc_socket2sockinfo(so, &si)) {
 		goto err;
+	}
+
+	if (so->so_proto->pr_flags & PR_CONNREQUIRED) {
+		bzero(&sopt, sizeof(sopt));
+		sopt.sopt_dir = SOPT_SET;
+		sopt.sopt_level = SOL_SOCKET;
+		sopt.sopt_name = SO_KEEPALIVE;
+		sopt.sopt_val = &one;
+		sopt.sopt_valsize = sizeof(one);
+		sosetopt(so, &sopt);
+	}
+
+	if (so->so_proto->pr_protocol == IPPROTO_TCP) {
+		bzero(&sopt, sizeof(sopt));
+		sopt.sopt_dir = SOPT_SET;
+		sopt.sopt_level = IPPROTO_TCP;
+		sopt.sopt_name = TCP_NODELAY;
+		sopt.sopt_val = &one;
+		sopt.sopt_valsize = sizeof(one);
+		sosetopt(so, &sopt);
+	}
 
 	ct->ct_closeit = FALSE;
 
@@ -249,17 +289,22 @@ clnt_vc_create(
 	 * Create a client handle which uses xdrrec for serialization
 	 * and authnone for authentication.
 	 */
+	sendsz = __rpc_get_t_size(si.si_af, si.si_proto, (int)sendsz);
+	recvsz = __rpc_get_t_size(si.si_af, si.si_proto, (int)recvsz);
+	error = soreserve(ct->ct_socket, sendsz, recvsz);
+	if (error != 0) {
+		if (ct->ct_closeit) {
+			soclose(ct->ct_socket);
+		}
+		goto err;
+	}
 	cl->cl_refs = 1;
 	cl->cl_ops = &clnt_vc_ops;
 	cl->cl_private = ct;
 	cl->cl_auth = authnone_create();
-	sendsz = __rpc_get_t_size(si.si_af, si.si_proto, (int)sendsz);
-	recvsz = __rpc_get_t_size(si.si_af, si.si_proto, (int)recvsz);
 
 	SOCKBUF_LOCK(&ct->ct_socket->so_rcv);
-	ct->ct_socket->so_upcallarg = ct;
-	ct->ct_socket->so_upcall = clnt_vc_soupcall;
-	ct->ct_socket->so_rcv.sb_flags |= SB_UPCALL;
+	soupcall_set(ct->ct_socket, SO_RCV, clnt_vc_soupcall, ct);
 	SOCKBUF_UNLOCK(&ct->ct_socket->so_rcv);
 
 	ct->ct_record = NULL;
@@ -270,6 +315,7 @@ clnt_vc_create(
 err:
 	if (cl) {
 		if (ct) {
+			mtx_destroy(&ct->ct_lock);
 			mem_free(ct, sizeof (struct ct_data));
 		}
 		if (cl)
@@ -280,24 +326,24 @@ err:
 
 static enum clnt_stat
 clnt_vc_call(
-	CLIENT *cl,
-	struct rpc_callextra *ext,
-	rpcproc_t proc,
-	xdrproc_t xdr_args,
-	void *args_ptr,
-	xdrproc_t xdr_results,
-	void *results_ptr,
-	struct timeval utimeout)
+	CLIENT		*cl,		/* client handle */
+	struct rpc_callextra *ext,	/* call metadata */
+	rpcproc_t	proc,		/* procedure number */
+	struct mbuf	*args,		/* pointer to args */
+	struct mbuf	**resultsp,	/* pointer to results */
+	struct timeval	utimeout)
 {
 	struct ct_data *ct = (struct ct_data *) cl->cl_private;
 	AUTH *auth;
+	struct rpc_err *errp;
+	enum clnt_stat stat;
 	XDR xdrs;
 	struct rpc_msg reply_msg;
 	bool_t ok;
 	int nrefreshes = 2;		/* number of times to refresh cred */
 	struct timeval timeout;
 	uint32_t xid;
-	struct mbuf *mreq = NULL;
+	struct mbuf *mreq = NULL, *results;
 	struct ct_request *cr;
 	int error;
 
@@ -305,17 +351,20 @@ clnt_vc_call(
 
 	mtx_lock(&ct->ct_lock);
 
-	if (ct->ct_closing) {
+	if (ct->ct_closing || ct->ct_closed) {
 		mtx_unlock(&ct->ct_lock);
 		free(cr, M_RPC);
 		return (RPC_CANTSEND);
 	}
 	ct->ct_threads++;
 
-	if (ext)
+	if (ext) {
 		auth = ext->rc_auth;
-	else
+		errp = &ext->rc_err;
+	} else {
 		auth = cl->cl_auth;
+		errp = &ct->ct_error;
+	}
 
 	cr->cr_mrep = NULL;
 	cr->cr_error = 0;
@@ -338,10 +387,11 @@ call_again:
 	 * Leave space to pre-pend the record mark.
 	 */
 	MGETHDR(mreq, M_WAIT, MT_DATA);
-	MCLGET(mreq, M_WAIT);
-	mreq->m_len = 0;
 	mreq->m_data += sizeof(uint32_t);
-	m_append(mreq, ct->ct_mpos, ct->ct_mcallc);
+	KASSERT(ct->ct_mpos + sizeof(uint32_t) <= MHLEN,
+	    ("RPC header too big"));
+	bcopy(ct->ct_mcallc, mreq->m_data, ct->ct_mpos);
+	mreq->m_len = ct->ct_mpos;
 
 	/*
 	 * The XID is the first thing in the request.
@@ -350,17 +400,16 @@ call_again:
 
 	xdrmbuf_create(&xdrs, mreq, XDR_ENCODE);
 
-	ct->ct_error.re_status = RPC_SUCCESS;
+	errp->re_status = stat = RPC_SUCCESS;
 
 	if ((! XDR_PUTINT32(&xdrs, &proc)) ||
-	    (! AUTH_MARSHALL(auth, &xdrs)) ||
-	    (! (*xdr_args)(&xdrs, args_ptr))) {
-		if (ct->ct_error.re_status == RPC_SUCCESS)
-			ct->ct_error.re_status = RPC_CANTENCODEARGS;
+	    (! AUTH_MARSHALL(auth, xid, &xdrs,
+		m_copym(args, 0, M_COPYALL, M_WAITOK)))) {
+		errp->re_status = stat = RPC_CANTENCODEARGS;
 		mtx_lock(&ct->ct_lock);
 		goto out;
 	}
-	m_fixhdr(mreq);
+	mreq->m_pkthdr.len = m_length(mreq, NULL);
 
 	/*
 	 * Prepend a record marker containing the packet length.
@@ -371,6 +420,22 @@ call_again:
 
 	cr->cr_xid = xid;
 	mtx_lock(&ct->ct_lock);
+	/*
+	 * Check to see if the other end has already started to close down
+	 * the connection. The upcall will have set ct_error.re_status
+	 * to RPC_CANTRECV if this is the case.
+	 * If the other end starts to close down the connection after this
+	 * point, it will be detected later when cr_error is checked,
+	 * since the request is in the ct_pending queue.
+	 */
+	if (ct->ct_error.re_status == RPC_CANTRECV) {
+		if (errp != &ct->ct_error) {
+			errp->re_errno = ct->ct_error.re_errno;
+			errp->re_status = RPC_CANTRECV;
+		}
+		stat = RPC_CANTRECV;
+		goto out;
+	}
 	TAILQ_INSERT_TAIL(&ct->ct_pending, cr, cr_link);
 	mtx_unlock(&ct->ct_lock);
 
@@ -379,16 +444,27 @@ call_again:
 	 */
 	error = sosend(ct->ct_socket, NULL, NULL, mreq, NULL, 0, curthread);
 	mreq = NULL;
+	if (error == EMSGSIZE) {
+		SOCKBUF_LOCK(&ct->ct_socket->so_snd);
+		sbwait(&ct->ct_socket->so_snd);
+		SOCKBUF_UNLOCK(&ct->ct_socket->so_snd);
+		AUTH_VALIDATE(auth, xid, NULL, NULL);
+		mtx_lock(&ct->ct_lock);
+		TAILQ_REMOVE(&ct->ct_pending, cr, cr_link);
+		goto call_again;
+	}
 
-	reply_msg.acpted_rply.ar_verf = _null_auth;
-	reply_msg.acpted_rply.ar_results.where = results_ptr;
-	reply_msg.acpted_rply.ar_results.proc = xdr_results;
+	reply_msg.acpted_rply.ar_verf.oa_flavor = AUTH_NULL;
+	reply_msg.acpted_rply.ar_verf.oa_base = cr->cr_verf;
+	reply_msg.acpted_rply.ar_verf.oa_length = 0;
+	reply_msg.acpted_rply.ar_results.where = NULL;
+	reply_msg.acpted_rply.ar_results.proc = (xdrproc_t)xdr_void;
 
 	mtx_lock(&ct->ct_lock);
 	if (error) {
 		TAILQ_REMOVE(&ct->ct_pending, cr, cr_link);
-		ct->ct_error.re_errno = error;
-		ct->ct_error.re_status = RPC_CANTSEND;
+		errp->re_errno = error;
+		errp->re_status = stat = RPC_CANTSEND;
 		goto out;
 	}
 
@@ -399,8 +475,8 @@ call_again:
 	 */
 	if (cr->cr_error) {
 		TAILQ_REMOVE(&ct->ct_pending, cr, cr_link);
-		ct->ct_error.re_errno = cr->cr_error;
-		ct->ct_error.re_status = RPC_CANTRECV;
+		errp->re_errno = cr->cr_error;
+		errp->re_status = stat = RPC_CANTRECV;
 		goto out;
 	}
 	if (cr->cr_mrep) {
@@ -413,7 +489,7 @@ call_again:
 	 */
 	if (timeout.tv_sec == 0 && timeout.tv_usec == 0) {
 		TAILQ_REMOVE(&ct->ct_pending, cr, cr_link);
-		ct->ct_error.re_status = RPC_TIMEDOUT;
+		errp->re_status = stat = RPC_TIMEDOUT;
 		goto out;
 	}
 
@@ -428,17 +504,19 @@ call_again:
 		 * on the list. Turn the error code into an
 		 * appropriate client status.
 		 */
-		ct->ct_error.re_errno = error;
+		errp->re_errno = error;
 		switch (error) {
 		case EINTR:
-			ct->ct_error.re_status = RPC_INTR;
+		case ERESTART:
+			stat = RPC_INTR;
 			break;
 		case EWOULDBLOCK:
-			ct->ct_error.re_status = RPC_TIMEDOUT;
+			stat = RPC_TIMEDOUT;
 			break;
 		default:
-			ct->ct_error.re_status = RPC_CANTRECV;
+			stat = RPC_CANTRECV;
 		}
+		errp->re_status = stat;
 		goto out;
 	} else {
 		/*
@@ -447,8 +525,8 @@ call_again:
 		 * otherwise we have a reply.
 		 */
 		if (cr->cr_error) {
-			ct->ct_error.re_errno = cr->cr_error;
-			ct->ct_error.re_status = RPC_CANTRECV;
+			errp->re_errno = cr->cr_error;
+			errp->re_status = stat = RPC_CANTRECV;
 			goto out;
 		}
 	}
@@ -460,50 +538,58 @@ got_reply:
 	 */
 	mtx_unlock(&ct->ct_lock);
 
+	if (ext && ext->rc_feedback)
+		ext->rc_feedback(FEEDBACK_OK, proc, ext->rc_feedback_arg);
+
 	xdrmbuf_create(&xdrs, cr->cr_mrep, XDR_DECODE);
 	ok = xdr_replymsg(&xdrs, &reply_msg);
-	XDR_DESTROY(&xdrs);
 	cr->cr_mrep = NULL;
-
-	mtx_lock(&ct->ct_lock);
 
 	if (ok) {
 		if ((reply_msg.rm_reply.rp_stat == MSG_ACCEPTED) &&
-			(reply_msg.acpted_rply.ar_stat == SUCCESS))
-			ct->ct_error.re_status = RPC_SUCCESS;
+		    (reply_msg.acpted_rply.ar_stat == SUCCESS))
+			errp->re_status = stat = RPC_SUCCESS;
 		else
-			_seterr_reply(&reply_msg, &(ct->ct_error));
+			stat = _seterr_reply(&reply_msg, errp);
 
-		if (ct->ct_error.re_status == RPC_SUCCESS) {
-			if (! AUTH_VALIDATE(cl->cl_auth,
-					    &reply_msg.acpted_rply.ar_verf)) {
-				ct->ct_error.re_status = RPC_AUTHERROR;
-				ct->ct_error.re_why = AUTH_INVALIDRESP;
-			}
-			if (reply_msg.acpted_rply.ar_verf.oa_base != NULL) {
-				xdrs.x_op = XDR_FREE;
-				(void) xdr_opaque_auth(&xdrs,
-					&(reply_msg.acpted_rply.ar_verf));
+		if (stat == RPC_SUCCESS) {
+			results = xdrmbuf_getall(&xdrs);
+			if (!AUTH_VALIDATE(auth, xid,
+				&reply_msg.acpted_rply.ar_verf,
+				&results)) {
+				errp->re_status = stat = RPC_AUTHERROR;
+				errp->re_why = AUTH_INVALIDRESP;
+			} else {
+				KASSERT(results,
+				    ("auth validated but no result"));
+				*resultsp = results;
 			}
 		}		/* end successful completion */
 		/*
 		 * If unsuccesful AND error is an authentication error
 		 * then refresh credentials and try again, else break
 		 */
-		else if (ct->ct_error.re_status == RPC_AUTHERROR)
+		else if (stat == RPC_AUTHERROR)
 			/* maybe our credentials need to be refreshed ... */
 			if (nrefreshes > 0 &&
-			    AUTH_REFRESH(cl->cl_auth, &reply_msg)) {
+			    AUTH_REFRESH(auth, &reply_msg)) {
 				nrefreshes--;
+				XDR_DESTROY(&xdrs);
+				mtx_lock(&ct->ct_lock);
 				goto call_again;
 			}
 		/* end of unsuccessful completion */
 	}	/* end of valid reply message */
 	else {
-		ct->ct_error.re_status = RPC_CANTDECODERES;
+		errp->re_status = stat = RPC_CANTDECODERES;
 	}
+	XDR_DESTROY(&xdrs);
+	mtx_lock(&ct->ct_lock);
 out:
 	mtx_assert(&ct->ct_lock, MA_OWNED);
+
+	KASSERT(stat != RPC_SUCCESS || *resultsp,
+	    ("RPC_SUCCESS without reply"));
 
 	if (mreq)
 		m_freem(mreq);
@@ -516,9 +602,12 @@ out:
 		
 	mtx_unlock(&ct->ct_lock);
 
+	if (auth && stat != RPC_SUCCESS)
+		AUTH_VALIDATE(auth, xid, NULL, NULL);
+
 	free(cr, M_RPC);
 
-	return (ct->ct_error.re_status);
+	return (stat);
 }
 
 static void
@@ -642,7 +731,7 @@ clnt_vc_control(CLIENT *cl, u_int request, void *info)
 		break;
 
 	case CLSET_WAITCHAN:
-		ct->ct_waitchan = *(const char **)info;
+		ct->ct_waitchan = (const char *)info;
 		break;
 
 	case CLGET_WAITCHAN:
@@ -651,7 +740,7 @@ clnt_vc_control(CLIENT *cl, u_int request, void *info)
 
 	case CLSET_INTERRUPTIBLE:
 		if (*(int *) info)
-			ct->ct_waitflag = PCATCH;
+			ct->ct_waitflag = PCATCH | PBDRY;
 		else
 			ct->ct_waitflag = 0;
 		break;
@@ -673,26 +762,40 @@ clnt_vc_control(CLIENT *cl, u_int request, void *info)
 }
 
 static void
-clnt_vc_destroy(CLIENT *cl)
+clnt_vc_close(CLIENT *cl)
 {
 	struct ct_data *ct = (struct ct_data *) cl->cl_private;
 	struct ct_request *cr;
-	struct socket *so = NULL;
 
 	mtx_lock(&ct->ct_lock);
 
+	if (ct->ct_closed) {
+		mtx_unlock(&ct->ct_lock);
+		return;
+	}
+
+	if (ct->ct_closing) {
+		while (ct->ct_closing)
+			msleep(ct, &ct->ct_lock, 0, "rpcclose", 0);
+		KASSERT(ct->ct_closed, ("client should be closed"));
+		mtx_unlock(&ct->ct_lock);
+		return;
+	}
+
 	if (ct->ct_socket) {
+		ct->ct_closing = TRUE;
+		mtx_unlock(&ct->ct_lock);
+
 		SOCKBUF_LOCK(&ct->ct_socket->so_rcv);
-		ct->ct_socket->so_upcallarg = NULL;
-		ct->ct_socket->so_upcall = NULL;
-		ct->ct_socket->so_rcv.sb_flags &= ~SB_UPCALL;
+		soupcall_clear(ct->ct_socket, SO_RCV);
+		clnt_vc_upcallsdone(ct);
 		SOCKBUF_UNLOCK(&ct->ct_socket->so_rcv);
 
 		/*
 		 * Abort any pending requests and wait until everyone
 		 * has finished with clnt_vc_call.
 		 */
-		ct->ct_closing = TRUE;
+		mtx_lock(&ct->ct_lock);
 		TAILQ_FOREACH(cr, &ct->ct_pending, cr_link) {
 			cr->cr_xid = 0;
 			cr->cr_error = ESHUTDOWN;
@@ -701,7 +804,25 @@ clnt_vc_destroy(CLIENT *cl)
 
 		while (ct->ct_threads)
 			msleep(ct, &ct->ct_lock, 0, "rpcclose", 0);
+	}
 
+	ct->ct_closing = FALSE;
+	ct->ct_closed = TRUE;
+	mtx_unlock(&ct->ct_lock);
+	wakeup(ct);
+}
+
+static void
+clnt_vc_destroy(CLIENT *cl)
+{
+	struct ct_data *ct = (struct ct_data *) cl->cl_private;
+	struct socket *so = NULL;
+
+	clnt_vc_close(cl);
+
+	mtx_lock(&ct->ct_lock);
+
+	if (ct->ct_socket) {
 		if (ct->ct_closeit) {
 			so = ct->ct_socket;
 		}
@@ -729,7 +850,7 @@ time_not_ok(struct timeval *t)
 		t->tv_usec <= -1 || t->tv_usec > 1000000);
 }
 
-void
+int
 clnt_vc_soupcall(struct socket *so, void *arg, int waitflag)
 {
 	struct ct_data *ct = (struct ct_data *) arg;
@@ -738,7 +859,9 @@ clnt_vc_soupcall(struct socket *so, void *arg, int waitflag)
 	struct ct_request *cr;
 	int error, rcvflag, foundreq;
 	uint32_t xid, header;
+	bool_t do_read;
 
+	ct->ct_upcallrefs++;
 	uio.uio_td = curthread;
 	do {
 		/*
@@ -746,7 +869,6 @@ clnt_vc_soupcall(struct socket *so, void *arg, int waitflag)
 		 * record mark.
 		 */
 		if (ct->ct_record_resid == 0) {
-			bool_t do_read;
 
 			/*
 			 * Make sure there is either a whole record
@@ -754,20 +876,20 @@ clnt_vc_soupcall(struct socket *so, void *arg, int waitflag)
 			 * error condition
 			 */
 			do_read = FALSE;
-			SOCKBUF_LOCK(&so->so_rcv);
 			if (so->so_rcv.sb_cc >= sizeof(uint32_t)
 			    || (so->so_rcv.sb_state & SBS_CANTRCVMORE)
 			    || so->so_error)
 				do_read = TRUE;
-			SOCKBUF_UNLOCK(&so->so_rcv);
 
 			if (!do_read)
-				return;
+				break;
 
+			SOCKBUF_UNLOCK(&so->so_rcv);
 			uio.uio_resid = sizeof(uint32_t);
 			m = NULL;
 			rcvflag = MSG_DONTWAIT | MSG_SOCALLBCK;
 			error = soreceive(so, NULL, &uio, &m, NULL, &rcvflag);
+			SOCKBUF_LOCK(&so->so_rcv);
 
 			if (error == EWOULDBLOCK)
 				break;
@@ -795,7 +917,7 @@ clnt_vc_soupcall(struct socket *so, void *arg, int waitflag)
 				mtx_unlock(&ct->ct_lock);
 				break;
 			}
-			memcpy(&header, mtod(m, uint32_t *), sizeof(uint32_t));
+			m_copydata(m, 0, sizeof(uint32_t), (char *)&header);
 			header = ntohl(header);
 			ct->ct_record = NULL;
 			ct->ct_record_resid = header & 0x7fffffff;
@@ -803,14 +925,29 @@ clnt_vc_soupcall(struct socket *so, void *arg, int waitflag)
 			m_freem(m);
 		} else {
 			/*
+			 * Wait until the socket has the whole record
+			 * buffered.
+			 */
+			do_read = FALSE;
+			if (so->so_rcv.sb_cc >= ct->ct_record_resid
+			    || (so->so_rcv.sb_state & SBS_CANTRCVMORE)
+			    || so->so_error)
+				do_read = TRUE;
+
+			if (!do_read)
+				break;
+
+			/*
 			 * We have the record mark. Read as much as
 			 * the socket has buffered up to the end of
 			 * this record.
 			 */
+			SOCKBUF_UNLOCK(&so->so_rcv);
 			uio.uio_resid = ct->ct_record_resid;
 			m = NULL;
 			rcvflag = MSG_DONTWAIT | MSG_SOCALLBCK;
 			error = soreceive(so, NULL, &uio, &m, NULL, &rcvflag);
+			SOCKBUF_LOCK(&so->so_rcv);
 
 			if (error == EWOULDBLOCK)
 				break;
@@ -839,13 +976,14 @@ clnt_vc_soupcall(struct socket *so, void *arg, int waitflag)
 				 * The XID is in the first uint32_t of
 				 * the reply.
 				 */
-				ct->ct_record =
-					m_pullup(ct->ct_record, sizeof(xid));
-				if (!ct->ct_record)
+				if (ct->ct_record->m_len < sizeof(xid) &&
+				    m_length(ct->ct_record, NULL) <
+				    sizeof(xid)) {
+					m_freem(ct->ct_record);
 					break;
-				memcpy(&xid,
-				    mtod(ct->ct_record, uint32_t *),
-				    sizeof(uint32_t));
+				}
+				m_copydata(ct->ct_record, 0, sizeof(xid),
+				    (char *)&xid);
 				xid = ntohl(xid);
 
 				mtx_lock(&ct->ct_lock);
@@ -878,4 +1016,24 @@ clnt_vc_soupcall(struct socket *so, void *arg, int waitflag)
 			}
 		}
 	} while (m);
+	ct->ct_upcallrefs--;
+	if (ct->ct_upcallrefs < 0)
+		panic("rpcvc upcall refcnt");
+	if (ct->ct_upcallrefs == 0)
+		wakeup(&ct->ct_upcallrefs);
+	return (SU_OK);
+}
+
+/*
+ * Wait for all upcalls in progress to complete.
+ */
+static void
+clnt_vc_upcallsdone(struct ct_data *ct)
+{
+
+	SOCKBUF_LOCK_ASSERT(&ct->ct_socket->so_rcv);
+
+	while (ct->ct_upcallrefs > 0)
+		(void) msleep(&ct->ct_upcallrefs,
+		    SOCKBUF_MTX(&ct->ct_socket->so_rcv), 0, "rpcvcup", 0);
 }

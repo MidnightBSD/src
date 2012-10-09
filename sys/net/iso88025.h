@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/iso88025.h,v 1.16.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  *
  * Information gathered from tokenring@freebsd, /sys/net/ethernet.h and
  * the Mach token ring driver.
@@ -164,9 +164,9 @@ struct	iso88025_addr {
 
 void	iso88025_ifattach	(struct ifnet *, const u_int8_t *, int);
 void	iso88025_ifdetach	(struct ifnet *, int);
-int	iso88025_ioctl		(struct ifnet *, int , caddr_t );
+int	iso88025_ioctl		(struct ifnet *, u_long, caddr_t );
 int	iso88025_output		(struct ifnet *, struct mbuf *, struct sockaddr *,
-				 struct rtentry *);
+    				 struct route *);
 void	iso88025_input		(struct ifnet *, struct mbuf *);
 
 #endif

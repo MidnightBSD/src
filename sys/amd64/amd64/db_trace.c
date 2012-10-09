@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/amd64/amd64/db_trace.c,v 1.4 2012/03/31 17:05:08 laffer1 Exp $ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_trace.c,v 1.80.2.2.2.2 2008/12/12 13:21:31 kib Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 
@@ -70,12 +69,10 @@ static db_varfcn_t db_ss;
 #define	DB_OFFSET(x)	(db_expr_t *)offsetof(struct trapframe, x)
 struct db_variable db_regs[] = {
 	{ "cs",		DB_OFFSET(tf_cs),	db_frame },
-#if 0
 	{ "ds",		DB_OFFSET(tf_ds),	db_frame },
 	{ "es",		DB_OFFSET(tf_es),	db_frame },
 	{ "fs",		DB_OFFSET(tf_fs),	db_frame },
 	{ "gs",		DB_OFFSET(tf_gs),	db_frame },
-#endif
 	{ "ss",		NULL,			db_ss },
 	{ "rax",	DB_OFFSET(tf_rax),	db_frame },
 	{ "rcx",        DB_OFFSET(tf_rcx),	db_frame },
@@ -95,7 +92,7 @@ struct db_variable db_regs[] = {
 	{ "r15",	DB_OFFSET(tf_r15),	db_frame },
 	{ "rip",	DB_OFFSET(tf_rip),	db_frame },
 	{ "rflags",	DB_OFFSET(tf_rflags),	db_frame },
-#define	DB_N_SHOW_REGS	20	/* Don't show registers after here. */
+#define	DB_N_SHOW_REGS	24	/* Don't show registers after here. */
 	{ "dr0",	NULL,			db_dr0 },
 	{ "dr1",	NULL,			db_dr1 },
 	{ "dr2",	NULL,			db_dr2 },
@@ -317,17 +314,19 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 		    strcmp(name, "Xtimerint") == 0 ||
 		    strcmp(name, "Xipi_intr_bitmap_handler") == 0 ||
 		    strcmp(name, "Xcpustop") == 0 ||
+		    strcmp(name, "Xcpususpend") == 0 ||
 		    strcmp(name, "Xrendezvous") == 0)
 			frame_type = INTERRUPT;
 		else if (strcmp(name, "Xfast_syscall") == 0)
 			frame_type = SYSCALL;
-#ifdef COMPAT_IA32
+#ifdef COMPAT_FREEBSD32
 		else if (strcmp(name, "Xint0x80_syscall") == 0)
 			frame_type = SYSCALL;
 #endif
 		/* XXX: These are interrupts with trap frames. */
 		else if (strcmp(name, "Xtimerint") == 0 ||
 		    strcmp(name, "Xcpustop") == 0 ||
+		    strcmp(name, "Xcpususpend") == 0 ||
 		    strcmp(name, "Xrendezvous") == 0 ||
 		    strcmp(name, "Xipi_intr_bitmap_handler") == 0)
 			frame_type = TRAP_INTERRUPT;
@@ -356,7 +355,7 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 		rbp = tf->tf_rbp;
 		switch (frame_type) {
 		case TRAP:
-			db_printf("--- trap %#lr", tf->tf_trapno);
+			db_printf("--- trap %#r", tf->tf_trapno);
 			break;
 		case SYSCALL:
 			db_printf("--- syscall");

@@ -24,12 +24,16 @@
  * SUCH DAMAGE.
  */
 
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/fm801.c,v 1.33 2007/06/17 06:10:42 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define PCI_VENDOR_FORTEMEDIA	0x1319
 #define PCI_DEVICE_FORTEMEDIA1	0x08011319	/* Audio controller */
@@ -106,10 +110,10 @@ static int fm801ch_setup(struct pcm_channel *c);
 */
 
 static u_int32_t fmts[] = {
-	AFMT_U8,
-	AFMT_STEREO | AFMT_U8,
-	AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S16_LE,
+	SND_FORMAT(AFMT_U8, 1, 0),
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
 	0
 };
 
@@ -272,7 +276,7 @@ fm801_wrcd(kobj_t obj, void *devinfo, int regno, u_int32_t data)
 static kobj_method_t fm801_ac97_methods[] = {
     	KOBJMETHOD(ac97_read,		fm801_rdcd),
     	KOBJMETHOD(ac97_write,		fm801_wrcd),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 AC97_DECLARE(fm801_ac97);
 
@@ -346,19 +350,20 @@ fm801ch_setformat(kobj_t obj, void *data, u_int32_t format)
 	struct fm801_info *fm801 = ch->parent;
 
 	DPRINT("fm801ch_setformat 0x%x : %s, %s, %s, %s\n", format,
-		(format & AFMT_STEREO)?"stereo":"mono",
-		(format & (AFMT_S16_LE | AFMT_S16_BE | AFMT_U16_LE | AFMT_U16_BE)) ? "16bit":"8bit",
+		(AFMT_CHANNEL(format) > 1)?"stereo":"mono",
+		(format & AFMT_16BIT) ? "16bit":"8bit",
 		(format & AFMT_SIGNED)? "signed":"unsigned",
 		(format & AFMT_BIGENDIAN)?"bigendiah":"littleendian" );
 
 	if(ch->dir == PCMDIR_PLAY) {
-		fm801->play_fmt =  (format & AFMT_STEREO)? FM_PLAY_STEREO : 0;
+		fm801->play_fmt =
+		    (AFMT_CHANNEL(format) > 1)? FM_PLAY_STEREO : 0;
 		fm801->play_fmt |= (format & AFMT_16BIT) ? FM_PLAY_16BIT : 0;
 		return 0;
 	}
 
 	if(ch->dir == PCMDIR_REC ) {
-		fm801->rec_fmt = (format & AFMT_STEREO)? FM_REC_STEREO:0;
+		fm801->rec_fmt = (AFMT_CHANNEL(format) > 1)? FM_REC_STEREO:0;
 		fm801->rec_fmt |= (format & AFMT_16BIT) ? FM_PLAY_16BIT : 0;
 		return 0;
 	}
@@ -367,8 +372,8 @@ fm801ch_setformat(kobj_t obj, void *data, u_int32_t format)
 }
 
 struct {
-	int limit;
-	int rate;
+	u_int32_t limit;
+	u_int32_t rate;
 } fm801_rates[11] = {
 	{  6600,  5500 },
 	{  8750,  8000 },
@@ -384,7 +389,7 @@ struct {
 /* anything above -> 48000 */
 };
 
-static int
+static u_int32_t
 fm801ch_setspeed(kobj_t obj, void *data, u_int32_t speed)
 {
 	struct fm801_chinfo *ch = data;
@@ -411,7 +416,7 @@ fm801ch_setspeed(kobj_t obj, void *data, u_int32_t speed)
 	return fm801_rates[i].rate;
 }
 
-static int
+static u_int32_t
 fm801ch_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct fm801_chinfo *ch = data;
@@ -489,12 +494,12 @@ fm801ch_trigger(kobj_t obj, void *data, int go)
 }
 
 /* Almost ALSA copy */
-static int
+static u_int32_t
 fm801ch_getptr(kobj_t obj, void *data)
 {
 	struct fm801_chinfo *ch = data;
 	struct fm801_info *fm801 = ch->parent;
-	int result = 0;
+	u_int32_t result = 0;
 
 	if (ch->dir == PCMDIR_PLAY) {
 		result = fm801_rd(fm801,
@@ -525,7 +530,7 @@ static kobj_method_t fm801ch_methods[] = {
     	KOBJMETHOD(channel_trigger,		fm801ch_trigger),
     	KOBJMETHOD(channel_getptr,		fm801ch_getptr),
     	KOBJMETHOD(channel_getcaps,		fm801ch_getcaps),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 CHANNEL_DECLARE(fm801ch);
 
@@ -744,12 +749,12 @@ static device_method_t fm801_methods[] = {
 	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 	DEVMETHOD(bus_alloc_resource,	fm801_alloc_resource),
 	DEVMETHOD(bus_release_resource,	fm801_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
-	{ 0, 0}
+
+	DEVMETHOD_END
 };
 
 static driver_t fm801_driver = {

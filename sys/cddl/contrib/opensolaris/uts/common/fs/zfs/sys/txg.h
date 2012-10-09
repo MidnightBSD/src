@@ -1,11 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
  * The contents of this file are subject to the terms of the
- * Common Development and Distribution License, Version 1.0 only
- * (the "License").  You may not use this file except in compliance
- * with the License.
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
@@ -21,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef _SYS_TXG_H
 #define	_SYS_TXG_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/spa.h>
 #include <sys/zfs_context.h>
@@ -42,6 +38,9 @@ extern "C" {
 #define	TXG_MASK		(TXG_SIZE - 1)	/* mask for size	*/
 #define	TXG_INITIAL		TXG_SIZE	/* initial txg 		*/
 #define	TXG_IDX			(txg & TXG_MASK)
+
+/* Number of txgs worth of frees we defer adding to in-core spacemaps */
+#define	TXG_DEFER_SIZE		2
 
 #define	TXG_WAIT		1ULL
 #define	TXG_NOWAIT		2ULL
@@ -73,8 +72,15 @@ extern void txg_sync_stop(struct dsl_pool *dp);
 extern uint64_t txg_hold_open(struct dsl_pool *dp, txg_handle_t *txghp);
 extern void txg_rele_to_quiesce(txg_handle_t *txghp);
 extern void txg_rele_to_sync(txg_handle_t *txghp);
-extern void txg_suspend(struct dsl_pool *dp);
-extern void txg_resume(struct dsl_pool *dp);
+extern void txg_register_callbacks(txg_handle_t *txghp, list_t *tx_callbacks);
+
+/*
+ * Delay the caller by the specified number of ticks or until
+ * the txg closes (whichever comes first).  This is intended
+ * to be used to throttle writers when the system nears its
+ * capacity.
+ */
+extern void txg_delay(struct dsl_pool *dp, uint64_t txg, int ticks);
 
 /*
  * Wait until the given transaction group has finished syncing.
@@ -96,7 +102,10 @@ extern void txg_wait_open(struct dsl_pool *dp, uint64_t txg);
  * Returns TRUE if we are "backed up" waiting for the syncing
  * transaction to complete; otherwise returns FALSE.
  */
-extern int txg_stalled(struct dsl_pool *dp);
+extern boolean_t txg_stalled(struct dsl_pool *dp);
+
+/* returns TRUE if someone is waiting for the next txg to sync */
+extern boolean_t txg_sync_waiting(struct dsl_pool *dp);
 
 /*
  * Per-txg object lists.
@@ -108,6 +117,7 @@ extern void txg_list_create(txg_list_t *tl, size_t offset);
 extern void txg_list_destroy(txg_list_t *tl);
 extern int txg_list_empty(txg_list_t *tl, uint64_t txg);
 extern int txg_list_add(txg_list_t *tl, void *p, uint64_t txg);
+extern int txg_list_add_tail(txg_list_t *tl, void *p, uint64_t txg);
 extern void *txg_list_remove(txg_list_t *tl, uint64_t txg);
 extern void *txg_list_remove_this(txg_list_t *tl, void *p, uint64_t txg);
 extern int txg_list_member(txg_list_t *tl, void *p, uint64_t txg);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/bios/smapi.c,v 1.14 2007/03/20 20:21:44 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -59,7 +58,7 @@ __FBSDID("$FreeBSD: src/sys/i386/bios/smapi.c,v 1.14 2007/03/20 20:21:44 jhb Exp
 #define	ADDR2HDR(addr)	((struct smapi_bios_header *)BIOS_PADDRTOVADDR(addr))
 
 struct smapi_softc {
-	struct cdev *cdev;
+	struct cdev *		cdev;
 	device_t		dev;
 	struct resource *	res;
 	int			rid;
@@ -83,33 +82,28 @@ static struct cdevsw smapi_cdevsw = {
 	.d_flags =	D_MEM | D_NEEDGIANT,
 };
 
-static void	smapi_identify		(driver_t *, device_t);
-static int	smapi_probe		(device_t);
-static int	smapi_attach		(device_t);
-static int	smapi_detach            (device_t);
-static int	smapi_modevent		(module_t, int, void *);
+static void	smapi_identify(driver_t *, device_t);
+static int	smapi_probe(device_t);
+static int	smapi_attach(device_t);
+static int	smapi_detach(device_t);
+static int	smapi_modevent(module_t, int, void *);
                 
-static int	smapi_header_cksum	(struct smapi_bios_header *);
+static int	smapi_header_cksum(struct smapi_bios_header *);
 
-extern int	smapi32			(struct smapi_bios_parameter *,
-					 struct smapi_bios_parameter *);
-extern int	smapi32_new		(u_long, u_short,
-					 struct smapi_bios_parameter *,
-					 struct smapi_bios_parameter *);
+extern int	smapi32(struct smapi_bios_parameter *,
+		    struct smapi_bios_parameter *);
+extern int	smapi32_new(u_long, u_short,
+		    struct smapi_bios_parameter *,
+		    struct smapi_bios_parameter *);
 
 static int
-smapi_ioctl (dev, cmd, data, fflag, td)
-	struct cdev *dev;
-	u_long		cmd;
-	caddr_t		data;
-	int		fflag;
-	d_thread_t *	td;
+smapi_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread *td)
 {
 	struct smapi_softc *sc;
 	int error;
 
 	error = 0;
-	sc = devclass_get_softc(smapi_devclass, minor(dev)); 
+	sc = devclass_get_softc(smapi_devclass, dev2unit(dev)); 
         if (sc == NULL) {
                 error = ENXIO;
                 goto fail;
@@ -284,10 +278,7 @@ smapi_detach (device_t dev)
 }
 
 static int
-smapi_modevent (mod, what, arg)
-        module_t        mod;
-        int             what;
-        void *          arg;
+smapi_modevent (module_t mod, int what, void *arg)
 {
 	device_t *	devs;
 	int		count;

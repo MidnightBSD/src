@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/intr_machdep.h,v 1.5 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.

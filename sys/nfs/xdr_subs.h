@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)xdr_subs.h	8.3 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfs/xdr_subs.h,v 1.15 2005/01/07 01:45:50 imp Exp $
+ * $FreeBSD$
  */
 
 

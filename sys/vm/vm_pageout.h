@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/vm/vm_pageout.h,v 1.2 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -58,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm_pageout.h,v 1.41.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _VM_VM_PAGEOUT_H_
@@ -84,6 +83,9 @@ extern int vm_pageout_page_count;
 #define VM_SWAP_NORMAL 1
 #define VM_SWAP_IDLE 2
 
+#define	VM_OOM_MEM	1
+#define	VM_OOM_SWAPZ	2
+
 /*
  *	Exported routines.
  */
@@ -100,6 +102,9 @@ extern void vm_waitpfault(void);
 
 #ifdef _KERNEL
 boolean_t vm_pageout_fallback_object_lock(vm_page_t, vm_page_t *);
-int vm_pageout_flush(vm_page_t *, int, int);
+int vm_pageout_flush(vm_page_t *, int, int, int, int *, boolean_t *);
+void vm_pageout_oom(int shortage);
+boolean_t vm_pageout_page_lock(vm_page_t, vm_page_t *);
+void vm_contig_grow_cache(int, vm_paddr_t, vm_paddr_t);
 #endif
 #endif	/* _VM_VM_PAGEOUT_H_ */

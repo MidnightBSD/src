@@ -1,4 +1,4 @@
-; $MidnightBSD: src/sys/kern/syscalls.master,v 1.9 2012/03/23 20:48:39 laffer1 Exp $
+ $FreeBSD$
 ;	from: @(#)syscalls.master	8.2 (Berkeley) 1/13/94
 ;
 ; System call name/number master file.
@@ -12,7 +12,7 @@
 ;		case where the event exists, but we don't want auditing, the
 ;		event should be #defined to AUE_NULL in audit_kevents.h.
 ;	type	one of STD, OBSOL, UNIMPL, COMPAT, COMPAT4, COMPAT6,
-;		LIBCOMPAT, NODEF, NOARGS, NOPROTO, NOSTD
+;		COMPAT7, NODEF, NOARGS, NOPROTO, NOSTD
 ;		The COMPAT* options may be combined with one or more NO*
 ;		options separated by '|' with no spaces (e.g. COMPAT|NOARGS)
 ;	name	psuedo-prototype of syscall routine
@@ -27,7 +27,7 @@
 ;	COMPAT	included on COMPAT #ifdef
 ;	COMPAT4	included on COMPAT4 #ifdef (FreeBSD 4 compat)
 ;	COMPAT6	included on COMPAT6 #ifdef (FreeBSD 6 compat)
-;	LIBCOMPAT included on COMPAT #ifdef, and placed in syscall.h
+;	COMPAT7	included on COMPAT7 #ifdef (FreeBSD 7 compat)
 ;	OBSOL	obsolete, not included in system, only specifies name
 ;	UNIMPL	not implemented, placeholder only
 ;	NOSTD	implemented but as a lkm that can be statically
@@ -40,7 +40,7 @@
 ;	NOPROTO	same as STD except do not create structure or
 ;		function prototype in sys/sysproto.h.  Does add a
 ;		definition to syscall.h besides adding a sysent.
-
+;	NOTSTATIC syscall is loadable
 ;
 ; Please copy any additions and changes to the following compatability tables:
 ; sys/compat/freebsd32/syscalls.master
@@ -150,8 +150,8 @@
 55	AUE_REBOOT	STD	{ int reboot(int opt); }
 56	AUE_REVOKE	STD	{ int revoke(char *path); }
 57	AUE_SYMLINK	STD	{ int symlink(char *path, char *link); }
-58	AUE_READLINK	STD	{ int readlink(char *path, char *buf, \
-				    int count); }
+58	AUE_READLINK	STD	{ ssize_t readlink(char *path, char *buf, \
+				    size_t count); }
 59	AUE_EXECVE	STD	{ int execve(char *fname, char **argv, \
 				    char **envv); }
 60	AUE_UMASK	STD	{ int umask(int newmask); } umask umask_args \
@@ -323,11 +323,11 @@
 				    struct fhandle *fhp); }
 161	AUE_NFS_GETFH	STD	{ int getfh(char *fname, \
 				    struct fhandle *fhp); }
-162	AUE_SYSCTL	STD	{ int getdomainname(char *domainname, \
+162	AUE_SYSCTL	COMPAT4	{ int getdomainname(char *domainname, \
 				    int len); }
-163	AUE_SYSCTL	STD	{ int setdomainname(char *domainname, \
+163	AUE_SYSCTL	COMPAT4	{ int setdomainname(char *domainname, \
 				    int len); }
-164	AUE_NULL	STD	{ int uname(struct utsname *name); }
+164	AUE_NULL	COMPAT4	{ int uname(struct utsname *name); }
 165	AUE_SYSARCH	STD	{ int sysarch(int op, char *parms); }
 166	AUE_RTPRIO	STD	{ int rtprio(int function, pid_t pid, \
 				    struct rtprio *rtp); }
@@ -403,27 +403,27 @@
 ;
 ; The following are reserved for loadable syscalls
 ;
-210	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-211	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-212	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-213	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-214	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-215	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-216	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-217	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-218	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
-219	AUE_NULL	NODEF	lkmnosys lkmnosys nosys_args int
+210	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+211	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+212	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+213	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+214	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+215	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+216	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+217	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+218	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
+219	AUE_NULL	NODEF|NOTSTATIC	lkmnosys lkmnosys nosys_args int
 
 ;
 ; The following were introduced with NetBSD/4.4Lite-2
-220	AUE_SEMCTL	NOSTD	{ int freebsd7___semctl(int semid, int semnum, \
+220	AUE_SEMCTL	COMPAT7|NOSTD { int __semctl(int semid, int semnum, \
 				    int cmd, union semun_old *arg); }
 221	AUE_SEMGET	NOSTD	{ int semget(key_t key, int nsems, \
 				    int semflg); }
 222	AUE_SEMOP	NOSTD	{ int semop(int semid, struct sembuf *sops, \
 				    size_t nsops); }
 223	AUE_NULL	UNIMPL	semconfig
-224	AUE_MSGCTL	NOSTD	{ int freebsd7_msgctl(int msqid, int cmd, \
+224	AUE_MSGCTL	COMPAT7|NOSTD { int msgctl(int msqid, int cmd, \
 				    struct msqid_ds_old *buf); }
 225	AUE_MSGGET	NOSTD	{ int msgget(key_t key, int msgflg); }
 226	AUE_MSGSND	NOSTD	{ int msgsnd(int msqid, const void *msgp, \
@@ -432,7 +432,7 @@
 				    size_t msgsz, long msgtyp, int msgflg); }
 228	AUE_SHMAT	NOSTD	{ int shmat(int shmid, const void *shmaddr, \
 				    int shmflg); }
-229	AUE_SHMCTL	NOSTD	{ int freebsd7_shmctl(int shmid, int cmd, \
+229	AUE_SHMCTL	COMPAT7|NOSTD { int shmctl(int shmid, int cmd, \
 				    struct shmid_ds_old *buf); }
 230	AUE_SHMDT	NOSTD	{ int shmdt(const void *shmaddr); }
 231	AUE_SHMGET	NOSTD	{ int shmget(key_t key, size_t size, \
@@ -594,7 +594,9 @@
 337	AUE_NULL	STD	{ int kldsym(int fileid, int cmd, \
 				    void *data); }
 338	AUE_JAIL	STD	{ int jail(struct jail *jail); }
-339	AUE_NULL	UNIMPL	pioctl
+339	AUE_NULL	NOSTD|NOTSTATIC	{ int nnpfs_syscall(int operation, \
+				    char *a_pathP, int a_opcode, \
+				    void *a_paramsP, int a_followSymlinks); }
 340	AUE_SIGPROCMASK	STD	{ int sigprocmask(int how, \
 				    const sigset_t *set, sigset_t *oset); }
 341	AUE_SIGSUSPEND	STD	{ int sigsuspend(const sigset_t *sigmask); }
@@ -670,17 +672,16 @@
 374	AUE_NULL	STD	{ int __setugid(int flag); }
 375	AUE_NULL	UNIMPL	nfsclnt
 376	AUE_EACCESS	STD	{ int eaccess(char *path, int flags); }
-377	AUE_NULL	UNIMPL	afs_syscall
+377	AUE_NULL	NOSTD|NOTSTATIC	{ int afs3_syscall(long syscall, \
+				    long parm1, long parm2, long parm3, \
+				    long parm4, long parm5, long parm6); }
 378	AUE_NMOUNT	STD	{ int nmount(struct iovec *iovp, \
 				    unsigned int iovcnt, int flags); }
-379	AUE_NULL	STD	{ int kse_exit(void); }
-380	AUE_NULL	STD	{ int kse_wakeup(struct kse_mailbox *mbx); }
-381	AUE_NULL	STD	{ int kse_create(struct kse_mailbox *mbx, \
-				    int newgroup); }
-382	AUE_NULL	STD	{ int kse_thr_interrupt( \
-				    struct kse_thr_mailbox *tmbx, int cmd, \
-				    long data); }
-383	AUE_NULL	STD	{ int kse_release(struct timespec *timeout); }
+379	AUE_NULL	UNIMPL	kse_exit
+380	AUE_NULL	UNIMPL	kse_wakeup
+381	AUE_NULL	UNIMPL	kse_create
+382	AUE_NULL	UNIMPL	kse_thr_interrupt
+383	AUE_NULL	UNIMPL	kse_release
 384	AUE_NULL	STD	{ int __mac_get_proc(struct mac *mac_p); }
 385	AUE_NULL	STD	{ int __mac_set_proc(struct mac *mac_p); }
 386	AUE_NULL	STD	{ int __mac_get_fd(int fd, \
@@ -781,9 +782,7 @@
 439	AUE_EXTATTR_LIST_LINK	STD	{ ssize_t extattr_list_link( \
 				    const char *path, int attrnamespace, \
 				    void *data, size_t nbytes); }
-440	AUE_NULL	STD	{ int kse_switchin( \
-				    struct kse_thr_mailbox *tmbx, \
-				    int flags); }
+440	AUE_NULL	UNIMPL	kse_switchin
 441	AUE_NULL	NOSTD	{ int ksem_timedwait(semid_t id, \
 				    const struct timespec *abstime); }
 442	AUE_NULL	STD	{ int thr_suspend( \
@@ -856,8 +855,9 @@
 479	AUE_TRUNCATE	STD	{ int truncate(char *path, off_t length); }
 480	AUE_FTRUNCATE	STD	{ int ftruncate(int fd, off_t length); }
 481	AUE_KILL	STD	{ int thr_kill2(pid_t pid, long id, int sig); }
-482	AUE_NULL	UNIMPL	shm_open
-483	AUE_NULL	UNIMPL	shm_unlink
+482	AUE_SHMOPEN	STD	{ int shm_open(const char *path, int flags, \
+				    mode_t mode); }
+483	AUE_SHMUNLINK	STD	{ int shm_unlink(const char *path); }
 484	AUE_NULL	STD	{ int cpuset(cpusetid_t *setid); }
 485	AUE_NULL	STD	{ int cpuset_setid(cpuwhich_t which, id_t id, \
 				    cpusetid_t setid); }
@@ -870,32 +870,84 @@
 488	AUE_NULL	STD	{ int cpuset_setaffinity(cpulevel_t level, \
 				    cpuwhich_t which, id_t id, size_t cpusetsize, \
 				    const cpuset_t *mask); }
-489	AUE_NULL	UNIMPL	faccessat
-490	AUE_NULL	UNIMPL	fchmodat
-491	AUE_NULL	UNIMPL	fchownat
-492	AUE_NULL	UNIMPL	fexecve
-493	AUE_NULL	UNIMPL	fstatat
-494	AUE_NULL	UNIMPL	futimesat
-495	AUE_NULL	UNIMPL	linkat
-496	AUE_NULL	UNIMPL	mkdirat
-497	AUE_NULL	UNIMPL	mkfifoat
-498	AUE_NULL	UNIMPL	mknodat
-499	AUE_NULL	UNIMPL	openat
-500	AUE_NULL	UNIMPL	readlinkat
-501	AUE_NULL	UNIMPL	renameat
-502	AUE_NULL	UNIMPL	symlinkat
-503	AUE_NULL	UNIMPL	unlinkat
-504	AUE_NULL	UNIMPL	posix_openpt
-505	AUE_NULL	UNIMPL	gssd_syscall
-506	AUE_NULL	UNIMPL	jail_get
-507	AUE_NULL	UNIMPL	jail_set
-508	AUE_NULL	UNIMPL	jail_remove
-509	AUE_CLOSEFROM	UNIMPL	closefrom
+489	AUE_FACCESSAT	STD	{ int faccessat(int fd, char *path, int mode, \
+				    int flag); }
+490	AUE_FCHMODAT	STD	{ int fchmodat(int fd, char *path, mode_t mode, \
+				    int flag); }
+491	AUE_FCHOWNAT	STD	{ int fchownat(int fd, char *path, uid_t uid, \
+				    gid_t gid, int flag); }
+492	AUE_FEXECVE	STD	{ int fexecve(int fd, char **argv, \
+				    char **envv); }
+493	AUE_FSTATAT	STD	{ int fstatat(int fd, char *path, \
+				    struct stat *buf, int flag); }
+494	AUE_FUTIMESAT	STD	{ int futimesat(int fd, char *path, \
+				    struct timeval *times); }
+495	AUE_LINKAT	STD	{ int linkat(int fd1, char *path1, int fd2, \
+				    char *path2, int flag); }
+496	AUE_MKDIRAT	STD	{ int mkdirat(int fd, char *path, mode_t mode); }
+497	AUE_MKFIFOAT	STD	{ int mkfifoat(int fd, char *path, mode_t mode); }
+498	AUE_MKNODAT	STD	{ int mknodat(int fd, char *path, mode_t mode, \
+				    dev_t dev); }
+; XXX: see the comment for open
+499	AUE_OPENAT_RWTC	STD	{ int openat(int fd, char *path, int flag, \
+				    mode_t mode); }
+500	AUE_READLINKAT	STD	{ int readlinkat(int fd, char *path, char *buf, \
+				    size_t bufsize); }
+501	AUE_RENAMEAT	STD	{ int renameat(int oldfd, char *old, int newfd, \
+				     char *new); }
+502	AUE_SYMLINKAT	STD	{ int symlinkat(char *path1, int fd, \
+				     char *path2); }
+503	AUE_UNLINKAT	STD	{ int unlinkat(int fd, char *path, int flag); }
+504	AUE_POSIX_OPENPT	STD	{ int posix_openpt(int flags); }
+; 505 is initialised by the kgssapi code, if present.
+505	AUE_NULL	NOSTD	{ int gssd_syscall(char *path); }
+506	AUE_NULL	STD	{ int jail_get(struct iovec *iovp, \
+				    unsigned int iovcnt, int flags); }
+507	AUE_NULL	STD	{ int jail_set(struct iovec *iovp, \
+				    unsigned int iovcnt, int flags); }
+508	AUE_NULL	STD	{ int jail_remove(int jid); }
+509	AUE_CLOSEFROM	STD	{ int closefrom(int lowfd); }
 510	AUE_SEMCTL	NOSTD	{ int __semctl(int semid, int semnum, \
 				    int cmd, union semun *arg); }
 511	AUE_MSGCTL	NOSTD	{ int msgctl(int msqid, int cmd, \
 				    struct msqid_ds *buf); }
 512	AUE_SHMCTL	NOSTD	{ int shmctl(int shmid, int cmd, \
 				    struct shmid_ds *buf); }
+513	AUE_LPATHCONF	STD	{ int lpathconf(char *path, int name); }
+514	AUE_CAP_NEW	STD	{ int cap_new(int fd, u_int64_t rights); }
+515	AUE_CAP_GETRIGHTS	STD	{ int cap_getrights(int fd, \
+				    u_int64_t *rightsp); }
+516	AUE_CAP_ENTER	STD	{ int cap_enter(void); }
+517	AUE_CAP_GETMODE	STD	{ int cap_getmode(u_int *modep); }
+518	AUE_PDFORK	STD	{ int pdfork(int *fdp, int flags); }
+519	AUE_PDKILL	STD	{ int pdkill(int fd, int signum); }
+520	AUE_PDGETPID	STD	{ int pdgetpid(int fd, pid_t *pidp); }
+521	AUE_PDWAIT	UNIMPL	pdwait4
+522	AUE_SELECT	STD	{ int pselect(int nd, fd_set *in, \
+				    fd_set *ou, fd_set *ex, \
+				    const struct timespec *ts, \
+				    const sigset_t *sm); }
+523	AUE_NULL	STD	{ int getloginclass(char *namebuf, \
+				    size_t namelen); }
+524	AUE_NULL	STD	{ int setloginclass(const char *namebuf); }
+525	AUE_NULL	STD	{ int rctl_get_racct(const void *inbufp, \
+				    size_t inbuflen, void *outbufp, \
+				    size_t outbuflen); }
+526	AUE_NULL	STD	{ int rctl_get_rules(const void *inbufp, \
+				    size_t inbuflen, void *outbufp, \
+				    size_t outbuflen); }
+527	AUE_NULL	STD	{ int rctl_get_limits(const void *inbufp, \
+				    size_t inbuflen, void *outbufp, \
+				    size_t outbuflen); }
+528	AUE_NULL	STD	{ int rctl_add_rule(const void *inbufp, \
+				    size_t inbuflen, void *outbufp, \
+				    size_t outbuflen); }
+529	AUE_NULL	STD	{ int rctl_remove_rule(const void *inbufp, \
+				    size_t inbuflen, void *outbufp, \
+				    size_t outbuflen); }
+530	AUE_NULL	STD	{ int posix_fallocate(int fd, \
+				    off_t offset, off_t len); }
+531	AUE_NULL	STD	{ int posix_fadvise(int fd, off_t offset, \
+				    off_t len, int advice); }
 ; Please copy any additions and changes to the following compatability tables:
 ; sys/compat/freebsd32/syscalls.master

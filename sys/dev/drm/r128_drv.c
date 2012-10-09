@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/r128_drv.c,v 1.11.2.3.4.1 2010/02/10 00:26:20 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -128,5 +128,9 @@ static driver_t r128_driver = {
 };
 
 extern devclass_t drm_devclass;
+#if __FreeBSD_version >= 700010
 DRIVER_MODULE(r128, vgapci, r128_driver, drm_devclass, 0, 0);
+#else
+DRIVER_MODULE(r128, pci, r128_driver, drm_devclass, 0, 0);
+#endif
 MODULE_DEPEND(r128, drm, 1, 1, 1);

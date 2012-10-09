@@ -25,11 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_linker.c,v 1.149 2007/05/31 11:51:51 kib Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_ddb.h"
 #include "opt_hwpmc_hooks.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -46,11 +45,14 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_linker.c,v 1.149 2007/05/31 11:51:51 kib E
 #include <sys/mount.h>
 #include <sys/linker.h>
 #include <sys/fcntl.h>
+#include <sys/jail.h>
 #include <sys/libkern.h>
 #include <sys/namei.h>
 #include <sys/vnode.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
+
+#include <net/vnet.h>
 
 #include <security/mac/mac_framework.h>
 
@@ -62,10 +64,15 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_linker.c,v 1.149 2007/05/31 11:51:51 kib E
 
 #ifdef KLD_DEBUG
 int kld_debug = 0;
+SYSCTL_INT(_debug, OID_AUTO, kld_debug, CTLFLAG_RW,
+        &kld_debug, 0, "Set various levels of KLD debug");
 #endif
 
 #define	KLD_LOCK()		sx_xlock(&kld_sx)
 #define	KLD_UNLOCK()		sx_xunlock(&kld_sx)
+#define	KLD_DOWNGRADE()		sx_downgrade(&kld_sx)
+#define	KLD_LOCK_READ()		sx_slock(&kld_sx)
+#define	KLD_UNLOCK_READ()	sx_sunlock(&kld_sx)
 #define	KLD_LOCKED()		sx_xlocked(&kld_sx)
 #define	KLD_LOCK_ASSERT() do {						\
 	if (!cold)							\
@@ -371,10 +378,10 @@ linker_load_file(const char *filename, linker_file_t *result)
 {
 	linker_class_t lc;
 	linker_file_t lf;
-	int foundfile, error;
+	int foundfile, error, modules;
 
 	/* Refuse to load modules if securelevel raised */
-	if (securelevel > 0)
+	if (prison0.pr_securelevel > 0)
 		return (EPERM);
 
 	KLD_LOCK_ASSERT();
@@ -410,11 +417,22 @@ linker_load_file(const char *filename, linker_file_t *result)
 				linker_file_unload(lf, LINKER_UNLOAD_FORCE);
 				return (error);
 			}
+			modules = !TAILQ_EMPTY(&lf->modules);
 			KLD_UNLOCK();
 			linker_file_register_sysctls(lf);
 			linker_file_sysinit(lf);
 			KLD_LOCK();
 			lf->flags |= LINKER_FILE_LINKED;
+
+			/*
+			 * If all of the modules in this file failed
+			 * to load, unload the file and return an
+			 * error of ENOEXEC.
+			 */
+			if (modules && TAILQ_EMPTY(&lf->modules)) {
+				linker_file_unload(lf, LINKER_UNLOAD_FORCE);
+				return (ENOEXEC);
+			}
 			*result = lf;
 			return (0);
 		}
@@ -424,6 +442,14 @@ linker_load_file(const char *filename, linker_file_t *result)
 	 * the module was not found.
 	 */
 	if (foundfile) {
+
+		/*
+		 * If the file type has not been recognized by the last try
+		 * printout a message before to fail.
+		 */
+		if (error == ENOSYS)
+			printf("linker_load_file: Unsupported file type\n");
+
 		/*
 		 * Format not recognized or otherwise unloadable.
 		 * When loading a module that is statically built into
@@ -571,7 +597,7 @@ linker_file_unload(linker_file_t file, int flags)
 	int error, i;
 
 	/* Refuse to unload modules if securelevel raised. */
-	if (securelevel > 0)
+	if (prison0.pr_securelevel > 0)
 		return (EPERM);
 
 	KLD_LOCK_ASSERT();
@@ -587,7 +613,30 @@ linker_file_unload(linker_file_t file, int flags)
 	    " informing modules\n"));
 
 	/*
-	 * Inform any modules associated with this file.
+	 * Quiesce all the modules to give them a chance to veto the unload.
+	 */
+	MOD_SLOCK;
+	for (mod = TAILQ_FIRST(&file->modules); mod;
+	     mod = module_getfnext(mod)) {
+
+		error = module_quiesce(mod);
+		if (error != 0 && flags != LINKER_UNLOAD_FORCE) {
+			KLD_DPF(FILE, ("linker_file_unload: module %s"
+			    " vetoed unload\n", module_getname(mod)));
+			/*
+			 * XXX: Do we need to tell all the quiesced modules
+			 * that they can resume work now via a new module
+			 * event?
+			 */
+			MOD_SUNLOCK;
+			return (error);
+		}
+	}
+	MOD_SUNLOCK;
+
+	/*
+	 * Inform any modules associated with this file that they are
+	 * being unloaded.
 	 */
 	MOD_XLOCK;
 	for (mod = TAILQ_FIRST(&file->modules); mod; mod = next) {
@@ -597,9 +646,13 @@ linker_file_unload(linker_file_t file, int flags)
 		/*
 		 * Give the module a chance to veto the unload.
 		 */
-		if ((error = module_unload(mod, flags)) != 0) {
-			KLD_DPF(FILE, ("linker_file_unload: module %p"
-			    " vetoes unload\n", mod));
+		if ((error = module_unload(mod)) != 0) {
+#ifdef KLD_DEBUG
+			MOD_SLOCK;
+			KLD_DPF(FILE, ("linker_file_unload: module %s"
+			    " failed unload\n", module_getname(mod)));
+			MOD_SUNLOCK;
+#endif
 			return (error);
 		}
 		MOD_XLOCK;
@@ -676,6 +729,9 @@ linker_file_add_dependency(linker_file_t file, linker_file_t dep)
 	file->deps = newdeps;
 	file->deps[file->ndeps] = dep;
 	file->ndeps++;
+	KLD_DPF(FILE, ("linker_file_add_dependency:"
+	    " adding %s as dependency for %s\n", 
+	    dep->filename, file->filename));
 	return (0);
 }
 
@@ -886,7 +942,6 @@ linker_debug_search_symbol_name(caddr_t value, char *buf, u_int buflen,
 	return (0);
 }
 
-#ifdef DDB
 /*
  * DDB Helpers.  DDB has to look across multiple files with their own symbol
  * tables and string tables.
@@ -895,12 +950,14 @@ linker_debug_search_symbol_name(caddr_t value, char *buf, u_int buflen,
  * DDB to hang because somebody's got the lock held.  We'll take the chance
  * that the files list is inconsistant instead.
  */
+#ifdef DDB
 int
 linker_ddb_lookup(const char *symstr, c_linker_sym_t *sym)
 {
 
 	return (linker_debug_lookup(symstr, sym));
 }
+#endif
 
 int
 linker_ddb_search_symbol(caddr_t value, c_linker_sym_t *sym, long *diffp)
@@ -923,7 +980,6 @@ linker_ddb_search_symbol_name(caddr_t value, char *buf, u_int buflen,
 
 	return (linker_debug_search_symbol_name(value, buf, buflen, offset));
 }
-#endif
 
 /*
  * stack(9) helper for non-debugging environemnts.  Unlike DDB helpers, we do
@@ -961,6 +1017,12 @@ kern_kldload(struct thread *td, const char *file, int *fileid)
 		return (error);
 
 	/*
+	 * It is possible that kldloaded module will attach a new ifnet,
+	 * so vnet context must be set when this ocurs.
+	 */
+	CURVNET_SET(TD_TO_VNET(td));
+
+	/*
 	 * If file does not contain a qualified name or any dot in it
 	 * (kldname.ko, or kldname.ver.ko) treat it as an interface
 	 * name.
@@ -975,23 +1037,30 @@ kern_kldload(struct thread *td, const char *file, int *fileid)
 
 	KLD_LOCK();
 	error = linker_load_module(kldname, modname, NULL, NULL, &lf);
-	if (error)
-		goto unlock;
-#ifdef HWPMC_HOOKS
-	pkm.pm_file = lf->filename;
-	pkm.pm_address = (uintptr_t) lf->address;
-	PMC_CALL_HOOK(td, PMC_FN_KLD_LOAD, (void *) &pkm);
-#endif
+	if (error) {
+		KLD_UNLOCK();
+		goto done;
+	}
 	lf->userrefs++;
 	if (fileid != NULL)
 		*fileid = lf->id;
-unlock:
+#ifdef HWPMC_HOOKS
+	KLD_DOWNGRADE();
+	pkm.pm_file = lf->filename;
+	pkm.pm_address = (uintptr_t) lf->address;
+	PMC_CALL_HOOK(td, PMC_FN_KLD_LOAD, (void *) &pkm);
+	KLD_UNLOCK_READ();
+#else
 	KLD_UNLOCK();
+#endif
+
+done:
+	CURVNET_RESTORE();
 	return (error);
 }
 
 int
-kldload(struct thread *td, struct kldload_args *uap)
+sys_kldload(struct thread *td, struct kldload_args *uap)
 {
 	char *pathname = NULL;
 	int error, fileid;
@@ -1024,6 +1093,7 @@ kern_kldunload(struct thread *td, int fileid, int flags)
 	if ((error = priv_check(td, PRIV_KLD_UNLOAD)) != 0)
 		return (error);
 
+	CURVNET_SET(TD_TO_VNET(td));
 	KLD_LOCK();
 	lf = linker_find_file_by_id(fileid);
 	if (lf) {
@@ -1056,22 +1126,28 @@ kern_kldunload(struct thread *td, int fileid, int flags)
 		error = ENOENT;
 
 #ifdef HWPMC_HOOKS
-	if (error == 0)
+	if (error == 0) {
+		KLD_DOWNGRADE();
 		PMC_CALL_HOOK(td, PMC_FN_KLD_UNLOAD, (void *) &pkm);
-#endif
+		KLD_UNLOCK_READ();
+	} else
+		KLD_UNLOCK();
+#else
 	KLD_UNLOCK();
+#endif
+	CURVNET_RESTORE();
 	return (error);
 }
 
 int
-kldunload(struct thread *td, struct kldunload_args *uap)
+sys_kldunload(struct thread *td, struct kldunload_args *uap)
 {
 
 	return (kern_kldunload(td, uap->fileid, LINKER_UNLOAD_NORMAL));
 }
 
 int
-kldunloadf(struct thread *td, struct kldunloadf_args *uap)
+sys_kldunloadf(struct thread *td, struct kldunloadf_args *uap)
 {
 
 	if (uap->flags != LINKER_UNLOAD_NORMAL &&
@@ -1081,7 +1157,7 @@ kldunloadf(struct thread *td, struct kldunloadf_args *uap)
 }
 
 int
-kldfind(struct thread *td, struct kldfind_args *uap)
+sys_kldfind(struct thread *td, struct kldfind_args *uap)
 {
 	char *pathname;
 	const char *filename;
@@ -1089,7 +1165,7 @@ kldfind(struct thread *td, struct kldfind_args *uap)
 	int error;
 
 #ifdef MAC
-	error = mac_check_kld_stat(td->td_ucred);
+	error = mac_kld_check_stat(td->td_ucred);
 	if (error)
 		return (error);
 #endif
@@ -1114,13 +1190,13 @@ out:
 }
 
 int
-kldnext(struct thread *td, struct kldnext_args *uap)
+sys_kldnext(struct thread *td, struct kldnext_args *uap)
 {
 	linker_file_t lf;
 	int error = 0;
 
 #ifdef MAC
-	error = mac_check_kld_stat(td->td_ucred);
+	error = mac_kld_check_stat(td->td_ucred);
 	if (error)
 		return (error);
 #endif
@@ -1151,32 +1227,42 @@ out:
 }
 
 int
-kldstat(struct thread *td, struct kldstat_args *uap)
+sys_kldstat(struct thread *td, struct kldstat_args *uap)
 {
 	struct kld_file_stat stat;
-	linker_file_t lf;
-	int error, namelen, version, version_num;
+	int error, version;
 
 	/*
 	 * Check the version of the user's structure.
 	 */
-	if ((error = copyin(&uap->stat->version, &version, sizeof(version))) != 0)
+	if ((error = copyin(&uap->stat->version, &version, sizeof(version)))
+	    != 0)
 		return (error);
-	if (version == sizeof(struct kld_file_stat_1))
-		version_num = 1;
-	else if (version == sizeof(struct kld_file_stat))
-		version_num = 2;
-	else
+	if (version != sizeof(struct kld_file_stat_1) &&
+	    version != sizeof(struct kld_file_stat))
 		return (EINVAL);
 
+	error = kern_kldstat(td, uap->fileid, &stat);
+	if (error != 0)
+		return (error);
+	return (copyout(&stat, uap->stat, version));
+}
+
+int
+kern_kldstat(struct thread *td, int fileid, struct kld_file_stat *stat)
+{
+	linker_file_t lf;
+	int namelen;
 #ifdef MAC
-	error = mac_check_kld_stat(td->td_ucred);
+	int error;
+
+	error = mac_kld_check_stat(td->td_ucred);
 	if (error)
 		return (error);
 #endif
 
 	KLD_LOCK();
-	lf = linker_find_file_by_id(uap->fileid);
+	lf = linker_find_file_by_id(fileid);
 	if (lf == NULL) {
 		KLD_UNLOCK();
 		return (ENOENT);
@@ -1186,34 +1272,31 @@ kldstat(struct thread *td, struct kldstat_args *uap)
 	namelen = strlen(lf->filename) + 1;
 	if (namelen > MAXPATHLEN)
 		namelen = MAXPATHLEN;
-	bcopy(lf->filename, &stat.name[0], namelen);
-	stat.refs = lf->refs;
-	stat.id = lf->id;
-	stat.address = lf->address;
-	stat.size = lf->size;
-	if (version_num > 1) {
-		/* Version 2 fields: */
-		namelen = strlen(lf->pathname) + 1;
-		if (namelen > MAXPATHLEN)
-			namelen = MAXPATHLEN;
-		bcopy(lf->pathname, &stat.pathname[0], namelen);
-	}
+	bcopy(lf->filename, &stat->name[0], namelen);
+	stat->refs = lf->refs;
+	stat->id = lf->id;
+	stat->address = lf->address;
+	stat->size = lf->size;
+	/* Version 2 fields: */
+	namelen = strlen(lf->pathname) + 1;
+	if (namelen > MAXPATHLEN)
+		namelen = MAXPATHLEN;
+	bcopy(lf->pathname, &stat->pathname[0], namelen);
 	KLD_UNLOCK();
 
 	td->td_retval[0] = 0;
-
-	return (copyout(&stat, uap->stat, version));
+	return (0);
 }
 
 int
-kldfirstmod(struct thread *td, struct kldfirstmod_args *uap)
+sys_kldfirstmod(struct thread *td, struct kldfirstmod_args *uap)
 {
 	linker_file_t lf;
 	module_t mp;
 	int error = 0;
 
 #ifdef MAC
-	error = mac_check_kld_stat(td->td_ucred);
+	error = mac_kld_check_stat(td->td_ucred);
 	if (error)
 		return (error);
 #endif
@@ -1235,7 +1318,7 @@ kldfirstmod(struct thread *td, struct kldfirstmod_args *uap)
 }
 
 int
-kldsym(struct thread *td, struct kldsym_args *uap)
+sys_kldsym(struct thread *td, struct kldsym_args *uap)
 {
 	char *symstr = NULL;
 	c_linker_sym_t sym;
@@ -1245,7 +1328,7 @@ kldsym(struct thread *td, struct kldsym_args *uap)
 	int error = 0;
 
 #ifdef MAC
-	error = mac_check_kld_stat(td->td_ucred);
+	error = mac_kld_check_stat(td->td_ucred);
 	if (error)
 		return (error);
 #endif
@@ -1537,6 +1620,12 @@ restart:
 				modname = mp->md_cval;
 				verinfo = mp->md_data;
 				mod = modlist_lookup2(modname, verinfo);
+				if (mod == NULL) {
+					printf("KLD file %s - cannot find "
+					    "dependency \"%s\"\n",
+					    lf->filename, modname);
+					goto fail;
+				}
 				/* Don't count self-dependencies */
 				if (lf == mod->container)
 					continue;
@@ -1553,11 +1642,9 @@ restart:
 		 */
 		error = LINKER_LINK_PRELOAD_FINISH(lf);
 		if (error) {
-			TAILQ_REMOVE(&depended_files, lf, loaded);
 			printf("KLD file %s - could not finalize loading\n",
 			    lf->filename);
-			linker_file_unload(lf, LINKER_UNLOAD_FORCE);
-			continue;
+			goto fail;
 		}
 		linker_file_register_modules(lf);
 		if (linker_file_lookup_set(lf, "sysinit_set", &si_start,
@@ -1565,6 +1652,10 @@ restart:
 			sysinit_add(si_start, si_stop);
 		linker_file_register_sysctls(lf);
 		lf->flags |= LINKER_FILE_LINKED;
+		continue;
+fail:
+		TAILQ_REMOVE(&depended_files, lf, loaded);
+		linker_file_unload(lf, LINKER_UNLOAD_FORCE);
 	}
 	/* woohoo! we made it! */
 }
@@ -1641,8 +1732,8 @@ linker_lookup_file(const char *path, int pathlen, const char *name,
 			NDFREE(&nd, NDF_ONLY_PNBUF);
 			type = nd.ni_vp->v_type;
 			if (vap)
-				VOP_GETATTR(nd.ni_vp, vap, td->td_ucred, td);
-			VOP_UNLOCK(nd.ni_vp, 0, td);
+				VOP_GETATTR(nd.ni_vp, vap, td->td_ucred);
+			VOP_UNLOCK(nd.ni_vp, 0);
 			vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
 			VFS_UNLOCK_GIANT(vfslocked);
 			if (type == VREG)
@@ -1671,7 +1762,8 @@ linker_hints_lookup(const char *path, int pathlen, const char *modname,
 	struct vattr vattr, mattr;
 	u_char *hints = NULL;
 	u_char *cp, *recptr, *bufend, *result, *best, *pathbuf, *sep;
-	int error, ival, bestver, *intp, reclen, found, flags, clen, blen;
+	int error, ival, bestver, *intp, found, flags, clen, blen;
+	ssize_t reclen;
 	int vfslocked = 0;
 
 	result = NULL;
@@ -1694,7 +1786,7 @@ linker_hints_lookup(const char *path, int pathlen, const char *modname,
 	if (nd.ni_vp->v_type != VREG)
 		goto bad;
 	best = cp = NULL;
-	error = VOP_GETATTR(nd.ni_vp, &vattr, cred, td);
+	error = VOP_GETATTR(nd.ni_vp, &vattr, cred);
 	if (error)
 		goto bad;
 	/*
@@ -1711,12 +1803,12 @@ linker_hints_lookup(const char *path, int pathlen, const char *modname,
 	    UIO_SYSSPACE, IO_NODELOCKED, cred, NOCRED, &reclen, td);
 	if (error)
 		goto bad;
-	VOP_UNLOCK(nd.ni_vp, 0, td);
+	VOP_UNLOCK(nd.ni_vp, 0);
 	vn_close(nd.ni_vp, FREAD, cred, td);
 	VFS_UNLOCK_GIANT(vfslocked);
 	nd.ni_vp = NULL;
 	if (reclen != 0) {
-		printf("can't read %d\n", reclen);
+		printf("can't read %zd\n", reclen);
 		goto bad;
 	}
 	intp = (int *)hints;
@@ -1780,7 +1872,7 @@ bad:
 	if (hints)
 		free(hints, M_TEMP);
 	if (nd.ni_vp != NULL) {
-		VOP_UNLOCK(nd.ni_vp, 0, td);
+		VOP_UNLOCK(nd.ni_vp, 0);
 		vn_close(nd.ni_vp, FREAD, cred, td);
 		VFS_UNLOCK_GIANT(vfslocked);
 	}
@@ -1859,62 +1951,41 @@ linker_basename(const char *path)
 }
 
 #ifdef HWPMC_HOOKS
-
-struct hwpmc_context {
-	int	nobjects;
-	int	nmappings;
-	struct pmckern_map_in *kobase;
-};
-
-static int
-linker_hwpmc_list_object(linker_file_t lf, void *arg)
-{
-	struct hwpmc_context *hc;
-
-	hc = arg;
-
-	/* If we run out of mappings, fail. */
-	if (hc->nobjects >= hc->nmappings)
-		return (1);
-
-	/* Save the info for this linker file. */
-	hc->kobase[hc->nobjects].pm_file = lf->filename;
-	hc->kobase[hc->nobjects].pm_address = (uintptr_t)lf->address;
-	hc->nobjects++;
-	return (0);
-}
-
 /*
  * Inform hwpmc about the set of kernel modules currently loaded.
  */
 void *
 linker_hwpmc_list_objects(void)
 {
-	struct hwpmc_context hc;
+	linker_file_t lf;
+	struct pmckern_map_in *kobase;
+	int i, nmappings;
 
-	hc.nmappings = 15;	/* a reasonable default */
+	nmappings = 0;
+	KLD_LOCK_READ();
+	TAILQ_FOREACH(lf, &linker_files, link)
+		nmappings++;
 
- retry:
-	/* allocate nmappings+1 entries */
-	MALLOC(hc.kobase, struct pmckern_map_in *,
-	    (hc.nmappings + 1) * sizeof(struct pmckern_map_in), M_LINKER,
-	    M_WAITOK | M_ZERO);
+	/* Allocate nmappings + 1 entries. */
+	kobase = malloc((nmappings + 1) * sizeof(struct pmckern_map_in),
+	    M_LINKER, M_WAITOK | M_ZERO);
+	i = 0;
+	TAILQ_FOREACH(lf, &linker_files, link) {
 
-	hc.nobjects = 0;
-	if (linker_file_foreach(linker_hwpmc_list_object, &hc) != 0) {
-		hc.nmappings = hc.nobjects;
-		FREE(hc.kobase, M_LINKER);
-		goto retry;
+		/* Save the info for this linker file. */
+		kobase[i].pm_file = lf->filename;
+		kobase[i].pm_address = (uintptr_t)lf->address;
+		i++;
 	}
+	KLD_UNLOCK_READ();
 
-	KASSERT(hc.nobjects > 0, ("linker_hpwmc_list_objects: no kernel "
-		"objects?"));
+	KASSERT(i > 0, ("linker_hpwmc_list_objects: no kernel objects?"));
 
 	/* The last entry of the malloced area comprises of all zeros. */
-	KASSERT(hc.kobase[hc.nobjects].pm_file == NULL,
+	KASSERT(kobase[i].pm_file == NULL,
 	    ("linker_hwpmc_list_objects: last object not NULL"));
 
-	return ((void *)hc.kobase);
+	return ((void *)kobase);
 }
 #endif
 
@@ -2059,8 +2130,8 @@ linker_load_dependencies(linker_file_t lf)
 		}
 		error = linker_load_module(NULL, modname, lf, verinfo, NULL);
 		if (error) {
-			printf("KLD %s: depends on %s - not available\n",
-			    lf->filename, modname);
+			printf("KLD %s: depends on %s - not available or"
+			    " version mismatch\n", lf->filename, modname);
 			break;
 		}
 	}
@@ -2091,7 +2162,7 @@ sysctl_kern_function_list(SYSCTL_HANDLER_ARGS)
 	int error;
 
 #ifdef MAC
-	error = mac_check_kld_stat(req->td->td_ucred);
+	error = mac_kld_check_stat(req->td->td_ucred);
 	if (error)
 		return (error);
 #endif
@@ -2111,5 +2182,5 @@ sysctl_kern_function_list(SYSCTL_HANDLER_ARGS)
 	return (SYSCTL_OUT(req, "", 1));
 }
 
-SYSCTL_PROC(_kern, OID_AUTO, function_list, CTLFLAG_RD,
+SYSCTL_PROC(_kern, OID_AUTO, function_list, CTLTYPE_OPAQUE | CTLFLAG_RD,
     NULL, 0, sysctl_kern_function_list, "", "kernel function list");

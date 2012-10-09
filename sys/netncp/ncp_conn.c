@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 1999, Boris Popov
+ * Copyright (c) 1999 Boris Popov
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -34,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_conn.c,v 1.30.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -100,13 +93,13 @@ ncp_conn_destroy(void)
 int
 ncp_conn_locklist(int flags, struct thread *td)
 {
-	return lockmgr(&listlock, flags | LK_CANRECURSE, 0, td);
+	return lockmgr(&listlock, flags | LK_CANRECURSE, 0);
 }
 
 void
 ncp_conn_unlocklist(struct thread *td)
 {
-	lockmgr(&listlock, LK_RELEASE, 0, td);
+	lockmgr(&listlock, LK_RELEASE, 0);
 }
 
 int
@@ -130,17 +123,17 @@ ncp_conn_lock_any(struct ncp_conn *conn, struct thread *td, struct ucred *cred)
 	int error;
 
 	if (conn->nc_id == 0) return EACCES;
-	error = lockmgr(&conn->nc_lock, LK_EXCLUSIVE | LK_CANRECURSE, 0, td);
+	error = lockmgr(&conn->nc_lock, LK_EXCLUSIVE | LK_CANRECURSE, 0);
 	if (error == ERESTART)
 		return EINTR;
 	error = ncp_chkintr(conn, td);
 	if (error) {
-		lockmgr(&conn->nc_lock, LK_RELEASE, 0, td);
+		lockmgr(&conn->nc_lock, LK_RELEASE, 0);
 		return error;
 	}
 
 	if (conn->nc_id == 0) {
-		lockmgr(&conn->nc_lock, LK_RELEASE, 0, td);
+		lockmgr(&conn->nc_lock, LK_RELEASE, 0);
 		return EACCES;
 	}
 	conn->td = td;		/* who currently operates */
@@ -188,13 +181,13 @@ ncp_conn_unlock(struct ncp_conn *conn, struct thread *td)
 	 * note, that LK_RELASE will do wakeup() instead of wakeup_one().
 	 * this will do a little overhead
 	 */
-	lockmgr(&conn->nc_lock, LK_RELEASE, 0, td);
+	lockmgr(&conn->nc_lock, LK_RELEASE, 0);
 }
 
 int
 ncp_conn_assert_locked(struct ncp_conn *conn, const char *checker, struct thread *td)
 {
-	if (conn->nc_lock.lk_flags & LK_HAVE_EXCL) return 0;
+	if (lockstatus(&conn->nc_lock) == LK_EXCLUSIVE) return 0;
 	printf("%s: connection isn't locked!\n", checker);
 	return EIO;
 }
@@ -239,7 +232,7 @@ ncp_conn_alloc(struct ncp_conn_args *cap, struct thread *td, struct ucred *cred,
 		owner->cr_uid = cap->owner;
 	} else
 		owner = crhold(cred);
-	MALLOC(ncp, struct ncp_conn *, sizeof(struct ncp_conn), 
+	ncp = malloc(sizeof(struct ncp_conn), 
 	    M_NCPDATA, M_WAITOK | M_ZERO);
 	error = 0;
 	lockinit(&ncp->nc_lock, PZERO, "ncplck", 0, 0);
@@ -302,8 +295,8 @@ ncp_conn_free(struct ncp_conn *ncp)
 	/*
 	 * if signal is raised - how I do react ?
 	 */
-	lockmgr(&ncp->nc_lock, LK_DRAIN, 0, td);
-	lockmgr(&ncp->nc_lock, LK_RELEASE, 0, td);
+	lockmgr(&ncp->nc_lock, LK_DRAIN, 0);
+	lockmgr(&ncp->nc_lock, LK_RELEASE, 0);
 	lockdestroy(&ncp->nc_lock);
 	while (ncp->nc_lwant) {
 		printf("lwant = %d\n", ncp->nc_lwant);
@@ -318,7 +311,7 @@ ncp_conn_free(struct ncp_conn *ncp)
 	if (ncp->li.password)
 		free(ncp->li.password, M_NCPDATA);
 	crfree(ncp->nc_owner);
-	FREE(ncp, M_NCPDATA);
+	free(ncp, M_NCPDATA);
 	return (0);
 }
 
@@ -527,17 +520,17 @@ ncp_conn_gethandle(struct ncp_conn *conn, struct thread *td, struct ncp_handle *
 {
 	struct ncp_handle *refp;
 
-	lockmgr(&lhlock, LK_EXCLUSIVE, 0, td);
+	lockmgr(&lhlock, LK_EXCLUSIVE, 0);
 	SLIST_FOREACH(refp, &lhlist, nh_next)
 		if (refp->nh_conn == conn && td == refp->nh_td) break;
 	if (refp) {
 		conn->ref_cnt++;
 		refp->nh_ref++;
 		*handle = refp;
-		lockmgr(&lhlock, LK_RELEASE, 0, td);
+		lockmgr(&lhlock, LK_RELEASE, 0);
 		return 0;
 	}
-	MALLOC(refp,struct ncp_handle *,sizeof(struct ncp_handle),M_NCPDATA,
+	refp = malloc(sizeof(struct ncp_handle),M_NCPDATA,
 	    M_WAITOK | M_ZERO);
 	SLIST_INSERT_HEAD(&lhlist,refp,nh_next);
 	refp->nh_ref++;
@@ -546,7 +539,7 @@ ncp_conn_gethandle(struct ncp_conn *conn, struct thread *td, struct ncp_handle *
 	refp->nh_id = ncp_next_handle++;
 	*handle = refp;
 	conn->ref_cnt++;
-	lockmgr(&lhlock, LK_RELEASE, 0, td);
+	lockmgr(&lhlock, LK_RELEASE, 0);
 	return 0;
 }
 /*
@@ -557,7 +550,7 @@ ncp_conn_puthandle(struct ncp_handle *handle, struct thread *td, int force)
 {
 	struct ncp_handle *refp = handle;
 
-	lockmgr(&lhlock, LK_EXCLUSIVE, 0, td);
+	lockmgr(&lhlock, LK_EXCLUSIVE, 0);
 	refp->nh_ref--;
 	refp->nh_conn->ref_cnt--;
 	if (force) {
@@ -566,9 +559,9 @@ ncp_conn_puthandle(struct ncp_handle *handle, struct thread *td, int force)
 	}
 	if (refp->nh_ref == 0) {
 		SLIST_REMOVE(&lhlist, refp, ncp_handle, nh_next);
-		FREE(refp, M_NCPDATA);
+		free(refp, M_NCPDATA);
 	}
-	lockmgr(&lhlock, LK_RELEASE, 0, td);
+	lockmgr(&lhlock, LK_RELEASE, 0);
 	return 0;
 }
 /*
@@ -578,10 +571,10 @@ int
 ncp_conn_findhandle(int connHandle, struct thread *td, struct ncp_handle **handle) {
 	struct ncp_handle *refp;
 
-	lockmgr(&lhlock, LK_SHARED, 0, td);
+	lockmgr(&lhlock, LK_SHARED, 0);
 	SLIST_FOREACH(refp, &lhlist, nh_next)
 		if (refp->nh_td == td && refp->nh_id == connHandle) break;
-	lockmgr(&lhlock, LK_RELEASE, 0, td);
+	lockmgr(&lhlock, LK_RELEASE, 0);
 	if (refp == NULL) {
 		return EBADF;
 	}
@@ -597,16 +590,16 @@ ncp_conn_putprochandles(struct thread *td)
 	struct ncp_handle *hp, *nhp;
 	int haveone = 0;
 
-	lockmgr(&lhlock, LK_EXCLUSIVE, 0, td);
+	lockmgr(&lhlock, LK_EXCLUSIVE, 0);
 	for (hp = SLIST_FIRST(&lhlist); hp; hp = nhp) {
 		nhp = SLIST_NEXT(hp, nh_next);
 		if (hp->nh_td != td) continue;
 		haveone = 1;
 		hp->nh_conn->ref_cnt -= hp->nh_ref;
 		SLIST_REMOVE(&lhlist, hp, ncp_handle, nh_next);
-		FREE(hp, M_NCPDATA);
+		free(hp, M_NCPDATA);
 	}
-	lockmgr(&lhlock, LK_RELEASE, 0, td);
+	lockmgr(&lhlock, LK_RELEASE, 0);
 	return haveone;
 }
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/vm/vm_zeroidle.c,v 1.4 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994 John Dyson
  * Copyright (c) 2001 Matt Dillon
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_zeroidle.c,v 1.49 2007/07/14 19:00:44 alc Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <opt_sched.h>
 
@@ -58,8 +57,8 @@ static int idlezero_enable_default = 0;
 TUNABLE_INT("vm.idlezero_enable", &idlezero_enable_default);
 /* Defer setting the enable flag until the kthread is running. */
 static int idlezero_enable = 0;
-SYSCTL_INT(_vm, OID_AUTO, idlezero_enable, CTLFLAG_RW, &idlezero_enable, 0, "");
-
+SYSCTL_INT(_vm, OID_AUTO, idlezero_enable, CTLFLAG_RW, &idlezero_enable, 0,
+    "Allow the kernel to use idle cpu cycles to zero-out pages");
 /*
  * Implement the pre-zeroed page mechanism.
  */
@@ -128,7 +127,7 @@ vm_pagezero(void __unused *arg)
 #ifndef PREEMPTION
 			if (sched_runnable()) {
 				thread_lock(curthread);
-				mi_switch(SW_VOL, NULL);
+				mi_switch(SW_VOL | SWT_IDLE, NULL);
 				thread_unlock(curthread);
 			}
 #endif
@@ -140,26 +139,21 @@ vm_pagezero(void __unused *arg)
 	}
 }
 
-static struct proc *pagezero_proc;
-
 static void
 pagezero_start(void __unused *arg)
 {
 	int error;
+	struct proc *p;
 	struct thread *td;
 
-	error = kthread_create(vm_pagezero, NULL, &pagezero_proc, RFSTOPPED, 0,
-	    "pagezero");
+	error = kproc_create(vm_pagezero, NULL, &p, RFSTOPPED, 0, "pagezero");
 	if (error)
 		panic("pagezero_start: error %d\n", error);
-	/*
-	 * We're an idle task, don't count us in the load.
-	 */
-	PROC_LOCK(pagezero_proc);
-	pagezero_proc->p_flag |= P_NOLOAD;
-	PROC_UNLOCK(pagezero_proc);
-	td = FIRST_THREAD_IN_PROC(pagezero_proc);
+	td = FIRST_THREAD_IN_PROC(p);
 	thread_lock(td);
+
+	/* We're an idle task, don't count us in the load. */
+	td->td_flags |= TDF_NOLOAD;
 	sched_class(td, PRI_IDLE);
 	sched_prio(td, PRI_MAX_IDLE);
 	sched_add(td, SRQ_BORING);

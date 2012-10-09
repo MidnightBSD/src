@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/tmpfs/tmpfs_vnops.h,v 1.2 2008/12/03 00:25:45 laffer1 Exp $ */
 /*	$NetBSD: tmpfs_vnops.h,v 1.7 2005/12/03 17:34:44 christos Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/tmpfs/tmpfs_vnops.h,v 1.2 2007/06/28 02:36:41 delphij Exp $
+ * $FreeBSD$
  */
 
 #ifndef _FS_TMPFS_TMPFS_VNOPS_H_

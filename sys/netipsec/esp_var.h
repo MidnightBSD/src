@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/esp_var.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: ip_esp.h,v 1.37 2002/06/09 16:26:10 itojun Exp $	*/
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -72,7 +72,10 @@ struct espstat {
 };
 
 #ifdef _KERNEL
-extern	int esp_enable;
-extern	struct espstat espstat;
+VNET_DECLARE(int, esp_enable);
+VNET_DECLARE(struct espstat, espstat);
+
+#define	V_esp_enable	VNET(esp_enable)
+#define	V_espstat	VNET(espstat)
 #endif /* _KERNEL */
 #endif /*_NETIPSEC_ESP_VAR_H_*/

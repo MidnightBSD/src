@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/bktr/bktr_reg.h,v 1.2 2008/12/02 02:24:36 laffer1 Exp $ */
 /*-
  * $FreeBSD$
  *

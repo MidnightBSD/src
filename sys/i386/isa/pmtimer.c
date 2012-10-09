@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/pmtimer.c,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 /*
  * Timer device driver for power management events.
@@ -36,7 +35,6 @@ __FBSDID("$FreeBSD: src/sys/i386/isa/pmtimer.c,v 1.6.6.1 2008/11/25 02:59:29 ken
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
-#include <sys/clock.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/syslog.h>
@@ -71,9 +69,8 @@ static int
 pmtimer_probe(device_t dev)
 {
 
-	if (ISA_PNP_PROBE(device_get_parent(dev), dev, pmtimer_ids) == ENXIO) {
+	if (ISA_PNP_PROBE(device_get_parent(dev), dev, pmtimer_ids) == ENXIO)
 		return (ENXIO);
-	}
 
 	/* only one instance always */
 	return (device_get_unit(dev));

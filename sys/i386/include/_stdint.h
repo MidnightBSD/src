@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/i386/include/_stdint.h,v 1.2 2012/03/31 17:05:09 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001, 2002 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 2001 The NetBSD Foundation, Inc.

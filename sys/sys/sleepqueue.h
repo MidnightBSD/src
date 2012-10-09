@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/sys/sleepqueue.h,v 1.4 2008/12/03 00:11:23 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/sleepqueue.h,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_SLEEPQUEUE_H_
@@ -50,7 +49,7 @@
  * call sleepq_set_timeout() after sleepq_add() to setup a timeout.  It
  * should then use one of the sleepq_timedwait() functions to block.
  *
- * If the thread wants to the sleep to be interruptible by signals, it can
+ * If the thread wants the sleep to be interruptible by signals, it can
  * call sleepq_catch_signals() after sleepq_add().  It should then use
  * one of the sleepq_wait_sig() functions to block.  After the thread has
  * been resumed, it should call sleepq_calc_signal_retval() to determine
@@ -65,7 +64,11 @@
  * sleep can be interrupted by calling sleepq_abort().  A thread can also
  * be removed from a specified sleep queue using the sleepq_remove()
  * function.  Note that the sleep queue chain must first be locked via
- * sleepq_lock() when calling sleepq_signal() and sleepq_broadcast().
+ * sleepq_lock() before calling sleepq_abort(), sleepq_broadcast(), or
+ * sleepq_signal().  These routines each return a boolean that will be true
+ * if at least one swapped-out thread was resumed.  In that case, the caller
+ * is responsible for waking up the swapper by calling kick_proc0() after
+ * releasing the sleep queue chain lock.
  *
  * Each thread allocates a sleep queue at thread creation via sleepq_alloc()
  * and releases it at thread destruction via sleepq_free().  Note that
@@ -88,7 +91,10 @@ struct thread;
 #define	SLEEPQ_CONDVAR		0x01		/* Used for a cv. */
 #define	SLEEPQ_PAUSE		0x02		/* Used by pause. */
 #define	SLEEPQ_SX		0x03		/* Used by an sx lock. */
+#define	SLEEPQ_LK		0x04		/* Used by a lockmgr. */
 #define	SLEEPQ_INTERRUPTIBLE	0x100		/* Sleep is interruptible. */
+#define	SLEEPQ_STOP_ON_BDRY	0x200		/* Stop sleeping thread on
+						   user mode boundary */
 
 void	init_sleepqueues(void);
 int	sleepq_abort(struct thread *td, int intrval);
@@ -103,10 +109,12 @@ void	sleepq_release(void *wchan);
 void	sleepq_remove(struct thread *td, void *wchan);
 int	sleepq_signal(void *wchan, int flags, int pri, int queue);
 void	sleepq_set_timeout(void *wchan, int timo);
-int	sleepq_timedwait(void *wchan);
-int	sleepq_timedwait_sig(void *wchan);
-void	sleepq_wait(void *wchan);
-int	sleepq_wait_sig(void *wchan);
+u_int	sleepq_sleepcnt(void *wchan, int queue);
+int	sleepq_timedwait(void *wchan, int pri);
+int	sleepq_timedwait_sig(void *wchan, int pri);
+int	sleepq_type(void *wchan);
+void	sleepq_wait(void *wchan, int pri);
+int	sleepq_wait_sig(void *wchan, int pri);
 
 #endif	/* _KERNEL */
 #endif	/* !_SYS_SLEEPQUEUE_H_ */

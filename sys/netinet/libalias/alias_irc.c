@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_irc.c,v 1.23.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /* Alias_irc.c intercepts packages contain IRC CTCP commands, and
 	changes DCC commands to export a port on the aliasing host instead
@@ -56,9 +56,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_irc.c,v 1.23.2.2.2.1 2008/11/
 #include <sys/kernel.h>
 #include <sys/module.h>
 #else
+#include <ctype.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,7 +93,7 @@ AliasHandleIrcOut(struct libalias *, struct ip *, struct alias_link *,
 		  int maxpacketsize);
 
 static int 
-fingerprint(struct libalias *la, struct ip *pip, struct alias_data *ah)
+fingerprint(struct libalias *la, struct alias_data *ah)
 {
 
 	if (ah->dport == NULL || ah->dport == NULL || ah->lnk == NULL || 
@@ -439,8 +439,10 @@ lPACKET_DONE:
 			int delta;
 
 			SetAckModified(lnk);
-			delta = GetDeltaSeqOut(pip, lnk);
-			AddSeq(pip, lnk, delta + copyat + iCopy - dlen);
+			tc = (struct tcphdr *)ip_next(pip);				
+			delta = GetDeltaSeqOut(tc->th_seq, lnk);
+			AddSeq(lnk, delta + copyat + iCopy - dlen, pip->ip_hl,
+			    pip->ip_len, tc->th_seq, tc->th_off);
 		}
 
 		/* Revise IP header */

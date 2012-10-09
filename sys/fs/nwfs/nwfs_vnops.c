@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000, 2001 Boris Popov
  * All rights reserved.
@@ -11,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/nwfs/nwfs_vnops.c,v 1.42.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,8 +38,6 @@
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
-
-#include <machine/mutex.h>
 
 #include <netncp/ncp.h>
 #include <netncp/ncp_conn.h>
@@ -122,7 +113,7 @@ static int
 nwfs_access(ap)
 	struct vop_access_args /* {
 		struct vnode *a_vp;
-		int  a_mode;
+		accmode_t a_accmode;
 		struct ucred *a_cred;
 		struct thread *td;
 	} */ *ap;
@@ -132,7 +123,7 @@ nwfs_access(ap)
 	struct nwmount *nmp = VTONWFS(vp);
 
 	NCPVNDEBUG("\n");
-	if ((ap->a_mode & VWRITE) && (vp->v_mount->mnt_flag & MNT_RDONLY)) {
+	if ((ap->a_accmode & VWRITE) && (vp->v_mount->mnt_flag & MNT_RDONLY)) {
 		switch (vp->v_type) {
 		    case VREG: case VDIR: case VLNK:
 			return (EROFS);
@@ -143,7 +134,7 @@ nwfs_access(ap)
 	mpmode = vp->v_type == VREG ? nmp->m.file_mode :
 	    nmp->m.dir_mode;
         return (vaccess(vp->v_type, mpmode, nmp->m.uid,
-            nmp->m.gid, ap->a_mode, ap->a_cred, NULL));
+            nmp->m.gid, ap->a_accmode, ap->a_cred, NULL));
 }
 /*
  * nwfs_open vnode op
@@ -176,11 +167,11 @@ nwfs_open(ap)
 		if ((error = nwfs_vinvalbuf(vp, ap->a_td)) == EINTR)
 			return (error);
 		np->n_atime = 0;
-		error = VOP_GETATTR(vp, &vattr, ap->a_cred, ap->a_td);
+		error = VOP_GETATTR(vp, &vattr, ap->a_cred);
 		if (error) return (error);
 		np->n_mtime = vattr.va_mtime.tv_sec;
 	} else {
-		error = VOP_GETATTR(vp, &vattr, ap->a_cred, ap->a_td);
+		error = VOP_GETATTR(vp, &vattr, ap->a_cred);
 		if (error) return (error);
 		if (np->n_mtime != vattr.va_mtime.tv_sec) {
 			if ((error = nwfs_vinvalbuf(vp, ap->a_td)) == EINTR)
@@ -232,24 +223,24 @@ nwfs_close(ap)
 
 	if (vp->v_type == VDIR) return 0;	/* nothing to do now */
 	error = 0;
-	mtx_lock(&vp->v_interlock);
+	VI_LOCK(vp);
 	if (np->opened == 0) {
-		mtx_unlock(&vp->v_interlock);
+		VI_UNLOCK(vp);
 		return 0;
 	}
-	mtx_unlock(&vp->v_interlock);
+	VI_UNLOCK(vp);
 	error = nwfs_vinvalbuf(vp, ap->a_td);
-	mtx_lock(&vp->v_interlock);
+	VI_LOCK(vp);
 	if (np->opened == 0) {
-		mtx_unlock(&vp->v_interlock);
+		VI_UNLOCK(vp);
 		return 0;
 	}
 	if (--np->opened == 0) {
-		mtx_unlock(&vp->v_interlock);
+		VI_UNLOCK(vp);
 		error = ncp_close_file(NWFSTOCONN(VTONWFS(vp)), &np->n_fh, 
 		   ap->a_td, ap->a_cred);
 	} else
-		mtx_unlock(&vp->v_interlock);
+		VI_UNLOCK(vp);
 	np->n_atime = 0;
 	return (error);
 }
@@ -263,13 +254,13 @@ nwfs_getattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 	struct nwnode *np = VTONW(vp);
 	struct vattr *va=ap->a_vap;
 	struct nwmount *nmp = VTONWFS(vp);
+	struct thread *td = curthread;
 	struct nw_entry_info fattr;
 	int error;
 	u_int32_t oldsize;
@@ -281,10 +272,10 @@ nwfs_getattr(ap)
 	oldsize = np->n_size;
 	if (np->n_flag & NVOLUME) {
 		error = ncp_obtain_info(nmp, np->n_fid.f_id, 0, NULL, &fattr,
-		    ap->a_td, ap->a_cred);
+		    td, ap->a_cred);
 	} else {
 		error = ncp_obtain_info(nmp, np->n_fid.f_parent, np->n_nmlen, 
-		    np->n_name, &fattr, ap->a_td, ap->a_cred);
+		    np->n_name, &fattr, td, ap->a_cred);
 	}
 	if (error) {
 		NCPVNDEBUG("error %d\n", error);
@@ -305,7 +296,6 @@ nwfs_setattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
@@ -343,13 +333,13 @@ nwfs_setattr(ap)
 			return EINVAL;
   		};
   	}
-	error = ncp_setattr(vp, vap, ap->a_cred, ap->a_td);
+	error = ncp_setattr(vp, vap, ap->a_cred, curthread);
 	if (error && vap->va_size != VNOVAL) {
 		np->n_size = tsize;
 		vnode_pager_setsize(vp, (u_long)tsize);
 	}
 	np->n_atime = 0;	/* invalidate cache */
-	VOP_GETATTR(vp, vap, ap->a_cred, ap->a_td);
+	VOP_GETATTR(vp, vap, ap->a_cred);
 	np->n_mtime = vap->va_mtime.tv_sec;
 	return (0);
 }
@@ -429,9 +419,8 @@ nwfs_create(ap)
 	*vpp = NULL;
 	if (vap->va_type == VSOCK)
 		return (EOPNOTSUPP);
-	if ((error = VOP_GETATTR(dvp, &vattr, cnp->cn_cred, cnp->cn_thread))) {
+	if ((error = VOP_GETATTR(dvp, &vattr, cnp->cn_cred)))
 		return (error);
-	}
 	fmode = AR_READ | AR_WRITE;
 /*	if (vap->va_vaflags & VA_EXCLUSIVE)
 		fmode |= AR_DENY_READ | AR_DENY_WRITE;*/
@@ -630,16 +619,14 @@ nwfs_mkdir(ap)
 	struct componentname *cnp = ap->a_cnp;
 	int len=cnp->cn_namelen;
 	struct ncp_open_info no;
-	struct nwnode *np;
 	struct vnode *newvp = (struct vnode *)0;
 	ncpfid fid;
 	int error = 0;
 	struct vattr vattr;
 	char *name=cnp->cn_nameptr;
 
-	if ((error = VOP_GETATTR(dvp, &vattr, cnp->cn_cred, cnp->cn_thread))) {
+	if ((error = VOP_GETATTR(dvp, &vattr, cnp->cn_cred)))
 		return (error);
-	}	
 	if ((name[0] == '.') && ((len == 1) || ((len == 2) && (name[1] == '.')))) {
 		return EEXIST;
 	}
@@ -655,7 +642,6 @@ nwfs_mkdir(ap)
 		fid.f_id = no.fattr.dirEntNum;
 		error = nwfs_nget(VTOVFS(dvp), fid, &no.fattr, dvp, &newvp);
 		if (!error) {
-			np = VTONW(newvp);
 			newvp->v_type = VDIR;
 			*ap->a_vpp = newvp;
 		}
@@ -790,7 +776,6 @@ static int nwfs_strategy (ap)
 	struct buf *bp=ap->a_bp;
 	struct ucred *cr;
 	struct thread *td;
-	int error = 0;
 
 	NCPVNDEBUG("\n");
 	if (bp->b_flags & B_ASYNC)
@@ -807,8 +792,8 @@ static int nwfs_strategy (ap)
 	 * otherwise just do it ourselves.
 	 */
 	if ((bp->b_flags & B_ASYNC) == 0 )
-		error = nwfs_doio(ap->a_vp, bp, cr, td);
-	return (error);
+		(void)nwfs_doio(ap->a_vp, bp, cr, td);
+	return (0);
 }
 
 
@@ -876,7 +861,7 @@ printf("dvp %d:%d:%d\n", (int)mp, (int)dvp->v_vflag & VV_ROOT, (int)flags & ISDO
 		struct vattr vattr;
 
 		vp = *vpp;
-		if (VOP_GETATTR(vp, &vattr, cnp->cn_cred, td) == 0 &&
+		if (!VOP_GETATTR(vp, &vattr, cnp->cn_cred) &&
 		    vattr.va_ctime.tv_sec == VTONW(vp)->n_ctime) {
 			if (nameiop != LOOKUP && islastcn)
 				cnp->cn_flags |= SAVENAME;
@@ -959,9 +944,9 @@ printf("dvp %d:%d:%d\n", (int)mp, (int)dvp->v_vflag & VV_ROOT, (int)flags & ISDO
 		return (0);
 	}
 	if (flags & ISDOTDOT) {
-		VOP_UNLOCK(dvp, 0, td);		/* race to get the inode */
+		VOP_UNLOCK(dvp, 0);		/* race to get the inode */
 		error = nwfs_nget(mp, fid, NULL, NULL, &vp);
-		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY);
 		if (error)
 			return (error);
 		*vpp = vp;

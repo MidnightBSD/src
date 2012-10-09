@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_sockbuf.c,v 1.171.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_param.h"
 
@@ -62,7 +61,7 @@ void	(*aio_swake)(struct socket *, struct sockbuf *);
 
 u_long	sb_max = SB_MAX;
 u_long sb_max_adj =
-       SB_MAX * MCLBYTES / (MSIZE + MCLBYTES); /* adjusted sb_max */
+       (quad_t)SB_MAX * MCLBYTES / (MSIZE + MCLBYTES); /* adjusted sb_max */
 
 static	u_long sb_efficiency = 8;	/* parameter for sbreserve() */
 
@@ -176,23 +175,34 @@ sbunlock(struct sockbuf *sb)
 void
 sowakeup(struct socket *so, struct sockbuf *sb)
 {
+	int ret;
 
 	SOCKBUF_LOCK_ASSERT(sb);
 
 	selwakeuppri(&sb->sb_sel, PSOCK);
-	sb->sb_flags &= ~SB_SEL;
+	if (!SEL_WAITING(&sb->sb_sel))
+		sb->sb_flags &= ~SB_SEL;
 	if (sb->sb_flags & SB_WAIT) {
 		sb->sb_flags &= ~SB_WAIT;
 		wakeup(&sb->sb_cc);
 	}
 	KNOTE_LOCKED(&sb->sb_sel.si_note, 0);
-	SOCKBUF_UNLOCK(sb);
-	if ((so->so_state & SS_ASYNC) && so->so_sigio != NULL)
-		pgsigio(&so->so_sigio, SIGIO, 0);
-	if (sb->sb_flags & SB_UPCALL)
-		(*so->so_upcall)(so, so->so_upcallarg, M_DONTWAIT);
+	if (sb->sb_upcall != NULL) {
+		ret = sb->sb_upcall(so, sb->sb_upcallarg, M_DONTWAIT);
+		if (ret == SU_ISCONNECTED) {
+			KASSERT(sb == &so->so_rcv,
+			    ("SO_SND upcall returned SU_ISCONNECTED"));
+			soupcall_clear(so, SO_RCV);
+		}
+	} else
+		ret = SU_OK;
 	if (sb->sb_flags & SB_AIO)
 		aio_swake(so, sb);
+	SOCKBUF_UNLOCK(sb);
+	if (ret == SU_ISCONNECTED)
+		soisconnected(so);
+	if ((so->so_state & SS_ASYNC) && so->so_sigio != NULL)
+		pgsigio(&so->so_sigio, SIGIO, 0);
 	mtx_assert(SOCKBUF_MTX(sb), MA_NOTOWNED);
 }
 
@@ -577,10 +587,6 @@ sbappendrecord_locked(struct sockbuf *sb, struct mbuf *m0)
 
 	if (m0 == 0)
 		return;
-	m = sb->sb_mb;
-	if (m)
-		while (m->m_nextpkt)
-			m = m->m_nextpkt;
 	/*
 	 * Put the first mbuf on the queue.  Note this permits zero length
 	 * records.
@@ -588,16 +594,14 @@ sbappendrecord_locked(struct sockbuf *sb, struct mbuf *m0)
 	sballoc(sb, m0);
 	SBLASTRECORDCHK(sb);
 	SBLINKRECORD(sb, m0);
-	if (m)
-		m->m_nextpkt = m0;
-	else
-		sb->sb_mb = m0;
+	sb->sb_mbtail = m0;
 	m = m0->m_next;
 	m0->m_next = 0;
 	if (m && (m0->m_flags & M_EOR)) {
 		m0->m_flags &= ~M_EOR;
 		m->m_flags |= M_EOR;
 	}
+	/* always call sbcompress() so it can do SBLASTMBUFCHK() */
 	sbcompress(sb, m, m0);
 }
 
@@ -765,6 +769,7 @@ sbcompress(struct sockbuf *sb, struct mbuf *m, struct mbuf *n)
 		}
 		if (n && (n->m_flags & M_EOR) == 0 &&
 		    M_WRITABLE(n) &&
+		    ((sb->sb_flags & SB_NOCOALESCE) == 0) &&
 		    m->m_len <= MCLBYTES / 4 && /* XXX: Don't copy too much */
 		    m->m_len <= M_TRAILINGSPACE(n) &&
 		    n->m_type == m->m_type) {
@@ -937,11 +942,13 @@ sbsndptr(struct sockbuf *sb, u_int off, u_int len, u_int *moff)
 
 	/* Advance by len to be as close as possible for the next transmit. */
 	for (off = off - sb->sb_sndptroff + len - 1;
-	     off > 0 && off >= m->m_len;
+	     off > 0 && m != NULL && off >= m->m_len;
 	     m = m->m_next) {
 		sb->sb_sndptroff += m->m_len;
 		off -= m->m_len;
 	}
+	if (off > 0 && m == NULL)
+		panic("%s: sockbuf %p and mbuf %p clashing", __func__, sb, ret);
 	sb->sb_sndptr = m;
 
 	return (ret);
@@ -1027,6 +1034,8 @@ sbtoxsockbuf(struct sockbuf *sb, struct xsockbuf *xsb)
 	xsb->sb_cc = sb->sb_cc;
 	xsb->sb_hiwat = sb->sb_hiwat;
 	xsb->sb_mbcnt = sb->sb_mbcnt;
+	xsb->sb_mcnt = sb->sb_mcnt;	
+	xsb->sb_ccnt = sb->sb_ccnt;
 	xsb->sb_mbmax = sb->sb_mbmax;
 	xsb->sb_lowat = sb->sb_lowat;
 	xsb->sb_flags = sb->sb_flags;

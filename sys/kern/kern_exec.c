@@ -25,15 +25,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.308.2.1.2.1 2008/01/19 18:15:05 kib Exp $");
+__FBSDID("$MidnightBSD$");
 
+#include "opt_capsicum.h"
 #include "opt_hwpmc_hooks.h"
 #include "opt_kdtrace.h"
 #include "opt_ktrace.h"
-#include "opt_mac.h"
+#include "opt_vm.h"
 
 #include <sys/param.h>
+#include <sys/capability.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/eventhandler.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -54,6 +57,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.308.2.1.2.1 2008/01/19 18:15:05
 #include <sys/pioctl.h>
 #include <sys/namei.h>
 #include <sys/resourcevar.h>
+#include <sys/sched.h>
 #include <sys/sdt.h>
 #include <sys/sf_buf.h>
 #include <sys/syscallsubr.h>
@@ -61,6 +65,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.308.2.1.2.1 2008/01/19 18:15:05
 #include <sys/shm.h>
 #include <sys/sysctl.h>
 #include <sys/vnode.h>
+#include <sys/stat.h>
 #ifdef KTRACE
 #include <sys/ktrace.h>
 #endif
@@ -90,11 +95,11 @@ dtrace_execexit_func_t	dtrace_fasttrap_exec;
 #endif
 
 SDT_PROVIDER_DECLARE(proc);
-SDT_PROBE_DEFINE(proc, kernel, , exec);
+SDT_PROBE_DEFINE(proc, kernel, , exec, exec);
 SDT_PROBE_ARGTYPE(proc, kernel, , exec, 0, "char *");
-SDT_PROBE_DEFINE(proc, kernel, , exec_failure);
+SDT_PROBE_DEFINE(proc, kernel, , exec_failure, exec-failure);
 SDT_PROBE_ARGTYPE(proc, kernel, , exec_failure, 0, "int");
-SDT_PROBE_DEFINE(proc, kernel, , exec_success);
+SDT_PROBE_DEFINE(proc, kernel, , exec_success, exec-success);
 SDT_PROBE_ARGTYPE(proc, kernel, , exec_success, 0, "char *");
 
 MALLOC_DEFINE(M_PARGS, "proc-args", "Process arguments");
@@ -104,15 +109,14 @@ static int sysctl_kern_usrstack(SYSCTL_HANDLER_ARGS);
 static int sysctl_kern_stackprot(SYSCTL_HANDLER_ARGS);
 static int do_execve(struct thread *td, struct image_args *args,
     struct mac *mac_p);
-static void exec_free_args(struct image_args *);
 
 /* XXX This should be vm_size_t. */
 SYSCTL_PROC(_kern, KERN_PS_STRINGS, ps_strings, CTLTYPE_ULONG|CTLFLAG_RD,
     NULL, 0, sysctl_kern_ps_strings, "LU", "");
 
 /* XXX This should be vm_size_t. */
-SYSCTL_PROC(_kern, KERN_USRSTACK, usrstack, CTLTYPE_ULONG|CTLFLAG_RD,
-    NULL, 0, sysctl_kern_usrstack, "LU", "");
+SYSCTL_PROC(_kern, KERN_USRSTACK, usrstack, CTLTYPE_ULONG|CTLFLAG_RD|
+    CTLFLAG_CAPRD, NULL, 0, sysctl_kern_usrstack, "LU", "");
 
 SYSCTL_PROC(_kern, OID_AUTO, stackprot, CTLTYPE_INT|CTLFLAG_RD,
     NULL, 0, sysctl_kern_stackprot, "I", "");
@@ -121,7 +125,7 @@ u_long ps_arg_cache_limit = PAGE_SIZE / 16;
 SYSCTL_ULONG(_kern, OID_AUTO, ps_arg_cache_limit, CTLFLAG_RW, 
     &ps_arg_cache_limit, 0, "");
 
-static int map_at_zero = 1;
+static int map_at_zero = 0;
 TUNABLE_INT("security.bsd.map_at_zero", &map_at_zero);
 SYSCTL_INT(_security_bsd, OID_AUTO, map_at_zero, CTLFLAG_RW, &map_at_zero, 0,
     "Permit processes to map an object at virtual address 0.");
@@ -189,7 +193,7 @@ struct execve_args {
 #endif
 
 int
-execve(td, uap)
+sys_execve(td, uap)
 	struct thread *td;
 	struct execve_args /* {
 		char *fname;
@@ -208,6 +212,28 @@ execve(td, uap)
 }
 
 #ifndef _SYS_SYSPROTO_H_
+struct fexecve_args {
+	int	fd;
+	char	**argv;
+	char	**envv;
+}
+#endif
+int
+sys_fexecve(struct thread *td, struct fexecve_args *uap)
+{
+	int error;
+	struct image_args args;
+
+	error = exec_copyin_args(&args, NULL, UIO_SYSSPACE,
+	    uap->argv, uap->envv);
+	if (error == 0) {
+		args.fd = uap->fd;
+		error = kern_execve(td, &args, NULL);
+	}
+	return (error);
+}
+
+#ifndef _SYS_SYSPROTO_H_
 struct __mac_execve_args {
 	char	*fname;
 	char	**argv;
@@ -217,7 +243,7 @@ struct __mac_execve_args {
 #endif
 
 int
-__mac_execve(td, uap)
+sys___mac_execve(td, uap)
 	struct thread *td;
 	struct __mac_execve_args /* {
 		char *fname;
@@ -256,9 +282,9 @@ kern_execve(td, args, mac_p)
 	struct proc *p = td->td_proc;
 	int error;
 
-	AUDIT_ARG(argv, args->begin_argv, args->argc,
+	AUDIT_ARG_ARGV(args->begin_argv, args->argc,
 	    args->begin_envv - args->begin_argv);
-	AUDIT_ARG(envv, args->begin_envv, args->envc,
+	AUDIT_ARG_ENVV(args->begin_envv, args->envc,
 	    args->endp - args->begin_envv);
 	if (p->p_flag & P_HADTHREADS) {
 		PROC_LOCK(p);
@@ -299,11 +325,11 @@ do_execve(td, args, mac_p)
 	struct mac *mac_p;
 {
 	struct proc *p = td->td_proc;
-	struct nameidata nd, *ndp;
+	struct nameidata nd;
 	struct ucred *newcred = NULL, *oldcred;
 	struct uidinfo *euip;
 	register_t *stack_base;
-	int error, len, i;
+	int error, i;
 	struct image_params image_params, *imgp;
 	struct vattr attr;
 	int (*img_first)(struct image_params *);
@@ -313,17 +339,18 @@ do_execve(td, args, mac_p)
 	struct vnode *tracevp = NULL;
 	struct ucred *tracecred = NULL;
 #endif
-	struct vnode *textvp = NULL;
+	struct vnode *textvp = NULL, *binvp = NULL;
 	int credential_changing;
 	int vfslocked;
 	int textset;
 #ifdef MAC
-	struct label *interplabel = NULL;
+	struct label *interpvplabel = NULL;
 	int will_transition;
 #endif
 #ifdef HWPMC_HOOKS
 	struct pmckern_procexec pe;
 #endif
+	static const char fexecv_proc_title[] = "(fexecv)";
 
 	vfslocked = 0;
 	imgp = &image_params;
@@ -348,10 +375,11 @@ do_execve(td, args, mac_p)
 	imgp->execlabel = NULL;
 	imgp->attr = &attr;
 	imgp->entry_addr = 0;
+	imgp->reloc_base = 0;
 	imgp->vmspace_destroyed = 0;
 	imgp->interpreted = 0;
 	imgp->opened = 0;
-	imgp->interpreter_name = args->buf + PATH_MAX + ARG_MAX;
+	imgp->interpreter_name = NULL;
 	imgp->auxargs = NULL;
 	imgp->vp = NULL;
 	imgp->object = NULL;
@@ -359,6 +387,13 @@ do_execve(td, args, mac_p)
 	imgp->ps_strings = 0;
 	imgp->auxarg_size = 0;
 	imgp->args = args;
+	imgp->execpath = imgp->freepath = NULL;
+	imgp->execpathp = 0;
+	imgp->canary = 0;
+	imgp->canarylen = 0;
+	imgp->pagesizes = 0;
+	imgp->pagesizeslen = 0;
+	imgp->stack_prot = 0;
 
 #ifdef MAC
 	error = mac_execve_enter(imgp, mac_p);
@@ -368,8 +403,6 @@ do_execve(td, args, mac_p)
 
 	imgp->image_header = NULL;
 
-	SDT_PROBE(proc, kernel, , exec, args->fname, 0, 0, 0, 0 );
-
 	/*
 	 * Translate the file name. namei() returns a vnode pointer
 	 *	in ni_vp amoung other things.
@@ -377,17 +410,48 @@ do_execve(td, args, mac_p)
 	 * XXXAUDIT: It would be desirable to also audit the name of the
 	 * interpreter if this is an interpreted binary.
 	 */
-	ndp = &nd;
-	NDINIT(ndp, LOOKUP, ISOPEN | LOCKLEAF | FOLLOW | SAVENAME | MPSAFE |
-	    AUDITVNODE1, UIO_SYSSPACE, args->fname, td);
+	if (args->fname != NULL) {
+		NDINIT(&nd, LOOKUP, ISOPEN | LOCKLEAF | FOLLOW | SAVENAME
+		    | MPSAFE | AUDITVNODE1, UIO_SYSSPACE, args->fname, td);
+	}
+
+	SDT_PROBE(proc, kernel, , exec, args->fname, 0, 0, 0, 0 );
 
 interpret:
-	error = namei(ndp);
-	if (error)
-		goto exec_fail;
+	if (args->fname != NULL) {
+#ifdef CAPABILITY_MODE
+		/*
+		 * While capability mode can't reach this point via direct
+		 * path arguments to execve(), we also don't allow
+		 * interpreters to be used in capability mode (for now).
+		 * Catch indirect lookups and return a permissions error.
+		 */
+		if (IN_CAPABILITY_MODE(td)) {
+			error = ECAPMODE;
+			goto exec_fail;
+		}
+#endif
+		error = namei(&nd);
+		if (error)
+			goto exec_fail;
 
-	vfslocked = NDHASGIANT(ndp);
-	imgp->vp = ndp->ni_vp;
+		vfslocked = NDHASGIANT(&nd);
+		binvp  = nd.ni_vp;
+		imgp->vp = binvp;
+	} else {
+		AUDIT_ARG_FD(args->fd);
+		/*
+		 * Some might argue that CAP_READ and/or CAP_MMAP should also
+		 * be required here; such arguments will be entertained.
+		 */
+		error = fgetvp_read(td, args->fd, CAP_FEXECVE, &binvp);
+		if (error)
+			goto exec_fail;
+		vfslocked = VFS_LOCK_GIANT(binvp->v_mount);
+		vn_lock(binvp, LK_EXCLUSIVE | LK_RETRY);
+		AUDIT_ARG_VNODE1(binvp);
+		imgp->vp = binvp;
+	}
 
 	/*
 	 * Check file permissions (also 'opens' file)
@@ -408,6 +472,7 @@ interpret:
 	 * actually an executable image.
 	 */
 	textset = imgp->vp->v_vflag & VV_TEXT;
+	ASSERT_VOP_ELOCKED(imgp->vp, "vv_text");
 	imgp->vp->v_vflag |= VV_TEXT;
 
 	error = exec_map_first_page(imgp);
@@ -439,8 +504,10 @@ interpret:
 
 	if (error) {
 		if (error == -1) {
-			if (textset == 0)
+			if (textset == 0) {
+				ASSERT_VOP_ELOCKED(imgp->vp, "vv_text");
 				imgp->vp->v_vflag &= ~VV_TEXT;
+			}
 			error = ENOEXEC;
 		}
 		goto exec_fail_dealloc;
@@ -460,23 +527,24 @@ interpret:
 		 */
 		imgp->vp->v_vflag &= ~VV_TEXT;
 		/* free name buffer and old vnode */
-		NDFREE(ndp, NDF_ONLY_PNBUF);
+		if (args->fname != NULL)
+			NDFREE(&nd, NDF_ONLY_PNBUF);
 #ifdef MAC
-		interplabel = mac_vnode_label_alloc();
-		mac_copy_vnode_label(ndp->ni_vp->v_label, interplabel);
+		mac_execve_interpreter_enter(binvp, &interpvplabel);
 #endif
 		if (imgp->opened) {
-			VOP_CLOSE(ndp->ni_vp, FREAD, td->td_ucred, td);
+			VOP_CLOSE(binvp, FREAD, td->td_ucred, td);
 			imgp->opened = 0;
 		}
-		vput(ndp->ni_vp);
+		vput(binvp);
 		vm_object_deallocate(imgp->object);
 		imgp->object = NULL;
 		VFS_UNLOCK_GIANT(vfslocked);
 		vfslocked = 0;
 		/* set new name to that of the interpreter */
-		NDINIT(ndp, LOOKUP, LOCKLEAF | FOLLOW | SAVENAME | MPSAFE,
+		NDINIT(&nd, LOOKUP, LOCKLEAF | FOLLOW | SAVENAME | MPSAFE,
 		    UIO_SYSSPACE, imgp->interpreter_name, td);
+		args->fname = imgp->interpreter_name;
 		goto interpret;
 	}
 
@@ -484,7 +552,16 @@ interpret:
 	 * NB: We unlock the vnode here because it is believed that none
 	 * of the sv_copyout_strings/sv_fixup operations require the vnode.
 	 */
-	VOP_UNLOCK(imgp->vp, 0, td);
+	VOP_UNLOCK(imgp->vp, 0);
+
+	/*
+	 * Do the best to calculate the full path to the image file.
+	 */
+	if (imgp->auxargs != NULL &&
+	    ((args->fname != NULL && args->fname[0] == '/') ||
+	     vn_fullpath(td, imgp->vp, &imgp->execpath, &imgp->freepath) != 0))
+		imgp->execpath = args->fname;
+
 	/*
 	 * Copy out strings (args and env) and initialize stack base
 	 */
@@ -523,10 +600,10 @@ interpret:
 
 	/* close files on exec */
 	fdcloseexec(td);
-	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
 
 	/* Get a reference to the vnode prior to locking the proc */
-	VREF(ndp->ni_vp);
+	VREF(binvp);
 
 	/*
 	 * For security and other reasons, signal handlers cannot
@@ -535,6 +612,7 @@ interpret:
 	 * reset.
 	 */
 	PROC_LOCK(p);
+	oldcred = crcopysafe(p, newcred);
 	if (sigacts_shared(p->p_sigacts)) {
 		oldsigacts = p->p_sigacts;
 		PROC_UNLOCK(p);
@@ -552,9 +630,16 @@ interpret:
 	execsigs(p);
 
 	/* name this process - nameiexec(p, ndp) */
-	len = min(ndp->ni_cnd.cn_namelen,MAXCOMLEN);
-	bcopy(ndp->ni_cnd.cn_nameptr, p->p_comm, len);
-	p->p_comm[len] = 0;
+	bzero(p->p_comm, sizeof(p->p_comm));
+	if (args->fname)
+		bcopy(nd.ni_cnd.cn_nameptr, p->p_comm,
+		    min(nd.ni_cnd.cn_namelen, MAXCOMLEN));
+	else if (vn_commname(binvp, p->p_comm, sizeof(p->p_comm)) != 0)
+		bcopy(fexecv_proc_title, p->p_comm, sizeof(fexecv_proc_title));
+	bcopy(p->p_comm, td->td_name, sizeof(td->td_name));
+#ifdef KTR
+	sched_clear_tdname(td);
+#endif
 
 	/*
 	 * mark as execed, wakeup the process that vforked (if any) and tell
@@ -563,7 +648,7 @@ interpret:
 	p->p_flag |= P_EXEC;
 	if (p->p_pptr && (p->p_flag & P_PPWAIT)) {
 		p->p_flag &= ~P_PPWAIT;
-		wakeup(p->p_pptr);
+		cv_broadcast(&p->p_pwait);
 	}
 
 	/*
@@ -572,22 +657,31 @@ interpret:
 	 * Don't honor setuid/setgid if the filesystem prohibits it or if
 	 * the process is being traced.
 	 *
+	 * We disable setuid/setgid/etc in compatibility mode on the basis
+	 * that most setugid applications are not written with that
+	 * environment in mind, and will therefore almost certainly operate
+	 * incorrectly. In principle there's no reason that setugid
+	 * applications might not be useful in capability mode, so we may want
+	 * to reconsider this conservative design choice in the future.
+	 *
 	 * XXXMAC: For the time being, use NOSUID to also prohibit
 	 * transitions on the file system.
 	 */
-	oldcred = p->p_ucred;
 	credential_changing = 0;
-	credential_changing |= (attr.va_mode & VSUID) && oldcred->cr_uid !=
+	credential_changing |= (attr.va_mode & S_ISUID) && oldcred->cr_uid !=
 	    attr.va_uid;
-	credential_changing |= (attr.va_mode & VSGID) && oldcred->cr_gid !=
+	credential_changing |= (attr.va_mode & S_ISGID) && oldcred->cr_gid !=
 	    attr.va_gid;
 #ifdef MAC
-	will_transition = mac_execve_will_transition(oldcred, imgp->vp,
-	    interplabel, imgp);
+	will_transition = mac_vnode_execve_will_transition(oldcred, imgp->vp,
+	    interpvplabel, imgp);
 	credential_changing |= will_transition;
 #endif
 
 	if (credential_changing &&
+#ifdef CAPABILITY_MODE
+	    ((oldcred->cr_flags & CRED_FLAG_CAPMODE) == 0) &&
+#endif
 	    (imgp->vp->v_mount->mnt_flag & MNT_NOSUID) == 0 &&
 	    (p->p_flag & P_TRACED) == 0) {
 		/*
@@ -598,16 +692,8 @@ interpret:
 		setsugid(p);
 
 #ifdef KTRACE
-		if (p->p_tracevp != NULL &&
-		    priv_check_cred(oldcred, PRIV_DEBUG_DIFFCRED, 0)) {
-			mtx_lock(&ktrace_mtx);
-			p->p_traceflag = 0;
-			tracevp = p->p_tracevp;
-			p->p_tracevp = NULL;
-			tracecred = p->p_tracecred;
-			p->p_tracecred = NULL;
-			mtx_unlock(&ktrace_mtx);
-		}
+		if (priv_check_cred(oldcred, PRIV_DEBUG_DIFFCRED, 0))
+			ktrprocexec(p, &tracecred, &tracevp);
 #endif
 		/*
 		 * Close any file descriptors 0..2 that reference procfs,
@@ -619,25 +705,24 @@ interpret:
 		 * allocate memory, so temporarily drop the process lock.
 		 */
 		PROC_UNLOCK(p);
+		VOP_UNLOCK(imgp->vp, 0);
 		setugidsafety(td);
-		VOP_UNLOCK(imgp->vp, 0, td);
 		error = fdcheckstd(td);
-		vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
 		if (error != 0)
 			goto done1;
 		PROC_LOCK(p);
 		/*
 		 * Set the new credentials.
 		 */
-		crcopy(newcred, oldcred);
-		if (attr.va_mode & VSUID)
+		if (attr.va_mode & S_ISUID)
 			change_euid(newcred, euip);
-		if (attr.va_mode & VSGID)
+		if (attr.va_mode & S_ISGID)
 			change_egid(newcred, attr.va_gid);
 #ifdef MAC
 		if (will_transition) {
-			mac_execve_transition(oldcred, newcred, imgp->vp,
-			    interplabel, imgp);
+			mac_vnode_execve_transition(oldcred, newcred, imgp->vp,
+			    interpvplabel, imgp);
 		}
 #endif
 		/*
@@ -669,7 +754,6 @@ interpret:
 		 */
 		if (oldcred->cr_svuid != oldcred->cr_uid ||
 		    oldcred->cr_svgid != oldcred->cr_gid) {
-			crcopy(newcred, oldcred);
 			change_svuid(newcred, newcred->cr_uid);
 			change_svgid(newcred, newcred->cr_gid);
 			p->p_ucred = newcred;
@@ -682,7 +766,7 @@ interpret:
 	 * to locking the proc lock.
 	 */
 	textvp = p->p_textvp;
-	p->p_textvp = ndp->ni_vp;
+	p->p_textvp = binvp;
 
 #ifdef KDTRACE_HOOKS
 	/*
@@ -699,17 +783,6 @@ interpret:
 	 */
 	KNOTE_LOCKED(&p->p_klist, NOTE_EXEC);
 	p->p_flag &= ~P_INEXEC;
-
-	/*
-	 * If tracing the process, trap to debugger so breakpoints
-	 * can be set before the program executes.
-	 * Use tdsignal to deliver signal to current thread, use
-	 * psignal may cause the signal to be delivered to wrong thread
-	 * because that thread will exit, remember we are going to enter
-	 * single thread mode.
-	 */
-	if (p->p_flag & P_TRACED)
-		tdsignal(p, td, SIGTRAP, NULL);
 
 	/* clear "fork but no exec" flag, as we _are_ execing */
 	p->p_acflag &= ~AFORK;
@@ -734,10 +807,12 @@ interpret:
 	 */
 	if (PMC_SYSTEM_SAMPLING_ACTIVE() || PMC_PROC_IS_USING_PMCS(p)) {
 		PROC_UNLOCK(p);
+		VOP_UNLOCK(imgp->vp, 0);
 		pe.pm_credentialschanged = credential_changing;
 		pe.pm_entryaddr = imgp->entry_addr;
 
 		PMC_CALL_HOOK_X(td, PMC_FN_PROCESS_EXEC, (void *) &pe);
+		vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
 	} else
 		PROC_UNLOCK(p);
 #else  /* !HWPMC_HOOKS */
@@ -746,13 +821,14 @@ interpret:
 
 	/* Set values passed into the program in registers. */
 	if (p->p_sysent->sv_setregs)
-		(*p->p_sysent->sv_setregs)(td, imgp->entry_addr,
-		    (u_long)(uintptr_t)stack_base, imgp->ps_strings);
+		(*p->p_sysent->sv_setregs)(td, imgp, 
+		    (u_long)(uintptr_t)stack_base);
 	else
-		exec_setregs(td, imgp->entry_addr,
-		    (u_long)(uintptr_t)stack_base, imgp->ps_strings);
+		exec_setregs(td, imgp, (u_long)(uintptr_t)stack_base);
 
-	vfs_mark_atime(imgp->vp, td);
+	vfs_mark_atime(imgp->vp, td->td_ucred);
+
+	SDT_PROBE(proc, kernel, , exec_success, args->fname, 0, 0, 0, 0);
 
 done1:
 	/*
@@ -763,9 +839,7 @@ done1:
 		crfree(oldcred);
 	else
 		crfree(newcred);
-	VOP_UNLOCK(imgp->vp, 0, td);
-
-	SDT_PROBE(proc, kernel, , exec_success, args->fname, 0, 0, 0, 0);
+	VOP_UNLOCK(imgp->vp, 0);
 
 	/*
 	 * Handle deferred decrement of ref counts.
@@ -777,8 +851,8 @@ done1:
 		vrele(textvp);
 		VFS_UNLOCK_GIANT(tvfslocked);
 	}
-	if (ndp->ni_vp && error != 0)
-		vrele(ndp->ni_vp);
+	if (binvp && error != 0)
+		vrele(binvp);
 #ifdef KTRACE
 	if (tracevp != NULL) {
 		int tvfslocked;
@@ -790,11 +864,9 @@ done1:
 	if (tracecred != NULL)
 		crfree(tracecred);
 #endif
-	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY, td);
-	if (oldargs != NULL)
-		pargs_drop(oldargs);
-	if (newargs != NULL)
-		pargs_drop(newargs);
+	vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
+	pargs_drop(oldargs);
+	pargs_drop(newargs);
 	if (oldsigacts != NULL)
 		sigacts_free(oldsigacts);
 
@@ -807,7 +879,8 @@ exec_fail_dealloc:
 		exec_unmap_first_page(imgp);
 
 	if (imgp->vp != NULL) {
-		NDFREE(ndp, NDF_ONLY_PNBUF);
+		if (args->fname)
+			NDFREE(&nd, NDF_ONLY_PNBUF);
 		if (imgp->opened)
 			VOP_CLOSE(imgp->vp, FREAD, td->td_ucred, td);
 		vput(imgp->vp);
@@ -816,7 +889,13 @@ exec_fail_dealloc:
 	if (imgp->object != NULL)
 		vm_object_deallocate(imgp->object);
 
+	free(imgp->freepath, M_TEMP);
+
 	if (error == 0) {
+		PROC_LOCK(p);
+		td->td_dbgflags |= TDB_EXEC;
+		PROC_UNLOCK(p);
+
 		/*
 		 * Stop the process here if its stop event mask has
 		 * the S_EXEC bit set.
@@ -836,8 +915,7 @@ exec_fail:
 done2:
 #ifdef MAC
 	mac_execve_exit(imgp);
-	if (interplabel != NULL)
-		mac_vnode_label_free(interplabel);
+	mac_execve_interpreter_exit(interpvplabel);
 #endif
 	VFS_UNLOCK_GIANT(vfslocked);
 	exec_free_args(args);
@@ -847,6 +925,12 @@ done2:
 		exit1(td, W_EXITCODE(0, SIGABRT));
 		/* NOT REACHED */
 	}
+
+#ifdef KTRACE
+	if (error == 0)
+		ktrprocctor(p);
+#endif
+
 	return (error);
 }
 
@@ -866,13 +950,19 @@ exec_map_first_page(imgp)
 	if (object == NULL)
 		return (EACCES);
 	VM_OBJECT_LOCK(object);
+#if VM_NRESERVLEVEL > 0
+	if ((object->flags & OBJ_COLORED) == 0) {
+		object->flags |= OBJ_COLORED;
+		object->pg_color = 0;
+	}
+#endif
 	ma[0] = vm_page_grab(object, 0, VM_ALLOC_NORMAL | VM_ALLOC_RETRY);
-	if ((ma[0]->valid & VM_PAGE_BITS_ALL) != VM_PAGE_BITS_ALL) {
+	if (ma[0]->valid != VM_PAGE_BITS_ALL) {
 		initial_pagein = VM_INITIAL_PAGEIN;
 		if (initial_pagein > object->size)
 			initial_pagein = object->size;
 		for (i = 1; i < initial_pagein; i++) {
-			if ((ma[i] = vm_page_lookup(object, i)) != NULL) {
+			if ((ma[i] = vm_page_next(ma[i - 1])) != NULL) {
 				if (ma[i]->valid)
 					break;
 				if ((ma[i]->oflags & VPO_BUSY) || ma[i]->busy)
@@ -888,20 +978,19 @@ exec_map_first_page(imgp)
 		initial_pagein = i;
 		rv = vm_pager_get_pages(object, ma, initial_pagein, 0);
 		ma[0] = vm_page_lookup(object, 0);
-		if ((rv != VM_PAGER_OK) || (ma[0] == NULL) ||
-		    (ma[0]->valid == 0)) {
-			if (ma[0]) {
-				vm_page_lock_queues();
+		if ((rv != VM_PAGER_OK) || (ma[0] == NULL)) {
+			if (ma[0] != NULL) {
+				vm_page_lock(ma[0]);
 				vm_page_free(ma[0]);
-				vm_page_unlock_queues();
+				vm_page_unlock(ma[0]);
 			}
 			VM_OBJECT_UNLOCK(object);
 			return (EIO);
 		}
 	}
-	vm_page_lock_queues();
+	vm_page_lock(ma[0]);
 	vm_page_hold(ma[0]);
-	vm_page_unlock_queues();
+	vm_page_unlock(ma[0]);
 	vm_page_wakeup(ma[0]);
 	VM_OBJECT_UNLOCK(object);
 
@@ -921,9 +1010,9 @@ exec_unmap_first_page(imgp)
 		m = sf_buf_page(imgp->firstpage);
 		sf_buf_free(imgp->firstpage);
 		imgp->firstpage = NULL;
-		vm_page_lock_queues();
+		vm_page_lock(m);
 		vm_page_unhold(m);
-		vm_page_unlock_queues();
+		vm_page_unlock(m);
 	}
 }
 
@@ -940,6 +1029,7 @@ exec_new_vmspace(imgp, sv)
 	int error;
 	struct proc *p = imgp->proc;
 	struct vmspace *vmspace = p->p_vmspace;
+	vm_object_t obj;
 	vm_offset_t sv_minuser, stack_addr;
 	vm_map_t map;
 	u_long ssiz;
@@ -973,6 +1063,20 @@ exec_new_vmspace(imgp, sv)
 		map = &vmspace->vm_map;
 	}
 
+	/* Map a shared page */
+	obj = sv->sv_shared_page_obj;
+	if (obj != NULL) {
+		vm_object_reference(obj);
+		error = vm_map_fixed(map, obj, 0,
+		    sv->sv_shared_page_base, sv->sv_shared_page_len,
+		    VM_PROT_READ | VM_PROT_EXECUTE, VM_PROT_ALL,
+		    MAP_COPY_ON_WRITE | MAP_ACC_NO_CHARGE);
+		if (error) {
+			vm_object_deallocate(obj);
+			return (error);
+		}
+	}
+
 	/* Allocate a new stack */
 	if (sv->sv_maxssiz != NULL)
 		ssiz = *sv->sv_maxssiz;
@@ -980,9 +1084,20 @@ exec_new_vmspace(imgp, sv)
 		ssiz = maxssiz;
 	stack_addr = sv->sv_usrstack - ssiz;
 	error = vm_map_stack(map, stack_addr, (vm_size_t)ssiz,
-	    sv->sv_stackprot, VM_PROT_ALL, MAP_STACK_GROWS_DOWN);
+	    obj != NULL && imgp->stack_prot != 0 ? imgp->stack_prot :
+		sv->sv_stackprot,
+	    VM_PROT_ALL, MAP_STACK_GROWS_DOWN);
 	if (error)
 		return (error);
+
+#ifdef __ia64__
+	/* Allocate a new register stack */
+	stack_addr = IA64_BACKINGSTORE;
+	error = vm_map_stack(map, stack_addr, (vm_size_t)ssiz,
+	    sv->sv_stackprot, VM_PROT_ALL, MAP_STACK_GROWS_UP);
+	if (error)
+		return (error);
+#endif
 
 	/* vm_ssize and vm_maxsaddr are somewhat antiquated concepts in the
 	 * VM_STACK case, but they are still used to monitor the size of the
@@ -1006,36 +1121,34 @@ exec_copyin_args(struct image_args *args, char *fname,
 	int error;
 	size_t length;
 
-	error = 0;
-
 	bzero(args, sizeof(*args));
 	if (argv == NULL)
 		return (EFAULT);
-	/*
-	 * Allocate temporary demand zeroed space for argument and
-	 *	environment strings:
-	 *
-	 * o ARG_MAX for argument and environment;
-	 * o MAXSHELLCMDLEN for the name of interpreters.
-	 */
-	args->buf = (char *) kmem_alloc_wait(exec_map,
-	    PATH_MAX + ARG_MAX + MAXSHELLCMDLEN);
-	if (args->buf == NULL)
-		return (ENOMEM);
-	args->begin_argv = args->buf;
-	args->endp = args->begin_argv;
-	args->stringspace = ARG_MAX;
 
-	args->fname = args->buf + ARG_MAX;
+	/*
+	 * Allocate demand-paged memory for the file name, argument, and
+	 * environment strings.
+	 */
+	error = exec_alloc_args(args);
+	if (error != 0)
+		return (error);
 
 	/*
 	 * Copy the file name.
 	 */
-	error = (segflg == UIO_SYSSPACE) ?
-	    copystr(fname, args->fname, PATH_MAX, &length) :
-	    copyinstr(fname, args->fname, PATH_MAX, &length);
-	if (error != 0)
-		goto err_exit;
+	if (fname != NULL) {
+		args->fname = args->buf;
+		error = (segflg == UIO_SYSSPACE) ?
+		    copystr(fname, args->fname, PATH_MAX, &length) :
+		    copyinstr(fname, args->fname, PATH_MAX, &length);
+		if (error != 0)
+			goto err_exit;
+	} else
+		length = 0;
+
+	args->begin_argv = args->buf + length;
+	args->endp = args->begin_argv;
+	args->stringspace = ARG_MAX;
 
 	/*
 	 * extract arguments first
@@ -1086,14 +1199,31 @@ err_exit:
 	return (error);
 }
 
-static void
+/*
+ * Allocate temporary demand-paged, zero-filled memory for the file name,
+ * argument, and environment strings.  Returns zero if the allocation succeeds
+ * and ENOMEM otherwise.
+ */
+int
+exec_alloc_args(struct image_args *args)
+{
+
+	args->buf = (char *)kmem_alloc_wait(exec_map, PATH_MAX + ARG_MAX);
+	return (args->buf != NULL ? 0 : ENOMEM);
+}
+
+void
 exec_free_args(struct image_args *args)
 {
 
-	if (args->buf) {
+	if (args->buf != NULL) {
 		kmem_free_wakeup(exec_map, (vm_offset_t)args->buf,
-		    PATH_MAX + ARG_MAX + MAXSHELLCMDLEN);
+		    PATH_MAX + ARG_MAX);
 		args->buf = NULL;
+	}
+	if (args->fname_buf != NULL) {
+		free(args->fname_buf, M_TEMP);
+		args->fname_buf = NULL;
 	}
 }
 
@@ -1112,26 +1242,64 @@ exec_copyout_strings(imgp)
 	register_t *stack_base;
 	struct ps_strings *arginfo;
 	struct proc *p;
-	int szsigcode;
+	size_t execpath_len;
+	int szsigcode, szps;
+	char canary[sizeof(long) * 8];
 
+	szps = sizeof(pagesizes[0]) * MAXPAGESIZES;
 	/*
 	 * Calculate string base and vector table pointers.
 	 * Also deal with signal trampoline code for this exec type.
 	 */
+	if (imgp->execpath != NULL && imgp->auxargs != NULL)
+		execpath_len = strlen(imgp->execpath) + 1;
+	else
+		execpath_len = 0;
 	p = imgp->proc;
 	szsigcode = 0;
 	arginfo = (struct ps_strings *)p->p_sysent->sv_psstrings;
-	if (p->p_sysent->sv_szsigcode != NULL)
-		szsigcode = *(p->p_sysent->sv_szsigcode);
+	if (p->p_sysent->sv_sigcode_base == 0) {
+		if (p->p_sysent->sv_szsigcode != NULL)
+			szsigcode = *(p->p_sysent->sv_szsigcode);
+	}
 	destp =	(caddr_t)arginfo - szsigcode - SPARE_USRSPACE -
+	    roundup(execpath_len, sizeof(char *)) -
+	    roundup(sizeof(canary), sizeof(char *)) -
+	    roundup(szps, sizeof(char *)) -
 	    roundup((ARG_MAX - imgp->args->stringspace), sizeof(char *));
 
 	/*
 	 * install sigcode
 	 */
-	if (szsigcode)
+	if (szsigcode != 0)
 		copyout(p->p_sysent->sv_sigcode, ((caddr_t)arginfo -
 		    szsigcode), szsigcode);
+
+	/*
+	 * Copy the image path for the rtld.
+	 */
+	if (execpath_len != 0) {
+		imgp->execpathp = (uintptr_t)arginfo - szsigcode - execpath_len;
+		copyout(imgp->execpath, (void *)imgp->execpathp,
+		    execpath_len);
+	}
+
+	/*
+	 * Prepare the canary for SSP.
+	 */
+	arc4rand(canary, sizeof(canary), 0);
+	imgp->canary = (uintptr_t)arginfo - szsigcode - execpath_len -
+	    sizeof(canary);
+	copyout(canary, (void *)imgp->canary, sizeof(canary));
+	imgp->canarylen = sizeof(canary);
+
+	/*
+	 * Prepare the pagesizes array.
+	 */
+	imgp->pagesizes = (uintptr_t)arginfo - szsigcode - execpath_len -
+	    roundup(sizeof(canary), sizeof(char *)) - szps;
+	copyout(pagesizes, (void *)imgp->pagesizes, szps);
+	imgp->pagesizeslen = szps;
 
 	/*
 	 * If we have a valid auxargs ptr, prepare some room
@@ -1150,9 +1318,8 @@ exec_copyout_strings(imgp)
 		 * for argument of Runtime loader.
 		 */
 		vectp = (char **)(destp - (imgp->args->argc +
-		    imgp->args->envc + 2 + imgp->auxarg_size) *
-		    sizeof(char *));
-
+		    imgp->args->envc + 2 + imgp->auxarg_size)
+		    * sizeof(char *));
 	} else {
 		/*
 		 * The '+ 2' is for the null pointers at the end of each of
@@ -1180,7 +1347,7 @@ exec_copyout_strings(imgp)
 	 * Fill in "ps_strings" struct for ps, w, etc.
 	 */
 	suword(&arginfo->ps_argvstr, (long)(intptr_t)vectp);
-	suword(&arginfo->ps_nargvstr, argc);
+	suword32(&arginfo->ps_nargvstr, argc);
 
 	/*
 	 * Fill in argument portion of vector table.
@@ -1196,7 +1363,7 @@ exec_copyout_strings(imgp)
 	suword(vectp++, 0);
 
 	suword(&arginfo->ps_envstr, (long)(intptr_t)vectp);
-	suword(&arginfo->ps_nenvstr, envc);
+	suword32(&arginfo->ps_nenvstr, envc);
 
 	/*
 	 * Fill in environment portion of vector table.
@@ -1228,29 +1395,29 @@ exec_check_permissions(imgp)
 	struct thread *td;
 	int error;
 
-	td = curthread;			/* XXXKSE */
+	td = curthread;
 
 	/* Get file attributes */
-	error = VOP_GETATTR(vp, attr, td->td_ucred, td);
+	error = VOP_GETATTR(vp, attr, td->td_ucred);
 	if (error)
 		return (error);
 
 #ifdef MAC
-	error = mac_check_vnode_exec(td->td_ucred, imgp->vp, imgp);
+	error = mac_vnode_check_exec(td->td_ucred, imgp->vp, imgp);
 	if (error)
 		return (error);
 #endif
-	
+
 	/*
-	 * 1) Check if file execution is disabled for the filesystem that this
-	 *	file resides on.
-	 * 2) Insure that at least one execute bit is on - otherwise root
-	 *	will always succeed, and we don't want to happen unless the
-	 *	file really is executable.
-	 * 3) Insure that the file is a regular file.
+	 * 1) Check if file execution is disabled for the filesystem that
+	 *    this file resides on.
+	 * 2) Ensure that at least one execute bit is on. Otherwise, a
+	 *    privileged user will always succeed, and we don't want this
+	 *    to happen unless the file really is executable.
+	 * 3) Ensure that the file is a regular file.
 	 */
 	if ((vp->v_mount->mnt_flag & MNT_NOEXEC) ||
-	    ((attr->va_mode & 0111) == 0) ||
+	    (attr->va_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0 ||
 	    (attr->va_type != VREG))
 		return (EACCES);
 
@@ -1343,4 +1510,65 @@ exec_unregister(execsw_arg)
 		free(execsw, M_TEMP);
 	execsw = newexecsw;
 	return (0);
+}
+
+static vm_object_t shared_page_obj;
+static int shared_page_free;
+
+int
+shared_page_fill(int size, int align, const char *data)
+{
+	vm_page_t m;
+	struct sf_buf *s;
+	vm_offset_t sk;
+	int res;
+
+	VM_OBJECT_LOCK(shared_page_obj);
+	m = vm_page_grab(shared_page_obj, 0, VM_ALLOC_RETRY);
+	res = roundup(shared_page_free, align);
+	if (res + size >= IDX_TO_OFF(shared_page_obj->size))
+		res = -1;
+	else {
+		VM_OBJECT_UNLOCK(shared_page_obj);
+		s = sf_buf_alloc(m, SFB_DEFAULT);
+		sk = sf_buf_kva(s);
+		bcopy(data, (void *)(sk + res), size);
+		shared_page_free = res + size;
+		sf_buf_free(s);
+		VM_OBJECT_LOCK(shared_page_obj);
+	}
+	vm_page_wakeup(m);
+	VM_OBJECT_UNLOCK(shared_page_obj);
+	return (res);
+}
+
+static void
+shared_page_init(void *dummy __unused)
+{
+	vm_page_t m;
+
+	shared_page_obj = vm_pager_allocate(OBJT_PHYS, 0, PAGE_SIZE,
+	    VM_PROT_DEFAULT, 0, NULL);
+	VM_OBJECT_LOCK(shared_page_obj);
+	m = vm_page_grab(shared_page_obj, 0, VM_ALLOC_RETRY | VM_ALLOC_NOBUSY |
+	    VM_ALLOC_ZERO);
+	m->valid = VM_PAGE_BITS_ALL;
+	VM_OBJECT_UNLOCK(shared_page_obj);
+}
+
+SYSINIT(shp, SI_SUB_EXEC, SI_ORDER_FIRST, (sysinit_cfunc_t)shared_page_init,
+    NULL);
+
+void
+exec_sysvec_init(void *param)
+{
+	struct sysentvec *sv;
+
+	sv = (struct sysentvec *)param;
+
+	if ((sv->sv_flags & SV_SHP) == 0)
+		return;
+	sv->sv_shared_page_obj = shared_page_obj;
+	sv->sv_sigcode_base = sv->sv_shared_page_base +
+	    shared_page_fill(*(sv->sv_szsigcode), 16, sv->sv_sigcode);
 }

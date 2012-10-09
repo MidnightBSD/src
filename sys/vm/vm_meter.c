@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/vm/vm_meter.c,v 1.3 2008/12/03 00:11:24 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_meter.c,v 1.96 2007/07/27 20:01:21 alc Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,8 +54,6 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_meter.c,v 1.96 2007/07/27 20:01:21 alc Exp $")
 
 struct vmmeter cnt;
 
-int maxslp = MAXSLP;
-
 SYSCTL_UINT(_vm, VM_V_FREE_MIN, v_free_min,
 	CTLFLAG_RW, &cnt.v_free_min, 0, "");
 SYSCTL_UINT(_vm, VM_V_FREE_TARGET, v_free_target,
@@ -77,6 +74,7 @@ SYSCTL_UINT(_vm, OID_AUTO, v_free_severe,
 static int
 sysctl_vm_loadavg(SYSCTL_HANDLER_ARGS)
 {
+	
 #ifdef SCTL_MASK32
 	u_int32_t la[4];
 
@@ -97,7 +95,6 @@ SYSCTL_PROC(_vm, VM_LOADAVG, loadavg, CTLTYPE_STRUCT | CTLFLAG_RD |
 static int
 vmtotal(SYSCTL_HANDLER_ARGS)
 {
-/* XXXKSE almost completely broken */
 	struct proc *p;
 	struct vmtotal total;
 	vm_map_entry_t entry;
@@ -132,33 +129,24 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 	FOREACH_PROC_IN_SYSTEM(p) {
 		if (p->p_flag & P_SYSTEM)
 			continue;
-		PROC_SLOCK(p);
+		PROC_LOCK(p);
 		switch (p->p_state) {
 		case PRS_NEW:
-			PROC_SUNLOCK(p);
+			PROC_UNLOCK(p);
 			continue;
 			break;
 		default:
 			FOREACH_THREAD_IN_PROC(p, td) {
-				/* Need new statistics  XXX */
 				thread_lock(td);
 				switch (td->td_state) {
 				case TDS_INHIBITED:
-					/*
-					 * XXX stats no longer synchronized.
-					 */
-					if (TD_ON_LOCK(td) ||
-					    (td->td_inhibitors ==
-					    TDI_SWAPPED)) {
+					if (TD_IS_SWAPPED(td))
 						total.t_sw++;
-					} else if (TD_IS_SLEEPING(td) ||
-					   TD_AWAITING_INTR(td) ||
-					   TD_IS_SUSPENDED(td)) {
-						if (td->td_priority <= PZERO)
-							total.t_dw++;
-						else
-							total.t_sl++;
-					}
+					else if (TD_IS_SLEEPING(td) &&
+					    td->td_priority <= PZERO)
+						total.t_dw++;
+					else
+						total.t_sl++;
 					break;
 
 				case TDS_CAN_RUN:
@@ -175,7 +163,7 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 				thread_unlock(td);
 			}
 		}
-		PROC_SUNLOCK(p);
+		PROC_UNLOCK(p);
 		/*
 		 * Note active objects.
 		 */
@@ -212,7 +200,7 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 		 * synchronization should not impair the accuracy of
 		 * the reported statistics. 
 		 */
-		if (object->type == OBJT_DEVICE) {
+		if (object->type == OBJT_DEVICE || object->type == OBJT_SG) {
 			/*
 			 * Devices, like /dev/mem, will badly skew our totals.
 			 */
@@ -263,16 +251,12 @@ vcnt(SYSCTL_HANDLER_ARGS)
 {
 	int count = *(int *)arg1;
 	int offset = (char *)arg1 - (char *)&cnt;
-#ifdef SMP
 	int i;
 
-	for (i = 0; i < mp_ncpus; ++i) {
+	CPU_FOREACH(i) {
 		struct pcpu *pcpu = pcpu_find(i);
 		count += *(int *)((char *)&pcpu->pc_cnt + offset);
 	}
-#else
-	count += *(int *)((char *)PCPU_PTR(cnt) + offset);
-#endif
 	return (SYSCTL_OUT(req, &count, sizeof(int)));
 }
 

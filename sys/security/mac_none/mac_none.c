@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2003 Networks Associates Technology, Inc.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_none/mac_none.c,v 1.36 2007/02/23 11:21:26 rwatson Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -49,9 +48,9 @@
 
 #include <security/mac/mac_policy.h>
 
-static struct mac_policy_ops mac_none_ops =
+static struct mac_policy_ops none_ops =
 {
 };
 
-MAC_POLICY_SET(&mac_none_ops, mac_none, "TrustedBSD MAC/None",
+MAC_POLICY_SET(&none_ops, mac_none, "TrustedBSD MAC/None",
     MPC_LOADTIME_FLAG_UNLOADOK, NULL);

@@ -28,10 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_mchain.c,v 1.18.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 #include <sys/endian.h>
 #include <sys/errno.h>
 #include <sys/mbuf.h>
@@ -39,6 +40,8 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_mchain.c,v 1.18.6.1 2008/11/25 02:59:29 ke
 #include <sys/uio.h>
 
 #include <sys/mchain.h>
+
+FEATURE(libmchain, "mchain library");
 
 MODULE_VERSION(libmchain, 1);
 
@@ -56,9 +59,7 @@ mb_init(struct mbchain *mbp)
 {
 	struct mbuf *m;
 
-	m = m_gethdr(M_TRYWAIT, MT_DATA);
-	if (m == NULL) 
-		return ENOBUFS;
+	m = m_gethdr(M_WAIT, MT_DATA);
 	m->m_len = 0;
 	mb_initm(mbp, m);
 	return 0;
@@ -113,9 +114,7 @@ mb_reserve(struct mbchain *mbp, int size)
 		panic("mb_reserve: size = %d\n", size);
 	m = mbp->mb_cur;
 	if (mbp->mb_mleft < size) {
-		mn = m_get(M_TRYWAIT, MT_DATA);
-		if (mn == NULL)
-			return NULL;
+		mn = m_get(M_WAIT, MT_DATA);
 		mbp->mb_cur = m->m_next = mn;
 		m = mn;
 		m->m_len = 0;
@@ -129,34 +128,49 @@ mb_reserve(struct mbchain *mbp, int size)
 }
 
 int
-mb_put_uint8(struct mbchain *mbp, u_int8_t x)
+mb_put_padbyte(struct mbchain *mbp)
+{
+	caddr_t dst;
+	char x = 0;
+
+	dst = mtod(mbp->mb_cur, caddr_t) + mbp->mb_cur->m_len;
+
+	/* only add padding if address is odd */
+	if ((unsigned long)dst & 1)
+		return mb_put_mem(mbp, (caddr_t)&x, 1, MB_MSYSTEM);
+	else
+	return 0;
+}
+
+int
+mb_put_uint8(struct mbchain *mbp, uint8_t x)
 {
 	return mb_put_mem(mbp, (caddr_t)&x, sizeof(x), MB_MSYSTEM);
 }
 
 int
-mb_put_uint16be(struct mbchain *mbp, u_int16_t x)
+mb_put_uint16be(struct mbchain *mbp, uint16_t x)
 {
 	x = htobe16(x);
 	return mb_put_mem(mbp, (caddr_t)&x, sizeof(x), MB_MSYSTEM);
 }
 
 int
-mb_put_uint16le(struct mbchain *mbp, u_int16_t x)
+mb_put_uint16le(struct mbchain *mbp, uint16_t x)
 {
 	x = htole16(x);
 	return mb_put_mem(mbp, (caddr_t)&x, sizeof(x), MB_MSYSTEM);
 }
 
 int
-mb_put_uint32be(struct mbchain *mbp, u_int32_t x)
+mb_put_uint32be(struct mbchain *mbp, uint32_t x)
 {
 	x = htobe32(x);
 	return mb_put_mem(mbp, (caddr_t)&x, sizeof(x), MB_MSYSTEM);
 }
 
 int
-mb_put_uint32le(struct mbchain *mbp, u_int32_t x)
+mb_put_uint32le(struct mbchain *mbp, uint32_t x)
 {
 	x = htole32(x);
 	return mb_put_mem(mbp, (caddr_t)&x, sizeof(x), MB_MSYSTEM);
@@ -190,11 +204,9 @@ mb_put_mem(struct mbchain *mbp, c_caddr_t source, int size, int type)
 
 	while (size > 0) {
 		if (mleft == 0) {
-			if (m->m_next == NULL) {
-				m = m_getm(m, size, M_TRYWAIT, MT_DATA);
-				if (m == NULL)
-					return ENOBUFS;
-			} else
+			if (m->m_next == NULL)
+				m = m_getm(m, size, M_WAIT, MT_DATA);
+			else
 				m = m->m_next;
 			mleft = M_TRAILINGSPACE(m);
 			continue;
@@ -295,9 +307,7 @@ md_init(struct mdchain *mdp)
 {
 	struct mbuf *m;
 
-	m = m_gethdr(M_TRYWAIT, MT_DATA);
-	if (m == NULL) 
-		return ENOBUFS;
+	m = m_gethdr(M_WAIT, MT_DATA);
 	m->m_len = 0;
 	md_initm(mdp, m);
 	return 0;
@@ -360,21 +370,21 @@ md_next_record(struct mdchain *mdp)
 }
 
 int
-md_get_uint8(struct mdchain *mdp, u_int8_t *x)
+md_get_uint8(struct mdchain *mdp, uint8_t *x)
 {
 	return md_get_mem(mdp, x, 1, MB_MINLINE);
 }
 
 int
-md_get_uint16(struct mdchain *mdp, u_int16_t *x)
+md_get_uint16(struct mdchain *mdp, uint16_t *x)
 {
 	return md_get_mem(mdp, (caddr_t)x, 2, MB_MINLINE);
 }
 
 int
-md_get_uint16le(struct mdchain *mdp, u_int16_t *x)
+md_get_uint16le(struct mdchain *mdp, uint16_t *x)
 {
-	u_int16_t v;
+	uint16_t v;
 	int error = md_get_uint16(mdp, &v);
 
 	if (x != NULL)
@@ -383,8 +393,9 @@ md_get_uint16le(struct mdchain *mdp, u_int16_t *x)
 }
 
 int
-md_get_uint16be(struct mdchain *mdp, u_int16_t *x) {
-	u_int16_t v;
+md_get_uint16be(struct mdchain *mdp, uint16_t *x)
+{
+	uint16_t v;
 	int error = md_get_uint16(mdp, &v);
 
 	if (x != NULL)
@@ -393,15 +404,15 @@ md_get_uint16be(struct mdchain *mdp, u_int16_t *x) {
 }
 
 int
-md_get_uint32(struct mdchain *mdp, u_int32_t *x)
+md_get_uint32(struct mdchain *mdp, uint32_t *x)
 {
 	return md_get_mem(mdp, (caddr_t)x, 4, MB_MINLINE);
 }
 
 int
-md_get_uint32be(struct mdchain *mdp, u_int32_t *x)
+md_get_uint32be(struct mdchain *mdp, uint32_t *x)
 {
-	u_int32_t v;
+	uint32_t v;
 	int error;
 
 	error = md_get_uint32(mdp, &v);
@@ -411,9 +422,9 @@ md_get_uint32be(struct mdchain *mdp, u_int32_t *x)
 }
 
 int
-md_get_uint32le(struct mdchain *mdp, u_int32_t *x)
+md_get_uint32le(struct mdchain *mdp, uint32_t *x)
 {
-	u_int32_t v;
+	uint32_t v;
 	int error;
 
 	error = md_get_uint32(mdp, &v);
@@ -503,9 +514,7 @@ md_get_mbuf(struct mdchain *mdp, int size, struct mbuf **ret)
 {
 	struct mbuf *m = mdp->md_cur, *rm;
 
-	rm = m_copym(m, mdp->md_pos - mtod(m, u_char*), size, M_TRYWAIT);
-	if (rm == NULL)
-		return EBADRPC;
+	rm = m_copym(m, mdp->md_pos - mtod(m, u_char*), size, M_WAIT);
 	md_get_mem(mdp, NULL, size, MB_MZERO);
 	*ret = rm;
 	return 0;

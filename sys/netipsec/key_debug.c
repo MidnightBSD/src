@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/key_debug.c,v 1.5.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: key_debug.c,v 1.26 2001/06/27 10:46:50 sakane Exp $	*/
 
 /*-
@@ -46,6 +46,7 @@
 #include <sys/socket.h>
 
 #include <net/route.h>
+#include <net/vnet.h>
 
 #include <netipsec/key_var.h>
 #include <netipsec/key_debug.h>

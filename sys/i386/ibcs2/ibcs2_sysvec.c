@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Steven Wallace
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_sysvec.c,v 1.32.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -60,32 +59,38 @@ extern char sigcode[];
 static int ibcs2_fixup(register_t **, struct image_params *);
 
 struct sysentvec ibcs2_svr3_sysvec = {
-        sizeof (ibcs2_sysent) / sizeof (ibcs2_sysent[0]),
-        ibcs2_sysent,
-        0xFF,
-        IBCS2_SIGTBLSZ,
-        bsd_to_ibcs2_sig,
-        ELAST + 1,
-        bsd_to_ibcs2_errno,
-	NULL,		/* trap-to-signal translation function */
-	ibcs2_fixup,	/* fixup */
-	sendsig,
-	sigcode,	/* use generic trampoline */
-	&szsigcode,	/* use generic trampoline size */
-	NULL,		/* prepsyscall */
-	"IBCS2 COFF",
-	NULL,		/* we don't have a COFF coredump function */
-	NULL,
-	IBCS2_MINSIGSTKSZ,
-	PAGE_SIZE,
-	VM_MIN_ADDRESS,
-	VM_MAXUSER_ADDRESS,
-	USRSTACK,
-	PS_STRINGS,
-	VM_PROT_ALL,
-	exec_copyout_strings,
-	exec_setregs,
-	NULL
+        .sv_size	= sizeof (ibcs2_sysent) / sizeof (ibcs2_sysent[0]),
+        .sv_table	= ibcs2_sysent,
+        .sv_mask	= 0xff,
+        .sv_sigsize	= IBCS2_SIGTBLSZ,
+        .sv_sigtbl	= bsd_to_ibcs2_sig,
+        .sv_errsize	= ELAST + 1,
+        .sv_errtbl	= bsd_to_ibcs2_errno,
+	.sv_transtrap	= NULL,
+	.sv_fixup	= ibcs2_fixup,
+	.sv_sendsig	= sendsig,
+	.sv_sigcode	= sigcode,	/* use generic trampoline */
+	.sv_szsigcode	= &szsigcode,
+	.sv_prepsyscall	= NULL,
+	.sv_name	= "IBCS2 COFF",
+	.sv_coredump	= NULL,	/* we don't have a COFF coredump function */
+	.sv_imgact_try	= NULL,
+	.sv_minsigstksz	= IBCS2_MINSIGSTKSZ,
+	.sv_pagesize	= PAGE_SIZE,
+	.sv_minuser	= VM_MIN_ADDRESS,
+	.sv_maxuser	= VM_MAXUSER_ADDRESS,
+	.sv_usrstack	= USRSTACK,
+	.sv_psstrings	= PS_STRINGS,
+	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_strings = exec_copyout_strings,
+	.sv_setregs	= exec_setregs,
+	.sv_fixlimit	= NULL,
+	.sv_maxssiz	= NULL,
+	.sv_flags	= SV_ABI_UNDEF | SV_IA32 | SV_ILP32,
+	.sv_set_syscall_retval = cpu_set_syscall_retval,
+	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
+	.sv_syscallnames = NULL,
+	.sv_schedtail	= NULL,
 };
 
 static int
@@ -130,4 +135,4 @@ static moduledata_t ibcs2_mod = {
 	ibcs2_modevent,
 	0
 };
-DECLARE_MODULE(ibcs2, ibcs2_mod, SI_SUB_PSEUDO, SI_ORDER_ANY);
+DECLARE_MODULE_TIED(ibcs2, ibcs2_mod, SI_SUB_PSEUDO, SI_ORDER_ANY);

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD: src/sys/netinet/in.h,v 1.100.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_IN_H_
@@ -89,27 +89,7 @@ typedef	__socklen_t	socklen_t;
 #define	_SOCKLEN_T_DECLARED
 #endif
 
-/* Avoid collision with original definition in sys/socket.h. */
-#ifndef	_STRUCT_SOCKADDR_STORAGE_DECLARED
-/*
- * RFC 2553: protocol-independent placeholder for socket addresses
- */
-#define	_SS_MAXSIZE	128U
-#define	_SS_ALIGNSIZE	(sizeof(__int64_t))
-#define	_SS_PAD1SIZE	(_SS_ALIGNSIZE - sizeof(unsigned char) - \
-			    sizeof(sa_family_t))
-#define	_SS_PAD2SIZE	(_SS_MAXSIZE - sizeof(unsigned char) - \
-			    sizeof(sa_family_t) - _SS_PAD1SIZE - _SS_ALIGNSIZE)
-
-struct sockaddr_storage {
-	unsigned char	ss_len;		/* address length */
-	sa_family_t	ss_family;	/* address family */
-	char		__ss_pad1[_SS_PAD1SIZE];
-	__int64_t	__ss_align;	/* force desired struct alignment */
-	char		__ss_pad2[_SS_PAD2SIZE];
-};
-#define	_STRUCT_SOCKADDR_STORAGE_DECLARED
-#endif
+#include <sys/_sockaddr_storage.h>
 
 /* Socket address, internet style. */
 struct sockaddr_in {
@@ -120,7 +100,7 @@ struct sockaddr_in {
 	char	sin_zero[8];
 };
 
-#ifndef _KERNEL
+#if !defined(_KERNEL) && __BSD_VISIBLE
 
 #ifndef _BYTEORDER_PROTOTYPED
 #define	_BYTEORDER_PROTOTYPED
@@ -140,7 +120,7 @@ __END_DECLS
 #define	ntohs(x)	__ntohs(x)
 #endif
 
-#endif /* !_KERNEL */
+#endif /* !_KERNEL && __BSD_VISIBLE */
 
 #if __POSIX_VISIBLE >= 200112
 #define	IPPROTO_RAW		255		/* raw IP packet */
@@ -256,6 +236,7 @@ __END_DECLS
 #define	IPPROTO_GMTP		100		/* GMTP*/
 #define	IPPROTO_IPCOMP		108		/* payload compression (IPComp) */
 #define	IPPROTO_SCTP		132		/* SCTP */
+#define	IPPROTO_MH		135		/* IPv6 Mobility Header */
 /* 101-254: Partly Unassigned */
 #define	IPPROTO_PIM		103		/* Protocol Independent Mcast */
 #define	IPPROTO_CARP		112		/* CARP */
@@ -271,6 +252,7 @@ __END_DECLS
 
 /* Only used internally, so can be outside the range of valid IP protocols. */
 #define	IPPROTO_DIVERT		258		/* divert pseudo-protocol */
+#define	IPPROTO_SEND		259		/* SeND pseudo-protocol */
 
 /*
  * Defined to avoid confusion.  The master value is defined by
@@ -293,8 +275,7 @@ __END_DECLS
  *
  * The value IP_PORTRANGE_HIGH changes the range of candidate port numbers
  * into the "high" range.  These are reserved for client outbound connections
- * which do not want to be filtered by any firewalls.  Note that by default
- * this is the same as IP_PORTRANGE_DEFAULT.
+ * which do not want to be filtered by any firewalls.
  *
  * The value IP_PORTRANGE_LOW changes the range to the "low" are
  * that is (by convention) restricted to privileged processes.  This
@@ -331,8 +312,13 @@ __END_DECLS
 #define	IPPORT_RESERVED		1024
 
 /*
- * Default local port range, used by both IP_PORTRANGE_DEFAULT
- * and IP_PORTRANGE_HIGH.
+ * Default local port range, used by IP_PORTRANGE_DEFAULT
+ */
+#define IPPORT_EPHEMERALFIRST	10000
+#define IPPORT_EPHEMERALLAST	65535 
+ 
+/*
+ * Dynamic port range, used by IP_PORTRANGE_HIGH.
  */
 #define	IPPORT_HIFIRSTAUTO	49152
 #define	IPPORT_HILASTAUTO	65535
@@ -406,6 +392,8 @@ __END_DECLS
 
 #define	IN_LOOPBACKNET		127			/* official! */
 
+#define	IN_RFC3021_MASK		(u_int32_t)0xfffffffe
+
 /*
  * Options for use with [gs]etsockopt at the IP level.
  * First word of comment is data type; bool is stored in int.
@@ -437,12 +425,21 @@ __END_DECLS
 #define	IP_FAITH		22   /* bool; accept FAITH'ed connections */
 
 #define	IP_ONESBCAST		23   /* bool: send all-ones broadcast */
+#define	IP_BINDANY		24   /* bool: allow bind to any address */
 
+/*
+ * Options for controlling the firewall and dummynet.
+ * Historical options (from 40 to 64) will eventually be
+ * replaced by only two options, IP_FW3 and IP_DUMMYNET3.
+ */
 #define	IP_FW_TABLE_ADD		40   /* add entry */
 #define	IP_FW_TABLE_DEL		41   /* delete entry */
 #define	IP_FW_TABLE_FLUSH	42   /* flush table */
 #define	IP_FW_TABLE_GETSIZE	43   /* get table size */
 #define	IP_FW_TABLE_LIST	44   /* list table contents */
+
+#define	IP_FW3			48   /* generic ipfw v.3 sockopts */
+#define	IP_DUMMYNET3		49   /* generic dummynet v.3 sockopts */
 
 #define	IP_FW_ADD		50   /* add a firewall rule to chain */
 #define	IP_FW_DEL		51   /* delete a firewall rule from chain */
@@ -464,6 +461,7 @@ __END_DECLS
 #define	IP_RECVTTL		65   /* bool; receive IP TTL w/dgram */
 #define	IP_MINTTL		66   /* minimum TTL for packet or drop */
 #define	IP_DONTFRAG		67   /* don't fragment packet */
+#define	IP_RECVTOS		68   /* bool; receive IP TOS w/dgram */
 
 /* IPv4 Source Filter Multicast API [RFC3678] */
 #define	IP_ADD_SOURCE_MEMBERSHIP	70   /* join a source-specific group */
@@ -495,7 +493,15 @@ __END_DECLS
  */
 #define	IP_MIN_MEMBERSHIPS	31
 #define	IP_MAX_MEMBERSHIPS	4095
-#define	IP_MAX_SOURCE_FILTER	1024	/* # of filters per socket, per group */
+#define	IP_MAX_SOURCE_FILTER	1024	/* XXX to be unused */
+
+/*
+ * Default resource limits for IPv4 multicast source filtering.
+ * These may be modified by sysctl.
+ */
+#define	IP_MAX_GROUP_SRC_FILTER		512	/* sources per group */
+#define	IP_MAX_SOCK_SRC_FILTER		128	/* sources per socket/group */
+#define	IP_MAX_SOCK_MUTE_FILTER		128	/* XXX no longer used */
 
 /*
  * Argument structure for IP_ADD_MEMBERSHIP and IP_DROP_MEMBERSHIP.
@@ -578,6 +584,7 @@ int	getsourcefilter(int, uint32_t, struct sockaddr *, socklen_t,
 /*
  * Filter modes; also used to represent per-socket filter mode internally.
  */
+#define	MCAST_UNDEFINED	0	/* fmode: not yet defined */
 #define	MCAST_INCLUDE	1	/* fmode: include these source(s) */
 #define	MCAST_EXCLUDE	2	/* fmode: exclude these source(s) */
 
@@ -719,16 +726,46 @@ int	 in_broadcast(struct in_addr, struct ifnet *);
 int	 in_canforward(struct in_addr);
 int	 in_localaddr(struct in_addr);
 int	 in_localip(struct in_addr);
+int	 inet_aton(const char *, struct in_addr *); /* in libkern */
 char	*inet_ntoa(struct in_addr); /* in libkern */
 char	*inet_ntoa_r(struct in_addr ina, char *buf); /* in libkern */
+char	*inet_ntop(int, const void *, char *, socklen_t); /* in libkern */
+int	 inet_pton(int af, const char *, void *); /* in libkern */
 void	 in_ifdetach(struct ifnet *);
 
 #define	in_hosteq(s, t)	((s).s_addr == (t).s_addr)
 #define	in_nullhost(x)	((x).s_addr == INADDR_ANY)
+#define	in_allhosts(x)	((x).s_addr == htonl(INADDR_ALLHOSTS_GROUP))
 
 #define	satosin(sa)	((struct sockaddr_in *)(sa))
 #define	sintosa(sin)	((struct sockaddr *)(sin))
 #define	ifatoia(ifa)	((struct in_ifaddr *)(ifa))
+
+/*
+ * Historically, BSD keeps ip_len and ip_off in host format
+ * when doing layer 3 processing, and this often requires
+ * to translate the format back and forth.
+ * To make the process explicit, we define a couple of macros
+ * that also take into account the fact that at some point
+ * we may want to keep those fields always in net format.
+ */
+
+#if (BYTE_ORDER == BIG_ENDIAN) || defined(HAVE_NET_IPLEN)
+#define SET_NET_IPLEN(p)	do {} while (0)
+#define SET_HOST_IPLEN(p)	do {} while (0)
+#else
+#define SET_NET_IPLEN(p)	do {		\
+	struct ip *h_ip = (p);			\
+	h_ip->ip_len = htons(h_ip->ip_len);	\
+	h_ip->ip_off = htons(h_ip->ip_off);	\
+	} while (0)
+
+#define SET_HOST_IPLEN(p)	do {		\
+	struct ip *h_ip = (p);			\
+	h_ip->ip_len = ntohs(h_ip->ip_len);	\
+	h_ip->ip_off = ntohs(h_ip->ip_off);	\
+	} while (0)
+#endif /* !HAVE_NET_IPLEN */
 
 #endif /* _KERNEL */
 

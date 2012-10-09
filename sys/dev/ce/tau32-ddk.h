@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/ce/tau32-ddk.h,v 1.3 2008/12/02 02:24:37 laffer1 Exp $ */
 /*
  * DDK (Driver Development Kit) for Cronyx Tau32-PCI adapter.
  *
