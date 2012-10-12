@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/modules/krpc/Makefile,v 1.1 2012/03/24 21:30:06 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../rpc ${.CURDIR}/../../xdr
 KMOD=	krpc
@@ -9,13 +9,12 @@ SRCS=	auth_none.c \
 	clnt_rc.c \
 	clnt_vc.c \
 	getnetconfig.c \
-	inet_ntop.c \
-	inet_pton.c \
 	rpc_callmsg.c \
 	rpc_generic.c \
 	rpc_prot.c \
 	rpcb_clnt.c \
 	rpcb_prot.c \
+	replay.c \
 	svc.c \
 	svc_auth.c \
 	svc_auth_unix.c \

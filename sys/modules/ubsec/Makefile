@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ubsec/Makefile,v 1.6 2007/03/21 03:42:51 sam Exp $
+# $MidnightBSD$
 
 .PATH:	${.CURDIR}/../../dev/ubsec
 KMOD	= ubsec
@@ -8,7 +8,7 @@ SRCS   += opt_bus.h cryptodev_if.h
 
 .if !defined(KERNBUILDDIR)
 opt_ubsec.h:
-	echo "#define UBSEC_DEBUG 1" > opt_ubsec.h
+	echo "#define UBSEC_DEBUG 1" > ${.TARGET}
 .endif
 
 .include <bsd.kmod.mk>

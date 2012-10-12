@@ -1,16 +1,18 @@
-# $MidnightBSD$
-# $FreeBSD: src/sys/modules/mfi/Makefile,v 1.1.2.1 2006/04/04 03:24:49 scottl Exp $
+# $MidnightBSD: src/sys/modules/mfi/Makefile,v 1.1 2007/03/08 18:03:15 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../dev/mfi
 
-KMOD=	mfi
-SRCS=	mfi.c mfi_pci.c mfi_disk.c
-SRCS+=	opt_mfi.h
-SRCS+=	device_if.h bus_if.h pci_if.h
-CFLAGS+= -Wall -Werror
+SUBDIR= mfip
 
-# To enable debug output from the driver, uncomment these two lines.
-#CFLAGS+= -DMFI_DEBUG=2
-#SRCS+=	mfi_debug.c
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+SUBDIR+= mfi_linux
+.endif
+
+KMOD=	mfi
+SRCS=	mfi.c mfi_pci.c mfi_disk.c mfi_debug.c mfi_syspd.c mfi_tbolt.c
+SRCS+=	opt_mfi.h opt_cam.h opt_compat.h
+SRCS+=	device_if.h bus_if.h pci_if.h
+
+#CFLAGS += -DMFI_DEBUG
 
 .include <bsd.kmod.mk>

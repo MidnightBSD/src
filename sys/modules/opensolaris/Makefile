@@ -1,20 +1,25 @@
-# $MidnightBSD: src/sys/modules/opensolaris/Makefile,v 1.1 2012/03/31 16:59:45 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/opensolaris/Makefile,v 1.2 2012/04/10 19:39:40 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../cddl/compat/opensolaris/kern
 
 KMOD=		opensolaris
 SRCS=		opensolaris.c		\
 		opensolaris_cmn_err.c	\
+		opensolaris_kmem.c	\
 		opensolaris_misc.c	\
-		opensolaris_kmem.c
+		opensolaris_sunddi.c
 
-.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
-.PATH:	${.CURDIR}/../../cddl/contrib/opensolaris/common/atomic/${MACHINE_ARCH}
-SRCS+=		atomic.S
+_A=${.CURDIR}/../../cddl/contrib/opensolaris/common/atomic
+.if exists(${_A}/${MACHINE_CPUARCH}/opensolaris_atomic.S)
+.PATH:	${_A}/${MACHINE_CPUARCH}
+SRCS+=		opensolaris_atomic.S
+.elif exists(${_A}/${MACHINE_ARCH}/opensolaris_atomic.S)
+.PATH:	${_A}/${MACHINE_ARCH}
+SRCS+=		opensolaris_atomic.S
 .else
 SRCS+=		opensolaris_atomic.c
 .endif
-		
+
 CFLAGS+=	-I${.CURDIR}/../../cddl/compat/opensolaris		\
 		-I${.CURDIR}/../../cddl/contrib/opensolaris/uts/common	\
 		-I${.CURDIR}/../..
