@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,14 +20,11 @@
  */
 
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef	_SYS_FM_PROTOCOL_H
 #define	_SYS_FM_PROTOCOL_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -46,16 +42,20 @@ extern "C" {
 #define	FM_CLASS			"class"
 #define	FM_VERSION			"version"
 
-/* FM event class values */
+/* FM protocol category 1 class names */
 #define	FM_EREPORT_CLASS		"ereport"
 #define	FM_FAULT_CLASS			"fault"
+#define	FM_DEFECT_CLASS			"defect"
 #define	FM_RSRC_CLASS			"resource"
 #define	FM_LIST_EVENT			"list"
+#define	FM_IREPORT_CLASS		"ireport"
 
 /* FM list.* event class values */
 #define	FM_LIST_SUSPECT_CLASS		FM_LIST_EVENT ".suspect"
 #define	FM_LIST_ISOLATED_CLASS		FM_LIST_EVENT ".isolated"
 #define	FM_LIST_REPAIRED_CLASS		FM_LIST_EVENT ".repaired"
+#define	FM_LIST_UPDATED_CLASS		FM_LIST_EVENT ".updated"
+#define	FM_LIST_RESOLVED_CLASS		FM_LIST_EVENT ".resolved"
 
 /* ereport class subcategory values */
 #define	FM_ERROR_CPU			"cpu"
@@ -72,7 +72,16 @@ extern "C" {
 /* list.* event payload member names */
 #define	FM_LIST_EVENT_SIZE		"list-sz"
 
-/* list.suspect, isolated, and repaired versions and payload member names */
+/* ireport.* event payload member names */
+#define	FM_IREPORT_DETECTOR		"detector"
+#define	FM_IREPORT_UUID			"uuid"
+#define	FM_IREPORT_PRIORITY		"pri"
+#define	FM_IREPORT_ATTRIBUTES		"attr"
+
+/*
+ * list.suspect, isolated, updated, repaired and resolved
+ * versions/payload member names.
+ */
 #define	FM_SUSPECT_UUID			"uuid"
 #define	FM_SUSPECT_DIAG_CODE		"code"
 #define	FM_SUSPECT_DIAG_TIME		"diag-time"
@@ -80,10 +89,22 @@ extern "C" {
 #define	FM_SUSPECT_FAULT_LIST		"fault-list"
 #define	FM_SUSPECT_FAULT_SZ		"fault-list-sz"
 #define	FM_SUSPECT_FAULT_STATUS		"fault-status"
+#define	FM_SUSPECT_INJECTED		"__injected"
 #define	FM_SUSPECT_MESSAGE		"message"
+#define	FM_SUSPECT_RETIRE		"retire"
+#define	FM_SUSPECT_RESPONSE		"response"
+#define	FM_SUSPECT_SEVERITY		"severity"
 
 #define	FM_SUSPECT_VERS0		0
 #define	FM_SUSPECT_VERSION		FM_SUSPECT_VERS0
+
+#define	FM_SUSPECT_FAULTY		0x1
+#define	FM_SUSPECT_UNUSABLE		0x2
+#define	FM_SUSPECT_NOT_PRESENT		0x4
+#define	FM_SUSPECT_DEGRADED		0x8
+#define	FM_SUSPECT_REPAIRED		0x10
+#define	FM_SUSPECT_REPLACED		0x20
+#define	FM_SUSPECT_ACQUITTED		0x40
 
 /* fault event versions and payload member names */
 #define	FM_FAULT_VERS0			0
@@ -105,6 +126,10 @@ extern "C" {
 #define	FM_RSRC_ASRU_UUID		"uuid"
 #define	FM_RSRC_ASRU_CODE		"code"
 #define	FM_RSRC_ASRU_FAULTY		"faulty"
+#define	FM_RSRC_ASRU_REPAIRED		"repaired"
+#define	FM_RSRC_ASRU_REPLACED		"replaced"
+#define	FM_RSRC_ASRU_ACQUITTED		"acquitted"
+#define	FM_RSRC_ASRU_RESOLVED		"resolved"
 #define	FM_RSRC_ASRU_UNUSABLE		"unusable"
 #define	FM_RSRC_ASRU_EVENT		"event"
 
@@ -113,6 +138,8 @@ extern "C" {
 #define	FM_RSRC_XPRT_VERSION		FM_RSRC_XPRT_VERS0
 #define	FM_RSRC_XPRT_UUID		"uuid"
 #define	FM_RSRC_XPRT_SUBCLASS		"subclass"
+#define	FM_RSRC_XPRT_FAULT_STATUS	"fault-status"
+#define	FM_RSRC_XPRT_FAULT_HAS_ASRU	"fault-has-asru"
 
 /*
  * FM ENA Format Macros
@@ -147,9 +174,11 @@ extern "C" {
 #define	FM_FMRI_AUTHORITY		"authority"
 #define	FM_FMRI_SCHEME			"scheme"
 #define	FM_FMRI_SVC_AUTHORITY		"svc-authority"
+#define	FM_FMRI_FACILITY		"facility"
 
 /* FMRI authority-type member names */
 #define	FM_FMRI_AUTH_CHASSIS		"chassis-id"
+#define	FM_FMRI_AUTH_PRODUCT_SN		"product-sn"
 #define	FM_FMRI_AUTH_PRODUCT		"product-id"
 #define	FM_FMRI_AUTH_DOMAIN		"domain-id"
 #define	FM_FMRI_AUTH_SERVER		"server-id"
@@ -169,6 +198,7 @@ extern "C" {
 #define	FM_FMRI_SCHEME_PKG		"pkg"
 #define	FM_FMRI_SCHEME_LEGACY		"legacy-hc"
 #define	FM_FMRI_SCHEME_ZFS		"zfs"
+#define	FM_FMRI_SCHEME_SW		"sw"
 
 /* Scheme versions */
 #define	FMD_SCHEME_VERSION0		0
@@ -188,8 +218,12 @@ extern "C" {
 #define	FM_PKG_SCHEME_VERSION		PKG_SCHEME_VERSION0
 #define	LEGACY_SCHEME_VERSION0		0
 #define	FM_LEGACY_SCHEME_VERSION	LEGACY_SCHEME_VERSION0
+#define	SVC_SCHEME_VERSION0		0
+#define	FM_SVC_SCHEME_VERSION		SVC_SCHEME_VERSION0
 #define	ZFS_SCHEME_VERSION0		0
 #define	FM_ZFS_SCHEME_VERSION		ZFS_SCHEME_VERSION0
+#define	SW_SCHEME_VERSION0		0
+#define	FM_SW_SCHEME_VERSION		SW_SCHEME_VERSION0
 
 /* hc scheme member names */
 #define	FM_FMRI_HC_SERIAL_ID		"serial"
@@ -200,6 +234,10 @@ extern "C" {
 #define	FM_FMRI_HC_LIST			"hc-list"
 #define	FM_FMRI_HC_SPECIFIC		"hc-specific"
 
+/* facility member names */
+#define	FM_FMRI_FACILITY_NAME		"facility-name"
+#define	FM_FMRI_FACILITY_TYPE		"facility-type"
+
 /* hc-list version and member names */
 #define	FM_FMRI_HC_NAME			"hc-name"
 #define	FM_FMRI_HC_ID			"hc-id"
@@ -209,6 +247,7 @@ extern "C" {
 
 /* hc-specific member names */
 #define	FM_FMRI_HC_SPECIFIC_OFFSET	"offset"
+#define	FM_FMRI_HC_SPECIFIC_PHYSADDR	"physaddr"
 
 /* fmd module scheme member names */
 #define	FM_FMRI_FMD_NAME		"mod-name"
@@ -216,6 +255,7 @@ extern "C" {
 
 /* dev scheme member names */
 #define	FM_FMRI_DEV_ID			"devid"
+#define	FM_FMRI_DEV_TGTPTLUN0		"target-port-l0id"
 #define	FM_FMRI_DEV_PATH		"device-path"
 
 /* pkg scheme member names */
@@ -224,14 +264,13 @@ extern "C" {
 #define	FM_FMRI_PKG_VERSION		"pkg-version"
 
 /* svc scheme member names */
-#define	FM_FMRI_SVC_NAME		"service-name"
-#define	FM_FMRI_SVC_VERSION		"service-version"
-#define	FM_FMRI_SVC_INSTANCE		"instance"
-#define	FM_FMRI_SVC_CONTRACT_ID		"contract-id"
+#define	FM_FMRI_SVC_NAME		"svc-name"
+#define	FM_FMRI_SVC_INSTANCE		"svc-instance"
+#define	FM_FMRI_SVC_CONTRACT_ID		"svc-contract-id"
 
 /* svc-authority member names */
 #define	FM_FMRI_SVC_AUTH_SCOPE		"scope"
-#define	FM_FMRI_SVC_AUTH_SYSTEM_FQN	"system-FQN"
+#define	FM_FMRI_SVC_AUTH_SYSTEM_FQN	"system-fqn"
 
 /* cpu scheme member names */
 #define	FM_FMRI_CPU_ID			"cpuid"
@@ -239,6 +278,13 @@ extern "C" {
 #define	FM_FMRI_CPU_MASK		"cpumask"
 #define	FM_FMRI_CPU_VID			"cpuvid"
 #define	FM_FMRI_CPU_CPUFRU		"cpufru"
+#define	FM_FMRI_CPU_CACHE_INDEX		"cacheindex"
+#define	FM_FMRI_CPU_CACHE_WAY		"cacheway"
+#define	FM_FMRI_CPU_CACHE_BIT		"cachebit"
+#define	FM_FMRI_CPU_CACHE_TYPE		"cachetype"
+
+#define	FM_FMRI_CPU_CACHE_TYPE_L2	0
+#define	FM_FMRI_CPU_CACHE_TYPE_L3	1
 
 /* legacy-hc scheme member names */
 #define	FM_FMRI_LEGACY_HC		"component"
@@ -262,6 +308,25 @@ extern "C" {
 #define	FM_FMRI_ZFS_POOL		"pool"
 #define	FM_FMRI_ZFS_VDEV		"vdev"
 
+/* sw scheme member names - extra indentation for members of an nvlist */
+#define	FM_FMRI_SW_OBJ			"object"
+#define	FM_FMRI_SW_OBJ_PATH			"path"
+#define	FM_FMRI_SW_OBJ_ROOT			"root"
+#define	FM_FMRI_SW_OBJ_PKG			"pkg"
+#define	FM_FMRI_SW_SITE			"site"
+#define	FM_FMRI_SW_SITE_TOKEN			"token"
+#define	FM_FMRI_SW_SITE_MODULE			"module"
+#define	FM_FMRI_SW_SITE_FILE			"file"
+#define	FM_FMRI_SW_SITE_LINE			"line"
+#define	FM_FMRI_SW_SITE_FUNC			"func"
+#define	FM_FMRI_SW_CTXT			"context"
+#define	FM_FMRI_SW_CTXT_ORIGIN			"origin"
+#define	FM_FMRI_SW_CTXT_EXECNAME		"execname"
+#define	FM_FMRI_SW_CTXT_PID			"pid"
+#define	FM_FMRI_SW_CTXT_ZONE			"zone"
+#define	FM_FMRI_SW_CTXT_CTID			"ctid"
+#define	FM_FMRI_SW_CTXT_STACK			"stack"
+
 extern nv_alloc_t *fm_nva_xcreate(char *, size_t);
 extern void fm_nva_xdestroy(nv_alloc_t *);
 
@@ -278,7 +343,7 @@ extern int i_fm_payload_set(nvlist_t *, const char *, va_list);
 extern void fm_fmri_hc_set(nvlist_t *, int, const nvlist_t *, nvlist_t *,
     int, ...);
 extern void fm_fmri_dev_set(nvlist_t *, int, const nvlist_t *, const char *,
-    const char *);
+    const char *, const char *);
 extern void fm_fmri_de_set(nvlist_t *, int, const nvlist_t *, const char *);
 extern void fm_fmri_cpu_set(nvlist_t *, int, const nvlist_t *, uint32_t,
     uint8_t *, const char *);
@@ -287,6 +352,8 @@ extern void fm_fmri_mem_set(nvlist_t *, int, const nvlist_t *, const char *,
 extern void fm_authority_set(nvlist_t *, int, const char *, const char *,
     const char *, const char *);
 extern void fm_fmri_zfs_set(nvlist_t *, int, uint64_t, uint64_t);
+extern void fm_fmri_hc_create(nvlist_t *, int, const nvlist_t *, nvlist_t *,
+    nvlist_t *, int, ...);
 
 extern uint64_t fm_ena_increment(uint64_t);
 extern uint64_t fm_ena_generate(uint64_t, uchar_t);

@@ -42919,18 +42919,12 @@ sys/cddl/contrib/opensolaris/uts/common/os/callb.c -text
 sys/cddl/contrib/opensolaris/uts/common/os/fm.c -text
 sys/cddl/contrib/opensolaris/uts/common/os/list.c -text
 sys/cddl/contrib/opensolaris/uts/common/os/nvpair_alloc_system.c -text
-sys/cddl/contrib/opensolaris/uts/common/os/taskq.c -text
-sys/cddl/contrib/opensolaris/uts/common/rpc/xdr.c -text
-sys/cddl/contrib/opensolaris/uts/common/rpc/xdr.h -text
-sys/cddl/contrib/opensolaris/uts/common/rpc/xdr_array.c -text
-sys/cddl/contrib/opensolaris/uts/common/rpc/xdr_mem.c -text
 sys/cddl/contrib/opensolaris/uts/common/sys/acl.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/acl_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/asm_linkage.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/avl.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/avl_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/bitmap.h -text
-sys/cddl/contrib/opensolaris/uts/common/sys/byteorder.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/callb.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/ccompile.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/cmn_err.h -text
@@ -42941,8 +42935,6 @@ sys/cddl/contrib/opensolaris/uts/common/sys/cred.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/ctf.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/ctf_api.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/debug.h -text
-sys/cddl/contrib/opensolaris/uts/common/sys/dkio.h -text
-sys/cddl/contrib/opensolaris/uts/common/sys/dklabel.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/dtrace.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/dtrace_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/errorq.h -text

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: src/sys/cddl/contrib/opensolaris/uts/common/dtrace/dtrace.c,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -123,6 +122,7 @@
 #include <sys/sysctl.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/rwlock.h>
 #include <sys/sx.h>
 #include <sys/dtrace_bsd.h>
 #include <netinet/in.h>
@@ -551,20 +551,16 @@ static void dtrace_enabling_provide(dtrace_provider_t *);
 static int dtrace_enabling_match(dtrace_enabling_t *, int *);
 static void dtrace_enabling_matchall(void);
 static dtrace_state_t *dtrace_anon_grab(void);
-#if defined(sun)
 static uint64_t dtrace_helper(int, dtrace_mstate_t *,
     dtrace_state_t *, uint64_t, uint64_t);
 static dtrace_helpers_t *dtrace_helpers_create(proc_t *);
-#endif
 static void dtrace_buffer_drop(dtrace_buffer_t *);
 static intptr_t dtrace_buffer_reserve(dtrace_buffer_t *, size_t, size_t,
     dtrace_state_t *, dtrace_mstate_t *);
 static int dtrace_state_option(dtrace_state_t *, dtrace_optid_t,
     dtrace_optval_t);
 static int dtrace_ecb_create_enable(dtrace_probe_t *, void *);
-#if defined(sun)
 static void dtrace_helper_provider_destroy(dtrace_helper_provider_t *);
-#endif
 uint16_t dtrace_load16(uintptr_t);
 uint32_t dtrace_load32(uintptr_t);
 uint64_t dtrace_load64(uintptr_t);
@@ -1917,6 +1913,75 @@ dtrace_aggregate_lquantize(uint64_t *lquanta, uint64_t nval, uint64_t incr)
 	lquanta[levels + 1] += incr;
 }
 
+static int
+dtrace_aggregate_llquantize_bucket(uint16_t factor, uint16_t low,
+    uint16_t high, uint16_t nsteps, int64_t value)
+{
+	int64_t this = 1, last, next;
+	int base = 1, order;
+
+	ASSERT(factor <= nsteps);
+	ASSERT(nsteps % factor == 0);
+
+	for (order = 0; order < low; order++)
+		this *= factor;
+
+	/*
+	 * If our value is less than our factor taken to the power of the
+	 * low order of magnitude, it goes into the zeroth bucket.
+	 */
+	if (value < (last = this))
+		return (0);
+
+	for (this *= factor; order <= high; order++) {
+		int nbuckets = this > nsteps ? nsteps : this;
+
+		if ((next = this * factor) < this) {
+			/*
+			 * We should not generally get log/linear quantizations
+			 * with a high magnitude that allows 64-bits to
+			 * overflow, but we nonetheless protect against this
+			 * by explicitly checking for overflow, and clamping
+			 * our value accordingly.
+			 */
+			value = this - 1;
+		}
+
+		if (value < this) {
+			/*
+			 * If our value lies within this order of magnitude,
+			 * determine its position by taking the offset within
+			 * the order of magnitude, dividing by the bucket
+			 * width, and adding to our (accumulated) base.
+			 */
+			return (base + (value - last) / (this / nbuckets));
+		}
+
+		base += nbuckets - (nbuckets / factor);
+		last = this;
+		this = next;
+	}
+
+	/*
+	 * Our value is greater than or equal to our factor taken to the
+	 * power of one plus the high magnitude -- return the top bucket.
+	 */
+	return (base);
+}
+
+static void
+dtrace_aggregate_llquantize(uint64_t *llquanta, uint64_t nval, uint64_t incr)
+{
+	uint64_t arg = *llquanta++;
+	uint16_t factor = DTRACE_LLQUANTIZE_FACTOR(arg);
+	uint16_t low = DTRACE_LLQUANTIZE_LOW(arg);
+	uint16_t high = DTRACE_LLQUANTIZE_HIGH(arg);
+	uint16_t nsteps = DTRACE_LLQUANTIZE_NSTEP(arg);
+
+	llquanta[dtrace_aggregate_llquantize_bucket(factor,
+	    low, high, nsteps, nval)] += incr;
+}
+
 /*ARGSUSED*/
 static void
 dtrace_aggregate_avg(uint64_t *data, uint64_t nval, uint64_t arg)
@@ -2784,6 +2849,21 @@ dtrace_dif_variable(dtrace_mstate_t *mstate, dtrace_state_t *state, uint64_t v,
 		return (dtrace_getreg(lwp->lwp_regs, ndx));
 		return (0);
 	}
+#else
+	case DIF_VAR_UREGS: {
+		struct trapframe *tframe;
+
+		if (!dtrace_priv_proc(state))
+			return (0);
+
+		if ((tframe = curthread->td_frame) == NULL) {
+			DTRACE_CPUFLAG_SET(CPU_DTRACE_BADADDR);
+			cpu_core[curcpu].cpuc_dtrace_illval = 0;
+			return (0);
+		}
+
+		return (dtrace_getreg(tframe, ndx));
+	}
 #endif
 
 	case DIF_VAR_CURTHREAD:
@@ -2839,7 +2919,6 @@ dtrace_dif_variable(dtrace_mstate_t *mstate, dtrace_state_t *state, uint64_t v,
 		}
 		return (mstate->dtms_stackdepth);
 
-#if defined(sun)
 	case DIF_VAR_USTACKDEPTH:
 		if (!dtrace_priv_proc(state))
 			return (0);
@@ -2859,7 +2938,6 @@ dtrace_dif_variable(dtrace_mstate_t *mstate, dtrace_state_t *state, uint64_t v,
 			mstate->dtms_present |= DTRACE_MSTATE_USTACKDEPTH;
 		}
 		return (mstate->dtms_ustackdepth);
-#endif
 
 	case DIF_VAR_CALLER:
 		if (!dtrace_priv_kernel(state))
@@ -2896,7 +2974,6 @@ dtrace_dif_variable(dtrace_mstate_t *mstate, dtrace_state_t *state, uint64_t v,
 		}
 		return (mstate->dtms_caller);
 
-#if defined(sun)
 	case DIF_VAR_UCALLER:
 		if (!dtrace_priv_proc(state))
 			return (0);
@@ -2920,7 +2997,6 @@ dtrace_dif_variable(dtrace_mstate_t *mstate, dtrace_state_t *state, uint64_t v,
 		}
 
 		return (mstate->dtms_ucaller);
-#endif
 
 	case DIF_VAR_PROBEPROV:
 		ASSERT(mstate->dtms_present & DTRACE_MSTATE_PROBE);
@@ -3136,6 +3212,11 @@ dtrace_dif_variable(dtrace_mstate_t *mstate, dtrace_state_t *state, uint64_t v,
 		return (curthread->td_errno);
 #endif
 	}
+#if !defined(sun)
+	case DIF_VAR_CPU: {
+		return curcpu;
+	}
+#endif
 	default:
 		DTRACE_CPUFLAG_SET(CPU_DTRACE_ILLOP);
 		return (0);
@@ -3169,14 +3250,11 @@ dtrace_dif_subr(uint_t subr, uint_t rd, uint64_t *regs,
 		uintptr_t rw;
 	} r;
 #else
+	struct thread *lowner;
 	union {
-		struct mtx *mi;
-		uintptr_t mx;
-	} m;
-	union {
-		struct sx *si;
-		uintptr_t sx;
-	} s;
+		struct lock_object *li;
+		uintptr_t lx;
+	} l;
 #endif
 
 	switch (subr) {
@@ -3273,75 +3351,83 @@ dtrace_dif_subr(uint_t subr, uint_t rd, uint64_t *regs,
 		break;
 
 #else
-	/* 
-         * XXX - The following code works because mutex, rwlocks, & sxlocks
-         *       all have similar data structures in FreeBSD.  This may not be
-         *	 good if someone changes one of the lock data structures.
-	 * 	 Ideally, it would be nice if all these shared a common lock 
-	 * 	 object.
-         */
 	case DIF_SUBR_MUTEX_OWNED:
-		/* XXX - need to use dtrace_canload() and dtrace_loadptr() */ 
-		m.mx = tupregs[0].dttk_value;
-
-#ifdef DOODAD
-		if (LO_CLASSINDEX(&(m.mi->lock_object)) < 2) { 
-			regs[rd] = !(m.mi->mtx_lock & MTX_UNOWNED);
-		} else {	
-			regs[rd] = !(m.mi->mtx_lock & SX_UNLOCKED);
+		if (!dtrace_canload(tupregs[0].dttk_value,
+			sizeof (struct lock_object), mstate, vstate)) {
+			regs[rd] = 0;
+			break;
 		}
-#endif
+		l.lx = dtrace_loadptr((uintptr_t)&tupregs[0].dttk_value);
+		regs[rd] = LOCK_CLASS(l.li)->lc_owner(l.li, &lowner);
 		break;
 
 	case DIF_SUBR_MUTEX_OWNER:
-		/* XXX - need to use dtrace_canload() and dtrace_loadptr() */ 
-		m.mx = tupregs[0].dttk_value;
-
-		if (LO_CLASSINDEX(&(m.mi->lock_object)) < 2) { 
-			regs[rd] = m.mi->mtx_lock & ~MTX_FLAGMASK;
-		} else {
-			if (!(m.mi->mtx_lock & SX_LOCK_SHARED)) 
-				regs[rd] = SX_OWNER(m.mi->mtx_lock);
-			else
-				regs[rd] = 0;
+		if (!dtrace_canload(tupregs[0].dttk_value,
+			sizeof (struct lock_object), mstate, vstate)) {
+			regs[rd] = 0;
+			break;
 		}
+		l.lx = dtrace_loadptr((uintptr_t)&tupregs[0].dttk_value);
+		LOCK_CLASS(l.li)->lc_owner(l.li, &lowner);
+		regs[rd] = (uintptr_t)lowner;
 		break;
 
 	case DIF_SUBR_MUTEX_TYPE_ADAPTIVE:
-		/* XXX - need to use dtrace_canload() and dtrace_loadptr() */ 
-		m.mx = tupregs[0].dttk_value;
-
-		regs[rd] = (LO_CLASSINDEX(&(m.mi->lock_object)) != 0);
+		if (!dtrace_canload(tupregs[0].dttk_value, sizeof (struct mtx),
+		    mstate, vstate)) {
+			regs[rd] = 0;
+			break;
+		}
+		l.lx = dtrace_loadptr((uintptr_t)&tupregs[0].dttk_value);
+		/* XXX - should be only LC_SLEEPABLE? */
+		regs[rd] = (LOCK_CLASS(l.li)->lc_flags &
+		    (LC_SLEEPLOCK | LC_SLEEPABLE)) != 0;
 		break;
 
 	case DIF_SUBR_MUTEX_TYPE_SPIN:
-		/* XXX - need to use dtrace_canload() and dtrace_loadptr() */ 
-		m.mx = tupregs[0].dttk_value;
-
-		regs[rd] = (LO_CLASSINDEX(&(m.mi->lock_object)) == 0);
+		if (!dtrace_canload(tupregs[0].dttk_value, sizeof (struct mtx),
+		    mstate, vstate)) {
+			regs[rd] = 0;
+			break;
+		}
+		l.lx = dtrace_loadptr((uintptr_t)&tupregs[0].dttk_value);
+		regs[rd] = (LOCK_CLASS(l.li)->lc_flags & LC_SPINLOCK) != 0;
 		break;
 
 	case DIF_SUBR_RW_READ_HELD: 
 	case DIF_SUBR_SX_SHARED_HELD: 
-		/* XXX - need to use dtrace_canload() and dtrace_loadptr() */ 
-		s.sx = tupregs[0].dttk_value;
-		regs[rd] = ((s.si->sx_lock & SX_LOCK_SHARED)  && 
-			    (SX_OWNER(s.si->sx_lock) >> SX_SHARERS_SHIFT) != 0);
+		if (!dtrace_canload(tupregs[0].dttk_value, sizeof (uintptr_t),
+		    mstate, vstate)) {
+			regs[rd] = 0;
+			break;
+		}
+		l.lx = dtrace_loadptr((uintptr_t)&tupregs[0].dttk_value);
+		regs[rd] = LOCK_CLASS(l.li)->lc_owner(l.li, &lowner) &&
+		    lowner == NULL;
 		break;
 
 	case DIF_SUBR_RW_WRITE_HELD:
 	case DIF_SUBR_SX_EXCLUSIVE_HELD:
-		/* XXX - need to use dtrace_canload() and dtrace_loadptr() */ 
-		s.sx = tupregs[0].dttk_value;
-		regs[rd] = (SX_OWNER(s.si->sx_lock) == (uintptr_t) curthread); 
+		if (!dtrace_canload(tupregs[0].dttk_value, sizeof (uintptr_t),
+		    mstate, vstate)) {
+			regs[rd] = 0;
+			break;
+		}
+		l.lx = dtrace_loadptr(tupregs[0].dttk_value);
+		LOCK_CLASS(l.li)->lc_owner(l.li, &lowner);
+		regs[rd] = (lowner == curthread);
 		break;
 
 	case DIF_SUBR_RW_ISWRITER:
 	case DIF_SUBR_SX_ISEXCLUSIVE:
-		/* XXX - need to use dtrace_canload() and dtrace_loadptr() */ 
-		s.sx = tupregs[0].dttk_value;
-		regs[rd] = ((s.si->sx_lock & SX_LOCK_EXCLUSIVE_WAITERS) ||
-		            !(s.si->sx_lock & SX_LOCK_SHARED));
+		if (!dtrace_canload(tupregs[0].dttk_value, sizeof (uintptr_t),
+		    mstate, vstate)) {
+			regs[rd] = 0;
+			break;
+		}
+		l.lx = dtrace_loadptr(tupregs[0].dttk_value);
+		regs[rd] = LOCK_CLASS(l.li)->lc_owner(l.li, &lowner) &&
+		    lowner != NULL;
 		break;
 #endif /* ! defined(sun) */
 
@@ -5600,7 +5686,7 @@ dtrace_action_breakpoint(dtrace_ecb_t *ecb)
 #if defined(sun)
 	debug_enter(c);
 #else
-	kdb_enter_why(KDB_WHY_DTRACE, "breakpoint action");
+	kdb_enter(KDB_WHY_DTRACE, "breakpoint action");
 #endif
 }
 
@@ -5657,7 +5743,7 @@ dtrace_action_raise(uint64_t sig)
 #else
 	struct proc *p = curproc;
 	PROC_LOCK(p);
-	psignal(p, sig);
+	kern_psignal(p, sig);
 	PROC_UNLOCK(p);
 #endif
 }
@@ -5677,7 +5763,7 @@ dtrace_action_stop(void)
 #else
 	struct proc *p = curproc;
 	PROC_LOCK(p);
-	psignal(p, SIGSTOP);
+	kern_psignal(p, SIGSTOP);
 	PROC_UNLOCK(p);
 #endif
 }
@@ -5731,7 +5817,6 @@ dtrace_action_chill(dtrace_mstate_t *mstate, hrtime_t val)
 	cpu->cpu_dtrace_chilled += val;
 }
 
-#if defined(sun)
 static void
 dtrace_action_ustack(dtrace_mstate_t *mstate, dtrace_state_t *state,
     uint64_t *buf, uint64_t arg)
@@ -5844,7 +5929,6 @@ dtrace_action_ustack(dtrace_mstate_t *mstate, dtrace_state_t *state,
 out:
 	mstate->dtms_scratch_ptr = old;
 }
-#endif
 
 /*
  * If you're looking for the epicenter of DTrace, you just found it.  This
@@ -5866,6 +5950,9 @@ dtrace_probe(dtrace_id_t id, uintptr_t arg0, uintptr_t arg1,
 	int vtime, onintr;
 	volatile uint16_t *flags;
 	hrtime_t now;
+
+	if (panicstr != NULL)
+		return;
 
 #if defined(sun)
 	/*
@@ -6167,7 +6254,6 @@ dtrace_probe(dtrace_id_t id, uintptr_t arg0, uintptr_t arg1,
 				    (uint32_t *)arg0);
 				continue;
 
-#if defined(sun)
 			case DTRACEACT_JSTACK:
 			case DTRACEACT_USTACK:
 				if (!dtrace_priv_proc(state))
@@ -6209,7 +6295,6 @@ dtrace_probe(dtrace_id_t id, uintptr_t arg0, uintptr_t arg1,
 				    DTRACE_USTACK_NFRAMES(rec->dtrd_arg) + 1);
 				DTRACE_CPUFLAG_CLEAR(CPU_DTRACE_NOFAULT);
 				continue;
-#endif
 
 			default:
 				break;
@@ -8136,7 +8221,6 @@ dtrace_helper_provide(dof_helper_t *dhp, pid_t pid)
 	dtrace_enabling_matchall();
 }
 
-#if defined(sun)
 static void
 dtrace_helper_provider_remove_one(dof_helper_t *dhp, dof_sec_t *sec, pid_t pid)
 {
@@ -8184,7 +8268,6 @@ dtrace_helper_provider_remove(dof_helper_t *dhp, pid_t pid)
 		dtrace_helper_provider_remove_one(dhp, sec, pid);
 	}
 }
-#endif
 
 /*
  * DTrace Meta Provider-to-Framework API Functions
@@ -8724,7 +8807,6 @@ dtrace_difo_validate(dtrace_difo_t *dp, dtrace_vstate_t *vstate, uint_t nregs,
 	return (err);
 }
 
-#if defined(sun)
 /*
  * Validate a DTrace DIF object that it is to be used as a helper.  Helpers
  * are much more constrained than normal DIFOs.  Specifically, they may
@@ -8882,7 +8964,6 @@ dtrace_difo_validate_helper(dtrace_difo_t *dp)
 
 	return (err);
 }
-#endif
 
 /*
  * Returns 1 if the expression in the DIF object can be cached on a per-thread
@@ -9214,7 +9295,6 @@ dtrace_difo_init(dtrace_difo_t *dp, dtrace_vstate_t *vstate)
 	dtrace_difo_hold(dp);
 }
 
-#if defined(sun)
 static dtrace_difo_t *
 dtrace_difo_duplicate(dtrace_difo_t *dp, dtrace_vstate_t *vstate)
 {
@@ -9258,7 +9338,6 @@ dtrace_difo_duplicate(dtrace_difo_t *dp, dtrace_vstate_t *vstate)
 	dtrace_difo_init(new, vstate);
 	return (new);
 }
-#endif
 
 static void
 dtrace_difo_destroy(dtrace_difo_t *dp, dtrace_vstate_t *vstate)
@@ -9840,6 +9919,35 @@ dtrace_ecb_aggregation_create(dtrace_ecb_t *ecb, dtrace_actdesc_t *desc)
 			goto err;
 
 		size = levels * sizeof (uint64_t) + 3 * sizeof (uint64_t);
+		break;
+	}
+
+	case DTRACEAGG_LLQUANTIZE: {
+		uint16_t factor = DTRACE_LLQUANTIZE_FACTOR(desc->dtad_arg);
+		uint16_t low = DTRACE_LLQUANTIZE_LOW(desc->dtad_arg);
+		uint16_t high = DTRACE_LLQUANTIZE_HIGH(desc->dtad_arg);
+		uint16_t nsteps = DTRACE_LLQUANTIZE_NSTEP(desc->dtad_arg);
+		int64_t v;
+
+		agg->dtag_initial = desc->dtad_arg;
+		agg->dtag_aggregate = dtrace_aggregate_llquantize;
+
+		if (factor < 2 || low >= high || nsteps < factor)
+			goto err;
+
+		/*
+		 * Now check that the number of steps evenly divides a power
+		 * of the factor.  (This assures both integer bucket size and
+		 * linearity within each magnitude.)
+		 */
+		for (v = factor; v < nsteps; v *= factor)
+			continue;
+
+		if ((v % nsteps) || (nsteps % factor))
+			goto err;
+
+		size = (dtrace_aggregate_llquantize_bucket(factor,
+		    low, high, nsteps, INT64_MAX) + 2) * sizeof (uint64_t);
 		break;
 	}
 
@@ -10578,8 +10686,6 @@ dtrace_buffer_alloc(dtrace_buffer_t *bufs, size_t size, int flags,
 {
 #if defined(sun)
 	cpu_t *cp;
-#else
-	struct pcpu *cp;
 #endif
 	dtrace_buffer_t *buf;
 
@@ -10667,10 +10773,7 @@ err:
 #endif
 
 	ASSERT(MUTEX_HELD(&dtrace_lock));
-	for (i = 0; i <= mp_maxid; i++) {
-		if ((cp = pcpu_find(i)) == NULL)
-			continue;
-
+	CPU_FOREACH(i) {
 		if (cpu != DTRACE_CPUALL && cpu != i)
 			continue;
 
@@ -10710,10 +10813,7 @@ err:
 	 * Error allocating memory, so free the buffers that were
 	 * allocated before the failed allocation.
 	 */
-	for (i = 0; i <= mp_maxid; i++) {
-		if ((cp = pcpu_find(i)) == NULL)
-			continue;
-
+	CPU_FOREACH(i) {
 		if (cpu != DTRACE_CPUALL && cpu != i)
 			continue;
 
@@ -12616,10 +12716,10 @@ dtrace_dstate_init(dtrace_dstate_t *dstate, size_t size)
 	maxper = (limit - (uintptr_t)start) / NCPU;
 	maxper = (maxper / dstate->dtds_chunksize) * dstate->dtds_chunksize;
 
-	for (i = 0; i < NCPU; i++) {
 #if !defined(sun)
-		if (CPU_ABSENT(i))
-			continue;
+	CPU_FOREACH(i) {
+#else
+	for (i = 0; i < NCPU; i++) {
 #endif
 		dstate->dtds_percpu[i].dtdsc_free = dvar = start;
 
@@ -12819,7 +12919,7 @@ dtrace_state_create(struct cdev *dev)
 #else
 	if (dev != NULL) {
 		cr = dev->si_cred;
-		m = minor(dev);
+		m = dev2unit(dev);
 		}
 
 	/* Allocate memory for the state. */
@@ -13618,7 +13718,9 @@ dtrace_state_destroy(dtrace_state_t *state)
 	if (state->dts_deadman != CYCLIC_NONE)
 		cyclic_remove(state->dts_deadman);
 #else
+	callout_stop(&state->dts_cleaner);
 	callout_drain(&state->dts_cleaner);
+	callout_stop(&state->dts_deadman);
 	callout_drain(&state->dts_deadman);
 #endif
 
@@ -13792,7 +13894,6 @@ dtrace_anon_property(void)
 	}
 }
 
-#if defined(sun)
 /*
  * DTrace Helper Functions
  */
@@ -13856,9 +13957,7 @@ dtrace_helper_trace(dtrace_helper_action_t *helper,
 		    ((uint64_t *)(uintptr_t)svar->dtsv_data)[curcpu];
 	}
 }
-#endif
 
-#if defined(sun)
 static uint64_t
 dtrace_helper(int which, dtrace_mstate_t *mstate,
     dtrace_state_t *state, uint64_t arg0, uint64_t arg1)
@@ -13866,7 +13965,7 @@ dtrace_helper(int which, dtrace_mstate_t *mstate,
 	uint16_t *flags = &cpu_core[curcpu].cpuc_dtrace_flags;
 	uint64_t sarg0 = mstate->dtms_arg[0];
 	uint64_t sarg1 = mstate->dtms_arg[1];
-	uint64_t rval;
+	uint64_t rval = 0;
 	dtrace_helpers_t *helpers = curproc->p_dtrace_helpers;
 	dtrace_helper_action_t *helper;
 	dtrace_vstate_t *vstate;
@@ -14057,9 +14156,7 @@ dtrace_helper_destroygen(int gen)
 
 	return (0);
 }
-#endif
 
-#if defined(sun)
 static int
 dtrace_helper_validate(dtrace_helper_action_t *helper)
 {
@@ -14074,9 +14171,7 @@ dtrace_helper_validate(dtrace_helper_action_t *helper)
 
 	return (err == 0);
 }
-#endif
 
-#if defined(sun)
 static int
 dtrace_helper_action_add(int which, dtrace_ecbdesc_t *ep)
 {
@@ -14623,12 +14718,17 @@ dtrace_helpers_create(proc_t *p)
 	return (help);
 }
 
-static void
-dtrace_helpers_destroy(void)
+#if defined(sun)
+static
+#endif
+void
+dtrace_helpers_destroy(proc_t *p)
 {
 	dtrace_helpers_t *help;
 	dtrace_vstate_t *vstate;
+#if defined(sun)
 	proc_t *p = curproc;
+#endif
 	int i;
 
 	mutex_enter(&dtrace_lock);
@@ -14715,7 +14815,10 @@ dtrace_helpers_destroy(void)
 	mutex_exit(&dtrace_lock);
 }
 
-static void
+#if defined(sun)
+static
+#endif
+void
 dtrace_helpers_duplicate(proc_t *from, proc_t *to)
 {
 	dtrace_helpers_t *help, *newhelp;
@@ -14796,7 +14899,6 @@ dtrace_helpers_duplicate(proc_t *from, proc_t *to)
 	if (hasprovs)
 		dtrace_helper_provider_register(to, newhelp, NULL);
 }
-#endif
 
 #if defined(sun)
 /*
@@ -15239,10 +15341,12 @@ dtrace_attach(dev_info_t *devi, ddi_attach_cmd_t cmd)
 #endif
 
 #if !defined(sun)
+#if __FreeBSD_version >= 800039
 static void
 dtrace_dtr(void *data __unused)
 {
 }
+#endif
 #endif
 
 /*ARGSUSED*/
@@ -15270,6 +15374,24 @@ dtrace_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 #else
 	cred_t *cred_p = NULL;
 
+#if __FreeBSD_version < 800039
+	/*
+	 * The first minor device is the one that is cloned so there is
+	 * nothing more to do here.
+	 */
+	if (dev2unit(dev) == 0)
+		return 0;
+
+	/*
+	 * Devices are cloned, so if the DTrace state has already
+	 * been allocated, that means this device belongs to a
+	 * different client. Each client should open '/dev/dtrace'
+	 * to get a cloned device.
+	 */
+	if (dev->si_drv1 != NULL)
+		return (EBUSY);
+#endif
+
 	cred_p = dev->si_cred;
 #endif
 
@@ -15279,6 +15401,13 @@ dtrace_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	 */
 	dtrace_cred2priv(cred_p, &priv, &uid, &zoneid);
 	if (priv == DTRACE_PRIV_NONE) {
+#if !defined(sun)
+#if __FreeBSD_version < 800039
+		/* Destroy the cloned device. */
+                destroy_dev(dev);
+#endif
+#endif
+
 		return (EACCES);
 	}
 
@@ -15309,7 +15438,11 @@ dtrace_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	state = dtrace_state_create(devp, cred_p);
 #else
 	state = dtrace_state_create(dev);
+#if __FreeBSD_version < 800039
+	dev->si_drv1 = state;
+#else
 	devfs_set_cdevpriv(state, dtrace_dtr);
+#endif
 #endif
 
 	mutex_exit(&cpu_lock);
@@ -15322,6 +15455,12 @@ dtrace_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 		--dtrace_opens;
 #endif
 		mutex_exit(&dtrace_lock);
+#if !defined(sun)
+#if __FreeBSD_version < 800039
+		/* Destroy the cloned device. */
+                destroy_dev(dev);
+#endif
+#endif
 		return (EAGAIN);
 	}
 
@@ -15347,8 +15486,16 @@ dtrace_close(struct cdev *dev, int flags, int fmt __unused, struct thread *td)
 
 	state = ddi_get_soft_state(dtrace_softstate, minor);
 #else
+#if __FreeBSD_version < 800039
+	dtrace_state_t *state = dev->si_drv1;
+
+	/* Check if this is not a cloned device. */
+	if (dev2unit(dev) == 0)
+		return (0);
+#else
 	dtrace_state_t *state;
 	devfs_get_cdevpriv((void **) &state);
+#endif
 
 #endif
 
@@ -15368,7 +15515,11 @@ dtrace_close(struct cdev *dev, int flags, int fmt __unused, struct thread *td)
 
 #if !defined(sun)
 		kmem_free(state, 0);
+#if __FreeBSD_version < 800039
+		dev->si_drv1 = NULL;
+#else
 		devfs_clear_cdevpriv();
+#endif
 #endif
 	}
 
@@ -15382,6 +15533,11 @@ dtrace_close(struct cdev *dev, int flags, int fmt __unused, struct thread *td)
 
 	mutex_exit(&dtrace_lock);
 	mutex_exit(&cpu_lock);
+
+#if __FreeBSD_version < 800039
+	/* Schedule this cloned device to be destroyed. */
+	destroy_dev_sched(dev);
+#endif
 
 	return (0);
 }
@@ -16413,23 +16569,41 @@ _fini(void)
 #else
 
 static d_ioctl_t	dtrace_ioctl;
+static d_ioctl_t	dtrace_ioctl_helper;
 static void		dtrace_load(void *);
 static int		dtrace_unload(void);
+#if __FreeBSD_version < 800039
+static void		dtrace_clone(void *, struct ucred *, char *, int , struct cdev **);
+static struct clonedevs	*dtrace_clones;		/* Ptr to the array of cloned devices. */
+static eventhandler_tag	eh_tag;			/* Event handler tag. */
+#else
 static struct cdev	*dtrace_dev;
+static struct cdev	*helper_dev;
+#endif
 
 void dtrace_invop_init(void);
 void dtrace_invop_uninit(void);
 
 static struct cdevsw dtrace_cdevsw = {
 	.d_version	= D_VERSION,
-	.d_flags	= D_TRACKCLOSE,
+	.d_flags	= D_TRACKCLOSE | D_NEEDMINOR,
 	.d_close	= dtrace_close,
 	.d_ioctl	= dtrace_ioctl,
 	.d_open		= dtrace_open,
 	.d_name		= "dtrace",
 };
 
+static struct cdevsw helper_cdevsw = {
+	.d_version	= D_VERSION,
+	.d_flags	= D_TRACKCLOSE | D_NEEDMINOR,
+	.d_ioctl	= dtrace_ioctl_helper,
+	.d_name		= "helper",
+};
+
 #include <dtrace_anon.c>
+#if __FreeBSD_version < 800039
+#include <dtrace_clone.c>
+#endif
 #include <dtrace_ioctl.c>
 #include <dtrace_load.c>
 #include <dtrace_modevent.c>

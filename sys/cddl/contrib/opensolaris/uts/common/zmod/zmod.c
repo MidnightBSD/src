@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/uts/common/zmod/zmod.c,v 1.2 2008/12/03 00:24:34 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -21,16 +21,15 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/types.h>
 #include <sys/zmod.h>
 
 #include "zlib.h"
+#include "zutil.h"
 
 /*
  * Uncompress the buffer 'src' into the buffer 'dst'.  The caller must store
@@ -50,7 +49,12 @@ z_uncompress(void *dst, size_t *dstlen, const void *src, size_t srclen)
 	zs.next_out = dst;
 	zs.avail_out = *dstlen;
 
-	if ((err = inflateInit(&zs)) != Z_OK)
+	/*
+	 * Call inflateInit2() specifying a window size of DEF_WBITS
+	 * with the 6th bit set to indicate that the compression format
+	 * type (zlib or gzip) should be automatically detected.
+	 */
+	if ((err = inflateInit2(&zs, DEF_WBITS | 0x20)) != Z_OK)
 		return (err);
 
 	if ((err = inflate(&zs, Z_FINISH)) != Z_STREAM_END) {
