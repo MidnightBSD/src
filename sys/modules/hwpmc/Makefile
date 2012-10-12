@@ -1,30 +1,24 @@
-#
-# $FreeBSD: src/sys/modules/hwpmc/Makefile,v 1.3 2005/06/09 19:45:08 jkoshy Exp $
-#
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../dev/hwpmc
 
 KMOD=	hwpmc
 
-SRCS=	hwpmc_mod.c hwpmc_logging.c vnode_if.h
+SRCS=	hwpmc_mod.c hwpmc_logging.c hwpmc_soft.c vnode_if.h
 
-WARNS?=	2
-
-.if ${MACHINE_ARCH} == "amd64"
-SRCS+=	hwpmc_amd.c hwpmc_piv.c hwpmc_x86.c
+.if ${MACHINE_CPUARCH} == "amd64"
+SRCS+=	hwpmc_amd.c hwpmc_core.c hwpmc_intel.c hwpmc_piv.c hwpmc_tsc.c
+SRCS+=	hwpmc_x86.c hwpmc_uncore.c
 SRCS+=	device_if.h bus_if.h
 .endif
 
-.if ${MACHINE_ARCH} == "arm"
-SRCS+=	hwpmc_arm.c
-.endif
-
-.if ${MACHINE_ARCH} == "i386"
-SRCS+=	hwpmc_amd.c hwpmc_piv.c hwpmc_ppro.c hwpmc_pentium.c hwpmc_x86.c
+.if ${MACHINE_CPUARCH} == "i386"
+SRCS+=	hwpmc_amd.c hwpmc_core.c hwpmc_intel.c hwpmc_piv.c hwpmc_ppro.c
+SRCS+=	hwpmc_pentium.c hwpmc_tsc.c hwpmc_x86.c hwpmc_uncore.c
 SRCS+=	device_if.h bus_if.h
 .endif
 
-.if ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_CPUARCH} == "sparc64"
 SRCS+=	hwpmc_sparc64.c
 .endif
 
