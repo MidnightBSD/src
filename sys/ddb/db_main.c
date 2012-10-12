@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_main.c,v 1.5.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,8 +51,10 @@ SYSCTL_NODE(_debug, OID_AUTO, ddb, CTLFLAG_RW, 0, "DDB settings");
 static dbbe_init_f db_init;
 static dbbe_trap_f db_trap;
 static dbbe_trace_f db_trace_self_wrapper;
+static dbbe_trace_thread_f db_trace_thread_wrapper;
 
-KDB_BACKEND(ddb, db_init, db_trace_self_wrapper, db_trap);
+KDB_BACKEND(ddb, db_init, db_trace_self_wrapper, db_trace_thread_wrapper,
+    db_trap);
 
 vm_offset_t ksym_start, ksym_end;
 
@@ -172,6 +174,7 @@ db_init(void)
 	uintptr_t symtab, strtab;
 	Elf_Size tabsz, strsz;
 
+	db_command_init();
 	if (ksym_end > ksym_start && ksym_start != 0) {
 		symtab = ksym_start;
 		tabsz = *((Elf_Size*)symtab);
@@ -243,5 +246,17 @@ db_trace_self_wrapper(void)
 	prev_jb = kdb_jmpbuf(jb);
 	if (setjmp(jb) == 0)
 		db_trace_self();
+	(void)kdb_jmpbuf(prev_jb);
+}
+
+static void
+db_trace_thread_wrapper(struct thread *td)
+{
+	jmp_buf jb;
+	void *prev_jb;
+
+	prev_jb = kdb_jmpbuf(jb);
+	if (setjmp(jb) == 0)
+		db_trace_thread(td, -1);
 	(void)kdb_jmpbuf(prev_jb);
 }

@@ -28,16 +28,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_ps.c,v 1.66.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/cons.h>
 #include <sys/jail.h>
 #include <sys/kdb.h>
-#include <sys/linker_set.h>
 #include <sys/proc.h>
 #include <sys/sysent.h>
 #include <sys/systm.h>
+#include <sys/_kstack_cache.h>
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
@@ -136,7 +136,7 @@ db_ps(db_expr_t addr, boolean_t hasaddr, db_expr_t count, char *modif)
 					if (TD_ON_LOCK(td))
 						lflag++;
 					if (TD_IS_SLEEPING(td)) {
-						if (!td->td_flags & TDF_SINTR)
+						if (!(td->td_flags & TDF_SINTR))
 							dflag++;
 						else
 							sflag++;
@@ -171,7 +171,7 @@ db_ps(db_expr_t addr, boolean_t hasaddr, db_expr_t count, char *modif)
 		state[1] = '\0';
 
 		/* Additional process state flags. */
-		if (!p->p_flag & P_INMEM)
+		if (!(p->p_flag & P_INMEM))
 			strlcat(state, "W", sizeof(state));
 		if (p->p_flag & P_TRACED)
 			strlcat(state, "X", sizeof(state));
@@ -189,13 +189,19 @@ db_ps(db_expr_t addr, boolean_t hasaddr, db_expr_t count, char *modif)
 		if (cred != NULL && jailed(cred))
 			strlcat(state, "J", sizeof(state));
 		db_printf(" %-6.6s ", state);
-		if (p->p_flag & P_HADTHREADS)
+		if (p->p_flag & P_HADTHREADS) {
 #ifdef __LP64__
-			db_printf(" (threaded)                  %s\n",
-			    p->p_comm);
+			db_printf(" (threaded)                  ");
 #else
-			db_printf(" (threaded)          %s\n", p->p_comm);
+			db_printf(" (threaded)          ");
 #endif
+			if (p->p_flag & P_SYSTEM)
+				db_printf("[");
+			db_printf("%s", p->p_comm);
+			if (p->p_flag & P_SYSTEM)
+				db_printf("]");
+			db_printf("\n");
+		}
 		FOREACH_THREAD_IN_PROC(p, td) {
 			dumpthread(p, td, p->p_flag & P_HADTHREADS);
 			if (db_pager_quit)
@@ -292,6 +298,7 @@ dumpthread(volatile struct proc *p, volatile struct thread *td, int all)
 DB_SHOW_COMMAND(thread, db_show_thread)
 {
 	struct thread *td;
+	struct lock_object *lock;
 	boolean_t comma;
 
 	/* Determine which thread to examine. */
@@ -299,11 +306,14 @@ DB_SHOW_COMMAND(thread, db_show_thread)
 		td = db_lookup_thread(addr, FALSE);
 	else
 		td = kdb_thread;
+	lock = (struct lock_object *)td->td_lock;
 
 	db_printf("Thread %d at %p:\n", td->td_tid, td);
 	db_printf(" proc (pid %d): %p\n", td->td_proc->p_pid, td->td_proc);
 	if (td->td_name[0] != '\0')
 		db_printf(" name: %s\n", td->td_name);
+	db_printf(" stack: %p-%p\n", (void *)td->td_kstack,
+	    (void *)(td->td_kstack + td->td_kstack_pages * PAGE_SIZE - 1));
 	db_printf(" flags: %#x ", td->td_flags);
 	db_printf(" pflags: %#x\n", td->td_pflags);
 	db_printf(" state: ");
@@ -363,6 +373,7 @@ DB_SHOW_COMMAND(thread, db_show_thread)
 		db_printf(" wmesg: %s  wchan: %p\n", td->td_wmesg,
 		    td->td_wchan);
 	db_printf(" priority: %d\n", td->td_priority);
+	db_printf(" container lock: %s (%p)\n", lock->lo_name, lock);
 }
 
 DB_SHOW_COMMAND(proc, db_show_proc)
@@ -417,5 +428,41 @@ DB_SHOW_COMMAND(proc, db_show_proc)
 		dumpthread(p, td, 1);
 		if (db_pager_quit)
 			break;
+	}
+}
+
+void
+db_findstack_cmd(db_expr_t addr, boolean_t have_addr,
+    db_expr_t dummy3 __unused, char *dummy4 __unused)
+{
+	struct proc *p;
+	struct thread *td;
+	struct kstack_cache_entry *ks_ce;
+	vm_offset_t saddr;
+
+	if (have_addr)
+		saddr = addr;
+	else {
+		db_printf("Usage: findstack <address>\n");
+		return;
+	}
+
+	FOREACH_PROC_IN_SYSTEM(p) {
+		FOREACH_THREAD_IN_PROC(p, td) {
+			if (td->td_kstack <= saddr && saddr < td->td_kstack +
+			    PAGE_SIZE * td->td_kstack_pages) {
+				db_printf("Thread %p\n", td);
+				return;
+			}
+		}
+	}
+
+	for (ks_ce = kstack_cache; ks_ce != NULL;
+	     ks_ce = ks_ce->next_ks_entry) {
+		if ((vm_offset_t)ks_ce <= saddr && saddr < (vm_offset_t)ks_ce +
+		    PAGE_SIZE * KSTACK_PAGES) {
+			db_printf("Cached stack %p\n", ks_ce);
+			return;
+		}
 	}
 }

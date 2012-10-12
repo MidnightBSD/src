@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_command.c,v 1.73.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/linker_set.h>
@@ -44,7 +44,9 @@ __FBSDID("$FreeBSD: src/sys/ddb/db_command.c,v 1.73.2.5.2.1 2008/11/25 02:59:29 
 #include <sys/signalvar.h>
 #include <sys/systm.h>
 #include <sys/cons.h>
+#include <sys/conf.h>
 #include <sys/watchdog.h>
+#include <sys/kernel.h>
 
 #include <ddb/ddb.h>
 #include <ddb/db_command.h>
@@ -63,10 +65,7 @@ db_addr_t	db_last_addr;
 db_addr_t	db_prev;
 db_addr_t	db_next;
 
-SET_DECLARE(db_cmd_set, struct command);
-SET_DECLARE(db_show_cmd_set, struct command);
-SET_DECLARE(db_show_all_cmd_set, struct command);
-
+static db_cmdfcn_t	db_dump;
 static db_cmdfcn_t	db_fncall;
 static db_cmdfcn_t	db_gdb;
 static db_cmdfcn_t	db_halt;
@@ -81,30 +80,20 @@ static db_cmdfcn_t	db_watchdog;
  */
 
 static struct command db_show_all_cmds[] = {
-	{ (char *)0 }
+	{ "trace",	db_stack_trace_all,	0,	0 },
 };
-
-static struct command_table db_show_all_table = {
-	db_show_all_cmds,
-	SET_BEGIN(db_show_all_cmd_set),
-	SET_LIMIT(db_show_all_cmd_set)
-};
+struct command_table db_show_all_table =
+    LIST_HEAD_INITIALIZER(db_show_all_table);
 
 static struct command db_show_cmds[] = {
 	{ "all",	0,			0,	&db_show_all_table },
 	{ "registers",	db_show_regs,		0,	0 },
 	{ "breaks",	db_listbreak_cmd, 	0,	0 },
 	{ "threads",	db_show_threads,	0,	0 },
-	{ (char *)0, }
 };
+struct command_table db_show_table = LIST_HEAD_INITIALIZER(db_show_table);
 
-static struct command_table db_show_table = {
-	db_show_cmds,
-	SET_BEGIN(db_show_cmd_set),
-	SET_LIMIT(db_show_cmd_set)
-};
-	
-static struct command db_commands[] = {
+static struct command db_cmds[] = {
 	{ "print",	db_print_cmd,		0,	0 },
 	{ "p",		db_print_cmd,		0,	0 },
 	{ "examine",	db_examine_cmd,		CS_SET_DOT, 0 },
@@ -115,6 +104,7 @@ static struct command db_commands[] = {
 	{ "w",		db_write_cmd,		CS_MORE|CS_SET_DOT, 0 },
 	{ "delete",	db_delete_cmd,		0,	0 },
 	{ "d",		db_delete_cmd,		0,	0 },
+	{ "dump",	db_dump,		0,	0 },
 	{ "break",	db_breakpoint_cmd,	0,	0 },
 	{ "b",		db_breakpoint_cmd,	0,	0 },
 	{ "dwatch",	db_deletewatch_cmd,	0,	0 },
@@ -130,6 +120,7 @@ static struct command db_commands[] = {
 	{ "match",	db_trace_until_matching_cmd,0,	0 },
 	{ "trace",	db_stack_trace,		CS_OWN,	0 },
 	{ "t",		db_stack_trace,		CS_OWN,	0 },
+	/* XXX alias for all trace */
 	{ "alltrace",	db_stack_trace_all,	0,	0 },
 	{ "where",	db_stack_trace,		CS_OWN,	0 },
 	{ "bt",		db_stack_trace,		CS_OWN,	0 },
@@ -141,7 +132,7 @@ static struct command db_commands[] = {
 	{ "reboot",	db_reset,		0,	0 },
 	{ "reset",	db_reset,		0,	0 },
 	{ "kill",	db_kill,		CS_OWN,	0 },
-	{ "watchdog",	db_watchdog,		0,	0 },
+	{ "watchdog",	db_watchdog,		CS_OWN,	0 },
 	{ "thread",	db_set_thread,		CS_OWN,	0 },
 	{ "run",	db_run_cmd,		CS_OWN,	0 },
 	{ "script",	db_script_cmd,		CS_OWN,	0 },
@@ -149,14 +140,9 @@ static struct command db_commands[] = {
 	{ "unscript",	db_unscript_cmd,	CS_OWN,	0 },
 	{ "capture",	db_capture_cmd,		CS_OWN,	0 },
 	{ "textdump",	db_textdump_cmd,	CS_OWN, 0 },
-	{ (char *)0, }
+	{ "findstack",	db_findstack_cmd,	0,	0 },
 };
-
-static struct command_table db_command_table = {
-	db_commands,
-	SET_BEGIN(db_cmd_set),
-	SET_LIMIT(db_cmd_set)
-};
+struct command_table db_cmd_table = LIST_HEAD_INITIALIZER(db_cmd_table);
 
 static struct command	*db_last_command = 0;
 
@@ -195,6 +181,72 @@ static int	db_cmd_search(char *name, struct command_table *table,
 		    struct command **cmdp);
 static void	db_command(struct command **last_cmdp,
 		    struct command_table *cmd_table, int dopager);
+
+/*
+ * Initialize the command lists from the static tables.
+ */
+void
+db_command_init(void)
+{
+#define	N(a)	(sizeof(a) / sizeof(a[0]))
+	int i;
+
+	for (i = 0; i < N(db_cmds); i++)
+		db_command_register(&db_cmd_table, &db_cmds[i]);
+	for (i = 0; i < N(db_show_cmds); i++)
+		db_command_register(&db_show_table, &db_show_cmds[i]);
+	for (i = 0; i < N(db_show_all_cmds); i++)
+		db_command_register(&db_show_all_table, &db_show_all_cmds[i]);
+#undef N
+}
+
+/*
+ * Register a command.
+ */
+void
+db_command_register(struct command_table *list, struct command *cmd)
+{
+	struct command *c, *last;
+
+	last = NULL;
+	LIST_FOREACH(c, list, next) {
+		int n = strcmp(cmd->name, c->name);
+
+		/* Check that the command is not already present. */
+		if (n == 0) {
+			printf("%s: Warning, the command \"%s\" already exists;"
+			     " ignoring request\n", __func__, cmd->name);
+			return;
+		}
+		if (n < 0) {
+			/* NB: keep list sorted lexicographically */
+			LIST_INSERT_BEFORE(c, cmd, next);
+			return;
+		}
+		last = c;
+	}
+	if (last == NULL)
+		LIST_INSERT_HEAD(list, cmd, next);
+	else
+		LIST_INSERT_AFTER(last, cmd, next);
+}
+
+/*
+ * Remove a command previously registered with db_command_register.
+ */
+void
+db_command_unregister(struct command_table *list, struct command *cmd)
+{
+	struct command *c;
+
+	LIST_FOREACH(c, list, next) {
+		if (cmd == c) {
+			LIST_REMOVE(cmd, next);
+			return;
+		}
+	}
+	/* NB: intentionally quiet */
+}
 
 /*
  * Helper function to match a single command.
@@ -245,22 +297,14 @@ db_cmd_search(name, table, cmdp)
 	struct command	**cmdp;	/* out */
 {
 	struct command	*cmd;
-	struct command	**aux_cmdp;
 	int		result = CMD_NONE;
 
-	for (cmd = table->table; cmd->name != 0; cmd++) {
-		db_cmd_match(name, cmd, cmdp, &result);
+	LIST_FOREACH(cmd, table, next) {
+		db_cmd_match(name,cmd,cmdp,&result);
 		if (result == CMD_UNIQUE)
-			return (CMD_UNIQUE);
+			break;
 	}
-	if (table->aux_tablep != NULL)
-		for (aux_cmdp = table->aux_tablep;
-		     aux_cmdp < table->aux_tablep_end;
-		     aux_cmdp++) {
-			db_cmd_match(name, *aux_cmdp, cmdp, &result);
-			if (result == CMD_UNIQUE)
-				return (CMD_UNIQUE);
-		}
+
 	if (result == CMD_NONE) {
 		/* check for 'help' */
 		if (name[0] == 'h' && name[1] == 'e'
@@ -274,19 +318,11 @@ static void
 db_cmd_list(table)
 	struct command_table *table;
 {
-	register struct command *cmd;
-	register struct command **aux_cmdp;
+	register struct command	*cmd;
 
-	for (cmd = table->table; cmd->name != 0; cmd++) {
-	    db_printf("%-12s", cmd->name);
-	    db_end_line(12);
-	}
-	if (table->aux_tablep == NULL)
-	    return;
-	for (aux_cmdp = table->aux_tablep; aux_cmdp < table->aux_tablep_end;
-	     aux_cmdp++) {
-	    db_printf("%-12s", (*aux_cmdp)->name);
-	    db_end_line(12);
+	LIST_FOREACH(cmd, table, next) {
+		db_printf("%-12s", cmd->name);
+		db_end_line(12);
 	}
 }
 
@@ -296,7 +332,7 @@ db_command(last_cmdp, cmd_table, dopager)
 	struct command_table *cmd_table;
 	int dopager;
 {
-	struct command	*cmd;
+	struct command	*cmd = NULL;
 	int		t;
 	char		modif[TOK_STRING_SIZE];
 	db_expr_t	addr, count;
@@ -463,7 +499,7 @@ db_command_loop()
 	    db_printf("db> ");
 	    (void) db_read_line();
 
-	    db_command(&db_last_command, &db_command_table, /* dopager */ 1);
+	    db_command(&db_last_command, &db_cmd_table, /* dopager */ 1);
 	}
 }
 
@@ -481,7 +517,7 @@ db_command_script(const char *command)
 {
 	db_prev = db_next = db_dot;
 	db_inject_line(command);
-	db_command(&db_last_command, &db_command_table, /* dopager */ 0);
+	db_command(&db_last_command, &db_cmd_table, /* dopager */ 0);
 }
 
 void
@@ -494,6 +530,27 @@ db_error(s)
 	kdb_reenter();
 }
 
+static void
+db_dump(db_expr_t dummy, boolean_t dummy2, db_expr_t dummy3, char *dummy4)
+{
+	int error;
+
+	error = doadump(FALSE);
+	if (error) {
+		db_printf("Cannot dump: ");
+		switch (error) {
+		case EBUSY:
+			db_printf("debugger got invoked while dumping.\n");
+			break;
+		case ENXIO:
+			db_printf("no dump device specified.\n");
+			break;
+		default:
+			db_printf("unknown error (error=%d).\n", error);
+			break;
+		}
+	}
+}
 
 /*
  * Call random function:
@@ -601,7 +658,7 @@ db_kill(dummy1, dummy2, dummy3, dummy4)
 	if (!db_expression(&pid))
 		DB_ERROR(("Missing process ID\n"));
 	db_skip_to_eol();
-	if (sig < 1 || sig > _SIG_MAXSIG)
+	if (!_SIG_VALID(sig))
 		DB_ERROR(("Signal number out of range\n"));
 
 	/*
@@ -620,7 +677,7 @@ db_kill(dummy1, dummy2, dummy3, dummy4)
 	if (PROC_TRYLOCK(p) == 0)
 		DB_ERROR(("Can't lock process with pid %ld\n", (long) pid));
 	else {
-		psignal(p, sig);
+		pksignal(p, sig, NULL);
 		PROC_UNLOCK(p);
 	}
 
@@ -629,13 +686,42 @@ out:
 #undef DB_ERROR
 }
 
+/*
+ * Reboot.  In case there is an additional argument, take it as delay in
+ * seconds.  Default to 15s if we cannot parse it and make sure we will
+ * never wait longer than 1 week.  Some code is similar to
+ * kern_shutdown.c:shutdown_panic().
+ */
+#ifndef	DB_RESET_MAXDELAY
+#define	DB_RESET_MAXDELAY	(3600 * 24 * 7)
+#endif
+
 static void
-db_reset(dummy1, dummy2, dummy3, dummy4)
-	db_expr_t	dummy1;
-	boolean_t	dummy2;
-	db_expr_t	dummy3;
-	char *		dummy4;
+db_reset(db_expr_t addr, boolean_t have_addr, db_expr_t count __unused,
+    char *modif __unused)
 {
+	int delay, loop;
+
+	if (have_addr) {
+		delay = (int)db_hex2dec(addr);
+
+		/* If we parse to fail, use 15s. */
+		if (delay == -1)
+			delay = 15;
+
+		/* Cap at one week. */
+		if ((uintmax_t)delay > (uintmax_t)DB_RESET_MAXDELAY)
+			delay = DB_RESET_MAXDELAY;
+
+		db_printf("Automatic reboot in %d seconds - "
+		    "press a key on the console to abort\n", delay);
+		for (loop = delay * 10; loop > 0; --loop) {
+			DELAY(1000 * 100); /* 1/10th second */
+			/* Did user type a key? */
+			if (cncheckc() != -1)
+				return;
+		}
+	}
 
 	cpu_reset();
 }
@@ -647,25 +733,40 @@ db_watchdog(dummy1, dummy2, dummy3, dummy4)
 	db_expr_t	dummy3;
 	char *		dummy4;
 {
-	int i;
+	db_expr_t old_radix, tout;
+	int err, i;
 
-	/*
-	 * XXX: It might make sense to be able to set the watchdog to a
-	 * XXX: timeout here so that failure or hang as a result of subsequent
-	 * XXX: ddb commands could be recovered by a reset.
-	 */
+	old_radix = db_radix;
+	db_radix = 10;
+	err = db_expression(&tout);
+	db_skip_to_eol();
+	db_radix = old_radix;
 
-	EVENTHANDLER_INVOKE(watchdog_list, 0, &i);
+	/* If no argument is provided the watchdog will just be disabled. */
+	if (err == 0) {
+		db_printf("No argument provided, disabling watchdog\n");
+		tout = 0;
+	} else if ((tout & WD_INTERVAL) == WD_TO_NEVER) {
+		db_error("Out of range watchdog interval\n");
+		return;
+	}
+	EVENTHANDLER_INVOKE(watchdog_list, tout, &i);
 }
 
 static void
 db_gdb(db_expr_t dummy1, boolean_t dummy2, db_expr_t dummy3, char *dummy4)
 {
 
-	if (kdb_dbbe_select("gdb") != 0)
+	if (kdb_dbbe_select("gdb") != 0) {
 		db_printf("The remote GDB backend could not be selected.\n");
-	else
-		db_printf("Step to enter the remote GDB backend.\n");
+		return;
+	}
+	/*
+	 * Mark that we are done in the debugger.  kdb_trap()
+	 * should re-enter with the new backend.
+	 */
+	db_cmd_loop_done = 1;
+	db_printf("(ctrl-c will return control to ddb)\n");
 }
 
 static void
@@ -738,4 +839,29 @@ db_stack_trace_all(db_expr_t dummy, boolean_t dummy2, db_expr_t dummy3,
 		}
 		kdb_jmpbuf(prev_jb);
 	}
+}
+
+/*
+ * Take the parsed expression value from the command line that was parsed
+ * as a hexadecimal value and convert it as if the expression was parsed
+ * as a decimal value.  Returns -1 if the expression was not a valid
+ * decimal value.
+ */
+db_expr_t
+db_hex2dec(db_expr_t expr)
+{
+	uintptr_t x, y;
+	db_expr_t val;
+
+	y = 1;
+	val = 0;
+	x = expr;
+	while (x != 0) {
+		if (x % 16 > 9)
+			return (-1);
+		val += (x % 16) * (y);
+		x >>= 4;
+		y *= 10;
+	}
+	return (val);
 }
