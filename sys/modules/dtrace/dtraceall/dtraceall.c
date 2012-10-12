@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/modules/dtrace/dtraceall/dtraceall.c,v 1.1 2012/03/28 21:16:38 laffer1 Exp $ */
 /*
  * Copyright (C) 2008 John Birrell <jb@freebsd.org>
  * 
@@ -33,6 +33,7 @@
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/errno.h>
+#include "opt_compat.h"
 
 static int
 dtraceall_modevent(module_t mod __unused, int type, void *data __unused)
@@ -66,9 +67,16 @@ MODULE_DEPEND(dtraceall, cyclic, 1, 1, 1);
 MODULE_DEPEND(dtraceall, opensolaris, 1, 1, 1);
 MODULE_DEPEND(dtraceall, dtrace, 1, 1, 1);
 MODULE_DEPEND(dtraceall, dtmalloc, 1, 1, 1);
+MODULE_DEPEND(dtraceall, dtnfscl, 1, 1, 1);
+MODULE_DEPEND(dtraceall, dtnfsclient, 1, 1, 1);
 #if defined(__amd64__) || defined(__i386__)
 MODULE_DEPEND(dtraceall, fbt, 1, 1, 1);
+MODULE_DEPEND(dtraceall, fasttrap, 1, 1, 1);
 #endif
+MODULE_DEPEND(dtraceall, lockstat, 1, 1, 1);
 MODULE_DEPEND(dtraceall, sdt, 1, 1, 1);
 MODULE_DEPEND(dtraceall, systrace, 1, 1, 1);
+#if defined(COMPAT_FREEBSD32)
+MODULE_DEPEND(dtraceall, systrace_freebsd32, 1, 1, 1);
+#endif
 MODULE_DEPEND(dtraceall, profile, 1, 1, 1);

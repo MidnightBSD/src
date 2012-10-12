@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/modules/em/Makefile,v 1.3 2011/02/16 13:36:44 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/em/Makefile,v 1.4 2012/06/30 03:04:27 laffer1 Exp $
 # $FreeBSD: src/sys/modules/em/Makefile,v 1.9.2.2.6.1 2010/02/10 00:26:20 kensmith Exp $
 
 .PATH:  ${.CURDIR}/../../dev/e1000
@@ -11,7 +11,7 @@ CORE_SRC = if_em.c e1000_osdep.c
 # undefined when using modular driver if not needed
 LEGACY_SRC    += if_lem.c
 COMMON_SHARED = e1000_api.c e1000_phy.c e1000_nvm.c e1000_mac.c \
-		e1000_manage.c e1000_vf.c e1000_mbx.c
+		e1000_manage.c e1000_vf.c e1000_mbx.c e1000_i210.c
 PCIE_SHARED = e1000_80003es2lan.c e1000_ich8lan.c e1000_82571.c e1000_82575.c
 LEGACY_SHARED = e1000_82540.c e1000_82542.c e1000_82541.c e1000_82543.c
 

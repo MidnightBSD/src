@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: src/sys/modules/dtrace/dtrace/Makefile,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD: src/sys/modules/dtrace/dtrace/Makefile,v 1.1 2012/03/28 21:16:38 laffer1 Exp $
 
-ARCHDIR=	${MACHINE_ARCH}
+ARCHDIR=	${MACHINE_CPUARCH}
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common/dtrace
 .PATH: ${.CURDIR}/../../../cddl/kern
@@ -13,9 +12,10 @@ SRCS=		dtrace.c \
 		dtrace_asm.S \
 		dtrace_subr.c
 
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 SRCS+=		dis_tables.c \
 		instr_size.c
+CFLAGS+=	-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/intel
 .endif
 
 SRCS+=		bus_if.h device_if.h vnode_if.h
@@ -24,9 +24,9 @@ SRCS+=		bus_if.h device_if.h vnode_if.h
 SRCS+=		assym.s
 
 # These are needed for assym.s
-SRCS+=		opt_compat.h opt_kstack_pages.h opt_nfs.h
+SRCS+=		opt_compat.h opt_kstack_pages.h opt_nfs.h opt_hwpmc_hooks.h
 
-.if ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "i386"
 SRCS+=		opt_apic.h
 .endif
 
@@ -41,5 +41,7 @@ CFLAGS+=	-DSMP -DDEBUG
 EXPORT_SYMS=	dtrace_register \
 		dtrace_unregister \
 		dtrace_probe_lookup
+
+dtrace_asm.o:  assym.s
 
 .include <bsd.kmod.mk>

@@ -48182,15 +48182,12 @@ sys/modules/amr/amr_linux/Makefile -text
 sys/modules/an/Makefile -text
 sys/modules/aout/Makefile -text
 sys/modules/apm/Makefile -text
-sys/modules/ar/Makefile -text
 sys/modules/arcmsr/Makefile -text
 sys/modules/arcnet/Makefile -text
-sys/modules/arl/Makefile -text
 sys/modules/asmc/Makefile -text
 sys/modules/asr/Makefile -text
 sys/modules/ata/Makefile -text
 sys/modules/ata/Makefile.inc -text
-sys/modules/ata/ata/Makefile -text
 sys/modules/ata/atacam/Makefile -text
 sys/modules/ata/atacard/Makefile -text
 sys/modules/ata/atacbus/Makefile -text
@@ -48231,13 +48228,10 @@ sys/modules/ata/atapicd/Makefile -text
 sys/modules/ata/atapifd/Makefile -text
 sys/modules/ata/atapist/Makefile -text
 sys/modules/ata/ataraid/Makefile -text
-sys/modules/ata/atausb/Makefile -text
 sys/modules/ath/Makefile -text
 sys/modules/ath_ahb/Makefile -text
 sys/modules/ath_pci/Makefile -text
-sys/modules/aue/Makefile -text
 sys/modules/auxio/Makefile -text
-sys/modules/axe/Makefile -text
 sys/modules/bce/Makefile -text
 sys/modules/bfe/Makefile -text
 sys/modules/bge/Makefile -text
@@ -48250,7 +48244,6 @@ sys/modules/bktr/Makefile.inc -text
 sys/modules/bktr/bktr/Makefile -text
 sys/modules/bktr/bktr_mem/Makefile -text
 sys/modules/bm/Makefile -text
-sys/modules/bridge/Makefile -text
 sys/modules/bridgestp/Makefile -text
 sys/modules/bwi/Makefile -text
 sys/modules/bwifw/Makefile -text
@@ -48270,7 +48263,6 @@ sys/modules/cc/cc_htcp/Makefile -text
 sys/modules/cc/cc_vegas/Makefile -text
 sys/modules/cd9660/Makefile -text
 sys/modules/cd9660_iconv/Makefile -text
-sys/modules/cdce/Makefile -text
 sys/modules/ce/Makefile -text
 sys/modules/ciss/Makefile -text
 sys/modules/cm/Makefile -text
@@ -48286,7 +48278,6 @@ sys/modules/crypto/Makefile -text
 sys/modules/cryptodev/Makefile -text
 sys/modules/cs/Makefile -text
 sys/modules/ctau/Makefile -text
-sys/modules/cue/Makefile -text
 sys/modules/cx/Makefile -text
 sys/modules/cxgb/Makefile -text
 sys/modules/cxgb/cxgb/Makefile -text
@@ -48341,7 +48332,6 @@ sys/modules/dtrace/dtraceall/Makefile -text
 sys/modules/dtrace/dtraceall/dtraceall.c -text
 sys/modules/dtrace/fasttrap/Makefile -text
 sys/modules/dtrace/fbt/Makefile -text
-sys/modules/dtrace/linsystrace/Makefile -text
 sys/modules/dtrace/lockstat/Makefile -text
 sys/modules/dtrace/profile/Makefile -text
 sys/modules/dtrace/prototype/Makefile -text
@@ -48352,7 +48342,6 @@ sys/modules/dtrace/systrace_linux32/Makefile -text
 sys/modules/dummynet/Makefile -text
 sys/modules/ed/Makefile -text
 sys/modules/eeemon/Makefile -text
-sys/modules/el/Makefile -text
 sys/modules/elink/Makefile -text
 sys/modules/em/Makefile -text
 sys/modules/en/Makefile -text
