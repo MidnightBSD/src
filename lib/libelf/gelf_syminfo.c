@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libelf/gelf_syminfo.c,v 1.3 2012/09/02 18:04:10 laffer1 Exp $");
 
 #include <sys/limits.h>
 
@@ -35,7 +35,7 @@ __MBSDID("$MidnightBSD$");
 
 #include "_libelf.h"
 
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 
 GElf_Syminfo *
 gelf_getsyminfo(Elf_Data *d, int ndx, GElf_Syminfo *dst)
@@ -148,4 +148,4 @@ gelf_update_syminfo(Elf_Data *d, int ndx, GElf_Syminfo *gs)
 	return (1);
 }
 
-#endif	/* __FreeBSD_version >= 700025 */
+#endif	/* __MidnightBSD_version >= 3000 */

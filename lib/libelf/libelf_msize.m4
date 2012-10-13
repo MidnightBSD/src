@@ -75,7 +75,7 @@ define(`DEFINE_ELF_MSIZES',
 DEFINE_ELF_MSIZES(ELF_TYPE_LIST)
 
 define(`MSIZE',
-  `#if	__FreeBSD_version >= $3
+  `#if	__MidnightBSD_version >= $3
     [ELF_T_$1] = { .msz32 = $1_SIZE32, .msz64 = $1_SIZE64 },
 #endif')
 define(`MSIZES',

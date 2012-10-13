@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libelf/libelf_align.c,v 1.3 2012/09/02 18:04:10 laffer1 Exp $");
 
 #include <sys/types.h>
 
@@ -66,18 +66,18 @@ struct align {
 static struct align malign[ELF_T_NUM] = {
 	[ELF_T_ADDR]	= MALIGN(Addr),
 	[ELF_T_BYTE]	= { .a32 = 1, .a64 = 1 },
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_CAP]	= MALIGN(Cap),
 #endif
 	[ELF_T_DYN]	= MALIGN(Dyn),
 	[ELF_T_EHDR]	= MALIGN(Ehdr),
 	[ELF_T_HALF]	= MALIGN(Half),
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_LWORD]	= MALIGN(Lword),
 	[ELF_T_MOVE]	= MALIGN(Move),
 #endif
 	[ELF_T_MOVEP] 	= UNSUPPORTED(),
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_NOTE]	= MALIGN(Nhdr),
 #endif
 	[ELF_T_OFF]	= MALIGN(Off),
@@ -88,16 +88,16 @@ static struct align malign[ELF_T_NUM] = {
 	[ELF_T_SWORD]	= MALIGN(Sword),
 	[ELF_T_SXWORD]	= MALIGN64(Sxword),
 	[ELF_T_SYM]	= MALIGN(Sym),
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_SYMINFO]	= MALIGN(Syminfo),
 #endif
-#if	__FreeBSD_version >= 700009
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_VDEF]	= MALIGN(Verdef),
 	[ELF_T_VNEED]	= MALIGN(Verneed),
 #endif
 	[ELF_T_WORD]	= MALIGN(Word),
 	[ELF_T_XWORD]	= MALIGN64(Xword),
-#if	__FreeBSD_version >= 800062
+#if	__MidnightBSD_version >= 4016
 	[ELF_T_GNUHASH] = MALIGN_WORD()
 #endif
 };
@@ -117,18 +117,18 @@ _libelf_malign(Elf_Type t, int elfclass)
 static struct align falign[ELF_T_NUM] = {
 	[ELF_T_ADDR]	= FALIGN(4,8),
 	[ELF_T_BYTE]	= FALIGN(1,1),
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_CAP]	= FALIGN(4,8),
 #endif
 	[ELF_T_DYN]	= FALIGN(4,8),
 	[ELF_T_EHDR]	= FALIGN(4,8),
 	[ELF_T_HALF]	= FALIGN(2,2),
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_LWORD]	= FALIGN(8,8),
 	[ELF_T_MOVE]	= FALIGN(8,8),
 #endif
 	[ELF_T_MOVEP] 	= UNSUPPORTED(),
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_NOTE]	= FALIGN(1,1),
 #endif
 	[ELF_T_OFF]	= FALIGN(4,8),
@@ -139,16 +139,16 @@ static struct align falign[ELF_T_NUM] = {
 	[ELF_T_SWORD]	= FALIGN(4,4),
 	[ELF_T_SXWORD]	= FALIGN(0,8),
 	[ELF_T_SYM]	= FALIGN(4,8),
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_SYMINFO]	= FALIGN(2,2),
 #endif
-#if	__FreeBSD_version >= 700009
+#if	__MidnightBSD_version >= 3000
 	[ELF_T_VDEF]	= FALIGN(4,4),
 	[ELF_T_VNEED]	= FALIGN(4,4),
 #endif
 	[ELF_T_WORD]	= FALIGN(4,4),
 	[ELF_T_XWORD]	= FALIGN(0,8),
-#if	__FreeBSD_version >= 800062
+#if	__MidnightBSD_version >= 4016
 	[ELF_T_GNUHASH] = FALIGN(4,8)
 #endif
 };

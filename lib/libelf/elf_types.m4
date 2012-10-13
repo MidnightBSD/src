@@ -35,36 +35,39 @@
  * + `version' is the OS version the symbol first appeared in.
  *
  * OS revisions of note are:
+ * based on freebsd versions:
  * 600102 - The earliest (6.0-STABLE) version supported by this code.
  * 700009 - Symbol versioning and ELF64 type changes.
  * 700025 - More ELF types and the introduction of libelf.
+ * 0.2.1 == 6 stable release
+ * 0.3 (3000+) = FreeBSD 7 ~ 700044
  */
 
 define(`ELF_TYPE_LIST',
-	``ADDR,		Addr,	600102',
-	`BYTE,		Byte,	600102',
-	`CAP,		Cap,	700025',
-	`DYN,		Dyn,	600102',
-	`EHDR,		Ehdr,	600102',
-	`GNUHASH,	-,	800062',
-	`HALF,		Half,	600102',
-	`LWORD,		Lword,	700025',
-	`MOVE,		Move,	700025',
-	`MOVEP,		MoveP,	700025',
-	`NOTE,		Note,	600102',
-	`OFF,		Off,	600102',
-	`PHDR,		Phdr,	600102',
-	`REL,		Rel,	600102',
-	`RELA,		Rela,	600102',
-	`SHDR,		Shdr,	600102',
-	`SWORD,		Sword,	600102',
-	`SXWORD,	Sxword,	700009',
-	`SYMINFO,	Syminfo, 700025',
-	`SYM,		Sym,	600102',
-	`VDEF,		Verdef,	700009',
-	`VNEED,		Verneed, 700009',
-	`WORD,		Word,	600102',
-	`XWORD,		Xword,	700009',
+	``ADDR,		Addr,	1000',
+	`BYTE,		Byte,	1000',
+	`CAP,		Cap,	3000',
+	`DYN,		Dyn,	1000',
+	`EHDR,		Ehdr,	1000',
+	`GNUHASH,	-,	4016',
+	`HALF,		Half,	1000',
+	`LWORD,		Lword,	3000',
+	`MOVE,		Move,	3000',
+	`MOVEP,		MoveP,	3000',
+	`NOTE,		Note,	1000',
+	`OFF,		Off,	1000',
+	`PHDR,		Phdr,	1000',
+	`REL,		Rel,	1000',
+	`RELA,		Rela,	1000',
+	`SHDR,		Shdr,	1000',
+	`SWORD,		Sword,	1000',
+	`SXWORD,	Sxword,	3000',
+	`SYMINFO,	Syminfo, 3000',
+	`SYM,		Sym,	1000',
+	`VDEF,		Verdef,	3000',
+	`VNEED,		Verneed, 3000',
+	`WORD,		Word,	1000',
+	`XWORD,		Xword,	3000',
 	`NUM,		_,	_'')
 
 /*

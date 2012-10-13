@@ -118,7 +118,7 @@ DEFINE_ELF_FSIZES(ELF_TYPE_LIST)
 DEFINE_ELF_FSIZE(`IDENT',`')	# `IDENT' is a pseudo type
 
 define(`FSIZE',
-  `#if	__FreeBSD_version >= $3
+  `#if	__MidnightBSD_version >= $3
     [ELF_T_$1] = { .fsz32 = $1_SIZE32, .fsz64 = $1_SIZE64 },
 #endif')
 define(`FSIZES',

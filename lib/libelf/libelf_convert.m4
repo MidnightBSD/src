@@ -465,7 +465,7 @@ libelf_cvt$3_$1_tom(char *dst, size_t dsz, char *src, size_t count,
  */
 
 define(`MAKE_TYPE_CONVERTER',
-  `#if	__FreeBSD_version >= $3 /* $1 */
+  `#if	__MidnightBSD_version >= $3 /* $1 */
 ifdef(`BASE'_$1,
     `ifdef(`IGNORE_'$1,`',
       `MAKEPRIM_TO_F($1,$2,`',64)
@@ -507,7 +507,7 @@ libelf_cvt_BYTE_tox(char *dst, size_t dsz, char *src, size_t count,
 
 MAKE_TYPE_CONVERTERS(ELF_TYPE_LIST)
 
-#if	__FreeBSD_version >= 800062
+#if	__MidnightBSD_version >= 4016
 /*
  * Sections of type ELF_T_GNUHASH start with a header containing 4 32-bit
  * words.  Bloom filter data comes next, followed by hash buckets and the
@@ -847,7 +847,7 @@ define(`CONV',
 
 define(`CONVERTER_NAME',
   `ifdef(`IGNORE_'$1,`',
-    `#if	__FreeBSD_version >= $3
+    `#if	__MidnightBSD_version >= $3
     [ELF_T_$1] = {
         CONV($1,32,tof), CONV($1,32,tom),
         CONV($1,64,tof), CONV($1,64,tom) },
@@ -875,7 +875,7 @@ CONVERTER_NAMES(ELF_TYPE_LIST)
 		.tom64 = libelf_cvt_BYTE_tox
 	},
 
-#if	__FreeBSD_version >= 800062
+#if	__MidnightBSD_version >= 4016
 	[ELF_T_GNUHASH] = {
 		.tof32 = libelf_cvt32_GNUHASH_tof,
 		.tom32 = libelf_cvt32_GNUHASH_tom,

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libelf/libelf_data.c,v 1.3 2012/09/02 18:04:10 laffer1 Exp $");
 
 #include <libelf.h>
 #include <osreldate.h>
@@ -42,7 +42,7 @@ _libelf_xlate_shtype(uint32_t sht)
 		return (ELF_T_SYM);
 	case SHT_FINI_ARRAY:
 		return (ELF_T_ADDR);
-#if	__FreeBSD_version >= 800062
+#if	__MidnightBSD_version >= 4016
 	case SHT_GNU_HASH:
 		return (ELF_T_GNUHASH);
 #endif
@@ -70,7 +70,7 @@ _libelf_xlate_shtype(uint32_t sht)
 		return (ELF_T_SYM);
 	case SHT_SYMTAB_SHNDX:
 		return (ELF_T_WORD);
-#if	__FreeBSD_version >= 700025
+#if	__MidnightBSD_version >= 3000
 	case SHT_GNU_verdef:	/* == SHT_SUNW_verdef */
 		return (ELF_T_VDEF);
 	case SHT_GNU_verneed:	/* == SHT_SUNW_verneed */
