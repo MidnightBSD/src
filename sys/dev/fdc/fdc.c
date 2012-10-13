@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fdc/fdc.c,v 1.317 2007/02/27 17:16:52 jhb Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_fdc.h"
 
@@ -97,6 +97,8 @@ __FBSDID("$FreeBSD: src/sys/dev/fdc/fdc.c,v 1.317 2007/02/27 17:16:52 jhb Exp $"
 				 * fd_drivetype; on i386 machines, if
 				 * given as 0, use RTC type for fd0
 				 * and fd1 */
+#define	FD_NO_CHLINE	0x10	/* drive does not support changeline
+				 * aka. unit attention */
 #define FD_NO_PROBE	0x20	/* don't probe drive (seek test), just
 				 * assume it is there */
 
@@ -263,6 +265,7 @@ struct fd_data {
 static driver_intr_t fdc_intr;
 static driver_filter_t fdc_intr_fast;
 static void fdc_reset(struct fdc_data *);
+static int fd_probe_disk(struct fd_data *, int *);
 
 SYSCTL_NODE(_debug, OID_AUTO, fdc, CTLFLAG_RW, 0, "fdc driver");
 
@@ -768,19 +771,19 @@ fdc_worker(struct fdc_data *fdc)
 		(fdc->retry >= retries || (fd->options & FDOPT_NORETRY))) {
 		if ((debugflags & 4))
 			printf("Too many retries (EIO)\n");
-		mtx_lock(&fdc->fdc_mtx);
-		fd->flags |= FD_EMPTY;
-		mtx_unlock(&fdc->fdc_mtx);
+		if (fdc->flags & FDC_NEEDS_RESET) {
+			mtx_lock(&fdc->fdc_mtx);
+			fd->flags |= FD_EMPTY;
+			mtx_unlock(&fdc->fdc_mtx);
+		}
 		return (fdc_biodone(fdc, EIO));
 	}
 
 	/* Disable ISADMA if we bailed while it was active */
 	if (fd != NULL && (fd->flags & FD_ISADMA)) {
-		mtx_lock(&Giant);
 		isa_dmadone(
 		    bp->bio_cmd & BIO_READ ? ISADMA_READ : ISADMA_WRITE,
 		    fd->fd_ioptr, fd->fd_iosize, fdc->dmachan);
-		mtx_unlock(&Giant);
 		mtx_lock(&fdc->fdc_mtx);
 		fd->flags &= ~FD_ISADMA;
 		mtx_unlock(&fdc->fdc_mtx);
@@ -836,65 +839,12 @@ fdc_worker(struct fdc_data *fdc)
 		fdctl_wr(fdc, fd->ft->trans);
 
 	if (bp->bio_cmd & BIO_PROBE) {
-
-		if (!(fdin_rd(fdc) & FDI_DCHG) && !(fd->flags & FD_EMPTY))
+		if ((!(device_get_flags(fd->dev) & FD_NO_CHLINE) &&
+		    !(fdin_rd(fdc) & FDI_DCHG) &&
+		    !(fd->flags & FD_EMPTY)) ||
+		    fd_probe_disk(fd, &need_recal) == 0)
 			return (fdc_biodone(fdc, 0));
-
-		/*
-		 * Try to find out if we have a disk in the drive
-		 *
-		 * First recal, then seek to cyl#1, this clears the
-		 * old condition on the disk change line so we can
-		 * examine it for current status
-		 */
-		if (debugflags & 0x40)
-			printf("New disk in probe\n");
-		mtx_lock(&fdc->fdc_mtx);
-		fd->flags |= FD_NEWDISK;
-		mtx_unlock(&fdc->fdc_mtx);
-		retry_line = __LINE__;
-		if (fdc_cmd(fdc, 2, NE7CMD_RECAL, fd->fdsu, 0))
-			return (1);
-		tsleep(fdc, PRIBIO, "fdrecal", hz);
-		retry_line = __LINE__;
-		if (fdc_sense_int(fdc, &st0, &cyl) == FD_NOT_VALID)
-			return (1); /* XXX */
-		retry_line = __LINE__;
-		if ((st0 & 0xc0) || cyl != 0)
-			return (1);
-
-		/* Seek to track 1 */
-		retry_line = __LINE__;
-		if (fdc_cmd(fdc, 3, NE7CMD_SEEK, fd->fdsu, 1, 0))
-			return (1);
-		tsleep(fdc, PRIBIO, "fdseek", hz);
-		retry_line = __LINE__;
-		if (fdc_sense_int(fdc, &st0, &cyl) == FD_NOT_VALID)
-			return (1); /* XXX */
-		need_recal |= (1 << fd->fdsu);
-		if (fdin_rd(fdc) & FDI_DCHG) {
-			if (debugflags & 0x40)
-				printf("Empty in probe\n");
-			mtx_lock(&fdc->fdc_mtx);
-			fd->flags |= FD_EMPTY;
-			mtx_unlock(&fdc->fdc_mtx);
-		} else {
-			if (debugflags & 0x40)
-				printf("Got disk in probe\n");
-			mtx_lock(&fdc->fdc_mtx);
-			fd->flags &= ~FD_EMPTY;
-			mtx_unlock(&fdc->fdc_mtx);
-			retry_line = __LINE__;
-			if(fdc_sense_drive(fdc, &st3) != 0)
-				return (1);
-			mtx_lock(&fdc->fdc_mtx);
-			if(st3 & NE7_ST3_WP)
-				fd->flags |= FD_WP;
-			else
-				fd->flags &= ~FD_WP;
-			mtx_unlock(&fdc->fdc_mtx);
-		}
-		return (fdc_biodone(fdc, 0));
+		return (1);
 	}
 
 	/*
@@ -912,7 +862,7 @@ fdc_worker(struct fdc_data *fdc)
 		fd->flags |= FD_NEWDISK;
 		mtx_unlock(&fdc->fdc_mtx);
 		g_topology_lock();
-		g_orphan_provider(fd->fd_provider, EXDEV);
+		g_orphan_provider(fd->fd_provider, ENXIO);
 		fd->fd_provider->flags |= G_PF_WITHER;
 		fd->fd_provider =
 		    g_new_providerf(fd->fd_geom, fd->fd_geom->name);
@@ -1006,11 +956,9 @@ fdc_worker(struct fdc_data *fdc)
 	/* Setup ISADMA if we need it and have it */
 	if ((bp->bio_cmd & (BIO_READ|BIO_WRITE|BIO_FMT))
 	     && !(fdc->flags & FDC_NODMA)) {
-		mtx_lock(&Giant);
 		isa_dmastart(
 		    bp->bio_cmd & BIO_READ ? ISADMA_READ : ISADMA_WRITE,
 		    fd->fd_ioptr, fd->fd_iosize, fdc->dmachan);
-		mtx_unlock(&Giant);
 		mtx_lock(&fdc->fdc_mtx);
 		fd->flags |= FD_ISADMA;
 		mtx_unlock(&fdc->fdc_mtx);
@@ -1088,11 +1036,9 @@ fdc_worker(struct fdc_data *fdc)
 
 	/* Finish DMA */
 	if (fd->flags & FD_ISADMA) {
-		mtx_lock(&Giant);
 		isa_dmadone(
 		    bp->bio_cmd & BIO_READ ? ISADMA_READ : ISADMA_WRITE,
 		    fd->fd_ioptr, fd->fd_iosize, fdc->dmachan);
-		mtx_unlock(&Giant);
 		mtx_lock(&fdc->fdc_mtx);
 		fd->flags &= ~FD_ISADMA;
 		mtx_unlock(&fdc->fdc_mtx);
@@ -1207,7 +1153,7 @@ fdc_thread(void *arg)
 	fdc->flags &= ~(FDC_KTHREAD_EXIT | FDC_KTHREAD_ALIVE);
 	mtx_unlock(&fdc->fdc_mtx);
 
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /*
@@ -1238,6 +1184,71 @@ fd_enqueue(struct fd_data *fd, struct bio *bp)
 	mtx_unlock(&fdc->fdc_mtx);
 }
 
+/*
+ * Try to find out if we have a disk in the drive.
+ */
+static int
+fd_probe_disk(struct fd_data *fd, int *recal)
+{
+	struct fdc_data *fdc;
+	int st0, st3, cyl;
+	int oopts, ret;
+
+	fdc = fd->fdc;
+	oopts = fd->options;
+	fd->options |= FDOPT_NOERRLOG | FDOPT_NORETRY;
+	ret = 1;
+
+	/*
+	 * First recal, then seek to cyl#1, this clears the old condition on
+	 * the disk change line so we can examine it for current status.
+	 */
+	if (debugflags & 0x40)
+		printf("New disk in probe\n");
+	mtx_lock(&fdc->fdc_mtx);
+	fd->flags |= FD_NEWDISK;
+	mtx_unlock(&fdc->fdc_mtx);
+	if (fdc_cmd(fdc, 2, NE7CMD_RECAL, fd->fdsu, 0))
+		goto done;
+	tsleep(fdc, PRIBIO, "fdrecal", hz);
+	if (fdc_sense_int(fdc, &st0, &cyl) == FD_NOT_VALID)
+		goto done;	/* XXX */
+	if ((st0 & 0xc0) || cyl != 0)
+		goto done;
+
+	/* Seek to track 1 */
+	if (fdc_cmd(fdc, 3, NE7CMD_SEEK, fd->fdsu, 1, 0))
+		goto done;
+	tsleep(fdc, PRIBIO, "fdseek", hz);
+	if (fdc_sense_int(fdc, &st0, &cyl) == FD_NOT_VALID)
+		goto done;	/* XXX */
+	*recal |= (1 << fd->fdsu);
+	if (fdin_rd(fdc) & FDI_DCHG) {
+		if (debugflags & 0x40)
+			printf("Empty in probe\n");
+		mtx_lock(&fdc->fdc_mtx);
+		fd->flags |= FD_EMPTY;
+		mtx_unlock(&fdc->fdc_mtx);
+	} else {
+		if (fdc_sense_drive(fdc, &st3) != 0)
+			goto done;
+		if (debugflags & 0x40)
+			printf("Got disk in probe\n");
+		mtx_lock(&fdc->fdc_mtx);
+		fd->flags &= ~FD_EMPTY;
+		if (st3 & NE7_ST3_WP)
+			fd->flags |= FD_WP;
+		else
+			fd->flags &= ~FD_WP;
+		mtx_unlock(&fdc->fdc_mtx);
+	}
+	ret = 0;
+
+done:
+	fd->options = oopts;
+	return (ret);
+}
+
 static int
 fdmisccmd(struct fd_data *fd, u_int cmd, void *data)
 {
@@ -1250,7 +1261,7 @@ fdmisccmd(struct fd_data *fd, u_int cmd, void *data)
 
 	/*
 	 * Set up a bio request for fdstrategy().  bio_offset is faked
-	 * so that fdstrategy() will seek to the the requested
+	 * so that fdstrategy() will seek to the requested
 	 * cylinder, and use the desired head.
 	 */
 	bp->bio_cmd = cmd;
@@ -1350,7 +1361,7 @@ fdautoselect(struct fd_data *fd)
 		if (debugflags & 0x40)
 			device_printf(fd->dev, "autoselection failed\n");
 		fdsettype(fd, fd_native_types[fd->type]);
-		return (0);
+		return (-1);
 	} else {
 		if (debugflags & 0x40) {
 			device_printf(fd->dev,
@@ -1383,6 +1394,7 @@ fd_access(struct g_provider *pp, int r, int w, int e)
 	struct fd_data *fd;
 	struct fdc_data *fdc;
 	int ar, aw, ae;
+	int busy;
 
 	fd = pp->geom->softc;
 	fdc = fd->fdc;
@@ -1403,22 +1415,33 @@ fd_access(struct g_provider *pp, int r, int w, int e)
 		return (0);
 	}
 
+	busy = 0;
 	if (pp->acr == 0 && pp->acw == 0 && pp->ace == 0) {
 		if (fdmisccmd(fd, BIO_PROBE, NULL))
 			return (ENXIO);
 		if (fd->flags & FD_EMPTY)
 			return (ENXIO);
 		if (fd->flags & FD_NEWDISK) {
-			fdautoselect(fd);
+			if (fdautoselect(fd) != 0 &&
+			    (device_get_flags(fd->dev) & FD_NO_CHLINE)) {
+				mtx_lock(&fdc->fdc_mtx);
+				fd->flags |= FD_EMPTY;
+				mtx_unlock(&fdc->fdc_mtx);
+				return (ENXIO);
+			}
 			mtx_lock(&fdc->fdc_mtx);
 			fd->flags &= ~FD_NEWDISK;
 			mtx_unlock(&fdc->fdc_mtx);
 		}
 		device_busy(fd->dev);
+		busy = 1;
 	}
 
-	if (w > 0 && (fd->flags & FD_WP))
+	if (w > 0 && (fd->flags & FD_WP)) {
+		if (busy)
+			device_unbusy(fd->dev);
 		return (EROFS);
+	}
 
 	pp->sectorsize = fd->sectorsize;
 	pp->stripesize = fd->ft->heads * fd->ft->sectrac * fd->sectorsize;
@@ -1469,8 +1492,6 @@ fd_ioctl(struct g_provider *pp, u_long cmd, void *data, int fflag, struct thread
 		return (0);
 
 	case FD_STYPE:                  /* set drive type */
-		if (!(fflag & FWRITE))
-			return (EPERM);
 		/*
 		 * Allow setting drive type temporarily iff
 		 * currently unset.  Used for fdformat so any
@@ -1492,8 +1513,6 @@ fd_ioctl(struct g_provider *pp, u_long cmd, void *data, int fflag, struct thread
 		return (0);
 
 	case FD_SOPTS:			/* set drive options */
-		if (!(fflag & FWRITE))
-			return (EPERM);
 		fd->options = *(int *)data;
 		return (0);
 
@@ -1709,12 +1728,16 @@ fdc_detach(device_t dev)
 	if ((error = bus_generic_detach(dev)))
 		return (error);
 
+	if (fdc->fdc_intr)
+		bus_teardown_intr(dev, fdc->res_irq, fdc->fdc_intr);
+	fdc->fdc_intr = NULL;
+
 	/* kill worker thread */
 	mtx_lock(&fdc->fdc_mtx);
 	fdc->flags |= FDC_KTHREAD_EXIT;
 	wakeup(&fdc->head);
 	while ((fdc->flags & FDC_KTHREAD_ALIVE) != 0)
-		msleep(&fdc->fdc_thread, &fdc->fdc_mtx, PRIBIO, "fdcdet", 0);
+		msleep(fdc->fdc_thread, &fdc->fdc_mtx, PRIBIO, "fdcdet", 0);
 	mtx_unlock(&fdc->fdc_mtx);
 
 	/* reset controller, turn motor off */
@@ -1795,7 +1818,7 @@ fdc_attach(device_t dev)
 	fdout_wr(fdc, fdc->fdout = 0);
 	bioq_init(&fdc->head);
 
-	kthread_create(fdc_thread, fdc, &fdc->fdc_thread, 0, 0,
+	kproc_create(fdc_thread, fdc, &fdc->fdc_thread, 0, 0,
 	    "fdc%d", device_get_unit(dev));
 
 	settle = hz / 8;
@@ -2006,15 +2029,22 @@ fd_attach(device_t dev)
 	return (0);
 }
 
+static void
+fd_detach_geom(void *arg, int flag)
+{
+	struct	fd_data *fd = arg;
+
+	g_topology_assert();
+	g_wither_geom(fd->fd_geom, ENXIO);
+}
+
 static int
 fd_detach(device_t dev)
 {
 	struct	fd_data *fd;
 
 	fd = device_get_softc(dev);
-	g_topology_lock();
-	g_wither_geom(fd->fd_geom, ENXIO);
-	g_topology_unlock();
+	g_waitfor_event(fd_detach_geom, fd, M_WAITOK, NULL);
 	while (device_get_state(dev) == DS_BUSY)
 		tsleep(fd, PZERO, "fdd", hz/10);
 	callout_drain(&fd->toffhandle);
@@ -2043,8 +2073,7 @@ static int
 fdc_modevent(module_t mod, int type, void *data)
 {
 
-	g_modevent(NULL, type, &g_fd_class);
-	return (0);
+	return (g_modevent(NULL, type, &g_fd_class));
 }
 
 DRIVER_MODULE(fd, fdc, fd_driver, fd_devclass, fdc_modevent, 0);

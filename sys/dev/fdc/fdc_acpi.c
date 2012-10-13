@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fdc/fdc_acpi.c,v 1.12 2006/02/21 03:19:24 njl Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -35,7 +35,8 @@ __FBSDID("$FreeBSD: src/sys/dev/fdc/fdc_acpi.c,v 1.12 2006/02/21 03:19:24 njl Ex
 #include <sys/module.h>
 #include <sys/proc.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 #include <dev/fdc/fdcvar.h>
 
@@ -95,10 +96,9 @@ fdc_acpi_attach(device_t dev)
 {
 	struct fdc_data *sc;
 	ACPI_BUFFER buf;
+	ACPI_OBJECT *obj;
 	device_t bus;
-	int error, fde_count, i;
-	ACPI_OBJECT *obj, *pkg;
-	uint32_t fde[ACPI_FDC_MAXDEVS];
+	int error;
 
 	/* Get our softc and use the same accessor as ISA. */
 	sc = device_get_softc(dev);
@@ -127,63 +127,13 @@ fdc_acpi_attach(device_t dev)
 	 */
 	bus = device_get_parent(dev);
 	if (ACPI_FAILURE(ACPI_EVALUATE_OBJECT(bus, dev, "_FDE", NULL, &buf))) {
-		error = ENXIO;
-		goto out_hintsprobe;
-	}
-
-	/* Parse the output of _FDE in various ways. */
-	obj = pkg = (ACPI_OBJECT *)buf.Pointer;
-	switch (obj->Type) {
-	case ACPI_TYPE_BUFFER:
-		/*
-		 * The spec says _FDE should be a buffer of five 32-bit
-		 * integers.  In violation of the spec, some systems use
-		 * five bytes instead.
-		 */
-		switch (obj->Buffer.Length) {
-		case ACPI_FDC_FDE_LEN:
-			bcopy(obj->Buffer.Pointer, fde, ACPI_FDC_FDE_LEN);
-			break;
-		case ACPI_FDC_MAXDEVS:
-			for (i = 0; i < ACPI_FDC_MAXDEVS; i++)
-				fde[i] = ((uint8_t *)obj->Buffer.Pointer)[i];
-			break;
-		default:
-			device_printf(dev, "_FDE wrong length: %d\n",
-			    obj->Buffer.Length);
-			error = ENXIO;
-			goto out_hintsprobe;
-		}
-		break;
-	case ACPI_TYPE_PACKAGE:
-		/*
-		 * In violation of the spec, systems including the ASUS
-		 * K8V return a package of five integers instead of a
-		 * buffer of five 32-bit integers.
-		 */
-		fde_count = min(ACPI_FDC_MAXDEVS, pkg->Package.Count);
-		for (i = 0; i < fde_count; i++) {
-			obj = &pkg->Package.Elements[i];
-			if (obj->Type == ACPI_TYPE_INTEGER)
-				fde[i] = (uint32_t)obj->Integer.Value;
-		}
-		break;
-	default:
-		device_printf(dev, "invalid _FDE type %d\n", obj->Type);
-		error = ENXIO;
-		goto out_hintsprobe;
+		error = fdc_hints_probe(dev);
+		goto out;
 	}
 
 	/* Add fd child devices as specified. */
-	error = fdc_acpi_probe_children(bus, dev, fde);
-
-out_hintsprobe:
-	/*
-	 * If there was a problem with the _FDE drive enumeration, fall
-	 * back to the hints-based probe.
-	 */
-	if (error)
-		error = fdc_hints_probe(dev);
+	obj = buf.Pointer;
+	error = fdc_acpi_probe_children(bus, dev, obj->Buffer.Pointer);
 
 out:
 	if (buf.Pointer)
