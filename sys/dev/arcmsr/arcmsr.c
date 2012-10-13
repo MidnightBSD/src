@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/arcmsr/arcmsr.c,v 1.3 2012/04/12 01:42:32 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/arcmsr/arcmsr.c,v 1.4 2012/08/03 02:32:47 laffer1 Exp $ */
 /*
 *****************************************************************************************
 **        O.S   : FreeBSD
@@ -74,7 +74,6 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #if 0
 #define ARCMSR_DEBUG1			1
@@ -1434,214 +1433,6 @@ static void arcmsr_abort_dr_ccbs(struct AdapterControlBlock *acb, int target, in
 	for (i = 0; i < ARCMSR_MAX_FREESRB_NUM; i++)
 	{
 		srb = acb->psrb_pool[i];
-		if (srb->startdone == ARCMSR_SRB_START)
-		{
-           	if((target == srb->pccb->ccb_h.target_id) && (lun == srb->pccb->ccb_h.target_lun))
-            {
-		    	srb->startdone = ARCMSR_SRB_ABORTED;
-				srb->pccb->ccb_h.status |= CAM_REQ_ABORTED;
-		    	arcmsr_srb_complete(srb, 1);
-       		}
-		}
-	}
-	/* enable outbound Post Queue, outbound doorbell Interrupt */
-	arcmsr_enable_allintr(acb, intmask_org);
-	ARCMSR_LOCK_RELEASE(&acb->qbuffer_lock);
-}
-
-
-/*
-**************************************************************************
-**************************************************************************
-*/
-static void arcmsr_dr_handle(struct AdapterControlBlock *acb) {
-	u_int32_t	devicemap;
-	u_int32_t	target, lun;
-    u_int32_t	deviceMapCurrent[4]={0};
-    u_int8_t	*pDevMap;
-
-	switch (acb->adapter_type) {
-	case ACB_ADAPTER_TYPE_A:
-			devicemap = offsetof(struct HBA_MessageUnit, msgcode_rwbuffer[ARCMSR_FW_DEVMAP_OFFSET]);
-			for (target= 0; target < 4; target++) 
-			{
-            	deviceMapCurrent[target]=bus_space_read_4(acb->btag[0], acb->bhandle[0],  devicemap);
-            	devicemap += 4;
-			}
-			break;
-
-	case ACB_ADAPTER_TYPE_B:
-			devicemap = offsetof(struct HBB_RWBUFFER, msgcode_rwbuffer[ARCMSR_FW_DEVMAP_OFFSET]);
-			for (target= 0; target < 4; target++) 
-			{
-            	deviceMapCurrent[target]=bus_space_read_4(acb->btag[1], acb->bhandle[1],  devicemap);
-            	devicemap += 4;
-			}
-			break;
-
-	case ACB_ADAPTER_TYPE_C:
-			devicemap = offsetof(struct HBC_MessageUnit, msgcode_rwbuffer[ARCMSR_FW_DEVMAP_OFFSET]);
-			for (target= 0; target < 4; target++) 
-			{
-            	deviceMapCurrent[target]=bus_space_read_4(acb->btag[0], acb->bhandle[0],  devicemap);
-            	devicemap += 4;
-			}
-			break;
-	}
-		if(acb->acb_flags & ACB_F_BUS_HANG_ON)
-		{
-			acb->acb_flags &= ~ACB_F_BUS_HANG_ON;
-		}
-		/* 
-		** adapter posted CONFIG message 
-		** copy the new map, note if there are differences with the current map
-		*/
-		pDevMap = (u_int8_t	*)&deviceMapCurrent[0];
-		for (target= 0; target < ARCMSR_MAX_TARGETID - 1; target++) 
-		{
-			if (*pDevMap != acb->device_map[target])
-			{
-                u_int8_t difference, bit_check;
-
-                difference= *pDevMap ^ acb->device_map[target];
-                for(lun=0; lun < ARCMSR_MAX_TARGETLUN; lun++)
-                {
-                    bit_check=(1 << lun);						/*check bit from 0....31*/
-                    if(difference & bit_check)
-                    {
-                        if(acb->device_map[target] & bit_check)
-                        {/* unit departed */
-							printf("arcmsr_dr_handle: Target=%x, lun=%x, GONE!!!\n",target,lun);
- 							arcmsr_abort_dr_ccbs(acb, target, lun);
-                        	arcmsr_rescan_lun(acb, target, lun);
-        					acb->devstate[target][lun] = ARECA_RAID_GONE;
-                        }
-                        else
-                        {/* unit arrived */
-							printf("arcmsr_dr_handle: Target=%x, lun=%x, ARRIVING!!!\n",target,lun);
-                        	arcmsr_rescan_lun(acb, target, lun);
-        					acb->devstate[target][lun] = ARECA_RAID_GOOD;
-                        }
-                    }
-                }
-/*				printf("arcmsr_dr_handle: acb->device_map[%x]=0x%x, deviceMapCurrent[%x]=%x\n",target,acb->device_map[target],target,*pDevMap); */
-				acb->device_map[target]= *pDevMap;
-			}
-			pDevMap++;
-		}
-}
-/*
-**************************************************************************
-**************************************************************************
-*/
-static void arcmsr_hba_message_isr(struct AdapterControlBlock *acb) {
-	u_int32_t outbound_message;
-
-	CHIP_REG_WRITE32(HBA_MessageUnit, 0, outbound_intstatus, ARCMSR_MU_OUTBOUND_MESSAGE0_INT);
-	outbound_message = CHIP_REG_READ32(HBA_MessageUnit, 0, msgcode_rwbuffer[0]);
-	if (outbound_message == ARCMSR_SIGNATURE_GET_CONFIG)
-		arcmsr_dr_handle( acb );
-}
-/*
-**************************************************************************
-**************************************************************************
-*/
-static void arcmsr_hbb_message_isr(struct AdapterControlBlock *acb) {
-	u_int32_t outbound_message;
-
-	/* clear interrupts */
-	CHIP_REG_WRITE32(HBB_DOORBELL, 0, iop2drv_doorbell, ARCMSR_MESSAGE_INT_CLEAR_PATTERN);
-	outbound_message = CHIP_REG_READ32(HBB_RWBUFFER, 1, msgcode_rwbuffer[0]);
-	if (outbound_message == ARCMSR_SIGNATURE_GET_CONFIG)
-		arcmsr_dr_handle( acb );
-}
-/*
-**************************************************************************
-**************************************************************************
-*/
-static void arcmsr_hbc_message_isr(struct AdapterControlBlock *acb) {
-	u_int32_t outbound_message;
-
-	CHIP_REG_WRITE32(HBC_MessageUnit, 0, outbound_doorbell_clear, ARCMSR_HBCMU_IOP2DRV_MESSAGE_CMD_DONE_DOORBELL_CLEAR);
-	outbound_message = CHIP_REG_READ32(HBC_MessageUnit, 0, msgcode_rwbuffer[0]);
-	if (outbound_message == ARCMSR_SIGNATURE_GET_CONFIG)
-		arcmsr_dr_handle( acb );
-}
-/*
-**************************************************************************
-**************************************************************************
-*/
-static void arcmsr_hba_doorbell_isr(struct AdapterControlBlock *acb)
-{
-	u_int32_t outbound_doorbell;
-	
-	/*
-	*******************************************************************
-	**  Maybe here we need to check wrqbuffer_lock is lock or not
-	**  DOORBELL: din! don! 
-	**  check if there are any mail need to pack from firmware
-	*******************************************************************
-	*/
-	outbound_doorbell=CHIP_REG_READ32(HBA_MessageUnit, 
-	0, outbound_doorbell);
-	CHIP_REG_WRITE32(HBA_MessageUnit, 
-	0, outbound_doorbell, outbound_doorbell); /* clear doorbell interrupt */
-	if(outbound_doorbell & ARCMSR_OUTBOUND_IOP331_DATA_WRITE_OK) {
-		arcmsr_iop2drv_data_wrote_handle(acb);
-	}
-	if(outbound_doorbell & ARCMSR_OUTBOUND_IOP331_DATA_READ_OK) {
-		arcmsr_iop2drv_data_read_handle(acb);
-	}
-	return;
-}
-
-static void arcmsr_rescanLun_cb(struct cam_periph *periph, union ccb *ccb)
-{
-/*
-	if (ccb->ccb_h.status != CAM_REQ_CMP)
-		printf("arcmsr_rescanLun_cb: Rescan Target=%x, lun=%x, failure status=%x\n",ccb->ccb_h.target_id,ccb->ccb_h.target_lun,ccb->ccb_h.status);
-	else
-		printf("arcmsr_rescanLun_cb: Rescan lun successfully!\n");
-*/
-	xpt_free_path(ccb->ccb_h.path);
-	xpt_free_ccb(ccb);
-}
-
-static void	arcmsr_rescan_lun(struct AdapterControlBlock *acb, int target, int lun)
-{
-	struct cam_path     *path;
-	union ccb           *ccb;
-
-	if ((ccb = (union ccb *)xpt_alloc_ccb_nowait()) == NULL)
- 		return;
-	if (xpt_create_path(&path, xpt_periph, cam_sim_path(acb->psim), target, lun) != CAM_REQ_CMP)
-	{
-		xpt_free_ccb(ccb);
-		return;
-	}
-/*	printf("arcmsr_rescan_lun: Rescan Target=%x, Lun=%x\n", target, lun); */
-	bzero(ccb, sizeof(union ccb));
-	xpt_setup_ccb(&ccb->ccb_h, path, 5);
-	ccb->ccb_h.func_code = XPT_SCAN_LUN;
-	ccb->ccb_h.cbfcnp = arcmsr_rescanLun_cb;
-	ccb->crcn.flags = CAM_FLAG_NONE;
-	xpt_action(ccb);
-	return;
-}
-
-
-static void arcmsr_abort_dr_ccbs(struct AdapterControlBlock *acb, int target, int lun)
-{
-   	struct CommandControlBlock *srb;
-	u_int32_t intmask_org;
-   	int i;
-
-	ARCMSR_LOCK_ACQUIRE(&acb->qbuffer_lock);
-	/* disable all outbound interrupts */
-	intmask_org = arcmsr_disable_allintr(acb);
-	for (i = 0; i < ARCMSR_MAX_FREESRB_NUM; i++)
-	{
-		srb = acb->psrb_pool[i];
 		if (srb->srb_state == ARCMSR_SRB_START)
 		{
            	if((target == srb->pccb->ccb_h.target_id) && (lun == srb->pccb->ccb_h.target_lun))
@@ -1780,7 +1571,7 @@ static void arcmsr_hbc_message_isr(struct AdapterControlBlock *acb) {
 **************************************************************************
 **************************************************************************
 */
-static void arcmsr_hbc_doorbell_isr(struct AdapterControlBlock *acb)
+static void arcmsr_hba_doorbell_isr(struct AdapterControlBlock *acb)
 {
 	u_int32_t outbound_doorbell;
 	
@@ -1791,16 +1582,15 @@ static void arcmsr_hbc_doorbell_isr(struct AdapterControlBlock *acb)
 	**  check if there are any mail need to pack from firmware
 	*******************************************************************
 	*/
-	outbound_doorbell=CHIP_REG_READ32(HBC_MessageUnit, 0, outbound_doorbell);
-	CHIP_REG_WRITE32(HBC_MessageUnit, 0, outbound_doorbell_clear, outbound_doorbell); /* clear doorbell interrupt */
-	if(outbound_doorbell & ARCMSR_HBCMU_IOP2DRV_DATA_WRITE_OK) {
+	outbound_doorbell=CHIP_REG_READ32(HBA_MessageUnit, 
+	0, outbound_doorbell);
+	CHIP_REG_WRITE32(HBA_MessageUnit, 
+	0, outbound_doorbell, outbound_doorbell); /* clear doorbell interrupt */
+	if(outbound_doorbell & ARCMSR_OUTBOUND_IOP331_DATA_WRITE_OK) {
 		arcmsr_iop2drv_data_wrote_handle(acb);
 	}
-	if(outbound_doorbell & ARCMSR_HBCMU_IOP2DRV_DATA_READ_OK) {
+	if(outbound_doorbell & ARCMSR_OUTBOUND_IOP331_DATA_READ_OK) {
 		arcmsr_iop2drv_data_read_handle(acb);
-	}
-	if(outbound_doorbell & ARCMSR_HBCMU_IOP2DRV_MESSAGE_CMD_DONE) {
-		arcmsr_hbc_message_isr(acb);    /* messenger of "driver to iop commands" */
 	}
 	return;
 }
@@ -1977,39 +1767,6 @@ static void arcmsr_handle_hbb_isr( struct AdapterControlBlock *acb)
 	/* MU post queue interrupts*/
 	if(outbound_doorbell & ARCMSR_IOP2DRV_CDB_DONE) {
 		arcmsr_hbb_postqueue_isr(acb);
-	}
-	if(outbound_doorbell & ARCMSR_IOP2DRV_MESSAGE_CMD_DONE) {
-		arcmsr_hbb_message_isr(acb);
-	}
-	if(outbound_intstatus & ARCMSR_MU_OUTBOUND_MESSAGE0_INT) {
-		arcmsr_hba_message_isr(acb);
-	}
-	return;
-}
-/*
-**********************************************************************
-**********************************************************************
-*/
-static void arcmsr_handle_hbc_isr( struct AdapterControlBlock *acb)
-{
-	u_int32_t host_interrupt_status;
-	/*
-	*********************************************
-	**   check outbound intstatus 
-	*********************************************
-	*/
-	host_interrupt_status=CHIP_REG_READ32(HBC_MessageUnit, 0, host_int_status);
-	if(!host_interrupt_status) {
-		/*it must be share irq*/
-		return;
-	}
-	/* MU doorbell interrupts*/
-	if(host_interrupt_status & ARCMSR_HBCMU_OUTBOUND_DOORBELL_ISR) {
-		arcmsr_hbc_doorbell_isr(acb);
-	}
-	/* MU post queue interrupts*/
-	if(host_interrupt_status & ARCMSR_HBCMU_OUTBOUND_POSTQUEUE_ISR) {
-		arcmsr_hbc_postqueue_isr(acb);
 	}
 	if(outbound_doorbell & ARCMSR_IOP2DRV_MESSAGE_CMD_DONE) {
 		arcmsr_hbb_message_isr(acb);
@@ -2627,9 +2384,6 @@ static void arcmsr_execute_srb(void *arg, bus_dma_segment_t *dm_segs, int nseg, 
 	}
 	pccb->ccb_h.status |= CAM_SIM_QUEUED;
 	arcmsr_build_srb(srb, dm_segs, nseg);
-/*	if (pccb->ccb_h.timeout != CAM_TIME_INFINITY)
-		callout_reset(&srb->ccb_callout, (pccb->ccb_h.timeout * hz) / 1000, arcmsr_srb_timeout, srb);
-*/
 	arcmsr_post_srb(acb, srb);
 	if (pccb->ccb_h.timeout != CAM_TIME_INFINITY)
 	{
