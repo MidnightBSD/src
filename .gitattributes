@@ -8890,6 +8890,7 @@ contrib/gcc4/config/i386/emmintrin.h -text
 contrib/gcc4/config/i386/freebsd.h -text
 contrib/gcc4/config/i386/freebsd64.h -text
 contrib/gcc4/config/i386/gas.h -text
+contrib/gcc4/config/i386/geode.md -text
 contrib/gcc4/config/i386/gmm_malloc.h -text
 contrib/gcc4/config/i386/gmon-sol2.c -text
 contrib/gcc4/config/i386/gnu.h -text
