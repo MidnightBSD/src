@@ -19,24 +19,26 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
-/* $FreeBSD: src/contrib/gcc/config/sparc/freebsd.h,v 1.10 2007/05/19 02:30:20 kan Exp $ */
+/* $FreeBSD$ */
 
 #undef  SUBTARGET_EXTRA_SPECS
 #define SUBTARGET_EXTRA_SPECS \
   { "fbsd_dynamic_linker", FBSD_DYNAMIC_LINKER }
 
 /* FreeBSD needs the platform name (sparc64) defined.
-   Emacs needs to know if the arch is 64 or 32-bits.  */
-
-#undef  CPP_CPU64_DEFAULT_SPEC
-#define CPP_CPU64_DEFAULT_SPEC \
-  "-D__sparc64__ -D__sparc_v9__ -D__sparcv9 -D__sparc__ -D__arch64__"
+   Emacs needs to know if the arch is 64 or 32-bits.
+   This also selects which targets are available via -mcpu.  */
 
 #undef  FBSD_TARGET_CPU_CPP_BUILTINS
 #define FBSD_TARGET_CPU_CPP_BUILTINS()		\
   do						\
     {						\
       builtin_define ("__LP64__");		\
+      builtin_define ("__sparc64__");		\
+      builtin_define ("__sparc_v9__");		\
+      builtin_define ("__sparcv9");		\
+      builtin_define ("__sparc__");		\
+      builtin_define ("__arch64__");		\
     }						\
   while (0)
 
@@ -158,6 +160,13 @@ Boston, MA 02110-1301, USA.  */
    RELATIVE relocations.  */
 
 /* #define DWARF_OFFSET_SIZE PTR_SIZE */
+
+#ifdef HAVE_AS_TLS
+#undef TARGET_SUN_TLS
+#undef TARGET_GNU_TLS
+#define TARGET_SUN_TLS 0
+#define TARGET_GNU_TLS 1
+#endif
 
 #undef ENDFILE_SPEC
 #define ENDFILE_SPEC						\

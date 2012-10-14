@@ -26,7 +26,7 @@ Boston, MA 02110-1301, USA.  */
    Further work by David O'Brien <obrien@FreeBSD.org> and
    Loren J. Rittle <ljrittle@acm.org>.  */
 
-/* $FreeBSD: src/contrib/gcc/config/freebsd.h,v 1.41 2007/05/19 02:30:20 kan Exp $ */
+/* $FreeBSD$ */
 
 /* In case we need to know.  */
 #define USING_CONFIG_FREEBSD 1
@@ -63,15 +63,26 @@ Boston, MA 02110-1301, USA.  */
 /* All FreeBSD Architectures support the ELF object file format.  */
 #undef  OBJECT_FORMAT_ELF
 #define OBJECT_FORMAT_ELF	1
+#define TARGET_ELF		1
 
 /* Don't assume anything about the header files.  */
 #undef  NO_IMPLICIT_EXTERN_C
 #define NO_IMPLICIT_EXTERN_C	1
 
 /* Make gcc agree with FreeBSD's standard headers (<machine/ansi.h>, etc...)  */
+#undef  SIZE_TYPE
+#define SIZE_TYPE FBSD_SIZE_TYPE
+#undef  PTRDIFF_TYPE
+#define PTRDIFF_TYPE FBSD_PTRDIFF_TYPE
 
 #undef  WCHAR_TYPE
 #define WCHAR_TYPE "int"
+#undef  WCHAR_TYPE_SIZE
+#define WCHAR_TYPE_SIZE 32
+#undef  WINT_TYPE
+#define WINT_TYPE "int"
+#undef  WINT_TYPE_SIZE
+#define WINT_TYPE_SIZE 32
 
 #ifdef FREEBSD_NATIVE
 #define LIBSTDCXX_PROFILE       "-lstdc++_p"
@@ -91,6 +102,6 @@ Boston, MA 02110-1301, USA.  */
 #undef NO_DOLLAR_IN_LABEL
 
 /* Define this so we can compile MS code for use with WINE.  */
-#define HANDLE_PRAGMA_PACK_PUSH_POP
+#define HANDLE_PRAGMA_PACK_PUSH_POP 1
 
 #define TARGET_POSIX_IO

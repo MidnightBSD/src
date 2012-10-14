@@ -16,9 +16,9 @@ any of these features is used.)  To test for the availability of these
 features in conditional compilation, check for a predefined macro
 @code{__GNUC__}, which is always defined under GCC@.
 
-These extensions are available in C and Objective-C@.  Most of them are
-also available in C++.  @xref{C++ Extensions,,Extensions to the
-C++ Language}, for extensions that apply @emph{only} to C++.
+These extensions are available in C.  Most of them are also available
+in C++.  @xref{C++ Extensions,,Extensions to the C++ Language}, for
+extensions that apply @emph{only} to C++.
 
 Some features that are in ISO C99 but not C89 or C++ are also, as
 extensions, accepted by GCC in C89 mode and in C++.
@@ -1716,8 +1716,6 @@ been called.  Functions with these attributes are useful for
 initializing data that will be used implicitly during the execution of
 the program.
 
-These attributes are not currently implemented for Objective-C@.
-
 @item deprecated
 @cindex @code{deprecated} attribute.
 The @code{deprecated} attribute results in a warning if the function
@@ -2605,9 +2603,9 @@ Preprocessing Directives, cpp, The GNU C Preprocessor}.
 
 This section describes the syntax with which @code{__attribute__} may be
 used, and the constructs to which attribute specifiers bind, for the C
-language.  Some details may vary for C++ and Objective-C@.  Because of
-infelicities in the grammar for attributes, some forms described here
-may not be successfully parsed in all cases.
+language.  Some details may vary for C++.  Because of infelicities in
+the grammar for attributes, some forms described here may not be
+successfully parsed in all cases.
 
 There are some problems with the semantics of attributes in C++.  For
 example, there are no manglings for attributes, although they may affect
@@ -3829,33 +3827,45 @@ These attributes mainly are intended to support the @code{__vector},
 @cindex open coding
 @cindex macros, inline alternative
 
-By declaring a function @code{inline}, you can direct GCC to
+By declaring a function inline, you can direct GCC to make
+calls to that function faster.  One way GCC can achieve this is to
 integrate that function's code into the code for its callers.  This
 makes execution faster by eliminating the function-call overhead; in
-addition, if any of the actual argument values are constant, their known
-values may permit simplifications at compile time so that not all of the
-inline function's code needs to be included.  The effect on code size is
-less predictable; object code may be larger or smaller with function
-inlining, depending on the particular case.  Inlining of functions is an
-optimization and it really ``works'' only in optimizing compilation.  If
-you don't use @option{-O}, no function is really inline.
+addition, if any of the actual argument values are constant, their
+known values may permit simplifications at compile time so that not
+all of the inline function's code needs to be included.  The effect on
+code size is less predictable; object code may be larger or smaller
+with function inlining, depending on the particular case.  You can
+also direct GCC to try to integrate all ``simple enough'' functions
+into their callers with the option @option{-finline-functions}.
 
-Inline functions are included in the ISO C99 standard, but there are
-currently substantial differences between what GCC implements and what
-the ISO C99 standard requires.  GCC will fully support C99 inline
-functions in version 4.3.  The traditional GCC handling of inline
-functions will still be available with @option{-std=gnu89},
-@option{-fgnu89-inline} or when @code{gnu_inline} attribute is present
-on all inline declarations.  The preprocessor macros
-@code{__GNUC_GNU_INLINE__} and @code{__GNUC_STDC_INLINE__} may be used
-to determine the handling of @code{inline} during a particular
-compilation (@pxref{Common Predefined Macros,,,cpp,The C
-Preprocessor}).
+GCC implements three different semantics of declaring a function
+inline.  One is available with @option{-std=gnu89}, another when
+@option{-std=c99} or @option{-std=gnu99}, and the third is used when
+compiling C++.
 
 To declare a function inline, use the @code{inline} keyword in its
 declaration, like this:
 
 @smallexample
+static inline int
+inc (int *a)
+@{
+  (*a)++;
+@}
+@end smallexample
+
+If you are writing a header file to be included in ISO C89 programs, write
+@code{__inline__} instead of @code{inline}.  @xref{Alternate Keywords}.
+
+The three types of inlining behave similarly in two important cases:
+when the @code{inline} keyword is used on a @code{static} function,
+like the example above, and when a function is first declared without
+using the @code{inline} keyword and then is defined with
+@code{inline}, like this:
+
+@smallexample
+extern int inc (int *a);
 inline int
 inc (int *a)
 @{
@@ -3863,32 +3873,8 @@ inc (int *a)
 @}
 @end smallexample
 
-(If you are writing a header file to be included in ISO C programs, write
-@code{__inline__} instead of @code{inline}.  @xref{Alternate Keywords}.)
-You can also make all ``simple enough'' functions inline with the option
-@option{-finline-functions}.
-
-@opindex Winline
-Note that certain usages in a function definition can make it unsuitable
-for inline substitution.  Among these usages are: use of varargs, use of
-alloca, use of variable sized data types (@pxref{Variable Length}),
-use of computed goto (@pxref{Labels as Values}), use of nonlocal goto,
-and nested functions (@pxref{Nested Functions}).  Using @option{-Winline}
-will warn when a function marked @code{inline} could not be substituted,
-and will give the reason for the failure.
-
-Note that in C and Objective-C, unlike C++, the @code{inline} keyword
-does not affect the linkage of the function.
-
-@cindex automatic @code{inline} for C++ member fns
-@cindex @code{inline} automatic for C++ member fns
-@cindex member fns, automatically @code{inline}
-@cindex C++ member fns, automatically @code{inline}
-@opindex fno-default-inline
-GCC automatically inlines member functions defined within the class
-body of C++ programs even if they are not explicitly declared
-@code{inline}.  (You can override this with @option{-fno-default-inline};
-@pxref{C++ Dialect Options,,Options Controlling C++ Dialect}.)
+In both of these common cases, the program behaves the same as if you
+had not used the @code{inline} keyword, except for its speed.
 
 @cindex inline functions, omission of
 @opindex fkeep-inline-functions
@@ -3903,6 +3889,27 @@ neither can recursive calls within the definition).  If there is a
 nonintegrated call, then the function is compiled to assembler code as
 usual.  The function must also be compiled as usual if the program
 refers to its address, because that can't be inlined.
+
+@cindex automatic @code{inline} for C++ member fns
+@cindex @code{inline} automatic for C++ member fns
+@cindex member fns, automatically @code{inline}
+@cindex C++ member fns, automatically @code{inline}
+@opindex fno-default-inline
+As required by ISO C++, GCC considers member functions defined within
+the body of a class to be marked inline even if they are
+not explicitly declared with the @code{inline} keyword.  You can
+override this with @option{-fno-default-inline}; @pxref{C++ Dialect
+Options,,Options Controlling C++ Dialect}.
+
+GCC does not inline any functions when not optimizing unless you specify
+the @samp{always_inline} attribute for the function, like this:
+
+@smallexample
+/* @r{Prototype.}  */
+inline void foo (const char) __attribute__((always_inline));
+@end smallexample
+
+The remainder of this section is specific to GNU C89 inlining.
 
 @cindex non-static inline function
 When an inline function is not @code{static}, then the compiler must assume
@@ -3925,24 +3932,6 @@ definition (lacking @code{inline} and @code{extern}) in a library file.
 The definition in the header file will cause most calls to the function
 to be inlined.  If any uses of the function remain, they will refer to
 the single copy in the library.
-
-Since GCC 4.3 will implement ISO C99 semantics for
-inline functions, it is simplest to use @code{static inline} only
-to guarantee compatibility.  (The
-existing semantics will remain available when @option{-std=gnu89} is
-specified, but eventually the default will be @option{-std=gnu99};
-that will implement the C99 semantics, though it does not do so in
-versions of GCC before 4.3.  After the default changes, the existing
-semantics will still be available via the @option{-fgnu89-inline}
-option or the @code{gnu_inline} function attribute.)
-
-GCC does not inline any functions when not optimizing unless you specify
-the @samp{always_inline} attribute for the function, like this:
-
-@smallexample
-/* @r{Prototype.}  */
-inline void foo (const char) __attribute__((always_inline));
-@end smallexample
 
 @node Extended Asm
 @section Assembler Instructions with C Expression Operands
@@ -7220,6 +7209,52 @@ The following built-in functions are available when @option{-msse3} is used.
 Generates the @code{movddup} machine instruction as a load from memory.
 @end table
 
+The following built-in functions are available when @option{-mssse3} is used.
+All of them generate the machine instruction that is part of the name
+with MMX registers.
+
+@smallexample
+v2si __builtin_ia32_phaddd (v2si, v2si)
+v4hi __builtin_ia32_phaddw (v4hi, v4hi)
+v4hi __builtin_ia32_phaddsw (v4hi, v4hi)
+v2si __builtin_ia32_phsubd (v2si, v2si)
+v4hi __builtin_ia32_phsubw (v4hi, v4hi)
+v4hi __builtin_ia32_phsubsw (v4hi, v4hi)
+v8qi __builtin_ia32_pmaddubsw (v8qi, v8qi)
+v4hi __builtin_ia32_pmulhrsw (v4hi, v4hi)
+v8qi __builtin_ia32_pshufb (v8qi, v8qi)
+v8qi __builtin_ia32_psignb (v8qi, v8qi)
+v2si __builtin_ia32_psignd (v2si, v2si)
+v4hi __builtin_ia32_psignw (v4hi, v4hi)
+long long __builtin_ia32_palignr (long long, long long, int)
+v8qi __builtin_ia32_pabsb (v8qi)
+v2si __builtin_ia32_pabsd (v2si)
+v4hi __builtin_ia32_pabsw (v4hi)
+@end smallexample
+
+The following built-in functions are available when @option{-mssse3} is used.
+All of them generate the machine instruction that is part of the name
+with SSE registers.
+
+@smallexample
+v4si __builtin_ia32_phaddd128 (v4si, v4si)
+v8hi __builtin_ia32_phaddw128 (v8hi, v8hi)
+v8hi __builtin_ia32_phaddsw128 (v8hi, v8hi)
+v4si __builtin_ia32_phsubd128 (v4si, v4si)
+v8hi __builtin_ia32_phsubw128 (v8hi, v8hi)
+v8hi __builtin_ia32_phsubsw128 (v8hi, v8hi)
+v16qi __builtin_ia32_pmaddubsw128 (v16qi, v16qi)
+v8hi __builtin_ia32_pmulhrsw128 (v8hi, v8hi)
+v16qi __builtin_ia32_pshufb128 (v16qi, v16qi)
+v16qi __builtin_ia32_psignb128 (v16qi, v16qi)
+v4si __builtin_ia32_psignd128 (v4si, v4si)
+v8hi __builtin_ia32_psignw128 (v8hi, v8hi)
+v2di __builtin_ia32_palignr (v2di, v2di, int)
+v16qi __builtin_ia32_pabsb128 (v16qi)
+v4si __builtin_ia32_pabsd128 (v4si)
+v8hi __builtin_ia32_pabsw128 (v8hi)
+@end smallexample
+
 The following built-in functions are available when @option{-m3dnow} is used.
 All of them generate the machine instruction that is part of the name.
 
@@ -9859,9 +9894,8 @@ The Solaris target supports @code{#pragma redefine_extname}
 Increase the minimum alignment of each @var{variable} to @var{alignment}.
 This is the same as GCC's @code{aligned} attribute @pxref{Variable
 Attributes}).  Macro expansion occurs on the arguments to this pragma
-when compiling C and Objective-C.  It does not currently occur when
-compiling C++, but this is a bug which may be fixed in a future
-release.
+when compiling C.  It does not currently occur when compiling C++, but
+this is a bug which may be fixed in a future release.
 
 @item fini (@var{function} [, @var{function}]...)
 @cindex pragma, fini

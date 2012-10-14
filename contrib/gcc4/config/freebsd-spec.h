@@ -18,7 +18,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
-/* $FreeBSD: src/contrib/gcc/config/freebsd-spec.h,v 1.23 2007/05/19 02:30:20 kan Exp $ */
+/* $FreeBSD$ */
 
 /* Common FreeBSD configuration. 
    All FreeBSD architectures should include this file, which will specify
@@ -56,7 +56,8 @@ Boston, MA 02110-1301, USA.  */
 	builtin_define_with_int_value ("__MidnightBSD__", 1);		\
 	builtin_define_with_int_value ("__FreeBSD__", FBSD_MAJOR);	\
 	builtin_define_std ("unix");					\
-	builtin_define ("__KPRINTF_ATTRIBUTE__");		       	\
+	builtin_define_std ("__unix__");				\
+	builtin_define ("__KPRINTF_ATTRIBUTE__");			\
 	builtin_assert ("system=unix");					\
 	builtin_assert ("system=bsd");					\
 	builtin_assert ("system=FreeBSD");				\
@@ -104,9 +105,10 @@ Boston, MA 02110-1301, USA.  */
       %{p:gcrt1.o%s} \
       %{!p: \
 	%{profile:gcrt1.o%s} \
-	%{!profile:crt1.o%s}}}} \
+	%{!profile: \
+          %{pie: Scrt1.o%s;:crt1.o%s}}}}} \
   crti.o%s \
-  %{static:crtbeginT.o%s;shared:crtbeginS.o%s;:crtbegin.o%s}"
+  %{static:crtbeginT.o%s;shared|pie:crtbeginS.o%s;:crtbegin.o%s}"
 
 /* Provide an ENDFILE_SPEC appropriate for FreeBSD/i386.  Here we tack on
    our own magical crtend.o file (see crtstuff.c) which provides part of
@@ -114,8 +116,7 @@ Boston, MA 02110-1301, USA.  */
    entering `main', followed by the normal "finalizer" file, `crtn.o'.  */
 
 #define FBSD_ENDFILE_SPEC "\
-  %{!shared:crtend.o%s} \
-  %{shared:crtendS.o%s} \
+  %{shared|pie:crtendS.o%s;:crtend.o%s} \
   crtn.o%s "
 
 /* Provide a LIB_SPEC appropriate for FreeBSD as configured and as
@@ -159,6 +160,7 @@ is built with the --enable-threads configure-time option.}		\
     %{pg:  %{pthread:-lpthread_p} -lc_p}}				\
   %{shared:								\
     %{pthread:-lpthread} -lc}						\
+  %{fstack-protector|fstack-protector-all:-lssp_nonshared}		\
   "
 #endif
 #endif
@@ -173,3 +175,8 @@ is built with the --enable-threads configure-time option.}		\
 #ifdef HAVE_LD_AS_NEEDED
 #define USE_LD_AS_NEEDED 1
 #endif
+
+#define FBSD_SIZE_TYPE \
+	(POINTER_SIZE == 64 ? "long unsigned int" : "unsigned int")
+#define FBSD_PTRDIFF_TYPE \
+	(POINTER_SIZE == 64 ? "long int" : "int")

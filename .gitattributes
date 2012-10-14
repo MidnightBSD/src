@@ -8841,6 +8841,14 @@ contrib/gcc4/config/dfp-bit.c -text
 contrib/gcc4/config/dfp-bit.h -text
 contrib/gcc4/config/divmod.c -text
 contrib/gcc4/config/elfos.h -text
+contrib/gcc4/config/fixdfdi.c -text
+contrib/gcc4/config/fixsfdi.c -text
+contrib/gcc4/config/fixunsdfsi.c -text
+contrib/gcc4/config/fixunssfsi.c -text
+contrib/gcc4/config/floatdidf.c -text
+contrib/gcc4/config/floatdisf.c -text
+contrib/gcc4/config/floatundidf.c -text
+contrib/gcc4/config/floatundisf.c -text
 contrib/gcc4/config/floatunsidf.c -text
 contrib/gcc4/config/floatunsisf.c -text
 contrib/gcc4/config/floatunsitf.c -text
