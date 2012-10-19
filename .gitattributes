@@ -34974,6 +34974,7 @@ lib/libc/gen/alarm.c -text
 lib/libc/gen/arc4random.3 -text
 lib/libc/gen/arc4random.c -text
 lib/libc/gen/assert.c -text
+lib/libc/gen/aux.c -text
 lib/libc/gen/basename.3 -text
 lib/libc/gen/basename.c -text
 lib/libc/gen/check_utility_compat.3 -text
