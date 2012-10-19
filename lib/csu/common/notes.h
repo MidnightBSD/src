@@ -1,5 +1,5 @@
 /*-
- * Copyright 1996, 1997, 1998, 2000 John D. Polstra.
+ * Copyright 2012 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -21,17 +21,18 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $MidnightBSD$
  */
 
-	.section .init,"ax",@progbits
-	addq	$8,%rsp
-	ret
+#ifndef	CSU_COMMON_NOTES_H
+#define	CSU_COMMON_NOTES_H
 
-	.section .fini,"ax",@progbits
-	addq	$8,%rsp
-	ret
+#define NOTE_MIDNIGHTBSD_VENDOR	"MidnightBSD"
 
-	.section .note.GNU-stack,"",%progbits
+#define NOTE_SECTION		".note.tag"
 
-	.section .rodata
-.ascii "$MidnightBSD: src/lib/csu/amd64/crtn.S,v 1.2 2008/05/16 18:43:29 laffer1 Exp $\0"
+#define ABI_NOTETYPE		1
+#define	CRT_NOINIT_NOTETYPE	2
+
+#endif

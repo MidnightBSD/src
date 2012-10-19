@@ -37,6 +37,7 @@ _init:
 _fini:
 	sub	$12,%esp	/* re-align stack pointer */
 
+	.section .note.GNU-stack,"",%progbits
+
 	.section .rodata
-.ascii "$MidnightBSD$\0"
-.ascii "$FreeBSD: src/lib/csu/i386-elf/crti.S,v 1.7 2005/05/19 07:31:06 dfr Exp $\0"
+.ascii "$MidnightBSD: src/lib/csu/i386-elf/crti.S,v 1.2 2008/05/16 18:43:29 laffer1 Exp $\0"

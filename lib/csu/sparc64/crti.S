@@ -55,5 +55,4 @@ _fini:
 
 
 	.section .rodata
-.ascii "$MidnightBSD$\0"
-.ascii "$FreeBSD: src/lib/csu/sparc64/crti.S,v 1.1 2001/10/28 00:20:34 obrien Exp $\0"
+.ascii "$MidnightBSD: src/lib/csu/sparc64/crti.S,v 1.2 2008/05/16 18:43:29 laffer1 Exp $\0"

@@ -39,5 +39,4 @@ _fini:
 
 	.section .rodata
 
-.ascii "$MidnightBSD$\0"
-.ascii "$FreeBSD: src/lib/csu/amd64/crti.S,v 1.7 2004/03/21 01:39:01 peter Exp $\0"
+.ascii "$MidnightBSD: src/lib/csu/amd64/crti.S,v 1.2 2008/05/16 18:43:29 laffer1 Exp $\0"
