@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/csu/i386-elf/crt1_s.S,v 1.1 2011/12/18 02:23:42 laffer1 Exp $
  * $FreeBSD: src/lib/csu/i386-elf/crt1_s.S,v 1.1.4.3 2011/01/16 10:47:35 kib Exp $
  */
 
@@ -31,9 +31,14 @@
 	.align	4
 	.globl	_start
 	.type	_start, @function
-_start:	xorl	%ebp,%ebp
+_start:
+	.cfi_startproc
+	xorl	%ebp,%ebp
 	pushl	%ebp
+	.cfi_def_cfa_offset 4
 	movl	%esp,%ebp
+	.cfi_offset %ebp,-8
+	.cfi_def_cfa_register %ebp
 	andl	$0xfffffff0,%esp # align stack
 	leal	8(%ebp),%eax
 	subl	$4,%esp
@@ -41,6 +46,10 @@ _start:	xorl	%ebp,%ebp
 	pushl	4(%ebp)		# argc
 	pushl	%edx		# rtld cleanup
 	call	_start1
+	int3
+	.cfi_endproc
 	.size	_start, . - _start
 
-	.ident	"$MidnightBSD$"
+	.section .note.GNU-stack,"",%progbits
+
+	.ident	"$MidnightBSD: src/lib/csu/i386-elf/crt1_s.S,v 1.1 2011/12/18 02:23:42 laffer1 Exp $"
