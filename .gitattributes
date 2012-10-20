@@ -35002,6 +35002,7 @@ lib/libc/gen/dlinfo.3 -text
 lib/libc/gen/dllockinit.3 -text
 lib/libc/gen/dlopen.3 -text
 lib/libc/gen/drand48.c -text
+lib/libc/gen/elf_utils.c -text
 lib/libc/gen/erand48.c -text
 lib/libc/gen/err.3 -text
 lib/libc/gen/err.c -text
