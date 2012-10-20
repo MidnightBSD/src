@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.3 (Berkeley) 3/30/94
- * $FreeBSD: src/include/signal.h,v 1.26 2005/10/16 22:23:03 davidxu Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SIGNAL_H_
@@ -58,11 +54,23 @@ typedef	__pid_t		pid_t;
 #endif
 #endif
 
+#if __POSIX_VISIBLE || __XSI_VISIBLE
+struct pthread;		/* XXX */
+typedef struct pthread *__pthread_t;
+#if !defined(_PTHREAD_T_DECLARED) && __POSIX_VISIBLE >= 200809
+typedef __pthread_t pthread_t;
+#define	_PTHREAD_T_DECLARED
+#endif
+#endif /* __POSIX_VISIBLE || __XSI_VISIBLE */
+
 __BEGIN_DECLS
 int	raise(int);
 
 #if __POSIX_VISIBLE || __XSI_VISIBLE
 int	kill(__pid_t, int);
+int	pthread_kill(__pthread_t, int);
+int	pthread_sigmask(int, const __sigset_t * __restrict,
+	    __sigset_t * __restrict);
 int	sigaction(int, const struct sigaction * __restrict,
 	    struct sigaction * __restrict);
 int	sigaddset(sigset_t *, int);
@@ -88,11 +96,20 @@ int	sigwaitinfo(const sigset_t * __restrict, siginfo_t * __restrict);
 #if __XSI_VISIBLE
 int	killpg(__pid_t, int);
 int	sigaltstack(const stack_t * __restrict, stack_t * __restrict); 
+int	sighold(int);
+int	sigignore(int);
 int	sigpause(int);
+int	sigrelse(int);
+void	(*sigset(int, void (*)(int)))(int);
+int	xsi_sigpause(int);
 #endif
 
-#if __POSIX_VISIBLE >= 200112
+#if __XSI_VISIBLE >= 600
 int	siginterrupt(int, int);
+#endif
+
+#if __POSIX_VISIBLE >= 200809 || __BSD_VISIBLE
+void	psignal(unsigned int, const char *);
 #endif
 
 #if __BSD_VISIBLE
@@ -102,7 +119,6 @@ int	sigreturn(const struct __ucontext *);
 int	sigsetmask(int);
 int	sigstack(const struct sigstack *, struct sigstack *);
 int	sigvec(int, struct sigvec *, struct sigvec *);
-void	psignal(unsigned int, const char *);
 #endif
 __END_DECLS
 

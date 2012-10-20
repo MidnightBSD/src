@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +27,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.12 (Berkeley) 4/27/95
- * $FreeBSD: src/include/unistd.h,v 1.80 2006/12/14 21:42:03 pjd Exp $
  * $MidnightBSD$
  */
 
@@ -79,7 +74,7 @@ typedef	__useconds_t	useconds_t;
 #define	_USECONDS_T_DECLARED
 #endif
 
-#define	 STDIN_FILENO	0	/* standard input file descriptor */
+#define	STDIN_FILENO	0	/* standard input file descriptor */
 #define	STDOUT_FILENO	1	/* standard output file descriptor */
 #define	STDERR_FILENO	2	/* standard error file descriptor */
 
@@ -108,11 +103,11 @@ typedef	__useconds_t	useconds_t;
 #define	_POSIX_READER_WRITER_LOCKS	200112L
 #define	_POSIX_REGEXP			1
 #define	_POSIX_SHELL			1
-#define	_POSIX_SPAWN			-1
+#define	_POSIX_SPAWN			200112L
 #define	_POSIX_SPIN_LOCKS		200112L
 #define	_POSIX_THREAD_ATTR_STACKADDR	200112L
 #define	_POSIX_THREAD_ATTR_STACKSIZE	200112L
-#define	_POSIX_THREAD_CPUTIME		-1
+#define	_POSIX_THREAD_CPUTIME		200112L
 #define	_POSIX_THREAD_PRIO_INHERIT	200112L
 #define	_POSIX_THREAD_PRIO_PROTECT	200112L
 #define	_POSIX_THREAD_PRIORITY_SCHEDULING 200112L
@@ -293,6 +288,7 @@ typedef	__useconds_t	useconds_t;
 #if __BSD_VISIBLE
 #define	_SC_NPROCESSORS_CONF	57
 #define	_SC_NPROCESSORS_ONLN	58
+#define	_SC_CPUSET_SIZE		122
 #endif
 
 /* Extensions found in Solaris and Linux. */
@@ -327,9 +323,9 @@ unsigned int	 alarm(unsigned int);
 int	 chdir(const char *);
 int	 chown(const char *, uid_t, gid_t);
 int	 close(int);
+void	 closefrom(int);
 int	 dup(int);
 int	 dup2(int, int);
-int	 eaccess(const char *, int);
 int	 execl(const char *, const char *, ...);
 int	 execle(const char *, const char *, ...);
 int	 execlp(const char *, const char *, ...);
@@ -361,7 +357,6 @@ ssize_t	 read(int, void *, size_t);
 int	 rmdir(const char *);
 int	 setgid(gid_t);
 int	 setpgid(pid_t, pid_t);
-void	 setproctitle(const char *_fmt, ...) __printf0like(1, 2);
 pid_t	 setsid(void);
 int	 setuid(uid_t);
 unsigned int	 sleep(unsigned int);
@@ -406,13 +401,39 @@ int	 getlogin_r(char *, int);
 /* 1003.1-2001 */
 #if __POSIX_VISIBLE >= 200112 || __XSI_VISIBLE
 int	 fchown(int, uid_t, gid_t);
-int	 readlink(const char *, char *, int);
+ssize_t	 readlink(const char * __restrict, char * __restrict, size_t);
 #endif
 #if __POSIX_VISIBLE >= 200112
 int	 gethostname(char *, size_t);
 int	 setegid(gid_t);
 int	 seteuid(uid_t);
 #endif
+
+/* 1003.1-2008 */
+#if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE
+int	 getsid(pid_t _pid);
+int	 fchdir(int);
+int	 getpgid(pid_t _pid);
+int	 lchown(const char *, uid_t, gid_t);
+ssize_t	 pread(int, void *, size_t, off_t);
+ssize_t	 pwrite(int, const void *, size_t, off_t);
+
+/* See comment at ftruncate() above. */
+#ifndef _TRUNCATE_DECLARED
+#define	_TRUNCATE_DECLARED
+int	 truncate(const char *, off_t);
+#endif
+#endif /* __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE */
+
+#if __POSIX_VISIBLE >= 200809 || __BSD_VISIBLE
+int	faccessat(int, const char *, int, int);
+int	fchownat(int, const char *, uid_t, gid_t, int);
+int	fexecve(int, char *const [], char *const []);
+int	linkat(int, const char *, int, const char *, int);
+ssize_t	readlinkat(int, const char * __restrict, char * __restrict, size_t);
+int	symlinkat(const char *, int, const char *);
+int	unlinkat(int, const char *, int);
+#endif /* __POSIX_VISIBLE >= 200809 || __BSD_VISIBLE */
 
 /*
  * symlink() was originally in POSIX.1a, which was withdrawn after
@@ -428,16 +449,9 @@ int	 symlink(const char * __restrict, const char * __restrict);
 char	*crypt(const char *, const char *);
 /* char	*ctermid(char *); */		/* XXX ??? */
 int	 encrypt(char *, int);
-int	 fchdir(int);
 long	 gethostid(void);
-int	 getpgid(pid_t _pid);
-int	 getsid(pid_t _pid);
-char	*getwd(char *);			/* LEGACY: obsoleted by getcwd() */
-int	 lchown(const char *, uid_t, gid_t);
 int	 lockf(int, int, off_t);
 int	 nice(int);
-ssize_t	 pread(int, void *, size_t, off_t);
-ssize_t	 pwrite(int, const void *, size_t, off_t);
 int	 setpgrp(pid_t _pid, pid_t _pgrp); /* obsoleted by setpgid() */
 int	 setregid(gid_t, gid_t);
 int	 setreuid(uid_t, uid_t);
@@ -448,24 +462,24 @@ void	 swab(const void * __restrict, void * __restrict, ssize_t);
 #endif /* _SWAB_DECLARED */
 
 void	 sync(void);
-useconds_t	 ualarm(useconds_t, useconds_t);
-int	 usleep(useconds_t);
-pid_t	 vfork(void);
 
-/* See comment at ftruncate() above. */
-#ifndef _TRUNCATE_DECLARED
-#define	_TRUNCATE_DECLARED
-int	 truncate(const char *, off_t);
-#endif
 #endif /* __XSI_VISIBLE */
 
-#if __XSI_VISIBLE <= 500 || __BSD_VISIBLE
+#if (__XSI_VISIBLE && __XSI_VISIBLE <= 500) || __BSD_VISIBLE
 int	 brk(const void *);
 int	 chroot(const char *);
 int	 getdtablesize(void);
 int	 getpagesize(void) __pure2;
 char	*getpass(const char *);
 void	*sbrk(intptr_t);
+#endif
+
+#if (__XSI_VISIBLE && __XSI_VISIBLE <= 600) || __BSD_VISIBLE
+char	*getwd(char *);			/* obsoleted by getcwd() */
+useconds_t
+	 ualarm(useconds_t, useconds_t);
+int	 usleep(useconds_t);
+pid_t	 vfork(void) __returns_twice;
 #endif
 
 #if __BSD_VISIBLE
@@ -478,6 +492,7 @@ const char *
 int	 crypt_set_format(const char *);
 int	 des_cipher(const char *, char *, long, int);
 int	 des_setkey(const char *key);
+int	 eaccess(const char *, int);
 void	 endusershell(void);
 int	 exect(const char *, char * const *, char * const *);
 int	 execvP(const char *, const char *, char * const *);
@@ -485,7 +500,9 @@ int	 feature_present(const char *);
 char	*fflagstostr(u_long);
 int	 getdomainname(char *, int);
 int	 getgrouplist(const char *, gid_t, gid_t *, int *);
+int	 getloginclass(char *, size_t);
 mode_t	 getmode(const void *, mode_t);
+int	 getosreldate(void);
 int	 getpeereid(int, uid_t *, gid_t *);
 int	 getresgid(gid_t *, gid_t *, gid_t *);
 int	 getresuid(uid_t *, uid_t *, uid_t *);
@@ -495,7 +512,11 @@ int	 iruserok(unsigned long, int, const char *, const char *);
 int	 iruserok_sa(const void *, int, int, const char *, const char *);
 int	 issetugid(void);
 void	__FreeBSD_libc_enter_restricted_mode(void);
+long	 lpathconf(const char *, int);
+#ifndef _MKDTEMP_DECLARED
 char	*mkdtemp(char *);
+#define	_MKDTEMP_DECLARED
+#endif
 #ifndef	_MKNOD_DECLARED
 int	 mknod(const char *, mode_t, dev_t);
 #define	_MKNOD_DECLARED
@@ -510,6 +531,7 @@ char	*mktemp(char *);
 #define	_MKTEMP_DECLARED
 #endif
 int	 nfssvc(int, void *);
+int	 nlm_syscall(int, int, int, char **);
 int	 profil(char *, size_t, vm_offset_t, int);
 int	 rcmd(char **, int, const char *, const char *, const char *, int *);
 int	 rcmd_af(char **, int, const char *,
@@ -540,7 +562,9 @@ int	 setkey(const char *);
 #define	_SETKEY_DECLARED
 #endif
 int	 setlogin(const char *);
+int	 setloginclass(const char *);
 void	*setmode(const char *);
+void	 setproctitle(const char *_fmt, ...) __printf0like(1, 2);
 int	 setresgid(gid_t, gid_t, gid_t);
 int	 setresuid(uid_t, uid_t, uid_t);
 int	 setrgid(gid_t);
@@ -551,7 +575,6 @@ int	 swapon(const char *);
 int	 swapoff(const char *);
 int	 syscall(int, ...);
 off_t	 __syscall(quad_t, ...);
-int	 ttyslot(void);
 int	 undelete(const char *);
 int	 unwhiteout(const char *);
 void	*valloc(size_t);			/* obsoleted by malloc() */

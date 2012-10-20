@@ -1,7 +1,9 @@
 /*-
- * Copyright (c) 2002,2005 Marcel Moolenaar
- * Copyright (c) 2002 Hiten Mahesh Pandya
+ * Copyright (c) 2011, 2012 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * This software was developed by David Chisnall under sponsorship from
+ * the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,37 +29,57 @@
  * $MidnightBSD$
  */
 
-#ifndef _UUID_H_
-#define	_UUID_H_
+#ifndef _XLOCALE_H_
+#define _XLOCALE_H_
 
-#include <sys/types.h>
-#include <sys/uuid.h>
-
-/*
- * This implementation mostly conforms to the DCE 1.1 specification.
- * See Also:
- *	uuidgen(1), uuidgen(2), uuid(3)
- */
-
-/* Status codes returned by the functions. */
-#define	uuid_s_ok			0
-#define	uuid_s_bad_version		1
-#define	uuid_s_invalid_string_uuid	2
-#define	uuid_s_no_memory		3
-
+#include <locale.h>
 __BEGIN_DECLS
-int32_t	uuid_compare(const uuid_t *, const uuid_t *, uint32_t *);
-void	uuid_create(uuid_t *, uint32_t *);
-void	uuid_create_nil(uuid_t *, uint32_t *);
-int32_t	uuid_equal(const uuid_t *, const uuid_t *, uint32_t *);
-void	uuid_from_string(const char *, uuid_t *, uint32_t *);
-uint16_t uuid_hash(const uuid_t *, uint32_t *);
-int32_t	uuid_is_nil(const uuid_t *, uint32_t *);
-void	uuid_to_string(const uuid_t *, char **, uint32_t *);
-void	uuid_enc_le(void *, const uuid_t *);
-void	uuid_dec_le(const void *, uuid_t *);
-void	uuid_enc_be(void *, const uuid_t *);
-void	uuid_dec_be(const void *, uuid_t *);
+#include <xlocale/_locale.h>
+
+#ifdef _STRING_H_
+#include <xlocale/_string.h>
+#endif
+
+#ifdef _INTTYPES_H_
+#include <xlocale/_inttypes.h>
+#endif
+
+#ifdef _MONETARY_H_
+#include <xlocale/_monetary.h>
+#endif
+
+#ifdef _STDLIB_H_
+#include <xlocale/_stdlib.h>
+#endif
+
+#ifdef _TIME_H_
+#include <xlocale/_time.h>
+#endif
+
+#ifdef _LANGINFO_H_
+#include <xlocale/_langinfo.h>
+#endif
+
+#ifdef _CTYPE_H_
+#include <xlocale/_ctype.h>
+#endif
+
+#ifdef _WCTYPE_H_
+#define _XLOCALE_WCTYPES 1
+#include <xlocale/_ctype.h>
+#endif
+
+#ifdef _STDIO_H_
+#include <xlocale/_stdio.h>
+#endif
+
+#ifdef _WCHAR_H_
+#include <xlocale/_wchar.h>
+#endif
+
+
+
+struct lconv	*localeconv_l(locale_t);
 __END_DECLS
 
-#endif	/* _UUID_H_ */
+#endif

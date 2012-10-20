@@ -35,8 +35,7 @@
  */
 
 /*
- * $FreeBSD: src/include/time.h,v 1.34 2006/04/15 03:08:55 jb Exp $
- * $MidnightBSD: src/include/time.h,v 1.3 2012/03/09 03:51:10 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _TIME_H_
@@ -105,6 +104,7 @@ typedef	__timer_t	timer_t;
 #define CLOCK_MONOTONIC_PRECISE	11	/* FreeBSD-specific. */
 #define CLOCK_MONOTONIC_FAST	12	/* FreeBSD-specific. */
 #define CLOCK_SECOND	13		/* FreeBSD-specific. */
+#define CLOCK_THREAD_CPUTIME_ID	14
 #endif /* !defined(CLOCK_REALTIME) && __POSIX_VISIBLE >= 200112 */
 
 #if !defined(TIMER_ABSTIME) && __POSIX_VISIBLE >= 200112
@@ -183,6 +183,10 @@ void tzsetwall(void);
 time_t timelocal(struct tm * const);
 time_t timegm(struct tm * const);
 #endif /* __BSD_VISIBLE */
+
+#if __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_)
+#include <xlocale/_time.h>
+#endif
 __END_DECLS
 
 #endif /* !_TIME_H_ */

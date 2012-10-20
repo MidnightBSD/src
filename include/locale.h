@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)locale.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/locale.h,v 1.8 2003/12/07 21:10:06 marcel Exp $
  * $MidnightBSD$
  */
 
@@ -78,6 +77,11 @@ struct lconv {
 __BEGIN_DECLS
 struct lconv	*localeconv(void);
 char		*setlocale(int, const char *);
+
+#if __POSIX_VISIBLE >= 200809
+#include <xlocale/_locale.h>
+#endif
 __END_DECLS
+
 
 #endif /* _LOCALE_H_ */

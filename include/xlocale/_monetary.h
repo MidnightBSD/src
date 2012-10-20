@@ -1,7 +1,9 @@
 /*-
- * Copyright (c) 2002,2005 Marcel Moolenaar
- * Copyright (c) 2002 Hiten Mahesh Pandya
+ * Copyright (c) 2011, 2012 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * This software was developed by David Chisnall under sponsorship from
+ * the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,40 +26,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD$
  */
 
-#ifndef _UUID_H_
-#define	_UUID_H_
+#ifndef _LOCALE_T_DEFINED
+#define _LOCALE_T_DEFINED
+typedef struct	_xlocale *locale_t;
+#endif
 
-#include <sys/types.h>
-#include <sys/uuid.h>
+#if __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_)
+#ifndef _XLOCALE_MONETARY_H
+#define _XLOCALE_MONETARY_H
 
-/*
- * This implementation mostly conforms to the DCE 1.1 specification.
- * See Also:
- *	uuidgen(1), uuidgen(2), uuid(3)
- */
+ssize_t strfmon_l(char *, size_t, locale_t, const char *, ...)
+    __strfmonlike(4, 5);
 
-/* Status codes returned by the functions. */
-#define	uuid_s_ok			0
-#define	uuid_s_bad_version		1
-#define	uuid_s_invalid_string_uuid	2
-#define	uuid_s_no_memory		3
-
-__BEGIN_DECLS
-int32_t	uuid_compare(const uuid_t *, const uuid_t *, uint32_t *);
-void	uuid_create(uuid_t *, uint32_t *);
-void	uuid_create_nil(uuid_t *, uint32_t *);
-int32_t	uuid_equal(const uuid_t *, const uuid_t *, uint32_t *);
-void	uuid_from_string(const char *, uuid_t *, uint32_t *);
-uint16_t uuid_hash(const uuid_t *, uint32_t *);
-int32_t	uuid_is_nil(const uuid_t *, uint32_t *);
-void	uuid_to_string(const uuid_t *, char **, uint32_t *);
-void	uuid_enc_le(void *, const uuid_t *);
-void	uuid_dec_le(const void *, uuid_t *);
-void	uuid_enc_be(void *, const uuid_t *);
-void	uuid_dec_be(const void *, uuid_t *);
-__END_DECLS
-
-#endif	/* _UUID_H_ */
+#endif /* _XLOCALE_MONETARY_H */
+#endif /* __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_) */

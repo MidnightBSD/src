@@ -1,6 +1,6 @@
-/*
- * Copyright (c) 1985, 1993
- *	The Regents of the University of California.  All rights reserved.
+/*-
+ * Copyright (c) 2011, 2012 The FreeBSD Foundation
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,18 +10,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -30,10 +23,39 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)sgtty.h	8.1 (Berkeley) 6/2/93
+ * $FreeBSD$
  */
 
-#ifndef USE_OLD_TTY
-#define	USE_OLD_TTY
+#ifndef _LOCALE_T_DEFINED
+#define _LOCALE_T_DEFINED
+typedef struct	_xlocale *locale_t;
 #endif
-#include <sys/ioctl.h>
+
+/*
+ * This file is included from both string.h and xlocale.h.  We need to expose
+ * the declarations unconditionally if we are included from xlocale.h, but only
+ * if we are in POSIX2008 mode if included from string.h.
+ */
+
+#ifndef _XLOCALE_STRING1_H
+#define _XLOCALE_STRING1_H
+
+/*
+ * POSIX2008 functions
+ */
+int	 strcoll_l(const char *, const char *, locale_t);
+size_t	 strxfrm_l(char *, const char *, size_t, locale_t);
+#endif /* _XLOCALE_STRING1_H */
+
+/*
+ * xlocale extensions
+ */
+#ifdef _XLOCALE_H_
+#ifndef _XLOCALE_STRING2_H
+#define _XLOCALE_STRING2_H
+int	 strcasecmp_l(const char *, const char *, locale_t);
+char	*strcasestr_l(const char *, const char *, locale_t);
+int	 strncasecmp_l(const char *, const char *, size_t, locale_t);
+
+#endif /* _XLOCALE_STRING2_H */
+#endif /* _XLOCALE_H_ */

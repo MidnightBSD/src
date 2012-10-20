@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001 The FreeBSD Project.
+ * Copyright (c) 2001-2008 The FreeBSD Project.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,13 +24,10 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/include/complex.h,v 1.6 2004/08/14 18:03:21 stefanf Exp $
  */
 
 #ifndef _COMPLEX_H
 #define	_COMPLEX_H
-
-#include <sys/cdefs.h>
 
 #ifdef __GNUC__
 #if __STDC_VERSION__ < 199901
@@ -48,16 +45,30 @@ __BEGIN_DECLS
 
 double		cabs(double complex);
 float		cabsf(float complex);
-double		cimag(double complex);
-float		cimagf(float complex);
-long double	cimagl(long double complex);
-double complex	conj(double complex);
-float complex	conjf(float complex);
+long double	cabsl(long double complex);
+double		carg(double complex);
+float		cargf(float complex);
+long double	cargl(long double complex);
+double complex	cexp(double complex);
+float complex	cexpf(float complex);
+double		cimag(double complex) __pure2;
+float		cimagf(float complex) __pure2;
+long double	cimagl(long double complex) __pure2;
+double complex	conj(double complex) __pure2;
+float complex	conjf(float complex) __pure2;
 long double complex
-		conjl(long double complex);
-double		creal(double complex);
-float		crealf(float complex);
-long double	creall(long double complex);
+		conjl(long double complex) __pure2;
+float complex	cprojf(float complex) __pure2;
+double complex	cproj(double complex) __pure2;
+long double complex
+		cprojl(long double complex) __pure2;
+double		creal(double complex) __pure2;
+float		crealf(float complex) __pure2;
+long double	creall(long double complex) __pure2;
+double complex	csqrt(double complex);
+float complex	csqrtf(float complex);
+long double complex
+		csqrtl(long double complex);
 
 __END_DECLS
 

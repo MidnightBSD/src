@@ -1,7 +1,9 @@
 /*-
- * Copyright (c) 2002,2005 Marcel Moolenaar
- * Copyright (c) 2002 Hiten Mahesh Pandya
+ * Copyright (c) 2011, 2012 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * This software was developed by David Chisnall under sponsorship from
+ * the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,40 +26,34 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD$
  */
-
-#ifndef _UUID_H_
-#define	_UUID_H_
-
-#include <sys/types.h>
-#include <sys/uuid.h>
 
 /*
- * This implementation mostly conforms to the DCE 1.1 specification.
- * See Also:
- *	uuidgen(1), uuidgen(2), uuid(3)
+ * Extended locale versions of the locale-aware functions from stdlib.h.
+ *
+ * Include <stdlib.h> before <xlocale.h> to expose these.
  */
+double			 atof_l(const char *, locale_t);
+int			 atoi_l(const char *, locale_t);
+long			 atol_l(const char *, locale_t);
+long long		 atoll_l(const char *, locale_t);
+int			 mblen_l(const char *, size_t, locale_t);
+size_t			 mbstowcs_l(wchar_t * __restrict,
+			    const char * __restrict, size_t, locale_t);
+int			 mbtowc_l(wchar_t * __restrict,
+			    const char * __restrict, size_t, locale_t);
+double			 strtod_l(const char *, char **, locale_t);
+float			 strtof_l(const char *, char **, locale_t);
+long			 strtol_l(const char *, char **, int, locale_t);
+long double		 strtold_l(const char *, char **, locale_t);
+long long		 strtoll_l(const char *, char **, int, locale_t);
+unsigned long		 strtoul_l(const char *, char **, int, locale_t);
+unsigned long long	 strtoull_l(const char *, char **, int, locale_t);
+size_t			 wcstombs_l(char * __restrict,
+			    const wchar_t * __restrict, size_t, locale_t);
+int			 wctomb_l(char *, wchar_t, locale_t);
 
-/* Status codes returned by the functions. */
-#define	uuid_s_ok			0
-#define	uuid_s_bad_version		1
-#define	uuid_s_invalid_string_uuid	2
-#define	uuid_s_no_memory		3
+int			 ___mb_cur_max_l(locale_t);
+#define MB_CUR_MAX_L(x) (___mb_cur_max_l(x))
 
-__BEGIN_DECLS
-int32_t	uuid_compare(const uuid_t *, const uuid_t *, uint32_t *);
-void	uuid_create(uuid_t *, uint32_t *);
-void	uuid_create_nil(uuid_t *, uint32_t *);
-int32_t	uuid_equal(const uuid_t *, const uuid_t *, uint32_t *);
-void	uuid_from_string(const char *, uuid_t *, uint32_t *);
-uint16_t uuid_hash(const uuid_t *, uint32_t *);
-int32_t	uuid_is_nil(const uuid_t *, uint32_t *);
-void	uuid_to_string(const uuid_t *, char **, uint32_t *);
-void	uuid_enc_le(void *, const uuid_t *);
-void	uuid_dec_le(const void *, uuid_t *);
-void	uuid_enc_be(void *, const uuid_t *);
-void	uuid_dec_be(const void *, uuid_t *);
-__END_DECLS
-
-#endif	/* _UUID_H_ */

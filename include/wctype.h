@@ -26,7 +26,7 @@
  *	citrus Id: wctype.h,v 1.4 2000/12/21 01:50:21 itojun Exp
  *	$NetBSD: wctype.h,v 1.3 2000/12/22 14:16:16 itojun Exp $
  * $FreeBSD: src/include/wctype.h,v 1.13 2004/08/12 10:29:14 tjr Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/include/wctype.h,v 1.2 2012/03/09 03:51:10 laffer1 Exp $
  */
 
 #ifndef _WCTYPE_H_
@@ -88,8 +88,14 @@ wint_t	iswrune(wint_t);
 wint_t	iswspecial(wint_t);
 wint_t	nextwctype(wint_t, wctype_t);
 #endif
+
+#if __POSIX_VISIBLE >= 200809
+#define _XLOCALE_WCTYPES 1
+#include <xlocale/_ctype.h>
+#endif /* __POSIX_VISIBLE >= 200809 */
 __END_DECLS
 
+#ifndef __cplusplus
 #define	iswalnum(wc)		__istype((wc), _CTYPE_A|_CTYPE_D)
 #define	iswalpha(wc)		__istype((wc), _CTYPE_A)
 #define	iswblank(wc)		__istype((wc), _CTYPE_B)
@@ -114,6 +120,7 @@ __END_DECLS
 #define	iswphonogram(wc)	__istype((wc), _CTYPE_Q)
 #define	iswrune(wc)		__istype((wc), 0xFFFFFF00L)
 #define	iswspecial(wc)		__istype((wc), _CTYPE_T)
-#endif
+#endif /* __BSD_VISIBLE */
+#endif /* __cplusplus */
 
 #endif		/* _WCTYPE_H_ */

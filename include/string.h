@@ -27,8 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)string.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/string.h,v 1.21.2.1 2005/08/29 18:46:39 andre Exp $
- * $MidnightBSD: src/include/string.h,v 1.5 2012/03/10 05:36:14 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _STRING_H_
@@ -62,7 +61,7 @@ void	*memrchr(const void *, int, size_t) __pure;
 int	 memcmp(const void *, const void *, size_t) __pure;
 void	*memcpy(void * __restrict, const void * __restrict, size_t);
 #if __BSD_VISIBLE
-void	*memmem(const void *, size_t, const void *, size_t);
+void	*memmem(const void *, size_t, const void *, size_t) __pure;
 #endif
 void	*memmove(void *, const void *, size_t);
 void	*memset(void *, int, size_t);
@@ -133,6 +132,10 @@ void	 swab(const void * __restrict, void * __restrict, ssize_t);
 #endif /* _SWAB_DECLARED */
 
 #endif /* __BSD_VISIBLE */
+
+#if __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_)
+#include <xlocale/_string.h>
+#endif
 __END_DECLS
 
 #endif /* _STRING_H_ */

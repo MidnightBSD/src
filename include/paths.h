@@ -27,8 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)paths.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/paths.h,v 1.26 2007/06/11 02:21:18 simokawa Exp $
- * $MidnightBSD: src/include/paths.h,v 1.5 2012/03/10 05:17:45 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _PATHS_H_
@@ -43,7 +42,6 @@
 /* Locate system binaries. */
 #define	_PATH_SYSPATH	"/sbin:/usr/sbin"
 
-#define	_PATH_AUTHCONF	"/etc/auth.conf"
 #define	_PATH_BSHELL	"/bin/sh"
 #define	_PATH_CAPABILITY	"/etc/capability"
 #define	_PATH_CAPABILITY_DB	"/etc/capability.db"

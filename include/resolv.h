@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- * 	This product includes software developed by the University of
- * 	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  * 
@@ -50,8 +46,8 @@
 
 /*%
  *	@(#)resolv.h	8.1 (Berkeley) 6/2/93
- *	$Id: resolv.h,v 1.4 2011-11-18 01:15:50 laffer1 Exp $
- * $FreeBSD: src/include/resolv.h,v 1.32.2.1 2008/12/17 12:31:04 ume Exp $
+ *	$Id: resolv.h,v 1.5 2012-10-20 17:17:25 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _RESOLV_H_

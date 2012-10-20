@@ -27,8 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdlib.h	8.5 (Berkeley) 5/19/95
- * $FreeBSD: src/include/stdlib.h,v 1.65 2007/07/04 00:00:38 scf Exp $
- * $MidnightBSD: src/include/stdlib.h,v 1.4 2012/03/09 03:51:10 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _STDLIB_H_
@@ -72,12 +71,15 @@ typedef struct {
 
 #define	RAND_MAX	0x7fffffff
 
-extern int __mb_cur_max;
-#define	MB_CUR_MAX	__mb_cur_max
-
 __BEGIN_DECLS
-void	 abort(void) __dead2;
-void	 abort2(const char *, int, void **) __dead2;
+#ifdef _XLOCALE_H_
+#include <xlocale/_stdlib.h>
+#endif
+extern int __mb_cur_max;
+extern int ___mb_cur_max(void);
+#define	MB_CUR_MAX	(___mb_cur_max())
+
+_Noreturn void	 abort(void);
 int	 abs(int) __pure2;
 int	 atexit(void (*)(void));
 double	 atof(const char *);
@@ -85,14 +87,14 @@ int	 atoi(const char *);
 long	 atol(const char *);
 void	*bsearch(const void *, const void *, size_t,
 	    size_t, int (*)(const void *, const void *));
-void	*calloc(size_t, size_t);
+void	*calloc(size_t, size_t) __malloc_like;
 div_t	 div(int, int) __pure2;
-void	 exit(int) __dead2;
+_Noreturn void	 exit(int);
 void	 free(void *);
 char	*getenv(const char *);
 long	 labs(long) __pure2;
 ldiv_t	 ldiv(long, long) __pure2;
-void	*malloc(size_t);
+void	*malloc(size_t) __malloc_like;
 int	 mblen(const char *, size_t);
 size_t	 mbstowcs(wchar_t * __restrict , const char * __restrict, size_t);
 int	 mbtowc(wchar_t * __restrict, const char * __restrict, size_t);
@@ -146,9 +148,17 @@ unsigned long long
 	 strtoull(const char * __restrict, char ** __restrict, int);
 #endif /* __LONG_LONG_SUPPORTED */
 
-void	 _Exit(int) __dead2;
+_Noreturn void	 _Exit(int);
 #endif /* __ISO_C_VISIBLE >= 1999 */
 
+/*
+ * If we're in a mode greater than C99, expose C1x functions.
+ */
+#if __ISO_C_VISIBLE >= 2011 || __cplusplus >= 201103L
+_Noreturn void
+	quick_exit(int);
+int	at_quick_exit(void (*)(void));
+#endif /* __ISO_C_VISIBLE >= 2011 */
 /*
  * Extensions made by POSIX relative to C.  We don't know yet which edition
  * of POSIX made these extensions, so assume they've always been there until
@@ -157,9 +167,22 @@ void	 _Exit(int) __dead2;
 #if __POSIX_VISIBLE /* >= ??? */
 int	 posix_memalign(void **, size_t, size_t); /* (ADV) */
 int	 rand_r(unsigned *);			/* (TSF) */
+char	*realpath(const char * __restrict, char * __restrict);
 int	 setenv(const char *, const char *, int);
 int	 unsetenv(const char *);
 #endif
+
+#if __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE
+int	 getsubopt(char **, char *const *, char **);
+#ifndef _MKDTEMP_DECLARED
+char	*mkdtemp(char *);
+#define	_MKDTEMP_DECLARED
+#endif
+#ifndef _MKSTEMP_DECLARED
+int	 mkstemp(char *);
+#define	_MKSTEMP_DECLARED
+#endif
+#endif /* __POSIX_VISIBLE >= 200809 || __XSI_VISIBLE */
 
 /*
  * The only changes to the XSI namespace in revision 6 were the deletion
@@ -175,18 +198,13 @@ double	 drand48(void);
 double	 erand48(unsigned short[3]);
 /* char	*fcvt(double, int, int * __restrict, int * __restrict); */
 /* char	*gcvt(double, int, int * __restrict, int * __restrict); */
-int	 getsubopt(char **, char *const *, char **);
 int	 grantpt(int);
 char	*initstate(unsigned long /* XSI requires u_int */, char *, long);
 long	 jrand48(unsigned short[3]);
 char	*l64a(long);
 void	 lcong48(unsigned short[7]);
 long	 lrand48(void);
-#ifndef _MKSTEMP_DECLARED
-int	 mkstemp(char *);
-#define	_MKSTEMP_DECLARED
-#endif
-#ifndef _MKTEMP_DECLARED
+#if !defined(_MKTEMP_DECLARED) && (__BSD_VISIBLE || __XSI_VISIBLE <= 600)
 char	*mktemp(char *);
 #define	_MKTEMP_DECLARED
 #endif
@@ -196,7 +214,6 @@ int	 posix_openpt(int);
 char	*ptsname(int);
 int	 putenv(char *);
 long	 random(void);
-char	*realpath(const char *, char resolved_path[]);
 unsigned short
 	*seed48(unsigned short[3]);
 #ifndef _SETKEY_DECLARED
@@ -230,10 +247,14 @@ extern void (*_malloc_message)(const char *, const char *, const char *,
 void	*alloca(size_t);
 #endif
 
+void	 abort2(const char *, int, void **) __dead2;
 __uint32_t
 	 arc4random(void);
-void	 arc4random_addrandom(unsigned char *dat, int datlen);
+void	 arc4random_addrandom(unsigned char *, int);
+void	 arc4random_buf(void *, size_t);
 void	 arc4random_stir(void);
+__uint32_t 
+	 arc4random_uniform(__uint32_t);
 char	*getbsize(int *, long *);
 					/* getcap(3) functions */
 char	*cgetcap(char *, const char *, int);
@@ -250,6 +271,8 @@ int	 cgetustr(char *, const char *, char **);
 int	 daemon(int, int);
 char	*devname(__dev_t, __mode_t);
 char 	*devname_r(__dev_t, __mode_t, char *, int);
+char	*fdevname(int);
+char 	*fdevname_r(int, char *, int);
 int	 getloadavg(double [], int);
 __const char *
 	 getprogname(void);

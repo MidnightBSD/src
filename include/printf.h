@@ -23,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/printf.h,v 1.4 2006/03/02 10:01:52 phk Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _PRINTF_H_
 #define _PRINTF_H_
 
+#include <stdio.h>
 #include <wchar.h>
 
 /*

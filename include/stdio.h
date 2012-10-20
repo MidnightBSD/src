@@ -13,11 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,8 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdio.h	8.5 (Berkeley) 4/29/95
- * $FreeBSD: src/include/stdio.h,v 1.60 2007/04/07 16:02:30 pjd Exp $
- * $MidnightBSD: src/include/stdio.h,v 1.3 2012/03/09 03:45:16 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_STDIO_H_
@@ -51,14 +46,15 @@ typedef	__off_t		fpos_t;
 typedef	__size_t	size_t;
 #define	_SIZE_T_DECLARED
 #endif
+
 #if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
 #ifndef _OFF_T_DECLARED
-#define       _OFF_T_DECLARED
-typedef       __off_t         off_t;
+#define	_OFF_T_DECLARED
+typedef	__off_t		off_t;
 #endif
 #ifndef _SSIZE_T_DECLARED
-#define       _SSIZE_T_DECLARED
-typedef       __ssize_t       ssize_t;
+#define	_SSIZE_T_DECLARED
+typedef	__ssize_t	ssize_t;
 #endif
 #endif
 
@@ -83,9 +79,6 @@ struct __sbuf {
 	int	_size;
 };
 
-/* hold a buncha junk that would grow the ABI */
-struct __sFILEX;
-
 /*
  * stdio state variables.
  *
@@ -109,18 +102,22 @@ struct __sFILEX;
  * that does not match the previous one in _bf.  When this happens,
  * _ub._base becomes non-nil (i.e., a stream has ungetc() data iff
  * _ub._base!=NULL) and _up and _ur save the current values of _p and _r.
+ *
+ * Certain members of __sFILE are accessed directly via macros or
+ * inline functions.  To preserve ABI compat, these members must not
+ * be disturbed.  These members are marked below with (*).
  */
-typedef	struct __sFILE {
-	unsigned char *_p;	/* current position in (some) buffer */
-	int	_r;		/* read space left for getc() */
-	int	_w;		/* write space left for putc() */
-	short	_flags;		/* flags, below; this FILE is free if 0 */
-	short	_file;		/* fileno, if Unix descriptor, else -1 */
-	struct	__sbuf _bf;	/* the buffer (at least 1 byte, if !NULL) */
-	int	_lbfsize;	/* 0 or -_bf._size, for inline putc */
+struct __sFILE {
+	unsigned char *_p;	/* (*) current position in (some) buffer */
+	int	_r;		/* (*) read space left for getc() */
+	int	_w;		/* (*) write space left for putc() */
+	short	_flags;		/* (*) flags, below; this FILE is free if 0 */
+	short	_file;		/* (*) fileno, if Unix descriptor, else -1 */
+	struct	__sbuf _bf;	/* (*) the buffer (at least 1 byte, if !NULL) */
+	int	_lbfsize;	/* (*) 0 or -_bf._size, for inline putc */
 
 	/* operations */
-	void	*_cookie;	/* cookie passed to io functions */
+	void	*_cookie;	/* (*) cookie passed to io functions */
 	int	(*_close)(void *);
 	int	(*_read)(void *, char *, int);
 	fpos_t	(*_seek)(void *, fpos_t, int);
@@ -128,7 +125,7 @@ typedef	struct __sFILE {
 
 	/* separate buffer for long sequences of ungetc() */
 	struct	__sbuf _ub;	/* ungetc buffer */
-	struct __sFILEX *_extra; /* additions to FILE to not break ABI */
+	unsigned char	*_up;	/* saved _p when _p is doing ungetc data */
 	int	_ur;		/* saved _r when _r is counting ungetc data */
 
 	/* tricks to meet minimum requirements even when malloc() fails */
@@ -141,8 +138,17 @@ typedef	struct __sFILE {
 	/* Unix stdio files get aligned to block boundaries on fseek() */
 	int	_blksize;	/* stat.st_blksize (may be != _bf._size) */
 	fpos_t	_offset;	/* current lseek offset */
-} FILE;
 
+	struct pthread_mutex *_fl_mutex;	/* used for MT-safety */
+	struct pthread *_fl_owner;	/* current owner */
+	int	_fl_count;	/* recursive lock count */
+	int	_orientation;	/* orientation for fwide() */
+	__mbstate_t _mbstate;	/* multibyte conversion state */
+};
+#ifndef _STDFILE_DECLARED
+#define _STDFILE_DECLARED
+typedef struct __sFILE FILE;
+#endif
 #ifndef _STDSTREAM_DECLARED
 __BEGIN_DECLS
 extern FILE *__stdinp;
@@ -199,7 +205,7 @@ __END_DECLS
 
 /* System V/ANSI C; this is the wrong way to do this, do *not* use these. */
 #if __XSI_VISIBLE
-#define	P_tmpdir	"/var/tmp/"
+#define	P_tmpdir	"/tmp/"
 #endif
 #define	L_tmpnam	1024	/* XXX must be == PATH_MAX */
 #define	TMP_MAX		308915776
@@ -219,6 +225,9 @@ __END_DECLS
 #define	stderr	__stderrp
 
 __BEGIN_DECLS
+#ifdef _XLOCALE_H_
+#include <xlocale/_stdio.h>
+#endif
 /*
  * Functions defined in ANSI C standard.
  */
@@ -282,8 +291,7 @@ int	 vsscanf(const char * __restrict, const char * __restrict, __va_list)
  * Functions defined in all versions of POSIX 1003.1.
  */
 #if __BSD_VISIBLE || __POSIX_VISIBLE <= 199506
-/* size for cuserid(3); UT_NAMESIZE + 1, see <utmp.h> */
-#define	L_cuserid	17	/* legacy */
+#define	L_cuserid	17	/* size for cuserid(3); MAXLOGNAME, legacy */
 #endif
 
 #if __POSIX_VISIBLE
@@ -314,10 +322,10 @@ int	 putc_unlocked(int, FILE *);
 int	 putchar_unlocked(int);
 #endif
 #if __BSD_VISIBLE
-void	clearerr_unlocked(FILE *);
-int	feof_unlocked(FILE *);
-int	ferror_unlocked(FILE *);
-int	fileno_unlocked(FILE *);
+void	 clearerr_unlocked(FILE *);
+int	 feof_unlocked(FILE *);
+int	 ferror_unlocked(FILE *);
+int	 fileno_unlocked(FILE *);
 #endif
 
 #if __POSIX_VISIBLE >= 200112
@@ -334,15 +342,60 @@ int	 putw(int, FILE *);
 char	*tempnam(const char *, const char *);
 #endif
 
+#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+ssize_t	 getdelim(char ** __restrict, size_t * __restrict, int,
+	    FILE * __restrict);
+int	 renameat(int, const char *, int, const char *);
+int	 vdprintf(int, const char * __restrict, __va_list);
+
+/*
+ * Every programmer and his dog wrote functions called getline() and dprintf()
+ * before POSIX.1-2008 came along and decided to usurp the names, so we
+ * don't prototype them by default unless one of the following is true:
+ *   a) the app has requested them specifically by defining _WITH_GETLINE or
+ *      _WITH_DPRINTF, respectively
+ *   b) the app has requested a POSIX.1-2008 environment via _POSIX_C_SOURCE
+ *   c) the app defines a GNUism such as _BSD_SOURCE or _GNU_SOURCE
+ */
+#ifndef _WITH_GETLINE
+#if defined(_BSD_SOURCE) || defined(_GNU_SOURCE)
+#define	_WITH_GETLINE
+#elif defined(_POSIX_C_SOURCE)
+#if _POSIX_C_SOURCE >= 200809
+#define	_WITH_GETLINE
+#endif
+#endif
+#endif
+
+#ifdef _WITH_GETLINE
+ssize_t	 getline(char ** __restrict, size_t * __restrict, FILE * __restrict);
+#endif
+
+#ifndef _WITH_DPRINTF
+#if defined(_BSD_SOURCE) || defined(_GNU_SOURCE)
+#define	_WITH_DPRINTF
+#elif defined(_POSIX_C_SOURCE)
+#if _POSIX_C_SOURCE >= 200809
+#define	_WITH_DPRINTF
+#endif
+#endif
+#endif
+
+#ifdef _WITH_DPRINTF
+int	 (dprintf)(int, const char * __restrict, ...);
+#endif
+
+#endif /* __BSD_VISIBLE || __POSIX_VISIBLE >= 200809 */
+
 /*
  * Routines that are purely local.
  */
 #if __BSD_VISIBLE
 int	 asprintf(char **, const char *, ...) __printflike(2, 3);
 char	*ctermid_r(char *);
-void	fcloseall(void);
+void	 fcloseall(void);
 char	*fgetln(FILE *, size_t *);
-__const char *fmtcheck(const char *, const char *) __format_arg(2);
+const char *fmtcheck(const char *, const char *) __format_arg(2);
 int	 fpurge(FILE *);
 void	 setbuffer(FILE *, char *, int);
 int	 setlinebuf(FILE *);
@@ -421,12 +474,15 @@ static __inline int __sputc(int _c, FILE *_p) {
 		(*(p)->_p = (c), (int)*(p)->_p++))
 #endif
 
+extern int __isthreaded;
+
+#ifndef __cplusplus
+
 #define	__sfeof(p)	(((p)->_flags & __SEOF) != 0)
 #define	__sferror(p)	(((p)->_flags & __SERR) != 0)
 #define	__sclearerr(p)	((void)((p)->_flags &= ~(__SERR|__SEOF)))
 #define	__sfileno(p)	((p)->_file)
 
-extern int __isthreaded;
 
 #define	feof(p)		(!__isthreaded ? __sfeof(p) : (feof)(p))
 #define	ferror(p)	(!__isthreaded ? __sferror(p) : (ferror)(p))
@@ -459,6 +515,7 @@ extern int __isthreaded;
 #define	getchar_unlocked()	getc_unlocked(stdin)
 #define	putchar_unlocked(x)	putc_unlocked(x, stdout)
 #endif
+#endif /* __cplusplus */
 
 __END_DECLS
 #endif /* !_STDIO_H_ */

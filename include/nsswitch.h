@@ -1,5 +1,5 @@
 /*	$NetBSD: nsswitch.h,v 1.6 1999/01/26 01:04:07 lukem Exp $	*/
-/*	$FreeBSD: src/include/nsswitch.h,v 1.4 2006/04/28 12:03:34 ume Exp $ */
+/*	$MidnightBSD$ */
 
 /*-
  * Copyright (c) 1997, 1998, 1999 The NetBSD Foundation, Inc.
@@ -16,13 +16,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -65,10 +58,12 @@
  * currently implemented sources
  */
 #define NSSRC_FILES	"files"		/* local files */
+#define	NSSRC_DB	"db"		/* database */
 #define	NSSRC_DNS	"dns"		/* DNS; IN for hosts, HS for others */
 #define	NSSRC_NIS	"nis"		/* YP/NIS */
 #define	NSSRC_COMPAT	"compat"	/* passwd,group in YP compat mode */
-#define	NSSRC_CACHE	"cache"		/* cache daemon */
+#define	NSSRC_CACHE	"cache"		/* nscd daemon */
+#define NSSRC_FALLBACK	"__fallback"	/* internal fallback source */
 
 /*
  * currently implemented databases
@@ -132,6 +127,7 @@ typedef struct _ns_dtab {
  */
 #define NS_FILES_CB(F,C)	{ NSSRC_FILES,	F,	C },
 #define NS_COMPAT_CB(F,C)	{ NSSRC_COMPAT,	F,	C },
+#define NS_FALLBACK_CB(F)	{ NSSRC_FALLBACK, F,	NULL },
  
 #ifdef HESIOD
 #   define NS_DNS_CB(F,C)	{ NSSRC_DNS,	F,	C },

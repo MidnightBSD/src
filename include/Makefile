@@ -1,54 +1,54 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.13 2012/07/06 01:32:14 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.14 2012/07/14 15:17:00 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
 .include <bsd.own.mk>
 
 CLEANFILES= osreldate.h version vers.c
-SUBDIR= arpa gssapi protocols rpcsvc rpc
+SUBDIR= arpa gssapi protocols rpcsvc rpc xlocale
 INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	db.h \
 	dirent.h dlfcn.h elf.h elf-hints.h err.h fmtmsg.h fnmatch.h fstab.h \
 	fts.h ftw.h getopt.h glob.h grp.h gssapi.h \
-	histedit.h ieeefp.h ifaddrs.h \
+	ieeefp.h ifaddrs.h \
 	inttypes.h iso646.h kenv.h langinfo.h libgen.h limits.h link.h \
 	locale.h malloc.h malloc_np.h memory.h monetary.h mpool.h mqueue.h \
 	ndbm.h netconfig.h \
 	netdb.h nl_types.h nlist.h nss.h nsswitch.h ohash.h paths.h \
 	printf.h proc_service.h pthread.h \
-	pthread_np.h pwd.h ranlib.h readpassphrase.h regex.h regexp.h \
-	res_update.h resolv.h runetype.h search.h setjmp.h sgtty.h \
+	pthread_np.h pwd.h ranlib.h readpassphrase.h regex.h \
+	res_update.h resolv.h runetype.h search.h semaphore.h setjmp.h \
 	signal.h spawn.h stab.h \
 	stdbool.h stddef.h stdio.h stdlib.h string.h stringlist.h \
-	strings.h sysexits.h tar.h tgmath.h \
+	strings.h sysexits.h tar.h termios.h tgmath.h \
 	time.h timeconv.h timers.h ttyent.h \
-	ulimit.h unistd.h utime.h utmp.h uuid.h varargs.h vis.h \
-	wchar.h wctype.h wordexp.h
+	ulimit.h unistd.h utime.h utmpx.h uuid.h varargs.h vis.h \
+	wchar.h wctype.h wordexp.h xlocale.h
 
 MHDRS=	float.h floatingpoint.h stdarg.h
 
-PHDRS=	sched.h semaphore.h _semaphore.h
+PHDRS=	sched.h _semaphore.h
 
 LHDRS=	aio.h errno.h fcntl.h linker_set.h poll.h stdint.h syslog.h \
-	termios.h ucontext.h
+	ucontext.h
 
 LDIRS=	bsm cam geom net net80211 netatalk netgraph netinet netinet6 \
 	netipsec netipx netnatm ${_netncp} netsmb \
 	nfs nfsclient nfsserver \
-	pccard sys vm
+	sys vm
 
-LSUBDIRS=	cam/scsi \
-	dev/acpica dev/an dev/bktr dev/firewire dev/hwpmc \
-	dev/ic dev/iicbus ${_dev_ieee488} dev/lmc dev/ofw \
+LSUBDIRS=	cam/ata cam/scsi \
+	dev/acpica dev/an dev/bktr dev/ciss dev/filemon dev/firewire dev/hwpmc \
+	dev/ic dev/iicbus ${_dev_ieee488} dev/io dev/lmc dev/mfi dev/ofw \
 	dev/pbio dev/ppbus dev/smbus \
 	dev/speaker dev/usb dev/utopia dev/vkbd dev/wi \
-	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/ntfs fs/nullfs \
+	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/nfs fs/ntfs fs/nullfs \
 	${_fs_nwfs} fs/portalfs fs/procfs fs/smbfs fs/udf fs/unionfs \
 	geom/cache geom/concat geom/eli geom/gate geom/journal geom/label \
-	geom/mirror geom/multipath geom/nop \
-	geom/raid3 geom/raid5 geom/shsec geom/stripe geom/virstor \
+	geom/mirror geom/mountver geom/multipath geom/nop \
+	geom/raid geom/raid3 geom/raid5 geom/shsec geom/stripe geom/virstor \
 	netgraph/atm netgraph/netflow \
 	security/audit \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
@@ -112,9 +112,9 @@ INCSLINKS+=	sys/$i ${INCLUDEDIR}/$i
 .if ${MACHINE} != ${MACHINE_CPUARCH}
 _MARCHS=	${MACHINE_CPUARCH}
 .endif
-#.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
-#_MARCHS+=	x86
-#.endif
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+_MARCHS+=	x86
+.endif
 
 .include <bsd.prog.mk>
 

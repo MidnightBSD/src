@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/pthread.h,v 1.40.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 #ifndef _PTHREAD_H_
 #define _PTHREAD_H_
@@ -98,7 +98,7 @@
  * Static initialization values. 
  */
 #define PTHREAD_MUTEX_INITIALIZER	NULL
-#define PTHREAD_ADAPTIVE_MUTEX_INITIALIZER_NP	NULL
+#define PTHREAD_ADAPTIVE_MUTEX_INITIALIZER_NP	((pthread_mutex_t)1)
 #define PTHREAD_COND_INITIALIZER	NULL
 #define PTHREAD_RWLOCK_INITIALIZER	NULL
 
@@ -135,6 +135,10 @@ enum pthread_mutextype {
 
 #define PTHREAD_MUTEX_DEFAULT		PTHREAD_MUTEX_ERRORCHECK
 
+struct _pthread_cleanup_info {
+	__uintptr_t	pthread_cleanup_pad[8];
+};
+
 /*
  * Thread function prototype definitions:
  */
@@ -162,8 +166,19 @@ int		pthread_barrierattr_getpshared(const pthread_barrierattr_t *,
 			int *);
 int		pthread_barrierattr_init(pthread_barrierattr_t *);
 int		pthread_barrierattr_setpshared(pthread_barrierattr_t *, int);
-void		pthread_cleanup_pop(int);
-void		pthread_cleanup_push(void (*) (void *), void *);
+
+#define		pthread_cleanup_push(cleanup_routine, cleanup_arg)		\
+		{								\
+			struct _pthread_cleanup_info __cleanup_info__;		\
+			__pthread_cleanup_push_imp(cleanup_routine, cleanup_arg,\
+				&__cleanup_info__);				\
+			{
+
+#define		pthread_cleanup_pop(execute)					\
+			}							\
+			__pthread_cleanup_pop_imp(execute);			\
+		}
+
 int		pthread_condattr_destroy(pthread_condattr_t *);
 int		pthread_condattr_getclock(const pthread_condattr_t *,
 			clockid_t *);
@@ -185,11 +200,11 @@ int		pthread_detach(pthread_t);
 int		pthread_equal(pthread_t, pthread_t);
 void		pthread_exit(void *) __dead2;
 void		*pthread_getspecific(pthread_key_t);
+int		pthread_getcpuclockid(pthread_t, clockid_t *);
 int		pthread_join(pthread_t, void **);
 int		pthread_key_create(pthread_key_t *,
 			void (*) (void *));
 int		pthread_key_delete(pthread_key_t);
-int		pthread_kill(pthread_t, int);
 int		pthread_mutexattr_init(pthread_mutexattr_t *);
 int		pthread_mutexattr_destroy(pthread_mutexattr_t *);
 int		pthread_mutexattr_getpshared(const pthread_mutexattr_t *,
@@ -218,14 +233,16 @@ int		pthread_rwlock_tryrdlock(pthread_rwlock_t *);
 int		pthread_rwlock_trywrlock(pthread_rwlock_t *);
 int		pthread_rwlock_unlock(pthread_rwlock_t *);
 int		pthread_rwlock_wrlock(pthread_rwlock_t *);
-int		pthread_rwlockattr_init(pthread_rwlockattr_t *);
+int		pthread_rwlockattr_destroy(pthread_rwlockattr_t *);
+int		pthread_rwlockattr_getkind_np(const pthread_rwlockattr_t *,
+			int *);
 int		pthread_rwlockattr_getpshared(const pthread_rwlockattr_t *,
 			int *);
+int		pthread_rwlockattr_init(pthread_rwlockattr_t *);
+int		pthread_rwlockattr_setkind_np(pthread_rwlockattr_t *, int);
 int		pthread_rwlockattr_setpshared(pthread_rwlockattr_t *, int);
-int		pthread_rwlockattr_destroy(pthread_rwlockattr_t *);
 pthread_t	pthread_self(void);
 int		pthread_setspecific(pthread_key_t, const void *);
-int		pthread_sigmask(int, const __sigset_t *, __sigset_t *);
 
 int		pthread_spin_init(pthread_spinlock_t *, int);
 int		pthread_spin_destroy(pthread_spinlock_t *);
@@ -237,9 +254,11 @@ int		pthread_setcancelstate(int, int *);
 int		pthread_setcanceltype(int, int *);
 void		pthread_testcancel(void);
 
+#if __BSD_VISIBLE
 int		pthread_getprio(pthread_t);
 int		pthread_setprio(pthread_t, int);
 void		pthread_yield(void);
+#endif
 
 int		pthread_mutexattr_getprioceiling(pthread_mutexattr_t *,
 			int *);
@@ -265,8 +284,14 @@ int		pthread_getschedparam(pthread_t pthread, int *,
 			struct sched_param *);
 int		pthread_setschedparam(pthread_t, int,
 			const struct sched_param *);
+#if __XSI_VISIBLE
 int		pthread_getconcurrency(void);
 int		pthread_setconcurrency(int);
+#endif
+
+void		__pthread_cleanup_push_imp(void (*)(void *), void *,
+			struct _pthread_cleanup_info *);
+void		__pthread_cleanup_pop_imp(int);
 __END_DECLS
 
 #endif

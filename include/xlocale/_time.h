@@ -1,7 +1,9 @@
 /*-
- * Copyright (c) 2002,2005 Marcel Moolenaar
- * Copyright (c) 2002 Hiten Mahesh Pandya
+ * Copyright (c) 2011, 2012 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * This software was developed by David Chisnall under sponsorship from
+ * the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,40 +26,33 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD$
  */
 
-#ifndef _UUID_H_
-#define	_UUID_H_
-
-#include <sys/types.h>
-#include <sys/uuid.h>
+#ifndef _LOCALE_T_DEFINED
+#define _LOCALE_T_DEFINED
+typedef struct	_xlocale *locale_t;
+#endif
 
 /*
- * This implementation mostly conforms to the DCE 1.1 specification.
- * See Also:
- *	uuidgen(1), uuidgen(2), uuid(3)
+ * This file is included from both locale.h and xlocale.h.  We need to expose
+ * the declarations unconditionally if we are included from xlocale.h, but only
+ * if we are in POSIX2008 mode if included from locale.h.
  */
+#ifndef _XLOCALE_LOCALE1_H
+#define _XLOCALE_LOCALE1_H
 
-/* Status codes returned by the functions. */
-#define	uuid_s_ok			0
-#define	uuid_s_bad_version		1
-#define	uuid_s_invalid_string_uuid	2
-#define	uuid_s_no_memory		3
+size_t	 strftime_l(char * __restrict, size_t, const char * __restrict,
+	    const struct tm * __restrict, locale_t) __strftimelike(3, 0);
 
-__BEGIN_DECLS
-int32_t	uuid_compare(const uuid_t *, const uuid_t *, uint32_t *);
-void	uuid_create(uuid_t *, uint32_t *);
-void	uuid_create_nil(uuid_t *, uint32_t *);
-int32_t	uuid_equal(const uuid_t *, const uuid_t *, uint32_t *);
-void	uuid_from_string(const char *, uuid_t *, uint32_t *);
-uint16_t uuid_hash(const uuid_t *, uint32_t *);
-int32_t	uuid_is_nil(const uuid_t *, uint32_t *);
-void	uuid_to_string(const uuid_t *, char **, uint32_t *);
-void	uuid_enc_le(void *, const uuid_t *);
-void	uuid_dec_le(const void *, uuid_t *);
-void	uuid_enc_be(void *, const uuid_t *);
-void	uuid_dec_be(const void *, uuid_t *);
-__END_DECLS
+#endif /* _XLOCALE_LOCALE1_H */
 
-#endif	/* _UUID_H_ */
+#ifdef _XLOCALE_H_
+#ifndef _XLOCALE_LOCALE2_H
+#define _XLOCALE_LOCALE2_H
+
+char	*strptime_l(const char * __restrict, const char * __restrict,
+           struct tm * __restrict, locale_t);
+
+#endif /* _XLOCALE_LOCALE2_H */
+#endif /* _XLOCALE_H_ */
