@@ -31,11 +31,13 @@
 static char sccsid[] = "@(#)sigcompat.c	8.1 (Berkeley) 6/2/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/compat-43/sigcompat.c,v 1.11 2007/01/09 00:27:49 imp Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
+#include <errno.h>
 #include <signal.h>
+#include <string.h>
 #include "un-namespace.h"
 #include "libc_private.h"
 
@@ -97,12 +99,91 @@ sigblock(mask)
 }
 
 int
-sigpause(mask)
-	int mask;
+sigpause(int mask)
 {
 	sigset_t set;
 
 	sigemptyset(&set);
 	set.__bits[0] = mask;
 	return (_sigsuspend(&set));
+}
+
+int
+xsi_sigpause(int sig)
+{
+	sigset_t set;
+
+	if (_sigprocmask(SIG_BLOCK, NULL, &set) == -1)
+		return (-1);
+	if (sigdelset(&set, sig) == -1)
+		return (-1);
+	return (_sigsuspend(&set));
+}
+
+int
+sighold(int sig)
+{
+	sigset_t set;
+
+	sigemptyset(&set);
+	if (sigaddset(&set, sig) == -1)
+		return (-1);
+	return (_sigprocmask(SIG_BLOCK, &set, NULL));
+}
+
+int
+sigignore(int sig)
+{
+	struct sigaction sa;
+
+	bzero(&sa, sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	return (_sigaction(sig, &sa, NULL));
+}
+
+int
+sigrelse(int sig)
+{
+	sigset_t set;
+
+	sigemptyset(&set);
+	if (sigaddset(&set, sig) == -1)
+		return (-1);
+	return (_sigprocmask(SIG_UNBLOCK, &set, NULL));
+}
+
+void
+(*sigset(int sig, void (*disp)(int)))(int)
+{
+	sigset_t set, pset;
+	struct sigaction sa, psa;
+
+	sigemptyset(&set);
+	if (sigaddset(&set, sig) == -1)
+		return (SIG_ERR);
+	if (_sigprocmask(SIG_BLOCK, NULL, &pset) == -1)
+		return (SIG_ERR);
+	if ((__sighandler_t *)disp == SIG_HOLD) {
+		if (_sigprocmask(SIG_BLOCK, &set, &pset) == -1)
+			return (SIG_ERR);
+		if (sigismember(&pset, sig))
+			return (SIG_HOLD);
+		else {
+			if (_sigaction(sig, NULL, &psa) == -1)
+				return (SIG_ERR);
+			return (psa.sa_handler);
+		}
+	} else {
+		if (_sigprocmask(SIG_UNBLOCK, &set, &pset) == -1)
+			return (SIG_ERR);
+	}
+
+	bzero(&sa, sizeof(sa));
+	sa.sa_handler = disp;
+	if (_sigaction(sig, &sa, &psa) == -1)
+		return (SIG_ERR);
+	if (sigismember(&pset, sig))
+		return (SIG_HOLD);
+	else
+		return (psa.sa_handler);
 }

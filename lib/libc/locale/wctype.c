@@ -2,6 +2,11 @@
  * Copyright (c) 2002 Tim J. Robbins.
  * All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -25,24 +30,34 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/wctype.c,v 1.3 2004/03/27 08:59:21 tjr Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <string.h>
 #include <wctype.h>
+#include <xlocale.h>
 
 #undef iswctype
 int
 iswctype(wint_t wc, wctype_t charclass)
 {
-
 	return (__istype(wc, charclass));
 }
-
-wctype_t
-wctype(const char *property)
+int
+iswctype_l(wint_t wc, wctype_t charclass, locale_t locale)
 {
-	struct {
+	return __istype_l(wc, charclass, locale);
+}
+
+/*
+ * IMPORTANT: The 0 in the call to this function in wctype() must be changed to
+ * __get_locale() if wctype_l() is ever modified to actually use the locale
+ * parameter.
+ */
+wctype_t
+wctype_l(const char *property, locale_t locale)
+{
+	static const struct {
 		const char	*name;
 		wctype_t	 mask;
 	} props[] = {
@@ -71,4 +86,9 @@ wctype(const char *property)
 		i++;
 
 	return (props[i].mask);
+}
+
+wctype_t wctype(const char *property)
+{
+	return wctype_l(property, 0);
 }

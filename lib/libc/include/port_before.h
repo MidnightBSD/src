@@ -1,4 +1,4 @@
-/* $FreeBSD: src/lib/libc/include/port_before.h,v 1.1 2006/03/21 15:37:15 ume Exp $ */
+/* $MidnightBSD$ */
 
 #ifndef _PORT_BEFORE_H_
 #define _PORT_BEFORE_H_
@@ -17,6 +17,6 @@
                 var = _u.v; \
         } while (0)
 
-#define UNUSED(x) (x) = (x)
+#define UNUSED(x) (void)(x)
 
 #endif /* _PORT_BEFORE_H_ */

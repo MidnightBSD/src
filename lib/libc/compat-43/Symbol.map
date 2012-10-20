@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/lib/libc/compat-43/Symbol.map,v 1.2 2007/04/29 14:05:16 deischen Exp $
+ * $MidnightBSD$
  */
 
 FBSD_1.0 {
@@ -15,6 +15,14 @@ FBSD_1.0 {
 	sigpause;
 	sigsetmask;
 	sigvec;
+};
+
+FBSD_1.2 {
+	sighold;
+	sigignore;
+	sigrelse;
+	sigset;
+	xsi_sigpause;
 };
 
 FBSDprivate_1.0 {

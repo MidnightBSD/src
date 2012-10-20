@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/include/un-namespace.h,v 1.17 2006/03/28 18:48:49 des Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _UN_NAMESPACE_H_
@@ -61,10 +61,12 @@
 #undef		listen
 #undef		nanosleep
 #undef		open
+#undef		openat
 #undef		poll
 #undef		pthread_atfork
 #undef		pthread_attr_destroy
 #undef		pthread_attr_get_np
+#undef		pthread_attr_getaffinity_np
 #undef		pthread_attr_getdetachstate
 #undef		pthread_attr_getguardsize
 #undef		pthread_attr_getinheritsched
@@ -75,6 +77,7 @@
 #undef		pthread_attr_getstackaddr
 #undef		pthread_attr_getstacksize
 #undef		pthread_attr_init
+#undef		pthread_attr_setaffinity_np
 #undef		pthread_attr_setcreatesuspend_np
 #undef		pthread_attr_setdetachstate
 #undef		pthread_attr_setguardsize
@@ -93,8 +96,6 @@
 #undef		pthread_barrierattr_init
 #undef		pthread_barrierattr_setpshared
 #undef		pthread_cancel
-#undef		pthread_cleanup_pop
-#undef		pthread_cleanup_push
 #undef		pthread_cond_broadcast
 #undef		pthread_cond_destroy
 #undef		pthread_cond_init
@@ -111,10 +112,13 @@
 #undef		pthread_detach
 #undef		pthread_equal
 #undef		pthread_exit
+#undef		pthread_getaffinity_np
 #undef		pthread_getconcurrency
+#undef		pthread_getcpuclockid
 #undef		pthread_getprio
 #undef		pthread_getschedparam
 #undef		pthread_getspecific
+#undef		pthread_getthreadid_np
 #undef		pthread_join
 #undef		pthread_key_create
 #undef		pthread_key_delete
@@ -124,6 +128,7 @@
 #undef		pthread_mutex_destroy
 #undef		pthread_mutex_getprioceiling
 #undef		pthread_mutex_init
+#undef		pthread_mutex_isowned_np
 #undef		pthread_mutex_lock
 #undef		pthread_mutex_setprioceiling
 #undef		pthread_mutex_timedlock
@@ -159,6 +164,7 @@
 #undef		pthread_rwlockattr_setpshared
 #undef		pthread_self
 #undef		pthread_set_name_np
+#undef		pthread_setaffinity_np
 #undef		pthread_setcancelstate
 #undef		pthread_setcanceltype
 #undef		pthread_setconcurrency

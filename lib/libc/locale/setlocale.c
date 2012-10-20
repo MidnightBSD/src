@@ -35,7 +35,7 @@
 static char sccsid[] = "@(#)setlocale.c	8.1 (Berkeley) 7/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/setlocale.c,v 1.51 2007/01/09 00:28:00 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -95,7 +95,7 @@ static char current_locale_string[_LC_LAST * (ENCODING_LEN + 1/*"/"*/ + 1)];
 
 static char	*currentlocale(void);
 static char	*loadlocale(int);
-static const char *__get_locale_env(int);
+const char *__get_locale_env(int);
 
 char *
 setlocale(category, locale)
@@ -278,13 +278,14 @@ loadlocale(category)
 
 	if (func(new) != _LDP_ERROR) {
 		(void)strcpy(old, new);
+		(void)strcpy(__xlocale_global_locale.components[category-1]->locale, new);
 		return (old);
 	}
 
 	return (NULL);
 }
 
-static const char *
+const char *
 __get_locale_env(category)
         int category;
 {

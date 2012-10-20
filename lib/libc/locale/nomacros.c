@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/nomacros.c,v 1.5 2002/03/22 21:52:18 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Tell <ctype.h> to generate extern versions of all its inline
@@ -8,5 +8,11 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/nomacros.c,v 1.5 2002/03/22 21:52:18 obr
  * before including <ctype.h>.
  */
 #define _EXTERNALIZE_CTYPE_INLINES_
+
+/*
+ * Also make sure <runetype.h> does not generate an inline definition
+ * of __getCurrentRuneLocale().
+ */
+#define __RUNETYPE_INTERNAL
 
 #include <ctype.h>

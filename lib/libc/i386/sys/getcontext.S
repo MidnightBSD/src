@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/sys/getcontext.S,v 1.1.20.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <SYS.h>
 
@@ -49,3 +49,5 @@ ENTRY(__sys_getcontext)
 	PIC_PROLOGUE
 	jmp	PIC_PLT(HIDENAME(cerror))
 END(__sys_getcontext)
+
+	.section .note.GNU-stack,"",%progbits

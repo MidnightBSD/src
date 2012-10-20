@@ -2,6 +2,11 @@
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -25,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/wcstombs.c,v 1.10 2004/07/21 10:54:57 tjr Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <limits.h>
 #include <stdlib.h>
@@ -33,11 +38,21 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/wcstombs.c,v 1.10 2004/07/21 10:54:57 tj
 #include "mblocal.h"
 
 size_t
-wcstombs(char * __restrict s, const wchar_t * __restrict pwcs, size_t n)
+wcstombs_l(char * __restrict s, const wchar_t * __restrict pwcs, size_t n,
+		locale_t locale)
 {
 	static const mbstate_t initial;
 	mbstate_t mbs;
+	const wchar_t *pwcsp;
+	FIX_LOCALE(locale);
 
 	mbs = initial;
-	return (__wcsnrtombs(s, &pwcs, SIZE_T_MAX, n, &mbs));
+	pwcsp = pwcs;
+	return (XLOCALE_CTYPE(locale)->__wcsnrtombs(s, &pwcsp, SIZE_T_MAX, n, &mbs));
 }
+size_t
+wcstombs(char * __restrict s, const wchar_t * __restrict pwcs, size_t n)
+{
+	return wcstombs_l(s, pwcs, n, __get_locale());
+}
+

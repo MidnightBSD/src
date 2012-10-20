@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)isalpha.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/locale/isalpha.3,v 1.21 2007/01/09 00:28:00 imp Exp $
+.\" $FreeBSD$
 .\"
 .Dd July 17, 2005
 .Dt ISALPHA 3
@@ -44,6 +44,8 @@
 .In ctype.h
 .Ft int
 .Fn isalpha "int c"
+.Ft int
+.Fn isalpha_l "int c" "locale_t loc"
 .Sh DESCRIPTION
 The
 .Fn isalpha
@@ -59,7 +61,6 @@ or the value of
 .Pp
 In the ASCII character set, this includes the following characters
 (with their numeric values shown in octal):
-.Pp
 .Bl -column \&000_``0''__ \&000_``0''__ \&000_``0''__ \&000_``0''__ \&000_``0''__
 .It "\&101\ ``A'' \t102\ ``B'' \t103\ ``C'' \t104\ ``D'' \t105\ ``E''"
 .It "\&106\ ``F'' \t107\ ``G'' \t110\ ``H'' \t111\ ``I'' \t112\ ``J''"
@@ -73,6 +74,11 @@ In the ASCII character set, this includes the following characters
 .It "\&164\ ``t'' \t165\ ``u'' \t166\ ``v'' \t167\ ``w'' \t170\ ``x''"
 .It "\&171\ ``y'' \t172\ ``z''"
 .El
+The
+.Fn isalpha_l
+function takes an explicit locale argument, whereas the
+.Fn isalpha
+function uses the current global or per-thread locale.
 .Sh RETURN VALUES
 The
 .Fn isalpha
@@ -93,9 +99,15 @@ function should be used instead.
 .Xr islower 3 ,
 .Xr isupper 3 ,
 .Xr iswalpha 3 ,
+.Xr xlocale 3 ,
 .Xr ascii 7
 .Sh STANDARDS
 The
 .Fn isalpha
 function conforms to
 .St -isoC .
+The
+.Fn isalpha_l
+function conforms to
+.St -p1003.1-2008 .
+

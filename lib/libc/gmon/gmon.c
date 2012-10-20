@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)gmon.c	8.1 (Berkeley) 6/4/93";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gmon/gmon.c,v 1.22 2007/01/09 00:27:58 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gmon/gmon.c,v 1.22 2007/01/09 00:27:58 imp Exp 
 
 #include <err.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,8 +59,8 @@ extern char *minbrk __asm ("minbrk");
 struct gmonparam _gmonparam = { GMON_PROF_OFF };
 
 static int	s_scale;
-/* see profil(2) where this is describe (incorrectly) */
-#define		SCALE_1_TO_1	0x10000L
+/* See profil(2) where this is described (incorrectly). */
+#define	SCALE_SHIFT	16
 
 #define ERR(s) _write(2, s, sizeof(s))
 
@@ -110,29 +111,13 @@ monstartup(lowpc, highpc)
 	p->tos[0].link = 0;
 
 	o = p->highpc - p->lowpc;
-	if (p->kcountsize < o) {
-#ifndef hp300
-		s_scale = ((float)p->kcountsize / o ) * SCALE_1_TO_1;
-#else /* avoid floating point */
-		int quot = o / p->kcountsize;
-
-		if (quot >= 0x10000)
-			s_scale = 1;
-		else if (quot >= 0x100)
-			s_scale = 0x10000 / quot;
-		else if (o >= 0x800000)
-			s_scale = 0x1000000 / (o / (p->kcountsize >> 8));
-		else
-			s_scale = 0x1000000 / ((o << 8) / p->kcountsize);
-#endif
-	} else
-		s_scale = SCALE_1_TO_1;
-
+	s_scale = (p->kcountsize < o) ?
+	    ((uintmax_t)p->kcountsize << SCALE_SHIFT) / o : (1 << SCALE_SHIFT);
 	moncontrol(1);
 }
 
 void
-_mcleanup()
+_mcleanup(void)
 {
 	int fd;
 	int fromindex;
@@ -170,7 +155,12 @@ _mcleanup()
 	}
 
 	moncontrol(0);
-	snprintf(outname, sizeof(outname), "%s.gmon", _getprogname());
+	if (getenv("PROFIL_USE_PID"))
+		snprintf(outname, sizeof(outname), "%s.%d.gmon",
+		    _getprogname(), getpid());
+	else
+		snprintf(outname, sizeof(outname), "%s.gmon", _getprogname());
+
 	fd = _open(outname, O_CREAT|O_TRUNC|O_WRONLY, 0666);
 	if (fd < 0) {
 		_warn("_mcleanup: %s", outname);

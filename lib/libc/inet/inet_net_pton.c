@@ -16,10 +16,10 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: inet_net_pton.c,v 1.1.1.1 2008-10-30 20:39:06 laffer1 Exp $";
+static const char rcsid[] = "$Id: inet_net_pton.c,v 1.2 2012-10-20 16:20:20 laffer1 Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/inet/inet_net_pton.c,v 1.3 2007/06/03 17:20:26 ume Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
@@ -135,11 +135,11 @@ inet_net_pton_ipv4(const char *src, u_char *dst, size_t size) {
 			assert(n >= 0 && n <= 9);
 			bits *= 10;
 			bits += n;
+			if (bits > 32)
+				goto enoent;
 		} while ((ch = *src++) != '\0' && isascii(ch) && isdigit(ch));
 		if (ch != '\0')
 			goto enoent;
-		if (bits > 32)
-			goto emsgsize;
 	}
 
 	/* Firey death and destruction unless we prefetched EOS. */

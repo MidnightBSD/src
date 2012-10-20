@@ -34823,8 +34823,8 @@ lib/libc/amd64/gen/fpgetsticky.c -text
 lib/libc/amd64/gen/fpsetmask.c -text
 lib/libc/amd64/gen/fpsetprec.c -text
 lib/libc/amd64/gen/fpsetround.c -text
+lib/libc/amd64/gen/getcontextx.c -text
 lib/libc/amd64/gen/infinity.c -text
-lib/libc/amd64/gen/ldexp.c -text
 lib/libc/amd64/gen/makecontext.c -text
 lib/libc/amd64/gen/modf.S -text
 lib/libc/amd64/gen/rfork_thread.S -text
@@ -34843,6 +34843,7 @@ lib/libc/amd64/string/memcmp.S -text
 lib/libc/amd64/string/memcpy.S -text
 lib/libc/amd64/string/memmove.S -text
 lib/libc/amd64/string/memset.S -text
+lib/libc/amd64/string/stpcpy.S -text
 lib/libc/amd64/string/strcat.S -text
 lib/libc/amd64/string/strcmp.S -text
 lib/libc/amd64/string/strcpy.S -text
@@ -34925,6 +34926,7 @@ lib/libc/db/man/mpool.3 -text
 lib/libc/db/man/recno.3 -text
 lib/libc/db/mpool/Makefile.inc -text
 lib/libc/db/mpool/README -text
+lib/libc/db/mpool/mpool-compat.c -text
 lib/libc/db/mpool/mpool.c -text
 lib/libc/db/mpool/mpool.libtp -text
 lib/libc/db/recno/Makefile.inc -text
@@ -34955,6 +34957,7 @@ lib/libc/db/test/run.test -text
 lib/libc/gdtoa/Makefile.inc -text
 lib/libc/gdtoa/Symbol.map -text
 lib/libc/gdtoa/_hdtoa.c -text
+lib/libc/gdtoa/_hldtoa.c -text
 lib/libc/gdtoa/_ldtoa.c -text
 lib/libc/gdtoa/glue.c -text
 lib/libc/gdtoa/machdep_ldisQ.c -text
@@ -34995,6 +34998,7 @@ lib/libc/gen/directory.3 -text
 lib/libc/gen/dirname.3 -text
 lib/libc/gen/dirname.c -text
 lib/libc/gen/disklabel.c -text
+lib/libc/gen/dl_iterate_phdr.3 -text
 lib/libc/gen/dladdr.3 -text
 lib/libc/gen/dlfcn.c -text
 lib/libc/gen/dlinfo.3 -text
@@ -35061,6 +35065,8 @@ lib/libc/gen/getosreldate.3 -text
 lib/libc/gen/getosreldate.c -text
 lib/libc/gen/getpagesize.3 -text
 lib/libc/gen/getpagesize.c -text
+lib/libc/gen/getpagesizes.3 -text
+lib/libc/gen/getpagesizes.c -text
 lib/libc/gen/getpass.3 -text
 lib/libc/gen/getpeereid.3 -text
 lib/libc/gen/getpeereid.c -text
@@ -35072,6 +35078,8 @@ lib/libc/gen/getttyent.3 -text
 lib/libc/gen/getttyent.c -text
 lib/libc/gen/getusershell.3 -text
 lib/libc/gen/getusershell.c -text
+lib/libc/gen/getutxent.3 -text
+lib/libc/gen/getutxent.c -text
 lib/libc/gen/getvfsbyname.3 -text
 lib/libc/gen/getvfsbyname.c -text
 lib/libc/gen/glob.3 -text
@@ -35118,6 +35126,7 @@ lib/libc/gen/posix_spawnattr_getsigmask.3 -text
 lib/libc/gen/posix_spawnattr_init.3 -text
 lib/libc/gen/psignal.3 -text
 lib/libc/gen/psignal.c -text
+lib/libc/gen/pututxline.c -text
 lib/libc/gen/pw_scan.c -text
 lib/libc/gen/pw_scan.h -text
 lib/libc/gen/pwcache.3 -text
@@ -35139,8 +35148,10 @@ lib/libc/gen/sem.c -text
 lib/libc/gen/sem_destroy.3 -text
 lib/libc/gen/sem_getvalue.3 -text
 lib/libc/gen/sem_init.3 -text
+lib/libc/gen/sem_new.c -text
 lib/libc/gen/sem_open.3 -text
 lib/libc/gen/sem_post.3 -text
+lib/libc/gen/sem_timedwait.3 -text
 lib/libc/gen/sem_wait.3 -text
 lib/libc/gen/semctl.c -text
 lib/libc/gen/setdomainname.c -text
@@ -35178,9 +35189,11 @@ lib/libc/gen/sysctlnametomib.c -text
 lib/libc/gen/syslog.3 -text
 lib/libc/gen/syslog.c -text
 lib/libc/gen/tcgetpgrp.3 -text
+lib/libc/gen/tcgetsid.3 -text
 lib/libc/gen/tcsendbreak.3 -text
 lib/libc/gen/tcsetattr.3 -text
 lib/libc/gen/tcsetpgrp.3 -text
+lib/libc/gen/tcsetsid.3 -text
 lib/libc/gen/telldir.c -text
 lib/libc/gen/telldir.h -text
 lib/libc/gen/termios.c -text
@@ -35208,6 +35221,8 @@ lib/libc/gen/usleep.3 -text
 lib/libc/gen/usleep.c -text
 lib/libc/gen/utime.3 -text
 lib/libc/gen/utime.c -text
+lib/libc/gen/utxdb.c -text
+lib/libc/gen/utxdb.h -text
 lib/libc/gen/valloc.3 -text
 lib/libc/gen/valloc.c -text
 lib/libc/gen/vis.3 -text
@@ -35234,8 +35249,8 @@ lib/libc/i386/gen/_set_tp.c -text
 lib/libc/i386/gen/_setjmp.S -text
 lib/libc/i386/gen/fabs.S -text
 lib/libc/i386/gen/flt_rounds.c -text
+lib/libc/i386/gen/getcontextx.c -text
 lib/libc/i386/gen/infinity.c -text
-lib/libc/i386/gen/ldexp.c -text
 lib/libc/i386/gen/makecontext.c -text
 lib/libc/i386/gen/modf.S -text
 lib/libc/i386/gen/rfork_thread.S -text
@@ -35243,9 +35258,7 @@ lib/libc/i386/gen/setjmp.S -text
 lib/libc/i386/gen/signalcontext.c -text
 lib/libc/i386/gen/sigsetjmp.S -text
 lib/libc/i386/stdlib/Makefile.inc -text
-lib/libc/i386/stdlib/abs.S -text
 lib/libc/i386/stdlib/div.S -text
-lib/libc/i386/stdlib/labs.S -text
 lib/libc/i386/stdlib/ldiv.S -text
 lib/libc/i386/string/Makefile.inc -text
 lib/libc/i386/string/bcmp.S -text
@@ -35263,7 +35276,6 @@ lib/libc/i386/string/strcat.S -text
 lib/libc/i386/string/strchr.S -text
 lib/libc/i386/string/strcmp.S -text
 lib/libc/i386/string/strcpy.S -text
-lib/libc/i386/string/strlen.S -text
 lib/libc/i386/string/strncmp.S -text
 lib/libc/i386/string/strrchr.S -text
 lib/libc/i386/string/swab.S -text
@@ -35361,6 +35373,7 @@ lib/libc/iconv/iconv.c -text
 lib/libc/iconv/iconv_canonicalize.3 -text
 lib/libc/iconv/iconvctl.3 -text
 lib/libc/iconv/iconvlist.3 -text
+lib/libc/include/compat.h -text
 lib/libc/include/fpmath.h -text
 lib/libc/include/isc/eventlib.h -text
 lib/libc/include/isc/list.h -text
@@ -35397,6 +35410,7 @@ lib/libc/isc/ev_timers.c -text
 lib/libc/isc/eventlib_p.h -text
 lib/libc/locale/Makefile.inc -text
 lib/libc/locale/Symbol.map -text
+lib/libc/locale/ascii.c -text
 lib/libc/locale/big5.5 -text
 lib/libc/locale/big5.c -text
 lib/libc/locale/btowc.3 -text
@@ -35405,10 +35419,14 @@ lib/libc/locale/collate.c -text
 lib/libc/locale/collate.h -text
 lib/libc/locale/collcmp.c -text
 lib/libc/locale/ctype.3 -text
+lib/libc/locale/ctype.c -text
+lib/libc/locale/ctype_l.3 -text
 lib/libc/locale/digittoint.3 -text
+lib/libc/locale/duplocale.3 -text
 lib/libc/locale/euc.5 -text
 lib/libc/locale/euc.c -text
 lib/libc/locale/fix_grouping.c -text
+lib/libc/locale/freelocale.3 -text
 lib/libc/locale/gb18030.5 -text
 lib/libc/locale/gb18030.c -text
 lib/libc/locale/gb2312.5 -text
@@ -35464,12 +35482,14 @@ lib/libc/locale/mbtowc.c -text
 lib/libc/locale/mskanji.5 -text
 lib/libc/locale/mskanji.c -text
 lib/libc/locale/multibyte.3 -text
+lib/libc/locale/newlocale.3 -text
 lib/libc/locale/nextwctype.3 -text
 lib/libc/locale/nextwctype.c -text
 lib/libc/locale/nl_langinfo.3 -text
 lib/libc/locale/nl_langinfo.c -text
 lib/libc/locale/nomacros.c -text
 lib/libc/locale/none.c -text
+lib/libc/locale/querylocale.3 -text
 lib/libc/locale/rpmatch.3 -text
 lib/libc/locale/rpmatch.c -text
 lib/libc/locale/rune.c -text
@@ -35487,6 +35507,7 @@ lib/libc/locale/toupper.3 -text
 lib/libc/locale/toupper.c -text
 lib/libc/locale/towlower.3 -text
 lib/libc/locale/towupper.3 -text
+lib/libc/locale/uselocale.3 -text
 lib/libc/locale/utf8.5 -text
 lib/libc/locale/utf8.c -text
 lib/libc/locale/wcrtomb.3 -text
@@ -35518,6 +35539,9 @@ lib/libc/locale/wctype.3 -text
 lib/libc/locale/wctype.c -text
 lib/libc/locale/wcwidth.3 -text
 lib/libc/locale/wcwidth.c -text
+lib/libc/locale/xlocale.3 -text
+lib/libc/locale/xlocale.c -text
+lib/libc/locale/xlocale_private.h -text
 lib/libc/nameser/Makefile.inc -text
 lib/libc/nameser/Symbol.map -text
 lib/libc/nameser/ns_name.c -text

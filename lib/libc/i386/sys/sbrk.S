@@ -34,7 +34,7 @@
 	.asciz "@(#)sbrk.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/sys/sbrk.S,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 
@@ -89,3 +89,5 @@ err:
 	jmp	HIDENAME(cerror)
 #endif /* PIC */
 END(sbrk)
+
+	.section .note.GNU-stack,"",%progbits

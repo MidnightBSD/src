@@ -68,6 +68,7 @@ ENTRY(setjmp)
 	movq	%r14,48(%rcx)		/* 6; r14 */
 	movq	%r15,56(%rcx)		/* 7; r15 */
 	fnstcw	64(%rcx)		/* 8; fpu cw */
+	stmxcsr	68(%rcx)		/*    and mxcsr */
 	xorq	%rax,%rax
 	ret
 END(setjmp)
@@ -81,12 +82,21 @@ ENTRY(__longjmp)
 	movq	$3,%rdi			/* SIG_SETMASK     */
 	leaq	72(%rdx),%rsi		/* (sigset_t*)set  */
 	movq	$0,%rdx			/* (sigset_t*)oset */
-	subq    $0x8,%rsp		/* make the stack 16-byte aligned */
+	subq	$0x8,%rsp		/* make the stack 16-byte aligned */
 	call	PIC_PLT(CNAME(_sigprocmask))
-	addq    $0x8,%rsp
+	addq	$0x8,%rsp
 	popq	%rsi
 	popq	%rdi			/* jmpbuf */
 	movq	%rdi,%rdx
+	/* Restore the mxcsr, but leave exception flags intact. */
+	stmxcsr	-4(%rsp)
+	movl	68(%rdx),%eax
+	andl	$0xffffffc0,%eax
+	movl	-4(%rsp),%edi
+	andl	$0x3f,%edi
+	xorl	%eax,%edi
+	movl	%edi,-4(%rsp)
+	ldmxcsr -4(%rsp)
 	movq	%rsi,%rax		/* retval */
 	movq	0(%rdx),%rcx
 	movq	8(%rdx),%rbx
@@ -96,7 +106,6 @@ ENTRY(__longjmp)
 	movq	40(%rdx),%r13
 	movq	48(%rdx),%r14
 	movq	56(%rdx),%r15
-	fninit
 	fldcw	64(%rdx)
 	testq	%rax,%rax
 	jnz	1f
@@ -104,3 +113,5 @@ ENTRY(__longjmp)
 1:	movq	%rcx,0(%rsp)
 	ret
 END(__longjmp)
+
+	.section .note.GNU-stack,"",%progbits

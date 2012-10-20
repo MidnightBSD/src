@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/string/strcat.S,v 1.10.24.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * strcat(s, append)
@@ -99,3 +99,5 @@ L2:	popl	%eax			/* pop destination address */
 	popl	%edi			/* restore edi */
 	ret
 END(strcat)
+
+	.section .note.GNU-stack,"",%progbits

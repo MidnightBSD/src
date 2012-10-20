@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/gen/_ctx_start.S,v 1.4.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * _ctx_start((void *func)(int arg1, ..., argn),
@@ -50,3 +50,5 @@ ENTRY(_ctx_start)
 	call	PIC_PLT(abort)		/* fubar */
 	ret
 END(_ctx_start)
+
+	.section .note.GNU-stack,"",%progbits

@@ -44,3 +44,5 @@ __FBSDID("$FreeBSD: src/lib/libc/amd64/sys/sigreturn.S,v 1.13.6.1 2008/11/25 02:
  */
 
 RSYSCALL(sigreturn)
+
+	.section .note.GNU-stack,"",%progbits

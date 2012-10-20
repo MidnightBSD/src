@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/include/namespace.h,v 1.20 2006/03/28 18:48:49 des Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _NAMESPACE_H_
@@ -80,10 +80,12 @@
 #define		listen				_listen
 #define		nanosleep			_nanosleep
 #define		open				_open
+#define		openat				_openat
 #define		poll				_poll
 #define		pthread_atfork			_pthread_atfork
 #define		pthread_attr_destroy		_pthread_attr_destroy
 #define		pthread_attr_get_np		_pthread_attr_get_np
+#define		pthread_attr_getaffinity_np	_pthread_attr_getaffinity_np
 #define		pthread_attr_getdetachstate	_pthread_attr_getdetachstate
 #define		pthread_attr_getguardsize	_pthread_attr_getguardsize
 #define		pthread_attr_getinheritsched	_pthread_attr_getinheritsched
@@ -94,6 +96,7 @@
 #define		pthread_attr_getstackaddr	_pthread_attr_getstackaddr
 #define		pthread_attr_getstacksize	_pthread_attr_getstacksize
 #define		pthread_attr_init		_pthread_attr_init
+#define		pthread_attr_setaffinity_np	_pthread_attr_setaffinity_np
 #define		pthread_attr_setcreatesuspend_np _pthread_attr_setcreatesuspend_np
 #define		pthread_attr_setdetachstate	_pthread_attr_setdetachstate
 #define		pthread_attr_setguardsize	_pthread_attr_setguardsize
@@ -112,8 +115,6 @@
 #define		pthread_barrierattr_init	_pthread_barrierattr_init
 #define		pthread_barrierattr_setpshared	_pthread_barrierattr_setpshared
 #define		pthread_cancel			_pthread_cancel
-#define		pthread_cleanup_pop		_pthread_cleanup_pop
-#define		pthread_cleanup_push		_pthread_cleanup_push
 #define		pthread_cond_broadcast		_pthread_cond_broadcast
 #define		pthread_cond_destroy		_pthread_cond_destroy
 #define		pthread_cond_init		_pthread_cond_init
@@ -130,10 +131,13 @@
 #define		pthread_detach			_pthread_detach
 #define		pthread_equal			_pthread_equal
 #define		pthread_exit			_pthread_exit
+#define		pthread_getaffinity_np		_pthread_getaffinity_np
 #define		pthread_getconcurrency		_pthread_getconcurrency
+#define		pthread_getcpuclockid		_pthread_getcpuclockid
 #define		pthread_getprio			_pthread_getprio
 #define		pthread_getschedparam		_pthread_getschedparam
 #define		pthread_getspecific		_pthread_getspecific
+#define		pthread_getthreadid_np		_pthread_getthreadid_np
 #define		pthread_join			_pthread_join
 #define		pthread_key_create		_pthread_key_create
 #define		pthread_key_delete		_pthread_key_delete
@@ -143,6 +147,7 @@
 #define		pthread_mutex_destroy		_pthread_mutex_destroy
 #define		pthread_mutex_getprioceiling	_pthread_mutex_getprioceiling
 #define		pthread_mutex_init		_pthread_mutex_init
+#define		pthread_mutex_isowned_np	_pthread_mutex_isowned_np
 #define		pthread_mutex_lock		_pthread_mutex_lock
 #define		pthread_mutex_setprioceiling	_pthread_mutex_setprioceiling
 #define		pthread_mutex_timedlock		_pthread_mutex_timedlock
@@ -178,6 +183,7 @@
 #define		pthread_rwlockattr_setpshared	_pthread_rwlockattr_setpshared
 #define		pthread_self			_pthread_self
 #define		pthread_set_name_np		_pthread_set_name_np
+#define		pthread_setaffinity_np		_pthread_setaffinity_np
 #define		pthread_setcancelstate		_pthread_setcancelstate
 #define		pthread_setcanceltype		_pthread_setcanceltype
 #define		pthread_setconcurrency		_pthread_setconcurrency

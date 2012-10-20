@@ -1,9 +1,9 @@
-# $FreeBSD: src/lib/libc/gdtoa/Makefile.inc,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
 
 # netlib gdtoa sources
 .PATH: ${.CURDIR}/gdtoa
 
-MISRCS+=_hdtoa.c _ldtoa.c glue.c
+MISRCS+=_hdtoa.c _hldtoa.c _ldtoa.c glue.c
 GDTOASRCS+=dmisc.c dtoa.c gdtoa.c gethex.c gmisc.c \
 	hd_init.c hexnan.c misc.c smisc.c \
 	strtod.c strtodg.c strtof.c strtord.c sum.c ulp.c

@@ -34,10 +34,12 @@
 	.asciz "@(#)fabs.s	5.2 (Berkeley) 12/17/90"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/gen/fabs.S,v 1.10.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 ENTRY(fabs)
 	fldl	4(%esp)
 	fabs
 	ret
 END(fabs)
+
+	.section .note.GNU-stack,"",%progbits

@@ -2,7 +2,7 @@
 # $FreeBSD: src/lib/libc/amd64/gen/Makefile.inc,v 1.29.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 SRCS+=	_setjmp.S _set_tp.c rfork_thread.S setjmp.S sigsetjmp.S \
-	fabs.S modf.S \
+	fabs.S getcontextx.c modf.S \
 	infinity.c ldexp.c makecontext.c signalcontext.c \
 	flt_rounds.c fpgetmask.c fpsetmask.c fpgetprec.c fpsetprec.c \
 	fpgetround.c fpsetround.c fpgetsticky.c

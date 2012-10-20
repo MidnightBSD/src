@@ -19,8 +19,8 @@
  * \brief private interfaces for eventlib
  * \author vix 09sep95 [initial]
  *
- * $Id: eventlib_p.h,v 1.1.1.1 2008-10-30 20:39:06 laffer1 Exp $
- * $FreeBSD: src/lib/libc/isc/eventlib_p.h,v 1.5 2007/06/03 17:20:26 ume Exp $
+ * $Id: eventlib_p.h,v 1.2 2012-10-20 16:20:20 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #ifndef _EVENTLIB_P_H
