@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getprogname.c,v 1.4 2002/03/29 22:43:41 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <stdlib.h>

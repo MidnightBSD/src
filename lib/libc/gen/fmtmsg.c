@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/fmtmsg.c,v 1.5 2003/05/01 19:03:13 nectar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <fmtmsg.h>
 #include <stdio.h>

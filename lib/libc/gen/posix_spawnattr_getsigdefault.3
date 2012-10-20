@@ -1,4 +1,4 @@
-.\" Copyright (c) 2008 Ed Schouten <ed@80386.nl>
+.\" Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -32,9 +32,9 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $FreeBSD$
+.\" $MidnightBSD$
 .\"
-.Dd Mar 24, 2008
+.Dd March 24, 2008
 .Dt POSIX_SPAWNATTR_GETSIGDEFAULT 3
 .Os
 .Sh NAME
@@ -52,13 +52,13 @@
 .Sh DESCRIPTION
 The
 .Fn posix_spawnattr_getsigdefault
-function shall obtain the value of the spawn-sigdefault attribute from the
+function obtains the value of the spawn-sigdefault attribute from the
 attributes object referenced by
 .Fa attr .
 .Pp
 The
 .Fn posix_spawnattr_setsigdefault
-function shall set the spawn-sigdefault attribute in an initialized attributes
+function sets the spawn-sigdefault attribute in an initialized attributes
 object referenced by
 .Fa attr .
 .Pp
@@ -66,13 +66,13 @@ The spawn-sigdefault attribute represents the set of signals to be forced to
 default signal handling in the new process image (if
 .Dv POSIX_SPAWN_SETSIGDEF
 is set in the spawn-flags attribute) by a spawn operation.
-The default value of this attribute shall be an empty signal set.
+The default value of this attribute is an empty signal set.
 .Sh RETURN VALUES
 The
 .Fn posix_spawnattr_getsigdefault
 and
 .Fn posix_spawnattr_setsigdefault
-functions shall return zero.
+functions return zero.
 .Sh SEE ALSO
 .Xr posix_spawn 3 ,
 .Xr posix_spawnattr_destroy 3 ,
@@ -92,7 +92,7 @@ The
 .Fn posix_spawnattr_getsigdefault
 and
 .Fn posix_spawnattr_setsigdefault
-functions appeared in
+functions first appeared in
 .Fx 8.0 .
 .Sh AUTHORS
-.An Ed Schouten Aq ed@80386.nl
+.An Ed Schouten Aq ed@FreeBSD.org

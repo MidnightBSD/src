@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fts.h	8.3 (Berkeley) 8/14/94
- * $FreeBSD: src/lib/libc/gen/fts-compat.h,v 1.12 2007/08/23 05:09:31 yar Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_FTS_H_
@@ -126,20 +126,7 @@ typedef struct _ftsent {
 	FTS *fts_fts;			/* back pointer to main FTS */
 } FTSENT;
 
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
-FTSENT	*fts_children(FTS *, int);
-int	 fts_close(FTS *);
-void	*fts_get_clientptr(FTS *);
 #define	 fts_get_clientptr(fts)	((fts)->fts_clientptr)
-FTS	*fts_get_stream(FTSENT *);
 #define	 fts_get_stream(ftsent)	((ftsent)->fts_fts)
-FTS	*fts_open(char * const *, int,
-	    int (*)(const FTSENT * const *, const FTSENT * const *));
-FTSENT	*fts_read(FTS *);
-int	 fts_set(FTS *, FTSENT *, int);
-void	 fts_set_clientptr(FTS *, void *);
-__END_DECLS
 
 #endif /* !_FTS_H_ */

@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/erand48.c,v 1.2 2002/03/22 21:52:05 obrien Exp $");*/
 __MBSDID("$MidnightBSD$");
 
 #include "rand48.h"

@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/lib/libc/gen/_once_stub.c,v 1.2.4.2 2009/12/17 20:41:40 jhb Exp $ */
 __MBSDID("$MidnightBSD$");
 
 #include "namespace.h"

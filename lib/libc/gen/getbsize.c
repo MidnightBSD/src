@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getbsize.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getbsize.c,v 1.8.2.1 2008/08/30 23:08:31 cperciva Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <stdio.h>

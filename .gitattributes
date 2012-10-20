@@ -34997,7 +34997,6 @@ lib/libc/gen/dirname.c -text
 lib/libc/gen/disklabel.c -text
 lib/libc/gen/dladdr.3 -text
 lib/libc/gen/dlfcn.c -text
-lib/libc/gen/dlfunc.c -text
 lib/libc/gen/dlinfo.3 -text
 lib/libc/gen/dllockinit.3 -text
 lib/libc/gen/dlopen.3 -text
@@ -35010,6 +35009,7 @@ lib/libc/gen/errlst.c -text
 lib/libc/gen/errno.c -text
 lib/libc/gen/exec.3 -text
 lib/libc/gen/exec.c -text
+lib/libc/gen/fdevname.c -text
 lib/libc/gen/feature_present.3 -text
 lib/libc/gen/feature_present.c -text
 lib/libc/gen/fmtcheck.3 -text
@@ -35093,10 +35093,6 @@ lib/libc/gen/lrand48.c -text
 lib/libc/gen/makecontext.3 -text
 lib/libc/gen/modf.3 -text
 lib/libc/gen/mrand48.c -text
-lib/libc/gen/msgctl.3 -text
-lib/libc/gen/msgget.3 -text
-lib/libc/gen/msgrcv.3 -text
-lib/libc/gen/msgsnd.3 -text
 lib/libc/gen/nftw.c -text
 lib/libc/gen/nice.3 -text
 lib/libc/gen/nice.c -text
@@ -35120,9 +35116,6 @@ lib/libc/gen/posix_spawnattr_getschedpolicy.3 -text
 lib/libc/gen/posix_spawnattr_getsigdefault.3 -text
 lib/libc/gen/posix_spawnattr_getsigmask.3 -text
 lib/libc/gen/posix_spawnattr_init.3 -text
-lib/libc/gen/posixshm.c -text
-lib/libc/gen/pselect.3 -text
-lib/libc/gen/pselect.c -text
 lib/libc/gen/psignal.3 -text
 lib/libc/gen/psignal.c -text
 lib/libc/gen/pw_scan.c -text
@@ -35159,7 +35152,6 @@ lib/libc/gen/setmode.c -text
 lib/libc/gen/setproctitle.3 -text
 lib/libc/gen/setproctitle.c -text
 lib/libc/gen/setprogname.c -text
-lib/libc/gen/shm_open.3 -text
 lib/libc/gen/siginterrupt.3 -text
 lib/libc/gen/siginterrupt.c -text
 lib/libc/gen/siglist.c -text

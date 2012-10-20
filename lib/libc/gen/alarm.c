@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)alarm.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/alarm.c,v 1.3 2007/01/09 00:27:53 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Backwards compatible alarm.
@@ -39,8 +39,9 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/alarm.c,v 1.3 2007/01/09 00:27:53 imp Exp $
 #include <sys/time.h>
 #include <unistd.h>
 
-unsigned int 
-alarm(unsigned int secs)
+unsigned int
+alarm(secs)
+	unsigned int secs;
 {
 	struct itimerval it, oitv;
 	struct itimerval *itp = &it;

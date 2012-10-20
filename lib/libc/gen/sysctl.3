@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)sysctl.3	8.4 (Berkeley) 5/9/95
-.\" $FreeBSD: src/lib/libc/gen/sysctl.3,v 1.69 2007/04/10 11:19:52 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd April 10, 2007
+.Dd February 11, 2012
 .Dt SYSCTL 3
 .Os
 .Sh NAME
@@ -42,9 +42,9 @@
 .In sys/types.h
 .In sys/sysctl.h
 .Ft int
-.Fn sysctl "int *name" "u_int namelen" "void *oldp" "size_t *oldlenp" "void *newp" "size_t newlen"
+.Fn sysctl "const int *name" "u_int namelen" "void *oldp" "size_t *oldlenp" "const void *newp" "size_t newlen"
 .Ft int
-.Fn sysctlbyname "const char *name" "void *oldp" "size_t *oldlenp" "void *newp" "size_t newlen"
+.Fn sysctlbyname "const char *name" "void *oldp" "size_t *oldlenp" "const void *newp" "size_t newlen"
 .Ft int
 .Fn sysctlnametomib "const char *name" "int *mibp" "size_t *sizep"
 .Sh DESCRIPTION
@@ -183,7 +183,6 @@ The top level names are defined with a CTL_ prefix in
 and are as follows.
 The next and subsequent levels down are found in the include files
 listed here, and described in separate sections below.
-.Pp
 .Bl -column CTLXMACHDEPXXX "Next level namesXXXXXX" -offset indent
 .It Sy "Name	Next level names	Description"
 .It "CTL_DEBUG	sys/sysctl.h	Debugging"
@@ -280,12 +279,12 @@ privilege may change the value.
 .It "HW_PHYSMEM	integer	no"
 .It "HW_USERMEM	integer	no"
 .It "HW_PAGESIZE	integer	no"
+.\".It "HW_DISKNAMES	integer	no"
+.\".It "HW_DISKSTATS	integer	no"
 .It "HW_FLOATINGPT	integer	no"
 .It "HW_MACHINE_ARCH	string	no"
 .It "HW_REALMEM	integer	no"
-.It "HW_SENSORS	node	not applicable"
 .El
-.Pp
 .Bl -tag -width 6n
 .It Li HW_MACHINE
 The machine class.
@@ -301,40 +300,14 @@ The bytes of physical memory.
 The bytes of non-kernel memory.
 .It Li HW_PAGESIZE
 The software page size.
+.\".It Fa HW_DISKNAMES
+.\".It Fa HW_DISKSTATS
 .It Li HW_FLOATINGPT
 Nonzero if the floating point support is in hardware.
 .It Li HW_MACHINE_ARCH
 The machine dependent architecture type.
 .It Li HW_REALMEM
 The bytes of real memory.
-.It Li HW_SENSORS
-Third level comprises an array of
-.Li struct sensordev
-structures containing information about devices 
-that may attach hardware monitoring sensors. 
-.Pp
-Third, fourth and fifth levels together comprise an array of
-.Li struct sensor
-structures containing snapshot readings of hardware monitoring sensors.
-In such usage, third level indicates the numerical representation 
-of the sensor device name to which the sensor is attached 
-(device's xname and number shall be matched with the help of 
-.Li struct sensordev
-structure above), 
-fourth level indicates sensor type and 
-fifth level is an ordinal sensor number (unique to
-the specified sensor type on the specified sensor device).
-.Pp
-The
-.Sy sensordev
-and
-.Sy sensor
-structures
-and
-.Sy sensor_type
-enumeration
-are defined in
-.In sys/sensors.h .
 .El
 .Ss CTL_KERN
 The string and integer information available for the CTL_KERN level
@@ -351,7 +324,7 @@ information.
 .It "KERN_BOOTFILE	string	yes"
 .It "KERN_BOOTTIME	struct timeval	no"
 .It "KERN_CLOCKRATE	struct clockinfo	no"
-.It "KERN_FILE	struct file	no"
+.It "KERN_FILE	struct xfile	no"
 .It "KERN_HOSTID	integer	yes"
 .It "KERN_HOSTUUID	string	yes"
 .It "KERN_HOSTNAME	string	yes"
@@ -368,16 +341,15 @@ information.
 .It "KERN_OSREV	integer	no"
 .It "KERN_OSTYPE	string	no"
 .It "KERN_POSIX1	integer	no"
-.It "KERN_PROC	struct proc	no"
+.It "KERN_PROC	node	not applicable"
 .It "KERN_PROF	node	not applicable"
 .It "KERN_QUANTUM	integer	yes"
 .It "KERN_SAVED_IDS	integer	no"
 .It "KERN_SECURELVL	integer	raise only"
 .It "KERN_UPDATEINTERVAL	integer	no"
 .It "KERN_VERSION	string	no"
-.It "KERN_VNODE	struct vnode	no"
+.It "KERN_VNODE	struct xvnode	no"
 .El
-.Pp
 .Bl -tag -width 6n
 .It Li KERN_ARGMAX
 The maximum bytes of argument to
@@ -397,10 +369,8 @@ This structure contains the clock, statistics clock and profiling clock
 frequencies, the number of micro-seconds per hz tick and the skew rate.
 .It Li KERN_FILE
 Return the entire file table.
-The returned data consists of a single
-.Va struct filehead
-followed by an array of
-.Va struct file ,
+The returned data consists of an array of
+.Va struct xfile ,
 whose size depends on the current number of such objects in the system.
 .It Li KERN_HOSTID
 Get or set the host ID.
@@ -465,10 +435,8 @@ attempts to comply.
 .It Li KERN_PROC
 Return selected information about specific running processes.
 .Pp
-For the following names, an array of pairs of
-.Va struct proc
-followed by corresponding
-.Va struct eproc
+For the following names, an array of
+.Va struct kinfo_proc
 structures is returned,
 whose size depends on the current number of such objects in the system.
 .Bl -column "Third level nameXXXXXX" "Fourth level is:XXXXXX" -offset indent
@@ -554,21 +522,8 @@ Note, the vnode table is not necessarily a consistent snapshot of
 the system.
 The returned data consists of an array whose size depends on the
 current number of such objects in the system.
-Each element of the array contains the kernel address of a vnode
-.Va struct vnode *
-followed by the vnode itself
-.Va struct vnode .
-.El
-.Ss CTL_MACHDEP
-The set of variables defined is architecture dependent.
-The following variables are defined for the i386 architecture.
-.Bl -column "CONSOLE_DEVICEXXX" "struct bootinfoXXX" -offset indent
-.It Sy "Second level name	Type	Changeable"
-.It Li "CPU_CONSDEV	dev_t	no"
-.It Li "CPU_ADJKERNTZ	int	yes"
-.It Li "CPU_DISRTCSET	int	yes"
-.It Li "CPU_BOOTINFO	struct bootinfo	no"
-.It Li "CPU_WALLCLOCK	int	yes"
+Each element of the array consists of a
+.Va struct xvnode .
 .El
 .Ss CTL_NET
 The string and integer information available for the CTL_NET level
@@ -581,7 +536,6 @@ privilege may change the value.
 .It "PF_INET	IPv4 values	yes"
 .It "PF_INET6	IPv6 values	yes"
 .El
-.Pp
 .Bl -tag -width 6n
 .It Li PF_ROUTE
 Return the entire routing table or a subset of it.
@@ -600,6 +554,7 @@ The fifth and sixth level names are as follows:
 .It "NET_RT_DUMP	None"
 .It "NET_RT_IFLIST	0 or if_index"
 .It "NET_RT_IFMALIST	0 or if_index"
+.It "NET_RT_IFLISTL	0 or if_index"
 .El
 .Pp
 The
@@ -607,6 +562,19 @@ The
 name returns information about multicast group memberships on all interfaces
 if 0 is specified, or for the interface specified by
 .Va if_index .
+.Pp
+The
+.Dv NET_RT_IFLISTL
+is like
+.Dv NET_RT_IFLIST ,
+just returning message header structs with additional fields allowing the
+interface to be extended without breaking binary compatibility.
+The
+.Dv NET_RT_IFLISTL
+uses 'l' versions of the message header structures:
+.Va struct if_msghdrl
+and
+.Va struct ifa_msghdrl .
 .It Li PF_INET
 Get or set various global information about the IPv4
 (Internet Protocol version 4).
@@ -688,7 +656,6 @@ privilege may change the value.
 .It "USER_TZNAME_MAX	integer	no"
 .El
 .Bl -tag -width 6n
-.Pp
 .It Li USER_BC_BASE_MAX
 The maximum ibase/obase values in the
 .Xr bc 1
@@ -767,7 +734,7 @@ privilege may change the value.
 .Bl -column "Second level nameXXXXXX" "struct loadavgXXX" -offset indent
 .It Sy "Second level name	Type	Changeable"
 .It "VM_LOADAVG	struct loadavg	no"
-.It "VM_METER	struct vmtotal	no"
+.It "VM_TOTAL	struct vmtotal	no"
 .It "VM_PAGEOUT_ALGORITHM	integer	yes"
 .It "VM_SWAPPING_ENABLED	integer	maybe"
 .It "VM_V_CACHE_MAX	integer	yes"
@@ -778,13 +745,12 @@ privilege may change the value.
 .It "VM_V_INACTIVE_TARGET	integer	yes"
 .It "VM_V_PAGEOUT_FREE_MIN	integer	yes"
 .El
-.Pp
 .Bl -tag -width 6n
 .It Li VM_LOADAVG
 Return the load average history.
 The returned data consists of a
 .Va struct loadavg .
-.It Li VM_METER
+.It Li VM_TOTAL
 Return the system wide virtual memory statistics.
 The returned data consists of a
 .Va struct vmtotal .
@@ -897,6 +863,8 @@ An attempt is made to set a read-only value.
 A process without appropriate privilege attempts to set a value.
 .El
 .Sh SEE ALSO
+.Xr confstr 3 ,
+.Xr kvm 3 ,
 .Xr sysconf 3 ,
 .Xr sysctl 8
 .Sh HISTORY

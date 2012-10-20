@@ -1,6 +1,6 @@
 /*
  * $FreeBSD: src/lib/libc/gen/Symbol.map,v 1.6 2007/05/31 13:01:33 deischen Exp $
- * $MidnightBSD: src/lib/libc/gen/Symbol.map,v 1.5 2011/12/28 02:55:16 laffer1 Exp $
+ * $MidnightBSD: src/lib/libc/gen/Symbol.map,v 1.6 2012/03/09 04:14:06 laffer1 Exp $
  */
 
 MNBSD_1.0 {
@@ -57,8 +57,6 @@ FBSD_1.0 {
 	pthread_cond_signal;
 	pthread_cond_timedwait;
 	pthread_cond_wait;
-        pthread_condattr_destroy;
-        pthread_condattr_init;
 	pthread_detach;
 	pthread_equal;
 	pthread_exit;
@@ -161,14 +159,6 @@ FBSD_1.0 {
 	setfsent;
 	endfsent;
 	ftok;
-	fts_open;
-	fts_close;
-	fts_read;
-	fts_set;
-	fts_children;
-	fts_get_clientptr;
-	fts_get_stream;
-	fts_set_clientptr;
 	ftw;
 	glob;
 	globfree;
@@ -258,9 +248,6 @@ FBSD_1.0 {
 	posix_madvise;
 	popen;
 	pclose;
-	shm_open;
-	shm_unlink;
-	pselect;
 	psignal;
 	raise;
 	readdir;
@@ -274,17 +261,6 @@ FBSD_1.0 {
 	seekdir;
 	user_from_uid;
 	group_from_gid;
-	sem_init;
-	sem_destroy;
-	sem_open;
-	sem_close;
-	sem_unlink;
-	sem_wait;
-	sem_trywait;
-	sem_timedwait;
-	sem_post;
-	sem_getvalue;
-	semctl;
 	setdomainname;
 	sethostname;
 	longjmperror;
@@ -321,7 +297,6 @@ FBSD_1.0 {
 	openlog;
 	closelog;
 	setlogmask;
-	ttyslot;
 	ttyname_r;
 	ttyname;
 	timezone;
@@ -364,12 +339,76 @@ FBSD_1.0 {
 };
 
 FBSD_1.1 {
+	arc4random_buf;
+	arc4random_uniform;
+	fdevname;
+	fdevname_r;
 	fdopendir;
 	feature_present;
+	fts_children;
+	fts_close;
+	fts_get_clientptr;
+	fts_get_stream;
+	fts_open;
+	fts_read;
+	fts_set;
+	fts_set_clientptr;
+	posix_spawn;
+	posix_spawn_file_actions_addclose;
+	posix_spawn_file_actions_adddup2;
+	posix_spawn_file_actions_addopen;
+	posix_spawn_file_actions_destroy;
+	posix_spawn_file_actions_init;
+	posix_spawnattr_destroy;
+	posix_spawnattr_getflags;
+	posix_spawnattr_getpgroup;
+	posix_spawnattr_getschedparam;
+	posix_spawnattr_getschedpolicy;
+	posix_spawnattr_getsigdefault;
+	posix_spawnattr_getsigmask;
+	posix_spawnattr_init;
+	posix_spawnattr_setflags;
+	posix_spawnattr_setpgroup;
+	posix_spawnattr_setschedparam;
+	posix_spawnattr_setschedpolicy;
+	posix_spawnattr_setsigdefault;
+	posix_spawnattr_setsigmask;
+	posix_spawnp;
+	semctl;
+	tcgetsid;
+	tcsetsid;
+	__pthread_cleanup_pop_imp;
+	__pthread_cleanup_push_imp;
+};
+
+FBSD_1.2 {
+	basename_r;
+	cfmakesane;
+	endutxent;
+	getpagesizes;
+	getutxent;
+	getutxid;
+	getutxline;
+	getutxuser;
+	pututxline;
+	sem_close;
+	sem_destroy;
+	sem_getvalue;
+	sem_init;
+	sem_open;
+	sem_post;
+	sem_timedwait;
+	sem_trywait;
+	sem_unlink;
+	sem_wait;
+	setutxdb;
+	setutxent;
 };
 
 FBSD_1.3 {
+	 fdlopen;
 	__FreeBSD_libc_enter_restricted_mode;
+	getcontextx;
 };
 
 FBSDprivate_1.0 {
@@ -396,10 +435,10 @@ FBSDprivate_1.0 {
 	_pthread_attr_setstackaddr;
 	_pthread_attr_setstacksize;
 	_pthread_cancel;
+	_pthread_cancel_enter;
+	_pthread_cancel_leave;
 	_pthread_cleanup_pop;
 	_pthread_cleanup_push;
-	_pthread_condattr_destroy;
-	_pthread_condattr_init;
 	_pthread_cond_broadcast;
 	_pthread_cond_destroy;
 	_pthread_cond_init;
@@ -416,6 +455,7 @@ FBSDprivate_1.0 {
 	_pthread_kill;
 	_pthread_main_np;
 	_pthread_mutex_destroy;
+	_pthread_mutex_init_calloc_cb;
 	_pthread_mutex_init;
 	_pthread_mutex_lock;
 	_pthread_mutex_trylock;
@@ -440,10 +480,13 @@ FBSDprivate_1.0 {
 	_spinlock;
 	_spinlock_debug;
 	_spinunlock;
+	_rtld_addr_phdr;
 	_rtld_atfork_pre;
 	_rtld_atfork_post;
 	_rtld_error;		/* for private use */
+	_rtld_get_stack_prot;
 	_rtld_thread_init;	/* for private use */
+	__elf_phdr_match_addr;
 	_err;
 	_warn;
 	__fmtcheck;
@@ -456,20 +499,9 @@ FBSDprivate_1.0 {
 	__opendir2;
 	__pause;
 	_pause;
-	__pselect;
 	__pw_scan;	/* Used by (at least) libutil */
 	__raise;
 	_raise;
-	__sem_init;
-	__sem_destroy;
-	__sem_open;
-	__sem_close;
-	__sem_unlink;
-	__sem_wait;
-	__sem_trywait;
-	__sem_timedwait;
-	__sem_post;
-	__sem_getvalue;
 	__sleep;
 	_sleep;
 	_rtld_allocate_tls;
@@ -486,4 +518,20 @@ FBSDprivate_1.0 {
 	_wait;
 	__waitpid;
 	_waitpid;
+
+	_libc_sem_init_compat;
+	_libc_sem_destroy_compat;
+	_libc_sem_open_compat;
+	_libc_sem_close_compat;
+	_libc_sem_unlink_compat;
+	_libc_sem_wait_compat;
+	_libc_sem_trywait_compat;
+	_libc_sem_timedwait_compat;
+	_libc_sem_post_compat;
+	_libc_sem_getvalue_compat;
+
+	__elf_aux_vector;
+	__pthread_map_stacks_exec;
+	__fillcontextx;
+	__getcontextx_size;
 };

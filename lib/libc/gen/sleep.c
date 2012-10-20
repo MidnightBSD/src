@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)sleep.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/sleep.c,v 1.32 2007/01/09 00:27:55 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -41,8 +41,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/sleep.c,v 1.32 2007/01/09 00:27:55 imp Exp 
 #include "un-namespace.h"
 
 unsigned int
-__sleep(seconds)
-	unsigned int seconds;
+__sleep(unsigned int seconds)
 {
 	struct timespec time_to_sleep;
 	struct timespec time_remaining;

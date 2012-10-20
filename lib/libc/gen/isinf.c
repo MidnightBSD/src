@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/gen/isinf.c,v 1.2 2004/07/10 15:52:26 marcel Exp $
+ * $MidnightBSD$
  */
 
 #include <math.h>

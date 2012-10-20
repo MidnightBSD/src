@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)daemon.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/daemon.c,v 1.8 2007/01/09 00:27:53 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -43,7 +43,8 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/daemon.c,v 1.8 2007/01/09 00:27:53 imp Exp 
 #include "un-namespace.h"
 
 int
-daemon(int nochdir, int noclose)
+daemon(nochdir, noclose)
+	int nochdir, noclose;
 {
 	struct sigaction osa, sa;
 	int fd;
@@ -63,6 +64,10 @@ daemon(int nochdir, int noclose)
 	case 0:
 		break;
 	default:
+		/*
+		 * A fine point:  _exit(0), not exit(0), to avoid triggering
+		 * atexit(3) processing
+		 */
 		_exit(0);
 	}
 

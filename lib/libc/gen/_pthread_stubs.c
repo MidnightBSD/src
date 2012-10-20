@@ -25,11 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/_pthread_stubs.c,v 1.13 2006/03/05 18:10:27 deischen Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <signal.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "libc_private.h"
 
@@ -53,6 +54,7 @@ static int		stub_main(void);
 static void 		*stub_null(void);
 static struct pthread	*stub_self(void);
 static int		stub_zero(void);
+static int		stub_fail(void);
 static int		stub_true(void);
 static void		stub_exit(void);
 
@@ -82,8 +84,6 @@ pthread_func_entry_t __thr_jtable[PJT_MAX] = {
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CANCEL */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CLEANUP_POP */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CLEANUP_PUSH */
-	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_CONDATTR_DESTROY */
-	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_CONDATTR_INIT */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_COND_BROADCAST */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_COND_DESTROY */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_COND_INIT */
@@ -95,7 +95,7 @@ pthread_func_entry_t __thr_jtable[PJT_MAX] = {
 	{PJT_DUAL_ENTRY(stub_exit)},    /* PJT_EXIT */
 	{PJT_DUAL_ENTRY(stub_null)},    /* PJT_GETSPECIFIC */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_JOIN */
-	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_KEY_CREATE */
+	{PJT_DUAL_ENTRY(stub_fail)},    /* PJT_KEY_CREATE */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_KEY_DELETE */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_KILL */
 	{PJT_DUAL_ENTRY(stub_main)},    /* PJT_MAIN_NP */
@@ -107,7 +107,7 @@ pthread_func_entry_t __thr_jtable[PJT_MAX] = {
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_MUTEX_LOCK */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_MUTEX_TRYLOCK */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_MUTEX_UNLOCK */
-	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_ONCE */
+	{PJT_DUAL_ENTRY(stub_fail)},    /* PJT_ONCE */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_RWLOCK_DESTROY */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_RWLOCK_INIT */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_RWLOCK_RDLOCK */
@@ -121,6 +121,10 @@ pthread_func_entry_t __thr_jtable[PJT_MAX] = {
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_SETSPECIFIC */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_SIGMASK */
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_TESTCANCEL */
+	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CLEANUP_POP_IMP */
+	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CLEANUP_PUSH_IMP */
+	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_CANCEL_ENTER */
+	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_CANCEL_LEAVE */
 };
 
 /*
@@ -213,8 +217,6 @@ STUB_FUNC1(pthread_cond_destroy, PJT_COND_DESTROY, int, void *)
 STUB_FUNC2(pthread_cond_init,	PJT_COND_INIT, int, void *, void *)
 STUB_FUNC1(pthread_cond_signal,	PJT_COND_SIGNAL, int, void *)
 STUB_FUNC2(pthread_cond_wait,	PJT_COND_WAIT, int, void *, void *)
-STUB_FUNC1(pthread_condattr_destroy,	PJT_CONDATTR_DESTROY, int, void *)
-STUB_FUNC1(pthread_condattr_init,	PJT_CONDATTR_INIT, int, void *)
 STUB_FUNC1(pthread_getspecific,	PJT_GETSPECIFIC, void *, pthread_key_t)
 STUB_FUNC2(pthread_key_create,	PJT_KEY_CREATE, int, void *, void *)
 STUB_FUNC1(pthread_key_delete,	PJT_KEY_DELETE, int, pthread_key_t)
@@ -269,6 +271,10 @@ STUB_FUNC2(pthread_kill, PJT_KILL, int, void *, int)
 STUB_FUNC2(pthread_setcancelstate, PJT_SETCANCELSTATE, int, int, void *)
 STUB_FUNC2(pthread_setcanceltype, PJT_SETCANCELTYPE, int, int, void *)
 STUB_FUNC(pthread_testcancel, PJT_TESTCANCEL, void)
+STUB_FUNC1(__pthread_cleanup_pop_imp, PJT_CLEANUP_POP_IMP, int, int)
+STUB_FUNC2(__pthread_cleanup_push_imp, PJT_CLEANUP_PUSH_IMP, void, void*, void *);
+STUB_FUNC1(_pthread_cancel_enter, PJT_CANCEL_ENTER, int, int)
+STUB_FUNC1(_pthread_cancel_leave, PJT_CANCEL_LEAVE, int, int)
 
 static int
 stub_zero(void)
@@ -286,6 +292,12 @@ static struct pthread *
 stub_self(void)
 {
 	return (&main_thread);
+}
+
+static int
+stub_fail(void)
+{
+	return (ENOSYS);
 }
 
 static int

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libc/gen/tls.c,v 1.14 2007/02/25 21:23:50 kientzle Exp $
+ *	$MidnightBSD$
  */
 
 /*
@@ -57,16 +57,21 @@ void _rtld_free_tls(void *tls, size_t tcbsize, size_t tcbalign);
 void *__libc_allocate_tls(void *oldtls, size_t tcbsize, size_t tcbalign);
 void __libc_free_tls(void *tls, size_t tcbsize, size_t tcbalign);
 
-#if defined(__amd64__)
+#if defined(__ia64__) || defined(__amd64__)
 #define TLS_TCB_ALIGN 16
-#elif defined(__i386__) || \
-    defined(__sparc64__)
+#elif defined(__powerpc__) || defined(__i386__) || defined(__arm__) || \
+    defined(__sparc64__) || defined(__mips__)
 #define TLS_TCB_ALIGN sizeof(void *)
 #else
 #error TLS_TCB_ALIGN undefined for target architecture
 #endif
 
-#if defined(__i386__) || defined(__amd64__) || defined(__sparc64__)
+#if defined(__arm__) || defined(__ia64__) || \
+    defined(__powerpc__)
+#define TLS_VARIANT_I
+#endif
+#if defined(__i386__) || defined(__amd64__) || defined(__sparc64__) || \
+    defined(__mips__)
 #define TLS_VARIANT_II
 #endif
 
@@ -133,11 +138,11 @@ __libc_allocate_tls(void *oldtcb, size_t tcbsize, size_t tcbalign __unused)
 	if (oldtcb != NULL && tcbsize == TLS_TCB_SIZE)
 		return (oldtcb);
 
-	tcb = calloc(1, tls_static_space + tcbsize);
+	tcb = calloc(1, tls_static_space + tcbsize - TLS_TCB_SIZE);
 	tls = (Elf_Addr **)(tcb + tcbsize - TLS_TCB_SIZE);
 
 	if (oldtcb != NULL) {
-		memcpy(tls, oldtcb, tls_static_space + TLS_TCB_SIZE);
+		memcpy(tls, oldtcb, tls_static_space);
 		free(oldtcb);
 
 		/* Adjust the DTV. */
@@ -303,6 +308,13 @@ _init_tls()
 			tls_init = (void*) phdr[i].p_vaddr;
 		}
 	}
+
+#ifdef TLS_VARIANT_I
+	/*
+	 * tls_static_space should include space for TLS structure
+	 */
+	tls_static_space += TLS_TCB_SIZE;
+#endif
 
 	tls = _rtld_allocate_tls(NULL, TLS_TCB_SIZE, TLS_TCB_ALIGN);
 

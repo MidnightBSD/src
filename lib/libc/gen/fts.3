@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)fts.3	8.5 (Berkeley) 4/16/94
-.\" $FreeBSD: src/lib/libc/gen/fts.3,v 1.23 2007/01/09 00:27:53 imp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 7, 2005
+.Dd March 18, 2012
 .Dt FTS 3
 .Os
 .Sh NAME
@@ -133,17 +133,16 @@ structure contains at least the following fields, which are
 described in greater detail below:
 .Bd -literal
 typedef struct _ftsent {
-	u_short fts_info;		/* flags for FTSENT structure */
+	int fts_info;			/* status for FTSENT structure */
 	char *fts_accpath;		/* access path */
 	char *fts_path;			/* root path */
-	u_short fts_pathlen;		/* strlen(fts_path) */
+	size_t fts_pathlen;		/* strlen(fts_path) */
 	char *fts_name;			/* file name */
-	u_short fts_namelen;		/* strlen(fts_name) */
-	short fts_level;		/* depth (\-1 to N) */
+	size_t fts_namelen;		/* strlen(fts_name) */
+	long fts_level;			/* depth (\-1 to N) */
 	int fts_errno;			/* file errno */
-	long fts_number;		/* local numeric value */
+	long long fts_number;		/* local numeric value */
 	void *fts_pointer;		/* local address value */
-	int64_t fts_bignum;		/* local 64-bit numeric value */
 	struct ftsent *fts_parent;	/* parent directory */
 	struct ftsent *fts_link;	/* next file structure */
 	struct ftsent *fts_cycle;	/* cycle structure */
@@ -199,10 +198,9 @@ A directory being visited in post-order.
 The contents of the
 .Vt FTSENT
 structure will be unchanged from when
-it was returned in pre-order, i.e., with the
+the directory was visited in pre-order, except for the
 .Fa fts_info
-field set to
-.Dv FTS_D .
+field.
 .It Dv FTS_ERR
 This is an error return, and the
 .Fa fts_errno
@@ -292,8 +290,6 @@ not modified by the
 .Nm
 functions.
 It is initialized to 0.
-Note that this field is overlaid by
-.Fa fts_bignum .
 .It Fa fts_pointer
 This field is provided for the use of the application program and is
 not modified by the
@@ -301,18 +297,6 @@ not modified by the
 functions.
 It is initialized to
 .Dv NULL .
-Note that this field is overlaid by
-.Fa fts_bignum .
-.It Fa fts_bignum
-This field is provided for the use of the application program and is
-not modified by the
-.Nm
-functions.
-It is initialized to 0.
-Note that this field overlays
-.Fa fts_number
-and
-.Fa fts_pointer .
 .It Fa fts_parent
 A pointer to the
 .Vt FTSENT
@@ -435,14 +419,17 @@ be provided to the
 .Fn fts_open
 function.
 .It Dv FTS_NOCHDIR
-As a performance optimization, the
+To allow descending to arbitrary depths
+(independent of
+.Brq Dv PATH_MAX )
+and improve performance, the
 .Nm
 functions change directories as they walk the file hierarchy.
 This has the side-effect that an application cannot rely on being
 in any particular directory during the traversal.
 The
 .Dv FTS_NOCHDIR
-option turns off this optimization, and the
+option turns off this feature, and the
 .Nm
 functions will not change the current directory.
 Note that applications should not themselves change their current directory
@@ -791,7 +778,7 @@ may fail and set
 as follows:
 .Bl -tag -width Er
 .It Bq Er EINVAL
-The options were invalid.
+The options were invalid, or the list were empty.
 .El
 .Sh SEE ALSO
 .Xr find 1 ,
@@ -814,3 +801,13 @@ functions were introduced in
 principally to provide for alternative interfaces to the
 .Nm
 functionality using different data structures.
+.Sh BUGS
+The
+.Fn fts_open
+function will automatically set the
+.Dv FTS_NOCHDIR
+option if the
+.Dv FTS_LOGICAL
+option is provided, or if it cannot
+.Xr open 2
+the current directory.

@@ -28,10 +28,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)glob.3	8.3 (Berkeley) 4/16/94
-.\" $FreeBSD: src/lib/libc/gen/glob.3,v 1.32 2007/01/09 00:27:54 imp Exp $
 .\" $MidnightBSD$
 .\"
-.Dd October 8, 2010
+.Dd December 20, 2011
 .Dt GLOB 3
 .Os
 .Sh NAME
@@ -43,7 +42,7 @@
 .Sh SYNOPSIS
 .In glob.h
 .Ft int
-.Fn glob "const char *pattern" "int flags" "int (*errfunc)(const char *, int)" "glob_t *pglob"
+.Fn glob "const char * restrict pattern" "int flags" "int (*errfunc)(const char *, int)" "glob_t * restrict pglob"
 .Ft void
 .Fn globfree "glob_t *pglob"
 .Sh DESCRIPTION
@@ -258,13 +257,10 @@ Expand patterns that start with
 .Ql ~
 to user name home directories.
 .It Dv GLOB_LIMIT
-Limit the amount of memory used to store matched strings to
-.Li 64K ,
-the number of
-.Xr stat 2
-calls to 128, and the number of
-.Xr readdir 3
-calls to 16K.
+Limit the total number of returned pathnames to the value provided in
+.Fa gl_matchc
+(default
+.Dv ARG_MAX ) .
 This option should be set for programs
 that can be coerced into a denial of service attack
 via patterns that expand to a very large number of matches,
@@ -421,7 +417,7 @@ execvp("ls", g.gl_pathv);
 .Sh SEE ALSO
 .Xr sh 1 ,
 .Xr fnmatch 3 ,
-.Xr regexp 3
+.Xr regex 3
 .Sh STANDARDS
 The current implementation of the
 .Fn glob

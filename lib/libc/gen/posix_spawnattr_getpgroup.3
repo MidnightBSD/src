@@ -1,4 +1,4 @@
-.\" Copyright (c) 2008 Ed Schouten <ed@80386.nl>
+.\" Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -32,9 +32,9 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $FreeBSD$
+.\" $MidnightBSD$
 .\"
-.Dd Mar 24, 2008
+.Dd March 24, 2008
 .Dt POSIX_SPAWNATTR_GETPGROUP 3
 .Os
 .Sh NAME
@@ -52,13 +52,13 @@
 .Sh DESCRIPTION
 The
 .Fn posix_spawnattr_getpgroup
-function shall obtain the value of the spawn-pgroup attribute from the
+function obtains the value of the spawn-pgroup attribute from the
 attributes object referenced by
 .Fa attr .
 .Pp
 The
 .Fn posix_spawnattr_setpgroup
-function shall set the spawn-pgroup attribute in an initialized
+function sets the spawn-pgroup attribute in an initialized
 attributes object referenced by
 .Fa attr .
 .Pp
@@ -66,13 +66,13 @@ The spawn-pgroup attribute represents the process group to be joined by
 the new process image in a spawn operation (if
 .Dv POSIX_SPAWN_SETPGROUP
 is set in the spawn-flags attribute).
-The default value of this attribute shall be zero.
+The default value of this attribute is zero.
 .Sh RETURN VALUES
 The
 .Fn posix_spawnattr_getpgroup
 and
 .Fn posix_spawnattr_setpgroup
-functions shall return zero.
+functions return zero.
 .Sh SEE ALSO
 .Xr posix_spawn 3 ,
 .Xr posix_spawnattr_destroy 3 ,
@@ -90,7 +90,7 @@ The
 .Fn posix_spawnattr_getpgroup
 and
 .Fn posix_spawnattr_setpgroup
-functions appeared in
+functions first appeared in
 .Fx 8.0 .
 .Sh AUTHORS
-.An Ed Schouten Aq ed@80386.nl
+.An Ed Schouten Aq ed@FreeBSD.org

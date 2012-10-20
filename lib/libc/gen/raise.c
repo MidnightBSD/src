@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)raise.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/raise.c,v 1.5 2007/01/09 00:27:55 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <signal.h>
 #include <unistd.h>
@@ -40,8 +40,7 @@ __weak_reference(__raise, raise);
 __weak_reference(__raise, _raise);
 
 int
-__raise(s)
-	int s;
+__raise(int s)
 {
 	return(kill(getpid(), s));
 }

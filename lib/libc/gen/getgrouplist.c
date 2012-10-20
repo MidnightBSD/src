@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getgrouplist.c	8.2 (Berkeley) 12/8/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getgrouplist.c,v 1.15 2007/01/09 00:27:53 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * get credential
@@ -42,46 +42,11 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/getgrouplist.c,v 1.15 2007/01/09 00:27:53 i
 #include <string.h>
 #include <unistd.h>
 
+extern int __getgroupmembership(const char *, gid_t, gid_t *, int, int *);
+
 int
 getgrouplist(const char *uname, gid_t agroup, gid_t *groups, int *grpcnt)
 {
-	const struct group *grp;
-	int i, maxgroups, ngroups, ret;
-
-	ret = 0;
-	ngroups = 0;
-	maxgroups = *grpcnt;
-	/*
-	 * When installing primary group, duplicate it;
-	 * the first element of groups is the effective gid
-	 * and will be overwritten when a setgid file is executed.
-	 */
-	groups[ngroups++] = agroup;
-	if (maxgroups > 1)
-		groups[ngroups++] = agroup;
-	/*
-	 * Scan the group file to find additional groups.
-	 */
-	setgrent();
-	while ((grp = getgrent()) != NULL) {
-		for (i = 0; i < ngroups; i++) {
-			if (grp->gr_gid == groups[i])
-				goto skip;
-		}
-		for (i = 0; grp->gr_mem[i]; i++) {
-			if (!strcmp(grp->gr_mem[i], uname)) {
-				if (ngroups >= maxgroups) {
-					ret = -1;
-					break;
-				}
-				groups[ngroups++] = grp->gr_gid;
-				break;
-			}
-		}
-skip:
-		;
-	}
-	endgrent();
-	*grpcnt = ngroups;
-	return (ret);
+	return __getgroupmembership(uname, agroup, groups, *grpcnt, grpcnt);
 }
+

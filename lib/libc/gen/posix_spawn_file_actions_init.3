@@ -1,4 +1,4 @@
-.\" Copyright (c) 2008 Ed Schouten <ed@80386.nl>
+.\" Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -32,9 +32,9 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $FreeBSD$
+.\" $MidnightBSD$
 .\"
-.Dd Mar 24, 2008
+.Dd March 24, 2008
 .Dt POSIX_SPAWN_FILE_ACTIONS_INIT 3
 .Os
 .Sh NAME
@@ -52,7 +52,7 @@
 .Sh DESCRIPTION
 The
 .Fn posix_spawn_file_actions_init
-function shall initialize the object referenced by
+function initialize the object referenced by
 .Fn file_actions
 to contain no file actions for
 .Fn posix_spawn
@@ -63,19 +63,19 @@ memory to be leaked.
 .Pp
 The
 .Fn posix_spawn_file_actions_destroy
-function shall destroy the object referenced by
+function destroy the object referenced by
 .Fa file_actions ;
 the object becomes, in effect, uninitialized.
 A destroyed spawn file actions object can be reinitialized using
 .Fn posix_spawn_file_actions_init .
 The object should not be used after it has been destroyed.
 .Sh RETURN VALUES
-Upon successful completion, these functions shall return zero;
-otherwise, an error number shall be returned to indicate the error.
+Upon successful completion, these functions return zero;
+otherwise, an error number is returned to indicate the error.
 .Sh ERRORS
 The
 .Fn posix_spawn_file_actions_init
-function shall fail if:
+function will fail if:
 .Bl -tag -width Er
 .It Bq Er ENOMEM
 Insufficient memory exists to initialize the spawn file actions object.
@@ -98,7 +98,7 @@ The
 .Fn posix_spawn_file_actions_init
 and
 .Fn posix_spawn_file_actions_destroy
-functions appeared in
+functions first appeared in
 .Fx 8.0 .
 .Sh AUTHORS
-.An Ed Schouten Aq ed@80386.nl
+.An Ed Schouten Aq ed@FreeBSD.org

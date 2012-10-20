@@ -1,6 +1,6 @@
-/*
- * Copyright (c) 1989, 1993
- *	The Regents of the University of California.  All rights reserved.
+/*-
+ * Copyright (c) 2009 Ed Schouten <ed@FreeBSD.org>
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,14 +10,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -27,29 +24,32 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)clock.c	8.1 (Berkeley) 6/4/93";
-#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
+#include "namespace.h"
 #include <sys/param.h>
-#include <sys/time.h>
-#include <sys/resource.h>
+#include <sys/ioctl.h>
+#include <stdlib.h>
+#include "un-namespace.h"
 
-/*
- * Convert usec to clock ticks; could do (usec * CLOCKS_PER_SEC) / 1000000,
- * but this would overflow if we switch to nanosec.
- */
-#define	CONVTCK(r)	((r).tv_sec * CLOCKS_PER_SEC \
-			 + (r).tv_usec / (1000000 / CLOCKS_PER_SEC))
-
-clock_t
-clock()
+char *
+fdevname_r(int fd, char *buf, int len)
 {
-	struct rusage ru;
+	struct fiodgname_arg fgn;
 
-	if (getrusage(RUSAGE_SELF, &ru))
-		return ((clock_t) -1);
-	return((clock_t)((CONVTCK(ru.ru_utime) + CONVTCK(ru.ru_stime))));
+	fgn.buf = buf;
+	fgn.len = len;
+
+	if (_ioctl(fd, FIODGNAME, &fgn) == -1)
+		return (NULL);
+	return (buf);
+}
+
+char *
+fdevname(int fd)
+{
+	static char buf[SPECNAMELEN + 1];
+
+	return (fdevname_r(fd, buf, sizeof(buf)));
 }
