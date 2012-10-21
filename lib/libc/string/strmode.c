@@ -31,16 +31,14 @@
 static char sccsid[] = "@(#)strmode.c	8.3 (Berkeley) 8/15/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/strmode.c,v 1.5 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
 
 void
-strmode(mode, p)
-	mode_t mode;
-	char *p;
+strmode(/* mode_t */ int mode, char *p)
 {
 	 /* print type */
 	switch (mode & S_IFMT) {
@@ -145,6 +143,6 @@ strmode(mode, p)
 		*p++ = 't';
 		break;
 	}
-	*p++ = ' ';		/* will be a '+' if ACL's implemented */
+	*p++ = ' ';
 	*p = '\0';
 }

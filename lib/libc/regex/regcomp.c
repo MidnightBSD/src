@@ -3,6 +3,11 @@
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * This code is derived from software contributed to Berkeley by
  * Henry Spencer.
  *
@@ -37,7 +42,7 @@
 static char sccsid[] = "@(#)regcomp.c	8.5 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/regex/regcomp.c,v 1.36 2007/06/11 03:05:54 delphij Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -81,11 +86,11 @@ extern "C" {
 #endif
 
 /* === regcomp.c === */
-static void p_ere(struct parse *p, wint_t stop, size_t reclimit);
-static void p_ere_exp(struct parse *p, size_t reclimit);
+static void p_ere(struct parse *p, wint_t stop);
+static void p_ere_exp(struct parse *p);
 static void p_str(struct parse *p);
-static void p_bre(struct parse *p, wint_t end1, wint_t end2, size_t reclimit);
-static int p_simp_re(struct parse *p, int starordinary, size_t reclimit);
+static void p_bre(struct parse *p, wint_t end1, wint_t end2);
+static int p_simp_re(struct parse *p, int starordinary);
 static int p_count(struct parse *p);
 static void p_bracket(struct parse *p);
 static void p_b_term(struct parse *p, cset *cs);
@@ -97,7 +102,7 @@ static wint_t othercase(wint_t ch);
 static void bothcases(struct parse *p, wint_t ch);
 static void ordinary(struct parse *p, wint_t ch);
 static void nonnewline(struct parse *p);
-static void repeat(struct parse *p, sopno start, int from, int to, size_t reclimit);
+static void repeat(struct parse *p, sopno start, int from, int to);
 static int seterr(struct parse *p, int e);
 static cset *allocset(struct parse *p);
 static void freeset(struct parse *p, cset *cs);
@@ -109,7 +114,7 @@ static sopno dupl(struct parse *p, sopno start, sopno finish);
 static void doemit(struct parse *p, sop op, size_t opnd);
 static void doinsert(struct parse *p, sop op, size_t opnd, sopno pos);
 static void dofwd(struct parse *p, sopno pos, sop value);
-static int enlarge(struct parse *p, sopno size);
+static void enlarge(struct parse *p, sopno size);
 static void stripsnug(struct parse *p, struct re_guts *g);
 static void findmust(struct parse *p, struct re_guts *g);
 static int altoffset(sop *scan, int offset);
@@ -161,13 +166,6 @@ static int never = 0;		/* for use in asserts; shuts lint up */
 #else
 #define	never	0		/* some <assert.h>s have bugs too */
 #endif
-
-#define MEMLIMIT    0x8000000
-#define MEMSIZE(p) \
-((p)->ncsalloc / CHAR_BIT + \
-(p)->ncsalloc * sizeof(cset) + \
-(p)->ssize * sizeof(sop))
-#define RECLIMIT    256
 
 /* Macro used by computejump()/computematchjump() */
 #define MIN(a,b)	((a)<(b)?(a):(b))
@@ -251,11 +249,11 @@ regcomp(regex_t * __restrict preg,
 	EMIT(OEND, 0);
 	g->firststate = THERE();
 	if (cflags&REG_EXTENDED)
-		p_ere(p, OUT, 0);
+		p_ere(p, OUT);
 	else if (cflags&REG_NOSPEC)
 		p_str(p);
 	else
-		p_bre(p, OUT, OUT, 0);
+		p_bre(p, OUT, OUT);
 	EMIT(OEND, 0);
 	g->laststate = THERE();
 
@@ -296,25 +294,19 @@ regcomp(regex_t * __restrict preg,
  */
 static void
 p_ere(struct parse *p,
-	int stop,		/* character this ERE should end at */
-    size_t reclimit)
+	int stop)		/* character this ERE should end at */
 {
 	char c;
 	sopno prevback;
 	sopno prevfwd;
 	sopno conc;
 	int first = 1;		/* is this the first alternative? */
-    
-    if (reclimit++ > RECLIMIT || p->error == REG_ESPACE) {
-        p->error = REG_ESPACE;
-        return;
-    }
 
 	for (;;) {
 		/* do a bunch of concatenated expressions */
 		conc = HERE();
 		while (MORE() && (c = PEEK()) != '|' && c != stop)
-			p_ere_exp(p, reclimit);
+			p_ere_exp(p);
 		(void)REQUIRE(HERE() != conc, REG_EMPTY);	/* require nonempty */
 
 		if (!EAT('|'))
@@ -346,7 +338,7 @@ p_ere(struct parse *p,
  == static void p_ere_exp(struct parse *p);
  */
 static void
-p_ere_exp(struct parse *p, size_t reclimit)
+p_ere_exp(struct parse *p)
 {
 	char c;
 	wint_t wc;
@@ -369,7 +361,7 @@ p_ere_exp(struct parse *p, size_t reclimit)
 			p->pbegin[subno] = HERE();
 		EMIT(OLPAREN, subno);
 		if (!SEE(')'))
-			p_ere(p, ')', reclimit);
+			p_ere(p, ')');
 		if (subno < NPAREN) {
 			p->pend[subno] = HERE();
 			assert(p->pend[subno] != 0);
@@ -473,7 +465,7 @@ p_ere_exp(struct parse *p, size_t reclimit)
 				count2 = INFINITY;
 		} else		/* just a single number */
 			count2 = count;
-		repeat(p, pos, count, count2, reclimit);
+		repeat(p, pos, count, count2);
 		if (!EAT('}')) {	/* error heuristics */
 			while (MORE() && PEEK() != '}')
 				NEXT();
@@ -517,15 +509,8 @@ p_str(struct parse *p)
 static void
 p_bre(struct parse *p,
 	int end1,		/* first terminating character */
-	int end2,		/* second terminating character */
-	size_t reclimit)
+	int end2)		/* second terminating character */
 {
-	
-	if (reclimit++ > RECLIMIT || p->error == REG_ESPACE) {
-		p->error = REG_ESPACE;
-		return;
-	}
-	
 	sopno start = HERE();
 	int first = 1;			/* first subexpression? */
 	int wasdollar = 0;
@@ -536,7 +521,7 @@ p_bre(struct parse *p,
 		p->g->nbol++;
 	}
 	while (MORE() && !SEETWO(end1, end2)) {
-		wasdollar = p_simp_re(p, first, reclimit);
+		wasdollar = p_simp_re(p, first);
 		first = 0;
 	}
 	if (wasdollar) {	/* oops, that was a trailing anchor */
@@ -555,8 +540,7 @@ p_bre(struct parse *p,
  */
 static int			/* was the simple RE an unbackslashed $? */
 p_simp_re(struct parse *p,
-	int starordinary,	/* is a leading * an ordinary character? */
-	size_t reclimit)
+	int starordinary)	/* is a leading * an ordinary character? */
 {
 	int c;
 	int count;
@@ -596,7 +580,7 @@ p_simp_re(struct parse *p,
 		EMIT(OLPAREN, subno);
 		/* the MORE here is an error heuristic */
 		if (MORE() && !SEETWO('\\', ')'))
-			p_bre(p, '\\', ')', reclimit);
+			p_bre(p, '\\', ')');
 		if (subno < NPAREN) {
 			p->pend[subno] = HERE();
 			assert(p->pend[subno] != 0);
@@ -657,7 +641,7 @@ p_simp_re(struct parse *p,
 				count2 = INFINITY;
 		} else		/* just a single number */
 			count2 = count;
-		repeat(p, pos, count, count2, reclimit);
+		repeat(p, pos, count, count2);
 		if (!EATTWO('\\', '}')) {	/* error heuristics */
 			while (MORE() && !SEETWO('\\', '}'))
 				NEXT();
@@ -751,6 +735,8 @@ p_b_term(struct parse *p, cset *cs)
 	char c;
 	wint_t start, finish;
 	wint_t i;
+	struct xlocale_collate *table =
+		(struct xlocale_collate*)__get_locale()->components[XLC_COLLATE];
 
 	/* classify what we've got */
 	switch ((MORE()) ? PEEK() : '\0') {
@@ -799,14 +785,14 @@ p_b_term(struct parse *p, cset *cs)
 		if (start == finish)
 			CHadd(p, cs, start);
 		else {
-			if (__collate_load_error) {
+			if (table->__collate_load_error) {
 				(void)REQUIRE((uch)start <= (uch)finish, REG_ERANGE);
 				CHaddrange(p, cs, start, finish);
 			} else {
-				(void)REQUIRE(__collate_range_cmp(start, finish) <= 0, REG_ERANGE);
+				(void)REQUIRE(__collate_range_cmp(table, start, finish) <= 0, REG_ERANGE);
 				for (i = 0; i <= UCHAR_MAX; i++) {
-					if (   __collate_range_cmp(start, i) <= 0
-					    && __collate_range_cmp(i, finish) <= 0
+					if (   __collate_range_cmp(table, start, i) <= 0
+					    && __collate_range_cmp(table, i, finish) <= 0
 					   )
 						CHadd(p, cs, i);
 				}
@@ -1016,8 +1002,7 @@ static void
 repeat(struct parse *p,
 	sopno start,		/* operand from here to end of strip */
 	int from,		/* repeated from this number */
-	int to,			/* to this number of times (maybe INFINITY) */
-	size_t reclimit)
+	int to)			/* to this number of times (maybe INFINITY) */
 {
 	sopno finish = HERE();
 #	define	N	2
@@ -1040,7 +1025,7 @@ repeat(struct parse *p,
 	case REP(0, INF):		/* as x{1,}? */
 		/* KLUDGE: emit y? as (y|) until subtle bug gets fixed */
 		INSERT(OCH_, start);		/* offset is wrong... */
-		repeat(p, start+1, 1, to, reclimit);
+		repeat(p, start+1, 1, to);
 		ASTERN(OOR1, start);
 		AHEAD(start);			/* ... fix it */
 		EMIT(OOR2, 0);
@@ -1060,7 +1045,7 @@ repeat(struct parse *p,
 		ASTERN(O_CH, THERETHERE());
 		copy = dupl(p, start+1, finish+1);
 		assert(copy == finish+4);
-		repeat(p, copy, 1, to-1, reclimit);
+		repeat(p, copy, 1, to-1);
 		break;
 	case REP(1, INF):		/* as x+ */
 		INSERT(OPLUS_, start);
@@ -1068,11 +1053,11 @@ repeat(struct parse *p,
 		break;
 	case REP(N, N):			/* as xx{m-1,n-1} */
 		copy = dupl(p, start, finish);
-		repeat(p, copy, from-1, to-1, reclimit);
+		repeat(p, copy, from-1, to-1);
 		break;
 	case REP(N, INF):		/* as xx{n-1,INF} */
 		copy = dupl(p, start, finish);
-		repeat(p, copy, from-1, to, reclimit);
+		repeat(p, copy, from-1, to);
 		break;
 	default:			/* "can't happen" */
 		SETERROR(REG_ASSERT);	/* just in case */
@@ -1126,13 +1111,9 @@ static cset *
 allocset(struct parse *p)
 {
 	cset *cs, *ncs;
-	
-	if (MEMSIZE(p) > MEMLIMIT)
-		goto oomem;
 
 	ncs = realloc(p->g->sets, (p->g->ncsets + 1) * sizeof(*ncs));
 	if (ncs == NULL) {
-	oomem:
 		SETERROR(REG_ESPACE);
 		return (NULL);
 	}
@@ -1272,8 +1253,8 @@ dupl(struct parse *p,
 	assert(finish >= start);
 	if (len == 0)
 		return(ret);
-	if (!enlarge(p, p->ssize + len))	/* this many unexpected additions */
-		return ret;
+	enlarge(p, p->ssize + len);	/* this many unexpected additions */
+	assert(p->ssize >= p->slen + len);
 	(void) memcpy((char *)(p->strip + p->slen),
 		(char *)(p->strip + start), (size_t)len*sizeof(sop));
 	p->slen += len;
@@ -1300,8 +1281,8 @@ doemit(struct parse *p, sop op, size_t opnd)
 
 	/* deal with undersized strip */
 	if (p->slen >= p->ssize)
-		if (!enlarge(p, (p->ssize+1) / 2 * 3))	/* +50% */
-			return;
+		enlarge(p, (p->ssize+1) / 2 * 3);	/* +50% */
+	assert(p->slen < p->ssize);
 
 	/* finally, it's all reduced to the easy case */
 	p->strip[p->slen++] = SOP(op, opnd);
@@ -1362,27 +1343,21 @@ dofwd(struct parse *p, sopno pos, sop value)
  - enlarge - enlarge the strip
  == static void enlarge(struct parse *p, sopno size);
  */
-static int
+static void
 enlarge(struct parse *p, sopno size)
 {
 	sop *sp;
-	sopno osize;
 
 	if (p->ssize >= size)
-		return 1;
-	osize = p->ssize;
-	p->ssize = size;
-	if (MEMSIZE(p) > MEMLIMIT)
-		goto oomem;
+		return;
+
 	sp = (sop *)realloc(p->strip, size*sizeof(sop));
 	if (sp == NULL) {
-oomem:
-		p->ssize = osize;
 		SETERROR(REG_ESPACE);
-		return 0;
+		return;
 	}
 	p->strip = sp;
-	return 1;
+	p->ssize = size;
 }
 
 /*

@@ -1,4 +1,4 @@
-/*	$NetBSD: strndup.c,v 1.1.2.1 2006/08/27 06:08:51 riz Exp $	*/
+/*      $NetBSD: strndup.c,v 1.3 2007/01/14 23:41:24 cbiere Exp $       */
 
 /*
  * Copyright (c) 1988, 1993
@@ -12,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,15 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
-#else
-__RCSID("$NetBSD: strndup.c,v 1.1.2.1 2006/08/27 06:08:51 riz Exp $");
-#endif
-#endif /* LIBC_SCCS and not lint */
-
-__MBSDID("$MidnightBSD: src/lib/libc/string/strndup.c,v 1.2 2007/01/04 06:44:43 laffer1 Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -50,12 +42,10 @@ strndup(const char *str, size_t n)
 	size_t len;
 	char *copy;
 
-	len = strlen(str);
-	if (len > n)
-		len = n;
-	if (!(copy = malloc(len + 1)))
+	len = strnlen(str, n);
+	if ((copy = malloc(len + 1)) == NULL)
 		return (NULL);
-	memcpy(copy, str, len + 1);
+	memcpy(copy, str, len);
 	copy[len] = '\0';
 	return (copy);
 }

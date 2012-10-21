@@ -2,7 +2,7 @@
  * This file is in the public domain.  Written by Garrett A. Wollman,
  * 2002-09-07.
  *
- * $FreeBSD: src/lib/libc/stdlib/_Exit.c,v 1.1 2002/09/10 02:04:49 wollman Exp $
+ * $FreeBSD$
  */
 
 #include <stdlib.h>

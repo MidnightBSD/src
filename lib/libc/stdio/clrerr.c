@@ -34,13 +34,15 @@
 static char sccsid[] = "@(#)clrerr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/clrerr.c,v 1.10 2007/01/09 00:28:06 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
 #include "un-namespace.h"
 #include "libc_private.h"
-#undef	clearerr
+
+#undef clearerr
+#undef clearerr_unlocked
 
 void
 clearerr(fp)
@@ -49,4 +51,11 @@ clearerr(fp)
 	FLOCKFILE(fp);
 	__sclearerr(fp);
 	FUNLOCKFILE(fp);
+}
+
+void
+clearerr_unlocked(FILE *fp)
+{
+
+	__sclearerr(fp);
 }

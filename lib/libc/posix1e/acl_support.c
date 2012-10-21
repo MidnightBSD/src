@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1999, 2000, 2001 Robert N. M. Watson
+ * Copyright (c) 1999-2001, 2008 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_support.c,v 1.14 2007/02/26 02:07:02 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -40,6 +40,8 @@ __FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_support.c,v 1.14 2007/02/26 02:07:0
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
 #include "acl_support.h"
 
@@ -47,6 +49,37 @@ __FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_support.c,v 1.14 2007/02/26 02:07:0
 #define ACL_STRING_PERM_READ    'r'
 #define ACL_STRING_PERM_EXEC    'x'
 #define ACL_STRING_PERM_NONE    '-'
+
+/*
+ * Return 0, if both ACLs are identical.
+ */
+int
+_acl_differs(const acl_t a, const acl_t b)
+{
+	int i;
+	struct acl_entry *entrya, *entryb;
+
+	assert(_acl_brand(a) == _acl_brand(b));
+	assert(_acl_brand(a) != ACL_BRAND_UNKNOWN);
+	assert(_acl_brand(b) != ACL_BRAND_UNKNOWN);
+
+	if (a->ats_acl.acl_cnt != b->ats_acl.acl_cnt)
+		return (1);
+
+	for (i = 0; i < b->ats_acl.acl_cnt; i++) {
+		entrya = &(a->ats_acl.acl_entry[i]);
+		entryb = &(b->ats_acl.acl_entry[i]);
+
+		if (entrya->ae_tag != entryb->ae_tag ||
+		    entrya->ae_id != entryb->ae_id ||
+		    entrya->ae_perm != entryb->ae_perm ||
+		    entrya->ae_entry_type != entryb->ae_entry_type ||
+		    entrya->ae_flags != entryb->ae_flags)
+			return (1);
+	}
+
+	return (0);
+}
 
 /*
  * _posix1e_acl_entry_compare -- compare two acl_entry structures to
@@ -59,6 +92,10 @@ typedef int (*compare)(const void *, const void *);
 static int
 _posix1e_acl_entry_compare(struct acl_entry *a, struct acl_entry *b)
 {
+
+	assert(_entry_brand(a) == ACL_BRAND_POSIX);
+	assert(_entry_brand(b) == ACL_BRAND_POSIX);
+
 	/*
 	 * First, sort between tags -- conveniently defined in the correct
 	 * order for verification.
@@ -90,11 +127,9 @@ _posix1e_acl_entry_compare(struct acl_entry *a, struct acl_entry *b)
 }
 
 /*
- * _posix1e_acl_sort -- sort ACL entries in POSIX.1e-formatted ACLs
- * Give the opportunity to fail, although we don't currently have a way
- * to fail.
+ * _posix1e_acl_sort -- sort ACL entries in POSIX.1e-formatted ACLs.
  */
-int
+void
 _posix1e_acl_sort(acl_t acl)
 {
 	struct acl *acl_int;
@@ -103,8 +138,6 @@ _posix1e_acl_sort(acl_t acl)
 
 	qsort(&acl_int->acl_entry[0], acl_int->acl_cnt,
 	    sizeof(struct acl_entry), (compare) _posix1e_acl_entry_compare);
-
-	return (0);
 }
 
 /*
@@ -116,6 +149,9 @@ int
 _posix1e_acl(acl_t acl, acl_type_t type)
 {
 
+	if (_acl_brand(acl) != ACL_BRAND_POSIX)
+		return (0);
+
 	return ((type == ACL_TYPE_ACCESS) || (type == ACL_TYPE_DEFAULT));
 }
 
@@ -124,7 +160,7 @@ _posix1e_acl(acl_t acl, acl_type_t type)
  * from code in sys/kern/kern_acl.c, and if changes are made in one, they
  * should be made in the other also.  This copy of acl_check is made
  * available * in userland for the benefit of processes wanting to check ACLs
- * for validity before submitting them to the kernel, or for performing 
+ * for validity before submitting them to the kernel, or for performing
  * in userland file system checking.  Needless to say, the kernel makes
  * the real checks on calls to get/setacl.
  *
@@ -138,7 +174,7 @@ _posix1e_acl_check(acl_t acl)
 {
 	struct acl *acl_int;
 	struct acl_entry	*entry; 	/* current entry */
-	uid_t	obj_uid=-1, obj_gid=-1, highest_uid=0, highest_gid=0;
+	uid_t	highest_uid=0, highest_gid=0;
 	int	stage = ACL_USER_OBJ;
 	int	i = 0;
 	int	count_user_obj=0, count_user=0, count_group_obj=0,
@@ -162,22 +198,19 @@ _posix1e_acl_check(acl_t acl)
 				return (EINVAL);
 			stage = ACL_USER;
 			count_user_obj++;
-			obj_uid = entry->ae_id;
 			break;
-	
+
 		case ACL_USER:
 			/* printf("_posix1e_acl_check: %d: ACL_USER\n", i); */
 			if (stage > ACL_USER)
 				return (EINVAL);
 			stage = ACL_USER;
-			if (entry->ae_id == obj_uid)
-				return (EINVAL);
 			if (count_user && (entry->ae_id <= highest_uid))
 				return (EINVAL);
 			highest_uid = entry->ae_id;
 			count_user++;
-			break;	
-	
+			break;
+
 		case ACL_GROUP_OBJ:
 			/* printf("_posix1e_acl_check: %d: ACL_GROUP_OBJ\n",
 			    i); */
@@ -185,22 +218,19 @@ _posix1e_acl_check(acl_t acl)
 				return (EINVAL);
 			stage = ACL_GROUP;
 			count_group_obj++;
-			obj_gid = entry->ae_id;
 			break;
-	
+
 		case ACL_GROUP:
 			/* printf("_posix1e_acl_check: %d: ACL_GROUP\n", i); */
 			if (stage > ACL_GROUP)
 				return (EINVAL);
 			stage = ACL_GROUP;
-			if (entry->ae_id == obj_gid)
-				return (EINVAL);
 			if (count_group && (entry->ae_id <= highest_gid))
 				return (EINVAL);
 			highest_gid = entry->ae_id;
 			count_group++;
 			break;
-			
+
 		case ACL_MASK:
 			/* printf("_posix1e_acl_check: %d: ACL_MASK\n", i); */
 			if (stage > ACL_MASK)
@@ -208,7 +238,7 @@ _posix1e_acl_check(acl_t acl)
 			stage = ACL_MASK;
 			count_mask++;
 			break;
-	
+
 		case ACL_OTHER:
 			/* printf("_posix1e_acl_check: %d: ACL_OTHER\n", i); */
 			if (stage > ACL_OTHER)
@@ -216,7 +246,7 @@ _posix1e_acl_check(acl_t acl)
 			stage = ACL_OTHER;
 			count_other++;
 			break;
-	
+
 		default:
 			/* printf("_posix1e_acl_check: %d: INVALID\n", i); */
 			return (EINVAL);
@@ -226,7 +256,7 @@ _posix1e_acl_check(acl_t acl)
 
 	if (count_user_obj != 1)
 		return (EINVAL);
-	
+
 	if (count_group_obj != 1)
 		return (EINVAL);
 
@@ -237,54 +267,6 @@ _posix1e_acl_check(acl_t acl)
 		return (EINVAL);
 
 	return (0);
-}
-
-
-/*
- * Given a uid/gid, return a username/groupname for the text form of an ACL.
- * Note that we truncate user and group names, rather than error out, as
- * this is consistent with other tools manipulating user and group names.
- * XXX NOT THREAD SAFE, RELIES ON GETPWUID, GETGRGID
- * XXX USES *PW* AND *GR* WHICH ARE STATEFUL AND THEREFORE THIS ROUTINE
- * MAY HAVE SIDE-EFFECTS
- */
-int
-_posix1e_acl_id_to_name(acl_tag_t tag, uid_t id, ssize_t buf_len, char *buf)
-{
-	struct group	*g;
-	struct passwd	*p;
-	int	i;
-
-	switch(tag) {
-	case ACL_USER:
-		p = getpwuid(id);
-		if (!p)
-			i = snprintf(buf, buf_len, "%d", id);
-		else
-			i = snprintf(buf, buf_len, "%s", p->pw_name);
-
-		if (i < 0) {
-			errno = ENOMEM;
-			return (-1);
-		}
-		return (0);
-
-	case ACL_GROUP:
-		g = getgrgid(id);
-		if (g == NULL) 
-			i = snprintf(buf, buf_len, "%d", id);
-		else
-			i = snprintf(buf, buf_len, "%s", g->gr_name);
-
-		if (i < 0) {
-			errno = ENOMEM;
-			return (-1);
-		}
-		return (0);
-
-	default:
-		return (EINVAL);
-	}
 }
 
 /*
@@ -381,4 +363,56 @@ _posix1e_acl_add_entry(acl_t acl, acl_tag_t tag, uid_t id, acl_perm_t perm)
 	acl_int->acl_cnt++;
 
 	return (0);
+}
+
+/*
+ * Convert "old" type - ACL_TYPE_{ACCESS,DEFAULT}_OLD - into its "new"
+ * counterpart.  It's neccessary for the old (pre-NFSv4 ACLs) binaries
+ * to work with new libc and kernel.  Fixing 'type' for old binaries with
+ * old libc and new kernel is being done by kern/vfs_acl.c:type_unold().
+ */
+int
+_acl_type_unold(acl_type_t type)
+{
+
+	switch (type) {
+	case ACL_TYPE_ACCESS_OLD:
+		return (ACL_TYPE_ACCESS);
+	case ACL_TYPE_DEFAULT_OLD:
+		return (ACL_TYPE_DEFAULT);
+	default:
+		return (type);
+	}
+}
+
+char *
+string_skip_whitespace(char *string)
+{
+
+	while (*string && ((*string == ' ') || (*string == '\t')))
+		string++;
+
+	return (string);
+}
+
+void
+string_trim_trailing_whitespace(char *string)
+{
+	char	*end;
+
+	if (*string == '\0')
+		return;
+
+	end = string + strlen(string) - 1;
+
+	while (end != string) {
+		if ((*end == ' ') || (*end == '\t')) {
+			*end = '\0';
+			end--;
+		} else {
+			return;
+		}
+	}
+
+	return;
 }

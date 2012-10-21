@@ -34,9 +34,11 @@
 static char sccsid[] = "@(#)fread.c	8.2 (Berkeley) 12/11/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/fread.c,v 1.14 2007/01/09 00:28:06 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
+#include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "un-namespace.h"
@@ -50,7 +52,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdio/fread.c,v 1.14 2007/01/09 00:28:06 imp Ex
 size_t
 fread(void * __restrict buf, size_t size, size_t count, FILE * __restrict fp)
 {
-	int ret;
+	size_t ret;
 
 	FLOCKFILE(fp);
 	ret = __fread(buf, size, count, fp);
@@ -67,12 +69,29 @@ __fread(void * __restrict buf, size_t size, size_t count, FILE * __restrict fp)
 	size_t total;
 
 	/*
-	 * The ANSI standard requires a return value of 0 for a count
-	 * or a size of 0.  Peculiarily, it imposes no such requirements
-	 * on fwrite; it only requires fread to be broken.
+	 * ANSI and SUSv2 require a return value of 0 if size or count are 0.
 	 */
-	if ((resid = count * size) == 0)
+	if ((count == 0) || (size == 0))
 		return (0);
+
+	/*
+	 * Check for integer overflow.  As an optimization, first check that
+	 * at least one of {count, size} is at least 2^16, since if both
+	 * values are less than that, their product can't possible overflow
+	 * (size_t is always at least 32 bits on FreeBSD).
+	 */
+	if (((count | size) > 0xFFFF) &&
+	    (count > SIZE_MAX / size)) {
+		errno = EINVAL;
+		fp->_flags |= __SERR;
+		return (0);
+	}
+
+	/*
+	 * Compute the (now required to not overflow) number of bytes to
+	 * read and actually do the work.
+	 */
+	resid = count * size;
 	ORIENT(fp, -1);
 	if (fp->_r < 0)
 		fp->_r = 0;

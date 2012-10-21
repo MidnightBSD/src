@@ -2,6 +2,11 @@
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * This code is derived from software contributed to Berkeley by
  * Chris Torek.
  *
@@ -34,7 +39,7 @@
 static char sccsid[] = "@(#)vfscanf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/vfscanf.c,v 1.41 2007/01/09 00:28:07 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <ctype.h>
@@ -51,6 +56,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdio/vfscanf.c,v 1.41 2007/01/09 00:28:07 imp 
 #include "collate.h"
 #include "libc_private.h"
 #include "local.h"
+#include "xlocale_private.h"
 
 #ifndef NO_FLOATING_POINT
 #include <locale.h>
@@ -95,10 +101,8 @@ __FBSDID("$FreeBSD: src/lib/libc/stdio/vfscanf.c,v 1.41 2007/01/09 00:28:07 imp 
 
 static const u_char *__sccl(char *, const u_char *);
 #ifndef NO_FLOATING_POINT
-static int parsefloat(FILE *, char *, char *);
+static int parsefloat(FILE *, char *, char *, locale_t);
 #endif
-
-int __scanfdebug = 0;
 
 __weak_reference(__vfscanf, vfscanf);
 
@@ -111,7 +115,18 @@ __vfscanf(FILE *fp, char const *fmt0, va_list ap)
 	int ret;
 
 	FLOCKFILE(fp);
-	ret = __svfscanf(fp, fmt0, ap);
+	ret = __svfscanf(fp, __get_locale(), fmt0, ap);
+	FUNLOCKFILE(fp);
+	return (ret);
+}
+int
+vfscanf_l(FILE *fp, locale_t locale, char const *fmt0, va_list ap)
+{
+	int ret;
+	FIX_LOCALE(locale);
+
+	FLOCKFILE(fp);
+	ret = __svfscanf(fp, locale, fmt0, ap);
 	FUNLOCKFILE(fp);
 	return (ret);
 }
@@ -120,7 +135,7 @@ __vfscanf(FILE *fp, char const *fmt0, va_list ap)
  * __svfscanf - non-MT-safe version of __vfscanf
  */
 int
-__svfscanf(FILE *fp, const char *fmt0, va_list ap)
+__svfscanf(FILE *fp, locale_t locale, const char *fmt0, va_list ap)
 {
 	const u_char *fmt = (const u_char *)fmt0;
 	int c;			/* character from format, or conversion */
@@ -735,9 +750,9 @@ literal:
 
 				*p = 0;
 				if ((flags & UNSIGNED) == 0)
-				    res = strtoimax(buf, (char **)NULL, base);
+				    res = strtoimax_l(buf, (char **)NULL, base, locale);
 				else
-				    res = strtoumax(buf, (char **)NULL, base);
+				    res = strtoumax_l(buf, (char **)NULL, base, locale);
 				if (flags & POINTER)
 					*va_arg(ap, void **) =
 							(void *)(uintptr_t)res;
@@ -768,21 +783,19 @@ literal:
 			/* scan a floating point number as if by strtod */
 			if (width == 0 || width > sizeof(buf) - 1)
 				width = sizeof(buf) - 1;
-			if ((width = parsefloat(fp, buf, buf + width)) == 0)
+			if ((width = parsefloat(fp, buf, buf + width, locale)) == 0)
 				goto match_failure;
 			if ((flags & SUPPRESS) == 0) {
 				if (flags & LONGDBL) {
-					long double res = strtold(buf, &p);
+					long double res = strtold_l(buf, &p, locale);
 					*va_arg(ap, long double *) = res;
 				} else if (flags & LONG) {
-					double res = strtod(buf, &p);
+					double res = strtod_l(buf, &p, locale);
 					*va_arg(ap, double *) = res;
 				} else {
-					float res = strtof(buf, &p);
+					float res = strtof_l(buf, &p, locale);
 					*va_arg(ap, float *) = res;
 				}
-				if (__scanfdebug && p - buf != width)
-					abort();
 				nassigned++;
 			}
 			nread += width;
@@ -809,6 +822,8 @@ __sccl(tab, fmt)
 	const u_char *fmt;
 {
 	int c, n, v, i;
+	struct xlocale_collate *table =
+		(struct xlocale_collate*)__get_locale()->components[XLC_COLLATE];
 
 	/* first `clear' the whole table */
 	c = *fmt++;		/* first char hat => negated scanset */
@@ -862,8 +877,8 @@ doswitch:
 			 */
 			n = *fmt;
 			if (n == ']'
-			    || (__collate_load_error ? n < c :
-				__collate_range_cmp (n, c) < 0
+			    || (table->__collate_load_error ? n < c :
+				__collate_range_cmp (table, n, c) < 0
 			       )
 			   ) {
 				c = '-';
@@ -871,14 +886,14 @@ doswitch:
 			}
 			fmt++;
 			/* fill in the range */
-			if (__collate_load_error) {
+			if (table->__collate_load_error) {
 				do {
 					tab[++c] = v;
 				} while (c < n);
 			} else {
 				for (i = 0; i < 256; i ++)
-					if (   __collate_range_cmp (c, i) < 0
-					    && __collate_range_cmp (i, n) <= 0
+					if (   __collate_range_cmp (table, c, i) < 0
+					    && __collate_range_cmp (table, i, n) <= 0
 					   )
 						tab[i] = v;
 			}
@@ -912,16 +927,16 @@ doswitch:
 
 #ifndef NO_FLOATING_POINT
 static int
-parsefloat(FILE *fp, char *buf, char *end)
+parsefloat(FILE *fp, char *buf, char *end, locale_t locale)
 {
 	char *commit, *p;
-	int infnanpos = 0;
+	int infnanpos = 0, decptpos = 0;
 	enum {
-		S_START, S_GOTSIGN, S_INF, S_NAN, S_MAYBEHEX,
-		S_DIGITS, S_FRAC, S_EXP, S_EXPDIGITS
+		S_START, S_GOTSIGN, S_INF, S_NAN, S_DONE, S_MAYBEHEX,
+		S_DIGITS, S_DECPT, S_FRAC, S_EXP, S_EXPDIGITS
 	} state = S_START;
 	unsigned char c;
-	char decpt = *localeconv()->decimal_point;
+	const char *decpt = localeconv_l(locale)->decimal_point;
 	_Bool gotmantdig = 0, ishex = 0;
 
 	/*
@@ -974,8 +989,6 @@ reswitch:
 			break;
 		case S_NAN:
 			switch (infnanpos) {
-			case -1:	/* XXX kludge to deal with nan(...) */
-				goto parsedone;
 			case 0:
 				if (c != 'A' && c != 'a')
 					goto parsedone;
@@ -993,13 +1006,15 @@ reswitch:
 			default:
 				if (c == ')') {
 					commit = p;
-					infnanpos = -2;
+					state = S_DONE;
 				} else if (!isalnum(c) && c != '_')
 					goto parsedone;
 				break;
 			}
 			infnanpos++;
 			break;
+		case S_DONE:
+			goto parsedone;
 		case S_MAYBEHEX:
 			state = S_DIGITS;
 			if (c == 'X' || c == 'x') {
@@ -1010,16 +1025,34 @@ reswitch:
 				goto reswitch;
 			}
 		case S_DIGITS:
-			if ((ishex && isxdigit(c)) || isdigit(c))
+			if ((ishex && isxdigit(c)) || isdigit(c)) {
 				gotmantdig = 1;
-			else {
-				state = S_FRAC;
-				if (c != decpt)
-					goto reswitch;
-			}
-			if (gotmantdig)
 				commit = p;
-			break;
+				break;
+			} else {
+				state = S_DECPT;
+				goto reswitch;
+			}
+		case S_DECPT:
+			if (c == decpt[decptpos]) {
+				if (decpt[++decptpos] == '\0') {
+					/* We read the complete decpt seq. */
+					state = S_FRAC;
+					if (gotmantdig)
+						commit = p;
+				}
+				break;
+			} else if (!decptpos) {
+				/* We didn't read any decpt characters. */
+				state = S_FRAC;
+				goto reswitch;
+			} else {
+				/*
+				 * We read part of a multibyte decimal point,
+				 * but the rest is invalid, so bail.
+				 */
+				goto parsedone;
+			}
 		case S_FRAC:
 			if (((c == 'E' || c == 'e') && !ishex) ||
 			    ((c == 'P' || c == 'p') && ishex)) {

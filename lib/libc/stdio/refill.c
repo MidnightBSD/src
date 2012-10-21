@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)refill.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/refill.c,v 1.19 2007/01/09 00:28:07 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -106,7 +106,7 @@ __srefill(FILE *fp)
 		if (HASUB(fp)) {
 			FREEUB(fp);
 			if ((fp->_r = fp->_ur) != 0) {
-				fp->_p = fp->_extra->_up;
+				fp->_p = fp->_up;
 				return (0);
 			}
 		}

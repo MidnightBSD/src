@@ -5,6 +5,11 @@
  * This code is derived from software contributed to Berkeley by
  * Chris Torek.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -34,30 +39,35 @@
 static char sccsid[] = "@(#)sprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/sprintf.c,v 1.15 2007/01/09 00:28:07 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdarg.h>
 #include <limits.h>
 #include "local.h"
+#include "xlocale_private.h"
 
 int
 sprintf(char * __restrict str, char const * __restrict fmt, ...)
 {
 	int ret;
 	va_list ap;
-	FILE f;
-	struct __sFILEX ext;
 
-	f._file = -1;
-	f._flags = __SWR | __SSTR;
-	f._bf._base = f._p = (unsigned char *)str;
-	f._bf._size = f._w = INT_MAX;
-	f._extra = &ext;
-	INITEXTRA(&f);
 	va_start(ap, fmt);
-	ret = __vfprintf(&f, fmt, ap);
+	ret = vsprintf(str, fmt, ap);
 	va_end(ap);
-	*f._p = 0;
+	return (ret);
+}
+int
+sprintf_l(char * __restrict str, locale_t locale, char const * __restrict fmt,
+		...)
+{
+	int ret;
+	va_list ap;
+	FIX_LOCALE(locale);
+
+	va_start(ap, fmt);
+	ret = vsprintf_l(str, locale, fmt, ap);
+	va_end(ap);
 	return (ret);
 }

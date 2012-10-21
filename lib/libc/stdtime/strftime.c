@@ -2,12 +2,17 @@
  * Copyright (c) 1989 The Regents of the University of California.
  * All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms are permitted
  * provided that the above copyright notice and this paragraph are
  * duplicated in all such forms and that any documentation,
  * advertising materials, and other materials related to such
  * distribution and use acknowledge that the software was developed
- * by the University of California, Berkeley.  The name of the
+ * by the University of California, Berkeley. The name of the
  * University may not be used to endorse or promote products derived
  * from this software without specific prior written permission.
  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
@@ -17,7 +22,7 @@
 
 #ifndef lint
 #ifndef NOID
-static const char	elsieid[] = "@(#)strftime.c	7.64";
+static const char	elsieid[] = "@(#)strftime.3	8.3";
 /*
 ** Based on the UCB version with the ID appearing below.
 ** This is ANSIish only when "multibyte character == plain character".
@@ -32,7 +37,7 @@ static const char	elsieid[] = "@(#)strftime.c	7.64";
 static const char	sccsid[] = "@(#)strftime.c	5.4 (Berkeley) 3/14/89";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdtime/strftime.c,v 1.41 2004/11/04 08:34:57 delphij Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "tzfile.h"
 #include <fcntl.h>
@@ -42,10 +47,9 @@ __FBSDID("$FreeBSD: src/lib/libc/stdtime/strftime.c,v 1.41 2004/11/04 08:34:57 d
 
 static char *	_add(const char *, char *, const char *);
 static char *	_conv(int, const char *, char *, const char *);
-static char *	_fmt(const char *, const struct tm *, char *, const char *, int *);
-
-size_t strftime(char * __restrict, size_t, const char * __restrict,
-    const struct tm * __restrict);
+static char *	_fmt(const char *, const struct tm *, char *, const char *,
+			int *, locale_t);
+static char *	_yconv(int, int, int, int, char *, const char *);
 
 extern char *	tzname[];
 
@@ -53,13 +57,12 @@ extern char *	tzname[];
 #define YEAR_2000_NAME	"CHECK_STRFTIME_FORMATS_FOR_TWO_DIGIT_YEARS"
 #endif /* !defined YEAR_2000_NAME */
 
-
 #define IN_NONE	0
 #define IN_SOME	1
 #define IN_THIS	2
 #define IN_ALL	3
 
-#define PAD_DEFAULT 0
+#define PAD_DEFAULT	0
 #define PAD_LESS	1
 #define PAD_SPACE	2
 #define PAD_ZERO	3
@@ -67,7 +70,7 @@ extern char *	tzname[];
 static const char* fmt_padding[][4] = {
 	/* DEFAULT,	LESS,	SPACE,	ZERO */
 #define PAD_FMT_MONTHDAY	0
-#define PAD_FMT_HMS			0
+#define PAD_FMT_HMS		0
 #define PAD_FMT_CENTURY		0
 #define PAD_FMT_SHORTYEAR	0
 #define PAD_FMT_MONTH		0
@@ -84,29 +87,30 @@ static const char* fmt_padding[][4] = {
 };
 
 size_t
-strftime(char * __restrict s, size_t maxsize, const char * __restrict format,
-    const struct tm * __restrict t)
+strftime_l(char * __restrict s, size_t maxsize, const char * __restrict format,
+    const struct tm * __restrict t, locale_t loc)
 {
 	char *	p;
 	int	warn;
+	FIX_LOCALE(loc);
 
 	tzset();
 	warn = IN_NONE;
-	p = _fmt(((format == NULL) ? "%c" : format), t, s, s + maxsize, &warn);
+	p = _fmt(((format == NULL) ? "%c" : format), t, s, s + maxsize, &warn, loc);
 #ifndef NO_RUN_TIME_WARNINGS_ABOUT_YEAR_2000_PROBLEMS_THANK_YOU
 	if (warn != IN_NONE && getenv(YEAR_2000_NAME) != NULL) {
-		(void) fprintf(stderr, "\n");
+		(void) fprintf_l(stderr, loc, "\n");
 		if (format == NULL)
-			(void) fprintf(stderr, "NULL strftime format ");
-		else	(void) fprintf(stderr, "strftime format \"%s\" ",
+			(void) fprintf_l(stderr, loc, "NULL strftime format ");
+		else	(void) fprintf_l(stderr, loc, "strftime format \"%s\" ",
 				format);
-		(void) fprintf(stderr, "yields only two digits of years in ");
+		(void) fprintf_l(stderr, loc, "yields only two digits of years in ");
 		if (warn == IN_SOME)
-			(void) fprintf(stderr, "some locales");
+			(void) fprintf_l(stderr, loc, "some locales");
 		else if (warn == IN_THIS)
-			(void) fprintf(stderr, "the current locale");
-		else	(void) fprintf(stderr, "all locales");
-		(void) fprintf(stderr, "\n");
+			(void) fprintf_l(stderr, loc, "the current locale");
+		else	(void) fprintf_l(stderr, loc, "all locales");
+		(void) fprintf_l(stderr, loc, "\n");
 	}
 #endif /* !defined NO_RUN_TIME_WARNINGS_ABOUT_YEAR_2000_PROBLEMS_THANK_YOU */
 	if (p == s + maxsize)
@@ -115,16 +119,24 @@ strftime(char * __restrict s, size_t maxsize, const char * __restrict format,
 	return p - s;
 }
 
+size_t
+strftime(char * __restrict s, size_t maxsize, const char * __restrict format,
+    const struct tm * __restrict t)
+{
+	return strftime_l(s, maxsize, format, t, __get_locale());
+}
+
 static char *
-_fmt(format, t, pt, ptlim, warnp)
+_fmt(format, t, pt, ptlim, warnp, loc)
 const char *		format;
 const struct tm * const	t;
 char *			pt;
 const char * const	ptlim;
 int *			warnp;
+locale_t	loc;
 {
 	int Ealternative, Oalternative, PadIndex;
-	struct lc_time_T *tptr = __get_current_time_locale();
+	struct lc_time_T *tptr = __get_current_time_locale(loc);
 
 	for ( ; *format; ++format) {
 		if (*format == '%') {
@@ -170,14 +182,14 @@ label:
 				** something completely different.
 				** (ado, 1993-05-24)
 				*/
-				pt = _conv((t->tm_year + TM_YEAR_BASE) / 100,
-					fmt_padding[PAD_FMT_CENTURY][PadIndex], pt, ptlim);
+				pt = _yconv(t->tm_year, TM_YEAR_BASE, 1, 0,
+					pt, ptlim);
 				continue;
 			case 'c':
 				{
 				int warn2 = IN_SOME;
 
-				pt = _fmt(tptr->c_fmt, t, pt, ptlim, warnp);
+				pt = _fmt(tptr->c_fmt, t, pt, ptlim, &warn2, loc);
 				if (warn2 == IN_ALL)
 					warn2 = IN_THIS;
 				if (warn2 > *warnp)
@@ -185,7 +197,7 @@ label:
 				}
 				continue;
 			case 'D':
-				pt = _fmt("%m/%d/%y", t, pt, ptlim, warnp);
+				pt = _fmt("%m/%d/%y", t, pt, ptlim, warnp, loc);
 				continue;
 			case 'd':
 				pt = _conv(t->tm_mday, fmt_padding[PAD_FMT_DAYOFMONTH][PadIndex],
@@ -218,7 +230,7 @@ label:
 					fmt_padding[PAD_FMT_SDAYOFMONTH][PadIndex], pt, ptlim);
 				continue;
 			case 'F':
-				pt = _fmt("%Y-%m-%d", t, pt, ptlim, warnp);
+				pt = _fmt("%Y-%m-%d", t, pt, ptlim, warnp, loc);
 				continue;
 			case 'H':
 				pt = _conv(t->tm_hour, fmt_padding[PAD_FMT_HMS][PadIndex],
@@ -240,7 +252,7 @@ label:
 				**		t->tm_hour % 12 : 12, 2, ' ');
 				** ...and has been changed to the below to
 				** match SunOS 4.1.1 and Arnold Robbins'
-				** strftime version 3.0.  That is, "%k" and
+				** strftime version 3.0. That is, "%k" and
 				** "%l" have been swapped.
 				** (ado, 1993-05-24)
 				*/
@@ -261,7 +273,7 @@ label:
 				**	_conv(t->tm_hour, 2, ' ');
 				** ...and has been changed to the below to
 				** match SunOS 4.1.1 and Arnold Robbin's
-				** strftime version 3.0.  That is, "%k" and
+				** strftime version 3.0. That is, "%k" and
 				** "%l" have been swapped.
 				** (ado, 1993-05-24)
 				*/
@@ -287,11 +299,11 @@ label:
 					pt, ptlim);
 				continue;
 			case 'R':
-				pt = _fmt("%H:%M", t, pt, ptlim, warnp);
+				pt = _fmt("%H:%M", t, pt, ptlim, warnp, loc);
 				continue;
 			case 'r':
 				pt = _fmt(tptr->ampm_fmt, t, pt, ptlim,
-					warnp);
+					warnp, loc);
 				continue;
 			case 'S':
 				pt = _conv(t->tm_sec, fmt_padding[PAD_FMT_HMS][PadIndex],
@@ -315,7 +327,7 @@ label:
 				}
 				continue;
 			case 'T':
-				pt = _fmt("%H:%M:%S", t, pt, ptlim, warnp);
+				pt = _fmt("%H:%M:%S", t, pt, ptlim, warnp, loc);
 				continue;
 			case 't':
 				pt = _add("\t", pt, ptlim);
@@ -340,7 +352,7 @@ label:
 			case 'G':	/* ISO 8601 year (four digits) */
 			case 'g':	/* ISO 8601 year (two digits) */
 /*
-** From Arnold Robbins' strftime version 3.0:  "the week number of the
+** From Arnold Robbins' strftime version 3.0: "the week number of the
 ** year (the first Monday as the first day of week 1) as a decimal number
 ** (01-53)."
 ** (ado, 1993-05-24)
@@ -353,17 +365,19 @@ label:
 ** might also contain days from the previous year and the week before week
 ** 01 of a year is the last week (52 or 53) of the previous year even if
 ** it contains days from the new year. A week starts with Monday (day 1)
-** and ends with Sunday (day 7).  For example, the first week of the year
+** and ends with Sunday (day 7). For example, the first week of the year
 ** 1997 lasts from 1996-12-30 to 1997-01-05..."
 ** (ado, 1996-01-02)
 */
 				{
 					int	year;
+					int	base;
 					int	yday;
 					int	wday;
 					int	w;
 
-					year = t->tm_year + TM_YEAR_BASE;
+					year = t->tm_year;
+					base = TM_YEAR_BASE;
 					yday = t->tm_yday;
 					wday = t->tm_wday;
 					for ( ; ; ) {
@@ -371,7 +385,7 @@ label:
 						int	bot;
 						int	top;
 
-						len = isleap(year) ?
+						len = isleap_sum(year, base) ?
 							DAYSPERLYEAR :
 							DAYSPERNYEAR;
 						/*
@@ -390,7 +404,7 @@ label:
 							top += DAYSPERWEEK;
 						top += len;
 						if (yday >= top) {
-							++year;
+							++base;
 							w = 1;
 							break;
 						}
@@ -399,26 +413,26 @@ label:
 								DAYSPERWEEK);
 							break;
 						}
-						--year;
-						yday += isleap(year) ?
+						--base;
+						yday += isleap_sum(year, base) ?
 							DAYSPERLYEAR :
 							DAYSPERNYEAR;
 					}
 #ifdef XPG4_1994_04_09
-					if ((w == 52
-					     && t->tm_mon == TM_JANUARY)
-					    || (w == 1
-						&& t->tm_mon == TM_DECEMBER))
-						w = 53;
+					if ((w == 52 &&
+						t->tm_mon == TM_JANUARY) ||
+						(w == 1 &&
+						t->tm_mon == TM_DECEMBER))
+							w = 53;
 #endif /* defined XPG4_1994_04_09 */
 					if (*format == 'V')
 						pt = _conv(w, fmt_padding[PAD_FMT_WEEKOFYEAR][PadIndex],
 							pt, ptlim);
 					else if (*format == 'g') {
 						*warnp = IN_ALL;
-						pt = _conv(year % 100, fmt_padding[PAD_FMT_SHORTYEAR][PadIndex],
+						pt = _yconv(year, base, 0, 1,
 							pt, ptlim);
-					} else	pt = _conv(year, fmt_padding[PAD_FMT_YEAR][PadIndex],
+					} else	pt = _yconv(year, base, 1, 1,
 							pt, ptlim);
 				}
 				continue;
@@ -428,7 +442,7 @@ label:
 				** "date as dd-bbb-YYYY"
 				** (ado, 1993-05-24)
 				*/
-				pt = _fmt("%e-%b-%Y", t, pt, ptlim, warnp);
+				pt = _fmt("%e-%b-%Y", t, pt, ptlim, warnp, loc);
 				continue;
 			case 'W':
 				pt = _conv((t->tm_yday + DAYSPERWEEK -
@@ -441,13 +455,13 @@ label:
 				pt = _conv(t->tm_wday, "%d", pt, ptlim);
 				continue;
 			case 'X':
-				pt = _fmt(tptr->X_fmt, t, pt, ptlim, warnp);
+				pt = _fmt(tptr->X_fmt, t, pt, ptlim, warnp, loc);
 				continue;
 			case 'x':
 				{
 				int	warn2 = IN_SOME;
 
-				pt = _fmt(tptr->x_fmt, t, pt, ptlim, &warn2);
+				pt = _fmt(tptr->x_fmt, t, pt, ptlim, &warn2, loc);
 				if (warn2 == IN_ALL)
 					warn2 = IN_THIS;
 				if (warn2 > *warnp)
@@ -456,12 +470,11 @@ label:
 				continue;
 			case 'y':
 				*warnp = IN_ALL;
-				pt = _conv((t->tm_year + TM_YEAR_BASE) % 100,
-					fmt_padding[PAD_FMT_SHORTYEAR][PadIndex], pt, ptlim);
+				pt = _yconv(t->tm_year, TM_YEAR_BASE, 0, 1,
+					pt, ptlim);
 				continue;
 			case 'Y':
-				pt = _conv(t->tm_year + TM_YEAR_BASE,
-					fmt_padding[PAD_FMT_YEAR][PadIndex],
+				pt = _yconv(t->tm_year, TM_YEAR_BASE, 1, 1,
 					pt, ptlim);
 				continue;
 			case 'Z':
@@ -492,12 +505,12 @@ label:
 				/*
 				** C99 says that the UTC offset must
 				** be computed by looking only at
-				** tm_isdst.  This requirement is
+				** tm_isdst. This requirement is
 				** incorrect, since it means the code
 				** must rely on magic (in this case
 				** altzone and timezone), and the
 				** magic might not have the correct
-				** offset.  Doing things correctly is
+				** offset. Doing things correctly is
 				** tricky and requires disobeying C99;
 				** see GNU C strftime for details.
 				** For now, punt and conform to the
@@ -526,14 +539,16 @@ label:
 					diff = -diff;
 				} else	sign = "+";
 				pt = _add(sign, pt, ptlim);
-				diff /= 60;
-				pt = _conv((diff/60)*100 + diff%60,
+				diff /= SECSPERMIN;
+				diff = (diff / MINSPERHOUR) * 100 +
+					(diff % MINSPERHOUR);
+				pt = _conv(diff,
 					fmt_padding[PAD_FMT_YEAR][PadIndex], pt, ptlim);
 				}
 				continue;
 			case '+':
 				pt = _fmt(tptr->date_fmt, t, pt, ptlim,
-					warnp);
+					warnp, loc);
 				continue;
 			case '-':
 				if (PadIndex != PAD_DEFAULT)
@@ -553,7 +568,7 @@ label:
 			case '%':
 			/*
 			** X311J/88-090 (4.12.3.5): if conversion char is
-			** undefined, behavior is undefined.  Print out the
+			** undefined, behavior is undefined. Print out the
 			** character itself as printf(3) also does.
 			*/
 			default:
@@ -588,5 +603,46 @@ const char * const	ptlim;
 {
 	while (pt < ptlim && (*pt = *str++) != '\0')
 		++pt;
+	return pt;
+}
+
+/*
+** POSIX and the C Standard are unclear or inconsistent about
+** what %C and %y do if the year is negative or exceeds 9999.
+** Use the convention that %C concatenated with %y yields the
+** same output as %Y, and that %Y contains at least 4 bytes,
+** with more only if necessary.
+*/
+
+static char *
+_yconv(a, b, convert_top, convert_yy, pt, ptlim)
+const int		a;
+const int		b;
+const int		convert_top;
+const int		convert_yy;
+char *			pt;
+const char * const	ptlim;
+{
+	register int	lead;
+	register int	trail;
+
+#define DIVISOR	100
+	trail = a % DIVISOR + b % DIVISOR;
+	lead = a / DIVISOR + b / DIVISOR + trail / DIVISOR;
+	trail %= DIVISOR;
+	if (trail < 0 && lead > 0) {
+		trail += DIVISOR;
+		--lead;
+	} else if (lead < 0 && trail > 0) {
+		trail -= DIVISOR;
+		++lead;
+	}
+	if (convert_top) {
+		if (lead == 0 && trail < 0)
+			pt = _add("-0", pt, ptlim);
+		else	pt = _conv(lead, "%02d", pt, ptlim);
+	}
+	if (convert_yy)
+		pt = _conv(((trail < 0) ? -trail : trail), "%02d", pt, ptlim);
 	return pt;
 }

@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)strncpy.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/strncpy.c,v 1.7 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
@@ -50,10 +50,10 @@ strncpy(char * __restrict dst, const char * __restrict src, size_t n)
 		const char *s = src;
 
 		do {
-			if ((*d++ = *s++) == 0) {
+			if ((*d++ = *s++) == '\0') {
 				/* NUL pad the remaining n-1 bytes */
 				while (--n != 0)
-					*d++ = 0;
+					*d++ = '\0';
 				break;
 			}
 		} while (--n != 0);

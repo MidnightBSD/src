@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)ferror.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/ferror.c,v 1.10 2007/01/09 00:28:06 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdio/ferror.c,v 1.10 2007/01/09 00:28:06 imp E
 #include "libc_private.h"
 
 #undef ferror
+#undef ferror_unlocked
 
 int
 ferror(FILE *fp)
@@ -52,4 +53,11 @@ ferror(FILE *fp)
 	ret = __sferror(fp);
 	FUNLOCKFILE(fp);
 	return (ret);
+}
+
+int
+ferror_unlocked(FILE *fp)
+{
+
+	return (__sferror(fp));
 }

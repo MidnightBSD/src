@@ -30,13 +30,14 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)strcat.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/string/strcat.3,v 1.15 2007/01/09 00:28:12 imp Exp $
+.\" $FreeBSD$
 .\"
-.Dd June 4, 1993
+.Dd December 1, 2009
 .Dt STRCAT 3
 .Os
 .Sh NAME
-.Nm strcat
+.Nm strcat ,
+.Nm strncat
 .Nd concatenate strings
 .Sh LIBRARY
 .Lb libc
@@ -79,6 +80,23 @@ and
 functions
 return the pointer
 .Fa s .
+.Sh SEE ALSO
+.Xr bcopy 3 ,
+.Xr memccpy 3 ,
+.Xr memcpy 3 ,
+.Xr memmove 3 ,
+.Xr strcpy 3 ,
+.Xr strlcat 3 ,
+.Xr strlcpy 3 ,
+.Xr wcscat 3
+.Sh STANDARDS
+The
+.Fn strcat
+and
+.Fn strncat
+functions
+conform to
+.St -isoC .
 .Sh SECURITY CONSIDERATIONS
 The
 .Fn strcat
@@ -137,19 +155,3 @@ foo(const char *arbitrary_string)
 #endif
 }
 .Ed
-.Sh SEE ALSO
-.Xr bcopy 3 ,
-.Xr memccpy 3 ,
-.Xr memcpy 3 ,
-.Xr memmove 3 ,
-.Xr strcpy 3 ,
-.Xr strlcat 3 ,
-.Xr strlcpy 3
-.Sh STANDARDS
-The
-.Fn strcat
-and
-.Fn strncat
-functions
-conform to
-.St -isoC .

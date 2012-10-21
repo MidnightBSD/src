@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/ffsl.c,v 1.3 2007/01/09 00:28:11 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <strings.h>
 
@@ -41,7 +41,7 @@ ffsl(long mask)
 	int bit;
 
 	if (mask == 0)
-		return(0);
+		return (0);
 	for (bit = 1; !(mask & 1); bit++)
 		mask = (unsigned long)mask >> 1;
 	return (bit);

@@ -34,21 +34,18 @@
 static char sccsid[] = "@(#)memchr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/memchr.c,v 1.5 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
 void *
-memchr(s, c, n)
-	const void *s;
-	unsigned char c;
-	size_t n;
+memchr(const void *s, int c, size_t n)
 {
 	if (n != 0) {
 		const unsigned char *p = s;
 
 		do {
-			if (*p++ == c)
+			if (*p++ == (unsigned char)c)
 				return ((void *)(p - 1));
 		} while (--n != 0);
 	}

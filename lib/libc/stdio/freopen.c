@@ -34,13 +34,14 @@
 static char sccsid[] = "@(#)freopen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/freopen.c,v 1.18 2007/01/09 00:28:06 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <limits.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -175,8 +176,8 @@ finish:
 	if (HASLB(fp))
 		FREELB(fp);
 	fp->_lb._size = 0;
-	fp->_extra->orientation = 0;
-	memset(&fp->_extra->mbstate, 0, sizeof(mbstate_t));
+	fp->_orientation = 0;
+	memset(&fp->_mbstate, 0, sizeof(mbstate_t));
 
 	if (f < 0) {			/* did not get it after all */
 		if (isopen)
@@ -198,6 +199,20 @@ finish:
 			f = wantfd;
 		} else
 			(void)_close(fp->_file);
+	}
+
+	/*
+	 * File descriptors are a full int, but _file is only a short.
+	 * If we get a valid file descriptor that is greater than
+	 * SHRT_MAX, then the fd will get sign-extended into an
+	 * invalid file descriptor.  Handle this case by failing the
+	 * open.
+	 */
+	if (f > SHRT_MAX) {
+		fp->_flags = 0;		/* set it free */
+		FUNLOCKFILE(fp);
+		errno = EMFILE;
+		return (NULL);
 	}
 
 	fp->_flags = flags;

@@ -1,7 +1,4 @@
-/*	$OpenBSD: strtonum.c,v 1.6 2004/08/03 19:38:01 millert Exp $	*/
-/* $MidnightBSD$ */
-
-/*
+/*-
  * Copyright (c) 2004 Ted Unangst and Todd Miller
  * All rights reserved.
  *
@@ -16,7 +13,12 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ *	$OpenBSD: strtonum.c,v 1.6 2004/08/03 19:38:01 millert Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <limits.h>

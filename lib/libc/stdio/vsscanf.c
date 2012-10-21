@@ -2,6 +2,11 @@
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * This code is derived from software contributed to Berkeley by
  * Donn Seeley at UUNET Technologies, Inc.
  *
@@ -34,43 +39,40 @@
 static char sccsid[] = "@(#)vsscanf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/vsscanf.c,v 1.13 2007/01/09 00:28:08 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <string.h>
 #include "local.h"
+#include "xlocale_private.h"
 
 static int
 eofread(void *, char *, int);
 
 /* ARGSUSED */
 static int
-eofread(cookie, buf, len)
-	void *cookie;
-	char *buf;
-	int len;
+eofread(void *cookie, char *buf, int len)
 {
 
 	return (0);
 }
 
 int
-vsscanf(str, fmt, ap)
-	const char * __restrict str;
-	const char * __restrict fmt;
-	__va_list ap;
+vsscanf_l(const char * __restrict str, locale_t locale,
+		const char * __restrict fmt, __va_list ap)
 {
-	FILE f;
-	struct __sFILEX ext;
+	FILE f = FAKE_FILE;
+	FIX_LOCALE(locale);
 
-	f._file = -1;
 	f._flags = __SRD;
 	f._bf._base = f._p = (unsigned char *)str;
 	f._bf._size = f._r = strlen(str);
 	f._read = eofread;
-	f._ub._base = NULL;
-	f._lb._base = NULL;
-	f._extra = &ext;
-	INITEXTRA(&f);
-	return (__svfscanf(&f, fmt, ap));
+	return (__svfscanf(&f, locale, fmt, ap));
+}
+int
+vsscanf(const char * __restrict str, const char * __restrict fmt,
+	__va_list ap)
+{
+	return vsscanf_l(str, __get_locale(), fmt, ap);
 }

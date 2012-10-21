@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_to_text.c,v 1.11 2003/07/24 23:33:25 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -39,7 +39,6 @@ __FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_to_text.c,v 1.11 2003/07/24 23:33:2
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <utmp.h>
 
 #include "acl_support.h"
 
@@ -50,12 +49,15 @@ __FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_to_text.c,v 1.11 2003/07/24 23:33:2
  * This function will not produce nice results if it is called with
  * a non-POSIX.1e semantics ACL.
  */
-char *
-acl_to_text(acl_t acl, ssize_t *len_p)
+
+char *_nfs4_acl_to_text_np(const acl_t acl, ssize_t *len_p, int flags);
+
+static char *
+_posix1e_acl_to_text(acl_t acl, ssize_t *len_p, int flags)
 {
 	struct acl	*acl_int;
 	char		*buf, *tmpbuf;
-	char		 name_buf[UT_NAMESIZE+1];
+	char		 name_buf[MAXLOGNAME];
 	char		 perm_buf[_POSIX1E_ACL_STRING_PERM_MAXSIZE+1],
 			 effective_perm_buf[_POSIX1E_ACL_STRING_PERM_MAXSIZE+1];
 	int		 i, error, len;
@@ -66,11 +68,6 @@ acl_to_text(acl_t acl, ssize_t *len_p)
 	buf = strdup("");
 	if (buf == NULL)
 		return(NULL);
-
-	if (acl == NULL) {
-		errno = EINVAL;
-		return(NULL);
-	}
 
 	acl_int = &acl->ats_acl;
 
@@ -105,7 +102,7 @@ acl_to_text(acl_t acl, ssize_t *len_p)
 				goto error_label;
 
 			error = _posix1e_acl_id_to_name(ae_tag, ae_id,
-			    UT_NAMESIZE+1, name_buf);
+			    MAXLOGNAME, name_buf, flags);
 			if (error)
 				goto error_label;
 
@@ -165,7 +162,7 @@ acl_to_text(acl_t acl, ssize_t *len_p)
 				goto error_label;
 
 			error = _posix1e_acl_id_to_name(ae_tag, ae_id,
-			    UT_NAMESIZE+1, name_buf);
+			    MAXLOGNAME, name_buf, flags);
 			if (error)
 				goto error_label;
 
@@ -234,4 +231,31 @@ error_label:
 	/* jump to here sets errno already, we just clean up */
 	if (buf) free(buf);
 	return (NULL);
+}
+
+char *
+acl_to_text_np(acl_t acl, ssize_t *len_p, int flags)
+{
+
+	if (acl == NULL) {
+		errno = EINVAL;
+		return(NULL);
+	}
+
+	switch (_acl_brand(acl)) {
+	case ACL_BRAND_POSIX:
+		return (_posix1e_acl_to_text(acl, len_p, flags));
+	case ACL_BRAND_NFS4:
+		return (_nfs4_acl_to_text_np(acl, len_p, flags));
+	default:
+		errno = EINVAL;
+		return (NULL);
+	}
+}
+
+char *
+acl_to_text(acl_t acl, ssize_t *len_p)
+{
+
+	return (acl_to_text_np(acl, len_p, 0));
 }

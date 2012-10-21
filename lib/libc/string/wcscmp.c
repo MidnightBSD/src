@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)strcmp.c	8.1 (Berkeley) 6/4/93";
 __RCSID("$NetBSD: wcscmp.c,v 1.3 2001/01/05 12:13:12 itojun Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
-__FBSDID("$FreeBSD: src/lib/libc/string/wcscmp.c,v 1.8 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <wchar.h>
 
@@ -45,12 +45,11 @@ __FBSDID("$FreeBSD: src/lib/libc/string/wcscmp.c,v 1.8 2007/01/09 00:28:12 imp E
  * Compare strings.
  */
 int
-wcscmp(s1, s2)
-	const wchar_t *s1, *s2;
+wcscmp(const wchar_t *s1, const wchar_t *s2)
 {
 
 	while (*s1 == *s2++)
-		if (*s1++ == 0)
+		if (*s1++ == '\0')
 			return (0);
 	/* XXX assumes wchar_t = int */
 	return (*(const unsigned int *)s1 - *(const unsigned int *)--s2);

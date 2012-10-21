@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)system.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdlib/system.c,v 1.11 2007/01/09 00:28:10 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -46,8 +46,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/system.c,v 1.11 2007/01/09 00:28:10 imp 
 #include "libc_private.h"
 
 int
-__system(command)
-	const char *command;
+__system(const char *command)
 {
 	pid_t pid, savedpid;
 	int pstat;

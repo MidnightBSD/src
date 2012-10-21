@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)putc.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/putc.c,v 1.14 2007/01/09 00:28:07 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdio/putc.c,v 1.14 2007/01/09 00:28:07 imp Exp
 #include "libc_private.h"
 
 #undef putc
+#undef putc_unlocked
 
 int
 putc(c, fp)
@@ -56,4 +57,11 @@ putc(c, fp)
 	retval = __sputc(c, fp);
 	FUNLOCKFILE(fp);
 	return (retval);
+}
+
+int
+putc_unlocked(int ch, FILE *fp)
+{
+
+	return (__sputc(ch, fp));
 }

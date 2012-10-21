@@ -5,6 +5,11 @@
  * This code is derived from software contributed to Berkeley by
  * Chris Torek.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -30,13 +35,14 @@
  * SUCH DAMAGE.
  *
  *	@(#)local.h	8.3 (Berkeley) 7/3/94
- * $FreeBSD: src/lib/libc/stdio/local.h,v 1.30 2007/01/09 00:28:06 imp Exp $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>	/* for off_t */
 #include <pthread.h>
 #include <string.h>
 #include <wchar.h>
+#include <locale.h>
 
 /*
  * Information local to this implementation of stdio,
@@ -50,8 +56,8 @@ extern int	_ftello(FILE *, fpos_t *);
 extern int	_fseeko(FILE *, off_t, int, int);
 extern int	__fflush(FILE *fp);
 extern void	__fcloseall(void);
-extern wint_t	__fgetwc(FILE *);
-extern wint_t	__fputwc(wchar_t, FILE *);
+extern wint_t	__fgetwc(FILE *, locale_t);
+extern wint_t	__fputwc(wchar_t, FILE *, locale_t);
 extern int	__sflush(FILE *);
 extern FILE	*__sfp(void);
 extern int	__slbexpand(FILE *, size_t);
@@ -65,30 +71,20 @@ extern void	_cleanup(void);
 extern void	__smakebuf(FILE *);
 extern int	__swhatbuf(FILE *, size_t *, int *);
 extern int	_fwalk(int (*)(FILE *));
-extern int	__svfscanf(FILE *, const char *, __va_list);
+extern int	__svfscanf(FILE *, locale_t, const char *, __va_list);
 extern int	__swsetup(FILE *);
 extern int	__sflags(const char *, int *);
 extern int	__ungetc(int, FILE *);
-extern wint_t	__ungetwc(wint_t, FILE *);
-extern int	__vfprintf(FILE *, const char *, __va_list);
+extern wint_t	__ungetwc(wint_t, FILE *, locale_t);
+extern int	__vfprintf(FILE *, locale_t, const char *, __va_list);
 extern int	__vfscanf(FILE *, const char *, __va_list);
-extern int	__vfwprintf(FILE *, const wchar_t *, __va_list);
-extern int	__vfwscanf(FILE * __restrict, const wchar_t * __restrict,
+extern int	__vfwprintf(FILE *, locale_t, const wchar_t *, __va_list);
+extern int	__vfwscanf(FILE * __restrict, locale_t, const wchar_t * __restrict,
 		    __va_list);
 extern size_t	__fread(void * __restrict buf, size_t size, size_t count,
 		FILE * __restrict fp);
 extern int	__sdidinit;
 
-
-/* hold a buncha junk that would grow the ABI */
-struct __sFILEX {
-	unsigned char	*_up;	/* saved _p when _p is doing ungetc data */
-	pthread_mutex_t	fl_mutex;	/* used for MT-safety */
-	pthread_t	fl_owner;	/* current owner */
-	int		fl_count;	/* recursive lock count */
-	int		orientation;	/* orientation for fwide() */
-	mbstate_t	mbstate;	/* multibyte conversion state */
-};
 
 /*
  * Prepare the given FILE for writing, and return 0 iff it
@@ -119,13 +115,12 @@ struct __sFILEX {
 	(fp)->_lb._base = NULL; \
 }
 
-#define	INITEXTRA(fp) { \
-	(fp)->_extra->_up = NULL; \
-	(fp)->_extra->fl_mutex = PTHREAD_MUTEX_INITIALIZER; \
-	(fp)->_extra->fl_owner = NULL; \
-	(fp)->_extra->fl_count = 0; \
-	(fp)->_extra->orientation = 0; \
-	memset(&(fp)->_extra->mbstate, 0, sizeof(mbstate_t)); \
+/*
+ * Structure initializations for 'fake' FILE objects.
+ */
+#define	FAKE_FILE {				\
+	._file = -1,				\
+	._fl_mutex = PTHREAD_MUTEX_INITIALIZER, \
 }
 
 /*
@@ -133,6 +128,6 @@ struct __sFILEX {
  * orientation. If o < 0, the stream has byte-orientation.
  */
 #define	ORIENT(fp, o)	do {				\
-	if ((fp)->_extra->orientation == 0)		\
-		(fp)->_extra->orientation = (o);	\
+	if ((fp)->_orientation == 0)			\
+		(fp)->_orientation = (o);		\
 } while (0)

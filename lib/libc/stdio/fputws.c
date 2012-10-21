@@ -2,6 +2,11 @@
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -25,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/fputws.c,v 1.6 2004/07/21 10:54:57 tjr Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -39,12 +44,15 @@ __FBSDID("$FreeBSD: src/lib/libc/stdio/fputws.c,v 1.6 2004/07/21 10:54:57 tjr Ex
 #include "mblocal.h"
 
 int
-fputws(const wchar_t * __restrict ws, FILE * __restrict fp)
+fputws_l(const wchar_t * __restrict ws, FILE * __restrict fp, locale_t locale)
 {
 	size_t nbytes;
 	char buf[BUFSIZ];
 	struct __suio uio;
 	struct __siov iov;
+	const wchar_t *wsp;
+	FIX_LOCALE(locale);
+	struct xlocale_ctype *l = XLOCALE_CTYPE(locale);
 
 	FLOCKFILE(fp);
 	ORIENT(fp, 1);
@@ -53,19 +61,26 @@ fputws(const wchar_t * __restrict ws, FILE * __restrict fp)
 	uio.uio_iov = &iov;
 	uio.uio_iovcnt = 1;
 	iov.iov_base = buf;
+	wsp = ws;
 	do {
-		nbytes = __wcsnrtombs(buf, &ws, SIZE_T_MAX, sizeof(buf),
-		    &fp->_extra->mbstate);
+		nbytes = l->__wcsnrtombs(buf, &wsp, SIZE_T_MAX, sizeof(buf),
+		    &fp->_mbstate);
 		if (nbytes == (size_t)-1)
 			goto error;
 		iov.iov_len = uio.uio_resid = nbytes;
 		if (__sfvwrite(fp, &uio) != 0)
 			goto error;
-	} while (ws != NULL);
+	} while (wsp != NULL);
 	FUNLOCKFILE(fp);
 	return (0);
 
 error:
 	FUNLOCKFILE(fp);
 	return (-1);
+}
+
+int
+fputws(const wchar_t * __restrict ws, FILE * __restrict fp)
+{
+	return fputws_l(ws, fp, __get_locale());
 }

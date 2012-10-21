@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)memcmp.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/memcmp.c,v 1.5 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
@@ -42,9 +42,7 @@ __FBSDID("$FreeBSD: src/lib/libc/string/memcmp.c,v 1.5 2007/01/09 00:28:12 imp E
  * Compare memory regions.
  */
 int
-memcmp(s1, s2, n)
-	const void *s1, *s2;
-	size_t n;
+memcmp(const void *s1, const void *s2, size_t n)
 {
 	if (n != 0) {
 		const unsigned char *p1 = s1, *p2 = s2;

@@ -30,10 +30,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/stdio/xprintf.c,v 1.5 2006/10/23 07:25:25 kib Exp $
+ * $FreeBSD$
  */
 
-#include <namespace.h>
+#include "namespace.h"
 #include <err.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -46,8 +46,9 @@
 #include <namespace.h>
 #include <string.h>
 #include <wchar.h>
-#include <un-namespace.h>
+#include "un-namespace.h"
 
+#include "local.h"
 #include "printf.h"
 #include "fvwrite.h"
 
@@ -575,7 +576,7 @@ static int
 __v3printf(FILE *fp, const char *fmt, int pct, va_list ap)
 {
 	int ret;
-	FILE fake;
+	FILE fake = FAKE_FILE;
 	unsigned char buf[BUFSIZ];
 
 	/* copy the important variables */
@@ -583,7 +584,8 @@ __v3printf(FILE *fp, const char *fmt, int pct, va_list ap)
 	fake._file = fp->_file;
 	fake._cookie = fp->_cookie;
 	fake._write = fp->_write;
-	fake._extra = fp->_extra;
+	fake._orientation = fp->_orientation;
+	fake._mbstate = fp->_mbstate;
 
 	/* set up the buffer */
 	fake._bf._base = fake._p = buf;

@@ -2,6 +2,11 @@
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -26,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdlib/strfmon.c,v 1.15 2005/09/12 19:52:42 stefanf Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -38,6 +43,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/strfmon.c,v 1.15 2005/09/12 19:52:42 ste
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "xlocale_private.h"
 
 /* internal flags */
 #define	NEED_GROUPING		0x01	/* print digits grouped (default) */
@@ -65,8 +71,12 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/strfmon.c,v 1.15 2005/09/12 19:52:42 ste
 #define GET_NUMBER(VAR)	do {					\
 	VAR = 0;						\
 	while (isdigit((unsigned char)*fmt)) {			\
+		if (VAR > INT_MAX / 10)				\
+			goto e2big_error;			\
 		VAR *= 10;					\
 		VAR += *fmt - '0';				\
+		if (VAR < 0)					\
+			goto e2big_error;			\
 		fmt++;						\
 	}							\
 } while (0)
@@ -88,11 +98,10 @@ static void __setup_vars(int, char *, char *, char *, char **);
 static int __calc_left_pad(int, char *);
 static char *__format_grouped_double(double, int *, int, int, int);
 
-ssize_t
-strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
-    ...)
+static ssize_t
+vstrfmon_l(char * __restrict s, size_t maxsize, locale_t loc,
+		const char * __restrict format, va_list ap)
 {
-	va_list		ap;
 	char 		*dst;		/* output destination pointer */
 	const char 	*fmt;		/* current format poistion pointer */
 	struct lconv 	*lc;		/* pointer to lconv structure */
@@ -115,10 +124,10 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 
 	char		*tmpptr;	/* temporary vars */
 	int		sverrno;
+	FIX_LOCALE(loc);
 
-        va_start(ap, format);
 
-	lc = localeconv();
+	lc = localeconv_l(loc);
 	dst = s;
 	fmt = format;
 	asciivalue = NULL;
@@ -187,7 +196,7 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 			/* Do we have enough space to put number with
 			 * required width ?
 			 */
-			if (dst + width >= s + maxsize)
+			if ((unsigned int)width >= maxsize - (dst - s))
 				goto e2big_error;
 		}
 
@@ -196,6 +205,8 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 			if (!isdigit((unsigned char)*++fmt))
 				goto format_error;
 			GET_NUMBER(left_prec);
+			if ((unsigned int)left_prec >= maxsize - (dst - s))
+				goto e2big_error;
 		}
 
 		/* Right precision */
@@ -203,6 +214,9 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 			if (!isdigit((unsigned char)*++fmt))
 				goto format_error;
 			GET_NUMBER(right_prec);
+			if ((unsigned int)right_prec >= maxsize - (dst - s) -
+			    left_prec)
+				goto e2big_error;
 		}
 
 		/* Conversion Characters */
@@ -218,6 +232,8 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 				goto format_error;
 		}
 
+		if (currency_symbol != NULL)
+			free(currency_symbol);
 		if (flags & USE_INTL_CURRENCY) {
 			currency_symbol = strdup(lc->int_curr_symbol);
 			if (currency_symbol != NULL)
@@ -246,6 +262,8 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 				pad_size = 0;
 		}
 
+		if (asciivalue != NULL)
+			free(asciivalue);
 		asciivalue = __format_grouped_double(value, &flags,
 				left_prec, right_prec, pad_char);
 		if (asciivalue == NULL)
@@ -367,7 +385,6 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 	}
 
 	PRINT('\0');
-	va_end(ap);
 	free(asciivalue);
 	free(currency_symbol);
 	return (dst - s - 1);	/* return size of put data except trailing '\0' */
@@ -386,9 +403,32 @@ end_error:
 	if (currency_symbol != NULL)
 		free(currency_symbol);
 	errno = sverrno;
-	va_end(ap);
 	return (-1);
 }
+ssize_t
+strfmon_l(char * __restrict s, size_t maxsize, locale_t loc, const char * __restrict format,
+    ...)
+{
+	size_t ret;
+	va_list ap;
+	va_start(ap, format);
+	ret = vstrfmon_l(s, maxsize, loc, format, ap);
+	va_end(ap);
+	return ret;
+}
+
+ssize_t
+strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
+    ...)
+{
+	size_t ret;
+	va_list ap;
+	va_start(ap, format);
+	ret = vstrfmon_l(s, maxsize, __get_locale(), format, ap);
+	va_end(ap);
+	return ret;
+}
+
 
 static void
 __setup_vars(int flags, char *cs_precedes, char *sep_by_space,
@@ -535,12 +575,11 @@ __format_grouped_double(double value, int *flags,
 
 	/* make sure that we've enough space for result string */
 	bufsize = strlen(avalue)*2+1;
-	rslt = malloc(bufsize);
+	rslt = calloc(1, bufsize);
 	if (rslt == NULL) {
 		free(avalue);
 		return (NULL);
 	}
-	memset(rslt, 0, bufsize);
 	bufend = rslt + bufsize - 1;	/* reserve space for trailing '\0' */
 
 	/* skip spaces at beggining */

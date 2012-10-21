@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)atoi.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/stdlib/atoi.3,v 1.13 2007/01/09 00:28:09 imp Exp $
+.\" $FreeBSD$
 .\"
 .Dd June 4, 1993
 .Dt ATOI 3
@@ -59,10 +59,6 @@ It is equivalent to:
 .Bd -literal -offset indent
 (int)strtol(nptr, (char **)NULL, 10);
 .Ed
-.Sh IMPLEMENTATION NOTES
-The
-.Fn atoi
-function is not thread-safe and also not async-cancel safe.
 .Pp
 The
 .Fn atoi

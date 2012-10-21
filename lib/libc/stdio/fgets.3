@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)fgets.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/stdio/fgets.3,v 1.21 2007/01/09 00:28:06 imp Exp $
+.\" $FreeBSD$
 .\"
-.Dd June 4, 1993
+.Dd May 5, 2012
 .Dt FGETS 3
 .Os
 .Sh NAME
@@ -128,6 +128,19 @@ may also fail and set
 .Va errno
 for any of the errors specified for the routine
 .Xr getchar 3 .
+.Sh SEE ALSO
+.Xr feof 3 ,
+.Xr ferror 3 ,
+.Xr fgetln 3 ,
+.Xr fgetws 3 ,
+.Xr getline 3
+.Sh STANDARDS
+The functions
+.Fn fgets
+and
+.Fn gets
+conform to
+.St -isoC-99 .
 .Sh SECURITY CONSIDERATIONS
 The
 .Fn gets
@@ -141,17 +154,3 @@ a buffer overflow attack.
 It is strongly suggested that the
 .Fn fgets
 function be used in all cases.
-(See
-the FSA.)
-.Sh SEE ALSO
-.Xr feof 3 ,
-.Xr ferror 3 ,
-.Xr fgetln 3 ,
-.Xr fgetws 3
-.Sh STANDARDS
-The functions
-.Fn fgets
-and
-.Fn gets
-conform to
-.St -isoC-99 .

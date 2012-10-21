@@ -3,6 +3,11 @@
  *		at Electronni Visti IA, Kiev, Ukraine.
  *			All rights reserved.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -26,18 +31,29 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/strxfrm.c,v 1.15 2002/09/06 11:24:06 tjr Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 #include <string.h>
 #include "collate.h"
 
 size_t
+strxfrm_l(char * __restrict dest, const char * __restrict src, size_t len, locale_t loc);
+size_t
 strxfrm(char * __restrict dest, const char * __restrict src, size_t len)
+{
+	return strxfrm_l(dest, src, len, __get_locale());
+}
+
+size_t
+strxfrm_l(char * __restrict dest, const char * __restrict src, size_t len, locale_t locale)
 {
 	int prim, sec, l;
 	size_t slen;
 	char *s, *ss;
+	FIX_LOCALE(locale);
+	struct xlocale_collate *table =
+		(struct xlocale_collate*)locale->components[XLC_COLLATE];
 
 	if (!*src) {
 		if (len > 0)
@@ -45,25 +61,15 @@ strxfrm(char * __restrict dest, const char * __restrict src, size_t len)
 		return 0;
 	}
 
-	if (__collate_load_error) {
-		slen = strlen(src);
-		if (len > 0) {
-			if (slen < len)
-				strcpy(dest, src);
-			else {
-				strncpy(dest, src, len - 1);
-				dest[len - 1] = '\0';
-			}
-		}
-		return slen;
-	}
+	if (table->__collate_load_error)
+		return strlcpy(dest, src, len);
 
 	slen = 0;
 	prim = sec = 0;
-	ss = s = __collate_substitute(src);
+	ss = s = __collate_substitute(table, src);
 	while (*s) {
 		while (*s && !prim) {
-			__collate_lookup(s, &l, &prim, &sec);
+			__collate_lookup(table, s, &l, &prim, &sec);
 			s += l;
 		}
 		if (prim) {

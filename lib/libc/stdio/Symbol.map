@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/lib/libc/stdio/Symbol.map,v 1.5 2007/04/29 14:05:19 deischen Exp $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {
@@ -108,6 +108,66 @@ FBSD_1.0 {
 	__swbuf;
 	wprintf;
 	wscanf;
+};
+
+FBSD_1.1 {
+	 dprintf;
+	 getdelim;
+	 getline;
+	 vdprintf;
+};
+
+FBSD_1.3 {
+	asprintf_l;
+	fprintf_l;
+	fwprintf_l;
+	printf_l;
+	snprintf_l;
+	sprintf_l;
+	swprintf_l;
+	vasprintf_l;
+	vfprintf_l;
+	vfwprintf_l;
+	vprintf_l;
+	vsnprintf_l;
+	vsprintf_l;
+	vswprintf_l;
+	vwprintf_l;
+	wprintf_l;
+	fgetwc_l;
+	fputwc_l;
+	ungetwc_l;
+	vfwscanf_l;
+	vswscanf_l;
+	fscanf_l;
+	fwscanf_l;
+	scanf_l;
+	sscanf_l;
+	swscanf_l;
+	vfscanf_l;
+	vscanf_l;
+	vsscanf_l;
+	vwscanf_l;
+	wscanf_l;
+	fgetws_l;
+	fputws_l;
+	getwc_l;
+	getwchar_l;
+	putwc_l;
+	putwchar_l;
+};
+
+FBSDprivate_1.0 {
+	_flockfile;
+	_flockfile_debug_stub;
+	_flockfile_debug;
+	_ftrylockfile;
+	_funlockfile;
+	__vfscanf;
+
+	/*
+	 * xprintf support
+	 */
 	__use_xprintf;
 	__lowercase_hex;
 	__uppercase_hex;
@@ -135,13 +195,4 @@ FBSD_1.0 {
 	__printf_render_time;
 	__printf_arginfo_vis;
 	__printf_render_vis;
-};
-
-FBSDprivate_1.0 {
-	_flockfile;
-	_flockfile_debug_stub;
-	_flockfile_debug;
-	_ftrylockfile;
-	_funlockfile;
-	__vfscanf;
 };

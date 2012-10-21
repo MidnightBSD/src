@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)strcmp.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/strcmp.c,v 1.6 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 
@@ -42,11 +42,10 @@ __FBSDID("$FreeBSD: src/lib/libc/string/strcmp.c,v 1.6 2007/01/09 00:28:12 imp E
  * Compare strings.
  */
 int
-strcmp(s1, s2)
-	const char *s1, *s2;
+strcmp(const char *s1, const char *s2)
 {
 	while (*s1 == *s2++)
-		if (*s1++ == 0)
+		if (*s1++ == '\0')
 			return (0);
 	return (*(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1));
 }

@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)qsort.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdlib/qsort.c,v 1.13 2007/01/09 00:28:10 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 
@@ -111,7 +111,9 @@ qsort(void *a, size_t n, size_t es, cmp_t *cmp)
 #endif
 {
 	char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
-	int d, r, swaptype, swap_cnt;
+	size_t d, r;
+	int cmp_result;
+	int swaptype, swap_cnt;
 
 loop:	SWAPINIT(a, es);
 	swap_cnt = 0;
@@ -140,16 +142,16 @@ loop:	SWAPINIT(a, es);
 
 	pc = pd = (char *)a + (n - 1) * es;
 	for (;;) {
-		while (pb <= pc && (r = CMP(thunk, pb, a)) <= 0) {
-			if (r == 0) {
+		while (pb <= pc && (cmp_result = CMP(thunk, pb, a)) <= 0) {
+			if (cmp_result == 0) {
 				swap_cnt = 1;
 				swap(pa, pb);
 				pa += es;
 			}
 			pb += es;
 		}
-		while (pb <= pc && (r = CMP(thunk, pc, a)) >= 0) {
-			if (r == 0) {
+		while (pb <= pc && (cmp_result = CMP(thunk, pc, a)) >= 0) {
+			if (cmp_result == 0) {
 				swap_cnt = 1;
 				swap(pc, pd);
 				pd -= es;

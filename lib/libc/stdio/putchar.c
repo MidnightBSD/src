@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)putchar.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/putchar.c,v 1.14 2007/01/09 00:28:07 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdio/putchar.c,v 1.14 2007/01/09 00:28:07 imp 
 #include "libc_private.h"
 
 #undef putchar
+#undef putchar_unlocked
 
 /*
  * A subroutine version of the macro putchar
@@ -60,4 +61,11 @@ putchar(c)
 	retval = __sputc(c, so);
 	FUNLOCKFILE(so);
 	return (retval);
+}
+
+int
+putchar_unlocked(int ch)
+{
+
+	return (__sputc(ch, stdout));
 }

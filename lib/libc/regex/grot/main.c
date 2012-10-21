@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/regex/grot/main.c,v 1.3 2002/03/22 21:52:48 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <string.h>
@@ -44,7 +44,7 @@ char *argv[];
 
 	progname = argv[0];
 
-	while ((c = getopt(argc, argv, "c:e:S:E:x")) != EOF)
+	while ((c = getopt(argc, argv, "c:e:S:E:x")) != -1)
 		switch (c) {
 		case 'c':	/* compile options */
 			copts = options('c', optarg);

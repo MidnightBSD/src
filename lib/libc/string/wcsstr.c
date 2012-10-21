@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)strstr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/wcsstr.c,v 1.9 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <wchar.h>
 
@@ -49,7 +49,7 @@ wcsstr(const wchar_t * __restrict s, const wchar_t * __restrict find)
 	wchar_t c, sc;
 	size_t len;
 
-	if ((c = *find++) != 0) {
+	if ((c = *find++) != L'\0') {
 		len = wcslen(find);
 		do {
 			do {

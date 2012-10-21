@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Sean C. Farley <scf@FreeBSD.org>
+ * Copyright (c) 2007-2009 Sean C. Farley <scf@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,23 +23,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
+
+#include "namespace.h"
 #include <sys/types.h>
-#include <err.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include "un-namespace.h"
 
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdlib/getenv.c,v 1.12 2007/09/22 02:30:44 scf Exp $");
-
-
-static const char CorruptEnvFindMsg[] =
-    "environment corrupt; unable to find %.*s";
+static const char CorruptEnvFindMsg[] = "environment corrupt; unable to find ";
 static const char CorruptEnvValueMsg[] =
-    "environment corrupt; missing value for %s";
+    "environment corrupt; missing value for ";
 
 
 /*
@@ -97,6 +99,26 @@ static void __attribute__ ((destructor)) __clean_env_destructor(void);
 
 
 /*
+ * A simple version of warnx() to avoid the bloat of including stdio in static
+ * binaries.
+ */
+static void
+__env_warnx(const char *msg, const char *name, size_t nameLen)
+{
+	static const char nl[] = "\n";
+	static const char progSep[] = ": ";
+
+	_write(STDERR_FILENO, _getprogname(), strlen(_getprogname()));
+	_write(STDERR_FILENO, progSep, sizeof(progSep) - 1);
+	_write(STDERR_FILENO, msg, strlen(msg));
+	_write(STDERR_FILENO, name, nameLen);
+	_write(STDERR_FILENO, nl, sizeof(nl) - 1);
+
+	return;
+}
+
+
+/*
  * Inline strlen() for performance.  Also, perform check for an equals sign.
  * Cheaper here than peforming a strchr() later.
  */
@@ -138,7 +160,7 @@ __findenv(const char *name, size_t nameLen, int *envNdx, bool onlyActive)
 
 	/*
 	 * Find environment variable from end of array (more likely to be
-	 * active).  A variable created by putenv is always active or it is not
+	 * active).  A variable created by putenv is always active, or it is not
 	 * tracked in the array.
 	 */
 	for (ndx = *envNdx; ndx >= 0; ndx--)
@@ -167,10 +189,6 @@ static char *
 __findenv_environ(const char *name, size_t nameLen)
 {
 	int envNdx;
-
-	/* Check for non-existant environment. */
-	if (environ == NULL)
-		return (NULL);
 
 	/* Find variable within environ. */
 	for (envNdx = 0; environ[envNdx] != NULL; envNdx++)
@@ -341,7 +359,8 @@ __build_env(void)
 			envVars[envNdx].valueSize =
 			    strlen(envVars[envNdx].value);
 		} else {
-			warnx(CorruptEnvValueMsg, envVars[envNdx].name);
+			__env_warnx(CorruptEnvValueMsg, envVars[envNdx].name,
+			    strlen(envVars[envNdx].name));
 			errno = EFAULT;
 			goto Failure;
 		}
@@ -356,8 +375,8 @@ __build_env(void)
 		activeNdx = envVarsTotal - 1;
 		if (__findenv(envVars[envNdx].name, nameLen, &activeNdx,
 		    false) == NULL) {
-			warnx(CorruptEnvFindMsg, (int)nameLen,
-			    envVars[envNdx].name);
+			__env_warnx(CorruptEnvFindMsg, envVars[envNdx].name,
+			    nameLen);
 			errno = EFAULT;
 			goto Failure;
 		}
@@ -407,11 +426,18 @@ getenv(const char *name)
 	}
 
 	/*
-	 * Find environment variable via environ if no changes have been made
-	 * via a *env() call or environ has been replaced by a running program,
-	 * otherwise, use the rebuilt environment.
+	 * Variable search order:
+	 * 1. Check for an empty environ.  This allows an application to clear
+	 *    the environment.
+	 * 2. Search the external environ array.
+	 * 3. Search the internal environment.
+	 *
+	 * Since malloc() depends upon getenv(), getenv() must never cause the
+	 * internal environment storage to be generated.
 	 */
-	if (envVars == NULL || environ != intEnviron)
+	if (environ == NULL || environ[0] == NULL)
+		return (NULL);
+	else if (envVars == NULL || environ != intEnviron)
 		return (__findenv_environ(name, nameLen));
 	else {
 		envNdx = envVarsTotal - 1;
@@ -502,8 +528,8 @@ __setenv(const char *name, size_t nameLen, const char *value, int overwrite)
 
 /*
  * If the program attempts to replace the array of environment variables
- * (environ) environ, then deactivate all variables and merge in the new list
- * from environ.
+ * (environ) environ or sets the first varible to NULL, then deactivate all
+ * variables and merge in the new list from environ.
  */
 static int
 __merge_environ(void)
@@ -511,8 +537,13 @@ __merge_environ(void)
 	char **env;
 	char *equals;
 
-	/* environ has been replaced.  clean up everything. */
-	if (envVarsTotal > 0 && environ != intEnviron) {
+	/*
+	 * Internally-built environ has been replaced or cleared (detected by
+	 * using the count of active variables against a NULL as the first value
+	 * in environ).  Clean up everything.
+	 */
+	if (intEnviron != NULL && (environ != intEnviron || (envActive > 0 &&
+	    environ[0] == NULL))) {
 		/* Deactivate all environment variables. */
 		if (envActive > 0) {
 			origEnviron = NULL;
@@ -527,7 +558,8 @@ __merge_environ(void)
 		if (origEnviron != NULL)
 			for (env = origEnviron; *env != NULL; env++) {
 				if ((equals = strchr(*env, '=')) == NULL) {
-					warnx(CorruptEnvValueMsg, *env);
+					__env_warnx(CorruptEnvValueMsg, *env,
+					    strlen(*env));
 					errno = EFAULT;
 					return (-1);
 				}

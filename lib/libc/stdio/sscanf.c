@@ -5,6 +5,11 @@
  * This code is derived from software contributed to Berkeley by
  * Chris Torek.
  *
+ * Copyright (c) 2011 The FreeBSD Foundation
+ * All rights reserved.
+ * Portions of this software were developed by David Chisnall
+ * under sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -34,45 +39,34 @@
 static char sccsid[] = "@(#)sscanf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/sscanf.c,v 1.12 2007/01/09 00:28:07 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <xlocale.h>
 #include "local.h"
-
-static int eofread(void *, char *, int);
-
-/* ARGSUSED */
-static int
-eofread(cookie, buf, len)
-	void *cookie;
-	char *buf;
-	int len;
-{
-
-	return (0);
-}
 
 int
 sscanf(const char * __restrict str, char const * __restrict fmt, ...)
 {
 	int ret;
 	va_list ap;
-	struct __sFILEX extra;
-	FILE f;
 
-	f._file = -1;
-	f._flags = __SRD;
-	f._bf._base = f._p = (unsigned char *)str;
-	f._bf._size = f._r = strlen(str);
-	f._read = eofread;
-	f._ub._base = NULL;
-	f._lb._base = NULL;
-	f._extra = &extra;
-	INITEXTRA(&f);
 	va_start(ap, fmt);
-	ret = __svfscanf(&f, fmt, ap);
+	ret = vsscanf(str, fmt, ap);
+	va_end(ap);
+	return (ret);
+}
+int
+sscanf_l(const char * __restrict str, locale_t locale,
+		char const * __restrict fmt, ...)
+{
+	int ret;
+	va_list ap;
+
+	va_start(ap, fmt);
+	ret = vsscanf_l(str, locale, fmt, ap);
 	va_end(ap);
 	return (ret);
 }

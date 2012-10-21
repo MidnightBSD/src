@@ -34,9 +34,11 @@
 static char sccsid[] = "@(#)fwrite.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/fwrite.c,v 1.12 2007/01/09 00:28:06 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
+#include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "un-namespace.h"
 #include "local.h"
@@ -57,8 +59,29 @@ fwrite(buf, size, count, fp)
 	struct __suio uio;
 	struct __siov iov;
 
+	/*
+	 * ANSI and SUSv2 require a return value of 0 if size or count are 0.
+	 */
+	if ((count == 0) || (size == 0))
+		return (0);
+
+	/*
+	 * Check for integer overflow.  As an optimization, first check that
+	 * at least one of {count, size} is at least 2^16, since if both
+	 * values are less than that, their product can't possible overflow
+	 * (size_t is always at least 32 bits on FreeBSD).
+	 */
+	if (((count | size) > 0xFFFF) &&
+	    (count > SIZE_MAX / size)) {
+		errno = EINVAL;
+		fp->_flags |= __SERR;
+		return (0);
+	}
+
+	n = count * size;
+
 	iov.iov_base = (void *)buf;
-	uio.uio_resid = iov.iov_len = n = count * size;
+	uio.uio_resid = iov.iov_len = n;
 	uio.uio_iov = &iov;
 	uio.uio_iovcnt = 1;
 

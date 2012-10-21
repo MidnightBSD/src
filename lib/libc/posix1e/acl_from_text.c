@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_from_text.c,v 1.11 2007/02/26 02:07:02 kientzle Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -40,45 +40,14 @@ __FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_from_text.c,v 1.11 2007/02/26 02:07
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "acl_support.h"
 
-static int _posix1e_acl_name_to_id(acl_tag_t tag, char *name, uid_t *id);
 static acl_tag_t acl_string_to_tag(char *tag, char *qualifier);
-static char *string_skip_whitespace(char *string);
-static void string_trim_trailing_whitespace(char *string);
 
-static char *
-string_skip_whitespace(char *string)
-{
-
-	while (*string && ((*string == ' ') || (*string == '\t'))) {
-		string++;
-	}
-	return (string);
-}
-
-static void
-string_trim_trailing_whitespace(char *string)
-{
-	char	*end;
-
-	if (*string == '\0')
-		return;
-
-	end = string + strlen(string) - 1;
-
-	while (end != string) {
-		if ((*end == ' ') || (*end == '\t')) {
-			*end = '\0';
-			end--;
-		} else {
-			return;
-		}
-	}
-
-	return;
-}
+int _nfs4_acl_entry_from_text(acl_t aclp, char *entry);
+int _text_could_be_nfs4_acl(const char *entry);
 
 static acl_tag_t
 acl_string_to_tag(char *tag, char *qualifier)
@@ -109,6 +78,111 @@ acl_string_to_tag(char *tag, char *qualifier)
 	}
 }
 
+static int
+_posix1e_acl_entry_from_text(acl_t aclp, char *entry)
+{
+	acl_tag_t	 t;
+	acl_perm_t	 p;
+	char		*tag, *qualifier, *permission;
+	uid_t		 id;
+	int		 error;
+
+	assert(_acl_brand(aclp) == ACL_BRAND_POSIX);
+
+	/* Split into three ':' delimited fields. */
+	tag = strsep(&entry, ":");
+	if (tag == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	tag = string_skip_whitespace(tag);
+	if ((*tag == '\0') && (!entry)) {
+		/*
+		 * Is an entirely comment line, skip to next
+		 * comma.
+		 */
+		return (0);
+	}
+	string_trim_trailing_whitespace(tag);
+
+	qualifier = strsep(&entry, ":");
+	if (qualifier == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	qualifier = string_skip_whitespace(qualifier);
+	string_trim_trailing_whitespace(qualifier);
+
+	permission = strsep(&entry, ":");
+	if (permission == NULL || entry) {
+		errno = EINVAL;
+		return (-1);
+	}
+	permission = string_skip_whitespace(permission);
+	string_trim_trailing_whitespace(permission);
+
+	t = acl_string_to_tag(tag, qualifier);
+	if (t == -1) {
+		errno = EINVAL;
+		return (-1);
+	}
+
+	error = _posix1e_acl_string_to_perm(permission, &p);
+	if (error == -1) {
+		errno = EINVAL;
+		return (-1);
+	}		
+
+	switch(t) {
+		case ACL_USER_OBJ:
+		case ACL_GROUP_OBJ:
+		case ACL_MASK:
+		case ACL_OTHER:
+			if (*qualifier != '\0') {
+				errno = EINVAL;
+				return (-1);
+			}
+			id = 0;
+			break;
+
+		case ACL_USER:
+		case ACL_GROUP:
+			error = _acl_name_to_id(t, qualifier, &id);
+			if (error == -1)
+				return (-1);
+			break;
+
+		default:
+			errno = EINVAL;
+			return (-1);
+	}
+
+	error = _posix1e_acl_add_entry(aclp, t, id, p);
+	if (error == -1)
+		return (-1);
+
+	return (0);
+}
+
+static int
+_text_is_nfs4_entry(const char *entry)
+{
+	int count = 0;
+
+	assert(strlen(entry) > 0);
+
+	while (*entry != '\0') {
+		if (*entry == ':' || *entry == '@')
+			count++;
+		entry++;
+	}
+
+	if (count <= 2)
+		return (0);
+
+	return (1);
+}
+
 /*
  * acl_from_text -- Convert a string into an ACL.
  * Postpone most validity checking until the end and call acl_valid() to do
@@ -117,20 +191,16 @@ acl_string_to_tag(char *tag, char *qualifier)
 acl_t
 acl_from_text(const char *buf_p)
 {
-	acl_tag_t	 t;
-	acl_perm_t	 p;
 	acl_t		 acl;
 	char		*mybuf_p, *line, *cur, *notcomment, *comment, *entry;
-	char		*tag, *qualifier, *permission;
 	int		 error;
-	uid_t		 id;
 
 	/* Local copy we can mess up. */
 	mybuf_p = strdup(buf_p);
 	if (mybuf_p == NULL)
 		return(NULL);
 
-	acl = acl_init(3);
+	acl = acl_init(3); /* XXX: WTF, 3? */
 	if (acl == NULL) {
 		free(mybuf_p);
 		return(NULL);
@@ -145,77 +215,33 @@ acl_from_text(const char *buf_p)
 
 		/* Inner loop: delimit at ',' boundaries. */
 		while ((entry = strsep(&notcomment, ","))) {
-			/* Now split into three ':' delimited fields. */
-			tag = strsep(&entry, ":");
-			if (tag == NULL) {
-				errno = EINVAL;
-				goto error_label;
-			}
-			tag = string_skip_whitespace(tag);
-			if ((*tag == '\0') && (!entry)) {
-				/*
-				 * Is an entirely comment line, skip to next
-				 * comma.
-				 */
+
+			/* Skip empty lines. */
+			if (strlen(string_skip_whitespace(entry)) == 0)
 				continue;
-			}
-			string_trim_trailing_whitespace(tag);
 
-			qualifier = strsep(&entry, ":");
-			if (qualifier == NULL) {
-				errno = EINVAL;
-				goto error_label;
-			}
-			qualifier = string_skip_whitespace(qualifier);
-			string_trim_trailing_whitespace(qualifier);
-
-			permission = strsep(&entry, ":");
-			if (permission == NULL || entry) {
-				errno = EINVAL;
-				goto error_label;
-			}
-			permission = string_skip_whitespace(permission);
-			string_trim_trailing_whitespace(permission);
-
-			t = acl_string_to_tag(tag, qualifier);
-			if (t == -1) {
-				errno = EINVAL;
-				goto error_label;
+			if (_acl_brand(acl) == ACL_BRAND_UNKNOWN) {
+				if (_text_is_nfs4_entry(entry))
+					_acl_brand_as(acl, ACL_BRAND_NFS4);
+				else
+					_acl_brand_as(acl, ACL_BRAND_POSIX);
 			}
 
-			error = _posix1e_acl_string_to_perm(permission, &p);
-			if (error == -1) {
-				errno = EINVAL;
-				goto error_label;
-			}		
-
-			switch(t) {
-			case ACL_USER_OBJ:
-			case ACL_GROUP_OBJ:
-			case ACL_MASK:
-			case ACL_OTHER:
-				if (*qualifier != '\0') {
-					errno = EINVAL;
-					goto error_label;
-				}
-				id = 0;
+			switch (_acl_brand(acl)) {
+			case ACL_BRAND_NFS4:
+				error = _nfs4_acl_entry_from_text(acl, entry);
 				break;
 
-			case ACL_USER:
-			case ACL_GROUP:
-				error = _posix1e_acl_name_to_id(t, qualifier,
-				    &id);
-				if (error == -1)
-					goto error_label;
+			case ACL_BRAND_POSIX:
+				error = _posix1e_acl_entry_from_text(acl, entry);
 				break;
 
 			default:
-				errno = EINVAL;
-				goto error_label;
+				error = EINVAL;
+				break;
 			}
 
-			error = _posix1e_acl_add_entry(acl, t, id, p);
-			if (error == -1)
+			if (error)
 				goto error_label;
 		}
 	}
@@ -229,6 +255,7 @@ acl_from_text(const char *buf_p)
 	}
 #endif
 
+	free(mybuf_p);
 	return(acl);
 
 error_label:
@@ -242,12 +269,9 @@ error_label:
  * XXX NOT THREAD SAFE, RELIES ON GETPWNAM, GETGRNAM
  * XXX USES *PW* AND *GR* WHICH ARE STATEFUL AND THEREFORE THIS ROUTINE
  * MAY HAVE SIDE-EFFECTS
- *
- * XXX currently doesn't deal correctly with a numeric uid being passed
- * instead of a username.  What is correct behavior here?  Check chown.
  */
-static int
-_posix1e_acl_name_to_id(acl_tag_t tag, char *name, uid_t *id)
+int
+_acl_name_to_id(acl_tag_t tag, char *name, uid_t *id)
 {
 	struct group	*g;
 	struct passwd	*p;

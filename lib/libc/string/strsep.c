@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)strsep.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/strsep.c,v 1.6 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 #include <stdio.h>
@@ -48,9 +48,7 @@ __FBSDID("$FreeBSD: src/lib/libc/string/strsep.c,v 1.6 2007/01/09 00:28:12 imp E
  * If *stringp is NULL, strsep returns NULL.
  */
 char *
-strsep(stringp, delim)
-	char **stringp;
-	const char *delim;
+strsep(char **stringp, const char *delim)
 {
 	char *s;
 	const char *spanp;

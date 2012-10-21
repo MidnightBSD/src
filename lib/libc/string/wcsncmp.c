@@ -34,14 +34,12 @@ static char sccsid[] = "@(#)strncmp.c	8.1 (Berkeley) 6/4/93";
 __RCSID("$NetBSD: wcsncmp.c,v 1.3 2001/01/05 12:13:13 itojun Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD: src/lib/libc/string/wcsncmp.c,v 1.8 2007/01/09 00:28:12 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <wchar.h>
 
 int
-wcsncmp(s1, s2, n)
-	const wchar_t *s1, *s2;
-	size_t n;
+wcsncmp(const wchar_t *s1, const wchar_t *s2, size_t n)
 {
 
 	if (n == 0)

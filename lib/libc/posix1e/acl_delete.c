@@ -30,13 +30,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_delete.c,v 1.8 2002/12/29 20:47:05 rwatson Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
 #include <sys/acl.h>
 #include "un-namespace.h"
 #include <sys/errno.h>
+
+#include "acl_support.h"
 
 int
 acl_delete_def_file(const char *path_p)
@@ -56,6 +58,7 @@ int
 acl_delete_file_np(const char *path_p, acl_type_t type)
 {
 
+	type = _acl_type_unold(type);
 	return (__acl_delete_file(path_p, type));
 }
 
@@ -63,13 +66,14 @@ int
 acl_delete_link_np(const char *path_p, acl_type_t type)
 {
 
+	type = _acl_type_unold(type);
 	return (__acl_delete_link(path_p, type));
 }
-
 
 int
 acl_delete_fd_np(int filedes, acl_type_t type)
 {
 
+	type = _acl_type_unold(type);
 	return (___acl_delete_fd(filedes, type));
 }
