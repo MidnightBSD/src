@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2000 Brian Fundakowski Feldman
+ * Copyright (c) 2007 Robert N. M. Watson
+ * Copyright (c) 2009 Ulf Lilleengen
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,29 +23,76 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$FreeBSD: src/lib/libutil/login_crypt.c,v 1.5 2002/04/08 11:04:56 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
-#include <sys/types.h>
-
-#include <login_cap.h>
-#include <stdio.h>
+#include <sys/param.h>
+#include <sys/user.h>
+#include <sys/sysctl.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 
-const char *
-login_setcryptfmt(login_cap_t *lc, const char *def, const char *error) {
-	const char *cipher;
+#include "libutil.h"
 
-	cipher = login_getcapstr(lc, "passwd_format", def, NULL);
-	if (getenv("CRYPT_DEBUG") != NULL)
-		fprintf(stderr, "login_setcryptfmt: "
-		    "passwd_format = %s\n", cipher);
-	if (cipher == NULL)
-		return (error);
-	if (!crypt_set_format(cipher))
-		return (error);
-	return (cipher);
+
+/*
+ * Sort processes first by pid and then tid.
+ */
+static int
+kinfo_proc_compare(const void *a, const void *b)
+{
+	int i;
+
+	i = ((const struct kinfo_proc *)a)->ki_pid -
+	    ((const struct kinfo_proc *)b)->ki_pid;
+	if (i != 0)
+		return (i);
+	i = ((const struct kinfo_proc *)a)->ki_tid -
+	    ((const struct kinfo_proc *)b)->ki_tid;
+	return (i);
+}
+
+static void
+kinfo_proc_sort(struct kinfo_proc *kipp, int count)
+{
+
+	qsort(kipp, count, sizeof(*kipp), kinfo_proc_compare);
+}
+
+struct kinfo_proc *
+kinfo_getallproc(int *cntp)
+{
+	struct kinfo_proc *kipp;
+	size_t len;
+	int mib[3];
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PROC;
+
+	len = 0;
+	if (sysctl(mib, 3, NULL, &len, NULL, 0) < 0)
+		return (NULL);
+
+	kipp = malloc(len);
+	if (kipp == NULL)
+		return (NULL);
+
+	if (sysctl(mib, 3, kipp, &len, NULL, 0) < 0)
+		goto bad;
+	if (len % sizeof(*kipp) != 0)
+		goto bad;
+	if (kipp->ki_structsize != sizeof(*kipp))
+		goto bad;
+	*cntp = len / sizeof(*kipp);
+	kinfo_proc_sort(kipp, len / sizeof(*kipp));
+	return (kipp);
+bad:
+	*cntp = 0;
+	free(kipp);
+	return (NULL);
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/pidfile.c,v 1.7.2.1 2007/10/15 10:49:05 kib Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -41,10 +41,17 @@ __FBSDID("$FreeBSD: src/lib/libutil/pidfile.c,v 1.7.2.1 2007/10/15 10:49:05 kib 
 #include <errno.h>
 #include <libutil.h>
 
+struct pidfh {
+	int	pf_fd;
+	char	pf_path[MAXPATHLEN + 1];
+	dev_t	pf_dev;
+	ino_t	pf_ino;
+};
+
 static int _pidfile_remove(struct pidfh *pfh, int freeit);
 
 static int
-pidfile_verify(struct pidfh *pfh)
+pidfile_verify(const struct pidfh *pfh)
 {
 	struct stat sb;
 
@@ -117,7 +124,7 @@ pidfile_open(const char *path, mode_t mode, pid_t *pidptr)
 	 * pidfile_write() can be called multiple times.
 	 */
 	fd = flopen(pfh->pf_path,
-	    O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, mode);
+	    O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NONBLOCK, mode);
 	if (fd == -1) {
 		count = 0;
 		rqtp.tv_sec = 0;
@@ -231,10 +238,6 @@ _pidfile_remove(struct pidfh *pfh, int freeit)
 
 	if (unlink(pfh->pf_path) == -1)
 		error = errno;
-	if (flock(pfh->pf_fd, LOCK_UN) == -1) {
-		if (error == 0)
-			error = errno;
-	}
 	if (close(pfh->pf_fd) == -1) {
 		if (error == 0)
 			error = errno;
@@ -255,4 +258,15 @@ pidfile_remove(struct pidfh *pfh)
 {
 
 	return (_pidfile_remove(pfh, 1));
+}
+
+int
+pidfile_fileno(const struct pidfh *pfh)
+{
+
+	if (pfh == NULL || pfh->pf_fd == -1) {
+		errno = EDOOFUS;
+		return (-1);
+	}
+	return (pfh->pf_fd);
 }

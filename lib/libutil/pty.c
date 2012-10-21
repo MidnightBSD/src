@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -32,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/pty.c,v 1.15 2003/10/18 10:04:16 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -54,48 +50,43 @@ static char sccsid[] = "@(#)pty.c	8.3 (Berkeley) 5/16/94";
 #include <unistd.h>
 
 int
-openpty(int *amaster, int *aslave, char *name, struct termios *termp, struct winsize *winp)
+openpty(int *amaster, int *aslave, char *name, struct termios *termp,
+    struct winsize *winp)
 {
-	char line[] = "/dev/ptyXX";
-	const char *cp1, *cp2;
-	int master, slave, ttygid;
-	struct group *gr;
+	const char *slavename;
+	int master, slave;
 
-	if ((gr = getgrnam("tty")) != NULL)
-		ttygid = gr->gr_gid;
-	else
-		ttygid = -1;
+	master = posix_openpt(O_RDWR|O_NOCTTY);
+	if (master == -1)
+		return (-1);
 
-	for (cp1 = "pqrsPQRS"; *cp1; cp1++) {
-		line[8] = *cp1;
-		for (cp2 = "0123456789abcdefghijklmnopqrstuv"; *cp2; cp2++) {
-			line[5] = 'p';
-			line[9] = *cp2;
-			if ((master = open(line, O_RDWR, 0)) == -1) {
-				if (errno == ENOENT)
-					break; /* try the next pty group */
-			} else {
-				line[5] = 't';
-				(void) grantpt(master);
-				(void) revoke(line);
-				if ((slave = open(line, O_RDWR, 0)) != -1) {
-					*amaster = master;
-					*aslave = slave;
-					if (name)
-						strcpy(name, line);
-					if (termp)
-						(void) tcsetattr(slave,
-							TCSAFLUSH, termp);
-					if (winp)
-						(void) ioctl(slave, TIOCSWINSZ,
-							(char *)winp);
-					return (0);
-				}
-				(void) close(master);
-			}
-		}
-	}
-	errno = ENOENT;	/* out of ptys */
+	if (grantpt(master) == -1)
+		goto bad;
+
+	if (unlockpt(master) == -1)
+		goto bad;
+
+	slavename = ptsname(master);
+	if (slavename == NULL)
+		goto bad;
+
+	slave = open(slavename, O_RDWR);
+	if (slave == -1)
+		goto bad;
+
+	*amaster = master;
+	*aslave = slave;
+
+	if (name)
+		strcpy(name, slavename);
+	if (termp)
+		tcsetattr(slave, TCSAFLUSH, termp);
+	if (winp)
+		ioctl(slave, TIOCSWINSZ, (char *)winp);
+
+	return (0);
+
+bad:	close(master);
 	return (-1);
 }
 

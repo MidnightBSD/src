@@ -1,6 +1,11 @@
 /*-
- * Copyright (c) 1988, 1993
+ * Copyright (c) 1986, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
+ * (c) UNIX System Laboratories, Inc.
+ * All or some portions of this file are derived from material licensed
+ * to the University of California by American Telephone and Telegraph
+ * Co. or Unix System Laboratories, Inc. and are reproduced herein with
+ * the permission of UNIX System Laboratories, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,50 +30,67 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	@(#)subr_prf.c	8.3 (Berkeley) 1/21/94
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/logout.c,v 1.12 2007/01/09 01:02:05 imp Exp $");
-
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char sccsid[] = "@(#)logout.c	8.1 (Berkeley) 6/4/93";
-#endif
-#endif /* LIBC_SCCS and not lint */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
-#include <sys/time.h>
-
-#include <fcntl.h>
 #include <libutil.h>
-#include <stdlib.h>
-#include <string.h>
-#include <timeconv.h>
-#include <unistd.h>
-#include <utmp.h>
+#include <stdio.h>
 
-typedef struct utmp UTMP;
-
-int
-logout(const char *line)
+void
+hexdump(const void *ptr, int length, const char *hdr, int flags)
 {
-	int fd;
-	UTMP ut;
-	int rval;
+	int i, j, k;
+	int cols;
+	const unsigned char *cp;
+	char delim;
 
-	if ((fd = open(_PATH_UTMP, O_RDWR, 0)) < 0)
-		return(0);
-	rval = 0;
-	while (read(fd, &ut, sizeof(UTMP)) == sizeof(UTMP)) {
-		if (!ut.ut_name[0] || strncmp(ut.ut_line, line, UT_LINESIZE))
-			continue;
-		bzero(ut.ut_name, UT_NAMESIZE);
-		bzero(ut.ut_host, UT_HOSTSIZE);
-		ut.ut_time = _time_to_time32(time(NULL));
-		(void)lseek(fd, -(off_t)sizeof(UTMP), L_INCR);
-		(void)write(fd, &ut, sizeof(UTMP));
-		rval = 1;
+	if ((flags & HD_DELIM_MASK) != 0)
+		delim = (flags & HD_DELIM_MASK) >> 8;
+	else
+		delim = ' ';
+
+	if ((flags & HD_COLUMN_MASK) != 0)
+		cols = flags & HD_COLUMN_MASK;
+	else
+		cols = 16;
+
+	cp = ptr;
+	for (i = 0; i < length; i+= cols) {
+		if (hdr != NULL)
+			printf("%s", hdr);
+
+		if ((flags & HD_OMIT_COUNT) == 0)
+			printf("%04x  ", i);
+
+		if ((flags & HD_OMIT_HEX) == 0) {
+			for (j = 0; j < cols; j++) {
+				k = i + j;
+				if (k < length)
+					printf("%c%02x", delim, cp[k]);
+				else
+					printf("   ");
+			}
+		}
+
+		if ((flags & HD_OMIT_CHARS) == 0) {
+			printf("  |");
+			for (j = 0; j < cols; j++) {
+				k = i + j;
+				if (k >= length)
+					printf(" ");
+				else if (cp[k] >= ' ' && cp[k] <= '~')
+					printf("%c", cp[k]);
+				else
+					printf(".");
+			}
+			printf("|");
+		}
+		printf("\n");
 	}
-	(void)close(fd);
-	return(rval);
 }
+

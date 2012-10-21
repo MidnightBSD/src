@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/login_tty.c,v 1.10 2007/01/09 01:02:05 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -37,17 +37,21 @@ static char sccsid[] = "@(#)login_tty.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/param.h>
-#include <sys/ioctl.h>
 
 #include <libutil.h>
 #include <stdlib.h>
+#include <termios.h>
 #include <unistd.h>
 
 int
 login_tty(int fd)
 {
-	(void) setsid();
-	if (ioctl(fd, TIOCSCTTY, (char *)NULL) == -1)
+	pid_t s;
+
+	s = setsid();
+	if (s == -1)
+		s = getsid(0);
+	if (tcsetsid(fd, s) == -1)
 		return (-1);
 	(void) dup2(fd, 0);
 	(void) dup2(fd, 1);

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000 Brian Fundakowski Feldman
+ * Copyright (c) 2009 Ulf Lilleengen
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,29 +22,50 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$FreeBSD: src/lib/libutil/login_crypt.c,v 1.5 2002/04/08 11:04:56 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
-#include <sys/types.h>
-
-#include <login_cap.h>
-#include <stdio.h>
+#include <sys/param.h>
+#include <sys/user.h>
+#include <sys/sysctl.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 
-const char *
-login_setcryptfmt(login_cap_t *lc, const char *def, const char *error) {
-	const char *cipher;
+#include "libutil.h"
 
-	cipher = login_getcapstr(lc, "passwd_format", def, NULL);
-	if (getenv("CRYPT_DEBUG") != NULL)
-		fprintf(stderr, "login_setcryptfmt: "
-		    "passwd_format = %s\n", cipher);
-	if (cipher == NULL)
-		return (error);
-	if (!crypt_set_format(cipher))
-		return (error);
-	return (cipher);
+struct kinfo_proc *
+kinfo_getproc(pid_t pid)
+{
+	struct kinfo_proc *kipp;
+	int mib[4];
+	size_t len;
+
+	len = 0;
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PID;
+	mib[3] = pid;
+	if (sysctl(mib, 4, NULL, &len, NULL, 0) < 0)
+		return (NULL);
+
+	kipp = malloc(len);
+	if (kipp == NULL)
+		return (NULL);
+
+	if (sysctl(mib, 4, kipp, &len, NULL, 0) < 0)
+		goto bad;
+	if (len != sizeof(*kipp))
+		goto bad;
+	if (kipp->ki_structsize != sizeof(*kipp))
+		goto bad;
+	if (kipp->ki_pid != pid)
+		goto bad;
+	return (kipp);
+bad:
+	free(kipp);
+	return (NULL);
 }

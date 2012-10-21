@@ -17,15 +17,17 @@
 .\" 5. Modifications may be freely made to this file providing the above
 .\"    conditions are met.
 .\"
-.\" $FreeBSD: src/lib/libutil/login_times.3,v 1.15 2004/07/02 23:52:19 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 2, 1997
-.Os
+.Dd October 20, 2008
 .Dt LOGIN_TIMES 3
+.Os
 .Sh NAME
 .Nm parse_lt ,
+.Nm in_lt ,
 .Nm in_ltm ,
-.Nm in_ltms
+.Nm in_ltms ,
+.Nm in_lts
 .Nd functions for parsing and checking login time periods
 .Sh LIBRARY
 .Lb libutil
@@ -36,9 +38,13 @@
 .Ft login_time_t
 .Fn parse_lt "const char *str"
 .Ft int
+.Fn in_lt "const login_time_t *lt" "time_t *ends"
+.Ft int
 .Fn in_ltm "const login_time_t *lt" "struct tm *t" "time_t *ends"
 .Ft int
 .Fn in_ltms "const login_time_t *lt" "struct tm *t" "time_t *ends"
+.Ft int
+.Fn in_lts "const login_time_t *lt" "time_t *ends"
 .Sh DESCRIPTION
 This set of functions may be used for parsing and checking login and
 session times against a predefined list of allowed login times as
@@ -135,6 +141,18 @@ elements in length, and terminated by an element with its
 .Ar lt_dow
 field set to
 .Em LTM_NONE .
+.Pp
+The
+.Fn in_lt
+and
+.Fn in_lts
+functions are equivalent to
+.Fn in_ltm
+and
+.Fn in_ltms ,
+respectively, with the second argument set to the current time as
+returned by
+.Xr localtime 3 .
 .Sh RETURN VALUES
 The
 .Fn parse_lt

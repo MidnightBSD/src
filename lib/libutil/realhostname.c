@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/realhostname.c,v 1.18.10.2 2009/06/09 01:43:58 des Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -61,8 +61,7 @@ realhostname(char *host, size_t hsize, const struct in_addr *ip)
 		if (strlen(trimmed) <= hsize) {
 			char lookup[MAXHOSTNAMELEN];
 
-			strncpy(lookup, hp->h_name, sizeof(lookup) - 1);
-			lookup[sizeof(lookup) - 1] = '\0';
+			strlcpy(lookup, hp->h_name, sizeof(lookup));
 			hp = gethostbyname(lookup);
 			if (hp == NULL)
 				result = HOSTNAME_INVALIDNAME;
