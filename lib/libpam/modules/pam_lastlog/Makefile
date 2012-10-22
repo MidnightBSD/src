@@ -22,13 +22,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/lib/libpam/modules/pam_lastlog/Makefile,v 1.5 2003/03/09 20:06:36 obrien Exp $
+# $FreeBSD$
 
 LIB=	pam_lastlog
 SRCS=	pam_lastlog.c
 MAN=	pam_lastlog.8
-
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
 
 .include <bsd.lib.mk>
