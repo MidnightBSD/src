@@ -19666,7 +19666,6 @@ contrib/ncurses/ncurses/base/lib_initscr.c -text
 contrib/ncurses/ncurses/base/lib_insch.c -text
 contrib/ncurses/ncurses/base/lib_insdel.c -text
 contrib/ncurses/ncurses/base/lib_insnstr.c -text
-contrib/ncurses/ncurses/base/lib_insstr.c -text
 contrib/ncurses/ncurses/base/lib_instr.c -text
 contrib/ncurses/ncurses/base/lib_isendwin.c -text
 contrib/ncurses/ncurses/base/lib_leaveok.c -text
