@@ -145,7 +145,6 @@
 #define ciphers_valid				ssh_ciphers_valid
 #define cleanhostname				ssh_cleanhostname
 #define cleanup_exit				ssh_cleanup_exit
-#define closefrom				ssh_closefrom
 #define colon					ssh_colon
 #define compat_cipher_proposal			ssh_compat_cipher_proposal
 #define compat_datafellows			ssh_compat_datafellows
@@ -381,7 +380,6 @@
 #define umac_final 				ssh_umac_final
 #define umac_new 				ssh_umac_new
 #define umac_update 				ssh_umac_update
-#define SSLeay_add_all_algorithms		ssh_SSLeay_add_all_algorithms
 #define packet_get_string_ptr			ssh_packet_get_string_ptr
 #define packet_set_timeout			ssh_packet_set_timeout
 #define cipher_is_cbc				ssh_cipher_is_cbc
