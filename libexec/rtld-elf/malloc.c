@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983 Regents of the University of California.
  * All rights reserved.
@@ -34,7 +33,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 /*static char *sccsid = "from: @(#)malloc.c	5.11 (Berkeley) 2/23/91";*/
-static char *rcsid = "$FreeBSD: src/libexec/rtld-elf/malloc.c,v 1.11 2006/01/12 07:28:21 jasone Exp $";
+static char *rcsid = "$MidnightBSD$";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -49,7 +48,7 @@ static char *rcsid = "$FreeBSD: src/libexec/rtld-elf/malloc.c,v 1.11 2006/01/12 
  */
 
 #include <sys/types.h>
-#include <err.h>
+#include <sys/sysctl.h>
 #include <paths.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -59,15 +58,7 @@ static char *rcsid = "$FreeBSD: src/libexec/rtld-elf/malloc.c,v 1.11 2006/01/12 
 #include <unistd.h>
 #include <sys/param.h>
 #include <sys/mman.h>
-#ifndef BSD
-#define MAP_COPY	MAP_PRIVATE
-#define MAP_FILE	0
-#define MAP_ANON	0
-#endif
-
-#ifndef BSD		/* Need do better than this */
-#define NEED_DEV_ZERO	1
-#endif
+#include "rtld_printf.h"
 
 static void morecore();
 static int findbucket();
@@ -150,8 +141,27 @@ botch(s)
 #endif
 
 /* Debugging stuff */
-static void xprintf(const char *, ...);
-#define TRACE()	xprintf("TRACE %s:%d\n", __FILE__, __LINE__)
+#define TRACE()	rtld_printf("TRACE %s:%d\n", __FILE__, __LINE__)
+
+extern int pagesize;
+
+static int
+rtld_getpagesize(void)
+{
+	int mib[2];
+	size_t size;
+
+	if (pagesize != 0)
+		return (pagesize);
+
+	mib[0] = CTL_HW;
+	mib[1] = HW_PAGESIZE;
+	size = sizeof(pagesize);
+	if (sysctl(mib, 2, &pagesize, &size, NULL, 0) == -1)
+		return (-1);
+	return (pagesize);
+
+}
 
 void *
 malloc(nbytes)
@@ -167,7 +177,7 @@ malloc(nbytes)
 	 * align break pointer so all data will be page aligned.
 	 */
 	if (pagesz == 0) {
-		pagesz = n = getpagesize();
+		pagesz = n = rtld_getpagesize();
 		if (morepages(NPOOLPAGES) == 0)
 			return NULL;
 		op = (union overhead *)(pagepool_start);
@@ -473,17 +483,12 @@ int	n;
 	int	fd = -1;
 	int	offset;
 
-#ifdef NEED_DEV_ZERO
-	fd = open(_PATH_DEVZERO, O_RDWR, 0);
-	if (fd == -1)
-		perror(_PATH_DEVZERO);
-#endif
-
 	if (pagepool_end - pagepool_start > pagesz) {
 		caddr_t	addr = (caddr_t)
 			(((long)pagepool_start + pagesz - 1) & ~(pagesz - 1));
 		if (munmap(addr, pagepool_end - addr) != 0)
-			warn("morepages: munmap %p", addr);
+			rtld_fdprintf(STDERR_FILENO, "morepages: munmap %p",
+			    addr);
 	}
 
 	offset = (long)pagepool_start - ((long)pagepool_start & ~(pagesz - 1));
@@ -491,29 +496,11 @@ int	n;
 	if ((pagepool_start = mmap(0, n * pagesz,
 			PROT_READ|PROT_WRITE,
 			MAP_ANON|MAP_COPY, fd, 0)) == (caddr_t)-1) {
-		xprintf("Cannot map anonymous memory");
+		rtld_printf("Cannot map anonymous memory\n");
 		return 0;
 	}
 	pagepool_end = pagepool_start + n * pagesz;
 	pagepool_start += offset;
 
-#ifdef NEED_DEV_ZERO
-	close(fd);
-#endif
 	return n;
-}
-
-/*
- * Non-mallocing printf, for use by malloc itself.
- */
-static void
-xprintf(const char *fmt, ...)
-{
-    char buf[256];
-    va_list ap;
-
-    va_start(ap, fmt);
-    vsprintf(buf, fmt, ap);
-    (void)write(STDOUT_FILENO, buf, strlen(buf));
-    va_end(ap);
 }

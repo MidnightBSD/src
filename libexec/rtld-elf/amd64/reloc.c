@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996, 1997, 1998, 1999 John D. Polstra.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/amd64/reloc.c,v 1.18 2006/03/28 06:09:24 davidxu Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -70,23 +69,29 @@ do_copy_relocations(Obj_Entry *dstobj)
 	    void *dstaddr;
 	    const Elf_Sym *dstsym;
 	    const char *name;
-	    unsigned long hash;
 	    size_t size;
 	    const void *srcaddr;
 	    const Elf_Sym *srcsym;
-	    Obj_Entry *srcobj;
-	    const Ver_Entry *ve;
+	    const Obj_Entry *srcobj, *defobj;
+	    SymLook req;
+	    int res;
 
 	    dstaddr = (void *) (dstobj->relocbase + rela->r_offset);
 	    dstsym = dstobj->symtab + ELF_R_SYM(rela->r_info);
 	    name = dstobj->strtab + dstsym->st_name;
-	    hash = elf_hash(name);
 	    size = dstsym->st_size;
-	    ve = fetch_ventry(dstobj, ELF_R_SYM(rela->r_info));
+	    symlook_init(&req, name);
+	    req.ventry = fetch_ventry(dstobj, ELF_R_SYM(rela->r_info));
+	    req.flags = SYMLOOK_EARLY;
 
-	    for (srcobj = dstobj->next;  srcobj != NULL;  srcobj = srcobj->next)
-		if ((srcsym = symlook_obj(name, hash, srcobj, ve, 0)) != NULL)
+	    for (srcobj = dstobj->next;  srcobj != NULL;  srcobj = srcobj->next) {
+		res = symlook_obj(&req, srcobj);
+		if (res == 0) {
+		    srcsym = req.sym_out;
+		    defobj = req.defobj_out;
 		    break;
+		}
+	    }
 
 	    if (srcobj == NULL) {
 		_rtld_error("Undefined symbol \"%s\" referenced from COPY"
@@ -94,7 +99,7 @@ do_copy_relocations(Obj_Entry *dstobj)
 		return -1;
 	    }
 
-	    srcaddr = (const void *) (srcobj->relocbase + srcsym->st_value);
+	    srcaddr = (const void *) (defobj->relocbase + srcsym->st_value);
 	    memcpy(dstaddr, srcaddr, size);
 	}
     }
@@ -114,20 +119,22 @@ init_pltgot(Obj_Entry *obj)
 
 /* Process the non-PLT relocations. */
 int
-reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
+reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
+    RtldLockState *lockstate)
 {
 	const Elf_Rela *relalim;
 	const Elf_Rela *rela;
 	SymCache *cache;
-	int bytes = obj->nchains * sizeof(SymCache);
 	int r = -1;
 
 	/*
 	 * The dynamic loader may be called from a thread, we have
 	 * limited amounts of stack available so we cannot use alloca().
 	 */
-	cache = mmap(NULL, bytes, PROT_READ|PROT_WRITE, MAP_ANON, -1, 0);
-	if (cache == MAP_FAILED)
+	if (obj != obj_rtld) {
+	    cache = calloc(obj->dynsymcount, sizeof(SymCache));
+	    /* No need to check for NULL here */
+	} else
 	    cache = NULL;
 
 	relalim = (const Elf_Rela *) ((caddr_t) obj->rela + obj->relasize);
@@ -146,7 +153,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 		    const Obj_Entry *defobj;
 
 		    def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		      false, cache);
+		      flags, cache, lockstate);
 		    if (def == NULL)
 			goto done;
 
@@ -165,7 +172,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 		    const Obj_Entry *defobj;
 
 		    def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		      false, cache);
+		      flags, cache, lockstate);
 		    if (def == NULL)
 			goto done;
 
@@ -195,7 +202,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 		    const Obj_Entry *defobj;
 
 		    def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		      false, cache);
+		      flags, cache, lockstate);
 		    if (def == NULL)
 			goto done;
 
@@ -209,7 +216,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 		    const Obj_Entry *defobj;
 
 		    def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		      false, cache);
+		      flags, cache, lockstate);
 		    if (def == NULL)
 			goto done;
 
@@ -240,7 +247,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 		    const Obj_Entry *defobj;
 
 		    def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		      false, cache);
+		      flags, cache, lockstate);
 		    if (def == NULL)
 			goto done;
 
@@ -272,7 +279,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 		    const Obj_Entry *defobj;
 
 		    def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		      false, cache);
+		      flags, cache, lockstate);
 		    if (def == NULL)
 			goto done;
 
@@ -286,7 +293,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 		    const Obj_Entry *defobj;
 
 		    def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		      false, cache);
+		      flags, cache, lockstate);
 		    if (def == NULL)
 			goto done;
 
@@ -300,7 +307,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 		    const Obj_Entry *defobj;
 
 		    def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		      false, cache);
+		      flags, cache, lockstate);
 		    if (def == NULL)
 			goto done;
 
@@ -323,9 +330,9 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 	}
 	r = 0;
 done:
-	if (cache)
-	    munmap(cache, bytes);
-	return(r);
+	if (cache != NULL)
+	    free(cache);
+	return (r);
 }
 
 /* Process the PLT relocations. */
@@ -339,18 +346,29 @@ reloc_plt(Obj_Entry *obj)
     for (rela = obj->pltrela;  rela < relalim;  rela++) {
 	Elf_Addr *where;
 
-	assert(ELF_R_TYPE(rela->r_info) == R_X86_64_JMP_SLOT);
+	switch(ELF_R_TYPE(rela->r_info)) {
+	case R_X86_64_JMP_SLOT:
+	  /* Relocate the GOT slot pointing into the PLT. */
+	  where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
+	  *where += (Elf_Addr)obj->relocbase;
+	  break;
 
-	/* Relocate the GOT slot pointing into the PLT. */
-	where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
-	*where += (Elf_Addr)obj->relocbase;
+	case R_X86_64_IRELATIVE:
+	  obj->irelative = true;
+	  break;
+
+	default:
+	  _rtld_error("Unknown relocation type %x in PLT",
+	    (unsigned int)ELF_R_TYPE(rela->r_info));
+	  return (-1);
+	}
     }
     return 0;
 }
 
 /* Relocate the jump slots in an object. */
 int
-reloc_jmpslots(Obj_Entry *obj)
+reloc_jmpslots(Obj_Entry *obj, int flags, RtldLockState *lockstate)
 {
     const Elf_Rela *relalim;
     const Elf_Rela *rela;
@@ -363,16 +381,96 @@ reloc_jmpslots(Obj_Entry *obj)
 	const Elf_Sym *def;
 	const Obj_Entry *defobj;
 
-	assert(ELF_R_TYPE(rela->r_info) == R_X86_64_JMP_SLOT);
-	where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
-	def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj, true, NULL);
-	if (def == NULL)
-	    return -1;
-	target = (Elf_Addr)(defobj->relocbase + def->st_value + rela->r_addend);
-	reloc_jmpslot(where, target, defobj, obj, (const Elf_Rel *)rela);
+	switch (ELF_R_TYPE(rela->r_info)) {
+	case R_X86_64_JMP_SLOT:
+	  where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
+	  def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
+		SYMLOOK_IN_PLT | flags, NULL, lockstate);
+	  if (def == NULL)
+	      return (-1);
+	  if (ELF_ST_TYPE(def->st_info) == STT_GNU_IFUNC) {
+	      obj->gnu_ifunc = true;
+	      continue;
+	  }
+	  target = (Elf_Addr)(defobj->relocbase + def->st_value + rela->r_addend);
+	  reloc_jmpslot(where, target, defobj, obj, (const Elf_Rel *)rela);
+	  break;
+
+	case R_X86_64_IRELATIVE:
+	  break;
+
+	default:
+	  _rtld_error("Unknown relocation type %x in PLT",
+	    (unsigned int)ELF_R_TYPE(rela->r_info));
+	  return (-1);
+	}
     }
     obj->jmpslots_done = true;
     return 0;
+}
+
+int
+reloc_iresolve(Obj_Entry *obj, RtldLockState *lockstate)
+{
+    const Elf_Rela *relalim;
+    const Elf_Rela *rela;
+
+    if (!obj->irelative)
+	return (0);
+    relalim = (const Elf_Rela *)((char *)obj->pltrela + obj->pltrelasize);
+    for (rela = obj->pltrela;  rela < relalim;  rela++) {
+	Elf_Addr *where, target, *ptr;
+
+	switch (ELF_R_TYPE(rela->r_info)) {
+	case R_X86_64_JMP_SLOT:
+	  break;
+
+	case R_X86_64_IRELATIVE:
+	  ptr = (Elf_Addr *)(obj->relocbase + rela->r_addend);
+	  where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
+	  lock_release(rtld_bind_lock, lockstate);
+	  target = ((Elf_Addr (*)(void))ptr)();
+	  wlock_acquire(rtld_bind_lock, lockstate);
+	  *where = target;
+	  break;
+	}
+    }
+    obj->irelative = false;
+    return (0);
+}
+
+int
+reloc_gnu_ifunc(Obj_Entry *obj, int flags, RtldLockState *lockstate)
+{
+    const Elf_Rela *relalim;
+    const Elf_Rela *rela;
+
+    if (!obj->gnu_ifunc)
+	return (0);
+    relalim = (const Elf_Rela *)((char *)obj->pltrela + obj->pltrelasize);
+    for (rela = obj->pltrela;  rela < relalim;  rela++) {
+	Elf_Addr *where, target;
+	const Elf_Sym *def;
+	const Obj_Entry *defobj;
+
+	switch (ELF_R_TYPE(rela->r_info)) {
+	case R_X86_64_JMP_SLOT:
+	  where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
+	  def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
+		SYMLOOK_IN_PLT | flags, NULL, lockstate);
+	  if (def == NULL)
+	      return (-1);
+	  if (ELF_ST_TYPE(def->st_info) != STT_GNU_IFUNC)
+	      continue;
+	  lock_release(rtld_bind_lock, lockstate);
+	  target = (Elf_Addr)rtld_resolve_ifunc(defobj, def);
+	  wlock_acquire(rtld_bind_lock, lockstate);
+	  reloc_jmpslot(where, target, defobj, obj, (const Elf_Rel *)rela);
+	  break;
+	}
+    }
+    obj->gnu_ifunc = false;
+    return (0);
 }
 
 void

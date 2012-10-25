@@ -38267,6 +38267,8 @@ libexec/rtld-elf/rtld.c -text
 libexec/rtld-elf/rtld.h -text
 libexec/rtld-elf/rtld_lock.c -text
 libexec/rtld-elf/rtld_lock.h -text
+libexec/rtld-elf/rtld_printf.c -text
+libexec/rtld-elf/rtld_printf.h -text
 libexec/rtld-elf/rtld_tls.h -text
 libexec/rtld-elf/sparc64/Makefile.inc -text
 libexec/rtld-elf/sparc64/reloc.c -text

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996, 1997, 1998, 1999, 2000 John D. Polstra.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/rtld.h,v 1.38 2007/04/03 18:31:20 kan Exp $
+ * $MidnightBSD$
  */
 
 #ifndef RTLD_H /* { */
@@ -35,6 +34,8 @@
 
 #include <elf-hints.h>
 #include <link.h>
+#include <stdarg.h>
+#include <setjmp.h>
 #include <stddef.h>
 
 #include "rtld_lock.h"
@@ -57,7 +58,7 @@
 #endif
 
 #define NEW(type)	((type *) xmalloc(sizeof(type)))
-#define CNEW(type)	((type *) xcalloc(sizeof(type)))
+#define CNEW(type)	((type *) xcalloc(1, sizeof(type)))
 
 /* We might as well do booleans like C++. */
 typedef unsigned char bool;
@@ -69,6 +70,10 @@ extern size_t tls_last_size;
 extern size_t tls_static_space;
 extern int tls_dtv_generation;
 extern int tls_max_index;
+
+extern int main_argc;
+extern char **main_argv;
+extern char **environ;
 
 struct stat;
 struct Struct_Obj_Entry;
@@ -83,7 +88,7 @@ typedef STAILQ_HEAD(Struct_Objlist, Struct_Objlist_Entry) Objlist;
 
 /* Types of init and fini functions */
 typedef void (*InitFunc)(void);
-typedef void (*InitArrayFunc)(int, char **, char **);
+typedef void (*InitArrFunc)(int, char **, char **);
 
 /* Lists of shared object dependencies */
 typedef struct Struct_Needed_Entry {
@@ -120,6 +125,12 @@ typedef struct Struct_Ver_Entry {
 	const char  *name;
 	const char  *file;
 } Ver_Entry;
+
+typedef struct Struct_Sym_Match_Result {
+    const Elf_Sym *sym_out;
+    const Elf_Sym *vsymp;
+    int vcount;
+} Sym_Match_Result;
 
 #define VER_INFO_HIDDEN	0x01
 
@@ -158,6 +169,7 @@ typedef struct Struct_Obj_Entry {
     const Elf_Phdr *phdr;	/* Program header if it is mapped, else NULL */
     size_t phsize;		/* Size of program header in bytes */
     const char *interp;		/* Pathname of the interpreter, if any */
+    Elf_Word stack_flags;
 
     /* TLS information */
     int tlsindex;		/* Index in DTV for this module */
@@ -166,6 +178,9 @@ typedef struct Struct_Obj_Entry {
     size_t tlssize;		/* Size of TLS block for this module */
     size_t tlsoffset;		/* Offset of static TLS block for this module */
     size_t tlsalign;		/* Alignment of static TLS block */
+
+    caddr_t relro_page;
+    size_t relro_size;
 
     /* Items from the dynamic section. */
     Elf_Addr *pltgot;		/* PLT or GOT, depending on architecture */
@@ -180,6 +195,11 @@ typedef struct Struct_Obj_Entry {
     const Elf_Sym *symtab;	/* Symbol table */
     const char *strtab;		/* String table */
     unsigned long strsize;	/* Size in bytes of string table */
+#ifdef __mips__
+    Elf_Word local_gotno;	/* Number of local GOT entries */
+    Elf_Word symtabno;		/* Number of dynamic symbols */
+    Elf_Word gotsym;		/* First dynamic symbol in GOT */
+#endif
 
     const Elf_Verneed *verneed; /* Required versions. */
     Elf_Word verneednum;	/* Number of entries in verneed table */
@@ -190,10 +210,21 @@ typedef struct Struct_Obj_Entry {
     const Elf_Hashelt *buckets;	/* Hash table buckets array */
     unsigned long nbuckets;	/* Number of buckets */
     const Elf_Hashelt *chains;	/* Hash table chain array */
-    unsigned long nchains;	/* Number of chains */
+    unsigned long nchains;	/* Number of entries in chain array */
 
-    const char *rpath;		/* Search path specified in object */
+    Elf32_Word nbuckets_gnu;		/* Number of GNU hash buckets*/
+    Elf32_Word symndx_gnu;		/* 1st accessible symbol on dynsym table */
+    Elf32_Word maskwords_bm_gnu;  	/* Bloom filter words - 1 (bitmask) */
+    Elf32_Word shift2_gnu;		/* Bloom filter shift count */
+    Elf32_Word dynsymcount;		/* Total entries in dynsym table */
+    Elf_Addr *bloom_gnu;		/* Bloom filter used by GNU hash func */
+    const Elf_Hashelt *buckets_gnu;	/* GNU hash table bucket array */
+    const Elf_Hashelt *chain_zero_gnu;	/* GNU hash table value array (Zeroed) */
+
+    char *rpath;		/* Search path specified in object */
     Needed_Entry *needed;	/* Shared objects needed by this one (%) */
+    Needed_Entry *needed_filtees;
+    Needed_Entry *needed_aux_filtees;
 
     STAILQ_HEAD(, Struct_Name_Entry) names; /* List of names for this object we
 					       know about. */
@@ -206,11 +237,15 @@ typedef struct Struct_Obj_Entry {
     Elf_Addr init_array;	/* Initialization array of functions */
     Elf_Addr fini_array;	/* Termination array of functions */
     int preinit_array_num;	/* Number of entries in preinit_array */
-    int init_array_num;		/* Number of entries in init_array */
-    int fini_array_num;		/* Number of entries in fini_array */
+    int init_array_num; 	/* Number of entries in init_array */
+    int fini_array_num; 	/* Number of entries in fini_array */
+
+    int32_t osrel;		/* OSREL note value */
 
     bool mainprog : 1;		/* True if this is the main program */
     bool rtld : 1;		/* True if this is the dynamic linker */
+    bool relocated : 1;		/* True if processed by relocate_objects() */
+    bool ver_checked : 1;	/* True if processed by rtld_verify_object_versions */
     bool textrel : 1;		/* True if there are relocations to text seg */
     bool symbolic : 1;		/* True if generated with "-Bsymbolic" */
     bool bind_now : 1;		/* True if all relocations should be made first */
@@ -219,8 +254,22 @@ typedef struct Struct_Obj_Entry {
     bool init_done : 1;		/* Already have added object to init list */
     bool tls_done : 1;		/* Already allocated offset for static TLS */
     bool phdr_alloc : 1;	/* Phdr is allocated and needs to be freed. */
+    bool z_origin : 1;		/* Process rpath and soname tokens */
+    bool z_nodelete : 1;	/* Do not unload the object and dependencies */
+    bool z_noopen : 1;		/* Do not load on dlopen */
+    bool z_loadfltr : 1;	/* Immediately load filtees */
+    bool ref_nodel : 1;		/* Refcount increased to prevent dlclose */
+    bool init_scanned: 1;	/* Object is already on init list. */
+    bool on_fini_list: 1;	/* Object is already on fini list. */
+    bool dag_inited : 1;	/* Object has its DAG initialized. */
+    bool filtees_loaded : 1;	/* Filtees loaded */
+    bool irelative : 1;		/* Object has R_MACHDEP_IRELATIVE relocs */
+    bool gnu_ifunc : 1;		/* Object has references to STT_GNU_IFUNC */
+    bool crt_no_init : 1;	/* Object' crt does not call _init/_fini */
+    bool valid_hash_sysv : 1;	/* A valid System V hash hash tag is available */
+    bool valid_hash_gnu : 1;	/* A valid GNU hash tag is available */
 
-    struct link_map linkmap;	/* for GDB and dlinfo() */
+    struct link_map linkmap;	/* For GDB and dlinfo() */
     Objlist dldags;		/* Object belongs to these dlopened DAGs (%) */
     Objlist dagmembers;		/* DAG has these members (%) */
     dev_t dev;			/* Object's filesystem's device */
@@ -231,12 +280,22 @@ typedef struct Struct_Obj_Entry {
 #define RTLD_MAGIC	0xd550b87a
 #define RTLD_VERSION	1
 
-#define RTLD_STATIC_TLS_EXTRA	64
+#define RTLD_STATIC_TLS_EXTRA	128
 
 /* Flags to be passed into symlook_ family of functions. */
 #define SYMLOOK_IN_PLT	0x01	/* Lookup for PLT symbol */
-#define SYMLOOK_DLSYM	0x02	/* Return newes versioned symbol. Used by
+#define SYMLOOK_DLSYM	0x02	/* Return newest versioned symbol. Used by
 				   dlsym. */
+#define	SYMLOOK_EARLY	0x04	/* Symlook is done during initialization. */
+
+/* Flags for load_object(). */
+#define	RTLD_LO_NOLOAD	0x01	/* dlopen() specified RTLD_NOLOAD. */
+#define	RTLD_LO_DLOPEN	0x02	/* Load_object() called from dlopen(). */
+#define	RTLD_LO_TRACE	0x04	/* Only tracing. */
+#define	RTLD_LO_NODELETE 0x08	/* Loaded object cannot be closed. */
+#define	RTLD_LO_FILTEES 0x10	/* Loading filtee. */
+#define	RTLD_LO_EARLY	0x20	/* Do not call ctors, postpone it to the
+				   initialization during the image start. */
 
 /*
  * Symbol cache entry used during relocation to avoid multiple lookups
@@ -247,31 +306,64 @@ typedef struct Struct_SymCache {
     const Obj_Entry *obj;	/* Shared object which defines it */
 } SymCache;
 
-extern void _rtld_error(const char *, ...) __printflike(1, 2);
-extern Obj_Entry *map_object(int, const char *, const struct stat *);
-extern void *xcalloc(size_t);
-extern void *xmalloc(size_t);
-extern char *xstrdup(const char *);
-extern Elf_Addr _GLOBAL_OFFSET_TABLE_[];
+/*
+ * This structure provides a reentrant way to keep a list of objects and
+ * check which ones have already been processed in some way.
+ */
+typedef struct Struct_DoneList {
+    const Obj_Entry **objs;		/* Array of object pointers */
+    unsigned int num_alloc;		/* Allocated size of the array */
+    unsigned int num_used;		/* Number of array slots used */
+} DoneList;
 
-extern void dump_relocations (Obj_Entry *);
-extern void dump_obj_relocations (Obj_Entry *);
-extern void dump_Elf_Rel (Obj_Entry *, const Elf_Rel *, u_long);
-extern void dump_Elf_Rela (Obj_Entry *, const Elf_Rela *, u_long);
+struct Struct_RtldLockState {
+	int lockstate;
+	sigjmp_buf env;
+};
+
+/*
+ * The pack of arguments and results for the symbol lookup functions.
+ */
+typedef struct Struct_SymLook {
+    const char *name;
+    unsigned long hash;
+    uint32_t hash_gnu;
+    const Ver_Entry *ventry;
+    int flags;
+    const Obj_Entry *defobj_out;
+    const Elf_Sym *sym_out;
+    struct Struct_RtldLockState *lockstate;
+} SymLook;
+
+void _rtld_error(const char *, ...) __printflike(1, 2);
+const char *rtld_strerror(int);
+Obj_Entry *map_object(int, const char *, const struct stat *);
+void *xcalloc(size_t, size_t);
+void *xmalloc(size_t);
+char *xstrdup(const char *);
+extern Elf_Addr _GLOBAL_OFFSET_TABLE_[];
+extern Elf_Sym sym_zero;	/* For resolving undefined weak refs. */
+
+void dump_relocations(Obj_Entry *);
+void dump_obj_relocations(Obj_Entry *);
+void dump_Elf_Rel(Obj_Entry *, const Elf_Rel *, u_long);
+void dump_Elf_Rela(Obj_Entry *, const Elf_Rela *, u_long);
 
 /*
  * Function declarations.
  */
 unsigned long elf_hash(const char *);
 const Elf_Sym *find_symdef(unsigned long, const Obj_Entry *,
-  const Obj_Entry **, int, SymCache *);
+  const Obj_Entry **, int, SymCache *, struct Struct_RtldLockState *);
 void init_pltgot(Obj_Entry *);
 void lockdflt_init(void);
+void digest_notes(Obj_Entry *, Elf_Addr, Elf_Addr);
 void obj_free(Obj_Entry *);
 Obj_Entry *obj_new(void);
 void _rtld_bind_start(void);
-const Elf_Sym *symlook_obj(const char *, unsigned long, const Obj_Entry *,
-    const Ver_Entry *, int);
+void *rtld_resolve_ifunc(const Obj_Entry *obj, const Elf_Sym *def);
+void symlook_init(SymLook *, const char *);
+int symlook_obj(SymLook *, const Obj_Entry *);
 void *tls_get_addr_common(Elf_Addr** dtvp, int index, size_t offset);
 void *allocate_tls(Obj_Entry *, void *, size_t, size_t);
 void free_tls(void *, size_t, size_t);
@@ -284,9 +376,12 @@ const Ver_Entry *fetch_ventry(const Obj_Entry *obj, unsigned long);
  * MD function declarations.
  */
 int do_copy_relocations(Obj_Entry *);
-int reloc_non_plt(Obj_Entry *, Obj_Entry *);
+int reloc_non_plt(Obj_Entry *, Obj_Entry *, int flags,
+    struct Struct_RtldLockState *);
 int reloc_plt(Obj_Entry *);
-int reloc_jmpslots(Obj_Entry *);
+int reloc_jmpslots(Obj_Entry *, int flags, struct Struct_RtldLockState *);
+int reloc_iresolve(Obj_Entry *, struct Struct_RtldLockState *);
+int reloc_gnu_ifunc(Obj_Entry *, int flags, struct Struct_RtldLockState *);
 void allocate_initial_tls(Obj_Entry *);
 
 #endif /* } */

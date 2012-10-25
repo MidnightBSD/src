@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Alexander Kabaev.
  * All rights reserved.
@@ -23,13 +22,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/rtld_lock.h,v 1.2 2003/06/19 02:39:37 mdodd Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _RTLD_LOCK_H_
 #define	_RTLD_LOCK_H_
 
 #define	RTLI_VERSION	0x01
+#define	MAX_RTLD_LOCKS	8
 
 struct RtldLockInfo
 {
@@ -45,6 +45,8 @@ struct RtldLockInfo
 };
 
 extern void _rtld_thread_init(struct RtldLockInfo *);
+extern void _rtld_atfork_pre(int *);
+extern void _rtld_atfork_post(int *);
 
 #ifdef IN_RTLD
 
@@ -53,11 +55,20 @@ typedef struct rtld_lock *rtld_lock_t;
 
 extern rtld_lock_t	rtld_bind_lock;
 extern rtld_lock_t	rtld_libc_lock;
+extern rtld_lock_t	rtld_phdr_lock;
 
-int	rlock_acquire(rtld_lock_t);
-int 	wlock_acquire(rtld_lock_t);
-void	rlock_release(rtld_lock_t, int);
-void	wlock_release(rtld_lock_t, int);
+#define	RTLD_LOCK_UNLOCKED	0
+#define	RTLD_LOCK_RLOCKED	1
+#define	RTLD_LOCK_WLOCKED	2
+
+struct Struct_RtldLockState;
+typedef struct Struct_RtldLockState RtldLockState;
+
+void	rlock_acquire(rtld_lock_t, RtldLockState *);
+void 	wlock_acquire(rtld_lock_t, RtldLockState *);
+void	lock_release(rtld_lock_t, RtldLockState *);
+void	lock_upgrade(rtld_lock_t, RtldLockState *);
+void	lock_restart_for_upgrade(RtldLockState *);
 
 #endif	/* IN_RTLD */
 

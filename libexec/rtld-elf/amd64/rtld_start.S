@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/amd64/rtld_start.S,v 1.5 2004/03/21 01:43:39 peter Exp $
+ * $FreeBSD$
  */
 
 	.text
@@ -56,7 +56,7 @@
  * and (2) "reloff", the byte offset of the appropriate relocation entry
  * in the PLT relocation table.
  *
- * We are careful to preserve all registers, even the the caller-save
+ * We are careful to preserve all registers, even the caller-save
  * registers.  That is because this code may be invoked by low-level
  * assembly-language code that is not ABI-compliant.
  *
@@ -112,3 +112,5 @@ _rtld_bind_start:
 	popfq				# Restore rflags
 	leaq	16(%rsp),%rsp		# Discard spare, obj, do not change rflags
 	ret				# "Return" to target address
+
+	.section .note.GNU-stack,"",%progbits

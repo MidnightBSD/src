@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 John D. Polstra.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/i386/rtld_machdep.h,v 1.11 2006/03/28 18:28:07 des Exp $
+ * $MidnightBSD$
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -32,8 +31,6 @@
 
 #include <sys/types.h>
 #include <machine/atomic.h>
-
-#define	CACHE_LINE_SIZE		32
 
 struct Struct_Obj_Entry;
 
@@ -61,8 +58,8 @@ reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 #define call_initfini_pointer(obj, target) \
 	(((InitFunc)(target))())
 
-#define call_array_pointer(target, argc, argv, env) \
-	(((InitArrayFunc)(target))(argc, argv, env))
+#define call_init_pointer(obj, target) \
+	(((InitArrFunc)(target))(main_argc, main_argv, environ))
 
 #define round(size, align) \
 	(((size) + (align) - 1) & ~((align) - 1))
@@ -79,5 +76,8 @@ typedef struct {
 
 extern void *___tls_get_addr(tls_index *ti) __attribute__((__regparm__(1)));
 extern void *__tls_get_addr(tls_index *ti);
+
+#define	RTLD_DEFAULT_STACK_PF_EXEC	PF_X
+#define	RTLD_DEFAULT_STACK_EXEC		PROT_EXEC
 
 #endif
