@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/msun/src/s_trunc.c,v 1.1 2004/06/20 09:25:43 das Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * trunc(x)
@@ -22,6 +22,8 @@ __FBSDID("$FreeBSD: src/lib/msun/src/s_trunc.c,v 1.1 2004/06/20 09:25:43 das Exp
  *	Inexact flag raised if x not equal to trunc(x).
  */
 
+#include <float.h>
+
 #include "math.h"
 #include "math_private.h"
 
@@ -31,7 +33,7 @@ double
 trunc(double x)
 {
 	int32_t i0,i1,j0;
-	u_int32_t i,j;
+	u_int32_t i;
 	EXTRACT_WORDS(i0,i1,x);
 	j0 = ((i0>>20)&0x7ff)-0x3ff;
 	if(j0<20) {
@@ -59,3 +61,7 @@ trunc(double x)
 	INSERT_WORDS(x,i0,i1);
 	return x;
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(trunc, truncl);
+#endif

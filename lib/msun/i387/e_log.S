@@ -34,11 +34,13 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: src/lib/msun/i387/e_log.S,v 1.7 2005/02/04 14:08:32 das Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(log)
 	fldln2
 	fldl	4(%esp)
 	fyl2x
 	ret
+END(log)
+
+	.section .note.GNU-stack,"",%progbits

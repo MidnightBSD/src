@@ -11,9 +11,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_asin.c,v 1.11 2005/02/04 18:26:05 das Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* __ieee754_asin(x)
  * Method :                  
@@ -45,6 +44,7 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_asin.c,v 1.11 2005/02/04 18:
  *
  */
 
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -82,14 +82,14 @@ __ieee754_asin(double x)
 		return x*pio2_hi+x*pio2_lo;	
 	    return (x-x)/(x-x);		/* asin(|x|>1) is NaN */   
 	} else if (ix<0x3fe00000) {	/* |x|<0.5 */
-	    if(ix<0x3e400000) {		/* if |x| < 2**-27 */
+	    if(ix<0x3e500000) {		/* if |x| < 2**-26 */
 		if(huge+x>one) return x;/* return x with inexact if x!=0*/
-	    } else 
-		t = x*x;
-		p = t*(pS0+t*(pS1+t*(pS2+t*(pS3+t*(pS4+t*pS5)))));
-		q = one+t*(qS1+t*(qS2+t*(qS3+t*qS4)));
-		w = p/q;
-		return x+x*w;
+	    }
+	    t = x*x;
+	    p = t*(pS0+t*(pS1+t*(pS2+t*(pS3+t*(pS4+t*pS5)))));
+	    q = one+t*(qS1+t*(qS2+t*(qS3+t*qS4)));
+	    w = p/q;
+	    return x+x*w;
 	}
 	/* 1> |x|>= 0.5 */
 	w = one-fabs(x);
@@ -111,3 +111,7 @@ __ieee754_asin(double x)
 	}    
 	if(hx>0) return t; else return -t;    
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(asin, asinl);
+#endif

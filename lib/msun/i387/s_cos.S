@@ -34,8 +34,7 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: src/lib/msun/i387/s_cos.S,v 1.6 1999/08/28 00:06:12 peter Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(cos)
 	fldl	4(%esp)
@@ -54,3 +53,6 @@ ENTRY(cos)
 	fstp	%st(1)
 	fcos
 	ret
+END(cos)
+
+	.section .note.GNU-stack,"",%progbits

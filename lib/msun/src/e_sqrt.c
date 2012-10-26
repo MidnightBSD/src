@@ -11,9 +11,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_sqrt.c,v 1.10 2005/02/04 18:26:06 das Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* __ieee754_sqrt(x)
  * Return correctly rounded sqrt.
@@ -84,6 +83,8 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_sqrt.c,v 1.10 2005/02/04 18:
  * Other methods : see the appended file at the end of the program below.
  *---------------
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -186,6 +187,10 @@ __ieee754_sqrt(double x)
 	INSERT_WORDS(z,ix0,ix1);
 	return z;
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(sqrt, sqrtl);
+#endif
 
 /*
 Other methods  (use floating-point arithmetic)

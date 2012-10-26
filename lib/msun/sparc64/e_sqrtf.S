@@ -22,12 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD$
- * $FreeBSD: src/lib/msun/sparc64/e_sqrtf.S,v 1.1 2005/02/21 18:27:57 das Exp $
  */
 
 #include <machine/asm.h>
+__FBSDID("$FreeBSD$")
 
 ENTRY(sqrtf)
 	retl

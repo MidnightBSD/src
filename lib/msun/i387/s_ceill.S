@@ -4,7 +4,7 @@
  */
 	
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/msun/i387/s_ceill.S,v 1.1 2005/04/16 21:12:55 das Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(ceill)
 	pushl	%ebp
@@ -25,3 +25,6 @@ ENTRY(ceill)
 
 	leave
 	ret
+END(ceill)
+
+	.section .note.GNU-stack,"",%progbits

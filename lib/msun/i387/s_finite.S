@@ -34,8 +34,7 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: src/lib/msun/i387/s_finite.S,v 1.7 1999/08/28 00:06:12 peter Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(finite)
 	movl	8(%esp),%eax
@@ -44,3 +43,6 @@ ENTRY(finite)
 	setneb	%al
 	andl	$0x000000ff, %eax
 	ret
+END(finite)
+
+	.section .note.GNU-stack,"",%progbits

@@ -34,8 +34,7 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: src/lib/msun/i387/s_copysign.S,v 1.6 1999/08/28 00:06:11 peter Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(copysign)
 	movl	16(%esp),%edx
@@ -46,3 +45,6 @@ ENTRY(copysign)
 	movl	%eax,8(%esp)
 	fldl	4(%esp)
 	ret
+END(copysign)
+
+	.section .note.GNU-stack,"",%progbits

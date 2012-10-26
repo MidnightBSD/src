@@ -11,7 +11,7 @@
 
 /*
  * from: @(#)fdlibm.h 5.1 93/09/24
- * $FreeBSD: src/lib/msun/src/math_private.h,v 1.20 2005/11/28 04:58:57 bde Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _MATH_PRIVATE_H_
@@ -38,7 +38,17 @@
  * ints.
  */
 
-#if BYTE_ORDER == BIG_ENDIAN
+#ifdef __arm__
+#if defined(__VFP_FP__)
+#define	IEEE_WORD_ORDER	BYTE_ORDER
+#else
+#define	IEEE_WORD_ORDER	BIG_ENDIAN
+#endif
+#else /* __arm__ */
+#define	IEEE_WORD_ORDER	BYTE_ORDER
+#endif
+
+#if IEEE_WORD_ORDER == BIG_ENDIAN
 
 typedef union
 {
@@ -48,11 +58,15 @@ typedef union
     u_int32_t msw;
     u_int32_t lsw;
   } parts;
+  struct
+  {
+    u_int64_t w;
+  } xparts;
 } ieee_double_shape_type;
 
 #endif
 
-#if BYTE_ORDER == LITTLE_ENDIAN
+#if IEEE_WORD_ORDER == LITTLE_ENDIAN
 
 typedef union
 {
@@ -62,6 +76,10 @@ typedef union
     u_int32_t lsw;
     u_int32_t msw;
   } parts;
+  struct
+  {
+    u_int64_t w;
+  } xparts;
 } ieee_double_shape_type;
 
 #endif
@@ -74,6 +92,14 @@ do {								\
   ew_u.value = (d);						\
   (ix0) = ew_u.parts.msw;					\
   (ix1) = ew_u.parts.lsw;					\
+} while (0)
+
+/* Get a 64-bit int from a double. */
+#define EXTRACT_WORD64(ix,d)					\
+do {								\
+  ieee_double_shape_type ew_u;					\
+  ew_u.value = (d);						\
+  (ix) = ew_u.xparts.w;						\
 } while (0)
 
 /* Get the more significant 32 bit int from a double.  */
@@ -101,6 +127,14 @@ do {								\
   ieee_double_shape_type iw_u;					\
   iw_u.parts.msw = (ix0);					\
   iw_u.parts.lsw = (ix1);					\
+  (d) = iw_u.value;						\
+} while (0)
+
+/* Set a double from a 64-bit int. */
+#define INSERT_WORD64(d,ix)					\
+do {								\
+  ieee_double_shape_type iw_u;					\
+  iw_u.xparts.w = (ix);						\
   (d) = iw_u.value;						\
 } while (0)
 
@@ -154,7 +188,53 @@ do {								\
   (d) = sf_u.value;						\
 } while (0)
 
+#ifdef FLT_EVAL_METHOD
+/*
+ * Attempt to get strict C99 semantics for assignment with non-C99 compilers.
+ */
+#if FLT_EVAL_METHOD == 0 || __GNUC__ == 0
+#define	STRICT_ASSIGN(type, lval, rval)	((lval) = (rval))
+#else
+#define	STRICT_ASSIGN(type, lval, rval) do {	\
+	volatile type __lval;			\
+						\
+	if (sizeof(type) >= sizeof(double))	\
+		(lval) = (rval);		\
+	else {					\
+		__lval = (rval);		\
+		(lval) = __lval;		\
+	}					\
+} while (0)
+#endif
+#endif
+
+/*
+ * Common routine to process the arguments to nan(), nanf(), and nanl().
+ */
+void _scan_nan(uint32_t *__words, int __num_words, const char *__s);
+
 #ifdef _COMPLEX_H
+
+/*
+ * C99 specifies that complex numbers have the same representation as
+ * an array of two elements, where the first element is the real part
+ * and the second element is the imaginary part.
+ */
+typedef union {
+	float complex f;
+	float a[2];
+} float_complex;
+typedef union {
+	double complex f;
+	double a[2];
+} double_complex;
+typedef union {
+	long double complex f;
+	long double a[2];
+} long_double_complex;
+#define	REALPART(z)	((z).a[0])
+#define	IMAGPART(z)	((z).a[1])
+
 /*
  * Inline functions that can be used to construct complex values.
  *
@@ -168,34 +248,64 @@ do {								\
 static __inline float complex
 cpackf(float x, float y)
 {
-	float complex z;
+	float_complex z;
 
-	__real__ z = x;
-	__imag__ z = y;
-	return (z);
+	REALPART(z) = x;
+	IMAGPART(z) = y;
+	return (z.f);
 }
 
 static __inline double complex
 cpack(double x, double y)
 {
-	double complex z;
+	double_complex z;
 
-	__real__ z = x;
-	__imag__ z = y;
-	return (z);
+	REALPART(z) = x;
+	IMAGPART(z) = y;
+	return (z.f);
 }
 
 static __inline long double complex
 cpackl(long double x, long double y)
 {
-	long double complex z;
+	long_double_complex z;
 
-	__real__ z = x;
-	__imag__ z = y;
-	return (z);
+	REALPART(z) = x;
+	IMAGPART(z) = y;
+	return (z.f);
 }
 #endif /* _COMPLEX_H */
  
+#ifdef __GNUCLIKE_ASM
+
+/* Asm versions of some functions. */
+
+#ifdef __amd64__
+static __inline int
+irint(double x)
+{
+	int n;
+
+	asm("cvtsd2si %1,%0" : "=r" (n) : "x" (x));
+	return (n);
+}
+#define	HAVE_EFFICIENT_IRINT
+#endif
+
+#ifdef __i386__
+static __inline int
+irint(double x)
+{
+	int n;
+
+	asm("fistl %0" : "=m" (n) : "t" (x));
+	return (n);
+}
+#define	HAVE_EFFICIENT_IRINT
+#endif
+
+#endif /* __GNUCLIKE_ASM */
+
 /*
  * ieee style elementary functions
  *
@@ -206,6 +316,7 @@ cpackl(long double x, long double y)
 #define	__ieee754_acos	acos
 #define	__ieee754_acosh	acosh
 #define	__ieee754_log	log
+#define	__ieee754_log2	log2
 #define	__ieee754_atanh	atanh
 #define	__ieee754_asin	asin
 #define	__ieee754_atan2	atan2
@@ -244,6 +355,7 @@ cpackl(long double x, long double y)
 #define	__ieee754_lgammaf_r lgammaf_r
 #define	__ieee754_gammaf_r gammaf_r
 #define	__ieee754_log10f log10f
+#define	__ieee754_log2f log2f
 #define	__ieee754_sinhf	sinhf
 #define	__ieee754_hypotf hypotf
 #define	__ieee754_j0f	j0f
@@ -256,17 +368,38 @@ cpackl(long double x, long double y)
 #define	__ieee754_scalbf scalbf
 
 /* fdlibm kernel function */
+int	__kernel_rem_pio2(double*,double*,int,int,int);
+
+/* double precision kernel functions */
+#ifdef INLINE_REM_PIO2
+__inline
+#endif
 int	__ieee754_rem_pio2(double,double*);
 double	__kernel_sin(double,double,int);
 double	__kernel_cos(double,double);
 double	__kernel_tan(double,double,int);
-int	__kernel_rem_pio2(double*,double*,int,int,int,const int*);
 
-/* float versions of fdlibm kernel functions */
-int	__ieee754_rem_pio2f(float,float*);
+/* float precision kernel functions */
+#ifdef INLINE_REM_PIO2F
+__inline
+#endif
+int	__ieee754_rem_pio2f(float,double*);
+#ifdef INLINE_KERNEL_SINDF
+__inline
+#endif
 float	__kernel_sindf(double);
+#ifdef INLINE_KERNEL_COSDF
+__inline
+#endif
 float	__kernel_cosdf(double);
+#ifdef INLINE_KERNEL_TANDF
+__inline
+#endif
 float	__kernel_tandf(double,int);
-int	__kernel_rem_pio2f(float*,float*,int,int,int,const int*);
+
+/* long double precision kernel functions */
+long double __kernel_sinl(long double, long double, int);
+long double __kernel_cosl(long double, long double);
+long double __kernel_tanl(long double, long double, int);
 
 #endif /* !_MATH_PRIVATE_H_ */

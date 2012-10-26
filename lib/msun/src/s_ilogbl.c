@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_ilogbl.c,v 1.1 2004/10/11 18:13:52 stefanf Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <float.h>
 #include <limits.h>

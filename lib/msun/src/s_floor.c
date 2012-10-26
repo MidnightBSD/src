@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_floor.c,v 1.9 2003/07/23 04:53:46 peter Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * floor(x)
@@ -22,6 +21,8 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_floor.c,v 1.9 2003/07/23 04:
  * Exception:
  *	Inexact flag raised if x not equal to floor(x).
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -71,3 +72,7 @@ floor(double x)
 	INSERT_WORDS(x,i0,i1);
 	return x;
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(floor, floorl);
+#endif

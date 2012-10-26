@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/lib/msun/sparc64/fenv.c,v 1.1 2004/06/06 10:05:57 das Exp $
  */
 
 #include <fenv.h>

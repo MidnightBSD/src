@@ -5,7 +5,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: src/lib/msun/i387/s_copysignf.S,v 1.1 2005/01/13 18:58:25 das Exp $");
+__FBSDID("$FreeBSD$");
 /* RCSID("$NetBSD: s_copysignf.S,v 1.3 1995/05/08 23:53:25 jtc Exp $") */
 
 ENTRY(copysignf)
@@ -17,3 +17,6 @@ ENTRY(copysignf)
 	movl	%eax,4(%esp)
 	flds	4(%esp)
 	ret
+END(copysignf)
+
+	.section .note.GNU-stack,"",%progbits

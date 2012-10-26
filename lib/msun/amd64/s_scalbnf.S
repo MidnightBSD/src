@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/msun/amd64/s_scalbnf.S,v 1.2 2005/09/12 20:54:00 das Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(scalbnf)
 	movss	%xmm0,-8(%rsp)
@@ -37,6 +37,9 @@ ENTRY(scalbnf)
 	fstps	-8(%rsp)
 	movss	-8(%rsp),%xmm0
 	ret
+END(scalbnf)
 
 .globl CNAME(ldexpf)
 .set	CNAME(ldexpf),CNAME(scalbnf)
+
+	.section .note.GNU-stack,"",%progbits

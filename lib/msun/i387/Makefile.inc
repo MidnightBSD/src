@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/msun/i387/Makefile.inc,v 1.9 2006/07/05 20:06:42 bde Exp $
+# $FreeBSD$
 
 ARCH_SRCS = e_exp.S e_fmod.S e_log.S e_log10.S \
 	    e_remainder.S e_sqrt.S s_ceil.S s_copysign.S \
@@ -13,7 +13,9 @@ ARCH_SRCS+= e_log10f.S e_logf.S e_remainderf.S \
 	    s_remquof.S s_rintf.S s_scalbnf.S s_significandf.S s_truncf.S
 
 # long double counterparts
-ARCH_SRCS+= s_ceill.S s_copysignl.S s_floorl.S s_scalbnl.S s_truncl.S
+ARCH_SRCS+= e_remainderl.S e_sqrtl.S s_ceill.S s_copysignl.S \
+	    s_floorl.S s_llrintl.S \
+	    s_logbl.S s_lrintl.S s_remquol.S s_rintl.S s_scalbnl.S s_truncl.S
 
 LDBL_PREC = 64	# XXX 64-bit format, but truncated to 53 bits
 SYM_MAPS += ${.CURDIR}/i387/Symbol.map

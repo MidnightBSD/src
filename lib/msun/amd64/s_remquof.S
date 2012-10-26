@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/msun/amd64/s_remquof.S,v 1.1 2005/03/25 04:40:44 das Exp $"); 
+__FBSDID("$FreeBSD$"); 
 	
 ENTRY(remquof)
 	movss	%xmm0,-4(%rsp)
@@ -63,3 +63,6 @@ ENTRY(remquof)
 	fstps	-4(%rsp)
 	movss	-4(%rsp),%xmm0
 	ret
+END(remquof)
+
+	.section .note.GNU-stack,"",%progbits

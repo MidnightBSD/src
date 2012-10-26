@@ -34,8 +34,7 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: src/lib/msun/i387/s_tan.S,v 1.6 1999/08/28 00:06:14 peter Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(tan)
 	fldl	4(%esp)
@@ -56,3 +55,6 @@ ENTRY(tan)
 	fptan
 	fstp	%st(0)
 	ret
+END(tan)
+
+	.section .note.GNU-stack,"",%progbits

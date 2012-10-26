@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_finite.c,v 1.8 2003/07/23 04:53:46 peter Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * finite(x) returns 1 is x is finite, else 0;

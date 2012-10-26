@@ -11,9 +11,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_remainder.c,v 1.10 2005/02/04 18:26:06 das Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* __ieee754_remainder(x,p)
  * Return :                  
@@ -23,6 +22,8 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_remainder.c,v 1.10 2005/02/0
  * Method : 
  *	Based on fmod() return x-[x/p]chopped*p exactlp.
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -48,7 +49,7 @@ __ieee754_remainder(double x, double p)
 	if((hx>=0x7ff00000)||			/* x not finite */
 	  ((hp>=0x7ff00000)&&			/* p is NaN */
 	  (((hp-0x7ff00000)|lp)!=0)))
-	    return (x*p)/(x*p);
+	    return ((long double)x*p)/((long double)x*p);
 
 
 	if (hp<=0x7fdfffff) x = __ieee754_fmod(x,p+p);	/* now x < 2p */
@@ -68,6 +69,11 @@ __ieee754_remainder(double x, double p)
 	    }
 	}
 	GET_HIGH_WORD(hx,x);
+	if ((hx&0x7fffffff)==0) hx = 0;
 	SET_HIGH_WORD(x,hx^sx);
 	return x;
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(remainder, remainderl);
+#endif

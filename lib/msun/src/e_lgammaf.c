@@ -13,9 +13,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_lgammaf.c,v 1.7 2002/05/28 18:15:04 alfred Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* __ieee754_lgammaf(x)
  * Return the logarithm of the Gamma function of x.

@@ -4,7 +4,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/msun/i387/s_trunc.S,v 1.1 2005/04/16 21:12:55 das Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(trunc)
 	pushl	%ebp
@@ -24,3 +24,6 @@ ENTRY(trunc)
 
 	leave
 	ret
+END(trunc)
+
+	.section .note.GNU-stack,"",%progbits

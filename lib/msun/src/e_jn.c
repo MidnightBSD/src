@@ -11,9 +11,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_jn.c,v 1.9 2005/02/04 18:26:06 das Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * __ieee754_jn(n, x), __ieee754_yn(n, x)
@@ -201,7 +200,12 @@ __ieee754_jn(int n, double x)
 			}
 	     	    }
 		}
-	    	b = (t*__ieee754_j0(x)/b);
+		z = __ieee754_j0(x);
+		w = __ieee754_j1(x);
+		if (fabs(z) >= fabs(w))
+		    b = (t*z/b);
+		else
+		    b = (t*w/a);
 	    }
 	}
 	if(sgn==1) return -b; else return b;

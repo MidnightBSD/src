@@ -26,15 +26,19 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     from: @(#)atan2.3	5.1 (Berkeley) 5/2/91
-.\" $FreeBSD: src/lib/msun/man/atan2.3,v 1.15 2007/01/09 01:02:05 imp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 14, 2005
+.Dd July 31, 2008
 .Dt ATAN2 3
 .Os
 .Sh NAME
 .Nm atan2 ,
-.Nm atan2f
-.Nd arc tangent functions of two variables
+.Nm atan2f ,
+.Nm atan2l ,
+.Nm carg ,
+.Nm cargf ,
+.Nm cargl
+.Nd arc tangent and complex phase angle functions
 .Sh LIBRARY
 .Lb libm
 .Sh SYNOPSIS
@@ -43,20 +47,51 @@
 .Fn atan2 "double y" "double x"
 .Ft float
 .Fn atan2f "float y" "float x"
+.Ft long double
+.Fn atan2l "long double y" "long double x"
+.In complex.h
+.Ft double
+.Fn carg "double complex z"
+.Ft float
+.Fn cargf "float complex z"
+.Ft long double
+.Fn cargl "long double complex z"
 .Sh DESCRIPTION
 The
-.Fn atan2
-and the
-.Fn atan2f
+.Fn atan2 ,
+.Fn atan2f ,
+and
+.Fn atan2l
 functions compute the principal value of the arc tangent of
 .Fa y/ Ns Ar x ,
 using the signs of both arguments to determine the quadrant of
 the return value.
+.Pp
+The
+.Fn carg ,
+.Fn cargf ,
+and
+.Fn cargl
+functions compute the complex argument (or phase angle) of
+.Fa z .
+The complex argument is the number theta such that
+.Li z = r * e^(I * theta) ,
+where
+.Li r = cabs(z) .
+The call
+.Li carg(z)
+is equivalent to
+.Li atan2(cimag(z), creal(z)) ,
+and similarly for
+.Fn cargf
+and
+.Fn cargl .
 .Sh RETURN VALUES
 The
-.Fn atan2
-and the
-.Fn atan2f
+.Fn atan2 ,
+.Fn atan2f ,
+and
+.Fn atan2l
 functions, if successful,
 return the arc tangent of
 .Fa y/ Ns Ar x
@@ -73,7 +108,7 @@ if
 .Ar x
 > 0,
 .It Ta sign( Ns Ar y Ns )*(\*(Pi -
-.Fn atan "\\*(Bay/x\\*(Ba" ) Ta
+.Fn atan "\*(Bay/x\*(Ba" ) Ta
 if
 .Ar x
 < 0,
@@ -81,7 +116,7 @@ if
 .No 0 Ta
 if x = y = 0, or
 .It Ta
-.Pf sign( Ar y Ns )*\\*(Pi/2 Ta
+.Pf sign( Ar y Ns )*\*(Pi/2 Ta
 if
 .Ar x
 = 0 \(!=
@@ -169,6 +204,7 @@ r := \(sr(x\(**x+y\(**y);\0\0if r = 0 then x := copysign(1,x);
 .Xr acos 3 ,
 .Xr asin 3 ,
 .Xr atan 3 ,
+.Xr cabs 3 ,
 .Xr cos 3 ,
 .Xr cosh 3 ,
 .Xr math 3 ,
@@ -178,6 +214,12 @@ r := \(sr(x\(**x+y\(**y);\0\0if r = 0 then x := copysign(1,x);
 .Xr tanh 3
 .Sh STANDARDS
 The
-.Fn atan2
-function conforms to
-.St -isoC .
+.Fn atan2 ,
+.Fn atan2f ,
+.Fn atan2l ,
+.Fn carg ,
+.Fn cargf ,
+and
+.Fn cargl
+functions conform to
+.St -isoC-99 .

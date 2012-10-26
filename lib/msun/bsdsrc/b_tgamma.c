@@ -31,11 +31,9 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)gamma.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
+/* @(#)gamma.c	8.1 (Berkeley) 6/4/93 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/msun/bsdsrc/b_tgamma.c,v 1.9 2007/05/02 15:24:49 bde Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * This code by P. McIlroy, Oct 1992;

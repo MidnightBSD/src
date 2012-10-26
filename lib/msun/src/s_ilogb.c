@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_ilogb.c,v 1.9 2004/10/09 17:14:28 stefanf Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* ilogb(double x)
  * return the binary exponent of non-zero x

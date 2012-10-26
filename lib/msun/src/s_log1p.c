@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_log1p.c,v 1.8 2005/12/04 12:28:33 bde Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* double log1p(double x)
  *
@@ -79,6 +78,8 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_log1p.c,v 1.8 2005/12/04 12:
  *	 See HP-15C Advanced Functions Handbook, p.193.
  */
 
+#include <float.h>
+
 #include "math.h"
 #include "math_private.h"
 
@@ -124,7 +125,7 @@ log1p(double x)
 	if (hx >= 0x7ff00000) return x+x;
 	if(k!=0) {
 	    if(hx<0x43400000) {
-		u  = 1.0+x;
+		STRICT_ASSIGN(double,u,1.0+x);
 		GET_HIGH_WORD(hu,u);
 	        k  = (hu>>20)-1023;
 	        c  = (k>0)? 1.0-(u-x):x-(u-1.0);/* correction term */
@@ -154,8 +155,14 @@ log1p(double x)
 	}
 	hfsq=0.5*f*f;
 	if(hu==0) {	/* |f| < 2**-20 */
-	    if(f==zero) if(k==0) return zero;
-			else {c += k*ln2_lo; return k*ln2_hi+c;}
+	    if(f==zero) {
+		if(k==0) {
+		    return zero;
+		} else {
+		    c += k*ln2_lo;
+		    return k*ln2_hi+c;
+		}
+	    }
 	    R = hfsq*(1.0-0.66666666666666666*f);
 	    if(k==0) return f-R; else
 	    	     return k*ln2_hi-((R-(k*ln2_lo+c))-f);

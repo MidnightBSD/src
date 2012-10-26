@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_nextafter.c,v 1.11 2005/03/07 21:27:37 das Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* IEEE functions
  *	nextafter(x,y)
@@ -21,7 +20,6 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_nextafter.c,v 1.11 2005/03/0
  *   Special cases:
  */
 
-#include <sys/cdefs.h>
 #include <float.h>
 
 #include "math.h"

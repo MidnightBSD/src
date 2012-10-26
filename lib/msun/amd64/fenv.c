@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/msun/amd64/fenv.c,v 1.4 2007/01/05 07:15:26 das Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -86,7 +86,7 @@ fegetenv(fenv_t *envp)
 int
 feholdexcept(fenv_t *envp)
 {
-	int mxcsr;
+	__uint32_t mxcsr;
 
 	__stmxcsr(&mxcsr);
 	__fnstenv(&envp->__x87);
@@ -101,7 +101,8 @@ feholdexcept(fenv_t *envp)
 int
 feupdateenv(const fenv_t *envp)
 {
-	int mxcsr, status;
+	__uint32_t mxcsr;
+	__uint16_t status;
 
 	__fnstsw(&status);
 	__stmxcsr(&mxcsr);
@@ -113,33 +114,35 @@ feupdateenv(const fenv_t *envp)
 int
 __feenableexcept(int mask)
 {
-	int mxcsr, control, omask;
+	__uint32_t mxcsr, omask;
+	__uint16_t control;
 
 	mask &= FE_ALL_EXCEPT;
 	__fnstcw(&control);
 	__stmxcsr(&mxcsr);
-	omask = (control | mxcsr >> _SSE_EMASK_SHIFT) & FE_ALL_EXCEPT;
+	omask = ~(control | mxcsr >> _SSE_EMASK_SHIFT) & FE_ALL_EXCEPT;
 	control &= ~mask;
 	__fldcw(control);
 	mxcsr &= ~(mask << _SSE_EMASK_SHIFT);
 	__ldmxcsr(mxcsr);
-	return (~omask);
+	return (omask);
 }
 
 int
 __fedisableexcept(int mask)
 {
-	int mxcsr, control, omask;
+	__uint32_t mxcsr, omask;
+	__uint16_t control;
 
 	mask &= FE_ALL_EXCEPT;
 	__fnstcw(&control);
 	__stmxcsr(&mxcsr);
-	omask = (control | mxcsr >> _SSE_EMASK_SHIFT) & FE_ALL_EXCEPT;
+	omask = ~(control | mxcsr >> _SSE_EMASK_SHIFT) & FE_ALL_EXCEPT;
 	control |= mask;
 	__fldcw(control);
 	mxcsr |= mask << _SSE_EMASK_SHIFT;
 	__ldmxcsr(mxcsr);
-	return (~omask);
+	return (omask);
 }
 
 __weak_reference(__feenableexcept, feenableexcept);

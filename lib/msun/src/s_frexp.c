@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_frexp.c,v 1.10 2005/03/07 21:27:37 das Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * for non-zero x
@@ -24,7 +23,6 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_frexp.c,v 1.10 2005/03/07 21
  * with *exp=0.
  */
 
-#include <sys/cdefs.h>
 #include <float.h>
 
 #include "math.h"

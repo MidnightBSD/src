@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/msun/src/s_nearbyint.c,v 1.1 2004/07/06 04:46:08 das Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <fenv.h>
 #include <math.h>
@@ -52,3 +52,4 @@ fn(type x)			\
 
 DECL(double, nearbyint, rint)
 DECL(float, nearbyintf, rintf)
+DECL(long double, nearbyintl, rintl)

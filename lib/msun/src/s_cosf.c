@@ -14,14 +14,17 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_cosf.c,v 1.15 2005/11/30 06:47:18 bde Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
+
+#include <float.h>
 
 #include "math.h"
 #define	INLINE_KERNEL_COSDF
 #define	INLINE_KERNEL_SINDF
+#define INLINE_REM_PIO2F
 #include "math_private.h"
+#include "e_rem_pio2f.c"
 #include "k_cosf.c"
 #include "k_sinf.c"
 
@@ -35,7 +38,7 @@ c4pio2 = 4*M_PI_2;			/* 0x401921FB, 0x54442D18 */
 float
 cosf(float x)
 {
-	float y[2];
+	double y;
 	int32_t n, hx, ix;
 
 	GET_FLOAT_WORD(hx,x);
@@ -72,13 +75,13 @@ cosf(float x)
 
     /* general argument reduction needed */
 	else {
-	    n = __ieee754_rem_pio2f(x,y);
+	    n = __ieee754_rem_pio2f(x,&y);
 	    switch(n&3) {
-		case 0: return  __kernel_cosdf((double)y[0]+y[1]);
-		case 1: return  __kernel_sindf(-(double)y[0]-y[1]);
-		case 2: return -__kernel_cosdf((double)y[0]+y[1]);
+		case 0: return  __kernel_cosdf(y);
+		case 1: return  __kernel_sindf(-y);
+		case 2: return -__kernel_cosdf(y);
 		default:
-		        return  __kernel_sindf((double)y[0]+y[1]);
+		        return  __kernel_sindf(y);
 	    }
 	}
 }

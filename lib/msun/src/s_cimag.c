@@ -23,13 +23,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/msun/src/s_cimag.c,v 1.1 2004/05/30 09:21:56 stefanf Exp $
+ * $MidnightBSD$
  */
 
 #include <complex.h>
+#include "math_private.h"
 
 double
 cimag(double complex z)
 {
-	return -z * I;
+	const double_complex z1 = { .f = z };
+
+	return (IMAGPART(z1));
 }

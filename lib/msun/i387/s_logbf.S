@@ -5,7 +5,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: src/lib/msun/i387/s_logbf.S,v 1.1 2005/01/13 18:58:25 das Exp $");
+__FBSDID("$FreeBSD$");
 /* RCSID("$NetBSD: s_logbf.S,v 1.3 1995/05/09 00:15:12 jtc Exp $") */
 
 ENTRY(logbf)
@@ -13,3 +13,6 @@ ENTRY(logbf)
 	fxtract
 	fstp	%st
 	ret
+END(logbf)
+
+	.section .note.GNU-stack,"",%progbits

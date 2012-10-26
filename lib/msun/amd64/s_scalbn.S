@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/msun/amd64/s_scalbn.S,v 1.1 2005/04/16 21:12:55 das Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(scalbn)
 	movsd	%xmm0,-8(%rsp)
@@ -37,3 +37,6 @@ ENTRY(scalbn)
 	fstpl	-8(%rsp)
 	movsd	-8(%rsp),%xmm0
 	ret
+END(scalbn)
+
+	.section .note.GNU-stack,"",%progbits

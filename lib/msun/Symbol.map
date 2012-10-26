@@ -1,6 +1,8 @@
 /*
- * $FreeBSD: src/lib/msun/Symbol.map,v 1.4 2007/04/29 14:05:20 deischen Exp $
+ * $FreeBSD$
  */
+
+/* 7.0-CURRENT */
 FBSD_1.0 {
 	__fe_dfl_env;
 	tgamma;
@@ -176,8 +178,53 @@ FBSD_1.0 {
 	truncf;
 	truncl;
 	cabs;
-	z_abs;
 	cabsf;
 	drem;
 	dremf;
+};
+
+/* First added in 8.0-CURRENT */
+FBSD_1.1 {
+	carg;
+	cargf;
+	csqrt;
+	csqrtf;
+	logbl;
+	nan;
+	nanf;
+	nanl;
+	llrintl;
+	lrintl;
+	nearbyintl;
+	rintl;
+	exp2l;
+	sinl;
+	cosl;
+	tanl;
+	tgammaf;
+	sqrtl;
+	hypotl;
+	cabsl;
+	csqrtl;
+	remquol;
+	remainderl;
+	fmodl;
+	acosl;
+	asinl;
+	atan2l;
+	atanl;
+	cargl;
+	cproj;
+	cprojf;
+	cprojl;
+};
+
+/* First added in 9.0-CURRENT */
+FBSD_1.2 {
+	__isnanf;
+	cbrtl;
+	cexp;
+	cexpf;
+	log2;
+	log2f;
 };

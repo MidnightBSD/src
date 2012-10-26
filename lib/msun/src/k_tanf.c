@@ -14,9 +14,8 @@
  */
 
 #ifndef INLINE_KERNEL_TANDF
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/k_tanf.c,v 1.20 2005/11/28 11:46:20 bde Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 #endif
 
 #include "math.h"
@@ -33,10 +32,10 @@ T[] =  {
   0x1362b9bf971bcd.0p-59,	/* 0.00946564784943673166728 */
 };
 
-#ifdef INLINE_KERNEL_TANDF
-extern inline
+#ifndef INLINE_KERNEL_TANDF
+extern
 #endif
-float
+__inline float
 __kernel_tandf(double x, int iy)
 {
 	double z,r,w,s,t,u;

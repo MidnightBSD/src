@@ -34,11 +34,13 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: src/lib/msun/i387/s_significand.S,v 1.7 2000/06/06 12:12:36 bde Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(significand)
 	fldl	4(%esp)
 	fxtract
 	fstp	%st(1)
 	ret
+END(significand)
+
+	.section .note.GNU-stack,"",%progbits

@@ -12,9 +12,8 @@
  *
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_acosh.c,v 1.8 2005/02/04 18:26:05 das Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* __ieee754_acosh(x)
  * Method :

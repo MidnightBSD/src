@@ -11,9 +11,8 @@
  * From: @(#)s_floor.c 5.1 93/09/24
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_truncl.c,v 1.4 2005/04/28 19:45:55 stefanf Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * truncl(x)
@@ -37,6 +36,7 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_truncl.c,v 1.4 2005/04/28 19
 #endif
 
 static const long double huge = 1.0e300;
+static const float zero[] = { 0.0, -0.0 };
 
 long double
 truncl(long double x)
@@ -47,7 +47,7 @@ truncl(long double x)
 	if (e < MANH_SIZE - 1) {
 		if (e < 0) {			/* raise inexact if x != 0 */
 			if (huge + x > 0.0)
-				u.e = 0.0;
+				u.e = zero[u.bits.sign];
 		} else {
 			uint64_t m = ((1llu << MANH_SIZE) - 1) >> (e + 1);
 			if (((u.bits.manh & m) | u.bits.manl) == 0)

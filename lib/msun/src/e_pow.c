@@ -9,9 +9,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_pow.c,v 1.11 2005/02/04 18:26:06 das Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* __ieee754_pow(x,y) return x**y
  *
@@ -110,10 +109,13 @@ __ieee754_pow(double x, double y)
     /* y==zero: x**0 = 1 */
 	if((iy|ly)==0) return one; 	
 
-    /* +-NaN return x+y */
+    /* x==1: 1**y = 1, even if y is NaN */
+	if (hx==0x3ff00000 && lx == 0) return one;
+
+    /* y!=zero: result is NaN if either arg is NaN */
 	if(ix > 0x7ff00000 || ((ix==0x7ff00000)&&(lx!=0)) ||
 	   iy > 0x7ff00000 || ((iy==0x7ff00000)&&(ly!=0))) 
-		return x+y;	
+		return (x+0.0)+(y+0.0);
 
     /* determine if y is an odd int when x < 0
      * yisint = 0	... y is not an integer
@@ -139,7 +141,7 @@ __ieee754_pow(double x, double y)
 	if(ly==0) { 	
 	    if (iy==0x7ff00000) {	/* y is +-inf */
 	        if(((ix-0x3ff00000)|lx)==0)
-		    return  y - y;	/* inf**+-1 is NaN */
+		    return  one;	/* (-1)**+-inf is NaN */
 	        else if (ix >= 0x3ff00000)/* (|x|>1)**+-inf = inf,0 */
 		    return (hy>=0)? y: zero;
 	        else			/* (|x|<1)**-,+inf = inf,0 */

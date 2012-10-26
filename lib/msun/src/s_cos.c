@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_cos.c,v 1.10 2005/10/24 14:08:36 bde Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* cos(x)
  * Return cosine function of x.
@@ -45,8 +44,12 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_cos.c,v 1.10 2005/10/24 14:0
  *	TRIG(x) returns trig(x) nearly rounded
  */
 
+#include <float.h>
+
 #include "math.h"
+#define INLINE_REM_PIO2
 #include "math_private.h"
+#include "e_rem_pio2.c"
 
 double
 cos(double x)
@@ -60,7 +63,7 @@ cos(double x)
     /* |x| ~< pi/4 */
 	ix &= 0x7fffffff;
 	if(ix <= 0x3fe921fb) {
-	    if(ix<0x3e400000)			/* if x < 2**-27 */
+	    if(ix<0x3e46a09e)			/* if x < 2**-27 * sqrt(2) */
 		if(((int)x)==0) return 1.0;	/* generate inexact */
 	    return __kernel_cos(x,z);
 	}
@@ -80,3 +83,7 @@ cos(double x)
 	    }
 	}
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(cos, cosl);
+#endif

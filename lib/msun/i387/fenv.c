@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/msun/i387/fenv.c,v 1.3 2007/01/05 07:15:26 das Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -87,7 +87,7 @@ int
 fesetexceptflag(const fexcept_t *flagp, int excepts)
 {
 	fenv_t env;
-	int mxcsr;
+	__uint32_t mxcsr;
 
 	__fnstenv(&env);
 	env.__status &= ~excepts;
@@ -117,7 +117,7 @@ feraiseexcept(int excepts)
 int
 fegetenv(fenv_t *envp)
 {
-	int mxcsr;
+	__uint32_t mxcsr;
 
 	__fnstenv(envp);
 	/*
@@ -135,7 +135,7 @@ fegetenv(fenv_t *envp)
 int
 feholdexcept(fenv_t *envp)
 {
-	int mxcsr;
+	__uint32_t mxcsr;
 
 	__fnstenv(envp);
 	__fnclex();
@@ -152,7 +152,8 @@ feholdexcept(fenv_t *envp)
 int
 feupdateenv(const fenv_t *envp)
 {
-	int mxcsr, status;
+	__uint32_t mxcsr;
+	__uint16_t status;
 
 	__fnstsw(&status);
 	if (__HAS_SSE())
@@ -167,7 +168,8 @@ feupdateenv(const fenv_t *envp)
 int
 __feenableexcept(int mask)
 {
-	int mxcsr, control, omask;
+	__uint32_t mxcsr, omask;
+	__uint16_t control;
 
 	mask &= FE_ALL_EXCEPT;
 	__fnstcw(&control);
@@ -175,20 +177,21 @@ __feenableexcept(int mask)
 		__stmxcsr(&mxcsr);
 	else
 		mxcsr = 0;
-	omask = (control | mxcsr >> _SSE_EMASK_SHIFT) & FE_ALL_EXCEPT;
+	omask = ~(control | mxcsr >> _SSE_EMASK_SHIFT) & FE_ALL_EXCEPT;
 	control &= ~mask;
 	__fldcw(control);
 	if (__HAS_SSE()) {
 		mxcsr &= ~(mask << _SSE_EMASK_SHIFT);
 		__ldmxcsr(mxcsr);
 	}
-	return (~omask);
+	return (omask);
 }
 
 int
 __fedisableexcept(int mask)
 {
-	int mxcsr, control, omask;
+	__uint32_t mxcsr, omask;
+	__uint16_t control;
 
 	mask &= FE_ALL_EXCEPT;
 	__fnstcw(&control);
@@ -196,14 +199,14 @@ __fedisableexcept(int mask)
 		__stmxcsr(&mxcsr);
 	else
 		mxcsr = 0;
-	omask = (control | mxcsr >> _SSE_EMASK_SHIFT) & FE_ALL_EXCEPT;
+	omask = ~(control | mxcsr >> _SSE_EMASK_SHIFT) & FE_ALL_EXCEPT;
 	control |= mask;
 	__fldcw(control);
 	if (__HAS_SSE()) {
 		mxcsr |= mask << _SSE_EMASK_SHIFT;
 		__ldmxcsr(mxcsr);
 	}
-	return (~omask);
+	return (omask);
 }
 
 __weak_reference(__feenableexcept, feenableexcept);

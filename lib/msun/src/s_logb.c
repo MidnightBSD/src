@@ -10,15 +10,16 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_logb.c,v 1.10 2005/12/03 11:57:19 bde Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * double logb(x)
  * IEEE 754 logb. Included to pass IEEE test suite. Not recommend.
  * Use ilogb instead.
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -36,9 +37,13 @@ logb(double x)
 	if(ix>=0x7ff00000) return x*x;
 	if(ix<0x00100000) {
 		x *= two54;		 /* convert subnormal x to normal */
-		GET_FLOAT_WORD(ix,x);
+		GET_HIGH_WORD(ix,x);
 		ix &= 0x7fffffff;
-		return (float) ((ix>>20)-1023-54);
+		return (double) ((ix>>20)-1023-54);
 	} else
 		return (double) ((ix>>20)-1023);
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(logb, logbl);
+#endif

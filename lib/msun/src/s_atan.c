@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_atan.c,v 1.9 2003/07/23 04:53:46 peter Exp $";
-#endif
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /* atan(x)
  * Method
@@ -33,6 +32,8 @@ static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_atan.c,v 1.9 2003/07/23 04:5
  * compiler will convert from decimal to binary accurately enough
  * to produce the hexadecimal values shown.
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -83,10 +84,10 @@ atan(double x)
 	    if(ix>0x7ff00000||
 		(ix==0x7ff00000&&(low!=0)))
 		return x+x;		/* NaN */
-	    if(hx>0) return  atanhi[3]+atanlo[3];
-	    else     return -atanhi[3]-atanlo[3];
+	    if(hx>0) return  atanhi[3]+*(volatile double *)&atanlo[3];
+	    else     return -atanhi[3]-*(volatile double *)&atanlo[3];
 	} if (ix < 0x3fdc0000) {	/* |x| < 0.4375 */
-	    if (ix < 0x3e200000) {	/* |x| < 2^-29 */
+	    if (ix < 0x3e400000) {	/* |x| < 2^-27 */
 		if(huge+x>one) return x;	/* raise inexact */
 	    }
 	    id = -1;
@@ -117,3 +118,7 @@ atan(double x)
 	    return (hx<0)? -z:z;
 	}
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(atan, atanl);
+#endif

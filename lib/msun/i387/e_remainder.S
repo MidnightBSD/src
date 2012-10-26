@@ -34,8 +34,7 @@
  */
 
 #include <machine/asm.h>
-
-RCSID("$FreeBSD: src/lib/msun/i387/e_remainder.S,v 1.8 2005/02/04 14:08:32 das Exp $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(remainder)
 	fldl	12(%esp)
@@ -46,3 +45,6 @@ ENTRY(remainder)
 	jp	1b
 	fstp	%st(1)
 	ret
+END(remainder)
+
+	.section .note.GNU-stack,"",%progbits

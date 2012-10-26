@@ -23,13 +23,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/msun/src/s_conjl.c,v 1.1 2004/05/30 09:21:56 stefanf Exp $
+ * $MidnightBSD$
  */
 
 #include <complex.h>
 
+#include "math_private.h"
+
 long double complex
 conjl(long double complex z)
 {
-	return creall(z) - I * cimagl(z);
+
+	return (cpackl(creall(z), -cimagl(z)));
 }

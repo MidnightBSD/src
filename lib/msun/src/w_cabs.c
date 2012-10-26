@@ -5,24 +5,19 @@
  * Placed into the Public Domain, 1994.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: src/lib/msun/src/w_cabs.c,v 1.4 2001/06/13 15:16:30 ru Exp $";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <complex.h>
+#include <float.h>
 #include <math.h>
 
 double
-cabs(z)
-	double complex z;
+cabs(double complex z)
 {
 	return hypot(creal(z), cimag(z));
 }
 
-double
-z_abs(z)
-	double complex *z;
-{
-	return hypot(creal(*z), cimag(*z));
-}
+#if LDBL_MANT_DIG == 53
+__weak_reference(cabs, cabsl);
+#endif

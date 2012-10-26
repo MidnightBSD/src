@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/msun/amd64/fenv.h,v 1.6 2007/01/06 21:46:23 das Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_FENV_H_
@@ -110,7 +110,8 @@ feclearexcept(int __excepts)
 static __inline int
 fegetexceptflag(fexcept_t *__flagp, int __excepts)
 {
-	int __mxcsr, __status;
+	__uint32_t __mxcsr;
+	__uint16_t __status;
 
 	__stmxcsr(&__mxcsr);
 	__fnstsw(&__status);
@@ -124,7 +125,8 @@ int feraiseexcept(int __excepts);
 static __inline int
 fetestexcept(int __excepts)
 {
-	int __mxcsr, __status;
+	__uint32_t __mxcsr;
+	__uint16_t __status;
 
 	__stmxcsr(&__mxcsr);
 	__fnstsw(&__status);
@@ -134,7 +136,7 @@ fetestexcept(int __excepts)
 static __inline int
 fegetround(void)
 {
-	int __control;
+	__uint16_t __control;
 
 	/*
 	 * We assume that the x87 and the SSE unit agree on the
@@ -149,7 +151,8 @@ fegetround(void)
 static __inline int
 fesetround(int __round)
 {
-	int __mxcsr, __control;
+	__uint32_t __mxcsr;
+	__uint16_t __control;
 
 	if (__round & ~_ROUND_MASK)
 		return (-1);
@@ -197,7 +200,7 @@ int fedisableexcept(int __mask);
 static __inline int
 fegetexcept(void)
 {
-	int __control;
+	__uint16_t __control;
 
 	/*
 	 * We assume that the masks for the x87 and the SSE unit are
