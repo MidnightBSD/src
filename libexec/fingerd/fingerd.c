@@ -39,7 +39,7 @@ static const char copyright[] =
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/libexec/fingerd/fingerd.c,v 1.2 2008/11/20 15:23:03 laffer1 Exp $");
 
 #ifndef lint
 #if 0
@@ -68,7 +68,7 @@ static const char rcsid[] =
 #include <string.h>
 #include "pathnames.h"
 
-void logerr(const char *, ...) __printflike(1, 2);
+void logerr(const char *, ...) __printflike(1, 2) __dead2;
 
 int
 main(int argc, char *argv[])
@@ -78,17 +78,23 @@ main(int argc, char *argv[])
 	char *lp;
 	struct sockaddr_storage ss;
 	socklen_t sval;
-	int p[2], logging, pflag, secure;
+	int p[2], debug, kflag, logging, pflag, secure;
 #define	ENTRIES	50
 	char **ap, *av[ENTRIES + 1], **comp, line[1024], *prog;
 	char rhost[MAXHOSTNAMELEN];
 
 	prog = _PATH_FINGER;
-	logging = pflag = secure = 0;
+	debug = logging = kflag = pflag = secure = 0;
 	openlog("fingerd", LOG_PID | LOG_CONS, LOG_DAEMON);
 	opterr = 0;
-	while ((ch = getopt(argc, argv, "lp:s")) != -1)
+	while ((ch = getopt(argc, argv, "dklp:s")) != -1)
 		switch (ch) {
+		case 'd':
+			debug = 1;
+			break;
+		case 'k':
+			kflag = 1;
+			break;
 		case 'l':
 			logging = 1;
 			break;
@@ -107,7 +113,7 @@ main(int argc, char *argv[])
 	/*
 	 * Enable server-side Transaction TCP.
 	 */
-	{
+	if (!debug) {
 		int one = 1;
 		if (setsockopt(STDOUT_FILENO, IPPROTO_TCP, TCP_NOPUSH, &one, 
 			       sizeof one) < 0) {
@@ -118,7 +124,7 @@ main(int argc, char *argv[])
 	if (!fgets(line, sizeof(line), stdin))
 		exit(1);
 
-	if (logging || pflag) {
+	if (!debug && (logging || pflag)) {
 		sval = sizeof(ss);
 		if (getpeername(0, (struct sockaddr *)&ss, &sval) < 0)
 			logerr("getpeername: %s", strerror(errno));
@@ -149,12 +155,14 @@ main(int argc, char *argv[])
 		syslog(LOG_NOTICE, "query from %s: `%s'", rhost, t);
 	}
 
-	comp = &av[1];
-	av[2] = "--";
-	for (lp = line, ap = &av[3];;) {
+	comp = &av[2];
+	av[3] = "--";
+	if (kflag)
+		*comp-- = "-k";
+	for (lp = line, ap = &av[4];;) {
 		*ap = strtok(lp, " \t\r\n");
 		if (!*ap) {
-			if (secure && ap == &av[3]) {
+			if (secure && ap == &av[4]) {
 				puts("must provide username\r\n");
 				exit(1);
 			}
@@ -167,8 +175,7 @@ main(int argc, char *argv[])
 
 		/* RFC742: "/[Ww]" == "-l" */
 		if ((*ap)[0] == '/' && ((*ap)[1] == 'W' || (*ap)[1] == 'w')) {
-			av[1] = "-l";
-			comp = &av[0];
+			*comp-- = "-l";
 		}
 		else if (++ap == av + ENTRIES) {
 			*ap = NULL;
@@ -183,6 +190,13 @@ main(int argc, char *argv[])
 		*comp = prog;
 	if (pipe(p) < 0)
 		logerr("pipe: %s", strerror(errno));
+
+	if (debug) {
+		fprintf(stderr, "%s", prog);
+		for (ap = comp; *ap != NULL; ++ap)
+			fprintf(stderr, " %s", *ap);
+		fprintf(stderr, "\n");
+	}
 
 	switch(vfork()) {
 	case 0:
