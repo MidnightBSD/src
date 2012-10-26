@@ -2218,7 +2218,6 @@ cddl/contrib/opensolaris/lib/libzfs/common/libzfs_config.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_dataset.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_diff.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_fru.c -text
-cddl/contrib/opensolaris/lib/libzfs/common/libzfs_graph.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_impl.h -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_import.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_iter.c -text

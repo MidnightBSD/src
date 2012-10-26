@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -25,7 +24,9 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
+/*
+ * Copyright (c) 2011, Joyent, Inc. All rights reserved.
+ */
 
 #include <stdlib.h>
 #include <strings.h>
@@ -37,6 +38,7 @@
 #include <alloca.h>
 #else
 #include <sys/sysctl.h>
+#include <libproc_compat.h>
 #endif
 #include <limits.h>
 
@@ -209,6 +211,83 @@ dt_aggregate_lquantizedcmp(int64_t *lhs, int64_t *rhs)
 	return (0);
 }
 
+static void
+dt_aggregate_llquantize(int64_t *existing, int64_t *new, size_t size)
+{
+	int i;
+
+	for (i = 1; i < size / sizeof (int64_t); i++)
+		existing[i] = existing[i] + new[i];
+}
+
+static long double
+dt_aggregate_llquantizedsum(int64_t *llquanta)
+{
+	int64_t arg = *llquanta++;
+	uint16_t factor = DTRACE_LLQUANTIZE_FACTOR(arg);
+	uint16_t low = DTRACE_LLQUANTIZE_LOW(arg);
+	uint16_t high = DTRACE_LLQUANTIZE_HIGH(arg);
+	uint16_t nsteps = DTRACE_LLQUANTIZE_NSTEP(arg);
+	int bin = 0, order;
+	int64_t value = 1, next, step;
+	long double total;
+
+	assert(nsteps >= factor);
+	assert(nsteps % factor == 0);
+
+	for (order = 0; order < low; order++)
+		value *= factor;
+
+	total = (long double)llquanta[bin++] * (long double)(value - 1);
+
+	next = value * factor;
+	step = next > nsteps ? next / nsteps : 1;
+
+	while (order <= high) {
+		assert(value < next);
+		total += (long double)llquanta[bin++] * (long double)(value);
+
+		if ((value += step) != next)
+			continue;
+
+		next = value * factor;
+		step = next > nsteps ? next / nsteps : 1;
+		order++;
+	}
+
+	return (total + (long double)llquanta[bin] * (long double)value);
+}
+
+static int
+dt_aggregate_llquantizedcmp(int64_t *lhs, int64_t *rhs)
+{
+	long double lsum = dt_aggregate_llquantizedsum(lhs);
+	long double rsum = dt_aggregate_llquantizedsum(rhs);
+	int64_t lzero, rzero;
+
+	if (lsum < rsum)
+		return (DT_LESSTHAN);
+
+	if (lsum > rsum)
+		return (DT_GREATERTHAN);
+
+	/*
+	 * If they're both equal, then we will compare based on the weights at
+	 * zero.  If the weights at zero are equal, then this will be judged a
+	 * tie and will be resolved based on the key comparison.
+	 */
+	lzero = lhs[1];
+	rzero = rhs[1];
+
+	if (lzero < rzero)
+		return (DT_LESSTHAN);
+
+	if (lzero > rzero)
+		return (DT_GREATERTHAN);
+
+	return (0);
+}
+
 static int
 dt_aggregate_quantizedcmp(int64_t *lhs, int64_t *rhs)
 {
@@ -265,11 +344,7 @@ dt_aggregate_usym(dtrace_hdl_t *dtp, uint64_t *data)
 
 	dt_proc_lock(dtp, P);
 
-#if defined(sun)
 	if (Plookup_by_addr(P, *pc, NULL, 0, &sym) == 0)
-#else
-	if (proc_addr2sym(P, *pc, NULL, 0, &sym) == 0)
-#endif
 		*pc = sym.st_value;
 
 	dt_proc_unlock(dtp, P);
@@ -292,11 +367,7 @@ dt_aggregate_umod(dtrace_hdl_t *dtp, uint64_t *data)
 
 	dt_proc_lock(dtp, P);
 
-#if defined(sun)
 	if ((map = Paddr_to_map(P, *pc)) != NULL)
-#else
-	if ((map = proc_addr2map(P, *pc)) != NULL)
-#endif
 		*pc = map->pr_vaddr;
 
 	dt_proc_unlock(dtp, P);
@@ -600,6 +671,10 @@ hashnext:
 			h->dtahe_aggregate = dt_aggregate_lquantize;
 			break;
 
+		case DTRACEAGG_LLQUANTIZE:
+			h->dtahe_aggregate = dt_aggregate_llquantize;
+			break;
+
 		case DTRACEAGG_COUNT:
 		case DTRACEAGG_SUM:
 		case DTRACEAGG_AVG:
@@ -865,6 +940,10 @@ dt_aggregate_valcmp(const void *lhs, const void *rhs)
 
 	case DTRACEAGG_LQUANTIZE:
 		rval = dt_aggregate_lquantizedcmp(laddr, raddr);
+		break;
+
+	case DTRACEAGG_LLQUANTIZE:
+		rval = dt_aggregate_llquantizedcmp(laddr, raddr);
 		break;
 
 	case DTRACEAGG_COUNT:

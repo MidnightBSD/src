@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -25,16 +24,21 @@
  * Use is subject to license terms.
  */
 
+/*
+ * Copyright (c) 2011, Joyent, Inc. All rights reserved.
+ */
+
 #ifndef	_DTRACE_H
 #define	_DTRACE_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/dtrace.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <gelf.h>
 #include <libproc.h>
+#if !defined(sun)
+#include <rtld_db.h>
+#endif
 
 #ifdef	__cplusplus
 extern "C" {

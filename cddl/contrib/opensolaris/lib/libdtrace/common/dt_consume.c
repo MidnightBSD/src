@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,11 +19,13 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
+/*
+ * Copyright (c) 2011, Joyent, Inc. All rights reserved.
+ */
 
 #include <stdlib.h>
 #include <strings.h>
@@ -37,6 +38,9 @@
 #include <alloca.h>
 #endif
 #include <dt_impl.h>
+#if !defined(sun)
+#include <libproc_compat.h>
+#endif
 
 #define	DT_MASK_LO 0x00000000FFFFFFFFULL
 
@@ -686,6 +690,121 @@ dt_print_lquantize(dtrace_hdl_t *dtp, FILE *fp, const void *addr,
 	return (0);
 }
 
+int
+dt_print_llquantize(dtrace_hdl_t *dtp, FILE *fp, const void *addr,
+    size_t size, uint64_t normal)
+{
+	int i, first_bin, last_bin, bin = 1, order, levels;
+	uint16_t factor, low, high, nsteps;
+	const int64_t *data = addr;
+	int64_t value = 1, next, step;
+	char positives = 0, negatives = 0;
+	long double total = 0;
+	uint64_t arg;
+	char c[32];
+
+	if (size < sizeof (uint64_t))
+		return (dt_set_errno(dtp, EDT_DMISMATCH));
+
+	arg = *data++;
+	size -= sizeof (uint64_t);
+
+	factor = DTRACE_LLQUANTIZE_FACTOR(arg);
+	low = DTRACE_LLQUANTIZE_LOW(arg);
+	high = DTRACE_LLQUANTIZE_HIGH(arg);
+	nsteps = DTRACE_LLQUANTIZE_NSTEP(arg);
+
+	/*
+	 * We don't expect to be handed invalid llquantize() parameters here,
+	 * but sanity check them (to a degree) nonetheless.
+	 */
+	if (size > INT32_MAX || factor < 2 || low >= high ||
+	    nsteps == 0 || factor > nsteps)
+		return (dt_set_errno(dtp, EDT_DMISMATCH));
+
+	levels = (int)size / sizeof (uint64_t);
+
+	first_bin = 0;
+	last_bin = levels - 1;
+
+	while (first_bin < levels && data[first_bin] == 0)
+		first_bin++;
+
+	if (first_bin == levels) {
+		first_bin = 0;
+		last_bin = 1;
+	} else {
+		if (first_bin > 0)
+			first_bin--;
+
+		while (last_bin > 0 && data[last_bin] == 0)
+			last_bin--;
+
+		if (last_bin < levels - 1)
+			last_bin++;
+	}
+
+	for (i = first_bin; i <= last_bin; i++) {
+		positives |= (data[i] > 0);
+		negatives |= (data[i] < 0);
+		total += dt_fabsl((long double)data[i]);
+	}
+
+	if (dt_printf(dtp, fp, "\n%16s %41s %-9s\n", "value",
+	    "------------- Distribution -------------", "count") < 0)
+		return (-1);
+
+	for (order = 0; order < low; order++)
+		value *= factor;
+
+	next = value * factor;
+	step = next > nsteps ? next / nsteps : 1;
+
+	if (first_bin == 0) {
+		(void) snprintf(c, sizeof (c), "< %lld", (long long)value);
+
+		if (dt_printf(dtp, fp, "%16s ", c) < 0)
+			return (-1);
+
+		if (dt_print_quantline(dtp, fp, data[0], normal,
+		    total, positives, negatives) < 0)
+			return (-1);
+	}
+
+	while (order <= high) {
+		if (bin >= first_bin && bin <= last_bin) {
+			if (dt_printf(dtp, fp, "%16lld ", (long long)value) < 0)
+				return (-1);
+
+			if (dt_print_quantline(dtp, fp, data[bin],
+			    normal, total, positives, negatives) < 0)
+				return (-1);
+		}
+
+		assert(value < next);
+		bin++;
+
+		if ((value += step) != next)
+			continue;
+
+		next = value * factor;
+		step = next > nsteps ? next / nsteps : 1;
+		order++;
+	}
+
+	if (last_bin < bin)
+		return (0);
+
+	assert(last_bin == bin);
+	(void) snprintf(c, sizeof (c), ">= %lld", (long long)value);
+
+	if (dt_printf(dtp, fp, "%16s ", c) < 0)
+		return (-1);
+
+	return (dt_print_quantline(dtp, fp, data[bin], normal,
+	    total, positives, negatives));
+}
+
 /*ARGSUSED*/
 static int
 dt_print_average(dtrace_hdl_t *dtp, FILE *fp, caddr_t addr,
@@ -873,7 +992,7 @@ dt_print_stack(dtrace_hdl_t *dtp, FILE *fp, const char *format,
 			if (pc > sym.st_value) {
 				(void) snprintf(c, sizeof (c), "%s`%s+0x%llx",
 				    dts.dts_object, dts.dts_name,
-				    pc - sym.st_value);
+				    (u_longlong_t)(pc - sym.st_value));
 			} else {
 				(void) snprintf(c, sizeof (c), "%s`%s",
 				    dts.dts_object, dts.dts_name);
@@ -886,9 +1005,10 @@ dt_print_stack(dtrace_hdl_t *dtp, FILE *fp, const char *format,
 			 */
 			if (dtrace_lookup_by_addr(dtp, pc, NULL, &dts) == 0) {
 				(void) snprintf(c, sizeof (c), "%s`0x%llx",
-				    dts.dts_object, pc);
+				    dts.dts_object, (u_longlong_t)pc);
 			} else {
-				(void) snprintf(c, sizeof (c), "0x%llx", pc);
+				(void) snprintf(c, sizeof (c), "0x%llx",
+				    (u_longlong_t)pc);
 			}
 		}
 
@@ -955,17 +1075,9 @@ dt_print_ustack(dtrace_hdl_t *dtp, FILE *fp, const char *format,
 		if ((err = dt_printf(dtp, fp, "%*s", indent, "")) < 0)
 			break;
 
-#if defined(sun)
 		if (P != NULL && Plookup_by_addr(P, pc[i],
-#else
-		if (P != NULL && proc_addr2sym(P, pc[i],
-#endif
 		    name, sizeof (name), &sym) == 0) {
-#if defined(sun)
 			(void) Pobjname(P, pc[i], objname, sizeof (objname));
-#else
-			(void) proc_objname(P, pc[i], objname, sizeof (objname));
-#endif
 
 			if (pc[i] > sym.st_value) {
 				(void) snprintf(c, sizeof (c),
@@ -976,12 +1088,8 @@ dt_print_ustack(dtrace_hdl_t *dtp, FILE *fp, const char *format,
 				    "%s`%s", dt_basename(objname), name);
 			}
 		} else if (str != NULL && str[0] != '\0' && str[0] != '@' &&
-#if defined(sun)
 		    (P != NULL && ((map = Paddr_to_map(P, pc[i])) == NULL ||
 		    (map->pr_mflags & MA_WRITE)))) {
-#else
-		    (P != NULL && ((map = proc_addr2map(P, pc[i])) == NULL))) {
-#endif
 			/*
 			 * If the current string pointer in the string table
 			 * does not point to an empty string _and_ the program
@@ -997,11 +1105,7 @@ dt_print_ustack(dtrace_hdl_t *dtp, FILE *fp, const char *format,
 			 */
 			(void) snprintf(c, sizeof (c), "%s", str);
 		} else {
-#if defined(sun)
 			if (P != NULL && Pobjname(P, pc[i], objname,
-#else
-			if (P != NULL && proc_objname(P, pc[i], objname,
-#endif
 			    sizeof (objname)) != 0) {
 				(void) snprintf(c, sizeof (c), "%s`0x%llx",
 				    dt_basename(objname), (u_longlong_t)pc[i]);
@@ -1071,11 +1175,7 @@ dt_print_usym(dtrace_hdl_t *dtp, FILE *fp, caddr_t addr, dtrace_actkind_t act)
 
 			dt_proc_lock(dtp, P);
 
-#if defined(sun)
 			if (Plookup_by_addr(P, pc, NULL, 0, &sym) == 0)
-#else
-			if (proc_addr2sym(P, pc, NULL, 0, &sym) == 0)
-#endif
 				pc = sym.st_value;
 
 			dt_proc_unlock(dtp, P);
@@ -1086,7 +1186,7 @@ dt_print_usym(dtrace_hdl_t *dtp, FILE *fp, caddr_t addr, dtrace_actkind_t act)
 	do {
 		n = len;
 		s = alloca(n);
-	} while ((len = dtrace_uaddr2str(dtp, pid, pc, s, n)) >= n);
+	} while ((len = dtrace_uaddr2str(dtp, pid, pc, s, n)) > n);
 
 	return (dt_printf(dtp, fp, format, s));
 }
@@ -1118,11 +1218,7 @@ dt_print_umod(dtrace_hdl_t *dtp, FILE *fp, const char *format, caddr_t addr)
 	if (P != NULL)
 		dt_proc_lock(dtp, P); /* lock handle while we perform lookups */
 
-#if defined(sun)
 	if (P != NULL && Pobjname(P, pc, objname, sizeof (objname)) != 0) {
-#else
-	if (P != NULL && proc_objname(P, pc, objname, sizeof (objname)) != 0) {
-#endif
 		(void) snprintf(c, sizeof (c), "%s", dt_basename(objname));
 	} else {
 		(void) snprintf(c, sizeof (c), "0x%llx", (u_longlong_t)pc);
@@ -1733,6 +1829,9 @@ dt_print_datum(dtrace_hdl_t *dtp, FILE *fp, dtrace_recdesc_t *rec,
 
 	case DTRACEAGG_LQUANTIZE:
 		return (dt_print_lquantize(dtp, fp, addr, size, normal));
+
+	case DTRACEAGG_LLQUANTIZE:
+		return (dt_print_llquantize(dtp, fp, addr, size, normal));
 
 	case DTRACEAGG_AVG:
 		return (dt_print_average(dtp, fp, addr, size, normal));

@@ -19,18 +19,15 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 /*
  * This file contains the functions which analyze the status of a pool.  This
  * include both the status of an active pool, as well as the status exported
  * pools.  Returns one of the ZPOOL_STATUS_* defines describing the status of
  * the pool.  This status is independent (to a certain degree) from the state of
- * the pool.  A pool's state descsribes only whether or not it is capable of
+ * the pool.  A pool's state describes only whether or not it is capable of
  * providing the necessary fault tolerance for data.  The status describes the
  * overall status of devices.  A pool that is online can still have a device
  * that is experiencing errors.
@@ -47,7 +44,7 @@
 #include "libzfs_impl.h"
 
 /*
- * Message ID table.  This must be kep in sync with the ZPOOL_STATUS_* defines
+ * Message ID table.  This must be kept in sync with the ZPOOL_STATUS_* defines
  * in libzfs.h.  Note that there are some status results which go past the end
  * of this table, and hence have no associated message ID.
  */
@@ -62,26 +59,10 @@ static char *zfs_msgid_table[] = {
 	"ZFS-8000-8A",
 	"ZFS-8000-9P",
 	"ZFS-8000-A5",
-	"ZFS-8000-EY"
-};
-
-/*
- * If the pool is active, a certain class of static errors is overridden by the
- * faults as analayzed by FMA.  These faults have separate knowledge articles,
- * and the article referred to by 'zpool status' must match that indicated by
- * the syslog error message.  We override missing data as well as corrupt pool.
- */
-static char *zfs_msgid_table_active[] = {
-	"ZFS-8000-14",
-	"ZFS-8000-D3",		/* overridden */
-	"ZFS-8000-D3",		/* overridden */
-	"ZFS-8000-4J",
-	"ZFS-8000-5E",
-	"ZFS-8000-6X",
-	"ZFS-8000-CS",		/* overridden */
-	"ZFS-8000-8A",
-	"ZFS-8000-9P",
-	"ZFS-8000-CS",		/* overridden */
+	"ZFS-8000-EY",
+	"ZFS-8000-HC",
+	"ZFS-8000-JQ",
+	"ZFS-8000-K4",
 };
 
 #define	NMSGID	(sizeof (zfs_msgid_table) / sizeof (zfs_msgid_table[0]))
@@ -96,9 +77,16 @@ vdev_missing(uint64_t state, uint64_t aux, uint64_t errs)
 
 /* ARGSUSED */
 static int
+vdev_faulted(uint64_t state, uint64_t aux, uint64_t errs)
+{
+	return (state == VDEV_STATE_FAULTED);
+}
+
+/* ARGSUSED */
+static int
 vdev_errors(uint64_t state, uint64_t aux, uint64_t errs)
 {
-	return (errs != 0);
+	return (state == VDEV_STATE_DEGRADED || errs != 0);
 }
 
 /* ARGSUSED */
@@ -113,6 +101,13 @@ static int
 vdev_offlined(uint64_t state, uint64_t aux, uint64_t errs)
 {
 	return (state == VDEV_STATE_OFFLINE);
+}
+
+/* ARGSUSED */
+static int
+vdev_removed(uint64_t state, uint64_t aux, uint64_t errs)
+{
+	return (state == VDEV_STATE_REMOVED);
 }
 
 /*
@@ -142,7 +137,7 @@ find_vdev_problem(nvlist_t *vdev, int (*func)(uint64_t, uint64_t, uint64_t))
 			if (find_vdev_problem(child[c], func))
 				return (B_TRUE);
 	} else {
-		verify(nvlist_lookup_uint64_array(vdev, ZPOOL_CONFIG_STATS,
+		verify(nvlist_lookup_uint64_array(vdev, ZPOOL_CONFIG_VDEV_STATS,
 		    (uint64_t **)&vs, &c) == 0);
 
 		if (func(vs->vs_state, vs->vs_aux,
@@ -163,9 +158,9 @@ find_vdev_problem(nvlist_t *vdev, int (*func)(uint64_t, uint64_t, uint64_t))
  * following:
  *
  *	- Check for a complete and valid configuration
- *	- Look for any missing devices in a non-replicated config
+ *	- Look for any faulted or missing devices in a non-replicated config
  *	- Check for any data errors
- *	- Check for any missing devices in a replicated config
+ *	- Check for any faulted or missing devices in a replicated config
  *	- Look for any devices showing errors
  *	- Check for any resilvering devices
  *
@@ -177,25 +172,36 @@ check_status(nvlist_t *config, boolean_t isimport)
 {
 	nvlist_t *nvroot;
 	vdev_stat_t *vs;
-	uint_t vsc;
+	pool_scan_stat_t *ps = NULL;
+	uint_t vsc, psc;
 	uint64_t nerr;
 	uint64_t version;
 	uint64_t stateval;
+	uint64_t suspended;
 	uint64_t hostid = 0;
 
 	verify(nvlist_lookup_uint64(config, ZPOOL_CONFIG_VERSION,
 	    &version) == 0);
 	verify(nvlist_lookup_nvlist(config, ZPOOL_CONFIG_VDEV_TREE,
 	    &nvroot) == 0);
-	verify(nvlist_lookup_uint64_array(nvroot, ZPOOL_CONFIG_STATS,
+	verify(nvlist_lookup_uint64_array(nvroot, ZPOOL_CONFIG_VDEV_STATS,
 	    (uint64_t **)&vs, &vsc) == 0);
 	verify(nvlist_lookup_uint64(config, ZPOOL_CONFIG_POOL_STATE,
 	    &stateval) == 0);
-	(void) nvlist_lookup_uint64(config, ZPOOL_CONFIG_HOSTID, &hostid);
+
+	/*
+	 * Currently resilvering a vdev
+	 */
+	(void) nvlist_lookup_uint64_array(nvroot, ZPOOL_CONFIG_SCAN_STATS,
+	    (uint64_t **)&ps, &psc);
+	if (ps && ps->pss_func == POOL_SCAN_RESILVER &&
+	    ps->pss_state == DSS_SCANNING)
+		return (ZPOOL_STATUS_RESILVERING);
 
 	/*
 	 * Pool last accessed by another system.
 	 */
+	(void) nvlist_lookup_uint64(config, ZPOOL_CONFIG_HOSTID, &hostid);
 	if (hostid != 0 && (unsigned long)hostid != gethostid() &&
 	    stateval == POOL_STATE_ACTIVE)
 		return (ZPOOL_STATUS_HOSTID_MISMATCH);
@@ -215,8 +221,30 @@ check_status(nvlist_t *config, boolean_t isimport)
 		return (ZPOOL_STATUS_BAD_GUID_SUM);
 
 	/*
-	 * Missing devices in non-replicated config.
+	 * Check whether the pool has suspended due to failed I/O.
 	 */
+	if (nvlist_lookup_uint64(config, ZPOOL_CONFIG_SUSPENDED,
+	    &suspended) == 0) {
+		if (suspended == ZIO_FAILURE_MODE_CONTINUE)
+			return (ZPOOL_STATUS_IO_FAILURE_CONTINUE);
+		return (ZPOOL_STATUS_IO_FAILURE_WAIT);
+	}
+
+	/*
+	 * Could not read a log.
+	 */
+	if (vs->vs_state == VDEV_STATE_CANT_OPEN &&
+	    vs->vs_aux == VDEV_AUX_BAD_LOG) {
+		return (ZPOOL_STATUS_BAD_LOG);
+	}
+
+	/*
+	 * Bad devices in non-replicated config.
+	 */
+	if (vs->vs_state == VDEV_STATE_CANT_OPEN &&
+	    find_vdev_problem(nvroot, vdev_faulted))
+		return (ZPOOL_STATUS_FAULTED_DEV_NR);
+
 	if (vs->vs_state == VDEV_STATE_CANT_OPEN &&
 	    find_vdev_problem(nvroot, vdev_missing))
 		return (ZPOOL_STATUS_MISSING_DEV_NR);
@@ -244,6 +272,8 @@ check_status(nvlist_t *config, boolean_t isimport)
 	/*
 	 * Missing devices in a replicated config.
 	 */
+	if (find_vdev_problem(nvroot, vdev_faulted))
+		return (ZPOOL_STATUS_FAULTED_DEV_R);
 	if (find_vdev_problem(nvroot, vdev_missing))
 		return (ZPOOL_STATUS_MISSING_DEV_R);
 	if (find_vdev_problem(nvroot, vdev_broken))
@@ -262,15 +292,15 @@ check_status(nvlist_t *config, boolean_t isimport)
 		return (ZPOOL_STATUS_OFFLINE_DEV);
 
 	/*
-	 * Currently resilvering
+	 * Removed device
 	 */
-	if (!vs->vs_scrub_complete && vs->vs_scrub_type == POOL_SCRUB_RESILVER)
-		return (ZPOOL_STATUS_RESILVERING);
+	if (find_vdev_problem(nvroot, vdev_removed))
+		return (ZPOOL_STATUS_REMOVED_DEV);
 
 	/*
 	 * Outdated, but usable, version
 	 */
-	if (version < ZFS_VERSION)
+	if (version < SPA_VERSION)
 		return (ZPOOL_STATUS_VERSION_OLDER);
 
 	return (ZPOOL_STATUS_OK);
@@ -284,7 +314,7 @@ zpool_get_status(zpool_handle_t *zhp, char **msgid)
 	if (ret >= NMSGID)
 		*msgid = NULL;
 	else
-		*msgid = zfs_msgid_table_active[ret];
+		*msgid = zfs_msgid_table[ret];
 
 	return (ret);
 }
@@ -300,4 +330,69 @@ zpool_import_status(nvlist_t *config, char **msgid)
 		*msgid = zfs_msgid_table[ret];
 
 	return (ret);
+}
+
+static void
+dump_ddt_stat(const ddt_stat_t *dds, int h)
+{
+	char refcnt[6];
+	char blocks[6], lsize[6], psize[6], dsize[6];
+	char ref_blocks[6], ref_lsize[6], ref_psize[6], ref_dsize[6];
+
+	if (dds == NULL || dds->dds_blocks == 0)
+		return;
+
+	if (h == -1)
+		(void) strcpy(refcnt, "Total");
+	else
+		zfs_nicenum(1ULL << h, refcnt, sizeof (refcnt));
+
+	zfs_nicenum(dds->dds_blocks, blocks, sizeof (blocks));
+	zfs_nicenum(dds->dds_lsize, lsize, sizeof (lsize));
+	zfs_nicenum(dds->dds_psize, psize, sizeof (psize));
+	zfs_nicenum(dds->dds_dsize, dsize, sizeof (dsize));
+	zfs_nicenum(dds->dds_ref_blocks, ref_blocks, sizeof (ref_blocks));
+	zfs_nicenum(dds->dds_ref_lsize, ref_lsize, sizeof (ref_lsize));
+	zfs_nicenum(dds->dds_ref_psize, ref_psize, sizeof (ref_psize));
+	zfs_nicenum(dds->dds_ref_dsize, ref_dsize, sizeof (ref_dsize));
+
+	(void) printf("%6s   %6s   %5s   %5s   %5s   %6s   %5s   %5s   %5s\n",
+	    refcnt,
+	    blocks, lsize, psize, dsize,
+	    ref_blocks, ref_lsize, ref_psize, ref_dsize);
+}
+
+/*
+ * Print the DDT histogram and the column totals.
+ */
+void
+zpool_dump_ddt(const ddt_stat_t *dds_total, const ddt_histogram_t *ddh)
+{
+	int h;
+
+	(void) printf("\n");
+
+	(void) printf("bucket   "
+	    "           allocated             "
+	    "          referenced          \n");
+	(void) printf("______   "
+	    "______________________________   "
+	    "______________________________\n");
+
+	(void) printf("%6s   %6s   %5s   %5s   %5s   %6s   %5s   %5s   %5s\n",
+	    "refcnt",
+	    "blocks", "LSIZE", "PSIZE", "DSIZE",
+	    "blocks", "LSIZE", "PSIZE", "DSIZE");
+
+	(void) printf("%6s   %6s   %5s   %5s   %5s   %6s   %5s   %5s   %5s\n",
+	    "------",
+	    "------", "-----", "-----", "-----",
+	    "------", "-----", "-----", "-----");
+
+	for (h = 0; h < 64; h++)
+		dump_ddt_stat(&ddh->ddh_stat[h], h);
+
+	dump_ddt_stat(dds_total, -1);
+
+	(void) printf("\n");
 }

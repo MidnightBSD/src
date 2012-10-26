@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,14 +20,16 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
+ */
+
+/*
+ * Copyright (c) 2011, Joyent, Inc. All rights reserved.
  */
 
 #ifndef	_DT_IMPL_H
 #define	_DT_IMPL_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/param.h>
 #include <sys/objfs.h>
@@ -43,6 +44,9 @@
 #include <libctf.h>
 #include <dtrace.h>
 #include <gelf.h>
+#if defined(sun)
+#include <synch.h>
+#endif
 
 #ifdef	__cplusplus
 extern "C" {
@@ -138,6 +142,7 @@ typedef struct dt_module {
 	dt_idhash_t *dm_extern;	/* external symbol definitions */
 #if !defined(sun)
 	caddr_t dm_reloc_offset;	/* Symbol relocation offset. */
+	uintptr_t *dm_sec_offsets;
 #endif
 } dt_module_t;
 
@@ -519,7 +524,8 @@ enum {
 	EDT_BADSETOPT,		/* invalid setopt library action */
 	EDT_BADSTACKPC,		/* invalid stack program counter size */
 	EDT_BADAGGVAR,		/* invalid aggregation variable identifier */
-	EDT_OVERSION		/* client is requesting deprecated version */
+	EDT_OVERSION,		/* client is requesting deprecated version */
+	EDT_ENABLING_ERR	/* failed to enable probe */
 };
 
 /*
@@ -599,18 +605,17 @@ extern int dt_buffered_flush(dtrace_hdl_t *, dtrace_probedata_t *,
 extern void dt_buffered_disable(dtrace_hdl_t *);
 extern void dt_buffered_destroy(dtrace_hdl_t *);
 
+extern uint64_t dt_stddev(uint64_t *, uint64_t);
+
 extern int dt_rw_read_held(pthread_rwlock_t *);
 extern int dt_rw_write_held(pthread_rwlock_t *);
 extern int dt_mutex_held(pthread_mutex_t *);
-
-extern uint64_t dt_stddev(uint64_t *, uint64_t);
-
-#define	DT_RW_READ_HELD(x)	dt_rw_read_held(x)
-#define	DT_RW_WRITE_HELD(x)	dt_rw_write_held(x)
-#define	DT_RW_LOCK_HELD(x)	(DT_RW_READ_HELD(x) || DT_RW_WRITE_HELD(x))
-#define	DT_MUTEX_HELD(x)	dt_mutex_held(x)
-
 extern int dt_options_load(dtrace_hdl_t *);
+
+#define DT_RW_READ_HELD(x)	dt_rw_read_held(x)	 
+#define DT_RW_WRITE_HELD(x)	dt_rw_write_held(x)	 
+#define DT_RW_LOCK_HELD(x)	(DT_RW_READ_HELD(x) || DT_RW_WRITE_HELD(x))
+#define DT_MUTEX_HELD(x)	dt_mutex_held(x)
 
 extern void dt_dprintf(const char *, ...);
 
@@ -639,6 +644,8 @@ extern void dt_format_destroy(dtrace_hdl_t *);
 extern int dt_print_quantize(dtrace_hdl_t *, FILE *,
     const void *, size_t, uint64_t);
 extern int dt_print_lquantize(dtrace_hdl_t *, FILE *,
+    const void *, size_t, uint64_t);
+extern int dt_print_llquantize(dtrace_hdl_t *, FILE *,
     const void *, size_t, uint64_t);
 extern int dt_print_agg(const dtrace_aggdata_t *, void *);
 
