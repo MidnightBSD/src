@@ -1,8 +1,6 @@
-# $MidnightBSD$
+# $MidnightBSD: src/cddl/lib/drti/Makefile,v 1.1 2012/04/06 02:23:54 laffer1 Exp $
 
-.include	"../../Makefile.inc"
-
-.PATH:		${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common
+.PATH:		${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/common
 
 SRCS=		drti.c
 FILES=		${SRCS:R:S/$/.o/g}
@@ -10,7 +8,6 @@ FILESOWN=	${LIBOWN}
 FILESGRP=	${LIBGRP}
 FILESMODE=	${LIBMODE}
 FILESDIR=	${LIBDIR}/dtrace
-WARNS?=		6
 CLEANFILES=	${FILES}
 
 CFLAGS+=	-I${.CURDIR}/../../../sys/cddl/compat/opensolaris \
@@ -18,6 +15,7 @@ CFLAGS+=	-I${.CURDIR}/../../../sys/cddl/compat/opensolaris \
 		-I${OPENSOLARIS_USR_DISTDIR}/head \
 		-I${OPENSOLARIS_USR_DISTDIR}/lib/libctf/common \
 		-I${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common \
-		-I${OPENSOLARIS_SYS_DISTDIR}/uts/common
+		-I${OPENSOLARIS_SYS_DISTDIR}/uts/common \
+		-DPIC ${PICFLAG}
 
-.include <bsd.prog.mk>
+.include <bsd.lib.mk>

@@ -1,5 +1,4 @@
-# $MidnightBSD: src/cddl/lib/libzfs/Makefile,v 1.2 2008/10/15 19:10:20 laffer1 Exp $
-# $FreeBSD: src/cddl/lib/libzfs/Makefile,v 1.3 2007/05/06 01:39:38 pjd Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../../cddl/compat/opensolaris/misc
 .PATH: ${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
@@ -7,28 +6,38 @@
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzfs/common
 
 LIB=	zfs
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+DPADD=	${LIBMD} ${LIBPTHREAD} ${LIBUMEM} ${LIBUTIL}
+LDADD=	-lmd -lpthread -lumem -lutil
 
 SRCS=	deviceid.c \
-	mnttab.c \
-	mkdirp.c \
-	zmount.c \
 	fsshare.c \
+	mkdirp.c \
+	mnttab.c \
+	zmount.c \
 	zone.c
 
-SRCS+=	zfs_namecheck.c \
-	zfs_prop.c \
+SRCS+=	libzfs_changelist.c \
+	libzfs_config.c \
 	libzfs_dataset.c \
-	libzfs_util.c \
-	libzfs_graph.c \
+	libzfs_diff.c \
+	libzfs_import.c \
+	libzfs_iter.c \
 	libzfs_mount.c \
 	libzfs_pool.c \
-	libzfs_changelist.c \
-	libzfs_config.c \
-	libzfs_import.c \
-	libzfs_status.c
+	libzfs_sendrecv.c \
+	libzfs_status.c \
+	libzfs_util.c \
+	zfs_comutil.c \
+	zfs_deleg.c \
+	zfs_fletcher.c \
+	zfs_ioctl_compat.c \
+	zfs_namecheck.c \
+	zfs_prop.c \
+	zpool_prop.c \
+	zprop_common.c \
 
+WARNS?=	0
+CSTD=	c99
 CFLAGS+= -DZFS_NO_ACL
 CFLAGS+= -I${.CURDIR}/../../../sbin/mount
 CFLAGS+= -I${.CURDIR}/../../../cddl/lib/libumem

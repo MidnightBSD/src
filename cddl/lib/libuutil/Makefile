@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/cddl/lib/libuutil/Makefile,v 1.2 2008/10/15 19:10:20 laffer1 Exp $
 # $FreeBSD: src/cddl/lib/libuutil/Makefile,v 1.2 2007/04/16 21:20:25 ru Exp $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libuutil/common
@@ -16,6 +16,7 @@ SRCS=	avl.c \
 	uu_pname.c \
 	uu_strtoint.c
 
+WARNS?=	0
 CFLAGS+= -DNATIVE_BUILD
 CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libuutil/common
 CFLAGS+= -I${.CURDIR}/../../../sys/cddl/compat/opensolaris
