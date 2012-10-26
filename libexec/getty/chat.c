@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/getty/chat.c,v 1.2 2012/04/11 00:46:54 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997
  *	David L Nugent <davidn@blaze.net.au>.
@@ -79,7 +79,7 @@ static int    chat_send(char const *);
  */
 
 static void
-chat_alrm(int signo)
+chat_alrm(int signo __unused)
 {
 	int on = 1;
 
@@ -391,7 +391,7 @@ chat_send(char const *str)
 {
 	int r = 0;
 
-	if (chat_debug && CHATDEBUG_SEND)
+	if (chat_debug & CHATDEBUG_SEND)
 		syslog(LOG_DEBUG, "chat_send '%s'", cleanstr(str, strlen(str)));
 
 	if (*str) {
