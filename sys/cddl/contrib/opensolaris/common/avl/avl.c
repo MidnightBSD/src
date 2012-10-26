@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/common/avl/avl.c,v 1.2 2008/12/03 00:24:29 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -20,12 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 
 /*
  * AVL - generic AVL tree implementation for kernel use
@@ -244,7 +240,7 @@ avl_nearest(avl_tree_t *tree, avl_index_t where, int direction)
  *	"void *"  of the found tree node
  */
 void *
-avl_find(avl_tree_t *tree, void *value, avl_index_t *where)
+avl_find(avl_tree_t *tree, const void *value, avl_index_t *where)
 {
 	avl_node_t *node;
 	avl_node_t *prev = NULL;
@@ -809,6 +805,64 @@ avl_remove(avl_tree_t *tree, void *data)
 	} while (parent != NULL);
 }
 
+#define	AVL_REINSERT(tree, obj)		\
+	avl_remove((tree), (obj));	\
+	avl_add((tree), (obj))
+
+boolean_t
+avl_update_lt(avl_tree_t *t, void *obj)
+{
+	void *neighbor;
+
+	ASSERT(((neighbor = AVL_NEXT(t, obj)) == NULL) ||
+	    (t->avl_compar(obj, neighbor) <= 0));
+
+	neighbor = AVL_PREV(t, obj);
+	if ((neighbor != NULL) && (t->avl_compar(obj, neighbor) < 0)) {
+		AVL_REINSERT(t, obj);
+		return (B_TRUE);
+	}
+
+	return (B_FALSE);
+}
+
+boolean_t
+avl_update_gt(avl_tree_t *t, void *obj)
+{
+	void *neighbor;
+
+	ASSERT(((neighbor = AVL_PREV(t, obj)) == NULL) ||
+	    (t->avl_compar(obj, neighbor) >= 0));
+
+	neighbor = AVL_NEXT(t, obj);
+	if ((neighbor != NULL) && (t->avl_compar(obj, neighbor) > 0)) {
+		AVL_REINSERT(t, obj);
+		return (B_TRUE);
+	}
+
+	return (B_FALSE);
+}
+
+boolean_t
+avl_update(avl_tree_t *t, void *obj)
+{
+	void *neighbor;
+
+	neighbor = AVL_PREV(t, obj);
+	if ((neighbor != NULL) && (t->avl_compar(obj, neighbor) < 0)) {
+		AVL_REINSERT(t, obj);
+		return (B_TRUE);
+	}
+
+	neighbor = AVL_NEXT(t, obj);
+	if ((neighbor != NULL) && (t->avl_compar(obj, neighbor) > 0)) {
+		AVL_REINSERT(t, obj);
+		return (B_TRUE);
+	}
+
+	return (B_FALSE);
+}
+
 /*
  * initialize a new AVL tree
  */
@@ -854,6 +908,12 @@ avl_numnodes(avl_tree_t *tree)
 	return (tree->avl_numnodes);
 }
 
+boolean_t
+avl_is_empty(avl_tree_t *tree)
+{
+	ASSERT(tree);
+	return (tree->avl_numnodes == 0);
+}
 
 #define	CHILDBIT	(1L)
 
