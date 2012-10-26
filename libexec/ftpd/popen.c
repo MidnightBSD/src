@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/ftpd/popen.c,v 1.3 2012/04/11 00:46:54 laffer1 Exp $ */
 /*
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -111,10 +111,11 @@ ftpd_popen(char *program, char *type)
 		flags |= GLOB_LIMIT;
 		if (glob(argv[argc], flags, NULL, &gl))
 			gargv[gargc++] = strdup(argv[argc]);
-		else
+		else if (gl.gl_pathc > 0) {
 			for (pop = gl.gl_pathv; *pop && gargc < (MAXGLOBARGS-1);
 			     pop++)
 				gargv[gargc++] = strdup(*pop);
+		}
 		globfree(&gl);
 	}
 	gargv[gargc] = NULL;

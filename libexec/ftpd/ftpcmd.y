@@ -76,31 +76,6 @@ __FBSDID("$FreeBSD: src/libexec/ftpd/ftpcmd.y,v 1.66.6.2 2008/12/23 01:23:09 cpe
 #include "extern.h"
 #include "pathnames.h"
 
-extern	union sockunion data_dest, his_addr;
-extern	int hostinfo;
-extern	int logged_in;
-extern	struct passwd *pw;
-extern	int guest;
-extern	char *homedir;
-extern 	int paranoid;
-extern	int logging;
-extern	int type;
-extern	int form;
-extern	int ftpdebug;
-extern	int timeout;
-extern	int maxtimeout;
-extern  int pdata;
-extern	char *hostname;
-extern	char proctitle[];
-extern	int usedefault;
-extern  char tmpline[];
-extern	int readonly;
-extern	int assumeutf8;
-extern	int noepsv;
-extern	int noretr;
-extern	int noguestretr;
-extern	char *typenames[]; /* defined in <arpa/ftp.h> included from ftpd.c */
-
 off_t	restart_point;
 
 static	int cmd_type;
@@ -109,8 +84,6 @@ static	int cmd_bytesz;
 static	int state;
 char	cbuf[512];
 char	*fromname = NULL;
-
-extern int epsvall;
 
 %}
 
@@ -1311,13 +1284,13 @@ yylex(void)
 		case CMD:
 			(void) signal(SIGALRM, toolong);
 			(void) alarm(timeout);
-			n = getline(cbuf, sizeof(cbuf) -1, stdin);
+			n = getline(cbuf, sizeof(cbuf)-1, stdin);
 			if (n == -1) {
 				reply(221, "You could at least say goodbye.");
 				dologout(0);
 			} else if (n == -2) {
 				reply(500, "Command too long.");
-				alarm(0);
+				(void) alarm(0);
 				continue;
 			}
 			(void) alarm(0);
