@@ -32621,7 +32621,6 @@ crypto/openssl/e_os.h -text
 crypto/openssl/e_os2.h -text
 crypto/openssl/engines/Makefile -text
 crypto/openssl/engines/alpha.opt -text
-crypto/openssl/engines/axp.opt -text
 crypto/openssl/engines/e_4758cca.c -text
 crypto/openssl/engines/e_4758cca.ec -text
 crypto/openssl/engines/e_4758cca_err.c -text
@@ -32664,7 +32663,6 @@ crypto/openssl/engines/e_ubsec_err.c -text
 crypto/openssl/engines/e_ubsec_err.h -text
 crypto/openssl/engines/engine_vector.mar -text
 crypto/openssl/engines/ia64.opt -text
-crypto/openssl/engines/makeengines.com -text
 crypto/openssl/engines/vax.opt -text
 crypto/openssl/engines/vendor_defns/aep.h -text
 crypto/openssl/engines/vendor_defns/atalla.h -text
@@ -32735,21 +32733,7 @@ crypto/openssl/fips/sha/fips_shatest.c -text
 crypto/openssl/fips/sha/fips_standalone_sha1.c -text
 crypto/openssl/openssl.doxy -text
 crypto/openssl/openssl.spec -text
-crypto/openssl/shlib/Makefile.hpux10-cc -text
 crypto/openssl/shlib/README -text
-crypto/openssl/shlib/hpux10-cc.sh -text
-crypto/openssl/shlib/irix.sh -text
-crypto/openssl/shlib/sco5-shared-gcc.sh -text
-crypto/openssl/shlib/sco5-shared-installed -text
-crypto/openssl/shlib/sco5-shared.sh -text
-crypto/openssl/shlib/solaris-sc4.sh -text
-crypto/openssl/shlib/solaris.sh -text
-crypto/openssl/shlib/sun.sh -text
-crypto/openssl/shlib/svr5-shared-gcc.sh -text
-crypto/openssl/shlib/svr5-shared-installed -text
-crypto/openssl/shlib/svr5-shared.sh -text
-crypto/openssl/shlib/win32.bat -text
-crypto/openssl/shlib/win32dll.bat -text
 crypto/openssl/ssl/Makefile -text
 crypto/openssl/ssl/bio_ssl.c -text
 crypto/openssl/ssl/d1_both.c -text
