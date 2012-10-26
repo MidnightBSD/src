@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/cddl/contrib/opensolaris/common/nvpair/nvpair.c,v 1.2 2008/12/03 00:24:30 laffer1 Exp $ */
 /*
  * CDDL HEADER START
  *
@@ -21,11 +20,8 @@
  */
 
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/debug.h>
 #include <sys/nvpair.h>
@@ -35,15 +31,18 @@
 
 #if defined(_KERNEL) && !defined(_BOOT)
 #include <sys/varargs.h>
+#include <sys/sunddi.h>
 #else
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #endif
 
 #ifndef	offsetof
-#define	offsetof(s, m)	((size_t)(&(((s *)0)->m)))
+#define	offsetof(s, m)		((size_t)(&(((s *)0)->m)))
 #endif
-
+#define	skip_whitespace(p)	while ((*(p) == ' ') || (*(p) == '\t')) p++
 
 /*
  * nvpair.c - Provides kernel & userland interfaces for manipulating
@@ -202,7 +201,7 @@ nv_mem_free(nvpriv_t *nvp, void *buf, size_t size)
 static void
 nv_priv_init(nvpriv_t *priv, nv_alloc_t *nva, uint32_t stat)
 {
-	bzero(priv, sizeof (priv));
+	bzero(priv, sizeof (nvpriv_t));
 
 	priv->nvp_nva = nva;
 	priv->nvp_stat = stat;
@@ -251,6 +250,12 @@ nvlist_init(nvlist_t *nvl, uint32_t nvflag, nvpriv_t *priv)
 	nvl->nvl_priv = (uint64_t)(uintptr_t)priv;
 	nvl->nvl_flag = 0;
 	nvl->nvl_pad = 0;
+}
+
+uint_t
+nvlist_nvflag(nvlist_t *nvl)
+{
+	return (nvl->nvl_nvflag);
 }
 
 /*
@@ -396,6 +401,9 @@ i_validate_type_nelem(data_type_t type, uint_t nelem)
 	case DATA_TYPE_STRING:
 	case DATA_TYPE_HRTIME:
 	case DATA_TYPE_NVLIST:
+#if !defined(_KERNEL)
+	case DATA_TYPE_DOUBLE:
+#endif
 		if (nelem != 1)
 			return (EINVAL);
 		break;
@@ -683,6 +691,18 @@ nvlist_remove(nvlist_t *nvl, const char *name, data_type_t type)
 	return (ENOENT);
 }
 
+int
+nvlist_remove_nvpair(nvlist_t *nvl, nvpair_t *nvp)
+{
+	if (nvl == NULL || nvp == NULL)
+		return (EINVAL);
+
+	nvp_buf_unlink(nvl, nvp);
+	nvpair_free(nvp);
+	nvp_buf_free(nvl, nvp);
+	return (0);
+}
+
 /*
  * This function calculates the size of an nvpair value.
  *
@@ -734,6 +754,11 @@ i_get_value_size(data_type_t type, const void *data, uint_t nelem)
 	case DATA_TYPE_UINT64:
 		value_sz = sizeof (uint64_t);
 		break;
+#if !defined(_KERNEL)
+	case DATA_TYPE_DOUBLE:
+		value_sz = sizeof (double);
+		break;
+#endif
 	case DATA_TYPE_STRING:
 		if (data == NULL)
 			value_sz = 0;
@@ -1018,6 +1043,14 @@ nvlist_add_uint64(nvlist_t *nvl, const char *name, uint64_t val)
 	return (nvlist_add_common(nvl, name, DATA_TYPE_UINT64, 1, &val));
 }
 
+#if !defined(_KERNEL)
+int
+nvlist_add_double(nvlist_t *nvl, const char *name, double val)
+{
+	return (nvlist_add_common(nvl, name, DATA_TYPE_DOUBLE, 1, &val));
+}
+#endif
+
 int
 nvlist_add_string(nvlist_t *nvl, const char *name, const char *val)
 {
@@ -1124,18 +1157,56 @@ nvlist_next_nvpair(nvlist_t *nvl, nvpair_t *nvp)
 	curr = NVPAIR2I_NVP(nvp);
 
 	/*
-	 * Ensure that nvp is an valid pointer.
+	 * Ensure that nvp is a valid nvpair on this nvlist.
+	 * NB: nvp_curr is used only as a hint so that we don't always
+	 * have to walk the list to determine if nvp is still on the list.
 	 */
 	if (nvp == NULL)
 		curr = priv->nvp_list;
-	else if (priv->nvp_curr == curr)
+	else if (priv->nvp_curr == curr || nvlist_contains_nvp(nvl, nvp))
 		curr = curr->nvi_next;
-	else if (nvlist_contains_nvp(nvl, nvp) == 0)
+	else
 		curr = NULL;
 
 	priv->nvp_curr = curr;
 
 	return (curr != NULL ? &curr->nvi_nvp : NULL);
+}
+
+nvpair_t *
+nvlist_prev_nvpair(nvlist_t *nvl, nvpair_t *nvp)
+{
+	nvpriv_t *priv;
+	i_nvp_t *curr;
+
+	if (nvl == NULL ||
+	    (priv = (nvpriv_t *)(uintptr_t)nvl->nvl_priv) == NULL)
+		return (NULL);
+
+	curr = NVPAIR2I_NVP(nvp);
+
+	if (nvp == NULL)
+		curr = priv->nvp_last;
+	else if (priv->nvp_curr == curr || nvlist_contains_nvp(nvl, nvp))
+		curr = curr->nvi_prev;
+	else
+		curr = NULL;
+
+	priv->nvp_curr = curr;
+
+	return (curr != NULL ? &curr->nvi_nvp : NULL);
+}
+
+boolean_t
+nvlist_empty(nvlist_t *nvl)
+{
+	nvpriv_t *priv;
+
+	if (nvl == NULL ||
+	    (priv = (nvpriv_t *)(uintptr_t)nvl->nvl_priv) == NULL)
+		return (B_TRUE);
+
+	return (priv->nvp_list == NULL);
 }
 
 char *
@@ -1148,6 +1219,27 @@ data_type_t
 nvpair_type(nvpair_t *nvp)
 {
 	return (NVP_TYPE(nvp));
+}
+
+int
+nvpair_type_is_array(nvpair_t *nvp)
+{
+	data_type_t type = NVP_TYPE(nvp);
+
+	if ((type == DATA_TYPE_BYTE_ARRAY) ||
+	    (type == DATA_TYPE_UINT8_ARRAY) ||
+	    (type == DATA_TYPE_INT16_ARRAY) ||
+	    (type == DATA_TYPE_UINT16_ARRAY) ||
+	    (type == DATA_TYPE_INT32_ARRAY) ||
+	    (type == DATA_TYPE_UINT32_ARRAY) ||
+	    (type == DATA_TYPE_INT64_ARRAY) ||
+	    (type == DATA_TYPE_UINT64_ARRAY) ||
+	    (type == DATA_TYPE_BOOLEAN_ARRAY) ||
+	    (type == DATA_TYPE_STRING_ARRAY) ||
+	    (type == DATA_TYPE_NVLIST_ARRAY))
+		return (1);
+	return (0);
+
 }
 
 static int
@@ -1177,6 +1269,9 @@ nvpair_value_common(nvpair_t *nvp, data_type_t type, uint_t *nelem, void *data)
 	case DATA_TYPE_INT64:
 	case DATA_TYPE_UINT64:
 	case DATA_TYPE_HRTIME:
+#if !defined(_KERNEL)
+	case DATA_TYPE_DOUBLE:
+#endif
 		if (data == NULL)
 			return (EINVAL);
 		bcopy(NVP_VALUE(nvp), data,
@@ -1313,6 +1408,14 @@ nvlist_lookup_uint64(nvlist_t *nvl, const char *name, uint64_t *val)
 	return (nvlist_lookup_common(nvl, name, DATA_TYPE_UINT64, NULL, val));
 }
 
+#if !defined(_KERNEL)
+int
+nvlist_lookup_double(nvlist_t *nvl, const char *name, double *val)
+{
+	return (nvlist_lookup_common(nvl, name, DATA_TYPE_DOUBLE, NULL, val));
+}
+#endif
+
 int
 nvlist_lookup_string(nvlist_t *nvl, const char *name, char **val)
 {
@@ -1447,6 +1550,9 @@ nvlist_lookup_pairs(nvlist_t *nvl, int flag, ...)
 		case DATA_TYPE_HRTIME:
 		case DATA_TYPE_STRING:
 		case DATA_TYPE_NVLIST:
+#if !defined(_KERNEL)
+		case DATA_TYPE_DOUBLE:
+#endif
 			val = va_arg(ap, void *);
 			ret = nvlist_lookup_common(nvl, name, type, NULL, val);
 			break;
@@ -1478,6 +1584,224 @@ nvlist_lookup_pairs(nvlist_t *nvl, int flag, ...)
 	va_end(ap);
 
 	return (ret);
+}
+
+/*
+ * Find the 'name'ed nvpair in the nvlist 'nvl'. If 'name' found, the function
+ * returns zero and a pointer to the matching nvpair is returned in '*ret'
+ * (given 'ret' is non-NULL). If 'sep' is specified then 'name' will penitrate
+ * multiple levels of embedded nvlists, with 'sep' as the separator. As an
+ * example, if sep is '.', name might look like: "a" or "a.b" or "a.c[3]" or
+ * "a.d[3].e[1]".  This matches the C syntax for array embed (for convience,
+ * code also supports "a.d[3]e[1]" syntax).
+ *
+ * If 'ip' is non-NULL and the last name component is an array, return the
+ * value of the "...[index]" array index in *ip. For an array reference that
+ * is not indexed, *ip will be returned as -1. If there is a syntax error in
+ * 'name', and 'ep' is non-NULL then *ep will be set to point to the location
+ * inside the 'name' string where the syntax error was detected.
+ */
+static int
+nvlist_lookup_nvpair_ei_sep(nvlist_t *nvl, const char *name, const char sep,
+    nvpair_t **ret, int *ip, char **ep)
+{
+	nvpair_t	*nvp;
+	const char	*np;
+	char		*sepp;
+	char		*idxp, *idxep;
+	nvlist_t	**nva;
+	long		idx;
+	int		n;
+
+	if (ip)
+		*ip = -1;			/* not indexed */
+	if (ep)
+		*ep = NULL;
+
+	if ((nvl == NULL) || (name == NULL))
+		return (EINVAL);
+
+	/* step through components of name */
+	for (np = name; np && *np; np = sepp) {
+		/* ensure unique names */
+		if (!(nvl->nvl_nvflag & NV_UNIQUE_NAME))
+			return (ENOTSUP);
+
+		/* skip white space */
+		skip_whitespace(np);
+		if (*np == 0)
+			break;
+
+		/* set 'sepp' to end of current component 'np' */
+		if (sep)
+			sepp = strchr(np, sep);
+		else
+			sepp = NULL;
+
+		/* find start of next "[ index ]..." */
+		idxp = strchr(np, '[');
+
+		/* if sepp comes first, set idxp to NULL */
+		if (sepp && idxp && (sepp < idxp))
+			idxp = NULL;
+
+		/*
+		 * At this point 'idxp' is set if there is an index
+		 * expected for the current component.
+		 */
+		if (idxp) {
+			/* set 'n' to length of current 'np' name component */
+			n = idxp++ - np;
+
+			/* keep sepp up to date for *ep use as we advance */
+			skip_whitespace(idxp);
+			sepp = idxp;
+
+			/* determine the index value */
+#if defined(_KERNEL) && !defined(_BOOT)
+			if (ddi_strtol(idxp, &idxep, 0, &idx))
+				goto fail;
+#else
+			idx = strtol(idxp, &idxep, 0);
+#endif
+			if (idxep == idxp)
+				goto fail;
+
+			/* keep sepp up to date for *ep use as we advance */
+			sepp = idxep;
+
+			/* skip white space index value and check for ']' */
+			skip_whitespace(sepp);
+			if (*sepp++ != ']')
+				goto fail;
+
+			/* for embedded arrays, support C syntax: "a[1].b" */
+			skip_whitespace(sepp);
+			if (sep && (*sepp == sep))
+				sepp++;
+		} else if (sepp) {
+			n = sepp++ - np;
+		} else {
+			n = strlen(np);
+		}
+
+		/* trim trailing whitespace by reducing length of 'np' */
+		if (n == 0)
+			goto fail;
+		for (n--; (np[n] == ' ') || (np[n] == '\t'); n--)
+			;
+		n++;
+
+		/* skip whitespace, and set sepp to NULL if complete */
+		if (sepp) {
+			skip_whitespace(sepp);
+			if (*sepp == 0)
+				sepp = NULL;
+		}
+
+		/*
+		 * At this point:
+		 * o  'n' is the length of current 'np' component.
+		 * o  'idxp' is set if there was an index, and value 'idx'.
+		 * o  'sepp' is set to the beginning of the next component,
+		 *    and set to NULL if we have no more components.
+		 *
+		 * Search for nvpair with matching component name.
+		 */
+		for (nvp = nvlist_next_nvpair(nvl, NULL); nvp != NULL;
+		    nvp = nvlist_next_nvpair(nvl, nvp)) {
+
+			/* continue if no match on name */
+			if (strncmp(np, nvpair_name(nvp), n) ||
+			    (strlen(nvpair_name(nvp)) != n))
+				continue;
+
+			/* if indexed, verify type is array oriented */
+			if (idxp && !nvpair_type_is_array(nvp))
+				goto fail;
+
+			/*
+			 * Full match found, return nvp and idx if this
+			 * was the last component.
+			 */
+			if (sepp == NULL) {
+				if (ret)
+					*ret = nvp;
+				if (ip && idxp)
+					*ip = (int)idx;	/* return index */
+				return (0);		/* found */
+			}
+
+			/*
+			 * More components: current match must be
+			 * of DATA_TYPE_NVLIST or DATA_TYPE_NVLIST_ARRAY
+			 * to support going deeper.
+			 */
+			if (nvpair_type(nvp) == DATA_TYPE_NVLIST) {
+				nvl = EMBEDDED_NVL(nvp);
+				break;
+			} else if (nvpair_type(nvp) == DATA_TYPE_NVLIST_ARRAY) {
+				(void) nvpair_value_nvlist_array(nvp,
+				    &nva, (uint_t *)&n);
+				if ((n < 0) || (idx >= n))
+					goto fail;
+				nvl = nva[idx];
+				break;
+			}
+
+			/* type does not support more levels */
+			goto fail;
+		}
+		if (nvp == NULL)
+			goto fail;		/* 'name' not found */
+
+		/* search for match of next component in embedded 'nvl' list */
+	}
+
+fail:	if (ep && sepp)
+		*ep = sepp;
+	return (EINVAL);
+}
+
+/*
+ * Return pointer to nvpair with specified 'name'.
+ */
+int
+nvlist_lookup_nvpair(nvlist_t *nvl, const char *name, nvpair_t **ret)
+{
+	return (nvlist_lookup_nvpair_ei_sep(nvl, name, 0, ret, NULL, NULL));
+}
+
+/*
+ * Determine if named nvpair exists in nvlist (use embedded separator of '.'
+ * and return array index).  See nvlist_lookup_nvpair_ei_sep for more detailed
+ * description.
+ */
+int nvlist_lookup_nvpair_embedded_index(nvlist_t *nvl,
+    const char *name, nvpair_t **ret, int *ip, char **ep)
+{
+	return (nvlist_lookup_nvpair_ei_sep(nvl, name, '.', ret, ip, ep));
+}
+
+boolean_t
+nvlist_exists(nvlist_t *nvl, const char *name)
+{
+	nvpriv_t *priv;
+	nvpair_t *nvp;
+	i_nvp_t *curr;
+
+	if (name == NULL || nvl == NULL ||
+	    (priv = (nvpriv_t *)(uintptr_t)nvl->nvl_priv) == NULL)
+		return (B_FALSE);
+
+	for (curr = priv->nvp_list; curr != NULL; curr = curr->nvi_next) {
+		nvp = &curr->nvi_nvp;
+
+		if (strcmp(name, NVP_NAME(nvp)) == 0)
+			return (B_TRUE);
+	}
+
+	return (B_FALSE);
 }
 
 int
@@ -1539,6 +1863,14 @@ nvpair_value_uint64(nvpair_t *nvp, uint64_t *val)
 {
 	return (nvpair_value_common(nvp, DATA_TYPE_UINT64, NULL, val));
 }
+
+#if !defined(_KERNEL)
+int
+nvpair_value_double(nvpair_t *nvp, double *val)
+{
+	return (nvpair_value_common(nvp, DATA_TYPE_DOUBLE, NULL, val));
+}
+#endif
 
 int
 nvpair_value_string(nvpair_t *nvp, char **val)
@@ -2243,14 +2575,15 @@ nvpair_native_embedded(nvstream_t *nvs, nvpair_t *nvp)
 {
 	if (nvs->nvs_op == NVS_OP_ENCODE) {
 		nvs_native_t *native = (nvs_native_t *)nvs->nvs_private;
-		nvlist_t *packed = (void *)
+		char *packed = (void *)
 		    (native->n_curr - nvp->nvp_size + NVP_VALOFF(nvp));
 		/*
 		 * Null out the pointer that is meaningless in the packed
 		 * structure. The address may not be aligned, so we have
 		 * to use bzero.
 		 */
-		bzero(&packed->nvl_priv, sizeof (packed->nvl_priv));
+		bzero(packed + offsetof(nvlist_t, nvl_priv),
+		    sizeof(((nvlist_t *)NULL)->nvl_priv));
 	}
 
 	return (nvs_embedded(nvs, EMBEDDED_NVL(nvp)));
@@ -2263,7 +2596,6 @@ nvpair_native_embedded_array(nvstream_t *nvs, nvpair_t *nvp)
 		nvs_native_t *native = (nvs_native_t *)nvs->nvs_private;
 		char *value = native->n_curr - nvp->nvp_size + NVP_VALOFF(nvp);
 		size_t len = NVP_NELEM(nvp) * sizeof (uint64_t);
-		nvlist_t *packed = (nvlist_t *)((uintptr_t)value + len);
 		int i;
 		/*
 		 * Null out pointers that are meaningless in the packed
@@ -2272,13 +2604,17 @@ nvpair_native_embedded_array(nvstream_t *nvs, nvpair_t *nvp)
 		 */
 		bzero(value, len);
 
-		for (i = 0; i < NVP_NELEM(nvp); i++, packed++)
+		value += len;
+		for (i = 0; i < NVP_NELEM(nvp); i++) {
 			/*
 			 * Null out the pointer that is meaningless in the
 			 * packed structure. The address may not be aligned,
 			 * so we have to use bzero.
 			 */
-			bzero(&packed->nvl_priv, sizeof (packed->nvl_priv));
+			bzero(value + offsetof(nvlist_t, nvl_priv),
+			    sizeof(((nvlist_t *)NULL)->nvl_priv));
+			value += sizeof(nvlist_t);
+		}
 	}
 
 	return (nvs_embedded_nvl_array(nvs, nvp, NULL));
@@ -2677,7 +3013,11 @@ nvs_xdr_nvp_op(nvstream_t *nvs, nvpair_t *nvp)
 		 */
 		ret = xdr_longlong_t(xdr, (void *)buf);
 		break;
-
+#if !defined(_KERNEL)
+	case DATA_TYPE_DOUBLE:
+		ret = xdr_double(xdr, (void *)buf);
+		break;
+#endif
 	case DATA_TYPE_STRING:
 		ret = xdr_string(xdr, &buf, buflen - 1);
 		break;
@@ -2783,6 +3123,9 @@ nvs_xdr_nvp_size(nvstream_t *nvs, nvpair_t *nvp, size_t *size)
 	case DATA_TYPE_INT64:
 	case DATA_TYPE_UINT64:
 	case DATA_TYPE_HRTIME:
+#if !defined(_KERNEL)
+	case DATA_TYPE_DOUBLE:
+#endif
 		nvp_sz += 8;
 		break;
 

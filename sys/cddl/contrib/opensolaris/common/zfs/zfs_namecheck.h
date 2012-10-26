@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef	_ZFS_NAMECHECK_H
 #define	_ZFS_NAMECHECK_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -43,12 +40,16 @@ typedef enum {
 	NAME_ERR_RESERVED,		/* entire name is reserved */
 	NAME_ERR_DISKLIKE,		/* reserved disk name (c[0-9].*) */
 	NAME_ERR_TOOLONG,		/* name is too long */
+	NAME_ERR_NO_AT,			/* permission set is missing '@' */
 } namecheck_err_t;
+
+#define	ZFS_PERMSET_MAXLEN	64
 
 int pool_namecheck(const char *, namecheck_err_t *, char *);
 int dataset_namecheck(const char *, namecheck_err_t *, char *);
-int dataset_name_hidden(const char *);
+int mountpoint_namecheck(const char *, namecheck_err_t *);
 int snapshot_namecheck(const char *, namecheck_err_t *, char *);
+int permset_namecheck(const char *, namecheck_err_t *, char *);
 
 #ifdef	__cplusplus
 }

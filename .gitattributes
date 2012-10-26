@@ -42762,13 +42762,8 @@ sys/cddl/compat/opensolaris/sys/zone.h -text
 sys/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE -text
 sys/cddl/contrib/opensolaris/common/acl/acl_common.c -text
 sys/cddl/contrib/opensolaris/common/acl/acl_common.h -text
-sys/cddl/contrib/opensolaris/common/atomic/amd64/atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/amd64/opensolaris_atomic.S -text
-sys/cddl/contrib/opensolaris/common/atomic/i386/atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/i386/opensolaris_atomic.S -text
-sys/cddl/contrib/opensolaris/common/atomic/ia64/opensolaris_atomic.S -text
-sys/cddl/contrib/opensolaris/common/atomic/powerpc64/opensolaris_atomic.S -text
-sys/cddl/contrib/opensolaris/common/atomic/sparc64/atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/sparc64/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/avl/avl.c -text
 sys/cddl/contrib/opensolaris/common/nvpair/nvpair.c -text

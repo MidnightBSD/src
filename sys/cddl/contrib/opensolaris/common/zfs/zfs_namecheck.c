@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 /*
  * Common name validation routines for ZFS.  These routines are shared by the
@@ -45,7 +42,9 @@
 #endif
 
 #include <sys/param.h>
+#include <sys/nvpair.h>
 #include "zfs_namecheck.h"
+#include "zfs_deleg.h"
 
 static int
 valid_char(char c)
@@ -53,14 +52,14 @@ valid_char(char c)
 	return ((c >= 'a' && c <= 'z') ||
 	    (c >= 'A' && c <= 'Z') ||
 	    (c >= '0' && c <= '9') ||
-	    c == '-' || c == '_' || c == '.' || c == ':');
+	    c == '-' || c == '_' || c == '.' || c == ':' || c == ' ');
 }
 
 /*
  * Snapshot names must be made up of alphanumeric characters plus the following
  * characters:
  *
- * 	[-_.:]
+ * 	[-_.: ]
  */
 int
 snapshot_namecheck(const char *path, namecheck_err_t *why, char *what)
@@ -91,6 +90,32 @@ snapshot_namecheck(const char *path, namecheck_err_t *why, char *what)
 	return (0);
 }
 
+
+/*
+ * Permissions set name must start with the letter '@' followed by the
+ * same character restrictions as snapshot names, except that the name
+ * cannot exceed 64 characters.
+ */
+int
+permset_namecheck(const char *path, namecheck_err_t *why, char *what)
+{
+	if (strlen(path) >= ZFS_PERMSET_MAXLEN) {
+		if (why)
+			*why = NAME_ERR_TOOLONG;
+		return (-1);
+	}
+
+	if (path[0] != '@') {
+		if (why) {
+			*why = NAME_ERR_NO_AT;
+			*what = path[0];
+		}
+		return (-1);
+	}
+
+	return (snapshot_namecheck(&path[1], why, what));
+}
+
 /*
  * Dataset names must be of the following form:
  *
@@ -99,7 +124,10 @@ snapshot_namecheck(const char *path, namecheck_err_t *why, char *what)
  * Where each component is made up of alphanumeric characters plus the following
  * characters:
  *
- * 	[-_.:]
+ * 	[-_.:%]
+ *
+ * We allow '%' here as we use that character internally to create unique
+ * names for temporary clones (for online recv).
  */
 int
 dataset_namecheck(const char *path, namecheck_err_t *why, char *what)
@@ -115,6 +143,7 @@ dataset_namecheck(const char *path, namecheck_err_t *why, char *what)
 	 * If ZFS_MAXNAMELEN value is changed, make sure to cleanup all
 	 * places using MAXNAMELEN.
 	 */
+
 	if (strlen(path) >= MAXNAMELEN) {
 		if (why)
 			*why = NAME_ERR_TOOLONG;
@@ -168,7 +197,7 @@ dataset_namecheck(const char *path, namecheck_err_t *why, char *what)
 
 		/* Validate the contents of this component */
 		while (loc != end) {
-			if (!valid_char(*loc)) {
+			if (!valid_char(*loc) && *loc != '%') {
 				if (why) {
 					*why = NAME_ERR_INVALCHAR;
 					*what = *loc;
@@ -210,6 +239,50 @@ dataset_namecheck(const char *path, namecheck_err_t *why, char *what)
 		/* Update to the next component */
 		loc = end + 1;
 	}
+}
+
+
+/*
+ * mountpoint names must be of the following form:
+ *
+ *	/[component][/]*[component][/]
+ */
+int
+mountpoint_namecheck(const char *path, namecheck_err_t *why)
+{
+	const char *start, *end;
+
+	/*
+	 * Make sure none of the mountpoint component names are too long.
+	 * If a component name is too long then the mkdir of the mountpoint
+	 * will fail but then the mountpoint property will be set to a value
+	 * that can never be mounted.  Better to fail before setting the prop.
+	 * Extra slashes are OK, they will be tossed by the mountpoint mkdir.
+	 */
+
+	if (path == NULL || *path != '/') {
+		if (why)
+			*why = NAME_ERR_LEADING_SLASH;
+		return (-1);
+	}
+
+	/* Skip leading slash  */
+	start = &path[1];
+	do {
+		end = start;
+		while (*end != '/' && *end != '\0')
+			end++;
+
+		if (end - start >= MAXNAMELEN) {
+			if (why)
+				*why = NAME_ERR_TOOLONG;
+			return (-1);
+		}
+		start = end + 1;
+
+	} while (*end != '\0');
+
+	return (0);
 }
 
 /*
@@ -267,22 +340,6 @@ pool_namecheck(const char *pool, namecheck_err_t *why, char *what)
 			*why = NAME_ERR_DISKLIKE;
 		return (-1);
 	}
-
-	return (0);
-}
-
-/*
- * Check if the dataset name is private for internal usage.
- * '$' is reserved for internal dataset names. e.g. "$MOS"
- *
- * Return 1 if the given name is used internally.
- * Return 0 if it is not.
- */
-int
-dataset_name_hidden(const char *name)
-{
-	if (strchr(name, '$') != NULL)
-		return (1);
 
 	return (0);
 }
