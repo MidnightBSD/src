@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2007 John Birrell <jb@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/cddl/compat/opensolaris/include/fcntl.h,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -33,6 +32,7 @@
 
 #include_next <fcntl.h>
 
-#define open64	open
+#define open64(...)	open(__VA_ARGS__)
+#define openat64(...)	openat(__VA_ARGS__)
 
 #endif
