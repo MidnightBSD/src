@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/rbootd/rbootd.c,v 1.2 2012/04/11 00:46:55 laffer1 Exp $ */
 /*
  * Copyright (c) 1988, 1992 The University of Utah and the Center
  *	for Software Science (CSS).
@@ -398,7 +398,7 @@ Exit(int sig)
 **		- This routine must be called with SIGHUP blocked.
 */
 void
-ReConfig(int signo)
+ReConfig(int signo __unused)
 {
 	syslog(LOG_NOTICE, "reconfiguring boot server");
 
@@ -424,7 +424,7 @@ ReConfig(int signo)
 **		- Debug file is closed.
 */
 void
-DebugOff(int signo)
+DebugOff(int signo __unused)
 {
 	if (DbgFp != NULL)
 		(void) fclose(DbgFp);
@@ -446,7 +446,7 @@ DebugOff(int signo)
 **		  otherwise do nothing.
 */
 void
-DebugOn(int signo)
+DebugOn(int signo __unused)
 {
 	if (DbgFp == NULL) {
 		if ((DbgFp = fopen(DbgFile, "w")) == NULL)
