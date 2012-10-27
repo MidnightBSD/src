@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/ypxfr/ypxfr_getmap.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
 /*
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -74,7 +74,7 @@ ypxfr_get_map(char *map, char *domain, char *host,
 	if ((clnt = clnt_create(host, YPPROG, YPVERS, "tcp")) == NULL) {
 		yp_error("%s", clnt_spcreateerror("failed to \
 create tcp handle"));
-		yp_errno = YPXFR_YPERR;
+		yp_errno = (enum ypstat)YPXFR_YPERR;
 		return(1);
 	}
 
@@ -92,7 +92,7 @@ create tcp handle"));
 		return(0);
 
 	if (status != YP_TRUE) {
-		yp_errno = YPXFR_YPERR;
+		yp_errno = (enum ypstat)YPXFR_YPERR;
 		return(1);
 	}
 

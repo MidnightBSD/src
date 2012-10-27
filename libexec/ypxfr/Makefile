@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/libexec/ypxfr/Makefile,v 1.2 2012/04/11 00:58:36 laffer1 Exp $
 # $FreeBSD: src/libexec/ypxfr/Makefile,v 1.11 2002/02/04 02:33:51 kris Exp $
 
 PROG=	ypxfr
@@ -13,14 +13,17 @@ GENSRCS=yp.h yp_clnt.c ypxfr_clnt.c
 MAN=	ypxfr.8
 
 CFLAGS+= -I.
+
+WARNS?=	2
 WFORMAT=0
+
 DPADD=	${LIBRPCSVC}
 LDADD=	-lrpcsvc
 
 CLEANFILES= ${GENSRCS}
 
 RPCDIR= ${.CURDIR}/../../include/rpcsvc
-RPCGEN= rpcgen -I -C
+RPCGEN=	RPCGEN_CPP=${CPP:Q} rpcgen -I -C
 
 ypxfr_clnt.c: ${RPCDIR}/yp.x
 	rm -f ${.TARGET}
