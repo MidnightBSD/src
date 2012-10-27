@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 John Birrell (jb@freebsd.org)
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libproc/_libproc.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -32,6 +31,7 @@
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/ptrace.h>
+#include <rtld_db.h>
 
 #include "libproc.h"
 
@@ -40,5 +40,16 @@ struct proc_handle {
 	int	kq;			/* Kernel event queue ID. */
 	int	flags;			/* Process flags. */
 	int	status;			/* Process status (PS_*). */
+	int	wstat;			/* Process wait status. */
+	rd_agent_t *rdap;		/* librtld_db agent */
+	rd_loadobj_t *rdobjs;
+	size_t	rdobjsz;
+	size_t	nobjs;
+	struct lwpstatus lwps;
 };
 
+#ifdef DEBUG
+#define DPRINTF(fmt, ...) 	warn(fmt, __VA_ARGS__)
+#else
+#define DPRINTF(fmt, ...)
+#endif
