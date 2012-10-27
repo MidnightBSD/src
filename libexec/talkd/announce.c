@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/talkd/announce.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -92,7 +92,7 @@ announce(CTL_MSG *request, const char *remote_machine)
  * Build a block of characters containing the message.
  * It is sent blank filled and in a single block to
  * try to keep the message in one piece if the recipient
- * in in vi at the time
+ * in vi at the time
  */
 int
 print_mesg(const char *tty, CTL_MSG *request,
@@ -100,7 +100,6 @@ print_mesg(const char *tty, CTL_MSG *request,
 {
 	struct timeval now;
 	time_t clock_sec;
-	struct timezone zone;
 	struct tm *localclock;
 	struct iovec iovec;
 	char line_buf[N_LINES][N_CHARS];
@@ -111,7 +110,7 @@ print_mesg(const char *tty, CTL_MSG *request,
 
 	i = 0;
 	max_size = 0;
-	gettimeofday(&now, &zone);
+	gettimeofday(&now, NULL);
 	clock_sec = now.tv_sec;
 	localclock = localtime(&clock_sec);
 	(void)snprintf(line_buf[i], N_CHARS, " ");
