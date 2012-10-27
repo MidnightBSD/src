@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/rpc.rwalld/rwalld.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
 /*
  * Copyright (c) 1993 Christopher G. Demetriou
  * All rights reserved.
@@ -137,14 +137,14 @@ possess(void)
 }
 
 void
-killkids(int sig)
+killkids(int sig __unused)
 {
 	while(wait4(-1, NULL, WNOHANG, NULL) > 0)
 		;
 }
 
 void *
-wallproc_wall_1_svc(wrapstring *s, struct svc_req *rqstp)
+wallproc_wall_1_svc(wrapstring *s, struct svc_req *rqstp __unused)
 {
 	static void		*dummy = NULL;
 
