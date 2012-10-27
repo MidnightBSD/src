@@ -1,6 +1,10 @@
 /*-
- * Copyright (c) 2005-2006 Joseph Koshy
+ * Copyright (c) 2005-2007 Joseph Koshy
+ * Copyright (c) 2007 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * Portions of this software were developed by A. Joseph Koshy under
+ * sponsorship from the FreeBSD Foundation and Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,12 +27,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libpmc/pmclog.h,v 1.3 2006/03/26 12:20:53 jkoshy Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	_PMCLOG_H_
 #define	_PMCLOG_H_
 
+#include <sys/cdefs.h>
 #include <sys/pmclog.h>
 
 enum pmclog_state {
@@ -36,6 +41,14 @@ enum pmclog_state {
 	PMCLOG_EOF,
 	PMCLOG_REQUIRE_DATA,
 	PMCLOG_ERROR
+};
+
+struct pmclog_ev_callchain {
+	uint32_t	pl_pid;
+	uint32_t	pl_pmcid;
+	uint32_t	pl_cpuflags;
+	uint32_t	pl_npc;
+	uintfptr_t	pl_pc[PMC_CALLCHAIN_DEPTH_MAX];
 };
 
 struct pmclog_ev_dropnotify {
@@ -71,6 +84,13 @@ struct pmclog_ev_pcsample {
 struct pmclog_ev_pmcallocate {
 	uint32_t	pl_event;
 	const char *	pl_evname;
+	uint32_t	pl_flags;
+	pmc_id_t	pl_pmcid;
+};
+
+struct pmclog_ev_pmcallocatedyn {
+	uint32_t	pl_event;
+	char 		pl_evname[PMC_NAME_MAX];
 	uint32_t	pl_flags;
 	pmc_id_t	pl_pmcid;
 };
@@ -125,6 +145,7 @@ struct pmclog_ev {
 	struct timespec   pl_ts;	/* log entry timestamp */
 	enum pmclog_type  pl_type;	/* type of log entry */
 	union { 			/* log entry data */
+		struct pmclog_ev_callchain	pl_cc;
 		struct pmclog_ev_closelog	pl_cl;
 		struct pmclog_ev_dropnotify	pl_dn;
 		struct pmclog_ev_initialize	pl_i;
@@ -132,6 +153,7 @@ struct pmclog_ev {
 		struct pmclog_ev_map_out	pl_mo;
 		struct pmclog_ev_pcsample	pl_s;
 		struct pmclog_ev_pmcallocate	pl_a;
+		struct pmclog_ev_pmcallocatedyn	pl_ad;
 		struct pmclog_ev_pmcattach	pl_t;
 		struct pmclog_ev_pmcdetach	pl_d;
 		struct pmclog_ev_proccsw	pl_c;
@@ -145,10 +167,12 @@ struct pmclog_ev {
 
 #define	PMCLOG_FD_NONE				(-1)
 
+__BEGIN_DECLS
 void	*pmclog_open(int _fd);
 int	pmclog_feed(void *_cookie, char *_data, int _len);
 int	pmclog_read(void *_cookie, struct pmclog_ev *_ev);
 void	pmclog_close(void *_cookie);
+__END_DECLS
 
 #endif
 

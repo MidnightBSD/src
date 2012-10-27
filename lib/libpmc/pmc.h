@@ -23,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libpmc/pmc.h,v 1.3 2005/06/09 19:45:06 jkoshy Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _PMC_H_
 #define _PMC_H_
 
+#include <sys/cdefs.h>
 #include <sys/pmc.h>
 
 /*
@@ -68,12 +69,14 @@ struct pmc_pmcinfo {
  * Prototypes
  */
 
+__BEGIN_DECLS
 int	pmc_allocate(const char *_ctrspec, enum pmc_mode _mode, uint32_t _flags,
     int _cpu, pmc_id_t *_pmcid);
 int	pmc_attach(pmc_id_t _pmcid, pid_t _pid);
 int	pmc_capabilities(pmc_id_t _pmc, uint32_t *_caps);
 int	pmc_configure_logfile(int _fd);
 int	pmc_flush_logfile(void);
+int	pmc_close_logfile(void);
 int	pmc_detach(pmc_id_t _pmcid, pid_t _pid);
 int	pmc_disable(int _cpu, int _pmc);
 int	pmc_enable(int _cpu, int _pmc);
@@ -105,5 +108,6 @@ const char	*pmc_name_of_state(enum pmc_state _ps);
 
 int	pmc_event_names_of_class(enum pmc_class _cl, const char ***_eventnames,
     int *_nevents);
+__END_DECLS
 
 #endif
