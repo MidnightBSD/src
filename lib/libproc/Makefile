@@ -1,5 +1,20 @@
 # $MidnightBSD$
 
-SUBDIR=	t1-bkpt t2-name2map t3-name2sym
+LIB=	proc
 
-.include <bsd.subdir.mk>
+SRCS=	proc_bkpt.c		\
+	proc_create.c		\
+	proc_regs.c		\
+	proc_sym.c		\
+	proc_rtld.c		\
+	proc_util.c
+
+INCS=	libproc.h
+
+CFLAGS+=	-I${.CURDIR}
+
+SHLIB_MAJOR=	2
+
+WITHOUT_MAN=
+
+.include <bsd.lib.mk>
