@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/mknetid/parse_group.c,v 1.2 2012/04/11 00:46:54 laffer1 Exp $ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -127,7 +127,7 @@ grscan(int search, int gid)
 		if (_gr_group.gr_name[0] == '+')
 			continue;
 		if ((_gr_group.gr_passwd = strsep(&bp, ":\n")) == NULL)
-			break;;
+			break;
 		if (!(cp = strsep(&bp, ":\n")))
 			continue;
 		_gr_group.gr_gid = atoi(cp);
