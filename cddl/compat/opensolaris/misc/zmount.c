@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -30,15 +29,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/compat/opensolaris/misc/zmount.c,v 1.1 2007/04/06 01:08:59 pjd Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/uio.h>
 #include <sys/mntent.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
+#include <string.h>
+#include <mnttab.h>
 
 static void
 build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val,
@@ -78,7 +79,7 @@ zmount(const char *spec, const char *dir, int mflag, char *fstype,
 
 	assert(spec != NULL);
 	assert(dir != NULL);
-	assert(mflag == 0);
+	assert(mflag == 0 || mflag == MS_RDONLY);
 	assert(fstype != NULL);
 	assert(strcmp(fstype, MNTTYPE_ZFS) == 0);
 	assert(dataptr == NULL);
@@ -87,16 +88,20 @@ zmount(const char *spec, const char *dir, int mflag, char *fstype,
 	assert(optlen > 0);
 
 	optstr = strdup(optptr);
-	assert(optptr != NULL);
+	assert(optstr != NULL);
 
 	iov = NULL;
 	iovlen = 0;
+	if (mflag & MS_RDONLY)
+		build_iovec(&iov, &iovlen, "ro", NULL, 0);
 	build_iovec(&iov, &iovlen, "fstype", fstype, (size_t)-1);
 	build_iovec(&iov, &iovlen, "fspath", __DECONST(char *, dir),
 	    (size_t)-1);
 	build_iovec(&iov, &iovlen, "from", __DECONST(char *, spec), (size_t)-1);
-	for (p = optstr; p != NULL; strsep(&p, ",/ "))
-		build_iovec(&iov, &iovlen, p, NULL, (size_t)-1);
+	for (p = optstr; p != NULL; strsep(&p, ",/ ")) {
+		if (*p != '\0')
+			build_iovec(&iov, &iovlen, p, NULL, (size_t)-1);
+	}
 	rv = nmount(iov, iovlen, 0);
 	free(optstr);
 	return (rv);

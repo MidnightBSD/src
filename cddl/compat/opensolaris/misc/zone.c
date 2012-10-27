@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/compat/opensolaris/misc/zone.c,v 1.1 2007/04/06 01:08:59 pjd Exp $
+ * $MidnightBSD$
  */
 
 #include <stdlib.h>
@@ -33,7 +32,7 @@
 #include <sys/sysctl.h>
 #include <sys/zone.h>
 
-int
+zoneid_t
 getzoneid(void)
 {
 	size_t size;
@@ -43,5 +42,5 @@ getzoneid(void)
 	size = sizeof(jailid);
 	if (sysctlbyname("security.jail.jailed", &jailid, &size, NULL, 0) == -1)
 		assert(!"No security.jail.jailed sysctl!");
-	return (jailid);
+	return ((zoneid_t)jailid);
 }

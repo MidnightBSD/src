@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/compat/opensolaris/misc/deviceid.c,v 1.1 2007/05/06 01:39:38 pjd Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -95,11 +94,7 @@ int
 devid_get(int fd, ddi_devid_t *retdevid)
 {
 
-	if (ioctl(fd, DIOCGIDENT, retdevid->devid) == -1)
-		return (errno);
-	if (retdevid->devid[0] == '\0')
-		return (ENOENT);
-	return (0);
+	return (ENOENT);
 }
 
 int
