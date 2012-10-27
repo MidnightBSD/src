@@ -38225,6 +38225,16 @@ libexec/tcpd/Makefile -text
 libexec/telnetd/Makefile -text
 libexec/tftp-proxy/Makefile -text
 libexec/tftpd/Makefile -text
+libexec/tftpd/tftp-file.c -text
+libexec/tftpd/tftp-file.h -text
+libexec/tftpd/tftp-io.c -text
+libexec/tftpd/tftp-io.h -text
+libexec/tftpd/tftp-options.c -text
+libexec/tftpd/tftp-options.h -text
+libexec/tftpd/tftp-transfer.c -text
+libexec/tftpd/tftp-transfer.h -text
+libexec/tftpd/tftp-utils.c -text
+libexec/tftpd/tftp-utils.h -text
 libexec/tftpd/tftpd.8 -text
 libexec/tftpd/tftpd.c -text
 libexec/ypxfr/Makefile -text

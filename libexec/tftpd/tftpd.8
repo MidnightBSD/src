@@ -30,10 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)tftpd.8	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/libexec/tftpd/tftpd.8,v 1.21.6.1 2008/11/25 02:59:29 kensmith Exp $
-.\" $MidnightBSD$
+.\" $FreeBSD$
 .\"
-.Dd September 14, 2000
+.Dd June 22, 2011
 .Dt TFTPD 8
 .Os
 .Sh NAME
@@ -41,7 +40,8 @@
 .Nd Internet Trivial File Transfer Protocol server
 .Sh SYNOPSIS
 .Nm tftpd
-.Op Fl cClnw
+.Op Fl cdClnow
+.Op Fl F Ar strftime-format
 .Op Fl s Ar directory
 .Op Fl u Ar user
 .Op Fl U Ar umask
@@ -143,6 +143,34 @@ except it falls back to
 specified via
 .Fl s
 if a directory does not exist for the client's IP.
+.It Fl F
+Use this
+.Xr strftime 3
+compatible format string for the creation of the suffix if
+.Fl W
+is specified.
+By default the string "%Y%m%d" is used.
+.It Fl d, d Ar [value]
+Enables debug output.
+If
+.Ar value
+is not specified, then the debug level is increased by one
+for each instance of
+.Fl d
+which is specified.
+.Pp
+If
+.Ar value
+is specified, then the debug level is set to
+.Ar value .
+The debug level is a bitmask implemented in
+.Pa src/libexec/tftpd/tftp-utils.h .
+Valid values are 0 (DEBUG_NONE), 1 (DEBUG_PACKETS), 2, (DEBUG_SIMPLE),
+4 (DEBUG_OPTIONS), and 8 (DEBUG_ACCESS).  Multiple debug values can be combined
+in the bitmask by logically OR'ing the values.  For example, specifying
+.Fl d
+.Ar 15
+will enable all the debug values.
 .It Fl l
 Log all requests using
 .Xr syslog 3
@@ -157,6 +185,8 @@ must also be enabled in the syslog configuration file,
 .It Fl n
 Suppress negative acknowledgement of requests for nonexistent
 relative filenames.
+.It Fl o
+Disable support for RFC2347 style TFTP Options.
 .It Fl s Ar directory
 Cause
 .Nm
@@ -185,6 +215,17 @@ Allow write requests to create new files.
 By default
 .Nm
 requires that the file specified in a write request exist.
+Note that this only works in directories writable by the user
+specified with
+.Fl u
+option
+.It Fl W
+As
+.Fl w
+but append a YYYYMMDD.nn sequence number to the end of the filename.
+Note that the string YYYYMMDD can be changed with the
+.Fl F
+option.
 .El
 .Sh SEE ALSO
 .Xr tftp 1 ,
@@ -194,11 +235,33 @@ requires that the file specified in a write request exist.
 .Xr services 5 ,
 .Xr syslog.conf 5 ,
 .Xr inetd 8
+.Pp
+The following RFC's are supported:
 .Rs
-.%A K. R. Sollins
+RFC 1350
 .%T The TFTP Protocol (Revision 2)
-.%D July 1992
-.%O RFC 1350, STD 33
+.Re
+.Rs
+RFC 2347
+.%T TFTP Option Extension
+.Re
+.Rs
+RFC 2348
+.%T TFTP Blocksize Option
+.Re
+.Rs
+RFC 2349
+.%T TFTP Timeout Interval and Transfer Size Options
+.Re
+.Pp
+The non-standard
+.Cm rollover
+and
+.Cm blksize2
+TFTP options are mentioned here:
+.Rs
+.%T Extending TFTP
+.%U http://www.compuphase.com/tftp.htm
 .Re
 .Sh HISTORY
 The
@@ -213,12 +276,39 @@ the
 .Fl u
 option was introduced in
 .Fx 4.2 ,
-and the
+the
 .Fl c
 option was introduced in
-.Fx 4.3 .
-.Sh BUGS
-Files larger than 33488896 octets (65535 blocks) cannot be transferred
-without client and server supporting blocksize negotiation (RFC1783).
+.Fx 4.3 ,
+and the
+.Fl F
+and
+.Fl W
+options were introduced in
+.Fx 7.4 .
 .Pp
-Many tftp clients will not transfer files over 16744448 octets (32767 blocks).
+Support for Timeout Interval and Transfer Size Options (RFC2349)
+was introduced in
+.Fx 5.0 ,
+support for the TFTP Blocksize Option (RFC2348) and the blksize2 option
+was introduced in
+.Fx 7.4 .
+.Pp
+Edwin Groothuis <edwin@FreeBSD.org> performed a major rewrite of the
+.Nm
+and
+.Xr tftp 1
+code to support RFC2348.
+.Sh NOTES
+Files larger than 33,553,919 octets (65535 blocks, last one <512
+octets) cannot be correctly transferred without client and server
+supporting blocksize negotiation (RFCs 2347 and 2348),
+or the non-standard TFTP rollover option.
+As a kludge,
+.Nm
+accepts a sequence of block number which wrap to zero after 65535,
+even if the rollover option is not specified.
+.Pp
+Many tftp clients will not transfer files over 16,776,703 octets
+(32767 blocks), as they incorrectly count the block number using
+a signed rather than unsigned 16-bit integer.
