@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/libexec/telnetd/Makefile,v 1.2 2012/04/11 00:58:36 laffer1 Exp $
 # $FreeBSD: src/libexec/telnetd/Makefile,v 1.26 2005/06/10 06:12:51 des Exp $
 
 # Do not define -DKLUDGELINEMODE, as it does not interact well with many
@@ -18,7 +18,8 @@ SRCS=		global.c slc.c state.c sys_term.c telnetd.c \
 WARNS?=		2
 WFORMAT?=	0
 
-CFLAGS+=	-DLINEMODE -DUSE_TERMIO -DDIAGNOSTICS -DOLD_ENVIRON -DENV_HACK
+CFLAGS+=	-DLINEMODE -DUSE_TERMIO -DDIAGNOSTICS -DOLD_ENVIRON \
+		-DENV_HACK -DSTREAMSPTY
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=	-DINET6
@@ -41,8 +42,8 @@ LDADD+=		-lmp -lcrypto -lcrypt ${MINUSLPAM}
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+=	-DKRB5 -DFORWARD -Dnet_write=telnet_net_write
-DPADD+=		${LIBKRB5} ${LIBASN1} ${LIBROKEN} ${LIBCOM_ERR}
-LDADD+=		-lkrb5 -lasn1 -lroken -lcom_err
+DPADD+=		${LIBKRB5} ${LIBHX509} ${LIBASN1} ${LIBROKEN} ${LIBCOM_ERR}
+LDADD+=		-lkrb5 -lhx509 -lasn1 -lroken -lcom_err
 .endif
 .endif
 
