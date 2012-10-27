@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/pppoed/pppoed.c,v 1.2 2012/04/11 00:46:55 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999-2001 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -571,8 +571,8 @@ main(int argc, char *argv[])
     }
     exec = (char *)alloca(sizeof DEFAULT_EXEC_PREFIX + strlen(label));
     if (exec == NULL) {
-      fprintf(stderr, "%s: Cannot allocate %d bytes\n", prog,
-              (int)(sizeof DEFAULT_EXEC_PREFIX) + strlen(label));
+      fprintf(stderr, "%s: Cannot allocate %zu bytes\n", prog,
+              sizeof DEFAULT_EXEC_PREFIX + strlen(label));
       return EX_OSERR;
     }
     strcpy(exec, DEFAULT_EXEC_PREFIX);
