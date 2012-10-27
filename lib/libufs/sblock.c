@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Juli Mallett.  All rights reserved.
  *
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libufs/sblock.c,v 1.10 2003/06/09 09:32:29 jmallett Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -41,6 +40,7 @@ __FBSDID("$FreeBSD: src/lib/libufs/sblock.c,v 1.10 2003/06/09 09:32:29 jmallett 
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include <libufs.h>
@@ -50,8 +50,11 @@ static int superblocks[] = SBLOCKSEARCH;
 int
 sbread(struct uufsd *disk)
 {
+	uint8_t block[MAXBSIZE];
 	struct fs *fs;
 	int sb, superblock;
+	int i, size, blks;
+	uint8_t *space;
 
 	ERROR(disk, NULL);
 
@@ -87,6 +90,34 @@ sbread(struct uufsd *disk)
 	}
 	disk->d_bsize = fs->fs_fsize / fsbtodb(fs, 1);
 	disk->d_sblock = superblock / disk->d_bsize;
+	/*
+	 * Read in the superblock summary information.
+	 */
+	size = fs->fs_cssize;
+	blks = howmany(size, fs->fs_fsize);
+	size += fs->fs_ncg * sizeof(int32_t);
+	space = malloc(size);
+	if (space == NULL) {
+		ERROR(disk, "failed to allocate space for summary information");
+		return (-1);
+	}
+	fs->fs_csp = (struct csum *)space;
+	for (i = 0; i < blks; i += fs->fs_frag) {
+		size = fs->fs_bsize;
+		if (i + fs->fs_frag > blks)
+			size = (blks - i) * fs->fs_fsize;
+		if (bread(disk, fsbtodb(fs, fs->fs_csaddr + i), block, size)
+		    == -1) {
+			ERROR(disk, "Failed to read sb summary information");
+			free(fs->fs_csp);
+			return (-1);
+		}
+		bcopy(block, space, size);
+		space += size;
+	}
+	fs->fs_maxcluster = (uint32_t *)space;
+	disk->d_sbcsum = fs->fs_csp;
+
 	return (0);
 }
 
@@ -94,6 +125,8 @@ int
 sbwrite(struct uufsd *disk, int all)
 {
 	struct fs *fs;
+	int blks, size;
+	uint8_t *space;
 	unsigned i;
 
 	ERROR(disk, NULL);
@@ -107,6 +140,22 @@ sbwrite(struct uufsd *disk, int all)
 	if (bwrite(disk, disk->d_sblock, fs, SBLOCKSIZE) == -1) {
 		ERROR(disk, "failed to write superblock");
 		return (-1);
+	}
+	/*
+	 * Write superblock summary information.
+	 */
+	blks = howmany(fs->fs_cssize, fs->fs_fsize);
+	space = (uint8_t *)disk->d_sbcsum;
+	for (i = 0; i < blks; i += fs->fs_frag) {
+		size = fs->fs_bsize;
+		if (i + fs->fs_frag > blks)
+			size = (blks - i) * fs->fs_fsize;
+		if (bwrite(disk, fsbtodb(fs, fs->fs_csaddr + i), space, size)
+		    == -1) {
+			ERROR(disk, "Failed to write sb summary information");
+			return (-1);
+		}
+		space += size;
 	}
 	if (all) {
 		for (i = 0; i < fs->fs_ncg; i++)

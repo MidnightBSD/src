@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Juli Mallett.  All rights reserved.
  *
@@ -25,39 +24,11 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libufs/libufs.h,v 1.12 2006/10/31 21:21:48 pjd Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	__LIBUFS_H__
 #define	__LIBUFS_H__
-
-/*
- * libufs macros (internal, non-exported).
- */
-#ifdef	_LIBUFS
-#ifdef	_LIBUFS_DEBUGGING
-/*
- * Trace steps through libufs, to be used at entry and erroneous return.
- */
-#define	ERROR(uufsd, str)					\
-do {								\
-	fprintf(stderr, "libufs in %s", __func__);		\
-	if (str != NULL)					\
-		fprintf(stderr, ": %s", str);			\
-	if (errno)						\
-		fprintf(stderr, ": %s", strerror(errno));	\
-	fprintf(stderr, "\n");					\
-	if ((uufsd) != NULL)					\
-		(uufsd)->d_error = str;				\
-} while (0)
-#else	/* _LIBUFS_DEBUGGING */
-#define	ERROR(uufsd, str)					\
-do {								\
-	if ((uufsd) != NULL)					\
-		(uufsd)->d_error = str;				\
-} while (0)
-#endif	/* _LIBUFS_DEBUGGING */
-#endif	/* _LIBUFS */
 
 /*
  * libufs structures.
@@ -72,6 +43,7 @@ struct uufsd {
 	int d_fd;		/* raw device file descriptor */
 	long d_bsize;		/* device bsize */
 	ufs2_daddr_t d_sblock;	/* superblock location */
+	struct csum *d_sbcsum;	/* Superblock summary info */
 	caddr_t d_inoblock;	/* inode block */
 	ino_t d_inomin;		/* low inode */
 	ino_t d_inomax;		/* high inode */
@@ -94,6 +66,30 @@ struct uufsd {
 #define	d_cg	d_cgunion.d_cg
 };
 
+/*
+ * libufs macros (internal, non-exported).
+ */
+#ifdef	_LIBUFS
+/*
+ * Trace steps through libufs, to be used at entry and erroneous return.
+ */
+static inline void
+ERROR(struct uufsd *u, const char *str)
+{
+
+#ifdef	_LIBUFS_DEBUGGING
+	if (str != NULL) {
+		fprintf(stderr, "libufs: %s", str);
+		if (errno != 0)
+			fprintf(stderr, ": %s", strerror(errno));
+		fprintf(stderr, "\n");
+	}
+#endif
+	if (u != NULL)
+		u->d_error = str;
+}
+#endif	/* _LIBUFS */
+
 __BEGIN_DECLS
 
 /*
@@ -105,18 +101,24 @@ __BEGIN_DECLS
  */
 ssize_t bread(struct uufsd *, ufs2_daddr_t, void *, size_t);
 ssize_t bwrite(struct uufsd *, ufs2_daddr_t, const void *, size_t);
+int berase(struct uufsd *, ufs2_daddr_t, ufs2_daddr_t);
 
 /*
  * cgroup.c
  */
+ufs2_daddr_t cgballoc(struct uufsd *);
+int cgbfree(struct uufsd *, ufs2_daddr_t, long);
+ino_t cgialloc(struct uufsd *);
 int cgread(struct uufsd *);
 int cgread1(struct uufsd *, int);
+int cgwrite(struct uufsd *);
 int cgwrite1(struct uufsd *, int);
 
 /*
  * inode.c
  */
 int getino(struct uufsd *, void **, ino_t, int *);
+int putino(struct uufsd *);
 
 /*
  * sblock.c
@@ -131,6 +133,16 @@ int ufs_disk_close(struct uufsd *);
 int ufs_disk_fillout(struct uufsd *, const char *);
 int ufs_disk_fillout_blank(struct uufsd *, const char *);
 int ufs_disk_write(struct uufsd *);
+
+/*
+ * ffs_subr.c
+ */
+void	ffs_clrblock(struct fs *, u_char *, ufs1_daddr_t);
+void	ffs_clusteracct(struct fs *, struct cg *, ufs1_daddr_t, int);
+void	ffs_fragacct(struct fs *, int, int32_t [], int);
+int	ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
+int	ffs_isfreeblock(struct fs *, u_char *, ufs1_daddr_t);
+void	ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
 
 __END_DECLS
 
