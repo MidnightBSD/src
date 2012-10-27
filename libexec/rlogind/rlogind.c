@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/rlogind/rlogind.c,v 1.2 2012/04/11 00:46:55 laffer1 Exp $ */
 /*-
  * Copyright (c) 1983, 1988, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -478,20 +478,9 @@ protocol(int f, int p)
 }
 
 void
-cleanup(int signo)
+cleanup(int signo __unused)
 {
-	char *p;
 
-	p = line + sizeof(_PATH_DEV) - 1;
-	if (logout(p))
-		logwtmp(p, "", "");
-	(void)chflags(line, 0);
-	(void)chmod(line, 0666);
-	(void)chown(line, 0, 0);
-	*p = 'p';
-	(void)chflags(line, 0);
-	(void)chmod(line, 0666);
-	(void)chown(line, 0, 0);
 	shutdown(netf, SHUT_RDWR);
 	exit(1);
 }
@@ -557,7 +546,7 @@ setup_term(int fd)
 {
 	char *cp = index(term+ENVSIZE, '/');
 	char *speed;
-	struct termios tt;
+	struct termios tt, def;
 
 #ifndef notyet
 	tcgetattr(fd, &tt);
@@ -570,9 +559,10 @@ setup_term(int fd)
 		cfsetspeed(&tt, atoi(speed));
 	}
 
-	tt.c_iflag = TTYDEF_IFLAG;
-	tt.c_oflag = TTYDEF_OFLAG;
-	tt.c_lflag = TTYDEF_LFLAG;
+	cfmakesane(&def);
+	tt.c_iflag = def.c_iflag;
+	tt.c_oflag = def.c_oflag;
+	tt.c_lflag = def.c_lflag;
 	tcsetattr(fd, TCSAFLUSH, &tt);
 #else
 	if (cp) {
