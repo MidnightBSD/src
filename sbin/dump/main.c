@@ -38,12 +38,11 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/1/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/dump/main.c,v 1.65 2006/10/12 20:22:31 ru Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/mount.h>
 #include <sys/disklabel.h>
 
@@ -64,6 +63,7 @@ static const char rcsid[] =
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <timeconv.h>
 #include <unistd.h>
 
@@ -116,19 +116,20 @@ main(int argc, char *argv[])
 	temp = _PATH_DTMP;
 	if (TP_BSIZE / DEV_BSIZE == 0 || TP_BSIZE % DEV_BSIZE != 0)
 		quit("TP_BSIZE must be a multiple of DEV_BSIZE\n");
-	level = '0';
+	level = 0;
+	rsync_friendly = 0;
 
 	if (argc < 2)
 		usage();
 
 	obsolete(&argc, &argv);
 	while ((ch = getopt(argc, argv,
-	    "0123456789aB:b:C:cD:d:f:h:LnP:Ss:T:uWw")) != -1)
+	    "0123456789aB:b:C:cD:d:f:h:LnP:RrSs:T:uWw")) != -1)
 		switch (ch) {
 		/* dump level */
 		case '0': case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7': case '8': case '9':
-			level = ch;
+			level = 10 * level + ch - '0';
 			break;
 
 		case 'a':		/* `auto-size', Write to EOM. */
@@ -189,6 +190,16 @@ main(int argc, char *argv[])
 			popenout = optarg;
 			break;
 
+		case 'r': /* store slightly less data to be friendly to rsync */
+			if (rsync_friendly < 1)
+				rsync_friendly = 1;
+			break;
+
+		case 'R': /* store even less data to be friendlier to rsync */
+			if (rsync_friendly < 2)
+				rsync_friendly = 2;
+			break;
+
 		case 'S':               /* exit after estimating # of tapes */
 			just_estimate = 1;
 			break;
@@ -205,7 +216,7 @@ main(int argc, char *argv[])
 				exit(X_STARTUP);
 			}
 			Tflag = 1;
-			lastlevel = '?';
+			lastlevel = -1;
 			break;
 
 		case 'u':		/* update /etc/dumpdates */
@@ -234,6 +245,11 @@ main(int argc, char *argv[])
 		while (argc--)
 			(void)fprintf(stderr, " %s", *argv++);
 		(void)fprintf(stderr, "\n");
+		exit(X_STARTUP);
+	}
+	if (rsync_friendly && (level > 0)) {
+		(void)fprintf(stderr, "%s %s\n", "rsync friendly options",
+		    "can be used only with level 0 dumps.");
 		exit(X_STARTUP);
 	}
 	if (Tflag && uflag) {
@@ -382,18 +398,22 @@ main(int argc, char *argv[])
 
 	(void)strcpy(spcl.c_label, "none");
 	(void)gethostname(spcl.c_host, NAMELEN);
-	spcl.c_level = level - '0';
+	spcl.c_level = level;
 	spcl.c_type = TS_TAPE;
-
+	if (rsync_friendly) {
+		/* don't store real dump times */
+		spcl.c_date = 0;
+		spcl.c_ddate = 0;
+	}
 	if (spcl.c_date == 0) {
 		tmsg = "the epoch\n";
 	} else {
 		time_t t = _time64_to_time(spcl.c_date);
 		tmsg = ctime(&t);
 	}
-	msg("Date of this level %c dump: %s", level, tmsg);
+	msg("Date of this level %d dump: %s", level, tmsg);
 
-	if (!Tflag)
+	if (!Tflag && (!rsync_friendly))
 	        getdumptime();		/* /etc/dumpdates snarfed */
 	if (spcl.c_ddate == 0) {
 		tmsg = "the epoch\n";
@@ -401,7 +421,10 @@ main(int argc, char *argv[])
 		time_t t = _time64_to_time(spcl.c_ddate);
 		tmsg = ctime(&t);
 	}
- 	msg("Date of last level %c dump: %s", lastlevel, tmsg);
+	if (lastlevel < 0)
+		msg("Date of last (level unknown) dump: %s", tmsg);
+	else
+		msg("Date of last level %d dump: %s", lastlevel, tmsg);
 
 	msg("Dumping %s%s ", snapdump ? "snapshot of ": "", disk);
 	if (dt != NULL)
@@ -744,7 +767,8 @@ obsolete(int *argcp, char **argvp[])
 	if (flags) {
 		*p = '\0';
 		*nargv++ = flagsp;
-	}
+	} else
+		free(flagsp);
 
 	/* Copy remaining arguments. */
 	while ((*nargv++ = *argv++));

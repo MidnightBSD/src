@@ -1,14 +1,16 @@
 # $MidnightBSD$
-# $FreeBSD: src/sbin/camcontrol/Makefile,v 1.17 2007/09/08 20:24:12 ken Exp $
 
 PROG=	camcontrol
 SRCS=	camcontrol.c util.c
 .if !defined(RELEASE_CRUNCH)
-SRCS+=	modeedit.c
+SRCS+=	fwdownload.c modeedit.c progress.c
 .else
 CFLAGS+= -DMINIMALISTIC
 .endif
-WARNS?=	6
+# This is verboten
+.if ${MACHINE_CPUARCH} == "arm"
+WARNS?= 3
+.endif
 DPADD=	${LIBCAM} ${LIBSBUF} ${LIBUTIL}
 LDADD=	-lcam -lsbuf -lutil
 MAN=	camcontrol.8

@@ -30,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/fsdb/fsdbutil.c,v 1.20 2006/08/23 22:44:00 ceri Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -52,7 +52,7 @@ static const char rcsid[] =
 #include "fsck.h"
 
 static int charsperline(void);
-static int printindir(ufs2_daddr_t blk, int level, char *bufp);
+static void printindir(ufs2_daddr_t blk, int level, char *bufp);
 static void printblocks(ino_t inum, union dinode *dp);
 
 char **
@@ -195,7 +195,7 @@ printstat(const char *cp, ino_t inum, union dinode *dp)
 
     blocks = DIP(dp, di_blocks);
     gen = DIP(dp, di_gen);
-    printf("LINKCNT=%hd FLAGS=%#x BLKCNT=%jx GEN=%jx\n", DIP(dp, di_nlink),
+    printf("LINKCNT=%d FLAGS=%#x BLKCNT=%jx GEN=%jx\n", DIP(dp, di_nlink),
 	DIP(dp, di_flags), (intmax_t)blocks, (intmax_t)gen);
 }
 
@@ -226,7 +226,7 @@ charsperline(void)
 /*
  * Recursively print a list of indirect blocks.
  */
-static int
+static void
 printindir(ufs2_daddr_t blk, int level, char *bufp)
 {
     struct bufarea buf, *bp;
@@ -234,6 +234,9 @@ printindir(ufs2_daddr_t blk, int level, char *bufp)
     int i, j, cpl, charssofar;
     ufs2_daddr_t blkno;
 
+    if (blk == 0)
+	return;
+    printf("%jd (%d) =>\n", (intmax_t)blk, level);
     if (level == 0) {
 	/* for the final indirect level, don't use the cache */
 	bp = &buf;
@@ -251,11 +254,8 @@ printindir(ufs2_daddr_t blk, int level, char *bufp)
 		blkno = bp->b_un.b_indir1[i];
 	else
 		blkno = bp->b_un.b_indir2[i];
-	if (blkno == 0) {
-	    if (level == 0)
-		putchar('\n');
-	    return 0;
-	}
+	if (blkno == 0)
+	    continue;
 	j = sprintf(tempbuf, "%jd", (intmax_t)blkno);
 	if (level == 0) {
 	    charssofar += j;
@@ -270,13 +270,14 @@ printindir(ufs2_daddr_t blk, int level, char *bufp)
 	    charssofar += 2;
 	} else {
 	    printf(" =>\n");
-	    if (printindir(blkno, level - 1, bufp) == 0)
-		return 0;
+	    printindir(blkno, level - 1, bufp);
+	    printf("\n");
+	    charssofar = 0;
 	}
     }
     if (level == 0)
 	putchar('\n');
-    return 1;
+    return;
 }
 
 
@@ -294,22 +295,21 @@ printblocks(ino_t inum, union dinode *dp)
     printf("Blocks for inode %d:\n", inum);
     printf("Direct blocks:\n");
     ndb = howmany(DIP(dp, di_size), sblock.fs_bsize);
-    for (i = 0; i < NDADDR; i++) {
-	if (DIP(dp, di_db[i]) == 0) {
-	    putchar('\n');
-	    return;
-	}
+    for (i = 0; i < NDADDR && i < ndb; i++) {
 	if (i > 0)
 	    printf(", ");
 	blkno = DIP(dp, di_db[i]);
 	printf("%jd", (intmax_t)blkno);
-	if (--ndb == 0 && (offset = blkoff(&sblock, DIP(dp, di_size))) != 0) {
+    }
+    if (ndb <= NDADDR) {
+	offset = blkoff(&sblock, DIP(dp, di_size));
+	if (offset != 0) {
 	    nfrags = numfrags(&sblock, fragroundup(&sblock, offset));
 	    printf(" (%d frag%s)", nfrags, nfrags > 1? "s": "");
 	}
     }
     putchar('\n');
-    if (DIP(dp, di_ib[0]) == 0)
+    if (ndb <= NDADDR)
 	return;
 
     bufp = malloc((unsigned int)sblock.fs_bsize);
@@ -317,8 +317,7 @@ printblocks(ino_t inum, union dinode *dp)
 	errx(EEXIT, "cannot allocate indirect block buffer");
     printf("Indirect blocks:\n");
     for (i = 0; i < NIADDR; i++)
-	if (printindir(DIP(dp, di_ib[i]), i, bufp) == 0)
-	    break;
+	printindir(DIP(dp, di_ib[i]), i, bufp);
     free(bufp);
 }
 

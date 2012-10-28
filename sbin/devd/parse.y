@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/sbin/devd/parse.y,v 1.5 2005/07/10 03:37:15 imp Exp $
  */
 
 #include "devd.h"

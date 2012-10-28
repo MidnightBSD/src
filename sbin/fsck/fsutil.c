@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sbin/fsck/fsutil.c,v 1.3 2007/01/02 06:37:58 laffer1 Exp $ */
+/* $MidnightBSD: src/sbin/fsck/fsutil.c,v 1.4 2007/01/02 06:54:22 laffer1 Exp $ */
 /*	$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $	*/
 
 /*
@@ -34,8 +34,8 @@
 #ifndef lint
 __RCSID("$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $");
 #endif /* not lint */
-__FBSDID("$FreeBSD: src/sbin/fsck/fsutil.c,v 1.8 2004/04/09 19:58:28 markm Exp $");
-__MBSDID("$MidnightBSD: src/sbin/fsck/fsutil.c,v 1.3 2007/01/02 06:37:58 laffer1 Exp $");
+__MBSDID("$FreeBSD: src/sbin/fsck/fsutil.c,v 1.8 2004/04/09 19:58:28 markm Exp $");
+__MBSDID("$MidnightBSD: src/sbin/fsck/fsutil.c,v 1.4 2007/01/02 06:54:22 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

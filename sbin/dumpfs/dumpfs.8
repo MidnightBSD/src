@@ -26,30 +26,49 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)dumpfs.8	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: src/sbin/dumpfs/dumpfs.8,v 1.16 2007/05/12 22:35:22 pav Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 19, 2003
+.Dd Jul 14, 2011
 .Dt DUMPFS 8
 .Os
 .Sh NAME
 .Nm dumpfs
-.Nd dump file system information
+.Nd dump UFS file system information
 .Sh SYNOPSIS
 .Nm
+.Op Fl f
+.Op Fl l
 .Op Fl m
 .Ar filesys | device
 .Sh DESCRIPTION
 The
 .Nm
-utility prints out the super block and cylinder group information
-for the file system or special device specified, unless
+utility prints out the UFS super block and cylinder group information
+for the file system or special device specified, unless the
+.Fl f ,
+.Fl l
+or
 .Fl m
-is specified.
+flag is specified.
 The listing is very long and detailed.
 This
 command is useful mostly for finding out certain file system
 information such as the file system block size and minimum
 free space percentage.
+.Pp
+If
+.Fl f
+is specified, a sorted list of all free fragments and free fragment ranges,
+as represented in cylinder group block free lists, is printed.
+If the flag is specified twice, contiguous free fragments are not collapsed
+into ranges and instead printed in a simple list.
+Fragment numbers may be converted to raw byte offsets by multiplying by the
+fragment size, which may be useful when recovering deleted data.
+.Pp
+If
+.Fl l
+is specified, the pathname to the file system's container derived from
+its unique identifier is printed.
 .Pp
 If
 .Fl m

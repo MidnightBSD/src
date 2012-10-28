@@ -23,7 +23,6 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: src/sbin/devd/devd.conf.5,v 1.11 2006/10/24 20:20:41 ru Exp $
 .\"
 .\" The section on comments was taken from named.conf.5, which has the
 .\" following copyright:
@@ -42,7 +41,7 @@
 .\" ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 .\" SOFTWARE.
 .\"
-.Dd October 25, 2006
+.Dd March 8, 2009
 .Dt DEVD.CONF 5
 .Os
 .Sh NAME
@@ -95,7 +94,6 @@ In this way generic statements can be overridden for devices or
 notifications that require special attention.
 .Pp
 The general syntax of a statement is:
-.Pp
 .Bd -literal -offset indent
 statement priority {
 	substatement "value";
@@ -111,7 +109,7 @@ statement.
 .It Ic directory Qq Ar /some/path ;
 Adds the given directory to the list of directories from which
 .Xr devd 8
-will read
+will read all files named "*.conf" as further
 configuration files.
 Any number of
 .Ic directory
@@ -121,7 +119,7 @@ Specifies PID file.
 .It Ic set Ar regexp-name Qq Ar (some|regexp) ;
 Creates a regular expression and assigns it to the variable
 .Ar regexp-name .
-The variable is avaiable throughout the rest of
+The variable is available throughout the rest of
 the configuration file.
 All regular expressions have an implicit
 .Ql ^$
@@ -209,7 +207,7 @@ The following sub-statements are supported within the
 statement.
 The
 .Dq Li notify
-variable is avaiable inside this statement and contains, a value, depending
+variable is available inside this statement and contains, a value, depending
 on which system and subsystem that delivered the event.
 .Bl -tag -width ".Ic directory"
 .It Ic action Qq Ar command ;
@@ -224,7 +222,7 @@ statements can exist within a
 statement;
 .Ar value
 can be either a fixed string or a regular expression.
-Below is a list of avaiable systems, subsystems, and types.
+Below is a list of available systems, subsystems, and types.
 .It Ic media-type Qq Ar string ;
 See above.
 .El
@@ -239,6 +237,10 @@ statement.
 .Ic Description
 .It Li bus
 Device name of parent bus.
+.It Li cdev
+Device node path if one is created by the
+.Xr devfs 5
+filesystem.
 .It Li cisproduct
 CIS-product.
 .It Li cisvendor
@@ -247,19 +249,41 @@ CIS-vendor.
 Device class.
 .It Li device
 Device ID.
+.It Li devclass
+Device Class (USB)
+.It Li devsubclass
+Device Sub-class (USB)
 .It Li device-name
 Name of attached/detached device.
+.It Li endpoints
+Endpoint count (USB)
 .It Li function
 Card functions.
+.It Li interface
+Interface ID (USB)
+.It Li intclass
+Interface Class (USB)
+.It Li intprotocol
+Interface Protocol  (USB)
+.It Li intsubclass
+Interface Sub-class (USB)
 .It Li manufacturer
 Manufacturer ID (pccard).
+.It Li mode
+Peripheral mode (USB)
 .It Li notify
 Match the value of the
 .Dq Li notify
 variable.
+.It Li parent
+Parent device
+.It Li port
+Hub port number (USB)
 .It Li product
-Product ID (pccard).
-.It Li serial
+Product ID (pccard/USB).
+.It Li release
+Hardware revision (USB)
+.It Li sernum
 Serial Number (USB).
 .It Li slot
 Card slot.
@@ -281,7 +305,7 @@ A partial list of systems, subsystems, and types used within the
 .Ic notify
 mechanism.
 .Pp
-.Bl -tag -width ".Li IFNET" -compact
+.Bl -tag -width ".Li coretemp" -compact
 .It Sy System
 .It Li ACPI
 Events related to the ACPI subsystem.
@@ -314,6 +338,76 @@ took place.
 Carrier status changed to UP.
 .It Li LINK_DOWN
 Carrier status changed to DOWN.
+.It Li ATTACH
+The network interface is attached to the system.
+.It Li DETACH
+The network interface is detached from the system.
+.El
+.El
+.It Li DEVFS
+Events related to the
+.Xr devfs 5
+filesystem.
+.Bl -tag -width ".Sy Subsystem" -compact
+.It Sy Subsystem
+.It Li CDEV
+.Bl -tag -width ".Li DESTROY" -compact
+.It Sy Type
+.It Li CREATE
+The
+.Xr devfs 5
+node is created.
+.It Li DESTROY
+The
+.Xr devfs 5
+node is destroyed.
+.El
+.El
+.It Li USB
+Events related to the USB subsystem.
+.Bl -tag -width ".Sy Subsystem" -compact
+.It Sy Subsystem
+.It Li DEVICE
+.Bl -tag -width ".Li DETACH" -compact
+.It Sy Type
+.It Li ATTACH
+USB device is attached to the system.
+.It Li DETACH
+USB device is detached from the system.
+.El
+.It Li INTERFACE
+.Bl -tag -width ".Li DETACH" -compact
+.It Sy Type
+.It Li ATTACH
+USB interface is attached to a device.
+.It Li DETACH
+USB interface is detached from a device.
+.El
+.El
+.It Li coretemp
+Events related to the
+.Xr coretemp 4
+device.
+.Bl -tag -width ".Sy Subsystem" -compact
+.It Sy Subsystem
+.It Li Thermal
+Notification that the CPU core has reached critical temperature.
+.Bl -tag -width ".Ar temperature" -compact
+.It Sy Type
+.It Ar temperature
+String containing the temperature of the core that has become too hot.
+.El
+.El
+.It Li kern
+Events related to the kernel.
+.Bl -tag -width ".Sy Subsystem" -compact
+.It Sy Subsystem
+.It Li power
+Information about the state of the system.
+.Bl -tag -width ".li resume" -compact
+.It Sy Type
+.It Li resume
+Notification that the system has woken from the suspended state.
 .El
 .El
 .El
@@ -409,6 +503,17 @@ notify 0 {
 };
 
 #
+# Match a USB device type
+#
+notify 0 {
+	match "system"			"USB";
+	match "subsystem"		"INTERFACE";
+	match "type"			"ATTACH";
+	match "intclass"		"0x0e";
+	action "logger USB video device attached";
+};
+
+#
 # Try to configure ath and wi devices with pccard_ether
 # as they are attached.
 #
@@ -431,4 +536,6 @@ The installed
 .Pa /etc/devd.conf
 has many additional examples.
 .Sh SEE ALSO
+.Xr coretemp 4 ,
+.Xr devfs 5 ,
 .Xr devd 8

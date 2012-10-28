@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/conflex.c,v 1.4 2005/08/26 01:25:59 brooks Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: src/sbin/dump/Makefile,v 1.24 2003/11/14 13:07:38 johan Exp $
+# $MidnightBSD$
 
 #	dump.h			header file
 #	itime.c			reads /etc/dumpdates
@@ -19,5 +19,6 @@ CFLAGS+=-DRDUMP
 SRCS=	itime.c main.c optr.c dumprmt.c tape.c traverse.c unctime.c cache.c
 MAN=	dump.8
 MLINKS=	dump.8 rdump.8
+WARNS?=	2
 
 .include <bsd.prog.mk>

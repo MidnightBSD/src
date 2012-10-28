@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)dir.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/dir.c,v 1.30 2004/10/08 20:44:47 truckman Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -210,7 +210,7 @@ dircheck(struct inodesc *idesc, struct direct *dp)
 	size_t size;
 	char *cp;
 	u_char type;
-	u_int namlen;
+	u_int8_t namlen;
 	int spaceleft;
 
 	spaceleft = DIRBLKSIZ - (idesc->id_loc % DIRBLKSIZ);
@@ -225,7 +225,7 @@ dircheck(struct inodesc *idesc, struct direct *dp)
 	type = dp->d_type;
 	if (dp->d_reclen < size ||
 	    idesc->id_filesize < size ||
-	    namlen > MAXNAMLEN ||
+	    namlen == 0 ||
 	    type > 15)
 		goto bad;
 	for (cp = dp->d_name, size = 0; size < namlen; size++)

@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
 # $FreeBSD: src/sbin/Makefile,v 1.168 2007/07/24 15:35:00 scottl Exp $
-# $MidnightBSD: src/sbin/Makefile,v 1.10 2012/01/14 15:18:41 laffer1 Exp $
+# $MidnightBSD: src/sbin/Makefile,v 1.11 2012/04/11 01:06:11 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -8,24 +8,19 @@
 
 SUBDIR=	adjkerntz \
 	atacontrol \
-	${_atm} \
 	badsect \
-	bsdlabel \
 	camcontrol \
 	ccdconfig \
 	clri \
 	comcontrol \
 	conscontrol \
 	ddb \
-	${_devd} \
 	devfs \
 	dhclient \
-	${_dhcp6c} \
 	dmesg \
 	dump \
 	dumpfs \
 	dumpon \
-	${_fdisk} \
 	ffsinfo \
 	fsck \
 	fsck_ffs \
@@ -35,14 +30,12 @@ SUBDIR=	adjkerntz \
 	gbde \
 	geom \
 	ggate \
-	gpt \
 	growfs \
 	gvinum \
-	idmapd \
+	hastctl \
+	hastd \
 	ifconfig \
 	init \
-	${_ipf} \
-	ipfw \
 	iscontrol \
 	kldconfig \
 	kldload \
@@ -62,70 +55,66 @@ SUBDIR=	adjkerntz \
 	mount_nullfs \
 	mount_udf \
 	mount_unionfs \
-	natd \
 	newfs \
 	newfs_msdos \
 	nfsiod \
 	nos-tun \
-	${_pfctl} \
-	${_pflogd} \
 	ping \
-	${_ping6} \
-	quotacheck \
 	rcorder \
 	reboot \
 	recoverdisk \
+	resolvconf \
 	restore \
 	route \
-	routed \
-	${_rtsol} \
 	savecore \
-	${_sconfig} \
 	setkey \
 	shutdown \
 	slattach \
 	spppcontrol \
 	startslip \
-	${_sunlabel} \
 	swapon \
 	sysctl \
 	tunefs \
 	umount \
 
 .if ${MK_ATM} != "no"
-_atm=		atm
+SUBDIR+=	atm
 .endif
 
 .if ${MK_CXX} != "no"
-_devd=		devd
+SUBDIR+=	devd
 .endif
 
 .if ${MK_IPFILTER} != "no"
-_ipf=		ipf
+SUBDIR+=	ipf
+.endif
+
+.if ${MK_IPFW} != "no"
+SUBDIR+=	ipfw
+SUBDIR+=	natd
 .endif
 
 .if ${MK_PF} != "no"
-_pfctl=		pfctl
-_pflogd=	pflogd
+SUBDIR+=	pfctl
+SUBDIR+=	pflogd
 .endif
 
 .if ${MK_INET6} != "no"
-_dhcp6c=	dhcp6c
-_ping6=		ping6
-_rtsol=		rtsol
+SUBDIR+=	dhcp6c
+SUBDIR+=	ping6
+SUBDIR+=	rtsol
 .endif
 
-.if ${MACHINE_ARCH} == "i386"
-_fdisk=		fdisk
-_sconfig=	sconfig
+.if ${MK_QUOTAS} != "no"
+SUBDIR+=	quotacheck
 .endif
 
-.if ${MACHINE_ARCH} == "amd64"
-_fdisk=		fdisk
+.if ${MK_ROUTED} != "no"
+SUBDIR+=	routed
 .endif
 
-.if ${MACHINE_ARCH} == "sparc64"
-_sunlabel=	sunlabel
-.endif
+.include <bsd.arch.inc.mk>
+
+SUBDIR:=	${SUBDIR:O}
 
 .include <bsd.subdir.mk>

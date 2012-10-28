@@ -32,12 +32,11 @@
 static char sccsid[] = "@(#)itime.c	8.1 (Berkeley) 6/5/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/dump/itime.c,v 1.16 2004/12/02 13:56:53 maxim Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
 #include <sys/queue.h>
-#include <sys/time.h>
 
 #include <ufs/ufs/dinode.h>
 
@@ -49,6 +48,7 @@ static const char rcsid[] =
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <timeconv.h>
 
 #include "dump.h"
@@ -106,8 +106,10 @@ readdumptimes(FILE *df)
 
 	for (;;) {
 		dtwalk = (struct dumptime *)calloc(1, sizeof (struct dumptime));
-		if (getrecord(df, &(dtwalk->dt_value)) < 0)
+		if (getrecord(df, &(dtwalk->dt_value)) < 0) {
+			free(dtwalk);
 			break;
+		}
 		nddates++;
 		SLIST_INSERT_HEAD(&dthead, dtwalk, dt_list);
 	}
@@ -132,11 +134,11 @@ getdumptime(void)
 
 	fname = disk;
 #ifdef FDEBUG
-	msg("Looking for name %s in dumpdates = %s for level = %c\n",
+	msg("Looking for name %s in dumpdates = %s for level = %d\n",
 		fname, dumpdates, level);
 #endif
 	spcl.c_ddate = 0;
-	lastlevel = '0';
+	lastlevel = 0;
 
 	initdumptimes();
 	/*
@@ -213,14 +215,17 @@ putdumptime(void)
 		time_t t = _time64_to_time(spcl.c_date);
 		tmsg = ctime(&t);
 	}
-	msg("level %c dump on %s", level, tmsg);
+	msg("level %d dump on %s", level, tmsg);
 }
 
 static void
 dumprecout(FILE *file, const struct dumpdates *what)
 {
 
-	if (fprintf(file, DUMPOUTFMT, what->dd_name,
+	if (strlen(what->dd_name) > DUMPFMTLEN)
+		quit("Name '%s' exceeds DUMPFMTLEN (%d) bytes\n",
+		    what->dd_name, DUMPFMTLEN);
+	if (fprintf(file, DUMPOUTFMT, DUMPFMTLEN, what->dd_name,
 	      what->dd_level, ctime(&what->dd_ddate)) < 0)
 		quit("%s: %s\n", dumpdates, strerror(errno));
 }
@@ -241,7 +246,7 @@ getrecord(FILE *df, struct dumpdates *ddatep)
 			dumpdates, recno);
 
 #ifdef FDEBUG
-	msg("getrecord: %s %c %s", ddatep->dd_name, ddatep->dd_level,
+	msg("getrecord: %s %d %s", ddatep->dd_name, ddatep->dd_level,
 	    ddatep->dd_ddate == 0 ? "the epoch\n" : ctime(&ddatep->dd_ddate));
 #endif
 	return(0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/ddb/ddb.c,v 1.2.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <stdio.h>
@@ -97,6 +96,7 @@ ddb_readfile(char *filename)
 #endif
 		ddb_main(argc, argv);
 	}
+	fclose(f);
 }
 
 void

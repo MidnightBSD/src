@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/utilities.c,v 1.23 2004/04/09 19:58:28 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -86,7 +86,7 @@ retry:
 	case S_IFDIR:
 		if (retried)
 			break;
-		
+
 		len = strlen(origname) - 1;
 		if (len > 0 && origname[len] == '/')
 			/* remove trailing slash */

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/fdisk/Makefile,v 1.12 2005/07/15 08:02:51 phk Exp $
+# $MidnightBSD$
 
 PROG=	fdisk
 SRCS=	fdisk.c geom_mbr_enc.c
@@ -7,8 +7,8 @@ MAN=	fdisk.8
 
 .PATH:	${.CURDIR}/../../sys/geom
 
-DPADD	+=	${LIBGEOM}
-LDADD	+=	-lgeom
+DPADD+=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF}
+LDADD+=	-lgeom -lbsdxml -lsbuf
 
 .include <bsd.prog.mk>
 

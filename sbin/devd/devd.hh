@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/sbin/devd/devd.hh,v 1.4 2006/01/30 22:50:13 pjd Exp $
  */
 
 #ifndef DEVD_HH
@@ -66,7 +65,7 @@ private:
  * eps is short for event_proc_single.  It is a single entry in an
  * event_proc.  Each keyword needs its own subclass from eps.
  */
-class eps
+struct eps
 {
 public:
 	eps() {}
@@ -126,7 +125,7 @@ private:
 	std::string _cmd;
 };
 
-class event_proc
+struct event_proc
 {
 public:
 	event_proc();
@@ -144,7 +143,7 @@ private:
 class config
 {
 public:
-	config() : _pidfile("") { push_var_table(); }
+	config() { _pidfile = ""; push_var_table(); }
 	virtual ~config() { reset(); }
 	void add_attach(int, event_proc *);
 	void add_detach(int, event_proc *);
@@ -154,6 +153,7 @@ public:
 	void set_pidfile(const char *);
 	void reset();
 	void parse();
+	void close_pidfile();
 	void open_pidfile();
 	void write_pidfile();
 	void remove_pidfile();

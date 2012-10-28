@@ -39,14 +39,13 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/main.c,v 1.47.2.6 2009/04/27 19:15:14 delphij Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
-#include <sys/stat.h>
 #include <sys/file.h>
-#include <sys/time.h>
 #include <sys/mount.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/uio.h>
 #include <sys/disklabel.h>
@@ -62,6 +61,7 @@ __FBSDID("$FreeBSD: src/sbin/fsck_ffs/main.c,v 1.47.2.6 2009/04/27 19:15:14 delp
 #include <paths.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 
 #include "fsck.h"
 
@@ -81,8 +81,8 @@ main(int argc, char *argv[])
 
 	sync();
 	skipclean = 1;
-	damagedflag = 0;
-	while ((ch = getopt(argc, argv, "b:Bc:CdDfFm:npy")) != -1) {
+	inoopt = 0;
+	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:npry")) != -1) {
 		switch (ch) {
 		case 'b':
 			skipclean = 0;
@@ -106,9 +106,9 @@ main(int argc, char *argv[])
 			debug++;
 			break;
 
-		case 'D':
-			damagedflag = 1;
-			/* FALLTHROUGH */
+		case 'E':
+			Eflag++;
+			break;
 
 		case 'f':
 			skipclean = 0;
@@ -136,6 +136,10 @@ main(int argc, char *argv[])
 
 		case 'C':
 			ckclean++;
+			break;
+
+		case 'r':
+			inoopt++;
 			break;
 
 		case 'y':
@@ -210,7 +214,6 @@ checkfilesys(char *filesys)
 	struct iovec *iov;
 	char errmsg[255];
 	int iovlen;
-	int fflags;
 	int cylno;
 	ino_t files;
 	size_t size;
@@ -243,8 +246,9 @@ checkfilesys(char *filesys)
 		if ((fsreadfd = open(filesys, O_RDONLY)) < 0 || readsb(0) == 0)
 			exit(3);	/* Cannot read superblock */
 		close(fsreadfd);
-		if (sblock.fs_flags & FS_NEEDSFSCK)
-			exit(4);	/* Earlier background failed */
+		/* Earlier background failed or journaled */
+		if (sblock.fs_flags & (FS_NEEDSFSCK | FS_SUJ))
+			exit(4);
 		if ((sblock.fs_flags & FS_DOSOFTDEP) == 0)
 			exit(5);	/* Not running soft updates */
 		size = MIBSIZE;
@@ -300,7 +304,7 @@ checkfilesys(char *filesys)
 			pfatal("MOUNTED READ-ONLY, CANNOT RUN IN BACKGROUND\n");
 		} else if ((fsreadfd = open(filesys, O_RDONLY)) >= 0) {
 			if (readsb(0) != 0) {
-				if (sblock.fs_flags & FS_NEEDSFSCK) {
+				if (sblock.fs_flags & (FS_NEEDSFSCK | FS_SUJ)) {
 					bkgrdflag = 0;
 					pfatal("UNEXPECTED INCONSISTENCY, %s\n",
 					    "CANNOT RUN IN BACKGROUND\n");
@@ -347,13 +351,6 @@ checkfilesys(char *filesys)
 		if (bkgrdflag) {
 			snprintf(snapname, sizeof snapname,
 			    "%s/.snap/fsck_snapshot", mntp->f_mntonname);
-			fflags = mntp->f_flags;
-			/*
-			 * XXX: Need to kick out MNT_ROOTFS until we fix
-			 * nmount().
-			 */
-			fflags &= ~MNT_ROOTFS;
-			fflags = fflags | MNT_UPDATE | MNT_SNAPSHOT;
 			build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
 			build_iovec(&iov, &iovlen, "from", snapname,
 			    (size_t)-1);
@@ -361,8 +358,10 @@ checkfilesys(char *filesys)
 			    (size_t)-1);
 			build_iovec(&iov, &iovlen, "errmsg", errmsg,
 			    sizeof(errmsg));
+			build_iovec(&iov, &iovlen, "update", NULL, 0);
+			build_iovec(&iov, &iovlen, "snapshot", NULL, 0);
 
-			while (nmount(iov, iovlen, fflags) < 0) {
+			while (nmount(iov, iovlen, mntp->f_flags) < 0) {
 				if (errno == EEXIST && unlink(snapname) == 0)
 					continue;
 				bkgrdflag = 0;
@@ -390,7 +389,29 @@ checkfilesys(char *filesys)
 		    sblock.fs_cstotal.cs_nffree * 100.0 / sblock.fs_dsize);
 		return (0);
 	}
-	
+	/*
+	 * Determine if we can and should do journal recovery.
+	 */
+	if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
+		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && skipclean) {
+			if (preen || reply("USE JOURNAL")) {
+				if (suj_check(filesys) == 0) {
+					printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
+					if (chkdoreload(mntp) == 0)
+						exit(0);
+					exit(4);
+				}
+			}
+			printf("** Skipping journal, falling through to full fsck\n\n");
+		}
+		/*
+		 * Write the superblock so we don't try to recover the
+		 * journal on another pass.
+		 */
+		sblock.fs_mtime = time(NULL);
+		sbdirty();
+	}
+
 	/*
 	 * Cleared if any questions answered no. Used to decide if
 	 * the superblock should be marked clean.
@@ -412,7 +433,10 @@ checkfilesys(char *filesys)
 	 */
 	if (duplist) {
 		if (preen || usedsoftdep)
-			pfatal("INTERNAL ERROR: dups with -p");
+			pfatal("INTERNAL ERROR: dups with %s%s%s",
+			    preen ? "-p" : "",
+			    (preen && usedsoftdep) ? " and " : "",
+			    usedsoftdep ? "softupdates" : "");
 		printf("** Phase 1b - Rescan For More DUPS\n");
 		pass1b();
 	}
@@ -530,7 +554,6 @@ chkdoreload(struct statfs *mntp)
 {
 	struct iovec *iov;
 	int iovlen;
-	int fflags;
 	char errmsg[255];
 
 	if (mntp == NULL)
@@ -539,19 +562,12 @@ chkdoreload(struct statfs *mntp)
 	iov = NULL;
 	iovlen = 0;
 	errmsg[0] = '\0';
-	fflags = mntp->f_flags;
 	/*
 	 * We modified a mounted file system.  Do a mount update on
 	 * it unless it is read-write, so we can continue using it
 	 * as safely as possible.
 	 */
 	if (mntp->f_flags & MNT_RDONLY) {
-		/*
-		 * XXX: Need to kick out MNT_ROOTFS until we fix
-		 * nmount().
-		 */
-		fflags &= ~MNT_ROOTFS;
-		fflags = fflags | MNT_RELOAD;
 		build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
 		build_iovec(&iov, &iovlen, "from", mntp->f_mntfromname,
 		    (size_t)-1);
@@ -560,12 +576,13 @@ chkdoreload(struct statfs *mntp)
 		build_iovec(&iov, &iovlen, "errmsg", errmsg,
 		    sizeof(errmsg));
 		build_iovec(&iov, &iovlen, "update", NULL, 0);
+		build_iovec(&iov, &iovlen, "reload", NULL, 0);
 		/*
 		 * XX: We need the following line until we clean up
 		 * nmount parsing of root mounts and NFS root mounts.
-		 */ 
+		 */
 		build_iovec(&iov, &iovlen, "ro", NULL, 0);
-		if (nmount(iov, iovlen, fflags) == 0) {
+		if (nmount(iov, iovlen, mntp->f_flags) == 0) {
 			return (0);
 		}
 		pwarn("mount reload of '%s' failed: %s %s\n\n",
@@ -618,9 +635,9 @@ getmntpt(const char *name)
 static void
 usage(void)
 {
-        (void) fprintf(stderr,
-            "usage: %s [-BCFpfny] [-b block] [-c level] [-m mode] "
-                        "filesystem ...\n",
-            getprogname());
-        exit(1);
+	(void) fprintf(stderr,
+	    "usage: %s [-BEFfnpry] [-b block] [-c level] [-m mode] "
+			"filesystem ...\n",
+	    getprogname());
+	exit(1);
 }

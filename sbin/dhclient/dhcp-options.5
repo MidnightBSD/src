@@ -36,7 +36,7 @@
 .\" see ``http://www.isc.org/isc''.  To learn more about Vixie
 .\" Enterprises, see ``http://www.vix.com''.
 .\"
-.\" $FreeBSD: src/sbin/dhclient/dhcp-options.5,v 1.3 2006/02/06 19:22:34 jcamou Exp $
+.\" $MidnightBSD$
 .\"
 .Dd January 1, 1995
 .Dt DHCP-OPTIONS 5
@@ -265,6 +265,10 @@ character set.
 .It Ic option domain-name Ar string ;
 This option specifies the domain name that the client should use when
 resolving hostnames via the Domain Name System.
+.It Ic option domain-search Ar string ;
+This option specifies a list of domain names that the client should use
+when resolving hostnames via the Domain Name System. This option is
+defined in RFC 3397.
 .It Ic option swap-server Ar ip-address ;
 This specifies the IP address of the client's swap server.
 .It Ic option root-path Ar string ;

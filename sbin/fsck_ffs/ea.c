@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/ea.c,v 1.2 2003/05/03 18:41:57 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -83,4 +83,3 @@ eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
 	return (STOP);
 #endif
 }
-

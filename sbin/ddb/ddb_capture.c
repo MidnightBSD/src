@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Robert N. M. Watson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/ddb/ddb_capture.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -96,24 +95,24 @@ kread_symbol(kvm_t *kvm, int index, void *address, size_t size,
 static void
 ddb_capture_print_kvm(kvm_t *kvm)
 {
-	u_int db_capture_bufsize;
+	u_int db_capture_bufoff;
 	char *buffer, *db_capture_buf;
 
 	if (kread_symbol(kvm, X_DB_CAPTURE_BUF, &db_capture_buf,
 	    sizeof(db_capture_buf), 0) < 0)
 		errx(-1, "kvm: unable to read db_capture_buf");
 
-	if (kread_symbol(kvm, X_DB_CAPTURE_BUFSIZE, &db_capture_bufsize,
-	    sizeof(db_capture_bufsize), 0) < 0)
-		errx(-1, "kvm: unable to read db_capture_bufsize");
+	if (kread_symbol(kvm, X_DB_CAPTURE_BUFOFF, &db_capture_bufoff,
+	    sizeof(db_capture_bufoff), 0) < 0)
+		errx(-1, "kvm: unable to read db_capture_bufoff");
 
-	buffer = malloc(db_capture_bufsize + 1);
+	buffer = malloc(db_capture_bufoff + 1);
 	if (buffer == NULL)
-		err(-1, "malloc: db_capture_bufsize (%u)",
-		    db_capture_bufsize);
-	bzero(buffer, db_capture_bufsize + 1);
+		err(-1, "malloc: db_capture_bufoff (%u)",
+		    db_capture_bufoff);
+	bzero(buffer, db_capture_bufoff + 1);
 
-	if (kread(kvm, db_capture_buf, buffer, db_capture_bufsize, 0) < 0)
+	if (kread(kvm, db_capture_buf, buffer, db_capture_bufoff, 0) < 0)
 		errx(-1, "kvm: unable to read buffer");
 
 	printf("%s\n", buffer);
@@ -162,7 +161,7 @@ ddb_capture_status_kvm(kvm_t *kvm)
 		errx(-1, "kvm: unable to read db_capture_bufsize");
 	if (kread_symbol(kvm, X_DB_CAPTURE_INPROGRESS,
 	    &db_capture_inprogress, sizeof(db_capture_inprogress), 0) < 0)
-		err(-1, "kvm: unable to read db_capture_inpgoress");
+		err(-1, "kvm: unable to read db_capture_inprogress");
 	printf("%u/%u bytes used\n", db_capture_bufoff, db_capture_bufsize);
 	if (db_capture_inprogress)
 		printf("capture is on\n");
@@ -205,6 +204,7 @@ ddb_capture(int argc, char *argv[])
 
 	mflag = NULL;
 	nflag = NULL;
+	kvm = NULL;
 	while ((ch = getopt(argc, argv, "M:N:")) != -1) {
 		switch (ch) {
 		case 'M':

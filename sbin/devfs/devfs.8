@@ -24,9 +24,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: src/sbin/devfs/devfs.8,v 1.18 2006/12/29 22:45:12 danger Exp $
 .\"
-.Dd November 5, 2006
+.Dd February 21, 2010
 .Dt DEVFS 8
 .Os
 .Sh NAME
@@ -197,6 +196,9 @@ Apply all the rules in ruleset number
 to the node.
 This does not necessarily result in any changes to the node
 (e.g., if none of the rules in the included ruleset match).
+Include commands in the referenced
+.Ar ruleset
+are not resolved.
 .It Cm mode Ar filemode
 Set the file mode to
 .Ar filemode ,
@@ -244,7 +246,9 @@ configuration file.
 .It Pa /etc/devfs.rules
 Local
 .Nm
-configuration file.
+configuration file.  Rulesets in here override those in
+.Pa /etc/defaults/devfs.rules
+with the same ruleset number, otherwise the two files are effectively merged.
 .It Pa /etc/devfs.conf
 Boot-time
 .Nm
@@ -313,7 +317,7 @@ group to use the
 .Xr snp 4
 devices.
 .Pp
-.Dl "devfs rule -s 20 add major 53 group games"
+.Dl "devfs rule -s 20 add type disk group wheel"
 .Pp
 Add a rule to ruleset number 20.
 Since this ruleset is not the current ruleset for any mount-points,

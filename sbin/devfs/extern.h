@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/sbin/devfs/extern.h,v 1.3 2004/06/02 23:02:31 stefanf Exp $
  */
 
 #ifndef __DEVFS_H__

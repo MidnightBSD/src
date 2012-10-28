@@ -1,26 +1,18 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/17/94
-# $FreeBSD: src/sbin/bsdlabel/Makefile,v 1.19 2004/01/11 09:11:10 nyan Exp $
-# $MidnightBSD: src/sbin/bsdlabel/Makefile,v 1.4 2007/03/20 18:53:02 laffer1 Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../sys/geom
 
 PROG=	bsdlabel
 SRCS=	bsdlabel.c geom_bsd_enc.c
-#MAN=	bsdlabel.5
 MAN+=	bsdlabel.8
 
-.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 LINKS=	${BINDIR}/bsdlabel ${BINDIR}/disklabel
 MLINKS=	bsdlabel.8 disklabel.8
 .endif
 
-DPADD=	${LIBGEOM}
-LDADD=	-lgeom
+DPADD=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF}
+LDADD=	-lgeom -lbsdxml -lsbuf
 
 .include <bsd.prog.mk>
-
-test: ${PROG}
-	sh ${.CURDIR}/runtest.sh
-
-testx: ${PROG}
-	sh -x ${.CURDIR}/runtest.sh

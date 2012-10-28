@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/dhclient.c,v 1.21 2007/02/09 17:50:26 emaste Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "dhcpd.h"
 #include "privsep.h"
@@ -95,6 +95,9 @@ struct iaddr iaddr_broadcast = { 4, { 255, 255, 255, 255 } };
 struct in_addr inaddr_any;
 struct sockaddr_in sockaddr_broadcast;
 
+char *path_dhclient_pidfile;
+struct pidfh *pidfile;
+
 /*
  * ASSERT_STATE() does nothing now; it used to be
  * assert (state_is == state_shouldbe).
@@ -126,7 +129,7 @@ int		 fork_privchld(int, int);
 	    ((a) > 0 ? (1 + (((a) - 1) | (sizeof(long) - 1))) : sizeof(long))
 #define	ADVANCE(x, n) (x += ROUNDUP((n)->sa_len))
 
-time_t	scripttime;
+static time_t	scripttime;
 
 int
 findproto(char *cp, int n)
@@ -176,17 +179,40 @@ get_ifa(char *cp, int n)
 
 	return (NULL);
 }
+
 struct iaddr defaddr = { 4 };
+uint8_t curbssid[6];
+
+static void
+disassoc(void *arg)
+{
+	struct interface_info *ifi = arg;
+
+	/*
+	 * Clear existing state.
+	 */
+	if (ifi->client->active != NULL) {
+		script_init("EXPIRE", NULL);
+		script_write_params("old_",
+		    ifi->client->active);
+		if (ifi->client->alias)
+			script_write_params("alias_",
+				ifi->client->alias);
+		script_go();
+	}
+	ifi->client->state = S_INIT;
+}
 
 /* ARGSUSED */
 void
 routehandler(struct protocol *p)
 {
-	char msg[2048];
+	char msg[2048], *addr;
 	struct rt_msghdr *rtm;
 	struct if_msghdr *ifm;
 	struct ifa_msghdr *ifam;
 	struct if_announcemsghdr *ifan;
+	struct ieee80211_join_event *jev;
 	struct client_lease *l;
 	time_t t = time(NULL);
 	struct sockaddr *sa;
@@ -201,13 +227,6 @@ routehandler(struct protocol *p)
 
 	switch (rtm->rtm_type) {
 	case RTM_NEWADDR:
-		/*
-		 * XXX: If someone other than us adds our address,
-		 * we should assume they are taking over from us,
-		 * delete the lease record, and exit without modifying
-		 * the interface.
-		 */
-		break;
 	case RTM_DELADDR:
 		ifam = (struct ifa_msghdr *)rtm;
 
@@ -220,7 +239,7 @@ routehandler(struct protocol *p)
 
 		sa = get_ifa((char *)(ifam + 1), ifam->ifam_addrs);
 		if (sa == NULL)
-			goto die;
+			break;
 
 		if ((a.len = sizeof(struct in_addr)) > sizeof(a.iabuf))
 			error("king bula sez: len mismatch");
@@ -232,21 +251,42 @@ routehandler(struct protocol *p)
 			if (addr_eq(a, l->address))
 				break;
 
-		if (l == NULL)	/* deleted addr is not the one we set */
+		if (l == NULL)	/* added/deleted addr is not the one we set */
 			break;
-		goto die;
+
+		addr = inet_ntoa(((struct sockaddr_in *)sa)->sin_addr);
+		if (rtm->rtm_type == RTM_NEWADDR)  {
+			/*
+			 * XXX: If someone other than us adds our address,
+			 * should we assume they are taking over from us,
+			 * delete the lease record, and exit without modifying
+			 * the interface?
+			 */
+			warning("My address (%s) was re-added", addr);
+		} else {
+			warning("My address (%s) was deleted, dhclient exiting",
+			    addr);
+			goto die;
+		}
+		break;
 	case RTM_IFINFO:
 		ifm = (struct if_msghdr *)rtm;
 		if (ifm->ifm_index != ifi->index)
 			break;
-		if ((rtm->rtm_flags & RTF_UP) == 0)
+		if ((rtm->rtm_flags & RTF_UP) == 0) {
+			warning("Interface %s is down, dhclient exiting",
+			    ifi->name);
 			goto die;
+		}
 		break;
 	case RTM_IFANNOUNCE:
 		ifan = (struct if_announcemsghdr *)rtm;
 		if (ifan->ifan_what == IFAN_DEPARTURE &&
-		    ifan->ifan_index == ifi->index)
+		    ifan->ifan_index == ifi->index) {
+			warning("Interface %s is gone, dhclient exiting",
+			    ifi->name);
 			goto die;
+		}
 		break;
 	case RTM_IEEE80211:
 		ifan = (struct if_announcemsghdr *)rtm;
@@ -255,24 +295,17 @@ routehandler(struct protocol *p)
 		switch (ifan->ifan_what) {
 		case RTM_IEEE80211_ASSOC:
 		case RTM_IEEE80211_REASSOC:
-			state_reboot(ifi);
-			break;
-		case RTM_IEEE80211_DISASSOC:
 			/*
-			 * Clear existing state; transition to the init
-			 * state and then wait for either a link down
-			 * notification or an associate event.
+			 * Use assoc/reassoc event to kick state machine
+			 * in case we roam.  Otherwise fall back to the
+			 * normal state machine just like a wired network.
 			 */
-			if (ifi->client->active != NULL) {
-				script_init("EXPIRE", NULL);
-				script_write_params("old_",
-				    ifi->client->active);
-				if (ifi->client->alias)
-					script_write_params("alias_",
-						ifi->client->alias);
-				script_go();
+			jev = (struct ieee80211_join_event *) &ifan[1];
+			if (memcmp(curbssid, jev->iev_addr, 6)) {
+				disassoc(ifi);
+				state_reboot(ifi);
 			}
-			ifi->client->state = S_INIT;
+			memcpy(curbssid, jev->iev_addr, 6);
 			break;
 		}
 		break;
@@ -286,6 +319,8 @@ die:
 	if (ifi->client->alias)
 		script_write_params("alias_", ifi->client->alias);
 	script_go();
+	if (pidfile != NULL)
+		pidfile_remove(pidfile);
 	exit(1);
 }
 
@@ -297,12 +332,13 @@ main(int argc, char *argv[])
 	int			 pipe_fd[2];
 	int			 immediate_daemon = 0;
 	struct passwd		*pw;
+	pid_t			 otherpid;
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 	openlog(__progname, LOG_PID | LOG_NDELAY, DHCPD_LOG_FACILITY);
-	setlogmask(LOG_UPTO(LOG_INFO));
+	setlogmask(LOG_UPTO(LOG_DEBUG));
 
-	while ((ch = getopt(argc, argv, "bc:dl:qu")) != -1)
+	while ((ch = getopt(argc, argv, "bc:dl:p:qu")) != -1)
 		switch (ch) {
 		case 'b':
 			immediate_daemon = 1;
@@ -315,6 +351,9 @@ main(int argc, char *argv[])
 			break;
 		case 'l':
 			path_dhclient_db = optarg;
+			break;
+		case 'p':
+			path_dhclient_pidfile = optarg;
 			break;
 		case 'q':
 			quiet = 1;
@@ -331,6 +370,21 @@ main(int argc, char *argv[])
 
 	if (argc != 1)
 		usage();
+
+	if (path_dhclient_pidfile == NULL) {
+		asprintf(&path_dhclient_pidfile,
+		    "%sdhclient.%s.pid", _PATH_VARRUN, *argv);
+		if (path_dhclient_pidfile == NULL)
+			error("asprintf");
+	}
+	pidfile = pidfile_open(path_dhclient_pidfile, 0600, &otherpid);
+	if (pidfile == NULL) {
+		if (errno == EEXIST)
+			error("dhclient already running, pid: %d.", otherpid);
+		if (errno == EAGAIN)
+			error("dhclient already running.");
+		warning("Cannot open or create pidfile: %m");
+	}
 
 	if ((ifi = calloc(1, sizeof(struct interface_info))) == NULL)
 		error("calloc");
@@ -354,6 +408,12 @@ main(int argc, char *argv[])
 	inaddr_any.s_addr = INADDR_ANY;
 
 	read_client_conf();
+
+	/* The next bit is potentially very time-consuming, so write out
+	   the pidfile right away.  We will write it out again with the
+	   correct pid after daemonizing. */
+	if (pidfile != NULL)
+		pidfile_write(pidfile);
 
 	if (!interface_link_status(ifi->name)) {
 		fprintf(stderr, "%s: no link ...", ifi->name);
@@ -1961,7 +2021,7 @@ supersede:
 					len = ip->client->
 					    config->defaults[i].len +
 					    lease->options[i].len;
-					if (len > sizeof(dbuf)) {
+					if (len >= sizeof(dbuf)) {
 						warning("no space to %s %s",
 						    "prepend option",
 						    dhcp_options[i].name);
@@ -1980,24 +2040,34 @@ supersede:
 					dp[len] = '\0';
 					break;
 				case ACTION_APPEND:
+					/*
+					 * When we append, we assume that we're
+					 * appending to text.  Some MS servers
+					 * include a NUL byte at the end of
+					 * the search string provided.
+					 */
 					len = ip->client->
 					    config->defaults[i].len +
 					    lease->options[i].len;
-					if (len > sizeof(dbuf)) {
+					if (len >= sizeof(dbuf)) {
 						warning("no space to %s %s",
 						    "append option",
 						    dhcp_options[i].name);
 						goto supersede;
 					}
-					dp = dbuf;
-					memcpy(dp,
+					memcpy(dbuf,
 						lease->options[i].data,
 						lease->options[i].len);
-					memcpy(dp + lease->options[i].len,
+					for (dp = dbuf + lease->options[i].len;
+					    dp > dbuf; dp--, len--)
+						if (dp[-1] != '\0')
+							break;
+					memcpy(dp,
 						ip->client->
 						config->defaults[i].data,
 						ip->client->
 						config->defaults[i].len);
+					dp = dbuf;
 					dp[len] = '\0';
 				}
 			} else {
@@ -2084,8 +2154,6 @@ script_go(void)
 	struct buf	*buf;
 	int		 ret;
 
-	scripttime = time(NULL);
-
 	hdr.code = IMSG_SCRIPT_GO;
 	hdr.len = sizeof(struct imsg_hdr);
 
@@ -2105,6 +2173,8 @@ script_go(void)
 	if (hdr.len != sizeof(hdr) + sizeof(int))
 		error("received corrupted message");
 	buf_read(privfd, &ret, sizeof(ret));
+
+	scripttime = time(NULL);
 
 	return (ret);
 }
@@ -2258,6 +2328,9 @@ go_daemon(void)
 	if (daemon(1, 0) == -1)
 		error("daemon");
 
+	if (pidfile != NULL)
+		pidfile_write(pidfile);
+
 	/* we are chrooted, daemon(3) fails to open /dev/null */
 	if (nullfd != -1) {
 		dup2(nullfd, STDIN_FILENO);
@@ -2301,12 +2374,16 @@ check_option(struct client_lease *l, int option)
 	case DHO_NETBIOS_DD_SERVER:
 	case DHO_FONT_SERVERS:
 	case DHO_DHCP_SERVER_IDENTIFIER:
+	case DHO_NISPLUS_SERVERS:
+	case DHO_MOBILE_IP_HOME_AGENT:
 	case DHO_SMTP_SERVER:
 	case DHO_POP_SERVER:
 	case DHO_NNTP_SERVER:
 	case DHO_WWW_SERVER:
 	case DHO_FINGER_SERVER:
 	case DHO_IRC_SERVER:
+	case DHO_STREETTALK_SERVER:
+	case DHO_STREETTALK_DA_SERVER:
 		if (!ipv4addrs(opbuf)) {
 			warning("Invalid IP address in option: %s", opbuf);
 			return (0);
@@ -2314,6 +2391,8 @@ check_option(struct client_lease *l, int option)
 		return (1)  ;
 	case DHO_HOST_NAME:
 	case DHO_NIS_DOMAIN:
+	case DHO_NISPLUS_DOMAIN:
+	case DHO_TFTP_SERVER_NAME:
 		if (!res_hnok(sbuf)) {
 			warning("Bogus Host Name option %d: %s (%s)", option,
 			    sbuf, opbuf);
@@ -2322,6 +2401,7 @@ check_option(struct client_lease *l, int option)
 		}
 		return (1);
 	case DHO_DOMAIN_NAME:
+	case DHO_DOMAIN_SEARCH:
 		if (!res_hnok(sbuf)) {
 			if (!check_search(sbuf)) {
 				warning("Bogus domain search list %d: %s (%s)",
@@ -2372,6 +2452,7 @@ check_option(struct client_lease *l, int option)
 	case DHO_DHCP_REBINDING_TIME:
 	case DHO_DHCP_CLASS_IDENTIFIER:
 	case DHO_DHCP_CLIENT_IDENTIFIER:
+	case DHO_BOOTFILE_NAME:
 	case DHO_DHCP_USER_CLASS_ID:
 	case DHO_END:
 		return (1);
@@ -2596,6 +2677,7 @@ fork_privchld(int fd, int fd2)
 
 	setproctitle("%s [priv]", ifi->name);
 
+	setsid();
 	dup2(nullfd, STDIN_FILENO);
 	dup2(nullfd, STDOUT_FILENO);
 	dup2(nullfd, STDERR_FILENO);

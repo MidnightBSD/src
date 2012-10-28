@@ -53,8 +53,7 @@ static char sccsid[] = "@(#)disklabel.c	8.2 (Berkeley) 1/7/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/bsdlabel/bsdlabel.c,v 1.110.2.1 2005/11/10 09:52:56 iedowse Exp $");
-__MBSDID("$MidnightBSD: src/sbin/bsdlabel/bsdlabel.c,v 1.3 2007/01/02 07:19:11 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <stdint.h>
@@ -64,6 +63,7 @@ __MBSDID("$MidnightBSD: src/sbin/bsdlabel/bsdlabel.c,v 1.3 2007/01/02 07:19:11 l
 #include <sys/disk.h>
 #define DKTYPENAMES
 #define FSTYPENAMES
+#define MAXPARTITIONS	20
 #include <sys/disklabel.h>
 
 #include <unistd.h>
@@ -80,6 +80,7 @@ __MBSDID("$MidnightBSD: src/sbin/bsdlabel/bsdlabel.c,v 1.3 2007/01/02 07:19:11 l
 #include "pathnames.h"
 
 static void	makelabel(const char *, struct disklabel *);
+static int	geom_class_available(const char *);
 static int	writelabel(void);
 static int	readlabel(int flag);
 static void	display(FILE *, const struct disklabel *);
@@ -95,15 +96,16 @@ static void	usage(void);
 static struct disklabel *getvirginlabel(void);
 
 #define	DEFEDITOR	_PATH_VI
+#define	DEFPARTITIONS	8
 
-static char	*dkname;
 static char	*specname;
+static char	*pname;
 static char	tmpfil[] = PATH_TMPFILE;
 
 static struct	disklabel lab;
 static u_char	bootarea[BBSIZE];
 static off_t	mediasize;
-static u_int	secsize;
+static ssize_t	secsize;
 static char	blank[] = "";
 static char	unknown[] = "unknown";
 
@@ -117,7 +119,7 @@ static int	installboot;	/* non-zero if we should install a boot program */
 static int	allfields;	/* present all fields in edit */
 static char const *xxboot;	/* primary boot */
 
-static off_t mbroffset;
+static uint32_t lba_offset;
 #ifndef LABELSECTOR
 #define LABELSECTOR -1
 #endif
@@ -127,12 +129,6 @@ static off_t mbroffset;
 static int labelsoffset = LABELSECTOR;
 static int labeloffset = LABELOFFSET;
 static int bbsize = BBSIZE;
-static int alphacksum =
-#if defined(__alpha__)
-	1;
-#else
-	0;
-#endif
 
 enum	{
 	UNSPEC, EDIT, READ, RESTORE, WRITE, WRITEBOOT
@@ -146,8 +142,11 @@ int
 main(int argc, char *argv[])
 {
 	FILE *t;
-	int ch, error = 0;
-	char const *name = 0;
+	int ch, error, fd;
+	const char *name;
+	
+	error = 0;
+	name = NULL;
 
 	while ((ch = getopt(argc, argv, "ABb:efm:nRrw")) != -1)
 		switch (ch) {
@@ -171,12 +170,6 @@ main(int argc, char *argv[])
 					labelsoffset = 1;
 					labeloffset = 0;
 					bbsize = 8192;
-					alphacksum = 0;
-				} else if (!strcmp(optarg, "alpha")) {
-					labelsoffset = 0;
-					labeloffset = 64;
-					bbsize = 8192;
-					alphacksum = 1;
 				} else {
 					errx(1, "Unsupported architecture");
 				}
@@ -219,17 +212,25 @@ main(int argc, char *argv[])
 
 	/* Figure out the names of the thing we're working on */
 	if (is_file) {
-		dkname = specname = argv[0];
-	} else if (argv[0][0] != '/') {
-		dkname = argv[0];
-		asprintf(&specname, "%s%s", _PATH_DEV, argv[0]);
-	} else if (strncmp(argv[0], _PATH_DEV, strlen(_PATH_DEV)) == 0) {
-		dkname = argv[0] + strlen(_PATH_DEV);
 		specname = argv[0];
 	} else {
-		dkname = strrchr(argv[0], '/');
-		dkname++;
-		specname = argv[0];
+		specname = g_device_path(argv[0]);
+		if (specname == NULL) {
+			warn("unable to get correct path for %s", argv[0]);
+			return(1);
+		}
+		fd = open(specname, O_RDONLY);
+		if (fd < 0) {
+			warn("error opening %s", specname);
+			return(1);
+		}
+		pname = g_providername(fd);
+		if (pname == NULL) {
+			warn("error getting providername for %s", specname);
+			close(fd);
+			return(1);
+		}
+		close(fd);
 	}
 
 	if (installboot && op == UNSPEC)
@@ -302,7 +303,7 @@ fixlabel(struct disklabel *lp)
 	struct partition *dp;
 	int i;
 
-	for (i = 0; i < MAXPARTITIONS; i++) {
+	for (i = 0; i < lp->d_npartitions; i++) {
 		if (i == RAW_PART)
 			continue;
 		if (lp->d_partitions[i].p_size)
@@ -337,7 +338,6 @@ readboot(void)
 {
 	int fd;
 	struct stat st;
-	uint64_t *p;
 
 	if (xxboot == NULL)
 		xxboot = "/boot/boot";
@@ -345,32 +345,42 @@ readboot(void)
 	if (fd < 0)
 		err(1, "cannot open %s", xxboot);
 	fstat(fd, &st);
-	if (alphacksum && st.st_size <= BBSIZE - 512) {
-		if (read(fd, bootarea + 512, st.st_size) != st.st_size)
-			err(1, "read error %s", xxboot);
-
-		/*
-		 * Set the location and length so SRM can find the
-		 * boot blocks.
-		 */
-		p = (uint64_t *)bootarea;
-		p[60] = (st.st_size + secsize - 1) / secsize;
-		p[61] = 1;
-		p[62] = 0;
-		return;
-	} else if ((!alphacksum) && st.st_size <= BBSIZE) {
+	if (st.st_size <= BBSIZE) {
 		if (read(fd, bootarea, st.st_size) != st.st_size)
 			err(1, "read error %s", xxboot);
+		close(fd);
 		return;
 	}
 	errx(1, "boot code %s is wrong size", xxboot);
 }
 
 static int
+geom_class_available(const char *name)
+{
+	struct gclass *class;
+	struct gmesh mesh;
+	int error;
+
+	error = geom_gettree(&mesh);
+	if (error != 0)
+		errc(1, error, "Cannot get GEOM tree");
+
+	LIST_FOREACH(class, &mesh.lg_class, lg_class) {
+		if (strcmp(class->lg_name, name) == 0) {
+			geom_deletetree(&mesh);
+			return (1);
+		}
+	}
+
+	geom_deletetree(&mesh);
+
+	return (0);
+}
+
+static int
 writelabel(void)
 {
-	uint64_t *p, sum;
-	int i, fd;
+	int i, fd, serrno;
 	struct gctl_req *grq;
 	char const *errstr;
 	struct disklabel *lp = &lab;
@@ -389,26 +399,40 @@ writelabel(void)
 		readboot();
 	for (i = 0; i < lab.d_npartitions; i++)
 		if (lab.d_partitions[i].p_size)
-			lab.d_partitions[i].p_offset += mbroffset;
+			lab.d_partitions[i].p_offset += lba_offset;
 	bsd_disklabel_le_enc(bootarea + labeloffset + labelsoffset * secsize,
 	    lp);
-	if (alphacksum) {
-		/* Generate the bootblock checksum for the SRM console.  */
-		for (p = (uint64_t *)bootarea, i = 0, sum = 0; i < 63; i++)
-			sum += p[i];
-		p[63] = sum;
-	}
 
 	fd = open(specname, O_RDWR);
 	if (fd < 0) {
 		if (is_file) {
 			warn("cannot open file %s for writing label", specname);
 			return(1);
+		} else
+			serrno = errno;
+
+		if (geom_class_available("PART") != 0) {
+			/*
+			 * Since we weren't able open provider for
+			 * writing, then recommend user to use gpart(8).
+			 */
+			warnc(serrno,
+			    "cannot open provider %s for writing label",
+			    specname);
+			warnx("Try to use gpart(8).");
+			return (1);
 		}
+
+		/* Give up if GEOM_BSD is not available. */
+		if (geom_class_available("BSD") == 0) {
+			warnc(serrno, "%s", specname);
+			return (1);
+		}
+
 		grq = gctl_get_handle();
 		gctl_ro_param(grq, "verb", -1, "write label");
 		gctl_ro_param(grq, "class", -1, "BSD");
-		gctl_ro_param(grq, "geom", -1, dkname);
+		gctl_ro_param(grq, "geom", -1, pname);
 		gctl_ro_param(grq, "label", 148+16*8,
 			bootarea + labeloffset + labelsoffset * secsize);
 		errstr = gctl_issue(grq);
@@ -422,7 +446,7 @@ writelabel(void)
 			grq = gctl_get_handle();
 			gctl_ro_param(grq, "verb", -1, "write bootcode");
 			gctl_ro_param(grq, "class", -1, "BSD");
-			gctl_ro_param(grq, "geom", -1, dkname);
+			gctl_ro_param(grq, "geom", -1, pname);
 			gctl_ro_param(grq, "bootcode", BBSIZE, bootarea);
 			errstr = gctl_issue(grq);
 			if (errstr != NULL) {
@@ -460,25 +484,25 @@ get_file_parms(int f)
 
 /*
  * Fetch disklabel for disk.
- * Use ioctl to get label unless -r flag is given.
  */
 static int
 readlabel(int flag)
 {
 	ssize_t nbytes;
+	uint32_t lba;
 	int f, i;
 	int error;
-	struct gctl_req *grq;
-	char const *errstr;
 
 	f = open(specname, O_RDONLY);
 	if (f < 0)
-		err(1, specname);
+		err(1, "%s", specname);
 	if (is_file)
 		get_file_parms(f);
-	else if ((ioctl(f, DIOCGMEDIASIZE, &mediasize) != 0) ||
-	    (ioctl(f, DIOCGSECTORSIZE, &secsize) != 0)) {
-		err(4, "cannot get disk geometry");
+	else {
+		mediasize = g_mediasize(f);
+		secsize = g_sectorsize(f);
+		if (secsize < 0 || mediasize < 0)
+			err(4, "cannot get disk geometry");
 	}
 	if (mediasize > (off_t)0xffffffff * secsize)
 		errx(1,
@@ -496,22 +520,30 @@ readlabel(int flag)
 	if (flag && error)
 		errx(1, "%s: no valid label found", specname);
 
-	grq = gctl_get_handle();
-	gctl_ro_param(grq, "verb", -1, "read mbroffset");
-	gctl_ro_param(grq, "class", -1, "BSD");
-	gctl_ro_param(grq, "geom", -1, dkname);
-	gctl_rw_param(grq, "mbroffset", sizeof(mbroffset), &mbroffset);
-	errstr = gctl_issue(grq);
-	if (errstr != NULL) {
-		mbroffset = 0;
-		gctl_free(grq);
-		return (error);
+	if (is_file)
+		return(0);
+
+	/*
+	 * Compensate for absolute block addressing by finding the
+	 * smallest partition offset and if the offset of the 'c'
+	 * partition is equal to that, subtract it from all offsets.
+	 */
+	lba = ~0;
+	for (i = 0; i < lab.d_npartitions; i++) {
+		if (lab.d_partitions[i].p_size)
+			lba = MIN(lba, lab.d_partitions[i].p_offset);
 	}
-	mbroffset /= lab.d_secsize;
-	if (lab.d_partitions[RAW_PART].p_offset == mbroffset)
-		for (i = 0; i < lab.d_npartitions; i++)
+	if (lba != 0 && lab.d_partitions[RAW_PART].p_offset == lba) {
+		for (i = 0; i < lab.d_npartitions; i++) {
 			if (lab.d_partitions[i].p_size)
-				lab.d_partitions[i].p_offset -= mbroffset;
+				lab.d_partitions[i].p_offset -= lba;
+		}
+		/*
+		 * Save the offset so that we can write the label
+		 * back with absolute block addresses.
+		 */
+		lba_offset = lba;
+	}
 	return (error);
 }
 
@@ -569,11 +601,11 @@ display(FILE *f, const struct disklabel *lp)
 	}
 	fprintf(f, "%u partitions:\n", lp->d_npartitions);
 	fprintf(f,
-	    "#        size   offset    fstype   [fsize bsize bps/cpg]\n");
+	    "#          size     offset    fstype   [fsize bsize bps/cpg]\n");
 	pp = lp->d_partitions;
 	for (i = 0; i < lp->d_npartitions; i++, pp++) {
 		if (pp->p_size) {
-			fprintf(f, "  %c: %8lu %8lu  ", 'a' + i,
+			fprintf(f, "  %c: %10lu %10lu  ", 'a' + i,
 			   (u_long)pp->p_size, (u_long)pp->p_offset);
 			if (pp->p_fstype < FSMAXTYPES)
 				fprintf(f, "%8.8s", fstypenames[pp->p_fstype]);
@@ -582,13 +614,13 @@ display(FILE *f, const struct disklabel *lp)
 			switch (pp->p_fstype) {
 
 			case FS_UNUSED:				/* XXX */
-				fprintf(f, "    %5lu %5lu %5.5s ",
+				fprintf(f, "    %5lu %5lu %2s",
 				    (u_long)pp->p_fsize,
 				    (u_long)(pp->p_fsize * pp->p_frag), "");
 				break;
 
 			case FS_BSDFFS:
-				fprintf(f, "    %5lu %5lu %5u ",
+				fprintf(f, "    %5lu %5lu %5u",
 				    (u_long)pp->p_fsize,
 				    (u_long)(pp->p_fsize * pp->p_frag),
 				    pp->p_cpg);
@@ -665,6 +697,8 @@ editit(void)
 	int pid, xpid;
 	int locstat, omask;
 	const char *ed;
+	uid_t uid;
+	gid_t gid;
 
 	omask = sigblock(sigmask(SIGINT)|sigmask(SIGQUIT)|sigmask(SIGHUP));
 	while ((pid = fork()) < 0) {
@@ -680,8 +714,12 @@ editit(void)
 	}
 	if (pid == 0) {
 		sigsetmask(omask);
-		setgid(getgid());
-		setuid(getuid());
+		gid = getgid();
+		if (setresgid(gid, gid, gid) == -1)
+			err(1, "setresgid");
+		uid = getuid();
+		if (setresuid(uid, uid, uid) == -1)
+			err(1, "setresuid");
 		if ((ed = getenv("EDITOR")) == (char *)0)
 			ed = DEFEDITOR;
 		execlp(ed, ed, tmpfil, (char *)0);
@@ -805,10 +843,15 @@ getasciilabel(FILE *f, struct disklabel *lp)
 			continue;
 		}
 		if (sscanf(cp, "%lu partitions", &v) == 1) {
-			if (v == 0 || v > MAXPARTITIONS) {
+			if (v > MAXPARTITIONS) {
 				fprintf(stderr,
 				    "line %d: bad # of partitions\n", lineno);
 				lp->d_npartitions = MAXPARTITIONS;
+				errors++;
+			} else if (v < DEFPARTITIONS) {
+				fprintf(stderr,
+				    "line %d: bad # of partitions\n", lineno);
+				lp->d_npartitions = DEFPARTITIONS;
 				errors++;
 			} else
 				lp->d_npartitions = v;
@@ -1123,23 +1166,42 @@ checklabel(struct disklabel *lp)
 			errors++;
 		} else if (lp->d_bbsize % lp->d_secsize)
 			warnx("boot block size %% sector-size != 0");
-		if (lp->d_npartitions > MAXPARTITIONS)
+		if (lp->d_npartitions > MAXPARTITIONS) {
 			warnx("number of partitions (%lu) > MAXPARTITIONS (%d)",
 			    (u_long)lp->d_npartitions, MAXPARTITIONS);
+			errors++;
+		}
+		if (lp->d_npartitions < DEFPARTITIONS) {
+			warnx("number of partitions (%lu) < DEFPARTITIONS (%d)",
+			    (u_long)lp->d_npartitions, DEFPARTITIONS);
+			errors++;
+		}
 	} else {
 		struct disklabel *vl;
 
 		vl = getvirginlabel();
-		lp->d_secsize = vl->d_secsize;
-		lp->d_nsectors = vl->d_nsectors;
-		lp->d_ntracks = vl->d_ntracks;
-		lp->d_ncylinders = vl->d_ncylinders;
-		lp->d_rpm = vl->d_rpm;
-		lp->d_interleave = vl->d_interleave;
-		lp->d_secpercyl = vl->d_secpercyl;
-		lp->d_secperunit = vl->d_secperunit;
-		lp->d_bbsize = vl->d_bbsize;
-		lp->d_npartitions = vl->d_npartitions;
+		if (lp->d_secsize == 0)
+			lp->d_secsize = vl->d_secsize;
+		if (lp->d_nsectors == 0)
+			lp->d_nsectors = vl->d_nsectors;
+		if (lp->d_ntracks == 0)
+			lp->d_ntracks = vl->d_ntracks;
+		if (lp->d_ncylinders == 0)
+			lp->d_ncylinders = vl->d_ncylinders;
+		if (lp->d_rpm == 0)
+			lp->d_rpm = vl->d_rpm;
+		if (lp->d_interleave == 0)
+			lp->d_interleave = vl->d_interleave;
+		if (lp->d_secpercyl == 0)
+			lp->d_secpercyl = vl->d_secpercyl;
+		if (lp->d_secperunit == 0 ||
+		    lp->d_secperunit > vl->d_secperunit)
+			lp->d_secperunit = vl->d_secperunit;
+		if (lp->d_bbsize == 0)
+			lp->d_bbsize = vl->d_bbsize;
+		if (lp->d_npartitions < DEFPARTITIONS ||
+		    lp->d_npartitions > MAXPARTITIONS)
+			lp->d_npartitions = vl->d_npartitions;
 	}
 
 
@@ -1402,7 +1464,7 @@ checklabel(struct disklabel *lp)
 			}
 		}
 	}
-	for (; i < MAXPARTITIONS; i++) {
+	for (; i < lp->d_npartitions; i++) {
 		part = 'a' + i;
 		pp = &lp->d_partitions[i];
 		if (pp->p_size || pp->p_offset)
@@ -1436,10 +1498,13 @@ getvirginlabel(void)
 
 	if (is_file)
 		get_file_parms(f);
-	else if ((ioctl(f, DIOCGMEDIASIZE, &mediasize) != 0) ||
-	    (ioctl(f, DIOCGSECTORSIZE, &secsize) != 0)) {
-		close (f);
-		return (NULL);
+	else {
+		mediasize = g_mediasize(f);
+		secsize = g_sectorsize(f);
+		if (secsize < 0 || mediasize < 0) {
+			close (f);
+			return (NULL);
+		}
 	}
 	memset(&loclab, 0, sizeof loclab);
 	loclab.d_magic = DISKMAGIC;
@@ -1467,7 +1532,7 @@ getvirginlabel(void)
 		loclab.d_ntracks = 255;
 	loclab.d_secpercyl = loclab.d_ntracks * loclab.d_nsectors;
 	loclab.d_ncylinders = loclab.d_secperunit / loclab.d_secpercyl;
-	loclab.d_npartitions = MAXPARTITIONS;
+	loclab.d_npartitions = DEFPARTITIONS;
 
 	/* Various (unneeded) compat stuff */
 	loclab.d_rpm = 3600;

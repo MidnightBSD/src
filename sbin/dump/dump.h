@@ -28,7 +28,7 @@
  *
  *	@(#)dump.h	8.2 (Berkeley) 4/28/95
  *
- * $FreeBSD: src/sbin/dump/dump.h,v 1.28 2007/02/26 08:15:56 mckusick Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -59,8 +59,8 @@ char	*tape;		/* name of the tape file */
 char	*popenout;	/* popen(3) per-"tape" command */
 char	*dumpdates;	/* name of the file containing dump date information*/
 char	*temp;		/* name of the file for doing rewrite of dumpdates */
-char	lastlevel;	/* dump level of previous dump */
-char	level;		/* dump level of this dump */
+int	lastlevel;	/* dump level of previous dump */
+int	level;		/* dump level of this dump */
 int	uflag;		/* update flag */
 int	diskfd;		/* disk file descriptor */
 int	tapefd;		/* tape file descriptor */
@@ -75,6 +75,7 @@ int	etapes;		/* estimated number of tapes */
 int	nonodump;	/* if set, do not honor UF_NODUMP user flags */
 int	unlimited;	/* if set, write to end of medium */
 int	cachesize;	/* size of block cache in bytes */
+int	rsync_friendly;	/* be friendly with rsync */
 
 int	notify;		/* notify operator flag */
 int	blockswritten;	/* number of blocks written on current tape */
@@ -158,7 +159,7 @@ struct	fstab *fstabsearch(const char *key); /* search fs_file and fs_spec */
  */
 struct dumpdates {
 	char	dd_name[NAME_MAX+3];
-	char	dd_level;
+	int	dd_level;
 	time_t	dd_ddate;
 };
 int	nddates;		/* number of records (might be zero) */
@@ -169,6 +170,11 @@ void	putdumptime(void);
 #define	ITITERATE(i, ddp) \
     	if (ddatev != NULL) \
 		for (ddp = ddatev[i = 0]; i < nddates; ddp = ddatev[++i])
+
+#define	DUMPFMTLEN	53			/* max device pathname length */
+#define	DUMPOUTFMT	"%-*s %d %s"		/* for printf */
+						/* name, level, ctime(date) */
+#define	DUMPINFMT	"%s %d %[^\n]\n"	/* inverse for scanf */
 
 void	sig(int signo);
 

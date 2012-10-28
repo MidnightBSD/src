@@ -39,8 +39,7 @@ static const char sccsid[] = "@(#)dmesg.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dmesg/dmesg.c,v 1.27 2005/01/17 13:56:46 delphij Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/dmesg/dmesg.c,v 1.3 2008/11/21 14:49:02 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/msgbuf.h>

@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.6 1997/05/08 21:11:11 gwr Exp $
-# $FreeBSD: src/sbin/fsck_msdosfs/Makefile,v 1.5 2004/02/23 20:13:51 johan Exp $
+# $MidnightBSD$
 
 FSCK=	${.CURDIR}/../fsck
 .PATH: ${FSCK}
@@ -9,6 +9,6 @@ MAN=	fsck_msdosfs.8
 SRCS=	main.c check.c boot.c fat.c dir.c fsutil.c
 
 CFLAGS+= -I${FSCK}
-WARNS?=	0
+WARNS?=	2
 
 .include <bsd.prog.mk>

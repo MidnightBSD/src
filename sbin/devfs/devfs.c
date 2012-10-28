@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/devfs/devfs.c,v 1.5 2004/01/22 07:23:35 grehan Exp $");
 __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
