@@ -27,7 +27,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/atm/atmconfig/diag.c,v 1.8 2007/04/14 16:09:23 maxim Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -426,7 +426,7 @@ diag_loop(int argc, char *argv[], const char *text,
 		for (i = 0; i < argc; i++) {
 			TAILQ_FOREACH(aif, &diagif_list, link) {
 				if (strcmp(argv[i], aif->ifname) == 0) {
-					heading(text);
+					heading("%s", text);
 					(*func)(aif);
 					break;
 				}
@@ -436,7 +436,7 @@ diag_loop(int argc, char *argv[], const char *text,
 		}
 	} else {
 		TAILQ_FOREACH(aif, &diagif_list, link) {
-			heading(text);
+			heading("%s", text);
 			(*func)(aif);
 		}
 	}
@@ -992,7 +992,7 @@ diag_vcc_loop(void (*func)(const struct diagif *), const char *text,
 		TAILQ_FOREACH(aif, &diagif_list, link) {
 			diagif_fetch_vcc(aif, fd);
 			if (aif->vtab->count != 0) {
-				heading(text);
+				heading("%s", text);
 				(*func)(aif);
 			}
 		}
@@ -1003,7 +1003,7 @@ diag_vcc_loop(void (*func)(const struct diagif *), const char *text,
 				if (strcmp(aif->ifname, argv[optind]) == 0) {
 					diagif_fetch_vcc(aif, fd);
 					if (aif->vtab->count != 0) {
-						heading(text);
+						heading("%s", text);
 						(*func)(aif);
 					}
 					break;
