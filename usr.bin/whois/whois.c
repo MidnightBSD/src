@@ -40,8 +40,7 @@ static char sccsid[] = "@(#)whois.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/whois/whois.c,v 1.46 2007/04/14 14:32:48 ache Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/whois/whois.c,v 1.3 2009/03/27 22:15:05 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -60,7 +59,6 @@ __MBSDID("$MidnightBSD: src/usr.bin/whois/whois.c,v 1.3 2009/03/27 22:15:05 laff
 #define	ABUSEHOST	"whois.abuse.net"
 #define	NICHOST		"whois.crsnic.net"
 #define	INICHOST	"whois.networksolutions.com"
-#define	DNICHOST	"whois.nic.mil"
 #define	GNICHOST	"whois.nic.gov"
 #define	ANICHOST	"whois.arin.net"
 #define	LNICHOST	"whois.lacnic.net"
@@ -106,7 +104,7 @@ main(int argc, char *argv[])
 
 	country = host = qnichost = NULL;
 	flags = use_qnichost = 0;
-	while ((ch = getopt(argc, argv, "aAbc:dfgh:iIklmp:QrR6")) != -1) {
+	while ((ch = getopt(argc, argv, "aAbc:fgh:iIklmp:QrR6")) != -1) {
 		switch (ch) {
 		case 'a':
 			host = ANICHOST;
@@ -119,9 +117,6 @@ main(int argc, char *argv[])
 			break;
 		case 'c':
 			country = optarg;
-			break;
-		case 'd':
-			host = DNICHOST;
 			break;
 		case 'f':
 			host = FNICHOST;
@@ -216,6 +211,10 @@ choose_server(char *domain)
 {
 	char *pos, *retval;
 
+	if (strchr(domain, ':')) {
+		s_asprintf(&retval, "%s", ANICHOST);
+		return (retval);
+	}
 	for (pos = strchr(domain, '\0'); pos > domain && *--pos == '.';)
 		*pos = '\0';
 	if (*domain == '\0')
@@ -361,7 +360,7 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: whois [-aAbdfgiIklmQrR6] [-c country-code | -h hostname] "
+	    "usage: whois [-aAbfgiIklmQrR6] [-c country-code | -h hostname] "
 	    "[-p port] name ...\n");
 	exit(EX_USAGE);
 }
