@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_cout.c 1.13 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/rpcgen/rpc_cout.c,v 1.16 2005/11/13 21:17:24 dwmalone Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * rpc_cout.c, XDR routine outputter for the RPC protocol compiler
@@ -200,11 +200,13 @@ print_ifsizeof(int indent, const char *prefix, const char *type)
 }
 
 static void
-print_ifclose(int indent)
+print_ifclose(int indent, int brace)
 {
 	f_print(fout, "))\n");
 	tabify(fout, indent);
 	f_print(fout, "\treturn (FALSE);\n");
+	if (brace)
+		f_print(fout, "\t}\n");
 }
 
 static void
@@ -212,12 +214,16 @@ print_ifstat(int indent, const char *prefix, const char *type, relation rel,
     const char *amax, const char *objname, const char *name)
 {
 	const char *alt = NULL;
+	int brace = 0;
 
 	switch (rel) {
 	case REL_POINTER:
+		brace = 1;
+		f_print(fout, "\t{\n");
+		f_print(fout, "\t%s **pp = %s;\n", type, objname);
 		print_ifopen(indent, "pointer");
 		print_ifarg("(char **)");
-		f_print(fout, "%s", objname);
+		f_print(fout, "pp");
 		print_ifsizeof(0, prefix, type);
 		break;
 	case REL_VECTOR:
@@ -274,7 +280,7 @@ print_ifstat(int indent, const char *prefix, const char *type, relation rel,
 		print_ifarg(objname);
 		break;
 	}
-	print_ifclose(indent);
+	print_ifclose(indent, brace);
 }
 
 /* ARGSUSED */
@@ -283,7 +289,7 @@ emit_enum(definition *def __unused)
 {
 	print_ifopen(1, "enum");
 	print_ifarg("(enum_t *)objp");
-	print_ifclose(1);
+	print_ifclose(1, 0);
 }
 
 static void
@@ -483,6 +489,7 @@ inline_struct(definition *def, int flag)
 			}
 			size = 0;
 			i = 0;
+			free(sizestr);
 			sizestr = NULL;
 			print_stat(indent + 1, &dl->decl);
 		}

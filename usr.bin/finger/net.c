@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -41,7 +37,7 @@ static char sccsid[] = "@(#)net.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/finger/net.c,v 1.23 2004/05/16 22:08:15 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -55,7 +51,7 @@ __FBSDID("$FreeBSD: src/usr.bin/finger/net.c,v 1.23 2004/05/16 22:08:15 stefanf 
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <utmp.h>
+#include <utmpx.h>
 #include "finger.h"
 
 static void cleanup(int sig);
@@ -144,13 +140,7 @@ do_protocol(const char *name, const struct addrinfo *ai)
 	iov[msg.msg_iovlen].iov_base = neteol;
 	iov[msg.msg_iovlen++].iov_len = 2;
 
-	/*
-	 * -T disables data-on-SYN: compatibility option to finger broken
-	 * hosts.  Also, the implicit-open API is broken on IPv6, so do
-	 * the explicit connect there, too.
-	 */
-	if ((Tflag || ai->ai_addr->sa_family == AF_INET6)
-	    && connect(s, ai->ai_addr, ai->ai_addrlen) < 0) {
+	if (connect(s, ai->ai_addr, ai->ai_addrlen) < 0) {
 		warn("connect");
 		close(s);
 		return -1;
@@ -236,7 +226,7 @@ trying(const struct addrinfo *ai)
 	printf("Trying %s...\n", buf);
 }
 
-void
+static void
 cleanup(int sig __unused)
 {
 #define	ERRSTR	"Timed out.\n"

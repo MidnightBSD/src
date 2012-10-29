@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -41,8 +37,9 @@ static char sccsid[] = "@(#)sprint.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/finger/sprint.c,v 1.22 2003/04/02 20:22:29 rwatson Exp $");
+__MBSDID("$MidnightBSD$");
 
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <db.h>
@@ -52,7 +49,7 @@ __FBSDID("$FreeBSD: src/usr.bin/finger/sprint.c,v 1.22 2003/04/02 20:22:29 rwats
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <utmp.h>
+#include <utmpx.h>
 #include "finger.h"
 
 static void	  stimeprint(WHERE *);
@@ -86,10 +83,10 @@ sflag_print(void)
 	 *	else
 	 *		remote host
 	 */
-#define	MAXREALNAME	20
+#define	MAXREALNAME	16
 #define MAXHOSTNAME     17      /* in reality, hosts are never longer than 16 */
-	(void)printf("%-*s %-*s%s  %s\n", UT_NAMESIZE, "Login", MAXREALNAME,
-	    "Name", " TTY  Idle  Login  Time ", (gflag) ? "" :
+	(void)printf("%-*s %-*s%s %s\n", MAXLOGNAME, "Login", MAXREALNAME,
+	    "Name", " TTY      Idle  Login  Time  ", (gflag) ? "" :
 	    oflag ? "Office  Phone" : "Where");
 
 	for (sflag = R_FIRST;; sflag = R_NEXT) {
@@ -105,7 +102,7 @@ sflag_print(void)
 			namelen = MAXREALNAME;
 			if (w->info == LOGGEDIN && !w->writable)
 				--namelen;	/* leave space before `*' */
-			(void)printf("%-*.*s %-*.*s", UT_NAMESIZE, UT_NAMESIZE,
+			(void)printf("%-*.*s %-*.*s", MAXLOGNAME, MAXLOGNAME,
 				pn->name, MAXREALNAME, namelen,
 				pn->realname ? pn->realname : "");
 			if (!w->loginat) {
@@ -115,12 +112,12 @@ sflag_print(void)
 			(void)putchar(w->info == LOGGEDIN && !w->writable ?
 			    '*' : ' ');
 			if (*w->tty)
-				(void)printf("%-3.3s ",
+				(void)printf("%-7.7s ",
 					     (strncmp(w->tty, "tty", 3)
 					      && strncmp(w->tty, "cua", 3))
 					     ? w->tty : w->tty + 3);
 			else
-				(void)printf("    ");
+				(void)printf("        ");
 			if (w->info == LOGGEDIN) {
 				stimeprint(w);
 				(void)printf("  ");

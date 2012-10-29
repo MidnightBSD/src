@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_tblout.c 1.4 89/02/22 (C) 1988 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/rpcgen/rpc_tblout.c,v 1.12 2005/11/13 21:17:24 dwmalone Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * rpc_tblout.c, Dispatch table outputter for the RPC protocol compiler
@@ -103,7 +103,7 @@ write_table(definition *def)
 			expected = 0;
 		} else {
 			expected = 1;
-			f_print(fout, null_entry);
+			fputs(null_entry, fout);
 		}
 		for (proc = vp->procs; proc != NULL; proc = proc->next) {
 			current = atoi(proc->proc_num);
@@ -141,7 +141,7 @@ write_table(definition *def)
 		}
 
 		/* print the table trailer */
-		f_print(fout, tbl_end);
+		fputs(tbl_end, fout);
 		f_print(fout, tbl_nproc, progvers, progvers, progvers);
 	}
 }

@@ -12,10 +12,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -33,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	from: @(#)quota.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/quota/quota.1,v 1.16 2005/01/18 13:43:52 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 8, 2002
+.Dd February 3, 2007
 .Dt QUOTA 1
 .Os
 .Sh NAME
@@ -43,28 +39,39 @@
 .Nd display disk usage and limits
 .Sh SYNOPSIS
 .Nm
-.Op Fl glu
-.Op Fl v | Fl q
+.Op Fl ghlu
+.Op Fl f Ar path
+.Op Fl v | q | r
 .Nm
-.Op Fl lu
-.Op Fl v | Fl q
+.Op Fl hlu
+.Op Fl f Ar path
+.Op Fl v | q | r
 .Ar user ...
 .Nm
 .Fl g
-.Op Fl l
-.Op Fl v | Fl q
+.Op Fl hl
+.Op Fl f Ar path
+.Op Fl v | q | r
 .Ar group ...
 .Sh DESCRIPTION
 The
 .Nm
 utility displays users' disk usage and limits.
 By default only the user quotas are printed.
+Disk block usage and limits are shown in 1024-byte blocks.
 .Pp
 The following options are available:
 .Bl -tag -width indent
+.It Fl f Ar path
+Only display quota information for the file system
+that contains the specified path.
+This can be any file within a mounted file system.
 .It Fl g
 Print group quotas for the group
 of which the user is a member.
+.It Fl h
+"Human-readable" output.
+Use unit suffixes: Byte, Kilobyte, Megabyte, Gigabyte, Terabyte and Petabyte.
 .It Fl l
 Do not report quotas on
 .Tn NFS
@@ -73,6 +80,21 @@ file systems.
 Print a more terse message,
 containing only information
 on file systems where usage is over quota.
+The
+.Fl q
+flag takes precedence over the
+.Fl v
+flag.
+.It Fl r
+Display the raw quota information as it appears in the quota structure.
+Non-zero time values will also be displayed in
+.Xr ctime 3
+format.
+This option implies
+.Fl v
+and will override the
+.Fl q
+flag.
 .It Fl u
 Print the user quotas.
 This is the default unless
@@ -102,12 +124,6 @@ flag and optional
 argument to view only the limits of groups of which they are members.
 .Pp
 The
-.Fl q
-flag takes precedence over the
-.Fl v
-flag.
-.Pp
-The
 .Nm
 utility tries to report the quotas of all mounted file systems.
 If the file system is mounted via
@@ -124,7 +140,9 @@ file systems, quotas must be turned on in
 If
 .Nm
 exits with a non-zero status, one or more file systems
-are over quota.
+are over quota or the path specified with the
+.Fl f
+option does not exist.
 .Pp
 If the
 .Fl l
@@ -144,6 +162,7 @@ to find file system names and locations
 .El
 .Sh SEE ALSO
 .Xr quotactl 2 ,
+.Xr ctime 3 ,
 .Xr fstab 5 ,
 .Xr edquota 8 ,
 .Xr quotacheck 8 ,

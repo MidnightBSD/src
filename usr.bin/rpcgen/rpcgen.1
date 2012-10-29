@@ -1,5 +1,5 @@
 .\" @(#)rpcgen.1 1.35 93/06/02 SMI
-.\" $FreeBSD: src/usr.bin/rpcgen/rpcgen.1,v 1.24 2005/09/02 18:37:34 stefanf Exp $
+.\" $MidnightBSD$
 .\" Copyright 1985-1993 Sun Microsystems, Inc.
 .\"
 .Dd September 2, 2005
@@ -490,6 +490,11 @@ Give the name of the directory where
 .Nm
 will start looking for the C-preprocessor.
 .El
+.Sh ENVIRONMENT
+If the
+.Ev RPCGEN_CPP
+environment variable is set, its value is used as the command line of the
+C preprocessor to be run on the input file.
 .Sh EXAMPLES
 The following example:
 .Dl example% rpcgen -T prot.x
