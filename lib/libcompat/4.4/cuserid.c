@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)cuserid.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libcompat/4.4/cuserid.c,v 1.3 2007/01/09 01:02:03 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <pwd.h>
 #include <stdio.h>
@@ -39,8 +39,7 @@ __FBSDID("$FreeBSD: src/lib/libcompat/4.4/cuserid.c,v 1.3 2007/01/09 01:02:03 im
 #include <unistd.h>
 
 char *
-cuserid(s)
-	char *s;
+cuserid(char *s)
 {
 	struct passwd *pwd;
 

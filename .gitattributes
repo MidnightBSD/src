@@ -36511,13 +36511,6 @@ lib/libcompat/4.3/rexec.c -text
 lib/libcompat/4.4/cuserid.3 -text
 lib/libcompat/4.4/cuserid.c -text
 lib/libcompat/Makefile -text
-lib/libcompat/regexp/COPYRIGHT -text
-lib/libcompat/regexp/README -text
-lib/libcompat/regexp/regerror.c -text
-lib/libcompat/regexp/regexp.3 -text
-lib/libcompat/regexp/regexp.c -text
-lib/libcompat/regexp/regmagic.h -text
-lib/libcompat/regexp/regsub.c -text
 lib/libcompiler_rt/Makefile -text
 lib/libcompiler_rt/__sync_fetch_and_add_4.c -text
 lib/libcompiler_rt/__sync_fetch_and_add_8.c -text

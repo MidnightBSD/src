@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libcompat/4.3/rexec.c,v 1.7 2007/01/09 01:02:02 imp Exp $
+ * $MidnightBSD$
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
@@ -302,7 +302,7 @@ rexec(ahost, rport, name, pass, cmd, fd2p)
 	struct hostent *hp;
 	u_short port;
 	int s, timo = 1, s3;
-	char c;
+	char c, *acct;
 
 	hp = gethostbyname(*ahost);
 	if (hp == 0) {
@@ -310,7 +310,9 @@ rexec(ahost, rport, name, pass, cmd, fd2p)
 		return (-1);
 	}
 	*ahost = hp->h_name;
-	ruserpass(hp->h_name, &name, &pass);
+	acct = NULL;
+	ruserpass(hp->h_name, &name, &pass, &acct);
+	free(acct);
 retry:
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	if (s < 0) {
