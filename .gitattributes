@@ -36947,6 +36947,7 @@ lib/libjail/jail.h -text
 lib/libjail/jail_getid.c -text
 lib/libkiconv/Makefile -text
 lib/libkiconv/kiconv.3 -text
+lib/libkiconv/kiconv_sysctl.c -text
 lib/libkiconv/quirks.c -text
 lib/libkiconv/quirks.h -text
 lib/libkiconv/xlat16_iconv.c -text
