@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libbegemot/Makefile,v 1.2 2012/04/10 19:40:33 laffer1 Exp $
 # $FreeBSD: src/lib/libbegemot/Makefile,v 1.4 2007/05/21 02:49:02 deischen Exp $
 
 LIBBEGEMOT_DIR=${.CURDIR}/../../contrib/libbegemot
@@ -6,10 +6,8 @@ LIBBEGEMOT_DIR=${.CURDIR}/../../contrib/libbegemot
 .PATH: ${LIBBEGEMOT_DIR}
 
 LIB=	begemot
-SHLIB_MAJOR= 3
+SHLIB_MAJOR= 4
 SHLIBDIR?= /lib
-
-# WARNS?=	6
 
 CFLAGS+=	-DUSE_SELECT -DQUADFMT='"ll"'
 SRCS=	rpoll.c
