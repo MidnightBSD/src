@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ypwhich/ypwhich.c,v 1.16 2004/04/04 19:17:38 charnier Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -64,6 +64,7 @@ struct ypalias {
 } ypaliases[] = {
 	{ "passwd", "passwd.byname" },
 	{ "master.passwd", "master.passwd.byname" },
+	{ "shadow", "shadow.byname" },
 	{ "group", "group.byname" },
 	{ "networks", "networks.byaddr" },
 	{ "hosts", "hosts.byaddr" },
@@ -142,11 +143,11 @@ main(int argc, char *argv[])
 	struct ypmaplist *ypml, *y;
 	struct hostent *hent;
 	struct sockaddr_in lsin;
-	int notrans, mode, getmap;
+	int notrans, mode;
 	int c, r;
 	u_int i;
 
-	getmap = notrans = mode = 0;
+	notrans = mode = 0;
 	while ((c = getopt(argc, argv, "xd:mt")) != -1)
 		switch (c) {
 		case 'x':

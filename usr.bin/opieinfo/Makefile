@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/opieinfo/Makefile,v 1.11 2004/11/03 18:01:20 ru Exp $
+# $MidnightBSD$
 #
 OPIE_DIST?=	${.CURDIR}/../../contrib/opie
 
@@ -7,6 +7,8 @@ PROG=	opieinfo
 CFLAGS+=-I${.CURDIR}/../../lib/libopie
 CFLAGS+=-I${OPIE_DIST}
 CFLAGS+=-DINSECURE_OVERRIDE
+
+WARNS?=	0
 
 DPADD=	${LIBOPIE} ${LIBMD}
 LDADD=	-lopie -lmd

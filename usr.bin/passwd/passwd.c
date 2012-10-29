@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/passwd/passwd.c,v 1.23 2003/04/18 21:27:09 nectar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 
@@ -67,7 +67,7 @@ int
 main(int argc, char *argv[])
 {
 	char hostname[MAXHOSTNAMELEN];
-	struct passwd *pwd;
+	struct passwd *pwd = NULL; /* Keep compiler happy. */
 	int o, pam_err;
 	uid_t uid;
 

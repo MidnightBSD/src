@@ -53720,6 +53720,9 @@ usr.bin/window/xxflush.c -text
 usr.bin/write/Makefile -text
 usr.bin/write/write.1 -text
 usr.bin/write/write.c -text
+usr.bin/wtmpcvt/Makefile -text
+usr.bin/wtmpcvt/wtmpcvt.1 -text
+usr.bin/wtmpcvt/wtmpcvt.c -text
 usr.bin/xargs/Makefile -text
 usr.bin/xargs/pathnames.h -text
 usr.bin/xargs/strnsubst.c -text
@@ -53793,6 +53796,7 @@ usr.bin/xstr/pathnames.h -text
 usr.bin/xstr/xstr.1 -text
 usr.bin/xstr/xstr.c -text
 usr.bin/xz/Makefile -text
+usr.bin/xzdec/Makefile -text
 usr.bin/yacc/ACKNOWLEDGEMENTS -text
 usr.bin/yacc/Makefile -text
 usr.bin/yacc/NEW_FEATURES -text

@@ -1,5 +1,5 @@
 # $MidnightBSD$
 
-PROG=	pathchk
+PROG=	wtmpcvt
 
 .include <bsd.prog.mk>

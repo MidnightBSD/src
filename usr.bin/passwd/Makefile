@@ -1,5 +1,5 @@
 # From:	@(#)Makefile	8.3 (Berkeley) 4/2/94
-# $FreeBSD: src/usr.bin/passwd/Makefile,v 1.47 2006/03/17 18:54:39 ru Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -12,7 +12,6 @@ LDADD	 = ${MINUSLPAM}
 LINKS	 = ${BINDIR}/passwd ${BINDIR}/yppasswd
 MLINKS	 = passwd.1 yppasswd.1
 .endif
-WARNS	?= 4
 
 beforeinstall:
 .for i in passwd yppasswd

@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/ypcat/ypcat.c,v 1.9 2005/05/21 09:55:10 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -52,6 +52,7 @@ struct ypalias {
 } ypaliases[] = {
 	{ "passwd", "passwd.byname" },
 	{ "master.passwd", "master.passwd.byname" },
+	{ "shadow", "shadow.byname" },
 	{ "group", "group.byname" },
 	{ "networks", "networks.byaddr" },
 	{ "hosts", "hosts.byaddr" },

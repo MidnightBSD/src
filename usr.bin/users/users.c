@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,18 +38,19 @@ static const char copyright[] =
 static char sccsid[] = "@(#)users.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/users/users.c,v 1.8 2002/09/04 23:29:09 dwmalone Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
+#include <sys/param.h>
 #include <sys/types.h>
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <utmp.h>
+#include <utmpx.h>
 
-typedef char   namebuf[UT_NAMESIZE];
+typedef char   namebuf[sizeof(((struct utmpx *)0)->ut_user) + 1];
 
 int scmp(const void *, const void *);
 static void usage(void);
@@ -65,7 +62,7 @@ main(int argc, char **argv)
 	int ncnt = 0;
 	int nmax = 0;
 	int cnt;
-	struct utmp utmp;
+	struct utmpx *ut;
 	int ch;
 
 	while ((ch = getopt(argc, argv, "")) != -1)
@@ -77,28 +74,28 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	if (!freopen(_PATH_UTMP, "r", stdin))
-		errx(1, "can't open %s", _PATH_UTMP);
-	while (fread((char *)&utmp, sizeof(utmp), 1, stdin) == 1) {
-		if (*utmp.ut_name) {
-			if (ncnt >= nmax) {
-				nmax += 32;
-				names = realloc(names, sizeof (*names) * nmax);
-				if (!names) {
-					errx(1, "realloc");
-					/* NOTREACHED */
-				}
+	setutxent();
+	while ((ut = getutxent()) != NULL) {
+		if (ut->ut_type != USER_PROCESS)
+			continue;
+		if (ncnt >= nmax) {
+			nmax += 32;
+			names = realloc(names, sizeof(*names) * nmax);
+			if (!names) {
+				errx(1, "realloc");
+				/* NOTREACHED */
 			}
-			(void)strncpy(names[ncnt], utmp.ut_name, UT_NAMESIZE);
-			++ncnt;
 		}
+		(void)strlcpy(names[ncnt], ut->ut_user, sizeof(*names));
+		++ncnt;
 	}
-	if (ncnt) {
-		qsort(names, ncnt, UT_NAMESIZE, scmp);
-		(void)printf("%.*s", UT_NAMESIZE, names[0]);
+	endutxent();
+	if (ncnt > 0) {
+		qsort(names, ncnt, sizeof(namebuf), scmp);
+		(void)printf("%s", names[0]);
 		for (cnt = 1; cnt < ncnt; ++cnt)
-			if (strncmp(names[cnt], names[cnt - 1], UT_NAMESIZE))
-				(void)printf(" %.*s", UT_NAMESIZE, names[cnt]);
+			if (strcmp(names[cnt], names[cnt - 1]) != 0)
+				(void)printf(" %s", names[cnt]);
 		(void)printf("\n");
 	}
 	exit(0);
@@ -114,5 +111,6 @@ usage(void)
 int
 scmp(const void *p, const void *q)
 {
-	return(strncmp(p, q, UT_NAMESIZE));
+
+	return (strcmp(p, q));
 }

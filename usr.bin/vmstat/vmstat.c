@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,11 +40,9 @@ static char sccsid[] = "@(#)vmstat.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/vmstat/vmstat.c,v 1.98 2007/07/27 20:01:22 alc Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/vmstat/vmstat.c,v 1.3 2008/12/09 17:16:40 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
-#include <sys/time.h>
 #include <sys/proc.h>
 #include <sys/uio.h>
 #include <sys/namei.h>
@@ -58,7 +52,9 @@ __MBSDID("$MidnightBSD: src/usr.bin/vmstat/vmstat.c,v 1.3 2008/12/09 17:16:40 la
 #include <sys/ioctl.h>
 #include <sys/resource.h>
 #include <sys/sysctl.h>
+#include <sys/time.h>
 #include <sys/vmmeter.h>
+#include <sys/pcpu.h>
 
 #include <vm/vm_param.h>
 
@@ -66,6 +62,7 @@ __MBSDID("$MidnightBSD: src/usr.bin/vmstat/vmstat.c,v 1.3 2008/12/09 17:16:40 la
 #include <devstat.h>
 #include <err.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <kvm.h>
 #include <limits.h>
 #include <memstat.h>
@@ -77,34 +74,27 @@ __MBSDID("$MidnightBSD: src/usr.bin/vmstat/vmstat.c,v 1.3 2008/12/09 17:16:40 la
 #include <sysexits.h>
 #include <time.h>
 #include <unistd.h>
+#include <libutil.h>
 
 static char da[] = "da";
 
 static struct nlist namelist[] = {
-#define	X_CPTIME	0
-	{ "_cp_time" },
-#define X_SUM		1
+#define X_SUM		0
 	{ "_cnt" },
-#define	X_BOOTTIME	2
-	{ "_boottime" },
-#define X_HZ		3
+#define X_HZ		1
 	{ "_hz" },
-#define X_STATHZ	4
+#define X_STATHZ	2
 	{ "_stathz" },
-#define X_NCHSTATS	5
+#define X_NCHSTATS	3
 	{ "_nchstats" },
-#define	X_INTRNAMES	6
+#define	X_INTRNAMES	4
 	{ "_intrnames" },
-#define	X_EINTRNAMES	7
-	{ "_eintrnames" },
-#define	X_INTRCNT	8
+#define	X_SINTRNAMES	5
+	{ "_sintrnames" },
+#define	X_INTRCNT	6
 	{ "_intrcnt" },
-#define	X_EINTRCNT	9
-	{ "_eintrcnt" },
-#define	X_KMEMSTATS	10
-	{ "_kmemstatistics" },
-#define	X_KMEMZONES	11
-	{ "_kmemzones" },
+#define	X_SINTRCNT	7
+	{ "_sintrcnt" },
 #ifdef notyet
 #define	X_DEFICIT	XXX
 	{ "_deficit" },
@@ -116,7 +106,7 @@ static struct nlist namelist[] = {
 	{ "_xstats" },
 #define X_END		XXX
 #else
-#define X_END		12
+#define X_END		8
 #endif
 	{ "" },
 };
@@ -135,9 +125,14 @@ static devstat_select_mode select_mode;
 
 static struct	vmmeter sum, osum;
 
-static int	winlines = 20;
+#define	VMSTAT_DEFAULT_LINES	20	/* Default number of `winlines'. */
+volatile sig_atomic_t wresized;		/* Tty resized, when non-zero. */
+static int winlines = VMSTAT_DEFAULT_LINES; /* Current number of tty rows. */
+
 static int	aflag;
 static int	nflag;
+static int	Pflag;
+static int	hflag;
 
 static kvm_t   *kd;
 
@@ -150,6 +145,7 @@ static kvm_t   *kd;
 #define ZMEMSTAT	0x40
 
 static void	cpustats(void);
+static void	pcpustats(int, u_long, int);
 static void	devstats(void);
 static void	doforkst(void);
 static void	dointr(void);
@@ -161,7 +157,9 @@ static void	kread(int, void *, size_t);
 static void	kreado(int, void *, size_t, size_t);
 static char    *kgetstr(const char *);
 static void	needhdr(int);
-static void	printhdr(void);
+static void	needresize(int);
+static void	doresize(void);
+static void	printhdr(int, u_long);
 static void	usage(void);
 
 static long	pct(long, long);
@@ -174,6 +172,7 @@ main(int argc, char *argv[])
 {
 	int c, todo;
 	unsigned int interval;
+	float f;
 	int reps;
 	char *memf, *nlistf;
 	char errbuf[_POSIX2_LINE_MAX];
@@ -181,7 +180,8 @@ main(int argc, char *argv[])
 	memf = nlistf = NULL;
 	interval = reps = todo = 0;
 	maxshowdevs = 2;
-	while ((c = getopt(argc, argv, "ac:fiM:mN:n:p:stw:z")) != -1) {
+	hflag = isatty(1);
+	while ((c = getopt(argc, argv, "ac:fhHiM:mN:n:Pp:stw:z")) != -1) {
 		switch (c) {
 		case 'a':
 			aflag++;
@@ -189,8 +189,17 @@ main(int argc, char *argv[])
 		case 'c':
 			reps = atoi(optarg);
 			break;
+		case 'P':
+			Pflag++;
+			break;
 		case 'f':
 			todo |= FORKSTAT;
+			break;
+		case 'h':
+			hflag = 1;
+			break;
+		case 'H':
+			hflag = 0;
 			break;
 		case 'i':
 			todo |= INTRSTAT;
@@ -226,7 +235,9 @@ main(int argc, char *argv[])
 #endif
 			break;
 		case 'w':
-			interval = atoi(optarg);
+			/* Convert to milliseconds. */
+			f = atof(optarg);
+			interval = f * 1000;
 			break;
 		case 'z':
 			todo |= ZMEMSTAT;
@@ -262,10 +273,10 @@ main(int argc, char *argv[])
 			warnx("kvm_nlist: %s", kvm_geterr(kd));
 		exit(1);
 	}
+	if (kd && Pflag)
+		errx(1, "Cannot use -P with crash dumps");
 
 	if (todo & VMSTAT) {
-		struct winsize winsize;
-
 		/*
 		 * Make sure that the userland devstat version matches the
 		 * kernel devstat version.  If not, exit and print a
@@ -276,17 +287,13 @@ main(int argc, char *argv[])
 
 
 		argv = getdrivedata(argv);
-		winsize.ws_row = 0;
-		(void) ioctl(STDOUT_FILENO, TIOCGWINSZ, (char *)&winsize);
-		if (winsize.ws_row > 0)
-			winlines = winsize.ws_row;
-
 	}
 
 #define	BACKWARD_COMPATIBILITY
 #ifdef	BACKWARD_COMPATIBILITY
 	if (*argv) {
-		interval = atoi(*argv);
+		f = atof(*argv);
+		interval = f * 1000;
 		if (*++argv)
 			reps = atoi(*argv);
 	}
@@ -296,7 +303,7 @@ main(int argc, char *argv[])
 		if (!reps)
 			reps = -1;
 	} else if (reps)
-		interval = 1;
+		interval = 1 * 1000;
 
 	if (todo & FORKSTAT)
 		doforkst();
@@ -335,10 +342,8 @@ getdrivedata(char **argv)
 	if ((num_devices = devstat_getnumdevs(NULL)) < 0)
 		errx(1, "%s", devstat_errbuf);
 
-	cur.dinfo = (struct devinfo *)malloc(sizeof(struct devinfo));
-	last.dinfo = (struct devinfo *)malloc(sizeof(struct devinfo));
-	bzero(cur.dinfo, sizeof(struct devinfo));
-	bzero(last.dinfo, sizeof(struct devinfo));
+	cur.dinfo = (struct devinfo *)calloc(1, sizeof(struct devinfo));
+	last.dinfo = (struct devinfo *)calloc(1, sizeof(struct devinfo));
 
 	if (devstat_getdevs(NULL, &cur) == -1)
 		errx(1, "%s", devstat_errbuf);
@@ -405,10 +410,90 @@ getuptime(void)
 }
 
 static void
+fill_pcpu(struct pcpu ***pcpup, int* maxcpup)
+{
+	struct pcpu **pcpu;
+	
+	int maxcpu, i;
+
+	*pcpup = NULL;
+	
+	if (kd == NULL)
+		return;
+
+	maxcpu = kvm_getmaxcpu(kd);
+	if (maxcpu < 0)
+		errx(1, "kvm_getmaxcpu: %s", kvm_geterr(kd));
+
+	pcpu = calloc(maxcpu, sizeof(struct pcpu *));
+	if (pcpu == NULL)
+		err(1, "calloc");
+
+	for (i = 0; i < maxcpu; i++) {
+		pcpu[i] = kvm_getpcpu(kd, i);
+		if (pcpu[i] == (struct pcpu *)-1)
+			errx(1, "kvm_getpcpu: %s", kvm_geterr(kd));
+	}
+
+	*maxcpup = maxcpu;
+	*pcpup = pcpu;
+}
+
+static void
+free_pcpu(struct pcpu **pcpu, int maxcpu)
+{
+	int i;
+
+	for (i = 0; i < maxcpu; i++)
+		free(pcpu[i]);
+	free(pcpu);
+}
+
+static void
 fill_vmmeter(struct vmmeter *vmmp)
 {
+	struct pcpu **pcpu;
+	int maxcpu, i;
+
 	if (kd != NULL) {
 		kread(X_SUM, vmmp, sizeof(*vmmp));
+		fill_pcpu(&pcpu, &maxcpu);
+		for (i = 0; i < maxcpu; i++) {
+			if (pcpu[i] == NULL)
+				continue;
+#define ADD_FROM_PCPU(i, name) \
+			vmmp->name += pcpu[i]->pc_cnt.name
+			ADD_FROM_PCPU(i, v_swtch);
+			ADD_FROM_PCPU(i, v_trap);
+			ADD_FROM_PCPU(i, v_syscall);
+			ADD_FROM_PCPU(i, v_intr);
+			ADD_FROM_PCPU(i, v_soft);
+			ADD_FROM_PCPU(i, v_vm_faults);
+			ADD_FROM_PCPU(i, v_cow_faults);
+			ADD_FROM_PCPU(i, v_cow_optim);
+			ADD_FROM_PCPU(i, v_zfod);
+			ADD_FROM_PCPU(i, v_ozfod);
+			ADD_FROM_PCPU(i, v_swapin);
+			ADD_FROM_PCPU(i, v_swapout);
+			ADD_FROM_PCPU(i, v_swappgsin);
+			ADD_FROM_PCPU(i, v_swappgsout);
+			ADD_FROM_PCPU(i, v_vnodein);
+			ADD_FROM_PCPU(i, v_vnodeout);
+			ADD_FROM_PCPU(i, v_vnodepgsin);
+			ADD_FROM_PCPU(i, v_vnodepgsout);
+			ADD_FROM_PCPU(i, v_intrans);
+			ADD_FROM_PCPU(i, v_tfree);
+			ADD_FROM_PCPU(i, v_forks);
+			ADD_FROM_PCPU(i, v_vforks);
+			ADD_FROM_PCPU(i, v_rforks);
+			ADD_FROM_PCPU(i, v_kthreads);
+			ADD_FROM_PCPU(i, v_forkpages);
+			ADD_FROM_PCPU(i, v_vforkpages);
+			ADD_FROM_PCPU(i, v_rforkpages);
+			ADD_FROM_PCPU(i, v_kthreadpages);
+#undef ADD_FROM_PCPU
+		}
+		free_pcpu(pcpu, maxcpu);
 	} else {
 		size_t size = sizeof(unsigned int);
 #define GET_VM_STATS(cat, name) \
@@ -484,7 +569,70 @@ fill_vmtotal(struct vmtotal *vmtp)
 	}
 }
 
+/* Determine how many cpu columns, and what index they are in kern.cp_times */
+static int
+getcpuinfo(u_long *maskp, int *maxidp)
+{
+	int maxcpu;
+	int maxid;
+	int ncpus;
+	int i, j;
+	int empty;
+	size_t size;
+	long *times;
+	u_long mask;
+
+	if (kd != NULL)
+		errx(1, "not implemented");
+	mask = 0;
+	ncpus = 0;
+	size = sizeof(maxcpu);
+	mysysctl("kern.smp.maxcpus", &maxcpu, &size, NULL, 0);
+	if (size != sizeof(maxcpu))
+		errx(1, "sysctl kern.smp.maxcpus");
+	size = sizeof(long) * maxcpu * CPUSTATES;
+	times = malloc(size);
+	if (times == NULL)
+		err(1, "malloc %zd bytes", size);
+	mysysctl("kern.cp_times", times, &size, NULL, 0);
+	maxid = (size / CPUSTATES / sizeof(long)) - 1;
+	for (i = 0; i <= maxid; i++) {
+		empty = 1;
+		for (j = 0; empty && j < CPUSTATES; j++) {
+			if (times[i * CPUSTATES + j] != 0)
+				empty = 0;
+		}
+		if (!empty) {
+			mask |= (1ul << i);
+			ncpus++;
+		}
+	}
+	if (maskp)
+		*maskp = mask;
+	if (maxidp)
+		*maxidp = maxid;
+	return (ncpus);
+}
+
+
+static void
+prthuman(u_int64_t val, int size)
+{
+	char buf[10];
+	int flags;
+
+	if (size < 5 || size > 9)
+		errx(1, "doofus");
+	flags = HN_B | HN_NOSPACE | HN_DECIMAL;
+	humanize_number(buf, size, val, "", HN_AUTOSCALE, flags);
+	printf("%*s", size, buf);
+}
+
 static int hz, hdrcnt;
+
+static long *cur_cp_times;
+static long *last_cp_times;
+static size_t size_cp_times;
 
 static void
 dovmstat(unsigned int interval, int reps)
@@ -493,10 +641,33 @@ dovmstat(unsigned int interval, int reps)
 	time_t uptime, halfuptime;
 	struct devinfo *tmp_dinfo;
 	size_t size;
+	int ncpus, maxid;
+	u_long cpumask;
+	int rate_adj;
 
 	uptime = getuptime();
 	halfuptime = uptime / 2;
+	rate_adj = 1;
+
+	/*
+	 * If the user stops the program (control-Z) and then resumes it,
+	 * print out the header again.
+	 */
 	(void)signal(SIGCONT, needhdr);
+
+	/*
+	 * If our standard output is a tty, then install a SIGWINCH handler
+	 * and set wresized so that our first iteration through the main
+	 * vmstat loop will peek at the terminal's current rows to find out
+	 * how many lines can fit in a screenful of output.
+	 */
+	if (isatty(fileno(stdout)) != 0) {
+		wresized = 1;
+		(void)signal(SIGWINCH, needresize);
+	} else {
+		wresized = 0;
+		winlines = VMSTAT_DEFAULT_LINES;
+	}
 
 	if (kd != NULL) {
 		if (namelist[X_STATHZ].n_type != 0 &&
@@ -514,16 +685,29 @@ dovmstat(unsigned int interval, int reps)
 		hz = clockrate.hz;
 	}
 
+	if (Pflag) {
+		ncpus = getcpuinfo(&cpumask, &maxid);
+		size_cp_times = sizeof(long) * (maxid + 1) * CPUSTATES;
+		cur_cp_times = calloc(1, size_cp_times);
+		last_cp_times = calloc(1, size_cp_times);
+	}
 	for (hdrcnt = 1;;) {
 		if (!--hdrcnt)
-			printhdr();
+			printhdr(ncpus, cpumask);
 		if (kd != NULL) {
-			kread(X_CPTIME, cur.cp_time, sizeof(cur.cp_time));
+			if (kvm_getcptime(kd, cur.cp_time) < 0)
+				errx(1, "kvm_getcptime: %s", kvm_geterr(kd));
 		} else {
 			size = sizeof(cur.cp_time);
 			mysysctl("kern.cp_time", &cur.cp_time, &size, NULL, 0);
 			if (size != sizeof(cur.cp_time))
 				errx(1, "cp_time size mismatch");
+		}
+		if (Pflag) {
+			size = size_cp_times;
+			mysysctl("kern.cp_times", cur_cp_times, &size, NULL, 0);
+			if (size != size_cp_times)
+				errx(1, "cp_times mismatch");
 		}
 
 		tmp_dinfo = last.dinfo;
@@ -560,7 +744,7 @@ dovmstat(unsigned int interval, int reps)
 				errx(1, "%s", devstat_errbuf);
 				break;
 			case 1:
-				printhdr();
+				printhdr(ncpus, cpumask);
 				break;
 			default:
 				break;
@@ -575,9 +759,17 @@ dovmstat(unsigned int interval, int reps)
 		(void)printf("%2d %1d %1d",
 		    total.t_rq - 1, total.t_dw + total.t_pw, total.t_sw);
 #define vmstat_pgtok(a) ((a) * (sum.v_page_size >> 10))
-#define	rate(x)	(((x) + halfuptime) / uptime)	/* round */
-		(void)printf(" %7d %6d ", vmstat_pgtok(total.t_avm),
-		    vmstat_pgtok(total.t_free));
+#define	rate(x)	(((x) * rate_adj + halfuptime) / uptime)	/* round */
+		if (hflag) {
+			printf(" ");
+			prthuman(total.t_avm * (u_int64_t)sum.v_page_size, 7);
+			printf(" ");
+			prthuman(total.t_free * (u_int64_t)sum.v_page_size, 6);
+			printf(" ");
+		} else {
+			printf(" %7d ", vmstat_pgtok(total.t_avm));
+			printf(" %6d ", vmstat_pgtok(total.t_free));
+		}
 		(void)printf("%5lu ",
 		    (unsigned long)rate(sum.v_vm_faults - osum.v_vm_faults));
 		(void)printf("%3lu ",
@@ -593,31 +785,35 @@ dovmstat(unsigned int interval, int reps)
 		(void)printf("%3lu ",
 		    (unsigned long)rate(sum.v_pdpages - osum.v_pdpages));
 		devstats();
-		(void)printf("%4lu %4lu %4lu ",
+		(void)printf("%4lu %4lu %4lu",
 		    (unsigned long)rate(sum.v_intr - osum.v_intr),
 		    (unsigned long)rate(sum.v_syscall - osum.v_syscall),
 		    (unsigned long)rate(sum.v_swtch - osum.v_swtch));
-		cpustats();
+		if (Pflag)
+			pcpustats(ncpus, cpumask, maxid);
+		else
+			cpustats();
 		(void)printf("\n");
 		(void)fflush(stdout);
 		if (reps >= 0 && --reps <= 0)
 			break;
 		osum = sum;
 		uptime = interval;
+		rate_adj = 1000;
 		/*
 		 * We round upward to avoid losing low-frequency events
-		 * (i.e., >= 1 per interval but < 1 per second).
+		 * (i.e., >= 1 per interval but < 1 per millisecond).
 		 */
 		if (interval != 1)
 			halfuptime = (uptime + 1) / 2;
 		else
 			halfuptime = 0;
-		(void)sleep(interval);
+		(void)usleep(interval * 1000);
 	}
 }
 
 static void
-printhdr(void)
+printhdr(int ncpus, u_long cpumask)
 {
 	int i, num_shown;
 
@@ -627,7 +823,15 @@ printhdr(void)
 		(void)printf(" disks %*s", num_shown * 4 - 7, "");
 	else if (num_shown == 1)
 		(void)printf("disk");
-	(void)printf("   faults      cpu\n");
+	(void)printf("   faults         ");
+	if (Pflag) {
+		for (i = 0; i < ncpus; i++) {
+			if (cpumask & (1ul << i))
+				printf("cpu%-2d    ", i);
+		}
+		printf("\n");
+	} else
+		printf("cpu\n");
 	(void)printf(" r b w     avm    fre   flt  re  pi  po    fr  sr ");
 	for (i = 0; i < num_devices; i++)
 		if ((dev_select[i].selected)
@@ -635,8 +839,16 @@ printhdr(void)
 			(void)printf("%c%c%d ", dev_select[i].device_name[0],
 				     dev_select[i].device_name[1],
 				     dev_select[i].unit_number);
-	(void)printf("  in   sy   cs us sy id\n");
-	hdrcnt = winlines - 2;
+	(void)printf("  in   sy   cs");
+	if (Pflag) {
+		for (i = 0; i < ncpus; i++)
+			printf(" us sy id");
+		printf("\n");
+	} else
+		printf(" us sy id\n");
+	if (wresized != 0)
+		doresize();
+	hdrcnt = winlines;
 }
 
 /*
@@ -647,6 +859,47 @@ needhdr(int dummy __unused)
 {
 
 	hdrcnt = 1;
+}
+
+/*
+ * When the terminal is resized, force an update of the maximum number of rows
+ * printed between each header repetition.  Then force a new header to be
+ * prepended to the next output.
+ */
+void
+needresize(int signo)
+{
+
+	wresized = 1;
+	hdrcnt = 1;
+}
+
+/*
+ * Update the global `winlines' count of terminal rows.
+ */
+void
+doresize(void)
+{
+	int status;
+	struct winsize w;
+
+	for (;;) {
+		status = ioctl(fileno(stdout), TIOCGWINSZ, &w);
+		if (status == -1 && errno == EINTR)
+			continue;
+		else if (status == -1)
+			err(1, "ioctl");
+		if (w.ws_row > 3)
+			winlines = w.ws_row - 3;
+		else
+			winlines = VMSTAT_DEFAULT_LINES;
+		break;
+	}
+
+	/*
+	 * Inhibit doresize() calls until we are rescheduled by SIGWINCH.
+	 */
+	wresized = 0;
 }
 
 #ifdef notyet
@@ -806,9 +1059,25 @@ devstats(void)
 }
 
 static void
+percent(double pct, int *over)
+{
+	char buf[10];
+	int l;
+
+	l = snprintf(buf, sizeof(buf), "%.0f", pct);
+	if (l == 1 && *over) {
+		printf("%s",  buf);
+		(*over)--;
+	} else
+		printf("%2s", buf);
+	if (l > 2)
+		(*over)++;
+}
+
+static void
 cpustats(void)
 {
-	int state;
+	int state, over;
 	double lpct, total;
 
 	total = 0;
@@ -818,11 +1087,54 @@ cpustats(void)
 		lpct = 100.0 / total;
 	else
 		lpct = 0.0;
-	(void)printf("%2.0f ", (cur.cp_time[CP_USER] +
-				cur.cp_time[CP_NICE]) * lpct);
-	(void)printf("%2.0f ", (cur.cp_time[CP_SYS] +
-				cur.cp_time[CP_INTR]) * lpct);
-	(void)printf("%2.0f", cur.cp_time[CP_IDLE] * lpct);
+	over = 0;
+	printf(" ");
+	percent((cur.cp_time[CP_USER] + cur.cp_time[CP_NICE]) * lpct, &over);
+	printf(" ");
+	percent((cur.cp_time[CP_SYS] + cur.cp_time[CP_INTR]) * lpct, &over);
+	printf(" ");
+	percent(cur.cp_time[CP_IDLE] * lpct, &over);
+}
+
+static void
+pcpustats(int ncpus, u_long cpumask, int maxid)
+{
+	int state, i;
+	double lpct, total;
+	long tmp;
+	int over;
+
+	/* devstats does this for cp_time */
+	for (i = 0; i <= maxid; i++) {
+		if ((cpumask & (1ul << i)) == 0)
+			continue;
+		for (state = 0; state < CPUSTATES; ++state) {
+			tmp = cur_cp_times[i * CPUSTATES + state];
+			cur_cp_times[i * CPUSTATES + state] -= last_cp_times[i * CPUSTATES + state];
+			last_cp_times[i * CPUSTATES + state] = tmp;
+		}
+	}
+
+	over = 0;
+	for (i = 0; i <= maxid; i++) {
+		if ((cpumask & (1ul << i)) == 0)
+			continue;
+		total = 0;
+		for (state = 0; state < CPUSTATES; ++state)
+			total += cur_cp_times[i * CPUSTATES + state];
+		if (total)
+			lpct = 100.0 / total;
+		else
+			lpct = 0.0;
+		printf(" ");
+		percent((cur_cp_times[i * CPUSTATES + CP_USER] +
+			 cur_cp_times[i * CPUSTATES + CP_NICE]) * lpct, &over);
+		printf(" ");
+		percent((cur_cp_times[i * CPUSTATES + CP_SYS] +
+			 cur_cp_times[i * CPUSTATES + CP_INTR]) * lpct, &over);
+		printf(" ");
+		percent(cur_cp_times[i * CPUSTATES + CP_IDLE] * lpct, &over);
+	}
 }
 
 static void
@@ -836,10 +1148,8 @@ dointr(void)
 
 	uptime = getuptime();
 	if (kd != NULL) {
-		intrcntlen = namelist[X_EINTRCNT].n_value -
-		    namelist[X_INTRCNT].n_value;
-		inamlen = namelist[X_EINTRNAMES].n_value -
-		    namelist[X_INTRNAMES].n_value;
+		kread(X_SINTRCNT, &intrcntlen, sizeof(intrcntlen));
+		kread(X_SINTRNAMES, &inamlen, sizeof(inamlen));
 		if ((intrcnt = malloc(intrcntlen)) == NULL ||
 		    (intrname = malloc(inamlen)) == NULL)
 			err(1, "malloc()");
@@ -870,18 +1180,18 @@ dointr(void)
 			istrnamlen = clen;
 		tintrname += clen + 1;
 	}
-	(void)printf("%-*s %20s %10s\n", istrnamlen, "interrupt", "total",
+	(void)printf("%-*s %20s %10s\n", (int)istrnamlen, "interrupt", "total",
 	    "rate");
 	inttotal = 0;
 	for (i = 0; i < nintr; i++) {
 		if (intrname[0] != '\0' && (*intrcnt != 0 || aflag))
-			(void)printf("%-*s %20lu %10lu\n", istrnamlen, intrname,
-			    *intrcnt, *intrcnt / uptime);
+			(void)printf("%-*s %20lu %10lu\n", (int)istrnamlen,
+			    intrname, *intrcnt, *intrcnt / uptime);
 		intrname += strlen(intrname) + 1;
 		inttotal += *intrcnt++;
 	}
-	(void)printf("%-*s %20llu %10llu\n", istrnamlen, "Total",
-	    (long long)inttotal, (long long)(inttotal / uptime));
+	(void)printf("%-*s %20" PRIu64 " %10" PRIu64 "\n", (int)istrnamlen,
+	    "Total", inttotal, inttotal / uptime);
 }
 
 static void
@@ -920,9 +1230,9 @@ domemstat_malloc(void)
 		if (memstat_get_numallocs(mtp) == 0 &&
 		    memstat_get_count(mtp) == 0)
 			continue;
-		printf("%13s %5lld %5lldK %7s %8lld  ",
+		printf("%13s %5" PRIu64 " %5" PRIu64 "K %7s %8" PRIu64 "  ",
 		    memstat_get_name(mtp), memstat_get_count(mtp),
-		    ((int64_t)memstat_get_bytes(mtp) + 1023) / 1024, "-",
+		    (memstat_get_bytes(mtp) + 1023) / 1024, "-",
 		    memstat_get_numallocs(mtp));
 		first = 1;
 		for (i = 0; i < 32; i++) {
@@ -968,16 +1278,18 @@ domemstat_zone(void)
 				    memstat_strerror(error));
 		}
 	}
-	printf("%-20s %8s  %8s  %8s  %8s  %8s  %8s\n\n", "ITEM", "SIZE",
-	    "LIMIT", "USED", "FREE", "REQUESTS", "FAILURES");
+	printf("%-20s %6s %6s %8s %8s %8s %4s %4s\n\n", "ITEM", "SIZE",
+	    "LIMIT", "USED", "FREE", "REQ", "FAIL", "SLEEP");
 	for (mtp = memstat_mtl_first(mtlp); mtp != NULL;
 	    mtp = memstat_mtl_next(mtp)) {
 		strlcpy(name, memstat_get_name(mtp), MEMTYPE_MAXNAME);
 		strcat(name, ":");
-		printf("%-20s %8llu, %8llu, %8llu, %8llu, %8llu, %8llu\n", name,
+		printf("%-20s %6" PRIu64 ", %6" PRIu64 ",%8" PRIu64 ",%8" PRIu64
+		    ",%8" PRIu64 ",%4" PRIu64 ",%4" PRIu64 "\n", name,
 		    memstat_get_size(mtp), memstat_get_countlimit(mtp),
 		    memstat_get_count(mtp), memstat_get_free(mtp),
-		    memstat_get_numallocs(mtp), memstat_get_failures(mtp));
+		    memstat_get_numallocs(mtp), memstat_get_failures(mtp),
+		    memstat_get_sleeps(mtp));
 	}
 	memstat_mtl_free(mtlp);
 	printf("\n");
@@ -1035,7 +1347,7 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr, "%s%s",
-		"usage: vmstat [-afimsz] [-c count] [-M core [-N system]] [-w wait]\n",
+		"usage: vmstat [-afHhimPsz] [-c count] [-M core [-N system]] [-w wait]\n",
 		"              [-n devs] [-p type,if,pass] [disks]\n");
 	exit(1);
 }

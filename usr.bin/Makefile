@@ -1,6 +1,5 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.39 2012/07/10 13:19:32 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.40 2012/07/20 02:40:53 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -15,22 +14,17 @@ SUBDIR=	alias \
 	asa \
 	asmgraph \
 	at \
-	${_atm} \
 	awk \
 	banner \
 	basename \
 	batt \
 	bc \
 	biff \
-	${_bluetooth} \
 	brainfuck \
 	brandelf \
 	bsdiff \
 	bzip2 \
 	bzip2recover \
-	${_c89} \
-	${_c99} \
-	${_calendar} \
 	cap_mkdb \
 	${_catman} \
 	cflow \
@@ -47,13 +41,11 @@ SUBDIR=	alias \
 	colrm \
 	column \
 	comm \
-	compile_et \
 	compress \
 	cpio \
 	cpufreq \
 	cpuset \
 	csplit \
-	ctags \
 	cut \
 	dc \
 	deroff \
@@ -69,7 +61,6 @@ SUBDIR=	alias \
 	false \
 	fetch \
 	file \
-	file2c \
 	find \
 	finger \
 	fmt \
@@ -92,7 +83,6 @@ SUBDIR=	alias \
 	${_host} \
 	${_iconv} \
 	id \
-	indent \
 	ipcrm \
 	ipcs \
 	join \
@@ -104,7 +94,6 @@ SUBDIR=	alias \
 	ktrace \
 	ktrdump \
 	lam \
-	last \
 	lastcomm \
 	ldd \
 	leave \
@@ -142,10 +131,7 @@ SUBDIR=	alias \
 	msearch \
 	msgs \
 	mt \
-	${_nc} \
 	ncal \
-	${_ncplist} \
-	${_ncplogin} \
 	netstat \
 	newgrp \
 	${_newkey} \
@@ -170,23 +156,18 @@ SUBDIR=	alias \
 	quota \
 	renice \
 	rev \
-	${_rlogin} \
 	rpcgen \
 	rpcinfo \
 	rs \
-	${_rsh} \
 	rup \
-	ruptime \
 	rusers \
 	rwall \
-	rwho \
 	script \
 	sdiff \
 	sed \
 	seq \
 	shar \
 	showmount \
-	${_smbutil} \
 	sockstat \
 	sort \
 	spell \
@@ -202,7 +183,6 @@ SUBDIR=	alias \
 	tar \
 	tcopy \
 	tee \
-	telnet \
 	tftp \
 	time \
 	tip \
@@ -223,13 +203,9 @@ SUBDIR=	alias \
 	uniq \
 	units \
 	unvis \
-	${_usbhidaction} \
-	${_usbhidctl} \
-	users \
 	uudecode \
 	uuencode \
 	unzip \
-	${_vacation} \
 	vgrind \
 	vi \
 	vis \
@@ -240,23 +216,19 @@ SUBDIR=	alias \
 	what \
 	whereis \
 	which \
-	who \
 	whois \
 	window \
 	write \
 	xargs \
 	xinstall \
 	${_xlint} \
-	xstr \
 	xz \
+	xzdec \
 	${_yacc} \
-	yes \
-	${_ypcat} \
-	${_ypmatch} \
-	${_ypwhich}
+	yes 
 
 .if ${MK_ATM} != "no"
-_atm=		atm
+SUBDIR+=	atm
 .endif
 
 .if ${MK_MAN} != "no"
@@ -264,18 +236,18 @@ _catman=	catman
 .endif
 
 .if ${MK_BIND_UTILS} != "no"
-_dig=		dig
-_host=		host
-_nslookup=	nslookup
-_nsupdate=	nsupdate
+SUBDIR+=	dig
+SUBDIR+=	host
+SUBDIR+=	nslookup
+SUBDIR+=	nsupdate
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
-_bluetooth=	bluetooth
+SUBDIR+=	bluetooth
 .endif
 
 .if ${MK_CALENDAR} != "no"
-_calendar=	calendar
+SUBDIR+=	calendar
 .endif
 
 .if ${MK_OPENSSL} != "no"
@@ -294,52 +266,68 @@ _mkesdb=	mkesdb
 .endif
 
 .if ${MK_NETCAT} != "no"
-_nc=		nc
+SUBDIR+=	nc
 .endif
 
 .if ${MK_NIS} != "no"
-_ypcat=		ypcat
-_ypmatch=	ypmatch
-_ypwhich=	ypwhich
+SUBDIR+=	ypcat
+SUBDIR+=	ypmatch
+SUBDIR+=	ypwhich
+.endif
+
+.if ${MK_QUOTAS} != "no"
+SUBDIR+=	quota
 .endif
 
 .if ${MK_RCMDS} != "no"
-_rlogin=	rlogin
-_rsh=		rsh
+SUBDIR+=	rlogin
+SUBDIR+=	rsh
+SUBDIR+=	ruptime
+SUBDIR+=	rwho
 .endif
 
 .if ${MK_SENDMAIL} != "no"
-_vacation=	vacation
+SUBDIR+=	vacation
+.endif
+
+.if ${MK_TELNET} != "no"
+SUBDIR+=	telnet
+.endif
+
+.if ${MK_TEXTPROC} != "no"
+SUBDIR+=	checknr
+SUBDIR+=	colcrt
+SUBDIR+=	ul
 .endif
 
 .if ${MK_TOOLCHAIN} != "no"
-_c89=		c89
-_c99=		c99
-_gprof=		gprof
-_lex=		lex
-_xlint=		xlint
-_yacc=		yacc
+SUBDIR+=	ar
+SUBDIR+=	c89
+SUBDIR+=	c99
+SUBDIR+=	compile_et
+SUBDIR+=	ctags
+SUBDIR+=	file2c
+SUBDIR+=	gprof
+SUBDIR+=	indent
+SUBDIR+=	lex
+SUBDIR+=	mkstr
+SUBDIR+=	rpcgen
+SUBDIR+=	unifdef
+SUBDIR+=	xlint
+SUBDIR+=	xstr
+SUBDIR+=	yacc
 .endif
 
 .if ${MK_USB} != "no"
-_usbhidaction=	usbhidaction
-_usbhidctl=	usbhidctl
+SUBDIR+=	usbhidaction
+SUBDIR+=	usbhidctl
 .endif
 
-.if ${MACHINE_ARCH} == "i386"
-.if ${MK_NCP} != "no"
-_ncplist=	ncplist
-_ncplogin=	ncplogin
-.endif
-_smbutil=	smbutil
-.endif
-
-.if ${MACHINE_ARCH} == "amd64"
-.if ${MK_NCP} != "no"
-_ncplist=	ncplist
-_ncplogin=	ncplogin
-.endif
-_smbutil=	smbutil
+.if ${MK_UTMPX} != "no"
+SUBDIR+=	last
+SUBDIR+=	users
+SUBDIR+=	who
+SUBDIR+=	wtmpcvt
 .endif
 
 .include <bsd.arch.inc.mk>

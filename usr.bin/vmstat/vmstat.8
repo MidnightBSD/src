@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,7 +26,6 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)vmstat.8	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/vmstat/vmstat.8,v 1.36 2006/11/02 19:53:57 rwatson Exp $
 .\" $MidnightBSD$
 .\"
 .Dd October 21, 2006
@@ -42,7 +37,7 @@
 .Sh SYNOPSIS
 .Nm
 .\" .Op Fl fimst
-.Op Fl afimsz
+.Op Fl afHhimPsz
 .Op Fl c Ar count
 .Op Fl M Ar core Op Fl N Ar system
 .Op Fl w Ar wait
@@ -95,6 +90,12 @@ and
 .Xr rfork 2
 system calls since system startup, and the number of pages of virtual memory
 involved in each.
+.It Fl h
+Changes memory columns into more easily human readable form.  Default if
+standard output is a terminal device.
+.It Fl H
+Changes memory columns into straight numbers.  Default if standard output
+is not a terminal device (such as a script).
 .It Fl i
 Report on the number of interrupts taken by each device since system
 startup.
@@ -115,6 +116,8 @@ Report on the usage of kernel dynamic memory allocated using
 by type.
 .It Fl n
 Change the maximum number of disks to display from the default of 2.
+.It Fl P
+Report per-cpu system/user/idle cpu statistics.
 .It Fl p
 Specify which types of devices to display.
 There are three different
@@ -202,6 +205,9 @@ seconds between each display.
 If no repeat
 .Ar wait
 interval is specified, the default is 1 second.
+The
+.Nm
+command will accept and honor a non-integer number of seconds.
 .It Fl z
 Report on memory used by the kernel zone allocator,
 .Xr uma 9 ,
@@ -211,7 +217,6 @@ by zone.
 By default,
 .Nm
 displays the following information:
-.Pp
 .Bl -tag -width indent
 .It procs
 Information about the numbers of processes in various states.

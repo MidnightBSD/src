@@ -13,13 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -39,9 +32,10 @@
 __COPYRIGHT(
 "@(#) Copyright (c) 1999\
  The NetBSD Foundation, Inc.  All rights reserved.");
-__RCSID("$FreeBSD: src/usr.bin/nl/nl.c,v 1.11 2006/12/22 05:54:19 imp Exp $");
+__RCSID("$MidnightBSD$");
 #endif    
 
+#define	_WITH_GETLINE
 #include <sys/types.h>
 
 #include <err.h>
@@ -96,12 +90,6 @@ static struct numbering_property numbering_properties[NP_LAST + 1] = {
 static void	filter(void);
 static void	parse_numbering(const char *, int);
 static void	usage(void);
-
-/*
- * Pointer to dynamically allocated input line buffer, and its size.
- */
-static char *buffer;
-static size_t buffersize;
 
 /*
  * Dynamically allocated buffer suitable for string representation of ints.
@@ -269,14 +257,6 @@ main(argc, argv)
 	memcpy(delim + delim1len, delim2, delim2len);
 	delimlen = delim1len + delim2len;
 
-	/* Determine the maximum input line length to operate on. */
-	if ((val = sysconf(_SC_LINE_MAX)) == -1) /* ignore errno */
-		val = LINE_MAX;
-	/* Allocate sufficient buffer space (including the terminating NUL). */
-	buffersize = (size_t)val + 1;
-	if ((buffer = malloc(buffersize)) == NULL)
-		err(EXIT_FAILURE, "cannot allocate input line buffer");
-
 	/* Allocate a buffer suitable for preformatting line number. */
 	intbuffersize = max(INT_STRLEN_MAXIMUM, width) + 1;	/* NUL */
 	if ((intbuffer = malloc(intbuffersize)) == NULL)
@@ -292,6 +272,9 @@ main(argc, argv)
 static void
 filter()
 {
+	char *buffer;
+	size_t buffersize;
+	ssize_t linelen;
 	int line;		/* logical line number */
 	int section;		/* logical page section */
 	unsigned int adjblank;	/* adjacent blank lines */
@@ -302,21 +285,23 @@ filter()
 	line = startnum;
 	section = BODY;
 
-	while (fgets(buffer, (int)buffersize, stdin) != NULL) {
+	buffer = NULL;
+	buffersize = 0;
+	while ((linelen = getline(&buffer, &buffersize, stdin)) > 0) {
 		for (idx = FOOTER; idx <= NP_LAST; idx++) {
 			/* Does it look like a delimiter? */
-			if (memcmp(buffer + delimlen * idx, delim,
-			    delimlen) == 0) {
-				/* Was this the whole line? */
-				if (buffer[delimlen * (idx + 1)] == '\n') {
-					section = idx;
-					adjblank = 0;
-					if (restart)
-						line = startnum;
-					goto nextline;
-				}
-			} else {
+			if (delimlen * (idx + 1) > linelen)
 				break;
+			if (memcmp(buffer + delimlen * idx, delim,
+			    delimlen) != 0)
+				break;
+			/* Was this the whole line? */
+			if (buffer[delimlen * (idx + 1)] == '\n') {
+				section = idx;
+				adjblank = 0;
+				if (restart)
+					line = startnum;
+				goto nextline;
 			}
 		}
 
@@ -354,7 +339,8 @@ filter()
 		} else {
 			(void)printf("%*s", width, "");
 		}
-		(void)printf("%s%s", sep, buffer);
+		(void)fputs(sep, stdout);
+		(void)fwrite(buffer, linelen, 1, stdout);
 
 		if (ferror(stdout))
 			err(EXIT_FAILURE, "output error");
@@ -364,6 +350,8 @@ nextline:
 
 	if (ferror(stdin))
 		err(EXIT_FAILURE, "input error");
+
+	free(buffer);
 }
 
 /*

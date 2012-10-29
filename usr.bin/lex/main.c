@@ -32,9 +32,9 @@ char copyright[] =
  All rights reserved.\n";
 #endif /* not lint */
 
-/* $Header: /home/cvs/src/usr.bin/lex/main.c,v 1.2 2011-12-31 00:11:10 laffer1 Exp $ */
+/* $Header: /home/cvs/src/usr.bin/lex/main.c,v 1.3 2012-10-29 20:54:16 laffer1 Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/lex/main.c,v 1.8.36.1 2009/08/03 08:13:06 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 
 #include "flexdef.h"

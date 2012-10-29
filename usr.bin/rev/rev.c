@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)rev.c	8.3 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/rev/rev.c,v 1.8 2004/12/15 06:24:57 ssouhlal Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 
@@ -57,7 +53,7 @@ __FBSDID("$FreeBSD: src/usr.bin/rev/rev.c,v 1.8 2004/12/15 06:24:57 ssouhlal Exp
 #include <unistd.h>
 #include <wchar.h>
 
-void usage(void);
+static void usage(void);
 
 int
 main(int argc, char *argv[])
@@ -96,7 +92,6 @@ main(int argc, char *argv[])
 		while ((p = fgetwln(fp, &len)) != NULL) {
 			if (p[len - 1] == '\n')
 				--len;
-			t = p + len - 1;
 			for (t = p + len - 1; t >= p; --t)
 				putwchar(*t);
 			putwchar('\n');

@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)who.1	8.2 (Berkeley) 12/30/93
-.\" $FreeBSD: src/usr.bin/who/who.1,v 1.17 2005/01/17 07:44:35 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd May 8, 2002
 .Dt WHO 1
@@ -79,7 +75,7 @@ An error occurred.
 Show idle time for each user in hours and minutes as
 .Ar hh Ns : Ns Ar mm ,
 .Ql \&.
-if the user has been idle less that a minute, and
+if the user has been idle less than a minute, and
 .Dq Li old
 if the user has been idle more than 24 hours.
 .It Cm am I
@@ -90,36 +86,36 @@ Equivalent to
 By default,
 .Nm
 gathers information from the file
-.Pa /var/run/utmp .
+.Pa /var/run/utx.active .
 An alternate
 .Ar file
 may be specified which is usually
-.Pa /var/log/wtmp
+.Pa /var/log/utx.log
 (or
-.Pa /var/log/wtmp.[0-6]
+.Pa /var/log/utx.log.[0-6]
 depending on site policy as
-.Pa wtmp
+.Pa utx.log
 can grow quite large and daily versions may or may not
 be kept around after compression by
 .Xr ac 8 ) .
 The
-.Pa wtmp
+.Pa utx.log
 file contains a record of every login, logout,
 crash, shutdown and date change
 since
-.Pa wtmp
+.Pa utx.log
 was last truncated or
 created.
 .Pp
 If
-.Pa /var/log/wtmp
+.Pa /var/log/utx.log
 is being used as the file, the user name may be empty
 or one of the special characters '|', '}' and '~'.
 Logouts produce
 an output line without any user name.
 For more information on the
 special characters, see
-.Xr utmp 5 .
+.Xr getutxent 3 .
 .Sh ENVIRONMENT
 The
 .Ev COLUMNS , LANG , LC_ALL
@@ -130,10 +126,10 @@ environment variables affect the execution of
 as described in
 .Xr environ 7 .
 .Sh FILES
-.Bl -tag -width /var/log/wtmp.[0-6] -compact
-.It Pa /var/run/utmp
-.It Pa /var/log/wtmp
-.It Pa /var/log/wtmp.[0-6]
+.Bl -tag -width /var/log/utx.log.[0-6] -compact
+.It Pa /var/run/utx.active
+.It Pa /var/log/utx.log
+.It Pa /var/log/utx.log.[0-6]
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -141,7 +137,7 @@ as described in
 .Xr last 1 ,
 .Xr users 1 ,
 .Xr w 1 ,
-.Xr utmp 5
+.Xr getutxent 3
 .Sh STANDARDS
 The
 .Nm

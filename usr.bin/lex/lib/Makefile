@@ -1,11 +1,12 @@
 # $MidnightBSD$
-# $FreeBSD: src/usr.bin/lex/lib/Makefile,v 1.10.2.1 2007/10/23 15:41:34 ru Exp $
 
 .include <bsd.own.mk>
 
 LIB=    ln
 SRCS=   libmain.c libyywrap.c
 NO_PIC=
+
+WARNS?=	2
 
 .if ${MK_INSTALLLIB} != "no"
 LINKS=  ${LIBDIR}/libln.a ${LIBDIR}/libl.a

@@ -1,5 +1,5 @@
-.\" Copyright (c) 1991, 1993
-.\"	The Regents of the University of California.  All rights reserved.
+.\" Copyright (c) 2010 Ed Schouten <ed@FreeBSD.org>
+.\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -9,14 +9,11 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
-.\"    may be used to endorse or promote products derived from this software
-.\"    without specific prior written permission.
 .\"
-.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 .\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 .\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
 .\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 .\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
 .\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -25,32 +22,45 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"	@(#)whoami.1	8.1 (Berkeley) 6/6/93
 .\" $MidnightBSD$
 .\"
-.Dd June 6, 1993
-.Dt WHOAMI 1
+.Dd January 14, 2010
+.Dt WTMPCVT 1
 .Os
 .Sh NAME
-.Nm whoami
-.Nd display effective user id
+.Nm wtmpcvt
+.Nd convert wtmp files to the utmpx format
 .Sh SYNOPSIS
 .Nm
+.Ar input
+.Ar output
 .Sh DESCRIPTION
 The
 .Nm
-utility has been obsoleted by the
-.Xr id 1
-utility, and is equivalent to
-.Dq Nm id Fl un .
-The command
-.Dq Nm id Fl p
-is suggested for normal interactive use.
-.Pp
+utility converts traditional
+.Pa wtmp
+user accounting database files to the same format that is used by
+.Pa /var/log/utx.log .
+This makes it possible to view their contents using existing accounting
+utilities, such as
+.Xr last 1
+and
+.Xr ac 8 .
+.Sh SEE ALSO
+.Xr last 1 ,
+.Xr getutxent 3 ,
+.Xr ac 8
+.Sh HISTORY
 The
 .Nm
-utility displays your effective user ID as a name.
-.Sh EXIT STATUS
-.Ex -std
-.Sh SEE ALSO
-.Xr id 1
+utility appeared in
+.Fx 9.0 .
+.Sh AUTHORS
+.An Ed Schouten Aq ed@FreeBSD.org
+.Sh BUGS
+The application assumes the
+.Ar input
+file has the same byte order as the host system.
+The
+.Ar output
+file can be used on any architecture.

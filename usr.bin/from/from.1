@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)from.1	8.2 (Berkeley) 12/30/93
-.\" $FreeBSD: src/usr.bin/from/from.1,v 1.15 2005/05/21 09:55:06 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd December 30, 1993
 .Dt FROM 1
@@ -55,7 +51,8 @@ The following options are available:
 .It Fl c
 Just print a count of messages and exit.
 .It Fl f Ar file
-The supplied file
+The supplied
+.Ar file
 is examined instead of the invoker's mailbox.
 If the
 .Fl f
@@ -63,7 +60,7 @@ option is used, the
 .Ar user
 argument should not be used.
 Read from standard input if file name
-.Ar -
+.Dq Fl
 is given.
 .It Fl s Ar sender
 Only mail from addresses containing
@@ -78,7 +75,7 @@ is given, the
 mailbox is examined instead of the invoker's own mailbox.
 (Privileges are required.)
 .Sh ENVIRONMENT
-.Bl -tag -width Fl
+.Bl -tag -width indent
 .It Ev MAIL
 If set, the location of the invoker's mailbox.
 Otherwise, the default in
@@ -86,7 +83,7 @@ Otherwise, the default in
 is used.
 .El
 .Sh FILES
-.Bl -tag -width /var/mail/* -compact
+.Bl -tag -width ".Pa /var/mail/*" -compact
 .It Pa /var/mail/*
 .El
 .Sh SEE ALSO
