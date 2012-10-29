@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 John Birrell (jb@freebsd.org)
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libdwarf/dwarf_init.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #include <stdlib.h>
@@ -579,6 +578,9 @@ dwarf_init_info(Dwarf_Debug dbg, Dwarf_Error *error)
 		offset = next_offset;
 	}
 
+	/* Build the function table. */
+	dwarf_build_function_table(dbg);
+
 	return ret;
 }
 
@@ -687,6 +689,7 @@ dwarf_elf_init(Elf *elf, int mode, Dwarf_Debug *ret_dbg, Dwarf_Error *error)
 		dbg->dbg_mode		= mode;
 
 		STAILQ_INIT(&dbg->dbg_cu);
+		STAILQ_INIT(&dbg->dbg_func);
 
 		*ret_dbg = dbg;
 

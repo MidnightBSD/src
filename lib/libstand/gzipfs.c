@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libstand/gzipfs.c,v 1.13 2004/01/21 20:12:23 jhb Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "stand.h"
 
@@ -41,6 +41,7 @@ struct z_file
     off_t		zf_dataoffset;
     z_stream		zf_zstream;
     char		zf_buf[Z_BUFSIZE];
+    int			zf_endseen;
 };
 
 static int	zf_fill(struct z_file *z);
@@ -60,14 +61,6 @@ struct fs_ops gzipfs_fsops = {
     zf_stat,
     null_readdir
 };
-
-#if 0
-void *
-calloc(int items, size_t size)
-{
-    return(malloc(items * size));
-}
-#endif
 
 static int
 zf_fill(struct z_file *zf)
@@ -211,10 +204,9 @@ zf_open(const char *fname, struct open_file *f)
     bzero(zf, sizeof(struct z_file));
     zf->zf_rawfd = rawfd;
 
-    /* Verify that the file is gzipped (XXX why do this afterwards?) */
+    /* Verify that the file is gzipped */
     if (check_header(zf)) {
 	close(zf->zf_rawfd);
-	inflateEnd(&(zf->zf_zstream));
 	free(zf);
 	return(EFTYPE);
     }
@@ -252,7 +244,7 @@ zf_read(struct open_file *f, void *buf, size_t size, size_t *resid)
     zf->zf_zstream.next_out = buf;			/* where and how much */
     zf->zf_zstream.avail_out = size;
 
-    while (zf->zf_zstream.avail_out) {
+    while (zf->zf_zstream.avail_out && zf->zf_endseen == 0) {
 	if ((zf->zf_zstream.avail_in == 0) && (zf_fill(zf) == -1)) {
 	    printf("zf_read: fill error\n");
 	    return(EIO);
@@ -260,12 +252,13 @@ zf_read(struct open_file *f, void *buf, size_t size, size_t *resid)
 	if (zf->zf_zstream.avail_in == 0) {		/* oops, unexpected EOF */
 	    printf("zf_read: unexpected EOF\n");
 	    if (zf->zf_zstream.avail_out == size)
-		return (EIO);
+		return(EIO);
 	    break;
 	}
 
 	error = inflate(&zf->zf_zstream, Z_SYNC_FLUSH);	/* decompression pass */
 	if (error == Z_STREAM_END) {			/* EOF, all done */
+	    zf->zf_endseen = 1;
 	    break;
 	}
 	if (error != Z_OK) {				/* argh, decompression error */
@@ -284,12 +277,13 @@ zf_rewind(struct open_file *f)
     struct z_file	*zf = (struct z_file *)f->f_fsdata;
 
     if (lseek(zf->zf_rawfd, zf->zf_dataoffset, SEEK_SET) == -1)
-	return -1;
+	return(-1);
     zf->zf_zstream.avail_in = 0;
     zf->zf_zstream.next_in = NULL;
+    zf->zf_endseen = 0;
     (void)inflateReset(&zf->zf_zstream);
 
-    return 0;
+    return(0);
 }
 
 static off_t
@@ -310,12 +304,12 @@ zf_seek(struct open_file *f, off_t offset, int where)
 	target = -1;
     default:
 	errno = EINVAL;
-	return (-1);
+	return(-1);
     }
 
     /* rewind if required */
     if (target < zf->zf_zstream.total_out && zf_rewind(f) != 0)
-	return -1;
+	return(-1);
 
     /* skip forwards if required */
     while (target > zf->zf_zstream.total_out) {
@@ -325,7 +319,7 @@ zf_seek(struct open_file *f, off_t offset, int where)
 	    return(-1);
     }
     /* This is where we are (be honest if we overshot) */
-    return (zf->zf_zstream.total_out);
+    return(zf->zf_zstream.total_out);
 }
 
 

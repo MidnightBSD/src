@@ -32,7 +32,7 @@
 
 #if defined(LIBC_RCS) && !defined(lint)
 	.text
-	.asciz "$FreeBSD: src/lib/libstand/i386/_setjmp.S,v 1.6 2007/01/09 01:02:04 imp Exp $"
+	.asciz "$FreeBSD$"
 #endif /* LIBC_RCS and not lint */
 
 /*
@@ -58,6 +58,7 @@ ENTRY(_setjmp)
 	movl	%edi,20(%eax)
 	xorl	%eax,%eax
 	ret
+END(_setjmp)
 
 ENTRY(_longjmp)
 	movl	4(%esp),%edx
@@ -73,3 +74,4 @@ ENTRY(_longjmp)
 	incl	%eax
 1:	movl	%ecx,0(%esp)
 	ret
+END(_longjmp)

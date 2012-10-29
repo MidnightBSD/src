@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libstand/read.c,v 1.6 2007/01/09 01:02:04 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include "stand.h"

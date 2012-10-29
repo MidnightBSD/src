@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libstand/stand.h,v 1.42 2007/01/09 01:02:04 imp Exp $
+ * $MidnightBSD$
  * From	$NetBSD: stand.h,v 1.22 1997/06/26 19:17:40 drochner Exp $	
  */
 
@@ -65,14 +65,12 @@
 #include <sys/cdefs.h>
 #include <sys/stat.h>
 #include <sys/dirent.h>
+
+/* this header intentionally exports NULL from <string.h> */
 #include <string.h>
 
 #define CHK(fmt, args...)	printf("%s(%d): " fmt "\n", __func__, __LINE__ , ##args)
 #define PCHK(fmt, args...)	{printf("%s(%d): " fmt "\n", __func__, __LINE__ , ##args); getchar();}
-
-#ifndef NULL
-#define	NULL	0
-#endif
 
 /* Avoid unwanted userlandish components */
 #define _KERNEL
@@ -167,7 +165,7 @@ struct open_file {
 #define SOPEN_RASIZE	512
 };
 
-#define	SOPEN_MAX	8
+#define	SOPEN_MAX	64
 extern struct open_file files[];
 
 /* f_flags values */
@@ -235,10 +233,6 @@ extern void	*calloc(size_t n1, size_t n2);
 extern void	*realloc(void *ptr, size_t size);
 extern void	*reallocf(void *ptr, size_t size);
 extern void	mallocstats(void);
-
-/* disklabel support (undocumented, may be junk) */
-struct		disklabel;
-extern char	*getdisklabel(const char *, struct disklabel *);
 
 extern int	printf(const char *fmt, ...) __printflike(1, 2);
 extern void	vprintf(const char *fmt, __va_list);

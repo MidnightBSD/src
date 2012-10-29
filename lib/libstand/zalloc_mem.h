@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libstand/zalloc_mem.h,v 1.3 1999/08/28 00:05:35 peter Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -37,15 +37,15 @@
 
 typedef struct MemNode {
     struct MemNode	*mr_Next;
-    iaddr_t		mr_Bytes;
+    uintptr_t		mr_Bytes;
 } MemNode;
 
 typedef struct MemPool {
     void		*mp_Base;  
     void		*mp_End;
     MemNode		*mp_First; 
-    iaddr_t		mp_Size;
-    iaddr_t		mp_Used;
+    uintptr_t		mp_Size;
+    uintptr_t		mp_Used;
 } MemPool;
 
 #define MEMNODE_SIZE_MASK       ((sizeof(MemNode) <= 8) ? 7 : 15)

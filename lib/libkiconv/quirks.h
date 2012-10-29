@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Ryuichiro Imura
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkiconv/quirks.h,v 1.1 2003/09/26 20:26:20 fjoe Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _KICONV_QUIRKS_H_

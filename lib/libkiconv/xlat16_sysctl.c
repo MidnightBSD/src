@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2001, Boris Popov
  * All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkiconv/xlat16_sysctl.c,v 1.2 2005/08/24 12:38:26 imura Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -71,11 +70,15 @@ kiconv_add_xlat16_table(const char *to, const char *from, const void *data, int 
 
 #else /* statically linked */
 
+#include <sys/types.h>
+#include <sys/iconv.h>
 #include <errno.h>
 
 int
-kiconv_add_xlat16_table(const char *to, const char *from, const void *data, int datalen)
+kiconv_add_xlat16_table(const char *to __unused, const char *from __unused,
+    const void *data __unused, int datalen __unused)
 {
+
 	return (EINVAL);
 }
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 John Birrell (jb@freebsd.org)
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libdwarf/_libdwarf.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	__LIBDWARF_H_
@@ -164,6 +163,37 @@ struct _Dwarf_Debug {
 			dbg_cu;		/* List of compilation units. */
 	Dwarf_CU	dbg_cu_current;
 					/* Ptr to the current compilation unit. */
+
+	STAILQ_HEAD(, _Dwarf_Func) dbg_func; /* List of functions */
 };
+
+struct _Dwarf_Func {
+	Dwarf_Die	func_die;
+	const char	*func_name;
+	Dwarf_Addr	func_low_pc;
+	Dwarf_Addr	func_high_pc;
+	int		func_is_inlined;
+	/* inlined instance */
+	STAILQ_HEAD(, _Dwarf_Inlined_Func) func_inlined_instances;
+	STAILQ_ENTRY(_Dwarf_Func) func_next;
+};
+
+struct _Dwarf_Inlined_Func {
+	struct _Dwarf_Func *ifunc_origin;
+	Dwarf_Die	ifunc_abstract;
+	Dwarf_Die	ifunc_concrete;
+	Dwarf_Addr	ifunc_low_pc;
+	Dwarf_Addr	ifunc_high_pc;
+	STAILQ_ENTRY(_Dwarf_Inlined_Func) ifunc_next;
+};
+
+void	dwarf_build_function_table(Dwarf_Debug dbg);
+
+#ifdef DWARF_DEBUG
+#include <assert.h>
+#define DWARF_ASSERT(x)	assert(x)
+#else
+#define DWARF_ASSERT(x)
+#endif
 
 #endif /* !__LIBDWARF_H_ */

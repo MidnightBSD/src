@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libstand/open.c,v 1.7 2007/01/09 01:02:04 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "stand.h"
 
@@ -113,6 +113,7 @@ open(const char *fname, int mode)
     /* see if we opened a raw device; otherwise, 'file' is the file name. */
     if (file == (char *)0 || *file == '\0') {
 	f->f_flags |= F_RAW;
+	f->f_rabuf = NULL;
 	return (fd);
     }
 

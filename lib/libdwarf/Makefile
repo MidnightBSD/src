@@ -14,17 +14,16 @@ SRCS=	\
 	dwarf_errno.c		\
 	dwarf_finish.c		\
 	dwarf_form.c		\
+	dwarf_func.c		\
 	dwarf_init.c		\
 	dwarf_loc.c
 
 INCS=	dwarf.h libdwarf.h
 
-CFLAGS+=	-I. -I${.CURDIR}
+CFLAGS+=	-I${.CURDIR}
 
-SHLIB_MAJOR=	1
+SHLIB_MAJOR=	3
 
-WARNS?=	6
-
-WITHOUT_MAN=	yes
+WITHOUT_MAN=
 
 .include <bsd.lib.mk>

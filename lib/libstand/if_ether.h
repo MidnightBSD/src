@@ -30,7 +30,7 @@
  *
  *	@(#)if_ether.h	8.1 (Berkeley) 6/10/93
  *
- * $FreeBSD: src/lib/libstand/if_ether.h,v 1.4 2007/01/09 01:02:03 imp Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -156,7 +156,7 @@ struct	ifqueue arpintrq;
 void	arpwhohas(struct arpcom *, struct in_addr *);
 void	arpintr(void);
 int	arpresolve(struct arpcom *,
-	    struct rtentry *, struct mbuf *, struct sockaddr *, u_char *);
+	    struct rtentry *, struct mbuf *, struct sockaddr *, u_char *, struct llentry **);
 void	arp_ifinit(struct arpcom *, struct ifaddr *);
 void	arp_rtrequest(int, struct rtentry *, struct sockaddr *);
 
@@ -233,7 +233,7 @@ struct ether_multistep {
 #ifdef _KERNEL
 void arp_rtrequest(int, struct rtentry *, struct sockaddr *);
 int arpresolve(struct arpcom *, struct rtentry *, struct mbuf *,
-		    struct sockaddr *, u_char *);
+		    struct sockaddr *, u_char *, struct llentry **);
 void arpintr(void);
 int arpioctl(u_long, caddr_t);
 void arp_ifinit(struct arpcom *, struct ifaddr *);

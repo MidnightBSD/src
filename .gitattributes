@@ -36581,6 +36581,7 @@ lib/libdwarf/dwarf_errmsg.c -text
 lib/libdwarf/dwarf_errno.c -text
 lib/libdwarf/dwarf_finish.c -text
 lib/libdwarf/dwarf_form.c -text
+lib/libdwarf/dwarf_func.c -text
 lib/libdwarf/dwarf_init.c -text
 lib/libdwarf/dwarf_loc.c -text
 lib/libdwarf/libdwarf.h -text
@@ -37023,6 +37024,7 @@ lib/libmemstat/memstat_malloc.c -text
 lib/libmemstat/memstat_uma.c -text
 lib/libmilter/Makefile -text
 lib/libmp/Makefile -text
+lib/libmp/Symbol.map -text
 lib/libmp/libmp.3 -text
 lib/libmp/mp.h -text
 lib/libmp/mpasbn.c -text
