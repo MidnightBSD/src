@@ -37483,7 +37483,7 @@ lib/libthread_db/arch/i386/libc_r_md.c -text
 lib/libthread_db/arch/i386/libpthread_md.c -text
 lib/libthread_db/arch/sparc64/libc_r_md.c -text
 lib/libthread_db/arch/sparc64/libpthread_md.c -text
-lib/libthread_db/libc_r_db.c -text
+lib/libthread_db/kse.h -text
 lib/libthread_db/libpthread_db.c -text
 lib/libthread_db/libpthread_db.h -text
 lib/libthread_db/libthr_db.c -text

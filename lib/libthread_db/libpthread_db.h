@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthread_db/libpthread_db.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _LIBPTHREAD_DB_H_
@@ -34,13 +34,14 @@
 
 #include "thread_db_int.h"
 
-struct pt_map {
-	enum {
-		PT_NONE,
-		PT_USER,
-		PT_LWP
-	} type;
+enum pt_type {
+	PT_NONE,
+	PT_USER,
+	PT_LWP
+};
 
+struct pt_map {
+	enum pt_type	type;
 	union {
 		lwpid_t		lwp;
 		psaddr_t	thr;

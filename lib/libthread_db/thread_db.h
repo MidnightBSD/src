@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthread_db/thread_db.h,v 1.6.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _THREAD_DB_H_
@@ -95,7 +95,7 @@ typedef enum {
 
 typedef struct {
 	td_thr_events_e	event;
-	const td_thrhandle_t *th_p;
+	psaddr_t	th_p;
 	uintptr_t	data;
 } td_event_msg_t;
 
@@ -191,6 +191,7 @@ typedef struct {
 	psaddr_t	ti_startfunc;
 	psaddr_t	ti_stkbase;
 	size_t		ti_stksize;
+	siginfo_t	ti_siginfo;
 } td_thrinfo_t;
 
 /*
@@ -239,7 +240,8 @@ td_err_e td_thr_setxmmregs(const td_thrhandle_t *, const char *);
 td_err_e td_thr_setfpregs(const td_thrhandle_t *, const prfpregset_t *);
 td_err_e td_thr_setgregs(const td_thrhandle_t *, const prgregset_t);
 td_err_e td_thr_validate(const td_thrhandle_t *);
-td_err_e td_thr_tls_get_addr(const td_thrhandle_t *, void *, size_t, void **);
+td_err_e td_thr_tls_get_addr(const td_thrhandle_t *, psaddr_t, size_t,
+    psaddr_t *);
 
 /* FreeBSD specific extensions. */
 td_err_e td_thr_sstep(const td_thrhandle_t *, int);
