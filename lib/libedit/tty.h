@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)tty.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: tty.h,v 1.11 2005/06/01 11:37:52 lukem Exp $
- * $FreeBSD: src/lib/libedit/tty.h,v 1.5 2005/08/07 20:51:52 stefanf Exp $
+ * $MidnightBSD$
  */
 
 /*

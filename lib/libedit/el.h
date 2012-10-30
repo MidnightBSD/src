@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)el.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: el.h,v 1.17 2006/12/15 22:13:33 christos Exp $
- * $FreeBSD: src/lib/libedit/el.h,v 1.7 2007/06/10 19:06:09 stefanf Exp $
+ * $MidnightBSD$
  */
 
 /*

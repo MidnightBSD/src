@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@
 static char sccsid[] = "@(#)emacs.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libedit/emacs.c,v 1.11 2007/03/11 18:30:22 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * emacs.c: Emacs functions

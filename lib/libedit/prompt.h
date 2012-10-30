@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)prompt.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: prompt.h,v 1.6 2003/08/07 16:44:32 agc Exp $
- * $FreeBSD: src/lib/libedit/prompt.h,v 1.3 2005/08/07 20:51:52 stefanf Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -48,11 +47,13 @@ typedef char * (*el_pfunc_t)(EditLine*);
 typedef struct el_prompt_t {
 	el_pfunc_t	p_func;	/* Function to return the prompt	*/
 	coord_t		p_pos;	/* position in the line after prompt	*/
+	char		p_ignore;	/* character to start/end literal 
+*/
 } el_prompt_t;
 
 protected void	prompt_print(EditLine *, int);
-protected int	prompt_set(EditLine *, el_pfunc_t, int);
-protected int	prompt_get(EditLine *, el_pfunc_t *, int);
+protected int	prompt_set(EditLine *, el_pfunc_t, char, int);
+protected int	prompt_get(EditLine *, el_pfunc_t *, char *, int);
 protected int	prompt_init(EditLine *);
 protected void	prompt_end(EditLine *);
 

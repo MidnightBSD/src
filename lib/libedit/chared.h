@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)chared.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: chared.h,v 1.17 2006/03/06 21:11:56 christos Exp $
- * $FreeBSD: src/lib/libedit/chared.h,v 1.9 2007/03/11 18:30:22 stefanf Exp $
+ * $MidnightBSD$
  */
 
 /*

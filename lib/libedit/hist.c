@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@
 static char sccsid[] = "@(#)hist.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libedit/hist.c,v 1.6 2005/08/07 20:51:52 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * hist.c: History access functions

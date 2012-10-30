@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@
 static char sccsid[] = "@(#)map.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libedit/map.c,v 1.14 2007/03/11 21:47:39 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * map.c: Editor function definitions

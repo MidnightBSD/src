@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)term.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: term.h,v 1.18 2006/11/24 00:01:17 christos Exp $
- * $FreeBSD: src/lib/libedit/term.h,v 1.8 2007/06/10 19:06:09 stefanf Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -80,12 +79,13 @@ typedef struct {
 #define	A_K_RT		3
 #define	A_K_HO		4
 #define	A_K_EN		5
-#define	A_K_NKEYS	6
+#define	A_K_DE		6
+#define	A_K_NKEYS	7
 
 protected void	term_move_to_line(EditLine *, int);
 protected void	term_move_to_char(EditLine *, int);
 protected void	term_clear_EOL(EditLine *, int);
-protected void	term_overwrite(EditLine *, const char *, int);
+protected void	term_overwrite(EditLine *, const char *, size_t);
 protected void	term_insertwrite(EditLine *, char *, int);
 protected void	term_deletechars(EditLine *, int);
 protected void	term_clear_screen(EditLine *);
@@ -105,8 +105,8 @@ protected int	term_gettc(EditLine *, int, char **);
 protected int	term_telltc(EditLine *, int, const char **);
 protected int	term_echotc(EditLine *, int, const char **);
 protected void	term_writec(EditLine *, int);
-protected int	term__putc(int);
-protected void	term__flush(void);
+protected int	term__putc(EditLine *, int);
+protected void	term__flush(EditLine *);
 
 /*
  * Easy access macros

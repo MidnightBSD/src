@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,14 +29,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$NetBSD: search.c,v 1.20 2004/11/04 01:16:03 christos Exp $
+ *	$NetBSD: search.c,v 1.21 2009/02/15 21:55:23 christos Exp $
  */
 
 #if !defined(lint) && !defined(SCCSID)
 static char sccsid[] = "@(#)search.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libedit/search.c,v 1.10 2005/08/07 20:51:52 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * search.c: History and character search functions
@@ -208,7 +207,7 @@ ce_inc_search(EditLine *el, int dir)
 	el_action_t ret = CC_NORM;
 
 	int ohisteventno = el->el_history.eventno;
-	int oldpatlen = el->el_search.patlen;
+	size_t oldpatlen = el->el_search.patlen;
 	int newdir = dir;
 	int done, redo;
 

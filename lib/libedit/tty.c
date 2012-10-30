@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,14 +29,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$NetBSD: tty.c,v 1.24 2006/03/18 09:07:05 christos Exp $
+ *	$NetBSD: tty.c,v 1.25 2006/03/18 09:09:41 christos Exp $
  */
 
 #if !defined(lint) && !defined(SCCSID)
 static char sccsid[] = "@(#)tty.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libedit/tty.c,v 1.9 2007/03/11 21:47:40 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * tty.c: tty interface stuff

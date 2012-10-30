@@ -1,13 +1,13 @@
 #	$NetBSD: Makefile,v 1.34 2005/05/28 12:02:53 lukem Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/lib/libedit/Makefile,v 1.31 2007/05/21 02:49:03 deischen Exp $
 # $MidnightBSD$
 
 LIB=	edit
-SHLIB_MAJOR=	6
+SHLIB_MAJOR=	7
 SHLIBDIR?= /lib
 
-OSRCS=	chared.c common.c el.c emacs.c fcns.c help.c hist.c key.c map.c \
+OSRCS=	chared.c common.c el.c emacs.c fcns.c filecomplete.c help.c \
+	hist.c key.c map.c \
 	parse.c prompt.c read.c refresh.c search.c sig.c term.c tty.c vi.c
 
 DPADD=	${LIBNCURSES}
@@ -26,15 +26,22 @@ MLINKS=	editline.3 el_deletestr.3 editline.3 el_end.3 editline.3 el_init.3 \
 	editline.3 tok_line.3 editline.3 tok_str.3
 
 # For speed and debugging
-#SRCS=   ${OSRCS} tokenizer.c history.c
+#SRCS=   ${OSRCS}
 # For protection
-SRCS=	editline.c tokenizer.c history.c
+SRCS=	editline.c
+SRCS+=	tokenizer.c history.c readline.c
 SRCS+=	common.h emacs.h fcns.h help.h vi.h
 CLEANFILES+= common.h editline.c emacs.h fcns.c fcns.h help.c help.h vi.h
 
-CFLAGS+= -I. -I${.CURDIR}
+INCS=	histedit.h
+
+CFLAGS+= -I. -I${.CURDIR} -I${.CURDIR}/edit
 CFLAGS+= #-DDEBUG_TTY -DDEBUG_KEY -DDEBUG_READ -DDEBUG -DDEBUG_REFRESH
 CFLAGS+= #-DDEBUG_PASTE -DDEBUG_EDIT
+
+WARNS?=	1
+
+SUBDIR= edit/readline
 
 AHDR=	vi.h emacs.h common.h
 ASRC=	${.CURDIR}/vi.c ${.CURDIR}/emacs.c ${.CURDIR}/common.c
