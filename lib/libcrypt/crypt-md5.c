@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/lib/libcrypt/crypt-md5.c,v 1.13 2003/06/02 21:43:14 markm Exp $ */
 __MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>

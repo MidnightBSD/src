@@ -36527,6 +36527,8 @@ lib/libcompiler_rt/__sync_val_compare_and_swap_n.h -text
 lib/libcrypt/Makefile -text
 lib/libcrypt/crypt-md5.c -text
 lib/libcrypt/crypt-nthash.c -text
+lib/libcrypt/crypt-sha256.c -text
+lib/libcrypt/crypt-sha512.c -text
 lib/libcrypt/crypt.3 -text
 lib/libcrypt/crypt.c -text
 lib/libcrypt/crypt.h -text

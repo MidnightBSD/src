@@ -1,18 +1,20 @@
-# $MidnightBSD: src/lib/libcrypt/Makefile,v 1.4 2011/03/19 23:37:17 laffer1 Exp $
-# $FreeBSD: src/lib/libcrypt/Makefile,v 1.39 2007/05/21 02:49:03 deischen Exp $
+#
+# $MidnightBSD$
 #
 
 SHLIBDIR?=	/lib
 
 .include <bsd.own.mk>
 
-SHLIB_MAJOR=	4
+SHLIB_MAJOR=	5
 LIB=		crypt
 
 .PATH:		${.CURDIR}/../libmd
 SRCS=		crypt.c misc.c \
 		crypt-md5.c md5c.c \
-		crypt-nthash.c md4c.c
+		crypt-nthash.c md4c.c \
+		crypt-sha256.c sha256c.c \
+		crypt-sha512.c sha512c.c
 MAN=		crypt.3
 MLINKS=		crypt.3 crypt_get_format.3 crypt.3 crypt_set_format.3
 CFLAGS+=	-I${.CURDIR}/../libmd -I${.CURDIR}/../libutil
@@ -24,14 +26,14 @@ SRCS+=		crypt-des.c crypt-blowfish.c blowfish.c
 CFLAGS+=	-I${.CURDIR} -DHAS_DES -DHAS_BLOWFISH
 .endif
 
-# And the auth_getval() code and support.
-.PATH:		${.CURDIR}/../libutil
-SRCS+=		auth.c property.c
-.for sym in auth_getval property_find properties_read properties_free properties_count \
-	    MD4Init MD4Final MD4Update MD4Pad \
-	    MD5Init MD5Final MD5Update MD5Pad
+.for sym in MD4Init MD4Final MD4Update MD4Pad \
+	    MD5Init MD5Final MD5Update MD5Pad \
+	    SHA256_Init SHA256_Final SHA256_Update \
+	    SHA512_Init SHA512_Final SHA512_Update
 CFLAGS+=	-D${sym}=__${sym}
 .endfor
+
+WARNS?=		2
 
 PRECIOUSLIB=
 

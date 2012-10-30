@@ -28,9 +28,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: src/lib/libcrypt/crypt.3,v 1.32 2007/04/04 14:04:55 ceri Exp $
 .\"
-.Dd January 19, 1997
+.Dd April 9, 2011
 .Dt CRYPT 3
 .Os
 .Sh NAME
@@ -189,6 +188,12 @@ MD5
 Blowfish
 .It
 NT-Hash
+.It
+(unused)
+.It
+SHA-256
+.It
+SHA-512
 .El
 .Pp
 Other crypt formats may be easily added.
@@ -227,7 +232,9 @@ Valid values are
 .\"
 .Ql des ,
 .Ql blf ,
-.Ql md5
+.Ql md5 ,
+.Ql sha256 ,
+.Ql sha512
 and
 .Ql nth .
 .Pp
@@ -235,12 +242,6 @@ The
 .Fn crypt_set_format
 function sets the default encoding format according to the supplied
 .Fa string .
-.Pp
-The global default format can be set using the
-.Pa /etc/auth.conf
-file using the
-.Va crypt_default
-property.
 .Sh RETURN VALUES
 The
 .Fn crypt
@@ -257,9 +258,7 @@ Otherwise, a value of 0 is returned.
 .Sh SEE ALSO
 .Xr login 1 ,
 .Xr passwd 1 ,
-.Xr auth_getval 3 ,
 .Xr getpass 3 ,
-.Xr auth.conf 5 ,
 .Xr passwd 5
 .Sh HISTORY
 A rotor-based

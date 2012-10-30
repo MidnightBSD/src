@@ -1,4 +1,4 @@
-/*-
+/*
  * Copyright (c) 1999
  *      Mark Murray.  All rights reserved.
  *
@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/lib/libcrypt/crypt.c,v 1.23 2003/06/02 19:29:27 markm Exp $ */
 __MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
@@ -64,29 +63,39 @@ static const struct {
 		"$3$"
 	},
 	{
+		"sha256",
+		crypt_sha256,
+		"$5$"
+	},
+	{
+		"sha512",
+		crypt_sha512,
+		"$6$"
+	},
+	{
 		NULL,
 		NULL,
 		NULL
 	}
 };
 
+#ifdef HAS_DES
+#define CRYPT_DEFAULT	"des"
+#else
+#define CRYPT_DEFAULT	"md5"
+#endif
+
 static int crypt_type = -1;
 
 static void
 crypt_setdefault(void)
 {
-	char *def;
 	size_t i;
 
 	if (crypt_type != -1)
 		return;
-	def = auth_getval("crypt_default");
-	if (def == NULL) {
-		crypt_type = 0;
-		return;
-	}
 	for (i = 0; i < sizeof(crypt_types) / sizeof(crypt_types[0]) - 1; i++) {
-		if (strcmp(def, crypt_types[i].name) == 0) {
+		if (strcmp(CRYPT_DEFAULT, crypt_types[i].name) == 0) {
 			crypt_type = (int)i;
 			return;
 		}
