@@ -37,13 +37,12 @@ static const char sccsid[] = "@(#)sys_term.c	8.4+1 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/telnet/telnetd/sys_term.c,v 1.18 2003/05/04 02:54:49 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/tty.h>
 #include <libutil.h>
 #include <stdlib.h>
-#include <utmp.h>
 
 #include "telnetd.h"
 #include "pathnames.h"
@@ -54,19 +53,6 @@ __FBSDID("$FreeBSD: src/contrib/telnet/telnetd/sys_term.c,v 1.18 2003/05/04 02:5
 
 int cleanopen(char *);
 void scrub_env(void);
-
-struct	utmp wtmp;
-
-#ifdef _PATH_WTMP
-char    wtmpf[] = _PATH_WTMP;
-#else
-char	wtmpf[]	= "/var/log/wtmp";
-#endif
-#ifdef _PATH_UTMP
-char    utmpf[] = _PATH_UTMP;
-#else
-char	utmpf[] = "/var/run/utmp";
-#endif
 
 char	*envinit[3];
 extern char **environ;
@@ -392,46 +378,32 @@ spcset(int func, cc_t *valp, cc_t **valpp)
  *
  * Returns the file descriptor of the opened pty.
  */
-char alpha[] = "0123456789abcdefghijklmnopqrstuv";
-char line[16];
+char line[32];
 
 int
 getpty(int *ptynum __unused)
 {
 	int p;
-	const char *cp;
-	char *p1, *p2;
-	int i;
+	const char *pn;
 
-	(void) strcpy(line, _PATH_DEV);
-	(void) strcat(line, "ptyXX");
-	p1 = &line[8];
-	p2 = &line[9];
+	p = posix_openpt(O_RDWR|O_NOCTTY);
+	if (p < 0)
+		return (-1);
+	
+	if (grantpt(p) == -1)
+		return (-1);
 
-	for (cp = "pqrsPQRS"; *cp; cp++) {
-		struct stat stb;
+	if (unlockpt(p) == -1)
+		return (-1);
+	
+	pn = ptsname(p);
+	if (pn == NULL)
+		return (-1);
+	
+	if (strlcpy(line, pn, sizeof line) >= sizeof line)
+		return (-1);
 
-		*p1 = *cp;
-		*p2 = '0';
-		/*
-		 * This stat() check is just to keep us from
-		 * looping through all 256 combinations if there
-		 * aren't that many ptys available.
-		 */
-		if (stat(line, &stb) < 0)
-			break;
-		for (i = 0; i < 32; i++) {
-			*p2 = alpha[i];
-			p = open(line, 2);
-			if (p > 0) {
-				line[5] = 't';
-				chown(line, 0, 0);
-				chmod(line, 0600);
-					return(p);
-			}
-		}
-	}
-	return(-1);
+	return (p);
 }
 
 #ifdef	LINEMODE
@@ -1331,24 +1303,7 @@ scrub_env(void)
 void
 cleanup(int sig __unused)
 {
-	char *p;
-	sigset_t mask;
 
-	p = line + sizeof(_PATH_DEV) - 1;
-	/*
-	 * Block all signals before clearing the utmp entry.  We don't want to
-	 * be called again after calling logout() and then not add the wtmp
-	 * entry because of not finding the corresponding entry in utmp.
-	 */
-	sigfillset(&mask);
-	sigprocmask(SIG_SETMASK, &mask, NULL);
-	if (logout(p))
-		logwtmp(p, "", "");
-	(void)chmod(line, 0666);
-	(void)chown(line, 0, 0);
-	*p = 'p';
-	(void)chmod(line, 0666);
-	(void)chown(line, 0, 0);
-	(void) shutdown(net, 2);
+	(void) shutdown(net, SHUT_RDWR);
 	_exit(1);
 }
