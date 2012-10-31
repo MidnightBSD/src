@@ -1,6 +1,9 @@
 /*-
- * Copyright (c) 1993
- *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 1992 The Regents of the University of California.
+ * All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * James da Silva at the University of Maryland at College Park.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,72 +31,62 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char sccsid[] = "@(#)kvm_getloadavg.c	8.1 (Berkeley) 6/4/93";
-#endif
-#endif /* LIBC_SCCS and not lint */
-
-#include <sys/param.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
-#include <stdlib.h>
-#include <limits.h>
-#include <nlist.h>
-#include <kvm.h>
-
-#include "kvm_private.h"
-
-static struct nlist nl[] = {
-	{ .n_name = "_averunnable" },
-#define	X_AVERUNNABLE	0
-	{ .n_name = "_fscale" },
-#define	X_FSCALE	1
-	{ .n_name = "" },
-};
+__MBSDID("$MidnightBSD$");
 
 /*
- * kvm_getloadavg() -- Get system load averages, from live or dead kernels.
- *
- * Put `nelem' samples into `loadavg' array.
- * Return number of samples retrieved, or -1 on error.
+ * Compatibility routines that implement the old re_comp/re_exec interface in
+ * terms of the regcomp/regexec interface.  It's possible that some programs
+ * rely on dark corners of re_comp/re_exec and won't work with this version,
+ * but most programs should be fine.
  */
-int
-kvm_getloadavg(kvm_t *kd, double loadavg[], int nelem)
+
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)regex.c	5.1 (Berkeley) 3/29/92";
+#endif /* LIBC_SCCS and not lint */
+
+#include <regex.h>
+#include <stddef.h>
+#include <unistd.h>
+
+static regex_t re_regexp;
+static int re_gotexp;
+static char re_errstr[100];
+
+char *
+re_comp(const char *s)
 {
-	struct loadavg loadinfo;
-	struct nlist *p;
-	int fscale, i;
+	int rc;
 
-	if (ISALIVE(kd))
-		return (getloadavg(loadavg, nelem));
-
-	if (kvm_nlist(kd, nl) != 0) {
-		for (p = nl; p->n_type != 0; ++p);
-		_kvm_err(kd, kd->program,
-		    "%s: no such symbol", p->n_name);
-		return (-1);
+	if (s == NULL || *s == '\0') {
+		if (!re_gotexp)
+			return __DECONST(char *,
+			    "no previous regular expression");
+		return (NULL);
 	}
 
-#define KREAD(kd, addr, obj) \
-	(kvm_read(kd, addr, (char *)(obj), sizeof(*obj)) != sizeof(*obj))
-	if (KREAD(kd, nl[X_AVERUNNABLE].n_value, &loadinfo)) {
-		_kvm_err(kd, kd->program, "can't read averunnable");
-		return (-1);
+	if (re_gotexp) {
+		regfree(&re_regexp);
+		re_gotexp = 0;
 	}
 
-	/*
-	 * Old kernels have fscale separately; if not found assume
-	 * running new format.
-	 */
-	if (!KREAD(kd, nl[X_FSCALE].n_value, &fscale))
-		loadinfo.fscale = fscale;
+	rc = regcomp(&re_regexp, s, REG_EXTENDED);
+	if (rc == 0) {
+		re_gotexp = 1;
+		return (NULL);
+	}
 
-	nelem = MIN(nelem, (int)(sizeof(loadinfo.ldavg) / sizeof(fixpt_t)));
-	for (i = 0; i < nelem; i++)
-		loadavg[i] = (double) loadinfo.ldavg[i] / loadinfo.fscale;
-	return (nelem);
+	regerror(rc, &re_regexp, re_errstr, sizeof(re_errstr));
+	re_errstr[sizeof(re_errstr) - 1] = '\0';
+	return (re_errstr);
+}
+
+int
+re_exec(const char *s)
+{
+	int rc;
+
+	if (!re_gotexp)
+		return (-1);
+	rc = regexec(&re_regexp, s, 0, NULL, 0);
+	return (rc == 0 ? 1 : 0);
 }

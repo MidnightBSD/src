@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm_amd64.c,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -52,6 +51,7 @@ static char sccsid[] = "@(#)kvm_hp300.c	8.1 (Berkeley) 6/4/93";
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <nlist.h>
 #include <kvm.h>
@@ -147,7 +147,7 @@ _kvm_freevtop(kvm_t *kd)
 int
 _kvm_initvtop(kvm_t *kd)
 {
-	struct nlist nlist[2];
+	struct nlist nl[2];
 	u_long pa;
 	u_long kernbase;
 	pml4_entry_t	*PML4;
@@ -176,23 +176,23 @@ _kvm_initvtop(kvm_t *kd)
 			return (-1);
 	}
 
-	nlist[0].n_name = "kernbase";
-	nlist[1].n_name = 0;
+	nl[0].n_name = "kernbase";
+	nl[1].n_name = 0;
 
-	if (kvm_nlist(kd, nlist) != 0) {
+	if (kvm_nlist(kd, nl) != 0) {
 		_kvm_err(kd, kd->program, "bad namelist - no kernbase");
 		return (-1);
 	}
-	kernbase = nlist[0].n_value;
+	kernbase = nl[0].n_value;
 
-	nlist[0].n_name = "KPML4phys";
-	nlist[1].n_name = 0;
+	nl[0].n_name = "KPML4phys";
+	nl[1].n_name = 0;
 
-	if (kvm_nlist(kd, nlist) != 0) {
+	if (kvm_nlist(kd, nl) != 0) {
 		_kvm_err(kd, kd->program, "bad namelist - no KPML4phys");
 		return (-1);
 	}
-	if (kvm_read(kd, (nlist[0].n_value - kernbase), &pa, sizeof(pa)) !=
+	if (kvm_read(kd, (nl[0].n_value - kernbase), &pa, sizeof(pa)) !=
 	    sizeof(pa)) {
 		_kvm_err(kd, kd->program, "cannot read KPML4phys");
 		return (-1);
@@ -222,7 +222,6 @@ _kvm_vatop(kvm_t *kd, u_long va, off_t *pa)
 	u_long pdpeindex;
 	u_long pdeindex;
 	u_long pteindex;
-	int i;
 	u_long a;
 	off_t ofs;
 	size_t s;

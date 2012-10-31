@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/lib/libkvm/kvm_cptime.c,v 1.1 2012/04/08 14:32:36 laffer1 Exp $ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -30,9 +29,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm_cptime.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
-#include <machine/pcpu.h>
 #include <sys/param.h>
 #include <sys/pcpu.h>
 #include <sys/resource.h>
@@ -40,15 +38,14 @@ __FBSDID("$FreeBSD: src/lib/libkvm/kvm_cptime.c,v 1.1.2.1.2.1 2008/11/25 02:59:2
 #include <errno.h>
 #include <kvm.h>
 #include <limits.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "kvm_private.h"
 
 static struct nlist kvm_cp_time_nl[] = {
-	{ "_cp_time" },			/* (deprecated) */
-	{ NULL },
+	{ .n_name = "_cp_time" },		/* (deprecated) */
+	{ .n_name = NULL },
 };
 
 #define	NL_CP_TIME		0
@@ -62,6 +59,7 @@ _kvm_cp_time_init(kvm_t *kd)
 	if (kvm_nlist(kd, kvm_cp_time_nl) < 0)
 		return (-1);
 	kvm_cp_time_cached = 1;
+	return (0);
 }
 
 static int
