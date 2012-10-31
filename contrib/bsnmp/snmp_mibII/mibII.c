@@ -48,8 +48,7 @@ static void *route_fd;
 /* if-index allocator */
 static uint32_t next_if_index = 1;
 
-/* re-fetch arp table */
-static int update_arp;
+/* currently fetching the arp table */
 static int in_update_arp;
 
 /* OR registrations */
@@ -117,6 +116,15 @@ u_int mibif_hc_update_interval;
 
 /* HC update timer handle */
 static void *hc_update_timer;
+
+/* Idle poll timer */
+static void *mibII_poll_timer;
+
+/* interfaces' data poll interval */
+u_int mibII_poll_ticks;
+
+/* Idle poll hook */
+static void mibII_idle(void *arg __unused);
 
 /*****************************/
 
@@ -409,6 +417,20 @@ mibif_reset_hc_timer(void)
 		return;
 	}
 	mibif_hc_update_interval = ticks;
+}
+
+/**
+ * Restart the idle poll timer.
+ */
+void
+mibif_restart_mibII_poll_timer(void)
+{
+	if (mibII_poll_timer != NULL)
+		timer_stop(mibII_poll_timer);
+
+	if ((mibII_poll_timer = timer_start_repeat(mibII_poll_ticks * 10,
+	    mibII_poll_ticks * 10, mibII_idle, NULL, module)) == NULL)
+		syslog(LOG_ERR, "timer_start(%u): %m", mibII_poll_ticks);
 }
 
 /*
@@ -821,6 +843,7 @@ check_llbcast(struct mibif *ifp)
 	  case IFT_ETHER:
 	  case IFT_FDDI:
 	  case IFT_ISO88025:
+	  case IFT_L2VLAN:
 		if (mib_find_rcvaddr(ifp->index, ether_bcast, 6) == NULL &&
 		    (rcv = mib_rcvaddr_create(ifp, ether_bcast, 6)) != NULL)
 			rcv->flags |= MIBRCVADDR_BCAST;
@@ -908,36 +931,6 @@ mib_find_ifa(struct in_addr addr)
 		if (ifa->inaddr.s_addr == addr.s_addr)
 			return (ifa);
 	return (NULL);
-}
-
-/*
- * Process a new ARP entry
- */
-static void
-process_arp(const struct rt_msghdr *rtm, const struct sockaddr_dl *sdl,
-    const struct sockaddr_in *sa)
-{
-	struct mibif *ifp;
-	struct mibarp *at;
-
-	/* IP arp table entry */
-	if (sdl->sdl_alen == 0) {
-		update_arp = 1;
-		return;
-	}
-	if ((ifp = mib_find_if_sys(sdl->sdl_index)) == NULL)
-		return;
-	/* have a valid entry */
-	if ((at = mib_find_arp(ifp, sa->sin_addr)) == NULL &&
-	    (at = mib_arp_create(ifp, sa->sin_addr,
-	    sdl->sdl_data + sdl->sdl_nlen, sdl->sdl_alen)) == NULL)
-		return;
-
-	if (rtm->rtm_rmx.rmx_expire == 0)
-		at->flags |= MIBARP_PERM;
-	else
-		at->flags &= ~MIBARP_PERM;
-	at->flags |= MIBARP_FOUND;
 }
 
 /*
@@ -1044,7 +1037,7 @@ handle_rtmsg(struct rt_msghdr *rtm)
 		break;
 
 	  case RTM_IFINFO:
-		ifm = (struct if_msghdr *)rtm;
+		ifm = (struct if_msghdr *)(void *)rtm;
 		mib_extract_addrs(ifm->ifm_addrs, (u_char *)(ifm + 1), addrs);
 		if ((ifp = mib_find_if_sys(ifm->ifm_index)) == NULL)
 			break;
@@ -1080,46 +1073,12 @@ handle_rtmsg(struct rt_msghdr *rtm)
 		}
 		break;
 #endif
-
 	  case RTM_GET:
-		mib_extract_addrs(rtm->rtm_addrs, (u_char *)(rtm + 1), addrs);
-		if (rtm->rtm_flags & RTF_LLINFO) {
-			if (addrs[RTAX_DST] == NULL ||
-			    addrs[RTAX_GATEWAY] == NULL ||
-			    addrs[RTAX_DST]->sa_family != AF_INET ||
-			    addrs[RTAX_GATEWAY]->sa_family != AF_LINK)
-				break;
-			process_arp(rtm,
-			    (struct sockaddr_dl *)(void *)addrs[RTAX_GATEWAY],
-			    (struct sockaddr_in *)(void *)addrs[RTAX_DST]);
-		} else {
-			if (rtm->rtm_errno == 0 && (rtm->rtm_flags & RTF_UP))
-				mib_sroute_process(rtm, addrs[RTAX_GATEWAY],
-				    addrs[RTAX_DST], addrs[RTAX_NETMASK]);
-		}
-		break;
-
 	  case RTM_ADD:
-		mib_extract_addrs(rtm->rtm_addrs, (u_char *)(rtm + 1), addrs);
-		if (rtm->rtm_flags & RTF_LLINFO) {
-			if (addrs[RTAX_DST] == NULL ||
-			    addrs[RTAX_GATEWAY] == NULL ||
-			    addrs[RTAX_DST]->sa_family != AF_INET ||
-			    addrs[RTAX_GATEWAY]->sa_family != AF_LINK)
-				break;
-			process_arp(rtm,
-			    (struct sockaddr_dl *)(void *)addrs[RTAX_GATEWAY],
-			    (struct sockaddr_in *)(void *)addrs[RTAX_DST]);
-		} else {
-			if (rtm->rtm_errno == 0 && (rtm->rtm_flags & RTF_UP))
-				mib_sroute_process(rtm, addrs[RTAX_GATEWAY],
-				    addrs[RTAX_DST], addrs[RTAX_NETMASK]);
-		}
-		break;
-
 	  case RTM_DELETE:
 		mib_extract_addrs(rtm->rtm_addrs, (u_char *)(rtm + 1), addrs);
-		if (rtm->rtm_errno == 0 && !(rtm->rtm_flags & RTF_LLINFO))
+
+		if (rtm->rtm_errno == 0 && (rtm->rtm_flags & RTF_UP))
 			mib_sroute_process(rtm, addrs[RTAX_GATEWAY],
 			    addrs[RTAX_DST], addrs[RTAX_NETMASK]);
 		break;
@@ -1289,7 +1248,8 @@ update_ifa_info(void)
 
 /*
  * Update arp table
- */
+ *
+*/
 void
 mib_arp_update(void)
 {
@@ -1305,11 +1265,11 @@ mib_arp_update(void)
 	TAILQ_FOREACH(at, &mibarp_list, link)
 		at->flags &= ~MIBARP_FOUND;
 
-	if ((buf = mib_fetch_rtab(AF_INET, NET_RT_FLAGS, RTF_LLINFO, &needed)) == NULL) {
+	if ((buf = mib_fetch_rtab(AF_INET, NET_RT_FLAGS, 0, &needed)) == NULL) {
 		in_update_arp = 0;
 		return;
 	}
-
+	
 	next = buf;
 	while (next < buf + needed) {
 		rtm = (struct rt_msghdr *)(void *)next;
@@ -1326,7 +1286,6 @@ mib_arp_update(void)
 		at = at1;
 	}
 	mibarpticks = get_ticks();
-	update_arp = 0;
 	in_update_arp = 0;
 }
 
@@ -1618,7 +1577,7 @@ get_cloners(void)
  * Idle function
  */
 static void
-mibII_idle(void)
+mibII_idle(void *arg __unused)
 {
 	struct mibifa *ifa;
 
@@ -1634,8 +1593,8 @@ mibII_idle(void)
 		mib_arp_update();
 		mib_iflist_bad = 0;
 	}
-	if (update_arp)
-		mib_arp_update();
+
+	mib_arp_update();
 }
 
 
@@ -1673,6 +1632,10 @@ mibII_start(void)
 	ipForward_reg = or_register(&oid_ipForward,
 	   "The MIB module for the display of CIDR multipath IP Routes.",
 	   module);
+
+	mibII_poll_timer = NULL;
+	mibII_poll_ticks = MIBII_POLL_TICKS;
+	mibif_restart_mibII_poll_timer();
 }
 
 /*
@@ -1716,6 +1679,11 @@ mibII_init(struct lmodule *mod, int argc __unused, char *argv[] __unused)
 static int
 mibII_fini(void)
 {
+	if (mibII_poll_timer != NULL ) {
+		timer_stop(mibII_poll_timer);
+		mibII_poll_timer = NULL;
+	}
+
 	if (route_fd != NULL)
 		fd_deselect(route_fd);
 	if (route != -1)
@@ -1755,7 +1723,7 @@ const struct snmp_module config = {
 	"This module implements the interface and ip groups.",
 	mibII_init,
 	mibII_fini,
-	mibII_idle,	/* idle */
+	NULL,		/* idle */
 	NULL,		/* dump */
 	NULL,		/* config */
 	mibII_start,
