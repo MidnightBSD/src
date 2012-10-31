@@ -25,12 +25,30 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libusbhid/usbvar.h,v 1.2 2002/03/27 16:07:18 joe Exp $
+ * $MidnightBSD$
  *
  */
 
+#ifndef _USBVAR_H_
+#define	_USBVAR_H_
+
 struct report_desc {
-	unsigned int size;
-	unsigned char data[1];
+	uint32_t size;
+	uint8_t data[1];
 };
 
+/* internal backwards compatibility functions */
+
+#ifdef HID_COMPAT7
+int	hid_set_immed_compat7(int fd, int enable);
+int	hid_get_report_id_compat7(int fd);
+report_desc_t	hid_get_report_desc_compat7(int fd);
+#endif
+
+#ifdef COMPAT_32BIT
+#define	hid_pass_ptr(ptr)	((uint64_t)(uintptr_t)(ptr))
+#else
+#define	hid_pass_ptr(ptr)	(ptr)
+#endif
+
+#endif		/* _USBVAR_H_ */
