@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)utility.c	8.4 (Berkeley) 5/30/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/telnet/telnetd/utility.c,v 1.13 2003/05/04 02:54:49 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #ifdef __FreeBSD__
 #include <locale.h>
@@ -847,22 +847,22 @@ printsub(char direction, unsigned char *pointer, int length)
 		    for (i = 2; i < length; i++ ) {
 			switch (pointer[i]) {
 			case NEW_ENV_VAR:
-			    output_data("\" VAR " + noquote);
+			    output_data("%s", "\" VAR " + noquote);
 			    noquote = 2;
 			    break;
 
 			case NEW_ENV_VALUE:
-			    output_data("\" VALUE " + noquote);
+			    output_data("%s", "\" VALUE " + noquote);
 			    noquote = 2;
 			    break;
 
 			case ENV_ESC:
-			    output_data("\" ESC " + noquote);
+			    output_data("%s", "\" ESC " + noquote);
 			    noquote = 2;
 			    break;
 
 			case ENV_USERVAR:
-			    output_data("\" USERVAR " + noquote);
+			    output_data("%s", "\" USERVAR " + noquote);
 			    noquote = 2;
 			    break;
 

@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)utilities.c	8.3 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/telnet/telnet/utilities.c,v 1.8 2003/05/04 02:54:48 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #define	TELOPTS
 #define	TELCMDS
@@ -782,7 +782,7 @@ printsub(char direction, unsigned char *pointer, int length)
 				    fprintf(NetTrace, "\" VAR " + noquote);
 			    } else
 #endif /* OLD_ENVIRON */
-				fprintf(NetTrace, "\" VALUE " + noquote);
+				fprintf(NetTrace, "%s", "\" VALUE " + noquote);
 			    noquote = 2;
 			    break;
 
@@ -798,17 +798,17 @@ printsub(char direction, unsigned char *pointer, int length)
 				    fprintf(NetTrace, "\" VALUE " + noquote);
 			    } else
 #endif /* OLD_ENVIRON */
-				fprintf(NetTrace, "\" VAR " + noquote);
+				fprintf(NetTrace, "%s", "\" VAR " + noquote);
 			    noquote = 2;
 			    break;
 
 			case ENV_ESC:
-			    fprintf(NetTrace, "\" ESC " + noquote);
+			    fprintf(NetTrace, "%s", "\" ESC " + noquote);
 			    noquote = 2;
 			    break;
 
 			case ENV_USERVAR:
-			    fprintf(NetTrace, "\" USERVAR " + noquote);
+			    fprintf(NetTrace, "%s", "\" USERVAR " + noquote);
 			    noquote = 2;
 			    break;
 

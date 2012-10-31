@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)telnet.h	8.2 (Berkeley) 12/15/93
- * $FreeBSD: src/contrib/telnet/arpa/telnet.h,v 1.9 2003/01/18 06:10:21 billf Exp $
+ * $FreeBSD$
  */
 
 #ifndef _ARPA_TELNET_H_
@@ -140,8 +140,8 @@ const char *telopts[NTELOPTS+1] = {
 	"TACACS UID", "OUTPUT MARKING", "TTYLOC",
 	"3270 REGIME", "X.3 PAD", "NAWS", "TSPEED", "LFLOW",
 	"LINEMODE", "XDISPLOC", "OLD-ENVIRON", "AUTHENTICATION",
-	"ENCRYPT", "NEW-ENVIRON", "TN3270E", "CHARSET", "COM-PORT",
-	"KERMIT",
+	"ENCRYPT", "NEW-ENVIRON", "TN3270E", "XAUTH", "CHARSET",
+	"RSP", "COM-PORT", "SLE", "STARTTLS", "KERMIT",
 	0
 };
 #define	TELOPT_FIRST	TELOPT_BINARY

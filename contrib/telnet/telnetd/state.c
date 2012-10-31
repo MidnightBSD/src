@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)state.c	8.5 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/telnet/telnetd/state.c,v 1.14 2003/05/04 02:54:49 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <stdarg.h>
 #include "telnetd.h"
@@ -553,8 +553,10 @@ willoption(int option)
 
 #ifdef	AUTHENTICATION
 		case TELOPT_AUTHENTICATION:
-			func = auth_request;
-			changeok++;
+			if (auth_level >= 0) {
+				func = auth_request;
+				changeok++;
+			}
 			break;
 #endif
 

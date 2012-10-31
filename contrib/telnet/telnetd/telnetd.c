@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)telnetd.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/telnet/telnetd/telnetd.c,v 1.29 2006/09/26 21:46:11 ru Exp $");
+__FBSDID("$FreeBSD$");
 
 #include "telnetd.h"
 #include "pathnames.h"
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: src/contrib/telnet/telnetd/telnetd.c,v 1.29 2006/09/26 21:46
 #include <libutil.h>
 #include <paths.h>
 #include <termcap.h>
-#include <utmp.h>
 
 #include <arpa/inet.h>
 
@@ -481,11 +480,13 @@ getterminaltype(char *name undef2)
     /*
      * Handle the Authentication option before we do anything else.
      */
-    send_do(TELOPT_AUTHENTICATION, 1);
-    while (his_will_wont_is_changing(TELOPT_AUTHENTICATION))
-	ttloop();
-    if (his_state_is_will(TELOPT_AUTHENTICATION)) {
-	retval = auth_wait(name);
+    if (auth_level >= 0) {
+	send_do(TELOPT_AUTHENTICATION, 1);
+	while (his_will_wont_is_changing(TELOPT_AUTHENTICATION))
+	    ttloop();
+	if (his_state_is_will(TELOPT_AUTHENTICATION)) {
+	    retval = auth_wait(name);
+	}
     }
 #endif
 
@@ -691,7 +692,6 @@ doit(struct sockaddr *who)
 	Please contact your net administrator");
 	remote_hostname[sizeof(remote_hostname) - 1] = '\0';
 
-	trimdomain(remote_hostname, UT_HOSTSIZE);
 	if (!isdigit(remote_hostname[0]) && strlen(remote_hostname) > utmp_len)
 		err_ = getnameinfo(who, who->sa_len, remote_hostname,
 				  sizeof(remote_hostname), NULL, 0,

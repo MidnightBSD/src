@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ext.h	8.2 (Berkeley) 12/15/93
- * $FreeBSD: src/contrib/telnet/telnetd/ext.h,v 1.11 2001/11/30 22:28:07 markm Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -77,7 +77,7 @@ extern char	*neturg;		/* one past last bye of urgent data */
 extern int	pcc, ncc;
 
 extern int	pty, net;
-extern char	line[16];
+extern char	line[32];
 extern int	SYNCHing;		/* we are in TELNET SYNCH mode */
 
 extern void

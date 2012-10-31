@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)network.c	8.2 (Berkeley) 12/15/93";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/telnet/telnet/network.c,v 1.7 2003/05/04 02:54:48 obrien Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -158,7 +158,7 @@ netflush(void)
 	    perror(hostname);
 	    (void)NetClose(net);
 	    ring_clear_mark(&netoring);
-	    longjmp(peerdied, -1);
+	    ExitString("Connection closed by foreign host.\n", 1);
 	    /*NOTREACHED*/
 	}
 	n = 0;
