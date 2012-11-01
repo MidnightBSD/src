@@ -38,8 +38,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 4/18/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/options.c,v 1.31 2004/04/06 20:06:48 markm Exp $");
-__MBSDID("$MidnightBSD: src/bin/pax/options.c,v 1.2 2007/07/22 09:45:20 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -51,7 +50,6 @@ __MBSDID("$MidnightBSD: src/bin/pax/options.c,v 1.2 2007/07/22 09:45:20 laffer1 
 #include <stdlib.h>
 #include <limits.h>
 #include <paths.h>
-#include <getopt.h>
 #include "pax.h"
 #include "options.h"
 #include "cpio.h"
@@ -889,7 +887,7 @@ tar_options(int argc, char **argv)
 					sawpat = 1;
 			}
 			/*
-			 * if patterns were added, we are doing	chdir()
+			 * if patterns were added, we are doing chdir()
 			 * on a file-by-file basis, else, just one
 			 * global chdir (if any) after opening input.
 			 */
@@ -1005,29 +1003,6 @@ mkpath(char *path)
 
 	return (0);
 }
-
-struct option cpio_longopts[] = {
-	{ "reset-access-time",	no_argument,		0,	'a' },
-	{ "make-directories",	no_argument,		0, 	'd' },
-	{ "nonmatching",	no_argument,		0,	'f' },
-	{ "extract",		no_argument,		0,	'i' },
-	{ "link",		no_argument,		0,	'l' },
-	{ "preserve-modification-time", no_argument,	0,	'm' },
-	{ "create",		no_argument,		0,	'o' },
-	{ "pass-through",	no_argument,		0,	'p' },
-	{ "rename",		no_argument,		0,	'r' },
-	{ "list",		no_argument,		0,	't' },
-	{ "unconditional",	no_argument,		0,	'u' },
-	{ "verbose",		no_argument,		0,	'v' },
-	{ "append",		no_argument,		0,	'A' },
-	{ "pattern-file",	required_argument,	0,	'E' },
-	{ "file",		required_argument,	0,	'F' },
-	{ "format",		required_argument,	0,	'H' },
-	{ "dereference",	no_argument,		0,	'L' },
-	{ "swap-halfwords",	no_argument,		0,	'S' },
-	{ NULL,			0,			NULL,	0 }
-};
-
 /*
  * cpio_options()
  *	look at the user specified flags. set globals as required and check if
@@ -1051,9 +1026,7 @@ cpio_options(int argc, char **argv)
 	dflag = 1;
 	act = -1;
 	nodirs = 1;
-	while ((c = getopt_long(argc, argv,
-		"+abcdfiklmoprstuvzABC:E:F:H:I:LO:SZ6",
-		cpio_longopts, NULL)) != -1)
+	while ((c=getopt(argc,argv,"abcdfiklmoprstuvzABC:E:F:H:I:LO:SZ6")) != -1)
 		switch (c) {
 			case 'a':
 				/*

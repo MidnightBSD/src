@@ -30,7 +30,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/pax/ar_subs.c,v 1.24 2005/01/12 03:25:55 brian Exp $ */
 
 #ifndef lint
 #if 0
@@ -855,7 +854,7 @@ copy(void)
 		}
 
 		/*
-		 * Non standard -Y and -Z flag. When the exisiting file is
+		 * Non standard -Y and -Z flag. When the existing file is
 		 * same age or newer skip
 		 */
 		if ((Yflag || Zflag) && ((lstat(arcn->name, &sb) == 0))) {
@@ -1097,7 +1096,7 @@ next_head(ARCHD *arcn)
 	}
 
 	/*
-	 * ok got a valid header, check for trailer if format encodes it in the
+	 * ok got a valid header, check for trailer if format encodes it in
 	 * the header.
 	 */
 	if (frmt->inhead && ((*frmt->trail_cpio)(arcn) == 0)) {

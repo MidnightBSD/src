@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)tar.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/tar.c,v 1.24 2004/11/13 10:56:35 yar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -291,7 +291,7 @@ tar_chksm(char *blk, int len)
 /*
  * tar_id()
  *	determine if a block given to us is a valid tar header (and not a USTAR
- *	header). We have to be on the lookout for those pesky blocks of	all
+ *	header). We have to be on the lookout for those pesky blocks of all
  *	zero's.
  * Return:
  *	0 if a tar header, -1 otherwise
@@ -510,7 +510,7 @@ tar_wr(ARCHD *arcn)
 {
 	HD_TAR *hd;
 	int len;
-	char hdblk[sizeof(HD_TAR)];
+	HD_TAR hdblk;
 
 	/*
 	 * check for those file system types which tar cannot store
@@ -569,7 +569,7 @@ tar_wr(ARCHD *arcn)
 	 * added after the file data (0 for all other types, as they only have
 	 * a header)
 	 */
-	hd = (HD_TAR *)hdblk;
+	hd = &hdblk;
 	l_strncpy(hd->name, arcn->name, sizeof(hd->name) - 1);
 	hd->name[sizeof(hd->name) - 1] = '\0';
 	arcn->pad = 0;
@@ -636,10 +636,10 @@ tar_wr(ARCHD *arcn)
 	 * 0 tells the caller to now write the file data, 1 says no data needs
 	 * to be written
 	 */
-	if (ul_oct(tar_chksm(hdblk, sizeof(HD_TAR)), hd->chksum,
+	if (ul_oct(tar_chksm((char *)&hdblk, sizeof(HD_TAR)), hd->chksum,
 	    sizeof(hd->chksum), 3))
 		goto out;
-	if (wr_rdbuf(hdblk, sizeof(HD_TAR)) < 0)
+	if (wr_rdbuf((char *)&hdblk, sizeof(HD_TAR)) < 0)
 		return(-1);
 	if (wr_skip((off_t)(BLKMULT - sizeof(HD_TAR))) < 0)
 		return(-1);
@@ -898,7 +898,7 @@ ustar_wr(ARCHD *arcn)
 {
 	HD_USTAR *hd;
 	char *pt;
-	char hdblk[sizeof(HD_USTAR)];
+	HD_USTAR hdblk;
 
 	/*
 	 * check for those file system types ustar cannot store
@@ -926,7 +926,7 @@ ustar_wr(ARCHD *arcn)
 		paxwarn(1, "File name too long for ustar %s", arcn->name);
 		return(1);
 	}
-	hd = (HD_USTAR *)hdblk;
+	hd = &hdblk;
 	arcn->pad = 0L;
 
 	/*
@@ -1044,10 +1044,10 @@ ustar_wr(ARCHD *arcn)
 	 * return 0 tells the caller to now write the file data, 1 says no data
 	 * needs to be written
 	 */
-	if (ul_oct(tar_chksm(hdblk, sizeof(HD_USTAR)), hd->chksum,
+	if (ul_oct(tar_chksm((char *)&hdblk, sizeof(HD_USTAR)), hd->chksum,
 	   sizeof(hd->chksum), 3))
 		goto out;
-	if (wr_rdbuf(hdblk, sizeof(HD_USTAR)) < 0)
+	if (wr_rdbuf((char *)&hdblk, sizeof(HD_USTAR)) < 0)
 		return(-1);
 	if (wr_skip((off_t)(BLKMULT - sizeof(HD_USTAR))) < 0)
 		return(-1);
@@ -1086,7 +1086,7 @@ name_split(char *name, int len)
 	 */
 	if (len <= TNMSZ)
 		return(name);
-	if (len > (TPFSZ + TNMSZ + 1))
+	if (len > TPFSZ + TNMSZ)
 		return(NULL);
 
 	/*
@@ -1095,7 +1095,7 @@ name_split(char *name, int len)
 	 * to find the biggest piece to fit in the name field (or the smallest
 	 * prefix we can find)
 	 */
-	start = name + len - TNMSZ - 1;
+	start = name + len - TNMSZ;
 	while ((*start != '\0') && (*start != '/'))
 		++start;
 

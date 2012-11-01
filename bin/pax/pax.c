@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)pax.c	8.2 (Berkeley) 4/18/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/pax.c,v 1.28 2004/04/06 20:06:48 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -372,7 +372,7 @@ gen_init(void)
 	/*
 	 * signal handling to reset stored directory times and modes. Since
 	 * we deal with broken pipes via failed writes we ignore it. We also
-	 * deal with any file size limit thorugh failed writes. Cpu time
+	 * deal with any file size limit thorough failed writes. Cpu time
 	 * limits are caught and a cleanup is forced.
 	 */
 	if ((sigemptyset(&s_mask) < 0) || (sigaddset(&s_mask, SIGTERM) < 0) ||

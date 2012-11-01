@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)pat_rep.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/pat_rep.c,v 1.25 2004/04/06 20:06:48 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -76,7 +76,7 @@ static char * range_match(char *, int);
 #ifdef NET2_REGEX
 static int resub(regexp *, char *, char *, char *);
 #else
-static int resub(regex_t *, regmatch_t *, char *, char *, char *);
+static int resub(regex_t *, regmatch_t *, char *, char *, char *, char *);
 #endif
 
 /*
@@ -140,7 +140,7 @@ rep_add(char *str)
 		regerror(res, &(rep->rcmp), rebuf, sizeof(rebuf));
 		paxwarn(1, "%s while compiling regular expression %s", rebuf, str);
 #	endif
-		(void)free((char *)rep);
+		free(rep);
 		return(-1);
 	}
 
@@ -152,11 +152,11 @@ rep_add(char *str)
 	*pt1++ = *str;
 	if ((pt2 = strchr(pt1, *str)) == NULL) {
 #		ifdef NET2_REGEX
-		(void)free((char *)rep->rcmp);
+		free(rep->rcmp);
 #		else
-		regfree(&(rep->rcmp));
+		regfree(&rep->rcmp);
 #		endif
-		(void)free((char *)rep);
+		free(rep);
 		paxwarn(1, "Invalid replacement string %s", str);
 		return(-1);
 	}
@@ -181,11 +181,11 @@ rep_add(char *str)
 			break;
 		default:
 #			ifdef NET2_REGEX
-			(void)free((char *)rep->rcmp);
+			free(rep->rcmp);
 #			else
-			regfree(&(rep->rcmp));
+			regfree(&rep->rcmp);
 #			endif
-			(void)free((char *)rep);
+			free(rep);
 			*pt1 = *str;
 			paxwarn(1, "Invalid replacement string option %s", str);
 			return(-1);
@@ -397,11 +397,11 @@ pat_sel(ARCHD *arcn)
 		/*
 		 * should never happen....
 		 */
-		paxwarn(1, "Pattern list inconsistant");
+		paxwarn(1, "Pattern list inconsistent");
 		return(-1);
 	}
 	*ppt = pt->fow;
-	(void)free((char *)pt);
+	free(pt);
 	arcn->pat = NULL;
 	return(0);
 }
@@ -929,7 +929,7 @@ rep_name(char *name, int *nlen, int prnt)
 #			ifdef NET2_REGEX
 			if ((res = resub(pt->rcmp,pt->nstr,outpt,endpt)) < 0) {
 #			else
-			if ((res = resub(&(pt->rcmp),pm,pt->nstr,outpt,endpt))
+			if ((res = resub(&(pt->rcmp),pm,inpt,pt->nstr,outpt,endpt))
 			    < 0) {
 #			endif
 				if (prnt)
@@ -1071,7 +1071,7 @@ resub(regexp *prog, char *src, char *dest, char *destend)
  */
 
 static int
-resub(regex_t *rp, regmatch_t *pm, char *src, char *dest,
+resub(regex_t *rp, regmatch_t *pm, char *orig, char *src, char *dest,
 	char *destend)
 {
 	char *spt;
@@ -1121,7 +1121,7 @@ resub(regex_t *rp, regmatch_t *pm, char *src, char *dest,
 		 */
 		if (len > (destend - dpt))
 			len = destend - dpt;
-		if (l_strncpy(dpt, src + pmpt->rm_so, len) != len)
+		if (l_strncpy(dpt, orig + pmpt->rm_so, len) != len)
 			return(-1);
 		dpt += len;
 	}

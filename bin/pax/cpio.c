@@ -30,7 +30,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/pax/cpio.c,v 1.23 2004/04/06 20:06:48 markm Exp $ */
 
 #ifndef lint
 #if 0
@@ -38,7 +37,7 @@ static char sccsid[] = "@(#)cpio.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/pax/cpio.c,v 1.4 2007/07/23 22:48:19 alex Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -168,7 +167,7 @@ cpio_endwr(void)
 	last.nlen = sizeof(TRAILER) - 1;
 	last.type = PAX_REG;
 	last.sb.st_nlink = 1;
-	(void)strlcpy(last.name, TRAILER,sizeof(last.name));
+	(void)strcpy(last.name, TRAILER);
 	return((*frmt->wr)(&last));
 }
 
@@ -391,7 +390,7 @@ cpio_wr(ARCHD *arcn)
 {
 	HD_CPIO *hd;
 	int nsz;
-	char hdblk[sizeof(HD_CPIO)];
+	HD_CPIO hdblk;
 
 	/*
 	 * check and repair truncated device and inode fields in the header
@@ -401,7 +400,7 @@ cpio_wr(ARCHD *arcn)
 
 	arcn->pad = 0L;
 	nsz = arcn->nlen + 1;
-	hd = (HD_CPIO *)hdblk;
+	hd = &hdblk;
 	if ((arcn->type != PAX_BLK) && (arcn->type != PAX_CHR))
 		arcn->sb.st_rdev = 0;
 
@@ -468,7 +467,7 @@ cpio_wr(ARCHD *arcn)
 	/*
 	 * write the file name to the archive
 	 */
-	if ((wr_rdbuf(hdblk, (int)sizeof(HD_CPIO)) < 0) ||
+	if ((wr_rdbuf((char *)&hdblk, (int)sizeof(HD_CPIO)) < 0) ||
 	    (wr_rdbuf(arcn->name, nsz) < 0)) {
 		paxwarn(1, "Unable to write cpio header for %s", arcn->org_name);
 		return(-1);
@@ -702,7 +701,7 @@ vcpio_wr(ARCHD *arcn)
 {
 	HD_VCPIO *hd;
 	unsigned int nsz;
-	char hdblk[sizeof(HD_VCPIO)];
+	HD_VCPIO hdblk;
 
 	/*
 	 * check and repair truncated device and inode fields in the cpio
@@ -711,7 +710,7 @@ vcpio_wr(ARCHD *arcn)
 	if (map_dev(arcn, (u_long)VCPIO_MASK, (u_long)VCPIO_MASK) < 0)
 		return(-1);
 	nsz = arcn->nlen + 1;
-	hd = (HD_VCPIO *)hdblk;
+	hd = &hdblk;
 	if ((arcn->type != PAX_BLK) && (arcn->type != PAX_CHR))
 		arcn->sb.st_rdev = 0;
 
@@ -803,7 +802,7 @@ vcpio_wr(ARCHD *arcn)
 	/*
 	 * write the header, the file name and padding as required.
 	 */
-	if ((wr_rdbuf(hdblk, (int)sizeof(HD_VCPIO)) < 0) ||
+	if ((wr_rdbuf((char *)&hdblk, (int)sizeof(HD_VCPIO)) < 0) ||
 	    (wr_rdbuf(arcn->name, (int)nsz) < 0)  ||
 	    (wr_skip((off_t)(VCPIO_PAD(sizeof(HD_VCPIO) + nsz))) < 0)) {
 		paxwarn(1,"Could not write sv4cpio header for %s",arcn->org_name);
@@ -990,7 +989,7 @@ bcpio_endrd(void)
  * bcpio_wr()
  *	copy the data in the ARCHD to buffer in old binary cpio format
  *	There is a real chance of field overflow with this critter. So we
- *	always check the conversion is ok. nobody in their right mind
+ *	always check that the conversion is ok. nobody in their right mind
  *	should write an archive in this format...
  * Return
  *      0 if file has data to be written after the header, 1 if file has NO
@@ -1002,7 +1001,7 @@ bcpio_wr(ARCHD *arcn)
 {
 	HD_BCPIO *hd;
 	int nsz;
-	char hdblk[sizeof(HD_BCPIO)];
+	HD_BCPIO hdblk;
 	off_t t_offt;
 	int t_int;
 	time_t t_timet;
@@ -1016,7 +1015,7 @@ bcpio_wr(ARCHD *arcn)
 
 	if ((arcn->type != PAX_BLK) && (arcn->type != PAX_CHR))
 		arcn->sb.st_rdev = 0;
-	hd = (HD_BCPIO *)hdblk;
+	hd = &hdblk;
 
 	switch(arcn->type) {
 	case PAX_CTG:
@@ -1116,7 +1115,7 @@ bcpio_wr(ARCHD *arcn)
 	/*
 	 * write the header, the file name and padding as required.
 	 */
-	if ((wr_rdbuf(hdblk, (int)sizeof(HD_BCPIO)) < 0) ||
+	if ((wr_rdbuf((char *)&hdblk, (int)sizeof(HD_BCPIO)) < 0) ||
 	    (wr_rdbuf(arcn->name, nsz) < 0) ||
 	    (wr_skip((off_t)(BCPIO_PAD(sizeof(HD_BCPIO) + nsz))) < 0)) {
 		paxwarn(1, "Could not write bcpio header for %s", arcn->org_name);

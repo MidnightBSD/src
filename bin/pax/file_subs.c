@@ -30,7 +30,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/pax/file_subs.c,v 1.21 2004/04/06 20:06:48 markm Exp $ */
 
 #ifndef lint
 #if 0
@@ -85,9 +84,9 @@ file_creat(ARCHD *arcn)
 	 * works. We have to take special handling when the file does exist. To
 	 * detect this, we use O_EXCL. For example when trying to create a
 	 * file and a character device or fifo exists with the same name, we
-	 * can accidently open the device by mistake (or block waiting to open)
-	 * If we find that the open has failed, then figure spend the effort to
-	 * figure out why. This strategy was found to have better average
+	 * can accidentally open the device by mistake (or block waiting to
+	 * open). If we find that the open has failed, then spend the effort
+	 * to figure out why. This strategy was found to have better average
 	 * performance in common use than checking the file (and the path)
 	 * first with lstat.
 	 */
@@ -285,7 +284,7 @@ mk_link(char *to, struct stat *to_sb, char *from,
 		 */
 		if ((to_sb->st_dev==sb.st_dev)&&(to_sb->st_ino == sb.st_ino)) {
 			paxwarn(1, "Unable to link file %s to itself", to);
-			return(-1);;
+			return(-1);
 		}
 
 		/*
@@ -426,17 +425,9 @@ node_creat(ARCHD *arcn)
 	 * we were able to create the node. set uid/gid, modes and times
 	 */
 	if (pids)
-		res = ((arcn->type == PAX_SLK) ?
-		    set_lids(arcn->name, arcn->sb.st_uid, arcn->sb.st_gid) :
-		    set_ids(arcn->name, arcn->sb.st_uid, arcn->sb.st_gid));
+		res = set_ids(arcn->name, arcn->sb.st_uid, arcn->sb.st_gid);
 	else
 		res = 0;
-
-	/*
-	 * symlinks are done now.
-	 */
-	if (arcn->type == PAX_SLK)
-		return(0);
 
 	/*
 	 * IMPORTANT SECURITY NOTE:
@@ -568,7 +559,7 @@ chk_path( char *name, uid_t st_uid, gid_t st_gid)
 
 	for(;;) {
 		/*
-		 * work foward from the first / and check each part of the path
+		 * work forward from the first / and check each part of the path
 		 */
 		spt = strchr(spt, '/');
 		if (spt == NULL)
@@ -609,7 +600,7 @@ chk_path( char *name, uid_t st_uid, gid_t st_gid)
 			(void)set_ids(name, st_uid, st_gid);
 
 		/*
-		 * make sure the user doen't have some strange umask that
+		 * make sure the user doesn't have some strange umask that
 		 * causes this newly created directory to be unusable. We fix
 		 * the modes and restore them back to the creation default at
 		 * the end of pax
@@ -633,7 +624,7 @@ chk_path( char *name, uid_t st_uid, gid_t st_gid)
  *	used by -t to reset access times).
  *	When ign is zero, only those times the user has asked for are set, the
  *	other ones are left alone. We do not assume the un-documented feature
- *	of many utimes() implementations that consider a 0 time value as a do
+ *	of many lutimes() implementations that consider a 0 time value as a do
  *	not set request.
  */
 
@@ -662,7 +653,7 @@ set_ftime(char *fnm, time_t mtime, time_t atime, int frc)
 	/*
 	 * set the times
 	 */
-	if (utimes(fnm, tv) < 0)
+	if (lutimes(fnm, tv) < 0)
 		syswarn(1, errno, "Access/modification time set failed on: %s",
 		    fnm);
 	return;
@@ -677,30 +668,6 @@ set_ftime(char *fnm, time_t mtime, time_t atime, int frc)
 
 int
 set_ids(char *fnm, uid_t uid, gid_t gid)
-{
-	if (chown(fnm, uid, gid) < 0) {
-		/*
-		 * ignore EPERM unless in verbose mode or being run by root.
-		 * if running as pax, POSIX requires a warning.
-		 */
-		if (strcmp(NM_PAX, argv0) == 0 || errno != EPERM || vflag ||
-		    geteuid() == 0)
-			syswarn(1, errno, "Unable to set file uid/gid of %s",
-			    fnm);
-		return(-1);
-	}
-	return(0);
-}
-
-/*
- * set_lids()
- *	set the uid and gid of a file system node
- * Return:
- *	0 when set, -1 on failure
- */
-
-int
-set_lids(char *fnm, uid_t uid, gid_t gid)
 {
 	if (lchown(fnm, uid, gid) < 0) {
 		/*
@@ -725,7 +692,7 @@ void
 set_pmode(char *fnm, mode_t mode)
 {
 	mode &= ABITS;
-	if (chmod(fnm, mode) < 0)
+	if (lchmod(fnm, mode) < 0)
 		syswarn(1, errno, "Could not set permissions on %s", fnm);
 	return;
 }
@@ -749,11 +716,11 @@ set_pmode(char *fnm, mode_t mode)
  *	uses lseek whenever it detects the input data is all 0 within that
  *	file block. In more detail, the strategy is as follows:
  *	While the input is all zero keep doing an lseek. Keep track of when we
- *	pass over file block boundries. Only write when we hit a non zero
+ *	pass over file block boundaries. Only write when we hit a non zero
  *	input. once we have written a file block, we continue to write it to
  *	the end (we stop looking at the input). When we reach the start of the
  *	next file block, start checking for zero blocks again. Working on file
- *	block boundries significantly reduces the overhead when copying files
+ *	block boundaries significantly reduces the overhead when copying files
  *	that are NOT very sparse. This overhead (when compared to a write) is
  *	almost below the measurement resolution on many systems. Without it,
  *	files with holes cannot be safely copied. It does has a side effect as
@@ -956,7 +923,7 @@ set_crc(ARCHD *arcn, int fd)
 
 	/*
 	 * safety check. we want to avoid archiving files that are active as
-	 * they can create inconsistant archive copies.
+	 * they can create inconsistent archive copies.
 	 */
 	if (cpcnt != arcn->sb.st_size)
 		paxwarn(1, "File changed size %s", arcn->org_name);

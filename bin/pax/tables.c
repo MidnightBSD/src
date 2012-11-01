@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)tables.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/tables.c,v 1.22 2004/04/06 20:06:48 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -178,8 +178,8 @@ chk_lnk(ARCHD *arcn)
 			 */
 			if (--pt->nlink <= 1) {
 				*ppt = pt->fow;
-				(void)free((char *)pt->name);
-				(void)free((char *)pt);
+				free(pt->name);
+				free(pt);
 			}
 			return(1);
 		}
@@ -198,7 +198,7 @@ chk_lnk(ARCHD *arcn)
 			ltab[indx] = pt;
 			return(0);
 		}
-		(void)free((char *)pt);
+		free(pt);
 	}
 
 	paxwarn(1, "Hard link table out of memory");
@@ -209,7 +209,7 @@ chk_lnk(ARCHD *arcn)
  * purg_lnk
  *	remove reference for a file that we may have added to the data base as
  *	a potential source for hard links. We ended up not using the file, so
- *	we do not want to accidently point another file at it later on.
+ *	we do not want to accidentally point another file at it later on.
  */
 
 void
@@ -254,8 +254,8 @@ purg_lnk(ARCHD *arcn)
 	 * remove and free it
 	 */
 	*ppt = pt->fow;
-	(void)free((char *)pt->name);
-	(void)free((char *)pt);
+	free(pt->name);
+	free(pt);
 }
 
 /*
@@ -288,8 +288,8 @@ lnk_end(void)
 		while (pt != NULL) {
 			ppt = pt;
 			pt = ppt->fow;
-			(void)free((char *)ppt->name);
-			(void)free((char *)ppt);
+			free(ppt->name);
+			free(ppt);
 		}
 	}
 	return;
@@ -306,14 +306,14 @@ lnk_end(void)
  * An append with an -u must read the archive and store the modification time
  * for every file on that archive before starting the write phase. It is clear
  * that this is one HUGE database. To save memory space, the actual file names
- * are stored in a scatch file and indexed by an in memory hash table. The
+ * are stored in a scratch file and indexed by an in memory hash table. The
  * hash table is indexed by hashing the file path. The nodes in the table store
  * the length of the filename and the lseek offset within the scratch file
  * where the actual name is stored. Since there are never any deletions to this
  * table, fragmentation of the scratch file is never an issue. Lookups seem to
  * not exhibit any locality at all (files in the database are rarely
  * looked up more than once...). So caching is just a waste of memory. The
- * only limitation is the amount of scatch file space available to store the
+ * only limitation is the amount of scratch file space available to store the
  * path names.
  */
 
@@ -460,7 +460,7 @@ chk_ftime(ARCHD *arcn)
 		paxwarn(1, "File time table ran out of memory");
 
 	if (pt != NULL)
-		(void)free((char *)pt);
+		free(pt);
 	return(-1);
 }
 
@@ -538,7 +538,7 @@ add_name(char *oname, int onamelen, char *nname)
 			if (strcmp(nname, pt->nname) == 0)
 				return(0);
 
-			(void)free((char *)pt->nname);
+			free(pt->nname);
 			if ((pt->nname = strdup(nname)) == NULL) {
 				paxwarn(1, "Cannot update rename table");
 				return(-1);
@@ -557,9 +557,9 @@ add_name(char *oname, int onamelen, char *nname)
 				ntab[indx] = pt;
 				return(0);
 			}
-			(void)free((char *)pt->oname);
+			free(pt->oname);
 		}
-		(void)free((char *)pt);
+		free(pt);
 	}
 	paxwarn(1, "Interactive rename table out of memory");
 	return(-1);
@@ -994,7 +994,7 @@ add_atdir(char *fname, dev_t dev, ino_t ino, time_t mtime, time_t atime)
 			atab[indx] = pt;
 			return;
 		}
-		(void)free((char *)pt);
+		free(pt);
 	}
 
 	paxwarn(1, "Directory access time reset table ran out of memory");
@@ -1051,8 +1051,8 @@ get_atdir(dev_t dev, ino_t ino, time_t *mtime, time_t *atime)
 	*ppt = pt->fow;
 	*mtime = pt->mtime;
 	*atime = pt->atime;
-	(void)free((char *)pt->name);
-	(void)free((char *)pt);
+	free(pt->name);
+	free(pt);
 	return(0);
 }
 

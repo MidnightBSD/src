@@ -1,4 +1,4 @@
-/*	$OpenBSD: getoldopt.c,v 1.4 2000/01/22 20:24:51 deraadt Exp $	*/
+/*	$OpenBSD: getoldopt.c,v 1.9 2009/10/27 23:59:22 deraadt Exp $	*/
 /*	$NetBSD: getoldopt.c,v 1.3 1995/03/21 09:07:28 cgd Exp $	*/
 
 /*-
@@ -7,11 +7,10 @@
  * otherwise, it uses the old rules used by tar, dump, and ps.
  *
  * Written 25 August 1985 by John Gilmore (ihnp4!hoptoad!gnu) and placed
- * in the Pubic Domain for your edification and enjoyment.
+ * in the Public Domain for your edification and enjoyment.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pax/getoldopt.c,v 1.5 2005/01/10 08:39:24 imp Exp $");
 __MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
@@ -34,7 +33,8 @@ getoldopt(int argc, char **argv, const char *optstring)
 	optarg = NULL;
 
 	if (key == NULL) {		/* First time */
-		if (argc < 2) return EOF;
+		if (argc < 2)
+			return (-1);
 		key = argv[1];
 		if (*key == '-')
 			use_getopt++;
@@ -43,18 +43,18 @@ getoldopt(int argc, char **argv, const char *optstring)
 	}
 
 	if (use_getopt)
-		return getopt(argc, argv, optstring);
+		return (getopt(argc, argv, optstring));
 
 	c = *key++;
 	if (c == '\0') {
 		key--;
-		return EOF;
+		return (-1);
 	}
 	place = strchr(optstring, c);
 
 	if (place == NULL || c == ':') {
 		fprintf(stderr, "%s: unknown option %c\n", argv[0], c);
-		return('?');
+		return ('?');
 	}
 
 	place++;
@@ -65,9 +65,9 @@ getoldopt(int argc, char **argv, const char *optstring)
 		} else {
 			fprintf(stderr, "%s: %c argument missing\n",
 				argv[0], c);
-			return('?');
+			return ('?');
 		}
 	}
 
-	return(c);
+	return (c);
 }
