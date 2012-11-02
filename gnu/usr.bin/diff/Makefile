@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/diff/Makefile,v 1.2 2008/08/25 02:26:52 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/diff/Makefile,v 1.17 2007/06/15 07:09:33 delphij Exp $
 
 DIFFSRC=${.CURDIR}/../../../contrib/diff/src
@@ -27,11 +27,5 @@ SUBDIR+=doc
 
 DPADD=	${LIBGNUREGEX}
 LDADD=	-lgnuregex
-
-.for f in diff.c context.c
-${f}: ${DIFFSRC}/${f} ${.CURDIR}/${f}.diff
-	patch -s -b .orig -o ${.TARGET} < ${.CURDIR}/${f}.diff ${DIFFSRC}/${f}
-CLEANFILES+= ${f}
-.endfor
 
 .include <bsd.prog.mk>
