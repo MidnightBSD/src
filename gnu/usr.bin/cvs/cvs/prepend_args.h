@@ -17,11 +17,11 @@
    02111-1307, USA.  */
 
 /* $FreeBSD: src/gnu/usr.bin/cvs/cvs/prepend_args.h,v 1.2 2002/09/02 06:09:03 peter Exp $ */
-/* $MidnightBSD: src/gnu/usr.bin/cvs/cvs/prepend_args.h,v 1.2 2007/04/06 17:59:29 laffer1 Exp $ */
+/* $MidnightBSD: src/gnu/usr.bin/cvs/cvs/prepend_args.h,v 1.3 2007/04/10 05:19:02 laffer1 Exp $ */
 
 /* This code, taken from GNU Grep, originally used the "PARAM" macro, as the
    current GNU coding standards requires.  Older GNU code used the "PROTO"
    macro, before the GNU coding standards replaced it.  We use the older
    form here to keep from having to include another file in cvs/src/main.c.  */
 
-void prepend_default_options(char const *, int *, char ***);
+void prepend_default_options PROTO ((char const *, int *, char ***));
