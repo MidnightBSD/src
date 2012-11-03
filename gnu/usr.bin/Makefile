@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.8 2009/05/22 02:12:09 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.9 2012/09/01 22:48:42 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
 
 .include <bsd.own.mk>
@@ -8,7 +8,6 @@ SUBDIR= ${_binutils} \
 	${_cvs} \
 	dialog \
 	diff \
-	diff3 \
 	${_dtc} \
 	${_gdb} \
 	${_gperf} \
