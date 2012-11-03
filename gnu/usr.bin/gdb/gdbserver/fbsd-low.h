@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Internal interfaces for the GNU/Linux specific target code for gdbserver.
    Copyright 2002, 2004 Free Software Foundation, Inc.
 
@@ -20,7 +19,7 @@
    Boston, MA 02111-1307, USA.  */
 
 /*
- * $FreeBSD: src/gnu/usr.bin/gdb/gdbserver/fbsd-low.h,v 1.2 2006/04/06 22:24:01 jmg Exp $
+ * $MidnightBSD$
  */
 
 typedef void (*regset_fill_func) (void *);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Low level interface to ptrace, for the remote server for GDB.
    Copyright 1995, 1996, 1998, 1999, 2000, 2001, 2002, 2003, 2004
    Free Software Foundation, Inc.
@@ -21,7 +20,7 @@
    Boston, MA 02111-1307, USA.  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/gdbserver/fbsd-low.c,v 1.2 2006/04/06 22:24:01 jmg Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "server.h"
 #include "fbsd-low.h"

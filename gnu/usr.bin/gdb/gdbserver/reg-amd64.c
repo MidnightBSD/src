@@ -23,7 +23,7 @@
 /* This file was created with the aid of ``regdat.sh'' and ``../../../../contrib/gdb/gdb/regformats/reg-x86-64.dat''.  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include "regdef.h"
 #include "regcache.h"
