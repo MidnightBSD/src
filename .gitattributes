@@ -33968,11 +33968,7 @@ gnu/usr.bin/gdb/kgdb/kthr.c -text
 gnu/usr.bin/gdb/kgdb/main.c -text
 gnu/usr.bin/gdb/kgdb/trgt.c -text
 gnu/usr.bin/gdb/kgdb/trgt_amd64.c -text
-gnu/usr.bin/gdb/kgdb/trgt_arm.c -text
 gnu/usr.bin/gdb/kgdb/trgt_i386.c -text
-gnu/usr.bin/gdb/kgdb/trgt_mips.c -text
-gnu/usr.bin/gdb/kgdb/trgt_powerpc.c -text
-gnu/usr.bin/gdb/kgdb/trgt_powerpc64.c -text
 gnu/usr.bin/gdb/kgdb/trgt_sparc64.c -text
 gnu/usr.bin/gdb/libgdb/Makefile -text
 gnu/usr.bin/gdb/libgdb/fbsd-threads.c -text
