@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.2 2012/07/04 13:37:32 laffer1 Exp $ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.7.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/cpuset.h>
@@ -81,14 +80,6 @@ kgdb_thr_add_procs(uintptr_t paddr)
 	struct thread td;
 	struct kthr *kt;
 	CORE_ADDR addr;
-
-	addr =  kgdb_lookup("_stopped_cpus");
-	if (addr != 0)
-		kvm_read(kvm, addr, &stopped_cpus, sizeof(stopped_cpus));
-	else
-		stopped_cpus = 0;
-
-	stoppcbs = kgdb_lookup("_stoppcbs");
 
 	while (paddr != 0) {
 		if (kvm_read(kvm, paddr, &p, sizeof(p)) != sizeof(p)) {

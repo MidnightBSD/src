@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kld.c,v 1.6.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -38,6 +37,7 @@ __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kld.c,v 1.6.2.4.2.1 2008/11/25 02:5
 #include <command.h>
 #include <completer.h>
 #include <environ.h>
+#include <exec.h>
 #include <frame-unwind.h>
 #include <inferior.h>
 #include <objfiles.h>
@@ -197,39 +197,34 @@ find_kld_address (char *arg, CORE_ADDR *address)
 	return (0);
 }
 
-struct add_section_info {
-	struct section_addr_info *section_addrs;
-	int sect_index;
-	CORE_ADDR base_addr;
-};
-
 static void
-add_section (bfd *bfd, asection *sect, void *arg)
+adjust_section_address (struct section_table *sec, CORE_ADDR *curr_base)
 {
-	struct add_section_info *asi = arg;
-	CORE_ADDR address;
-	char *name;
+	struct bfd_section *asect = sec->the_bfd_section;
+	bfd *abfd = sec->bfd;
 
-	/* Ignore non-resident sections. */
-	if ((bfd_get_section_flags(bfd, sect) & (SEC_ALLOC | SEC_LOAD)) == 0)
+	if ((abfd->flags & (EXEC_P | DYNAMIC)) != 0) {
+		sec->addr += *curr_base;
+		sec->endaddr += *curr_base;
 		return;
+	}
 
-	name = xstrdup(bfd_get_section_name(bfd, sect));
-	make_cleanup(xfree, name);
-	address = asi->base_addr + bfd_get_section_vma(bfd, sect);
-	asi->section_addrs->other[asi->sect_index].name = name;
-	asi->section_addrs->other[asi->sect_index].addr = address;
-	asi->section_addrs->other[asi->sect_index].sectindex = sect->index;
-	printf_unfiltered("\t%s_addr = %s\n", name, local_hex_string(address));
-	asi->sect_index++;
+	*curr_base = align_power(*curr_base,
+	    bfd_get_section_alignment(abfd, asect));
+	sec->addr = *curr_base;
+	sec->endaddr = sec->addr + bfd_section_size(abfd, asect);
+	*curr_base = sec->endaddr;
 }
 
 static void
 load_kld (char *path, CORE_ADDR base_addr, int from_tty)
 {
-	struct add_section_info asi;
+	struct section_addr_info *sap;
+	struct section_table *sections = NULL, *sections_end = NULL, *s;
 	struct cleanup *cleanup;
 	bfd *bfd;
+	CORE_ADDR curr_addr;
+	int i;
 
 	/* Open the kld. */
 	bfd = bfd_openr(path, gnutarget);
@@ -245,19 +240,29 @@ load_kld (char *path, CORE_ADDR base_addr, int from_tty)
 	if (bfd_get_section_by_name (bfd, ".text") == NULL)
 		error("\"%s\": can't find text section", path);
 
-	printf_unfiltered("add symbol table from file \"%s\" at\n", path);
+	/* Build a section table from the bfd and relocate the sections. */
+	if (build_section_table (bfd, &sections, &sections_end))
+		error("\"%s\": can't find file sections", path);
+	cleanup = make_cleanup(xfree, sections);
+	curr_addr = base_addr;
+	for (s = sections; s < sections_end; s++)
+		adjust_section_address(s, &curr_addr);
 
-	/* Build a section table for symbol_file_add() from the bfd sections. */
-	asi.section_addrs = alloc_section_addr_info(bfd_count_sections(bfd));
-	cleanup = make_cleanup(xfree, asi.section_addrs);
-	asi.sect_index = 0;
-	asi.base_addr = base_addr;
-	bfd_map_over_sections(bfd, add_section, &asi);
+	/* Build a section addr info to pass to symbol_file_add(). */
+	sap = build_section_addr_info_from_section_table (sections,
+	    sections_end);
+	cleanup = make_cleanup((make_cleanup_ftype *)free_section_addr_info,
+	    sap);
+
+	printf_unfiltered("add symbol table from file \"%s\" at\n", path);
+	for (i = 0; i < sap->num_sections; i++)
+		printf_unfiltered("\t%s_addr = %s\n", sap->other[i].name,
+		    local_hex_string(sap->other[i].addr));		
 
 	if (from_tty && (!query("%s", "")))
 		error("Not confirmed.");
 
-	symbol_file_add(path, from_tty, asi.section_addrs, 0, OBJF_USERLOADED);
+	symbol_file_add(path, from_tty, sap, 0, OBJF_USERLOADED);
 
 	do_cleanups(cleanup);
 }
@@ -298,9 +303,12 @@ kgdb_add_kld_cmd (char *arg, int from_tty)
 static void
 kld_relocate_section_addresses (struct so_list *so, struct section_table *sec)
 {
+	static CORE_ADDR curr_addr;
 
-	sec->addr += so->lm_info->base_address;
-	sec->endaddr += so->lm_info->base_address;
+	if (sec == so->sections)
+		curr_addr = so->lm_info->base_address;
+
+	adjust_section_address(sec, &curr_addr);
 }
 
 static void

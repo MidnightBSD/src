@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/gnu/usr.bin/gdb/kgdb/trgt_i386.c,v 1.2 2012/07/04 13:37:32 laffer1 Exp $ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_i386.c,v 1.6.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -42,7 +41,6 @@ __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_i386.c,v 1.6.2.6.2.1 2008/11/2
 #include <target.h>
 #include <gdbthread.h>
 #include <inferior.h>
-#include <objfiles.h>
 #include <regcache.h>
 #include <frame-unwind.h>
 #include <i386-tdep.h>
