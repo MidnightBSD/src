@@ -1,8 +1,15 @@
-# $MidnightBSD: src/gnu/usr.bin/gdb/libgdb/Makefile,v 1.2 2012/07/04 13:48:07 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/gdb/libgdb/Makefile,v 1.3 2012/07/19 03:21:20 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/gdb/libgdb/Makefile,v 1.11 2006/04/10 09:00:19 ru Exp $
 
-TARGET_ARCH?= ${MACHINE_CPUARCH}
+# These assignments duplicate much of the functionality of
+# MACHINE_CPUARCH, but there's no easy way to export make functions...
+
+.if defined(TARGET_ARCH)
+TARGET_CPUARCH=${TARGET_ARCH}
+.else
 TARGET_CPUARCH=${MACHINE_CPUARCH}
+.endif
+TARGET_ARCH?=	${MACHINE_ARCH}
 
 LIB=	gdb
 INTERNALLIB=
@@ -55,7 +62,7 @@ xregcomp xre_exec xregexec xre_search xre_compile_fastmap xregerror xre_comp xre
 CFLAGS+= -D${stupid_gnu}=${stupid_gnu:S/^x//}
 .endfor
 
-.if ${TARGET_ARCH} == ${MACHINE_CPUARCH}
+.if ${TARGET_ARCH} == ${MACHINE_ARCH}
 _fork_child= fork-child.c
 _infptrace= infptrace.c
 _inftarg= inftarg.c
@@ -72,7 +79,7 @@ CLEANFILES= frame-unwind-kluge.c.orig
 version.c:
 	echo '#include "version.h"' >  ${.TARGET}
 	echo 'const char version[] = ${VERSION};' >> ${.TARGET}
-	echo 'const char host_name[] = "${MACHINE_CPUARCH}-${VENDOR}-midnightbsd";' \
+	echo 'const char host_name[] = "${MACHINE_ARCH}-${VENDOR}-midnightbsd";' \
 	    >> ${.TARGET}
 	echo 'const char target_name[] = "${TARGET_ARCH}-${VENDOR}-midnightbsd";' \
 	    >> ${.TARGET}

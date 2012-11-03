@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/gdb/Makefile.inc,v 1.4 2012/07/19 03:21:20 laffer1 Exp $
 
 VERSION= "6.1.1 [MidnightBSD]"
 VENDOR= midnightbsd
@@ -16,10 +16,18 @@ OBJ_ROOT= ${.OBJDIR}/../..
 OBJ_BU= ${OBJ_ROOT}/binutils
 OBJ_GDB= ${OBJ_ROOT}/gdb
 
-TARGET_ARCH?= ${MACHINE_CPUARCH}
-TARGET_SUBDIR= ${BMAKE_GDB}/arch/${TARGET_ARCH}
+# These assignments duplicate much of the functionality of
+# MACHINE_CPUARCH, but there's no easy way to export make functions...
 
-.if ${TARGET_ARCH} != ${MACHINE_CPUARCH}
+.if defined(TARGET_ARCH)
+TARGET_CPUARCH=${TARGET_ARCH}
+.else
+TARGET_CPUARCH=${MACHINE_CPUARCH}
+.endif
+TARGET_ARCH?=	${MACHINE_ARCH}
+TARGET_SUBDIR= ${BMAKE_GDB}/arch/${TARGET_CPUARCH}
+
+.if ${TARGET_ARCH} != ${MACHINE_ARCH}
 GDB_CROSS_DEBUGGER=
 .endif
 
