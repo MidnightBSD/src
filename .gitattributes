@@ -33906,6 +33906,7 @@ gnu/usr.bin/diff/libdiffutils/getopt.h -text
 gnu/usr.bin/diff/libdiffutils/gnuwidechar.h -text
 gnu/usr.bin/diff/libdiffutils/string.h -text
 gnu/usr.bin/diff/libdiffutils/strings.h -text
+gnu/usr.bin/diff/libdiffutils/sys/stat.h -text
 gnu/usr.bin/diff/libdiffutils/unistr.h -text
 gnu/usr.bin/diff/libdiffutils/unitypes.h -text
 gnu/usr.bin/diff/libdiffutils/uniwidth.h -text
