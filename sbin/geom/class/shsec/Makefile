@@ -1,7 +1,7 @@
-# $FreeBSD: src/sbin/geom/class/shsec/Makefile,v 1.1 2005/01/11 18:06:44 pjd Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../misc
 
-CLASS=	shsec
+GEOM_CLASS=	shsec
 
 .include <bsd.lib.mk>

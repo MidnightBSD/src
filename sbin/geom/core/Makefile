@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/geom/core/Makefile,v 1.10 2004/12/21 09:59:42 ru Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../misc
 
@@ -8,7 +8,7 @@ SRCS=	geom.c subr.c
 
 NO_SHARED=NO
 
-CFLAGS+= -DCLASS_DIR=\"${CLASS_DIR}\"
+CFLAGS+= -DGEOM_CLASS_DIR=\"${GEOM_CLASS_DIR}\"
 CFLAGS+= -I${.CURDIR}/../../../sys -I${.CURDIR} -I${.CURDIR}/..
 
 DPADD=	${LIBGEOM} ${LIBSBUF} ${LIBBSDXML} ${LIBUTIL}

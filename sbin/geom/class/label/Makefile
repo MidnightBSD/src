@@ -1,7 +1,7 @@
-# $FreeBSD: src/sbin/geom/class/label/Makefile,v 1.1 2004/07/02 19:40:34 pjd Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../misc
 
-CLASS=	label
+GEOM_CLASS=	label
 
 .include <bsd.lib.mk>

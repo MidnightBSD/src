@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004-2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2010 Edward Tomasz Napierala <trasz@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,33 +22,35 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD$
  */
 
-#ifndef _SUBR_H_
-#define	_SUBR_H_
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
+
+#include <stdio.h>
 #include <stdint.h>
+#include <libgeom.h>
+#include <geom/mountver/g_mountver.h>
 
-unsigned int g_lcm(unsigned int a, unsigned int b);
-uint32_t bitcount32(uint32_t x);
-int g_parse_lba(const char *lbastr, unsigned int sectorsize, off_t *sectors);
+#include "core/geom.h"
 
-off_t g_get_mediasize(const char *name);
-unsigned int g_get_sectorsize(const char *name);
 
-int g_metadata_read(const char *name, unsigned char *md, size_t size,
-    const char *magic);
-int g_metadata_store(const char *name, const unsigned char *md, size_t size);
-int g_metadata_clear(const char *name, const char *magic);
+uint32_t lib_version = G_LIB_VERSION;
+uint32_t version = G_MOUNTVER_VERSION;
 
-void gctl_error(struct gctl_req *req, const char *error, ...) __printflike(2, 3);
-int gctl_get_int(struct gctl_req *req, const char *pfmt, ...) __printflike(2, 3);
-intmax_t gctl_get_intmax(struct gctl_req *req, const char *pfmt, ...) __printflike(2, 3);
-const char *gctl_get_ascii(struct gctl_req *req, const char *pfmt, ...) __printflike(2, 3);
-int gctl_change_param(struct gctl_req *req, const char *name, int len,
-    const void *value);
-int gctl_delete_param(struct gctl_req *req, const char *name);
-int gctl_has_param(struct gctl_req *req, const char *name);
-
-#endif	/* !_SUBR_H_ */
+struct g_command class_commands[] = {
+	{ "create", G_FLAG_VERBOSE | G_FLAG_LOADKLD, NULL,
+	    {
+		G_OPT_SENTINEL
+	    },
+	    "[-v] dev ..."
+	},
+	{ "destroy", G_FLAG_VERBOSE, NULL,
+	    {
+		{ 'f', "force", NULL, G_TYPE_BOOL },
+		G_OPT_SENTINEL
+	    },
+	    "[-fv] prov ..."
+	},
+	G_CMD_SENTINEL
+};

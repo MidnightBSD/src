@@ -2,6 +2,6 @@
 
 .PATH: ${.CURDIR}/../../misc
 
-GEOM_CLASS=	concat
+GEOM_CLASS=	mountver
 
 .include <bsd.lib.mk>

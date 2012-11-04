@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,49 +27,66 @@
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
+#include <sys/param.h>
+#include <errno.h>
+#include <paths.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+#include <strings.h>
+#include <assert.h>
 #include <libgeom.h>
-#include <geom/nop/g_nop.h>
-
-#include "core/geom.h"
-
+#include <geom/raid/g_raid.h>
+#include <core/geom.h>
+#include <misc/subr.h>
 
 uint32_t lib_version = G_LIB_VERSION;
-uint32_t version = G_NOP_VERSION;
+uint32_t version = G_RAID_VERSION;
 
 struct g_command class_commands[] = {
-	{ "create", G_FLAG_VERBOSE | G_FLAG_LOADKLD, NULL,
+	{ "label", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'e', "error", "-1", G_TYPE_NUMBER },
-		{ 'o', "offset", "0", G_TYPE_NUMBER },
-		{ 'r', "rfailprob", "-1", G_TYPE_NUMBER },
-		{ 's', "size", "0", G_TYPE_NUMBER },
-		{ 'S', "secsize", "0", G_TYPE_NUMBER },
-		{ 'w', "wfailprob", "-1", G_TYPE_NUMBER },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
+		{ 'o', "fmtopt", G_VAL_OPTIONAL, G_TYPE_STRING },
+		{ 'S', "size", G_VAL_OPTIONAL, G_TYPE_NUMBER },
+		{ 's', "strip", G_VAL_OPTIONAL, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-v] [-e error] [-o offset] [-r rfailprob] [-s size] "
-	    "[-S secsize] [-w wfailprob] dev ..."
+	    "[-fv] [-o fmtopt] [-S size] [-s stripsize] format label level prov ..."
 	},
-	{ "configure", G_FLAG_VERBOSE, NULL,
+	{ "add", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'e', "error", "-1", G_TYPE_NUMBER },
-		{ 'r', "rfailprob", "-1", G_TYPE_NUMBER },
-		{ 'w', "wfailprob", "-1", G_TYPE_NUMBER },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
+		{ 'S', "size", G_VAL_OPTIONAL, G_TYPE_NUMBER },
+		{ 's', "strip", G_VAL_OPTIONAL, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-v] [-e error] [-r rfailprob] [-w wfailprob] prov ..."
+	    "[-fv] [-S size] [-s stripsize] name label level"
 	},
-	{ "destroy", G_FLAG_VERBOSE, NULL,
+	{ "delete", G_FLAG_VERBOSE, NULL,
 	    {
 		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] prov ..."
+	    "[-fv] name [label|num]"
 	},
-	{ "reset", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
-	    "[-v] prov ..."
+	{ "insert", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	    "[-v] name prov ..."
+	},
+	{ "remove", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	    "[-v] name prov ..."
+	},
+	{ "fail", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	    "[-v] name prov ..."
+	},
+	{ "stop", G_FLAG_VERBOSE, NULL,
+	    {
+		{ 'f', "force", NULL, G_TYPE_BOOL },
+		G_OPT_SENTINEL
+	    },
+	    "[-fv] name"
 	},
 	G_CMD_SENTINEL
 };
+

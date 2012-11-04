@@ -1,8 +1,9 @@
-# $FreeBSD: src/sbin/geom/class/multipath/Makefile,v 1.2 2007/02/27 07:29:15 mjacob Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../misc
-CLASS=	multipath
 
-.include <bsd.lib.mk>
+GEOM_CLASS=	multipath
 
 CFLAGS+=  -I${.CURDIR}/../../../../sys
+
+.include <bsd.lib.mk>

@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/geom/class/mirror/gmirror.8,v 1.23.2.2 2011/09/29 18:42:44 mav Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 1, 2009
+.Dd December 8, 2009
 .Dt GMIRROR 8
 .Os
 .Sh NAME
@@ -122,7 +122,7 @@ indicates an action to be performed:
 Create a mirror.
 The order of components is important, because a component's priority is based on its position
 (starting from 0 to 255).
-The component with the biggest priority (the lowest number) is used by the
+The component with the biggest priority is used by the
 .Cm prefer
 balance algorithm
 and is also used as a master component when resynchronization is needed,

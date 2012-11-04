@@ -2,7 +2,7 @@
 
 .PATH:	${.CURDIR}/../../misc
 
-GEOM_CLASS=	raid3
+GEOM_CLASS=	raid
 
 DPADD=	${LIBMD}
 LDADD=	-lmd

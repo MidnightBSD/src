@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/label/geom_label.c,v 1.10 2007/05/15 20:25:16 marcel Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -40,41 +40,46 @@ __FBSDID("$FreeBSD: src/sbin/geom/class/label/geom_label.c,v 1.10 2007/05/15 20:
 #include "core/geom.h"
 #include "misc/subr.h"
 
+#ifdef STATIC_GEOM_CLASSES
+#define PUBSYM(x)	glabel_##x
+#else
+#define PUBSYM(x)	x
+#endif
 
-uint32_t lib_version = G_LIB_VERSION;
-uint32_t version = G_LABEL_VERSION;
+uint32_t PUBSYM(lib_version) = G_LIB_VERSION;
+uint32_t PUBSYM(version) = G_LABEL_VERSION;
 
 static void label_main(struct gctl_req *req, unsigned flags);
 static void label_clear(struct gctl_req *req);
 static void label_dump(struct gctl_req *req);
 static void label_label(struct gctl_req *req);
 
-struct g_command class_commands[] = {
-	{ "clear", G_FLAG_VERBOSE, label_main, G_NULL_OPTS, NULL,
+struct g_command PUBSYM(class_commands)[] = {
+	{ "clear", G_FLAG_VERBOSE, label_main, G_NULL_OPTS,
 	    "[-v] dev ..."
 	},
 	{ "create", G_FLAG_VERBOSE | G_FLAG_LOADKLD, NULL, G_NULL_OPTS,
-	    NULL, "[-v] name dev"
+	    "[-v] name dev"
 	},
 	{ "destroy", G_FLAG_VERBOSE, NULL,
 	    {
 		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    NULL, "[-fv] name ..."
+	    "[-fv] name ..."
 	},
-	{ "dump", 0, label_main, G_NULL_OPTS, NULL,
+	{ "dump", 0, label_main, G_NULL_OPTS,
 	    "dev ..."
 	},
 	{ "label", G_FLAG_VERBOSE | G_FLAG_LOADKLD, label_main, G_NULL_OPTS,
-	    NULL, "[-v] name dev"
+	    "[-v] name dev"
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
 	    {
 		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    NULL, "[-fv] name ..."
+	    "[-fv] name ..."
 	},
 	G_CMD_SENTINEL
 };
@@ -118,12 +123,6 @@ label_label(struct gctl_req *req)
 		return;
 	}
 
-	label = gctl_get_ascii(req, "arg0");
-	if (strlen(label) > 15) {
-		gctl_error(req, "Label cannot exceed 15 characters");
-		return;
-	}
-
 	/*
 	 * Clear last sector first to spoil all components if device exists.
 	 */
@@ -137,6 +136,7 @@ label_label(struct gctl_req *req)
 
 	strlcpy(md.md_magic, G_LABEL_MAGIC, sizeof(md.md_magic));
 	md.md_version = G_LABEL_VERSION;
+	label = gctl_get_ascii(req, "arg0");
 	strlcpy(md.md_label, label, sizeof(md.md_label));
 	md.md_provsize = g_get_mediasize(name);
 	if (md.md_provsize == 0) {
