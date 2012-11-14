@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.2 2008-12-06 20:34:25 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.3 2012-11-14 23:58:26 laffer1 Exp $";
 #endif
 
 #ifndef	SOLARIS
@@ -810,3 +810,20 @@ int ipfsync()
 {
 	return 0;
 }
+
+
+#ifndef ipf_random
+u_32_t ipf_random()
+{
+	static int seeded = 0;
+
+	/*
+	 * Choose a non-random seed so that "randomness" can be "tested."
+	 */
+	if (seeded == 0) {
+		srand(0);
+		seeded = 1;
+	}
+	return rand();
+}
+#endif
