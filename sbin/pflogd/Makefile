@@ -1,4 +1,4 @@
-# $FreeBSD: src/sbin/pflogd/Makefile,v 1.3 2004/10/24 14:25:53 ru Exp $
+# $MidnightBSD$
 
 .PATH:	${.CURDIR}/../../contrib/pf/pflogd
 
@@ -6,8 +6,11 @@ PROG=	pflogd
 SRCS= 	pflogd.c pidfile.c privsep.c privsep_fdpass.c
 MAN=	pflogd.8
 
-CFLAGS+=-Wall -Werror -Wmissing-prototypes -Wshadow
-LDADD=	-lpcap -lutil
+CFLAGS+=-include ${.CURDIR}/../../lib/libpcap/config.h
+
+LDADD=	-lpcap
 DPADD=	${LIBPCAP} ${LIBUTIL}
+
+WARNS?=	2
 
 .include <bsd.prog.mk>
