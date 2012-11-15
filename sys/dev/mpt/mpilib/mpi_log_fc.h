@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2010, LSI Logic Corporation and its contributors.
  * All rights reserved.
@@ -35,7 +35,7 @@
  *                  in the IOCLogInfo field of a MPI Default Reply Message.
  *
  *  CREATION DATE:  6/02/2000
- *  ID:             $Id: mpi_log_fc.h,v 1.3 2012-08-06 01:22:09 laffer1 Exp $
+ *  ID:             $Id: mpi_log_fc.h,v 1.4 2012-11-15 22:35:22 laffer1 Exp $
  */
 
 

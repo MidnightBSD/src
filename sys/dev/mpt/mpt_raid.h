@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /*-
  * Definitions for the integrated RAID features LSI MPT Fusion adapters.
  *

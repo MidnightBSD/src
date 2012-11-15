@@ -45936,7 +45936,6 @@ sys/dev/mps/mpsvar.h -text
 sys/dev/mpt/mpilib/mpi.h -text
 sys/dev/mpt/mpilib/mpi_cnfg.h -text
 sys/dev/mpt/mpilib/mpi_fc.h -text
-sys/dev/mpt/mpilib/mpi_inb.h -text
 sys/dev/mpt/mpilib/mpi_init.h -text
 sys/dev/mpt/mpilib/mpi_ioc.h -text
 sys/dev/mpt/mpilib/mpi_lan.h -text
