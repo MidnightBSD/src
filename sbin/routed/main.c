@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/routed/main.c,v 1.19 2006/11/05 14:49:47 trhodes Exp $
+ * $MidnightBSD$
  */
 
 #include "defs.h"
@@ -38,62 +38,65 @@
 #include <fcntl.h>
 #include <sys/file.h>
 
-__COPYRIGHT("@(#) Copyright (c) 1983, 1988, 1993\n"
+__COPYRIGHT("@(#) Copyright (c) 1983, 1988, 1993 "
 	    "The Regents of the University of California."
-	    "  All rights reserved.\n");
+	    "  All rights reserved.");
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #include <util.h>
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: src/sbin/routed/main.c,v 1.19 2006/11/05 14:49:47 trhodes Exp $");
+__RCSID("$MidnightBSD$");
 #else
-__RCSID("$Revision: 1.2 $");
-#ident "$Revision: 1.2 $"
+__RCSID("$Revision: 1.3 $");
+#ident "$Revision: 1.3 $"
 #endif
 
 pid_t	mypid;
 
 naddr	myaddr;				/* system address */
-char	myname[MAXHOSTNAMELEN+1];
+static char myname[MAXHOSTNAMELEN+1];
 
-int	verbose;
+static int verbose;
 
 int	supplier;			/* supply or broadcast updates */
 int	supplier_set;
-int	ipforwarding = 1;		/* kernel forwarding on */
+static int ipforwarding = 1;		/* kernel forwarding on */
 
-int	default_gateway;		/* 1=advertise default */
-int	background = 1;
+static int default_gateway;		/* 1=advertise default */
+static int background = 1;
 int	ridhosts;			/* 1=reduce host routes */
 int	mhome;				/* 1=want multi-homed host route */
 int	advertise_mhome;		/* 1=must continue advertising it */
 int	auth_ok = 1;			/* 1=ignore auth if we do not care */
 
 struct timeval epoch;			/* when started */
-struct timeval clk, prev_clk;
+struct timeval clk;
+static struct timeval prev_clk;
 static int usec_fudge;
 struct timeval now;			/* current idea of time */
 time_t	now_stale;
 time_t	now_expire;
 time_t	now_garbage;
 
-struct timeval next_bcast;		/* next general broadcast */
+static struct timeval next_bcast;	/* next general broadcast */
 struct timeval no_flash = {		/* inhibit flash update */
 	EPOCH+SUPPLY_INTERVAL, 0
 };
 
-struct timeval flush_kern_timer;
+static struct timeval flush_kern_timer;
 
-fd_set	fdbits;
-int	sock_max;
+static fd_set fdbits;
+static int sock_max;
 int	rip_sock = -1;			/* RIP socket */
-struct interface *rip_sock_mcast;	/* current multicast interface */
+const struct interface *rip_sock_mcast;	/* current multicast interface */
 int	rt_sock;			/* routing socket */
 int	rt_sock_seqno;
 
 
 static  int get_rip_sock(naddr, int);
 static void timevalsub(struct timeval *, struct timeval *, struct timeval *);
+static void sigalrm(int s UNUSED);
+static void sigterm(int sig);
 
 int
 main(int argc,
@@ -529,7 +532,9 @@ usage:
 			n--;
 		}
 
-		for (ifp = ifnet; n > 0 && 0 != ifp; ifp = ifp->int_next) {
+		LIST_FOREACH(ifp, &ifnet, int_list) {
+			if (n <= 0)
+				break;
 			if (ifp->int_rip_sock >= 0
 			    && FD_ISSET(ifp->int_rip_sock, &ibits)) {
 				read_rip(ifp->int_rip_sock, ifp);
@@ -541,7 +546,7 @@ usage:
 
 
 /* ARGSUSED */
-void
+static void
 sigalrm(int s UNUSED)
 {
 	/* Historically, SIGALRM would cause the daemon to check for
@@ -553,7 +558,7 @@ sigalrm(int s UNUSED)
 
 
 /* watch for fatal signals */
-void
+static void
 sigterm(int sig)
 {
 	stopint = sig;
@@ -578,7 +583,7 @@ fix_select(void)
 		if (sock_max <= rip_sock)
 			sock_max = rip_sock+1;
 	}
-	for (ifp = ifnet; 0 != ifp; ifp = ifp->int_next) {
+	LIST_FOREACH(ifp, &ifnet, int_list) {
 		if (ifp->int_rip_sock >= 0) {
 			FD_SET(ifp->int_rip_sock, &fdbits);
 			if (sock_max <= ifp->int_rip_sock)
@@ -690,7 +695,7 @@ rip_off(void)
 
 		/* get non-broadcast sockets to listen to queries.
 		 */
-		for (ifp = ifnet; ifp != 0; ifp = ifp->int_next) {
+		LIST_FOREACH(ifp, &ifnet, int_list) {
 			if (ifp->int_state & IS_REMOTE)
 				continue;
 			if (ifp->int_rip_sock < 0) {
@@ -713,25 +718,23 @@ rip_off(void)
 static void
 rip_mcast_on(struct interface *ifp)
 {
-	struct ip_mreq m;
+	struct group_req gr;
+	struct sockaddr_in *sin;
 
 	if (!IS_RIP_IN_OFF(ifp->int_state)
 	    && (ifp->int_if_flags & IFF_MULTICAST)
-#ifdef MCAST_PPP_BUG
-	    && !(ifp->int_if_flags & IFF_POINTOPOINT)
-#endif
 	    && !(ifp->int_state & IS_ALIAS)) {
-		m.imr_multiaddr.s_addr = htonl(INADDR_RIP_GROUP);
-#ifdef MCAST_IFINDEX
-		m.imr_interface.s_addr = htonl(ifp->int_index);
-#else
-		m.imr_interface.s_addr = ((ifp->int_if_flags & IFF_POINTOPOINT)
-					  ? ifp->int_dstaddr
-					  : ifp->int_addr);
+		memset(&gr, 0, sizeof(gr));
+		gr.gr_interface = ifp->int_index;
+		sin = (struct sockaddr_in *)&gr.gr_group;
+		sin->sin_family = AF_INET;
+#ifdef _HAVE_SIN_LEN
+		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
-		if (setsockopt(rip_sock,IPPROTO_IP, IP_ADD_MEMBERSHIP,
-			       &m, sizeof(m)) < 0)
-			LOGERR("setsockopt(IP_ADD_MEMBERSHIP RIP)");
+		sin->sin_addr.s_addr = htonl(INADDR_RIP_GROUP);
+		if (setsockopt(rip_sock, IPPROTO_IP, MCAST_JOIN_GROUP,
+			       &gr, sizeof(gr)) < 0)
+			LOGERR("setsockopt(MCAST_JOIN_GROUP RIP)");
 	}
 }
 
@@ -763,7 +766,7 @@ rip_on(struct interface *ifp)
 		 * since that would let two daemons bind to the broadcast
 		 * socket.
 		 */
-		for (ifp = ifnet; ifp != 0; ifp = ifp->int_next) {
+		LIST_FOREACH(ifp, &ifnet, int_list) {
 			if (ifp->int_rip_sock >= 0) {
 				(void)close(ifp->int_rip_sock);
 				ifp->int_rip_sock = -1;
@@ -778,7 +781,7 @@ rip_on(struct interface *ifp)
 		if (next_bcast.tv_sec < now.tv_sec+MIN_WAITTIME)
 			next_bcast.tv_sec = now.tv_sec+MIN_WAITTIME;
 
-		for (ifp = ifnet; ifp != 0; ifp = ifp->int_next) {
+		LIST_FOREACH(ifp, &ifnet, int_list) {
 			ifp->int_query_time = NEVER;
 			rip_mcast_on(ifp);
 		}

@@ -39,7 +39,6 @@ static char sccsid[] = "@(#)shutdown.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-/* $FreeBSD: src/sbin/shutdown/shutdown.c,v 1.28 2005/01/25 08:40:51 delphij Exp $ */
 __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>

@@ -7,7 +7,6 @@
  * ----------------------------------------------------------------------------
  *
  * $MidnightBSD$
- * $FreeBSD: src/sbin/recoverdisk/recoverdisk.c,v 1.9 2007/06/17 16:53:45 phk Exp $
  */
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -27,7 +26,7 @@
 
 volatile sig_atomic_t aborting = 0;
 static size_t bigsize = 1024 * 1024;
-static size_t medsize = 64 * 1024;
+static size_t medsize;
 static size_t minsize = 512;
 
 struct lump {
@@ -77,6 +76,7 @@ static void
 save_worklist(void)
 {
 	FILE *file;
+	struct lump *llp;
 
 	if (wworklist != NULL) {
 		(void)fprintf(stderr, "\nSaving worklist ...");
@@ -86,14 +86,11 @@ save_worklist(void)
 		if (file == NULL)
 			err(1, "Error opening file %s", wworklist);
 
-		for (;;) {
-			lp = TAILQ_FIRST(&lumps);
-			if (lp == NULL)
-				break;
+		TAILQ_FOREACH(llp, &lumps, list)
 			fprintf(file, "%jd %jd %d\n",
-			    (intmax_t)lp->start, (intmax_t)lp->len, lp->state);
-			TAILQ_REMOVE(&lumps, lp, list);
-		}
+			    (intmax_t)llp->start, (intmax_t)llp->len,
+			    llp->state);
+		fclose(file);
 		(void)fprintf(stderr, " done.\n");
 	}
 }
@@ -137,8 +134,8 @@ read_worklist(off_t t)
 static void
 usage(void)
 {
-	(void)fprintf(stderr,
-    "usage: recoverdisk [-r worklist] [-w worklist] source-drive [destination]\n");
+	(void)fprintf(stderr, "usage: recoverdisk [-b bigsize] [-r readlist] "
+	    "[-s interval] [-w writelist] source [destination]\n");
 	exit(1);
 }
 
@@ -156,18 +153,25 @@ main(int argc, char * const argv[])
 	int fdr, fdw;
 	off_t t, d, start, len;
 	size_t i, j;
-	int error, flags, state;
+	int error, state;
 	u_char *buf;
 	u_int sectorsize;
 	time_t t1, t2;
 	struct stat sb;
+	u_int n, snapshot = 60;
 
-	while ((ch = getopt(argc, argv, "r:w:")) != -1) {
+	while ((ch = getopt(argc, argv, "b:r:w:s:")) != -1) {
 		switch (ch) {
+		case 'b':
+			bigsize = strtoul(optarg, NULL, 0);
+			break;
 		case 'r':
 			rworklist = strdup(optarg);
 			if (rworklist == NULL)
 				err(1, "Cannot allocate enough memory");
+			break;
+		case 's':
+			snapshot = strtoul(optarg, NULL, 0);
 			break;
 		case 'w':
 			wworklist = strdup(optarg);
@@ -192,38 +196,43 @@ main(int argc, char * const argv[])
 	error = fstat(fdr, &sb);
 	if (error < 0)
 		err(1, "fstat failed");
-	flags = O_WRONLY;
 	if (S_ISBLK(sb.st_mode) || S_ISCHR(sb.st_mode)) {
 		error = ioctl(fdr, DIOCGSECTORSIZE, &sectorsize);
 		if (error < 0)
 			err(1, "DIOCGSECTORSIZE failed");
 
-		/*
-		 * Make medsize roughly 64kB, depending on native sector
-		 * size. bigsize has to be a multiple of medsize.
-		 * For media with 2352 sectors, this will
-		 * result in 2352, 63504, and 1016064 bytes.
-		 */
 		minsize = sectorsize;
-		medsize = (medsize / sectorsize) * sectorsize;
-		bigsize = medsize * 16;
+		bigsize = (bigsize / sectorsize) * sectorsize;
 
 		error = ioctl(fdr, DIOCGMEDIASIZE, &t);
 		if (error < 0)
 			err(1, "DIOCGMEDIASIZE failed");
 	} else {
 		t = sb.st_size;
-		flags |= O_CREAT | O_TRUNC;
 	}
+
+	if (bigsize < minsize)
+		bigsize = minsize;
+
+	for (ch = 0; (bigsize >> ch) > minsize; ch++)
+		continue;
+	medsize = bigsize >> (ch / 2);
+	medsize = (medsize / minsize) * minsize;
+
+	fprintf(stderr, "Bigsize = %zu, medsize = %zu, minsize = %zu\n",
+	    bigsize, medsize, minsize);
 
 	buf = malloc(bigsize);
 	if (buf == NULL)
-		err(1, "Cannot allocate %jd bytes buffer", (intmax_t)bigsize);
+		err(1, "Cannot allocate %zu bytes buffer", bigsize);
 
 	if (argc > 1) {
-		fdw = open(argv[1], flags, DEFFILEMODE);
+		fdw = open(argv[1], O_WRONLY | O_CREAT, DEFFILEMODE);
 		if (fdw < 0)
 			err(1, "Cannot open write descriptor %s", argv[1]);
+		if (ftruncate(fdw, t) < 0)
+			err(1, "Cannot truncate output %s to %jd bytes",
+			    argv[1], (intmax_t)t);
 	} else
 		fdw = -1;
 
@@ -239,6 +248,7 @@ main(int argc, char * const argv[])
 	t1 = 0;
 	start = len = i = state = 0;
 	PRINT_HEADER;
+	n = 0;
 	for (;;) {
 		lp = TAILQ_FIRST(&lumps);
 		if (lp == NULL)
@@ -258,6 +268,10 @@ main(int argc, char * const argv[])
 			if (t1 != t2 || lp->len < (off_t)bigsize) {
 				PRINT_STATUS(start, i, len, state, d, t);
 				t1 = t2;
+				if (++n == snapshot) {
+					save_worklist();
+					n = 0;
+				}
 			}
 			if (i == 0) {
 				errx(1, "BOGUS i %10jd", (intmax_t)i);
@@ -277,7 +291,14 @@ main(int argc, char * const argv[])
 				lp->len -= i;
 				continue;
 			}
-			printf("\n%jd %zu failed %d\n", lp->start, i, errno);
+			printf("\n%jd %zu failed (%s)\n",
+			    lp->start, i, strerror(errno));
+			if (errno == EINVAL) {
+				printf("read() size too big? Try with -b 131072");
+				aborting = 1;
+			}
+			if (errno == ENXIO)
+				aborting = 1;
 			new_lump(lp->start, i, lp->state + 1);
 			lp->start += i;
 			lp->len -= i;
@@ -290,6 +311,7 @@ main(int argc, char * const argv[])
 		free(lp);
 	}
 	PRINT_STATUS(start, i, len, state, d, t);
+	save_worklist();
 	printf("\nCompleted\n");
 	return (0);
 }

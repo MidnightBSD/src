@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
 # $FreeBSD: src/sbin/Makefile,v 1.168 2007/07/24 15:35:00 scottl Exp $
-# $MidnightBSD: src/sbin/Makefile,v 1.11 2012/04/11 01:06:11 laffer1 Exp $
+# $MidnightBSD: src/sbin/Makefile,v 1.12 2012/10/28 19:22:30 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -69,9 +69,7 @@ SUBDIR=	adjkerntz \
 	savecore \
 	setkey \
 	shutdown \
-	slattach \
 	spppcontrol \
-	startslip \
 	swapon \
 	sysctl \
 	tunefs \

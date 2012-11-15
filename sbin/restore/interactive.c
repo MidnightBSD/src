@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)interactive.c	8.5 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/restore/interactive.c,v 1.18 2005/07/21 16:12:35 dds Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -83,7 +83,7 @@ struct arglist {
 static char	*copynext(char *, char *);
 static int	 fcmp(const void *, const void *);
 static void	 formatf(struct afile *, int);
-static void	 getcmd(char *, char *, char *, int, struct arglist *);
+static void	 getcmd(char *, char *, char *, size_t, struct arglist *);
 struct dirent	*glob_readdir(void *);
 static int	 glob_stat(const char *, struct stat *);
 static void	 mkentry(char *, struct direct *, struct afile *);
@@ -301,7 +301,7 @@ loop:
  * eliminate any embedded ".." components.
  */
 static void
-getcmd(char *curdir, char *cmd, char *name, int size, struct arglist *ap)
+getcmd(char *curdir, char *cmd, char *name, size_t size, struct arglist *ap)
 {
 	char *cp;
 	static char input[BUFSIZ];
@@ -441,7 +441,7 @@ copynext(char *input, char *output)
  * remove any embedded "." and ".." components.
  */
 void
-canon(char *rawname, char *canonname, int len)
+canon(char *rawname, char *canonname, size_t len)
 {
 	char *cp, *np;
 
@@ -502,7 +502,7 @@ printlist(char *name, char *basename)
 	struct afile single;
 	RST_DIR *dirp;
 	int entries, len, namelen;
-	char locname[MAXPATHLEN + 1];
+	char locname[MAXPATHLEN];
 
 	dp = pathsearch(name);
 	if (dp == NULL || (!dflag && TSTINO(dp->d_ino, dumpmap) == 0) ||
@@ -533,8 +533,8 @@ printlist(char *name, char *basename)
 		fprintf(stderr, "%s:\n", name);
 		entries = 0;
 		listp = list;
-		(void) strncpy(locname, name, MAXPATHLEN);
-		(void) strncat(locname, "/", MAXPATHLEN);
+		(void)strlcpy(locname, name, MAXPATHLEN);
+		(void)strlcat(locname, "/", MAXPATHLEN);
 		namelen = strlen(locname);
 		while ((dp = rst_readdir(dirp))) {
 			if (dp == NULL)
@@ -550,8 +550,7 @@ printlist(char *name, char *basename)
 				fprintf(stderr, "%s%s: name exceeds %d char\n",
 					locname, dp->d_name, MAXPATHLEN);
 			} else {
-				(void) strncat(locname, dp->d_name,
-				    (int)dp->d_namlen);
+				(void)strlcat(locname, dp->d_name, MAXPATHLEN);
 				mkentry(locname, dp, listp++);
 				entries++;
 			}

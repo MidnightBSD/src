@@ -23,9 +23,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: src/sbin/recoverdisk/recoverdisk.1,v 1.3 2007/06/17 16:53:45 phk Exp $
 .\"
-.Dd May 6, 2006
+.Dd May 1, 2011
 .Dt RECOVERDISK 1
 .Os
 .Sh NAME
@@ -33,30 +32,43 @@
 .Nd recover data from hard disk or optical media
 .Sh SYNOPSIS
 .Nm
-.Op Fl r Ar rlist
-.Op Fl w Ar wlist
-.Ar special
-.Op Ar file
+.Op Fl b Ar bigsize
+.Op Fl r Ar readlist
+.Op Fl s Ar interval
+.Op Fl w Ar writelist
+.Ar source
+.Op Ar destination
 .Sh DESCRIPTION
 The
 .Nm
 utility reads data from the
-.Ar special
+.Ar source
 file until all blocks could be successfully read.
+If
+.Ar destination
+was specified all data is being written to that file.
 It starts reading in multiples of the sector size.
 Whenever a block fails, it is put to the end of the working queue and will be
 read again, possibly with a smaller read size.
 .Pp
-It uses block sizes of roughly 1 MB, 64kB, and the native sector size (usually
-512 bytes).
+By default it uses block sizes of roughly 1 MB, 32kB, and the native
+sector size (usually 512 bytes).
 These figures are adjusted slightly, for devices whose sectorsize is not a
 power of 2, e.g., audio CDs with a sector size of 2352 bytes.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
-.It Fl r Ar rlist
+.It Fl b Ar bigsize
+The size of reads attempted first.
+The middle pass is roughly the logarithmic average of the bigsize and
+the sectorsize.
+.It Fl r Ar readlist
 Read the list of blocks and block sizes to read from the specified file.
-.It Fl w Ar wlist
+.It Fl s Ar interval
+How often we should update the writelist file while things go OK.
+The default is 60 and the unit is "progress messages" so if things
+go well, this is the same as once per minute.
+.It Fl w Ar writelist
 Write the list of remaining blocks to read to the specified file if
 .Nm
 is aborted via
@@ -93,20 +105,23 @@ Percent complete.
 .Sh EXAMPLES
 .Bd -literal
 # recover data from failing hard drive ad3
-touch /data/lots_of_space
-recoverdisk /dev/ad3 /data/lots_of_space
+recoverdisk /dev/ad3 /data/disk.img
 
 # clone a hard disk
 recoverdisk /dev/ad3 /dev/ad4
 
 # read an ISO image from a CD-ROM
-touch /data/cd.iso; recoverdisk /dev/acd0 /data/cd.iso
+recoverdisk /dev/cd0 /data/cd.iso
 
 # continue reading from a broken CD and update the existing worklist
-recoverdisk -r worklist -w worklist /dev/acd0 /data/cd.iso
+recoverdisk -r worklist -w worklist /dev/cd0 /data/cd.iso
 
 # recover a single file from the unreadable media
-touch file.avi; recoverdisk /cdrom/file.avi file.avi
+recoverdisk /cdrom/file.avi file.avi
+
+# If the disk hangs the system on read-errors try:
+recoverdisk -b 0 /dev/ad3 /somewhere
+
 .Ed
 .Sh SEE ALSO
 .Xr dd 1
@@ -120,7 +135,7 @@ utility first appeared in
 The original implementation was done by
 .An Poul-Henning Kamp Aq phk@FreeBSD.org
 with minor improvements from
-.An Ulrich Sp\(:orlein Aq uspoerlein@gmail.com .
+.An Ulrich Sp\(:orlein Aq uqs@FreeBSD.org .
 .Pp
 This manual page was written by
 .An Ulrich Sp\(:orlein .
@@ -131,4 +146,13 @@ This is due to the DMA reads being split up into blocks of at most 128kB.
 These reads then fail if the sectorsize is not a divisor of 128kB.
 When reading a full raw audio CD, this leads to roughly 700 error messages
 flying by.
-This is harmless.
+This is harmless and can be avoided by setting
+.Fl b
+to no more than 128kB.
+.\".Pp
+.\"When reading from optical media, a bug in the GEOM framework will
+.\"prevent it from seeing that the media has been removed.
+.\"The device can still be opened, but all reads will fail.
+.\"This is usually harmless, but will send
+.\".Nm
+.\"into an infinite loop.

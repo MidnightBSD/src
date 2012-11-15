@@ -27,9 +27,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/ping6/ping6.8,v 1.23 2005/02/10 09:19:32 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd May 17, 1998
+.Dd April 20, 2010
 .Dt PING6 8
 .Os
 .Sh NAME
@@ -40,9 +40,9 @@ packets to network hosts
 .Sh SYNOPSIS
 .Nm
 .\" without ipsec, or new ipsec
-.Op Fl dfHmnNqtvwW
+.Op Fl DdfHmnNoqrRtvwW
 .\" old ipsec
-.\" .Op Fl AdEfmnNqRtvwW
+.\" .Op Fl ADdEfmnNqRtvwW
 .Bk -words
 .Op Fl a Ar addrtype
 .Ek
@@ -141,6 +141,8 @@ Stop after sending
 .Ar count
 .Tn ECHO_RESPONSE
 packets.
+.It Fl D
+Disable IPv6 fragmentation.
 .It Fl d
 Set the
 .Dv SO_DEBUG
@@ -225,6 +227,8 @@ Since node information multicast group is a link-local multicast group,
 outgoing interface needs to be specified by
 .Fl I
 option.
+.It Fl o
+Exit successfully after receiving one reply packet.
 .It Fl p Ar pattern
 You may specify up to 16
 .Dq pad
@@ -242,6 +246,22 @@ specifies IPsec policy to be used for the probe.
 Quiet output.
 Nothing is displayed except the summary lines at startup time and
 when finished.
+.It Fl r
+Audible.
+Include a bell
+.Tn ( ASCII
+0x07)
+character in the output when any packet is received.
+.It Fl R
+Audible.
+Output a bell
+.Tn ( ASCII
+0x07)
+character when no packet is received before the next packet
+is transmitted.
+To cater for round-trip times that are longer than the interval
+between transmissions, further missing packets cause a bell only
+if the maximum number of unreceived packets has increased.
 .It Fl S Ar sourceaddr
 Specifies the source address of request packets.
 The source address must be one of the unicast addresses of the sending node,
@@ -407,7 +427,9 @@ option of
 The
 .Nm
 utility returns 0 on success (the host is alive),
-and non-zero if the arguments are incorrect or the host is not responding.
+2 if the transmission was successful but no responses were received,
+any other non-zero value if the arguments are incorrect or
+another error has occurred.
 .Sh EXAMPLES
 Normally,
 .Nm

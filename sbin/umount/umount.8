@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)umount.8	8.2 (Berkeley) 5/8/95
-.\" $FreeBSD: src/sbin/umount/umount.8,v 1.20 2004/04/09 19:58:40 markm Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 18, 2003
+.Dd May 31, 2011
 .Dt UMOUNT 8
 .Os
 .Sh NAME
@@ -37,7 +37,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl fv
-.Ar special | node | fsid
+.Ar special ... | node ... | fsid ...
 .Nm
 .Fl a | A
 .Op Fl F Ar fstab
@@ -57,7 +57,8 @@ device or remote node (rhost:path), the path to the mount point
 or by the file system ID
 .Ar fsid
 as reported by
-.Dq mount -v .
+.Dq mount -v
+when run by root.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
@@ -77,6 +78,9 @@ The file system is forcibly unmounted.
 Active special devices continue to work,
 but all other files return errors if further accesses are attempted.
 The root file system cannot be forcibly unmounted.
+For NFS, a forced dismount can take up to 1 minute or more to
+complete against an unresponsive server and may throw away
+data not yet written to the server for this case.
 .It Fl h Ar host
 Only file systems mounted from the specified host will be
 unmounted.

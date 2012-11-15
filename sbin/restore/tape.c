@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)tape.c	8.9 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/restore/tape.c,v 1.49 2007/03/06 08:13:20 mckusick Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -227,7 +227,7 @@ setup(void)
 	volno = 1;
 	setdumpnum();
 	FLUSHTAPEBUF();
-	if (!pipein && !bflag)
+	if (!pipein && !pipecmdin && !bflag)
 		findtapeblksize();
 	if (gethead(&spcl) == FAIL) {
 		fprintf(stderr, "Tape is not a dump tape\n");
@@ -333,10 +333,6 @@ getvol(long nextvol)
 		}
 		if (volno == 1)
 			return;
-		if (pipecmdin) {
-			closemt();
-			goto getpipecmdhdr;
-		}
 		goto gethdr;
 	}
 again:
@@ -400,8 +396,7 @@ again:
 	if (pipecmdin) {
 		char volno[sizeof("2147483647")];
 
-getpipecmdhdr:
-		(void)sprintf(volno, "%d", newvol);
+		(void)sprintf(volno, "%ld", newvol);
 		if (setenv("RESTORE_VOLUME", volno, 1) == -1) {
 			fprintf(stderr, "Cannot set $RESTORE_VOLUME: %s\n",
 			    strerror(errno));
@@ -433,7 +428,8 @@ gethdr:
 		goto again;
 	}
 	if (tmpbuf.c_volume != volno) {
-		fprintf(stderr, "Wrong volume (%ld)\n", tmpbuf.c_volume);
+		fprintf(stderr, "Wrong volume (%jd)\n",
+		    (intmax_t)tmpbuf.c_volume);
 		volno = 0;
 		goto again;
 	}
@@ -454,8 +450,8 @@ gethdr:
  	 * If coming to this volume at random, skip to the beginning
  	 * of the next record.
  	 */
-	dprintf(stdout, "last rec %qd, tape starts with %qd\n", prevtapea,
-	    tmpbuf.c_tapea);
+	dprintf(stdout, "last rec %jd, tape starts with %jd\n",
+	    (intmax_t)prevtapea, (intmax_t)tmpbuf.c_tapea);
  	if (tmpbuf.c_type == TS_TAPE) {
  		if (curfile.action != USING) {
 			/*
@@ -554,8 +550,8 @@ printdumpinfo(void)
 	    (spcl.c_ddate == 0) ? "the epoch\n" : ctime(&t));
 	if (spcl.c_host[0] == '\0')
 		return;
-	fprintf(stderr, "Level %ld dump of %s on %s:%s\n",
-		spcl.c_level, spcl.c_filesys, spcl.c_host, spcl.c_dev);
+	fprintf(stderr, "Level %jd dump of %s on %s:%s\n",
+	    (intmax_t)spcl.c_level, spcl.c_filesys, spcl.c_host, spcl.c_dev);
 	fprintf(stderr, "Label: %s\n", spcl.c_label);
 }
 
@@ -582,7 +578,9 @@ extractfile(char *name)
 	ctimep[1].tv_sec = curfile.birthtime_sec;
 	ctimep[1].tv_usec = curfile.birthtime_nsec / 1000;
 	extsize = curfile.extsize;
-	uid = curfile.uid;
+	uid = getuid();
+	if (uid == 0)
+		uid = curfile.uid;
 	gid = curfile.gid;
 	mode = curfile.mode;
 	flags = curfile.file_flags;
@@ -1202,17 +1200,17 @@ getmore:
 	 * Check for mid-tape short read error.
 	 * If found, skip rest of buffer and start with the next.
 	 */
-	if (!pipein && numtrec < ntrec && i > 0) {
+	if (!pipein && !pipecmdin && numtrec < ntrec && i > 0) {
 		dprintf(stdout, "mid-media short read error.\n");
 		numtrec = ntrec;
 	}
 	/*
 	 * Handle partial block read.
 	 */
-	if (pipein && i == 0 && rd > 0)
+	if ((pipein || pipecmdin) && i == 0 && rd > 0)
 		i = rd;
 	else if (i > 0 && i != ntrec * TP_BSIZE) {
-		if (pipein) {
+		if (pipein || pipecmdin) {
 			rd += i;
 			cnt -= i;
 			if (cnt > 0)
@@ -1280,7 +1278,7 @@ getmore:
 			return;
 		}
 		if (rd % TP_BSIZE != 0)
-			panic("partial block read: %d should be %d\n",
+			panic("partial block read: %ld should be %ld\n",
 				rd, ntrec * TP_BSIZE);
 		terminateinput();
 		memmove(&tapebuf[rd], &endoftapemark, (long)TP_BSIZE);
@@ -1377,8 +1375,6 @@ gethead(struct s_spcl *buf)
 	}
 	if (checksum((int *)buf) == FAIL)
 		return (FAIL);
-	if (_time64_to_time(buf->c_date) != dumpdate)
-		fprintf(stderr, "Header with wrong dumpdate.\n");
 	if (Bcvt) {
 		swabst((u_char *)"8l4s1q8l2q17l", (u_char *)buf);
 		swabst((u_char *)"l",(u_char *) &buf->c_level);
@@ -1393,28 +1389,25 @@ gethead(struct s_spcl *buf)
 		/*
 		 * Have to patch up missing information in bit map headers
 		 */
-		buf->c_inumber = 0;
 		buf->c_size = buf->c_count * TP_BSIZE;
 		if (buf->c_count > TP_NINDIR)
 			readmapflag = 1;
 		else 
 			for (i = 0; i < buf->c_count; i++)
 				buf->c_addr[i]++;
-		break;
+		/* FALL THROUGH */
 
 	case TS_TAPE:
-		if (buf->c_magic == NFS_MAGIC) {
-			if ((buf->c_flags & NFS_DR_NEWINODEFMT) == 0)
-				oldinofmt = 1;
-			buf->c_date = _time32_to_time(buf->c_old_date);
-			buf->c_ddate = _time32_to_time(buf->c_old_ddate);
-			buf->c_tapea = buf->c_old_tapea;
-			buf->c_firstrec = buf->c_old_firstrec;
-		}
+		if (buf->c_magic == NFS_MAGIC &&
+		    (buf->c_flags & NFS_DR_NEWINODEFMT) == 0)
+			oldinofmt = 1;
+		/* FALL THROUGH */
+
 	case TS_END:
 		buf->c_inumber = 0;
-		break;
+		/* FALL THROUGH */
 
+	case TS_ADDR:
 	case TS_INODE:
 		/*
 		 * For old dump tapes, have to copy up old fields to
@@ -1427,16 +1420,18 @@ gethead(struct s_spcl *buf)
 			buf->c_ddate = _time32_to_time(buf->c_old_ddate);
 			buf->c_atime = _time32_to_time(buf->c_old_atime);
 			buf->c_mtime = _time32_to_time(buf->c_old_mtime);
+			buf->c_birthtime = 0;
+			buf->c_birthtimensec = 0;
+			buf->c_extsize = 0;
 		}
-		break;
-
-	case TS_ADDR:
 		break;
 
 	default:
 		panic("gethead: unknown inode type %d\n", buf->c_type);
 		break;
 	}
+	if (dumpdate != 0 && _time64_to_time(buf->c_date) != dumpdate)
+		fprintf(stderr, "Header with wrong dumpdate.\n");
 	/*
 	 * If we're restoring a filesystem with the old (FreeBSD 1)
 	 * format inodes, copy the uid/gid to the new location
@@ -1466,8 +1461,8 @@ accthdr(struct s_spcl *header)
 	if (header->c_type == TS_TAPE) {
 		fprintf(stderr, "Volume header ");
  		if (header->c_firstrec)
- 			fprintf(stderr, "begins with record %qd",
- 				header->c_firstrec);
+ 			fprintf(stderr, "begins with record %jd",
+			    (intmax_t)header->c_firstrec);
  		fprintf(stderr, "\n");
 		previno = 0x7fffffff;
 		return;

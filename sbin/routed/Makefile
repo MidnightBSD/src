@@ -1,12 +1,13 @@
 # Make `routed` for FreeBSD
-# $FreeBSD: src/sbin/routed/Makefile,v 1.16 2004/08/13 14:18:24 ru Exp $
+# $MidnightBSD$
 
-PROG=   routed
-SRCS=   if.c input.c main.c output.c parms.c radix.c rdisc.c table.c trace.c
-MAN=   routed.8
-SUBDIR= rtquery
-LDADD=	-lmd
+PROG=	routed
+MAN=	routed.8
+SRCS=	if.c input.c main.c output.c parms.c radix.c rdisc.c table.c trace.c
+WARNS?=	3
 DPADD=	${LIBMD}
-WARNS?=	0
+LDADD=	-lmd
+
+SUBDIR= rtquery
 
 .include <bsd.prog.mk>

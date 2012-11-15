@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/routed/rdisc.c,v 1.11 2005/05/31 20:28:49 stefanf Exp $
+ * $MidnightBSD$
  */
 
 #include "defs.h"
@@ -37,10 +37,10 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: src/sbin/routed/rdisc.c,v 1.11 2005/05/31 20:28:49 stefanf Exp $");
+__RCSID("$MidnightBSD$");
 #else
-__RCSID("$Revision: 1.1.1.2 $");
-#ident "$Revision: 1.1.1.2 $"
+__RCSID("$Revision: 1.2 $");
+#ident "$Revision: 1.2 $"
 #endif
 
 /* router advertisement ICMP packet */
@@ -73,7 +73,7 @@ union ad_u {
 
 
 int	rdisc_sock = -1;		/* router-discovery raw socket */
-struct interface *rdisc_sock_mcast;	/* current multicast interface */
+static const struct interface *rdisc_sock_mcast; /* current multicast interface */
 
 struct timeval rdisc_timer;
 int rdisc_ok;				/* using solicited route */
@@ -87,7 +87,9 @@ struct dr {				/* accumulated advertisements */
     time_t  dr_life;			/* lifetime in host byte order */
     n_long  dr_recv_pref;		/* received but biased preference */
     n_long  dr_pref;			/* preference adjusted by metric */
-} *cur_drp, drs[MAX_ADS];
+};
+static const struct dr *cur_drp;
+static struct dr drs[MAX_ADS];
 
 /* convert between signed, balanced around zero,
  * and unsigned zero-based preferences */
@@ -168,7 +170,10 @@ void
 set_rdisc_mg(struct interface *ifp,
 	     int on)			/* 0=turn it off */
 {
-	struct ip_mreq m;
+	struct group_req gr;
+	struct sockaddr_in *sin;
+
+	assert(ifp != NULL);
 
 	if (rdisc_sock < 0) {
 		/* Create the raw socket so that we can hear at least
@@ -185,39 +190,35 @@ set_rdisc_mg(struct interface *ifp,
 		return;
 	}
 
-#ifdef MCAST_PPP_BUG
-	if (ifp->int_if_flags & IFF_POINTOPOINT)
-		return;
+	memset(&gr, 0, sizeof(gr));
+	gr.gr_interface = ifp->int_index;
+	sin = (struct sockaddr_in *)&gr.gr_group;
+	sin->sin_family = AF_INET;
+#ifdef _HAVE_SIN_LEN
+	sin->sin_len = sizeof(struct sockaddr_in);
 #endif
-	memset(&m, 0, sizeof(m));
-#ifdef MCAST_IFINDEX
-	m.imr_interface.s_addr = htonl(ifp->int_index);
-#else
-	m.imr_interface.s_addr = ((ifp->int_if_flags & IFF_POINTOPOINT)
-				  ? ifp->int_dstaddr
-				  : ifp->int_addr);
-#endif
+
 	if (supplier
 	    || (ifp->int_state & IS_NO_ADV_IN)
 	    || !on) {
 		/* stop listening to advertisements
 		 */
 		if (ifp->int_state & IS_ALL_HOSTS) {
-			m.imr_multiaddr.s_addr = htonl(INADDR_ALLHOSTS_GROUP);
+			sin->sin_addr.s_addr = htonl(INADDR_ALLHOSTS_GROUP);
 			if (setsockopt(rdisc_sock, IPPROTO_IP,
-				       IP_DROP_MEMBERSHIP,
-				       &m, sizeof(m)) < 0)
-				LOGERR("IP_DROP_MEMBERSHIP ALLHOSTS");
+				       MCAST_LEAVE_GROUP,
+				       &gr, sizeof(gr)) < 0)
+				LOGERR("MCAST_LEAVE_GROUP ALLHOSTS");
 			ifp->int_state &= ~IS_ALL_HOSTS;
 		}
 
 	} else if (!(ifp->int_state & IS_ALL_HOSTS)) {
 		/* start listening to advertisements
 		 */
-		m.imr_multiaddr.s_addr = htonl(INADDR_ALLHOSTS_GROUP);
-		if (setsockopt(rdisc_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
-			       &m, sizeof(m)) < 0) {
-			LOGERR("IP_ADD_MEMBERSHIP ALLHOSTS");
+		sin->sin_addr.s_addr = htonl(INADDR_ALLHOSTS_GROUP);
+		if (setsockopt(rdisc_sock, IPPROTO_IP, MCAST_JOIN_GROUP,
+			       &gr, sizeof(gr)) < 0) {
+			LOGERR("MCAST_JOIN_GROUP ALLHOSTS");
 		} else {
 			ifp->int_state |= IS_ALL_HOSTS;
 		}
@@ -229,21 +230,21 @@ set_rdisc_mg(struct interface *ifp,
 		/* stop listening to solicitations
 		 */
 		if (ifp->int_state & IS_ALL_ROUTERS) {
-			m.imr_multiaddr.s_addr=htonl(INADDR_ALLROUTERS_GROUP);
+			sin->sin_addr.s_addr = htonl(INADDR_ALLROUTERS_GROUP);
 			if (setsockopt(rdisc_sock, IPPROTO_IP,
-				       IP_DROP_MEMBERSHIP,
-				       &m, sizeof(m)) < 0)
-				LOGERR("IP_DROP_MEMBERSHIP ALLROUTERS");
+				       MCAST_LEAVE_GROUP,
+				       &gr, sizeof(gr)) < 0)
+				LOGERR("MCAST_LEAVE_GROUP ALLROUTERS");
 			ifp->int_state &= ~IS_ALL_ROUTERS;
 		}
 
 	} else if (!(ifp->int_state & IS_ALL_ROUTERS)) {
 		/* start hearing solicitations
 		 */
-		m.imr_multiaddr.s_addr=htonl(INADDR_ALLROUTERS_GROUP);
-		if (setsockopt(rdisc_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
-			       &m, sizeof(m)) < 0) {
-			LOGERR("IP_ADD_MEMBERSHIP ALLROUTERS");
+		sin->sin_addr.s_addr = htonl(INADDR_ALLROUTERS_GROUP);
+		if (setsockopt(rdisc_sock, IPPROTO_IP, MCAST_JOIN_GROUP,
+			       &gr, sizeof(gr)) < 0) {
+			LOGERR("MCAST_JOIN_GROUP ALLROUTERS");
 		} else {
 			ifp->int_state |= IS_ALL_ROUTERS;
 		}
@@ -281,7 +282,7 @@ set_supplier(void)
 	/* Switch router discovery multicast groups from soliciting
 	 * to advertising.
 	 */
-	for (ifp = ifnet; ifp; ifp = ifp->int_next) {
+	LIST_FOREACH(ifp, &ifnet, int_list) {
 		if (ifp->int_state & IS_BROKE)
 			continue;
 		ifp->int_rdisc_cnt = 0;
@@ -699,7 +700,6 @@ send_rdisc(union ad_u *p,
 	struct sockaddr_in rsin;
 	int flags;
 	const char *msg;
-	naddr tgt_mcast;
 
 
 	memset(&rsin, 0, sizeof(rsin));
@@ -736,27 +736,14 @@ send_rdisc(union ad_u *p,
 		}
 		if (rdisc_sock_mcast != ifp) {
 			/* select the right interface. */
-#ifdef MCAST_IFINDEX
-			/* specify ifindex */
-			tgt_mcast = htonl(ifp->int_index);
-#else
-#ifdef MCAST_PPP_BUG
-			/* Do not specify the primary interface explicitly
-			 * if we have the multicast point-to-point kernel
-			 * bug, since the kernel will do the wrong thing
-			 * if the local address of a point-to-point link
-			 * is the same as the address of an ordinary
-			 * interface.
-			 */
-			if (ifp->int_addr == myaddr) {
-				tgt_mcast = 0;
-			} else
-#endif
-			tgt_mcast = ifp->int_addr;
-#endif
+			struct ip_mreqn mreqn;
+
+			memset(&mreqn, 0, sizeof(struct ip_mreqn));
+			mreqn.imr_ifindex = ifp->int_index;
 			if (0 > setsockopt(rdisc_sock,
 					   IPPROTO_IP, IP_MULTICAST_IF,
-					   &tgt_mcast, sizeof(tgt_mcast))) {
+					   &mreqn,
+					   sizeof(mreqn))) {
 				LOGERR("setsockopt(rdisc_sock,"
 				       "IP_MULTICAST_IF)");
 				rdisc_sock_mcast = 0;
@@ -834,7 +821,7 @@ rdisc_adv(void)
 
 	rdisc_timer.tv_sec = now.tv_sec + NEVER;
 
-	for (ifp = ifnet; ifp; ifp = ifp->int_next) {
+	LIST_FOREACH(ifp, &ifnet, int_list) {
 		if (0 != (ifp->int_state & (IS_NO_ADV_OUT | IS_BROKE)))
 			continue;
 
@@ -876,7 +863,7 @@ rdisc_sol(void)
 
 	rdisc_timer.tv_sec = now.tv_sec + NEVER;
 
-	for (ifp = ifnet; ifp; ifp = ifp->int_next) {
+	LIST_FOREACH(ifp, &ifnet, int_list) {
 		if (0 != (ifp->int_state & (IS_NO_SOL_OUT | IS_BROKE))
 		    || ifp->int_rdisc_cnt >= MAX_SOLICITATIONS)
 			continue;
@@ -959,7 +946,6 @@ read_d(void)
 #endif
 		union {
 			struct ip ip;
-			u_short s[512/2];
 			u_char	b[512];
 		} pkt;
 	} buf;

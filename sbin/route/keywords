@@ -1,5 +1,5 @@
 #	@(#)keywords	8.2 (Berkeley) 3/19/94
-# $FreeBSD: src/sbin/route/keywords,v 1.6 2005/09/28 12:12:15 tobez Exp $
+# $MidnightBSD$
 
 add
 atalk
@@ -33,6 +33,7 @@ mtu
 net
 netmask
 nostatic
+nostick
 osi
 prefixlen
 proto1
@@ -44,8 +45,11 @@ rtt
 rttvar
 sa
 sendpipe
+show
 ssthresh
 static
+sticky
+weight
 x25
 xns
 xresolve

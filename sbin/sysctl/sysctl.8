@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	From: @(#)sysctl.8	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/sbin/sysctl/sysctl.8,v 1.61.2.1 2007/12/02 08:48:30 remko Exp $
+.\" $MidnightBSD$
 .\"
-.Dd November 28, 2007
+.Dd January 17, 2011
 .Dt SYSCTL 8
 .Os
 .Sh NAME
@@ -36,7 +36,7 @@
 .Nd get or set kernel state
 .Sh SYNOPSIS
 .Nm
-.Op Fl bdehNnoqx
+.Op Fl bdehiNnoqx
 .Ar name Ns Op = Ns Ar value
 .Ar ...
 .Nm
@@ -82,6 +82,12 @@ or
 is specified, or a variable is being set.
 .It Fl h
 Format output for human, rather than machine, readability.
+.It Fl i
+Ignore unknown OIDs.
+The purpose is to make use of
+.Nm
+for collecting data from a variety of machines (not all of which
+are necessarily running exactly the same software) easier.
 .It Fl N
 Show only variable names, not their values.
 This is particularly useful with shells that offer programmable
@@ -128,9 +134,7 @@ few bytes.
 .Pp
 The information available from
 .Nm
-consists of integers, strings, devices
-.Pq Vt dev_t ,
-and opaque types.
+consists of integers, strings, and opaque types.
 The
 .Nm
 utility
@@ -159,17 +163,8 @@ For a detailed description of these variable see
 .Pp
 The changeable column indicates whether a process with appropriate
 privilege can change the value.
-String, integer, and devices values can be set using
+String and integer values can be set using
 .Nm .
-For device values,
-.Ar value
-can be specified as a character device special file name.
-Special values
-.Cm off
-and
-.Cm none
-denote
-.Dq no device .
 .Bl -column security.bsd.unprivileged_read_msgbuf integerxxx
 .It Sy "Name	Type	Changeable
 .It "kern.ostype	string	no
@@ -214,8 +209,6 @@ denote
 .It "hw.floatingpoint	integer	no
 .It "hw.machine_arch	string	no
 .It "hw.realmem	integer	no
-.It "hw.sensors.<xname>.<type><numt>	struct	no
-.It "machdep.console_device	dev_t	no
 .It "machdep.adjkerntz	integer	yes
 .It "machdep.disable_rtc_set	integer	yes
 .It "machdep.guessed_bootdev	string	no

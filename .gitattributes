@@ -38896,15 +38896,9 @@ sbin/setkey/vchar.h -text
 sbin/shutdown/Makefile -text
 sbin/shutdown/shutdown.8 -text
 sbin/shutdown/shutdown.c -text
-sbin/slattach/Makefile -text
-sbin/slattach/slattach.8 -text
-sbin/slattach/slattach.c -text
 sbin/spppcontrol/Makefile -text
 sbin/spppcontrol/spppcontrol.8 -text
 sbin/spppcontrol/spppcontrol.c -text
-sbin/startslip/Makefile -text
-sbin/startslip/startslip.1 -text
-sbin/startslip/startslip.c -text
 sbin/sunlabel/Makefile -text
 sbin/sunlabel/runtest.sh -text
 sbin/sunlabel/sunlabel.8 -text

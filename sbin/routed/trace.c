@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/routed/trace.c,v 1.12 2005/05/31 20:28:49 stefanf Exp $
+ * $MidnightBSD$
  */
 
 #define	RIPCMDS
@@ -39,10 +39,10 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: src/sbin/routed/trace.c,v 1.12 2005/05/31 20:28:49 stefanf Exp $");
+__RCSID("$MidnightBSD$");
 #else
-__RCSID("$Revision: 1.1.1.2 $");
-#ident "$Revision: 1.1.1.2 $"
+__RCSID("$Revision: 1.2 $");
+#ident "$Revision: 1.2 $"
 #endif
 
 
@@ -51,14 +51,12 @@ __RCSID("$Revision: 1.1.1.2 $");
 #define stat	stat64
 #endif
 
-#define	NRECORDS	50		/* size of circular trace buffer */
-
 int	tracelevel, new_tracelevel;
 FILE	*ftrace;			/* output trace file */
 static const char *sigtrace_pat = "%s";
 static char savetracename[PATH_MAX];
 char	inittracename[PATH_MAX];
-int	file_trace;			/* 1=tracing to file, not stdout */
+static int file_trace;			/* 1=tracing to file, not stdout */
 
 static void trace_dump(void);
 static void tmsg(const char *, ...) PATTRIB(1,2);
@@ -255,13 +253,13 @@ void
 tracelevel_msg(const char *pat,
 	       int dump)		/* -1=no dump, 0=default, 1=force */
 {
-	static const char *off_msgs[MAX_TRACELEVEL] = {
+	static const char * const off_msgs[MAX_TRACELEVEL] = {
 		"Tracing actions stopped",
 		"Tracing packets stopped",
 		"Tracing packet contents stopped",
 		"Tracing kernel changes stopped",
 	};
-	static const char *on_msgs[MAX_TRACELEVEL] = {
+	static const char * const on_msgs[MAX_TRACELEVEL] = {
 		"Tracing actions started",
 		"Tracing packets started",
 		"Tracing packet contents started",
@@ -473,13 +471,13 @@ struct bits {
 	const char *bits_name;
 };
 
-static struct bits if_bits[] = {
+static const struct bits if_bits[] = {
 	{ IFF_LOOPBACK,		0,		"LOOPBACK" },
 	{ IFF_POINTOPOINT,	0,		"PT-TO-PT" },
 	{ 0,			0,		0}
 };
 
-static struct bits is_bits[] = {
+static const struct bits is_bits[] = {
 	{ IS_ALIAS,		0,		"ALIAS" },
 	{ IS_SUBNET,		0,		"" },
 	{ IS_REMOTE,		(IS_NO_RDISC
@@ -523,7 +521,7 @@ static struct bits is_bits[] = {
 	{ 0,			0,		"%#x"}
 };
 
-static struct bits rs_bits[] = {
+static const struct bits rs_bits[] = {
 	{ RS_IF,		0,		"IF" },
 	{ RS_NET_INT,		RS_NET_SYN,	"NET_INT" },
 	{ RS_NET_SYN,		0,		"NET_SYN" },
@@ -870,7 +868,7 @@ trace_dump(void)
 	lastlog();
 
 	(void)fputs("current daemon state:\n", ftrace);
-	for (ifp = ifnet; ifp != 0; ifp = ifp->int_next)
+	LIST_FOREACH(ifp, &ifnet, int_list) 
 		trace_if("", ifp);
 	(void)rn_walktree(rhead, walk_trace, 0);
 }
