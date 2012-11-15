@@ -38828,6 +38828,7 @@ sbin/quotacheck/Makefile -text
 sbin/quotacheck/preen.c -text
 sbin/quotacheck/quotacheck.8 -text
 sbin/quotacheck/quotacheck.c -text
+sbin/quotacheck/quotacheck.h -text
 sbin/rcorder/Makefile -text
 sbin/rcorder/hash.c -text
 sbin/rcorder/hash.h -text
