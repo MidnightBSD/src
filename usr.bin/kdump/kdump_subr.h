@@ -1,4 +1,4 @@
-/* $FreeBSD: src/usr.bin/kdump/kdump_subr.h,v 1.3 2007/04/09 22:04:27 emaste Exp $ */
+/* $MidnightBSD$ */
 
 void signame (int);
 void semctlname (int);
@@ -32,11 +32,11 @@ void whencename (int);
 void rlimitname (int);
 void shutdownhowname (int);
 void prioname (int);
+void fadvisebehavname (int);
 void madvisebehavname (int);
 void msyncflagsname (int);
 void schedpolicyname (int);
 void kldunloadfflagsname (int);
-void ksethrcmdname (int);
 void extattrctlname (int);
 void kldsymcmdname (int);
 void sendfileflagsname (int);
@@ -46,3 +46,5 @@ void lio_listioname (int);
 void minheritname (int);
 void quotactlname (int);
 void ptraceopname (int);
+void vmprotname (int);
+void vmresultname (int);

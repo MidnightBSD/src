@@ -1,6 +1,8 @@
-set -e
+#!/bin/sh
+#
+# $MidnightBSD$
 
-# $FreeBSD: src/usr.bin/kdump/mkioctls,v 1.39 2007/07/14 21:49:24 rwatson Exp $
+set -e
 
 if [ "x$1" = "x-s" ]; then
 	use_switch=1
@@ -27,11 +29,12 @@ ioctl_includes=`
 `
 
 awk -v x="$ioctl_includes" 'BEGIN {print x}' |
-	gcc -E -I$1 -dM - |
+	$CPP -I$1 -dM -DCOMPAT_43TTY - |
 	awk -v ioctl_includes="$ioctl_includes" -v use_switch="$use_switch" '
 BEGIN {
 	print "/* XXX obnoxious prerequisites. */"
 	print "#define COMPAT_43"
+	print "#define COMPAT_43TTY"
 	print "#include <sys/param.h>"
 	print "#include <sys/devicestat.h>"
 	print "#include <sys/disklabel.h>"
@@ -44,11 +47,6 @@ BEGIN {
 	print "#include <net/if_var.h>"
 	print "#include <net/pfvar.h>"
 	print "#include <net/route.h>"
-# Disabled in 7.0 as netatm is not MPSAFE.
-#	print "#include <netatm/atm.h>"
-#	print "#include <netatm/atm_if.h>"
-#	print "#include <netatm/atm_sap.h>"
-#	print "#include <netatm/atm_sys.h>"
 	print "#include <netinet/in.h>"
 	print "#include <netinet/ip_mroute.h>"
 	print "#include <netinet6/in6_var.h>"
@@ -70,13 +68,13 @@ BEGIN {
 }
 
 /^#[ 	]*define[ 	]+[A-Za-z_][A-Za-z0-9_]*[ 	]+_IO/ {
-	
+
 	# find where the name starts
 	for (i = 1; i <= NF; i++)
 		if ($i ~ /define/)
 			break;
 	++i;
-	# 
+	#
 	if (use_switch)
 		printf("\tcase %s:\n\t\treturn(\"%s\");\n", $i, $i);
 	else
