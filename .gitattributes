@@ -54727,6 +54727,7 @@ usr.sbin/mtree/create.c -text
 usr.sbin/mtree/excludes.c -text
 usr.sbin/mtree/extern.h -text
 usr.sbin/mtree/misc.c -text
+usr.sbin/mtree/mtree.5 -text
 usr.sbin/mtree/mtree.8 -text
 usr.sbin/mtree/mtree.c -text
 usr.sbin/mtree/mtree.h -text
@@ -54841,6 +54842,7 @@ usr.sbin/ofwdump/ofwdump.c -text
 usr.sbin/ofwdump/pathnames.h -text
 usr.sbin/pciconf/Makefile -text
 usr.sbin/pciconf/cap.c -text
+usr.sbin/pciconf/err.c -text
 usr.sbin/pciconf/pathnames.h -text
 usr.sbin/pciconf/pciconf.8 -text
 usr.sbin/pciconf/pciconf.c -text
