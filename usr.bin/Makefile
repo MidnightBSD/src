@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $MidnightBSD: src/usr.bin/Makefile,v 1.40 2012/07/20 02:40:53 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.41 2012/10/29 20:54:16 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -78,7 +78,6 @@ SUBDIR=	alias \
 	grep \
 	gzip \
 	head \
-	${_hesinfo} \
 	hexdump \
 	${_host} \
 	${_iconv} \
@@ -256,7 +255,7 @@ _newkey=	newkey
 .endif
 
 .if ${MK_HESIOD} != "no"
-_hesinfo=	hesinfo
+SUBDIR+=	hesinfo
 .endif
 
 .if ${MK_ICONV} != "no"
