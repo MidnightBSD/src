@@ -53338,6 +53338,9 @@ usr.bin/sqlite3/Makefile -text
 usr.bin/stat/Makefile -text
 usr.bin/stat/stat.1 -text
 usr.bin/stat/stat.c -text
+usr.bin/stdbuf/Makefile -text
+usr.bin/stdbuf/stdbuf.1 -text
+usr.bin/stdbuf/stdbuf.c -text
 usr.bin/su/Makefile -text
 usr.bin/su/su.1 -text
 usr.bin/su/su.c -text

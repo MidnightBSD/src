@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $MidnightBSD: src/usr.bin/Makefile,v 1.41 2012/10/29 20:54:16 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.42 2012/11/17 19:14:34 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -13,27 +13,23 @@ SUBDIR=	alias \
 	apply \
 	asa \
 	asmgraph \
-	at \
 	awk \
 	banner \
 	basename \
 	batt \
-	bc \
-	biff \
 	brainfuck \
 	brandelf \
 	bsdiff \
 	bzip2 \
 	bzip2recover \
 	cap_mkdb \
-	${_catman} \
 	cflow \
 	cgraph \
 	chat \
 	checknr \
-	${_chkey} \
 	chpass \
 	cksum \
+	${_clang} \
 	cmp \
 	col \
 	colcrt \
@@ -47,9 +43,7 @@ SUBDIR=	alias \
 	cpuset \
 	csplit \
 	cut \
-	dc \
 	deroff \
-	${_dig} \
 	dirname \
 	du \
 	ee \
@@ -65,7 +59,6 @@ SUBDIR=	alias \
 	finger \
 	fmt \
 	fold \
-	from \
 	fstat \
 	fsync \
 	ftp \
@@ -74,12 +67,10 @@ SUBDIR=	alias \
 	getconf \
 	getent \
 	getopt \
-	${_gprof} \
 	grep \
 	gzip \
 	head \
 	hexdump \
-	${_host} \
 	${_iconv} \
 	id \
 	ipcrm \
@@ -102,7 +93,6 @@ SUBDIR=	alias \
 	${_lex} \
 	limits \
 	locale \
-	locate \
 	lock \
 	lockf \
 	logger \
@@ -113,9 +103,6 @@ SUBDIR=	alias \
 	lorder \
 	lsvfs \
 	m4 \
-	mail \
-	make \
-	makewhatis \
 	mesg \
 	minigzip \
  	ministat \
@@ -128,18 +115,14 @@ SUBDIR=	alias \
 	mktemp \
 	mkuzip \
 	msearch \
-	msgs \
 	mt \
 	ncal \
 	netstat \
 	newgrp \
-	${_newkey} \
 	nfsstat \
 	nice \
 	nl \
 	nohup \
-	${_nslookup} \
-	${_nsupdate} \
 	opieinfo \
 	opiekey \
 	opiepasswd \
@@ -173,6 +156,7 @@ SUBDIR=	alias \
 	split \
 	sqlite3 \
 	stat \
+	stdbuf \
 	su \
 	sudo \
 	systat \
@@ -198,14 +182,12 @@ SUBDIR=	alias \
 	ul \
 	uname \
 	unexpand \
-	unifdef \
 	uniq \
+	unzip \
 	units \
 	unvis \
 	uudecode \
 	uuencode \
-	unzip \
-	vgrind \
 	vi \
 	vis \
 	vmstat \
@@ -221,17 +203,25 @@ SUBDIR=	alias \
 	xargs \
 	xinstall \
 	${_xlint} \
+	${_xstr} \
 	xz \
 	xzdec \
 	${_yacc} \
-	yes 
+	yes \
+	${_ypcat} \
+	${_ypmatch} \
+	${_ypwhich}
+
+.if ${MK_AT} != "no"
+SUBDIR+=	at
+.endif
 
 .if ${MK_ATM} != "no"
 SUBDIR+=	atm
 .endif
 
-.if ${MK_MAN} != "no"
-_catman=	catman
+.if ${MK_MAN_UTILS} != "no"
+SUBDIR+=	catman
 .endif
 
 .if ${MK_BIND_UTILS} != "no"
@@ -245,13 +235,16 @@ SUBDIR+=	nsupdate
 SUBDIR+=	bluetooth
 .endif
 
+.if ${MK_BSD_CPIO} != "no"
+SUBDIR+=	cpio
+.endif
+
 .if ${MK_CALENDAR} != "no"
 SUBDIR+=	calendar
 .endif
 
-.if ${MK_OPENSSL} != "no"
-_chkey=		chkey
-_newkey=	newkey
+.if ${MK_CLANG} != "no"
+_clang=		clang
 .endif
 
 .if ${MK_HESIOD} != "no"
@@ -262,6 +255,37 @@ SUBDIR+=	hesinfo
 _iconv=		iconv
 _mkcsmapper=	mkcsmapper
 _mkesdb=	mkesdb
+.endif
+
+.if ${MK_GROFF} != "no"
+SUBDIR+=	vgrind
+.endif
+
+.if ${MK_OPENSSL} != "no"
+SUBDIR+=	bc
+SUBDIR+=	chkey
+SUBDIR+=	dc
+SUBDIR+=	newkey
+.endif
+
+.if ${MK_LOCATE} != "no"
+SUBDIR+=	locate
+.endif
+
+.if ${MK_MAIL} != "no"
+SUBDIR+=	biff
+SUBDIR+=	from
+SUBDIR+=	mail
+SUBDIR+=	msgs
+.endif
+
+.if ${MK_MAKE} != "no"
+SUBDIR+=	make
+.endif
+
+.if ${MK_MAN_UTILS} != "no"
+_makewhatis=	makewhatis
+_man=		man
 .endif
 
 .if ${MK_NETCAT} != "no"
