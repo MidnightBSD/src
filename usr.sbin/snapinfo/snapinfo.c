@@ -22,7 +22,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/usr.sbin/snapinfo/snapinfo.c,v 1.3 2007/03/16 12:36:54 pjd Exp $
  *
  */
 
@@ -141,7 +140,7 @@ find_snapshot(struct statfs *sfs)
 
 int
 compare_function(const char *path, const struct stat *st, int flags,
-struct FTW * ftwv)
+    struct FTW * ftwv __unused)
 {
 
 	if (flags == FTW_F && st->st_ino == inode) {

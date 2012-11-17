@@ -26,12 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/diskinfo/diskinfo.c,v 1.9 2007/05/06 00:25:21 pjd Exp $
+ * $MidnightBSD$
  */
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -39,6 +40,7 @@
 #include <paths.h>
 #include <err.h>
 #include <sys/disk.h>
+#include <sys/param.h>
 #include <sys/time.h>
 
 static void
@@ -56,9 +58,9 @@ static void commandtime(int fd, off_t mediasize, u_int sectorsize);
 int
 main(int argc, char **argv)
 {
-	int i, ch, fd, error;
-	char buf[BUFSIZ], ident[DISK_IDENT_SIZE];
-	off_t	mediasize;
+	int i, ch, fd, error, exitval = 0;
+	char buf[BUFSIZ], ident[DISK_IDENT_SIZE], physpath[MAXPATHLEN];
+	off_t	mediasize, stripesize, stripeoffset;
 	u_int	sectorsize, fwsectors, fwheads;
 
 	while ((ch = getopt(argc, argv, "ctv")) != -1) {
@@ -90,28 +92,42 @@ main(int argc, char **argv)
 			sprintf(buf, "%s%s", _PATH_DEV, argv[i]);
 			fd = open(buf, O_RDONLY);
 		}
-		if (fd < 0)
-			err(1, argv[i]);
+		if (fd < 0) {
+			warn("%s", argv[i]);
+			exitval = 1;
+			goto out;
+		}
 		error = ioctl(fd, DIOCGMEDIASIZE, &mediasize);
-		if (error)
-			err(1, "%s: ioctl(DIOCGMEDIASIZE) failed, probably not a disk.", argv[i]);
+		if (error) {
+			warn("%s: ioctl(DIOCGMEDIASIZE) failed, probably not a disk.", argv[i]);
+			exitval = 1;
+			goto out;
+		}
 		error = ioctl(fd, DIOCGSECTORSIZE, &sectorsize);
-		if (error)
-			err(1, "%s: DIOCGSECTORSIZE failed, probably not a disk.", argv[i]);
+		if (error) {
+			warn("%s: DIOCGSECTORSIZE failed, probably not a disk.", argv[i]);
+			exitval = 1;
+			goto out;
+		}
 		error = ioctl(fd, DIOCGFWSECTORS, &fwsectors);
 		if (error)
 			fwsectors = 0;
 		error = ioctl(fd, DIOCGFWHEADS, &fwheads);
 		if (error)
 			fwheads = 0;
-		error = ioctl(fd, DIOCGIDENT, ident);
+		error = ioctl(fd, DIOCGSTRIPESIZE, &stripesize);
 		if (error)
-			ident[0] = '\0';
+			stripesize = 0;
+		error = ioctl(fd, DIOCGSTRIPEOFFSET, &stripeoffset);
+		if (error)
+			stripeoffset = 0;
 		if (!opt_v) {
 			printf("%s", argv[i]);
 			printf("\t%u", sectorsize);
 			printf("\t%jd", (intmax_t)mediasize);
 			printf("\t%jd", (intmax_t)mediasize/sectorsize);
+			printf("\t%jd", (intmax_t)stripesize);
+			printf("\t%jd", (intmax_t)stripeoffset);
 			if (fwsectors != 0 && fwheads != 0) {
 				printf("\t%jd", (intmax_t)mediasize /
 				    (fwsectors * fwheads * sectorsize));
@@ -127,23 +143,28 @@ main(int argc, char **argv)
 			    (intmax_t)mediasize, buf);
 			printf("\t%-12jd\t# mediasize in sectors\n",
 			    (intmax_t)mediasize/sectorsize);
+			printf("\t%-12jd\t# stripesize\n", stripesize);
+			printf("\t%-12jd\t# stripeoffset\n", stripeoffset);
 			if (fwsectors != 0 && fwheads != 0) {
 				printf("\t%-12jd\t# Cylinders according to firmware.\n", (intmax_t)mediasize /
 				    (fwsectors * fwheads * sectorsize));
 				printf("\t%-12u\t# Heads according to firmware.\n", fwheads);
 				printf("\t%-12u\t# Sectors according to firmware.\n", fwsectors);
 			} 
-			if (ident[0] != '\0')
+			if (ioctl(fd, DIOCGIDENT, ident) == 0)
 				printf("\t%-12s\t# Disk ident.\n", ident);
+			if (ioctl(fd, DIOCGPHYSPATH, physpath) == 0)
+				printf("\t%-12s\t# Physical path\n", physpath);
 		}
 		printf("\n");
 		if (opt_c)
 			commandtime(fd, mediasize, sectorsize);
 		if (opt_t)
 			speeddisk(fd, mediasize, sectorsize);
+out:
 		close(fd);
 	}
-	exit (0);
+	exit (exitval);
 }
 
 
@@ -151,7 +172,7 @@ static char sector[65536];
 static char mega[1024 * 1024];
 
 static void
-rdsect(int fd, u_int blockno, u_int sectorsize)
+rdsect(int fd, off_t blockno, u_int sectorsize)
 {
 	int error;
 
@@ -212,21 +233,27 @@ TR(double count)
 static void
 speeddisk(int fd, off_t mediasize, u_int sectorsize)
 {
-	int i;
-	uint b0, b1, sectorcount;
+	int bulk, i;
+	off_t b0, b1, sectorcount, step;
 
 	sectorcount = mediasize / sectorsize;
+	step = 1ULL << (flsll(sectorcount / (4 * 200)) - 1);
+	if (step > 16384)
+		step = 16384;
+	bulk = mediasize / (1024 * 1024);
+	if (bulk > 100)
+		bulk = 100;
 
 	printf("Seek times:\n");
 	printf("\tFull stroke:\t");
 	b0 = 0;
-	b1 = sectorcount - 1 - 16384;
+	b1 = sectorcount - step;
 	T0();
 	for (i = 0; i < 125; i++) {
 		rdsect(fd, b0, sectorsize);
-		b0 += 16384;
+		b0 += step;
 		rdsect(fd, b1, sectorsize);
-		b1 -= 16384;
+		b1 -= step;
 	}
 	TN(250);
 
@@ -236,9 +263,9 @@ speeddisk(int fd, off_t mediasize, u_int sectorsize)
 	T0();
 	for (i = 0; i < 125; i++) {
 		rdsect(fd, b0, sectorsize);
-		b0 += 16384;
+		b0 += step;
 		rdsect(fd, b1, sectorsize);
-		b1 += 16384;
+		b1 += step;
 	}
 	TN(250);
 	printf("\tQuarter stroke:\t");
@@ -247,9 +274,9 @@ speeddisk(int fd, off_t mediasize, u_int sectorsize)
 	T0();
 	for (i = 0; i < 250; i++) {
 		rdsect(fd, b0, sectorsize);
-		b0 += 16384;
+		b0 += step;
 		rdsect(fd, b1, sectorsize);
-		b1 += 16384;
+		b1 += step;
 	}
 	TN(500);
 
@@ -258,7 +285,7 @@ speeddisk(int fd, off_t mediasize, u_int sectorsize)
 	T0();
 	for (i = 0; i < 400; i++) {
 		rdsect(fd, b0, sectorsize);
-		b0 += 16384;
+		b0 += step;
 	}
 	TN(400);
 
@@ -267,7 +294,7 @@ speeddisk(int fd, off_t mediasize, u_int sectorsize)
 	T0();
 	for (i = 0; i < 400; i++) {
 		rdsect(fd, b0, sectorsize);
-		b0 -= 16384;
+		b0 -= step;
 	}
 	TN(400);
 
@@ -281,7 +308,7 @@ speeddisk(int fd, off_t mediasize, u_int sectorsize)
 	TN(2048);
 
 	printf("\tSeq inner:\t");
-	b0 = sectorcount - 2048 - 1;
+	b0 = sectorcount - 2048;
 	T0();
 	for (i = 0; i < 2048; i++) {
 		rdsect(fd, b0, sectorsize);
@@ -293,28 +320,28 @@ speeddisk(int fd, off_t mediasize, u_int sectorsize)
 	printf("\toutside:     ");
 	rdsect(fd, 0, sectorsize);
 	T0();
-	for (i = 0; i < 100; i++) {
+	for (i = 0; i < bulk; i++) {
 		rdmega(fd);
 	}
-	TR(100 * 1024);
+	TR(bulk * 1024);
 
 	printf("\tmiddle:      ");
-	b0 = sectorcount / 2;
+	b0 = sectorcount / 2 - bulk * (1024*1024 / sectorsize) / 2 - 1;
 	rdsect(fd, b0, sectorsize);
 	T0();
-	for (i = 0; i < 100; i++) {
+	for (i = 0; i < bulk; i++) {
 		rdmega(fd);
 	}
-	TR(100 * 1024);
+	TR(bulk * 1024);
 
 	printf("\tinside:      ");
-	b0 = sectorcount - 100 * (1024*1024 / sectorsize) - 1;;
+	b0 = sectorcount - bulk * (1024*1024 / sectorsize) - 1;;
 	rdsect(fd, b0, sectorsize);
 	T0();
-	for (i = 0; i < 100; i++) {
+	for (i = 0; i < bulk; i++) {
 		rdmega(fd);
 	}
-	TR(100 * 1024);
+	TR(bulk * 1024);
 
 	printf("\n");
 	return;

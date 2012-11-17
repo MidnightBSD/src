@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993, 19801990
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)mkmakefile.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/config/mkmakefile.c,v 1.91.2.4 2011/01/02 13:31:10 lstewart Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 /*
@@ -141,6 +140,8 @@ makefile(void)
 	if (ofp == 0)
 		err(1, "%s", path("Makefile.new"));
 	fprintf(ofp, "KERN_IDENT=%s\n", ident);
+	fprintf(ofp, "MACHINE=%s\n", machinename);
+	fprintf(ofp, "MACHINE_ARCH=%s\n", machinearch);
 	SLIST_FOREACH_SAFE(op, &mkopt, op_next, t) {
 		fprintf(ofp, "%s=%s", op->op_name, op->op_value);
 		while ((op = SLIST_NEXT(op, op_append)) != NULL)
@@ -311,6 +312,7 @@ read_file(char *fname)
 	struct device *dp;
 	struct opt *op;
 	char *wd, *this, *compilewith, *depends, *clean, *warning;
+	const char *objprefix;
 	int compile, match, nreqs, std, filetype,
 	    imp_rule, no_obj, before_depend, mandatory, nowerror;
 
@@ -325,6 +327,7 @@ next:
 	 *	[ compile-with "compile rule" [no-implicit-rule] ]
 	 *      [ dependency "dependency-list"] [ before-depend ]
 	 *	[ clean "file-list"] [ warning "text warning" ]
+	 *	[ obj-prefix "file prefix"]
 	 */
 	wd = get_word(fp);
 	if (wd == (char *)EOF) {
@@ -372,6 +375,7 @@ next:
 	before_depend = 0;
 	nowerror = 0;
 	filetype = NORMAL;
+	objprefix = "";
 	if (eq(wd, "standard")) {
 		std = 1;
 	/*
@@ -383,8 +387,8 @@ next:
 		mandatory = 1;
 	} else if (!eq(wd, "optional")) {
 		fprintf(stderr,
-		    "%s: %s must be optional, mandatory or standard\n",
-		    fname, this);
+		    "%s: \"%s\" %s must be optional, mandatory or standard\n",
+		    fname, wd, this);
 		exit(1);
 	}
 nextparam:
@@ -466,6 +470,16 @@ nextparam:
 		warning = ns(wd);
 		goto nextparam;
 	}
+	if (eq(wd, "obj-prefix")) {
+		next_quoted_word(fp, wd);
+		if (wd == 0) {
+			printf("%s: %s missing object prefix string.\n",
+				fname, this);
+			exit(1);
+		}
+		objprefix = ns(wd);
+		goto nextparam;
+	}
 	nreqs++;
 	if (eq(wd, "local")) {
 		filetype = LOCAL;
@@ -534,6 +548,7 @@ doneparam:
 	tp->f_depends = depends;
 	tp->f_clean = clean;
 	tp->f_warn = warning;
+	tp->f_objprefix = objprefix;
 	goto next;
 }
 
@@ -618,11 +633,12 @@ do_objs(FILE *fp)
 		cp = sp + (len = strlen(sp)) - 1;
 		och = *cp;
 		*cp = 'o';
+		len += strlen(tp->f_objprefix);
 		if (len + lpos > 72) {
 			lpos = 8;
 			fprintf(fp, "\\\n\t");
 		}
-		fprintf(fp, "%s ", sp);
+		fprintf(fp, "%s%s ", tp->f_objprefix, sp);
 		lpos += len + 1;
 		*cp = och;
 	}
@@ -698,30 +714,33 @@ do_rules(FILE *f)
 		och = *cp;
 		if (ftp->f_flags & NO_IMPLCT_RULE) {
 			if (ftp->f_depends)
-				fprintf(f, "%s: %s\n", np, ftp->f_depends);
+				fprintf(f, "%s%s: %s\n",
+					ftp->f_objprefix, np, ftp->f_depends);
 			else
-				fprintf(f, "%s: \n", np);
+				fprintf(f, "%s%s: \n", ftp->f_objprefix, np);
 		}
 		else {
 			*cp = '\0';
 			if (och == 'o') {
-				fprintf(f, "%so:\n\t-cp $S/%so .\n\n",
-					tail(np), np);
+				fprintf(f, "%s%so:\n\t-cp $S/%so .\n\n",
+					ftp->f_objprefix, tail(np), np);
 				continue;
 			}
 			if (ftp->f_depends) {
-				fprintf(f, "%sln: $S/%s%c %s\n", tail(np),
-					np, och, ftp->f_depends);
+				fprintf(f, "%s%sln: $S/%s%c %s\n",
+					ftp->f_objprefix, tail(np), np, och,
+					ftp->f_depends);
 				fprintf(f, "\t${NORMAL_LINT}\n\n");
-				fprintf(f, "%so: $S/%s%c %s\n", tail(np),
-					np, och, ftp->f_depends);
+				fprintf(f, "%s%so: $S/%s%c %s\n",
+					ftp->f_objprefix, tail(np), np, och,
+					ftp->f_depends);
 			}
 			else {
-				fprintf(f, "%sln: $S/%s%c\n", tail(np),
-					np, och);
+				fprintf(f, "%s%sln: $S/%s%c\n",
+					ftp->f_objprefix, tail(np), np, och);
 				fprintf(f, "\t${NORMAL_LINT}\n\n");
-				fprintf(f, "%so: $S/%s%c\n", tail(np),
-					np, och);
+				fprintf(f, "%s%so: $S/%s%c\n",
+					ftp->f_objprefix, tail(np), np, och);
 			}
 		}
 		compilewith = ftp->f_compilewith;
@@ -742,16 +761,17 @@ do_rules(FILE *f)
 				    "config: don't know rules for %s\n", np);
 				break;
 			}
-			snprintf(cmd, sizeof(cmd), "${%s_%c%s}\n"
-			    ".if defined(NORMAL_CTFCONVERT) && "
-			    "!empty(NORMAL_CTFCONVERT)\n"
-			    "\t${NORMAL_CTFCONVERT}\n.endif", ftype,
+			snprintf(cmd, sizeof(cmd),
+			    "${%s_%c%s}\n\t@${NORMAL_CTFCONVERT}", ftype,
 			    toupper(och),
 			    ftp->f_flags & NOWERROR ? "_NOWERROR" : "");
 			compilewith = cmd;
 		}
 		*cp = och;
-		fprintf(f, "\t%s\n\n", compilewith);
+		if (strlen(ftp->f_objprefix))
+			fprintf(f, "\t%s $S/%s\n\n", compilewith, np);
+		else
+			fprintf(f, "\t%s\n\n", compilewith);
 	}
 }
 

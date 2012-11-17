@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/pciconf/pciconf.c,v 1.30.2.4 2010/09/20 19:17:31 jhb Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -68,7 +68,7 @@ struct pci_vendor_info
 TAILQ_HEAD(,pci_vendor_info)	pci_vendors;
 
 static void list_bars(int fd, struct pci_conf *p);
-static void list_devs(int verbose, int bars, int caps);
+static void list_devs(int verbose, int bars, int caps, int errors);
 static void list_verbose(struct pci_conf *p);
 static const char *guess_class(struct pci_conf *p);
 static const char *guess_subclass(struct pci_conf *p);
@@ -83,7 +83,7 @@ static void
 usage(void)
 {
 	fprintf(stderr, "%s\n%s\n%s\n%s\n",
-		"usage: pciconf -l [-bcv]",
+		"usage: pciconf -l [-bcev]",
 		"       pciconf -a selector",
 		"       pciconf -r [-b | -h] selector addr[:addr2]",
 		"       pciconf -w [-b | -h] selector addr value");
@@ -94,12 +94,14 @@ int
 main(int argc, char **argv)
 {
 	int c;
-	int listmode, readmode, writemode, attachedmode, bars, caps, verbose;
+	int listmode, readmode, writemode, attachedmode;
+	int bars, caps, errors, verbose;
 	int byte, isshort;
 
-	listmode = readmode = writemode = attachedmode = bars = caps = verbose = byte = isshort = 0;
+	listmode = readmode = writemode = attachedmode = 0;
+	bars = caps = errors = verbose = byte = isshort = 0;
 
-	while ((c = getopt(argc, argv, "abchlrwv")) != -1) {
+	while ((c = getopt(argc, argv, "abcehlrwv")) != -1) {
 		switch(c) {
 		case 'a':
 			attachedmode = 1;
@@ -112,6 +114,10 @@ main(int argc, char **argv)
 
 		case 'c':
 			caps = 1;
+			break;
+
+		case 'e':
+			errors = 1;
 			break;
 
 		case 'h':
@@ -146,15 +152,15 @@ main(int argc, char **argv)
 		usage();
 
 	if (listmode) {
-		list_devs(verbose, bars, caps);
+		list_devs(verbose, bars, caps, errors);
 	} else if (attachedmode) {
 		chkattached(argv[optind]);
 	} else if (readmode) {
 		readit(argv[optind], argv[optind + 1],
-		       byte ? 1 : isshort ? 2 : 4);
+		    byte ? 1 : isshort ? 2 : 4);
 	} else if (writemode) {
 		writeit(argv[optind], argv[optind + 1], argv[optind + 2],
-		       byte ? 1 : isshort ? 2 : 4);
+		    byte ? 1 : isshort ? 2 : 4);
 	} else {
 		usage();
 	}
@@ -163,7 +169,7 @@ main(int argc, char **argv)
 }
 
 static void
-list_devs(int verbose, int bars, int caps)
+list_devs(int verbose, int bars, int caps, int errors)
 {
 	int fd;
 	struct pci_conf_io pc;
@@ -173,7 +179,7 @@ list_devs(int verbose, int bars, int caps)
 	if (verbose)
 		load_vendors();
 
-	fd = open(_PATH_DEVPCI, caps ? O_RDWR : O_RDONLY, 0);
+	fd = open(_PATH_DEVPCI, (caps || errors) ? O_RDWR : O_RDONLY, 0);
 	if (fd < 0)
 		err(1, "%s", _PATH_DEVPCI);
 
@@ -206,23 +212,25 @@ list_devs(int verbose, int bars, int caps)
 		}
 		for (p = conf; p < &conf[pc.num_matches]; p++) {
 			printf("%s%d@pci%d:%d:%d:%d:\tclass=0x%06x card=0x%08x "
-			       "chip=0x%08x rev=0x%02x hdr=0x%02x\n",
-			       (p->pd_name && *p->pd_name) ? p->pd_name :
-			       "none",
-			       (p->pd_name && *p->pd_name) ? (int)p->pd_unit :
-			       none_count++, p->pc_sel.pc_domain,
-			       p->pc_sel.pc_bus, p->pc_sel.pc_dev,
-			       p->pc_sel.pc_func, (p->pc_class << 16) |
-			       (p->pc_subclass << 8) | p->pc_progif,
-			       (p->pc_subdevice << 16) | p->pc_subvendor,
-			       (p->pc_device << 16) | p->pc_vendor,
-			       p->pc_revid, p->pc_hdr);
+			    "chip=0x%08x rev=0x%02x hdr=0x%02x\n",
+			    (p->pd_name && *p->pd_name) ? p->pd_name :
+			    "none",
+			    (p->pd_name && *p->pd_name) ? (int)p->pd_unit :
+			    none_count++, p->pc_sel.pc_domain,
+			    p->pc_sel.pc_bus, p->pc_sel.pc_dev,
+			    p->pc_sel.pc_func, (p->pc_class << 16) |
+			    (p->pc_subclass << 8) | p->pc_progif,
+			    (p->pc_subdevice << 16) | p->pc_subvendor,
+			    (p->pc_device << 16) | p->pc_vendor,
+			    p->pc_revid, p->pc_hdr);
 			if (verbose)
 				list_verbose(p);
 			if (bars)
 				list_bars(fd, p);
 			if (caps)
 				list_caps(fd, p);
+			if (errors)
+				list_errors(fd, p);
 		}
 	} while (pc.status == PCI_GETCONF_MORE_DEVS);
 
@@ -616,7 +624,8 @@ readit(const char *name, const char *reg, int width)
 	sel = getsel(name);
 	for (i = 1, r = rstart; r <= rend; i++, r += width) {
 		readone(fd, &sel, r, width);
-		if (i && !(i % 8)) putchar(' ');
+		if (i && !(i % 8))
+			putchar(' ');
 		putchar(i % (16/width) ? ' ' : '\n');
 	}
 	if (i % (16/width) != 1)

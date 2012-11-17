@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995  Peter Wemm
  * Copyright (c) 1980, 1993
@@ -34,7 +33,7 @@
 static char sccsid[] = "@(#)mkheaders.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/config/mkoptions.c,v 1.34.2.2 2011/01/02 13:31:10 lstewart Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 /*
@@ -352,9 +351,11 @@ update_option(const char *this, char *val, int flags)
 			return;
 		}
 	}
-	fprintf(stderr, "Compat option %s not listed in options file.\n",
-	    this);
-	exit(1);
+	/*
+	 * Option not found, but that's OK, we just ignore it since it
+	 * may be for another arch.
+	 */
+	return;
 }
 
 static int

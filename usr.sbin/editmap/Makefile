@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/editmap/Makefile,v 1.3 2005/06/10 06:12:52 des Exp $
+# $MidnightBSD$
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH: ${SENDMAIL_DIR}/editmap
@@ -9,6 +9,8 @@ MAN=	editmap.8
 
 CFLAGS+= -I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+= -DNEWDB -DNOT_SENDMAIL
+
+WARNS?=	2
 
 LIBSMDIR=	${.OBJDIR}/../../lib/libsm
 LIBSM=		${LIBSMDIR}/libsm.a

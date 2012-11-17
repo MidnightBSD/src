@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)chroot.c	8.1 (Berkeley) 6/9/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/chroot/chroot.c,v 1.11 2004/08/07 04:19:37 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 
@@ -61,17 +61,16 @@ char	*group;		/* group to switch to ... */
 char	*grouplist;	/* group list to switch to ... */
 
 int
-main(argc, argv)
-	int argc;
-	char *argv[];
+main(int argc, char *argv[])
 {
 	struct group	*gp;
 	struct passwd	*pw;
 	char		*endp, *p;
 	const char	*shell;
-	gid_t		gid, gidlist[NGROUPS_MAX];
+	gid_t		gid, *gidlist;
 	uid_t		uid;
 	int		ch, gids;
+	long		ngroups_max;
 
 	gid = 0;
 	uid = 0;
@@ -117,8 +116,11 @@ main(argc, argv)
 		}
 	}
 
+	ngroups_max = sysconf(_SC_NGROUPS_MAX) + 1;
+	if ((gidlist = malloc(sizeof(gid_t) * ngroups_max)) == NULL)
+		err(1, "malloc");
 	for (gids = 0;
-	    (p = strsep(&grouplist, ",")) != NULL && gids < NGROUPS_MAX; ) {
+	    (p = strsep(&grouplist, ",")) != NULL && gids < ngroups_max; ) {
 		if (*p == '\0')
 			continue;
 
@@ -135,7 +137,7 @@ main(argc, argv)
 		}
 		gids++;
 	}
-	if (p != NULL && gids == NGROUPS_MAX)
+	if (p != NULL && gids == ngroups_max)
 		errx(1, "too many supplementary groups provided");
 
 	if (user != NULL) {
@@ -175,7 +177,7 @@ main(argc, argv)
 }
 
 static void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr, "usage: chroot [-g group] [-G group,group,...] "
 	    "[-u user] newroot [command]\n");

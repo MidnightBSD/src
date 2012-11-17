@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/crunch/crunchide/Makefile,v 1.8 2006/08/22 07:51:09 ru Exp $
+# $MidnightBSD$
 
 PROG=   crunchide
 SRCS=	crunchide.c
@@ -10,7 +10,7 @@ CFLAGS+=-DNLIST_AOUT
 SRCS+=	exec_aout.c
 .endif
 
-.if ${TARGET_ARCH} == ia64 || \
+.if ${TARGET_ARCH} == ia64 || ${TARGET_ARCH} == powerpc64 || \
     ${TARGET_ARCH} == sparc64 || ${TARGET_ARCH} == amd64
 CFLAGS+=-DNLIST_ELF64
 SRCS+=	exec_elf64.c

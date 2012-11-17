@@ -27,13 +27,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/pciconf/pciconf.h,v 1.1.4.1 2007/11/08 21:33:40 jhb Exp $
+ * $MidnightBSD$
  */
 
 #ifndef __PCICONF_H__
 #define	__PCICONF_H__
 
 void	list_caps(int fd, struct pci_conf *p);
+void	list_errors(int fd, struct pci_conf *p);
+uint8_t	pci_find_cap(int fd, struct pci_conf *p, uint8_t id);
+uint16_t pcie_find_cap(int fd, struct pci_conf *p, uint16_t id);
 uint32_t read_config(int fd, struct pcisel *sel, long reg, int width);
 
 #endif

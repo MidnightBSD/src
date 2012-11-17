@@ -28,7 +28,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)lang.l	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.sbin/config/lang.l,v 1.45.2.3 2010/07/15 23:07:02 imp Exp $
  * $MidnightBSD$
  */
 
@@ -40,6 +39,7 @@
 #include "config.h"
 
 #define YY_NO_UNPUT
+#define YY_NO_INPUT
 
 /*
  * Data for returning to previous files from include files.

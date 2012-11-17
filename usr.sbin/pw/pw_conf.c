@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/pw/pw_conf.c,v 1.15 2007/03/30 11:23:10 le Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <string.h>
@@ -91,7 +91,7 @@ static struct userconf config =
 	NULL,			/* Mail to send to new accounts */
 	"/var/log/userlog",	/* Where to log changes */
 	"/home",		/* Where to create home directory */
-	0777,			/* Home directory perms, modified by umask */
+	_DEF_DIRMODE,		/* Home directory perms, modified by umask */
 	"/bin",			/* Where shells are located */
 	system_shells,		/* List of shells (first is default) */
 	bourne_shell,		/* Default shell */
@@ -302,7 +302,7 @@ read_userconfig(char const * file)
 				case _UC_HOMEMODE:
 					modeset = setmode(q);
 					config.homemode = (q == NULL || !boolean_val(q, 1))
-						? 0777 : getmode(modeset, 0777);
+						? _DEF_DIRMODE : getmode(modeset, _DEF_DIRMODE);
 					free(modeset);
 					break;
 				case _UC_SHELLPATH:

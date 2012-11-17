@@ -1,22 +1,19 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.28 2012/03/01 04:45:09 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.29 2012/03/23 20:55:00 laffer1 Exp $
 
 .include <bsd.own.mk>
 
 # XXX MISSING:		mkproto
-SUBDIR=	ac \
-	accton \
+SUBDIR+=accton \
 	${_acpi} \
 	adduser \
 	amd \
-	ancontrol \
 	${_apm} \
 	${_apmd} \
 	${_arlcontrol} \
 	arp \
 	${_asf} \
-	${_atm} \
 	${_audit} \
 	${_auditd} \
 	${_auditreduce} \
@@ -33,10 +30,8 @@ SUBDIR=	ac \
 	chown \
 	chroot \
 	ckdist \
-	config \
 	${_cpucontrol} \
 	cron \
-	crunch \
 	ctm \
 	daemon \
 	dconschat \
@@ -78,7 +73,6 @@ SUBDIR=	ac \
 	${_kgmon} \
 	${_kgzip} \
 	kldxref \
-	lastlogin \
 	lmcconfig \
 	${_lpr} \
 	${_lptcontrol} \
@@ -99,6 +93,7 @@ SUBDIR=	ac \
 	moused \
 	mport \
 	${_mptable} \
+	mptutil \
 	mrouted \
 	mtest \
 	mtree \
@@ -116,7 +111,6 @@ SUBDIR=	ac \
 	${_nscd} \
 	ntpd \
 	${_ofwdump} \
-	pccard \
 	pciconf \
 	periodic \
 	pmccontrol \
@@ -165,8 +159,6 @@ SUBDIR=	ac \
 	sensorsd \
 	service \
 	${_sicontrol} \
-	sliplogin \
-	slstat \
 	smbmsg \
 	snapinfo \
 	${_spkrtest} \
@@ -190,9 +182,7 @@ SUBDIR=	ac \
 	wake \
 	watch \
 	watchdogd \
-	wlandebug \
 	${_wlconfig} \
-	wpa \
 	${_ypbind} \
 	${_yp_mkdb} \
 	${_yppoll} \
@@ -201,11 +191,6 @@ SUBDIR=	ac \
 	${_ypset} \
 	zic \
 	${_zzz}
-
-# Disabled in 7.0 as netatm is not MPSAFE.
-#.if ${MK_ATM} != "no"
-#_atm=		atm
-#.endif
 
 .if ${MK_AUDIT} != "no"
 _audit=		audit
@@ -355,5 +340,26 @@ _zzz=		zzz
 _eeprom=	eeprom
 _ofwdump=	ofwdump
 .endif
+
+.if ${MK_TOOLCHAIN} != "no"
+SUBDIR+=	config
+SUBDIR+=	crunch
+.endif
+
+.if ${MK_UTMPX} != "no"
+SUBDIR+=	ac
+SUBDIR+=	lastlogin
+SUBDIR+=	utxrm
+.endif
+
+.if ${MK_WIRELESS} != "no"
+SUBDIR+=	ancontrol
+SUBDIR+=	wlandebug
+SUBDIR+=	wpa
+.endif
+
+.include <bsd.arch.inc.mk>
+
+SUBDIR:=	${SUBDIR:O}
 
 .include <bsd.subdir.mk>

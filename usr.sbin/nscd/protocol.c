@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <assert.h>
 #include <stdlib.h>

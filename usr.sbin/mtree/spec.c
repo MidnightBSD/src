@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)spec.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mtree/spec.c,v 1.23 2006/07/03 10:55:21 maxim Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -254,14 +254,17 @@ set(char *t, NODE *ip)
 			break;
 		case F_TIME:
 			ip->st_mtimespec.tv_sec = strtoul(val, &ep, 10);
-			if (*ep != '.')
-				errx(1, "line %d: invalid time %s",
-				lineno, val);
-			val = ep + 1;
-			ip->st_mtimespec.tv_nsec = strtoul(val, &ep, 10);
+			if (*ep == '.') {
+				/* Note: we require exactly nine
+				 * digits after the decimal point. */
+				val = ep + 1;
+				ip->st_mtimespec.tv_nsec
+				    = strtoul(val, &ep, 10);
+			} else
+				ip->st_mtimespec.tv_nsec = 0;
 			if (*ep)
 				errx(1, "line %d: invalid time %s",
-				lineno, val);
+				    lineno, val);
 			break;
 		case F_TYPE:
 			switch(*val) {

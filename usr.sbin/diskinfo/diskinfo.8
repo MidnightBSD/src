@@ -26,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/diskinfo/diskinfo.8,v 1.7 2005/01/18 20:02:33 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd November 9, 2004
 .Dt DISKINFO 8
@@ -46,7 +46,8 @@ and optionally runs a naive performance test on the device.
 .Pp
 If given no arguments, the output will be a single line per specified device
 with the following fields: device name, sectorsize, media size in bytes,
-media size in sectors, firmware cylinders, firmware heads, and firmware sectors.
+media size in sectors, stripe size, stripe offset, firmware cylinders,
+firmware heads, and firmware sectors.
 The last three fields are only present if the information is available.
 .Pp
 If given the

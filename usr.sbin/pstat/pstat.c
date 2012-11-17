@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)pstat.c	8.16 (Berkeley) 5/9/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pstat/pstat.c,v 1.102 2007/07/04 00:00:40 scf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -54,7 +54,6 @@ __FBSDID("$FreeBSD: src/usr.sbin/pstat/pstat.c,v 1.102 2007/07/04 00:00:40 scf E
 #include <sys/stat.h>
 #include <sys/stdint.h>
 #include <sys/ioctl.h>
-#include <sys/ioctl_compat.h>	/* XXX NTTYDISC is too well hidden */
 #include <sys/tty.h>
 #include <sys/blist.h>
 
@@ -77,16 +76,22 @@ enum {
 	NL_CONSTTY,
 	NL_MAXFILES,
 	NL_NFILES,
-	NL_TTY_LIST
+	NL_TTY_LIST,
+	NL_MARKER
 };
 
-static struct nlist nl[] = {
-	{ .n_name = "_constty" },
-	{ .n_name = "_maxfiles" },
-	{ .n_name = "_openfiles" },
-	{ .n_name = "_tty_list" },
-	{ .n_name = "" }
+static struct {
+	int order;
+	const char *name;
+} namelist[] = {
+	{ NL_CONSTTY, "_constty" },
+	{ NL_MAXFILES, "_maxfiles" },
+	{ NL_NFILES, "_openfiles" },
+	{ NL_TTY_LIST, "_tty_list" },
+	{ NL_MARKER, "" },
 };
+#define NNAMES	(sizeof(namelist) / sizeof(*namelist))
+static struct nlist nl[NNAMES];
 
 static int	humanflag;
 static int	usenumflag;
@@ -96,10 +101,10 @@ static char	*nlistf;
 static char	*memf;
 static kvm_t	*kd;
 
-static char	*usagestr;
+static const char *usagestr;
 
 static void	filemode(void);
-static int	getfiles(char **, size_t *);
+static int	getfiles(struct xfile **, size_t *);
 static void	swapmode(void);
 static void	ttymode(void);
 static void	ttyprt(struct xtty *);
@@ -108,9 +113,11 @@ static void	usage(void);
 int
 main(int argc, char *argv[])
 {
-	int ch, i, quit, ret;
+	int ch, quit, ret;
 	int fileflag, ttyflag;
-	char buf[_POSIX2_LINE_MAX],*opts;
+	unsigned int i;
+	char buf[_POSIX2_LINE_MAX];
+	const char *opts;
 
 	fileflag = swapflag = ttyflag = 0;
 
@@ -170,6 +177,12 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
+	/*
+	 * Initialize symbol names list.
+	 */
+	for (i = 0; i < NNAMES; i++)
+		nl[namelist[i].order].n_name = strdup(namelist[i].name);
+
 	if (memf != NULL) {
 		kd = kvm_openfiles(nlistf, memf, NULL, O_RDONLY, buf);
 		if (kd == NULL)
@@ -215,7 +228,7 @@ static const char fhdr64[] =
 /* c000000000000000 ------ RWAI 123 123 c000000000000000 1000000000000000 */
 
 static const char hdr[] =
-"  LINE RAW CAN OUT IHIWT ILOWT OHWT LWT     COL STATE  SESS      PGID DISC\n";
+"      LINE   INQ  CAN  LIN  LOW  OUTQ  USE  LOW   COL  SESS  PGID STATE\n";
 
 static void
 ttymode_kvm(void)
@@ -233,32 +246,32 @@ ttymode_kvm(void)
 	while (tp != NULL) {
 		if (kvm_read(kd, (u_long)tp, &tty, sizeof tty) != sizeof tty)
 			errx(1, "kvm_read(): %s", kvm_geterr(kd));
-		xt.xt_rawcc = tty.t_rawq.c_cc;
-		xt.xt_cancc = tty.t_canq.c_cc;
-		xt.xt_outcc = tty.t_outq.c_cc;
-#define XT_COPY(field) xt.xt_##field = tty.t_##field
-		XT_COPY(line);
-		XT_COPY(state);
-		XT_COPY(column);
-		XT_COPY(ihiwat);
-		XT_COPY(ilowat);
-		XT_COPY(ohiwat);
-		XT_COPY(olowat);
-#undef XT_COPY
+		xt.xt_insize = tty.t_inq.ti_nblocks * TTYINQ_DATASIZE;
+		xt.xt_incc = tty.t_inq.ti_linestart - tty.t_inq.ti_begin;
+		xt.xt_inlc = tty.t_inq.ti_end - tty.t_inq.ti_linestart;
+		xt.xt_inlow = tty.t_inlow;
+		xt.xt_outsize = tty.t_outq.to_nblocks * TTYOUTQ_DATASIZE;
+		xt.xt_outcc = tty.t_outq.to_end - tty.t_outq.to_begin;
+		xt.xt_outlow = tty.t_outlow;
+		xt.xt_column = tty.t_column;
+		/* xt.xt_pgid = ... */
+		/* xt.xt_sid = ... */
+		xt.xt_flags = tty.t_flags;
+		xt.xt_dev = NODEV;
 		ttyprt(&xt);
-		tp = TAILQ_NEXT(tp, t_list);
+		tp = TAILQ_NEXT(&tty, t_list);
 	}
 }
 
 static void
 ttymode_sysctl(void)
 {
-	struct xtty *xt, *end;
-	void *xttys;
+	struct xtty *xttys;
 	size_t len;
+	unsigned int i, n;
 
 	(void)printf("%s", hdr);
-	if ((xttys = malloc(len = sizeof *xt)) == NULL)
+	if ((xttys = malloc(len = sizeof(*xttys))) == NULL)
 		err(1, "malloc()");
 	while (sysctlbyname("kern.ttys", xttys, &len, 0, 0) == -1) {
 		if (errno != ENOMEM)
@@ -267,11 +280,9 @@ ttymode_sysctl(void)
 		if ((xttys = realloc(xttys, len)) == NULL)
 			err(1, "realloc()");
 	}
-	if (len > 0) {
-		end = (struct xtty *)((char *)xttys + len);
-		for (xt = xttys; xt < end; xt++)
-			ttyprt(xt);
-	}
+	n = len / sizeof(*xttys);
+	for (i = 0; i < n; i++)
+		ttyprt(&xttys[i]);
 }
 
 static void
@@ -288,109 +299,79 @@ static struct {
 	int flag;
 	char val;
 } ttystates[] = {
-#ifdef TS_WOPEN
-	{ TS_WOPEN,	'W'},
+#if 0
+	{ TF_NOPREFIX,		'N' },
 #endif
-	{ TS_ISOPEN,	'O'},
-	{ TS_CARR_ON,	'C'},
-#ifdef TS_CONNECTED
-	{ TS_CONNECTED,	'c'},
-#endif
-	{ TS_TIMEOUT,	'T'},
-	{ TS_FLUSH,	'F'},
-	{ TS_BUSY,	'B'},
-#ifdef TS_ASLEEP
-	{ TS_ASLEEP,	'A'},
-#endif
-#ifdef TS_SO_OLOWAT
-	{ TS_SO_OLOWAT,	'A'},
-#endif
-#ifdef TS_SO_OCOMPLETE
-	{ TS_SO_OCOMPLETE, 'a'},
-#endif
-	{ TS_XCLUDE,	'X'},
-	{ TS_TTSTOP,	'S'},
-#ifdef TS_CAR_OFLOW
-	{ TS_CAR_OFLOW,	'm'},
-#endif
-#ifdef TS_CTS_OFLOW
-	{ TS_CTS_OFLOW,	'o'},
-#endif
-#ifdef TS_DSR_OFLOW
-	{ TS_DSR_OFLOW,	'd'},
-#endif
-	{ TS_TBLOCK,	'K'},
-	{ TS_ASYNC,	'Y'},
-	{ TS_BKSL,	'D'},
-	{ TS_ERASE,	'E'},
-	{ TS_LNCH,	'L'},
-	{ TS_TYPEN,	'P'},
-	{ TS_CNTTB,	'N'},
-#ifdef TS_CAN_BYPASS_L_RINT
-	{ TS_CAN_BYPASS_L_RINT, 'l'},
-#endif
-#ifdef TS_SNOOP
-	{ TS_SNOOP,     's'},
-#endif
-#ifdef TS_ZOMBIE
-	{ TS_ZOMBIE,	'Z'},
-#endif
-	{ 0,	       '\0'},
+	{ TF_INITLOCK,		'I' },
+	{ TF_CALLOUT,		'C' },
+
+	/* Keep these together -> 'Oi' and 'Oo'. */
+	{ TF_OPENED,		'O' },
+	{ TF_OPENED_IN,		'i' },
+	{ TF_OPENED_OUT,	'o' },
+	{ TF_OPENED_CONS,	'c' },
+
+	{ TF_GONE,		'G' },
+	{ TF_OPENCLOSE,		'B' },
+	{ TF_ASYNC,		'Y' },
+	{ TF_LITERAL,		'L' },
+
+	/* Keep these together -> 'Hi' and 'Ho'. */
+	{ TF_HIWAT,		'H' },
+	{ TF_HIWAT_IN,		'i' },
+	{ TF_HIWAT_OUT,		'o' },
+
+	{ TF_STOPPED,		'S' },
+	{ TF_EXCLUDE,		'X' },
+	{ TF_BYPASS,		'l' },
+	{ TF_ZOMBIE,		'Z' },
+	{ TF_HOOK,		's' },
+
+	/* Keep these together -> 'bi' and 'bo'. */
+	{ TF_BUSY,		'b' },
+	{ TF_BUSY_IN,		'i' },
+	{ TF_BUSY_OUT,		'o' },
+
+	{ 0,			'\0'},
 };
 
 static void
 ttyprt(struct xtty *xt)
 {
 	int i, j;
-	char *name, state[20];
+	char *name;
 
 	if (xt->xt_size != sizeof *xt)
 		errx(1, "struct xtty size mismatch");
 	if (usenumflag || xt->xt_dev == 0 ||
 	   (name = devname(xt->xt_dev, S_IFCHR)) == NULL)
-		printf("   %2d,%-2d", major(xt->xt_dev), minor(xt->xt_dev));
+		printf("%5d,%4d ", major(xt->xt_dev), minor(xt->xt_dev));
 	else
-		(void)printf("%7s ", name);
-	(void)printf("%2ld %3ld ", xt->xt_rawcc, xt->xt_cancc);
-	(void)printf("%3ld %5d %5d %4d %3d %7d ", xt->xt_outcc,
-		xt->xt_ihiwat, xt->xt_ilowat, xt->xt_ohiwat, xt->xt_olowat,
-		xt->xt_column);
+		printf("%10s ", name);
+	printf("%5zu %4zu %4zu %4zu %5zu %4zu %4zu %5u %5d %5d ",
+	    xt->xt_insize, xt->xt_incc, xt->xt_inlc,
+	    (xt->xt_insize - xt->xt_inlow), xt->xt_outsize,
+	    xt->xt_outcc, (xt->xt_outsize - xt->xt_outlow),
+	    MIN(xt->xt_column, 99999), xt->xt_sid, xt->xt_pgid);
 	for (i = j = 0; ttystates[i].flag; i++)
-		if (xt->xt_state & ttystates[i].flag)
-			state[j++] = ttystates[i].val;
+		if (xt->xt_flags & ttystates[i].flag) {
+			putchar(ttystates[i].val);
+			j++;
+		}
 	if (j == 0)
-		state[j++] = '-';
-	state[j] = '\0';
-	(void)printf("%-6s %8d", state, xt->xt_sid);
-	(void)printf("%6d ", xt->xt_pgid);
-	switch (xt->xt_line) {
-	case TTYDISC:
-		(void)printf("term\n");
-		break;
-	case NTTYDISC:
-		(void)printf("ntty\n");
-		break;
-	case SLIPDISC:
-		(void)printf("slip\n");
-		break;
-	case PPPDISC:
-		(void)printf("ppp\n");
-		break;
-	default:
-		(void)printf("%d\n", xt->xt_line);
-		break;
-	}
+		putchar('-');
+	putchar('\n');
 }
 
 static void
 filemode(void)
 {
-	struct xfile *fp;
-	char *buf, flagbuf[16], *fbp;
+	struct xfile *fp, *buf;
+	char flagbuf[16], *fbp;
 	int maxf, openf;
 	size_t len;
-	static char *dtypes[] = { "???", "inode", "socket", "pipe",
-	    "fifo", "kqueue", "crypto" };
+	static char const * const dtypes[] = { "???", "inode", "socket",
+	    "pipe", "fifo", "kqueue", "crypto" };
 	int i;
 	int wid;
 
@@ -443,11 +424,11 @@ filemode(void)
 }
 
 static int
-getfiles(char **abuf, size_t *alen)
+getfiles(struct xfile **abuf, size_t *alen)
 {
+	struct xfile *buf;
 	size_t len;
 	int mib[2];
-	char *buf;
 
 	/*
 	 * XXX
@@ -479,6 +460,7 @@ getfiles(char **abuf, size_t *alen)
  */
 
 #define CONVERT(v)	((int64_t)(v) * pagesize / blocksize)
+#define CONVERT_BLOCKS(v)	((int64_t)(v) * pagesize)
 static struct kvm_swap swtot;
 static int nswdev;
 
@@ -497,7 +479,7 @@ print_swap_header(void)
 }
 
 static void
-print_swap_line(const char *devname, intmax_t nblks, intmax_t bused,
+print_swap_line(const char *swdevname, intmax_t nblks, intmax_t bused,
     intmax_t bavail, float bpercent)
 {
 	char usedbuf[5];
@@ -508,13 +490,13 @@ print_swap_line(const char *devname, intmax_t nblks, intmax_t bused,
 	pagesize = getpagesize();
 	getbsize(&hlen, &blocksize);
 
-	printf("%-15s %*jd ", devname, hlen, CONVERT(nblks));
+	printf("%-15s %*jd ", swdevname, hlen, CONVERT(nblks));
 	if (humanflag) {
 		humanize_number(usedbuf, sizeof(usedbuf),
-		    CONVERT(blocksize * bused), "",
+		    CONVERT_BLOCKS(bused), "",
 		    HN_AUTOSCALE, HN_B | HN_NOSPACE | HN_DECIMAL);
 		humanize_number(availbuf, sizeof(availbuf),
-		    CONVERT(blocksize * bavail), "",
+		    CONVERT_BLOCKS(bavail), "",
 		    HN_AUTOSCALE, HN_B | HN_NOSPACE | HN_DECIMAL);
 		printf("%8s %8s %5.0f%%\n", usedbuf, availbuf, bpercent);
 	} else {

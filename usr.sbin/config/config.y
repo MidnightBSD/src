@@ -48,10 +48,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -69,7 +65,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.y	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.sbin/config/config.y,v 1.78.2.4 2011/01/02 13:31:10 lstewart Exp $
  * $MidnightBSD$
  */
 
@@ -98,6 +93,12 @@ int include(const char *, int);
 void yyerror(const char *s);
 int yywrap(void);
 
+static void newdev(char *name);
+static void newfile(char *name);
+static void rmdev_schedule(struct device_head *dh, char *name);
+static void newopt(struct opt_head *list, char *name, char *value, int append);
+static void rmopt_schedule(struct opt_head *list, char *name);
+
 static char *
 devopt(char *dev)
 {
@@ -125,20 +126,17 @@ Spec:
 		|
 	Config_spec SEMICOLON
 		|
-	INCLUDE PATH SEMICOLON
-	      = {
+	INCLUDE PATH SEMICOLON {
 		if (incignore == 0)
 			include($2, 0);
 		};
 		|
-	INCLUDE ID SEMICOLON
-	      = {
+	INCLUDE ID SEMICOLON {
 	          if (incignore == 0)
 		  	include($2, 0);
 		};
 		|
-	FILES ID SEMICOLON
-	      = { newfile($2); };
+	FILES ID SEMICOLON { newfile($2); };
 	        |
 	SEMICOLON
 		|
@@ -146,16 +144,14 @@ Spec:
 		;
 
 Config_spec:
-	ARCH Save_id
-	    = {
+	ARCH Save_id {
 		if (machinename != NULL && !eq($2, machinename))
 		    errx(1, "%s:%d: only one machine directive is allowed",
 			yyfile, yyline);
 		machinename = $2;
 		machinearch = $2;
 	      } |
-	ARCH Save_id Save_id
-	    = {
+	ARCH Save_id Save_id {
 		if (machinename != NULL &&
 		    !(eq($2, machinename) && eq($3, machinearch)))
 		    errx(1, "%s:%d: only one machine directive is allowed",
@@ -163,8 +159,7 @@ Config_spec:
 		machinename = $2;
 		machinearch = $3;
 	      } |
-	CPU Save_id
-	      = {
+	CPU Save_id {
 		struct cputype *cp =
 		    (struct cputype *)calloc(1, sizeof (struct cputype));
 		if (cp == NULL)
@@ -172,8 +167,7 @@ Config_spec:
 		cp->cpu_name = $2;
 		SLIST_INSERT_HEAD(&cputype, cp, cpu_next);
 	      } |
-	NOCPU Save_id
-	      = {
+	NOCPU Save_id {
 		struct cputype *cp, *cp2;
 		SLIST_FOREACH_SAFE(cp, &cputype, cpu_next, cp2) {
 			if (eq(cp->cpu_name, $2)) {
@@ -184,27 +178,20 @@ Config_spec:
 	      } |
 	OPTIONS Opt_list
 		|
-	NOOPTION Save_id
-	      = { rmopt_schedule(&opt, $2); } |
+	NOOPTION Save_id { rmopt_schedule(&opt, $2); } |
 	MAKEOPTIONS Mkopt_list
 		|
-	NOMAKEOPTION Save_id
-	      = { rmopt_schedule(&mkopt, $2); } |
-	IDENT ID
-	      = { ident = $2; } |
+	NOMAKEOPTION Save_id { rmopt_schedule(&mkopt, $2); } |
+	IDENT ID { ident = $2; } |
 	System_spec
 		|
-	MAXUSERS NUMBER
-	      = { maxusers = $2; } |
-	PROFILE NUMBER
-	      = { profiling = $2; } |
-	ENV ID
-	      = {
+	MAXUSERS NUMBER { maxusers = $2; } |
+	PROFILE NUMBER { profiling = $2; } |
+	ENV ID {
 		env = $2;
 		envmode = 1;
 		} |
-	HINTS ID
-	      = {
+	HINTS ID {
 		struct hint *hint;
 
 		hint = (struct hint *)calloc(1, sizeof (struct hint));
@@ -216,16 +203,16 @@ Config_spec:
 	        }
 
 System_spec:
-	CONFIG System_id System_parameter_list
-	  = { errx(1, "%s:%d: root/dump/swap specifications obsolete",
-	      yyfile, yyline);}
+	CONFIG System_id System_parameter_list {
+		errx(1, "%s:%d: root/dump/swap specifications obsolete",
+		      yyfile, yyline);
+		}
 	  |
 	CONFIG System_id
 	  ;
 
 System_id:
-	Save_id
-	      = { newopt(&mkopt, ns("KERNEL"), $1, 0); };
+	Save_id { newopt(&mkopt, ns("KERNEL"), $1, 0); };
 
 System_parameter_list:
 	  System_parameter_list ID
@@ -239,23 +226,19 @@ Opt_list:
 		;
 
 Option:
-	Save_id
-	      = {
+	Save_id {
 		newopt(&opt, $1, NULL, 0);
 		if (strchr($1, '=') != NULL)
 			errx(1, "%s:%d: The `=' in options should not be "
 			    "quoted", yyfile, yyline);
 	      } |
-	Save_id EQUALS Opt_value
-	      = {
+	Save_id EQUALS Opt_value {
 		newopt(&opt, $1, $3, 0);
 	      } ;
 
 Opt_value:
-	ID
-		= { $$ = $1; } |
-	NUMBER
-		= {
+	ID { $$ = $1; } |
+	NUMBER {
 			char buf[80];
 
 			(void) snprintf(buf, sizeof(buf), "%d", $1);
@@ -263,8 +246,7 @@ Opt_value:
 		} ;
 
 Save_id:
-	ID
-	      = { $$ = $1; }
+	ID { $$ = $1; }
 	;
 
 Mkopt_list:
@@ -274,16 +256,13 @@ Mkopt_list:
 		;
 
 Mkoption:
-	Save_id
-	      = { newopt(&mkopt, $1, ns(""), 0); } |
-	Save_id EQUALS Opt_value
-	      = { newopt(&mkopt, $1, $3, 0); } |
-	Save_id PLUSEQUALS Opt_value
-	      = { newopt(&mkopt, $1, $3, 1); } ;
+	Save_id { newopt(&mkopt, $1, ns(""), 0); } |
+	Save_id EQUALS { newopt(&mkopt, $1, ns(""), 0); } |
+	Save_id EQUALS Opt_value { newopt(&mkopt, $1, $3, 0); } |
+	Save_id PLUSEQUALS Opt_value { newopt(&mkopt, $1, $3, 1); } ;
 
 Dev:
-	ID
-	      = { $$ = $1; }
+	ID { $$ = $1; }
 	;
 
 Device_spec:
@@ -305,16 +284,14 @@ NoDev_list:
 		;
 
 Device:
-	Dev
-	      = {
+	Dev {
 		newopt(&opt, devopt($1), ns("1"), 0);
 		/* and the device part */
 		newdev($1);
 		}
 
 NoDevice:
-	Dev
-	      = {
+	Dev {
 		char *s = devopt($1);
 
 		rmopt_schedule(&opt, s);

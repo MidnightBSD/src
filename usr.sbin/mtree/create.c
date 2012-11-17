@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)create.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mtree/create.c,v 1.37 2005/03/29 11:44:17 tobez Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -212,9 +212,9 @@ statf(int indent, FTSENT *p)
 		output(indent, &offset, "size=%jd",
 		    (intmax_t)p->fts_statp->st_size);
 	if (keys & F_TIME)
-		output(indent, &offset, "time=%ld.%ld",
-		    (long)p->fts_statp->st_mtimespec.tv_sec,
-		    p->fts_statp->st_mtimespec.tv_nsec);
+		output(indent, &offset, "time=%ld.%09ld",
+		    (long)p->fts_statp->st_mtim.tv_sec,
+		    p->fts_statp->st_mtim.tv_nsec);
 	if (keys & F_CKSUM && S_ISREG(p->fts_statp->st_mode)) {
 		if ((fd = open(p->fts_accpath, O_RDONLY, 0)) < 0 ||
 		    crc(fd, &val, &len))

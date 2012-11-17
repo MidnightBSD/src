@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/config/main.c,v 1.76.2.4 2010/07/15 23:07:02 imp Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -108,7 +108,6 @@ main(int argc, char **argv)
 	struct stat buf;
 	int ch, len;
 	char *p;
-	char xxx[MAXPATHLEN];
 	char *kernfile;
 	int printmachine;
 
@@ -156,6 +155,8 @@ main(int argc, char **argv)
 		usage();
 
 	PREFIX = *argv;
+	if (stat(PREFIX, &buf) != 0 || !S_ISREG(buf.st_mode))
+		err(2, "%s", PREFIX);
 	if (freopen("DEFAULTS", "r", stdin) != NULL) {
 		found_defaults = 1;
 		yyfile = "DEFAULTS";
@@ -216,32 +217,6 @@ main(int argc, char **argv)
 	} else if (!S_ISDIR(buf.st_mode))
 		errx(EXIT_FAILURE, "%s isn't a directory", p);
 
-	/*
-	 * make symbolic links in compilation directory
-	 * for "sys" (to make genassym.c work along with #include <sys/xxx>)
-	 * and similarly for "machine".
-	 */
-	if (*srcdir == '\0')
-		(void)snprintf(xxx, sizeof(xxx), "../../include");
-	else
-		(void)snprintf(xxx, sizeof(xxx), "%s/%s/include",
-		    srcdir, machinename);
-	(void) unlink(path("machine"));
-	(void) symlink(xxx, path("machine"));
-	if (strcmp(machinename, machinearch) != 0) {
-		/*
-		 * make symbolic links in compilation directory for
-		 * machinearch, if it is different than machinename.
-		 */
-		if (*srcdir == '\0')
-			(void)snprintf(xxx, sizeof(xxx), "../../../%s/include",
-			    machinearch);
-		else
-			(void)snprintf(xxx, sizeof(xxx), "%s/%s/include",
-			    srcdir, machinearch);
-		(void) unlink(path(machinearch));
-		(void) symlink(xxx, path(machinearch));
-	}
 	configfile();			/* put config file into kernel*/
 	options();			/* make options .h files */
 	makefile();			/* build Makefile */
@@ -602,7 +577,7 @@ cleanheaders(char *p)
 	struct dirent *dp;
 	struct file_list *fl;
 	struct hdr_list *hl;
-	int i;
+	size_t len;
 
 	remember("y.tab.h");
 	remember("setdefs.h");
@@ -616,12 +591,13 @@ cleanheaders(char *p)
 	if ((dirp = opendir(p)) == NULL)
 		err(EX_OSERR, "opendir %s", p);
 	while ((dp = readdir(dirp)) != NULL) {
-		i = dp->d_namlen - 2;
+		len = strlen(dp->d_name);
 		/* Skip non-headers */
-		if (dp->d_name[i] != '.' || dp->d_name[i + 1] != 'h')
+		if (len < 2 || dp->d_name[len - 2] != '.' ||
+		    dp->d_name[len - 1] != 'h')
 			continue;
 		/* Skip special stuff, eg: bus_if.h, but check opt_*.h */
-		if (index(dp->d_name, '_') &&
+		if (strchr(dp->d_name, '_') &&
 		    strncmp(dp->d_name, "opt_", 4) != 0)
 			continue;
 		/* Check if it is a target file */

@@ -27,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/pw/pw_user.c,v 1.61 2007/03/30 12:57:25 le Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -41,19 +41,11 @@ static const char rcsid[] =
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
-#include <utmp.h>
 #include <login_cap.h>
-#if defined(USE_MD5RAND)
-#include <md5.h>
-#endif
 #include "pw.h"
 #include "bitmap.h"
 
-#if (MAXLOGNAME-1) > UT_NAMESIZE
-#define LOGNAMESIZE UT_NAMESIZE
-#else
 #define LOGNAMESIZE (MAXLOGNAME-1)
-#endif
 
 static		char locked_str[] = "*LOCKED*";
 
@@ -115,7 +107,6 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 	struct stat     st;
 	char            line[_PASSWORD_LEN+1];
 	FILE	       *fp;
-	mode_t dmode;
 	char *dmode_c;
 	void *set = NULL;
 
@@ -164,9 +155,8 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 		if ((set = setmode(dmode_c)) == NULL)
 			errx(EX_DATAERR, "invalid directory creation mode '%s'",
 			    dmode_c);
-		dmode = getmode(set, S_IRWXU | S_IRWXG | S_IRWXO);
+		cnf->homemode = getmode(set, _DEF_DIRMODE);
 		free(set);
-		cnf->homemode = dmode;
 	}
 
 	/*
@@ -194,7 +184,7 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 			if (strchr(cnf->home+1, '/') == NULL) {
 				strcpy(dbuf, "/usr");
 				strncat(dbuf, cnf->home, MAXPATHLEN-5);
-				if (mkdir(dbuf, cnf->homemode) != -1 || errno == EEXIST) {
+				if (mkdir(dbuf, _DEF_DIRMODE) != -1 || errno == EEXIST) {
 					chown(dbuf, 0, 0);
 					/*
 					 * Skip first "/" and create symlink:
@@ -210,7 +200,7 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 				while ((p = strchr(++p, '/')) != NULL) {
 					*p = '\0';
 					if (stat(dbuf, &st) == -1) {
-						if (mkdir(dbuf, cnf->homemode) == -1)
+						if (mkdir(dbuf, _DEF_DIRMODE) == -1)
 							goto direrr;
 						chown(dbuf, 0, 0);
 					} else if (!S_ISDIR(st.st_mode))
@@ -219,7 +209,7 @@ pw_user(struct userconf * cnf, int mode, struct cargs * args)
 				}
 			}
 			if (stat(dbuf, &st) == -1) {
-				if (mkdir(dbuf, cnf->homemode) == -1) {
+				if (mkdir(dbuf, _DEF_DIRMODE) == -1) {
 				direrr:	err(EX_OSFILE, "mkdir '%s'", dbuf);
 				}
 				chown(dbuf, 0, 0);
@@ -1029,88 +1019,40 @@ pw_shellpolicy(struct userconf * cnf, struct cargs * args, char *newshell)
 	return shell_path(cnf->shelldir, cnf->shells, sh ? sh : cnf->shell_default);
 }
 
-static char const chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.";
+#define	SALTSIZE	32
+
+static char const chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ./";
 
 char           *
 pw_pwcrypt(char *password)
 {
 	int             i;
-	char            salt[12];
+	char            salt[SALTSIZE + 1];
 
 	static char     buf[256];
 
 	/*
 	 * Calculate a salt value
 	 */
-	for (i = 0; i < 8; i++)
-		salt[i] = chars[arc4random() % 63];
-	salt[i] = '\0';
+	for (i = 0; i < SALTSIZE; i++)
+		salt[i] = chars[arc4random_uniform(sizeof(chars) - 1)];
+	salt[SALTSIZE] = '\0';
 
 	return strcpy(buf, crypt(password, salt));
 }
 
-#if defined(USE_MD5RAND)
-u_char *
-pw_getrand(u_char *buf, int len)	/* cryptographically secure rng */
-{
-	int i;
-	for (i=0;i<len;i+=16) {
-		u_char ubuf[16];
-
-		MD5_CTX md5_ctx;
-		struct timeval tv, tvo;
-		struct rusage ru;
-		int n=0;
-		int t;
-
-		MD5Init (&md5_ctx);
-		t=getpid();
-		MD5Update (&md5_ctx, (u_char*)&t, sizeof t);
-		t=getppid();
-		MD5Update (&md5_ctx, (u_char*)&t, sizeof t);
-		gettimeofday (&tvo, NULL);
-		do {
-			getrusage (RUSAGE_SELF, &ru);
-			MD5Update (&md5_ctx, (u_char*)&ru, sizeof ru);
-			gettimeofday (&tv, NULL);
-			MD5Update (&md5_ctx, (u_char*)&tv, sizeof tv);
-		} while (n++<20 || tv.tv_usec-tvo.tv_usec<100*1000);
-		MD5Final (ubuf, &md5_ctx);
-		memcpy(buf+i, ubuf, MIN(16, len-i));
-	}
-	return buf;
-}
-
-#else	/* Portable version */
-
-static u_char *
-pw_getrand(u_char *buf, int len)
-{
-	int i;
-
-	for (i = 0; i < len; i++) {
-		unsigned long val = arc4random();
-		/* Use all bits in the random value */
-		buf[i]=(u_char)((val >> 24) ^ (val >> 16) ^ (val >> 8) ^ val);
-	}
-	return buf;
-}
-
-#endif
 
 static char    *
 pw_password(struct userconf * cnf, struct cargs * args, char const * user)
 {
 	int             i, l;
 	char            pwbuf[32];
-	u_char		rndbuf[sizeof pwbuf];
 
 	switch (cnf->default_password) {
 	case -1:		/* Random password */
 		l = (arc4random() % 8 + 8);	/* 8 - 16 chars */
-		pw_getrand(rndbuf, l);
 		for (i = 0; i < l; i++)
-			pwbuf[i] = chars[rndbuf[i] % (sizeof(chars)-1)];
+			pwbuf[i] = chars[arc4random_uniform(sizeof(chars)-1)];
 		pwbuf[i] = '\0';
 
 		/*
@@ -1266,7 +1208,7 @@ pw_checkname(u_char *name, int gecos)
 	if (reject) {
 		snprintf(showch, sizeof(showch), (*ch >= ' ' && *ch < 127)
 		    ? "`%c'" : "0x%02x", *ch);
-		errx(EX_DATAERR, "invalid character %s at position %d in %s",
+		errx(EX_DATAERR, "invalid character %s at position %td in %s",
 		    showch, (ch - name), showtype);
 	}
 	if (!gecos && (ch - name) > LOGNAMESIZE)

@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)mtree.8	8.2 (Berkeley) 12/11/93
-.\" $FreeBSD: src/usr.sbin/mtree/mtree.8,v 1.56 2007/06/16 08:26:00 maxim Exp $
+.\" $MidnightBSD$
 .\"
 .Dd June 16, 2007
 .Dt MTREE 8
@@ -37,9 +37,6 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl LPUcdeinqruxw
-.Bk -words
-.Op Fl f Ar spec
-.Ek
 .Bk -words
 .Op Fl f Ar spec
 .Ek
@@ -91,7 +88,7 @@ Do not complain about files that are in the file hierarchy, but not in the
 specification.
 .It Fl i
 Indent the output 4 spaces each time a directory level is descended when
-create a specification with the
+creating a specification with the
 .Fl c
 option.
 This does not affect either the /set statements or the comment before each
@@ -119,7 +116,7 @@ Same as
 except a status of 2 is returned if the file hierarchy did not match
 the specification.
 .It Fl w
-Make some errorconditions non-fatal warnings.
+Make some errors non-fatal warnings.
 .It Fl x
 Do not descend below mount points in the file hierarchy.
 .It Fl f Ar file
@@ -129,7 +126,7 @@ instead of from the standard input.
 .Pp
 If this option is specified twice, the two specifications are compared
 to each other rather than to the file hierarchy.
-The specifications be sorted like output generated using
+The specifications will be sorted like output generated using
 .Fl c .
 The output format in this case is somewhat remniscent of
 .Xr comm 1 ,
@@ -233,7 +230,9 @@ The size, in bytes, of the file.
 .It Cm link
 The file the symbolic link is expected to reference.
 .It Cm time
-The last modification time of the file.
+The last modification time of the file, in seconds and nanoseconds.
+The value should include a period character and exactly nine digits
+after the period.
 .It Cm type
 The type of the file; may be set to any one of the following:
 .Pp
@@ -258,10 +257,10 @@ socket
 The default set of keywords are
 .Cm flags ,
 .Cm gid ,
+.Cm link ,
 .Cm mode ,
 .Cm nlink ,
 .Cm size ,
-.Cm link ,
 .Cm time ,
 and
 .Cm uid .

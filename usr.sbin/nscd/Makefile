@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 PROG=	nscd
 MAN=	nscd.conf.5 nscd.8

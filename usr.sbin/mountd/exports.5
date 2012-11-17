@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)exports.5	8.3 (Berkeley) 3/29/95
-.\" $FreeBSD: src/usr.sbin/mountd/exports.5,v 1.28 2006/01/29 08:44:05 jkoshy Exp $
+.\" $MidnightBSD$
 .\"
-.Dd March 29, 1995
+.Dd July 12, 2011
 .Dt EXPORTS 5
 .Os
 .Sh NAME
@@ -54,22 +54,31 @@ Appendix I.
 Each line in the file
 (other than comment lines that begin with a #)
 specifies the mount point(s) and export flags within one local server
-file system for one or more hosts.
+file system or the NFSv4 tree root for one or more hosts.
 A long line may be split over several lines by ending all but the
 last line with a backslash
 .Pq Ql \e .
-A host may be specified only once for each local file system on the
+A host may be specified only once for each local file or the NFSv4 tree root on the
 server and there may be only one default entry for each server
 file system that applies to all other hosts.
-The latter exports the file system to the ``world'' and should
+The latter exports the file system to the
+.Dq world
+and should
 be used only when the file system contains public information.
 .Pp
 In a mount entry,
 the first field(s) specify the directory path(s) within a server file system
 that can be mounted on by the corresponding client(s).
-There are two forms of this specification.
+There are three forms of this specification.
 The first is to list all mount points as absolute
 directory paths separated by whitespace.
+This list of directory paths should be considered an
+.Dq administrative control ,
+since it is only enforced by the
+.Xr mountd 8
+daemon and not the kernel.
+As such, it only applies to NFSv2 and NFSv3 mounts and only
+with respect to the client's use of the mount protocol.
 The second is to specify the pathname of the root of the file system
 followed by the
 .Fl alldirs
@@ -79,21 +88,43 @@ including regular files if the
 .Fl r
 option is used on
 .Xr mountd 8 .
+Because NFSv4 does not use the mount protocol,
+the
+.Dq administrative controls
+are not applied.
+Thus, all the above export line(s) should be considered to have the
+.Fl alldirs
+flag, even if the line is specified without it.
+The third form has the string ``V4:'' followed by a single absolute path
+name, to specify the NFSv4 tree root.
+This line does not export any file system, but simply marks where the root
+of the server's directory tree is for NFSv4 clients.
+The exported file systems for NFSv4 are specified via the other lines
+in the
+.Xr exports 5
+file in the same way as for NFSv2 and NFSv3.
 The pathnames must not have any symbolic links in them and should not have
-any "." or ".." components.
+any
+.Dq Pa \&.
+or
+.Dq Pa ..
+components.
 Mount points for a file system may appear on multiple lines each with
 different sets of hosts and export options.
 .Pp
 The second component of a line specifies how the file system is to be
 exported to the host set.
 The option flags specify whether the file system
-is exported read-only or read-write and how the client uid is mapped to
+is exported read-only or read-write and how the client UID is mapped to
 user credentials on the server.
+For the NFSv4 tree root, the only option that can be specified in this
+section is
+.Fl sec .
 .Pp
 Export options are specified as follows:
 .Pp
 .Sm off
-.Fl maproot No = Sy user
+.Fl maproot Li = Sy user
 .Sm on
 The credential of the specified user is used for remote access by root.
 The credential includes all the groups to which the user is a member
@@ -102,7 +133,7 @@ on the local machine (see
 The user may be specified by name or number.
 .Pp
 .Sm off
-.Fl maproot No = Sy user:group1:group2:...
+.Fl maproot Li = Sy user:group1:group2:...
 .Sm on
 The colon separated list is used to specify the precise credential
 to be used for remote access by root.
@@ -111,13 +142,13 @@ Note that user: should be used to distinguish a credential containing
 no groups from a complete credential for that user.
 .Pp
 .Sm off
-.Fl mapall No = Sy user
+.Fl mapall Li = Sy user
 .Sm on
 or
 .Sm off
-.Fl mapall No = Sy user:group1:group2:...
+.Fl mapall Li = Sy user:group1:group2:...
 .Sm on
-specifies a mapping for all client uids (including root)
+specifies a mapping for all client UIDs (including root)
 using the same semantics as
 .Fl maproot .
 .Pp
@@ -143,6 +174,17 @@ option is given,
 all users (including root) will be mapped to that credential in
 place of their own.
 .Pp
+.Sm off
+.Fl sec Li = Sy flavor1:flavor2...
+.Sm on
+specifies a colon separated list of acceptable security flavors to be
+used for remote access.
+Supported security flavors are sys, krb5, krb5i and krb5p.
+If multiple flavors are listed, they should be ordered with the most
+preferred flavor first.
+If this option is not present,
+the default security flavor list of just sys is used.
+.Pp
 The
 .Fl ro
 option specifies that the file system should be exported read-only
@@ -159,7 +201,7 @@ be done with the
 .Fl public
 flag.
 However, this flag in itself allows r/w access to all files in
-the file system, not requiring reserved ports and not remapping uids.
+the file system, not requiring reserved ports and not remapping UIDs.
 It
 is only provided to conform to the spec, and should normally not be used.
 For a
@@ -209,8 +251,14 @@ below).
 The third component of a line specifies the host set to which the line applies.
 The set may be specified in three ways.
 The first way is to list the host name(s) separated by white space.
-(Standard Internet ``dot'' addresses may be used in place of names.)
-The second way is to specify a ``netgroup'' as defined in the netgroup file (see
+(Standard Internet
+.Dq dot
+addresses may be used in place of names.)
+The second way is to specify a
+.Dq netgroup
+as defined in the
+.Pa netgroup
+file (see
 .Xr netgroup 5 ) .
 The third way is to specify an Internet subnetwork using a network and
 network mask that is defined as the set of all hosts with addresses within
@@ -221,18 +269,27 @@ large number of clients within an administrative subnet.
 .Pp
 The first two cases are specified by simply listing the name(s) separated
 by whitespace.
-All names are checked to see if they are ``netgroup'' names
+All names are checked to see if they are
+.Dq netgroup
+names
 first and are assumed to be hostnames otherwise.
 Using the full domain specification for a hostname can normally
 circumvent the problem of a host that has the same name as a netgroup.
 The third case is specified by the flag
 .Sm off
-.Fl network No = Sy netname
+.Fl network Li = Sy netname Op Li / Ar prefixlength
 .Sm on
 and optionally
 .Sm off
 .Fl mask No = Sy netmask .
 .Sm on
+The netmask may be specified either by attaching a
+.Ar prefixlength
+to the
+.Fl network
+option, or by using a separate
+.Fl mask
+option.
 If the mask is not specified, it will default to the mask for that network
 class (A, B or C; see
 .Xr inet 4 ) .
@@ -240,13 +297,49 @@ See the
 .Sx EXAMPLES
 section below.
 .Pp
+Scoped IPv6 address must carry scope identifier as documented in
+.Xr inet6 4 .
+For example,
+.Dq Li fe80::%re2/10
+is used to specify
+.Li fe80::/10
+on
+.Li re2
+interface.
+.Pp
+For the third form which specifies the NFSv4 tree root, the directory path
+specifies the location within the server's file system tree which is the
+root of the NFSv4 tree.
+All entries of this form must specify the same directory path.
+This location can be any directory and does not
+need to be within an exported file system. If it is not in an exported
+file system, a very limited set of operations are permitted, so that an
+NFSv4 client can traverse the tree to an exported file system.
+Although parts of the NFSv4 tree can be non-exported, the entire NFSv4 tree
+must consist of local file systems capable of being exported via NFS.
+NFSv4 does not use the mount protocol and does permit clients to cross server
+mount point boundaries, although not all clients are capable of crossing the
+mount points.
+.Pp
+The
+.Fl sec
+option on these line(s) specifies what security flavors may be used for
+NFSv4 operations that do not use file handles. Since these operations
+(SetClientID, SetClientIDConfirm, Renew, DelegPurge and ReleaseLockOnwer)
+allocate/modify state in the server, it is possible to restrict some clients to
+the use of the krb5[ip] security flavors, via this option.
+See the
+.Sx EXAMPLES
+section below.
+This third form is meaningless for NFSv2 and NFSv3 and is ignored for them.
+.Pp
 The
 .Xr mountd 8
 utility can be made to re-read the
 .Nm
 file by sending it a hangup signal as follows:
 .Bd -literal -offset indent
-kill -s HUP `cat /var/run/mountd.pid`
+/etc/rc.d/mountd reload
 .Ed
 .Pp
 After sending the
@@ -269,50 +362,93 @@ the default remote mount-point file
 /usr -maproot=daemon grumpy.cis.uoguelph.ca 131.104.48.16
 /usr -ro -mapall=nobody
 /u -maproot=bin: -network 131.104.48 -mask 255.255.255.0
+/a -network 192.168.0/24
+/a -network 3ffe:1ce1:1:fe80::/64
 /u2 -maproot=root friends
 /u2 -alldirs -network cis-net -mask cis-mask
 /cdrom -alldirs,quiet,ro -network 192.168.33.0 -mask 255.255.255.0
+/private -sec=krb5i
+/secret -sec=krb5p
+V4: /	-sec=krb5:krb5i:krb5p -network 131.104.48 -mask 255.255.255.0
+V4: /	-sec=sys:krb5:krb5i:krb5p grumpy.cis.uoguelph.ca
 .Ed
 .Pp
 Given that
-.Pa /usr ,
-.Pa /u
+.Pa /usr , /u , /a
 and
 .Pa /u2
 are
 local file system mount points, the above example specifies the following:
 .Pp
+The file system rooted at
 .Pa /usr
 is exported to hosts
 .Em friends
 where friends is specified in the netgroup file
 with users mapped to their remote credentials and
-root mapped to uid 0 and group 10.
-It is exported read-write and the hosts in ``friends'' can mount either /usr
-or /usr/local.
+root mapped to UID 0 and group 10.
+It is exported read-write and the hosts in
+.Dq friends
+can mount either
+.Pa /usr
+or
+.Pa /usr/local .
 It is exported to
 .Em 131.104.48.16
 and
 .Em grumpy.cis.uoguelph.ca
 with users mapped to their remote credentials and
-root mapped to the user and groups associated with ``daemon'';
+root mapped to the user and groups associated with
+.Dq daemon ;
 it is exported to the rest of the world as read-only with
-all users mapped to the user and groups associated with ``nobody''.
+all users mapped to the user and groups associated with
+.Dq nobody .
 .Pp
+The file system rooted at
 .Pa /u
 is exported to all hosts on the subnetwork
 .Em 131.104.48
-with root mapped to the uid for ``bin'' and with no group access.
+with root mapped to the UID for
+.Dq bin
+and with no group access.
 .Pp
+The file system rooted at
 .Pa /u2
-is exported to the hosts in ``friends'' with root mapped to uid and groups
-associated with ``root'';
-it is exported to all hosts on network ``cis-net'' allowing mounts at any
+is exported to the hosts in
+.Dq friends
+with root mapped to UID and groups
+associated with
+.Dq root ;
+it is exported to all hosts on network
+.Dq cis-net
+allowing mounts at any
 directory within /u2.
 .Pp
 The file system rooted at
+.Pa /a
+is exported to the network 192.168.0.0, with a netmask of 255.255.255.0.
+However, the netmask length in the entry for
+.Pa /a
+is not specified through a
+.Fl mask
+option, but through the
+.Li / Ns Ar prefix
+notation.
+.Pp
+The file system rooted at
+.Pa /a
+is also exported to the IPv6 network
+.Li 3ffe:1ce1:1:fe80::
+address, using the upper 64 bits as the prefix.
+Note that, unlike with IPv4 network addresses, the specified network
+address must be complete, and not just contain the upper bits.
+With IPv6 addresses, the
+.Fl mask
+option must not be used.
+.Pp
+The file system rooted at
 .Pa /cdrom
-will exported read-only to the entire network 192.168.33.0/24, including
+will be exported read-only to the entire network 192.168.33.0/24, including
 all its subdirectories.
 Since
 .Pa /cdrom
@@ -341,7 +477,23 @@ While there is no CD-ROM medium mounted under
 it would export the (normally empty) directory
 .Pa /cdrom
 of the root file system instead.
+.Pp
+The file system rooted at
+.Pa /private
+will be exported using Kerberos 5 authentication and will require
+integrity protected messages for all accesses.
+The file system rooted at
+.Pa /secret
+will also be exported using Kerberos 5 authentication and all messages
+used to access it will be encrypted.
+.Pp
+For the experimental server, the NFSv4 tree is rooted at ``/'',
+and any client within the 131.104.48 subnet is permitted to perform NFSv4 state
+operations on the server, so long as valid Kerberos credentials are provided.
+The machine grumpy.cis.uoguelph.ca is permitted to perform NFSv4 state
+operations on the server using AUTH_SYS credentials, as well as Kerberos ones.
 .Sh SEE ALSO
+.Xr nfsv4 4 ,
 .Xr netgroup 5 ,
 .Xr mountd 8 ,
 .Xr nfsd 8 ,

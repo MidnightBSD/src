@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)verify.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mtree/verify.c,v 1.25 2006/07/03 10:55:21 maxim Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -65,6 +65,12 @@ mtree_verifyspec(FILE *fi)
 }
 
 static int
+nsort(const FTSENT * const *a, const FTSENT * const *b)
+{
+	return (strcmp((*a)->fts_name, (*b)->fts_name));
+}
+
+static int
 vwalk(void)
 {
 	FTS *t;
@@ -76,7 +82,7 @@ vwalk(void)
 
 	argv[0] = dot;
 	argv[1] = NULL;
-	if ((t = fts_open(argv, ftsoptions, NULL)) == NULL)
+	if ((t = fts_open(argv, ftsoptions, nsort)) == NULL)
 		err(1, "line %d: fts_open", lineno);
 	level = root;
 	specdepth = rval = 0;

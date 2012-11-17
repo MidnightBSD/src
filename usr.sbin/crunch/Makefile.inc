@@ -1,4 +1,6 @@
-# $FreeBSD: src/usr.sbin/crunch/Makefile.inc,v 1.2 2001/07/20 06:19:43 obrien Exp $
+# $MidnightBSD$
 
 # modify to taste
 BINDIR?= /usr/bin
+
+WARNS?=	2

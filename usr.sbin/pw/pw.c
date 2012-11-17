@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/pw/pw.c,v 1.31 2007/03/30 11:23:10 le Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <err.h>
@@ -117,7 +117,7 @@ main(int argc, char *argv[])
 		{ /* grp  */
 			"V:C:qn:g:h:H:M:opNPY",
 			"V:C:qn:g:Y",
-			"V:C:qn:g:l:h:H:FM:m:NPY",
+			"V:C:qn:d:g:l:h:H:FM:m:NPY",
 			"V:C:qn:g:FPa",
 			"V:C:q"
 		 }
@@ -225,7 +225,7 @@ main(int argc, char *argv[])
 			setgrdir(etcpath);
 		}
 	}
-    
+
 	/*
 	 * Now, let's do the common initialisation
 	 */
@@ -409,6 +409,7 @@ cmdhelp(int mode, int which)
 				"\t-g gid         group id\n"
 				"\t-M usr1,usr2   replaces users as group members\n"
 				"\t-m usr1,usr2   add users as group members\n"
+				"\t-d usr1,usr2   delete users as group members\n"
 				"\t-l name        new group name\n"
 				"\t-Y             update NIS maps\n"
 				"\t-N             no update\n",

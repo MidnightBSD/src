@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.sbin/config/config.h,v 1.62.2.2 2010/07/15 23:07:02 imp Exp $
  * $MidnightBSD$
  */
 
@@ -54,6 +53,7 @@ struct file_list {
 	char	*f_depends;		/* additional dependancies */
 	char	*f_clean;		/* File list to add to clean rule */
 	char	*f_warn;		/* warning message */
+	const char *f_objprefix;	/* prefix string for object name */
 };
 
 struct files_name {

@@ -1,5 +1,5 @@
 /*	$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $	*/
-/* $FreeBSD: src/usr.sbin/crunch/crunchide/crunchide.c,v 1.11 2007/03/06 09:32:40 kevlo Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997 Christopher G. Demetriou.  All rights reserved.
  * Copyright (c) 1994 University of Maryland
@@ -87,7 +87,7 @@ int hide_syms(const char *filename);
 
 int verbose;
 
-int main __P((int, char *[]));
+int main(int, char *[]);
 
 int main(argc, argv)
 int argc;
