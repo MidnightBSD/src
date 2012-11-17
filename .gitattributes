@@ -52832,6 +52832,7 @@ usr.bin/kdump/Makefile -text
 usr.bin/kdump/kdump.1 -text
 usr.bin/kdump/kdump.c -text
 usr.bin/kdump/kdump_subr.h -text
+usr.bin/kdump/linux_syscalls.conf -text
 usr.bin/kdump/mkioctls -text
 usr.bin/kdump/mksubr -text
 usr.bin/keylogin/Makefile -text
