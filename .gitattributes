@@ -38698,8 +38698,14 @@ sbin/ipf/iptest/Makefile -text
 sbin/ipf/libipf/Makefile -text
 sbin/ipf/rules/Makefile -text
 sbin/ipfw/Makefile -text
+sbin/ipfw/altq.c -text
+sbin/ipfw/dummynet.c -text
 sbin/ipfw/ipfw.8 -text
 sbin/ipfw/ipfw2.c -text
+sbin/ipfw/ipfw2.h -text
+sbin/ipfw/ipv6.c -text
+sbin/ipfw/main.c -text
+sbin/ipfw/nat.c -text
 sbin/iscontrol/Makefile -text
 sbin/iscontrol/auth_subr.c -text
 sbin/iscontrol/config.c -text
@@ -38711,7 +38717,6 @@ sbin/iscontrol/iscsi.conf.5 -text
 sbin/iscontrol/login.c -text
 sbin/iscontrol/misc.c -text
 sbin/iscontrol/pdu.c -text
-sbin/iscontrol/pdu.h -text
 sbin/kldconfig/Makefile -text
 sbin/kldconfig/kldconfig.8 -text
 sbin/kldconfig/kldconfig.c -text

@@ -45,7 +45,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_cd9660.c	8.7 (Berkeley) 5/1/95";
 */
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/mount_cd9660/mount_cd9660.c,v 1.33 2005/12/19 05:52:37 avatar Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/cdio.h>
@@ -251,8 +251,10 @@ set_charset(struct iovec **iov, int *iovlen, const char *localcs)
 
 	if ((cs_disk = malloc(ICONV_CSNMAXLEN)) == NULL)
 		return (-1);
-	if ((cs_local = malloc(ICONV_CSNMAXLEN)) == NULL)
+	if ((cs_local = malloc(ICONV_CSNMAXLEN)) == NULL) {
+		free(cs_disk);
 		return (-1);
+	}
 	strncpy(cs_disk, ENCODING_UNICODE, ICONV_CSNMAXLEN);
 	strncpy(cs_local, kiconv_quirkcs(localcs, KICONV_VENDOR_MICSFT),
 	    ICONV_CSNMAXLEN);

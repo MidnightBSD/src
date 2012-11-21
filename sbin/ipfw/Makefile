@@ -1,9 +1,10 @@
 # $MidnightBSD$
-# $FreeBSD: src/sbin/ipfw/Makefile,v 1.14 2004/10/03 06:32:37 green Exp $
 
 PROG=	ipfw
-SRCS=	ipfw2.c
-WARNS?=	0
+SRCS=	ipfw2.c dummynet.c ipv6.c main.c nat.c altq.c
+WARNS?=	2
+DPADD=	${LIBUTIL}
+LDADD=	-lutil
 MAN=	ipfw.8
 
 .include <bsd.prog.mk>

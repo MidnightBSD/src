@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005 Daniel Braniss <danny@cs.huji.ac.il>
+ * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,11 +26,11 @@
  */
 
 /*
- | $Id: misc.c,v 1.1 2008-11-11 21:30:40 laffer1 Exp $
+ | $Id: misc.c,v 1.2 2012-11-21 21:47:58 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/iscontrol/misc.c,v 1.1.4.1 2008/02/07 00:08:57 pb Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -46,6 +46,9 @@ __FBSDID("$FreeBSD: src/sbin/iscontrol/misc.c,v 1.1.4.1 2008/02/07 00:08:57 pb E
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <dev/iscsi/initiator/iscsi.h>
+#include "iscontrol.h"
 
 static inline char
 c2b(unsigned char c)

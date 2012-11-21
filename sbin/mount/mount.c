@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)mount.c	8.25 (Berkeley) 5/8/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/mount/mount.c,v 1.96.2.4 2010/10/18 14:40:48 jh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -91,7 +91,7 @@ char   *flags2opts(int);
 
 /* Map from mount options to printable formats. */
 static struct opt {
-	int o_opt;
+	uint64_t o_opt;
 	const char *o_name;
 } optnames[] = {
 	{ MNT_ASYNC,		"asynchronous" },
@@ -109,8 +109,10 @@ static struct opt {
 	{ MNT_NOCLUSTERW,	"noclusterw" },
 	{ MNT_SUIDDIR,		"suiddir" },
 	{ MNT_SOFTDEP,		"soft-updates" },
+	{ MNT_SUJ,		"journaled soft-updates" },
 	{ MNT_MULTILABEL,	"multilabel" },
 	{ MNT_ACLS,		"acls" },
+	{ MNT_NFS4ACLS,		"nfsv4acls" },
 	{ MNT_GJOURNAL,		"gjournal" },
 	{ 0, NULL }
 };
@@ -140,8 +142,8 @@ use_mountprog(const char *vfstype)
 	 */
 	unsigned int i;
 	const char *fs[] = {
-	"cd9660", "mfs", "msdosfs", "nfs", "nfs4", "ntfs",
-	"nwfs", "nullfs", "portalfs", "smbfs", "udf", "unionfs",
+	"cd9660", "mfs", "msdosfs", "nfs", "ntfs",
+	"nwfs", "nullfs", "oldnfs", "portalfs", "smbfs", "udf", "unionfs",
 	NULL
 	};
 
@@ -242,7 +244,7 @@ main(int argc, char *argv[])
 	const char *mntfromname, **vfslist, *vfstype;
 	struct fstab *fs;
 	struct statfs *mntbuf;
-	int all, ch, i, init_flags, late, mntsize, rval, have_fstab, ro;
+	int all, ch, i, init_flags, late, failok, mntsize, rval, have_fstab, ro;
 	char *cp, *ep, *options;
 
 	all = init_flags = late = 0;
@@ -327,6 +329,10 @@ main(int argc, char *argv[])
 					continue;
 				if (hasopt(fs->fs_mntops, "late") && !late)
 					continue;
+				if (hasopt(fs->fs_mntops, "failok"))
+					failok = 1;
+				else
+					failok = 0;
 				if (!(init_flags & MNT_UPDATE) &&
 				    ismounted(fs, mntbuf, mntsize))
 					continue;
@@ -334,7 +340,7 @@ main(int argc, char *argv[])
 				    mntbuf->f_flags);
 				if (mountfs(fs->fs_vfstype, fs->fs_spec,
 				    fs->fs_file, init_flags, options,
-				    fs->fs_mntops))
+				    fs->fs_mntops) && !failok)
 					rval = 1;
 			}
 		} else if (fstab_style) {
@@ -347,6 +353,9 @@ main(int argc, char *argv[])
 			for (i = 0; i < mntsize; i++) {
 				if (checkvfsname(mntbuf[i].f_fstypename,
 				    vfslist))
+					continue;
+				if (!verbose &&
+				    (mntbuf[i].f_flags & MNT_IGNORE) != 0)
 					continue;
 				prmount(&mntbuf[i]);
 			}
@@ -580,6 +589,9 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 		for (i = 1; i < mnt_argv.c; i++)
 			(void)printf(" %s", mnt_argv.a[i]);
 		(void)printf("\n");
+		free(optbuf);
+		free(mountprog);
+		mountprog = NULL;
 		return (0);
 	}
 
@@ -590,6 +602,8 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 	}
 
 	free(optbuf);
+	free(mountprog);
+	mountprog = NULL;
 
 	if (verbose) {
 		if (statfs(name, &sf) < 0) {
@@ -608,7 +622,7 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 void
 prmount(struct statfs *sfp)
 {
-	int flags;
+	uint64_t flags;
 	unsigned int i;
 	struct opt *o;
 	struct passwd *pw;
@@ -617,7 +631,7 @@ prmount(struct statfs *sfp)
 	    sfp->f_fstypename);
 
 	flags = sfp->f_flags & MNT_VISFLAGMASK;
-	for (o = optnames; flags && o->o_opt; o++)
+	for (o = optnames; flags != 0 && o->o_opt != 0; o++)
 		if (flags & o->o_opt) {
 			(void)printf(", %s", o->o_name);
 			flags &= ~o->o_opt;
@@ -711,6 +725,14 @@ mangle(char *options, struct cpa *a)
 				 * in the boot cycle; for instance,
 				 * loopback NFS mounts can't be mounted
 				 * before mountd starts.
+				 */
+				continue;
+			} else if (strcmp(p, "failok") == 0) {
+				/*
+				 * "failok" is used to prevent certain file
+				 * systems from being causing the system to
+				 * drop into single user mode in the boot
+				 * cycle, and is not a real mount option.
 				 */
 				continue;
 			} else if (strncmp(p, "mountprog", 9) == 0) {
@@ -915,6 +937,7 @@ flags2opts(int flags)
 	if (flags & MNT_SUIDDIR)	res = catopt(res, "suiddir");
 	if (flags & MNT_MULTILABEL)	res = catopt(res, "multilabel");
 	if (flags & MNT_ACLS)		res = catopt(res, "acls");
+	if (flags & MNT_NFS4ACLS)	res = catopt(res, "nfsv4acls");
 
 	return (res);
 }

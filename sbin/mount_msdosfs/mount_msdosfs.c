@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: mount_msdos.c,v 1.18 1997/09/16 12:24:18 lukem Exp $	*/
 
 /*
@@ -33,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/mount_msdosfs/mount_msdosfs.c,v 1.43 2007/01/29 01:49:08 rodrigc Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -219,8 +218,12 @@ main(int argc, char **argv)
 	build_iovec_argf(&iov, &iovlen, "mask", "%u", mask);
 	build_iovec_argf(&iov, &iovlen, "dirmask", "%u", dirmask);
 
-	if (nmount(iov, iovlen, mntflags) < 0)
-		err(1, "%s: %s", dev, errmsg);
+	if (nmount(iov, iovlen, mntflags) < 0) {
+		if (errmsg[0])
+			err(1, "%s: %s", dev, errmsg);
+		else
+			err(1, "%s", dev);
+	}
 
 	exit (0);
 }

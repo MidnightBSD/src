@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)getmntopts.c	8.3 (Berkeley) 3/29/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/mount/getmntopts.c,v 1.18 2005/11/14 17:39:00 rodrigc Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -130,7 +130,7 @@ checkpath(const char *path, char *resolved)
 	struct stat sb;
 
 	if (realpath(path, resolved) != NULL && stat(resolved, &sb) == 0) {
-		if (!S_ISDIR(sb.st_mode)) 
+		if (!S_ISDIR(sb.st_mode))
 			errx(EX_USAGE, "%s: not a directory", resolved);
 	} else
 		errx(EX_USAGE, "%s: %s", resolved, strerror(errno));
@@ -176,7 +176,7 @@ build_iovec_argf(struct iovec **iov, int *iovlen, const char *name,
 	char val[255] = { 0 };
 
 	va_start(ap, fmt);
-	vsnprintf(val, sizeof(val), fmt, ap);  
+	vsnprintf(val, sizeof(val), fmt, ap);
 	va_end(ap);
 	build_iovec(iov, iovlen, name, strdup(val), (size_t)-1);
 }

@@ -1,5 +1,4 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/9/93
-# $FreeBSD: src/sbin/md5/Makefile,v 1.10 2005/03/09 19:23:04 cperciva Exp $
 # $MidnightBSD$
 
 PROG=	md5
@@ -12,7 +11,6 @@ MLINKS=	md5.1 rmd160.1 \
 	md5.1 sha1.1 \
 	md5.1 sha256.1
 
-WARNS?=	6
 WFORMAT?=	1
 
 DPADD=	${LIBMD}

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/natd/natd.c,v 1.50 2006/09/26 23:26:51 piso Exp $");
+__MBSDID("$MidnightBSD$");
 
 #define SYSLOG_NAMES
 
@@ -68,7 +68,7 @@ struct instance {
 	int			divertInOut;
 };
 
-static LIST_HEAD(, instance) root = LIST_HEAD_INITIALIZER(&root);
+static LIST_HEAD(, instance) root = LIST_HEAD_INITIALIZER(root);
 
 struct libalias *mla;
 struct instance *mip;
@@ -111,7 +111,7 @@ static void	Usage (void);
 static char*	FormatPacket (struct ip*);
 static void	PrintPacket (struct ip*);
 static void	SyslogPacket (struct ip*, int priority, const char *label);
-static void	SetAliasAddressFromIfName (const char *ifName);
+static int	SetAliasAddressFromIfName (const char *ifName);
 static void	InitiateShutdown (int);
 static void	Shutdown (int);
 static void	RefreshAddr (int);
@@ -130,6 +130,7 @@ static void	SetupPunchFW(const char *strValue);
 static void	SetupSkinnyPort(const char *strValue);
 static void	NewInstance(const char *name);
 static void	DoGlobal (int fd);
+static int	CheckIpfwRulenum(unsigned int rnum);
 
 /*
  * Globals.
@@ -147,12 +148,15 @@ static	const char*		pidName;
 static	int			routeSock;
 static	int			globalPort;
 static	int			divertGlobal;
+static	int			exitDelay;
+
 
 int main (int argc, char** argv)
 {
 	struct sockaddr_in	addr;
 	fd_set			readMask;
 	int			fdMax;
+	int			rval;
 /* 
  * Initialize packet aliasing software.
  * Done already here to be able to alter option bits
@@ -174,6 +178,7 @@ int main (int argc, char** argv)
 	icmpSock 		= -1;
 	fdMax	 		= -1;
 	divertGlobal		= -1;
+	exitDelay		= EXIT_DELAY;
 
 	ParseArgs (argc, argv);
 /*
@@ -297,8 +302,17 @@ int main (int argc, char** argv)
 
 				mip->assignAliasAddr = 1;
 			}
-			else
-				SetAliasAddressFromIfName (mip->ifName);
+			else {
+				do {
+					rval = SetAliasAddressFromIfName (mip->ifName);
+					if (background == 0 || dynamicMode == 0)
+						break;
+					if (rval == EAGAIN)
+						sleep(1);
+				} while (rval == EAGAIN);
+				if (rval != 0)
+					exit(1);
+			}
 		}
 
 	}
@@ -347,7 +361,10 @@ int main (int argc, char** argv)
  */
 	siginterrupt(SIGTERM, 1);
 	siginterrupt(SIGHUP, 1);
-	signal (SIGTERM, InitiateShutdown);
+	if (exitDelay)
+		signal(SIGTERM, InitiateShutdown);
+	else
+		signal(SIGTERM, Shutdown);
 	signal (SIGHUP, RefreshAddr);
 /*
  * Set alias address if it has been given.
@@ -437,7 +454,7 @@ int main (int argc, char** argv)
 	return 0;
 }
 
-static void DaemonMode ()
+static void DaemonMode(void)
 {
 	FILE*	pidFile;
 
@@ -524,7 +541,8 @@ static void DoGlobal (int fd)
 
 #if 0
 	if (mip->assignAliasAddr) {
-		SetAliasAddressFromIfName (mip->ifName);
+		if (SetAliasAddressFromIfName (mip->ifName) != 0)
+			exit(1);
 		mip->assignAliasAddr = 0;
 	}
 #endif
@@ -627,10 +645,18 @@ static void DoAliasing (int fd, int direction)
 	socklen_t		addrSize;
 	struct ip*		ip;
 	char			msgBuf[80];
+	int			rval;
 
 	if (mip->assignAliasAddr) {
-
-		SetAliasAddressFromIfName (mip->ifName);
+		do {
+			rval = SetAliasAddressFromIfName (mip->ifName);
+			if (background == 0 || dynamicMode == 0)
+				break;
+			if (rval == EAGAIN)
+				sleep(1);
+		} while (rval == EAGAIN);
+		if (rval != 0)
+			exit(1);
 		mip->assignAliasAddr = 0;
 	}
 /*
@@ -860,7 +886,7 @@ static char* FormatPacket (struct ip* ip)
 	return buf;
 }
 
-static void
+static int
 SetAliasAddressFromIfName(const char *ifn)
 {
 	size_t needed;
@@ -884,7 +910,7 @@ SetAliasAddressFromIfName(const char *ifn)
 		err(1, "iflist-sysctl-estimate");
 	if ((buf = malloc(needed)) == NULL)
 		errx(1, "malloc failed");
-	if (sysctl(mib, 6, buf, &needed, NULL, 0) == -1)
+	if (sysctl(mib, 6, buf, &needed, NULL, 0) == -1 && errno != ENOMEM)
 		err(1, "iflist-sysctl-get");
 	lim = buf + needed;
 /*
@@ -944,14 +970,19 @@ SetAliasAddressFromIfName(const char *ifn)
 			}
 		}
 	}
-	if (sin == NULL)
-		errx(1, "%s: cannot get interface address", ifn);
+	if (sin == NULL) {
+		warnx("%s: cannot get interface address", ifn);
+		free(buf);
+		return EAGAIN;
+	}
 
 	LibAliasSetAddress(mla, sin->sin_addr);
 	syslog(LOG_INFO, "Aliasing to %s, mtu %d bytes",
 	       inet_ntoa(sin->sin_addr), mip->ifMTU);
 
 	free(buf);
+
+	return 0;
 }
 
 void Quit (const char* msg)
@@ -984,7 +1015,7 @@ static void InitiateShutdown (int sig __unused)
  */
 	siginterrupt(SIGALRM, 1);
 	signal (SIGALRM, Shutdown);
-	alarm (10);
+	ualarm(exitDelay*1000, 1000);
 }
 
 static void Shutdown (int sig __unused)
@@ -1019,7 +1050,8 @@ enum Option {
 	PunchFW,
 	SkinnyPort,
 	LogIpfwDenied,
-	PidFile
+	PidFile,
+	ExitDelay
 };
 
 enum Param {
@@ -1277,6 +1309,13 @@ static struct OptionInfo optionTable[] = {
 		"name of aliasing engine instance",
 		"instance",
 		NULL },
+	{ ExitDelay,
+		0,
+		Numeric,
+		"ms",
+		"delay in ms before daemon exit after signal",
+		"exit_delay",
+		NULL },
 };
 	
 static void ParseOption (const char* option, const char* parms)
@@ -1479,6 +1518,11 @@ static void ParseOption (const char* option, const char* parms)
 	case Instance:
 		NewInstance(strValue);
 		break;
+	case ExitDelay:
+		if (numValue < 0 || numValue > MAX_EXIT_DELAY)
+			errx(1, "Incorrect exit delay: %d", numValue);	
+		exitDelay = numValue;
+		break;
 	}
 }
 
@@ -1538,7 +1582,7 @@ void ReadConfigFile (const char* fileName)
 	fclose (file);
 }
 
-static void Usage ()
+static void Usage(void)
 {
 	int			i;
 	int			max;
@@ -1564,7 +1608,7 @@ static void Usage ()
 
 void SetupPortRedirect (const char* parms)
 {
-	char		buf[128];
+	char		*buf;
 	char*		ptr;
 	char*		serverPool;
 	struct in_addr	localAddr;
@@ -1583,7 +1627,9 @@ void SetupPortRedirect (const char* parms)
 	int             i;
 	struct alias_link *aliaslink = NULL;
 
-	strlcpy (buf, parms, sizeof(buf));
+	buf = strdup (parms);
+	if (!buf)
+		errx (1, "redirect_port: strdup() failed");
 /*
  * Extract protocol.
  */
@@ -1700,12 +1746,14 @@ void SetupPortRedirect (const char* parms)
 			ptr = strtok(NULL, ",");
 		}
 	}
+	
+	free (buf);
 }
 
 void
 SetupProtoRedirect(const char* parms)
 {
-	char		buf[128];
+	char		*buf;
 	char*		ptr;
 	struct in_addr	localAddr;
 	struct in_addr	publicAddr;
@@ -1714,7 +1762,9 @@ SetupProtoRedirect(const char* parms)
 	char*		protoName;
 	struct protoent *protoent;
 
-	strlcpy (buf, parms, sizeof(buf));
+	buf = strdup (parms);
+	if (!buf)
+		errx (1, "redirect_port: strdup() failed");
 /*
  * Extract protocol.
  */
@@ -1756,11 +1806,13 @@ SetupProtoRedirect(const char* parms)
  */
 	(void)LibAliasRedirectProto(mla, localAddr, remoteAddr, publicAddr,
 				       proto);
+
+	free (buf);
 }
 
 void SetupAddressRedirect (const char* parms)
 {
-	char		buf[128];
+	char		*buf;
 	char*		ptr;
 	char*		separator;
 	struct in_addr	localAddr;
@@ -1768,7 +1820,9 @@ void SetupAddressRedirect (const char* parms)
 	char*		serverPool;
 	struct alias_link *aliaslink;
 
-	strlcpy (buf, parms, sizeof(buf));
+	buf = strdup (parms);
+	if (!buf)
+		errx (1, "redirect_port: strdup() failed");
 /*
  * Extract local address.
  */
@@ -1805,6 +1859,8 @@ void SetupAddressRedirect (const char* parms)
 			ptr = strtok(NULL, ",");
 		}
 	}
+
+	free (buf);
 }
 
 void StrToAddr (const char* str, struct in_addr* addr)
@@ -1916,6 +1972,10 @@ SetupPunchFW(const char *strValue)
 	if (sscanf(strValue, "%u:%u", &base, &num) != 2)
 		errx(1, "punch_fw: basenumber:count parameter required");
 
+	if (CheckIpfwRulenum(base + num - 1) == -1)
+		errx(1, "punch_fw: basenumber:count parameter should fit "
+			"the maximum allowed rule numbers");
+
 	LibAliasSetFWBase(mla, base, num);
 	(void)LibAliasSetMode(mla, PKT_ALIAS_PUNCH_FW, PKT_ALIAS_PUNCH_FW);
 }
@@ -1959,4 +2019,23 @@ NewInstance(const char *name)
 	LIST_INSERT_HEAD(&root, ip, list);
 	mla = ip->la;
 	mip = ip;
+}
+
+static int
+CheckIpfwRulenum(unsigned int rnum)
+{
+	unsigned int default_rule;
+	size_t len = sizeof(default_rule);
+
+	if (sysctlbyname("net.inet.ip.fw.default_rule", &default_rule, &len,
+		NULL, 0) == -1) {
+		warn("Failed to get the default ipfw rule number, using "
+		     "default historical value 65535.  The reason was");
+		default_rule = 65535;
+	}
+	if (rnum >= default_rule) {
+		return -1;
+	}
+
+	return 0;
 }

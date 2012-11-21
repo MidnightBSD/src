@@ -18,7 +18,6 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/sbin/md5/md5.c,v 1.35 2006/01/17 15:35:57 phk Exp $ */
 __MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
@@ -45,6 +44,8 @@ __MBSDID("$MidnightBSD$");
 int qflag;
 int rflag;
 int sflag;
+unsigned char* checkAgainst;
+int	checksFailed;
 
 typedef void (DIGEST_Init)(void *);
 typedef void (DIGEST_Update)(void *, const unsigned char *, size_t);
@@ -80,7 +81,7 @@ typedef union {
 	RIPEMD160_CTX ripemd160;
 } DIGEST_CTX;
 
-/* max(MD5_DIGEST_LENGTH, SHA_DIGEST_LENGTH, 
+/* max(MD5_DIGEST_LENGTH, SHA_DIGEST_LENGTH,
 	SHA256_DIGEST_LENGTH, RIPEMD160_DIGEST_LENGTH)*2+1 */
 #define HEX_DIGEST_LENGTH 65
 
@@ -119,28 +120,33 @@ Arguments (may be any combination):
 int
 main(int argc, char *argv[])
 {
-	int     ch;
+	int	ch;
 	char   *p;
 	char	buf[HEX_DIGEST_LENGTH];
-	int     failed;
+	int	failed;
  	unsigned	digest;
  	const char*	progname;
- 
+
  	if ((progname = strrchr(argv[0], '/')) == NULL)
  		progname = argv[0];
  	else
  		progname++;
- 
+
  	for (digest = 0; digest < sizeof(Algorithm)/sizeof(*Algorithm); digest++)
  		if (strcasecmp(Algorithm[digest].progname, progname) == 0)
  			break;
- 
+
  	if (digest == sizeof(Algorithm)/sizeof(*Algorithm))
  		digest = 0;
 
 	failed = 0;
-	while ((ch = getopt(argc, argv, "pqrs:tx")) != -1)
+	checkAgainst = NULL;
+	checksFailed = 0;
+	while ((ch = getopt(argc, argv, "c:pqrs:tx")) != -1)
 		switch (ch) {
+		case 'c':
+			checkAgainst = optarg;
+			break;
 		case 'p':
 			MDFilter(&Algorithm[digest], 1);
 			break;
@@ -174,11 +180,19 @@ main(int argc, char *argv[])
 				failed++;
 			} else {
 				if (qflag)
-					printf("%s\n", p);
+					printf("%s", p);
 				else if (rflag)
-					printf("%s %s\n", p, *argv);
+					printf("%s %s", p, *argv);
 				else
-					printf("%s (%s) = %s\n", Algorithm[digest].name, *argv, p);
+					printf("%s (%s) = %s",
+					    Algorithm[digest].name, *argv, p);
+				if (checkAgainst && strcmp(checkAgainst,p))
+				{
+					checksFailed++;
+					if (!qflag)
+						printf(" [ Failed ]");
+				}
+				printf("\n");
 			}
 		} while (*++argv);
 	} else if (!sflag && (optind == 1 || qflag || rflag))
@@ -186,7 +200,9 @@ main(int argc, char *argv[])
 
 	if (failed != 0)
 		return (1);
- 
+	if (checksFailed != 0)
+		return (2);
+
 	return (0);
 }
 /*
@@ -198,12 +214,20 @@ MDString(Algorithm_t *alg, const char *string)
 	size_t len = strlen(string);
 	char buf[HEX_DIGEST_LENGTH];
 
+	alg->Data(string,len,buf);
 	if (qflag)
-		printf("%s\n", alg->Data(string, len, buf));
+		printf("%s", buf);
 	else if (rflag)
-		printf("%s \"%s\"\n", alg->Data(string, len, buf), string);
+		printf("%s \"%s\"", buf, string);
 	else
-		printf("%s (\"%s\") = %s\n", alg->name, string, alg->Data(string, len, buf));
+		printf("%s (\"%s\") = %s", alg->name, string, buf);
+	if (checkAgainst && strcmp(buf,checkAgainst))
+	{
+		checksFailed++;
+		if (!qflag)
+			printf(" [ failed ]");
+	}
+	printf("\n");
 }
 /*
  * Measures the time to digest TEST_BLOCK_COUNT TEST_BLOCK_LEN-byte blocks.
@@ -217,10 +241,9 @@ MDTimeTrial(Algorithm_t *alg)
 	float seconds;
 	unsigned char block[TEST_BLOCK_LEN];
 	unsigned int i;
-	char   *p, buf[HEX_DIGEST_LENGTH];
+	char *p, buf[HEX_DIGEST_LENGTH];
 
-	printf
-	    ("%s time trial. Digesting %d %d-byte blocks ...",
+	printf("%s time trial. Digesting %d %d-byte blocks ...",
 	    alg->name, TEST_BLOCK_COUNT, TEST_BLOCK_LEN);
 	fflush(stdout);
 
@@ -229,7 +252,7 @@ MDTimeTrial(Algorithm_t *alg)
 		block[i] = (unsigned char) (i & 0xff);
 
 	/* Start timer */
-	getrusage(0, &before);
+	getrusage(RUSAGE_SELF, &before);
 
 	/* Digest blocks */
 	alg->Init(&context);
@@ -238,15 +261,14 @@ MDTimeTrial(Algorithm_t *alg)
 	p = alg->End(&context, buf);
 
 	/* Stop timer */
-	getrusage(0, &after);
+	getrusage(RUSAGE_SELF, &after);
 	timersub(&after.ru_utime, &before.ru_utime, &total);
 	seconds = total.tv_sec + (float) total.tv_usec / 1000000;
 
 	printf(" done\n");
 	printf("Digest = %s", p);
 	printf("\nTime = %f seconds\n", seconds);
-	printf
-	    ("Speed = %f bytes/second\n",
+	printf("Speed = %f bytes/second\n",
 	    (float) TEST_BLOCK_LEN * (float) TEST_BLOCK_COUNT / seconds);
 }
 /*
@@ -254,7 +276,7 @@ MDTimeTrial(Algorithm_t *alg)
  */
 
 const char *MDTestInput[MDTESTCOUNT] = {
-	"", 
+	"",
 	"a",
 	"abc",
 	"message digest",
@@ -350,6 +372,6 @@ static void
 usage(Algorithm_t *alg)
 {
 
-	fprintf(stderr, "usage: %s [-pqrtx] [-s string] [files ...]\n", alg->progname);
+	fprintf(stderr, "usage: %s [-pqrtx] [-c string] [-s string] [files ...]\n", alg->progname);
 	exit(1);
 }

@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/mdmfs/mdmfs.8,v 1.29 2007/02/15 21:49:32 ceri Exp $
+.\" $MidnightBSD$
 .\"
-.Dd February 15, 2007
+.Dd September 4, 2011
 .Dt MDMFS 8
 .Os
 .Sh NAME
@@ -36,11 +36,11 @@
 driver
 .Sh SYNOPSIS
 .Nm
-.Op Fl DLlMNPSUX
+.Op Fl DLlMNPStUX
 .Op Fl a Ar maxcontig
 .Op Fl b Ar block-size
 .Op Fl c Ar blocks-per-cylinder-group
-.Op Fl d Ar max-extent-size 
+.Op Fl d Ar max-extent-size
 .Op Fl E Ar path-mdconfig
 .Op Fl e Ar maxbpg
 .Op Fl F Ar file
@@ -75,8 +75,8 @@ was specified) using
 .Xr newfs 8 ,
 and mounts it using
 .Xr mount 8 .
-It can handle 
-.Xr geom_uzip 4 
+It can handle
+.Xr geom_uzip 4
 compressed disk images, as long as the kernel supports this GEOM class.
 All the command line options are passed to the appropriate program
 at the appropriate stage in order to achieve the desired effect.
@@ -224,6 +224,13 @@ and the optional
 .Xr malloc 9
 backed disks
 .Pq Dv MD_MALLOC .
+.It Fl t
+Turn on the TRIM enable flag for
+.Xr newfs 8 .
+The
+.Xr md 4
+device supports the BIO_DELETE command, enabling the TRIM on created
+filesystem allows return of freed memory to the system pool.
 .It Fl U
 Enable soft-updates on the file system.
 This is the default, and is accepted only
@@ -311,7 +318,7 @@ do not use soft-updates on it and mount it
 .Pp
 .Dl "mdmfs -M -S -o async -s 16m md1 /tmp"
 .Pp
-Create and mount a 
+Create and mount a
 .Xr geom_uzip 4
 based compressed disk image:
 .Pp

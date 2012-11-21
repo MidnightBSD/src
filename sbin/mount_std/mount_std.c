@@ -38,7 +38,7 @@ static const char copyright[] =
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/mount_std/mount_std.c,v 1.22 2006/09/13 04:50:44 charnier Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>

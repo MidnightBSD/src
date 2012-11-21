@@ -25,10 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/kldstat/kldstat.c,v 1.19 2005/09/24 08:20:45 pjd Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -51,26 +50,29 @@ printmod(int modid)
 	printf("\t\t%2d %s\n", stat.id, stat.name);
 }
 
-static void printfile(int fileid, int verbose)
+static void
+printfile(int fileid, int verbose)
 {
     struct kld_file_stat stat;
     int modid;
 
     stat.version = sizeof(struct kld_file_stat);
     if (kldstat(fileid, &stat) < 0)
-	warn("can't stat file id %d", fileid);
+	err(1, "can't stat file id %d", fileid);
     else
-	printf("%2d %4d %p %-8jx %s\n",
-	       stat.id, stat.refs, stat.address, (uintmax_t)stat.size, 
+	printf("%2d %4d %p %-8zx %s",
+	       stat.id, stat.refs, stat.address, stat.size, 
 	       stat.name);
 
     if (verbose) {
+	printf(" (%s)\n", stat.pathname);
 	printf("\tContains modules:\n");
 	printf("\t\tId Name\n");
 	for (modid = kldfirstmod(fileid); modid > 0;
 	     modid = modfnext(modid))
 	    printmod(modid);
-    }
+    } else
+	printf("\n");
 }
 
 static void

@@ -1,7 +1,4 @@
-#	$FreeBSD: src/sbin/ipf/ipftest/Makefile,v 1.4 2006/09/10 08:58:46 obrien Exp $
-
-NO_WFORMAT=
-NO_LINT=
+#	$MidnightBSD$
 
 PROG=		ipftest
 SRCS=		${GENHDRS} ipftest.c fil.c ip_frag.c ip_state.c ip_nat.c \
@@ -12,7 +9,6 @@ SRCS=		${GENHDRS} ipftest.c fil.c ip_frag.c ip_state.c ip_nat.c \
 MAN=		ipftest.1
 
 WARNS?=		0
-
 CFLAGS+=	-DIPFILTER_LOG -DIPFILTER_COMPILED -DIPFILTER_LOOKUP \
 		-DIPFILTER_SCAN -DIPFILTER_SYNC -DIPFILTER_CKSUM -I.
 

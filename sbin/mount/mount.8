@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount.8	8.8 (Berkeley) 6/16/94
-.\" $FreeBSD: src/sbin/mount/mount.8,v 1.82.2.7 2010/11/24 00:00:32 mckusick Exp $
+.\" $MidnightBSD$
 .\"
-.Dd March 11, 2008
+.Dd June 6, 2011
 .Dt MOUNT 8
 .Os
 .Sh NAME
@@ -120,11 +120,14 @@ takes effect.
 The following options are available:
 .Bl -tag -width indent
 .It Cm acls
-Enable Access Control Lists, or ACLS, which can be customized via the
+Enable POSIX.1e Access Control Lists, or ACLs, which can be customized via the
 .Xr setfacl 1
 and
 .Xr getfacl 1
 commands.
+This flag is mutually exclusive with
+.Cm nfsv4acls
+flag.
 .It Cm async
 All
 .Tn I/O
@@ -186,6 +189,15 @@ See
 .Xr mac 4
 for more information, which cause the multilabel mount flag to be set
 automatically at mount-time.
+.It Cm nfsv4acls
+Enable NFSv4 ACLs, which can be customized via the
+.Xr setfacl 1
+and
+.Xr getfacl 1
+commands.
+This flag is mutually exclusive with
+.Cm acls
+flag.
 .It Cm noasync
 Metadata I/O should be done synchronously, while data I/O should be done
 asynchronously.
@@ -293,9 +305,6 @@ When you are done with the mounted snapshot:
 umount /mnt
 mdconfig -d -u 4
 .Ed
-.Pp
-Further details can be found in the file at
-.Pa /usr/src/sys/ufs/ffs/README.snapshot .
 .El
 .It Cm suiddir
 A directory on the mounted file system will respond to the SUID bit
@@ -339,7 +348,6 @@ option) may be passed as a comma separated list; these options are
 distinguished by a leading
 .Dq \&-
 (dash).
-Options that take a value are specified using the syntax -option=value.
 For example, the
 .Nm
 command:
@@ -352,6 +360,16 @@ causes
 to execute the equivalent of:
 .Bd -literal -offset indent
 /sbin/mount_cd9660 -e /dev/cd0 /cdrom
+.Ed
+.Pp
+Options that take a value are specified using the -option=value syntax:
+.Bd -literal -offset indent
+mount -t msdosfs -o -u=fred,-g=wheel /dev/da0s1 /mnt
+.Ed
+.Pp
+is equivalent to
+.Bd -literal -offset indent
+/sbin/mount_msdosfs -u fred -g wheel /dev/da0s1 /mnt
 .Ed
 .Pp
 Additional options specific to file system types
@@ -422,15 +440,15 @@ However, for the following file system types:
 .Cm mfs ,
 .Cm msdosfs ,
 .Cm nfs ,
-.Cm nfs4 ,
 .Cm ntfs ,
 .Cm nwfs ,
 .Cm nullfs ,
+.Cm oldnfs ,
 .Cm portalfs ,
 .Cm smbfs ,
 .Cm udf ,
 and
-.Cm unionfs ,
+.Cm unionfs .
 .Nm
 will not call
 .Xr nmount 2
@@ -469,6 +487,12 @@ or
 option.
 .It Fl v
 Verbose mode.
+If the
+.Fl v
+is used alone, show all file systems, including those that were mounted with the
+.Dv MNT_IGNORE
+flag and show additional information about each file system (including fsid
+when run by root).
 .It Fl w
 The file system object is to be read and write.
 .El
@@ -522,7 +546,14 @@ support for a particular file system might be provided either on a static
 .Xr mount_smbfs 8 ,
 .Xr mount_udf 8 ,
 .Xr mount_unionfs 8 ,
-.Xr umount 8
+.Xr umount 8 ,
+.Xr zfs 8 ,
+.Xr zpool 8
+.Sh HISTORY
+A
+.Nm
+utility appeared in
+.At v1 .
 .Sh CAVEATS
 After a successful
 .Nm ,
@@ -545,10 +576,5 @@ gets a
 signal (that causes an update of the export list)
 only when the file system is mounted via
 .Nm .
-.Sh HISTORY
-A
-.Nm
-utility appeared in
-.At v1 .
 .Sh BUGS
 It is possible for a corrupted file system to cause a crash.

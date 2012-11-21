@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -7,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/sbin/mdconfig/mdconfig.c,v 1.54.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 #include <sys/param.h>
@@ -39,10 +38,11 @@ static enum {UNSET, ATTACH, DETACH, LIST} action = UNSET;
 static int nflag;
 
 static void usage(void);
+static void md_set_file(const char *);
 static int md_find(char *, const char *);
 static int md_query(char *name);
 static int md_list(char *units, int opt);
-static char *geom_config_get(struct gconf *g, char *name);
+static char *geom_config_get(struct gconf *g, const char *name);
 static void md_prthumanval(char *length);
 
 #define OPT_VERBOSE	0x01
@@ -53,14 +53,15 @@ static void md_prthumanval(char *length);
 #define CLASS_NAME_MD	"MD"
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr,
 "usage: mdconfig -a -t type [-n] [-o [no]option] ... [-f file]\n"
 "                [-s size] [-S sectorsize] [-u unit]\n"
-"                [-x sectors/track] [-y heads/cyl]\n"
-"       mdconfig -d -u unit\n"
-"       mdconfig -l [-v] [-n] [-u unit]\n");
+"                [-x sectors/track] [-y heads/cylinder]\n"
+"       mdconfig -d -u unit [-o [no]force]\n"
+"       mdconfig -l [-v] [-n] [-u unit]\n"
+"       mdconfig file\n");
 	fprintf(stderr, "\t\ttype = {malloc, preload, vnode, swap}\n");
 	fprintf(stderr, "\t\toption = {cluster, compress, reserve}\n");
 	fprintf(stderr, "\t\tsize = %%d (512 byte blocks), %%db (B),\n");
@@ -75,7 +76,7 @@ main(int argc, char **argv)
 	int ch, fd, i, vflag;
 	char *p;
 	int cmdline = 0;
-	char *mdunit;
+	char *mdunit = NULL;
 
 	bzero(&mdio, sizeof(mdio));
 	mdio.md_file = malloc(PATH_MAX);
@@ -83,10 +84,7 @@ main(int argc, char **argv)
 		err(1, "could not allocate memory");
 	vflag = 0;
 	bzero(mdio.md_file, PATH_MAX);
-	for (;;) {
-		ch = getopt(argc, argv, "ab:df:lno:s:S:t:u:vx:y:");
-		if (ch == -1)
-			break;
+	while ((ch = getopt(argc, argv, "ab:df:lno:s:S:t:u:vx:y:")) != -1) {
 		switch (ch) {
 		case 'a':
 			if (cmdline != 0)
@@ -142,25 +140,21 @@ main(int argc, char **argv)
 				mdio.md_options = MD_CLUSTER | MD_AUTOUNIT | MD_COMPRESS;
 				cmdline = 2;
 			}
- 			if (cmdline != 2)
- 				usage();
-			if (realpath(optarg, mdio.md_file) == NULL) {
-				err(1, "could not find full path for %s",
-				    optarg);
-			}
-			fd = open(mdio.md_file, O_RDONLY);
-			if (fd < 0)
-				err(1, "could not open %s", optarg);
-			else if (mdio.md_mediasize == 0) {
-				struct stat sb;
-
-				if (fstat(fd, &sb) == -1)
-					err(1, "could not stat %s", optarg);
-				mdio.md_mediasize = sb.st_size;
-			}
-			close(fd);
+			if (cmdline != 2)
+				usage();
+			md_set_file(optarg);
 			break;
 		case 'o':
+			if (action == DETACH) {
+				if (!strcmp(optarg, "force"))
+					mdio.md_options |= MD_FORCE;
+				else if (!strcmp(optarg, "noforce"))
+					mdio.md_options &= ~MD_FORCE;
+				else
+					errx(1, "Unknown option: %s.", optarg);
+				break;
+			}
+
 			if (cmdline != 2)
 				usage();
 			if (!strcmp(optarg, "async"))
@@ -258,6 +252,19 @@ main(int argc, char **argv)
 			usage();
 		}
 	}
+
+	argc -= optind;
+	argv += optind;
+	if (action == UNSET) {
+		if (argc != 1)
+			usage();
+		action = ATTACH;
+		mdio.md_type = MD_VNODE;
+		mdio.md_options = MD_CLUSTER | MD_AUTOUNIT | MD_COMPRESS;
+		cmdline = 2;
+		md_set_file(*argv);
+	}
+
 	mdio.md_version = MDIOVERSION;
 
 	if (!kld_isloaded("g_md") && kld_load("geom_md") == -1)
@@ -285,7 +292,7 @@ main(int argc, char **argv)
 	}
 	if (action == LIST) {
 		if (mdio.md_options & MD_AUTOUNIT) {
-			/* 
+			/*
 			 * Listing all devices. This is why we pass NULL
 			 * together with OPT_LIST.
 			 */
@@ -311,6 +318,26 @@ main(int argc, char **argv)
 		usage();
 	close (fd);
 	return (0);
+}
+
+static void
+md_set_file(const char *fn)
+{
+	struct stat sb;
+	int fd;
+
+	if (realpath(fn, mdio.md_file) == NULL)
+		err(1, "could not find full path for %s", fn);
+	fd = open(mdio.md_file, O_RDONLY);
+	if (fd < 0)
+		err(1, "could not open %s", fn);
+	if (fstat(fd, &sb) == -1)
+		err(1, "could not stat %s", fn);
+	if (!S_ISREG(sb.st_mode))
+		errx(1, "%s is not a regular file", fn);
+	if (mdio.md_mediasize == 0)
+		mdio.md_mediasize = sb.st_size;
+	close(fd);
 }
 
 /*
@@ -364,16 +391,19 @@ md_list(char *units, int opt)
 					found = 1;
 			}
 			gc = &pp->lg_config;
-			printf("%s", pp->lg_name);
+			if (nflag && strncmp(pp->lg_name, "md", 2) == 0)
+				printf("%s", pp->lg_name + 2);
+			else
+				printf("%s", pp->lg_name);
+
 			if (opt & OPT_VERBOSE || opt & OPT_UNIT) {
 				type = geom_config_get(gc, "type");
 				if (strcmp(type, "vnode") == 0)
 					file = geom_config_get(gc, "file");
 				length = geom_config_get(gc, "length");
-				if (length == NULL)
-					length = "<a>";
 				printf("\t%s\t", type);
-				md_prthumanval(length);
+				if (length != NULL)
+					md_prthumanval(length);
 				if (file != NULL) {
 					printf("\t%s", file);
 					file = NULL;
@@ -400,7 +430,7 @@ md_list(char *units, int opt)
  * Returns value of 'name' from gconfig structure.
  */
 static char *
-geom_config_get(struct gconf *g, char *name)
+geom_config_get(struct gconf *g, const char *name)
 {
 	struct gconfig *gce;
 
@@ -445,14 +475,15 @@ static void
 md_prthumanval(char *length)
 {
 	char buf[6];
-	uint64_t bytes;
+	uintmax_t bytes;
 	char *endptr;
 
-	bytes = strtoul(length, &endptr, 10);
-	if (bytes == (unsigned)ULONG_MAX || *endptr != '\0')
+	errno = 0;
+	bytes = strtoumax(length, &endptr, 10);
+	if (errno != 0 || *endptr != '\0' || bytes > INT64_MAX)
 		return;
-	humanize_number(buf, sizeof(buf) - (bytes < 0 ? 0 : 1),
-	    bytes, "", HN_AUTOSCALE, HN_B | HN_NOSPACE | HN_DECIMAL);
+	humanize_number(buf, sizeof(buf), (int64_t)bytes, "",
+	    HN_AUTOSCALE, HN_B | HN_NOSPACE | HN_DECIMAL);
 	(void)printf("%6s", buf);
 }
 

@@ -23,11 +23,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sbin/kldconfig/Makefile,v 1.3 2003/04/23 20:22:32 johan Exp $
+# $MidnightBSD$
 #
 
 PROG=		kldconfig
 MAN=		kldconfig.8
-WARNS?=		5
 
 .include <bsd.prog.mk>

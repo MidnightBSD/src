@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005-2007 Daniel Braniss <danny@cs.huji.ac.il>
+ * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,11 +26,11 @@
  */
 
 /*
- | $Id: auth_subr.c,v 1.1 2008-11-11 21:30:40 laffer1 Exp $
+ | $Id: auth_subr.c,v 1.2 2012-11-21 21:47:58 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/iscontrol/auth_subr.c,v 1.1 2007/07/24 15:35:01 scottl Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -52,9 +52,8 @@ __FBSDID("$FreeBSD: src/sbin/iscontrol/auth_subr.c,v 1.1 2007/07/24 15:35:01 sco
 #include <md5.h>
 #include <sha.h>
 
-#include "iscsi.h"
+#include <dev/iscsi/initiator/iscsi.h>
 #include "iscontrol.h"
-#include "pdu.h"
 
 static int
 chapMD5(char id, char *cp, char *chapSecret, unsigned char *digest)
@@ -153,7 +152,7 @@ chapDigest(char *ap, char id, char *cp, char *chapSecret)
 }
 
 char *
-genChapChallenge(char *encoding, int len)
+genChapChallenge(char *encoding, uint len)
 {
      int	fd;
      unsigned	char tmp[1024];

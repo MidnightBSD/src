@@ -23,11 +23,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sbin/kldunload/Makefile,v 1.10 2006/02/27 22:20:57 wkoszek Exp $
+# $MidnightBSD$
 #
 
 PROG=	kldunload
 MAN=	kldunload.8
-WARNS?=	6
 
 .include <bsd.prog.mk>

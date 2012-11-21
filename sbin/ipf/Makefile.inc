@@ -1,4 +1,4 @@
-#	$FreeBSD: src/sbin/ipf/Makefile.inc,v 1.2 2005/05/17 14:29:06 ru Exp $
+#	$MidnightBSD$
 
 WARNS?=		2
 NO_WFORMAT=

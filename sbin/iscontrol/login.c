@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005 Daniel Braniss <danny@cs.huji.ac.il>
+ * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,11 +25,11 @@
  *
  */
 /*
- | $Id: login.c,v 1.1 2008-11-11 21:30:40 laffer1 Exp $
+ | $Id: login.c,v 1.2 2012-11-21 21:47:58 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/iscontrol/login.c,v 1.1 2007/07/24 15:35:01 scottl Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -47,9 +47,8 @@ __FBSDID("$FreeBSD: src/sbin/iscontrol/login.c,v 1.1 2007/07/24 15:35:01 scottl 
 #include <stdlib.h>
 #include <string.h>
 
-#include "iscsi.h"
+#include <dev/iscsi/initiator/iscsi.h>
 #include "iscontrol.h"
-#include "pdu.h"
 
 static char *status_class1[] = {
      "Initiator error",
@@ -108,7 +107,7 @@ getkeyval(char *key, pdu_t *pp)
     debug_called(3);
 
     len = pp->ds_len;
-    ptr = (char *)pp->ds;
+    ptr = (char *)pp->ds_addr;
     klen = strlen(key);
     while(len > klen) {
 	 if(strncmp(key, ptr, klen) == 0)
@@ -164,7 +163,7 @@ processParams(isess_t *sess, pdu_t *pp)
      debug_called(3);
 
      len = pp->ds_len;
-     ptr = (char *)pp->ds;
+     ptr = (char *)pp->ds_addr;
      while(len > 0) {
 	  if(vflag > 1)
 	       printf("got: len=%d %s\n", len, ptr);
@@ -173,16 +172,18 @@ processParams(isess_t *sess, pdu_t *pp)
 	       klen = eq - ptr;
 	  if(klen > 0) {
 	       if(strncmp(ptr, "TargetAddress", klen) == 0) {
-		    char	*p, *q;
+		    char	*p, *q, *ta = NULL;
 
 		    // TargetAddress=domainname[:port][,portal-group-tag]
 		    // XXX: if(op->targetAddress) free(op->targetAddress);
 		    q = op->targetAddress = strdup(eq+1);
 		    if(*q == '[') {
 			 // bracketed IPv6
-			 if((q = strchr(q, ']')) != NULL)
-			      q++;
-			 else
+			 if((q = strchr(q, ']')) != NULL) {
+			      *q++ = '\0';
+			      ta = op->targetAddress;
+			      op->targetAddress = strdup(ta+1);
+			 } else
 			      q = op->targetAddress;
 		    }
 		    if((p = strchr(q, ',')) != NULL) {
@@ -193,6 +194,8 @@ processParams(isess_t *sess, pdu_t *pp)
 			 *p++ = 0;
 			 op->port = atoi(p);
 		    }
+		    if(ta)
+			 free(ta);
 	       } else if(strncmp(ptr, "MaxRecvDataSegmentLength", klen) == 0) {
 		    // danny's RFC
 		    op->maxXmitDataSegmentLength = strtol(eq+1, (char **)NULL, 0);
@@ -230,7 +233,7 @@ handleLoginResp(isess_t *sess, pdu_t *pp)
 
      st_class  = status >> 8;
      if(status) {
-	  int	st_detail = status & 0xff;
+	  uint	st_detail = status & 0xff;
 
 	  switch(st_class) {
 	  case 1: // Redirect
