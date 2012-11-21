@@ -38659,12 +38659,15 @@ sbin/ifconfig/af_inet.c -text
 sbin/ifconfig/af_inet6.c -text
 sbin/ifconfig/af_ipx.c -text
 sbin/ifconfig/af_link.c -text
+sbin/ifconfig/af_nd6.c -text
 sbin/ifconfig/ifbridge.c -text
 sbin/ifconfig/ifcarp.c -text
 sbin/ifconfig/ifclone.c -text
 sbin/ifconfig/ifconfig.8 -text
 sbin/ifconfig/ifconfig.c -text
 sbin/ifconfig/ifconfig.h -text
+sbin/ifconfig/iffib.c -text
+sbin/ifconfig/ifgif.c -text
 sbin/ifconfig/ifgre.c -text
 sbin/ifconfig/ifgroup.c -text
 sbin/ifconfig/ifieee80211.c -text
