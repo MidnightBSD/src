@@ -1,11 +1,14 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/27/94
-# $FreeBSD: src/sbin/newfs/Makefile,v 1.22 2003/02/11 03:06:45 jmallett Exp $
+# $MidnightBSD$
+
+.PATH: ${.CURDIR}/../../sys/geom
 
 PROG=	newfs
-DPADD=	${LIBUFS}
-LDADD=	-lufs
-SRCS=	newfs.c mkfs.c
-WARNS?=	2
+DPADD=	${LIBUFS} ${LIBUTIL}
+LDADD=	-lufs -lutil
+SRCS=	newfs.c mkfs.c geom_bsd_enc.c
+
+WARNS?=	3
 MAN=	newfs.8
 
 .include <bsd.prog.mk>

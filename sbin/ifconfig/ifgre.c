@@ -25,7 +25,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ifconfig/ifgre.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $";
+  "$MidnightBSD$";
 #endif
 
 #include <sys/param.h>
@@ -89,7 +89,7 @@ static __constructor void
 gre_ctor(void)
 {
 #define	N(a)	(sizeof(a) / sizeof(a[0]))
-	int i;
+	size_t i;
 
 	for (i = 0; i < N(gre_cmds);  i++)
 		cmd_register(&gre_cmds[i]);

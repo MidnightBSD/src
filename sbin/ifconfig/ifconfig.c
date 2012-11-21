@@ -27,8 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #ifndef lint
 static const char copyright[] =
 "@(#) Copyright (c) 1983, 1993\n\
@@ -38,17 +36,14 @@ static const char copyright[] =
 #ifndef lint
 #if 0
 static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
-static const char rcsid[] =
-  "$FreeBSD: src/sbin/ifconfig/ifconfig.c,v 1.134 2007/10/04 09:45:41 thompsa Exp $";
 #endif
+static const char rcsid[] =
+  "$MidnightBSD$";
 #endif /* not lint */
-
-__MBSDID("$MidnightBSD: src/sbin/ifconfig/ifconfig.c,v 1.5 2011/02/06 21:26:31 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/module.h>
 #include <sys/linker.h>
@@ -71,6 +66,7 @@ __MBSDID("$MidnightBSD: src/sbin/ifconfig/ifconfig.c,v 1.5 2011/02/06 21:26:31 l
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <jail.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,6 +82,8 @@ __MBSDID("$MidnightBSD: src/sbin/ifconfig/ifconfig.c,v 1.5 2011/02/06 21:26:31 l
 struct	ifreq ifr;
 
 char	name[IFNAMSIZ];
+char	*descr = NULL;
+size_t	descrlen = 64;
 int	setaddr;
 int	setmask;
 int	doalias;
@@ -150,7 +148,7 @@ main(int argc, char *argv[])
 	struct ifaddrs *ifap, *ifa;
 	struct ifreq paifr;
 	const struct sockaddr_dl *sdl;
-	char options[1024], *cp;
+	char options[1024], *cp, *namecp = NULL;
 	const char *ifname;
 	struct option *p;
 	size_t iflen;
@@ -222,8 +220,10 @@ main(int argc, char *argv[])
 		ifindex = 0;
 		if (argc == 1) {
 			afp = af_getbyname(*argv);
-			if (afp == NULL)
+			if (afp == NULL) {
+				warnx("Address family '%s' unknown.", *argv);
 				usage();
+			}
 			if (afp->af_name != NULL)
 				argc--, argv++;
 			/* leave with afp non-zero */
@@ -255,6 +255,19 @@ main(int argc, char *argv[])
 				ifconfig(argc, argv, 1, NULL);
 				exit(0);
 			}
+			/*
+			 * NOTE:  We have to special-case the `-vnet' command
+			 * right here as we would otherwise fail when trying
+			 * to find the interface as it lives in another vnet.
+			 */
+			if (argc > 0 && (strcmp(argv[0], "-vnet") == 0)) {
+				iflen = strlcpy(name, ifname, sizeof(name));
+				if (iflen >= sizeof(name))
+					errx(1, "%s: interface name too long",
+					    ifname);
+				ifconfig(argc, argv, 0, NULL);
+				exit(0);
+			}
 			errx(1, "interface %s does not exist", ifname);
 		}
 	}
@@ -284,7 +297,7 @@ main(int argc, char *argv[])
 			sdl = (const struct sockaddr_dl *) ifa->ifa_addr;
 		else
 			sdl = NULL;
-		if (cp != NULL && strcmp(cp, ifa->ifa_name) == 0)
+		if (cp != NULL && strcmp(cp, ifa->ifa_name) == 0 && !namesonly)
 			continue;
 		iflen = strlcpy(name, ifa->ifa_name, sizeof(name));
 		if (iflen >= sizeof(name)) {
@@ -294,20 +307,40 @@ main(int argc, char *argv[])
 		}
 		cp = ifa->ifa_name;
 
+		if ((ifa->ifa_flags & IFF_CANTCONFIG) != 0)
+			continue;
 		if (downonly && (ifa->ifa_flags & IFF_UP) != 0)
 			continue;
 		if (uponly && (ifa->ifa_flags & IFF_UP) == 0)
 			continue;
-		ifindex++;
 		/*
 		 * Are we just listing the interfaces?
 		 */
 		if (namesonly) {
+			if (namecp == cp)
+				continue;
+			if (afp != NULL) {
+				/* special case for "ether" address family */
+				if (!strcmp(afp->af_name, "ether")) {
+					if (sdl == NULL ||
+					    (sdl->sdl_type != IFT_ETHER &&
+					    sdl->sdl_type != IFT_L2VLAN &&
+					    sdl->sdl_type != IFT_BRIDGE) ||
+					    sdl->sdl_alen != ETHER_ADDR_LEN)
+						continue;
+				} else {
+					if (ifa->ifa_addr->sa_family != afp->af_af)
+						continue;
+				}
+			}
+			namecp = cp;
+			ifindex++;
 			if (ifindex > 1)
 				printf(" ");
 			fputs(name, stdout);
 			continue;
 		}
+		ifindex++;
 
 		if (argc > 0)
 			ifconfig(argc, argv, 0, afp);
@@ -396,14 +429,21 @@ cmd_register(struct cmd *p)
 }
 
 static const struct cmd *
-cmd_lookup(const char *name)
+cmd_lookup(const char *name, int iscreate)
 {
 #define	N(a)	(sizeof(a)/sizeof(a[0]))
 	const struct cmd *p;
 
 	for (p = cmds; p != NULL; p = p->c_next)
-		if (strcmp(name, p->c_name) == 0)
-			return p;
+		if (strcmp(name, p->c_name) == 0) {
+			if (iscreate) {
+				if (p->c_iscloneop)
+					return p;
+			} else {
+				if (!p->c_iscloneop)
+					return p;
+			}
+		}
 	return NULL;
 #undef N
 }
@@ -438,27 +478,81 @@ static const struct cmd setifdstaddr_cmd =
 	DEF_CMD("ifdstaddr", 0, setifdstaddr);
 
 static int
-ifconfig(int argc, char *const *argv, int iscreate, const struct afswtch *afp)
+ifconfig(int argc, char *const *argv, int iscreate, const struct afswtch *uafp)
 {
-	const struct afswtch *nafp;
+	const struct afswtch *afp, *nafp;
+	const struct cmd *p;
 	struct callback *cb;
 	int s;
 
 	strncpy(ifr.ifr_name, name, sizeof ifr.ifr_name);
-top:
-	if (afp == NULL)
+	afp = NULL;
+	if (uafp != NULL)
+		afp = uafp;
+	/*
+	 * This is the historical "accident" allowing users to configure IPv4
+	 * addresses without the "inet" keyword which while a nice feature has
+	 * proven to complicate other things.  We cannot remove this but only
+	 * make sure we will never have a similar implicit default for IPv6 or
+	 * any other address familiy.  We need a fallback though for
+	 * ifconfig IF up/down etc. to work without INET support as people
+	 * never used ifconfig IF link up/down, etc. either.
+	 */
+#ifndef RESCUE
+#ifdef INET
+	if (afp == NULL && feature_present("inet"))
 		afp = af_getbyname("inet");
+#endif
+#endif
+	if (afp == NULL)
+		afp = af_getbyname("link");
+	if (afp == NULL) {
+		warnx("Please specify an address_family.");
+		usage();
+	}
+top:
 	ifr.ifr_addr.sa_family =
 		afp->af_af == AF_LINK || afp->af_af == AF_UNSPEC ?
-		AF_INET : afp->af_af;
+		AF_LOCAL : afp->af_af;
 
-	if ((s = socket(ifr.ifr_addr.sa_family, SOCK_DGRAM, 0)) < 0)
+	if ((s = socket(ifr.ifr_addr.sa_family, SOCK_DGRAM, 0)) < 0 &&
+	    (uafp != NULL || errno != EPROTONOSUPPORT ||
+	     (s = socket(AF_LOCAL, SOCK_DGRAM, 0)) < 0))
 		err(1, "socket(family %u,SOCK_DGRAM", ifr.ifr_addr.sa_family);
 
 	while (argc > 0) {
-		const struct cmd *p;
-
-		p = cmd_lookup(*argv);
+		p = cmd_lookup(*argv, iscreate);
+		if (iscreate && p == NULL) {
+			/*
+			 * Push the clone create callback so the new
+			 * device is created and can be used for any
+			 * remaining arguments.
+			 */
+			cb = callbacks;
+			if (cb == NULL)
+				errx(1, "internal error, no callback");
+			callbacks = cb->cb_next;
+			cb->cb_func(s, cb->cb_arg);
+			iscreate = 0;
+			/*
+			 * Handle any address family spec that
+			 * immediately follows and potentially
+			 * recreate the socket.
+			 */
+			nafp = af_getbyname(*argv);
+			if (nafp != NULL) {
+				argc--, argv++;
+				if (nafp != afp) {
+					close(s);
+					afp = nafp;
+					goto top;
+				}
+			}
+			/*
+			 * Look for a normal parameter.
+			 */
+			continue;
+		}
 		if (p == NULL) {
 			/*
 			 * Not a recognized command, choose between setting
@@ -467,33 +561,6 @@ top:
 			p = (setaddr ? &setifdstaddr_cmd : &setifaddr_cmd);
 		}
 		if (p->c_u.c_func || p->c_u.c_func2) {
-			if (iscreate && !p->c_iscloneop) { 
-				/*
-				 * Push the clone create callback so the new
-				 * device is created and can be used for any
-				 * remaining arguments.
-				 */
-				cb = callbacks;
-				if (cb == NULL)
-					errx(1, "internal error, no callback");
-				callbacks = cb->cb_next;
-				cb->cb_func(s, cb->cb_arg);
-				iscreate = 0;
-				/*
-				 * Handle any address family spec that
-				 * immediately follows and potentially
-				 * recreate the socket.
-				 */
-				nafp = af_getbyname(*argv);
-				if (nafp != NULL) {
-					argc--, argv++;
-					if (nafp != afp) {
-						close(s);
-						afp = nafp;
-						goto top;
-					}
-				}
-			}
 			if (p->c_parameter == NEXTARG) {
 				if (argv[1] == NULL)
 					errx(1, "'%s' requires argument",
@@ -622,6 +689,34 @@ deletetunnel(const char *vname, int param, int s, const struct afswtch *afp)
 }
 
 static void
+setifvnet(const char *jname, int dummy __unused, int s,
+    const struct afswtch *afp)
+{
+	struct ifreq my_ifr;
+
+	memcpy(&my_ifr, &ifr, sizeof(my_ifr));
+	my_ifr.ifr_jid = jail_getid(jname);
+	if (my_ifr.ifr_jid < 0)
+		errx(1, "%s", jail_errmsg);
+	if (ioctl(s, SIOCSIFVNET, &my_ifr) < 0)
+		err(1, "SIOCSIFVNET");
+}
+
+static void
+setifrvnet(const char *jname, int dummy __unused, int s,
+    const struct afswtch *afp)
+{
+	struct ifreq my_ifr;
+
+	memcpy(&my_ifr, &ifr, sizeof(my_ifr));
+	my_ifr.ifr_jid = jail_getid(jname);
+	if (my_ifr.ifr_jid < 0)
+		errx(1, "%s", jail_errmsg);
+	if (ioctl(s, SIOCSIFRVNET, &my_ifr) < 0)
+		err(1, "SIOCSIFRVNET(%d, %s)", my_ifr.ifr_jid, my_ifr.ifr_name);
+}
+
+static void
 setifnetmask(const char *addr, int dummy __unused, int s,
     const struct afswtch *afp)
 {
@@ -691,13 +786,13 @@ setifflags(const char *vname, int value, int s, const struct afswtch *afp)
 	struct ifreq		my_ifr;
 	int flags;
 
-	bcopy((char *)&ifr, (char *)&my_ifr, sizeof(struct ifreq));
+	memset(&my_ifr, 0, sizeof(my_ifr));
+	(void) strlcpy(my_ifr.ifr_name, name, sizeof(my_ifr.ifr_name));
 
  	if (ioctl(s, SIOCGIFFLAGS, (caddr_t)&my_ifr) < 0) {
  		Perror("ioctl (SIOCGIFFLAGS)");
  		exit(1);
  	}
-	strncpy(my_ifr.ifr_name, name, sizeof (my_ifr.ifr_name));
 	flags = (my_ifr.ifr_flags & 0xffff) | (my_ifr.ifr_flagshigh << 16);
 
 	if (value < 0) {
@@ -773,14 +868,50 @@ setifname(const char *val, int dummy __unused, int s,
 	free(newname);
 }
 
+/* ARGSUSED */
+static void
+setifdescr(const char *val, int dummy __unused, int s, 
+    const struct afswtch *afp)
+{
+	char *newdescr;
+
+	ifr.ifr_buffer.length = strlen(val) + 1;
+	if (ifr.ifr_buffer.length == 1) {
+		ifr.ifr_buffer.buffer = newdescr = NULL;
+		ifr.ifr_buffer.length = 0;
+	} else {
+		newdescr = strdup(val);
+		ifr.ifr_buffer.buffer = newdescr;
+		if (newdescr == NULL) {
+			warn("no memory to set ifdescr");
+			return;
+		}
+	}
+
+	if (ioctl(s, SIOCSIFDESCR, (caddr_t)&ifr) < 0)
+		warn("ioctl (set descr)");
+
+	free(newdescr);
+}
+
+/* ARGSUSED */
+static void
+unsetifdescr(const char *val, int value, int s, const struct afswtch *afp)
+{
+
+	setifdescr("", 0, s, 0);
+}
+
 #define	IFFBITS \
 "\020\1UP\2BROADCAST\3DEBUG\4LOOPBACK\5POINTOPOINT\6SMART\7RUNNING" \
 "\10NOARP\11PROMISC\12ALLMULTI\13OACTIVE\14SIMPLEX\15LINK0\16LINK1\17LINK2" \
-"\20MULTICAST\22PPROMISC\23MONITOR\24STATICARP\25NEEDSGIANT"
+"\20MULTICAST\22PPROMISC\23MONITOR\24STATICARP"
 
 #define	IFCAPBITS \
 "\020\1RXCSUM\2TXCSUM\3NETCONS\4VLAN_MTU\5VLAN_HWTAGGING\6JUMBO_MTU\7POLLING" \
-"\10VLAN_HWCSUM\11TSO4\12TSO6\13LRO\14WOL_UCAST\15WOL_MCAST\16WOL_MAGIC"
+"\10VLAN_HWCSUM\11TSO4\12TSO6\13LRO\14WOL_UCAST\15WOL_MCAST\16WOL_MAGIC" \
+"\21VLAN_HWFILTER\23VLAN_HWTSO\24LINKSTATE\25NETMAP" \
+"\26RXCSUM_IPV6\27TXCSUM_IPV6"
 
 /*
  * Print the status of the interface.  If an address family was
@@ -796,11 +927,12 @@ status(const struct afswtch *afp, const struct sockaddr_dl *sdl,
 
 	if (afp == NULL) {
 		allfamilies = 1;
-		afp = af_getbyname("inet");
-	} else
+		ifr.ifr_addr.sa_family = AF_LOCAL;
+	} else {
 		allfamilies = 0;
-
-	ifr.ifr_addr.sa_family = afp->af_af == AF_LINK ? AF_INET : afp->af_af;
+		ifr.ifr_addr.sa_family =
+		    afp->af_af == AF_LINK ? AF_LOCAL : afp->af_af;
+	}
 	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 
 	s = socket(ifr.ifr_addr.sa_family, SOCK_DGRAM, 0);
@@ -814,6 +946,26 @@ status(const struct afswtch *afp, const struct sockaddr_dl *sdl,
 	if (ioctl(s, SIOCGIFMTU, &ifr) != -1)
 		printf(" mtu %d", ifr.ifr_mtu);
 	putchar('\n');
+
+	for (;;) {
+		if ((descr = reallocf(descr, descrlen)) != NULL) {
+			ifr.ifr_buffer.buffer = descr;
+			ifr.ifr_buffer.length = descrlen;
+			if (ioctl(s, SIOCGIFDESCR, &ifr) == 0) {
+				if (ifr.ifr_buffer.buffer == descr) {
+					if (strlen(descr) > 0)
+						printf("\tdescription: %s\n",
+						    descr);
+				} else if (ifr.ifr_buffer.length > descrlen) {
+					descrlen = ifr.ifr_buffer.length;
+					continue;
+				}
+			}
+		} else
+			warn("unable to allocate memory for interface"
+			    "description");
+		break;
+	}
 
 	if (ioctl(s, SIOCGIFCAP, (caddr_t)&ifr) == 0) {
 		if (ifr.ifr_curcap != 0) {
@@ -984,6 +1136,10 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD("-arp",		IFF_NOARP,	setifflags),
 	DEF_CMD("debug",	IFF_DEBUG,	setifflags),
 	DEF_CMD("-debug",	-IFF_DEBUG,	setifflags),
+	DEF_CMD_ARG("description",		setifdescr),
+	DEF_CMD_ARG("descr",			setifdescr),
+	DEF_CMD("-description",	0,		unsetifdescr),
+	DEF_CMD("-descr",	0,		unsetifdescr),
 	DEF_CMD("promisc",	IFF_PPROMISC,	setifflags),
 	DEF_CMD("-promisc",	-IFF_PPROMISC,	setifflags),
 	DEF_CMD("add",		IFF_UP,		notealias),
@@ -1003,6 +1159,8 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD_ARG2("tunnel",			settunnel),
 	DEF_CMD("-tunnel", 0,			deletetunnel),
 	DEF_CMD("deletetunnel", 0,		deletetunnel),
+	DEF_CMD_ARG("vnet",			setifvnet),
+	DEF_CMD_ARG("-vnet",			setifrvnet),
 	DEF_CMD("link0",	IFF_LINK0,	setifflags),
 	DEF_CMD("-link0",	-IFF_LINK0,	setifflags),
 	DEF_CMD("link1",	IFF_LINK1,	setifflags),
@@ -1013,6 +1171,10 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD("-monitor",	-IFF_MONITOR,	setifflags),
 	DEF_CMD("staticarp",	IFF_STATICARP,	setifflags),
 	DEF_CMD("-staticarp",	-IFF_STATICARP,	setifflags),
+	DEF_CMD("rxcsum6",	IFCAP_RXCSUM_IPV6,	setifcap),
+	DEF_CMD("-rxcsum6",	-IFCAP_RXCSUM_IPV6,	setifcap),
+	DEF_CMD("txcsum6",	IFCAP_TXCSUM_IPV6,	setifcap),
+	DEF_CMD("-txcsum6",	-IFCAP_TXCSUM_IPV6,	setifcap),
 	DEF_CMD("rxcsum",	IFCAP_RXCSUM,	setifcap),
 	DEF_CMD("-rxcsum",	-IFCAP_RXCSUM,	setifcap),
 	DEF_CMD("txcsum",	IFCAP_TXCSUM,	setifcap),
@@ -1021,6 +1183,10 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD("-netcons",	-IFCAP_NETCONS,	setifcap),
 	DEF_CMD("polling",	IFCAP_POLLING,	setifcap),
 	DEF_CMD("-polling",	-IFCAP_POLLING,	setifcap),
+	DEF_CMD("tso6",		IFCAP_TSO6,	setifcap),
+	DEF_CMD("-tso6",	-IFCAP_TSO6,	setifcap),
+	DEF_CMD("tso4",		IFCAP_TSO4,	setifcap),
+	DEF_CMD("-tso4",	-IFCAP_TSO4,	setifcap),
 	DEF_CMD("tso",		IFCAP_TSO,	setifcap),
 	DEF_CMD("-tso",		-IFCAP_TSO,	setifcap),
 	DEF_CMD("lro",		IFCAP_LRO,	setifcap),
@@ -1044,7 +1210,7 @@ static __constructor void
 ifconfig_ctor(void)
 {
 #define	N(a)	(sizeof(a) / sizeof(a[0]))
-	int i;
+	size_t i;
 
 	for (i = 0; i < N(basic_cmds);  i++)
 		cmd_register(&basic_cmds[i]);

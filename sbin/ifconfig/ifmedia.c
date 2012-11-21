@@ -1,5 +1,5 @@
 /*	$NetBSD: ifconfig.c,v 1.34 1997/04/21 01:17:58 lukem Exp $	*/
-/* $FreeBSD: src/sbin/ifconfig/ifmedia.c,v 1.25 2007/06/11 03:56:33 sam Exp $ */
+/* $MidnightBSD$ */
 
 /*
  * Copyright (c) 1997 Jason R. Thorpe.
@@ -25,7 +25,6 @@
  * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
  * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-SRCS+=	ifgre.c			# GRE keys etc
  * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
  * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
@@ -46,10 +45,6 @@ SRCS+=	ifgre.c			# GRE keys etc
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -102,6 +97,12 @@ static struct ifmedia_description *get_toptype_desc(int);
 static struct ifmedia_type_to_subtype *get_toptype_ttos(int);
 static struct ifmedia_description *get_subtype_desc(int,
     struct ifmedia_type_to_subtype *ttos);
+
+#define	IFM_OPMODE(x) \
+	((x) & (IFM_IEEE80211_ADHOC | IFM_IEEE80211_HOSTAP | \
+	 IFM_IEEE80211_IBSS | IFM_IEEE80211_WDS | IFM_IEEE80211_MONITOR | \
+	 IFM_IEEE80211_MBSS))
+#define	IFM_IEEE80211_STA	0
 
 static void
 media_status(int s)
@@ -163,10 +164,13 @@ media_status(int s)
 			break;
 
 		case IFM_IEEE80211:
-			/* XXX: Different value for adhoc? */
-			if (ifmr.ifm_status & IFM_ACTIVE)
-				printf("associated");
-			else
+			if (ifmr.ifm_status & IFM_ACTIVE) {
+				/* NB: only sta mode associates */
+				if (IFM_OPMODE(ifmr.ifm_active) == IFM_IEEE80211_STA)
+					printf("associated");
+				else
+					printf("running");
+			} else
 				printf("no carrier");
 			break;
 		}
@@ -264,12 +268,8 @@ setmedia(const char *val, int d, int s, const struct afswtch *afp)
 	subtype = get_media_subtype(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
 	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
-	ifr.ifr_media = (ifmr->ifm_current & ~(IFM_NMASK|IFM_TMASK)) |
+	ifr.ifr_media = (ifmr->ifm_current & IFM_IMASK) |
 	    IFM_TYPE(ifmr->ifm_ulist[0]) | subtype;
-
-	if ((ifr.ifr_media & IFM_TMASK) == 0) {
-		ifr.ifr_media &= ~IFM_GMASK;
-	}
 
 	ifmr->ifm_current = ifr.ifr_media;
 	callback_register(setifmediacallback, (void *)ifmr);
@@ -323,7 +323,7 @@ setmediainst(const char *val, int d, int s, const struct afswtch *afp)
 	ifmr = ifmedia_getstate(s);
 
 	inst = atoi(val);
-	if (inst < 0 || inst > IFM_INST_MAX)
+	if (inst < 0 || inst > (int)IFM_INST_MAX)
 		errx(1, "invalid media instance: %s", val);
 
 	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
@@ -417,6 +417,9 @@ static struct ifmedia_description ifm_subtype_shared_aliases[] =
 static struct ifmedia_description ifm_shared_option_descriptions[] =
     IFM_SHARED_OPTION_DESCRIPTIONS;
 
+static struct ifmedia_description ifm_shared_option_aliases[] =
+    IFM_SHARED_OPTION_ALIASES;
+
 struct ifmedia_type_to_subtype {
 	struct {
 		struct ifmedia_description *desc;
@@ -425,7 +428,7 @@ struct ifmedia_type_to_subtype {
 	struct {
 		struct ifmedia_description *desc;
 		int alias;
-	} options[3];
+	} options[4];
 	struct {
 		struct ifmedia_description *desc;
 		int alias;
@@ -444,6 +447,7 @@ static struct ifmedia_type_to_subtype ifmedia_types_to_subtypes[] = {
 		},
 		{
 			{ &ifm_shared_option_descriptions[0], 0 },
+			{ &ifm_shared_option_aliases[0], 1 },
 			{ &ifm_subtype_ethernet_option_descriptions[0], 0 },
 			{ NULL, 0 },
 		},
@@ -461,6 +465,7 @@ static struct ifmedia_type_to_subtype ifmedia_types_to_subtypes[] = {
 		},
 		{
 			{ &ifm_shared_option_descriptions[0], 0 },
+			{ &ifm_shared_option_aliases[0], 1 },
 			{ &ifm_subtype_tokenring_option_descriptions[0], 0 },
 			{ NULL, 0 },
 		},
@@ -478,6 +483,7 @@ static struct ifmedia_type_to_subtype ifmedia_types_to_subtypes[] = {
 		},
 		{
 			{ &ifm_shared_option_descriptions[0], 0 },
+			{ &ifm_shared_option_aliases[0], 1 },
 			{ &ifm_subtype_fddi_option_descriptions[0], 0 },
 			{ NULL, 0 },
 		},
@@ -495,6 +501,7 @@ static struct ifmedia_type_to_subtype ifmedia_types_to_subtypes[] = {
 		},
 		{
 			{ &ifm_shared_option_descriptions[0], 0 },
+			{ &ifm_shared_option_aliases[0], 1 },
 			{ &ifm_subtype_ieee80211_option_descriptions[0], 0 },
 			{ NULL, 0 },
 		},
@@ -514,6 +521,7 @@ static struct ifmedia_type_to_subtype ifmedia_types_to_subtypes[] = {
 		},
 		{
 			{ &ifm_shared_option_descriptions[0], 0 },
+			{ &ifm_shared_option_aliases[0], 1 },
 			{ &ifm_subtype_atm_option_descriptions[0], 0 },
 			{ NULL, 0 },
 		},
@@ -749,7 +757,7 @@ print_media_word_ifconfig(int ifmw)
 {
 	struct ifmedia_description *desc;
 	struct ifmedia_type_to_subtype *ttos;
-	int i;
+	int seen_option = 0, i;
 
 	/* Find the top-level interface type. */
 	desc = get_toptype_desc(ifmw);
@@ -784,7 +792,10 @@ print_media_word_ifconfig(int ifmw)
 		for (desc = ttos->options[i].desc;
 		    desc->ifmt_string != NULL; desc++) {
 			if (ifmw & desc->ifmt_word) {
-				printf(" mediaopt %s", desc->ifmt_string);
+				if (seen_option == 0)
+					printf(" mediaopt ");
+				printf("%s%s", seen_option++ ? "," : "",
+				    desc->ifmt_string);
 			}
 		}
 	}
@@ -815,7 +826,7 @@ static __constructor void
 ifmedia_ctor(void)
 {
 #define	N(a)	(sizeof(a) / sizeof(a[0]))
-	int i;
+	size_t i;
 
 	for (i = 0; i < N(media_cmds);  i++)
 		cmd_register(&media_cmds[i]);

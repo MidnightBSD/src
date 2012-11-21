@@ -42,8 +42,16 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/newfs/mkfs.c,v 1.92 2006/10/31 21:52:27 pjd Exp $");
+__MBSDID("$MidnightBSD$");
 
+#include <sys/param.h>
+#include <sys/disklabel.h>
+#include <sys/file.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <err.h>
 #include <grp.h>
 #include <limits.h>
@@ -52,20 +60,11 @@ __FBSDID("$FreeBSD: src/sbin/newfs/mkfs.c,v 1.92 2006/10/31 21:52:27 pjd Exp $")
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
-#include <sys/param.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
 #include <ufs/ufs/dinode.h>
 #include <ufs/ufs/dir.h>
 #include <ufs/ffs/fs.h>
-#include <sys/disklabel.h>
-#include <sys/file.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
 #include "newfs.h"
 
 /*
@@ -100,6 +99,15 @@ static int makedir(struct direct *, int);
 static void setblock(struct fs *, unsigned char *, int);
 static void wtfs(ufs2_daddr_t, int, char *);
 static u_int32_t newfs_random(void);
+
+static int
+do_sbwrite(struct uufsd *disk)
+{
+	if (!disk->d_sblock)
+		disk->d_sblock = disk->d_fs.fs_sblockloc / disk->d_bsize;
+	return (pwrite(disk->d_fd, &disk->d_fs, SBLOCKSIZE, (off_t)((part_ofs +
+	    disk->d_sblock) * disk->d_bsize)));
+}
 
 void
 mkfs(struct partition *pp, char *fsys)
@@ -142,6 +150,8 @@ mkfs(struct partition *pp, char *fsys)
 		sblock.fs_flags |= FS_GJOURNAL;
 	if (lflag)
 		sblock.fs_flags |= FS_MULTILABEL;
+	if (tflag)
+		sblock.fs_flags |= FS_TRIM;
 	/*
 	 * Validate the given file system size.
 	 * Verify that its last block can actually be accessed.
@@ -487,33 +497,41 @@ restart:
 		printf("\twith soft updates\n");
 #	undef B2MBFACTOR
 
+	if (Eflag && !Nflag) {
+		printf("Erasing sectors [%jd...%jd]\n", 
+		    sblock.fs_sblockloc / disk.d_bsize,
+		    fsbtodb(&sblock, sblock.fs_size) - 1);
+		berase(&disk, sblock.fs_sblockloc / disk.d_bsize,
+		    sblock.fs_size * sblock.fs_fsize - sblock.fs_sblockloc);
+	}
 	/*
 	 * Wipe out old UFS1 superblock(s) if necessary.
 	 */
 	if (!Nflag && Oflag != 1) {
-		i = bread(&disk, SBLOCK_UFS1 / disk.d_bsize, chdummy, SBLOCKSIZE);
+		i = bread(&disk, part_ofs + SBLOCK_UFS1 / disk.d_bsize, chdummy, SBLOCKSIZE);
 		if (i == -1)
 			err(1, "can't read old UFS1 superblock: %s", disk.d_error);
 
 		if (fsdummy.fs_magic == FS_UFS1_MAGIC) {
 			fsdummy.fs_magic = 0;
-			bwrite(&disk, SBLOCK_UFS1 / disk.d_bsize, chdummy, SBLOCKSIZE);
+			bwrite(&disk, part_ofs + SBLOCK_UFS1 / disk.d_bsize,
+			    chdummy, SBLOCKSIZE);
 			for (cg = 0; cg < fsdummy.fs_ncg; cg++) {
 				if (fsbtodb(&fsdummy, cgsblock(&fsdummy, cg)) > fssize)
 					break;
-				bwrite(&disk, fsbtodb(&fsdummy,
+				bwrite(&disk, part_ofs + fsbtodb(&fsdummy,
 				  cgsblock(&fsdummy, cg)), chdummy, SBLOCKSIZE);
 			}
 		}
 	}
 	if (!Nflag)
-		sbwrite(&disk, 0);
-	if (Eflag == 1) {
-		printf("** Exiting on Eflag 1\n");
+		do_sbwrite(&disk);
+	if (Xflag == 1) {
+		printf("** Exiting on Xflag 1\n");
 		exit(0);
 	}
-	if (Eflag == 2)
-		printf("** Leaving BAD MAGIC on Eflag 2\n");
+	if (Xflag == 2)
+		printf("** Leaving BAD MAGIC on Xflag 2\n");
 	else
 		sblock.fs_magic = (Oflag != 1) ? FS_UFS2_MAGIC : FS_UFS1_MAGIC;
 
@@ -521,7 +539,7 @@ restart:
 	 * Now build the cylinders group blocks and
 	 * then print out indices of cylinder groups.
 	 */
-	printf("super-block backups (for fsck -b #) at:\n");
+	printf("super-block backups (for fsck_ffs -b #) at:\n");
 	i = 0;
 	width = charsperline();
 	/*
@@ -532,11 +550,10 @@ restart:
 		iobufsize = SBLOCKSIZE + 3 * sblock.fs_bsize;
 	else
 		iobufsize = 4 * sblock.fs_bsize;
-	if ((iobuf = malloc(iobufsize)) == 0) {
+	if ((iobuf = calloc(1, iobufsize)) == 0) {
 		printf("Cannot allocate I/O buffer\n");
 		exit(38);
 	}
-	bzero(iobuf, iobufsize);
 	/*
 	 * Make a copy of the superblock into the buffer that we will be
 	 * writing out in each cylinder group.
@@ -571,12 +588,12 @@ restart:
 		sblock.fs_old_cstotal.cs_nifree = sblock.fs_cstotal.cs_nifree;
 		sblock.fs_old_cstotal.cs_nffree = sblock.fs_cstotal.cs_nffree;
 	}
-	if (Eflag == 3) {
-		printf("** Exiting on Eflag 3\n");
+	if (Xflag == 3) {
+		printf("** Exiting on Xflag 3\n");
 		exit(0);
 	}
 	if (!Nflag) {
-		sbwrite(&disk, 0);
+		do_sbwrite(&disk);
 		/*
 		 * For UFS1 filesystems with a blocksize of 64K, the first
 		 * alternate superblock resides at the location used for
@@ -595,7 +612,7 @@ restart:
 			sblock.fs_cssize - i : sblock.fs_bsize,
 			((char *)fscs) + i);
 	/*
-	 * Update information about this partion in pack
+	 * Update information about this partition in pack
 	 * label, to that it may be updated on disk.
 	 */
 	if (pp != NULL) {
@@ -922,7 +939,7 @@ alloc(int size, int mode)
 	int i, blkno, frag;
 	uint d;
 
-	bread(&disk, fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
+	bread(&disk, part_ofs + fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
 	    sblock.fs_cgsize);
 	if (acg.cg_magic != CG_MAGIC) {
 		printf("cg 0: bad magic number\n");
@@ -972,10 +989,8 @@ void
 iput(union dinode *ip, ino_t ino)
 {
 	ufs2_daddr_t d;
-	int c;
 
-	c = ino_to_cg(&sblock, ino);
-	bread(&disk, fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
+	bread(&disk, part_ofs + fsbtodb(&sblock, cgtod(&sblock, 0)), (char *)&acg,
 	    sblock.fs_cgsize);
 	if (acg.cg_magic != CG_MAGIC) {
 		printf("cg 0: bad magic number\n");
@@ -992,7 +1007,7 @@ iput(union dinode *ip, ino_t ino)
 		exit(32);
 	}
 	d = fsbtodb(&sblock, ino_to_fsba(&sblock, ino));
-	bread(&disk, d, (char *)iobuf, sblock.fs_bsize);
+	bread(&disk, part_ofs + d, (char *)iobuf, sblock.fs_bsize);
 	if (sblock.fs_magic == FS_UFS1_MAGIC)
 		((struct ufs1_dinode *)iobuf)[ino_to_fsbo(&sblock, ino)] =
 		    ip->dp1;
@@ -1010,7 +1025,7 @@ wtfs(ufs2_daddr_t bno, int size, char *bf)
 {
 	if (Nflag)
 		return;
-	if (bwrite(&disk, bno, bf, size) < 0)
+	if (bwrite(&disk, part_ofs + bno, bf, size) < 0)
 		err(36, "wtfs: %d bytes at sector %jd", size, (intmax_t)bno);
 }
 

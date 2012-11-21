@@ -56,7 +56,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ifconfig/ifvlan.c,v 1.12 2006/07/09 06:10:23 sam Exp $";
+  "$MidnightBSD$";
 #endif
 
 #define	NOTAG	((u_short) -1)
@@ -136,8 +136,6 @@ DECL_CMD_FUNC(setvlantag, val, d)
 
 	if (getvlan(s, &ifr, &vreq) != -1)
 		vlan_set(s, &ifr);
-	else
-		clone_setcallback(vlan_create);
 }
 
 static
@@ -149,8 +147,6 @@ DECL_CMD_FUNC(setvlandev, val, d)
 
 	if (getvlan(s, &ifr, &vreq) != -1)
 		vlan_set(s, &ifr);
-	else
-		clone_setcallback(vlan_create);
 }
 
 static
@@ -174,12 +170,21 @@ DECL_CMD_FUNC(unsetvlandev, val, d)
 static struct cmd vlan_cmds[] = {
 	DEF_CLONE_CMD_ARG("vlan",			setvlantag),
 	DEF_CLONE_CMD_ARG("vlandev",			setvlandev),
+	/* NB: non-clone cmds */
+	DEF_CMD_ARG("vlan",				setvlantag),
+	DEF_CMD_ARG("vlandev",				setvlandev),
 	/* XXX For compatibility.  Should become DEF_CMD() some day. */
 	DEF_CMD_OPTARG("-vlandev",			unsetvlandev),
 	DEF_CMD("vlanmtu",	IFCAP_VLAN_MTU,		setifcap),
 	DEF_CMD("-vlanmtu",	-IFCAP_VLAN_MTU,	setifcap),
 	DEF_CMD("vlanhwtag",	IFCAP_VLAN_HWTAGGING,	setifcap),
 	DEF_CMD("-vlanhwtag",	-IFCAP_VLAN_HWTAGGING,	setifcap),
+	DEF_CMD("vlanhwfilter",	IFCAP_VLAN_HWFILTER,	setifcap),
+	DEF_CMD("-vlanhwfilter", -IFCAP_VLAN_HWFILTER,	setifcap),
+	DEF_CMD("-vlanhwtso",	-IFCAP_VLAN_HWTSO,	setifcap),
+	DEF_CMD("vlanhwtso",	IFCAP_VLAN_HWTSO,	setifcap),
+	DEF_CMD("vlanhwcsum",	IFCAP_VLAN_HWCSUM,	setifcap),
+	DEF_CMD("-vlanhwcsum",	-IFCAP_VLAN_HWCSUM,	setifcap),
 };
 static struct afswtch af_vlan = {
 	.af_name	= "af_vlan",
@@ -191,11 +196,12 @@ static __constructor void
 vlan_ctor(void)
 {
 #define	N(a)	(sizeof(a) / sizeof(a[0]))
-	int i;
+	size_t i;
 
 	for (i = 0; i < N(vlan_cmds);  i++)
 		cmd_register(&vlan_cmds[i]);
 	af_register(&af_vlan);
 	callback_register(vlan_cb, NULL);
+	clone_setdefcallback("vlan", vlan_create);
 #undef N
 }

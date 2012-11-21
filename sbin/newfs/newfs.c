@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)newfs.c	8.13 (Berkeley) 5/1/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/newfs/newfs.c,v 1.82 2007/03/02 20:07:59 pjd Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * newfs: friendly front end to mkfs
@@ -77,18 +77,23 @@ __FBSDID("$FreeBSD: src/sbin/newfs/newfs.c,v 1.82 2007/03/02 20:07:59 pjd Exp $"
 #include <syslog.h>
 #include <unistd.h>
 
+#include <libutil.h>
+
 #include "newfs.h"
 
+int	Eflag;			/* Erase previous disk contents */
 int	Lflag;			/* add a volume label */
 int	Nflag;			/* run without writing file system */
 int	Oflag = 2;		/* file system format (1 => UFS1, 2 => UFS2) */
 int	Rflag;			/* regression test */
 int	Uflag;			/* enable soft updates for file system */
-int	Eflag = 0;		/* exit in middle of newfs for testing */
+int	jflag;			/* enable soft updates journaling for filesys */
+int	Xflag = 0;		/* exit in middle of newfs for testing */
 int	Jflag;			/* enable gjournal for file system */
 int	lflag;			/* enable multilabel for file system */
 int	nflag;			/* do not create .snap directory */
-quad_t	fssize;			/* file system size */
+int	tflag;			/* enable TRIM */
+intmax_t fssize;		/* file system size */
 int	sectorsize;		/* bytes/sector */
 int	realsectorsize;		/* bytes/sector in hardware */
 int	fsize = 0;		/* fragment size */
@@ -106,12 +111,19 @@ u_char	*volumelabel = NULL;	/* volume label for filesystem */
 struct uufsd disk;		/* libufs disk structure */
 
 static char	device[MAXPATHLEN];
+static u_char   bootarea[BBSIZE];
+static int	is_file;		/* work on a file, not a device */
+static char	*dkname;
 static char	*disktype;
 static int	unlabeled;
 
+static void getfssize(intmax_t *, const char *p, intmax_t, intmax_t);
 static struct disklabel *getdisklabel(char *s);
 static void rewritelabel(char *s, struct disklabel *lp);
 static void usage(void);
+static int expand_number_int(const char *buf, int *num);
+
+ufs2_daddr_t part_ofs; /* partition offset in blocks, used with files */
 
 int
 main(int argc, char *argv[])
@@ -121,14 +133,18 @@ main(int argc, char *argv[])
 	struct partition oldpartition;
 	struct stat st;
 	char *cp, *special;
-	int ch, i;
+	intmax_t reserved;
+	int ch, i, rval;
 	off_t mediasize;
+	char part_name;		/* partition name, default to full disk */
 
+	part_name = 'c';
+	reserved = 0;
 	while ((ch = getopt(argc, argv,
-	    "EJL:NO:RS:T:Ua:b:c:d:e:f:g:h:i:lm:no:s:")) != -1)
+	    "EJL:NO:RS:T:UXa:b:c:d:e:f:g:h:i:jlm:no:p:r:s:t")) != -1)
 		switch (ch) {
 		case 'E':
-			Eflag++;
+			Eflag = 1;
 			break;
 		case 'J':
 			Jflag = 1;
@@ -158,22 +174,34 @@ main(int argc, char *argv[])
 			Rflag = 1;
 			break;
 		case 'S':
-			if ((sectorsize = atoi(optarg)) <= 0)
+			rval = expand_number_int(optarg, &sectorsize);
+			if (rval < 0 || sectorsize <= 0)
 				errx(1, "%s: bad sector size", optarg);
 			break;
 		case 'T':
 			disktype = optarg;
 			break;
+		case 'j':
+			jflag = 1;
+			/* fall through to enable soft updates */
 		case 'U':
 			Uflag = 1;
 			break;
+		case 'X':
+			Xflag++;
+			break;
 		case 'a':
-			if ((maxcontig = atoi(optarg)) <= 0)
+			rval = expand_number_int(optarg, &maxcontig);
+			if (rval < 0 || maxcontig <= 0)
 				errx(1, "%s: bad maximum contiguous blocks",
 				    optarg);
 			break;
 		case 'b':
-			if ((bsize = atoi(optarg)) < MINBSIZE)
+			rval = expand_number_int(optarg, &bsize);
+			if (rval < 0)
+				 errx(1, "%s: bad block size",
+                                    optarg);
+			if (bsize < MINBSIZE)
 				errx(1, "%s: block size too small, min is %d",
 				    optarg, MINBSIZE);
 			if (bsize > MAXBSIZE)
@@ -181,33 +209,40 @@ main(int argc, char *argv[])
 				    optarg, MAXBSIZE);
 			break;
 		case 'c':
-			if ((maxblkspercg = atoi(optarg)) <= 0)
+			rval = expand_number_int(optarg, &maxblkspercg);
+			if (rval < 0 || maxblkspercg <= 0)
 				errx(1, "%s: bad blocks per cylinder group",
 				    optarg);
 			break;
 		case 'd':
-			if ((maxbsize = atoi(optarg)) < MINBSIZE)
+			rval = expand_number_int(optarg, &maxbsize);
+			if (rval < 0 || maxbsize < MINBSIZE)
 				errx(1, "%s: bad extent block size", optarg);
 			break;
 		case 'e':
-			if ((maxbpg = atoi(optarg)) <= 0)
+			rval = expand_number_int(optarg, &maxbpg);
+			if (rval < 0 || maxbpg <= 0)
 			  errx(1, "%s: bad blocks per file in a cylinder group",
 				    optarg);
 			break;
 		case 'f':
-			if ((fsize = atoi(optarg)) <= 0)
+			rval = expand_number_int(optarg, &fsize);
+			if (rval < 0 || fsize <= 0)
 				errx(1, "%s: bad fragment size", optarg);
 			break;
 		case 'g':
-			if ((avgfilesize = atoi(optarg)) <= 0)
+			rval = expand_number_int(optarg, &avgfilesize);
+			if (rval < 0 || avgfilesize <= 0)
 				errx(1, "%s: bad average file size", optarg);
 			break;
 		case 'h':
-			if ((avgfilesperdir = atoi(optarg)) <= 0)
+			rval = expand_number_int(optarg, &avgfilesperdir);
+			if (rval < 0 || avgfilesperdir <= 0)
 			       errx(1, "%s: bad average files per dir", optarg);
 			break;
 		case 'i':
-			if ((density = atoi(optarg)) <= 0)
+			rval = expand_number_int(optarg, &density);
+			if (rval < 0 || density <= 0)
 				errx(1, "%s: bad bytes per inode", optarg);
 			break;
 		case 'l':
@@ -230,11 +265,27 @@ main(int argc, char *argv[])
 		"%s: unknown optimization preference: use `space' or `time'",
 				    optarg);
 			break;
+		case 'r':
+			errno = 0;
+			reserved = strtoimax(optarg, &cp, 0);
+			if (errno != 0 || cp == optarg ||
+			    *cp != '\0' || reserved < 0)
+				errx(1, "%s: bad reserved size", optarg);
+			break;
+		case 'p':
+			is_file = 1;
+			part_name = optarg[0];
+			break;
+
 		case 's':
 			errno = 0;
-			fssize = strtoimax(optarg, NULL, 0);
-			if (errno != 0)
-				err(1, "%s: bad file system size", optarg);
+			fssize = strtoimax(optarg, &cp, 0);
+			if (errno != 0 || cp == optarg ||
+			    *cp != '\0' || fssize < 0)
+				errx(1, "%s: bad file system size", optarg);
+			break;
+		case 't':
+			tflag = 1;
 			break;
 		case '?':
 		default:
@@ -247,6 +298,8 @@ main(int argc, char *argv[])
 		usage();
 
 	special = argv[0];
+	if (!special[0])
+		err(1, "empty file/special name");
 	cp = strrchr(special, '/');
 	if (cp == 0) {
 		/*
@@ -256,7 +309,16 @@ main(int argc, char *argv[])
 		special = device;
 	}
 
-	if (ufs_disk_fillout_blank(&disk, special) == -1 ||
+	if (is_file) {
+		/* bypass ufs_disk_fillout_blank */
+		bzero( &disk, sizeof(disk));
+		disk.d_bsize = 1;
+		disk.d_name = special;
+		disk.d_fd = open(special, O_RDONLY);
+		if (disk.d_fd < 0 ||
+		    (!Nflag && ufs_disk_write(&disk) == -1))
+			errx(1, "%s: ", special);
+	} else if (ufs_disk_fillout_blank(&disk, special) == -1 ||
 	    (!Nflag && ufs_disk_write(&disk) == -1)) {
 		if (disk.d_error != NULL)
 			errx(1, "%s: %s", special, disk.d_error);
@@ -265,26 +327,31 @@ main(int argc, char *argv[])
 	}
 	if (fstat(disk.d_fd, &st) < 0)
 		err(1, "%s", special);
-	if ((st.st_mode & S_IFMT) != S_IFCHR)
-		errx(1, "%s: not a character-special device", special);
-
-	if (sectorsize == 0)
-		ioctl(disk.d_fd, DIOCGSECTORSIZE, &sectorsize);
-	if (sectorsize && !ioctl(disk.d_fd, DIOCGMEDIASIZE, &mediasize)) {
-		if (fssize == 0)
-			fssize = mediasize / sectorsize;
-		else if (fssize > mediasize / sectorsize)
-			errx(1, "%s: maximum file system size is %jd",
-			    special, (intmax_t)(mediasize / sectorsize));
+	if ((st.st_mode & S_IFMT) != S_IFCHR) {
+		warn("%s: not a character-special device", special);
+		is_file = 1;	/* assume it is a file */
+		dkname = special;
+		if (sectorsize == 0)
+			sectorsize = 512;
+		mediasize = st.st_size;
+		/* set fssize from the partition */
+	} else {
+	    if (sectorsize == 0)
+		if (ioctl(disk.d_fd, DIOCGSECTORSIZE, &sectorsize) == -1)
+		    sectorsize = 0;	/* back out on error for safety */
+	    if (sectorsize && ioctl(disk.d_fd, DIOCGMEDIASIZE, &mediasize) != -1)
+		getfssize(&fssize, special, mediasize / sectorsize, reserved);
 	}
 	pp = NULL;
 	lp = getdisklabel(special);
 	if (lp != NULL) {
-		cp = strchr(special, '\0');
-		cp--;
-		if ((*cp < 'a' || *cp > 'h') && !isdigit(*cp))
+		if (!is_file) /* already set for files */
+			part_name = special[strlen(special) - 1];
+		if ((part_name < 'a' || part_name - 'a' >= MAXPARTITIONS) &&
+				!isdigit(part_name))
 			errx(1, "%s: can't figure out file system partition",
-			    special);
+					special);
+		cp = &part_name;
 		if (isdigit(*cp))
 			pp = &lp->d_partitions[RAW_PART];
 		else
@@ -296,17 +363,15 @@ main(int argc, char *argv[])
 		if (pp->p_fstype == FS_BOOT)
 			errx(1, "%s: `%c' partition overlaps boot program",
 			    special, *cp);
-		if (fssize == 0)
-			fssize = pp->p_size;
-		if (fssize > pp->p_size)
-			errx(1, 
-		    "%s: maximum file system size %d", special, pp->p_size);
+		getfssize(&fssize, special, pp->p_size, reserved);
 		if (sectorsize == 0)
 			sectorsize = lp->d_secsize;
 		if (fsize == 0)
 			fsize = pp->p_fsize;
 		if (bsize == 0)
 			bsize = pp->p_frag * pp->p_fsize;
+		if (is_file)
+			part_ofs = pp->p_offset;
 	}
 	if (sectorsize <= 0)
 		errx(1, "%s: no default sector size", special);
@@ -336,7 +401,27 @@ main(int argc, char *argv[])
 			rewritelabel(special, lp);
 	}
 	ufs_disk_close(&disk);
-	exit(0);
+	if (!jflag)
+		exit(0);
+	if (execlp("tunefs", "newfs", "-j", "enable", special, NULL) < 0)
+		err(1, "Cannot enable soft updates journaling, tunefs");
+	/* NOT REACHED */
+}
+
+void
+getfssize(intmax_t *fsz, const char *s, intmax_t disksize, intmax_t reserved)
+{
+	intmax_t available;
+
+	available = disksize - reserved;
+	if (available <= 0)
+		errx(1, "%s: reserved not less than device size %jd",
+		    s, disksize);
+	if (*fsz == 0)
+		*fsz = available;
+	else if (*fsz > available)
+		errx(1, "%s: maximum file system size is %jd",
+		    s, available);
 }
 
 struct disklabel *
@@ -345,7 +430,20 @@ getdisklabel(char *s)
 	static struct disklabel lab;
 	struct disklabel *lp;
 
-	if (!ioctl(disk.d_fd, DIOCGDINFO, (char *)&lab))
+	if (is_file) {
+		if (read(disk.d_fd, bootarea, BBSIZE) != BBSIZE)
+			err(4, "cannot read bootarea");
+		if (bsd_disklabel_le_dec(
+		    bootarea + (0 /* labeloffset */ +
+				1 /* labelsoffset */ * sectorsize),
+		    &lab, MAXPARTITIONS))
+			errx(1, "no valid label found");
+
+		lp = &lab;
+		return &lab;
+	}
+
+	if (ioctl(disk.d_fd, DIOCGDINFO, (char *)&lab) != -1)
 		return (&lab);
 	unlabeled++;
 	if (disktype) {
@@ -363,7 +461,15 @@ rewritelabel(char *s, struct disklabel *lp)
 		return;
 	lp->d_checksum = 0;
 	lp->d_checksum = dkcksum(lp);
-	if (ioctl(disk.d_fd, DIOCWDINFO, (char *)lp) < 0)
+	if (is_file) {
+		bsd_disklabel_le_enc(bootarea + 0 /* labeloffset */ +
+			1 /* labelsoffset */ * sectorsize, lp);
+		lseek(disk.d_fd, 0, SEEK_SET);
+		if (write(disk.d_fd, bootarea, BBSIZE) != BBSIZE)
+			errx(1, "cannot write label");
+		return;
+	}
+	if (ioctl(disk.d_fd, DIOCWDINFO, (char *)lp) == -1)
 		warn("ioctl (WDINFO): %s: can't rewrite disk label", s);
 }
 
@@ -375,12 +481,13 @@ usage()
 	    getprogname(),
 	    " [device-type]");
 	fprintf(stderr, "where fsoptions are:\n");
+	fprintf(stderr, "\t-E Erase previous disk content\n");
 	fprintf(stderr, "\t-J Enable journaling via gjournal\n");
 	fprintf(stderr, "\t-L volume label to add to superblock\n");
 	fprintf(stderr,
 	    "\t-N do not create file system, just print out parameters\n");
 	fprintf(stderr, "\t-O file system format: 1 => UFS1, 2 => UFS2\n");
-	fprintf(stderr, "\t-R regression test, supress random factors\n");
+	fprintf(stderr, "\t-R regression test, suppress random factors\n");
 	fprintf(stderr, "\t-S sector size\n");
 	fprintf(stderr, "\t-T disktype\n");
 	fprintf(stderr, "\t-U enable soft updates\n");
@@ -393,10 +500,31 @@ usage()
 	fprintf(stderr, "\t-g average file size\n");
 	fprintf(stderr, "\t-h average files per directory\n");
 	fprintf(stderr, "\t-i number of bytes per inode\n");
+	fprintf(stderr, "\t-j enable soft updates journaling\n");
 	fprintf(stderr, "\t-l enable multilabel MAC\n");
 	fprintf(stderr, "\t-n do not create .snap directory\n");
 	fprintf(stderr, "\t-m minimum free space %%\n");
 	fprintf(stderr, "\t-o optimization preference (`space' or `time')\n");
-	fprintf(stderr, "\t-s file systemsize (sectors)\n");
+	fprintf(stderr, "\t-p partition name (a..h)\n");
+	fprintf(stderr, "\t-r reserved sectors at the end of device\n");
+	fprintf(stderr, "\t-s file system size (sectors)\n");
+	fprintf(stderr, "\t-t enable TRIM\n");
 	exit(1);
+}
+
+static int
+expand_number_int(const char *buf, int *num)
+{
+	int64_t num64;
+	int rval;
+
+	rval = expand_number(buf, &num64);
+	if (rval < 0)
+		return (rval);
+	if (num64 > INT_MAX || num64 < INT_MIN) {
+		errno = ERANGE;
+		return (-1);
+	}
+	*num = (int)num64;
+	return (0);
 }

@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ifconfig/af_inet.c,v 1.3 2007/02/24 23:55:46 sam Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -37,6 +37,7 @@ static const char rcsid[] =
 #include <sys/socket.h>
 #include <net/if.h>
 
+#include <ctype.h>
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +53,7 @@ static const char rcsid[] =
 
 #include "ifconfig.h"
 
-static struct ifaliasreq in_addreq;
+static struct in_aliasreq in_addreq;
 static struct ifreq in_ridreq;
 
 static void
@@ -110,15 +111,18 @@ in_getaddr(const char *s, int which)
 		char *p = NULL;
 
 		if((p = strrchr(s, '/')) != NULL) {
+			const char *errstr;
 			/* address is `name/masklen' */
 			int masklen;
-			int ret;
 			struct sockaddr_in *min = sintab[MASK];
 			*p = '\0';
-			ret = sscanf(p+1, "%u", &masklen);
-			if(ret != 1 || (masklen < 0 || masklen > 32)) {
+			if (!isdigit(*(p + 1)))
+				errstr = "invalid";
+			else
+				masklen = (int)strtonum(p + 1, 0, 32, &errstr);
+			if (errstr != NULL) {
 				*p = '/';
-				errx(1, "%s: bad value", s);
+				errx(1, "%s: bad value (width %s)", s, errstr);
 			}
 			min->sin_len = sizeof(*min);
 			min->sin_addr.s_addr = htonl(~((1LL << (32 - masklen)) - 1) & 
@@ -130,7 +134,7 @@ in_getaddr(const char *s, int which)
 		return;
 	if ((hp = gethostbyname(s)) != 0)
 		bcopy(hp->h_addr, (char *)&sin->sin_addr, 
-		    MIN(hp->h_length, sizeof(sin->sin_addr)));
+		    MIN((size_t)hp->h_length, sizeof(sin->sin_addr)));
 	else if ((np = getnetbyname(s)) != 0)
 		sin->sin_addr = inet_makeaddr(np->n_net, INADDR_ANY);
 	else
@@ -169,7 +173,7 @@ in_status_tunnel(int s)
 static void
 in_set_tunnel(int s, struct addrinfo *srcres, struct addrinfo *dstres)
 {
-	struct ifaliasreq addreq;
+	struct in_aliasreq addreq;
 
 	memset(&addreq, 0, sizeof(addreq));
 	strncpy(addreq.ifra_name, name, IFNAMSIZ);
@@ -196,5 +200,10 @@ static struct afswtch af_inet = {
 static __constructor void
 inet_ctor(void)
 {
+
+#ifndef RESCUE
+	if (!feature_present("inet"))
+		return;
+#endif
 	af_register(&af_inet);
 }

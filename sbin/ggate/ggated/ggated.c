@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/ggate/ggated/ggated.c,v 1.9 2006/12/18 11:12:00 pjd Exp $
+ * $MidnightBSD$
  */
 
 #include <stdio.h>
@@ -99,8 +99,8 @@ static TAILQ_HEAD(, ggd_request) outqueue = TAILQ_HEAD_INITIALIZER(outqueue);
 pthread_mutex_t inqueue_mtx, outqueue_mtx;
 pthread_cond_t inqueue_cond, outqueue_cond;
 
-static SLIST_HEAD(, ggd_export) exports = SLIST_HEAD_INITIALIZER(&exports);
-static LIST_HEAD(, ggd_connection) connections = LIST_HEAD_INITIALIZER(&connection);
+static SLIST_HEAD(, ggd_export) exports = SLIST_HEAD_INITIALIZER(exports);
+static LIST_HEAD(, ggd_connection) connections = LIST_HEAD_INITIALIZER(connections);
 
 static void *recv_thread(void *arg);
 static void *disk_thread(void *arg);
@@ -211,10 +211,10 @@ line_parse(char *line, unsigned lineno)
 
 	ex = malloc(sizeof(*ex));
 	if (ex == NULL)
-		g_gate_xlog("No enough memory.");
+		g_gate_xlog("Not enough memory.");
 	ex->e_path = strdup(path);
 	if (ex->e_path == NULL)
-		g_gate_xlog("No enough memory.");
+		g_gate_xlog("Not enough memory.");
 
 	/* Made 'and' here. */
 	ex->e_ip = (ip & mask);
@@ -756,6 +756,9 @@ disk_thread(void *arg)
 		error = pthread_mutex_unlock(&outqueue_mtx);
 		assert(error == 0);
 	}
+
+	/* NOTREACHED */
+	return (NULL);
 }
 
 static void *
@@ -810,6 +813,9 @@ send_thread(void *arg)
 		}
 		free(req);
 	}
+
+	/* NOTREACHED */
+	return (NULL);
 }
 
 static void

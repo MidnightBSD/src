@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sbin/ifconfig/ifcarp.c,v 1.2 2005/02/22 14:07:47 glebius Exp $ */
+/*	$MidnightBSD$ */
 /*	from $OpenBSD: ifconfig.c,v 1.82 2003/10/19 05:43:35 mcbride Exp $ */
 
 /*
@@ -57,6 +57,7 @@ void setcarp_advbase(const char *,int, int, const struct afswtch *rafp);
 void setcarp_advskew(const char *, int, int, const struct afswtch *rafp);
 void setcarp_passwd(const char *, int, int, const struct afswtch *rafp);
 void setcarp_vhid(const char *, int, int, const struct afswtch *rafp);
+void setcarp_state(const char *, int, int, const struct afswtch *rafp);
 
 void
 carp_status(int s)
@@ -96,6 +97,7 @@ setcarp_passwd(const char *val, int d, int s, const struct afswtch *afp)
 	if (ioctl(s, SIOCGVH, (caddr_t)&ifr) == -1)
 		err(1, "SIOCGVH");
 
+	memset(carpr.carpr_key, 0, sizeof(carpr.carpr_key));
 	/* XXX Should hash the password into the key here, perhaps? */
 	strlcpy(carpr.carpr_key, val, CARP_KEY_LEN);
 
@@ -174,11 +176,34 @@ setcarp_advbase(const char *val, int d, int s, const struct afswtch *afp)
 	return;
 }
 
+void setcarp_state(const char *val, int d, int s, const struct afswtch *afp)
+{
+	struct carpreq carpr;
+	int i;
+
+	bzero((char *)&carpr, sizeof(struct carpreq));
+	ifr.ifr_data = (caddr_t)&carpr;
+
+	if (ioctl(s, SIOCGVH, (caddr_t)&ifr) == -1)
+		err(1, "SIOCGVH");
+
+	for (i = 0; i <= CARP_MAXSTATE; i++) {
+		if (!strcasecmp(val, carp_states[i])) {
+			carpr.carpr_state = i;
+			break;
+		}
+	}
+
+	if (ioctl(s, SIOCSVH, (caddr_t)&ifr) == -1)
+		err(1, "SIOCSVH");
+}
+
 static struct cmd carp_cmds[] = {
 	DEF_CMD_ARG("advbase",	setcarp_advbase),
 	DEF_CMD_ARG("advskew",	setcarp_advskew),
 	DEF_CMD_ARG("pass",	setcarp_passwd),
 	DEF_CMD_ARG("vhid",	setcarp_vhid),
+	DEF_CMD_ARG("state",	setcarp_state),
 };
 static struct afswtch af_carp = {
 	.af_name	= "af_carp",

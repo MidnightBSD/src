@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/gbde/gbde.c,v 1.31 2006/02/08 06:52:15 cperciva Exp $
+ * $MidnightBSD$
  *
  * XXX: Future stuff
  *
@@ -750,7 +750,7 @@ main(int argc, char **argv)
 	if (argc < 3)
 		usage();
 
-	if ((i = modfind("g_bde")) < 0) {
+	if (modfind("g_bde") < 0) {
 		/* need to load the gbde module */
 		if (kldload(GBDEMOD) < 0 || modfind("g_bde") < 0)
 			err(1, GBDEMOD ": Kernel module not available");

@@ -27,8 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/comcontrol/comcontrol.c,v 1.14 2003/08/08 19:51:01 johan Exp $");
-__MBSDID("$MidnightBSD: src/sbin/comcontrol/comcontrol.c,v 1.2 2008/11/20 19:55:57 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <err.h>

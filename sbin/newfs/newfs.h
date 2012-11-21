@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/newfs/newfs.h,v 1.18 2006/10/31 21:52:27 pjd Exp $
+ * $MidnightBSD$
  */
 
 #include <libufs.h>
@@ -70,21 +70,23 @@
  * We allocate one inode slot per NFPI fragments, expecting this
  * to be far more than we will ever need.
  */
-#define	NFPI		4
+#define	NFPI		2
 
 /*
  * variables set up by front end.
  */
+extern int	Eflag;		/* Erase previous disk contents */
 extern int	Lflag;		/* add a volume label */
 extern int	Nflag;		/* run mkfs without writing file system */
 extern int	Oflag;		/* build UFS1 format file system */
 extern int	Rflag;		/* regression test */
 extern int	Uflag;		/* enable soft updates for file system */
-extern int	Eflag;		/* exit as if error, for testing */
+extern int	Xflag;		/* exit in middle of newfs for testing */
 extern int	Jflag;		/* enable gjournal for file system */
 extern int	lflag;		/* enable multilabel MAC for file system */
 extern int	nflag;		/* do not create .snap directory */
-extern quad_t	fssize;		/* file system size */
+extern int	tflag;		/* enable TRIM */
+extern intmax_t	fssize;		/* file system size */
 extern int	sectorsize;	/* bytes/sector */
 extern int	realsectorsize;	/* bytes/sector in hardware*/
 extern int	fsize;		/* fragment size */
@@ -100,5 +102,21 @@ extern int	avgfilesize;	/* expected average file size */
 extern int	avgfilesperdir;	/* expected number of files per directory */
 extern u_char	*volumelabel;	/* volume label for filesystem */
 extern struct uufsd disk;	/* libufs disk structure */
+
+/*
+ * To override a limitation in libufs, export the offset (in sectors) of the
+ * partition on the underlying media (file or disk). The value is used as
+ * an offset for all accesses to the media through bread(), which is only
+ * invoked directly in this program.
+ * For bwrite() we need a different approach, namely override the library
+ * version with one defined here. This is because bwrite() is called also
+ * by the library function sbwrite() which we cannot intercept nor want to
+ * rewrite. As a consequence, the internal version of bwrite() adds the
+ * partition offset itself when calling the underlying function, pwrite().
+ *
+ * XXX This info really ought to go into the struct uufsd, at which point
+ * we can remove the above hack.
+ */
+extern ufs2_daddr_t part_ofs;	/* partition offset in blocks */
 
 void mkfs (struct partition *, char *);

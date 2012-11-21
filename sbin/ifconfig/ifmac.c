@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/ifconfig/ifmac.c,v 1.4 2004/12/31 19:46:27 sam Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -112,7 +112,7 @@ static __constructor void
 mac_ctor(void)
 {
 #define	N(a)	(sizeof(a) / sizeof(a[0]))
-	int i;
+	size_t i;
 
 	for (i = 0; i < N(mac_cmds);  i++)
 		cmd_register(&mac_cmds[i]);
