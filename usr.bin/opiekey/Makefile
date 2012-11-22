@@ -7,7 +7,7 @@ PROG=	opiekey
 CFLAGS+=-I${.CURDIR}/../../lib/libopie
 CFLAGS+=-I${OPIE_DIST}
 CFLAGS+=-DINSECURE_OVERRIDE
-
+WARNS?=	0
 DPADD=	${LIBOPIE} ${LIBMD}
 LDADD=	-lopie -lmd
 
