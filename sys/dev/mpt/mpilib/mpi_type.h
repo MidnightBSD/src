@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/mpt/mpilib/mpi_type.h,v 1.5 2012/11/15 22:35:22 laffer1 Exp $ */
 /*
  * Copyright (c) 2000-2010, LSI Logic Corporation and its contributors.
  * All rights reserved.
@@ -77,7 +77,7 @@ typedef unsigned char   U8;
 typedef signed   short  S16;
 typedef unsigned short  U16;
 
-#ifdef	__FreeBSD__
+#ifdef	__MidnightBSD__
 
 typedef int32_t  S32;
 typedef uint32_t U32;
