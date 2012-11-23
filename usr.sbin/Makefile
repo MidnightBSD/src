@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.29 2012/03/23 20:55:00 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.30 2012/11/17 02:20:56 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -14,11 +14,7 @@ SUBDIR+=accton \
 	${_arlcontrol} \
 	arp \
 	${_asf} \
-	${_audit} \
-	${_auditd} \
-	${_auditreduce} \
 	${_authpf} \
-	${_bluetooth} \
 	${_boot0cfg} \
 	bootparamd \
 	bsdinstall \
@@ -42,7 +38,6 @@ SUBDIR+=accton \
 	${_dnssec-keyfromlabel} \
 	${_dnssec-keygen} \
 	${_dnssec-signzone} \
-	${_editmap} \
 	edquota \
 	${_eeprom} \
 	extattr \
@@ -76,10 +71,8 @@ SUBDIR+=accton \
 	lmcconfig \
 	${_lpr} \
 	${_lptcontrol} \
-	${_mailstats} \
 	mailwrapper \
 	makefs \
-	${_makemap} \
 	manctl \
 	memcontrol \
 	mergemaster \
@@ -121,8 +114,6 @@ SUBDIR+=accton \
 	${_pppctl} \
 	pppd \
 	pppstats \
-	${_praliases} \
-	${_praudit} \
 	procctl \
 	pstat \
 	pw \
@@ -152,7 +143,6 @@ SUBDIR+=accton \
 	rwhod \
 	sa \
 	sade \
-	${_sendmail} \
 	setfib \
 	setfmac \
 	setpmac \
@@ -163,7 +153,6 @@ SUBDIR+=accton \
 	snapinfo \
 	${_spkrtest} \
 	spray \
-	sysinstall \
 	syslogd \
 	sysrc \
 	tcpdchk \
@@ -176,7 +165,6 @@ SUBDIR+=accton \
 	trpt \
 	tzsetup \
 	ugidfw \
-	${_usbdevs} \
 	vidcontrol \
 	vipw \
 	wake \
@@ -193,10 +181,10 @@ SUBDIR+=accton \
 	${_zzz}
 
 .if ${MK_AUDIT} != "no"
-_audit=		audit
-_auditd=	auditd
-_auditreduce=	auditreduce
-_praudit=	praudit
+SUBDIR+=	audit
+SUBDIR+=	auditd
+SUBDIR+=	auditreduce
+SUBDIR+=	praudit
 .endif
 
 .if ${MK_BIND_DNSSEC} != "no" && ${MK_OPENSSL} != "no"
@@ -215,7 +203,7 @@ _rndc-confgen=		rndc-confgen
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
-_bluetooth=	bluetooth
+SUBDIR+=	bluetooth
 .endif
 
 .if ${MK_OPENSSL} != "no"
@@ -274,15 +262,11 @@ _nscd=		nscd
 .endif
 
 .if ${MK_SENDMAIL} != "no"
-_editmap=	editmap
-_mailstats=	mailstats
-_makemap=	makemap
-_praliases=	praliases
-_sendmail=	sendmail
-.endif
-
-.if ${MK_USB} != "no"
-_usbdevs=	usbdevs
+SUBDIR+=	editmap
+SUBDIR+=	mailstats
+SUBDIR+=	makemap
+SUBDIR+=	praliases
+SUBDIR+=	sendmail
 .endif
 
 .if ${MACHINE_ARCH} == "i386"
@@ -341,9 +325,20 @@ _eeprom=	eeprom
 _ofwdump=	ofwdump
 .endif
 
+.if ${MK_SYSINSTALL} != "no"
+SUBDIR+=	sysinstall
+.endif
+
 .if ${MK_TOOLCHAIN} != "no"
 SUBDIR+=	config
 SUBDIR+=	crunch
+.endif
+
+.if ${MK_USB} != "no"
+SUBDIR+=	uathload
+SUBDIR+=	uhsoctl
+SUBDIR+=	usbconfig
+SUBDIR+=	usbdump
 .endif
 
 .if ${MK_UTMPX} != "no"
