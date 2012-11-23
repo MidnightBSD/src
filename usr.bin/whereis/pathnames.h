@@ -23,7 +23,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/usr.bin/whereis/pathnames.h,v 1.4 2002/08/22 01:50:51 johan Exp $
  */
 
 /* Where to look for libexec and games */
@@ -43,7 +42,7 @@
 "/usr/src/games"
 
 /* Each subdirectory of PATH_PORTS will be appended to PATH_SOURCES. */
-#define PATH_PORTS "/usr/mports"
+#define PATH_PORTS "/usr/ports"
 
 /* How to query the current manpath. */
 #define MANPATHCMD "manpath -q"

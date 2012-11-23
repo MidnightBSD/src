@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. Neither the name of the University nor the names of its contributors
+.\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	From: @(#)install.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/xinstall/install.1,v 1.32.2.1 2005/08/18 15:01:25 keramida Exp $
+.\" $MidnightBSD$
 .\"
-.Dd May 7, 2001
+.Dd March 6, 2006
 .Dt INSTALL 1
 .Os
 .Sh NAME
@@ -188,14 +188,16 @@ option has been specified.
 .Pp
 If the
 .Ev DONTSTRIP
-environment variable is present
+environment variable is present,
 .Nm
 will ignore any specification of the
 .Fl s
 option.
-This is mainly used in debugging The MidnightBSD Ports Collection.
+This is mainly for use in debugging the
+.Fx
+Ports Collection.
 .Sh FILES
-.Bl -tag -width INS@XXXX -compact
+.Bl -tag -width ".Pa INS@XXXX" -compact
 .It Pa INS@XXXX
 If either
 .Fl S

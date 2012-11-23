@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)xinstall.c	8.1 (Berkeley) 7/21/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/xinstall/xinstall.c,v 1.68 2007/12/14 08:46:57 edwin Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -53,13 +49,13 @@ __FBSDID("$FreeBSD: src/usr.bin/xinstall/xinstall.c,v 1.68 2007/12/14 08:46:57 e
 #include <sys/time.h>
 #include <sys/wait.h>
 
-#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <paths.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,16 +82,16 @@ int dobackup, docompare, dodir, dopreserve, dostrip, nommap, safecopy, verbose;
 mode_t mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 const char *suffix = BACKUP_SUFFIX;
 
-void	copy(int, const char *, int, const char *, off_t);
-int	compare(int, const char *, size_t, int, const char *, size_t);
-int	create_newfile(const char *, int, struct stat *);
-int	create_tempfile(const char *, char *, size_t);
-void	install(const char *, const char *, u_long, u_int);
-void	install_dir(char *);
-u_long	numeric_id(const char *, const char *);
-void	strip(const char *);
-int	trymmap(int);
-void	usage(void);
+static int	compare(int, const char *, size_t, int, const char *, size_t);
+static void	copy(int, const char *, int, const char *, off_t);
+static int	create_newfile(const char *, int, struct stat *);
+static int	create_tempfile(const char *, char *, size_t);
+static void	install(const char *, const char *, u_long, u_int);
+static void	install_dir(char *);
+static u_long	numeric_id(const char *, const char *);
+static void	strip(const char *);
+static int	trymmap(int);
+static void	usage(void);
 
 int
 main(int argc, char *argv[])
@@ -247,7 +243,7 @@ main(int argc, char *argv[])
 	/* NOTREACHED */
 }
 
-u_long
+static u_long
 numeric_id(const char *name, const char *type)
 {
 	u_long val;
@@ -270,7 +266,7 @@ numeric_id(const char *name, const char *type)
  * install --
  *	build a path name and install the file
  */
-void
+static void
 install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 {
 	struct stat from_sb, temp_sb, to_sb;
@@ -497,7 +493,7 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 	 * flags, except for the dump flag.
 	 * NFS does not support flags.  Ignore EOPNOTSUPP flags if we're just
 	 * trying to turn off UF_NODUMP.  If we're trying to set real flags,
-	 * then warn if the the fs doesn't support it, otherwise fail.
+	 * then warn if the fs doesn't support it, otherwise fail.
 	 */
 	if (!devnull && (flags & SETFLAGS ||
 	    (from_sb.st_flags & ~UF_NODUMP) != to_sb.st_flags) &&
@@ -524,7 +520,7 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
  * compare --
  *	compare two files; non-zero means files differ
  */
-int
+static int
 compare(int from_fd, const char *from_name __unused, size_t from_len,
 	int to_fd, const char *to_name __unused, size_t to_len)
 {
@@ -588,7 +584,7 @@ compare(int from_fd, const char *from_name __unused, size_t from_len,
  * create_tempfile --
  *	create a temporary file based on path and open it
  */
-int
+static int
 create_tempfile(const char *path, char *temp, size_t tsize)
 {
 	char *p;
@@ -608,7 +604,7 @@ create_tempfile(const char *path, char *temp, size_t tsize)
  * create_newfile --
  *	create a new file, overwriting an existing one if necessary
  */
-int
+static int
 create_newfile(const char *path, int target, struct stat *sbp)
 {
 	char backup[MAXPATHLEN];
@@ -651,7 +647,7 @@ create_newfile(const char *path, int target, struct stat *sbp)
  * copy --
  *	copy from one file to another
  */
-void
+static void
 copy(int from_fd, const char *from_name, int to_fd, const char *to_name,
     off_t size)
 {
@@ -675,11 +671,18 @@ copy(int from_fd, const char *from_name, int to_fd, const char *to_name,
 	if (size <= 8 * 1048576 && trymmap(from_fd) &&
 	    (p = mmap(NULL, (size_t)size, PROT_READ, MAP_SHARED,
 		    from_fd, (off_t)0)) != (char *)MAP_FAILED) {
-		if ((nw = write(to_fd, p, size)) != size) {
+		nw = write(to_fd, p, size);
+		if (nw != size) {
 			serrno = errno;
 			(void)unlink(to_name);
-			errno = nw > 0 ? EIO : serrno;
-			err(EX_OSERR, "%s", to_name);
+			if (nw >= 0) {
+				errx(EX_OSERR,
+     "short write to %s: %jd bytes written, %jd bytes asked to write",
+				    to_name, (uintmax_t)nw, (uintmax_t)size);
+			} else {
+				errno = serrno;
+				err(EX_OSERR, "%s", to_name);
+			}
 		}
 		done_copy = 1;
 	}
@@ -688,8 +691,15 @@ copy(int from_fd, const char *from_name, int to_fd, const char *to_name,
 			if ((nw = write(to_fd, buf, nr)) != nr) {
 				serrno = errno;
 				(void)unlink(to_name);
-				errno = nw > 0 ? EIO : serrno;
-				err(EX_OSERR, "%s", to_name);
+				if (nw >= 0) {
+					errx(EX_OSERR,
+     "short write to %s: %jd bytes written, %jd bytes asked to write",
+					    to_name, (uintmax_t)nw,
+					    (uintmax_t)size);
+				} else {
+					errno = serrno;
+					err(EX_OSERR, "%s", to_name);
+				}
 			}
 		if (nr != 0) {
 			serrno = errno;
@@ -704,7 +714,7 @@ copy(int from_fd, const char *from_name, int to_fd, const char *to_name,
  * strip --
  *	use strip(1) to strip the target file
  */
-void
+static void
 strip(const char *to_name)
 {
 	const char *stripbin;
@@ -734,9 +744,9 @@ strip(const char *to_name)
 
 /*
  * install_dir --
- *	build directory heirarchy
+ *	build directory hierarchy
  */
-void
+static void
 install_dir(char *path)
 {
 	char *p;
@@ -770,13 +780,13 @@ install_dir(char *path)
  * usage --
  *	print a usage message and die
  */
-void
+static void
 usage(void)
 {
 	(void)fprintf(stderr,
-"usage: install [-bCcpSsv] [-B suffix] [-f flags] [-g group] [-m mode]\n"
+"usage: install [-bCcMpSsv] [-B suffix] [-f flags] [-g group] [-m mode]\n"
 "               [-o owner] file1 file2\n"
-"       install [-bCcpSsv] [-B suffix] [-f flags] [-g group] [-m mode]\n"
+"       install [-bCcMpSsv] [-B suffix] [-f flags] [-g group] [-m mode]\n"
 "               [-o owner] file1 ... fileN directory\n"
 "       install -d [-v] [-g group] [-m mode] [-o owner] directory ...\n");
 	exit(EX_USAGE);
@@ -787,7 +797,7 @@ usage(void)
  * trymmap --
  *	return true (1) if mmap should be tried, false (0) if not.
  */
-int
+static int
 trymmap(int fd)
 {
 /*
