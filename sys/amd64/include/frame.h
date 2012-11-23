@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)frame.h	5.2 (Berkeley) 1/18/91
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _MACHINE_FRAME_H_

@@ -4,8 +4,7 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-# $MidnightBSD: src/sys/amd64/conf/NOTES,v 1.4 2011/10/20 04:28:11 laffer1 Exp $
-# $FreeBSD: src/sys/amd64/conf/NOTES,v 1.69.2.3.2.1 2008/02/06 03:24:29 scottl Exp $
+# $MidnightBSD: src/sys/amd64/conf/NOTES,v 1.5 2012/09/14 03:01:57 laffer1 Exp $
 #
 
 #

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)profile.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _MACHINE_PROFILE_H_

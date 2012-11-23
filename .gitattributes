@@ -42167,12 +42167,10 @@ share/zoneinfo/yearistype.sh -text
 share/zoneinfo/zone.tab -text
 sys/Makefile -text
 sys/amd64/Makefile -text
-sys/amd64/acpica/OsdEnvironment.c -text
 sys/amd64/acpica/acpi_machdep.c -text
 sys/amd64/acpica/acpi_switch.S -text
 sys/amd64/acpica/acpi_wakecode.S -text
 sys/amd64/acpica/acpi_wakeup.c -text
-sys/amd64/acpica/madt.c -text
 sys/amd64/amd64/amd64_mem.c -text
 sys/amd64/amd64/apic_vector.S -text
 sys/amd64/amd64/atomic.c -text
@@ -42181,12 +42179,10 @@ sys/amd64/amd64/autoconf.c -text
 sys/amd64/amd64/bios.c -text
 sys/amd64/amd64/bpf_jit_machdep.c -text
 sys/amd64/amd64/bpf_jit_machdep.h -text
-sys/amd64/amd64/busdma_machdep.c -text
 sys/amd64/amd64/cpu_switch.S -text
 sys/amd64/amd64/db_disasm.c -text
 sys/amd64/amd64/db_interface.c -text
 sys/amd64/amd64/db_trace.c -text
-sys/amd64/amd64/dump_machdep.c -text
 sys/amd64/amd64/elf_machdep.c -text
 sys/amd64/amd64/exception.S -text
 sys/amd64/amd64/fpu.c -text
@@ -42195,11 +42191,8 @@ sys/amd64/amd64/genassym.c -text
 sys/amd64/amd64/identcpu.c -text
 sys/amd64/amd64/in_cksum.c -text
 sys/amd64/amd64/initcpu.c -text
-sys/amd64/amd64/intr_machdep.c -text
 sys/amd64/amd64/io.c -text
-sys/amd64/amd64/io_apic.c -text
 sys/amd64/amd64/legacy.c -text
-sys/amd64/amd64/local_apic.c -text
 sys/amd64/amd64/locore.S -text
 sys/amd64/amd64/machdep.c -text
 sys/amd64/amd64/mem.c -text
@@ -42207,10 +42200,6 @@ sys/amd64/amd64/minidump_machdep.c -text
 sys/amd64/amd64/mp_machdep.c -text
 sys/amd64/amd64/mp_watchdog.c -text
 sys/amd64/amd64/mpboot.S -text
-sys/amd64/amd64/mptable.c -text
-sys/amd64/amd64/mptable_pci.c -text
-sys/amd64/amd64/msi.c -text
-sys/amd64/amd64/nexus.c -text
 sys/amd64/amd64/pmap.c -text
 sys/amd64/amd64/prof_machdep.c -text
 sys/amd64/amd64/ptrace_machdep.c -text
@@ -42219,7 +42208,6 @@ sys/amd64/amd64/stack_machdep.c -text
 sys/amd64/amd64/support.S -text
 sys/amd64/amd64/sys_machdep.c -text
 sys/amd64/amd64/trap.c -text
-sys/amd64/amd64/tsc.c -text
 sys/amd64/amd64/uio_machdep.c -text
 sys/amd64/amd64/uma_machdep.c -text
 sys/amd64/amd64/vm_machdep.c -text
@@ -42230,6 +42218,7 @@ sys/amd64/conf/GENERIC -text
 sys/amd64/conf/GENERIC.hints -text
 sys/amd64/conf/Makefile -text
 sys/amd64/conf/NOTES -text
+sys/amd64/conf/XENHVM -text
 sys/amd64/ia32/ia32_exception.S -text
 sys/amd64/ia32/ia32_misc.c -text
 sys/amd64/ia32/ia32_reg.c -text
@@ -42243,7 +42232,6 @@ sys/amd64/include/_limits.h -text
 sys/amd64/include/_stdint.h -text
 sys/amd64/include/_types.h -text
 sys/amd64/include/acpica_machdep.h -text
-sys/amd64/include/apicreg.h -text
 sys/amd64/include/apicvar.h -text
 sys/amd64/include/apm_bios.h -text
 sys/amd64/include/asm.h -text
@@ -42276,14 +42264,11 @@ sys/amd64/include/memdev.h -text
 sys/amd64/include/metadata.h -text
 sys/amd64/include/minidump.h -text
 sys/amd64/include/mp_watchdog.h -text
-sys/amd64/include/mptable.h -text
-sys/amd64/include/mutex.h -text
 sys/amd64/include/nexusvar.h -text
 sys/amd64/include/param.h -text
 sys/amd64/include/pc/bios.h -text
 sys/amd64/include/pc/display.h -text
 sys/amd64/include/pcb.h -text
-sys/amd64/include/pcb_ext.h -text
 sys/amd64/include/pci_cfgreg.h -text
 sys/amd64/include/pcpu.h -text
 sys/amd64/include/pmap.h -text

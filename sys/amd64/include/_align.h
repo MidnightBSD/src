@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #include <x86/_align.h>

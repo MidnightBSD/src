@@ -1,6 +1,6 @@
 # Makefile for syscall tables
 #
-# $FreeBSD$
+# $MidnightBSD$
 
 all:
 	@echo "make sysent only"

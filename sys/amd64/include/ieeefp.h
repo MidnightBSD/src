@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  * 	from: @(#) ieeefp.h 	1.0 (Berkeley) 9/23/93
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _MACHINE_IEEEFP_H_

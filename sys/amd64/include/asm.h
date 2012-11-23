@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)DEFS.h	5.1 (Berkeley) 4/23/90
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -81,11 +81,11 @@
 
 #define RCSID(x)	.text; .asciz x
 
-#undef __FBSDID
+#undef __MBSDID
 #if !defined(lint) && !defined(STRIP_FBSDID)
-#define __FBSDID(s)	.ident s
+#define __MBSDID(s)	.ident s
 #else
-#define __FBSDID(s)	/* nothing */
+#define __MBSDID(s)	/* nothing */
 #endif /* not lint and not STRIP_FBSDID */
 
 #endif /* !_MACHINE_ASM_H_ */

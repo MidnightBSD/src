@@ -1,4 +1,4 @@
-# $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/sys/amd64/conf/GENERIC.hints,v 1.17 2007/10/14 10:55:49 netchild Exp $
+# $MidnightBSD$
 hint.fdc.0.at="isa"
 hint.fdc.0.port="0x3F0"
 hint.fdc.0.irq="6"
