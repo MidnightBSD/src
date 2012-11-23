@@ -1,5 +1,5 @@
 .\" $FreeBSD$
 Set to not build
-.Xr acpiconf 8 ,
-.Xr acpidump 8
+.Xr apm 8 ,
+.Xr apmd 8
 and related programs.
