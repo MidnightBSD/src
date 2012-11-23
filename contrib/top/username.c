@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: src/contrib/top/username.c,v 1.3.32.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -30,19 +30,17 @@
  *  This makes the table size independent of the passwd file size.
  */
 
+#include <sys/param.h>
 #include <sys/types.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <pwd.h>
-#include <utmp.h>
 
 #include "top.local.h"
 #include "utils.h"
 
 struct hash_el {
     int  uid;
-    char name[UT_NAMESIZE + 1];
+    char name[MAXLOGNAME];
 };
 
 #define    is_empty_hash(x)	(hash_table[x].name[0] == 0)
@@ -53,13 +51,11 @@ struct hash_el {
 */
 #define    hashit(i)	(abs(i) % Table_size)
 
-int get_user(int uid);
-
 /* K&R requires that statically declared tables be initialized to zero. */
 /* We depend on that for hash_table and YOUR compiler had BETTER do it! */
 struct hash_el hash_table[Table_size];
 
-void init_hash(void)
+init_hash()
 
 {
     /*
@@ -133,7 +129,7 @@ int wecare;		/* 1 = enter it always, 0 = nice to have */
 
     /* empty or wrong slot -- fill it with new value */
     hash_table[hashindex].uid = uid;
-    (void) strncpy(hash_table[hashindex].name, name, UT_NAMESIZE);
+    (void) strncpy(hash_table[hashindex].name, name, MAXLOGNAME - 1);
     return(hashindex);
 }
 
@@ -144,7 +140,10 @@ int wecare;		/* 1 = enter it always, 0 = nice to have */
  * and cache any entries we pass over while looking.
  */
 
-int get_user(int uid)
+int get_user(uid)
+
+register int uid;
+
 {
     struct passwd *pwd;
 

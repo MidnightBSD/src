@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: src/contrib/top/commands.c,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -80,18 +80,22 @@ n or #  - change number of processes to display\n", stdout);
 #ifdef ORDER
 	if (displaymode == DISP_CPU)
 		fputs("\
-o       - specify sort order (pri, size, res, cpu, time, threads)\n", stdout);
+o       - specify sort order (pri, size, res, cpu, time, threads, jid)\n",
+	    stdout);
 	else
 		fputs("\
-o       - specify sort order (vcsw, ivcsw, read, write, fault, total)\n", stdout);
+o       - specify sort order (vcsw, ivcsw, read, write, fault, total, jid)\n",
+	    stdout);
 #endif
 	fputs("\
+P       - toggle the displaying of per-CPU statistics\n\
 r       - renice a process\n\
 s       - change number of seconds to delay between updates\n\
 S       - toggle the displaying of system processes\n\
 a       - toggle the displaying of process titles\n\
 t       - toggle the display of this process\n\
 u       - display processes for only one user (+ selects all users)\n\
+z       - toggle the displaying of the system idle process\n\
 \n\
 \n", stdout);
     }

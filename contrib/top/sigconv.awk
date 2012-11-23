@@ -1,4 +1,4 @@
-# $FreeBSD: src/contrib/top/sigconv.awk,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
 
 BEGIN		{
 		    nsig = 0;
