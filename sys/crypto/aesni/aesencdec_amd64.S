@@ -132,4 +132,4 @@ ENTRY(aesni_decrypt_cbc)
 	.cfi_endproc
 END(aesni_decrypt_cbc)
 
-	.ident	"$FreeBSD$"
+	.ident	"$MidnightBSD$"

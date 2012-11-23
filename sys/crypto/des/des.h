@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$MidnightBSD$	*/
 /*	$KAME: des.h,v 1.8 2001/09/10 04:03:57 itojun Exp $	*/
 
 /* lib/des/des.h */

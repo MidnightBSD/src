@@ -27,8 +27,8 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ctl_frontend_internal.h,v 1.1.1.1 2012-07-21 15:17:33 laffer1 Exp $
- * $FreeBSD$
+ * $Id: ctl_frontend_internal.h,v 1.2 2012-11-23 06:04:01 laffer1 Exp $
+ * $MidnightBSD$
  */
 /*
  * CTL kernel internal frontend target driver.  This allows kernel-level

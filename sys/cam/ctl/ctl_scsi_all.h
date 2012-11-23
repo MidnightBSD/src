@@ -24,10 +24,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ctl_scsi_all.h,v 1.1.1.1 2012-07-21 15:17:33 laffer1 Exp $
+ * $Id: ctl_scsi_all.h,v 1.2 2012-11-23 06:04:01 laffer1 Exp $
  */
 
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 __BEGIN_DECLS
 const char *	ctl_scsi_status_string(struct ctl_scsiio *ctsio);

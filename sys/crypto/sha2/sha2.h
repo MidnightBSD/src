@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$MidnightBSD$	*/
 /*	$KAME: sha2.h,v 1.3 2001/03/12 08:27:48 itojun Exp $	*/
 
 /*

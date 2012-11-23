@@ -26,12 +26,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ctl_scsi_all.c,v 1.1.1.1 2012-07-21 15:17:33 laffer1 Exp $
+ * $Id: ctl_scsi_all.c,v 1.2 2012-11-23 06:04:01 laffer1 Exp $
  */
 
 #include <sys/param.h>
 
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #ifdef _KERNEL

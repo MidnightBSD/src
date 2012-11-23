@@ -27,7 +27,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: smp_all.c,v 1.1.1.1 2012-07-21 15:17:33 laffer1 Exp $
+ * $Id: smp_all.c,v 1.2 2012-11-23 06:04:02 laffer1 Exp $
  */
 
 /*
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>

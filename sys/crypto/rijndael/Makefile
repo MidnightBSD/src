@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 PROG=test00
 NO_MAN=

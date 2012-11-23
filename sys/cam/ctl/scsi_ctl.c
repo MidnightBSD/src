@@ -27,7 +27,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: scsi_ctl.c,v 1.1.1.1 2012-07-21 15:17:33 laffer1 Exp $
+ * $Id: scsi_ctl.c,v 1.2 2012-11-23 06:04:01 laffer1 Exp $
  */
 /*
  * Peripheral driver interface between CAM and CTL (CAM Target Layer).
@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>

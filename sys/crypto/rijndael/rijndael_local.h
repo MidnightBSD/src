@@ -1,5 +1,5 @@
 /*	$KAME: rijndael_local.h,v 1.5 2003/08/28 08:37:24 itojun Exp $	*/
-/*	$FreeBSD$	*/
+/*	$MidnightBSD$	*/
 
 /* the file should not be used from outside */
 typedef u_int8_t		u8;
